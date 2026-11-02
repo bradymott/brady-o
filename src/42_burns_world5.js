@@ -646,19 +646,45 @@ BW5.buildDock = function (api, g) {
   api.trigger({ x: A.x, z: A.z, r: 13, when: g2 => g2.missions.state('boss') === 'available' && !BW5.state.bossOn, onEnter: g2 => BW5.bossIntro(g2) });
 };
 
-BW5.buildTower = function (api, g) {
-  const T = BW5.TOWER;
-  // the fence around the lookout (tarp walls) with a toll gate
-  const panel = (x0, z0, x1, z1) => {
-    const len = Math.hypot(x1 - x0, z1 - z0), yaw = Math.atan2(x1 - x0, z1 - z0);
-    api.mesh((x0 + x1) / 2, (z0 + z1) / 2, m => { m.lo = true; const n = Math.max(1, Math.round(len / 4)); for (let i = 0; i < n; i++) { m.color(i % 2 ? '#2a6ac8' : '#38a8e8'); BW567K.rbox(m, 0, 2.5, -len / 2 + (i + 0.5) * len / n, 0.3, 5, len / n - 0.1, 0.12); } m.lo = false; return { cols: [{ t: 'box', x: 0, z: 0, hx: 0.15, hz: len / 2, y0: 0, y1: 5 }] }; }, { yaw });
+// Biscuit's lookout, out the back behind the Barter Baron's toll gate. When the shared big-art module
+// is in the build (src/41_burns_bigart.js), the lookout is THE PUMP JACK COLOSSUS: ride its carrier bar up
+// and hop onto the Gusher Tank. Without it, a spiral tower of overstock stands in the same fenced yard.
+BW5.buildLookout = function (api, g) {
+  const PJ = BW5.PJ, M = g.def.missions.find(q => q.id === 'lookout');
+  const piece = BW567K.bigArt(api, g, 'pumpJack', PJ.x, PJ.z, { rotY: PJ.rot, vantage: false, phase: 2.2, nestReward: 'glow' });
+  // the yard fence (tarp walls) with the toll gate at (34, -116); bigger around the pump jack
+  const x0 = piece ? 12 : 18, x1 = piece ? 70 : 50, z1 = piece ? -162 : -152;
+  const panel = (ax, az, bx, bz) => {
+    const len = Math.hypot(bx - ax, bz - az), yaw = Math.atan2(bx - ax, bz - az);
+    api.mesh((ax + bx) / 2, (az + bz) / 2, m => { m.lo = true; const n = Math.max(1, Math.round(len / 4)); for (let i = 0; i < n; i++) { m.color(i % 2 ? '#2a6ac8' : '#38a8e8'); BW567K.rbox(m, 0, 2.5, -len / 2 + (i + 0.5) * len / n, 0.3, 5, len / n - 0.1, 0.12); } m.lo = false; return { cols: [{ t: 'box', x: 0, z: 0, hx: 0.15, hz: len / 2, y0: 0, y1: 5 }] }; }, { yaw });
   };
-  panel(18, -116, 31, -116); panel(37, -116, 50, -116); panel(18, -116, 18, -152); panel(50, -116, 50, -152); panel(18, -152, 50, -152);
+  panel(x0, -116, 31, -116); panel(37, -116, x1, -116); panel(x0, -116, x0, z1); panel(x1, -116, x1, z1); panel(x0, z1, x1, z1);
   api.prop('booth', { x: 41.5, z: -111.5, roof: '#ffd84a', col: '#2a1a0a' });
-  api.sign('OVERSTOCK LOOKOUT\nACCESS: ONE (1) TRADE', 27.6, -112, { yaw: 0, h: 1.2, style: { bg: '#2a1a0a', fg: '#ffd84a', size: 19, border: '#ffd84a' } });
+  api.sign(piece ? 'BISCUIT\'S LOOKOUT\nACCESS: ONE (1) TRADE' : 'OVERSTOCK LOOKOUT\nACCESS: ONE (1) TRADE', 27.6, -112, { yaw: 0, h: 1.2, style: { bg: '#2a1a0a', fg: '#ffd84a', size: 19, border: '#ffd84a' } });
   BW5.state.toll = api.collider({ t: 'box', x: 34, z: -116, hx: 3.2, hz: 0.4, y0: 0, y1: 5, walk: false });
   const arm = api.mover(m => { m.color('#2a2a30'); BW567K.rbox(m, 0, -0.5, 0, 0.5, 1.0, 0.5, 0.1); m.color('#ffd84a').shine(2); BW567K.rbox(m, 3.2, 0, 0, 6.4, 0.25, 0.22, 0.1); m.color('#1a1a1a'); for (let k = 0; k < 4; k++) m.box(1.2 + k * 1.5, 0, 0, 0.5, 0.26, 0.23); m.shine(0); return { cols: [] }; });
   arm.x = 30.8; arm.y = 1.1; arm.z = -116; BW5.state.tollArm = arm;
+  if (piece && piece.summit) {
+    const S = piece.summit;
+    BW5.LOOK = { kind: 'pump', x: S.x, y: S.y, z: S.z, r: S.r, piece };
+    Object.assign(M, { name: 'Biscuit\'s Lookout', short: 'Ride the Pump Jack up to the Gusher Tank',
+      desc: 'Ride the Pump Jack Colossus\'s carrier bar up, hop onto the Gusher Tank and look for fire on the horizon.', hint: 'Out the back, through the toll gate. Board from the crate by the wellhead.' });
+    // a "you can do it" sign at the boarding crate
+    const c = piece.toWorld(-3.2, 0, 18.2);
+    api.sign('LOOKOUT ELEVATOR\nHOP ON WHEN IT DIPS', c[0], c[2], { yaw: PJ.rot - Math.PI / 2, h: 1.1, style: { bg: '#ffc21a', fg: '#2a1a0a', size: 19, border: '#2a1a0a' } });
+  } else {
+    // [integration placeholder] no big-art module in this build: the Overstock spiral tower stands in
+    BW5.LOOK = { kind: 'tower', x: BW5.TOWER.x, y: 26, z: BW5.TOWER.z, r: 3.4 };
+    Object.assign(M, { name: 'The Overstock Lookout', short: 'Climb the Overstock lookout', desc: 'Climb the tower of overstock and look for fire on the horizon.', hint: 'Out the back east door' });
+    BW5.buildTower(api, g);
+  }
+  const L = BW5.LOOK;
+  M.target = { x: L.x, z: L.z, r: Math.max(2.4, L.r - 0.6), y: L.y - 0.1 };
+  M.marker = { x: L.x, z: L.z };
+};
+// the fallback lookout: a spiral of pallets around a column of giant overstock
+BW5.buildTower = function (api, g) {
+  const T = BW5.TOWER;
   // central column of giant overstock
   api.mesh(T.x, T.z, m => {
     const cols = [];

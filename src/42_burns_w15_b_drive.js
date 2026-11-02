@@ -45,10 +45,13 @@ const BW15D = {
     if (sy >= -0.25) S.revT = 0;
     if (S.v > vmax) S.v = approach(S.v, vmax, 8 * dt);
     // auto-brake behind whatever is ahead (traffic, cops); bumping at speed is still possible
-    if (S.v > 0 && S.capAhead !== undefined && S.v > S.capAhead) S.v = approach(S.v, Math.max(0, S.capAhead), 16 * dt);
+    // (steering lets you crawl out from behind a stopped car)
+    const capMin = Math.abs(sx) > 0.35 && sy > -0.25 ? 1.8 : 0;
+    if (S.v > 0 && S.capAhead !== undefined && S.v > Math.max(capMin, S.capAhead)) S.v = approach(S.v, Math.max(capMin, S.capAhead), 16 * dt);
+    if (capMin && S.v < capMin && sy > 0.25) S.v = Math.min(capMin, S.v + 4 * dt);
     // ---- steering
     S.steer = BurnsM.damp(S.steer, clamp(sx, -1, 1), 7, dt);
-    const av = Math.abs(S.v), turn = 1.25 * clamp(av / 4.5, 0, 1) / (1 + Math.max(0, av - 11) * 0.035);
+    const av = Math.abs(S.v), turn = 1.25 * clamp(av / 3, 0, 1) / (1 + Math.max(0, av - 11) * 0.035);
     let yawRate = -S.steer * turn * (S.v < 0 ? -1 : 1);
     // trip wobble: a lazy sway that the lane assist and the steady taps fight
     const tv = BW15D.tripVis(S), encK = S.enc ? 1.6 : 1, steady = S.enc ? S.enc.steady : 0;
