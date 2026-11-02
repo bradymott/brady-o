@@ -51,7 +51,7 @@ BurnsWorlds.register({
     { id: 'escort', name: 'The Informant', type: 'escort', requires: ['creep'], giver: 'velour', start: 'manual', companion: 'velour', short: 'Walk Agent Velour to the Quiet Lounge', marker: { x: 52, z: 8 },
       target: { x: 52, z: 8, r: 4.5 }, desc: 'Agent Velour will only talk somewhere quiet. Walk him to the Quiet Lounge, and don\'t let a creep get close enough to hug him.', hint: 'From the cuddle puddle east to the Quiet Lounge',
       onStart(g) { BURNS_W4.escortStart(g); }, onFail(g) { BURNS_W4.escortReset(g); }, onComplete(g) { BURNS_W4.velourTalks(g); } },
-    { id: 'summit', name: 'Top of the Dome', type: 'climb', start: 'trigger', secret: true, short: 'Climb to the neon heart', target: { x: 22, z: -62, r: 3.4, y: 17.5 }, tokenAt: { x: 23.5, y: 19.2, z: -62 },
+    { id: 'summit', name: 'Top of the Dome', type: 'climb', start: 'trigger', secret: true, short: 'Climb to the neon heart', target: { x: 22, z: -62, r: 3.4, y: 17.0 }, tokenAt: { x: 23.2, y: 18.6, z: -62 },
       desc: 'Somebody built a spiral of glowing pads up the big pink dome. At the top: a giant neon heart. Obviously.', hint: 'Around the outside of the big pink dome' },
     { id: 'boss', name: 'The Velvet Creeper', type: 'boss', requires: ['escort'], start: 'manual', tokenDirect: true, short: 'Defeat the Velvet Creeper!', marker: { x: 22, z: -62 },
       desc: 'The Velvet Creeper boa-lassoed your informant into the big pink dome. Dodge his lasso, pop his pickup lines, and bonk him while he\'s tangled.', hint: 'Inside the big pink dome', lockedDesc: 'Find the informant first.' }
@@ -257,7 +257,7 @@ BURNS_W4.buildDistrict = function (api, g) {
       else if (st === 'active') g2.say(a, [`${g2.missions.get('goggles').n} of 8 goggles. The playa giveth goggles. The playa taketh goggles.`]);
       else g2.say(a, ['Eight goggles, reunited with their faces. You\'re a hero to the slightly visually impaired.']);
     } });
-  const GG = [[-60, 0.9, 30], [62, 7.3, 44], [-30, 1.2, -18], [8, 3.6, 32], [44, 0.9, -38], [-72, 8.9, -20], [-24, 1.2, -10], [70, 0.9, -70]];
+  const GG = [[-60, 0.9, 30], [62, 7.3, 44], [-30, 1.2, -18], [8, 4.3, 32], [44, 0.9, -38], [-72, 8.9, -20], [-24, 1.2, -10], [70, 0.9, -70]];
   GG.forEach(([x, y, z], i) => api.pickup('item:goggles', x, y, z, { mission: 'goggles', gate: true, id: 'gg' + i }));
   api.checkpoint('cp_row', -8, 30, { yaw: Math.PI, name: 'Lounge Row' });
 };
@@ -289,16 +289,16 @@ BURNS_W4.buildPuddle = function (api, g) {
 /* ---------------- the big pink dome (enterable lathe shell) ---------------- */
 BURNS_W4.buildDome = function (api, g) {
   const W4 = BURNS_W4, S = W4.state, BW = BURNS_W234, D = W4.DOME, R = api.rng;
-  const N = 14, prof = [], inner = [];
-  for (let k = 0; k <= N; k++) { const a = k / N * Math.PI / 2, r = D.r * Math.cos(a), y = D.h * Math.sin(a), stripe = k % 2 ? '#ff7ab8' : '#ff9ad0'; prof.push([Math.max(0.001, r), y, stripe]); }
-  for (let k = N; k >= 0; k--) { const a = k / N * Math.PI / 2; inner.push([Math.max(0.001, (D.r - 0.25) * Math.cos(a)), (D.h - 0.25) * Math.sin(a), k % 2 ? '#c84a8a' : '#d85a9a']); }
-  // the doorway faces the city (south, +Z): leave a gap of ~34 degrees in both shells
-  const gap = 0.3;
+  const N = 14, K = 4, prof = [], inner = [];
+  for (let k = 0; k <= N; k++) { const a = k / N * Math.PI / 2, stripe = k % 2 ? '#ff7ab8' : '#ff9ad0'; prof.push([Math.max(0.001, D.r * Math.cos(a)), D.h * Math.sin(a), stripe]); inner.push([Math.max(0.001, (D.r - 0.25) * Math.cos(a)), (D.h - 0.25) * Math.sin(a), k % 2 ? '#c84a8a' : '#d85a9a', 0.12]); }
+  // the doorway faces the city (south, +Z): a gap in the lower band only, so it reads as a door
+  const gap = 0.18, doorH = prof[K][1];
   api.mesh(D.x, D.z, m => {
-    m.color('#ff8ac0').shine(2); m.lathe(prof, { seg: 40, theta0: gap, theta1: TAU - gap }); m.shine(0);
-    m.color('#c84a8a'); m.lathe(inner, { seg: 40, theta0: gap, theta1: TAU - gap });
-    // the doorway arch + neon trim
-    m.color('#ffd84a', 0.9); m.push(); m.tf(0, 0, D.r - 0.1, 0, 0, 0); m.torus(0, 3.2, 0, 4.6, 0.22, { seg: 28, tseg: 6 }); m.pop(); m.emissive(0);
+    m.color('#ff8ac0').shine(2); m.lathe(prof.slice(0, K + 1), { seg: 40, theta0: gap, theta1: TAU - gap }); m.lathe(prof.slice(K), { seg: 40 }); m.shine(0);
+    m.color('#c84a8a'); BW.innerShell(m, inner.slice(0, K + 1), { seg: 40, theta0: gap, theta1: TAU - gap }); BW.innerShell(m, inner.slice(K), { seg: 40 });
+    // the doorway arch (an upright oval of neon) + trim
+    const dz = D.r * Math.cos(gap) + 0.05, dw = D.r * Math.sin(gap);
+    m.color('#ffd84a', 0.9); m.push(); m.tf(0, 0, dz, 0, Math.PI / 2, 0, 1, 1, doorH / dw); m.torus(0, 0, 0, dw, 0.22, { seg: 28, tseg: 6 }); m.pop(); m.emissive(0);
     m.color('#ff3b8a', 1); BW.ring(m, 0, D.h * 0.55, 0, D.r * Math.cos(Math.asin(0.55)) + 0.15, 0.12, { seg: 48, tseg: 4 }); m.emissive(0);
     // inside: a round stage, a dance floor and a disco ball
     m.color('#2a0a1a'); BW.post(m, 0, 0, -10, 4.2, 0.6, { edge: 0.18 });
@@ -308,7 +308,7 @@ BURNS_W4.buildDome = function (api, g) {
     m.color('#8a8a92'); BW.limb(m, 0, D.h - 1.8, 0, 0, D.h - 0.2, 0, 0.05);
     // the walls: a ring of wall colliders (camera-friendly inside), leaving the doorway open
     const cols = [];
-    for (let i = 0; i < 36; i++) { const a = (i + 0.5) / 36 * TAU; if (a < gap + 0.05 || a > TAU - gap - 0.05) continue; const wr = D.r - 0.2; cols.push({ t: 'box', x: Math.sin(a) * wr, z: Math.cos(a) * wr, hx: wr * Math.PI / 36 + 0.15, hz: 0.35, y0: 0, y1: 7.5, yaw: a, walk: false }); }
+    for (let i = 0; i < 48; i++) { const a = (i + 0.5) / 48 * TAU; if (a < gap + 0.04 || a > TAU - gap - 0.04) continue; const wr = D.r - 0.2; cols.push({ t: 'box', x: Math.sin(a) * wr, z: Math.cos(a) * wr, hx: wr * Math.PI / 48 + 0.15, hz: 0.35, y0: 0, y1: 7.5, yaw: a, walk: false }); }
     cols.push({ t: 'cyl', x: 0, z: -10, r: 4.2, y0: 0, y1: 0.6 });
     return { cols, lights: [{ x: 0, y: D.h - 3.4, z: 0, s: 3.5, c: '#ffffff', blink: 3 }, { x: 0, y: 0, z: 0, s: 0, c: '#ff4fa8', pool: 20 }, { x: 0, y: 3.2, z: D.r + 0.2, s: 2, c: '#ffd84a' }] };
   });
@@ -405,7 +405,7 @@ BurnsBehaviors.register('w4Gazer', {
       D.cd = 9; S.gaze = { a, mash: 0, t: 0, last: -1 };
       p.locked = true; p.animOverride = 'idle'; p.vx = p.vz = 0;
       a.say('Shh. Don\'t speak. Just... gaze. Let our souls hold hands.', 3);
-      g.warn('EYE CONTACT! MASH JUMP / ACTION TO LOOK AWAY', 2.5); burnsSfx('lsd', { vol: 0.5 });
+      g.warn('MASH TO LOOK AWAY!', 2.5); burnsSfx('lsd', { vol: 0.5 });
     }
     a.physics(dt);
   }
@@ -470,7 +470,7 @@ BURNS_W4.bossIntro = function (g) {
   g.missions.start('boss', true);
   const c1 = { x: D.x + 6, y: 3.5, z: D.z + 4, tx: a.x, ty: 3, tz: a.z, fov: 0.85 };
   g.cutscene([
-    { music: 'burns_boss' },
+    { music: 'boss' },
     { cam: c1 },
     { banner: ['THE VELVET CREEPER', 'King of the Lounge · Boss', { col: '#ff3b8a', big: true, dur: 3 }] },
     { say: [a, ['Welcome... to my LOUNGE. Have you met my boa? Her name is Consent. Just kidding. Her name is Linda.', 'Your little informant is MINE now. Nobody leaves without a hug. And I do the hugging.']] },

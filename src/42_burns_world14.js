@@ -13,7 +13,7 @@
      rings      Ring Run             13 glowing rings over the deep-playa art
      needle     Thread the Needle    secret: fly UNDER the Leaning Lighthouses' kiss
      formation  Freefall Formation   fall through all 5 formation rings
-     bullseye   Bullseye Landing     land within 3 m of the X
+     bullseye   Bullseye Landing     land inside the 4 m bullseye by the X
    Story missions: pilot (find Dusty), chute (the rigger + the sparkle pony),
    briefing (Safety Third), board (wheels up), jump (land at the Glow Crew).
    Files: 42_burns_w14_a_base.js (config, models, anims), _b_city.js (the
@@ -71,7 +71,7 @@ const BW14_W = {
       // the drop zone
       const DZ = S.dz, inDz = Math.hypot(d.x - DZ.x, d.z - DZ.z) < DZ.r, high = d.y - BW14_PLANE.GEAR_H >= DZ.alt;
       const ready = inDz && high && !d.ground;
-      if (ready && !S.dzReady) { F.say('GREEN LIGHT! Out on the step, kid! JUMP!', 'green'); burnsSfx('greeter_bell', { pitch: 1.4 }); g.warn('GREEN LIGHT · JUMP!', 1.6); }
+      if (ready && !S.dzReady) { F.say('GREEN LIGHT! Out on the step, kid! JUMP!', 'green'); burnsSfx('greeter_bell', { pitch: 1.4 }); BW14_HUD.flash(g, 'GREEN LIGHT · JUMP!', 1.6); }
       if (inDz && !high && !d.ground) F.hint('climb', 'We\'re over the drop zone, but too low. Climb to ' + BW14_HUD.ft(DZ.alt) + ' feet!');
       S.dzReady = ready;
     } else if (name === 'ring') {
@@ -95,7 +95,7 @@ const BW14_W = {
       if (d.q === 'perfect') { g.banner('PERFECT PULL!', 'Right in the green. +10 glow sticks', { col: '#7aff5a' }); g.addGlow(10); F.say('Beautiful pull! Now steer for the X. Toggles: left, right, both to flare.'); }
       else if (d.q === 'early') { g.banner('EARLY PULL', 'Long scenic ride. Mind the wind!', { col: '#9adcff', small: true }); F.say('Early pull! You\'ll be up there a while. Watch the wind drift.'); }
       else if (d.q === 'late') { g.banner('LATE PULL!', 'Cutting it close...', { col: '#ffb020', small: true }); F.say('LATE! Flare when your feet are about to touch!'); }
-      else { g.warn(d.auto ? 'NO PULL!' : 'TOO LOW!', 1.6); F.say(d.auto ? 'PULL! PULL! ...the backup popped. It\'s gonna be a lumpy one.' : 'Way too low! That chute needs more sky than that!'); }
+      else { BW14_HUD.flash(g, d.auto ? 'NO PULL!' : 'TOO LOW!', 1.6); F.say(d.auto ? 'PULL! PULL! ...the backup popped. It\'s gonna be a lumpy one.' : 'Way too low! That chute needs more sky than that!'); }
       void C;
     } else if (name === 'open') {
       BW14_W.ctlHint(g, 'canopy');
@@ -116,9 +116,9 @@ const BW14_W = {
   updateTracker(g) {
     const S = g.bw14, F = S.fly, m = g.missions.get('jump'); if (!m) return;
     let t = 'Skydive into the Burn';
-    if (F.mode === 'plane') { const r = F.nextRing(); t = F.pl.ground ? 'Throttle up · pull back to take off' : r ? 'Fly through ring ' + (r.i + 1) + ' of ' + F.rings.length : 'Climb to ' + BW14_HUD.ft(S.dz.alt) + ' ft over the drop zone · JUMP'; }
-    else if (F.mode === 'free') t = 'Freefall! Pull in the green';
-    else if (F.mode === 'canopy' || F.mode === 'deploy') t = 'Steer to the X · flare to land';
+    if (F.mode === 'plane') { const r = F.nextRing(); t = F.pl.ground ? 'Throttle up, pull back' : r ? 'Ring ' + (r.i + 1) + ' of ' + F.rings.length : 'Climb to ' + BW14_HUD.ft(S.dz.alt) + ' ft · JUMP'; }
+    else if (F.mode === 'free') t = 'Pull in the green!';
+    else if (F.mode === 'canopy' || F.mode === 'deploy') t = 'Steer to the X · flare';
     m.def.short = t;
   },
 
@@ -144,8 +144,8 @@ const BW14_W = {
     for (let k = 0; k < 5; k++) {
       const col = this.RING_COLS[(k + 2) % this.RING_COLS.length];
       const mv = api.mover(m => { BW14_Model.ring(m, col, true); return { cols: [] }; });
-      mv.x = 0; mv.y = -50; mv.z = 0; mv.scale = 6; mv.noCollide = true; mv.visible = false;
-      F.frings.push({ i: k, x: 0, y: -50, z: 0, r: 6, col, mv, done: false });
+      mv.x = 0; mv.y = -50; mv.z = 0; mv.scale = 7; mv.noCollide = true; mv.visible = false;
+      F.frings.push({ i: k, x: 0, y: -50, z: 0, r: 7, col, mv, done: false });
     }
     // festival drones over the Temple + the route
     const dspots = [[-40, -170, 50, 26, 14], [10, -150, 64, 20, 18], [-120, -160, 46, 30, 10], [250, -330, 60, 24, 16], [-290, -250, 50, 20, 20], [80, -100, 70, 26, 12], [-20, -120, 38, 18, 18]];
@@ -164,11 +164,13 @@ const BW14_W = {
     const at = (y, side) => {
       const t = (D.y - y) / BW14_PH.FALL_V, throwK = 1 - Math.exp(-t / 0.75);
       const mx = Math.sin(F.pl.yaw) * F.pl.V * 0.8 * 0.75 * throwK, mz = Math.cos(F.pl.yaw) * F.pl.V * 0.8 * 0.75 * throwK;
-      const steer = Math.min(t * 6, 70);
+      const steer = Math.min(t * 3.5, 50);
       return [D.x + mx + C.WIND.x * t + Math.sin(toLZ) * steer + Math.cos(toLZ) * side, D.z + mz + C.WIND.z * t + Math.cos(toLZ) * steer - Math.sin(toLZ) * side];
     };
-    const ys = [D.y - 55, D.y - 100, D.y - 145, D.y - 190, D.y - 232], sides = [0, 14, -12, 16, -6];
-    F.frings.forEach((r, k) => { const [x, z] = at(ys[k], sides[k]); r.x = x; r.z = z; r.y = Math.max(C.PULL_HI + 6, ys[k]); r.prev = undefined; if (r.mv) { r.mv.x = x; r.mv.y = r.y; r.mv.z = z; r.mv.visible = !r.done; } });
+    // five rings evenly spaced between just below the exit and just above the pull window
+    const top = D.y - 30, bot = C.PULL_HI + 12, gap = Math.max(14, (top - bot) / 4);
+    const ys = [0, 1, 2, 3, 4].map(k => Math.max(bot - 4, top - k * gap)), sides = [0, 4, -3, 5, -2];
+    F.frings.forEach((r, k) => { const [x, z] = at(ys[k], sides[k]); r.x = x; r.z = z; r.y = ys[k]; r.prev = undefined; if (r.mv) { r.mv.x = x; r.mv.y = r.y; r.mv.z = z; r.mv.visible = !r.done; } });
     const sticks = g.pickups.items.filter(P => P.bw14ff && !P.taken);
     sticks.forEach((P, i) => { const k = Math.floor(i / 5), f = (i % 5 + 1) / 6, ya = k === 0 ? D.y - 12 : ys[k - 1], yb = ys[Math.min(4, k)]; const y = lerp(ya, yb, f), s0 = k === 0 ? 0 : sides[k - 1], s1 = sides[Math.min(4, k)], [x, z] = at(y, lerp(s0, s1, f)); P.x = x; P.z = z; P.y0 = y; });
     const ph = g.pickups.items.find(P => P.id === 'p3' && !P.taken);
@@ -211,7 +213,8 @@ const BW14_W = {
     S.dzReady = false; F.setMode('exit');
     if (Sound.engine) Sound.engine(true, 0.4);
     g.setTod(Math.max(g.tod, 0.72), 0.02);
-    const exitCam = (k) => { const P = F.pl, s = bw14Rot(P.yaw, 0, 0, -6.5 - k * 2, 1.2 + k * 1.5, -4 + k * 3); return { x: P.x + s[0], y: P.y + s[1], z: P.z + s[2], tx: p.x, ty: p.y + 0.8, tz: p.z, fov: 1.05 }; };
+    // below the wing line, off the right side: Brady on the step, the strut, the wing above, the city way down
+    const exitCam = (k) => { const P = F.pl, s = bw14Rot(P.yaw, 0, 0, -5.6 - k * 1.6, -0.55 - k * 0.9, -3.2 + k * 2.6); return { x: P.x + s[0], y: P.y + s[1], z: P.z + s[2], tx: p.x, ty: p.y + 0.6, tz: p.z, fov: 1.1 }; };
     let tt = 0;
     g.cutscene([
       { do: g2 => { F.say('Out on the step... hold the strut... and on three!', 'step'); } },
@@ -240,6 +243,8 @@ const BW14_W = {
   /* ---------------- landing: score, card, and what happens next ---------------- */
   landed(g, r) {
     const S = g.bw14, F = S.fly, C = BW14_CFG;
+    S.ctlHint = null;
+    const jm = g.missions.get('jump'); if (jm) jm.def.short = r.land === 'hard' ? 'Ouch! Jump again' : 'Landed! GO or jump again';
     const surfName = { dome: 'A DOME!', potty: 'A PORTA-POTTY ROOF!', rv: 'AN RV ROOF!', shade: 'A SHADE STRUCTURE!', roof: 'SOMEBODY\'S ROOF!', playa: 'the playa' }[r.surf] || 'the playa';
     const rows = [];
     if (r.land === 'hard') {
@@ -248,13 +253,13 @@ const BW14_W = {
       F.say('You okay? Shake it off. I\'m circling back. One more time!', 'hard');
       g.fx.burst(r.x, 1, r.z, 'star', 20, '#ffe24a'); burnsSfx('crowd', { vol: 0.4 });
     } else {
-      const d = r.dist, bull = d < 3, great = d < 8, good = d < 18;
+      const d = r.dist, bull = d < 4, great = d < 9, good = d < 18;
       const stars = (bull ? 2 : great ? 1 : good ? 1 : 0) + (r.land === 'soft' ? 1 : 0) - (r.land === 'rough' ? 1 : 0);
       const landTxt = { soft: r.perfectFlare ? 'PERFECT FLARE' : 'SOFT', ok: 'RAN IT OUT', rough: 'TUMBLE!' }[r.land];
       rows.push(['Distance to the X', d < 1 ? 'ON IT!' : d.toFixed(1) + ' m', bull ? '#7aff5a' : great ? '#ffe24a' : '#ffffff']);
       rows.push(['Landing', landTxt, r.land === 'soft' ? '#7aff5a' : r.land === 'ok' ? '#ffe24a' : '#ff9a6a']);
       if (r.surf !== 'playa') rows.push(['Touched down on', surfName, '#ff9ad8']);
-      const title = bull ? 'BULLSEYE!' : great ? 'NICE LANDING!' : good ? 'GOOD LANDING' : r.surf !== 'playa' ? 'UNSCHEDULED STOP' : 'YOU LANDED!';
+      const title = { potty: 'OCCUPIED!', dome: 'DOME SLIDE!', rv: 'RV ROOFTOP!', shade: 'SHADE BOUNCE!', roof: 'UNSCHEDULED STOP' }[r.surf] || (bull ? 'BULLSEYE!' : great ? 'NICE LANDING!' : good ? 'GOOD LANDING' : 'YOU LANDED!');
       const quip = r.surf === 'potty' ? 'From inside: "OCCUPIED!"' : r.surf === 'dome' ? 'You slid down the dome. Somebody inside cheered.' : r.surf === 'rv' ? 'The RV owner: "Rent is due Sunday."' : r.surf === 'shade' ? 'Boing. Shade structures make great trampolines. Don\'t tell them.' : r.land === 'rough' ? 'You tumbled like a dusty burrito. The crowd loved it.' : bull ? 'The Glow Crew is losing their minds.' : d > 45 ? 'The Glow Crew is jogging over with your bike.' : 'The Glow Crew waves their glow sticks.';
       S.card = { t: 0, title, col: bull ? '#7aff5a' : '#ffd84a', rows, stars: clamp(stars, 0, 3), quip, again: true, hard: false };
       if (bull && !g.missions.isDone('bullseye')) bw14After(g, 0.6, g2 => g2.missions.complete('bullseye'));
@@ -355,6 +360,10 @@ const BW14_W = {
       { banner: [BurnsWorlds.label(14).toUpperCase(), 'SKYDIVE INTO THE BURN', { col: '#ff9a4a', big: true, dur: 3 }] },
       { cam: { from: { x: 520, y: 60, z: 330, tx: 420, ty: 0, tz: 140, fov: 0.9 }, to: { x: C.SPAWN.x - 5, y: 2.4, z: C.SPAWN.z + 26, tx: C.SPAWN.x, ty: 1.6, tz: C.SPAWN.z + 16, fov: 0.85 }, dur: 3.5 } },
       { say: ['brady', ['Revoked. My ticket got REVOKED.', 'By a Ranger with a clipboard and a "cop" in a jester hat. Escorted out of my own city.']] },
+      { cam: { x: 378, y: 2.4, z: 222, tx: 366, ty: 1.5, tz: 230, fov: 0.85 } },
+      { say: [{ name: 'RANGER RAMSEY', model: BurnsRig.model(BurnsRig.npcSpec('ranger', 14)) }, ['And STAY out. On foot, anyway.']] },
+      { say: [{ name: '"DAVE" (A REGULAR BURNER)', model: BurnsRig.model(BurnsRig.npcSpec('undercovercop', 14)) }, ['Groovy.']] },
+      { cam: { x: C.SPAWN.x - 5, y: 2.4, z: C.SPAWN.z + 26, tx: C.SPAWN.x, ty: 1.6, tz: C.SPAWN.z + 16, fov: 0.85 } },
       { say: ['brady', ['And Chinka is on top of the Man\'s pavilion. Waiting for me.']] },
       { do: g2 => { S.flyby = 0; burnsSfx('artcarHorn', { pitch: 0.5, vol: 0.4 }); } },
       { cam: { x: C.SPAWN.x - 4, y: 1.8, z: C.SPAWN.z + 24, tx: C.SPAWN.x + 20, ty: 40, tz: C.SPAWN.z - 60, fov: 0.95 } },
@@ -394,8 +403,8 @@ BurnsWorlds.register({
       desc: 'Two lighthouses lean together out in the deep playa. There\'s a gap under the kiss. A small plane fits. Probably.', hint: 'The Leaning Lighthouses, deep playa' },
     { id: 'formation', name: 'Freefall Formation', type: 'custom', start: 'manual', requires: ['board'], tokenDirect: true, short: 'Fall through all 5 formation rings',
       desc: 'The Glow Crew\'s friends hung five LED formation rings under the drop zone. Steer through every one before you pull.', hint: 'Freefall, below the drop zone' },
-    { id: 'bullseye', name: 'Bullseye Landing', type: 'custom', start: 'manual', requires: ['board'], tokenDirect: true, short: 'Land within 3 m of the X',
-      desc: 'The Glow Crew laid out a target next to your bike. Land on the X. Flare just before touchdown.', hint: 'The Glow Crew camp, 4:40 & Esplanade' },
+    { id: 'bullseye', name: 'Bullseye Landing', type: 'custom', start: 'manual', requires: ['board'], tokenDirect: true, short: 'Land in the bullseye (4 m)',
+      desc: 'The Glow Crew laid out a target next to your bike. Land inside the pink bullseye. Flare just before touchdown.', hint: 'The Glow Crew camp, 4:40 & Esplanade' },
     { id: 'jump', name: 'Skydive Into the Burn', type: 'custom', token: false, start: 'manual', requires: ['board'], short: 'Skydive into the Burn',
       desc: 'Fly over the city, jump at the drop zone, pull in the green, steer to the Glow Crew, land by your bike.', hint: 'The drop zone over the Man' }
   ],
@@ -416,6 +425,7 @@ BurnsWorlds.register({
     BW14_City.ART.find(a => a.id === 'lighthouses').yaw = -1.45;
     BW14_City.art(api, g);
     S.man = BW14_City.man(api, g);
+    S.artCars = BW14_City.artCars(api, g);
     // hot art with thermals: the plaza fire pieces + the Ember Bloom by the landing zone
     BW14_City.hotArt(api, g, bw14Clock(7.5, 248).x, bw14Clock(7.5, 248).z, 'the Flame Lotus', 8, 18);
     BW14_City.hotArt(api, g, bw14Clock(4.5, 248).x, bw14Clock(4.5, 248).z, 'the Ember Tree', 8, 18);
@@ -436,6 +446,7 @@ BurnsWorlds.register({
     const F = S.fly = new BW14_Fly(g, S);
     { const m = new BurnsMesh(8192); BW14_Model.plane(m, { skinned: true }); F.planeP = new BW14_Puppet(g, m.geo(), BW14_PLANE.NB); g.addBoss(F.planeP); }
     { const m = new BurnsMesh(4096); BW14_Model.canopy(m); F.canP = new BW14_Puppet(g, m.geo(), 3); F.canP.hidden = true; g.addBoss(F.canP); }
+    S.geos = [F.planeP.model.geo, F.canP.model.geo];
     F.placePlane(C.PARK.x, C.PARK.z, C.PARK.yaw); F.setMode('parked'); F.posePlane(0);
     {
       const c = Math.cos(C.PARK.yaw), s = Math.sin(C.PARK.yaw);
@@ -529,6 +540,9 @@ BurnsWorlds.register({
       api.npc({ id: 'rosie', name: 'RIGGER ROSIE', spec: BW14_W.rosieSpec(), x: RG.x - 2, z: RG.z - 0.5, yaw: -Math.PI / 2,
         talk(g2, a) { BW14_W.talkRosie(g2, a); } });
     }
+    // another little plane tied down on the apron (no name decal: saves sign-atlas space)
+    api.mesh(447, 176, m => { m.tf(0, BW14_PLANE.GEAR_H * 0.85, 0, 0, 0, 0, 0.85); BW14_Model.plane(m, { body: '#ffd84a', belly: '#9a6bff', stripe: '#ff4fd8', trim: '#38f2ff', name: false, ears: false, led: false }); return { cols: BW14_Model.planeCols().map(c => Object.assign({}, c, { x: c.x * 0.85, z: c.z * 0.85, hx: c.hx && c.hx * 0.85, hz: c.hz && c.hz * 0.85, r: c.r && c.r * 0.85, y0: c.y0 * 0.85, y1: c.y1 * 0.85 })) }; }, { yaw: -Math.PI / 2 - 0.25 });
+    for (const sd of [1, -1]) api.cylinder(447 + Math.sin(-Math.PI / 2 - 0.25 + sd * Math.PI / 2) * 4.6, 0, 176 + Math.cos(-Math.PI / 2 - 0.25 + sd * Math.PI / 2) * 4.6, 0.18, 0.4, '#3a3a44', { noCol: true });
     // the fuel depot + the fuel truck (drivable)
     {
       const FU = C.FUEL;
@@ -543,6 +557,11 @@ BurnsWorlds.register({
     // walls of the airport (the city fence keeps Brady on the airstrip until he flies)
     for (let z = -36; z < 300; z += 20) api.prop('fence', { x: 352, z: z + 10, yaw: Math.PI / 2, len: 20 });
     for (let x = 352; x < 560; x += 20) { api.prop('fence', { x: x + 10, z: -38, len: 20 }); }
+    // the Man's goons from the Workshops, guarding the fence they walked Brady out through
+    api.npc({ id: 'goonRanger', name: 'RANGER RAMSEY', type: 'ranger', seed: 14, x: 366, z: 226, yaw: Math.PI / 2, behavior: 'idle',
+      lines: ['Ticket: revoked. Per the principles. Specifically principle eleven, which I wrote this morning.', 'The city is closed to you ON FOOT, sir. I was very specific about the feet.', 'I\'m not a cop. HE is. ...Undercover.'] });
+    api.npc({ id: 'goonCop', name: '"DAVE" (A REGULAR BURNER)', type: 'undercovercop', seed: 14, x: 366, z: 233, yaw: Math.PI / 2, behavior: 'idle',
+      lines: ['Greetings, fellow burner. Nothing to see here. Groovy.', 'Is that a parachute? ...Carry on, citizen. I mean. Groovy.'] });
     api.sign('CITY FENCE\nRANGERS SAY: NOPE', 356, 160, { yaw: Math.PI / 2, h: 1.1, style: { bg: '#f4e8c8', fg: '#3a1a10', size: 28, border: '#c81a1a' } });
     api.sign('BLACK ROCK MUNICIPAL AIRSTRIP\nPOP: WHOEVER LANDS', C.SPAWN.x + 5, C.SPAWN.z - 4, { yaw: 0, h: 1.3, style: { bg: '#2a1a3a', fg: '#ffd84a', size: 28, border: '#ffd84a' } });
     api.checkpoint('cp_road', C.SPAWN.x - 4, C.SPAWN.z - 12, { yaw: Math.PI, name: 'Airstrip Road' });
@@ -561,6 +580,11 @@ BurnsWorlds.register({
     // a tech bro pitching a skydiving app, an influencer shooting on the runway
     api.enemy({ type: 'techbro', seed: 14, x: 440, z: 214, behavior: 'pitcher', hp: 2, pitches: ['UBER FOR SKYDIVING!', 'PLUMMET.APP!', 'SERIES A-LTITUDE!', 'DISRUPT GRAVITY!'] });
     api.enemy({ type: 'influencer', seed: 14, x: 398, z: 190, behavior: 'flasher', hp: 2 });
+    // air colliders for the airstrip buildings (the plane bonks off them instead of flying through)
+    BW14_City.obstacle('the hangar', C.HANGAR.x - 12, 3, C.HANGAR.z, C.HANGAR.x + 12, 3, C.HANGAR.z, 9);
+    BW14_City.obstacle('the terminal', C.SHACK.x, 0, C.SHACK.z, C.SHACK.x, 3, C.SHACK.z, 4.5);
+    BW14_City.obstacle('the control tower', C.SHACK.x + 7, 0, C.SHACK.z - 9, C.SHACK.x + 7, 10, C.SHACK.z - 9, 2.6);
+    BW14_City.obstacle('the fuel tank', C.FUEL.x + 6, 2.6, C.FUEL.z - 9, C.FUEL.x + 6, 2.6, C.FUEL.z + 1, 2.4);
     api.marker('plane', C.PARK.x, C.PARK.z, 'Dust Bunny', { col: '#ff9a4a' });
     api.marker('hangar', C.HANGAR.x, C.HANGAR.z, 'Hangar', { col: '#c8ccd4' });
     /* ---------------- the landing zone: the Glow Crew camp ---------------- */
@@ -575,7 +599,7 @@ BurnsWorlds.register({
       api.sign('BRADY\'S\nCOSTUME', L.x + 6.5, L.z - 2, { y: 1.15, post: false, h: 0.5, style: { bg: '#ff4fd8', fg: '#ffffff', size: 26 } });
       api.mesh(L.x + 4.5, L.z - 3.5, m => { BurnsProps.bikeShape(m, 0, 0, 0, Math.atan2(-L.x, -L.z), '#ffd21a'); return { cols: [] }; });
       for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; api.glow(L.x + Math.sin(a) * 20, 0.35, L.z + Math.cos(a) * 20, 0.6, BURNS_NEON[i % 7], { blink: 4 }); }
-      api.light(L.x, L.z, 24, '#ff4fd8', 0.4);
+      api.light(L.x, L.z, 22, '#ff4fd8', 0.22);
       const crewTypes = ['ledsuit', 'tutu', 'burner', 'furcoat', 'sparklepony'];
       for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + 0.4; api.npc({ type: crewTypes[i], seed: 400 + i, x: L.x + Math.sin(a) * 11, z: L.z + Math.cos(a) * 11, yaw: a + Math.PI, behavior: 'idle', anim: 'cheer', crew: true, chatter: false, lines: ['Land on the X! We believe in you! Mostly!'] }); }
       api.npc({ id: 'lumi', name: 'LUMI (GLOW CREW)', type: 'ledsuit', seed: 77, x: L.x + 3.5, z: L.z + 5, yaw: Math.PI, behavior: 'idle', anim: 'wave', crew: true, chatter: false, lines: ['We\'ve got your bike. And your costume. Just land, Brady!'] });
@@ -666,7 +690,7 @@ BurnsWorlds.register({
     const d = BurnsEnv.dir(az, el); env.sunDir = d; env.keyDir = d.slice();
     // see the whole city from the air: thinner haze the higher the camera
     const cy = g.cam ? g.cam.y : 2, k = clamp((cy - 20) / 220, 0, 1);
-    env.fogD *= lerp(1, 0.38, k); env.haze = lerp(env.haze, env.haze * 0.6, k);
+    env.fogD *= lerp(1, 0.26, k); env.haze = lerp(env.haze, env.haze * 0.55, k); env.fogMax = lerp(env.fogMax, env.fogMax * 0.8, k);
     if (F && F.active && F.mode === 'free') env.fogD *= 0.9;
   },
   drawSprites(g, R) {
@@ -687,7 +711,7 @@ BurnsWorlds.register({
       const nr = F.nextRing();
       if (nr) R.bbs.bb(nr.x, nr.y, nr.z, 30, 30, SP.glow, burnsRGBf(nr.col), 0.3 + Math.sin(t * 6) * 0.1, true);
       for (const u of F.thermalRings) { if (u.cool > 0) continue; R.bbs.bb(u.x, u.y, u.z, 24, 12, SP.glow, [1, 0.85, 0.3], 0.22, true); if (Math.random() < 0.3 && Math.hypot(u.x - cam.x, u.z - cam.z) < 260) g.fx.add(u.x + (Math.random() - 0.5) * 24, u.y - 10, u.z + (Math.random() - 0.5) * 24, 0, 12, 0, 1.4, 0.5, 0.2, [1, 0.85, 0.35], 0.8, 'spark', 1); }
-      const DZ = S.dz; R.flat.flat(DZ.x, DZ.alt, DZ.z, DZ.r * 2, DZ.r * 2, t * 0.2, SP.ring, S.dzReady ? [0.3, 1, 0.4] : [1, 0.25, 0.3], 0.45, true);
+      const DZ = S.dz; R.flat.flat(DZ.x, DZ.alt, DZ.z, DZ.r * 2, DZ.r * 2, t * 0.2, SP.ring, S.dzReady ? [0.3, 1, 0.4] : [1, 0.25, 0.3], 0.22, true);
       for (let i = 0; i < 4; i++) R.bbs.bb(DZ.x, DZ.alt - 60 + i * 40, DZ.z, 8, 40, SP.glow, S.dzReady ? [0.3, 1, 0.4] : [1, 0.3, 0.35], 0.12, true);
       // nav lights on the wingtips + a strobe
       const M = F.planeP; if (M && !M.hidden) { const a = M.point(0, 5.4, 0.9, 0.4), b = M.point(0, -5.4, 0.9, 0.4), c = M.point(0, 0, 1.6, -3.9); R.bbs.bb(a[0], a[1], a[2], 1.4, 1.4, SP.glow, [1, 0.2, 0.2], 0.9, true); R.bbs.bb(b[0], b[1], b[2], 1.4, 1.4, SP.glow, [0.2, 1, 0.3], 0.9, true); if (Math.floor(t * 1.5) % 2 === 0 && (t * 1.5) % 1 < 0.12) R.bbs.bb(c[0], c[1], c[2], 3, 3, SP.glow, [1, 1, 1], 1, true); }

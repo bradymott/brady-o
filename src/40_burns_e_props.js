@@ -15,20 +15,25 @@ const BurnsProps = {
   rngFor(o) { return mulberry32(o && o.seed !== undefined ? o.seed : 1234); },
   // a real tyre: rounded rubber torus, sidewall, shiny hub with a cap (axle along X)
   wheel(m, x, y, z, r, w, col) {
-    const tr = Math.min(w * 0.5, r * 0.3), lo = m.lo;
     m.push(); m.tf(x, y, z, 0, 0, Math.PI / 2);
+    if (m.lo) {   // distant / LOD: a smooth tyre drum and a hub disc (~60 triangles)
+      m.color(col || '#1c1c20'); m.cyl(0, -w / 2, 0, r, r, w, 8, { smooth: true });
+      m.color('#9a9ea8'); m.cyl(0, -w / 2 - 0.01, 0, r * 0.5, r * 0.5, w + 0.02, 6, { smooth: true });
+      m.pop(); return;
+    }
+    const tr = Math.min(w * 0.5, r * 0.3);
     m.color(col || '#1c1c20').shine(1);
-    m.push(); m.tf(0, 0, 0, 0, 0, 0, 1, w / (2 * tr), 1); m.torus(0, 0, 0, r - tr, tr, { seg: lo ? 10 : 16, tseg: lo ? 5 : 8 }); m.pop();
-    m.shine(0); m.color('#26262c'); m.cyl(0, -w * 0.4, 0, r - tr, r - tr, w * 0.8, 12, { caps: false });
-    m.color('#b8bcc8').shine(3); m.roundCyl(0, -w * 0.36, 0, r * 0.52, w * 0.72, Math.min(r * 0.1, w * 0.3), { seg: lo ? 8 : 12 });
-    m.color('#6a6e78'); m.roundCyl(0, -w * 0.4, 0, r * 0.17, w * 0.8, r * 0.05, { seg: 8 });
+    m.push(); m.tf(0, 0, 0, 0, 0, 0, 1, w / (2 * tr), 1); m.torus(0, 0, 0, r - tr, tr, { seg: 14, tseg: 6 }); m.pop();
+    m.shine(0); m.color('#26262c'); m.cyl(0, -w * 0.4, 0, r - tr, r - tr, w * 0.8, 10, { caps: false });
+    m.color('#b8bcc8').shine(3); m.cyl(0, -w * 0.36, 0, r * 0.52, r * 0.52, w * 0.72, 10, { smooth: true });
+    m.color('#6a6e78'); m.cyl(0, -w * 0.4, 0, r * 0.17, r * 0.17, w * 0.8, 6, { smooth: true });
     m.shine(0); m.pop();
   },
   win(m, x, y, z, w, h, side, lit, rng) {
     // a window on an X-facing side (side = +1 / -1), slightly proud of the surface; glass is glossy
     const glow = lit && rng && rng() < 0.55;
     m.color(glow ? '#ffc070' : '#1c2433', glow ? 0.85 : 0.04).shine(glow ? 0 : 3);
-    m.roundBox(x + side * 0.012, y, z, 0.03, h, w, 0.012, { k: 1, m: 1 });
+    if (m.lo) m.box(x + side * 0.012, y, z, 0.03, h, w); else m.roundBox(x + side * 0.012, y, z, 0.03, h, w, 0.012, { k: 1, m: 1 });
     m.emissive(0).shine(0);
   },
   // swoosh decal along a side

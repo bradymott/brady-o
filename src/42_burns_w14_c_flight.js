@@ -92,8 +92,10 @@ class BW14_Fly {
       d.mv.x = d.x; d.mv.y = d.y; d.mv.z = d.z;
     }
     for (const dd of this.devils) { const a = t * dd.sp + dd.ph; dd.x = dd.cx + Math.sin(a) * dd.rx; dd.z = dd.cz + Math.cos(a * 0.8) * dd.rz; }
-    for (const r of this.rings) if (r.mv && !r.done) { r.mv.scale = r.r * (1 + Math.sin(t * 3 + r.i) * 0.03); }
-    for (const r of this.thermalRings) if (r.mv) { r.mv.yaw = t * 0.6 + r.i; r.cool = Math.max(0, (r.cool || 0) - dt); }
+    // gate rings + updrafts belong to the plane: hidden while Brady falls or floats (no mix-ups with formation rings)
+    const planeRings = !this.active || this.mode === 'plane' || this.mode === 'parked' || this.mode === 'idle';
+    for (const r of this.rings) if (r.mv) { r.mv.visible = planeRings && !r.done; if (!r.done) r.mv.scale = r.r * (1 + Math.sin(t * 3 + r.i) * 0.03); }
+    for (const r of this.thermalRings) if (r.mv) { r.mv.visible = planeRings; r.mv.yaw = t * 0.6 + r.i; r.cool = Math.max(0, (r.cool || 0) - dt); }
     for (const r of this.frings) if (r.mv && !r.done) r.mv.yaw = t * 0.8 + r.i;
     if (this.active && (this.mode === 'plane' || this.mode === 'free' || this.mode === 'canopy')) this.stepFireworks(g, dt);
   }
@@ -138,7 +140,8 @@ class BW14_Fly {
       P.bank = BurnsM.damp(P.bank, 0, 8, dt);
       const rot = P.V > PH.VROT * 0.7 && pitchIn > 0.2 ? 0.17 * pitchIn : 0;
       P.pitch = BurnsM.damp(P.pitch, rot, 3, dt);
-      let a = P.thr * 5.6 - PH.DRAG * P.V * P.V - (onRwy ? PH.RWY_DRAG : 1.4) - (P.thr < 0.05 ? 2.2 : 0);
+      // the strip is smoother, but the flat playa is a runway too (so a gentle playa landing can take off again)
+      let a = P.thr * 6.5 - PH.DRAG * P.V * P.V - (onRwy ? PH.RWY_DRAG : 0.85) - (P.thr < 0.05 ? 2.2 : 0);
       P.V = Math.max(0, P.V + a * dt);
       P.x += Math.sin(P.yaw) * P.V * dt; P.z += Math.cos(P.yaw) * P.V * dt;
       P.y = gy + (onRwy ? 0 : Math.sin(this.t * 23) * 0.03 * Math.min(1, P.V / 10));
@@ -151,7 +154,7 @@ class BW14_Fly {
       P.bank += clamp(bankT - P.bank, -2.4 * dt, 2.4 * dt);
       let pitchT = pitchIn * PH.PITCH_MAX;
       const stall = P.V < PH.VSTALL;
-      if (stall) { pitchT = Math.min(pitchT, -0.32); if (!this.stallWarn) { this.stallWarn = true; g.warn('STALL! THROTTLE UP!', 1.4); this.say('Too slow! Nose down, throttle UP!', 'stall'); } } else this.stallWarn = false;
+      if (stall) { pitchT = Math.min(pitchT, -0.32); if (!this.stallWarn) { this.stallWarn = true; BW14_HUD.flash(g, 'STALL! THROTTLE UP!', 1.4); this.say('Too slow! Nose down, throttle UP!', 'stall'); } } else this.stallWarn = false;
       if (P.y > PH.CEIL) pitchT = Math.min(pitchT, -0.1);
       P.pitch += clamp(pitchT - P.pitch, -1.25 * dt, 1.25 * dt);
       const yr = clamp(-9.8 * Math.tan(P.bank) / Math.max(P.V, 12) * PH.TURN_K, -0.95, 0.95);
@@ -314,19 +317,20 @@ class BW14_Fly {
     const P = this.pl, D = this.dv;
     D.x = p.x; D.y = p.y; D.z = p.z; D.yaw = P.yaw - 0.6; D.vx = Math.sin(P.yaw) * P.V * 0.8; D.vz = Math.cos(P.yaw) * P.V * 0.8; D.vy = -1;
     D.L = D.R = 0; D.open = 0; this.collected = this.collected || 0;
-    this.setMode('free'); this.freeT = 0; this.pulled = false;
+    this.setMode('free'); this.freeT = 0; this.pulled = false; this.engOff = false;
     burnsSfx('wind', { vol: 0.8 }, 'dust'); burnsSfx('yell', { pitch: 1.2, vol: 0.5 });
     BW14_W.event(this.g, 'letgo', D);
   }
   stepFree(p, dt, I) {
     const g = this.g, D = this.dv, C = BW14_CFG, PH = BW14_PH;
     this.freeT += dt;
+    if (!this.engOff && Sound.engine) { if (this.freeT > 1.4) { this.engOff = true; Sound.engine(false, 0); } else Sound.engine(true, 0.4 - this.freeT * 0.25); }
     // steer: left/right turn, up = track forward (faster, steeper), down = backslide (slower fall)
-    D.yaw -= I.sx * 1.7 * dt;
+    D.yaw -= I.sx * 2.3 * dt;
     const fwdT = I.sy > 0 ? I.sy * PH.TRACK_V : I.sy * 4;
-    const fx = Math.sin(D.yaw), fz = Math.cos(D.yaw);
+    const fx = Math.sin(D.yaw), fz = Math.cos(D.yaw), rx = -Math.cos(D.yaw), rz = Math.sin(D.yaw), side = I.sx * 5;   // turning also side-slides a little
     const wx = C.WIND.x + this.gust.x, wz = C.WIND.z + this.gust.z;
-    D.vx = BurnsM.damp(D.vx, fx * fwdT + wx, 1.3, dt); D.vz = BurnsM.damp(D.vz, fz * fwdT + wz, 1.3, dt);
+    D.vx = BurnsM.damp(D.vx, fx * fwdT + rx * side + wx, 2.1, dt); D.vz = BurnsM.damp(D.vz, fz * fwdT + rz * side + wz, 2.1, dt);
     const vT = PH.FALL_V + Math.max(0, I.sy) * 5 - Math.max(0, -I.sy) * 4;
     D.vy = BurnsM.damp(D.vy, -vT, 0.85, dt);
     D.x += D.vx * dt; D.y += D.vy * dt; D.z += D.vz * dt;
@@ -360,7 +364,7 @@ class BW14_Fly {
   }
   pull(agl, auto) {
     const g = this.g, C = BW14_CFG;
-    if (this.pulled) return; this.pulled = true;
+    if (this.pulled) return; this.pulled = true; this.windHint = false; this.flareHint = false;
     let q = agl > C.PULL_HI ? 'early' : agl >= C.PULL_LO ? 'perfect' : agl >= C.PULL_DEAD ? 'late' : 'dead';
     if (auto) q = 'dead';
     this.pullQ = q; this.pullAlt = agl;
@@ -383,7 +387,7 @@ class BW14_Fly {
     this.poseCanopy(dt);
     const gy = g.world.surface(D.x, D.z, D.y + 1, 0.3, BURNS_SURF); this.agl = D.y - gy.y;
     if (D.y <= gy.y + 0.02) { D.y = gy.y; this.touchdown(p, gy.col, true); return; }
-    if (k >= 1 && !dead) { this.setMode('canopy'); D.vf = 4; D.minAGLbrake = 99; D.flareMax = 0; this.snapped = false; BW14_W.event(g, 'open', D); }
+    if (k >= 1 && !dead) { this.setMode('canopy'); D.vf = 4; D.flareAt = undefined; D.flareMax = 0; this.snapped = false; BW14_W.event(g, 'open', D); }
   }
   // the canopy system: centre of the canopy hangs 6.4 m over Brady's feet
   poseCanopy(dt) {
@@ -411,14 +415,15 @@ class BW14_Fly {
     const vfT = PH.CAN_V * (1 - 0.66 * brake);
     const vfOld = D.vf; D.vf = BurnsM.damp(D.vf, vfT, 1.5, dt);
     const lost = Math.max(0, vfOld - D.vf);
-    let vyT = -(PH.CAN_SINK * (1 - 0.45 * brake)) - Math.abs(turn) * 1.7;
-    if (brake > 0.86) { D.stallT += dt; if (D.stallT > 1.9) { vyT = -7.5; if (!this.stallSaid) { this.stallSaid = true; g.warn('STALL! LET UP!', 1.2); } } } else { D.stallT = Math.max(0, D.stallT - dt * 2); this.stallSaid = false; }
+    let vyT = -(PH.CAN_SINK * (1 - 0.6 * brake)) - Math.abs(turn) * 1.7;
+    if (brake > 0.86) { D.stallT += dt; if (D.stallT > 2.6) { vyT = -7.5; if (!this.stallSaid) { this.stallSaid = true; BW14_HUD.flash(g, 'STALL! LET UP!', 1.2); } } } else { D.stallT = Math.max(0, D.stallT - dt * 2); this.stallSaid = false; }
     const th = this.thermalAt(D.x, D.y, D.z) * 0.35;
     D.vy = BurnsM.damp(D.vy, vyT + th, 1.3, dt) + lost * 1.05;
     D.vy = Math.min(D.vy, 2.5);
     // wind + gusts + dust shoves
     this.stepGusts(dt);
-    const wx = C.WIND.x + this.gust.x, wz = C.WIND.z + this.gust.z;
+    // gusts ease off near the ground (wind gradient), so the final approach is fair
+    const gk = clamp((this.agl === undefined ? 30 : this.agl) / 22, 0.3, 1), wx = C.WIND.x + this.gust.x * gk, wz = C.WIND.z + this.gust.z * gk;
     const fx = Math.sin(D.yaw), fz = Math.cos(D.yaw);
     D.vx = fx * D.vf + wx; D.vz = fz * D.vf + wz;
     D.x += D.vx * dt; D.y += D.vy * dt; D.z += D.vz * dt;
@@ -427,13 +432,15 @@ class BW14_Fly {
     // collisions with tall stuff (the Man, art) push you off; tops of domes/RVs are landing spots
     const hit = bw14Probe(g, D.x, D.z, D.y);
     this.agl = D.y - hit.y;
-    if (this.agl < 8 && brake > 0.5) { D.minAGLbrake = Math.min(D.minAGLbrake, this.agl); D.flareMax = Math.max(D.flareMax, brake); }
+    if (this.agl < 8 && brake > 0.5) { if (D.flareAt === undefined) D.flareAt = this.agl; D.flareMax = Math.max(D.flareMax, brake); }
+    if (brake < 0.2) D.flareAt = undefined;
     this.checkAirPickups(D.x, D.y + 0.9, D.z, 3.2);
     p.x = D.x; p.y = D.y; p.z = D.z; p.yaw = D.yaw; p.vx = D.vx; p.vy = D.vy; p.vz = D.vz; p.grounded = false;
     const k = { l: D.L, r: D.R, roll: D.roll * 0.6 };
     p.ch.poseFn = (Pz, t) => BURNS_ANIMS.bw14Hang(Pz, t, k);
     this.poseCanopy(dt);
-    if (this.agl < 6 && this.agl > 0.5 && !this.flareHint && brake < 0.3) { this.flareHint = true; g.warn('FLARE!', 0.9); }
+    if (this.agl < 6 && this.agl > 0.5 && !this.flareHint && brake < 0.3) { this.flareHint = true; BW14_HUD.flash(g, 'FLARE!', 0.9); }
+    if (this.agl < 40 && !this.windHint) { this.windHint = true; this.say('Final approach: turn INTO the wind (face against the wind arrow) and flare at knee height!'); }
     if (D.y <= hit.y) { D.y = hit.y; this.touchdown(p, hit.col, false); }
     if (Math.random() < dt * 6) g.fx.add(D.x + (Math.random() - 0.5) * 8, D.y + 3 + Math.random() * 4, D.z + (Math.random() - 0.5) * 8, wx * 2, 0, wz * 2, 0.6, 0.05, 0.02, [1, 1, 1], 0.3, 'streak', 16);
   }
@@ -450,11 +457,11 @@ class BW14_Fly {
     const vDown = -D.vy, vh = Math.hypot(D.vx, D.vz);
     const dist = Math.hypot(D.x - C.LZ.x, D.z - C.LZ.z);
     const surf = col && col.y1 > 1.2 ? (col.bw14 || (col.t === 'dome' ? 'dome' : col.y1 > 3.1 && col.y1 < 3.6 ? 'rv' : col.y1 > 2.3 && col.y1 < 2.6 ? 'potty' : col.y1 > 2.8 && col.y1 < 3.1 ? 'shade' : 'roof')) : 'playa';
-    let land = hard || this.pullQ === 'dead' ? 'hard' : vDown < 2.0 && vh < 7 ? 'soft' : vDown < 3.8 && vh < 9.5 ? 'ok' : 'rough';
-    const perfectFlare = land === 'soft' && D.flareMax > 0.6 && D.minAGLbrake < 6.5 && D.minAGLbrake > 0.4;
-    const res = { land, dist, surf, perfectFlare, vDown, vh, x: D.x, z: D.z, pullQ: this.pullQ };
+    let land = hard || this.pullQ === 'dead' ? 'hard' : vDown < 2.4 && vh < 7 ? 'soft' : vDown < 3.9 && vh < 9.5 ? 'ok' : 'rough';
+    const perfectFlare = land === 'soft' && D.flareMax > 0.6 && D.flareAt !== undefined && D.flareAt < 5.5 && D.flareAt > 1.0;
+    const res = { land, dist, surf, perfectFlare, vDown, vh, x: D.x, z: D.z, pullQ: this.pullQ, col: surf === 'dome' ? col : null };
     this.result = res;
-    this.setMode('landed'); this.landT = 0;
+    this.setMode('landed'); this.landT = 0; this._slid = false; this._stood = false;
     if (this.canP) { this.canDrop = { y: 0, t: 0 }; }
     p.x = D.x; p.y = D.y; p.z = D.z; p.yaw = D.yaw; p.vx = p.vy = p.vz = 0; p.grounded = true;
     const anim = land === 'hard' ? 'bw14Splat' : land === 'rough' ? 'bw14Tumble' : land === 'ok' ? 'run' : 'victory';
@@ -468,12 +475,18 @@ class BW14_Fly {
     const g = this.g, D = this.dv, r = this.result;
     this.landT += dt;
     // run-out / tumble slide
-    if (r && (r.land === 'ok' || r.land === 'rough') && this.landT < (r.land === 'ok' ? 0.9 : 1.4)) {
+    if (r && r.surf !== 'dome' && (r.land === 'ok' || r.land === 'rough') && this.landT < (r.land === 'ok' ? 0.9 : 1.4)) {
       const k = r.land === 'ok' ? 4.5 : 6;
       D.x += Math.sin(D.yaw) * k * (1 - this.landT) * dt; D.z += Math.cos(D.yaw) * k * (1 - this.landT) * dt;
       const s = g.world.surface(D.x, D.z, D.y + 0.6, 0.3, BURNS_SURF); D.y = s.y;
     } else if (r && r.land === 'ok' && this.landT > 0.9 && !this._stood) { this._stood = true; p.ch.play('victory'); }
-    if (r && r.land === 'rough' && this.landT > 1.4 && !this._stood) { this._stood = true; p.ch.play('hurt'); }
+    if (r && r.land === 'rough' && r.surf !== 'dome' && this.landT > 1.4 && !this._stood) { this._stood = true; p.ch.play('hurt'); }
+    // landed on a dome: tumble down its side to the playa
+    if (r && r.col && r.surf === 'dome' && this.landT < 2.2) {
+      const c = r.col, dx = D.x - c.x, dz = D.z - c.z, d = Math.hypot(dx, dz) || 0.01, ax = dx / d, az = dz / d;
+      if (d < c.r + 0.6) { D.x += ax * 4.5 * dt; D.z += az * 4.5 * dt; const s2 = g.world.surface(D.x, D.z, D.y + 0.5, 0.25, BURNS_SURF); D.y = Math.max(s2.y, D.y - 9 * dt); p.ch.play('bw14Tumble'); D.yaw = Math.atan2(ax, az); }
+      else if (!this._slid) { this._slid = true; D.y = g.world.surface(D.x, D.z, D.y + 0.5, 0.25, BURNS_SURF).y; p.ch.play('bw14Splat'); g.fx.dust(D.x, D.y, D.z, 10); burnsSfx('land'); }
+    }
     p.x = D.x; p.y = D.y; p.z = D.z; p.yaw = D.yaw;
     // the canopy settles behind Brady
     const M = this.canP;
@@ -498,7 +511,9 @@ class BW14_Fly {
     if (this.mode === 'plane' || this.mode === 'parked') {
       const P = this.pl; px = P.x; py = P.y; pz = P.z; yaw = P.yaw;
       const speedK = clamp(P.V / 35, 0, 1.3);
-      dist = (P.ground ? 9.5 : 11.5) + speedK * 1.5 + (portrait ? 4 : 0); hgt = P.ground ? 2.7 : 3.4 + (portrait ? 1.2 : 0); ty = 1.2 + P.pitch * 4;
+      // the higher you fly, the more the camera tips down so the city stays in view
+      const hk = P.ground ? 0 : clamp((P.y - 70) / 260, 0, 1);
+      dist = (P.ground ? 9.5 : 11.5) + speedK * 1.5 + (portrait ? 1.5 : 0) + hk * 3; hgt = P.ground ? 2.7 : 3.4 + (portrait ? 0.6 : 0) + hk * 7; ty = 1.2 + P.pitch * 4 - hk * 4;
       look = 7 + speedK * 4;
       C.yaw = C.init ? BurnsM.dampAngle(C.yaw, yaw + lk, P.ground ? 6 : 2.8, fdt) : yaw;
       cam.roll = BurnsM.damp(cam.roll || 0, P.ground ? 0 : -P.bank * 0.28, 4, fdt);
@@ -507,12 +522,13 @@ class BW14_Fly {
       dist = 7; hgt = 1.5; ty = 0.6; look = 3; C.yaw = C.init ? BurnsM.dampAngle(C.yaw, yaw + 0.9 + lk, 2, fdt) : yaw + 0.9; cam.roll = 0;
     } else if (this.mode === 'free') {
       const D = this.dv; px = D.x; py = D.y; pz = D.z; yaw = D.yaw;
-      dist = 6.5 + (portrait ? 3 : 0); hgt = 5.5 + (portrait ? 2 : 0); ty = -7; look = 5;
+      dist = 5.2 + (portrait ? 2.5 : 0); hgt = 3.8 + (portrait ? 1.5 : 0); ty = -5.5; look = 4;
       C.yaw = C.init ? BurnsM.dampAngle(C.yaw, yaw + lk, 2.6, fdt) : yaw; cam.roll = BurnsM.damp(cam.roll || 0, 0, 3, fdt);
     } else if (this.mode === 'deploy' || this.mode === 'canopy') {
       const D = this.dv, agl = this.agl === undefined ? 50 : this.agl, low = clamp((14 - agl) / 12, 0, 1);
       px = D.x; py = D.y; pz = D.z; yaw = D.yaw;
-      dist = lerp(10.5, 7.5, low) + (portrait ? 4 : 0); hgt = lerp(this.mode === 'deploy' ? 5 : 3.2, 1.2, low) + (portrait ? 1 : 0); ty = lerp(-1.5, 0.9, low); look = lerp(9, 6, low);
+      // keep the canopy in frame (that's what you're flying) and blend to a ground-ahead view for the flare
+      dist = lerp(this.mode === 'deploy' ? 13.5 : 12.5, 8, low) + (portrait ? 1.5 : 0); hgt = lerp(this.mode === 'deploy' ? 4.5 : 3.6, 1.4, low) + (portrait ? 0.5 : 0); ty = lerp(2.4, 0.9, low); look = lerp(4, 6, low);
       C.yaw = C.init ? BurnsM.dampAngle(C.yaw, yaw + lk, 2.2, fdt) : yaw; cam.roll = BurnsM.damp(cam.roll || 0, D.roll * 0.4, 3, fdt);
     } else {
       // landed: a slow orbit around Brady

@@ -258,7 +258,7 @@ BW11.drawLasers = function (g, R) {
     const dx = L.x - cam.x, dz = L.z - cam.z; if (dx * dx + dz * dz > 260 * 260) continue;
     if (L.when && !L.when(g)) continue;
     const near = dx * dx + dz * dz < 90 * 90, n = near ? L.n : Math.ceil(L.n / 2);
-    const sweep = Math.sin(t * (L.rate || 0.8) + L.ph), col = L.col[Math.floor(t * 0.5 + L.ph) % L.col.length];
+    const sweep = Math.sin(t * (L.rate || 0.8) + L.ph), nc = L.col.length, col = L.col[((Math.floor(t * 0.5 + L.ph) % nc) + nc) % nc];
     R.bbs.bb(L.x, L.y, L.z, 1.1, 1.1, BURNS_SPRITES.R.glow, col, 0.9, true);
     for (let i = 0; i < n; i++) {
       const u = n === 1 ? 0 : i / (n - 1) - 0.5, ang = L.yaw + u * L.spread + sweep * 0.5, el = (L.tilt || 0.18) + Math.sin(t * 0.9 + i + L.ph) * 0.12;
@@ -318,6 +318,27 @@ BW11.updateBikes = function (g, dt) {
 };
 
 /* ---------------- set-piece builders ---------------- */
+// a DJ table with two turntables and a glowing mixer (front = +Z, the DJ stands at -Z). top = surface height
+BW11.djTable = function (api, x, y, z, yaw, o) {
+  o = o || {};
+  const body = o.body || '#1a1822', trim = o.trim || '#2a2833', ca = o.colA || '#ff4fd8', cb = o.colB || '#38f2ff';
+  return api.mesh(x, z, m => {
+    m.color(body).shine(1); m.roundBox(0, 0.5, 0, 2.6, 1.0, 0.8, 0.12, { top: trim, uv: o.uv });
+    m.color(ca, 1); m.roundBox(-0.62, 0.66, 0.41, 1.1, 0.05, 0.02, 0.01); m.color(cb, 1); m.roundBox(0.62, 0.66, 0.41, 1.1, 0.05, 0.02, 0.01); m.emissive(0);
+    for (const sd of [1, -1]) {
+      const px = sd * 0.75, col = sd > 0 ? cb : ca;
+      m.color('#2a2833').shine(2); m.roundBox(px, 1.05, 0, 0.62, 0.1, 0.52, 0.03);
+      m.color('#0d0d12').shine(2); m.push(); m.tf(px, 1.1, 0); m.roundCyl(0, 0, 0, 0.2, 0.025, 0.006, { seg: 18 }); m.pop();
+      m.color(col, 0.75); m.push(); m.tf(px, 1.124, 0); m.roundCyl(0, 0, 0, 0.065, 0.006, 0.002, { seg: 12 }); m.pop(); m.emissive(0);
+      m.color('#c8c8d4').shine(3); m.limb(px + sd * 0.24, 1.14, -0.17, px + sd * 0.16, 1.15, 0.12, 0.012, 0.01, { seg: 6 });
+      m.color(col, 0.9); m.roundBox(px + sd * 0.25, 1.11, 0.17, 0.05, 0.02, 0.1, 0.008); m.emissive(0);
+    }
+    m.color('#24222c').shine(2); m.roundBox(0, 1.06, 0, 0.36, 0.12, 0.48, 0.03);
+    [ca, '#ffe24a', cb].forEach((c, i) => { for (const sd of [-1, 1]) { m.color(c, 0.65); m.push(); m.tf(sd * 0.08, 1.12, -0.14 + i * 0.1); m.roundCyl(0, 0, 0, 0.022, 0.03, 0.008, { seg: 8 }); m.pop(); } });
+    m.emissive(0).shine(0);
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.3, hz: 0.4, y0: 0, y1: 1.12 }], lights: [{ x: -0.75, y: 1.2, z: 0, s: 0.8, c: ca }, { x: 0.75, y: 1.2, z: 0, s: 0.8, c: cb }] };
+  }, { y, yaw });
+};
 // wooden speaker cabinet with two subwoofer cones (front = +Z). Returns the cone centres (local)
 BW11.speaker = function (m, x, y, z, w, h, d, o) {
   o = o || {};
@@ -368,8 +389,7 @@ BW11.buildRoot = function (api, g) {
   });
   // stage + booth
   api.roundBox(x, 0, z + 7, 11, 1.3, 5.4, '#7a5234', { r: 0.25, top: '#9a6a40' });
-  api.roundBox(x, 1.3, z + 8.0, 2.6, 1.0, 0.75, '#6a4428', { r: 0.18, top: '#3a2414' });
-  api.mesh(x, z + 8.0, m => { m.color('#9aff7a', 1); m.roundBox(0, 1.85, 0.39, 2.3, 0.05, 0.02, 0.01); m.color('#ffb040', 0.9); for (const sd of [-1, 1]) m.roundCyl(sd * 0.6, 2.3, 0, 0.22, 0.03, 0.01); m.emissive(0); return {}; });
+  BW11.djTable(api, x, 1.3, z + 8.0, 0, { body: '#6a4428', trim: '#3a2414', colA: '#9aff7a', colB: '#ffb040', uv: bark });
   // root-step climb to the treehouse, branch steps to the canopy nest
   const steps = [[1.15, 4.4, 1.6], [1.65, 4.3, 3.2], [2.15, 4.2, 4.7]];
   for (const [a, d, y] of steps) api.roundBox(x + Math.sin(a) * d, y - 0.45, z + Math.cos(a) * d, 2.3, 0.45, 2.0, '#6a4428', { r: 0.18, yaw: a, top: '#4a7a3a' });
@@ -449,8 +469,7 @@ BW11.buildTemple = function (api, g) {
   // columns
   for (const cx of [-11, -7, -3, 3, 7, 11]) api.lathe(x + cx, 1.4, z + 5.5, [[0.62, 0], [0.66, 0.25, gold, 0.3], [0.5, 0.45, '#d8c8e8'], [0.45, 4.6, '#d8c8e8'], [0.62, 4.95, gold, 0.3], [0.72, 5.3, gold, 0.4], [0.72, 5.3, gold], [0, 5.3, gold]], '#d8c8e8', { seg: 12, gloss: 2, colScale: 0.85 });
   // the booth
-  api.roundBox(x, 1.4, z + 4.9, 2.8, 1.0, 0.75, '#22102a', { r: 0.16, top: '#3a1a44' });
-  api.mesh(x, z + 4.9, m => { m.color(gold, 0.9); m.roundBox(0, 1.95, 0.39, 2.5, 0.06, 0.02, 0.01); m.emissive(0); return {}; });
+  BW11.djTable(api, x, 1.4, z + 4.9, 0, { body: '#22102a', trim: '#e0aa30', colA: '#ffb040', colB: '#ff4fd8' });
   // towers with onion domes (the west one has ledges up its face)
   for (const sd of [-1, 1]) {
     const tx = x + sd * 10, tz = z - 2.6;
@@ -517,8 +536,7 @@ BW11.buildQM = function (api, g) {
   });
   // round stage + "?"-shaped booth
   api.cylinder(x, 0, z + 5.2, 3.8, 1.0, '#1c1a2a', { round: 0.12 });
-  api.roundBox(x, 1.0, z + 6.1, 2.4, 1.0, 0.7, '#2a2840', { r: 0.18, top: '#3a3858' });
-  api.mesh(x, z + 6.1, m => { m.color('#38f2ff', 1); m.roundBox(0, 1.55, 0.36, 2.1, 0.05, 0.02, 0.01); m.emissive(0); return {}; });
+  BW11.djTable(api, x, 1.0, z + 6.1, 0, { body: '#2a2840', trim: '#3a3858', colA: '#ff4fd8', colB: '#38f2ff' });
   api.paint((c, Pt, sc) => { const [px, pz] = Pt(F.x, F.z); const gr = c.createRadialGradient(px, pz, 0, px, pz, F.r * sc); gr.addColorStop(0, 'rgba(60,40,110,0.75)'); gr.addColorStop(1, 'rgba(60,40,110,0)'); c.fillStyle = gr; c.beginPath(); c.arc(px, pz, F.r * sc, 0, TAU); c.fill(); c.fillStyle = 'rgba(120,240,255,0.18)'; c.font = `${4 * sc}px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.textBaseline = 'middle'; for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; c.fillText('?', px + Math.cos(a) * F.r * 0.6 * sc, pz + Math.sin(a) * F.r * 0.6 * sc); } });
   api.light(F.x, F.z, 16, '#9a6bff', 0.45); api.light(x, z + 4, 12, '#38f2ff', 0.4);
   for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; api.glow(F.x + Math.sin(a) * (F.r + 0.5), 0.3, F.z + Math.cos(a) * (F.r + 0.5), 0.6, i % 2 ? '#38f2ff' : '#ff4fd8', { blink: 2.5 }); }
@@ -570,7 +588,17 @@ BW11.buildDome = function (api, g) {
   api.sign('THUNDERDOME', x, z + R * 0.92 + 0.3, { yaw: 0, y: 4.5, h: 1.3, post: false, style: { bg: '#120a0a', fg: '#ff5a3a', border: '#ffb040', size: 52, glow: '#ff5a3a' }, glow: '#ff5a3a' });
   api.sign('DEATH GUILD\nFOAM ONLY · NO CRYING', x + 4.2, z + R + 2, { yaw: -0.3, h: 1.0, style: { bg: '#1a1416', fg: '#e8e0d8', border: '#ff5a3a', size: 32 } });
   // MC tower by the entrance
-  api.roundBox(x - 5.8, 0, z + R + 1.6, 2.2, 3.0, 2.2, '#2a2a30', { r: 0.15, top: '#3a3a40' });
+  api.roundBox(x - 5.8, 2.7, z + R + 1.6, 2.6, 0.3, 2.6, '#2a2a30', { r: 0.08, top: '#3a3a40' });
+  api.mesh(x - 5.8, z + R + 1.6, m => {
+    m.color('#3a3a40').shine(2);
+    for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) m.limb(sx * 1.1, 0, sz * 1.1, sx * 1.1, 2.7, sz * 1.1, 0.07, 0.07, { seg: 6 });
+    for (const sd of [-1, 1]) { m.limb(-1.1, 0.2, sd * 1.1, 1.1, 2.5, sd * 1.1, 0.04, 0.04, { seg: 5 }); m.limb(sd * 1.1, 0.2, -1.1, sd * 1.1, 2.5, 1.1, 0.04, 0.04, { seg: 5 }); }
+    for (const sd of [-1, 1]) { m.limb(-1.2, 3.8, sd * 1.2, 1.2, 3.8, sd * 1.2, 0.04, 0.04, { seg: 5 }); m.limb(sd * 1.2, 3.8, -1.2, sd * 1.2, 3.8, 1.2, 0.04, 0.04, { seg: 5 }); }
+    for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) m.limb(sx * 1.2, 3.0, sz * 1.2, sx * 1.2, 3.8, sz * 1.2, 0.04, 0.04, { seg: 5 });
+    m.color('#ff3b2a', 1); for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) m.ball(sx * 1.2, 3.9, sz * 1.2, 0.12, { seg: 8, rings: 5 }); m.emissive(0);
+    m.color('#e8e0d8').shine(2); m.push(); m.tf(0.9, 3.5, 0.9, 0.8, Math.PI / 2 - 0.3, 0); m.lathe([[0.05, 0], [0.07, 0.15], [0.25, 0.55], [0.25, 0.57], [0, 0.57]], { seg: 12 }); m.pop(); m.shine(0);
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.3, hz: 1.3, y0: 0, y1: 3.0 }], lights: [{ x: 1.2, y: 3.9, z: 1.2, s: 0.8, c: '#ff3b2a', blink: 4 }, { x: -1.2, y: 3.9, z: -1.2, s: 0.8, c: '#ff3b2a', blink: 4 }] };
+  });
   api.paint((c, Pt, sc) => { const [px, pz] = Pt(x, z); c.fillStyle = 'rgba(70,40,30,0.55)'; c.beginPath(); c.arc(px, pz, (R - 0.5) * sc, 0, TAU); c.fill(); c.strokeStyle = 'rgba(255,90,58,0.55)'; c.lineWidth = 0.25 * sc; c.beginPath(); c.arc(px, pz, (R - 3) * sc, 0, TAU); c.stroke(); c.beginPath(); c.arc(px, pz, 2 * sc, 0, TAU); c.stroke(); });
   api.light(x, z, 15, '#ff7a3a', 0.45); api.light(x, z + R + 3, 8, '#ffb040', 0.35);
   for (const n of geo.nodes) if (n[1] > 0.2 && n[1] < 0.9 && Math.random() < 0.18) api.glow(x + n[0] * R, n[1] * R, z + n[2] * R, 0.5, Math.random() < 0.5 ? '#ff5a3a' : '#ffb040', { blink: 3 });
@@ -603,8 +631,7 @@ BW11.buildWobble = function (api, g) {
     return { cols, lights: [{ x: 0, y: 6, z: 2, s: 6, c: '#9a6bff' }, { x: 0, y: 0, z: 4, s: 0, c: '#9a6bff', pool: 18 }] };
   });
   // booth
-  api.roundBox(x, 1.6, z + 5.0, 3.4, 1.05, 0.85, '#1a1822', { r: 0.2, top: '#2a2833' });
-  api.mesh(x, z + 5.0, m => { m.color('#ff4fd8', 1); m.roundBox(-0.85, 2.2, 0.44, 1.5, 0.06, 0.02, 0.01); m.color('#38f2ff', 1); m.roundBox(0.85, 2.2, 0.44, 1.5, 0.06, 0.02, 0.01); m.emissive(0); return {}; });
+  BW11.djTable(api, x, 1.6, z + 5.0, 0, { body: '#1c1a26', trim: '#c8c8d4', colA: '#ff4fd8', colB: '#38f2ff' });
   // speaker towers
   for (const sd of [-1, 1]) api.mesh(x + sd * 11.2, z + 7.5, m => { for (let i = 0; i < 3; i++) BW11.speaker(m, 0, i * 1.55, 0, 2.5, 1.5, 2.0, { col: '#202028', cones: 1, dust: '#ff4fd8' }); m.color(sd < 0 ? '#ff4fd8' : '#38f2ff', 1); m.roundBox(0, 4.7, 1.02, 2.3, 0.08, 0.04, 0.02); m.emissive(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.25, hz: 1.0, y0: 0, y1: 4.65 }], lights: [{ x: 0, y: 4.9, z: 1.2, s: 1.6, c: sd < 0 ? '#ff4fd8' : '#38f2ff' }] }; });
   // LED floor
@@ -644,7 +671,9 @@ BW11.buildLoop = function (api, g) {
     return { lights: [{ x: 0, y: 1.6, z: 0, s: 1.2, c: '#ff4fd8', blink: 6 }] };
   });
   api.sign('DJ LOOPHOLE\nALL NIGHT · EVERY NIGHT\nNO REQUESTS', x, z + 1.9, { yaw: Math.PI, y: 1.9, h: 1.3, post: true, style: { bg: '#1a0a2a', fg: '#7aff5a', border: '#ff4fd8', size: 38, glow: '#7aff5a' }, glow: '#7aff5a' });
-  api.light(x, z - 3, 10, '#ff4fd8', 0.4);
+  api.light(x, z - 3, 14, '#ff4fd8', 0.55); api.light(x, z + 1, 8, '#7aff5a', 0.35);
+  api.prop('pennants', { x: 0, z: 0, x0: x - 3.4, y0: 3.2, z0: z + 1.8, x1: x + 3.4, y1: 3.2, z1: z + 1.8, n: 14, sag: 0.5 });
+  for (const sd of [-1, 1]) api.capsule(x + sd * 3.4, 0, z + 1.8, 0.07, 3.3, '#3a3a40', { col: { camPass: true } });
   S.lasers.push({ x: x + 2.7, y: 2.5, z: z - 0.2, yaw: Math.PI, n: 2, spread: 0.6, col: [[0.5, 1, 0.3]], rate: 3, len: 25, tilt: 0.25, ph: 6 });
 };
 // a lamp post (lamplighter lantern) along the Esplanade

@@ -585,7 +585,8 @@ function bbaKickStep(g, R, dt) {
     }
     R.air = { kick: k, t: 0, hoop: false };
     burnsSfx('jumpBig', { pitch: 0.9 }); g.shake(0.15); g.fx.dust(k.x, k.y, k.z, 10);
-    g.missions.event('bbaLaunch', k);
+    g.missions.event('bbaRamp', k);
+    if (k.piece.o.onRamp) k.piece.o.onRamp(g, k.piece);
     return;
   }
 }
@@ -835,14 +836,13 @@ function bbaSemiBuild(api, g, P) {
     bbaSweep(m, 17, j => { const t = j / 16, a = t * Math.PI * 1.35, rr = 0.95 * (1 - 0.4 * t), y = 4.05 + rr * (1 - Math.cos(a)), z = Z1 + rr * Math.sin(a), nn = bbaV.norm(0, Math.cos(a), -Math.sin(a)); return { p: [-LN, y, z], l: [1, 0, 0], n: nn }; }, [[-1.45, -0.04], [1.45, -0.04], [1.45, 0.04], [-1.45, 0.04]], () => '#dcd8d0');
     // rear doors swung wide open
     for (const sx of [-1, 1]) {
-      const hx = -LN + sx * 1.32, a = sx * 1.95;
-      m.push(); m.tf(hx, 0, Z0, a);
+      const hx = -LN + sx * 1.47;
+      m.push(); m.tf(hx, 0, Z0, Math.PI);
       m.color('#e8e4dc').shine(1); m.roundBox(0, 2.17, -0.66, 0.1, 3.5, 1.32, 0.05); m.shine(0);
-      m.color('#c8ccd4'); m.limb(0.07, 0.6, -0.5, 0.07, 3.7, -0.5, 0.035, 0.035); m.limb(0.07, 0.6, -0.95, 0.07, 3.7, -0.95, 0.035, 0.035);
-      m.color('#d23a30'); m.roundBox(0.06, 1.0, -0.66, 0.03, 0.3, 1.2, 0.02);
+      m.color('#c8ccd4'); for (const zz of [-0.5, -0.95]) m.limb(sx * 0.07, 0.6, zz, sx * 0.07, 3.7, zz, 0.035, 0.035);
+      m.color('#d23a30'); m.roundBox(sx * 0.06, 1.0, -0.66, 0.03, 0.3, 1.2, 0.02);
       m.pop();
-      const ca = Math.cos(a), sa = Math.sin(a);
-      cols.push({ t: 'box', x: hx + (-0.66) * sa, z: Z0 + (-0.66) * ca, hx: 0.06, hz: 0.66, yaw: a, y0: 0, y1: 3.92 });
+      m.color('#9a9aa2'); m.roundCyl(hx, 0.4, Z0, 0.06, 3.4, 0.02, { seg: 6 });
     }
     // the front of the trailer: nose wall + landing gear under the lip
     const LIPY = Y + S.rampY(S.RAMP1);
@@ -908,9 +908,8 @@ function bbaSemiBuild(api, g, P) {
   const hoop = { x: LN, y: LIPY + 3.2, z: 29.3, r: 2.4 };
   bbaPart(api, P, LN + 2, 29, m => {
     const cols = [], lights = [];
-    m.push(); m.tf(hoop.x, hoop.y, hoop.z, 0, Math.PI / 2, 0);
-    for (let i = 0; i < 16; i++) { m.color(i % 2 ? '#f4f0e8' : '#e8402a', i % 2 ? 0 : 0.35); m.push(); m.tf(0, 0, 0, i / 16 * TAU); m.torus(0, 0, 0, hoop.r, 0.22, { seg: 4, tseg: 6 }); m.pop(); }
-    m.pop(); m.emissive(0);
+    const ring = []; for (let i = 0; i <= 48; i++) { const a = i / 48 * TAU; ring.push([hoop.x + Math.cos(a) * hoop.r, hoop.y + Math.sin(a) * hoop.r, hoop.z]); }
+    bbaTube(m, ring, 0.24, m.segs(8, 5), { caps: false, colFn: j => (Math.floor(j / 3) % 2 ? '#f4f0e8' : '#e8402a') });
     m.color('#3a3a44').shine(1); m.limb(hoop.x + 3.9, 0, hoop.z, hoop.x + 3.9, hoop.y + 0.4, hoop.z, 0.22, 0.16); m.limb(hoop.x + 3.9, hoop.y + 0.4, hoop.z, hoop.x + hoop.r + 0.1, hoop.y, hoop.z, 0.14, 0.12); m.shine(0);
     m.color('#ffd21a'); m.roundBox(hoop.x + 3.9, 0.2, hoop.z, 1.2, 0.4, 1.2, 0.15);
     cols.push({ t: 'cyl', x: hoop.x + 3.9, z: hoop.z, r: 0.3, y0: 0, y1: hoop.y + 0.4, camPass: true });
@@ -926,14 +925,14 @@ function bbaSemiBuild(api, g, P) {
   const L = { x: F.wx(-LN, 0), z: F.wz(-LN, 0), y: F.wy(Y), yaw: F.rot, fx: Math.sin(F.rot), fz: Math.cos(F.rot), R: R0 * F.s, drift: DR * F.s, minV: 8.5, camSide: 1, piece: P };
   P.R.loops.push(L); P.loop = L;
   const kd = F.dir(0, 1);
-  const k = { x: F.wx(LN, S.RAMP1), z: F.wz(LN, S.RAMP1), y: F.wy(LIPY), fx: kd[0], fz: kd[1], hw: 1.15 * F.s, len: 3.2 * F.s, vyBike: 11, vyFoot: 10.5, piece: P,
+  const k = { x: F.wx(LN, S.RAMP1), z: F.wz(LN, S.RAMP1), y: F.wy(LIPY), fx: kd[0], fz: kd[1], hw: 1.15 * F.s, len: 0.75 * F.s, vyBike: 11, vyFoot: 10.5, piece: P,
     hoop: { x: F.wx(hoop.x, hoop.z), y: F.wy(hoop.y), z: F.wz(hoop.x, hoop.z), r: hoop.r * F.s, nx: kd[0], nz: kd[1] } };
   P.R.kicks.push(k); P.kick = k;
   P.summitL = [0, YD + 3.85, -2.25, 1.35];
   P.spots = { deck: F.w(0, YD, 3.0), cabRoof: F.w(0, YD + 3.85, -2.25), lip: F.w(LN, LIPY, S.RAMP1), hoop: F.w(hoop.x, hoop.y, hoop.z), loopEntry: F.w(-LN, 0, -12), cargo: F.w(-9, 1.4, -10), landing: F.w(LN, 0, 38) };
   // climbing route (local): used for glow sticks and by the test bot
   P.route = [['walk', -9, -13.2], ['jump', -9.0, -10.0], ['jump', -11.0, -7.0], ['jump', -9.6, -4.0], ['jump', -11.4, -1.2], ['jump', -9.4, 1.6], ['jump', -7.4, 4.2], ['jump', -5.4, 2.4],
-    ['walk', -4.15, 2.0], ['jump', -2.6, 2.0, 0, 'grab'], ['climb', 'strap'], ['walk', -1.45, 0.2], ['jump', -1.3, 0.0], ['jump', -0.4, 1.6], ['jump', -0.2, 0.1], ['jump', 0, -2.2]];
+    ['walk', -4.15, 2.0], ['jump', -2.6, 2.0, 0, 'grab'], ['climb', 'strap'], ['walk', -1.55, 1.45], ['jump', -1.3, 0.1], ['jump', -0.4, 1.7], ['jump', -0.2, 0.1], ['jump', 0, -2.2]];
   bbaGlowPath(api, P, [[-9, 2.3, -10], [-11, 3.7, -7], [-9.6, 5.1, -4], [-11.4, 6.5, -1.2], [-9.4, 7.9, 1.6], [-7.4, 9.3, 4.2], [-5.0, 10.7, 2.6], [-3.2, 11.6, 2.0], [-2.5, 12.6, 2.0], [-2.5, 13.8, 2.0], [-1.4, YD + 0.9, 0], [-0.4, YD + 3.1, 1.6], [0, YD + 4.7, -2.2]]);
   // the loop ride and the launch arc pass through glow sticks too
   const lp = []; for (let j = 8; j < N; j += 8) { const f = loopF(j); lp.push([f.p[0] + f.n[0] * 1.3, f.p[1] + f.n[1] * 1.3, f.p[2] + f.n[2] * 1.3]); }
@@ -1209,10 +1208,14 @@ function bbaPumpBuild(api, g, P) {
           p.vx = (nestW[0] - p.x) / t; p.vz = (nestW[2] - p.z) / t; p.vy = vy; p.grounded = false; p.platform = null; p.jumps = 1; p.jumpCut = true; p.knockT = t * 0.92;
           p.yaw = Math.atan2(p.vx, p.vz); p.ch.play('flip', null, true);
           burnsSfx('jumpBig', { pitch: 0.7 }); gg.shake(0.35); gg.fx.ring(p.x, p.y + 0.1, p.z, 2.2, '#ffc21a', 0.5);
-          gg.toast('CATAPULTED!'); gg.missions.event('bbaFling', P);
+          gg.toast('CATAPULTED!'); gg.missions.event('bbaFling', P); st.flung = t + 0.6;
           if (P.o.onFling) P.o.onFling(gg, P);
         }
       }
+    }
+    if (st.flung > 0) {
+      st.flung -= wdt;
+      if (p.grounded && !p.vehicle) { st.flung = 0; p.vx = p.vz = 0; p.knockT = 0; p.landT = 0.25; gg.fx.dust(p.x, p.y, p.z, 12); gg.shake(0.2); burnsSfx('land'); }
     }
     if (st.fire > 0) {
       st.fire -= wdt;
@@ -1292,16 +1295,17 @@ function bbaGiantBuild(api, g, P) {
     m.color('#1e1e24'); m.roundBox(0, 7.0, 8.1, 12.4, 0.9, 1.3, 0.4);
     m.color('#ffc21a').shine(3); m.roundBox(0, 7.55, 8.1, 2.0, 0.35, 1.6, 0.14); m.shine(0);
     // upper arms lying beside the body (sleeves)
-    for (const sx of [-1, 1]) m.limb(sx * 6.8, 4.6, 22.5, sx * 8.7, 2.6, 15.0, 2.1, 1.85, { seg: m.segs(12, 8) });
+    m.color('#b8322a').shine(1); for (const sx of [-1, 1]) m.limb(sx * 6.8, 4.6, 22.5, sx * 8.7, 2.6, 15.0, 2.1, 1.85, { seg: m.segs(12, 8) });
+    m.color('#3a1616'); for (const sx of [-1, 1]) m.torus(sx * 7.9, 3.5, 18.6, 1.95, 0.18, { seg: 14, tseg: 4 }); m.shine(0);
     // colliders: legs, hips
     for (const sx of [-1, 1]) {
-      cols.push({ t: 'ramp', x: sx * 4.0, z: -12.8, hx: 1.4, hz: 4.8, y0: 0, ya: 4.5, yb: 7.0 });
-      cols.push({ t: 'box', x: sx * 3.9, z: -8.0, hx: 1.9, hz: 1.5, y0: 0, y1: 7.1 });
+      cols.push({ t: 'ramp', x: sx * 4.0, z: -13.55, hx: 1.4, hz: 4.05, y0: 0, ya: 4.5, yb: 7.0 });
+      cols.push({ t: 'box', x: sx * 3.9, z: -8.0, hx: 1.9, hz: 1.5, y0: 0, y1: 7.0 });
     }
-    cols.push({ t: 'ramp', x: -3.6, z: -1.5, hx: 2.4, hz: 5.0, y0: 0, ya: 7.0, yb: 6.5 });
+    cols.push({ t: 'ramp', x: -3.6, z: -1.5, hx: 2.4, hz: 5.0, y0: 0, ya: 7.0, yb: 6.75 });
     // right thigh with the pocket hole (x 2.6..5.2, z -3.7..0.7)
-    cols.push({ t: 'ramp', x: 3.6, z: -5.1, hx: 2.4, hz: 1.4, y0: 0, ya: 7.0, yb: 6.9 });
-    cols.push({ t: 'ramp', x: 3.6, z: 2.1, hx: 2.4, hz: 1.4, y0: 0, ya: 6.6, yb: 6.5 });
+    cols.push({ t: 'ramp', x: 3.6, z: -5.1, hx: 2.4, hz: 1.4, y0: 0, ya: 7.0, yb: 6.95 });
+    cols.push({ t: 'ramp', x: 3.6, z: 2.1, hx: 2.4, hz: 1.4, y0: 0, ya: 6.8, yb: 6.75 });
     cols.push({ t: 'box', x: 2.0, z: -1.5, hx: 0.6, hz: 2.2, y0: 0, y1: 6.7 });
     cols.push({ t: 'box', x: 5.6, z: -1.5, hx: 0.4, hz: 2.2, y0: 0, y1: 6.7 });
     cols.push({ t: 'box', x: 3.9, z: -1.5, hx: 1.3, hz: 2.2, y0: 0, y1: 4.4 });
@@ -1365,14 +1369,15 @@ function bbaGiantBuild(api, g, P) {
     const cols = [
       { t: 'box', x: 0, z: 12.75, hx: 5.4, hz: 3.75, y0: 0, y1: 8.6 },
       { t: 'box', x: 0, z: 20.0, hx: 5.8, hz: 3.5, y0: 0, y1: 9.4 },
-      { t: 'box', x: 0, z: 14.0, hx: 2.4, hz: 1.6, y0: 0, y1: 9.75 }
+      { t: 'box', x: 0, z: 14.0, hx: 2.4, hz: 1.6, y0: 0, y1: 9.75 },
+      { t: 'ramp', x: 0, z: 16.3, hx: 5.4, hz: 1.2, y0: 0, ya: 8.6, yb: 9.4 }
     ];
     for (const sx of [-1, 1]) cols.push({ t: 'ramp', x: sx * 6.3, z: 14.4, hx: 0.9, hz: 2.7, yaw: sx * Math.PI / 2 * -1, y0: 0, ya: 4.4, yb: 8.4 });
     const lights = [10.4, 14.4, 18.4, 22.0].map(z => ({ x: 0, y: (z < 16 ? 8.55 : 9.35) + 0.25, z, s: 0.8, c: '#ffe08a' }));
     return { cols, lights };
   });
   // the forearm ramps rise toward the middle: local -z of each ramp must point outward
-  for (const d of torso.dcols) if (d.t === 'ramp') { d.lyaw = d.lx > 0 ? -Math.PI / 2 : Math.PI / 2; }
+  for (const d of torso.dcols) if (d.t === 'ramp' && Math.abs(d.lx) > 3 * P.F.s) { d.lyaw = d.lx > 0 ? -Math.PI / 2 : Math.PI / 2; }
   P.parts = { torso };
   bbaClimbZone(api, P, { x: -4.1, z: -24.7, y0: 0.2, y1: 9.3, nx: 0, nz: -1, hw: 1.5, top: 9.4, exit: 1.0, name: 'boot', col: false });
   bbaClimbZone(api, P, { x: 4.1, z: -24.7, y0: 0.2, y1: 9.3, nx: 0, nz: -1, hw: 1.5, top: 9.4, exit: 1.0, name: 'boot2', col: false });
@@ -1380,12 +1385,12 @@ function bbaGiantBuild(api, g, P) {
   const om = TAU / BBA_GIANT.T;
   const pose = () => { const y = BBA_GIANT.AMP * Math.sin(st.ph); bbaPose(P, torso, 0, y, 0, 0, 0, 0); };
   pose();
-  P.route = [['walk', -4.1, -27.5], ['walk', -4.1, -25.3], ['climb', 'boot'], ['walk', -4.1, -21.5], ['walk', -4.0, -17.5], ['walk', -3.9, -8.0], ['walk', -3.6, 1.5], ['walk', -2.0, 5.5], ['jump', -2.0, 10.8],
-    ['walk', -1.0, 16.6], ['walk', 0, 21.5], ['jump', 0, 25.2], ['wait', 'calm'], ['jump', 0, 29.2], ['jump', 0, 31.2]];
+  P.route = [['walk', -4.1, -27.5], ['walk', -4.1, -25.3], ['climb', 'boot'], ['walk', -4.1, -21.5], ['walk', -4.0, -17.5], ['walk', -3.9, -8.0], ['walk', -3.6, 1.5], ['walk', -2.0, 5.5], ['jump', -2.6, 10.8],
+    ['walk', -3.6, 12.2], ['walk', -3.6, 17.4], ['walk', 0, 21.5], ['jump', 0, 25.2], ['wait', 'calm'], ['jump', 0, 29.2], ['jump', 0, 31.2]];
   P.summitL = [0, 12.8, 31.3, 1.2];
   P.spots = { nose: F.w(0, 12.8, 31.3), ear: F.w(-4.95, 6.0, 30.6), pocket: F.w(3.9, 4.4, -1.5), belly: F.w(0, 8.6, 12.8), boot: F.w(-4.1, 9.4, -22.2) };
   bbaGlowPath(api, P, [[-4.1, 2.5, -25.4], [-4.1, 5.5, -25.4], [-4.1, 10.3, -22.0], [-4.0, 6.0, -15], [-3.9, 8.0, -8], [-3.6, 7.6, 1.5], [-2.0, 9.6, 11], [0, 10.4, 17], [0, 11.6, 25.5], [0, 12.2, 29.2]]);
-  bbaPickup(api, P, P.o.ear === undefined ? { kind: 'water', label: 'EAR WAX? NO, WATER' } : P.o.ear, -4.95, 6.9, 30.6);
+  bbaPickup(api, P, P.o.ear === undefined ? 'water' : P.o.ear, -4.95, 6.9, 30.6);
   bbaPickup(api, P, P.o.pocket === undefined ? 'glow' : P.o.pocket, 3.9, 5.3, -1.5);
   bbaPool(api, P, 0, 14, 12, '#ffd29a', 0.3);
   // LSD dream: stepping clouds from his nose up to a dream bubble (only on LSD)
@@ -1476,7 +1481,8 @@ function bbaGalleonBuild(api, g, P) {
     // stern lanterns
     for (const x of [-2.4, 0, 2.4]) { m.push(); m.tf(x, 8.25, Z0 + 0.3); m.color(trim).shine(3); m.lathe([[0.05, 0], [0.32, 0.08], [0.46, 0.55], [0.36, 1.08], [0.12, 1.22], [0.02, 1.45]], { seg: 8 }); m.color('#ffd070', 1); m.ball(0, 0.62, 0, 0.3); m.emissive(0).shine(0); m.pop(); lights.push({ x, y: 8.9, z: Z0 + 0.3, s: 1.6, c: '#ffc860' }); }
     // portholes (glow at night)
-    for (const sx of [-1, 1]) for (let z = -5; z <= 9; z += 3.5) { const x = sx * (G.w(z) + 0.02); m.color('#ffc860', 0.7); m.push(); m.tf(x, 2.6, z, sx * Math.PI / 2); m.roundCyl(0, -0.06, 0, 0.35, 0.12, 0.04, { seg: 10 }); m.pop(); m.emissive(0); }
+    for (const sx of [-1, 1]) for (let z = -5; z <= 9; z += 3.5) { const x = sx * (G.w(z) + 0.02); m.color('#ffc860', 0.7); m.push(); m.tf(x, 2.6, z, sx * Math.PI / 2); m.roundCyl(0, -0.06, 0, 0.35, 0.12, 0.04, { seg: 10 }); m.pop(); m.emissive(0); lights.push({ x: x + sx * 0.2, y: 2.6, z, s: 0.9, c: '#ffc070' }); }
+    for (const x of [-2.2, -0.75, 0.75, 2.2]) lights.push({ x, y: 6.3, z: Z0 - 0.3, s: 1.3, c: '#ffc070' });
     // bowsprit + figurehead (a gilded jackrabbit in goggles)
     m.color(mastC); m.limb(0, 7.0, 17.5, 0, 9.2, 26.0, 0.32, 0.2);
     m.push(); m.tf(0, 6.4, 19.0, 0, -0.5, 0); m.color(trim).shine(3);
@@ -1668,7 +1674,7 @@ function bbaCathBuild(api, g, P) {
     // woven ladders (the climb nets)
     const ladder = (x0, z0, x1, z1, ya, yb) => { m.color('#b08850'); m.limb(x0, ya, z0, x0, yb, z0, 0.08, 0.08, { seg: 4 }); m.limb(x1, ya, z1, x1, yb, z1, 0.08, 0.08, { seg: 4 }); for (let y = ya + 0.4; y < yb; y += 0.5) m.limb(x0, y, z0, x1, y, z1, 0.06, 0.06, { seg: 4 }); };
     ladder(-3.52, 1.5, -3.52, 3.1, 2.8, 7.6);
-    ladder(-0.3, -7.08, 1.3, -7.08, 10.4, K.LOFT);
+    ladder(0.8, -7.08, 2.4, -7.08, 10.4, K.LOFT);
     ladder(-0.8, K.SZ - 2.08, 0.8, K.SZ - 2.08, K.LOFT, K.NEST);
     // a log step at the door + hanging lanterns
     m.color('#7a5432'); m.roundCyl(-4.4, 0, 8.6, 0.8, 0.7, 0.2);
@@ -1677,11 +1683,11 @@ function bbaCathBuild(api, g, P) {
     return { cols, lights };
   });
   bbaClimbZone(api, P, { x: -3.5, z: 2.3, y0: 2.8, y1: 7.6, nx: 1, nz: 0, hw: 0.8, top: 7.6, exit: 0.95, name: 'ladder1' });
-  bbaClimbZone(api, P, { x: 0.5, z: -7.05, y0: 10.4, y1: K.LOFT, nx: 0, nz: -1, hw: 0.8, top: K.LOFT, exit: 0.95, name: 'ladder2' });
+  bbaClimbZone(api, P, { x: 1.6, z: -7.05, y0: 10.4, y1: K.LOFT, nx: 0, nz: -1, hw: 0.75, top: K.LOFT, exit: 0.95, name: 'ladder2' });
   bbaClimbZone(api, P, { x: 0, z: K.SZ - 2.05, y0: K.LOFT, y1: K.NEST, nx: 0, nz: -1, hw: 0.8, top: K.NEST, exit: 0.95, name: 'spire' });
   P.summitL = [0, K.NEST, K.SZ, 1.8];
   P.route = [['walk', -4.4, 10.2], ['jump', -4.4, 8.6], ['jump', -3.5, 6.0], ['jump', -2.6, 2.6], ['walk', -3.05, 2.3], ['climb', 'ladder1'], ['walk', -5.0, -5.0], ['walk', 0, -5.0], ['walk', 4.6, -5.0], ['walk', 4.8, -7.6], ['jump', 4.8, -9.5], ['jump', 1.0, -8.6],
-    ['walk', 0.5, -7.5], ['climb', 'ladder2'], ['walk', 0, -5.9], ['walk', 0, -6.45], ['climb', 'spire'], ['walk', 0, -4.6]];
+    ['walk', 1.6, -7.5], ['climb', 'ladder2'], ['walk', 0, -6.5], ['climb', 'spire'], ['walk', 0, -4.6]];
   P.spots = { nest: F.w(0, K.NEST, K.SZ), loft: F.w(0, K.LOFT, -4), door: F.w(0, 0, K.Z1 + 1), westGallery: F.w(-5, 7.6, -1), eastGallery: F.w(5, 7.6, -6) };
   bbaGlowPath(api, P, [[-4.4, 1.6, 8.6], [-3.5, 2.3, 6.0], [-2.4, 3.7, 2.5], [-3.1, 5.0, 2.3], [-5, 8.5, -1], [-5, 8.5, -5], [0, 8.5, -5], [4.8, 8.5, -5], [4.8, 9.9, -9.5], [0.5, 11.3, -8.6], [0.5, 13, -7.5], [0, 15.9, -5], [0, 18, -6.5], [0, 21, -6.5], [0, 24, -6.5]]);
   bbaPickup(api, P, P.o.nestReward === undefined ? 'glow' : P.o.nestReward, 0, K.NEST + 1.0, K.SZ + 0.8);
@@ -1690,6 +1696,12 @@ function bbaCathBuild(api, g, P) {
     const env = gg.env, cam = gg.cam;
     if ((cam.x - F.x) * (cam.x - F.x) + (cam.z - F.z) * (cam.z - F.z) > 120 * 120) return;
     const day = 1 - nk;
+    if (nk > 0.05) {
+      // lantern light inside the nave: big soft glows behind the lattice show through every gap
+      const t = P.R.t, warm = [1, 0.62, 0.25];
+      for (let i = 0; i < 7; i++) { const z = K.Z1 - 2 - i * 4, q = F.w(0, 5 + (i % 2) * 3, z), fl = 0.85 + 0.15 * Math.sin(t * 3.1 + i * 1.7); Rr.bbs.bb(q[0], q[1], q[2], 16, 16, Sp.glow, warm, 0.22 * nk * fl, true); }
+      const sp = F.w(0, 24, K.SZ); Rr.bbs.bb(sp[0], sp[1], sp[2], 13, 13, Sp.glow, warm, 0.2 * nk, true);
+    }
     if (day > 0.05 && env && env.sunDir && env.sunDir[1] > 0.05) {
       // god rays through the weave
       const sd = env.sunDir, t = P.R.t, col = [1, 0.88, 0.62];
@@ -1719,8 +1731,8 @@ function bbaShroomBuild(api, g, P) {
   const capPos = i => { const a = K.A0 + i * K.STEP; return [Math.sin(a) * K.RAD, Math.cos(a) * K.RAD]; };
   const shroom = (m, x, z, top, r, hue, spots) => {
     const cap = burnsHSL(hue, 0.75, 0.62), rim = burnsHSL(hue, 0.95, 0.72), stem = '#f2ead8';
-    m.color(stem).shine(1); m.limb(x, 0, z, x, top - 0.6, z, Math.max(0.35, r * 0.3), Math.max(0.28, r * 0.2), { seg: m.segs(12, 7) });
-    if (r > 1.2) { m.color('#e8dcc8'); m.lathe([[r * 0.22, top * 0.62], [r * 0.5, top * 0.6 - 0.35], [r * 0.48, top * 0.6 - 0.45], [r * 0.2, top * 0.6]], { seg: 12 }); }
+    m.color(stem).shine(1); m.limb(x, 0, z, x, top - 0.6, z, Math.max(0.38, r * 0.4), Math.max(0.3, r * 0.27), { seg: m.segs(12, 7), mid: 0.06 });
+    if (r > 1.2) { m.color('#e8dcc8'); m.push(); m.tf(x, 0, z); m.lathe([[r * 0.3, top * 0.62], [r * 0.6, top * 0.6 - 0.35], [r * 0.58, top * 0.6 - 0.45], [r * 0.28, top * 0.6]], { seg: 12 }); m.pop(); }
     m.color(burnsHSL(hue, 0.5, 0.35), 0.35); m.push(); m.tf(x, top - 0.85, z); m.lathe([[r * 0.25, 0], [r * 0.95, 0.12], [r * 0.95, 0.12]], { seg: m.segs(16, 9) }); m.pop(); m.emissive(0);
     m.color(cap, 0.18).shine(2); m.push(); m.tf(x, top - 0.85, z);
     m.lathe([[r * 0.95, 0.12], [r * 1.02, 0.18, rim, 0.6], [r * 0.98, 0.45], [r * 0.8, 0.72], [r * 0.45, 0.85], [0, 0.88]], { seg: m.segs(18, 10) });
@@ -1735,13 +1747,13 @@ function bbaShroomBuild(api, g, P) {
       const [x, z] = capPos(i);
       shroom(m, x, z, top, K.CR, hues[i], 5);
       cols.push({ t: 'cyl', x, z, r: K.CR - 0.15, y0: top - 0.75, y1: top, spring: K.V, tag: 'bbaCap' });
-      cols.push({ t: 'cyl', x, z, r: 0.55, y0: 0, y1: top - 0.75 });
+      cols.push({ t: 'cyl', x, z, r: 0.75, y0: 0, y1: top - 0.75 });
     });
     // the Elder Shroom (not springy: the summit)
     shroom(m, 0, 0, K.ELDER, K.ER, 285, 9);
     m.color('#ffd84a', 0.6); m.ball(0.9, K.ELDER + 0.1, -0.6, 0.3); m.ball(-0.8, K.ELDER + 0.08, 0.7, 0.25); m.emissive(0);
     cols.push({ t: 'cyl', x: 0, z: 0, r: K.ER - 0.1, y0: K.ELDER - 0.8, y1: K.ELDER });
-    cols.push({ t: 'cyl', x: 0, z: 0, r: 1.15, y0: 0, y1: K.ELDER - 0.8 });
+    cols.push({ t: 'cyl', x: 0, z: 0, r: 1.4, y0: 0, y1: K.ELDER - 0.8 });
     // a ring of little shrooms; some are baby trampolines
     for (let i = 0; i < 14; i++) {
       const a = i / 14 * TAU + 0.2, d = 11 + (i % 3) * 2.2, x = Math.sin(a) * d, z = Math.cos(a) * d, top = 0.8 + (i % 4) * 0.45, r = 0.7 + (i % 3) * 0.25;
@@ -1778,4 +1790,322 @@ function bbaShroomBuild(api, g, P) {
     if (!p.grounded && p.vy > K.V * 0.9 && p.vy <= K.V + 0.01) for (const cap of P.caps) if (Math.hypot(p.x - cap.x, p.z - cap.z) < cap.r + 0.5 && Math.abs(p.y - cap.y) < 0.8 && cap.flash < 0.5) { cap.flash = 1; gg.fx.ring(cap.x, cap.y + 0.1, cap.z, cap.r * 1.3, '#ffffff', 0.4); gg.fx.burst(cap.x, cap.y + 0.3, cap.z, 'star', 8, BURNS_NEON[(Math.random() * 7) | 0]); }
     if (nk > 0.2 && Math.random() < wdt * 6 * nk) { const a = Math.random() * TAU, d = Math.random() * 12, q = F.w(Math.sin(a) * d, 0.5 + Math.random() * 3, Math.cos(a) * d); gg.fx.add(q[0], q[1], q[2], (Math.random() - 0.5) * 0.4, 0.8 + Math.random() * 0.6, (Math.random() - 0.5) * 0.4, 4, 0.18, 0.05, bbaHue(Math.random() * 360, 1, 0.7), 1, 'glow', 1); }
   };
+}
+
+/* ======================= 7. THE LEANING LIGHTHOUSES =======================
+   Three crooked lighthouses that lean on each other like old friends after a long night.
+   Each has an outside spiral staircase (walkable, 0.42 m risers) up to a gallery. Press ACTION
+   at the top to LIGHT IT: twin beams start sweeping the playa and reveal what hides in the dark:
+   darkwads (burners with no lights) become visible, and a hidden plank bridge appears from Kip's
+   gallery to the Keeper's Cache. Tallest gallery (Lou, 24.4 m) = summit. */
+const BBA_LH = {
+  TOWERS: [
+    { name: 'LEANING LOU', x: -7, z: -4, gH: 24.4, ld: [0.7, 0.7], la: 0.12, a0: Math.PI * 1.1, col: ['#f4f0e8', '#d23a30'] },
+    { name: 'TIPSY TESS', x: 8, z: -2, gH: 18.4, ld: [-1, 0.15], la: 0.16, a0: Math.PI * 0.35, col: ['#f4f0e8', '#2a8ac8'] },
+    { name: 'CROOKED KIP', x: 0, z: 10, gH: 13.6, ld: [0.2, 1], la: 0.1, a0: Math.PI * 1.55, col: ['#f8e8b8', '#2a9a6a'] }
+  ],
+  R0: 3.0, R1: 2.2, GR: 3.15, ROUT: 4.6, RISE: 0.42, DA: 0.27
+};
+BurnsBigArt.kinds.lighthouses = {
+  name: 'The Leaning Lighthouses', mission: 'Keeper of the Light', size: 40, foot: [34, 34], height: 30, summitY: 24.4,
+  desc: 'Three crooked lighthouses leaning on each other. Light them up and their beams show you what hides in the dark.',
+  hint: 'Walk the spiral stairs to a gallery and press ACTION to light the lamp. Watch where the beams sweep.',
+  build(api, g, P) { bbaLighthouseBuild(api, g, P); }
+};
+function bbaLHAxis(T, y) { const l = Math.hypot(T.ld[0], T.ld[1]) || 1, k = Math.tan(T.la) * y; return [T.x + T.ld[0] / l * k, T.z + T.ld[1] / l * k]; }
+function bbaLighthouseBuild(api, g, P) {
+  const K = BBA_LH, F = P.F;
+  P.lh = [];
+  K.TOWERS.forEach((T, ti) => {
+    const gH = T.gH, lampY = gH + 1.7, ax = bbaLHAxis(T, 0), top = bbaLHAxis(T, gH);
+    const rAt = y => K.R0 - (K.R0 - K.R1) * clamp(y / gH, 0, 1);
+    const steps = [];
+    const rise = gH / Math.ceil(gH / (K.RISE / F.s));   // world rise stays <= 0.42 m at any scale
+    for (let i = 0, y = rise; y <= gH + 0.01; i++, y += rise) {
+      const a = T.a0 + i * K.DA * rise / K.RISE, c = bbaLHAxis(T, y), rin = y > gH - 2.7 ? K.GR + 0.05 : rAt(y) - 0.05;
+      steps.push({ a, y, cx: c[0], cz: c[1], rin, rc: (rin + K.ROUT) / 2, hz: (K.ROUT - rin) / 2 });
+    }
+    bbaPart(api, P, T.x, T.z, m => {
+      const cols = [], lights = [];
+      const yawL = Math.atan2(T.ld[0], T.ld[1]), cl = Math.cos(T.la);
+      // the leaning tower body (striped), lamp room, dome
+      m.push(); m.tf(T.x, 0, T.z, yawL, T.la, 0);
+      const prof = []; const bands = 7;
+      for (let b = 0; b <= bands; b++) { const y = b / bands * gH / cl, r = rAt(y * cl); const c = T.col[b % 2]; prof.push([r, y, c]); if (b < bands) prof.push([rAt((b + 1) / bands * gH) + 0.0001, (b + 1) / bands * gH / cl - 0.001, c]); }
+      m.shine(1); m.lathe(prof, { seg: m.segs(20, 12) });
+      m.color('#2a2a30'); m.roundCyl(0, gH / cl - 0.35, 0, K.GR, 0.35, 0.1, { seg: m.segs(20, 12) });
+      m.color('#c8eaff', 0.25).shine(3); m.lathe([[1.95, gH / cl], [1.95, gH / cl + 2.9]], { seg: m.segs(16, 10) }); m.emissive(0);
+      m.color('#2a2a30'); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; m.limb(Math.sin(a) * 1.97, gH / cl, Math.cos(a) * 1.97, Math.sin(a) * 1.97, gH / cl + 2.9, Math.cos(a) * 1.97, 0.06, 0.06, { seg: 4 }); }
+      m.color(T.col[1]).shine(2); m.lathe([[2.25, gH / cl + 2.9], [2.25, gH / cl + 3.1], [1.6, gH / cl + 3.9], [0.4, gH / cl + 4.5], [0, gH / cl + 4.6]], { seg: m.segs(16, 10) });
+      m.color('#ffd84a').shine(3); m.ball(0, gH / cl + 4.8, 0, 0.3); m.shine(0);
+      m.color('#3a3a44'); m.roundCyl(0, gH / cl + 0.3, 0, 0.7, 0.9, 0.15);
+      m.color('#fff2c8', 0.5); m.ball(0, gH / cl + 1.7, 0, 0.75); m.emissive(0);
+      // gallery rail
+      m.color('#2a2a30'); m.torus(0, gH / cl + 1.0, 0, K.GR - 0.08, 0.06, { seg: m.segs(20, 12), tseg: 4 });
+      for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; m.limb(Math.sin(a) * (K.GR - 0.08), gH / cl, Math.cos(a) * (K.GR - 0.08), Math.sin(a) * (K.GR - 0.08), gH / cl + 1.0, Math.cos(a) * (K.GR - 0.08), 0.045, 0.045, { seg: 4 }); }
+      // door + windows (glow at night)
+      m.color('#3a2a1a'); m.push(); m.tf(0, 0, 0, T.a0 + Math.PI); m.roundBox(0, 1.1, K.R0 - 0.05, 1.2, 2.2, 0.3, 0.1); m.pop();
+      for (let k = 1; k < 4; k++) { const y = k * gH / 4.2 / cl, a = T.a0 + k * 2.1; m.color('#ffd070', 0.75); m.push(); m.tf(0, y, 0, a); m.roundBox(0, 0, rAt(y * cl) - 0.02, 0.6, 0.9, 0.12, 0.08); m.pop(); m.emissive(0); }
+      m.pop();
+      // the spiral stairs (vertical colliders follow the leaning axis)
+      m.lo = true;
+      const rail = [];
+      for (const s of steps) {
+        const sx = Math.sin(s.a), sz = Math.cos(s.a);
+        m.color(s.y > gH - 2.7 ? '#7a5a3a' : '#8a6a4a').shine(1);
+        m.push(); m.tf(s.cx + sx * s.rc, s.y - 0.13, s.cz + sz * s.rc, s.a); m.roundBox(0, 0, 0, 1.2, 0.26, s.hz * 2, 0.08); m.pop(); m.shine(0);
+        cols.push({ t: 'box', x: s.cx + sx * s.rc, z: s.cz + sz * s.rc, hx: 0.62, hz: s.hz, yaw: s.a, y0: s.y - 0.26, y1: s.y });
+        cols.push({ t: 'box', x: s.cx + sx * (K.ROUT + 0.08), z: s.cz + sz * (K.ROUT + 0.08), hx: 0.6, hz: 0.06, yaw: s.a, y0: s.y, y1: s.y + 1.0, walk: false, camPass: true });
+        rail.push([s.cx + sx * (K.ROUT - 0.02), s.y + 0.95, s.cz + sz * (K.ROUT - 0.02)]);
+        if (steps.indexOf(s) % 3 === 0) { m.color('#2a2a30'); m.limb(rail[rail.length - 1][0], s.y, rail[rail.length - 1][2], rail[rail.length - 1][0], s.y + 0.95, rail[rail.length - 1][2], 0.04, 0.04, { seg: 3 }); }
+        // the steps hang off brackets on the tower
+        if (steps.indexOf(s) % 2 === 0) { m.color('#3a3a44'); m.limb(s.cx + sx * (s.rin + 0.05), s.y - 0.9, s.cz + sz * (s.rin + 0.05), s.cx + sx * s.rc, s.y - 0.25, s.cz + sz * s.rc, 0.07, 0.05, { seg: 3 }); }
+      }
+      m.color('#2a2a30'); bbaTube(m, rail, 0.05, 4, { caps: false });
+      m.lo = false;
+      // tower body colliders (stacked, following the lean) + gallery + lamp room
+      for (let y = 0; y < gH - 0.4; y += 2.2) { const c = bbaLHAxis(T, y + 1.1); cols.push({ t: 'cyl', x: c[0], z: c[1], r: rAt(y + 1.1) - 0.05, y0: y, y1: Math.min(gH - 0.35, y + 2.2), cover: true }); }
+      cols.push({ t: 'cyl', x: top[0], z: top[1], r: K.GR, y0: gH - 0.35, y1: gH });
+      cols.push({ t: 'cyl', x: top[0], z: top[1], r: 2.0, y0: gH, y1: gH + 3.3, cover: true });
+      lights.push({ x: ax[0], y: 0.5, z: ax[1], s: 0, c: '#ffd070', pool: 7 * (P.maxNight > 0.25 ? 1 : 0) });
+      return { cols, lights };
+    });
+    const lampW = F.w(top[0], lampY, top[1]);
+    const L = { i: ti, T, name: T.name, lit: !!(P.o.lit === true || (Array.isArray(P.o.lit) && P.o.lit[ti])), x: lampW[0], y: lampW[1], z: lampW[2], yaw: ti * 2.1, range: 85 * F.s, width: 7 * F.s, twin: true, steps, gal: F.w(top[0], gH, top[1]) };
+    P.lh.push(L); P.R.beams.push(L);
+    L.glow = bbaDynGlow(api, P, top[0], lampY, top[1], 3.2, '#fff2c8'); L.glow.s = 0;
+    bbaItem(P, { x: L.gal[0], z: L.gal[2], y: L.gal[1], r: 3.7 * F.s, label: 'LIGHT IT!', when: () => !L.lit, fn: gg => bbaLight(gg, P, L) });
+  });
+  /* ---- the hidden bridge from Kip's gallery to the Keeper's Cache (appears when a beam sweeps it) ---- */
+  const T2 = K.TOWERS[2], kTop = bbaLHAxis(T2, T2.gH), bz0 = kTop[1] + K.GR + 0.9;
+  const bridge = bbaMover(api, P, m => {
+    const cols = [];
+    for (let k = 0; k < 7; k++) { const z = bz0 + k * 1.9, y = T2.gH + k * 0.12; m.color(burnsHSL(180 + k * 25, 0.9, 0.6), 0.85).shine(2); m.roundBox(kTop[0], y - 0.15, z, 1.9, 0.3, 1.5, 0.1); cols.push({ t: 'box', x: kTop[0], z, hx: 0.95, hz: 0.75, y0: y - 0.3, y1: y }); }
+    const cz = bz0 + 6 * 1.9 + 3.0, cy = T2.gH + 0.9;
+    m.color('#3a2a5a', 0.3).shine(1); m.roundBox(kTop[0], cy - 0.3, cz, 3.4, 0.6, 3.4, 0.25);
+    m.color('#ffd84a', 0.9); m.ellipsoid(kTop[0], cy - 0.8, cz, 1.4, 0.4, 1.4); m.emissive(0).shine(0);
+    cols.push({ t: 'box', x: kTop[0], z: cz, hx: 1.7, hz: 1.7, y0: cy - 0.6, y1: cy });
+    return { cols, lights: [{ x: kTop[0], y: cy - 0.9, z: cz, s: 2.4, c: '#ffd84a' }] };
+  });
+  bbaPose(P, bridge, 0, 0, 0, 0, 0, 0); bridge.visible = !!P.o.bridgeVisible;
+  P.parts = { bridge };
+  const mid = F.w(kTop[0], T2.gH, bz0 + 6.5), cache = F.w(kTop[0], T2.gH + 0.9, bz0 + 6 * 1.9 + 3.0);
+  P.R.reveals.push({ x: mid[0], z: mid[2], r: 4, kind: 'path', done: bridge.visible, fn: gg => { bridge.visible = true; gg.banner('A HIDDEN PATH!', 'The beam lit a bridge to the Keeper\'s Cache.', { col: '#38f2ff', small: true }); burnsSfx('secret'); for (let k = 0; k < 7; k++) { const q = F.w(kTop[0], T2.gH + 0.3, bz0 + k * 1.9); gg.fx.burst(q[0], q[1], q[2], 'star', 6, '#38f2ff'); } if (P.o.onReveal) P.o.onReveal(gg, P, { kind: 'path' }); } });
+  if (P.o.cacheReward !== null) { const rw = P.o.cacheReward === undefined ? 'glow' : P.o.cacheReward; if (rw === 'glow') api.glowRing(cache[0], cache[2], 1.0, 8, cache[1] + 0.9); else bbaPickup(api, P, rw, kTop[0], T2.gH + 1.8, bz0 + 6 * 1.9 + 3.0); }
+  for (const q of P.o.reveals || []) { const w = F.w(q.x, 0, q.z); P.R.reveals.push({ x: w[0], z: w[2], r: q.r || 2, kind: 'custom', done: false, fn: q.fn }); }
+  /* ---- darkwads: burners walking around with no lights (hidden until a beam finds them) ---- */
+  const nDark = P.o.darkwads === undefined ? 5 : P.o.darkwads | 0;
+  P.darkwads = [];
+  const lines = [['WHOA. Light! I\'ve been walking in circles since Tuesday.', 'Take these glow sticks. I clearly can\'t be trusted with them.'], ['Is it night? I thought I went blind.', 'Here, have my glow sticks. I found them in my pocket. Weird.'], ['A DARKWAD? Me? ...Yeah, fair.', 'Gifting you my emergency glow. Ironically.'], ['I was being mysterious. Mostly lost.', 'Glow sticks for the lighthouse hero!'], ['My EL wire died on day one. Long story.', 'Have some glow. Shine on, lighthouse kid.']];
+  P.start = gg => {
+    const rng = mulberry32(hashStr(P.id + 'dark'));
+    for (let i = 0; i < nDark; i++) {
+      const a = i / Math.max(1, nDark) * TAU + rng() * 0.6, d = (26 + rng() * 26) * F.s, x = F.x + Math.sin(a) * d, z = F.z + Math.cos(a) * d;
+      const a2 = gg.spawnActor({ type: ['burner', 'furcoat', 'tutu', 'crusty', 'burner'][i % 5], seed: 300 + i, x, z, yaw: rng() * TAU, behavior: 'wander', radius: 3, speed: 0.7, name: 'DARKWAD', lines: lines[i % lines.length], gift: { kind: 'glowstick', n: 5 }, chatter: false, always: true, _bbaDark: true });
+      a2.hidden = true; a2.data.dark = true; P.darkwads.push(a2);
+      const q = { x, z, r: 2, kind: 'darkwad', done: false, actor: a2, fn: (g2, qq) => {
+        const A = qq.actor; A.hidden = false; A.ch.play('cheer'); A.say(['WHOA, LIGHT!', 'I can SEE!', 'Am I glowing?', 'Who turned the playa on?'][i % 4], 2.4);
+        g2.fx.confetti(A.x, A.y + 2, A.z, 20); burnsSfx('secret', { vol: 0.6 });
+        const n = P.darkwads.filter(d2 => !d2.hidden).length; g2.toast(`DARKWAD LIT UP ${n}/${P.darkwads.length}`);
+        A.data.led = BURNS_NEON[i % 7];
+        if (n === P.darkwads.length) { g2.banner('NO MORE DARKWADS!', 'Everyone out here can see now.', { col: '#38f2ff', small: true }); g2.missions.event('bbaDarkwadsAll', P); if (P.o.onDarkwads) P.o.onDarkwads(g2, P); }
+        if (P.o.onReveal) P.o.onReveal(g2, P, { kind: 'darkwad', actor: A });
+      } };
+      P.R.reveals.push(q);
+    }
+  };
+  P.summitL = (() => { const t = bbaLHAxis(K.TOWERS[0], K.TOWERS[0].gH); return [t[0], K.TOWERS[0].gH, t[1], 3.4]; })();
+  // route (local) up Lou's spiral stairs: waypoints every few steps
+  { const T = K.TOWERS[0], st0 = P.lh[0].steps, r = [];
+    const s0 = st0[0]; r.push(['walk', s0.cx + Math.sin(s0.a - 0.6) * 5.6, s0.cz + Math.cos(s0.a - 0.6) * 5.6]);
+    for (let i = 0; i < st0.length; i += 2) { const s = st0[i], rr = Math.min(K.ROUT - 0.55, s.rc + 0.25); r.push(['walk', s.cx + Math.sin(s.a) * rr, s.cz + Math.cos(s.a) * rr]); }
+    const tp = bbaLHAxis(T, T.gH), last = st0[st0.length - 1], ga = last.a + 0.5; r.push(['walk', tp[0] + Math.sin(ga) * 2.65, tp[1] + Math.cos(ga) * 2.65]); r.push(['act']);
+    P.route = r; }
+  P.spots = { lou: P.lh[0].gal, tess: P.lh[1].gal, kip: P.lh[2].gal, cache, bridge: F.w(kTop[0], T2.gH, bz0 - 0.3) };
+  bbaGlowPath(api, P, P.lh[0].steps.filter((s, i) => i % 6 === 3).map(s => { const l = F.l(s.cx + Math.sin(s.a) * s.rc, s.cz + Math.cos(s.a) * s.rc); return [l[0], s.y + 0.9, l[1]]; }));
+  P.update = (gg, wdt) => {
+    const nk = bbaNight(gg, P);
+    for (const L of P.lh) {
+      L.yaw += wdt * 0.9;
+      const k = L.lit ? 0.55 + 0.45 * nk : 0;
+      L.glow.s = L.lit ? L.glow.s0 * (1 + nk) : 0; L.glow.c[0] = k; L.glow.c[1] = k * 0.95; L.glow.c[2] = k * 0.78;
+    }
+    for (const A of P.darkwads) if (!A.hidden && A.data.led && Math.random() < wdt * 3) gg.fx.glint(A.x, A.y + 1.2, A.z, A.data.led);
+  };
+  P.draw = (gg, Rr, Sp, nk) => {
+    const cam = gg.cam, a = 0.07 + 0.2 * nk;
+    for (const L of P.lh) {
+      if (!L.lit) continue;
+      for (const off of [0, Math.PI]) {
+        const yaw = L.yaw + off, dx = Math.sin(yaw), dz = Math.cos(yaw), tilt = Math.atan2(L.y, 48 * F.s), len = Math.min(L.range, (L.y - 0.2) / Math.sin(tilt));
+        const ex = L.x + dx * len * Math.cos(tilt), ey = L.y - len * Math.sin(tilt), ez = L.z + dz * len * Math.cos(tilt);
+        bbaLine(Rr, L.x, L.y, L.z, ex, ey, ez, L.width * 1.3, Sp.beam, [1, 0.95, 0.75], a * 0.5, true);
+        bbaLine(Rr, L.x, L.y, L.z, ex, ey, ez, L.width * 0.55, Sp.beam, [1, 0.98, 0.88], a, true);
+        Rr.flat.flat(ex, Math.max(0.05, ey) + 0.05, ez, L.width * 1.4, L.width * 3.2, yaw, Sp.glow, [1, 0.92, 0.7], a * 2.2, true);
+        const tc = bbaV.norm(cam.x - L.x, cam.y - L.y, cam.z - L.z), f = Math.max(0, dx * Math.cos(tilt) * tc[0] - Math.sin(tilt) * tc[1] + dz * Math.cos(tilt) * tc[2]);
+        if (f > 0.75) Rr.bbs.bb(L.x, L.y, L.z, 10 * f * f, 10 * f * f, Sp.glow, [1, 0.95, 0.8], (f - 0.75) * 2.4 * (0.3 + 0.7 * nk), true);
+      }
+    }
+  };
+}
+function bbaLight(g, P, L) {
+  if (L.lit) return;
+  L.lit = true;
+  g.banner(L.name + ' IS LIT', 'Watch where the beam sweeps...', { col: '#ffe8a0', small: true });
+  burnsSfx('secret'); burnsSfx('crowd_cheer', { vol: 0.4 }); g.fx.confetti(L.x, L.y, L.z, 30); g.shake(0.15);
+  g.missions.event('bbaLit', L);
+  if (P.o.onLit) P.o.onLit(g, P, L.i);
+  if (P.lh.every(q => q.lit)) { g.banner('ALL THREE LIGHTS ARE LIT', 'The Leaning Lighthouses are fully awake.', { col: '#ffd84a' }); g.missions.event('bbaAllLit', P); if (P.o.onAllLit) P.o.onAllLit(g, P); }
+}
+
+/* ======================= 8. THE RETRO ROCKET =======================
+   A 31 m atomic-age rocket standing on three swept fins, with a red lattice launch gantry at +X.
+   Climb the gantry's ladders level by level (5 m apart, hatches alternate sides) to the top deck
+   (25 m, summit) and hit the big red button: countdown, rumble, steam, ignition and a fireworks
+   show from the nose cone. The access arm swings away and back. It never leaves. That's the art. */
+const BBA_RKT = { GX0: 7, GX1: 13, GZ: 3, LV: [5, 10, 15, 20, 25], HX: 11.0, TOP: 25 };
+BurnsBigArt.kinds.retroRocket = {
+  name: 'The Retro Rocket', mission: 'Push the Big Red Button', size: 36, foot: [22, 16], height: 32, summitY: 25,
+  desc: 'An atomic-age rocket bound for nowhere. Climb the gantry and push the big red button.',
+  hint: 'Ladders inside the gantry: up through the hatches, level by level. The button is on the top deck.',
+  build(api, g, P) { bbaRocketBuild(api, g, P); }
+};
+function bbaRocketBuild(api, g, P) {
+  const K = BBA_RKT, F = P.F, cream = '#f4ecd8', red = '#d8342c', chrome = '#d8dce4', gred = '#c8302a';
+  /* ---- the rocket ---- */
+  bbaPart(api, P, 0, 0, m => {
+    const cols = [], lights = [];
+    m.shine(2);
+    m.lathe([[0, 3.0, cream], [1.8, 3.1, cream], [2.6, 4.5, cream], [3.1, 8, cream], [3.2, 10.8, cream], [3.2, 10.8, red], [3.2, 12.6, red], [3.2, 12.6, cream], [3.0, 17, cream], [2.6, 21, cream], [2.0, 24.5, cream], [2.0, 24.5, chrome], [1.3, 27.5, chrome], [0.6, 30, chrome], [0, 31.3, chrome]], { seg: m.segs(28, 14) });
+    m.color('#3a3a44').shine(1); m.lathe([[0, 2.9], [1.25, 2.6], [1.55, 2.3], [2.05, 1.25], [2.15, 1.15], [1.9, 1.15], [1.2, 2.2], [0, 2.5]], { seg: m.segs(20, 10) });
+    m.color('#ff8a2a', 0.5); m.ellipsoid(0, 1.6, 0, 1.6, 0.25, 1.6, { seg: 14, rings: 4 }); m.emissive(0);
+    // fins
+    for (let k = 0; k < 3; k++) {
+      const a = Math.PI / 6 + k * TAU / 3;
+      m.push(); m.tf(0, 0, 0, a - Math.PI / 2);
+      m.color(red).shine(2); m.extrude([[2.7, 12.8], [2.9, 4.0], [6.6, 0.25], [7.0, 0.25], [6.6, 2.2], [4.6, 7.0]], 0.55, { convex: false });
+      m.color(chrome).shine(3); m.ball(6.85, 0.45, 0, 0.42);
+      m.color('#ffe24a', 0.9); m.ball(6.9, 1.2, 0, 0.18); m.emissive(0).shine(0);
+      m.pop();
+      const d = [Math.sin(a), Math.cos(a)];
+      cols.push({ t: 'box', x: d[0] * 5.0, z: d[1] * 5.0, hx: 0.35, hz: 2.0, yaw: a, y0: 0, y1: 3.2 });
+      lights.push({ x: d[0] * 6.9, y: 1.2, z: d[1] * 6.9, s: 0.9, c: '#ffe24a', blink: 4 });
+    }
+    // portholes + hatch facing the gantry (+X)
+    for (const [y, a] of [[14.5, Math.PI / 2], [18.5, Math.PI / 2], [16.5, -Math.PI / 6], [16.5, Math.PI * 1.2]]) {
+      const r = y < 17 ? 3.08 : 2.75; m.push(); m.tf(Math.sin(a) * r, y, Math.cos(a) * r, a, Math.PI / 2, 0);
+      m.color(chrome).shine(3); m.torus(0, 0, 0, 0.62, 0.13, { seg: 14, tseg: 5 }); m.color('#8adcff', 0.65); m.ellipsoid(0, 0, 0, 0.55, 0.08, 0.55, { seg: 12, rings: 4 }); m.emissive(0).shine(0); m.pop();
+      lights.push({ x: Math.sin(a) * (r + 0.2), y, z: Math.cos(a) * (r + 0.2), s: 1.0, c: '#8adcff' });
+    }
+    m.color('#3a3a44').shine(1); m.push(); m.tf(2.5, 21.2, 0, Math.PI / 2, 0.08); m.roundBox(0, 0, 0, 1.6, 2.2, 0.25, 0.25); m.pop();
+    m.color('#ffe24a', 0.8); m.roundBox(2.68, 22.45, 0, 0.1, 0.18, 1.0, 0.04); m.emissive(0).shine(0);
+    // body colliders
+    cols.push({ t: 'cyl', x: 0, z: 0, r: 2.2, y0: 0, y1: 3.1, cover: true });
+    cols.push({ t: 'cyl', x: 0, z: 0, r: 3.15, y0: 3.1, y1: 17, cover: true });
+    cols.push({ t: 'cyl', x: 0, z: 0, r: 2.5, y0: 17, y1: 24.5, cover: true });
+    cols.push({ t: 'cyl', x: 0, z: 0, r: 1.4, y0: 24.5, y1: 30, cover: true });
+    lights.push({ x: 0, y: 31.6, z: 0, s: 1.4, c: '#ff3a2a', blink: 2 });
+    return { cols, lights };
+  });
+  /* ---- the gantry ---- */
+  bbaPart(api, P, (K.GX0 + K.GX1) / 2, 0, m => {
+    const cols = [], lights = [], X0 = K.GX0, X1 = K.GX1, Z = K.GZ, H = K.TOP + 1.2;
+    m.color(gred).shine(1);
+    for (const x of [X0, X1]) for (const z of [-Z, Z]) { m.roundBox(x, H / 2, z, 0.4, H, 0.4, 0.1); cols.push({ t: 'cyl', x, z, r: 0.28, y0: 0, y1: H, camPass: true }); }
+    const lv = [0].concat(K.LV);
+    for (let i = 0; i < lv.length - 1; i++) {
+      const y0 = lv[i] + 0.2, y1 = lv[i + 1] - 0.2;
+      for (const z of [-Z, Z]) { m.limb(X0, y0, z, X1, y1, z, 0.09, 0.09, { seg: 4 }); m.limb(X1, y0, z, X0, y1, z, 0.09, 0.09, { seg: 4 }); }
+      m.limb(X1, y0, -Z, X1, y1, Z, 0.09, 0.09, { seg: 4 }); m.limb(X1, y1, -Z, X1, y0, Z, 0.09, 0.09, { seg: 4 });
+    }
+    m.shine(0);
+    // decks with alternating hatches (+z on odd levels, -z on even)
+    K.LV.forEach((y, i) => {
+      const hz = i % 2 === 0 ? 1 : -1;   // hatch side
+      const deck = (x0, x1, z0, z1) => { m.color('#3a3a44').shine(1); m.roundBox((x0 + x1) / 2, y - 0.12, (z0 + z1) / 2, x1 - x0, 0.24, z1 - z0, 0.06); m.shine(0); cols.push({ t: 'box', x: (x0 + x1) / 2, z: (z0 + z1) / 2, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, y0: y - 0.24, y1: y }); };
+      if (i === K.LV.length - 1) { deck(X0, X1, -Z, hz > 0 ? 1.0 : Z); if (hz > 0) deck(X0, 11.0, 1.0, Z); }
+      else if (hz > 0) { deck(X0, X1, -Z, 1.0); deck(X0, 11.0, 1.0, Z); }
+      else { deck(X0, X1, -1.0, Z); deck(X0, 11.0, -Z, -1.0); }
+      m.color('#ffc21a'); for (const [x, z, w, d] of [[(X0 + X1) / 2, -Z, X1 - X0, 0.08], [(X0 + X1) / 2, Z, X1 - X0, 0.08], [X1, 0, 0.08, 2 * Z]]) m.roundBox(x, y + 1.0, z, w, 0.08, d, 0.03);
+      // the ladder up to this level (rails + rungs) on the hatch's -x edge, climbed from inside the hatch
+      const zc = hz * 1.9, yb = i ? K.LV[i - 1] : 0, xl = K.HX + 0.05;
+      m.color('#d8dce4').shine(2); for (const z of [zc - 0.72, zc + 0.72]) m.limb(xl, yb, z, xl, y + 1.0, z, 0.05, 0.05, { seg: 4 }); for (let yy = yb + 0.35; yy < y; yy += 0.4) m.limb(xl, yy, zc - 0.72, xl, yy, zc + 0.72, 0.04, 0.04, { seg: 4 }); m.shine(0);
+      lights.push({ x: X1, y: y + 1.0, z: 0, s: 0.7, c: '#ff3a2a', blink: 1.5 });
+    });
+    // top deck rails + the big red button + floodlights
+    const T = K.TOP;
+    m.color('#ffc21a'); m.roundBox(X0, T + 1.0, 0, 0.08, 0.08, 2 * Z, 0.03);
+    m.color('#3a3a44').shine(1); m.roundCyl(10, T, 0.6, 0.5, 1.0, 0.12); m.color('#d82a2a', 0.6).shine(2); m.ellipsoid(10, T + 1.05, 0.6, 0.55, 0.3, 0.55, { phi1: Math.PI / 2 }); m.emissive(0).shine(0);
+    m.color('#ffe24a'); m.roundBox(10, T + 0.75, 0.6, 1.2, 0.12, 1.2, 0.05);
+    cols.push({ t: 'cyl', x: 10, z: 0.6, r: 0.55, y0: T, y1: T + 1.2 });
+    for (const z of [-Z, Z]) { m.color('#2a2a30'); m.roundBox(X0 + 0.2, T + 1.6, z, 0.5, 0.5, 0.7, 0.1); m.color('#fff4d8', 1); m.roundBox(X0 - 0.06, T + 1.6, z, 0.06, 0.4, 0.55, 0.03); m.emissive(0); lights.push({ x: X0 - 0.3, y: T + 1.6, z, s: 2.0, c: '#fff4d8' }); }
+    lights.push({ x: 2, y: 0.2, z: 0, s: 0, c: '#fff0d8', pool: 12 * (P.maxNight > 0.25 ? 1 : 0) });
+    return { cols, lights };
+  });
+  // ladders: ground->L1 (+z), L1->L2 (-z), L2->L3 (+z), L3->L4 (-z), L4->top (+z)
+  K.LV.forEach((y, i) => { const hz = i % 2 === 0 ? 1 : -1; bbaClimbZone(api, P, { x: K.HX, z: hz * 1.9, y0: i ? K.LV[i - 1] : 0, y1: y, nx: 1, nz: 0, hw: 0.78, top: y, exit: 0.95, name: 'ladder' + i }); });
+  /* ---- the access arm (swings away at launch) ---- */
+  const arm = bbaMover(api, P, m => {
+    m.color(gred).shine(1); m.roundBox(-1.9, -0.15, 0, 3.8, 0.3, 1.6, 0.08);
+    m.color('#ffc21a'); for (const sz of [-0.78, 0.78]) m.roundBox(-1.9, 0.9, sz, 3.8, 0.08, 0.08, 0.03);
+    m.color(gred); for (const sz of [-0.78, 0.78]) for (const x of [-0.2, -1.9, -3.6]) m.limb(x, 0, sz, x, 0.9, sz, 0.05, 0.05, { seg: 4 });
+    m.shine(0);
+    return { cols: [{ t: 'box', x: -1.9, z: 0, hx: 1.9, hz: 0.8, y0: -0.3, y1: 0 }] };
+  });
+  const armHome = K.LV[3];
+  bbaPose(P, arm, K.GX0, armHome, 0, 0, 0, 0);
+  P.parts = { arm };
+  bbaItem(P, { x: F.wx(10, 0.6), z: F.wz(10, 0.6), y: F.wy(K.TOP), r: 2.4 * F.s, label: 'LAUNCH!', when: () => !P.launch, fn: gg => bbaLaunch(gg, P) });
+  bbaPickup(api, P, P.o.hatchReward === undefined ? 'glow' : P.o.hatchReward, 3.6, armHome + 0.9, 0);
+  P.summitL = [10, K.TOP, -0.6, 2.9];
+  P.route = [['walk', 12.2, 5.0], ['walk', 11.55, 1.9], ['climb', 'ladder0']];
+  for (let i = 1; i < K.LV.length; i++) { const hz = i % 2 === 0 ? 1 : -1; P.route.push(['walk', 11.55, hz * 1.9], ['climb', 'ladder' + i]); }
+  P.route.push(['walk', 10, -0.5], ['act']);
+  P.spots = { top: F.w(10, K.TOP, 0), button: F.w(10, K.TOP, 0.6), hatch: F.w(3.6, armHome, 0), nose: F.w(0, 31.3, 0) };
+  bbaGlowPath(api, P, [[11.5, 2.5, 1.9], [11.5, 7.5, -1.9], [11.5, 12.5, 1.9], [11.5, 17.5, -1.9], [11.5, 22.5, 1.9], [9, K.TOP + 0.9, -1.5], [5.5, armHome + 0.9, 0]]);
+  bbaPool(api, P, 10, 0, 9, '#ff6a4a', 0.3);
+  const st = P.rk = { shells: [] };
+  P.update = (gg, wdt) => {
+    const L = P.launch;
+    // the arm swings away during a launch and back after
+    const want = L && L.t < 14 ? -1.35 : 0;
+    st.armA = BurnsM.damp(st.armA || 0, want, 1.6, wdt);
+    bbaPose(P, arm, K.GX0, armHome, 0, st.armA, 0, 0);
+    // fireworks shells in flight
+    for (const s of st.shells) { s.t += wdt; s.vy -= 9 * wdt; s.x += s.vx * wdt; s.y += s.vy * wdt; s.z += s.vz * wdt; if (Math.random() < 0.7) gg.fx.trail(s.x, s.y, s.z, s.col); if (s.vy < 2 || s.t > 3) { s.done = true; gg.fx.firework(s.x, s.y, s.z, s.col); gg.fx.firework(s.x + 1, s.y + 1, s.z - 1, BURNS_NEON[(Math.random() * 7) | 0]); burnsSfx('firework_burst', { vol: 0.5, pitch: 0.8 + Math.random() * 0.4 }); gg.pointLight(s.x, s.y, s.z, 40, bbaHue(Math.random() * 360), 2); } }
+    st.shells = st.shells.filter(s => !s.done);
+    if (!L) return;
+    const t0 = L.t; L.t += wdt; const t = L.t;
+    const nozzle = F.w(0, 1.2, 0), nose = F.w(0, 31.3, 0);
+    for (let k = 0; k < 5; k++) if (t0 < k && t >= k) { gg.banner('T-MINUS ' + (5 - k), k < 4 ? 'Stand clear of the fins!' : 'Here we go...', { col: '#ff4a2a', small: true }); burnsSfx('greeter_bell', { pitch: 0.6 + k * 0.1 }); }
+    if (t < 5) { gg.shake(0.05 + t * 0.05); if (Math.random() < wdt * 30 * (0.3 + t / 5)) { const a = Math.random() * TAU; gg.fx.add(nozzle[0] + Math.sin(a) * 3, 0.3, nozzle[2] + Math.cos(a) * 3, Math.sin(a) * 4, 1 + Math.random() * 2, Math.cos(a) * 4, 2.2, 1.5, 5, [0.95, 0.95, 1], 0.45, 'smoke', 4); } }
+    if (t0 < 5 && t >= 5) { gg.banner('IGNITION!', 'Destination: nowhere. Spectacularly.', { col: '#ffb020', big: true }); burnsSfx('man_roar', { pitch: 0.5 }); burnsSfx('flame_jet'); gg.shake(0.7); gg.missions.event('bbaLaunch', P); if (P.o.onLaunch) P.o.onLaunch(gg, P); }
+    if (t >= 5 && t < 11) {
+      gg.shake(0.25);
+      for (let i = 0; i < 4; i++) { const a = Math.random() * TAU, sp = 2 + Math.random() * 6; gg.fx.add(nozzle[0] + (Math.random() - 0.5), nozzle[1], nozzle[2] + (Math.random() - 0.5), Math.sin(a) * sp, -2 - Math.random() * 3, Math.cos(a) * sp, 0.7, 1.6, 0.6, [1, 0.6, 0.2], 1, 'flame', 1); }
+      if (Math.random() < wdt * 25) { const a = Math.random() * TAU; gg.fx.add(nozzle[0] + Math.sin(a) * 4, 0.4, nozzle[2] + Math.cos(a) * 4, Math.sin(a) * 6, 0.8, Math.cos(a) * 6, 3, 2, 7, [0.9, 0.88, 0.92], 0.4, 'smoke', 4); }
+      gg.pointLight(nozzle[0], 2, nozzle[2], 30, [1, 0.55, 0.2], 2.4);
+      if (Math.random() < wdt * 4) burnsSfx('flame_jet', { vol: 0.6 });
+    }
+    if (t >= 6.5 && t < 13.5 && (L.next = (L.next || 6.5)) <= t) {
+      L.next = t + 0.22 + Math.random() * 0.25;
+      const a = Math.random() * TAU, sp = 2 + Math.random() * 4;
+      st.shells.push({ x: nose[0], y: nose[1] + 0.5, z: nose[2], vx: Math.sin(a) * sp, vy: 26 + Math.random() * 10, vz: Math.cos(a) * sp, t: 0, col: BURNS_NEON[(Math.random() * 7) | 0] });
+      burnsSfx('firework_launch', { vol: 0.4 });
+    }
+    if (t0 < 14 && t >= 14) { gg.banner('MISSION ACCOMPLISHED', 'The rocket went nowhere. The crowd went wild.', { col: '#7aff5a', small: true }); burnsSfx('crowd_cheer'); }
+    if (t > 17) P.launch = null;
+  };
+  P.draw = (gg, Rr, Sp, nk) => {
+    const L = P.launch; if (!L || L.t < 5 || L.t > 11) return;
+    const q = F.w(0, 1.0, 0), e = F.w(0, -3, 0), k = Math.min(1, (L.t - 5) * 3) * Math.min(1, (11 - L.t));
+    Rr.bbs.bb(q[0], q[1] - 0.5, q[2], 9 * k, 9 * k, Sp.glow, [1, 0.6, 0.25], 0.9, true);
+    bbaLine(Rr, q[0], q[1], q[2], e[0], e[1], e[2], 4.5 * k, Sp.flame, [1, 0.75, 0.35], 0.9, true);
+  };
+}
+function bbaLaunch(g, P) {
+  if (P.launch) return;
+  P.launch = { t: 0 };
+  g.banner('LAUNCH SEQUENCE', 'Countdown started. Hold on to your bun.', { col: '#ff4a2a' });
+  burnsSfx('neon_flash', { vol: 0.5 });
 }

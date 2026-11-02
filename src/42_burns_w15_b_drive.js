@@ -25,7 +25,8 @@ const BW15D = {
   // 0..1 from the bags taken this visit (8 = maximum wonk)
   tripTarget(S) { return clamp(S.trip.bags / 8, 0, 1); },
   // visual intensity (with the peak while a cop is near)
-  tripVis(S) { return clamp(S.trip.level + S.trip.peak * 0.55, 0, 1.25); },
+  // (cops make it peak, relative to how many bags are in: no bags, no rainbows)
+  tripVis(S) { const L = S.trip.level; return clamp(L + S.trip.peak * Math.min(0.55, L * 0.9), 0, 1.25); },
   /* ---------------- the Party Barge controller ---------------- */
   vmax(S) { return S.zone === 'line' ? 11 : S.paved ? 24 : 16.5; },
   ride(g, rv, p, dt) {
@@ -135,7 +136,7 @@ const BW15D = {
     } else S.v *= Math.max(0, 1 - dt * (frontal > 0.3 ? 4 : 0.8));
   },
   honk(g, S) {
-    if (S.honkT > 0) return; S.honkT = 0.5;
+    if (S.honkT > 0) return; S.honkT = 0.5; S.honks = (S.honks || 0) + 1;
     burnsSfx('artcarHorn'); g.fx.notes(S.rv.x, S.rv.y + 4, S.rv.z);
     for (const a of g.actors) if (!a.hidden && a.friendly && a !== S.chinka && Math.hypot(a.x - S.rv.x, a.z - S.rv.z) < 16) a.say(['WOOO!', 'BYE!', 'SEE YOU NEXT YEAR!', 'PARTY BARGE!', 'Honk honk!'][Math.floor(Math.random() * 5)], 1.4);
     if (S.enc) BW15D.encHonk(g, S);
@@ -477,7 +478,7 @@ const BW15D = {
       if (G.state === 'approach' || G.state === 'ready') {
         // stand by the window (Brady's side when there's room, otherwise Chinka's)
         const side = G.side || 1;
-        const tx = rv.x + c * side * 2.25 + s * 2.1, tz = rv.z - s * side * 2.25 + c * 2.1;
+        const wz = BW15M.SEAT_Z, tx = rv.x + c * side * 2.25 + s * wz, tz = rv.z - s * side * 2.25 + c * wz;
         a.data.tx = tx; a.data.tz = tz;
         const d = Math.hypot(a.x - tx, a.z - tz);
         if (d < 0.9 && Math.abs(S.v) < 1.6) { if (G.state !== 'ready') { G.state = 'ready'; G.t = 0; a.say(G.line, 3.2); burnsSfx('dialogue_blip'); } }
@@ -551,9 +552,8 @@ const BW15D = {
 BurnsBehaviors.register('bw15Seat', {
   update(a, g, dt) {
     const S = BW15.state; if (!S || !S.rv) return;
-    const rv = S.rv, o = a.def.seat || [-0.62, BW15M.DECK, 2.05], c = Math.cos(rv.yaw), s = Math.sin(rv.yaw);
-    const k = S.parts.uni && S.parts.uni.visible ? S.parts.uni.scale : 1;
-    a.x = rv.x + (o[0] * c + o[2] * s) * k; a.z = rv.z + (-o[0] * s + o[2] * c) * k; a.y = rv.y + (o[1] - BW15M.DECK) * k + BW15M.DECK * k;
+    const rv = S.rv, o = a.def.seat || [-0.62, BW15M.DECK, BW15M.SEAT_Z], c = Math.cos(rv.yaw), s = Math.sin(rv.yaw);
+    a.x = rv.x + o[0] * c + o[2] * s; a.z = rv.z - o[0] * s + o[2] * c; a.y = rv.y + o[1];
     a.yaw = rv.yaw + (a.def.seatYaw || 0); a.vx = a.vz = a.vy = 0;
     const anim = a.data.anim && a.data.animT > 0 ? a.data.anim : (a.bubbleText && a.bubbleT > 0 ? (a.def.talkAnim || 'sit') : (a.def.seatAnim || 'sit'));
     if (a.data.animT > 0) a.data.animT -= dt;

@@ -27,7 +27,7 @@ const BW15W = {
     { type: 'burnermom', seed: 5, name: 'SOMEONE\'S MOM', power: 'weed', hello: 'Yoo-hoo! Sweetie!', line: 'My son said "Mom, get rid of this before the highway!" Is it a mint? Take it, sweetie!', thanks: 'Drive safe! Call your mother!' },
     { type: 'furry', seed: 2, name: 'FUZZWICK', power: 'lsd', hello: '*muffled waving*', line: '*muffled* CAN\'T FIT IT IN THE SUIT! TAKE IT! TAKE IT!', thanks: '*happy muffled noises*' },
     { type: 'techbro', seed: 9, name: 'CHADWICK', power: 'khole', hello: 'Yo! Party barge! Quick pitch!', line: 'I\'m liquidating my position before the default world. Consider it a gift. Like, an exit gift.', thanks: 'Circle back next year, bro!' },
-    { type: 'soaker', seed: 4, name: 'RAINBOW', power: 'bufo', hello: 'Namaste, beautiful barge!', line: 'The springs told me to let go. Of everything. Starting with this.', thanks: 'I am lighter. I am steam.' },
+    { type: 'healer', seed: 4, name: 'RAINBOW', power: 'bufo', hello: 'Namaste, beautiful barge!', line: 'The springs told me to let go. Of everything. Starting with this.', thanks: 'I am lighter. I am steam.' },
     { type: 'sparklepony', seed: 12, name: 'GLITTER', power: 'liquor', hello: '', line: '', thanks: '' }
   ],
   /* ---------------- terrain features (baked once into the height grid) ---------------- */
@@ -336,7 +336,7 @@ BurnsWorlds.register({
     S.parts.uni = api.mover(m => BW15M.unicorn(m)); S.parts.uni.visible = false;
     S.parts.legs = [0, 1, 2, 3].map(() => { const mv = api.mover(m => BW15M.unicornLeg(m)); mv.visible = false; return mv; });
     S.parts.wingL = api.mover(m => BW15M.wing(m, 1)); S.parts.wingR = api.mover(m => BW15M.wing(m, -1)); S.parts.wingL.visible = S.parts.wingR.visible = false;
-    S.chinkaDef = api.npc({ id: 'w15chinka', type: 'chinka', name: 'CHINKA', x: rv.x, z: rv.z, behavior: 'bw15Seat', seat: [-0.62, BW15M.DECK, 2.05], noTalk: true, chatter: false, always: true, fixedY: true, collide: false });
+    S.chinkaDef = api.npc({ id: 'w15chinka', type: 'chinka', name: 'CHINKA', x: rv.x, z: rv.z, behavior: 'bw15Seat', seat: [-0.62, BW15M.DECK, BW15M.SEAT_Z], noTalk: true, chatter: false, always: true, fixedY: true, collide: false });
     /* ================= cops ================= */
     S.cops.push(t1.cop, t2.cop, cc1, cc2, S.undercover);
     S.traps.push({ kind: 'trap', s: BW15.S.trap1, pre: 50, cop: t1.cop, officer: t1.officer });
@@ -358,7 +358,7 @@ BurnsWorlds.register({
     for (let i = 0; i < 7; i++) api.pickup('glowstick', -14, 1.2, -320 + i * 12);
     glowRoad(300, 340, 1.85, 6); glowRoad(470, 520, 1.85, 8); glowRoad(700, 750, 1.85, 8); glowRoad(870, 920, 1.85, 8);
     glowRoad(560, 600, -1.85, 6);
-    api.pickup('photo', -14, 1.7, -268, { id: 'p1' });
+    api.pickup('photo', -7, 1.7, -284, { id: 'p1' });
     // the last bags (handed over or tossed by the givers; hidden until then)
     S.bagDefs = BW15W.GIVERS.map((G, i) => api.pickup('bag:' + G.power, 0, -60, -3000 - i * 10, { id: 'bag' + (i + 1), onTake: (g2, P) => { if (BW15.state) BW15.state.lastBagId = P.id; } }));
     // givers
@@ -509,7 +509,7 @@ Object.assign(BW15W, {
     const a = S.pony; if (!a || S.ponyAboard) return;
     S.ponyAboard = true; S.ponyWait = 0;
     g.fx.confetti(a.x, a.y + 2, a.z, 30); burnsSfx('appear', null, 'secret');
-    a.def.seat = [0.15, BW15M.DECK, -1.4]; a.def.seatAnim = 'dance'; a.def.seatYaw = Math.PI * 0.85; a.setBehavior('bw15Seat');
+    a.def.seat = [0.15, BW15M.DECK, 1.5]; a.def.seatAnim = 'dance'; a.def.seatYaw = Math.PI * 0.85; a.setBehavior('bw15Seat');
     a.say('YAY! Gerlach! I call the disco ball!', 2.6);
     if (g.missions.state('pony') === 'available') g.missions.start('pony');
     BW15D.quip(g, 'pony', ['Welcome aboard! Mind the glitter. ...More glitter.', 'Every party barge needs a pony.'], true);
@@ -630,6 +630,17 @@ window.BW15_DEBUG = {
   // tap STEADY on every beat with the given accuracy (0..1) for sec seconds of sim
   steady(acc) { BW15.state.autoSteady = acc; },
   speed(v) { BW15.state.v = v; },
+  // key places for scripted tests: pony, furry, techbro, gas, springs, lot, check, devils, hill
+  pos(name) {
+    const S = BW15.state, g = S.g, A = n => { const a = g.actor(n); return a ? { x: a.x, z: a.z } : null; };
+    switch (name) {
+      case 'pony': return A('w15pony'); case 'furry': return A('w15giver4'); case 'tech': return A('w15giver5'); case 'healer': return A('w15giver6');
+      case 'gas': return { x: BW15W.gas.x, z: BW15W.gas.z }; case 'springs': return { x: BW15W.springs.x, z: BW15W.springs.z }; case 'lot': return { x: BW15W.lot.x, z: BW15W.lot.z };
+      case 'hill': return { x: BW15W.hill.x, z: BW15W.hill.z }; case 'devils': return S.devils.map(D => ({ x: D.x, z: D.z, r: D.r }));
+      case 'track': return BW15_TERR.tracks[0].pts.map(p => ({ x: p[0], z: p[1] }));
+      default: return null;
+    }
+  },
   bags(n) { const S = BW15.state; for (let i = 0; i < n; i++) { S.lastBagId = null; BW15D.bagTaken(S.g, S, 'molly'); } }
 };
 // test helper: auto-tap STEADY close to each beat (runs inside the sim step)

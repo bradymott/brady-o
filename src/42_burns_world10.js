@@ -16,7 +16,7 @@
 const BURNS_W10 = {
   DECK: 6.0, SAUCER_R: 16.2, LAND: { x: 12, z: 214 }, VIEW: { x: 0, z: 60 },
   ARENA1: { x: 0, z: 0, r: 40 }, ARENA2: { x: 0, z: 0, r: 46 },
-  ROCKET: { x: 112, z: 30 }, BEAM_R: 18.6,
+  ROCKET: { x: 112, z: 30 }, BEAM_R: 18.6, BAD: { x: 7, z: 57.5 },
   state: null
 };
 const BURNS_W10_SKY = Object.assign({}, BURNS_PALETTES.night, {
@@ -122,7 +122,8 @@ BurnsWorlds.register({
 
 /* ---------------- big art placement (guarded; see BURNS_W9.placeArt) ---------------- */
 BURNS_W10.placeArt = function (api, g, kind, x, z, o, fallback) {
-  if (typeof BurnsBigArt !== 'undefined' && BurnsBigArt && typeof BurnsBigArt.place === 'function') {
+  // (only kinds the module already has: the others stay on our stand-in quietly until they land)
+  if (typeof BurnsBigArt !== 'undefined' && BurnsBigArt && typeof BurnsBigArt.place === 'function' && (!BurnsBigArt.kinds || BurnsBigArt.kinds[kind])) {
     try { const info = BurnsBigArt.place(api, g, kind, x, z, o || {}); if (info !== false) return { big: true, info }; } catch (e) { console.warn('BurnsBigArt.place(' + kind + ') failed; using the stand-in', e); }
   }
   return { big: false, info: fallback() };
@@ -347,7 +348,7 @@ BURNS_W10.buildCast = function (api) {
     lines: [burnsW8910Pick(BURNS_W8910_ARCH.BURN[k]), k === 'captain' ? 'Fire perimeter check: complete. Hydration check: YOU. Drink.' : k === 'billionaire' ? 'Radically inclusive Burn, darling. Velvet rope starts... here.' : k === 'techbro' ? 'This circle? Decentralized community architecture.' : k === 'healer' ? 'Would you like to eye-gaze before he burns? It\'s free. It costs your soul.' : k === 'crusty' ? 'Back in my day the Man was twelve feet tall and we LIKED it.' : 'Do you have water? And a cup? And a flashlight? Love the costume though!'],
     gift: k === 'captain' ? { kind: 'water' } : k === 'crusty' ? { kind: 'glowstick', n: 8 } : undefined }))).map(d => d.id);
   // everybody else, spread around the inner edge of the crowd
-  const rest = ['greeterF', 'greeterM', 'furry', 'cop', 'badidea', 'deathguild', 'burney', 'partied', 'kid', 'mom', 'cult', 'gatestaff', 'darkwad', 'artist', 'fencebotA', 'fencebotB', 'lamplighter'];
+  const rest = ['greeterF', 'greeterM', 'furry', 'cop', 'deathguild', 'burney', 'partied', 'kid', 'mom', 'cult', 'gatestaff', 'darkwad', 'artist', 'fencebotA', 'fencebotB', 'lamplighter'];
   const lines = {
     greeterF: ['WELCOME HOOOME! ...to the Burn! Same thing!'], greeterM: ['Welcome home, brother! First Burn? Roll in the dust! No, wait, not now.'], furry: ['It is SO hot in here and I would not change a thing.'],
     cop: ['Groovy. Totally groovy. I am a regular burner. *badge falls out*'], badidea: ['What if I got REALLY close to the fire? For the vibes.'], deathguild: ['Two men enter... no wait, wrong dome. Enjoy the Burn.'],
@@ -360,8 +361,13 @@ BURNS_W10.buildCast = function (api) {
     const x = Math.sin(a) * r, z = Math.cos(a) * r;
     if (Math.abs(BurnsM.wrap(a)) < 0.3) return null;
     const anim = k === 'cop' ? 'shuffle' : k === 'greeterF' || k === 'greeterM' || k === 'cult' ? 'w8910welcome' : k === 'badidea' ? 'w8910think' : 'cheer';
-    return api.npc(BURNS_W8910_ARCH.npc(k, { id: 'cast_' + k, x, z, yaw: Math.atan2(-x, -z), anim, lines: lines[k] })).id;
+    // chat: their own ambient lines too (the engine's default fence-bot lines quote real song titles)
+    return api.npc(BURNS_W8910_ARCH.npc(k, { id: 'cast_' + k, x, z, yaw: Math.atan2(-x, -z), anim, lines: lines[k], chat: k === 'fencebotA' || k === 'fencebotB' ? ['Beep.', 'Boop.', 'We could neither confirm nor deny.'] : lines[k] })).id;
   }).filter(Boolean);
+  // the Bad Idea Guy sits a few seats from Brady and Chinka... and a ranger keeps an eye on him
+  const B = BURNS_W10.BAD;
+  api.npc(BURNS_W8910_ARCH.npc('badidea', { id: 'cast_badidea', x: B.x, z: B.z, yaw: Math.atan2(-B.x, -B.z), behavior: 'w10BadEdge', lines: lines.badidea, chat: ['Hear me out: what if the Man... but MORE on fire?', 'I brought marshmallows. And a very long stick. And a shorter stick.'] }));
+  api.npc({ id: 'ranger_sunny', name: 'RANGER SUNNY', type: 'ranger', seed: 103, x: B.x + 1.6, z: B.z - 0.4, yaw: Math.atan2(-(B.x + 1.6), -(B.z - 0.4)), lines: ['I\'ve got my eye on that one. The one with the stick.'], chat: ['Stay behind the line, folks.', 'Yes. You. Behind the line.'] });
   // a few generic dancers between them
   api.crowd(-22, 56, 4, 5, { behaviors: ['dance'] }); api.crowd(24, 54, 4, 5, { behaviors: ['dance'] });
 };
@@ -667,12 +673,17 @@ BURNS_W10.burn = function (g) {
     { cam: { from: camAt(0, 1.6, 46, 0, 22, 0, 1.0), to: camAt(14, 3, 50, 0, 28, 0, 1.05), dur: 8.5 } },
     // 5. the fire
     { do: g2 => { S.burning = true; S.burnT = 0; burnsSfx('flame_jet', { vol: 1 }); } },
-    { cam: { from: camAt(10, 3, 32, 0, 9, 0, 0.9), to: camAt(-10, 4, 30, 0, 12, 0, 0.95), dur: 7.5 } },
+    { cam: { from: camAt(10, 3, 32, 0, 9, 0, 0.9), to: camAt(-10, 4, 30, 0, 12, 0, 0.95), dur: 5.5 } },
+    // (meanwhile, a few seats from Brady: the Bad Idea Guy has an idea)
+    { do: g2 => W.badEdge(g2) },
+    { cam: { from: camAt(W.BAD.x - 3.6, 1.7, W.BAD.z - 10.5, W.BAD.x + 1, 1.5, W.BAD.z, 0.8), to: camAt(W.BAD.x - 2.6, 1.9, W.BAD.z - 8.8, W.BAD.x + 1, 1.5, W.BAD.z, 0.8), dur: 3.8 } },
+    { cam: { from: camAt(-10, 4, 30, 0, 12, 0, 0.95), to: camAt(-6, 4.5, 34, 0, 12, 0, 0.95), dur: 2.0 } },
     // 6. the fall
     { do: g2 => { S.collapseT = 0; burnsSfx('man_roar', { pitch: 0.5, vol: 0.8 }); } },
     { cam: camAt(0, 3, 44, 0, 8, 0, 0.9) },
     { until: g2 => { S.collapseT += 1 / 120; S.collapseK = Math.min(1, S.collapseT / 3.2); if (S.collapseK >= 1 && !S.fell) { S.fell = true; g2.shake(0.9); for (let i = 0; i < 6; i++) g2.fx.spark(man.x + (Math.random() - 0.5) * 8, 2 + Math.random() * 6, man.z - 8 + (Math.random() - 0.5) * 8, 30, '#ffd890', 14); burnsSfx('crowd_cheer', { vol: 1 }); burnsSfx('man_stomp'); W.crowdCheer(g2); } return S.collapseT > 4.4; } },
-    // 7. Brady and Chinka, together, lit by the fire
+    // 7. Brady and Chinka, together, lit by the fire (quiet: no bubbles, no banners)
+    { do: g2 => { BurnsW8910.clearTimers(g2); g2.banners.length = 0; for (const a of g2.actors) { a.bubbleT = 0; a.bubbleText = null; } } },
     { cam: camAt(V.x + 1.4, 1.4, V.z + 5.2, 0, 4, 0, 0.75) },
     { wait: 2.6 },
     { say: [chinkaWho(), ['Best. Burn. Ever.']] },
@@ -698,8 +709,11 @@ BURNS_W10.burnStage = function (g) {
   g.tod = 1;
 };
 BURNS_W10.crowdCheer = function (g) {
-  for (const a of g.actors) { if (a.hidden || a.id === 'chinka' || a.def.spinner) continue; if (a.behName !== 'sit') { a.def.anim = 'cheer'; a.ch.play('cheer'); } if (a.def.burnLines && Math.random() < 0.7) a.say(burnsW8910Pick(a.def.burnLines), 3); }
-  const bad = g.actor('cast_badidea'); if (bad) { bad.say('Is it hot if I get closer? For science?', 2.5); BurnsW8910.timer(g, 2.6, g2 => { const r = g2.actor('ranger'); if (r) r.say('BACK BEHIND THE LINE, BUDDY.', 2.4); }); }
+  const talkers = [];
+  for (const a of g.actors) { if (a.hidden || a.id === 'chinka' || a.def.spinner) continue; if (a.behName !== 'sit') { a.def.anim = 'cheer'; a.ch.play('cheer'); } if (a.def.burnLines) talkers.push(a); }
+  // a few voices, one after another (a wall of overlapping bubbles reads as noise)
+  for (let i = talkers.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = talkers[i]; talkers[i] = talkers[j]; talkers[j] = t; }
+  talkers.slice(0, 3).forEach((a, i) => BurnsW8910.timer(g, 0.2 + i * 1.3, () => a.say(burnsW8910Pick(a.def.burnLines), 2.2)));
 };
 // fireworks from the base, from the Man himself and from the Retro Rocket (game time, so it plays the same at any frame rate)
 BURNS_W10.fireworksUpdate = function (g, dt) {
@@ -710,6 +724,23 @@ BURNS_W10.fireworksUpdate = function (g, dt) {
   if (Math.random() < dt * 3.6 && S.rocketTop) { const K = S.rocketTop; S.mortars.push({ x: K[0], y: K[1], z: K[2], vy: 34, t: 0, top: 1.4, big: true }); }
   if (Math.random() < dt * 3) g.screenFlash('#ffe8c0', 0.08);
 };
+// the Bad Idea Guy edges toward the fire "for science", gets yelled at, runs back
+BURNS_W10.badEdge = function (g) {
+  const a = g.actor('cast_badidea'); if (!a || a.hidden) return;
+  a.data.st = 'edge'; a.say('Is it hot if I get closer? For science?', 1.7);
+  BurnsW8910.timer(g, 1.8, g2 => { a.data.st = 'caught'; const r = g2.actor('ranger_sunny'); if (r) r.say('BACK BEHIND THE LINE, BUDDY.', 1.6); });
+  BurnsW8910.timer(g, 2.7, g2 => { a.data.st = 'back'; a.say('...Worth it.', 1.6); });
+};
+BurnsBehaviors.register('w10BadEdge', {
+  init(a) { a.data.st = 'wait'; a.data.hx = a.x; a.data.hz = a.z; },
+  update(a, g, dt) {
+    const D = a.data;
+    if (D.st === 'edge') { a.moveTo(0, 0, 1.5, dt, 0.4); a.ch.play('walk'); }
+    else if (D.st === 'back') { const d = a.moveTo(D.hx, D.hz, 3.6, dt, 0.3); a.ch.play(d > 0.4 ? 'run' : 'idle'); if (d <= 0.4) { D.st = 'wait'; a.yaw = Math.atan2(-a.x, -a.z); } }
+    else { a.vx = a.vz = 0; a.ch.play(D.st === 'caught' ? 'hurt' : (BURNS_W10.state && BURNS_W10.state.burning ? 'cheer' : 'w8910think')); }
+    a.physics(dt);
+  }
+});
 BURNS_W10.burnUpdate = function (g, dt) {
   const W = BURNS_W10, S = W.state, man = S.man;
   S.burnT = (S.burnT || 0) + dt;

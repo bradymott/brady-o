@@ -370,7 +370,7 @@ BW5.buildLot = function (api, g) {
     acc: ['ledNecklace', 'bracelets'], prop: 'water', paint: null, key: 'w5:biscuit'
   });
   BW5.BISCUIT_SPEC = spec;
-  api.npc({ id: 'biscuit', name: 'BISCUIT', spec, x: B.x, z: B.z + 1.25, yaw: Math.PI, behavior: 'sit', always: true, followDist: 2.4,
+  api.npc({ id: 'biscuit', name: 'BISCUIT', spec, x: B.x, z: B.z + 1.25, yaw: Math.PI, behavior: 'sit', always: true, followDist: 3.2,
     chat: ['Platonic buddies, ASSEMBLE.', 'I\'m not lost. I\'m FOLLOWING.', 'Gary says hi.', 'You smell like dust. Same.', 'I packed snacks. For you. For Gary. For the vibes.'],
     talk(g, a) { BW5.talkBiscuit(g, a); } });
   // Gary: Biscuit's emotional support cooler (a mover with googly eyes)
@@ -824,7 +824,7 @@ BurnsBehaviors.register('bw5Hoarder', {
 BurnsBehaviors.register('bw5Baron', {
   init(a) { a.data.mode = 'park'; a.data.t = 1; a.data.lift = 0; a.data.ang = 0; a.data.tagT = 1.5; a.data.cycle = 0; },
   hit(a, g, kind) {
-    if (a.data.mode === 'stuck') return true;
+    if (a.data.mode === 'stuck') { if (kind === 'love') { a.hit('spin'); return 'handled'; } return true; }
     a.say(['No haggling!', 'Make me an OFFER!', 'That\'s not a trade!', 'Price check: NO.'][Math.floor(Math.random() * 4)], 1.1);
     const p = g.player, dx = p.x - a.x, dz = p.z - a.z, d = Math.hypot(dx, dz) || 1; p.knock(dx / d * 8, 6, dz / d * 8); burnsSfx('bump');
     return false;
@@ -963,18 +963,19 @@ BW5.chuteStart = function (g) {
   const S = BW5.state; S.chute.on = true; S.chute.hits = 0;
   S.carts.forEach((c, k) => { c.on = false; c.wait = 0.5 + k * 0.35; });
   burnsSfx('crowd', { vol: 0.4 }); g.shake(0.3);
-  const b = g.actor('biscuit'); if (b) { if (b.behName !== 'follow') b.setBehavior('follow'); b.say('CARTS AWAAAAY! Stick close, buddy!', 2.2); }
+  // while the carts fly, the action button is for spinning (not for chatting with Biscuit)
+  const b = g.actor('biscuit'); if (b) { if (b.behName !== 'follow') b.setBehavior('follow'); b.def.noTalk = true; b.say('CARTS AWAAAAY! Stick close, buddy!', 2.2); }
   g.banner('CART AVALANCHE!', 'Spin carts away from Biscuit. Jump the rest.', { col: '#ffd84a' });
 };
 BW5.chuteReset = function (g) {
   const S = BW5.state; S.chute.on = false; S.chute.hits = 0;
   for (const c of S.carts) { c.on = false; S.cartP.off(c.i); }
-  const b = g.actor('biscuit'); if (b) { b.x = -3; b.z = -20; b.y = 0; b.vx = b.vz = b.vy = 0; b.say('Ow. Okay. Again! Gary believes in us.', 2.4); }
+  const b = g.actor('biscuit'); if (b) { b.def.noTalk = false; b.x = -3; b.z = -20; b.y = 0; b.vx = b.vz = b.vy = 0; b.say('Ow. Okay. Again! Gary believes in us.', 2.4); }
 };
 BW5.chuteDone = function (g) {
   const S = BW5.state; S.chute.on = false;
   for (const c of S.carts) { c.on = false; S.cartP.off(c.i); }
-  const b = g.actor('biscuit'); if (b) { b.setBehavior('idle'); b.x = 2.2; b.z = -75.2; b.y = BW5.CHUTE.h; }
+  const b = g.actor('biscuit'); if (b) { b.def.noTalk = false; b.setBehavior('idle'); b.x = 2.2; b.z = -75.2; b.y = BW5.CHUTE.h; }
   BW567K.after(g, 0.6, g2 => BW5.talkRhonda(g2, g2.actor('rhonda'), true));
 };
 BW5.updateLifts = function (g, dt) {
@@ -1029,6 +1030,7 @@ BW5.placeBiscuit = function (g) {
   const done = id => g.missions.isDone(id);
   if (BurnsSave.get().worldDone[5] || !done('gary')) { b.setBehavior('sit'); if (done('gary')) G.mode = 'biscuit'; return; }
   G.mode = 'biscuit';
+  if (done('boss')) { BW5.biscuitToLookout(g); return; }
   if (done('escort')) { b.setBehavior('idle'); b.x = 2.2; b.z = -75.2; b.y = BW5.CHUTE.h; return; }
   b.setBehavior('follow'); const p = g.player; b.x = p.x + 1.5; b.z = p.z + 1.5; b.y = 0;
 };
@@ -1036,7 +1038,7 @@ BW5.biscuitJoins = function (g) {
   const b = g.actor('biscuit');
   BW567K.after(g, 0.8, g2 => {
     g2.say(b, ['GARY! You came back! You\'re so cold! You\'re supposed to be cold!', 'I\'m Biscuit. I owe you one. And by "owe" I mean I\'m GIFTING you my friendship. Platonically. You have a wife. I have a cooler.', 'You\'re hunting an art car? Rhonda at Returns knows every art car on the playa. She\'s at the top of the Cart Chute. Let\'s go!'], () => {
-      if (b) { b.setBehavior('follow'); b.def.followDist = 2.4; }
+      if (b) { b.setBehavior('follow'); b.def.followDist = 3.2; }
       if (!g2.missions.isDone('member')) g2.say(b, ['But first: membership cards. Marge at the front. She\'s... thorough.']);
     });
   });
@@ -1108,7 +1110,17 @@ BW5.talkBiscuit = function (g, a) {
   else if (est === 'available') g.say(a, ['Rhonda at Returns knows every art car on the playa. She works at the top of the Cart Chute.', 'Carts come down that thing like a waterfall. Spin \'em away from me. I bruise like a peach.', 'Lead the way, buddy!'], () => g.missions.start('escort'));
   else if (est === 'active') g.say(a, ['Up the chute! I\'m right behind you! Mostly!']);
   else if (BurnsSave.get().worldDone[5]) g.say(a, ['Platonic buddies for life. Gary agrees. Gary always agrees.']);
+  else if (g.missions.isDone('boss')) g.say(a, BW5.LOOK && BW5.LOOK.kind === 'pump'
+    ? ['My lookout! The big nodding horse. Its carrier bar is basically an elevator with commitment issues.', 'Hop on from the crate when it dips, ride it to the top, jump onto the tank. I\'ll meet you up there. I know a shortcut.']
+    : ['My lookout! Climb the pallets all the way up. I\'ll meet you at the top. I know a shortcut.'])
   else g.say(a, ['Rhonda said the Baron\'s sitting on the lookout gate. Ugh. HIM.', 'Go teach him about gifting. I\'ll guard Gary.']);
+};
+// after the Baron: Biscuit waits at the foot of his lookout
+BW5.biscuitToLookout = function (g) {
+  const b = g.actor('biscuit'), L = BW5.LOOK; if (!b || !L) return;
+  let x = L.x - 6, z = L.z + 8;
+  if (L.kind === 'pump') { const q = L.piece.toWorld(-5.4, 0, 18.6); x = q[0]; z = q[2]; }
+  b.setBehavior('idle'); b.def.fixedY = false; b.x = x; b.z = z; b.y = 0; b.home = { x, z }; b.face(L.x, L.z, 1, 100);
 };
 BW5.talkRhonda = function (g, a, arrival) {
   const est = g.missions.state('escort'), b = g.actor('biscuit');
@@ -1180,7 +1192,8 @@ BW5.baronDefeated = function (g) {
       { say: ['brady', ['That\'s literally the whole point of this place.']] },
       { do: g3 => { g3.fx.confetti(a.x, a.y + 2.5, a.z, 60); burnsSfx('crowd_cheer'); for (let i = 0; i < 10; i++) { const t = i / 10 * TAU; g3.spawnPickup('glowstick', a.x + Math.sin(t) * 2.5, 1.2, a.z + Math.cos(t) * 2.5, { pop: true }); } } },
       { say: [a, ['TAKE IT! TAKE ALL OF IT! IT\'S FREE! OH WOW, THAT FEELS AMAZING!', 'The lookout gate\'s open. On the house. Everything\'s on the house. I own NOTHING now. I feel GREAT.']] },
-      { do: g3 => { BW5.openToll(g3); burnsMusic('burns_w5'); } }
+      { do: g3 => { BW5.openToll(g3); BW5.biscuitToLookout(g3); burnsMusic('burns_w5'); } },
+      { say: [g.actor('biscuit') || 'brady', ['(over the walkie) Buddy! I\'m at the lookout already. Come out the back and through the gate!']] }
     ]);
   });
 };
@@ -1201,20 +1214,25 @@ BW5.intro = function (g) {
   ]);
 };
 BW5.finale = function (g) {
-  const T = BW5.TOWER, p = g.player, b = g.actor('biscuit'), O = BW5.FAR_OCTO;
+  const L = BW5.LOOK || { kind: 'tower', x: BW5.TOWER.x, y: 26, z: BW5.TOWER.z }, p = g.player, b = g.actor('biscuit'), O = BW5.FAR_OCTO;
   BW5.state.finale = true;
-  const look = { x: T.x - 1.2, y: 27.6, z: T.z + 1.6, tx: O.x, ty: 9, tz: O.z, fov: 0.32 };
+  // stand at the rim that faces the far horizon, Biscuit at Brady's side
+  const d = Math.hypot(O.x - L.x, O.z - L.z), ux = (O.x - L.x) / d, uz = (O.z - L.z) / d, vx = uz, vz = -ux;
+  const px = L.x + ux * 2.0, pz = L.z + uz * 2.0, yaw = Math.atan2(ux, uz);
+  const look = { x: L.x - ux * 1.6, y: L.y + 1.9, z: L.z - uz * 1.6, tx: O.x, ty: 9, tz: O.z, fov: 0.32 };
+  const two = { x: px + vx * 4.6 + ux * 4.2, y: L.y + 2.4, z: pz + vz * 4.6 + uz * 4.2, tx: px + vx * 0.7, ty: L.y + 0.9, tz: pz + vz * 0.7, fov: 0.85 };
+  const first = L.kind === 'pump' ? 'I took the maintenance ladder. There\'s a ladder. With a HANDRAIL. The whole time.' : 'I took the stairs. There were stairs. Inside. The whole time.';
   g.cutscene([
-    { do: g2 => { p.teleport(T.x - 1.0, 26, T.z + 0.6, Math.atan2(O.x - T.x, O.z - T.z)); if (b) { b.setBehavior('idle'); b.x = T.x + 1.3; b.z = T.z + 1.4; b.y = 26; b.def.fixedY = true; } } },
-    { cam: { x: T.x + 5, y: 28.5, z: T.z + 6, tx: T.x, ty: 26.8, tz: T.z, fov: 0.85 } },
-    { say: [b || 'brady', ['I took the stairs. There were stairs. Inside. The whole time.']] },
+    { do: g2 => { p.teleport(px, L.y, pz, yaw); if (b) { b.setBehavior('idle'); b.x = px + vx * 1.5; b.z = pz + vz * 1.5; b.y = L.y; b.yaw = yaw; b.def.fixedY = true; } } },
+    { cam: two },
+    { say: [b || 'brady', [first]] },
     { say: ['brady', ['Look for fire on the horizon...']] },
     { cam: look },
     { do: g2 => { BW5.state.farFire = 4.5; } },
     { wait: 1.4 },
     { say: [b || 'brady', ['THERE! Fire on the horizon! That\'s El Pulpo, the fire-breathing octopus!']] },
     { say: ['brady', ['If anything can catch a forty-foot wooden lover... it\'s a fire-breathing octopus.']] },
-    { cam: { x: T.x + 4, y: 27.8, z: T.z + 4, tx: T.x, ty: 26.9, tz: T.z, fov: 0.8 } },
+    { cam: Object.assign({}, two, { fov: 0.8 }) },
     { say: [b || 'brady', ['It roams deep playa at night. I\'ll meet you out there. I\'m bringing snacks. And Gary.', 'Platonic buddies FOREVER. Or until Sunday. Whichever comes first.']] },
     { do: g2 => { BurnsSave.flag(5, 'octopusSpotted', true); p.victoryT = 3; burnsSfx('crowd_cheer'); g2.fx.confetti(p.x, p.y + 2, p.z, 50); } },
     { wait: 1.2 }
@@ -1335,7 +1353,7 @@ BW5.buildMister = function (api, g) {
   api.mesh(-6, 118, m => { m.color('#9aa0aa'); BW567K.limb(m, -3, 2.7, -2.4, 3, 2.7, -2.4, 0.04); BW567K.limb(m, -3, 2.7, 2.4, 3, 2.7, 2.4, 0.04); m.color('#38c8ff', 0.4); for (let i = 0; i < 6; i++) BW567K.ball(m, -2.5 + i, 2.62, -2.4, 0.06, { seg: 6, rings: 4 }); m.emissive(0); return { cols: [] }; });
   api.sign('MISTING STATION\nFREE COOL · NO QUESTIONS', -10.2, 116, { yaw: Math.PI / 2, h: 1.0, style: { bg: '#bff0ff', fg: '#1f4fae', size: 19, border: '#1f4fae' } });
   // Fluffernutter, the overheating furry
-  api.npc({ id: 'furry', name: 'FLUFFERNUTTER', type: 'furry', seed: 7, x: -24, z: 44, yaw: Math.PI / 2, behavior: 'sit', followDist: 2.8,
+  api.npc({ id: 'furry', name: 'FLUFFERNUTTER', type: 'furry', seed: 7, x: -24, z: 44, yaw: Math.PI / 2, behavior: 'sit', followDist: 3.2,
     chat: ['So... hot... forty pounds of love, zero airflow...', 'Is the floor melting or is it me?', 'Hugs later. Mist now.'],
     talk(g, a) { BW5.talkFurry(g, a); } });
 };

@@ -39,6 +39,23 @@ const BURNS_W234 = {
   limb(m, x0, y0, z0, x1, y1, z1, r0, r1, o) { m.limb(x0, y0, z0, x1, y1, z1, r0, r1 === undefined ? r0 : r1, o); return m; },
   // smooth tube through points [[x,y,z],...] (capsules joined end to end)
   tube(m, pts, r, o) { for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1]; m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r, o); } return m; },
+  // inside surface of a revolution (faces + normals point inward: domes and tents you walk into).
+  // prof: [[r, y, colour?, emissive?], ...] bottom -> top. o: { seg, theta0, theta1 }
+  innerShell(m, prof, o) {
+    o = o || {};
+    const seg = o.seg || 24, full = o.theta0 === undefined && o.theta1 === undefined, t0 = o.theta0 || 0, t1 = o.theta1 === undefined ? TAU : o.theta1;
+    const cols = full ? seg : seg + 1, n = prof.length, base = m.nv, P = [0, 0, 0], N = [0, 0, 0], c0 = m.c, e0 = m.e;
+    const wr = BURNS_ATLAS.white, wu = (wr.u0 + wr.u1) / 2, wv = (wr.v0 + wr.v1) / 2;
+    for (let j = 0; j < n; j++) {
+      const A = prof[Math.max(0, j - 1)], B = prof[Math.min(n - 1, j + 1)], dr = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dr, dy) || 1, nr = -dy / l, ny = dr / l;
+      if (prof[j][2]) m.c = burnsRGB(prof[j][2]); if (prof[j][3] !== undefined) m.e = prof[j][3];
+      for (let i = 0; i < cols; i++) { const th = t0 + (t1 - t0) * i / seg, sn = Math.sin(th), cs = Math.cos(th), r = prof[j][0]; m.tp(r * sn, prof[j][1], r * cs, P); m.tn(nr * sn, ny, nr * cs, N); m.vert(P[0], P[1], P[2], N[0], N[1], N[2], wu, wv); }
+      m.c = c0; m.e = e0;
+    }
+    const qs = full ? cols : cols - 1;
+    for (let j = 0; j < n - 1; j++) for (let i = 0; i < qs; i++) { const i1 = (i + 1) % cols, a = base + j * cols + i, b = base + j * cols + i1, c = base + (j + 1) * cols + i1, d = base + (j + 1) * cols + i; m.ind.push(a, c, b, a, d, c); }
+    return m;
+  },
   // ring: torus around local Y unless pitch/roll given (roll = PI/2 -> wheel standing in the YZ plane)
   ring(m, x, y, z, R, r, o) { o = o || {}; m.push(); m.tf(x, y, z, o.yaw || 0, o.pitch || 0, o.roll || 0); m.torus(0, 0, 0, R, r, o); m.pop(); return m; },
   post(m, x, y, z, r, h, o) { m.roundCyl(x, y, z, r, h, o && o.edge !== undefined ? o.edge : r * 0.4, o); return m; },

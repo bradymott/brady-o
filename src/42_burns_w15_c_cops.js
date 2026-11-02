@@ -137,22 +137,27 @@ const BW15C = {
   /* ---------------- chases ---------------- */
   startChase(g, S, cop, why) {
     if (!cop) return;
-    S.chase = { cop, t: 0, lock: 1, close: 0, why, lostT: 0 };
-    cop.state = 'chase'; cop.lights = true; cop.v = Math.max(cop.v, 6);
+    S.chase = { cop, t: 0, lock: 1, close: 0, why, lostT: 0, delay: 1.3 };
+    cop.state = 'chase'; cop.lights = true; cop.v = 0;
+    const T = S.traps.find(q => q.cop === cop); if (T && T.officer) T.officer.say('Hold on! My coffee! ...PULL OVER!', 2.4);
     if (S.tail) S.tail.paused = true;
     burnsMusic('burns_w15_chase', 'burns_w8');
   },
   updateChase(g, S, dt) {
     const C = S.chase, cop = C.cop, rv = S.rv;
     C.t += dt;
+    if (C.delay > 0) { C.delay -= dt; return; }   // he spilled his coffee: a head start
     const dx = rv.x - cop.x, dz = rv.z - cop.z, d = Math.hypot(dx, dz);
-    const sees = BW15C.sees(g, S, cop, d);
+    const sees = d < 16 || BW15C.sees(g, S, cop, d);   // nobody hides from a cop that's right on them
     if (sees) { C.lock = Math.min(1, C.lock + dt * 0.45); C.lx = rv.x; C.lz = rv.z; }
-    else C.lock -= dt * (S.hideRate || 0.3);
+    else C.lock -= dt * (S.hideRate || 0.3) * (C.t < 2.5 ? 0.35 : 1);
     C.sees = sees;
     // pursue: aim a little ahead of the RV
     const lead = clamp(d / 25, 0, 1.2), tx = rv.x + Math.sin(rv.yaw) * S.v * lead, tz = rv.z + Math.cos(rv.yaw) * S.v * lead;
-    if (C.lock > 0.15) BW15C.driveCop(g, cop, tx, tz, clamp(Math.max(S.v + (d - 9) * 0.7, 8), 0, 26.5), dt);
+    // a patrol car is quick on the road and hopeless off it
+    const cpr = BW15_ROAD.project(cop.x, cop.z, cop.rs, cop._pr || (cop._pr = {})); cop.rs = cpr.s;
+    const top = cpr.d < 7 ? 25.5 : 13.5;
+    if (C.lock > 0.15) BW15C.driveCop(g, cop, tx, tz, clamp(Math.max(S.v + (d - 9) * 0.7, 8), 0, top), dt);
     else BW15C.driveCop(g, cop, C.lx || tx, C.lz || tz, 7, dt);
     if (Math.random() < dt * 1.2) burnsSfx('siren', { vol: 0.35 }, 'laser');
     if (d < 7.5 && C.lock > 0.5) C.close += dt; else C.close = Math.max(0, C.close - dt * 0.6);
@@ -224,7 +229,7 @@ const BW15C = {
     T.t += dt;
     if (T.paused) { BW15C.driveCop(g, cop, cop.x + Math.sin(cop.yaw) * 5, cop.z + Math.cos(cop.yaw) * 5, 0, dt); return; }
     const dx = rv.x - cop.x, dz = rv.z - cop.z, d = Math.hypot(dx, dz);
-    const sees = BW15C.sees(g, S, cop, d);
+    const sees = (d < 10 && S.hideK < 0.5) || BW15C.sees(g, S, cop, d);
     if (sees) T.lock = Math.min(1, T.lock + dt * 0.12); else T.lock -= dt * (S.hideRate || 0.3);
     T.sees = sees;
     // follow ~16 m behind along the road; he won't take his convertible off-road
@@ -252,23 +257,24 @@ const BW15C = {
   sees(g, S, cop, d) {
     if (d > 75) return false;
     if (S.hideK > 0.5) return false;
+    // blending into dense traffic only works if he isn't already right on you
+    if (S.dense >= 3 && d > 14) { S.hideWhy = 'IN THE LINE'; return false; }
     const rv = S.rv, len = Math.max(0.1, d);
     const t = g.world.raycast(cop.x, cop.y + 1.4, cop.z, rv.x, rv.y + 2.2, rv.z, true);
-    return t * len >= len - 6.2;
+    if (t * len < len - 6.2) { S.hideWhy = 'BEHIND A TRUCK'; return false; }
+    return true;
   },
   updateHide(g, S, dt) {
     const rv = S.rv;
-    let k = 0, why = '', rate = 0.25;
-    for (const D of S.devils) { if (Math.hypot(D.x - rv.x, D.z - rv.z) < D.r) { k = 1; why = 'DUST DEVIL'; rate = 0.6; } }
-    for (const Z of S.zones) { if (Math.hypot(Z.x - rv.x, Z.z - rv.z) < Z.r) { k = 1; why = Z.why; rate = Math.max(rate, Z.rate || 0.6); } }
-    if (!k && S.zone === 'off' && Math.abs(S.v) > 9) { k = 0.6; why = 'DUST CLOUD'; rate = 0.32; }
-    // behind / between traffic
-    if (!k && S.hwy) {
-      let n = 0, close = 0;
-      for (const lane of S.hwy.lanes) for (const car of lane.cars) { const d = Math.hypot(car.mv.x - rv.x, car.mv.z - rv.z); if (d < 13) n++; if (d < 8) close++; }
-      if (close >= 1 && n >= 2) { k = 0.55; why = 'IN THE LINE'; rate = 0.4; }
-    }
-    S.hideK = k; S.hideWhy = why; S.hideRate = rate;
+    let k = 0, why = '', rate = 0.3;
+    for (const D of S.devils) { if (Math.hypot(D.x - rv.x, D.z - rv.z) < D.r) { k = 1; why = 'DUST DEVIL'; rate = 0.42; } }
+    for (const Z of S.zones) { if (Math.hypot(Z.x - rv.x, Z.z - rv.z) < Z.r) { k = 1; why = Z.why; rate = Math.max(rate, Z.rate || 0.45); } }
+    if (!k && S.zone === 'off' && Math.abs(S.v) > 9) { k = 0.6; why = 'DUST CLOUD'; rate = 0.26; }
+    // how much traffic is around (used to blend into the line)
+    let n = 0;
+    if (S.hwy) for (const lane of S.hwy.lanes) for (const car of lane.cars) { const dx = car.mv.x - rv.x, dz = car.mv.z - rv.z; if (dx * dx + dz * dz < 144) n++; }
+    S.dense = n;
+    S.hideK = k; S.hideWhy = why; S.hideRate = k ? rate : 0.32;
   },
   /* ---------------- sky + atmosphere (per frame) ---------------- */
   env(g, env) {
@@ -334,38 +340,38 @@ const BW15C = {
     }
     // ---- speedometer
     const mph = Math.round(Math.abs(S.v) * 2.237), L = Input.layout;
-    let gx = W / 2, gy = H - Sf.b - 34;
-    if (L && portrait) { gx = W / 2; gy = Math.min(L.stickHome.y, L.action.y) - L.r * 2.1; }
+    let gx = W / 2, gy = H - Sf.b - 30;
+    if (L && portrait) { gx = clamp(L.stickHome.x, Sf.l + 60, W / 2); gy = L.stickHome.y - L.stickHome.r - 38; }
     const lim = S.enc ? (S.enc.kind === 'check' ? 10 : 45) : S.zone === 'line' ? 10 : S.paved ? 45 : 25;
-    UI.pill(ctx, gx - 62, gy - 22, 124, 44, 'rgba(10,6,24,0.6)', S.enc && (S.enc.fast || S.enc.slow) ? 'rgba(255,80,80,0.9)' : 'rgba(255,255,255,0.25)');
-    UI.text(ctx, String(mph), gx - 18, gy + 1, 22, mph > lim ? '#ff8a8a' : '#ffffff', { stroke: false });
-    UI.text(ctx, 'MPH', gx + 12, gy + 7, 9, '#cfc8e8', { align: 'left', stroke: false, ui: true });
-    ctx.save(); ctx.fillStyle = '#ffffff'; rr(ctx, gx + 24, gy - 17, 32, 30, 5); ctx.fill(); ctx.strokeStyle = '#c8303a'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
-    UI.text(ctx, 'LIMIT', gx + 40, gy - 9, 6, '#1a1a22', { stroke: false, ui: true }); UI.text(ctx, String(lim), gx + 40, gy + 4, 12, '#1a1a22', { stroke: false });
+    UI.pill(ctx, gx - 58, gy - 22, 116, 44, 'rgba(10,6,24,0.6)', S.enc && (S.enc.fast || S.enc.slow) ? 'rgba(255,80,80,0.9)' : 'rgba(255,255,255,0.25)');
+    UI.text(ctx, String(mph), gx - 16, gy - 3, 21, mph > lim ? '#ff8a8a' : '#ffffff', { stroke: false });
+    UI.text(ctx, 'MPH', gx - 16, gy + 13, 8, '#cfc8e8', { stroke: false, ui: true });
+    ctx.save(); ctx.fillStyle = '#ffffff'; rr(ctx, gx + 16, gy - 17, 32, 34, 5); ctx.fill(); ctx.strokeStyle = '#c8303a'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+    UI.text(ctx, 'LIMIT', gx + 32, gy - 8, 6, '#1a1a22', { stroke: false, ui: true }); UI.text(ctx, String(lim), gx + 32, gy + 6, 13, '#1a1a22', { stroke: false });
     // ---- the Exodus pulse
     const P = S.pulse;
     if (S.zone === 'line' && P.phase !== 'done' && P.phase !== 'won') {
       const label = P.phase === 'big' ? `GATE CLOSES IN ${Math.max(0, Math.ceil(P.bigT))}` : P.phase === 'count' ? `THE BIG PULSE IN ${Math.max(1, Math.ceil(3.2 - P.t))}` : P.phase === 'go1' ? 'PULSE! ROLL!' : P.phase === 'retry' ? `NEXT PULSE IN ${Math.max(1, Math.ceil(5 - P.t))}` : 'HOLDING · TAKE THE LAST BAGS';
       const col = P.phase === 'big' ? (P.bigT < 10 && Math.floor(t * 4) % 2 ? '#ff6a6a' : '#7aff5a') : P.phase === 'go1' ? '#7aff5a' : '#ffb04a';
-      const py = (g.topStack || Sf.t + 40) + 6;
-      UI.text(ctx, label, W / 2, py + 10, Math.min(20, W / 26), col, { glow: col });
+      const py = (g.topStack || Sf.t + 40) + 6 + g.toasts.length * 28;
+      UI.text(ctx, label, W / 2, py + 10, Math.min(16, W / 30), col, { glow: col });
     }
     // ---- KEEP IT TOGETHER
     if (S.enc) BW15C.drawEnc(ctx, g, S);
     // ---- chase / tail
     const C = S.chase || S.tail;
     if (C && !S.enc) {
-      const bw = Math.min(260, W * 0.5), bx = W / 2 - bw / 2, by = (g.topStack || Sf.t + 40) + 4;
+      const bw = Math.min(260, W * 0.5), bx = W / 2 - bw / 2, by = (g.topStack || Sf.t + 40) + 4 + g.toasts.length * 28;
       UI.pill(ctx, bx, by, bw, 46, 'rgba(30,6,20,0.72)', S.chase ? 'rgba(255,60,90,0.9)' : 'rgba(255,176,32,0.9)');
       UI.text(ctx, S.chase ? 'COPS ON YOUR TAIL!' : 'UNDERCOVER COP: LOSE HIM', W / 2, by + 11, 11, S.chase ? '#ff9ab0' : '#ffd890', { stroke: false });
       ctx.fillStyle = 'rgba(255,255,255,0.15)'; rr(ctx, bx + 12, by + 22, bw - 24, 8, 4); ctx.fill();
       const lk = clamp(C.lock, 0, 1); ctx.fillStyle = S.chase ? '#ff4a6a' : '#ffb020'; rr(ctx, bx + 12, by + 22, (bw - 24) * lk, 8, 4); ctx.fill();
-      UI.text(ctx, S.hideK > 0.3 ? 'HIDING: ' + S.hideWhy : (C.sees ? 'HE CAN SEE YOU' : 'OUT OF SIGHT...'), W / 2, by + 38, 9, S.hideK > 0.3 ? '#7aff9a' : '#ffffff', { stroke: false, ui: true });
+      UI.text(ctx, !C.sees && S.hideWhy ? 'HIDING: ' + S.hideWhy : (C.sees ? 'HE CAN SEE YOU · DUST · TRUCKS · TRAFFIC' : 'OUT OF SIGHT...'), W / 2, by + 38, 9, !C.sees ? '#7aff9a' : '#ffffff', { stroke: false, ui: true });
     }
   },
   drawEnc(ctx, g, S) {
     const E = S.enc, W = Game.cssW, H = Game.cssH, UI = BurnsUI, Sf = UI.safe(), portrait = H > W;
-    const bw = Math.min(300, W * 0.62), bx = W / 2 - bw / 2, by = (g.topStack || Sf.t + 40) + 4 + (portrait ? 30 : 0);
+    const bw = Math.min(300, W * 0.62), bx = W / 2 - bw / 2, by = (g.topStack || Sf.t + 40) + 4 + g.toasts.length * 28 + (portrait ? 30 : 0);
     UI.pill(ctx, bx, by, bw, 62, 'rgba(26,6,30,0.78)', 'rgba(255,79,216,0.9)');
     UI.text(ctx, 'KEEP IT TOGETHER', W / 2, by + 12, 13, '#ffd0f4', { glow: '#ff4fd8' });
     // suspicion

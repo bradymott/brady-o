@@ -8,7 +8,8 @@
      lost       Lost in the Dust       find 5 lost burners and lead them to the Outpost
      secretset  The Secret Set         a rumor, a bass line, the trash fence, two robots
      artist     Wire and Glow          help Wren finish her giant wire-frame moth
-     devil      Devil's Shelter        outrun a giant dust devil to the Sleeping Giant's hand
+     devil      Devil's Shelter        outrun a giant dust devil to the Sleeping Giant (the gap
+                                       between his boots; the cupped hand on our stand-in)
      giantclimb Giant Steps            hidden: climb the Sleeping Giant to his nose
      boss       The Man in the Storm   he fights from the dust... then the dust takes them
    The Leaning Lighthouses and the Sleeping Giant are placed through BurnsBigArt
@@ -75,7 +76,10 @@ BurnsWorlds.register({
     /* ---------------- the lamplighters, the beacon and the lamp line ---------------- */
     W9.buildLampLine(api);
     st.art = {};
-    st.art.lh = W9.placeArt(api, g, 'lighthouses', W9.LIGHT.x, W9.LIGHT.z, { rotY: 0.3, onReach: g2 => { if (g2.missions.state('whiteout') === 'active') BURNS_W9.beacon(g2); } }, () => W9.lighthouses(api));
+    // (placed at the fixed base spot every visit; W9.LIGHT is where the beacon ends up: our tower top or the module's summit)
+    const LB = W9.LIGHT_BASE || (W9.LIGHT_BASE = Object.assign({}, W9.LIGHT));
+    W9.LIGHT = Object.assign({}, LB);
+    st.art.lh = W9.placeArt(api, g, 'lighthouses', LB.x, LB.z, { rotY: 0.3, onReach: g2 => { if (g2.missions.state('whiteout') === 'active') BURNS_W9.beacon(g2); } }, () => W9.lighthouses(api));
     if (!st.art.lh.big) W9.lighthouseClimb(api);
     else { const P = st.art.lh.info; if (P && P.summit) { W9.LIGHT.x = P.summit.x; W9.LIGHT.z = P.summit.z; W9.LIGHT.top = P.summit.y; } }
     api.checkpoint('cp_start', 6, 146, { yaw: Math.PI, name: 'Temple Road' });
@@ -151,7 +155,8 @@ BurnsWorlds.register({
    loaded; otherwise builds our own stand-in. Mission hooks (beacon top, hand shelter, nose)
    use the BURNS_W9 coordinates above, so the stand-ins and the module line up at integration. */
 BURNS_W9.placeArt = function (api, g, kind, x, z, o, fallback) {
-  if (typeof BurnsBigArt !== 'undefined' && BurnsBigArt && typeof BurnsBigArt.place === 'function') {
+  // (only kinds the module already has: the others stay on our stand-in quietly until they land)
+  if (typeof BurnsBigArt !== 'undefined' && BurnsBigArt && typeof BurnsBigArt.place === 'function' && (!BurnsBigArt.kinds || BurnsBigArt.kinds[kind])) {
     try { const info = BurnsBigArt.place(api, g, kind, x, z, o || {}); if (info !== false) return { big: true, info }; } catch (e) { console.warn('BurnsBigArt.place(' + kind + ') failed; using the stand-in', e); }
   }
   return { big: false, info: fallback() };

@@ -17,7 +17,7 @@
 
 const BW7 = {
   CAR: { x: 0, z: -96 }, FLOOR: { x: 0, z: -66, r: 22 }, CAMP: { x: -84, z: 4 }, PONY: { x: 82, z: 6 },
-  STRIP: { x0: -74, z0: -36, x1: -34, z1: -80 }, PLAT: { x: -24, z: -58 }, PIER: { x: 96, z: -30 },
+  STRIP: { x0: -74, z0: -36, x1: -34, z1: -80 }, PLAT: { x: -24, z: -58 }, PIER: { x: 96, z: -30 }, GALLEON: { x: 112, z: -104, rot: Math.PI / 2 },
   SUMMIT: { x: 0, z: -99.6, y: 14.4 },
   state: null
 };
@@ -93,6 +93,7 @@ BurnsWorlds.register({
     BW567K.speedHook(g); BW567K.camHook(g);
     g.tod = Math.min(1, BurnsSave.tokenCount(7) * 0.12 + (g.missions.isDone('summit') ? 0.4 : 0));
     if (g.missions.isDone('race')) BW7.setOn(g, true);
+    const q = g.actor('queen'); if (q && !g.missions.isDone('boss')) q.hidden = true;
     if (!S.introDone) BW7.intro(g);
     else g.banner('SUNRISE SET', 'The sun waits for no one. Neither does the bass.', { col: '#ffb0d8' });
   },
@@ -171,7 +172,8 @@ BW7.buildHeart = function (api, g) {
   }
   api.pickup('photo', C.x + 3.2, 3.3, C.z + 9.4, { id: 'p2' });
   // stairs up to the upper deck (left side)
-  [3.3, 4.2, 5.1].forEach((y, i) => BW567K.rb(api, C.x - 3.4, y - 0.3, C.z + 5.2 - i * 1.25, 1.6, 0.3, 1.1, '#ff9ac8', { r: 0.1 }));
+  // (they climb from the chassis roof toward the stage's front edge at z + 3.5, clear of the pillars)
+  [3.3, 4.2, 5.1].forEach((y, i) => BW567K.rb(api, C.x - 3.4, y - 0.3, C.z + 7.3 - i * 1.25, 1.6, 0.3, 1.1, '#ff9ac8', { r: 0.1 }));
   // the upper deck (the stage)
   BW567K.rb(api, C.x, 5.6, C.z - 2.0, 8.4, 0.4, 11, '#5a2a3a', { r: 0.18, top: '#7a3a4a' });
   api.mesh(C.x, C.z, m => { m.color('#ffd84a').shine(2); for (const sx of [-1, 1]) BW567K.limb(m, sx * 4.1, 6.9, -7.4, sx * 4.1, 6.9, 3.4, 0.05); for (let i = 0; i < 6; i++) for (const sx of [-1, 1]) BW567K.limb(m, sx * 4.1, 6.0, -7.4 + i * 2.16, sx * 4.1, 6.9, -7.4 + i * 2.16, 0.04); m.shine(0); return { cols: [{ t: 'box', x: -4.1, z: -2, hx: 0.08, hz: 5.4, y0: 6.0, y1: 6.95, walk: false }, { t: 'box', x: 4.1, z: -2, hx: 0.08, hz: 5.4, y0: 6.0, y1: 6.95, walk: false }] }; });
@@ -190,7 +192,7 @@ BW7.buildHeart = function (api, g) {
   api.mesh(C.x, BW7.SUMMIT.z, m => { m.color('#ffd84a').shine(3); BW567K.rcyl(m, 0, BW7.SUMMIT.y - 0.35, 0, 1.55, 0.35, 0.12); BW567K.torus(m, 0, BW7.SUMMIT.y + 0.8, 0, 1.5, 0.05, { seg: 18, tseg: 4 }); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; BW567K.limb(m, Math.sin(a) * 1.5, BW7.SUMMIT.y, Math.cos(a) * 1.5, Math.sin(a) * 1.5, BW7.SUMMIT.y + 0.8, Math.cos(a) * 1.5, 0.035); } m.shine(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 1.55, y0: BW7.SUMMIT.y - 0.35, y1: BW7.SUMMIT.y }] }; });
   api.light(C.x, C.z + 6, 18, '#ff4fa8', 0.5);
   api.checkpoint('cp_heart', C.x + 7.5, C.z + 12, { yaw: Math.PI, name: 'Heartbeat' });
-  api.glowArc(C.x - 3.2, 1.8, C.z + 11.1, C.x - 3.2, 3.2, C.z + 9.4, 0.5, 3); api.glowArc(C.x - 3.4, 3.8, C.z + 5.2, C.x - 3.4, 6.4, C.z + 2.7, 0.6, 4);
+  api.glowArc(C.x - 3.2, 1.8, C.z + 11.1, C.x - 3.2, 3.2, C.z + 9.4, 0.5, 3); api.glowArc(C.x - 3.4, 3.8, C.z + 7.3, C.x - 3.4, 6.4, C.z + 3.0, 0.6, 4);
   sc.forEach(([x, y], i) => { if (i) api.pickup('glowstick', C.x + x, y + 0.9, C.z - 6.6); });
 };
 BW7.buildFloor = function (api, g) {
@@ -213,6 +215,13 @@ BW7.buildFloor = function (api, g) {
   api.pickup('water', F.x - 10, 0.9, F.z + 24); api.pickup('water', F.x + 24, 0.9, F.z - 4);
   api.pickup('bag:molly', F.x - 26, 0.9, F.z + 10); api.pickup('bag:powder', F.x + 26, 0.9, F.z + 14);
   api.glowRing(F.x, F.z + 4, 20, 18);
+  // THE GLITTER QUEEN: hidden until the sun breaks (then she floats in on her content throne)
+  const qs = BW567K.mine('influencer', 77, { prop: 'ringlight', glasses: 'heart', coat: { kind: 'kimono', col: '#ffd84a', trim: '#ff9ad8' }, top: { kind: 'crop', col: '#ff9ad8' },
+    hair: { style: 'long', col: '#ffb0e0', hi: '#ffffff' }, hat: { kind: 'cowboy', col: '#ffe8a0' }, key: 'w7:queen' });
+  if (!g.missions.isDone('boss')) api.enemy({ id: 'queen', name: 'THE GLITTER QUEEN', type: 'influencer', spec: qs, scale: 1.15, x: F.x + 20, z: F.z - 10, y: 9, yaw: -Math.PI / 2, behavior: 'bw7Queen', hp: 4, boss: true, drop: 14, always: true, chatter: false, keepBehavior: true, fixedY: true, collide: false,
+    onDefeat(g2) { BW7.queenDefeated(g2); } });
+  else api.npc({ id: 'queen', name: 'THE GLITTER QUEEN', type: 'influencer', spec: qs, scale: 1.15, x: F.x + 7, z: F.z + 3, yaw: Math.PI, behavior: 'dance', style: 2, bpm: 122,
+    lines: ['No filter. No phone. Just vibes. ...Okay, ONE photo.', 'The sun has more followers than me. And honestly? It deserves them.'], gift: { kind: 'glowstick', n: 6 } });
 };
 BW7.buildStrip = function (api, g) {
   const T = BW7.STRIP, len = Math.hypot(T.x1 - T.x0, T.z1 - T.z0), yaw = Math.atan2(T.x1 - T.x0, T.z1 - T.z0);
@@ -290,16 +299,29 @@ BW7.buildDancePlat = function (api, g) {
   api.light(D.x, D.z, 8, '#ff4fd8', 0.35);
 };
 BW7.buildPier = function (api, g) {
-  // the Landlocked Galleon sits at the end of this pier (big art module). If the module isn't loaded,
-  // the pier still stands on its own as "the pier to nowhere" (integration point: BW7.PIER).
-  const P = BW7.PIER;
-  api.mesh(P.x, P.z - 15, m => { m.color('#8a6a4a'); m.box(0, 0.62, 0, 3, 0.18, 30, { uv: BURNS_ATLAS.pattern('wood'), uvFaces: ['py'] }); for (let i = 0; i <= 10; i++) for (const sx of [-1, 1]) { m.color('#6a4a2a'); BW567K.rcyl(m, sx * 1.4, 0, -15 + i * 3, 0.14, 1.4, 0.04); } m.color('#c8a060'); for (const sx of [-1, 1]) BW567K.limb(m, sx * 1.4, 1.35, -15, sx * 1.4, 1.35, 15, 0.04); return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.5, hz: 15, y0: 0, y1: 0.7 }] }; });
-  const art = BW567K.bigArt(api, g, 'galleon', P.x, P.z - 42, { rotY: 0, night: 'auto' });   // the Landlocked Galleon (big-art module): crow's nest + zipline
-  if (!art) api.sign('THE PIER TO NOWHERE\n(BRING YOUR OWN SHIP)', P.x + 2.6, P.z + 1, { yaw: -Math.PI / 2, h: 1.0, style: { bg: '#2a4a6a', fg: '#ffffff', size: 24, border: '#ffd84a' } });
-  // LSD-only steps off the end of the pier to a hidden photo
-  api.pickup('bag:lsd', P.x, 1.6, P.z - 2);
-  api.hidden(() => { for (let i = 0; i < 6; i++) BW567K.rb(api, P.x + 2 + i * 2.2, 1.4 + i * 1.5, P.z - 31 - i * 1.6, 2.2, 0.3, 2.2, burnsHSL(320 + i * 18, 0.9, 0.65), { e: 0.6, r: 0.1 }); api.glow(P.x + 13, 10.6, P.z - 39, 2, '#ffd84a'); });
-  api.pickup('photo', P.x + 13, 10.6, P.z - 39, { id: 'p3', hidden: true });
+  // THE LANDLOCKED GALLEON (shared big-art module, src/41_burns_bigart.js) runs aground east of the
+  // pony camp; its own 45 m pier reaches north toward the playa. If the module isn't in the build, a
+  // stand-in "pier to nowhere" stands at BW7.PIER instead (integration point).
+  const P = BW7.PIER, G = BW7.GALLEON;
+  const art = BW567K.bigArt(api, g, 'galleon', G.x, G.z, { rotY: G.rot, night: 'auto' });
+  let lsd, steps;
+  if (art) {
+    BW7.state.galleon = art;
+    const head = art.toWorld(-58, 0, 6);                        // the land end of the galleon's pier
+    lsd = [head[0] - 3, head[2] + 1];
+    steps = i => [head[0] - 8 - i * 2.2, 1.4 + i * 1.5, head[2] - 2 - i * 1.4];
+    api.sign('THE LANDLOCKED GALLEON\nALL ASHORE WHO\'S GOING ASHORE', head[0] + 3.4, head[2] + 2, { yaw: 0, h: 1.0, style: { bg: '#2a4a6a', fg: '#ffffff', size: 24, border: '#ffd84a' } });
+  } else {
+    api.mesh(P.x, P.z - 15, m => { m.color('#8a6a4a'); m.box(0, 0.62, 0, 3, 0.18, 30, { uv: BURNS_ATLAS.pattern('wood'), uvFaces: ['py'] }); for (let i = 0; i <= 10; i++) for (const sx of [-1, 1]) { m.color('#6a4a2a'); BW567K.rcyl(m, sx * 1.4, 0, -15 + i * 3, 0.14, 1.4, 0.04); } m.color('#c8a060'); for (const sx of [-1, 1]) BW567K.limb(m, sx * 1.4, 1.35, -15, sx * 1.4, 1.35, 15, 0.04); return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.5, hz: 15, y0: 0, y1: 0.7 }] }; });
+    api.sign('THE PIER TO NOWHERE\n(BRING YOUR OWN SHIP)', P.x + 2.6, P.z + 1, { yaw: -Math.PI / 2, h: 1.0, style: { bg: '#2a4a6a', fg: '#ffffff', size: 24, border: '#ffd84a' } });
+    lsd = [P.x, P.z - 2];
+    steps = i => [P.x + 2 + i * 2.2, 1.4 + i * 1.5, P.z - 31 - i * 1.6];
+  }
+  // LSD-only steps up into the sky to a hidden photo
+  api.pickup('bag:lsd', lsd[0], art ? 0.9 : 1.6, lsd[1]);
+  const top = steps(5);
+  api.hidden(() => { for (let i = 0; i < 6; i++) { const q = steps(i); BW567K.rb(api, q[0], q[1], q[2], 2.2, 0.3, 2.2, burnsHSL(320 + i * 18, 0.9, 0.65), { e: 0.6, r: 0.1 }); } api.glow(top[0], top[1] + 1.4, top[2], 2, '#ffd84a'); });
+  api.pickup('photo', top[0], top[1] + 1.4, top[2], { id: 'p3', hidden: true });
 };
 BW7.buildWanderers = function (api, g) {
   // the Guy Who Partied Too Hard (one boot missing) + his boot, somewhere
@@ -312,7 +334,7 @@ BW7.buildWanderers = function (api, g) {
   api.crowd(-40, 60, 6, 4, { types: ['burner', 'tutu', 'ledsuit'], behaviors: ['wander', 'idle'] });
   api.npc({ type: 'ranger', seed: 72, name: 'RANGER DAWN', x: 30, z: 20, behavior: 'wander', radius: 10, lines: ['Sunrise is the best time of the burn. Hydrate, hug, repeat.', 'Watch out for the guy in the jester hat. He\'s... not a burner.'], gift: { kind: 'water' } });
   api.glowLine(-30, 120, -60, 40, 9); api.glowLine(40, 100, 70, 40, 8); api.glowLine(-30, -20, -70, 0, 7); api.glowLine(30, -40, 70, -10, 7); api.glowLine(-8, -30, 8, -30, 5);
-  api.pickup('bag:shrooms', 120, 0.9, -80); api.pickup('bag:khole', -120, 0.9, -60); api.pickup('water', 60, 0.9, -60); api.pickup('water', -60, 0.9, 80);
+  api.pickup('bag:shrooms', 132, 0.9, -64); api.pickup('bag:khole', -120, 0.9, -60); api.pickup('water', 60, 0.9, -60); api.pickup('water', -60, 0.9, 80);
 };
 
 /* ============================================================ puppets: the pulsing heart, the DJ silhouette, the Queen's throne + drones ============================================================ */
@@ -414,30 +436,11 @@ BurnsBehaviors.register('bw7Flash', {
     a.vx = a.vz = 0; BurnsBehaviors.contact(a, g, 0); a.physics(dt);
   }
 });
-// the undercover cop: dances terribly; chases Brady if he's on a power-up; confiscates it
-BurnsBehaviors.register('bw7Cop', {
-  init(a) { a.data.mode = 'dance'; a.data.t = 0; },
-  update(a, g, dt) {
-    const D = a.data, p = g.player, d = a.distP(), powered = p.power && p.powerT > 0 && p.power !== 'water';
-    if (D.mode === 'dance') {
-      a.ch.play('dance', { style: 3, bpm: 90 }); a.moveTo(a.home.x, a.home.z, 1.2, dt, 1.5);
-      if (Math.random() < dt * 0.15) a.say(['Groovy.', 'I am a burner. Like you. A fellow burner.', 'Far out. Is that... a baggie?'][Math.floor(Math.random() * 3)], 1.8);
-      if (Math.random() < dt * 0.05) g.fx.glint(a.x, a.y + 1.4, a.z, '#ffd84a');
-      if (powered && d < 13 && BurnsBehaviors.sees(a, g, 13, 1.2)) { D.mode = 'chase'; D.t = 8; a.say('HEY! Is that GROUND SCORE?! Freeze! ...Groovily!', 2); burnsSfx('yell'); }
-    } else if (D.mode === 'chase') {
-      D.t -= dt; a.moveTo(p.x, p.z, 5.6, dt, 0.5); a.ch.play('run', { rate: 0.9 });
-      if (!powered || D.t <= 0 || d > 24 || p.hiddenT > 0) { D.mode = 'dance'; a.say('...Lost him. Groovy. Totally groovy.', 1.6); }
-      else if (a.touching(0.2)) { const P = BURNS_POWERUPS[p.power]; p.endPower(true); g.toast('CONFISCATED: ' + (P ? P.name : 'POWER-UP')); a.say('This is going into... evidence. I mean. Groovy.', 2.2); burnsSfx('powerdown'); D.mode = 'cool'; D.t = 6; }
-    } else if (D.mode === 'cool') { D.t -= dt; a.ch.play('phone'); a.moveTo(a.x, a.z, 0, dt); if (D.t <= 0) D.mode = 'dance'; }
-    a.physics(dt);
-  },
-  hit(a, g) { a.data.mode = 'cool'; a.data.t = 4; a.say('Assaulting an officer— I mean. Whoa, man. Rude.', 2); return 'handled'; }
-});
 // the Glitter Queen: floats on her content throne with a drone swarm
 BurnsBehaviors.register('bw7Queen', {
   init(a) { a.data.mode = 'wait'; a.data.t = 1; a.data.ang = 0; a.data.alt = 4.2; },
   hit(a, g, kind) {
-    if (a.data.mode === 'likes') return true;
+    if (a.data.mode === 'likes') { if (kind === 'love') { a.hit('spin'); return 'handled'; } return true; }
     if (a.data.mode !== 'wait') a.say(['Don\'t touch the talent!', 'Ew, sweat!', 'Not on camera!'][Math.floor(Math.random() * 3)], 1);
     return false;
   },

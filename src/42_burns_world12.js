@@ -82,12 +82,12 @@ BurnsWorlds.register({
     const S = BW12.state;
     /* ---------------- custom textures (allocated first so the atlas layout is stable) ---------------- */
     S.tx = {
-      msgA: BW1213.tex('w12msgA', 480, 170, (x, w, h) => BW1213.paintMessages(x, w, h, 11)),
-      msgB: BW1213.tex('w12msgB', 480, 170, (x, w, h) => BW1213.paintMessages(x, w, h, 23)),
-      note: BW1213.tex('w12note', 400, 276, (x, w, h) => BW1213.paintNote(x, w, h, ['B —', 'Not gone. The big guy carried me', 'off in the storm, but I\'m okay.', 'Find me where lost loves are found:', '9:00, the Workshops.', '— C'], { heart: true, ink: '#2a2a6a' })),
+      msgA: BW1213.tex('w12msgA', 600, 212, (x, w, h) => BW1213.paintMessages(x, w, h, 11)),
+      msgB: BW1213.tex('w12msgB', 600, 212, (x, w, h) => BW1213.paintMessages(x, w, h, 23)),
+      msgC: BW1213.tex('w12msgC', 600, 212, (x, w, h) => BW1213.paintMessages(x, w, h, 37)),
+      note: BW1213.tex('w12note', 580, 400, (x, w, h) => BW1213.paintNote(x, w, h, ['B —', 'Not gone. The big guy carried me', 'off in the storm, but I\'m okay.', 'Find me where lost loves are found:', '9:00, the Workshops.', '— C'], { heart: true, ink: '#2a2a6a' })),
       carve: BW1213.tex('w12carve', 256, 64, (x, w, h) => BW1213.paintCarving(x, w, h)),
       photos: BW1213.tex('w12photos', 256, 80, (x, w, h) => BW1213.paintPhotos(x, w, h)),
-      msgC: BW1213.tex('w12msgC', 480, 170, (x, w, h) => BW1213.paintMessages(x, w, h, 37)),
       pinned: BW1213.tex('w12pinned', 240, 120, (x, w, h) => { const r = mulberry32(5); for (let i = 0; i < 6; i++) { const px = 10 + (i % 3) * 76 + r() * 8, py = 8 + Math.floor(i / 3) * 56 + r() * 6; x.save(); x.translate(px + 30, py + 22); x.rotate(r.range(-0.2, 0.2)); x.fillStyle = r.pick(['#fff4c8', '#ffd8e0', '#e0f0ff', '#fbf8ec']); x.fillRect(-30, -22, 60, 44); x.strokeStyle = 'rgba(40,30,60,0.7)'; for (let k = 0; k < 4; k++) { x.beginPath(); x.moveTo(-24, -12 + k * 9); x.lineTo(r.range(4, 24), -12 + k * 9); x.stroke(); } x.fillStyle = '#c83a3a'; x.beginPath(); x.arc(0, -20, 3, 0, TAU); x.fill(); x.restore(); } })
     };
     const msgRegs = [S.tx.msgA, S.tx.msgB, S.tx.msgC];
@@ -813,10 +813,18 @@ BW12.layoutName = function (layout) {
     for (const ch of w) {
       const G = BW12.GLYPHS[ch];
       for (const st of G.strokes) {
-        const pts = [];
+        const pts = [], sid = strokes.length;
+        let acc = 0;
         for (let i = 0; i < st.length - 1; i++) {
-          const a = st[i], b = st[i + 1], n = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * L / 0.008));
-          for (let k = (i === 0 ? 0 : 1); k <= n; k++) { const t = k / n, lu = (u + lerp(a[0], b[0], t)) * L, lv = v0 + lerp(a[1], b[1], t) * L; pts.push([B.c[0] + B.r[0] * lu + B.n[0] * 0.04, B.c[1] + lv, B.c[2] + B.r[1] * lu + B.n[1] * 0.04]); }
+          const a = st[i], b = st[i + 1], seg = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(2, Math.ceil(seg * L / 0.008));
+          for (let k = (i === 0 ? 0 : 1); k <= n; k++) {
+            const t = k / n, gu = lerp(a[0], b[0], t), gv = lerp(a[1], b[1], t), s = acc + seg * t;
+            // a human hand: a slight slant, a slow wobble and a little drift per stroke
+            const wob = Math.sin(s * 7.3 + sid * 1.9) * 0.018 + Math.sin(s * 19.1 + sid) * 0.007;
+            const lu = (u + gu + gv * 0.13 + wob) * L, lv = v0 + (gv + Math.cos(s * 6.1 + sid * 2.3) * 0.014 + Math.sin(sid * 3.7) * 0.02) * L;
+            pts.push([B.c[0] + B.r[0] * lu + B.n[0] * 0.04, B.c[1] + lv, B.c[2] + B.r[1] * lu + B.n[1] * 0.04]);
+          }
+          acc += seg;
         }
         const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
         strokes.push({ pts, cum, total: cum[cum.length - 1] });
@@ -834,7 +842,7 @@ BW12.writeScene = function (g) {
   const S = BW12.state, p = g.player, B = S.board;
   const W = Game.cssW, H = Game.cssH, asp = W / H, layout = asp < 1 ? 'two' : 'row';
   const Lt = BW12.layoutName(layout);
-  const tanY = Math.tan(0.45), tanX = tanY * asp, d = Math.max(1.0, (Lt.halfW + 0.22) / tanX, (Lt.halfH + 0.22) / tanY);
+  const tanY = Math.tan(0.45), tanX = tanY * asp, d = Math.max(1.4, (Lt.halfW + 0.55) / tanX, (Lt.halfH + 0.42) / (tanY * 0.8));
   const eye = { x: B.c[0] + B.n[0] * d, y: B.c[1] + 0.02, z: B.c[2] + B.n[1] * d, tx: B.c[0], ty: B.c[1], tz: B.c[2], fov: 0.9 };
   const stand = { x: B.c[0] + B.n[0] * 0.75 - B.r[0] * 1.45, z: B.c[2] + B.n[1] * 0.75 - B.r[1] * 1.45 };
   const wide = { x: B.c[0] + B.n[0] * 4.2 + B.r[0] * 1.6, y: 2.2, z: B.c[2] + B.n[1] * 4.2 + B.r[1] * 1.6, tx: B.c[0] - B.r[0] * 0.4, ty: 1.3, tz: B.c[2] - B.r[1] * 0.4, fov: 0.85 };
@@ -900,7 +908,7 @@ BW12.traceFinish = function (g) {
   if (S.trace) { S.trace.done = true; S.ink.done = S.trace.strokes.length; S.ink.s = 0; BurnsSave.flag(12, 'wrote', true); BurnsSave.flag(12, 'wroteLayout', S.trace.layout); }
   g.bossLine = null;
   burnsSfx('secret', { vol: 0.35 });
-  const B = S.board; for (let i = 0; i < 14; i++) g.fx.glint(B.c[0] + B.r[0] * (Math.random() - 0.5) * 2, B.c[1] + (Math.random() - 0.5) * 0.5, B.c[2] + B.r[1] * (Math.random() - 0.5) * 2, '#ffe8b0');
+  const B = S.board; for (let i = 0; i < 7; i++) g.fx.glint(B.c[0] + B.r[0] * (Math.random() - 0.5) * 2, B.c[1] + (Math.random() - 0.5) * 0.5, B.c[2] + B.r[1] * (Math.random() - 0.5) * 2, '#ffe8b0');
 };
 BW12.afterName = function (g) {
   const S = BW12.state, p = g.player;
@@ -918,7 +926,7 @@ BW12.ending = function (g) {
   // read facing outward into the open courtyard (away from the sanctuary)
   let ox = p.x - TC.x, oz = p.z - TC.z; const ol = Math.hypot(ox, oz) || 1; const fx = ox / ol, fz = oz / ol, sx = fz, sz = -fx;
   const W = Game.cssW, H = Game.cssH, asp = W / H, tanY = Math.tan(0.4), tanX = tanY * asp;
-  const dd = Math.max(0.4, 0.25 / tanX, 0.18 / tanY);
+  const dd = Math.max(0.55, 0.3 / tanX, 0.21 / (tanY * 0.8));
   const hand = { x: p.x + fx * 0.42, y: p.y + 1.22, z: p.z + fz * 0.42 };
   const ins = { x: p.x + fx * 1.5, y: p.y + 3.3, z: p.z + fz * 1.5 };
   const camOver = { x: p.x + sx * 1.5 + fx * 0.3, y: p.y + 1.75, z: p.z + sz * 1.5 + fz * 0.3, tx: hand.x, ty: hand.y, tz: hand.z, fov: 0.85 };

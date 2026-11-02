@@ -615,7 +615,14 @@ BURNS_W2.placeRocket = function (api, g, x, z) {
   const S = BURNS_W2.state, BW = BURNS_W234;
   let info = null;
   if (typeof BurnsBigArt !== 'undefined' && BurnsBigArt.kinds && BurnsBigArt.kinds.retroRocket) {
-    try { const P = BurnsBigArt.place(api, g, 'retroRocket', x, z, { rotY: -0.6 }); if (P && P.summit) info = { top: { x: P.summit.x, y: P.summit.y, z: P.summit.z }, view: { x: P.summit.x, y: P.summit.y, z: P.summit.z } }; } catch (e) { info = null; }
+    // the big-art Retro Rocket: ladders up the gantry, its own LAUNCH! button + countdown show.
+    // We add the city-view moment at the top and award the token when it launches.
+    try {
+      const P = BurnsBigArt.place(api, g, 'retroRocket', x, z, { rotY: -0.6, vantage: false,
+        onReach: g2 => BURNS_W2.rocketView(g2),
+        onLaunch: g2 => { const T = S.rocket.top; if (g2.missions.state('rocket') === 'available') g2.missions.start('rocket', true); if (g2.missions.state('rocket') === 'active') g2.missions.complete('rocket', { x: T.x - 1.5, y: T.y + 1.3, z: T.z }); } });
+      if (P && P.summit) { info = { top: { x: P.summit.x, y: P.summit.y, z: P.summit.z }, view: { x: P.summit.x, y: P.summit.y, z: P.summit.z }, big: P }; S.rocketP = P; }
+    } catch (e) { info = null; }
   }
   if (!info || !info.top) {
     // stand-in rocket: chrome body with red stripes, round nose, three fins, portholes
@@ -644,20 +651,21 @@ BURNS_W2.placeRocket = function (api, g, x, z) {
     info = { top: { x: gx + 0.9, y: 15.62, z: gz + 0.9 }, view: { x: gx, y: 16.2, z: gz } };
     api.sign('THE RETRO\nROCKET', x - 5.2, z + 3.2, { h: 1.0, yaw: -0.9, style: { bg: '#1a1a2a', fg: '#ff4a4a', glow: '#ff2a2a', size: 24, border: '#e8ecf4' }, glow: '#ff2a2a' });
   }
-  S.rocket = { x, z, top: info.top, view: info.view || info.top };
-  api.trigger({ x: info.top.x, z: info.top.z, r: 4.5, y0: info.top.y - 0.6, once: true, onEnter: g2 => BURNS_W2.rocketView(g2) });
-  api.trigger({ x, z, r: 14, once: true, onEnter: g2 => { if (g2.missions.state('rocket') === 'available') { g2.missions.start('rocket'); g2.banner('THE RETRO ROCKET', 'Climb the gantry. Push the big red button.', { col: '#ff4a4a' }); } } });
+  S.rocket = { x, z, top: info.top, view: info.view || info.top, big: !!info.big };
+  if (!info.big) api.trigger({ x: info.top.x, z: info.top.z, r: 4.5, y0: info.top.y - 0.6, once: true, onEnter: g2 => BURNS_W2.rocketView(g2) });
+  api.trigger({ x, z, r: info.big ? 21 : 14, once: true, onEnter: g2 => { if (g2.missions.state('rocket') === 'available') { g2.missions.start('rocket'); g2.banner('THE RETRO ROCKET', 'Climb the gantry. Push the big red button.', { col: '#ff4a4a' }); } } });
   api.light(x, z, 16, '#ffd8a0', 0.4);
-  api.glowArc(x + 11.5, 1.0, z, x + 7.8, 16.4, z, 2.2, 10);
+  if (!info.big) api.glowArc(x + 11.5, 1.0, z, x + 7.8, 16.4, z, 2.2, 10);
 };
 BURNS_W2.rocketView = function (g) {
   const S = BURNS_W2.state, R = S.rocket, [hx, hz] = BURNS_W2.CAMP, p = g.player;
-  const c0 = { x: R.view.x, y: R.view.y + 2.4, z: R.view.z, tx: R.x, ty: 14, tz: R.z, fov: 0.9 }, c1 = { x: R.view.x, y: R.view.y + 2.6, z: R.view.z, tx: hx, ty: 0, tz: hz, fov: 0.7 };
+  const c0 = { x: R.view.x, y: R.view.y + 2.4, z: R.view.z, tx: R.x, ty: R.view.y - 2, tz: R.z, fov: 0.9 }, c1 = { x: R.view.x, y: R.view.y + 2.6, z: R.view.z, tx: hx, ty: 0, tz: hz, fov: 0.7 };
   g.cutscene([
     { cam: c0 }, { cam: { from: c0, to: c1, dur: 2.4 } },
     { say: ['brady', ['Whoa. You can see the whole city from up here.', 'And way out there... a ring of art cars going around and around one block. Somewhere around seven-something.', 'Lumen said the parade goes round and round. That has to be near our camp!']] },
-    { do: g2 => { g2.camYaw = p.yaw; g2.snapCam = true; g2.banner('CITY VIEW', 'The parade circles a block near 7:30. Now: the big red button.', { col: '#ffe24a' }); } }
+    { do: g2 => { g2.camYaw = p.yaw; g2.snapCam = true; g2.banner('CITY VIEW', 'The parade circles a block near 7:30. Now: the big red button.', { col: '#ffe24a' }); if (g2.missions.state('rocket') === 'available') g2.missions.start('rocket', true); } }
   ]);
+  if (R.big) return;   // the big-art rocket has its own LAUNCH! button
   g.interactables = g.interactables || [];
   g.interactables.push({ x: R.top.x, z: R.top.z, y: R.top.y, r: 2.2, label: 'LAUNCH', when: g2 => g2.missions.state('rocket') === 'active', fn: g2 => BURNS_W2.rocketLaunch(g2) });
 };

@@ -193,41 +193,45 @@ const BW15M = {
   sideDecal(m, side, x, y, z, w, h, reg) {
     m.push(); m.tf(x, y, z, side === 1 ? Math.PI / 2 : side === -1 ? -Math.PI / 2 : side === -2 ? Math.PI : 0); m.decal(0, 0, 0, w, h, reg); m.pop();
   },
-  // the roof-deck furniture shared by the RV and the unicorn: helm, two chairs, rails, couch, disco ball
+  // the roof-deck furniture shared by the RV and the unicorn. The captain's helm and Chinka's chair sit in
+  // the rear third so the chase camera always sees the two of them; the party lounge is up front.
+  SEAT_Z: -2.0,
   deckKit(m, o) {
-    const D = this.DECK, r = mulberry32(77), lights = [];
+    const D = this.DECK, lights = [], SZ = this.SEAT_Z;
     o = o || {};
     // captain's chair (driver, +X side) and the helm
-    m.color('#3a2a3e').shine(1); m.roundCyl(0.62, D, 2.05, 0.12, 0.2, 0.04, { seg: 8 });
-    m.color('#ff4fa8').shine(1); m.roundBox(0.62, D + 0.33, 2.05, 0.64, 0.2, 0.62, 0.08); m.roundBox(0.62, D + 0.78, 1.74, 0.64, 0.72, 0.16, 0.08);
-    m.color('#ffe24a'); m.roundBox(0.62, D + 1.18, 1.74, 0.5, 0.12, 0.14, 0.05);
-    m.color('#5a3a26').shine(1); m.roundCyl(0.62, D, 2.82, 0.09, 0.72, 0.04, { seg: 8 });
-    m.push(); m.tf(0.62, D + 0.86, 2.66, 0, -1.05); m.color('#2a1a10').shine(2); m.torus(0, 0, 0, 0.3, 0.04, { seg: 18, tseg: 6 });
+    m.color('#3a2a3e').shine(1); m.roundCyl(0.62, D, SZ, 0.12, 0.2, 0.04, { seg: 8 });
+    m.color('#ff4fa8').shine(1); m.roundBox(0.62, D + 0.33, SZ, 0.64, 0.2, 0.62, 0.08); m.roundBox(0.62, D + 0.72, SZ - 0.31, 0.64, 0.6, 0.16, 0.08);
+    m.color('#ffe24a'); m.roundBox(0.62, D + 1.05, SZ - 0.31, 0.5, 0.12, 0.14, 0.05);
+    m.color('#5a3a26').shine(1); m.roundCyl(0.62, D, SZ + 0.77, 0.09, 0.72, 0.04, { seg: 8 });
+    m.push(); m.tf(0.62, D + 0.86, SZ + 0.61, 0, -1.05); m.color('#2a1a10').shine(2); m.torus(0, 0, 0, 0.3, 0.04, { seg: 18, tseg: 6 });
     m.color('#c89a3a').shine(3); for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.4; m.limb(0, 0, 0, Math.sin(a) * 0.3, 0, Math.cos(a) * 0.3, 0.018, 0.018, { seg: 5 }); } m.ball(0, 0, 0, 0.07, { seg: 8, rings: 5 }); m.pop();
-    // Chinka's striped beach chair (-X side)
-    m.color('#38c8c8').shine(1); m.roundBox(-0.62, D + 0.32, 2.05, 0.62, 0.12, 0.6, 0.05);
-    m.push(); m.tf(-0.62, D + 0.66, 1.78, 0, -0.35); m.roundBox(0, 0, 0, 0.62, 0.7, 0.1, 0.05); m.color('#ffffff'); m.roundBox(0, 0.12, 0.02, 0.63, 0.12, 0.1, 0.04); m.roundBox(0, -0.16, 0.02, 0.63, 0.12, 0.1, 0.04); m.pop();
-    m.color('#d8d8de').shine(2); for (const sx of [-0.88, -0.36]) for (const sz of [1.8, 2.3]) m.limb(sx, D, sz, sx, D + 0.3, sz, 0.025, 0.025, { seg: 5 });
+    // Chinka's striped beach chair (-X side) with her map holder
+    m.color('#38c8c8').shine(1); m.roundBox(-0.62, D + 0.32, SZ, 0.62, 0.12, 0.6, 0.05);
+    m.push(); m.tf(-0.62, D + 0.62, SZ - 0.27, 0, -0.35); m.roundBox(0, 0, 0, 0.62, 0.62, 0.1, 0.05); m.color('#ffffff'); m.roundBox(0, 0.12, 0.02, 0.63, 0.12, 0.1, 0.04); m.roundBox(0, -0.14, 0.02, 0.63, 0.12, 0.1, 0.04); m.pop();
+    m.color('#d8d8de').shine(2); for (const sx of [-0.88, -0.36]) for (const sz of [SZ - 0.25, SZ + 0.25]) m.limb(sx, D, sz, sx, D + 0.3, sz, 0.025, 0.025, { seg: 5 });
     m.shine(0);
     // rails + string lights
     const L = o.deckLen || 7.6, z0 = o.deckZ0 === undefined ? -4.3 : o.deckZ0, W2 = 1.2;
     m.color('#e8e0d0').shine(2);
     const posts = [];
     for (let i = 0; i <= 6; i++) { const z = z0 + i * L / 6; posts.push([W2, z], [-W2, z]); }
-    for (const [x, z] of posts) m.limb(x, D, z, x, D + 0.55, z, 0.035, 0.035, { seg: 6 });
-    m.limb(W2, D + 0.55, z0, W2, D + 0.55, z0 + L, 0.03, 0.03, { seg: 6 }); m.limb(-W2, D + 0.55, z0, -W2, D + 0.55, z0 + L, 0.03, 0.03, { seg: 6 });
-    m.limb(-W2, D + 0.55, z0, W2, D + 0.55, z0, 0.03, 0.03, { seg: 6 });
+    for (const [x, z] of posts) m.limb(x, D, z, x, D + 0.5, z, 0.035, 0.035, { seg: 6 });
+    m.limb(W2, D + 0.5, z0, W2, D + 0.5, z0 + L, 0.03, 0.03, { seg: 6 }); m.limb(-W2, D + 0.5, z0, -W2, D + 0.5, z0 + L, 0.03, 0.03, { seg: 6 });
+    m.limb(-W2, D + 0.5, z0, W2, D + 0.5, z0, 0.03, 0.03, { seg: 6 }); m.limb(-W2, D + 0.5, z0 + L, W2, D + 0.5, z0 + L, 0.03, 0.03, { seg: 6 });
     m.shine(0);
-    for (let i = 0; i < 9; i++) { const z = z0 + 0.3 + i * (L - 0.6) / 8; lights.push({ x: W2, y: D + 0.5, z, s: 0.32, c: BURNS_NEON[i % 7] }, { x: -W2, y: D + 0.5, z, s: 0.32, c: BURNS_NEON[(i + 3) % 7] }); }
-    // party couch at the back + speakers + disco ball on a pole + a rainbow flag
-    m.color('#8a2a8a').shine(1); m.roundBox(0, D + 0.25, z0 + 0.75, 2.0, 0.4, 0.8, 0.14); m.roundBox(0, D + 0.62, z0 + 0.42, 2.0, 0.55, 0.22, 0.1);
-    m.roundBox(0.95, D + 0.45, z0 + 0.75, 0.2, 0.42, 0.8, 0.08); m.roundBox(-0.95, D + 0.45, z0 + 0.75, 0.2, 0.42, 0.8, 0.08);
-    m.color('#1a1a22').shine(1); for (const sx of [0.8, -0.8]) { m.roundBox(sx, D + 0.45, z0 + 2.0, 0.5, 0.9, 0.45, 0.08); m.color('#3a3a46'); m.push(); m.tf(sx, D + 0.62, z0 + 2.23, 0, Math.PI / 2); m.roundCyl(0, -0.02, 0, 0.16, 0.04, 0.02, { seg: 10 }); m.pop(); m.color('#1a1a22'); }
-    m.color('#9a9aa6').shine(2); m.limb(0, D, z0 + 2.4, 0, D + 1.75, z0 + 2.4, 0.03, 0.03, { seg: 6 });
-    m.color('#e8eef8').shine(3); m.ball(0, D + 1.95, z0 + 2.4, 0.28, { seg: m.segs(14, 8), rings: m.segs(10, 6), colFn: (x, y, z) => { const v = 0.75 + 0.25 * bw15Hash(Math.floor((x + 1) * 20), Math.floor((y + z + 2) * 20)); return rgbToHex(255 * v, 255 * v, 255 * Math.min(1, v + 0.05)); } });
-    lights.push({ x: 0, y: D + 1.95, z: z0 + 2.4, s: 1.1, c: '#ffffff' });
-    m.color('#7a6a5a').shine(1); m.limb(-W2 + 0.1, D + 0.5, z0 + 0.1, -W2 + 0.1, D + 2.6, z0 + 0.1, 0.03, 0.025, { seg: 6 });
-    BW15_RAINBOW.forEach((c, i) => { m.color(c, 0.2); m.roundBox(-W2 + 0.1, D + 2.5 - i * 0.09, z0 - 0.45, 0.02, 0.09, 0.9, 0.01); });
+    for (let i = 0; i < 9; i++) { const z = z0 + 0.3 + i * (L - 0.6) / 8; lights.push({ x: W2, y: D + 0.46, z, s: 0.32, c: BURNS_NEON[i % 7] }, { x: -W2, y: D + 0.46, z, s: 0.32, c: BURNS_NEON[(i + 3) % 7] }); }
+    // the party lounge up front: a couch facing back toward the helm, speakers, the disco ball
+    const zf = z0 + L;
+    m.color('#8a2a8a').shine(1); m.roundBox(0, D + 0.22, zf - 0.85, 1.9, 0.36, 0.75, 0.13); m.roundBox(0, D + 0.5, zf - 0.38, 1.9, 0.5, 0.2, 0.09);
+    m.roundBox(0.9, D + 0.38, zf - 0.85, 0.2, 0.36, 0.75, 0.08); m.roundBox(-0.9, D + 0.38, zf - 0.85, 0.2, 0.36, 0.75, 0.08);
+    m.color('#1a1a22').shine(1); for (const sx of [0.86, -0.86]) { m.roundBox(sx, D + 0.4, zf - 1.75, 0.42, 0.78, 0.4, 0.08); m.color('#3a3a46'); m.push(); m.tf(sx, D + 0.55, zf - 1.97, 0, -Math.PI / 2); m.roundCyl(0, -0.02, 0, 0.14, 0.04, 0.02, { seg: 10 }); m.pop(); m.color('#1a1a22'); }
+    m.color('#9a9aa6').shine(2); m.limb(0, D, zf - 1.6, 0, D + 1.85, zf - 1.6, 0.03, 0.03, { seg: 6 });
+    m.color('#e8eef8').shine(3); m.ball(0, D + 2.05, zf - 1.6, 0.28, { seg: m.segs(14, 8), rings: m.segs(10, 6), colFn: (x, y, z) => { const v = 0.75 + 0.25 * bw15Hash(Math.floor((x + 1) * 20), Math.floor((y + z + 2) * 20)); return rgbToHex(255 * v, 255 * v, 255 * Math.min(1, v + 0.05)); } });
+    lights.push({ x: 0, y: D + 2.05, z: zf - 1.6, s: 1.1, c: '#ffffff' });
+    // a rainbow flag on the back corner
+    m.color('#7a6a5a').shine(1); m.limb(-W2 + 0.1, D + 0.5, z0 + 0.1, -W2 + 0.1, D + 2.5, z0 + 0.1, 0.03, 0.025, { seg: 6 });
+    BW15_RAINBOW.forEach((c, i) => { m.color(c, 0.2); m.roundBox(-W2 + 0.1, D + 2.4 - i * 0.09, z0 - 0.35, 0.02, 0.09, 0.8, 0.01); });
     m.emissive(0).shine(0);
     return lights;
   },
@@ -278,7 +282,7 @@ const BW15M = {
     // rear ladder + bike rack with two bikes + spare tyre cover
     m.color('#a8a8b2').shine(2); for (const sx of [0.62, 0.95]) m.limb(sx, 1.0, -4.84, sx, 3.36, -4.84, 0.03, 0.03, { seg: 5 }); for (let y = 1.25; y < 3.3; y += 0.35) m.limb(0.62, y, -4.86, 0.95, y, -4.86, 0.022, 0.022, { seg: 5 });
     m.shine(0); BurnsProps.bikeShape(m, -0.65, 0.95, -5.05, Math.PI / 2, '#ff4fd8'); BurnsProps.bikeShape(m, -0.05, 0.95, -5.15, Math.PI / 2, '#38f2ff');
-    m.color('#2a1440').shine(1); m.push(); m.tf(0.2, 2.0, -4.95, 0, Math.PI / 2); m.roundCyl(0, -0.12, 0, 0.42, 0.24, 0.1, { seg: 16 }); m.pop();
+    m.push(); m.tf(0.2, 2.15, -4.95, 0, Math.PI / 2); m.color('#ff4fa8').shine(1); m.roundCyl(0, -0.12, 0, 0.42, 0.24, 0.1, { seg: 16 }); m.color('#ffe24a', 0.3); m.torus(0, 0.125, 0, 0.3, 0.035, { seg: 16, tseg: 4 }); m.color('#2a1440'); m.ball(0, 0.12, 0, 0.12, { seg: 8, rings: 5 }); m.emissive(0).shine(0); m.pop();
     // roof AC unit + solar panel + the deck
     m.color('#e8e8ec').shine(1); m.roundBox(0, D - 0.02, -1.6, 0.9, 0.28, 0.9, 0.1);
     m.color('#a87a4a').shine(1); m.roundBox(0, D - 0.04, -0.6, W - 0.12, 0.1, 7.7, 0.04);
@@ -288,7 +292,7 @@ const BW15M = {
     lights.push({ x: 0.84, y: 1.08, z: 4.95, s: 1.1, c: '#fff4d0', beam: 0 }, { x: -0.84, y: 1.08, z: 4.95, s: 1.1, c: '#fff4d0', beam: 0 }, { x: 1.05, y: 1.15, z: -4.9, s: 0.7, c: '#ff3020' }, { x: -1.05, y: 1.15, z: -4.9, s: 0.7, c: '#ff3020' });
     return {
       cols: [{ t: 'box', x: 0, z: -0.25, hx: W / 2, hz: 4.75, y0: 0.3, y1: D - 0.05, cover: true }],
-      seat: [0.62, D - 0.42, 2.05], poofers: [], w: W, len: 9.6, top: D, lights
+      seat: [0.62, D - 0.42, this.SEAT_Z], poofers: [], w: W, len: 9.6, top: D, lights
     };
   },
   /* ---- unicorn form: a giant galloping unicorn with the same deck on its back ---- */

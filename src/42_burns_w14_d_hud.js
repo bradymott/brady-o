@@ -14,6 +14,8 @@
 
 const BW14_HUD = {
   lay: null,
+  // a flashing call-out (no countdown, unlike g.warn): GREEN LIGHT, STALL, FLARE...
+  flash(g, text, secs) { if (g && g.bw14) g.bw14.flashMsg = { text, t: secs || 1.2, dur: secs || 1.2 }; },
   layout(g) {
     const W = Game.cssW, H = Game.cssH, portrait = H > W, L = Input.layout, r = L ? L.r : 46, S = BurnsUI.safe();
     const lh = portrait ? r * 4.0 : clamp(H * 0.5, r * 2.6, r * 3.8), lx = W - S.r - r * 1.25;
@@ -22,13 +24,13 @@ const BW14_HUD = {
       W, H, portrait, r, S,
       thr: { x: lx, y0, y1, w: r * 1.05 },
       btnThr: { id: 'bw14thr', x: lx, y: (y0 + y1) / 2, r: lh / 2 * 0.86 },
-      btnJump: { id: 'bw14jump', x: lx - r * 2.45, y: y1 - r * 0.55, r: r * 1.12 },
+      btnJump: portrait ? { id: 'bw14jump', x: W / 2 + 20, y: H - S.b - r * 1.9, r: r * 1.12 } : { id: 'bw14jump', x: lx - r * 2.45, y: y1 - r * 0.55, r: r * 1.12 },
       btnPull: { id: 'bw14pull', x: W - S.r - r * 1.55, y: H - S.b - r * (portrait ? 2.3 : 1.55), r: r * 1.35 },
       btnL: { id: 'bw14L', x: S.l + r * 1.7, y: H - S.b - r * (portrait ? 2.3 : 1.65), r: r * 1.3 },
       btnR: { id: 'bw14R', x: W - S.r - r * 1.7, y: H - S.b - r * (portrait ? 2.3 : 1.65), r: r * 1.3 },
-      btnInv: { id: 'bw14inv', x: lx - r * 1.55, y: y0 + 22, r: 19 },
-      btnAgain: { id: 'bw14again', x: W / 2 - Math.min(110, W * 0.2), y: H * (portrait ? 0.66 : 0.74), r: portrait ? 40 : 34 },
-      btnGo: { id: 'bw14go', x: W / 2 + Math.min(110, W * 0.2), y: H * (portrait ? 0.66 : 0.74), r: portrait ? 40 : 34 }
+      btnInv: portrait ? { id: 'bw14inv', x: lx, y: y0 - 34, r: 18 } : { id: 'bw14inv', x: lx - r * 1.55, y: y0 + 22, r: 19 },
+      btnAgain: { id: 'bw14again', x: W / 2 - Math.min(110, W * 0.2), y: portrait ? H * 0.43 : H * 0.62 + 4, r: portrait ? 40 : 34 },
+      btnGo: { id: 'bw14go', x: W / 2 + Math.min(110, W * 0.2), y: portrait ? H * 0.43 : H * 0.62 + 4, r: portrait ? 40 : 34 }
     };
     // instrument cluster: bottom centre (landscape) or a right-hand column (portrait)
     if (portrait) lay.inst = { x: W - S.r - 58, y: Math.min(H * 0.3, 260), col: true };
@@ -39,11 +41,11 @@ const BW14_HUD = {
   // the touch buttons the current phase needs (merged into Input.hud by the scene hook)
   buttons(g) {
     const S = g.bw14, F = S && S.fly; if (!F || !F.active) return [];
-    const lay = this.lay || this.layout(g), out = [];
+    const lay = this.layout(g), out = [];   // always fresh (orientation changes)
     if (F.mode === 'plane') { out.push(lay.btnThr, lay.btnInv); if (S.dzReady) out.push(lay.btnJump); }
     else if (F.mode === 'free') out.push(lay.btnPull);
     else if (F.mode === 'canopy' || F.mode === 'deploy') out.push(lay.btnL, lay.btnR);
-    else if (F.mode === 'landed' && S.card && S.card.ready) { out.push(lay.btnGo); if (S.card.again) out.push(lay.btnAgain); }
+    else if (F.mode === 'landed' && S.card && S.card.ready) { if (!S.card.hard) out.push(lay.btnGo); if (S.card.again) out.push(lay.btnAgain); }
     return out;
   },
   install(g) {
@@ -122,7 +124,7 @@ const BW14_HUD = {
         const D = F.dv;
         this.toggleBtn(ctx, lay.btnL, !!Input.hudHeld.bw14L, D.L, 'LEFT');
         this.toggleBtn(ctx, lay.btnR, !!Input.hudHeld.bw14R, D.R, 'RIGHT');
-        BurnsUI.text(ctx, 'HOLD BOTH TO FLARE', lay.W / 2, lay.H - lay.S.b - 14, 11, F.agl < 9 ? '#ffe24a' : 'rgba(255,255,255,0.8)', { ui: true });
+        BurnsUI.text(ctx, 'HOLD BOTH TO FLARE', lay.W / 2, lay.portrait ? lay.btnL.y - lay.btnL.r - 14 : lay.H - lay.S.b - 14, 11, F.agl < 9 ? '#ffe24a' : 'rgba(255,255,255,0.8)', { ui: true });
       }
     } else if (F.mode === 'landed') {
       if (S.card && S.card.ready) {
@@ -156,14 +158,16 @@ const BW14_HUD = {
       if (F.mode === 'landed' && S.card) this.card(ctx, g, S.card, lay);
     }
     this.radio(ctx, g, F, lay);
+    const fm = S.flashMsg;
+    if (fm && fm.t > 0 && !cine) { fm.t -= g.lastFdt || 1 / 60; const a = (0.65 + 0.35 * Math.sin(g.time * 16)) * clamp(fm.t * 3, 0, 1); BurnsUI.text(ctx, fm.text, lay.W / 2, lay.portrait ? lay.H * 0.3 : lay.H * 0.3, Math.min(34, lay.W / 15), `rgba(255,${200 + 55 * a | 0},${90 + 60 * a | 0},${a})`, { glow: '#ff4fd8' }); }
     if (S.ctlHint && S.ctlHint.t > 0 && !cine && !g.dialog.open) {
       // controls card: left side in landscape (between the HUD pills and the stick), lower middle in portrait
       const a = clamp(S.ctlHint.t, 0, 1), fs = lay.portrait ? 11 : 10.5;
       ctx.save(); ctx.globalAlpha = a; ctx.font = `600 ${fs}px ${FONT_UI}`;
-      const maxW = lay.portrait ? lay.W - 30 : Math.min(300, lay.W * 0.36), lines = [];
+      const maxW = lay.portrait ? Math.min(lay.W - 30, lay.thr.x - lay.thr.w / 2 - 24) : Math.min(300, lay.W * 0.36), lines = [];
       S.ctlHint.lines.forEach((l, i) => BurnsUI.wrap(ctx, l, maxW - 20).forEach(w2 => lines.push([w2, i])));
       const w = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l[0]).width)) + 22), h = lines.length * (fs + 4) + 12;
-      const x = lay.portrait ? lay.W / 2 - w / 2 : lay.S.l + 4, y = lay.portrait ? lay.H * 0.7 : Math.min(150, lay.H * 0.36);
+      const x = lay.portrait ? Math.max(12, (lay.thr.x - lay.thr.w / 2 - 12) / 2 - w / 2 + 6) : lay.S.l + 4, y = lay.portrait ? lay.H * 0.665 : Math.min(150, lay.H * 0.36);
       this.panel(ctx, x, y, w, h, 0.6);
       lines.forEach((l, i) => BurnsUI.text(ctx, l[0], x + w / 2, y + 9 + fs / 2 + i * (fs + 4), fs, l[1] ? '#d8fbff' : '#ffe24a', { ui: true, stroke: false }));
       ctx.restore();
@@ -229,7 +233,7 @@ const BW14_HUD = {
     if (!p.on) { ctx.rotate(p.ang); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-8, -11); ctx.lineTo(-3, 0); ctx.lineTo(-8, 11); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(10,4,20,0.8)'; ctx.lineWidth = 2; ctx.stroke(); }
     else { const s = 1 + Math.sin(performance.now() / 160) * 0.12; ctx.scale(s, s); ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(14, 0); ctx.lineTo(0, 14); ctx.lineTo(-14, 0); ctx.closePath(); ctx.stroke(); }
     ctx.restore();
-    if (label) BurnsUI.text(ctx, label, clamp(p.x, 40, Game.cssW - 40), clamp(p.y + (p.on ? 26 : 24), 20, Game.cssH - 20), 11, col, { ui: true });
+    if (label) { ctx.save(); ctx.font = `600 11px ${FONT_UI}`; const hw = ctx.measureText(label).width / 2 + 6; ctx.restore(); BurnsUI.text(ctx, label, clamp(p.x, hw, Game.cssW - hw), clamp(p.y + (p.on ? 26 : 24), 20, Game.cssH - 20), 11, col, { ui: true }); }
   },
   markers(ctx, g, F) {
     const S = g.bw14, P = F.pl;
@@ -247,8 +251,11 @@ const BW14_HUD = {
     const R = F.radio; if (!R) return;
     const a = clamp(Math.min(R.t * 5, (R.dur - R.t) * 3), 0, 1); if (a <= 0) return;
     ctx.save(); ctx.globalAlpha = a; ctx.font = `600 12px ${FONT_UI}`;
-    const maxW = Math.min(lay.W - 40, 520), lines = BurnsUI.wrap(ctx, R.text, maxW - 70).slice(0, 3), w = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l).width)) + 74), h = 22 + lines.length * 15;
-    const x = lay.W / 2 - w / 2, y = lay.portrait ? lay.H * 0.56 : lay.H - lay.S.b - 62 - h;
+    // landscape: in the free band between the stick and the right-hand buttons
+    const Ls = Input.layout, bandL = lay.portrait ? 12 : (Ls ? Ls.stickHome.x + Ls.stickHome.r + 8 : 170), bandR = lay.portrait ? lay.W - 12 : lay.btnJump.x - lay.btnJump.r - 8;
+    const maxW = Math.min(bandR - bandL, 520), lines = BurnsUI.wrap(ctx, R.text, maxW - 70).slice(0, 3), w = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l).width)) + 74), h = 22 + lines.length * 15;
+    const landed = F.mode === 'landed';
+    const x = (bandL + bandR) / 2 - w / 2, y = landed ? lay.H - lay.S.b - h - 6 : lay.portrait ? lay.H * 0.6 : lay.H - lay.S.b - 62 - h;
     this.panel(ctx, x, y, w, h, 0.72);
     ctx.fillStyle = '#ff9a4a'; rr(ctx, x + 8, y + 8, 46, h - 16, 8); ctx.fill();
     BurnsUI.text(ctx, '📻', x + 31, y + h / 2 - 5, 16, '#ffffff', { stroke: false }); BurnsUI.text(ctx, 'RADIO', x + 31, y + h / 2 + 11, 8, '#2a1020', { stroke: false });
@@ -257,7 +264,7 @@ const BW14_HUD = {
     ctx.restore();
   },
   card(ctx, g, c, lay) {
-    const W = lay.W, H = lay.H, k = clamp(c.t / 0.4, 0, 1), w = Math.min(W - 30, 400), x = W / 2 - w / 2, y = lay.portrait ? H * 0.2 : H * 0.12, h = lay.portrait ? H * 0.38 : H * 0.5;
+    const W = lay.W, H = lay.H, k = clamp(c.t / 0.4, 0, 1), w = Math.min(W - 30, 400), x = W / 2 - w / 2, y = lay.portrait ? H * 0.09 : H * 0.12, h = lay.portrait ? H * 0.32 : H * 0.48;
     ctx.save(); ctx.globalAlpha = k;
     this.panel(ctx, x, y, w, h, 0.78);
     BurnsUI.text(ctx, c.title, W / 2, y + 26, Math.min(26, W / 16), c.col, { glow: c.col });
@@ -271,6 +278,12 @@ const BW14_HUD = {
 
 /* ---------------- engine hooks (guarded: only world 14 while flying) ---------------- */
 (() => {
+  // free World 14's own puppet meshes (plane, canopy) with the rest of the world's GPU buffers
+  const rel0 = BurnsScenes.releaseWorld;
+  BurnsScenes.releaseWorld = function (scene) {
+    rel0.call(this, scene);
+    try { const S = scene && scene.bw14; if (S && S.geos && BurnsGL.gl) for (const geo of S.geos) BurnsGL.freeGeo(geo); } catch (e) { /* ignore */ }
+  };
   const dc0 = BurnsUI.drawControls;
   BurnsUI.drawControls = function (ctx, g) {
     const S = g && g.bw14, F = S && S.fly;

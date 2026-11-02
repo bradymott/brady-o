@@ -792,9 +792,9 @@ class BurnsPlayScene {
     if (env.trip > 0.01 && this.world.ghosts.length) R.ghost(this.world.ghosts, env, this.world, BURNS_ATLAS.T, 0.55 + env.trip * 0.35);
     // skinned: groups (vehicles, movers, pickups), characters, bosses
     this.pickups.draw(R);
-    for (const G of this.world.groups) G.pose();
+    for (const G of this.world.groups) G.pose(this.cam);
     R.skinBegin(env, this.world, BURNS_ATLAS.T);
-    for (const G of this.world.groups) if (G.objs.length) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.15);
+    for (const G of this.world.groups) if (G.objs.length) { R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.15); if (G.effTris !== undefined) R.stats.tris += G.effTris - G.geo.count / 3; }
     for (const G of this.pickups.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.6);
     const blink = p.invT > 0 && !p.dead && Math.floor(this.time * 14) % 2 === 0;
     if (!blink) R.skin(p.model.geo, p.ch.bones, p.ch.nb, p.hurtT > 0 ? [1, 0.4, 0.4, 0.4] : null, p.ch.face, 0.5);

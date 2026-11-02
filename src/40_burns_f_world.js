@@ -64,6 +64,7 @@ class BurnsCollide {
 }
 
 /* ---------------- rigid-skinned group ---------------- */
+const BURNS_GROUP_LOD = 38;   // metres: traffic vehicles switch to their low-detail twin beyond this
 class BurnsGroup {
   constructor(max) { this.max = max || BurnsGL.maxBones || 32; this.mesh = new BurnsMesh(4096); this.objs = []; this.geo = null; this.bones = null; }
   get full() { return this.objs.length >= this.max || this.mesh.nv > 40000; }
@@ -73,6 +74,7 @@ class BurnsGroup {
     m.append(src);
     const u8 = m.u8; for (let i = base; i < m.nv; i++) { const b = i * 24 + 15; u8[b] = (u8[b] & 0xC0) | (idx & 63); }
     const obj = Object.assign({ idx, group: this, x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, scale: 1, visible: true, info, cols: info.cols || [], lights: info.lights || [] }, o || {});
+    obj.tris = (src.ind.length / 3) | 0;
     this.objs.push(obj);
     return obj;
   }
@@ -86,12 +88,24 @@ class BurnsGroup {
     return obj;
   }
   finish() { this.geo = this.mesh.geo(); this.bones = new Float32Array(this.objs.length * 12); this.mesh = null; return this; }
-  pose() {
+  // cam: objects with a LOD twin show their low-detail copy beyond BURNS_GROUP_LOD metres
+  pose(cam) {
     const B = this.bones; if (!B) return;
+    const hide = i => { B.fill(0, i * 12, i * 12 + 12); B[i * 12 + 7] = -999; };
+    let eff = 0, twins = false;
     for (const o of this.objs) {
-      if (!o.visible) { B.fill(0, o.idx * 12, o.idx * 12 + 12); B[o.idx * 12 + 3] = o.x; B[o.idx * 12 + 7] = -999; B[o.idx * 12 + 11] = o.z; continue; }
-      BurnsM.a34Set(B, o.idx * 12, o.x, o.y, o.z, o.yaw, o.pitch, o.roll, o.scale, o.scale, o.scale);
+      if (o.twinOf) continue;                    // posed through its owner
+      let slot = o.idx, tris = o.tris || 0;
+      if (o.twin !== undefined) {
+        twins = true;
+        const far = cam && (o.x - cam.x) * (o.x - cam.x) + (o.z - cam.z) * (o.z - cam.z) > BURNS_GROUP_LOD * BURNS_GROUP_LOD;
+        hide(far ? o.idx : o.twin); slot = far ? o.twin : o.idx; if (far) tris = this.objs[o.twin].tris || 0;
+      }
+      if (!o.visible) { hide(slot); continue; }
+      eff += tris;
+      BurnsM.a34Set(B, slot * 12, o.x, o.y, o.z, o.yaw, o.pitch, o.roll, o.scale, o.scale, o.scale);
     }
+    this.effTris = twins ? eff : undefined;    // triangles actually rasterised (hidden twins collapse to nothing)
   }
 }
 
@@ -112,7 +126,7 @@ class BurnsTraffic {
       for (let i = 0; i < (L.vehicles || 20) && s > 0; i++) {
         const seed = (def.seed || 1) * 1000 + this.lanes.length * 100 + i;
         const kind = kinds ? kinds[i % kinds.length] : null;
-        const mv = world.addMover(m => BurnsProps.vehicle(m, { seed, kind: (L.kindAt && L.kindAt(i)) || kind }), { traffic: true });
+        const mv = world.addMover(m => BurnsProps.vehicle(m, { seed, kind: (L.kindAt && L.kindAt(i)) || kind }), { traffic: true, lodTwin: true });
         const len = mv.info.len || 6;
         s -= len / 2;
         const car = { mv, s, len, v: 0, sleep: false, id: (L.id || 'lane' + this.lanes.length) + ':' + i, lane };
@@ -243,9 +257,13 @@ class BurnsWorld {
     // build into a scratch mesh first, so a big object never overflows a group's 16-bit index range
     const src = new BurnsMesh(4096); src.setBone(0); src.identity();
     const info = build(src) || {};
-    let g = this.groups.find(G => !G.geo && !G.pickups && G.objs.length < G.max && G.mesh.nv + src.nv <= 64000);
+    // o.lodTwin: the builder is deterministic, so also build a low-detail copy (engine traffic)
+    let lo = null; if (o && o.lodTwin) { lo = new BurnsMesh(2048); lo.setBone(0); lo.identity(); lo.lo = true; build(lo); }
+    const need = src.nv + (lo ? lo.nv : 0), slots = lo ? 2 : 1;
+    let g = this.groups.find(G => !G.geo && !G.pickups && G.objs.length + slots <= G.max && G.mesh.nv + need <= 64000);
     if (!g) { g = new BurnsGroup(); this.groups.push(g); }
     const obj = g.addBuilt(src, info, o);
+    if (lo) { const tw = g.addBuilt(lo, {}, { twinOf: obj }); tw.cols = []; tw.lights = []; obj.twin = tw.idx; }
     obj.mover = true;
     obj.dcols = (obj.cols || []).map(d => Object.assign({}, d, { mover: obj, lx: d.x || 0, lz: d.z || 0, lyaw: d.yaw || 0, ly0: d.y0 || 0, ly1: d.y1, lya: d.ya, lyb: d.yb }));
     obj.px = obj.x; obj.py = obj.y; obj.pz = obj.z; obj.pyaw = obj.yaw;

@@ -28,8 +28,10 @@ const BW1213 = {
     const reg = BURNS_ATLAS.sign('⁣' + key, { w, h, pad: 0, size: 6, fg: 'rgba(0,0,0,0)' });
     if (reg === BURNS_ATLAS.white || reg._bw) return reg;
     const x = BURNS_ATLAS.ctx;
+    // the atlas may rasterise blocks smaller than asked (it packs signs at a fraction of their size):
+    // paint in the requested w x h space and let the context scale it into the block we really got
     x.save(); x.beginPath(); x.rect(reg.px, reg.py, reg.pw, reg.ph); x.clip(); x.translate(reg.px, reg.py);
-    x.clearRect(0, 0, w, h);
+    x.clearRect(0, 0, reg.pw, reg.ph); x.scale(reg.pw / w, reg.ph / h);
     try { paint(x, w, h); } catch (e) { console.error(e); }
     x.restore();
     reg._bw = true;
@@ -133,7 +135,12 @@ const BW1213 = {
     x.strokeStyle = 'rgba(80,120,200,0.18)'; x.lineWidth = 1; for (let y = h * 0.16; y < h; y += h / (lines.length + 1.6)) { x.beginPath(); x.moveTo(8, y + 4); x.lineTo(w - 8, y + 4); x.stroke(); }
     x.fillStyle = o.ink || '#22305a'; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
     const lh = h / (lines.length + 1.2);
-    lines.forEach((l, i) => { x.save(); x.translate(w * 0.08, lh * (i + 1.05)); x.rotate(-0.02 + (i % 2) * 0.012); x.font = `${Math.round(lh * (o.k || 0.72))}px ${this.HAND}`; x.fillText(l, i === lines.length - 1 && o.signRight ? w * 0.4 : 0, 0); x.restore(); });
+    // one font size for every line, shrunk until the longest line fits the paper
+    let fs = Math.round(lh * (o.k || 0.72));
+    x.font = `${fs}px ${this.HAND}`;
+    const widest = Math.max(...lines.map(l => x.measureText(l).width));
+    if (widest > w * 0.84) fs = Math.max(8, Math.floor(fs * w * 0.84 / widest));
+    lines.forEach((l, i) => { x.save(); x.translate(w * 0.08, lh * (i + 1.05)); x.rotate(-0.02 + (i % 2) * 0.012); x.font = `${fs}px ${this.HAND}`; x.fillText(l, i === lines.length - 1 && o.signRight ? w * 0.4 : 0, 0); x.restore(); });
     if (o.heart) { const cx = w * 0.86, cy = h * 0.84, s = h * 0.05; x.fillStyle = '#e8306a'; x.beginPath(); x.moveTo(cx, cy + s); x.bezierCurveTo(cx - s * 1.6, cy - s * 0.2, cx - s * 0.6, cy - s * 1.5, cx, cy - s * 0.5); x.bezierCurveTo(cx + s * 0.6, cy - s * 1.5, cx + s * 1.6, cy - s * 0.2, cx, cy + s); x.fill(); }
   },
   // tileable floral print (Klaus's sundress)
@@ -395,13 +402,16 @@ BW1213.M = {
     m.color(o.frame || '#8a6a4a');
     const dx = Math.sin(t0) * R, dz = Math.cos(t0) * R;
     m.limb(dx, 0, dz, dx * 0.97, doorH, dz * 0.97, 0.09, 0.08); m.limb(-dx, 0, dz, -dx * 0.97, doorH, dz * 0.97, 0.09, 0.08); m.limb(dx * 0.97, doorH, dz * 0.97, -dx * 0.97, doorH, dz * 0.97, 0.08, 0.08);
-    // colliders: stacked rings of boxes that follow the shell (none across the doorway)
-    const cols2 = [], N = o.colN || 22;
-    for (const [y0, y1] of [[0, Math.min(doorH, H * 0.5)], [Math.min(doorH, H * 0.5), H * 0.8]]) {
-      const ym = (y0 + y1) / 2, rr = R * Math.sin(Math.acos(clamp(ym / H, 0, 1))) - 0.25;
+    // colliders: stacked rings of boxes that follow the shell, so neither Brady nor the camera
+    // can slip out through the fabric (the doorway stays open below the door height)
+    const cols2 = [], N = o.colN || 22, bands = [];
+    let yb = 0; while (yb < H * 0.86) { const yt = Math.min(H * 0.92, yb + Math.max(0.8, H / 7)); bands.push([yb, yt]); yb = yt; }
+    for (const [y0, y1] of bands) {
+      const rr = R * Math.sin(Math.acos(clamp(y1 / H, 0, 1))) - 0.3;
+      if (rr < 1.2) continue;
       for (let i = 0; i < N; i++) {
-        const a = (i + 0.5) / N * TAU; if (y0 < doorH - 0.2 && (a < t0 || a > t1)) continue;
-        cols2.push({ t: 'box', x: Math.sin(a) * rr, z: Math.cos(a) * rr, hx: Math.PI * rr / N + 0.12, hz: 0.2, y0, y1, yaw: a, walk: false });
+        const a = (i + 0.5) / N * TAU; if (y0 < doorH - 0.2 && (a < t0 + 0.05 || a > t1 - 0.05)) continue;
+        cols2.push({ t: 'box', x: Math.sin(a) * rr, z: Math.cos(a) * rr, hx: Math.PI * rr / N + 0.14, hz: 0.25, y0, y1, yaw: a, walk: false });
       }
     }
     cols2.push({ t: 'box', x: 0, z: 0, hx: 0.5, hz: 0.5, y0: H - 0.4, y1: H + 0.05, walk: true, camPass: true });
@@ -419,16 +429,19 @@ BW1213.M = {
       const tA = full ? 0 : door / 2, tB = full ? TAU : TAU - door / 2;
       for (let k = 0; k < n; k++) {
         const a = tA + (tB - tA) * k / n, b = tA + (tB - tA) * (k + 1) / n;
-        m.color(cols[k % cols.length]); m.lathe(P, { seg: 3, theta0: a, theta1: b, rMod: full ? null : scal });
-        m.color(shade(cols[k % cols.length], -0.35), o.ei === undefined ? 0.18 : o.ei); m.lathe(P.map(q => [q[0] * 0.98, q[1]]), { seg: 3, theta0: a, theta1: b, flip: true }); m.emissive(0);
+        m.color(cols[k % cols.length]); m.lathe(P, { seg: 4, theta0: a, theta1: b, rMod: full ? null : scal });
+        m.color(shade(cols[k % cols.length], -0.35), o.ei === undefined ? 0.18 : o.ei); m.lathe(P.map(q => [q[0] * 0.98, q[1]]), { seg: 4, theta0: a, theta1: b, flip: true }); m.emissive(0);
       }
     }
     m.color(o.pole || '#6a4a2a'); m.limb(0, 0, 0, 0, H + 0.6, 0, 0.1, 0.07);
     m.color(o.flag || '#ffe24a'); m.push(); m.tf(0, H + 0.35, 0); m.extrude([[0, 0], [0.7, 0.12], [0, 0.25]], 0.02); m.pop();
-    const cl = [], N = 20;
-    for (let i = 0; i < N; i++) {
-      const a = (i + 0.5) / N * TAU; if (a < door / 2 + 0.05 || a > TAU - door / 2 - 0.05) continue;
-      cl.push({ t: 'box', x: Math.sin(a) * (R - 0.3), z: Math.cos(a) * (R - 0.3), hx: Math.PI * R / N + 0.12, hz: 0.22, y0: 0, y1: H * 0.42, yaw: a, walk: false });
+    const cl = [], N = 20, rAt = y => { for (let i = 0; i < prof.length - 1; i++) { const p0 = prof[i], p1 = prof[i + 1]; if (y >= p0[1] && y <= p1[1]) return lerp(p0[0], p1[0], (y - p0[1]) / Math.max(1e-6, p1[1] - p0[1])); } return 0; };
+    for (let yb = 0; yb < H * 0.82; yb += H / 7) {
+      const y1 = Math.min(H * 0.86, yb + H / 7), rr = rAt(y1) - 0.3; if (rr < 1.0) continue;
+      for (let i = 0; i < N; i++) {
+        const a = (i + 0.5) / N * TAU; if (yb < doorH - 0.2 && (a < door / 2 + 0.05 || a > TAU - door / 2 - 0.05)) continue;
+        cl.push({ t: 'box', x: Math.sin(a) * rr, z: Math.cos(a) * rr, hx: Math.PI * rr / N + 0.14, hz: 0.25, y0: yb, y1, yaw: a, walk: false });
+      }
     }
     cl.push({ t: 'cyl', x: 0, z: 0, r: 0.12, y0: 0, y1: H, camPass: true });
     return cl;

@@ -167,6 +167,12 @@ BurnsWorlds.register({
     const S = BW13.state;
     BW1213.tick(S, dt);
     BW1213.gateLabels(g);
+    // while something is chasing Brady, ACTION always means SPIN (nobody stops him for a chat)
+    const chase = g.missions.state('contact') === 'active' || g.missions.state('tantra') === 'active' || g.missions.state('belonging') === 'active' || g.missions.state('sound') === 'active';
+    if (chase !== S.chaseMode) {
+      S.chaseMode = chase;
+      for (const a of g.actors) { if (a.id === 'flow' || a.id === 'klaus' || (a.id && a.id.indexOf('follower') === 0)) continue; if (a.def._nt === undefined) a.def._nt = !!a.def.noTalk; a.def.noTalk = chase ? true : a.def._nt; }
+    }
     BW13.updateGrab(g, dt);
     BW13.updateCushions(g, dt);
     BW13.updateBowls(g, dt);
@@ -174,6 +180,7 @@ BurnsWorlds.register({
     BW13.updateNap(g, dt);
     BW13.updateExercise(g, dt);
     BW13.updateTruck(g, dt);
+    if (S.planeOn) { const P = S.plane; S.planeT += dt; P.x = 70 - S.planeT * 15; P.roll = Math.sin(S.planeT * 1.4) * 0.12; P.pitch = 0.04; if (Math.random() < dt * 30) g.fx.add(P.x + 3.4, P.y + 0.05, P.z, 0, 0, 0, 1.4, 0.35, 1.6, [1, 1, 1], 0.3, 'puff', 0); }
     // tokens push the morning along
     const want = Math.min(1, BurnsSave.tokenCount(13) * 0.15);
     if (g.tod < want && g.todTarget === null) g.setTod(want, 0.02);
@@ -547,7 +554,7 @@ BW13.intro = function (g) {
    ============================================================ */
 BW13.grab = function (g, by, dur, line) {
   const S = BW13.state, p = g.player;
-  if (p.grabbedBy || p.invT > 0 || g.cine || p.vehicle || p.dead) return false;
+  if (p.grabbedBy || p.invT > 0 || g.cine || g.dialog.open || p.vehicle || p.dead) return false;
   p.grab(by, dur); S.grab = { by, t: dur };
   g.warn(line || 'MASH JUMP TO BREAK FREE!', dur);
   burnsSfx('bump', { vol: 0.5 });
@@ -1070,7 +1077,7 @@ BW13.reveal = function (g) {
   const S = BW13.state, p = g.player, L = BW13.LOVE, M = BW13.MAN, pearl = g.actor('pearl');
   const door = BW13.LOVEDOOR;
   const camIn = { x: L.x + 2.4, y: 1.7, z: L.z - 1.4, tx: L.x, ty: 1.0, tz: L.z - 4.2, fov: 0.8 };
-  const camOut = { x: door.x + 2, y: 16, z: door.z + 16, tx: M.x, ty: 50, tz: M.z, fov: 0.6 };
+  const camOut = { x: door.x + 2, y: 16, z: door.z + 16, tx: M.x, ty: 58, tz: M.z, fov: 0.62 };
   g.cutscene([
     { cam: camIn },
     { do: g2 => { p.animOverride = 'yell'; burnsSfx('yell', { vol: 0.8 }); g2.shake(0.3); } },
@@ -1094,7 +1101,7 @@ BW13.reveal = function (g) {
 BW13.goons = function (g) {
   const S = BW13.state, p = g.player, L = BW13.LOVE, door = BW13.LOVEDOOR, E = BW13.EXIT;
   const cop = g.actor('cop'), rng = g.actor('ranger'), pearl = g.actor('pearl'), flow = g.actor('flow'), klaus = g.actor('klaus');
-  const setCine = a => { if (a) { a.setBehavior('bw12cine'); a.def.fixedY = false; } };
+  const setCine = a => { if (a) { a.setBehavior('bw12cine'); a.def.fixedY = false; a.ch.play('idle'); } };
   setCine(cop); setCine(rng);
   const march = { t: 0 };
   g.cutscene([
@@ -1127,13 +1134,13 @@ BW13.goons = function (g) {
     { do: g2 => { if (cop) { cop.setBehavior('walk'); cop.def.path = [[-12, 60], [12, 60]]; cop.def.pingpong = true; cop.speed = 1.6; } if (rng) { rng.setBehavior('walk'); rng.def.path = [[-12, 52], [12, 52], [12, 70], [-12, 70]]; rng.speed = 1.6; } } },
     { wait: 1.4 },
     { say: ['brady', ['Revoked. Chinka\'s on top of the Man\'s pavilion, and I\'m standing on the gate road.']] },
-    { do: g2 => { const P = S.plane; P.visible = true; P.x = 120; P.y = 34; P.z = E.z - 12; P.yaw = -Math.PI / 2; S.planeT = 0; burnsSfx('artcarHorn', { vol: 0.25, pitch: 0.5 }); p.animOverride = 'bw1213_lookup'; } },
-    { cam: { x: E.x + 2.6, y: 0.8, z: E.z + 4, tx: E.x - 8, ty: 30, tz: E.z - 12, fov: 0.95 } },
-    { until: g2 => { const P = S.plane; S.planeT += 1 / 120; P.x = 120 - S.planeT * 34; P.roll = Math.sin(S.planeT * 1.4) * 0.1; if (Math.random() < 0.3) g2.fx.add(P.x + 3.5, P.y, P.z, 0, 0, 0, 1.2, 0.4, 1.4, [1, 1, 1], 0.25, 'puff', 0); return S.planeT > 4.4; } },
+    { do: g2 => { const P = S.plane; P.visible = true; P.x = 70; P.y = 20; P.z = E.z - 9; P.yaw = -Math.PI / 2; S.planeT = 0; S.planeOn = true; burnsSfx('artcarHorn', { vol: 0.25, pitch: 0.5 }); p.yaw = 0.5; p.animOverride = 'bw1213_lookup'; } },
+    { cam: { x: E.x + 1.2, y: 0.9, z: E.z + 4.2, tx: E.x - 3, ty: 11, tz: E.z - 9, fov: 1.0 } },
+    { wait: 2.0 },
     { say: ['brady', ['If I can\'t get back in through the gate...', '...I\'ll come in from the SKY.']] },
     { banner: ['TO BE CONTINUED', '...from the sky.', { col: '#38c8ff', big: true, dur: 3 }] },
     { wait: 2.2 },
-    { do: g2 => { p.locked = false; p.animOverride = null; S.plane.visible = false; } }
+    { do: g2 => { p.locked = false; p.animOverride = null; S.plane.visible = false; S.planeOn = false; } }
   ], g2 => g2.finishWorld());
 };
 
@@ -1184,10 +1191,11 @@ BW13.drawSprites = function (g, R) {
   if (E && E.phase === 'call') { const k = E.meter; R.bbs.bb(p.x, p.y + 1.5, p.z, 1 + k * 3.5, 1 + k * 3.5, SP.heart, [1, 0.35, 0.6], 0.3 + k * 0.6, true); }
   // the heart flare over the Man's pavilion
   if (S.flare > 0) {
-    const M = BW13.MAN, k = S.flare, rise = clamp((1 - k) * 4, 0, 1);
-    R.bbs.bb(M.x, 62 + rise * 26, M.z, 26 * (0.6 + rise * 0.6), 26 * (0.6 + rise * 0.6), SP.heart, [1, 0.3, 0.6], Math.min(1, k * 1.5), true);
-    R.bbs.bb(M.x, 62 + rise * 26, M.z, 60, 60, SP.glow, [1, 0.4, 0.7], Math.min(0.8, k), true);
-    if (rise < 1) R.bbs.streak(M.x, 40 + rise * 22, M.z, 0, 1, 0, 30 * rise + 2, 3, SP.streak, [1, 0.6, 0.85], 0.8);
+    const M = BW13.MAN, k = S.flare, rise = clamp((1 - k) * 5, 0, 1), y = 56 + rise * 14, sz = 20 + rise * 22;
+    R.bbs.bb(M.x, y, M.z, sz * 2.4, sz * 2.4, SP.glow, [1, 0.35, 0.65], Math.min(0.9, k * 1.2), true);
+    R.bbs.bb(M.x, y, M.z, sz, sz, SP.heart, [1, 0.25, 0.55], Math.min(1, k * 1.6), false);
+    R.bbs.bb(M.x, y, M.z, sz * 0.8, sz * 0.8, SP.heart, [1, 0.75, 0.9], Math.min(1, k * 1.6) * 0.8, true);
+    if (rise < 1) R.bbs.streak(M.x, 47 + rise * 10, M.z, 0, 1, 0, 20 * rise + 2, 3, SP.streak, [1, 0.6, 0.85], 0.8);
   }
 };
 

@@ -80,7 +80,8 @@ const BW14_City = {
       line(C.SPAWN.x, 300, 380, 600, 8, 'rgba(214,186,152,0.4)');
       // the landing zone: a big bullseye laid out by the Glow Crew
       const L = C.LZ; soft(L.x, L.z, 30, '#f4e4c8', 0.6);
-      for (const [r, col] of [[20, 'rgba(255,79,216,0.5)'], [12, 'rgba(255,226,74,0.6)'], [6, 'rgba(56,242,255,0.65)'], [2.6, 'rgba(255,79,216,0.85)']]) { const [px, pz] = P(L.x, L.z); c.strokeStyle = col; c.lineWidth = 1.1 * S; c.beginPath(); c.arc(px, pz, r * S, 0, TAU); c.stroke(); }
+      { const [px, pz] = P(L.x, L.z); c.fillStyle = 'rgba(255,79,216,0.28)'; c.beginPath(); c.arc(px, pz, 4 * S, 0, TAU); c.fill(); }
+      for (const [r, col] of [[18, 'rgba(255,79,216,0.5)'], [9, 'rgba(255,226,74,0.65)'], [4, 'rgba(255,79,216,0.9)']]) { const [px, pz] = P(L.x, L.z); c.strokeStyle = col; c.lineWidth = 1.1 * S; c.beginPath(); c.arc(px, pz, r * S, 0, TAU); c.stroke(); }
       { const [px, pz] = P(L.x, L.z); c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 0.9 * S; c.beginPath(); c.moveTo(px - 3 * S, pz - 3 * S); c.lineTo(px + 3 * S, pz + 3 * S); c.moveTo(px + 3 * S, pz - 3 * S); c.lineTo(px - 3 * S, pz + 3 * S); c.stroke(); }
     });
   },
@@ -201,40 +202,50 @@ const BW14_City = {
       m.color('#e8342a'); for (let k = 0; k < 4; k++) { const a = k / 4 * TAU; m.push(); m.tf(Math.sin(a) * 3.6, 6, Math.cos(a) * 3.6, a); m.roundBox(0, 0, 0, 0.4, 9, 3.4, 0.18); m.roundBox(0, -4.4, 0.9, 0.5, 1.2, 1.8, 0.2); m.pop(); }
       m.color('#38f2ff', 0.7).shine(3); for (let k = 0; k < 3; k++) { const a = k / 3 * TAU + 0.5; m.push(); m.tf(Math.sin(a) * 3.3, 19, Math.cos(a) * 3.3, a); m.torus(0, 0, 0, 0.7, 0.14, { seg: 12, tseg: 4 }); m.pop(); m.ball(Math.sin(a) * 3.25, 19, Math.cos(a) * 3.25, 0.62, { seg: 8, rings: 6 }); }
       m.color('#ffb040', 1); m.ball(0, 1.0, 0, 1.4, { seg: 10, rings: 6, squash: 0.6 }); m.emissive(0).shine(0);
+      // the gantry (like BurnsBigArt's): a red lattice tower with decks, an arm to the capsule, the big red button
+      m.color('#c8302a').shine(1);
+      for (const [x, z] of [[7, -3], [13, -3], [7, 3], [13, 3]]) m.limb(x, 0, z, x, 27, z, 0.3, 0.3, { seg: 6 });
+      for (const y of [5, 10, 15, 20, 25]) { m.color('#c8302a'); m.roundBox(10, y, 0, 6.6, 0.3, 6.6, 0.1); m.color('#5a606c'); m.limb(7, y - 4.5, -3, 13, y - 0.4, -3, 0.12, 0.12, { seg: 3 }); m.limb(7, y - 4.5, 3, 13, y - 0.4, 3, 0.12, 0.12, { seg: 3 }); }
+      m.color('#d8dce4').shine(3); m.roundBox(5.2, 25.3, 0, 4.6, 0.6, 1.6, 0.2);
+      m.color('#ff2a2a', 0.9); m.roundCyl(11.5, 25.15, 0, 0.6, 0.4, 0.15, { seg: 10 }); m.emissive(0).shine(0);
     });
     this.obstacle(A.name, A.x, 0, A.z, A.x, 31, A.z, 4.2);
+    { const c = Math.cos(0.4), sn = Math.sin(0.4); this.obstacle('the gantry', A.x + 10 * c, 0, A.z - 10 * sn, A.x + 10 * c, 27, A.z - 10 * sn, 5); }
     this.thermal(A.x + 18, A.z + 30, 12, 9, 220, 'rocket exhaust');
   },
   art_giant(api, g, A) {
+    // matches BurnsBigArt's wooden Sleeping Giant: carved wood, plaid shirt, denim, boots, a big beard
     this.put('art:giant', A.x, 0, A.z, -0.5, 1, m => {
-      const sk = '#c89068', sh = '#a87048';
-      m.color('#f4f0e8'); m.ellipsoid(-15, 2, 0, 6, 2.2, 5, { seg: 12, rings: 6 });               // pillow
-      m.color(sk).shine(1); m.ellipsoid(-13, 7.2, 0, 5.4, 5.8, 5.2, { seg: 14, rings: 9 });       // head
-      m.color('#3a2a1e'); m.ellipsoid(-14.2, 9.6, -0.6, 5.0, 4.0, 5.0, { seg: 12, rings: 6, phi1: 1.6 }); // hair
-      m.color(sh); m.ellipsoid(-8.2, 7.6, 3.6, 1.0, 1.0, 1.0, { seg: 8, rings: 5 });              // nose
-      m.color('#4a2a1e'); for (const zz of [1.8, 5.0]) m.limb(-9.0, 8.8, zz, -9.0, 8.6, zz + 1.4, 0.18, 0.18, { seg: 4 }); // closed eyes
-      m.color('#5a8ac8'); m.ellipsoid(0, 5.2, 0, 11, 5.6, 6.2, { seg: 16, rings: 9 });            // body (in pyjamas)
-      m.color('#4a7ab8'); m.limb(8, 4, 2.5, 16, 7.5, 2.0, 2.6, 2.3, { seg: 10 }); m.limb(16, 7.5, 2.0, 22, 2.4, 2.4, 2.3, 2.1, { seg: 10 }); // knee up
-      m.limb(9, 2.5, -2.5, 23, 2.2, -3.0, 2.4, 2.0, { seg: 10 });
-      m.color(sk); m.ellipsoid(24, 2.4, 2.6, 1.6, 2.0, 3.4, { seg: 10, rings: 6 }); m.ellipsoid(25, 2.2, -3.0, 1.6, 2.0, 3.4, { seg: 10, rings: 6 });
-      m.color('#5a8ac8'); m.limb(-4, 9.0, 3.5, 4, 10.5, 5.0, 1.8, 1.6, { seg: 8 }); m.color(sk); m.ball(5, 10.6, 5.2, 1.7, { seg: 8, rings: 6 });
+      const wood = '#c8905a', woodD = '#a8723e', denim = '#3a5a8a', boot = '#4a2e1e', beard = '#9a5a2e';
+      m.color('#f2ead8'); m.ellipsoid(-16, 2.2, 0, 6.5, 2.4, 5.2, { seg: 12, rings: 6 });                // pillow
+      m.color(wood).shine(1); m.ellipsoid(-13.5, 7.4, 0, 5.4, 5.8, 5.2, { seg: 14, rings: 9 });         // head
+      m.color(beard); m.ellipsoid(-9.6, 6.4, 0.4, 3.0, 4.6, 4.4, { seg: 12, rings: 7 });                 // beard
+      m.color(woodD); m.ellipsoid(-8.6, 9.2, 0.6, 1.1, 1.0, 1.1, { seg: 8, rings: 5 });                   // nose
+      m.color('#3a2416'); for (const zz of [-1.6, 2.6]) m.limb(-9.4, 10.6, zz, -9.3, 10.4, zz + 1.4, 0.18, 0.18, { seg: 4 }); // closed eyes
+      m.color('#b8322a'); m.ellipsoid(0, 5.6, 0, 11, 6.0, 6.4, { seg: 16, rings: 9, colFn: (x, y, z) => ((Math.floor((x + 50) / 2.2) + Math.floor((z + 50) / 2.2)) % 2) ? '#b8322a' : '#3a1616' }); // plaid shirt (breathing chest)
+      m.color(denim); m.limb(8, 4, 2.6, 16, 8.2, 2.0, 2.7, 2.4, { seg: 10 }); m.limb(16, 8.2, 2.0, 22, 2.6, 2.4, 2.4, 2.2, { seg: 10 }); // knee up
+      m.limb(9, 2.6, -2.6, 23, 2.3, -3.0, 2.5, 2.1, { seg: 10 });
+      m.color(boot); m.ellipsoid(24, 2.6, 2.6, 1.8, 2.4, 3.6, { seg: 10, rings: 6 }); m.ellipsoid(25, 2.4, -3.0, 1.8, 2.4, 3.6, { seg: 10, rings: 6 });
+      m.color(wood); m.limb(-4, 9.4, 3.6, 4, 11, 5.2, 1.8, 1.6, { seg: 8 }); m.ball(5, 11.1, 5.4, 1.8, { seg: 8, rings: 6 });     // hand on the belly
       m.color('#9a7aff', 0.7); for (let k = 0; k < 3; k++) { m.push(); m.tf(-13 + k * 2.6, 17 + k * 4, -2, 0.3); m.roundBox(0, 0, 0, 2 + k * 0.6, 0.5, 0.3, 0.12); m.pop(); } m.emissive(0).shine(0);
     });
     { const c = Math.cos(-0.5), sn = Math.sin(-0.5), W = lx => [A.x + lx * c, A.z - lx * sn]; const a = W(-15), b = W(22); this.obstacle(A.name, a[0], 4, a[1], b[0], 4, b[1], 7); }
   },
   art_pumpjack(api, g, A) {
     const yaw = 1.2;
+    // matches BurnsBigArt's steel Pump Jack Colossus (steel frame, yellow beam, maroon counterweight)
     this.put('art:pumpjack', A.x, 0, A.z, yaw, 1, m => {
-      m.color('#4a4a52'); m.roundBox(0, 0.8, 0, 8, 1.6, 30, 0.4);
-      m.color('#e8b020').shine(2); for (const sd of [1, -1]) { m.limb(sd * 2.8, 1.6, -6, sd * 0.6, 22, 0, 0.7, 0.55, { seg: 8 }); m.limb(sd * 2.8, 1.6, 6, sd * 0.6, 22, 0, 0.7, 0.55, { seg: 8 }); }
-      m.color('#3a3a44'); m.roundCyl(0, 21.5, 0, 1.6, 1.4, 0.3, { seg: 12 });
-      m.color('#5a5a62'); m.roundBox(0, 3.5, -11, 3, 5, 3, 0.4); m.color('#2a2a30'); m.limb(0, 1.6, 12, 0, 6, 12, 0.5, 0.5, { seg: 8 });
+      m.color('#3a3e48'); m.roundBox(0, 0.8, 0, 9, 1.6, 34, 0.4);
+      m.color('#5a606c').shine(2); for (const sd of [1, -1]) { m.limb(sd * 3.2, 1.6, -7, sd * 0.7, 22, 0, 0.8, 0.6, { seg: 8 }); m.limb(sd * 3.2, 1.6, 7, sd * 0.7, 22, 0, 0.8, 0.6, { seg: 8 }); m.limb(sd * 3, 8, -4.5, sd * 3, 8, 4.5, 0.35, 0.35, { seg: 6 }); }
+      m.color('#3a3e48'); m.roundCyl(0, 21.5, 0, 1.6, 1.4, 0.3, { seg: 12 });
+      m.color('#5a606c'); m.roundBox(0, 3.5, -11, 3.4, 5, 3.4, 0.4); m.color('#d8a84a').shine(3); m.push(); m.tf(9, 0, 6); m.roundCyl(0, 0, 0, 4.2, 15, 0.8, { seg: 14 }); m.pop(); m.shine(2);
+      m.color('#2a2a30'); m.limb(0, 1.6, 12.6, 0, 6, 12.6, 0.5, 0.5, { seg: 8 });
       m.shine(0);
     });
     // the rocking walking beam + horse head + the spinning counterweight are movers
     const c = Math.cos(yaw), s = Math.sin(yaw), W = (lx, lz) => [A.x + lx * c + lz * s, A.z - lx * s + lz * c];
-    const beam = api.mover(m => { m.color('#e8b020').shine(2); m.roundBox(0, 0, -1, 2.4, 2.6, 26, 0.5); m.color('#3a3a44'); m.push(); m.tf(0, -2.6, 12.6, 0, 0, 0); m.lathe([[0, -3], [2.8, -2.6], [3.4, 0], [2.8, 2.6], [0, 3]], { seg: 10, sx: 0.5 }); m.pop(); m.color('#ff4fd8', 1); m.limb(0, 1.4, -13, 0, 1.4, 11, 0.12, 0.12, { seg: 4 }); m.emissive(0).shine(0); m.color('#2a2a30'); m.limb(0, -5, 12.6, 0, -18, 12.6, 0.12, 0.12, { seg: 4 }); return { cols: [] }; });
-    const crank = api.mover(m => { m.color('#3a3a44'); m.roundBox(0, 0, 0, 1.6, 9, 3.4, 0.5); m.color('#e8342a'); m.roundBox(0, -3.8, 0, 2.2, 3.6, 5.2, 0.6); return { cols: [] }; });
+    const beam = api.mover(m => { m.color('#ffc21a').shine(2); m.roundBox(0, 0, -1, 2.4, 2.6, 26, 0.5); m.color('#3a3a44'); m.push(); m.tf(0, -2.6, 12.6, 0, 0, 0); m.lathe([[0, -3], [2.8, -2.6], [3.4, 0], [2.8, 2.6], [0, 3]], { seg: 10, sx: 0.5 }); m.pop(); m.color('#ff4fd8', 1); m.limb(0, 1.4, -13, 0, 1.4, 11, 0.12, 0.12, { seg: 4 }); m.emissive(0).shine(0); m.color('#2a2a30'); m.limb(0, -5, 12.6, 0, -18, 12.6, 0.12, 0.12, { seg: 4 }); return { cols: [] }; });
+    const crank = api.mover(m => { m.color('#3a3e48'); m.roundBox(0, 0, 0, 1.6, 9, 3.4, 0.5); m.color('#8a2a3a'); m.roundBox(0, -3.8, 0, 2.2, 3.6, 5.2, 0.6); return { cols: [] }; });
     const [bx, bz] = W(0, 0), [cx, cz] = W(0, -11);
     beam.noCollide = crank.noCollide = true;
     api.update((g2, dt) => {
@@ -247,22 +258,28 @@ const BW14_City = {
     { const p = W(0, 12.6); this.obstacle('the horse head', p[0], 8, p[1], p[0], 26, p[1], 4); }
   },
   art_semi(api, g, A) {
+    // matches BurnsBigArt's Knotted Semi: the trailer loops the loop, the cab parks on top of the knot
     this.put('art:semi', A.x, 0, A.z, -0.3, 1, m => {
-      // the cab
-      m.color('#3a6ad8').shine(2); m.roundBox(0, 2.6, 7.2, 3.2, 3.6, 3.6, 0.5); m.roundBox(0, 1.6, 9.6, 3.0, 1.8, 1.6, 0.4);
-      m.color('#1c2a46', 0.05).shine(3); m.roundBox(0, 3.3, 9.0, 2.7, 1.2, 0.1, 0.06); m.emissive(0);
-      m.color('#c8c8d0'); for (const sd of [1, -1]) m.limb(sd * 1.5, 1.5, 6.2, sd * 1.5, 6.8, 6.2, 0.18, 0.18, { seg: 6 });
-      m.color('#1a1a1e'); for (const [x, z] of [[1.4, 9], [-1.4, 9], [1.4, 6], [-1.4, 6]]) { m.push(); m.tf(x, 0.9, z, 0, 0, Math.PI / 2); m.roundCyl(0, -0.35, 0, 0.9, 0.7, 0.2, { seg: 12 }); m.pop(); }
-      // the trailer tied in an overhand (trefoil) knot
-      const knot = t => [(Math.sin(t) + 2 * Math.sin(2 * t)) * 2.6, 9 + (Math.cos(t) - 2 * Math.cos(2 * t)) * 2.6 * 0.85, -Math.sin(3 * t) * 2.6 - 4];
-      m.color('#f4f0e8').shine(2);
-      const N = 54; let prev = knot(0);
-      for (let i = 1; i <= N; i++) { const q = knot(i / N * TAU); m.limb(prev[0], prev[1], prev[2], q[0], q[1], q[2], 1.55, 1.55, { seg: 10, ends: i === 1 || i === N }); prev = q; }
-      m.color('#ff4fd8', 1); prev = knot(0); for (let i = 1; i <= N; i += 2) { const q = knot(i / N * TAU); m.ball(q[0], q[1] + 1.4, q[2], 0.25, { seg: 6, rings: 4 }); } m.emissive(0);
-      m.color('#1a1a1e'); for (const [x, z] of [[1.5, -11], [-1.5, -11], [1.5, -12.8], [-1.5, -12.8]]) { m.push(); m.tf(x, 0.9, z, 0, 0, Math.PI / 2); m.roundCyl(0, -0.35, 0, 0.9, 0.7, 0.2, { seg: 12 }); m.pop(); }
-      m.color('#d8d8e0'); m.roundBox(0, 2.2, -11.8, 3, 2.6, 4, 0.4); m.limb(0, 3.4, -10, 0.5, 6.2, -6.5, 1.3, 1.5, { seg: 8 });
+      const R0 = 6.8, white = '#f4f0e8';
+      // the looping trailer: a flat box-section strip swept around a vertical loop that drifts sideways
+      m.color(white).shine(2);
+      const N = 40; let prev = null;
+      for (let i = 0; i <= N; i++) {
+        const a = i / N * TAU, x = (i / N - 0.5) * 4.8, y = R0 - Math.cos(a) * R0 + 0.4, z = Math.sin(a) * R0, q = [x, y, z];
+        if (prev) m.limb(prev[0], prev[1], prev[2], q[0], q[1], q[2], 1.35, 1.35, { seg: 8, ends: i === 1 || i === N, sz: 0.55 });
+        prev = q;
+      }
+      m.color('#ff4fd8', 1); for (let i = 0; i < N; i += 3) { const a = i / N * TAU; m.ball((i / N - 0.5) * 4.8, R0 - Math.cos(a) * (R0 - 1.4) + 0.4, Math.sin(a) * (R0 - 1.4), 0.25, { seg: 6, rings: 4 }); } m.emissive(0);
+      // ramps in and out + the cradle deck on top
+      m.color('#c8c8d0'); m.roundBox(-2.4, 0.4, 13, 3, 0.5, 12, 0.2); m.roundBox(2.4, 0.4, -13, 3, 0.5, 12, 0.2);
+      m.color('#5a606c'); m.roundBox(0, 14.6, 0, 3.8, 0.8, 9, 0.3);
+      // the cab, parked on top
+      m.color('#3a6ad8').shine(2); m.roundBox(0, 17.2, 1.2, 3.2, 3.6, 3.6, 0.5); m.roundBox(0, 16.2, 3.6, 3.0, 1.8, 1.6, 0.4);
+      m.color('#1c2a46', 0.05).shine(3); m.roundBox(0, 17.9, 3.0, 2.7, 1.2, 0.1, 0.06); m.emissive(0);
+      m.color('#c8c8d0'); for (const sd of [1, -1]) m.limb(sd * 1.5, 16, 0.2, sd * 1.5, 21.4, 0.2, 0.18, 0.18, { seg: 6 });
+      m.color('#1a1a1e'); for (const [x, z] of [[1.4, 3], [-1.4, 3], [1.4, 0], [-1.4, 0]]) { m.push(); m.tf(x, 15.9, z, 0, 0, Math.PI / 2); m.roundCyl(0, -0.35, 0, 0.9, 0.7, 0.2, { seg: 12 }); m.pop(); }
     });
-    this.obstacle(A.name, A.x, 0, A.z, A.x, 16, A.z, 9);
+    this.obstacle(A.name, A.x, 0, A.z, A.x, 20, A.z, 8.5);
   },
   // the two lighthouses lean into each other: an arch you can (secretly) fly through
   LH: { half: 20, tilt: 0.47, h: 38 },
@@ -270,9 +287,12 @@ const BW14_City = {
     const L = this.LH;
     const yaw = A.yaw || 0;
     this.put('art:lighthouses', A.x, 0, A.z, yaw, 1, m => {
+      const tower = (h, stripe, base) => { const prof = []; const n = 8; for (let k = 0; k < n; k++) { const y0 = k / n * h, y1 = (k + 1) / n * h, c = k % 2 ? base : stripe; prof.push([lerp(3.4, 2.2, y0 / h), y0, c], [lerp(3.4, 2.2, y1 / h), y1, c]); } return [[0, 0]].concat(prof).concat([[0, h]]); };
+      // the third one, Crooked Kip, leans on the other two from behind
+      m.push(); m.tf(-27, 0, 0, 0, 0, -0.55); m.lathe(tower(20, '#2a9a6a', '#f8e8b8'), { seg: 14 }); m.color('#2a2a30'); m.roundCyl(0, 20, 0, 2.6, 0.5, 0.2, { seg: 12 }); m.color('#ffe8a0', 1); m.roundCyl(0, 20.5, 0, 1.5, 2.6, 0.3, { seg: 12 }); m.emissive(0); m.color('#2a2a30'); m.lathe([[1.9, 23.1], [1.9, 23.4], [0.3, 25.4], [0, 25.6]], { seg: 12 }); m.pop();
       for (const sd of [-1, 1]) {
         m.push(); m.tf(sd * L.half, 0, 0, 0, 0, sd * L.tilt);
-        const prof = []; const n = 8; for (let k = 0; k < n; k++) { const y0 = k / n * 31, y1 = (k + 1) / n * 31, c = k % 2 ? '#f4f0e8' : '#e8342a'; prof.push([lerp(3.4, 2.2, y0 / 31), y0, c], [lerp(3.4, 2.2, y1 / 31), y1, c]); }
+        const prof = tower(31, sd < 0 ? '#d23a30' : '#2a8ac8', '#f4f0e8').slice(1, -1);
         m.lathe([[0, 0]].concat(prof).concat([[0, 31]]), { seg: 16 });
         m.color('#2a2a30'); m.roundCyl(0, 31, 0, 2.8, 0.6, 0.2, { seg: 14 });
         m.color('#ffe8a0', 1); m.roundCyl(0, 31.6, 0, 1.7, 3.2, 0.3, { seg: 14 }); m.emissive(0);
@@ -283,6 +303,7 @@ const BW14_City = {
     });
     const ax = Math.cos(yaw), az = -Math.sin(yaw);
     for (const sd of [-1, 1]) { const b = sd * L.half, t = sd * (L.half - Math.sin(L.tilt) * L.h), ty = Math.cos(L.tilt) * L.h; this.obstacle(A.name, A.x + ax * b, 0, A.z + az * b, A.x + ax * t, ty, A.z + az * t, 3.3); }
+    { const b = -27, t = -27 + Math.sin(0.55) * 22, ty = Math.cos(0.55) * 22; this.obstacle(A.name, A.x + ax * b, 0, A.z + az * b, A.x + ax * t, ty, A.z + az * t, 3.0); }
   },
   art_galleon(api, g, A) {
     this.put('art:galleon', A.x, 0, A.z, 0.8, 1, m => {
@@ -302,6 +323,8 @@ const BW14_City = {
       m.color('#3a2a1e'); m.limb(0, 6, 16, 0, 9.5, 24, 0.3, 0.15, { seg: 6 });
       m.color('#e8c870', 0.3); m.ball(0, 4.4, 17.4, 1.2, { seg: 8, rings: 6 }); m.emissive(0);
       m.pop();
+      // the pier it "sailed" up to (like BurnsBigArt's)
+      m.color('#a87a4e'); m.roundBox(9, 1.2, -20, 3, 0.4, 24, 0.12); m.color('#6a4a2a'); for (let k = 0; k < 7; k++) for (const sd of [1, -1]) m.limb(9 + sd * 1.4, 0, -31 + k * 3.8, 9 + sd * 1.4, 2.4, -31 + k * 3.8, 0.18, 0.18, { seg: 5 });
     });
     this.obstacle(A.name, A.x - 9, 6, A.z - 11, A.x + 9, 6, A.z + 11, 7);
     this.obstacle('the masts', A.x, 6, A.z, A.x, 25, A.z, 3);
@@ -355,6 +378,34 @@ const BW14_City = {
     api.light(x, z, 16, '#ff8a3a', 0.6);
     this.hot.push({ x, z, name });
     return this.thermal(x, z, r || 11, lift || 7, 460, name);
+  },
+  /* art cars cruising the inner playa and the Esplanade (original designs, low detail, one shared draw) */
+  artCars(api, g) {
+    const designs = {
+      duck(m) { m.color('#ffe24a').shine(2); m.ellipsoid(0, 2.2, -0.5, 2.6, 1.6, 3.6, { seg: 12, rings: 7 }); m.ball(0, 4.6, 2.0, 1.5, { seg: 12, rings: 8 }); m.color('#ff7a1a'); m.ellipsoid(0, 4.4, 3.6, 0.8, 0.3, 0.7, { seg: 8, rings: 4 }); m.color('#1a1a1e'); m.ball(0.7, 5.0, 3.1, 0.18, { seg: 6, rings: 4 }); m.ball(-0.7, 5.0, 3.1, 0.18, { seg: 6, rings: 4 }); },
+      snail(m) { m.color('#7ae85a').shine(1); m.roundBox(0, 0.9, 0, 2.4, 1.2, 7, 0.5); m.limb(0, 1.4, 3.2, 0, 3.6, 3.8, 0.6, 0.45, { seg: 8 }); m.color('#9a6bff', 0.5); m.push(); m.tf(0, 3.4, -0.6, 0, 0, Math.PI / 2); m.torus(0, 0, 0, 1.8, 0.9, { seg: 14, tseg: 8 }); m.pop(); m.emissive(0); m.color('#ff4fd8', 1); m.ball(0.4, 4.3, 4.0, 0.2, { seg: 6, rings: 4 }); m.ball(-0.4, 4.3, 4.0, 0.2, { seg: 6, rings: 4 }); m.emissive(0); },
+      dragon(m) { m.color('#c83a3a').shine(2); m.roundBox(0, 1.6, 0, 3.0, 2.4, 9, 0.6); m.color('#ffd84a'); for (let k = 0; k < 6; k++) m.cyl(0, 2.8, -3.5 + k * 1.4, 0.5, 0, 1.2, 4, {}); m.color('#a82a2a'); m.limb(0, 2.6, 4.2, 0, 4.6, 6.0, 1.2, 0.9, { seg: 10 }); m.color('#ffe24a', 1); m.ball(0.5, 5.0, 6.4, 0.25, { seg: 6, rings: 4 }); m.ball(-0.5, 5.0, 6.4, 0.25, { seg: 6, rings: 4 }); m.emissive(0); },
+      disco(m) { m.color('#3a3a44'); m.roundBox(0, 0.8, 0, 3.2, 1.2, 6, 0.4); m.color('#d8e0f0', 0.35).shine(3); m.ball(0, 3.8, 0, 2.4, { seg: 14, rings: 10 }); m.emissive(0).shine(0); },
+      cupcake(m) { m.color('#f4e8d0'); m.lathe([[2.6, 0.4], [3.0, 2.2], [3.1, 2.4]], { seg: 14 }); m.color('#ff9ad0').shine(1); m.lathe([[3.2, 2.4], [3.0, 3.4], [2.0, 4.6], [0.8, 5.4], [0, 5.6]], { seg: 14 }); m.color('#ff3b5c', 0.4); m.ball(0, 5.9, 0, 0.6, { seg: 8, rings: 5 }); m.emissive(0); },
+      bus(m) { m.color('#38c8ff').shine(2); m.roundBox(0, 2.0, 0, 2.6, 2.8, 10, 0.5); m.color('#ff4fd8'); m.roundBox(0, 3.6, 0, 2.7, 0.3, 10.1, 0.12); m.color('#1c2a46', 0.1).shine(3); for (const sd of [1, -1]) m.roundBox(sd * 1.31, 2.5, 0, 0.05, 0.8, 8, 0.05); m.emissive(0); m.color('#ffe24a', 1); for (let k = 0; k < 6; k++) m.ball(0, 4.0, -4 + k * 1.6, 0.25, { seg: 6, rings: 4 }); m.emissive(0); }
+    };
+    const cars = [];
+    const add = (kind, path, speed, ph) => {
+      const mv = api.mover(m => { m.color('#1a1a1e'); for (const [x, z] of [[1.2, 2.4], [-1.2, 2.4], [1.2, -2.4], [-1.2, -2.4]]) { m.push(); m.tf(x, 0.45, z, 0, 0, Math.PI / 2); m.roundCyl(0, -0.2, 0, 0.45, 0.4, 0.1, { seg: 8 }); m.pop(); } designs[kind](m); m.color(BURNS_NEON[cars.length % 7], 1); m.torus(0, 0.25, 0, 3.0, 0.08, { seg: 16, tseg: 3 }); m.emissive(0).shine(0); return { cols: [] }; });
+      mv.noCollide = true; cars.push({ mv, path, speed, ph });
+    };
+    const ring = (r, h0, h1) => t => { const h = lerp(h0, h1, t); const a = bw14Clock(h, r); return [a.x, a.z]; };
+    add('duck', ring(80, 0, 12), 0.012, 0.0);
+    add('snail', ring(105, 0, 12), -0.006, 0.4);
+    add('dragon', ring(62, 0, 12), 0.016, 0.7);
+    add('disco', t => { const h = 2.2 + (Math.sin(t * TAU) * 0.5 + 0.5) * 7.6, a = bw14Clock(h, 146); return [a.x, a.z]; }, 0.01, 0.2);
+    add('cupcake', t => { const h = 2.2 + (Math.sin(t * TAU + 2) * 0.5 + 0.5) * 7.6, a = bw14Clock(h, 146); return [a.x, a.z]; }, 0.008, 0.5);
+    add('bus', t => [Math.sin(t * TAU) * 160, -260 + Math.cos(t * TAU) * 110], 0.01, 0.1);
+    api.update((g2, dt) => {
+      const T = g2.time;
+      for (const c of cars) { const t = ((T * c.speed + c.ph) % 1 + 1) % 1, p = c.path(t), q = c.path((t + 0.002) % 1); c.mv.x = p[0]; c.mv.z = p[1]; c.mv.y = 0; c.mv.yaw = Math.atan2(q[0] - p[0], q[1] - p[1]) + (c.speed < 0 ? Math.PI : 0); }
+    });
+    return cars;
   },
   /* the Man on his pavilion, Chinka in his hand (her beacon shows from anywhere) */
   man(api, g) {

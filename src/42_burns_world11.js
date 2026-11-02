@@ -82,11 +82,11 @@ BurnsBehaviors.register('bw11Runner', {
 /* ---------------- the world ---------------- */
 BurnsWorlds.register({
   id: 11, name: 'Sound Camp Crawl', sub: 'The 10:00 and 2:00 sides, camp to camp',
-  sky: Object.assign({}, BURNS_PALETTES.night, { zen: '#04051a', hor: '#2c1446', mid: '#170e38', midK: 0.4, fog: '#24183c', fogD: 0.0088, haze: 0.45, cityCol: '#ff4fd8', cityK: 0.75, stars: 0.95, clouds: 0.12, cloudCol: '#2a2048', emB: 1.7, sky: '#4a4a8a', gnd: '#3a2a48', key: '#8a9ae0', keyK: 0.5, rim: '#b07aff' }),
+  sky: Object.assign({}, BURNS_PALETTES.night, { zen: '#04051a', hor: '#2c1446', mid: '#170e38', midK: 0.4, fog: '#24183c', fogD: 0.0088, haze: 0.45, cityCol: '#ff4fd8', cityK: 0.75, stars: 0.95, clouds: 0.12, cloudCol: '#2a2048', emB: 1.7, sky: '#5a5a9c', gnd: '#4a3a5a', key: '#9aa8e8', keyK: 0.62, rim: '#b07aff' }),
   music: (window.Sound && Sound.trackNames && Sound.trackNames.indexOf('burns_w11') >= 0) ? 'burns_w11' : 'land3',
   bounds: [-232, -150, 232, 100],
   spawn: { x: BW11.P.spawn.x, y: 0, z: BW11.P.spawn.z, yaw: BW11.P.spawn.yaw },
-  ground: { base: '#a8896f', crack: 0.22, mottle: 0.38, res: 0.5 },
+  ground: { base: '#b4977c', crack: 0.22, mottle: 0.38, res: 0.5 },
   dust: 0.6,
   bike: true,
   missions: [
@@ -609,3 +609,6 @@ BW11.setDone = function (g, r) {
     { wait: 1.2 }
   ], g2 => g2.finishWorld());
 };
+
+/* test / debug access (the build is one IIFE) */
+try { if (window.BRADY_BURNS) { window.BRADY_BURNS.BW11 = BW11; window.BRADY_BURNS.BW11Dome = BW11Dome; } } catch (e) { /* ignore */ }

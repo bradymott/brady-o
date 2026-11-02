@@ -167,6 +167,13 @@ BurnsWorlds.register({
     api.mesh(-24, 104, m => { m.color('#5a4a3a'); BW.post(m, -2.4, 0, 0, 0.1, 2.0); BW.post(m, 2.4, 0, 0, 0.1, 2.0); m.color('#ff9a3a'); BW.tube(m, [[-2.3, 1.7, 0], [-1.2, 1.0, 0], [0, 0.85, 0], [1.2, 1.0, 0], [2.3, 1.7, 0]], 0.18); return { cols: [] }; });
     api.npc({ id: 'gina', name: 'GREETER GINA', type: 'greeter', seed: 77, x: -16, z: 98, yaw: Math.PI,
       lines: ['Morning, sunshine! You slept in our hammock. That makes you family.', 'Word on the playa: a giant wooden guy is looking for a dude with a man bun. That\'s... you, huh?', 'You need a disguise, honey. The Costume Cult is west. They\'ll make you unrecognizable.'], gift: { kind: 'glowstick', n: 10 } });
+    // someone brought their mom (she is having the best week of anyone here)
+    api.npc({ id: 'mom', name: 'BURNER MOM', type: 'burnermom', seed: 2, x: -6, z: 96, yaw: -2.4, behavior: 'idle', anim: 'cheer', chatter: true,
+      talk(g2, a) {
+        if (a.w3photo) { g2.say(a, ['Best! Week! Ever! I\'m doing the sunrise set AND a sound bath tomorrow!']); return; }
+        g2.say(a, ['OH MY GOSH, a real burner with a BUN! Can I get a photo with you? Two cameras! For backup!', 'Okay, say BURN! ...Perfect. Now one where you look mysterious. PERFECT.', 'Here, honey: water, glow sticks, and a granola bar I made. You can\'t see the granola bar. It\'s in my heart.'], () => { a.w3photo = true; g2.screenFlash('#ffffff', 0.5); burnsSfx('camera_flash'); g2.glow += 10; g2.player.givePower('water'); g2.toast('+10 GLOW STICKS · MOM APPROVED'); const k = g2.actor('kid'); if (k) k.say('MOM. Please. Stop. Photographing. Strangers.', 2.6); });
+      } });
+    api.npc({ id: 'kid', name: 'BURNER KID', type: 'burnerkid', seed: 2, x: -4.6, z: 97.6, yaw: -2.0, behavior: 'idle', chatter: true, lines: ['I brought my mom. To the Burn. Please don\'t make it weird.', 'She has two cameras. TWO. She\'s out-partying all of us.'] });
     api.glowLine(-20, 90, -50, 72, 10); api.glowLine(-36, 70, -36, 50, 6); api.glowLine(-30, 40, 30, 40, 14, 0.9); api.glowLine(44, 30, 4, -20, 10);
     api.glowRing(W3.HENGE.x, W3.HENGE.z, 6, 12); api.glowLine(20, -40, 40, -44, 6); api.glowRing(W3.GRAVE.x, W3.GRAVE.z, 16, 16);
     api.glowsticks([[60, 70], [70, 70], [80, 70], [-100, 70], [-110, 70], [100, 96], [110, 96], [-90, 96], [60, 10], [70, 0], [80, -10], [-90, -20], [-100, -30], [-110, -40]]);
@@ -751,7 +758,7 @@ BURNS_W3.bossIntro = function (g) {
   g.missions.start('boss', true);
   const c1 = { x: gx + 6, y: 3, z: gz + 8, tx: a.x, ty: 3.2, tz: a.z, fov: 0.85 };
   g.cutscene([
-    { music: 'burns_boss' },
+    { music: 'boss' },
     { cam: c1 },
     { banner: ['BARON VON SPOKES', 'The Tallbike Baron · Boss', { col: '#ffd21a', big: true, dur: 3 }] },
     { say: [a, ['WELCOME to my Bike Graveyard, little bun. Every yellow bike on the playa ends up HERE. With ME.', 'You took one back? From MY thief? On MY playa? Nobody rides away from the Baron.']] },

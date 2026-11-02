@@ -681,12 +681,14 @@ BW6.joinParty = function (g, a, instant) {
   a.data = a.data || {};
   a.setBehavior('bw6Party');
   a.data.party = true; a.data.sx = P.x + Math.sin(ang) * rad; a.data.sz = P.z + Math.cos(ang) * rad; a.data.style = k % 6;
+  a.def.noTalk = true;   // dancers crowd the trailer: keep the action button for the DJ booth
   if (instant) { a.x = a.data.sx + (Math.random() - 0.5) * 3; a.z = a.data.sz + (Math.random() - 0.5) * 3; }
   P.members.add(a);
 };
 BW6.leaveParty = function (g, a, follow) {
   const S = BW6.state, P = S.party; if (P) P.members.delete(a);
   a.data.party = false;
+  a.def.noTalk = false;
   if (follow) { a.setBehavior('bw6Tag'); S.followers.push(a); }
   else { a.setBehavior('wander'); }
 };
@@ -838,7 +840,7 @@ BurnsBehaviors.register('bw6Unibro', {
 BurnsBehaviors.register('bw6Chad', {
   init(a) { a.data.mode = 'wait'; a.data.t = 1; a.data.ang = 0; a.data.pitchT = 1.5; a.seatY = 1.05; },
   hit(a, g, kind) {
-    if (a.data.mode === 'dizzy') return true;
+    if (a.data.mode === 'dizzy') { if (kind === 'love') { a.hit('spin'); return 'handled'; } return true; }
     if (a.data.mode === 'wait') return false;
     a.say(['Let\'s take this offline!', 'You can\'t disrupt the DISRUPTOR!', 'My lawyers will circle back!', 'Per my last email: NO.'][Math.floor(Math.random() * 4)], 1.2);
     const p = g.player, dx = p.x - a.x, dz = p.z - a.z, d = Math.hypot(dx, dz) || 1; if (kind !== 'fire' && kind !== 'bike') p.knock(dx / d * 8, 6, dz / d * 8);
