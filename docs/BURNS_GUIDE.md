@@ -94,7 +94,7 @@ Everything below is called inside `build(api, g)`. Positions are world metres. M
 - `api.mesh(x, z, m => { …; return {cols, lights}; }, {y, yaw, scale})`: custom geometry with `BurnsMesh` (§6) in local space. Return colliders and lights in **local** coordinates and they're transformed for you.
 - `api.collider(desc)`: a raw collider in world coordinates (§4.6).
 - `api.sign(text, x, z, {yaw, h, y, post, maxW, style: {bg, fg, size, border, glow, font}, glow})`: a signboard with real text. `\n` makes lines.
-- `api.hidden(() => { … })`: everything built inside, geometry, colliders and glows, **only exists while Brady is on LSD**. Pair it with pickups that have `hidden: true`.
+- `api.hidden(() => { … })`: everything built inside, geometry, colliders and glows, **only exists while Brady is on LSD**. Pair it with pickups that have `hidden: true`. Light pools (`api.light`) are baked into the lightmap and always show, so keep them out of hidden sections.
 
 ### 4.3 Dynamic things
 - `api.mover(build, opts)`: a moving rigid object (platform, door, barrier arm, vehicle) drawn in a shared skinned group (one draw call for up to about 40 objects). `build(m)` returns `{cols, lights}` in local space. Animate it by setting `mv.x, y, z, yaw, pitch, roll, scale, visible` in `api.update` or `def.update`. Brady **rides** movers he stands on. Set `mv.noCollide = true` to disable its colliders.
@@ -635,7 +635,10 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
    - Pause, quit to title and back all work.
    - Saves survive a reload.
    - Draw count is about 120 or less (`D.state().draws`).
-5. Reference tests: World 1's scripted playthrough, touch and orientation tests live in the engine author's scratchpad. Copy their patterns: `play1.js` (mission run-through) and `ui_test.js` (CDP touch events: `Input.dispatchTouchEvent`).
+5. Reference tests (World 1, written for the engine) are in `/tmp/claude-0/-home-user-brady-o/55338a3e-dd1f-51fb-b998-1b26dc729d6a/scratchpad/burns/`, if that folder is still there. Copy their patterns:
+   - `play1.js`: scripted mission run-through.
+   - `ui_test.js`: real touch via CDP `Input.dispatchTouchEvent`, both orientations, pause/quit, no-WebGL and context loss.
+   - `gallery.js`: costumes, cast, bike, art car and power-ups.
 
 ---
 

@@ -705,11 +705,18 @@ class BurnsPlayScene {
     // look-ahead in the movement direction
     const la = Math.min(1.6, hsp * 0.18);
     const lx = hsp > 0.5 ? p.vx / hsp * la : 0, lz = hsp > 0.5 ? p.vz / hsp * la : 0;
-    const pitch = this.camPitch, cy = this.camYaw;
+    const cy = this.camYaw, ax = C.x + lx, ay = C.y, az = C.z + lz, want = baseDist;
+    // collision: first try rising over whatever blocks the view (vehicles behind Brady on the RV
+    // roofs, walls), and only then pull the camera in toward him
+    const probe = (pt) => { const dX = -Math.sin(cy) * Math.cos(pt), dY = Math.sin(pt), dZ = -Math.cos(cy) * Math.cos(pt); return Math.max(1.1, W.raycast(ax, ay, az, ax + dX * (want + 0.4), ay + dY * (want + 0.4), az + dZ * (want + 0.4), true) * (want + 0.4) - 0.45); };
+    let lift = 0;
+    if (!(this.cine && this.cine.cam) && probe(this.camPitch) < want * 0.7) {
+      let best = probe(this.camPitch);
+      for (const extra of [0.3, 0.55, 0.8]) { const pt = Math.min(1.3, this.camPitch + extra), al = probe(pt); if (al > best + 0.4) { best = al; lift = pt - this.camPitch; } if (al >= want * 0.85) break; }
+    }
+    this.camLift = BurnsM.damp(this.camLift || 0, lift, lift > (this.camLift || 0) ? 6 : 1.5, fdt);
+    const pitch = this.camPitch + this.camLift;
     const dirX = -Math.sin(cy) * Math.cos(pitch), dirY = Math.sin(pitch), dirZ = -Math.cos(cy) * Math.cos(pitch);
-    // collision: pull the camera in front of anything between it and Brady
-    const ax = C.x + lx, ay = C.y, az = C.z + lz;
-    const want = baseDist;
     const hit = W.raycast(ax, ay, az, ax + dirX * (want + 0.4), ay + dirY * (want + 0.4), az + dirZ * (want + 0.4), true);
     const allowed = Math.max(1.1, hit * (want + 0.4) - 0.45);
     this.camD = allowed < this.camD ? allowed : BurnsM.damp(this.camD, Math.min(want, allowed), 2.5, fdt);

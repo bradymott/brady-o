@@ -414,7 +414,7 @@ const BurnsBehaviors = {
     hit(a, g) { if (a.data.mode !== 'angel') { a.say('Not yet! I\'m mid-ritual!', 1.0); return false; } return true; },
     update(a, g, dt) {
       const D = a.data, p = g.player; D.t -= dt;
-      if (D.mode === 'walk') { a.moveTo(p.x, p.z, 2.0, dt, 3); a.ch.play('walk'); if (D.t <= 0 && a.grounded) { D.mode = 'leap'; D.tx = p.x; D.tz = p.z; const d = Math.hypot(D.tx - a.x, D.tz - a.z), tt = 1.1; a.vx = (D.tx - a.x) / tt; a.vz = (D.tz - a.z) / tt; a.vy = 13; a.grounded = false; D.air = true; a.say('DUST ANGEL!', 1); burnsSfx('jump3d'); D.mark = { x: D.tx, z: D.tz }; void d; } }
+      if (D.mode === 'walk') { a.moveTo(p.x, p.z, 2.0, dt, 3); a.ch.play('walk'); if (D.t <= 0 && a.grounded) { D.mode = 'leap'; D.tx = p.x; D.tz = p.z; const tt = 1.1; a.vx = (D.tx - a.x) / tt; a.vz = (D.tz - a.z) / tt; a.vy = 13; a.grounded = false; a.say('DUST ANGEL!', 1); burnsSfx('jump3d'); } }
       else if (D.mode === 'leap') {
         a.ch.play(a.vy > 0 ? 'jump' : 'fall'); a.face(D.tx, D.tz, dt, 6);
         if (a.grounded && a.stT > 0.2) {
@@ -424,7 +424,7 @@ const BurnsBehaviors = {
         }
       }
       else if (D.mode === 'angel') { a.ch.play('knocked'); a.vx = a.vz = 0; if (Math.random() < dt * 4) g.fx.dust(a.x + (Math.random() - 0.5) * 2, a.y + 0.1, a.z + (Math.random() - 0.5) * 2, 1); if (D.t <= 0) { D.mode = 'walk'; D.t = 1.6; a.vy = 4; a.grounded = false; } }
-      if (D.mode === 'leap') a.stT += 0; else a.stT = 0;
+      if (D.mode !== 'leap') a.stT = 0; // stT times the leap
       a.physics(dt);
     }
   });
@@ -834,7 +834,6 @@ class BurnsManBoss {
         if (u > 1.4) this.setState('idle');
       }
     }
-    if (this.st === 'defeated') this.stT += 0;
     // pose + chinka in hand
     const ch = this.ch; ch.x = this.x; ch.y = this.y; ch.z = this.z; ch.yaw = this.yaw; ch.scale = this.scale;
     ch.update(dt); ch.compute();

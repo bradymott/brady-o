@@ -309,7 +309,7 @@ const BurnsProps = {
     const yaw = o.aim || 0, lights = [];
     m.push(); m.tf(0, 8.2, 0.8, yaw);
     m.color('#3a3a40'); m.box(0, 0, 0, 2.0, 0.1, 0.1);
-    for (let i = 0; i < 4; i++) { const x = (i % 2 ? 0.5 : -0.5) + (i < 2 ? -0.35 : 0.35) * 0; const y = i < 2 ? 0.35 : -0.25; m.color('#2a2a30'); m.box((i % 2 ? 0.55 : -0.55), y, 0.1, 0.5, 0.45, 0.2); m.color('#fff8e0', 1); m.box((i % 2 ? 0.55 : -0.55), y, 0.205, 0.42, 0.36, 0.02); m.emissive(0); void x; }
+    for (let i = 0; i < 4; i++) { const lx = i % 2 ? 0.55 : -0.55, ly = i < 2 ? 0.35 : -0.25; m.color('#2a2a30'); m.box(lx, ly, 0.1, 0.5, 0.45, 0.2); m.color('#fff8e0', 1); m.box(lx, ly, 0.205, 0.42, 0.36, 0.02); m.emissive(0); }
     m.pop();
     lights.push({ x: Math.sin(yaw) * 0.3, y: 8.2, z: 0.8 + Math.cos(yaw) * 0.3, s: 4, c: '#fff4d8' });
     lights.push({ x: Math.sin(yaw) * 10, y: 0, z: 0.8 + Math.cos(yaw) * 10, s: 0, c: '#fff0d0', pool: 16 });
@@ -520,13 +520,13 @@ const BurnsBikeModel = {
     m.color('#c8c8d0'); m.box(0, 0.62, -0.62, 0.3, 0.04, 0.3); // rear rack
     m.color('#f4f0e8'); m.box(0, 0.75, 0.62, 0.3, 0.2, 0.22); // front basket
     m.color('#ff4fd8', 1); for (let i = 0; i < 5; i++) m.box(0, 0.3 + i * 0.1, -0.06 + i * 0.07, 0.09, 0.04, 0.04); m.emissive(0);
-    for (const [b, z] of [[1, fz], [2, rz]]) {
+    for (const b of [1, 2]) {
       m.setBone(b); m.push(); m.tf(0, 0, 0, 0, 0, Math.PI / 2);
       m.color('#1a1a1a'); m.cyl(0, -0.03, 0, wr, wr, 0.06, 12, {});
       m.color(col); m.cyl(0, -0.035, 0, wr * 0.82, wr * 0.82, 0.07, 12, {});
       m.color('#1a1a1a'); m.cyl(0, -0.04, 0, wr * 0.7, wr * 0.7, 0.08, 12, {});
       m.color('#c8c8d0'); for (let k = 0; k < 4; k++) { const a = k / 4 * Math.PI; m.beam(Math.cos(a) * wr * 0.72, 0, Math.sin(a) * wr * 0.72, -Math.cos(a) * wr * 0.72, 0, -Math.sin(a) * wr * 0.72, 0.02); }
-      m.pop(); void z;
+      m.pop();
     }
     m.setBone(3); m.color('#4a4a52'); m.box(0, 0, 0, 0.3, 0.05, 0.05); m.box(0.15, -0.08, 0, 0.03, 0.18, 0.04); m.box(-0.15, 0.08, 0, 0.03, 0.18, 0.04);
     m.color('#1a1a1a'); m.box(0.2, -0.17, 0, 0.1, 0.03, 0.06); m.box(-0.2, 0.17, 0, 0.1, 0.03, 0.06);

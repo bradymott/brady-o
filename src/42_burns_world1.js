@@ -180,7 +180,7 @@ BurnsWorlds.register({
           g.fx.burst(a.x, a.y + 2, a.z, 'star', 10, '#ffe24a');
           const m = g.missions.get('drivers'); m.n++;
           g.toast(`Drivers awake: ${m.n}/4`);
-          setTimeoutGame(g, 1.6, () => { car.sleep = false; g.fx.dust(a.x, a.y, a.z, 8); g.removeActor(a); });
+          burnsW1Timer(g, 1.6, () => { car.sleep = false; g.fx.dust(a.x, a.y, a.z, 8); g.removeActor(a); });
           if (m.n >= 4) g.missions.complete('drivers', { x: a.x, y: a.y + 1.4, z: a.z + 1.5 });
         } });
     });
@@ -387,7 +387,7 @@ BurnsWorlds.register({
 });
 
 /* small game-time timer helper used by World 1 (paused with the game) */
-function setTimeoutGame(g, sec, fn) { const S = BURNS_W1.state; (S.timers || (S.timers = [])).push({ t: sec, fn }); }
+function burnsW1Timer(g, sec, fn) { const S = BURNS_W1.state; (S.timers || (S.timers = [])).push({ t: sec, fn }); }
 
 /* ---------------- intro cutscene: the Man takes Chinka ---------------- */
 BURNS_W1.intro = function (g) {
@@ -480,7 +480,7 @@ BURNS_W1.nextGreeter = function (g) {
     return;
   }
   const a = g.spawnActor({ type: 'greeter', seed: G.seed, name: G.name, x: -40 + (i - 1) * 3, z: -158, yaw: Math.PI, behavior: G.behavior, hp: 3, friendly: false, boss: true, drop: 4, defeatLine: 'Welcome... home...', afterDefeat: 'dance',
-    onDefeat(g2) { burnsSfx('crowd_cheer'); S.round++; setTimeoutGame(g2, 1.6, () => BURNS_W1.nextGreeter(g2)); } });
+    onDefeat(g2) { burnsSfx('crowd_cheer'); S.round++; burnsW1Timer(g2, 1.6, () => BURNS_W1.nextGreeter(g2)); } });
   a.home = { x: -40, z: -152 };
   S.greeter = a;
   g.boss = { name: G.name, get hp() { return a.hp; }, maxHp: 3, active: true, get defeated() { return a.defeated; }, st: '', head() { return [a.x, a.y + 2.2, a.z]; }, update() {} };
@@ -523,7 +523,7 @@ BURNS_W1.bossIntro = function (g) {
 BURNS_W1.bossDefeated = function (g) {
   const S = BURNS_W1.state, man = S.man, p = g.player;
   g.missions.complete('boss');
-  setTimeoutGame(g, 1.4, () => {
+  burnsW1Timer(g, 1.4, () => {
     g.cutscene([
       { music: 'burns_victory' },
       { cam: { x: 10, y: 4, z: -280, tx: man.x, ty: 6, tz: man.z, fov: 0.9 } },

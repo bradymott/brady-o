@@ -662,23 +662,32 @@ class CreditsScene {
   constructor(set) {
     this.set = set || 'road';
     this.t = 0; Input.setMode('ui'); Sound.music('credits');
-    const g = countGold(), sp = setProgress(this.set);
-    const bossSet = this.set === 'classic' ? CLASSIC_WORLDS : this.set === 'world' ? WORLD3_REGIONS : WORLD_ORDER.filter(w => !WORLDS[w].secret);
-    const bosses = []; for (const w of bossSet) { const n = bossName(w); if (n && bosses.indexOf(n) < 0) bosses.push(n); }
+    const burns = this.set === 'burns';
+    const g = countGold(), sp = setProgress('world');
+    const B = (Save.data.burns || {}), nk = o => o ? Object.keys(o).length : 0;
+    const bosses = [];
+    if (burns) bosses.push('The Man (four times. He really loves her.)', 'The Greeter Gauntlet', 'The Velvet Creeper', 'Chad, Founder & CEO', 'The Glitter Queen', 'DPW Foreman Rusty');
+    else for (const w of WORLD3_REGIONS) { const n = bossName(w); if (n && bosses.indexOf(n) < 0) bosses.push(n); }
     const tag = this.set === 'world' ? 'SUPER BRADY-O WORLD' : 'BRADY-O BURNS';
     this.lines = [
       ['BRADY-O', 'h'], [tag, 'k'], ['', ''], ['Chinka is safe. The Man burned. Nobody hydrated enough.', 's'], ['', ''],
       ['STARRING', 'k'], ['Brady  ·  long hair, man bun, zero chill', 'v'], ['Chinka  ·  the actual hero, honestly', 'v'], ['Slothy  ·  very fast, for a sloth', 'v'], ['Toadie & the Toad Crew  ·  hydration consultants', 'v'], ['', ''],
       ['AND INTRODUCING', 'k'], ['The Man  ·  forty feet of wood with a crush on Chinka', 'v'], ['', ''],
       ['BURNERS WHO GOT IN THE WAY', 'k'], ['Hippies who want to talk about your aura', 'v'], ['Tech bros on electric unicycles', 'v'], ['Orgy dome creepers in fur coats', 'v'], ['Sparkle ponies who forgot water', 'v'], ['Fake spiritual pagan witches', 'v'], ['DPW. Obviously DPW.', 'v'], ['', ''],
-      ['CAMP BOSSES', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
-      ['YOUR STATS', 'k'], [`Photos of Chinka: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Man got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
-      [g.have >= g.total ? 'Every photo of Chinka. She framed them all.' : 'Some photos of Chinka are still out on the playa...', 's'],
-      [worldUnlocked(50) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', ''],
+      [burns ? 'BOSSES' : 'CAMP BOSSES', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
+      ...(burns ? [
+        ['YOUR STATS', 'k'], [`Burn Tokens: ${nk(B.tokens)}`, 'v'], [`Photos of Chinka: ${nk(B.photos)}`, 'v'], [`Worlds cleared: ${nk(B.worldDone)} / 10`, 'v'], ['', ''],
+        ['Six-day drivers, stressed camp leads and greeters', 's'], ['Influencers, sparkle ponies and crusty old burners', 's'], ['It was better last year. It always is.', 's'], ['', '']
+      ] : [
+        ['YOUR STATS', 'k'], [`Photos of Chinka: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Man got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
+        [g.have >= g.total ? 'Every photo of Chinka. She framed them all.' : 'Some photos of Chinka are still out on the playa...', 's'],
+        [worldUnlocked(50) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', '']
+      ]),
+
       ['Leave no trace. Hug your sloth.', 's'], ['', ''], ['', ''],
       ['THANKS FOR PLAYING', 'h']
     ];
-    if (this.set === 'road') { Save.data.beatGame = true; Save.save(); }
+    if (this.set === 'world') { Save.data.beatGame = true; Save.save(); }
     const W = Game.cssW, H = Game.cssH;
     this.btns = [{ x: W - Math.max(14, insets.r + 8) - 110, y: H - Math.max(14, insets.b + 8) - 42, w: 110, h: 40, label: 'MENU ▶', fn: () => Game.setScene(new TitleScene()) }];
   }

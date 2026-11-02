@@ -379,7 +379,7 @@ class BurnsWorld {
       patch(x0, z0, r, col, a) { const x = W.paintX, [cx, cz] = W.toPaint(x0, z0), R = r * W.paintXf.sx; const g = x.createRadialGradient(cx, cz, 0, cx, cz, R); const c = burnsRGB(col); g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${a === undefined ? 0.5 : a})`); g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`); x.fillStyle = g; x.fillRect(cx - R, cz - R, R * 2, R * 2); },
       // lightmap pool (warm light on the ground)
       light(x, z, r, col, i) { W.lights.push({ x, z, r, c: col || '#ffb070', i: i === undefined ? 0.5 : i }); },
-      glow(x, y, z, s, col, o) { W.glows.push({ x, y, z, s, c: burnsRGBf(col || '#ffffff'), ph: Math.random() * 10, blink: (o && o.blink) || 0, hidden: !!(o && o.hidden) }); },
+      glow(x, y, z, s, col, o) { W.glows.push({ x, y, z, s, c: burnsRGBf(col || '#ffffff'), ph: Math.random() * 10, blink: (o && o.blink) || 0, hidden: !!((o && o.hidden) || W._hidden) }); },
       // custom static geometry: fn(m) in local space at (x, y, z, yaw)
       mesh(x, z, fn, o) { o = o || {}; return W.place(fn, x, o.y || 0, z, o.yaw || 0, o.scale || 1, o); },
       prop(kind, o) {
