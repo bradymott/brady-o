@@ -25,16 +25,51 @@ const BURNS_ATLAS = {
     const c = makeCanvas(this.W, this.H), x = c.getContext('2d');
     this.canvas = c; this.ctx = x;
     x.clearRect(0, 0, this.W, this.H);
-    this.FACES.forEach((f, i) => { for (let r = 0; r < 4; r++) { const X = i * 128, Y = 1024 + r * 128; x.save(); x.beginPath(); x.rect(X + 6, Y + 6, 116, 116); x.clip(); x.translate(X + 8, Y + 8); x.scale(1.75, 1.75); this.paintFace(x, 0, 0, f, r); x.restore(); } });
+    this.FACES.forEach((f, i) => this.paintFaceCell(i, f));
     this.PATTERNS.forEach((p, i) => { const px = (i % 8) * 128, py = 320 + Math.floor(i / 8) * 128; this.paintPattern(x, px, py, p); this.regions['pat:' + p] = this.reg(px + 4, py + 4, 120, 120); });
     this.ICONS.forEach((p, i) => { const px = (i % 8) * 128, py = 576 + Math.floor(i / 8) * 128; this.paintIcon(x, px, py, p); this.regions['icon:' + p] = this.reg(px + 4, py + 4, 120, 120); });
     this.paintPhoto(x, 0, 832);
     this.regions.photo = this.reg(4, 836, 120, 152);
-    this.FACES.forEach((f, i) => { this.regions['face:' + f] = this.reg(i * 128 + 4, 1024 + 4, 120, 120); });
+    this.extraPatterns.forEach((e, i) => this.paintExtra(i));
     this.T = { src: c, opts: { mips: true, premult: true, aniso: 4 }, tex: null, gen: -1 };
     this.signReset();
   },
   reg(x, y, w, h) { return { u0: x / this.W, v0: y / this.H, u1: (x + w) / this.W, v1: (y + h) / this.H, px: x, py: y, pw: w, ph: h }; },
+  // ---- faces: 32 slots (two banks of 16 x 4 expression rows); add more with addFace ----
+  faceRecipes: {},
+  paintFaceCell(i, f) {
+    const x = this.ctx, col = i % 16, bank = Math.floor(i / 16);
+    for (let r = 0; r < 4; r++) {
+      const X = col * 128, Y = 1024 + bank * 512 + r * 128;
+      x.save(); x.clearRect(X, Y, 128, 128); x.beginPath(); x.rect(X + 6, Y + 6, 116, 116); x.clip(); x.translate(X + 8, Y + 8); x.scale(1.75, 1.75); this.paintFace(x, 0, 0, f, r); x.restore();
+    }
+    this.regions['face:' + f] = this.reg(col * 128 + 4, 1024 + bank * 512 + 4, 120, 120);
+    if (this.T) this.T.dirty = true;
+  },
+  // new face: recipe { eyes, eyeSc, brows: {col, tilt, w, y}, mouth, stubble, beard, mustache, wrinkles, blush, lashes, lips, mask }
+  // or a painter fn(ctx, row, H) drawing in a 64x64 box (H: the built-in eye/brow/mouth/stubble/blush/nose helpers)
+  addFace(name, recipe) {
+    this.faceRecipes[name] = recipe;
+    let i = this.FACES.indexOf(name);
+    if (i < 0) { if (this.FACES.length >= 32) { console.warn('burns: face slots full'); return; } this.FACES.push(name); i = this.FACES.length - 1; }
+    if (this.canvas) this.paintFaceCell(i, name);
+  },
+  // ---- extra 128px pattern tiles (16 slots at y 64..320): addPattern(name, fn(ctx, rng)) paints a tileable 128x128 decal ----
+  extraPatterns: [],
+  addPattern(name, fn) {
+    let i = this.extraPatterns.findIndex(e => e.name === name);
+    if (i < 0) { if (this.extraPatterns.length >= 16) { console.warn('burns: pattern slots full'); return; } this.extraPatterns.push({ name, fn }); i = this.extraPatterns.length - 1; }
+    else this.extraPatterns[i].fn = fn;
+    if (this.canvas) this.paintExtra(i);
+  },
+  paintExtra(i) {
+    const e = this.extraPatterns[i], x = this.ctx, px = (i % 8) * 128, py = 64 + Math.floor(i / 8) * 128;
+    x.save(); x.clearRect(px, py, 128, 128); x.beginPath(); x.rect(px, py, 128, 128); x.clip(); x.translate(px, py);
+    try { e.fn(x, mulberry32(hashStr(e.name))); } catch (err) { console.error(err); }
+    x.restore();
+    this.regions['pat:' + e.name] = this.reg(px + 4, py + 4, 120, 120);
+    if (this.T) this.T.dirty = true;
+  },
   face(name) { return this.regions['face:' + name] || this.regions['face:friendly']; },
   pattern(name) { return this.regions['pat:' + name]; },
   icon(name) { return this.regions['icon:' + name]; },
@@ -123,6 +158,24 @@ const BURNS_ATLAS = {
     const ek = row === 2 ? 'squint' : row === 3 ? 'heart' : null;
     const mk = (n, t, h, hap) => row === 1 ? t : row === 2 ? h : row === 3 ? hap : n;
     const E = (cx, cy, base, sc) => eye(cx, cy, ek || base, sc);
+    const rec = this.faceRecipes[name];
+    if (typeof rec === 'function') { rec(x, row, { eye, brow, mouth, stubble, blush, nose, ink, white, E, mk }); x.restore(); return; }
+    if (rec) {
+      const q = rec, ey = q.eyeY || 27, sc = q.eyeSc || 1;
+      if (q.mask) { x.fillStyle = q.mask; x.beginPath(); x.ellipse(32, 30, 30, 26, 0, 0, TAU); x.fill(); }
+      if (q.stubble) stubble(q.stubble, !!q.stubbleFull);
+      if (q.nose !== false) nose();
+      if (q.wrinkles) { x.strokeStyle = 'rgba(70,40,30,0.45)'; x.lineWidth = 1.1; for (const sx of [1, -1]) { for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(32 + sx * 15, ey - 2 + k * 3); x.lineTo(32 + sx * 19, ey - 4 + k * 4); x.stroke(); } } x.beginPath(); x.moveTo(25, 12); x.quadraticCurveTo(32, 10, 39, 12); x.moveTo(23, 15); x.quadraticCurveTo(32, 13, 41, 15); x.stroke(); }
+      if (q.eyes !== 'none') { const base = q.eyes === 'squint' ? (row === 3 ? 'heart' : 'closed') : q.eyes === 'normal' ? null : q.eyes; eye(22, ey, row === 2 ? 'squint' : row === 3 ? 'heart' : base, sc); eye(42, ey, row === 2 ? 'squint' : row === 3 ? 'heart' : base, sc); }
+      if (q.lashes) { x.strokeStyle = ink; x.lineWidth = 2; for (const ex of [22, 42]) for (let k = -1; k <= 1; k++) { x.beginPath(); x.moveTo(ex + k * 3, ey - 4.5); x.lineTo(ex + k * 4.5, ey - 8); x.stroke(); } }
+      if (q.brows !== false) { const b = q.brows || {}; x.save(); x.lineWidth = b.thick || 2.6; brow(22, b.y || ey - 9, row === 2 ? -2 : (b.tilt || 0), b.w || 6, b.col); brow(42, b.y || ey - 9, row === 2 ? 2 : -(b.tilt || 0), b.w || 6, b.col); x.restore(); }
+      if (q.beard) { x.fillStyle = q.beard; x.beginPath(); x.moveTo(6, 32); x.quadraticCurveTo(10, 58, 32, 63); x.quadraticCurveTo(54, 58, 58, 32); x.quadraticCurveTo(46, 41, 32, 40); x.quadraticCurveTo(18, 41, 6, 32); x.fill(); }
+      if (q.mustache) { x.fillStyle = q.mustache; x.beginPath(); x.moveTo(20, 45); x.quadraticCurveTo(32, 36, 44, 45); x.quadraticCurveTo(32, 42, 20, 45); x.fill(); }
+      mouth(mk(q.mouth || 'smile', 'open', 'wavy', 'grin'), 32, q.mouthY || 46, q.mouthW || 9);
+      if (q.lips) { x.fillStyle = q.lips; x.beginPath(); x.ellipse(32, (q.mouthY || 46), 6, 2.4, 0, 0, TAU); x.fill(); }
+      if (q.blush) blush();
+      x.restore(); return;
+    }
     switch (name) {
       case 'brady': case 'bradyClean':
         nose(); E(22, 27, null); E(42, 27, null);
