@@ -9,8 +9,28 @@ const PHYS = {
   coyote: 0.09, buffer: 0.13, runDelay: 0.42,
   swimG: 9 * TS, swimMaxFall: 3.6 * TS, swimStroke: 6.4 * TS, swimMaxX: 4.4 * TS, swimAccel: 14 * TS, swimDrag: 8 * TS,
   springV: 25 * TS, springVLow: 16 * TS, stompV: 11 * TS, stompVHeld: 16.5 * TS,
-  conveyor: 2.6 * TS
+  conveyor: 2.6 * TS,
+  bounceLo: 13 * TS, bounceHi: 22.5 * TS   // bouncy surfaces (big-top canvas, speaker cones, couches)
 };
+// special surfaces, stored per tile in area.surf (shared by the game and the validator)
+const SURF = { NONE: 0, BOUNCE: 1, STICKY: 2 };
+function surfAt(area, tx, ty) {
+  const s = area.surf; if (!s || tx < 0 || ty < 0 || tx >= area.W || ty >= area.H) return 0;
+  return s[ty * area.W + tx];
+}
+// force zones (updrafts, currents, wind tunnels, dust-devil columns): rects in px with
+// fx = sideways drift (px/s) and fy = vertical acceleration (px/s^2, negative = up) capped at vmax
+function zoneForce(area, b) {
+  const Z = area.zones; if (!Z || !Z.length) return null;
+  const cx = b.x + b.w / 2, cy = b.y + b.h * 0.6;
+  let fx = 0, fy = 0, vmax = 0, hit = false;
+  for (const z of Z) {
+    if (z.off) continue;
+    if (cx < z.x || cx > z.x + z.w || cy < z.y || cy > z.y + z.h) continue;
+    fx += z.fx || 0; fy += z.fy || 0; vmax = Math.max(vmax, z.vmax || 0); hit = true;
+  }
+  return hit ? { fx, fy, vmax } : null;
+}
 const PLAYER_DIM = { small: { w: 20, h: 28 }, big: { w: 22, h: 54 }, crouch: { w: 22, h: 30 } };
 
 function tileAt(area, tx, ty) {
@@ -165,7 +185,11 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
   p.inWater = water;
   const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
   const ice = p.onGround && p.groundTile === T.ICE;
+  const gsurf = p.onGround ? surfAt(area, p.groundTx, p.groundTy) : 0;
+  const sticky = gsurf === SURF.STICKY;
+  const smul = (opts.speedMul || 1) * (sticky ? 0.5 : 1);
   if (dir) p.facing = dir;
+  const zf = zoneForce(area, p);
 
   if (water) {
     const target = dir * PHYS.swimMaxX;
@@ -183,6 +207,7 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
     p.vy += PHYS.swimG * gm * dt;
     if (p.vy > PHYS.swimMaxFall) p.vy = approach(p.vy, PHYS.swimMaxFall, 30 * TS * dt);
     if (inp.down) p.vy = approach(p.vy, PHYS.swimMaxFall * 1.4, 20 * TS * dt);
+    if (zf && zf.fy) { p.vy += zf.fy * 0.35 * dt; if (zf.vmax && p.vy < -zf.vmax * 0.5) p.vy = -zf.vmax * 0.5; }
     p.jumping = false; p.coyote = 0; p.jumpBuf = 0;
     if (p.y < -TS) p.vy = Math.max(p.vy, 0);
   } else {
@@ -193,8 +218,8 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
     }
     const running = inp.action || p.runT > PHYS.runDelay;
     let maxS;
-    if (p.onGround) { maxS = running ? PHYS.run : PHYS.walk; p.airMax = maxS; }
-    else maxS = Math.max(PHYS.walk, p.airMax || PHYS.walk);
+    if (p.onGround) { maxS = (running ? PHYS.run : PHYS.walk) * smul; p.airMax = maxS; }
+    else maxS = Math.max(PHYS.walk * (opts.speedMul || 1), p.airMax || PHYS.walk);
     if (p.crouch && p.onGround) {
       p.vx = approach(p.vx, 0, PHYS.decel * (ice ? 0.15 : 0.6) * dt);
     } else if (dir !== 0) {
@@ -214,7 +239,7 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
     else p.jumpBuf -= dt;
     if (p.onGround) p.coyote = PHYS.coyote; else p.coyote -= dt;
     if (p.jumpBuf > 0 && p.coyote > 0 && !(p.crouch && opts.noCrouchJump)) {
-      p.vy = -(PHYS.jumpV + Math.abs(p.vx) * PHYS.jumpSpeedBonus) * (opts.jumpBoost || 1);
+      p.vy = -(PHYS.jumpV + Math.abs(p.vx) * PHYS.jumpSpeedBonus) * (opts.jumpBoost || 1) * (sticky ? 0.78 : 1);
       p.jumping = true; p.jumpBuf = 0; p.coyote = 0; p.onGround = false; p.ride = null;
       ev.jump = true;
     }
@@ -222,6 +247,12 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
     if (p.jumping && !inp.jump && p.vy < -PHYS.jumpCut) p.vy = -PHYS.jumpCut;
     const g = (p.vy < 0 && inp.jump && p.jumping) ? PHYS.gUp : PHYS.gDown;
     p.vy += g * gm * dt;
+    if (zf && zf.fy) {
+      // updrafts lift Brady up to a terminal speed (or push him down, if fy > 0)
+      p.vy += zf.fy * dt;
+      if (zf.vmax && p.vy < -zf.vmax) p.vy = -zf.vmax;
+      if (zf.fy < 0) p.jumping = false;
+    }
     if (p.vy > PHYS.maxFall) p.vy = PHYS.maxFall;
     if (p.vy >= 0) p.jumping = false;
   }
@@ -229,10 +260,18 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
   let extraDx = 0;
   if (p.onGround && (p.groundTile === T.CONV_L || p.groundTile === T.CONV_R)) extraDx = (p.groundTile === T.CONV_L ? -1 : 1) * PHYS.conveyor * dt;
   if (opts.windDx) extraDx += opts.windDx * dt;
+  if (zf && zf.fx) extraDx += zf.fx * dt;
+  if (p.carryVx && !p.onGround) extraDx += p.carryVx * dt;
   const wasGround = p.onGround;
   moveBody(p, area, dt, { semis: !(p.dropT > 0), hidden: true, corner: true, platforms, extraDx });
+  if (p.onGround || p.hitWall) p.carryVx = 0;
   ev.bonks = p.bonks;
   ev.landed = p.onGround && !wasGround;
+  // bouncy surfaces: big-top canvas, speaker cones, couches (hold jump to go higher)
+  if (p.onGround && !p.inWater && surfAt(area, p.groundTx, p.groundTy) === SURF.BOUNCE && !(p.ride)) {
+    p.vy = -(inp.jump ? PHYS.bounceHi : PHYS.bounceLo) * (opts.jumpBoost || 1);
+    p.onGround = false; p.jumping = !!inp.jump; p.coyote = 0; p.jumpBuf = 0; ev.bounce = true;
+  }
   if (p.stroke > 0) p.stroke = Math.max(0, p.stroke - dt * 2.5);
   return ev;
 }

@@ -242,7 +242,17 @@ const Sound = (() => {
     c25:    { w: ['n25'], a: 0.002, dcy: 0.3, sus: 0.7, rel: 0.02 },
     c25v:   { w: ['n25'], a: 0.002, dcy: 0.35, sus: 0.75, rel: 0.03, vib: 18, vr: 6 },
     c12:    { w: ['n12'], a: 0.002, dcy: 0.25, sus: 0.6, rel: 0.02 },
-    ctri:   { w: ['ntri'], a: 0.002, dcy: 0.5, sus: 1, rel: 0.02 }
+    ctri:   { w: ['ntri'], a: 0.002, dcy: 0.5, sus: 1, rel: 0.02 },
+    sax:    { w: ['sawtooth', 'p25'], det: 4, cut: 1300, kt: 0.5, fe: 0.8, fd: 0.12, q: 2.2, a: 0.04, dcy: 0.4, sus: 0.8, rel: 0.12, vib: 22, vr: 5.2 },
+    honky:  { w: ['triangle', 'sawtooth'], det: 18, cut: 2400, kt: 0.3, fe: 1, fd: 0.05, q: 0.8, a: 0.002, dcy: 0.35, sus: 0, rel: 0.2 },
+    hpsi:   { w: ['sawtooth', 'p12'], det: 3, cut: 3500, kt: 0.2, fe: 1.5, fd: 0.04, q: 0.7, a: 0.001, dcy: 0.3, sus: 0, rel: 0.15 },
+    calliope:{ w: ['square', 'triangle'], m2: 2, cut: 3000, a: 0.01, dcy: 0.3, sus: 0.85, rel: 0.06, vib: 25, vr: 7, vib0: 1 },
+    theremin:{ w: ['sine', 'triangle'], det: 2, a: 0.12, dcy: 0.5, sus: 0.9, rel: 0.3, vib: 40, vr: 6, vib0: 1 },
+    clav:   { w: ['p12', 'square'], det: 3, cut: 2200, kt: 0.3, fe: 1.5, fd: 0.03, q: 3, a: 0.001, dcy: 0.1, sus: 0.2, rel: 0.04 },
+    ssaw:   { w: ['sawtooth', 'sawtooth'], det: 20, cut: 2200, kt: 0.4, fe: 1.2, fd: 0.1, q: 0.8, a: 0.01, dcy: 0.3, sus: 0.75, rel: 0.18, vib: 10, vr: 5.2 },
+    vibes:  { fm: 1, ratio: 4, idx: 0.9, ie: 0.1, id: 0.12, a: 0.002, dcy: 1.4, sus: 0, rel: 0.4 },
+    mbox:   { fm: 1, ratio: 5, idx: 0.9, ie: 0.05, id: 0.1, a: 0.002, dcy: 0.8, sus: 0, rel: 0.4 },
+    bigbell:{ fm: 1, ratio: 2.76, idx: 3, ie: 0.08, id: 0.35, a: 0.002, dcy: 2.2, sus: 0, rel: 1.2 }
   };
 
   function voice(name, t, m, d, v, out) {
@@ -306,7 +316,15 @@ const Sound = (() => {
       default: chit(t, 0.03, a * 0.12, out, 1); break;
     }
   }
-  // extra kit: w cowbell, j tambourine, v vinyl crackle, u bubble
+  function clank(t, v, out) {   // two inharmonic squares through a resonant band-pass = struck metal
+    const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), bp = filt('bandpass', 1900, 3), g = ctx.createGain();
+    o1.type = 'square'; o2.type = 'square'; o1.frequency.value = 183; o2.frequency.value = 271;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.001); g.gain.exponentialRampToValueAtTime(0.0006, t + 0.26);
+    o1.connect(bp); o2.connect(bp); bp.connect(g); g.connect(out);
+    o1.start(t); o2.start(t); o1.stop(t + 0.28); o2.stop(t + 0.28); done(o1, [o1, o2, bp, g]);
+  }
+  // extra kit: w cowbell, j tambourine, v vinyl crackle, u bubble, a metal clank, e car honk,
+  // f fire whoosh, p typewriter key, q dust swoosh, y laser zap, i small bell ding
   function drum(ch, t, v, out, kit) {
     const up = ch >= 'A' && ch <= 'Z', a = Math.max(0.0001, v * (up ? 1.25 : 0.85));
     if (kit === 'nes') { drumNes(ch.toLowerCase(), t, a, out); return; }
@@ -315,6 +333,16 @@ const Sound = (() => {
       case 'j': nhit(t, 0.11, a * 0.16, out, 'bandpass', 8500, 2.5, 0.004); break;
       case 'v': nhit(t, 0.012, a * 0.05 * (0.4 + Math.random()), out, 'highpass', 2500); break;
       case 'u': { const f = 260 + Math.random() * 480; thit(t, f, f * 2.4, 0.09, a * 0.16, out, 'sine', 0.07); break; }
+      case 'a': clank(t, a * 0.3, out); nhit(t, 0.03, a * 0.22, out, 'bandpass', 3200, 2); break;
+      case 'e': {
+        const f = 440 * (0.95 + Math.random() * 0.1), o = { ft: 'lowpass', ff: 1500, hold: 0.8, a: 0.01 };
+        tone(t, 'sawtooth', f, 0, 0.2, a * 0.06, out, o); tone(t, 'sawtooth', f * 1.26, 0, 0.2, a * 0.05, out, o); break;
+      }
+      case 'f': noise(t, 0.55, a * 0.3, out, { ft: 'lowpass', f: 300, f1: 2200, st: 0.15, f2: 400, q: 1, a: 0.02 }); break;
+      case 'p': nhit(t, 0.018, a * 0.22, out, 'highpass', 2500); thit(t, 1700, 1100, 0.02, a * 0.08, out, 'triangle'); break;
+      case 'q': noise(t, 1.4, a * 0.2, out, { ft: 'bandpass', f: 400, f1: 1500, st: 0.7, f2: 500, q: 1, a: 0.5 }); break;
+      case 'y': thit(t, 2400, 260, 0.14, a * 0.08, out, 'square', 0.12); break;
+      case 'i': thit(t, 2640, 2620, 0.6, a * 0.12, out, 'sine', 0.5); break;
       case 'k': thit(t, 160, 42, 0.38, a, out, 'sine', 0.11); nhit(t, 0.014, a * 0.22, out, 'lowpass', 2500); break;
       case 's': nhit(t, 0.17, a * 0.5, out, 'bandpass', 1900, 0.7); thit(t, 220, 160, 0.09, a * 0.35, out, 'triangle'); break;
       case 'g': nhit(t, 0.07, a * 0.16, out, 'bandpass', 2200, 0.8); break;
@@ -823,13 +851,199 @@ const Sound = (() => {
     coinTally: (t, p, v, o) => T8(t, 'n12', 2093 * p, 0, 0.025, 0.09 * v, o, { hold: 0.8 })
   };
 
+  // ------------------------------------- BRADY-O BURNS / SUPER BRADY-O WORLD SFX --
+  // gibberish speech: quick formant syllables with a pitch contour
+  function babble(t, n, f0, rate, v, out, p, o) {
+    const V = ['a', 'e', 'i', 'o', 'u'];
+    let tt = t;
+    for (let i = 0; i < n; i++) {
+      const d = rate * (0.7 + R() * 0.6);
+      const f = f0 * p * (1 + (R() - 0.5) * (o.spread || 0.3)) * (o.rise ? 1 + (i / n) * o.rise : 1);
+      formant(tt, [[0, f], [d, f * (o.fall || 0.92)]], [[0, V[(R() * 5) | 0]], [d * 0.7, V[(R() * 5) | 0]]], d, v, out, { vib: o.vib || 0, vr: 8, a: 0.015 });
+      tt += d + (o.gap || 0.02);
+    }
+  }
+
+  Object.assign(SFX, {
+    // movement
+    footstep: (t, p, v, o) => noise(t, 0.055, 0.22 * v, o, { ft: 'bandpass', f: (1300 + R() * 1400) * p, q: 1.1, a: 0.003 }),
+    land: (t, p, v, o) => {
+      tone(t, 'sine', 150 * p, 55, 0.12, 0.4 * v, o);
+      noise(t, 0.09, 0.22 * v, o, { ft: 'lowpass', f: 1400 });
+    },
+    jump3d: (t, p, v, o) => {
+      tone(t, 'triangle', 230 * p, 560 * p, 0.2, 0.2 * v, o, { st: 0.15 });
+      noise(t, 0.18, 0.12 * v, o, { ft: 'bandpass', f: 600 * p, f1: 2200 * p, q: 1.2, a: 0.02 });
+    },
+    doublejump: (t, p, v, o) => {   // higher hop + flip whoosh
+      tone(t, 'p25', 420 * p, 980 * p, 0.16, 0.16 * v, o, LP(3500, { st: 0.12 }));
+      noise(t + 0.04, 0.32, 0.36 * v, o, { ft: 'bandpass', f: 700 * p, f1: 3200 * p, st: 0.14, f2: 900 * p, q: 1.6, a: 0.03, lfo: [14, 400] });
+    },
+    groundpound: (t, p, v, o) => {  // dive whoosh, then a heavy impact
+      noise(t, 0.2, 0.2 * v, o, { ft: 'bandpass', f: 3000 * p, f1: 500 * p, q: 1.2 });
+      tone(t, 'triangle', 900 * p, 250 * p, 0.18, 0.08 * v, o);
+      tone(t + 0.18, 'sine', 130 * p, 32, 0.4, 0.6 * v, o);
+      noise(t + 0.18, 0.3, 0.45 * v, o, { ft: 'lowpass', f: 1600, f1: 200 });
+      noise(t + 0.18, 0.05, 0.25 * v, o, { ft: 'highpass', f: 2500 });
+    },
+    spin: (t, p, v, o) => {         // headbang spin attack: swirling whoosh + two power-chord chugs
+      noise(t, 0.38, 0.32 * v, o, { ft: 'bandpass', f: 900 * p, q: 2, lfo: [9, 700], a: 0.02, hold: 0.5 });
+      voice('dist', t + 0.02, 40 + K(p), 0.16, 0.18 * v, o);
+      voice('dist', t + 0.2, 43 + K(p), 0.14, 0.15 * v, o);
+    },
+    // rewards & story
+    token_get: (t, p, v, o) => {    // big reward fanfare (~1.6 s)
+      const k = K(p);
+      [[67, 0], [72, 0.09], [76, 0.18], [79, 0.27]].forEach(n => voice('brass', t + n[1], n[0] + k, 0.1, 0.13 * v, o));
+      [72, 76, 79, 84].forEach(m => voice('brass', t + 0.38, m + k, 0.9, 0.07 * v, o));
+      [60, 67].forEach(m => voice('strings', t + 0.38, m + k, 1.0, 0.06 * v, o));
+      [96, 100, 103, 108].forEach((m, i) => voice('bell', t + 0.45 + i * 0.06, m + k, 0.4, 0.04 * v, o));
+      [0, 0.09, 0.18, 0.27].forEach(d => drum('s', t + d, 0.4 * v, o));
+      drum('K', t + 0.38, 0.8 * v, o); drum('x', t + 0.38, 0.7 * v, o);
+    },
+    ticket: (t, p, v, o) => {
+      tone(t, 'p25', 1568 * p, 0, 0.06, 0.12 * v, o, LP(6000));
+      tone(t + 0.06, 'p25', 2093 * p, 0, 0.2, 0.12 * v, o, LP(7000, { hold: 0.3 }));
+      noise(t, 0.05, 0.15 * v, o, { ft: 'bandpass', f: 4000, q: 1.5 });
+    },
+    dialogue_blip: (t, p, v, o) => tone(t, 'square', (520 + R() * 160) * p, 0, 0.035, 0.075 * v, o, LP(2200, { hold: 0.6 })),
+    crowd_cheer: (t, p, v, o) => {
+      SFX.crowd(t, p, v, o);
+      tone(t + 0.3, 'sine', 1400 * p, 2600 * p, 0.5, 0.05 * v, o, { st: 0.25, f2: 2200 * p });
+      tone(t + 0.8, 'sine', 1700 * p, 2900 * p, 0.4, 0.04 * v, o, { st: 0.2, f2: 2400 * p });
+    },
+    // characters
+    yell: (t, p, v, o) => babble(t, 6, 300, 0.13, 0.24 * v, o, p, { spread: 0.35, vib: 30, fall: 1.15 }),
+    greeter_bell: (t, p, v, o) => { // big brass bell, struck twice
+      const k = K(p);
+      [0, 0.5].forEach((d, i) => {
+        voice('bigbell', t + d, 55 + k, 1.6, 0.16 * v * (i ? 0.8 : 1), o);
+        voice('bigbell', t + d, 67.3 + k, 1.2, 0.07 * v, o);
+        noise(t + d, 0.03, 0.2 * v, o, { ft: 'bandpass', f: 3500, q: 2 });
+      });
+    },
+    camera_flash: (t, p, v, o) => {  // shutter, flash pop, recharge whine
+      noise(t, 0.015, 0.3 * v, o, { ft: 'highpass', f: 3000 });
+      noise(t + 0.05, 0.02, 0.25 * v, o, { ft: 'highpass', f: 2000 });
+      noise(t + 0.05, 0.12, 0.18 * v, o, { ft: 'bandpass', f: 6000, q: 0.8 });
+      tone(t + 0.15, 'sine', 1200 * p, 5200 * p, 0.7, 0.035 * v, o, { lin: 1, a: 0.05, hold: 0.6 });
+    },
+    pitch_blah: (t, p, v, o) => {   // gibberish start-up pitch, ends on a bright "ding"
+      babble(t, 8, 170, 0.11, 0.28 * v, o, p, { spread: 0.25, rise: 0.4, fall: 0.95 });
+      voice('bell', t + 1.15, 88 + K(p), 0.2, 0.05 * v, o);
+    },
+    hurt3d: (t, p, v, o) => {
+      tone(t, 'sawtooth', 460 * p, 170 * p, 0.3, 0.15 * v, o, LP(1600, { vib: 60, vr: 25 }));
+      noise(t, 0.08, 0.25 * v, o, { ft: 'lowpass', f: 1500 });
+      formant(t, [[0, 210 * p], [0.22, 150 * p]], [[0, 'o'], [0.15, 'u']], 0.25, 0.3 * v, o, { a: 0.01 });
+    },
+    // the Man
+    neon_flash: (t, p, v, o) => {   // huge electric flash
+      noise(t, 0.08, 0.5 * v, o, { ft: 'highpass', f: 1500 });
+      noise(t, 0.9, 0.25 * v, o, { ft: 'bandpass', f: 2500 * p, q: 1.5, lfo: [37, 1800], a: 0.005 });
+      tone(t, 'sawtooth', 120 * p, 0, 1.0, 0.07 * v, o, LP(900, { hold: 0.4, vib: 15, vr: 50 }));
+      tone(t, 'square', 3000 * p, 120 * p, 0.4, 0.05 * v, o, LP(5000));
+      tone(t, 'sine', 70 * p, 40, 0.5, 0.35 * v, o);
+    },
+    man_roar: (t, p, v, o) => {     // deep wooden roar with creaks (~1.8 s)
+      formant(t, [[0, 70 * p], [0.4, 95 * p], [1.6, 55 * p]], [[0, 'o'], [0.5, 'a'], [1.4, 'o']], 1.8, 0.55 * v, o, { vib: 25, vr: 5, a: 0.15 });
+      croak(t + 0.1, 38 * p, 1.5, 0.35 * v, o, 9);
+      noise(t, 1.8, 0.2 * v, o, { ft: 'lowpass', f: 300, q: 0.8, a: 0.2, hold: 0.5 });
+      for (let i = 0; i < 4; i++) noise(t + 0.3 + i * 0.35 + R() * 0.1, 0.05, 0.12 * v, o, { ft: 'bandpass', f: 900 + R() * 900, q: 5 });
+    },
+    man_stomp: (t, p, v, o) => {
+      tone(t, 'sine', 85 * p, 28, 0.7, 0.6 * v, o);
+      noise(t, 0.45, 0.4 * v, o, { ft: 'lowpass', f: 500, f1: 80 });
+      noise(t, 0.06, 0.3 * v, o, { ft: 'bandpass', f: 1800, q: 2 });
+      croak(t + 0.05, 50 * p, 0.3, 0.15 * v, o, 14);
+    },
+    // hazards & effects
+    flame_jet: (t, p, v, o) => {
+      noise(t, 0.05, 0.3 * v, o, { ft: 'bandpass', f: 600, q: 1 });
+      noise(t + 0.03, 0.85, 0.45 * v, o, { ft: 'lowpass', f: 600 * p, f1: 1800 * p, st: 0.2, q: 1.2, a: 0.04, hold: 0.6 });
+      noise(t + 0.03, 0.8, 0.16 * v, o, { ft: 'bandpass', f: 2200 * p, q: 0.8, lfo: [29, 1200], a: 0.03, hold: 0.5 });
+      tone(t, 'sine', 75 * p, 50, 0.6, 0.25 * v, o, { a: 0.03 });
+    },
+    firework_launch: (t, p, v, o) => {
+      tone(t, 'sine', 700 * p, 2700 * p, 0.9, 0.07 * v, o, { vib: 30, vr: 13, st: 0.85, a: 0.02, hold: 0.5 });
+      noise(t, 0.9, 0.12 * v, o, { ft: 'highpass', f: 3500, a: 0.02, hold: 0.5 });
+      noise(t, 0.05, 0.3 * v, o, { ft: 'lowpass', f: 900 });
+    },
+    firework_burst: (t, p, v, o) => {
+      tone(t, 'sine', 110 * p, 35, 0.5, 0.6 * v, o);
+      noise(t, 0.6, 0.5 * v, o, { ft: 'lowpass', f: 3000, f1: 300 });
+      for (let i = 0; i < 12; i++) noise(t + 0.15 + R() * 1.0, 0.025, (0.08 + R() * 0.1) * v, o, { ft: 'highpass', f: 3000 + R() * 4000 });
+      [84, 88, 91, 96].forEach((m, i) => voice('glass', t + 0.1 + i * 0.05, m + K(p) + 12 * ((R() * 2) | 0), 0.05, 0.04 * v, o));
+    },
+    // bike
+    bike_bell: (t, p, v, o) => {    // tring-tring
+      const k = K(p);
+      for (const d of [0, 0.07, 0.14, 0.42, 0.49, 0.56]) {
+        voice('bell', t + d, 93.2 + k, 0.12, 0.06 * v, o);
+        tone(t + d, 'sine', 4100 * p, 0, 0.12, 0.025 * v, o);
+      }
+    },
+    bike_pedal: (t, p, v, o) => {   // freewheel ticks + chain whirr
+      for (let i = 0; i < 6; i++) noise(t + i * 0.035, 0.012, 0.14 * v, o, { ft: 'highpass', f: 4500 * p });
+      noise(t, 0.2, 0.1 * v, o, { ft: 'bandpass', f: 800 * p, f1: 1400 * p, q: 2 });
+    },
+    // pickups
+    pickup_bag: (t, p, v, o) => {
+      for (let i = 0; i < 3; i++) noise(t + i * 0.04, 0.05, 0.16 * v, o, { ft: 'bandpass', f: 2000 + R() * 2500, q: 1.3 });
+      tone(t + 0.12, 'sine', 380 * p, 920 * p, 0.09, 0.22 * v, o);
+    },
+    molly: (t, p, v, o) => {        // warm sparkle
+      const k = K(p);
+      [62, 66, 69, 73].forEach((m, i) => voice('ep', t + i * 0.04, m + k, 0.8, 0.06 * v, o));
+      voice('swell', t, 50 + k, 0.7, 0.07 * v, o);
+      [86, 90, 93, 97, 98, 102].forEach((m, i) => voice('glass', t + 0.15 + i * 0.07, m + k, 0.05, 0.04 * v, o));
+    },
+    khole: (t, p, v, o) => {        // slow-motion warble (~1.6 s)
+      tone(t, 'triangle', 440 * p, 110 * p, 1.6, 0.16 * v, o, { vib: 90, vr: 2.2, a: 0.1, hold: 0.5, lin: 1 });
+      tone(t, 'sine', 220 * p, 55 * p, 1.6, 0.18 * v, o, { vib: 60, vr: 1.7, a: 0.1, hold: 0.5, lin: 1 });
+      noise(t, 1.6, 0.08 * v, o, { ft: 'lowpass', f: 2000, f1: 200, q: 3, a: 0.3, lfo: [1.5, 300] });
+    },
+    powder: (t, p, v, o) => {       // fast jittery zip
+      tone(t, 'square', 300 * p, 2600 * p, 0.22, 0.1 * v, o, LP(4000, { vib: 120, vr: 45 }));
+      noise(t, 0.2, 0.3 * v, o, { ft: 'bandpass', f: 1500 * p, f1: 7000 * p, q: 2 });
+      for (let i = 0; i < 4; i++) tone(t + 0.2 + i * 0.035, 'p12', (1800 + R() * 1500) * p, 0, 0.03, 0.06 * v, o, LP(7000));
+    },
+    lsd: (t, p, v, o) => {          // psychedelic shimmer (~1.3 s)
+      const k = K(p);
+      [72, 74, 76, 78, 80, 82, 84, 86, 88].forEach((m, i) => voice('glass', t + i * 0.07, m + k, 0.1, 0.045 * v, o));
+      tone(t, 'sine', 500 * p, 1000 * p, 1.3, 0.07 * v, o, { vib: 200, vr: 3.5, a: 0.2, hold: 0.5, lin: 1 });
+      tone(t, 'triangle', 750 * p, 1500 * p, 1.3, 0.05 * v, o, { vib: 240, vr: 2.5, a: 0.2, hold: 0.5, lin: 1 });
+      noise(t, 1.3, 0.08 * v, o, { ft: 'bandpass', f: 800, f1: 5000, q: 6, a: 0.2, lfo: [3, 1500] });
+    },
+    costume: (t, p, v, o) => {      // magical outfit change: harp sweep + sparkle + bell
+      const k = K(p);
+      [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84].forEach((m, i) => voice('harp', t + i * 0.035, m + k, 0.15, 0.08 * v, o));
+      noise(t + 0.1, 0.6, 0.1 * v, o, { ft: 'highpass', f: 6000, a: 0.1 });
+      voice('bell', t + 0.42, 91 + k, 0.5, 0.06 * v, o); voice('bell', t + 0.42, 96 + k, 0.5, 0.04 * v, o);
+    },
+    map_open: (t, p, v, o) => {     // paper rustle + flap
+      for (let i = 0; i < 5; i++) noise(t + i * 0.05 + R() * 0.02, 0.06, 0.28 * v, o, { ft: 'bandpass', f: 1800 + R() * 3000, q: 1.2 });
+      tone(t + 0.22, 'sine', 140 * p, 90, 0.1, 0.15 * v, o);
+    },
+    key: (t, p, v, o) => {          // metallic clinks + little chime
+      [0, 0.08].forEach(d => { tone(t + d, 'triangle', 3100 * p, 0, 0.15, 0.07 * v, o); tone(t + d, 'sine', 4370 * p, 0, 0.12, 0.05 * v, o); });
+      run(t + 0.18, 'p25', [84, 91], 0.07, 0.08, 0.11 * v, o, p, LP(6000, { hold: 0.5 }));
+    },
+    door: (t, p, v, o) => {         // creak, then thud
+      croak(t, 95 * p, 0.55, 0.25 * v, o, 21);
+      tone(t + 0.5, 'sine', 120 * p, 55, 0.18, 0.35 * v, o);
+      noise(t + 0.5, 0.08, 0.2 * v, o, { ft: 'lowpass', f: 900 });
+    }
+  });
+
   // ---------------------------------------------------------------- music --
   // Track format (all original compositions):
   //  bpm, spb steps/beat (4), bpb beats/bar (4), bars
   //  ch  chords, one token per bar ("F,G" splits a bar evenly)
   //  ld  lead line "NOTE:steps" ('.' rest, '_' tie, '|' bar line); li inst, lv vol, lg gate
   //  hx  auto-harmony volume (nearest chord tone a third-ish below the lead), hi its inst
-  //  bp  bass pattern (r root, f fifth, o octave, t third, s seventh, l low fifth, '-' hold, '.' rest;
+  //  l2  optional second melody line (l2i/l2v/l2g inst/vol/gate), same syntax as ld
+  //  bp  bass pattern (r root, f fifth, o octave, t third, s seventh, x sixth, l low fifth, '-' hold, '.' rest;
   //      UPPERCASE = accent); bi/bv/bo inst/vol/base note
   //  ap  arp pattern (0-9 chord-tone index, c whole chord, '-' hold); ai/av/ao
   //  a2  second arp/stab layer (a2i/a2v/a2o); pd pad pattern (pi/pv/po)
@@ -1358,6 +1572,363 @@ const Sound = (() => {
     }
   });
 
+  // ---------------------------------------------------- BRADY-O BURNS (3D) --
+  Object.assign(TRACKS, {
+    // World select on the playa: warm and hopeful. G major 7ths
+    burns_hub: {
+      bpm: 98, bars: 8, rv: 0.35, dl: 0.15, sw: 0.1,
+      ch: 'Gmaj7 Bm7 Cmaj7 D Gmaj7 Em7 Am7 D7sus4',
+      ld: 'B4:4 D5:4 F#5:4 G5:4 | A5:6 F#5:2 D5:8 | E5:4 G5:4 B5:6 A5:2 | F#5:12 .:4 |' +
+          'G5:4 B5:4 D6:6 B5:2 | B5:4 G5:4 E5:8 | C6:4 B5:4 A5:4 G5:4 | A5:8 G5:4 .:4',
+      li: 'whistle', lv: 0.13,
+      bp: 'r---..r-f---..o-', bi: 'sub', bv: 0.28,
+      ap: 'c---..c-..c-....', ai: 'ep', av: 0.06, ao: 55,
+      dr: ['k.......k..k....', '....r.......r...', '..h...h...h...h.', 'n.n.n.n.n.n.n.n.'], dv: 0.38
+    },
+    // Story intro: 8 romantic bars (piano, Eb major), then the Man takes Chinka (C minor, low brass, timpani)
+    burns_intro: {
+      bpm: 84, bars: 16, rv: 0.45, dl: 0.15,
+      ch: 'Eb Cm Ab Bb Eb Cm Fm7 Bb Cm Cm Ab G Cm Db Ab G',
+      ld: 'G5:4 Bb5:4 Eb6:6 D6:2 | C6:6 Bb5:2 G5:8 | Ab5:4 C6:4 Eb6:4 C6:4 | D6:12 .:4 |' +
+          'Eb6:4 D6:2 C6:2 Bb5:4 G5:4 | G5:4 C6:4 Eb6:8 | F6:4 Eb6:4 C6:4 Ab5:4 | Bb5:12 .:4 | ' + rp('.:16 | ', 7) + '.:16',
+      li: 'piano', lv: 0.17,
+      l2: rp('.:16 | ', 8) + 'C4:8 Eb4:4 D4:4 | G3:12 .:4 | Ab3:8 C4:4 Eb4:4 | D4:8 B3:8 | C4:4 Eb4:4 G4:8 | F4:6 Eb4:2 Db4:8 | C4:8 Eb4:4 Ab4:4 | G4:4 F4:4 D4:4 B3:4',
+      l2i: 'brass', l2v: 0.16,
+      ap: rp('0.1.2.1.', 16) + dots(128), ai: 'piano', av: 0.035, ao: 55,
+      pd: 'c---------------', pi: 'strings', pv: 0.035, po: 50,
+      bp: rp('r---------------', 8) + rp('r-r-r-r-r-r-r-r-', 8), bi: 'sub', bv: 0.28,
+      dr: [dots(128) + rp('t.......t...t...', 7) + 't.t.t.t.tttTTTTT', dots(128) + 'x' + dots(127)], dv: 0.45
+    },
+    // W1 The Line / Gate Road: dusty shuffle, harmonica-ish reed, honky-tonk piano, boogie bass, honks
+    burns_w1: {
+      bpm: 116, bars: 16, rv: 0.25, sw8: 0.35,
+      ch: 'A D A E A D E A D D A F#m Bm E A E',
+      ld: 'E5:2 A5:2 C#6:4 B5:2 A5:2 E5:4 | F#5:4 A5:2 F#5:2 D5:8 | C#5:2 E5:2 A5:4 C#6:2 B5:2 A5:4 | B5:6 G#5:2 E5:8 |' +
+          'A5:2 C#6:2 E6:4 C#6:2 A5:2 E5:4 | D6:4 C#6:2 A5:2 F#5:4 A5:4 | G#5:4 B5:4 E6:4 D6:4 | C#6:12 .:4 |' +
+          'A5:4 D6:4 F#6:6 E6:2 | D6:4 A5:4 F#5:8 | E5:2 A5:2 C#6:2 E6:2 C#6:4 A5:4 | A5:6 G#5:2 F#5:8 |' +
+          'B5:4 D6:4 F#6:4 D6:4 | E6:6 D6:2 B5:8 | C#6:4 B5:2 A5:2 E5:4 C#5:4 | B4:4 D5:4 E5:4 G#5:4',
+      li: 'reed', lv: 0.14,
+      bp: 'r.t.f.x.s.x.f.t.', bi: 'pluckb', bv: 0.3,
+      ap: '..c-..c-..c-..c-', ai: 'honky', av: 0.04, ao: 60,
+      dr: ['k.......k.k.....', '....s.......s...', 'h.h.h.h.h.h.h.h.', dots(124) + 'e.e.', X(8)], dv: 0.42
+    },
+    // W2 Finding Camp: the city at night, fire spinners, tribal drums and bass. D minor
+    burns_w2: {
+      bpm: 110, bars: 16, rv: 0.35, dl: 0.2,
+      ch: 'Dm Dm Bb C Dm Dm Bb A Gm Gm Dm Dm Bb C A A',
+      ld: 'D5:6 F5:2 A5:4 G5:4 | F5:4 E5:4 D5:8 | D5:4 F5:4 Bb5:6 A5:2 | G5:6 E5:2 C5:8 |' +
+          'A5:6 C6:2 D6:4 C6:4 | A5:4 G5:4 F5:8 | F5:4 G5:4 A5:4 Bb5:4 | A5:8 C#6:4 E6:4 |' +
+          'D6:6 Bb5:2 G5:8 | A5:4 Bb5:4 D6:8 | F6:6 E6:2 D6:8 | A5:4 F5:4 D5:8 |' +
+          'D6:4 C6:4 Bb5:4 F5:4 | E6:6 D6:2 C6:8 | C#6:4 E6:4 A5:8 | E5:4 G5:4 A5:8',
+      li: 'vox', lv: 0.13,
+      bp: 'r..r..r.r..r..o.', bi: 'sub', bv: 0.3,
+      pd: 'c---------------', pi: 'pad', pv: 0.03, po: 50,
+      dr: ['k.....k...k.....', 't..m..t.t..m.m..', 'b.bb.b.bb.b.bb.b', 'f' + dots(31)], dv: 0.42
+    },
+    // W3 Costume Cult & the Yellow Bike: glam cabaret disco. D minor, stomp + brass + strings
+    burns_w3: {
+      bpm: 124, bars: 16, rv: 0.25, pump: 0.2,
+      ch: 'Dm Dm Gm A Dm Dm Bb A Gm C F Bb Gm A Dm A',
+      ld: 'A4:2 D5:2 F5:2 A5:2 G5:3 F5:1 E5:4 | F5:3 E5:1 D5:4 A4:8 | Bb4:2 D5:2 G5:2 Bb5:2 A5:3 G5:1 F5:4 | E5:4 C#5:4 A4:4 .:4 |' +
+          'D6:2 C6:2 A5:2 F5:2 A5:3 G5:1 F5:4 | E5:3 F5:1 G5:4 A5:8 | Bb5:2 A5:2 G5:2 F5:2 D5:4 F5:4 | E5:2 G5:2 C#6:4 A5:8 |' +
+          'G5:6 A5:2 Bb5:8 | C6:6 Bb5:2 G5:8 | A5:4 C6:4 F6:8 | D6:6 C6:2 Bb5:8 |' +
+          'Bb5:4 A5:2 G5:2 D6:4 Bb5:4 | C#6:4 E6:4 G6:4 E6:4 | F6:4 E6:2 D6:2 A5:4 F5:4 | E5:2 F5:2 G5:2 A5:2 C#6:8',
+      li: 'brass', lv: 0.13, hx: 0.05,
+      bp: 'r-o-r-o-r-o-r-o-', bi: 'slapb', bv: 0.25,
+      ap: '..c-..c-..c-..c-', ai: 'honky', av: 0.035, ao: 60,
+      pd: 'c---------------', pi: 'strings', pv: 0.03, po: 57,
+      dr: [FOUR, CLAP, OFFO, H16, '....j.......j...', X(8)], dv: 0.45
+    },
+    // W4 The Orgy Dome: sleazy-but-tasteful lounge slow jam (12/8 feel). Eb, sax over Rhodes
+    burns_w4: {
+      bpm: 72, spb: 3, bars: 8, rv: 0.35, dl: 0.15,
+      ch: 'Ebmaj7 Cm7 Fm7 Bb7 Gm7 C7 Fm7 Bb7',
+      ld: 'G5:3 Bb5:2 D6:1 Eb6:6 | D6:2 C6:1 Bb5:3 G5:6 | Ab5:3 C6:2 Eb6:1 F6:3 Eb6:3 | D6:6 Ab5:3 F5:3 |' +
+          'Bb5:3 D6:2 F6:7 | E6:3 D6:2 C6:1 Bb5:6 | Ab5:2 G5:1 F5:3 C6:3 Eb6:3 | D6:9 .:3',
+      li: 'sax', lv: 0.14,
+      bp: 'r..t..f..t..', bi: 'pluckb', bv: 0.3,
+      ap: 'c-....c-....', ai: 'ep', av: 0.055, ao: 55,
+      dr: ['k.....k..k..', '...c.....c..', 'h..h.hh..h.h'], dv: 0.38
+    },
+    // W5 Costco Soul Trading Co.: 8 bars of elevator muzak (vibes), then it turns into funk (horns, clav)
+    burns_w5: {
+      bpm: 104, bars: 16, rv: 0.25,
+      ch: 'Cmaj7 Am7 Dm7 G7 Cmaj7 Am7 Dm7 G7 C7 C7 F7 F7 C7 C7 G7 F7',
+      ld: 'E5:4 G5:4 B5:6 A5:2 | G5:6 E5:2 C5:8 | F5:4 A5:4 C6:6 B5:2 | A5:6 F5:2 D5:8 |' +
+          'E5:2 F5:2 G5:4 C6:4 B5:4 | A5:6 G5:2 E5:8 | D5:4 F5:4 A5:4 C6:4 | B5:12 .:4 | ' + rp('.:16 | ', 7) + '.:16',
+      li: 'vibes', lv: 0.13,
+      l2: rp('.:16 | ', 8) +
+          '.:2 G5:1 Bb5:1 C6:2 .:2 E6:2 C6:1 Bb5:1 C6:4 | .:4 G5:2 Bb5:2 E6:3 D6:1 C6:4 | .:2 C6:1 Eb6:1 F6:2 .:2 A5:2 C6:1 Eb6:1 F6:4 | .:4 Eb6:2 C6:2 A5:3 G5:1 F5:4 |' +
+          'C6:2 C6:2 .:2 C6:2 E6:4 G6:4 | Bb5:2 Bb5:2 .:2 Bb5:2 G5:4 E5:4 | D6:3 B5:1 G5:4 F6:4 D6:4 | Eb6:2 C6:2 A5:2 F5:2 .:4 C6:4',
+      l2i: 'brass', l2v: 0.14,
+      bp: rp('r-----f-r-----f-', 8) + rp('r..ro..r.r..f.o.', 8), bi: 'slapb', bv: 0.27,
+      ap: rp('c---..c-....c-..', 8) + dots(128), ai: 'ep', av: 0.05, ao: 57,
+      a2: dots(128) + rp('.c.c..c..c.c..c.', 8), a2i: 'clav', a2v: 0.035, a2o: 60,
+      dr: [rp('k.....k.k.....k.', 8) + rp('k.....k...k.k...', 8), rp('r..r..r...r..r..', 8) + rp('....S..g.g..S..g', 8),
+        rp('n.n.n.n.n.n.n.n.', 8) + rp(H16, 8), dots(128) + rp('..o.......o.....', 8), dots(128) + 'x' + dots(127)], dv: 0.42
+    },
+    // W6 The Art Car Hunt: tribal techno with fire. F minor, acid bass, toms and flame bursts
+    burns_w6: {
+      bpm: 128, bars: 16, rv: 0.25, dl: 0.15, pump: 0.35,
+      ch: 'Fm Fm Fm Eb Fm Fm Db Eb Fm Fm Fm Eb Db Db Eb Eb',
+      ld: 'F5:2 .:1 F5:1 Ab5:2 .:2 C6:2 .:2 Bb5:2 Ab5:2 | G5:3 F5:3 C5:2 .:8 | F5:2 .:1 F5:1 Ab5:2 .:2 C6:2 .:2 Eb6:2 C6:2 | Bb5:3 G5:3 Eb5:2 .:8 |' +
+          'F5:2 .:1 F5:1 Ab5:2 .:2 C6:2 .:2 Bb5:2 Ab5:2 | G5:3 Ab5:3 Bb5:2 C6:8 | Db6:3 C6:3 Ab5:2 F5:8 | G5:3 Bb5:3 Eb6:2 .:8 |' +
+          'C6:4 Ab5:4 F5:4 Ab5:4 | C6:3 Db6:3 C6:2 Ab5:8 | F6:4 Eb6:4 C6:4 Ab5:4 | G5:6 Bb5:2 Eb6:8 |' +
+          'F6:3 Eb6:3 Db6:2 Ab5:8 | F5:3 Ab5:3 Db6:2 F6:8 | G6:3 F6:3 Eb6:2 Bb5:8 | G5:4 Bb5:4 Eb6:4 G6:4',
+      li: 'saw2', lv: 0.13,
+      bp: 'R..r..r..R..r.o.', bi: 'acid', bv: 0.22,
+      dr: [FOUR, 't..t..m...t..m..', 'b.b.bb.b.b.bb.b.', OFFO, 'f' + dots(63), X(8)], dv: 0.45
+    },
+    // W7 Sunrise Set: melodic deep house at dawn, euphoric. Ab major
+    burns_w7: {
+      bpm: 122, bars: 16, rv: 0.35, dl: 0.15, pump: 0.4,
+      ch: 'Fm7 Dbmaj7 Abmaj7 Eb Fm7 Dbmaj7 Bbm7 Eb Dbmaj7 Eb Cm7 Fm7 Dbmaj7 Eb Abmaj7 Eb',
+      ld: 'C6:3 Ab5:3 F5:2 Eb5:4 F5:4 | F5:3 Ab5:3 C6:2 Db6:8 | Eb6:3 C6:3 Ab5:2 G5:4 Ab5:4 | Bb5:12 G5:4 |' +
+          'C6:3 Ab5:3 F5:2 Eb5:4 Ab5:4 | F6:3 Eb6:3 Db6:2 C6:8 | Db6:3 C6:3 Bb5:2 F5:4 Ab5:4 | G5:12 Bb5:4 |' +
+          'Ab5:6 C6:2 F6:8 | G6:6 F6:2 Eb6:8 | Eb6:4 C6:4 G5:4 Bb5:4 | Ab5:6 G5:2 F5:8 |' +
+          'F5:4 Ab5:4 C6:4 F6:4 | G6:6 F6:2 Eb6:4 Bb5:4 | C6:4 Eb6:4 G6:8 | F6:4 Eb6:4 Bb5:4 G5:4',
+      li: 'ssaw', lv: 0.12, hx: 0.05,
+      bp: '..r-..r-..r-..o-', bi: 'sub', bv: 0.3,
+      ap: '0.2.1.3.0.2.1.3.', ai: 'pluck', av: 0.035, ao: 63,
+      pd: 'c---------------', pi: 'pad', pv: 0.035, po: 53,
+      dr: [FOUR, CLAP, OFFO, H16, X(8)], dv: 0.45
+    },
+    // W8 Hell Station: industrial rock, clanking metal. E phrygian riff
+    burns_w8: {
+      bpm: 140, bars: 16, rv: 0.25,
+      ch: 'Em Em F Em Em Em G F Am Am F G Em Em F B',
+      ld: 'E4:2 E4:2 G4:2 E4:1 F4:1 .:2 E4:2 B4:2 A#4:2 | E4:2 E4:2 G4:2 A4:2 B4:4 .:4 | F4:2 F4:2 A4:2 F4:1 G4:1 .:2 F4:2 C5:2 B4:2 | E5:4 D5:2 B4:2 G4:4 F4:4 |' +
+          'E4:2 E4:2 G4:2 E4:1 F4:1 .:2 E4:2 B4:2 A#4:2 | E4:2 E4:2 G4:2 A4:2 B4:2 D5:2 E5:4 | D5:3 B4:3 G4:2 F5:4 D5:4 | C5:4 A4:4 F4:4 E4:4 |' +
+          'A4:3 C5:3 E5:2 A5:8 | G5:3 E5:3 C5:2 A4:8 | F5:3 A5:3 C6:2 B5:4 A5:4 | G5:6 B5:2 D6:8 |' +
+          'E5:3 G5:3 B5:2 E6:8 | D6:3 B5:3 G5:2 E5:8 | F5:4 A5:4 C6:4 E6:4 | D#6:4 B5:4 F#5:4 D#5:4',
+      li: 'gtr', lv: 0.12,
+      ap: 'c-c-..c-c-..c-c.', ai: 'dist', av: 0.045, ao: 40,
+      bp: 'r.r.r.r.r.r.r.r.', bi: 'sawb', bv: 0.24,
+      dr: ['k.k...k.k.k...k.', '....S.......S...', 'a..a....a...a.a.', 'h.h.h.h.h.h.h.h.', X(8)], dv: 0.48,
+      fill: ['k.k.k.k.k.k.k.k.', '....S...S.SSaaaa', 'a...a...a...a...'], fe: 8
+    },
+    // W9 Deep Playa Showdown: dark ambient techno in a dust storm. B minor, filters open across the loop
+    burns_w9: {
+      bpm: 124, bars: 16, rv: 0.45, dl: 0.25, pump: 0.3, bld: [0.4, 1.3],
+      ch: 'Bm Bm G G Bm Bm Em F# Bm Bm G G Em Em F# F#',
+      ld: 'F#5:8 D5:4 B4:4 | C#5:12 D5:4 | B4:8 D5:4 G5:4 | F#5:12 .:4 | B5:8 A5:4 F#5:4 | E5:12 F#5:4 | G5:8 E5:4 B4:4 | A#4:8 C#5:8 |' +
+          'D6:8 B5:4 F#5:4 | A5:12 B5:4 | D6:8 B5:4 G5:4 | F#5:12 .:4 | E6:8 B5:4 G5:4 | F#5:12 G5:4 | A#5:8 C#6:8 | F#5:12 .:4',
+      li: 'vox', lv: 0.12,
+      bp: 'R..r..r..R..r.o.', bi: 'acid', bv: 0.2,
+      ap: '0.2.4.0.2.5.', ai: 'pluck', av: 0.035, ao: 59,
+      pd: 'c---------------', pi: 'pad', pv: 0.035, po: 50,
+      dr: [FOUR, '..h...h...h...h.', '....r.......r...', 'q' + dots(63), dots(128) + rp(CLAP, 8), X(16)], dv: 0.45
+    },
+    // W10 The Man Pavilion: epic approach, tension building (timpani, then snare, then hats)
+    burns_w10: {
+      bpm: 116, bars: 16, rv: 0.35, bld: [0.4, 1.4],
+      ch: 'Cm Cm Ab Ab Fm Fm G G Cm Cm Ab Ab Db Db G G',
+      ld: 'C5:8 Eb5:4 G5:4 | F5:6 Eb5:2 D5:8 | C5:8 Eb5:4 Ab5:4 | G5:12 .:4 | F5:8 Ab5:4 C6:4 | Bb5:6 Ab5:2 G5:8 | B4:4 D5:4 G5:4 F5:4 | D5:12 .:4 |' +
+          'G5:8 C6:4 Eb6:4 | D6:6 C6:2 G5:8 | Eb6:8 C6:4 Ab5:4 | G5:12 Ab5:4 | F6:8 Db6:4 Ab5:4 | C6:6 Db6:2 F6:8 | D6:4 F6:4 B5:4 D6:4 | G6:12 .:4',
+      li: 'brass', lv: 0.15, hx: 0.05,
+      l2: rp('.:16 | ', 8) + 'Eb5:16 | D5:16 | C5:16 | Eb5:16 | F5:16 | Ab5:16 | G5:16 | B4:16', l2i: 'vox', l2v: 0.09,
+      bp: 'r-r-r-r-r-r-r-r-', bi: 'sawb', bv: 0.24,
+      ap: 'c-------c-------', ai: 'strings', av: 0.035, ao: 55,
+      dr: ['k.......k.......', 't.......t...t...', dots(128) + rp('....s.......s...', 8), dots(192) + rp('h.h.h.h.h.h.h.h.', 4),
+        dots(240) + 'tttmmmtttTTTTTTT', 'x' + dots(255)], dv: 0.45
+    },
+    // The Man boss fight: ominous and driving. G minor with a menacing Ab
+    man_boss: {
+      bpm: 136, bars: 16, rv: 0.25,
+      ch: 'Gm Gm Ab Gm Gm Gm Eb D Cm Cm Ab Ab Gm Gm Ab D',
+      ld: 'G4:2 G4:2 Bb4:2 G4:2 D5:4 C5:2 Bb4:2 | A4:2 Bb4:2 A4:2 G4:2 D4:8 | Ab4:2 Ab4:2 C5:2 Ab4:2 Eb5:4 D5:2 C5:2 | Bb4:2 C5:2 Bb4:2 A4:2 G4:8 |' +
+          'G5:2 G5:2 Bb5:2 G5:2 D6:4 C6:2 Bb5:2 | A5:2 Bb5:2 C6:2 D6:2 G5:8 | G5:3 Bb5:3 Eb6:2 D6:4 Bb5:4 | F#5:4 A5:4 C6:4 D6:4 |' +
+          'Eb6:6 D6:2 C6:8 | G5:4 C6:4 Eb6:8 | C6:6 Bb5:2 Ab5:8 | Eb6:4 C6:4 Ab5:8 |' +
+          'D6:6 C6:2 Bb5:8 | G5:4 Bb5:4 D6:8 | Eb6:3 D6:3 C6:2 Ab5:8 | F#5:2 A5:2 C6:2 D6:2 F#6:8',
+      li: 'saw2', lv: 0.13,
+      ap: 'c--.c-c-c--.c-c-', ai: 'dist', av: 0.05, ao: 43,
+      bp: 'r-r-r-r-r-r-r-r-', bi: 'reese', bv: 0.24,
+      dr: ['k...k...k...k.k.', '....S.......S...', 'h.h.h.h.h.h.h.h.', 'a.......a.......', X(8)], dv: 0.48,
+      fill: ['k...k...k...k.k.', '....S...S.SSmmtt', 'h.h.h.h.........'], fe: 8
+    },
+    // The giant Man phase: bigger, faster, desperate. A minor, Neapolitan Bb, buzzing lead
+    man_giant: {
+      bpm: 160, bars: 8, rv: 0.22,
+      ch: 'Am Am F E Am Am Bb E',
+      ld: 'A5:1 G#5:1 A5:1 C6:1 E6:2 A5:2 B5:1 A5:1 G#5:1 A5:1 E5:4 | C6:2 B5:2 A5:2 E6:2 D6:2 C6:2 B5:4 |' +
+          'F5:1 E5:1 F5:1 A5:1 C6:2 F6:2 E6:2 C6:2 A5:4 | G#5:2 B5:2 E6:2 G#6:2 F6:4 E6:4 |' +
+          'A5:1 G#5:1 A5:1 C6:1 E6:2 A6:2 G#6:2 E6:2 C6:4 | E6:2 D6:2 C6:2 B5:2 A5:2 G#5:2 A5:4 |' +
+          'Bb4:2 D5:2 F5:2 Bb5:2 A5:2 F5:2 D5:4 | E5:2 F5:2 G#5:2 B5:2 D6:2 E6:2 F6:4',
+      li: 'buzz', lv: 0.12,
+      ap: 'c-c-c-c-c-c-c-c-', ai: 'dist', av: 0.045, ao: 45,
+      bp: 'rrrrrrrrrrrrrrrr', bi: 'sawb', bv: 0.2,
+      dr: ['k.k.k.k.k.k.k.k.', '....S.......S.S.', 'hhhhhhhhhhhhhhhh', 'a...a...a...a...', X(4)], dv: 0.48
+    },
+    // Victory jingle (~2.4 s, plays once)
+    burns_victory: {
+      bpm: 150, bpb: 3, bars: 2, rv: 0.3, loop: false,
+      ch: 'G,C D,G',
+      ld: 'D5:2 G5:2 B5:2 C6:2 E6:2 G6:2 | F#6:2 E6:2 D6:2 G6:6',
+      li: 'ssaw', lv: 0.15, hx: 0.07,
+      bp: 'r-r-r-r-r-r-r-r-r-------', bi: 'sawb', bv: 0.25,
+      ap: 'c-.c-.c-.c-.c-.c-.c-----', ai: 'stab', av: 0.05, ao: 60,
+      dr: ['k..k..k..k..k..k..K.....', '..s..s..s..s..ssss......', 'x' + dots(17) + 'x' + dots(5)], dv: 0.45
+    },
+    // Ending: the rescue (tender), then the Man burns (fire, the drop, triumph). D major
+    burns_ending: {
+      bpm: 116, bars: 16, rv: 0.35, dl: 0.12, pump: 0.4,
+      ch: 'Bm G D A Bm G Em A D A Bm G D A G,A D',
+      ld: 'F#5:6 E5:2 D5:4 B4:4 | B4:4 D5:4 G5:8 | F#5:6 A5:2 D6:8 | C#6:8 B5:4 A5:4 |' +
+          'B5:6 A5:2 F#5:4 D5:4 | D5:4 G5:4 B5:8 | G5:4 F#5:4 E5:4 B4:4 | C#5:4 E5:4 A5:4 C#6:4 |' +
+          'D6:3 D6:3 C#6:2 A5:4 F#5:4 | E5:3 E5:3 F#5:2 A5:8 | B5:3 B5:3 C#6:2 D6:4 F#6:4 | E6:6 D6:2 B5:8 |' +
+          'F#6:3 E6:3 D6:2 A5:4 F#5:4 | E6:3 D6:3 C#6:2 A5:8 | B5:4 D6:4 C#6:4 E6:4 | D6:12 .:4',
+      li: 'ssaw', lv: 0.12, hx: 0.05,
+      ap: rp('0.1.2.1.', 16) + rp('c..c..c...c..c..', 8), ai: 'piano', av: 0.04, ao: 55,
+      pd: 'c---------------', pi: 'strings', pv: 0.035, po: 50,
+      bp: rp('r---------------', 8) + rp('..r-..r-..r-..o-', 8), bi: 'sawb', bv: 0.25,
+      dr: [dots(64) + rp('t...............', 3) + 't.......t.t.tttt' + rp(FOUR, 8), dots(128) + rp(CLAP, 8), dots(128) + rp(OFFO, 8),
+        dots(128) + rp(H16, 8), dots(112) + 's.s.s.s.ssssSSSS' + dots(128), dots(128) + 'x' + dots(127), dots(128) + 'f' + dots(127)], dv: 0.45
+    }
+  });
+
+  // ---------------------------------------------- SUPER BRADY-O WORLD (2D) --
+  Object.assign(TRACKS, {
+    // Land 1 Gate Road: dusk in the RV line. F major, twangy guitar, lazy shuffle, a honk
+    land1: {
+      bpm: 104, bars: 8, rv: 0.3, sw8: 0.25,
+      ch: 'Fmaj7 Am7 Bbmaj7 C Fmaj7 Am7 Gm7 C7sus4',
+      ld: 'C5:4 F5:2 A5:2 G5:4 E5:4 | E5:6 G5:2 C6:8 | D6:4 C6:2 A5:2 F5:4 D5:4 | E5:6 G5:2 C5:8 |' +
+          'A5:4 C6:2 E6:2 C6:4 A5:4 | G5:6 E5:2 A5:8 | Bb5:4 A5:2 G5:2 F5:4 D5:4 | F5:8 G5:4 Bb5:4',
+      li: 'twang', lv: 0.16,
+      bp: 'r-..r-f-r-..o-f-', bi: 'sub', bv: 0.28,
+      ap: '..c-..c-..c-..c-', ai: 'ep', av: 0.045, ao: 57,
+      dr: ['k.......k..k....', '....s.......s...', 'h.h.h.h.h.h.h.h.', dots(60) + 'e...'], dv: 0.4
+    },
+    // Land 2 Center Camp: circus big top waltz (3/4) with a calliope. C major
+    land2: {
+      bpm: 150, bpb: 3, bars: 16, rv: 0.25,
+      ch: 'C C G7 G7 G7 G7 C C F F C A7 D7 G7 C G7',
+      ld: 'E5:4 G5:4 C6:4 | B5:2 C6:2 E6:8 | D6:4 B5:4 G5:4 | F5:2 G5:2 B5:8 | D6:4 F6:4 D6:4 | C#6:2 D6:2 G5:8 | E5:4 G5:4 C6:4 | E6:12 |' +
+          'A5:4 C6:4 F6:4 | E6:2 F6:2 A5:8 | G5:4 C6:4 E6:4 | C#6:4 E6:4 G6:4 | F#6:4 D6:4 A5:4 | B5:2 C6:2 D6:8 | C6:4 G5:4 E5:4 | D5:4 F5:4 B5:4',
+      li: 'calliope', lv: 0.12,
+      bp: 'r-..........f-..........', bi: 'sub', bv: 0.28,
+      ap: '....c-..c-..', ai: 'organ', av: 0.035, ao: 60,
+      dr: ['k...........', '....g...g...'], dv: 0.38
+    },
+    // Land 3 The Esplanade: sound camps and lasers. G minor house
+    land3: {
+      bpm: 128, bars: 16, rv: 0.25, dl: 0.15, pump: 0.45,
+      ch: 'Gm Eb Bb F Gm Eb Cm D Eb F Gm Gm Eb F D D',
+      ld: 'D6:3 D6:3 Bb5:2 G5:3 A5:3 Bb5:2 | G5:3 G5:3 Eb5:2 Bb5:8 | F5:3 Bb5:3 D6:2 F6:3 Eb6:3 D6:2 | C6:12 A5:4 |' +
+          'D6:3 D6:3 Bb5:2 G5:3 A5:3 Bb5:2 | Eb6:3 D6:3 Bb5:2 G5:8 | C6:3 Eb6:3 G6:2 F6:3 Eb6:3 C6:2 | D6:12 F#5:4 |' +
+          'G5:6 Bb5:2 Eb6:8 | A5:6 C6:2 F6:8 | G6:6 F6:2 D6:8 | Bb5:4 A5:4 G5:8 |' +
+          'Eb6:4 G6:4 Bb5:8 | F5:4 A5:4 C6:8 | A5:4 D6:4 F#6:8 | F#6:4 E6:4 D6:4 A5:4',
+      li: 'ssaw', lv: 0.12,
+      bp: '..r-..r-..r-..r-', bi: 'sawb', bv: 0.26,
+      ap: '0213021302130213', ai: 'pulse', av: 0.03, ao: 62,
+      dr: [FOUR, CLAP, OFFO, H16, '..............y.......y.....y...', X(8)], dv: 0.47
+    },
+    // Land 4 Theme Camp Row: quirky, witchy 12/8 jig. A harmonic minor, harpsichord, cauldron bubbles
+    land4: {
+      bpm: 100, spb: 3, bars: 8, rv: 0.3, dl: 0.15,
+      ch: 'Am E Am G F E Dm E',
+      ld: 'A4:1 C5:1 E5:1 A5:2 G#5:1 A5:3 E5:3 | G#5:1 A5:1 B5:1 E5:3 D5:1 C5:1 B4:1 G#4:3 | C5:1 E5:1 A5:1 C6:2 B5:1 A5:3 E5:3 | D5:1 G5:1 B5:1 D6:3 C6:1 B5:1 A5:1 G5:3 |' +
+          'F5:1 A5:1 C6:1 F6:2 E6:1 D6:3 C6:3 | B5:1 G#5:1 E5:1 F5:3 G#5:3 B5:3 | D6:1 C6:1 B5:1 A5:3 F5:1 E5:1 D5:1 F5:3 | E5:3 G#5:3 B4:6',
+      li: 'hpsi', lv: 0.13, lg: 0.8,
+      bp: 'r..f..o..f..', bi: 'pluckb', bv: 0.28,
+      ap: '0..1..2..1..', ai: 'glass', av: 0.03, ao: 69,
+      dr: ['k.....k.....', '...r.....r.r', 'u....u...u..'], dv: 0.38
+    },
+    // Land 5 Hot Springs: bubbly and watery. E major lydian colours
+    land5: {
+      bpm: 84, bars: 8, rv: 0.6, dl: 0.3,
+      ch: 'Emaj7 C#m7 Amaj7 B7sus4 Emaj7 G#m7 Amaj9 B',
+      ld: 'G#5:4 B5:4 D#6:6 B5:2 | E6:6 C#6:2 G#5:8 | C#6:4 B5:4 G#5:8 | F#5:8 E5:4 A5:4 |' +
+          'B5:4 G#5:4 E5:4 D#5:4 | F#5:6 G#5:2 B5:8 | C#6:4 B5:4 A5:4 G#5:4 | F#5:12 D#5:4',
+      li: 'whistle', lv: 0.13,
+      ap: '0.2.4.1.3.5.2.4.', ai: 'glass', av: 0.035, ao: 71,
+      pd: 'c---------------', pi: 'pad', pv: 0.04, po: 52,
+      bp: 'r-------r---f---', bi: 'sub', bv: 0.26,
+      dr: ['k.......k.......', '....n.......n...', 'u..u....u.u..u..', '..u.....u.....u.'], dv: 0.32
+    },
+    // Land 6 Deep Playa: mysterious night. F# minor 9 with a Neapolitan G
+    land6: {
+      bpm: 96, bars: 8, rv: 0.5, dl: 0.35,
+      ch: 'F#m9 Dmaj7 Bm7 C#7sus4 F#m9 Dmaj7 Gmaj7 C#7',
+      ld: 'C#6:6 A5:2 G#5:8 | F#5:4 A5:4 C#6:8 | D6:6 C#6:2 A5:8 | B5:8 F#5:4 G#5:4 |' +
+          'A5:4 C#6:4 E6:8 | C#6:6 A5:2 F#5:8 | B5:4 D6:4 F#6:8 | F5:8 G#5:4 B5:4',
+      li: 'bell', lv: 0.13,
+      ap: '0.1.2.3.4.3.2.1.', ai: 'pluck', av: 0.03, ao: 54,
+      pd: 'c---------------', pi: 'pad', pv: 0.04, po: 50,
+      bp: 'r---------f-----', bi: 'sub', bv: 0.25,
+      dr: ['k.........k.....', '....r.......r...', 'n.n.n.n.n.n.n.n.', 'd.......d..d....'], dv: 0.33
+    },
+    // Land 7 Hell Station: industrial grind. D minor riff, clanking metal
+    land7: {
+      bpm: 132, bars: 8, rv: 0.2,
+      ch: 'Dm Dm Bb A Dm Dm Eb A',
+      ld: 'D4:2 D4:2 F4:2 D4:1 Eb4:1 .:2 D4:2 A4:2 G#4:2 | D4:2 F4:2 G4:2 A4:2 C5:4 A4:4 | Bb3:2 Bb3:2 D4:2 F4:2 Bb4:4 A4:4 | A3:2 C#4:2 E4:2 G4:2 A4:8 |' +
+          'D5:2 D5:2 F5:2 D5:1 Eb5:1 .:2 D5:2 A5:2 G#5:2 | F5:2 E5:2 D5:2 C5:2 A4:8 | Eb5:2 G5:2 Bb5:2 G5:2 Eb5:4 D5:4 | C#5:4 E5:4 A5:4 G5:4',
+      li: 'gtr', lv: 0.12,
+      ap: 'c-c-..c-c-..c-c.', ai: 'dist', av: 0.045, ao: 38,
+      bp: 'r.r.r.r.r.r.r.r.', bi: 'sawb', bv: 0.24,
+      dr: ['k...k.k.k...k.k.', '....S.......S...', 'a.a...a.a.a...a.', 'h.h.h.h.h.h.h.h.'], dv: 0.47
+    },
+    // Land 8 The Man Base: epic and menacing. C minor, brass over power chords
+    land8: {
+      bpm: 120, bars: 16, rv: 0.3,
+      ch: 'Cm Cm Ab Bb Cm Cm Db G Fm Fm Ab Ab Fm Db G G',
+      ld: 'C5:4 G5:4 Eb5:4 C5:4 | D5:6 Eb5:2 C5:8 | Ab4:4 C5:4 Eb5:6 F5:2 | D5:12 .:4 | G5:4 C6:4 Bb5:4 G5:4 | Ab5:6 G5:2 Eb5:8 | F5:4 Ab5:4 Db6:8 | B5:8 D6:4 F6:4 |' +
+          'C6:6 Ab5:2 F5:8 | Eb6:6 Db6:2 C6:8 | C6:4 Eb6:4 Ab5:8 | G5:12 .:4 | F5:4 Ab5:4 C6:4 F6:4 | F6:6 Eb6:2 Db6:8 | D6:4 B5:4 G5:4 B5:4 | D6:4 F6:4 G6:8',
+      li: 'brass', lv: 0.15, hx: 0.05,
+      ap: 'c--.c--.c-.c-c-.', ai: 'dist', av: 0.045, ao: 48,
+      bp: 'r-r-r-r-r-r-r-r-', bi: 'sawb', bv: 0.24,
+      dr: ['k.......k.k.....', '....S.......S...', 't...........t.t.', 'h.h.h.h.h.h.h.h.', X(8)], dv: 0.47,
+      fill: ['k.......k.k.....', '....S...S.mmttTT', 'h.h.h.h.........'], fe: 8
+    },
+    // Land 9 Sunrise Set: dawn, euphoric trance-house. D major
+    land9: {
+      bpm: 126, bars: 16, rv: 0.3, dl: 0.15, pump: 0.45,
+      ch: 'D A Bm G D A G A Bm G D A Bm G Em A',
+      ld: 'D5:3 F#5:3 A5:2 B5:3 A5:3 F#5:2 | E5:3 A5:3 C#6:2 B5:8 | D6:3 C#6:3 B5:2 F#5:3 A5:3 B5:2 | D6:12 B5:4 |' +
+          'D6:3 F#6:3 E6:2 D6:3 C#6:3 A5:2 | C#6:3 E6:3 A5:2 E6:8 | B5:3 D6:3 G6:2 F#6:3 E6:3 D6:2 | E6:12 C#6:4 |' +
+          'F#6:6 E6:2 D6:8 | D6:6 B5:2 G5:8 | A5:6 D6:2 F#6:8 | E6:6 C#6:2 A5:8 | B5:4 D6:4 F#6:4 D6:4 | G6:6 F#6:2 D6:8 | E6:4 G6:4 B5:4 E6:4 | C#6:4 E6:4 A5:4 E5:4',
+      li: 'ssaw', lv: 0.12, hx: 0.05,
+      bp: '..r-..r-..r-..r-', bi: 'sawb', bv: 0.26,
+      ap: '0213021302130213', ai: 'pulse', av: 0.03, ao: 62,
+      pd: 'c---------------', pi: 'pad', pv: 0.035, po: 50,
+      dr: [FOUR, CLAP, OFFO, H16, X(8)], dv: 0.47,
+      fill: [FOUR, '....c...c.c.cccc', '..o...o...o.....'], fe: 8
+    },
+    // Land 10 World 22: strange, glitchy, literary. 7/8, bit-crushed, typewriter keys and a carriage-return ding
+    land10: {
+      bpm: 240, spb: 2, bpb: 7, bars: 8, rv: 0.2, dl: 0.2, crush: true,
+      ch: 'Em C Am B Em C F B',
+      ld: 'E5:2 G5:2 B5:2 E5:2 F#5:2 G5:4 | E5:2 C5:2 G5:2 E5:2 B5:3 .:3 | A5:2 C6:2 E6:2 A5:2 B5:2 C6:4 | D#6:3 B5:3 F#5:2 A5:6 |' +
+          'G5:2 F#5:2 E5:2 B4:2 E5:2 G5:2 B5:2 | C6:2 B5:2 G5:2 E5:2 C5:6 | F5:2 A5:2 C6:2 F6:2 E6:3 C6:3 | B5:3 F#5:3 D#5:2 B4:6',
+      li: 'crush', lv: 0.11,
+      bp: 'r.r.f.r.o.r.f.', bi: 'pluckb', bv: 0.28,
+      ap: '0.2.1.3.2.1.0.', ai: 'glass', av: 0.03, ao: 64,
+      dr: ['k.....k...k...', 'p.pp.p.ppp.p.p', '....s......s..', '.........z....', dots(27) + 'i'], dv: 0.38
+    },
+    // Haunted camp: theremin over harpsichord, heartbeat and a ticking clock. D minor
+    haunt: {
+      bpm: 88, bars: 8, rv: 0.5, dl: 0.3,
+      ch: 'Dm Dm Gm A7 Dm Bb Edim A7',
+      ld: 'A5:8 G#5:4 A5:4 | F5:6 E5:2 D5:8 | Bb5:8 A5:4 G5:4 | C#6:12 .:4 | D6:6 C#6:2 A5:8 | F6:6 E6:2 D6:8 | G5:4 Bb5:4 C#6:4 E6:4 | E6:8 C#6:4 A5:4',
+      li: 'theremin', lv: 0.13,
+      ap: '0.1.2.1.3.2.1.2.', ai: 'hpsi', av: 0.03, ao: 50,
+      pd: 'c---------------', pi: 'organ', pv: 0.03, po: 50,
+      bp: 'r-------l-------', bi: 'sub', bv: 0.25,
+      dr: ['d.......d.d.....', '....r.......r..r', 'l.l.l.l.l.l.l.l.'], dv: 0.33
+    },
+    // Gift camp: cozy reward room. Music box over Rhodes. F major
+    gift_camp: {
+      bpm: 92, bars: 8, rv: 0.35, dl: 0.15, sw: 0.1,
+      ch: 'F Dm7 Bbmaj7 C F Am7 Bbmaj7,C F',
+      ld: 'A5:4 C6:4 F6:6 E6:2 | D6:4 C6:4 A5:8 | Bb5:4 D6:4 F6:4 A6:4 | G6:12 .:4 | F6:4 C6:4 A5:4 C6:4 | E6:6 C6:2 A5:8 | D6:4 F6:4 E6:4 G6:4 | F6:12 .:4',
+      li: 'mbox', lv: 0.14,
+      ap: 'c---..c-..c-....', ai: 'ep', av: 0.05, ao: 53,
+      bp: 'r-----r-f-------', bi: 'sub', bv: 0.26,
+      dr: ['k.......k.......', '....r.......r...', 'n.n.n.n.n.n.n.n.'], dv: 0.32
+    }
+  });
+
   // ------------------------------------------------------------- compiler --
   const QUAL = {
     '': [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 7, 10], m7: [0, 3, 7, 10], maj7: [0, 4, 7, 11],
@@ -1439,12 +2010,18 @@ const Sound = (() => {
         if (T.hx) { const h = harmBelow(n.m, chordAt[Math.min(n.p, total - 1)]); if (h != null) add(n.p, { c: 'H', m: h + tr, d: n.d, v: 1 }); }
       }
     }
+    // second melody line (counter-melody / a different instrument for another section)
+    if (T.l2) {
+      const L2 = parseLine(T.l2, spBar, warn, name + ' lead2');
+      if (L2.bars !== bars) warn.push(name + ': lead2 has ' + L2.bars + ' bars, expected ' + bars);
+      for (const n of L2.notes) add(n.p, { c: 'M', m: n.m + tr, d: n.d, v: 1 });
+    }
     // bass
     if (T.bp) {
       const bo = T.bo || 36;
       pat(T.bp, total, (s, c, d) => {
         const ch = chordAt[s], r = bo + pcOf(ch.r - bo), lc = c.toLowerCase();
-        const off = { r: 0, f: 7, o: 12, t: ch.iv[1], s: ch.iv[3] != null ? ch.iv[3] : 10, l: -5 }[lc];
+        const off = { r: 0, f: 7, o: 12, t: ch.iv[1], s: ch.iv[3] != null ? ch.iv[3] : 10, l: -5, x: 9 }[lc];
         if (off == null) return;
         add(s, { c: 'B', m: r + off + tr, d, v: c === lc ? 1 : 1.2 });
       });
@@ -1470,7 +2047,7 @@ const Sound = (() => {
       name, ev, total, warn, loop: T.loop !== false, bpm: T.bpm, spb,
       sd: 60 / (T.bpm * spb), dt: Math.min(1.5, (T.dtb || 0.75) * 60 / T.bpm),
       sw: T.sw || 0, sw8: T.sw8 || 0, pump: T.pump || 0, wr: T.wr || 0, kit: T.retro ? 'nes' : '',
-      a2i: T.a2i || 'pluck', a2v: T.a2v || 0.04,
+      a2i: T.a2i || 'pluck', a2v: T.a2v || 0.04, l2i: T.l2i || 'brass', l2v: T.l2v || 0.12, l2g: T.l2g || 0.92,
       li: T.li || 'sq2', lv: T.lv || 0.15, lg: T.lg || 0.92, hi: T.hi || T.li || 'sq2', hv: T.hx || 0,
       bi: T.bi || 'sub', bv: T.bv || 0.28, ai: T.ai || 'pulse', av: T.av || 0.06,
       pi: T.pi || 'pad', pv: T.pv || 0.05, dv: T.dv || 0.5,
@@ -1496,6 +2073,7 @@ const Sound = (() => {
           break;
         case 'L': voice(cfg.li, t, e.m, e.d * sd * cfg.lg, cfg.lv * e.v, mo); break;
         case 'H': voice(cfg.hi, t, e.m, e.d * sd * cfg.lg, cfg.hv * e.v, mo); break;
+        case 'M': voice(cfg.l2i, t, e.m, e.d * sd * cfg.l2g, cfg.l2v * e.v, mo); break;
         case 'B': voice(cfg.bi, t, e.m, e.d * sd * 0.9, cfg.bv * e.v, mo); break;
         case 'A': case 'P': case 'C': {
           const inst = e.c === 'A' ? cfg.ai : e.c === 'P' ? cfg.pi : cfg.a2i;
