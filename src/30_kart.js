@@ -29,7 +29,7 @@ const KART_RACERS = [
   { id: 'chinka', name: 'Chinka', kart: 'Sunset Sweetheart', tag: 'All heart, all speed', color: '#ff8a3a', stats: { speed: 3, accel: 4, handling: 4, weight: 2 } },
   { id: 'slothy', name: 'Slothy', kart: 'Hammock Hauler', tag: 'Slow is a lifestyle', color: '#7ac74f', stats: { speed: 4, accel: 1, handling: 3, weight: 5 } },
   { id: 'toadie', name: 'Toadie', kart: 'Lily Hopper', tag: 'Tiny. Twirly. Quick.', color: '#4adf8a', stats: { speed: 2, accel: 5, handling: 5, weight: 1 } },
-  { id: 'buzzkill', name: 'Lord Buzzkill', kart: 'Bloodsucker X', tag: 'Ruins every party', color: '#ff2a4a', stats: { speed: 5, accel: 2, handling: 2, weight: 4 } },
+  { id: 'theman', name: 'The Man', kart: 'Effigy Express', tag: 'Burns brightest, drives worst', color: '#ff5a2a', stats: { speed: 5, accel: 2, handling: 2, weight: 4 } },
   { id: 'hippie', name: 'Hippie', kart: 'Flower Power Van', tag: 'Peace, love, drift', color: '#ffd84a', stats: { speed: 3, accel: 3, handling: 4, weight: 3 } },
   { id: 'techbro', name: 'Tech Bro', kart: 'Disruptor Pod', tag: 'Moves fast, breaks things', color: '#38f2ff', stats: { speed: 4, accel: 5, handling: 2, weight: 2 } },
   { id: 'dpw', name: 'DPW', kart: 'Dust Hauler', tag: 'Built the road. Owns it.', color: '#ff9a3a', stats: { speed: 4, accel: 2, handling: 2, weight: 5 } }
@@ -56,7 +56,9 @@ const KART_CELL = 128;         // atlas cell size for AI karts
 const KART_HI = 320;           // hi-res cell size for the player's kart
 const KART_PXM = 42;           // sprite pixels per metre at KART_CELL
 
-function kartRacer(id) { return KART_RACERS.find(r => r.id === id) || KART_RACERS[0]; }
+// racers with an extra sprite pose: The Man throws his arms up when he grabs a gift box
+const KART_POSES = { theman: ['up'] };
+function kartRacer(id) { if (id === 'buzzkill') id = 'theman'; return KART_RACERS.find(r => r.id === id) || KART_RACERS[0]; }
 function kartSave() {
   const d = Save.data;
   if (!d.kart || typeof d.kart !== 'object') d.kart = {};
@@ -64,7 +66,8 @@ function kartSave() {
   if (!k.trophies) k.trophies = {};
   if (!k.best) k.best = {};
   if (k.autoGas === undefined) k.autoGas = true;
-  if (!k.racer) k.racer = 'brady';
+  if (k.racer === 'buzzkill') k.racer = 'theman';   // the villain changed: Lord Buzzkill -> The Man
+  if (!k.racer || !KART_RACERS.some(r => r.id === k.racer)) k.racer = 'brady';
   return k;
 }
 function kartFmtTime(t) {
@@ -1280,57 +1283,46 @@ const KART_DRIVERS = {
       }
     });
   },
-  buzzkill() {
-    const A = KartProj, body = '#24202a', red = '#e0283c';
-    const head = kartRig({
-      shirt: body, skin: '#2e2a34', sleeve: body, fore: '#2e2a34', hand: '#3a3440', tw: 0.2, td: 0.14, th: 0.5, armR: 0.04, headR: 0.26,
-      torso: { neck: '#18151c', front: ctx => { ctx.fillStyle = red; for (let i = 0; i < 3; i++) ctx.fillRect(-0.2, -0.16 + i * 0.13, 0.4, 0.045); }, back: ctx => { ctx.fillStyle = red; for (let i = 0; i < 3; i++) ctx.fillRect(-0.2, -0.16 + i * 0.13, 0.4, 0.045); } }
-    });
-    // wings behind the shoulders
-    for (const s of [-1, 1]) {
-      const root = [s * 0.08, 0.86, -0.42], tip = [s * 0.55, 1.15, -0.78];
-      A.add(A.P(lerp(root[0], tip[0], 0.5), lerp(root[1], tip[1], 0.5), lerp(root[2], tip[2], 0.5))[2], ctx => {
-        const pts = []; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, u = (Math.cos(a) + 1) / 2, v = Math.sin(a) * 0.16; pts.push(A.P(lerp(root[0], tip[0], u), lerp(root[1], tip[1], u) + v, lerp(root[2], tip[2], u) - v * 0.3)); }
-        KartProj.pathPts(ctx, pts); ctx.fillStyle = 'rgba(210,230,255,0.38)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = A.lw(0.015); ctx.stroke();
-        ctx.strokeStyle = 'rgba(224,40,60,0.6)'; ctx.beginPath(); const a = A.P(root[0], root[1], root[2]), b = A.P(tip[0], tip[1], tip[2]); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
-      });
+  theman(look, pose) {
+    // a tall wooden lattice stick figure with a glowing diamond head and a neon outline
+    const A = KartProj, wood = '#c8935a', ink = 'rgba(58,30,10,0.85)', neon = '#ff6a2a', gold = '#ffd27a';
+    const up = pose === 'up', z0 = -0.26;
+    const neonGlow = (ctx, pa, pb) => { ctx.lineCap = 'round'; ctx.shadowColor = neon; ctx.shadowBlur = A.SC * 0.25; ctx.strokeStyle = neon; ctx.lineWidth = A.lw(0.05); ctx.beginPath(); ctx.moveTo(pa[0], pa[1]); ctx.lineTo(pb[0], pb[1]); ctx.stroke(); ctx.strokeStyle = '#ffe2b0'; ctx.lineWidth = A.lw(0.018); ctx.stroke(); };
+    const tube = (ctx, pa, pb) => { ctx.strokeStyle = '#ffb27a'; ctx.lineWidth = A.lw(0.016); ctx.beginPath(); ctx.moveTo(pa[0], pa[1]); ctx.lineTo(pb[0], pb[1]); ctx.stroke(); };
+    const beam = (p, q, r, lit) => A.limb(p, q, r || 0.032, wood, { line: ink, after: lit ? tube : null, glow: lit ? neonGlow : null });
+    // two parallel thin beams with ties and a zig-zag brace: reads as a wooden lattice
+    const truss = (p, q, w, n, lit) => {
+      const dx = q[0] - p[0], dy = q[1] - p[1], l = Math.hypot(dx, dy) || 1, ox = -dy / l * w / 2, oy = dx / l * w / 2;
+      const P = (t, s2) => [lerp(p[0], q[0], t) + ox * s2, lerp(p[1], q[1], t) + oy * s2, lerp(p[2], q[2], t)];
+      beam(P(0, -1), P(1, -1), 0.026, lit); beam(P(0, 1), P(1, 1), 0.026, false);
+      for (let i = 0; i <= n; i++) beam(P(i / n, -1), P(i / n, 1), 0.016);
+      for (let i = 0; i < n; i++) beam(P(i / n, i % 2 ? 1 : -1), P((i + 1) / n, i % 2 ? -1 : 1), 0.014);
+    };
+    // seated legs (mostly hidden by the plinth)
+    for (const sg of [-1, 1]) { truss([sg * 0.13, 0.52, z0], [sg * 0.16, 0.64, 0.12], 0.07, 2, true); beam([sg * 0.16, 0.64, 0.12], [sg * 0.15, 0.42, 0.3], 0.026); }
+    // torso: tapered truss from hips to shoulders
+    const hipY = 0.52, midY = 0.95, shY = 1.38;
+    for (const sg of [-1, 1]) { beam([sg * 0.13, hipY, z0], [sg * 0.18, midY, z0], 0.035, true); beam([sg * 0.18, midY, z0], [sg * 0.22, shY, z0], 0.035, true); }
+    beam([-0.15, hipY, z0], [0.15, hipY, z0], 0.024); beam([-0.19, midY, z0], [0.19, midY, z0], 0.022); beam([-0.35, shY, z0], [0.35, shY, z0], 0.03, true);
+    beam([-0.13, hipY, z0], [0.18, midY, z0], 0.016); beam([0.13, hipY, z0], [-0.18, midY, z0], 0.016);
+    beam([-0.18, midY, z0], [0.22, shY, z0], 0.016); beam([0.18, midY, z0], [-0.22, shY, z0], 0.016);
+    // arms: hands on the wheel, or flung up in triumph
+    for (const sg of [-1, 1]) {
+      const S = [sg * 0.33, shY - 0.02, z0];
+      if (up) { const E = [sg * 0.52, 1.6, z0 - 0.02], H = [sg * 0.67, 1.9, z0 - 0.04]; truss(S, E, 0.075, 2, true); truss(E, H, 0.065, 2, true); for (const f of [-0.35, 0, 0.35]) beam(H, [H[0] + sg * 0.05 + f * 0.06, H[1] + 0.07, H[2]], 0.014); }
+      else { const E = [sg * 0.4, 1.04, -0.02], H = [sg * 0.14, 0.88, 0.24]; truss(S, E, 0.065, 2, true); beam(E, H, 0.03, true); }
     }
-    const r = 0.26;
-    const parts = [];
-    for (const s of [-1, 1]) {
-      const ep = [head[0] + s * r * 0.62, head[1] + r * 0.1, head[2] + r * 0.62];
-      parts.push({ p: ep, f: ctx => {
-        const q = A.P(ep[0], ep[1], ep[2]), R = r * 0.58 * A.SC;
-        const gg = ctx.createRadialGradient(q[0] - R * 0.3, q[1] - R * 0.35, R * 0.1, q[0], q[1], R);
-        gg.addColorStop(0, '#ff8a8a'); gg.addColorStop(0.5, '#e01a2a'); gg.addColorStop(1, '#6a0612');
-        ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(q[0], q[1], R, 0, TAU); ctx.fill();
-        ctx.fillStyle = 'rgba(40,0,0,0.35)'; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; ctx.beginPath(); ctx.arc(q[0] + Math.cos(a) * R * 0.5, q[1] + Math.sin(a) * R * 0.5, R * 0.1, 0, TAU); ctx.fill(); }
-        ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(q[0] - R * 0.35, q[1] - R * 0.35, R * 0.18, 0, TAU); ctx.fill();
-      } });
-    }
-    // proboscis
-    const pr0 = [head[0], head[1] - r * 0.25, head[2] + r * 0.85], pr1 = [head[0], head[1] - r * 1.6, head[2] + r * 3.0];
-    parts.push({ p: [(pr0[0] + pr1[0]) / 2, (pr0[1] + pr1[1]) / 2, (pr0[2] + pr1[2]) / 2], f: ctx => {
-      const a = A.P(pr0[0], pr0[1], pr0[2]), b = A.P(pr1[0], pr1[1], pr1[2]);
-      ctx.lineCap = 'round'; ctx.strokeStyle = '#0c0a10'; ctx.lineWidth = A.lw(0.05); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
-      ctx.strokeStyle = '#5a5060'; ctx.lineWidth = A.lw(0.018); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
-    } });
-    // antennae + tiny crown
-    for (const s of [-1, 1]) {
-      const a0 = [head[0] + s * r * 0.3, head[1] + r * 0.8, head[2] + r * 0.4], a1 = [head[0] + s * r * 1.1, head[1] + r * 2.0, head[2] + r * 0.9];
-      parts.push({ p: a1, f: ctx => { const a = A.P(a0[0], a0[1], a0[2]), b = A.P(a1[0], a1[1], a1[2]); ctx.strokeStyle = '#141018'; ctx.lineWidth = A.lw(0.02); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(a[0] + (b[0] - a[0]) * 0.2, b[1], b[0], b[1]); ctx.stroke(); for (let i = 1; i < 5; i++) { const t = i / 5, x = lerp(a[0], b[0], t), y = lerp(a[1], b[1], t * t); ctx.beginPath(); ctx.moveTo(x - 2, y - 1); ctx.lineTo(x + 2, y + 1); ctx.stroke(); } } });
-    }
-    const cp = [head[0], head[1] + r * 1.02, head[2]];
-    parts.push({ p: cp, bias: 0.3, f: ctx => {
-      const q = A.P(cp[0], cp[1], cp[2]), w = r * 0.62 * A.SC, h = r * 0.5 * A.SC;
-      ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.moveTo(q[0] - w, q[1]); ctx.lineTo(q[0] - w, q[1] - h); ctx.lineTo(q[0] - w * 0.5, q[1] - h * 0.5); ctx.lineTo(q[0], q[1] - h * 1.2); ctx.lineTo(q[0] + w * 0.5, q[1] - h * 0.5); ctx.lineTo(q[0] + w, q[1] - h); ctx.lineTo(q[0] + w, q[1]); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = '#a0701a'; ctx.lineWidth = A.lw(0.015); ctx.stroke(); ctx.fillStyle = '#e0283c'; ctx.beginPath(); ctx.arc(q[0], q[1] - h * 0.35, w * 0.18, 0, TAU); ctx.fill();
-    } });
-    kartHead(head, r, {
-      base: '#2a2630', parts,
-      features: (ctx, c, rr) => { A.sdecal(ctx, c, rr, 0, 0.45, k => { KartFace.brow(k, -0.3, 0, 0.4, 0.4, '#e0283c', 0.1); KartFace.brow(k, 0.3, 0, 0.4, -0.4, '#e0283c', 0.1); }); },
-      glow: (ctx, c, rr) => { for (const s of [-1, 1]) { const q = A.P(c[0] + s * rr * 0.62, c[1] + rr * 0.1, c[2] + rr * 0.62); if (A.facing(s * 0.6, 0.1, 0.8) > -0.3) { ctx.fillStyle = 'rgba(255,40,60,0.9)'; ctx.shadowColor = '#ff2a3a'; ctx.shadowBlur = 6; ctx.beginPath(); ctx.arc(q[0], q[1], rr * 0.35 * A.SC, 0, TAU); ctx.fill(); } } }
-    });
+    // steering wheel on a column
+    const wz = 0.28, wy = 0.84, tilt = 0.85;
+    A.ring([0, wy, wz], [1, 0, 0], [0, Math.cos(tilt), Math.sin(tilt)], 0.15, '#3a2a1e', 0.035, {});
+    A.limb([0, wy - 0.02, wz + 0.02], [0, 0.46, wz + 0.28], 0.025, '#4a3428', {});
+    // neck + glowing diamond head
+    beam([0, shY, z0], [0, 1.46, z0], 0.028);
+    const C = [0, 1.72, z0], T = [0, 1.98, z0], Bm = [0, 1.45, z0], F = [0, 1.72, z0 + 0.13], K = [0, 1.72, z0 - 0.13], L = [-0.17, 1.72, z0], R = [0.17, 1.72, z0];
+    const faces = [[T, F, R], [T, R, K], [T, K, L], [T, L, F], [Bm, R, F], [Bm, K, R], [Bm, L, K], [Bm, F, L]];
+    for (const f of faces) A.poly(f, gold, { c: C, amt: 0.55, line: 'rgba(150,70,10,0.8)', lw: 0.02,
+      glow: (ctx, pr) => { KartProj.pathPts(ctx, pr); ctx.shadowColor = '#ffb84a'; ctx.shadowBlur = A.SC * 0.45; ctx.fillStyle = '#ffe9a8'; ctx.fill(); } });
+    A.at(C[0], C[1], C[2], (ctx, x, y, Sc) => { const g = ctx.createRadialGradient(x, y, 0, x, y, Sc * 0.14); g.addColorStop(0, 'rgba(255,255,235,0.9)'); g.addColorStop(1, 'rgba(255,220,140,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, Sc * 0.14, 0, TAU); ctx.fill(); }, null, 0.3);
   },
   hippie() {
     const A = KartProj, skin = '#e0a882', hair = '#6a4a2a', hairHi = '#9a7448';
@@ -1556,22 +1548,33 @@ const KART_BODIES = {
     // lotus flower
     A.at(-0.52, 0.42, -0.42, (ctx, x, y, S) => { for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * 0.42; ctx.fillStyle = i % 2 ? '#ffb0dc' : '#ff7ac0'; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * S * 0.08, y + Math.sin(a) * S * 0.08, S * 0.1, S * 0.045, a, 0, TAU); ctx.fill(); } ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(x, y, S * 0.04, 0, TAU); ctx.fill(); }, kartGlowDot('#ff7ac0', 0.1), 0.05);
   },
-  buzzkill() {
-    const A = KartProj, blk = '#1c1a22', red = '#d82038', metal = '#3a3644';
-    kartUnderglow('#ff2a3a', 0.8, 1.15, 0.02);
-    for (const s of [-1, 1]) for (const z of [-0.62, 0.6]) {
-      A.at(s * 0.55, 0.12, z, (ctx, x, y, S) => { ctx.fillStyle = metal; ctx.beginPath(); ctx.ellipse(x, y, S * 0.22, S * 0.22 * Math.sin(A.phi) + S * 0.04, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#ff3a4a'; ctx.lineWidth = Math.max(1, S * 0.03); ctx.stroke(); },
-        (ctx, x, y, S) => { ctx.fillStyle = '#ff2a3a'; ctx.shadowColor = '#ff2a3a'; ctx.shadowBlur = S * 0.3; ctx.beginPath(); ctx.ellipse(x, y + S * 0.03, S * 0.2, S * 0.08, 0, 0, TAU); ctx.fill(); });
+  theman() {
+    // Effigy Express: a rolling two-tier wooden plinth with neon trim and twin flame jets
+    const A = KartProj, wood = '#a8723e', woodL = '#d6a466', neon = '#ff6a2a', amber = '#ffc24a';
+    kartUnderglow('#ff5a1a', 0.85, 1.25);
+    kartWheels4({ rx: 0.67, rr: 0.31, rz: -0.6, rw: 0.27, fx: 0.63, fr: 0.27, fz: 0.66, fw: 0.22, hub: '#c08a4e', tyre: '#2a1e16' });
+    const planks = ctx => { ctx.strokeStyle = 'rgba(70,38,12,0.55)'; ctx.lineWidth = 0.03; for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(0, i / 4); ctx.lineTo(1, i / 4); ctx.stroke(); } ctx.fillStyle = 'rgba(70,38,12,0.35)'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(0.1 + i * 0.2, 0.5, 0.025, 0, TAU); ctx.fill(); } };
+    const deck = ctx => { ctx.strokeStyle = 'rgba(80,44,14,0.5)'; ctx.lineWidth = 0.02; for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.moveTo(i / 6, 0); ctx.lineTo(i / 6, 1); ctx.stroke(); } };
+    const emblem = ctx => { ctx.fillStyle = '#3a200c'; ctx.fillRect(0.3, 0.1, 0.4, 0.8); ctx.fillStyle = amber; ctx.beginPath(); ctx.moveTo(0.5, 0.18); ctx.lineTo(0.64, 0.5); ctx.lineTo(0.5, 0.82); ctx.lineTo(0.36, 0.5); ctx.closePath(); ctx.fill(); };
+    A.frustum(-1.02, 1.02, [-0.62, 0.62, 0.15, 0.34], [-0.56, 0.56, 0.15, 0.3], wood, { top: woodL, decalR: planks, decalL: planks, decalBack: planks, decalFront: emblem, decalTop: deck });
+    A.frustum(-0.78, 0.42, [-0.44, 0.44, 0.33, 0.48], [-0.4, 0.4, 0.33, 0.45], wood, { top: woodL, decalR: planks, decalL: planks, decalBack: planks, decalTop: deck });
+    // neon trim along both tiers
+    kartNeon([[-0.62, 0.35, -1.02], [-0.56, 0.31, 1.02], [0.56, 0.31, 1.02], [0.62, 0.35, -1.02], [-0.62, 0.35, -1.02]], neon, 0.03, 0.01);
+    kartNeon([[-0.44, 0.49, -0.78], [-0.4, 0.46, 0.42], [0.4, 0.46, 0.42], [0.44, 0.49, -0.78], [-0.44, 0.49, -0.78]], amber, 0.025, 0.02);
+    for (const sg of [-1, 1]) A.at(sg * 0.3, 0.27, 1.03, kartDot('#fff0c8', 0.045), kartGlowDot('#ffd88a', 0.06), 0.01);
+    // twin flame jets at the back
+    for (const sg of [-1, 1]) {
+      const n0 = [sg * 0.3, 0.42, -1.02], n1 = [sg * 0.3, 0.46, -1.5];
+      A.at(n0[0], n0[1], n0[2], (ctx, x, y, S) => { ctx.fillStyle = '#4a4040'; ctx.beginPath(); ctx.arc(x, y, S * 0.085, 0, TAU); ctx.fill(); ctx.strokeStyle = '#9a8a80'; ctx.lineWidth = Math.max(1, S * 0.02); ctx.stroke(); ctx.fillStyle = '#ff9a3a'; ctx.beginPath(); ctx.arc(x, y, S * 0.045, 0, TAU); ctx.fill(); },
+        (ctx) => {
+          const a = A.P(n0[0], n0[1], n0[2]), b = A.P(n1[0], n1[1], n1[2]), S = A.SC, dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy), w = S * 0.09;
+          ctx.shadowColor = '#ff6a1a'; ctx.shadowBlur = S * 0.3;
+          if (l < w) { ctx.fillStyle = '#ffb04a'; ctx.beginPath(); ctx.arc(a[0], a[1], w * 1.1, 0, TAU); ctx.fill(); return; }
+          const ux = dx / l, uy = dy / l;
+          ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.moveTo(a[0] - uy * w, a[1] + ux * w); ctx.quadraticCurveTo(b[0] - uy * w * 0.4, b[1] + ux * w * 0.4, b[0], b[1]); ctx.quadraticCurveTo(b[0] + uy * w * 0.4, b[1] - ux * w * 0.4, a[0] + uy * w, a[1] - ux * w); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#fff2b0'; ctx.beginPath(); ctx.arc(a[0], a[1], w * 0.6, 0, TAU); ctx.fill();
+        }, -0.02);
     }
-    const stripe = ctx => { ctx.fillStyle = red; ctx.beginPath(); ctx.moveTo(0, 0.3); ctx.lineTo(1, 0.15); ctx.lineTo(1, 0.4); ctx.lineTo(0, 0.55); ctx.fill(); };
-    A.frustum(-0.98, 0.42, [-0.58, 0.58, 0.2, 0.56], [-0.46, 0.46, 0.2, 0.46], blk, { decalR: stripe, decalL: stripe, decalTop: ctx => { ctx.fillStyle = red; ctx.fillRect(0.45, 0, 0.1, 1); }, decalBack: ctx => { ctx.fillStyle = '#2a0a10'; ctx.beginPath(); ctx.arc(0.5, 0.5, 0.3, 0, TAU); ctx.fill(); ctx.strokeStyle = red; ctx.lineWidth = 0.06; ctx.stroke(); } });
-    A.frustum(0.42, 1.3, [-0.46, 0.46, 0.2, 0.46], [-0.04, 0.04, 0.27, 0.31], blk, { decalTop: ctx => { ctx.fillStyle = red; ctx.fillRect(0.42, 0, 0.16, 1); } });
-    A.box(0, 0.5, -0.2, 0.7, 0.04, 0.6, '#0c0a10', {});
-    for (const s of [-1, 1]) {
-      A.poly([[s * 0.58, 0.5, -0.92], [s * 0.86, 0.95, -1.1], [s * 0.58, 0.54, -0.4]], red, { both: true });
-      A.poly([[s * 0.46, 0.4, 0.4], [s * 0.82, 0.3, 0.2], [s * 0.58, 0.42, -0.1]], red, { both: true });
-    }
-    A.at(0, 0.38, -1.0, (ctx, x, y, S) => { ctx.fillStyle = '#ff6a7a'; ctx.beginPath(); ctx.arc(x, y, S * 0.12, 0, TAU); ctx.fill(); }, kartGlowDot('#ff2a3a', 0.2), 0.03);
   },
   hippie() {
     const A = KartProj, teal = '#38b8a8', cream = '#f6ecd2', org = '#ff8a3a';
@@ -1644,13 +1647,13 @@ const KartArt = {
     return c;
   },
   // render one kart view into canvases (base, glow) of size px
-  renderKart(id, dir, size, phi) {
+  renderKart(id, dir, size, phi, pose) {
     const base = this.scratch('kb' + size, size, size), glow = this.scratch('kg' + size, size, size);
     const theta = dir / KART_DIRS * TAU;
     KartProj.view(theta, phi, size / KART_CELL * KART_PXM, size / 2, size * 0.7);
     KartProj.clear();
     KART_BODIES[id]();
-    KART_DRIVERS[id](Save.data ? Save.data.look : null);
+    KART_DRIVERS[id](Save.data ? Save.data.look : null, pose);
     KartProj.flush(base.getContext('2d'), glow.getContext('2d'));
     return { base, glow };
   },
@@ -1661,28 +1664,30 @@ const KartArt = {
     for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; dst.drawImage(s, x + Math.cos(a) * w, y + Math.sin(a) * w); }
     dst.drawImage(src, x, y);
   },
-  kartJob(id, dir) {
+  kartJob(id, dir, pose) {
+    const key = pose ? id + '_' + pose : id;
     return () => {
-      const A = this.atlas, r = this.renderKart(id, dir, KART_CELL, 0.3);
-      const reg = A.alloc('k_' + id + '_' + dir, KART_CELL, KART_CELL, 1);
+      const A = this.atlas, r = this.renderKart(id, dir, KART_CELL, 0.3, pose);
+      const reg = A.alloc('k_' + key + '_' + dir, KART_CELL, KART_CELL, 1);
       this.outlined(A.c.getContext('2d'), reg.x, reg.y, r.base, 1.1, 'rgba(24,14,34,0.85)');
       // keep the glow layer until the glow pass packs it
       this._glows = this._glows || {};
       const g = makeCanvas(KART_CELL / 2, KART_CELL / 2); g.getContext('2d').drawImage(r.glow, 0, 0, KART_CELL / 2, KART_CELL / 2);
-      this._glows[id + '_' + dir] = g;
+      this._glows[key + '_' + dir] = g;
     };
   },
-  glowJob(id, dir) {
+  glowJob(id, dir, pose) {
+    const key = pose ? id + '_' + pose : id;
     return () => {
-      const A = this.atlas, g = this._glows && this._glows[id + '_' + dir];
-      const reg = A.alloc('g_' + id + '_' + dir, KART_CELL / 2, KART_CELL / 2, 1);
-      if (g) { A.c.getContext('2d').drawImage(g, reg.x, reg.y); delete this._glows[id + '_' + dir]; }
+      const A = this.atlas, g = this._glows && this._glows[key + '_' + dir];
+      const reg = A.alloc('g_' + key + '_' + dir, KART_CELL / 2, KART_CELL / 2, 1);
+      if (g) { A.c.getContext('2d').drawImage(g, reg.x, reg.y); delete this._glows[key + '_' + dir]; }
     };
   },
-  hiJob(id, dir) {
+  hiJob(id, dir, pose) {
     return () => {
-      const H = this.hi, r = this.renderKart(id, dir, KART_HI, 0.36);
-      const reg = H.alloc('h_' + dir, KART_HI, KART_HI, 2);
+      const H = this.hi, r = this.renderKart(id, dir, KART_HI, 0.36, pose);
+      const reg = H.alloc('h_' + (pose ? pose + '_' : '') + dir, KART_HI, KART_HI, 2);
       this.outlined(H.c.getContext('2d'), reg.x, reg.y, r.base, 2, 'rgba(24,14,34,0.85)');
     };
   },
@@ -1693,26 +1698,29 @@ const KartArt = {
       if (this.glTex) { KartGL.del([this.glTex]); this.glTex = null; }
       this.atlas = new KartAtlas(2048, 4096); this.atlasLook = lk; this.glTexGen = -1; this.faces = {};
       this.queue = [];
-      for (const r of KART_RACERS) for (let d = 0; d < KART_DIRS; d++) this.queue.push(this.kartJob(r.id, d));
+      const each = fn => { for (const r of KART_RACERS) { for (let d = 0; d < KART_DIRS; d++) fn(r.id, d, ''); for (const pose of KART_POSES[r.id] || []) for (let d = 0; d < KART_DIRS; d++) fn(r.id, d, pose); } };
+      each((id, d, pose) => this.queue.push(this.kartJob(id, d, pose)));
       this.queue.push(() => { const A = this.atlas; A.x = 0; A.y += A.row; A.row = 0; });
-      for (const r of KART_RACERS) for (let d = 0; d < KART_DIRS; d++) this.queue.push(this.glowJob(r.id, d));
+      each((id, d, pose) => this.queue.push(this.glowJob(id, d, pose)));
       this.queue.push(() => { const A = this.atlas; A.x = 0; A.y += A.row; A.row = 0; KartProps.paintAll(A); });
     }
     const out = [];
     for (let i = 0; i < this.queue.length; i++) out.push(() => { const j = this.queue.shift(); if (j) j(); });
     if (hiId && this.hiKey !== hiId + lk) {
       this.hiKey = hiId + lk;
-      this.hiQueue = [() => { if (this.glHiTex) { KartGL.del([this.glHiTex]); this.glHiTex = null; } this.hi = new KartAtlas(2048, 1024); this.glHiGen = -1; }];
+      const poses = KART_POSES[hiId] || [];
+      this.hiQueue = [() => { if (this.glHiTex) { KartGL.del([this.glHiTex]); this.glHiTex = null; } this.hi = new KartAtlas(2048, poses.length ? 2048 : 1024); this.glHiGen = -1; }];
       for (let d = 0; d < KART_DIRS; d++) this.hiQueue.push(this.hiJob(hiId, d));
+      for (const pose of poses) for (let d = 0; d < KART_DIRS; d++) this.hiQueue.push(this.hiJob(hiId, d, pose));
     }
     if (this.hiQueue) for (let i = 0; i < this.hiQueue.length; i++) out.push(() => { const j = this.hiQueue.shift(); if (j) j(); });
     return out;
   },
   ready() { return this.atlas && this.queue && this.queue.length === 0; },
   reg(name) { return this.atlas && this.atlas.map[name]; },
-  kart(id, dir) { return this.atlas.map['k_' + id + '_' + dir]; },
-  kartGlow(id, dir) { return this.atlas.map['g_' + id + '_' + dir]; },
-  hiKart(dir) { return this.hi && this.hi.map['h_' + dir]; },
+  kart(id, dir, pose) { const m = this.atlas.map; return (pose && m['k_' + id + '_' + pose + '_' + dir]) || m['k_' + id + '_' + dir]; },
+  kartGlow(id, dir, pose) { const m = this.atlas.map; return (pose && m['g_' + id + '_' + pose + '_' + dir]) || m['g_' + id + '_' + dir]; },
+  hiKart(dir, pose) { if (!this.hi) return null; const m = this.hi.map; return (pose && m['h_' + pose + '_' + dir]) || m['h_' + dir]; },
   glAtlas() {
     if (this.glTex && this.glTexGen === KartGL.gen) return this.glTex;
     this.glTex = KartGL.texture(this.atlas.c, { mips: true, premult: true });
@@ -1803,7 +1811,7 @@ class KartRaceScene {
     this.raceIdx = opts.race || 0;
     this.trackId = opts.track || (this.mode === 'gp' ? this.cup.tracks[this.raceIdx] : 'esplanade');
     if (!KART_TRACKS[this.trackId]) this.trackId = 'esplanade';
-    this.racerId = opts.racer || ks.racer;
+    this.racerId = kartRacer(opts.racer || ks.racer).id;   // also maps the retired 'buzzkill' id to 'theman'
     this.autoGas = opts.autoGas !== undefined ? !!opts.autoGas : ks.autoGas !== false;
     this.gp = opts.gp || { points: {}, results: [] };
     this.gpSnap = JSON.stringify(this.gp);
@@ -1979,7 +1987,7 @@ class KartRaceScene {
   }
   stepKart(k, dt, racing) {
     const T = this.T, R = this.R, inp = k.inp;
-    for (const key of ['boostT', 'slowT', 'dustSlow', 'discoT', 'immuneT', 'waterT', 'swarmT', 'hopCool', 'padCool', 'bumpT', 'itemCool', 'landT']) if (k[key] > 0) k[key] = Math.max(0, k[key] - dt);
+    for (const key of ['boostT', 'slowT', 'dustSlow', 'discoT', 'immuneT', 'waterT', 'swarmT', 'hopCool', 'padCool', 'bumpT', 'itemCool', 'landT', 'cheerT']) if (k[key] > 0) k[key] = Math.max(0, k[key] - dt);
     if (k.spinT > 0) { k.spinT = Math.max(0, k.spinT - dt); k.spinA += dt * 13 * Math.min(1, k.spinT + 0.3); if (k.spinT === 0) k.spinA = 0; }
     // roulette
     if (k.roul > 0) {
@@ -2134,7 +2142,7 @@ class KartRaceScene {
       if (dx * dx + dz * dz < 3.2 && k.y < 2.2) {
         g.alive = 0; g.t = 2.6;
         this.confetti(g.x, 1.0, g.z, 18);
-        if (!k.item && k.roul <= 0) { k.roul = k.player ? 1.7 : 0.9; k.roulItem = kartRollItem(k.rank, this.karts.length, this.rng); }
+        if (!k.item && k.roul <= 0) { k.roul = k.player ? 1.7 : 0.9; k.roulItem = kartRollItem(k.rank, this.karts.length, this.rng); k.cheerT = k.roul + 1.4; }
       }
     }
     // laps
@@ -2323,6 +2331,11 @@ class KartRaceScene {
           this.parts.spawn({ x: k.x - fx * 0.85 + rx * s * 0.62, y: 0.15, z: k.z - fz * 0.85 + rz * s * 0.62, vx: -fx * 3 + (rng() - 0.5) * 4 + rx * s * 2, vy: 1.5 + rng() * 3, vz: -fz * 3 + (rng() - 0.5) * 4 + rz * s * 2, life: 0.22 + rng() * 0.15, s0: tier ? 0.2 : 0.12, s1: 0.04, r: c[0], g: c[1], b: c[2], add: true, reg: 'glowball0_0', grav: 18 });
         }
       }
+    }
+    // The Man's twin flame jets
+    if (k.id === 'theman' && sp > 2 && rng() < dt * 34) {
+      const sg = rng() < 0.5 ? -1 : 1;
+      this.parts.spawn({ x: k.x - fx * 1.08 + rx * sg * 0.3, y: k.y + 0.44, z: k.z - fz * 1.08 + rz * sg * 0.3, vx: k.vx * 0.5 - fx * 3, vy: 0.6, vz: k.vz * 0.5 - fz * 3, life: 0.22, s0: 0.55, s1: 0.15, r: 1, g: 0.55 + rng() * 0.3, b: 0.2, add: true, reg: 'flame0_0' });
     }
     // boost flames + glow trail
     if (k.boostT > 0 && rng() < dt * 50) {
@@ -2763,10 +2776,11 @@ Object.assign(KartRaceScene.prototype, {
     const f = dx * fx + dz * fz, r = dx * -fz + dz * fx;
     const th = Math.atan2(r, -f);
     const dir = ((Math.round(th / (TAU / KART_DIRS)) % KART_DIRS) + KART_DIRS) % KART_DIRS;
-    const hi = k.player && A.hiKart(dir);
-    const reg = hi || A.kart(k.id, dir);
+    const pose = k.cheerT > 0 && KART_POSES[k.id] ? KART_POSES[k.id][0] : '';
+    const hi = k.player && A.hiKart(dir, pose);
+    const reg = hi || A.kart(k.id, dir, pose);
     const size = KART_CELL / KART_PXM;
-    const bob = (k.air ? 0 : Math.sin(t * 26 + k.slot) * 0.018 * Math.min(1, k.speed / 8)) + (k.id === 'buzzkill' ? 0.12 + Math.sin(t * 4 + k.slot) * 0.06 : 0) - (k.landT > 0 ? k.landT * 0.4 : 0);
+    const bob = (k.air ? 0 : Math.sin(t * 26 + k.slot) * 0.018 * Math.min(1, k.speed / 8)) + 0 - (k.landT > 0 ? k.landT * 0.4 : 0);
     const roll = -k.steer * 0.05 * Math.min(1, k.speed / 10) + (k.drift ? -k.drift * 0.04 : 0);
     this.lightAt(k.x, k.z, L);
     const lift = k.player ? 0.82 : 0.7;
@@ -2775,7 +2789,7 @@ Object.assign(KartRaceScene.prototype, {
     if (k.immuneT > 0 && k.spinT <= 0 && Math.floor(t * 16) % 2) ca = 0.55;
     const y = k.y + bob;
     bt.bb(k.x, y, k.z, size, size, reg, 0.5, 0.7, cr, cg, cb, ca, hi ? 1 : 0, roll);
-    const g = A.kartGlow(k.id, dir);
+    const g = A.kartGlow(k.id, dir, pose);
     if (g && glowK > 0.1) { const gi = glowK * (k.player ? 0.6 : 0.9); bt.bb(k.x, y, k.z, size, size, g, 0.5, 0.7, gi, gi, gi, -1, 0, roll, 0.02); }
     // shadow
     const sh = shadowA * 1.2 * clamp(1 - k.y / 6, 0.2, 1);
@@ -3329,6 +3343,7 @@ Object.assign(KartArt, {
     return (this.faces[key] = c);
   },
   face(ctx, id, cx, cy, s) {
+    if (KartPortraits.has(id)) { KartPortraits.draw(ctx, id, cx, cy, s * 1.1, performance.now() / 1000); return; }
     if (typeof CharArt !== 'undefined' && CharArt && CharArt.drawPortrait) { try { CharArt.drawPortrait(ctx, id, cx, cy, s, performance.now() / 1000); return; } catch (e) { /* fall back */ } }
     const r = kartRacer(id);
     ctx.save();
@@ -3340,6 +3355,67 @@ Object.assign(KartArt, {
     ctx.restore();
   }
 });
+
+// portraits for racers that the shared CharArt doesn't draw (The Man)
+const KartPortraits = {
+  cache: {},
+  has(id) { return id === 'theman'; },
+  // full figure fitted in a size x size box centred on (x, y)
+  draw(ctx, id, x, y, size, t) {
+    const px = Math.max(24, Math.round(size * Math.max(1, Game.dpr))), key = id + px;
+    let c = this.cache[key];
+    if (!c) { c = this.cache[key] = makeCanvas(px, px); const g = c.getContext('2d'); g.scale(px / 100, px / 100); kartPaintManPortrait(g); }
+    ctx.save();
+    const s = size / 100, ox = x - size / 2, oy = y - size / 2, pulse = 0.7 + 0.3 * Math.sin(t * 3.1);
+    const hg = ctx.createRadialGradient(ox + 50 * s, oy + 20 * s, 0, ox + 50 * s, oy + 20 * s, 34 * s);
+    hg.addColorStop(0, `rgba(255,200,110,${0.55 * pulse})`); hg.addColorStop(1, 'rgba(255,90,30,0)');
+    ctx.fillStyle = hg; ctx.fillRect(ox, oy, size, size);
+    ctx.drawImage(c, ox, oy, size, size);
+    // smitten: a little heart for Chinka floats by his hand
+    const hy = oy + (16 + Math.sin(t * 2.2) * 3) * s, hx = ox + 86 * s;
+    KartFace.heart(ctx, hx, hy, 4.6 * s); ctx.fillStyle = '#ff5a9a'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = Math.max(0.6, 0.7 * s); ctx.stroke();
+    ctx.restore();
+  }
+};
+// The Man, front view, arms raised: lattice wood, neon outline, glowing diamond head (100 x 100 units)
+function kartPaintManPortrait(x) {
+  const wood = '#c8935a', woodD = '#7a4a22', neon = '#ff6a2a';
+  x.lineCap = 'round'; x.lineJoin = 'round';
+  const beam = (a, b, w, col) => { x.strokeStyle = 'rgba(58,30,10,0.9)'; x.lineWidth = w + 1.4; x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(b[0], b[1]); x.stroke(); x.strokeStyle = col || wood; x.lineWidth = w; x.stroke(); };
+  const truss = (a, b, w, n) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, ox = -dy / l * w / 2, oy = dx / l * w / 2;
+    const P = (t, s) => [lerp(a[0], b[0], t) + ox * s, lerp(a[1], b[1], t) + oy * s];
+    beam(P(0, -1), P(1, -1), 2.4); beam(P(0, 1), P(1, 1), 2.4);
+    for (let i = 0; i <= n; i++) beam(P(i / n, -1), P(i / n, 1), 1.3, woodD);
+    for (let i = 0; i < n; i++) beam(P(i / n, i % 2 ? 1 : -1), P((i + 1) / n, i % 2 ? -1 : 1), 1.1, woodD);
+  };
+  const outline = [];
+  // legs, torso, arms (raised in a V)
+  for (const sg of [-1, 1]) { truss([50 + sg * 6, 64], [50 + sg * 13, 104], 6, 4); outline.push([[50 + sg * 9, 64], [50 + sg * 16.5, 104]]); }
+  for (const sg of [-1, 1]) { beam([50 + sg * 6, 64], [50 + sg * 8, 50], 3); beam([50 + sg * 8, 50], [50 + sg * 10, 37], 3); outline.push([[50 + sg * 6, 64], [50 + sg * 8, 50], [50 + sg * 10, 37]]); }
+  beam([43, 64], [57, 64], 2.2); beam([41.5, 50], [58.5, 50], 2); beam([36, 37], [64, 37], 2.6);
+  beam([44, 64], [58, 50], 1.2, woodD); beam([56, 64], [42, 50], 1.2, woodD); beam([42, 50], [60, 37], 1.2, woodD); beam([58, 50], [40, 37], 1.2, woodD);
+  for (const sg of [-1, 1]) {
+    truss([50 + sg * 13, 37], [50 + sg * 23, 22], 5, 3); truss([50 + sg * 23, 22], [50 + sg * 31, 7], 4.4, 3);
+    for (const f of [-1, 0, 1]) beam([50 + sg * 31, 7], [50 + sg * 32.5 + f * 1.6, 2.5], 0.9);
+    outline.push([[50 + sg * 13, 37], [50 + sg * 23, 22], [50 + sg * 31, 7]]);
+  }
+  beam([50, 37], [50, 31.5], 2.2);
+  // neon outline
+  x.save(); x.shadowColor = neon; x.shadowBlur = 4; x.strokeStyle = neon; x.lineWidth = 1.5;
+  for (const line of outline) { x.beginPath(); line.forEach((p, i) => i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.stroke(); }
+  x.shadowBlur = 0; x.strokeStyle = '#ffe2b0'; x.lineWidth = 0.6;
+  for (const line of outline) { x.beginPath(); line.forEach((p, i) => i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.stroke(); }
+  x.restore();
+  // the glowing diamond head
+  x.save(); x.shadowColor = '#ffb84a'; x.shadowBlur = 9;
+  x.beginPath(); x.moveTo(50, 7); x.lineTo(59.5, 19.5); x.lineTo(50, 32); x.lineTo(40.5, 19.5); x.closePath();
+  const hg = x.createLinearGradient(40, 7, 60, 32); hg.addColorStop(0, '#fff8d8'); hg.addColorStop(0.5, '#ffd27a'); hg.addColorStop(1, '#ff9a3a');
+  x.fillStyle = hg; x.fill(); x.shadowBlur = 0; x.strokeStyle = '#a8501a'; x.lineWidth = 1; x.stroke();
+  x.fillStyle = 'rgba(255,255,255,0.55)'; x.beginPath(); x.moveTo(50, 7); x.lineTo(59.5, 19.5); x.lineTo(50, 19.5); x.closePath(); x.fill();
+  x.strokeStyle = 'rgba(150,70,10,0.6)'; x.lineWidth = 0.8; x.beginPath(); x.moveTo(40.5, 19.5); x.lineTo(59.5, 19.5); x.moveTo(50, 7); x.lineTo(50, 32); x.stroke();
+  x.restore();
+}
 
 // animated festival backdrop for menus (static layers cached per size)
 function kartMenuBackdrop(ctx, W, H, t) {
@@ -3561,6 +3637,7 @@ class KartMenuScene {
     const r = kartRacer(id);
     const g = ctx.createRadialGradient(x + w / 2, y + h * 0.4, 4, x + w / 2, y + h / 2, Math.max(w, h)); g.addColorStop(0, rgba(r.color, 0.55)); g.addColorStop(1, 'rgba(10,6,20,0)');
     ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    if (KartPortraits.has(id)) { KartPortraits.draw(ctx, id, x + w / 2, y + h / 2, Math.min(w, h * 1.05), this.t); ctx.restore(); return; }
     if (typeof CharArt !== 'undefined' && CharArt && CharArt.drawPortrait) { try { CharArt.drawPortrait(ctx, id, x + w / 2, y + h / 2, Math.min(w, h), this.t); ctx.restore(); return; } catch (e) { /* fall through */ } }
     if (id === 'brady') {
       const s = Math.min(w / 30, h / 52) * (big ? 0.95 : 1.05);
@@ -3584,7 +3661,8 @@ class KartMenuScene {
     // preview: rotating art car + stats
     const P = this.preview, r = KART_RACERS[this.sel];
     this.drawCard(ctx, P, true, r.color);
-    const reg = KartArt.atlas && KartArt.kart(r.id, Math.floor(this.t * 5) % KART_DIRS);
+    const pose = KART_POSES[r.id] && Math.floor(this.t / 1.6) % 2 ? KART_POSES[r.id][0] : '';
+    const reg = KartArt.atlas && KartArt.kart(r.id, Math.floor(this.t * 5) % KART_DIRS, pose);
     const ks = Math.min(P.h * 0.62, P.w * (this.portrait ? 0.42 : 0.62));
     const kx = this.portrait ? P.x + P.w * 0.27 : P.x + P.w / 2, ky = this.portrait ? P.y + P.h * 0.55 : P.y + ks * 0.55 + 8;
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(kx, ky + ks * 0.18, ks * 0.4, ks * 0.1, 0, 0, TAU); ctx.fill();
@@ -3592,8 +3670,11 @@ class KartMenuScene {
     else kartText(ctx, 'painting karts...', kx, ky, 12, 'rgba(255,255,255,0.7)', { ui: true, stroke: false });
     const tx = this.portrait ? P.x + P.w * 0.54 : P.x + 16, ty = this.portrait ? P.y + 22 : ky + ks * 0.3 + 14, tw = this.portrait ? P.w * 0.43 : P.w - 32;
     kartText(ctx, r.name.toUpperCase(), tx, ty, 18, r.color, { align: 'left' });
-    kartText(ctx, r.kart + '  ·  ' + r.tag, tx, ty + 20, 11, 'rgba(255,255,255,0.85)', { align: 'left', ui: true, stroke: false });
-    this.drawStatBars(ctx, r, tx, ty + 44, Math.min(tw, 260));
+    ctx.font = `11px ${FONT_UI}`;
+    const line = r.kart + '  ·  ' + r.tag, fits = ctx.measureText(line).width <= tw;
+    if (fits) kartText(ctx, line, tx, ty + 20, 11, 'rgba(255,255,255,0.85)', { align: 'left', ui: true, stroke: false });
+    else { kartText(ctx, r.kart, tx, ty + 20, 11, 'rgba(255,255,255,0.85)', { align: 'left', ui: true, stroke: false }); kartText(ctx, r.tag, tx, ty + 34, 11, 'rgba(255,255,255,0.7)', { align: 'left', ui: true, stroke: false }); }
+    this.drawStatBars(ctx, r, tx, ty + (fits ? 44 : 56), Math.min(tw, 260));
   }
   drawCups(ctx) {
     const W = Game.cssW, ks = kartSave();
