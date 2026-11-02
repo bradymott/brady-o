@@ -119,7 +119,7 @@ BurnsWorlds.register({
     for (let r = 20; r < 98; r += 13) for (const s of [-1, 1]) { const [x, z] = at(s * 4.2 * 180 / Math.PI / r, r); if (bounds(x, z, 2)) api.mesh(x, z, m => BW.lamp(m, { pool: 8, col: '#ffd890' }), { yaw: s > 0 ? Math.PI / 2 : -Math.PI / 2 }); }
     /* ---------------- the city: camps on every block ---------------- */
     S.capCamp = W2.at(21, 111);
-    const reserved = [[CAMP[0], CAMP[1], 27], [59, 13, 17], [34, 22, 13], [107, -32, 9], [66, -38, 7], [30, -46, 7], [S.capCamp[0], S.capCamp[1], 11]];
+    const reserved = [[CAMP[0], CAMP[1], 27], [59, 13, 17], [34, 22, 13], [107, -32, 9], [66, -38, 7], [S.capCamp[0], S.capCamp[1], 11]];
     const isReserved = (x, z) => reserved.some(q => Math.hypot(x - q[0], z - q[1]) < q[2]);
     let lotN = 0, npcN = 0;
     for (let j = 0; j < RR.length; j++) for (const side of [1, -1]) {
@@ -315,7 +315,7 @@ BurnsWorlds.register({
       const LOST = [
         { id: 'lost1', name: 'LOST LARRY', type: 'burner', seed: 71, x: 107, z: -32, dest: [0, 178], addr: '6:00 & C', lines: ['Excuse me. Where\'s 4:30? I\'ve been walking toward 4:30 since Tuesday.', 'Wait. I wrote my address on my arm. It says... 6:00 & C. Is that close?'] },
         { id: 'lost2', name: 'DIZZY DAISY', type: 'tutu', seed: 72, x: 66, z: -38, dest: [15, 126], addr: '6:30 & A', lines: ['Is this 4:30? It feels like 4:30.', 'My camp has a giant inflatable avocado. 6:30 and A? Take me there and I\'ll love you forever. Or until sunrise.'] },
-        { id: 'lost3', name: 'MOONBEAM', type: 'furcoat', seed: 73, x: 30, z: -46, dest: [30, 152], addr: '7:00 & B', lines: ['Brother. Where is 4:30? I need to be at 4:30 at... 4:30.', 'Oh. Oh no. My camp is 7:00 & B. It always was. Walk me?'] }
+        { id: 'lost3', name: 'MOONBEAM', type: 'furcoat', seed: 73, x: 21, z: -80, dest: [30, 152], addr: '7:00 & B', lines: ['Brother. Where is 4:30? I need to be at 4:30 at... 4:30.', 'Oh. Oh no. My camp is 7:00 & B. It always was. Walk me?'] }
       ];
       for (const L of LOST) {
         const [dx, dz] = at(L.dest[0], L.dest[1] - 5);
@@ -435,7 +435,7 @@ BurnsWorlds.register({
     /* ---------------- darkwads (no lights, nearly invisible) + the undercover cop ---------------- */
     {
       const DW = [[[-8, 186], [14, 186]], [[-22, 214], [-2, 214]], [[2, 162], [2, 196]], [[20, 222], [20, 240], [8, 240]], [[-28, 168], [-28, 194]]];
-      DW.forEach((pts, i) => { const path = pts.map(([th, r]) => at(th, r)); api.npc(BW.castDef('darkwad', 600 + i, { name: 'DARKWAD', behavior: 'w234Darkwad', path, speed: 1.0 + i * 0.1, x: path[0][0], z: path[0][1], chatter: false, hittable: true, lines: ['Lights are for people who want to be seen. I want to be FELT.', 'Shh. I\'m blending in. With the night.'] })); });
+      DW.forEach((pts, i) => { const path = pts.map(([th, r]) => at(th, r)); api.npc(BW.castDef('darkwad', 600 + i, { name: 'DARKWAD', behavior: 'w234Darkwad', path, speed: 1.0 + i * 0.1, x: path[0][0], z: path[0][1], chatter: true, hittable: true, chat: ['Lights are for people who want to be seen.', 'Shh. I\'m blending in. With the night.'] })); });
       const [cx, cz] = at(2, 60);
       api.npc(BW.castDef('cop', 7, { id: 'cop', name: 'TOTALLY NORMAL BURNER', behavior: 'w234Cop', x: cx, z: cz, view: 15, fov: 1.0, chaseSpeed: 5.4, friendly: false, chatter: false }));
       api.npc(BW.castDef('cop', 8, { name: 'ALSO A NORMAL BURNER', behavior: 'w234Cop', x: at(24, 176)[0], z: at(24, 176)[1], view: 13, chaseSpeed: 5.2, friendly: false, chatter: false }));

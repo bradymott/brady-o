@@ -135,6 +135,7 @@ const BW567K = {
   // game-time timers (pause with the game). Call BW567K.tick(g, dt) from the world update.
   after(g, sec, fn) { (g.bw567timers || (g.bw567timers = [])).push({ t: sec, fn }); },
   tick(g, dt) {
+    if (g.bw567rhythm) BW567K.rhythmStep(g, dt);
     const L = g.bw567timers; if (!L || !L.length) return;
     for (const t of L.slice()) { t.t -= dt; if (t.t <= 0 && !t.done) { t.done = true; try { t.fn(g); } catch (e) { Game.reportError ? Game.reportError(e) : console.error(e); } } }
     g.bw567timers = L.filter(t => !t.done);
@@ -331,3 +332,130 @@ class BW567Attach extends BW567Puppet {
     }
   }
 }
+
+/* ---------------- camera override (frame the DJ decks / dance floor without a cutscene) ---------------- */
+BW567K.camHook = function (g) {
+  if (g.bw567camHooked) return; g.bw567camHooked = true;
+  const orig = g.updateCamera.bind(g);
+  g.updateCamera = function (fdt) {
+    const c0 = g.bw567cam;
+    if (c0 && !(g.cine && g.cine.cam)) { const c = typeof c0 === 'function' ? c0(g) : c0; Object.assign(g.cam, c); g.cam.shift = Game.cssH > Game.cssW ? 0.08 : 0; g.cam.roll = 0; g.cam.near = 0.15; g.cam.far = 1500; return; }
+    return orig(fdt);
+  };
+};
+
+/* ---------------- tap-on-the-beat minigame (fallback for BurnsDJ; W7 dance-off) ----------------
+   BW567K.rhythm(g, { title, bpm, duration, difficulty 0..1, crowd, cam, anim, onDone(result) })
+   result: { score 0..1, grade 'S'|'A'|'B'|'C'|'D', crowdPeak, perfects, hits, total }
+   Runs in game mode (presses register on touch-down): JUMP = ▲ lane, ACTION = ◉ lane. */
+BW567K.rhythm = function (g, o) {
+  o = o || {};
+  const bpm = o.bpm || 124, beat = 60 / bpm, dur = o.duration || 20, diff = clamp(o.difficulty === undefined ? 0.5 : o.difficulty, 0, 1);
+  const rng = mulberry32(hashStr((o.title || 'set') + ':' + Math.floor(Math.random() * 1e6)));
+  const notes = [], lead = beat * 4;
+  for (let t = lead, i = 0; t < lead + dur; t += beat / 2, i++) {
+    const onBeat = i % 2 === 0, bar = Math.floor(i / 8);
+    const p = onBeat ? 0.42 + diff * 0.35 : (diff > 0.35 ? 0.08 + diff * 0.22 : 0);
+    if (rng() > p) continue;
+    const last = notes[notes.length - 1];
+    if (last && t - last.t < (diff > 0.6 ? beat / 2 - 0.01 : beat - 0.01)) continue;
+    const lane = last && rng() < 0.55 ? last.lane : (bar + i) % 3 === 0 ? 1 - (last ? last.lane : 0) : Math.floor(rng() * 2);
+    notes.push({ t, lane, res: null });
+  }
+  const p = g.player;
+  const st = { o, bpm, beat, dur, notes, t: -0.6, lastBeat: -1, combo: 0, maxCombo: 0, sum: 0, hits: 0, perfects: 0, judge: null, judgeT: 0, hype: 0.3, done: false, endT: lead + dur + 1.2 };
+  g.bw567rhythm = st;
+  p.locked = true; p.vx = p.vz = 0; p.animOverride = o.anim || 'dance';
+  if (o.cam) { BW567K.camHook(g); g.bw567cam = o.cam; }
+  try { Sound.stopMusic && Sound.stopMusic(); } catch (e) { /* ignore */ }
+  burnsSfx('select2', null, 'select');
+  return st;
+};
+BW567K.rhythmStep = function (g, dt) {
+  const st = g.bw567rhythm; if (!st || st.done) return;
+  const p = g.player;
+  if (g.cine || g.dialog.open) return;
+  st.t += dt;
+  const bt = Math.floor(st.t / st.beat);
+  if (bt !== st.lastBeat && st.t >= 0) { st.lastBeat = bt; burnsSfx('kick', { vol: bt % 4 === 0 ? 0.7 : 0.45 }); if (st.o.onBeat) st.o.onBeat(g, bt); }
+  const press = lane => {
+    let best = null, bd = 0.2;
+    for (const n of st.notes) { if (n.res || n.lane !== lane) continue; const d = Math.abs(n.t - st.t); if (d <= bd) { bd = d; best = n; } }
+    if (!best) { st.judge = 'OOPS'; st.judgeT = 0.4; st.combo = 0; st.hype = Math.max(0, st.hype - 0.03); burnsSfx('bump', { vol: 0.25 }); return; }
+    const pts = bd <= 0.07 ? 1 : bd <= 0.13 ? 0.75 : 0.45;
+    best.res = pts === 1 ? 'PERFECT' : pts === 0.75 ? 'GREAT' : 'GOOD';
+    st.sum += pts; st.hits++; if (pts === 1) st.perfects++;
+    st.combo++; st.maxCombo = Math.max(st.maxCombo, st.combo); st.judge = best.res; st.judgeT = 0.5; st.hype = Math.min(1, st.hype + 0.04 * pts + st.combo * 0.002);
+    burnsSfx(pts === 1 ? 'gold' : 'pick', { vol: 0.5, pitch: lane ? 1.25 : 1.0 });
+    if (st.o.onHit) st.o.onHit(g, best, pts);
+  };
+  if (p.inp.jumpPressed) press(0);
+  if (p.inp.actionPressed) press(1);
+  for (const n of st.notes) if (!n.res && st.t - n.t > 0.2) { n.res = 'MISS'; st.combo = 0; st.judge = 'MISS'; st.judgeT = 0.45; st.hype = Math.max(0, st.hype - 0.05); if (st.o.onMiss) st.o.onMiss(g, n); }
+  if (st.judgeT > 0) st.judgeT -= dt;
+  if (st.t >= st.endT) BW567K.rhythmEnd(g);
+};
+BW567K.rhythmEnd = function (g) {
+  const st = g.bw567rhythm; if (!st || st.done) return;
+  st.done = true;
+  const total = Math.max(1, st.notes.length), score = clamp(st.sum / total, 0, 1);
+  const grade = score >= 0.92 ? 'S' : score >= 0.8 ? 'A' : score >= 0.6 ? 'B' : score >= 0.4 ? 'C' : 'D';
+  const res = { score, grade, crowdPeak: Math.round((st.o.crowd || 0) + st.hype * 20), perfects: st.perfects, hits: st.hits, total };
+  const p = g.player; p.locked = false; p.animOverride = null;
+  g.bw567cam = null; g.bw567rhythm = null;
+  if (st.o.music) burnsMusic(st.o.music);
+  if (st.o.onDone) st.o.onDone(res);
+  return res;
+};
+// test hook: auto-play with a given accuracy (0..1)
+BW567K.rhythmAuto = function (g, acc) {
+  const st = g.bw567rhythm; if (!st) return null;
+  for (const n of st.notes) { if (n.res) continue; const r = Math.random(); n.res = r < acc ? 'PERFECT' : 'MISS'; if (n.res === 'PERFECT') { st.sum += 1; st.hits++; st.perfects++; } }
+  st.t = st.endT; return BW567K.rhythmEnd(g);
+};
+BW567K.drawRhythm = function (ctx, g) {
+  const st = g.bw567rhythm; if (!st || st.done) return;
+  const W = Game.cssW, H = Game.cssH, S = BurnsUI.safe(), portrait = H > W;
+  const w = Math.min(W - S.l - S.r - 16, 620), x0 = (W - w) / 2, y0 = S.t + (portrait ? 70 : 10), lh = portrait ? 46 : 40, hitX = x0 + 56, span = 2.2;
+  ctx.save();
+  ctx.fillStyle = 'rgba(12,6,26,0.72)'; rr(ctx, x0 - 8, y0 - 26, w + 16, lh * 2 + 52, 14); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,79,216,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+  BurnsUI.text(ctx, st.o.title || 'DROP THE BEAT', x0 + 4, y0 - 12, 12, '#ffd84a', { align: 'left' });
+  const pct = clamp(st.t / (st.endT - 1.2), 0, 1);
+  ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(x0 + w * 0.5, y0 - 16, w * 0.48, 6); ctx.fillStyle = '#38f2ff'; ctx.fillRect(x0 + w * 0.5, y0 - 16, w * 0.48 * pct, 6);
+  const lanes = [{ col: '#c04bff', lab: '▲ JUMP' }, { col: '#ff4b7d', lab: '◉ SPIN' }];
+  for (let l = 0; l < 2; l++) {
+    const y = y0 + 8 + l * lh + lh / 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(x0, y - lh / 2 + 3, w, lh - 6);
+    ctx.strokeStyle = lanes[l].col; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(hitX, y, lh * 0.34, 0, TAU); ctx.stroke();
+    BurnsUI.text(ctx, lanes[l].lab, x0 + 4, y, 9, lanes[l].col, { align: 'left', stroke: false });
+  }
+  // beat ticks
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  for (let k = Math.floor((st.t) / st.beat); k < (st.t + span) / st.beat; k++) { const x = hitX + (k * st.beat - st.t) / span * (w - 70); if (x > hitX - 4 && x < x0 + w) ctx.fillRect(x, y0 + 10, 1.5, lh * 2 - 4); }
+  for (const n of st.notes) {
+    const dt = n.t - st.t; if (dt > span || dt < -0.25) continue;
+    if (n.res && n.res !== 'MISS') continue;
+    const x = hitX + dt / span * (w - 70), y = y0 + 8 + n.lane * lh + lh / 2, r = lh * 0.3;
+    ctx.fillStyle = n.res === 'MISS' ? 'rgba(120,120,120,0.6)' : lanes[n.lane].col; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+    BurnsUI.text(ctx, n.lane ? '◉' : '▲', x, y + 1, 13, '#ffffff', { stroke: false });
+  }
+  if (st.t < 0 || st.t < st.beat * 4) { const c = Math.max(1, 4 - Math.floor(Math.max(0, st.t) / st.beat)); BurnsUI.text(ctx, st.t < 0 ? 'GET READY' : String(c), W / 2, y0 + lh * 2 + 52, 26, '#ffffff', { glow: '#ff4fd8' }); }
+  if (st.judge && st.judgeT > 0) BurnsUI.text(ctx, st.judge + (st.combo > 2 ? `  x${st.combo}` : ''), hitX + 60, y0 + lh * 2 + 30, 16, st.judge === 'PERFECT' ? '#ffd84a' : st.judge === 'MISS' || st.judge === 'OOPS' ? '#ff6a6a' : '#7aff9a', { align: 'left', glow: '#ff4fd8' });
+  // hype meter
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(x0 + w - 130, y0 + lh * 2 + 22, 120, 8); const gr = ctx.createLinearGradient(x0 + w - 130, 0, x0 + w - 10, 0); gr.addColorStop(0, '#ff4fd8'); gr.addColorStop(1, '#ffd84a'); ctx.fillStyle = gr; ctx.fillRect(x0 + w - 130, y0 + lh * 2 + 22, 120 * st.hype, 8);
+  BurnsUI.text(ctx, 'HYPE', x0 + w - 136, y0 + lh * 2 + 26, 9, '#ffffff', { align: 'right', stroke: false });
+  ctx.restore();
+};
+// DJ entry point: the shared BurnsDJ minigame when it exists, otherwise the fallback above
+BW567K.dj = function (g, o) {
+  if (typeof BurnsDJ !== 'undefined' && BurnsDJ && BurnsDJ.open) {
+    try { return BurnsDJ.open(g, { title: o.title, bpm: o.bpm, genre: o.genre, difficulty: o.difficulty, duration: o.duration, crowd: o.crowd, onDone: o.onDone }); } catch (e) { if (Game.reportError) Game.reportError(e); }
+  }
+  return BW567K.rhythm(g, o);
+};
+(() => {
+  const prev = BurnsUI.drawOverlay;
+  BurnsUI.drawOverlay = function (ctx, g, fdt) { prev.call(this, ctx, g, fdt); if (g && g.bw567rhythm && g.state === 'play' && !g.paused) { try { BW567K.drawRhythm(ctx, g); } catch (e) { if (Game.reportError) Game.reportError(e); } } };
+})();
