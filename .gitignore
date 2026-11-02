@@ -1,0 +1,13 @@
+# Build outputs: regenerate with `node tools/build.js` (the app icons are kept so a rebuild works offline)
+dist/*
+!dist/icons/
+!dist/icon.b64
+!dist/icon.png
+Brady-O-app.zip
+
+# Screenshots written by the test tools
+shots/
+touch-*.png
+
+node_modules/
+.DS_Store
