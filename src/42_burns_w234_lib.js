@@ -344,6 +344,9 @@ BurnsBehaviors.register('w234Cop', {
   hit(a, g) { if (a.data.mode === 'dazed') return false; a.data.mode = 'dazed'; a.data.dz = 2.6; a.say('MY COVER! ...I mean. Ow. Groovy ow.', 2); g.fx.burst(a.x, a.y + 1.8, a.z, 'star', 10, '#ffd84a'); return 'handled'; }
 });
 
+// puppet: world code steers the actor (moveTo + ch.play); this only runs physics
+BurnsBehaviors.register('w234Puppet', { update(a, g, dt) { a.physics(dt); } });
+
 /* ---------- riding behaviour: an actor pedalling a bike mover along a path ----------
    def: { path: [[x,z]...], speed, loop (default true), bikeMv, hazard (knocks Brady over),
           lines (shouted on a near miss), lean } */

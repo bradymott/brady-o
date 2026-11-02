@@ -402,6 +402,8 @@ BURNS_W8.buildStation = function (api) {
   // the fuel gauge post at pump 3
   api.mesh(BURNS_W8.PUMP3.x - 1.2, -3.6, m => { m.color('#2a2a30').shine(2); S.rbox(m, 0, 2.2, 0, 0.5, 4.4, 0.5, 0.15); m.shine(0); m.color('#ffd21a'); S.rbox(m, 0, 4.55, 0, 0.9, 0.5, 0.6, 0.15); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.3, y0: 0, y1: 4.8 }] }; });
   api.glowRing(0, 0, 13, 16); api.glowLine(-7, 9, -7, -9, 6); api.glowLine(0, 9, 0, -9, 6);
+  // the fuel nozzle (only appears when Skids drops it)
+  api.pickup('item:nozzle', 0, -60, 0, { mission: 'nozzle', gate: true, label: 'FUEL NOZZLE', icon: 'drop', id: 'nozzleItem', persist: false, col: '#38f2ff' });
   api.light(0, 0, 22, '#fff0d0', 0.35);
 };
 BURNS_W8.buildOffice = function (api) {

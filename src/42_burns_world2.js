@@ -626,7 +626,7 @@ BURNS_W2.clue = function (g, n, who, lines) {
 
 BURNS_W2.lampStart = function (g) {
   const S = BURNS_W2.state; S.lampWalk = { i: 0, far: 0 };
-  ['wick', 'lamp1', 'lamp2'].forEach(id => { const a = g.actor(id); if (a) { a.w2start = a.w2start || { x: a.x, z: a.z }; a.setBehavior('idle'); } });
+  ['wick', 'lamp1', 'lamp2'].forEach(id => { const a = g.actor(id); if (a) { a.w2start = a.w2start || { x: a.x, z: a.z }; a.setBehavior('w234Puppet'); } });
   g.banner('LIGHT THE WAY', 'Walk with the lamplighters. Stay in their light.', { col: '#ffcf7a' });
 };
 BURNS_W2.lampStep = function (g, dt) {
@@ -646,11 +646,12 @@ BURNS_W2.lampStep = function (g, dt) {
 BURNS_W2.lampReset = function (g) {
   const S = BURNS_W2.state; S.lampWalk = null;
   for (const L of S.lamps) { L.lit = false; L.gl.c = [0, 0, 0]; }
-  ['wick', 'lamp1', 'lamp2'].forEach(id => { const a = g.actor(id); if (a && a.w2start) { a.x = a.w2start.x; a.z = a.w2start.z; a.vx = a.vz = 0; } });
+  ['wick', 'lamp1', 'lamp2'].forEach(id => { const a = g.actor(id); if (a && a.w2start) { a.x = a.w2start.x; a.z = a.w2start.z; a.vx = a.vz = 0; a.setBehavior('idle'); } });
 };
 BURNS_W2.lampDone = function (g) {
   const S = BURNS_W2.state; S.lampWalk = null;
   for (const L of S.lamps) { L.lit = true; L.gl.c = L.gl.c0; }
+  ['wick', 'lamp1', 'lamp2'].forEach(id => { const a = g.actor(id); if (a) { a.setBehavior('idle'); a.vx = a.vz = 0; a.home = { x: a.x, z: a.z, y: a.y, yaw: a.yaw }; } });
   g.glow += 25; g.toast('+25 GLOW STICKS · 7:00 IS LIT');
   const a = g.actor('wick'); if (a) a.say('The way is lit. It always was. We just reminded it.', 3.5);
   g.spawnPickup('water', g.player.x + 1.5, 0.9, g.player.z, { pop: true });
