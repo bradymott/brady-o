@@ -16,7 +16,10 @@
                        greats, oks, misses, maxCombo, accuracy, forfeit }
    Optional extras: booth {x, y, z, yaw} (where Brady stands; default: where he
    is, facing the crowd), exclude [actor ids], intro: false (skip the title
-   card), deckA / deckB {name, artist}, quotes {S, A, B, C, D}.
+   card), deck3d (true/false: a 3D DJ table under Brady's hands; default: only
+   when nothing is built in front of him), music (a dance-track id to play on
+   deck A, e.g. 'burns_w6'), deckA / deckB {name, artist}, quotes {S, A, B, C, D}.
+   BurnsDJ.isOpen(g) tells whether a set is running; BurnsDJ.session is the live set.
 
    How a set plays (all touch, two thumbs, ~45-90 s):
      WARM UP    tap the pads as the rings close on them (on the beat)
@@ -128,11 +131,14 @@ const BurnsDJ = {
     return clamp((d - 1) / 2, 0, 1);
   },
   // two decks at the same tempo (closest to the request), genre first
-  pickTracks(bpm, genre) {
+  pickTracks(bpm, genre, music) {
     bpm = clamp(+bpm || 124, 80, 170);
     const names = (window.Sound && Sound.trackNames) || [];
     const avail = BURNS_DJ_TRACKS.filter(t => !names.length || names.indexOf(t.id) >= 0);
     const L = avail.length ? avail : BURNS_DJ_TRACKS;
+    // a caller's own dance track (o.music) becomes deck A; deck B matches its tempo
+    const own = music && L.find(t => t.id === music);
+    if (own) { const mates = L.filter(t => t.bpm === own.bpm && t !== own); return [own, mates.find(t => t.genre === own.genre) || mates[0] || own]; }
     const tempos = Array.from(new Set(L.map(t => t.bpm)));
     // prefer tempos with two tracks (a real mix), then closeness
     tempos.sort((a, b) => (Math.abs(a - bpm) + (L.filter(t => t.bpm === a).length < 2 ? 4 : 0)) - (Math.abs(b - bpm) + (L.filter(t => t.bpm === b).length < 2 ? 4 : 0)));
@@ -202,7 +208,7 @@ class BurnsDJSession {
   constructor(g, o) {
     this.g = g; this.o = o; this.active = false;
     this.diff = BurnsDJ.normDiff(o.difficulty);
-    const tr = BurnsDJ.pickTracks(o.bpm || 124, o.genre);
+    const tr = BurnsDJ.pickTracks(o.bpm || 124, o.genre, o.music);
     this.trackA = Object.assign({}, tr[0], o.deckA || {}); this.trackB = Object.assign({}, tr[1], o.deckB || {});
     this.bpm = this.trackA.bpm; this.spb = 60 / this.bpm;
     this.title = String(o.title || 'LIVE SET').toUpperCase();
@@ -902,6 +908,8 @@ class BurnsDJSession {
   }
   camera(fdt) {
     const g = this.g, cam = g.cam, T = this.camTarget(this._ct || (this._ct = {})), port = Game.cssH > Game.cssW * 1.05;
+    // swoop in from the gameplay camera (unless it was far away: then just cut)
+    if (this.camK === undefined || this.camK === 0) { const F = this.saved.camFrom; if (!F || Math.hypot(F.x - T.x, F.z - T.z) > 40) this.camK = 1; }
     const k = this.camK = Math.min(1, (this.camK || 0) + fdt / 1.1), e = easeInOut(k), A = this.saved.camFrom || T;
     cam.x = lerp(A.x, T.x, e); cam.y = lerp(A.y, T.y, e); cam.z = lerp(A.z, T.z, e);
     cam.tx = lerp(A.tx, T.tx, e); cam.ty = lerp(A.ty, T.ty, e); cam.tz = lerp(A.tz, T.tz, e);

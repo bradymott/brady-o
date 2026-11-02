@@ -96,7 +96,7 @@ const BW14_City = {
     for (let ri = 0; ri < rings.length - 1; ri++) {
       const r0 = rings[ri] + (ri === 0 ? 6.5 : 3.5), r1 = rings[ri + 1] - 3.5;
       for (let h = C.H0; h < C.H1 - 1e-6; h += 0.5) {
-        const key = 'camp' + Math.floor(h * 2);
+        const key = 'camp' + Math.floor(h / 2);   // four big quadrants: fewer draw calls, still frustum-culled
         const n = ri === 0 ? 4 : 7 + Math.floor(R() * 3);
         for (let k = 0; k < n; k++) {
           const r = lerp(r0, r1, R()), hh = h + 0.04 + R() * 0.42, p = bw14Clock(hh, r);
@@ -175,7 +175,7 @@ const BW14_City = {
   fence() {
     for (let i = 0; i < 5; i++) {
       const a0 = i / 5 * TAU + 0.31, a1 = (i + 1) / 5 * TAU + 0.31, x0 = Math.sin(a0) * 575, z0 = -Math.cos(a0) * 575, x1 = Math.sin(a1) * 575, z1 = -Math.cos(a1) * 575;
-      const n = 14; for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, x = lerp(x0, x1, t), z = lerp(z0, z1, t), len = Math.hypot(x1 - x0, z1 - z0) / n, yaw = Math.atan2(x1 - x0, z1 - z0); this.put('fence' + i, x, 0, z, yaw, 1, m => { m.color('#ff7a2a'); m.box(0, 1.1, 0, 0.08, 1.2, len - 0.3); m.color('#6a6a72'); m.box(0, 1, len / 2 - 0.15, 0.12, 2.0, 0.12); }, true); }
+      const n = 14; for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, x = lerp(x0, x1, t), z = lerp(z0, z1, t), len = Math.hypot(x1 - x0, z1 - z0) / n, yaw = Math.atan2(x1 - x0, z1 - z0); this.put('fence', x, 0, z, yaw, 1, m => { m.color('#ff7a2a'); m.box(0, 1.1, 0, 0.08, 1.2, len - 0.3); m.color('#6a6a72'); m.box(0, 1, len / 2 - 0.15, 0.12, 2.0, 0.12); }, true); }
     }
   },
 
@@ -369,7 +369,7 @@ const BW14_City = {
   },
   /* hot art for thermals: fire sculptures with a column of warm air */
   hotArt(api, g, x, z, name, lift, r) {
-    this.put('hot:' + name, x, 0, z, 0, 1, m => {
+    this.put('hot', x, 0, z, 0, 1, m => {
       m.color('#3a3a44').shine(2); m.roundCyl(0, 0, 0, 3.2, 1.2, 0.3, { seg: 12 });
       m.color('#6a4a3a'); for (let k = 0; k < 5; k++) { const a = k / 5 * TAU; m.limb(0, 1.2, 0, Math.sin(a) * 4.2, 9 + (k % 2) * 3, Math.cos(a) * 4.2, 0.45, 0.2, { seg: 6 }); }
       m.color('#ff7a2a', 0.9); m.ball(0, 2, 0, 1.6, { seg: 8, rings: 5 }); m.emissive(0).shine(0);

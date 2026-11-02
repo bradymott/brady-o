@@ -689,7 +689,7 @@ BURNS_W8.intro = function (g) {
     { say: ['brady', ['How bad can it be?']] },
     { say: [g.actor('gail'), ['*laughs for eleven seconds*']] },
     { do: g2 => { BurnsSave.flag(8, 'intro', true); S.introDone = true; p.locked = false; p.teleport(BURNS_W8.SPAWN.x, 0, BURNS_W8.SPAWN.z, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; burnsMusic('burns_w8'); } },
-    { banner: ['RUNNING ON FUMES', 'Drive El Pulpo (ACTION near the seat) to the end of the fuel line.', { col: '#ffd84a' }] }
+    { banner: ['RUNNING ON FUMES', 'Drive El Pulpo (ACTION at the seat) to the fuel line.', { col: '#ffd84a' }] }
   ], null);
 };
 
@@ -860,7 +860,7 @@ BURNS_W8.bossIntro = function (g) {
     { say: [a, ['WHO GAVE THE SPARKLE PONY A PERMIT?!', 'Twenty-two years I\'ve kept this playa ugly. Functional. FUN-FREE.', 'And you roll in with a fire-breathing OCTOPUS? That thing\'s getting impounded. With you in it.']] },
     { say: ['brady', ['It\'s a gift economy, Rusty. Gift me some chill.']] },
     { say: [a, ['I GIFT YOU... OVERTIME!']] },
-    { do: g2 => { T.shake = 0; T.pitch = 0.32; p.teleport(Y.x, 0, Y.z + 16, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; BURNS_W8.rustyStart(g2); g2.banner('FIGHT!', 'Dodge his RAM into the containers, then SPIN or STOMP Rusty while he\'s stuck', { col: '#ffd84a' }); } }
+    { do: g2 => { T.shake = 0; T.pitch = 0.32; p.teleport(Y.x, 0, Y.z + 16, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; BURNS_W8.rustyStart(g2); g2.banner('FIGHT!', 'Dodge his RAM · hit Rusty while he\'s stuck', { col: '#ffd84a' }); } }
   ]);
 };
 BURNS_W8.rustyStart = function (g) {
@@ -1082,7 +1082,7 @@ BURNS_W8.captainAlly = function (g) {
   const a = g.actor('captain');
   BurnsSave.flag(8, 'captain', true);
   g.glow += 15; g.player.givePower('water');
-  g.banner('ALLY: CAPTAIN PRUDENCE', 'She\'ll lecture DPW raiders frozen while El Pulpo fuels.', { col: '#ffd21a' });
+  g.banner('NEW ALLY: PRUDENCE', 'She\'ll lecture DPW raiders frozen while El Pulpo fuels.', { col: '#ffd21a' });
   if (a) { a.say('Station: SWEPT. Feelings: ORGANIZED. Let\'s fuel that octopus.', 3); g.fx.confetti(a.x, a.y + 2, a.z, 20); }
 };
 /* ---------------- Bad Idea Burt ---------------- */

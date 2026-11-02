@@ -107,7 +107,7 @@ const BW14_W = {
   ctlHint(g, mode) {
     const touch = Input.usingTouch || Game.forceTouchUI, S = g.bw14;
     const T = {
-      plane: touch ? ['FLY THE DUST BUNNY', 'Left stick: pitch + bank to turn · Right lever: throttle', 'Throttle up, roll, pull back at 50 kt · ⇅ flips the stick'] : ['FLY THE DUST BUNNY', 'Arrows/WASD: pitch + bank · Space: throttle up · X/Shift: down', 'Throttle up, roll, then pull back (↓) to lift off'],
+      plane: touch ? ['FLY THE DUST BUNNY', 'Left stick: pitch + bank to turn · Right lever: throttle', 'Throttle up, roll, pull back at 50 kt · ⇅ flips the stick'] : ['FLY THE DUST BUNNY', 'Arrows/WASD: pitch + bank · Space: throttle up · X/Shift: down', 'Throttle up, roll, then pull back (↓) to lift off · I flips the stick'],
       free: touch ? ['FREEFALL!', 'Stick: steer (up = track forward) · Fly through the rings', 'Hit PULL when the altimeter is in the GREEN'] : ['FREEFALL!', 'Arrows: steer (up = track forward)', 'X/Shift or Space: PULL in the GREEN'],
       canopy: touch ? ['CANOPY OPEN', 'Hold LEFT / RIGHT toggles to turn', 'Hold BOTH to brake · FLARE just before your feet touch'] : ['CANOPY OPEN', 'Left/Right: toggles · Down or Space: both (brake)', 'FLARE just before your feet touch']
     };
@@ -330,13 +330,21 @@ const BW14_W = {
     }
     if (K.mv) { K.mv.x = K.x; K.mv.y = K.y; K.mv.z = K.z; K.mv.yaw = K.yaw; K.mv.pitch = K.pitch || 0; }
   },
+  // (re)starting the checklist: keep what's already done (saved flags), send the windsock flying if it's still on the pole
+  preflightOnStart(g, m) {
+    const S = g.bw14; S.pf = S.pf || {};
+    m.n = ['oilcap', 'sock', 'fuel'].filter(k => S.pf[k]).length;
+    if (!S.pf.sock && S.sock && S.sock.mode === 'pole') BW14_W.sockGust(g);
+    if (m.n >= 3) bw14After(g, 0.6, g2 => { const mm = g2.missions.get('preflight'); if (mm && mm.state === 'active') g2.missions.complete('preflight'); });
+  },
   preflightStep(g, what) {
     const S = g.bw14, m = g.missions.get('preflight');
     if (!m || m.state === 'done') return;
     S.pf = S.pf || {}; if (S.pf[what]) return; S.pf[what] = true;
     const n = ['oilcap', 'sock', 'fuel'].filter(k => S.pf[k]).length;
     m.n = n;
-    if (n >= 3) { const C = BW14_CFG; g.missions.complete('preflight', { x: C.PARK.x + 3, y: 1.4, z: C.PARK.z + 5 }); const d = g.actor('dusty'); if (d) d.say('Checklist complete! She\'s purring.', 3); }
+    // the token pops up in front of Brady (by the plane when the last job was the fuel run)
+    if (n >= 3) { const C = BW14_CFG; g.missions.complete('preflight', what === 'fuel' ? { x: C.PARK.x + 3, y: 1.4, z: C.PARK.z + 5 } : undefined); const d = g.actor('dusty'); if (d) d.say('Checklist complete! She\'s purring.', 3); }
     else g.toast('PRE-FLIGHT ' + n + '/3');
   },
   giveRig(g) {
@@ -388,7 +396,8 @@ BurnsWorlds.register({
     { id: 'pilot', name: 'Find a Pilot', type: 'talk', target: 'dusty', start: 'auto', token: false, short: 'Find a pilot at the airstrip', marker: { x: 433, z: 146 },
       desc: 'The gate won\'t let you back in. The sky might. Somebody here owns a plane.', hint: 'The cream plane with bunny ears, by the runway' },
     { id: 'preflight', name: 'Pre-Flight Check', type: 'custom', count: 3, giver: 'dusty', start: 'manual', requires: ['pilot'], progressLabel: 'Pre-flight', short: 'Oil cap · windsock · fuel', marker: { x: 484, z: 118 },
-      desc: 'Captain Dusty\'s checklist: find the oil cap, catch the runaway windsock, drive the fuel truck to the plane.', hint: 'Hangar (oil cap), runway edge (windsock), fuel depot (truck)' },
+      desc: 'Captain Dusty\'s checklist: find the oil cap, catch the runaway windsock, drive the fuel truck to the plane.', hint: 'Hangar (oil cap), runway edge (windsock), fuel depot (truck)',
+      onStart(g, m) { BW14_W.preflightOnStart(g, m); } },
     { id: 'chute', name: 'Packed With Love', type: 'custom', token: false, giver: 'rosie', start: 'manual', requires: ['pilot'], short: 'Get your parachute from Rigger Rosie', marker: { x: 474, z: 82 },
       desc: 'Rigger Rosie packed you a rainbow chute. A sparkle pony "borrowed" the pilot chute as a cape.', hint: 'The packing shade by the hangar; the pony hangs out by the terminal' },
     { id: 'briefing', name: 'Safety Third', type: 'custom', token: false, giver: 'captain', start: 'manual', requires: ['pilot'], short: 'Sit through the safety briefing', marker: { x: 486, z: 176 },
@@ -633,6 +642,7 @@ BurnsWorlds.register({
     // persistent progress
     S.pf = { oilcap: !!bw14Flag('oilcap'), sock: !!bw14Flag('sock'), fuel: !!bw14Flag('fuel') };
     if (g.missions.isDone('preflight')) S.pf = { oilcap: true, sock: true, fuel: true };
+    if (S.pf.oilcap) { const P = g.pickups.items.find(q => q.id === 'oilcap'); if (P) { P.taken = true; P.obj.visible = false; } }
     if (S.pf.fuel && S.truck) { S.truck.x = C.PARK.x + 9; S.truck.z = C.PARK.z + 12; S.truck.yaw = Math.PI; S.truck.parked = true; S.truck.syncMover(); }
     if (g.missions.isDone('chute')) BW14_W.giveRig(g); else BW14_W.plainBrady(g);
     const pf = g.missions.get('preflight'); if (pf && pf.state !== 'done') pf.n = ['oilcap', 'sock', 'fuel'].filter(k => S.pf[k]).length;
@@ -650,6 +660,7 @@ BurnsWorlds.register({
     if (S.ctlHint && S.ctlHint.t > 0) S.ctlHint.t -= dt;
     if (S.card) { S.card.t += dt; BW14_W.cardInput(g); }
     // flip the stick
+    if (S.invKey) { S.invKey = false; S.hudP.bw14inv = true; }
     if (S.hudP.bw14inv) { bw14Flag('invert', !bw14Flag('invert')); burnsSfx('select'); g.toast(bw14Flag('invert') ? 'STICK: ARCADE (UP = CLIMB)' : 'STICK: PILOT (PULL BACK = CLIMB)'); }
     // the jump (touch button or ACTION / X / Shift on keyboard and pad)
     if (F.active && F.mode === 'plane' && S.dzReady && !g.cine && !g.dialog.open && (S.hudP.bw14jump || p.inp.actionPressed)) { p.inp.actionPressed = false; BW14_W.jumpOut(g); }
@@ -764,7 +775,7 @@ Object.assign(BW14_W, {
       a.setBehavior('idle'); a.def.fixedY = false; a.y = 0; a.x = BW14_CFG.PARK.x + 3.4; a.z = BW14_CFG.PARK.z + 4.5;
       g.say(a, ['ZZZ— wha?! Who\'s flyin\' my plane?! ...Oh. Nobody. Good.', 'Captain Dusty. Thirty years crop-dusting beans. Now I dust burners. Out of a plane. On purpose.'], () => {
         g.say('brady', ['I need to get INTO the city. Today. The gate won\'t let me. My wife is on top of the Man.'], () => {
-          g.say(a, ['On top of the Man? Huh. That\'s a new one even for this week.', 'Tell you what: you earn the seat. Pre-flight checklist: find my oil cap, catch my windsock — it blew off again — and drive the fuel truck over.', 'Then get a chute from Rigger Rosie, and sit through the Safety Third briefing. Rules are rules. Third rules, but rules.'], () => { M.start('preflight'); g.setTod(Math.max(g.tod, 0.08), 0.05); if (S.sock && S.sock.mode === 'pole' && !S.pf.sock) BW14_W.sockGust(g); });
+          g.say(a, ['On top of the Man? Huh. That\'s a new one even for this week.', 'Tell you what: you earn the seat. Pre-flight checklist: find my oil cap, catch my windsock — it blew off again — and drive the fuel truck over.', 'Then get a chute from Rigger Rosie, and sit through the Safety Third briefing. Rules are rules. Third rules, but rules.'], () => { M.start('preflight'); g.setTod(Math.max(g.tod, 0.08), 0.05); });
         });
       });
       return;

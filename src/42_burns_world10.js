@@ -395,7 +395,7 @@ BURNS_W10.intro = function (g) {
     { say: ['brady', [BURNS_W10_COSTUME_LINES[cos] || BURNS_W10_COSTUME_LINES.none]] },
     { say: [f1, ['Your bike, honey! The crew stashed it right where you said. GO GET HER!']] },
     { do: g2 => { BurnsSave.flag(10, 'intro', true); S.introDone = true; p.animOverride = null; p.locked = false; p.teleport(L.x, 0, L.z, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; W.mountBike(g2); } },
-    { banner: ['RIDE TO THE BURN', 'Down the promenade to the great circle. ACTION rings your bell.', { col: '#ffd84a' }] }
+    { banner: ['RIDE TO THE BURN', 'Ride down the promenade. ACTION rings your bell.', { col: '#ffd84a' }] }
   ], null);
 };
 BURNS_W10.mountBike = function (g) {
@@ -465,7 +465,12 @@ BURNS_W10.mortarUpdate = function (g, dt) {
 };
 BURNS_W10.env = function (g, env) {
   const S = BURNS_W10.state;
-  // keep movers in sync with the latest positions before they are drawn
+  // the engine lights the scene with the first 4 point lights queued; during the Burn the fire comes first
+  // (the eight fire spinners each queue one, and would otherwise crowd it out)
+  if (S.burnK > 0 && g.plights) {
+    const k = S.burnK, fl = 1 + Math.sin(g.time * 13) * 0.06 + Math.sin(g.time * 31) * 0.04;
+    g.plights.unshift({ x: 0, y: BURNS_W10.DECK + 10, z: 0, r: 60, c: [1, 0.5, 0.15], i: 2.2 * k * fl }, { x: 0, y: 2, z: 30, r: 40, c: [1, 0.55, 0.2], i: 1.2 * k * fl }, { x: 0, y: 4, z: 47, r: 24, c: [1, 0.5, 0.18], i: 0.9 * k * fl });
+  }
   if (S.burnK > 0) { env.emB += S.burnK * 0.3; env.fogCol = env.fogCol.map((c, i) => lerp(c, [0.45, 0.2, 0.1][i], S.burnK * 0.35)); env.haze = Math.min(1, env.haze + S.burnK * 0.2); }
   if (S.phase === 2 && S.man && S.man.st === 'flash') env.emB += S.man.flashK * 0.6;
 };
@@ -551,7 +556,7 @@ BURNS_W10.bossIntro = function (g) {
     { say: ['man', ['SMALL MAN. YOU CAME BACK. AGAIN.', 'THIS IS MY PAVILION. MY NIGHT. MY... CHINKA.']] },
     { say: [{ name: 'CHINKA', model: BurnsRig.model(BurnsRig.chinkaSpec()) }, ['I am NOT your Chinka! I\'m HIS Chinka! And I\'m my OWN Chinka!']] },
     { say: ['man', ['THEN WATCH, BUN BOY, AS I DEFEND MY LOVE FROM ON HIGH!']] },
-    { do: g2 => { p.teleport(0, 0, 44, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = burnsW8910Proxy(man, { camY: 9 }); man.start(); g2.banner('FINAL BATTLE: THE SAUCER', 'Dodge his fire and fireworks · when he slumps, ride a green tractor beam up and bonk his head', { col: '#ffe24a' }); } }
+    { do: g2 => { p.teleport(0, 0, 44, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = burnsW8910Proxy(man, { camY: 9 }); man.start(); g2.banner('THE SAUCER', 'When he slumps, ride a green beam up · bonk his head', { col: '#ffe24a' }); } }
   ]);
 };
 BURNS_W10.phase1Down = function (g) {
@@ -575,7 +580,7 @@ BURNS_W10.toGiant = function (g) {
     { banner: ['THE GIANT MAN', 'Final Form · He is very, very big now', { col: '#ff4fd8', big: true, dur: 3.4 }] },
     { say: ['brady', ['...Okay. That\'s a lot of Man.']] },
     { say: [{ name: 'CHINKA', model: BurnsRig.model(BurnsRig.chinkaSpec()) }, ['BRADY! When he flashes, HIDE! Behind the domes! The speakers! Anything!']] },
-    { do: g2 => { W.giantSetup(g2); const cp = g2.world.checkpoints.find(c => c.id === 'cp_giant'); if (cp) g2.checkpointTouch(cp); p.teleport(-6, 0, 50, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = burnsW8910Proxy(man, { camY: 6.5, name: () => 'THE GIANT MAN' }); man.start(); g2.banner('FINAL BATTLE: THE GIANT', 'NEON FLASH = hide in a green ring behind cover · jump the fire and the stomps · bonk his head', { col: '#ffe24a' }); } }
+    { do: g2 => { W.giantSetup(g2); const cp = g2.world.checkpoints.find(c => c.id === 'cp_giant'); if (cp) g2.checkpointTouch(cp); p.teleport(-6, 0, 50, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = burnsW8910Proxy(man, { camY: 6.5, name: () => 'THE GIANT MAN' }); man.start(); g2.banner('FINAL FORM', 'Flash? Hide in a green ring · bonk him when he kneels', { col: '#ffe24a' }); } }
   ]);
 };
 BURNS_W10.giantSetup = function (g) {
@@ -770,9 +775,7 @@ BURNS_W10.drawBurn = function (g, R) {
   R.bbs.bb(0, W.DECK + 8, 0, 34 * k, 40 * k, SP.glow, [1, 0.5, 0.15], 0.55 * k, true);
   R.bbs.bb(h[0], h[1], h[2], 14 * k, 14 * k, SP.glow, [1, 0.7, 0.3], 0.6 * k, true);
   R.flat.flat(0, 0.08, 0, 70 * k, 70 * k, 0, SP.glow, [1, 0.45, 0.12], 0.45 * k, true);
-  g.pointLight(0, W.DECK + 10, 0, 60, [1, 0.5, 0.15], 2.2 * k);
-  g.pointLight(0, 2, 30, 40, [1, 0.55, 0.2], 1.2 * k);
-  g.pointLight(0, 4, 47, 24, [1, 0.5, 0.18], 0.9 * k);   // the firelight reaches the front rows (Brady, Chinka, the Bad Idea Guy)
+  // (the fire's point lights are queued in BURNS_W10.env, ahead of the fire spinners' own lights)
 };
 // after the Burn (also on revisits): the Man is an ember pile, the circle glows, Chinka hangs out
 BURNS_W10.afterBurn = function (g, inCine) {

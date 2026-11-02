@@ -349,7 +349,8 @@ class BW14_Fly {
     const k = { track: clamp(I.sy, 0, 1), turn: clamp(I.sx, -1, 1) };
     p.ch.poseFn = (Pz, t) => BURNS_ANIMS.bw14Free(Pz, t, k);
     if (Math.random() < dt * 40) g.fx.add(D.x + (Math.random() - 0.5) * 3, D.y - 3 - Math.random() * 6, D.z + (Math.random() - 0.5) * 3, 0, 16 + Math.random() * 8, 0, 0.5, 0.06, 0.03, [1, 1, 1], 0.5, 'streak', 16);
-    if (Math.floor(this.freeT * 2) !== Math.floor((this.freeT - dt) * 2) && agl < C.PULL_HI + 30 && agl > C.PULL_LO - 10) burnsSfx('dialogue_blip', { pitch: 2, vol: 0.4 });
+    if (Math.floor(this.freeT * 2) !== Math.floor((this.freeT - dt) * 2) && agl < C.PULL_HI + 30 && agl > C.PULL_LO - 10) burnsSfx('dialogue_blip', { pitch: 2, vol: 0.4 });   // altimeter beeps near the window
+    if (Math.floor(this.freeT / 1.7) !== Math.floor((this.freeT - dt) / 1.7)) burnsSfx('wind', { vol: 0.3, pitch: 0.8 + Math.random() * 0.4 }, 'dust');
   }
   checkFreeRings() {
     const D = this.dv, g = this.g;

@@ -258,10 +258,10 @@ BW11.drawLasers = function (g, R) {
     const dx = L.x - cam.x, dz = L.z - cam.z; if (dx * dx + dz * dz > 260 * 260) continue;
     if (L.when && !L.when(g)) continue;
     const near = dx * dx + dz * dz < 90 * 90, n = near ? L.n : Math.ceil(L.n / 2);
-    const sweep = Math.sin(t * (L.rate || 0.8) + L.ph), nc = L.col.length, col = L.col[((Math.floor(t * 0.5 + L.ph) % nc) + nc) % nc];
+    const ph = +L.ph || 0, sweep = Math.sin(t * (L.rate || 0.8) + ph), nc = (L.col && L.col.length) || 0, ci = nc ? ((Math.floor(t * 0.5 + ph) % nc) + nc) % nc : 0, col = (nc && L.col[ci]) || [1, 1, 1];
     R.bbs.bb(L.x, L.y, L.z, 1.1, 1.1, BURNS_SPRITES.R.glow, col, 0.9, true);
     for (let i = 0; i < n; i++) {
-      const u = n === 1 ? 0 : i / (n - 1) - 0.5, ang = L.yaw + u * L.spread + sweep * 0.5, el = (L.tilt || 0.18) + Math.sin(t * 0.9 + i + L.ph) * 0.12;
+      const u = n === 1 ? 0 : i / (n - 1) - 0.5, ang = (L.yaw || 0) + u * (L.spread || 1) + sweep * 0.5, el = (L.tilt || 0.18) + Math.sin(t * 0.9 + i + ph) * 0.12;
       const len = L.len || 60;
       BW11.beam(R, L.x, L.y, L.z, L.x + Math.sin(ang) * len * Math.cos(el), L.y + Math.sin(el) * len, L.z + Math.cos(ang) * len * Math.cos(el), near ? 0.07 : 0.16, col, 0.55, near ? 5 : 2);
     }
@@ -426,6 +426,23 @@ BW11.buildRoot = function (api, g) {
   for (let i = 0; i < 12; i++) { const a = i * 2.39 + 0.5, r = 5.5 + (i % 4) * 0.9; api.glow(x + Math.sin(a) * r, 9.5 + (i % 3) * 1.3, z + Math.cos(a) * r, 0.9, '#ffb040', { blink: 1.2 }); }
   api.sign('ROOT SOCIETY', F.x + 13.5, F.z + 7, { yaw: -0.7, h: 1.5, style: { bg: '#2a1a0c', fg: '#ffd890', border: '#7aff5a', size: 48, glow: '#7aff5a' }, glow: '#7aff5a' });
   S.lasers.push({ x, y: 13.5, z: z + 1, yaw: 0, n: 5, spread: 1.6, col: [[1, 0.7, 0.25], [0.5, 1, 0.35]], rate: 0.5, len: 55, tilt: 0.12, ph: 1 });
+};
+// Root Society's tipi village (Brady's home camp since World 17)
+BW11.buildTipis = function (api) {
+  const R = mulberry32(1717), spots = [[-205, -66, '#e8dcc0'], [-214, -55, '#d8c8a8'], [-216, -71, '#e0d0b8'], [-203, -79, '#ead8c0']];
+  spots.forEach(([x, z, canvas], i) => {
+    const band = ['#7aff5a', '#ffb040', '#38f2ff', '#ff4fd8'][i];
+    api.mesh(x, z, m => {
+      m.color(canvas).shine(0);
+      m.lathe([[2.0, 0], [1.98, 0.2], [1.5, 1.2, band, 0.25], [1.42, 1.4, band, 0.25], [1.38, 1.42], [0.75, 2.8], [0.2, 3.7], [0.12, 3.8], [0, 3.82]], { seg: 16 });
+      m.color('#5a3a22').shine(1); for (let k = 0; k < 7; k++) { const a = k / 7 * TAU; m.limb(Math.sin(a) * 0.18, 3.55, Math.cos(a) * 0.18, Math.sin(a) * -0.32, 4.6, Math.cos(a) * -0.32, 0.035, 0.03, { seg: 5 }); }
+      m.color('#2a1a10'); m.push(); m.tf(0, 0, 1.55, 0, -0.4, 0); m.roundBox(0, 0.7, 0, 0.8, 1.35, 0.06, 0.03); m.pop();
+      m.color('#ffd890', 0.9); m.ball(0, 2.1, 0, 0.1, { seg: 6, rings: 4 }); m.emissive(0);
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 1.6, y0: 0, y1: 2.2 }], lights: [{ x: 0, y: 1.2, z: 1.9, s: 0.9, c: '#ffd890' }, { x: 0, y: 0, z: 0, s: 0, c: '#ffb070', pool: 6, i: 0.4 }] };
+    }, { yaw: Math.atan2(-184 - x, -40 - z) + R.range(-0.2, 0.2) });
+  });
+  api.sign('BRADY\'S TIPI\n(HOME!)', -205.5, -62.4, { yaw: 0.6, h: 0.9, style: { bg: '#f4e8c8', fg: '#3a2414', border: '#7aff5a', size: 36 } });
+  api.sign('ROOT SOCIETY\nTIPI VILLAGE', -198, -56, { yaw: 0.9, h: 1.0, style: { bg: '#2a1a0c', fg: '#ffd890', border: '#7aff5a', size: 36, glow: '#7aff5a' }, glow: '#7aff5a' });
 };
 // Crusty Curt's wobbly tower of scaffolding and pallets
 BW11.buildCurtTower = function (api) {

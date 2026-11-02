@@ -50,7 +50,12 @@ BurnsWorlds.register({
     { id: 'ride', name: 'First Ride', type: 'custom', requires: ['thief'], giver: 'spokes', start: 'manual', time: 60, short: 'Ride the gates: loop the semi, launch the trailer!', marker: { x: 40, z: -44 },
       desc: 'Coach Spokes\' First Ride course runs through the Knotted Semi. Ride through every gate in order: the loop-de-loop, then launch off the trailer.', hint: 'The Knotted Semi, open playa east',
       onStart(g) { BURNS_W3.rideStart(g); }, onFail(g) { BURNS_W3.rideReset(g); },
-      onEvent(g, m, name) { const R = BURNS_W3.state.ride; if (!R) return; if (name === 'bbaLoopStart') { R.looped = true; g.banner('LOOP-DE-LOOP!', '', { col: '#ff4fd8', small: true }); } if (name === 'bbaLaunch') { R.launched = true; } } },
+      onEvent(g, m, name, data) {
+        const R = BURNS_W3.state.ride; if (!R) return;
+        if (name === 'bbaLoopStart') { R.looped = true; g.banner('LOOP-DE-LOOP!', '', { col: '#ff4fd8', small: true }); }
+        // the semi's launch kicker (big-art 'bbaRamp'; 'bbaStunt' = through the ring of fire)
+        if ((name === 'bbaRamp' || name === 'bbaStunt' || name === 'bbaLaunch') && (!data || !data.piece || data.piece === BURNS_W3.state.semiP) && g.player.vehicle) R.launched = true;
+      } },
     { id: 'boss', name: 'The Tallbike Baron', type: 'boss', requires: ['dress', 'ride'], start: 'manual', tokenDirect: true, short: 'Defeat the Tallbike Baron!', marker: { x: -62, z: -78 },
       desc: 'The bike thief works for the Baron, who hoards stolen community bikes in his Bike Graveyard. Knock him off his tall bike.', hint: 'The Bike Graveyard, open playa west', lockedDesc: 'Get a costume and finish your First Ride.' },
     { id: 'vibes', name: 'Good Vibes Only', token: false, type: 'find', giver: 'glimmer', start: 'manual', short: 'Find Glimmer\'s platform boot', marker: { x: -36, z: 6 },

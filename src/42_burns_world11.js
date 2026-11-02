@@ -17,6 +17,19 @@
 
 if (typeof BURNS_MUSIC_FALLBACK !== 'undefined' && !BURNS_MUSIC_FALLBACK.burns_w11) BURNS_MUSIC_FALLBACK.burns_w11 = 'land3';
 
+// JEFR, Root Society's camp leader (Brady's adoptive camp dad since World 17): an original character.
+// Registered as an NPC type so every world draws him the same way; a later definition (World 17) replaces this one.
+if (typeof BURNS_NPC_TYPES !== 'undefined' && !BURNS_NPC_TYPES.jefr && BurnsRig.defineType) {
+  BurnsRig.defineType('jefr', { anim: 'idle', lines: ['Welcome home, little brother!', 'The tree hears everything. Mostly bass.', 'Hydrate, then dance, then hydrate.'],
+    spec(s, r) {
+      s.face = 'friendly'; s.skin = '#c8906a'; s.skinSh = '#a06c48'; s.body.h = 1.04; s.body.w = 1.1;
+      s.hair = { style: 'long', col: '#6a4a2a', hi: '#9a7a4a' }; s.beard = { col: '#6a4a2a', len: 0.09 };
+      s.hat = { kind: 'cowboy', col: '#7a5a34' }; s.glasses = null; s.goggles = 'brass';
+      s.top = { kind: 'tee', col: '#4a6a34' }; s.vest = 'patches'; s.vestCol = '#7a5a34';
+      s.bottom = { kind: 'cargo', col: '#5a4a34' }; s.shoes = { kind: 'workboots', col: '#6a4a2a', sole: '#3a2a1a', laces: true };
+      s.acc = ['beads', 'kandi', 'utilityBelt']; s.prop = null;
+    } });
+}
 BW11.spec = function (base, seed, over, key) {
   const s = BurnsRig.npcSpec(BW11.type(base), seed);
   Object.assign(s, { paint: null, coat: null, vest: null, hat: null, goggles: false, glasses: null, beard: null, led: null, prop: null, prop2: null, acc: [] }, over);
@@ -79,6 +92,12 @@ BurnsBehaviors.register('bw11Runner', {
   hit(a, g) { return g.missions.state('usb') === 'active' && !BW11.state.usbFree; }
 });
 
+// a short burst of cheering, then back to whatever the actor was doing
+BurnsBehaviors.register('bw11Cheer', {
+  init(a) { a.data.t = 2.6 + Math.random() * 0.6; },
+  update(a, g, dt) { a.data.t -= dt; a.ch.play('cheer'); a.face(g.player.x, g.player.z, dt, 4); a.vx = a.vz = 0; a.physics(dt); if (a.data.t <= 0) a.setBehavior(a.def.behavior || 'idle'); }
+});
+
 /* ---------------- the world ---------------- */
 BurnsWorlds.register({
   id: 11, name: 'Sound Camp Crawl', sub: 'The 10:00 and 2:00 sides, camp to camp',
@@ -97,12 +116,12 @@ BurnsWorlds.register({
       desc: 'DJ Loophole won\'t share what he knows until someone out-DJs him. Get a C or better.', hint: 'Camp Make Some Noise, by the 10:00 plaza' },
     { id: 'heckle', name: 'Heckle-Off', short: 'Out-heckle Crusty Curt', type: 'custom', giver: 'curt', start: 'manual', marker: { x: -196, z: -16 },
       desc: 'A crusty vet is heckling every DJ in town. Heckle him back: win two rounds of three.', hint: 'Root Society dance floor, 10:00 side' },
-    { id: 'cable', name: 'Blown Bass', short: 'Find 3 speaker cables, then plug in', type: 'custom', count: 3, progressLabel: 'Speaker cables', giver: 'mycelium', start: 'manual', requires: ['quest'], marker: { x: -184, z: -40 },
-      desc: 'The wind tore Root Society\'s bass cable into three pieces: one up the tree, one on a speaker, one atop Curt\'s tower. Then plug it in.', hint: 'Root Society, 10:00 side',
+    { id: 'cable', name: 'Blown Bass', short: 'Find 3 speaker cables, then plug in', type: 'custom', count: 3, progressLabel: 'Speaker cables', giver: 'jefr', start: 'manual', requires: ['quest'], marker: { x: -184, z: -40 },
+      desc: 'Home camp needs you: the wind tore Root Society\'s bass cable into three pieces (up the tree, on a speaker, atop Curt\'s tower). Find them, plug in, and Jefr gives you the talisman.', hint: 'Root Society, your home camp (10:00 side)',
       onEvent(g, m, name, data) {
         if (name !== 'pickup' || data.mission !== 'cable') return;
         m.n++; burnsSfx('pick');
-        if (m.n >= 3) { g.banner('ALL THREE CABLES!', 'Plug them in at the junction box on the stage', { col: '#7aff5a' }); m.data.marker = 'mycelium'; }
+        if (m.n >= 3) { g.banner('ALL THREE CABLES!', 'Plug them in at the junction box on the stage', { col: '#7aff5a' }); m.data.marker = 'jefr'; }
         else g.toast(`Speaker cables: ${m.n}/3`);
         return true;
       } },
@@ -133,7 +152,8 @@ BurnsWorlds.register({
 /* ---------------- build ---------------- */
 BW11.build = function (api, g) {
   const P = BW11.P, R = api.rng;
-  BW11.state = { lasers: [], timers: [], showOfferings: g.missions && false, usbFree: false, hornT: 2, fogT: 0, doorLock: 0 };
+  BW11.state = { lasers: [], timers: [], showOfferings: false, usbFree: false, hornT: 2, fogT: 0, doorLock: 0 };
+  BW11Dome.active = false; BW11Dome.o = null; BW11Dome.f = null;   // a bout from an earlier visit never carries over
   const S = BW11.state;
   S.showOfferings = BurnsSave.get().missions['11:quest'] === 'done';
   g.interactables = g.interactables || [];
@@ -161,7 +181,7 @@ BW11.build = function (api, g) {
   const EL = BW11.plen(P.esp), tmp = {};
   for (let s = 8; s < EL - 6; s += 24) { BW11.along(P.esp, s, tmp); const rx = Math.cos(tmp.yaw), rz = -Math.sin(tmp.yaw); BW11.lampPost(api, tmp.x - rx * 7.8, tmp.z - rz * 7.8); }
   /* ---------- the 10:00 side ---------- */
-  BW11.buildLoop(api, g); BW11.buildRoot(api, g); BW11.buildCurtTower(api); BW11.buildTemple(api, g);
+  BW11.buildLoop(api, g); BW11.buildRoot(api, g); BW11.buildCurtTower(api); BW11.buildTipis(api); BW11.buildTemple(api, g);
   /* ---------- the 2:00 side ---------- */
   BW11.buildQM(api, g); BW11.buildDome(api, g); BW11.buildWobble(api, g);
   /* ---------- theme camps on the city side ---------- */
@@ -210,6 +230,8 @@ BW11.build = function (api, g) {
   // interactables: plug in the bass
   const J = S.junction;
   g.interactables.push({ x: J.x, z: J.z, y: J.y, r: 2.4, label: 'PLUG IN', when: g2 => g2.missions.state('cable') === 'active' && g2.missions.get('cable').n >= 3, fn: g2 => BW11.plugIn(g2) });
+  // coming home: Brady's tipi neighbours cheer the first time he walks in each visit
+  api.trigger({ x: P.rootFloor.x, z: P.rootFloor.z, r: 17, once: true, onEnter: g2 => BW11.homecoming(g2) });
   // mystery doors: in one, out the next
   S.doors.forEach((d, i) => api.trigger({ x: d.x, z: d.z, r: 0.9, onEnter: g2 => BW11.doorWarp(g2, i) }));
 };
@@ -230,6 +252,13 @@ BW11.buildPeople = function (api, g) {
   const RT = P.root, RF = P.rootFloor;
   api.npc({ id: 'mycelium', name: 'DJ MYCELIUM', spec: BW11.LOOKS.mycelium(), x: RT.x, z: RT.z + 7.2, y: 1.3, fixedY: true, yaw: 0, behavior: 'idle', noDJ: true, talk: (g2, a) => BW11.talkMycelium(g2, a),
     chat: ['...is this thing on?', 'The roots are quiet tonight.', 'Bass is the heartbeat of the forest. Our heart is unplugged.'] });
+  api.npc({ id: 'jefr', name: 'JEFR', type: T('jefr'), seed: 1, x: RT.x - 6.5, z: RT.z + 12.5, yaw: 0.4, behavior: 'idle', noDJ: true, talk: (g2, a) => BW11.talkJefr(g2, a) });
+  // Brady's tipi neighbours, out on the dance floor
+  S.campFriends = [
+    api.npc({ id: 'moss', name: 'MOSS (TIPI NEIGHBOR)', type: 'tutu', seed: 171, x: RF.x - 4, z: RF.z + 3, yaw: 2.6, behavior: 'dance', style: 1, lines: ['BRADY! Your tipi zipper is still broken. We love it.', 'Family dinner is at "whenever." Bring a fork.'] }),
+    api.npc({ id: 'river', name: 'RIVER (TIPI NEIGHBOR)', type: 'burner', seed: 172, x: RF.x + 3, z: RF.z + 5, yaw: 3.4, behavior: 'dance', style: 4, lines: ['Root Society forever! Also, whose sock is on the tipi pole?', 'Go get her, Brady. We\'ll keep the bass warm.'], gift: { kind: 'water' } }),
+    api.npc({ id: 'birch', name: 'BIRCH (TIPI NEIGHBOR)', type: 'furcoat', seed: 173, x: RF.x - 1, z: RF.z - 3, yaw: 0, behavior: 'dance', style: 0, lines: ['You smell like the open playa. Respect.', 'Jefr\'s been pacing since the bass died. Help the man.'] })
+  ];
   api.npc({ id: 'curt', name: 'CRUSTY CURT', type: T('crusty'), seed: 7, prop: 'bottle', x: RF.x + 7, z: RF.z - 6, yaw: Math.PI, behavior: 'idle', talk: (g2, a) => BW11.talkCurt(g2, a),
     chat: ['BOOO! PLAY SOMETHING WITH A BANJO!', 'THIS ISN\'T MUSIC, IT\'S A FAX MACHINE FALLING DOWN STAIRS!', 'Baker Beach had better bass! And it was a BEACH!', 'Too corporate! Even the trees are corporate now!'] });
   const fixed = BurnsSave.hasToken(11, 'cable');
@@ -395,10 +424,10 @@ BW11.intro = function (g) {
   g.cutscene([
     { music: g.def.music },
     { cam: c0 },
-    { banner: [BurnsWorlds.label(11).toUpperCase(), 'SOUND CAMP CRAWL · 10:00 TO 2:00', { col: '#7aff5a', big: true, dur: 3 }] },
+    { banner: [BurnsWorlds.label(11).toUpperCase(), 'SOUND CAMP CRAWL · THURSDAY NIGHT', { col: '#7aff5a', big: true, dur: 3 }] },
     { cam: { from: c0, to: c1, dur: 3.6 } },
     { cam: { from: c1, to: c2, dur: 2.4 } },
-    { say: ['brady', ['El Pulpo is running on fumes. Yellow bike it is.', 'Somewhere out here, somebody saw where the Man took Chinka.']] },
+    { say: ['brady', ['El Pulpo is running on fumes. Yellow bike it is.', 'Root Society\'s on the 10:00 side. Home camp\'s got my back.', 'Somewhere out here, somebody saw where the Man took Chinka.']] },
     { cam: { x: -192, y: 2.4, z: 72, tx: -188, ty: 1.7, tz: 66, fov: 0.85 } },
     { say: [mel || 'MEGAPHONE MEL', ['ATTENTION, BEAUTIFUL WEIRDOS! A giant wooden guy was spotted dancing at a sound camp tonight!', 'Rumor says ONE DJ saw where he went with that lady!']] },
     { say: ['brady', ['A DJ. At a sound camp. On the 10 and 2 sides.', 'That narrows it down to... all of them.']] },
@@ -440,10 +469,23 @@ BW11.djoff = function (g) {
 /* ---------------- Root Society: Blown Bass + the Heckle-Off ---------------- */
 BW11.talkMycelium = function (g, a) {
   const st = g.missions.state('cable'), m = g.missions.get('cable');
-  if (st === 'locked') { g.say(a, ['Welcome to the roots, friend. We\'re all connected underground. Like fungus. Like bass.', 'Except our bass is gone. The wind took it. Come back if you can help.']); return; }
-  if (st === 'available') { g.say(a, ['Alkali sent you? She sends her regards, probably. Through the mycelium.', 'Our bass cable blew apart in the wind. Three pieces, scattered.', 'One went up the tree. One\'s on top of a speaker. Curt\'s tower ate the third. Find them, plug them in at the junction box.'], () => g.missions.start('cable')); return; }
-  if (st === 'active') { g.say(a, m.n >= 3 ? ['You have all three! The junction box is on the stage, by the left speaker. PLUG IN!'] : [`${m.n} of 3 cables. The roots are patient. I am... mostly patient.`]); return; }
-  g.say(a, ['Feel that? That\'s the earth humming back. You did that.']);
+  if (st === 'done') { g.say(a, ['Feel that? That\'s the earth humming back. You did that, little brother.']); return; }
+  if (st === 'active') { g.say(a, m.n >= 3 ? ['You have all three! The junction box is on the stage, by the left speaker. PLUG IN!'] : [`${m.n} of 3 cables. I\'m playing pure treble out here. It\'s like a forest with no trunk.`]); return; }
+  g.say(a, ['We\'re all connected underground. Like fungus. Like bass.', 'Except our bass is gone. The wind took it. Talk to Jefr, he\'s been pacing.']);
+};
+BW11.homecoming = function (g) {
+  const S = BW11.state, P = BW11.P.rootFloor, names = ['moss', 'river', 'birch', 'jefr'];
+  const lines = ['BRADY\'S HOME!', 'THERE HE IS!', 'TIPI BROTHER!', 'Welcome home, little brother!'];
+  names.forEach((id, i) => { const a = g.actor(id); if (!a) return; a.say(lines[i], 2.4); a.setBehavior('bw11Cheer'); });
+  g.fx.confetti(P.x, 3, P.z, 40); burnsSfx('crowd_cheer', { vol: 0.6 });
+  g.toast('HOME CAMP: ROOT SOCIETY');
+};
+BW11.talkJefr = function (g, a) {
+  const st = g.missions.state('cable'), m = g.missions.get('cable');
+  if (st === 'locked') { g.say(a, ['Brady! Welcome home, little brother. Your tipi missed you.', 'Go find your DJ. We\'re under the tree if you need us. And we always need bass.']); return; }
+  if (st === 'available') { g.say(a, ['Alkali wants an offering from Root Society? Of course she does. She has taste.', 'But our bass blew out in the wind. The speaker cable\'s in three pieces, scattered all over camp.', 'One went up the tree. One\'s on top of a speaker. Curt\'s tower ate the third.', 'Plug them back in at the junction box and the talisman is yours. Family helps family.'], () => g.missions.start('cable')); return; }
+  if (st === 'active') { g.say(a, m.n >= 3 ? ['All three! Junction box, on the stage by the left speaker. Plug in, little brother!'] : [`${m.n} of 3 cables. The roots are patient. I am... mostly patient.`]); return; }
+  g.say(a, ['Root Society sounds like itself again. Go get her back, Brady. Then come home and tell us everything.']);
 };
 BW11.plugIn = function (g) {
   const S = BW11.state, a = g.actor('mycelium'), J = S.junction, RT = BW11.P.root;
@@ -453,7 +495,8 @@ BW11.plugIn = function (g) {
     { cam: { x: RT.x + 9, y: 4.5, z: RT.z + 22, tx: RT.x, ty: 3, tz: RT.z + 6, fov: 0.95 } },
     { do: g2 => { burnsSfx('man_stomp', { vol: 0.7 }); g2.shake(0.5); for (const c of S.rootCones) g2.fx.ring(c[0], c[1], c[2] + 0.4, 3, '#7aff5a', 0.6); g2.fx.confetti(RT.x, 6, RT.z + 12, 40); burnsSfx('crowd_cheer'); for (const c of S.rootCrowd || []) { const ac = g2.actors.find(x => x.def === c); if (ac) ac.setBehavior('dance'); } } },
     { wait: 1.2 },
-    { say: [a || 'DJ MYCELIUM', ['THE BASS RETURNS! The roots are singing!', 'For Alkali, take this. A talisman carved from a root that fell in the 2019 windstorm.', 'It hums at forty hertz. Like a very small, very wise subwoofer.']] },
+    { say: [a || 'DJ MYCELIUM', ['THE BASS RETURNS! The roots are singing!']] },
+    { say: [g.actor('jefr') || 'JEFR', ['That\'s the Root Society sound! Here, little brother: our root-wood talisman.', 'Carved from a root that came down in a windstorm. It hums at forty hertz.', 'Take it to Alkali with love from home.']] },
     { do: g2 => { BW11.give(g2, 'talisman'); g2.missions.complete('cable', { x: J.x + 1.5, y: J.y + 1.2, z: J.z + 1.5 }); } }
   ]);
 };

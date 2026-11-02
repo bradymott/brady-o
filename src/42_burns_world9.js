@@ -552,7 +552,7 @@ BURNS_W9.beacon = function (g) {
   const S = BURNS_W9.state; if (S.beaconOn) return;
   S.beaconOn = true; BurnsSave.flag(9, 'beacon', true);
   BURNS_W9.whiteoutShort(g);
-  g.banner('THE BEACON IS AWAKE', 'Its beams sweep the dust. Follow the lamp line north to the Outpost.', { col: '#fff0c0' });
+  g.banner('THE BEACON IS AWAKE', 'Follow the lamp line north to the Outpost.', { col: '#fff0c0' });
   burnsSfx('secret'); g.fx.confetti(BURNS_W9.LIGHT.x, BURNS_W9.LIGHT.top + 2, BURNS_W9.LIGHT.z, 30); g.shake(0.2);
 };
 BURNS_W9.whiteoutUpdate = function (g, m) {
@@ -624,7 +624,7 @@ BURNS_W9.setReveal = function (g) {
 };
 BURNS_W9.giveGoggles = function (g) {
   const S = BURNS_W9.state; S.goggles = true; BurnsSave.flag(9, 'goggles', true);
-  g.banner('DUST GOGGLES', 'Junk-made, robot-approved: you can see through the storm now.', { col: '#38f2ff', big: true });
+  g.banner('DUST GOGGLES', 'Robot-approved. Now you can see through the storm.', { col: '#38f2ff', big: true });
   burnsSfx('map_open', null, 'secret');
 };
 BURNS_W9.botTalk = function (g, a) {
@@ -686,7 +686,7 @@ BURNS_W9.bossIntro = function (g) {
     { say: ['man', ['SMALL MAN. YOU FOLLOWED US INTO THE STORM.', 'THE DUST IS MY WITNESS. SHE WILL LEARN TO LOVE ME.']] },
     { say: ['brady', ['She doesn\'t love you. She doesn\'t even like sand!']] },
     { say: ['man', ['THEN I WILL BURY YOU IN IT!']] },
-    { do: g2 => { S.forceStorm = undefined; p.teleport(A.x, 0, A.z + 22, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = burnsW8910Proxy(man, { camY: 8 }); man.start(); g2.banner('FIGHT!', 'Jump his shockwaves · dodge the dust devils · hide from the flash · bonk his head when he collapses', { col: '#ffe24a' }); } }
+    { do: g2 => { S.forceStorm = undefined; p.teleport(A.x, 0, A.z + 22, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = burnsW8910Proxy(man, { camY: 8 }); man.start(); g2.banner('FIGHT!', 'Dodge everything · bonk his head when he collapses', { col: '#ffe24a' }); } }
   ]);
 };
 BURNS_W9.bossDefeated = function (g) {

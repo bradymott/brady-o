@@ -27,8 +27,7 @@
 const bbaV = {
   norm(x, y, z) { const l = Math.hypot(x, y, z) || 1; return [x / l, y / l, z / l]; },
   cross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; },
-  dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; },
-  add(a, b, k) { return [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k]; }
+  dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
 };
 const BBA_CLIMB_V = 4.3;          // climbing speed on nets/ladders (m/s)
 const BBA_NOGRAV = () => BURNS_PHYS.gravity;
@@ -77,19 +76,6 @@ function bbaPart(api, P, lx, lz, fn) {
   }, { yaw: F.rot, scale: F.s, y: F.y0 });
   P.cols.push(...(info.wcols || []));
   return info;
-}
-// a raw collider given in piece-local coordinates
-function bbaCol(api, P, d) {
-  const F = P.F, s = F.s, c = Object.assign({}, d);
-  c.x = F.wx(d.x || 0, d.z || 0); c.z = F.wz(d.x || 0, d.z || 0);
-  c.yaw = F.rot + (d.yaw || 0);
-  c.y0 = F.y0 + (d.y0 || 0) * s; if (d.y1 !== undefined) c.y1 = F.y0 + d.y1 * s;
-  if (d.hx !== undefined) { c.hx = d.hx * s; c.hz = d.hz * s; }
-  if (d.r !== undefined) c.r = d.r * s;
-  if (d.ya !== undefined) { c.ya = F.y0 + d.ya * s; c.yb = F.y0 + d.yb * s; }
-  const w = api.collider(c);
-  P.cols.push(w);
-  return w;
 }
 function bbaScaleCol(d, s) { const c = Object.assign({}, d); for (const k of ['x', 'z', 'hx', 'hz', 'r', 'y0', 'y1', 'ya', 'yb']) if (c[k] !== undefined) c[k] *= s; return c; }
 // a mover built in piece-local units (scaled with the piece). Position it with bbaPose().
@@ -233,7 +219,7 @@ function bbaHook(g, R) {
 function bbaDraw(g, Rr, R) {
   if (g.world && g.world._bba !== R) return;
   const S = BURNS_SPRITES.R, nk = R.night;
-  for (const P of R.pieces) if (P.draw) P.draw(g, Rr, S, bbaNight(g, P), nk);
+  for (const P of R.pieces) { if (P.draw) P.draw(g, Rr, S, bbaNight(g, P), nk); if (P.burning) bbaBurnDraw(g, Rr, S, P); }
   if (R.ride && R.ride.draw) R.ride.draw(g, Rr, S);
 }
 // camera override with smooth blend in/out: R.cam = { fn(g, C) -> {x,y,z,tx,ty,tz,fov} | null, dur, t, k }
@@ -275,6 +261,7 @@ function bbaUpdate(g, wdt, R) {
     bbaRevealStep(g, R, dt);
     bbaMomentumStep(g, R, dt);
     if (R.zipReturn) bbaZipReturn(g, R, dt);
+    for (const P of R.pieces) if (P.burning) bbaBurnStep(g, P, wdt);
   } catch (e) { bbaErr(e); }
 }
 
@@ -704,6 +691,46 @@ function bbaDynGlow(api, P, lx, ly, lz, size, col) {
   return g;
 }
 
+/* ---- the burn: engulf a piece in flames (a Friday-night spectacle; geometry stays, it's art) ---- */
+function bbaBurn(g, P, o) {
+  o = o || {};
+  if (P.burning && !P.burning.done) return P.burning;
+  // flame points sampled from the piece's own colliders (tops and sides)
+  const pts = [], rng = mulberry32(hashStr(P.id + 'burn')), cols = P.cols.filter(c => !c.camPass && (c.y1 - c.y0) > 0.6);
+  for (let i = 0; i < 90 && cols.length; i++) {
+    const c = cols[(rng() * cols.length) | 0], top = rng() < 0.6;
+    if (c.t === 'cyl' || c.t === 'dome') { const a = rng() * TAU, r = top ? c.r * Math.sqrt(rng()) : c.r; pts.push([c.x + Math.sin(a) * r, top ? c.y1 : lerp(c.y0, c.y1, rng()), c.z + Math.cos(a) * r]); }
+    else { const lx = (rng() * 2 - 1) * c.hx, lz = (rng() * 2 - 1) * c.hz, cy = Math.cos(c.yaw || 0), sy = Math.sin(c.yaw || 0); pts.push([c.x + lx * cy + lz * sy, top ? (c.t === 'ramp' ? (c.ya + c.yb) / 2 : c.y1) : lerp(c.y0, c.y1, rng()), c.z - lx * sy + lz * cy]); }
+  }
+  if (!pts.length) pts.push([P.x, P.F.y0 + 2, P.z]);
+  let cy = 0; for (const q of pts) cy += q[1]; cy /= pts.length;
+  P.burning = { t: 0, dur: o.dur || 45, pts, cx: P.x, cy, cz: P.z, hazard: !!o.hazard, onDone: o.onDone, done: false, k: 0 };
+  burnsSfx('flame_jet'); burnsSfx('crowd_cheer', { vol: 0.8 }); g.shake(0.2);
+  g.missions.event('bbaBurn', P);
+  return P.burning;
+}
+function bbaBurnStep(g, P, wdt) {
+  const B = P.burning; if (B.done) return;
+  B.t += wdt;
+  const t = B.t, d = B.dur, k = B.k = t < 6 ? t / 6 : t > d - 8 ? Math.max(0, (d - t) / 8) : 1;
+  const n = Math.random() < k ? 2 + ((k * 4) | 0) : 0;
+  for (let i = 0; i < n; i++) {
+    const q = B.pts[(Math.random() * B.pts.length) | 0];
+    g.fx.add(q[0] + (Math.random() - 0.5) * 1.2, q[1], q[2] + (Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 1.5, 3 + Math.random() * 4, (Math.random() - 0.5) * 1.5, 0.7 + Math.random() * 0.5, 2.6 * (0.6 + k * 0.6), 0.8, [1, 0.5 + Math.random() * 0.3, 0.15], 1, 'flame', 1);
+    if (Math.random() < 0.3) g.fx.add(q[0], q[1] + 1, q[2], (Math.random() - 0.5) * 3, 4 + Math.random() * 6, (Math.random() - 0.5) * 3, 1.6, 0.14, 0.04, [1, 0.7, 0.3], 1, 'spark', 1 | 4);
+  }
+  if (Math.random() < wdt * 14 * k) { const q = B.pts[(Math.random() * B.pts.length) | 0]; g.fx.add(q[0], q[1] + 2, q[2], (Math.random() - 0.5) * 1.5, 3 + Math.random() * 2, (Math.random() - 0.5) * 1.5, 4.5, 3, 11, [0.2, 0.17, 0.18], 0.4, 'smoke', 4); }
+  if (Math.random() < wdt * 3 * k) burnsSfx('flame_jet', { vol: 0.5 * k, pitch: 0.7 + Math.random() * 0.3 });
+  if (B.hazard && k > 0.3 && Math.random() < wdt * 4) { const q = B.pts[(Math.random() * B.pts.length) | 0]; g.addTempFire(q[0], q[1], q[2], 1.2, 1.5); }
+  if (t >= d) { B.done = true; burnsSfx('crowd_cheer'); g.missions.event('bbaBurnDone', P); if (B.onDone) B.onDone(g, P); }
+}
+function bbaBurnDraw(g, Rr, Sp, P) {
+  const B = P.burning; if (B.done || B.k < 0.01) return;
+  const fl = 0.85 + 0.15 * Math.sin(P.R.t * 9) * Math.sin(P.R.t * 5.3), sz = (P.K.size || 30) * P.F.s;
+  Rr.bbs.bb(B.cx, B.cy + 4, B.cz, sz * 1.4, sz * 1.4, Sp.glow, [1, 0.5, 0.18], 0.55 * B.k * fl, true);
+  if (g.frameN !== B.lf) { B.lf = g.frameN; g.pointLight(B.cx, B.cy + 3, B.cz, sz * 1.6, [1, 0.5, 0.2], 2.6 * B.k * fl); }
+}
+
 /* ======================= public API ======================= */
 const BurnsBigArt = {
   version: 1,
@@ -758,6 +785,8 @@ const BurnsBigArt = {
   beamHits(g, x, z) { return bbaBeamHits(g, x, z); },
   // register something a lighthouse beam can reveal: fn(g, q) runs once, when a lit beam sweeps (x, z)
   revealable(g, x, z, fn, r) { const R = g.world && g.world._bba; if (!R) return null; const q = { x, z, r: r || 1.5, fn, done: false, kind: 'custom' }; R.reveals.push(q); return q; },
+  // set a piece on fire (spectacle): opts { dur: seconds (45), hazard: false, onDone(g, piece) }
+  burn(g, piece, o) { const P = typeof piece === 'string' ? this.piece(g, piece) : piece; return P ? bbaBurn(g, P, o) : null; },
   // is Brady currently climbing / ziplining / looping?
   state(g) { const R = g.world && g.world._bba; if (!R) return {}; return { climbing: !!R.climb, riding: R.ride ? R.ride.kind : null, air: !!R.air }; }
 };

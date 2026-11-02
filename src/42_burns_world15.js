@@ -145,7 +145,7 @@ BurnsWorlds.register({
     api.collider({ t: 'box', x: -BW15.FENCE_X, z: -400, hx: 0.3, hz: 200, y0: 0, y1: 1.3, walk: false });
     api.collider({ t: 'box', x: BW15.FENCE_X, z: -400, hx: 0.3, hz: 200, y0: 0, y1: 1.3, walk: false });
     for (let z = -560; z < BW15.GATE_Z - 10; z += 26) for (const x of [-16.2, 16.2]) api.prop('cone', { x, z: z + rng.range(-3, 3) });
-    const kinds = ['rv', 'van', 'car', 'boxtruck', 'rv', 'camper', 'bus', 'car', 'trailer', 'rv', 'van', 'car'];
+    const kinds = ['rv', 'van', 'car', 'boxtruck', 'rv', 'camper', 'bus', 'car', 'trailer', 'rv', 'artcar', 'van', 'car'];
     S.line = api.traffic({ seed: 15, lanes: L.map((x, i) => ({ id: 'L' + i, points: [[x, BW15.LINE_BACK], [x, BW15.LINE_END]], vehicles: 30, gap: [1.6, 3.2], speed: 0.9, waveRate: 0.28 + i * 0.03, kindAt: k => kinds[(k + i * 5) % kinds.length] })) });
     BW15D.layoutLine(S, S.line, BW15.SPAWN_Z);
     // pulse towers + flaggers at both stop lines
@@ -256,6 +256,8 @@ BurnsWorlds.register({
     /* ================= furry hitchhiker ================= */
     const fz = at(BW15.S.furry, -6.5);
     put(fz.x + 0.8, fz.z, m => BW15M.roadSign(m, { text: 'ANYWHERE\nBUT HERE', style: { bg: '#f4e8c8', fg: '#3a1a10', size: 34 }, w: 0.9, y: 0.9 }), fz.yaw + Math.PI / 2);
+    // a crusty hitchhiker who would rather walk (ambient)
+    { const hh = at(880, -6.8), road = at(880, 0); api.npc(Object.assign(BW15_CAST.who('crusty', 33), { x: hh.x, z: hh.z, yaw: Math.atan2(road.x - hh.x, road.z - hh.z), behavior: 'idle', anim: 'wave', name: 'HITCHHIKER', chat: ['No thanks, man. Walking is the journey.', 'It was better when we hitchhiked IN.', 'Is that RV... a unicorn? Respect.'] })); put(hh.x - 0.9, hh.z + 0.4, m => BW15M.roadSign(m, { text: 'BAKER BEACH\nOR BUST', style: { bg: '#f4e8c8', fg: '#3a1a10', size: 34 }, w: 0.9, y: 0.9 }), Math.atan2(road.x - hh.x, road.z - hh.z)); }
     /* ================= the checkpoint ================= */
     const ck = BW15.S.check;
     for (let s = ck - 48; s <= ck + 26; s += 4) { for (const lat of [0.05, -4.15]) { const a = at(s, lat); put(a.x, a.z, m => BW15M.cone(m), a.yaw); } }

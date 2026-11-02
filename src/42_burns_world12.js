@@ -490,7 +490,7 @@ BW12.buildTemple = function (api, R, msgSub, S) {
   q = P(300 * deg, 12.0); sit(q[0], q[1], 300 * deg + Math.PI, 404, 'tutu', ['Take your time. Nobody\'s in a hurry here.']);
   q = P(100 * deg, 15.5); sit(q[0], q[1], 100 * deg + Math.PI, 405, 'ledsuit', null);
   q = P(210 * deg, 4.2); sit(q[0], q[1], 210 * deg + Math.PI, 406, 'burner', ['(She\'s holding a photo against her chest. She nods at you.)'], 'bw1213_kneel');
-  q = P(130 * deg, 4.3); sit(q[0], q[1], 130 * deg + Math.PI, 407, 'crusty', ['Twenty-six years I\'ve been coming out here. It never gets lighter. It gets... shared.']);
+  q = P(130 * deg, 4.3); sit(q[0], q[1], 130 * deg + Math.PI, 407, 'burner', ['Twenty-six years I\'ve been coming out here. It never gets lighter. It gets... shared.']);
   q = P(272 * deg, 11.0); sit(q[0], q[1], 272 * deg + Math.PI, 408, 'burner', ['(She plays a few soft notes on a little thumb piano for you.)'], 'bw1213_floorsit', { notes: true, name: 'KALIMBA PLAYER' });
   q = P(166 * deg, 18.7); sit(q[0], q[1], 166 * deg, 409, 'burner', ['I wrote "thank you." Took me nine years to know who to say it to.'], 'bw1213_write');
   q = P(228 * deg, 18.7); sit(q[0], q[1], 228 * deg, 410, 'furcoat', null, 'bw1213_write');
@@ -627,7 +627,7 @@ BW12.buildTable = function (api, R, S) {
   api.sign('FOR EVERYONE WHO\nCOULDN\'T COME.\nSIT AWHILE.', T.x, T.z + 5.5, { h: 1.1, style: { bg: '#f8f0e0', fg: '#4a3a5a', size: 34, border: '#a89070', font: BW1213.HAND } });
   BW12.lampPost(api, T.x - 10.6, T.z, 4.8, !BurnsSave.hasToken(12, 'lamps'));
   api.npc({ type: 'burner', seed: 520, name: 'SOMEONE AT THE TABLE', x: T.x + 4, z: T.z + 1.05, yaw: Math.PI, behavior: 'bw12still', anim: 'sit', chatter: false, lines: ['I set a place for my dad. He always took the seat facing the sunrise.'] });
-  api.npc({ type: 'crusty', seed: 521, x: T.x - 3.9, z: T.z - 1.05, yaw: 0, behavior: 'bw12still', anim: 'sit', chatter: false, lines: ['(He raises his cup to the empty chair beside him.)'] });
+  api.npc({ spec: Object.assign(BW1213.base(521, { face: 'tired', skin: '#d8a888', skinSh: '#b88868', hair: { style: 'long', col: '#c8c4c0', hi: '#e8e4e0' }, beard: { col: '#c8c4c0', len: 0.06 }, top: { kind: 'button', col: '#8a9a7a' }, bottom: { kind: 'cargo', col: '#6a6050' }, shoes: { kind: 'boots', col: '#5a4030' } }), { key: 'bw12:elder' }), x: T.x - 3.9, z: T.z - 1.05, yaw: 0, behavior: 'bw12still', anim: 'sit', chatter: false, lines: ['(He raises his cup to the empty chair beside him.)'] });
 };
 BW12.buildStair = function (api, R, S) {
   const T = BW12.STAIR; S.stairStep = [];

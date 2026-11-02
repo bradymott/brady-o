@@ -225,8 +225,10 @@ const BW14_HUD = {
     const cam = g.cam, B = R.B; let dx = x - cam.x, dy = y - cam.y, dz = z - cam.z;
     let sx = dx * B.rx + dy * B.ry + dz * B.rz, sy = -(dx * B.ux + dy * B.uy + dz * B.uz);
     const l = Math.hypot(sx, sy) || 1; sx /= l; sy /= l;
-    const k = Math.min((W / 2 - m) / Math.max(1e-3, Math.abs(sx)), (H / 2 - m) / Math.max(1e-3, Math.abs(sy)));
-    return { x: W / 2 + sx * k, y: H / 2 + sy * k, on: false, ang: Math.atan2(sy, sx) };
+    // edge arrows live in a box that stays clear of the HUD pills and the bottom controls
+    const top = 70, bot = H * (H > W ? 0.66 : 0.6), cy = (top + bot) / 2, hh = (bot - top) / 2;
+    const k = Math.min((W / 2 - m - 40) / Math.max(1e-3, Math.abs(sx)), hh / Math.max(1e-3, Math.abs(sy)));
+    return { x: W / 2 + sx * k, y: cy + sy * k, on: false, ang: Math.atan2(sy, sx) };
   },
   arrowAt(ctx, p, col, label) {
     ctx.save(); ctx.translate(p.x, p.y);
@@ -277,6 +279,8 @@ const BW14_HUD = {
 };
 
 /* ---------------- engine hooks (guarded: only world 14 while flying) ---------------- */
+// keyboard: I flips the stick (pilot <-> arcade) in World 14
+try { window.addEventListener('keydown', e => { const g = Game.scene; if (e.code === 'KeyI' && !e.repeat && g && g.bw14 && g.state === 'play' && !g.paused) g.bw14.invKey = true; }); } catch (e) { /* no window */ }
 (() => {
   // free World 14's own puppet meshes (plane, canopy) with the rest of the world's GPU buffers
   const rel0 = BurnsScenes.releaseWorld;

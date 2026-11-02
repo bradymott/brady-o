@@ -195,6 +195,7 @@ const BW15D = {
       ['Every. Last. Bag. We\'re basically a parade now.', 'This is the most beautiful traffic of my life.']
     ][clamp(n - 1, 0, 7)];
     BW15D.quip(g, 'bag' + n, lines, true);
+    if (S.chinka) { S.chinka.data.anim = 'cheer'; S.chinka.data.animT = 1.3; }
     if (n >= 5) BW15D.setForm(g, S, n === 5 ? 'wings' : n === 6 ? 'unicorn' : n === 7 ? 'wings' : 'pegacorn', n >= 8 ? 34 : 24);
   },
   /* ---------------- RV forms: wings, unicorn, both ---------------- */

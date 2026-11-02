@@ -53,6 +53,8 @@ const BW15C = {
         if (S.onRoad && S.s > T.s - T.pre && S.s < T.s - T.pre + 18 && S.v > 0.5) { BW15C.startEnc(g, S, T); break; }
       }
     }
+    // going around the checkpoint off-road gets you noticed
+    if (!S.enc && !S.chase && !g.cine && !S.ending) { const T = S.traps.find(q => q.kind === 'check' && !q.done); if (T && S.s > T.s - 12 && S.s < T.s + 24 && Math.abs(S.lat) > 6.5 && Math.abs(S.lat) < 70) { T.done = true; g.toast('YOU SKIPPED THE CHECKPOINT!'); if (T.officer) T.officer.say('HEY! The checkpoint is THIS way!', 2.4); BW15C.startChase(g, S, T.cop, 'skip'); } }
     if (S.enc) BW15C.updateEnc(g, S, dt);
     if (S.chase) BW15C.updateChase(g, S, dt);
     // the undercover cop's tail

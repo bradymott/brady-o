@@ -26,7 +26,8 @@ const BW11Dome = {
     D.active = true;
     // swap Brady's controller for the bout
     if (p.vehicle) p.vehicle.dismount(p);
-    D.saved = { upd: Object.getOwnPropertyDescriptor(p, 'update') };
+    D.saved = { upd: Object.getOwnPropertyDescriptor(p, 'update'), bike: g.bike };
+    g.bike = null; if (g.syncHudButtons) g.syncHudButtons();   // no BIKE button mid-bout
     p.update = function (dt) { BW11Dome.step(dt); };
     p.teleport(D.f[0].x, 0, D.f[0].z, D.f[0].yaw);
     const ch = o.champ;
@@ -148,6 +149,8 @@ const BW11Dome = {
     const D = this, g = D.g, p = g.player; if (!D.active) return;
     D.active = false;
     if (D.saved.upd) Object.defineProperty(p, 'update', D.saved.upd); else delete p.update;
+    if (D.saved.bike && !g.bike) g.bike = D.saved.bike;
+    if (g.syncHudButtons) g.syncHudButtons();
     g.boss = null;
     const C = D.C; p.teleport(C.x, 0, C.z + C.R - 3, Math.PI); p.ch.play('idle'); g.snapCam = true; g.camYaw = 0;
     const ch = D.o.champ; if (ch) { ch.setBehavior('idle'); ch.x = ch.home.x; ch.z = ch.home.z; ch.y = ch.home.y; ch.yaw = ch.home.yaw; }
