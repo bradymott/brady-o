@@ -803,12 +803,14 @@ function bbaSemiBuild(api, g, P) {
     // the trailer's wheels, flung up into the air on the outside of the loop
     for (const th of [Math.PI + 0.62, Math.PI + 0.86]) {
       const f = loopF(th / TAU * N), o = -0.38 - 0.62;
+      m.lo = true;
       for (const u of [-1.0, -0.55, 0.55, 1.0]) {
         m.push(); m.tf(f.p[0] + u, f.p[1] + f.n[1] * o, f.p[2] + f.n[2] * o, 0, -th, Math.PI / 2);
-        m.color('#18181c'); m.roundCyl(0, -0.2, 0, 0.56, 0.4, 0.14, { seg: m.segs(14, 8) });
-        m.color('#c8ccd4').shine(2); m.roundCyl(0, -0.22, 0, 0.3, 0.44, 0.08, { seg: 10 }); m.shine(0);
+        m.color('#18181c'); m.roundCyl(0, -0.2, 0, 0.56, 0.4, 0.14, { seg: 10 });
+        m.color('#c8ccd4').shine(2); m.roundCyl(0, -0.22, 0, 0.3, 0.44, 0.08, { seg: 8 }); m.shine(0);
         m.pop();
       }
+      m.lo = false;
     }
     // marker lights on the curb tops, all the way round (they glow at night)
     for (let j = 2; j < N; j += 6) {
@@ -1028,8 +1030,8 @@ function bbaCrate(m, x, y, z, w, top, kind, i) {
   const wood = i % 2 ? '#c89058' : '#b87e48', dark = '#8a5a30';
   m.color(wood).shine(1); m.roundBox(x, y + h / 2, z, w, h, w, 0.16); m.shine(0);
   m.color(dark);
-  for (const sz of [-1, 1]) { m.roundBox(x, y + h / 2, z + sz * (w / 2 + 0.03), w - 0.2, 0.22, 0.06, 0.03); m.roundBox(x + sz * (w / 2 + 0.03), y + h / 2, z, 0.06, 0.22, w - 0.2, 0.03); }
-  for (let yy = y + 0.6; yy < top - 0.4; yy += 1.4) for (const sz of [-1, 1]) { m.roundBox(x, yy, z + sz * (w / 2 + 0.03), w - 0.2, 0.12, 0.05, 0.02); m.roundBox(x + sz * (w / 2 + 0.03), yy, z, 0.05, 0.12, w - 0.2, 0.02); }
+  for (let yy = y + 0.7; yy < top - 0.3; yy += 1.4) for (const sz of [-1, 1]) { m.box(x, yy, z + sz * (w / 2 + 0.02), w - 0.24, 0.16, 0.05); m.box(x + sz * (w / 2 + 0.02), yy, z, 0.05, 0.16, w - 0.24); }
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.box(x + sx * (w / 2 - 0.1), y + h / 2, z + sz * (w / 2 + 0.02), 0.14, h - 0.2, 0.05);
   if (kind === 'disco') { m.color('#d8e4ff').shine(3); m.ball(x + 0.5, top + 0.05, z - 0.4, 0.7, { phi1: Math.PI * 0.55 }); m.shine(0); }
   if (kind === 'fragile') { m.color('#e8402a', 0.4); m.roundBox(x, y + h * 0.62, z + w / 2 + 0.05, w * 0.7, 0.4, 0.04, 0.02); m.roundBox(x - w / 2 - 0.05, y + h * 0.62, z, 0.04, 0.4, w * 0.7, 0.02); m.emissive(0); }
 }

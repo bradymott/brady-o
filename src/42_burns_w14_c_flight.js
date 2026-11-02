@@ -118,7 +118,8 @@ class BW14_Fly {
   seatBrady(p) {
     const P = this.pl, s = this.seat(); p.x = s[0]; p.y = s[1]; p.z = s[2]; p.yaw = P.yaw; p.vx = p.vy = p.vz = 0; p.grounded = false;
     const k = { steer: clamp(P.ail, -1, 1), happy: P.V > 25 };
-    p.ch.poseFn = (Pz, t) => { BURNS_ANIMS.bw14Pilot(Pz, t, k); Pz.pitch = -P.pitch; Pz.roll = P.bank; Pz.pivot = 1.2; };
+    // pivot at the seat so Brady rides rigidly with the cabin (same rotation order as the plane)
+    p.ch.poseFn = (Pz, t) => { BURNS_ANIMS.bw14Pilot(Pz, t, k); Pz.pitch = -P.pitch; Pz.roll = P.bank; Pz.pivot = 0; };
   }
   stepParked(p, dt) { this.posePlane(dt); }
   stepPlane(p, dt, I) {

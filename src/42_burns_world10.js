@@ -772,6 +772,7 @@ BURNS_W10.drawBurn = function (g, R) {
   R.flat.flat(0, 0.08, 0, 70 * k, 70 * k, 0, SP.glow, [1, 0.45, 0.12], 0.45 * k, true);
   g.pointLight(0, W.DECK + 10, 0, 60, [1, 0.5, 0.15], 2.2 * k);
   g.pointLight(0, 2, 30, 40, [1, 0.55, 0.2], 1.2 * k);
+  g.pointLight(0, 4, 47, 24, [1, 0.5, 0.18], 0.9 * k);   // the firelight reaches the front rows (Brady, Chinka, the Bad Idea Guy)
 };
 // after the Burn (also on revisits): the Man is an ember pile, the circle glows, Chinka hangs out
 BURNS_W10.afterBurn = function (g, inCine) {
