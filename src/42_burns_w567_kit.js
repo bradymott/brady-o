@@ -151,6 +151,60 @@ const BW567K = {
   bar(name, a, maxHp, extra) {
     return Object.assign({ name, maxHp, active: true, get hp() { return Math.max(0, a.hp); }, get defeated() { return a.defeated; }, get st() { return a.data && a.data.mode; }, head() { return [a.x, a.y + a.h * 1.05, a.z]; }, update() {} }, extra || {});
   },
+  /* ---------------- character looks (user's archetypes + action figures) ----------------
+     who(type, seed, extra): the engine's own spec when it knows the type (it adds chatter lines
+     for new types), otherwise a stand-in with matching colours and gear. Swap point for later. */
+  engineKnows(type) {
+    try { if (typeof BURNS_NPC_TYPES !== 'undefined' && BURNS_NPC_TYPES) return Array.isArray(BURNS_NPC_TYPES) ? BURNS_NPC_TYPES.indexOf(type) >= 0 : !!BURNS_NPC_TYPES[type]; } catch (e) { /* not there yet */ }
+    try { if (BurnsRig.types) return !!(Array.isArray(BurnsRig.types) ? BurnsRig.types.indexOf(type) >= 0 : BurnsRig.types[type]); } catch (e) { /* ignore */ }
+    return typeof BURNS_LINES !== 'undefined' && !!BURNS_LINES[type];
+  },
+  who(type, seed, extra) {
+    const s = this.engineKnows(type) ? BurnsRig.npcSpec(type, seed || 0) : this.standIn(type, seed || 0);
+    if (extra) Object.assign(s, extra);
+    s.key = 'bw567:' + type + ':' + (seed || 0) + (extra ? ':' + hashStr(JSON.stringify(extra)) : '');
+    return s;
+  },
+  standIn(type, seed) {
+    const b = BurnsRig.npcSpec(type === 'crusty' || type === 'sparklepony' || type === 'techbro' ? type : 'burner', seed);
+    const r = mulberry32(hashStr('si:' + type + ':' + seed));
+    const S = Object.assign(b, { kind: type, acc: [], hat: null, goggles: false, glasses: null, coat: null, vest: null, led: null, paint: null, prop: null });
+    switch (type) {
+      case 'furry': Object.assign(S, { skin: '#b0a48e', skinSh: '#8e8270', face: 'kid', hair: { style: 'mohawk', col: '#ff4fd8', hi: '#38f2ff' }, seed: 7 * Math.floor(seed / 7 + 1),
+        top: { kind: 'tee', col: '#f4f0e8' }, coat: { kind: 'fur', col: r.pick(['#a8987e', '#b8a890', '#9a8c78']), trim: '#ffffff' }, bottom: { kind: 'leggings', col: '#9a8c78', pattern: 'rainbow' },
+        shoes: { kind: 'furboots', col: '#7a6c5a' }, acc: ['ledNecklace', 'bracelets'], body: { h: 1.0, w: 1.22 } }); break;
+      case 'darkwad': Object.assign(S, { face: 'smug', glasses: 'shades', hair: { style: 'short', col: '#141418', hi: '#26262c' }, top: { kind: 'hoodie', col: '#121216' }, bottom: { kind: 'cargo', col: '#141418' }, shoes: { kind: 'sneakers', col: '#5a5a62', sole: '#3a3a40' }, acc: ['toolbelt'] }); break;
+      case 'badideaguy': Object.assign(S, { face: 'goofy', goggles: true, hair: { style: 'buzz', col: '#4a3424' }, top: { kind: 'tank', col: '#f4f4f0' }, bottom: { kind: 'shorts', col: '#7a5a3a' }, shoes: { kind: 'boots', col: '#9a7a5a' }, acc: ['toolbelt', 'bracelets'] }); break;
+      case 'undercovercop': Object.assign(S, { face: 'stern', glasses: 'shades', hair: { style: 'buzz', col: '#3a2a1a' }, top: { kind: 'button', col: '#ff8a2a', pattern: 'tiedye' }, vest: 'fleece', vestCol: '#16161c', bottom: { kind: 'shorts', col: '#c8b48a' }, shoes: { kind: 'sneakers', col: '#f4f4f4', sole: '#d8d8d8' }, prop: 'radio', acc: ['bracelets'], body: { h: 1.02, w: 1.15 } }); break;
+      case 'crusty': Object.assign(S, { face: 'beard', goggles: true, hair: { style: 'afro', col: '#b8b4ac', hi: '#e0dcd4' }, skin: '#b88a64', skinSh: '#946a4a', top: { kind: 'tee', col: '#3a3438' }, coat: { kind: 'duster', col: '#7a5434', trim: '#efe2c8' }, bottom: { kind: 'cargo', col: '#6a6a50' }, shoes: { kind: 'boots', col: '#7a5a3a' }, acc: ['toolbelt', 'bracelets'], prop: 'bottle' }); break;
+      case 'greeter_f': Object.assign(S, { face: 'greeter', hat: { kind: 'cowboy', col: '#ff4fa8' }, glasses: 'heart', hair: { style: 'long', col: '#2a1a14', hi: '#8a5a3a' }, top: { kind: 'crop', col: '#38c8c8', pattern: 'sequin' }, bottom: { kind: 'tutu', col: '#9aff5a' }, shoes: { kind: 'sneakers', col: '#ff7ad8', sole: '#ffffff' }, acc: ['lei', 'bracelets'], prop: 'bell' }); break;
+      case 'greeter_m': Object.assign(S, { face: 'beard', hat: { kind: 'cowboy', col: '#d8c08a' }, glasses: 'shades', top: { kind: 'button', col: '#ff8a2a', pattern: 'tiedye' }, bottom: { kind: 'shorts', col: '#ff4fa8' }, shoes: { kind: 'sneakers', col: '#7aff5a', sole: '#ffffff' }, acc: ['lei', 'bracelets'], prop: 'bell' }); break;
+      case 'billionaire': Object.assign(S, { face: 'smug', glasses: 'shades', goggles: true, hair: { style: 'short', col: '#c8a060', hi: '#f0d8a0' }, top: { kind: 'button', col: '#ffffff' }, coat: { kind: 'kimono', col: '#f8f6f0', trim: '#e8c860' }, bottom: { kind: 'chinos', col: '#f4f2ec' }, shoes: { kind: 'sneakers', col: '#ffffff', sole: '#e8c860' }, acc: ['bracelets'], body: { h: 1.04, w: 1.0 } }); break;
+      case 'techbro': Object.assign(S, { face: 'smug', glasses: 'clear', hair: { style: 'short', col: '#3a2a1a' }, top: { kind: 'button', col: '#9ac0e8' }, vest: 'patches', bottom: { kind: 'chinos', col: '#c8b48a' }, shoes: { kind: 'sneakers', col: '#f4f4f4', sole: '#e0e0e0' }, acc: ['earbuds', 'bracelets'], prop: 'phone' }); break;
+      case 'burnerkid': Object.assign(S, { face: 'kid', hat: { kind: 'furhat', col: '#38c8c8' }, glasses: 'shades', top: { kind: 'none' }, paint: 'rainbow', bottom: { kind: 'cargo', col: '#c8a878' }, shoes: { kind: 'furboots', col: '#ff9ad0' }, acc: ['ledNecklace', 'bracelets', 'lei'], body: { h: 0.92, w: 0.9 } }); break;
+      case 'burnermom': Object.assign(S, { face: 'greeter', hair: { style: 'bun', col: '#c8c8d0', hi: '#ffffff' }, hat: { kind: 'cowboy', col: '#e8d8a8' }, glasses: 'clear', top: { kind: 'button', col: '#ff9ac8' }, vest: 'fleece', vestCol: '#5aa05a', bottom: { kind: 'jeans', col: '#6a8ac8' }, shoes: { kind: 'sneakers', col: '#f4f4f4' }, acc: ['lei', 'bracelets'], prop: 'phone', body: { h: 0.94, w: 1.05 } }); break;
+      case 'annoyingdj': Object.assign(S, { face: 'goofy', hair: { style: 'short', col: '#121216', hi: '#3a3a44' }, goggles: true, glasses: 'shades', top: { kind: 'button', col: '#ff6ad0', pattern: 'tiedye' }, bottom: { kind: 'shorts', col: '#9aff3a' }, shoes: { kind: 'sneakers', col: '#38c8c8' }, acc: ['headset', 'ledNecklace', 'bracelets'] }); break;
+      case 'burney': Object.assign(S, { face: 'beard', hair: { style: 'bald', col: '#3a6aff' }, hat: { kind: 'cowboy', col: '#d8c08a' }, top: { kind: 'button', col: '#2ab8a8', pattern: 'tiedye' }, vest: 'patches', bottom: { kind: 'shorts', col: '#c8b48a' }, shoes: { kind: 'boots', col: '#3a2a1a' }, tattoos: true, acc: ['bracelets', 'ledNecklace'], prop: 'phone', body: { h: 1.0, w: 1.15 } }); break;
+      case 'partiedtoohard': Object.assign(S, { face: 'tired', hair: { style: 'long', col: '#8a8478', hi: '#b8b2a8' }, top: { kind: 'button', col: '#e8b8d8', pattern: 'tiedye' }, bottom: { kind: 'cargo', col: '#7a6a5a' }, shoes: { kind: 'boots', col: '#6a5040' }, acc: ['ledNecklace', 'bracelets', 'lei'] }); break;
+      case 'sherpa': Object.assign(S, { face: 'tired', hat: { kind: 'cap', col: '#4a5a3a' }, top: { kind: 'tee', col: '#7a8a5a' }, bottom: { kind: 'cargo', col: '#5a5a40' }, shoes: { kind: 'boots', col: '#3a2a1a' }, acc: ['toolbelt'] }); break;
+      case 'security': Object.assign(S, { face: 'stern', glasses: 'shades', hat: { kind: 'cap', col: '#111114' }, top: { kind: 'tee', col: '#141418' }, bottom: { kind: 'cargo', col: '#1e1e24' }, shoes: { kind: 'boots', col: '#111114' }, prop: 'radio', body: { h: 1.06, w: 1.3 } }); break;
+      default: break;
+    }
+    return S;
+  },
+  // accessory meshes in bone space (head bone origin = neck joint; face at +z)
+  acc(m, kind, o) {
+    o = o || {};
+    if (kind === 'mask') { m.color(o.col || '#f4ecd8').shine(1); m.push(); m.tf(0, 0.1, 0.12, 0, -0.1); BW567K.ellip(m, 0, 0, 0.02, 0.15, 0.09, 0.08, { seg: 10, rings: 6, theta0: -1.5, theta1: 1.5 }); m.pop(); m.shine(0); return; }
+    if (kind === 'panama') { m.color(o.col || '#f4ecd8'); BW567K.lathe(m, 0, 0.36, 0, [[0, 0], [0.34, 0.01], [0.34, 0.035], [0.2, 0.04], [0.19, 0.17], [0, 0.19]], { seg: 14 }); m.color('#2a2a30'); BW567K.lathe(m, 0, 0.4, 0, [[0.196, 0], [0.196, 0.04]], { seg: 14 }); return; }
+    if (kind === 'ears') { for (const sx of [-1, 1]) { m.color(o.col || '#a8987e'); m.push(); m.tf(sx * 0.13, 0.4, -0.02, 0, 0, -sx * 0.25); BW567K.lathe(m, 0, 0, 0, [[0.09, 0], [0.07, 0.12], [0, 0.26]], { seg: 6, sz: 0.45 }); m.color('#ff4fa8'); m.push(); m.tf(0, 0.02, 0.025); BW567K.lathe(m, 0, 0, 0, [[0.055, 0], [0.04, 0.1], [0, 0.2]], { seg: 6, sz: 0.3 }); m.pop(); m.pop(); } return; }
+    if (kind === 'tail') { m.color(o.col || '#a8987e'); BW567K.tube(m, [[0, 0, 0], [0, -0.1, -0.2], [0, -0.05, -0.45], [0, 0.12, -0.62]], [0.09, 0.11, 0.09, 0.05], { seg: 7 }); m.color('#ffffff'); BW567K.ball(m, 0, 0.13, -0.64, 0.07, { seg: 6, rings: 4 }); return; }
+    if (kind === 'jester') { const cs = ['#ff4fd8', '#38f2ff', '#ffe24a']; m.color('#7aff5a'); BW567K.lathe(m, 0, 0.33, -0.01, [[0.2, 0], [0.2, 0.06], [0, 0.09]], { seg: 10 }); for (let i = 0; i < 3; i++) { const a = (i - 1) * 0.9; m.color(cs[i]); BW567K.tube(m, [[0, 0.38, 0], [Math.sin(a) * 0.12, 0.5, Math.cos(a) * 0.04 - 0.02], [Math.sin(a) * 0.3, 0.52, -0.06], [Math.sin(a) * 0.38, 0.38, -0.1]], [0.1, 0.07, 0.04, 0.02], { seg: 6 }); m.color('#ffd84a', 0.3).shine(3); BW567K.ball(m, Math.sin(a) * 0.38, 0.35, -0.1, 0.04, { seg: 6, rings: 4 }); m.emissive(0).shine(0); } return; }
+    if (kind === 'medallion') { m.color('#e8c040', 0.15).shine(3); BW567K.torus(m, 0, 0.42, 0.06, 0.13, 0.012, { seg: 12, tseg: 4 }); m.push(); m.tf(0, 0.3, 0.15, 0, Math.PI / 2); BW567K.rcyl(m, 0, -0.01, 0, 0.06, 0.02, 0.01); m.pop(); m.emissive(0).shine(0); return; }
+    if (kind === 'purifier') { m.color('#e8eef4').shine(2); BW567K.rbox(m, 0, 0.42, 0.15, 0.16, 0.1, 0.06, 0.03); m.color('#38f2ff', 0.9); BW567K.torus(m, 0, 0.42, 0.185, 0.035, 0.008, { seg: 10, tseg: 4 }); m.emissive(0).shine(0); return; }
+    if (kind === 'cast') { m.color('#f8f8f4'); BW567K.limb(m, 0, -0.02, 0, 0, -0.22, 0, 0.075, 0.068); return; }
+    if (kind === 'greetsign') { m.color('#8a6a3a'); BW567K.limb(m, 0, -0.05, 0.05, 0, 0.55, 0.05, 0.015); m.color('#d8b078'); BW567K.rbox(m, 0, 0.62, 0.05, 0.34, 0.16, 0.03, 0.01); const reg = BURNS_ATLAS.sign('GREETER', { bg: '#d8b078', fg: '#5a2a10', size: 30, pad: 4 }); m.color('#ffffff'); m.decal(0, 0.62, 0.067, 0.3, 0.3 / reg.aspect, reg); m.push(); m.tf(0, 0, 0.1, Math.PI); m.decal(0, 0.62, 0.067, 0.3, 0.3 / reg.aspect, reg); m.pop(); return; }
+  },
   // cached skinned geometry: build(m) once per session
   geo(key, build) {
     let G = this.geoCache[key];
@@ -250,4 +304,30 @@ class BW567Puppet {
   off(i) { const B = this.ch.bones, k = i * 12; B.fill(0, k, k + 12); B[k + 7] = -999; return this; }
   update(dt) { this.t += dt; if (this.tick) this.tick(dt); }
   draw(R) { if (this.sprites) this.sprites(R); }
+}
+
+/* ---------------- accessories glued to character bones (masks, hats, gadgets) ----------------
+   geo built with one bone per accessory slot. attach(i, who, bone, x, y, z, yaw, pitch, roll, s)
+   who: actor | 'player' | () => actor. Posed right before the engine draws it, from the bones the
+   character was just drawn with, so it never lags; hidden when its wearer wasn't drawn. */
+class BW567Attach extends BW567Puppet {
+  constructor(g, geo, n) {
+    super(g, geo, n);
+    this.items = []; this._frame = -1; this._ch = this.ch;
+    Object.defineProperty(this, 'ch', { configurable: true, get() { this.sync(); return this._ch; } });
+  }
+  attach(i, who, bone, x, y, z, yaw, pitch, roll, s) { this.items[i] = { who, bone, x: x || 0, y: y || 0, z: z || 0, yaw: yaw || 0, pitch: pitch || 0, roll: roll || 0, s: s || 1, on: true }; return this.items[i]; }
+  sync() {
+    const g = this.g; if (this._frame === g.frameN) return; this._frame = g.frameN;
+    for (let i = 0; i < this.n; i++) {
+      const it = this.items[i];
+      if (!it || !it.on) { this.off(i); continue; }
+      let a = typeof it.who === 'function' ? it.who() : it.who;
+      if (a === 'player') a = g.player;
+      const isP = a === g.player;
+      if (!a || a.removed || a.hidden || (!isP && !a._vis) || !a.ch || !a.ch.bones) { this.off(i); continue; }
+      BurnsM.a34Set(this._m, 0, it.x, it.y, it.z, it.yaw, it.pitch, it.roll, it.s, it.s, it.s);
+      BurnsM.a34Mul(this._ch.bones, i * 12, a.ch.bones, it.bone * 12, this._m, 0);
+    }
+  }
 }

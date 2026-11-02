@@ -30,10 +30,10 @@ BurnsWorlds.register({
   music: 'burns_w5',
   bounds: [-128, -172, 128, 152],
   spawn: { x: 0, y: 0, z: 140, yaw: Math.PI },
-  ground: { base: '#dcb890', crack: 0.3, mottle: 0.35, res: 0.5 },
+  ground: { base: '#d0aa84', crack: 0.3, mottle: 0.35, res: 0.5 },
   dust: 0.8,
   missions: [
-    { id: 'member', name: 'Membership Card', short: 'Get carded by Marge', type: 'custom', giver: 'marge', start: 'manual', marker: { x: -7, z: 64 },
+    { id: 'member', name: 'Membership Card', short: 'Get carded by Marge', type: 'custom', token: false, giver: 'marge', start: 'manual', marker: { x: -7, z: 64 },
       desc: 'Membership is free, lifetime and mandatory. Stand on the X for your photo, then pass Marge\'s gifting quiz.', hint: 'Membership desk at the warehouse entrance',
       onComplete(g) { BW5.openTurnstiles(g); g.setTod(Math.max(g.tod, 0.14), 0.04); } },
     { id: 'gary', name: 'Gary Got Snatched', short: 'Catch the cooler thief', type: 'custom', giver: 'biscuit', start: 'manual', marker: { x: 0, z: 88 },
@@ -51,6 +51,15 @@ BurnsWorlds.register({
       onStart(g) { BW5.chuteStart(g); },
       onFail(g) { BW5.chuteReset(g); },
       onComplete(g) { BW5.chuteDone(g); g.setTod(Math.max(g.tod, g.tod + 0.14), 0.04); } },
+    { id: 'oasis', name: 'The Radically Inclusive Open Bar', short: 'Sneak into the Oasis for the drone map', type: 'find', giver: 'sam', start: 'manual', requires: ['member'], marker: { x: 84, z: 40 }, tokenAt: { x: 86, y: 1.9, z: 42.4 },
+      desc: 'The Turnkey Billionaire next door had a drone follow the fire octopus for a week. The map is behind his "radically inclusive" open bar. Security won\'t let you in. His sherpa might.', hint: 'The Oasis compound, east of the warehouse (Sam at the staff entrance, west side)', lockedDesc: 'Get carded at Costco Soul Trading Co. first.',
+      onStart(g) { BW5.disguise(g, true); },
+      onEvent(g, m, name) { if (name === 'spotted' && g.player.hiddenT <= 0) { g.missions.fail('oasis', 'Security! You\'re not on the list!'); return true; } },
+      onFail(g) { BW5.thrownOut(g); },
+      onComplete(g) { BW5.mapFound(g); g.setTod(Math.max(g.tod, g.tod + 0.14), 0.04); } },
+    { id: 'furry', name: 'Too Fluffy for This', short: 'Lead Fluffernutter to the misting station', type: 'escort', token: false, companion: 'furry', giver: 'furry', start: 'manual', requires: ['member'], target: { x: -6, z: 118, r: 4.5 }, marker: { x: -30, z: 46 },
+      desc: 'A furry is overheating in the warehouse. Lead them out to the misting station by the street.', hint: 'Inside the warehouse, near the entrance (west side)', lockedDesc: 'Get carded first.',
+      onComplete(g) { BW5.furryCooled(g); } },
     { id: 'boss', name: 'The Barter Baron', type: 'boss', start: 'manual', requires: ['escort'], tokenDirect: true, short: 'Defeat the Barter Baron!', marker: { x: -29, z: -112 },
       desc: 'He sits on the Overstock lookout gate and wants a trade for everything. Make him crash his forklift, then bonk him.', hint: 'The loading dock, out the back west door', lockedDesc: 'Talk to Rhonda at Returns first.' },
     { id: 'lookout', name: 'The Overstock Lookout', type: 'climb', start: 'auto', requires: ['boss'], tokenDirect: true, short: 'Climb the Overstock lookout', target: { x: 34, z: -134, r: 3.6, y: 25.6 }, marker: { x: 34, z: -134 },
@@ -116,6 +125,9 @@ BurnsWorlds.register({
     /* ---------------- the loading dock (boss) + the Overstock lookout ---------------- */
     BW5.buildDock(api, g);
     BW5.buildTower(api, g);
+    /* ---------------- next door: the Turnkey Billionaire's "Oasis" + the misting station ---------------- */
+    BW5.buildOasis(api, g);
+    BW5.buildMister(api, g);
     /* ---------------- the far horizon: El Pulpo, as seen from the lookout ---------------- */
     BW5.buildFarOcto(api);
     /* ---------------- puppets: carts + forklift ---------------- */
@@ -132,6 +144,8 @@ BurnsWorlds.register({
     if (g.missions.isDone('member')) BW5.openTurnstiles(g, true);
     if (g.missions.isDone('boss')) BW5.openToll(g, true);
     BW5.placeBiscuit(g);
+    if (g.missions.isDone('oasis')) { S.staffOpen = true; S.staffDoor.off = true; }
+    if (g.missions.isDone('furry')) { const f = g.actor('furry'); if (f) { f.x = -4; f.z = 120; f.home = { x: -4, z: 120 }; f.setBehavior('dance'); } }
     g.tod = Math.min(1, BurnsSave.tokenCount(5) * 0.14);
     if (!S.introDone) BW5.intro(g);
     else g.banner('COSTCO SOUL TRADING CO.', 'Gifting is not bartering. Bulk is a lifestyle.', { col: '#38f2ff' });
@@ -142,12 +156,17 @@ BurnsWorlds.register({
     BW5.updateLifts(g, dt);
     BW5.updateTurnstiles(g, dt);
     BW5.updateGary(g, dt);
+    BW5.updateOasis(g, dt);
     BW5.updateCarts(g, dt);
     BW5.updateForklift(g, dt);
     const want = Math.min(1, BurnsSave.tokenCount(5) * 0.14);
     if (g.tod < want - 0.001 && g.todTarget === null) g.setTod(want, 0.03);
   },
-  bw567Overlay(ctx, g) { BW5.drawLabels(ctx, g); }
+  bw567Overlay(ctx, g) {
+    BW5.drawLabels(ctx, g);
+    const S = BW5.state;
+    if (S.disguiseT > 0 && !g.cine) { const W = Game.cssW; BurnsUI.pill(ctx, W / 2 - 92, (g.topStack || 40) + 2, 184, 24, 'rgba(232,200,96,0.85)'); BurnsUI.text(ctx, `LINEN DISGUISE  ${Math.ceil(S.disguiseT)}s`, W / 2, (g.topStack || 40) + 14.5, 12, '#2a1a0a', { ui: true, stroke: false }); }
+  }
 });
 
 /* ============================================================ builders ============================================================ */
@@ -219,10 +238,10 @@ BW5.shelfRun = function (api, x, zc, L, levels, lh, seed) {
     }
     // goods
     for (let l = 0; l < levels; l++) {
-      const y = l === 0 ? 0.02 : l * lh, maxH = Math.min(lh - 0.45, 1.5);
+      const y = l === 0 ? 0.02 : l * lh, maxH = Math.min(lh - 0.45, 1.5), skip = l === 0 ? 0.4 : l === 1 ? 0.55 : 1.1;
       let z = -L / 2 + 0.5;
       while (z < L / 2 - 0.8) {
-        if (rng() < 0.22) { z += rng.range(0.6, 1.6); continue; }
+        if (rng() < skip) { z += rng.range(0.8, 2.2); continue; }
         const gd = BW5.good(m, 0, y, z, rng, maxH, D - 0.5);
         const zc = z + gd.d / 2;
         if (gd.h > 0.3) cols.push({ t: 'box', x: gd.x || 0, z: zc - (z - z) + (gd.dz || 0), hx: gd.w / 2, hz: gd.d / 2, y0: y, y1: y + gd.h });
@@ -309,7 +328,7 @@ BW5.buildStreet = function (api, g) {
   api.pickup('water', -6, 0.9, 130);
   api.pickup('bag:shrooms', -88, 0.9, 136);
   api.glowLine(0, 122, 0, 76, 12);
-  api.glowLine(-30, 132, -6, 132, 6); api.glowLine(6, 132, 30, 132, 6);
+  api.glowLine(-30, 132, -8, 132, 5);
   for (const sx of [-1, 1]) for (let z = 150; z > 112; z -= 38) api.prop('lightTower', { x: sx * 12, z, yaw: sx > 0 ? -Math.PI / 2 : Math.PI / 2 });
   api.sign('COSTCO SOUL\nTRADING CO.  ↑', 6, 118, { yaw: 0, h: 1.2, style: { bg: '#1f4fae', fg: '#ffffff', size: 40, border: '#ff4a2a' } });
   api.sign('FREE PARKING\n(EVERYTHING IS FREE)', -7, 112, { yaw: 0, h: 1.1, style: { bg: '#fff4d8', fg: '#1f4fae', size: 34, border: '#1f4fae' } });
@@ -576,6 +595,13 @@ BW5.buildAisles = function (api, g) {
   police.forEach((p, i) => api.enemy({ name: 'GIFT POLICE', type: 'ranger', seed: 640 + i, x: p.path[0][0], z: p.path[0][1], behavior: 'patrol', path: p.path, view: 10, fov: 0.55, speed: 1.6, chaseSpeed: 4.4, hp: 2, drop: 3, spotLine: 'HALT! WAS THAT A TRADE?!',
     spec: Object.assign(BurnsRig.npcSpec('ranger', 640 + i), { top: { kind: 'button', col: '#ff6ad0' }, hat: { kind: 'cap', col: '#1a1a3a' }, vest: 'hivis', key: 'w5:police' + i }),
     chat: ['Gifting is NOT bartering!', 'I saw that eye contact. Very transactional.', 'Step away from the reciprocity.'], defeatLine: 'Okay. Was that a gift? It felt like a gift.' }));
+  // Someone Brought Their Mom: an embarrassed burner kid + a mom out-partying everyone
+  api.npc({ id: 'mom', name: 'DEB (SOMEONE\'S MOM)', type: 'burnermom', spec: BW567K.who('burnermom', 1), x: -21.2, z: 18, yaw: -Math.PI / 2, behavior: 'dance', style: 1,
+    chat: ['WOOO! Is this a rave? Is it a RAVE?!', 'I\'ve got two cameras. One for memories, one for BACKUP memories.', 'Kevin, honey, smile!'],
+    talk(g, a) { BW5.talkMom(g, a); } });
+  api.npc({ id: 'kid', name: 'KEVIN (HER KID)', type: 'burnerkid', spec: BW567K.who('burnerkid', 1), x: -24.6, z: 16.4, yaw: Math.PI / 2,
+    chat: ['Mom. MOM. Please.', 'She\'s been up for 30 hours. I\'m so tired.', 'Do NOT let her near the art cars.'],
+    lines: ['I invited her as a joke. She already has more friends here than me.', 'She traded her book club for a dance crew. On day one.'] });
   // shoplifter in the aisles
   api.enemy({ type: 'burner', seed: 650, name: 'SHOPLIFTER', x: 44, z: 2, behavior: 'thief', hp: 1, steal: 5, chatter: false });
   // shelf-top photo + a climb onto the east row
@@ -585,7 +611,7 @@ BW5.buildAisles = function (api, g) {
   api.pickup('photo', 44, 7.9, -55, { id: 'p2' });
   api.glowLine(44, 7.4, -40, 44, 7.4, -54, 6);
   // glow sticks down the side aisles
-  for (const x of [-37, 23, -51, 51]) api.glowLine(x, 40, x, -50, 8);
+  for (const x of [-37, 23, -51, 51]) api.glowLine(x, 36, x, -46, 6);
   api.pickup('water', -37, 0.9, -12); api.pickup('water', 37, 0.9, 12); api.pickup('bag:weed', 51, 0.9, 30);
 };
 
@@ -846,6 +872,20 @@ BW5.makePuppets = function (g) {
   fork.addColliders = function () { if (this.hidden || !this.colOn) return; for (const c of this.cols) this.g.world.col.addDyn(c); };
   S.forkP = fork;
   g.addBoss(fork);
+  // accessories: Preston's silk dust mask, Brady's linen disguise (hat + mask), Fluffernutter's ears + tail, Bryce's air purifier
+  const accGeo = BW567K.geo('w5acc', m => {
+    m.setBone(0); BW567K.acc(m, 'mask', { col: '#f4ecd8' });
+    m.setBone(1); BW567K.acc(m, 'panama'); m.setBone(2); BW567K.acc(m, 'mask', { col: '#f8f6f0' });
+    m.setBone(3); BW567K.acc(m, 'ears'); m.setBone(4); BW567K.acc(m, 'tail');
+    m.setBone(5); BW567K.acc(m, 'purifier');
+  });
+  const att = new BW567Attach(g, accGeo, 6);
+  const H = BURNS_BONES.HEAD;
+  att.attach(0, () => g.actor('preston'), H);
+  att.attach(1, 'player', H).on = false; att.attach(2, 'player', H).on = false;
+  att.attach(3, () => g.actor('furry'), H); att.attach(4, () => g.actor('furry'), BURNS_BONES.HIPS, 0, 0, -0.14);
+  att.attach(5, () => g.actor('optimizer'), BURNS_BONES.CHEST);
+  S.att = att; g.addBoss(att);
 };
 BW5.updateCarts = function (g, dt) {
   const S = BW5.state, P = S.cartP; if (!P) return;
@@ -1182,4 +1222,169 @@ BurnsWorlds.get(5).drawSprites = function (g, R) {
   R.bbs.bb(O.x - 4, 10 + k * 3, O.z + 2, 8, 16, S2.flame, [1, 0.7, 0.2], 1, true);
   R.bbs.bb(O.x, 10, O.z, 40, 40, S2.glow, [1, 0.5, 0.2], 0.7, true);
   if (Math.random() < 0.5) g.fx.add(O.x + (Math.random() - 0.5) * 4, 11, O.z, (Math.random() - 0.5) * 3, 14 + Math.random() * 8, 0, 1.0, 5, 2, [1, 0.6, 0.2], 1, 'flame', 1);
+};
+
+/* ============================================================ next door: THE OASIS (the Turnkey Billionaire) ============================================================ */
+BW5.OASIS = { x0: 68, x1: 122, z0: -6, z1: 66, gateX: 94, staffZ: 24 };
+BW5.buildOasis = function (api, g) {
+  const O = BW5.OASIS;
+  // lush (imported) lawn + a pristine white path
+  api.paint((c, P, sc) => {
+    const [x0, z0] = P(O.x0, O.z1), [x1, z1] = P(O.x1, O.z0);
+    c.fillStyle = 'rgba(232,226,214,0.9)'; c.fillRect(x0, z1, x1 - x0, z0 - z1);
+    const [lx, lz] = P(80, 26); const gl = c.createRadialGradient(lx, lz, 2, lx, lz, 16 * sc); gl.addColorStop(0, 'rgba(80,170,80,0.95)'); gl.addColorStop(0.85, 'rgba(80,160,80,0.85)'); gl.addColorStop(1, 'rgba(80,160,80,0)'); c.fillStyle = gl; c.beginPath(); c.arc(lx, lz, 16 * sc, 0, TAU); c.fill();
+    c.strokeStyle = 'rgba(232,200,96,0.8)'; c.lineWidth = 0.3 * sc; c.strokeRect(x0 + 2, z1 + 2, x1 - x0 - 4, z0 - z1 - 4);
+  });
+  // tall white fence with gold caps (gate in the south side, staff door in the west side)
+  const fence = (x0, z0, x1, z1) => {
+    const len = Math.hypot(x1 - x0, z1 - z0); if (len < 0.5) return;
+    const yaw = Math.atan2(x1 - x0, z1 - z0);
+    api.mesh((x0 + x1) / 2, (z0 + z1) / 2, m => { m.lo = true; const n = Math.max(1, Math.round(len / 5)); for (let i = 0; i < n; i++) { const z = -len / 2 + (i + 0.5) * len / n; m.color('#f8f6f0').shine(2); BW567K.rbox(m, 0, 1.75, z, 0.4, 3.5, len / n - 0.08, 0.15); m.color('#e8c860'); BW567K.rbox(m, 0, 3.55, z, 0.5, 0.14, len / n, 0.05); m.shine(0); } m.lo = false; return { cols: [{ t: 'box', x: 0, z: 0, hx: 0.25, hz: len / 2, y0: 0, y1: 3.6, cover: true }] }; }, { yaw });
+  };
+  fence(O.x0, O.z1, O.gateX - 3.5, O.z1); fence(O.gateX + 3.5, O.z1, O.x1, O.z1);
+  fence(O.x0, O.z0, O.x1, O.z0); fence(O.x1, O.z0, O.x1, O.z1);
+  fence(O.x0, O.z1, O.x0, O.staffZ + 2.2); fence(O.x0, O.staffZ - 2.2, O.x0, O.z0);
+  // the gate: gold arch, velvet ropes, a bouncer line nobody crosses
+  api.mesh(O.gateX, O.z1, m => {
+    m.color('#e8c860').shine(3); for (const sx of [-1, 1]) BW567K.rcyl(m, sx * 3.6, 0, 0, 0.35, 5.2, 0.12); BW567K.rbox(m, 0, 5.4, 0, 8.2, 0.7, 0.6, 0.25); m.shine(0);
+    const reg = BURNS_ATLAS.sign('THE OASIS', { bg: '#f8f6f0', fg: '#b08a20', size: 52, pad: 10 });
+    m.color('#ffffff', 0.2); m.decal(0, 5.4, 0.31, 5.2, 5.2 / reg.aspect, reg); m.emissive(0);
+    m.color('#e8c860').shine(3); for (let i = 0; i < 4; i++) BW567K.rcyl(m, -2.4 + i * 1.6, 0, 1.2, 0.07, 1.0, 0.03); m.shine(0);
+    m.color('#c8202a'); for (let i = 0; i < 3; i++) BW567K.tube(m, [[-2.4 + i * 1.6, 0.92, 1.2], [-1.6 + i * 1.6, 0.72, 1.2], [-0.8 + i * 1.6, 0.92, 1.2]], [0.04, 0.04, 0.04], { seg: 6, cap: false });
+    return { cols: [{ t: 'cyl', x: -3.6, z: 0, r: 0.35, y0: 0, y1: 5.2 }, { t: 'cyl', x: 3.6, z: 0, r: 0.35, y0: 0, y1: 5.2 }, { t: 'box', x: 0, z: 0.4, hx: 3.3, hz: 0.9, y0: 0, y1: 3.6, walk: false }] };
+  });
+  api.sign('RADICALLY INCLUSIVE\n(GUEST LIST ONLY)', O.gateX - 6.5, O.z1 + 1.6, { yaw: 0, h: 1.1, style: { bg: '#f8f6f0', fg: '#b08a20', size: 34, border: '#e8c860' } });
+  // staff entrance (a plain door the sherpa opens)
+  BW5.state.staffDoor = api.collider({ t: 'box', x: O.x0, z: O.staffZ, hx: 0.3, hz: 2.2, y0: 0, y1: 3.6, walk: false });
+  api.mesh(O.x0, O.staffZ, m => { m.color('#9a9aa2'); for (const sz of [-1, 1]) BW567K.rcyl(m, 0, 0, sz * 2.2, 0.15, 3.6, 0.05); m.color('#6a6a72'); BW567K.rbox(m, 0, 3.4, 0, 0.3, 0.3, 4.6, 0.1); return { cols: [] }; });
+  BW5.state.staffGate = api.mover(m => { m.color('#c8c8d0').shine(1); BW567K.rbox(m, 0, 1.5, 1.05, 0.12, 2.9, 2.1, 0.05); m.shine(0); return { cols: [] }; });
+  BW5.state.staffGate.x = O.x0; BW5.state.staffGate.z = O.staffZ - 2.1; BW5.state.staffGate.y = 0;
+  api.sign('STAFF ENTRANCE\n(SHERPAS ONLY)', O.x0 - 0.4, O.staffZ + 3.4, { yaw: -Math.PI / 2, h: 0.9, style: { bg: '#6a6a72', fg: '#ffffff', size: 30 } });
+  // the air-conditioned dome + AC units
+  api.prop('dome', { x: 104, z: 28, r: 11, col: '#f8f6f0', alt: '#e8e4dc', glow: '#bff0ff' });
+  for (let i = 0; i < 5; i++) { const a = -0.6 + i * 0.5, x = 104 + Math.sin(a) * 12.4, z = 28 + Math.cos(a) * 12.4; api.mesh(x, z, m => { m.color('#dfe6ec').shine(2); BW567K.rbox(m, 0, 0.7, 0, 1.6, 1.4, 1.0, 0.18); m.color('#5a6a7a'); m.push(); m.tf(0, 0.75, 0.51, 0, Math.PI / 2); BW567K.torus(m, 0, 0, 0, 0.42, 0.04, { seg: 14, tseg: 4 }); m.pop(); m.color('#2a3440'); m.push(); m.tf(0, 0.75, 0.5, 0, Math.PI / 2); m.cyl(0, 0, 0, 0.4, 0.4, 0.02, 12, {}); m.pop(); m.shine(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 0.8, hz: 0.5, y0: 0, y1: 1.4 }] }; }, { yaw: a }); BW5.state.acUnits = (BW5.state.acUnits || []).concat([[x, z, a]]); }
+  api.sign('AIR-CONDITIONED\nAUTHENTICITY', 104, 15.8, { yaw: 0, h: 0.9, style: { bg: '#f8f6f0', fg: '#2a6ac8', size: 32 } });
+  // the "radically inclusive" open bar
+  api.mesh(84, 40, m => {
+    m.color('#f8f6f0').shine(2); BW567K.rbox(m, 0, 0.6, 0, 9, 1.2, 1.4, 0.35); m.color('#e8c860'); BW567K.rbox(m, 0, 1.24, 0, 9.3, 0.12, 1.6, 0.05);
+    m.color('#ffffff'); BW567K.rbox(m, 0, 1.6, -2.4, 9, 3.2, 0.5, 0.15);
+    const bc = ['#3aa05a', '#c83a2a', '#e8c040', '#7a3aa0', '#38c8e8', '#f4f4f0'];
+    for (let i = 0; i < 14; i++) { m.color(bc[i % 6]).shine(3); BW567K.lathe(m, -4 + i * 0.6, 2.0 + (i % 2) * 0.9, -2.0, [[0, 0], [0.1, 0.02], [0.1, 0.28], [0.04, 0.38], [0.04, 0.48], [0, 0.5]], { seg: 8 }); }
+    m.shine(0);
+    for (let i = 0; i < 5; i++) { m.color('#e8c860').shine(3); BW567K.rcyl(m, -3.6 + i * 1.8, 0, 1.6, 0.05, 0.8, 0.02); m.color('#f8f6f0'); BW567K.rcyl(m, -3.6 + i * 1.8, 0.78, 1.6, 0.28, 0.12, 0.05); m.shine(0); }
+    m.color('#f4ecd8'); m.poly([[-5.5, 4.8, -3], [5.5, 4.8, -3], [5.5, 4.0, 2.4], [-5.5, 4.0, 2.4]]); m.poly([[5.5, 4.8, -3], [-5.5, 4.8, -3], [-5.5, 4.0, 2.4], [5.5, 4.0, 2.4]]);
+    m.color('#e8c860'); for (const [x, z] of [[-5.5, -3], [5.5, -3], [-5.5, 2.4], [5.5, 2.4]]) BW567K.limb(m, x, 0, z, x, z < 0 ? 4.8 : 4.0, z, 0.06);
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: 4.5, hz: 0.7, y0: 0, y1: 1.3 }, { t: 'box', x: 0, z: -2.4, hx: 4.5, hz: 0.25, y0: 0, y1: 3.2 }] };
+  });
+  api.sign('OPEN BAR\nRADICALLY INCLUSIVE*', 84, 43.4, { y: 4.4, h: 1.0, post: false, style: { bg: '#f8f6f0', fg: '#b08a20', size: 34, border: '#e8c860' } });
+  api.sign('*GUEST LIST ONLY', 89.5, 41.4, { y: 0.4, h: 0.5, post: false, style: { bg: '#f8f6f0', fg: '#c8202a', size: 26 } });
+  api.pickup('item:dronemap', 87.6, 1.8, 40.2, { mission: 'oasis', gate: true, label: 'DRONE MAP', icon: 'map', col: '#e8c860', id: 'dronemap' });
+  // infinity pool, palms, white couches
+  api.mesh(80, 20, m => { m.color('#f8f6f0').shine(2); BW567K.rbox(m, 0, 0.3, 0, 10, 0.6, 6, 0.3); m.color('#38c8ff', 0.35).shine(3); m.box(0, 0.58, 0, 9.0, 0.06, 5.0); m.shine(0).emissive(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 5, hz: 3, y0: 0, y1: 0.6 }] }; });
+  api.sign('THE PLAYA\'S ONLY\nINFINITY POOL', 80, 24.2, { y: 0.9, h: 0.8, style: { bg: '#f8f6f0', fg: '#2a6ac8', size: 30 } });
+  for (const [x, z] of [[72, 8], [72, 34], [90, 8], [116, 56], [74, 58], [114, 2]]) api.mesh(x, z, m => { m.color('#8a6a4a'); BW567K.tube(m, [[0, 0, 0], [0.2, 2, 0], [0.5, 4, 0.1], [0.6, 5.4, 0.2]], [0.28, 0.24, 0.2, 0.16], { seg: 8 }); m.color('#3aa05a'); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; BW567K.limb(m, 0.6, 5.5, 0.2, 0.6 + Math.sin(a) * 2.2, 4.6, 0.2 + Math.cos(a) * 2.2, 0.16, 0.05); } return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.3, y0: 0, y1: 5 }] }; });
+  for (const [x, z, yaw] of [[76, 30, 0], [86, 28, Math.PI], [96, 46, 1.2]]) api.mesh(x, z, m => { m.color('#ffffff').shine(1); BW567K.rbox(m, 0, 0.3, 0, 2.4, 0.5, 0.9, 0.2); BW567K.rbox(m, 0, 0.75, -0.36, 2.4, 0.6, 0.2, 0.1); m.shine(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.2, hz: 0.45, y0: 0, y1: 0.55 }] }; }, { yaw });
+  // the septic RV out back (the sherpas' glamorous side of things)
+  api.prop('rv', { x: 76, z: 2, yaw: Math.PI / 2, seed: 701, col: '#f8f6f0' });
+  api.mesh(76, 2, m => { m.color('#3a3a40'); BW567K.tube(m, [[-1.4, 0.6, 3.2], [-2.6, 0.2, 4.2], [-4.2, 0.2, 3.6], [-5.6, 0.9, 2.6]], [0.12, 0.12, 0.12, 0.12], { seg: 6 }); m.color('#8a8a72'); BW567K.rcyl(m, -6.4, 0, 2.2, 1.0, 1.8, 0.2); return { cols: [{ t: 'cyl', x: -6.4, z: 2.2, r: 1.0, y0: 0, y1: 1.8 }] }; });
+  // Preston's custom e-bike (costs more than a used car)
+  api.mesh(98, 50, m => { m.push(); m.tf(0, 0, 0, 0.6); BurnsProps.bikeShape(m, 0, 0, 0, 0, '#e8c860'); m.color('#f8f6f0').shine(3); BW567K.rbox(m, 0, 0.52, 0.0, 0.16, 0.22, 0.5, 0.06); m.shine(0); m.pop(); return { cols: [] }; });
+  // the cast: Preston, the Optimization Tech Bro, the bartender, security, Sam the sherpa
+  api.npc({ id: 'preston', name: 'PRESTON, TURNKEY BILLIONAIRE', type: 'billionaire', spec: BW567K.who('billionaire', 1), x: 96, z: 47.5, yaw: -2.4,
+    chat: ['Radical inclusion is my core value.', 'I flew the jet in Tuesday. The playa is so... authentic.', 'My sherpas built all of this. I watched. It was very spiritual.', 'Security! Include him... out.'],
+    lines: ['Welcome to the Oasis! Radical inclusion is my CORE value.', 'Wait. Are you on the list? ...Security! Radically include him OUT.'] });
+  api.npc({ id: 'optimizer', name: 'BRYCE, OPTIMIZER', type: 'techbro', spec: BW567K.who('techbro', 801, { kind: 'optimizer', vest: 'patches', glasses: 'clear', acc: ['earbuds', 'bracelets'] }), x: 93.6, z: 45.4, yaw: 0.9, behavior: 'idle', anim: 'talk',
+    chat: ['Preston. PRESTON. Picture it: Web3 shade structures.', 'Zero cellular friction, infinite networking.', 'It\'s like a drum circle, but decentralized.', 'My heart-rate variability is CRUSHING this dust storm.'],
+    lines: ['This whole week is a networking opportunity with zero cellular friction.', 'I call this campfire "decentralized warmth architecture." Want in on the seed round?'] });
+  api.npc({ id: 'bartender', name: 'SHERPA (BAR)', type: 'sherpa', spec: BW567K.who('sherpa', 2), x: 82.4, z: 38.6, yaw: 0, chat: ['Open bar! For the list.', 'I also built the bar. And the list.'],
+    lines: ['This bar is radically inclusive. For the list. Which I also wrote.', 'Here. Water. Don\'t tell Preston. He thinks water is a lifestyle brand.'], gift: { kind: 'water' } });
+  api.npc({ id: 'sam', name: 'SAM, SHERPA', type: 'sherpa', spec: BW567K.who('sherpa', 3, { face: 'friendly', hat: { kind: 'bandana', col: '#c86a3a' } }), x: 64.6, z: 21.5, yaw: Math.PI / 2,
+    chat: ['Psst. Over here.', 'I build it. I cook it. I empty the septic. Ask me anything.'],
+    talk(g, a) { BW5.talkSam(g, a); } });
+  const guard = (id, path, view) => api.enemy({ id, name: 'OASIS SECURITY', type: 'security', spec: BW567K.who('security', hashStr(id) % 9), x: path[0][0], z: path[0][1], behavior: 'patrol', path, view, fov: 0.7, speed: 1.3, chase: false, hp: 99, damage: 0, noTalk: true, keepBehavior: true,
+    spotLine: 'HEY! You\'re not on the list!', chat: ['Radically inclusive space. Members only.', 'Sir, this is a private open bar.', 'Name? ...Not on the list.'],
+    hit(a2, g2) { a2.say('Sir. Sir. That\'s assault on a vibe.', 1.4); return false; } });
+  guard('guard1', [[O.gateX - 3, O.z1 + 2.2], [O.gateX + 3, O.z1 + 2.2]], 9);
+  guard('guard2', [[O.gateX + 3, O.z1 + 2.8], [O.gateX - 3, O.z1 + 2.8]], 9);
+  guard('guard3', [[76, 46], [92, 46], [92, 32], [76, 32]], 10);
+  guard('guard4', [[100, 10], [114, 40], [100, 50]], 10);
+  api.pickup('bag:liquor', 116, 0.9, 60);
+  api.glowLine(66, 40, 66, 8, 6);
+};
+BW5.buildMister = function (api, g) {
+  // the misting station on the street (for overheated furries and humans)
+  api.prop('shade', { x: -6, z: 118, w: 6, d: 5, col: '#bff0ff' });
+  api.mesh(-6, 118, m => { m.color('#9aa0aa'); BW567K.limb(m, -3, 2.7, -2.4, 3, 2.7, -2.4, 0.04); BW567K.limb(m, -3, 2.7, 2.4, 3, 2.7, 2.4, 0.04); m.color('#38c8ff', 0.4); for (let i = 0; i < 6; i++) BW567K.ball(m, -2.5 + i, 2.62, -2.4, 0.06, { seg: 6, rings: 4 }); m.emissive(0); return { cols: [] }; });
+  api.sign('MISTING STATION\nFREE COOL · NO QUESTIONS', -10.2, 116, { yaw: Math.PI / 2, h: 1.0, style: { bg: '#bff0ff', fg: '#1f4fae', size: 32, border: '#1f4fae' } });
+  // Fluffernutter, the overheating furry
+  api.npc({ id: 'furry', name: 'FLUFFERNUTTER', type: 'furry', spec: BW567K.who('furry', 7), x: -24, z: 44, yaw: Math.PI / 2, behavior: 'sit', followDist: 2.8,
+    chat: ['So... hot... forty pounds of love, zero airflow...', 'Is the floor melting or is it me?', 'Hugs later. Mist now.'],
+    talk(g, a) { BW5.talkFurry(g, a); } });
+};
+
+/* ---------------- Oasis + furry + mom logic ---------------- */
+BW5.talkMom = function (g, a) {
+  if (BW5.state.momPhoto) { g.say(a, ['Framing that one. Kevin\'s getting a COPY.']); return; }
+  BW5.state.momPhoto = true;
+  const p = g.player, k = g.actor('kid');
+  g.say(a, ['OH! A man bun! Can I get a photo? For my book club. Well, my old book club. I\'m in a dance crew now.'], () => {
+    g.cutscene([
+      { do: g2 => { p.teleport(a.x + Math.sin(a.yaw + 0.6) * 1.2, a.y, a.z + Math.cos(a.yaw + 0.6) * 1.2, a.yaw + Math.PI); p.animOverride = 'victory'; a.setBehavior('idle'); a.ch.play('cheer'); } },
+      { cam: { x: a.x + Math.sin(a.yaw) * 4.2, y: 1.8, z: a.z + Math.cos(a.yaw) * 4.2, tx: (a.x + p.x) / 2, ty: 1.4, tz: (a.z + p.z) / 2, fov: 0.7 } },
+      { say: [k || a, [{ who: k || a, text: 'Mom. MOM. He\'s on a quest. His wife got kidnapped by a giant wooden man.' }]] },
+      { say: [a, ['Then he needs a GOOD photo for the poster! Say "playa"!']] },
+      { do: g2 => { g2.screenFlash('#ffffff', 0.8); burnsSfx('camera_flash'); g2.fx.flashAt(a.x, 1.6, a.z); } },
+      { wait: 0.4 },
+      { do: g2 => { g2.screenFlash('#ffffff', 0.7); burnsSfx('camera_flash'); } },
+      { say: [a, ['Backup camera. Always a backup. Here, sweetie: gifts! Glow sticks, a granola bar, and a hug. Mom rules.']] },
+      { do: g2 => { p.animOverride = null; a.setBehavior('dance'); g2.addGlow(12); p.heal(2); g2.fx.hearts(a.x, 2, a.z, 12); g2.toast('MOM GIFTED 12 GLOW STICKS + A GRANOLA BAR'); } }
+    ]);
+  });
+};
+BW5.talkSam = function (g, a) {
+  const st = g.missions.state('oasis');
+  if (st === 'locked') g.say(a, ['Psst. Get a membership card from Costco Soul next door first. Then come see me. Trust me.']);
+  else if (st === 'available') g.say(a, ['Psst. Hey. I\'m Sam. I built this camp. I cook the food. I empty the RV septic. Living the dream.', 'Yesterday Preston called me "the help." Then "family." Then "the help" again.', 'He tried to buy that fire-breathing octopus art car. Had a drone follow it for a week. The drone map is at the end of his open bar.', 'Wear this linen robe and hat. Security only looks at linen. Grab the map, don\'t make eye contact, and GO.'], () => g.missions.start('oasis'));
+  else if (st === 'active') g.say(a, ['Linen doesn\'t last forever! End of the bar! Go go go!']);
+  else g.say(a, ['You didn\'t see me. I\'m just the help. The help says: go get your octopus.']);
+};
+BW5.disguise = function (g, on) {
+  const S = BW5.state, p = g.player;
+  S.disguiseT = on ? 40 : 0; p.hiddenT = on ? 40 : 0;
+  if (S.att) { S.att.items[1].on = on; S.att.items[2].on = on; }
+  if (on) { S.staffDoor.off = true; S.staffOpen = true; g.toast('LINEN DISGUISE ON: SECURITY CAN\'T SEE YOU (40s)'); burnsSfx('costume'); g.fx.confetti(p.x, p.y + 1.5, p.z, 16); }
+};
+BW5.thrownOut = function (g) {
+  const p = g.player, O = BW5.OASIS;
+  BW5.disguise(g, false);
+  g.fadeTo(1, 0.25);
+  BW567K.after(g, 0.35, g2 => { p.teleport(O.x0 - 4, 0, O.staffZ, -Math.PI / 2); g2.camYaw = -Math.PI / 2; g2.snapCam = true; g2.fadeTo(0, 0.4); g2.toast('SECURITY ESCORTED YOU OUT. VERY INCLUSIVELY.'); const s = g2.actor('sam'); if (s) s.say('Ouch. Try again! Talk to me for fresh linen.', 2.4); });
+};
+BW5.mapFound = function (g) {
+  const S = BW5.state, pr = g.actor('preston');
+  g.player.hiddenT = Math.max(g.player.hiddenT, 15); S.disguiseT = Math.max(S.disguiseT || 0, 15);
+  g.banner('DRONE MAP', 'El Pulpo\'s nightly route through deep playa', { col: '#e8c860', big: true, icon: 'map' });
+  BurnsSave.flag(5, 'droneMap', true);
+  BW567K.after(g, 1.2, g2 => g2.say(pr || 'brady', [{ who: pr || 'brady', text: 'Who let you— I mean. RADICAL INCLUSION! Welcome! ...Security, include him OUT.' }, { who: 'brady', text: 'The octopus loops deep playa every night. Past the two o\'clock... ish. Thanks, Preston!' }]));
+};
+BW5.talkFurry = function (g, a) {
+  const st = g.missions.state('furry');
+  if (st === 'locked') g.say(a, ['So... hot... is that a membership card? I can\'t see. My eyes are fur.']);
+  else if (st === 'available') g.say(a, ['Hi. I\'m Fluffernutter. This suit is forty pounds of love and zero airflow.', 'There\'s a misting station out by the street. Lead the way? I\'ll follow your... blurry shape.'], () => { g.missions.start('furry'); a.setBehavior('follow'); });
+  else if (st === 'active') g.say(a, ['Misting station. Street. Cool. Hurry. Fluffy.']);
+  else g.say(a, ['I\'m MOIST and HAPPY. Free hugs! The good kind!']);
+};
+BW5.furryCooled = function (g) {
+  const a = g.actor('furry'); if (!a) return;
+  a.setBehavior('dance'); a.say('MIST! Sweet, sweet mist! Hugs for everyone!', 3);
+  g.fx.hearts(a.x, a.y + 2, a.z, 16); g.addGlow(10); g.toast('FLUFFERNUTTER GIFTED YOU 10 GLOW STICKS + A HUG');
+  g.player.heal(6);
+};
+BW5.updateOasis = function (g, dt) {
+  const S = BW5.state, p = g.player;
+  if (S.disguiseT > 0) { S.disguiseT -= dt; p.hiddenT = Math.max(p.hiddenT, Math.min(S.disguiseT, 0.2)); if (S.disguiseT <= 0) { BW5.disguise(g, false); if (g.missions.state('oasis') === 'active') g.warn('DISGUISE WORE OFF!', 1.6); if (BW5.state.staffOpen && g.missions.isDone('oasis')) S.staffDoor.off = true; } }
+  if (S.staffGate) S.staffGate.yaw = BurnsM.damp(S.staffGate.yaw || 0, S.staffOpen ? -1.6 : 0, 3, dt);
+  // cold air from the AC units, mist at the misting station
+  if (S.acUnits && Math.random() < dt * 6) { const u = S.acUnits[Math.floor(Math.random() * S.acUnits.length)]; if (Math.hypot(u[0] - p.x, u[1] - p.z) < 60) g.fx.smoke(u[0] + Math.sin(u[2]) * 0.6, 0.8, u[1] + Math.cos(u[2]) * 0.6, 1, '#e8f8ff'); }
+  if (Math.hypot(p.x + 6, p.z - 118) < 40 && Math.random() < dt * 10) g.fx.add(-8.5 + Math.random() * 5, 2.6, 115.6, (Math.random() - 0.5) * 0.4, -0.6, (Math.random() - 0.5) * 0.4, 1.2, 0.3, 1.4, [0.85, 0.95, 1], 0.35, 'puff', 4);
 };

@@ -15,7 +15,12 @@
 const BURNS_W234 = {
   S: null,
   /* ---------- per-world runtime state ---------- */
-  reset(g) { this.S = { g, timers: [], att: [], riders: [], parades: [], bikes: [] }; return this.S; },
+  reset(g) {
+    this.S = { g, timers: [], att: [], riders: [], parades: [], bikes: [] };
+    // sign-bearing gear uses the per-world sign atlas: rebuild it each world
+    const C = this._attCache; if (C) for (const k in C) if (k.indexOf('sign:') === 0) { try { BurnsGL.freeGeo && BurnsGL.freeGeo(C[k].geo); } catch (e) { /* ignore */ } delete C[k]; }
+    return this.S;
+  },
   timer(sec, fn) { if (this.S) this.S.timers.push({ t: sec, fn }); },
   update(g, dt) {
     const S = this.S; if (!S) return;
@@ -62,7 +67,7 @@ const BURNS_W234 = {
   // clock-street signpost: blade A (clock street) along local X, blade B (letter street) along local Z
   signpost(m, o) {
     o = o || {};
-    const st = { bg: '#24102e', fg: '#fff2c8', size: 34, border: '#ff9ad8', pad: 14 };
+    const st = { bg: '#24102e', fg: '#fff2c8', size: 24, border: '#ff9ad8', pad: 10 };
     m.color('#2e2630'); this.post(m, 0, 0, 0, 0.07, 3.3);
     const blade = (text, y, yaw) => {
       const reg = BURNS_ATLAS.sign(text, st), bh = 0.36, bw = Math.max(0.7, bh * reg.aspect);
@@ -129,8 +134,8 @@ const BURNS_W234 = {
   attach(a, model, bone, when) { if (this.S) this.S.att.push({ a, model, bone, when }); },
   // head-bone gear (head joint at the origin, face toward +Z)
   gear: {
-    respirator(m) { m.color('#3a3a40').shine(1); BURNS_W234.egg(m, 0, 0.13, 0.12, 0.085, 0.07, 0.06, { seg: 10, rings: 6 }); for (const s of [-1, 1]) { m.push(); m.tf(s * 0.085, 0.1, 0.15, 0, 0.5, s * -0.6); m.color('#e8c020'); m.roundCyl(0, -0.03, 0, 0.042, 0.06, 0.012, { seg: 10 }); m.pop(); } m.shine(0); m.color('#1a1a1e'); BURNS_W234.ring(m, 0, 0.16, 0, 0.135, 0.01, { pitch: 0.25, seg: 14, tseg: 3 }); },
-    headlamp(m) { m.color('#1a1a1e'); BURNS_W234.ring(m, 0, 0.27, 0, 0.142, 0.013, { seg: 16, tseg: 3 }); m.color('#3a3a40'); BURNS_W234.rb(m, 0, 0.27, 0.145, 0.07, 0.05, 0.04, 0.012); m.color('#fff4c8', 1); BURNS_W234.egg(m, 0, 0.27, 0.168, 0.026, 0.026, 0.01, { seg: 8, rings: 4 }); m.emissive(0); },
+    respirator(m) { m.color('#3a3a40').shine(1); BURNS_W234.egg(m, 0, 0.11, 0.17, 0.095, 0.08, 0.07, { seg: 10, rings: 6 }); for (const s of [-1, 1]) { m.push(); m.tf(s * 0.095, 0.08, 0.2, 0, 0.5, s * -0.6); m.color('#e8c020'); m.roundCyl(0, -0.03, 0, 0.048, 0.065, 0.014, { seg: 10 }); m.pop(); } m.shine(0); m.color('#1a1a1e'); BURNS_W234.ring(m, 0, 0.15, 0.0, 0.19, 0.011, { pitch: 0.25, seg: 16, tseg: 3 }); },
+    headlamp(m) { m.color('#1a1a1e'); BURNS_W234.ring(m, 0, 0.28, -0.005, 0.19, 0.014, { seg: 18, tseg: 3 }); m.color('#3a3a40'); BURNS_W234.rb(m, 0, 0.28, 0.19, 0.08, 0.06, 0.045, 0.014); m.color('#fff4c8', 1); BURNS_W234.egg(m, 0, 0.28, 0.215, 0.03, 0.03, 0.012, { seg: 8, rings: 4 }); m.emissive(0); },
     crystal(m) { m.color('#c8f0ff', 0.4).shine(3); BURNS_W234.lathe(m, 0, -0.06, 0.12, [[0, 0], [0.05, 0.05], [0.04, 0.12], [0, 0.17]], { seg: 6 }); m.shine(0).emissive(0); }
   },
   /* ---------- parades: movers looping along a closed path ---------- */
@@ -190,6 +195,154 @@ const BURNS_W234 = {
   near(g, x, z, r) { const p = g.player; return Math.hypot(p.x - x, p.z - z) < r; },
   costumeOn() { const c = BurnsSave.get().costume; return !!c && c !== 'none'; }
 };
+
+/* ---------- cast: the user's burner figures (stand-ins until the engine ships the types) ----------
+   BURNS_W234.castDef(kind, seed, def) -> an actor def with the look; gear attaches in wireGear(g).
+   If the engine knows the type (BURNS_LINES[type] exists), the engine look is used instead. */
+BURNS_W234.engineType = function (type) { try { return !!(BURNS_LINES[type] && BurnsRig.npcSpec(type, 1).kind === type); } catch (e) { return false; } };
+BURNS_W234.CAST = {
+  firespinner(seed) {
+    const s = Object.assign(BurnsRig.npcSpec('burner', seed), { top: { kind: 'crop', col: '#6a4a2e', pattern: 'sequin' }, bottom: { kind: 'kilt', col: '#ff7a2a', pattern: 'flames' }, shoes: { kind: 'boots', col: '#c8a070' }, hat: null, goggles: false, glasses: null, coat: null, led: null, paint: null, prop: null, hair: { style: 'buzz', col: '#2a1a12', hi: '#3a2a1a' }, acc: ['bracelets'], body: { h: 1.0, w: 0.95 }, key: 'w234:fire:' + (seed % 4) });
+    return { spec: s, gear: [['firehood', BURNS_BONES.HEAD], ['firewings', BURNS_BONES.CHEST]] };
+  },
+  darkwad(seed) {
+    const s = Object.assign(BurnsRig.npcSpec('techbro', seed), { top: { kind: 'hoodie', col: '#141418' }, vest: null, bottom: { kind: 'cargo', col: '#121216' }, shoes: { kind: 'sneakers', col: '#5a5a62', sole: '#3a3a40' }, hair: { style: 'buzz', col: '#141010', hi: '#2a2020' }, glasses: 'shades', face: 'smug', prop: null, acc: [], led: null, key: 'w234:darkwad:' + (seed % 3) });
+    return { spec: s, gear: [['backpack', BURNS_BONES.CHEST], ['litNecklace', BURNS_BONES.CHEST, a => a.w234lit]] };
+  },
+  cop(seed) {
+    const s = Object.assign(BurnsRig.npcSpec('techbro', seed), { top: { kind: 'button', col: '#ff7a2a', pattern: 'tiedye' }, vest: 'fleece', vestCol: '#16161c', bottom: { kind: 'shorts', col: '#c8b48a' }, shoes: { kind: 'sneakers', col: '#f4f4f4', sole: '#d8d8d8' }, hair: { style: 'buzz', col: '#5a4030', hi: '#6a5040' }, glasses: 'shades', face: 'stern', prop: 'radio', acc: ['bracelets'], key: 'w234:cop' });
+    return { spec: s, gear: [['jester', BURNS_BONES.HEAD], ['badge', BURNS_BONES.CHEST]] };
+  },
+  furry(seed) {
+    const s = Object.assign(BurnsRig.npcSpec('burner', seed), { skin: '#a8987c', skinSh: '#8a7a62', top: { kind: 'hoodie', col: '#a8987c', pattern: 'leopard' }, bottom: { kind: 'leggings', col: '#a8987c', pattern: 'leopard' }, shoes: { kind: 'furboots', col: '#6a6052' }, coat: null, hat: null, goggles: false, glasses: null, hair: { style: 'bald', col: '#a8987c', hi: '#a8987c' }, acc: ['bracelets'], led: '#38f2ff', body: { h: 1.04, w: 1.14 }, key: 'w234:furry' });
+    return { spec: s, gear: [['furhead', BURNS_BONES.HEAD], ['harness', BURNS_BONES.CHEST], ['pawL', BURNS_BONES.FARM_L], ['pawR', BURNS_BONES.FARM_R]] };
+  },
+  greeterW(seed) {
+    const s = Object.assign(BurnsRig.npcSpec('tutu', seed), { top: { kind: 'crop', col: '#2ac8c0', pattern: 'sequin' }, bottom: { kind: 'tutu', col: '#9aff3a' }, shoes: { kind: 'sneakers', col: '#ff4fd8', sole: '#ffe24a' }, hair: { style: 'long', col: '#3a2216', hi: '#b8844a' }, glasses: 'heart', goggles: false, face: 'greeter', acc: ['bracelets', 'lei'], key: 'w234:greeterW' });
+    return { spec: s, gear: [['sunhat', BURNS_BONES.HEAD], ['sign:greeter', BURNS_BONES.PROP]] };
+  },
+  greeterM(seed) {
+    const s = Object.assign(BurnsRig.npcSpec('burner', seed), { top: { kind: 'button', col: '#ff8a2a', pattern: 'tiedye' }, bottom: { kind: 'cargo', col: '#ff4fd8' }, shoes: { kind: 'sneakers', col: '#7aff5a', sole: '#ffffff' }, hair: { style: 'short', col: '#2a1a12', hi: '#3a2a1a' }, glasses: 'shades', face: 'beard', hat: null, goggles: false, coat: null, paint: null, acc: ['bracelets', 'ledNecklace'], key: 'w234:greeterM' });
+    return { spec: s, gear: [['fedora', BURNS_BONES.HEAD], ['sign:greeter', BURNS_BONES.PROP]] };
+  },
+  lamplighter(seed) {
+    const s = Object.assign(BurnsRig.npcSpec('burner', seed), { top: { kind: 'tee', col: '#f4ecd8' }, coat: { kind: 'kimono', col: '#f8f0dc', trim: '#e8d8b0' }, bottom: { kind: 'leggings', col: '#efe4cc' }, shoes: { kind: 'sneakers', col: '#a07848', sole: '#7a5a38' }, hat: null, goggles: false, glasses: null, led: null, paint: null, prop: null, hair: { style: 'short', col: '#3a2a1a', hi: '#4a3a2a' }, face: 'friendly', acc: ['toolbelt'], key: 'w234:lamplighter:' + (seed % 3) });
+    return { spec: s, gear: [['headwrap', BURNS_BONES.HEAD], ['lanternPoles', BURNS_BONES.CHEST]] };
+  },
+  healer(seed) {
+    const s = Object.assign(BurnsRig.npcSpec('burner', seed), { skin: '#e8c0a0', skinSh: '#c89a7a', top: { kind: 'tee', col: '#f8f6f0' }, coat: { kind: 'kimono', col: '#fbf8f2', trim: '#e8e0ff' }, bottom: { kind: 'leggings', col: '#f4f0e8' }, shoes: { kind: 'sneakers', col: '#e8c0a0', sole: '#d8a888' }, hat: null, goggles: false, glasses: null, hair: { style: 'long', col: '#c8a878', hi: '#f0d8a8' }, face: 'sleepy', acc: ['bracelets'], led: null, paint: null, key: 'w234:healer' });
+    return { spec: s, gear: [['crystal', BURNS_BONES.CHEST]] };
+  }
+};
+BURNS_W234.castDef = function (kind, seed, def) {
+  const engineKind = { firespinner: 'firespinner', darkwad: 'darkwad', cop: 'undercovercop', furry: 'furry', greeterW: 'greeter_f', greeterM: 'greeter_m', healer: 'healer', lamplighter: 'lamplighter' }[kind];
+  def = def || {};
+  if (engineKind && this.engineType(engineKind)) { def.type = engineKind; def.seed = seed; return def; }
+  const c = this.CAST[kind](seed);
+  def.spec = c.spec; def.w234gear = c.gear; def.type = def.type || c.spec.kind; def.seed = seed;
+  return def;
+};
+// gear meshes (bone-local; head joint at the origin, face toward +Z)
+BURNS_W234.GEAR = {
+  firehood(m) { const W = BURNS_W234; m.color('#4a3426'); W.egg(m, 0, 0.2, -0.01, 0.2, 0.215, 0.195, { seg: 12, rings: 8 }); m.color('#2a1e18'); W.egg(m, 0, 0.17, 0.1, 0.17, 0.17, 0.1, { seg: 10, rings: 6 }); m.color('#ff8a1a', 1); W.rb(m, 0, 0.235, 0.188, 0.24, 0.045, 0.03, 0.015); m.emissive(0); m.color('#c8c8d0').shine(2); W.ring(m, 0, 0.02, 0, 0.13, 0.02, { seg: 12, tseg: 4 }); m.shine(0); },
+  firewings(m) {
+    const W = BURNS_W234;
+    for (const s of [-1, 1]) for (let k = 0; k < 4; k++) { const a = 0.35 + k * 0.32; m.push(); m.tf(s * 0.15, 0.42, -0.15, s * 0.3, -0.25, s * a); m.color(['#ff4a1a', '#ff7a1a', '#ffb02a', '#ffe24a'][k], 0.55); W.egg(m, 0, 0.28, 0, 0.06, 0.3, 0.02, { seg: 8, rings: 6 }); m.pop(); }
+    m.emissive(0); m.color('#d8b040').shine(3); W.ring(m, 0, 0.3, 0.135, 0.06, 0.016, { pitch: Math.PI / 2, seg: 14, tseg: 4 }); m.color('#ff9a2a', 0.6); W.egg(m, 0, 0.3, 0.14, 0.05, 0.05, 0.012, { seg: 10, rings: 4 }); m.shine(0).emissive(0);
+  },
+  backpack(m) { m.color('#101014'); BURNS_W234.rb(m, 0, 0.3, -0.19, 0.3, 0.36, 0.14, 0.06); for (const s of [-1, 1]) BURNS_W234.limb(m, s * 0.12, 0.47, 0.03, s * 0.12, 0.08, 0.135, 0.018); },
+  litNecklace(m) { m.color('#7aff5a', 1); BURNS_W234.ring(m, 0, 0.46, 0.02, 0.16, 0.018, { pitch: -0.35, seg: 16, tseg: 4 }); m.color('#ff4fd8', 1); BURNS_W234.ring(m, 0, 0.0, 0, 0.2, 0.018, { seg: 16, tseg: 4 }); m.emissive(0); },
+  jester(m) {
+    const W = BURNS_W234; m.color('#2a6ad8'); W.egg(m, 0, 0.36, -0.01, 0.19, 0.08, 0.18, { seg: 12, rings: 6, phi1: Math.PI / 2 });
+    [['#e83a2a', -1, 0], ['#ffd21a', 0, 1], ['#2ab84a', 1, 0]].forEach(([c, sx, up]) => { m.color(c); W.tube(m, [[sx * 0.08, 0.38, -0.02], [sx * 0.2, 0.55 + up * 0.15, -0.05], [sx * 0.3, 0.42 + up * 0.25, -0.08]], 0.045); m.color('#ffd84a').shine(3); W.ball(m, sx * 0.3, 0.4 + up * 0.25, -0.08, 0.04, { seg: 8, rings: 5 }); m.shine(0); });
+  },
+  badge(m) { m.color('#d8b040').shine(3); BURNS_W234.ring(m, 0, 0.42, 0.13, 0.11, 0.012, { pitch: -0.3, seg: 16, tseg: 3 }); BURNS_W234.egg(m, 0, 0.3, 0.155, 0.045, 0.045, 0.012, { seg: 10, rings: 4 }); BURNS_W234.egg(m, 0.1, 0.33, 0.14, 0.035, 0.04, 0.01, { seg: 6, rings: 4 }); m.shine(0); },
+  furhead(m) {
+    const W = BURNS_W234;
+    m.color('#a8987c'); W.egg(m, 0, 0.22, 0.0, 0.25, 0.25, 0.24, { seg: 14, rings: 9, colFn: (x, y, z) => (z > 0.12 && y < -0.02) ? '#f4f0e8' : (Math.sin(x * 40) * Math.cos(y * 35) > 0.6 ? '#7a6a52' : null) });
+    m.color('#f4f0e8'); W.egg(m, 0, 0.12, 0.2, 0.12, 0.09, 0.12, { seg: 10, rings: 6 }); m.color('#1a1a1e'); W.ball(m, 0, 0.15, 0.32, 0.035, { seg: 8, rings: 5 });
+    for (const s of [-1, 1]) { m.color('#ffffff'); W.egg(m, s * 0.1, 0.26, 0.2, 0.07, 0.08, 0.05, { seg: 10, rings: 6 }); m.color('#3aaa3a', 0.2); W.egg(m, s * 0.105, 0.26, 0.235, 0.045, 0.055, 0.025, { seg: 10, rings: 5 }); m.color('#101010'); W.egg(m, s * 0.11, 0.26, 0.255, 0.022, 0.03, 0.012, { seg: 8, rings: 4 }); m.emissive(0);
+      m.push(); m.tf(s * 0.15, 0.4, -0.02, 0, 0, -s * 0.35); m.color('#a8987c'); W.lathe(m, 0, 0, 0, [[0.09, 0], [0.07, 0.12], [0, 0.26]], { seg: 8, sz: 0.5 }); m.color('#ff4f9a'); W.lathe(m, 0, 0.01, 0.025, [[0.05, 0], [0.035, 0.1], [0, 0.2]], { seg: 6, sz: 0.3 }); m.pop(); }
+    m.color('#ff4f9a'); W.ball(m, -0.03, 0.47, 0.02, 0.07, { seg: 8, rings: 5 }); m.color('#2ac8c0'); W.ball(m, 0.05, 0.46, -0.02, 0.06, { seg: 8, rings: 5 });
+  },
+  harness(m) { const W = BURNS_W234; m.color('#16161a'); W.limb(m, -0.17, 0.46, 0.13, 0.17, 0.12, 0.14, 0.022); W.limb(m, 0.17, 0.46, 0.13, -0.17, 0.12, 0.14, 0.022); ['#ff4fd8', '#ffe24a', '#7aff5a'].forEach((c, i) => { m.color(c); W.egg(m, -0.08 + i * 0.08, 0.28, 0.15, 0.03, 0.03, 0.012, { seg: 8, rings: 4 }); }); m.color('#2ac8c0'); W.tube(m, [[0.18, 0.48, 0.02], [0.05, 0.3, -0.16], [-0.16, 0.1, -0.1]], 0.025); },
+  pawL(m) { BURNS_W234.GEAR.paw(m); }, pawR(m) { BURNS_W234.GEAR.paw(m); },
+  paw(m) { const W = BURNS_W234; ['#ff4f9a', '#ff9a2a', '#2ac8c0'].forEach((c, i) => { m.color(c); W.ring(m, 0, -0.06 - i * 0.06, 0, 0.065, 0.02, { seg: 10, tseg: 4 }); }); m.color('#a8987c'); W.egg(m, 0, -0.3, 0.01, 0.08, 0.09, 0.08, { seg: 10, rings: 6 }); m.color('#202020'); for (let k = -1; k <= 1; k++) W.ball(m, k * 0.035, -0.38, 0.05, 0.015, { seg: 5, rings: 3 }); },
+  sunhat(m) { const W = BURNS_W234; m.color('#ff3bb8'); W.lathe(m, 0, 0.33, -0.01, [[0.36, 0], [0.34, 0.03], [0.2, 0.05], [0.18, 0.14], [0.1, 0.19], [0, 0.2]], { seg: 16 }); m.color('#ffe24a', 0.6); W.ring(m, 0, 0.39, -0.01, 0.185, 0.018, { seg: 16, tseg: 3 }); m.emissive(0); },
+  fedora(m) { const W = BURNS_W234; m.color('#e8d49a'); W.lathe(m, 0, 0.34, -0.01, [[0.3, 0], [0.28, 0.025], [0.17, 0.035], [0.16, 0.15], [0.08, 0.18], [0, 0.17]], { seg: 14 }); m.color('#3a2a1a'); W.ring(m, 0, 0.4, -0.01, 0.165, 0.02, { seg: 14, tseg: 3 }); },
+  headwrap(m) { const W = BURNS_W234; m.color('#fbf6ea'); W.egg(m, 0, 0.27, -0.02, 0.2, 0.17, 0.2, { seg: 12, rings: 7, phi1: Math.PI * 0.62 }); W.ring(m, 0, 0.31, -0.02, 0.18, 0.04, { pitch: 0.2, seg: 14, tseg: 5 }); W.limb(m, 0, 0.3, -0.18, 0.02, 0.05, -0.24, 0.05, 0.03); },
+  lanternPoles(m) {
+    const W = BURNS_W234;
+    for (const s of [-1, 1]) {
+      m.color('#8a6a42'); W.limb(m, s * 0.1, 0.1, -0.12, s * 0.5, 1.75, -0.28, 0.022);
+      m.color('#3a3028'); W.limb(m, s * 0.5, 1.75, -0.28, s * 0.62, 1.72, -0.28, 0.012); W.limb(m, s * 0.62, 1.72, -0.28, s * 0.62, 1.6, -0.28, 0.008);
+      m.color('#ffcf7a', 1); W.egg(m, s * 0.62, 1.48, -0.28, 0.075, 0.1, 0.075, { seg: 10, rings: 6 }); m.emissive(0); m.color('#3a3028'); W.lathe(m, s * 0.62, 1.57, -0.28, [[0.085, 0], [0.04, 0.05], [0, 0.06]], { seg: 8 });
+    }
+  },
+  crystal(m) { const W = BURNS_W234; m.color('#d8b040'); W.ring(m, 0, 0.42, 0.06, 0.13, 0.008, { pitch: -0.5, seg: 14, tseg: 3 }); m.color('#d8f4ff', 0.45).shine(3); W.lathe(m, 0, 0.12, 0.15, [[0, 0], [0.07, 0.07], [0.06, 0.16], [0, 0.24]], { seg: 6 }); m.shine(0).emissive(0); },
+  greeterSign(m) {
+    const W = BURNS_W234; m.color('#8a6a3a'); W.limb(m, 0, -0.05, 0.03, 0, 0.55, 0.03, 0.018);
+    const reg = BURNS_ATLAS.sign('GREETER', { bg: '#f4e2b0', fg: '#3a1a10', size: 26, border: '#8a5a2a', pad: 8 }), w = 0.36, h = w / reg.aspect;
+    m.color('#c8a060'); W.rb(m, 0, 0.62, 0.03, w + 0.04, h + 0.04, 0.03, 0.01); m.color('#ffffff'); m.decal(0, 0.62, 0.047, w, h, reg); m.push(); m.tf(0, 0, 0.06, Math.PI); m.decal(0, 0.62, 0.047, w, h, reg); m.pop();
+  }
+};
+BURNS_W234.wireGear = function (g) {
+  for (const a of g.actors) {
+    const G = a.def.w234gear; if (!G) continue;
+    for (const [name, bone, when] of G) {
+      const key = name === 'sign:greeter' ? 'sign:greeter' : 'gear:' + name, fn = name === 'sign:greeter' ? this.GEAR.greeterSign : this.GEAR[name];
+      if (!fn) continue;
+      this.attach(a, this.attModel(key, m => fn(m)), bone, when ? (g2 => when(a, g2)) : null);
+    }
+  }
+};
+// the darkwad: no lights at all. Nearly invisible until close; bumping into him knocks you down.
+// Spin or stomp him to stick glow sticks on him (a.w234lit). def: { path, speed }
+BurnsBehaviors.register('w234Darkwad', {
+  init(a) { a.data.i = 0; a.data.cd = 0; a.ch.rim = 0; if (!a.w234draw) { a.w234draw = true; const d0 = a.draw; a.draw = function (R) { d0.call(this, R); const p = this.g.player, d = Math.hypot(p.x - this.x, p.z - this.z), lsd = p.power === 'lsd' && p.powerT > 0; const lamp = this.g.w234lamp && d < 15; const k = (this.w234lit || lsd || lamp) ? 0 : clamp((d - 2.2) / 4, 0, 0.94); if (k > 0.01 && !(this.hurtT > 0)) this.ch.tint = [0.012, 0.01, 0.018, k]; this.ch.rim = this.w234lit ? 0.35 : 0; }; } },
+  update(a, g, dt) {
+    const D = a.data, p = g.player, P = a.def.path;
+    if (D.cd > 0) D.cd -= dt;
+    if (P && P.length) { const t = P[D.i], d = a.moveTo(t[0], t[1], a.def.speed || 1.1, dt, 0.4); if (d < 0.6 || (D.bump || 0) > 60) { D.bump = 0; D.i = (D.i + 1) % P.length; } a.ch.play(a.w234lit ? 'dance' : 'walk', a.w234lit ? { style: 1 } : { rate: 0.8 }); }
+    else { a.ch.play(a.w234lit ? 'dance' : 'phone'); a.vx = a.vz = 0; }
+    if (!a.w234lit && D.cd <= 0 && !p.dead && p.invT <= 0 && Math.hypot(p.x - a.x, p.z - a.z) < a.r + p.r + 0.15 && p.y < a.y + 1.4) {
+      D.cd = 1.5; p.hurt(1, a.x, a.z, 9); a.say(['Watch it!', 'Hey! I was standing here!', 'Who turned off the... oh. Me.', 'Lights are for tourists.'][Math.floor(Math.random() * 4)], 1.6);
+    }
+    a.physics(dt);
+  },
+  hit(a, g) {
+    if (a.w234lit) return false;
+    a.w234lit = true; a.say(['Whoa. I\'m... visible?', 'Is this what being seen feels like?', 'I GLOW. I\'M A GLOW GUY NOW.'][Math.floor(Math.random() * 3)], 2.4);
+    g.fx.confetti(a.x, a.y + 1.8, a.z, 20); burnsSfx('pick'); g.missions.event('w234lit', a);
+    return 'handled';
+  }
+});
+// the undercover cop: dances badly ("groovy") and chases you if he spots a ground-score power-up
+BurnsBehaviors.register('w234Cop', {
+  init(a) { a.data.mode = 'blend'; a.data.t = Math.random() * 5; a.data.cd = 0; },
+  update(a, g, dt) {
+    const D = a.data, p = g.player, d = a.distP(), holding = p.power && p.powerT > 0 && p.power !== 'water';
+    D.t += dt; if (D.cd > 0) D.cd -= dt;
+    if (D.mode === 'dazed') { D.dz -= dt; a.ch.play('hurt'); a.yaw += dt * 4; a.vx = BurnsM.damp(a.vx, 0, 5, dt); a.vz = BurnsM.damp(a.vz, 0, 5, dt); if (D.dz <= 0) D.mode = 'blend'; }
+    else if (D.mode === 'chase') {
+      if (!holding || d > 24) { D.mode = 'blend'; a.say(['...Groovy.', 'I lost him. I mean. Far out.', 'Copy. Suspect has... vibed away.'][Math.floor(Math.random() * 3)], 1.8); }
+      else {
+        a.moveTo(p.x, p.z, a.def.chaseSpeed || 5.4, dt, 0.5); a.ch.play('run', { rate: 0.9 });
+        if (Math.random() < dt * 0.4) a.say(['SIR! IS THAT A... GROOVY BAGGIE?', 'STOP! IN THE NAME OF... RADICAL SELF-EXPRESSION!', 'I JUST WANNA TALK! ABOUT THE BAGGIE!'][Math.floor(Math.random() * 3)], 1.4);
+        if (a.touching(0.2) && D.cd <= 0) { D.cd = 3; const P = BURNS_POWERUPS[p.power]; p.endPower(true); g.toast('CONFISCATED: ' + (P ? P.label : 'BAGGIE')); a.say('This is... evidence. Groovy evidence.', 2.4); burnsSfx('powerdown'); p.knock((p.x - a.x) * 3, 5, (p.z - a.z) * 3); D.mode = 'blend'; }
+      }
+    } else {
+      const hx = a.home.x + Math.sin(D.t * 0.21) * 2.5, hz = a.home.z + Math.cos(D.t * 0.17) * 2.5;
+      const dd = a.moveTo(hx, hz, 0.9, dt, 0.5);
+      a.ch.play(dd > 0.8 ? 'walk' : 'dance', dd > 0.8 ? { rate: 0.7 } : { style: 3, bpm: 92 });
+      if (Math.random() < dt * 0.1 && d < 12) a.say(['Groovy.', 'Far out, fellow burner.', 'I, too, enjoy... the bass.', 'Nobody here is a cop. Especially not me.', 'Whoops, that\'s my badge. It\'s a... costume badge.'][Math.floor(Math.random() * 5)], 2.2);
+      if (holding && d < (a.def.view || 14) && BurnsBehaviors.sees(a, g, a.def.view || 14, a.def.fov || 1.1)) { D.mode = 'chase'; a.say('FREEZE! I mean... HEY BRO, WHAT\'S IN THE BAGGIE?!', 2); g.toast('UNDERCOVER COP! DITCH HIM OR LOSE YOUR POWER-UP'); burnsSfx('yell'); }
+      else if (d < 7) a.face(p.x, p.z, dt, 2);
+    }
+    a.physics(dt);
+  },
+  hit(a, g) { if (a.data.mode === 'dazed') return false; a.data.mode = 'dazed'; a.data.dz = 2.6; a.say('MY COVER! ...I mean. Ow. Groovy ow.', 2); g.fx.burst(a.x, a.y + 1.8, a.z, 'star', 10, '#ffd84a'); return 'handled'; }
+});
 
 /* ---------- riding behaviour: an actor pedalling a bike mover along a path ----------
    def: { path: [[x,z]...], speed, loop (default true), bikeMv, hazard (knocks Brady over),

@@ -356,3 +356,302 @@ const BurnsW8910Pulpo = {
     return P;
   }
 };
+
+/* ---------------- accessories skinned onto an actor's bones ----------------
+   Things the rig has no slot for (respirators, chest radios, fist-sized crystals...).
+   An actor with def.acc8910 = key gets BURNS_W8910_ACC[key] drawn with its own bones
+   (one extra draw per visible actor). Call BurnsW8910Acc.draw(g, R) from def.drawSkinned. */
+const BURNS_W8910_ACC = {
+  captain(m, B) {
+    m.setBone(B.HEAD);
+    m.color('#3a3a42').shine(1); m.roundBox(0, 0.1, 0.17, 0.2, 0.15, 0.11, 0.05);
+    m.color('#ff5a8a'); for (const sx of [1, -1]) { m.push(); m.tf(sx * 0.12, 0.07, 0.2, 0, Math.PI / 2, sx * 0.5); m.roundCyl(0, -0.04, 0, 0.065, 0.08, 0.02); m.pop(); }
+    m.color('#1a1a1e'); m.torus(0, 0.12, 0.0, 0.175, 0.012, { seg: 12, tseg: 4 });
+    m.color('#fff4b0', 1); m.roundCyl(0, 0.355, 0.15, 0.045, 0.06, 0.015); m.emissive(0);
+    m.setBone(B.CHEST);
+    m.color('#1a1a1e'); m.roundBox(0.1, 0.33, 0.16, 0.1, 0.16, 0.06, 0.02); m.limb(0.13, 0.4, 0.16, 0.14, 0.58, 0.14, 0.008, 0.006);
+    m.color('#ff2a2a', 1); m.ball(0.08, 0.38, 0.195, 0.012); m.emissive(0);
+    m.color('#e8f2ff', 0.35).shine(3);
+    for (const [b, y] of [[B.UARM_L, -0.16], [B.UARM_R, -0.16], [B.FARM_L, -0.12], [B.FARM_R, -0.12], [B.THIGH_L, -0.22], [B.THIGH_R, -0.22], [B.SHIN_L, -0.2], [B.SHIN_R, -0.2]]) { m.setBone(b); m.roundBox(0, y, 0, b === B.THIGH_L || b === B.THIGH_R ? 0.16 : 0.12, 0.035, b === B.THIGH_L || b === B.THIGH_R ? 0.16 : 0.12, 0.015); }
+    m.emissive(0).shine(0);
+  },
+  billionaire(m, B) {
+    m.setBone(B.CHEST); m.color('#e8dcf4').shine(2); m.torus(0, 0.45, 0.02, 0.1, 0.035, { seg: 12, tseg: 5 }); m.roundBox(0, 0.39, 0.12, 0.12, 0.08, 0.03, 0.02);
+    m.setBone(B.FARM_L); m.color('#f0c040').shine(3); m.torus(0, -0.22, 0, 0.05, 0.016, { seg: 10, tseg: 4 }); m.shine(0);
+  },
+  crusty(m, B) {
+    m.setBone(B.CHEST); m.color('#c83a2a'); m.torus(0, 0.43, 0.01, 0.11, 0.035, { seg: 12, tseg: 5 }); m.push(); m.tf(0, 0.38, 0.12, 0, -0.3, 0); m.roundBox(0, 0, 0, 0.12, 0.1, 0.02, 0.01); m.pop();
+    m.color('#6a3a1a'); m.limb(0.17, 0.46, 0.13, -0.14, 0.04, 0.14, 0.02, 0.02); m.limb(0.17, 0.46, -0.13, -0.14, 0.04, -0.14, 0.02, 0.02);
+    m.setBone(B.HIPS); m.color('#d8a838').shine(3); m.push(); m.tf(0, -0.02, 0.15, 0, Math.PI / 2, 0); m.roundCyl(0, -0.015, 0, 0.055, 0.03, 0.01); m.pop(); m.shine(0);
+    m.color('#c8a070'); for (const b of [B.SHIN_L, B.SHIN_R]) { m.setBone(b); m.roundBox(0, -0.05, 0.07, 0.13, 0.13, 0.06, 0.03); }
+  },
+  healer(m, B) {
+    m.setBone(B.CHEST); m.color('#d8c8a0'); m.limb(-0.1, 0.45, 0.1, 0, 0.3, 0.16, 0.008, 0.008); m.limb(0.1, 0.45, 0.1, 0, 0.3, 0.16, 0.008, 0.008);
+    m.color('#c8a8ff', 0.55).shine(3); m.ellipsoid(0, 0.24, 0.18, 0.06, 0.1, 0.05, { seg: 5, rings: 2 }); m.emissive(0).shine(0);
+  },
+  techbro(m, B) {
+    m.setBone(B.CHEST); m.color('#f4f4f8').shine(2); m.torus(0, 0.46, 0.0, 0.12, 0.03, { seg: 12, tseg: 5 }); m.color('#7aff5a', 1); m.ball(0.0, 0.46, 0.12, 0.018); m.emissive(0);
+    m.color('#4a5a4a'); for (let i = 0; i < 6; i++) m.roundBox((i % 2 ? 1 : -1) * 0.11, 0.18 + Math.floor(i / 2) * 0.08, 0.15, 0.08, 0.06, 0.03, 0.01);
+    m.setBone(B.FARM_L); m.color('#1a1a1e'); m.roundBox(0, -0.22, 0.03, 0.06, 0.03, 0.06, 0.01); m.color('#38f2ff', 1); m.roundBox(0, -0.22, 0.062, 0.045, 0.022, 0.006, 0.003); m.emissive(0).shine(0);
+  },
+  firespinner(m, B) {
+    m.setBone(B.HEAD); m.color('#3a2a22').shine(1); m.ellipsoid(0, 0.2, -0.01, 0.205, 0.215, 0.2, { seg: 12, rings: 8 });
+    m.color('#ff8a1a', 0.9); m.roundBox(0, 0.22, 0.19, 0.2, 0.045, 0.03, 0.015); m.emissive(0);
+    m.setBone(B.CHEST); m.color('#c8c8d0').shine(3); m.push(); m.tf(0, 0.32, 0.15, 0, Math.PI / 2, 0); m.roundCyl(0, -0.015, 0, 0.07, 0.03, 0.01); m.pop(); m.shine(0);
+    for (const sx of [1, -1]) for (let k = 0; k < 3; k++) { m.color(k === 1 ? '#ffd84a' : '#ff6a1a', 0.5); m.push(); m.tf(sx * (0.12 + k * 0.06), 0.42, -0.16, 0, -0.3, sx * (0.25 + k * 0.3)); m.lathe([[0, 0], [0.05, 0.05], [0.035, 0.25], [0, 0.36]], { seg: 6 }); m.pop(); }
+    m.emissive(0);
+    m.color('#c8c8d0').shine(3); for (const b of [B.FARM_L, B.FARM_R]) { m.setBone(b); m.roundBox(0, -0.12, 0, 0.11, 0.12, 0.11, 0.03); } m.shine(0);
+    m.color('#ff7a1a'); for (const b of [B.SHIN_L, B.SHIN_R]) { m.setBone(b); m.push(); m.tf(0, -0.03, 0.07, 0, Math.PI / 2, 0); m.roundCyl(0, -0.02, 0, 0.065, 0.04, 0.015); m.pop(); }
+  },
+  greeterF(m, B) {
+    m.setBone(B.HEAD); m.color('#ff4fd8').shine(1); m.push(); m.tf(0, 0.36, 0); m.lathe([[0, 0], [0.38, 0.0], [0.36, 0.03], [0.16, 0.06], [0.15, 0.17], [0, 0.19]], { seg: 16 }); m.pop();
+    m.setBone(B.FARM_R); m.color('#a87a4a'); m.limb(0, -0.2, 0.05, 0, 0.25, 0.08, 0.012, 0.012); m.roundBox(0, 0.36, 0.08, 0.24, 0.14, 0.02, 0.01);
+    m.setBone(B.CHEST); for (let i = 0; i < 7; i++) { const a = -1.1 + i * 0.37; m.color(BURNS_NEON[i % 7]); m.ball(Math.sin(a) * 0.12, 0.42 - Math.cos(a) * 0.06, 0.12, 0.018); }
+  },
+  greeterM(m, B) {
+    m.setBone(B.HEAD); m.color('#e8d08a').shine(1); m.push(); m.tf(0, 0.35, 0); m.lathe([[0, 0], [0.27, 0.0], [0.25, 0.03], [0.14, 0.05], [0.13, 0.15], [0.08, 0.16], [0, 0.15]], { seg: 14 }); m.pop();
+    m.color('#5a3a2a'); m.torus(0, 0.39, 0, 0.135, 0.012, { seg: 12, tseg: 3 });
+    m.setBone(B.FARM_R); m.color('#a87a4a'); m.limb(0, -0.2, 0.05, 0, 0.25, 0.08, 0.012, 0.012); m.roundBox(0, 0.36, 0.08, 0.24, 0.14, 0.02, 0.01);
+  },
+  darkwad(m, B) {
+    m.setBone(B.CHEST); m.color('#141418'); m.roundBox(0, 0.3, -0.18, 0.3, 0.36, 0.14, 0.05);
+    m.color('#1a1a1e'); for (const sx of [1, -1]) m.limb(sx * 0.12, 0.47, 0.11, sx * 0.13, 0.12, 0.13, 0.018, 0.018);
+  },
+  badidea(m, B) {
+    m.setBone(B.FARM_R); m.color('#fbfbf6'); m.roundBox(0, -0.13, 0, 0.13, 0.3, 0.13, 0.05);
+    m.setBone(B.UARM_R); m.color('#f4f4ee'); m.roundBox(0, -0.18, 0, 0.12, 0.14, 0.12, 0.04);
+    m.setBone(B.FARM_L); m.color('#1a1a1e'); m.torus(0, -0.2, 0, 0.055, 0.02, { seg: 10, tseg: 4 }); m.color('#c8c8d0').shine(3); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; m.push(); m.tf(Math.sin(a) * 0.072, -0.2, Math.cos(a) * 0.072, a, Math.PI / 2, 0); m.lathe([[0, 0], [0.012, 0], [0, 0.03]], { seg: 4 }); m.pop(); } m.shine(0);
+    m.setBone(B.SHIN_L); m.color('#2a2a30'); m.roundBox(0, -0.04, 0.0, 0.14, 0.14, 0.14, 0.04);
+    m.setBone(B.CHEST); m.color('#6a4a2a'); m.limb(0.17, 0.46, 0.13, -0.15, 0.05, 0.14, 0.018, 0.018);
+  },
+  cop(m, B) {
+    m.setBone(B.HEAD);
+    const cols = ['#ff3b5c', '#ffe24a', '#38f2ff'];
+    for (let i = 0; i < 3; i++) { const a = (i - 1) * 0.8; m.color(cols[i]); m.push(); m.tf(Math.sin(a) * 0.08, 0.36, 0, 0, 0, -a * 1.3); m.lathe([[0, 0], [0.09, 0], [0.06, 0.12], [0.02, 0.28], [0, 0.3]], { seg: 8 }); m.color('#ffd84a').shine(3); m.ball(0, 0.3, 0, 0.035, { seg: 6, rings: 4 }); m.shine(0); m.pop(); }
+    m.color(cols[0]); m.torus(0, 0.36, 0, 0.17, 0.03, { seg: 14, tseg: 4 });
+    m.setBone(B.CHEST); m.color('#f0c040').shine(3); m.torus(0, 0.38, 0.06, 0.1, 0.01, { seg: 12, tseg: 3 }); m.push(); m.tf(0, 0.28, 0.15, 0, Math.PI / 2, 0); m.roundCyl(0, -0.01, 0, 0.04, 0.02, 0.006); m.pop(); m.shine(0);
+    m.setBone(B.SHIN_L); m.color('#f8f8f8'); m.roundBox(0, -0.3, 0, 0.12, 0.14, 0.12, 0.03); m.setBone(B.SHIN_R); m.roundBox(0, -0.3, 0, 0.12, 0.14, 0.12, 0.03);
+  },
+  furry(m, B) {
+    m.setBone(B.HEAD);
+    m.color('#a8988a').shine(1); m.ellipsoid(0, 0.21, 0, 0.25, 0.24, 0.24, { seg: 14, rings: 10, colFn: (x, y, z) => (Math.sin(x * 40) * Math.cos(z * 37 + y * 20) > 0.6 ? '#7a6a5e' : null) });
+    m.color('#f4f0ea'); m.ellipsoid(0, 0.12, 0.2, 0.13, 0.1, 0.12, { seg: 10, rings: 6 }); m.color('#1a1416'); m.ball(0, 0.15, 0.31, 0.035, { seg: 6, rings: 4 });
+    for (const sx of [1, -1]) { m.color('#1a1416'); m.ellipsoid(sx * 0.09, 0.27, 0.19, 0.065, 0.075, 0.03); m.color('#5aff6a', 0.4).shine(3); m.ellipsoid(sx * 0.09, 0.27, 0.205, 0.05, 0.06, 0.025); m.emissive(0).shine(0); m.color('#0a0a0a'); m.ball(sx * 0.09, 0.27, 0.228, 0.022, { seg: 6, rings: 4 }); }
+    for (const sx of [1, -1]) { m.color('#a8988a'); m.push(); m.tf(sx * 0.15, 0.4, -0.02, 0, 0, -sx * 0.35); m.lathe([[0, 0], [0.08, 0], [0.04, 0.18], [0, 0.24]], { seg: 6, sz: 0.5 }); m.color('#ff4fa8'); m.lathe([[0, 0.02], [0.05, 0.03], [0.02, 0.17], [0, 0.2]], { seg: 6, sz: 0.3 }); m.pop(); }
+    m.color('#ff4fd8'); m.ball(0.03, 0.46, 0.0, 0.06); m.color('#38f2ff'); m.ball(-0.04, 0.47, -0.03, 0.05);
+    const stripes = ['#ff4fa8', '#ff8a2a', '#38c8c8'];
+    for (const b of [B.UARM_L, B.UARM_R, B.FARM_L, B.FARM_R, B.THIGH_L, B.THIGH_R, B.SHIN_L, B.SHIN_R]) { m.setBone(b); for (let i = 0; i < 3; i++) { m.color(stripes[i]); m.roundBox(0, -0.07 - i * 0.05, 0, 0.13, 0.03, 0.13, 0.012); } }
+    m.color('#8a7a6e'); for (const b of [B.FARM_L, B.FARM_R]) { m.setBone(b); m.ball(0, -0.3, 0.01, 0.075); }
+    for (const b of [B.FOOT_L, B.FOOT_R]) { m.setBone(b); m.color('#8a7a6e'); m.ellipsoid(0, -0.04, 0.07, 0.1, 0.07, 0.15); m.color('#2a2226'); for (let k = -1; k <= 1; k++) m.ball(k * 0.045, -0.04, 0.21, 0.018, { seg: 5, rings: 3 }); }
+    m.setBone(B.CHEST); m.color('#141418'); m.limb(0.12, 0.47, 0.13, 0.12, 0.08, 0.13, 0.016, 0.016); m.limb(-0.12, 0.47, 0.13, -0.12, 0.08, 0.13, 0.016, 0.016); m.roundBox(0, 0.25, 0.135, 0.28, 0.03, 0.02, 0.008);
+    m.color('#38c8c8'); m.limb(0.18, 0.46, -0.05, -0.1, 0.1, -0.16, 0.02, 0.02);
+    m.color('#ffe24a'); m.ball(0.06, 0.25, 0.15, 0.022); m.color('#ff4fd8'); m.ball(-0.06, 0.25, 0.15, 0.022);
+  },
+  lamplighter(m, B) {
+    m.setBone(B.CHEST); m.color('#8a6a4a');
+    for (const sx of [1, -1]) {
+      m.limb(sx * 0.16, 0.45, -0.05, sx * 0.55, 1.75, -0.35, 0.022, 0.018);
+      m.push(); m.tf(sx * 0.56, 1.62, -0.36); m.color('#3a2a1a'); m.lathe([[0, 0], [0.07, 0], [0.08, 0.04], [0.06, 0.06]], { seg: 8 }); m.color('#ffd890', 0.95); m.lathe([[0, 0.05], [0.075, 0.07], [0.075, 0.2], [0.05, 0.23], [0, 0.24]], { seg: 8 }); m.color('#3a2a1a', 0); m.lathe([[0, 0.22], [0.06, 0.23], [0.02, 0.3], [0, 0.31]], { seg: 6 }); m.pop(); m.emissive(0);
+    }
+    m.setBone(B.HEAD); m.color('#f4ecd8'); m.ellipsoid(0, 0.3, -0.01, 0.2, 0.14, 0.2, { phi1: Math.PI * 0.55 });
+  },
+  artist(m, B) {
+    m.setBone(B.CHEST); m.color('#c8a070'); for (const sx of [1, -1]) m.limb(sx * 0.12, 0.47, 0.12, sx * 0.1, 0.02, 0.13, 0.014, 0.014);
+    m.setBone(B.HIPS); m.color('#d8c8a8'); m.roundBox(0, -0.12, 0.13, 0.32, 0.36, 0.03, 0.02);
+    const dots = ['#ff4fd8', '#38f2ff', '#ffe24a', '#7aff5a', '#ff7a2a']; for (let i = 0; i < 9; i++) { m.color(dots[i % 5]); m.ball(-0.12 + (i * 37 % 24) / 100, -0.24 + (i * 53 % 30) / 100, 0.15, 0.018, { seg: 5, rings: 3 }); }
+  },
+  fencebotA(m, B) {
+    m.setBone(B.HEAD); m.color('#9aa0aa').shine(2);
+    m.lathe([[0, -0.02], [0.2, -0.02], [0.21, 0.02], [0.2, 0.2], [0.215, 0.22], [0.2, 0.42], [0.22, 0.44], [0.22, 0.47], [0, 0.47]], { seg: 14, rMod: (th, t) => 1 + (Math.sin(th * 3 + 1) > 0.85 && t > 0.3 && t < 0.7 ? -0.08 : 0) });
+    m.shine(0); for (const y of [0.11, 0.33]) { m.color(y > 0.2 ? '#ff4fd8' : '#38f2ff', 1); m.torus(0, y, 0, 0.205, 0.012, { seg: 16, tseg: 3 }); } m.emissive(0);
+    for (const sx of [1, -1]) { m.push(); m.tf(sx * 0.075, 0.24, 0.2, 0, Math.PI / 2, 0); m.color('#d82a2a').shine(3); m.roundCyl(0, -0.012, 0, 0.045, 0.02, 0.006); m.color('#f4f4f4', 1); m.roundCyl(0, -0.016, 0, 0.012, 0.03, 0.004); m.emissive(0).shine(0); m.pop(); }
+    m.color('#5a5a62'); m.limb(0.12, 0.47, 0, 0.18, 0.62, 0, 0.008, 0.005);
+  },
+  fencebotB(m, B) {
+    m.setBone(B.HEAD); m.color('#c8ccd4').shine(3); m.ellipsoid(0, 0.3, 0, 0.215, 0.17, 0.215, { phi1: Math.PI / 2, colFn: (x, y, z) => ((Math.round(x * 26) + Math.round(z * 26) + Math.round(y * 30)) % 3 === 0 ? '#3a3a42' : null) });
+    m.shine(0); m.color('#b8905a'); m.roundBox(0, 0.17, 0.02, 0.36, 0.3, 0.36, 0.02);
+    m.color('#1a1a1e'); m.roundBox(0, 0.2, 0.19, 0.28, 0.07, 0.01, 0.005);
+    m.color('#38f2ff', 1); m.roundBox(0, 0.2, 0.196, 0.26, 0.018, 0.008, 0.004); m.emissive(0);
+    m.color('#c8ccd4'); for (const sx of [1, -1]) m.limb(sx * 0.2, 0.32, 0, sx * 0.28, 0.32, 0, 0.012, 0.012);
+  },
+  fencebotBody(m, B) {
+    m.setBone(B.CHEST); m.color('#5a5a3a'); for (const sx of [1, -1]) m.limb(sx * 0.12, 0.46, 0.13, -sx * 0.1, 0.05, 0.14, 0.018, 0.018);
+    m.color('#8ad0ff', 0.3).shine(3); m.roundCyl(0.14, 0.12, 0.15, 0.04, 0.16, 0.015); m.emissive(0).shine(0);
+    m.color('#3a3a42'); for (const b of [B.FARM_L, B.FARM_R]) { m.setBone(b); m.roundBox(0, -0.28, 0, 0.11, 0.1, 0.12, 0.03); }
+    m.color('#6a5a44'); for (const b of [B.SHIN_L, B.SHIN_R]) { m.setBone(b); m.roundBox(0, -0.05, 0.07, 0.13, 0.13, 0.06, 0.03); }
+  },
+  deathguild(m, B) {
+    m.setBone(B.HEAD); m.color('#d8d4cc').shine(2); m.ellipsoid(0, 0.16, 0.12, 0.15, 0.17, 0.08); m.color('#141414'); for (const sx of [1, -1]) m.ball(sx * 0.055, 0.2, 0.19, 0.035); m.shine(0);
+    m.color('#141414'); m.ellipsoid(0, 0.24, -0.03, 0.21, 0.23, 0.2, { phi1: Math.PI * 0.62 });
+    m.setBone(B.CHEST); m.color('#c8c8d0').shine(3); for (const sx of [1, -1]) for (let k = 0; k < 3; k++) { m.push(); m.tf(sx * (0.18 + k * 0.03), 0.47, -0.04 + k * 0.05, 0, 0, -sx * 0.4); m.lathe([[0, 0], [0.025, 0], [0, 0.09]], { seg: 5 }); m.pop(); } m.shine(0);
+    m.color('#5a3a22'); m.limb(0.17, 0.46, 0.13, -0.15, 0.05, 0.14, 0.018, 0.018); m.limb(-0.17, 0.46, 0.13, 0.15, 0.05, 0.14, 0.018, 0.018);
+  },
+  burney(m, B) {
+    m.setBone(B.HEAD); for (const sx of [1, -1]) { m.color('#f4f0ea'); m.push(); m.tf(sx * 0.07, 0.48, -0.02, 0, 0, -sx * 0.15); m.lathe([[0, 0], [0.045, 0.02], [0.05, 0.2], [0.03, 0.3], [0, 0.32]], { seg: 6, sz: 0.4 }); m.color('#ff9ad0'); m.lathe([[0, 0.04], [0.025, 0.06], [0.03, 0.2], [0, 0.28]], { seg: 6, sz: 0.25 }); m.pop(); }
+    m.color('#2a5ac8'); m.ellipsoid(0, 0.1, 0.18, 0.12, 0.035, 0.04);
+    m.setBone(B.FARM_R); m.color('#1a1a1e').shine(2); m.roundBox(0, -0.28, 0.06, 0.12, 0.08, 0.07, 0.015); m.color('#5ab0ff', 0.3).shine(3); m.roundCyl(0, -0.27, 0.1, 0.022, 0.03, 0.006); m.emissive(0).shine(0);
+  },
+  annoyingdj(m, B) {
+    m.setBone(B.HEAD); m.color('#1a1a1e').shine(2); m.torus(0, 0.24, 0, 0.19, 0.02, { seg: 14, tseg: 4, sy: 1 }); for (const sx of [1, -1]) { m.push(); m.tf(sx * 0.19, 0.2, 0, 0, 0, Math.PI / 2); m.roundCyl(0, -0.03, 0, 0.065, 0.06, 0.02); m.pop(); }
+    m.color('#ffffff'); m.roundBox(0, 0.21, 0.175, 0.3, 0.1, 0.03, 0.03); m.color('#ff8a1a', 0.3).shine(3); for (const sx of [1, -1]) m.roundBox(sx * 0.07, 0.21, 0.19, 0.11, 0.07, 0.01, 0.02); m.emissive(0).shine(0);
+  },
+  partied(m, B) { m.setBone(B.CHEST); m.color('#2a6ac8'); m.limb(0, 0.46, 0.12, 0, 0.2, 0.15, 0.008, 0.008); m.color('#f4f4f4'); m.roundBox(0, 0.16, 0.155, 0.08, 0.1, 0.01, 0.005); },
+  kid(m, B) {
+    m.setBone(B.HEAD); m.color('#ffd84a', 0.3); for (let i = 0; i < 7; i++) { const a = -1.2 + i * 0.4; m.push(); m.tf(Math.sin(a) * 0.17, 0.36, Math.cos(a) * 0.12, a, -0.3, 0); m.lathe([[0, 0], [0.025, 0], [0, 0.11]], { seg: 4 }); m.pop(); } m.emissive(0);
+    m.setBone(B.FARM_R); m.color('#8a5a32'); m.limb(0, -0.25, 0.05, 0, 0.5, 0.08, 0.018, 0.015); m.color('#c8a0ff', 0.5); m.ball(0, 0.55, 0.08, 0.05); m.emissive(0);
+  },
+  mom(m, B) { m.setBone(B.CHEST); m.color('#1a1a1e').shine(2); m.roundBox(0.07, 0.25, 0.15, 0.1, 0.07, 0.06, 0.015); m.roundBox(-0.08, 0.2, 0.15, 0.1, 0.07, 0.06, 0.015); m.shine(0); m.color('#3a2a1a'); m.torus(0, 0.42, 0.02, 0.12, 0.008, { seg: 10, tseg: 3 }); },
+  cult(m, B) {
+    m.setBone(B.CHEST); m.color('#ff4fa8'); m.torus(0, 0.45, 0, 0.17, 0.06, { seg: 14, tseg: 6 }); m.color('#ff8ad8', 0.4); m.ball(0, 0.3, 0.15, 0.04); m.emissive(0);
+    m.color('#ff4fa8'); for (const b of [B.FARM_L, B.FARM_R]) { m.setBone(b); m.torus(0, -0.2, 0, 0.065, 0.035, { seg: 10, tseg: 5 }); }
+  },
+  gatestaff(m, B) { m.setBone(B.FARM_L); m.color('#1a1a1e'); m.roundBox(0, -0.27, 0.05, 0.06, 0.13, 0.04, 0.01); m.limb(0.015, -0.2, 0.05, 0.015, 0.02, 0.05, 0.004, 0.004); },
+  pony(m, B) {
+    m.setBone(B.HEAD); m.color('#ff4fd8', 0.6); for (let i = 0; i < 5; i++) { const a = -0.8 + i * 0.4; m.ball(Math.sin(a) * 0.17, 0.42 + Math.cos(a) * 0.04, Math.cos(a) * 0.06, 0.03); } m.emissive(0);
+  }
+};
+const BurnsW8910Acc = {
+  cache: {},
+  geo(key) {
+    let a = this.cache[key];
+    if (!a) { const m = new BurnsMesh(2048); (BURNS_W8910_ACC[key] || (() => {}))(m, BURNS_BONES); a = this.cache[key] = m.empty ? { geo: null } : { geo: m.geo() }; }
+    return a.geo;
+  },
+  draw(g, R) {
+    for (const a of g.actors) {
+      if ((!a.def.acc8910 && !a.def.acc8910b) || a.hidden || a.removed || !a._vis) continue;
+      for (const key of [a.def.acc8910, a.def.acc8910b]) { if (!key) continue; const geo = this.geo(key); if (geo) R.skin(geo, a.ch.bones, a.ch.nb, a.ch.tint, 0, a.ch.rim); }
+    }
+  }
+};
+
+/* ---------------- the six burner archetypes (looks + lines, our own words) ---------------- */
+const BURNS_W8910_ARCH = {
+  spec(kind) {
+    let s;
+    if (kind === 'billionaire') {
+      s = BurnsRig.npcSpec('techbro', 701);
+      Object.assign(s, { top: { kind: 'button', col: '#fbf8f2' }, vest: null, bottom: { kind: 'chinos', col: '#f6f2ea' }, shoes: { kind: 'sneakers', col: '#ffffff', sole: '#e8e0d0' }, glasses: 'shades', goggles: true, face: 'smug', hair: { style: 'short', col: '#3a2a1a', hi: '#6a5a4a' }, prop: 'coffee', acc: [], body: { h: 1.02, w: 1.0 } });
+    } else if (kind === 'crusty') {
+      s = BurnsRig.npcSpec('crusty', 702);
+      Object.assign(s, { skin: '#c88a5e', skinSh: '#a86a44', hair: { style: 'afro', col: '#b8b4ae', hi: '#e8e4de' }, face: 'beard', goggles: true, glasses: null, hat: null, coat: { kind: 'duster', col: '#8a5a36', trim: '#f0e2c4' }, top: { kind: 'tee', col: '#3a3430' }, vest: null, bottom: { kind: 'cargo', col: '#6a6a54' }, shoes: { kind: 'boots', col: '#6a4a2a' }, acc: ['toolbelt', 'bracelets'], body: { h: 1.0, w: 1.06 } });
+    } else if (kind === 'pony') {
+      s = BurnsRig.npcSpec('sparklepony', 703);
+      Object.assign(s, { coat: { kind: 'fur', col: '#ff4fd8', trim: '#ffffff' }, top: { kind: 'crop', col: '#c8a0ff', pattern: 'sequin' }, bottom: { kind: 'leggings', col: '#1a1a22', pattern: 'plaid' }, shoes: { kind: 'furboots', col: '#38f2ff' }, hair: { style: 'wig', col: '#ff9ad0', hi: '#ffffff' }, glasses: 'heart', acc: ['wings'], face: 'lashes' });
+    } else if (kind === 'techbro') {
+      s = BurnsRig.npcSpec('techbro', 704);
+      Object.assign(s, { vest: 'fleece', vestCol: '#5a6a5a', top: { kind: 'tee', col: '#2a2a34' }, bottom: { kind: 'chinos', col: '#c8b48a' }, prop: 'phone', glasses: null, face: 'smug', acc: ['earbuds'], hair: { style: 'buzz', col: '#3a2a1a', hi: '#5a4a3a' } });
+    } else if (kind === 'captain') {
+      s = BurnsRig.npcSpec('gate', 705);
+      Object.assign(s, { top: { kind: 'hoodie', col: '#2a2a34' }, vest: 'hivis', bottom: { kind: 'cargo', col: '#3a3a30' }, shoes: { kind: 'boots', col: '#141414' }, hat: { kind: 'hardhat', col: '#ffd21a' }, glasses: 'clear', goggles: false, face: 'stern', prop: 'clipboard', hair: { style: 'bun', col: '#6a3a2a', hi: '#8a5a4a' }, acc: [], body: { h: 0.97, w: 1.0 } });
+    } else if (kind === 'healer') {
+      s = BurnsRig.npcSpec('burner', 706);
+      const sk = s.skin;
+      Object.assign(s, { coat: { kind: 'kimono', col: '#fbfaf6', trim: '#e8dcff' }, top: { kind: 'tank', col: '#fbfaf6' }, bottom: { kind: 'kilt', col: '#f4f2ec' }, shoes: { kind: 'sneakers', col: sk, sole: sk }, hat: null, goggles: false, glasses: null, face: 'sleepy', hair: { style: 'long', col: '#c8a878', hi: '#f0d8a8' }, acc: ['bracelets'], paint: null });
+    } else if (kind === 'firespinner') {
+      s = BurnsRig.npcSpec('burner', 707);
+      Object.assign(s, { top: { kind: 'crop', col: '#6a4a32', pattern: 'leopard' }, bottom: { kind: 'kilt', col: '#ff7a1a', pattern: 'flames' }, shoes: { kind: 'boots', col: '#c8a070' }, hair: { style: 'bald', col: '#2a1a12', hi: '#2a1a12' }, hat: null, goggles: false, glasses: null, face: 'stern', acc: [], paint: null, body: { h: 1.0, w: 0.95 } });
+    } else if (kind === 'greeterF') {
+      s = BurnsRig.npcSpec('greeter', 708);
+      Object.assign(s, { top: { kind: 'tank', col: '#38c8c8', pattern: 'sequin' }, bottom: { kind: 'tutu', col: '#9aff5a' }, shoes: { kind: 'sneakers', col: '#ff4fd8', sole: '#ffffff' }, hair: { style: 'long', col: '#2a1a14', hi: '#8a5a3a' }, hat: null, glasses: 'shades', face: 'lashes', acc: ['bracelets'], prop: null, body: { h: 0.94, w: 0.92 } });
+    } else if (kind === 'greeterM') {
+      s = BurnsRig.npcSpec('greeter', 709);
+      Object.assign(s, { top: { kind: 'button', col: '#ff8a2a', pattern: 'tiedye' }, bottom: { kind: 'shorts', col: '#ff4fd8' }, shoes: { kind: 'sneakers', col: '#38f2ff', sole: '#ffffff' }, hair: { style: 'short', col: '#2a1a14', hi: '#4a3a2a' }, hat: null, glasses: 'shades', face: 'beard', acc: ['bracelets', 'lei'], prop: null, body: { h: 1.02, w: 1.12 } });
+    } else if (kind === 'darkwad') {
+      s = BurnsRig.npcSpec('techbro', 710);
+      Object.assign(s, { top: { kind: 'hoodie', col: '#141418' }, vest: null, bottom: { kind: 'cargo', col: '#141418' }, shoes: { kind: 'sneakers', col: '#5a5a62', sole: '#3a3a42' }, hair: { style: 'mohawk', col: '#141414', hi: '#2a2a2a' }, glasses: 'shades', goggles: false, face: 'smug', acc: ['toolbelt'], prop: null });
+    } else if (kind === 'badidea') {
+      s = BurnsRig.npcSpec('burner', 711);
+      Object.assign(s, { top: { kind: 'tank', col: '#f8f8f4' }, bottom: { kind: 'shorts', col: '#7a5a3a' }, shoes: { kind: 'boots', col: '#a8845a' }, hair: { style: 'short', col: '#5a3a22', hi: '#7a5a3a' }, hat: null, goggles: true, glasses: null, face: 'smug', acc: ['toolbelt'], paint: null, body: { h: 1.0, w: 1.04 } });
+    } else if (kind === 'cop') {
+      s = BurnsRig.npcSpec('techbro', 712);
+      Object.assign(s, { top: { kind: 'button', col: '#ff8a2a', pattern: 'rainbow' }, vest: 'fleece', vestCol: '#1a1a1e', bottom: { kind: 'shorts', col: '#c8b48a' }, shoes: { kind: 'sneakers', col: '#f4f4f4', sole: '#d8d8d8' }, hair: { style: 'buzz', col: '#3a2a1a', hi: '#5a4a3a' }, glasses: 'shades', face: 'stern', acc: ['toolbelt'], prop: 'radio', body: { h: 1.02, w: 1.1 } });
+    } else if (kind === 'furry') {
+      s = BurnsRig.npcSpec('burner', 713);
+      Object.assign(s, { skin: '#a8988a', skinSh: '#8a7a6e', top: { kind: 'hoodie', col: '#a8988a', pattern: 'leopard' }, bottom: { kind: 'leggings', col: '#a8988a', pattern: 'leopard' }, shoes: { kind: 'furboots', col: '#8a7a6e' }, hair: { style: 'bald', col: '#a8988a', hi: '#a8988a' }, hat: null, goggles: false, glasses: null, face: 'friendly', acc: ['ledNecklace'], paint: null, body: { h: 1.0, w: 1.12 } });
+    } else if (kind === 'lamplighter') {
+      s = BurnsRig.npcSpec('burner', 714);
+      Object.assign(s, { coat: { kind: 'kimono', col: '#f4ecd8', trim: '#e0d0a8' }, top: { kind: 'tee', col: '#f4ecd8' }, bottom: { kind: 'kilt', col: '#ece2cc' }, shoes: { kind: 'sneakers', col: '#a8845a', sole: '#8a6a4a' }, hat: null, goggles: false, glasses: null, face: 'friendly', acc: ['toolbelt'], paint: null, hair: { style: 'short', col: '#3a2a1a', hi: '#5a4a3a' } });
+    } else if (kind === 'artist') {
+      s = BurnsRig.npcSpec('burner', 715);
+      Object.assign(s, { top: { kind: 'crop', col: '#c8c8cc' }, bottom: { kind: 'cargo', col: '#34343e' }, shoes: { kind: 'boots', col: '#6a4a2a' }, hat: { kind: 'cowboy', col: '#e8d090' }, hair: { style: 'wavy', col: '#6a4228', hi: '#9a6a48' }, face: 'friendly', goggles: false, glasses: null, acc: ['bracelets'], prop: 'clipboard', paint: null, body: { h: 0.95, w: 0.92 } });
+    } else if (kind === 'fencebotA' || kind === 'fencebotB') {
+      s = BurnsRig.npcSpec('crusty', kind === 'fencebotA' ? 716 : 717);
+      Object.assign(s, { coat: { kind: 'duster', col: kind === 'fencebotA' ? '#7a5a3a' : '#6a4a2e', trim: '#5a3a22' }, top: { kind: 'tee', col: '#3a3430' }, vest: 'patches', bottom: { kind: 'cargo', col: '#5a5a3a' }, shoes: { kind: 'boots', col: '#c8a070' }, hat: null, goggles: false, glasses: null, hair: { style: 'bald', col: '#2a2a2a', hi: '#2a2a2a' }, face: 'stern', acc: ['toolbelt'], body: { h: 1.0, w: 1.0 } });
+    } else if (kind === 'deathguild') {
+      s = BurnsRig.npcSpec('burner', 718);
+      Object.assign(s, { coat: { kind: 'pirate', col: '#141414', trim: '#3a3a3a' }, top: { kind: 'tee', col: '#141414' }, bottom: { kind: 'cargo', col: '#141414' }, shoes: { kind: 'boots', col: '#141414' }, hat: null, goggles: false, glasses: null, hair: { style: 'bald', col: '#141414', hi: '#141414' }, acc: ['toolbelt'], paint: null, face: 'stern' });
+    } else if (kind === 'burney') {
+      s = BurnsRig.npcSpec('burner', 719);
+      Object.assign(s, { top: { kind: 'button', col: '#2ab0a0', pattern: 'rainbow' }, vest: 'patches', bottom: { kind: 'shorts', col: '#c8b48a' }, shoes: { kind: 'boots', col: '#2a2a2a' }, hat: { kind: 'cowboy', col: '#e8d090' }, hair: { style: 'buzz', col: '#2a5ac8', hi: '#4a7ae8' }, face: 'goofy', goggles: false, glasses: null, acc: ['ledNecklace', 'bracelets'], paint: 'tattoo', body: { h: 1.0, w: 1.12 } });
+    } else if (kind === 'annoyingdj') {
+      s = BurnsRig.npcSpec('burner', 720);
+      Object.assign(s, { top: { kind: 'button', col: '#ff6ab8', pattern: 'tiedye' }, bottom: { kind: 'shorts', col: '#9aff5a' }, shoes: { kind: 'sneakers', col: '#2ac8c8', sole: '#ffffff' }, hat: null, goggles: false, glasses: null, hair: { style: 'short', col: '#141414', hi: '#2a2a3a' }, face: 'goofy', acc: ['ledNecklace', 'bracelets'], paint: null });
+    } else if (kind === 'partied') {
+      s = BurnsRig.npcSpec('burner', 721);
+      Object.assign(s, { top: { kind: 'button', col: '#f4c8d8' }, bottom: { kind: 'cargo', col: '#8a7a64' }, shoes: { kind: 'boots', col: '#6a5a4a' }, hat: null, goggles: false, glasses: null, hair: { style: 'long', col: '#8a8a8a', hi: '#b8b8b8' }, face: 'tired', acc: ['bracelets', 'ledNecklace'], paint: null });
+    } else if (kind === 'kid') {
+      s = BurnsRig.npcSpec('burner', 722);
+      Object.assign(s, { top: { kind: 'none' }, paint: 'rainbow', bottom: { kind: 'cargo', col: '#c8a878' }, shoes: { kind: 'furboots', col: '#ff9ad0' }, hat: { kind: 'furhat', col: '#2ac8c8' }, glasses: 'shades', goggles: false, face: 'kid', acc: ['ledNecklace', 'bracelets'], body: { h: 0.9, w: 0.9 } });
+    } else if (kind === 'mom') {
+      s = BurnsRig.npcSpec('burner', 723);
+      Object.assign(s, { top: { kind: 'hoodie', col: '#ff9ad0' }, vest: 'fleece', vestCol: '#5a9a5a', bottom: { kind: 'jeans', col: '#4a6a9a' }, shoes: { kind: 'sneakers', col: '#ffffff', sole: '#e8e8e8' }, hat: { kind: 'cowboy', col: '#e8d090' }, hair: { style: 'short', col: '#c8c8cc', hi: '#ffffff' }, glasses: 'shades', goggles: false, face: 'friendly', acc: ['lei'], paint: null, body: { h: 0.94, w: 1.04 } });
+    } else if (kind === 'cult') {
+      s = BurnsRig.npcSpec('burner', 724);
+      Object.assign(s, { top: { kind: 'none' }, paint: null, bottom: { kind: 'leggings', col: '#ff6ab8' }, shoes: { kind: 'boots', col: '#ff4fa8' }, hat: null, hair: { style: 'mohawk', col: '#ff4fa8', hi: '#ffb0d8' }, glasses: 'heart', goggles: false, face: 'beard', acc: [], body: { h: 1.04, w: 1.22 } });
+    } else if (kind === 'gatestaff') {
+      s = BurnsRig.npcSpec('gate', 725);
+      Object.assign(s, { top: { kind: 'tee', col: '#141418' }, vest: null, bottom: { kind: 'shorts', col: '#1a1a22' }, shoes: { kind: 'boots', col: '#141414' }, hat: null, glasses: 'shades', face: 'stern', hair: { style: 'down', col: '#6a4a2a', hi: '#d8b070' }, acc: ['toolbelt', 'bracelets'], prop: 'radio', body: { h: 0.96, w: 0.92 } });
+    }
+    s.key = 'w8910arch:' + kind;
+    return s;
+  },
+  NAMES: { billionaire: 'STERLING, TURNKEY CAMP', crusty: 'GRIT, SINCE \'96', pony: 'GLIMMER', techbro: 'BRAXTON, FOUNDER', captain: 'CAPTAIN PRUDENCE', healer: 'MOONWATER',
+    firespinner: 'FIRE SPINNER', greeterF: 'GREETER', greeterM: 'GREETER', darkwad: 'DARKWAD', badidea: 'BAD IDEA BURT', cop: 'TOTALLY A BURNER', furry: 'FUZZBUCKET',
+    lamplighter: 'LAMPLIGHTER', artist: 'WREN, PLAYA ARTIST', fencebotA: 'FENCE BOT A', fencebotB: 'FENCE BOT B', deathguild: 'DEATH GUILD', burney: 'BURNEY', annoyingdj: 'DJ DROPZ',
+    partied: 'TUESDAY GARY', kid: 'BURNER KID', mom: 'BURNER MOM', cult: 'BROTHER BUBBLEGUM', gatestaff: 'GATE STAFF' },
+  // the engine's type names for each role (the engine draws these itself once it knows them)
+  TYPE: { captain: 'safetycaptain', billionaire: 'billionaire', crusty: 'crusty', pony: 'sparklepony', techbro: 'techbro', healer: 'healer', firespinner: 'firespinner', greeterF: 'greeter_f', greeterM: 'greeter_m',
+    darkwad: 'darkwad', badidea: 'badideaguy', cop: 'undercovercop', furry: 'furry', lamplighter: 'lamplighter', artist: 'playaartist', fencebotA: 'fencebot_a', fencebotB: 'fencebot_b',
+    deathguild: 'deathguild', burney: 'burney', annoyingdj: 'annoyingdj', partied: 'partiedtoohard', kid: 'burnerkid', mom: 'burnermom', cult: 'cultleader', gatestaff: 'gatestaff' },
+  OVERLAY: { captain: 'captain', billionaire: 'billionaire', crusty: 'crusty', healer: 'healer', techbro: 'techbro', pony: 'pony', firespinner: 'firespinner', greeterF: 'greeterF', greeterM: 'greeterM', darkwad: 'darkwad', badidea: 'badidea', cop: 'cop', furry: 'furry',
+    lamplighter: 'lamplighter', artist: 'artist', fencebotA: 'fencebotA', fencebotB: 'fencebotB', deathguild: 'deathguild', burney: 'burney', annoyingdj: 'annoyingdj', partied: 'partied', kid: 'kid', mom: 'mom', cult: 'cult', gatestaff: 'gatestaff' },
+  // does the engine already draw this type itself? (never throws; falls back to the stand-ins)
+  engineHas(type) {
+    try {
+      if (typeof BurnsRig.hasType === 'function') return !!BurnsRig.hasType(type);
+      const L = BurnsRig.types || BurnsRig.TYPES || (typeof BURNS_NPC_TYPES !== 'undefined' ? BURNS_NPC_TYPES : null);
+      if (L) return Array.isArray(L) ? L.indexOf(type) >= 0 : !!L[type];
+    } catch (e) { /* stand-in */ }
+    return ['ranger', 'dpw', 'sparklepony', 'techbro', 'crusty'].indexOf(type) >= 0 && type !== 'crusty';
+  },
+  // an actor def for a cast role: the engine type when it exists, otherwise our rounded stand-in
+  npc(kind, o) {
+    const type = this.TYPE[kind] || kind, d = { type, seed: 700 + (Object.keys(this.TYPE).indexOf(kind) + 1) * 3, name: this.NAMES[kind] || type.toUpperCase() };
+    if (!this.engineHas(type)) { const sp = this.spec(kind); if (sp) { d.spec = sp; if (this.OVERLAY[kind]) d.acc8910 = this.OVERLAY[kind]; } }
+    if (kind === 'fencebotA' || kind === 'fencebotB') d.acc8910b = 'fencebotBody';
+    return Object.assign(d, o || {});
+  },
+  // cheers for the Burn (W10 cameo crowd)
+  BURN: {
+    billionaire: ['Magnificent! I\'m buying the ashes.', 'My staff will clap for me. Clap, Gerald.'],
+    crusty: ['Best burn since the beach! ...Don\'t quote me.', 'Too corporate! ...Still crying though.'],
+    pony: ['I\'m crying glitter! Is that normal?!', 'Can I borrow a tissue? And a hug? And a ride home?'],
+    techbro: ['This is so disruptive. I\'m pivoting. To feelings.', 'Zero cellular friction. Infinite vibes.'],
+    captain: ['Fire perimeter: INTACT. Feelings: ALSO INTACT.', 'Everyone stay behind the line! ...WOOOO!'],
+    healer: ['He\'s releasing his ego... I\'m weeping...', 'My twin flame! ...No wait, that\'s just a fire.']
+  }
+};
+
+/* ---------------- extra animations for the cast ---------------- */
+(() => {
+  const B = BURNS_BONES, S = (P, b, x, y, z) => { P.r[b * 3] = x; P.r[b * 3 + 1] = y || 0; P.r[b * 3 + 2] = z || 0; };
+  // Bad Idea Burt: cast arm raised, finger to chin, scheming
+  BURNS_ANIMS.w8910think = (P, t) => { BURNS_ANIMS.idle(P, t); S(P, B.UARM_R, -2.85, 0, -0.15); S(P, B.FARM_R, -0.1); S(P, B.UARM_L, -1.0, 0, 0.35); S(P, B.FARM_L, -2.1); S(P, B.HEAD, 0.08, 0.2 + Math.sin(t * 0.8) * 0.15, 0.1); };
+  // DJs: hands on the decks, head nodding on the beat
+  BURNS_ANIMS.w8910dj = (P, t, k) => { const b = Math.sin(t * (k && k.bpm ? k.bpm / 60 * TAU : 13)); S(P, B.UARM_L, -0.85, 0, 0.25); S(P, B.FARM_L, -0.9 + b * 0.1); S(P, B.UARM_R, -0.85, 0, -0.25); S(P, B.FARM_R, -0.9 - b * 0.1); S(P, B.CHEST, 0.15 + Math.abs(b) * 0.06); S(P, B.HEAD, 0.1 + Math.abs(b) * 0.25); S(P, B.THIGH_L, -0.1); S(P, B.SHIN_L, 0.2 + Math.abs(b) * 0.15); S(P, B.THIGH_R, -0.1); S(P, B.SHIN_R, 0.2 + Math.abs(b) * 0.15); P.y = -Math.abs(b) * 0.05; };
+  // fire spinners: arms swinging wide circles (the poi flames are particles)
+  BURNS_ANIMS.w8910spin = (P, t) => { const a = t * 7.5; S(P, B.UARM_L, -1.3 + Math.sin(a) * 0.9, 0, 1.0 + Math.cos(a) * 0.5); S(P, B.FARM_L, -0.3); S(P, B.UARM_R, -1.3 + Math.sin(a + Math.PI) * 0.9, 0, -1.0 - Math.cos(a + Math.PI) * 0.5); S(P, B.FARM_R, -0.3); S(P, B.CHEST, 0.05, Math.sin(t * 2) * 0.3); S(P, B.THIGH_L, -0.2); S(P, B.SHIN_L, 0.3); S(P, B.THIGH_R, 0.1); S(P, B.SHIN_R, 0.15); P.y = -0.03; };
+  // arms wide in welcome (greeters, Brother Bubblegum)
+  BURNS_ANIMS.w8910welcome = (P, t) => { BURNS_ANIMS.idle(P, t); S(P, B.UARM_L, -0.3, 0, 1.5 + Math.sin(t * 2) * 0.1); S(P, B.UARM_R, -0.3, 0, -1.5 - Math.sin(t * 2) * 0.1); S(P, B.FARM_L, -0.2); S(P, B.FARM_R, -0.2); P.face = 3; };
+})();

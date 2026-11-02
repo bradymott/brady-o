@@ -32,18 +32,11 @@ const BURNS_W8_SKY2 = Object.assign({}, BURNS_W8_SKY, {
 });
 const BURNS_W8_TAUNTS = ['SPARKLE PONY SPOTTED!', 'HARD HAT AREA, GLITTER BOY!', 'HAVEN\'T SHOWERED SINCE JULY. PROUD OF IT.', 'GO BACK TO YOUR DOME!', 'I LIVE HERE. YOU VISIT.', 'YOU\'RE MOOP!', 'WHO LET YOU PAST THE BERM?!', 'MY BOOTS HAVE SEEN THINGS.'];
 
-/* ---------------- DPW looks ---------------- */
+/* ---------------- DPW looks ----------------
+   Crews use the engine's 'dpw' type as-is (the engine owns the DPW look). Named DPW
+   characters start from that same spec and only change a hat, a face or a prop. */
 function burnsW8Spec(seed, o) {
   const s = BurnsRig.npcSpec('dpw', seed);
-  const r = mulberry32(seed * 977 + 5);
-  s.skin = r.pick(['#c8875e', '#b8764e', '#8a5636', '#d89a70']); s.skinSh = shade(s.skin, -0.14);
-  s.top = { kind: r.pick(['tee', 'tank', 'hoodie']), col: r.pick(['#7a6a58', '#5a4e44', '#8a7458', '#4a4a4a']) };
-  s.bottom = { kind: 'cargo', col: r.pick(['#5a4a3a', '#4a4236', '#6a5a46']) };
-  s.hat = { kind: r.pick(['hardhat', 'hardhat', 'cap', 'bandana']), col: r.pick(['#ff8a1a', '#ffd21a', '#e8e0d0', '#c84a2a']) };
-  s.face = r.pick(['beard', 'grumpy', 'stern', 'beard']); s.goggles = r.chance(0.6); s.glasses = r.chance(0.3) ? 'shades' : null;
-  s.hair = { style: r.pick(['long', 'short', 'mohawk', 'buzz', 'bald']), col: r.pick(['#6a5a4a', '#3a2a1a', '#9a8a7a', '#c8b8a0']), hi: '#d8c8b0' };
-  s.acc = ['toolbelt']; if (r.chance(0.4)) s.acc.push('bracelets');
-  s.body = { h: 0.98 + r() * 0.12, w: 1.12 + r() * 0.22 };
   Object.assign(s, o || {});
   s.key = 'w8dpw:' + seed + ':' + JSON.stringify(o || {});
   return s;
@@ -103,6 +96,7 @@ function burnsW8Spec(seed, o) {
       stink(a, g, dt); D.cd -= dt;
       const dc = Math.hypot(car.x - a.x, car.z - a.z);
       a.data.atCar = dc < 4.2;
+      if (D.frozen > 0) { D.frozen -= dt; a.data.atCar = false; a.moveTo(a.x, a.z, 0, dt); a.ch.play('sit'); if (Math.random() < dt * 3) g.fx.zzz(a.x, a.y + 1.6, a.z); a.physics(dt); return; }
       if (d < 5 && Math.abs(p.y - a.y) < 2) { a.moveTo(p.x, p.z, 3.2, dt, 0.6); a.ch.play('run', { rate: 0.8 }); taunt(a, dt); }
       else if (!a.data.atCar) { a.moveTo(car.x, car.z, 3.0, dt, 3.6); a.ch.play('walk', { rate: 1.3 }); }
       else { a.face(car.x, car.z, dt, 4); a.moveTo(a.x, a.z, 0, dt); a.ch.play('clipboard'); if (D.cd <= 0) { D.cd = 3 + Math.random() * 2; a.say(burnsW8910Pick(['WHO PARKED THIS CALAMARI?!', 'UNPLUGGING. FOR SAFETY.', 'This octopus needs a permit for its permit!', 'NOT ON MY WATCH!']), 1.8); } }
@@ -160,6 +154,9 @@ BurnsWorlds.register({
       onComplete(g) { g.toast('NOZZLE RECOVERED! BACK TO PUMP 3!'); } },
     { id: 'climb', name: 'Hell\'s Highest', short: 'Climb the big diesel tank', type: 'climb', start: 'trigger', secret: true, target: { x: -58, z: -30, r: 4.6, y: 12 }, tokenAt: { x: -58, y: 13.6, z: -30 },
       desc: 'DO NOT CLIMB THE TANK, says the sign. The sign is not the boss of you.', hint: 'The tank farm, west of the station' },
+    { id: 'moop', name: 'MOOP Patrol', short: 'Sweep MOOP for Captain Prudence', type: 'collect', count: 8, token: false, giver: 'captain', start: 'manual', progressLabel: 'MOOP', marker: { x: -9, z: 92 },
+      desc: 'Captain Prudence (Safety Third) wants 8 pieces of Matter Out Of Place swept from around the station.', hint: 'Captain Prudence, by the fuel line',
+      onComplete(g) { BURNS_W8.captainAlly(g); } },
     { id: 'boss', name: 'Foreman Rusty', short: 'Defeat Foreman Rusty!', type: 'boss', start: 'manual', requires: ['fillup', 'nozzle'], tokenDirect: true, marker: { x: 0, z: -112 },
       desc: 'Twenty-two years on the playa. Showered twice. He wants El Pulpo impounded.', hint: 'The DPW yard, north end', lockedDesc: 'Fuel up El Pulpo first.' }
   ],
@@ -228,11 +225,29 @@ BurnsWorlds.register({
     api.npc({ name: 'FROSTY', type: 'tutu', seed: 83, x: 34.5, z: 79, yaw: -2.2, lines: ['It\'s a hundred and four degrees. Have a water. Have two. Have a snow cone of the soul.', 'DPW don\'t take ice. They say ice is "for tourists." They drink warm Gatorade from 2019.'], gift: { kind: 'water' } });
     api.npc({ type: 'ranger', seed: 81, name: 'RANGER DUSTIN', x: 14, z: 40, behavior: 'walk', path: [[14, 40], [14, 80], [14, 40]], speed: 1.2, lines: ['I\'m not a cop. I\'m a Ranger. DPW aren\'t cops either. They\'re worse. They have forklifts.', 'Foreman Rusty\'s been impounding art cars all week. Says they "make the playa look fun."'], gift: { kind: 'glowstick', n: 6 } });
     // roaming DPW crews
-    const dpw = (x, z, seed, beh, o) => api.enemy(Object.assign({ spec: burnsW8Spec(seed), name: 'DPW', x, z, behavior: beh, hp: beh === 'w8Rebar' ? 3 : 2, drop: 3, tag: 'dpw', afterDefeat: 'chill', defeatLine: burnsW8910Pick(['Fine. Break time.', 'I\'m telling Rusty.', 'Ugh. Union rules.', 'My shift ended in August anyway.']) }, o || {}));
+    const dpw = (x, z, seed, beh, o) => api.enemy(Object.assign({ type: 'dpw', seed: seed * 13 + 3, name: 'DPW', x, z, behavior: beh, hp: beh === 'w8Rebar' ? 3 : 2, drop: 3, tag: 'dpw', afterDefeat: 'chill', defeatLine: burnsW8910Pick(['Fine. Break time.', 'I\'m telling Rusty.', 'Ugh. Union rules.', 'My shift ended in August anyway.']) }, o || {}));
     dpw(-22, 40, 1, 'w8Wrench'); dpw(92, -30, 2, 'w8Wrench'); dpw(102, -78, 3, 'w8Wrench'); dpw(-42, -44, 4, 'w8Wrench');
     dpw(62, -12, 5, 'w8Wrench', { y: 5.2, fixedY: true, aggro: 13 });
     dpw(-8, -74, 6, 'w8Rebar'); dpw(-70, -84, 7, 'w8Rebar'); dpw(72, -58, 8, 'w8Rebar');
     dpw(22, -34, 9, 'charger', { chargeLine: 'BULLDOZER!', dashSpeed: 11, aggro: 15 }); dpw(-30, 16, 10, 'charger', { chargeLine: 'OUTTA MY YARD!', dashSpeed: 11, aggro: 15 });
+    // Captain Prudence (Safety Third) vs. DPW
+    api.npc(Object.assign(BURNS_W8910_ARCH.npc('captain'), { id: 'captain', x: -9.2, z: 94.5, yaw: Math.PI / 2 + 0.6,
+      talk(g2, a) { BURNS_W8.captainTalk(g2, a); } }));
+    api.roundBox(-10.6, 0, 93, 1.2, 0.9, 0.8, '#5a6a5a', { r: 0.12 });
+    api.sign('SAFETY FIRST\nSAFETY SECOND\nSAFETY THIRD', -11.4, 90.6, { yaw: Math.PI / 2 + 0.3, h: 1.3, style: { bg: '#ffd21a', fg: '#1a1008', size: 36, border: '#1a1008' } });
+    const moop = [[-3, 70, 'a bottle cap'], [11, 40, 'a feather boa fluff'], [-18, 18, 'a single sock'], [18, -14, 'a glitter clump'], [-22, -8, 'a zip tie'], [6, -18, 'a pistachio shell'], [26, 22, 'a cigarette... no, a sparkler stick'], [-6, 52, 'a sequin. Just one.']];
+    moop.forEach(([x, z, what], i) => api.pickup('item:moop', x, 0.6, z, { mission: 'moop', gate: true, label: 'MOOP', icon: i % 2 ? 'ziptie' : 'glowstick', id: 'moop' + i, persist: false, onTake: g2 => g2.toast('MOOP: ' + what.toUpperCase()) }));
+    // Bad Idea Burt and his fuel stunt
+    api.npc(Object.assign(BURNS_W8910_ARCH.npc('badidea'), { id: 'burt', x: -31, z: 9, yaw: -0.6, anim: 'w8910think',
+      talk(g2, a) { BURNS_W8.burtTalk(g2, a); } }));
+    api.mesh(-36, 12, m => {
+      const S2 = BurnsW8910Shape;
+      for (let i = 0; i < 9; i++) { m.color(i % 3 ? '#c8202a' : '#e8c020').shine(2); S2.rbox(m, (i % 3) * 0.55 - 0.55, 0.32 + Math.floor(i / 3) * 0.62, 0, 0.5, 0.6, 0.32, 0.08); }
+      m.shine(0); m.color('#8a6a4a'); m.push(); m.tf(0, 0.9, 1.6, 0, -0.42, 0); S2.rbox(m, 0, 0, 0, 1.4, 0.1, 3.4, 0.03); m.pop();
+      m.color('#c8c8d0').shine(3); S2.rbox(m, 2.4, 0.75, 1.2, 0.9, 0.5, 1.3, 0.05); for (const [x, z] of [[2.0, 0.7], [2.8, 0.7], [2.0, 1.7], [2.8, 1.7]]) S2.ball(m, x, 0.12, z, 0.1); m.shine(0);
+      return { cols: [{ t: 'box', x: 0, z: 0, hx: 0.85, hz: 0.2, y0: 0, y1: 1.9 }] };
+    });
+    api.sign('BURT\'S STUNT ZONE\n(SPECTATORS: STAND BACK\nFURTHER. NO, FURTHER.)', -38.5, 7.5, { yaw: 0.6, h: 1.4, style: { bg: '#1a1a22', fg: '#ffe24a', size: 32, border: '#ffe24a' } });
     // the hidden photo above the canopy (LSD path)
     api.pickup('bag:lsd', -18, 0.9, -6);
     api.hidden(() => {
@@ -277,6 +292,7 @@ BurnsWorlds.register({
     env.haze = Math.min(1, env.haze + 0.05);
   },
   drawSprites(g, R) { BurnsW8910Haz.draw(g, R); BURNS_W8.drawSprites(g, R); },
+  drawSkinned(g, R) { BurnsW8910Acc.draw(g, R); },
   update(g, dt) { BurnsW8910.tick(g, dt); }
 });
 
@@ -628,6 +644,8 @@ BURNS_W8.update = function (g, dt) {
   const car = S.pulpo.car;
   car.maxSpeed = S.pulpo.fuel >= 0.99 ? 9 : 3.2;
   if (S.pulpo.fuel < 0.99 && car.rider && Math.random() < dt * 0.6) g.fx.smoke(car.x, car.y + 2, car.z, 2, '#3a3438');
+  BURNS_W8.captainUpdate(g, dt);
+  BURNS_W8.burtUpdate(g, dt);
   // the permit marker follows the current step
   const pm = g.missions.get('permit');
   if (pm && pm.state === 'active') { const step = BurnsSave.flag(8, 'permitStep') || 1; pm.def.marker = step === 1 ? { x: 74, z: -16 } : step === 2 || step === 4 ? { x: 84, z: -101 } : step === 3 ? { x: -30, z: 60 } : { x: 29, z: 34 }; }
@@ -660,7 +678,7 @@ BURNS_W8.intro = function (g) {
   g.cutscene([
     { music: 'burns_intro' },
     { cam: { x: -26, y: 20, z: 60, tx: 0, ty: 4, tz: -10, fov: 0.85 } },
-    { banner: ['WORLD 8', 'HELL STATION · THE PLAYA\'S ONLY PUMP', { col: '#ff5a2a', big: true, dur: 3 }] },
+    { banner: [BurnsWorlds.label(8).toUpperCase(), 'HELL STATION · THE PLAYA\'S ONLY PUMP', { col: '#ff5a2a', big: true, dur: 3 }] },
     { cam: { from: { x: -26, y: 20, z: 60, tx: 0, ty: 4, tz: -10, fov: 0.85 }, to: { x: 16, y: 5, z: 140, tx: C.x, ty: 3, tz: C.z, fov: 0.85 }, dur: 4 } },
     { do: g2 => { g2.fx.smoke(car.x, 7.5, car.z - 1.6, 8, '#3a3438'); burnsSfx('artcarHorn', { pitch: 0.6, vol: 0.6 }); g2.shake(0.2); } },
     { say: ['brady', ['Come on, Pulpo. Don\'t do this to me. Not in a hundred and four degrees.']] },
@@ -780,7 +798,7 @@ BURNS_W8.fillUpdate = function (g, m, dt) {
     const n = S.waves < 2 ? 2 : 3;
     for (let i = 0; i < n; i++) {
       const sx = (i % 2 ? 1 : -1) * (12 + i * 3), z = -22 - Math.random() * 6;
-      const a = g.spawnActor({ spec: burnsW8Spec(60 + S.waves * 7 + i), name: 'DPW', type: 'dpw', x: sx, z, behavior: 'w8Raid', hp: 2, friendly: false, drop: 2, tag: 'dpw', afterDefeat: 'chill', defeatLine: burnsW8910Pick(['Fine. Fill your squid.', 'It\'s an OCTOPUS? Huh.', 'Break time!']) });
+      const a = g.spawnActor({ type: 'dpw', seed: 60 + S.waves * 7 + i, name: 'DPW', x: sx, z, behavior: 'w8Raid', hp: 2, friendly: false, drop: 2, tag: 'dpw', afterDefeat: 'chill', defeatLine: burnsW8910Pick(['Fine. Fill your squid.', 'It\'s an OCTOPUS? Huh.', 'Break time!']) });
       S.raiders.push(a);
     }
     g.toast('DPW INCOMING! PROTECT THE OCTOPUS!'); burnsSfx('yell', { vol: 0.6 });
@@ -955,7 +973,7 @@ BURNS_W8.rustyUpdate = function (a, g, dt) {
         D.called = true;
         for (let i = 0; i < 2; i++) {
           const ang = Math.PI + (i ? 0.5 : -0.5), x = Y.x + Math.sin(ang) * (Y.r - 4), z = Y.z + Math.cos(ang) * (Y.r - 4);
-          g.spawnActor({ spec: burnsW8Spec(90 + D.calls * 3 + i), type: 'dpw', name: 'DPW CREW', x, z, behavior: i ? 'w8Rebar' : 'w8Wrench', hp: 2, friendly: false, drop: 2, tag: 'dpw', rustyCrew: true, afterDefeat: 'chill', defeatLine: 'Union break!' });
+          g.spawnActor({ type: 'dpw', seed: 90 + D.calls * 3 + i, name: 'DPW CREW', x, z, behavior: i ? 'w8Rebar' : 'w8Wrench', hp: 2, friendly: false, drop: 2, tag: 'dpw', rustyCrew: true, afterDefeat: 'chill', defeatLine: 'Union break!' });
           g.fx.dust(x, 0.2, z, 16);
         }
       }
@@ -1019,4 +1037,73 @@ BURNS_W8.rustyRetired = function (g) {
   const c = Math.cos(T.yaw); a.x = T.x - 2.6 * c; a.z = T.z; a.y = 0; a.setBehavior('sit');
   a.def.lines = ['Full tank, glitter boy. Go get your lady.', 'Twenty-two years. Two showers. One defeat. I\'m putting it on my resume.'];
   a.def.noTalk = false; a.def.talk = null;
+};
+
+/* ---------------- Captain Prudence (Safety Third) ---------------- */
+BURNS_W8.CAPTAIN_BANTER = [
+  ['captain', 'Your fuel line has ZERO hazard signage!'], ['hank', 'It\'s a gas station. In a desert. Lady.'],
+  ['captain', 'Where is your gray-water evaporation pond?!'], ['hank', 'We evaporate it by not showering.'],
+  ['captain', 'I have LAMINATED a chore wheel for your crew.'], ['hank', 'Our chore wheel is Rusty yelling.'],
+  ['captain', 'That burn barrel is 4 feet from a fuel pump!'], ['hank', 'It\'s for warmth. And vibes.']
+];
+BURNS_W8.captainUpdate = function (g, dt) {
+  const S = BURNS_W8.state, cap = g.actor('captain'), hank = g.actor('hank');
+  if (!cap) return;
+  S.banterT = (S.banterT || 4) - dt;
+  if (S.banterT <= 0 && !S.capAtPump && hank && !g.dialog.open && !g.cine && Math.hypot(g.player.x - cap.x, g.player.z - cap.z) < 22) {
+    const i = S.banterI || 0, L = BURNS_W8.CAPTAIN_BANTER[i % BURNS_W8.CAPTAIN_BANTER.length];
+    (L[0] === 'captain' ? cap : hank).say(L[1], 2.6); S.banterI = i + 1; S.banterT = i % 2 ? 6.5 : 2.8;
+  }
+  // as an ally during the fill-up she lectures raiders into a stupor
+  if (S.fueling && BurnsSave.flag(8, 'captain')) {
+    if (!S.capAtPump) { S.capAtPump = true; cap.x = BURNS_W8.PUMP3.x - 2.4; cap.z = 4.2; cap.y = 0; cap.home = { x: cap.x, z: cap.z, y: 0, yaw: 0 }; cap.say('Safety team, DEPLOYED!', 2); }
+    S.lectureT = (S.lectureT || 3) - dt;
+    if (S.lectureT <= 0) {
+      let best = null, bd = 14;
+      for (const a of S.raiders) { if (a.defeated || a.removed || (a.data.frozen || 0) > 0) continue; const d = Math.hypot(a.x - cap.x, a.z - cap.z); if (d < bd) { bd = d; best = a; } }
+      if (best) {
+        S.lectureT = 5.5; best.data.frozen = 3.6; best.say(burnsW8910Pick(['Ugh. Not the Captain.', 'Is this... a PowerPoint?', 'I\'m so bored I can\'t move.']), 2.2);
+        cap.say(burnsW8910Pick(['SAFETY BRIEFING! Section 4: hands OFF other people\'s octopi!', 'Did you sign the LAMINATED waiver? I\'ll wait.', 'Let\'s review the fire triangle. All of it. Slowly.']), 2.6);
+        g.fx.ring(best.x, best.y + 0.1, best.z, 2.4, '#ffd21a', 0.5); burnsSfx('pick', { pitch: 0.7, vol: 0.5 });
+      } else S.lectureT = 1;
+    }
+  }
+};
+BURNS_W8.captainTalk = function (g, a) {
+  const st = g.missions.state('moop');
+  if (st === 'available' || st === 'locked') {
+    g.say(a, ['Halt! Captain Prudence. Safety Third Camp. Your bike light is five lumens too dim, your goggles have no anti-fog, and is that an OCTOPUS?', 'These DPW animals left MOOP everywhere. Matter Out Of Place. It\'s a moral emergency.', 'Sweep eight pieces of MOOP for me and I\'ll have your back at the pumps. I bring the lecture. Nobody survives the lecture.'], () => g.missions.start('moop'));
+  } else if (st === 'active') g.say(a, [`${g.missions.get('moop').n} of 8. Check the apron, the lanes, the line. MOOP hides. MOOP is patient.`]);
+  else g.say(a, ['When you fuel, I\'ll be at pump 3 with my laminated binder. Any DPW who touches that octopus gets the full briefing.', 'Also: here\'s a respirator tip. Breathe in. Through the filter. Not the dust. You\'re welcome.']);
+};
+BURNS_W8.captainAlly = function (g) {
+  const a = g.actor('captain');
+  BurnsSave.flag(8, 'captain', true);
+  g.glow += 15; g.player.givePower('water');
+  g.banner('ALLY: CAPTAIN PRUDENCE', 'She\'ll lecture DPW raiders frozen while El Pulpo fuels.', { col: '#ffd21a' });
+  if (a) { a.say('Station: SWEPT. Feelings: ORGANIZED. Let\'s fuel that octopus.', 3); g.fx.confetti(a.x, a.y + 2, a.z, 20); }
+};
+/* ---------------- Bad Idea Burt ---------------- */
+BURNS_W8.burtTalk = function (g, a) {
+  const S = BURNS_W8.state;
+  if (S.burtDone || BurnsSave.flag(8, 'burt')) { g.say(a, ['...Nailed it.', 'My eyebrows will grow back. The legend won\'t.'], () => { if (!a.data.gifted) { a.data.gifted = true; g.glow += 12; g.toast('GIFTED 12 GLOW STICKS!'); burnsSfx('gift', null, 'pick'); } }); return; }
+  g.say(a, ['Hmm. Hmmmm. Okay, hear me out.', 'The fuel line is four hours long, right? So what if I skip it. With a RAMP. Made of gas cans.', 'I ride the shopping cart off the ramp, over the line, holding a sparkler for style. Land right at pump 3.']);
+  g.say('brady', ['That is the worst idea I\'ve ever heard. The cans are full.']);
+  g.say(a, ['Full of POTENTIAL. Watch this.'], () => { S.burtGo = 0.01; });
+};
+BURNS_W8.burtUpdate = function (g, dt) {
+  const S = BURNS_W8.state, a = g.actor('burt');
+  if (!a || !S.burtGo) return;
+  S.burtGo += dt;
+  if (S.burtGo < 1.4) { a.moveTo(-36, 14.5, 4, dt, 0.3); a.ch.play('run'); a.physics(dt); return; }
+  if (!S.burtPoof) {
+    S.burtPoof = true; S.burtDone = true; BurnsSave.flag(8, 'burt', true);
+    g.fx.burst(-36, 1.6, 12, 'spark', 26, '#ffb040'); g.fx.smoke(-36, 1.2, 12, 14, '#3a3236'); for (let i = 0; i < 6; i++) g.fx.fire(-36 + (Math.random() - 0.5) * 2, 0.8, 12 + (Math.random() - 0.5) * 2, 2);
+    burnsSfx('firework_burst', { pitch: 0.55 }); g.shake(0.35);
+    a.x = -33.5; a.z = 10; a.vx = a.vz = 0; a.def.anim = 'sit'; a.ch.play('knocked');
+    a.say('...Nailed it.', 3);
+    BurnsW8910.timer(g, 2.4, g2 => { a.def.anim = 'sit'; a.say('Same time tomorrow?', 2.4); });
+  }
+  if (S.burtGo < 8 && Math.random() < dt * 4) g.fx.smoke(a.x, a.y + 1.9, a.z, 1, '#4a4448');
+  if (S.burtGo > 8) S.burtGo = 0;
 };

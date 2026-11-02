@@ -63,6 +63,13 @@ BurnsWorlds.register({
     { id: 'moop', name: 'MOOP Sweep', token: false, type: 'collect', count: 10, giver: 'captain', start: 'manual', progressLabel: 'MOOP', short: 'MOOP sweep: pick up 10 bits of litter', marker: { x: 40, z: -46 },
       desc: 'Captain Safety Third says your illumination is five lumens too dim. Sweep up 10 bits of MOOP (Matter Out Of Place) and earn a regulation headlamp.', hint: 'Safety Camp, Esplanade between 6:30 and 7:00',
       onStart(g) { BURNS_W2.labels(g, 'moop', 'MOOP'); }, onComplete(g) { BURNS_W2.moopDone(g); } },
+    { id: 'darkwads', name: 'Light Up the Darkwads', token: false, type: 'custom', count: 4, giver: 'captain', start: 'manual', requires: ['moop'], progressLabel: 'Darkwads lit', short: 'Spin or stomp 4 darkwads to light them up', marker: { x: -40, z: 40 },
+      desc: 'Unlit pedestrians lurk on the outer streets. They\'re nearly invisible until you bump into them. Spin or stomp them to stick glow on them.', hint: 'Outer streets, C to E, between 5:30 and 7:00',
+      onEvent(g, m, name) { if (name === 'w234lit') { g.missions.progress('darkwads'); return true; } },
+      onComplete(g) { g.glow += 20; g.toast('+20 GLOW STICKS · THE STREETS ARE SAFER'); const a = g.actor('captain'); if (a) a.say('Four darkwads, illuminated. I\'m not crying. It\'s dust.', 3); } },
+    { id: 'lanterns', name: 'Light the Way', token: false, type: 'custom', giver: 'wick', start: 'manual', short: 'Walk with the lamplighters (stay in their light)', marker: { x: -6, z: -90 },
+      desc: 'Every night the lamplighters carry lanterns out along 7:00. Walk with them and stay inside their light while they light the way.', hint: 'Lamplighters gather at 7:00 & Esplanade',
+      onStart(g) { BURNS_W2.lampStart(g); }, onFail(g) { BURNS_W2.lampReset(g); }, onComplete(g) { BURNS_W2.lampDone(g); } },
     { id: 'tower', name: 'Lighthouse of Lost Souls', type: 'climb', start: 'trigger', secret: true, short: 'Climb the lighthouse', target: { x: 0, z: 0, r: 3.2, y: 13.6 },
       desc: 'An art lighthouse on the open playa. Lost souls climb it to look for their camp.', hint: 'Open playa west of the conclave' },
     { id: 'camp', name: 'Home Is Where the Man Is', type: 'boss', start: 'auto', silent: true, requires: ['ranger', 'conclave', 'lights'], tokenDirect: true, short: 'Go home: 7:30 & E',
@@ -139,28 +146,28 @@ BurnsWorlds.register({
       m.color('#ff4fd8', 1); BW.ball(m, 0, 9.4, 0, 0.8); m.emissive(0);
       return { cols: [{ t: 'cyl', x: 0, z: 0, r: 9, y0: 0, y1: 2.6 }], lights: [{ x: 0, y: 9.4, z: 0, s: 6, c: '#ff4fd8' }, { x: 0, y: 0, z: 0, s: 0, c: '#ffb860', pool: 18 }] };
     });
-    api.sign('OUT TO LUNCH\n— THE MAN', W2.C.x, W2.C.z + 10.5, { h: 1.2, y: 2.7, style: { bg: '#1a0a1a', fg: '#ffd84a', glow: '#ff9a2a', size: 40, border: '#ffd84a' }, glow: '#ffd84a' });
+    api.sign('OUT TO LUNCH\n— THE MAN', W2.C.x, W2.C.z + 10.5, { h: 1.2, y: 2.7, style: { bg: '#1a0a1a', fg: '#ffd84a', glow: '#ff9a2a', size: 28, border: '#ffd84a' }, glow: '#ffd84a' });
     /* ---------------- 6:00 & Esplanade: Ranger Outpost (start) ---------------- */
     {
       const [ox, oz] = [86, -60];
       api.prop('shade', { x: ox + 4, z: oz + 2, w: 6, d: 5, col: '#c8b088' });
       api.roundBox(ox + 4.5, 0, oz + 3.6, 2.6, 1.0, 0.9, '#6a4a32', { r: 0.12 });
-      api.sign('RANGER\nOUTPOST', ox + 4.5, oz + 6, { h: 1.0, style: { bg: '#3a2a1a', fg: '#f4e2b0', size: 38, border: '#f4e2b0' } });
+      api.sign('RANGER\nOUTPOST', ox + 4.5, oz + 6, { h: 1.0, style: { bg: '#3a2a1a', fg: '#f4e2b0', size: 27, border: '#f4e2b0' } });
       api.cylinder(ox + 1.2, 0, oz + 5.5, 0.45, 0.9, '#2a6aa8', { gloss: 2 });
       api.pickup('water', ox + 1.2, 1.4, oz + 5.5);
       api.light(ox + 4, oz + 2, 9, '#ffcf90', 0.5);
       api.npc({ id: 'sage', name: 'RANGER SAGEBRUSH', type: 'ranger', seed: 4, x: ox + 3.5, z: oz + 1.6, yaw: Math.PI,
         talk(g2, a) {
           const st = g2.missions.state('ranger');
-          if (st === 'available') g2.say(a, ['First night? Lost? I\'m a Ranger. I\'m not a cop. Totally different hat.', 'The city is a clock. The Man sits in the middle. CLOCK streets go OUT like hands: 6:00, 6:30, 7:00...', 'LETTER streets go AROUND: Esplanade on the inside, then A, B, C, all the way out.', 'Quiz time! Go stand under the 6:30 and A sign. I\'ll wait. Rangers are great at waiting.'], () => g2.missions.start('ranger'));
+          if (st === 'available') g2.say(a, ['First night? Lost? I\'m a Ranger. Not a cop. Totally different hat. The hat is VERY different. Let me explain the hat.', 'Okay, no time for the hat. The city is a clock. The Man sits in the middle. CLOCK streets go OUT like hands: 6:00, 6:30, 7:00...', 'LETTER streets go AROUND: Esplanade on the inside, then A, B, C, all the way out. Principle Number Three applies. Also Principle Seven. I\'ll summarize all ten.', '...And that is Principle Ten. Also, I\'m writing you up. Citation: one bike light, insufficiently bright. You don\'t have a bike? I\'m citing the bike you WILL have.', 'Quiz time! Go stand under the 6:30 and A sign. I\'ll wait. Rangers are great at waiting. And at paperwork.'], () => { g2.toast('CITATION: DIM BIKE LIGHT (FUTURE)'); g2.missions.start('ranger'); });
           else if (st === 'active') g2.say(a, ['6:30 is one street over toward 7. A is the first ring past Esplanade. Look up at the signs, friend.']);
           else g2.say(a, ['Seven-something, huh? Keep reading those signs. And drink water. That\'s an order. I\'m not a cop, it\'s a suggestion.']);
         } });
       api.npc({ type: 'ranger', seed: 9, name: 'RANGER BUTTONS', x: 100, z: -48, behavior: 'walk', path: [[100, -48], [60, -96], [100, -48]], speed: 1.2,
         lines: ['Sign says 6:00 and Esplanade. That means you\'re at 6:00 and Esplanade. I love this job.', 'Saw a forty-foot wooden fella sneak toward the 7s. Hard to miss. Easy to lose.'], gift: { kind: 'water' } });
       api.checkpoint('cp_esp', ox - 4, oz + 2, { yaw: 0, name: 'Ranger Outpost' });
-      api.sign('WELCOME TO\nTHE CITY', 72, -66, { h: 1.2, style: { bg: '#24102e', fg: '#ffe0f4', glow: '#ff4fd8', size: 40, border: '#ff4fd8' }, glow: '#ff4fd8' });
-      api.sign('YOU ARE HERE\n(PROBABLY)', 92, -70, { h: 0.9, yaw: -0.3, style: { bg: '#f4e8c8', fg: '#3a1a10', size: 34, border: '#3a1a10' } });
+      api.sign('WELCOME TO\nTHE CITY', 72, -66, { h: 1.2, style: { bg: '#24102e', fg: '#ffe0f4', glow: '#ff4fd8', size: 28, border: '#ff4fd8' }, glow: '#ff4fd8' });
+      api.sign('YOU ARE HERE\n(PROBABLY)', 92, -70, { h: 0.9, yaw: -0.3, style: { bg: '#f4e8c8', fg: '#3a1a10', size: 24, border: '#3a1a10' } });
     }
     /* ---------------- the Fire Conclave (open playa) ---------------- */
     {
@@ -170,7 +177,7 @@ BurnsWorlds.register({
       for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; api.mesh(cx + Math.sin(a) * 15.5, cz + Math.cos(a) * 15.5, m => { m.color('#5a4030'); BW.post(m, 0, 0, 0, 0.08, 0.9); m.color('#ff9a3a', 1); BW.ball(m, 0, 0.95, 0, 0.1); m.emissive(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 0.9, camPass: true }], lights: [{ x: 0, y: 0.95, z: 0, s: 0.45, c: '#ff9a3a' }] }; }); }
       for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.26; api.prop('barrel', { x: cx + Math.sin(a) * 17.5, z: cz + Math.cos(a) * 17.5 }); }
       api.light(cx, cz, 18, '#ff8a3a', 0.45);
-      api.sign('FIRE\nCONCLAVE', cx + 2, cz + 19.5, { h: 1.1, yaw: 0.1, style: { bg: '#2a0a0a', fg: '#ffb04a', glow: '#ff6a1a', size: 40, border: '#ff7a2a' }, glow: '#ff7a2a' });
+      api.sign('FIRE\nCONCLAVE', cx + 2, cz + 19.5, { h: 1.1, yaw: 0.1, style: { bg: '#2a0a0a', fg: '#ffb04a', glow: '#ff6a1a', size: 28, border: '#ff7a2a' }, glow: '#ff7a2a' });
       api.npc({ id: 'flint', name: 'FIRE MARSHAL FLINT', type: 'burner', seed: 31, x: cx + 1.5, z: cz + 17.2, yaw: Math.PI,
         spec: Object.assign(BurnsRig.npcSpec('burner', 31), { top: { kind: 'tee', col: '#c83a1a' }, vest: 'hivis', hat: { kind: 'hardhat', col: '#ffd84a' }, prop: 'radio', key: 'w2:flint' }),
         talk(g2, a) {
@@ -187,12 +194,12 @@ BurnsWorlds.register({
       let si = 0;
       for (const rg of rings) for (let i = 0; i < rg.n; i++) {
         const kind = ['poi', 'staff', 'poi', 'fans'][si % 4];
-        S.spinners.push(api.npc({ type: R.pick(['burner', 'tutu', 'ledsuit', 'furcoat']), seed: 300 + si, behavior: 'w2Spinner', cx, cz, ring: rg.r, omega: rg.om, phase: i / rg.n * TAU, kind, collide: false, chatter: true,
-          chat: ['Spin it to win it!', 'Mind the poi, honey!', 'Fire is a love language.', 'I can\'t stop. I don\'t know how to stop.', 'Smells like eyebrows!'], x: cx + rg.r, z: cz }));
+        S.spinners.push(api.npc(BW.castDef('firespinner', 300 + si, { behavior: 'w2Spinner', name: 'FIRE SPINNER', cx, cz, ring: rg.r, omega: rg.om, phase: i / rg.n * TAU, kind, collide: false, chatter: true,
+          chat: ['Spin it to win it!', 'Mind the poi, honey!', 'Fire is a love language.', 'I can\'t stop. I don\'t know how to stop.', 'Smells like eyebrows!'], x: cx + rg.r, z: cz })));
         si++;
       }
       // fire dancers ringing the edge (ambient)
-      for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + 0.6; api.npc({ type: R.pick(['burner', 'tutu', 'sparklepony']), seed: 340 + i, x: cx + Math.sin(a) * 19.5, z: cz + Math.cos(a) * 19.5, behavior: 'dance', style: i % 6, yaw: a + Math.PI }); }
+      for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + 0.6; api.npc(i % 2 ? { type: R.pick(['burner', 'tutu', 'sparklepony']), seed: 340 + i, x: cx + Math.sin(a) * 19.5, z: cz + Math.cos(a) * 19.5, behavior: 'dance', style: i % 6, yaw: a + Math.PI } : BW.castDef('firespinner', 340 + i, { name: 'FIRE DANCER', x: cx + Math.sin(a) * 19.5, z: cz + Math.cos(a) * 19.5, behavior: 'dance', style: 5, yaw: a + Math.PI, lines: ['The conclave is family. Hot, slightly singed family.', 'Wear natural fibers near fire. Polyester is a choice. A melty choice.'] })); }
       api.checkpoint('cp_conclave', cx - 5, cz + 19, { yaw: Math.PI, name: 'Fire Conclave' });
       api.glowRing(cx, cz, 9.1, 14); api.glowRing(cx, cz, 14.2, 18);
       api.pickup('water', cx + 8, 0.9, cz + 17);
@@ -216,14 +223,14 @@ BurnsWorlds.register({
       for (let i = 0; i < 13; i++) { const a = i * 0.72 + 0.3, y = 1.0 + i * 0.98, rr = 3.25; api.roundBox(tx + Math.sin(a) * rr, y - 0.28, tz + Math.cos(a) * rr, 1.5, 0.28, 1.3, BURNS_NEON[i % 7], { yaw: a, r: 0.1, e: 0.35 }); }
       api.glowArc(tx + 3.3, 1.6, tz, tx + 1.3, 14.4, tz, 2.5, 9);
       api.light(tx, tz, 14, '#fff0c0', 0.45);
-      api.sign('LIGHTHOUSE\nOF LOST SOULS', tx + 5.5, tz + 5, { h: 1.0, yaw: 0.6, style: { bg: '#0a1a2a', fg: '#c8f0ff', glow: '#38f2ff', size: 36, border: '#38f2ff' }, glow: '#38f2ff' });
+      api.sign('LIGHTHOUSE\nOF LOST SOULS', tx + 5.5, tz + 5, { h: 1.0, yaw: 0.6, style: { bg: '#0a1a2a', fg: '#c8f0ff', glow: '#38f2ff', size: 26, border: '#38f2ff' }, glow: '#38f2ff' });
       api.trigger({ x: tx, z: tz, r: 9, once: true, onEnter: g2 => { if (g2.missions.state('tower') === 'available') { g2.missions.start('tower'); g2.banner('HIDDEN CHALLENGE', 'Lighthouse of Lost Souls: climb it!', { col: '#38f2ff' }); } } });
       api.pickup('photo', tx - 1.7, 14.5, tz + 0.6, { id: 'p1' });
     }
     /* ---------------- LSD-only: floating jellyfish over the open playa ---------------- */
     {
       api.pickup('bag:lsd', 112, 0.9, -78);
-      api.sign('JELLYFISH\nSIGHTINGS: 0', 118, -84, { h: 0.9, yaw: -0.8, style: { bg: '#0a1a2a', fg: '#c8f0ff', size: 32, border: '#38f2ff' } });
+      api.sign('JELLYFISH\nSIGHTINGS: 0', 118, -84, { h: 0.9, yaw: -0.8, style: { bg: '#0a1a2a', fg: '#c8f0ff', size: 23, border: '#38f2ff' } });
       const J = [[120, 1.4, -92], [124, 2.9, -98], [121, 4.4, -104.5], [114.5, 5.9, -106], [108, 7.3, -103], [104, 8.6, -97]];
       api.hidden(() => {
         J.forEach(([x, y, z], i) => api.mesh(x, z, m => {
@@ -257,7 +264,7 @@ BurnsWorlds.register({
       M('alley').target.x = ex - dirX * 1.0; M('alley').target.z = ez - dirZ * 1.0;
       // exit door (opens after the run)
       S.alleyDoor = api.collider({ t: 'box', x: ex + dirX * 0.4, z: ez + dirZ * 0.4, hx: 2.2, hz: 0.3, y0: 0, y1: 4.6, yaw, walk: false });
-      api.sign('FLAME ALLEY\nDON\'T DAWDLE', sx - dirX * 2 + sideX * 4.2, sz - dirZ * 2 + sideZ * 4.2, { h: 1.1, yaw: yaw + Math.PI, style: { bg: '#2a0a0a', fg: '#ff9a3a', glow: '#ff4a1a', size: 40, border: '#ff9a3a' }, glow: '#ff7a2a' });
+      api.sign('FLAME ALLEY\nDON\'T DAWDLE', sx - dirX * 2 + sideX * 4.2, sz - dirZ * 2 + sideZ * 4.2, { h: 1.1, yaw: yaw + Math.PI, style: { bg: '#2a0a0a', fg: '#ff9a3a', glow: '#ff4a1a', size: 28, border: '#ff9a3a' }, glow: '#ff7a2a' });
       api.npc({ id: 'sparky', name: 'SPARKY', type: 'burner', seed: 51, x: sx - dirX * 2.6 - sideX * 3.6, z: sz - dirZ * 2.6 - sideZ * 3.6, yaw: yaw + Math.PI,
         spec: Object.assign(BurnsRig.npcSpec('burner', 51), { top: { kind: 'tank', col: '#2a2a2a' }, goggles: true, hat: null, glasses: null, acc: ['toolbelt'], hair: { style: 'mohawk', col: '#ff6a1a', hi: '#ffd84a' }, key: 'w2:sparky' }),
         talk(g2, a) {
@@ -276,7 +283,7 @@ BurnsWorlds.register({
       api.prop('shade', { x: bx, z: bz, w: 8, d: 6, col: '#2a2a3a' });
       api.roundBox(bx, 0, bz - 2, 3.6, 0.95, 1.0, '#3a3a48', { r: 0.12 });
       for (let i = 0; i < 6; i++) api.mesh(bx - 3 + i * 1.2, bz + 3.6, m => BW.bike(m, BURNS_NEON[i % 7], { led: BURNS_NEON[(i + 3) % 7], lo: true }), { yaw: Math.PI / 2 });
-      api.sign('CAMP BLINKY\nBIKE LIGHT REPAIR', bx + 4.5, bz + 4.5, { h: 1.1, yaw: -0.5, style: { bg: '#0a0a1a', fg: '#7af2ff', glow: '#38f2ff', size: 36, border: '#38f2ff' }, glow: '#38f2ff' });
+      api.sign('CAMP BLINKY\nBIKE LIGHT REPAIR', bx + 4.5, bz + 4.5, { h: 1.1, yaw: -0.5, style: { bg: '#0a0a1a', fg: '#7af2ff', glow: '#38f2ff', size: 26, border: '#38f2ff' }, glow: '#38f2ff' });
       for (let i = 0; i < 14; i++) api.glow(bx - 4 + (i % 7) * 1.3, 2.7 + Math.floor(i / 7) * 0.12, bz + (i < 7 ? 3 : -3), 0.4, BURNS_NEON[i % 7], { blink: 4 });
       api.light(bx, bz, 11, '#38c8ff', 0.5);
       api.npc({ id: 'lumen', name: 'LUMEN', type: 'ledsuit', seed: 6, x: bx + 1.4, z: bz - 1.0, yaw: 0.6,
@@ -301,7 +308,7 @@ BurnsWorlds.register({
           S.swarms.push(d);
         }
       });
-      api.sign('BIKE SWARM\nCROSSING', ...at(10, 165), { h: 0.9, yaw: W2.outYaw(10) + Math.PI / 2, style: { bg: '#ffe24a', fg: '#2a1a10', size: 34, border: '#2a1a10' } });
+      api.sign('BIKE SWARM\nCROSSING', ...at(10, 165), { h: 0.9, yaw: W2.outYaw(10) + Math.PI / 2, style: { bg: '#ffe24a', fg: '#2a1a10', size: 24, border: '#2a1a10' } });
     }
     /* ---------------- lost burners (want 4:30) ---------------- */
     {
@@ -351,15 +358,18 @@ BurnsWorlds.register({
         return { cols, lights: [{ x: 0, y: 2.8, z: -1, s: 2.4, c: '#f4f8ff', pool: 10 }, { x: -3.4, y: 1.9, z: 2.6, s: 0.6, c: '#e8ff5a' }] };
       }, { yaw });
       for (let i = 0; i < 6; i++) { const [cx, cz] = L(-4 + i * 1.6, 4.6); api.prop('cone', { x: cx, z: cz }); }
-      { const [sx, sz] = L(4.6, -1.2); api.sign('SAFETY CAMP\nSAFETY THIRD\n(BUT STILL)', sx, sz, { h: 1.3, yaw, style: { bg: '#e8ff5a', fg: '#1a1a10', size: 34, border: '#1a1a10' } }); }
-      { const [sx, sz] = L(-3.4, 2.62); api.sign('CHORE WHEEL\n(LAMINATED)', sx + rx * 0.01, sz + rz * 0.01, { h: 0.5, y: 0.9, post: false, yaw: yaw + 0.4, style: { bg: '#f4f4f0', fg: '#1a1a10', size: 28 } }); }
+      { const [sx, sz] = L(4.6, -1.2); api.sign('SAFETY CAMP\nSAFETY THIRD\n(BUT STILL)', sx, sz, { h: 1.3, yaw, style: { bg: '#e8ff5a', fg: '#1a1a10', size: 24, border: '#1a1a10' } }); }
+      { const [sx, sz] = L(-3.4, 2.62); api.sign('CHORE WHEEL\n(LAMINATED)', sx + rx * 0.01, sz + rz * 0.01, { h: 0.5, y: 0.9, post: false, yaw: yaw + 0.4, style: { bg: '#f4f4f0', fg: '#1a1a10', size: 21 } }); }
       const capSpec = Object.assign(BurnsRig.npcSpec('dpw', 61), { top: { kind: 'button', col: '#4a5a3a' }, vest: 'hivis', led: '#e8ff5a', bottom: { kind: 'cargo', col: '#3a3a30' }, shoes: { kind: 'boots', col: '#1a1a14' }, hat: { kind: 'hardhat', col: '#ffd21a' }, glasses: 'clear', face: 'stern', acc: ['headset', 'toolbelt'], prop: 'clipboard', key: 'w2:captain' });
       const [cx, cz] = L(0.6, 1.8);
       S.captainDef = api.npc({ id: 'captain', name: 'CAPTAIN SAFETY THIRD', spec: capSpec, x: cx, z: cz, yaw, behavior: 'w2Captain', chatter: false,
         talk(g2, a) {
           const st = g2.missions.state('moop');
+          const st2 = g2.missions.state('darkwads');
           if (st === 'available') BURNS_W2.captainLecture(g2, a);
           else if (st === 'active') g2.say(a, [`${g2.missions.get('moop').n} of 10 MOOP items. I counted. Twice. Then I laminated the count.`]);
+          else if (st2 === 'available') g2.say(a, ['New assignment. DARKWADS. Unlit pedestrians. Zero lumens. Out on the far streets, walking around in BLACK.', 'You won\'t see them until you\'re face-first in one. Spin or stomp them and stick some glow on them. Four of them. Move out.'], () => g2.missions.start('darkwads'));
+          else if (st2 === 'active') g2.say(a, [`${g2.missions.get('darkwads').n} of 4 darkwads illuminated. Your headlamp helps. You\'re welcome.`]);
           else g2.say(a, ['Headlamp: on. Hydration: up. Fun: ...I\'ll schedule some fun. Tuesday. Fourteen hundred hours.']);
         } });
       api.trigger({ x: qx, z: qz, r: 10, onEnter: g2 => { if (g2.missions.state('moop') === 'available' && !S.capMet && !g2.cine) BURNS_W2.captainLecture(g2, g2.actor('captain')); } });
@@ -387,7 +397,7 @@ BurnsWorlds.register({
     {
       const bar = (x, z, yaw, title, col, npc) => {
         api.mesh(x, z, m => { m.color(col); BW.rb(m, 0, 0.55, 0, 3.2, 1.1, 0.9, 0.3); m.color('#f4e8d8'); BW.rb(m, 0, 1.12, 0, 3.4, 0.1, 1.1, 0.04); m.color('#3a2a2a'); for (const sx of [-1, 0, 1]) { BW.post(m, sx * 1.1, 0, 1.0, 0.05, 0.75); BW.egg(m, sx * 1.1, 0.8, 1.0, 0.25, 0.08, 0.25); } return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.6, hz: 0.45, y0: 0, y1: 1.15 }], lights: [{ x: 0, y: 1.6, z: 0, s: 1.6, c: '#ffd890', pool: 8 }] }; }, { yaw });
-        api.sign(title, x - Math.sin(yaw) * 1.6, z - Math.cos(yaw) * 1.6, { yaw, h: 0.9, y: 2.2, style: { bg: '#1a0a1a', fg: '#ffe7a0', glow: '#ff9a3a', size: 34, border: '#ff9a3a' }, glow: '#ff9a3a' });
+        api.sign(title, x - Math.sin(yaw) * 1.6, z - Math.cos(yaw) * 1.6, { yaw, h: 0.9, y: 2.2, style: { bg: '#1a0a1a', fg: '#ffe7a0', glow: '#ff9a3a', size: 24, border: '#ff9a3a' }, glow: '#ff9a3a' });
         npc.x = x - Math.sin(yaw) * 0.9; npc.z = z - Math.cos(yaw) * 0.9; npc.yaw = yaw; api.npc(npc);
       };
       { const [x, z] = at(-8, 113); bar(x, z, Math.atan2(W2.C.x - x, W2.C.z - z), 'PICKLE JUICE\nBAR', '#3a7a3a', { id: 'pete', name: 'PICKLE PETE', type: 'crusty', seed: 81, lines: ['Pickle juice! Electrolytes! Gifted, not bartered!', 'Your hydration looks low. Your vibe looks high. Drink up.'], gift: { kind: 'water' } }); }
@@ -397,6 +407,38 @@ BurnsWorlds.register({
       for (const [[x, z], i] of DRUNK) api.enemy({ type: R.pick(['burner', 'furcoat', 'crusty']), seed: 500 + i, name: 'CAMP NEIGHBOR', x, z, behavior: 'w2Drunk', hp: 1, drop: 3, afterDefeat: 'sleep', defeatLine: 'I love you, man... zzz', damage: 1 });
       for (const [[x, z], i] of [[at(-5, 196), 1], [at(52, 166), 2]]) api.enemy({ type: 'campLead', seed: 520 + i, x, z, behavior: 'shouter', hp: 2, aggro: 10, taunts: ['WHO TOOK MY GENERATOR?!', 'QUIET HOURS ARE A MYTH!', 'IS THAT YOUR TENT ON MY TENT?!'] });
       api.enemy({ type: 'burner', seed: 530, name: 'GLOW STICK THIEF', x: -40, z: -14, behavior: 'thief', hp: 1, steal: 6 });
+    }
+    /* ---------------- the lamplighters: a procession that lights 7:00 every night ---------------- */
+    {
+      S.lamps = [];
+      for (let r = 106; r <= 198; r += 11.5) for (const sd of [-1, 1]) {
+        const d = 4.6 * sd / r * 180 / Math.PI, [x, z] = at(30 + d, r);
+        api.mesh(x, z, m => { m.color('#3a2e2a'); BW.post(m, 0, 0, 0, 0.07, 2.9); m.color('#d8d0c0'); BW.egg(m, 0, 3.05, 0, 0.16, 0.2, 0.16, { seg: 10, rings: 6 }); m.color('#2a2224'); BW.lathe(m, 0, 3.2, 0, [[0.18, 0], [0.1, 0.1], [0, 0.14]], { seg: 10 }); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 2.9, camPass: true, walk: false }] }; });
+        api.glow(x, 3.05, z, 1.4, '#ffcf7a'); const gl = api.world.glows[api.world.glows.length - 1];
+        gl.c0 = gl.c; gl.c = [0, 0, 0]; S.lamps.push({ x, z, gl, lit: false, r });
+      }
+      const route = []; for (let r = 104; r <= 200; r += 8) route.push(at(30, r));
+      S.lampRoute = route;
+      const [wx, wz] = at(30.5, 96);
+      ['ELDER WICK', 'LAMPLIGHTER', 'LAMPLIGHTER'].forEach((nm, i) => {
+        api.npc(BW.castDef('lamplighter', 700 + i, { id: i ? 'lamp' + i : 'wick', name: nm, x: wx + i * 1.4, z: wz - i * 1.6, yaw: W2.outYaw(30), behavior: 'idle', chatter: !!i,
+          chat: ['Light is a gift you give the dark.', 'Mind the hem of my robe, friend.', 'Every lantern is somebody\'s way home.'],
+          talk: i ? null : (g2, a) => {
+            const st = g2.missions.state('lanterns');
+            if (st === 'available') g2.say(a, ['Good evening, traveler. Every night we carry the lanterns out along 7:00, so the lost can find their way home.', 'Walk with us. Stay inside our light. The darkwads won\'t trouble you there, and the street will remember the way.'], () => g2.missions.start('lanterns'));
+            else if (st === 'active') g2.say(a, ['Stay close, child. The light only reaches so far.']);
+            else g2.say(a, ['The 7:00 lanterns burn for you tonight. Go home.']);
+          } }));
+      });
+      api.sign('LAMPLIGHTERS\nGATHER HERE', ...at(28.5, 92), { h: 0.9, yaw: W2.outYaw(30) + Math.PI, style: { bg: '#f4ecd8', fg: '#5a3a1a', size: 22, border: '#c8a060' } });
+    }
+    /* ---------------- darkwads (no lights, nearly invisible) + the undercover cop ---------------- */
+    {
+      const DW = [[[-8, 186], [14, 186]], [[-22, 214], [-2, 214]], [[2, 162], [2, 196]], [[20, 222], [20, 240], [8, 240]], [[-28, 168], [-28, 194]]];
+      DW.forEach((pts, i) => { const path = pts.map(([th, r]) => at(th, r)); api.npc(BW.castDef('darkwad', 600 + i, { name: 'DARKWAD', behavior: 'w234Darkwad', path, speed: 1.0 + i * 0.1, x: path[0][0], z: path[0][1], chatter: false, hittable: true, lines: ['Lights are for people who want to be seen. I want to be FELT.', 'Shh. I\'m blending in. With the night.'] })); });
+      const [cx, cz] = at(2, 60);
+      api.npc(BW.castDef('cop', 7, { id: 'cop', name: 'TOTALLY NORMAL BURNER', behavior: 'w234Cop', x: cx, z: cz, view: 15, fov: 1.0, chaseSpeed: 5.4, friendly: false, chatter: false }));
+      api.npc(BW.castDef('cop', 8, { name: 'ALSO A NORMAL BURNER', behavior: 'w234Cop', x: at(24, 176)[0], z: at(24, 176)[1], view: 13, chaseSpeed: 5.2, friendly: false, chatter: false }));
     }
     /* ---------------- the art car parade (loop around Brady's block) ---------------- */
     {
@@ -411,8 +453,8 @@ BurnsWorlds.register({
       // a photo riding on top of the whale
       const car = S.parade.cars[3];
       api.pickup('photo', 0, 2.6, 0, { id: 'p2', follow: (g2, P) => { P.x = car.mv.x; P.z = car.mv.z; P.y0 = car.mv.y + 4.6; } });
-      api.sign('ART CAR\nCROSSING', ...at(41.5, 196), { h: 1.0, yaw: W2.outYaw(41.5) + Math.PI, style: { bg: '#ffe24a', fg: '#2a1a10', size: 36, border: '#2a1a10' } });
-      api.sign('THE PARADE\nNEVER ENDS', ...at(51, 196), { h: 0.9, yaw: W2.outYaw(51) + Math.PI, style: { bg: '#24102e', fg: '#ffd0f4', glow: '#ff4fd8', size: 32, border: '#ff4fd8' }, glow: '#ff4fd8' });
+      api.sign('ART CAR\nCROSSING', ...at(41.5, 196), { h: 1.0, yaw: W2.outYaw(41.5) + Math.PI, style: { bg: '#ffe24a', fg: '#2a1a10', size: 26, border: '#2a1a10' } });
+      api.sign('THE PARADE\nNEVER ENDS', ...at(51, 196), { h: 0.9, yaw: W2.outYaw(51) + Math.PI, style: { bg: '#24102e', fg: '#ffd0f4', glow: '#ff4fd8', size: 23, border: '#ff4fd8' }, glow: '#ff4fd8' });
       { const [x, z] = at(38, 186); api.checkpoint('cp_parade', x, z, { yaw: W2.outYaw(38), name: 'Parade Route' }); }
       api.glowArc(...(() => { const a = at(45, 198), b = at(45, 210); return [a[0], 1.2, a[1], b[0], 1.2, b[1]]; })(), 3.2, 6);
     }
@@ -427,7 +469,7 @@ BurnsWorlds.register({
       { const [x, z] = L(7, -8); api.roundBox(x, 0, z, 2.2, 1.6, 1.4, '#4a6a8a', { yaw: oy, r: 0.25, col: { cover: true } }); }
       { const [x, z] = L(-1, 13); api.prop('shade', { x, z, w: 7, d: 5, col: '#ffcfa0' }); }
       { const [x, z] = L(1, 11); api.prop('couch', { x, z, yaw: oy + Math.PI, col: '#8a2a5a' }); }
-      { const [x, z] = L(-14, -4); api.sign('CAMP COZY\nCHAOS', x, z, { h: 1.3, yaw: oy + Math.PI, style: { bg: '#1a0a2a', fg: '#ffe24a', glow: '#ff9a2a', size: 44, border: '#ffe24a' }, glow: '#ffe24a' }); }
+      { const [x, z] = L(-14, -4); api.sign('CAMP COZY\nCHAOS', x, z, { h: 1.3, yaw: oy + Math.PI, style: { bg: '#1a0a2a', fg: '#ffe24a', glow: '#ff9a2a', size: 30, border: '#ffe24a' }, glow: '#ffe24a' }); }
       api.light(hx, hz, 22, '#ff70c0', 0.35); api.light(hx, hz, 10, '#ffd890', 0.3);
       for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; api.glow(hx + Math.sin(a) * 20, 2.6, hz + Math.cos(a) * 20, 0.7, BURNS_NEON[i % 7], { blink: 2 }); }
       { const [x, z] = L(0, -16); api.checkpoint('cp_camp', x, z, { yaw: oy + Math.PI, name: 'Camp Cozy Chaos' }); }
@@ -472,9 +514,12 @@ BurnsWorlds.register({
     const S = BURNS_W2.state, BW = BURNS_W234;
     BURNS_W2.updateNote(g);
     if (g.missions.isDone('lost')) for (const L of S.lost) { const a = g.actor(L.id); if (a) { a.w2home = true; a.x = L.dx; a.z = L.dz; a.setBehavior('dance'); a.home = { x: a.x, z: a.z, y: 0, yaw: 0 }; } }
+    BW.wireGear(g);
+    if (g.missions.isDone('darkwads')) for (const a of g.actors) if (a.behName === 'w234Darkwad') a.w234lit = true;
     const cap = g.actor('captain'); if (cap) BW.attach(cap, BW.attModel('respirator', m => BW.gear.respirator(m)), BURNS_BONES.HEAD);
     BW.attach(g.player, BW.attModel('headlamp', m => BW.gear.headlamp(m)), BURNS_BONES.HEAD, () => S.headlamp);
     S.headlamp = g.missions.isDone('moop');
+    if (g.missions.isDone('lanterns')) for (const L of S.lamps) { L.lit = true; L.gl.c = L.gl.c0; }
     if (g.missions.isDone('alley')) { S.alleyDoor.off = true; }
     if (g.missions.isDone('camp')) { S.man.hidden = true; S.bossStarted = true; }
     g.tod = Math.min(0.9, BurnsSave.tokenCount(2) * 0.15);
@@ -493,11 +538,13 @@ BurnsWorlds.register({
       for (const a of S.spinnerActors) { const d = Math.hypot(a.x - p.x, a.z - p.z); if (d < d1) { a2 = a1; d2 = d1; a1 = a; d1 = d; } else if (d < d2) { a2 = a; d2 = d; } }
       for (const a of [a1, a2]) if (a) g.pointLight(a.x, 1.8, a.z, 7.5, [1, 0.55, 0.2], 1.3);
     }
+    if (S.lampWalk) { const w = g.actor('wick'); if (w) g.pointLight(w.x, 2.2, w.z, 9, [1, 0.8, 0.45], 1.1); }
     if (S.headlamp && !p.dead) g.pointLight(p.x + Math.sin(p.yaw) * 2.2, p.y + 1.9, p.z + Math.cos(p.yaw) * 2.2, 9, [1, 0.95, 0.82], 1.0);
   },
   update(g, dt) {
     const S = BURNS_W2.state, W2 = BURNS_W2, p = g.player;
     BURNS_W234.update(g, dt);
+    g.w234lamp = !!S.headlamp;
     if (!S.spinnerActors) S.spinnerActors = g.actors.filter(a => a.behName === 'w2Spinner');
     // walking lost burners home (followers that get boxed in by camps catch up behind Brady)
     if (g.missions.state('lost') === 'active' || g.missions.state('lost') === 'available') {
@@ -518,6 +565,7 @@ BurnsWorlds.register({
       S.lectures = S.lectures.filter(w => !w.dead);
     }
     if (S.frozenT > 0) { S.frozenT -= dt; p.animOverride = 'idle'; if (S.frozenT <= 0 && S.frozeByMe) { S.frozeByMe = false; p.locked = false; p.animOverride = null; } }
+    if (S.lampWalk) BURNS_W2.lampStep(g, dt);
     // the parade parks for the fight
     if (S.parade) S.parade.stopped = !!(S.bossStarted && !g.missions.isDone('camp'));
     // tokens push the night deeper
@@ -576,6 +624,37 @@ BURNS_W2.clue = function (g, n, who, lines) {
   });
 };
 
+BURNS_W2.lampStart = function (g) {
+  const S = BURNS_W2.state; S.lampWalk = { i: 0, far: 0 };
+  ['wick', 'lamp1', 'lamp2'].forEach(id => { const a = g.actor(id); if (a) { a.w2start = a.w2start || { x: a.x, z: a.z }; a.setBehavior('idle'); } });
+  g.banner('LIGHT THE WAY', 'Walk with the lamplighters. Stay in their light.', { col: '#ffcf7a' });
+};
+BURNS_W2.lampStep = function (g, dt) {
+  const S = BURNS_W2.state, W = S.lampWalk, R = S.lampRoute, p = g.player, lead = g.actor('wick');
+  if (!lead) return;
+  const t = R[Math.min(W.i, R.length - 1)], d = lead.moveTo(t[0], t[1], 1.25, dt, 0.4);
+  lead.ch.play('walk', { rate: 0.75 });
+  if (d < 0.6 && W.i < R.length - 1) W.i++;
+  ['lamp1', 'lamp2'].forEach((id, k) => { const a = g.actor(id); if (!a) return; const bx = lead.x - Math.sin(lead.yaw) * (2 + k * 1.8) + Math.cos(lead.yaw) * (k ? 1 : -1), bz = lead.z - Math.cos(lead.yaw) * (2 + k * 1.8) - Math.sin(lead.yaw) * (k ? 1 : -1); const dd = a.moveTo(bx, bz, 1.6, dt, 0.3); a.ch.play(dd > 0.5 ? 'walk' : 'idle', { rate: 0.75 }); });
+  for (const L of S.lamps) if (!L.lit && Math.hypot(L.x - lead.x, L.z - lead.z) < 5.5) { L.lit = true; L.gl.c = L.gl.c0; g.fx.burst(L.x, 3.1, L.z, 'spark', 8, '#ffcf7a'); burnsSfx('pick', { vol: 0.35, pitch: 1.4 }); }
+  const dp = Math.hypot(p.x - lead.x, p.z - lead.z);
+  W.far = dp > 11 ? W.far + dt : 0;
+  if (W.far > 0.05 && W.far < dt * 1.5) g.warn('STAY IN THE LIGHT!', 2.5);
+  if (W.far > 3) { g.missions.fail('lanterns', 'You wandered out of the light.'); return; }
+  if (W.i >= R.length - 1 && d < 0.8) g.missions.complete('lanterns');
+};
+BURNS_W2.lampReset = function (g) {
+  const S = BURNS_W2.state; S.lampWalk = null;
+  for (const L of S.lamps) { L.lit = false; L.gl.c = [0, 0, 0]; }
+  ['wick', 'lamp1', 'lamp2'].forEach(id => { const a = g.actor(id); if (a && a.w2start) { a.x = a.w2start.x; a.z = a.w2start.z; a.vx = a.vz = 0; } });
+};
+BURNS_W2.lampDone = function (g) {
+  const S = BURNS_W2.state; S.lampWalk = null;
+  for (const L of S.lamps) { L.lit = true; L.gl.c = L.gl.c0; }
+  g.glow += 25; g.toast('+25 GLOW STICKS · 7:00 IS LIT');
+  const a = g.actor('wick'); if (a) a.say('The way is lit. It always was. We just reminded it.', 3.5);
+  g.spawnPickup('water', g.player.x + 1.5, 0.9, g.player.z, { pop: true });
+};
 BURNS_W2.labels = function (g, mission, label) { for (const P of g.pickups.items) if (P.mission === mission) P.label = label; };
 BURNS_W2.captainLecture = function (g, a) {
   const S = BURNS_W2.state; S.capMet = true;
