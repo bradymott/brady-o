@@ -1,152 +1,154 @@
 /* ============================================================
-   Level sets beyond the main adventure
-   - Brady-O Classic (worlds 31-38): retro 8-bit styled campaign
-   - Brady-O World   (regions 41-49): Black Rock City overworld
+   SUPER BRADY-O WORLD — the 2D overworld campaign.
+   10 lands (ids 41-50), 60 levels, a walkable overworld map.
+
+   Story: the Man (the giant wooden effigy) fell in love with Chinka and
+   carried her to the top of his pavilion. Brady crosses the playa land
+   by land to bring her home.
+
+   Every level is meant to feel different: each entry in a land's `spec`
+   names the level's signature idea. `plan` is the generator archetype
+   used today; `kinds` is the node type shown on the overworld
+   (level / haunt / fort / castle / gift).
+   Gift camps are hidden side camps behind secret exits; each hands Brady a
+   permanent burner gift (saved in Save.data.gifts).
    ============================================================ */
 
-/* ---------- Brady-O Classic: 8 worlds x 4 levels ---------- */
-Object.assign(WORLDS, {
-  31: { set: 'classic', name: 'The Driveway', theme: 'suburbs', pool: ['glump', 'glump', 'rollo'], plan: ['ow', 'under', 'ow', 'castle'],
-    names: ['Loading the Car', 'Garage Crawl', 'Cul-de-Sac Sprint', "Raccoon's Garage"] },
-  32: { set: 'classic', name: 'Reno Run', theme: 'neon', pool: ['glump', 'rollo', 'boomer', 'flapper'], plan: ['ow', 'sky', 'auto', 'castle'],
-    names: ['Neon Strip', 'Rooftop Hop', 'Shopping Cart Chase', 'Mega-Mart Showdown'] },
-  33: { set: 'classic', name: 'Highway 447', theme: 'desert', pool: ['spiker', 'hopper', 'rollo', 'glump'], plan: ['ow', 'ow', 'under', 'castle'],
-    names: ['Mile Marker 0', 'Sagebrush Shuffle', 'Abandoned Mine', 'Tumbleweed Trap'] },
-  34: { set: 'classic', name: 'Hot Springs', theme: 'springs', pool: ['glump', 'rollo', 'hopper'], plan: ['ow', 'water', 'water', 'castle'],
-    names: ['Steamy Shore', 'Bubble Pool', 'Geyser Grotto', 'Geyser Guardian'] },
-  35: { set: 'classic', name: 'Gate Road', theme: 'gate', pool: ['spiker', 'glump', 'rollo', 'hopper'], plan: ['ow', 'auto', 'ow', 'castle'],
-    names: ['The Line', 'Dust Crawl', 'Greeter Gauntlet', 'Hard-Hat Hold'] },
-  36: { set: 'classic', name: 'The City', theme: 'esplanade', pool: ['glump', 'rollo', 'flapper', 'boomer', 'hopper'], plan: ['ow', 'sky', 'tower', 'castle'],
-    names: ['Esplanade Stroll', 'Scaffold Skyline', 'Lighthouse Climb', 'Bass Bunker'] },
-  37: { set: 'classic', name: 'Deep Playa', theme: 'deepplaya', pool: ['spiker', 'flapper', 'wisp', 'hopper'], plan: ['ow', 'auto', 'under', 'castle'],
-    names: ['Whiteout', 'Art Car Express', 'Inside the Sculpture', 'Dust Devil Den'] },
-  38: { set: 'classic', name: 'The Burn', theme: 'burn', pool: ['glump', 'rollo', 'spiker', 'flapper', 'wisp'], plan: ['ow', 'tower', 'sky', 'castle'],
-    names: ['Ember Field', 'Climb the Man', 'Firework Skies', 'Lord Buzzkill'] }
-});
-const CLASSIC_WORLDS = [31, 32, 33, 34, 35, 36, 37, 38];
-
-/* ---------- Brady-O World: Black Rock City regions ---------- */
-Object.assign(WORLDS, {
-  41: { set: 'world', name: 'Gate Road', theme: 'gate', pool: ['spiker', 'glump', 'hopper', 'rollo'], plan: ['ow', 'auto', 'ow', 'ow', 'castle'],
-    names: ['Mile 1: The Line', 'Dust Convoy', 'Ticket Check', 'The Greeters', 'Gatekeeper Gruff'] },
-  42: { set: 'world', name: 'Center Camp', theme: 'camps', pool: ['glump', 'rollo', 'hopper', 'flapper'], plan: ['ow', 'sky', 'ow', 'under', 'castle'],
-    names: ['K Street Hustle', 'Shade Cloth Skyway', 'Bike Rack Ruckus', 'The Coffee Tent', 'The Barista Bot'] },
-  43: { set: 'world', name: 'Sound Camps', theme: 'esplanade', pool: ['glump', 'rollo', 'boomer', 'flapper', 'hopper'], plan: ['ow', 'under', 'sky', 'tower', 'auto', 'castle'],
-    names: ['4:30 Bass Drop', 'Inside the Subwoofer', 'Laser Ledges', '3:00 Plaza Tower', 'Disco Bus Ride', 'DJ Wub-Lord'] },
-  44: { set: 'world', name: 'Theme Camps', theme: 'camps', pool: ['glump', 'rollo', 'spiker', 'wisp', 'boomer'], plan: ['ow', 'ow', 'under', 'sky', 'ow', 'castle'],
-    names: ['7:30 Welcome Mat', 'Pancake Camp', 'The Dome Maze', '9:00 Plaza Flags', 'Witchy Woods', 'Grand Witch Moonbeam'] },
-  45: { set: 'world', name: 'Night Art Cars', theme: 'esplanade', pool: ['flapper', 'boomer', 'wisp', 'rollo'], plan: ['auto', 'sky', 'auto', 'ow', 'castle'],
-    names: ['Hop the Fish Car', 'Neon Whale Ride', 'Cupcake Convoy', 'Laser Field', 'Mutant Vehicle Monster'] },
-  46: { set: 'world', name: 'Deep Playa', theme: 'deepplaya', pool: ['spiker', 'flapper', 'wisp', 'hopper'], plan: ['ow', 'auto', 'tower', 'ow', 'sky', 'castle'],
-    names: ['Into the Dust', 'Whiteout Express', 'Sculpture Climb', 'Lost & Found', 'Kite Field', 'Dust Devil Diablo'] },
-  47: { set: 'world', name: 'The Man & The Temple', theme: 'burn', pool: ['glump', 'rollo', 'spiker', 'flapper', 'wisp', 'boomer'], plan: ['ow', 'tower', 'auto', 'sky', 'castle'],
-    names: ['Base of the Man', 'Climbing the Man', 'Temple Procession', 'Temple Rafters', 'Lord Buzzkill'] },
-  48: { set: 'world', name: 'The Trash Fence', theme: 'deepplaya', secret: true, pool: ['spiker', 'hopper', 'wisp'], plan: ['ow', 'sky', 'auto', 'castle'],
-    names: ['Edge of the World', 'Fence Walkers', 'Perimeter Patrol', 'The Lost Sparkle Pony'] },
-  49: { set: 'world', name: 'Sunrise Set', theme: 'sunrise', secret: true, pool: ['glump', 'flapper', 'hopper', 'boomer'], plan: ['auto', 'sky', 'castle'],
-    names: ['Chasing the Sunrise', 'Dancing on Clouds', 'The Last Song'] }
-});
-const WORLD3_REGIONS = [41, 42, 43, 44, 45, 46, 47, 48, 49];
-
-/*
-  Black Rock City map. Positions use the city's own address system:
-  clock = clock position (2:00..10:00 is the city arc, 12:00 points past the Man to the Temple)
-  r     = distance from the Man. Esplanade ring = 100, lettered streets A..K = 112..232 (12 apart),
-          open playa < 100, Gate Road and the perimeter > 240.
-*/
-const BRC_NODES = [
-  { id: '41-1', clock: 6.0, r: 430, label: 'Gate Road · Mile 1' },
-  { id: '41-2', clock: 6.0, r: 392, label: 'Gate Road · Mile 2' },
-  { id: '41-3', clock: 6.0, r: 352, label: 'Box Office' },
-  { id: '41-4', clock: 6.0, r: 312, label: 'Greeters Station', secret: true },
-  { id: '41-5', clock: 6.0, r: 272, label: 'The Gate', boss: true },
-  { id: '42-1', clock: 6.0, r: 232, label: '6:00 & K' },
-  { id: '42-2', clock: 6.0, r: 196, label: '6:00 & H' },
-  { id: '42-3', clock: 6.0, r: 160, label: '6:00 & E' },
-  { id: '42-4', clock: 6.0, r: 128, label: 'Center Camp Café' },
-  { id: '42-5', clock: 6.0, r: 104, label: '6:00 & Esplanade', boss: true },
-  { id: '43-1', clock: 4.5, r: 104, label: '4:30 & Esplanade' },
-  { id: '43-2', clock: 4.0, r: 124, label: '4:00 & B' },
-  { id: '43-3', clock: 3.5, r: 148, label: '3:30 & D', secret: true },
-  { id: '43-4', clock: 3.0, r: 184, label: '3:00 Plaza' },
-  { id: '43-5', clock: 2.5, r: 148, label: '2:30 & D' },
-  { id: '43-6', clock: 2.0, r: 104, label: '2:00 & Esplanade', boss: true },
-  { id: '44-1', clock: 7.5, r: 104, label: '7:30 & Esplanade' },
-  { id: '44-2', clock: 8.0, r: 124, label: '8:00 & B' },
-  { id: '44-3', clock: 8.5, r: 148, label: '8:30 & D', secret: true },
-  { id: '44-4', clock: 9.0, r: 184, label: '9:00 Plaza' },
-  { id: '44-5', clock: 9.5, r: 148, label: '9:30 & D' },
-  { id: '44-6', clock: 10.0, r: 104, label: '10:00 & Esplanade', boss: true },
-  { id: '45-1', clock: 3.0, r: 84, label: 'Inner Playa · 3:00' },
-  { id: '45-2', clock: 2.5, r: 70, label: 'Art Car Crossing' },
-  { id: '45-3', clock: 2.0, r: 58, label: 'Neon Whale Dock' },
-  { id: '45-4', clock: 1.5, r: 46, label: 'Laser Field' },
-  { id: '45-5', clock: 1.0, r: 36, label: 'Mutant Vehicle Lot', boss: true },
-  { id: '46-1', clock: 9.0, r: 84, label: 'Inner Playa · 9:00' },
-  { id: '46-2', clock: 9.8, r: 72, label: 'Dust Storm Flats' },
-  { id: '46-3', clock: 10.6, r: 62, label: 'The Big Sculpture' },
-  { id: '46-4', clock: 11.2, r: 74, label: 'Lost & Found', secret: true },
-  { id: '46-5', clock: 11.0, r: 48, label: 'Kite Field' },
-  { id: '46-6', clock: 11.0, r: 34, label: 'Dust Devil Den', boss: true },
-  { id: '47-1', clock: 6.0, r: 14, label: 'Base of the Man' },
-  { id: '47-2', clock: 12.0, r: 0, label: 'The Man' },
-  { id: '47-3', clock: 12.0, r: 24, label: 'Temple Procession' },
-  { id: '47-4', clock: 12.0, r: 44, label: 'Temple Steps' },
-  { id: '47-5', clock: 12.0, r: 58, label: 'The Temple', boss: true },
-  { id: '48-1', clock: 4.0, r: 300, label: 'Trash Fence · 4:00' },
-  { id: '48-2', clock: 2.8, r: 300, label: 'Trash Fence · 2:45' },
-  { id: '48-3', clock: 1.6, r: 300, label: 'Trash Fence · 1:30' },
-  { id: '48-4', clock: 0.6, r: 300, label: 'The Far Corner', boss: true },
-  { id: '49-1', clock: 12.6, r: 96, label: 'Deep Deep Playa' },
-  { id: '49-2', clock: 12.2, r: 116, label: 'Sunrise Art Car' },
-  { id: '49-3', clock: 11.8, r: 136, label: 'The Last Song', boss: true }
+/* ---------- lands ---------- */
+const WORLD_LANDS = [
+  { id: 41, name: 'Gate Road', tag: 'The endless line of RVs', color: '#e8a060', mood: 'dusk' },
+  { id: 42, name: 'Center Camp', tag: 'Big top, bad coffee, acrobats', color: '#f0c070', mood: 'day' },
+  { id: 43, name: 'The Esplanade', tag: 'Sound camps and lasers', color: '#ff4fd8', mood: 'night' },
+  { id: 44, name: 'Theme Camp Row', tag: 'Witches, crusties and pancakes', color: '#8ad86a', mood: 'day' },
+  { id: 45, name: 'Hot Springs', tag: 'Off the playa: steam and mud', color: '#5ac8e8', mood: 'day' },
+  { id: 46, name: 'Deep Playa', tag: 'Sculptures, dust and wanderers', color: '#c89ae8', mood: 'night' },
+  { id: 47, name: 'Hell Station', tag: 'DPW turf: fuel, rebar, forklifts', color: '#ff7a3a', mood: 'dusk' },
+  { id: 48, name: 'The Man Base', tag: 'Where the Man keeps Chinka', color: '#ffd84a', mood: 'night' },
+  { id: 49, name: 'Sunrise Set', tag: 'Secret: dance till dawn', color: '#ffb0a0', mood: 'dawn', secret: true },
+  { id: 50, name: 'World 22', tag: 'Secret: the last page', color: '#9affd8', mood: 'void', secret: true }
 ];
 
-/*
-  Paths between nodes. kind: 'normal' (opened by the regular exit) or 'secret'
-  (opened by a level's hidden exit). A node is reachable when any path into it is open.
-  'needs' lists extra levels that must also be cleared before the path opens.
-*/
-const BRC_PATHS = [
-  { from: '41-1', to: '41-2', kind: 'normal' }, { from: '41-2', to: '41-3', kind: 'normal' },
-  { from: '41-3', to: '41-4', kind: 'normal' }, { from: '41-4', to: '41-5', kind: 'normal' },
-  { from: '41-4', to: '42-3', kind: 'secret' },
-  { from: '41-5', to: '42-1', kind: 'normal' }, { from: '42-1', to: '42-2', kind: 'normal' },
-  { from: '42-2', to: '42-3', kind: 'normal' }, { from: '42-3', to: '42-4', kind: 'normal' },
-  { from: '42-4', to: '42-5', kind: 'normal' },
-  { from: '42-5', to: '43-1', kind: 'normal' }, { from: '42-5', to: '44-1', kind: 'normal' },
-  { from: '43-1', to: '43-2', kind: 'normal' }, { from: '43-2', to: '43-3', kind: 'normal' },
-  { from: '43-3', to: '43-4', kind: 'normal' }, { from: '43-3', to: '48-1', kind: 'secret' },
-  { from: '43-4', to: '43-5', kind: 'normal' }, { from: '43-5', to: '43-6', kind: 'normal' },
-  { from: '44-1', to: '44-2', kind: 'normal' }, { from: '44-2', to: '44-3', kind: 'normal' },
-  { from: '44-3', to: '44-4', kind: 'normal' }, { from: '44-3', to: '45-3', kind: 'secret' },
-  { from: '44-4', to: '44-5', kind: 'normal' }, { from: '44-5', to: '44-6', kind: 'normal' },
-  { from: '43-6', to: '45-1', kind: 'normal' }, { from: '45-1', to: '45-2', kind: 'normal' },
-  { from: '45-2', to: '45-3', kind: 'normal' }, { from: '45-3', to: '45-4', kind: 'normal' },
-  { from: '45-4', to: '45-5', kind: 'normal' },
-  { from: '44-6', to: '46-1', kind: 'normal' }, { from: '46-1', to: '46-2', kind: 'normal' },
-  { from: '46-2', to: '46-3', kind: 'normal' }, { from: '46-3', to: '46-4', kind: 'normal' },
-  { from: '46-4', to: '46-5', kind: 'normal' }, { from: '46-4', to: '49-1', kind: 'secret' },
-  { from: '46-5', to: '46-6', kind: 'normal' },
-  { from: '45-5', to: '47-1', kind: 'normal', needs: ['46-6'] }, { from: '46-6', to: '47-1', kind: 'normal', needs: ['45-5'] },
-  { from: '47-1', to: '47-2', kind: 'normal' }, { from: '47-2', to: '47-3', kind: 'normal' },
-  { from: '47-3', to: '47-4', kind: 'normal' }, { from: '47-4', to: '47-5', kind: 'normal' },
-  { from: '48-1', to: '48-2', kind: 'normal' }, { from: '48-2', to: '48-3', kind: 'normal' },
-  { from: '48-3', to: '48-4', kind: 'normal' }, { from: '48-4', to: '46-1', kind: 'normal' },
-  { from: '49-1', to: '49-2', kind: 'normal' }, { from: '49-2', to: '49-3', kind: 'normal' },
-  { from: '49-3', to: '47-1', kind: 'normal' }
-];
-// levels in Brady-O World that hide a secret exit
-const WORLD3_SECRETS = { '41-4': true, '43-3': true, '44-3': true, '46-4': true };
+/* ---------- levels per land ---------- */
+// plan: generator archetype in use now; kinds: overworld node type; spec: the level's signature idea
+Object.assign(WORLDS, {
+  41: { set: 'world', label: '1', name: 'Gate Road', theme: 'gate', pool: ['glump', 'rollo', 'hopper'],
+    plan: ['ow', 'auto', 'ow', 'under', 'ow', 'castle', 'ow'],
+    kinds: ['level', 'level', 'level', 'haunt', 'level', 'castle', 'gift'],
+    names: ['Mile 1: The Line', 'RV Rooftop Convoy', 'Dust-Out Detour', 'The Stowaway RV', 'Six Days on the Road', 'Greeter Station', 'Kandi Camp'],
+    spec: ['first steps among idling RVs; six-day drivers shuffle', 'auto-scroll across the roofs of a crawling RV convoy',
+      'dust gusts and whiteouts; secret exit to Kandi Camp', 'haunted puzzle house: a giant RV maze of doors hiding stowaways',
+      'exhausted drivers, honking horns, stressed camp leads who yell', 'castle: the Head Greeter boss (hugs, bell shockwaves, dust angels)',
+      'gift camp: earn kandi bracelets (start every level with one extra hit)'] },
+  42: { set: 'world', label: '2', name: 'Center Camp', theme: 'camps', pool: ['glump', 'rollo', 'hopper', 'flapper'],
+    plan: ['ow', 'sky', 'under', 'tower', 'ow', 'castle'],
+    kinds: ['level', 'level', 'level', 'fort', 'level', 'castle'],
+    names: ['Coffee Line Crawl', 'Big Top Trapeze', 'Slam Poetry Pit', 'Chai Tower', 'Acro Yoga Heights', "Barista Bot's Espresso Works"],
+    spec: ['the coffee line as a platforming obstacle course', 'swing on trapezes and bounce on the big-top canvas',
+      'underground open-mic: poets fire verse projectiles', 'fortress climb up a teetering chai-stand tower',
+      'acro-yoga human platforms that lift and tilt', 'castle: the Barista Bot boss'] },
+  43: { set: 'world', label: '3', name: 'The Esplanade', theme: 'esplanade', pool: ['glump', 'boomer', 'flapper', 'hopper'],
+    plan: ['ow', 'ow', 'under', 'auto', 'under', 'castle', 'ow'],
+    kinds: ['level', 'level', 'level', 'level', 'haunt', 'castle', 'gift'],
+    names: ['Bass Drop Boulevard', 'Laser Grid Rave', 'Inside the Subwoofer', 'Disco Bus Ride', 'Strobe House', "DJ Wub-Lord's Stage", 'Lamplighter Camp'],
+    spec: ['platforms pulse to the beat; bass shockwaves', 'laser grids switch on and off with the music',
+      'inside a giant speaker cabinet; secret exit to Lamplighter Camp', 'auto-scroll on top of a party bus through the crowd',
+      'haunted strobe-lit house: things only move in the dark', 'castle: DJ Wub-Lord boss', 'gift camp: earn a lantern that lights dark and dusty levels'] },
+  44: { set: 'world', label: '4', name: 'Theme Camp Row', theme: 'camps', pool: ['rollo', 'spiker', 'wisp', 'boomer'],
+    plan: ['ow', 'ow', 'under', 'ow', 'sky', 'castle'],
+    kinds: ['level', 'level', 'haunt', 'level', 'level', 'castle'],
+    names: ['Pancake Camp Breakfast', 'Witchy Woods', 'The Lost & Found', 'Crusty Corner', 'Bubble Camp Heights', "Grand Witch Moonbeam's Coven"],
+    spec: ['griddle platforms and flipping pancakes', 'pagan witches on brooms and crystal hazards',
+      'haunted lost-and-found maze of doors and fake walls; secret exit to Sunrise Set', 'crusty old burners slow you with "it was better in 98" rants',
+      'float on giant soap bubbles between camp towers', 'castle: Grand Witch Moonbeam boss'] },
+  45: { set: 'world', label: '5', name: 'Hot Springs', theme: 'springs', pool: ['glump', 'rollo', 'hopper'],
+    plan: ['ow', 'water', 'ow', 'under', 'ow', 'castle', 'ow'],
+    kinds: ['level', 'level', 'level', 'level', 'level', 'castle', 'gift'],
+    names: ['Road Trip Detour', 'Hot Pool Plunge', 'Geyser Field', 'Steam Caverns', 'Mud Slide Canyon', "Geyser Guardian's Grotto", 'Bike Repair Camp'],
+    spec: ['desert detour with tumbleweeds and a broken-down van', 'swim the hot pools; currents and bubbles',
+      'geysers launch you on a timer; secret exit to Bike Repair Camp', 'steam vents in the dark; ride the updrafts',
+      'slippery mud slopes and rolling boulders', 'castle: the Geyser Guardian boss', 'gift camp: a tuned-up ride (Brady runs faster)'] },
+  46: { set: 'world', label: '6', name: 'Deep Playa', theme: 'deepplaya', pool: ['spiker', 'flapper', 'wisp', 'hopper'],
+    plan: ['ow', 'sky', 'ow', 'auto', 'ow', 'castle', 'ow'],
+    kinds: ['level', 'level', 'level', 'level', 'level', 'castle', 'gift'],
+    names: ['Sculpture Garden', 'LED Jellyfish Drift', 'Influencer Alley', 'Art Car Caravan', 'Whiteout', "Dust Devil Diablo's Vortex", 'Hydration Station'],
+    spec: ['climb giant art sculptures at night', 'drift between floating LED jellyfish',
+      'influencers flash cameras, sparkle ponies steal power-ups; secret exit to Hydration Station',
+      'auto-scroll hopping between moving art cars', 'total dust storm: see only by glow sticks',
+      'castle: Dust Devil Diablo boss', 'gift camp: one more drop of max hydration (health)'] },
+  47: { set: 'world', label: '7', name: 'Hell Station', theme: 'highway', pool: ['spiker', 'rollo', 'boomer', 'glump'],
+    plan: ['ow', 'ow', 'tower', 'auto', 'under', 'castle'],
+    kinds: ['level', 'level', 'fort', 'level', 'level', 'castle'],
+    names: ['Fuel Line', 'Forklift Frenzy', 'Rebar Yard', 'Tech Bro Bypass', 'Trash Fence Tunnel', "Foreman Rusty's Depot"],
+    spec: ['fuel tanks, leaking barrels and DPW crews', 'conveyors, forklift lifts and crane hooks',
+      'fortress of scaffolding and rebar spikes', 'auto-scroll chased by tech bros on electric unicycles; secret exit to Sunrise Set',
+      'wind tunnels along the trash fence', 'castle: DPW Foreman Rusty boss'] },
+  48: { set: 'world', label: '8', name: 'The Man Base', theme: 'burn', pool: ['glump', 'rollo', 'spiker', 'flapper', 'wisp', 'boomer'],
+    plan: ['ow', 'ow', 'tower', 'under', 'castle'],
+    kinds: ['level', 'level', 'level', 'fort', 'castle'],
+    names: ['The Long Walk', 'Fire Conclave', 'Saucer Scaffold', 'Neon Gauntlet', "The Man's Pavilion"],
+    spec: ['the walk out to the Man, every hazard so far mixed together', 'fire spinners and flame cannons',
+      "climb the flying-saucer base's scaffolding", 'fortress of neon traps and flashing lights',
+      'final castle: THE MAN boss (atop his saucer, then grows giant: neon flashes, face fire, firework arms)'] },
+  49: { set: 'world', label: 'S', name: 'Sunrise Set', theme: 'sunrise', secret: true, pool: ['glump', 'flapper', 'hopper', 'boomer'],
+    plan: ['ow', 'sky', 'auto', 'ow', 'castle'],
+    kinds: ['level', 'level', 'level', 'level', 'castle'],
+    names: ['First Light', 'Golden Hour Glide', 'Last Art Car Home', 'Dancing on Air', 'The Last Song'],
+    spec: ['hard: dawn platforming', 'hard: long glides between clouds', 'hard: auto-scroll on the last art car of the night',
+      'hard: every jump on the beat', 'the hardest boss; a hidden super-secret exit opens World 22'] },
+  50: { set: 'world', label: '22', name: 'World 22', theme: 'w22', secret: true, pool: ['wisp', 'flapper', 'spiker'],
+    plan: ['ow', 'sky', 'under', 'castle'],
+    kinds: ['level', 'level', 'level', 'castle'],
+    names: ['Page One', 'Between the Lines', 'The Margins', 'Twenty-Two'],
+    spec: ['surreal, glitchy, made of pages', 'floating text platforms', 'ink-dark caverns', 'the Archivist boss'] }
+});
 
-/* Progress helpers for Brady-O World (used by the map and by level completion) */
+const CLASSIC_WORLDS = []; // Brady-O Classic was retired
+const WORLD3_REGIONS = [41, 42, 43, 44, 45, 46, 47, 48, 49, 50];
+
+/* ---------- overworld graph ---------- */
+// Every level is a node; the map lays them out by land. kind: normal (clear the level) or secret (find its secret exit).
+const WORLD_NODES = [];
+for (const L of WORLD_LANDS) {
+  const W = WORLDS[L.id];
+  W.names.forEach((nm, k) => WORLD_NODES.push({ id: L.id + '-' + (k + 1), land: L.id, type: W.kinds[k], name: nm, label: L.name + ' · ' + nm, boss: W.kinds[k] === 'castle' }));
+}
+const WORLD_PATHS = [];
+{
+  const P = (from, to, kind) => WORLD_PATHS.push({ from, to, kind: kind || 'normal' });
+  // main route through each land (switch camps are side branches)
+  const main = { 41: [1, 2, 3, 4, 5, 6], 42: [1, 2, 3, 4, 5, 6], 43: [1, 2, 3, 4, 5, 6], 44: [1, 2, 3, 4, 5, 6], 45: [1, 2, 3, 4, 5, 6],
+    46: [1, 2, 3, 4, 5, 6], 47: [1, 2, 3, 4, 5, 6], 48: [1, 2, 3, 4, 5], 49: [1, 2, 3, 4, 5], 50: [1, 2, 3, 4] };
+  for (const w in main) { const s = main[w]; for (let k = 0; k < s.length - 1; k++) P(w + '-' + s[k], w + '-' + s[k + 1]); }
+  // each land's castle opens the next land
+  P('41-6', '42-1'); P('42-6', '43-1'); P('43-6', '44-1'); P('44-6', '45-1'); P('45-6', '46-1'); P('46-6', '47-1'); P('47-6', '48-1');
+  // gift camps behind secret exits
+  P('41-3', '41-7', 'secret'); P('43-3', '43-7', 'secret'); P('45-3', '45-7', 'secret'); P('46-3', '46-7', 'secret');
+  // Sunrise Set: a hidden land with two ways in
+  P('44-3', '49-1', 'secret'); P('47-4', '49-1', 'secret');
+  // World 22: the super-secret exit at the end of Sunrise Set
+  P('49-5', '50-1', 'secret');
+}
+// levels whose secret exit the generator must build
+const WORLD3_SECRETS = {};
+for (const p of WORLD_PATHS) if (p.kind === 'secret') WORLD3_SECRETS[p.from] = true;
+
+// Provisional positions so the current map keeps working until the new overworld lands.
+// (clock 2..10 around the city arc, r = distance from the Man)
+const BRC_NODES = WORLD_NODES.map((n, k) => {
+  const li = n.land - 41, idx = +n.id.split('-')[1];
+  return Object.assign({}, n, { clock: 2.4 + (li * 0.83) % 7.2 + idx * 0.09, r: 140 + ((idx * 53 + li * 37) % 300), w: n.land });
+});
+const BRC_PATHS = WORLD_PATHS;
+
+/* Progress helpers for Super Brady-O World (used by the map and by level completion) */
 const WorldGame = {
   start: '41-1',
   isUnlocked(id) { return id === this.start || !!Save.data.unlocked[id]; },
   isDone(id) { return !!Save.data.done[id]; },
   secretFound(id) { return !!Save.data.secretExits[id]; },
   goldCount(id) { const g = Save.data.gold[id]; return g ? g.filter(Boolean).length : 0; },
-  node(id) { return BRC_NODES.find(n => n.id === id); },
+  node(id) { return WORLD_NODES.find(n => n.id === id); },
+  land(id) { return WORLD_LANDS.find(L => L.id === +String(id).split('-')[0]); },
   name(id) { const [w, i] = id.split('-').map(Number); return WORLDS[w] ? WORLDS[w].names[i - 1] : id; },
   pathOpen(p) {
     const ok = p.kind === 'secret' ? !!Save.data.secretExits[p.from] : !!Save.data.done[p.from];
@@ -155,7 +157,7 @@ const WorldGame = {
   // called when a level is finished; returns the ids newly unlocked
   complete(id, secret) {
     const opened = [];
-    for (const p of BRC_PATHS) {
+    for (const p of WORLD_PATHS) {
       if (!this.pathOpen(p)) continue;
       if (!Save.data.unlocked[p.to]) { Save.data.unlocked[p.to] = true; opened.push(p.to); }
     }

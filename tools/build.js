@@ -11,7 +11,7 @@ const crypto = require('crypto');
 const { execSync } = require('child_process');
 const root = path.join(__dirname, '..');
 const srcDir = path.join(root, 'src');
-const dist = path.join(root, 'dist');
+const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(root, 'dist'); // agents can build into a private folder
 const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.js')).sort();
 let code = files.map(f => `/* ---- ${f} ---- */\n` + fs.readFileSync(path.join(srcDir, f), 'utf8')).join('\n');
 code = `(function(){\n${code}\n})();`;

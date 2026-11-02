@@ -82,18 +82,22 @@ function drawLogo(ctx, x, y, size, t) {
 
 /* ---------------- Title: four games ---------------- */
 const GAMES = [
-  { id: 'road', title: 'ROAD TO THE BURN', sub: 'The Brady-O adventure', col: '#ff6a2a' },
-  { id: 'classic', title: 'BRADY-O CLASSIC', sub: '8-bit arcade platforming', col: '#38c8ff' },
-  { id: 'world', title: 'BRADY-O WORLD', sub: 'Black Rock City with Slothy', col: '#7ad86a' },
+  { id: 'burns', title: 'BRADY-O BURNS', sub: '3D adventure: rescue Chinka', col: '#ff6a2a' },
+  { id: 'world', title: 'SUPER BRADY-O WORLD', sub: '2D platforming across the playa', col: '#7ad86a' },
   { id: 'kart', title: 'ART CAR KART', sub: 'Race across the playa', col: '#ff4fd8' }
 ];
+// Brady-O Burns (3D) lives in its own modules; find its entry scene however it was exported
+function burnsScene() {
+  if (typeof BurnsHubScene !== 'undefined') return BurnsHubScene;
+  return window.BRADY_BURNS && (window.BRADY_BURNS.BurnsHubScene || window.BRADY_BURNS.Scene) || null;
+}
 function startGame(id) {
   Sound.play('select');
-  if (id === 'road') {
-    if (!Save.data.seenIntro) Game.setScene(new StoryScene(introPanels(), () => { Save.data.seenIntro = true; Save.save(); Game.setScene(new MapScene(1, 'road')); }));
-    else Game.setScene(new MapScene(Save.data.lastWorld || 1, 'road'));
-  } else if (id === 'classic') Game.setScene(new MapScene(Save.data.lastClassic || 31, 'classic'));
-  else if (id === 'world') {
+  if (id === 'burns') {
+    const B = burnsScene();
+    if (B) Game.setScene(new B());
+    else if (Game.scene && Game.scene.toastMsg !== undefined) Game.scene.toastMsg = 'BRADY-O BURNS IS STILL BEING BUILT';
+  } else if (id === 'world') {
     const go = () => goToMap('world', 41, Save.data.world3 && Save.data.world3.node);
     if (!Save.data.seenWorldIntro) Game.setScene(new StoryScene(worldIntroPanels(), () => { Save.data.seenWorldIntro = true; Save.save(); go(); }, 'sloth'));
     else go();
@@ -119,10 +123,10 @@ function goToMap(set, world, fromId) {
     else Game.setScene(new MapScene(world || 41, 'world'));
   } else Game.setScene(new MapScene(world, set));
 }
-function isLevelUnlocked(id) { return !!Save.data.unlocked[id] || id === '1-1' || id === '31-1' || id === '41-1'; }
+function isLevelUnlocked(id) { return !!Save.data.unlocked[id] || id === '41-1'; }
 function setProgress(set) {
   let done = 0, total = 0;
-  for (const w of WORLD_ORDER.concat(CLASSIC_WORLDS, WORLD3_REGIONS)) {
+  for (const w of WORLD3_REGIONS) {
     if (((WORLDS[w].set) || 'road') !== set) continue;
     for (let i = 1; i <= WORLDS[w].plan.length; i++) { total++; if (Save.data.done[levelId(w, i)]) done++; }
   }
@@ -135,7 +139,6 @@ class TitleScene {
     Input.setMode('ui');
     Sound.setRetro && Sound.setRetro(false);
     Sound.music('title');
-    this.retroCanvas = makeCanvas(72, 48);
     this.build();
   }
   build() {
@@ -144,10 +147,18 @@ class TitleScene {
     this.logo = { x: W / 2, y: top + (portrait ? 54 : 40), size: portrait ? Math.min(52, W * 0.13) : Math.min(58, H * 0.14) };
     const gap = 12;
     let cw, ch, cols, y0;
-    if (portrait) { cols = 2; cw = (W - side * 2 - gap) / 2; ch = Math.min(255, (H - 330) / 2, cw * 1.45); y0 = this.logo.y + 66 + Math.max(0, (H - 330 - 2 * ch) * 0.25); }
-    else { cols = 4; cw = (W - side * 2 - gap * 3) / 4; ch = Math.min(H * 0.52, cw * 1.05); y0 = this.logo.y + 46; }
-    this.cards = GAMES.map((g, i) => ({ ...g, x: side + (i % cols) * (cw + gap), y: y0 + Math.floor(i / cols) * (ch + gap), w: cw, h: ch }));
-    const by = portrait ? y0 + 2 * (ch + gap) + 4 : y0 + ch + 12;
+    let by;
+    if (portrait) {
+      // the 3D adventure gets a full-width hero card, the other two sit side by side
+      cw = (W - side * 2 - gap) / 2; ch = Math.min(250, (H - 330) / 2, cw * 1.45);
+      y0 = this.logo.y + 66 + Math.max(0, (H - 330 - 2 * ch) * 0.25);
+      this.cards = GAMES.map((g, i) => i === 0 ? { ...g, x: side, y: y0, w: W - side * 2, h: ch } : { ...g, x: side + (i - 1) * (cw + gap), y: y0 + ch + gap, w: cw, h: ch });
+      by = y0 + 2 * (ch + gap) + 4;
+    } else {
+      cols = 3; cw = (W - side * 2 - gap * 2) / 3; ch = Math.min(H * 0.52, cw * 0.85); y0 = this.logo.y + 46;
+      this.cards = GAMES.map((g, i) => ({ ...g, x: side + i * (cw + gap), y: y0, w: cw, h: ch }));
+      by = y0 + ch + 12;
+    }
     const bw = Math.min(150, (W - side * 2 - gap) / 2);
     this.btns = [
       { x: W / 2 - bw - gap / 2, y: by, w: bw, h: 40, label: 'LOOK', fn: () => { Sound.play('select'); Game.setScene(new LookScene()); } },
@@ -162,7 +173,7 @@ class TitleScene {
     if (this.toastMsg) { this.toastT = 2.4; this.toastShown = this.toastMsg; this.toastMsg = ''; }
     for (const tp of Input.taps) for (const c of this.cards) if (tp.x >= c.x && tp.x <= c.x + c.w && tp.y >= c.y && tp.y <= c.y + c.h) { c.press = 0.15; startGame(c.id); return; }
     const k = Input.uiKey;
-    if (k === 'left' || k === 'right') { this.sel = ((this.sel || 0) + (k === 'right' ? 1 : 3)) % 4; Sound.play('select', { vol: 0.4 }); }
+    if (k === 'left' || k === 'right') { this.sel = ((this.sel || 0) + (k === 'right' ? 1 : GAMES.length - 1)) % GAMES.length; Sound.play('select', { vol: 0.4 }); }
     if ((k === 'enter' || (Input.jumpPressed && !Input.usingTouch)) && this.sel !== undefined) { startGame(GAMES[this.sel].id); return; }
     const hit = UI.hitButtons(this.btns);
     if (hit && hit.fn && (Input.taps.length || k === 'enter')) { hit.fn(); return; }
@@ -202,13 +213,14 @@ class TitleScene {
     ctx.font = `${Math.min(12, c.w / 15)}px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fillText(c.sub, c.x + c.w / 2, c.y + c.h * 0.74 + fs + 2);
     let prog = '';
     if (c.id === 'kart') { const k = Save.data.kart; const tr = k && k.trophies ? Object.keys(k.trophies).length : 0; prog = tr ? tr + ' trophies' : '8 racers · 8 tracks'; }
+    else if (c.id === 'burns') { const b = Save.data.burns; const tk = b && b.tokens ? Object.keys(b.tokens).length : 0; prog = tk ? `${tk} burn tokens` : '10 worlds in 3D'; }
     else { const p = setProgress(c.id); prog = `${p.done}/${p.total} levels`; }
     ctx.font = `${Math.min(11, c.w / 16)}px ${FONT_DISPLAY}`; ctx.fillStyle = c.col; ctx.fillText(prog, c.x + c.w / 2, c.y + c.h - 14);
     ctx.restore();
   }
   cardArt(ctx, c, t, x, y, w, h) {
     ctx.save(); ctx.translate(x, y);
-    if (c.id === 'road') {
+    if (c.id === 'burns') {
       const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#1a0614'); g.addColorStop(0.7, '#7a1e10'); g.addColorStop(1, '#ff7a2a');
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
       for (let i = 0; i < 30; i++) { ctx.fillStyle = `rgba(255,${150 + (i * 13) % 100},60,${0.5 + 0.5 * Math.sin(t * 3 + i)})`; ctx.fillRect((i * 37 + t * 20) % w, h - ((t * 30 + i * 23) % h), 2, 2); }
@@ -223,20 +235,6 @@ class TitleScene {
       ctx.save(); ctx.translate(w * 0.26, h * 0.95); ctx.scale(h / 120, h / 120);
       drawBrady(ctx, { x: 0, y: 0, facing: 1, small: false, power: 0, anim: { state: 'run', t, phase: t * 13, speed: 1 }, hair: null, look: Save.data.look, time: t });
       ctx.restore();
-    } else if (c.id === 'classic') {
-      // a tiny low-res scene scaled up with hard pixels
-      const rc = this.retroCanvas, rx = rc.getContext('2d');
-      rx.fillStyle = '#5a9aff'; rx.fillRect(0, 0, 72, 48);
-      rx.fillStyle = '#ffffff'; rx.fillRect(((t * 6) % 90) - 14, 8, 12, 3); rx.fillRect(((t * 6) % 90) - 12, 6, 7, 2);
-      rx.fillStyle = '#c87a3a'; for (let i = 0; i < 9; i++) rx.fillRect(i * 8, 40, 7, 7);
-      rx.fillStyle = '#7ad86a'; rx.fillRect(0, 38, 72, 2);
-      rx.fillStyle = '#ff4f8a'; rx.fillRect(40, 20, 7, 7); rx.fillStyle = '#ffe24a'; rx.fillRect(43, 20, 1, 7); rx.fillRect(40, 23, 7, 1);
-      rx.save(); rx.translate(20 + Math.sin(t) * 8, 38); rx.scale(0.45, 0.45);
-      drawBrady(rx, { x: 0, y: 0, facing: 1, small: true, power: 0, anim: { state: Math.sin(t * 2) > 0 ? 'run' : 'jump', t, phase: t * 12, speed: 1 }, hair: null, look: Save.data.look, time: t });
-      rx.restore();
-      ctx.imageSmoothingEnabled = false; ctx.drawImage(rc, 0, 0, w, h * (48 / 48)); ctx.imageSmoothingEnabled = true;
-      ctx.fillStyle = 'rgba(0,0,0,0.18)'; for (let yy = 0; yy < h; yy += 3) ctx.fillRect(0, yy, w, 1);
-      ctx.font = `${Math.min(12, w / 14)}px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.fillText('8-BIT', w / 2, 16);
     } else if (c.id === 'world') {
       const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0c0a1e'); g.addColorStop(1, '#2a1a3a');
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
@@ -654,7 +652,7 @@ class GameOverScene {
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
     UI.title(ctx, 'GAME OVER', W / 2, H / 2 - 50, Math.min(48, W * 0.09));
     ctx.save(); ctx.textAlign = 'center'; ctx.font = `13px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillText('Lord Buzzkill wins this round. Not the war.', W / 2, H / 2 - 12); ctx.restore();
+    ctx.fillText('The Man wins this round. Not the war.', W / 2, H / 2 - 12); ctx.restore();
     UI.drawButtons(ctx, this.btns);
   }
 }
@@ -667,14 +665,14 @@ class CreditsScene {
     const g = countGold(), sp = setProgress(this.set);
     const bossSet = this.set === 'classic' ? CLASSIC_WORLDS : this.set === 'world' ? WORLD3_REGIONS : WORLD_ORDER.filter(w => !WORLDS[w].secret);
     const bosses = []; for (const w of bossSet) { const n = bossName(w); if (n && bosses.indexOf(n) < 0) bosses.push(n); }
-    const tag = this.set === 'classic' ? 'BRADY-O CLASSIC' : this.set === 'world' ? 'BRADY-O WORLD' : 'ROAD TO THE BURN';
+    const tag = this.set === 'world' ? 'SUPER BRADY-O WORLD' : 'BRADY-O BURNS';
     this.lines = [
       ['BRADY-O', 'h'], [tag, 'k'], ['', ''], ['Chinka is safe. The Man burned. Nobody hydrated enough.', 's'], ['', ''],
       ['STARRING', 'k'], ['Brady  ·  long hair, man bun, zero chill', 'v'], ['Chinka  ·  the actual hero, honestly', 'v'], ['Slothy  ·  very fast, for a sloth', 'v'], ['Toadie & the Toad Crew  ·  hydration consultants', 'v'], ['', ''],
-      ['AND INTRODUCING', 'k'], ['Lord Buzzkill  ·  a mosquito the size of a dome', 'v'], ['', ''],
+      ['AND INTRODUCING', 'k'], ['The Man  ·  forty feet of wood with a crush on Chinka', 'v'], ['', ''],
       ['BURNERS WHO GOT IN THE WAY', 'k'], ['Hippies who want to talk about your aura', 'v'], ['Tech bros on electric unicycles', 'v'], ['Orgy dome creepers in fur coats', 'v'], ['Sparkle ponies who forgot water', 'v'], ['Fake spiritual pagan witches', 'v'], ['DPW. Obviously DPW.', 'v'], ['', ''],
       ['CAMP BOSSES', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
-      ['YOUR STATS', 'k'], [`Photos of Chinka: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times Buzzkill got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
+      ['YOUR STATS', 'k'], [`Photos of Chinka: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Man got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
       [g.have >= g.total ? 'Every photo of Chinka. She framed them all.' : 'Some photos of Chinka are still out on the playa...', 's'],
       [worldUnlocked(22) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', ''],
       ['Leave no trace. Hug your sloth.', 's'], ['', ''], ['', ''],

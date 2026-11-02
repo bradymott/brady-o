@@ -120,6 +120,13 @@ const Save = {
     for (const k in def.settings) if (d.settings[k] === undefined) d.settings[k] = def.settings[k];
     if (!d.look || !d.look.v) d.look = Object.assign({}, def.look); // look v2: modelled on Brady's photo
     for (const k in def.look) if (d.look[k] === undefined) d.look[k] = def.look[k];
+    // v3: the games were restructured (Brady-O Burns in 3D, Super Brady-O World's new lands),
+    // so old 2D level progress no longer matches any level. Keep looks, settings, lives, kart and eggs.
+    if ((d.v || 0) < 3) {
+      d.done = {}; d.unlocked = { '41-1': true }; d.gold = {}; d.best = {}; d.secretExits = {}; d.world3 = {};
+      d.worldsSeen = {}; d.seenIntro = false; d.seenWorldIntro = false; d.beatGame = false; d.lastWorld = 41;
+      d.v = 3;
+    }
     this.data = d;
     return d;
   },
