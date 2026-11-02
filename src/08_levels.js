@@ -267,7 +267,7 @@ function genStrip(ctx, mode) {
   for (const s of sets) if (!s.done) st.x = runChunk(st, s.chunk, s.opts);
   if (secret && !secretPlaced) st.x = placeSecret(st, secret, secretStyle);
   // the end: stairs up then a runway to the Encore Gate
-  const endX = R.finale === 'flat' ? chunkFinaleFlat(st) : chunkFinale(st);
+  const endX = R.finale === 'gift' ? chunkFinaleGift(st) : R.finale === 'flat' ? chunkFinaleFlat(st) : chunkFinale(st);
   if (cave) for (let cx = 0; cx < endX; cx++) { B.fill(cx, 0, cx, R.ceil || 4, T.GROUND); }
   B.trim(endX);
   resolvePendingReturns(st);

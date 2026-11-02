@@ -25,6 +25,30 @@ class Ent {
     Sound.play('kick');
     this.g.burst(this.cx, this.cy, 10, '#ffffff', 'spark');
   }
+  // Molly's love bomb (and Slothy's hug): a hostile burner becomes a dancing friend
+  befriend() {
+    if (this.dead || this.friendT) return false;
+    this.friendT = 6; this.enemy = false; this.vx = 0;
+    this.g.addScore(300, this.cx, this.y);
+    this.g.burst(this.cx, this.cy, 14, '#ff9ad8', 'confetti');
+    this.g.parts.text(this.cx, this.y - 6, '\u2665', '#ff7ab8');
+    return true;
+  }
+  // returns true while the entity is a dancing friend (call at the top of update)
+  updateFriend(dt) {
+    if (!this.friendT) return false;
+    this.friendT -= dt; this.t += dt;
+    if (Math.random() < 0.05) this.g.burst(this.cx, this.y, 1, `hsl(${Math.random() * 360},100%,70%)`, 'spark');
+    if (this.friendT <= 0) { this.remove = true; this.g.burst(this.cx, this.cy, 10, '#ff9ad8', 'confetti'); }
+    return true;
+  }
+  drawFriend(ctx, fn) {
+    // a little dance: bob and sway, hearts float up
+    ctx.save(); ctx.translate(this.cx, this.y + this.h); ctx.rotate(Math.sin(this.t * 8) * 0.18); ctx.translate(0, -Math.abs(Math.sin(this.t * 8)) * 4);
+    fn(ctx); ctx.restore();
+    ctx.fillStyle = `rgba(255,120,190,${0.6 + 0.4 * Math.sin(this.t * 5)})`; ctx.font = `10px ${FONT_UI}`; ctx.textAlign = 'center';
+    ctx.fillText('\u2665', this.cx + Math.sin(this.t * 3) * 6, this.y - 8 - (this.t * 20) % 20);
+  }
   updateKnocked(dt) {
     this.vy += PHYS.gDown * dt; this.x += this.vx * dt; this.y += this.vy * dt; this.spin = (this.spin || 0) + dt * 10;
     if (this.y > this.g.area.H * TS + 100) this.remove = true;
@@ -57,7 +81,9 @@ class Walker extends Ent {
   }
   hit(kind, src) {
     if (this.dead) return false;
+    if (kind === 'love' || kind === 'hug') return this.befriend();
     if (kind === 'stomp') return this.stomp(src);
+    if (kind === 'spin') { if (this.spiky || this.fiery) return 'bounce'; return this.stomp(src); }
     this.knockOff(src && src.vx ? sign(src.vx) : (src && src.x < this.x ? 1 : -1));
     return true;
   }
@@ -70,180 +96,7 @@ class Walker extends Ent {
   touchPlayer(p) { if (!this.dead) p.hurt(this); }
 }
 
-class Glump extends Walker {
-  constructor(g, s) { super(g, s, 24, 24, 1.6); this.col = g.tint('glump'); }
-  update(dt) {
-    this.t += dt;
-    if (this.knocked) return this.updateKnocked(dt);
-    if (this.dead) { this.flatT -= dt; if (this.flatT <= 0) this.remove = true; return; }
-    this.walk(dt);
-  }
-  draw(ctx) {
-    if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI); Sprites.glump(ctx, 0, this.h / 2, this.t, this.col, this.dir, 0, false); ctx.restore(); return; }
-    Sprites.glump(ctx, this.cx, this.y + this.h, this.t, this.col, this.dir, Math.sin(this.t * 10) * 0.5, this.dead);
-  }
-}
-
-class Rollo extends Walker {
-  constructor(g, s) { super(g, s, 24, 28, 1.4); this.col = g.tint('rollo'); this.edgeTurn = true; this.state = 'walk'; this.shellT = 0; this.spin = 0; this.kickGrace = 0; }
-  update(dt) {
-    this.t += dt;
-    if (this.knocked) return this.updateKnocked(dt);
-    if (this.kickGrace > 0) this.kickGrace -= dt;
-    if (this.state === 'shell') {
-      this.shellT += dt;
-      if (this.shellT > 6) { this.state = 'walk'; this.h = 28; this.y -= 4; this.vx = this.dir * this.speed; this.edgeTurn = true; }
-    }
-    if (this.state === 'slide') {
-      this.spin += dt * sign(this.vx) * 14;
-      // knock out enemies in the way
-      for (const e of this.g.entities) {
-        if (e === this || !e.enemy || e.dead || e.boss) continue;
-        if (overlap(this, e)) { e.hit('shell', this); this.g.chainScore(this); }
-      }
-      // break bricks it slams into
-      if (this.hitWallTile) {
-        const ht = this.hitWallTile; this.hitWallTile = null;
-        this.g.bumpBlock(ht.tx, ht.ty, true, this);
-      }
-    }
-    this.walk(dt);
-    if (this.state === 'slide' && this.hitWall) {
-      const tx = Math.floor((this.vx < 0 ? this.x + this.w + 2 : this.x - 2) / TS), ty = Math.floor(this.cy / TS);
-      const t = tileAt(this.g.area, tx, ty);
-      if (t === T.BRICK || t === T.QBLOCK || t === T.QBRICK) this.g.bumpBlock(tx, ty, true, this);
-      if (this.g.onScreen(this)) Sound.play('bump', { vol: 0.5 });
-    }
-    if (this.state === 'shell') this.vx = 0;
-  }
-  stomp(p) {
-    Sound.play('stomp');
-    if (this.state === 'walk') {
-      this.state = 'shell'; this.shellT = 0; this.vx = 0; this.y += 4; this.h = 24; this.edgeTurn = false;
-      return true;
-    }
-    if (this.state === 'slide') { this.state = 'shell'; this.shellT = 0; this.vx = 0; return true; }
-    // stomping a resting shell kicks it
-    this.kick(p.cx < this.cx ? 1 : -1);
-    return true;
-  }
-  kick(dir) {
-    this.state = 'slide'; this.vx = dir * 9.5 * TS; this.kickGrace = 0.25; this.edgeTurn = false; this.g.chain = 0;
-    Sound.play('kick');
-    this.g.burst(this.cx, this.y + this.h, 6, '#ffffff', 'dust');
-  }
-  touchPlayer(p) {
-    if (this.dead) return;
-    if (this.state === 'shell') { this.kick(p.cx < this.cx ? 1 : -1); return; }
-    if (this.state === 'slide' && this.kickGrace > 0) return;
-    p.hurt(this);
-  }
-  draw(ctx) {
-    if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI); Sprites.rollo(ctx, 0, this.h / 2, this.t, this.col, this.dir, true, 0); ctx.restore(); return; }
-    let shake = 0;
-    if (this.state === 'shell' && this.shellT > 4.5) shake = Math.sin(this.t * 40) * 1.5;
-    Sprites.rollo(ctx, this.cx + shake, this.y + this.h, this.t, this.col, this.dir, this.state !== 'walk', this.spin);
-  }
-}
-
-class Spiker extends Walker {
-  constructor(g, s) { super(g, s, 24, 22, 1.2); this.col = g.tint('spiker'); this.edgeTurn = !!s.edgeTurn; }
-  update(dt) { this.t += dt; if (this.knocked) return this.updateKnocked(dt); this.walk(dt); }
-  stomp(p) { return false; }
-  hit(kind, src) { if (kind === 'stomp') return false; return super.hit(kind, src); }
-  draw(ctx) {
-    if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI); Sprites.spiker(ctx, 0, this.h / 2, this.t, this.col, this.dir); ctx.restore(); return; }
-    Sprites.spiker(ctx, this.cx, this.y + this.h, this.t, this.col, this.dir);
-  }
-}
-
-class Hopper extends Walker {
-  constructor(g, s) { super(g, s, 22, 22, 1.0); this.col = g.tint('hopper'); this.jt = 1 + Math.random(); }
-  update(dt) {
-    this.t += dt;
-    if (this.knocked) return this.updateKnocked(dt);
-    if (this.dead) { this.flatT -= dt; if (this.flatT <= 0) this.remove = true; return; }
-    if (this.onGround) {
-      this.vx = 0;
-      this.jt -= dt;
-      if (this.jt <= 0) {
-        const p = this.g.player;
-        const d = p ? sign(p.cx - this.cx) || this.dir : this.dir;
-        this.dir = d; this.vy = -13 * TS; this.vx = d * 2.6 * TS; this.jt = 1.1 + Math.random() * 0.9; this.onGround = false;
-      }
-    }
-    const vx = this.vx;
-    this.walk(dt);
-    if (!this.onGround && this.hitWall) this.vx = -vx;
-  }
-  draw(ctx) {
-    if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI); Sprites.hopper(ctx, 0, this.h / 2, this.t, this.col, this.dir, false); ctx.restore(); return; }
-    if (this.dead) { ctx.save(); ctx.translate(this.cx, this.y + this.h); ctx.scale(1.3, 0.35); Sprites.hopper(ctx, 0, 0, this.t, this.col, this.dir, false); ctx.restore(); return; }
-    Sprites.hopper(ctx, this.cx, this.y + this.h, this.t, this.col, this.dir, !this.onGround);
-  }
-}
-
 /* ---------------- flyers & floaters ---------------- */
-class Flapper extends Ent {
-  constructor(g, s) {
-    super(g, s, 24, 18); this.enemy = true; this.col = g.tint('flapper');
-    this.hx = this.x; this.hy = this.y; this.range = (2 + Math.random() * 2) * TS; this.state = 'patrol'; this.cool = 2;
-    this.swoops = g.level.d > 0.3;
-  }
-  update(dt) {
-    this.t += dt;
-    if (this.knocked) return this.updateKnocked(dt);
-    const p = this.g.player;
-    if (this.state === 'patrol') {
-      const nx = this.hx + Math.sin(this.t * 0.9) * this.range;
-      this.dir = sign(nx - this.x) || this.dir;
-      this.x = nx; this.y = this.hy + Math.sin(this.t * 2.6) * 10;
-      this.cool -= dt;
-      if (this.swoops && this.cool <= 0 && p && !p.dead && Math.abs(p.cx - this.cx) < 5 * TS && p.y > this.y + TS && p.y < this.y + 7 * TS) {
-        this.state = 'swoop'; this.sx = this.x; this.sy = this.y; this.tx = p.cx - this.w / 2; this.ty = p.y; this.st = 0;
-      }
-    } else if (this.state === 'swoop') {
-      this.st += dt * 0.9;
-      const k = Math.min(1, this.st);
-      // dive along an arc down to the player's old position and back up
-      this.x = lerp(this.sx, this.tx + (this.tx - this.sx), k);
-      this.y = this.sy + Math.sin(k * Math.PI) * (this.ty - this.sy);
-      this.dir = sign(this.tx - this.sx) || this.dir;
-      if (k >= 1) { this.state = 'patrol'; this.hx = this.x - Math.sin(this.t * 0.9) * this.range; this.hy = this.y; this.cool = 2.5; }
-    }
-  }
-  hit(kind, src) {
-    if (this.dead) return false;
-    if (kind === 'stomp') { this.knockOff(0); Sound.play('stomp'); return true; }
-    this.knockOff(src && src.vx ? sign(src.vx) : 1); return true;
-  }
-  touchPlayer(p) { if (!this.dead) p.hurt(this); }
-  draw(ctx) {
-    if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(this.spin || 0); Sprites.flapper(ctx, 0, 10, this.t, this.col, this.dir); ctx.restore(); return; }
-    Sprites.flapper(ctx, this.cx, this.y + this.h, this.t, this.col, this.dir);
-  }
-}
-
-class Wisp extends Ent {
-  constructor(g, s) { super(g, s, 22, 26); this.enemy = true; this.col = g.tint('flapper') ; this.col = '#c8a8ff'; this.hx = this.x; this.hy = this.y; }
-  update(dt) {
-    this.t += dt;
-    if (this.knocked) return this.updateKnocked(dt);
-    const p = this.g.player;
-    if (p && !p.dead && Math.abs(p.cx - this.cx) < 8 * TS && Math.abs(p.cy - this.cy) < 6 * TS) {
-      const dx = p.cx - this.cx, dy = p.cy - this.cy, d = Math.hypot(dx, dy) || 1;
-      const sp = 1.3 * TS;
-      this.x += dx / d * sp * dt; this.y += dy / d * sp * dt + Math.sin(this.t * 3) * 0.3;
-    } else {
-      this.x += (this.hx - this.x) * dt * 0.5; this.y += (this.hy + Math.sin(this.t * 2) * 12 - this.y) * dt;
-    }
-  }
-  hit(kind, src) { if (this.dead || kind === 'stomp') return false; this.knockOff(1); return true; }
-  touchPlayer(p) { if (!this.dead) p.hurt(this); }
-  draw(ctx) { Sprites.wisp(ctx, this.cx, this.cy, this.t, this.col); }
-  get light() { return { r: 70, c: 'rgba(200,170,255,' }; }
-}
-
 class Jelly extends Ent {
   constructor(g, s) { super(g, s, 22, 24); this.enemy = true; this.hy = this.y; this.range = (s.range || 3) * TS; this.col = ['#ff7ad8', '#7ad8ff', '#c87aff'][Math.floor(Math.random() * 3)]; }
   update(dt) { this.t += dt; if (this.knocked) return this.updateKnocked(dt); this.y = this.hy + Math.sin(this.t * 1.1) * this.range * 0.5; }
@@ -276,38 +129,6 @@ class Snapper extends Ent {
 }
 
 /* ---------------- turrets & projectiles ---------------- */
-class Boomer extends Ent {
-  constructor(g, s) { super(g, s, 26, 30); this.enemy = true; this.col = g.tint('glump'); this.cool = 1.5 + Math.random(); this.pulse = 0; }
-  update(dt) {
-    this.t += dt;
-    if (this.knocked) return this.updateKnocked(dt);
-    const p = this.g.player;
-    this.pulse = Math.max(0, this.pulse - dt * 3);
-    if (!p || p.dead) return;
-    this.dir = p.cx < this.cx ? -1 : 1;
-    const dx = Math.abs(p.cx - this.cx);
-    this.cool -= dt;
-    if (this.cool <= 0 && dx < 13 * TS && dx > 2 * TS && this.g.onScreen(this, 40)) {
-      this.cool = 2.8 - this.g.level.d * 0.8;
-      this.pulse = 1;
-      const bb = new BassBall(this.g, this.cx + this.dir * 14, this.y + 12, this.dir, '#ff4fa8');
-      bb.kind = enemyLook('boomer') === 'slot' ? 'coin' : 'heart';
-      this.g.spawn(bb);
-      Sound.play('fire', { vol: 0.6 });
-    }
-  }
-  hit(kind, src) {
-    if (this.dead) return false;
-    if (kind === 'stomp') { this.knockOff(0); Sound.play('stomp'); return true; }
-    this.knockOff(src && src.vx ? sign(src.vx) : 1); return true;
-  }
-  touchPlayer(p) { if (!this.dead) p.hurt(this); }
-  draw(ctx) {
-    if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(this.spin || 0); Sprites.boomer(ctx, 0, 15, this.t, this.col, this.dir, 0); ctx.restore(); return; }
-    Sprites.boomer(ctx, this.cx, this.y + this.h, this.t, this.col, this.dir, this.pulse);
-  }
-}
-
 class BassBall extends Ent {
   constructor(g, x, y, dir, col) { super(g, null, 18, 18); this.x = x - 9; this.y = y - 9; this.vx = dir * 4.6 * TS; this.dir = dir; this.enemy = true; this.col = col || '#ff4fd8'; this.life = 6; }
   update(dt) {
@@ -346,67 +167,6 @@ class Leaper extends Ent {
 }
 
 /* ---------------- hazards ---------------- */
-class Slab extends Ent {
-  constructor(g, s) { super(g, s, 56, 56); this.x = s.x - TS; this.y = s.y - 64; this.homeY = this.y; this.state = 'idle'; this.timer = 0; this.solidTop = true; this.dx = 0; this.dy = 0; this.enemy = false; }
-  update(dt) {
-    this.t += dt;
-    const p = this.g.player;
-    const oy = this.y;
-    if (this.state === 'idle') {
-      if (p && !p.dead && p.y > this.y + this.h - 4 && Math.abs(p.cx - this.cx) < 1.7 * TS) { this.state = 'shake'; this.timer = 0.3; }
-    } else if (this.state === 'shake') {
-      this.timer -= dt; if (this.timer <= 0) { this.state = 'fall'; this.vy = 0; }
-    } else if (this.state === 'fall') {
-      this.vy = Math.min(this.vy + 90 * TS * dt, 24 * TS);
-      const probe = { x: this.x + 2, y: this.y, w: this.w - 4, h: this.h, vx: 0, vy: this.vy };
-      moveBody(probe, this.g.area, dt, { semis: false });
-      this.y = probe.y;
-      if (probe.onGround) { this.state = 'land'; this.timer = 1.0; if (this.g.onScreen(this)) { this.g.shake(6); Sound.play('bump'); this.g.burst(this.cx, this.y + this.h, 14, '#c8c8d0', 'dust'); } }
-      if (this.y > this.g.area.H * TS) { this.y = this.homeY; this.state = 'idle'; }
-    } else if (this.state === 'land') {
-      this.timer -= dt; if (this.timer <= 0) this.state = 'rise';
-    } else if (this.state === 'rise') {
-      this.y -= 2.4 * TS * dt; if (this.y <= this.homeY) { this.y = this.homeY; this.state = 'idle'; }
-    }
-    this.dy = this.y - oy; this.dx = 0;
-  }
-  touchPlayer(p) {
-    // standing on top is safe; otherwise falling slabs crush, resting ones push
-    if (p.y + p.h <= this.y + 6 && p.vy >= 0) return;
-    if (this.state === 'fall' && p.y + p.h > this.y + this.h - 18) { p.hurt(this); return; }
-    if (p.cx < this.cx) p.x = this.x - p.w; else p.x = this.x + this.w;
-  }
-  draw(ctx) {
-    const sx = this.state === 'shake' ? Math.sin(this.t * 60) * 2 : 0;
-    // chain to ceiling
-    ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 2;
-    for (let yy = this.homeY - 200; yy < this.y; yy += 10) { ctx.beginPath(); ctx.ellipse(this.cx, yy, 2.5, 4, 0, 0, TAU); ctx.stroke(); }
-    Sprites.slab(ctx, this.x + sx, this.y, this.w, this.h, this.t, this.state === 'fall' || this.state === 'shake' || this.state === 'land', this.g.area.theme);
-  }
-}
-
-class Icicle extends Ent {
-  constructor(g, s) { super(g, s, 14, 26); this.x = s.x - 7; this.y = s.y - TS; this.state = 'hang'; this.timer = 0; this.enemy = false; }
-  update(dt) {
-    this.t += dt;
-    const p = this.g.player;
-    if (this.state === 'hang') {
-      if (p && !p.dead && Math.abs(p.cx - this.cx) < 1.3 * TS && p.y > this.y) { this.state = 'shake'; this.timer = 0.35; if (this.g.onScreen(this)) Sound.play('crumble', { vol: 0.5 }); }
-    } else if (this.state === 'shake') {
-      this.timer -= dt; if (this.timer <= 0) { this.state = 'fall'; this.vy = 0; }
-    } else if (this.state === 'fall') {
-      this.vy = Math.min(this.vy + 60 * TS * dt, 20 * TS);
-      moveBody(this, this.g.area, dt, { semis: false });
-      if (this.onGround || this.y > this.g.area.H * TS) {
-        this.remove = true; this.g.burst(this.cx, this.y + this.h, 12, '#c8f0ff', 'debris');
-        if (this.g.onScreen(this)) Sound.play('break', { vol: 0.5 });
-      }
-    }
-  }
-  touchPlayer(p) { if (this.state === 'fall') p.hurt(this); }
-  draw(ctx) { Sprites.icicle(ctx, this.cx, this.y, this.state === 'shake'); }
-}
-
 class EmberChain extends Ent {
   constructor(g, s) {
     super(g, s, 2, 2);
@@ -464,21 +224,62 @@ class Bolt extends Ent {
 
 /* ---------------- platforms ---------------- */
 class MovingPlatform extends Ent {
+  // motion: back-and-forth (ax/ay), pendulum swing (trapeze), orbit (saucer rings) or carrier (rides with the scroll)
   constructor(g, s) {
     super(g, s, (s.pw || 3) * TS, 14);
     this.x = s.x - TS / 2; this.y = s.y; this.hx = this.x; this.hy = this.y;
-    this.ax = s.ax || 0; this.ay = s.ay || 0; this.speed = (s.speed || 2) * TS;
+    this.ax = s.ax || 0; this.ay = s.ay || 0; this.speed = (s.speed || 2) * TS; this.rate = s.speed || 2;
+    this.skin = s.skin || null; this.design = s.design || 0;
+    this.swing = s.swing || null; this.orbit = s.orbit || 0; this.carrier = !!s.carrier; this.tilt = !!s.tilt;
     const dist = Math.hypot(this.ax, this.ay) || 1;
     this.period = dist / this.speed * 2 + 1.0;
-    this.t = 0; this.dx = 0; this.dy = 0; this.isPlatform = true;
+    this.t = s.phase || 0; this.dx = 0; this.dy = 0; this.isPlatform = true; this.tiltT = 0; this.tiltDir = 1;
+    if (this.swing) { this.ancX = s.x; this.ancY = s.y; this.place(); this.dx = this.dy = 0; }
+    if (this.orbit) { this.place(); this.dx = this.dy = 0; }
+    if (this.carrier) {
+      this.stopX = s.stopX || 1e9;
+      // after a checkpoint the bus pulls up wherever Brady respawns
+      const cp = g.checkpoint, st = g.level && g.level.start;
+      if (cp && st) { this.x += cp.x - st.x; this.hx = this.x; }
+    }
   }
-  update(dt) {
-    this.t += dt;
-    const k = 0.5 - 0.5 * Math.cos(this.t / this.period * TAU);
-    const nx = this.hx + this.ax * k, ny = this.hy + this.ay * k;
+  place() {
+    let nx, ny;
+    if (this.swing) {
+      const th = this.swing.amp * Math.sin(this.t * this.rate * 1.6);
+      nx = this.ancX + Math.sin(th) * this.swing.len - this.w / 2; ny = this.ancY + Math.cos(th) * this.swing.len;
+      this.swingTh = th;
+    } else if (this.orbit) {
+      const a = this.t * this.rate;
+      nx = this.hx + Math.cos(a) * this.orbit; ny = this.hy + Math.sin(a) * this.orbit;
+    } else {
+      const k = 0.5 - 0.5 * Math.cos(this.t / this.period * TAU);
+      nx = this.hx + this.ax * k; ny = this.hy + this.ay * k;
+    }
     this.dx = nx - this.x; this.dy = ny - this.y; this.x = nx; this.y = ny;
   }
-  draw(ctx) { Sprites.platform(ctx, this.x, this.y, this.w, THEMES[this.g.area.theme], 'move', this.t); }
+  update(dt) {
+    if (this.carrier) {
+      const go = this.g.state === 'play' && this.x < this.stopX;
+      const nx = go ? Math.min(this.stopX, this.x + this.speed * dt) : this.x;
+      this.dx = nx - this.x; this.dy = 0; this.x = nx; this.t += dt;
+      return;
+    }
+    this.t += dt;
+    this.place();
+    // acro flyers: stand too long and they tip you off
+    if (this.tilt) {
+      const p = this.g.player;
+      if (p && p.ride === this) {
+        this.tiltT += dt;
+        if (this.tiltT > 1.3) { this.tiltDir = p.cx < this.cx ? -1 : 1; p.x += this.tiltDir * 3.2 * TS * dt * Math.min(1, (this.tiltT - 1.3) * 2); }
+      } else this.tiltT = Math.max(0, this.tiltT - dt * 2);
+    }
+  }
+  draw(ctx) {
+    if (this.skin && PlatformArt[this.skin]) PlatformArt[this.skin](ctx, this, this.g.t);
+    else Sprites.platform(ctx, this.x, this.y, this.w, THEMES[this.g.area.theme], 'move', this.t);
+  }
 }
 class FallingPlatform extends Ent {
   constructor(g, s) {
@@ -503,7 +304,9 @@ class FallingPlatform extends Ent {
     if (this.state === 'gone') return;
     const sx = this.state === 'shake' ? Math.sin(this.t * 70) * 1.5 : 0;
     ctx.save(); if (this.respawnT > 0) ctx.globalAlpha = 1 - this.respawnT / 0.4;
-    Sprites.platform(ctx, this.x + sx, this.y, this.w, THEMES[this.g.area.theme], 'fall', this.t); ctx.restore();
+    if (this.s.skin && PlatformArt[this.s.skin]) PlatformArt[this.s.skin](ctx, { x: this.x + sx, y: this.y, w: this.w, h: this.h, t: this.t, design: Math.floor(this.hx / TS) % 3, tilt: this.state === 'shake' ? Math.sin(this.t * 40) * 0.08 : 0 }, this.g.t);
+    else Sprites.platform(ctx, this.x + sx, this.y, this.w, THEMES[this.g.area.theme], 'fall', this.t);
+    ctx.restore();
   }
 }
 
@@ -514,6 +317,7 @@ class Item extends Ent {
     if (kind === 'coffee' || kind === 'cassette') this.speedX = 2.4 * TS;
     if (kind === 'eclipse') this.speedX = 3.6 * TS;
     if (kind === 'bufo') this.speedX = 2.0 * TS;
+    if (BAG_KINDS[kind]) this.speedX = 1.2 * TS;
     this.item = true;
   }
   update(dt) {
@@ -526,6 +330,7 @@ class Item extends Ent {
     if (this.hitWall) this.vx = -vx;
     if (this.kind === 'eclipse' && this.onGround) this.vy = -11 * TS;
     if (this.kind === 'bufo' && this.onGround) { this.vy = -8 * TS; if (this.g.onScreen(this) && Math.random() < 0.3) Sound.play('toad', { vol: 0.4 }); }
+    if (BAG_KINDS[this.kind] && this.onGround) this.vy = -5 * TS;
     if (this.y > this.g.area.H * TS + 50) this.remove = true;
   }
   touchPlayer(p) {
@@ -544,6 +349,7 @@ class Item extends Ent {
     else if (this.kind === 'joint') Sprites.joint(ctx, x, y, this.t);
     else if (this.kind === 'eclipse') Sprites.eclipse(ctx, x, this.cy, this.t);
     else if (this.kind === 'cassette') Sprites.cassette(ctx, x, y, this.t);
+    else if (BAG_KINDS[this.kind]) Sprites.baggie(ctx, x, y, this.t, this.kind);
     ctx.restore();
   }
   get light() { return { r: 50, c: 'rgba(255,220,150,' }; }
@@ -576,7 +382,7 @@ class Spring extends Ent {
       if (p.cx < this.cx) p.x = Math.min(p.x, this.x - p.w); else p.x = Math.max(p.x, this.x + this.w);
     }
   }
-  draw(ctx) { Sprites.spring(ctx, this.cx, this.y + this.h, this.comp); }
+  draw(ctx) { if (this.s.skin && PlatformArt[this.s.skin + 'Spring']) PlatformArt[this.s.skin + 'Spring'](ctx, this.cx, this.y + this.h, this.comp, this.t); else Sprites.spring(ctx, this.cx, this.y + this.h, this.comp); }
 }
 
 class Checkpoint extends Ent {
@@ -614,19 +420,16 @@ class Portal extends Ent {
     if (Input.upPressed || Input.downPressed || (Input.up && p.onGround)) this.g.enterPortal(this);
   }
   draw(ctx) {
-    Sprites.portal(ctx, this.cx, this.y + 22, this.t, this.kind);
+    if (this.kind === 'door') DoorArt.draw(ctx, this.cx, this.y + this.h, this.s.look || 'door', this.t, this.near);
+    else Sprites.portal(ctx, this.cx, this.y + 22, this.t, this.kind);
     if (this.near) {
       const b = Math.sin(this.t * 6) * 3;
       ctx.fillStyle = 'rgba(255,255,255,0.95)';
       ctx.beginPath(); ctx.moveTo(this.cx, this.y - 22 + b); ctx.lineTo(this.cx + 8, this.y - 12 + b); ctx.lineTo(this.cx - 8, this.y - 12 + b); ctx.fill();
       ctx.font = `9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('UP', this.cx, this.y - 28 + b);
     }
-    if (this.warpWorld) {
-      ctx.fillStyle = '#ffd84a'; ctx.font = `13px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(WORLDS[this.warpWorld].label || String(this.warpWorld), this.cx, this.y - 40);
-    }
   }
-  get light() { return { r: 90, c: this.kind === 'glitch' ? 'rgba(0,255,154,' : 'rgba(180,120,255,' }; }
+  get light() { return this.kind === 'door' ? { r: 60, c: 'rgba(255,220,150,' } : { r: 90, c: 'rgba(180,120,255,' }; }
 }
 
 class Sign extends Ent {
@@ -672,153 +475,10 @@ class Disc extends Ent {
   draw(ctx) { Sprites.pukeball(ctx, this.cx, this.cy, this.t, 7); }
 }
 
-/* ---------------- boss ---------------- */
-class Boss extends Ent {
-  constructor(g, s) {
-    const style = (typeof BOSS_STYLE !== 'undefined' && BOSS_STYLE[s.world]) || 'raccoon';
-    const hush = !!(typeof BOSS_FLOATERS !== 'undefined' && BOSS_FLOATERS[style]);
-    super(g, s, hush ? 64 : 72, hush ? 100 : 70);
-    this.style = style;
-    this.world = s.world; this.boss = true; this.enemy = true;
-    this.arenaX0 = s.arenaX0 * TS; this.arenaX1 = s.doorX * TS; this.doorX = s.doorX;
-    const tier = s.world <= 12 ? s.world : s.world <= 38 ? (s.world - 30) * 1.25 : s.world <= 49 ? (s.world - 40) * 1.4 : 10;
-    this.tier = tier;
-    this.maxHp = style === 'buzzkill' ? (s.world === 10 ? 9 : 7) : hush ? 6 : clamp(3 + Math.floor(tier / 3), 3, 6);
-    if (s.world === 11 || s.world === 12 || s.world === 22) this.maxHp = 6;
-    this.hp = this.maxHp; this.state = 'sleep'; this.timer = 0; this.hurtT = 0; this.dir = -1; this.squash = 0; this.hush = hush;
-    this.name = typeof bossName === 'function' ? bossName(s.world).toUpperCase() : 'BOSS';
-    this.homeY = this.y;
-  }
-  get aggression() { return 1 + (1 - this.hp / this.maxHp) * 0.8 + Math.min(this.tier || 1, 10) * 0.04; }
-  shotKind() { return { hardhat: 'cone', dj: 'wave', buzzkill: 'skeeter', cart: 'coin', raccoon: 'coin', tumbleweed: 'cone', geyser: 'wave', bouncer: 'heart', barista: 'wave', mutant: 'wave', pony: 'heart', archivist: 'wave', triplord: 'heart', witch: 'wave', guru: 'coin', dustdevil: 'cone' }[this.style] || 'heart'; }
-  shotCol() { return { dj: '#38f2ff', geyser: '#8af0ff', witch: '#7affd8', buzzkill: '#ff3a5a', triplord: '#ff3ab8' }[this.style] || '#ff4fa8'; }
-  update(dt) {
-    this.t += dt;
-    if (this.hurtT > 0) this.hurtT -= dt;
-    this.squash = approach(this.squash, 0, dt * 4);
-    const p = this.g.player;
-    if (this.state === 'sleep') {
-      if (p && p.x > this.arenaX0 + TS) { this.state = 'intro'; this.timer = 1.6; this.g.bossStart(this); }
-      if (!this.hush) this.fall(dt);
-      return;
-    }
-    if (this.state === 'dying') {
-      this.timer -= dt;
-      if (Math.random() < 0.4) this.g.burst(this.x + Math.random() * this.w, this.y + Math.random() * this.h, 6, '#ffd84a', 'spark');
-      if (this.timer <= 0) { this.remove = true; this.g.bossDefeated(this); }
-      return;
-    }
-    if (this.state === 'intro') { this.timer -= dt; if (this.timer <= 0) { this.state = 'walk'; this.timer = 2; } if (!this.hush) this.fall(dt); return; }
-    if (this.hush) return this.updateHush(dt);
-    this.dir = p && p.cx < this.cx ? -1 : 1;
-    this.timer -= dt * this.aggression;
-    if (this.state === 'walk') {
-      this.vx = this.dir * (1.5 + this.world * 0.08) * TS * this.aggression;
-      if (this.timer <= 0) {
-        const r = Math.random();
-        if (r < 0.4) { this.state = 'jump'; this.vy = -16 * TS; this.vx = this.dir * 3.5 * TS; }
-        else if (r < 0.75 && this.world >= 2) { this.state = 'shoot'; this.timer = 0.9; this.vx = 0; this.shots = this.world >= 6 ? 3 : 2; }
-        else { this.state = 'charge'; this.timer = 0.45; this.vx = 0; }
-      }
-    } else if (this.state === 'jump') {
-      if (this.onGround && this.vy >= 0) { this.state = 'walk'; this.timer = 1.4 + Math.random(); this.g.shake(5); Sound.play('bump'); this.squash = 1; this.g.burst(this.cx, this.y + this.h, 14, '#ffffff', 'dust'); this.shockwave(); }
-    } else if (this.state === 'shoot') {
-      if (this.timer <= 0) {
-        { const bb = new BassBall(this.g, this.cx + this.dir * 30, this.y + 24 + (this.shots % 2) * 18, this.dir, this.shotCol()); bb.kind = this.shotKind(); this.g.spawn(bb); }
-        Sound.play('fire'); this.shots--;
-        this.timer = 0.4;
-        if (this.shots <= 0) { this.state = 'walk'; this.timer = 1.6; }
-      }
-    } else if (this.state === 'charge') {
-      if (this.timer > 0) this.vx = 0;
-      else { this.vx = this.dir * 8 * TS; if (this.hitWall || this.timer < -1.0) { this.state = 'walk'; this.timer = 1.5; if (this.hitWall) { this.g.shake(5); Sound.play('bump'); } } }
-    }
-    this.fall(dt);
-    this.x = clamp(this.x, this.arenaX0, this.arenaX1 - this.w);
-  }
-  shockwave() {
-    if ((this.tier || 1) < 4) return;
-    for (const d of [-1, 1]) { const b = new BassBall(this.g, this.cx + d * 40, this.y + this.h - 10, d, this.shotCol()); b.kind = 'wave'; b.vx *= 0.8; this.g.spawn(b); }
-  }
-  updateHush(dt) {
-    // The Hush floats, teleports, rains silent notes and swoops low (vulnerable) between volleys
-    const p = this.g.player;
-    this.timer -= dt * this.aggression;
-    this.dir = p && p.cx < this.cx ? -1 : 1;
-    if (!this.mode) { this.mode = 'float'; this.timer = 2; }
-    const groundY = this.homeY;
-    if (this.mode === 'float') {
-      this.y = approach(this.y, groundY - 4 * TS + Math.sin(this.t * 2) * 12, 6 * TS * dt);
-      this.x += this.dir * 1.5 * TS * dt;
-      if (this.timer <= 0) { this.mode = Math.random() < 0.5 ? 'volley' : 'teleport'; this.timer = 1.2; this.shots = 5; }
-    } else if (this.mode === 'volley') {
-      this.y = approach(this.y, groundY - 4 * TS, 6 * TS * dt);
-      if (this.timer <= 0 && this.shots > 0) {
-        this.shots--; this.timer = 0.28;
-        const b = new BassBall(this.g, this.cx, this.y + 40, this.dir, this.shotCol()); b.kind = this.shotKind();
-        const dx = p.cx - this.cx, dy = p.cy - (this.y + 40), d = Math.hypot(dx, dy) || 1;
-        b.vx = dx / d * 5 * TS; b.vy = dy / d * 5 * TS; b.update = function (dt2) { this.t += dt2; if (this.knocked) return this.updateKnocked(dt2); this.x += this.vx * dt2; this.y += this.vy * dt2; this.life -= dt2; if (this.life <= 0) this.remove = true; };
-        this.g.spawn(b); Sound.play('laser', { vol: 0.6 });
-      }
-      if (this.shots <= 0 && this.timer <= 0) { this.mode = 'swoop'; this.timer = 2.4; }
-    } else if (this.mode === 'teleport') {
-      this.alphaT = (this.alphaT || 0) + dt * 3;
-      if (this.timer <= 0) {
-        this.x = clamp(p.cx + (Math.random() < 0.5 ? -1 : 1) * 5 * TS - this.w / 2, this.arenaX0, this.arenaX1 - this.w);
-        this.mode = 'swoop'; this.timer = 2.4; this.alphaT = 0; Sound.play('portal');
-      }
-    } else if (this.mode === 'swoop') {
-      this.state = this.timer > 1.6 ? 'charge' : 'walk';
-      this.y = approach(this.y, groundY - (this.timer > 0.6 ? 0 : 3 * TS), 7 * TS * dt);
-      this.x += this.dir * 2.4 * TS * dt;
-      if (this.timer <= 0) { this.mode = 'float'; this.timer = 2.2; }
-    }
-    this.x = clamp(this.x, this.arenaX0, this.arenaX1 - this.w);
-  }
-  fall(dt) {
-    this.vy += PHYS.gDown * 0.8 * dt; if (this.vy > PHYS.maxFall) this.vy = PHYS.maxFall;
-    moveBody(this, this.g.area, dt, { semis: false });
-  }
-  hit(kind, src) {
-    if (this.state === 'sleep' || this.state === 'intro' || this.state === 'dying' || this.hurtT > 0) return false;
-    if (kind === 'stomp') {
-      if (this.hush && this.mode !== 'swoop') return false;
-      this.damage(1);
-      return true;
-    }
-    if (kind === 'disc') { this.damage(0.34); return true; }
-    if (kind === 'star' || kind === 'shell') { this.damage(1); return true; }
-    return false;
-  }
-  damage(n) {
-    this.hp -= n; this.hurtT = n >= 1 ? 1.0 : 0.25; this.squash = 1;
-    Sound.play('bossHit'); this.g.shake(6); this.g.burst(this.cx, this.cy, 16, '#ffffff', 'spark');
-    if (this.hp <= 0.01) { this.state = 'dying'; this.timer = 1.6; this.vx = 0; Sound.play('bossDie'); this.g.shake(14); }
-    else if (n >= 1 && !this.hush) { this.state = 'walk'; this.timer = 0.8; this.vx = -this.dir * 6 * TS; }
-    if (this.style === 'buzzkill' && this.g.onScreen(this)) Sound.play('mosquito', { vol: 0.6 });
-  }
-  touchPlayer(p) {
-    if (this.state === 'sleep' || this.state === 'dying' || this.state === 'intro') return;
-    // stomp from above
-    if (p.vy > 0 && p.prevBottom <= this.y + this.h * 0.35) {
-      if (this.hit('stomp', p)) { p.vy = -PHYS.stompVHeld; p.jumping = true; this.g.addScore(1000, this.cx, this.y); return; }
-    }
-    if (this.hurtT > 0.5) return;
-    p.hurt(this);
-  }
-  draw(ctx) {
-    ctx.save();
-    if (this.hush && this.mode === 'teleport') ctx.globalAlpha = Math.max(0.1, 1 - (this.alphaT || 0));
-    if (this.state === 'dying') ctx.globalAlpha = Math.max(0, this.timer / 1.6);
-    drawBoss(ctx, this, this.t);
-    ctx.restore();
-  }
-  get light() { return { r: 150, c: 'rgba(200,160,255,' }; }
-}
-
+// baggie power-ups (ground score): timed effects, never shown in use
+const BAG_KINDS = { molly: { name: 'LOVE BOMB', col: '#ff7ab8', time: 9 }, khole: { name: 'K-HOLE', col: '#7ab8ff', time: 9 }, powder: { name: 'PARTY POWDER', col: '#ffffff', time: 10 }, lsd: { name: 'LSD', col: '#c87aff', time: 14 } };
 const ENTITY_TYPES = {
-  glump: Glump, rollo: Rollo, spiker: Spiker, hopper: Hopper, flapper: Flapper, wisp: Wisp, jelly: Jelly, snapper: Snapper,
-  boomer: Boomer, leaper: Leaper, slab: Slab, icicle: Icicle, emberchain: EmberChain, bolt: Bolt,
+  jelly: Jelly, snapper: Snapper, leaper: Leaper, emberchain: EmberChain, bolt: Bolt,
   mplat: MovingPlatform, fplat: FallingPlatform, gold: Gold, spring: Spring, checkpoint: Checkpoint, gate: Gate,
-  portal: Portal, sign: Sign, boss: Boss
+  portal: Portal, sign: Sign
 };

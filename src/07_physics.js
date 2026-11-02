@@ -207,7 +207,7 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
     p.vy += PHYS.swimG * gm * dt;
     if (p.vy > PHYS.swimMaxFall) p.vy = approach(p.vy, PHYS.swimMaxFall, 30 * TS * dt);
     if (inp.down) p.vy = approach(p.vy, PHYS.swimMaxFall * 1.4, 20 * TS * dt);
-    if (zf && zf.fy) { p.vy += zf.fy * 0.35 * dt; if (zf.vmax && p.vy < -zf.vmax * 0.5) p.vy = -zf.vmax * 0.5; }
+    if (zf && zf.fy) { p.vy += zf.fy * dt; if (zf.vmax && p.vy < -zf.vmax * 0.5) p.vy = -zf.vmax * 0.5; }
     p.jumping = false; p.coyote = 0; p.jumpBuf = 0;
     if (p.y < -TS) p.vy = Math.max(p.vy, 0);
   } else {
