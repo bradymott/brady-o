@@ -189,6 +189,7 @@ const BurnsSave = {
       seenWorldIntro: {},        // worldId -> true
       lastWorld: 1,
       checkpoint: {},            // worldId -> checkpoint id (resume point)
+      pack: {},                  // Brady's backpack: itemId -> count (ground scores, quest items)
       settings: { camSens: 1, invertY: false, autoCam: true }
     };
   },
@@ -200,11 +201,16 @@ const BurnsSave = {
     for (const k in def) if (d[k] === undefined) d[k] = def[k];
     for (const k in def.settings) if (d.settings[k] === undefined) d.settings[k] = def.settings[k];
     if (!d.unlocked[1]) d.unlocked[1] = true;
-    // progression follows BURNS_WORLD_ORDER: every finished world unlocks the next one in the
-    // sequence (migrates saves made when worlds unlocked by id + 1, e.g. finished 6 -> unlock 11)
-    let changed = false;
-    for (const id of BURNS_WORLD_ORDER) { if (!d.worldDone[id]) continue; const nx = BurnsWorlds.next(id); if (nx && !d.unlocked[nx]) { d.unlocked[nx] = true; changed = true; } }
-    if (changed) this.save();
+    if (this._migrated !== d) {   // once per loaded save
+      this._migrated = d;
+      // progression follows BURNS_WORLD_ORDER: every finished world unlocks the next one in the
+      // sequence (migrates saves made under older orders, e.g. finished 2 -> unlock 16). Nothing is re-locked.
+      let changed = false;
+      for (const id of BURNS_WORLD_ORDER) { if (!d.worldDone[id]) continue; const nx = BurnsWorlds.next(id); if (nx && !d.unlocked[nx]) { d.unlocked[nx] = true; changed = true; } }
+      // ground scores arrived with world 16: saves that already got past it keep their baggies
+      if (!d.flags['0:groundscore'] && BURNS_WORLD_ORDER.some(id => d.worldDone[id] && BURNS_WORLD_ORDER.indexOf(id) > BURNS_WORLD_ORDER.indexOf(16))) { d.flags['0:groundscore'] = true; changed = true; }
+      if (changed) this.save();
+    }
     return d;
   },
   save() { try { Save.save(); } catch (e) { /* ignore */ } },
@@ -217,6 +223,9 @@ const BurnsSave = {
   hasItem(id) { return !!this.get().items[id]; },
   addItem(id) { const d = this.get(); if (d.items[id]) return false; d.items[id] = true; this.save(); return true; },
   flag(w, k, v) { const d = this.get(); const key = w + ':' + k; if (v !== undefined) { d.flags[key] = v; this.save(); } return d.flags[key]; },
+  // ground scores (baggies) exist only after the story flag (world 16, Bam Bam's pill)
+  groundScore() { return !!this.get().flags['0:groundscore']; },
+  setGroundScore(on) { this.flag(0, 'groundscore', on === undefined ? true : !!on); return this.groundScore(); },
   unlockWorld(w) { if (!w) return false; const d = this.get(); if (!d.unlocked[w]) { d.unlocked[w] = true; this.save(); return true; } return false; },
   isUnlocked(w) { return !!this.get().unlocked[w]; },
   setCostume(id) { const d = this.get(); d.costume = id; d.costumesOwned[id] = true; this.save(); }
@@ -225,26 +234,29 @@ const BurnsSave = {
 /* ---------------- world registry ---------------- */
 // Play order by world id. Ids never change (files, saves and tokens are keyed by id); the
 // "World N" a player sees is the position in this list. Finishing a world unlocks the next one here.
-const BURNS_WORLD_ORDER = [1, 2, 3, 4, 5, 6, 11, 7, 8, 9, 12, 13, 14, 10, 15];
+const BURNS_WORLD_ORDER = [1, 2, 16, 17, 3, 4, 5, 6, 11, 7, 8, 9, 12, 13, 14, 10, 15];
 // secret worlds stay off the hub until unlocked (15 "Exodus" unlocks after the finale, world 10)
 const BURNS_WORLD_SECRET = { 15: true };
 // Metadata for every world (shown on the hub even before a world file registers). hub = pin position on the map (0..1).
+// day / dayShort: the day of the Burn week (intro card, loading card, hub pin). home: Brady's revisitable home world.
 const BURNS_WORLD_META = [
-  { id: 1, name: 'The Line', sub: 'Gate Road', hub: { x: 0.88, y: 0.88 }, col: '#ff9a4a' },
-  { id: 2, name: 'Finding Camp', sub: 'The city at night', hub: { x: 0.72, y: 0.76 }, col: '#ff4fd8' },
-  { id: 3, name: 'Costume Cult & the Yellow Bike', sub: 'Pick a look. Find a ride.', hub: { x: 0.55, y: 0.85 }, col: '#ffe24a' },
-  { id: 4, name: 'The Orgy Dome', sub: 'Meet the informant. Keep your pants on.', hub: { x: 0.37, y: 0.81 }, col: '#ff3b5c' },
-  { id: 5, name: 'Costco Soul Trading Co.', sub: 'The great gifting warehouse', hub: { x: 0.20, y: 0.70 }, col: '#38f2ff' },
-  { id: 6, name: 'The Art Car Hunt', sub: 'Commandeer the fire octopus', hub: { x: 0.11, y: 0.50 }, col: '#ff7a2a' },
-  { id: 11, name: 'Sound Camp Crawl', sub: 'Follow the bass, camp to camp', hub: { x: 0.18, y: 0.30 }, col: '#7aff5a' },
-  { id: 7, name: 'Sunrise Set', sub: 'A heart-topped sound car at dawn', hub: { x: 0.32, y: 0.16 }, col: '#ffb0d8' },
-  { id: 8, name: 'Hell Station', sub: 'Fuel up. Fight DPW.', hub: { x: 0.50, y: 0.09 }, col: '#ff5a2a' },
-  { id: 9, name: 'Deep Playa Showdown', sub: 'The Man, again', hub: { x: 0.68, y: 0.16 }, col: '#9a6bff' },
-  { id: 12, name: 'The Temple', sub: 'Quiet, heavy, beautiful', hub: { x: 0.82, y: 0.30 }, col: '#f0d8a8' },
-  { id: 13, name: 'The Workshops', sub: 'Build something. Break nothing.', hub: { x: 0.9, y: 0.47 }, col: '#38c8ff' },
-  { id: 14, name: 'Skydive Into the Burn', sub: 'Plane, freefall, parachute', hub: { x: 0.79, y: 0.62 }, col: '#9ad8ff' },
-  { id: 10, name: 'The Man Pavilion', sub: 'Ride in. Bring her home.', hub: { x: 0.50, y: 0.48 }, col: '#ffd84a' },
-  { id: 15, name: 'Exodus', sub: 'The long road home', hub: { x: 0.09, y: 0.82 }, col: '#ffb040', secret: true }
+  { id: 1, name: 'The Line', sub: 'Gate Road', hub: { x: 0.88, y: 0.88 }, col: '#ff9a4a', day: 'Sunday, arrival', dayShort: 'SUN' },
+  { id: 2, name: 'No Camp', sub: 'The city at night', hub: { x: 0.75, y: 0.72 }, col: '#ff4fd8', day: 'Sunday night \u2192 Monday', dayShort: 'SUN NIGHT' },
+  { id: 16, name: 'Rhythm Wave', sub: 'The bamboo dance floor', hub: { x: 0.68, y: 0.89 }, col: '#ffb84a', day: 'Monday', dayShort: 'MON' },
+  { id: 17, name: 'Root Society', sub: 'Home sweet tipi', hub: { x: 0.60, y: 0.68 }, col: '#e8c890', day: 'Tuesday', dayShort: 'TUE', home: true },
+  { id: 3, name: 'Costume Cult', sub: 'Pick a look. Get your bike back.', hub: { x: 0.54, y: 0.87 }, col: '#ffe24a', day: 'Tuesday', dayShort: 'TUE' },
+  { id: 4, name: 'The Orgy Dome', sub: 'Meet the informant. Keep your pants on.', hub: { x: 0.37, y: 0.81 }, col: '#ff3b5c', day: 'Tuesday night', dayShort: 'TUE NIGHT' },
+  { id: 5, name: 'Costco Soul Trading Co.', sub: 'The great gifting warehouse', hub: { x: 0.20, y: 0.70 }, col: '#38f2ff', day: 'Wednesday', dayShort: 'WED' },
+  { id: 6, name: 'The Art Car Hunt', sub: 'Commandeer the fire octopus', hub: { x: 0.11, y: 0.50 }, col: '#ff7a2a', day: 'Wednesday night', dayShort: 'WED NIGHT' },
+  { id: 11, name: 'Sound Camp Crawl', sub: 'Follow the bass, camp to camp', hub: { x: 0.18, y: 0.30 }, col: '#7aff5a', day: 'Thursday night', dayShort: 'THU NIGHT' },
+  { id: 7, name: 'Sunrise Set', sub: 'A heart-topped sound car at dawn', hub: { x: 0.32, y: 0.16 }, col: '#ffb0d8', day: 'Friday dawn', dayShort: 'FRI DAWN' },
+  { id: 8, name: 'Hell Station', sub: 'Fuel up. Fight DPW.', hub: { x: 0.50, y: 0.09 }, col: '#ff5a2a', day: 'Friday', dayShort: 'FRI' },
+  { id: 9, name: 'Deep Playa Showdown', sub: 'The Man, again', hub: { x: 0.68, y: 0.16 }, col: '#9a6bff', day: 'Friday night', dayShort: 'FRI NIGHT' },
+  { id: 12, name: 'The Temple', sub: 'Quiet, heavy, beautiful', hub: { x: 0.82, y: 0.30 }, col: '#f0d8a8', day: 'Saturday dawn', dayShort: 'SAT DAWN' },
+  { id: 13, name: 'The Workshops', sub: 'Build something. Break nothing.', hub: { x: 0.9, y: 0.47 }, col: '#38c8ff', day: 'Saturday', dayShort: 'SAT' },
+  { id: 14, name: 'Skydive Into the Burn', sub: 'Plane, freefall, parachute', hub: { x: 0.79, y: 0.62 }, col: '#9ad8ff', day: 'Saturday afternoon', dayShort: 'SAT PM' },
+  { id: 10, name: 'The Man Pavilion', sub: 'Ride in. Bring her home.', hub: { x: 0.50, y: 0.48 }, col: '#ffd84a', day: 'Saturday night', dayShort: 'SAT NIGHT' },
+  { id: 15, name: 'Exodus', sub: 'The long road home', hub: { x: 0.09, y: 0.82 }, col: '#ffb040', secret: true, day: 'Monday', dayShort: 'MON' }
 ];
 const BurnsWorlds = {
   defs: {},
@@ -256,15 +268,32 @@ const BurnsWorlds = {
     def.name = def.name || meta.name || ('World ' + def.id);
     def.sub = def.sub || meta.sub || '';
     def.missions = def.missions || [];
+    for (const m of def.missions) {
+      if (!m) continue;
+      if (m.side && m.token === undefined) m.token = false;        // side quests are not Burn Tokens unless they say so
+      if (m.requires && !Array.isArray(m.requires)) {               // requires: { use: 'powder', missions: [...] }
+        if (m.requires.use && !m.use) m.use = m.requires.use;
+        m.requires = m.requires.missions || [];
+      }
+    }
     this.defs[def.id] = def;
     return def;
   },
   get(id) { return this.defs[id] || null; },
   meta(id) {
     const m = BURNS_WORLD_META.find(k => k.id === id) || { id, name: 'World ' + id, sub: '', hub: { x: 0.5, y: 0.5 }, col: '#ffffff' };
-    const d = this.defs[id];   // a registered world's own name/sub win over the placeholder metadata
-    return d ? Object.assign({}, m, { name: d.name || m.name, sub: d.sub || m.sub }) : m;
+    const d = this.defs[id];   // a registered world's own name/sub/day win over the placeholder metadata
+    return d ? Object.assign({}, m, { name: d.name || m.name, sub: d.sub || m.sub, day: d.day || m.day, dayShort: d.dayShort || (d.day && d.day !== m.day ? null : m.dayShort), home: d.home !== undefined ? !!d.home : m.home }) : m;
   },
+  // day of the Burn week: 'Tuesday night' / 'TUE NIGHT'
+  day(id) { return this.meta(id).day || ''; },
+  dayShort(id) {
+    const m = this.meta(id); if (m.dayShort) return m.dayShort;
+    const d = String(m.day || '').toUpperCase(); if (!d) return '';
+    const w = d.split(/[ ,]+/); return w[0].slice(0, 3) + (w[1] && /NIGHT|DAWN|AFTERNOON|MORNING/.test(w[1]) ? ' ' + (w[1] === 'AFTERNOON' ? 'PM' : w[1]) : '');
+  },
+  isHome(id) { return !!this.meta(id).home; },
+  home() { const m = BURNS_WORLD_META.find(k => k.home); const reg = Object.keys(this.defs).map(Number).find(k => this.defs[k].home); return reg || (m ? m.id : null); },
   tokenTotal(id) { const d = this.defs[id]; return d ? d.missions.filter(m => m.token !== false).length : 6; },
   // ---- play order (BURNS_WORLD_ORDER) ----
   order: BURNS_WORLD_ORDER,
@@ -312,3 +341,96 @@ const BURNS_KEY_ITEMS = {
   artcar: { name: 'ART CAR KEYS', desc: 'You can drive art cars.', col: '#ff7a2a' }
 };
 const BURNS_HYDRATION_MAX = 6;
+
+/* ---------------- the backpack: ground scores, quest items, trade goods ----------------
+   Every power-up id is an item; worlds add more with BurnsPack.define(id, {name, desc, col, icon, kind, use(g)}).
+   Counts live in Save.data.burns.pack (shared by all worlds). The play scene wraps this as g.pack. */
+const BURNS_PACK_ITEMS = {};
+const BurnsPack = {
+  define(id, def) { BURNS_PACK_ITEMS[id] = Object.assign({ id }, def || {}); if (!BURNS_PACK_ITEMS[id].name) BURNS_PACK_ITEMS[id].name = String(id).toUpperCase(); return BURNS_PACK_ITEMS[id]; },
+  get(id) {
+    const d = BURNS_PACK_ITEMS[id]; if (d) return d;
+    const P = BURNS_POWERUPS[id];
+    if (P) return { id, name: P.name, label: P.label, desc: P.tip, col: P.col, icon: P.icon, power: id, kind: 'score' };
+    return { id, name: String(id).toUpperCase(), desc: '', col: '#e8e0d0', kind: 'goods' };
+  },
+  isScore(id) { return !!BURNS_POWERUPS[id] && !BURNS_POWERUPS[id].instant; },   // ground scores (gated by the story flag)
+  usable(id) { const d = this.get(id); return !!(d.use || d.power); },
+  count(id) { return BurnsSave.get().pack[id] | 0; },
+  total() { const p = BurnsSave.get().pack; let n = 0; for (const k in p) n += Math.max(0, p[k] | 0); return n; },
+  add(id, n) { const p = BurnsSave.get().pack; p[id] = (p[id] | 0) + (n === undefined ? 1 : n | 0); if (p[id] <= 0) delete p[id]; BurnsSave.save(); return p[id] | 0; },
+  take(id, n) { n = n === undefined ? 1 : n | 0; const p = BurnsSave.get().pack; if ((p[id] | 0) < n) return false; p[id] -= n; if (p[id] <= 0) delete p[id]; BurnsSave.save(); return true; },
+  list() { const p = BurnsSave.get().pack; return Object.keys(p).filter(k => p[k] > 0).map(k => ({ id: k, n: p[k] | 0, def: this.get(k) })); }
+};
+BurnsPack.define('water', { name: 'WATER BOTTLE', desc: 'Saved for later. USE: +2 hydration.', col: '#5ad0ff', icon: 'drop', use(g) { g.player.givePower('water'); return true; } });
+
+/* ---------------- goods: what rewards, gifts and trades hand over ----------------
+   'molly' | {pack:'molly', n} | {pack:{molly:2}} | {glow:n} | {item:id} | {costume:id} | {power:id} | {heal:n}
+   | {text} | {fn(g), text} | arrays of any of these. One object may combine keys: {glow: 10, pack: 'molly'}. */
+const BurnsGoods = {
+  list(goods) {
+    const out = [];
+    const one = gd => {
+      if (gd === null || gd === undefined || gd === false) return;
+      if (Array.isArray(gd)) { gd.forEach(one); return; }
+      if (typeof gd === 'string') { out.push({ k: 'pack', id: gd, n: 1 }); return; }
+      if (typeof gd !== 'object') return;
+      if (gd.pack) { if (typeof gd.pack === 'string') out.push({ k: 'pack', id: gd.pack, n: Math.max(1, gd.n | 0) }); else for (const id in gd.pack) out.push({ k: 'pack', id, n: Math.max(1, gd.pack[id] | 0) }); }
+      if (gd.glow) out.push({ k: 'glow', n: gd.glow | 0 });
+      if (gd.item) out.push({ k: 'item', id: gd.item });
+      if (gd.costume) out.push({ k: 'costume', id: gd.costume });
+      if (gd.power) out.push({ k: 'power', id: gd.power });
+      if (gd.heal) out.push({ k: 'heal', n: gd.heal | 0 });
+      if (gd.fn) out.push({ k: 'fn', fn: gd.fn, text: gd.text });
+      else if (gd.text) out.push({ k: 'text', text: gd.text });
+    };
+    one(goods);
+    return out;
+  },
+  label(e) {
+    switch (e.k) {
+      case 'pack': return (e.n > 1 ? e.n + ' × ' : '') + BurnsPack.get(e.id).name;
+      case 'glow': return e.n + ' GLOW STICK' + (e.n === 1 ? '' : 'S');
+      case 'item': { const K = BURNS_KEY_ITEMS[e.id]; return K ? K.name : String(e.id).toUpperCase(); }
+      case 'costume': { const c = BURNS_COSTUMES.find(k => k.id === e.id); return (c ? c.name : String(e.id)).toUpperCase() + ' COSTUME'; }
+      case 'power': { const P = BURNS_POWERUPS[e.id]; return P ? P.name : String(e.id).toUpperCase(); }
+      case 'heal': return '+' + e.n + ' HYDRATION';
+      default: return e.text ? String(e.text).toUpperCase() : '';
+    }
+  },
+  text(goods) { return this.list(goods).map(e => this.label(e)).filter(Boolean).join(' + '); },
+  // what Brady can hand over: glow sticks he carries this visit + backpack items
+  need(goods) { const n = { glow: 0, pack: {} }; for (const e of this.list(goods)) { if (e.k === 'glow') n.glow += e.n; else if (e.k === 'pack') n.pack[e.id] = (n.pack[e.id] || 0) + e.n; } return n; },
+  canPay(g, goods) { const n = this.need(goods); if (n.glow > ((g && g.glow) || 0)) return false; for (const id in n.pack) if (BurnsPack.count(id) < n.pack[id]) return false; return true; },
+  missing(g, goods) {
+    const n = this.need(goods), out = [], have = (g && g.glow) || 0;
+    if (n.glow > have) out.push((n.glow - have) + ' MORE GLOW STICK' + (n.glow - have === 1 ? '' : 'S'));
+    for (const id in n.pack) { const c = BurnsPack.count(id); if (c < n.pack[id]) out.push((n.pack[id] - c > 1 ? (n.pack[id] - c) + ' × ' : '') + BurnsPack.get(id).name); }
+    return out.join(' + ');
+  },
+  pay(g, goods) {
+    if (!this.canPay(g, goods)) return false;
+    const n = this.need(goods);
+    if (n.glow && g) { if (g.spendGlow) g.spendGlow(n.glow); else g.glow -= n.glow; }
+    for (const id in n.pack) BurnsPack.take(id, n.pack[id]);
+    if (g && g.syncHudButtons) g.syncHudButtons();
+    return true;
+  },
+  // give goods to Brady; returns the text of what he got. o: {quiet} (no toast)
+  grant(g, goods, o) {
+    o = o || {};
+    const list = this.list(goods), sv = BurnsSave.get();
+    for (const e of list) {
+      if (e.k === 'pack') { if (g && g.pack) g.pack.add(e.id, e.n, { quiet: true }); else BurnsPack.add(e.id, e.n); }
+      else if (e.k === 'glow') { if (g) g.glow += e.n; }
+      else if (e.k === 'item') { if (g && g.giveItem) g.giveItem(e.id, true); else BurnsSave.addItem(e.id); }
+      else if (e.k === 'costume') { sv.costumesOwned[e.id] = true; BurnsSave.save(); }
+      else if (e.k === 'power') { if (g && g.player) g.player.givePower(e.id); }
+      else if (e.k === 'heal') { if (g && g.player) g.player.heal(e.n); }
+      else if (e.k === 'fn') { try { e.fn(g); } catch (err) { console.warn('burns: goods fn failed', err); } }
+    }
+    const txt = list.map(e => this.label(e)).filter(Boolean).join(' + ');
+    if (!o.quiet && txt && g && g.toast) { g.toast('GOT: ' + txt); burnsSfx('gift', null, 'pick'); }
+    return txt;
+  }
+};

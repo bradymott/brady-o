@@ -166,7 +166,7 @@ BurnsWorlds.register({
   bw567Overlay(ctx, g) {
     BW5.drawLabels(ctx, g);
     const S = BW5.state;
-    if (S.disguiseT > 0 && !g.cine) { const W = Game.cssW; BurnsUI.pill(ctx, W / 2 - 92, (g.topStack || 40) + 2, 184, 24, 'rgba(232,200,96,0.85)'); BurnsUI.text(ctx, `LINEN DISGUISE  ${Math.ceil(S.disguiseT)}s`, W / 2, (g.topStack || 40) + 14.5, 12, '#2a1a0a', { ui: true, stroke: false }); }
+    if (S.disguiseT > 0 && !g.cine) { const W = Game.cssW; const y = BW567K.hudY(g); BurnsUI.pill(ctx, W / 2 - 92, y, 184, 24, 'rgba(232,200,96,0.85)'); BurnsUI.text(ctx, `LINEN DISGUISE  ${Math.ceil(S.disguiseT)}s`, W / 2, y + 12.5, 12, '#2a1a0a', { ui: true, stroke: false }); }
   }
 });
 

@@ -53,7 +53,8 @@ function burnsW8Spec(seed, o) {
     update(a, g, dt) {
       const D = a.data, p = g.player, d = a.distP();
       D.cd -= dt; stink(a, g, dt);
-      if (d < (a.def.aggro || 16) && Math.abs(p.y - a.y) < 7) {
+      // (minPY: the one on the container stack waits until Brady has ridden the forks up, so the ride itself is fair)
+      if (d < (a.def.aggro || 16) && Math.abs(p.y - a.y) < 7 && !(a.def.minPY !== undefined && p.y < a.def.minPY)) {
         a.face(p.x, p.z, dt, 5); taunt(a, dt);
         if (D.cd <= 0 && d > 2.5) {
           D.cd = a.def.cooldown || (2.1 + Math.random() * 0.8); D.throwT = 0.3;
@@ -227,7 +228,7 @@ BurnsWorlds.register({
     // roaming DPW crews
     const dpw = (x, z, seed, beh, o) => api.enemy(Object.assign({ type: 'dpw', seed: seed * 13 + 3, name: 'DPW', x, z, behavior: beh, hp: beh === 'w8Rebar' ? 3 : 2, drop: 3, tag: 'dpw', afterDefeat: 'chill', defeatLine: burnsW8910Pick(['Fine. Break time.', 'I\'m telling Rusty.', 'Ugh. Union rules.', 'My shift ended in August anyway.']) }, o || {}));
     dpw(-22, 40, 1, 'w8Wrench'); dpw(92, -30, 2, 'w8Wrench'); dpw(102, -78, 3, 'w8Wrench'); dpw(-42, -44, 4, 'w8Wrench');
-    dpw(62, -12, 5, 'w8Wrench', { y: 5.2, fixedY: true, aggro: 13 });
+    dpw(62, -12, 5, 'w8Wrench', { y: 5.2, fixedY: true, aggro: 13, minPY: 3.4 });
     dpw(-8, -74, 6, 'w8Rebar'); dpw(-70, -84, 7, 'w8Rebar'); dpw(72, -58, 8, 'w8Rebar');
     dpw(22, -34, 9, 'charger', { chargeLine: 'BULLDOZER!', dashSpeed: 11, aggro: 15 }); dpw(-30, 16, 10, 'charger', { chargeLine: 'OUTTA MY YARD!', dashSpeed: 11, aggro: 15 });
     // Captain Prudence (Safety Third) vs. DPW

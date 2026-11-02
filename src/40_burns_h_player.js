@@ -61,7 +61,8 @@ class BurnsPlayer {
   givePower(id) {
     const P = BURNS_POWERUPS[id]; if (!P) return;
     const g = this.g;
-    if (P.instant) { this.heal(P.heal || 1); g.fx.burst(this.x, this.y + 1.2, this.z, 'drop', 12, '#5ad0ff'); burnsSfx('hydrate', null, 'powerup'); g.banner(P.name, P.tip, { col: P.col, small: true }); return; }
+    const told = () => { if (g.missions) { g.missions.noteUse(id); g.missions.event('power', id); } };   // 'power' event + missions with use: id
+    if (P.instant) { this.heal(P.heal || 1); g.fx.burst(this.x, this.y + 1.2, this.z, 'drop', 12, '#5ad0ff'); burnsSfx('hydrate', null, 'powerup'); g.banner(P.name, P.tip, { col: P.col, small: true }); told(); return; }
     this.endPower(true);
     this.power = id; this.powerT = P.dur; this.powerMax = P.dur;
     burnsSfx(P.sfx || 'pickup_bag');
@@ -74,6 +75,7 @@ class BurnsPlayer {
     if (id === 'weed') { this.say('Floatin\'...', 1.6); }
     if (id === 'bufo') { this.say('I can see the music!', 1.6); }
     if (id === 'liquor') { this.ammo = P.ammo || 8; this.say('Hold my bottle.', 1.4); }
+    told();
   }
   endPower(silent) {
     const id = this.power; if (!id) return;

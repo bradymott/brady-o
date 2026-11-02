@@ -540,7 +540,7 @@ BW13.intro = function (g) {
   g.cutscene([
     { music: 'w7' },
     { cam: camA },
-    { banner: [BurnsWorlds.label(13).toUpperCase(), 'THE WORKSHOPS · 8:55 A.M.', { col: '#38c8ff', big: true, dur: 3.2 }] },
+    { banner: [BurnsWorlds.label(13).toUpperCase(), 'THE WORKSHOPS · SATURDAY, 8:55 A.M.', { col: '#38c8ff', big: true, dur: 3.2 }] },
     { cam: { from: camA, to: camB, dur: 4 } },
     { say: ['brady', ['Workshop Village. Nine o\'clock. "Where lost loves are found."', 'Okay, Chinka. I\'m here.']] },
     { say: [{ name: 'GREETER DAISY', model: BurnsRig.model(BurnsRig.npcSpec('greeter_f', 2)) }, ['WELCOME HOOOME! First workshop? Sign in at the table! Everybody signs in!']] },

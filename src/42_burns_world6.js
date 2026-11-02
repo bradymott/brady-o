@@ -1057,6 +1057,8 @@ BW6.chadArrives = function (g) {
   g.missions.start('boss', true);
   g.cutscene([
     { music: 'man_boss' },
+    // wandered off? the party calls you back for the showdown
+    { do: g2 => { if (!p.vehicle && Math.hypot(p.x - A.x, p.z - A.z) > 40) { p.teleport(A.x - 5, g2.world.height(A.x - 5, A.z - 5), A.z - 5, Math.atan2(c.x - A.x + 5, c.z - A.z + 5)); g2.snapCam = true; } } },
     { cam: { x: A.x - 6, y: 3.5, z: A.z - 6, tx: c.x, ty: 2.5, tz: c.z, fov: 0.85 } },
     { do: g2 => { burnsSfx('artcarHorn', { pitch: 1.8 }); g2.shake(0.3); } },
     { banner: ['CHAD, FOUNDER & CEO', 'Octopus-as-a-Service · Boss', { col: '#38f2ff', big: true, dur: 3 }] },
@@ -1124,7 +1126,7 @@ BW6.overlay = function (ctx, g) {
   if (g.cine || BW567K.busy(g)) return;
   const P = S.party, n = BW6.count(g);
   if ((P && P.on) || (g.missions.state('party') === 'active' && g.player.vehicle === S.car)) {
-    const w = Math.min(W - 40, 360), x = (W - w) / 2, y = (g.topStack || 40) + 4;
+    const w = Math.min(W - 40, 360), x = (W - w) / 2, y = BW567K.hudY(g) + 2;
     ctx.save(); ctx.fillStyle = 'rgba(20,6,30,0.72)'; rr(ctx, x, y, w, 40, 12); ctx.fill(); ctx.strokeStyle = 'rgba(255,79,216,0.7)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
     BurnsUI.text(ctx, P && P.on ? `PARTY · ${P.spot.name}` : 'FIND A PARTY SPOT', x + 10, y + 11, 10, '#ffd84a', { align: 'left', stroke: false });
     BurnsUI.text(ctx, `${n}/${BW6.GOAL}`, x + w - 10, y + 13, 16, n >= BW6.GOAL ? '#7aff5a' : '#ffffff', { align: 'right' });

@@ -50,8 +50,9 @@ const BurnsEnv = {
 };
 
 /* ---------------- missions ----------------
-   def: { id, name, desc, type, token (default true), giver, start: 'talk'|'auto'|'trigger'|'manual',
-          requires: [ids], target: {x,z,r,y}, count, time, item, marker:{x,z}, hint, tokenAt:{x,y,z},
+   def: { id, name, desc, type, token (default true; side quests default false), giver,
+          start: 'talk'|'auto'|'trigger'|'manual'|'board', requires: [ids], target: {x,z,r,y}, count, time, item,
+          marker:{x,z}, hint, tokenAt:{x,y,z}, side (quest board), reward (goods), use (backpack item required),
           onStart, onUpdate, onEvent, onComplete, onFail }   (all hooks receive (game, m, ...)) */
 class BurnsMissions {
   constructor(g, defs) {
@@ -79,7 +80,11 @@ class BurnsMissions {
     if (m.state === 'locked') return false;
     m.state = 'active'; m.n = 0; m.t = 0; m.data = {};
     if (m.def.time) m.left = m.def.time;
-    if (!quiet && !m.def.silent) { this.g.banner('MISSION', m.def.name, { col: '#38f2ff' }); burnsSfx('select2', null, 'select'); }
+    this.tracked = id;
+    const pl = this.g.player;
+    m.used = !m.def.use || !!(pl && pl.power === m.def.use && pl.powerT > 0);
+    if (!quiet && !m.def.silent) { this.g.banner(m.def.side ? 'SIDE QUEST' : 'MISSION', m.def.name, { col: m.def.side ? '#ffb0d8' : '#38f2ff' }); burnsSfx('select2', null, 'select'); }
+    if (!m.used && !m.def.silent) this.g.toast(`NEEDS: ${BurnsPack.get(m.def.use).name} (BACKPACK)`);
     if (m.def.onStart) m.def.onStart(this.g, m);
     return true;
   }
@@ -90,11 +95,21 @@ class BurnsMissions {
     if (m.n >= need) this.complete(id);
     else this.g.toast(`${m.def.progressLabel || m.def.name}: ${m.n}/${need}`);
   }
-  complete(id, at) {
+  complete(id, at, force) {
     const m = this.get(id); if (!m || m.state === 'done') return;
+    const g = this.g;
+    // missions with use: 'item' wait until Brady has used that backpack item during the mission
+    if (m.def.use && m.state === 'active' && !m.used && !force) {
+      if (!(g.time - (m.useWarnT || -9) < 3)) {
+        m.useWarnT = g.time;
+        const nm = BurnsPack.get(m.def.use).name;
+        g.banner(m.def.useHint || `USE YOUR ${nm}!`, g.pack && g.pack.has(m.def.use) ? 'Open your BACKPACK and use it.' : `You need a ${nm}. Find one!`, { col: '#ff9ad8', small: true });
+        burnsSfx('bump', { vol: 0.5 });
+      }
+      return false;
+    }
     if (m.state === 'locked' || m.state === 'available') m.state = 'active';
     m.state = 'done';
-    const g = this.g;
     if (m.def.onComplete) m.def.onComplete(g, m);
     if (m.def.token !== false) {
       if (m.def.tokenDirect) g.awardToken(m.id);
@@ -106,8 +121,10 @@ class BurnsMissions {
       }
     } else {
       BurnsSave.get().missions[g.worldId + ':' + m.id] = 'done'; BurnsSave.save();
-      if (!m.def.silent) g.banner('DONE!', m.def.name, { col: '#7aff5a', small: true });
+      if (!m.def.silent) g.banner(m.def.side ? 'SIDE QUEST DONE!' : 'DONE!', m.def.name, { col: '#7aff5a', small: true });
     }
+    if (m.def.reward) { const txt = g.grant(m.def.reward, { quiet: true }); if (txt) { g.banner('REWARD', txt, { col: '#7aff5a', small: true }); burnsSfx('gift', { vol: 0.6 }, 'pick'); } }
+    if (this.tracked === m.id) this.tracked = null;
     this.refresh();
   }
   fail(id, why) {
@@ -148,16 +165,57 @@ class BurnsMissions {
       if (d.onUpdate) d.onUpdate(g, m, dt);
     }
   }
-  // the next thing to do (for the HUD tracker)
+  // Brady used a backpack item / power-up: satisfies active missions with use: id
+  noteUse(id) { for (const m of this.list) if (m.state === 'active' && m.def.use === id && !m.used) { m.used = true; if (!m.def.silent) this.g.toast(`${BurnsPack.get(id).name} \u2713 ${m.def.short || m.def.name}`); } }
+  used(id) { const m = this.get(id); return !!(m && m.used); }
+  track(id) { const m = this.get(id); if (m && m.state === 'active') this.tracked = id; }
+  side() { return this.list.filter(m => m.def.side); }
+  // the next thing to do (for the HUD tracker): the tracked mission, else the latest active one
   tracker() {
     const a = this.active();
     if (!a.length) return null;
-    const m = a[a.length - 1], d = m.def;
+    const tm = this.tracked && this.get(this.tracked);
+    const m = tm && tm.state === 'active' ? tm : a[a.length - 1], d = m.def;
     let txt = d.short || d.name;
     if (d.count && d.type !== 'find') txt += ` ${m.n}/${d.count}`;
     if (m.left !== undefined) txt += `  ⏱ ${Math.ceil(m.left)}s`;
     return { text: txt, m };
   }
+}
+
+/* ---------------- the backpack (g.pack): ground scores, quest items, trade goods ----------------
+   Counts are saved (BurnsPack, Save.data.burns.pack); this adds the toasts, events and the HUD. */
+class BurnsBackpack {
+  constructor(g) { this.g = g; }
+  count(id) { return BurnsPack.count(id); }
+  has(id, n) { return BurnsPack.count(id) >= (n === undefined ? 1 : n); }
+  list() { return BurnsPack.list(); }
+  total() { return BurnsPack.total(); }
+  add(id, n, o) {
+    n = n === undefined ? 1 : n; o = o || {};
+    const g = this.g, d = BurnsPack.get(id);
+    BurnsPack.add(id, n);
+    if (!o.quiet) { g.toast(`+${n > 1 ? n + ' \u00d7 ' : ''}${d.name} \u2192 BACKPACK`); burnsSfx('pickup_bag'); }
+    g.packFlash = 1.4;
+    if (g.missions) g.missions.event('pack', id);
+    g.syncHudButtons();
+    return BurnsPack.count(id);
+  }
+  take(id, n) { const ok = BurnsPack.take(id, n); this.g.syncHudButtons(); return ok; }
+  // use one item: power-ups start (nobody is ever shown taking anything), custom items run def.use(g)
+  use(id) {
+    const g = this.g, d = BurnsPack.get(id);
+    if (!this.has(id)) return false;
+    let consumed = true;
+    if (d.use) consumed = d.use(g) !== false;
+    else if (d.power) g.player.givePower(d.power);
+    else { g.toast(`${d.name}: nothing to do with it right now`); return false; }
+    if (consumed) BurnsPack.take(id, 1);
+    if (g.missions) { g.missions.noteUse(id); g.missions.event('use', id); }
+    g.syncHudButtons();
+    return true;
+  }
+  open() { return this.g.openPack(); }
 }
 
 /* ---------------- dialogue (bottom box + portrait, tap to advance) ---------------- */
@@ -269,7 +327,7 @@ let burnsHooked = false;
 const BurnsKeys = { down: {}, pressed: {} };
 function burnsHookOnce() {
   if (burnsHooked) return; burnsHooked = true;
-  const map = { KeyQ: 'camL', KeyE: 'camR', KeyC: 'recenter', KeyR: 'recenter', KeyB: 'bike', KeyM: 'missions', Tab: 'missions', KeyF: 'camR', KeyI: 'camU', KeyK2: 'camD' };
+  const map = { KeyQ: 'camL', KeyE: 'camR', KeyC: 'recenter', KeyR: 'recenter', KeyB: 'bike', KeyM: 'missions', Tab: 'missions', KeyF: 'camR', KeyI: 'camU', KeyK2: 'camD', KeyG: 'pack', KeyL: 'board' };
   window.addEventListener('keydown', e => { const a = map[e.code]; if (!a || !(Game.scene instanceof BurnsPlayScene)) return; if (e.cancelable) e.preventDefault(); if (!BurnsKeys.down[a]) BurnsKeys.pressed[a] = true; BurnsKeys.down[a] = true; });
   window.addEventListener('keyup', e => { const a = map[e.code]; if (a) BurnsKeys.down[a] = false; });
   window.addEventListener('blur', () => { BurnsKeys.down = {}; });
@@ -310,6 +368,8 @@ class BurnsPlayScene {
     this.world = new BurnsWorld(d, this);
     this.missions = new BurnsMissions(this, d.missions);
     this.missions.deferred = true;
+    this.pack = new BurnsBackpack(this);
+    this.dayCardT = d.dayCard === false ? -1 : 0;
     this.R = new BurnsRenderer();
     this.palA = d.sky || 'dusk'; this.palB = d.sky2 || null; this.tod = d.tod || 0;
     this.actors = [];
@@ -356,13 +416,17 @@ class BurnsPlayScene {
     L.jump = { x: jx, y: jy, r: r * 1.12 }; L.action = { x: ax, y: ay, r: r * 0.9 }; L.stickHome = { x: sx, y: sy, r: r * 1.15 };
     L.pause = { x: lefty ? safeL + 24 : W - safeR - 24, y: Math.max(12, insets.t) + 24, r: 22 }; L.r = r;
     L.split = lefty ? W * 0.55 : W * 0.45;
-    this.hudBtns = { cam: { id: 'cam', x: cx, y: cy, r: r * 0.55 }, bike: { id: 'bike', x: bx, y: by, r: r * 0.58 } };
+    // pack: the backpack pill under the HUD counters (its position is refreshed by the HUD each frame)
+    this.hudBtns = { cam: { id: 'cam', x: cx, y: cy, r: r * 0.55 }, bike: { id: 'bike', x: bx, y: by, r: r * 0.58 }, pack: (this.hudBtns && this.hudBtns.pack) || { id: 'pack', x: safeL + 50, y: 160, r: 17 } };
     this.syncHudButtons();
   }
+  // the backpack shows once ground scores exist in the story, or as soon as it holds anything
+  packVisible() { return BurnsSave.groundScore() || BurnsPack.total() > 0; }
   syncHudButtons() {
     if (!this.hudBtns) return;
     const list = [this.hudBtns.cam];
     if (this.player && ((this.bike && !this.cine) || this.player.vehicle)) list.push(this.hudBtns.bike);
+    if (this.player && !this.cine && this.hudBtns.pack && this.packVisible()) list.push(this.hudBtns.pack);
     Input.hud = this.state === 'play' && !this.paused ? list : null;
     Input.camDrag = this.state === 'play' && !this.paused;
   }
@@ -428,7 +492,9 @@ class BurnsPlayScene {
     if (P.onTake) P.onTake(this, P);
     if (b === 'glowstick') { this.glow++; burnsSfx('glowstick', { vol: 0.5, pitch: 0.9 + Math.random() * 0.3 }, 'pick'); this.fx.burst(P.x, P.y0, P.z, 'spark', 4, rgbToHex(P.glowCol[0] * 255, P.glowCol[1] * 255, P.glowCol[2] * 255)); if (this.glow % 50 === 0) { p.heal(1); this.toast('50 GLOW STICKS! +1 HYDRATION'); } }
     else if (b === 'water') { p.givePower('water'); }
-    else if (b === 'bag') { burnsSfx('pickup_bag'); p.givePower(P.arg); this.missions.event('power', P.arg); }
+    else if (b === 'bag' && (P.arg === 'water' || !BURNS_POWERUPS[P.arg])) { p.givePower('water'); }
+    else if (b === 'bag') { this.pack.add(P.arg); this.fx.burst(P.x, P.y0, P.z, 'star', 8, BURNS_POWERUPS[P.arg].col); }   // ground score -> backpack
+    else if (b === 'pack') { this.pack.add(P.arg); this.fx.burst(P.x, P.y0, P.z, 'star', 8, BurnsPack.get(P.arg).col); }
     else if (b === 'token') { this.awardToken(P.mission || P.id); }
     else if (b === 'photo') { const isNew = BurnsSave.addPhoto(this.worldId, P.id); this.banner('PHOTO OF CHINKA', `${BurnsSave.photoCount(this.worldId)}/3 found in this world`, { col: '#ff9ad0', big: true, icon: 'photo' }); burnsSfx('chinka', null, 'secret'); this.fx.hearts(P.x, P.y0, P.z, 12); void isNew; }
     else if (b === 'item') {
@@ -486,13 +552,64 @@ class BurnsPlayScene {
       const gift = a.def.gift;
       if (gift && !a.data.gifted) {
         a.data.gifted = true;
-        if (gift.kind === 'glowstick') { this.glow += gift.n || 5; this.toast(`GIFTED ${gift.n || 5} GLOW STICKS!`); burnsSfx('gift', null, 'pick'); }
-        else if (gift.kind === 'water' || BURNS_POWERUPS[gift.kind]) this.player.givePower(gift.kind);
+        if (gift.goods) { const txt = this.grant(gift.goods, { quiet: true }); if (txt) this.toast('GIFTED: ' + txt); burnsSfx('gift', null, 'pick'); }
+        else if (gift.kind === 'glowstick') { this.glow += gift.n || 5; this.toast(`GIFTED ${gift.n || 5} GLOW STICKS!`); burnsSfx('gift', null, 'pick'); }
+        else if (gift.kind === 'water') this.player.givePower('water');
+        else if (BURNS_POWERUPS[gift.kind]) {   // ground scores go to the backpack (glow sticks before they exist in the story)
+          if (BurnsSave.groundScore()) this.pack.add(gift.kind);
+          else { this.glow += 5; this.toast('GIFTED 5 GLOW STICKS!'); burnsSfx('gift', null, 'pick'); }
+        }
         else if (gift.kind === 'item') this.giveItem(gift.item);
         this.fx.confetti(a.x, a.y + 2, a.z, 16);
       }
+      if (a.def.trades && a.def.trades.length && !a.removed) this.openTrade(a);
     });
   }
+  /* ---------- goods, trading and menus (backpack, quest board, trade window) ---------- */
+  grant(goods, o) { return BurnsGoods.grant(this, goods, o); }
+  canPay(goods) { return BurnsGoods.canPay(this, goods); }
+  pay(goods) { return BurnsGoods.pay(this, goods); }
+  // spend carried glow sticks (keeps the banked lifetime total honest)
+  spendGlow(n) {
+    n = Math.max(0, Math.min(n | 0, this.glow));
+    const banked = this.glowBanked || 0, fromBanked = Math.max(0, n - Math.max(0, this.glow - banked));
+    this.glow -= n;
+    if (fromBanked > 0) { this.glowBanked = Math.max(0, banked - fromBanked); const sv = BurnsSave.get(); sv.glow = Math.max(0, sv.glow - fromBanked); BurnsSave.save(); }
+    return n;
+  }
+  openMenu(tab) {
+    if (this.state !== 'play') return false;
+    if (!this.paused) { this.paused = true; this.menuFrom = 'game'; Input.setMode('ui'); if (Sound.engine) Sound.engine(false, 0); }
+    else this.menuFrom = this.menuFrom || 'pause';
+    this.pauseTab = tab; this.menuScroll = 0;
+    this.buildPause(); this.syncHudButtons(); burnsSfx('map_open', { vol: 0.6 });
+    return true;
+  }
+  openPack() { return this.openMenu('pack'); }
+  openBoard() { if (!this.boardTab) this.boardTab = 'available'; return this.openMenu('board'); }
+  openJournal() { return this.openBoard(); }
+  openTrade(a, trades) { this.tradeCtx = { actor: a, trades: trades || (a && a.def && a.def.trades) || [] }; return this.openMenu('trade'); }
+  // leave a sub-menu: back to the pause page if we came from there, else straight back to play
+  menuBack() { if (this.menuFrom === 'pause') { this.pauseTab = 'main'; this.buildPause(); } else this.closePause(); }
+  tradeKey(a, t, i) { return 'trade:' + ((a && (a.id || (a.def && a.def.name))) || 'npc') + ':' + (t.id !== undefined ? t.id : i); }
+  tradeDone(a, t, i) { return t.once !== false && !!this.flag(this.tradeKey(a, t, i)); }
+  doTrade(a, t, i) {
+    if (this.tradeDone(a, t, i)) return false;
+    if (!this.canPay(t.give)) { burnsSfx('bump'); this.toast('YOU NEED: ' + BurnsGoods.missing(this, t.give)); return false; }
+    this.pay(t.give);
+    const txt = this.grant(t.get, { quiet: true });
+    if (t.once !== false) this.flag(this.tradeKey(a, t, i), true);
+    this.banner('TRADED!', txt, { col: '#7aff5a', small: true });
+    burnsSfx('gift', null, 'pick');
+    if (a && a.x !== undefined) this.fx.confetti(a.x, a.y + 2, a.z, 14);
+    this.missions.event('trade', { actor: a, trade: t, id: t.id !== undefined ? t.id : i });
+    if (t.onTrade) t.onTrade(this, a, t); else if (a && a.def && a.def.onTrade) a.def.onTrade(this, a, t);
+    if (this.dialog.open || this.cine) this.closePause(); else if (this.paused) this.buildPause();
+    return true;
+  }
+  boardAccept(id) { if (this.missions.start(id)) { this.missions.track(id); this.closePause(); return true; } return false; }
+  // the day-of-the-week card (shown automatically at the start of a visit unless def.dayCard === false)
+  dayCard() { this.dayCardT = 0; }
   groundPound(x, y, z, R, quiet) {
     if (!quiet) { burnsSfx('groundpound'); this.shake(0.3); }
     this.fx.dust(x, y + 0.1, z, 14); this.fx.ring(x, y + 0.08, z, R, '#ffffff', 0.4);
@@ -548,8 +665,8 @@ class BurnsPlayScene {
     if (toHub) Game.setScene(new BurnsHubScene({ from: this.worldId }));
     else Game.setScene(new TitleScene());
   }
-  openPause() { if (this.state !== 'play') return; this.paused = true; this.pauseTab = 'main'; Input.setMode('ui'); this.buildPause(); this.syncHudButtons(); burnsSfx('pause', null, 'select'); if (Sound.engine) Sound.engine(false, 0); }
-  closePause() { this.paused = false; Input.setMode('game'); this.syncHudButtons(); burnsSfx('select'); }
+  openPause() { if (this.state !== 'play') return; this.paused = true; this.pauseTab = 'main'; this.menuFrom = 'pause'; Input.setMode('ui'); this.buildPause(); this.syncHudButtons(); burnsSfx('pause', null, 'select'); if (Sound.engine) Sound.engine(false, 0); }
+  closePause() { this.paused = false; this.menuFrom = null; this.tradeCtx = null; Input.setMode('game'); this.syncHudButtons(); burnsSfx('select'); }
   /* ---------- input ---------- */
   readInput() {
     const p = this.player, I = Input;
@@ -571,6 +688,8 @@ class BurnsPlayScene {
     if (I.hudPressed.bike || BurnsKeys.pressed.bike || (pad && pad.bikeP)) this.inp.bike = true;
     if (I.hudPressed.cam || BurnsKeys.pressed.recenter || (pad && pad.camP)) this.inp.recenter = true;
     if (BurnsKeys.pressed.missions) this.inp.missions = true;
+    if (I.hudPressed.pack || BurnsKeys.pressed.pack) this.inp.pack = true;
+    if (BurnsKeys.pressed.board) this.inp.board = true;
     BurnsKeys.pressed = {};
   }
   pollPad() {
@@ -602,6 +721,8 @@ class BurnsPlayScene {
     if (Input.pausePressed && !this.dialog.open) { this.openPause(); return; }
     this.readInput();
     if (this.inp.missions) { this.inp.missions = false; this.openPause(); this.pauseTab = 'missions'; this.buildPause(); return; }
+    if (this.inp.pack) { this.inp.pack = false; if (!this.cine && !this.dialog.open && this.packVisible()) { this.openPack(); return; } }
+    if (this.inp.board) { this.inp.board = false; if (!this.cine && !this.dialog.open && this.missions.side().length) { this.openBoard(); return; } }
     const g = this, p = this.player, W = this.world;
     this.time += dt;
     // dialogue + cutscene

@@ -63,8 +63,8 @@ const BW14_City = {
       c.strokeStyle = 'rgba(120,90,70,0.22)'; c.lineWidth = 1.2 * S;
       for (let i = 0; i < 26; i++) { const a = R() * TAU, r0 = R.range(30, 120), r1 = R.range(160, 480); const [x0, z0] = P(Math.sin(a) * r0, -Math.cos(a) * r0), [x1, z1] = P(Math.sin(a + R.range(-0.4, 0.4)) * r1, -Math.cos(a + R.range(-0.4, 0.4)) * r1); c.beginPath(); c.moveTo(x0, z0); c.lineTo(x1, z1); c.stroke(); }
       // the trash fence (pentagon)
-      c.strokeStyle = 'rgba(255,120,40,0.55)'; c.lineWidth = 1.4 * S; c.beginPath();
-      for (let i = 0; i <= 5; i++) { const a = i / 5 * TAU + 0.31, [px, pz] = P(Math.sin(a) * 575, -Math.cos(a) * 575); i ? c.lineTo(px, pz) : c.moveTo(px, pz); } c.stroke();
+      c.strokeStyle = 'rgba(255,120,40,0.55)'; c.lineWidth = 1.4 * S;
+      for (const [x0, z0, x1, z1] of this.fenceRuns()) { const a = P(x0, z0), b = P(x1, z1); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
       // the airstrip: compacted runway, threshold bars, centre dashes, numbers, the apron and taxiway
       const W2 = C.RWY;
       soft(C.APRON.x + 20, C.APRON.z - 10, 140, '#e6c8a2', 0.28);
@@ -172,10 +172,29 @@ const BW14_City = {
     this.obstacle('the Temple spire', T.x, 22, T.z, T.x, 29, T.z, 3);
   },
   /* the trash fence: a thin orange line far out (sold as "the edge of the world") */
-  fence() {
+  // the pentagon, clipped where it would cut across the airstrip: there it hands over to the
+  // airport's own fence (x = 352 / z = -38), so the airstrip sits outside, like an enclave
+  fenceRuns() {
+    const AX = 352, AZ = -38, out = [];
     for (let i = 0; i < 5; i++) {
       const a0 = i / 5 * TAU + 0.31, a1 = (i + 1) / 5 * TAU + 0.31, x0 = Math.sin(a0) * 575, z0 = -Math.cos(a0) * 575, x1 = Math.sin(a1) * 575, z1 = -Math.cos(a1) * 575;
-      const n = 14; for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, x = lerp(x0, x1, t), z = lerp(z0, z1, t), len = Math.hypot(x1 - x0, z1 - z0) / n, yaw = Math.atan2(x1 - x0, z1 - z0); this.put('fence', x, 0, z, yaw, 1, m => { m.color('#ff7a2a'); m.box(0, 1.1, 0, 0.08, 1.2, len - 0.3); m.color('#6a6a72'); m.box(0, 1, len / 2 - 0.15, 0.12, 2.0, 0.12); }, true); }
+      // the part with x >= AX and z >= AZ lies in the airport quadrant
+      let tin = 0, tout = 1; const dx = x1 - x0, dz = z1 - z0;
+      for (const [p0, d, lim] of [[x0, dx, AX], [z0, dz, AZ]]) {
+        if (Math.abs(d) < 1e-6) { if (p0 < lim) { tin = 1; tout = 0; } continue; }
+        const t = (lim - p0) / d; if (d > 0) tin = Math.max(tin, t); else tout = Math.min(tout, t);
+      }
+      if (tin >= tout) { out.push([x0, z0, x1, z1]); continue; }
+      if (tin > 0.001) out.push([x0, z0, lerp(x0, x1, tin), lerp(z0, z1, tin)]);
+      if (tout < 0.999) out.push([lerp(x0, x1, tout), lerp(z0, z1, tout), x1, z1]);
+    }
+    out.push([AX, 299, AX, 309]);   // close the little gap up to the airport fence's end
+    return out;
+  },
+  fence() {
+    for (const [x0, z0, x1, z1] of this.fenceRuns()) {
+      const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 48)), len = L / n, yaw = Math.atan2(x1 - x0, z1 - z0);
+      for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, x = lerp(x0, x1, t), z = lerp(z0, z1, t); this.put('fence', x, 0, z, yaw, 1, m => { m.color('#ff7a2a'); m.box(0, 1.1, 0, 0.08, 1.2, len - 0.3); m.color('#6a6a72'); m.box(0, 1, len / 2 - 0.15, 0.12, 2.0, 0.12); }, true); }
     }
   },
 

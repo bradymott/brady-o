@@ -64,7 +64,7 @@ function bbaErr(e) {
 /* ---------------- geometry helpers ---------------- */
 // static geometry in piece-local coordinates (split big pieces into several parts: each part
 // lands in the 48 m cell of its own origin and must stay under ~15k vertices)
-function bbaPart(api, P, lx, lz, fn) {
+function bbaPart(api, P, lx, lz, fn, mesh) {
   const F = P.F;
   const info = api.mesh(F.wx(lx, lz), F.wz(lx, lz), m => {
     m.push(); m.tf(-lx, 0, -lz);
@@ -73,9 +73,16 @@ function bbaPart(api, P, lx, lz, fn) {
     for (const c of r.cols || []) { c.x = (c.x || 0) - lx; c.z = (c.z || 0) - lz; }
     for (const L of r.lights || []) { L.x = (L.x || 0) - lx; L.z = (L.z || 0) - lz; }
     return r;
-  }, { yaw: F.rot, scale: F.s, y: F.y0 });
+  }, { yaw: F.rot, scale: F.s, y: F.y0, mesh: mesh || undefined });
   P.cols.push(...(info.wcols || []));
   return info;
+}
+// a dedicated static mesh for one piece (its own chunk, so it can be hidden later: the cathedral burn)
+function bbaOwnMesh(api, P) {
+  const own = new BurnsMesh(8192);
+  api.world.cells.set('bba:' + P.id, { list: [own] });
+  own.geo = function () { const r = BurnsMesh.prototype.geo.call(this); P.chunk = r; return r; };
+  return own;
 }
 function bbaScaleCol(d, s) { const c = Object.assign({}, d); for (const k of ['x', 'z', 'hx', 'hz', 'r', 'y0', 'y1', 'ya', 'yb']) if (c[k] !== undefined) c[k] *= s; return c; }
 // a mover built in piece-local units (scaled with the piece). Position it with bbaPose().
@@ -219,7 +226,7 @@ function bbaHook(g, R) {
 function bbaDraw(g, Rr, R) {
   if (g.world && g.world._bba !== R) return;
   const S = BURNS_SPRITES.R, nk = R.night;
-  for (const P of R.pieces) { if (P.draw) P.draw(g, Rr, S, bbaNight(g, P), nk); if (P.burning) bbaBurnDraw(g, Rr, S, P); }
+  for (const P of R.pieces) { if (P.draw) P.draw(g, Rr, S, bbaNight(g, P), nk); if (P.burning) bbaBurnDraw(g, Rr, S, P); if (P.cburn) bbaCathBurnDraw(g, Rr, S, P); }
   if (R.ride && R.ride.draw) R.ride.draw(g, Rr, S);
 }
 // camera override with smooth blend in/out: R.cam = { fn(g, C) -> {x,y,z,tx,ty,tz,fov} | null, dur, t, k }
@@ -261,7 +268,7 @@ function bbaUpdate(g, wdt, R) {
     bbaRevealStep(g, R, dt);
     bbaMomentumStep(g, R, dt);
     if (R.zipReturn) bbaZipReturn(g, R, dt);
-    for (const P of R.pieces) if (P.burning) bbaBurnStep(g, P, wdt);
+    for (const P of R.pieces) { if (P.burning) bbaBurnStep(g, P, wdt); if (P.cburn) bbaCathBurnStep(g, P, dt); }
   } catch (e) { bbaErr(e); }
 }
 
@@ -582,6 +589,10 @@ function bbaKickStep(g, R, dt) {
 function bbaSummitStep(g, R, dt) {
   const p = g.player;
   for (const P of R.pieces) {
+    if (!P.arrived) {
+      const ar = P.o.arriveR || (P.K.size || 30) * 0.6 * P.F.s;
+      if (Math.hypot(p.x - P.x, p.z - P.z) < ar) { P.arrived = true; g.missions.event('bbaArrive', P); if (P.o.onArrive) P.o.onArrive(g, P); }
+    }
     const S = P.summit; if (!S) continue;
     const at = Math.hypot(p.x - S.x, p.z - S.z) < S.r && p.y >= S.y - 0.35 && p.y < S.y + 4 && (p.grounded || p.vehicle);
     if (!at) continue;
@@ -786,7 +797,7 @@ const BurnsBigArt = {
   // register something a lighthouse beam can reveal: fn(g, q) runs once, when a lit beam sweeps (x, z)
   revealable(g, x, z, fn, r) { const R = g.world && g.world._bba; if (!R) return null; const q = { x, z, r: r || 1.5, fn, done: false, kind: 'custom' }; R.reveals.push(q); return q; },
   // set a piece on fire (spectacle): opts { dur: seconds (45), hazard: false, onDone(g, piece) }
-  burn(g, piece, o) { const P = typeof piece === 'string' ? this.piece(g, piece) : piece; return P ? bbaBurn(g, P, o) : null; },
+  burn(g, piece, o) { const P = typeof piece === 'string' ? this.piece(g, piece) : piece; if (!P) return null; return P.K.burn ? P.K.burn(g, P, o || {}) : bbaBurn(g, P, o); },
   // is Brady currently climbing / ziplining / looping?
   state(g) { const R = g.world && g.world._bba; if (!R) return {}; return { climbing: !!R.climb, riding: R.ride ? R.ride.kind : null, air: !!R.air }; }
 };
@@ -1633,8 +1644,16 @@ BurnsBigArt.kinds.stickCathedral = {
 };
 function bbaCathBuild(api, g, P) {
   const K = BBA_CATH, F = P.F, Lh = K.half, tmp = [0, 0];
+  K.burnFn = K.burnFn || ((gg, PP, o) => bbaCathBurn(gg, PP, o));
+  P.K.burn = K.burnFn;
+  // already burned in this world (saved)? only the smouldering pile remains
+  const burned = P.o.burned !== undefined ? !!P.o.burned : !!(g && BurnsSave.flag(g.worldId, 'bba:' + P.id + ':burned'));
+  if (burned) { bbaCathAshes(api, g, P); return; }
   const stick = ['#c8a46a', '#b89458', '#d8b878', '#a8844c'];
   const ribZ = []; for (let z = K.Z1; z >= K.Z0 - 0.01; z -= 4) ribZ.push(z);
+  const own = bbaOwnMesh(api, P), W = api.world, glow0 = W.glows.length, pick0 = W.pickupDefs.length;
+  const bp = P.burnPtsL = [];   // flame points along the lattice (local), sampled from the sticks
+  const sample = (pts, every) => { for (let i = 0; i < pts.length; i += every) bp.push(pts[i]); };
   /* ---- the nave: twisted ribs + diagonal basket weave ---- */
   bbaPart(api, P, 0, -2, m => {
     m.lo = true;
@@ -1643,6 +1662,7 @@ function bbaCathBuild(api, g, P) {
         const pts = [];
         for (let i = 0; i <= 26; i++) { const s = i / 26 * 2 * Lh; K.arch(s, tmp); const a = s * 0.9 + k * TAU / 3, tw = 0.32; pts.push([tmp[0] + Math.cos(a) * tw * 0.6, tmp[1] + Math.sin(a) * tw * 0.4, z + Math.sin(a) * tw]); }
         m.color(stick[(ri + k) % 4]); bbaTube(m, pts, 0.17, 5, { caps: false });
+        if (k === 0) sample(pts, 2);
       }
     });
     // diagonal weave across the vault (two directions), skipping the doorway on the front
@@ -1650,7 +1670,7 @@ function bbaCathBuild(api, g, P) {
     for (const dir of [1, -1]) for (let s0 = -28; s0 <= 2 * Lh + 28; s0 += 3.6) {
       const pts = [];
       for (let z = K.Z0; z <= K.Z1 + 0.01; z += 1.4) { const s = s0 + dir * (z - K.Z0) * 1.0; if (s < 0.4 || s > 2 * Lh - 0.4) { if (pts.length > 1) break; pts.length = 0; continue; } K.arch(s, tmp); pts.push([tmp[0] * 1.01, tmp[1] + 0.05, z]); }
-      if (pts.length > 2) { m.color(stick[n++ % 4]); bbaTube(m, pts, 0.11, 4, { caps: false }); }
+      if (pts.length > 2) { m.color(stick[n++ % 4]); bbaTube(m, pts, 0.11, 4, { caps: false }); sample(pts, 3); }
     }
     // the apse: a woven back wall
     for (let i = 1; i < 9; i++) { const s = i / 9 * 2 * Lh; K.arch(s, tmp); m.color(stick[i % 4]); m.limb(tmp[0], 0, K.Z0 - 0.2, tmp[0] * 0.9, tmp[1] - 0.2, K.Z0 - 0.15, 0.12, 0.1, { seg: 4 }); }
@@ -1663,7 +1683,7 @@ function bbaCathBuild(api, g, P) {
     for (const sx of [-1, 1]) for (let y = 9; y < 15; y += 2.4) { m.color(stick[1]); m.limb(sx * 3.4, y, K.Z1 + 0.15, sx * 6.2, y - 2.5, K.Z1 + 0.15, 0.1, 0.1, { seg: 4 }); }
     m.lo = false;
     return { cols: [] };
-  });
+  }, own);
   /* ---- the spire over the crossing ---- */
   bbaPart(api, P, 0, K.SZ, m => {
     m.lo = true;
@@ -1671,13 +1691,14 @@ function bbaCathBuild(api, g, P) {
     for (let k = 0; k < 12; k++) {
       const pts = []; for (let i = 0; i <= 18; i++) { const t = i / 18, a = k / 12 * TAU + t * 3.4 * (k % 2 ? 1 : -1), r = r0 * (1 - t) + 0.15; pts.push([Math.sin(a) * r, lerp(y0, y1, t), K.SZ + Math.cos(a) * r]); }
       m.color(stick[k % 4]); bbaTube(m, pts, lerp(0.16, 0.1, k / 12), 4, { caps: false });
+      if (k % 2 === 0) sample(pts, 2);
     }
     for (const t of [0.0, 0.2, 0.42, 0.66]) { const r = r0 * (1 - t) + 0.15; m.color(stick[1]); m.torus(0, lerp(y0, y1, t), K.SZ, r, 0.13, { seg: 16, tseg: 4 }); }
     for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + 0.4; m.color(stick[2]); m.limb(Math.sin(a) * r0, y0, K.SZ + Math.cos(a) * r0, Math.sin(a) * 6.8, 10.2, K.SZ + Math.cos(a) * 6.8, 0.16, 0.16, { seg: 4 }); }
     m.color('#ffd070', 0.9); m.ball(0, y1 + 0.6, K.SZ, 0.7); m.emissive(0);
     m.lo = false;
     return { cols: [], lights: [{ x: 0, y: y1 + 0.6, z: K.SZ, s: 2.5, c: '#ffd070' }] };
-  });
+  }, own);
   /* ---- the jungle gym: nests, galleries, tie-beam, loft, core column, bird's nest ---- */
   bbaPart(api, P, 0, -3, m => {
     const cols = [], lights = [];
@@ -1712,7 +1733,7 @@ function bbaCathBuild(api, g, P) {
     cols.push({ t: 'cyl', x: -4.4, z: 8.6, r: 0.8, y0: 0, y1: 0.7 });
     for (const [x, y, z] of [[0, 11, 6], [-4.5, 6, -2], [4.6, 6, -6], [0, 13, -10], [0, 22, K.SZ]]) { m.color('#2a2a30'); m.limb(x, y + 0.5, z, x, y + 2.5, z, 0.03, 0.03, { seg: 3 }); m.color('#ffc860', 0.95); m.ellipsoid(x, y, z, 0.32, 0.45, 0.32); m.emissive(0); lights.push({ x, y, z, s: 1.6, c: '#ffc860' }); }
     return { cols, lights };
-  });
+  }, own);
   bbaClimbZone(api, P, { x: -3.5, z: 2.3, y0: 2.8, y1: 7.6, nx: 1, nz: 0, hw: 0.8, top: 7.6, exit: 0.95, name: 'ladder1' });
   bbaClimbZone(api, P, { x: 1.6, z: -7.05, y0: 10.4, y1: K.LOFT, nx: 0, nz: -1, hw: 0.75, top: K.LOFT, exit: 0.95, name: 'ladder2' });
   bbaClimbZone(api, P, { x: 0, z: K.SZ - 2.05, y0: K.LOFT, y1: K.NEST, nx: 0, nz: -1, hw: 0.8, top: K.NEST, exit: 0.95, name: 'spire' });
@@ -1723,8 +1744,12 @@ function bbaCathBuild(api, g, P) {
   bbaGlowPath(api, P, [[-4.4, 1.6, 8.6], [-3.5, 2.3, 6.0], [-2.4, 3.7, 2.5], [-3.1, 5.0, 2.3], [-5, 8.5, -1], [-5, 8.5, -5], [0, 8.5, -5], [4.8, 8.5, -5], [4.8, 9.9, -9.5], [0.5, 11.3, -8.6], [0.5, 13, -7.5], [0, 15.9, -5], [0, 18, -6.5], [0, 21, -6.5], [0, 24, -6.5]]);
   bbaPickup(api, P, P.o.nestReward === undefined ? 'glow' : P.o.nestReward, 0, K.NEST + 1.0, K.SZ + 0.8);
   bbaPool(api, P, 0, -2, 14, '#ffc860', 0.4);
+  P.glowRange = [glow0, W.glows.length]; P.pickDefs = W.pickupDefs.slice(pick0);
+  P.burnPts = bp.map(q => F.w(q[0], q[1], q[2]));
+  if (P.o.burnable !== false) bbaCathCollapseParts(api, P);
   P.draw = (gg, Rr, Sp, nk) => {
     const env = gg.env, cam = gg.cam;
+    if (P.burnt) return;
     if ((cam.x - F.x) * (cam.x - F.x) + (cam.z - F.z) * (cam.z - F.z) > 120 * 120) return;
     const day = 1 - nk;
     if (nk > 0.05) {
@@ -1808,6 +1833,14 @@ function bbaShroomBuild(api, g, P) {
   bbaGlowPath(api, P, K.CAPS.map((top, i) => { const [x, z] = capPos(i); return [x, top + 3.2, z]; }).concat([[0, K.ELDER + 1.0, 0]]));
   bbaPickup(api, P, P.o.elderReward === undefined ? null : P.o.elderReward, 0, K.ELDER + 1.0, 0.8);
   bbaPool(api, P, 0, 0, 16, '#b07aff', 0.35);
+  P.draw = (gg, Rr, Sp, nk) => {
+    if (P.o.beacon === false) return;
+    // a pulsing column of spore light over the Elder Shroom: a destination you can see from far away
+    const t = P.R.t, a = F.w(0, K.ELDER + 0.5, 0), b = F.w(0, K.ELDER + 60, 0), c = bbaHue((t * 30) % 360, 1, 0.65), k = (0.1 + 0.3 * nk) * (0.8 + 0.2 * Math.sin(t * 2.2));
+    bbaLine(Rr, a[0], a[1], a[2], b[0], b[1], b[2], 9 * F.s, Sp.beam, c, k, true);
+    bbaLine(Rr, a[0], a[1], a[2], b[0], b[1] - 25 * F.s, b[2], 3 * F.s, Sp.beam, [1, 1, 1], k * 0.8, true);
+    Rr.bbs.bb(a[0], a[1] + 1, a[2], 14 * F.s, 9 * F.s, Sp.glow, c, k * 1.2, true);
+  };
   P.update = (gg, wdt) => {
     const nk = bbaNight(gg, P), t = P.R.t, p = gg.player;
     for (let i = 0; i < dyn.length; i++) {
@@ -2139,4 +2172,239 @@ function bbaLaunch(g, P) {
   P.launch = { t: 0 };
   g.banner('LAUNCH SEQUENCE', 'Countdown started. Hold on to your bun.', { col: '#ff4a2a' });
   burnsSfx('neon_flash', { vol: 0.5 });
+}
+
+/* ---- THE BURN: the Stick Cathedral's spectacular burn (a side-quest set piece) ----------------
+   BurnsBigArt.burn(g, cathedral, { cinematic: true, crowd: 26, music, hazard: true, persist: true, onDone(g, piece) })
+   Timeline (s): 0 the crowd gathers in a circle - 5 ignition, fire runs up the woven lattice -
+   13.5 a fire tornado spins up in the nave - 21 the structure collapses - 22 a glowing pile -
+   32 done (onDone). Skippable (cinematic = a cutscene with SKIP: skipping jumps to the glowing pile).
+   The cathedral's static mesh is its own chunk, so it can vanish; low-detail mover copies fall. */
+const BBA_CBURN = { IGNITE: 5, CLIMB: 10, T0: 13.5, T1: 21.2, COLLAPSE: 21, FALL: 2.6, END: 32, TOP: 40 };
+BurnsBehaviors.register('bbaSpectator', {
+  init(a) { a.data.mode = 'walk'; a.data.cheer = Math.random() * 3; },
+  update(a, g, dt) {
+    const D = a.data, d = a.def, S = d._bbaB, ph = S ? S.phase : 'embers';
+    if (D.mode === 'walk') {
+      const r = a.moveTo(d.tx, d.tz, d.speed || 2.6, dt, 0.35); a.ch.play('walk', { rate: 1.4 });
+      if (r < 0.5) D.mode = 'watch';
+    } else {
+      a.vx = BurnsM.damp(a.vx, 0, 6, dt); a.vz = BurnsM.damp(a.vz, 0, 6, dt);
+      a.face(d.fx, d.fz, dt, 4);
+      D.cheer -= dt;
+      if (ph === 'embers') a.ch.play('dance', { style: d.style, bpm: 120 + d.style * 3 });
+      else if (ph === 'tornado' || ph === 'collapse' || D.cheer > 2.2) a.ch.play('cheer');
+      else { a.ch.play(ph === 'fire' && Math.sin(a.t * 0.7 + d.style) > 0.6 ? 'cheer' : 'idle'); if (D.cheer < 0) D.cheer = 3 + Math.random() * 5; }
+    }
+    a.physics(dt);
+  }
+});
+function bbaCathCollapseParts(api, P) {
+  const K = BBA_CATH, Lh = K.half, tmp = [0, 0], dark = '#7a5a34', charred = '#4a3020';
+  const section = (px, py, pz, build) => { const mv = bbaMover(api, P, m => { m.lo = true; m.push(); m.tf(-px, -py, -pz); build(m); m.pop(); m.lo = false; return { cols: [] }; }); bbaPose(P, mv, px, py, pz, 0, 0, 0); mv.visible = false; return { mv, px, py, pz }; };
+  const half = (left) => m => {
+    for (let z = K.Z1; z >= K.Z0 - 0.01; z -= 4) { const pts = []; for (let i = 0; i <= 10; i++) { const s = (left ? 0 : Lh) + i / 10 * Lh; K.arch(s, tmp); pts.push([tmp[0], tmp[1], z]); } m.color(dark); bbaTube(m, pts, 0.24, 4, { caps: false }); }
+    let n = 0;
+    for (const dir of [1, -1]) for (let s0 = -28; s0 <= 2 * Lh + 28; s0 += 7.2) {
+      const pts = [];
+      for (let z = K.Z0; z <= K.Z1 + 0.01; z += 2.8) { const s = s0 + dir * (z - K.Z0); if ((left && (s < 0.4 || s > Lh)) || (!left && (s < Lh || s > 2 * Lh - 0.4))) { if (pts.length > 1) break; pts.length = 0; continue; } K.arch(s, tmp); pts.push([tmp[0], tmp[1] + 0.05, z]); }
+      if (pts.length > 2) { m.color(n++ % 2 ? dark : charred); bbaTube(m, pts, 0.14, 3, { caps: false }); }
+    }
+  };
+  P.fall = [
+    Object.assign(section(-K.SPAN, 0, -2, half(true)), { axis: 'roll', ang: -1.2, delay: 0.25 }),
+    Object.assign(section(K.SPAN, 0, -2, half(false)), { axis: 'roll', ang: 1.2, delay: 0.45 }),
+    Object.assign(section(0, 13.2, K.SZ, m => {
+      for (let k = 0; k < 6; k++) { const pts = []; for (let i = 0; i <= 10; i++) { const t = i / 10, a = k / 6 * TAU + t * 3.4, r = 5.6 * (1 - t) + 0.15; pts.push([Math.sin(a) * r, lerp(13.2, 38.5, t), K.SZ + Math.cos(a) * r]); } m.color(k % 2 ? dark : charred); bbaTube(m, pts, 0.15, 3, { caps: false }); }
+      m.color(dark); m.limb(0, K.LOFT, K.SZ, 0, K.NEST, K.SZ, 0.9, 0.7, { seg: 6 }); m.color('#ffb040', 0.8); m.ball(0, 39.1, K.SZ, 0.7); m.emissive(0);
+    }), { axis: 'pitch', ang: 1.75, delay: 0, drop: 11 }),
+    Object.assign(section(0, 0, K.Z1 + 0.15, m => {
+      m.color(dark); for (const sx of [-1, 1]) m.limb(sx * 3.2, 0, K.Z1 + 0.15, sx * 3.0, 8.2, K.Z1 + 0.15, 0.22, 0.18, { seg: 4 });
+      const door = []; for (let i = 0; i <= 8; i++) { const a = i / 8 * Math.PI; door.push([Math.cos(a) * 3.1, 8.2 + Math.sin(a) * 2.4, K.Z1 + 0.15]); } bbaTube(m, door, 0.2, 4, { caps: false });
+      m.push(); m.tf(0, 12.4, K.Z1 + 0.2, 0, Math.PI / 2, 0); m.torus(0, 0, 0, 2.2, 0.22, { seg: 10, tseg: 4 }); m.pop();
+      m.color('#ff7a2a', 0.9); m.push(); m.tf(0, 12.4, K.Z1 + 0.05, 0, Math.PI / 2, 0); m.ellipsoid(0, 0, 0, 1.9, 0.06, 1.9, { seg: 10, rings: 3 }); m.pop(); m.emissive(0);
+    }), { axis: 'pitch', ang: 1.45, delay: 0.7 })
+  ];
+  // the glowing pile left behind
+  P.pile = bbaMover(api, P, m => { bbaCathPileMesh(m); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 5.2, y0: 0, y1: 1.7 }] }; });
+  bbaPose(P, P.pile, 0, 0, -2, 0, 0, 0); P.pile.visible = false;
+}
+function bbaCathPileMesh(m) {
+  const rows = [[0, 0], [6.6, 0], [6.2, 0.45], [5.4, 0.8], [4.4, 1.25], [3.2, 1.65], [2.0, 2.0], [0.8, 2.25], [0, 2.3]].map((q, i) => [q[0], q[1], i % 2 ? '#ff5a1a' : '#241812', i % 2 ? 0.95 : 0]);
+  m.lathe(rows, { seg: m.segs(16, 10), rMod: (th, t) => 1 + Math.sin(th * 5 + t * 7) * 0.08 + Math.sin(th * 11) * 0.04 });
+  const rng = mulberry32(7);
+  for (let i = 0; i < 16; i++) {
+    const a = rng() * TAU, r0 = rng() * 2.5, r1 = 3 + rng() * 3.5, a1 = a + (rng() - 0.5) * 1.4, y0 = 1.6 + rng() * 0.9;
+    const x0 = Math.sin(a) * r0, z0 = Math.cos(a) * r0, x1 = Math.sin(a1) * r1, z1 = Math.cos(a1) * r1;
+    m.color('#2a1a12'); m.limb(x0, y0, z0, x1, 0.4 + rng() * 0.6, z1, 0.32, 0.26, { seg: 6 });
+    m.color('#ff6a1a', 0.95); m.ball(x1, 0.45 + rng() * 0.5, z1, 0.28, { seg: 6, rings: 4 }); m.emissive(0);
+  }
+}
+// already burned (saved): only the smouldering pile is built
+function bbaCathAshes(api, g, P) {
+  const F = P.F;
+  P.burnt = true; P.summitL = null;
+  bbaPart(api, P, 0, -2, m => { m.push(); m.tf(0, 0, -2); bbaCathPileMesh(m); m.pop(); return { cols: [{ t: 'cyl', x: 0, z: -2, r: 5.2, y0: 0, y1: 1.7 }], lights: [{ x: 0, y: 2.6, z: -2, s: 6, c: '#ff6a1a' }] }; });
+  bbaPool(api, P, 0, -2, 14, '#ff6a2a', 0.5);
+  P.spots = { pile: F.w(0, 1.7, -2) };
+  P.start = gg => { if (P.o.hazard !== false) for (let i = 0; i < 7; i++) { const a = i / 7 * TAU, q = F.w(Math.sin(a) * 3.2, 1.2, -2 + Math.cos(a) * 3.2); gg.addTempFire(q[0], q[1], q[2], 1.0, 1e9); } };
+  P.update = (gg, wdt) => { if (Math.random() < wdt * 2) { const q = F.w((Math.random() - 0.5) * 6, 2.2, -2 + (Math.random() - 0.5) * 6); gg.fx.add(q[0], q[1], q[2], 0.3, 1.2, 0, 5, 1.5, 6, [0.25, 0.22, 0.22], 0.3, 'smoke', 4 | 32); } };
+}
+function bbaCathBurn(g, P, o) {
+  o = o || {};
+  if (P.burnt || (P.cburn && !P.cburn.done)) { if (P.burnt && o.onDone) o.onDone(g, P); return P.cburn || null; }
+  const F = P.F, K = BBA_CATH, T = BBA_CBURN, R = P.R;
+  const c = F.w(0, 0, -2);
+  const B = P.cburn = { t: 0, phase: 'gather', o, cx: c[0], cz: c[2], y0: F.y0, front: 0, tornado: 0, crowd: [], done: false, collapsed: false, tc: 0 };
+  // the crowd gathers in a circle around the cathedral
+  const n = o.crowd === undefined ? 26 : o.crowd | 0, rng = mulberry32(hashStr(P.id + 'crowd')), ring = 30 * F.s;
+  const types = ['burner', 'furcoat', 'tutu', 'ledsuit', 'sparklepony', 'crusty', 'burner', 'ranger'];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU + rng() * 0.12, rr = ring + (i % 3) * 1.6 * F.s + rng() * 0.8;
+    const sx = B.cx + Math.sin(a) * (rr + 10), sz = B.cz + Math.cos(a) * (rr + 10), tx = B.cx + Math.sin(a) * rr, tz = B.cz + Math.cos(a) * rr;
+    const A = g.spawnActor({ type: types[i % types.length], seed: 900 + i, x: sx, z: sz, yaw: a + Math.PI, behavior: 'bbaSpectator', tx, tz, fx: B.cx, fz: B.cz, speed: 3.0 + rng() * 0.8, style: i % 6, _bbaB: B, noTalk: true, chatter: false, always: true });
+    B.crowd.push(A);
+  }
+  // keep Brady safely outside the burn perimeter
+  const p = g.player;
+  if (Math.hypot(p.x - B.cx, p.z - B.cz) < ring - 2) {
+    const a = Math.atan2(p.x - B.cx, p.z - B.cz) || 0.4, rr = ring + 4 * F.s;
+    if (p.vehicle) p.vehicle.dismount(p);
+    p.teleport(B.cx + Math.sin(a) * rr, g.world.height(B.cx + Math.sin(a) * rr, B.cz + Math.cos(a) * rr), B.cz + Math.cos(a) * rr, a + Math.PI);
+    g.toast('A RANGER WAVES YOU BACK TO THE PERIMETER');
+  }
+  if (o.music) burnsMusic(o.music);
+  burnsSfx('crowd_cheer', { vol: 0.7 });
+  g.missions.event('bbaBurn', P);
+  if (o.cinematic !== false) {
+    const C = (lx, ly, lz, tx, ty, tz, fov) => { const a = F.w(lx, ly, lz), b = F.w(tx, ty, tz); return { x: a[0], y: a[1], z: a[2], tx: b[0], ty: b[1], tz: b[2], fov: fov || 1.0 }; };
+    const A0 = C(-36, 8, 36, 0, 12, -2), B0 = C(-27, 4.5, 27, 0, 14, -2), C0 = C(-24, 3.5, 30, 0, 18, -3, 1.1), D0 = C(-19, 2.8, 27, 0, 21, -3, 1.18), E0 = C(-34, 10, 28, 0, 5, -2), F0 = C(-24, 4.5, 24, 0, 1.5, -2);
+    g.cutscene([
+      { cam: A0 },
+      { banner: ['THE BURN', 'Tonight the Stick Cathedral goes up.', { col: '#ff7a2a', big: true, dur: 3.5 }] },
+      { cam: { from: A0, to: B0, dur: T.IGNITE } },
+      { cam: { from: B0, to: C0, dur: T.T0 - T.IGNITE + 0.5 } },
+      { cam: { from: C0, to: D0, dur: T.COLLAPSE - T.T0 - 0.5 } },
+      { cam: { from: D0, to: E0, dur: 4 } },
+      { cam: { from: E0, to: F0, dur: T.END - T.COLLAPSE - 4 } },
+      { do: gg => bbaCathBurnFinish(gg, P) }
+    ], null);
+    B.cine = g.cine;
+  }
+  return B;
+}
+function bbaCathCollapse(g, P) {
+  const B = P.cburn;
+  if (B.collapsed) return; B.collapsed = true; B.tc = B.t;
+  if (P.chunk) P.chunk.count = 0;              // the woven cathedral is gone...
+  for (const c of P.cols) c.off = true;
+  for (const z of P.climbs) z.off = true;
+  if (P.glowRange) for (let i = P.glowRange[0]; i < P.glowRange[1]; i++) g.world.glows[i].s = 0;
+  for (const it of g.pickups.items) if (!it.taken && P.pickDefs && P.pickDefs.some(d => Math.abs(d.x - it.x) < 0.01 && Math.abs(d.z - it.z) < 0.01)) { it.taken = true; it.obj.visible = false; }
+  P.summit = null; P.burnt = true;
+  if (P.fall) for (const S of P.fall) S.mv.visible = true;   // ...replaced by burning copies that fall
+  burnsSfx('man_stomp', { pitch: 0.6 }); burnsSfx('man_roar', { pitch: 0.4, vol: 0.8 }); burnsSfx('crowd_cheer'); g.shake(0.8);
+  for (const q of P.burnPts) if (Math.random() < 0.25) g.fx.burst(q[0], q[1], q[2], 'spark', 3, '#ffb040');
+}
+// the pile stays hot: real fires (flames, flicker light, and they burn if you walk in)
+function bbaCathPileFires(g, P) {
+  const B = P.cburn; if (B.fires) return; B.fires = true;
+  const F = P.F, hot = B.o.hazard !== false;
+  for (let i = 0; i < 7; i++) { const a = i / 7 * TAU, q = F.w(Math.sin(a) * 3.2, 1.2, -2 + Math.cos(a) * 3.2); if (hot) g.addTempFire(q[0], q[1], q[2], 1.0, 1e9); else g.world.fires.push({ x: q[0], y: q[1], z: q[2], r: 1.0, hazard: false, t: Math.random() * 10 }); }
+}
+function bbaCathBurnFinish(g, P) {
+  const B = P.cburn; if (!B || B.done) return;
+  if (!B.collapsed) bbaCathCollapse(g, P);
+  B.done = true; B.phase = 'embers'; B.t = Math.max(B.t, BBA_CBURN.END); B.tornado = 0;
+  if (P.fall) for (const S of P.fall) S.mv.visible = false;
+  if (P.pile) { P.pile.visible = true; P.pile.scale = 1; }
+  for (const A of B.crowd) { if (A.data.mode === 'walk') { A.x = A.def.tx; A.z = A.def.tz; A.data.mode = 'watch'; } }
+  bbaCathPileFires(g, P);
+  if (B.o.persist !== false) BurnsSave.flag(g.worldId, 'bba:' + P.id + ':burned', true);
+  burnsSfx('crowd_cheer');
+  g.missions.event('bbaBurnDone', P);
+  if (B.o.onDone) B.o.onDone(g, P);
+}
+function bbaCathBurnStep(g, P, dt) {
+  const B = P.cburn, T = BBA_CBURN, F = P.F;
+  if (B.done) {
+    // the glowing pile smoulders on
+    if (Math.random() < dt * 6) { const q = F.w((Math.random() - 0.5) * 7, 2.2, -2 + (Math.random() - 0.5) * 7); g.fx.add(q[0], q[1], q[2], (Math.random() - 0.5) * 0.6, 2 + Math.random() * 2, (Math.random() - 0.5) * 0.6, 2.2, 0.12, 0.04, [1, 0.6, 0.25], 1, 'spark', 1 | 32); }
+    if (Math.random() < dt * 3) { const q = F.w((Math.random() - 0.5) * 5, 2.6, -2 + (Math.random() - 0.5) * 5); g.fx.add(q[0], q[1], q[2], 0.4, 1.4, 0.1, 5, 2, 8, [0.2, 0.18, 0.18], 0.32, 'smoke', 4 | 32); }
+    if (g.frameN !== B.lf) { B.lf = g.frameN; const q = F.w(0, 3, -2); g.pointLight(q[0], q[1], q[2], 26, [1, 0.45, 0.15], 1.6 + Math.sin(P.R.t * 7) * 0.2); }
+    return;
+  }
+  B.t += dt;
+  const t = B.t;
+  B.phase = t < T.IGNITE ? 'gather' : t < T.T0 ? 'fire' : t < T.COLLAPSE ? 'tornado' : t < T.COLLAPSE + T.FALL + 1.2 ? 'collapse' : 'embers';
+  if (t >= T.IGNITE && B.t - dt < T.IGNITE) { burnsSfx('flame_jet'); burnsSfx('crowd_cheer', { vol: 0.8 }); if (!B.cine) g.banner('IGNITION', 'The weave catches...', { col: '#ff7a2a', small: true }); }
+  B.front = clamp((t - T.IGNITE) / T.CLIMB, 0, 1);
+  const h = B.front * T.TOP * F.s, alive = !B.collapsed;
+  // fire runs up the woven lattice
+  if (alive && t >= T.IGNITE) {
+    const pts = P.burnPts, n = 7;
+    for (let i = 0; i < n; i++) {
+      const q = pts[(Math.random() * pts.length) | 0], dy = h - (q[1] - B.y0);
+      if (dy < 0 || (dy > 7 && Math.random() < 0.6)) continue;
+      g.fx.add(q[0] + (Math.random() - 0.5) * 0.6, q[1], q[2] + (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 1.2, 2.5 + Math.random() * 2.5, (Math.random() - 0.5) * 1.2, 0.55 + Math.random() * 0.3, 2.4, 0.7, [1, 0.5 + Math.random() * 0.3, 0.15], 1, 'flame', 1);
+    }
+    if (Math.random() < dt * 40) { const q = pts[(Math.random() * pts.length) | 0]; if (q[1] - B.y0 < h) g.fx.add(q[0], q[1], q[2], (Math.random() - 0.5) * 2, 3 + Math.random() * 4, (Math.random() - 0.5) * 2, 2 + Math.random(), 0.14, 0.04, [1, 0.62, 0.25], 1, 'spark', 1 | 32); }
+    if (Math.random() < dt * 9 && h > 2) { const q = pts[(Math.random() * pts.length) | 0]; if (q[1] - B.y0 < h) g.fx.add(q[0], q[1] + 2, q[2], (Math.random() - 0.5) * 1.5, 2.5 + Math.random() * 2, (Math.random() - 0.5) * 1.5, 5, 3, 13, [0.18, 0.15, 0.16], 0.4, 'smoke', 4 | 32); }
+    if (Math.random() < dt * 2.5) burnsSfx('flame_jet', { vol: 0.5, pitch: 0.6 + Math.random() * 0.4 });
+  }
+  // the fire tornado
+  const tw = t < T.T0 ? 0 : t < T.T0 + 1.4 ? (t - T.T0) / 1.4 : t < T.T1 - 1 ? 1 : Math.max(0, (T.T1 - t));
+  if (tw > 0 && B.tornado === 0) { burnsSfx('man_roar', { pitch: 0.55, vol: 0.7 }); if (!B.cine) g.toast('FIRE TORNADO!'); g.missions.event('bbaTornado', P); }
+  B.tornado = tw;
+  if (tw > 0.05) {
+    for (let i = 0; i < 2; i++) { const a = Math.random() * TAU, r = 1 + Math.random() * 2.5, y = B.y0 + Math.random() * 30 * tw * F.s; g.fx.add(B.cx + Math.sin(a) * r, y, B.cz + Math.cos(a) * r, Math.cos(a) * 9, 3 + Math.random() * 5, -Math.sin(a) * 9, 0.9, 0.18, 0.05, [1, 0.7, 0.3], 1, 'spark', 1 | 4); }
+    if (Math.random() < dt * 1.2) burnsSfx('wind', { vol: 0.6, pitch: 0.6 }, 'dust');
+    g.shake(0.06 * tw);
+  }
+  // collapse: the falling copies, then the pile
+  if (t >= T.COLLAPSE && !B.collapsed) bbaCathCollapse(g, P);
+  if (B.collapsed && P.fall) {
+    for (const S of P.fall) {
+      const u = clamp((t - B.tc - S.delay) / T.FALL, 0, 1), sink = clamp((t - B.tc - S.delay - T.FALL) / 1.2, 0, 1), a = S.ang * u * u;
+      bbaPose(P, S.mv, S.px, S.py - (S.drop || 0) * Math.pow(u, 1.5) - sink * 5, S.pz, 0, S.axis === 'pitch' ? a : 0, S.axis === 'roll' ? a : 0);
+      if (u >= 1 && !S.landed) { S.landed = true; g.shake(0.5); burnsSfx('man_stomp', { pitch: 0.7 }); const q = F.w(S.px, 0.5, S.pz); g.fx.dust(q[0], q[1], q[2], 24, '#6a5a50'); g.fx.burst(q[0], q[1] + 2, q[2], 'spark', 26, '#ffb040'); }
+      if (sink >= 1) S.mv.visible = false;
+      if (S.mv.visible && Math.random() < dt * 30) { const q = F.w(S.px, S.py, S.pz); g.fx.fire(q[0] + (Math.random() - 0.5) * 8, q[1] + Math.random() * 6, q[2] + (Math.random() - 0.5) * 8, 2.2); }
+    }
+    if (P.pile) { const k = clamp((t - B.tc - 0.6) / 2.0, 0, 1); P.pile.visible = k > 0; P.pile.scale = 0.25 + 0.75 * easeInOut(k); }
+    if (t - B.tc > 1.0) bbaCathPileFires(g, P);
+    if (P.pile && P.pile.visible && Math.random() < dt * 40) { const q = F.w((Math.random() - 0.5) * 9, 0.8 + Math.random() * 1.2, -2 + (Math.random() - 0.5) * 9); g.fx.fire(q[0], q[1], q[2], 1.6 + Math.random()); }
+  }
+  if (g.frameN !== B.lf) { B.lf = g.frameN; const k = B.phase === 'gather' ? 0 : 1, q = [B.cx, B.y0 + Math.max(4, h * 0.45), B.cz]; if (k) g.pointLight(q[0], q[1], q[2], 46 * F.s, [1, 0.5, 0.18], 2.6 + Math.sin(P.R.t * 11) * 0.3); }
+  if (t >= T.END) bbaCathBurnFinish(g, P);
+}
+function bbaCathBurnDraw(g, Rr, Sp, P) {
+  const B = P.cburn, F = P.F, T = BBA_CBURN, t = P.R.t;
+  if (B.done || (P.pile && P.pile.visible && B.t - B.tc > 2.2)) {
+    // heat shimmer over the glowing pile
+    for (let i = 0; i < 8; i++) { const a = i * 0.8, x = B.cx + Math.sin(a) * 2.5 + Math.sin(t * 7 + i) * 0.4, z = B.cz + Math.cos(a) * 2.5, y = B.y0 + 4 + (i % 3); bbaLine(Rr, x, y - 2, z, x + Math.sin(t * 9 + i * 2) * 0.5, y + 3, z, 0.9, Sp.streak, [1, 0.85, 0.6], 0.05, true); }
+    Rr.bbs.bb(B.cx, B.y0 + 2, B.cz, 16, 10, Sp.glow, [1, 0.42, 0.12], 0.35 + Math.sin(t * 5) * 0.05, true);
+    return;
+  }
+  const h = B.front * T.TOP * F.s;
+  if (!B.collapsed && B.t >= T.IGNITE) {
+    // the lattice glows where the fire has reached
+    const pts = P.burnPts, col = [1, 0.42, 0.12];
+    for (let i = 0; i < pts.length; i += 2) { const q = pts[i], dy = h - (q[1] - B.y0); if (dy < 0) continue; const fl = 0.55 + 0.45 * Math.sin(t * 13 + i * 1.7); Rr.bbs.bb(q[0], q[1], q[2], 1.6 + (dy < 5 ? 1.4 : 0), 1.6 + (dy < 5 ? 1.4 : 0), Sp.glow, col, (dy < 5 ? 0.7 : 0.4) * fl, true); }
+    // heat shimmer above the flames
+    for (let i = 0; i < 14; i++) { const a = i * 0.45, x = B.cx + Math.sin(a) * 7 + Math.sin(t * 8 + i) * 0.5, z = B.cz + Math.cos(a) * 9, y = B.y0 + h + 2 + (i % 4) * 2; bbaLine(Rr, x, y - 3, z, x + Math.sin(t * 10 + i * 1.3) * 0.7, y + 4, z, 1.1, Sp.streak, [1, 0.85, 0.6], 0.055, true); }
+    Rr.bbs.bb(B.cx, B.y0 + h * 0.5, B.cz, 26 + h, 18 + h, Sp.glow, [1, 0.45, 0.14], 0.3, true);
+  }
+  // fire tornado: three interleaved helices of flame around a bright core
+  const tw = B.tornado;
+  if (tw > 0.02) {
+    const H = 42 * tw * F.s, cx = B.cx + Math.sin(t * 1.3) * 1.2, cz = B.cz + Math.cos(t * 1.1) * 1.2, col = [0, 0, 0];
+    for (let j = 0; j < 3; j++) for (let k = 0; k < 30; k++) {
+      const f = k / 29, hy = f * H, th = t * 7.5 + f * 9 + j * 2.094, r = (0.8 + f * 3.4) * (1 + 0.2 * Math.sin(t * 3 + f * 6));
+      col[0] = 1; col[1] = lerp(0.85, 0.35, f); col[2] = lerp(0.45, 0.08, f);
+      Rr.bbs.bb(cx + Math.cos(th) * r, B.y0 + hy, cz + Math.sin(th) * r, 2.6 + f * 2.4, 3.4 + f * 2.6, Sp.flame, col, 0.85 * (1 - f * 0.45) * tw, true, Math.sin(th) * 0.3);
+    }
+    bbaLine(Rr, cx, B.y0, cz, cx, B.y0 + H, cz, 3.2 * tw, Sp.streak, [1, 0.8, 0.45], 0.7 * tw, true);
+    Rr.bbs.bb(cx, B.y0 + H * 0.3, cz, 12 * tw, 20 * tw, Sp.glow, [1, 0.55, 0.2], 0.55 * tw, true);
+  }
 }

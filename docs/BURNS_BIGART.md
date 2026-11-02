@@ -44,6 +44,7 @@ Call it inside `build(api, g)`. `x, z` is the piece origin on the playa (centre 
 | `mission` | — | A mission id. When Brady stands on the summit, the mission is started (if available) and completed with its token spawning **at the summit**. Works with any mission type; `type: 'custom', start: 'manual'` is the usual choice (see `BurnsBigArt.mission`). A locked mission is left alone. |
 | `token` | — | `true` creates mission `bba_<id>` on the fly (or pass a string id). Prefer declaring the mission yourself so the hub's token total is right before the first visit. |
 | `onReach(g, piece)` | — | Called the first time Brady reaches the summit in a visit. |
+| `onArrive(g, piece)` | — | Called the first time Brady comes within `arriveR` of the piece (default 60% of its size) in a visit. Handy when a piece is a *destination* (event `bbaArrive`). |
 | `reveal` | — | `[{x, z, label, col}]` world-space map markers added to the minimap when the summit is reached ("vantage point"). |
 | `vantage` | `true` | The first time a summit is reached (saved per world), the camera slowly orbits the piece for ~4 s. Moving the stick cancels it. `false` disables, `'always'` replays every visit. |
 | `glow` | `true` | `false` removes the piece's glow sticks (each piece adds roughly 8–20). |
@@ -74,6 +75,7 @@ Kind-specific options and callbacks are listed with each piece (§4).
 - `BurnsBigArt.beamHits(g, x, z)` → true while a lit lighthouse beam sweeps over `(x, z)`.
 - `BurnsBigArt.revealable(g, x, z, fn, r)` → register anything to be revealed once by a sweeping lighthouse beam (`fn(g, q)` runs once). Call it in `onStart` or later.
 - `BurnsBigArt.state(g)` → `{climbing, riding: 'zip'|'loop'|null, air}`.
+- `BurnsBigArt.burn(g, pieceOrId, opts)` → sets a piece on fire. The **Stick Cathedral** gets the full burn sequence (§4.5); every other piece gets a generic blaze over its own colliders (`{dur: 45, hazard: false, onDone(g, piece)}`).
 
 ### Mission events
 
@@ -90,6 +92,8 @@ Every piece reports what happens through `g.missions.event(name, data)`, so `cus
 | `bbaLit`, `bbaAllLit` | A lighthouse is lit; all three are lit. |
 | `bbaReveal`, `bbaDarkwadsAll` | A beam reveals something (data `.kind` = `'darkwad'`, `'path'`, `'custom'`); every darkwad is lit up. |
 | `bbaLaunch` | The Retro Rocket ignites. |
+| `bbaArrive` | Brady first comes near a piece (see `onArrive`). |
+| `bbaBurn`, `bbaTornado`, `bbaBurnDone` | A burn starts; the cathedral's fire tornado spins up; the burn is over (also on SKIP). |
 
 Example: "loop the loop three times" is `{ id: 'loops', type: 'custom', count: 3, start: 'auto', onEvent(g, m, n) { if (n === 'bbaLoop') g.missions.progress('loops'); } }`.
 
@@ -173,16 +177,35 @@ A towering basket-woven cathedral of bent saplings: a pointed-arch nave and a tw
 - **Footprint** 20 × 32 m (nave z −16 … +12, door at +Z). **Height** 38 m. **Summit** the bird's nest inside the spire, 26 m.
 - **Gameplay** (a jungle gym): log step → woven nests → woven ladder → west gallery (7.6 m) → tie-beam across the nave → east gallery → nests → ladder to the crossing loft (15 m) → ladder up the spire's core to the bird's nest.
   - Day: sunlight shafts pour through the weave. Night: hanging lanterns, glowing rose window, a beacon on the spire.
-- **Options** `nestReward`.
-- **Spots** `nest, loft, door, westGallery, eastGallery`.
-- **Mission ideas** "Bird's Nest Bell"; hide-and-seek inside; W12 (Temple world) as a quiet climbing space.
+- **Options** `nestReward`, `burnable` (default `true`: builds the low-detail collapse copies the burn needs, ~4.5k mover vertices; `false` to save them if you never burn it), `burned` (force the burned state).
+- **Spots** `nest, loft, door, westGallery, eastGallery` (`pile` once burned).
+- **Mission ideas** "Bird's Nest Bell"; hide-and-seek inside; W12 (Temple world) as a quiet climbing space; **the burn** (below).
+
+#### The Burn (`BurnsBigArt.burn(g, cathedral, opts)`)
+A 32-second set piece for the "go see a major art piece burn" side quest:
+1. **The crowd gathers in a circle**: 26 burners walk in and stand in a ring 30 m out, facing the fire (Brady is waved back to the perimeter if he's inside).
+2. **Fire runs up the woven lattice** (5 s → 15 s): flames climb from the ground to the spire tip, the sticks glow where the fire has reached, embers rise, smoke builds, **heat shimmer** ripples above the flames.
+3. **A fire tornado** (13.5 s → 21 s) spins up inside the nave: a twisting 40 m column of flame throwing sparks; the crowd cheers.
+4. **The structure collapses** (21 s): the woven cathedral vanishes into burning, falling sections (the spire topples, the nave halves fold in, the facade falls forward), with shakes and spark bursts.
+5. **A glowing pile** remains: a mound of embers and charred logs that keeps burning (real fires: flicker light, and it burns if you walk in), with heat shimmer and the crowd dancing.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `cinematic` | `true` | Plays as a cutscene with its own camera moves and the **SKIP** button. Skipping jumps straight to the glowing pile (all end-state changes still happen, `onDone` still fires). `false` = the burn runs while Brady walks around. |
+| `onDone(g, piece)` | — | Called once when the burn ends or is skipped. If the cathedral is already burned (a revisit), `burn()` calls it immediately. |
+| `crowd` | `26` | Spectators to spawn (0 for none; each visible spectator is one draw). |
+| `music` | — | Optional track to start (e.g. `'burns_w10'`). |
+| `hazard` | `true` | The pile burns Brady if he walks in. |
+| `persist` | `true` | Saves `bba:<id>:burned` for the world; on later visits the cathedral is built as the smouldering pile only (no summit, no climb). Pass `burned: false` to `place()` to rebuild it anyway. |
+
+After the burn the cathedral's colliders, ladders, summit, lanterns and route glow sticks are gone. Burn it at night for the full effect (`g.setTod(1, 0.5)` first, or a night world).
 
 ### 4.6 `glowshroomGrove`: The Glowshroom Grove
 Giant glowing mushrooms spiralling up around the Elder Shroom.
 - **Footprint** ~30 × 30 m. **Height** 25 m. **Summit** the Elder Shroom's cap, 24 m.
 - **Gameplay**: every cap on the spiral is a trampoline (spring 18.6, ~5.4 m bounce). Jump onto the smallest cap and steer to the next one up; double jump for margin. Little shrooms around the edge (some are baby trampolines).
   - Night: the caps pulse through the colours, flash when you bounce, spores drift up.
-- **Options** `elderReward`.
+- **Options** `elderReward`, `beacon` (default `true`: a pulsing column of spore light rises 60 m over the Elder Shroom, brighter at night, so the grove reads as a destination from far away; `false` to hide it).
 - **Spots** `elder`. `piece.caps` lists the bouncy caps.
 - **Mission ideas** "Elder Shroom Summit"; collect spores (pickups) mid-bounce; W11 (sound camps) dance floor backdrop.
 
@@ -208,7 +231,40 @@ A 31 m atomic-age rocket on three swept fins beside a red lattice gantry.
 
 ---
 
-## 5. Where they fit (suggested)
+## 5. Where they fit
+
+### Confirmed uses
+
+**World 16, Rhythm Wave: the Glowshroom Grove is the destination of the wobbly bike ride.** Place it far out on the playa so its beacon shows on the horizon, and finish the ride when Brady arrives on the bike:
+
+```js
+missions: [
+  { id: 'shrooms', name: 'Ride to the Mushrooms', type: 'ride', vehicle: 'bike', start: 'manual',
+    target: { x: 140, z: -220, r: 20 }, hint: 'The giant glowing mushrooms, out past the deep playa' },
+  BurnsBigArt.mission('glowshroomGrove', 'elder', { name: 'Elder Shroom Summit' })
+],
+build(api, g) {
+  const grove = BurnsBigArt.place(api, g, 'glowshroomGrove', 140, -220, {
+    mission: 'elder',                      // token on the Elder Shroom's cap
+    onArrive(g, P) { g.banner('THE MUSHROOMS', 'They are... breathing?', { col: '#b07aff' }); }
+  });
+}
+```
+Notes: the `ride` mission completes inside `r` while on the bike (`target` = the piece's `x, z`). The caps are trampolines on foot: Brady should hop off the bike (EXIT) to bounce up. The beacon and the pulsing caps are strongest at night; in a day world the beacon is a soft rainbow column.
+
+**World 17, Root Society: "go see a major art piece burn" triggers the Stick Cathedral burn.**
+
+```js
+const cath = BurnsBigArt.place(api, g, 'stickCathedral', -120, 80, { rotY: Math.PI });
+// ... when the side quest's moment comes (talk handler, trigger, Friday night):
+g.setTod(1, 1);                                     // make it night if it isn't
+BurnsBigArt.burn(g, cath, {
+  onDone(g) { g.missions.complete('seeTheBurn'); g.say('brady', ['That was... the most beautiful thing I have ever seen.']); }
+});
+```
+The burn saves itself (`persist`), so the home hub shows the smouldering pile on every later visit, and calling `burn()` again just runs `onDone` immediately. If W17 needs the cathedral standing again later, place it with `{ burned: false }`.
+
+### Suggested
 
 | World | Piece | Use |
 |---|---|---|

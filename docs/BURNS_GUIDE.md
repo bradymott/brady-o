@@ -74,36 +74,56 @@ That's a complete, playable world. The hub lists it automatically once it regist
 | `env(g, env)` | fn | Per frame: tweak the lighting `env` (for example fog during a dust storm). |
 | `onRespawn(g)` | fn | After Brady faints and respawns. |
 | `drawSkinned(g, R)`, `drawSprites(g, R)` | fn | Advanced: extra draws (§10). |
+| `day`, `dayShort` | string | Day of the week shown on the intro card, the loading card and the hub pin (for example `'Monday'`, `'MON'`). Defaults come from the table in §3.1, so you rarely need it. |
+| `dayCard` | bool | `false` skips the automatic day card at the start of a visit. Show it yourself later with `g.dayCard()` (for example at the end of your intro cutscene). |
+| `home` | bool | Marks Brady's home world (world 17 already has it). The hub shows it as a tipi pin with a HOME button. |
+| `boardTitle` | string | Title of this world's quest board (§7.1), e.g. `'ROOT SOCIETY JOB BOARD'`. |
 
-### 3.1 Play order (14 worlds + a secret one)
+### 3.1 Play order, days of the week and the home world
 
-Worlds are played in this order, by **id**. It's `BURNS_WORLD_ORDER`, also available as `BurnsWorlds.order`:
+The story is one week at the Burn: Brady arrives a clueless first-timer and leaves a full-on burner. Worlds are played in this order, by **id**. It's `BURNS_WORLD_ORDER`, also available as `BurnsWorlds.order`:
 
-| Shown as | World 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | Secret |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| World id | 1 | 2 | 3 | 4 | 5 | 6 | **11** Sound Camp Crawl | 7 | 8 | 9 | **12** The Temple | **13** The Workshops | **14** Skydive Into the Burn | 10 (finale) | **15** Exodus |
+| Shown as | World id | Name | Day (`BurnsWorlds.day(id)`) |
+|---|---|---|---|
+| World 1 | 1 | The Line | Sunday, arrival |
+| World 2 | 2 | No Camp | Sunday night → Monday |
+| World 3 | **16** | Rhythm Wave | Monday |
+| World 4 | **17** | Root Society: Brady's **home** | Tuesday |
+| World 5 | 3 | Costume Cult | Tuesday |
+| World 6 | 4 | The Orgy Dome | Tuesday night |
+| World 7 | 5 | Costco Soul Trading Co. | Wednesday |
+| World 8 | 6 | The Art Car Hunt | Wednesday night |
+| World 9 | 11 | Sound Camp Crawl | Thursday night |
+| World 10 | 7 | Sunrise Set | Friday dawn |
+| World 11 | 8 | Hell Station | Friday |
+| World 12 | 9 | Deep Playa Showdown | Friday night |
+| World 13 | 12 | The Temple | Saturday dawn |
+| World 14 | 13 | The Workshops | Saturday |
+| World 15 | 14 | Skydive Into the Burn | Saturday afternoon |
+| World 16 | 10 | The Man Pavilion (finale) | Saturday night |
+| Secret | 15 | Exodus | Monday |
 
-- **Ids never change.** Files (`src/42_burns_world11.js` …), saves, tokens, photos, flags and `debug.play(id)` all use the id. Only what players see uses the position.
-- **Unlocking.** `g.finishWorld()` unlocks `BurnsWorlds.next(id)`, the next world in the order (finishing id 6 unlocks id 11, not 7). Old saves migrate automatically: any finished world unlocks the next one in the sequence.
+- **Ids never change.** Files (`src/42_burns_world16.js` …), saves, tokens, photos, flags and `debug.play(id)` all use the id. Only what players see uses the position.
+- **Unlocking.** `g.finishWorld()` unlocks `BurnsWorlds.next(id)`, the next world in the order (finishing id 2 unlocks 16, 16 unlocks 17, 17 unlocks 3). Old saves migrate automatically: any finished world unlocks the next one in the sequence, and nothing that was unlocked is ever re-locked (a save that had finished world 2 now also has 16 open).
 - **Labels.** Never print `'World ' + id`.
-  - Use `BurnsWorlds.label(id)` (→ `"World 7"` for id 11, `"Secret World"` for 15) or `BurnsWorlds.num(id)` (→ `7`).
-  - Lookups: `BurnsWorlds.idAt(n)`, `next(id)`, `prev(id)`, `isFinale(id)` (id 10), `isSecret(id)` (id 15), `visible()` (the ids the hub shows).
-  - The hub, loading card, pause menu and results screen already do this.
-- **Hub.** It shows 14 pins in play order. Unregistered ids show "SOON"/"Coming soon" and can't be started, so nothing breaks while a world is in progress.
+  - Use `BurnsWorlds.label(id)` (→ `"World 5"` for id 3, `"Secret World"` for 15) or `BurnsWorlds.num(id)` (→ `5`).
+  - Lookups: `BurnsWorlds.idAt(n)`, `next(id)`, `prev(id)`, `isFinale(id)` (id 10), `isSecret(id)` (id 15), `isHome(id)` (id 17), `home()` (→ 17), `visible()` (the ids the hub shows).
+  - The hub, loading card, day card, pause menu and results screen already do this.
+- **Days of the week.** `BurnsWorlds.day(id)` → `'Tuesday night'`, `BurnsWorlds.dayShort(id)` → `'TUE NIGHT'`. A world can override them with `day`/`dayShort` in its definition.
+  - The **loading card** and the hub panel show the full day, and every hub pin has its short day above it.
+  - A **day card** ("TUESDAY NIGHT · World 6 · The Orgy Dome") fades in over the first seconds of every visit, under any letterbox. Turn it off with `dayCard: false` and call `g.dayCard()` when you want it.
+  - Write dialogue that fits the day ("It's only Monday and I'm already crispy").
+- **The home world (17, Root Society).** Brady's tipi is his home from Tuesday on.
+  - Once unlocked it stays playable from the hub like any world, shown as a **tipi pin** with a HOME label, plus a **HOME** shortcut button in the hub header.
+  - Its main story should end with `g.finishWorld()` (that unlocks world 3); later visits are free roam for side quests (§7.1). Use `BurnsSave.flag(17, …)` to skip the arrival story on return visits.
+  - The hub panel shows how many of its side quests are done.
+- **Hub.** It shows the pins in play order. Unregistered ids show "SOON"/"Coming soon" and can't be started, so nothing breaks while a world is in progress.
 - **Secret World 15 "Exodus".**
   - It's hidden from the hub, not even "coming soon", until it's unlocked. After that it shows as a glowing RV pin labelled SECRET.
   - It unlocks when the finale is finished: `g.finishWorld()` in world 10 unlocks `next(10)` = 15, and the results screen says "A SECRET WORLD HAS BEEN UNLOCKED…".
   - The finale can also unlock it explicitly after the credits with `BurnsSave.unlockWorld(15)`.
-- **Story order.** World 11 comes after the art-car hunt (6) and before Sunrise Set (7). Worlds 12, 13 and 14 come after the Deep Playa showdown (9) and before the finale (10).
-
----|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| World id | 1 | 2 | 3 | 4 | 5 | 6 | **11** Sound Camp Crawl | 7 | 8 | 9 | **12** The Temple | **13** The Workshops | 10 (finale) |
-
-- **Ids never change.** Files (`src/42_burns_world11.js` …), saves, tokens, photos, flags and `debug.play(id)` all use the id. Only what players see uses the position.
-- **Unlocking.** `g.finishWorld()` unlocks `BurnsWorlds.next(id)`, the next world in the order (finishing id 6 unlocks id 11, not 7). Old saves migrate automatically: any finished world unlocks the next one in the sequence.
-- **Labels.** Never print `'World ' + id`. Use `BurnsWorlds.label(id)` → `"World 7"` for id 11, or `BurnsWorlds.num(id)` → `7`. Lookups: `BurnsWorlds.idAt(n)`, `next(id)`, `prev(id)`, `isFinale(id)` (true for id 10). The hub, loading card, pause menu and results screen already do this.
-- **Hub.** It shows 13 pins in play order. Unregistered ids show "SOON"/"Coming soon" and can't be started, so nothing breaks while a world is in progress.
-- Story order matters for continuity. World 11 comes after the art-car hunt (6) and before Sunrise Set (7). Worlds 12 and 13 come after the Deep Playa showdown (9) and before the finale (10).
+- **Story order.** 16 (Monday) and 17 (Tuesday) sit between No Camp (2) and Costume Cult (3). World 11 comes after the art-car hunt (6) and before Sunrise Set (7). Worlds 12, 13 and 14 come after the Deep Playa showdown (9) and before the finale (10).
+- **Ground scores start in world 16** (§8.3): before Bam Bam's pill, baggies are hidden everywhere, including worlds 1 and 2.
 
 ---
 
@@ -149,7 +169,8 @@ Everything below is called inside `build(api, g)`. Positions are world metres. M
 - `api.pickup(kind, x, y, z, opts)`. `y` is the float height and defaults to 0.9. Kinds:
   - `'glowstick'`: the coins.
   - `'water'`: +2 hydration.
-  - `'bag:<power>'`: power-up baggie: `molly | khole | powder | lsd | shrooms | weed | bufo | liquor | water`.
+  - `'bag:<power>'`: a **ground score** baggie: `molly | khole | powder | lsd | shrooms | weed | bufo | liquor`. Picking it up puts it in Brady's **backpack** (§8.3); he uses it from there when he wants. Baggies are **invisible until the ground-score story flag is set** in world 16, then appear everywhere (even mid-visit). `'bag:water'` is plain water (instant, never hidden).
+  - `'pack:<item>'`: any backpack item (§8.3), for quest items and trade goods such as `pack:icebag`. Never hidden by the ground-score flag. Its label defaults to the item's name.
   - `'token'`: Burn Token (normally spawned by missions). Give it `{mission: id}`.
   - `'photo'`: Photo of Chinka. **Requires `{id}`**, unique per world, three per world. It's saved and won't respawn.
   - `'item:<id>'`: key item (`ticket | map | www | bike | costumes | artcar`) or a mission collectible such as `item:ziptie`.
@@ -226,6 +247,12 @@ All props are rounded and smooth-shaded: real tyres, soft-edged bodies and gloss
 | `saucer` | flying-saucer platform for the final Man fight, walkable | `r, h` |
 | `junktower` | crooked **climbable** tower of stacked junk cars with lashed ladders and planks (the bad idea guy's landmark), ~10.5 m for 8 levels | `levels, seed`. Returns `top` and `topPos` (prop-local `[x,y,z]` of the top car). |
 | `trunk` | sticker-covered old wooden trunk (crusty's camp) | none |
+| `redlightRV` | the **Red Light District** RV: hot-pink, hearts and feather trim, marquee bulbs, a RED LIGHT DISTRICT sign, red lanterns, walkable roof (3.3 m). Door on its right (+X) side | `lit` (marquee and lanterns on, default true), `len`. Returns `cols, lights, top, door` (prop-local `[x,z]` just outside the door). |
+| `questBoard` | a cork quest board on posts with pinned notes (§7.1). Use `api.questBoard` for a working one | `col, title` |
+
+**`api.redLightCamp(x, z, yaw, opts)`** places the Red Light District RV and its crew in one call (W1 uses it in the line; W2 uses it for Brady's gear stash). `opts`: `crew` (`true` = all five, a number, or an array of crew ids), `lit`, `behavior` (crew behaviour, default by variant), `lines`/`chat` overrides per id (`{rlCandi: ['…']}`), `talk` per id, `rv: false` (crew only). Returns `{ rv, crew: [actor defs] }`. Crew ids: `rlVelvet` (MAMA VELVET, `madame`), `rlCandi` (CANDI, `bikini`), `rlRoxie` (ROXIE, `corset`), `rlPeachy` (PEACHY, `fan`), `rlBlush` (BLUSH, `showgirl`).
+
+**`api.questBoard({x, z, yaw, title})`** builds the board prop plus an ACTION prompt (`QUEST BOARD`) that opens the world's quest board (§7.1).
 
 Need something new? Write it with `api.mesh` (§6). If it's reusable, add a builder function in your own file (`function burnsW6Octopus(m, o) {…; return {cols, lights}}`) and call it through `api.mesh` or `api.mover`.
 
@@ -277,7 +304,8 @@ Need something new? Write it with `api.mesh` (§6). If it's reusable, add a buil
 | `behavior` | §6.4. Default `idle`. |
 | `lines` | Dialogue when talked to (ACTION nearby). |
 | `talk(g, a)` | Custom talk handler that replaces `lines`. Starts missions, gives items. |
-| `gift` | `{kind:'glowstick', n}`, `{kind:'water'}`, `{kind:'<power>'}` or `{kind:'item', item:'map'}`. Given once, after `lines`. Gifting culture! |
+| `gift` | `{kind:'glowstick', n}`, `{kind:'water'}`, `{kind:'<power>'}`, `{kind:'item', item:'map'}` or `{goods: …}` (any goods, §8.3). Given once, after `lines`. Gifting culture! A power-up gift goes into the **backpack**; before the ground-score flag (§8.3) it turns into 5 glow sticks instead. |
+| `trades` | `[{id, give, get, label, note, once, when(g,a), onTrade(g,a,t)}]`: barter offers (§8.3). After the NPC's `lines`, the **trade window** opens. With a custom `talk`, open it yourself with `g.openTrade(a)`. |
 | `chat` | Ambient bubble lines said when Brady walks by. They default to per-type lines. `chatter:false` silences them. |
 | `hp`, `damage`, `drop` | Enemies: hit points, contact damage, glow sticks dropped. |
 | `tag` | Matches `defeat` missions with `tag`. |
@@ -313,6 +341,7 @@ The engine draws `'!'` over the `giver` of any available mission and `'?'` over 
 | `burnerkid` ★, `burnermom` ★ | Kid: teal beanie with a golden sun crown, white shades, shirtless with rainbow body paint, beads, backpack, tan cargos, rainbow leg warmers, wizard staff, embarrassed. Mom: grey bob, straw sun hat, white shades, pink sweater, green vest, beads, capri jeans, two cameras. | Mom's idle is `cheer`. |
 | `cultleader` ★ | "Brother Bubblegum" (original): swooped hot-pink hair, pink beard, heart shades, shirtless, hot-pink fur boa and cuffs, heart pendants, pink belt. | Idle `welcome` (arms spread). Tasteful. |
 | `fencebot_a` ★, `fencebot_b` ★ | "The Fence Bots": homemade junk helmets (A: a dented trash can with LED strips and bottle-cap eyes; B: a colander with cardboard and an EL-wire visor). Patched brown playa jackets, harness with tubes and pouches, olive cargos, knee pads, desert boots, robot gloves, clipped water bottles. | Idle `robot`. Never chrome or gold visor helmets. |
+| `redlight` | The **Red Light District** camp's burlesque/cabaret crew: glamorous blonde performers, PG-13 glam. `variant`: `'bikini'` (pink bikini top, high-waisted pink shorts, pink feather boa, heart shades, platform boots), `'corset'` (red corset-style top, ruffled skirt, white boa, curls), `'fan'` (pink sequin top, tiered pink tutu, feather fans), `'showgirl'` (red corset, pink boa, mini top hat, cane), `'madame'` (camp mom: tall blonde updo, cat-eye glasses, long red skirt, pink boa). Numbers 0–4 work too. | Brady and Chinka rode to the Burn in their pink RV (W1); they babysit his stuff in W2. The named crew is `BURNS_REDLIGHT.crew`; place RV + crew with `api.redLightCamp` (§5). Idle `cheer`/`dance`/`wave` by variant. |
 | `billionaire`, `safetycaptain`, `healer` | Archetypes. Billionaire: white linens, aviators, goggles, silk dust mask, cocktail. Safety captain: hard hat, respirator, hi-vis, reflective tape, chest radio, clipboard. Healer: white robes, giant crystal, barefoot. | `techbro` keeps his pitch-deck look. |
 | `burner, furcoat, tutu, ledsuit, campLead, driver, influencer` | Seed-varied party crowd and staff. | `crowd()` uses these. |
 | `chinka`, `brady` | The leads (Brady follows `Save.data.look` and the costume). | |
@@ -468,7 +497,7 @@ Define missions in `def.missions`. Each mission is `{id, name, short, desc, hint
 | Field | Meaning |
 |---|---|
 | `type` | `reach, find, collect, talk, defeat, race, stealth, escort, ride, climb, boss, custom` (table below). |
-| `start` | `'manual'` (default; you call `g.missions.start(id)`, usually from a `talk` handler), `'auto'` (starts when available), or `'trigger'` (you start it from `api.trigger`). |
+| `start` | `'manual'` (default; you call `g.missions.start(id)`, usually from a `talk` handler), `'auto'` (starts when available), `'trigger'` (you start it from `api.trigger`), or `'board'` (accepted from the quest board, §7.1). |
 | `giver` | Actor id. It shows `'!'` while the mission is available. |
 | `requires` | `[missionIds]`. The mission stays `locked` until these are done. |
 | `token` | Default `true`, which makes it a Burn Token. `false` makes it a side mission (saved in `Save.data.burns.missions`). |
@@ -483,6 +512,9 @@ Define missions in `def.missions`. Each mission is `{id, name, short, desc, hint
 | `secret` | Hidden as `???` until started. |
 | `silent` | No start banner. |
 | `failOnFaint` | Fails if Brady faints. Timed missions always do. |
+| `side` | `true` makes it a **side quest**: listed on the quest board (§7.1) instead of the main mission list, `token` defaults to `false`. |
+| `reward` | Goods (§8.3) given when the mission completes, with a REWARD banner: `{glow: 20}`, `'molly'`, `{pack: {icebag: 1}}`, `{costume: 'pirate'}`, `{item: 'artcar'}`, `{heal: 2}`, `{text: 'A spin-art shirt'}`, arrays to combine. Works on any mission, side or main. |
+| `use` | A backpack item Brady must **use** (§8.3) while the mission is active before it can complete, e.g. `use: 'powder'` for a timed run. `requires: {use: 'powder', missions: [ids]}` is the same thing. Reaching the goal without it shows a warning instead of completing. `useHint` overrides the warning text. |
 | Hooks | `onStart(g,m)`, `onUpdate(g,m,dt)`, `onEvent(g,m,name,data)` (return `true` to swallow the event), `onComplete(g,m)`, `onFail(g,m)`. |
 
 What each type does automatically:
@@ -502,8 +534,8 @@ What each type does automatically:
 | `boss`, `custom` | You call `g.missions.complete(id)` yourself. |
 
 Runtime calls:
-- State: `g.missions.start(id, quiet)`, `complete(id, tokenPos)`, `fail(id, why)`, `progress(id, add, total)`, `state(id)`, `isDone(id)`, `get(id)` (gives `.n`, `.data` and `.left`).
-- `g.missions.event(name, data)` fires events. Engine events: `pickup, defeat, talk, spotted, pound, spring, mount, bell, flames, power`. Fire your own too, for example `g.missions.event('delivered', item)`.
+- State: `g.missions.start(id, quiet)`, `complete(id, tokenPos)`, `fail(id, why)`, `progress(id, add, total)`, `state(id)`, `isDone(id)`, `get(id)` (gives `.n`, `.data`, `.left` and `.used`), `track(id)` (shows it in the HUD tracker; starting a mission tracks it).
+- `g.missions.event(name, data)` fires events. Engine events: `pickup, defeat, talk, spotted, pound, spring, mount, bell, flames, power` (data = power id, when one starts), `pack` (data = item id, added to the backpack), `use` (data = item id, used from the backpack), `trade` (data = `{actor, trade, id}`). Fire your own too, for example `g.missions.event('delivered', item)`.
 
 **Fetch chains / deliver** are `custom` missions plus `talk` handlers:
 ```js
@@ -514,6 +546,24 @@ Runtime calls:
 **Story beats.** `g.flag(key, value?)` stores per-world flags in the save.
 
 **The What Where When guide** (`items.www`, given in W1) makes the mission list show everything, including locked and available missions with their `hint` locations, and puts every mission `marker` on the minimap. Write a useful `hint` for every mission.
+
+### 7.1 Side quests and the quest board (home world)
+
+Any world can have side quests; the home world (17) is built around them. A side quest is an ordinary mission with `side: true`:
+```js
+{ id: 'ice', side: true, name: 'Ice, Ice, Furry', type: 'custom', start: 'board', hint: 'The furry is wilting at 7:30 & B',
+  desc: 'Get a bag of ice from the ice line to the overheating furry.', reward: [{ glow: 15 }, 'molly'],
+  onStart(g) { g.pack.add('icebag'); } }
+{ id: 'buttid', side: true, token: true, name: 'Butt ID', type: 'custom', giver: 'ziggy', start: 'manual', … }  // a Burn Token side quest
+```
+- **Tokens or not.** Side quests default to `token: false`: they're saved as done (`Save.data.burns.missions`) and pay out their `reward`. `token: true` makes one a Burn Token as well (it counts toward the world's token total). Use tokens for the best 5–7 quests.
+- **Starting.** `start: 'board'` quests have an ACCEPT button on the board; accepting starts the quest and returns to play. Quests with a `giver` show "Talk to NAME" on the board instead (and `'!'` over the giver as usual). `start: 'auto'` and `'trigger'` work as for any mission.
+- **The quest board** lists the world's side quests in three tabs: AVAILABLE, ACTIVE and DONE, with each quest's description, `hint` (where to go) and reward. Locked quests (unmet `requires`) show as "???". ACTIVE quests have a TRACK button that puts them in the HUD tracker.
+  - Open it from the pause menu (**SIDE QUESTS**, shown when the world has any), from an in-world board (`api.questBoard({x, z, yaw, title})`), with the **J** key, or from code with `g.openBoard()`.
+  - Title: `def.boardTitle` (default `'QUEST BOARD'`).
+- **Rewards** are any goods (§8.3), granted with a REWARD banner when the quest completes. `reward.text` names a one-off prize.
+- Main missions stay in the MISSIONS list; side quests don't clutter it.
+- Active side quests are not saved: leaving the world resets them to available.
 
 ---
 
@@ -530,7 +580,7 @@ Runtime calls:
   - `weed`: float while holding jump.
   - `bufo`: fly while holding jump.
   - `liquor`: ACTION throws bouncing puke balls.
-- Give one directly with `g.player.givePower('bufo')`.
+- They're **ground scores**: Brady finds baggies, keeps them in his backpack and uses them when he chooses (§8.3). `g.pack.add('powder')` gives one; `g.pack.use('powder')` uses one. `g.player.givePower('bufo')` still starts one instantly, for story beats only (it skips the backpack, so don't use it before the ground-score flag).
 - **Key items** (saved globally):
   - Give or check with `g.giveItem(id)` and `g.hasItem(id)`.
   - Ids: `ticket` (W1), `map` (minimap, W1), `www` (W1), `bike` (W3), `costumes` (W3), `artcar` (W6, your choice).
@@ -551,6 +601,57 @@ Runtime calls:
     - sound and text: `horn` (sfx name), `hornLines` (what nearby NPCs shout), `driveHint` (the toast shown on mount), `onHorn(g, car)`.
   - Read `car.speed`, `car.x/z/yaw` and `car.rider` at runtime. Brady stands on the deck when he isn't driving.
   - `ride` missions with `vehicle: 'car'` work out of the box.
+
+### 8.3 Ground scores, the backpack and trading
+
+**The ground-score flag.** Brady is a clueless first-timer; ground scores only start in world 16, after Bam Bam's pill.
+- `BurnsSave.setGroundScore(true)` turns them on for good (W16 does this). `BurnsSave.groundScore()` reads it. It's stored as `flags['0:groundscore']`, so `BurnsSave.flag(0, 'groundscore', true)` does the same.
+- Before it's set: `bag:*` pickups are invisible and can't be collected (worlds 1 and 2 included), the backpack HUD button stays hidden, and power-up `gift`s pay 5 glow sticks instead.
+- After it's set: baggies appear everywhere at once, even in the current visit. Saves that had already finished world 3 or later get the flag automatically.
+
+**The backpack** (`Save.data.burns.pack`, saved, shared by all worlds).
+- Picking up a baggie (`bag:molly`) or a `pack:<item>` pickup **stores** it ("+1 LOVE BOMB → BACKPACK") instead of using it. Existing `api.pickup('bag:…')` calls keep working unchanged.
+- Brady opens the backpack from the **backpack button** on the HUD (top right, with a count badge), from **BACKPACK** in the pause menu, or with the **G** key. Each item shows its name, count and what it does, with a **USE** button. USE closes the menu and starts the power-up (nobody is ever shown taking anything: a sound, a banner and the effect).
+- Runtime API: `g.pack.add(id, n=1, {quiet})`, `g.pack.take(id, n=1)` → bool, `g.pack.count(id)`, `g.pack.has(id, n=1)`, `g.pack.use(id)` → bool, `g.pack.list()` → `[{id, n, def}]`, `g.openPack()`. Save-level versions without UI: `BurnsPack.count(id)`, `BurnsPack.add(id, n)`, `BurnsPack.take(id, n)`.
+- Events: `pack` (added) and `use` (used), with the item id; using a power-up also fires `power`.
+- **Items.** Every power-up id is an item (`molly, khole, powder, lsd, shrooms, weed, bufo, liquor`), plus `water` (a bottle for later: USE heals 2). Define quest items and trade goods at load time:
+```js
+BurnsPack.define('icebag', { name: 'BAG OF ICE', desc: 'Melting. Hurry.', col: '#bff0ff', icon: 'drop' });
+BurnsPack.define('buttid', { name: 'PLAYA ID', desc: 'Official. Cheeky. Laminated.', col: '#ffb0d8', kind: 'quest' });
+BurnsPack.define('kazoo', { name: 'KAZOO', desc: 'Toot.', col: '#ffd84a', use(g) { burnsSfx('bike_bell'); g.playerBubble('TOOT!'); return false; } });
+```
+  Fields: `name`, `desc`, `col`, `icon` (atlas icon name; default a tinted baggie), `kind` (`'quest'` items can't be USEd unless they have `use`), `use(g)` (return `true` to consume one, `false` to keep it). Unknown ids still work and show as their id in capitals.
+
+**Goods** are how rewards, gifts and trades name stuff. Any of these, or an array of them:
+
+| Goods | Means |
+|---|---|
+| `'molly'` | one backpack item (shorthand for `{pack: 'molly'}`) |
+| `{pack: 'molly', n: 2}` / `{pack: {molly: 2, icebag: 1}}` | backpack items |
+| `{glow: 20}` | glow sticks (Brady's sticks carried this visit, the HUD number) |
+| `{item: 'artcar'}` | a key item (get only) |
+| `{costume: 'pirate'}` | unlocks a wardrobe costume (get only) |
+| `{power: 'water'}`, `{heal: 2}` | instant effect (get only) |
+| `{text: 'A spin-art shirt'}` | a label for a one-off prize (get only) |
+| `{fn: g => {…}, text: '…'}` | custom effect (get only) |
+
+One object can combine keys: `{glow: 10, pack: 'molly'}`. Helpers: `g.grant(goods, {quiet})` gives them (with toasts), `g.canPay(goods)` and `g.pay(goods)` check and take them (glow sticks and backpack items only), `BurnsGoods.text(goods)` → `"2 × LOVE BOMB + 10 GLOW STICKS"`.
+
+**Trading.** Give an NPC `trades`:
+```js
+api.npc({ id: 'swapmeet', name: 'SWAP MEET STEVE', type: 'crusty', x: 10, z: 4,
+  lines: ['Everything is gifted. Except this table. This table is a trading table.'],
+  trades: [
+    { id: 'm2g', give: 'molly', get: { glow: 25 }, label: 'Love Bomb for glow sticks' },
+    { id: 'g2p', give: { glow: 15 }, get: 'powder', once: false },
+    { id: 'phone', give: { pack: 'phone' }, get: [{ costume: 'disco' }, { text: 'Eternal gratitude' }], when: g => g.missions.state('phone') === 'active' }
+  ] });
+```
+- After the NPC's lines the **trade window** opens: each offer shows GIVE → GET with a TRADE button (greyed out with "NEED …" when Brady can't pay) and a DONE button. Open it from a custom `talk` with `g.openTrade(a)` or `g.openTrade(a, tradesArray)`.
+- `once` (default `true`): the trade is saved as done for that NPC (`id`, or its index) and shows TRADED. `once: false` repeats. `when(g, a)` hides an offer until it returns true.
+- A trade fires the mission event `trade` with `{actor, trade, id}` and calls `onTrade(g, a, t)` (on the trade or the NPC def).
+
+**Missions that require a ground score**: `use: 'powder'` (§7). Hand Brady one first if the player might not have it: `onStart(g) { if (!g.pack.has('powder')) g.pack.add('powder'); }`.
 
 ---
 
@@ -613,6 +714,9 @@ Available in hooks, behaviours, triggers and talk handlers.
 - `g.projectile({kind:'pitch'|'puke'|'firework'|'fireball', x,y,z, vx,vy,vz | speed, homing, gravity, life, dmg, r, text, trail})`.
 - `g.addTempFire(x,y,z,r,secs)`, `g.pointLight(...)`.
 - `g.giveItem(id)`, `g.hasItem(id)`, `g.flag(k, v)`, `g.awardToken(missionId)`.
+- Backpack and goods (§8.3): `g.pack.add/take/count/has/use/list`, `g.grant(goods)`, `g.canPay(goods)`, `g.pay(goods)`.
+- Menus: `g.openPack()` (backpack), `g.openBoard()` (quest board, §7.1), `g.openTrade(actor, trades)` (trade window). They pause the game while open.
+- `g.dayCard()` shows the day-of-week card now (§3.1).
 - `g.interactables = [{x, z, y, r, label, when(g), fn(g, it)}]`: extra ACTION prompts such as `OPEN`, `RING` or `FUEL`.
 - `g.cutscene(steps, done)` (§11). `g.finishWorld(next)` ends the world (§12).
 - Bosses: `g.addBoss(b)` registers a boss-like object (update, draw and colliders every step). `g.boss = b` puts it on the HUD health bar (needs `name, hp, maxHp, active, defeated`).
@@ -705,12 +809,14 @@ World 10 should pass `next` to roll into the ending; `StoryScene` and `CreditsSc
 ```
 { v, unlocked:{1:true,…}, tokens:{'w:missionId':true}, photos:{'w:id':true}, items:{ticket,map,www,bike,costumes,artcar},
   costume:'none', costumesOwned, glow (lifetime), glowWorld:{w:best}, worldDone:{w:true}, missions:{'w:id':'done'},
-  flags:{'w:key':value}, seenIntro, lastWorld, checkpoint:{w:cpId}, settings:{camSens, invertY, autoCam} }
+  flags:{'w:key':value}, seenIntro, lastWorld, checkpoint:{w:cpId}, settings:{camSens, invertY, autoCam},
+  pack:{itemId:count} }
 ```
 - `BurnsSave.get()` returns the data (and creates or migrates it).
 - Tokens and photos: `hasToken`, `addToken`, `tokenCount(w)`, `hasPhoto`, `addPhoto`, `photoCount(w)`.
 - Items and worlds: `hasItem`, `addItem`, `unlockWorld`, `isUnlocked`, `setCostume`.
 - Flags: `flag(w,k,v)`. Saves happen automatically on those calls; call `BurnsSave.save()` after editing `get()` directly.
+- Ground scores and the backpack: `groundScore()`, `setGroundScore(true)` (= `flag(0, 'groundscore', true)`), and `BurnsPack.count/add/take` (§8.3). Trades marked `once` are saved as flags `'w:trade:actorId:tradeId'`.
 - Tokens, photos, key items and finished non-token missions persist and don't respawn. Glow sticks respawn on every visit (best score per world).
 - A world's intro should play once: `if (!BurnsSave.flag(id, 'intro')) …` then `BurnsSave.flag(id, 'intro', true)`.
 
@@ -807,6 +913,8 @@ Read it top to bottom; it uses almost every feature.
    - **`bossIntro`** starts the fight from a trigger.
    - **`bossDefeated`** plays the flee cutscene, then `finishWorld()`.
 8. **Atmosphere.** `sky: 'dusk', sky2: 'night'`. Each token pushes `tod` toward night. `env()` thickens fog during the ticket's dust gust.
+9. **The Red Light District.** Brady and Chinka hitched a ride to the Burn in the Red Light District camp's pink RV. `api.redLightCamp` parks it in the line right next to the spawn, with the crew (`redlight` type) cheering Brady on; it's in the intro cutscene too.
+10. **Ground scores.** W1's baggies stay hidden on a first visit (Brady doesn't know what they are yet). After world 16 they appear, including the LSD staircase to the third photo.
 
 ---
 
@@ -814,8 +922,10 @@ Read it top to bottom; it uses almost every feature.
 
 | World | Story beat | Engine pieces to reach for |
 |---|---|---|
-| 2 Finding Camp | City at night. The Man shows up at Brady's camp (boss #2). Fire spinners and flame effects. | `sky: 'night'`, lots of `api.light`/`api.glow`, `flameJet` rings, fire-spinner NPCs (custom anim: `dance` style + fire sprites in `drawSprites`), `BurnsManBoss` with `['stomp','swipe','fire']`. |
-| 3 Costume Cult & the Yellow Bike | Choose a costume; find the yellow community bike. | `g.giveItem('costumes')` + `BurnsSave.setCostume` + `player.rebuildModel()`; `g.giveItem('bike')`; `ride` missions; `bell` events. |
+| 2 No Camp | Sunday night: Brady has no camp. He stashes his gear in the Red Light District RV (`api.redLightCamp`, crew `BURNS_REDLIGHT.crew`), gets rejected all over the city, sleeps at Center Camp, flees the tent guy. Fire spinners and flame effects. | `sky: 'night'`, lots of `api.light`/`api.glow`, `flameJet` rings, fire-spinner NPCs (custom anim: `dance` style + fire sprites in `drawSprites`), `BurnsManBoss` with `['stomp','swipe','fire']`. |
+| 16 Rhythm Wave (plays 3rd) | Monday: build the camp, win the dance contest, Bam Bam's pill, the wonky bike ride to the Glowshroom Grove. Ground scores start here. | `BurnsSave.setGroundScore(true)` after the pill; `g.pack`, `trades`, a mission with `use:`; `g.giveItem('bike')`. |
+| 17 Root Society (plays 4th, home) | Tuesday: Jefr adopts Brady, gives him a tipi. Revisitable home with lots of side quests. | `side: true` missions with `reward`, `api.questBoard`, `trades`, `g.finishWorld()` when the arrival story is done. |
+| 3 Costume Cult (plays 5th) | Choose a costume. Brady already has the yellow bike from W16, so here it gets stolen: chase the thief, fix the flat. | `g.giveItem('costumes')` + `BurnsSave.setCostume` + `player.rebuildModel()`; `g.giveItem('bike')`; `ride` missions; `bell` events. |
 | 4 The Orgy Dome | Meet an informant while sneaking past creepy dudes. Comedic, nothing explicit. | `stealth` missions with `patrol` enemies (`view`, `fov`), `follow` behaviour for the informant, giant `dome` props with `api.mesh` interiors. |
 | 5 Costco Soul Trading Co. | Giant gifting warehouse; a platonic burner buddy joins. | Shelves from `api.box`/`scaffold`; `deliver` chains (`custom` + `talk`); `follow` companion (`escort`). |
 | 6 The Art Car Hunt | Commandeer a fire-breathing octopus art car, dodging tech bros. | `api.artCar({ build: yourOctopus })` with `poofers`, `pitcher` enemies, `ride` missions with `vehicle: 'car'`, `flames` events. |

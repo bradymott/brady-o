@@ -690,6 +690,6 @@ BW7.sprites = function (g, R) {
 BW7.overlay = function (ctx, g) {
   const S = BW7.state;
   if (g.cine || g.bw567rhythm) return;
-  if (g.missions.state('photobomb') === 'active') { const W = Game.cssW; BurnsUI.text(ctx, 'DON\'T GET FLASHED', W / 2, (g.topStack || 40) + 14, 12, '#ffd84a', { glow: '#ff4fa8' }); }
+  if (g.missions.state('photobomb') === 'active') { const W = Game.cssW; BurnsUI.text(ctx, 'DON\'T GET FLASHED', W / 2, BW567K.hudY(g) + 12, 12, '#ffd84a', { glow: '#ff4fa8' }); }
 };
 BurnsWorlds.get(7).dbg = BW7;

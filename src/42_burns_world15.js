@@ -184,7 +184,7 @@ BurnsWorlds.register({
     api.sign('EXODUS\n← THAT WAY', 21, -530, { yaw: -Math.PI / 2, h: 1.2, style: { bg: '#ff8a3a', fg: '#ffffff', size: 40 } });
     api.crowd(-46, -470, 3, 4, { behaviors: ['dance'] }); api.crowd(48, -360, 3, 4, { behaviors: ['dance'] });
     // the Man's ashes far behind, still smoking
-    put(0, -690, m => { m.color('#4a4248'); m.lathe([[0, 0], [20, 0], [14, 2.2], [6, 4.6], [0, 5.2]], { seg: 24, rMod: th => 1 + Math.sin(th * 5) * 0.05 }); m.color('#ff6a2a', 0.9); for (let i = 0; i < 26; i++) { const a = i / 26 * TAU, r = 3 + (i % 5) * 2.4; m.ball(Math.sin(a) * r, 3.4 - r * 0.18, Math.cos(a) * r, 0.5, { seg: 6, rings: 4 }); } m.emissive(0); return { cols: [], lights: [{ x: 0, y: 5, z: 0, s: 14, c: '#ff7a3a' }] }; });
+    put(-62, -655, m => { m.color('#4a4248'); m.lathe([[0, 0], [20, 0], [14, 2.2], [6, 4.6], [0, 5.2]], { seg: 24, rMod: th => 1 + Math.sin(th * 5) * 0.05 }); m.color('#ff6a2a', 0.9); for (let i = 0; i < 26; i++) { const a = i / 26 * TAU, r = 3 + (i % 5) * 2.4; m.ball(Math.sin(a) * r, 3.4 - r * 0.18, Math.cos(a) * r, 0.5, { seg: 6, rings: 4 }); } m.emissive(0); return { cols: [], lights: [{ x: 0, y: 5, z: 0, s: 14, c: '#ff7a3a' }] }; });
     /* ================= the exit gate ================= */
     prop('gateArch', { x: 0, z: BW15.GATE_Z - 1.4, w: 34, h: 9, text: 'SEE YOU NEXT YEAR!' });
     BW15.CORRIDORS.forEach((x, i) => put(x, BW15.GATE_Z, m => BW15M.booth(m, { col: BURNS_NEON[i % 7] })));
@@ -304,7 +304,7 @@ BurnsWorlds.register({
     const tables = [dL(-9, 6.5), dL(9.5, 6.8), dL(14, 11)];
     BW15W.tables = tables;
     tables.forEach((p, i) => put(p.x, p.z, m => BW15M.picnic(m, { food: true }), dYaw + Math.PI / 2 + (i === 2 ? 0.3 : 0)));
-    { const r1 = dL(-16, 14), r2 = dL(18, 18); prop('rv', { x: r1.x, z: r1.z, yaw: dYaw + 0.2, seed: 91 }); prop('bus', { x: r2.x, z: r2.z, yaw: dYaw - 0.25, seed: 92, col: '#9a6bff' }); }
+    { const r1 = dL(-21, 5), r2 = dL(22, 4); prop('rv', { x: r1.x, z: r1.z, yaw: dYaw + Math.PI / 2 + 0.15, seed: 91 }); prop('bus', { x: r2.x, z: r2.z, yaw: dYaw - Math.PI / 2 - 0.2, seed: 92, col: '#9a6bff' }); }
     const eaters = [['tutu', 61], ['crusty', 62], ['furcoat', 63], ['burner', 64], ['ledsuit', 65], ['greeter_m', 66]];
     eaters.forEach(([tp, sd], i) => { const tb = tables[1 + (i % 2)], side = i % 2 ? 1 : -1; const off = (Math.floor(i / 2) - 1) * 0.7; api.npc(Object.assign(BW15_CAST.who(tp, sd), { x: tb.x + Math.cos(dYaw) * off + Math.sin(dYaw) * side * 0.75, z: tb.z - Math.sin(dYaw) * off + Math.cos(dYaw) * side * 0.75, yaw: dYaw + (side > 0 ? Math.PI : 0) + Math.PI / 2, behavior: 'sit', chat: ['Pancakes! Real pancakes!', 'A chair! With a back!', 'Running water. I could cry.', 'Same time next year!'] })); });
     api.npc(Object.assign(BW15_CAST.who('diner', 1), { x: dL(3, 6).x, z: dL(3, 6).z, yaw: dYaw, behavior: 'idle', name: 'DINER COOK', chat: ['Order up!', 'Exodus Monday. Busiest day of the year.', 'Hash browns? Hash browns.'] }));
@@ -372,7 +372,7 @@ BurnsWorlds.register({
       else if (i === 4) { x = fz.x; z = fz.z; extra = { anim: 'wave' }; }
       else if (i === 5) { x = S.techDef.x; z = S.techDef.z; }
       else { x = spr.x + 2.5; z = spr.z - 1.5; extra = { y: sprH - 0.4, fixedY: false }; }
-      return api.npc(Object.assign(BW15_CAST.who(G.type, G.seed), { id: 'w15giver' + i, name: G.name, x, z, yaw: Math.PI, behavior: i < 4 ? 'idle' : 'idle', noTalk: true, always: i < 4, chat: i === 4 ? ['*muffled* ...hot in here.', '*thumbs up*'] : undefined }, extra));
+      return api.npc(Object.assign(BW15_CAST.who(G.type, G.seed), { id: 'w15giver' + i, name: G.name, x, z, yaw: Math.PI, behavior: 'idle', noTalk: true, always: i < 4, chatter: i === 4, chat: i === 4 ? ['*muffled* ...hot in here.', '*thumbs up*'] : undefined }, extra));
     });
     // camp flags (the Party Barge touches them by driving past)
     const flag = (id, s, name) => { const a = at(s, -7.5); const cp = api.checkpoint(id, a.x, a.z, { y: H(a.x, a.z), yaw: a.yaw, name }); cp.s = s; S.cps.push(cp); return cp; };
@@ -520,7 +520,7 @@ Object.assign(BW15W, {
     if (S.ending) return;
     for (const cp of S.cps) {
       if (cp.passed || cp.s < 5) continue;
-      if (S.s >= cp.s && S.onRoad) { cp.passed = true; g.checkpointTouch(cp); }
+      if (S.s >= cp.s && S.onRoad) { cp.passed = true; g.checkpointTouch(cp); if (cp.id === 'cp_hwy') g.toast('TIP: LET GO OF THE STICK TO CRUISE · PULL BACK TO BRAKE'); }
     }
   },
   landmarks(g, S, dt) {
@@ -556,10 +556,10 @@ Object.assign(BW15W, {
     const cx = rv.x, cz = rv.z, D = BW15M.DECK;
     g.cutscene([
       { music: 'burns_ending' },
-      { cam: { x: 22, y: 16, z: -640, tx: 0, ty: 4, tz: -690, fov: 0.8 } },
-      { banner: ['WORLD 15', 'EXODUS · MONDAY MORNING', { col: '#ffb04a', big: true, dur: 3.2 }] },
+      { cam: { x: -22, y: 14, z: -612, tx: -60, ty: 3, tz: -660, fov: 0.8 } },
+      { banner: [BurnsWorlds.label(15).toUpperCase(), 'EXODUS · MONDAY MORNING', { col: '#ffb04a', big: true, dur: 3.2 }] },
       { wait: 2.2 },
-      { cam: { from: { x: 22, y: 16, z: -640, tx: 0, ty: 4, tz: -690, fov: 0.8 }, to: { x: cx + 9, y: D + 6, z: cz - 14, tx: cx, ty: D + 1, tz: cz + 4, fov: 0.85 }, dur: 4.2 } },
+      { cam: { from: { x: -22, y: 14, z: -612, tx: -60, ty: 3, tz: -660, fov: 0.8 }, to: { x: cx + 9, y: D + 6, z: cz - 14, tx: cx, ty: D + 1, tz: cz + 4, fov: 0.85 }, dur: 4.2 } },
       { say: [ch, ['Babe. We did it. You got me back from a giant wooden man.']] },
       { say: ['brady', ['And then he burned. Which I feel... complicated about.']] },
       { say: [ch, ['He\'ll be back next year. They always are.', 'Now: Gerlach. Pancakes. It\'s, like, twelve miles.']] },
@@ -593,10 +593,8 @@ Object.assign(BW15W, {
         S.allowExit = true; S.form.mode = 'rv'; S.form.k = 0; S.trip.peak = 0;
         if (p.vehicle) p.vehicle.dismount(p);
         rv.mv.visible = true;
-        const sx = Math.cos(dYaw + Math.PI / 2), sz = -Math.sin(dYaw + Math.PI / 2);
         p.teleport(tb.x + Math.sin(dYaw) * 0.75, g.world.height(tb.x, tb.z), tb.z + Math.cos(dYaw) * 0.75, dYaw + Math.PI); p.locked = true; p.animOverride = 'sit';
         if (ch) { ch.def.seat = null; ch.setBehavior('sit'); ch.def.fixedY = true; ch.x = tb.x - Math.sin(dYaw) * 0.75; ch.z = tb.z - Math.cos(dYaw) * 0.75; ch.y = g.world.height(tb.x, tb.z); ch.yaw = dYaw; }
-        void sx; void sz;
       } },
       { cam: { x: tb.x + Math.cos(dYaw) * 4.5 + Math.sin(dYaw) * 1.5, y: g.world.height(tb.x, tb.z) + 2.0, z: tb.z - Math.sin(dYaw) * 4.5 + Math.cos(dYaw) * 1.5, tx: tb.x, ty: g.world.height(tb.x, tb.z) + 1.0, tz: tb.z, fov: 0.85 } },
       { fade: 'in', dur: 0.8 },

@@ -502,7 +502,7 @@ BW11.plugIn = function (g) {
 };
 BW11.HECKLES = [
   { line: 'Nice man bun. Did it come with the ticket, or was it an upgrade?', opts: ['My bun has seen the inside of a shower this decade. Can your kilt say that?', 'Uh... your FACE is a bun.', 'I\'m going through a breakup. With a giant wooden man. It\'s complicated.'], best: 0, react: ['OHHHHH!', '...what?', 'Awww. Wait, what?'] },
-  { line: 'I\'ve been coming here since before you were born. We built this city uphill. Both ways.', opts: ['Cool story, grandpa.', 'Back then the event guide was a napkin. You still haven\'t finished reading it.', 'Was the Man shorter back then? Asking for my wife.'], best: 1, react: ['Boooo.', 'OHHHHHH! NAPKIN!', 'Huh?'] },
+  { line: 'I\'ve been coming here since before you were born. We built this city uphill. Both ways.', opts: ['Cool story, grandpa.', 'Back then the event guide was a napkin. You still haven\'t finished reading it.', 'Was the Man shorter back then? I need to know how tall my nemesis is.'], best: 1, react: ['Boooo.', 'OHHHHHH! NAPKIN!', 'Huh?'] },
   { line: 'This music sounds like a fax machine falling down the stairs!', opts: ['Fax machines are vintage. You LOVE vintage.', '...Beep boop?', 'And your beer is so warm it\'s legally a soup.'], best: 2, react: ['Heh. Okay.', 'Crickets.', 'SOUP! SOUP! SOUP!'] }
 ];
 BW11.talkCurt = function (g, a) {

@@ -55,13 +55,13 @@ const BW15D = {
     const av = Math.abs(S.v), turn = 1.25 * clamp(av / 3, 0, 1) / (1 + Math.max(0, av - 11) * 0.035);
     let yawRate = -S.steer * turn * (S.v < 0 ? -1 : 1);
     // trip wobble: a lazy sway that the lane assist and the steady taps fight
-    const tv = BW15D.tripVis(S), encK = S.enc ? 1.6 : 1, steady = S.enc ? S.enc.steady : 0;
-    S.wob = tv * encK * (1 - steady * 0.75) * (0.26 * Math.sin(S.t * 1.25) + 0.15 * Math.sin(S.t * 2.7 + 1.3) + 0.07 * Math.sin(S.t * 5.3));
+    const tv = BW15D.tripVis(S), encK = S.enc ? 1.3 : 1, steady = S.enc ? S.enc.steady : 0;
+    S.wob = tv * encK * (1 - steady * 0.85) * (0.19 * Math.sin(S.t * 1.25) + 0.11 * Math.sin(S.t * 2.7 + 1.3) + 0.05 * Math.sin(S.t * 5.3));
     yawRate += S.wob * clamp(av / 6, 0, 1);
     // lane assist when the stick is centred
     if (Math.abs(sx) < 0.14 && av > 0.6 && !S.scripted) {
       const target = BW15D.assistYaw(S, rv);
-      if (target !== null) { const k = (S.enc ? 1.2 : 2.7) + av * 0.05; yawRate += clamp(BurnsM.wrap(target - rv.yaw) * k, -1.1, 1.1); }
+      if (target !== null) { const k = (S.enc ? 1.9 : 2.7) + av * 0.05; yawRate += clamp(BurnsM.wrap(target - rv.yaw) * k, -1.1, 1.1); }
     }
     if (S.scripted && S.scripted.yaw !== undefined) yawRate = clamp(BurnsM.wrap(S.scripted.yaw - rv.yaw) * 3, -1.2, 1.2);
     rv.yaw = BurnsM.wrap(rv.yaw + yawRate * dt);
@@ -219,7 +219,7 @@ const BW15D = {
     }
     if (P.wingL) {
       const wk = wings ? easeOut(F.k) : 0, flap = 0.35 + 0.5 * Math.sin(S.t * 6.5);
-      for (const [W, sd] of [[P.wingL, 1], [P.wingR, -1]]) { W.visible = wk > 0.02; at(W, sd * 1.25, 2.95, -0.4); W.scale = wk; W.roll = sd * flap; W.pitch = 0; }
+      for (const [W, sd] of [[P.wingL, 1], [P.wingR, -1]]) { W.visible = wk > 0.02; at(W, sd * 1.25, 2.95, -0.4); W.scale = wk * 1.6; W.roll = sd * flap; W.pitch = 0; }
     }
   },
   /* ---------------- dust, rainbow trails ---------------- */
@@ -232,9 +232,8 @@ const BW15D = {
     const tv = BW15D.tripVis(S);
     if (tv > 0.18 && av > 2) {
       S.trailAcc += dt * av;
-      const rgb = S._rgb || (S._rgb = [0, 0, 0]);
-      while (S.trailAcc > 0.7) {
-        S.trailAcc -= 0.7;
+      while (S.trailAcc > 0.5) {
+        S.trailAcc -= 0.5;
         for (let i = 0; i < 7; i++) {
           const lx = (i - 3) * 0.34, x = rv.x - s * 5.2 + c * lx, z = rv.z - c * 5.2 - s * lx;
           const col = burnsRGBf(BW15_RAINBOW[i]);
@@ -242,7 +241,6 @@ const BW15D = {
         }
         if (S.form.mode !== 'rv') g.fx.glint(rv.x - s * 3 + (Math.random() - 0.5) * 3, rv.y + 2 + Math.random() * 2, rv.z - c * 3, BURNS_NEON[Math.floor(Math.random() * 7)]);
       }
-      void rgb;
     }
   },
   /* ---------------- the rippling ribbon road ---------------- */
@@ -279,12 +277,12 @@ const BW15D = {
       if (J.k <= 0.001) { mv.visible = false; J.placed = false; return; }
       const dx = J.x - rv.x, dz = J.z - rv.z, ahead = dx * s + dz * c;
       if (!J.placed || ahead < -50 || Math.hypot(dx, dz) > 170) {
-        const a = BW15_ROAD.at(S.s + 70 + i * 34 + Math.random() * 20, (i % 2 ? 1 : -1) * (6 + Math.random() * 18), {});
-        J.x = a.x; J.z = a.z; J.h = 20 + Math.random() * 12; J.ph = Math.random() * 6; J.placed = true; J.vx = (Math.random() - 0.5) * 2; J.vz = (Math.random() - 0.5) * 2;
+        const a = BW15_ROAD.at(S.s + 55 + i * 30 + Math.random() * 20, (i % 2 ? 1 : -1) * (5 + Math.random() * 16), {});
+        J.x = a.x; J.z = a.z; J.h = 11 + Math.random() * 7; J.ph = Math.random() * 6; J.placed = true; J.vx = (Math.random() - 0.5) * 2; J.vz = (Math.random() - 0.5) * 2;
       }
       J.x += J.vx * dt; J.z += J.vz * dt;
       mv.visible = true; mv.x = J.x; mv.z = J.z; mv.y = g.world.height(J.x, J.z) + J.h + Math.sin(S.t * 0.7 + J.ph) * 2.2;
-      mv.yaw += dt * 0.15; mv.scale = J.k * (1 + 0.07 * Math.sin(S.t * 2.1 + J.ph));
+      mv.yaw += dt * 0.15; mv.scale = J.k * 1.25 * (1 + 0.07 * Math.sin(S.t * 2.1 + J.ph));
     });
     // rainbow arches bloom over the highway
     for (const A of S.arches) { A.k = approach(A.k, tv > 0.38 && !S.ending ? 1 : 0, dt * 0.5); A.mv.visible = A.k > 0.01; A.mv.scale = easeOut(A.k); }
@@ -378,7 +376,6 @@ const BW15D = {
   },
   pulseLogic(g, S, dt) {
     const P = S.pulse, rv = S.rv;
-    const done = g.missions.isDone('pulse');
     switch (P.phase) {
       case 'hold1': if (P.t > 2 && BW15D.giversDone(S, [0, 1]) && !g.cine) BW15D.setPulse(g, S, 'go1'); break;
       case 'go1': if (P.t > 9 && (Math.abs(S.v) < 0.4 || P.t > 22)) BW15D.setPulse(g, S, 'hold2'); break;
@@ -393,7 +390,6 @@ const BW15D = {
       case 'retry': if (P.t > 5) BW15D.setPulse(g, S, 'big'); break;
       case 'done': if (P.t > (P.bgOpen ? 24 : 18)) { P.bgOpen = !P.bgOpen; P.gate = P.bgOpen; P.t = 0; } break;
     }
-    void done;
     for (const a of S.arms || []) a.roll = BurnsM.damp(a.roll || 0, P.gate ? 1.3 : 0, 3, dt);
     for (const b of S.barriers || []) b.off = !!P.gate;
     for (const L of S.lights || []) { const green = P.phase === 'go1' || P.phase === 'big' || (P.phase === 'done' && P.bgOpen) || P.phase === 'won'; L.red.visible = !green; L.green.visible = green; }
@@ -401,7 +397,7 @@ const BW15D = {
   setPulse(g, S, phase) {
     const P = S.pulse; P.phase = phase; P.t = 0;
     const fl = S.flaggers || [];
-    if (phase === 'go1') { P.gate = false; g.banner('PULSE!', 'The line moves! Roll with it.', { col: '#7aff5a' }); burnsSfx('crowd_cheer'); fl.forEach(a => a.say('GO GO GO! Slowly!', 2)); BW15D.quip(g, 'go1', ['It\'s moving! The line is MOVING!', 'Pulse! Roll, babe, roll!'], true); }
+    if (phase === 'go1') { P.gate = false; g.banner('PULSE!', 'The line moves! Hold the stick up to roll with it.', { col: '#7aff5a' }); burnsSfx('crowd_cheer'); fl.forEach(a => a.say('GO GO GO! Slowly!', 2)); BW15D.quip(g, 'go1', ['It\'s moving! The line is MOVING!', 'Pulse! Roll, babe, roll!'], true); }
     if (phase === 'hold2') { g.banner('HOLD', 'Pulse stopped. More burners with last bags...', { col: '#ff9a4a', small: true }); fl.forEach(a => a.say('HOLD IT! Next pulse soon!', 2)); }
     if (phase === 'count') { g.banner('THE BIG PULSE', 'Get through the gate before it closes!', { col: '#ffe24a', big: true }); burnsSfx('kartCountdown', null, 'select'); }
     if (phase === 'big') { P.gate = true; P.bigT = BW15.BIG_TIME; burnsSfx('kartGo', null, 'powerup'); g.banner('GO!', 'Weave between the lanes · the gate closes in ' + BW15.BIG_TIME + 's', { col: '#7aff5a' }); BW15D.quip(g, 'big', ['Babe! Between the lanes! GO!', 'Squeeze through! We fit! Probably!'], true); for (const a of S.walkers || []) a.data.clear = true; }
@@ -428,7 +424,7 @@ const BW15D = {
   /* ---------------- highway traffic: terrain-hugging, yielding, slowing at the checkpoint ---------------- */
   updateHighway(g, S, dt) {
     const T = S.hwy; if (!T) return;
-    const W = g.world, rv = S.rv, c = Math.cos(rv.yaw), s = Math.sin(rv.yaw);
+    const W = g.world, rv = S.rv;
     for (const lane of T.lanes) {
       const out = lane.def.id === 'out';
       for (const car of lane.cars) {
@@ -449,7 +445,6 @@ const BW15D = {
         mv.y = y + rip; mv.pitch = -Math.atan((h1 - h0) / 4);
       }
     }
-    void c; void s;
   },
   // the speed the Party Barge may keep without rear-ending what's ahead
   aheadCap(g, S) {
@@ -533,7 +528,7 @@ const BW15D = {
     else if (A.x !== undefined) { tx = A.x; tz = A.z; }
     else { const p = BW15_ROAD.at(S.s + (A.look || 14), A.lat === undefined ? -1.85 : A.lat, {}); tx = p.x; tz = p.z; }
     const want = Math.atan2(tx - rv.x, tz - rv.z), err = BurnsM.wrap(want - rv.yaw);
-    const sx = clamp(-err * 2.2, -1, 1);
+    const sx = A.noSteer ? 0 : clamp(-err * 2.2, -1, 1);
     const sp = A.speed === undefined ? 18 : A.speed;
     const sy = S.v < sp - 0.6 ? 1 : S.v > sp + 0.6 ? -0.6 : 0;
     return [sx, sy];

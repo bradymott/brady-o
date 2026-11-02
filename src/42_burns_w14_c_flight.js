@@ -418,7 +418,8 @@ class BW14_Fly {
     const vfOld = D.vf; D.vf = BurnsM.damp(D.vf, vfT, 1.5, dt);
     const lost = Math.max(0, vfOld - D.vf);
     let vyT = -(PH.CAN_SINK * (1 - 0.6 * brake)) - Math.abs(turn) * 1.7;
-    if (brake > 0.86) { D.stallT += dt; if (D.stallT > 2.6) { vyT = -7.5; if (!this.stallSaid) { this.stallSaid = true; BW14_HUD.flash(g, 'STALL! LET UP!', 1.2); } } } else { D.stallT = Math.max(0, D.stallT - dt * 2); this.stallSaid = false; }
+    // holding full brakes up high stalls the wing; the final flare (under 8 m) never does
+    if (brake > 0.86 && (this.agl === undefined || this.agl > 8)) { D.stallT += dt; if (D.stallT > 2.6) { vyT = -7.5; if (!this.stallSaid) { this.stallSaid = true; BW14_HUD.flash(g, 'STALL! LET UP!', 1.2); } } } else { D.stallT = Math.max(0, D.stallT - dt * 2); this.stallSaid = false; }
     const th = this.thermalAt(D.x, D.y, D.z) * 0.35;
     D.vy = BurnsM.damp(D.vy, vyT + th, 1.3, dt) + lost * 1.05;
     D.vy = Math.min(D.vy, 2.5);
@@ -458,6 +459,7 @@ class BW14_Fly {
     const g = this.g, D = this.dv, C = BW14_CFG;
     const vDown = -D.vy, vh = Math.hypot(D.vx, D.vz);
     const dist = Math.hypot(D.x - C.LZ.x, D.z - C.LZ.z);
+    if (g.bw14) g.bw14.flashMsg = null;   // feet are down: drop stale call-outs (STALL, FLARE, NO PULL...)
     const surf = col && col.y1 > 1.2 ? (col.bw14 || (col.t === 'dome' ? 'dome' : col.y1 > 3.1 && col.y1 < 3.6 ? 'rv' : col.y1 > 2.3 && col.y1 < 2.6 ? 'potty' : col.y1 > 2.8 && col.y1 < 3.1 ? 'shade' : 'roof')) : 'playa';
     let land = hard || this.pullQ === 'dead' ? 'hard' : vDown < 2.4 && vh < 7 ? 'soft' : vDown < 3.9 && vh < 9.5 ? 'ok' : 'rough';
     const perfectFlare = land === 'soft' && D.flareMax > 0.6 && D.flareAt !== undefined && D.flareAt < 5.5 && D.flareAt > 1.0;

@@ -176,7 +176,7 @@ const BW15C = {
     if (S.tail) S.tail.paused = false;
   },
   busted(g, S, cop) {
-    const C = S.chase, rv = S.rv; S.chase = null; S.enc = null;
+    const rv = S.rv; S.chase = null; S.enc = null;
     if (S.tail) { S.tail.cop.state = 'return'; S.tail = null; }
     burnsSfx('buzzkill', null, 'powerdown');
     const copM = { name: 'OFFICER', model: BurnsRig.model(BW15_CAST.who('cop', 4).spec) };
@@ -198,7 +198,6 @@ const BW15C = {
       { fade: 'in', dur: 0.6 },
       { banner: ['TRY AGAIN', 'Keep it together this time!', { col: '#ffe24a', small: true }] }
     ], () => { S.scripted = null; });
-    void C;
   },
   // back to the last camp flag; reset cops and encounters after it
   retry(g, S) {
@@ -344,9 +343,10 @@ const BW15C = {
     const mph = Math.round(Math.abs(S.v) * 2.237), L = Input.layout;
     let gx = W / 2, gy = H - Sf.b - 30;
     if (L && portrait) { gx = clamp(L.stickHome.x, Sf.l + 60, W / 2); gy = L.stickHome.y - L.stickHome.r - 38; }
-    const lim = S.enc ? (S.enc.kind === 'check' ? 10 : 45) : S.zone === 'line' ? 10 : S.paved ? 45 : 25;
+    const rush = S.zone === 'line' && S.pulse.phase === 'big';
+    const lim = S.enc ? (S.enc.kind === 'check' ? 10 : 45) : rush ? 'GO' : S.zone === 'line' ? 10 : S.paved ? 45 : 25;
     UI.pill(ctx, gx - 58, gy - 22, 116, 44, 'rgba(10,6,24,0.6)', S.enc && (S.enc.fast || S.enc.slow) ? 'rgba(255,80,80,0.9)' : 'rgba(255,255,255,0.25)');
-    UI.text(ctx, String(mph), gx - 16, gy - 3, 21, mph > lim ? '#ff8a8a' : '#ffffff', { stroke: false });
+    UI.text(ctx, String(mph), gx - 16, gy - 3, 21, !rush && mph > lim ? '#ff8a8a' : '#ffffff', { stroke: false });
     UI.text(ctx, 'MPH', gx - 16, gy + 13, 8, '#cfc8e8', { stroke: false, ui: true });
     ctx.save(); ctx.fillStyle = '#ffffff'; rr(ctx, gx + 16, gy - 17, 32, 34, 5); ctx.fill(); ctx.strokeStyle = '#c8303a'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
     UI.text(ctx, 'LIMIT', gx + 32, gy - 8, 6, '#1a1a22', { stroke: false, ui: true }); UI.text(ctx, String(lim), gx + 32, gy + 6, 13, '#1a1a22', { stroke: false });

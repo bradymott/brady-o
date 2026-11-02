@@ -611,8 +611,9 @@ BURNS_W9.setReveal = function (g) {
     { cam: { x: X + 6, y: 2.4, z: Z + 9, tx: X, ty: 1.6, tz: Z - 1, fov: 0.8 } },
     { do: g2 => { g2.fx.confetti(X, 3, Z + 4, 40); burnsSfx('crowd_cheer'); } },
     { wait: 1.2 },
-    { do: g2 => { p.teleport(X + 1.2, 0, Z + 2.2, Math.PI); p.yaw = Math.PI; } },
-    { cam: { x: X + 2.4, y: 1.75, z: Z + 3.2, tx: X - 0.2, ty: 1.75, tz: Z - 1, fov: 0.72 } },
+    { do: g2 => { const yw = Math.atan2(-2.2, -2.6); p.teleport(X + 2.2, 0, Z + 1.6, yw); p.yaw = yw; } },
+    // (Brady stands to the side so the robots fill the frame)
+    { cam: { x: X - 1.6, y: 1.7, z: Z + 3.6, tx: X + 0.3, ty: 1.6, tz: Z - 1, fov: 0.72 } },
     { say: ['brady', ['Two robots. At the trash fence. Playing a secret set on car batteries.', '...Are you...?']] },
     { say: [A, ['We could neither confirm nor deny.']] },
     { say: [B, ['Beep. Boop.']] },

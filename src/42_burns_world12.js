@@ -261,7 +261,11 @@ BurnsWorlds.register({
     if (!S.introDone) BW12.intro(g);
     else {
       g.banner(BurnsWorlds.label(12).toUpperCase() + ' · THE TEMPLE', g.missions.isDone('hope') ? 'The sun is up. She\'s out there.' : 'Walk out at dawn. Write her name.', { col: '#ffe0a8' });
-      BW1213.after(S, 0.2, () => { if (g.missions.state('notes') === 'available') g.missions.start('notes', true); });
+      BW1213.after(S, 0.2, () => {
+        if (g.missions.state('notes') === 'available') g.missions.start('notes', true);
+        // her name is already on the wood but the note was never read: it's still tucked there
+        if (g.missions.isDone('name') && g.missions.state('hope') === 'available') g.missions.start('hope', true);
+      });
     }
   },
   onRespawn(g) { const p = g.player; p.animOverride = null; p.locked = false; },
@@ -673,7 +677,7 @@ BW12.intro = function (g) {
   g.cutscene([
     { music: 'w9' },
     { cam: camA },
-    { banner: [BurnsWorlds.label(12).toUpperCase(), 'THE TEMPLE · DAWN', { col: '#ffe0a8', big: true, dur: 3.4 }] },
+    { banner: [BurnsWorlds.label(12).toUpperCase(), 'THE TEMPLE · SATURDAY, DAWN', { col: '#ffe0a8', big: true, dur: 3.4 }] },
     { wait: 1.2 },
     { cam: { from: camA, to: camB, dur: 4.2 } },
     { say: ['brady', ['The storm\'s gone.', '...So is she.']] },
@@ -968,7 +972,7 @@ BW12.drawSprites = function (g, R) {
       const a = i / 11 * TAU + 0.3, rr = 10 + (i % 3) * 3.2, fx = TC.x + Math.sin(a) * rr, fz = TC.z + Math.cos(a) * rr;
       const cx = fx + sd[0] * L * 0.5, cy = 0.1 + Math.max(0.2, sd[1]) * L * 0.5 + 3.5, cz = fz + sd[2] * L * 0.5;
       const flick = 0.75 + 0.25 * Math.sin(t * 0.6 + i * 1.7);
-      R.bbs.streak(cx, cy, cz, sd[0], Math.max(0.35, sd[1] + 0.3), sd[2], L, 1.3 + (i % 2) * 0.6, SP.streak, col, 0.07 * k * flick);
+      R.bbs.streak(cx, cy, cz, sd[0], Math.max(0.35, sd[1] + 0.3), sd[2], L, 1.3 + (i % 2) * 0.6, SP.streak, col, 0.1 * k * flick);
     }
     // dust motes drifting in the light
     for (let i = 0; i < 40; i++) { const a = i * 2.39996, rr = 9 + (i * 37 % 11), ph = (t * 0.05 + i * 0.137) % 1; const x = TC.x + Math.sin(a) * rr + Math.sin(t * 0.3 + i) * 0.6, z = TC.z + Math.cos(a) * rr + Math.cos(t * 0.27 + i) * 0.6, y = 0.6 + ph * 6; R.bbs.bb(x, y, z, 0.07, 0.07, SP.glow, [1, 0.9, 0.7], 0.5 * Math.sin(ph * Math.PI) * k, true); }

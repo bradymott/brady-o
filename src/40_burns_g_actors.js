@@ -758,10 +758,13 @@ class BurnsPickups {
       if (!grp || grp.full) { grp = new BurnsGroup(); grp.pickups = true; this.groups.push(grp); }
       const kind = d.kind, k = kind.split(':');
       const P = Object.assign({}, d, { base: k[0], arg: k[1], taken: false, t: Math.random() * 6, y0: d.y });
+      // ground scores (bag:<power>) only exist once the story flag is set (world 16); they go to the backpack
+      P.score = P.base === 'bag' && BurnsPack.isScore(P.arg);
+      const PK = P.base === 'pack' ? BurnsPack.get(P.arg) : null;
       const meshKind = P.base === 'glowstick' ? 'glowstick' : P.base === 'water' ? 'water' : P.base === 'bag' ? 'bag' : P.base === 'token' ? 'token' : P.base === 'photo' ? 'photo' : 'item';
-      P.obj = grp.add(m => { BURNS_PICKUP_MESH[meshKind](m, { col: d.col, seed: this.items.length, power: P.arg, icon: d.icon || P.arg, item: P.arg }); return {}; });
-      P.glowCol = burnsRGBf(P.base === 'glowstick' ? (d.col || BURNS_NEON[this.items.length % 7]) : P.base === 'token' ? '#ffc040' : P.base === 'bag' ? (BURNS_POWERUPS[P.arg] || BURNS_POWERUPS.water).col : P.base === 'water' ? '#5ad0ff' : P.base === 'photo' ? '#ff9ad0' : '#ffe080');
-      P.label = P.base === 'bag' ? (BURNS_POWERUPS[P.arg] || {}).label : P.base === 'item' ? (BURNS_KEY_ITEMS[P.arg] ? BURNS_KEY_ITEMS[P.arg].name : (d.label || '')) : d.label || null;
+      P.obj = grp.add(m => { BURNS_PICKUP_MESH[meshKind](m, { col: d.col || (PK && PK.col), seed: this.items.length, power: P.arg, icon: d.icon || (PK && PK.icon) || P.arg, item: P.arg }); return {}; });
+      P.glowCol = burnsRGBf(P.base === 'glowstick' ? (d.col || BURNS_NEON[this.items.length % 7]) : P.base === 'token' ? '#ffc040' : P.base === 'bag' ? (BURNS_POWERUPS[P.arg] || BURNS_POWERUPS.water).col : P.base === 'water' ? '#5ad0ff' : P.base === 'photo' ? '#ff9ad0' : PK ? (d.col || PK.col || '#ffe080') : '#ffe080');
+      P.label = P.base === 'bag' ? (BURNS_POWERUPS[P.arg] || {}).label : P.base === 'item' ? (BURNS_KEY_ITEMS[P.arg] ? BURNS_KEY_ITEMS[P.arg].name : (d.label || '')) : PK ? (d.label || PK.name) : d.label || null;
       this.items.push(P);
       return P;
     };
@@ -781,17 +784,24 @@ class BurnsPickups {
   }
   spawn(kind, x, y, z, o) {
     o = o || {};
-    const base = kind.split(':')[0];
+    const base = kind.split(':')[0], arg = kind.split(':')[1];
     const P = this.spare.find(s => s.taken && s.base === base);
-    if (!P) { if (base === 'glowstick') { this.g.addGlow(1); } return null; }
+    if (!P) {
+      if (base === 'glowstick') { this.g.addGlow(1); }
+      // runtime baggies / backpack items have no spare slot: they go straight into the backpack
+      else if (base === 'pack' && arg) this.g.pack.add(arg);
+      else if (base === 'bag' && arg) { if (!BurnsPack.isScore(arg)) this.g.player.givePower('water'); else if (BurnsSave.groundScore()) this.g.pack.add(arg); }
+      return null;
+    }
     Object.assign(P, { x, y, z, y0: y, taken: false, mission: o.mission, id: o.id, pop: o.pop ? 0.6 : 0, vy: o.pop ? 5 : 0, t: 0, label: o.label || P.label, onTake: o.onTake });
     P.obj.visible = true;
     return P;
   }
   update(dt) {
     const g = this.g, p = g.player, rad = (p.giant > 0 ? 2.6 : 1.1);
+    const gs = g.gsOn = BurnsSave.groundScore();
     for (const P of this.items) {
-      if (P.taken) continue;
+      if (P.taken || (P.score && !gs)) continue;
       P.t += dt;
       if (P.pop > 0) { P.pop -= dt; P.vy -= 18 * dt; P.y0 += P.vy * dt; const s = g.world.surface(P.x, P.z, P.y0, 0.1, BURNS_SURF).y + 0.7; if (P.y0 < s) { P.y0 = s; P.vy = Math.abs(P.vy) * 0.4; } }
       if (P.hidden && !(p.power === 'lsd' && p.powerT > 0)) continue;
@@ -806,7 +816,7 @@ class BurnsPickups {
     const p = this.g.player, S = BURNS_SPRITES.R, lsd = p.power === 'lsd' && p.powerT > 0, cam = R.cam;
     for (const P of this.items) {
       const o = P.obj;
-      if (P.taken || (P.hidden && !lsd) || (P.gate && this.g.missions.state(P.mission) !== 'active')) { o.visible = false; continue; }
+      if (P.taken || (P.score && !this.g.gsOn) || (P.hidden && !lsd) || (P.gate && this.g.missions.state(P.mission) !== 'active')) { o.visible = false; continue; }
       o.visible = true;
       const spin = P.base === 'glowstick' ? P.t * 2.2 : P.t * 1.8, bob = Math.sin(P.t * 2.4) * 0.12;
       o.x = P.x; o.y = P.y0 + bob; o.z = P.z; o.yaw = spin; o.scale = P.base === 'token' ? 1.15 : P.base === 'photo' ? 1.2 : 1;

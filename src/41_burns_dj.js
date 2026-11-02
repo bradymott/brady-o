@@ -4,8 +4,8 @@
    BurnsDJ.open(g, { title, bpm, genre, difficulty, duration, crowd, onDone(result) })
      g           the running BurnsPlayScene
      title       set name shown on the decks ('LIVE ON EL PULPO')
-     bpm         90..150. Snapped to the nearest real music track so the
-                 visual beat and the audio beat line up.
+     bpm         snapped to the nearest tempo that has real dance tracks in the
+                 game (120..140 today) so the visual beat and the music line up.
      genre       'house' | 'techno' | 'disco' | 'trance' | 'melodic' | 'breaks' | 'bass'
      difficulty  1..3 (or 0..1, or 'easy' | 'normal' | 'hard')
      duration    seconds (~45..90). The set is built from 4-bar phrases.
@@ -20,6 +20,10 @@
    when nothing is built in front of him), music (a dance-track id to play on
    deck A, e.g. 'burns_w6'), deckA / deckB {name, artist}, quotes {S, A, B, C, D}.
    BurnsDJ.isOpen(g) tells whether a set is running; BurnsDJ.session is the live set.
+   onDone fires after the player dismisses the results card (or leaves the booth
+   from the pause menu: forfeit = true). It may open another set straight away.
+   Keys: D F J K pads, Space DROP, Shift/S hold filter, Up/Down pitch, Right
+   crossfade, X scratch, P/Esc pause. Tests: BurnsDJ.session.autoplay(q 0..1).
 
    How a set plays (all touch, two thumbs, ~45-90 s):
      WARM UP    tap the pads as the rings close on them (on the beat)
@@ -320,11 +324,14 @@ class BurnsDJSession {
     const cv = Game.canvas;
     this.h = {
       down: e => S.ev('down', e), move: e => S.ev('move', e), up: e => S.ev('up', e), cancel: e => S.ev('up', e),
-      kd: e => S.key(e, true), ku: e => S.key(e, false)
+      kd: e => S.key(e, true), ku: e => S.key(e, false),
+      // phone locked / app switched mid-set: pause (stops the music; resuming rewinds to the bar)
+      vis: () => { if (document.hidden && S.active && Game.scene === S.g && S.phase === 'play' && !S.paused) S.setPause(true); }
     };
     cv.addEventListener('pointerdown', this.h.down); cv.addEventListener('pointermove', this.h.move);
     cv.addEventListener('pointerup', this.h.up); cv.addEventListener('pointercancel', this.h.cancel);
     window.addEventListener('keydown', this.h.kd); window.addEventListener('keyup', this.h.ku);
+    document.addEventListener('visibilitychange', this.h.vis);
     burnsSfx('throw', { vol: 0.5 });
     if (this.o.intro === false) this.introT = 0.9;
   }
@@ -334,6 +341,7 @@ class BurnsDJSession {
       cv.removeEventListener('pointerdown', this.h.down); cv.removeEventListener('pointermove', this.h.move);
       cv.removeEventListener('pointerup', this.h.up); cv.removeEventListener('pointercancel', this.h.cancel);
       window.removeEventListener('keydown', this.h.kd); window.removeEventListener('keyup', this.h.ku);
+      document.removeEventListener('visibilitychange', this.h.vis);
       this.h = null;
     }
   }

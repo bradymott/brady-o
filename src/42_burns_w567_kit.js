@@ -494,6 +494,8 @@ BW567K.dj = function (g, o) {
   return BW567K.rhythm(g, o);
 };
 // is a DJ / rhythm minigame running right now?
+// y for a world's status pill under the HUD stack: below the tracker / boss bar AND the live toasts
+BW567K.hudY = function (g) { return (g.topStack || 40) + 2 + (g.toasts ? g.toasts.filter(t => t.t < 2.2).length : 0) * 28; };
 BW567K.busy = function (g) { return !!(g.bw567rhythm || (typeof BurnsDJ !== 'undefined' && BurnsDJ && BurnsDJ.isOpen && BurnsDJ.isOpen(g))); };
 (() => {
   const prev = BurnsUI.drawOverlay;
@@ -511,3 +513,5 @@ BURNS_ANIMS.bw567dj = function (P, t) {
   S(B.THIGH_L, -0.12 - nod * 0.1); S(B.SHIN_L, 0.2 + nod * 0.15); S(B.THIGH_R, -0.08); S(B.SHIN_R, 0.15 + nod * 0.1);
   P.y = -nod * 0.05; P.face = 3;
 };
+// debug / test access (the bundle is one IIFE)
+try { if (window.BRADY_BURNS) window.BRADY_BURNS.BW567K = BW567K; } catch (e) { /* no window */ }

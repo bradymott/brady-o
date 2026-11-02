@@ -29,6 +29,7 @@ const BURNS_W234 = {
       S.timers = S.timers.filter(t => !t.done);
     }
     for (const P of S.parades) this.paradeStep(g, P, dt);
+    if (S.carry || S.loads) this.carryStep(g, dt);
   },
   /* ---------- shapes (local coords of m's transform) ---------- */
   rb(m, cx, cy, cz, w, h, d, r, o) { m.roundBox(cx, cy, cz, w, h, d, r === undefined ? Math.min(w, h, d) * 0.22 : r, o); return m; },
@@ -207,6 +208,12 @@ const BURNS_W234 = {
       if (a.removed || a.hidden || !a._vis) continue;
       R.skin(t.model.geo, a.ch.bones.subarray(t.bone * 12, t.bone * 12 + 12), 1, a.ch.tint, 0, 0.3);
     }
+    // loads lying on the ground (see carryStart)
+    if (S.loads) for (const L of S.loads) {
+      const c = g.cam, d2 = (L.x - c.x) * (L.x - c.x) + (L.z - c.z) * (L.z - c.z); if (d2 > 90 * 90) continue;
+      BurnsM.a34Set(L.m12, 0, L.x, L.y, L.z, L.yaw, L.pitch || 0, 0, 1, 1, 1);
+      R.skin(L.o.ground.geo, L.m12, 1, null, 0, 0.35);
+    }
   },
   /* ---------- small utils ---------- */
   near(g, x, z, r) { const p = g.player; return Math.hypot(p.x - x, p.z - z) < r; },
@@ -338,22 +345,22 @@ BurnsBehaviors.register('w234Darkwad', {
 BurnsBehaviors.register('w234Cop', {
   init(a) { a.data.mode = 'blend'; a.data.t = Math.random() * 5; a.data.cd = 0; },
   update(a, g, dt) {
-    const D = a.data, p = g.player, d = a.distP(), holding = p.power && p.powerT > 0 && p.power !== 'water';
+    const D = a.data, p = g.player, d = a.distP(), holding = a.def.suspect ? !!a.def.suspect(g, a) : !!(p.power && p.powerT > 0 && p.power !== 'water');
     D.t += dt; if (D.cd > 0) D.cd -= dt;
     if (D.mode === 'dazed') { D.dz -= dt; a.ch.play('hurt'); a.yaw += dt * 4; a.vx = BurnsM.damp(a.vx, 0, 5, dt); a.vz = BurnsM.damp(a.vz, 0, 5, dt); if (D.dz <= 0) D.mode = 'blend'; }
     else if (D.mode === 'chase') {
       if (!holding || d > 24) { D.mode = 'blend'; a.say(['...Groovy.', 'I lost him. I mean. Far out.', 'Copy. Suspect has... vibed away.'][Math.floor(Math.random() * 3)], 1.8); }
       else {
         a.moveTo(p.x, p.z, a.def.chaseSpeed || 5.4, dt, 0.5); a.ch.play('run', { rate: 0.9 });
-        if (Math.random() < dt * 0.4) a.say(['SIR! IS THAT A... GROOVY BAGGIE?', 'STOP! IN THE NAME OF... RADICAL SELF-EXPRESSION!', 'I JUST WANNA TALK! ABOUT THE BAGGIE!'][Math.floor(Math.random() * 3)], 1.4);
-        if (a.touching(0.2) && D.cd <= 0) { D.cd = 3; const P = BURNS_POWERUPS[p.power]; p.endPower(true); g.toast('CONFISCATED: ' + (P ? P.label : 'BAGGIE')); a.say('This is... evidence. Groovy evidence.', 2.4); burnsSfx('powerdown'); p.knock((p.x - a.x) * 3, 5, (p.z - a.z) * 3); D.mode = 'blend'; }
+        if (Math.random() < dt * 0.4) { const L = a.def.chaseLines || ['SIR! IS THAT A... GROOVY BAGGIE?', 'STOP! IN THE NAME OF... RADICAL SELF-EXPRESSION!', 'I JUST WANNA TALK! ABOUT THE BAGGIE!']; a.say(L[Math.floor(Math.random() * L.length)], 1.4); }
+        if (a.touching(0.2) && D.cd <= 0) { D.cd = 3; if (a.def.onCatch) a.def.onCatch(g, a); else { const P = BURNS_POWERUPS[p.power]; p.endPower(true); g.toast('CONFISCATED: ' + (P ? P.label : 'BAGGIE')); a.say('This is... evidence. Groovy evidence.', 2.4); burnsSfx('powerdown'); p.knock((p.x - a.x) * 3, 5, (p.z - a.z) * 3); } D.mode = 'blend'; }
       }
     } else {
       const hx = a.home.x + Math.sin(D.t * 0.21) * 2.5, hz = a.home.z + Math.cos(D.t * 0.17) * 2.5;
       const dd = a.moveTo(hx, hz, 0.9, dt, 0.5);
       a.ch.play(dd > 0.8 ? 'walk' : 'dance', dd > 0.8 ? { rate: 0.7 } : { style: 3, bpm: 92 });
       if (Math.random() < dt * 0.1 && d < 12) a.say(['Groovy.', 'Far out, fellow burner.', 'I, too, enjoy... the bass.', 'Nobody here is a cop. Especially not me.', 'Whoops, that\'s my badge. It\'s a... costume badge.'][Math.floor(Math.random() * 5)], 2.2);
-      if (holding && d < (a.def.view || 14) && BurnsBehaviors.sees(a, g, a.def.view || 14, a.def.fov || 1.1)) { D.mode = 'chase'; a.say('FREEZE! I mean... HEY BRO, WHAT\'S IN THE BAGGIE?!', 2); g.toast('UNDERCOVER COP! DITCH HIM OR LOSE YOUR POWER-UP'); burnsSfx('yell'); }
+      if (holding && D.cd <= 0 && d < (a.def.view || 14) && BurnsBehaviors.sees(a, g, a.def.view || 14, a.def.fov || 1.1)) { D.mode = 'chase'; a.say(a.def.spotLine || 'FREEZE! I mean... HEY BRO, WHAT\'S IN THE BAGGIE?!', 2); g.toast(a.def.spotToast || 'UNDERCOVER COP! DITCH HIM OR LOSE YOUR POWER-UP'); burnsSfx('yell'); }
       else if (d < 7) a.face(p.x, p.z, dt, 2);
     }
     a.physics(dt);
@@ -438,6 +445,100 @@ BURNS_ANIMS.w234lounge = (P, t) => {
   S(B.UARM_L, -0.4, 0, 1.2); S(B.FARM_L, -0.9); S(B.UARM_R, -2.6, 0, -0.5); S(B.FARM_R, -1.6);
   S(B.CHEST, -0.1 + Math.sin(t * 1.2) * 0.02); S(B.HEAD, 0.25, 0.3);
   P.pitch = -0.95; P.pivot = 0.5; P.y = -0.38; P.face = 3;
+};
+
+/* ---------- carrying a heavy load (W2: the stash, the haul, the escape) ----------
+   BURNS_W234.loadModels(key, build) -> { hand, ground }: one build, baked twice (held over Brady's
+   head on the chest bone / resting on the ground). build(m) draws the load centred on the origin,
+   sitting on y = 0.
+   BURNS_W234.loadPlace(g, o, x, z, yaw) puts a load on the ground; walking into it picks it up.
+   BURNS_W234.carryStart(g, o) puts one in Brady's hands. o: { hand, ground, name, speed (0.62),
+     jump (false), dropOnHurt (true), when(g) (may it be picked up?), onPick(g, L), onDrop(g, L, why) }.
+   While carrying: slower, no jumping (unless o.jump), ACTION only talks or interacts (no spin), and
+   anything that hurts Brady knocks the load loose (unless dropOnHurt is false). */
+BURNS_W234.loadModels = function (key, build) {
+  return {
+    hand: this.attModel('load:' + key + ':hand', m => { m.push(); m.tf(0, 0.83, 0.04); build(m); m.pop(); }),
+    ground: this.attModel('load:' + key + ':ground', m => build(m))
+  };
+};
+BURNS_W234.carryInstall = function (p) {
+  if (p._w234carry) return; p._w234carry = true;
+  let d = null, o = Object.getPrototypeOf(p);
+  while (o && !(d = Object.getOwnPropertyDescriptor(o, 'speedMul'))) o = Object.getPrototypeOf(o);
+  Object.defineProperty(p, 'speedMul', { configurable: true, get() {
+    const v = d && d.get ? d.get.call(this) : 1, S = BURNS_W234.S, c = S && S.carry;
+    return c && S.g === this.g ? v * (c.o.speed || 0.62) : v;
+  } });
+};
+BURNS_W234.carryStart = function (g, o) {
+  const S = this.S, p = g.player; if (!S) return;
+  this.carryInstall(p);
+  if (p.vehicle) p.vehicle.dismount(p);
+  S.carry = { o, t: 0, inv: p.invT, warn: 0 };
+  if (!S.carryAtt) { S.carryAtt = { get geo() { const c = BURNS_W234.S && BURNS_W234.S.carry; return c ? c.o.hand.geo : null; } }; this.attach(p, S.carryAtt, BURNS_BONES.CHEST, () => !!(BURNS_W234.S && BURNS_W234.S.carry)); }
+  burnsSfx('pick', { pitch: 0.7 });
+};
+BURNS_W234.carryEnd = function (g) {
+  const S = this.S, p = g.player; if (!S) return null;
+  const c = S.carry; S.carry = null;
+  if (p.animOverride === 'w234carry' || p.animOverride === 'w234carryIdle') p.animOverride = null;
+  return c;
+};
+BURNS_W234.loadPlace = function (g, o, x, z, yaw, y) {
+  const S = this.S; if (!S) return null;
+  const L = { o, x, z, y: y === undefined ? g.world.height(x, z) : y, yaw: yaw || 0, t: 0, m12: new Float32Array(12) };
+  (S.loads || (S.loads = [])).push(L);
+  return L;
+};
+BURNS_W234.loadRemove = function (L) { const S = this.S; if (S && S.loads) S.loads = S.loads.filter(q => q !== L); };
+BURNS_W234.carryDrop = function (g, why) {
+  const S = this.S, p = g.player, c = this.carryEnd(g); if (!c) return null;
+  const L = this.loadPlace(g, c.o, p.x + Math.sin(p.yaw) * 0.8, p.z + Math.cos(p.yaw) * 0.8, p.yaw + 0.7, p.y + 1.6);
+  L.vy = 3.5; L.air = true; L.vx = Math.sin(p.yaw) * 2; L.vz = Math.cos(p.yaw) * 2;
+  burnsSfx('bump', { pitch: 0.8 }); g.fx.dust(L.x, L.y, L.z, 8);
+  if (c.o.onDrop) c.o.onDrop(g, L, why);
+  void S; return L;
+};
+BURNS_W234.carryStep = function (g, dt) {
+  const S = this.S, p = g.player, c = S.carry;
+  // loads on the ground: settle, then get picked up by walking into them
+  if (S.loads) for (const L of S.loads.slice()) {
+    L.t += dt;
+    if (L.air) { L.vy -= 22 * dt; L.x += L.vx * dt; L.z += L.vz * dt; L.y += L.vy * dt; L.pitch = (L.pitch || 0) + dt * 5; const gy = g.world.height(L.x, L.z); if (L.y <= gy) { L.y = gy; L.air = false; L.pitch = 0; g.fx.dust(L.x, gy, L.z, 6); } }
+    if (!c && !L.air && L.t > 0.7 && !p.dead && !p.vehicle && !g.cine && p.invT < 1.2 && Math.hypot(p.x - L.x, p.z - L.z) < 1.35 && Math.abs(p.y - L.y) < 1.2 && (!L.o.when || L.o.when(g, L))) {
+      this.loadRemove(L); this.carryStart(g, L.o);
+      if (L.o.onPick) L.o.onPick(g, L);
+      return;
+    }
+  }
+  if (!c) return;
+  c.t += dt; c.warn -= dt;
+  const hurt = p.invT > c.inv + 0.2; c.inv = p.invT;
+  if ((hurt || p.dead) && c.o.dropOnHurt !== false) { this.carryDrop(g, 'hurt'); g.toast(c.o.dropText || 'YOU DROPPED YOUR STUFF! (walk into it to pick it up)'); return; }
+  if (p.vehicle) { p.vehicle.dismount(p); if (c.warn <= 0) { c.warn = 2; g.toast('NOT WITH ALL THIS STUFF!'); } }
+  if (p.grabbedBy) { if (p.animOverride === 'w234carry' || p.animOverride === 'w234carryIdle') p.animOverride = null; return; }
+  // no jumping (or no double jump) with your arms full
+  if (!c.o.jump) { if (p.inp.jumpPressed && c.warn <= 0) { c.warn = 2.5; g.toast('TOO HEAVY TO JUMP!'); } p.inp.jumpPressed = false; p.inp.jump = false; }
+  else if (!p.grounded && p.coyote <= 0) p.inp.jumpPressed = false;
+  // ACTION talks or interacts; it never spins while you're carrying
+  if (p.inp.actionPressed && !g.talkTarget() && !g.interactTarget()) { p.inp.actionPressed = false; if (c.warn <= 0) { c.warn = 2.5; g.toast('HANDS FULL!'); } }
+  const sp = Math.hypot(p.vx, p.vz);
+  if (p.grounded && p.hurtT <= 0 && !p.dead && !p.locked) p.animOverride = sp > 0.6 ? 'w234carry' : 'w234carryIdle';
+  else if (p.animOverride === 'w234carry' || p.animOverride === 'w234carryIdle') p.animOverride = null;
+};
+// carrying a load over your head: a heavy trudge, arms up
+BURNS_ANIMS.w234carry = (P, t) => {
+  BURNS_ANIMS.walk(P, t, { rate: 1.15 });
+  const B = BURNS_BONES, S = (b, x, y, z) => { P.r[b * 3] = x; P.r[b * 3 + 1] = y || 0; P.r[b * 3 + 2] = z || 0; }, s = Math.sin(t * 7.5 * 1.15);
+  S(B.UARM_L, -2.85, 0, 0.32); S(B.FARM_L, -0.5); S(B.UARM_R, -2.85, 0, -0.32); S(B.FARM_R, -0.5);
+  S(B.CHEST, -0.08, s * 0.04, s * 0.05); S(B.HEAD, 0.12); P.face = 2;
+};
+BURNS_ANIMS.w234carryIdle = (P, t) => {
+  BURNS_ANIMS.idle(P, t);
+  const B = BURNS_BONES, S = (b, x, y, z) => { P.r[b * 3] = x; P.r[b * 3 + 1] = y || 0; P.r[b * 3 + 2] = z || 0; }, b = Math.sin(t * 3) * 0.04;
+  S(B.UARM_L, -2.85 + b, 0, 0.32); S(B.FARM_L, -0.5); S(B.UARM_R, -2.85 - b, 0, -0.32); S(B.FARM_R, -0.5);
+  S(B.CHEST, -0.06); S(B.HEAD, 0.1); P.sq = 0.97;
 };
 
 /* ---------- pickup meshes for world items (extension of BURNS_PICKUP_MESH.item) ---------- */

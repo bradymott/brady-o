@@ -124,7 +124,7 @@ const BW14_HUD = {
         const D = F.dv;
         this.toggleBtn(ctx, lay.btnL, !!Input.hudHeld.bw14L, D.L, 'LEFT');
         this.toggleBtn(ctx, lay.btnR, !!Input.hudHeld.bw14R, D.R, 'RIGHT');
-        BurnsUI.text(ctx, 'HOLD BOTH TO FLARE', lay.W / 2, lay.portrait ? lay.btnL.y - lay.btnL.r - 14 : lay.H - lay.S.b - 14, 11, F.agl < 9 ? '#ffe24a' : 'rgba(255,255,255,0.8)', { ui: true });
+        BurnsUI.text(ctx, 'HOLD BOTH TO FLARE', lay.W / 2, lay.portrait ? lay.btnL.y - lay.btnL.r - 14 : lay.H - lay.S.b - 64, 11, F.agl < 9 ? '#ffe24a' : 'rgba(255,255,255,0.8)', { ui: true });
       }
     } else if (F.mode === 'landed') {
       if (S.card && S.card.ready) {
@@ -175,6 +175,13 @@ const BW14_HUD = {
   },
   ft(m) { return Math.max(0, Math.round(m * BW14_CFG.FT / 10) * 10).toLocaleString('en-US'); },
   instruments(ctx, g, F, lay) {
+    // portrait: the column sits where the engine's big banners land, so it ducks while one shows
+    const duck = lay.portrait && g.banners && g.banners[0] && g.banners[0].big;
+    if (duck) { ctx.save(); ctx.globalAlpha *= 0.22; }
+    this.instruments0(ctx, g, F, lay);
+    if (duck) ctx.restore();
+  },
+  instruments0(ctx, g, F, lay) {
     const C = BW14_CFG, I = lay.inst, plane = F.mode === 'plane';
     const alt = plane ? F.pl.y - BW14_PLANE.GEAR_H - g.world.height(F.pl.x, F.pl.z) : (F.agl === undefined ? F.dv.y : F.agl);
     const spd = plane ? F.pl.V : Math.hypot(F.dv.vx, F.dv.vz, F.dv.vy);
@@ -257,7 +264,7 @@ const BW14_HUD = {
     const Ls = Input.layout, bandL = lay.portrait ? 12 : (Ls ? Ls.stickHome.x + Ls.stickHome.r + 8 : 170), bandR = lay.portrait ? lay.W - 12 : lay.btnJump.x - lay.btnJump.r - 8;
     const maxW = Math.min(bandR - bandL, 520), lines = BurnsUI.wrap(ctx, R.text, maxW - 70).slice(0, 3), w = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l).width)) + 74), h = 22 + lines.length * 15;
     const landed = F.mode === 'landed';
-    const x = (bandL + bandR) / 2 - w / 2, y = landed ? lay.H - lay.S.b - h - 6 : lay.portrait ? lay.H * 0.6 : lay.H - lay.S.b - 62 - h;
+    const x = (bandL + bandR) / 2 - w / 2, y = landed ? lay.H - lay.S.b - h - 6 : lay.portrait ? lay.H * 0.6 : lay.H - lay.S.b - 62 - h - (F.mode === 'canopy' || F.mode === 'deploy' ? 16 : 0);   // canopy: room for the flare label
     this.panel(ctx, x, y, w, h, 0.72);
     ctx.fillStyle = '#ff9a4a'; rr(ctx, x + 8, y + 8, 46, h - 16, 8); ctx.fill();
     BurnsUI.text(ctx, '📻', x + 31, y + h / 2 - 5, 16, '#ffffff', { stroke: false }); BurnsUI.text(ctx, 'RADIO', x + 31, y + h / 2 + 11, 8, '#2a1020', { stroke: false });

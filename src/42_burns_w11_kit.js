@@ -193,8 +193,9 @@ BW11.overlay = function (ctx, g, fdt) {
 BW11.choice = function (g, o) {
   const st = { o, picked: null, focus: 0, t: 0, btns: [] };
   g.cutscene([
-    { do: g2 => { g2.bw11choice = st; } },
-    { until: g2 => { st.t += 1 / 120; return BW11.choiceStep(g2, st); } },
+    // ambient chatter stays quiet while Brady picks (bubbles would cover the picker)
+    { do: g2 => { g2.bw11choice = st; for (const a of g2.actors) if (a.friendly && a.bubbleText) { a.bubbleText = null; a.bubbleT = 0; } } },
+    { until: g2 => { st.t += 1 / 120; for (const a of g2.actors) if (a.chatT < 2) a.chatT = 2; return BW11.choiceStep(g2, st); } },
     { do: g2 => { g2.bw11choice = null; const i = st.picked === null ? (o.def || 0) : st.picked; BW11.after(g2, 0.02, g3 => { if (o.done) o.done(g3, i); }); } }
   ], null, { letterbox: true });
   return st;
