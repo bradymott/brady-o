@@ -275,7 +275,7 @@ function genStrip(ctx, mode) {
   const area = B.build({
     theme: th, music: musicFor(ctx), water: false, dark: !!R.dark, autoscroll: auto ? (R.scroll || (2.7 + d * 1.2)) : 0,
     wind: R.wind || null, dust: R.dust || 0, whiteout: !!R.whiteout, beat: R.bpm ? { bpm: R.bpm } : null, sky: sky,
-    gravity: R.gravity || 1, camMinY: 0, chasers: R.chasers || null, sunrise: !!R.sunrise, lsdHint: !!R.trip
+    gravity: R.gravity || 1, camMinY: 0, chasers: R.chasers || null, sunrise: !!R.sunrise, lsdHint: !!R.trip, liquid: R.liquid || null
   });
   return { area, start: { area: 0, x: 6 * TS + TS / 2, y: GY * TS }, time: auto ? 400 : (R.time || 300) };
 }
@@ -586,7 +586,7 @@ function genTower(ctx) {
   }
   pickGold(ctx, B);
   const rising = R.rising ? { delay: 4, speed: (R.rising.speed || 0.8) + d * 0.3, look: R.rising.look || 'lava' } : null;
-  const area = B.build({ theme: ctx.theme, music: musicFor(ctx), water: false, dark: !!R.dark, autoscroll: 0, tower: true, risingLava: rising, gravity: 1 });
+  const area = B.build({ theme: ctx.theme, music: musicFor(ctx), water: false, dark: !!R.dark, autoscroll: 0, tower: true, risingLava: rising, gravity: 1, liquid: R.liquid || (rising && rising.look) || null });
   return { area, start: { area: 0, x: 5 * TS, y: (H - 3) * TS }, time: 400 };
 }
 
@@ -616,20 +616,20 @@ function genCastle(ctx) {
   let x = st.x;
   B.ground(x, x + 3, st.gy); x += 4;
   if (st.gy !== GY) { B.ground(x, x + 1, GY); x += 2; }
-  const endX = buildArena(st, x, GY, R.arena || 'classic', secret);
+  const endX = buildArena(st, x, GY, R.arena || 'hall', secret);
   for (let cx = 0; cx < endX; cx++) B.fill(cx, 0, cx, 2, T.GROUND);
   B.trim(endX);
   resolvePendingReturns(st);
   pickGold(ctx, B);
-  const area = B.build({ theme: th, music: R.music || 'castle', water: false, dark: !!R.dark || !!THEMES[th].dark, autoscroll: 0, castle: true, gravity: 1, beat: R.bpm ? { bpm: R.bpm } : null, wind: R.wind || null });
+  const area = B.build({ theme: th, music: R.music || 'castle', water: false, dark: !!R.dark || !!(THEMES[th] || {}).dark, autoscroll: 0, castle: true, gravity: 1, beat: R.bpm ? { bpm: R.bpm } : null, wind: R.wind || null, liquid: R.liquid || null });
   return { area, start: { area: 0, x: 6 * TS + TS / 2, y: GY * TS }, time: 400 };
 }
 // boss arenas: the floor plan suits each boss
 function buildArena(st, x, GY, layout, secret) {
   const { B, ctx, R } = st;
-  const arenaX0 = x, arenaW = R.arenaW || (layout === 'man' ? 34 : 26);
+  const arenaX0 = x, arenaW = R.arenaW || (layout === 'man' ? 30 : 26);
   B.ground(arenaX0, arenaX0 + arenaW - 1, GY);
-  if (layout === 'classic') {
+  if (layout === 'hall') {
     for (let q = 0; q < 3; q++) { B.set(arenaX0 + 4 + q, GY - 4, T.SEMI); B.set(arenaX0 + arenaW - 7 + q, GY - 4, T.SEMI); }
   } else if (layout === 'pool') {
     // hot water channels between three islands
@@ -648,8 +648,8 @@ function buildArena(st, x, GY, layout, secret) {
     for (let q = 0; q < 3; q++) B.set(arenaX0 + 11 + q, GY - 5, T.SEMI);
   } else if (layout === 'man') {
     // the pavilion floor, with plywood cover walls to hide behind from the neon flash
-    for (const cx of [6, 16, 26]) { B.fill(arenaX0 + cx, GY - 3, arenaX0 + cx + 1, GY - 1, T.HARD); B.prop('coverwall', arenaX0 + cx, GY - 3, 2, 3, 'none'); }
-    for (let q = 0; q < 3; q++) { B.set(arenaX0 + 10 + q, GY - 5, T.SEMI); B.set(arenaX0 + 20 + q, GY - 5, T.SEMI); }
+    for (const cx of [5, 13, 21]) { B.fill(arenaX0 + cx, GY - 3, arenaX0 + cx + 1, GY - 1, T.HARD); B.prop('coverwall', arenaX0 + cx, GY - 3, 2, 3, 'none'); }
+    for (let q = 0; q < 3; q++) { B.set(arenaX0 + 9 + q, GY - 5, T.SEMI); B.set(arenaX0 + 17 + q, GY - 5, T.SEMI); }
   } else if (layout === 'cover') {
     for (const cx of [5, 13, 20]) { B.fill(arenaX0 + cx, GY - 3, arenaX0 + cx + 1, GY - 1, T.HARD); B.prop('coverwall', arenaX0 + cx, GY - 3, 2, 3, 'none'); }
     for (let q = 0; q < 3; q++) B.set(arenaX0 + 9 + q, GY - 5, T.SEMI);

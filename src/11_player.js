@@ -11,6 +11,12 @@ class Player {
     this.anim = { state: 'idle', t: 0, phase: 0, speed: 0, blink: false, stroke: 0, happy: false };
     this.idleT = 0; this.blinkT = 2; this.throwT = 0; this.discs = 0; this.deathT = 0; this.growT = 0;
     this.prevBottom = this.y + this.h; this.inp = {}; this.springT = 0; this.hurtFlash = 0;
+    // Super Brady-O World extras
+    this.spin = false; this.spinVis = 0; this.pack = (g.packCarry !== undefined ? g.packCarry : null);
+    this.fx = { molly: 0, khole: 0, powder: 0, lsd: 0 }; this.stunT = 0; this.slowT = 0; this.grabbedBy = null; this.grabMash = 0;
+    this.carryVx = 0; this.rideVx = 0; this.pushX = 0;
+    const gifts = (Save.data && Save.data.gifts) || {};
+    this.kandi = gifts.kandi ? 1 : 0;
     const ha = hairAnchor(this.x + this.w / 2, this.y + this.h, this.facing, this.power === 0, null);
     this.hair = makeHair(this.power === 0 ? BRADY_DIM.small.hairN : BRADY_DIM.big.hairN, ha.x, ha.y);
   }
@@ -41,8 +47,19 @@ class Player {
   hurt(src) {
     if (this.dead || this.state !== 'play') return;
     if (this.star > 0) { if (src && src.enemy && !src.boss && src.hit) { if (src.hit('star', this)) this.g.chainScore(src); } return; }
+    if (this.fx.molly > 0) { if (src && src.enemy && !src.boss && src.hit) { if (src.hit('love', this)) this.g.chainScore(src); } return; }
     if (this.invuln > 0) return;
+    if (this.grabbedBy) { const gb = this.grabbedBy; this.grabbedBy = null; if (gb.release) gb.release(true); }
     if (this.mounted) { this.dismount(true); return; }
+    if (this.kandi > 0) {
+      // kandi bracelets snap instead of Brady taking the hit
+      this.kandi--; this.invuln = 1.6; this.hurtFlash = 0.3;
+      Sound.play('powerdown', { vol: 0.6 }); this.g.shake(3);
+      this.g.burst(this.cx, this.cy, 18, '#ff7ad8', 'confetti'); this.g.parts.text(this.cx, this.y - 8, 'KANDI SNAPPED!', '#ff9ad8');
+      if (src && src.x !== undefined) this.vx = (this.cx < (src.x + (src.w || 0) / 2) ? -1 : 1) * 4 * TS;
+      this.vy = Math.min(this.vy, -6 * TS);
+      return;
+    }
     if (this.power > 0) {
       this.setPower(this.power === 2 ? 1 : 0, true);
       Sound.play('powerdown');
@@ -63,8 +80,20 @@ class Player {
     this.g.onPlayerDying(reason);
   }
 
+  // timed effects already running? the new power-up goes to the pack instead (if it's empty)
+  busy(kind) {
+    if (kind === 'coffee') return this.power > 0;
+    if (kind === 'vinyl') return this.power === 2;
+    return this.star > 0 || this.fly > 0 || this.floaty > 0 || this.fx.molly > 0 || this.fx.khole > 0 || this.fx.powder > 0 || this.fx.lsd > 0;
+  }
   collect(kind, src) {
     const g = this.g;
+    const packable = kind !== 'gold' && kind !== 'cassette';
+    if (packable && !this.usingPack && this.busy(kind) && !this.pack) {
+      this.pack = kind; Sound.play('appear'); sfx('pickup_bag', null, { vol: 0.5 });
+      g.addScore(500, this.cx, this.y); g.toast('SAVED TO YOUR PACK \u2014 TAP IT TO USE');
+      return;
+    }
     switch (kind) {
       case 'coffee': // psychedelic mushroom
         if (this.power === 0) this.setPower(1); else { Sound.play('powerup'); }
@@ -77,7 +106,7 @@ class Player {
         g.toast('LIQUID COURAGE! TAP THROW TO PUKE');
         break;
       case 'eclipse': // disco ball
-        this.star = 10; Sound.play('disco'); g.mus ? g.mus('star') : Sound.music('star'); g.addScore(1000, this.cx, this.y);
+        this.star = 10; Sound.play('disco'); g.mus('star'); g.addScore(1000, this.cx, this.y);
         g.toast('DISCO FEVER!');
         break;
       case 'cassette': // water bottle
@@ -91,12 +120,41 @@ class Player {
         this.floaty = 9; this.fly = 0; Sound.play('float'); this.vy = Math.min(this.vy, -2 * TS);
         g.addScore(500, this.cx, this.y); g.burst(this.cx, this.cy, 10, '#e8e8f0', 'dust'); g.toast('FLOATY... HOLD DOWN TO SINK');
         break;
+      case 'molly': // Love Bomb: burners you touch become dancing friends
+        this.fx.molly = BAG_KINDS.molly.time; this.invuln = Math.max(this.invuln, 1.2); sfx('molly', 'disco');
+        g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 30, '#ff7ab8', 'confetti'); g.toast('LOVE BOMB! EVERYONE IS YOUR FRIEND');
+        break;
+      case 'khole': // K-Hole: the world slows down around Brady
+        this.fx.khole = BAG_KINDS.khole.time; sfx('khole', 'portal');
+        g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 20, '#7ab8ff', 'bubble'); g.toast('K-HOLE... EVERYTHING... SLOWS... DOWN');
+        break;
+      case 'powder': // Party Powder: faster legs, higher jumps
+        this.fx.powder = BAG_KINDS.powder.time; sfx('powder', 'powerup');
+        g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 24, '#ffffff', 'spark'); g.toast('PARTY POWDER! GO GO GO');
+        break;
+      case 'lsd': // LSD: hidden blocks and secret ledges show up; the colors melt
+        this.fx.lsd = BAG_KINDS.lsd.time; sfx('lsd', 'mushroom'); g.trip = Math.max(g.trip || 0, 1.2);
+        g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 24, '#c87aff', 'confetti'); g.toast('LSD: THE HIDDEN STUFF SHOWS UP');
+        break;
       case 'gold':
         g.collectGold(src.idx, src.cx, src.cy);
         break;
     }
     if (kind !== 'gold') g.flashText = null;
   }
+  usePack() {
+    const k = this.pack;
+    if (!k || this.dead || this.state !== 'play') return false;
+    if (k === 'coffee' && this.power > 0) { this.g.toast('ALREADY BIG'); Sound.play('bump', { vol: 0.4 }); return false; }
+    if (k === 'vinyl' && this.power === 2) { this.g.toast('ALREADY HOLDING A BOTTLE'); Sound.play('bump', { vol: 0.4 }); return false; }
+    this.pack = null;
+    if (BAG_KINDS[k] || k === 'bufo' || k === 'joint' || k === 'eclipse') { this.star = Math.min(this.star, 0.01); this.fly = 0; this.floaty = 0; for (const f in this.fx) this.fx[f] = 0; }
+    this.usingPack = true; this.collect(k); this.usingPack = false;
+    this.g.burst(this.cx, this.cy, 12, '#ffd84a', 'spark');
+    return true;
+  }
+  stun(t) { if (this.star > 0 || this.fx.molly > 0) return; this.stunT = Math.max(this.stunT, t); this.vx *= 0.3; this.g.parts.text(this.cx, this.y - 10, 'DAZED', '#ffffff'); }
+  slowDown(t) { if (this.star > 0 || this.fx.molly > 0) return; this.slowT = Math.max(this.slowT, t); }
 
   update(dt, inp) {
     const g = this.g, A = g.area;
@@ -115,6 +173,22 @@ class Player {
     if (this.state === 'clear') { this.updateClear(dt); return; }
 
     if (this.invuln > 0) this.invuln -= dt;
+    for (const f in this.fx) if (this.fx[f] > 0) { this.fx[f] -= dt; if (this.fx[f] <= 0) { this.fx[f] = 0; Sound.play('float', { pitch: 0.7, vol: 0.4 }); } }
+    if (this.stunT > 0) { this.stunT -= dt; inp = { left: false, right: false, up: false, down: false, jump: false, action: false, jumpPressed: false, actionPressed: false }; }
+    if (this.slowT > 0) this.slowT -= dt;
+    if (this.spinVis > 0) this.spinVis -= dt;
+    // a greeter's hug: wriggle (jump / left / right) to break free
+    if (this.grabbedBy) {
+      const gb = this.grabbedBy;
+      if (gb.dead || gb.remove) this.grabbedBy = null;
+      else {
+        if (inp.jumpPressed || inp.actionPressed || (inp.left && !this.lastL) || (inp.right && !this.lastR)) { this.grabMash++; this.g.burst(this.cx, this.y + 6, 2, '#ff9ad8', 'spark'); }
+        this.lastL = inp.left; this.lastR = inp.right;
+        if (this.grabMash >= 5) { this.grabbedBy = null; gb.release(false); }
+        this.vx = 0; this.vy = 0; this.anim.state = 'fall'; this.updateHair(dt);
+        return;
+      }
+    }
     if (this.star > 0) {
       this.star -= dt;
       if (Math.random() < 0.5) g.burst(this.x + Math.random() * this.w, this.y + Math.random() * this.h, 1, `hsl(${Math.random() * 360},100%,70%)`, 'spark');
@@ -127,8 +201,9 @@ class Player {
     if (this.floaty > 0) { this.floaty -= dt; if (this.floaty <= 0) { this.floaty = 0; Sound.play('float', { pitch: 0.7, vol: 0.5 }); } }
     if (this.springT > 0) this.springT -= dt;
 
-    // ride moving platforms
-    if (this.ride && !this.ride.dead) { this.x += this.ride.dx || 0; this.y += this.ride.dy || 0; }
+    // ride moving platforms (and keep their momentum when jumping off)
+    if (this.ride && !this.ride.dead) { this.x += this.ride.dx || 0; this.y += this.ride.dy || 0; this.rideVx = (this.ride.dx || 0) / dt; }
+    else if (this.onGround) this.rideVx = 0;
 
     // crouch (big only)
     const wantCrouch = inp.down && this.onGround && this.power > 0 && !this.inWater;
@@ -141,7 +216,8 @@ class Player {
     if (inp.down && inp.jumpPressed && this.onGround && this.groundTile === T.SEMI) { this.dropT = 0.22; this.y += 2; this.onGround = false; inp = Object.assign({}, inp, { jumpPressed: false }); }
 
     this.prevBottom = this.y + this.h;
-    const windDx = g.windForce || 0;
+    const windDx = (g.windForce || 0) + (this.pushX || 0);
+    this.pushX = 0;
     // hanging from a ceiling with Slothy: shuffle along, jump to let go
     if (this.hang) {
       const head = tileAt(A, Math.floor(this.cx / TS), Math.floor((this.y - 3) / TS));
@@ -161,7 +237,34 @@ class Player {
     // a balloon doesn't stay on the ground: lift off unless Brady holds down
     if (floating && this.onGround && !inp.down) { this.vy = -3 * TS; this.onGround = false; }
     const gScale = floating ? 0.12 : (flying && inp.jump && !this.onGround) ? 0.25 : 1;
-    const ev = playerPhysics(this, inp, A, dt, g.platforms, { windDx, noCrouchJump: false, jumpBoost: this.mounted ? 1.12 : 1, gScale });
+    // headbang spin: tap jump again in mid-air
+    const nearGround = () => { const fy = Math.floor((this.y + this.h + 22) / TS); for (const tx of [Math.floor((this.x + 2) / TS), Math.floor((this.x + this.w - 2) / TS)]) { const t = tileAt(A, tx, fy); if (SOLID[t] || t === T.SEMI) return true; } return this.vy > 0 && g.platforms.some(pl => !pl.dead && this.x + this.w > pl.x && this.x < pl.x + pl.w && pl.y - (this.y + this.h) < 24 && pl.y > this.y); };
+    if (inp.jumpPressed && !this.onGround && !this.spin && !this.mounted && !this.inWater && !(this.fly > 0) && !(this.floaty > 0) && this.coyote <= 0 && !(this.vy > 0 && nearGround())) {
+      this.spin = true; this.spinVis = 0.3; inp = Object.assign({}, inp, { jumpPressed: false });
+      if (this.vy > -2.4 * TS) this.vy = -2.4 * TS;
+      sfx('spin', 'headbang', { vol: 0.6 }); g.burst(this.cx, this.y + 8, 6, '#ffffff', 'spark');
+    }
+    const gifts = Save.data.gifts || {};
+    const speedMul = (this.slowT > 0 ? 0.55 : 1) * (this.fx.powder > 0 ? 1.3 : 1) * (gifts.bike ? 1.12 : 1);
+    const jumpBoost = (this.mounted ? 1.12 : 1) * (this.fx.powder > 0 ? 1.14 : 1);
+    const wasGround = this.onGround, rideWas = this.ride;
+    const ev = playerPhysics(this, inp, A, dt, g.platforms, { windDx, noCrouchJump: false, jumpBoost, gScale, speedMul });
+    if (ev.jump && rideWas && !rideWas.carrier) this.carryVx = this.rideVx * 0.85;
+    if (ev.jump && rideWas && rideWas.carrier) this.carryVx = this.rideVx;
+    if (ev.bounce) { Sound.play('spring', { vol: 0.45, pitch: 1.3 }); g.burst(this.cx, this.y + this.h, 4, '#ffffff', 'dust'); }
+    // a spin landing breaks bricks and pops blocks under Brady's boots
+    if (this.spin && ev.landed) {
+      let broke = false;
+      const ty = Math.floor((this.y + this.h + 2) / TS);
+      for (const tx of [Math.floor((this.x + 3) / TS), Math.floor((this.x + this.w - 3) / TS)]) {
+        const t = tileAt(A, tx, ty);
+        if (t === T.BRICK) { g.bumpBlock(tx, ty, true, this); broke = true; }
+        else if (t === T.QBLOCK || t === T.QBRICK) { g.bumpBlock(tx, ty, true, this); }
+      }
+      if (broke) { this.onGround = false; this.vy = 3 * TS; g.shake(3); }
+      else { this.spin = false; }
+    }
+    if (this.onGround || this.inWater || this.fly > 0 || this.floaty > 0 || this.hang) this.spin = false;
     // bufo flight: hold jump to climb, let go to glide
     if (this.fly > 0 && !this.inWater) {
       if (inp.jump && !this.onGround) this.vy = approach(this.vy, -7.5 * TS, 70 * TS * dt);
@@ -253,6 +356,7 @@ class Player {
     let st;
     if (this.hang) st = 'hang';
     else if (this.mounted) st = 'ride';
+    else if (this.spin && !this.onGround) st = 'headbang';
     else if (this.floaty > 0 && !this.onGround) st = 'float';
     else if (this.fly > 0 && !this.onGround) st = 'fly';
     else if (this.inWater) st = 'swim';
@@ -329,7 +433,10 @@ class Player {
     }
     if (this.dead) o.rot = 0;
     if (small !== this.small) o.hair = null;
+    if (this.spin && !this.onGround) o.rot = Math.sin(this.anim.t * 26) * 0.25;
+    PlayerFx.under(ctx, this, t);
     drawBrady(ctx, o);
+    PlayerFx.over(ctx, this, t);
   }
   get light() { return { r: this.g.area.water ? 150 : 170, c: 'rgba(255,240,220,' }; }
 }

@@ -5,7 +5,7 @@ const out = process.argv[2];
 (async () => {
   const browser = await chromium.launch();
   const page = await (await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage();
-  await page.goto('file://' + path.join(__dirname, '..', 'dist', 'brady-o.html'));
+  await page.goto('file://' + path.join(process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist'), 'brady-o.html'));
   await page.waitForTimeout(2500);
   await page.screenshot({ path: path.join(out, 'brady-o-title.png') });
   const shot = async (name, w, i, frac, extra) => {
@@ -26,8 +26,10 @@ const out = process.argv[2];
     await page.waitForTimeout(150);
     await page.screenshot({ path: path.join(out, name) });
   };
-  await shot('brady-o-neon-city.png', 2, 5, 0.3, 'big');
-  await shot('brady-o-frostbite-peaks.png', 4, 3, 0.35, 'big');
-  await shot('brady-o-eclipse-citadel.png', 10, 1, 0.25, 'big');
+  await shot('brady-o-gate-road.png', 41, 1, 0.3, 'big');
+  await shot('brady-o-bigtop.png', 42, 2, 0.35, 'big');
+  await shot('brady-o-laser-rave.png', 43, 2, 0.3, 'big');
+  await shot('brady-o-hot-springs.png', 45, 3, 0.35, 'big');
+  await shot('brady-o-twenty-two.png', 50, 1, 0.25, 'big');
   await browser.close();
 })();

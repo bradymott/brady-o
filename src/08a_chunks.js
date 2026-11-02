@@ -561,9 +561,9 @@ const CH = {
     const L = 12;
     st.floor(st.x, st.x + L - 1);
     const tx = st.x + 5, top = st.gy - 8;
-    B.zone(tx, top - 1, 2, st.gy - top + 1, 0, -150 * TS, 7 * TS, st.R.ventKind || 'port');
+    B.zone(tx, top - 1, 2, st.gy - top + 1, 0, -150 * TS, 7 * TS, st.R.ventKind || 'port', { pull: 3.5 });
     B.spawn('vent', tx, st.gy - 1, { look: st.R.ventKind || 'port', w: 2 });
-    for (let q = 0; q < 3; q++) { B.set(tx - 3 + q, top, T.SEMI); B.set(tx + 2 + q, top, T.SEMI); }
+    for (let q = 0; q < 3; q++) { B.set(tx - 3 + q, top + 1, T.SEMI); B.set(tx + 2 + q, top + 1, T.SEMI); }
     B.picksCol(tx, top + 1, st.gy - 3); B.picksCol(tx + 1, top + 1, st.gy - 3);
     B.gold(tx + 3, top - 2, 'high');
     return st.x + L;
@@ -691,7 +691,7 @@ const CH = {
     const { B, ctx, rng } = st;
     st.floor(st.x, st.x + 2);
     let x = st.x + 3;
-    const h = rng.int(3, 5);
+    const h = rng.int(2, 3);
     B.prop('camptower', x, st.gy - h, 3, B.H - st.gy + h, 'body', { flags: true });
     B.picksRow(x, x + 2, st.gy - h - 2);
     x += 3 + rng.int(1, 2);
@@ -785,7 +785,8 @@ const CH = {
     const gy = st.gy;
     const ledges = { hand: [[0, 3, 3], [4, 6, 3], [1, 9, 2], [6, 9, 2]], whale: [[0, 3, 2], [2, 6, 3], [5, 8, 3], [3, 10, 3]], head: [[0, 3, 3], [5, 3, 3], [2, 7, 5]], flower: [[3, 3, 3], [0, 6, 3], [5, 7, 3], [3, 10, 3]], octa: [[1, 3, 2], [5, 4, 3], [2, 7, 3], [4, 10, 2]] }[kind];
     let topY = gy;
-    for (const [lx, ly, lw] of ledges) { for (let q = 0; q < lw; q++) { B.set(x + lx + q, gy - ly, T.SEMI); B.setHide(x + lx + q, gy - ly, 1); } topY = Math.min(topY, gy - ly); B.picksRow(x + lx, x + lx + lw - 1, gy - ly - 2); }
+    // the climbing ledges are scaffold planks bolted onto the art
+    for (const [lx, ly, lw] of ledges) { for (let q = 0; q < lw; q++) B.set(x + lx + q, gy - ly, T.SEMI); topY = Math.min(topY, gy - ly); B.picksRow(x + lx, x + lx + lw - 1, gy - ly - 2); }
     B.prop('sculpture', x, gy - 11, W, 11, 'none', { form: kind });
     B.gold(x + ledges[ledges.length - 1][0] + 1, topY - 3, 'high');
     placeEnemiesOnFlat(ctx, B, x, x + W, gy, rng.chance(0.5) ? 1 : 0, ['witch']);
@@ -825,20 +826,19 @@ const CH = {
     return st.x + L;
   },
   devils(st) {
-    // dust devils: whirlwinds that carry Brady up and over
+    // dust devils: whirlwinds that carry Brady up and over a wide ditch
     const { B, ctx, rng } = st;
     st.floor(st.x, st.x + 2);
-    let x = st.x + 3;
-    const w = rng.int(5, 7);
-    const top = st.gy - 7;
-    B.zone(x + 1, top, 2, st.gy - top + 3, 0, -150 * TS, 6.5 * TS, 'devil');
-    B.spawn('devilzone', x + 1, st.gy - 1, { h: st.gy - top });
-    x += w;
-    for (let q = 0; q < 3; q++) B.set(x - 2 + q, top + 1, T.SEMI);
-    B.picksArc(x - 4, x + 2, top - 1, 2);
-    B.gold(x - 1, top - 2, 'high');
-    st.floor(x + 2, x + 4);
-    return x + 5;
+    const zx = st.x + 4, top = st.gy - 7;
+    B.zone(zx, top, 2, st.gy - top + 3, 0, -150 * TS, 6.5 * TS, 'devil', { pull: 4 });
+    B.spawn('devilzone', zx, st.gy - 1, { h: st.gy - top });
+    // a ledge right beside the whirl, then the far side of the ditch
+    for (let q = 0; q < 3; q++) B.set(zx + 2 + q, top + 2, T.SEMI);
+    B.picksCol(zx, top + 2, st.gy - 2); B.picksCol(zx + 1, top + 2, st.gy - 2);
+    B.gold(zx + 3, top, 'high');
+    const fx = zx + 2 + rng.int(5, 6);
+    st.floor(fx, fx + 3);
+    return fx + 4;
   },
   glowpath(st) {
     // in the whiteout only the glow sticks show the way across the ruts
@@ -1008,7 +1008,7 @@ const CH = {
     let x = st.x + 3;
     const gw = rng.int(9, 12);
     const top = st.gy - 7;
-    B.zone(x, top, 3, st.gy - top + 4, 0, -150 * TS, 6 * TS, 'thermal');
+    B.zone(x, top, 3, st.gy - top + 4, 0, -150 * TS, 6 * TS, 'thermal', { pull: 3 });
     B.zone(x + 3, top - 2, gw - 3, st.gy - top, 3.0 * TS, -70 * TS, 0, 'tailwind', { dir: 1 });
     B.spawn('vent', x + 1, st.gy + 2, { look: 'thermal', w: 3, sky: true });
     B.picksArc(x + 1, x + gw - 2, top - 1, 2);
@@ -1192,9 +1192,13 @@ function genHaunt(ctx) {
     seen.add(key(a, b)); depth[key(a, b)] = depth[key(c, r)] + 1; parent[key(a, b)] = [c, r];
     edges.push({ a: [c, r], b: [a, b] }); stack.push([a, b]);
   }
-  // exit: the deepest room; key: the deepest other room
+  // exit: a dead-end room far from the front door (tree depth + distance across the house);
+  // key: the next-best room, so the hunt crosses the house twice
   const cells = Object.keys(depth).map(k => k.split(',').map(Number));
-  cells.sort((p, q) => depth[key(...q)] - depth[key(...p)] || (q[1] === 0) - (p[1] === 0));
+  const deg = {};
+  for (const e of edges) for (const p of [e.a, e.b]) deg[key(...p)] = (deg[key(...p)] || 0) + 1;
+  const far = p => depth[key(...p)] + 2 * (Math.abs(p[0] - start[0]) + Math.abs(p[1] - start[1])) + (deg[key(...p)] === 1 ? 2 : 0) + (p[1] === 0 ? 1 : 0);
+  cells.sort((p, q) => far(q) - far(p));
   const exitC = cells[0];
   const keyC = cells.find(p => key(...p) !== key(...exitC) && key(...p) !== key(...start)) || cells[1];
   const isExit = p => key(...p) === key(...exitC);
@@ -1329,18 +1333,24 @@ function genHaunt(ctx) {
 
 /* ---------- gift camps: a short friendly level, then the gift booth ---------- */
 function genGift(ctx) {
-  ctx.R = Object.assign({}, ctx.R, { finale: 'gift', len: ctx.R.len || 70, lenD: 0, cp: false, bonus: false });
+  ctx.R = Object.assign({}, ctx.R, { finale: 'gift', len: ctx.R.len || 70, lenD: 0, cp: false, bonus: false, open: ['alcove'].concat(ctx.R.open || []) });
   return genStrip(ctx, 'side');
 }
 function chunkFinaleGift(st) {
   const { B, ctx } = st;
   const x = st.x;
   st.floor(x, x + 23);
-  B.prop('giftbooth', x + 4, st.gy - 4, 5, 4, 'none', { gift: ctx.R.gift });
-  B.spawn('giftbooth', x + 6, st.gy - 1, { gift: ctx.R.gift });
-  B.spawn('gate', x + 16, st.gy - 1, {});
-  B.picksArc(x + 10, x + 14, st.gy - 3, 2);
-  addDecor(ctx, B, x + 19, x + 22, st.gy, 0.4);
+  // a crate step and a high shelf with a photo, then the gift booth (its roof holds another)
+  B.fill(x + 1, st.gy - 2, x + 2, st.gy - 1, T.HARD);
+  for (let q = 0; q < 3; q++) B.set(x + 3 + q, st.gy - 5, T.SEMI);
+  B.gold(x + 4, st.gy - 7, 'must');
+  B.prop('giftbooth', x + 8, st.gy - 4, 5, 4, 'none', { gift: ctx.R.gift });
+  for (let q = 0; q < 5; q++) { B.set(x + 8 + q, st.gy - 4, T.SEMI); B.setHide(x + 8 + q, st.gy - 4, 1); }
+  B.gold(x + 10, st.gy - 6, 'must');
+  B.spawn('giftbooth', x + 10, st.gy - 1, { gift: ctx.R.gift });
+  B.spawn('gate', x + 18, st.gy - 1, {});
+  B.picksArc(x + 13, x + 16, st.gy - 3, 2);
+  addDecor(ctx, B, x + 20, x + 22, st.gy, 0.4);
   return x + 24;
 }
 

@@ -18,7 +18,6 @@ for (const w of ALL_WORLDS) {
     if (!r.goal) { flags.push('NO GOAL'); fails++; }
     if (!r.gold.every(Boolean)) { flags.push('gold ' + golds); goldMiss++; }
     if (lvl.secret && lvl.secret.kind === 'secretExit' && !r.secretGoal) flags.push('SECRET EXIT UNREACHABLE');
-    if (lvl.secret && lvl.secret.kind === 'glitch' && r.warps.indexOf(12) < 0) flags.push('GLITCH PORTAL UNREACHABLE');
     if (lvl.warps && lvl.warps.some(x => r.warps.indexOf(x) < 0)) flags.push('WARPS ' + r.warps.join(','));
     const a = lvl.areas[0];
     console.log(`${id.padEnd(6)} ${lvl.type.padEnd(7)} W=${String(a.W).padEnd(4)} H=${String(a.H).padEnd(3)} nodes=${String(r.nodes).padEnd(5)} sims=${String(r.sims).padEnd(6)} ${r.ms}ms ${flags.join(' | ')}`);

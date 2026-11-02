@@ -11,7 +11,7 @@ require('fs').mkdirSync(out, { recursive: true });
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
-  await page.goto('file://' + path.join(__dirname, '..', 'dist', 'brady-o.html'));
+  await page.goto('file://' + path.join(process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist'), 'brady-o.html'));
   await page.waitForTimeout(1200);
   for (const id of ids) {
     const [w, i, frac, area] = id.split(/[-@:]/).map(Number);

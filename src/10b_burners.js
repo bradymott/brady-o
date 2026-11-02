@@ -55,6 +55,12 @@ class Shot extends Ent {
   pop(quiet) {
     if (this.remove) return;
     this.remove = true; this.dead = true;
+    if (this.kind === 'firework') {
+      // the Man's fireworks burst into a shower of falling sparks
+      sfx('firework_burst', 'pick', { vol: 0.5, pitch: 0.6 }); this.g.burst(this.cx, this.cy, 30, '#fff', 'firework');
+      for (let k = 0; k < 5; k++) fire(this.g, this.cx, this.cy, { kind: 'ember', vx: (k - 2) * 1.4 * TS, vy: -2 * TS, grav: PHYS.gDown * 0.35, w: 10, h: 10, life: 2.2, thru: true, fiery: true, col: '#ffd84a' });
+      return;
+    }
     if (!quiet) this.g.burst(this.cx, this.cy, 8, this.col, this.kind === 'pitch' || this.kind === 'rant' || this.kind === 'rantup' ? 'confetti' : 'spark');
   }
   hit(kind, src) {

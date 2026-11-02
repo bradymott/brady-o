@@ -291,13 +291,13 @@ const BurnsProps = {
     // string of flags from (x0,y0,z0) to (x1,y1,z1) in local coords (no colliders)
     const n = o.n || 14;
     for (let i = 0; i < n; i++) {
-      const t0 = i / n, t1 = (i + 0.7) / n, sag = (t) => -Math.sin(t * Math.PI) * (o.sag || 0.8);
+      const t0 = i / n, t1 = (i + 0.55) / n, sag = (t) => -Math.sin(t * Math.PI) * (o.sag || 0.8);
       const ax = lerp(o.x0, o.x1, t0), ay = lerp(o.y0, o.y1, t0) + sag(t0), az = lerp(o.z0, o.z1, t0);
       const bx = lerp(o.x0, o.x1, t1), by = lerp(o.y0, o.y1, t1) + sag(t1), bz = lerp(o.z0, o.z1, t1);
       m.color(BURNS_NEON[i % 7]);
-      const mx = (ax + bx) / 2, mz = (az + bz) / 2;
-      m.poly([[ax, ay, az], [bx, by, bz], [mx, (ay + by) / 2 - 0.45, mz]]);
-      m.poly([[bx, by, bz], [ax, ay, az], [mx, (ay + by) / 2 - 0.45, mz]]);
+      const mx = (ax + bx) / 2, mz = (az + bz) / 2, drop = o.drop || 0.32;
+      m.poly([[ax, ay, az], [bx, by, bz], [mx, (ay + by) / 2 - drop, mz]]);
+      m.poly([[bx, by, bz], [ax, ay, az], [mx, (ay + by) / 2 - drop, mz]]);
     }
     return { cols: [], lights: [], top: 0 };
   },
@@ -488,7 +488,6 @@ const BurnsManModel = {
     for (let k = 0; k < 4; k++) { const a = ring[k], b = ring[(k + 1) % 4]; m.poly([a, b, top], null, [0, hy, 0]); m.poly([b, a, bot], null, [0, hy, 0]); }
     m.emissive(0);
     for (let k = 0; k < 4; k++) { const a = ring[k], b = ring[(k + 1) % 4]; neonRail(a[0] * 1.03, a[1], a[2] * 1.03, top[0], top[1] + 0.05, top[2]); neonRail(a[0] * 1.03, a[1], a[2] * 1.03, b[0] * 1.03, b[1], b[2] * 1.03); neonRail(a[0] * 1.03, a[1], a[2] * 1.03, bot[0], bot[1] - 0.05, bot[2]); }
-    m.decal(0, hy, hw * 0.75 * 0.52 + 0.06, 0.9, 0.9, BURNS_ATLAS.face('man'));
     // arms (raised in the default pose via animation)
     for (const side of [1, -1]) {
       m.setBone(side > 0 ? B.UARM_L : B.UARM_R); lattice(0.2, -2.6, 0.75, 0.65, 0.75, 3); neonRail(side * 0.42, 0.1, 0.4, side * 0.36, -2.6, 0.38);

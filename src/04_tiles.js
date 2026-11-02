@@ -37,14 +37,14 @@ const TileArt = {
     const th = THEMES[themeKey];
     const A = { S, ground: [], ice: [], pillar: {}, semi: {}, qblock: [], conv: { l: [], r: [] }, glitch: [] };
     for (let v = 0; v < 2; v++) for (let m = 0; m < 16; m++) A.ground[v * 16 + m] = this.tile(S, ctx => paintGround(ctx, th, m, v));
-    for (let m = 0; m < 2; m++) A.ice[m] = this.tile(S, ctx => paintIce(ctx, m));
+    for (let m = 0; m < 2; m++) A.ice[m] = this.tile(S, ctx => paintIce(ctx, m, th.iceStyle));
     A.brick = this.tile(S, ctx => paintBrick(ctx, th.brick));
     for (let f = 0; f < 4; f++) A.qblock[f] = this.tile(S, ctx => paintQBlock(ctx, th, f));
     A.used = this.tile(S, ctx => paintUsed(ctx));
     A.hard = this.tile(S, ctx => paintHard(ctx, th.hard));
     ['L', 'M', 'R', 'S'].forEach(p => A.semi[p] = this.tile(S, ctx => paintSemi(ctx, th.semi, p)));
-    A.spikes = this.tile(S, ctx => paintSpikes(ctx, false));
-    A.spikesCeil = this.tile(S, ctx => paintSpikes(ctx, true));
+    A.spikes = this.tile(S, ctx => paintSpikes(ctx, false, th.spikes));
+    A.spikesCeil = this.tile(S, ctx => paintSpikes(ctx, true, th.spikes));
     for (let f = 0; f < 4; f++) { A.conv.l[f] = this.tile(S, ctx => paintConveyor(ctx, -1, f)); A.conv.r[f] = this.tile(S, ctx => paintConveyor(ctx, 1, f)); }
     A.crumble = this.tile(S, ctx => paintCrumble(ctx, th));
     ['L', 'R', 'S'].forEach(p => { A.pillar[p + 't'] = this.tile(S, ctx => paintPillar(ctx, th.pillar, p, true)); A.pillar[p + 'b'] = this.tile(S, ctx => paintPillar(ctx, th.pillar, p, false)); });
@@ -121,6 +121,12 @@ function paintGround(ctx, th, mask, variant) {
   } else if (st === 'mineral') {
     for (let y = 0; y < TS; y += 5) { ctx.fillStyle = (y / 5) % 2 ? 'rgba(255,170,90,0.18)' : 'rgba(120,40,20,0.15)'; ctx.fillRect(0, y + Math.sin(y + variant) * 1.5, TS, 3); }
     speckle(ctx, rng, 6, 'rgba(255,240,200,0.25)', 0, 0, TS, TS, 0.8, 1.8);
+  } else if (st === 'paper') {
+    // stacked paper: ruled lines, a margin rule and the odd ink blot
+    ctx.strokeStyle = 'rgba(90,130,200,0.35)'; ctx.lineWidth = 0.8;
+    for (let y = 6; y < TS; y += 7) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(TS, y); ctx.stroke(); }
+    if (variant) { ctx.strokeStyle = 'rgba(220,90,110,0.4)'; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(8, TS); ctx.stroke(); }
+    if (rng() < 0.3) { ctx.fillStyle = 'rgba(20,20,40,0.55)'; ctx.beginPath(); ctx.arc(6 + rng() * 20, 8 + rng() * 18, 1.5 + rng() * 2.5, 0, TAU); ctx.fill(); }
   } else if (st === 'deck') {
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(4, 0, 3, TS); ctx.fillRect(TS - 7, 0, 3, TS);
     ctx.strokeStyle = 'rgba(90,60,30,0.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(5, 2); ctx.lineTo(TS - 5, TS - 2); ctx.moveTo(TS - 5, 2); ctx.lineTo(5, TS - 2); ctx.stroke();
@@ -246,6 +252,11 @@ function paintCap(ctx, th, st, left, right, rng) {
     ctx.fillStyle = G.capHi; for (let x = Math.ceil(x0); x < x1; x += 8) { ctx.beginPath(); ctx.moveTo(x + 4, 1.5); ctx.lineTo(x + 7, 4); ctx.lineTo(x + 4, 6.5); ctx.lineTo(x + 1, 4); ctx.fill(); }
     ctx.fillStyle = shade(G.cap, -0.35); ctx.fillRect(x0, 7, x1 - x0, 1.4);
     ctx.fillStyle = 'rgba(255,255,255,0.7)'; for (let x = Math.ceil(x0) + 2; x < x1; x += 3) ctx.fillRect(x, 8.4, 1, 2); // fringe
+  } else if (st === 'paper') {
+    ctx.fillStyle = G.cap; ctx.fillRect(x0, 0, x1 - x0, 5);
+    ctx.fillStyle = G.capHi; ctx.fillRect(x0, 0, x1 - x0, 1.4);
+    ctx.fillStyle = 'rgba(40,40,70,0.35)'; ctx.fillRect(x0, 5, x1 - x0, 1);
+    ctx.fillStyle = 'rgba(40,40,70,0.15)'; for (let x = x0 + 3; x < x1 - 3; x += 7 + rng() * 6) ctx.fillRect(x, 2.4, 3 + rng() * 4, 0.8);
   } else if (st === 'deck') {
     const g = ctx.createLinearGradient(0, 0, 0, 7); g.addColorStop(0, G.capHi); g.addColorStop(1, G.cap);
     ctx.fillStyle = g; ctx.fillRect(x0, 0, x1 - x0, 7);
@@ -283,7 +294,17 @@ function paintCap(ctx, th, st, left, right, rng) {
   }
 }
 
-function paintIce(ctx, topOpen) {
+function paintIce(ctx, topOpen, style) {
+  if (style === 'mud' || style === 'butter') {
+    // slick surfaces: wet mud in the canyon, melted butter on the griddle row
+    const mud = style === 'mud';
+    const g = ctx.createLinearGradient(0, 0, 0, TS); g.addColorStop(0, mud ? '#8a6040' : '#f8e08a'); g.addColorStop(1, mud ? '#4a3020' : '#d8a84a');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, TS, TS);
+    ctx.fillStyle = mud ? 'rgba(255,230,190,0.18)' : 'rgba(255,255,255,0.35)';
+    for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(6 + i * 7, 10 + (i % 2) * 9, 4, 2, 0.3, 0, TAU); ctx.fill(); }
+    if (topOpen) { ctx.fillStyle = mud ? '#a87a52' : '#fff6c0'; ctx.beginPath(); ctx.moveTo(0, 0); for (let x = 0; x <= TS; x += 4) ctx.lineTo(x, 3 + Math.sin(x * 0.8) * 1.5); ctx.lineTo(TS, 0); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(2, 0.5, TS - 4, 1.2); }
+    return;
+  }
   const g = ctx.createLinearGradient(0, 0, TS, TS);
   g.addColorStop(0, '#c8f0ff'); g.addColorStop(1, '#6ab8e0');
   ctx.fillStyle = g; ctx.fillRect(0, 0, TS, TS);
@@ -501,10 +522,21 @@ function paintSemi(ctx, P, part) {
   }
 }
 
-function paintSpikes(ctx, ceil) {
+function paintSpikes(ctx, ceil, style) {
   // rusty rebar sticking out of the playa (the reason everyone caps their rebar)
   ctx.save();
   if (ceil) { ctx.translate(0, TS); ctx.scale(1, -1); }
+  if (style === 'crystal' || style === 'neon' || style === 'ink') {
+    const cols = style === 'crystal' ? ['#c8a0ff', '#7affd8', '#e8d0ff'] : style === 'neon' ? ['#ff4fd8', '#38f2ff', '#ffffff'] : ['#1a1a2a', '#3a3a5a', '#12121e'];
+    for (let i = 0; i < 4; i++) {
+      const x = 4 + i * 8, h = 16 + ((i * 7) % 3) * 4;
+      if (style === 'neon') { ctx.shadowColor = cols[i % 2]; ctx.shadowBlur = 6; }
+      ctx.fillStyle = cols[i % 3]; ctx.beginPath(); ctx.moveTo(x - 4, TS); ctx.lineTo(x - 1, TS - h); ctx.lineTo(x + 1, TS - h); ctx.lineTo(x + 4, TS); ctx.closePath(); ctx.fill();
+      if (style !== 'ink') { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.moveTo(x - 1, TS - 3); ctx.lineTo(x - 0.5, TS - h + 2); ctx.lineTo(x + 0.5, TS - h + 4); ctx.fill(); }
+    }
+    ctx.restore();
+    return;
+  }
   ctx.fillStyle = 'rgba(70,50,40,0.6)'; ctx.beginPath(); ctx.ellipse(TS / 2, TS - 2, TS / 2, 3, 0, 0, TAU); ctx.fill();
   for (let i = 0; i < 4; i++) {
     const x = 4 + i * 8, h = 18 + (i % 2) * 6, lean = (i - 1.5) * 1.2;

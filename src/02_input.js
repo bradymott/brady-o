@@ -18,6 +18,11 @@ const Input = {
   usingTouch: false,
   anyKeyPressed: false,
   swipes: [],            // for easter-egg codes on title screen: 'U','D','L','R'
+  // opt-in extras (Brady-O Burns; inert unless a scene sets them):
+  camDrag: false,        // game mode: right-side touches away from the buttons orbit a camera (camDX/camDY, CSS px)
+  camDX: 0, camDY: 0,
+  hud: null,             // game mode: extra round buttons [{id, x, y, r}] checked before jump/action
+  hudPressed: {}, hudHeld: {},
 
   init(canvas) {
     this.canvas = canvas;
@@ -88,10 +93,12 @@ const Input = {
     const L = this.layout;
     if (!L) return 'none';
     if (Math.hypot(x - L.pause.x, y - L.pause.y) < L.pause.r * 1.6) return 'pause';
+    if (this.hud) for (const b of this.hud) if (Math.hypot(x - b.x, y - b.y) < b.r * 1.25) return 'hud:' + b.id;
     const leftSide = L.lefty ? x > L.split : x < L.split;
     if (leftSide) return 'stick';
     const da = Math.hypot(x - L.action.x, y - L.action.y);
     const dj = Math.hypot(x - L.jump.x, y - L.jump.y);
+    if (this.camDrag && da > L.action.r * 1.5 && dj > L.jump.r * 1.45) return 'cam';
     if (da < L.action.r * 1.35 && da < dj) return 'action';
     return 'jump';
   },
@@ -111,6 +118,7 @@ const Input = {
       } else if (t.role === 'jump') { this.jumpPressed = true; }
       else if (t.role === 'action') { this.actionPressed = true; }
       else if (t.role === 'pause') { this.pausePressed = true; }
+      else if (t.role.startsWith('hud:')) { this.hudPressed[t.role.slice(4)] = true; }
     }
     this.touches.set(e.pointerId, t);
     this.recompute();
@@ -121,6 +129,7 @@ const Input = {
     if (!t) return;
     if (e.cancelable) e.preventDefault();
     const p = this.pos(e);
+    if (t.role === 'cam' && this.mode === 'game') { this.camDX += p.x - t.x; this.camDY += p.y - t.y; }
     t.x = p.x; t.y = p.y;
     if (this.mode === 'game') {
       if (t.role === 'stick' && this.stick.id === e.pointerId) {
@@ -226,10 +235,12 @@ const Input = {
     let l = !!this.keys.left, r = !!this.keys.right, u = !!this.keys.up, d = !!this.keys.down;
     let j = !!this.keys.jump, a = !!this.keys.action;
     if (this.pad) { l = l || this.pad.left; r = r || this.pad.right; u = u || this.pad.up; d = d || this.pad.down; j = j || this.pad.jump; a = a || this.pad.action; }
+    for (const k in this.hudHeld) this.hudHeld[k] = false;
     if (this.mode === 'game') {
       for (const t of this.touches.values()) {
         if (t.role === 'jump') j = true;
         if (t.role === 'action') a = true;
+        if (t.role.startsWith('hud:')) this.hudHeld[t.role.slice(4)] = true;
       }
       if (this.stick.active && this.layout) {
         const dx = this.stick.x - this.stick.ox, dy = this.stick.y - this.stick.oy;
@@ -250,6 +261,7 @@ const Input = {
     this.jumpPressed = false; this.actionPressed = false; this.upPressed = false;
     this.downPressed = false; this.pausePressed = false; this.taps.length = 0; this.uiKey = null;
     this.anyKeyPressed = false;
+    for (const k in this.hudPressed) this.hudPressed[k] = false;
   },
 
   setMode(m) {

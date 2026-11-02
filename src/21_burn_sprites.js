@@ -19,13 +19,7 @@ function stepLegs(ctx, x, y, t, col, sp, w, h) {
   rr(ctx, x - sp - w / 2, y - h - Math.max(0, k) * 2, w, h, w / 2); ctx.fill();
   rr(ctx, x + sp - w / 2, y - h - Math.max(0, -k) * 2, w, h, w / 2); ctx.fill();
 }
-function enemyLook(kind) {
-  const th = (Game.scene && Game.scene.area) ? Game.scene.area.theme : '';
-  const base = th.replace(/_(cave|fort)$/, '');
-  if (kind === 'flapper') return ['camps', 'temple', 'deepplaya', 'esplanade', 'trip', 'sunrise'].indexOf(base) >= 0 ? 'witch' : 'mosquito';
-  if (kind === 'boomer') return base === 'neon' ? 'slot' : 'dome';
-  return kind;
-}
+// enemyLook() lives in 21b_roster_art.js (witches only; the mosquito minions retired with Lord Buzzkill)
 
 Object.assign(Sprites, {
   /* ---------- Hippie (walker) ---------- */
@@ -115,24 +109,9 @@ Object.assign(Sprites, {
     for (let i = -2; i <= 2; i++) { const sx = x + i * 3.2; ctx.beginPath(); ctx.moveTo(sx - 1, hy - 8 + Math.abs(i)); ctx.lineTo(sx, hy - 15 + Math.abs(i) * 1.5 + Math.sin(t * 4 + i) * 0.4); ctx.lineTo(sx + 1, hy - 8 + Math.abs(i)); ctx.fill(); }
   },
 
-  /* ---------- Pagan witch on a broom / mosquito drone ---------- */
+  /* ---------- Pagan witch on a broom ---------- */
   flapper(ctx, x, y, t, col, dir) {
-    const look = enemyLook('flapper');
     const cy = y - 10;
-    if (look === 'mosquito') {
-      const fl = Math.sin(t * 60) * 0.5 + 0.5;
-      ctx.fillStyle = 'rgba(220,235,255,0.45)';
-      for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(x - dir * 2 + s * 1, cy - 6, 10, 3.5 + fl * 2, s * (0.5 + fl * 0.3) - dir * 0.2, 0, TAU); ctx.fill(); }
-      ctx.strokeStyle = '#2a1a1a'; ctx.lineWidth = 0.8;
-      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x - 2 + i * 2, cy + 2); ctx.lineTo(x - 6 + i * 4, cy + 9); ctx.lineTo(x - 8 + i * 5, cy + 12); ctx.stroke(); }
-      ctx.fillStyle = '#4a2a2a'; ctx.beginPath(); ctx.ellipse(x - dir * 6, cy + 1, 7, 3.5, dir * 0.25, 0, TAU); ctx.fill(); // abdomen
-      ctx.fillStyle = 'rgba(255,60,60,0.5)'; ctx.beginPath(); ctx.ellipse(x - dir * 7, cy + 1.5, 4, 2, dir * 0.25, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#2a1a1a'; ctx.beginPath(); ctx.arc(x + dir * 1, cy - 1, 4, 0, TAU); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + dir * 5, cy - 2, 3, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#ff2a2a'; ctx.beginPath(); ctx.arc(x + dir * 6, cy - 3, 1.5, 0, TAU); ctx.fill();
-      ctx.strokeStyle = '#2a1a1a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + dir * 7.5, cy - 1); ctx.lineTo(x + dir * 15, cy + 3); ctx.stroke(); // proboscis
-      return;
-    }
     // witch: broom, flowing cloak, pointy hat with a moon
     const bob = Math.sin(t * 3) * 1.5;
     ctx.save(); ctx.translate(x, cy + bob); ctx.scale(dir, 1);
@@ -213,7 +192,6 @@ Object.assign(Sprites, {
       ctx.fillStyle = '#ff6a1a'; ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(7, 7); ctx.lineTo(-7, 7); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#ffffff'; ctx.fillRect(-4, 0, 8, 2); ctx.restore(); return;
     }
-    if (kind === 'skeeter') { Sprites.flapperMini(ctx, x, y, t, dir); return; }
     if (kind === 'wave') {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < 3; i++) { ctx.strokeStyle = rgba(col || '#38f2ff', 0.8 - i * 0.22); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(x - dir * i * 5, y, 9 - i, -1, 1); ctx.stroke(); }
@@ -231,15 +209,6 @@ Object.assign(Sprites, {
     ctx.fillStyle = '#1a1018'; ctx.beginPath(); ctx.arc(-2, 0, 1, 0, TAU); ctx.arc(2, 0, 1, 0, TAU); ctx.fill();
     ctx.restore();
   },
-  flapperMini(ctx, x, y, t, dir) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(0.8, 0.8);
-    ctx.fillStyle = 'rgba(220,235,255,0.5)'; ctx.beginPath(); ctx.ellipse(0, -5, 8, 3 + Math.sin(t * 60) * 1.5, 0.3, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#3a1a1a'; ctx.beginPath(); ctx.ellipse(-dir * 4, 1, 6, 3, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(dir * 3, -1, 3.4, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#ff2a2a'; ctx.beginPath(); ctx.arc(dir * 4, -2, 1.3, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#3a1a1a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dir * 5, 0); ctx.lineTo(dir * 12, 3); ctx.stroke();
-    ctx.restore();
-  },
-
   /* ---------- Creeper in a fur coat (slowly follows you) ---------- */
   wisp(ctx, x, y, t, col) {
     const bob = Math.sin(t * 4) * 1.5;

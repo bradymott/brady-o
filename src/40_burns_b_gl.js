@@ -605,10 +605,10 @@ class BurnsRenderer {
     gl.clearColor(bg[0], bg[1], bg[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     const save = { P: this.P.slice(), V: this.V.slice(), VP: this.VP.slice(), cam: this.cam, B: Object.assign({}, this.B) };
     const hy = headY || 1.6;
-    BurnsM.persp(this.P, 0.42, w / h, 0.1, 50, 0);
-    BurnsM.lookAt(this.V, this.B, 0.55, hy + 0.12, 2.0, 0, hy - 0.02, 0);
+    BurnsM.persp(this.P, 0.3, w / h, 0.1, 50, 0);
+    BurnsM.lookAt(this.V, this.B, 0.5, hy + 0.1, 2.0, 0, hy - 0.06, 0);
     BurnsM.mul4(this.VP, this.P, this.V);
-    this.cam = { x: 0.55, y: hy + 0.12, z: 2.0 };
+    this.cam = { x: 0.5, y: hy + 0.1, z: 2.0 };
     const penv = Object.assign({}, env, { fogD: 0, trip: 0, sky: [0.75, 0.72, 0.85], gnd: [0.35, 0.3, 0.38], keyDir: [0.45, 0.6, 0.66], keyCol: [0.75, 0.68, 0.6], emB: 1.4, rimCol: [0.7, 0.6, 1.0] });
     const savedPL = this.pl.slice(), savedPC = this.pc.slice();
     this.setLights(null);

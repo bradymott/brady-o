@@ -13,10 +13,10 @@ fs.mkdirSync(out, { recursive: true });
   const errors = [];
   page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.type() + ': ' + m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-  await page.goto('file://' + path.join(__dirname, '..', 'dist', 'brady-o.html'));
+  await page.goto('file://' + path.join(process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist'), 'brady-o.html'));
   await page.waitForTimeout(2500);
   await page.screenshot({ path: path.join(out, 'title.png') });
-  const ids = levels.length ? levels : ['1-1'];
+  const ids = levels.length ? levels : ['41-1'];
   for (const id of ids) {
     const [w, i] = id.split('-').map(Number);
     await page.evaluate(([w, i]) => { const B = window.BRADY; B.Game.setScene(new B.Play(B.getLevel(w, i), {})); }, [w, i]);

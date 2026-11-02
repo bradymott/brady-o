@@ -10,7 +10,7 @@ const PHYS = {
   swimG: 9 * TS, swimMaxFall: 3.6 * TS, swimStroke: 6.4 * TS, swimMaxX: 4.4 * TS, swimAccel: 14 * TS, swimDrag: 8 * TS,
   springV: 25 * TS, springVLow: 16 * TS, stompV: 11 * TS, stompVHeld: 16.5 * TS,
   conveyor: 2.6 * TS,
-  bounceLo: 13 * TS, bounceHi: 22.5 * TS   // bouncy surfaces (big-top canvas, speaker cones, couches)
+  bounceLo: 13 * TS, bounceHi: 24.5 * TS   // bouncy surfaces (big-top canvas, speaker cones, couches)
 };
 // special surfaces, stored per tile in area.surf (shared by the game and the validator)
 const SURF = { NONE: 0, BOUNCE: 1, STICKY: 2 };
@@ -28,6 +28,7 @@ function zoneForce(area, b) {
     if (z.off) continue;
     if (cx < z.x || cx > z.x + z.w || cy < z.y || cy > z.y + z.h) continue;
     fx += z.fx || 0; fy += z.fy || 0; vmax = Math.max(vmax, z.vmax || 0); hit = true;
+    if (z.pull) fx += (z.x + z.w / 2 - cx) * z.pull;   // whirlwinds and updrafts pull toward their core
   }
   return hit ? { fx, fy, vmax } : null;
 }

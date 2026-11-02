@@ -266,7 +266,7 @@ themeVariant('hotsprings', 'mudcanyon', {
     { kind: 'mesas', color: '#7a4a3a', base: 400, f: 0.2 }
   ],
   ground: { style: 'mineral', cap: '#8a5a3a', capHi: '#c89a6a', dirt: '#6a4030', dirt2: '#4a2c20', rock: '#9a6a4a' },
-  decor: ['reeds', 'mudpot', 'reeds']
+  decor: ['reeds', 'mudpot', 'reeds'], iceStyle: 'mud'
 });
 themeVariant('sunrise', 'goldenhour', {
   name: 'Golden Hour', sky: ['#5a3a8a', '#ff9a6a', '#ffe0a0'], celestial: { type: 'sun', x: 0.3, y: 0.62, r: 70, color: '#fff4d0', glow: '#ffb07a' },
@@ -292,6 +292,21 @@ Object.assign(THEMES.manbase_fort, { name: 'The Pavilion', layers: [{ kind: 'sau
 Object.assign(THEMES.pages_fort, { name: 'The Archive', layers: [{ kind: 'wallpaper', color: '#3a2a20', base: 0, f: 0.08, style: 'books' }], fog: '#c8a878', particles: 'motes', spikes: 'ink', liquid: 'ink' });
 Object.assign(THEMES.dpwyard_fort, { spikes: 'rebar', layers: [{ kind: 'yard', color: '#1e1418', base: 400, f: 0.1, near: true }, { kind: 'chains', color: '#120c0e', base: 0, f: 0.22 }] });
 Object.assign(THEMES.witchwoods_fort, { name: 'The Coven', spikes: 'crystal', layers: [{ kind: 'forest', color: '#1a1030', base: 380, f: 0.12 }, { kind: 'chains', color: '#120a1e', base: 0, f: 0.2 }], fog: '#c8a0ff' });
+THEMES.camps.iceStyle = 'butter';
+// two lands' castles get open-air looks instead of the generic fortress hall
+Object.assign(THEMES.gate_fort, { name: 'Greeter Station', sky: ['#1a1238', '#a84a6a', '#ffb07a'], celestial: { type: 'sun', x: 0.75, y: 0.66, r: 50, color: '#fff0c8', glow: '#ff8a5a' }, stars: 0.4,
+  layers: [{ kind: 'nvmountains', color: '#4a3a6a', base: 312, amp: 110, f: 0.04, blur: true, haze: '#d88a8a' }, { kind: 'convoy', color: '#2a2036', base: 380, f: 0.14, dyn: 'dustplumes' }, { kind: 'flagline', color: '#1a1424', base: 410, f: 0.32 }],
+  fog: '#ff9a7a', particles: 'sand', darkness: 0.12, decor: ['greeterbell', 'cone', 'gatesign', 'cone'] });
+Object.assign(THEMES.deepplaya_fort, { name: 'The Vortex', sky: ['#3a2a3a', '#9a6a5a', '#d8a878'], celestial: { type: 'sun', x: 0.22, y: 0.5, r: 40, color: '#ffe8c0', glow: '#d8905a' }, stars: 0, particles: 'sand', dust: 0.5,
+  layers: [{ kind: 'nvmountains', color: '#5a4448', base: 330, amp: 80, f: 0.03, blur: true, haze: '#c89a7a' }, { kind: 'sculptures', color: '#3a2a2a', base: 400, f: 0.14, lit: true, dyn: 'dustdevil' }],
+  fog: '#d8c0a0', darkness: 0.16 });
+// a night traffic jam for Six Days on the Road, a laser-grid dance floor for the rave
+themeVariant('gate', 'gate_night', { name: 'Six Days on the Road', sky: ['#05040e', '#1a1440', '#4a2a5a'], celestial: { type: 'moon', x: 0.8, y: 0.18, r: 24, color: '#fffbe8', glow: '#a8c8ff' }, stars: 1, cloudsDyn: false, night: true, darkness: 0.32,
+  layers: [{ kind: 'nvmountains', color: '#1a1430', base: 312, amp: 110, f: 0.04, blur: true }, { kind: 'convoy', color: '#120e1e', base: 382, f: 0.2, dyn: 'dustplumes' }, { kind: 'flagline', color: '#0e0a16', base: 412, f: 0.4 }],
+  ground: Object.assign({}, THEMES.gate.ground, { night: true }), particles: 'motes' });
+themeVariant('esplanade', 'laserrave', { name: 'Laser Grid Rave', sky: ['#02010a', '#0a0420', '#24083a'],
+  layers: [{ kind: 'grid', color: '#ff4fd8', base: 300, f: 0.06 }, { kind: 'speakers', color: '#0a0812', base: 390, f: 0.16, dyn: 'lasers' }, { kind: 'crowd', color: '#05030a', base: 430, f: 0.36, glow: true }],
+  spotlights: true, darkness: 0.46 });
 Object.assign(THEMES.sunrise_fort, { name: 'The Last Stage', layers: [{ kind: 'soundcar', color: '#2a1a3a', base: 400, f: 0.1, dyn: 'lasers' }, { kind: 'crowd', color: '#120a18', base: 430, f: 0.36 }], sky: ['#2a1a4a', '#c86aa8', '#ffc08a'], spotlights: true });
 
 /* ---------- new background painters ---------- */

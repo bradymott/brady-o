@@ -109,13 +109,13 @@ const BURNS_ATLAS = {
     const stubble = (alpha, full) => {
       const rng = mulberry32(77);
       x.fillStyle = `rgba(40,26,20,${alpha})`;
-      for (let i = 0; i < (full ? 520 : 260); i++) {
+      for (let i = 0; i < (full ? 520 : 190); i++) {
         const a = rng() * Math.PI, r = 18 + rng() * 12;
         const px = 32 + Math.cos(a) * r * 1.05, py = 34 + Math.sin(a) * r * (full ? 1.0 : 0.95);
         if (py < 38 && !full) continue;
         x.fillRect(px, py, 1.4, 1.4);
       }
-      for (let i = 0; i < 70; i++) { x.fillRect(22 + rng() * 20, 40 + rng() * 3, 1.3, 1.3); }
+      for (let i = 0; i < 45; i++) { x.fillRect(22 + rng() * 20, 40 + rng() * 3, 1.2, 1.2); }
     };
     const blush = () => { x.fillStyle = 'rgba(255,90,110,0.28)'; x.beginPath(); x.ellipse(15, 40, 5, 3, 0, 0, TAU); x.ellipse(49, 40, 5, 3, 0, 0, TAU); x.fill(); };
     const nose = () => { x.fillStyle = 'rgba(120,60,40,0.35)'; x.beginPath(); x.moveTo(32, 30); x.lineTo(35, 38); x.lineTo(29, 38); x.closePath(); x.fill(); };
@@ -126,7 +126,7 @@ const BURNS_ATLAS = {
       case 'brady': case 'bradyClean':
         nose(); E(22, 27, null); E(42, 27, null);
         brow(22, 18, row === 2 ? -2 : 0.5, 6, '#2a1c14'); brow(42, 18, row === 2 ? 2 : -0.5, 6, '#2a1c14');
-        if (name === 'brady') stubble(0.55, false);
+        if (name === 'brady') stubble(0.34, false);
         mouth(mk('smile', 'open', 'wavy', 'grin'), 32, 46, 9);
         break;
       case 'friendly': nose(); E(22, 28, null); E(42, 28, null); brow(22, 19, 0, 5); brow(42, 19, 0, 5); mouth(mk('smile', 'open', 'wavy', 'grin')); blush(); break;

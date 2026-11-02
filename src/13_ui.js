@@ -674,7 +674,7 @@ class CreditsScene {
       ['CAMP BOSSES', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
       ['YOUR STATS', 'k'], [`Photos of Chinka: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Man got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
       [g.have >= g.total ? 'Every photo of Chinka. She framed them all.' : 'Some photos of Chinka are still out on the playa...', 's'],
-      [worldUnlocked(22) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', ''],
+      [worldUnlocked(50) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', ''],
       ['Leave no trace. Hug your sloth.', 's'], ['', ''], ['', ''],
       ['THANKS FOR PLAYING', 'h']
     ];

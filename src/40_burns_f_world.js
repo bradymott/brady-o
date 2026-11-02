@@ -163,7 +163,7 @@ class BurnsWorld {
     this.ghostMesh = null; this.chunks = []; this.ghosts = [];
     this.groups = []; this.movers = []; this.traffic = [];
     this.glows = []; this.beams = []; this.fires = []; this.jets = []; this.muds = []; this.triggers = []; this.checkpoints = []; this.markers = []; this.regions = {};
-    this.pickupDefs = []; this.actorDefs = []; this.updaters = [];
+    this.pickupDefs = []; this.actorDefs = []; this.updaters = []; this.vehicles = [];
     this.lights = []; // lightmap pools (painted at finish)
     const b = def.bounds || [-150, -150, 150, 150];
     this.bounds = { x0: b[0], z0: b[1], x1: b[2], z1: b[3] };
@@ -243,8 +243,10 @@ class BurnsWorld {
   // per physics step: refresh mover colliders into the dynamic grid
   stepMovers() {
     const C = this.col; C.beginDyn();
+    const p = this.game && this.game.player, cr = this.moverCollideR || 110;
     for (const o of this.movers) {
       if (!o.visible || o.noCollide) continue;
+      if (p && (Math.abs(o.x - p.x) > cr || Math.abs(o.z - p.z) > cr)) continue;
       const c = Math.cos(o.yaw), s = Math.sin(o.yaw);
       for (const d of o.dcols) {
         d.x = o.x + d.lx * c + d.lz * s; d.z = o.z - d.lx * s + d.lz * c; d.yaw = o.yaw + d.lyaw;
@@ -312,7 +314,7 @@ class BurnsWorld {
     const pf = this.paintXf;
     this.ground = {
       geos, px0: pf.x0, pz0: pf.z0, pw: pf.w, pd: pf.d,
-      base: burnsRGBf(g.base || '#c9a27e'), crackScale: g.crackScale || 0.16, crackK: g.crack === undefined ? 0.35 : g.crack,
+      base: burnsRGBf(g.base || '#c9a27e'), crackScale: g.crackScale || 0.16, crackK: g.crack === undefined ? 0.28 : g.crack,
       mottleScale: g.mottleScale || 0.012, mottleK: g.mottle === undefined ? 0.35 : g.mottle
     };
   }
@@ -395,6 +397,8 @@ class BurnsWorld {
       hidden(fn) { W._hidden = true; try { fn(); } finally { W._hidden = false; } },
       mover(build, o) { return W.addMover(build, o); },
       traffic(def) { const T = new BurnsTraffic(W, def); W.traffic.push(T); return T; },
+      // a drivable art car (and walkable moving platform). o: { x, z, yaw, build(m) -> {cols, seat, poofers, w}, maxSpeed, path: [[x,z]...], pathSpeed, label }
+      artCar(o) { const v = new BurnsVehicle(W.game, 'car', o || {}); W.vehicles.push(v); return v; },
       // per-frame world logic: fn(game, dt)
       update(fn) { W.updaters.push(fn); },
       npc(d) { d.friendly = true; W.actorDefs.push(d); return d; },
@@ -440,13 +444,13 @@ class BurnsWorld {
     return out;
   }
   // push a vertical cylinder (x,z,radius, feet y, height) out of solid colliders. returns {x,z,hit,wall}
-  push(e, rad, feetY, height, step) {
+  push(e, rad, feetY, height, step, ignoreMover) {
     const list = this._near2 || (this._near2 = []), L = [0, 0];
     this.col.near(e.x, e.z, rad + 0.5, list);
     let hit = null;
     for (let it = 0; it < 2; it++) {
       for (const c of list) {
-        if (!c.solid) continue;
+        if (!c.solid || (ignoreMover && c.mover === ignoreMover)) continue;
         let top = c.y1;
         if (c.t === 'ramp') { this.col.local(c, e.x, e.z, L); top = c.ya + (clamp(L[1], -c.hz, c.hz) + c.hz) / (2 * c.hz) * (c.yb - c.ya); }
         if (c.t === 'dome') {
