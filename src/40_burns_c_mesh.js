@@ -7,15 +7,16 @@
    Untextured faces sample a transparent texel, so they show the colour.
    ============================================================ */
 
-/* ---------------- shared atlas (2048 x 1024) ----------------
-   left half:  faces (16 cols x 4 expression rows of 64px), pattern tiles,
-               item icons, misc (Chinka photo)
-   right half: per-world sign/banner text (shelf-packed, reset per world) */
+/* ---------------- shared atlas (2048 x 2048) ----------------
+   top-left:     pattern tiles, item icons, misc (Chinka photo)
+   top-right:    per-world sign/banner text (shelf-packed, reset per world)
+   bottom half:  faces, 16 cols x 4 expression rows of 128px (art inset 8px with a clear
+                 margin, so faces wrap cleanly onto round heads) */
 const BURNS_ATLAS = {
-  W: 2048, H: 1024, canvas: null, T: null,
-  faceV0: 64 / 1024, faceV1: 320 / 1024, faceRowV: 64 / 1024,
+  W: 2048, H: 2048, canvas: null, T: null,
+  faceV0: 1024 / 2048, faceV1: 1536 / 2048, faceRowV: 128 / 2048,
   regions: {},
-  white: { u0: 4 / 2048, v0: 4 / 1024, u1: 12 / 2048, v1: 12 / 1024 },
+  white: { u0: 4 / 2048, v0: 4 / 2048, u1: 12 / 2048, v1: 12 / 2048 },
   FACES: ['brady', 'bradyClean', 'friendly', 'lashes', 'tired', 'stressed', 'greeter', 'beard', 'smug', 'chinka', 'stern', 'goofy', 'grumpy', 'sleepy', 'man', 'kid'],
   PATTERNS: ['tattoo', 'tattoo2', 'fur', 'disco', 'led', 'plaid', 'hivis', 'tiedye', 'wood', 'swoosh', 'canvas', 'sequin', 'leopard', 'flames', 'denim', 'rainbow'],
   ICONS: ['heart', 'k', 'flake', 'tab', 'shroom', 'leaf', 'toad', 'bottle', 'drop', 'ticket', 'map', 'www', 'token', 'glowstick', 'ziptie', 'camera'],
@@ -24,12 +25,12 @@ const BURNS_ATLAS = {
     const c = makeCanvas(this.W, this.H), x = c.getContext('2d');
     this.canvas = c; this.ctx = x;
     x.clearRect(0, 0, this.W, this.H);
-    this.FACES.forEach((f, i) => { for (let r = 0; r < 4; r++) this.paintFace(x, i * 64, 64 + r * 64, f, r); });
+    this.FACES.forEach((f, i) => { for (let r = 0; r < 4; r++) { const X = i * 128, Y = 1024 + r * 128; x.save(); x.beginPath(); x.rect(X + 6, Y + 6, 116, 116); x.clip(); x.translate(X + 8, Y + 8); x.scale(1.75, 1.75); this.paintFace(x, 0, 0, f, r); x.restore(); } });
     this.PATTERNS.forEach((p, i) => { const px = (i % 8) * 128, py = 320 + Math.floor(i / 8) * 128; this.paintPattern(x, px, py, p); this.regions['pat:' + p] = this.reg(px + 4, py + 4, 120, 120); });
     this.ICONS.forEach((p, i) => { const px = (i % 8) * 128, py = 576 + Math.floor(i / 8) * 128; this.paintIcon(x, px, py, p); this.regions['icon:' + p] = this.reg(px + 4, py + 4, 120, 120); });
     this.paintPhoto(x, 0, 832);
     this.regions.photo = this.reg(4, 836, 120, 152);
-    this.FACES.forEach((f, i) => { this.regions['face:' + f] = this.reg(i * 64 + 2, 64 + 2, 60, 60); });
+    this.FACES.forEach((f, i) => { this.regions['face:' + f] = this.reg(i * 128 + 4, 1024 + 4, 120, 120); });
     this.T = { src: c, opts: { mips: true, premult: true, aniso: 4 }, tex: null, gen: -1 };
     this.signReset();
   },
