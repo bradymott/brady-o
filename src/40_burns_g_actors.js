@@ -29,7 +29,7 @@ class BurnsActor {
     this.g = g; this.def = def; this.id = def.id || null;
     this.type = def.type || 'burner';
     this.friendly = def.friendly !== false;
-    const spec = def.spec || (this.type === 'chinka' ? BurnsRig.chinkaSpec() : this.type === 'brady' ? BurnsRig.bradySpec('none') : BurnsRig.npcSpec(this.type, def.seed || 0));
+    const spec = def.spec || (this.type === 'chinka' ? BurnsRig.chinkaSpec() : this.type === 'brady' ? BurnsRig.bradySpec('none') : BurnsRig.npcSpec(this.type, def.seed || 0, def));
     this.model = def.model || BurnsRig.model(spec);
     this.ch = new BurnsChar(this.model);
     this.scale = def.scale || 1; this.ch.scale = this.scale;
@@ -97,7 +97,7 @@ class BurnsActor {
       if (this.chatT <= 0) {
         this.chatT = 7 + Math.random() * 12;
         const d = this.distP();
-        if (d < 9 && d > 1.2) { const L = this.def.chat || BURNS_LINES[this.type]; if (L && L.length) this.say(L[Math.floor(Math.random() * L.length)]); }
+        if (d < 9 && d > 1.2) { const TY = BURNS_NPC_TYPES[this.type], L = this.def.chat || (TY && TY.lines) || BURNS_LINES[this.type]; if (L && L.length) this.say(L[Math.floor(Math.random() * L.length)]); }
       }
     }
   }
@@ -153,7 +153,7 @@ const BurnsBehaviors = {
 };
 (() => {
   const R = (n, b) => BurnsBehaviors.register(n, b);
-  const typeAnim = a => ({ campLead: 'clipboard', techbro: 'phone', influencer: 'photo', greeter: 'idle', gate: 'idle' })[a.type] || 'idle';
+  const typeAnim = a => { const T = BURNS_NPC_TYPES[a.type]; return (T && T.anim) || ({ campLead: 'clipboard', techbro: 'phone', influencer: 'photo' })[a.type] || 'idle'; };
   // stand around, turn toward the player when near
   R('idle', {
     update(a, g, dt) {
@@ -445,6 +445,142 @@ const BurnsBehaviors = {
       a.physics(dt);
     }
   });
+  /* ---------------- burner action-figure behaviours ---------------- */
+  const T3 = [0, 0, 0];
+  // fire spinner: spins poi / fans / staff / hoop (def.tool or the type's tool) with burning trails and a
+  // flickering light; the flames hurt on touch (def.hazard: false to disable). def: { path, speed, turn, rate, spinning }
+  R('firespin', {
+    init(a) { a.data.tool = (a.model.spec && a.model.spec.tool) || a.def.tool || 'poi'; a.data.i = 0; },
+    update(a, g, dt) {
+      const D = a.data, P = a.def.path;
+      if (P && P.length) { const q = P[D.i % P.length]; if (a.moveTo(q[0], q[1], a.def.speed || 1.2, dt, 0.5) < 0.6) D.i++; }
+      else { a.vx = a.vz = 0; if (a.def.turn) a.yaw += a.def.turn * dt; }
+      const on = a.def.spinning !== false;
+      a.ch.play(on ? 'firespin' : 'idle', { tool: D.tool, rate: a.def.rate || 1 });
+      if (on && a.def.hazard !== false && a.ch.computed && !g.cine) {
+        const p = g.player, W = a.model.wicks || [];
+        for (const w of W) {
+          const q = a.ch.bonePoint(w.bone, w.p[0], w.p[1], w.p[2], T3), dx = p.x - q[0], dz = p.z - q[2], dy = p.y + 1.0 - q[1];
+          if (dx * dx + dz * dz < 0.36 && Math.abs(dy) < 1.0) { if (p.hurt(1, a.x, a.z, 6)) { p.say(['HOT HOT HOT!', 'My eyebrows!', 'Not the bun!'][Math.floor(Math.random() * 3)], 1); g.fx.spark(q[0], q[1], q[2], 8); g.missions.event('burned', a); } break; }
+        }
+      }
+      a.physics(dt);
+    },
+    draw(a, g, R) {
+      const W = a.model.wicks;
+      if (a.def.spinning === false || !W || !W.length) return;
+      const cam = g.cam, d2 = (a.x - cam.x) * (a.x - cam.x) + (a.z - cam.z) * (a.z - cam.z); if (d2 > 85 * 85) return;
+      const pr = Math.min(1, 7 / W.length); let cx = 0, cy = 0, cz = 0;
+      for (const w of W) {
+        const q = a.ch.bonePoint(w.bone, w.p[0], w.p[1], w.p[2], T3); cx += q[0]; cy += q[1]; cz += q[2];
+        if (Math.random() < pr) g.fx.add(q[0], q[1], q[2], (Math.random() - 0.5) * 0.3, 0.5 + Math.random() * 0.5, (Math.random() - 0.5) * 0.3, 0.3 + Math.random() * 0.12, 0.36, 0.08, [1, 0.5 + Math.random() * 0.35, 0.15], 1, 'flame', 1, Math.random() * 6, 0);
+        if (Math.random() < pr * 0.45) g.fx.add(q[0], q[1], q[2], 0, 0, 0, 0.16, 0.55, 0.2, [1, 0.72, 0.32], 0.8, 'glow', 1);
+      }
+      const n = W.length; g.pointLight(cx / n, cy / n + 0.3, cz / n, 7.5, [1, 0.55, 0.2], 1.15 + Math.sin(g.time * 23 + a.t) * 0.15);
+    }
+  });
+  // darkwad: nearly invisible at night (just a glint off his shades) until light reveals him; bumping into
+  // him knocks Brady down (and off the bike). ACTION with 3 glow sticks lights him up with EL wire.
+  // def: { radius (wander), cost, lightable, elCol, lit, onBump(g,a), onLit(g,a) }  events: 'darkwadBump', 'lit'
+  R('darkwad', {
+    init(a) { a.data.cd = 0; if (a.def.lit) BurnsBehaviors.lightUp(a, a.g, true); },
+    update(a, g, dt) {
+      const D = a.data, p = g.player; D.cd = Math.max(0, D.cd - dt);
+      if (a.def.radius) { if (!D.tx || Math.random() < dt * 0.25) { const t = Math.random() * TAU; D.tx = a.home.x + Math.cos(t) * a.def.radius; D.tz = a.home.z + Math.sin(t) * a.def.radius; } const d = a.moveTo(D.tx, D.tz, 0.8, dt, 0.4); a.ch.play(d > 0.5 ? 'walk' : 'idle'); }
+      else { a.vx = a.vz = 0; a.ch.play('idle'); }
+      a.cloak = !D.lit && !BurnsBehaviors.revealed(a, g);
+      if (!D.lit && D.cd <= 0 && !g.cine && !p.dead && a.touching(0.2)) {
+        D.cd = 2.2;
+        if (p.vehicle && p.vehicle.kind === 'bike') p.vehicle.dismount(p, true);
+        const dx = p.x - a.x, dz = p.z - a.z, d = Math.hypot(dx, dz) || 1;
+        p.knock(dx / d * 5, 5, dz / d * 5); p.ch.play('knocked', null, true); burnsSfx('bump'); g.shake(0.2);
+        p.say(['WHO PUT A PERSON THERE?!', 'Light yourself up, man!', 'DARKWAD!'][Math.floor(Math.random() * 3)], 1.4);
+        a.say(['Watch it.', '...', 'I was here first.'][Math.floor(Math.random() * 3)], 1.4);
+        g.missions.event('darkwadBump', a); if (a.def.onBump) a.def.onBump(g, a);
+      }
+      a.physics(dt);
+    },
+    talk(a, g) {
+      if (a.data.lit || a.def.lightable === false) return false;
+      const cost = a.def.cost === undefined ? 3 : a.def.cost;
+      if (g.glow >= cost) { g.glow -= cost; BurnsBehaviors.lightUp(a, g); return true; }
+      a.say(`Got ${cost} glow sticks? No? Then keep walking.`, 2); return true;
+    },
+    draw(a, g, R) { if (a.cloak && Math.random() < 0.04) { const q = a.ch.bonePoint(BURNS_BONES.HEAD, 0.075, 0.235, 0.215, T3); g.fx.glint(q[0], q[1], q[2], '#e8f0ff'); } }
+  });
+  // is a darkwad visible? daylight, LSD, standing right next to him, a carried light, headlights, light pools or fires
+  BurnsBehaviors.revealed = (a, g) => {
+    const p = g.player, env = g.env;
+    if (env && env.sunDir && env.sunDir[1] > 0.12) return true;
+    if (p.power === 'lsd' && p.powerT > 0) return true;
+    const d = Math.hypot(p.x - a.x, p.z - a.z);
+    if (d < 2.4) return true;
+    if (p.lightR && d < p.lightR) return true;                 // set by worlds: lantern gift, flashlight...
+    if (g.glow > 0 && d < 3.6) return true;                     // Brady's glow sticks
+    const v = p.vehicle; if (v && d < 16) { const fx = Math.sin(v.yaw), fz = Math.cos(v.yaw); if (((a.x - p.x) * fx + (a.z - p.z) * fz) / (d || 1) > 0.82) return true; }
+    let lit = 0; for (const L of g.world.lights) { const dx = L.x - a.x, dz = L.z - a.z; if (Math.abs(dx) > L.r || Math.abs(dz) > L.r) continue; const k = 1 - Math.hypot(dx, dz) / L.r; if (k > 0) { lit += (L.i || 0.5) * k * k; if (lit > 0.18) return true; } }
+    for (const f of g.world.fires) if (Math.abs(f.x - a.x) < 5 && Math.abs(f.z - a.z) < 5) return true;
+    return false;
+  };
+  BurnsBehaviors.lightUp = (a, g, silent) => {
+    a.data.lit = true; a.cloak = false;
+    const spec = BurnsRig.npcSpec(a.type === 'darkwad' ? 'darkwad' : a.type, a.def.seed || 0, a.def);
+    spec.acc = (spec.acc || []).concat(['elwire']); spec.elCol = a.def.elCol || BURNS_NEON[(a.def.seed || 0) % 7]; spec.key += ':lit';
+    a.model = BurnsRig.model(spec); a.ch.setModel(a.model);
+    if (!silent) { g.fx.confetti(a.x, a.y + 1.6, a.z, 18); burnsSfx('pickup_glow'); a.say(['Whoa. I\'m... visible. I kind of love it.', 'Okay, the glow is a vibe.', 'Fine. FINE. I\'m radiant.'][Math.floor(Math.random() * 3)], 2.4); g.missions.event('lit', a); if (a.def.onLit) a.def.onLit(g, a); }
+  };
+  // undercover cop: "blends in" (dances badly, says groovy); spots Brady carrying an active power-up -> chases;
+  // a catch confiscates it. Hide in a crowd (2+ dancing NPCs within 2.2 m) to lose him.
+  // def: { path, view, fov, chaseSpeed, chaseTime, onConfiscate(g,a,id) }  events: 'copSpotted', 'confiscated'
+  R('undercover', {
+    init(a) { a.data.mode = 'blend'; a.data.t = 0; a.data.i = 0; },
+    update(a, g, dt) {
+      const D = a.data, p = g.player; D.t -= dt;
+      const carrying = !!p.power && p.powerT > 0, hidden = BurnsBehaviors.inCrowd(g, p, a);
+      if (D.mode === 'blend') {
+        const P = a.def.path;
+        if (P && P.length) { const q = P[D.i % P.length]; if (a.moveTo(q[0], q[1], 1.1, dt, 0.5) < 0.6) D.i++; a.ch.play('walk'); }
+        else { a.vx = a.vz = 0; a.ch.play('robot'); }
+        if (Math.random() < dt * 0.06) a.say(['Groovy.', 'Far out, fellow burner.', 'Nice... vibes.', 'I too enjoy the... untz.'][Math.floor(Math.random() * 4)], 1.8);
+        if (Math.random() < dt * 0.05) { const q = a.ch.bonePoint(BURNS_BONES.CHEST, 0.08, 0.34, 0.16, T3); g.fx.glint(q[0], q[1], q[2], '#ffe08a'); }
+        if (carrying && !hidden && !g.cine && BurnsBehaviors.sees(a, g, a.def.view || 11, a.def.fov || 1.1)) { D.mode = 'chase'; D.t = a.def.chaseTime || 9; a.say('FREEZE! I mean... groovy? FREEZE!', 1.6); g.missions.event('copSpotted', a); }
+      } else if (D.mode === 'chase') {
+        a.moveTo(p.x, p.z, a.def.chaseSpeed || 4.2, dt, 0.4); a.ch.play('run', { rate: 0.9 });
+        if (!carrying || hidden || D.t <= 0 || a.distP() > (a.def.view || 11) * 1.8) { D.mode = 'lost'; D.t = 2.5; a.say(hidden ? 'Where\'d the bun go? You all look the same!' : 'Lost him. Groovy.', 2); }
+        else if (a.touching(0.25) && !g.cine) {
+          const id = p.power; p.endPower(true);
+          g.toast(((BURNS_POWERUPS[id] && BURNS_POWERUPS[id].name) || 'POWER-UP') + ' CONFISCATED!');
+          const dx = p.x - a.x, dz = p.z - a.z, d = Math.hypot(dx, dz) || 1; p.knock(dx / d * 4, 4, dz / d * 4);
+          a.say('This is... confiscated. For science. Groovy.', 2.2); burnsSfx('bump'); D.mode = 'lost'; D.t = 4;
+          g.missions.event('confiscated', { actor: a, power: id }); if (a.def.onConfiscate) a.def.onConfiscate(g, a, id);
+        }
+      } else { const dh = a.moveTo(a.home.x, a.home.z, 1.4, dt, 0.5); a.ch.play(dh > 0.6 ? 'walk' : 'idle'); if (D.t <= 0 && dh < 0.7) D.mode = 'blend'; }
+      a.physics(dt);
+    }
+  });
+  // lamplighter: walks a path carrying lanterns (a warm moving light) and hangs a glowing lantern
+  // every `hang` metres, so dark streets light up behind them. def: { path, speed, hang (m, false = none), loop, col }
+  // events: 'lanternHung' (per lantern), 'lampsDone' (end of a non-looping path)
+  R('lamplight', {
+    init(a) { a.data.i = 0; a.data.dist = 0; a.data.done = false; },
+    update(a, g, dt) {
+      const D = a.data, P = a.def.path;
+      if (!P || !P.length || D.done) { a.vx = a.vz = 0; a.ch.play('lantern'); if (D.done || !P) { const d = a.distP(); if (d < 6) a.face(g.player.x, g.player.z, dt, 2); } a.physics(dt); return; }
+      const q = P[D.i % P.length], x0 = a.x, z0 = a.z;
+      if (a.moveTo(q[0], q[1], a.def.speed || 1.0, dt, 0.4) < 0.5) { D.i++; if (!a.def.loop && D.i >= P.length) { D.done = true; g.missions.event('lampsDone', a); } }
+      a.ch.play('walk', { rate: 0.8 });
+      D.dist += Math.hypot(a.x - x0, a.z - z0);
+      const hang = a.def.hang === undefined ? 6 : a.def.hang;
+      if (hang && D.dist >= hang) { D.dist = 0; const s = Math.sin(a.yaw + Math.PI / 2) * 0.6, c = Math.cos(a.yaw + Math.PI / 2) * 0.6; g.world.glows.push({ x: a.x + s, y: a.y + 1.9, z: a.z + c, s: 1.1, c: burnsRGBf(a.def.col || '#ffd890'), ph: Math.random() * 10, blink: 0, hidden: false }); g.missions.event('lanternHung', a); }
+      a.physics(dt);
+    },
+    draw(a, g, R) { const cam = g.cam; if ((a.x - cam.x) * (a.x - cam.x) + (a.z - cam.z) * (a.z - cam.z) > 70 * 70) return; g.pointLight(a.x, a.y + 2.2, a.z, 9, burnsRGBf(a.def.col || '#ffd890'), 1.0); }
+  });
+  BurnsBehaviors.inCrowd = (g, p, except) => {
+    let n = 0;
+    for (const o of g.actors) { if (o === except || o.removed || o.hidden || !o.friendly) continue; const dx = o.x - p.x, dz = o.z - p.z; if (dx * dx + dz * dz < 4.84 && (o.behName === 'dance' || o.def.crowd)) { if (++n >= 2) return true; } }
+    return false;
+  };
 })();
 
 /* ---------------- projectiles + shockwaves ---------------- */

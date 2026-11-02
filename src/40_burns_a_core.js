@@ -225,7 +225,9 @@ const BurnsSave = {
 /* ---------------- world registry ---------------- */
 // Play order by world id. Ids never change (files, saves and tokens are keyed by id); the
 // "World N" a player sees is the position in this list. Finishing a world unlocks the next one here.
-const BURNS_WORLD_ORDER = [1, 2, 3, 4, 5, 6, 11, 7, 8, 9, 12, 13, 10];
+const BURNS_WORLD_ORDER = [1, 2, 3, 4, 5, 6, 11, 7, 8, 9, 12, 13, 14, 10, 15];
+// secret worlds stay off the hub until unlocked (15 "Exodus" unlocks after the finale, world 10)
+const BURNS_WORLD_SECRET = { 15: true };
 // Metadata for every world (shown on the hub even before a world file registers). hub = pin position on the map (0..1).
 const BURNS_WORLD_META = [
   { id: 1, name: 'The Line', sub: 'Gate Road', hub: { x: 0.88, y: 0.88 }, col: '#ff9a4a' },
@@ -239,8 +241,10 @@ const BURNS_WORLD_META = [
   { id: 8, name: 'Hell Station', sub: 'Fuel up. Fight DPW.', hub: { x: 0.50, y: 0.09 }, col: '#ff5a2a' },
   { id: 9, name: 'Deep Playa Showdown', sub: 'The Man, again', hub: { x: 0.68, y: 0.16 }, col: '#9a6bff' },
   { id: 12, name: 'The Temple', sub: 'Quiet, heavy, beautiful', hub: { x: 0.82, y: 0.30 }, col: '#f0d8a8' },
-  { id: 13, name: 'The Workshops', sub: 'Build something. Break nothing.', hub: { x: 0.89, y: 0.52 }, col: '#38c8ff' },
-  { id: 10, name: 'The Man Pavilion', sub: 'Ride in. Bring her home.', hub: { x: 0.50, y: 0.48 }, col: '#ffd84a' }
+  { id: 13, name: 'The Workshops', sub: 'Build something. Break nothing.', hub: { x: 0.9, y: 0.47 }, col: '#38c8ff' },
+  { id: 14, name: 'Skydive Into the Burn', sub: 'Plane, freefall, parachute', hub: { x: 0.79, y: 0.62 }, col: '#9ad8ff' },
+  { id: 10, name: 'The Man Pavilion', sub: 'Ride in. Bring her home.', hub: { x: 0.50, y: 0.48 }, col: '#ffd84a' },
+  { id: 15, name: 'Exodus', sub: 'The long road home', hub: { x: 0.09, y: 0.82 }, col: '#ffb040', secret: true }
 ];
 const BurnsWorlds = {
   defs: {},
@@ -266,10 +270,13 @@ const BurnsWorlds = {
   order: BURNS_WORLD_ORDER,
   num(id) { const i = this.order.indexOf(id); return i < 0 ? id : i + 1; },          // id -> "World N" position (1-based)
   idAt(n) { return this.order[n - 1] || null; },                                      // position -> id
-  label(id) { return 'World ' + this.num(id); },
+  label(id) { return this.isSecret(id) ? 'Secret World' : 'World ' + this.num(id); },
+  isSecret(id) { return !!BURNS_WORLD_SECRET[id]; },
+  // ids the hub shows: the play order, minus secret worlds that are still locked
+  visible() { const sv = BurnsSave.get(); return this.order.filter(id => !this.isSecret(id) || sv.unlocked[id]); },
   next(id) { const i = this.order.indexOf(id); return i >= 0 && i < this.order.length - 1 ? this.order[i + 1] : null; },
   prev(id) { const i = this.order.indexOf(id); return i > 0 ? this.order[i - 1] : null; },
-  isFinale(id) { return this.order[this.order.length - 1] === id; }
+  isFinale(id) { return id === 10; }
 };
 
 /* ---------------- costumes (geometry lives in 40_burns_d_rig.js) ---------------- */

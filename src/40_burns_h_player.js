@@ -289,7 +289,7 @@ class BurnsVehicle {
   mount(p) {
     this.rider = p; p.vehicle = this; p.pound = 0; p.spinT = 0;
     if (this.kind === 'bike') { this.visible = true; this.x = p.x; this.z = p.z; this.y = p.y; this.yaw = p.yaw; this.speed = Math.hypot(p.vx, p.vz) * 0.6; burnsSfx('mount', null, 'pick'); }
-    else { burnsSfx('artcarHorn'); this.g.toast('YOU\'RE DRIVING! JUMP = HORN · ACTION = FLAMES'); }
+    else { burnsSfx(this.o.horn || 'artcarHorn'); this.g.toast(this.o.driveHint || (this.poofers.length ? 'YOU\'RE DRIVING! JUMP = HORN · ACTION = FLAMES' : 'YOU\'RE DRIVING! JUMP = HORN')); }
     this.g.missions.event('mount', this);
   }
   dismount(p, crash) {
@@ -317,7 +317,7 @@ class BurnsVehicle {
       this.yaw += clamp(diff, -tr * dt * 2, tr * dt * 2);
       const facing = Math.cos(diff);
       this.speed = approach(this.speed, this.maxSpeed * mag * Math.max(0.25, facing), this.accel * dt * (facing < 0 ? 2 : 1));
-    } else this.speed = approach(this.speed, 0, (this.kind === 'bike' ? 7 : 3) * dt);
+    } else this.speed = approach(this.speed, 0, (this.kind === 'bike' ? 7 : (this.o.brake || 3)) * dt);
     if (this.kind === 'bike') {
       // hop + bell
       if (I.jumpPressed && this.grounded && !locked) { this.vy = 7.2; this.grounded = false; burnsSfx('jump3d', { pitch: 1.2 }); }
@@ -336,7 +336,7 @@ class BurnsVehicle {
       p.ch.play('bike', { rate: 4 + this.speed * 0.9 });
       p.hazards(dt, p.r);
     } else {
-      if (I.jumpPressed && !locked) { burnsSfx('artcarHorn'); this.hornT = 0.6; for (const a of g.actors) if (Math.hypot(a.x - this.x, a.z - this.z) < 14 && a.friendly && !a.boss) a.say(['WOOO!', 'ART CAR!', 'Can I get on?!'][Math.floor(Math.random() * 3)], 1.2); }
+      if (I.jumpPressed && !locked) { burnsSfx(this.o.horn || 'artcarHorn'); this.hornT = 0.6; const HL = this.o.hornLines || ['WOOO!', 'ART CAR!', 'Can I get on?!']; for (const a of g.actors) if (Math.hypot(a.x - this.x, a.z - this.z) < 14 && a.friendly && !a.boss) a.say(HL[Math.floor(Math.random() * HL.length)], 1.2); if (this.o.onHorn) this.o.onHorn(g, this); }
       if (I.action && !locked) this.flames(dt); else this.flameT = 0;
       const e = { x: this.x + Math.sin(this.yaw) * this.speed * dt, z: this.z + Math.cos(this.yaw) * this.speed * dt };
       // keep the car out of static geometry (simple: push its centre)

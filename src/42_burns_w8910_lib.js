@@ -81,9 +81,16 @@ const BurnsW8910 = {
     const L = g._bw8910T;
     if (L && L.length) { for (const t of L) { if (t.done) continue; t.t -= dt; if (t.t <= 0) { t.done = true; t.fn(g); } } g._bw8910T = (g._bw8910T || []).filter(t => !t.done); }
     BurnsW8910Haz.update(g, dt);
+    BurnsW8910.hush(g);
   },
   ground(g, x, z, maxY) { return g.world.surface(x, z, maxY === undefined ? 999 : maxY, 0.1, BURNS_W8910_SURF).y; },
   near(g, x, z, r) { const p = g.player; return Math.hypot(p.x - x, p.z - z) < r; },
+  // no ambient NPC chatter during cutscenes (a passing "Back in my day..." bubble would sit on top of the dialog box)
+  hush(g) {
+    const on = !!g.cine;
+    if (on) for (const a of g.actors) if (a.friendly && !a.boss) { if (a.chatT < 1.5) a.chatT = 1.5; if (!g._bw8910Cine && a.bubbleText) { a.bubbleT = 0; a.bubbleText = null; } }
+    g._bw8910Cine = on;
+  },
   // safe spots behind cover from a flash at head h. covers: [{x, z, r}]
   safeSpots(g, h, covers) {
     const out = [], W = g.world;
@@ -185,7 +192,7 @@ const BurnsW8910Haz = {
         const B = W.bounds; h.x = clamp(h.x, B.x0, B.x1); h.z = clamp(h.z, B.z0, B.z1);
         if (h.t > life) { h.dead = true; continue; }
         const rr = h.r * (0.4 + 0.6 * h.grow), gy = W.height(h.x, h.z);
-        if (h.grow > 0.5 && Math.hypot(p.x - h.x, p.z - h.z) < rr + 0.45 && p.y < gy + h.h * 0.55 && !p.dead) {
+        if (!h.harmless && h.grow > 0.5 && Math.hypot(p.x - h.x, p.z - h.z) < rr + 0.45 && p.y < gy + h.h * 0.55 && !p.dead) {
           if (p.hurt(h.dmg, h.x, h.z, 6)) { p.vy = h.giant ? 15 : 12.5; p.grounded = false; g.toast(h.giant ? 'THE BIG ONE GOT YOU!' : 'WHIRLED!'); }
         }
       }
@@ -655,3 +662,6 @@ const BURNS_W8910_ARCH = {
   // arms wide in welcome (greeters, Brother Bubblegum)
   BURNS_ANIMS.w8910welcome = (P, t) => { BURNS_ANIMS.idle(P, t); S(P, B.UARM_L, -0.3, 0, 1.5 + Math.sin(t * 2) * 0.1); S(P, B.UARM_R, -0.3, 0, -1.5 - Math.sin(t * 2) * 0.1); S(P, B.FARM_L, -0.2); S(P, B.FARM_R, -0.2); P.face = 3; };
 })();
+
+/* test hook: lets the scripted playthroughs peek at world state (read-only use) */
+try { if (typeof window !== 'undefined' && window.BRADY_BURNS) window.BRADY_BURNS.w8910 = () => ({ w8: typeof BURNS_W8 !== 'undefined' ? BURNS_W8 : null, w9: typeof BURNS_W9 !== 'undefined' ? BURNS_W9 : null, w10: typeof BURNS_W10 !== 'undefined' ? BURNS_W10 : null }); } catch (e) { /* ignore */ }

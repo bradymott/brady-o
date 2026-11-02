@@ -10,7 +10,7 @@
      alley     Flame Alley           timed run through Camp Combustion's poofer alley
      lights    Bike Light Roundup    8 LED bike lights scattered between bike swarms
      lost      Lost & Found Burners  walk three lost burners home (address practice)
-     tower     Lighthouse of Lost Souls  hidden climb on the open playa
+     rocket    Launch the Retro Rocket   climb the big-art gantry, push the button (city view)
      camp      Home Is Where the Man Is  boss: the Man waits at 7:30 & E (needs all 3 clues)
    Set pieces: the never-ending art car parade circling Brady's block,
    the Fire Conclave rings, Flame Alley.
@@ -70,8 +70,8 @@ BurnsWorlds.register({
     { id: 'lanterns', name: 'Light the Way', token: false, type: 'custom', giver: 'wick', start: 'manual', short: 'Walk with the lamplighters (stay in their light)', marker: { x: -6, z: -90 },
       desc: 'Every night the lamplighters carry lanterns out along 7:00. Walk with them and stay inside their light while they light the way.', hint: 'Lamplighters gather at 7:00 & Esplanade',
       onStart(g) { BURNS_W2.lampStart(g); }, onFail(g) { BURNS_W2.lampReset(g); }, onComplete(g) { BURNS_W2.lampDone(g); } },
-    { id: 'tower', name: 'Lighthouse of Lost Souls', type: 'climb', start: 'trigger', secret: true, short: 'Climb the lighthouse', target: { x: 0, z: 0, r: 3.2, y: 13.6 },
-      desc: 'An art lighthouse on the open playa. Lost souls climb it to look for their camp.', hint: 'Open playa west of the conclave' },
+    { id: 'rocket', name: 'Launch the Retro Rocket', type: 'custom', start: 'trigger', short: 'Climb the gantry, hit LAUNCH', marker: { x: 130, z: -68 },
+      desc: 'A giant retro rocket on the open playa. Climb its gantry for a view of the whole city, then hit the big red button.', hint: 'Open playa, east of the 6:00 promenade' },
     { id: 'camp', name: 'Home Is Where the Man Is', type: 'boss', start: 'auto', silent: true, requires: ['ranger', 'conclave', 'lights'], tokenDirect: true, short: 'Go home: 7:30 & E',
       desc: 'Your note says 7:30 & E. Cross the art car parade and get home.', hint: 'Inside the art car parade loop', lockedDesc: 'Find all three clues first.' }
   ],
@@ -85,7 +85,7 @@ BurnsWorlds.register({
     const M = id => this.missions.find(m => m.id === id);
     { const [x, z] = at(15, 126); const t = M('ranger').target; t.x = x + 3.5; t.z = z + 3.5; }
     S.conclave = { x: 56, z: -84 }; Object.assign(M('conclave').target, S.conclave);
-    S.tower = { x: 18, z: -96 }; Object.assign(M('tower').target, S.tower); M('tower').tokenAt = { x: S.tower.x + 1.6, y: 14.8, z: S.tower.z };
+    S.tower = { x: 18, z: -96 };
     M('camp').marker = { x: CAMP[0], z: CAMP[1] };
     /* ---------------- ground: streets, tyre tracks, open playa ---------------- */
     api.paint((c, P, sc) => {
@@ -195,7 +195,7 @@ BurnsWorlds.register({
       for (const rg of rings) for (let i = 0; i < rg.n; i++) {
         const kind = ['poi', 'staff', 'poi', 'fans'][si % 4];
         S.spinners.push(api.npc(BW.castDef('firespinner', 300 + si, { behavior: 'w2Spinner', name: 'FIRE SPINNER', cx, cz, ring: rg.r, omega: rg.om, phase: i / rg.n * TAU, kind, collide: false, chatter: true,
-          chat: ['Spin it to win it!', 'Mind the poi, honey!', 'Fire is a love language.', 'I can\'t stop. I don\'t know how to stop.', 'Smells like eyebrows!'], x: cx + rg.r, z: cz })));
+          chat: ['Spin it to win it!', 'Mind the poi, honey!', 'Fire is a love language.', 'I can\'t stop. I don\'t know how to stop.', 'Smells like eyebrows!'], x: cx + rg.r, z: cz, tool: kind === 'fans' ? 'fans' : kind === 'staff' ? 'staff' : 'poi' })));
         si++;
       }
       // fire dancers ringing the edge (ambient)
@@ -224,9 +224,10 @@ BurnsWorlds.register({
       api.glowArc(tx + 3.3, 1.6, tz, tx + 1.3, 14.4, tz, 2.5, 9);
       api.light(tx, tz, 14, '#fff0c0', 0.45);
       api.sign('LIGHTHOUSE\nOF LOST SOULS', tx + 5.5, tz + 5, { h: 1.0, yaw: 0.6, style: { bg: '#0a1a2a', fg: '#c8f0ff', glow: '#38f2ff', size: 26, border: '#38f2ff' }, glow: '#38f2ff' });
-      api.trigger({ x: tx, z: tz, r: 9, once: true, onEnter: g2 => { if (g2.missions.state('tower') === 'available') { g2.missions.start('tower'); g2.banner('HIDDEN CHALLENGE', 'Lighthouse of Lost Souls: climb it!', { col: '#38f2ff' }); } } });
       api.pickup('photo', tx - 1.7, 14.5, tz + 0.6, { id: 'p1' });
     }
+    /* ---------------- the Retro Rocket (big art; gantry climb + launch button) ---------------- */
+    W2.placeRocket(api, g, 130, -68);
     /* ---------------- LSD-only: floating jellyfish over the open playa ---------------- */
     {
       api.pickup('bag:lsd', 112, 0.9, -78);
@@ -360,9 +361,9 @@ BurnsWorlds.register({
       for (let i = 0; i < 6; i++) { const [cx, cz] = L(-4 + i * 1.6, 4.6); api.prop('cone', { x: cx, z: cz }); }
       { const [sx, sz] = L(4.6, -1.2); api.sign('SAFETY CAMP\nSAFETY THIRD\n(BUT STILL)', sx, sz, { h: 1.3, yaw, style: { bg: '#e8ff5a', fg: '#1a1a10', size: 24, border: '#1a1a10' } }); }
       { const [sx, sz] = L(-3.4, 2.62); api.sign('CHORE WHEEL\n(LAMINATED)', sx + rx * 0.01, sz + rz * 0.01, { h: 0.5, y: 0.9, post: false, yaw: yaw + 0.4, style: { bg: '#f4f4f0', fg: '#1a1a10', size: 21 } }); }
-      const capSpec = Object.assign(BurnsRig.npcSpec('dpw', 61), { top: { kind: 'button', col: '#4a5a3a' }, vest: 'hivis', led: '#e8ff5a', bottom: { kind: 'cargo', col: '#3a3a30' }, shoes: { kind: 'boots', col: '#1a1a14' }, hat: { kind: 'hardhat', col: '#ffd21a' }, glasses: 'clear', face: 'stern', acc: ['headset', 'toolbelt'], prop: 'clipboard', key: 'w2:captain' });
+      const capLook = BW.engineType('safetycaptain') ? { type: 'safetycaptain', seed: 61 } : { spec: Object.assign(BurnsRig.npcSpec('burner', 61), { top: { kind: 'button', col: '#4a5a3a' }, vest: 'hivis', led: '#e8ff5a', bottom: { kind: 'cargo', col: '#3a3a30' }, shoes: { kind: 'boots', col: '#1a1a14' }, hat: { kind: 'hardhat', col: '#ffd21a' }, glasses: 'clear', face: 'stern', acc: ['headset', 'toolbelt'], prop: 'clipboard', beard: null, goggles: false, key: 'w2:captain' }) };
       const [cx, cz] = L(0.6, 1.8);
-      S.captainDef = api.npc({ id: 'captain', name: 'CAPTAIN SAFETY THIRD', spec: capSpec, x: cx, z: cz, yaw, behavior: 'w2Captain', chatter: false,
+      S.captainDef = api.npc(Object.assign(capLook, { id: 'captain', name: 'CAPTAIN SAFETY THIRD', x: cx, z: cz, yaw, behavior: 'w2Captain', chatter: false,
         talk(g2, a) {
           const st = g2.missions.state('moop');
           const st2 = g2.missions.state('darkwads');
@@ -371,7 +372,7 @@ BurnsWorlds.register({
           else if (st2 === 'available') g2.say(a, ['New assignment. DARKWADS. Unlit pedestrians. Zero lumens. Out on the far streets, walking around in BLACK.', 'You won\'t see them until you\'re face-first in one. Spin or stomp them and stick some glow on them. Four of them. Move out.'], () => g2.missions.start('darkwads'));
           else if (st2 === 'active') g2.say(a, [`${g2.missions.get('darkwads').n} of 4 darkwads illuminated. Your headlamp helps. You\'re welcome.`]);
           else g2.say(a, ['Headlamp: on. Hydration: up. Fun: ...I\'ll schedule some fun. Tuesday. Fourteen hundred hours.']);
-        } });
+        } }));
       api.trigger({ x: qx, z: qz, r: 10, onEnter: g2 => { if (g2.missions.state('moop') === 'available' && !S.capMet && !g2.cine) BURNS_W2.captainLecture(g2, g2.actor('captain')); } });
       // MOOP: litter scattered around the Esplanade
       const MP = [[18, 104], [24, 106], [27, 118], [14, 117], [31, 108], [36, 118], [9, 106], [40, 112], [22, 128], [33, 130]];
@@ -381,8 +382,7 @@ BurnsWorlds.register({
     /* ---------------- a sparkle pony asking strangers for water ---------------- */
     {
       const [x, z] = at(-5, 112);
-      const ponySpec = Object.assign(BurnsRig.npcSpec('sparklepony', 7), { coat: { kind: 'fur', col: '#ff3bd8', trim: '#7af2ff' }, top: { kind: 'crop', col: '#c8a0ff', pattern: 'sequin' }, bottom: { kind: 'shorts', col: '#1a1a24', pattern: 'sequin' }, shoes: { kind: 'furboots', col: '#ffffff' }, hair: { style: 'wig', col: '#7af2ff', hi: '#ffffff' }, glasses: 'heart', acc: ['wings', 'bracelets'], body: { h: 1.02, w: 0.86 }, key: 'w2:pony' });
-      api.npc({ id: 'pony', name: 'GLITTERBOMB', spec: ponySpec, x, z, yaw: Math.PI * 0.9, behavior: 'wander', radius: 2.5,
+      api.npc({ id: 'pony', name: 'GLITTERBOMB', type: 'sparklepony', seed: 7, x, z, yaw: Math.PI * 0.9, behavior: 'wander', radius: 2.5,
         chat: ['Water? Anyone? I take payment in good vibes.', 'I brought three suitcases of costumes. And zero cups.', 'Is that a water bottle or are you just happy to see me?', 'Hydration is a social construct. Kidding. Please. Water.'],
         talk(g2, a) {
           if (a.w2paid) { g2.say(a, ['You\'re my favorite stranger. Today. So far.']); return; }
@@ -404,7 +404,7 @@ BurnsWorlds.register({
       { const [x, z] = at(22, 139); bar(x, z, Math.atan2(W2.C.x - x, W2.C.z - z), 'GRILLED\nCHEESUS', '#d89a2a', { id: 'cheesus', name: 'GRILLED CHEESUS', type: 'burner', seed: 82, lines: ['Grilled cheese at 2 AM is a human right.', 'Take these glow sticks. And this sandwich. You can\'t see the sandwich. It\'s spiritual.'], gift: { kind: 'glowstick', n: 10 } }); }
       { const [x, z] = at(38, 165); bar(x, z, Math.atan2(x - W2.C.x, z - W2.C.z), 'CAMP SIZZLE\nFREE BACON 2 AM', '#a83a2a', { id: 'sizzle', name: 'BACON BRO', type: 'crusty', seed: 83, lines: ['Bacon! It\'s 2 AM! The two best things!', 'Lost? Bacon helps. Bacon always helps. Here, have some glow sticks too.'], gift: { kind: 'glowstick', n: 8 } }); }
       const DRUNK = [[at(5, 138), 1], [at(27, 192), 2], [at(-12, 166), 3], [at(48, 140), 4], [at(19, 216), 5], [at(-20, 140), 6]];
-      for (const [[x, z], i] of DRUNK) api.enemy({ type: R.pick(['burner', 'furcoat', 'crusty']), seed: 500 + i, name: 'CAMP NEIGHBOR', x, z, behavior: 'w2Drunk', hp: 1, drop: 3, afterDefeat: 'sleep', defeatLine: 'I love you, man... zzz', damage: 1 });
+      for (const [[x, z], i] of DRUNK) api.enemy({ type: i % 2 && BW.engineType('partiedtoohard') ? 'partiedtoohard' : R.pick(['burner', 'furcoat']), seed: 500 + i, name: 'CAMP NEIGHBOR', x, z, behavior: 'w2Drunk', hp: 1, drop: 3, afterDefeat: 'sleep', defeatLine: 'I love you, man... zzz', damage: 1 });
       for (const [[x, z], i] of [[at(-5, 196), 1], [at(52, 166), 2]]) api.enemy({ type: 'campLead', seed: 520 + i, x, z, behavior: 'shouter', hp: 2, aggro: 10, taunts: ['WHO TOOK MY GENERATOR?!', 'QUIET HOURS ARE A MYTH!', 'IS THAT YOUR TENT ON MY TENT?!'] });
       api.enemy({ type: 'burner', seed: 530, name: 'GLOW STICK THIEF', x: -40, z: -14, behavior: 'thief', hp: 1, steal: 6 });
     }
@@ -516,7 +516,7 @@ BurnsWorlds.register({
     if (g.missions.isDone('lost')) for (const L of S.lost) { const a = g.actor(L.id); if (a) { a.w2home = true; a.x = L.dx; a.z = L.dz; a.setBehavior('dance'); a.home = { x: a.x, z: a.z, y: 0, yaw: 0 }; } }
     BW.wireGear(g);
     if (g.missions.isDone('darkwads')) for (const a of g.actors) if (a.behName === 'w234Darkwad') a.w234lit = true;
-    const cap = g.actor('captain'); if (cap) BW.attach(cap, BW.attModel('respirator', m => BW.gear.respirator(m)), BURNS_BONES.HEAD);
+    const cap = g.actor('captain'); if (cap && !BW.engineType('safetycaptain')) BW.attach(cap, BW.attModel('respirator', m => BW.gear.respirator(m)), BURNS_BONES.HEAD);
     BW.attach(g.player, BW.attModel('headlamp', m => BW.gear.headlamp(m)), BURNS_BONES.HEAD, () => S.headlamp);
     S.headlamp = g.missions.isDone('moop');
     if (g.missions.isDone('lanterns')) for (const L of S.lamps) { L.lit = true; L.gl.c = L.gl.c0; }
@@ -607,6 +607,76 @@ BurnsWorlds.register({
   }
 });
 
+/* ---------------- the Retro Rocket ----------------
+   Uses the shared big-art module when present (BurnsBigArt.place, see docs/BURNS_BIGART.md);
+   otherwise builds an original stand-in: a retro rocket on a pad with a climbable gantry.
+   Either way the gantry top (S.rocketTop) gets the LAUNCH button and the city-view moment. */
+BURNS_W2.placeRocket = function (api, g, x, z) {
+  const S = BURNS_W2.state, BW = BURNS_W234;
+  let info = null;
+  if (typeof BurnsBigArt !== 'undefined' && BurnsBigArt.kinds && BurnsBigArt.kinds.retroRocket) {
+    try { const P = BurnsBigArt.place(api, g, 'retroRocket', x, z, { rotY: -0.6 }); if (P && P.summit) info = { top: { x: P.summit.x, y: P.summit.y, z: P.summit.z }, view: { x: P.summit.x, y: P.summit.y, z: P.summit.z } }; } catch (e) { info = null; }
+  }
+  if (!info || !info.top) {
+    // stand-in rocket: chrome body with red stripes, round nose, three fins, portholes
+    const prof = [[0, 0.6, '#c8ccd8'], [1.9, 0.6, '#c8ccd8'], [2.3, 2.0, '#d8dce8'], [2.3, 2.0, '#c8202a'], [2.3, 3.2, '#c8202a'], [2.3, 3.2, '#e8ecf4'], [2.25, 9.0, '#e8ecf4'], [2.25, 9.0, '#c8202a'], [2.15, 10.2, '#c8202a'], [2.15, 10.2, '#e8ecf4'], [1.9, 13.0, '#e8ecf4'], [1.2, 15.6, '#e8ecf4'], [0.5, 17.0, '#c8202a'], [0, 17.5, '#c8202a']];
+    api.mesh(x, z, m => {
+      m.color('#4a4a52'); BW.post(m, 0, 0, 0, 4.2, 0.6, { edge: 0.2 });
+      m.color('#e8ecf4').shine(3); m.lathe(prof, { seg: 22 }); m.shine(0);
+      m.color('#3a3a44'); BW.lathe(m, 0, 0.0, 0, [[1.0, 0.6], [1.5, 0.0], [1.5, 0.0]], { seg: 16 });
+      for (let k = 0; k < 3; k++) { const a = k / 3 * TAU; m.push(); m.tf(Math.sin(a) * 2.3, 2.4, Math.cos(a) * 2.3, a); m.color('#c8202a').shine(2); BW.egg(m, 0, 0, 0.9, 0.18, 2.2, 1.3, { seg: 10, rings: 8 }); m.shine(0); m.pop(); }
+      for (let k = 0; k < 3; k++) { const a = k / 3 * TAU + 0.5, y = 6 + k * 2.4; m.color('#9aa0b0').shine(3); BW.ring(m, Math.sin(a) * 2.22, y, Math.cos(a) * 2.22, 0.45, 0.08, { yaw: a, pitch: Math.PI / 2, seg: 14, tseg: 4 }); m.shine(0); m.color('#38f2ff', 0.8); BW.egg(m, Math.sin(a) * 2.2, y, Math.cos(a) * 2.2, 0.38, 0.38, 0.06, { seg: 10, rings: 5 }); m.emissive(0); }
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 4.2, y0: 0, y1: 0.6 }, { t: 'cyl', x: 0, z: 0, r: 2.3, y0: 0.6, y1: 15.5 }], lights: [{ x: 0, y: 17.6, z: 0, s: 2.2, c: '#ff3b5c', blink: 2 }, { x: 0, y: 0, z: 0, s: 0, c: '#ffd890', pool: 14 }] };
+    });
+    // the gantry: a steel frame beside the rocket with switchback platforms up to 15.5 m
+    const gx = x + 7.8, gz = z;
+    api.mesh(gx, gz, m => {
+      m.color('#d8a020');
+      for (const [a, b] of [[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6]]) BW.limb(m, a, 0, b, a, 16.4, b, 0.09, 0.09, { seg: 6 });
+      for (let y = 2; y <= 16; y += 2.8) for (const [a0, b0, a1, b1] of [[-1.6, -1.6, 1.6, -1.6], [1.6, -1.6, 1.6, 1.6], [1.6, 1.6, -1.6, 1.6], [-1.6, 1.6, -1.6, -1.6]]) BW.limb(m, a0, y, b0, a1, y + 1.4, b1, 0.045, 0.045, { seg: 5 });
+      m.color('#3a3a40'); BW.rb(m, 0, 15.5, 0, 4.2, 0.24, 4.2, 0.08); BW.limb(m, -2.1, 15.5, 0, -6.2, 15.5, 0, 0.12);
+      m.color('#e8e8f0').shine(2); for (const [a, b] of [[-2, -2], [2, -2], [2, 2], [-2, 2]]) BW.limb(m, a, 15.6, b, a, 16.6, b, 0.04); BW.ring(m, 0, 16.6, 0, 2.85, 0.045, { seg: 4, tseg: 4, yaw: Math.PI / 4 }); m.shine(0);
+      m.color('#2a2a30'); BW.post(m, 0.9, 15.62, 0.9, 0.22, 0.9); m.color('#ff2a2a', 0.8).shine(3); BW.egg(m, 0.9, 16.6, 0.9, 0.2, 0.12, 0.2, { seg: 12, rings: 6, phi1: Math.PI / 2 }); m.shine(0).emissive(0);
+      return { cols: [{ t: 'box', x: 0, z: 0, hx: 2.1, hz: 2.1, y0: 15.38, y1: 15.62 }, ...[[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6]].map(([a, b]) => ({ t: 'cyl', x: a, z: b, r: 0.1, y0: 0, y1: 16.4, camPass: true })), { t: 'cyl', x: 0.9, z: 0.9, r: 0.24, y0: 15.6, y1: 16.5 }], lights: [{ x: 0.9, y: 16.7, z: 0.9, s: 1.2, c: '#ff2a2a', blink: 4 }, { x: 0, y: 16, z: 0, s: 2.5, c: '#ffe8a0' }] };
+    });
+    // switchback steps winding up the gantry (rise ~1.1 m each)
+    for (let i = 0; i < 13; i++) { const side = Math.floor(i / 4) % 2, k = i % 4, a = (i * 0.5) + 0.2, rr = 3.3; api.roundBox(gx + Math.sin(a) * rr, 0.85 + i * 1.12, gz + Math.cos(a) * rr, 1.5, 0.26, 1.4, ['#d8a020', '#c8c8d0'][i % 2], { yaw: a, r: 0.08 }); void side; void k; }
+    info = { top: { x: gx + 0.9, y: 15.62, z: gz + 0.9 }, view: { x: gx, y: 16.2, z: gz } };
+    api.sign('THE RETRO\nROCKET', x - 5.2, z + 3.2, { h: 1.0, yaw: -0.9, style: { bg: '#1a1a2a', fg: '#ff4a4a', glow: '#ff2a2a', size: 24, border: '#e8ecf4' }, glow: '#ff2a2a' });
+  }
+  S.rocket = { x, z, top: info.top, view: info.view || info.top };
+  api.trigger({ x: info.top.x, z: info.top.z, r: 4.5, y0: info.top.y - 0.6, once: true, onEnter: g2 => BURNS_W2.rocketView(g2) });
+  api.trigger({ x, z, r: 14, once: true, onEnter: g2 => { if (g2.missions.state('rocket') === 'available') { g2.missions.start('rocket'); g2.banner('THE RETRO ROCKET', 'Climb the gantry. Push the big red button.', { col: '#ff4a4a' }); } } });
+  api.light(x, z, 16, '#ffd8a0', 0.4);
+  api.glowArc(x + 11.5, 1.0, z, x + 7.8, 16.4, z, 2.2, 10);
+};
+BURNS_W2.rocketView = function (g) {
+  const S = BURNS_W2.state, R = S.rocket, [hx, hz] = BURNS_W2.CAMP, p = g.player;
+  const c0 = { x: R.view.x, y: R.view.y + 2.4, z: R.view.z, tx: R.x, ty: 14, tz: R.z, fov: 0.9 }, c1 = { x: R.view.x, y: R.view.y + 2.6, z: R.view.z, tx: hx, ty: 0, tz: hz, fov: 0.7 };
+  g.cutscene([
+    { cam: c0 }, { cam: { from: c0, to: c1, dur: 2.4 } },
+    { say: ['brady', ['Whoa. You can see the whole city from up here.', 'And way out there... a ring of art cars going around and around one block. Somewhere around seven-something.', 'Lumen said the parade goes round and round. That has to be near our camp!']] },
+    { do: g2 => { g2.camYaw = p.yaw; g2.snapCam = true; g2.banner('CITY VIEW', 'The parade circles a block near 7:30. Now: the big red button.', { col: '#ffe24a' }); } }
+  ]);
+  g.interactables = g.interactables || [];
+  g.interactables.push({ x: R.top.x, z: R.top.z, y: R.top.y, r: 2.2, label: 'LAUNCH', when: g2 => g2.missions.state('rocket') === 'active', fn: g2 => BURNS_W2.rocketLaunch(g2) });
+};
+BURNS_W2.rocketLaunch = function (g) {
+  const S = BURNS_W2.state, R = S.rocket;
+  if (S.launching) return; S.launching = true;
+  const c0 = { x: R.x + 22, y: 6, z: R.z + 16, tx: R.x, ty: 8, tz: R.z, fov: 0.9 };
+  g.cutscene([
+    { cam: c0 }, { sfx: 'select' },
+    { banner: ['3', '', { col: '#ff4a4a', big: true, dur: 0.9 }] }, { wait: 0.9 },
+    { banner: ['2', '', { col: '#ffb02a', big: true, dur: 0.9 }] }, { wait: 0.9 },
+    { banner: ['1', '', { col: '#ffe24a', big: true, dur: 0.9 }] }, { wait: 0.9 },
+    { do: g2 => { S.launchT = 0; burnsSfx('flame_jet'); burnsSfx('crowd_cheer'); } },
+    { until: g2 => { S.launchT += 1 / 120; g2.shake(0.25); for (let i = 0; i < 4; i++) g2.fx.fire(R.x + (Math.random() - 0.5) * 2, 0.6, R.z + (Math.random() - 0.5) * 2, 3); if (Math.random() < 0.3) g2.fx.smoke(R.x + (Math.random() - 0.5) * 6, 0.5, R.z + (Math.random() - 0.5) * 6, 2, '#e8e0f0'); if (Math.random() < 0.06) { g2.fx.firework(R.x + (Math.random() - 0.5) * 10, 20 + Math.random() * 8, R.z + (Math.random() - 0.5) * 10, BURNS_NEON[Math.floor(Math.random() * 7)]); burnsSfx('firework_burst', { vol: 0.5 }); } return S.launchT > 3.2; } },
+    { banner: ['LIFTOFF!', '(Emotionally. It\'s art. It stays here.)', { col: '#ffe24a', big: true }] },
+    { do: g2 => { S.launching = false; g2.missions.complete('rocket', { x: R.top.x - 1.4, y: R.top.y + 1.2, z: R.top.z - 1.2 }); } }
+  ]);
+};
+
 /* ---------------- the note ---------------- */
 BURNS_W2.updateNote = function (g) {
   const W2 = BURNS_W2, n = W2.clues(g), note = W2.NOTE[n];
@@ -632,10 +702,10 @@ BURNS_W2.lampStart = function (g) {
 BURNS_W2.lampStep = function (g, dt) {
   const S = BURNS_W2.state, W = S.lampWalk, R = S.lampRoute, p = g.player, lead = g.actor('wick');
   if (!lead) return;
-  const t = R[Math.min(W.i, R.length - 1)], d = lead.moveTo(t[0], t[1], 1.25, dt, 0.4);
-  lead.ch.play('walk', { rate: 0.75 });
+  const t = R[Math.min(W.i, R.length - 1)], d = lead.moveTo(t[0], t[1], 1.7, dt, 0.4);
+  lead.ch.play('walk', { rate: 0.9 });
   if (d < 0.6 && W.i < R.length - 1) W.i++;
-  ['lamp1', 'lamp2'].forEach((id, k) => { const a = g.actor(id); if (!a) return; const bx = lead.x - Math.sin(lead.yaw) * (2 + k * 1.8) + Math.cos(lead.yaw) * (k ? 1 : -1), bz = lead.z - Math.cos(lead.yaw) * (2 + k * 1.8) - Math.sin(lead.yaw) * (k ? 1 : -1); const dd = a.moveTo(bx, bz, 1.6, dt, 0.3); a.ch.play(dd > 0.5 ? 'walk' : 'idle', { rate: 0.75 }); });
+  ['lamp1', 'lamp2'].forEach((id, k) => { const a = g.actor(id); if (!a) return; const bx = lead.x - Math.sin(lead.yaw) * (2 + k * 1.8) + Math.cos(lead.yaw) * (k ? 1 : -1), bz = lead.z - Math.cos(lead.yaw) * (2 + k * 1.8) - Math.sin(lead.yaw) * (k ? 1 : -1); const dd = a.moveTo(bx, bz, 2.1, dt, 0.3); a.ch.play(dd > 0.5 ? 'walk' : 'idle', { rate: 0.75 }); });
   for (const L of S.lamps) if (!L.lit && Math.hypot(L.x - lead.x, L.z - lead.z) < 5.5) { L.lit = true; L.gl.c = L.gl.c0; g.fx.burst(L.x, 3.1, L.z, 'spark', 8, '#ffcf7a'); burnsSfx('pick', { vol: 0.35, pitch: 1.4 }); }
   const dp = Math.hypot(p.x - lead.x, p.z - lead.z);
   W.far = dp > 11 ? W.far + dt : 0;
@@ -674,7 +744,7 @@ BURNS_W2.lot = function (api, x, z, yaw, seed, force, allowNpc) {
   const L = (a, b) => [x + rx * a + fx * b, z + rz * a + fz * b];
   const kind = force || r.weighted([['rv', 3], ['dome', 2], ['tents', 1.6], ['lounge', 1.6], ['art', 1], ['sound', 0.6], ['flags', 0.8]]);
   let npcs = 0;
-  const crowd = (a, b, n, beh) => { if (!allowNpc || r() > 0.55) return; const [cx, cz] = L(a, b); for (let i = 0; i < n; i++) { const t = r() * TAU, d = r() * 1.8; api.npc({ type: r.pick(['burner', 'burner', 'furcoat', 'tutu', 'ledsuit', 'sparklepony', 'crusty']), seed: Math.floor(r() * 1e6), x: cx + Math.cos(t) * d, z: cz + Math.sin(t) * d, yaw: r() * TAU, behavior: beh || r.pick(['dance', 'idle', 'dance', 'sit', 'wander']), style: Math.floor(r() * 6), radius: 3, ambient: true }); npcs++; } };
+  const crowd = (a, b, n, beh) => { if (!allowNpc || r() > 0.55) return; const [cx, cz] = L(a, b); for (let i = 0; i < n; i++) { const t = r() * TAU, d = r() * 1.8; api.npc({ type: r.pick(['burner', 'burner', 'furcoat', 'tutu', 'ledsuit', 'sparklepony', 'burner']), seed: Math.floor(r() * 1e6), x: cx + Math.cos(t) * d, z: cz + Math.sin(t) * d, yaw: r() * TAU, behavior: beh || r.pick(['dance', 'idle', 'dance', 'sit', 'wander']), style: Math.floor(r() * 6), radius: 3, ambient: true }); npcs++; } };
   const neon = () => r.pick(BURNS_NEON);
   if (kind === 'rv') {
     const [vx, vz] = L(r.range(-1.5, 1.5), -2.6);
@@ -896,7 +966,7 @@ BURNS_W2.intro = function (g) {
   p.locked = true;
   g.cutscene([
     { cam: { x: 40, y: 48, z: 60, tx: 80, ty: 0, tz: -60, fov: 0.95 } },
-    { banner: ['WORLD 2', 'FINDING CAMP · THE CITY AT NIGHT', { col: '#ff4fd8', big: true, dur: 3 }] },
+    { banner: [BurnsWorlds.label ? BurnsWorlds.label(2) : 'WORLD 2', 'FINDING CAMP · THE CITY AT NIGHT', { col: '#ff4fd8', big: true, dur: 3 }] },
     { cam: { from: { x: 40, y: 48, z: 60, tx: 80, ty: 0, tz: -60, fov: 0.95 }, to: { x: 86, y: 3.2, z: -52, tx: 80, ty: 1.6, tz: -62, fov: 0.8 }, dur: 4.2 } },
     { say: ['brady', ['Rule number one on the playa: if you get separated, meet at camp.', 'Chinka wrote our address on a napkin. Our camp is at...']] },
     { do: g2 => { g2.banner('THE NOTE', '?:?? & ?', { col: '#ffe24a', big: true, dur: 3 }); burnsSfx('map_open', null, 'secret'); } },
@@ -949,3 +1019,6 @@ BURNS_W2.bossDefeated = function (g) {
     ], g2 => g2.finishWorld());
   });
 };
+
+/* test/debug access (the bundle is one IIFE) */
+try { (window.BRADY_W234 = window.BRADY_W234 || {}).w2 = BURNS_W2; } catch (e) { /* no window */ }

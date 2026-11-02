@@ -15,7 +15,7 @@
    ============================================================ */
 
 const BURNS_W8 = {
-  SPAWN: { x: 2.5, z: 128 }, CAR: { x: 8, z: 131 },
+  SPAWN: { x: -2.5, z: 125 }, CAR: { x: 9.5, z: 133 },
   LINE_END: { x: -12, z: 97 }, BAY: { x: 7.1, z: 0.4 }, PUMP3: { x: 4.75, z: 0.4 },
   YARD: { x: 0, z: -118, r: 30 }, GATE: { x: 0, z: -86 },
   TANK: { x: -58, z: -30, r: 6, h: 12 },
@@ -134,7 +134,7 @@ BurnsWorlds.register({
   sky: BURNS_W8_SKY, sky2: BURNS_W8_SKY2, tod: 0,
   music: 'burns_w8',
   bounds: [-150, -175, 150, 150],
-  spawn: { x: 2.5, y: 0, z: 128, yaw: Math.PI },
+  spawn: { x: -2.5, y: 0, z: 125, yaw: Math.PI },
   ground: { base: '#d6aa7c', crack: 0.32, mottle: 0.38, res: 0.5 },
   dust: 1.4,
   missions: [
@@ -924,7 +924,7 @@ BURNS_W8.rustyUpdate = function (a, g, dt) {
         g.fx.burst(fx, 2.5, fz, 'spark', 30, '#ffd890'); g.fx.dust(fx, 0.5, fz, 30);
         a.say(burnsW8910Pick(['MY BACK!', 'THAT CONTAINER WAS THERE BEFORE ME!', 'WHO PUT THAT THERE?! ...I PUT THAT THERE.']), 2);
         g.warn('HE\'S STUCK! SPIN OR STOMP RUSTY!', 2.2);
-      } else if (D.t > 3.2) { D.st = 'brake'; D.t = 0; }
+      } else if (D.t > 4.6) { D.st = 'brake'; D.t = 0; }
       break;
     }
     case 'brake': T.speed = approach(T.speed, 0, dt * 20); T.x += Math.sin(D.dir) * T.speed * dt; T.z += Math.cos(D.dir) * T.speed * dt; if (T.speed <= 0) { D.st = 'idle'; D.t = 0; } break;

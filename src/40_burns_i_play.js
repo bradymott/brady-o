@@ -806,7 +806,10 @@ class BurnsPlayScene {
       if (d2 > 115 * 115) continue;
       if (!BurnsM.sphereVisible(P, a.x, a.y + 1, a.z, 2 * a.scale)) continue;
       a.draw(R); a.ch.update(vdt * this.slow); a.ch.compute();
-      R.skin(a.model.geo, a.ch.bones, a.ch.nb, a.ch.tint, a.ch.face, a.ch.rim);
+      if (a.beh.draw) a.beh.draw(a, this, R);           // per-frame behaviour effects (fire, glints, lights)
+      if (a.cloak) continue;                             // e.g. a darkwad in the dark: logic runs, nothing drawn
+      // distant characters use the low-detail model
+      R.skin(d2 > BURNS_FAR_D2 && a.model.far ? a.model.far : d2 > BURNS_LOD_D2 && a.model.lod ? a.model.lod : a.model.geo, a.ch.bones, a.ch.nb, a.ch.tint, a.ch.face, a.ch.rim);
       a._vis = true;
     }
     for (const b of this.bosses) { if (!b.ch || b.hidden) continue; R.skin(b.model.geo, b.ch.bones, b.ch.nb, b.hurtTint || null, b.ch.face, 0.25); if (b.chinka && b.showChinka !== false) R.skin(b.chinka.model.geo, b.chinka.bones, b.chinka.nb, null, b.chinka.face, 0.5); }
@@ -928,6 +931,8 @@ class BurnsPlayScene {
 }
 
 /* ---------------- scene helpers ---------------- */
+const BURNS_LOD_D2 = 16 * 16;   // characters beyond 16 m from the camera draw their LOD model
+const BURNS_FAR_D2 = 45 * 45;   // ...and beyond 45 m the crowd LOD (no small accessories)
 const BurnsScenes = {
   play(worldId, opts) { const s = new BurnsPlayScene(worldId, opts); Game.setScene(s); return s; },
   releaseWorld(scene) {

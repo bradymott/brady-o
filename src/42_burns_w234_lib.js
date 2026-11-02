@@ -199,7 +199,7 @@ const BURNS_W234 = {
 /* ---------- cast: the user's burner figures (stand-ins until the engine ships the types) ----------
    BURNS_W234.castDef(kind, seed, def) -> an actor def with the look; gear attaches in wireGear(g).
    If the engine knows the type (BURNS_LINES[type] exists), the engine look is used instead. */
-BURNS_W234.engineType = function (type) { try { return !!(BURNS_LINES[type] && BurnsRig.npcSpec(type, 1).kind === type); } catch (e) { return false; } };
+BURNS_W234.engineType = function (type) { try { return typeof BURNS_NPC_TYPES !== 'undefined' && !!BURNS_NPC_TYPES[type]; } catch (e) { return false; } };
 BURNS_W234.CAST = {
   firespinner(seed) {
     const s = Object.assign(BurnsRig.npcSpec('burner', seed), { top: { kind: 'crop', col: '#6a4a2e', pattern: 'sequin' }, bottom: { kind: 'kilt', col: '#ff7a2a', pattern: 'flames' }, shoes: { kind: 'boots', col: '#c8a070' }, hat: null, goggles: false, glasses: null, coat: null, led: null, paint: null, prop: null, hair: { style: 'buzz', col: '#2a1a12', hi: '#3a2a1a' }, acc: ['bracelets'], body: { h: 1.0, w: 0.95 }, key: 'w234:fire:' + (seed % 4) });
@@ -237,7 +237,7 @@ BURNS_W234.CAST = {
 BURNS_W234.castDef = function (kind, seed, def) {
   const engineKind = { firespinner: 'firespinner', darkwad: 'darkwad', cop: 'undercovercop', furry: 'furry', greeterW: 'greeter_f', greeterM: 'greeter_m', healer: 'healer', lamplighter: 'lamplighter' }[kind];
   def = def || {};
-  if (engineKind && this.engineType(engineKind)) { def.type = engineKind; def.seed = seed; return def; }
+  if (engineKind && this.engineType(engineKind)) { def.type = engineKind; def.seed = seed; if (kind === 'darkwad') def.w234gear = [['litNecklace', BURNS_BONES.CHEST, a => a.w234lit]]; return def; }
   const c = this.CAST[kind](seed);
   def.spec = c.spec; def.w234gear = c.gear; def.type = def.type || c.spec.kind; def.seed = seed;
   return def;
@@ -444,6 +444,7 @@ BURNS_ANIMS.w234lounge = (P, t) => {
       else if (v === 3) { m.color('#ffd84a', 0.6).shine(3); BURNS_W234.egg(m, 0, 0, 0, 0.14, 0.14, 0.02, { seg: 12, rings: 4 }); m.shine(0).emissive(0); }
       else { m.color('#1a1a1e'); BURNS_W234.tube(m, [[-0.2, -0.1, 0], [0, 0.05, 0], [0.18, 0.12, 0.04]], 0.018); }
     },
+    boot(m) { const W = BURNS_W234; m.color('#d8dce8').shine(3); W.rb(m, 0, -0.22, 0.04, 0.24, 0.22, 0.44, 0.08); W.post(m, 0, -0.12, -0.06, 0.12, 0.5, { edge: 0.05 }); m.color('#ff9ad8'); W.ring(m, 0, 0.38, -0.06, 0.12, 0.03, { seg: 12, tseg: 4 }); m.shine(0); },
     wristband(m) { m.color('#ff4fd8', 0.5); W.ring(m, 0, 0, 0, 0.18, 0.04, { roll: Math.PI / 2, seg: 14, tseg: 5 }); m.emissive(0); }
   };
   BURNS_PICKUP_MESH.item = function (m, o) {

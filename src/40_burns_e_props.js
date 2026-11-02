@@ -13,18 +13,23 @@
 
 const BurnsProps = {
   rngFor(o) { return mulberry32(o && o.seed !== undefined ? o.seed : 1234); },
+  // a real tyre: rounded rubber torus, sidewall, shiny hub with a cap (axle along X)
   wheel(m, x, y, z, r, w, col) {
+    const tr = Math.min(w * 0.5, r * 0.3), lo = m.lo;
     m.push(); m.tf(x, y, z, 0, 0, Math.PI / 2);
-    m.color(col || '#18181c'); m.cyl(0, -w / 2, 0, r, r, w, 7, {});
-    m.color('#8a8a92'); m.cyl(0, -w / 2 - 0.01, 0, r * 0.45, r * 0.45, w + 0.02, 6, {});
-    m.pop();
+    m.color(col || '#1c1c20').shine(1);
+    m.push(); m.tf(0, 0, 0, 0, 0, 0, 1, w / (2 * tr), 1); m.torus(0, 0, 0, r - tr, tr, { seg: lo ? 10 : 16, tseg: lo ? 5 : 8 }); m.pop();
+    m.shine(0); m.color('#26262c'); m.cyl(0, -w * 0.4, 0, r - tr, r - tr, w * 0.8, 12, { caps: false });
+    m.color('#b8bcc8').shine(3); m.roundCyl(0, -w * 0.36, 0, r * 0.52, w * 0.72, Math.min(r * 0.1, w * 0.3), { seg: lo ? 8 : 12 });
+    m.color('#6a6e78'); m.roundCyl(0, -w * 0.4, 0, r * 0.17, w * 0.8, r * 0.05, { seg: 8 });
+    m.shine(0); m.pop();
   },
   win(m, x, y, z, w, h, side, lit, rng) {
-    // a window on an X-facing side (side = +1 / -1), slightly proud of the surface
+    // a window on an X-facing side (side = +1 / -1), slightly proud of the surface; glass is glossy
     const glow = lit && rng && rng() < 0.55;
-    m.color(glow ? '#ffc070' : '#1c2433', glow ? 0.85 : 0.04);
-    m.box(x + side * 0.012, y, z, 0.03, h, w);
-    m.emissive(0);
+    m.color(glow ? '#ffc070' : '#1c2433', glow ? 0.85 : 0.04).shine(glow ? 0 : 3);
+    m.roundBox(x + side * 0.012, y, z, 0.03, h, w, 0.012, { k: 1, m: 1 });
+    m.emissive(0).shine(0);
   },
   // swoosh decal along a side
   sideDecal(m, x, y, z, len, h, side, reg) {
@@ -48,10 +53,10 @@ const BurnsProps = {
     const L = o.len || 9 + r() * 1.5, W = 2.5, H = o.h || 3.3, col = o.col || r.pick(['#f2ece0', '#ece6da', '#f4f4f0', '#e8e0cc']);
     const zf = L / 2, zb = -L / 2, cab = zf - 2.2;
     m.color('#26262c'); m.box(0, 0.48, 0, W - 0.25, 0.32, L - 0.5);
-    m.color(col); m.bbox(0, (0.72 + H) / 2, (cab + zb) / 2, W, H - 0.72, cab - zb, 0.14);
-    m.bbox(0, (2.3 + H) / 2, (cab + zf - 0.6) / 2, W - 0.06, H - 2.3, zf - 0.6 - cab, 0.3);
-    m.color(o.cabCol || col); m.bbox(0, 1.5, cab + 0.65, W - 0.1, 1.6, 1.3, 0.14);
-    m.bbox(0, 1.08, zf - 0.45, W - 0.2, 0.72, 0.9, 0.18);
+    m.color(col).shine(1); m.bbox(0, (0.72 + H) / 2, (cab + zb) / 2, W, H - 0.72, cab - zb, 0.42);
+    m.bbox(0, (2.3 + H) / 2, (cab + zf - 0.6) / 2, W - 0.06, H - 2.3, zf - 0.6 - cab, 0.38);
+    m.color(o.cabCol || col); m.bbox(0, 1.5, cab + 0.65, W - 0.1, 1.6, 1.3, 0.4);
+    m.bbox(0, 1.08, zf - 0.45, W - 0.2, 0.72, 0.9, 0.28); m.shine(0);
     m.color('#1a2232', 0.05); m.box(0, 1.85, cab + 1.31, W - 0.35, 0.7, 0.04); m.box(W / 2 + 0.005, 1.85, cab + 0.8, 0.03, 0.6, 0.8); m.box(-W / 2 - 0.005, 1.85, cab + 0.8, 0.03, 0.6, 0.8); m.emissive(0);
     m.color('#2a2a30'); m.box(0, 1.05, zf + 0.01, 1.2, 0.35, 0.04); m.box(0, 0.62, zf + 0.05, W - 0.1, 0.22, 0.12);
     m.color('#fff4d0', 1); m.box(0.85, 1.12, zf + 0.02, 0.32, 0.18, 0.04); m.box(-0.85, 1.12, zf + 0.02, 0.32, 0.18, 0.04);
@@ -91,10 +96,10 @@ const BurnsProps = {
     const L = 6.2, W = 2.2, col = o.col || r.pick(['#a83a2a', '#2a4a8a', '#e8e0d0', '#3a6a3a', '#5a5a64']), shell = o.shell || r.pick(['#e8e4dc', '#d8d0c0', '#f4f0e8']);
     const zf = L / 2, zb = -L / 2;
     m.color('#26262c'); m.box(0, 0.42, 0, W - 0.2, 0.3, L - 0.4);
-    m.color(col); m.bbox(0, 0.95, zf - 0.9, W, 0.75, 1.8, 0.15); m.bbox(0, 1.45, zf - 2.3, W - 0.05, 1.3, 1.4, 0.15);
+    m.color(col).shine(1); m.bbox(0, 0.95, zf - 0.9, W, 0.75, 1.8, 0.28); m.bbox(0, 1.45, zf - 2.3, W - 0.05, 1.3, 1.4, 0.32);
     m.color('#1a2232', 0.04); m.box(0, 1.75, zf - 1.62, W - 0.3, 0.5, 0.05); m.emissive(0);
     m.color(col); m.box(0, 0.95, (zb + zf - 3) / 2, W, 0.75, zf - 3 - zb);
-    m.color(shell); m.bbox(0, 1.95, (zb + zf - 2.95) / 2, W + 0.15, 1.6, zf - 2.95 - zb + 0.2, 0.2);
+    m.color(shell); m.bbox(0, 1.95, (zb + zf - 2.95) / 2, W + 0.15, 1.6, zf - 2.95 - zb + 0.2, 0.4); m.shine(0);
     this.win(m, (W + 0.15) / 2, 2.1, (zb + zf - 3) / 2, 1.2, 0.5, 1, true, r); this.win(m, -(W + 0.15) / 2, 2.1, (zb + zf - 3) / 2, 1.2, 0.5, -1, true, r);
     m.color('#fff4d0', 1); m.box(0.7, 1.0, zf + 0.01, 0.3, 0.16, 0.04); m.box(-0.7, 1.0, zf + 0.01, 0.3, 0.16, 0.04);
     m.color('#ff2a2a', 1); m.box(0.85, 1.0, zb - 0.01, 0.18, 0.25, 0.04); m.box(-0.85, 1.0, zb - 0.01, 0.18, 0.25, 0.04); m.emissive(0);
@@ -112,8 +117,8 @@ const BurnsProps = {
     const L = o.len || 8.2, W = 2.5, H = 3.8, col = o.col || r.pick(['#f4f4f0', '#ff8a1a', '#f4f4f0', '#e8e8e0']), cabCol = o.cabCol || r.pick(['#f4f4f0', '#c8202a', '#2a4a9a']);
     const zf = L / 2, zb = -L / 2, boxF = zf - 2.5;
     m.color('#26262c'); m.box(0, 0.5, 0, W - 0.3, 0.32, L - 0.4);
-    m.color(col); m.bbox(0, (0.8 + H) / 2, (boxF + zb) / 2, W, H - 0.8, boxF - zb, 0.08);
-    m.color(cabCol); m.bbox(0, 1.55, boxF + 1.15, W - 0.1, 1.9, 1.9, 0.2);
+    m.color(col); m.bbox(0, (0.8 + H) / 2, (boxF + zb) / 2, W, H - 0.8, boxF - zb, 0.2);
+    m.color(cabCol).shine(1); m.bbox(0, 1.55, boxF + 1.15, W - 0.1, 1.9, 1.9, 0.45); m.shine(0);
     m.color('#1a2232', 0.04); m.box(0, 2.05, boxF + 2.11, W - 0.4, 0.75, 0.04); m.box(W / 2 - 0.04, 2.0, boxF + 1.4, 0.04, 0.6, 0.8); m.box(-W / 2 + 0.04, 2.0, boxF + 1.4, 0.04, 0.6, 0.8); m.emissive(0);
     m.color('#2a2a30'); m.box(0, 0.75, zf + 0.02, W - 0.2, 0.25, 0.12); m.box(0, 1.15, zf - 0.03, 1.2, 0.4, 0.04);
     m.color('#fff4d0', 1); m.box(0.85, 1.2, zf + 0.01, 0.3, 0.2, 0.04); m.box(-0.85, 1.2, zf + 0.01, 0.3, 0.2, 0.04);
@@ -137,8 +142,8 @@ const BurnsProps = {
     o = o || {}; const r = this.rngFor(o);
     const L = 4.6, W = 1.9, col = o.col || r.pick(['#c8202a', '#2a5ac8', '#f4f4f0', '#1a1a1e', '#8a8a92', '#e8b020', '#3a8a5a', '#6a2a8a']);
     const zf = L / 2, zb = -L / 2;
-    m.color(col); m.bbox(0, 0.68, 0, W, 0.62, L, 0.18);
-    m.bbox(0, 1.22, -0.25, W - 0.2, 0.5, 2.3, 0.2);
+    m.color(col).shine(2); m.bbox(0, 0.68, 0, W, 0.62, L, 0.26);
+    m.bbox(0, 1.22, -0.25, W - 0.2, 0.5, 2.3, 0.26); m.shine(0);
     m.color('#1a2232', 0.05); m.box(0, 1.22, 0.92, W - 0.35, 0.4, 0.05); m.box(0, 1.22, -1.42, W - 0.35, 0.36, 0.05); m.box(W / 2 - 0.09, 1.24, -0.25, 0.03, 0.34, 2.0); m.box(-W / 2 + 0.09, 1.24, -0.25, 0.03, 0.34, 2.0); m.emissive(0);
     m.color('#fff4d0', 1); m.box(0.65, 0.78, zf + 0.01, 0.35, 0.14, 0.04); m.box(-0.65, 0.78, zf + 0.01, 0.35, 0.14, 0.04);
     m.color('#ff2a2a', 1); m.box(0.7, 0.8, zb - 0.01, 0.3, 0.14, 0.04); m.box(-0.7, 0.8, zb - 0.01, 0.3, 0.14, 0.04); m.emissive(0);
@@ -158,8 +163,8 @@ const BurnsProps = {
     const L = 11, W = 2.5, H = 3.1, zf = L / 2, zb = -L / 2;
     const base = o.col || r.pick(['#e8b020', '#9a6bff', '#3aa0a0', '#ff4f8a']);
     m.color('#26262c'); m.box(0, 0.5, 0, W - 0.3, 0.3, L - 0.5);
-    m.color(base); m.bbox(0, (0.75 + H) / 2, -0.4, W, H - 0.75, L - 0.8, 0.2);
-    m.bbox(0, 1.1, zf - 0.6, W - 0.1, 0.75, 1.2, 0.2);
+    m.color(base).shine(1); m.bbox(0, (0.75 + H) / 2, -0.4, W, H - 0.75, L - 0.8, 0.45);
+    m.bbox(0, 1.1, zf - 0.6, W - 0.1, 0.75, 1.2, 0.3); m.shine(0);
     // psychedelic panels
     for (let i = 0; i < 7; i++) { const z = zb + 0.9 + i * 1.35; m.color(BURNS_NEON[(i + (o.seed || 0)) % 7]); m.box(W / 2 + 0.01, 1.3, z, 0.02, 0.55, 1.1); m.box(-W / 2 - 0.01, 1.3, z, 0.02, 0.55, 1.1); }
     for (let i = 0; i < 7; i++) { const z = zb + 0.9 + i * 1.35; this.win(m, W / 2, 2.25, z, 1.0, 0.6, 1, true, r); this.win(m, -W / 2, 2.25, z, 1.0, 0.6, -1, true, r); }
@@ -183,7 +188,7 @@ const BurnsProps = {
     o = o || {}; const r = this.rngFor(o);
     const tL = 7, W = 2.4, H = 2.9;
     m.push(); m.tf(0, 0, -2.6);
-    m.color('#c8ccd4'); m.bbox(0, (0.5 + H) / 2 + 0.1, 0, W, H - 0.5, tL, 0.7);
+    m.color('#c8ccd4').shine(3); m.bbox(0, (0.5 + H) / 2 + 0.1, 0, W, H - 0.5, tL, 0.8); m.shine(0);
     m.color('#9aa0aa'); for (let y = 1.0; y < H; y += 0.45) m.box(0, y, 0, W + 0.02, 0.03, tL - 1.2);
     this.win(m, W / 2, 2.0, 1.5, 1.2, 0.5, 1, true, r); this.win(m, -W / 2, 2.0, 1.5, 1.2, 0.5, -1, true, r); this.win(m, W / 2, 2.0, -1.5, 1.0, 0.5, 1, true, r);
     m.color('#26262c'); m.box(0, 0.35, 0, W - 0.3, 0.2, tL - 1);
@@ -193,7 +198,7 @@ const BurnsProps = {
     m.pop();
     m.push(); m.tf(0, 0, 3.6);
     const tc = r.pick(['#2a2a30', '#8a1a1a', '#e8e8e8', '#2a4a7a']);
-    m.color(tc); m.bbox(0, 0.85, 0, 2.1, 0.7, 5.2, 0.15); m.bbox(0, 1.55, 0.35, 1.95, 0.7, 2.0, 0.2);
+    m.color(tc).shine(2); m.bbox(0, 0.85, 0, 2.1, 0.7, 5.2, 0.26); m.bbox(0, 1.55, 0.35, 1.95, 0.7, 2.0, 0.28); m.shine(0);
     m.color('#1a2232', 0.04); m.box(0, 1.6, 1.36, 1.7, 0.5, 0.04); m.emissive(0);
     m.color('#fff4d0', 1); m.box(0.7, 0.95, 2.61, 0.3, 0.15, 0.04); m.box(-0.7, 0.95, 2.61, 0.3, 0.15, 0.04); m.emissive(0);
     for (const wz of [1.7, -1.7]) { this.wheel(m, 0.95, 0.4, wz, 0.4, 0.28); this.wheel(m, -0.95, 0.4, wz, 0.4, 0.28); }
@@ -208,7 +213,7 @@ const BurnsProps = {
   van(m, o) {
     o = o || {}; const r = this.rngFor(o);
     const L = 5.8, W = 2.05, H = 2.6, col = o.col || r.pick(['#f4f4f0', '#8a9aa0', '#3a3a40', '#c8a878']), zf = L / 2, zb = -L / 2;
-    m.color(col); m.bbox(0, (0.5 + H) / 2, -0.35, W, H - 0.5, L - 0.7, 0.2); m.bbox(0, 0.9, zf - 0.45, W - 0.1, 0.8, 0.9, 0.25);
+    m.color(col).shine(1); m.bbox(0, (0.5 + H) / 2, -0.35, W, H - 0.5, L - 0.7, 0.42); m.bbox(0, 0.9, zf - 0.45, W - 0.1, 0.8, 0.9, 0.32); m.shine(0);
     m.color('#1a2232', 0.04); m.box(0, 1.75, zf - 0.72, W - 0.3, 0.7, 0.04); this.win(m, W / 2, 1.85, 0.2, 1.4, 0.5, 1, true, r); this.win(m, -W / 2, 1.85, 0.2, 1.4, 0.5, -1, true, r); m.emissive(0);
     m.color('#fff4d0', 1); m.box(0.7, 0.95, zf + 0.01, 0.28, 0.14, 0.04); m.box(-0.7, 0.95, zf + 0.01, 0.28, 0.14, 0.04); m.color('#ff2a2a', 1); m.box(0.85, 1.2, zb + 0.34, 0.12, 0.4, 0.04); m.box(-0.85, 1.2, zb + 0.34, 0.12, 0.4, 0.04); m.emissive(0);
     for (const wz of [zf - 1.0, zb + 1.2]) { this.wheel(m, W / 2 - 0.12, 0.38, wz, 0.38, 0.24); this.wheel(m, -W / 2 + 0.12, 0.38, wz, 0.38, 0.24); }
@@ -417,6 +422,53 @@ const BurnsProps = {
     const cols = [{ t: 'box', x: 0, z: 0, hx: W / 2, hz: L / 2, y0: 0, y1: H + 0.05, cover: true }, { t: 'box', x: 0, z: -0.5, hx: 1.4, hz: 1.6, y0: H, y1: H + 3.2 }];
     return { cols, lights: [{ x: 0, y: H + 2.2, z: -0.5, s: 4, c: o.sculpt || '#38c8ff' }], top: H + 0.05, len: L, w: W, poofers: [[W / 2 - 0.5, H + 1.4, -L / 2 + 0.8], [-W / 2 + 0.5, H + 1.4, -L / 2 + 0.8]], seat: [0, H + 0.1, L / 2 - 1.6] };
   },
+  // a sticker-covered old wooden trunk (crusty's camp)
+  trunk(m, o) {
+    o = o || {}; const W = 0.95, H = 0.6, D = 0.55, st = BURNS_ATLAS.pattern('stickers'), wd = BURNS_ATLAS.pattern('wood');
+    m.color('#7a5230'); m.roundBox(0, H * 0.42, 0, W, H * 0.84, D, 0.04, { uv: st });
+    m.color('#6a4426'); m.push(); m.tf(0, H * 0.84, 0); m.lathe([[D / 2, 0], [D / 2 - 0.01, 0.08], [D * 0.38, 0.14], [0, 0.16]], { seg: 12, sx: W / D, theta0: -Math.PI / 2, theta1: Math.PI / 2, caps: true }); m.lathe([[D / 2, 0], [D / 2 - 0.01, 0.08], [D * 0.38, 0.14], [0, 0.16]], { seg: 12, sx: W / D, theta0: Math.PI / 2, theta1: Math.PI * 1.5, caps: true }); m.pop();
+    m.color('#b8a070').shine(3); for (const x of [-W / 2 + 0.08, W / 2 - 0.08]) m.roundBox(x, H * 0.5, 0, 0.05, H, D + 0.02, 0.01); m.roundBox(0, H * 0.78, D / 2 + 0.01, 0.1, 0.1, 0.02, 0.01); m.shine(0);
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: W / 2, hz: D / 2, y0: 0, y1: H + 0.12 }], top: H + 0.12 };
+  },
+  // a crooked, climbable TOWER OF STACKED JUNK CARS with lashed ladders and planks.
+  // o: { levels (default 8), seed }. Every car roof is a ledge within mantle reach of the one below. Returns { top, topPos }
+  junktower(m, o) {
+    o = o || {}; const r = this.rngFor(Object.assign({ seed: 777 }, o)), N = o.levels || 8, cols = [], lights = [];
+    const cars = ['#8a3a2a', '#3a5a8a', '#6a6a52', '#9a7a3a', '#5a3a5a', '#3a6a5a', '#8a8a92', '#a85a2a'];
+    let y = 0, x = 0, z = 0, yaw = 0;
+    const H = 1.32;   // per level: a beater's height
+    for (let i = 0; i < N; i++) {
+      // each car is offset so part of the roof below stays exposed as a step
+      const ang = i * 2.1 + r() * 0.6, off = i ? 1.15 : 0, tilt = (r() - 0.5) * 0.08;
+      x = i ? Math.sin(ang) * off * 0.9 : 0; z = i ? Math.cos(ang) * off * 0.9 : 0; yaw = r() * Math.PI;
+      const col = cars[i % cars.length], L = 4.0, W = 1.8;
+      m.push(); m.tf(x, y, z, yaw, tilt, (r() - 0.5) * 0.06);
+      // rusty rounded beater body
+      m.color(col).shine(1); m.roundBox(0, 0.62, 0, W, 0.62, L, 0.22); m.roundBox(0, 1.05, -0.2, W - 0.22, 0.48, 2.1, 0.2); m.shine(0);
+      m.color('#1c2433', 0.03).shine(3); m.roundBox(0, 1.08, 0.88, W - 0.42, 0.34, 0.04, 0.02); m.roundBox(0, 1.08, -1.27, W - 0.42, 0.3, 0.04, 0.02); m.shine(0).emissive(0);
+      m.color('#7a4a2a'); for (let k = 0; k < 3; k++) { m.push(); m.tf((r() - 0.5) * W * 0.8, 0.65 + r() * 0.3, (r() - 0.5) * L * 0.7, r() * 3); m.ellipsoid(0, 0, W / 2 + 0.002, 0.18 + r() * 0.12, 0.1 + r() * 0.08, 0.02, { seg: 8, rings: 4 }); m.pop(); }   // rust patches
+      if (i === 0 || r() < 0.5) for (const wz of [1.3, -1.3]) { this.wheel(m, W / 2 - 0.1, 0.32, wz, 0.32, 0.22); this.wheel(m, -W / 2 + 0.1, 0.32, wz, 0.32, 0.22); }
+      m.pop();
+      // colliders: car body + cabin as one walkable roof box at this level
+      cols.push({ t: 'box', x, z, hx: W / 2, hz: L / 2, yaw, y0: y, y1: y + 0.93 });
+      cols.push({ t: 'box', x: x - Math.sin(yaw) * 0.2, z: z - Math.cos(yaw) * 0.2, hx: (W - 0.22) / 2, hz: 1.05, yaw, y0: y, y1: y + H });
+      // lashed ladder + plank toward the next car
+      if (i < N - 1) {
+        const a2 = (i + 1) * 2.1, nx = Math.sin(a2) * 1.04, nz = Math.cos(a2) * 1.04;
+        m.color('#9a7a4a'); const lx = (x + nx) / 2 + 0.9 * Math.sin(a2 + 1.2), lz = (z + nz) / 2 + 0.9 * Math.cos(a2 + 1.2);
+        for (const sd of [-0.22, 0.22]) m.limb(lx + sd * Math.cos(a2), y + 0.1, lz - sd * Math.sin(a2), lx + sd * Math.cos(a2) - Math.sin(a2) * 0.3, y + H + 0.5, lz - sd * Math.sin(a2) - Math.cos(a2) * 0.3, 0.035, 0.035, { seg: 6 });
+        for (let k = 1; k < 5; k++) { const t = k / 5; m.limb(lx - 0.22 * Math.cos(a2) - Math.sin(a2) * 0.3 * t, y + 0.1 + (H + 0.4) * t, lz + 0.22 * Math.sin(a2) - Math.cos(a2) * 0.3 * t, lx + 0.22 * Math.cos(a2) - Math.sin(a2) * 0.3 * t, y + 0.1 + (H + 0.4) * t, lz - 0.22 * Math.sin(a2) - Math.cos(a2) * 0.3 * t, 0.025, 0.025, { seg: 5 }); }
+        m.color('#3a2a1a'); m.limb(lx, y + H * 0.6, lz, x, y + 0.9, z, 0.012, 0.012, { seg: 4 });   // lashing rope
+        if (i % 2 === 0) { m.color('#b08a5a'); m.push(); m.tf((x + nx) / 2, y + H + 0.02, (z + nz) / 2, a2 + 0.4); m.roundBox(0, 0, 0, 0.5, 0.06, 2.2, 0.02); m.pop(); cols.push({ t: 'box', x: (x + nx) / 2, z: (z + nz) / 2, hx: 0.25, hz: 1.1, yaw: a2 + 0.4, y0: y + H - 0.03, y1: y + H + 0.05 }); }
+      }
+      if (i % 2 === 1) lights.push({ x: x, y: y + 1.4, z: z, s: 0.5, c: BURNS_NEON[i % 7], blink: 3 });
+      y += H;
+    }
+    // a little flag + plank deck on the top car
+    m.color('#5a4a3a'); m.limb(x, y, z, x, y + 1.6, z, 0.03, 0.025, { seg: 6 }); m.color('#ff4fd8'); m.push(); m.tf(x, y + 1.3, z); m.roundBox(0.3, 0, 0, 0.6, 0.35, 0.02, 0.01); m.pop();
+    lights.push({ x, y: y + 1.7, z, s: 0.9, c: '#ff4fd8', blink: 2 });
+    return { cols, lights, top: y, topPos: [x, y, z] };
+  },
   saucer(m, o) {
     // flying-saucer-like platform for the final Man encounter (top deck walkable)
     o = o || {}; const R = o.r || 14, H = o.h || 4;
@@ -450,53 +502,63 @@ const BurnsManModel = {
   build(o) {
     if (this.cache && !o) return this.cache;
     o = o || {};
-    const m = new BurnsMesh(8192), B = BURNS_BONES;
+    const m = new BurnsMesh(16384), B = BURNS_BONES;
     const wood = o.wood || '#c89a6a', dark = o.dark || '#8a5a3a', neon = o.neon || '#38f2ff', heart = o.heart || '#ff4fa8';
-    // lattice limb: 4 rails + zig-zag braces between y0..y1 (local Y), widths w0 (top) w1 (bottom)
+    // rounded wooden members: rails are soft-ended timbers, braces and rings are thinner dowels
+    const rail = (a, b, r) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r * 0.92, { seg: 8 });
+    const dowel = (a, b, r) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r, { seg: 6, ends: false });
+    // lattice limb: 4 rails + zig-zag braces + rings between y0..y1 (local Y), widths w0 (top) w1 (bottom)
     const lattice = (y0, y1, w0, w1, d, n) => {
       const corners = (y, w) => [[w / 2, y, d / 2], [-w / 2, y, d / 2], [-w / 2, y, -d / 2], [w / 2, y, -d / 2]];
       const A = corners(y0, w0), Bc = corners(y1, w1);
-      m.color(wood);
-      for (let k = 0; k < 4; k++) m.beam(A[k][0], A[k][1], A[k][2], Bc[k][0], Bc[k][1], Bc[k][2], 0.22);
-      m.color(dark);
+      m.color(wood).shine(1);
+      for (let k = 0; k < 4; k++) rail(A[k], Bc[k], 0.12);
+      m.color(dark).shine(0);
       for (let i = 0; i < n; i++) {
         const t0 = i / n, t1 = (i + 1) / n;
         const P = (t, k) => { const a = A[k], b = Bc[k]; return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; };
-        for (let k = 0; k < 4; k++) { const p = P(i % 2 ? t0 : t1, k), q = P(i % 2 ? t1 : t0, (k + 1) % 4); m.beam(p[0], p[1], p[2], q[0], q[1], q[2], 0.14); }
-        const ring = k => P(t0, k);
-        for (let k = 0; k < 4; k++) { const p = ring(k), q = ring((k + 1) % 4); m.beam(p[0], p[1], p[2], q[0], q[1], q[2], 0.12); }
+        for (let k = 0; k < 4; k++) dowel(P(i % 2 ? t0 : t1, k), P(i % 2 ? t1 : t0, (k + 1) % 4), 0.075);
+        for (let k = 0; k < 4; k++) dowel(P(t0, k), P(t0, (k + 1) % 4), 0.065);
       }
     };
-    const neonRail = (x0, y0, z0, x1, y1, z1) => { m.color(neon, 1); m.beam(x0, y0, z0, x1, y1, z1, 0.11); m.emissive(0); };
+    const neonRail = (x0, y0, z0, x1, y1, z1) => { m.color(neon, 1); m.limb(x0, y0, z0, x1, y1, z1, 0.065, 0.065, { seg: 6 }); m.emissive(0); };
     // hips
     m.setBone(B.HIPS); lattice(-0.3, 0.4, 2.6, 2.6, 1.2, 1);
-    m.color(dark); m.box(0, 0.05, 0, 2.8, 0.25, 1.3);
+    m.color(dark); m.roundBox(0, 0.05, 0, 2.8, 0.28, 1.3, 0.12);
     // torso (wider at the shoulders)
     m.setBone(B.CHEST); lattice(0, 4.3, 3.2, 2.2, 1.3, 4);
-    m.color(wood); m.box(0, 4.1, 0, 4.2, 0.35, 1.4); // shoulder beam
+    m.color(wood).shine(1); m.limb(-2.05, 4.1, 0, 2.05, 4.1, 0, 0.2, 0.2, { seg: 10 }); m.shine(0); // shoulder beam
     neonRail(1.1, 0, 0.66, 2.0, 4.2, 0.66); neonRail(-1.1, 0, 0.66, -2.0, 4.2, 0.66);
-    // the glowing heart in the chest
+    // the glowing heart in the chest (puffy: two layers)
     m.color(heart, 1); m.push(); m.tf(0, 2.5, 0.2);
-    const hp = []; for (let i = 0; i < 20; i++) { const t = i / 20 * TAU; const x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); hp.push([x * 0.045, y * 0.045]); }
-    m.extrude(hp.reverse(), 0.5, { convex: false }); m.pop(); m.emissive(0);
-    // head: elongated diamond (octahedron) with neon edges
+    const hp = []; for (let i = 0; i < 24; i++) { const t = i / 24 * TAU; const x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); hp.push([x * 0.045, y * 0.045]); }
+    m.extrude(hp.slice().reverse(), 0.5, { convex: false });
+    m.color('#ffb0d8', 1); m.push(); m.tf(0, 0, 0.26, 0, 0, 0, 0.7, 0.7, 1); m.extrude(hp.slice().reverse(), 0.06, { convex: false }); m.pop();
+    m.pop(); m.emissive(0);
+    // head: a smooth glowing spindle with neon meridians and a halo ring
     m.setBone(B.HEAD);
-    m.color(wood); m.box(0, 0.3, 0, 0.6, 0.8, 0.6);
+    m.color(wood).shine(1); m.limb(0, -0.1, 0, 0, 0.62, 0, 0.3, 0.26, { seg: 10 }); m.shine(0);
     const hy = 1.9, hh = 1.35, hw = 1.0;
-    const top = [0, hy + hh, 0], bot = [0, hy - hh, 0], ring = [[hw, hy, 0], [0, hy, hw * 0.75], [-hw, hy, 0], [0, hy, -hw * 0.75]];
     m.color(o.headCol || '#ffd0f0', 0.85);
-    for (let k = 0; k < 4; k++) { const a = ring[k], b = ring[(k + 1) % 4]; m.poly([a, b, top], null, [0, hy, 0]); m.poly([b, a, bot], null, [0, hy, 0]); }
+    m.push(); m.tf(0, hy, 0); m.lathe([[0, -hh], [hw * 0.42, -hh * 0.55], [hw * 0.82, -hh * 0.18], [hw, 0], [hw * 0.82, hh * 0.2], [hw * 0.42, hh * 0.6], [0, hh]], { seg: 16, sz: 0.75 }); m.pop();
     m.emissive(0);
-    for (let k = 0; k < 4; k++) { const a = ring[k], b = ring[(k + 1) % 4]; neonRail(a[0] * 1.03, a[1], a[2] * 1.03, top[0], top[1] + 0.05, top[2]); neonRail(a[0] * 1.03, a[1], a[2] * 1.03, b[0] * 1.03, b[1], b[2] * 1.03); neonRail(a[0] * 1.03, a[1], a[2] * 1.03, bot[0], bot[1] - 0.05, bot[2]); }
+    m.color(neon, 1);
+    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + Math.PI / 4, sx = Math.sin(a), sz = Math.cos(a) * 0.75; const prof = [[0, -hh], [0.42, -hh * 0.55], [0.82, -hh * 0.18], [1, 0], [0.82, hh * 0.2], [0.42, hh * 0.6], [0, hh]]; for (let i = 0; i < prof.length - 1; i++) { const p0 = prof[i], p1 = prof[i + 1]; m.limb(sx * p0[0] * hw * 1.03, hy + p0[1], sz * p0[0] * hw * 1.03, sx * p1[0] * hw * 1.03, hy + p1[1], sz * p1[0] * hw * 1.03, 0.05, 0.05, { seg: 5 }); } }
+    m.push(); m.tf(0, hy, 0, 0, 0, 0, 1, 1, 0.75); m.torus(0, 0, 0, hw * 1.04, 0.06, { seg: 24, tseg: 5 }); m.pop();
+    m.emissive(0);
     // arms (raised in the default pose via animation)
     for (const side of [1, -1]) {
       m.setBone(side > 0 ? B.UARM_L : B.UARM_R); lattice(0.2, -2.6, 0.75, 0.65, 0.75, 3); neonRail(side * 0.42, 0.1, 0.4, side * 0.36, -2.6, 0.38);
+      m.color(wood).shine(1); m.ball(0, 0.1, 0, 0.42, { seg: 12, rings: 8 }); m.shine(0);
       m.setBone(side > 0 ? B.FARM_L : B.FARM_R); lattice(0, -2.4, 0.62, 0.5, 0.6, 3); neonRail(side * 0.34, 0, 0.32, side * 0.28, -2.4, 0.3);
-      m.color(wood); m.box(0, -2.75, 0, 0.8, 0.7, 0.5); // hand block
-      for (let f = 0; f < 3; f++) { m.color(dark); m.box((f - 1) * 0.25, -3.25, 0, 0.16, 0.6, 0.18); }
+      m.color(wood).shine(1); m.ball(0, 0, 0, 0.36, { seg: 12, rings: 8 });
+      m.roundBox(0, -2.75, 0, 0.8, 0.7, 0.5, 0.2); // hand
+      for (let f = 0; f < 3; f++) { m.color(dark); m.limb((f - 1) * 0.25, -3.0, 0, (f - 1) * 0.27, -3.45, 0, 0.09, 0.07, { seg: 6 }); }
+      m.shine(0);
       m.setBone(side > 0 ? B.THIGH_L : B.THIGH_R); lattice(0, -2.8, 1.0, 0.85, 0.9, 3); neonRail(side * 0.53, 0, 0.47, side * 0.46, -2.8, 0.44);
       m.setBone(side > 0 ? B.SHIN_L : B.SHIN_R); lattice(0, -2.5, 0.85, 0.75, 0.8, 3); neonRail(side * 0.45, 0, 0.42, side * 0.4, -2.5, 0.4);
-      m.setBone(side > 0 ? B.FOOT_L : B.FOOT_R); m.color(dark); m.bbox(0, -0.25, 0.35, 1.2, 0.5, 2.0, 0.12); m.color(neon, 1); m.box(0, -0.02, 0.35, 1.25, 0.06, 2.05); m.emissive(0);
+      m.color(wood).shine(1); m.ball(0, 0, 0, 0.45, { seg: 12, rings: 8 }); m.shine(0);
+      m.setBone(side > 0 ? B.FOOT_L : B.FOOT_R); m.color(dark); m.roundBox(0, -0.25, 0.35, 1.2, 0.5, 2.0, 0.22); m.color(neon, 1); m.push(); m.tf(0, -0.02, 0.35, 0, 0, 0, 0.6, 1, 1); m.torus(0, 0, 0, 1.0, 0.04, { seg: 18, tseg: 4 }); m.pop(); m.emissive(0);
     }
     const model = { geo: m.geo(), nb: BURNS_NB, body: this.body(), headY: 11.4, height: 13, man: true };
     if (!o || !Object.keys(o).length) this.cache = model;
@@ -510,28 +572,29 @@ const BurnsBikeModel = {
   build(col) {
     col = col || '#ffd21a';
     if (this.cache[col]) return this.cache[col];
-    const m = new BurnsMesh(2048);
+    const m = new BurnsMesh(4096);
     // bone 0 frame, 1 front wheel, 2 rear wheel, 3 cranks, 4 handlebar
-    m.setBone(0); m.color(col);
-    const fz = 0.55, rz = -0.52, wr = 0.36;
-    m.beam(0, wr, rz, 0, 0.78, 0.05, 0.07); m.beam(0, wr, rz, 0, 0.42, 0.0, 0.07); m.beam(0, 0.42, 0.0, 0, 0.78, 0.05, 0.07); m.beam(0, 0.42, 0.0, 0, 0.82, 0.38, 0.07); m.beam(0, 0.82, 0.38, 0, wr, fz, 0.06);
-    m.beam(0.1, wr, rz, 0.1, 0.62, -0.08, 0.04); m.beam(-0.1, wr, rz, -0.1, 0.62, -0.08, 0.04);
-    m.color('#2a2a2a'); m.bbox(0, 0.86, -0.04, 0.14, 0.06, 0.26, 0.02);
-    m.color('#c8c8d0'); m.box(0, 0.62, -0.62, 0.3, 0.04, 0.3); // rear rack
-    m.color('#f4f0e8'); m.box(0, 0.75, 0.62, 0.3, 0.2, 0.22); // front basket
-    m.color('#ff4fd8', 1); for (let i = 0; i < 5; i++) m.box(0, 0.3 + i * 0.1, -0.06 + i * 0.07, 0.09, 0.04, 0.04); m.emissive(0);
+    m.setBone(0); m.color(col).shine(2);
+    const fz = 0.55, rz = -0.52, wr = 0.36, tube = (a, b, r) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r, { seg: 8 });
+    tube([0, wr, rz], [0, 0.78, 0.05], 0.032); tube([0, wr, rz], [0, 0.42, 0.0], 0.03); tube([0, 0.42, 0.0], [0, 0.78, 0.05], 0.034); tube([0, 0.42, 0.0], [0, 0.82, 0.38], 0.034); tube([0, 0.82, 0.38], [0, wr, fz], 0.03);
+    tube([0.08, wr, rz], [0.04, 0.68, -0.06], 0.018); tube([-0.08, wr, rz], [-0.04, 0.68, -0.06], 0.018);
+    m.shine(1); m.color('#2a2a2a'); m.ellipsoid(0, 0.87, -0.04, 0.08, 0.035, 0.14, { seg: 10, rings: 6 }); // saddle
+    m.color('#c8c8d0').shine(3); m.roundBox(0, 0.62, -0.62, 0.3, 0.035, 0.3, 0.015); // rear rack
+    m.shine(0);
+    m.push(); m.tf(0, 0.65, 0.62); m.color('#f4f0e8'); m.lathe([[0, 0], [0.13, 0.0], [0.16, 0.2], [0.15, 0.215]], { seg: 10, sz: 0.75 }); m.pop(); // front basket
+    m.color('#ff4fd8', 1); for (let i = 0; i < 5; i++) m.ball(0, 0.3 + i * 0.1, -0.06 + i * 0.07, 0.025, { seg: 6, rings: 4 }); m.emissive(0);
     for (const b of [1, 2]) {
       m.setBone(b); m.push(); m.tf(0, 0, 0, 0, 0, Math.PI / 2);
-      m.color('#1a1a1a'); m.cyl(0, -0.03, 0, wr, wr, 0.06, 12, {});
-      m.color(col); m.cyl(0, -0.035, 0, wr * 0.82, wr * 0.82, 0.07, 12, {});
-      m.color('#1a1a1a'); m.cyl(0, -0.04, 0, wr * 0.7, wr * 0.7, 0.08, 12, {});
-      m.color('#c8c8d0'); for (let k = 0; k < 4; k++) { const a = k / 4 * Math.PI; m.beam(Math.cos(a) * wr * 0.72, 0, Math.sin(a) * wr * 0.72, -Math.cos(a) * wr * 0.72, 0, -Math.sin(a) * wr * 0.72, 0.02); }
-      m.pop();
+      m.color('#1a1a1c').shine(1); m.torus(0, 0, 0, wr - 0.035, 0.035, { seg: 20, tseg: 6 });
+      m.color(col).shine(2); m.torus(0, 0, 0, wr * 0.86, 0.012, { seg: 18, tseg: 4 });
+      m.color('#c8c8d0').shine(3); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; m.limb(0, 0, 0, Math.cos(a) * wr * 0.84, 0, Math.sin(a) * wr * 0.84, 0.005, 0.005, { seg: 3, ends: false }); }
+      m.roundCyl(0, -0.03, 0, 0.035, 0.06, 0.01, { seg: 8 });
+      m.shine(0); m.pop();
     }
-    m.setBone(3); m.color('#4a4a52'); m.box(0, 0, 0, 0.3, 0.05, 0.05); m.box(0.15, -0.08, 0, 0.03, 0.18, 0.04); m.box(-0.15, 0.08, 0, 0.03, 0.18, 0.04);
-    m.color('#1a1a1a'); m.box(0.2, -0.17, 0, 0.1, 0.03, 0.06); m.box(-0.2, 0.17, 0, 0.1, 0.03, 0.06);
-    m.setBone(4); m.color('#c8c8d0'); m.box(0, 0, 0, 0.6, 0.04, 0.04); m.color('#1a1a1a'); m.box(0.28, 0, 0, 0.1, 0.05, 0.05); m.box(-0.28, 0, 0, 0.1, 0.05, 0.05);
-    m.color('#ffd84a'); m.cyl(0.2, 0.02, 0.03, 0.035, 0.03, 0.04, 6, {}); // the bell
+    m.setBone(3); m.color('#4a4a52').shine(2); m.limb(-0.15, 0, 0, 0.15, 0, 0, 0.022, 0.022, { seg: 6 }); m.limb(0.15, 0, 0, 0.15, -0.16, 0, 0.016, 0.016, { seg: 5 }); m.limb(-0.15, 0, 0, -0.15, 0.16, 0, 0.016, 0.016, { seg: 5 });
+    m.color('#1a1a1a'); m.roundBox(0.2, -0.17, 0, 0.1, 0.03, 0.06, 0.01); m.roundBox(-0.2, 0.17, 0, 0.1, 0.03, 0.06, 0.01); m.shine(0);
+    m.setBone(4); m.color('#c8c8d0').shine(3); m.limb(-0.3, 0, 0, 0.3, 0, 0, 0.016, 0.016, { seg: 6 }); m.color('#1a1a1a').shine(1); m.limb(0.22, 0, 0, 0.33, 0, 0, 0.026, 0.026, { seg: 6 }); m.limb(-0.22, 0, 0, -0.33, 0, 0, 0.026, 0.026, { seg: 6 });
+    m.color('#ffd84a').shine(3); m.push(); m.tf(0.2, 0.03, 0.03); m.lathe([[0.035, 0], [0.03, 0.025], [0.012, 0.04], [0, 0.045]], { seg: 8 }); m.pop(); m.shine(0); // the bell
     const model = { geo: m.geo(), nb: 5, wheelR: wr, front: fz, rear: rz, bones: { frame: 0, fw: 1, rw: 2, crank: 3, bar: 4 } };
     this.cache[col] = model;
     return model;

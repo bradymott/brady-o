@@ -26,7 +26,13 @@ BurnsWorlds.register({
   music: 'burns_w1',
   bounds: [-118, -318, 118, 340],
   spawn: { x: 17.2, y: 0, z: 296, yaw: Math.PI },
-  ground: { base: '#c9a07c', crack: 0.26, mottle: 0.4, res: 0.5 },
+  // flat playa inside the corridor; soft rolling dunes rise outside the bounds and settle again before the horizon skirt
+  ground: { base: '#c9a07c', crack: 0.26, mottle: 0.4, res: 0.5, height(x, z) {
+    const dx = Math.max(-118 - x, 0, x - 118), dz = Math.max(-318 - z, 0, z - 340), d = Math.hypot(dx, dz);
+    if (d <= 0) return 0;
+    const t = Math.min(1, d / 58), k = Math.pow(Math.sin(t * Math.PI), 1.4);
+    return k * (2.2 + 1.3 * Math.sin(x * 0.061 + z * 0.043) * Math.cos(z * 0.052 - x * 0.029) + 0.5 * Math.sin(x * 0.17 - z * 0.11));
+  } },
   dust: 1.2,
   missions: [
     { id: 'ticket', name: 'Golden Ticket', short: 'Catch the ticket on the RV roofs', type: 'find', giver: 'lucky', start: 'manual', marker: { x: 16, z: 72 },
@@ -41,8 +47,8 @@ BurnsWorlds.register({
     { id: 'greeters', name: 'Greeter Gauntlet', type: 'custom', giver: 'dusty', start: 'manual', short: 'Survive the greeters', marker: { x: -40, z: -152 },
       desc: 'Survive Mama Dusty\'s three most intense greeters to be officially welcomed.', hint: 'Greeter Station, west side near the gate',
       onComplete(g) { g.giveItem('www'); g.setTod(Math.max(g.tod, 0.75), 0.05); } },
-    { id: 'stack', name: 'Top of the Stack', type: 'climb', start: 'trigger', secret: true, silent: false, short: 'Climb to the top of the stack', target: { x: -64, z: 31, r: 3.2, y: 15.2 }, tokenAt: { x: -64, y: 16.6, z: 31 },
-      desc: 'Camp Overkill stacked their vehicles. For art. Climb it.', hint: 'Camp Overkill, far west of the Pre-Gate Party' },
+    { id: 'stack', name: 'Top of the Stack', type: 'climb', giver: 'dare', start: 'manual', secret: true, silent: false, short: 'Climb to the top of the junk-car tower', target: { x: -64, z: 31, r: 2.4, y: 9.5 }, tokenAt: { x: -64, y: 11.5, z: 31 },
+      desc: 'Camp Overkill stacked eight junk cars into a tower. For art. Danny dares you to climb it.', hint: 'Camp Overkill, far west of the Pre-Gate Party' },
     { id: 'boss', name: 'The Man at the Gate', type: 'boss', start: 'manual', requires: ['ticket', 'greeters'], tokenDirect: true, short: 'Defeat the Man!', marker: { x: 0, z: -290 },
       desc: 'He\'s blocking the gate. With your wife. Take cover from his neon flash.', hint: 'Through the gate', lockedDesc: 'Needs a ticket and a proper greeting.' }
   ],
@@ -233,25 +239,23 @@ BurnsWorlds.register({
     api.pickup('photo', -36, 9.2, 96, { id: 'p1' });
     api.glowArc(-27.5, 2.8, 96, -32, 6.2, 96, 1.2, 5);
     api.pickup('water', 20, 0.9, 40);
-    /* ---------------- Camp Overkill: the stack (hidden challenge) ---------------- */
+    /* ---------------- Camp Overkill: the junk-car tower (hidden challenge) ---------------- */
     {
       const x = -64, z = 31;
-      api.prop('rv', { x, z, yaw: 0.3, seed: 501 });
-      api.prop('crate', { x: x + 2.6, z: z - 3.4, s: 1.3 });
-      api.prop('crate', { x: x + 0.4, z: z - 1.5, y: 3.3, s: 1.2 });
-      api.prop('boxtruck', { x: x - 0.6, z: z + 1, y: 3.3, yaw: 1.4, seed: 502 });
-      api.prop('crate', { x: x - 2.2, z: z + 3.4, y: 7.1, s: 1.2 });
-      api.prop('car', { x: x + 0.3, z: z + 0.6, y: 7.1, yaw: -0.5, seed: 503 });
-      api.box(x - 1.5, 8.6, z - 1.2, 6, 2.6, 2.4, '#3a8a9a', { yaw: 0.9, bevel: 0.05 });
-      api.prop('crate', { x: x + 1.4, z: z - 2.6, y: 8.6, s: 1.1 });
-      api.prop('car', { x: x - 0.8, z: z + 0.2, y: 11.2, yaw: 2.2, seed: 504 });
-      api.box(x, 12.75, z, 4.4, 2.4, 4.4, '#5a4a6a', { bevel: 0.08 });
-      api.sign('YOU ARE NOT SUPPOSED\nTO BE UP HERE', x, z + 2.3, { y: 15.2, h: 0.9, post: false, style: { bg: '#ffe24a', fg: '#2a1a10', size: 34, border: '#2a1a10' } });
+      const T = api.prop('junktower', { x, z, seed: 31, levels: 8 });
+      // the climb target sits on the top car (prop-local coords, no yaw)
+      const tp = T.topPos || [0, T.top, 0], M = g.def.missions.find(q => q.id === 'stack');
+      M.target = { x: x + tp[0], z: z + tp[2], r: 2.2, y: tp[1] - 0.5 }; M.tokenAt = { x: x + tp[0], y: tp[1] + 1.4, z: z + tp[2] };
+      api.prop('trunk', { x: x + 6.5, z: z + 2.5, yaw: 0.4 });
       api.sign('CAMP OVERKILL\n"IT\'S ART"', x + 8, z - 6, { yaw: -0.6, h: 1.2, style: { bg: '#1a1a2a', fg: '#38f2ff', glow: '#38f2ff', size: 40, border: '#38f2ff' }, glow: '#38f2ff' });
-      api.pickup('bag:khole', x + 0.4, 5.6, z - 1.5);
-      api.glowArc(x + 2.6, 2.4, z - 3.4, x + 0.4, 5.3, z - 1.5, 0.8, 4);
-      for (let i = 0; i < 6; i++) api.glow(x + Math.sin(i) * 2.4, 3.6 + i * 2, z + Math.cos(i) * 2.4, 0.5, BURNS_NEON[i % 7], { blink: 3 });
-      api.trigger({ x, z, r: 9, once: true, onEnter: g => { if (g.missions.state('stack') === 'available') { g.missions.start('stack'); g.banner('HIDDEN CHALLENGE', 'Top of the Stack: climb it!', { col: '#38f2ff' }); } } });
+      api.pickup('bag:khole', x + 2.2, 3.6, z - 1.2);
+      api.npc({ id: 'dare', name: 'DANNY BAD IDEA', type: 'badideaguy', seed: 5, x: x + 5.5, z: z - 3.5, yaw: -2.2,
+        talk(g, a) {
+          const st = g.missions.state('stack');
+          if (st === 'available') g.say(a, ['Hear me out. Eight cars. Stacked. By hand. Mostly mine.', 'I dare you to climb it. I did it last night. That\'s why the cast.', 'Hop car to car. Use the planks. Don\'t look down. Or up. Or anywhere.'], () => { g.missions.start('stack'); g.banner('HIDDEN CHALLENGE', 'Top of the Stack: climb the junk-car tower!', { col: '#38f2ff' }); });
+          else if (st === 'active') g.say(a, ['Car to car! Mantle the roofs! Physics is a suggestion!']);
+          else g.say(a, ['LEGEND. Next we\'re jumping an art car off a dune. Kidding. Unless...']);
+        } });
       api.light(x, z, 14, '#38c8ff', 0.4);
     }
     /* ---------------- LSD-only path to a hidden photo (east, over the fence) ---------------- */
@@ -469,7 +473,7 @@ BURNS_W1.gauntlet = function (g) {
 BURNS_W1.GREETERS = [
   { name: 'BIG HUG BARB', behavior: 'greeterHug', seed: 31, intro: 'Round 1: she hugs. Hard. Make her miss, then hit her while she\'s dizzy!' },
   { name: 'DUST ANGEL DEV', behavior: 'greeterSlam', seed: 32, intro: 'Round 2: jump the dust wave, then bonk him while he makes dust angels!' },
-  { name: 'DING-DONG DORIS', behavior: 'greeterBell', seed: 33, intro: 'Round 3: jump the bell rings, then hit her while her ears ring!' }
+  { name: 'DING-DONG DORIS', behavior: 'greeterBell', seed: 33, prop: 'bell', intro: 'Round 3: jump the bell rings, then hit her while her ears ring!' }
 ];
 BURNS_W1.nextGreeter = function (g) {
   const S = BURNS_W1.state, i = S.round, G = BURNS_W1.GREETERS[i];
@@ -479,7 +483,7 @@ BURNS_W1.nextGreeter = function (g) {
     g.say(d, ['You\'ve been GREETED! Officially. Thoroughly. Possibly bruised.', 'Here\'s the What Where When guide: every mission and party out here, marked on your map. And a token, because we love you.'], () => g.missions.complete('greeters', { x: -36, y: 1.4, z: -150 }));
     return;
   }
-  const a = g.spawnActor({ type: 'greeter', seed: G.seed, name: G.name, x: -40 + (i - 1) * 3, z: -158, yaw: Math.PI, behavior: G.behavior, hp: 3, friendly: false, boss: true, drop: 4, defeatLine: 'Welcome... home...', afterDefeat: 'dance',
+  const a = g.spawnActor({ type: 'greeter', seed: G.seed, prop: G.prop, name: G.name, x: -40 + (i - 1) * 3, z: -158, yaw: Math.PI, behavior: G.behavior, hp: 3, friendly: false, boss: true, drop: 4, defeatLine: 'Welcome... home...', afterDefeat: 'dance',
     onDefeat(g2) { burnsSfx('crowd_cheer'); S.round++; burnsW1Timer(g2, 1.6, () => BURNS_W1.nextGreeter(g2)); } });
   a.home = { x: -40, z: -152 };
   S.greeter = a;

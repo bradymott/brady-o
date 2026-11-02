@@ -66,7 +66,16 @@ class BurnsCollide {
 /* ---------------- rigid-skinned group ---------------- */
 class BurnsGroup {
   constructor(max) { this.max = max || BurnsGL.maxBones || 32; this.mesh = new BurnsMesh(4096); this.objs = []; this.geo = null; this.bones = null; }
-  get full() { return this.objs.length >= this.max || this.mesh.nv > 52000; }
+  get full() { return this.objs.length >= this.max || this.mesh.nv > 40000; }
+  // add an object already built into its own mesh (bone 0); its bone index is remapped to the slot
+  addBuilt(src, info, o) {
+    const idx = this.objs.length, m = this.mesh, base = m.nv;
+    m.append(src);
+    const u8 = m.u8; for (let i = base; i < m.nv; i++) { const b = i * 24 + 15; u8[b] = (u8[b] & 0xC0) | (idx & 63); }
+    const obj = Object.assign({ idx, group: this, x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, scale: 1, visible: true, info, cols: info.cols || [], lights: info.lights || [] }, o || {});
+    this.objs.push(obj);
+    return obj;
+  }
   // build(m) appends geometry in object-local space; returns info (cols/lights...)
   add(build, o) {
     const idx = this.objs.length, m = this.mesh;
@@ -231,9 +240,12 @@ class BurnsWorld {
   }
   /* ---------- movers (dynamic rigid objects with colliders + lights) ---------- */
   addMover(build, o) {
-    let g = this.groups.find(G => !G.geo && !G.full && !G.pickups);
+    // build into a scratch mesh first, so a big object never overflows a group's 16-bit index range
+    const src = new BurnsMesh(4096); src.setBone(0); src.identity();
+    const info = build(src) || {};
+    let g = this.groups.find(G => !G.geo && !G.pickups && G.objs.length < G.max && G.mesh.nv + src.nv <= 64000);
     if (!g) { g = new BurnsGroup(); this.groups.push(g); }
-    const obj = g.add(build, o);
+    const obj = g.addBuilt(src, info, o);
     obj.mover = true;
     obj.dcols = (obj.cols || []).map(d => Object.assign({}, d, { mover: obj, lx: d.x || 0, lz: d.z || 0, lyaw: d.yaw || 0, ly0: d.y0 || 0, ly1: d.y1, lya: d.ya, lyb: d.yb }));
     obj.px = obj.x; obj.py = obj.y; obj.pz = obj.z; obj.pyaw = obj.yaw;
@@ -438,7 +450,8 @@ class BurnsWorld {
       crowd(x, z, r, n, o) {
         o = o || {}; const rng = mulberry32(hashStr('crowd' + x + ',' + z));
         const out = [];
-        for (let i = 0; i < n; i++) { const a = rng() * TAU, d = Math.sqrt(rng()) * r; out.push(api.npc(Object.assign({ type: rng.pick(o.types || ['burner', 'burner', 'furcoat', 'tutu', 'ledsuit', 'sparklepony']), seed: Math.floor(rng() * 1e6), x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, yaw: rng() * TAU, behavior: rng.pick(o.behaviors || ['dance', 'dance', 'idle', 'wander']), style: Math.floor(rng() * 6), ambient: true, lines: o.lines }, o.extra || {}))); }
+        // crowd looks come from 24 variants per type, so crowds share models (fast loads, less GPU memory)
+        for (let i = 0; i < n; i++) { const a = rng() * TAU, d = Math.sqrt(rng()) * r; out.push(api.npc(Object.assign({ type: rng.pick(o.types || ['burner', 'burner', 'furcoat', 'tutu', 'ledsuit', 'sparklepony']), seed: Math.floor(rng() * 24), x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, yaw: rng() * TAU, behavior: rng.pick(o.behaviors || ['dance', 'dance', 'idle', 'wander']), style: Math.floor(rng() * 6), ambient: true, lines: o.lines }, o.extra || {}))); }
         return out;
       },
       pickup(kind, x, y, z, o) { const p = Object.assign({ kind, x, y: y === undefined ? 0.9 : y, z }, o || {}); W.pickupDefs.push(p); return p; },

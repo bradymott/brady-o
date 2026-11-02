@@ -1,6 +1,6 @@
 # BRADY-O BURNS: World Authoring Guide
 
-This guide is for agents building Worlds 2–13 of **Brady-O Burns**, the 3D third-person adventure inside Brady-O. The engine and World 1 are already done. You add a world by creating one file, `src/4N_burns_worldN.js`, that calls `BurnsWorlds.register({...})`. You shouldn't need to touch the engine. If you hit a real gap, add the smallest possible hook to the engine and say so in your report.
+This guide is for agents building Worlds 2–15 of **Brady-O Burns**, the 3D third-person adventure inside Brady-O. The engine and World 1 are already done. You add a world by creating one file, `src/4N_burns_worldN.js`, that calls `BurnsWorlds.register({...})`. You shouldn't need to touch the engine. If you hit a real gap, add the smallest possible hook to the engine and say so in your report.
 
 - Engine: `src/40_burns_a_core.js` … `src/40_burns_k_hub.js`
 - Worked example: `src/42_burns_world1.js` (World 1, "The Line")
@@ -58,7 +58,7 @@ That's a complete, playable world. The hub lists it automatically once it regist
 
 | Field | Type | Meaning |
 |---|---|---|
-| `id` | number 1–13 | Required. Matches `BURNS_WORLD_META` (hub name, colour and pin position). The id is permanent; the "World N" players see is its place in the play order (§3.1). |
+| `id` | number 1–15 | Required. Matches `BURNS_WORLD_META` (hub name, colour and pin position). The id is permanent; the "World N" players see is its place in the play order (§3.1). |
 | `name`, `sub` | string | Title and subtitle. Defaults come from the meta table. |
 | `build(api, g)` | function | Required. Builds terrain, props, NPCs, pickups and missions. Runs once per visit, before the first frame. |
 | `missions` | array | Mission definitions (§7). Missions with `token !== false` are the world's Burn Tokens; aim for 5–7. |
@@ -75,12 +75,28 @@ That's a complete, playable world. The hub lists it automatically once it regist
 | `onRespawn(g)` | fn | After Brady faints and respawns. |
 | `drawSkinned(g, R)`, `drawSprites(g, R)` | fn | Advanced: extra draws (§10). |
 
-### 3.1 Play order (13 worlds)
+### 3.1 Play order (14 worlds + a secret one)
 
 Worlds are played in this order, by **id**. It's `BURNS_WORLD_ORDER`, also available as `BurnsWorlds.order`:
 
-| Position (shown as "World N") | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Shown as | World 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | Secret |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| World id | 1 | 2 | 3 | 4 | 5 | 6 | **11** Sound Camp Crawl | 7 | 8 | 9 | **12** The Temple | **13** The Workshops | **14** Skydive Into the Burn | 10 (finale) | **15** Exodus |
+
+- **Ids never change.** Files (`src/42_burns_world11.js` …), saves, tokens, photos, flags and `debug.play(id)` all use the id. Only what players see uses the position.
+- **Unlocking.** `g.finishWorld()` unlocks `BurnsWorlds.next(id)`, the next world in the order (finishing id 6 unlocks id 11, not 7). Old saves migrate automatically: any finished world unlocks the next one in the sequence.
+- **Labels.** Never print `'World ' + id`.
+  - Use `BurnsWorlds.label(id)` (→ `"World 7"` for id 11, `"Secret World"` for 15) or `BurnsWorlds.num(id)` (→ `7`).
+  - Lookups: `BurnsWorlds.idAt(n)`, `next(id)`, `prev(id)`, `isFinale(id)` (id 10), `isSecret(id)` (id 15), `visible()` (the ids the hub shows).
+  - The hub, loading card, pause menu and results screen already do this.
+- **Hub.** It shows 14 pins in play order. Unregistered ids show "SOON"/"Coming soon" and can't be started, so nothing breaks while a world is in progress.
+- **Secret World 15 "Exodus".**
+  - It's hidden from the hub, not even "coming soon", until it's unlocked. After that it shows as a glowing RV pin labelled SECRET.
+  - It unlocks when the finale is finished: `g.finishWorld()` in world 10 unlocks `next(10)` = 15, and the results screen says "A SECRET WORLD HAS BEEN UNLOCKED…".
+  - The finale can also unlock it explicitly after the credits with `BurnsSave.unlockWorld(15)`.
+- **Story order.** World 11 comes after the art-car hunt (6) and before Sunrise Set (7). Worlds 12, 13 and 14 come after the Deep Playa showdown (9) and before the finale (10).
+
+---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | World id | 1 | 2 | 3 | 4 | 5 | 6 | **11** Sound Camp Crawl | 7 | 8 | 9 | **12** The Temple | **13** The Workshops | 10 (finale) |
 
 - **Ids never change.** Files (`src/42_burns_world11.js` …), saves, tokens, photos, flags and `debug.play(id)` all use the id. Only what players see uses the position.
@@ -181,7 +197,7 @@ Optional flags:
 
 ## 5. Prop library (`api.prop(kind, opts)`)
 
-All props face +Z (front) and sit on the ground at their origin. Every prop accepts `x, y, z, yaw, scale, seed`, and `cover: true|false` overrides its colliders' cover flag.
+All props are rounded and smooth-shaded: real tyres, soft-edged bodies and glossy glass. They face +Z (front) and sit on the ground at their origin. Every prop accepts `x, y, z, yaw, scale, seed`, and `cover: true|false` overrides its colliders' cover flag.
 
 | kind | Size, top | Options |
 |---|---|---|
@@ -208,6 +224,8 @@ All props face +Z (front) and sit on the ground at their origin. Every prop acce
 | `trampoline` | spring pad | `r, power, col` |
 | `artcar` | generic mutant vehicle with a deck, sculpture, poofers | `len, w, col, sculpt` |
 | `saucer` | flying-saucer platform for the final Man fight, walkable | `r, h` |
+| `junktower` | crooked **climbable** tower of stacked junk cars with lashed ladders and planks (the bad idea guy's landmark), ~10.5 m for 8 levels | `levels, seed`. Returns `top` and `topPos` (prop-local `[x,y,z]` of the top car). |
+| `trunk` | sticker-covered old wooden trunk (crusty's camp) | none |
 
 Need something new? Write it with `api.mesh` (§6). If it's reusable, add a builder function in your own file (`function burnsW6Octopus(m, o) {…; return {cols, lights}}`) and call it through `api.mesh` or `api.mover`.
 
@@ -251,7 +269,8 @@ Need something new? Write it with `api.mesh` (§6). If it's reusable, add a buil
 
 | Field | Meaning |
 |---|---|
-| `type` | `burner, furcoat, tutu, ledsuit, greeter, gate, campLead, driver, ranger, dpw, techbro, sparklepony, influencer, crusty, chinka, brady`. This sets the outfit, face and prop. |
+| `type` | An NPC type name (see the list below). It sets the whole look: body, face, hair, outfit, gear and a default idle animation. **Unknown names fall back to a generic burner** with a console warning, so you can reference a planned type before it exists. |
+| `variant`, `prop`, `tool` | Optional look options passed to the type: `variant` (e.g. `'kilt'` for `crusty`, `'f'`/`'m'` for `greeter`), `prop` (override the held prop, `null` for none), `tool` (`firespinner`: `'poi'`, `'fans'`, `'staff'` or `'hoop'`). |
 | `seed` | Varies skin, hair and colours within a type. Use different seeds for variety. |
 | `id`, `name` | `id` for lookups (`g.actor(id)`) and mission givers; `name` shows in the dialogue box. |
 | `x, z, y, yaw` | Placement. `y` defaults to the ground. Add `fixedY: true` for NPCs on roofs or vehicles. |
@@ -269,6 +288,34 @@ Need something new? Write it with `api.mesh` (§6). If it's reusable, add a buil
 | `noTalk`, `hittable`, `always`, `collide:false` | Misc: never talkable; friendly but can be spun; update even when far; no collision. |
 
 The engine draws `'!'` over the `giver` of any available mission and `'?'` over active targets.
+
+**NPC types.** All characters are rounded 3D figures. Types marked ★ are the user's burner "action figures". Match them, don't restyle them. Behaviours are listed in §6.4.
+
+| Type | Look | Notes |
+|---|---|---|
+| `crusty` ★ | Grizzled grey curls and beard, brass goggles up, paisley bandana, worn suede jacket with shearling, crossbody straps, utility belt, kandi, olive cargos with knee pads, work boots. | Holds a camera or warm beer (`prop`). `variant: 'kilt'` = faded utility kilt. |
+| `firespinner` ★ | Knit hood and mask with an orange visor slit, chain-mesh crop harness, sun medallion, flame wings, silver bracers, flame cloth panels, knee medallions, wrapped boots. | `tool: 'poi' \| 'fans' \| 'staff' \| 'hoop'`. Use behaviour `firespin`. |
+| `gatestaff` ★ (alias `gate`) | Brown bob with highlights, wraparound shades, black GATE tee (our own sun emblem), black denim shorts, duty belt with radio holster, chain, thigh straps, fingerless gloves, bracelets, combat boots. | Holds a tall-antenna walkie (`prop: 'walkie'`; also `flashlight`, `spray`). |
+| `greeter_f` ★, `greeter_m` ★ (`greeter` = either, by seed or `variant: 'f'/'m'`) | F: pink floppy sun hat, round purple shades, sequin halter, rainbow tiered tutu, graffiti high-tops. M: straw fedora, orange aviators, beard, paisley shirt, pink-to-lime cargo shorts, striped socks. | Both hold a GREETER sign (`prop: 'bell'` for the bell). Idle: `wave`. |
+| `darkwad` ★ | All black: spiky hair, sunglasses at night, long-sleeve, backpack, baggy cargos, grey sneakers. | Use behaviour `darkwad` (invisible in the dark, knocks Brady down). `lit: true` in a custom spec adds EL wire. |
+| `badideaguy` ★ | Goggles up, stubble, white tank, arm cast, crossbody bag, spiked wristband, cargo shorts, knee brace, suede work boots. | Idle `dare` (cast arm pointing up). Pair him with `api.prop('junktower')`. |
+| `undercovercop` ★ | Jester hat with bells, aviators, psychedelic shirt under a tactical vest, gold chain, badge, duty belt, watch, khaki cargo shorts, tube socks, dad sneakers. | Use behaviour `undercover` (chases power-up carriers). |
+| `furry` ★ | Full fox-hyena fursuit: grey spotted fur, white muzzle and chest, pink inner ears, pink/teal tuft, big green eyes, rainbow-striped limbs, big paws, harness with badges and kandi, LED wristband, teal tube, bushy tail. | Friendly; hugs (`anim: 'hug'`). |
+| `deathguild` ★ | Black hood and metal skull mask, black biker duster with tattered tails and spiked shoulders, bandoliers, utility belt and chains, dented metal knee pads, combat boots. | Holds a skull staff, foam bat or canteen (`prop: 'skullstaff' \| 'foambat' \| 'canteen'`). The W11 Thunderdome crew. |
+| `ranger` ★ | Overzealous ranger: cream ranger hat, trimmed beard, intense face, sage bandana, field shirt with chest pockets, suspenders with carabiners, orange radio pouches, watch, khaki cargo shorts, hiking boots. | Holds a clipboard. `variant: 'chill'` gives shades, a friendly face and no clipboard. |
+| `burney` ★ | Straw cowboy hat with pink-lined bunny ears, buzz cut, huge blue mustache and brows, open teal floral shirt, utility vest, chains, blue tribal tattoos, cargo shorts, boots. | Holds a camera; idle `photo`. |
+| `playaartist` ★ | Straw sun hat, wavy brown hair, off-shoulder knit top, suspenders, paint-splattered apron with brushes, splattered rolled work pants, boots. | Holds a brush or palette. |
+| `dpw` ★ | DPW punk: tall black spiked mohawk, piercings, scalp tattoos, studded patched vest (our own DPW patch), spiked shoulders and wristband, fingerless gloves, tattooed arms, ripped patched jeans, work boots. | Holds a yellow-handled hammer or rebar. |
+| `lamplighter` ★ | Flowing cream robes, white head wrap, canvas belt, sandals, two tall lantern poles over the shoulders. | Idle `lantern`. Use behaviour `lamplight` to light streets as they walk. Dignified, not a joke target. |
+| `annoyingdj` ★ | Slicked hair, huge white-framed orange goggles, headphones, open tie-dye shirt over a white tee, beads, medallion, lime shorts, teal sneakers. | Holds a mic or energy drink. Idle `dj`. |
+| `sparklepony` ★ | New look: long black hair, tall silver spiked crown, purple-rainbow visor, holographic sequin long-sleeve crop, sequin shorts, big iridescent fairy wings, silver thigh-high warmers, silver sneakers, fanny pack, LED pendants. | Holds an LED wand or glitter bottle. |
+| `partiedtoohard` ★ | Messy greying hair, stubble, bloodshot eyes, torn pastel floral shirt open, tangled beads, kandi, lanyard, torn cargo shorts, one boot missing, dirty backpack. | Holds a map, water or a can. Idle `dazed`. |
+| `burnerkid` ★, `burnermom` ★ | Kid: teal beanie with a golden sun crown, white shades, shirtless with rainbow body paint, beads, backpack, tan cargos, rainbow leg warmers, wizard staff, embarrassed. Mom: grey bob, straw sun hat, white shades, pink sweater, green vest, beads, capri jeans, two cameras. | Mom's idle is `cheer`. |
+| `cultleader` ★ | "Brother Bubblegum" (original): swooped hot-pink hair, pink beard, heart shades, shirtless, hot-pink fur boa and cuffs, heart pendants, pink belt. | Idle `welcome` (arms spread). Tasteful. |
+| `fencebot_a` ★, `fencebot_b` ★ | "The Fence Bots": homemade junk helmets (A: a dented trash can with LED strips and bottle-cap eyes; B: a colander with cardboard and an EL-wire visor). Patched brown playa jackets, harness with tubes and pouches, olive cargos, knee pads, desert boots, robot gloves, clipped water bottles. | Idle `robot`. Never chrome or gold visor helmets. |
+| `billionaire`, `safetycaptain`, `healer` | Archetypes. Billionaire: white linens, aviators, goggles, silk dust mask, cocktail. Safety captain: hard hat, respirator, hi-vis, reflective tape, chest radio, clipboard. Healer: white robes, giant crystal, barefoot. | `techbro` keeps his pitch-deck look. |
+| `burner, furcoat, tutu, ledsuit, campLead, driver, influencer` | Seed-varied party crowd and staff. | `crowd()` uses these. |
+| `chinka`, `brady` | The leads (Brady follows `Save.data.look` and the costume). | |
 
 ### 6.4 Behaviours
 Pass behaviour parameters in the actor def.
@@ -291,6 +338,10 @@ Pass behaviour parameters in the actor def.
 | `thief` | `steal` | Steals glow sticks and runs; hit it to get them back. |
 | `greeterHug`, `greeterSlam`, `greeterBell` | (W1 sub-bosses) | Only vulnerable when dizzy or lying down. |
 | `chill` | | Post-defeat: sits or dances. |
+| `firespin` | `tool` (`poi, fans, staff, hoop`; default from the type), `hazard` (default true: the flames hurt on touch), `path` and `speed` (walking spinner), `turn` (slow spin in place), `rate`, `spinning:false` | Use with type `firespinner`. Flaming trails, glow and a flickering light that lights the people around. Fires the mission event `burned`. |
+| `darkwad` | `radius` (wander), `cost` (glow sticks to light him up, default 3), `lightable:false`, `lit` (start lit), `elCol`, `onBump(g,a)`, `onLit(g,a)` | Use with type `darkwad`. At night he's invisible except for a glint off his shades. Light reveals him: daylight, LSD, light pools (`api.light`), fires, headlights, `player.lightR` (set it for a lantern or flashlight gift) or glow sticks within 3.6 m. Bumping into him knocks Brady down and off the bike (event `darkwadBump`). ACTION with enough glow sticks lights him up with EL wire (event `lit`), for a "light up the darkwads" mission. |
+| `lamplight` | `path`, `speed` (1.0), `hang` (metres between hung lanterns, default 6; `false` = none), `loop`, `col` | Use with type `lamplighter`. Walks the route carrying a warm moving light and hangs a glowing lantern every `hang` metres, so the dark street lights up behind them. Events `lanternHung` and `lampsDone`. Follow the lamp line in a whiteout. |
+| `undercover` | `path`, `view` (11), `fov` (1.1), `chaseSpeed` (4.2), `chaseTime` (9), `onConfiscate(g,a,id)` | Use with type `undercovercop`. He dances badly and says "groovy". If he sees Brady with an **active** power-up he chases; a catch confiscates it (event `confiscated`). Hiding in a crowd (2+ dancing NPCs within 2.2 m) loses him. Event `copSpotted`. |
 
 **Write your own** in your world file:
 ```js
@@ -313,39 +364,89 @@ Helpers on `a`:
 - State: `setBehavior(name)`, `home`, `data` (scratch).
 - Vision: `BurnsBehaviors.sees(a, g, range, halfFov)` checks line of sight.
 
-### 6.5 Custom looks (`spec`)
-`BurnsRig.npcSpec(type, seed)` returns a spec you can modify, or you can write one from scratch:
+### 6.5 Characters: specs, custom looks and new types
+
+Every character is built from a **spec**, a plain object. `BurnsRig.npcSpec(type, seed, opts)` returns a type's spec for you to tweak, or you can write one from scratch. The model is cached by `spec.key`, so give hand-made specs a unique `key`.
 ```js
 const spec = BurnsRig.npcSpec('burner', 3);
 Object.assign(spec, {
-  top: { kind: 'none' }, paint: 'tiedye',                  // shirtless + body paint
+  top: { kind: 'none' }, paint: 'tiedye',                   // shirtless + body paint
   bottom: { kind: 'kilt', col: '#2a2a34' },
   hat: { kind: 'tophat', col: '#1a1a1a' }, goggles: true, glasses: 'heart',
-  acc: ['ledNecklace', 'cape'], prop: 'bell', key: 'w4:ringmaster'   // key: unique cache id
+  acc: ['ledNecklace', 'cape'], prop: 'bell', key: 'w4:ringmaster'
 });
 api.npc({ spec, x: 0, z: 0, name: 'RINGMASTER', lines: ['Step right up!'] });
 ```
-Spec fields:
-- Body and face:
-  - `skin`, `hair: {style, col, hi}`. Styles: `short, long, pony, bald, mohawk, afro, buzz, bun, down, wavy, wig`.
-  - `face`: `friendly, lashes, tired, stressed, greeter, beard, smug, chinka, stern, goofy, grumpy, sleepy, kid`.
-  - `body: {h, w}`: height and width multipliers.
-- Clothes:
-  - `top: {kind: tee|tank|crop|hoodie|button|none, col, pattern}`
-  - `bottom: {kind: jeans|shorts|leggings|kilt|tutu|cargo|chinos, col, pattern}`
-  - `shoes: {kind: sneakers|boots|furboots, col, sole}`
-  - `coat: {kind: fur|kimono|duster|pirate, col, trim}`
-  - `vest: 'hivis'|'fleece'|'patches'` (with `vestCol`)
-  - `led: '#colour'` (LED suit strips)
-  - `paint: patternName`
-- Headwear: `hat: {kind: cowboy|hardhat|cap|ranger|tophat|furhat|bandana|tricorn}`, `glasses: shades|clear|heart|visor`, `goggles: true`.
-- Accessories: `acc: [ledNecklace, lei, wings, cape, toolbelt, headset, earbuds, bracelets]`.
-- Held prop: `prop: clipboard|phone|bell|coffee|radio|ringlight|bottle|water`.
+When you restyle a figure type with `Object.assign`, remember that figures carry extra fields. Clear what you don't want, for example `beard: null, goggles: false, acc: []`.
+
+**Spec reference** (every field is optional):
+
+| Field | Values |
+|---|---|
+| `body` | `{h, w, fem}`: height and width multipliers (0.85–1.2), and `fem: true` for a slimmer waist and a bust. |
+| `skin`, `skinSh` | Skin colour and its shadow colour. |
+| `face` | `friendly, goofy, lashes, tired, stressed, greeter, beard, smug, chinka, stern, grumpy, sleepy, kid, crusty, gateStaff, greeterF, greeterM, scheming, cop, furry, dazed, embarrassed, beatific, intense, partydad, toothy, mom, serene` (32 face slots in all), or your own (below). The face art wraps onto the round head and changes with expression (talk, hurt, happy). |
+| `hair` | `{style, col, hi}`. Styles: `short, buzz, bald, long, down, wig, wavy, pony, bun, bob, curly, afro, mohawk, spiky`. |
+| `beard` | `{col, len (0.02–0.12), trim, noMustache}`: a sculpted 3D beard and mustache. |
+| `hat` | `{kind, col}`. Kinds: `cowboy, ranger, hardhat, cap, tophat, furhat, bandana, tricorn, sunhat, fedora, jester`. |
+| `glasses` | `shades, wrap, aviator, round, clear, heart, visor`, plus `lensCol` for tinted lenses. |
+| `goggles` | `true`, `'classic'`, `'brass'` or `'tutu'`. They're worn pushed up on the forehead. |
+| `hood` | `true` hides the hair, for full hoods and helmets that you add as accessories. |
+| `top` | `{kind, col, pattern, emblem}`. Kinds: `tee, long, tank, crop, halter, offshoulder, vest, hoodie, button, none`. `long: true` gives long sleeves (for example a long-sleeve crop). `button` also takes `long, open, under` (the colour of the tee under an open shirt). `emblem` is a pattern name printed on the chest. |
+| `vest` | `'hivis'`, `'fleece'`, `'patches'` or `'tactical'`, with `vestCol`. |
+| `coat` | `{kind, col, trim, pattern}`. Kinds: `jacket` (hip length with a shearling collar and cuffs), `fur, kimono, duster, pirate, robe` (ankle length, bell sleeves). `tattered: true` gives a ragged hem. |
+| `bottom` | `{kind, col, pattern}`. Kinds: `jeans, cargo, chinos, pants, leggings, shorts, kilt, tutu`. Extras: `cargo` (side pockets), `baggy`, `patches`, `capri` (cropped at mid-shin), `rolled` (cuffs), `belt: '#col'`, `fade: '#col'` (two-tone shorts), `tiers: [cols]` (tutu layers), `utility` (kilt pockets). |
+| `socks` | `{col, stripe}`, shown with shorts and skirts. |
+| `shoes` | `{kind, col, sole, laces, wraps, print, laceCol}`. Kinds: `sneakers, hightops, dad, boots, workboots, combat, furboots, sandals, barefoot`. `missing: 'left'|'right'` leaves one foot in a sock. |
+| `gloves` | A colour, for fingerless gloves. |
+| `led` | An LED-suit strip colour. `paint`: a body-paint pattern on bare skin. |
+| `acc` | A list of accessory names (below). |
+| `prop`, `prop2` | Held items for the right hand and, with `prop2`, the left hand. |
+| `tool` | `firespinner` only. |
+| `fursuit` | A full-body costume, advanced: see `furry` in `40_burns_da_round.js`. |
+
+- **Accessories (`acc`):**
+  - Neck and chest: `ledNecklace, lei, beads, bandana, goldChain, badge, sunMedallion`.
+  - Straps, belts and bags: `straps, utilityBelt, dutyBelt, toolbelt, chain, messenger, crossbag, backpack, harness`.
+  - Arms and legs: `kandi, bracelets, bracers, spikedBand, cast, watch, kneepads, kneeBrace, kneeMedallions, thighStraps`.
+  - Head: `headset, earbuds, fireHood`.
+  - Back pieces: `wings, flameWings, cape`.
+  - Other: `flameTassets, sash, elwire`.
+- **Held props (`prop`):**
+  - Tools and gadgets: `clipboard, phone, radio, walkie, flashlight, spray, camera, ringlight`.
+  - Drinks and odds and ends: `coffee, bottle, water, tin, guide, bell, greeterSign`.
+  - Fire tools: `poi, fan, staff, hoop`.
+
+**Define a new NPC type** (any world file, at load time):
+```js
+BurnsRig.defineType('w9Hermit', {
+  anim: 'idle',                                // default idle flavour (any §6.6 animation)
+  lines: ['The fence talks to me.', 'Bring me a sandwich.'],   // ambient chatter
+  spec(s, rng, opts) {                         // s = seeded defaults (skin, hair, body); fill in the look
+    s.face = 'grumpy'; s.hair = { style: 'long', col: '#c8c8c8' }; s.beard = { col: '#c8c8c8', len: 0.1 };
+    s.top = { kind: 'tee', col: rng.pick(['#5a4a3a', '#4a5a3a']) }; s.coat = { kind: 'robe', col: '#8a7a5a' };
+    s.bottom = { kind: 'pants', col: '#4a3a2a' }; s.shoes = { kind: 'sandals', col: '#6a4a2a' };
+    s.acc = ['beads', 'w9Lantern']; s.prop = opts.prop || 'staff';
+  }
+});
+api.npc({ type: 'w9Hermit', seed: 4, x: 0, z: 0 });
+```
+Add your own pieces the same way. Build with `BurnsMesh` (§6.1). Each piece is drawn in a bone's local space, and `A` gives you helpers: `A.headPt(theta, phi, offset)` for a point on the head, `A.torsoPt(theta, y, offset)` for a point on the chest, `A.torsoR(y)`, `A.h`, `A.w`, `A.lo` (true while building the low-detail model, so skip small details), `A.S` (the spec) and `A.skin`.
+```js
+BurnsRig.defineAcc('w9Lantern', (m, A) => { m.setBone(BURNS_BONES.HIPS); m.color('#ffd84a', 1); m.ball(0.2, -0.1, 0.1, 0.05); m.emissive(0); });
+BurnsRig.defineProp('w9Spoon', (m, A) => { m.color('#c8c8d0').shine(3); m.limb(0, -0.1, 0.05, 0, 0.3, 0.05, 0.012, 0.012); });
+BurnsRig.defineHat('w9Pot', (m, A, hat) => { m.color(hat.col || '#8a8a92').shine(2); m.roundCyl(0, 0.3, 0, 0.2, 0.14, 0.03); });
+BURNS_ATLAS.addFace('w9Hermit', { eyes: 'squint', brows: { col: '#ddd', thick: 4 }, mouth: 'flat', wrinkles: true, beard: '#ccc' });
+BURNS_ATLAS.addPattern('w9Rags', (ctx, rng) => { /* paint a tileable 128x128 decal; transparent shows the base colour */ });
+```
+- Bones: `HIPS, CHEST, HEAD, UARM_L/R, FARM_L/R, THIGH_L/R, SHIN_L/R, FOOT_L/R, PROP` (right hand), `HAIR` (springy: hair, bun, ears) and `TAIL`.
+- Limbs hang along −Y from their joint and the character faces +Z.
+- **Face recipe fields:** `eyes` (`normal, blue, green, squint, tired, closed, none`), `eyeSc`, `lashes`, `brows {col, tilt, w, y, thick}` or `false`, `mouth` (`smile, grin, flat, frown, smirk, o, open`), `mouthW`, `stubble` (0–0.5), `beard` and `mustache` colours, `wrinkles`, `blush`, `lips`, `mask` (a colour). You can also pass a painter, `fn(ctx, row, helpers)`, that draws in a 64×64 box. `row` is the expression: 0 normal, 1 talking, 2 hurt, 3 happy.
 
 Brady is `BurnsRig.bradySpec(costume)`: it follows `Save.data.look` (bun or down, shades/clear/none, tattoos, stubble, hair and skin colours) plus the costume. Chinka is `BurnsRig.chinkaSpec()`.
 
 ### 6.6 Animation names
-`idle, walk, run, jump, flip, fall, land, spin, pound, hurt, dance{style,bpm}, bike, drive{steer}, sit, sleep, victory, cheer, talk, wave, shuffle, yell, hug, charge, bell, phone, photo, clipboard, throw, climb, float, fly, captive, knocked`.
+`idle, walk, run, jump, flip, fall, land, spin, pound, hurt, dance{style,bpm}, bike, drive{steer}, sit, sleep, victory, cheer, talk, wave, shuffle, yell, hug, charge, bell, phone, photo, clipboard, throw, climb, float, fly, captive, knocked`, plus the cast's idle flavours `firespin{tool,rate}, dare, think, radio, lantern, dj{bpm}, dazed, welcome, robot`. Hair and buns are springy: they bounce on landings and swing when characters turn.
 - Play one with `a.ch.play('name', params)`.
 - `BURNS_ANIMS[name] = (P, t, k) => {...}` adds a new one. `P.r` holds per-bone `[rx, ry, rz]` and `P.y, pitch, roll, yaw, sq, face` are root offsets. Bones are listed in `BURNS_BONES`.
 - Limb conventions: forward swing is negative `rx`, a knee bend is positive `rx` on the shin, and raising the left arm sideways (+X) is positive `rz`.
@@ -444,6 +545,11 @@ Runtime calls:
   - Pass `build: m => {...; return { cols, seat: [x,y,z], poofers: [[x,y,z]…], w, len, top }}` for a custom model, like W6's octopus. The generic `BurnsProps.artcar` is the default.
   - Undriven cars follow `path: [[x,z]…]` at `pathSpeed`, or park. Brady can ride on the deck either way (it's a moving platform).
   - `drivable: false` or `when: g => cond` controls when it can be driven.
+  - **Any drivable vehicle** (an RV for Exodus, a golf cart, a mutant vehicle) uses the same call. The options are:
+    - `build` (body model, returns `seat`, `w`, `len`, `top`; leave out `poofers` for no flames);
+    - handling: `maxSpeed` (8.5 m/s), `accel` (3.5), `turn` (0.9), `brake` (3, coasting deceleration);
+    - sound and text: `horn` (sfx name), `hornLines` (what nearby NPCs shout), `driveHint` (the toast shown on mount), `onHorn(g, car)`.
+  - Read `car.speed`, `car.x/z/yaw` and `car.rider` at runtime. Brady stands on the deck when he isn't driving.
   - `ride` missions with `vehicle: 'car'` work out of the box.
 
 ---
@@ -635,10 +741,10 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
   - Static props are merged per 48 m cell.
   - Vehicles, movers and pickups share skinned groups (about 40 per draw).
   - **Each visible character is one draw.** Keep **visible** NPCs to about 50: crowds far from the action are fine because the culling distance is 115 m, but don't put 200 dancers in one spot.
-- **Vertices.** Static chunks are split automatically. W1 is about 300k triangles in view at most. Rounded primitives cost 3–6× a plain box, so use them where the camera gets close and use `m.lo` or plain `box` for background clutter. Characters switch to a low-detail model automatically beyond about 24 m.
+- **Vertices.** Static chunks are split automatically. W1 is about 300k triangles in view at most. Rounded primitives cost 3–6× a plain box, so use them where the camera gets close and use `m.lo` or plain `box` for background clutter. Characters switch LOD automatically: full detail (about 8–16k triangles) within 16 m, LOD (3–5k) to 45 m, and a crowd LOD (about 2.4k, small accessories dropped) beyond that. `api.crowd` reuses 24 looks per type, so crowds share models. Hand-placed NPCs with unique seeds each cost a model build (about 10 ms) and GPU memory, so reuse seeds for background extras.
 - **CPU.** Actors farther than 110 m from Brady don't update. Keep `update` hooks O(n) over small lists; don't scan all colliders every step. Movers farther than 110 m skip collision.
 - **Sprites.** Particles are capped at 2600; glow billboards are culled at 170 m. Emitters near the camera are cheap; don't emit every step from 50 places.
-- **Textures.** One atlas (2048×1024), one sprite sheet, and per-world ground paint (≤2048²) and lightmap (≤1024²). Don't add per-world textures.
+- **Textures.** One atlas (2048×2048, with 32 face slots and 23 extra pattern slots), one sprite sheet, and per-world ground paint (≤2048²) and lightmap (≤1024²). Don't add per-world textures.
 - **Resolution.** The engine caps DPR at 2 and drops resolution automatically (down to 50%) when frames run slow. Never fight it.
 - **GPU memory.** Leaving a world frees its buffers (`BurnsScenes.releaseWorld`).
 

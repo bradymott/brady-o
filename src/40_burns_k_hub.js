@@ -57,7 +57,7 @@ class BurnsHubScene {
     this.opts = opts || {}; this.t = 0; this.wardrobe = false;
     Input.setMode('ui'); Input.camDrag = false; Input.hud = null;
     const sv = BurnsSave.get();
-    const O = BurnsWorlds.order, want = this.opts.select || sv.lastWorld || 1;
+    const O = BurnsWorlds.visible(), want = this.opts.select || sv.lastWorld || 1;
     this.sel = O.indexOf(want) >= 0 ? want : O[0];
     const nx = this.opts.from ? BurnsWorlds.next(this.opts.from) : null;
     if (nx && sv.unlocked[nx] && BurnsWorlds.get(nx)) this.sel = nx;
@@ -87,8 +87,8 @@ class BurnsHubScene {
     this.btns.push(this.playBtn);
     this.btns.focus = this.btns.length - 1;
     // one pin per world in play order (labelled by position); ids without metadata get a spot on a ring
-    const O = BurnsWorlds.order;
-    this.nodes = O.map((id, i) => { const m = BurnsWorlds.meta(id), a = i / O.length * TAU, h = BURNS_WORLD_META.find(k => k.id === id) ? m.hub : { x: 0.5 + Math.sin(a) * 0.4, y: 0.5 + Math.cos(a) * 0.4 }; return { id, n: i + 1, x: this.map.x + h.x * this.map.w, y: this.map.y + h.y * this.map.h, col: m.col }; });
+    const O = BurnsWorlds.visible();
+    this.nodes = O.map((id, i) => { const m = BurnsWorlds.meta(id), a = i / O.length * TAU, h = BURNS_WORLD_META.find(k => k.id === id) ? m.hub : { x: 0.5 + Math.sin(a) * 0.4, y: 0.5 + Math.cos(a) * 0.4 }; return { id, n: BurnsWorlds.num(id), secret: BurnsWorlds.isSecret(id), x: this.map.x + h.x * this.map.w, y: this.map.y + h.y * this.map.h, col: m.col }; });
     this.nodeR = clamp(Math.min(this.map.w, this.map.h) / 17, 12, 17);
     if (this.wardrobe) this.buildWardrobe();
   }
@@ -114,7 +114,7 @@ class BurnsHubScene {
     if (this.toast) { this.toast.t -= dt; if (this.toast.t <= 0) this.toast = null; }
     if (this.wardrobe) { const hit = UI.hitButtons(this.wbtns); if (hit) hit.fn(); return; }
     const k = Input.uiKey;
-    const O = BurnsWorlds.order, si = Math.max(0, O.indexOf(this.sel));
+    const O = BurnsWorlds.visible(), si = Math.max(0, O.indexOf(this.sel));
     if (k === 'left' || k === 'up') { this.sel = O[(si + O.length - 1) % O.length]; burnsSfx('select', { vol: 0.4 }); return; }
     if (k === 'right' || k === 'down') { this.sel = O[(si + 1) % O.length]; burnsSfx('select', { vol: 0.4 }); return; }
     if (k === 'enter') { this.play(); return; }
@@ -162,11 +162,17 @@ class BurnsHubScene {
     burnsDrawMan2D(ctx, cx, cy + 8, Math.min(0.32, M.h / 900), t, true);
     // path between worlds
     ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2; ctx.setLineDash([3, 6]); ctx.beginPath();
-    this.nodes.forEach((n, i) => i ? ctx.lineTo(n.x, n.y) : ctx.moveTo(n.x, n.y)); ctx.stroke(); ctx.setLineDash([]);
+    this.nodes.filter(n => !n.secret).forEach((n, i) => i ? ctx.lineTo(n.x, n.y) : ctx.moveTo(n.x, n.y)); ctx.stroke(); ctx.setLineDash([]);
     // nodes
     for (const n of this.nodes) {
       const un = !!sv.unlocked[n.id], reg = !!BurnsWorlds.get(n.id), sel = this.sel === n.id, done = !!sv.worldDone[n.id];
       const R0 = this.nodeR || 17, r = sel ? R0 + 4 + Math.sin(t * 5) * 1.5 : R0;
+      if (n.secret) { // a glowing RV pin
+        ctx.save(); ctx.translate(n.x, n.y); ctx.shadowColor = '#ffb040'; ctx.shadowBlur = 14 + Math.sin(t * 4) * 6; ctx.fillStyle = '#ffd890'; rr(ctx, -r * 1.2, -r * 0.62, r * 2.4, r * 1.15, 6); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.fillStyle = '#5a3a2a'; ctx.fillRect(-r * 0.95, -r * 0.4, r * 0.5, r * 0.32); ctx.fillRect(-r * 0.3, -r * 0.4, r * 0.5, r * 0.32); ctx.fillStyle = '#2a2224'; ctx.beginPath(); ctx.arc(-r * 0.62, r * 0.55, r * 0.26, 0, TAU); ctx.arc(r * 0.68, r * 0.55, r * 0.26, 0, TAU); ctx.fill();
+        if (sel) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; rr(ctx, -r * 1.25, -r * 0.67, r * 2.5, r * 1.25, 7); ctx.stroke(); }
+        ctx.restore(); BurnsUI.text(ctx, 'SECRET', n.x, n.y + r + 9, 10, '#ffd890', { glow: '#ffb040' }); continue;
+      }
       ctx.save();
       if (sel) { ctx.shadowColor = n.col; ctx.shadowBlur = 20; }
       ctx.fillStyle = un ? n.col : '#5a4a5a'; ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, TAU); ctx.fill();

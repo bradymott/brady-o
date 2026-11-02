@@ -15,7 +15,7 @@
 
 const BW5 = {
   ROWS: [16, 30, 44], FRONT: 56, BACK: -86,
-  DOCK: { x: -29, z: -112, r: 19 }, TOWER: { x: 34, z: -134 }, RET: { x: 0, z: -79 },
+  DOCK: { x: -29, z: -112, r: 19 }, TOWER: { x: 34, z: -134 }, PJ: { x: 40, z: -138, rot: Math.PI / 2 }, LOOK: null, RET: { x: 0, z: -79 },
   CHUTE: { z0: -70, z1: -30, h: 4 },
   BISCUIT_PIC: { x: 24, z: 92 },
   state: null
@@ -107,7 +107,7 @@ BurnsWorlds.register({
     }
     // aisle number signs hanging over the side aisles
     const aisleNames = [['AISLE 7\nBULK GLITTER', -23], ['AISLE 12\nSPARE GOGGLES', 23], ['AISLE 3\nEMOTIONAL SUPPORT', -37], ['AISLE 9\nZIP TIES (SOLD OUT)', 37], ['AISLE 0\nFREE HUGS (SAMPLE SIZE)', -51], ['AISLE 11\nMOOP BAGS', 51]];
-    for (const [t, x] of aisleNames) for (const z of [44, -58]) api.sign(t, x, z, { y: 8.2, h: 1.1, post: false, yaw: z > 0 ? 0 : Math.PI, style: { bg: '#1a2a5a', fg: '#ffffff', size: 34, border: '#38f2ff' } });
+    for (const [t, x] of aisleNames) for (const z of [44, -58]) api.sign(t, x, z, { y: 8.2, h: 1.1, post: false, yaw: z > 0 ? 0 : Math.PI, style: { bg: '#1a2a5a', fg: '#ffffff', size: 19, border: '#38f2ff' } });
     /* ---------------- outside: the street + camps ---------------- */
     BW5.buildStreet(api, g);
     /* ---------------- parking lot ---------------- */
@@ -124,7 +124,7 @@ BurnsWorlds.register({
     BW5.buildAisles(api, g);
     /* ---------------- the loading dock (boss) + the Overstock lookout ---------------- */
     BW5.buildDock(api, g);
-    BW5.buildTower(api, g);
+    BW5.buildLookout(api, g);
     /* ---------------- next door: the Turnkey Billionaire's "Oasis" + the misting station ---------------- */
     BW5.buildOasis(api, g);
     BW5.buildMister(api, g);
@@ -134,7 +134,8 @@ BurnsWorlds.register({
     BW5.makePuppets(g);
     api.marker('ware', 0, 0, 'Warehouse', { col: '#38f2ff' });
     api.marker('dock', BW5.DOCK.x, BW5.DOCK.z, 'Dock', { col: '#ffd84a' });
-    api.marker('tower', BW5.TOWER.x, BW5.TOWER.z, 'Lookout', { col: '#ff9a4a' });
+    api.marker('tower', BW5.LOOK.x, BW5.LOOK.z, 'Lookout', { col: '#ff9a4a' });
+    BW567K.sanitizeActors(api);
   },
   onStart(g) {
     const S = BW5.state;
@@ -205,9 +206,9 @@ BW5.buildShell = function (api) {
     BW567K.rbox(m, 0, 12, 0, 32, 5.6, 1.0, 0.45);
     m.color('#ff4a2a'); BW567K.rbox(m, 0, 14.95, 0.2, 31, 0.5, 1.0, 0.2); BW567K.rbox(m, 0, 9.05, 0.2, 31, 0.5, 1.0, 0.2);
     m.shine(0);
-    const reg = BURNS_ATLAS.sign('COSTCO SOUL\nTRADING CO.', { bg: '#1f4fae', fg: '#ffffff', size: 64, glow: '#38f2ff', pad: 18, font: FONT_DISPLAY });
+    const reg = BURNS_ATLAS.sign('COSTCO SOUL\nTRADING CO.', { bg: '#1f4fae', fg: '#ffffff', size: 40, glow: '#38f2ff', pad: 10, font: FONT_DISPLAY });
     m.color('#ffffff', 0.6); m.decal(0, 12, 0.52, Math.min(28, 4.8 * reg.aspect), Math.min(28, 4.8 * reg.aspect) / reg.aspect, reg); m.emissive(0);
-    const sub = BURNS_ATLAS.sign('EST. WHENEVER  ·  MEMBERS: EVERYONE', { bg: '#ff4a2a', fg: '#ffffff', size: 36, pad: 10 });
+    const sub = BURNS_ATLAS.sign('EST. WHENEVER  ·  MEMBERS: EVERYONE', { bg: '#ff4a2a', fg: '#ffffff', size: 19, pad: 10 });
     m.color('#ffffff', 0.3); m.decal(0, 8.2, 0.55, 14, 14 / sub.aspect, sub); m.emissive(0);
     m.color('#ffd84a', 1); for (let i = 0; i < 26; i++) { const t = i / 25; m.box(-15.6 + t * 31.2, 15.35, 0.55, 0.18, 0.18, 0.1); m.box(-15.6 + t * 31.2, 8.65, 0.55, 0.18, 0.18, 0.1); } m.emissive(0);
     return { cols: [{ t: 'cyl', x: -15, z: 0, r: 0.6, y0: 0, y1: 15 }, { t: 'cyl', x: 15, z: 0, r: 0.6, y0: 0, y1: 15 }] };
@@ -310,7 +311,7 @@ BW5.buildStreet = function (api, g) {
     api.prop('couch', { x: x + 1.2 + (o.dx || 0), z: z - side * 7, yaw: side > 0 ? 0 : Math.PI, col: r.pick(['#2a5a8a', '#8a2a5a', '#5a8a2a']) });
     for (let i = 0; i < 3; i++) api.prop('chair', { x: x - 2 + i * 1.3 + (o.dx || 0), z: z - side * 9, yaw: r() * TAU, col: r.pick(BURNS_NEON) });
     api.prop('cooler', { x: x + 3.4, z: z - side * 5.5, col: r.pick(['#2a8ac8', '#c83a2a']) });
-    if (o.sign) api.sign(o.sign, x - 4, z - side * 10.5, { yaw: side > 0 ? 0 : Math.PI, h: 1.0, style: { bg: o.bg || '#fff4d8', fg: '#2a1a10', size: 34, border: '#2a1a10' } });
+    if (o.sign) api.sign(o.sign, x - 4, z - side * 10.5, { yaw: side > 0 ? 0 : Math.PI, h: 1.0, style: { bg: o.bg || '#fff4d8', fg: '#2a1a10', size: 19, border: '#2a1a10' } });
   };
   camp(-36, 146, 1, 501, { sign: 'PANCAKES ARE A\nLOVE LANGUAGE', vehicle: 'bus' });
   camp(36, 146, 1, 502, { sign: 'HYDRATION NATION', bg: '#d8f4ff' });
@@ -330,8 +331,8 @@ BW5.buildStreet = function (api, g) {
   api.glowLine(0, 122, 0, 76, 12);
   api.glowLine(-30, 132, -8, 132, 5);
   for (const sx of [-1, 1]) for (let z = 150; z > 112; z -= 38) api.prop('lightTower', { x: sx * 12, z, yaw: sx > 0 ? -Math.PI / 2 : Math.PI / 2 });
-  api.sign('COSTCO SOUL\nTRADING CO.  ↑', 6, 118, { yaw: 0, h: 1.2, style: { bg: '#1f4fae', fg: '#ffffff', size: 40, border: '#ff4a2a' } });
-  api.sign('FREE PARKING\n(EVERYTHING IS FREE)', -7, 112, { yaw: 0, h: 1.1, style: { bg: '#fff4d8', fg: '#1f4fae', size: 34, border: '#1f4fae' } });
+  api.sign('COSTCO SOUL\nTRADING CO.  ↑', 6, 118, { yaw: 0, h: 1.2, style: { bg: '#1f4fae', fg: '#ffffff', size: 22, border: '#ff4a2a' } });
+  api.sign('FREE PARKING\n(EVERYTHING IS FREE)', -7, 112, { yaw: 0, h: 1.1, style: { bg: '#fff4d8', fg: '#1f4fae', size: 19, border: '#1f4fae' } });
 };
 
 BW5.buildLot = function (api, g) {
@@ -347,7 +348,7 @@ BW5.buildLot = function (api, g) {
     for (let i = 0; i < 7; i++) { m.push(); m.tf(-4 + i * 1.1, 0, 0, Math.PI / 2 + 0.05 * Math.sin(i)); BW5.cartMesh(m, i % 3 ? '#b8c0cc' : '#c8ccd8'); m.pop(); }
     return { cols: [{ t: 'box', x: 0, z: -2.2, hx: 5, hz: 0.1, y0: 0, y1: 1.05 }, { t: 'box', x: 0, z: 2.2, hx: 5, hz: 0.1, y0: 0, y1: 1.05 }, { t: 'box', x: 5, z: 0, hx: 0.1, hz: 2.2, y0: 0, y1: 1.05 }, { t: 'box', x: -0.5, z: 0, hx: 4.4, hz: 1.4, y0: 0, y1: 1.05 }] };
   });
-  api.sign('CART RETURN\nCARTS ARE PEOPLE TOO', -34, 84.6, { yaw: 0, h: 1.0, style: { bg: '#1f4fae', fg: '#ffffff', size: 32, border: '#ffffff' } });
+  api.sign('CART RETURN\nCARTS ARE PEOPLE TOO', -34, 84.6, { yaw: 0, h: 1.0, style: { bg: '#1f4fae', fg: '#ffffff', size: 19, border: '#ffffff' } });
   // parked camp vehicles along the lot edges
   api.prop('van', { x: 52, z: 76, yaw: -Math.PI / 2, seed: 520 });
   api.prop('car', { x: 47, z: 86, yaw: -Math.PI / 2 + 0.1, seed: 521 });
@@ -398,7 +399,7 @@ BW5.buildEntrance = function (api, g) {
   api.mesh(0, F, m => {
     m.color('#ff4a2a').shine(2); for (const x of [-9.4, 9.4]) BW567K.rcyl(m, x, 0, 0, 0.45, 6.4, 0.15);
     BW567K.rbox(m, 0, 6.6, 0, 19.6, 0.7, 0.9, 0.3); m.shine(0);
-    const reg = BURNS_ATLAS.sign('MEMBERS  →  ENTRANCE', { bg: '#ff4a2a', fg: '#ffffff', size: 34, pad: 8 });
+    const reg = BURNS_ATLAS.sign('MEMBERS  →  ENTRANCE', { bg: '#ff4a2a', fg: '#ffffff', size: 19, pad: 8 });
     m.color('#ffffff', 0.2); m.decal(0, 6.6, 0.47, 9, 9 / reg.aspect, reg); m.push(); m.tf(0, 0, 0, Math.PI); m.decal(0, 6.6, 0.47, 9, 9 / reg.aspect, reg); m.pop(); m.emissive(0);
     return { cols: [{ t: 'cyl', x: -9.4, z: 0, r: 0.45, y0: 0, y1: 6.4 }, { t: 'cyl', x: 9.4, z: 0, r: 0.45, y0: 0, y1: 6.4 }] };
   });
@@ -416,7 +417,7 @@ BW5.buildEntrance = function (api, g) {
     m.color('#2a2a30'); BW567K.rbox(m, -1.0, 1.36, 0.2, 0.5, 0.36, 0.3, 0.05); m.color('#5ab0ff', 0.8); m.box(-1.0, 1.38, 0.36, 0.42, 0.26, 0.01); m.emissive(0);
     return { cols: [{ t: 'box', x: 0, z: 0, hx: 2, hz: 0.72, y0: 0, y1: 1.2 }] };
   });
-  api.sign('MEMBERSHIP\nFREE · LIFETIME · MANDATORY', -7, 66.6, { yaw: 0, y: 2.6, h: 1.1, post: false, style: { bg: '#ffffff', fg: '#1f4fae', size: 34, border: '#ff4a2a' } });
+  api.sign('MEMBERSHIP\nFREE · LIFETIME · MANDATORY', -7, 66.6, { yaw: 0, y: 2.6, h: 1.1, post: false, style: { bg: '#ffffff', fg: '#1f4fae', size: 19, border: '#ff4a2a' } });
   // photo booth tripod pointing at the X
   api.mesh(5, 70.5, m => {
     m.color('#2a2a30'); for (let i = 0; i < 3; i++) { const a = i / 3 * TAU; BW567K.limb(m, Math.sin(a) * 0.5, 0, Math.cos(a) * 0.5, 0, 1.4, 0, 0.03); }
@@ -424,8 +425,8 @@ BW5.buildEntrance = function (api, g) {
     m.color('#ffffff', 1); BW567K.torus(m, 0.7, 1.7, 0, 0.32, 0.04, { seg: 14, tseg: 5 }); m.emissive(0);
     return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.3, y0: 0, y1: 1.7, camPass: true }] };
   });
-  api.npc({ id: 'marge', name: 'MARGE, MEMBERSHIP', type: 'greeter', seed: 570, x: -7, z: 62.6, yaw: 0,
-    spec: Object.assign(BurnsRig.npcSpec('greeter', 570), { hair: { style: 'bun', col: '#c8c8d0', hi: '#ffffff' }, glasses: 'clear', hat: null, top: { kind: 'button', col: '#38c8e8' }, bottom: { kind: 'chinos', col: '#2a2a40' }, prop: 'clipboard', acc: ['lei'], face: 'greeter', key: 'w5:marge' }),
+  api.npc({ id: 'marge', name: 'MARGE, MEMBERSHIP', seed: 570, x: -7, z: 62.6, yaw: 0,
+    type: 'burner', spec: BW567K.mine('burner', 570, { hair: { style: 'bun', col: '#c8c8d0', hi: '#ffffff' }, glasses: 'clear', top: { kind: 'button', col: '#38c8e8' }, bottom: { kind: 'chinos', col: '#2a2a40' }, shoes: { kind: 'sneakers', col: '#f4f4f4' }, prop: 'clipboard', acc: ['lei'], face: 'greeter', key: 'w5:marge' }),
     chat: ['MEMBERS! Everyone\'s a member!', 'Card, hon? Everybody gets carded.', 'No smiling in membership photos. House rules.'],
     talk(g, a) { BW5.talkMarge(g, a); } });
   api.trigger({ x: 5, z: 66, r: 1.4, when: g2 => g2.missions.state('member') === 'active' && !BW5.state.photo, onEnter: g2 => BW5.photo(g2) });
@@ -442,7 +443,7 @@ BW5.buildBulk = function (api, g) {
     m.color('#3a7a2a'); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; BW567K.ellip(m, Math.sin(a) * 2.3, 3.6 + (i % 3) * 0.2, Math.cos(a) * 2.3, 0.25, 0.7, 0.25, { seg: 8, rings: 5 }); }
     return { cols: [{ t: 'cyl', x: 0, z: 0, r: 2.55, y0: 0, y1: 5.35 }] };
   });
-  api.sign('BULK PICKLES\n1 TON (LOOSELY)', 0, 18.7, { yaw: 0, y: 1.6, h: 1.1, post: false, style: { bg: '#fff4c8', fg: '#2a5a2a', size: 34, border: '#2a5a2a' } });
+  api.sign('BULK PICKLES\n1 TON (LOOSELY)', 0, 18.7, { yaw: 0, y: 1.6, h: 1.1, post: false, style: { bg: '#fff4c8', fg: '#2a5a2a', size: 19, border: '#2a5a2a' } });
   // crate steps up the jar
   BW567K.rb(api, 4.8, 0, 19.6, 1.6, 1.3, 1.6, '#c89a60', { r: 0.12 });
   BW567K.rb(api, 4.2, 0, 17.4, 1.6, 2.6, 1.6, '#b88a50', { r: 0.12 });
@@ -466,8 +467,8 @@ BW5.buildBulk = function (api, g) {
     m.lo = false;
     return { cols };
   });
-  api.sign('BULK BABY WIPES\nTHE PLAYA SHOWER', 4.6, PZ + 3.6, { yaw: 0.4, h: 1.0, style: { bg: '#e8f4ff', fg: '#1f4fae', size: 34, border: '#3aa0ff' } });
-  api.npc({ type: 'crusty', seed: 580, name: 'AUNTIE WIPES', x: -4.2, z: PZ + 3.4, yaw: 0.6, lines: ['Six days, zero showers, one hundred wipes. That\'s the playa math.', 'Take a wipe. Take two. Your elbows are a disgrace.'], gift: { kind: 'water' } });
+  api.sign('BULK BABY WIPES\nTHE PLAYA SHOWER', 4.6, PZ + 3.6, { yaw: 0.4, h: 1.0, style: { bg: '#e8f4ff', fg: '#1f4fae', size: 19, border: '#3aa0ff' } });
+  api.npc({ type: 'tutu', seed: 580, name: 'AUNTIE WIPES', x: -4.2, z: PZ + 3.4, yaw: 0.6, lines: ['Six days, zero showers, one hundred wipes. That\'s the playa math.', 'Take a wipe. Take two. Your elbows are a disgrace.'], gift: { kind: 'water' } });
   api.pickup('bag:lsd', -3.8, 0.9, PZ - 3.8);
   api.glowRing(0, PZ, 4.6, 10);
   // LSD-only rafter walk to a hidden photo
@@ -530,13 +531,13 @@ BW5.buildChute = function (api, g) {
   for (const sx of [-1, 1]) api.mesh(sx * 9.5, -78, m => { m.color('#ffd84a').shine(2); BW567K.limb(m, 0, C.h + 1.0, -7.8, 0, C.h + 1.0, 7.8, 0.06); for (let i = 0; i < 5; i++) BW567K.limb(m, 0, C.h, -7.8 + i * 3.9, 0, C.h + 1.0, -7.8 + i * 3.9, 0.05); m.shine(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 0.12, hz: 7.9, y0: C.h, y1: C.h + 1.05, walk: false }] }; });
   // cart hopper at the top + catcher piles at the bottom
   api.mesh(0, -84.5, m => { m.color('#1f6fd0').shine(2); BW567K.rbox(m, 0, C.h + 1.5, 0, 16, 3, 2, 0.4); m.shine(0); m.color('#ffd84a', 0.4); m.box(0, C.h + 2.6, 1.02, 15, 0.3, 0.02); m.emissive(0); for (let i = 0; i < 8; i++) { m.push(); m.tf(-6.5 + i * 1.85, C.h + 3.0, -0.3, Math.PI, 0.5); BW5.cartMesh(m, '#b8c0cc'); m.pop(); } return { cols: [{ t: 'box', x: 0, z: 0, hx: 8, hz: 1, y0: C.h, y1: C.h + 3 }] }; });
-  api.sign('THE CART CHUTE\nDO NOT RIDE (RIDE)', 12.5, -30, { yaw: -0.5, h: 1.2, style: { bg: '#ffd84a', fg: '#1a1a2a', size: 36, border: '#1a1a2a' } });
+  api.sign('THE CART CHUTE\nDO NOT RIDE (RIDE)', 12.5, -30, { yaw: -0.5, h: 1.2, style: { bg: '#ffd84a', fg: '#1a1a2a', size: 19, border: '#1a1a2a' } });
   for (const sx of [-1, 1]) api.mesh(sx * 12, -27, m => { for (let i = 0; i < 6; i++) { m.push(); m.tf((i % 3 - 1) * 0.9, Math.floor(i / 3) * 0.95, (i % 2) * 0.6, i * 1.3, 0, Math.floor(i / 3) * 0.3); BW5.cartMesh(m, '#c0c6d0'); m.pop(); } return { cols: [{ t: 'box', x: 0, z: 0.3, hx: 1.6, hz: 1.0, y0: 0, y1: 1.8 }] }; });
   // Returns desk + Rhonda
   api.mesh(0, -76.5, m => { m.color('#ff4a2a').shine(2); BW567K.rbox(m, 0, C.h + 0.55, 0, 4.4, 1.1, 1.0, 0.25); m.color('#ffffff'); BW567K.rbox(m, 0, C.h + 1.13, 0, 4.6, 0.08, 1.1, 0.04); m.shine(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 2.2, hz: 0.5, y0: C.h, y1: C.h + 1.17 }] }; }, { y: 0 });
-  api.sign('RETURNS\nNONE ACCEPTED · NO REGRETS', 0, -78.5, { y: C.h + 1.6, h: 1.1, post: false, style: { bg: '#ff4a2a', fg: '#ffffff', size: 34, border: '#ffffff' } });
-  api.npc({ id: 'rhonda', name: 'RHONDA, RETURNS', type: 'crusty', seed: 610, x: 0, z: -77.8, y: C.h, fixedY: true, yaw: 0, always: true,
-    spec: Object.assign(BurnsRig.npcSpec('crusty', 610), { hair: { style: 'pony', col: '#8a3a2a', hi: '#c86a4a' }, glasses: 'heart', goggles: false, hat: null, face: 'stern', prop: 'clipboard', body: { h: 0.95, w: 1.05 }, key: 'w5:rhonda' }),
+  api.sign('RETURNS\nNONE ACCEPTED · NO REGRETS', 0, -78.5, { y: C.h + 1.6, h: 1.1, post: false, style: { bg: '#ff4a2a', fg: '#ffffff', size: 19, border: '#ffffff' } });
+  api.npc({ id: 'rhonda', name: 'RHONDA, RETURNS', type: 'burner', seed: 610, x: 0, z: -77.8, y: C.h, fixedY: true, yaw: 0, always: true,
+    spec: BW567K.mine('burner', 610, { hair: { style: 'pony', col: '#8a3a2a', hi: '#c86a4a' }, glasses: 'heart', top: { kind: 'tee', col: '#ff4a2a' }, vest: 'patches', bottom: { kind: 'cargo', col: '#5a5040' }, shoes: { kind: 'boots', col: '#3a2a1a' }, face: 'stern', prop: 'clipboard', body: { h: 0.95, w: 1.05 }, key: 'w5:rhonda' }),
     chat: ['No returns.', 'We don\'t take returns. We don\'t take ANYTHING.'],
     talk(g, a) { BW5.talkRhonda(g, a); } });
   api.pickup('bag:liquor', 6, C.h + 0.9, -82);
@@ -562,7 +563,7 @@ BW5.buildAisle99 = function (api, g) {
     }
     return { cols };
   });
-  api.sign('AISLE 99\nTOP SHELF', RX + 9, RZ + 1.6, { y: 12.9, h: 1.1, post: false, style: { bg: '#ffd84a', fg: '#1a1a2a', size: 36, border: '#1a1a2a' } });
+  api.sign('AISLE 99\nTOP SHELF', RX + 9, RZ + 1.6, { y: 12.9, h: 1.1, post: false, style: { bg: '#ffd84a', fg: '#1a1a2a', size: 19, border: '#1a1a2a' } });
   // forklift lifts: mast + a pallet platform (mover) that rides up and down
   const lifts = [{ x: -33.6, lo: 2.0, hi: 4.82, per: 6.2, ph: 0 }, { x: -52.0, lo: 4.82, hi: 9.62, per: 7.0, ph: 1.5 }, { x: -39.0, lo: 9.62, hi: 12.02, per: 5.6, ph: 3.0 }];
   for (const L0 of lifts) {
@@ -577,8 +578,8 @@ BW5.buildAisle99 = function (api, g) {
   api.pickup('item:ice', -47, 12.9, -78, { mission: 'pallets', gate: true, label: 'LAST BAG OF ICE', icon: 'drop', col: '#bff0ff', id: 'ice' });
   api.glowArc(-29.5, 2.0, -71, -31.6, 3.2, -73, 0.6, 3);
   api.glowLine(-36, 5.7, -77, -49, 5.7, -77, 6); api.glowLine(-50, 10.5, -77, -41, 10.5, -77, 5); api.glowLine(-41, 12.9, -77.5, -45, 12.9, -77.5, 3);
-  api.npc({ id: 'fran', name: 'FRAN, FORKLIFTS', type: 'dpw', seed: 620, x: -27, z: -66, yaw: Math.PI,
-    spec: Object.assign(BurnsRig.npcSpec('dpw', 620), { face: 'friendly', hair: { style: 'pony', col: '#3a2a1a' }, body: { h: 0.96, w: 1.05 }, key: 'w5:fran' }),
+  api.npc({ id: 'fran', name: 'FRAN, FORKLIFTS', type: 'burner', seed: 620, x: -27, z: -66, yaw: Math.PI,
+    spec: BW567K.mine('burner', 620, { face: 'friendly', hair: { style: 'pony', col: '#3a2a1a' }, hat: { kind: 'hardhat', col: '#ffb81c' }, vest: 'hivis', top: { kind: 'tee', col: '#6a5a4a' }, bottom: { kind: 'cargo', col: '#5a4a3a' }, shoes: { kind: 'boots', col: '#2a1a10' }, prop: 'radio', acc: ['toolbelt'], body: { h: 0.96, w: 1.05 }, key: 'w5:fran' }),
     chat: ['Forklift certified. Sort of.', 'They go up. They go down. That\'s the whole job.'],
     talk(g, a) { BW5.talkFran(g, a); } });
   api.prop('crate', { x: -25, z: -70, s: 1.2 }); api.prop('crate', { x: -24, z: -71.4, s: 1.0 });
@@ -587,19 +588,19 @@ BW5.buildAisle99 = function (api, g) {
 BW5.buildAisles = function (api, g) {
   // cart-pushing hoarders (their carts are puppet carts 0..2)
   const hoard = [{ x: 37, z0: 44, z1: -56, seed: 630 }, { x: -51, z0: -56, z1: 44, seed: 631 }, { x: 23, z0: -56, z1: 40, seed: 632 }];
-  hoard.forEach((h, i) => api.enemy({ id: 'hoard' + i, name: 'HOARDER', type: 'crusty', seed: h.seed, x: h.x, z: h.z0, behavior: 'bw5Hoarder', hp: 2, cart: i, path: [[h.x, h.z0], [h.x, h.z1]], speed: 2.6, drop: 3,
-    spec: Object.assign(BurnsRig.npcSpec('crusty', h.seed), { hat: { kind: 'cap', col: '#c83a2a' }, coat: null, vest: 'fleece', vestCol: '#5a5a64', face: 'grumpy', key: 'w5:hoard' + i }),
+  hoard.forEach((h, i) => api.enemy({ id: 'hoard' + i, name: 'HOARDER', type: 'burner', seed: h.seed, x: h.x, z: h.z0, behavior: 'bw5Hoarder', hp: 2, cart: i, path: [[h.x, h.z0], [h.x, h.z1]], speed: 2.6, drop: 3,
+    spec: BW567K.mine('burner', h.seed, { hat: { kind: 'cap', col: '#c83a2a' }, vest: 'fleece', vestCol: '#5a5a64', top: { kind: 'tee', col: '#8a8a72' }, bottom: { kind: 'cargo', col: '#5a5040' }, shoes: { kind: 'sneakers', col: '#9a9a9a' }, face: 'grumpy', key: 'w5:hoard' + i }),
     chat: ['Bulk is a lifestyle.', 'I\'ll need eleven of those.', 'Out of my way. Stocking up for the apocalypse. And Tuesday.'], defeatLine: 'Fine. I\'ll only take TEN.' }));
   // gift police (patrol + vision cones)
   const police = [{ x: -23, path: [[-23, 40], [-23, -56]] }, { x: 37, path: [[37, -40], [37, 30]] }, { x: -37, path: [[-37, -56], [-37, 10]] }, { x: 51, path: [[51, 40], [51, -56]] }];
-  police.forEach((p, i) => api.enemy({ name: 'GIFT POLICE', type: 'ranger', seed: 640 + i, x: p.path[0][0], z: p.path[0][1], behavior: 'patrol', path: p.path, view: 10, fov: 0.55, speed: 1.6, chaseSpeed: 4.4, hp: 2, drop: 3, spotLine: 'HALT! WAS THAT A TRADE?!',
-    spec: Object.assign(BurnsRig.npcSpec('ranger', 640 + i), { top: { kind: 'button', col: '#ff6ad0' }, hat: { kind: 'cap', col: '#1a1a3a' }, vest: 'hivis', key: 'w5:police' + i }),
+  police.forEach((p, i) => api.enemy({ name: 'GIFT POLICE', type: 'burner', seed: 640 + i, x: p.path[0][0], z: p.path[0][1], behavior: 'patrol', path: p.path, view: 10, fov: 0.55, speed: 1.6, chaseSpeed: 4.4, hp: 2, drop: 3, spotLine: 'HALT! WAS THAT A TRADE?!',
+    spec: BW567K.mine('burner', 640 + i, { top: { kind: 'button', col: '#ff6ad0' }, hat: { kind: 'cap', col: '#1a1a3a' }, vest: 'hivis', bottom: { kind: 'cargo', col: '#2a2a3a' }, shoes: { kind: 'boots', col: '#1a1a1a' }, face: 'stern', glasses: 'shades', prop: 'radio', key: 'w5:police' + i }),
     chat: ['Gifting is NOT bartering!', 'I saw that eye contact. Very transactional.', 'Step away from the reciprocity.'], defeatLine: 'Okay. Was that a gift? It felt like a gift.' }));
   // Someone Brought Their Mom: an embarrassed burner kid + a mom out-partying everyone
-  api.npc({ id: 'mom', name: 'DEB (SOMEONE\'S MOM)', type: 'burnermom', spec: BW567K.who('burnermom', 1), x: -21.2, z: 18, yaw: -Math.PI / 2, behavior: 'dance', style: 1,
+  api.npc({ id: 'mom', name: 'DEB (SOMEONE\'S MOM)', type: 'burnermom', seed: 1, x: -21.2, z: 18, yaw: -Math.PI / 2, behavior: 'dance', style: 1,
     chat: ['WOOO! Is this a rave? Is it a RAVE?!', 'I\'ve got two cameras. One for memories, one for BACKUP memories.', 'Kevin, honey, smile!'],
     talk(g, a) { BW5.talkMom(g, a); } });
-  api.npc({ id: 'kid', name: 'KEVIN (HER KID)', type: 'burnerkid', spec: BW567K.who('burnerkid', 1), x: -24.6, z: 16.4, yaw: Math.PI / 2,
+  api.npc({ id: 'kid', name: 'KEVIN (HER KID)', type: 'burnerkid', seed: 1, x: -24.6, z: 16.4, yaw: Math.PI / 2,
     chat: ['Mom. MOM. Please.', 'She\'s been up for 30 hours. I\'m so tired.', 'Do NOT let her near the art cars.'],
     lines: ['I invited her as a joke. She already has more friends here than me.', 'She traded her book club for a dance crew. On day one.'] });
   // shoplifter in the aisles
@@ -628,7 +629,7 @@ BW5.buildDock = function (api, g) {
     const a = i / 5 * TAU + 0.3, x = A.x + Math.sin(a) * 11, z = A.z + Math.cos(a) * 11, h = i % 2 ? 2.4 : 1.6;
     api.mesh(x, z, m => { for (let k = 0; k < Math.round(h / 0.8); k++) { m.push(); m.tf(0, k * 0.8, 0, k * 0.2); BW5.palletMesh(m, true); m.pop(); } return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.15, hz: 1.15, y0: 0, y1: h, cover: true }] }; });
   }
-  api.sign('BARTER BARON\'S LOADING DOCK\nEVERYTHING HAS A PRICE', A.x + 6, A.z + A.r + 2.5, { yaw: Math.PI, h: 1.3, style: { bg: '#2a1a0a', fg: '#ffd84a', size: 36, border: '#ffd84a', glow: '#ffb020' }, glow: '#ffd84a' });
+  api.sign('BARTER BARON\'S LOADING DOCK\nEVERYTHING HAS A PRICE', A.x + 6, A.z + A.r + 2.5, { yaw: Math.PI, h: 1.3, style: { bg: '#2a1a0a', fg: '#ffd84a', size: 19, border: '#ffd84a', glow: '#ffb020' }, glow: '#ffd84a' });
   api.checkpoint('cp_dock', -4, -98, { yaw: Math.PI, name: 'Loading Dock' });
   api.pickup('water', A.x - 14, 0.9, A.z + 8); api.pickup('water', A.x + 14, 0.9, A.z - 6);
   api.glowRing(A.x, A.z, 7, 12);
@@ -654,7 +655,7 @@ BW5.buildTower = function (api, g) {
   };
   panel(18, -116, 31, -116); panel(37, -116, 50, -116); panel(18, -116, 18, -152); panel(50, -116, 50, -152); panel(18, -152, 50, -152);
   api.prop('booth', { x: 41.5, z: -111.5, roof: '#ffd84a', col: '#2a1a0a' });
-  api.sign('OVERSTOCK LOOKOUT\nACCESS: ONE (1) TRADE', 27.6, -112, { yaw: 0, h: 1.2, style: { bg: '#2a1a0a', fg: '#ffd84a', size: 36, border: '#ffd84a' } });
+  api.sign('OVERSTOCK LOOKOUT\nACCESS: ONE (1) TRADE', 27.6, -112, { yaw: 0, h: 1.2, style: { bg: '#2a1a0a', fg: '#ffd84a', size: 19, border: '#ffd84a' } });
   BW5.state.toll = api.collider({ t: 'box', x: 34, z: -116, hx: 3.2, hz: 0.4, y0: 0, y1: 5, walk: false });
   const arm = api.mover(m => { m.color('#2a2a30'); BW567K.rbox(m, 0, -0.5, 0, 0.5, 1.0, 0.5, 0.1); m.color('#ffd84a').shine(2); BW567K.rbox(m, 3.2, 0, 0, 6.4, 0.25, 0.22, 0.1); m.color('#1a1a1a'); for (let k = 0; k < 4; k++) m.box(1.2 + k * 1.5, 0, 0, 0.5, 0.26, 0.23); m.shine(0); return { cols: [] }; });
   arm.x = 30.8; arm.y = 1.1; arm.z = -116; BW5.state.tollArm = arm;
@@ -747,7 +748,7 @@ BW5.forkMesh = function (m) {
   for (const [x, z, r] of [[0.8, 0.5, 0.4], [-0.8, 0.5, 0.4], [0.8, -1.05, 0.34], [-0.8, -1.05, 0.34]]) { m.push(); m.tf(x, r, z, 0, 0, Math.PI / 2); m.color('#1a1a1e'); BW567K.rcyl(m, 0, -0.18, 0, r, 0.36, 0.1); m.color('#d8d8d8'); BW567K.rcyl(m, 0, -0.19, 0, r * 0.5, 0.38, 0.04); m.pop(); }
   m.color('#3a3a44'); for (const sx of [-1, 1]) BW567K.rbox(m, sx * 0.48, 1.7, 0.95, 0.12, 3.2, 0.14, 0.04);
   m.color('#ffd84a', 1); m.box(0.55, 1.0, 0.92, 0.18, 0.12, 0.04); m.box(-0.55, 1.0, 0.92, 0.18, 0.12, 0.04); m.emissive(0);
-  const plate = BURNS_ATLAS.sign('BARTER\nLIFT', { bg: '#2a1a0a', fg: '#ffd84a', size: 30, pad: 6 });
+  const plate = BURNS_ATLAS.sign('BARTER\nLIFT', { bg: '#2a1a0a', fg: '#ffd84a', size: 19, pad: 6 });
   m.color('#ffffff', 0.3); m.push(); m.tf(0, 0, 0, Math.PI); m.decal(0, 0.95, 1.69, 0.9, 0.9 / plate.aspect, plate); m.pop(); m.emissive(0);
   m.shine(0);
   m.setBone(1);
@@ -872,19 +873,10 @@ BW5.makePuppets = function (g) {
   fork.addColliders = function () { if (this.hidden || !this.colOn) return; for (const c of this.cols) this.g.world.col.addDyn(c); };
   S.forkP = fork;
   g.addBoss(fork);
-  // accessories: Preston's silk dust mask, Brady's linen disguise (hat + mask), Fluffernutter's ears + tail, Bryce's air purifier
-  const accGeo = BW567K.geo('w5acc', m => {
-    m.setBone(0); BW567K.acc(m, 'mask', { col: '#f4ecd8' });
-    m.setBone(1); BW567K.acc(m, 'panama'); m.setBone(2); BW567K.acc(m, 'mask', { col: '#f8f6f0' });
-    m.setBone(3); BW567K.acc(m, 'ears'); m.setBone(4); BW567K.acc(m, 'tail');
-    m.setBone(5); BW567K.acc(m, 'purifier');
-  });
-  const att = new BW567Attach(g, accGeo, 6);
-  const H = BURNS_BONES.HEAD;
-  att.attach(0, () => g.actor('preston'), H);
-  att.attach(1, 'player', H).on = false; att.attach(2, 'player', H).on = false;
-  att.attach(3, () => g.actor('furry'), H); att.attach(4, () => g.actor('furry'), BURNS_BONES.HIPS, 0, 0, -0.14);
-  att.attach(5, () => g.actor('optimizer'), BURNS_BONES.CHEST);
+  // accessories: Brady's linen disguise (panama hat + silk dust mask) for sneaking into the Oasis
+  const accGeo = BW567K.geo('w5acc2', m => { m.setBone(0); BW567K.acc(m, 'panama'); m.setBone(1); BW567K.acc(m, 'mask', { col: '#f8f6f0' }); });
+  const att = new BW567Attach(g, accGeo, 2);
+  att.attach(0, 'player', BURNS_BONES.HEAD).on = false; att.attach(1, 'player', BURNS_BONES.HEAD).on = false;
   S.att = att; g.addBoss(att);
 };
 BW5.updateCarts = function (g, dt) {
@@ -1173,7 +1165,7 @@ BW5.intro = function (g) {
   g.cutscene([
     { music: 'burns_intro' },
     { cam: { x: 46, y: 34, z: 170, tx: 0, ty: 8, tz: 40, fov: 0.85 } },
-    { banner: ['WORLD 5', 'COSTCO SOUL TRADING CO.', { col: '#38f2ff', big: true, dur: 3 }] },
+    { banner: [BurnsWorlds.label(5).toUpperCase(), 'COSTCO SOUL TRADING CO.', { col: '#38f2ff', big: true, dur: 3 }] },
     { cam: { from: { x: 46, y: 34, z: 170, tx: 0, ty: 8, tz: 40, fov: 0.85 }, to: { x: 6, y: 3.2, z: 146, tx: 0, ty: 4, tz: 60, fov: 0.85 }, dur: 4 } },
     { say: ['brady', ['The informant said everybody passes through Costco Soul Trading Co. eventually.', 'If I\'m catching a forty-foot wooden guy with a crush on my wife, I need wheels. Big ones. Preferably on fire.']] },
     { cam: { x: -2, y: 2.4, z: 70, tx: -7, ty: 1.6, tz: 62.6, fov: 0.8 } },
@@ -1247,23 +1239,23 @@ BW5.buildOasis = function (api, g) {
   // the gate: gold arch, velvet ropes, a bouncer line nobody crosses
   api.mesh(O.gateX, O.z1, m => {
     m.color('#e8c860').shine(3); for (const sx of [-1, 1]) BW567K.rcyl(m, sx * 3.6, 0, 0, 0.35, 5.2, 0.12); BW567K.rbox(m, 0, 5.4, 0, 8.2, 0.7, 0.6, 0.25); m.shine(0);
-    const reg = BURNS_ATLAS.sign('THE OASIS', { bg: '#f8f6f0', fg: '#b08a20', size: 52, pad: 10 });
+    const reg = BURNS_ATLAS.sign('THE OASIS', { bg: '#f8f6f0', fg: '#b08a20', size: 40, pad: 8 });
     m.color('#ffffff', 0.2); m.decal(0, 5.4, 0.31, 5.2, 5.2 / reg.aspect, reg); m.emissive(0);
     m.color('#e8c860').shine(3); for (let i = 0; i < 4; i++) BW567K.rcyl(m, -2.4 + i * 1.6, 0, 1.2, 0.07, 1.0, 0.03); m.shine(0);
     m.color('#c8202a'); for (let i = 0; i < 3; i++) BW567K.tube(m, [[-2.4 + i * 1.6, 0.92, 1.2], [-1.6 + i * 1.6, 0.72, 1.2], [-0.8 + i * 1.6, 0.92, 1.2]], [0.04, 0.04, 0.04], { seg: 6, cap: false });
     return { cols: [{ t: 'cyl', x: -3.6, z: 0, r: 0.35, y0: 0, y1: 5.2 }, { t: 'cyl', x: 3.6, z: 0, r: 0.35, y0: 0, y1: 5.2 }, { t: 'box', x: 0, z: 0.4, hx: 3.3, hz: 0.9, y0: 0, y1: 3.6, walk: false }] };
   });
-  api.sign('RADICALLY INCLUSIVE\n(GUEST LIST ONLY)', O.gateX - 6.5, O.z1 + 1.6, { yaw: 0, h: 1.1, style: { bg: '#f8f6f0', fg: '#b08a20', size: 34, border: '#e8c860' } });
+  api.sign('RADICALLY INCLUSIVE\n(GUEST LIST ONLY)', O.gateX - 6.5, O.z1 + 1.6, { yaw: 0, h: 1.1, style: { bg: '#f8f6f0', fg: '#b08a20', size: 19, border: '#e8c860' } });
   // staff entrance (a plain door the sherpa opens)
   BW5.state.staffDoor = api.collider({ t: 'box', x: O.x0, z: O.staffZ, hx: 0.3, hz: 2.2, y0: 0, y1: 3.6, walk: false });
   api.mesh(O.x0, O.staffZ, m => { m.color('#9a9aa2'); for (const sz of [-1, 1]) BW567K.rcyl(m, 0, 0, sz * 2.2, 0.15, 3.6, 0.05); m.color('#6a6a72'); BW567K.rbox(m, 0, 3.4, 0, 0.3, 0.3, 4.6, 0.1); return { cols: [] }; });
   BW5.state.staffGate = api.mover(m => { m.color('#c8c8d0').shine(1); BW567K.rbox(m, 0, 1.5, 1.05, 0.12, 2.9, 2.1, 0.05); m.shine(0); return { cols: [] }; });
   BW5.state.staffGate.x = O.x0; BW5.state.staffGate.z = O.staffZ - 2.1; BW5.state.staffGate.y = 0;
-  api.sign('STAFF ENTRANCE\n(SHERPAS ONLY)', O.x0 - 0.4, O.staffZ + 3.4, { yaw: -Math.PI / 2, h: 0.9, style: { bg: '#6a6a72', fg: '#ffffff', size: 30 } });
+  api.sign('STAFF ENTRANCE\n(SHERPAS ONLY)', O.x0 - 0.4, O.staffZ + 3.4, { yaw: -Math.PI / 2, h: 0.9, style: { bg: '#6a6a72', fg: '#ffffff', size: 19 } });
   // the air-conditioned dome + AC units
   api.prop('dome', { x: 104, z: 28, r: 11, col: '#f8f6f0', alt: '#e8e4dc', glow: '#bff0ff' });
   for (let i = 0; i < 5; i++) { const a = -0.6 + i * 0.5, x = 104 + Math.sin(a) * 12.4, z = 28 + Math.cos(a) * 12.4; api.mesh(x, z, m => { m.color('#dfe6ec').shine(2); BW567K.rbox(m, 0, 0.7, 0, 1.6, 1.4, 1.0, 0.18); m.color('#5a6a7a'); m.push(); m.tf(0, 0.75, 0.51, 0, Math.PI / 2); BW567K.torus(m, 0, 0, 0, 0.42, 0.04, { seg: 14, tseg: 4 }); m.pop(); m.color('#2a3440'); m.push(); m.tf(0, 0.75, 0.5, 0, Math.PI / 2); m.cyl(0, 0, 0, 0.4, 0.4, 0.02, 12, {}); m.pop(); m.shine(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 0.8, hz: 0.5, y0: 0, y1: 1.4 }] }; }, { yaw: a }); BW5.state.acUnits = (BW5.state.acUnits || []).concat([[x, z, a]]); }
-  api.sign('AIR-CONDITIONED\nAUTHENTICITY', 104, 15.8, { yaw: 0, h: 0.9, style: { bg: '#f8f6f0', fg: '#2a6ac8', size: 32 } });
+  api.sign('AIR-CONDITIONED\nAUTHENTICITY', 104, 15.8, { yaw: 0, h: 0.9, style: { bg: '#f8f6f0', fg: '#2a6ac8', size: 19 } });
   // the "radically inclusive" open bar
   api.mesh(84, 40, m => {
     m.color('#f8f6f0').shine(2); BW567K.rbox(m, 0, 0.6, 0, 9, 1.2, 1.4, 0.35); m.color('#e8c860'); BW567K.rbox(m, 0, 1.24, 0, 9.3, 0.12, 1.6, 0.05);
@@ -1276,12 +1268,12 @@ BW5.buildOasis = function (api, g) {
     m.color('#e8c860'); for (const [x, z] of [[-5.5, -3], [5.5, -3], [-5.5, 2.4], [5.5, 2.4]]) BW567K.limb(m, x, 0, z, x, z < 0 ? 4.8 : 4.0, z, 0.06);
     return { cols: [{ t: 'box', x: 0, z: 0, hx: 4.5, hz: 0.7, y0: 0, y1: 1.3 }, { t: 'box', x: 0, z: -2.4, hx: 4.5, hz: 0.25, y0: 0, y1: 3.2 }] };
   });
-  api.sign('OPEN BAR\nRADICALLY INCLUSIVE*', 84, 43.4, { y: 4.4, h: 1.0, post: false, style: { bg: '#f8f6f0', fg: '#b08a20', size: 34, border: '#e8c860' } });
+  api.sign('OPEN BAR\nRADICALLY INCLUSIVE*', 84, 43.4, { y: 4.4, h: 1.0, post: false, style: { bg: '#f8f6f0', fg: '#b08a20', size: 19, border: '#e8c860' } });
   api.sign('*GUEST LIST ONLY', 89.5, 41.4, { y: 0.4, h: 0.5, post: false, style: { bg: '#f8f6f0', fg: '#c8202a', size: 26 } });
   api.pickup('item:dronemap', 87.6, 1.8, 40.2, { mission: 'oasis', gate: true, label: 'DRONE MAP', icon: 'map', col: '#e8c860', id: 'dronemap' });
   // infinity pool, palms, white couches
   api.mesh(80, 20, m => { m.color('#f8f6f0').shine(2); BW567K.rbox(m, 0, 0.3, 0, 10, 0.6, 6, 0.3); m.color('#38c8ff', 0.35).shine(3); m.box(0, 0.58, 0, 9.0, 0.06, 5.0); m.shine(0).emissive(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 5, hz: 3, y0: 0, y1: 0.6 }] }; });
-  api.sign('THE PLAYA\'S ONLY\nINFINITY POOL', 80, 24.2, { y: 0.9, h: 0.8, style: { bg: '#f8f6f0', fg: '#2a6ac8', size: 30 } });
+  api.sign('THE PLAYA\'S ONLY\nINFINITY POOL', 80, 24.2, { y: 0.9, h: 0.8, style: { bg: '#f8f6f0', fg: '#2a6ac8', size: 19 } });
   for (const [x, z] of [[72, 8], [72, 34], [90, 8], [116, 56], [74, 58], [114, 2]]) api.mesh(x, z, m => { m.color('#8a6a4a'); BW567K.tube(m, [[0, 0, 0], [0.2, 2, 0], [0.5, 4, 0.1], [0.6, 5.4, 0.2]], [0.28, 0.24, 0.2, 0.16], { seg: 8 }); m.color('#3aa05a'); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; BW567K.limb(m, 0.6, 5.5, 0.2, 0.6 + Math.sin(a) * 2.2, 4.6, 0.2 + Math.cos(a) * 2.2, 0.16, 0.05); } return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.3, y0: 0, y1: 5 }] }; });
   for (const [x, z, yaw] of [[76, 30, 0], [86, 28, Math.PI], [96, 46, 1.2]]) api.mesh(x, z, m => { m.color('#ffffff').shine(1); BW567K.rbox(m, 0, 0.3, 0, 2.4, 0.5, 0.9, 0.2); BW567K.rbox(m, 0, 0.75, -0.36, 2.4, 0.6, 0.2, 0.1); m.shine(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.2, hz: 0.45, y0: 0, y1: 0.55 }] }; }, { yaw });
   // the septic RV out back (the sherpas' glamorous side of things)
@@ -1290,10 +1282,10 @@ BW5.buildOasis = function (api, g) {
   // Preston's custom e-bike (costs more than a used car)
   api.mesh(98, 50, m => { m.push(); m.tf(0, 0, 0, 0.6); BurnsProps.bikeShape(m, 0, 0, 0, 0, '#e8c860'); m.color('#f8f6f0').shine(3); BW567K.rbox(m, 0, 0.52, 0.0, 0.16, 0.22, 0.5, 0.06); m.shine(0); m.pop(); return { cols: [] }; });
   // the cast: Preston, the Optimization Tech Bro, the bartender, security, Sam the sherpa
-  api.npc({ id: 'preston', name: 'PRESTON, TURNKEY BILLIONAIRE', type: 'billionaire', spec: BW567K.who('billionaire', 1), x: 96, z: 47.5, yaw: -2.4,
+  api.npc({ id: 'preston', name: 'PRESTON, TURNKEY BILLIONAIRE', type: 'billionaire', seed: 1, x: 96, z: 47.5, yaw: -2.4,
     chat: ['Radical inclusion is my core value.', 'I flew the jet in Tuesday. The playa is so... authentic.', 'My sherpas built all of this. I watched. It was very spiritual.', 'Security! Include him... out.'],
     lines: ['Welcome to the Oasis! Radical inclusion is my CORE value.', 'Wait. Are you on the list? ...Security! Radically include him OUT.'] });
-  api.npc({ id: 'optimizer', name: 'BRYCE, OPTIMIZER', type: 'techbro', spec: BW567K.who('techbro', 801, { kind: 'optimizer', vest: 'patches', glasses: 'clear', acc: ['earbuds', 'bracelets'] }), x: 93.6, z: 45.4, yaw: 0.9, behavior: 'idle', anim: 'talk',
+  api.npc({ id: 'optimizer', name: 'BRYCE, OPTIMIZER', type: 'techbro', seed: 801, x: 93.6, z: 45.4, yaw: 0.9, behavior: 'idle', anim: 'talk',
     chat: ['Preston. PRESTON. Picture it: Web3 shade structures.', 'Zero cellular friction, infinite networking.', 'It\'s like a drum circle, but decentralized.', 'My heart-rate variability is CRUSHING this dust storm.'],
     lines: ['This whole week is a networking opportunity with zero cellular friction.', 'I call this campfire "decentralized warmth architecture." Want in on the seed round?'] });
   api.npc({ id: 'bartender', name: 'SHERPA (BAR)', type: 'sherpa', spec: BW567K.who('sherpa', 2), x: 82.4, z: 38.6, yaw: 0, chat: ['Open bar! For the list.', 'I also built the bar. And the list.'],
@@ -1315,9 +1307,9 @@ BW5.buildMister = function (api, g) {
   // the misting station on the street (for overheated furries and humans)
   api.prop('shade', { x: -6, z: 118, w: 6, d: 5, col: '#bff0ff' });
   api.mesh(-6, 118, m => { m.color('#9aa0aa'); BW567K.limb(m, -3, 2.7, -2.4, 3, 2.7, -2.4, 0.04); BW567K.limb(m, -3, 2.7, 2.4, 3, 2.7, 2.4, 0.04); m.color('#38c8ff', 0.4); for (let i = 0; i < 6; i++) BW567K.ball(m, -2.5 + i, 2.62, -2.4, 0.06, { seg: 6, rings: 4 }); m.emissive(0); return { cols: [] }; });
-  api.sign('MISTING STATION\nFREE COOL · NO QUESTIONS', -10.2, 116, { yaw: Math.PI / 2, h: 1.0, style: { bg: '#bff0ff', fg: '#1f4fae', size: 32, border: '#1f4fae' } });
+  api.sign('MISTING STATION\nFREE COOL · NO QUESTIONS', -10.2, 116, { yaw: Math.PI / 2, h: 1.0, style: { bg: '#bff0ff', fg: '#1f4fae', size: 19, border: '#1f4fae' } });
   // Fluffernutter, the overheating furry
-  api.npc({ id: 'furry', name: 'FLUFFERNUTTER', type: 'furry', spec: BW567K.who('furry', 7), x: -24, z: 44, yaw: Math.PI / 2, behavior: 'sit', followDist: 2.8,
+  api.npc({ id: 'furry', name: 'FLUFFERNUTTER', type: 'furry', seed: 7, x: -24, z: 44, yaw: Math.PI / 2, behavior: 'sit', followDist: 2.8,
     chat: ['So... hot... forty pounds of love, zero airflow...', 'Is the floor melting or is it me?', 'Hugs later. Mist now.'],
     talk(g, a) { BW5.talkFurry(g, a); } });
 };
@@ -1351,7 +1343,7 @@ BW5.talkSam = function (g, a) {
 BW5.disguise = function (g, on) {
   const S = BW5.state, p = g.player;
   S.disguiseT = on ? 40 : 0; p.hiddenT = on ? 40 : 0;
-  if (S.att) { S.att.items[1].on = on; S.att.items[2].on = on; }
+  if (S.att) { S.att.items[0].on = on; S.att.items[1].on = on; }
   if (on) { S.staffDoor.off = true; S.staffOpen = true; g.toast('LINEN DISGUISE ON: SECURITY CAN\'T SEE YOU (40s)'); burnsSfx('costume'); g.fx.confetti(p.x, p.y + 1.5, p.z, 16); }
 };
 BW5.thrownOut = function (g) {
@@ -1388,3 +1380,6 @@ BW5.updateOasis = function (g, dt) {
   if (S.acUnits && Math.random() < dt * 6) { const u = S.acUnits[Math.floor(Math.random() * S.acUnits.length)]; if (Math.hypot(u[0] - p.x, u[1] - p.z) < 60) g.fx.smoke(u[0] + Math.sin(u[2]) * 0.6, 0.8, u[1] + Math.cos(u[2]) * 0.6, 1, '#e8f8ff'); }
   if (Math.hypot(p.x + 6, p.z - 118) < 40 && Math.random() < dt * 10) g.fx.add(-8.5 + Math.random() * 5, 2.6, 115.6, (Math.random() - 0.5) * 0.4, -0.6, (Math.random() - 0.5) * 0.4, 1.2, 0.3, 1.4, [0.85, 0.95, 1], 0.35, 'puff', 4);
 };
+
+/* test/debug access to this world's state (no globals) */
+BurnsWorlds.get(5).dbg = BW5;

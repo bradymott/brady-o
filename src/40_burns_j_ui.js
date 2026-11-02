@@ -406,7 +406,7 @@ const BurnsUI = {
     const rows = [['token', `Burn Tokens  ${BurnsSave.tokenCount(g.worldId)} / ${BurnsWorlds.tokenTotal(g.worldId)}`], ['photo', `Photos of Chinka  ${BurnsSave.photoCount(g.worldId)} / 3`], ['glowstick', `Glow sticks  ${g.glow}`]];
     rows.forEach((r, i) => { const a = clamp((g.resultsT - 0.4 - i * 0.25) / 0.3, 0, 1); ctx.save(); ctx.globalAlpha = a; this.icon(ctx, r[0], W / 2 - 120, H * 0.44 + i * 38, 28); this.text(ctx, r[1], W / 2 - 96, H * 0.44 + i * 38, 15, '#ffffff', { align: 'left' }); ctx.restore(); });
     const nx = BurnsWorlds.next(g.worldId);
-    if (nx) this.text(ctx, `${BurnsWorlds.label(nx).toUpperCase()} UNLOCKED: ${BurnsWorlds.meta(nx).name.toUpperCase()}`, W / 2, H * 0.75, 13, '#7aff5a', { glow: '#2aff6a' });
+    if (nx) this.text(ctx, BurnsWorlds.isSecret(nx) ? 'A SECRET WORLD HAS BEEN UNLOCKED...' : `${BurnsWorlds.label(nx).toUpperCase()} UNLOCKED: ${BurnsWorlds.meta(nx).name.toUpperCase()}`, W / 2, H * 0.75, 13, '#7aff5a', { glow: '#2aff6a' });
     if (g.resultsT > 1.2) this.text(ctx, 'TAP TO CONTINUE', W / 2, H * 0.86 + Math.sin(g.t * 4) * 2, 12, '#ffd84a');
   }
 };

@@ -14,7 +14,7 @@
                  margin, so faces wrap cleanly onto round heads) */
 const BURNS_ATLAS = {
   W: 2048, H: 2048, canvas: null, T: null,
-  faceV0: 1024 / 2048, faceV1: 1536 / 2048, faceRowV: 128 / 2048,
+  faceV0: 1024 / 2048, faceV1: 2048 / 2048, faceRowV: 128 / 2048,   // two banks: y 1024..1536 and 1536..2048
   regions: {},
   white: { u0: 4 / 2048, v0: 4 / 2048, u1: 12 / 2048, v1: 12 / 2048 },
   FACES: ['brady', 'bradyClean', 'friendly', 'lashes', 'tired', 'stressed', 'greeter', 'beard', 'smug', 'chinka', 'stern', 'goofy', 'grumpy', 'sleepy', 'man', 'kid'],
@@ -54,16 +54,17 @@ const BURNS_ATLAS = {
     if (i < 0) { if (this.FACES.length >= 32) { console.warn('burns: face slots full'); return; } this.FACES.push(name); i = this.FACES.length - 1; }
     if (this.canvas) this.paintFaceCell(i, name);
   },
-  // ---- extra 128px pattern tiles (16 slots at y 64..320): addPattern(name, fn(ctx, rng)) paints a tileable 128x128 decal ----
+  // ---- extra 128px pattern tiles (23 slots: y 64..320 and y 832..960): addPattern(name, fn(ctx, rng)) paints a tileable 128x128 decal ----
   extraPatterns: [],
+  extraSlot(i) { return i < 16 ? [(i % 8) * 128, 64 + Math.floor(i / 8) * 128] : [128 + (i - 16) * 128, 832]; },
   addPattern(name, fn) {
     let i = this.extraPatterns.findIndex(e => e.name === name);
-    if (i < 0) { if (this.extraPatterns.length >= 16) { console.warn('burns: pattern slots full'); return; } this.extraPatterns.push({ name, fn }); i = this.extraPatterns.length - 1; }
+    if (i < 0) { if (this.extraPatterns.length >= 23) { console.warn('burns: pattern slots full: ' + name); return; } this.extraPatterns.push({ name, fn }); i = this.extraPatterns.length - 1; }
     else this.extraPatterns[i].fn = fn;
     if (this.canvas) this.paintExtra(i);
   },
   paintExtra(i) {
-    const e = this.extraPatterns[i], x = this.ctx, px = (i % 8) * 128, py = 64 + Math.floor(i / 8) * 128;
+    const e = this.extraPatterns[i], x = this.ctx, [px, py] = this.extraSlot(i);
     x.save(); x.clearRect(px, py, 128, 128); x.beginPath(); x.rect(px, py, 128, 128); x.clip(); x.translate(px, py);
     try { e.fn(x, mulberry32(hashStr(e.name))); } catch (err) { console.error(err); }
     x.restore();
@@ -71,7 +72,7 @@ const BURNS_ATLAS = {
     if (this.T) this.T.dirty = true;
   },
   face(name) { return this.regions['face:' + name] || this.regions['face:friendly']; },
-  pattern(name) { return this.regions['pat:' + name]; },
+  pattern(name) { return this.regions['pat:' + name] || this.white; },   // unknown/unpainted -> transparent texel (shows the base colour)
   icon(name) { return this.regions['icon:' + name]; },
   // ---- per-world sign text (right half) ----
   signReset() {
@@ -91,11 +92,13 @@ const BURNS_ATLAS = {
     const tw = Math.max(...lines.map(l => x.measureText(l).width));
     const pad = o.pad === undefined ? size * 0.4 : o.pad;
     const w = Math.min(1000, Math.ceil(o.w || tw + pad * 2)), h = Math.min(500, Math.ceil(o.h || size * 1.25 * lines.length + pad * 1.4));
-    if (this.sx + w + 4 > 2048) { this.sx = 1028; this.sy += this.srow + 4; this.srow = 0; }
-    if (this.sy + h + 4 > 1024) { console.warn('burns sign atlas full'); return this.white; }
+    // signs are rasterised at 72% (about twice as many fit); their size in the world is set by the caller, not by pixels
+    const SC = 0.72, pw = Math.ceil(w * SC), ph = Math.ceil(h * SC);
+    if (this.sx + pw + 4 > 2048) { this.sx = 1028; this.sy += this.srow + 4; this.srow = 0; }
+    if (this.sy + ph + 4 > 1024) { console.warn('burns sign atlas full'); return this.white; }
     const px = this.sx, py = this.sy;
-    this.sx += w + 6; this.srow = Math.max(this.srow, h);
-    x.save(); x.beginPath(); x.rect(px, py, w, h); x.clip(); x.translate(px, py);
+    this.sx += pw + 6; this.srow = Math.max(this.srow, ph);
+    x.save(); x.beginPath(); x.rect(px, py, pw, ph); x.clip(); x.translate(px, py); x.scale(SC, SC);
     if (o.bg) { x.fillStyle = o.bg; if (o.round) { rr(x, 0, 0, w, h, o.round); x.fill(); } else x.fillRect(0, 0, w, h); }
     if (o.border) { x.strokeStyle = o.border; x.lineWidth = o.borderW || Math.max(3, size * 0.1); if (o.round) { rr(x, x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth, o.round); x.stroke(); } else x.strokeRect(x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth); }
     x.font = `${size}px ${font}`; x.textAlign = 'center'; x.textBaseline = 'middle';
@@ -103,7 +106,7 @@ const BURNS_ATLAS = {
     x.fillStyle = o.fg || '#ffffff';
     lines.forEach((l, i) => x.fillText(l, w / 2, h / 2 + (i - (lines.length - 1) / 2) * size * 1.18 + size * 0.04));
     x.restore();
-    const r = this.reg(px, py, w, h); r.aspect = w / h;
+    const r = this.reg(px, py, pw, ph); r.aspect = w / h;
     this.signs[key] = r;
     if (this.T) this.T.dirty = true;
     return r;
@@ -456,43 +459,22 @@ class BurnsMesh {
     return this;
   }
   // chamfered box (soft low-poly look); b = bevel size
+  // beveled box -> now a rounded box with smooth normals (same footprint; `b` = edge radius). o: { top, bottom, side, uv }
   bbox(cx, cy, cz, w, h, d, b, o) {
     o = o || {};
-    const hx = w / 2, hy = h / 2, hz = d / 2;
-    b = Math.min(b === undefined ? Math.min(w, h, d) * 0.18 : b, hx * 0.95, hy * 0.95, hz * 0.95);
-    const c = [cx, cy, cz];
-    const pt = (sx, sy, sz, ax) => [cx + sx * (ax === 0 ? hx : hx - b), cy + sy * (ax === 1 ? hy : hy - b), cz + sz * (ax === 2 ? hz : hz - b)];
-    const S = [-1, 1];
+    b = Math.min(b === undefined ? Math.min(w, h, d) * 0.18 : b * 1.2, w * 0.48, h * 0.48, d * 0.48);
     const col = this.c;
-    const useUV = o.uv;
-    // main faces
-    for (const s of S) {
-      this.c = (o.side ? burnsRGB(o.side) : col);
-      const fx = [pt(s, -1, -1, 0), pt(s, 1, -1, 0), pt(s, 1, 1, 0), pt(s, -1, 1, 0)];
-      this.poly(fx, null, c);
-      const fz = [pt(-1, -1, s, 2), pt(1, -1, s, 2), pt(1, 1, s, 2), pt(-1, 1, s, 2)];
-      if (useUV && s > 0 && (o.uvFaces || 'pz') === 'pz') {
-        // front face with UV (BR, TR, TL, BL as seen from +z)
-        const r = o.uv; this.poly([pt(1, -1, 1, 2), pt(1, 1, 1, 2), pt(-1, 1, 1, 2), pt(-1, -1, 1, 2)], [[r.u1, r.v1], [r.u1, r.v0], [r.u0, r.v0], [r.u0, r.v1]], c);
-      } else this.poly(fz, null, c);
-      this.c = s > 0 && o.top ? burnsRGB(o.top) : s < 0 && o.bottom ? burnsRGB(o.bottom) : col;
-      const fy = [pt(-1, s, -1, 1), pt(1, s, -1, 1), pt(1, s, 1, 1), pt(-1, s, 1, 1)];
-      this.poly(fy, null, c);
-    }
+    if (o.side) this.c = burnsRGB(o.side);
+    this.roundBox(cx, cy, cz, w, h, d, Math.max(0.004, b), { top: o.top ? burnsRGB(o.top) : (o.side ? col : null), bottom: o.bottom ? burnsRGB(o.bottom) : (o.side ? col : null), uv: o.uv && (o.uvFaces || 'pz') === 'pz' ? o.uv : null, k: o.k, m: o.m });
     this.c = col;
-    // edge chamfers
-    for (const s1 of S) for (const s2 of S) {
-      this.poly([pt(s1, s2, -1, 0), pt(s1, s2, -1, 1), pt(s1, s2, 1, 1), pt(s1, s2, 1, 0)], null, c); // along z (x,y edges)
-      this.poly([pt(s1, -1, s2, 0), pt(s1, -1, s2, 2), pt(s1, 1, s2, 2), pt(s1, 1, s2, 0)], null, c); // along y (x,z edges)
-      this.poly([pt(-1, s1, s2, 1), pt(-1, s1, s2, 2), pt(1, s1, s2, 2), pt(1, s1, s2, 1)], null, c); // along x (y,z edges)
-    }
-    // corners
-    for (const sx of S) for (const sy of S) for (const sz of S) this.poly([pt(sx, sy, sz, 0), pt(sx, sy, sz, 1), pt(sx, sy, sz, 2)], null, c);
     return this;
   }
   // vertical cylinder / frustum / cone. y = bottom. o: { caps:true, smooth:true, top colour, uv, yaw0 }
   cyl(cx, y, cz, r0, r1, h, seg, o) {
     o = o || {}; seg = seg || 8;
+    // rounder by default: smooth-shaded sides, and enough segments that big cylinders don't look faceted
+    if (o.smooth === undefined) o = Object.assign({}, o, { smooth: true });
+    if (!o.stripes && !this.lo) { const R = Math.max(r0, r1); if (R > 0.6) seg = Math.max(seg, 18); else if (R > 0.25) seg = Math.max(seg, 12); else if (R > 0.08) seg = Math.max(seg, 9); }
     const a0 = o.yaw0 || 0, col = this.c;
     const ring = (r, yy) => { const a = []; for (let i = 0; i < seg; i++) { const t = a0 + i / seg * TAU; a.push([cx + Math.sin(t) * r, yy, cz + Math.cos(t) * r]); } return a; };
     const B = ring(r0, y), T = ring(r1, y + h), ctr = [cx, y + h / 2, cz];
@@ -540,6 +522,8 @@ class BurnsMesh {
   // low-poly sphere (lat/long). o.smooth for soft shading, o.squash y scale
   sphere(cx, cy, cz, r, seg, rings, o) {
     o = o || {}; seg = seg || 8; rings = rings || 5;
+    if (o.smooth === undefined) o = Object.assign({}, o, { smooth: true });
+    if (!this.lo && r > 0.3) { seg = Math.max(seg, 14); rings = Math.max(rings, 8); }
     if (o.hemi && rings % 2) rings++;
     const sy = o.squash || 1, ctr = [cx, cy, cz];
     const P = (i, j) => { const t = i / seg * TAU, p = j / rings * Math.PI; return [cx + Math.sin(p) * Math.sin(t) * r, cy + Math.cos(p) * r * sy, cz + Math.sin(p) * Math.cos(t) * r]; };
@@ -690,7 +674,7 @@ class BurnsMesh {
     }
     return this;
   }
-  segs(hi, lo) { return this.lo ? lo : hi; }
+  segs(hi, lo) { return this.lo ? (this.far && lo > 4 ? Math.max(4, Math.round(lo * 0.7)) : lo) : hi; }
   // ellipsoid. o: { seg, rings, theta0, theta1 (longitude range, 0 = +Z), phi0, phi1 (0 = top, PI = bottom), uvFn(x,y,z)->[u,v], colFn(x,y,z,nx,ny,nz)->colour }
   ellipsoid(cx, cy, cz, rx, ry, rz, o) {
     o = o || {};
@@ -714,6 +698,13 @@ class BurnsMesh {
   //   uv: region (u around, ping-pong mirrored uvRepeat times (default 2), v along), caps, flip (face inward: linings) }
   lathe(profile, o) {
     o = o || {};
+    // orientation-proof: open profiles may be given top -> bottom, closed loops either way round;
+    // normalise to bottom -> top / counter-clockwise in (r, y) so the surface always faces outward
+    {
+      const N0 = profile.length, F = profile[0], L = profile[N0 - 1];
+      if (N0 > 2 && Math.abs(F[0] - L[0]) < 1e-6 && Math.abs(F[1] - L[1]) < 1e-6) { let a2 = 0; for (let k = 0; k < N0 - 1; k++) a2 += profile[k][0] * profile[k + 1][1] - profile[k + 1][0] * profile[k][1]; if (a2 < 0) profile = profile.slice().reverse(); }
+      else if (F[1] > L[1] + 1e-9) profile = profile.slice().reverse();
+    }
     const seg = o.seg || this.segs(14, 8), n = profile.length;
     const full = o.theta0 === undefined && o.theta1 === undefined, t0 = o.theta0 || 0, t1 = o.theta1 === undefined ? TAU : o.theta1;
     const sx = o.sx || 1, sz = o.sz || 1;
@@ -771,7 +762,7 @@ class BurnsMesh {
     const ix = w / 2 - r, iy = h / 2 - r, iz = d / 2 - r;
     const k = o.k || this.segs(2, 1), mR = o.m || this.segs(2, 1);
     const cols = 4 * (k + 1), rows = 2 * (mR + 1);
-    const tTop = o.top ? burnsRGB(o.top) : null, tBot = o.bottom ? burnsRGB(o.bottom) : null;
+    const tTop = o.top ? (Array.isArray(o.top) ? o.top : burnsRGB(o.top)) : null, tBot = o.bottom ? (Array.isArray(o.bottom) ? o.bottom : burnsRGB(o.bottom)) : null;
     const uvR = o.uv, uvFace = o.uvFace || 'pz';
     this.grid(cols, rows, true, (i, j, out) => {
       const q = Math.floor(i / (k + 1)), lon = (q + (i % (k + 1)) / k) * Math.PI / 2;

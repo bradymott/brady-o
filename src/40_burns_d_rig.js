@@ -574,7 +574,35 @@ const BURNS_ANIMS = (() => {
     float(P, t) { const s = Math.sin(t * 2); arms(P, -0.2, 1.2 + s * 0.2, -0.3, -0.2, -1.2 - s * 0.2, -0.3); legs(P, -0.3, 0.5, 0.1, 0.3); S(P, B.CHEST, -0.05); S(P, B.HEAD, -0.2); P.y = s * 0.05; P.face = 3; },
     fly(P, t) { arms(P, -3.0, 0.2, 0, -0.3, -0.5, -0.3); legs(P, 0.2, 0.3, 0.5, 0.6); S(P, B.CHEST, 0.6); S(P, B.HEAD, -0.6); P.pitch = 0.5; P.face = 3; },
     captive(P, t) { const s = Math.sin(t * 6); arms(P, -2.8 + s * 0.3, 0.6, -0.4, -2.8 - s * 0.3, -0.6, -0.4); legs(P, -0.3 + s * 0.3, 0.6, 0.2 - s * 0.3, 0.5); S(P, B.HEAD, -0.2); P.face = 1; },
-    knocked(P, t) { const u = Math.min(1, t * 3); legs(P, -1.5 * u, 0.3, -1.4 * u, 0.4); arms(P, -0.5, 1.2, -0.3, -0.5, -1.2, -0.3); P.pitch = -1.4 * u; P.pivot = 0.2; P.y = -0.05 * u; P.face = 2; }
+    knocked(P, t) { const u = Math.min(1, t * 3); legs(P, -1.5 * u, 0.3, -1.4 * u, 0.4); arms(P, -0.5, 1.2, -0.3, -0.5, -1.2, -0.3); P.pitch = -1.4 * u; P.pivot = 0.2; P.y = -0.05 * u; P.face = 2; },
+    /* ---- idle flavours for the NPC types ---- */
+    // fire spinning: k.tool = poi | fans | staff | hoop (props spin on the PROP / TAIL bones)
+    firespin(P, t, k) {
+      const tool = k && k.tool || 'poi', w = 9 * (k && k.rate || 1), s = Math.sin(t * w), c = Math.cos(t * w), b = Math.sin(t * 2.4);
+      legs(P, -0.2 + b * 0.08, 0.35, 0.15 - b * 0.08, 0.25); S(P, B.HIPS, 0, b * 0.15); S(P, B.CHEST, 0.08, -b * 0.18); S(P, B.HEAD, 0.05, b * 0.2);
+      if (tool === 'poi') { arms(P, -1.0 + s * 0.35, 0.35 + c * 0.25, -0.4, -1.0 - s * 0.35, -0.35 + c * 0.25, -0.4); S(P, B.PROP, 0, 0, t * w); S(P, B.TAIL, 0, 0, -t * w + 1.2); }
+      else if (tool === 'fans') { arms(P, -1.2 + s * 0.6, 0.7 + c * 0.5, -0.6, -1.2 - s * 0.6, -0.7 + c * 0.5, -0.6); S(P, B.PROP, 0, 0, s * 0.8); S(P, B.TAIL, 0, 0, -s * 0.8); }
+      else if (tool === 'staff') { arms(P, -0.3, 0.3, -0.5, -1.35, -0.2, -0.3); S(P, B.PROP, 0, 0, t * w); }
+      else { arms(P, -0.3, 0.4, -0.4, -0.5, -1.2, -0.2); S(P, B.PROP, 0, 0, t * w * 0.8); }
+      P.y = -Math.abs(b) * 0.03;
+    },
+    // the cast arm raised, pointing up; the other hand on the hip (bad idea guy)
+    dare(P, t) { A.idle(P, t); const s = Math.sin(t * 3); arms(P, 0.05, 0.6, -1.6, -2.85 + s * 0.08, -0.15, -0.1); S(P, B.CHEST, -0.05, 0.15); S(P, B.HEAD, -0.15, -0.2 + Math.sin(t * 0.7) * 0.15); },
+    think(P, t) { A.idle(P, t); arms(P, -0.3, 0.25, -1.3, -0.55, -0.15, -2.45); S(P, B.HEAD, 0.1, 0.1, 0.08 + Math.sin(t * 0.8) * 0.05); },
+    radio(P, t) { A.idle(P, t); arms(P, 0.05, 0.12, -0.2, -0.95, -0.35, -2.1); S(P, B.HEAD, 0.05, -0.2); P.face = (Math.sin(t * 16) > 0.2) ? 1 : 0; },
+    lantern(P, t) { A.idle(P, t); const s = Math.sin(t * 1.4); arms(P, -0.75, 0.2, -1.55, -0.75, -0.2, -1.55); S(P, B.CHEST, 0.02 + s * 0.01); S(P, B.HEAD, -0.05 + s * 0.02, Math.sin(t * 0.4) * 0.2); },
+    dj(P, t, k) {
+      const bpm = (k && k.bpm) || 128, b = t * bpm / 60 * TAU, s = Math.sin(b), pump = Math.max(0, Math.sin(b * 0.5));
+      arms(P, -2.0 - pump * 0.8, 0.4, -0.6, -1.1, -1.25, -2.0); legs(P, -0.15, 0.3 + Math.abs(s) * 0.25, -0.15, 0.3 + Math.abs(s) * 0.25);
+      S(P, B.CHEST, 0.12 + Math.abs(s) * 0.08); S(P, B.HEAD, Math.abs(s) * 0.3 - 0.1, 0, 0.05 * s); P.y = -Math.abs(s) * 0.06; P.face = pump > 0.6 ? 1 : 3;
+    },
+    dazed(P, t) {
+      const s = Math.sin(t * 0.9), s2 = Math.sin(t * 1.7 + 1);
+      legs(P, -0.15, 0.3, 0.05, 0.2); arms(P, 0.1 + s * 0.15, 0.15, -0.2, 0.1 - s * 0.15, -0.15, -0.25);
+      S(P, B.CHEST, 0.15, s * 0.1, s * 0.12); S(P, B.HEAD, 0.35 + s2 * 0.12, s * 0.2, s2 * 0.2); S(P, B.HIPS, 0, 0, -s * 0.06); P.y = -0.03;
+    },
+    welcome(P, t) { const s = Math.sin(t * 1.6); arms(P, -0.35 + s * 0.08, 1.35 + s * 0.12, -0.2, -0.35 - s * 0.08, -1.35 - s * 0.12, -0.2); legs(P, -0.05, 0.08, 0.05, 0.08); S(P, B.CHEST, -0.12, s * 0.08); S(P, B.HEAD, -0.2 + s * 0.05, s * 0.1); P.y = Math.abs(s) * 0.02; P.face = 3; },
+    robot(P, t) { A.dance(P, t, { style: 3, bpm: 110 }); }
   };
   return A;
 })();
@@ -586,12 +614,12 @@ class BurnsChar {
     this.x = 0; this.y = 0; this.z = 0; this.yaw = 0; this.scale = 1;
     this.anim = 'idle'; this.animT = 0; this.k = {};
     this.P = burnsPoseNew(); this.from = burnsPoseNew(); this.tmp = burnsPoseNew();
-    this.blend = 1; this.blendDur = 0.12;
+    this.blend = 1; this.blendDur = 0.16;
     this.bones = new Float32Array(this.nb * 12);
     this.face = 0; this.faceOverride = -1;
     this.tint = null; this.visible = true; this.rim = 0.35;
     this._r = new Float32Array(12); this._a = new Float32Array(12); this._w = new Float32Array(this.nb * 12); this._t2 = new Float32Array(12); this._root = new Float32Array(12);
-    this.hairV = 0; this.hairA = 0;
+    this.hairV = 0; this.hairA = 0; this.hairBV = 0; this.hairB = 0; this._py = null; this._pvy = 0; this._pyaw = null;
   }
   setModel(model) { this.model = model; this.nb = model.nb; }
   play(name, k, instant) {
@@ -619,15 +647,25 @@ class BurnsChar {
     } else { out.r.set(P.r); out.y = P.y; out.sq = P.sq; out.pitch = P.pitch; out.yaw = P.yaw; out.roll = P.roll; }
     out.pivot = P.pivot; out.face = P.face;
     this.face = this.faceOverride >= 0 ? this.faceOverride : P.face;
-    // hair sway: spring on the HAIR bone driven by root motion
+    // secondary motion: the HAIR bone (bun, long hair) is a damped spring driven by vertical
+    // bounce (landing, jumping, walk bob) and by turning, so hair keeps moving after the body stops
     const hb = BURNS_BONES.HAIR * 3;
-    this.hairV += (-this.hairA * 60 - this.hairV * 9) * dt; this.hairA += this.hairV * dt;
-    out.r[hb] += this.hairA;
+    if (dt > 0) {
+      const y = this.y + out.y * this.scale;
+      if (this._py === null) { this._py = y; this._pyaw = this.yaw; }
+      const vy = clamp((y - this._py) / dt, -30, 30), ay = clamp((vy - this._pvy) / dt, -400, 400);
+      let dyaw = this.yaw - this._pyaw; dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
+      this._py = y; this._pvy = vy; this._pyaw = this.yaw;
+      this.hairV += (-this.hairA * 60 - this.hairV * 8 + ay * 0.012) * dt;
+      this.hairBV += (-this.hairB * 70 - this.hairBV * 8 - clamp(dyaw / dt, -12, 12) * 3) * dt;
+      this.hairA = clamp(this.hairA + this.hairV * dt, -0.7, 0.7); this.hairB = clamp(this.hairB + this.hairBV * dt, -0.5, 0.5);
+    }
+    out.r[hb] += this.hairA; out.r[hb + 2] += this.hairB;
   }
   kick(v) { this.hairV += v; }
   // bone matrices (Float32Array nb*12) for the renderer
   compute() {
-    const P = this.P, off = this.model.body.off, W = this._w, r = this._r, a = this._a;
+    const P = this.P, off = this.model.body.off, W = this._w, r = this._r, a = this._a, PAR = this.model.parent || BURNS_PARENT;
     const s = this.scale, sq = P.sq, sxz = 1 / Math.sqrt(Math.max(0.2, sq));
     // root: T(pos) * Ry(yaw) * [pivot] Rx(pitch) Rz(roll) * S
     BurnsM.a34Set(a, 0, this.x, this.y + P.y * s, this.z, this.yaw + P.yaw, 0, 0, 1, 1, 1);
@@ -642,11 +680,11 @@ class BurnsChar {
     for (let b = 0; b < this.nb; b++) {
       const o = off[b], R = P.r;
       BurnsM.a34Set(r, 0, o[0], o[1], o[2], R[b * 3 + 1], R[b * 3], R[b * 3 + 2], 1, 1, 1);
-      const p = BURNS_PARENT[b];
+      const p = PAR[b];
       if (p < 0) BurnsM.a34Mul(W, b * 12, root, 0, r, 0);
       else BurnsM.a34Mul(W, b * 12, W, p * 12, r, 0);
     }
-    this.bones.set(W);
+    this.bones.set(W); this.computed = true;
     return this.bones;
   }
   // world position of a point in a bone's local frame (after compute())

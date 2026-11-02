@@ -150,7 +150,12 @@ const BW567K = {
   },
   // a boss-bar wrapper for an actor-based (sub)boss
   bar(name, a, maxHp, extra) {
-    return Object.assign({ name, maxHp, active: true, get hp() { return Math.max(0, a.hp); }, get defeated() { return a.defeated; }, get st() { return a.data && a.data.mode; }, head() { return [a.x, a.y + a.h * 1.05, a.z]; }, update() {} }, extra || {});
+    const b = { name, maxHp, active: true, head() { return [a.x, a.y + a.h * 1.05, a.z]; }, update() {} };
+    Object.defineProperty(b, 'hp', { get() { return Math.max(0, a.hp); }, enumerable: true, configurable: true });
+    Object.defineProperty(b, 'defeated', { get() { return a.defeated; }, enumerable: true, configurable: true });
+    Object.defineProperty(b, 'st', { get() { return a.data && a.data.mode; }, enumerable: true, configurable: true });
+    if (extra) Object.defineProperties(b, Object.getOwnPropertyDescriptors(extra));
+    return b;
   },
   /* ---------------- character looks (user's archetypes + action figures) ----------------
      who(type, seed, extra): the engine's own spec when it knows the type (it adds chatter lines
@@ -164,6 +169,13 @@ const BW567K = {
     const s = this.engineKnows(type) ? BurnsRig.npcSpec(type, seed || 0) : this.standIn(type, seed || 0);
     if (extra) Object.assign(s, extra);
     s.key = 'bw567:' + type + ':' + (seed || 0) + (extra ? ':' + hashStr(JSON.stringify(extra)) : '');
+    return s;
+  },
+  // my own characters: a custom look on a (non-figure) base type, clearing figure-only fields
+  mine(base, seed, extra) {
+    const s = BurnsRig.npcSpec(base, seed || 0);
+    Object.assign(s, { beard: null, goggles: false, hat: null, glasses: null, coat: null, vest: null, led: null, paint: null, prop: null, acc: [], gear: null }, extra || {});
+    s.key = (extra && extra.key) || ('bw567mine:' + base + ':' + (seed || 0) + ':' + hashStr(JSON.stringify(extra || {})));
     return s;
   },
   standIn(type, seed) {
@@ -206,11 +218,34 @@ const BW567K = {
     if (kind === 'cast') { m.color('#f8f8f4'); BW567K.limb(m, 0, -0.02, 0, 0, -0.22, 0, 0.075, 0.068); return; }
     if (kind === 'greetsign') { m.color('#8a6a3a'); BW567K.limb(m, 0, -0.05, 0.05, 0, 0.55, 0.05, 0.015); m.color('#d8b078'); BW567K.rbox(m, 0, 0.62, 0.05, 0.34, 0.16, 0.03, 0.01); const reg = BURNS_ATLAS.sign('GREETER', { bg: '#d8b078', fg: '#5a2a10', size: 30, pad: 4 }); m.color('#ffffff'); m.decal(0, 0.62, 0.067, 0.3, 0.3 / reg.aspect, reg); m.push(); m.tf(0, 0, 0.1, Math.PI); m.decal(0, 0.62, 0.067, 0.3, 0.3 / reg.aspect, reg); m.pop(); return; }
   },
+  // monumental art from 41_burns_bigart.js (guarded: returns null when the module isn't loaded)
+  bigArt(api, g, kind, x, z, o) {
+    if (typeof BurnsBigArt === 'undefined' || !BurnsBigArt || !BurnsBigArt.place || !BurnsBigArt.kinds || !BurnsBigArt.kinds[kind]) return null;
+    try { return BurnsBigArt.place(api, g, kind, x, z, o || {}) || {}; } catch (e) { if (Game.reportError) Game.reportError(e); return null; }
+  },
+  // build-time guard: make sure every actor in this world has a buildable look (falls back to a stand-in
+  // if the engine's spec for a type throws), so a half-finished engine type can never block a world from loading
+  sanitizeActors(api) {
+    const W = api.world;
+    for (const d of W.actorDefs) {
+      if (d.model) continue;
+      try { const spec = d.spec || (d.type === 'chinka' ? BurnsRig.chinkaSpec() : d.type === 'brady' ? BurnsRig.bradySpec('none') : BurnsRig.npcSpec(d.type || 'burner', d.seed || 0)); BurnsRig.model(spec); continue; } catch (e) { /* fall back */ }
+      try { const s2 = this.standIn(d.type || 'burner', d.seed || 0); s2.key = 'bw567safe:' + (d.type || 'burner') + ':' + (d.seed || 0); BurnsRig.model(s2); d.spec = s2; continue; } catch (e) { /* plainer */ }
+      const s3 = { kind: 'burner', skin: '#d8a880', hair: { style: 'short', col: '#3a2a1a' }, face: 'friendly', top: { kind: 'tee', col: '#ff4fd8' }, bottom: { kind: 'shorts', col: '#2a2a34' }, shoes: { kind: 'sneakers', col: '#2a2a2a' }, acc: [], key: 'bw567plain' };
+      try { BurnsRig.model(s3); d.spec = s3; } catch (e) { d.spec = s3; }
+    }
+  },
   // cached skinned geometry: build(m) once per session
   geo(key, build) {
-    let G = this.geoCache[key];
-    if (!G) { const m = new BurnsMesh(4096); build(m); G = m.geo(); this.geoCache[key] = G; }
-    return G;
+    // rebuilt once per world visit: decals point into the per-world sign atlas, which resets every visit
+    const scene = (typeof Game !== 'undefined' && Game.scene) || null;
+    let E = this.geoCache[key];
+    if (E && E.scene === scene && E.atlasGen === BURNS_ATLAS.signGen) return E.geo;
+    if (E && E.geo) { try { BurnsGL.freeGeo(E.geo); } catch (e) { /* ignore */ } }
+    const m = new BurnsMesh(4096); build(m);
+    E = { geo: m.geo(), scene, atlasGen: BURNS_ATLAS.signGen };
+    this.geoCache[key] = E;
+    return E.geo;
   },
   hurtNear(g, x, y, z, r, dmg, kb) {
     const p = g.player; if (p.dead) return false;
@@ -450,12 +485,29 @@ BW567K.drawRhythm = function (ctx, g) {
 };
 // DJ entry point: the shared BurnsDJ minigame when it exists, otherwise the fallback above
 BW567K.dj = function (g, o) {
-  if (typeof BurnsDJ !== 'undefined' && BurnsDJ && BurnsDJ.open) {
-    try { return BurnsDJ.open(g, { title: o.title, bpm: o.bpm, genre: o.genre, difficulty: o.difficulty, duration: o.duration, crowd: o.crowd, onDone: o.onDone }); } catch (e) { if (Game.reportError) Game.reportError(e); }
+  if (typeof BurnsDJ !== 'undefined' && BurnsDJ && BurnsDJ.open && !o.fallback) {
+    try {
+      const S = BurnsDJ.open(g, { title: o.title, bpm: o.bpm, genre: o.genre || 'house', difficulty: o.difficulty, duration: Math.max(45, o.duration || 45), crowd: o.crowdAt || o.crowd, booth: o.booth, deck3d: o.deck3d, onDone: o.onDone });
+      if (S) return S;
+    } catch (e) { if (Game.reportError) Game.reportError(e); }
   }
   return BW567K.rhythm(g, o);
 };
+// is a DJ / rhythm minigame running right now?
+BW567K.busy = function (g) { return !!(g.bw567rhythm || (typeof BurnsDJ !== 'undefined' && BurnsDJ && BurnsDJ.isOpen && BurnsDJ.isOpen(g))); };
 (() => {
   const prev = BurnsUI.drawOverlay;
   BurnsUI.drawOverlay = function (ctx, g, fdt) { prev.call(this, ctx, g, fdt); if (g && g.bw567rhythm && g.state === 'play' && !g.paused) { try { BW567K.drawRhythm(ctx, g); } catch (e) { if (Game.reportError) Game.reportError(e); } } };
 })();
+
+/* ---------------- extra animations ---------------- */
+// DJing: hands on the decks, head nodding on the beat, the occasional headphone check
+BURNS_ANIMS.bw567dj = function (P, t) {
+  const B = BURNS_BONES, S = (b, x, y, z) => { P.r[b * 3] = x; P.r[b * 3 + 1] = y || 0; P.r[b * 3 + 2] = z || 0; };
+  const beat = t * (124 / 60) * TAU, nod = Math.abs(Math.sin(beat / 2)), cue = Math.sin(t * 0.7) > 0.6;
+  S(B.CHEST, 0.18 + nod * 0.05, Math.sin(t * 1.3) * 0.12); S(B.HEAD, 0.1 + nod * 0.22, Math.sin(t * 0.9) * 0.15);
+  S(B.UARM_L, -0.95 + Math.sin(beat) * 0.08, 0, 0.22); S(B.FARM_L, -0.7);
+  if (cue) { S(B.UARM_R, -0.6, 0, -1.9); S(B.FARM_R, -2.2); } else { S(B.UARM_R, -0.95 - Math.sin(beat * 0.5) * 0.1, 0, -0.22); S(B.FARM_R, -0.7 + Math.sin(beat) * 0.15); }
+  S(B.THIGH_L, -0.12 - nod * 0.1); S(B.SHIN_L, 0.2 + nod * 0.15); S(B.THIGH_R, -0.08); S(B.SHIN_R, 0.15 + nod * 0.1);
+  P.y = -nod * 0.05; P.face = 3;
+};
