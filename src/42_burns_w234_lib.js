@@ -126,7 +126,13 @@ const BURNS_W234 = {
     const m = new BurnsMesh(1024); m.setBone(0); build(m);
     return (C[key] = { geo: m.geo(), nb: 1 });
   },
-  attach(a, model, bone) { if (this.S) this.S.att.push({ a, model, bone }); },
+  attach(a, model, bone, when) { if (this.S) this.S.att.push({ a, model, bone, when }); },
+  // head-bone gear (head joint at the origin, face toward +Z)
+  gear: {
+    respirator(m) { m.color('#3a3a40').shine(1); BURNS_W234.egg(m, 0, 0.13, 0.12, 0.085, 0.07, 0.06, { seg: 10, rings: 6 }); for (const s of [-1, 1]) { m.push(); m.tf(s * 0.085, 0.1, 0.15, 0, 0.5, s * -0.6); m.color('#e8c020'); m.roundCyl(0, -0.03, 0, 0.042, 0.06, 0.012, { seg: 10 }); m.pop(); } m.shine(0); m.color('#1a1a1e'); BURNS_W234.ring(m, 0, 0.16, 0, 0.135, 0.01, { pitch: 0.25, seg: 14, tseg: 3 }); },
+    headlamp(m) { m.color('#1a1a1e'); BURNS_W234.ring(m, 0, 0.27, 0, 0.142, 0.013, { seg: 16, tseg: 3 }); m.color('#3a3a40'); BURNS_W234.rb(m, 0, 0.27, 0.145, 0.07, 0.05, 0.04, 0.012); m.color('#fff4c8', 1); BURNS_W234.egg(m, 0, 0.27, 0.168, 0.026, 0.026, 0.01, { seg: 8, rings: 4 }); m.emissive(0); },
+    crystal(m) { m.color('#c8f0ff', 0.4).shine(3); BURNS_W234.lathe(m, 0, -0.06, 0.12, [[0, 0], [0.05, 0.05], [0.04, 0.12], [0, 0.17]], { seg: 6 }); m.shine(0).emissive(0); }
+  },
   /* ---------- parades: movers looping along a closed path ---------- */
   // o: { path: [[x,z]...] (closed), builds: [fn(m) -> {cols, lights, len}], n, speed }
   parade(api, o) {
@@ -174,7 +180,9 @@ const BURNS_W234 = {
   drawSkinned(g, R) {
     const S = this.S; if (!S) return;
     for (const t of S.att) {
-      const a = t.a; if (!a || a.removed || a.hidden || !a._vis) continue;
+      const a = t.a; if (!a || (t.when && !t.when(g))) continue;
+      if (a === g.player) { if (a.invT > 0 && !a.dead && Math.floor(g.time * 14) % 2 === 0) continue; R.skin(t.model.geo, a.ch.bones.subarray(t.bone * 12, t.bone * 12 + 12), 1, null, 0, 0.45); continue; }
+      if (a.removed || a.hidden || !a._vis) continue;
       R.skin(t.model.geo, a.ch.bones.subarray(t.bone * 12, t.bone * 12 + 12), 1, a.ch.tint, 0, 0.3);
     }
   },
@@ -272,6 +280,14 @@ BURNS_ANIMS.w234lounge = (P, t) => {
     patchkit(m) { m.color('#2a6ad8'); W.rb(m, 0, 0, 0, 0.42, 0.28, 0.1, 0.04); m.color('#ffe24a'); W.rb(m, 0, 0.02, 0.055, 0.3, 0.12, 0.02, 0.01); m.color('#e83a2a'); W.ring(m, 0, -0.07, 0.06, 0.06, 0.018, { pitch: Math.PI / 2, seg: 10, tseg: 4 }); },
     pump(m) { m.color('#e83a2a').shine(2); W.post(m, 0, -0.32, 0, 0.06, 0.55); m.shine(0); m.color('#1a1a1e'); W.limb(m, -0.14, 0.26, 0, 0.14, 0.26, 0, 0.025); W.limb(m, 0, 0.22, 0, 0, 0.3, 0, 0.015); m.color('#3a3a40'); W.tube(m, [[0.05, -0.3, 0], [0.18, -0.36, 0.05], [0.22, -0.2, 0.1]], 0.012); },
     rose(m) { m.color('#2a8a3a'); W.limb(m, 0, -0.35, 0, 0, 0.1, 0, 0.015); m.color('#ff2a5a'); W.ball(m, 0, 0.16, 0, 0.09, { seg: 8, rings: 6 }); },
+    moop(m, o) {
+      const v = (o.seed || 0) % 5;
+      if (v === 0) { m.color('#d82a2a').shine(2); m.roundCyl(0, -0.05, 0, 0.16, 0.08, 0.03, { seg: 12 }); m.shine(0); }
+      else if (v === 1) { m.color('#ff8ad8'); BURNS_W234.egg(m, 0, 0, 0, 0.06, 0.26, 0.02, { seg: 8, rings: 6 }); m.color('#ffffff'); BURNS_W234.limb(m, 0, -0.3, 0, 0, 0.22, 0, 0.012); }
+      else if (v === 2) { m.color('#d8c8a0'); BURNS_W234.egg(m, -0.05, 0, 0, 0.1, 0.07, 0.16, { seg: 8, rings: 5, phi1: Math.PI / 2 }); BURNS_W234.egg(m, 0.06, 0.02, 0, 0.1, 0.07, 0.16, { seg: 8, rings: 5, phi1: Math.PI / 2 }); }
+      else if (v === 3) { m.color('#ffd84a', 0.6).shine(3); BURNS_W234.egg(m, 0, 0, 0, 0.14, 0.14, 0.02, { seg: 12, rings: 4 }); m.shine(0).emissive(0); }
+      else { m.color('#1a1a1e'); BURNS_W234.tube(m, [[-0.2, -0.1, 0], [0, 0.05, 0], [0.18, 0.12, 0.04]], 0.018); }
+    },
     wristband(m) { m.color('#ff4fd8', 0.5); W.ring(m, 0, 0, 0, 0.18, 0.04, { roll: Math.PI / 2, seg: 14, tseg: 5 }); m.emissive(0); }
   };
   BURNS_PICKUP_MESH.item = function (m, o) {

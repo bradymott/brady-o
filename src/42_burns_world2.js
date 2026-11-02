@@ -26,7 +26,7 @@ const BURNS_W2 = {
   at(th, r) { const a = th * Math.PI / 180; return [this.C.x - r * Math.sin(a), this.C.z + r * Math.cos(a)]; },
   polar(x, z) { const dx = x - this.C.x, dz = z - this.C.z; return [Math.atan2(-dx, dz) * 180 / Math.PI, Math.hypot(dx, dz)]; },
   outYaw(th) { const a = th * Math.PI / 180; return Math.atan2(-Math.sin(a), Math.cos(a)); },
-  clues() { let n = 0; for (const id of ['ranger', 'conclave', 'lights']) if (BurnsSave.hasToken(2, id)) n++; return n; }
+  clues(g) { let n = 0; for (const id of ['ranger', 'conclave', 'lights']) if (g ? g.missions.isDone(id) : BurnsSave.hasToken(2, id)) n++; return n; }
 };
 (() => { const W = BURNS_W2; W.CAMP = W.at(45, 230); W.MAN = W.at(45, 245); })();
 
@@ -55,10 +55,14 @@ BurnsWorlds.register({
       onComplete(g) { BURNS_W2.alleyDone(g); } },
     { id: 'lights', name: 'Bike Light Roundup', type: 'collect', count: 8, giver: 'lumen', start: 'manual', progressLabel: 'Bike lights', short: 'Collect lost bike lights', marker: { x: 34, z: 22 },
       desc: 'A bike swarm blew through Camp Blinky and scattered 8 LED bike lights. Grab them between swarms. Don\'t stand in the bike lane.', hint: 'Camp Blinky, 6:30 & C',
+      onStart(g) { BURNS_W2.labels(g, 'lights', 'BIKE LIGHT'); },
       onComplete(g) { BURNS_W2.clue(g, 3, 'LUMEN', ['MY BABIES! All eight! The playa is bright again!', 'Your note? Ooh, that last bit is an E. Seven-thirty and E. Right where the parade goes round and round.']); } },
     { id: 'lost', name: 'Lost & Found Burners', type: 'custom', count: 3, giver: 'lost1', start: 'manual', progressLabel: 'Burners home', short: 'Walk the lost burners home', marker: { x: 107, z: -32 },
       desc: 'Three burners asked you where 4:30 is. It is not here. Walk each of them to the address they actually remember.', hint: 'Lost burners wander near Esplanade and 6:00',
       onComplete(g) { g.banner('ADDRESS MASTER', 'You know this city better than the people who live here.', { col: '#7aff5a', small: true }); } },
+    { id: 'moop', name: 'MOOP Sweep', token: false, type: 'collect', count: 10, giver: 'captain', start: 'manual', progressLabel: 'MOOP', short: 'MOOP sweep: pick up 10 bits of litter', marker: { x: 40, z: -46 },
+      desc: 'Captain Safety Third says your illumination is five lumens too dim. Sweep up 10 bits of MOOP (Matter Out Of Place) and earn a regulation headlamp.', hint: 'Safety Camp, Esplanade between 6:30 and 7:00',
+      onStart(g) { BURNS_W2.labels(g, 'moop', 'MOOP'); }, onComplete(g) { BURNS_W2.moopDone(g); } },
     { id: 'tower', name: 'Lighthouse of Lost Souls', type: 'climb', start: 'trigger', secret: true, short: 'Climb the lighthouse', target: { x: 0, z: 0, r: 3.2, y: 13.6 },
       desc: 'An art lighthouse on the open playa. Lost souls climb it to look for their camp.', hint: 'Open playa west of the conclave' },
     { id: 'camp', name: 'Home Is Where the Man Is', type: 'boss', start: 'auto', silent: true, requires: ['ranger', 'conclave', 'lights'], tokenDirect: true, short: 'Go home: 7:30 & E',
@@ -107,7 +111,8 @@ BurnsWorlds.register({
     // the 6:00 promenade: double row of lamps out to the pavilion
     for (let r = 20; r < 98; r += 13) for (const s of [-1, 1]) { const [x, z] = at(s * 4.2 * 180 / Math.PI / r, r); if (bounds(x, z, 2)) api.mesh(x, z, m => BW.lamp(m, { pool: 8, col: '#ffd890' }), { yaw: s > 0 ? Math.PI / 2 : -Math.PI / 2 }); }
     /* ---------------- the city: camps on every block ---------------- */
-    const reserved = [[CAMP[0], CAMP[1], 27], [S.conclave.x, S.conclave.y || S.conclave.z, 0], [59, 13, 17], [34, 22, 13], [107, -32, 9]];
+    S.capCamp = W2.at(21, 111);
+    const reserved = [[CAMP[0], CAMP[1], 27], [59, 13, 17], [34, 22, 13], [107, -32, 9], [66, -38, 7], [30, -46, 7], [S.capCamp[0], S.capCamp[1], 11]];
     const isReserved = (x, z) => reserved.some(q => Math.hypot(x - q[0], z - q[1]) < q[2]);
     let lotN = 0, npcN = 0;
     for (let j = 0; j < RR.length; j++) for (const side of [1, -1]) {
@@ -284,7 +289,7 @@ BurnsWorlds.register({
       api.checkpoint('cp_blinky', bx - 5.5, bz - 1, { yaw: Math.PI / 2, name: 'Camp Blinky' });
       // the lights: on the swarm streets (B = 152 and C = 178)
       const LP = [[3, 152], [22, 152], [-8, 178], [12, 178], [30, 178], [52, 152.5], [-22, 152], [40, 180]];
-      LP.forEach(([th, r], i) => { const [x, z] = at(th, r + (i % 2 ? 2 : -2)); api.pickup('item:bikelight', x, 0.8, z, { mission: 'lights', gate: true, label: 'BIKE LIGHT', id: 'bl' + i, col: '#38f2ff' }); });
+      LP.forEach(([th, r], i) => { const [x, z] = at(th, r + (i % 2 ? 2 : -2)); api.pickup('item:bikelight', x, 0.8, z, { mission: 'lights', gate: true, id: 'bl' + i, col: '#38f2ff' }); });
       // two swarms (enemy cyclists who knock you over)
       const swarmPath = (rA, rB, th0, th1) => { const p = []; for (let th = th0; th <= th1; th += 5) p.push(at(th, rA)); p.push(at(th1, (rA + rB) / 2)); for (let th = th1; th >= th0; th -= 5) p.push(at(th, rB)); p.push(at(th0, (rA + rB) / 2)); return p; };
       const routes = [swarmPath(152, 178, -28, 55), swarmPath(178, 152, -20, 58)];
@@ -310,16 +315,73 @@ BurnsWorlds.register({
         L.dx = dx; L.dz = dz;
         api.npc({ id: L.id, name: L.name, type: L.type, seed: L.seed, x: L.x, z: L.z, behavior: 'wander', radius: 3, followDist: 2.2 + LOST.indexOf(L) * 0.9, lost: L,
           chat: ['Where\'s 4:30?', 'Is it 4:30 yet?', 'Has anyone seen 4:30?'],
-          marker: (g2, a) => a.data.home ? null : a.behName === 'follow' ? '?' : (g2.missions.state('lost') !== 'done' ? '!' : null),
+          marker: (g2, a) => a.w2home ? null : a.behName === 'follow' ? '?' : (g2.missions.state('lost') !== 'done' ? '!' : null),
           talk(g2, a) {
             const st = g2.missions.state('lost');
-            if (a.data.home || st === 'done') { g2.say(a, ['Home sweet dusty home. You\'re a legend.']); return; }
+            if (a.w2home || st === 'done') { g2.say(a, ['Home sweet dusty home. You\'re a legend.']); return; }
             if (a.behName === 'follow') { g2.say(a, [`${L.addr}! ${L.addr}! Lead the way, captain.`]); return; }
             g2.say(a, L.lines.concat([`(${L.name} is following you. Walk them to ${L.addr}.)`]), () => { if (st === 'available') g2.missions.start('lost'); a.setBehavior('follow'); a.say('Lead on!', 1.4); });
           } });
         api.marker(L.id + 'home', dx, dz, L.addr, { col: '#7aff5a' });
       }
       S.lost = LOST;
+    }
+    /* ---------------- Safety Camp: Captain Safety Third (MOOP sweep, lecture waves) ---------------- */
+    {
+      const [qx, qz] = S.capCamp, yaw = Math.atan2(W2.C.x - qx, W2.C.z - qz), fx = Math.sin(yaw), fz = Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+      const L = (a, b) => [qx + rx * a + fx * b, qz + rz * a + fz * b];
+      M('moop').marker = { x: qx, z: qz };
+      api.mesh(qx, qz, m => {
+        const cols = [];
+        // impeccable shade with reflective tape on every pole
+        m.color('#c8c8c0'); BW.rb(m, 0, 3.0, -1, 7.4, 0.12, 5.4, 0.05);
+        for (const [a, b] of [[-3.5, -3.5], [3.5, -3.5], [-3.5, 1.5], [3.5, 1.5]]) { m.color('#5a5a62'); BW.post(m, a, 0, b, 0.08, 3.0); m.color('#e8ff5a', 0.9); for (let k = 0; k < 3; k++) BW.ring(m, a, 0.6 + k * 0.9, b, 0.085, 0.022, { seg: 10, tseg: 3 }); m.emissive(0); cols.push({ t: 'cyl', x: a, z: b, r: 0.1, y0: 0, y1: 3.0, camPass: true }); }
+        cols.push({ t: 'box', x: 0, z: -1, hx: 3.7, hz: 2.7, y0: 2.94, y1: 3.06 });
+        // labelled bins in a perfect row
+        ['#2a6ad8', '#2a9a4a', '#8a8a92', '#d8a020'].forEach((c, i) => { const bx = -2.7 + i * 1.8; m.color(c); BW.rb(m, bx, 0.5, -3.0, 1.2, 1.0, 0.9, 0.16); m.color('#e8ff5a', 0.9); BW.rb(m, bx, 0.85, -2.54, 1.0, 0.07, 0.02, 0.01); m.emissive(0); cols.push({ t: 'box', x: bx, z: -3.0, hx: 0.6, hz: 0.45, y0: 0, y1: 1.0 }); });
+        // gray-water evaporation pond
+        m.color('#3a3a44'); BW.rb(m, 3.2, 0.12, 3.2, 3.0, 0.24, 2.0, 0.1); m.color('#6a8aa8', 0.25).shine(3); BW.rb(m, 3.2, 0.25, 3.2, 2.7, 0.04, 1.7, 0.02); m.shine(0).emissive(0);
+        cols.push({ t: 'box', x: 3.2, z: 3.2, hx: 1.5, hz: 1.0, y0: 0, y1: 0.28 });
+        // the laminated chore wheel
+        m.color('#5a5a62'); BW.post(m, -3.4, 0, 2.6, 0.06, 1.4); m.push(); m.tf(-3.4, 1.9, 2.6, 0.4, Math.PI / 2, 0);
+        ['#ff4fd8', '#38f2ff', '#ffe24a', '#7aff5a', '#ff7a2a', '#9a6bff'].forEach((c, i) => { m.color(c); m.lathe([[0, 0], [0.6, 0], [0.6, 0.04], [0, 0.04]], { seg: 6, theta0: i / 6 * TAU, theta1: (i + 1) / 6 * TAU }); });
+        m.pop(); m.color('#e8e8f0').shine(3); BW.ring(m, -3.4, 1.9, 2.6, 0.62, 0.03, { pitch: Math.PI / 2, yaw: 0.4, seg: 18, tseg: 4 }); m.shine(0);
+        // a fire extinguisher and a first-aid kit (obviously)
+        m.color('#d82a2a').shine(2); BW.post(m, 1.6, 0, -2.2, 0.16, 0.7); m.shine(0); m.color('#f4f4f0'); BW.rb(m, -0.6, 0.2, -2.0, 0.6, 0.4, 0.4, 0.08); m.color('#d82a2a'); BW.rb(m, -0.6, 0.25, -1.79, 0.1, 0.24, 0.02, 0.01); BW.rb(m, -0.6, 0.25, -1.79, 0.24, 0.1, 0.02, 0.01);
+        return { cols, lights: [{ x: 0, y: 2.8, z: -1, s: 2.4, c: '#f4f8ff', pool: 10 }, { x: -3.4, y: 1.9, z: 2.6, s: 0.6, c: '#e8ff5a' }] };
+      }, { yaw });
+      for (let i = 0; i < 6; i++) { const [cx, cz] = L(-4 + i * 1.6, 4.6); api.prop('cone', { x: cx, z: cz }); }
+      { const [sx, sz] = L(4.6, -1.2); api.sign('SAFETY CAMP\nSAFETY THIRD\n(BUT STILL)', sx, sz, { h: 1.3, yaw, style: { bg: '#e8ff5a', fg: '#1a1a10', size: 34, border: '#1a1a10' } }); }
+      { const [sx, sz] = L(-3.4, 2.62); api.sign('CHORE WHEEL\n(LAMINATED)', sx + rx * 0.01, sz + rz * 0.01, { h: 0.5, y: 0.9, post: false, yaw: yaw + 0.4, style: { bg: '#f4f4f0', fg: '#1a1a10', size: 28 } }); }
+      const capSpec = Object.assign(BurnsRig.npcSpec('dpw', 61), { top: { kind: 'button', col: '#4a5a3a' }, vest: 'hivis', led: '#e8ff5a', bottom: { kind: 'cargo', col: '#3a3a30' }, shoes: { kind: 'boots', col: '#1a1a14' }, hat: { kind: 'hardhat', col: '#ffd21a' }, glasses: 'clear', face: 'stern', acc: ['headset', 'toolbelt'], prop: 'clipboard', key: 'w2:captain' });
+      const [cx, cz] = L(0.6, 1.8);
+      S.captainDef = api.npc({ id: 'captain', name: 'CAPTAIN SAFETY THIRD', spec: capSpec, x: cx, z: cz, yaw, behavior: 'w2Captain', chatter: false,
+        talk(g2, a) {
+          const st = g2.missions.state('moop');
+          if (st === 'available') BURNS_W2.captainLecture(g2, a);
+          else if (st === 'active') g2.say(a, [`${g2.missions.get('moop').n} of 10 MOOP items. I counted. Twice. Then I laminated the count.`]);
+          else g2.say(a, ['Headlamp: on. Hydration: up. Fun: ...I\'ll schedule some fun. Tuesday. Fourteen hundred hours.']);
+        } });
+      api.trigger({ x: qx, z: qz, r: 10, onEnter: g2 => { if (g2.missions.state('moop') === 'available' && !S.capMet && !g2.cine) BURNS_W2.captainLecture(g2, g2.actor('captain')); } });
+      // MOOP: litter scattered around the Esplanade
+      const MP = [[18, 104], [24, 106], [27, 118], [14, 117], [31, 108], [36, 118], [9, 106], [40, 112], [22, 128], [33, 130]];
+      MP.forEach(([th, r], i) => { const [x, z] = W2.at(th, r); api.pickup('item:moop', x, 0.7, z, { mission: 'moop', gate: true, id: 'moop' + i }); });
+      api.light(qx, qz, 12, '#f4f8ff', 0.4);
+    }
+    /* ---------------- a sparkle pony asking strangers for water ---------------- */
+    {
+      const [x, z] = at(-5, 112);
+      const ponySpec = Object.assign(BurnsRig.npcSpec('sparklepony', 7), { coat: { kind: 'fur', col: '#ff3bd8', trim: '#7af2ff' }, top: { kind: 'crop', col: '#c8a0ff', pattern: 'sequin' }, bottom: { kind: 'shorts', col: '#1a1a24', pattern: 'sequin' }, shoes: { kind: 'furboots', col: '#ffffff' }, hair: { style: 'wig', col: '#7af2ff', hi: '#ffffff' }, glasses: 'heart', acc: ['wings', 'bracelets'], body: { h: 1.02, w: 0.86 }, key: 'w2:pony' });
+      api.npc({ id: 'pony', name: 'GLITTERBOMB', spec: ponySpec, x, z, yaw: Math.PI * 0.9, behavior: 'wander', radius: 2.5,
+        chat: ['Water? Anyone? I take payment in good vibes.', 'I brought three suitcases of costumes. And zero cups.', 'Is that a water bottle or are you just happy to see me?', 'Hydration is a social construct. Kidding. Please. Water.'],
+        talk(g2, a) {
+          if (a.w2paid) { g2.say(a, ['You\'re my favorite stranger. Today. So far.']); return; }
+          if (g2.player.hydration < 3) { g2.say(a, ['Oh no, honey. You\'re thirstier than me. And I\'m a sparkle pony. Go to the pickle juice bar.']); return; }
+          g2.say(a, ['Hi! I love your bun. Can I have some water? I brought three suitcases of faux fur and no cup.', '(You pour her a little of your water.)', 'Bless. Good vibes, transferred! Here, I found this in my fur coat. I don\'t know whose it is. Now it\'s yours.'], () => {
+            a.w2paid = true; g2.player.hydration = Math.max(1, g2.player.hydration - 1); g2.toast('-1 HYDRATION · +GOOD VIBES'); g2.fx.hearts(a.x, a.y + 2, a.z, 12);
+            g2.spawnPickup('water', a.x + 1, 0.9, a.z, { pop: true }); g2.player.givePower('molly'); burnsSfx('gift', null, 'pick');
+          });
+        } });
     }
     /* ---------------- gifting camps, drunks and camp leads ---------------- */
     {
@@ -348,7 +410,7 @@ BurnsWorlds.register({
       S.parade.onHit = (g2) => { g2.toast('ART CARS HAVE THE RIGHT OF WAY!'); };
       // a photo riding on top of the whale
       const car = S.parade.cars[3];
-      api.pickup('photo', 0, 2.6, 0, { id: 'p2', follow: (g2, P) => { P.x = car.mv.x; P.z = car.mv.z; P.y0 = car.mv.y + 2.55; } });
+      api.pickup('photo', 0, 2.6, 0, { id: 'p2', follow: (g2, P) => { P.x = car.mv.x; P.z = car.mv.z; P.y0 = car.mv.y + 4.6; } });
       api.sign('ART CAR\nCROSSING', ...at(41.5, 196), { h: 1.0, yaw: W2.outYaw(41.5) + Math.PI, style: { bg: '#ffe24a', fg: '#2a1a10', size: 36, border: '#2a1a10' } });
       api.sign('THE PARADE\nNEVER ENDS', ...at(51, 196), { h: 0.9, yaw: W2.outYaw(51) + Math.PI, style: { bg: '#24102e', fg: '#ffd0f4', glow: '#ff4fd8', size: 32, border: '#ff4fd8' }, glow: '#ff4fd8' });
       { const [x, z] = at(38, 186); api.checkpoint('cp_parade', x, z, { yaw: W2.outYaw(38), name: 'Parade Route' }); }
@@ -407,13 +469,17 @@ BurnsWorlds.register({
     }
   },
   onStart(g) {
-    const S = BURNS_W2.state;
+    const S = BURNS_W2.state, BW = BURNS_W234;
     BURNS_W2.updateNote(g);
+    if (g.missions.isDone('lost')) for (const L of S.lost) { const a = g.actor(L.id); if (a) { a.w2home = true; a.x = L.dx; a.z = L.dz; a.setBehavior('dance'); a.home = { x: a.x, z: a.z, y: 0, yaw: 0 }; } }
+    const cap = g.actor('captain'); if (cap) BW.attach(cap, BW.attModel('respirator', m => BW.gear.respirator(m)), BURNS_BONES.HEAD);
+    BW.attach(g.player, BW.attModel('headlamp', m => BW.gear.headlamp(m)), BURNS_BONES.HEAD, () => S.headlamp);
+    S.headlamp = g.missions.isDone('moop');
     if (g.missions.isDone('alley')) { S.alleyDoor.off = true; }
     if (g.missions.isDone('camp')) { S.man.hidden = true; S.bossStarted = true; }
     g.tod = Math.min(0.9, BurnsSave.tokenCount(2) * 0.15);
     if (!S.introDone) BURNS_W2.intro(g);
-    else g.banner('FINDING CAMP', 'Your note says ' + BURNS_W2.NOTE[BURNS_W2.clues()] + '. Read the signs.', { col: '#ff4fd8' });
+    else g.banner('FINDING CAMP', 'Your note says ' + BURNS_W2.NOTE[BURNS_W2.clues(g)] + '. Read the signs.', { col: '#ff4fd8' });
   },
   onRespawn(g) {
     const S = BURNS_W2.state;
@@ -427,18 +493,31 @@ BurnsWorlds.register({
       for (const a of S.spinnerActors) { const d = Math.hypot(a.x - p.x, a.z - p.z); if (d < d1) { a2 = a1; d2 = d1; a1 = a; d1 = d; } else if (d < d2) { a2 = a; d2 = d; } }
       for (const a of [a1, a2]) if (a) g.pointLight(a.x, 1.8, a.z, 7.5, [1, 0.55, 0.2], 1.3);
     }
+    if (S.headlamp && !p.dead) g.pointLight(p.x + Math.sin(p.yaw) * 2.2, p.y + 1.9, p.z + Math.cos(p.yaw) * 2.2, 9, [1, 0.95, 0.82], 1.0);
   },
   update(g, dt) {
     const S = BURNS_W2.state, W2 = BURNS_W2, p = g.player;
     BURNS_W234.update(g, dt);
     if (!S.spinnerActors) S.spinnerActors = g.actors.filter(a => a.behName === 'w2Spinner');
-    // walking lost burners home
+    // walking lost burners home (followers that get boxed in by camps catch up behind Brady)
     if (g.missions.state('lost') === 'active' || g.missions.state('lost') === 'available') {
       for (const L of S.lost) {
-        const a = g.actor(L.id); if (!a || a.data.home || a.behName !== 'follow') continue;
-        if (Math.hypot(a.x - L.dx, a.z - L.dz) < 6) W2.lostHome(g, a, L);
+        const a = g.actor(L.id); if (!a || a.w2home || a.behName !== 'follow') continue;
+        const d = Math.hypot(a.x - p.x, a.z - p.z);
+        if (d > 12 && !g.cine) { const k = (S.lost.indexOf(L) + 1) * 1.4; a.x = p.x - Math.sin(p.yaw) * (1.6 + k); a.z = p.z - Math.cos(p.yaw) * (1.6 + k); a.y = p.y; a.vx = a.vz = 0; }
+        if (Math.hypot(a.x - L.dx, a.z - L.dz) < 6 || Math.hypot(p.x - L.dx, p.z - L.dz) < 3.5) W2.lostHome(g, a, L);
       }
     }
+    // Captain Safety Third's lecture waves: jump them or get frozen mid-step
+    if (S.lectures && S.lectures.length) {
+      for (const w of S.lectures) {
+        const prev = w.r; w.r += 6.5 * dt; if (w.r > 11) { w.dead = true; continue; }
+        const d = Math.hypot(p.x - w.x, p.z - w.z);
+        if (!w.hit && d >= prev - 0.4 && d <= w.r + 0.4 && p.y < 0.55 && !p.dead && !g.cine && !g.dialog.open) { w.hit = true; S.frozenT = 1.5; p.locked = true; S.frozeByMe = true; p.vx = p.vz = 0; p.say(['...', 'Yes, Captain.', 'Sorry, Captain.'][Math.floor(Math.random() * 3)], 1.2); g.toast('LECTURED! Jump the lecture waves'); burnsSfx('pitch_blah', { vol: 0.6 }); }
+      }
+      S.lectures = S.lectures.filter(w => !w.dead);
+    }
+    if (S.frozenT > 0) { S.frozenT -= dt; p.animOverride = 'idle'; if (S.frozenT <= 0 && S.frozeByMe) { S.frozeByMe = false; p.locked = false; p.animOverride = null; } }
     // the parade parks for the fight
     if (S.parade) S.parade.stopped = !!(S.bossStarted && !g.missions.isDone('camp'));
     // tokens push the night deeper
@@ -469,6 +548,8 @@ BurnsWorlds.register({
         });
       }
     }
+    // lecture waves (hi-vis rings)
+    if (S.lectures) for (const w of S.lectures) { const k = 1 - w.r / 11; R.flat.flat(w.x, 0.14, w.z, w.r * 2.15, w.r * 2.15, 0, SP.ring, [0.92, 1, 0.35], 0.9 * k + 0.1, true); R.flat.flat(w.x, 0.12, w.z, w.r * 2.0, w.r * 2.0, 0, SP.ring, [1, 1, 1], 0.4 * k, true); }
     // lighthouse beam sweeping the playa
     const T = S.tower;
     if (T) { const a = S.beamA || 0; for (let k = 1; k <= 7; k++) { const d = k * 3.2; R.bbs.bb(T.x + Math.sin(a) * d, 15 - k * 0.3, T.z + Math.cos(a) * d, 2.6 + k * 0.5, 2.6 + k * 0.5, SP.glow, [1, 0.95, 0.75], 0.32 - k * 0.03, true); } }
@@ -480,7 +561,7 @@ BurnsWorlds.register({
 
 /* ---------------- the note ---------------- */
 BURNS_W2.updateNote = function (g) {
-  const W2 = BURNS_W2, n = W2.clues(), note = W2.NOTE[n];
+  const W2 = BURNS_W2, n = W2.clues(g), note = W2.NOTE[n];
   const m = g.missions.get('note'); if (m) { m.def.short = 'Find camp: ' + note; m.def.name = 'The Crumpled Note: ' + note; }
   const c = g.missions.get('camp'); if (c) c.def.short = n >= 3 ? 'Go home: 7:30 & E (cross the parade!)' : 'Find camp: ' + note;
   return note;
@@ -491,7 +572,19 @@ BURNS_W2.clue = function (g, n, who, lines) {
   g.say(a || { name: who, model: null }, lines, () => {
     g.banner('THE NOTE', note, { col: '#ffe24a', big: true, dur: 3.2 });
     burnsSfx('map_open', null, 'secret');
-    if (BURNS_W2.clues() >= 3) g.say('brady', ['Seven-thirty and E. Camp Cozy Chaos. Chinka, I\'m coming home.']);
+    if (BURNS_W2.clues(g) >= 3) g.say('brady', ['Seven-thirty and E. Camp Cozy Chaos. Chinka, I\'m coming home.']);
+  });
+};
+
+BURNS_W2.labels = function (g, mission, label) { for (const P of g.pickups.items) if (P.mission === mission) P.label = label; };
+BURNS_W2.captainLecture = function (g, a) {
+  const S = BURNS_W2.state; S.capMet = true;
+  g.say(a, ['HALT. Citizen. Your illumination is FIVE LUMENS too dim.', 'No bike? Then your PERSONAL lumens are too dim! You are a dark spot! Dark spots get run over by art cars!', 'Also: there is MOOP on my Esplanade. Matter. Out. Of. Place. Ten pieces. I can SEE them.', 'Sweep them up and I will issue you one regulation headlamp. And stay out of my lecture radius.'], () => { if (g.missions.state('moop') === 'available') g.missions.start('moop'); });
+};
+BURNS_W2.moopDone = function (g) {
+  const S = BURNS_W2.state, a = g.actor('captain');
+  g.say(a || 'brady', ['Ten pieces of MOOP. Bagged, tagged, logged. Outstanding.', 'One regulation headlamp, issued. Wear it at all times. Yes, in the shower. There is no shower. Wear it anyway.'], () => {
+    S.headlamp = true; g.glow += 15; g.banner('REGULATION HEADLAMP', 'Your personal lumens are now acceptable. +15 glow sticks', { col: '#e8ff5a', big: true }); burnsSfx('map_open', null, 'secret');
   });
 };
 
@@ -655,6 +748,22 @@ BurnsBehaviors.register('w2Spinner', {
     if (!p.dead && p.invT <= 0 && Math.hypot(p.x - a.x, p.z - a.z) < (d.kind === 'staff' ? 1.65 : 1.5) && p.y < 2.6) { p.hurt(1, a.x, a.z, 7); p.say('HOT HOT HOT!', 1); }
   }
 });
+// Captain Safety Third: clipboard, glare, and lecture waves while the MOOP sweep is unfinished
+BurnsBehaviors.register('w2Captain', {
+  init(a) { a.data.cd = 2.5; },
+  update(a, g, dt) {
+    const D = a.data, p = g.player, d = a.distP(), S = BURNS_W2.state;
+    if (d < 12) a.face(p.x, p.z, dt, 3);
+    a.vx = a.vz = 0; a.physics(dt);
+    D.cd -= dt;
+    if (D.yell > 0) { D.yell -= dt; a.ch.play('yell'); if (D.yell <= 0) { (S.lectures || (S.lectures = [])).push({ x: a.x, z: a.z, r: 0.6 }); g.fx.ring(a.x, 0.3, a.z, 1.4, '#e8ff5a', 0.4); } return; }
+    if (S.capMet && !g.missions.isDone('moop') && d < 10 && d > 1.4 && D.cd <= 0 && !g.dialog.open && !g.cine) {
+      D.cd = 4.2 + Math.random(); D.yell = 0.5;
+      a.say(['IS THAT A CLOSED-TOE SHOE?!', 'HYDRATE! IN AN ORDERLY FASHION!', 'WHERE IS YOUR BUDDY?!', 'THAT IS NOT A SAFE DISTANCE!', 'FIVE LUMENS! TOO DIM!'][Math.floor(Math.random() * 5)], 1.5);
+      burnsSfx('yell', { vol: 0.5 });
+    } else a.ch.play(a.bubbleT > 0 && d < 10 ? 'talk' : 'clipboard');
+  }
+});
 // drunk camp neighbours: wobble toward Brady, hug-bump, pass out when spun
 BurnsBehaviors.register('w2Drunk', {
   init(a) { a.data.t = Math.random() * 4; },
@@ -684,12 +793,12 @@ BURNS_W2.alleyDone = function (g) {
   const a = g.actor('sparky'); if (a) a.say('DING DING! LEGEND! The back door\'s open!', 3);
 };
 BURNS_W2.lostHome = function (g, a, L) {
-  a.data.home = true; a.setBehavior('dance'); a.home = { x: a.x, z: a.z, y: a.y, yaw: a.yaw };
-  a.say(['HOME! It was here the whole time!', 'My avocado! I\'d know that inflatable anywhere!', 'This is it! I can feel it in my sequins!'][S_idx(L)], 3);
+  if (a.w2home) return;
+  a.w2home = true; a.x = L.dx; a.z = L.dz; a.setBehavior('dance'); a.home = { x: a.x, z: a.z, y: a.y, yaw: a.yaw };
+  a.say(['HOME! It was here the whole time!', 'My avocado! I\'d know that inflatable anywhere!', 'This is it! I can feel it in my sequins!'][BURNS_W2.state.lost.indexOf(L) % 3], 3);
   g.fx.confetti(a.x, a.y + 2, a.z, 20); g.glow += 5; g.toast('+5 GLOW STICKS · ' + L.addr);
   burnsSfx('crowd_cheer', { vol: 0.5 });
   if (g.missions.state('lost') === 'active') g.missions.progress('lost', 1);
-  function S_idx(l) { return BURNS_W2.state.lost.indexOf(l) % 3; }
 };
 BURNS_W2.homeEnter = function (g) {
   const S = BURNS_W2.state;
