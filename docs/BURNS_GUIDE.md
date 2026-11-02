@@ -713,12 +713,12 @@ Read it top to bottom; it uses almost every feature.
 | 4 The Orgy Dome | Meet an informant while sneaking past creepy dudes. Comedic, nothing explicit. | `stealth` missions with `patrol` enemies (`view`, `fov`), `follow` behaviour for the informant, giant `dome` props with `api.mesh` interiors. |
 | 5 Costco Soul Trading Co. | Giant gifting warehouse; a platonic burner buddy joins. | Shelves from `api.box`/`scaffold`; `deliver` chains (`custom` + `talk`); `follow` companion (`escort`). |
 | 6 The Art Car Hunt | Commandeer a fire-breathing octopus art car, dodging tech bros. | `api.artCar({ build: yourOctopus })` with `poofers`, `pitcher` enemies, `ride` missions with `vehicle: 'car'`, `flames` events. |
-| 11 Sound Camp Crawl (plays 7th) | Camp-to-camp crawl through the sound camps. | Crowds with `dance` (`k.bpm`), `api.light`/`api.glow` stages, the shared `BurnsDJ` decks minigame (its own file). |
+| 11 Sound Camp Crawl (plays 7th) | Per your brief. | Dancing crowds (`dance` with `k.bpm`), `api.light`/`api.glow` stages, the shared `BurnsDJ` decks minigame (its own file). |
 | 7 Sunrise Set | Heart-topped sound car at dawn; sparkle ponies, influencers, crusty old burners. | `sky: 'night', sky2: 'dawn'` with `setTod`; `api.mover` for the sound car (or `artCar` with `path`); `flasher` influencers; crowds with `dance`. |
 | 8 Hell Station | Fuel the art car; battle DPW. | `g.interactables` for fuel pumps; DPW `charger`/`chase` enemies; `mud`, `fire`; an `escort` or `ride` mission. |
 | 9 Deep Playa Showdown | Fight the Man again; he escapes. | Open deep playa, `dust` up, `BurnsManBoss` with fireworks; end with his `flee` like W1. |
-| 12 The Temple (plays 11th) | A quiet, beautiful wooden temple; the emotional calm before the end. | `api.lathe`/`api.roundBox` wood (pattern `wood`), soft `dawn`/`dusk` palette with `mid` band, gentle `float`/`climb` platforming. |
-| 13 The Workshops (plays 12th) | Burner workshops: build something, break nothing. | `api.mover` machines and conveyors, `g.interactables`, `api.roundBox` benches and tools. |
+| 12 The Temple (plays 11th) | Per your brief. | Rounded wood (`api.lathe`, `api.roundBox`, pattern `wood`); palettes can add a `mid` sky band (§9). |
+| 13 The Workshops (plays 12th) | Per your brief. | `api.mover` machines, `g.interactables`, `api.roundBox` benches and tools. |
 | 10 The Man Pavilion | Ride in on the yellow bike, in costume, to the final fight. Phase 1 on the saucer, phase 2 giant (neon flash + cover, face fire, arm fireworks). | `api.prop('saucer')`, `man.y` on the deck, cover props on the deck; phase 2 tweens `man.scale`, music `man_giant`; `finishWorld(g => Game.setScene(…ending…))`. |
 
 Have fun. Make it look like a modern mobile game, keep the jokes short, and test on both orientations.
