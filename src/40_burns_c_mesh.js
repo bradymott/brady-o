@@ -294,7 +294,7 @@ class BurnsMesh {
     this.ind = [];
     this.M = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]);
     this.stack = [];
-    this.c = [255, 255, 255]; this.e = 0; this.bone = 0;
+    this.c = [255, 255, 255]; this.e = 0; this.bone = 0; this.gloss = 0; this.lo = false;
     this.uvr = BURNS_ATLAS.white;
     this.bmin = [Infinity, Infinity, Infinity]; this.bmax = [-Infinity, -Infinity, -Infinity];
     this._t = new Float32Array(12);
@@ -309,8 +309,10 @@ class BurnsMesh {
   color(c, e) { this.c = burnsRGB(c); if (e !== undefined) this.e = e; return this; }
   emissive(e) { this.e = e; return this; }
   setBone(b) { this.bone = b; return this; }
-  push() { this.stack.push(this.M.slice(), this.c, this.e, this.bone); return this; }
-  pop() { this.bone = this.stack.pop(); this.e = this.stack.pop(); this.c = this.stack.pop(); this.M = this.stack.pop(); return this; }
+  push() { this.stack.push(this.M.slice(), this.c, this.e, this.bone, this.gloss); return this; }
+  pop() { this.gloss = this.stack.pop(); this.bone = this.stack.pop(); this.e = this.stack.pop(); this.c = this.stack.pop(); this.M = this.stack.pop(); return this; }
+  // specular shine for following geometry: 0 matte .. 3 glossy (sunglasses, paint, chrome)
+  shine(g) { this.gloss = clamp(g | 0, 0, 3); return this; }
   identity() { this.M.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]); return this; }
   // M = M * T(x,y,z) * R(yaw,pitch,roll) * S
   tf(x, y, z, yaw, pitch, roll, sx, sy, sz) {
@@ -326,7 +328,7 @@ class BurnsMesh {
     const i = this.nv++, f = this.f, b = i * 24;
     f[i * 6] = x; f[i * 6 + 1] = y; f[i * 6 + 2] = z;
     this.i8[b + 12] = Math.round(nx * 127); this.i8[b + 13] = Math.round(ny * 127); this.i8[b + 14] = Math.round(nz * 127);
-    this.u8[b + 15] = this.bone;
+    this.u8[b + 15] = (this.bone & 63) | (this.gloss << 6);
     const c = this.c; this.u8[b + 16] = c[0]; this.u8[b + 17] = c[1]; this.u8[b + 18] = c[2]; this.u8[b + 19] = Math.round(clamp(this.e, 0, 1) * 255);
     this.u16[i * 12 + 10] = Math.round(clamp(u, 0, 1) * 65535); this.u16[i * 12 + 11] = Math.round(clamp(v, 0, 1) * 65535);
     if (x < this.bmin[0]) this.bmin[0] = x; if (y < this.bmin[1]) this.bmin[1] = y; if (z < this.bmin[2]) this.bmin[2] = z;
@@ -335,7 +337,14 @@ class BurnsMesh {
   }
   // transform local point
   tp(x, y, z, o) { const M = this.M; o[0] = M[0] * x + M[1] * y + M[2] * z + M[3]; o[1] = M[4] * x + M[5] * y + M[6] * z + M[7]; o[2] = M[8] * x + M[9] * y + M[10] * z + M[11]; return o; }
-  tn(x, y, z, o) { const M = this.M; let a = M[0] * x + M[1] * y + M[2] * z, b = M[4] * x + M[5] * y + M[6] * z, c = M[8] * x + M[9] * y + M[10] * z; const l = Math.hypot(a, b, c) || 1; o[0] = a / l; o[1] = b / l; o[2] = c / l; return o; }
+  // transform local normal by the inverse-transpose (cofactors) of M, so non-uniform scales shade correctly
+  tn(x, y, z, o) {
+    const M = this.M, a = M[0], b = M[1], c = M[2], d = M[4], e = M[5], f = M[6], g = M[8], h = M[9], i = M[10];
+    const c00 = e * i - f * h, c01 = f * g - d * i, c02 = d * h - e * g;
+    let nx = c00 * x + c01 * y + c02 * z, ny = (c * h - b * i) * x + (a * i - c * g) * y + (b * g - a * h) * z, nz = (b * f - c * e) * x + (c * d - a * f) * y + (a * e - b * d) * z;
+    if (a * c00 + b * c01 + c * c02 < 0) { nx = -nx; ny = -ny; nz = -nz; }
+    const l = Math.hypot(nx, ny, nz) || 1; o[0] = nx / l; o[1] = ny / l; o[2] = nz / l; return o;
+  }
   /* polygon in LOCAL coords (array of [x,y,z]); uvs optional array of [u,v];
      orient: optional local point inside the solid -> winding fixed to face away from it;
      normals: optional per-vertex local normals (soft shading) */
@@ -589,6 +598,209 @@ class BurnsMesh {
     const pts = []; for (let i = 0; i < seg; i++) { const t = i / seg * TAU; pts.push([cx + Math.sin(t) * r, y, cz + Math.cos(t) * r]); }
     this.poly(pts, null, [cx, y - 1, cz]);
     if (o.both) this.poly(pts.slice().reverse(), null, [cx, y + 1, cz]);
+    return this;
+  }
+  /* ================= smooth (rounded) primitives =================
+     All emit shared vertices with smooth normals. m.lo = true builds a low-detail version
+     (fewer segments) for LOD models. Per-vertex colour/emissive can be set from callbacks. */
+  // indexed grid: cols x rows vertices from fn(i, j, out) -> out.p, out.n (local), optional out.uv, out.col, out.e
+  grid(cols, rows, wrapU, fn, wrapV) {
+    const base = this.nv, P = [0, 0, 0], N = [0, 0, 0], o = { p: [0, 0, 0], n: [0, 1, 0], uv: null, col: null, e: undefined };
+    const wr = BURNS_ATLAS.white, wu = (wr.u0 + wr.u1) / 2, wv = (wr.v0 + wr.v1) / 2;
+    const col0 = this.c, e0 = this.e;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      o.uv = null; o.col = null; o.e = undefined;
+      fn(i, j, o);
+      this.tp(o.p[0], o.p[1], o.p[2], P); this.tn(o.n[0], o.n[1], o.n[2], N);
+      if (o.col) this.c = o.col; if (o.e !== undefined) this.e = o.e;
+      this.vert(P[0], P[1], P[2], N[0], N[1], N[2], o.uv ? o.uv[0] : wu, o.uv ? o.uv[1] : wv);
+      this.c = col0; this.e = e0;
+    }
+    // orientation: compare a middle quad's winding with its supplied normal, flip if needed
+    const f = this.f, i8 = this.i8;
+    let flip = false, decided = false;
+    const qs = wrapU ? cols : cols - 1, qr = wrapV ? rows : rows - 1;
+    for (let jj = Math.floor(qr / 2); jj < qr && !decided; jj++) for (let ii = 0; ii < qs && !decided; ii++) {
+      const a = base + jj * cols + ii, b = base + jj * cols + (ii + 1) % cols, c = base + ((jj + 1) % rows) * cols + (ii + 1) % cols;
+      const ax = f[a * 6], ay = f[a * 6 + 1], az = f[a * 6 + 2];
+      const ux = f[b * 6] - ax, uy = f[b * 6 + 1] - ay, uz = f[b * 6 + 2] - az, vx = f[c * 6] - ax, vy = f[c * 6 + 1] - ay, vz = f[c * 6 + 2] - az;
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      if (nx * nx + ny * ny + nz * nz < 1e-14) continue;
+      const sx = i8[a * 24 + 12] + i8[b * 24 + 12] + i8[c * 24 + 12], sy = i8[a * 24 + 13] + i8[b * 24 + 13] + i8[c * 24 + 13], sz = i8[a * 24 + 14] + i8[b * 24 + 14] + i8[c * 24 + 14];
+      flip = nx * sx + ny * sy + nz * sz < 0; decided = true;
+    }
+    for (let j = 0; j < qr; j++) for (let i = 0; i < qs; i++) {
+      const i1 = (i + 1) % cols, j1 = (j + 1) % rows;
+      const a = base + j * cols + i, b = base + j * cols + i1, c = base + j1 * cols + i1, d = base + j1 * cols + i;
+      if (flip) this.ind.push(a, c, b, a, d, c); else this.ind.push(a, b, c, a, c, d);
+    }
+    return this;
+  }
+  segs(hi, lo) { return this.lo ? lo : hi; }
+  // ellipsoid. o: { seg, rings, theta0, theta1 (longitude range, 0 = +Z), phi0, phi1 (0 = top, PI = bottom), uvFn(x,y,z)->[u,v], colFn(x,y,z,nx,ny,nz)->colour }
+  ellipsoid(cx, cy, cz, rx, ry, rz, o) {
+    o = o || {};
+    const seg = o.seg || this.segs(14, 8), rings = o.rings || this.segs(10, 6);
+    const t0 = o.theta0 === undefined ? 0 : o.theta0, t1 = o.theta1 === undefined ? TAU : o.theta1, full = o.theta0 === undefined && o.theta1 === undefined;
+    const p0 = o.phi0 || 0, p1 = o.phi1 === undefined ? Math.PI : o.phi1;
+    const cols = full ? seg : seg + 1;
+    this.grid(cols, rings + 1, full, (i, j, out) => {
+      const th = t0 + (t1 - t0) * i / seg, ph = p0 + (p1 - p0) * j / rings;
+      const sx = Math.sin(ph) * Math.sin(th), sy = Math.cos(ph), sz = Math.sin(ph) * Math.cos(th);
+      const x = sx * rx, y = sy * ry, z = sz * rz;
+      out.p[0] = cx + x; out.p[1] = cy + y; out.p[2] = cz + z;
+      let nx = sx / rx, ny = sy / ry, nz = sz / rz; const l = Math.hypot(nx, ny, nz) || 1; out.n[0] = nx / l; out.n[1] = ny / l; out.n[2] = nz / l;
+      if (o.uvFn) out.uv = o.uvFn(x, y, z, out.n);
+      if (o.colFn) { const c = o.colFn(x, y, z, out.n); if (c) out.col = burnsRGB(c); }
+    });
+    return this;
+  }
+  // surface of revolution around local Y. profile: [[r, y, colour?, emissive?], ...] (bottom -> top).
+  // Repeat a point to make a hard crease. o: { seg, sx, sz (elliptical section), theta0, theta1, rMod(theta, t)->scale,
+  //   uv: region (u around, ping-pong mirrored uvRepeat times (default 2), v along), caps, flip (face inward: linings) }
+  lathe(profile, o) {
+    o = o || {};
+    const seg = o.seg || this.segs(14, 8), n = profile.length;
+    const full = o.theta0 === undefined && o.theta1 === undefined, t0 = o.theta0 || 0, t1 = o.theta1 === undefined ? TAU : o.theta1;
+    const sx = o.sx || 1, sz = o.sz || 1;
+    // profile normals: averaged unit tangents; a repeated point makes a hard crease; axis points face +/-Y
+    const pn = [], same = (U, V) => Math.abs(U[0] - V[0]) < 1e-6 && Math.abs(U[1] - V[1]) < 1e-6;
+    for (let k = 0; k < n; k++) {
+      const P = profile[k], A = k > 0 ? profile[k - 1] : null, B = k < n - 1 ? profile[k + 1] : null;
+      if (P[0] < 1e-6 && (k === 0 || k === n - 1)) { const up = k === 0 ? !(B && B[1] >= P[1] - 1e-9) : !!(A && A[1] <= P[1] + 1e-9); pn.push([0, up ? 1 : -1]); continue; }
+      const prevSame = A && same(A, P), nextSame = B && same(B, P);
+      let dr = 0, dy = 0;
+      const addT = (U, V) => { const tr = V[0] - U[0], ty = V[1] - U[1], l = Math.hypot(tr, ty) || 1; dr += tr / l; dy += ty / l; };
+      if (prevSame) { if (B) addT(P, B); }
+      else if (nextSame) { if (A) addT(A, P); }
+      else { if (A) addT(A, P); if (B) addT(P, B); }
+      const l = Math.hypot(dr, dy) || 1; pn.push([dy / l, -dr / l]);
+    }
+    let len = 0; const acc = [0]; for (let k = 1; k < n; k++) { len += Math.hypot(profile[k][0] - profile[k - 1][0], profile[k][1] - profile[k - 1][1]); acc.push(len); }
+    const cols = full ? seg : seg + 1;
+    this.grid(cols, n, full, (i, j, out) => {
+      const th = t0 + (t1 - t0) * i / seg, P = profile[j], m = o.rMod ? o.rMod(th, j / (n - 1)) : 1;
+      const r = P[0] * m, s = Math.sin(th), c = Math.cos(th);
+      out.p[0] = r * s * sx; out.p[1] = P[1]; out.p[2] = r * c * sz;
+      let nx = pn[j][0] * s / sx, ny = pn[j][1], nz = pn[j][0] * c / sz; const l = (Math.hypot(nx, ny, nz) || 1) * (o.flip ? -1 : 1);
+      out.n[0] = nx / l; out.n[1] = ny / l; out.n[2] = nz / l;
+      if (P[2]) out.col = burnsRGB(P[2]);
+      if (P[3] !== undefined) out.e = P[3];
+      if (o.uv) { const R = o.uv, ur = o.uvRepeat || (full ? 2 : 1), tt = ((i / seg) * ur) % 2; out.uv = [lerp(R.u0, R.u1, tt <= 1 ? tt : 2 - tt), lerp(R.v0, R.v1, clamp(len ? acc[j] / len : 0, 0, 1))]; }
+    });
+    if (o.caps) {
+      // flat caps where the profile ends away from the axis
+      for (const k of [0, n - 1]) { const P = profile[k]; if (P[0] < 1e-5) continue; const pts = []; for (let i = 0; i < seg; i++) { const th = t0 + (t1 - t0) * i / seg; pts.push([P[0] * Math.sin(th) * sx, P[1], P[0] * Math.cos(th) * sz]); } if (k === 0) pts.reverse(); this.poly(pts, null, [0, P[1] + (k === 0 ? 1 : -1), 0]); }
+    }
+    return this;
+  }
+  // tapered capsule (limb) between two points, radii r0 -> r1. o: { seg, uv: region (wraps), uvRepeat, ends: false (open tube) }
+  limb(x0, y0, z0, x1, y1, z1, r0, r1, o) {
+    o = o || {};
+    const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0, L = Math.hypot(dx, dy, dz); if (L < 1e-5) return this;
+    const yaw = Math.atan2(dx, dz), pitch = Math.acos(clamp(dy / L, -1, 1));
+    const k = this.segs(3, 2), prof = [];
+    if (o.ends !== false) for (let i = 0; i <= k; i++) { const a = -Math.PI / 2 + i / k * Math.PI / 2; prof.push([r0 * Math.cos(a), r0 * Math.sin(a)]); }
+    else prof.push([r0, 0]);
+    const mid = o.mid || 0; if (mid) prof.push([lerp(r0, r1, 0.5) * (1 + mid), L * 0.5]);
+    if (o.ends !== false) for (let i = 0; i <= k; i++) { const a = i / k * Math.PI / 2; prof.push([r1 * Math.cos(a), L + r1 * Math.sin(a)]); }
+    else prof.push([r1, L]);
+    this.push(); this.tf(x0, y0, z0, yaw, pitch, 0);
+    this.lathe(prof, { seg: o.seg || this.segs(10, 6), uv: o.uv, uvRepeat: o.uvRepeat, sx: o.sx, sz: o.sz });
+    this.pop();
+    return this;
+  }
+  // rounded box (Minkowski box + sphere): flat faces, round edges and corners. r = edge radius
+  roundBox(cx, cy, cz, w, h, d, r, o) {
+    o = o || {};
+    r = Math.max(0.0005, Math.min(r === undefined ? Math.min(w, h, d) * 0.2 : r, w / 2, h / 2, d / 2));
+    const ix = w / 2 - r, iy = h / 2 - r, iz = d / 2 - r;
+    const k = o.k || this.segs(2, 1), mR = o.m || this.segs(2, 1);
+    const cols = 4 * (k + 1), rows = 2 * (mR + 1);
+    const tTop = o.top ? burnsRGB(o.top) : null, tBot = o.bottom ? burnsRGB(o.bottom) : null;
+    const uvR = o.uv, uvFace = o.uvFace || 'pz';
+    this.grid(cols, rows, true, (i, j, out) => {
+      const q = Math.floor(i / (k + 1)), lon = (q + (i % (k + 1)) / k) * Math.PI / 2;
+      const top = j < mR + 1, lat = top ? (j / mR) * Math.PI / 2 : Math.PI / 2 + ((j - mR - 1) / mR) * Math.PI / 2;
+      const nx = Math.sin(lat) * Math.cos(lon), ny = Math.cos(lat), nz = Math.sin(lat) * Math.sin(lon);
+      const sx = (q === 0 || q === 3) ? 1 : -1, sz = (q === 0 || q === 1) ? 1 : -1, sy = top ? 1 : -1;
+      const x = sx * ix + r * nx, y = sy * iy + r * ny, z = sz * iz + r * nz;
+      out.p[0] = cx + x; out.p[1] = cy + y; out.p[2] = cz + z; out.n[0] = nx; out.n[1] = ny; out.n[2] = nz;
+      if (tTop && ny > 0.7) out.col = tTop; else if (tBot && ny < -0.7) out.col = tBot;
+    });
+    // flat top and bottom: the first/last rows are the four face corners
+    const base = this.nv - cols * rows, K = k + 1, bot = base + (rows - 1) * cols;
+    this.quadIdx(base, base + K, base + 2 * K, base + 3 * K);
+    this.quadIdx(bot, bot + K, bot + 2 * K, bot + 3 * K);
+    // a texture (o.uv) goes on the flat +Z face as a decal, so it never smears around the edges
+    if (uvR && uvFace === 'pz') this.decal(cx, cy, cz + d / 2 + 0.002, Math.max(0.01, w - r * 1.1), Math.max(0.01, h - r * 1.1), uvR);
+    return this;
+  }
+  // two triangles over existing vertices a,b,c,d (in ring order), wound to face along vertex a's normal
+  quadIdx(a, b, c, d) {
+    const f = this.f, i8 = this.i8;
+    const ux = f[b * 6] - f[a * 6], uy = f[b * 6 + 1] - f[a * 6 + 1], uz = f[b * 6 + 2] - f[a * 6 + 2];
+    const vx = f[c * 6] - f[a * 6], vy = f[c * 6 + 1] - f[a * 6 + 1], vz = f[c * 6 + 2] - f[a * 6 + 2];
+    const s = (uy * vz - uz * vy) * i8[a * 24 + 12] + (uz * vx - ux * vz) * i8[a * 24 + 13] + (ux * vy - uy * vx) * i8[a * 24 + 14];
+    if (s >= 0) this.ind.push(a, b, c, a, c, d); else this.ind.push(a, c, b, a, d, c);
+    return this;
+  }
+  // torus around local Y (ring in the XZ plane). R = ring radius, r = tube radius
+  torus(cx, cy, cz, R, r, o) {
+    o = o || {};
+    const seg = o.seg || this.segs(16, 10), tseg = o.tseg || this.segs(8, 5), sy = o.sy || 1;
+    this.grid(seg, tseg, true, (i, j, out) => {
+      const th = i / seg * TAU, ph = j / tseg * TAU, cp = Math.cos(ph), sp = Math.sin(ph);
+      out.p[0] = cx + (R + r * cp) * Math.sin(th); out.p[1] = cy + r * sp * sy; out.p[2] = cz + (R + r * cp) * Math.cos(th);
+      out.n[0] = cp * Math.sin(th); out.n[1] = sp / sy; out.n[2] = cp * Math.cos(th);
+    }, true);
+    return this;
+  }
+  // cylinder with rounded top/bottom edges (barrels, drums, posts). y = bottom
+  roundCyl(cx, y, cz, rad, h, edge, o) {
+    o = o || {};
+    const e = Math.min(edge === undefined ? rad * 0.25 : edge, rad * 0.9, h / 2), k = this.segs(3, 1), prof = [[0, 0]];
+    for (let i = 0; i <= k; i++) { const a = -Math.PI / 2 + i / k * Math.PI / 2; prof.push([rad - e + e * Math.cos(a), e + e * Math.sin(a)]); }
+    for (let i = 0; i <= k; i++) { const a = i / k * Math.PI / 2; prof.push([rad - e + e * Math.cos(a), h - e + e * Math.sin(a)]); }
+    prof.push([0, h]);
+    this.push(); this.tf(cx, y, cz); this.lathe(prof, { seg: o.seg || this.segs(14, 8), sx: o.sx, sz: o.sz, uv: o.uv }); this.pop();
+    return this;
+  }
+  // smooth sphere shortcut
+  ball(cx, cy, cz, r, o) { return this.ellipsoid(cx, cy, cz, r, r, r, o); }
+  // parametric surface: fn(u, v, out[3]) for u, v in 0..1 (local coords); smooth normals from finite differences.
+  // o: { wrapU, wrapV, out: true | [x,y,z] (normals face away from the centroid / that point), flip, colFn(u,v), uvFn(u,v) }
+  surf(nu, nv, fn, o) {
+    o = o || {};
+    const cols = o.wrapU ? nu : nu + 1, rows = o.wrapV ? nv : nv + 1, n = cols * rows;
+    const P = new Float32Array(n * 3), N = new Float32Array(n * 3), t = [0, 0, 0], A = [0, 0, 0], Bp = [0, 0, 0], C = [0, 0, 0], D = [0, 0, 0];
+    const eu = 0.35 / nu, ev = 0.35 / nv, cu = u => o.wrapU ? u : clamp(u, 0, 1), cv = v => o.wrapV ? v : clamp(v, 0, 1);
+    let mx = 0, my = 0, mz = 0;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const u = i / nu, v = j / nv, k = (j * cols + i) * 3;
+      fn(u, v, t); P[k] = t[0]; P[k + 1] = t[1]; P[k + 2] = t[2]; mx += t[0]; my += t[1]; mz += t[2];
+      let nx = 0, ny = 0, nz = 0;
+      for (let tr = 0; tr < 4; tr++) {
+        const vv = tr === 0 ? v : cv(v + (v < 0.5 ? 1 : -1) * ev * tr), uu = tr === 0 ? u : cu(u + (u < 0.5 ? 1 : -1) * eu * tr * 0.5);
+        fn(cu(uu + eu), vv, A); fn(cu(uu - eu), vv, Bp); fn(uu, cv(vv + ev), C); fn(uu, cv(vv - ev), D);
+        const ux = A[0] - Bp[0], uy = A[1] - Bp[1], uz = A[2] - Bp[2], vx = C[0] - D[0], vy = C[1] - D[1], vz = C[2] - D[2];
+        nx = uy * vz - uz * vy; ny = uz * vx - ux * vz; nz = ux * vy - uy * vx;
+        if (nx * nx + ny * ny + nz * nz > 1e-18) break;
+      }
+      const l = Math.hypot(nx, ny, nz) || 1; N[k] = nx / l; N[k + 1] = ny / l; N[k + 2] = nz / l;
+    }
+    let sg = o.flip ? -1 : 1;
+    if (o.out) {
+      const Cx = o.out === true ? mx / n : o.out[0], Cy = o.out === true ? my / n : o.out[1], Cz = o.out === true ? mz / n : o.out[2];
+      let dot = 0; for (let k = 0; k < n * 3; k += 3) dot += (P[k] - Cx) * N[k] + (P[k + 1] - Cy) * N[k + 1] + (P[k + 2] - Cz) * N[k + 2];
+      if (dot < 0) sg = -sg;
+    }
+    this.grid(cols, rows, !!o.wrapU, (i, j, out) => {
+      const k = (j * cols + i) * 3;
+      out.p[0] = P[k]; out.p[1] = P[k + 1]; out.p[2] = P[k + 2]; out.n[0] = N[k] * sg; out.n[1] = N[k + 1] * sg; out.n[2] = N[k + 2] * sg;
+      if (o.colFn) { const c = o.colFn(i / nu, j / nv); if (c) out.col = typeof c === 'string' ? burnsRGB(c) : c; }
+      if (o.uvFn) out.uv = o.uvFn(i / nu, j / nv);
+    }, !!o.wrapV);
     return this;
   }
   // merge another builder's vertices (already in world space) — used to combine prop meshes

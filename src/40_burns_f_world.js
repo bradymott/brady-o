@@ -392,6 +392,38 @@ class BurnsWorld {
         o = o || {};
         return W.place(m => { m.color(col || '#8a7a6a', o.e || 0); if (o.bevel) m.bbox(0, h / 2, 0, w, h, d, o.bevel, o); else m.box(0, h / 2, 0, w, h, d, o); m.emissive(0); return { cols: o.noCol ? [] : [Object.assign({ t: 'box', x: 0, z: 0, hx: w / 2, hz: d / 2, y0: 0, y1: h }, o.col || {})] }; }, x, y, z, o.yaw || 0, 1, o);
       },
+      /* smooth, rounded primitives with matching colliders (y = bottom). Common opts:
+         { yaw, e (emissive 0..1), gloss (0..3 shine), noCol, col: {collider overrides}, seg } */
+      roundBox(x, y, z, w, h, d, col, o) {
+        o = o || {};
+        return W.place(m => { m.color(col || '#8a7a6a', o.e || 0).shine(o.gloss || 0); m.roundBox(0, h / 2, 0, w, h, d, o.r === undefined ? Math.min(w, h, d) * 0.22 : o.r, o); m.emissive(0).shine(0); return { cols: o.noCol ? [] : [Object.assign({ t: 'box', x: 0, z: 0, hx: w / 2, hz: d / 2, y0: 0, y1: h }, o.col || {})] }; }, x, y, z, o.yaw || 0, 1, o);
+      },
+      sphere(x, y, z, r, col, o) {
+        o = o || {}; const sq = o.squash || 1;
+        return W.place(m => { m.color(col || '#c8b8a8', o.e || 0).shine(o.gloss || 0); m.ellipsoid(0, r * sq, 0, r, r * sq, r, o); m.emissive(0).shine(0); return { cols: o.noCol ? [] : [Object.assign({ t: 'dome', x: 0, z: 0, r, y0: r * sq }, o.col || {})] }; }, x, y, z, o.yaw || 0, 1, o);
+      },
+      capsule(x, y, z, r, h, col, o) {
+        o = o || {};
+        return W.place(m => { m.color(col || '#c8b8a8', o.e || 0).shine(o.gloss || 0); m.limb(0, 0, 0, 0, Math.max(0.001, h - 2 * r), 0, r, o.r1 || r, o); m.emissive(0).shine(0); return { cols: o.noCol ? [] : [Object.assign({ t: 'cyl', x: 0, z: 0, r, y0: -r, y1: h - r }, o.col || {})] }; }, x, y + r, z, o.yaw || 0, 1, o);
+      },
+      cylinder(x, y, z, r, h, col, o) {
+        o = o || {};
+        return W.place(m => { m.color(col || '#8a8a92', o.e || 0).shine(o.gloss || 0); if (o.r1 !== undefined && o.r1 !== r) m.cyl(0, 0, 0, r, o.r1, h, o.seg || m.segs(16, 8), { smooth: true }); else m.roundCyl(0, 0, 0, r, h, o.round === undefined ? Math.min(r, h) * 0.15 : o.round, o); m.emissive(0).shine(0); return { cols: o.noCol ? [] : [Object.assign({ t: 'cyl', x: 0, z: 0, r: Math.max(r, o.r1 || 0), y0: 0, y1: h }, o.col || {})] }; }, x, y, z, o.yaw || 0, 1, o);
+      },
+      cone(x, y, z, r, h, col, o) {
+        o = o || {};
+        return W.place(m => { m.color(col || '#ff7a1a', o.e || 0).shine(o.gloss || 0); m.lathe([[0, 0], [r, 0], [r, 0], [r * 0.06, h * 0.96], [0, h]], o); m.emissive(0).shine(0); return { cols: o.noCol ? [] : [Object.assign({ t: 'cyl', x: 0, z: 0, r: r * 0.6, y0: 0, y1: h * 0.75 }, o.col || {})] }; }, x, y, z, o.yaw || 0, 1, o);
+      },
+      // profile: [[radius, height, colour?, emissive?], ...] bottom -> top (repeat a point for a hard edge)
+      lathe(x, y, z, profile, col, o) {
+        o = o || {};
+        let rmax = 0, ymax = 0; for (const p of profile) { rmax = Math.max(rmax, p[0]); ymax = Math.max(ymax, p[1]); }
+        return W.place(m => { m.color(col || '#c8b8a8', o.e || 0).shine(o.gloss || 0); m.lathe(profile, o); m.emissive(0).shine(0); return { cols: o.noCol ? [] : [Object.assign({ t: 'cyl', x: 0, z: 0, r: rmax * (o.colScale || 0.9), y0: 0, y1: ymax }, o.col || {})] }; }, x, y, z, o.yaw || 0, 1, o);
+      },
+      torus(x, y, z, R, r, col, o) {
+        o = o || {};
+        return W.place(m => { m.color(col || '#ff4fd8', o.e || 0).shine(o.gloss || 0); m.push(); m.tf(0, 0, 0, 0, o.pitch || 0, o.roll || 0); m.torus(0, 0, 0, R, r, o); m.pop(); m.emissive(0).shine(0); return { cols: [] }; }, x, y, z, o.yaw || 0, 1, o);
+      },
       collider(c) { return W.col.add(c); },
       // geometry + colliders that only exist while LSD is active
       hidden(fn) { W._hidden = true; try { fn(); } finally { W._hidden = false; } },

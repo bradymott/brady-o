@@ -57,9 +57,11 @@ class BurnsHubScene {
     this.opts = opts || {}; this.t = 0; this.wardrobe = false;
     Input.setMode('ui'); Input.camDrag = false; Input.hud = null;
     const sv = BurnsSave.get();
-    this.sel = clamp(this.opts.select || sv.lastWorld || 1, 1, 10);
-    if (this.opts.from && sv.unlocked[this.opts.from + 1] && BurnsWorlds.get(this.opts.from + 1)) this.sel = this.opts.from + 1;
-    this.newUnlock = this.opts.from && sv.worldDone[this.opts.from] ? this.opts.from + 1 : 0;
+    const O = BurnsWorlds.order, want = this.opts.select || sv.lastWorld || 1;
+    this.sel = O.indexOf(want) >= 0 ? want : O[0];
+    const nx = this.opts.from ? BurnsWorlds.next(this.opts.from) : null;
+    if (nx && sv.unlocked[nx] && BurnsWorlds.get(nx)) this.sel = nx;
+    this.newUnlock = nx && sv.worldDone[this.opts.from] ? nx : 0;
     burnsMusic('burns_hub');
     if (!sv.seenIntro && !this.opts.noIntro) {
       sv.seenIntro = true; BurnsSave.save();
@@ -84,14 +86,17 @@ class BurnsHubScene {
     this.playBtn = { x: P.x + 12, y: P.y + P.h - 58, w: P.w - 24, h: 46, label: 'PLAY', primary: true, fn: () => this.play() };
     this.btns.push(this.playBtn);
     this.btns.focus = this.btns.length - 1;
-    this.nodes = BURNS_WORLD_META.map(m => ({ id: m.id, x: this.map.x + m.hub.x * this.map.w, y: this.map.y + m.hub.y * this.map.h, col: m.col }));
+    // one pin per world in play order (labelled by position); ids without metadata get a spot on a ring
+    const O = BurnsWorlds.order;
+    this.nodes = O.map((id, i) => { const m = BurnsWorlds.meta(id), a = i / O.length * TAU, h = BURNS_WORLD_META.find(k => k.id === id) ? m.hub : { x: 0.5 + Math.sin(a) * 0.4, y: 0.5 + Math.cos(a) * 0.4 }; return { id, n: i + 1, x: this.map.x + h.x * this.map.w, y: this.map.y + h.y * this.map.h, col: m.col }; });
+    this.nodeR = clamp(Math.min(this.map.w, this.map.h) / 17, 12, 17);
     if (this.wardrobe) this.buildWardrobe();
   }
   resize() { this.build(); }
   playIntro() { Game.setScene(new StoryScene(burnsPrologue(), () => Game.setScene(new BurnsHubScene({ noIntro: true, select: this.sel })), 'burns_intro')); }
   play() {
     const w = this.sel, sv = BurnsSave.get();
-    if (!sv.unlocked[w]) { burnsSfx('bump'); this.toast = { text: `Beat World ${w - 1}'s boss to unlock this world.`, t: 2.4 }; return; }
+    if (!sv.unlocked[w]) { const pv = BurnsWorlds.prev(w); burnsSfx('bump'); this.toast = { text: pv ? `Beat ${BurnsWorlds.label(pv)}'s boss to unlock this world.` : 'This world is locked.', t: 2.4 }; return; }
     if (!BurnsWorlds.get(w)) { burnsSfx('bump'); this.toast = { text: 'The burners are still building this world. Soon!', t: 2.4 }; return; }
     burnsSfx('select');
     BurnsScenes.play(w);
@@ -109,10 +114,11 @@ class BurnsHubScene {
     if (this.toast) { this.toast.t -= dt; if (this.toast.t <= 0) this.toast = null; }
     if (this.wardrobe) { const hit = UI.hitButtons(this.wbtns); if (hit) hit.fn(); return; }
     const k = Input.uiKey;
-    if (k === 'left' || k === 'up') { this.sel = this.sel > 1 ? this.sel - 1 : 10; burnsSfx('select', { vol: 0.4 }); return; }
-    if (k === 'right' || k === 'down') { this.sel = this.sel < 10 ? this.sel + 1 : 1; burnsSfx('select', { vol: 0.4 }); return; }
+    const O = BurnsWorlds.order, si = Math.max(0, O.indexOf(this.sel));
+    if (k === 'left' || k === 'up') { this.sel = O[(si + O.length - 1) % O.length]; burnsSfx('select', { vol: 0.4 }); return; }
+    if (k === 'right' || k === 'down') { this.sel = O[(si + 1) % O.length]; burnsSfx('select', { vol: 0.4 }); return; }
     if (k === 'enter') { this.play(); return; }
-    for (const tp of Input.taps) for (const n of this.nodes) if (Math.hypot(tp.x - n.x, tp.y - n.y) < 26) { if (this.sel === n.id) this.play(); else { this.sel = n.id; burnsSfx('select'); } return; }
+    for (const tp of Input.taps) { let best = null, bd = (this.nodeR || 17) + 9; for (const n of this.nodes) { const d = Math.hypot(tp.x - n.x, tp.y - n.y); if (d < bd) { bd = d; best = n; } } if (best) { if (this.sel === best.id) this.play(); else { this.sel = best.id; burnsSfx('select'); } return; } }
     const hit = UI.hitButtons(this.btns.filter(b => b !== this.playBtn).concat([this.playBtn]));
     if (hit && (Input.taps.length || k === 'enter' || Input.jumpPressed)) hit.fn();
   }
@@ -160,14 +166,14 @@ class BurnsHubScene {
     // nodes
     for (const n of this.nodes) {
       const un = !!sv.unlocked[n.id], reg = !!BurnsWorlds.get(n.id), sel = this.sel === n.id, done = !!sv.worldDone[n.id];
-      const r = sel ? 21 + Math.sin(t * 5) * 1.5 : 17;
+      const R0 = this.nodeR || 17, r = sel ? R0 + 4 + Math.sin(t * 5) * 1.5 : R0;
       ctx.save();
       if (sel) { ctx.shadowColor = n.col; ctx.shadowBlur = 20; }
       ctx.fillStyle = un ? n.col : '#5a4a5a'; ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, TAU); ctx.fill();
       ctx.shadowBlur = 0; ctx.strokeStyle = sel ? '#ffffff' : 'rgba(255,255,255,0.6)'; ctx.lineWidth = sel ? 3 : 1.5; ctx.stroke();
       ctx.restore();
-      BurnsUI.text(ctx, un ? String(n.id) : '🔒', n.x, n.y + 1, un ? 15 : 12, un ? '#1a0a1a' : '#ffffff', { stroke: false });
-      if (un) { const tk = BurnsSave.tokenCount(n.id), tot = BurnsWorlds.tokenTotal(n.id); BurnsUI.text(ctx, reg ? `${tk}/${tot}` : 'SOON', n.x, n.y + r + 10, 10, done ? '#7aff5a' : '#ffffff'); }
+      BurnsUI.text(ctx, un ? String(n.n) : '🔒', n.x, n.y + 1, un ? Math.round(R0 * 0.85) : Math.round(R0 * 0.7), un ? '#1a0a1a' : '#ffffff', { stroke: false });
+      if (un) { const tk = BurnsSave.tokenCount(n.id), tot = BurnsWorlds.tokenTotal(n.id); BurnsUI.text(ctx, reg ? `${tk}/${tot}` : 'SOON', n.x, n.y + r + 9, R0 < 15 ? 9 : 10, done ? '#7aff5a' : '#ffffff'); }
       if (this.newUnlock === n.id && this.t < 3) { ctx.save(); ctx.strokeStyle = `rgba(255,255,255,${1 - this.t / 3})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(n.x, n.y, 20 + this.t * 30, 0, TAU); ctx.stroke(); ctx.restore(); }
     }
     ctx.restore();
@@ -178,7 +184,7 @@ class BurnsHubScene {
     UI.panel(ctx, P.x, P.y, P.w, P.h);
     const portrait = Game.cssH > Game.cssW;
     let y = P.y + 22;
-    BurnsUI.text(ctx, 'WORLD ' + this.sel, P.x + P.w / 2, y, 12, m.col); y += 22;
+    BurnsUI.text(ctx, BurnsWorlds.label(this.sel).toUpperCase(), P.x + P.w / 2, y, 12, m.col); y += 22;
     ctx.save(); ctx.font = `${Math.min(18, P.w / 12)}px ${FONT_DISPLAY}`; const nl = BurnsUI.wrap(ctx, m.name.toUpperCase(), P.w - 24); ctx.restore();
     nl.forEach(l => { BurnsUI.text(ctx, l, P.x + P.w / 2, y, Math.min(18, P.w / 12), '#ffffff'); y += 22; });
     ctx.save(); ctx.font = `12px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.textAlign = 'center';
@@ -189,7 +195,7 @@ class BurnsHubScene {
       const rows = [['token', `${BurnsSave.tokenCount(this.sel)} / ${BurnsWorlds.tokenTotal(this.sel)} Burn Tokens`], ['photo', `${BurnsSave.photoCount(this.sel)} / 3 Photos of Chinka`], ['glowstick', `Best: ${sv.glowWorld[this.sel] || 0} glow sticks`]];
       for (const r of rows) { if (y > this.playBtn.y - 24) break; BurnsUI.icon(ctx, r[0], P.x + 26, y, 20); BurnsUI.text(ctx, r[1], P.x + 44, y, 11, '#ffffff', { align: 'left', ui: true, stroke: false }); y += portrait ? 22 : 26; }
       if (sv.worldDone[this.sel]) BurnsUI.text(ctx, '✓ BOSS DEFEATED', P.x + P.w / 2, Math.min(y + 4, this.playBtn.y - 12), 11, '#7aff5a');
-    } else if (!un) BurnsUI.text(ctx, `Beat the boss of World ${this.sel - 1} to unlock.`, P.x + P.w / 2, y + 10, 11, '#ffd84a', { ui: true, stroke: false });
+    } else if (!un) { const pv = BurnsWorlds.prev(this.sel); BurnsUI.text(ctx, pv ? `Beat the boss of ${BurnsWorlds.label(pv)} to unlock.` : 'Locked.', P.x + P.w / 2, y + 10, 11, '#ffd84a', { ui: true, stroke: false }); }
     else BurnsUI.text(ctx, 'Coming soon — the burners are building it.', P.x + P.w / 2, y + 10, 11, '#ffd84a', { ui: true, stroke: false });
     this.playBtn.disabled = !(un && reg);
     this.playBtn.label = un && reg ? (BurnsSave.tokenCount(this.sel) ? 'PLAY' : 'START') : un ? 'SOON' : 'LOCKED';
@@ -215,6 +221,7 @@ class BurnsHubScene {
 /* ---------------- exports + test/debug hooks ---------------- */
 window.BRADY_BURNS = {
   BurnsHubScene, BurnsPlayScene, BurnsWorlds, BurnsSave, BurnsScenes, BurnsGL,
+  BurnsManBoss, BurnsRig, BurnsProps, BurnsMesh, BurnsBehaviors, BURNS_ATLAS,
   debug: {
     scene() { return Game.scene; },
     play(w, opts) { return BurnsScenes.play(w || 1, opts || {}); },

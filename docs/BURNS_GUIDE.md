@@ -1,6 +1,6 @@
 # BRADY-O BURNS: World Authoring Guide
 
-This guide is for agents building Worlds 2–10 of **Brady-O Burns**, the 3D third-person adventure inside Brady-O. The engine and World 1 are already done. You add a world by creating one file, `src/4N_burns_worldN.js`, that calls `BurnsWorlds.register({...})`. You shouldn't need to touch the engine. If you hit a real gap, add the smallest possible hook to the engine and say so in your report.
+This guide is for agents building Worlds 2–13 of **Brady-O Burns**, the 3D third-person adventure inside Brady-O. The engine and World 1 are already done. You add a world by creating one file, `src/4N_burns_worldN.js`, that calls `BurnsWorlds.register({...})`. You shouldn't need to touch the engine. If you hit a real gap, add the smallest possible hook to the engine and say so in your report.
 
 - Engine: `src/40_burns_a_core.js` … `src/40_burns_k_hub.js`
 - Worked example: `src/42_burns_world1.js` (World 1, "The Line")
@@ -16,6 +16,7 @@ This guide is for agents building Worlds 2–10 of **Brady-O Burns**, the 3D thi
 - **Coordinates.** Y is up and units are metres. The playa floor is `y = 0` unless you give a height function.
 - **Yaw.** `yaw = 0` faces **+Z**. Forward is `(sin yaw, 0, cos yaw)`; to face a point, `yaw = Math.atan2(dx, dz)`. North (toward the city, the gate in W1) is **−Z** by convention, which is `yaw = Math.PI`.
 - **Scale.** Brady is about 1.85 m tall. A single jump peaks at about 2.0 m, a double jump at about 3.6 m, and a ledge-assist mantle catches tops up to about 1.45 m above the feet. An RV roof is 3.3 m, a box truck 3.8 m, a car 1.0–1.5 m.
+- **Look: rounded and soft, not blocky.** The art style is smooth-shaded, rounded, toy-like 3D with soft light (the quality bar of the best late-90s 3D platformers, with original designs). Build anything the camera gets near from the **rounded primitives** (`api.roundBox`, `api.sphere`, `api.capsule`, `api.cylinder`, `api.cone`, `api.lathe`, `api.torus`, and `m.roundBox` / `m.ellipsoid` / `m.limb` / `m.lathe` in custom meshes; see §4.2 and §6.1). Keep hard `box`/`bbox` for distant clutter, thin trim and signs. Library props (`api.prop`) and all characters are already rounded.
 - **Tone.** Keep it funny, short, burner-specific and original. Don't use real names or brands, and don't copy any existing game's characters, levels or music. Real landmarks get original designs: show the spirit, not a replica. Power-ups are labelled baggies or items, and **nobody is ever shown using them**. The Orgy Dome world stays comedic, with nothing explicit.
 
 ---
@@ -57,7 +58,7 @@ That's a complete, playable world. The hub lists it automatically once it regist
 
 | Field | Type | Meaning |
 |---|---|---|
-| `id` | number 1–10 | Required. Matches `BURNS_WORLD_META` (hub name and position). |
+| `id` | number 1–13 | Required. Matches `BURNS_WORLD_META` (hub name, colour and pin position). The id is permanent; the "World N" players see is its place in the play order (§3.1). |
 | `name`, `sub` | string | Title and subtitle. Defaults come from the meta table. |
 | `build(api, g)` | function | Required. Builds terrain, props, NPCs, pickups and missions. Runs once per visit, before the first frame. |
 | `missions` | array | Mission definitions (§7). Missions with `token !== false` are the world's Burn Tokens; aim for 5–7. |
@@ -73,6 +74,20 @@ That's a complete, playable world. The hub lists it automatically once it regist
 | `env(g, env)` | fn | Per frame: tweak the lighting `env` (for example fog during a dust storm). |
 | `onRespawn(g)` | fn | After Brady faints and respawns. |
 | `drawSkinned(g, R)`, `drawSprites(g, R)` | fn | Advanced: extra draws (§10). |
+
+### 3.1 Play order (13 worlds)
+
+Worlds are played in this order, by **id**. It's `BURNS_WORLD_ORDER`, also available as `BurnsWorlds.order`:
+
+| Position (shown as "World N") | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| World id | 1 | 2 | 3 | 4 | 5 | 6 | **11** Sound Camp Crawl | 7 | 8 | 9 | **12** The Temple | **13** The Workshops | 10 (finale) |
+
+- **Ids never change.** Files (`src/42_burns_world11.js` …), saves, tokens, photos, flags and `debug.play(id)` all use the id. Only what players see uses the position.
+- **Unlocking.** `g.finishWorld()` unlocks `BurnsWorlds.next(id)`, the next world in the order (finishing id 6 unlocks id 11, not 7). Old saves migrate automatically: any finished world unlocks the next one in the sequence.
+- **Labels.** Never print `'World ' + id`. Use `BurnsWorlds.label(id)` → `"World 7"` for id 11, or `BurnsWorlds.num(id)` → `7`. Lookups: `BurnsWorlds.idAt(n)`, `next(id)`, `prev(id)`, `isFinale(id)` (true for id 10). The hub, loading card, pause menu and results screen already do this.
+- **Hub.** It shows 13 pins in play order. Unregistered ids show "SOON"/"Coming soon" and can't be started, so nothing breaks while a world is in progress.
+- Story order matters for continuity. World 11 comes after the art-car hunt (6) and before Sunrise Set (7). Worlds 12 and 13 come after the Deep Playa showdown (9) and before the finale (10).
 
 ---
 
@@ -91,6 +106,14 @@ Everything below is called inside `build(api, g)`. Positions are world metres. M
 ### 4.2 Static geometry (merged into chunk buffers)
 - `api.prop(kind, opts)`: places a library prop (§5). Common opts: `x, y, z, yaw, scale, seed`, plus per-prop options. Returns `{cols, lights, top, …}`.
 - `api.box(x, y, z, w, h, d, colour, {yaw, bevel, e (emissive 0..1), noCol, col: {collider overrides}})`: a visible box with a matching collider. Your go-to platform. `y` is the box bottom.
+- **Rounded shapes: use these first.** Smooth-shaded, soft-edged solids with matching colliders. `y` is the **bottom**. Shared opts: `{yaw, e (emissive 0..1), gloss (shine 0..3: 1 satin, 2 plastic/paint, 3 glass/chrome), noCol, col: {collider overrides}, seg, tag, cover}`. Each returns the same `{cols, wcols}` info as `api.box`.
+  - `api.roundBox(x, y, z, w, h, d, colour, {r, top, bottom})`: a box with rounded edges and corners (`r` = edge radius, default 22% of the smallest side; `top`/`bottom` recolour those faces). Box collider, walkable top. Your go-to platform, crate, stage, couch or counter.
+  - `api.sphere(x, y, z, r, colour, {squash})`: smooth ball or blob (`squash` < 1 flattens it into a mound). Dome collider; Brady can stand on top.
+  - `api.capsule(x, y, z, r, h, colour, {r1})`: pill of total height `h` (radius `r`, top radius `r1`). Cylinder collider. Bollards, posts, cacti, soft pillars.
+  - `api.cylinder(x, y, z, r, h, colour, {r1, round})`: drum, pillar or table with softly rounded rims (`round` = rim radius); with `r1` it tapers smoothly to top radius `r1`. Cylinder collider.
+  - `api.cone(x, y, z, r, h, colour)`: soft-tipped cone (traffic cones, spires, party hats). Cylinder collider (60% radius, 75% height).
+  - `api.lathe(x, y, z, profile, colour, {seg, colScale})`: any surface of revolution. `profile` is `[[radius, height, colour?, emissive?], …]` from bottom to top; start or end at radius 0 to close it, and **repeat a point** to get a crisp rim. Vases, lamps, totems, onion domes, mushrooms, trophies, bottles. Cylinder collider of the widest radius × `colScale` (0.9).
+  - `api.torus(x, y, z, R, r, colour, {pitch, roll})`: ring or hoop (`pitch: Math.PI/2` stands it up like a wheel). No collider.
 - `api.mesh(x, z, m => { …; return {cols, lights}; }, {y, yaw, scale})`: custom geometry with `BurnsMesh` (§6) in local space. Return colliders and lights in **local** coordinates and they're transformed for you.
 - `api.collider(desc)`: a raw collider in world coordinates (§4.6).
 - `api.sign(text, x, z, {yaw, h, y, post, maxW, style: {bg, fg, size, border, glow, font}, glow})`: a signboard with real text. `\n` makes lines.
@@ -205,7 +228,17 @@ Need something new? Write it with `api.mesh` (§6). If it's reusable, add a buil
   - `extrude(poly2D, depth, {convex:false})`: hearts, letters, logos; `convex:false` triangulates concave shapes.
   - `decal(x, y, z, w, h, region, {both})`: a textured quad facing +Z (signs, faces, labels).
   - `disc(x, y, z, r, seg)`, `poly(points, uvs, insidePoint)`, `quadUV(p0,p1,p2,p3, region)`.
-- **Budget.** One static chunk holds up to 50k vertices; the world splits chunks for you. A beveled box is 96 vertices, a plain box 24. Prefer `box` for distant or plentiful things.
+- **Smooth primitives (preferred).** Shared vertices with smooth normals; this is what makes things look round instead of blocky. Local coordinates, current colour/emissive/shine:
+  - `roundBox(cx, cy, cz, w, h, d, r, {top, bottom, uv})`: rounded box, **centre**-anchored, edge radius `r`.
+  - `ellipsoid(cx, cy, cz, rx, ry, rz, {seg, rings, theta0, theta1, phi0, phi1, colFn(x,y,z,n)})` and `ball(cx, cy, cz, r, o)`. `phi` runs from 0 (top pole) to π (bottom), so `{phi1: Math.PI / 2}` is a dome cap; `theta` is longitude (0 = +Z).
+  - `limb(x0, y0, z0, x1, y1, z1, r0, r1, {seg, mid, ends: false, sx, sz})`: tapered capsule between two points (arms, legs, pipes, branches, beams with soft ends). `mid: 0.15` bulges the middle; `ends: false` leaves the tube open.
+  - `lathe(profile, {seg, sx, sz, theta0, theta1, rMod(theta, t), uv, uvRepeat, caps})`: surface of revolution around local **Y** at the current transform: `m.push(); m.tf(x, y, z); m.lathe([[0, 0], [0.5, 0.1], [0.4, 1], [0, 1.1]]); m.pop();`. Profile rows are `[radius, y, colour?, emissive?]`; repeat a row for a hard crease. `sx`/`sz` squash the section into an oval (car bodies, tubs, boats); `rMod(theta, t)` returns a per-vertex radius scale (lumpy rocks, petals).
+  - `roundCyl(cx, y, cz, r, h, edge, {seg})`: cylinder with rounded rims, `y` = bottom (barrels, drums, wheels when rotated).
+  - `torus(cx, cy, cz, R, r, {seg, tseg, sy})`: ring in the XZ plane. Rotate it with `m.tf(0, 0, 0, 0, Math.PI / 2)` for a tyre.
+  - `m.shine(0..3)`: specular gloss for what you build next (0 matte, 1 satin/skin, 2 plastic/paint/hair, 3 glass/chrome/sunglasses). It's saved by `push`/`pop`; reset with `m.shine(0)`.
+  - `m.lo = true`: smooth primitives built while it's set use about half the segments. Use it for distant scenery and big repeated sets; set it back to `false` after.
+  - The old faceted helpers (`box`, `bbox`, `cyl`, `sphere`, `capsule`, `dome`) still work and are right for hard-edged things such as sign boards, planks, the geodesic dome, rebar and distant clutter. Pass `{smooth: true}` to `cyl`/`sphere` for smooth normals.
+- **Budget.** One static chunk holds up to 50k vertices; the world splits chunks for you. Vertex costs: plain box 24, beveled box 96, `roundBox` 72 (32 with `m.lo`), `ball`/`ellipsoid` 154 (56), `limb` 80 (36), `torus` 128 (50), `roundCyl` 140 (48), `lathe` = segments × profile rows. Hundreds of rounded props per cell are fine; thousands of them in one view are not, so use `m.lo` or plain boxes for distant or plentiful things.
 
 ### 6.2 Textures (one shared atlas)
 - `BURNS_ATLAS.pattern(name)`: tileable decals. Names: `tattoo, tattoo2, fur, disco, led, plaid, hivis, tiedye, wood, swoosh, canvas, sequin, leopard, flames, denim, rainbow`. Use them as `{uv: BURNS_ATLAS.pattern('fur'), uvFaces: 'sides'}`.
@@ -434,6 +467,8 @@ A palette is plain data. Override any field: `sky: Object.assign({}, BURNS_PALET
 | `key`, `keyK` | Key light colour and strength. It comes from the sun when it's up, otherwise from the moon. |
 | `emB` | Emissive boost (neon pops more at night). |
 | `rim` | Character rim-light colour. |
+| `clouds`, `cloudCol`, `cloudScale`, `cloudSpeed` | Soft drifting clouds: amount 0..1 (0 = clear), colour, size (0.55; bigger = smaller clouds) and drift speed. Custom palettes that don't set `cloudCol` get clouds tinted from their own `hor`. |
+| `mid`, `midK` | Optional third sky-gradient colour halfway up, and its strength 0..1 (0 = plain two-colour gradient). |
 
 - For dust storms and similar events, use `def.env(g, env)` per frame (W1's ticket gust adds `env.fogD`).
 - **Light at night.** Use `api.light` pools under every camp, fire and lamp, `api.glow` for the sources themselves, emissive colours on neon geometry (`m.color(c, 1)`), and dynamic point lights from fires, which are automatic (up to 4 near Brady). Brief flashes can use `g.pointLight(x, y, z, radius, [r,g,b], intensity)` each frame.
@@ -600,7 +635,7 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
   - Static props are merged per 48 m cell.
   - Vehicles, movers and pickups share skinned groups (about 40 per draw).
   - **Each visible character is one draw.** Keep **visible** NPCs to about 50: crowds far from the action are fine because the culling distance is 115 m, but don't put 200 dancers in one spot.
-- **Vertices.** Static chunks are split automatically. W1 is about 240k triangles in view at most. Prefer `box` over `bbox` for background clutter.
+- **Vertices.** Static chunks are split automatically. W1 is about 300k triangles in view at most. Rounded primitives cost 3–6× a plain box, so use them where the camera gets close and use `m.lo` or plain `box` for background clutter. Characters switch to a low-detail model automatically beyond about 24 m.
 - **CPU.** Actors farther than 110 m from Brady don't update. Keep `update` hooks O(n) over small lists; don't scan all colliders every step. Movers farther than 110 m skip collision.
 - **Sprites.** Particles are capped at 2600; glow billboards are culled at 170 m. Emitters near the camera are cheap; don't emit every step from 50 places.
 - **Textures.** One atlas (2048×1024), one sprite sheet, and per-world ground paint (≤2048²) and lightmap (≤1024²). Don't add per-world textures.
@@ -678,9 +713,12 @@ Read it top to bottom; it uses almost every feature.
 | 4 The Orgy Dome | Meet an informant while sneaking past creepy dudes. Comedic, nothing explicit. | `stealth` missions with `patrol` enemies (`view`, `fov`), `follow` behaviour for the informant, giant `dome` props with `api.mesh` interiors. |
 | 5 Costco Soul Trading Co. | Giant gifting warehouse; a platonic burner buddy joins. | Shelves from `api.box`/`scaffold`; `deliver` chains (`custom` + `talk`); `follow` companion (`escort`). |
 | 6 The Art Car Hunt | Commandeer a fire-breathing octopus art car, dodging tech bros. | `api.artCar({ build: yourOctopus })` with `poofers`, `pitcher` enemies, `ride` missions with `vehicle: 'car'`, `flames` events. |
+| 11 Sound Camp Crawl (plays 7th) | Camp-to-camp crawl through the sound camps. | Crowds with `dance` (`k.bpm`), `api.light`/`api.glow` stages, the shared `BurnsDJ` decks minigame (its own file). |
 | 7 Sunrise Set | Heart-topped sound car at dawn; sparkle ponies, influencers, crusty old burners. | `sky: 'night', sky2: 'dawn'` with `setTod`; `api.mover` for the sound car (or `artCar` with `path`); `flasher` influencers; crowds with `dance`. |
 | 8 Hell Station | Fuel the art car; battle DPW. | `g.interactables` for fuel pumps; DPW `charger`/`chase` enemies; `mud`, `fire`; an `escort` or `ride` mission. |
 | 9 Deep Playa Showdown | Fight the Man again; he escapes. | Open deep playa, `dust` up, `BurnsManBoss` with fireworks; end with his `flee` like W1. |
+| 12 The Temple (plays 11th) | A quiet, beautiful wooden temple; the emotional calm before the end. | `api.lathe`/`api.roundBox` wood (pattern `wood`), soft `dawn`/`dusk` palette with `mid` band, gentle `float`/`climb` platforming. |
+| 13 The Workshops (plays 12th) | Burner workshops: build something, break nothing. | `api.mover` machines and conveyors, `g.interactables`, `api.roundBox` benches and tools. |
 | 10 The Man Pavilion | Ride in on the yellow bike, in costume, to the final fight. Phase 1 on the saucer, phase 2 giant (neon flash + cover, face fire, arm fireworks). | `api.prop('saucer')`, `man.y` on the deck, cover props on the deck; phase 2 tweens `man.scale`, music `man_giant`; `finishWorld(g => Game.setScene(…ending…))`. |
 
 Have fun. Make it look like a modern mobile game, keep the jokes short, and test on both orientations.

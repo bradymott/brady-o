@@ -7,21 +7,26 @@
    A palette is plain data; worlds give one or two (dusk -> night) and the
    scene interpolates with game.tod (0..1). Colours are hex, angles degrees. */
 const BURNS_PALETTES = {
-  dusk: { zen: '#2a1d4a', hor: '#ff8a5a', fog: '#c98a72', fogD: 0.0105, fogH: 0.05, haze: 0.55, fogMax: 0.92, sun: [205, 4], sunCol: '#ffb070', sunSize: 0.0016, moon: [30, 22], moonK: 0.4, stars: 0.18, mtnCol: '#5a3a52', mtnH: 3.2, city: [0, 0], cityCol: '#ff6ab0', cityK: 0.25, sky: '#8a7aa8', gnd: '#6a4a40', key: '#ffb080', keyK: 0.85, emB: 1.3, rim: '#ffb090' },
-  night: { zen: '#060818', hor: '#2a1838', fog: '#2a1e34', fogD: 0.012, fogH: 0.06, haze: 0.5, fogMax: 0.95, sun: [205, -20], sunCol: '#000000', sunSize: 0.0001, moon: [40, 34], moonK: 1, stars: 1, mtnCol: '#140e22', mtnH: 3.0, city: [0, 0], cityCol: '#ff4fd8', cityK: 0.55, sky: '#4a4a80', gnd: '#382a40', key: '#8a9ad8', keyK: 0.45, emB: 1.55, rim: '#9a7aff' },
-  day: { zen: '#3a7ad8', hor: '#f4d8b0', fog: '#e8d0b0', fogD: 0.006, fogH: 0.04, haze: 0.6, fogMax: 0.85, sun: [140, 55], sunCol: '#fff4d8', sunSize: 0.0022, moon: [30, -10], moonK: 0, stars: 0, mtnCol: '#8a7a8a', mtnH: 3.0, city: [0, 0], cityCol: '#000000', cityK: 0, sky: '#c8d8f0', gnd: '#c8a888', key: '#fff0d8', keyK: 0.9, emB: 1.15, rim: '#ffffff' },
-  dawn: { zen: '#3a4a8a', hor: '#ffb0a0', fog: '#e8b0a8', fogD: 0.008, fogH: 0.05, haze: 0.6, fogMax: 0.9, sun: [80, 3], sunCol: '#ffc890', sunSize: 0.002, moon: [250, 20], moonK: 0.3, stars: 0.12, mtnCol: '#6a4a6a', mtnH: 3.1, city: [0, 0], cityCol: '#ff70c0', cityK: 0.15, sky: '#b0a0c8', gnd: '#a07a70', key: '#ffc0a0', keyK: 0.8, emB: 1.3, rim: '#ffc0d0' }
+  dusk: { zen: '#2a1d4a', hor: '#ff8a5a', fog: '#c98a72', fogD: 0.0105, fogH: 0.05, haze: 0.55, fogMax: 0.92, sun: [205, 4], sunCol: '#ffb070', sunSize: 0.0016, moon: [30, 22], moonK: 0.4, stars: 0.18, mtnCol: '#5a3a52', mtnH: 3.2, city: [0, 0], cityCol: '#ff6ab0', cityK: 0.25, sky: '#8a7aa8', gnd: '#6a4a40', key: '#ffb080', keyK: 0.85, emB: 1.3, rim: '#ffb090', clouds: 0.5, cloudCol: '#e89a8a', mid: '#b0607a', midK: 0.35 },
+  night: { zen: '#060818', hor: '#2a1838', fog: '#2a1e34', fogD: 0.012, fogH: 0.06, haze: 0.5, fogMax: 0.95, sun: [205, -20], sunCol: '#000000', sunSize: 0.0001, moon: [40, 34], moonK: 1, stars: 1, mtnCol: '#140e22', mtnH: 3.0, city: [0, 0], cityCol: '#ff4fd8', cityK: 0.55, sky: '#4a4a80', gnd: '#382a40', key: '#8a9ad8', keyK: 0.45, emB: 1.55, rim: '#9a7aff', clouds: 0.3, cloudCol: '#2a2442', mid: '#1a1436', midK: 0.3 },
+  day: { zen: '#3a7ad8', hor: '#f4d8b0', fog: '#e8d0b0', fogD: 0.006, fogH: 0.04, haze: 0.6, fogMax: 0.85, sun: [140, 55], sunCol: '#fff4d8', sunSize: 0.0022, moon: [30, -10], moonK: 0, stars: 0, mtnCol: '#8a7a8a', mtnH: 3.0, city: [0, 0], cityCol: '#000000', cityK: 0, sky: '#c8d8f0', gnd: '#c8a888', key: '#fff0d8', keyK: 0.9, emB: 1.15, rim: '#ffffff', clouds: 0.55, cloudCol: '#fff8f0', mid: '#7ab0e8', midK: 0.35 },
+  dawn: { zen: '#3a4a8a', hor: '#ffb0a0', fog: '#e8b0a8', fogD: 0.008, fogH: 0.05, haze: 0.6, fogMax: 0.9, sun: [80, 3], sunCol: '#ffc890', sunSize: 0.002, moon: [250, 20], moonK: 0.3, stars: 0.12, mtnCol: '#6a4a6a', mtnH: 3.1, city: [0, 0], cityCol: '#ff70c0', cityK: 0.15, sky: '#b0a0c8', gnd: '#a07a70', key: '#ffc0a0', keyK: 0.8, emB: 1.3, rim: '#ffc0d0', clouds: 0.45, cloudCol: '#f0b8b8', mid: '#a080b0', midK: 0.3 }
 };
 const BurnsEnv = {
   dir(az, el) { const a = az * Math.PI / 180, e = el * Math.PI / 180; return [Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)]; },
   resolve(p) {
     if (typeof p === 'string') p = BURNS_PALETTES[p] || BURNS_PALETTES.dusk;
-    return Object.assign({}, BURNS_PALETTES.dusk, p);
+    const r = Object.assign({ cloudScale: 0.55, cloudSpeed: 0.012 }, BURNS_PALETTES.dusk, p);
+    // a custom palette that doesn't mention clouds / mid band gets ones matched to its own horizon
+    if (!p.cloudCol) { const h = burnsRGBf(r.hor); r.cloudCol = [h[0] * 0.55 + 0.42, h[1] * 0.55 + 0.4, h[2] * 0.55 + 0.4]; }
+    if (!p.mid) { r.mid = r.hor; r.midK = 0; }
+    return r;
   },
   // build renderer env from palette(s) a,b mixed by t; out reused
   build(a, b, t, out, time) {
     const A = this.resolve(a), B = b ? this.resolve(b) : A;
-    const c = k => { const x = burnsRGBf(A[k]), y = burnsRGBf(B[k]); return [lerp(x[0], y[0], t), lerp(x[1], y[1], t), lerp(x[2], y[2], t)]; };
+    const rgb = v => typeof v === 'string' ? burnsRGBf(v) : v;
+    const c = k => { const x = rgb(A[k]), y = rgb(B[k]); return [lerp(x[0], y[0], t), lerp(x[1], y[1], t), lerp(x[2], y[2], t)]; };
     const n = k => lerp(A[k], B[k], t);
     const d = k => this.dir(lerp(A[k][0], B[k][0], t), lerp(A[k][1], B[k][1], t));
     out = out || {};
@@ -37,6 +42,8 @@ const BurnsEnv = {
     const sd = out.sunDir, md = out.moonDir;
     out.keyDir = sd[1] > 0.02 ? sd.slice() : md.slice();
     out.emB = n('emB'); out.rimCol = c('rim');
+    out.clouds = n('clouds'); out.cloudCol = c('cloudCol'); out.mid = c('mid'); out.midK = n('midK');
+    out.cloudScale = n('cloudScale'); out.cloudSpeed = n('cloudSpeed');
     out.time = time || 0; out.trip = 0;
     return out;
   }
@@ -525,7 +532,7 @@ class BurnsPlayScene {
   finishWorld(next) {
     const sv = BurnsSave.get();
     sv.worldDone[this.worldId] = true;
-    BurnsSave.unlockWorld(this.worldId + 1);
+    BurnsSave.unlockWorld(BurnsWorlds.next(this.worldId));   // next in BURNS_WORLD_ORDER (not id + 1)
     sv.checkpoint[this.worldId] = null;
     this.saveRun();
     this.state = 'results'; this.resultsT = 0; Input.setMode('ui'); this.syncHudButtons();

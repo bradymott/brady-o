@@ -44,7 +44,7 @@ const BurnsUI = {
     const gr = ctx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#120a24'); gr.addColorStop(0.7, '#5a1e30'); gr.addColorStop(1, '#c86a3a');
     ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
     const meta = BurnsWorlds.meta(g.worldId);
-    this.text(ctx, 'WORLD ' + g.worldId, W / 2, H * 0.38, 14, '#ffd84a');
+    this.text(ctx, BurnsWorlds.label(g.worldId).toUpperCase(), W / 2, H * 0.38, 14, '#ffd84a');
     this.text(ctx, (meta.name || '').toUpperCase(), W / 2, H * 0.47, Math.min(34, W / 16), '#ffffff', { glow: '#ff4fd8' });
     this.text(ctx, 'Loading the playa' + '.'.repeat(1 + Math.floor(g.t * 4) % 3), W / 2, H * 0.58, 13, 'rgba(255,255,255,0.75)', { ui: true, stroke: false });
   },
@@ -61,7 +61,7 @@ const BurnsUI = {
   },
   drawMissing(ctx, g) {
     if (!g.noglBtns) g.buildNoGL();
-    g.noglMsg = `World ${g.worldId} is still being built by the burners. Check back soon!`;
+    g.noglMsg = `${BurnsWorlds.label(g.worldId)} is still being built by the burners. Check back soon!`;
     this.drawNoGL(ctx, g);
   },
   /* ---------- the in-game overlay ---------- */
@@ -365,7 +365,7 @@ const BurnsUI = {
       UI.panel(ctx, W / 2 - pw / 2, top, pw, bot - top);
       UI.title(ctx, title, W / 2, top + 26, 24);
       const meta = BurnsWorlds.meta(g.worldId);
-      this.text(ctx, `World ${g.worldId} · ${meta.name}`, W / 2, top + 50, 11, 'rgba(255,255,255,0.75)', { ui: true, stroke: false });
+      this.text(ctx, `${BurnsWorlds.label(g.worldId)} · ${meta.name}`, W / 2, top + 50, 11, 'rgba(255,255,255,0.75)', { ui: true, stroke: false });
     } else UI.title(ctx, title, W / 2, Math.max(36, insets.t + 30), 24);
     UI.drawButtons(ctx, g.pauseUI);
   },
@@ -373,7 +373,7 @@ const BurnsUI = {
     const W = Game.cssW, H = Game.cssH, www = BurnsSave.hasItem('www');
     UI.title(ctx, www ? 'WHAT WHERE WHEN' : 'MISSIONS', W / 2, Math.max(34, insets.t + 28), 22);
     const meta = BurnsWorlds.meta(g.worldId);
-    this.text(ctx, `World ${g.worldId}: ${meta.name} · Tokens ${BurnsSave.tokenCount(g.worldId)}/${BurnsWorlds.tokenTotal(g.worldId)} · Photos ${BurnsSave.photoCount(g.worldId)}/3`, W / 2, Math.max(56, insets.t + 50), 11, 'rgba(255,255,255,0.8)', { ui: true, stroke: false });
+    this.text(ctx, `${BurnsWorlds.label(g.worldId)}: ${meta.name} · Tokens ${BurnsSave.tokenCount(g.worldId)}/${BurnsWorlds.tokenTotal(g.worldId)} · Photos ${BurnsSave.photoCount(g.worldId)}/3`, W / 2, Math.max(56, insets.t + 50), 11, 'rgba(255,255,255,0.8)', { ui: true, stroke: false });
     const list = g.missions.list.filter(m => www || m.state !== 'locked');
     const cw = Math.min(W - 40, 640), x = (W - cw) / 2, rowH = W > H ? 46 : 58;
     const maxRows = Math.floor((H - 110) / (rowH + 6)), start = clamp(g.missionScroll || 0, 0, Math.max(0, list.length - maxRows));
@@ -402,10 +402,11 @@ const BurnsUI = {
     ctx.fillStyle = `rgba(8,4,18,${0.82 * k})`; ctx.fillRect(0, 0, W, H);
     const meta = BurnsWorlds.meta(g.worldId);
     this.text(ctx, 'WORLD COMPLETE!', W / 2, H * 0.22, Math.min(40, W / 12) * (0.6 + 0.4 * easeOut(k)), '#ffd84a', { glow: '#ff9a2a' });
-    this.text(ctx, `World ${g.worldId}: ${meta.name}`, W / 2, H * 0.32, 14, '#ffffff', { ui: true });
+    this.text(ctx, `${BurnsWorlds.label(g.worldId)}: ${meta.name}`, W / 2, H * 0.32, 14, '#ffffff', { ui: true });
     const rows = [['token', `Burn Tokens  ${BurnsSave.tokenCount(g.worldId)} / ${BurnsWorlds.tokenTotal(g.worldId)}`], ['photo', `Photos of Chinka  ${BurnsSave.photoCount(g.worldId)} / 3`], ['glowstick', `Glow sticks  ${g.glow}`]];
     rows.forEach((r, i) => { const a = clamp((g.resultsT - 0.4 - i * 0.25) / 0.3, 0, 1); ctx.save(); ctx.globalAlpha = a; this.icon(ctx, r[0], W / 2 - 120, H * 0.44 + i * 38, 28); this.text(ctx, r[1], W / 2 - 96, H * 0.44 + i * 38, 15, '#ffffff', { align: 'left' }); ctx.restore(); });
-    if (g.worldId < 10) this.text(ctx, `WORLD ${g.worldId + 1} UNLOCKED: ${BurnsWorlds.meta(g.worldId + 1).name.toUpperCase()}`, W / 2, H * 0.75, 13, '#7aff5a', { glow: '#2aff6a' });
+    const nx = BurnsWorlds.next(g.worldId);
+    if (nx) this.text(ctx, `${BurnsWorlds.label(nx).toUpperCase()} UNLOCKED: ${BurnsWorlds.meta(nx).name.toUpperCase()}`, W / 2, H * 0.75, 13, '#7aff5a', { glow: '#2aff6a' });
     if (g.resultsT > 1.2) this.text(ctx, 'TAP TO CONTINUE', W / 2, H * 0.86 + Math.sin(g.t * 4) * 2, 12, '#ffd84a');
   }
 };

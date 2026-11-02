@@ -20,9 +20,9 @@ uniform sampler2D uLight;
 uniform vec4 uPL[4];
 uniform vec3 uPC[4];
 uniform float uTrip, uTime, uEmB;
-vec3 bLight(vec3 n, vec3 w) {
+vec3 bLight(vec3 n, vec3 w, float wr) {
   vec3 L = mix(uGnd, uSky, n.y * 0.5 + 0.5);
-  L += uKeyC * max(dot(n, uKeyD), 0.0);
+  L += uKeyC * max((dot(n, uKeyD) + wr) / (1.0 + wr), 0.0);
   vec3 lm = texture2D(uLight, (w.xz - uLm.xy) * uLm.zw).rgb;
   L += lm * (1.5 * exp(-max(w.y, 0.0) * 0.14)) * (0.75 + 0.25 * max(n.y, 0.0));
   for (int i = 0; i < 4; i++) {
@@ -31,6 +31,14 @@ vec3 bLight(vec3 n, vec3 w) {
     L += uPC[i] * (a * a) * (0.35 + 0.65 * max(dot(n, d / (dl + 0.0001)), 0.0));
   }
   return L;
+}
+vec3 bSpec(vec3 n, vec3 w, float g) {
+  vec3 v = normalize(uCam - w);
+  vec3 h = normalize(uKeyD + v);
+  float nh = max(dot(n, h), 0.0);
+  float s = pow(nh, 8.0 + g * g * 100.0) * (0.12 + 0.6 * g) * smoothstep(-0.05, 0.2, dot(n, uKeyD));
+  float f = pow(1.0 - max(dot(n, v), 0.0), 3.0) * g * 0.3;
+  return uKeyC * s + mix(uGnd, uSky, n.y * 0.5 + 0.5) * f;
 }
 float bFog(vec3 w, float e) {
   float d = length(w - uCam);
@@ -83,14 +91,20 @@ const BurnsGL = {
 varying vec2 vN;
 uniform vec3 uF, uR, uU, uTan;
 uniform vec3 uZen, uHor, uFogC, uSunD, uSunC, uMoonD, uMtnC, uCityD, uCityC;
-uniform vec4 uSkyK;
+uniform vec4 uSkyK, uCloud, uMid;
+uniform vec3 uCloudC;
 uniform float uTime, uHaze, uTrip;
 float h3(vec3 p){ p = fract(p * 0.3183099 + vec3(0.11, 0.17, 0.13)); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float h2(vec2 p){ p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
+float n2(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h2(i), h2(i + vec2(1.0, 0.0)), f.x), mix(h2(i + vec2(0.0, 1.0)), h2(i + vec2(1.0, 1.0)), f.x), f.y); }
 void main(){
   vec3 d = normalize(uF + uR * (vN.x * uTan.x) + uU * ((vN.y - uTan.z) * uTan.y));
   float el = asin(clamp(d.y, -1.0, 1.0));
   float az = atan(d.x, d.z);
-  vec3 col = mix(uHor, uZen, pow(clamp(el / 1.25, 0.0, 1.0), 0.55));
+  float gy = pow(clamp(el / 1.25, 0.0, 1.0), 0.55);
+  vec3 col = mix(uHor, uZen, gy);
+  col = mix(col, uMid.rgb, uMid.a * (1.0 - abs(gy * 2.0 - 1.0)));
   float sd = max(dot(d, uSunD), 0.0);
   col += uSunC * (pow(sd, 7.0) * 0.32 + pow(sd, 60.0) * 0.55);
   col = mix(col, uSunC * 1.25 + vec3(0.12), smoothstep(1.0 - uSkyK.x, 1.0 - uSkyK.x * 0.7, sd));
@@ -109,6 +123,13 @@ void main(){
     }
     float band = exp(-pow(d.x * 0.8 + d.y * 0.55 - d.z * 0.3, 2.0) * 9.0);
     col += vec3(0.16, 0.12, 0.24) * band * uSkyK.z * smoothstep(0.05, 0.5, el) * 0.6;
+  }
+  if (uCloud.x > 0.0 && el > 0.0) {
+    vec2 cp = d.xz / (d.y + 0.12) * uCloud.y + vec2(uTime * uCloud.z, uTime * uCloud.z * 0.37);
+    float cn = n2(cp) * 0.55 + n2(cp * 2.13 + 3.7) * 0.3 + n2(cp * 4.37 + 9.1) * 0.15;
+    float ca = smoothstep(0.48, 0.8, cn) * smoothstep(0.0, 0.22, el) * uCloud.x;
+    vec3 cc = uCloudC * (0.82 + 0.3 * smoothstep(0.5, 0.85, cn)) + uSunC * pow(sd, 5.0) * 0.35;
+    col = mix(col, cc, ca);
   }
   vec3 hd = normalize(vec3(d.x, 0.0001, d.z));
   float cg = max(dot(hd, uCityD), 0.0);
@@ -141,16 +162,16 @@ void main(){
   alb *= 1.0 - d1.r * uDetK.y * fade;
   alb *= 1.0 + (d2.g - 0.5) * uDetK.w;
   alb *= 0.95 + d1.b * 0.1 * fade;
-  vec3 c = alb * bLight(n, vW);
+  vec3 c = alb * bLight(n, vW, 0.0);
   if (uTrip > 0.0) c = bTrip(c, vW);
   gl_FragColor = vec4(mix(c, uFogC, bFog(vW, 0.0)), 1.0);
 }`, ['aPos', 'aNrm']),
-      mesh: this.program(`attribute vec3 aPos; attribute vec3 aNrm; attribute vec4 aCol; attribute vec2 aUV;
+      mesh: this.program(`attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV;
 uniform mat4 uVP;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT;
-void main(){ vW = aPos; vN = aNrm; vC = aCol; vT = aUV; gl_Position = uVP * vec4(aPos, 1.0); }`,
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
+void main(){ vW = aPos; vN = aNrm; vC = aCol; vT = aUV; vG = floor(aBone / 64.0 + 0.01) / 3.0; gl_Position = uVP * vec4(aPos, 1.0); }`,
         `precision highp float;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
 uniform sampler2D uTex;
 uniform float uAlphaK;
 ${BURNS_GLSL_LIGHT}
@@ -159,16 +180,18 @@ void main(){
   vec3 alb = vC.rgb * (1.0 - t.a) + t.rgb;
   vec3 n = normalize(vN);
   float e = vC.a;
-  vec3 c = mix(alb * bLight(n, vW), alb * uEmB, e);
+  vec3 c = mix(alb * bLight(n, vW, 0.25), alb * uEmB, e);
+  if (vG > 0.0) c += bSpec(n, vW, vG) * (1.0 - e);
   if (uTrip > 0.0) c = bTrip(c, vW);
   gl_FragColor = vec4(mix(c, uFogC, bFog(vW, e)) * uAlphaK, uAlphaK);
 }`, A),
       skin: this.program(`#define MAXB ${MB}
 attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV;
 uniform mat4 uVP; uniform vec4 uB[MAXB * 3]; uniform vec3 uFace;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
 void main(){
-  int i = int(aBone + 0.5) * 3;
+  int i = int(mod(aBone, 64.0) + 0.5) * 3;
+  vG = floor(aBone / 64.0 + 0.01) / 3.0;
   vec4 r0 = uB[i]; vec4 r1 = uB[i + 1]; vec4 r2 = uB[i + 2];
   vec4 p = vec4(aPos, 1.0);
   vW = vec3(dot(r0, p), dot(r1, p), dot(r2, p));
@@ -178,7 +201,7 @@ void main(){
   gl_Position = uVP * vec4(vW, 1.0);
 }`,
         `precision highp float;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
 uniform sampler2D uTex;
 uniform vec4 uTint; uniform vec3 uRimC; uniform float uRim;
 ${BURNS_GLSL_LIGHT}
@@ -187,7 +210,8 @@ void main(){
   vec3 alb = vC.rgb * (1.0 - t.a) + t.rgb;
   vec3 n = normalize(vN);
   float e = vC.a;
-  vec3 c = mix(alb * bLight(n, vW), alb * uEmB, e);
+  vec3 c = mix(alb * bLight(n, vW, 0.4), alb * uEmB, e);
+  if (vG > 0.0) c += bSpec(n, vW, vG) * (1.0 - e);
   vec3 v = normalize(uCam - vW);
   c += uRimC * pow(1.0 - max(dot(n, v), 0.0), 2.5) * uRim;
   c = mix(c, uTint.rgb, uTint.a);
@@ -493,6 +517,10 @@ class BurnsRenderer {
     gl.uniform3fv(u.uSunD, env.sunDir); gl.uniform3fv(u.uSunC, env.sunCol); gl.uniform3fv(u.uMoonD, env.moonDir);
     gl.uniform3fv(u.uMtnC, env.mtnCol); gl.uniform3fv(u.uCityD, env.cityDir); gl.uniform3fv(u.uCityC, env.cityCol);
     gl.uniform4f(u.uSkyK, env.sunSize, env.moon, env.stars, env.mtnH);
+    const cl = env.cloudCol || env.hor, mid = env.mid;
+    gl.uniform4f(u.uCloud, env.clouds || 0, env.cloudScale || 0.55, env.cloudSpeed === undefined ? 0.012 : env.cloudSpeed, 0);
+    gl.uniform3f(u.uCloudC, cl[0], cl[1], cl[2]);
+    if (mid) gl.uniform4f(u.uMid, mid[0], mid[1], mid[2], env.midK || 0); else gl.uniform4f(u.uMid, 0, 0, 0, 0);
     gl.uniform1f(u.uTime, env.time || 0); gl.uniform1f(u.uHaze, env.haze); gl.uniform1f(u.uTrip, env.trip || 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.stats.draws++;

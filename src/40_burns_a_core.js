@@ -200,6 +200,11 @@ const BurnsSave = {
     for (const k in def) if (d[k] === undefined) d[k] = def[k];
     for (const k in def.settings) if (d.settings[k] === undefined) d.settings[k] = def.settings[k];
     if (!d.unlocked[1]) d.unlocked[1] = true;
+    // progression follows BURNS_WORLD_ORDER: every finished world unlocks the next one in the
+    // sequence (migrates saves made when worlds unlocked by id + 1, e.g. finished 6 -> unlock 11)
+    let changed = false;
+    for (const id of BURNS_WORLD_ORDER) { if (!d.worldDone[id]) continue; const nx = BurnsWorlds.next(id); if (nx && !d.unlocked[nx]) { d.unlocked[nx] = true; changed = true; } }
+    if (changed) this.save();
     return d;
   },
   save() { try { Save.save(); } catch (e) { /* ignore */ } },
@@ -212,23 +217,29 @@ const BurnsSave = {
   hasItem(id) { return !!this.get().items[id]; },
   addItem(id) { const d = this.get(); if (d.items[id]) return false; d.items[id] = true; this.save(); return true; },
   flag(w, k, v) { const d = this.get(); const key = w + ':' + k; if (v !== undefined) { d.flags[key] = v; this.save(); } return d.flags[key]; },
-  unlockWorld(w) { const d = this.get(); if (!d.unlocked[w]) { d.unlocked[w] = true; this.save(); return true; } return false; },
+  unlockWorld(w) { if (!w) return false; const d = this.get(); if (!d.unlocked[w]) { d.unlocked[w] = true; this.save(); return true; } return false; },
   isUnlocked(w) { return !!this.get().unlocked[w]; },
   setCostume(id) { const d = this.get(); d.costume = id; d.costumesOwned[id] = true; this.save(); }
 };
 
 /* ---------------- world registry ---------------- */
-// Metadata for all ten worlds (shown on the hub even before a world file registers).
+// Play order by world id. Ids never change (files, saves and tokens are keyed by id); the
+// "World N" a player sees is the position in this list. Finishing a world unlocks the next one here.
+const BURNS_WORLD_ORDER = [1, 2, 3, 4, 5, 6, 11, 7, 8, 9, 12, 13, 10];
+// Metadata for every world (shown on the hub even before a world file registers). hub = pin position on the map (0..1).
 const BURNS_WORLD_META = [
-  { id: 1, name: 'The Line', sub: 'Gate Road', hub: { x: 0.86, y: 0.86 }, col: '#ff9a4a' },
-  { id: 2, name: 'Finding Camp', sub: 'The city at night', hub: { x: 0.70, y: 0.66 }, col: '#ff4fd8' },
-  { id: 3, name: 'Costume Cult & the Yellow Bike', sub: 'Pick a look. Find a ride.', hub: { x: 0.52, y: 0.74 }, col: '#ffe24a' },
-  { id: 4, name: 'The Orgy Dome', sub: 'Meet the informant. Keep your pants on.', hub: { x: 0.30, y: 0.66 }, col: '#ff3b5c' },
-  { id: 5, name: 'Costco Soul Trading Co.', sub: 'The great gifting warehouse', hub: { x: 0.18, y: 0.46 }, col: '#38f2ff' },
-  { id: 6, name: 'The Art Car Hunt', sub: 'Commandeer the fire octopus', hub: { x: 0.34, y: 0.34 }, col: '#ff7a2a' },
-  { id: 7, name: 'Sunrise Set', sub: 'A heart-topped sound car at dawn', hub: { x: 0.62, y: 0.30 }, col: '#ffb0d8' },
-  { id: 8, name: 'Hell Station', sub: 'Fuel up. Fight DPW.', hub: { x: 0.84, y: 0.44 }, col: '#ff5a2a' },
-  { id: 9, name: 'Deep Playa Showdown', sub: 'The Man, again', hub: { x: 0.50, y: 0.10 }, col: '#9a6bff' },
+  { id: 1, name: 'The Line', sub: 'Gate Road', hub: { x: 0.88, y: 0.88 }, col: '#ff9a4a' },
+  { id: 2, name: 'Finding Camp', sub: 'The city at night', hub: { x: 0.72, y: 0.76 }, col: '#ff4fd8' },
+  { id: 3, name: 'Costume Cult & the Yellow Bike', sub: 'Pick a look. Find a ride.', hub: { x: 0.55, y: 0.85 }, col: '#ffe24a' },
+  { id: 4, name: 'The Orgy Dome', sub: 'Meet the informant. Keep your pants on.', hub: { x: 0.37, y: 0.81 }, col: '#ff3b5c' },
+  { id: 5, name: 'Costco Soul Trading Co.', sub: 'The great gifting warehouse', hub: { x: 0.20, y: 0.70 }, col: '#38f2ff' },
+  { id: 6, name: 'The Art Car Hunt', sub: 'Commandeer the fire octopus', hub: { x: 0.11, y: 0.50 }, col: '#ff7a2a' },
+  { id: 11, name: 'Sound Camp Crawl', sub: 'Follow the bass, camp to camp', hub: { x: 0.18, y: 0.30 }, col: '#7aff5a' },
+  { id: 7, name: 'Sunrise Set', sub: 'A heart-topped sound car at dawn', hub: { x: 0.32, y: 0.16 }, col: '#ffb0d8' },
+  { id: 8, name: 'Hell Station', sub: 'Fuel up. Fight DPW.', hub: { x: 0.50, y: 0.09 }, col: '#ff5a2a' },
+  { id: 9, name: 'Deep Playa Showdown', sub: 'The Man, again', hub: { x: 0.68, y: 0.16 }, col: '#9a6bff' },
+  { id: 12, name: 'The Temple', sub: 'Quiet, heavy, beautiful', hub: { x: 0.82, y: 0.30 }, col: '#f0d8a8' },
+  { id: 13, name: 'The Workshops', sub: 'Build something. Break nothing.', hub: { x: 0.89, y: 0.52 }, col: '#38c8ff' },
   { id: 10, name: 'The Man Pavilion', sub: 'Ride in. Bring her home.', hub: { x: 0.50, y: 0.48 }, col: '#ffd84a' }
 ];
 const BurnsWorlds = {
@@ -245,8 +256,20 @@ const BurnsWorlds = {
     return def;
   },
   get(id) { return this.defs[id] || null; },
-  meta(id) { return BURNS_WORLD_META.find(m => m.id === id) || { id, name: 'World ' + id, sub: '', hub: { x: 0.5, y: 0.5 }, col: '#ffffff' }; },
-  tokenTotal(id) { const d = this.defs[id]; return d ? d.missions.filter(m => m.token !== false).length : 6; }
+  meta(id) {
+    const m = BURNS_WORLD_META.find(k => k.id === id) || { id, name: 'World ' + id, sub: '', hub: { x: 0.5, y: 0.5 }, col: '#ffffff' };
+    const d = this.defs[id];   // a registered world's own name/sub win over the placeholder metadata
+    return d ? Object.assign({}, m, { name: d.name || m.name, sub: d.sub || m.sub }) : m;
+  },
+  tokenTotal(id) { const d = this.defs[id]; return d ? d.missions.filter(m => m.token !== false).length : 6; },
+  // ---- play order (BURNS_WORLD_ORDER) ----
+  order: BURNS_WORLD_ORDER,
+  num(id) { const i = this.order.indexOf(id); return i < 0 ? id : i + 1; },          // id -> "World N" position (1-based)
+  idAt(n) { return this.order[n - 1] || null; },                                      // position -> id
+  label(id) { return 'World ' + this.num(id); },
+  next(id) { const i = this.order.indexOf(id); return i >= 0 && i < this.order.length - 1 ? this.order[i + 1] : null; },
+  prev(id) { const i = this.order.indexOf(id); return i > 0 ? this.order[i - 1] : null; },
+  isFinale(id) { return this.order[this.order.length - 1] === id; }
 };
 
 /* ---------------- costumes (geometry lives in 40_burns_d_rig.js) ---------------- */
