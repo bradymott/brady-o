@@ -44,7 +44,7 @@ def curl(rig, name, s, x, y0, z0, turns, drop, rad, mats, bones, soft=0.6, phase
 
 def build_brady(rig):
     skin = mat('skin', '#e0ac86', rough=0.72); ink = mat('ink', '#1c1a22', rough=0.78)
-    shadow = mat('beard_shadow', '#cf9a76', rough=0.8); stubble = mat('stubble', '#c38f6e', rough=0.85); lipshadow = mat('lip_shadow', '#d4a07c', rough=0.85)
+    shadow = mat('beard_shadow', '#d6a27f', rough=0.8); stubble = mat('stubble', '#d2a07a', rough=0.85); lipshadow = mat('lip_shadow', '#d8a67f', rough=0.85)
     lip = mat('lip', '#b4746a', rough=0.7); teeth = mat('teeth', '#f4f1ea', rough=0.4)
     tee = mat('tee_black', '#1b1a20', rough=0.9); jeans = mat('jeans', '#2b3758', rough=0.85)
     shoe = mat('sneaker_black', '#141418', rough=0.6); sole = mat('sneaker_sole', '#d8d4cc', rough=0.7)
@@ -54,33 +54,31 @@ def build_brady(rig):
     def part(name, bm, mats, bones, soft=1.0, wfn=None):
         bm_xf(bm, SK); rig.part(name, bm, mats, bones, soft, wfn)
     # lean torso (tee), belly, hips (jeans)
-    part('chest', rbox((0, 1.27, 0), (0.38, 0.40, 0.23), 0.09, 4, taper=(0.88, 0.9)), tee, ['Spine1', 'Spine2', 'Spine', 'Hips', L + 'Shoulder', Rr + 'Shoulder'], 1.3)
-    part('belly', rbox((0, 1.05, -0.005), (0.33, 0.18, 0.215), 0.07, 3), tee, ['Spine', 'Hips', 'Spine1'], 1.3)
-    part('hips', rbox((0, 0.93, 0), (0.34, 0.22, 0.23), 0.08, 3), jeans, ['Hips', L + 'UpLeg', Rr + 'UpLeg', 'Spine'], 1.2)
-    part('belt', bm_torus(0.175, 0.014, 24, 6, AY, (0, 1.0, 0), sy=0.68), mat('belt', '#2a1d14', rough=0.7), ['Hips', 'Spine'], 1.2)
+    part('chest', rbox((0, 1.28, 0), (0.4, 0.38, 0.215), 0.1, 4, taper=(0.72, 0.85)), tee, ['Spine1', 'Spine2', 'Spine', 'Hips', L + 'Shoulder', Rr + 'Shoulder'], 1.3)
+    part('belly', rbox((0, 1.06, -0.005), (0.28, 0.17, 0.185), 0.07, 3), tee, ['Spine', 'Hips', 'Spine1'], 1.3)
+    part('hips', rbox((0, 0.93, 0), (0.3, 0.22, 0.205), 0.08, 3), jeans, ['Hips', L + 'UpLeg', Rr + 'UpLeg', 'Spine'], 1.2)
+    part('belt', bm_torus(0.155, 0.013, 24, 6, AY, (0, 1.0, 0), sy=0.68), mat('belt', '#2a1d14', rough=0.7), ['Hips', 'Spine'], 1.2)
     # neck and a longer head with a strong jaw and chin
     part('neck', capsule((0, 1.45, -0.01), (0, 1.58, -0.01), 0.054, None, 14, 3, 2), skin, ['Neck', 'Spine2', 'Head'])
     part('head', ellipsoid((0, 1.68, -0.012), 0.088, 0.128, 0.105, 20, 12), skin, ['Head', 'Neck'], 0.6)
-    part('jaw', rbox((0, 1.598, 0.01), (0.152, 0.1, 0.165), 0.045, 2), shadow, ['Head', 'Neck'], 0.6)
-    part('cheeks', ellipsoid((0, 1.64, 0.0), 0.088, 0.07, 0.1, 14, 5, math.pi * 0.35, math.pi * 0.75), skin, ['Head', 'Neck'], 0.6)
+    part('jaw', ellipsoid((0, 1.625, 0.004), 0.085, 0.098, 0.102, 20, 9, math.pi * 0.4, math.pi), skin, ['Head', 'Neck'], 0.6)
     for s in (1, -1):
         part('ear%d' % s, ellipsoid((s * 0.09, 1.675, -0.015), 0.014, 0.028, 0.02, 10, 6), skin, ['Head'], 0.6)
     # the nose: prominent and straight, a long bridge down to a rounded tip well in front of the face
-    part('nose_bridge', capsule((0, 1.715, 0.088), (0, 1.652, 0.128), 0.014, 0.024, 14, 3, 3), skin, ['Head'], 0.6)
-    part('nose_tip', ellipsoid((0, 1.648, 0.131), 0.028, 0.024, 0.025, 16, 9), skin, ['Head'], 0.6)
+    part('nose_bridge', capsule((0, 1.712, 0.09), (0, 1.66, 0.114), 0.011, 0.016, 14, 3, 3), skin, ['Head'], 0.6)
+    part('nose_tip', ellipsoid((0, 1.657, 0.117), 0.019, 0.016, 0.017, 16, 9), skin, ['Head'], 0.6)
     for s in (1, -1):
-        part('nostril%d' % s, ellipsoid((s * 0.024, 1.642, 0.115), 0.016, 0.012, 0.018, 10, 6), skin, ['Head'], 0.6)
+        part('nostril%d' % s, ellipsoid((s * 0.016, 1.652, 0.107), 0.011, 0.008, 0.012, 10, 6), skin, ['Head'], 0.6)
     # a wide toothy grin: two thin lip arcs, teeth between, laugh lines at the corners, a stubble goatee around it
-    part('goatee_chin', ellipsoid((0, 1.566, 0.084), 0.034, 0.02, 0.022, 10, 5), stubble, ['Head'], 0.6)
-    part('lip_shadow', ellipsoid((0, 1.634, 0.098), 0.034, 0.011, 0.012, 12, 5), lipshadow, ['Head'], 0.6)
-    part('lip_up', bm_torus(0.036, 0.004, 16, 5, AZ, (0, 1.619, 0.103), sweep=(math.pi * 1.04, math.pi * 1.96), sy=0.45), lip, ['Head'], 0.6)
-    part('lip_lo', bm_torus(0.034, 0.0045, 16, 5, AZ, (0, 1.608, 0.103), sweep=(math.pi * 1.06, math.pi * 1.94), sy=0.5), lip, ['Head'], 0.6)
-    part('teeth', bm_box(0.046, 0.009, 0.005, (0, 1.609, 0.104)), teeth, ['Head'], 0.6)
+    part('goatee_chin', ellipsoid((0, 1.574, 0.082), 0.03, 0.017, 0.016, 10, 5), stubble, ['Head'], 0.6)   # flush with the chin: a tone, not a bump
+    part('lip_up', bm_torus(0.029, 0.0038, 16, 5, AZ, (0, 1.619, 0.102), sweep=(math.pi * 1.04, math.pi * 1.96), sy=0.45), lip, ['Head'], 0.6)
+    part('lip_lo', bm_torus(0.027, 0.0042, 16, 5, AZ, (0, 1.609, 0.102), sweep=(math.pi * 1.06, math.pi * 1.94), sy=0.5), lip, ['Head'], 0.6)
+    part('teeth', bm_box(0.036, 0.0075, 0.005, (0, 1.61, 0.103)), teeth, ['Head'], 0.6)
     for s in (1, -1):
-        part('laugh%d' % s, bm_torus(0.022, 0.0025, 10, 4, AZ, (s * 0.058, 1.63, 0.082), sweep=(math.pi * (1.0 if s > 0 else 0.0), math.pi * (1.5 if s > 0 else 0.5))), shadow, ['Head'], 0.6)
+        part('laugh%d' % s, bm_torus(0.018, 0.002, 10, 4, AZ, (s * 0.05, 1.63, 0.086), sweep=(math.pi * (1.0 if s > 0 else 0.0), math.pi * (1.5 if s > 0 else 0.5))), shadow, ['Head'], 0.6)
     # brows above round-rectangular shades
     for s in (1, -1):
-        part('brow%d' % s, bm_xf(rbox((s * 0.043, 1.728, 0.09), (0.06, 0.013, 0.016), 0.005, 2), tilt((s * 0.043, 1.728, 0.09), 0.0, -0.25, s * -0.15)), brow, ['Head'], 0.6)
+        part('brow%d' % s, bm_xf(rbox((s * 0.043, 1.727, 0.09), (0.056, 0.011, 0.014), 0.005, 2), tilt((s * 0.043, 1.728, 0.09), 0.0, -0.25, s * -0.15)), brow, ['Head'], 0.6)
         part('lens%d' % s, rbox((s * 0.044, 1.69, 0.101), (0.064, 0.042, 0.02), 0.017, 3), shades, ['Head'], 0.6)
         part('temple%d' % s, rbox((s * 0.092, 1.694, 0.02), (0.011, 0.012, 0.14), 0.004, 1), shades, ['Head'], 0.6)
     part('bridge', rbox((0, 1.697, 0.106), (0.03, 0.011, 0.011), 0.004, 1), shades, ['Head'], 0.6)
@@ -92,15 +90,10 @@ def build_brady(rig):
     part('bun_wisp', ellipsoid((0.025, 1.835, -0.08), 0.036, 0.024, 0.034, 8, 5), hair, ['Bun', 'Head'], 0.5)
     part('bun_wisp2', ellipsoid((-0.03, 1.79, -0.12), 0.03, 0.022, 0.03, 8, 5), hair, ['Bun', 'Head'], 0.5)
     part('bun_tie', bm_torus(0.034, 0.007, 14, 5, aim((0, 0.5, -1)), (0, 1.766, -0.06)), tie, ['Bun', 'Head'], 0.5)
-    for s in (1, -1):
-        curl(rig, 'curl_t%d' % s, s, s * 0.097, 1.748, 0.06, 1.0, 0.035, 0.012, hair, ['Head'], phase=0.4 * s)
-        curl(rig, 'curl_t2%d' % s, s, s * 0.1, 1.746, 0.03, 0.9, 0.028, 0.011, hair_hi, ['Head'], phase=2.0 * s)
-        curl(rig, 'curl_t3%d' % s, s, s * 0.102, 1.75, -0.02, 0.9, 0.028, 0.011, hair, ['Head'], phase=1.3 * s)
-        curl(rig, 'curl_n%d' % s, s, s * 0.045, 1.615, -0.095, 0.9, 0.035, 0.011, hair, ['Head', 'Neck'], phase=1.0 * s)
-        curl(rig, 'curl_n2%d' % s, s, s * 0.02, 1.6, -0.1, 0.8, 0.03, 0.01, hair_hi, ['Head', 'Neck'], phase=2.4 * s)
     for side, s in ((L, 1), (Rr, -1)):
         # short sleeve (tee), the mandala upper arm, a bare forearm, hand
-        part(side + '_sleeve', capsule((s * 0.16, ARM_Y, 0), (s * 0.29, ARM_Y, 0), 0.08, 0.07, 12, 4, 2), tee, [side + 'Arm', side + 'Shoulder', side + 'ForeArm', 'Spine2'])
+        part(side + '_deltoid', ellipsoid((s * 0.185, 1.44, 0), 0.075, 0.07, 0.07, 12, 7), tee, [side + 'Shoulder', side + 'Arm', 'Spine2'])
+        part(side + '_sleeve', capsule((s * 0.2, ARM_Y, 0), (s * 0.3, ARM_Y, 0), 0.068, 0.062, 12, 4, 2), tee, [side + 'Arm', side + 'Shoulder', side + 'ForeArm', 'Spine2'])
         bm, _ = limb((s * 0.265, ARM_Y, 0), (s * 0.465, ARM_Y, 0), 0.06, 0.052, 24, 3, 16, mandala)
         part(side + '_arm', bm, [skin, ink], [side + 'Arm', side + 'ForeArm', side + 'Shoulder'])
         bm, _ = limb((s * 0.455, ARM_Y, 0), (s * 0.725, ARM_Y, 0), 0.053, 0.042, 10, 3, 6, elbow_band)
@@ -108,8 +101,8 @@ def build_brady(rig):
         part(side + '_hand', rbox((s * 0.795, 1.425, 0), (0.165, 0.09, 0.045), 0.02, 2), skin, [side + 'Hand', side + 'ForeArm'], 0.7)
         part(side + '_thumb', capsule((s * 0.75, 1.425, 0.03), (s * 0.79, 1.425, 0.065), 0.016, 0.013, 10, 3, 2), skin, [side + 'Hand', side + 'ForeArm'], 0.7)
         # thigh, shin (jeans), black sneaker, pale sole
-        part(side + '_thigh', capsule((s * 0.105, 0.93, 0), (s * 0.105, 0.5, 0), 0.088, 0.07, 12, 4, 3), jeans, [side + 'UpLeg', side + 'Leg', 'Hips'])
-        part(side + '_shin', capsule((s * 0.105, 0.51, 0), (s * 0.105, 0.1, 0), 0.068, 0.058, 12, 4, 3), jeans, [side + 'Leg', side + 'Foot', side + 'UpLeg'])
+        part(side + '_thigh', capsule((s * 0.1, 0.93, 0), (s * 0.1, 0.5, 0), 0.08, 0.064, 12, 4, 3), jeans, [side + 'UpLeg', side + 'Leg', 'Hips'])
+        part(side + '_shin', capsule((s * 0.1, 0.51, 0), (s * 0.1, 0.1, 0), 0.062, 0.052, 12, 4, 3), jeans, [side + 'Leg', side + 'Foot', side + 'UpLeg'])
         part(side + '_shoe', rbox((s * 0.105, 0.065, 0.075), (0.12, 0.09, 0.3), 0.03, 3), shoe, [side + 'Foot', side + 'ToeBase', side + 'Leg'], 0.8)
         part(side + '_sole', rbox((s * 0.105, 0.018, 0.075), (0.125, 0.035, 0.31), 0.012, 2), sole, [side + 'Foot', side + 'ToeBase'], 0.8)
         part(side + '_lace', rbox((s * 0.105, 0.105, 0.12), (0.06, 0.012, 0.09), 0.004, 1), sole, [side + 'Foot', side + 'ToeBase'], 0.8)
