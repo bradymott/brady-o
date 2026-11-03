@@ -356,13 +356,13 @@ void main(){
   if (uSkyK.y > 0.0) {
     float md = max(dot(d, uMoonD), 0.0);
     col += vec3(0.55, 0.6, 0.8) * (pow(md, 220.0) * 0.5 + pow(md, 18.0) * 0.06) * uSkyK.y;
-    // a real little moon: lit hemisphere from the sun's side, soft maria
+    // a real little moon: the hemisphere facing us, lit from the sun's side (nudged toward full), soft maria
     vec3 mr = normalize(cross(uMoonD, vec3(0.0, 1.0, 0.0))), mu = cross(mr, uMoonD);
     vec2 q = vec2(dot(d, mr), dot(d, mu)) / 0.026;
     float qd = dot(q, q);
     if (qd < 1.0 && md > 0.9) {
-      vec3 ns = normalize(mr * q.x + mu * q.y + uMoonD * sqrt(1.0 - qd));
-      float lit = smoothstep(-0.12, 0.2, dot(ns, normalize(uSunD + uMoonD * 0.25)));
+      vec3 ns = normalize(mr * q.x + mu * q.y - uMoonD * sqrt(1.0 - qd));
+      float lit = smoothstep(-0.12, 0.2, dot(ns, normalize(uSunD - uMoonD * 0.3)));
       float maria = 0.78 + 0.22 * smoothstep(0.35, 0.7, fbm(q * 2.3 + 4.0));
       vec3 mc = vec3(0.97, 0.95, 0.88) * maria * mix(0.07, 1.0, lit);
       col = mix(col, mc, smoothstep(1.0, 0.86, qd) * uSkyK.y);

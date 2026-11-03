@@ -74,6 +74,8 @@ const BurnsUI = {
     const bossOn = g.boss && g.boss.active && !g.boss.defeated;
     g._trk = this.trackerLayout(ctx, g, S);
     g.topStack = S.t + (g._trk ? g._trk.h + 10 : 6) + (bossOn ? 52 : 0);
+    // def.drawUnder(g, ctx, fdt): a world's own 2D layer over the 3D frame, under the engine's HUD (screen tints, panels)
+    if (g.def.drawUnder) g.def.drawUnder(g, ctx, fdt);
     // screen tints for power-ups
     if (p.power === 'khole' && p.powerT > 0) { const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.2, W / 2, H / 2, H * 0.85); v.addColorStop(0, 'rgba(80,40,160,0)'); v.addColorStop(1, `rgba(80,40,160,${0.45 + Math.sin(g.time * 2) * 0.1})`); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); }
     if (p.power === 'lsd' && p.powerT > 0) { ctx.save(); ctx.globalCompositeOperation = 'overlay'; ctx.fillStyle = `hsla(${(g.time * 90) % 360},90%,60%,0.16)`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
@@ -92,6 +94,8 @@ const BurnsUI = {
     if (g.warnT > 0 && g.warnText) { const a = 0.6 + 0.4 * Math.sin(g.time * 18); this.text(ctx, g.warnText, W / 2, H * 0.3, Math.min(40, W / 14), `rgba(255,${80 + 100 * a | 0},80,${a})`, { glow: '#ff2a2a' }); this.text(ctx, g.warnT.toFixed(1), W / 2, H * 0.3 + 34, 18, '#ffffff'); }
     if (g.dialog.open) this.drawDialog(ctx, g);
     if (!cine && g.state === 'play' && !g.dialog.open && !g.paused && !window.__burnsHideHUD) this.drawControls(ctx, g);
+    // def.drawOverlay(g, ctx, fdt): a world's own 2D layer over the HUD, dialogue and touch controls (under the fade, pause and results)
+    if (g.def.drawOverlay) g.def.drawOverlay(g, ctx, fdt);
     // flash + fade
     if (g.flashA > 0) { ctx.fillStyle = rgba(g.flashC || '#ffffff', Math.min(1, g.flashA)); ctx.fillRect(0, 0, W, H); g.flashA = Math.max(0, g.flashA - fdt * 1.6); }
     g.fade = approach(g.fade, g.fadeTarget, fdt * g.fadeRate);
@@ -127,7 +131,7 @@ const BurnsUI = {
     for (const a of g.actors) {
       if (a.removed || a.hidden) continue;
       const top = a.y + a.h * 1.04 + 0.15;
-      if (a.bubbleText && a.bubbleT > 0) bubble(a.x, top, a.z, a.bubbleText, a.friendly ? null : 'rgba(255,230,230,0.96)');
+      if (a.bubbleText && a.bubbleT > 0 && !(a.bubbleChat && (g.cine || (g.modalOn && g.modalOn())))) bubble(a.x, top, a.z, a.bubbleText, a.friendly ? null : 'rgba(255,230,230,0.96)');
       // mission marker: '!' over givers of available missions, '?' over active targets
       const mk = a.def.marker ? a.def.marker(g, a) : this.markerFor(g, a);
       if (mk && R.project(a.x, top + 0.5 + Math.sin(g.time * 4) * 0.1, a.z, W, H, o) && o.w < 48) {
@@ -173,7 +177,7 @@ const BurnsUI = {
   },
   // mission tracker pill layout: one line; in portrait a long objective wraps onto a second line instead of being cut
   trackerLayout(ctx, g, S) {
-    const tr = g.missions.tracker(); if (!tr) return null;
+    const tr = !g.hideTracker && g.missions.tracker(); if (!tr) return null;   // g.hideTracker: a minigame owns the top of the screen
     const W = Game.cssW, H = Game.cssH, p = g.player, ds = Math.min(24, W / 26);
     ctx.save(); ctx.font = `600 12px ${FONT_UI}`;
     const full = '\u25b6 ' + tr.text, fit = (t, w) => { if (ctx.measureText(t).width <= w) return t; while (t.length > 4 && ctx.measureText(t + '\u2026').width > w) t = t.slice(0, -1); return t.trimEnd() + '\u2026'; };
@@ -398,6 +402,9 @@ const BurnsUI = {
     ctx.beginPath(); burnsRR(ctx, r.x, r.y, r.w, r.h, 16); ctx.rect(P.x + P.w, P.y, -P.w, P.h);
     const gr = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); gr.addColorStop(0, 'rgba(36,20,60,0.95)'); gr.addColorStop(1, 'rgba(16,8,30,0.95)');
     ctx.fillStyle = gr; ctx.fill('evenodd');
+    // the 3D portrait shows through the hole; copy it again from this frame's GL image so nothing drawn before the
+    // box (cutscene letterbox bars, power-up tints, speech bubbles) covers the face
+    if (g.portraitFrame === g.frameN && g.R && g.R.w && BurnsGL.canvas) { const k = g.R.w / Game.cssW; try { ctx.drawImage(BurnsGL.canvas, P.x * k, P.y * k, P.w * k, P.h * k, P.x, P.y, P.w, P.h); } catch (e) { /* the frame copy is a nicety */ } }
     ctx.strokeStyle = 'rgba(255,79,216,0.7)'; ctx.lineWidth = 2; burnsRR(ctx, r.x, r.y, r.w, r.h, 16); ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; burnsRR(ctx, P.x, P.y, P.w, P.h, 8); ctx.stroke();
     // name tag

@@ -653,7 +653,7 @@ BW17.intro = function (g) {
     { do: g2 => { g2.shake(0.25); burnsSfx('man_stomp', { vol: 0.25, pitch: 1.6 }); } },
     { orbit: { actor: 'brady', r0: 4, r1: 7, h0: 1.4, h1: 2.6, a0: 0.4, a1: 2.6, ty: 1.3, dur: 3 } },
     { say: ['brady', ['That bass. Three domes. A... coliseum? Okay. Follow the bass.']] },
-    { do: g2 => { p.animOverride = 'walk'; S.walkT = 0; } },
+    { do: g2 => { p.animOverride = 'walk'; S.walkT = 0; } }, { dof: false },   // keep the camp sharp: it's the reveal
     // over-the-shoulder tracking shot: he walks toward the bass and the camp grows in front of him
     // (the camera is set from here: a parallel track step would not reach the cutscene camera)
     { until: (g2, c) => {

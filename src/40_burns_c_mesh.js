@@ -7,13 +7,13 @@
    Untextured faces sample a transparent texel, so they show the colour.
    ============================================================ */
 
-/* ---------------- shared atlas (2048 x 3072) ----------------
+/* ---------------- shared atlas (2048 x 4096) ----------------
    top-left:     pattern tiles, item icons, misc (Chinka photo)
    top-right:    per-world sign/banner text, page 1 (shelf-packed, reset per world)
-   y 1024..2048: faces, 16 cols x 4 expression rows of 128px (art inset 8px with a clear
-                 margin, so faces wrap cleanly onto round heads)
-   y 2048..3072: sign page 2 (2048 x 1024): camp-heavy worlds fill page 1, then this */
-const BURNS_ATLAS_H = 3072;
+   y 1024..3072: faces, four banks of 16 cols x 4 expression rows of 128px = 64 faces (art inset 8px with a
+                 clear margin, so faces wrap cleanly onto round heads)
+   y 3072..4096: sign page 2 (2048 x 1024): camp-heavy worlds fill page 1, then this */
+const BURNS_ATLAS_H = 4096;
 // Run a painter between save() and restore() on a shared 2D context that is at its top level (the atlas). If the
 // painter throws, or leaves a save() open, unwind the whole stack: its transform and clip must never leak onto
 // the tiles, faces and signs painted after it (and start clean if someone else's painter leaked one).
@@ -31,10 +31,10 @@ function burnsPaintSafe(x, fn) {
 }
 const BURNS_ATLAS = {
   W: 2048, H: BURNS_ATLAS_H, canvas: null, T: null,
-  faceV0: 1024 / BURNS_ATLAS_H, faceV1: 2048 / BURNS_ATLAS_H, faceRowV: 128 / BURNS_ATLAS_H,   // two banks: y 1024..1536 and 1536..2048
+  faceV0: 1024 / BURNS_ATLAS_H, faceV1: 3072 / BURNS_ATLAS_H, faceRowV: 128 / BURNS_ATLAS_H,   // four banks of 512px: y 1024..3072
   regions: {},
   white: { u0: 4 / 2048, v0: 4 / BURNS_ATLAS_H, u1: 12 / 2048, v1: 12 / BURNS_ATLAS_H },
-  SIGN_AREAS: [[1028, 4, 2048, 1024], [4, 2052, 2048, 3072]],
+  SIGN_AREAS: [[1028, 4, 2048, 1024], [4, 3076, 2048, 4096]],
   FACES: ['brady', 'bradyClean', 'friendly', 'lashes', 'tired', 'stressed', 'greeter', 'beard', 'smug', 'chinka', 'stern', 'goofy', 'grumpy', 'sleepy', 'man', 'kid'],
   PATTERNS: ['tattoo', 'tattoo2', 'fur', 'disco', 'led', 'plaid', 'hivis', 'tiedye', 'wood', 'swoosh', 'canvas', 'sequin', 'leopard', 'flames', 'denim', 'rainbow'],
   ICONS: ['heart', 'k', 'flake', 'tab', 'shroom', 'leaf', 'toad', 'bottle', 'drop', 'ticket', 'map', 'www', 'token', 'glowstick', 'ziptie', 'camera'],
@@ -53,7 +53,7 @@ const BURNS_ATLAS = {
     this.signReset();
   },
   reg(x, y, w, h) { return { u0: x / this.W, v0: y / this.H, u1: (x + w) / this.W, v1: (y + h) / this.H, px: x, py: y, pw: w, ph: h }; },
-  // ---- faces: 32 slots (two banks of 16 x 4 expression rows); add more with addFace ----
+  // ---- faces: 64 slots (four banks of 16 x 4 expression rows); add more with addFace ----
   faceRecipes: {},
   paintFaceCell(i, f) {
     const x = this.ctx, col = i % 16, bank = Math.floor(i / 16);
@@ -69,7 +69,7 @@ const BURNS_ATLAS = {
   addFace(name, recipe) {
     this.faceRecipes[name] = recipe;
     let i = this.FACES.indexOf(name);
-    if (i < 0) { if (this.FACES.length >= 32) { console.warn('burns: face slots full'); return; } this.FACES.push(name); i = this.FACES.length - 1; }
+    if (i < 0) { if (this.FACES.length >= 64) { console.warn('burns: face slots full (64): ' + name); return; } this.FACES.push(name); i = this.FACES.length - 1; }
     if (this.canvas) this.paintFaceCell(i, name);
   },
   // ---- extra 128px pattern tiles (23 slots: y 64..320 and y 832..960): addPattern(name, fn(ctx, rng)) paints a tileable 128x128 decal ----
@@ -92,7 +92,7 @@ const BURNS_ATLAS = {
   icon(name) { return this.regions['icon:' + name]; },
   // ---- per-world sign text (right half) ----
   signReset() {
-    const x = this.ctx; burnsCtxUnwind(x, false); x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 2048, 2048, 1024);
+    const x = this.ctx; burnsCtxUnwind(x, false); x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 3072, 2048, 1024);
     this.sa = 0; this.sx = 1024 + 4; this.sy = 4; this.srow = 0; this.signs = {};
     if (this.T) this.T.dirty = true;
   },
@@ -101,15 +101,15 @@ const BURNS_ATLAS = {
     if (!this.canvas) return null;
     const c = makeCanvas(2048, 2048), x = c.getContext('2d');
     x.drawImage(this.canvas, 1024, 0, 1024, 1024, 0, 0, 1024, 1024);
-    x.drawImage(this.canvas, 0, 2048, 2048, 1024, 0, 1024, 2048, 1024);
+    x.drawImage(this.canvas, 0, 3072, 2048, 1024, 0, 1024, 2048, 1024);
     return { c, sa: this.sa, sx: this.sx, sy: this.sy, srow: this.srow, signs: this.signs };
   },
   signRestore(S) {
     if (!S || !this.canvas) return;
     const x = this.ctx; burnsCtxUnwind(x, false);
-    x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 2048, 2048, 1024);
+    x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 3072, 2048, 1024);
     x.drawImage(S.c, 0, 0, 1024, 1024, 1024, 0, 1024, 1024);
-    x.drawImage(S.c, 0, 1024, 2048, 1024, 0, 2048, 2048, 1024);
+    x.drawImage(S.c, 0, 1024, 2048, 1024, 0, 3072, 2048, 1024);
     this.sa = S.sa; this.sx = S.sx; this.sy = S.sy; this.srow = S.srow; this.signs = S.signs;
     if (this.T) this.T.dirty = true;
   },
@@ -383,7 +383,7 @@ const BURNS_ATLAS = {
     } catch (e) { console.warn('burns: Chinka photo bake failed', e); img = null; }
     if (!img) return;
     this.paintPhoto(this.ctx, 0, 832, img);
-    if (this.T && !BurnsGL.texRegion(this.T, 0, 832, 128, 160)) this.T.dirty = true;   // just the tile, not the whole 2048 x 3072 atlas
+    if (this.T && !BurnsGL.texRegion(this.T, 0, 832, 128, 160)) this.T.dirty = true;   // just the tile, not the whole 2048 x 4096 atlas
   }
 };
 

@@ -52,7 +52,7 @@ class BurnsActor {
   setBehavior(name) { this.behName = name; this.beh = BurnsBehaviors.get(name); this.data = {}; this.stT = 0; if (this.beh.init) this.beh.init(this, this.g); }
   get canTalk() { return !this.hidden && this.friendly && !this.def.noTalk && !!(this.def.lines || this.def.talk || this.def.gift || this.beh.talk); }
   get boss() { return !!this.def.boss; }
-  say(text, dur) { this.bubbleText = text; this.bubbleT = dur || Math.max(2.2, text.length * 0.07); }
+  say(text, dur) { this.bubbleText = text; this.bubbleT = dur || Math.max(2.2, text.length * 0.07); this.bubbleChat = false; }
   face(tx, tz, dt, rate) { const t = Math.atan2(tx - this.x, tz - this.z); this.yaw = BurnsM.dampAngle(this.yaw, t, rate || 6, dt); }
   distP() { const p = this.g.player; return Math.hypot(p.x - this.x, p.z - this.z); }
   // steer toward a point; returns remaining distance
@@ -92,12 +92,13 @@ class BurnsActor {
     if (this.bubbleT > 0) { this.bubbleT -= dt; if (this.bubbleT <= 0) this.bubbleText = null; }
     if (!this.hidden) this.beh.update(this, this.g, dt);
     // ambient chatter when the player walks by
-    if (this.friendly && !this.boss && !this.g.dialog.open && this.def.chatter !== false) {
+    // (held while a dialogue box is open, in cutscenes and during modal minigames: DJ sets, rhythm rounds, g.modal)
+    if (this.friendly && !this.boss && !this.g.dialog.open && !this.g.cine && !(this.g.modalOn && this.g.modalOn()) && this.def.chatter !== false) {
       this.chatT -= dt;
       if (this.chatT <= 0) {
         this.chatT = 7 + Math.random() * 12;
         const d = this.distP();
-        if (d < 9 && d > 1.2) { const TY = BURNS_NPC_TYPES[this.type], L = this.def.chat || (TY && TY.lines) || BURNS_LINES[this.type]; if (L && L.length) this.say(L[Math.floor(Math.random() * L.length)]); }
+        if (d < 9 && d > 1.2) { const TY = BURNS_NPC_TYPES[this.type], L = this.def.chat || (TY && TY.lines) || BURNS_LINES[this.type]; if (L && L.length) { this.say(L[Math.floor(Math.random() * L.length)]); this.bubbleChat = true; } }
       }
     }
   }

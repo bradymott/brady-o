@@ -918,7 +918,7 @@ class BurnsPlayScene {
   updateCamera(fdt) {
     const p = this.player, cam = this.cam, sv = BurnsSave.get().settings, W = this.world;
     const portrait = Game.cssH > Game.cssW;
-    if (this.cine && this.cine.cam) { Object.assign(cam, this.cine.cam); cam.shift = portrait ? 0.06 : 0; cam.roll = 0; return; }
+    if (this.cine && this.cine.cam) { Object.assign(cam, this.cine.cam); cam.shift = portrait ? 0.06 : 0; cam.roll = 0; if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt); return; }
     // manual orbit (touch drag / mouse / keys / right stick)
     const sens = (sv.camSens || 1) * 0.0085;
     let dyaw = -Input.camDX * sens, dpitch = Input.camDY * sens * 0.7 * (sv.invertY ? -1 : 1);
@@ -1004,7 +1004,11 @@ class BurnsPlayScene {
       if (!p.vehicle && !p.locked) p.yaw = yaw;   // the body faces where you look
     }
     cam.near = 0.15; cam.far = 1500;
+    // def.cameraFx(g, cam, dt): a world's own camera effects (wobble, roll, fov breathing) on the finished camera
+    if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt);
   }
+  // a modal minigame owns the screen (DJ set, rhythm round, or any world that sets g.modal): no random chatter
+  modalOn() { return !!(this.modal || this.bw567rhythm || (typeof BurnsDJ !== 'undefined' && BurnsDJ.isOpen && BurnsDJ.isOpen(this))); }
   /* ---------- rendering ---------- */
   adapt(fdt) {
     this.slowAcc = clamp((this.slowAcc || 0) + (fdt > 0.021 ? fdt : -fdt * 0.3), 0, 3);
@@ -1052,7 +1056,8 @@ class BurnsPlayScene {
     R.setCamera(this.cam);
     const env = BurnsEnv.build(this.palA, this.palB, this.tod, this.env, this.time);
     if (this.def.env) this.def.env(this, env);
-    env.trip = p.power === 'lsd' && p.powerT > 0 ? Math.min(1, p.powerT / 2, (BURNS_POWERUPS.lsd.dur - p.powerT) * 2) : 0;
+    // colour trip: the strongest of the world's own (g.colorTrip 0..1, or env.trip set in def.env) and the power-up's
+    env.trip = Math.max(env.trip || 0, this.colorTrip || 0, p.power === 'lsd' && p.powerT > 0 ? Math.min(1, p.powerT / 2, (BURNS_POWERUPS.lsd.dur - p.powerT) * 2) : 0);
     this.collectLights(env);
     // pose everything first: the shadow pass and the main pass draw the same characters
     this.pickups.draw(R);
@@ -1314,6 +1319,7 @@ class BurnsPlayScene {
     const r = box.portrait;
     const headY = (model.headY || 1.62) * scale + 0.05;
     R.portrait({ x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k }, env, BURNS_ATLAS.T, [0.16, 0.1, 0.24], headY, RR => RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
+    this.portraitFrame = this.frameN;   // the dialogue box copies it over anything drawn under the box
   }
   /* ---------- pause + results ---------- */
   buildPause() { this.pauseUI = BurnsUI.buildPause(this); }
