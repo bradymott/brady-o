@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 2: NO CAMP (Sunday night → Monday)
+   BRADY GOES TO BURNING MAN — World 2: NO CAMP (Sunday night → Monday)
    Brady is a first-timer with no camp. The Red Light District crew
    (the pink RV he rode in on) babysits his gear while he asks every
    camp in the city to take him in. Five rejections later he crashes
@@ -523,7 +523,7 @@ BurnsWorlds.register({
     }
     /* ---------------- 5:15 & Esplanade: the Red Light District's pink RV (start, gear stash, finale) ---------------- */
     {
-      const [rx, rz] = W2.RLD, toC = Math.atan2(W2.C.x - rx, W2.C.z - rz), yaw = toC - Math.PI / 2;   // the door (+X side) faces the Esplanade
+      const [rx, rz] = W2.RLD, toC = Math.atan2(W2.C.x - rx, W2.C.z - rz), yaw = toC + Math.PI / 2;   // the side door (the RV's -X side) faces the Esplanade
       const talk = { rlVelvet: (g2, a) => BURNS_W2.velvetTalk(g2, a) };
       const lines = {
         rlCandi: ['Welcome to the Red Light District! Cabaret at midnight, brunch at three PM.', 'You rode in with US, so you\'re family. Weird, homeless family.'],
@@ -544,13 +544,13 @@ BurnsWorlds.register({
         // stand-in: a pink RV with marquee bulbs + the crew (until the engine's api.redLightCamp exists)
         api.prop('rv', { x: rx, z: rz, yaw, seed: 77, col: '#ff6fb0', cabCol: '#ffd0e4', bikes: false });
         const L = (a, b) => [rx + a * Math.cos(yaw) + b * Math.sin(yaw), rz - a * Math.sin(yaw) + b * Math.cos(yaw)];
-        for (let k = 0; k < 12; k++) { const [x, z] = L(1.32, -4.2 + k * 0.76); api.glow(x, 3.15, z, 0.32, k % 2 ? '#ffd84a' : '#ff4f7a', { blink: 3 }); }
-        for (const b of [-2.6, 2.6]) { const [x, z] = L(2.6, b); api.mesh(x, z, m => { m.color('#3a1a24'); BW.post(m, 0, 0, 0, 0.05, 2.2); m.color('#ff2a3a', 0.9); BW.egg(m, 0, 2.35, 0, 0.22, 0.3, 0.22, { seg: 10, rings: 6 }); m.emissive(0); return { lights: [{ x: 0, y: 2.35, z: 0, s: 1.2, c: '#ff2a3a' }] }; }); }
-        { const [x, z] = L(3.4, 4.4); api.sign('RED LIGHT\nDISTRICT', x, z, { h: 1.1, yaw: yaw + Math.PI / 2, style: { bg: '#2a0a14', fg: '#ff9ac8', glow: '#ff2a5a', size: 28, border: '#ff4f7a' }, glow: '#ff2a5a' }); }
-        door = L(2.3, 0.6);
+        for (let k = 0; k < 12; k++) { const [x, z] = L(-1.32, -4.2 + k * 0.76); api.glow(x, 3.15, z, 0.32, k % 2 ? '#ffd84a' : '#ff4f7a', { blink: 3 }); }
+        for (const b of [-2.6, 2.6]) { const [x, z] = L(-2.6, b); api.mesh(x, z, m => { m.color('#3a1a24'); BW.post(m, 0, 0, 0, 0.05, 2.2); m.color('#ff2a3a', 0.9); BW.egg(m, 0, 2.35, 0, 0.22, 0.3, 0.22, { seg: 10, rings: 6 }); m.emissive(0); return { lights: [{ x: 0, y: 2.35, z: 0, s: 1.2, c: '#ff2a3a' }] }; }); }
+        { const [x, z] = L(-3.4, 4.4); api.sign('RED LIGHT\nDISTRICT', x, z, { h: 1.1, yaw: yaw - Math.PI / 2, style: { bg: '#2a0a14', fg: '#ff9ac8', glow: '#ff2a5a', size: 28, border: '#ff4f7a' }, glow: '#ff2a5a' }); }
+        door = L(-2.3, 0.6);
         const CREW = [['rlVelvet', 'MAMA VELVET', 'madame'], ['rlCandi', 'CANDI', 'bikini'], ['rlRoxie', 'ROXIE', 'corset'], ['rlPeachy', 'PEACHY', 'fan'], ['rlBlush', 'BLUSH', 'showgirl']];
         CREW.forEach(([id, name, variant], i) => {
-          const [x, z] = L(3.6 + (i % 2) * 1.4, -3.4 + i * 1.7), base = { id, name, x, z, yaw: yaw + Math.PI / 2, behavior: i ? 'dance' : 'idle', style: i % 6, chatter: true, lines: lines[id], talk: talk[id] };
+          const [x, z] = L(-3.6 - (i % 2) * 1.4, -3.4 + i * 1.7), base = { id, name, x, z, yaw: yaw - Math.PI / 2, behavior: i ? 'dance' : 'idle', style: i % 6, chatter: true, lines: lines[id], talk: talk[id] };
           if (BW.engineType('redlight')) api.npc(Object.assign(base, { type: 'redlight', variant, seed: 60 + i }));
           else api.npc(Object.assign(base, { type: 'burner', seed: 60 + i, rlLook: true, spec: Object.assign(BurnsRig.npcSpec('burner', 60 + i), {
             body: { fem: true, h: i ? 1.0 : 1.06 }, face: 'lashes', hair: { style: ['wig', 'wavy', 'curly', 'bob', 'wavy'][i], col: '#ffe08a', hi: '#fff4c8' },
@@ -777,7 +777,12 @@ BurnsWorlds.register({
     // a dropped load: a bobbing beacon so you can find your stuff
     const BL = BURNS_W234.S && BURNS_W234.S.loads; if (BL) for (const L of BL) { if (L.air) continue; const b = Math.sin(t * 4) * 0.15; R.bbs.bb(L.x, L.y + 1.6 + b, L.z, 0.9, 0.9, SP.glow, [1, 0.45, 0.8], 0.8, true); R.bbs.bb(L.x, L.y + 1.6 + b, L.z, 0.32, 0.32, SP.square, [1, 1, 1], 0.9, false, t * 2); }
     // Rhythm Wave's bamboo bass, way out past 5:00: pulsing light on the horizon
-    if (S.bass) { const pulse = Math.max(0, Math.sin(t * Math.PI * 2 * 2.05)), k = Math.min(1, S.bass); for (let i = 0; i < 5; i++) R.bbs.bb(205 + i * 6, 4 + i * 1.5 + pulse * 2, -10 + (i - 2) * 9, 26 + pulse * 10, 18 + pulse * 6, SP.glow, [1, 0.72 - i * 0.05, 0.3 + i * 0.08], (0.28 + pulse * 0.3) * k, true); }
+    if (S.bass) {
+      const pulse = Math.max(0, Math.sin(t * Math.PI * 2 * 2.05)), k = Math.min(1, S.bass);
+      for (let i = 0; i < 5; i++) R.bbs.bb(205 + i * 6, 4 + i * 1.5 + pulse * 2, -10 + (i - 2) * 9, 26 + pulse * 10, 18 + pulse * 6, SP.glow, [1, 0.72 - i * 0.05, 0.3 + i * 0.08], (0.28 + pulse * 0.3) * k, true);
+      // party lasers sweeping up from behind the horizon (they read even against the dawn sky)
+      for (let i = 0; i < 6; i++) { const a = t * 0.9 + i * 1.7; R.bbs.bb(200 + i * 4 + Math.sin(a) * 6, 18, -16 + i * 6, 1.6, 34, SP.glow, i % 2 ? [0.25, 1, 0.85] : [1, 0.3, 0.85], (0.35 + pulse * 0.25) * k, true); }
+    }
     // teapot steam + jellyfish glow from the parade
     if (S.parade && Math.random() < 0.35) for (const c of S.parade.cars) { if (c.i % 6 === 1) { const d2 = (c.mv.x - cam.x) * (c.mv.x - cam.x) + (c.mv.z - cam.z) * (c.mv.z - cam.z); if (d2 < 60 * 60) g.fx.smoke(c.mv.x + Math.sin(c.mv.yaw) * 2.9, 3.4, c.mv.z + Math.cos(c.mv.yaw) * 2.9, 1, '#f4f0ff'); } }
     void t;
@@ -930,8 +935,9 @@ BURNS_W2.loadDef = function (kind, name, o) {
 BURNS_W2.stashStart = function (g) {
   const S = BURNS_W2.state; if (S.stashLoads) return;
   const [rx, rz] = BURNS_W2.RLD, sp = g.def.spawn, d = S.rvDoor;
-  // between the spawn and the RV door
-  const bx = lerp(sp.x, d.x, 0.72), bz = lerp(sp.z, d.z, 0.72);
+  // a little pile beside the path from the spawn to the RV door (clear of the crew)
+  const dl = Math.hypot(d.x - sp.x, d.z - sp.z) || 1, ux = (d.x - sp.x) / dl, uz = (d.z - sp.z) / dl;
+  const bx = sp.x + ux * 2.5 + uz * 4.2, bz = sp.z + uz * 2.5 - ux * 4.2;
   S.stashLoads = [['duffel', '40 IDENTICAL BLACK TEES'], ['sleepbag', 'SLEEPING BAG (STILL IN PLASTIC)'], ['brie', 'A WHOLE WHEEL OF BRIE']].map(([k, nm], i) => {
     const o = BURNS_W2.loadDef(k, nm, { stash: true, when: g2 => g2.missions.state('stash') === 'active', onPick(g2) { g2.toast(nm + ' · CARRY IT INTO THE RV'); BURNS_W2.markHaul(g2); } , onDrop(g2, L) { BURNS_W2.markHaul(g2, L); } });
     return BURNS_W234.loadPlace(g, o, bx + Math.cos(i * 2.1) * 1.3, bz + Math.sin(i * 2.1) * 1.3, i * 1.3);
@@ -1392,6 +1398,7 @@ BurnsBehaviors.register('w2Kevin', {
     D.t -= dt; if (D.cd > 0) D.cd -= dt;
     const chasing = !!(S && S.esc) && g.missions.state('escape') === 'active';
     if (!chasing && D.mode !== 'host' && D.mode !== 'done') D.mode = 'host';
+    a.friendly = D.mode === 'host' || D.mode === 'done';   // no small talk mid-chase (and a stomp dazes him)
     const d = Math.hypot(p.x - a.x, p.z - a.z);
     if (D.mode === 'host' || D.mode === 'done') {
       if (d < 6) a.face(p.x, p.z, dt, 3);
@@ -1435,6 +1442,7 @@ BurnsBehaviors.register('w2Sole', {
   update(a, g, dt) {
     const D = a.data, p = g.player, P = a.def.post;
     D.t -= dt;
+    a.friendly = D.mode === 'off';
     if (D.mode === 'off') { a.hidden = true; a.vx = a.vz = 0; return; }
     const d = Math.hypot(p.x - a.x, p.z - a.z);
     if (D.mode === 'post') {

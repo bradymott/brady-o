@@ -2317,7 +2317,9 @@ const Sound = (() => {
     get enabled() { return !dead; },
     get retro() { return retro; },
     sfxNames: Object.keys(SFX),
-    trackNames: Object.keys(TRACKS),
+    get trackNames() { return Object.keys(TRACKS); },
+    // add a new song at load time (same format as the built-in TRACKS); existing songs can't be replaced
+    addTrack(name, def) { try { if (typeof name === 'string' && def && !has(TRACKS, name)) { TRACKS[name] = def; return true; } } catch (e) { /* ignore */ } return false; },
     // dev aid: returns authoring problems per track (empty object when all tracks are well-formed)
     _validate() {
       const out = {};

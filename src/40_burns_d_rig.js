@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — character rigs
+   BRADY GOES TO BURNING MAN — character rigs
    Rigid-part puppets (beveled boxes, capsules) skinned to 16 bones.
    One model (geometry) per spec, cached; many BurnsChar instances can
    share a model. Animation is procedural: BURNS_ANIMS[name](P, t, k)

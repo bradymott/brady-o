@@ -261,7 +261,7 @@ BurnsWorlds.register({
     if (!S.introDone) BW12.intro(g);
     else {
       // after the engine's day card has faded
-      BW1213.after(S, 4.2, () => g.banner('THE TEMPLE', g.missions.isDone('hope') ? 'The sun is up. She\'s out there.' : 'Walk out at dawn. Write her name.', { col: '#ffe0a8' }));
+      BW1213.afterDayCard(g, S, () => g.banner('THE TEMPLE', g.missions.isDone('hope') ? 'The sun is up. She\'s out there.' : 'Walk out at dawn. Write her name.', { col: '#ffe0a8' }));
       BW1213.after(S, 0.2, () => {
         if (g.missions.state('notes') === 'available') g.missions.start('notes', true);
         // her name is already on the wood but the note was never read: it's still tucked there
@@ -695,7 +695,7 @@ BW12.intro = function (g) {
     { cam: { from: camC, to: camD, dur: 4.5 } },
     { do: g2 => { BurnsSave.flag(12, 'intro', true); S.introDone = true; S.necklace.visible = false; S.neckFollow = false; p.locked = false; p.animOverride = null; p.teleport(C.x - 1, 0, C.z - 1.5, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; const j = g2.actor('juniper'); if (j) { j.x = C.x + 3.4; j.z = C.z - 1.8; j.yaw = -2.2; j.setBehavior('bw12still'); } } },
     { do: g2 => { if (g2.missions.state('notes') === 'available') g2.missions.start('notes', true); } },
-    { banner: ['THE TEMPLE', 'Walk out at dawn. Write her name.', { col: '#ffe0a8' }] }
+    { do: g2 => BW1213.afterDayCard(g2, S, () => g2.banner('THE TEMPLE', 'Walk out at dawn. Write her name.', { col: '#ffe0a8' })) }
   ], null);
 };
 

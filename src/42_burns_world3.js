@@ -55,7 +55,7 @@ BurnsWorlds.register({
         if ((name === 'bbaRamp' || name === 'bbaStunt' || name === 'bbaLaunch') && (!data || !data.piece || data.piece === BURNS_W3.state.semiP) && g.player.vehicle) R.launched = true;
       } },
     { id: 'boss', name: 'The Tallbike Baron', type: 'boss', requires: ['dress', 'ride'], start: 'manual', tokenDirect: true, short: 'Defeat the Tallbike Baron!', marker: { x: -62, z: -78 },
-      desc: 'The bike thief works for the Baron, who hoards stolen community bikes in his Bike Graveyard. Knock him off his tall bike.', hint: 'The Bike Graveyard, open playa west', lockedDesc: 'Get a costume and finish your First Ride.' },
+      desc: 'The bike thief works for the Baron, who hoards stolen community bikes in his Bike Graveyard. Knock him off his tall bike.', hint: 'The Bike Graveyard, open playa west', lockedDesc: 'Get a costume and finish your Test Ride.' },
     { id: 'vibes', name: 'Good Vibes Only', token: false, type: 'find', giver: 'glimmer', start: 'manual', short: 'Find Glimmer\'s platform boot', marker: { x: -36, z: 6 },
       desc: 'Sparkle ponies are hogging half the costume racks. Glimmer will clear them out if you find her lost platform boot.', hint: 'She last saw it near the Free Store',
       onComplete(g) { BURNS_W3.vibesDone(g); } },
@@ -65,7 +65,7 @@ BurnsWorlds.register({
   build(api, g) {
     const W3 = BURNS_W3, R = api.rng, BW = BURNS_W234;
     BW.reset(g);
-    W3.state = { introDone: !!BurnsSave.flag(3, 'intro'), ribbons: [], gates: [], wheels: [], lookouts: [] };
+    W3.state = { introDone: !!BurnsSave.flag(3, 'intro'), gates: [], wheels: [], lookouts: [] };
     const S = W3.state;
     /* ---------------- ground ---------------- */
     api.paint((c, P, sc) => {
@@ -230,8 +230,6 @@ BurnsWorlds.register({
       const L = a.def.view || 9, w = 2 * L * Math.tan(a.def.fov || 0.5), al = a.data.alert || 0;
       R.flat.flat(a.x + Math.sin(a.yaw) * L / 2, a.y + 0.06, a.z + Math.cos(a.yaw) * L / 2, w, L, a.yaw + Math.PI, SP.beam, al > 0.05 ? [1, 0.25, 0.25] : [1, 0.85, 0.3], 0.35 + al * 0.4, true);
     }
-    // ribbons flutter
-    for (const r of S.ribbons) if (r.on) { for (let k = 0; k < 4; k++) R.bbs.bb(r.x + Math.sin(t * 3 + k) * 0.25, 1.95 - k * 0.22, r.z + Math.cos(t * 2.6 + k) * 0.25, 0.5, 0.18, SP.square, [1, 0.85, 0.1], 1, false, t * 2 + k); R.bbs.bb(r.x, 2.1, r.z, 2.4, 2.4, SP.glow, [1, 0.85, 0.2], 0.6, true); }
     // course gates: the next one pulses
     if (S.ride) { const G = S.gates[S.ride.i]; if (G) R.bbs.bb(G.x, G.y + 2.2, G.z, 6 + Math.sin(t * 6) * 0.6, 6 + Math.sin(t * 6) * 0.6, SP.glow, [0.2, 0.95, 1], 0.55, true); }
     // mister spray at the clinic
@@ -347,13 +345,11 @@ BURNS_W3.buildClinic = function (api, g) {
   api.npc({ id: 'wanda', name: 'WRENCH WANDA', type: 'dpw', seed: 12, x: cx - 1, z: cz - 1, yaw: Math.PI,
     spec: Object.assign(BurnsRig.npcSpec('burner', 12), { top: { kind: 'tank', col: '#ffd21a' }, bottom: { kind: 'cargo', col: '#4a4a3a' }, shoes: { kind: 'boots', col: '#2a1a12' }, vest: null, coat: null, hat: { kind: 'bandana', col: '#3a6ad8' }, hair: { style: 'pony', col: '#2a1a12', hi: '#5a3a2a' }, face: 'friendly', goggles: false, glasses: null, beard: null, led: null, paint: null, acc: ['toolbelt', 'bracelets'], prop: null, body: { h: 0.96, w: 1.0 }, key: 'w3:wanda' }),
     talk(g2, a) {
-      const h = g2.missions.state('hunt'), f = g2.missions.state('flat');
-      if (g2.missions.state('vibe') !== 'done') g2.say(a, ['Can\'t talk, honey, those lookouts have been sniffing around my clinic all day. Lose them first.']);
-      else if (h === 'available') g2.say(a, ['You snuck past those wooden-mask weirdos? Respect.', 'You need wheels. Yellow bikes are community bikes: ride one, leave it for the next burner.', 'I tied yellow ribbons out to where I saw one this morning. Follow the ribbons.'], () => g2.missions.start('hunt'));
-      else if (h === 'active') g2.say(a, ['Follow the yellow ribbons, sugar. Out past the clinic, onto the open playa.']);
-      else if (f === 'available') g2.say(a, ['A flat? Classic yellow bike. Patch kits live at the Free Store, and the last pump went up a stack of bike boxes. Don\'t ask.', 'Bring both to the bike and patch it right there. I believe in you. I\'ve seen you sneak.'], () => g2.missions.start('flat'));
-      else if (f === 'active') g2.say(a, ['Patch kit from the Free Store, pump from the box tower. Then fix it at the Henge.']);
-      else g2.say(a, ['Ride safe. Ring your bell. Lock nothing. Love everything.']);
+      const t = g2.missions.state('thief'), f = g2.missions.state('flat');
+      if (t === 'active') g2.say(a, ['Your bike got JACKED? Sugar, that\'s the Baron\'s crew. They ride in circles and stop for selfies. Run him down!']);
+      else if (f === 'active') g2.say(a, ['A flat? Classic. Patch kits live at the Free Store, and the last pump went up a stack of bike boxes. Don\'t ask.', 'Fix it at the Henge repair stand. I believe in you. I\'ve seen you sneak.']);
+      else if (g2.missions.state('vibe') !== 'done') g2.say(a, ['Can\'t talk long, honey, those lookouts have been sniffing around my clinic all day.']);
+      else g2.say(a, ['Ride safe. Ring your bell. Lock nothing. Love everything. ...Okay, maybe lock it.']);
     } });
   api.checkpoint('cp_clinic', cx - 7, cz + 6, { yaw: Math.PI, name: 'Bike Clinic' });
   api.pickup('water', cx + 3, 0.9, cz + 4);
@@ -395,9 +391,9 @@ BURNS_W3.buildSemi = function (api, g) {
     talk(g2, a) {
       const st = g2.missions.state('ride');
       if (st === 'locked') g2.say(a, ['No bike, no course, friend. Rules of the road. Well. Rules of the dirt.']);
-      else if (st === 'available') { if (!g2.hasItem('bike')) { g2.say(a, ['You need a bike first.']); return; } g2.say(a, ['First Ride! Seven gates. In the back of the Knotted Semi, round the loop-de-loop, up the trailer and through the ring of fire.', 'Hit the BIKE button to hop on. Go FAST into the loop. Sixty seconds. DING DING!'], () => g2.missions.start('ride')); }
+      else if (st === 'available') { if (!g2.hasItem('bike')) { g2.say(a, ['You need a bike first.']); return; } g2.say(a, ['Test ride! Your bike just had surgery. Seven gates. In the back of the Knotted Semi, round the loop-de-loop, up the trailer and through the ring of fire.', 'Hit the BIKE button to hop on. Go FAST into the loop. Sixty seconds. DING DING!'], () => g2.missions.start('ride')); }
       else if (st === 'active') g2.say(a, ['Pedal, pedal, PEDAL!']);
-      else g2.say(a, ['Best first ride I\'ve seen since the guy who rode a unicycle into a dome.']);
+      else g2.say(a, ['Best test ride I\'ve seen since the guy who rode a unicycle into a dome.']);
     } });
   api.checkpoint('cp_semi', 30, -46, { yaw: Math.PI / 2, name: 'The Knotted Semi' });
   api.light(sx, sz, 24, '#ffe0b0', 0.3);
@@ -506,9 +502,8 @@ BURNS_W3.wire = function (g) {
   // story state on revisit
   if (g.missions.isDone('vibes')) W3.clearRacks(g, true);
   if (g.missions.isDone('furry')) { const f = g.actor('fuzz'); if (f) { f.w3cool = true; f.x = S.mister.x - 2; f.z = S.mister.z; f.setBehavior('dance'); } }
-  if (g.hasItem('bike')) { S.bikeMv.visible = false; }
-  else if (g.missions.isDone('flat')) { S.bikeMv.roll = 0; }
-  if (g.missions.isDone('hunt')) for (const r of S.ribbons) r.on = false;
+  // the yellow bike: stolen (thief riding it), then flat at the Henge stand, then yours again
+  W3.bikeState(g);
   const baron = g.actor('baron'); if (baron && g.missions.isDone('boss')) { baron.hidden = true; S.tallMv.visible = false; }
   const thief = g.actor('thief'); void thief;
 };
@@ -559,7 +554,7 @@ BURNS_W3.resetLookouts = function (g) { for (const a of BURNS_W3.state.lookoutAc
 BURNS_W3.vibesDone = function (g) {
   BURNS_W3.clearRacks(g, false);
   const a = g.actor('glimmer');
-  g.say(a || 'brady', ['MY BOOT! My beautiful, impractical boot! I can walk in straight lines again!', 'Girls! Off the racks! This bun-man has GOOD VIBES. And here, take some of mine.'], () => { g.player.givePower('molly'); g.glow += 15; g.toast('+15 GLOW STICKS · ALL COSTUME RACKS OPEN'); });
+  g.say(a || 'brady', ['MY BOOT! My beautiful, impractical boot! I can walk in straight lines again!', 'Girls! Off the racks! This bun-man has GOOD VIBES. And here, take some of mine.'], () => { if (g.grant && BurnsSave.groundScore && BurnsSave.groundScore()) g.grant('molly'); else g.player.givePower('molly'); g.glow += 15; g.toast('+15 GLOW STICKS · ALL COSTUME RACKS OPEN'); });
 };
 BURNS_W3.loopCheck = function (g) {
   const S = BURNS_W3.state, L = S.loop, p = g.player, b = g.bike;
@@ -569,66 +564,44 @@ BURNS_W3.loopCheck = function (g) {
   else if (Math.hypot(p.x - ex, p.z - ez) < 2.2 && b.speed <= 6.5 && !S.slowWarn) { S.slowWarn = true; g.toast('FASTER! You need speed for the loop'); BURNS_W234.timer(3, () => { S.slowWarn = false; }); }
 };
 
-/* ---------------- ribbons, the yellow bike, the thief ---------------- */
-BURNS_W3.ribbon = function (g, i) {
-  const S = BURNS_W3.state; S.ribbon = i;
-  for (const r of S.ribbons) r.on = r.i === i;
-  const r = S.ribbons[i]; if (r) { const m = g.missions.get('hunt'); if (m) m.data.marker = null; g.missions.get('hunt').def.marker = { x: r.x, z: r.z }; }
-};
-BURNS_W3.huntStep = function (g, dt) {
-  const S = BURNS_W3.state, p = g.player;
-  if (g.missions.state('hunt') === 'active' && S.ribbon !== undefined) {
-    const r = S.ribbons[S.ribbon];
-    if (r && Math.hypot(p.x - r.x, p.z - r.z) < 3.2) {
-      g.fx.burst(r.x, 2, r.z, 'star', 10, '#ffd21a'); burnsSfx('pick');
-      if (S.ribbon < S.ribbons.length - 1) { BURNS_W3.ribbon(g, S.ribbon + 1); g.toast(['A YELLOW RIBBON! THERE\'S ANOTHER ONE OUT THERE', 'ANOTHER RIBBON! KEEP GOING', 'RIBBON! THE PLAYA IS SPEAKING', 'ONE MORE RIBBON...'][S.ribbon - 1] || 'RIBBON!'); }
-      else { for (const q of S.ribbons) q.on = false; BURNS_W3.foundBike(g); }
-    }
+/* ---------------- the yellow bike: parked, stolen, chased, flat, fixed ---------------- */
+// on every visit: who has the bike right now?
+BURNS_W3.bikeState = function (g) {
+  const S = BURNS_W3.state, M = g.missions, mv = S.bikeMv;
+  if (!M.isDone('flat')) {
+    // until it's fixed, the BIKE button has nothing to summon
+    if (g.player.vehicle) g.player.vehicle.dismount(g.player);
+    S.stolenBike = g.bike || null; g.bike = null; g.syncHudButtons();
   }
+  if (!M.isDone('thief')) { mv.x = S.rack.x + 0.5; mv.z = S.rack.z; mv.yaw = S.rack.yaw + Math.PI / 2; mv.roll = 0.18; mv.visible = true; if (S.introDone) BURNS_W3.thiefSpawn(g, true); }
+  else if (!M.isDone('flat')) { mv.x = S.stand.x; mv.z = S.stand.z; mv.yaw = 1.2; mv.roll = 0.32; mv.visible = true; }
+  else mv.visible = false;
+};
+BURNS_W3.thiefSpawn = function (g, ride) {
+  const S = BURNS_W3.state, mv = S.bikeMv;
+  if (S.thief || g.missions.isDone('thief')) return S.thief;
+  const th = g.spawnActor({ id: 'thief', name: 'SPOKE SNATCHER', type: 'burner', seed: 444, x: mv.x, z: mv.z, behavior: 'w234Puppet', friendly: false, hp: 1, collide: false,
+    spec: Object.assign(BurnsRig.npcSpec('burner', 444), { top: { kind: 'hoodie', col: '#2a2a30' }, bottom: { kind: 'cargo', col: '#2a2a30' }, hat: { kind: 'bandana', col: '#c8202a' }, glasses: 'shades', goggles: false, coat: null, vest: null, led: null, paint: null, beard: null, acc: [], key: 'w3:thief' }) });
+  S.thief = th; th.y = 0.42; th.yaw = mv.yaw; th.ch.play('bike');
+  const m = g.missions.get('thief'); if (m) m.def.marker = th;   // the tracker follows him
+  if (ride) S.thiefRun = { lead: 0, i: 0, stop: 0, sp: 0 };
+  return th;
+};
+// out from the rack to the open playa, then round and round the Bike Henge
+BURNS_W3.THIEF_IN = [[-16, 80], [-10, 56], [-4, 30], [2, 4], [6, -22]];
+BURNS_W3.THIEF_PATH = [[10, -50], [30, -70], [10, -96], [-20, -100], [-36, -70], [-30, -40], [-14, -22], [8, -24]];
+BURNS_W3.huntStep = function (g, dt) {
+  const S = BURNS_W3.state;
   if (S.thiefRun) BURNS_W3.thiefStep(g, dt);
 };
-BURNS_W3.foundBike = function (g) {
-  const { x: hx, z: hz } = BURNS_W3.HENGE;
-  g.cutscene([
-    { cam: { x: hx + 4, y: 2.2, z: hz + 6, tx: hx + 0.6, ty: 0.6, tz: hz + 1.4, fov: 0.75 } },
-    { say: ['brady', ['A yellow bike! Chained to the Henge with a sign: FREE BIKE. NOT FREE AIR.', '...The back tire is flat as a pancake. A dusty pancake.']] },
-    { do: g2 => { g2.missions.complete('hunt', { x: hx - 1.5, y: 1.4, z: hz + 3 }); } }
-  ]);
-};
-BURNS_W3.fixBike = function (g) {
-  const S = BURNS_W3.state, { x: hx, z: hz } = BURNS_W3.HENGE;
-  g.cutscene([
-    { cam: { x: hx + 3.5, y: 1.9, z: hz + 5, tx: hx + 0.6, ty: 0.6, tz: hz + 1.4, fov: 0.75 } },
-    { do: g2 => { g2.player.animOverride = 'clipboard'; S.bikeMv.roll = 0; g2.fx.burst(hx + 0.6, 0.5, hz + 1.4, 'star', 16, '#ffd21a'); burnsSfx('powerup'); } },
-    { wait: 0.8 },
-    { say: ['brady', ['Patch. Pump. Pump. Pump. Pump...', 'GOOD AS NEW! Hello, beautiful.']] },
-    { do: g2 => { g2.player.animOverride = null; g2.missions.complete('flat', { x: hx - 1.5, y: 1.4, z: hz + 3 }); } },
-    { wait: 0.4 },
-    { do: g2 => { BURNS_W234.timer(0.05, g3 => BURNS_W3.thiefAppears(g3)); } }
-  ]);
-};
-BURNS_W3.thiefAppears = function (g) {
-  const S = BURNS_W3.state, { x: hx, z: hz } = BURNS_W3.HENGE;
-  if (S.thief || g.missions.state('thief') === 'done') return;
-  const th = g.spawnActor({ id: 'thief', name: 'SPOKE SNATCHER', type: 'burner', seed: 444, x: hx + 8, z: hz + 6, behavior: 'w234Puppet', friendly: false, hp: 1, collide: false,
-    spec: Object.assign(BurnsRig.npcSpec('burner', 444), { top: { kind: 'hoodie', col: '#2a2a30' }, bottom: { kind: 'cargo', col: '#2a2a30' }, hat: { kind: 'bandana', col: '#c8202a' }, glasses: 'shades', goggles: false, acc: [], key: 'w3:thief' }) });
-  S.thief = th;
-  g.cutscene([
-    { cam: { x: hx - 6, y: 3, z: hz + 9, tx: hx + 2, ty: 1, tz: hz + 2, fov: 0.85 } },
-    { do: g2 => { th.x = hx + 0.9; th.z = hz + 1.9; th.yaw = 1.2; th.y = 0.42; th.ch.play('bike'); g2.missions.start('thief', true); } },
-    { say: [th, ['Ooh, a FIXED yellow bike? Finders keepers! Ding ding, sucker!']] },
-    { say: ['brady', ['HEY! That\'s a COMMUNITY bike! I\'m the community!']] },
-    { do: g2 => { S.thiefRun = { i: 0, stop: 1.2, sp: 0 }; g2.banner('THE BIKE THIEF', 'Catch him! Spin or stomp him off the bike!', { col: '#ff4a4a' }); } }
-  ]);
-};
-BURNS_W3.THIEF_PATH = [[10, -50], [30, -70], [10, -96], [-20, -100], [-36, -70], [-30, -40], [-14, -22], [8, -24]];
 BURNS_W3.thiefStep = function (g, dt) {
-  const S = BURNS_W3.state, T = S.thiefRun, a = S.thief, P = BURNS_W3.THIEF_PATH, p = g.player;
-  if (!a || g.missions.state('thief') !== 'active') return;
-  if (T.stop > 0) { T.stop -= dt; T.sp = approach(T.sp, 0, dt * 8); a.ch.play(T.stop > 1.2 ? 'photo' : 'bike', { rate: 2 }); if (Math.random() < dt * 0.6) a.say(['Selfie with the art! Hold on!', 'Brb, posting this.', 'Ding ding!'][Math.floor(Math.random() * 3)], 1.4); }
+  const S = BURNS_W3.state, T = S.thiefRun, a = S.thief, p = g.player;
+  if (!a || g.missions.state('thief') !== 'active' || g.cine) return;
+  if (T.stop > 0) { T.stop -= dt; T.sp = approach(T.sp, 0, dt * 8); a.ch.play(T.stop > 1.2 ? 'photo' : 'bike', { rate: 2 }); if (Math.random() < dt * 0.6) a.say(['Selfie with the art! Hold on!', 'Brb, posting this.', 'Ding ding!', '#stolenbike #blessed'][Math.floor(Math.random() * 4)], 1.4); }
   else {
-    const t = P[T.i % P.length], dx = t[0] - a.x, dz = t[1] - a.z, d = Math.hypot(dx, dz);
-    if (d < 2.5) { T.i++; if (T.i % 3 === 0) T.stop = 2.6; }
+    const IN = BURNS_W3.THIEF_IN, P = BURNS_W3.THIEF_PATH, lead = T.lead < IN.length, t = lead ? IN[T.lead] : P[T.i % P.length];
+    const dx = t[0] - a.x, dz = t[1] - a.z, d = Math.hypot(dx, dz);
+    if (d < 2.5) { if (lead) { T.lead++; if (T.lead === 3) T.stop = 2.4; } else { T.i++; if (T.i % 3 === 0) T.stop = 2.6; } }
     a.yaw = BurnsM.dampAngle(a.yaw, Math.atan2(dx, dz), 3, dt);
     const near = Math.hypot(p.x - a.x, p.z - a.z);
     T.sp = approach(T.sp, near < 6 ? 7.0 : near > 30 ? 4.0 : 6.2, dt * 4);
@@ -640,20 +613,39 @@ BURNS_W3.thiefStep = function (g, dt) {
 BURNS_W3.thiefCaught = function (g) {
   const S = BURNS_W3.state, a = S.thief; if (!a || S.thiefCaught) return; S.thiefCaught = true; S.thiefRun = null;
   a.ch.play('knocked'); a.y = 0; a.say('Okay okay! It\'s yours! Community vibes!', 2.5); g.fx.dust(a.x, 0.2, a.z, 14); burnsSfx('stomp');
+  const st = S.stand;
   g.cutscene([
     { cam: { x: a.x + 4, y: 2.4, z: a.z + 4, tx: a.x, ty: 0.8, tz: a.z, fov: 0.8 } },
-    { say: [a, ['I work for the BARON, man. He collects bikes. ALL the bikes. He\'s gonna be so mad.']] },
-    { say: ['brady', ['Tell your Baron the yellow bike is MINE now. Well. Ours. Mine for a while.']] },
-    { do: g2 => { S.bikeMv.visible = false; g2.giveItem('bike'); g2.missions.complete('thief', { x: a.x + 1.4, y: 1.4, z: a.z + 1.4 }); a.setBehavior('chill'); a.friendly = true; } },
-    { banner: ['YELLOW BIKE!', 'Tap BIKE (or press B) to ride. Ring the bell with ACTION.', { col: '#ffd21a' }] }
+    { say: [a, ['I work for the BARON, man. He collects bikes. ALL the bikes. He\'s gonna be so mad.', 'Also your back tire is flat. I took a shortcut through the Thorn Garden. Sorry. Kind of.']] },
+    { say: ['brady', ['Tell your Baron this yellow bike is MINE. Well. Ours. Mine for a while.', 'I\'ll wheel it to the Henge repair stand. Patch kit. Pump. I can do this.']] },
+    { do: g2 => { const mv = S.bikeMv; mv.x = st.x; mv.z = st.z; mv.yaw = 1.2; mv.roll = 0.32; mv.visible = true; g2.missions.complete('thief', { x: a.x + 1.4, y: 1.4, z: a.z + 1.4 }); a.setBehavior('chill'); a.friendly = true; } },
+    { banner: ['FIX A FLAT', 'Patch kit at the Free Store, pump up the crate tower. Then FIX it at the Henge.', { col: '#ffd21a' }] }
   ]);
+};
+BURNS_W3.fixBike = function (g) {
+  const S = BURNS_W3.state, { x: hx, z: hz } = BURNS_W3.HENGE;
+  g.cutscene([
+    { cam: { x: hx + 3.5, y: 1.9, z: hz + 5, tx: hx + 0.6, ty: 0.6, tz: hz + 1.4, fov: 0.75 } },
+    { do: g2 => { g2.player.animOverride = 'clipboard'; S.bikeMv.roll = 0; g2.fx.burst(hx + 0.6, 0.5, hz + 1.4, 'star', 16, '#ffd21a'); burnsSfx('powerup'); } },
+    { wait: 0.8 },
+    { say: ['brady', ['Patch. Pump. Pump. Pump. Pump...', 'GOOD AS NEW! Hello again, beautiful. Nobody steals you twice.']] },
+    { do: g2 => { g2.player.animOverride = null; BURNS_W3.bikeBack(g2); g2.missions.complete('flat', { x: hx - 1.5, y: 1.4, z: hz + 3 }); } },
+    { banner: ['YOUR BIKE IS BACK', 'Tap BIKE (or press B) to ride. Ring the bell with ACTION.', { col: '#ffd21a' }] }
+  ]);
+};
+BURNS_W3.bikeBack = function (g) {
+  const S = BURNS_W3.state;
+  S.bikeMv.visible = false;
+  if (!g.bike && S.stolenBike) g.bike = S.stolenBike;
+  g.giveItem('bike', true);   // also creates the bike if this save never had one
+  g.syncHudButtons();
 };
 
 /* ---------------- First Ride: gates, the loop-de-loop, the trailer launch ---------------- */
 BURNS_W3.rideStart = function (g) {
   const S = BURNS_W3.state; S.ride = { i: 0 };
   if (g.bike && !g.player.vehicle) { const p = g.player; g.bike.x = p.x; g.bike.z = p.z; g.bike.y = p.y; g.bike.yaw = p.yaw; g.bike.mount(p); }
-  g.banner('FIRST RIDE', 'Through the gates in order. Loop the semi. Launch the trailer!', { col: '#38f2ff' });
+  g.banner('TEST RIDE', 'Through the gates in order. Loop the semi. Launch the trailer!', { col: '#38f2ff' });
 };
 BURNS_W3.rideReset = function (g) { const S = BURNS_W3.state; S.ride = null; if (S.stunt) BURNS_W3.stuntEnd(g, true); };
 BURNS_W3.rideStep = function (g, dt) {
@@ -829,17 +821,22 @@ BURNS_W3.bossDefeated = function (g) {
   });
 };
 
-/* ---------------- intro ---------------- */
+/* ---------------- intro: park the bike for ten seconds ---------------- */
 BURNS_W3.intro = function (g) {
-  const S = BURNS_W3.state, p = g.player;
-  p.locked = true; p.animOverride = 'sleep'; p.teleport(-24, 0.9, 104, 0);
+  const S = BURNS_W3.state, p = g.player, R = S.rack, mv = S.bikeMv;
+  const bx = R.x + 2.2, bz = R.z + 1.6;
+  p.locked = true; p.teleport(bx, 0, bz, -Math.PI / 2);
+  const c0 = { x: 20, y: 30, z: 140, tx: -30, ty: 0, tz: 40, fov: 0.9 }, c1 = { x: bx + 3.4, y: 2.1, z: bz + 3.2, tx: R.x, ty: 0.9, tz: R.z, fov: 0.78 };
   g.cutscene([
-    { cam: { x: 20, y: 30, z: 140, tx: -30, ty: 0, tz: 40, fov: 0.9 } },
-    { banner: [BurnsWorlds.label ? BurnsWorlds.label(3) : 'WORLD 3', 'COSTUME CULT & THE YELLOW BIKE', { col: '#ffe24a', big: true, dur: 3 }] },
-    { cam: { from: { x: 20, y: 30, z: 140, tx: -30, ty: 0, tz: 40, fov: 0.9 }, to: { x: -21, y: 2.4, z: 108, tx: -24, ty: 1.2, tz: 104, fov: 0.8 }, dur: 4 } },
-    { say: ['brady', ['...Morning? Morning. I fell asleep in a stranger\'s hammock. Very playa.', 'The Man saw my face. He knows my bun. I need a disguise. And wheels. Real wheels.']] },
-    { do: g2 => { p.locked = false; p.animOverride = null; p.teleport(-18, 0, 100, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; BurnsSave.flag(3, 'intro', true); S.introDone = true; } },
-    { banner: ['GET A DISGUISE', 'The Costume Cult is west. Then find a yellow bike.', { col: '#ffd84a' }] }
+    { cam: c0 },
+    { cam: { from: c0, to: c1, dur: 4 } },
+    { say: ['brady', ['Tuesday! Root Society gave me a tipi AND a toothbrush. Living the dream.', 'Jefr says the Man is asking around for "a little guy with a bun". I need a disguise.', 'Lock my bike? Nah. Everybody here is SO nice.']] },
+    { do: g2 => { const th = BURNS_W3.thiefSpawn(g2, false); th.x = mv.x; th.z = mv.z; th.yaw = mv.yaw; burnsSfx('bike_bell'); } },
+    { cam: { x: R.x - 3.5, y: 1.8, z: R.z + 4, tx: R.x, ty: 1.0, tz: R.z, fov: 0.75 } },
+    { say: [{ name: 'SPOKE SNATCHER', model: BurnsRig.model(Object.assign(BurnsRig.npcSpec('burner', 444), { top: { kind: 'hoodie', col: '#2a2a30' }, bottom: { kind: 'cargo', col: '#2a2a30' }, hat: { kind: 'bandana', col: '#c8202a' }, glasses: 'shades', goggles: false, coat: null, vest: null, led: null, paint: null, beard: null, acc: [], key: 'w3:thief' })) }, ['Ooh, an UNLOCKED yellow bike? Finders keepers! Ding ding, sucker!']] },
+    { say: ['brady', ['HEY! That\'s MY bike! ...Our bike! The COMMUNITY\'S bike! Which I am CURRENTLY USING!']] },
+    { do: g2 => { p.locked = false; p.teleport(bx, 0, bz, -Math.PI / 2 - 0.6); g2.camYaw = -Math.PI / 2 - 0.6; g2.snapCam = true; BurnsSave.flag(3, 'intro', true); S.introDone = true; S.thiefRun = { lead: 0, i: 0, stop: 0, sp: 0 }; } },
+    { banner: ['BIKE THIEF!', 'Chase him down: tackle or spin him off your bike!', { col: '#ff4a4a' }] }
   ], null);
 };
 

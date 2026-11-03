@@ -39,8 +39,8 @@ const TileArt = {
     for (let v = 0; v < 2; v++) for (let m = 0; m < 16; m++) A.ground[v * 16 + m] = this.tile(S, ctx => paintGround(ctx, th, m, v));
     for (let m = 0; m < 2; m++) A.ice[m] = this.tile(S, ctx => paintIce(ctx, m, th.iceStyle));
     A.brick = this.tile(S, ctx => paintBrick(ctx, th.brick));
-    for (let f = 0; f < 4; f++) A.qblock[f] = this.tile(S, ctx => paintQBlock(ctx, th, f));
-    A.used = this.tile(S, ctx => paintUsed(ctx));
+    for (let f = 0; f < 4; f++) A.qblock[f] = this.tile(S, ctx => (th.qblockArt || paintQBlock)(ctx, th, f));
+    A.used = this.tile(S, ctx => (th.usedArt || paintUsed)(ctx, th));
     A.hard = this.tile(S, ctx => paintHard(ctx, th.hard));
     ['L', 'M', 'R', 'S'].forEach(p => A.semi[p] = this.tile(S, ctx => paintSemi(ctx, th.semi, p)));
     A.spikes = this.tile(S, ctx => paintSpikes(ctx, false, th.spikes));
@@ -77,7 +77,10 @@ function paintGround(ctx, th, mask, variant) {
   const g = ctx.createLinearGradient(0, 0, 0, TS);
   g.addColorStop(0, G.dirt); g.addColorStop(1, mix(G.dirt, G.dirt2, 0.55));
   ctx.fillStyle = g; ctx.fillRect(-1, -1, TS + 2, TS + 2);
-  if (st === 'metal') {
+  // a theme can paint its own ground body (G.paint) and cap (G.paintCap)
+  if (typeof G.paint === 'function') {
+    G.paint(ctx, rng, { top, left, right, bottom, variant });
+  } else if (st === 'metal') {
     ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1;
     ctx.strokeRect(0.5, 0.5, TS - 1, TS - 1);
     ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(1, 1, TS - 2, 2);
@@ -172,6 +175,7 @@ function paintGround(ctx, th, mask, variant) {
 function paintCap(ctx, th, st, left, right, rng) {
   const G = th.ground;
   const x0 = left ? 1 : -0.5, x1 = right ? TS - 1 : TS + 0.5;
+  if (typeof G.paintCap === 'function') { G.paintCap(ctx, x0, x1, rng, left, right); return; }
   if (st === 'grass' || st === 'coral') {
     const capH = 9;
     ctx.fillStyle = G.cap;
@@ -315,6 +319,7 @@ function paintIce(ctx, topOpen, style) {
 }
 
 function paintBrick(ctx, B) {
+  if (typeof B.paint === 'function') { B.paint(ctx); return; }
   const st = B.style;
   ctx.fillStyle = B.mortar; ctx.fillRect(0, 0, TS, TS);
   const brickFace = (x, y, w, h, c) => {
@@ -419,6 +424,7 @@ function paintUsed(ctx) {
 }
 
 function paintHard(ctx, H) {
+  if (typeof H.paint === 'function') { H.paint(ctx); return; }
   ctx.fillStyle = H.c2; ctx.fillRect(0, 0, TS, TS);
   // bevelled pyramid block
   ctx.fillStyle = shade(H.c1, 0.25); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(TS, 0); ctx.lineTo(TS - 6, 6); ctx.lineTo(6, 6); ctx.closePath(); ctx.fill();
@@ -435,6 +441,7 @@ function paintSemi(ctx, P, part) {
   const st = P.style;
   const l = part === 'L' || part === 'S', r = part === 'R' || part === 'S';
   const x0 = l ? 2 : 0, x1 = r ? TS - 2 : TS;
+  if (typeof P.paint === 'function') { P.paint(ctx, part, x0, x1); return; }
   if (st === 'cloud') {
     ctx.fillStyle = P.c2;
     ctx.beginPath(); ctx.ellipse(16, 9, 18, 7, 0, 0, TAU); ctx.fill();

@@ -1,10 +1,11 @@
-# BRADY-O BURNS: World Authoring Guide
+# BRADY GOES TO BURNING MAN: World Authoring Guide
 
-This guide is for agents building Worlds 2–15 of **Brady-O Burns**, the 3D third-person adventure inside Brady-O. The engine and World 1 are already done. You add a world by creating one file, `src/4N_burns_worldN.js`, that calls `BurnsWorlds.register({...})`. You shouldn't need to touch the engine. If you hit a real gap, add the smallest possible hook to the engine and say so in your report.
+This guide is for agents building the worlds of **Brady Goes to Burning Man**, a 3D adventure that ships as its own app. The engine and World 1 are already done. You add a world by creating one file, `src/42_burns_worldN.js`, that calls `BurnsWorlds.register({...})`. You shouldn't need to touch the engine. If you hit a real gap, add the smallest possible hook to the engine and say so in your report.
 
-- Engine: `src/40_burns_a_core.js` … `src/40_burns_k_hub.js`
+- Engine: `src/40_burns_a_core.js` … `src/40_burns_l_app.js`
 - Worked example: `src/42_burns_world1.js` (World 1, "The Line")
-- Entry point: `new BurnsHubScene()` (the title menu's BRADY-O BURNS card)
+- App entry point: `Game.setScene(new BurnsAppStart())`, the cinematic title screen (continue / new game / settings / camera), which flows into the hub (`new BurnsHubScene()`).
+- **Branding.** Nothing the player sees says "Brady-O": no titles, menus, dialogue, credits or signs. The hero is just **Brady**.
 
 ---
 
@@ -247,7 +248,7 @@ All props are rounded and smooth-shaded: real tyres, soft-edged bodies and gloss
 | `saucer` | flying-saucer platform for the final Man fight, walkable | `r, h` |
 | `junktower` | crooked **climbable** tower of stacked junk cars with lashed ladders and planks (the bad idea guy's landmark), ~10.5 m for 8 levels | `levels, seed`. Returns `top` and `topPos` (prop-local `[x,y,z]` of the top car). |
 | `trunk` | sticker-covered old wooden trunk (crusty's camp) | none |
-| `redlightRV` | the **Red Light District** RV: hot-pink, hearts and feather trim, marquee bulbs, a RED LIGHT DISTRICT sign, red lanterns, walkable roof (3.3 m). Door on its right (+X) side | `lit` (marquee and lanterns on, default true), `len`. Returns `cols, lights, top, door` (prop-local `[x,z]` just outside the door). |
+| `redlightRV` | the **Red Light District** RV: hot-pink, hearts and feather trim, marquee bulbs, a RED LIGHT DISTRICT sign, red lanterns, walkable roof (3.3 m). Door on its right (−X) side | `lit` (marquee and lanterns on, default true), `len`. Returns `cols, lights, top, door` (prop-local `[x,z]` just outside the door). |
 | `questBoard` | a cork quest board on posts with pinned notes (§7.1). Use `api.questBoard` for a working one | `col, title` |
 
 **`api.redLightCamp(x, z, yaw, opts)`** places the Red Light District RV and its crew in one call (W1 uses it in the line; W2 uses it for Brady's gear stash). `opts`: `crew` (`true` = all five, a number, or an array of crew ids), `lit`, `behavior` (crew behaviour, default by variant), `lines`/`chat` overrides per id (`{rlCandi: ['…']}`), `talk` per id, `rv: false` (crew only). Returns `{ rv, crew: [actor defs] }`. Crew ids: `rlVelvet` (MAMA VELVET, `madame`), `rlCandi` (CANDI, `bikini`), `rlRoxie` (ROXIE, `corset`), `rlPeachy` (PEACHY, `fan`), `rlBlush` (BLUSH, `showgirl`).
@@ -559,7 +560,7 @@ Any world can have side quests; the home world (17) is built around them. A side
 - **Tokens or not.** Side quests default to `token: false`: they're saved as done (`Save.data.burns.missions`) and pay out their `reward`. `token: true` makes one a Burn Token as well (it counts toward the world's token total). Use tokens for the best 5–7 quests.
 - **Starting.** `start: 'board'` quests have an ACCEPT button on the board; accepting starts the quest and returns to play. Quests with a `giver` show "Talk to NAME" on the board instead (and `'!'` over the giver as usual). `start: 'auto'` and `'trigger'` work as for any mission.
 - **The quest board** lists the world's side quests in three tabs: AVAILABLE, ACTIVE and DONE, with each quest's description, `hint` (where to go) and reward. Locked quests (unmet `requires`) show as "???". ACTIVE quests have a TRACK button that puts them in the HUD tracker.
-  - Open it from the pause menu (**SIDE QUESTS**, shown when the world has any), from an in-world board (`api.questBoard({x, z, yaw, title})`), with the **J** key, or from code with `g.openBoard()`.
+  - Open it from the pause menu (**SIDE QUESTS**, shown when the world has any), from an in-world board (`api.questBoard({x, z, yaw, title})`), with the **L** key, or from code with `g.openBoard()`.
   - Title: `def.boardTitle` (default `'QUEST BOARD'`).
 - **Rewards** are any goods (§8.3), granted with a REWARD banner when the quest completes. `reward.text` names a one-off prize.
 - Main missions stay in the MISSIONS list; side quests don't clutter it.
@@ -677,8 +678,27 @@ A palette is plain data. Override any field: `sky: Object.assign({}, BURNS_PALET
 | `clouds`, `cloudCol`, `cloudScale`, `cloudSpeed` | Soft drifting clouds: amount 0..1 (0 = clear), colour, size (0.55; bigger = smaller clouds) and drift speed. Custom palettes that don't set `cloudCol` get clouds tinted from their own `hor`. |
 | `mid`, `midK` | Optional third sky-gradient colour halfway up, and its strength 0..1 (0 = plain two-colour gradient). |
 
+| `exposure` | Overall brightness after tone mapping (1 default). |
+| `bloom` | Bloom multiplier (1 default; night scenes bloom more on their own). |
+| `rays` | God-ray strength toward a low sun (1 default; 0 off). Strongest at dawn and sunset. |
+| `heat` | Heat shimmer over the far playa (default: automatic on hot, sunny days; 0 off). |
+| `dust` | Drifting dust haze near the ground (0.5 default). |
+| `scatter`, `belt`, `milkyway`, `sunHDR` | Atmospheric scattering glow, the pink Belt of Venus opposite a low sun, Milky Way brightness at night, and the brightness of the sun disc (all 1 except `sunHDR` 7). |
+| `grade` | `[saturation, contrast, vignette]`, default `[1.08, 0.12, 0.32]`. |
+
 - For dust storms and similar events, use `def.env(g, env)` per frame (W1's ticket gust adds `env.fogD`).
-- **Light at night.** Use `api.light` pools under every camp, fire and lamp, `api.glow` for the sources themselves, emissive colours on neon geometry (`m.color(c, 1)`), and dynamic point lights from fires, which are automatic (up to 4 near Brady). Brief flashes can use `g.pointLight(x, y, z, radius, [r,g,b], intensity)` each frame.
+- **Light at night.** Use `api.light` pools under every camp, fire and lamp, `api.glow` for the sources themselves, emissive colours on neon geometry (`m.color(c, 1)`, which **blooms** at night), and dynamic point lights.
+  - The engine picks the **16 most relevant point lights** every frame (12 on phones, 4 on the WebGL1 fallback): fires, your `g.pointLight(x, y, z, radius, [r,g,b], intensity)` calls (they win ties), Brady's power-up aura, art-car and vehicle lights, and the brighter `api.glow` lamps near the camera.
+
+### 9.1 The rendering pipeline (WebGL2)
+
+Everything is lit in linear HDR, then tone mapped. You get all of this for free; this section explains what you'll see and the few knobs.
+- **Sun shadows.** A real-time shadow map follows the camera (about 55 m on phones, 70–80 m on desktops), with soft edges. Static geometry, characters, vehicles, movers and bosses cast and receive. Glowing surfaces don't receive. At night the moon casts faint shadows. Blob shadows under characters remain as soft contact shadows. Custom geometry drawn in `def.drawSkinned` doesn't cast; add `def.drawShadows(g, R)` and issue the same `R.skin(...)` calls there to make it cast.
+- **Materials (PBR-lite).** The gloss bits (`m.shine(0..3)`) are roughness: 0 matte (fabric, wood, skin, canvas), 1 satin, 2 paint/plastic, 3 glass and chrome (real sky reflections). Sun specular is GGX, with fresnel on everything and rim light on characters. Atlas patterns (wood, denim, canvas, fur, sequins…) are **bump-mapped** automatically from their own shading, and the playa's cracked mud has real depth.
+- **Ambient occlusion.** Every placed prop, mover and character gets **baked AO** when it's built: dark corners, the gap under a couch or a shade, armpits, under the chin, clothing edges, and contact with the ground. It's free at runtime. Turn it off for one object with `{ noAO: true }` in its `api.*` options. High tiers add **SSAO** on top.
+- **Post.** Dual-filter bloom (LEDs, neon, fire, the sun), god rays at dawn and dusk, heat shimmer on hot days, heat haze above fires, depth of field in cutscenes, ACES tone mapping, gentle grading and a vignette. MSAA keeps edges clean.
+- **Sky.** Palette gradient plus atmospheric scattering, an HDR sun with a halo, the Belt of Venus, clouds with silver linings at golden hour, a moon with phases, dense stars and the **Milky Way**.
+- **Quality tiers.** `ultra`, `high` (desktop default), `medium` (phone default) and `low`, picked from the player's **GRAPHICS** setting (`auto` by default). Dynamic resolution still drops the render scale when frames run long. The WebGL1 fallback keeps the classic look without shadows or post.
 
 ---
 
@@ -716,7 +736,21 @@ Available in hooks, behaviours, triggers and talk handlers.
 - `g.giveItem(id)`, `g.hasItem(id)`, `g.flag(k, v)`, `g.awardToken(missionId)`.
 - Backpack and goods (§8.3): `g.pack.add/take/count/has/use/list`, `g.grant(goods)`, `g.canPay(goods)`, `g.pay(goods)`.
 - Menus: `g.openPack()` (backpack), `g.openBoard()` (quest board, §7.1), `g.openTrade(actor, trades)` (trade window). They pause the game while open.
-- `g.dayCard()` shows the day-of-week card now (§3.1).
+- `g.dayCard(o)` shows the day-of-week card now (§3.1); `o` can override `{day, name, sub}`.
+- **2D overlay helpers (app-safe).** The app ships **without the 2D game**, so don't use its globals (`rr`, `UI`, `TitleScene`, `StoryScene`, `drawBrady`, `drawChinka`…) in new code. Use the engine's drop-in equivalents: `burnsRR(ctx, x, y, w, h, r)` (rounded-rect path), `BurnsUIKit.drawButtons/hitButtons/panel/title` (same button objects as before), `BurnsUI.text/fitSize/textLines/icon`, `BurnsStoryScene({cards: [{day, title, line, pal}], then})` for story interludes, and `burnsToTitle()` to leave to the title screen. The shared core (`clamp`, `lerp`, `Save`, `Sound`, `Input`, `FONT_*`…) is fine.
+
+**Camera modes.** The player picks one with the **VIEW** button, the **V** key, or in settings, and it's remembered:
+- `normal`: classic third person.
+- `close`: over Brady's right shoulder.
+- `first`: through Brady's eyes, showing his arms (tattoos and all) and whatever he's holding. Movement, jumping, talking and interacting all work the same.
+- `far`: zoomed out, Brady small in a big landscape.
+
+Read it with `g.camMode`, set it with `g.setCamMode(mode)`, and check `g.firstPerson()`. Cutscenes always use their own cameras. If a set piece needs a specific view (a tight corridor, say), switch for that moment and restore `g.camMode` after.
+
+**Held items.** `g.player.hold('zipties')` puts a mission item in Brady's right hand (seen in third person and in first person); `g.player.hold(null)` empties it. A mission with `hold: 'ticket'` holds the item while it's active and drops it when it completes or fails.
+- Held props: `ticket, zipties, glowstick, icebag, idcard, parcel, wrench, map, water, phone, camera, flashlight, bell, coffee, guide`, or any prop from §6.5.
+- Your own: `BurnsRig.defineProp('w17Spoon', (m, A) => {…})`. Unknown names show a generic tag.
+- On the bike, first person shows the handlebars and both hands on the grips.
 - `g.interactables = [{x, z, y, r, label, when(g), fn(g, it)}]`: extra ACTION prompts such as `OPEN`, `RING` or `FUEL`.
 - `g.cutscene(steps, done)` (§11). `g.finishWorld(next)` ends the world (§12).
 - Bosses: `g.addBoss(b)` registers a boss-like object (update, draw and colliders every step). `g.boss = b` puts it on the HUD health bar (needs `name, hp, maxHp, active, defeated`).
@@ -739,8 +773,30 @@ Available in hooks, behaviours, triggers and talk handlers.
 | `{ banner: [title, sub, opts] }`, `{ music }`, `{ sfx }` | Titles and audio. |
 | `{ fade: 'out'|'in', dur }`, `{ letterbox: false }` | Fades and letterbox control. |
 | `{ parallel: [steps…] }` | Run steps together. |
+| `{ dolly: {from, to, dur, ease} }`, `{ crane: … }` | Same as a `cam` tween; use the names for readability. |
+| `{ orbit: {x, y, z \| actor, r \| r0+r1, h \| h0+h1, a0, a1, ty, dur, fov, ease, hold} }` | Circle a point or an actor (`'brady'` or an id), optionally pushing in (`r0`→`r1`) and rising (`h0`→`h1`). Angles are yaw in radians. |
+| `{ track: {actor, dist, h, side, ty, fov, dur, k} }` | Follow an actor from behind (`side` swings around them), smoothed. Good for walks and chases. |
+| `{ slowmo: 0.3, dur }` | Slow the world (not the camera) for `dur` seconds, or until `{ slowmo: 1 }`. |
+| `{ dof: {focus, aperture} \| false \| 'auto' }` | Depth of field. Cutscenes focus on the camera's target automatically; set a focus distance in metres, or turn it off. |
+| `{ title: true \| {day, name, sub}, hold, wait: false }` | The title card: the day of the week, then "World N · Name". Waits `hold` seconds (3.4) unless `wait: false`. |
+| `{ swell: 'track' }` | Switch music and lift it for a few seconds: the big story moments. |
+| `{ shake: 0.6 }`, `{ flash: '#ffffff' }` | Camera shake and a screen flash. |
 
 During cutscenes Brady is locked. Use `g.player.animOverride = 'sit'` to pose him, and set it back to `null` when done.
+
+**Example: a reveal.**
+```js
+g.cutscene([
+  { title: true, wait: false },
+  { crane: { from: { x: 0, y: 2, z: 20, tx: 0, ty: 2, tz: 0 }, to: { x: 0, y: 14, z: 30, tx: 0, ty: 6, tz: 0 }, dur: 4 } },
+  { swell: 'burns_w3' },
+  { orbit: { actor: 'jefr', r0: 6, r1: 3.5, h0: 2.5, h1: 1.6, a0: 0, a1: 1.2, dur: 3.5 } },
+  { say: [g.actor('jefr'), ['Welcome home, kid.']] },
+  { slowmo: 0.4, dur: 1.2 }, { flash: '#ffd84a' }, { shake: 0.4 }
+]);
+```
+
+**Story transitions (automatic).** When a world calls `g.finishWorld()`, the engine plays a short victory orbit around Brady in slow motion with a music swell, then shows the results. After that, a **story card** carries the player to the next world: that world's sky at its time of day, its day of the week, its name and a one-line story beat, before it loads. Write your world's line as `def.story: 'Monday. Follow the bass to a bamboo dance floor.'` (defaults live in `BURNS_STORY_IN`). Skip the victory orbit with `def.noOutro: true` if your ending already has one. `finishWorld(next)` with a callback still takes over completely (the finale's ending).
 
 ---
 
@@ -809,7 +865,7 @@ World 10 should pass `next` to roll into the ending; `StoryScene` and `CreditsSc
 ```
 { v, unlocked:{1:true,…}, tokens:{'w:missionId':true}, photos:{'w:id':true}, items:{ticket,map,www,bike,costumes,artcar},
   costume:'none', costumesOwned, glow (lifetime), glowWorld:{w:best}, worldDone:{w:true}, missions:{'w:id':'done'},
-  flags:{'w:key':value}, seenIntro, lastWorld, checkpoint:{w:cpId}, settings:{camSens, invertY, autoCam},
+  flags:{'w:key':value}, seenIntro, lastWorld, checkpoint:{w:cpId}, settings:{camSens, invertY, autoCam, cam, gfx},
   pack:{itemId:count} }
 ```
 - `BurnsSave.get()` returns the data (and creates or migrates it).
@@ -852,11 +908,15 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
 - **Sprites.** Particles are capped at 2600; glow billboards are culled at 170 m. Emitters near the camera are cheap; don't emit every step from 50 places.
 - **Textures.** One atlas (2048×2048, with 32 face slots and 23 extra pattern slots), one sprite sheet, and per-world ground paint (≤2048²) and lightmap (≤1024²). Don't add per-world textures.
 - **Resolution.** The engine caps DPR at 2 and drops resolution automatically (down to 50%) when frames run slow. Never fight it.
+- **Shadows cost a second pass.** The shadow map redraws every static chunk near the camera, every vehicle group, and every character within about 42 m. Keep giant merged meshes out of the camera's way, and give background rows of props `m.lo` detail. On phones the `medium` tier uses a 1024² map and no SSAO. Test your heaviest view with `BurnsGL.configure('high')` and with `'medium'`.
+- **Point lights** are free to request (`g.pointLight`): the engine keeps only the most relevant 12–16.
 - **GPU memory.** Leaving a world frees its buffers (`BurnsScenes.releaseWorld`).
 
 ---
 
 ## 16. Testing your world
+
+- **Screenshots.** `window.__burnsHideHUD = true` hides the HUD and touch controls. `BurnsGL.configure('ultra'|'high'|'medium'|'low')` switches the graphics tier live; `BurnsGL.tier` reads it.
 
 1. Build privately: `BRADY_DIST=$SCRATCH/dist node tools/build.js`.
 2. Playwright (`require('playwright')`, `chromium.launch()`), viewports **874×402** and **402×874**, `deviceScaleFactor: 2, isMobile: true, hasTouch: true`. Headless WebGL renders in software (slow, so FPS there means nothing).

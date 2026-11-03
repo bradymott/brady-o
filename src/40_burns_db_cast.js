@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — the burner action-figure cast (figures 9–20) and the
+   BRADY GOES TO BURNING MAN — the burner action-figure cast (figures 9–20) and the
    cast-archetype profiles, built on the character-definition API in
    40_burns_da_round.js. Our own rounded designs; outfits and gear matched
    to the user's figures (no packaging art or text).
@@ -362,4 +362,18 @@ const BURNS_REDLIGHT = {
       if (opts && opts.prop !== undefined) s.prop = opts.prop;
       s.key = 'redlight:' + v + ':' + s.hair.col + ':' + s.hair.style;
     } };
+})();
+
+
+/* ---------- held mission items (g.player.hold(id) / mission hold: id): in the right hand, shown in first person ---------- */
+(() => {
+  const G = BURNS_GEAR, prop = (n, f) => { G.prop[n] = f; };
+  prop('ticket', (m, A) => { m.color('#ffd84a', 0.25).shine(2); m.push(); m.tf(0, 0.0, 0.07, 0, 0.15, 0.25); m.roundBox(0, 0.02, 0, 0.13, 0.065, 0.006, 0.006); m.color('#c83a2a'); m.roundBox(0, 0.02, 0.004, 0.11, 0.012, 0.002, 0.002); m.color('#1a1418'); for (let i = 0; i < 4; i++) m.box(-0.045 + i * 0.03, 0.04, 0.0035, 0.018, 0.006, 0.001); m.pop(); m.emissive(0); m.shine(0); });
+  prop('zipties', (m, A) => { m.color('#f4f4f0').shine(1); m.push(); m.tf(0, 0.0, 0.06, 0, 0, 0.3); for (let i = 0; i < (A.lo ? 3 : 7); i++) { const a = (i - 3) * 0.035; m.limb(Math.sin(a) * 0.04, -0.08, 0.0 + i * 0.002, Math.sin(a) * 0.2, 0.16, 0.01 * (i % 3), 0.004, 0.004, { seg: 4 }); } m.color('#2a2a30'); m.roundCyl(0, 0.0, 0, 0.03, 0.03, 0.008); m.pop(); m.shine(0); });
+  prop('glowstick', (m, A) => { m.color('#7aff5a', 1); m.limb(0, -0.07, 0.06, 0, 0.12, 0.06, 0.012, 0.012, { seg: 6 }); m.emissive(0); m.color('#e8e8e8'); m.ball(0, 0.13, 0.06, 0.012, { seg: 5, rings: 3 }); });
+  prop('icebag', (m, A) => { m.color('#d8f4ff', 0.12).shine(3); m.ellipsoid(0, -0.06, 0.06, 0.08, 0.1, 0.07, { seg: A.lo ? 7 : 11, rings: 7 }); m.color('#f4fbff'); for (let i = 0; i < (A.lo ? 0 : 5); i++) m.roundBox(-0.03 + (i % 3) * 0.03, -0.09 + Math.floor(i / 3) * 0.05, 0.1, 0.03, 0.03, 0.03, 0.006); m.color('#3a7aff'); m.roundCyl(0, 0.04, 0.06, 0.02, 0.02, 0.005); m.emissive(0); m.shine(0); });
+  prop('idcard', (m, A) => { m.color('#f4f0f8').shine(2); m.push(); m.tf(0, 0.0, 0.07, 0, 0.2, -0.2); m.roundBox(0, 0.02, 0, 0.09, 0.06, 0.004, 0.006); m.color('#ffb0d8'); m.roundBox(-0.022, 0.02, 0.003, 0.03, 0.04, 0.001, 0.003); m.color('#5a4a6a'); for (let i = 0; i < 3; i++) m.box(0.02, 0.032 - i * 0.012, 0.0028, 0.035, 0.005, 0.001); m.pop(); m.shine(0); });
+  prop('parcel', (m, A) => { m.color('#b8885a'); m.roundBox(0, 0.0, 0.08, 0.16, 0.12, 0.12, 0.01); m.color('#e8e0c8'); m.roundBox(0, 0.0, 0.08, 0.165, 0.02, 0.125, 0.004); m.roundBox(0, 0.0, 0.08, 0.02, 0.125, 0.125, 0.004); });
+  prop('wrench', (m, A) => { m.color('#b8bcc8').shine(3); m.limb(0, -0.08, 0.05, 0, 0.12, 0.05, 0.011, 0.011, { seg: 5 }); m.push(); m.tf(0, 0.14, 0.05); m.torus(0, 0, 0, 0.022, 0.009, { seg: 8, tseg: 4 }); m.pop(); m.shine(0); });
+  prop('heldTag', (m, A) => { m.color('#f4ead0'); m.push(); m.tf(0, 0.0, 0.07, 0, 0.1, 0.2); m.roundBox(0, 0.02, 0, 0.08, 0.1, 0.006, 0.006); m.color('#c84a3a'); m.ball(0, 0.06, 0.004, 0.008, { seg: 5, rings: 3 }); m.pop(); });
 })();

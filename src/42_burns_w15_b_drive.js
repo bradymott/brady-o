@@ -299,7 +299,7 @@ const BW15D = {
       const talking = T.talkT > 0;
       if (talking) T.talkT -= dt;
       T.mouthO.visible = show && talking && Math.floor(S.t * 9) % 2 === 0; T.mouthC.visible = show && !T.mouthO.visible; T.mouthO.scale = T.mouthC.scale = T.k;
-      if (show && tOn && d < 46 && !T.said && T.ahead(rv) && !g.cine) { T.said = true; const line = T.lines[Math.min(T.lines.length - 1, Math.floor(tv * T.lines.length))]; T.talkT = 2.8; S.bubbles.push({ x: T.x, y: T.top + 0.6, z: T.z, text: line, t: 3.2, sign: true }); burnsSfx('dialogue_blip', { vol: 0.5, pitch: 0.7 }); }
+      if (show && tOn && d < 46 && !T.said && T.ahead(rv) && !g.cine && !(S.chinka && S.chinka.bubbleText)) { T.said = true; const line = T.lines[Math.min(T.lines.length - 1, Math.floor(tv * T.lines.length))]; T.talkT = 2.8; S.bubbles.push({ x: T.x, y: T.top + 0.6, z: T.z, text: line, t: 3.2, sign: true }); burnsSfx('dialogue_blip', { vol: 0.5, pitch: 0.7 }); }
       if (T.said && d > 80) T.said = false;
     }
     for (const b of S.bubbles) b.t -= dt;

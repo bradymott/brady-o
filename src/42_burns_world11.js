@@ -160,6 +160,14 @@ BurnsWorlds.register({
 /* ---------------- build ---------------- */
 BW11.build = function (api, g) {
   const P = BW11.P, R = api.rng;
+  // every sign in a world shares one sign atlas, and W11 has a lot of them: rasterise them a little smaller
+  // (same size in the world, slightly softer text) so all of them fit. This api object belongs to this build only.
+  const sign0 = api.sign;
+  api.sign = (text, x, z, o) => {
+    o = Object.assign({}, o || {}); const st = o.style = Object.assign({}, o.style || {});
+    st.size = Math.max(22, Math.round((st.size || 44) * 0.72)); st.pad = Math.round((st.pad === undefined ? 24 : st.pad) * 0.72);
+    return sign0(text, x, z, o);
+  };
   BW11.state = { lasers: [], timers: [], showOfferings: false, usbFree: false, hornT: 2, fogT: 0, doorLock: 0 };
   BW11Dome.active = false; BW11Dome.o = null; BW11Dome.f = null;   // a bout from an earlier visit never carries over
   BW11.lasersOff = false;
@@ -480,7 +488,8 @@ BW11.cannonball = function (g, drop, pound) {
   const p = g.player, lou = g.actor('lou'), score = pound ? 10 : drop > 7 ? 8 : 7;
   g.fx.burst(p.x, p.y + 0.5, p.z, 'dot', pound ? 46 : 30, '#ffffff'); g.fx.smoke(p.x, p.y + 0.3, p.z, pound ? 14 : 9, '#f4fbff'); g.fx.ring(p.x, p.y + 0.3, p.z, pound ? 4.5 : 3.2, '#bfe8ff', 0.6);
   burnsSfx('splash', { vol: 0.8 }); burnsSfx('crowd_cheer', { vol: pound ? 0.8 : 0.5 }); g.shake(pound ? 0.35 : 0.2);
-  if (lou) { lou.say(score === 10 ? 'TEN! PERFECT CANNONBALL!' : score === 8 ? 'EIGHT! Huge splash!' : 'SEVEN! Tuck those knees!', 2.6); lou.ch.play('cheer'); }
+  BW11.state.lastCannonball = score;
+  if (lou) { lou.say(score === 10 ? 'TEN! PERFECT CANNONBALL!' : score === 8 ? 'EIGHT! Huge splash!' : 'SEVEN! Tuck those knees!', 2.6); lou.chatT = Math.max(lou.chatT || 0, 4); lou.ch.play('cheer'); }
   for (const a of g.actors) if (a.friendly && !a.removed && a !== lou && Math.hypot(a.x - p.x, a.z - p.z) < 16 && a.behName === 'dance') a.ch.play('cheer');
   g.toast(`CANNONBALL! ${score}/10`);
   if (!BurnsSave.flag(11, 'cannonball')) { BurnsSave.flag(11, 'cannonball', true); g.addGlow(15); p.givePower('water'); BW11.after(g, 1.2, g2 => g2.toast('LIFEGUARD LOU: +15 GLOW STICKS')); }
@@ -546,7 +555,7 @@ BW11.talkMycelium = function (g, a) {
 BW11.homecoming = function (g) {
   const S = BW11.state, P = BW11.P.rootFloor, names = ['moss', 'river', 'birch', 'jefr'];
   const lines = ['BRADY\'S HOME!', 'THERE HE IS!', 'TIPI BROTHER!', 'Welcome home, little brother!'];
-  names.forEach((id, i) => { const a = g.actor(id); if (!a) return; a.say(lines[i], 2.4); a.setBehavior('bw11Cheer'); });
+  names.forEach((id, i) => { const a = g.actor(id); if (!a) return; a.say(lines[i], 2.4); a.chatT = Math.max(a.chatT || 0, 4); a.setBehavior('bw11Cheer'); });
   g.fx.confetti(P.x, 3, P.z, 40); burnsSfx('crowd_cheer', { vol: 0.6 });
   g.toast('HOME CAMP: ROOT SOCIETY');
 };

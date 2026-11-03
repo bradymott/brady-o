@@ -15,6 +15,8 @@ const BW1213 = {
   HAND: '"Noteworthy", "Bradley Hand", "Segoe Print", "Marker Felt", "Comic Neue", "Comic Sans MS", cursive',
   /* ---------------- timers (game time, paused with the game) ---------------- */
   after(S, sec, fn) { (S.timers || (S.timers = [])).push({ t: sec, fn }); },
+  // run fn once the engine's day-of-the-week card (about 3.8 s at the start of a visit) has faded, so banners never overlap it
+  afterDayCard(g, S, fn, extra) { const left = g.dayCardT >= 0 ? Math.max(0, 3.9 - g.dayCardT) : 0; BW1213.after(S, left + (extra || 0.1), fn); },
   tick(S, dt) {
     if (!S.timers || !S.timers.length) return;
     for (const t of S.timers.slice()) { t.t -= dt; if (t.t <= 0 && !t.done) { t.done = true; try { t.fn(); } catch (e) { console.error(e); } } }

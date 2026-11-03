@@ -6,8 +6,8 @@
    (08a_chunks.js), an enemy mix and a theme. The world tables
    (names, kinds, specs) live in 26_worlddata.js.
    ============================================================ */
-const WORLDS = {};                                   // filled by 26_worlddata.js
-const WORLD_ORDER = [41, 42, 43, 44, 45, 46, 47, 48, 49, 50];
+const WORLDS = {};                                   // filled as the tour's countries register (28_tour_a_core.js)
+const WORLD_ORDER = [];                               // playable worlds in route order (Tour.rebuildOrder)
 const MAIN_WORLDS = [41, 42, 43, 44, 45, 46, 47, 48];
 // a level's secret exit opens a hidden path on the overworld map
 function secretFor(id) {
@@ -112,6 +112,8 @@ function levelDesign(w, i) {
 const ARCH_TYPE = { side: 'ow', auto: 'auto', cave: 'under', sky: 'sky', water: 'water', tower: 'tower', castle: 'castle', haunt: 'haunt', gift: 'gift', carrier: 'auto' };
 
 function generateLevel(w, i, attempt) {
+  // world-tour levels are built from their country's level scripts
+  if (typeof Tour !== 'undefined' && Tour.levelSpec(w, i)) return TourBuild.generate(w, i, attempt);
   const W = WORLDS[w];
   const id = levelId(w, i);
   const rng = mulberry32(hashStr('sbw:' + id + ':' + attempt));

@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — 2D overlay: HUD, touch controls, speech bubbles,
+   BRADY GOES TO BURNING MAN — 2D overlay: HUD, touch controls, speech bubbles,
    markers, banners, dialogue box, minimap, pause menu, results.
    Everything is drawn in CSS px on the main 2D canvas after the 3D frame.
    ============================================================ */
@@ -15,7 +15,7 @@ const BurnsUI = {
     ctx.restore();
   },
   wrap(ctx, text, maxW) { const words = String(text).split(' '), lines = []; let line = ''; for (const w of words) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; } if (line) lines.push(line); return lines; },
-  pill(ctx, x, y, w, h, fill, stroke) { ctx.fillStyle = fill; rr(ctx, x, y, w, h, h / 2); ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke(); } },
+  pill(ctx, x, y, w, h, fill, stroke) { ctx.fillStyle = fill; burnsRR(ctx, x, y, w, h, h / 2); ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke(); } },
   drop(ctx, x, y, s, fill, k) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s / 20, s / 20);
     const path = () => { ctx.beginPath(); ctx.moveTo(0, -10); ctx.bezierCurveTo(6, -2, 8, 2, 8, 5); ctx.arc(0, 5, 8, 0, Math.PI); ctx.bezierCurveTo(-8, 2, -6, -2, 0, -10); ctx.closePath(); };
@@ -54,12 +54,12 @@ const BurnsUI = {
     const W = Game.cssW, H = Game.cssH;
     ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
     ctx.fillStyle = '#100820'; ctx.fillRect(0, 0, W, H);
-    this.text(ctx, 'BRADY-O BURNS', W / 2, H * 0.3, 26, '#ff9a4a', { glow: '#ff4fd8' });
+    this.text(ctx, 'BRADY GOES TO BURNING MAN', W / 2, H * 0.3, this.fitSize(ctx, 'BRADY GOES TO BURNING MAN', 26, W - 30), '#ff9a4a', { glow: '#ff4fd8' });
     ctx.save(); ctx.font = `14px ${FONT_UI}`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
     const msg = g.noglMsg || 'This 3D adventure needs WebGL, and this browser has it turned off (or the GPU is busy). Try reopening Safari, or turn off Low Power Mode.';
     this.wrap(ctx, msg, Math.min(W - 40, 520)).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.42 + i * 20));
     ctx.restore();
-    if (g.noglBtns) UI.drawButtons(ctx, g.noglBtns);
+    if (g.noglBtns) BurnsUIKit.drawButtons(ctx, g.noglBtns);
   },
   drawMissing(ctx, g) {
     if (!g.noglBtns) g.buildNoGL();
@@ -79,7 +79,7 @@ const BurnsUI = {
     if (p.hydration <= 2 && !p.dead) { const a = (0.22 + Math.sin(g.time * 5) * 0.1) * (p.hydration <= 1 ? 1.4 : 1); const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.9); v.addColorStop(0, 'rgba(255,40,40,0)'); v.addColorStop(1, `rgba(200,20,20,${a})`); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); }
     this.drawWorldLabels(ctx, g);
     const cine = !!g.cine;
-    if (!cine && g.state === 'play') this.drawHUD(ctx, g, S);
+    if (!cine && g.state === 'play' && !window.__burnsHideHUD) this.drawHUD(ctx, g, S);
     this.drawBossBar(ctx, g, S);
     // letterbox
     g.lbK = BurnsM.damp(g.lbK || 0, cine && g.cine.letter ? 1 : 0, 6, fdt);
@@ -90,7 +90,7 @@ const BurnsUI = {
     // warning
     if (g.warnT > 0 && g.warnText) { const a = 0.6 + 0.4 * Math.sin(g.time * 18); this.text(ctx, g.warnText, W / 2, H * 0.3, Math.min(40, W / 14), `rgba(255,${80 + 100 * a | 0},80,${a})`, { glow: '#ff2a2a' }); this.text(ctx, g.warnT.toFixed(1), W / 2, H * 0.3 + 34, 18, '#ffffff'); }
     if (g.dialog.open) this.drawDialog(ctx, g);
-    if (!cine && g.state === 'play' && !g.dialog.open && !g.paused) this.drawControls(ctx, g);
+    if (!cine && g.state === 'play' && !g.dialog.open && !g.paused && !window.__burnsHideHUD) this.drawControls(ctx, g);
     // flash + fade
     if (g.flashA > 0) { ctx.fillStyle = rgba(g.flashC || '#ffffff', Math.min(1, g.flashA)); ctx.fillRect(0, 0, W, H); g.flashA = Math.max(0, g.flashA - fdt * 1.6); }
     g.fade = approach(g.fade, g.fadeTarget, fdt * g.fadeRate);
@@ -110,7 +110,7 @@ const BurnsUI = {
       const lines = this.wrap(ctx, text, 190 * sc), lh = 16 * sc;
       const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 18 * sc, h = lines.length * lh + 12 * sc;
       let bx = clamp(o.x - w / 2, 6, W - w - 6), by = clamp(o.y - h - 12 * sc, 6, H - h - 6);
-      ctx.fillStyle = col || 'rgba(255,255,255,0.95)'; rr(ctx, bx, by, w, h, 10 * sc); ctx.fill();
+      ctx.fillStyle = col || 'rgba(255,255,255,0.95)'; burnsRR(ctx, bx, by, w, h, 10 * sc); ctx.fill();
       ctx.beginPath(); ctx.moveTo(clamp(o.x, bx + 10, bx + w - 10) - 6 * sc, by + h - 1); ctx.lineTo(clamp(o.x, bx + 10, bx + w - 10) + 6 * sc, by + h - 1); ctx.lineTo(o.x, Math.min(by + h + 10 * sc, o.y - 2)); ctx.closePath(); ctx.fill();
       ctx.fillStyle = small ? '#ffffff' : '#1a1024'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
       lines.forEach((l, i) => ctx.fillText(l, bx + w / 2, by + 6 * sc + i * lh));
@@ -189,10 +189,16 @@ const BurnsUI = {
     // mission tracker
     const tr = g.missions.tracker();
     if (tr) {
-      ctx.save(); ctx.font = `600 12px ${FONT_UI}`; const tw = Math.min(W * 0.5, ctx.measureText(tr.text).width + 34); ctx.restore();
-      const tx = W / 2 - tw / 2, ty = S.t + 6;
+      ctx.save(); ctx.font = `600 12px ${FONT_UI}`;
+      let tw = Math.min(W * 0.5, ctx.measureText(tr.text).width + 34), tx = W / 2 - tw / 2;
+      const left = S.l + 6 + 10 + p.maxHydration * ds * 0.95 + 10, right = W - S.r - 58;
+      if (tx < left) { tx = left; tw = Math.min(tw, right - left); }
+      let label = '▶ ' + tr.text;
+      while (label.length > 6 && ctx.measureText(label).width > tw - 22) label = label.slice(0, -2) + '…';
+      ctx.restore();
+      const ty = S.t + 6;
       this.pill(ctx, tx, ty, tw, 26, 'rgba(10,6,24,0.6)', 'rgba(56,242,255,0.5)');
-      this.text(ctx, '▶ ' + tr.text, W / 2, ty + 13.5, 12, '#d8fbff', { ui: true, stroke: false });
+      this.text(ctx, label, tx + tw / 2, ty + 13.5, 12, '#d8fbff', { ui: true, stroke: false });
     }
     // toasts (below the tracker / boss bar stack)
     let ty2 = g.topStack || (S.t + 40);
@@ -237,9 +243,9 @@ const BurnsUI = {
     const b = g.boss; if (!b || !b.active || b.defeated) return;
     const W = Game.cssW, bw = Math.min(380, W * 0.5), x = W / 2 - bw / 2, y = S.t + (g.missions.tracker() ? 34 : 6);
     this.text(ctx, b.name, W / 2, y + 8, 14, '#ffd0f4', { glow: '#ff4fd8' });
-    ctx.fillStyle = 'rgba(10,6,24,0.7)'; rr(ctx, x, y + 18, bw, 12, 6); ctx.fill();
+    ctx.fillStyle = 'rgba(10,6,24,0.7)'; burnsRR(ctx, x, y + 18, bw, 12, 6); ctx.fill();
     const k = b.hp / b.maxHp; const gr = ctx.createLinearGradient(x, 0, x + bw, 0); gr.addColorStop(0, '#ff4fd8'); gr.addColorStop(1, '#ffd84a');
-    ctx.fillStyle = gr; rr(ctx, x + 2, y + 20, (bw - 4) * k, 8, 4); ctx.fill();
+    ctx.fillStyle = gr; burnsRR(ctx, x + 2, y + 20, (bw - 4) * k, 8, 4); ctx.fill();
     ctx.fillStyle = 'rgba(10,6,24,0.8)'; for (let i = 1; i < b.maxHp; i++) ctx.fillRect(x + bw * i / b.maxHp - 1, y + 18, 2, 12);
     if (b.st === 'stunned') this.text(ctx, 'HE\'S DOWN! HIT THE GLOWING HEAD!', W / 2, y + 42, 12, '#ffe24a');
   },
@@ -257,7 +263,7 @@ const BurnsUI = {
   // the day-of-the-week card at the start of a visit ("TUESDAY NIGHT · World 6 · The Orgy Dome")
   drawDayCard(ctx, g, fdt) {
     if (!(g.dayCardT >= 0)) return;
-    const day = BurnsWorlds.day(g.worldId); if (!day) { g.dayCardT = -1; return; }
+    const O = g.dayCardO || {}, day = O.day || BurnsWorlds.day(g.worldId); if (!day) { g.dayCardT = -1; return; }
     if (g.fade > 0.6) return;   // wait for the fade-in
     if (g.dayCardT === 0 && g.banners.length && g.banners[0].big) return;   // never on top of a big banner
     g.dayCardT += fdt; const t = g.dayCardT, D = 3.8;
@@ -270,7 +276,7 @@ const BurnsUI = {
     ctx.fillStyle = gr; ctx.fillRect(0, y - bh / 2, W, bh);
     const s = 1 + (1 - easeOut(clamp(t / 0.55, 0, 1))) * 0.22, size = this.fitSize(ctx, day.toUpperCase(), Math.min(36, W / 13), W - 40) * s;
     this.text(ctx, day.toUpperCase(), W / 2, y - 9, size, '#ffd84a', { glow: '#ff9a2a' });
-    const meta = BurnsWorlds.meta(g.worldId), sub = `${BurnsWorlds.label(g.worldId)} \u00b7 ${meta.name}`;
+    const meta = BurnsWorlds.meta(g.worldId), sub = O.sub || `${BurnsWorlds.label(g.worldId)} \u00b7 ${O.name || meta.name}`;
     this.text(ctx, sub, W / 2, y + 22, this.fitSize(ctx, sub, 13, W - 40, true), '#ffffff', { ui: true });
     ctx.restore();
   },
@@ -332,6 +338,7 @@ const BurnsUI = {
     const H = this.hudBtnsCache = g.hudBtns;
     if (H) {
       btn(H.cam, Input.hudHeld.cam, 'CAM', '#3a6aff');
+      if (H.view && Input.hud && Input.hud.indexOf(H.view) >= 0) btn(H.view, Input.hudHeld.view, 'VIEW', '#22a890', ({ normal: '3RD', close: 'CLOSE', first: '1ST', far: 'FAR' })[g.camMode || 'normal']);
       if (Input.hud && Input.hud.indexOf(H.bike) >= 0) btn(H.bike, Input.hudHeld.bike, veh ? 'EXIT' : 'BIKE', '#ffc21a');
     }
     ctx.restore();
@@ -350,11 +357,11 @@ const BurnsUI = {
     const r = this.dialogRect(g), P = r.portrait;
     ctx.save();
     // panel with a hole where the 3D portrait shows through
-    ctx.beginPath(); rr(ctx, r.x, r.y, r.w, r.h, 16); ctx.rect(P.x + P.w, P.y, -P.w, P.h);
+    ctx.beginPath(); burnsRR(ctx, r.x, r.y, r.w, r.h, 16); ctx.rect(P.x + P.w, P.y, -P.w, P.h);
     const gr = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); gr.addColorStop(0, 'rgba(36,20,60,0.95)'); gr.addColorStop(1, 'rgba(16,8,30,0.95)');
     ctx.fillStyle = gr; ctx.fill('evenodd');
-    ctx.strokeStyle = 'rgba(255,79,216,0.7)'; ctx.lineWidth = 2; rr(ctx, r.x, r.y, r.w, r.h, 16); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; rr(ctx, P.x, P.y, P.w, P.h, 8); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,79,216,0.7)'; ctx.lineWidth = 2; burnsRR(ctx, r.x, r.y, r.w, r.h, 16); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; burnsRR(ctx, P.x, P.y, P.w, P.h, 8); ctx.stroke();
     // name tag
     const name = c.name || '';
     if (name) { ctx.font = `13px ${FONT_DISPLAY}`; const nw = ctx.measureText(name).width + 24; this.pill(ctx, P.x + P.w + 10, r.y - 13, nw, 26, '#ff4fd8'); this.text(ctx, name, P.x + P.w + 10 + nw / 2, r.y, 13, '#ffffff', { stroke: false }); }
@@ -377,7 +384,8 @@ const BurnsUI = {
     if (g.pauseTab === 'missions') {
       list.push({ x: Math.max(14, insets.l + 8), y: Math.max(12, insets.t + 6), w: 92, h: 38, label: '◀ BACK', fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
     } else if (g.pauseTab === 'settings') {
-      const row = (label, val, fn, i) => ({ x, y: H * 0.2 + i * 46, w: bw, h: 38, label: `${label}: ${val}`, size: 12, fn: () => { fn(); BurnsSave.save(); Save.save(); g.buildPause(); } });
+      const two = H < 620, cw2 = two ? Math.min(250, (W - 60) / 2) : bw, x0 = two ? (W - cw2 * 2 - 12) / 2 : x, y0 = Math.max(insets.t + 62, H * 0.2);
+      const row = (label, val, fn, i) => ({ x: two ? x0 + (i % 2) * (cw2 + 12) : x0, y: y0 + (two ? Math.floor(i / 2) : i) * 46, w: cw2, h: 38, label: `${label}: ${val}`, size: 12, fn: () => { fn(); BurnsSave.save(); Save.save(); g.buildPause(); } });
       const pct = v => Math.round(v * 100) + '%', cyc = (v, a) => a[(a.indexOf(v) + 1) % a.length];
       list.push(row('MUSIC', pct(st.music), () => { st.music = cyc(Math.round(st.music * 4) / 4, [0, 0.25, 0.5, 0.75, 1]); Sound.setMusicVolume(st.music); }, 0));
       list.push(row('SOUND FX', pct(st.sfx), () => { st.sfx = cyc(Math.round(st.sfx * 4) / 4, [0, 0.25, 0.5, 0.75, 1]); Sound.setSfxVolume(st.sfx); }, 1));
@@ -385,7 +393,10 @@ const BurnsUI = {
       list.push(row('INVERT CAMERA Y', bs.invertY ? 'ON' : 'OFF', () => { bs.invertY = !bs.invertY; }, 3));
       list.push(row('AUTO CAMERA', bs.autoCam !== false ? 'ON' : 'OFF', () => { bs.autoCam = bs.autoCam === false; }, 4));
       list.push(row('SCREEN SHAKE', st.shake !== false ? 'ON' : 'OFF', () => { st.shake = st.shake === false; }, 5));
-      list.push({ x, y: H * 0.2 + 6 * 46 + 6, w: bw, h: 40, label: '◀ BACK', primary: true, fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
+      list.push(row('CAMERA', BURNS_CAM_LABELS[g.camMode || 'normal'], () => { const i = BURNS_CAM_MODES.indexOf(g.camMode || 'normal'); g.setCamMode(BURNS_CAM_MODES[(i + 1) % BURNS_CAM_MODES.length], true); }, 6));
+      list.push(row('GRAPHICS', String(bs.gfx || 'auto').toUpperCase() + (BurnsGL.gl2 ? '' : ' (BASIC)'), () => { const N = BURNS_GFX.names; bs.gfx = N[(N.indexOf(bs.gfx || 'auto') + 1) % N.length]; BurnsGL.configure(bs.gfx); }, 7));
+      const rows = two ? 4 : 8;
+      list.push({ x: W / 2 - bw / 2, y: y0 + rows * 46 + 6, w: bw, h: 40, label: '◀ BACK', primary: true, fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
     } else {
       const items = [['RESUME', () => g.closePause(), true]];
       items.push([BurnsSave.hasItem('www') ? 'WHAT WHERE WHEN' : 'MISSIONS', () => { g.pauseTab = 'missions'; g.buildPause(); burnsSfx('map_open'); }]);
@@ -405,26 +416,26 @@ const BurnsUI = {
   },
   updatePause(g, dt) {
     if (Input.pausePressed) { if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') g.menuBack(); else if (g.pauseTab !== 'main') { g.pauseTab = 'main'; g.buildPause(); } else g.closePause(); return; }
-    const hit = UI.hitButtons(g.pauseUI);
+    const hit = BurnsUIKit.hitButtons(g.pauseUI);
     if (hit) { burnsSfx('select'); hit.fn(); return; }
     if (g.pauseTab === 'missions') { for (const t of Input.taps) { if (t.y > Game.cssH * 0.15) g.missionScroll = ((g.missionScroll || 0) + (t.y > Game.cssH * 0.6 ? 1 : -1)); } }
   },
   drawPause(ctx, g) {
     const W = Game.cssW, H = Game.cssH;
     ctx.fillStyle = 'rgba(6,3,14,0.72)'; ctx.fillRect(0, 0, W, H);
-    if (g.pauseTab === 'missions') { this.drawMissions(ctx, g); UI.drawButtons(ctx, g.pauseUI); return; }
+    if (g.pauseTab === 'missions') { this.drawMissions(ctx, g); BurnsUIKit.drawButtons(ctx, g.pauseUI); return; }
     if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') { this.drawMenu(ctx, g); return; }
     const title = g.pauseTab === 'settings' ? 'SETTINGS' : 'PAUSED';
     if (g.pauseTab !== 'settings') {
       const L = g.pauseUI; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
       for (const b of L) { x0 = Math.min(x0, b.x); x1 = Math.max(x1, b.x + b.w); y0 = Math.min(y0, b.y); y1 = Math.max(y1, b.y + b.h); }
       const top = y0 - 66, bot = y1 + 16, pw = Math.max(Math.min(320, W * 0.8), x1 - x0 + 40);
-      UI.panel(ctx, W / 2 - pw / 2, top, pw, bot - top);
-      UI.title(ctx, title, W / 2, top + 26, 24);
+      BurnsUIKit.panel(ctx, W / 2 - pw / 2, top, pw, bot - top);
+      BurnsUIKit.title(ctx, title, W / 2, top + 26, 24);
       const meta = BurnsWorlds.meta(g.worldId), day = BurnsWorlds.day(g.worldId);
       this.text(ctx, `${BurnsWorlds.label(g.worldId)} · ${meta.name}${day ? ' · ' + day : ''}`, W / 2, top + 50, 11, 'rgba(255,255,255,0.75)', { ui: true, stroke: false });
-    } else UI.title(ctx, title, W / 2, Math.max(36, insets.t + 30), 24);
-    UI.drawButtons(ctx, g.pauseUI);
+    } else BurnsUIKit.title(ctx, title, W / 2, Math.max(36, insets.t + 30), 24);
+    BurnsUIKit.drawButtons(ctx, g.pauseUI);
   },
   /* ---------- sub-menus: backpack, quest board, trade window ---------- */
   menuFrame(g) {
@@ -490,9 +501,9 @@ const BurnsUI = {
   // a tinted baggie with the item's atlas icon (or its initial)
   itemIcon(ctx, d, x, y, s) {
     ctx.save(); ctx.translate(x, y);
-    ctx.fillStyle = 'rgba(244,246,255,0.94)'; rr(ctx, -s * 0.36, -s * 0.46, s * 0.72, s * 0.92, s * 0.12); ctx.fill();
-    ctx.fillStyle = d.col || '#ffd84a'; rr(ctx, -s * 0.36, -s * 0.46, s * 0.72, s * 0.16, s * 0.06); ctx.fill();
-    ctx.strokeStyle = 'rgba(20,8,30,0.5)'; ctx.lineWidth = 1; rr(ctx, -s * 0.36, -s * 0.46, s * 0.72, s * 0.92, s * 0.12); ctx.stroke();
+    ctx.fillStyle = 'rgba(244,246,255,0.94)'; burnsRR(ctx, -s * 0.36, -s * 0.46, s * 0.72, s * 0.92, s * 0.12); ctx.fill();
+    ctx.fillStyle = d.col || '#ffd84a'; burnsRR(ctx, -s * 0.36, -s * 0.46, s * 0.72, s * 0.16, s * 0.06); ctx.fill();
+    ctx.strokeStyle = 'rgba(20,8,30,0.5)'; ctx.lineWidth = 1; burnsRR(ctx, -s * 0.36, -s * 0.46, s * 0.72, s * 0.92, s * 0.12); ctx.stroke();
     ctx.restore();
     if (d.icon && BURNS_ATLAS.icon(d.icon)) this.icon(ctx, d.icon, x, y + s * 0.08, s * 0.56);
     else this.text(ctx, String(d.name || '?').charAt(0), x, y + s * 0.08, s * 0.42, shade(d.col || '#888888', -0.35), { stroke: false });
@@ -501,9 +512,9 @@ const BurnsUI = {
     ctx.save(); ctx.translate(x, y); const k = s / 20; ctx.scale(k, k);
     ctx.strokeStyle = 'rgba(20,8,30,0.9)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(0, -7, 4.5, Math.PI, 0); ctx.stroke();
-    ctx.fillStyle = col; rr(ctx, -8, -7, 16, 17, 5); ctx.fill(); ctx.lineWidth = 1.4; ctx.stroke();
-    ctx.fillStyle = shade(col, -0.3); rr(ctx, -8, -7, 16, 7, 4); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.45)'; rr(ctx, -4.5, 2, 9, 5.5, 2); ctx.fill();
+    ctx.fillStyle = col; burnsRR(ctx, -8, -7, 16, 17, 5); ctx.fill(); ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.fillStyle = shade(col, -0.3); burnsRR(ctx, -8, -7, 16, 7, 4); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; burnsRR(ctx, -4.5, 2, 9, 5.5, 2); ctx.fill();
     ctx.restore();
   },
   drawMenu(ctx, g) {
@@ -521,7 +532,7 @@ const BurnsUI = {
       title = ((a && ((a.def && a.def.name) || (a.type && g.typeName(a.type)))) || 'TRADE').toUpperCase();
       sub = `Wants to trade · You carry ${g.glow} glow stick${g.glow === 1 ? '' : 's'}`;
     }
-    UI.title(ctx, title, W / 2, F.top + 19, Math.min(22, W / 18));
+    BurnsUIKit.title(ctx, title, W / 2, F.top + 19, Math.min(22, W / 18));
     this.text(ctx, sub, W / 2, F.top + 42, 11, 'rgba(255,255,255,0.8)', { ui: true, stroke: false });
     const vis = g.menuVis || [];
     if (!vis.length) {
@@ -540,7 +551,7 @@ const BurnsUI = {
       let bg = 'rgba(255,255,255,0.07)';
       if (r.kind === 'quest' && r.m.state === 'active') bg = 'rgba(56,242,255,0.14)';
       if (r.kind === 'trade' && g.tradeDone(r.a, r.t, r.i)) bg = 'rgba(122,255,90,0.08)';
-      ctx.fillStyle = bg; rr(ctx, F.x, y, F.cw, h, 10); ctx.fill();
+      ctx.fillStyle = bg; burnsRR(ctx, F.x, y, F.cw, h, 10); ctx.fill();
       if (r.kind === 'pack') {
         const d = r.def;
         this.itemIcon(ctx, d, F.x + 25, y + h / 2, 36);
@@ -574,11 +585,11 @@ const BurnsUI = {
         if (!done && !g.canPay(t.give) && F.rowH > 64) para('Need ' + BurnsGoods.missing(g, t.give), tx, yy + 15, tw, 'rgba(255,255,255,0.6)', 1, 10);
       }
     }
-    UI.drawButtons(ctx, g.pauseUI);
+    BurnsUIKit.drawButtons(ctx, g.pauseUI);
   },
   drawMissions(ctx, g) {
     const W = Game.cssW, H = Game.cssH, www = BurnsSave.hasItem('www');
-    UI.title(ctx, www ? 'WHAT WHERE WHEN' : 'MISSIONS', W / 2, Math.max(34, insets.t + 28), 22);
+    BurnsUIKit.title(ctx, www ? 'WHAT WHERE WHEN' : 'MISSIONS', W / 2, Math.max(34, insets.t + 28), 22);
     const meta = BurnsWorlds.meta(g.worldId);
     this.text(ctx, `${BurnsWorlds.label(g.worldId)}: ${meta.name} · Tokens ${BurnsSave.tokenCount(g.worldId)}/${BurnsWorlds.tokenTotal(g.worldId)} · Photos ${BurnsSave.photoCount(g.worldId)}/3`, W / 2, Math.max(56, insets.t + 50), 11, 'rgba(255,255,255,0.8)', { ui: true, stroke: false });
     const list = g.missions.list.filter(m => !m.def.side && (www || m.state !== 'locked'));
@@ -587,7 +598,7 @@ const BurnsUI = {
     g.missionScroll = start;
     list.slice(start, start + maxRows).forEach((m, i) => {
       const y = 76 + i * (rowH + 6), d = m.def;
-      ctx.fillStyle = m.state === 'active' ? 'rgba(56,242,255,0.16)' : 'rgba(255,255,255,0.07)'; rr(ctx, x, y, cw, rowH, 10); ctx.fill();
+      ctx.fillStyle = m.state === 'active' ? 'rgba(56,242,255,0.16)' : 'rgba(255,255,255,0.07)'; burnsRR(ctx, x, y, cw, rowH, 10); ctx.fill();
       ctx.globalAlpha = m.state === 'done' ? 1 : 0.35; this.icon(ctx, 'token', x + 22, y + rowH / 2, 26); ctx.globalAlpha = 1;
       const st = { done: 'DONE', active: 'ACTIVE', available: 'AVAILABLE', locked: '???' }[m.state];
       const stCol = { done: '#7aff5a', active: '#38f2ff', available: '#ffd84a', locked: '#8a7a9a' }[m.state];

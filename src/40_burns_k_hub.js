@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — hub: a stylized 2D playa map of the ten worlds,
+   BRADY GOES TO BURNING MAN — hub: a stylized 2D playa map of the ten worlds,
    the prologue story (first visit) and the costume wardrobe.
    Entry point for the title menu: new BurnsHubScene()
    ============================================================ */
@@ -33,24 +33,19 @@ function burnsStoryBG(ctx, W, H, t, top, bot) {
 }
 function burnsRV2D(ctx, x, y, s, col, lit) {
   ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-  ctx.fillStyle = col || '#e8e0d0'; rr(ctx, -40, -34, 80, 30, 5); ctx.fill(); rr(ctx, 34, -26, 18, 22, 4); ctx.fill();
+  ctx.fillStyle = col || '#e8e0d0'; burnsRR(ctx, -40, -34, 80, 30, 5); ctx.fill(); burnsRR(ctx, 34, -26, 18, 22, 4); ctx.fill();
   ctx.fillStyle = '#c83a2a'; ctx.fillRect(-40, -20, 80, 4);
   ctx.fillStyle = lit ? '#ffc070' : '#2a3040'; ctx.fillRect(-30, -30, 12, 7); ctx.fillRect(-12, -30, 12, 7); ctx.fillRect(6, -30, 12, 7);
   ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(-24, -4, 6, 0, TAU); ctx.arc(30, -4, 6, 0, TAU); ctx.fill();
   if (lit) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(54, -12, 1, 54, -12, 30); g.addColorStop(0, 'rgba(255,240,200,0.7)'); g.addColorStop(1, 'rgba(255,240,200,0)'); ctx.fillStyle = g; ctx.fillRect(24, -42, 60, 60); ctx.restore(); }
   ctx.restore();
 }
-function burnsPrologue() {
-  const brady = (ctx, x, y, s, t, st) => { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); drawBrady(ctx, { x: 0, y: 0, facing: 1, small: false, power: 0, anim: { state: st || 'idle', t, phase: t * 12, speed: 1 }, hair: null, look: Save.data.look, time: t }); ctx.restore(); };
-  return [
-    { text: 'Brady and Chinka drove for days to get to the Burn. Goggles: packed. Water: packed. Love: very packed.',
-      scene(ctx, W, H, t) { const gy = burnsStoryBG(ctx, W, H, t); for (let i = 0; i < 6; i++) burnsRV2D(ctx, ((i * 150 + t * 14) % (W + 200)) - 100, gy - 6 - i * 3, 0.7 + i * 0.05, ['#e8e0d0', '#f4f4f0', '#d8c8a8'][i % 3], true); const s = Math.min(2.4, H / 160); brady(ctx, W * 0.4, gy + 20, s, t, 'idle'); drawChinka(ctx, { x: W * 0.4 + 30 * s, y: gy + 20, scale: s, t, pose: 'wave', facing: -1 }); } },
-    { text: 'But out on the playa, something enormous was waking up. Something made of wood. And neon. And feelings.',
-      scene(ctx, W, H, t) { const gy = burnsStoryBG(ctx, W, H, t, '#0a0618', '#5a1e4a'); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(W * 0.5, gy - H * 0.3, 10, W * 0.5, gy - H * 0.3, H * 0.6); g.addColorStop(0, 'rgba(255,90,200,0.45)'); g.addColorStop(1, 'rgba(255,90,200,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore(); burnsDrawMan2D(ctx, W * 0.5, gy + 10, Math.min(2.2, H / 200), t, true); } },
-    { text: 'Somewhere ahead, past miles of RVs and dust, the gate was about to open. What could possibly go wrong?',
-      scene(ctx, W, H, t) { const gy = burnsStoryBG(ctx, W, H, t); for (let i = 0; i < 9; i++) burnsRV2D(ctx, W * 0.1 + i * W * 0.1, gy - 4 + Math.sin(i) * 3, 0.55, ['#e8e0d0', '#ff8a1a', '#f4f4f0'][i % 3], true); burnsDrawMan2D(ctx, W * 0.82, gy - 18, Math.min(0.9, H / 400), t, true); const s = Math.min(2.4, H / 160); brady(ctx, W * 0.25, gy + 34, s, t, 'victory'); } }
-  ];
-}
+// the prologue: three story cards (first visit, and the hub's STORY button)
+const BURNS_PROLOGUE = [
+  { day: 'Before the Burn', title: 'Brady & Chinka', line: 'Brady has never been to Burning Man. Chinka has a plan, two tickets, and a ride on the roof of a pink RV.', pal: ['dusk', 'night', 0.15], rv: true, man: false },
+  { day: 'Out on the playa', title: 'Something is waking up', line: 'Something enormous. Something made of wood. And neon. And feelings.', pal: ['dusk', 'night', 1], man: true },
+  { day: 'Sunday', title: 'The line to the gate', line: 'Six hundred miles later, the gate is almost in sight. What could possibly go wrong?', pal: ['day', 'dusk', 0.35], rv: true, man: true }
+];
 
 class BurnsHubScene {
   constructor(opts) {
@@ -78,7 +73,7 @@ class BurnsHubScene {
     const pw = portrait ? W - S.l - S.r : W - this.map.x - mw - S.r - 12;
     this.panel = portrait ? { x: S.l, y: bottom + 8, w: pw, h: H - S.b - bottom - 16 } : { x: this.map.x + mw + 12, y: top, w: pw, h: mh };
     const bw = 96;
-    this.btns = [{ x: S.l, y: S.t, w: 92, h: 36, label: '◀ BACK', size: 12, fn: () => { burnsSfx('back'); Game.setScene(new TitleScene()); } }];
+    this.btns = [{ x: S.l, y: S.t, w: 92, h: 36, label: '◀ BACK', size: 12, fn: () => { burnsSfx('back'); burnsToTitle(); } }];
     const rx = W - S.r;
     this.btns.push({ x: rx - bw, y: S.t, w: bw, h: 36, label: 'STORY', size: 12, fn: () => this.playIntro() });
     if (BurnsSave.hasItem('costumes') || window.__burnsAllCostumes) this.btns.push({ x: rx - bw * 2 - 8, y: S.t, w: bw + 10, h: 36, label: 'WARDROBE', size: 11, fn: () => { this.wardrobe = true; this.buildWardrobe(); burnsSfx('costume'); } });
@@ -96,7 +91,7 @@ class BurnsHubScene {
     if (this.wardrobe) this.buildWardrobe();
   }
   resize() { this.build(); }
-  playIntro() { Game.setScene(new StoryScene(burnsPrologue(), () => Game.setScene(new BurnsHubScene({ noIntro: true, select: this.sel })), 'burns_intro')); }
+  playIntro() { const sel = this.sel; Game.setScene(new BurnsStoryScene({ cards: BURNS_PROLOGUE, music: 'burns_intro', then: () => Game.setScene(new BurnsHubScene({ noIntro: true, select: sel })) })); }
   play() {
     const w = this.sel, sv = BurnsSave.get();
     if (!sv.unlocked[w]) { const pv = BurnsWorlds.prev(w); burnsSfx('bump'); this.toast = { text: pv ? `Beat ${BurnsWorlds.label(pv)}'s boss to unlock this world.` : 'This world is locked.', t: 2.4 }; return; }
@@ -115,14 +110,14 @@ class BurnsHubScene {
     this.t += dt;
     if (this.deferIntro) { this.deferIntro = false; this.playIntro(); return; }
     if (this.toast) { this.toast.t -= dt; if (this.toast.t <= 0) this.toast = null; }
-    if (this.wardrobe) { const hit = UI.hitButtons(this.wbtns); if (hit) hit.fn(); return; }
+    if (this.wardrobe) { const hit = BurnsUIKit.hitButtons(this.wbtns); if (hit) hit.fn(); return; }
     const k = Input.uiKey;
     const O = BurnsWorlds.visible(), si = Math.max(0, O.indexOf(this.sel));
     if (k === 'left' || k === 'up') { this.sel = O[(si + O.length - 1) % O.length]; burnsSfx('select', { vol: 0.4 }); return; }
     if (k === 'right' || k === 'down') { this.sel = O[(si + 1) % O.length]; burnsSfx('select', { vol: 0.4 }); return; }
     if (k === 'enter') { this.play(); return; }
     for (const tp of Input.taps) { let best = null, bd = (this.nodeR || 17) + 9; for (const n of this.nodes) { const d = Math.hypot(tp.x - n.x, tp.y - n.y); if (d < bd) { bd = d; best = n; } } if (best) { if (this.sel === best.id) this.play(); else { this.sel = best.id; burnsSfx('select'); } return; } }
-    const hit = UI.hitButtons(this.btns.filter(b => b !== this.playBtn).concat([this.playBtn]));
+    const hit = BurnsUIKit.hitButtons(this.btns.filter(b => b !== this.playBtn).concat([this.playBtn]));
     if (hit && (Input.taps.length || k === 'enter' || Input.jumpPressed)) hit.fn();
   }
   draw(ctx) {
@@ -138,14 +133,14 @@ class BurnsHubScene {
     BurnsUI.text(ctx, 'BRADY GOES TO BURNING MAN', W / 2, hy, BurnsUI.fitSize(ctx, 'BRADY GOES TO BURNING MAN', Math.min(26, W / 16), W - 230), '#ff9a4a', { glow: '#ff4fd8' });
     BurnsUI.text(ctx, `Burn Tokens ${BurnsSave.tokenCount()}  ·  Photos ${BurnsSave.photoCount()}  ·  Glow ${sv.glow}`, W / 2, hy + 22, 11, 'rgba(255,255,255,0.8)', { ui: true, stroke: false });
     this.drawPanel(ctx, sv);
-    UI.drawButtons(ctx, this.btns);
+    BurnsUIKit.drawButtons(ctx, this.btns);
     if (this.toast) BurnsUI.text(ctx, this.toast.text, W / 2, H * 0.5, 13, '#ffd84a', { ui: true });
     if (this.wardrobe) this.drawWardrobe(ctx);
   }
   drawMap(ctx, t, sv) {
     const M = this.map;
     ctx.save();
-    ctx.beginPath(); rr(ctx, M.x, M.y, M.w, M.h, 18); ctx.clip();
+    ctx.beginPath(); burnsRR(ctx, M.x, M.y, M.w, M.h, 18); ctx.clip();
     const g = ctx.createRadialGradient(M.x + M.w * 0.5, M.y + M.h * 0.5, 10, M.x + M.w * 0.5, M.y + M.h * 0.5, Math.max(M.w, M.h) * 0.7);
     g.addColorStop(0, '#c89070'); g.addColorStop(1, '#6a3e3a'); ctx.fillStyle = g; ctx.fillRect(M.x, M.y, M.w, M.h);
     // cracked-playa texture
@@ -171,9 +166,9 @@ class BurnsHubScene {
       const un = !!sv.unlocked[n.id], reg = !!BurnsWorlds.get(n.id), sel = this.sel === n.id, done = !!sv.worldDone[n.id];
       const R0 = this.nodeR || 17, r = sel ? R0 + 4 + Math.sin(t * 5) * 1.5 : R0;
       if (n.secret) { // a glowing RV pin
-        ctx.save(); ctx.translate(n.x, n.y); ctx.shadowColor = '#ffb040'; ctx.shadowBlur = 14 + Math.sin(t * 4) * 6; ctx.fillStyle = '#ffd890'; rr(ctx, -r * 1.2, -r * 0.62, r * 2.4, r * 1.15, 6); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.save(); ctx.translate(n.x, n.y); ctx.shadowColor = '#ffb040'; ctx.shadowBlur = 14 + Math.sin(t * 4) * 6; ctx.fillStyle = '#ffd890'; burnsRR(ctx, -r * 1.2, -r * 0.62, r * 2.4, r * 1.15, 6); ctx.fill(); ctx.shadowBlur = 0;
         ctx.fillStyle = '#5a3a2a'; ctx.fillRect(-r * 0.95, -r * 0.4, r * 0.5, r * 0.32); ctx.fillRect(-r * 0.3, -r * 0.4, r * 0.5, r * 0.32); ctx.fillStyle = '#2a2224'; ctx.beginPath(); ctx.arc(-r * 0.62, r * 0.55, r * 0.26, 0, TAU); ctx.arc(r * 0.68, r * 0.55, r * 0.26, 0, TAU); ctx.fill();
-        if (sel) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; rr(ctx, -r * 1.25, -r * 0.67, r * 2.5, r * 1.25, 7); ctx.stroke(); }
+        if (sel) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; burnsRR(ctx, -r * 1.25, -r * 0.67, r * 2.5, r * 1.25, 7); ctx.stroke(); }
         ctx.restore(); BurnsUI.text(ctx, 'SECRET', n.x, n.y + r + 9, 10, '#ffd890', { glow: '#ffb040' }); continue;
       }
       if (n.home) { // Brady's home: a canvas tipi with crossed poles and a warm glowing door
@@ -200,11 +195,11 @@ class BurnsHubScene {
       if (this.newUnlock === n.id && this.t < 3) { ctx.save(); ctx.strokeStyle = `rgba(255,255,255,${1 - this.t / 3})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(n.x, n.y, 20 + this.t * 30, 0, TAU); ctx.stroke(); ctx.restore(); }
     }
     ctx.restore();
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; rr(ctx, M.x, M.y, M.w, M.h, 18); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; burnsRR(ctx, M.x, M.y, M.w, M.h, 18); ctx.stroke();
   }
   drawPanel(ctx, sv) {
     const P = this.panel, m = BurnsWorlds.meta(this.sel), un = !!sv.unlocked[this.sel], reg = !!BurnsWorlds.get(this.sel);
-    UI.panel(ctx, P.x, P.y, P.w, P.h);
+    BurnsUIKit.panel(ctx, P.x, P.y, P.w, P.h);
     const portrait = Game.cssH > Game.cssW;
     let y = P.y + 22;
     const day = BurnsWorlds.day(this.sel);
@@ -229,18 +224,18 @@ class BurnsHubScene {
   drawWardrobe(ctx) {
     const W = Game.cssW, H = Game.cssH, sv = BurnsSave.get();
     ctx.fillStyle = 'rgba(6,3,14,0.85)'; ctx.fillRect(0, 0, W, H);
-    UI.title(ctx, 'WARDROBE', W / 2, Math.max(36, insets.t + 30), 24);
+    BurnsUIKit.title(ctx, 'WARDROBE', W / 2, Math.max(36, insets.t + 30), 24);
     for (const b of this.wbtns) {
       if (!b.costume) continue;
       const c = BURNS_COSTUMES.find(k => k.id === b.costume), on = sv.costume === b.costume;
-      ctx.save(); ctx.fillStyle = on ? 'rgba(255,79,216,0.35)' : 'rgba(255,255,255,0.08)'; rr(ctx, b.x, b.y, b.w, b.h, 12); ctx.fill();
+      ctx.save(); ctx.fillStyle = on ? 'rgba(255,79,216,0.35)' : 'rgba(255,255,255,0.08)'; burnsRR(ctx, b.x, b.y, b.w, b.h, 12); ctx.fill();
       ctx.strokeStyle = on ? '#ff4fd8' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = on ? 3 : 1; ctx.stroke();
       ctx.fillStyle = c.col; ctx.beginPath(); ctx.arc(b.x + 22, b.y + b.h / 2, 12, 0, TAU); ctx.fill();
       BurnsUI.text(ctx, c.name.toUpperCase(), b.x + 42, b.y + b.h / 2 - 9, 10, '#ffffff', { align: 'left' });
       ctx.font = `10px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.textAlign = 'left'; ctx.fillText(c.desc, b.x + 42, b.y + b.h / 2 + 10);
       ctx.restore();
     }
-    UI.drawButtons(ctx, this.wbtns.filter(b => !b.costume));
+    BurnsUIKit.drawButtons(ctx, this.wbtns.filter(b => !b.costume));
   }
 }
 

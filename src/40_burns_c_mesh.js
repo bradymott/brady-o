@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — mesh builder + texture atlases
+   BRADY GOES TO BURNING MAN — mesh builder + texture atlases
    BurnsMesh: low-poly geometry with a transform stack. Every primitive
    is emitted flat-shaded (or soft with opts.smooth) in the 24-byte format.
    Colours are vertex colours; an atlas "decal" (premultiplied RGBA) is
@@ -99,8 +99,8 @@ const BURNS_ATLAS = {
     const px = this.sx, py = this.sy;
     this.sx += pw + 6; this.srow = Math.max(this.srow, ph);
     x.save(); x.beginPath(); x.rect(px, py, pw, ph); x.clip(); x.translate(px, py); x.scale(SC, SC);
-    if (o.bg) { x.fillStyle = o.bg; if (o.round) { rr(x, 0, 0, w, h, o.round); x.fill(); } else x.fillRect(0, 0, w, h); }
-    if (o.border) { x.strokeStyle = o.border; x.lineWidth = o.borderW || Math.max(3, size * 0.1); if (o.round) { rr(x, x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth, o.round); x.stroke(); } else x.strokeRect(x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth); }
+    if (o.bg) { x.fillStyle = o.bg; if (o.round) { burnsRR(x, 0, 0, w, h, o.round); x.fill(); } else x.fillRect(0, 0, w, h); }
+    if (o.border) { x.strokeStyle = o.border; x.lineWidth = o.borderW || Math.max(3, size * 0.1); if (o.round) { burnsRR(x, x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth, o.round); x.stroke(); } else x.strokeRect(x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth); }
     x.font = `${size}px ${font}`; x.textAlign = 'center'; x.textBaseline = 'middle';
     if (o.glow) { x.shadowColor = o.glow; x.shadowBlur = size * 0.35; }
     x.fillStyle = o.fg || '#ffffff';
@@ -865,3 +865,75 @@ class BurnsMesh {
     return { data: this.buf.slice(0, this.nv * 24), idx: new Uint16Array(this.ind), count: this.ind.length, nv: this.nv, bounds: [this.bmin[0], this.bmin[1], this.bmin[2], this.bmax[0], this.bmax[1], this.bmax[2]], vbo: null, ibo: null, gen: -1 };
   }
 }
+
+
+/* ---------------- baked ambient occlusion ----------------
+   Each object's own triangles (plus the ground under statics) are rasterised into a coarse occupancy grid,
+   box-blurred, and every vertex reads how 'buried' the space just outside its surface is: dark corners,
+   crevices, the gap under a shade or a couch, armpits, under the chin. Multiplies the vertex colour once at
+   build time, so it costs nothing per frame. o: { joints (skinned rest pose, nb*3), ground(x,z), res, k } */
+const BurnsAO = {
+  _P: null, _G: null, _T: null,
+  bake(buf, v0, v1, idx, i0, i1, o) {
+    o = o || {};
+    const n = v1 - v0; if (n < 8 || i1 - i0 < 6) return;
+    const f = new Float32Array(buf), i8 = new Int8Array(buf), u8 = new Uint8Array(buf), J = o.joints;
+    if (!this._P || this._P.length < n * 3) this._P = new Float32Array(Math.max(n * 3, 8192));
+    const P = this._P;
+    let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
+    for (let k = 0; k < n; k++) {
+      const i = v0 + k; let x = f[i * 6], y = f[i * 6 + 1], z = f[i * 6 + 2];
+      if (J) { const b = (u8[i * 24 + 15] & 63) * 3; x += J[b]; y += J[b + 1]; z += J[b + 2]; }
+      P[k * 3] = x; P[k * 3 + 1] = y; P[k * 3 + 2] = z;
+      if (x < x0) x0 = x; if (y < y0) y0 = y; if (z < z0) z0 = z; if (x > x1) x1 = x; if (y > y1) y1 = y; if (z > z1) z1 = z;
+    }
+    const ext = Math.max(x1 - x0, y1 - y0, z1 - z0); if (!(ext > 0.04) || ext > 400) return;
+    const pad = 3, CAP = 60;
+    let cell = clamp(ext / (o.res || 34), 0.03, 0.75);
+    cell = Math.max(cell, Math.max(x1 - x0, y1 - y0, z1 - z0) / (CAP - pad * 2));
+    if (cell > (o.maxCell || 0.45)) return;   // huge merged meshes: too coarse to be worth it
+    const nx = Math.ceil((x1 - x0) / cell) + pad * 2, ny = Math.ceil((y1 - y0) / cell) + pad * 2, nz = Math.ceil((z1 - z0) / cell) + pad * 2, N = nx * ny * nz;
+    if (!this._G || this._G.length < N) { this._G = new Float32Array(N); this._T = new Float32Array(N); }
+    const G = this._G, T = this._T; G.fill(0, 0, N);
+    const gx0 = x0 - pad * cell, gy0 = y0 - pad * cell, gz0 = z0 - pad * cell, ic = 1 / cell;
+    const mark = (x, y, z) => { const a = ((x - gx0) * ic) | 0, b = ((y - gy0) * ic) | 0, c = ((z - gz0) * ic) | 0; if (a >= 0 && b >= 0 && c >= 0 && a < nx && b < ny && c < nz) G[(b * nz + c) * nx + a] = 1; };
+    for (let t = i0; t + 2 < i1; t += 3) {
+      const a = idx[t] - v0, b = idx[t + 1] - v0, c = idx[t + 2] - v0;
+      if (a < 0 || b < 0 || c < 0 || a >= n || b >= n || c >= n) continue;
+      const ax = P[a * 3], ay = P[a * 3 + 1], az = P[a * 3 + 2], bx = P[b * 3] - ax, by = P[b * 3 + 1] - ay, bz = P[b * 3 + 2] - az, cx = P[c * 3] - ax, cy = P[c * 3 + 1] - ay, cz = P[c * 3 + 2] - az;
+      const L = Math.max(Math.hypot(bx, by, bz), Math.hypot(cx, cy, cz), Math.hypot(cx - bx, cy - by, cz - bz));
+      const st = Math.min(40, Math.ceil(L * ic * 1.4));
+      if (st <= 1) { mark(ax, ay, az); mark(ax + bx, ay + by, az + bz); mark(ax + cx, ay + cy, az + cz); continue; }
+      for (let s = 0; s <= st; s++) for (let r = 0; r <= st - s; r++) { const u = s / st, v = r / st; mark(ax + bx * u + cx * v, ay + by * u + cy * v, az + bz * u + cz * v); }
+    }
+    if (o.ground) for (let k = 0; k < nx; k++) for (let m = 0; m < nz; m++) {
+      const gy = o.ground(gx0 + (k + 0.5) * cell, gz0 + (m + 0.5) * cell), top = Math.min(ny - 1, Math.floor((gy - gy0) * ic) - 1);
+      for (let j = 0; j <= top; j++) G[(j * nz + m) * nx + k] = 1;
+    }
+    // separable 5-tap box blur along x, z, y
+    const blur = (src, dst, sx, len, outer) => {
+      for (let q = 0; q < N; q++) dst[q] = 0;
+      for (let q = 0; q < N; q++) { const v = src[q]; if (!v) continue; const pos = Math.floor(q / sx) % len; for (let d = -2; d <= 2; d++) { const p2 = pos + d; if (p2 >= 0 && p2 < len) dst[q + d * sx] += v * 0.2; } }
+      void outer;
+    };
+    blur(G, T, 1, nx); blur(T, G, nx * nz, ny); blur(G, T, nx, nz);
+    const F = T, k0 = o.k === undefined ? 1 : o.k;
+    const at = (a, b, c) => (a < 0 || b < 0 || c < 0 || a >= nx || b >= ny || c >= nz) ? 0 : F[(b * nz + c) * nx + a];
+    for (let k = 0; k < n; k++) {
+      const i = v0 + k, B = i * 24;
+      if (u8[B + 19] > 110) continue;   // glowing surfaces stay bright
+      const px = (P[k * 3] + i8[B + 12] / 127 * cell * 1.5 - gx0) * ic - 0.5, py = (P[k * 3 + 1] + i8[B + 13] / 127 * cell * 1.5 - gy0) * ic - 0.5, pz = (P[k * 3 + 2] + i8[B + 14] / 127 * cell * 1.5 - gz0) * ic - 0.5;
+      const a = Math.floor(px), b = Math.floor(py), c = Math.floor(pz), fx = px - a, fy = py - b, fz = pz - c;
+      const occ = ((at(a, b, c) * (1 - fx) + at(a + 1, b, c) * fx) * (1 - fz) + (at(a, b, c + 1) * (1 - fx) + at(a + 1, b, c + 1) * fx) * fz) * (1 - fy)
+        + ((at(a, b + 1, c) * (1 - fx) + at(a + 1, b + 1, c) * fx) * (1 - fz) + (at(a, b + 1, c + 1) * (1 - fx) + at(a + 1, b + 1, c + 1) * fx) * fz) * fy;
+      const ao = 1 - clamp((occ - 0.21) * 2.3, 0, 0.62) * k0;
+      if (ao < 0.995) { u8[B + 16] = Math.round(u8[B + 16] * ao); u8[B + 17] = Math.round(u8[B + 17] * ao); u8[B + 18] = Math.round(u8[B + 18] * ao); }
+    }
+  },
+  // rest-pose joint positions for a character model (bone origins: offsets summed along the parent chain)
+  joints(body, parent, nb) {
+    const J = new Float32Array(nb * 3), off = body.off, PAR = parent || BURNS_PARENT;
+    for (let b = 0; b < nb; b++) { const o = off[b] || [0, 0, 0], p = PAR[b]; J[b * 3] = o[0] + (p >= 0 ? J[p * 3] : 0); J[b * 3 + 1] = o[1] + (p >= 0 ? J[p * 3 + 1] : 0); J[b * 3 + 2] = o[2] + (p >= 0 ? J[p * 3 + 2] : 0); }
+    return J;
+  }
+};

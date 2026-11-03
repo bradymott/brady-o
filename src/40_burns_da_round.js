@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — rounded characters (smooth, toy-like 3D)
+   BRADY GOES TO BURNING MAN — rounded characters (smooth, toy-like 3D)
    Ellipsoid heads with wrapped face art, tapered-capsule limbs, mitten
    hands, round shoes, sculpted hair with volume, soft gloss. Same 16 bones
    and offsets as burnsBody() (40_burns_d_rig.js), so every animation, actor,
@@ -1072,6 +1072,8 @@ BURNS_GEAR.acc.harness = (m, A) => { // black harness with badges, kandi, a gadg
         const hi = BurnsRound.build(spec, false), lo = BurnsRound.build(spec, true), far = BurnsRound.build(spec, 'far');
         // a second held prop (spec.prop2) rides the TAIL bone, re-parented to the left forearm like PROP on the right
         if (hi.A.parent) { body.off = body.off.map(o => o.slice()); body.off[BURNS_BONES.TAIL] = body.off[BURNS_BONES.PROP].slice(); }
+        // baked ambient occlusion in the rest pose: under the chin, armpits, between the legs, collars and hems
+        if (!window.__burnsNoAO) { const J = BurnsAO.joints(body, hi.A.parent, BURNS_NB); for (const G of [hi.geo, lo.geo]) BurnsAO.bake(G.data, 0, G.nv, G.idx, 0, G.count, { joints: J, res: 40, k: 0.9 }); }
         mdl = { geo: hi.geo, lod: lo.geo, far: far.geo, nb: BURNS_NB, body, headY: body.headY, height: body.height, spec, parent: hi.A.parent || null, wicks: hi.A.wicks };
       }
       this.cache[key] = mdl;

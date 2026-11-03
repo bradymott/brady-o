@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — play scene: environment, missions, dialogue,
+   BRADY GOES TO BURNING MAN — play scene: environment, missions, dialogue,
    cutscenes, camera and the main loop (BurnsPlayScene).
    ============================================================ */
 
@@ -85,6 +85,7 @@ class BurnsMissions {
     m.used = !m.def.use || !!(pl && pl.power === m.def.use && pl.powerT > 0);
     if (!quiet && !m.def.silent) { this.g.banner(m.def.side ? 'SIDE QUEST' : 'MISSION', m.def.name, { col: m.def.side ? '#ffb0d8' : '#38f2ff' }); burnsSfx('select2', null, 'select'); }
     if (!m.used && !m.def.silent) this.g.toast(`NEEDS: ${BurnsPack.get(m.def.use).name} (BACKPACK)`);
+    if (m.def.hold && pl) pl.hold(m.def.hold);
     if (m.def.onStart) m.def.onStart(this.g, m);
     return true;
   }
@@ -125,11 +126,13 @@ class BurnsMissions {
     }
     if (m.def.reward) { const txt = g.grant(m.def.reward, { quiet: true }); if (txt) { g.banner('REWARD', txt, { col: '#7aff5a', small: true }); burnsSfx('gift', { vol: 0.6 }, 'pick'); } }
     if (this.tracked === m.id) this.tracked = null;
+    if (m.def.hold && g.player && g.player.held === m.def.hold) g.player.hold(null);
     this.refresh();
   }
   fail(id, why) {
     const m = this.get(id); if (!m || m.state !== 'active') return;
     m.state = 'available';
+    if (m.def.hold && this.g.player && this.g.player.held === m.def.hold) this.g.player.hold(null);
     if (m.def.onFail) m.def.onFail(this.g, m);
     this.g.banner('MISSION FAILED', why || m.def.name, { col: '#ff4a4a', small: true });
     burnsSfx('powerdown', { vol: 0.6 });
@@ -261,13 +264,19 @@ class BurnsDialog {
 }
 
 /* ---------------- cutscenes ----------------
-   steps (run in order): { cam: {x,y,z, tx,ty,tz, fov} | { from, to, dur, ease } }, { wait: s },
-   { say: [who, lines] }, { do: fn(g) }, { until: fn(g) }, { banner: [title, sub, opts] },
-   { letterbox: bool }, { fade: 'out'|'in', dur }, { music: name }, { sfx: name },
+   steps (run in order): { cam: {x,y,z, tx,ty,tz, fov} | { from, to, dur, ease, hold } } (also as dolly: / crane:),
+   { orbit: { x,y,z | actor, r (r0,r1), h (h0,h1), a0, a1, dur, ty, fov, ease, hold } },
+   { track: { actor, dist, h, side, ty, fov, dur } }, { wait: s }, { say: [who, lines] }, { do: fn(g) },
+   { until: fn(g) }, { banner: [title, sub, opts] }, { title: true | {day, name, sub}, hold, wait },
+   { letterbox: bool }, { fade: 'out'|'in', dur }, { music: name }, { swell: name }, { sfx: name },
+   { slowmo: 0..1, dur }, { dof: {focus, aperture} | false | 'auto' }, { shake: amount }, { flash: colour },
    { move: { actor, x, z, speed, anim } }, { parallel: [steps...] } */
 class BurnsCine {
   constructor(g, steps, done, opts) {
-    this.g = g; this.steps = steps.slice(); this.done = done; this.opts = opts || {}; this.i = -1; this.t = 0; this.cur = null; this.cam = null; this.letter = this.opts.letterbox !== false; this.finished = false;
+    this.g = g; this.done = done; this.opts = opts || {}; this.i = -1; this.t = 0; this.cur = null; this.cam = null; this.letter = this.opts.letterbox !== false; this.finished = false;
+    // dolly / crane are camera tweens with friendlier names
+    this.steps = steps.map(s => s && (s.dolly || s.crane) && !s.cam ? Object.assign({}, s, { cam: s.dolly || s.crane }) : s);
+    this.dof = this.opts.dof === undefined ? null : this.opts.dof;
     this.advance();
   }
   advance() {
@@ -280,6 +289,13 @@ class BurnsCine {
     if (s.music) { burnsMusic(s.music); this.advance(); return; }
     if (s.sfx) { burnsSfx(s.sfx); this.advance(); return; }
     if (s.banner) { g.banner(...s.banner); this.advance(); return; }
+    if (s.slowmo !== undefined) { g.cineSlow = clamp(s.slowmo, 0.05, 1); this.slowT = s.dur || 0; this.advance(); return; }
+    if (s.dof !== undefined) { this.dof = s.dof === 'auto' ? null : s.dof; this.advance(); return; }
+    if (s.shake) { g.shake(s.shake); this.advance(); return; }
+    if (s.flash) { g.screenFlash(s.flash === true ? '#ffffff' : s.flash, s.alpha || 0.85); this.advance(); return; }
+    if (s.swell) { g.musicSwell(s.swell); this.advance(); return; }
+    if (s.title) { g.dayCard(s.title === true ? null : s.title); if (s.wait === false) this.advance(); return; }
+    if (s.orbit || s.track) { if (!this.cam) this.cam = Object.assign({}, g.camState()); }
     if (s.say) { this.waiting = true; g.dialog.say(s.say[0], s.say[1], () => { this.waiting = false; }); return; }
     if (s.cam && !s.cam.dur) { this.cam = Object.assign({}, s.cam); this.advance(); return; }
     if (s.cam) { this.camFrom = this.cam ? Object.assign({}, this.cam) : Object.assign({}, g.camState()); }
@@ -290,8 +306,30 @@ class BurnsCine {
     const s = this.cur; if (!s) return;
     this.t += dt;
     const g = this.g;
+    if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) g.cineSlow = 1; }
     if (s.say) { if (!this.waiting) this.advance(); return; }
     if (s.wait !== undefined) { if (this.t >= s.wait) this.advance(); return; }
+    if (s.title) { if (this.t >= (s.hold || 3.4)) this.advance(); return; }
+    if (s.orbit) {
+      const O = s.orbit, dur = O.dur || 4, u = clamp(this.t / dur, 0, 1), e = O.ease === 'linear' ? u : easeInOut(u);
+      const A = typeof O.actor === 'string' ? (O.actor === 'brady' ? g.player : g.actor(O.actor)) : O.actor;
+      const tx = A ? A.x : O.x, ty = (A ? A.y : O.y) || 0, tz = A ? A.z : O.z;
+      const a0 = O.a0 || 0, a = lerp(a0, O.a1 === undefined ? a0 + Math.PI / 2 : O.a1, e);
+      const r = lerp(O.r0 || O.r || 8, O.r1 || O.r || 8, e), h = lerp(O.h0 !== undefined ? O.h0 : (O.h || 3), O.h1 !== undefined ? O.h1 : (O.h || 3), e);
+      this.cam = { x: tx + Math.sin(a) * r, y: ty + h, z: tz + Math.cos(a) * r, tx, ty: ty + (O.ty === undefined ? 1.2 : O.ty), tz, fov: O.fov || 0.9 };
+      if (this.t >= dur + (O.hold || 0)) this.advance();
+      return;
+    }
+    if (s.track) {
+      const K = s.track, A = typeof K.actor === 'string' ? (K.actor === 'brady' ? g.player : g.actor(K.actor)) : (K.actor || g.player);
+      if (!A) { this.advance(); return; }
+      const yaw = (A.yaw || 0) + (K.side || 0), d = K.dist || 4.5;
+      const w = { x: A.x - Math.sin(yaw) * d, y: (A.y || 0) + (K.h || 1.9), z: A.z - Math.cos(yaw) * d, tx: A.x, ty: (A.y || 0) + (K.ty === undefined ? 1.3 : K.ty), tz: A.z, fov: K.fov || 0.85 };
+      const c = this.cam, k = 1 - Math.exp(-dt * (K.k || 3.5));
+      if (!c || this.t <= dt) this.cam = Object.assign({}, w); else for (const key of ['x', 'y', 'z', 'tx', 'ty', 'tz', 'fov']) c[key] += (w[key] - c[key]) * k;
+      if (this.t >= (K.dur || 3)) this.advance();
+      return;
+    }
     if (s.until) { if (s.until(g, this)) this.advance(); return; }
     if (s.fade) { if (this.t >= (s.dur || 0.6)) this.advance(); return; }
     if (s.move) {
@@ -319,7 +357,7 @@ class BurnsCine {
     this.g.fadeTo(0, 0.3);
     this.finish();
   }
-  finish() { if (this.finished) return; this.finished = true; const d = this.done; this.done = null; if (d) d(this.g); }
+  finish() { if (this.finished) return; this.finished = true; this.g.cineSlow = 1; const d = this.done; this.done = null; if (d) d(this.g); }
 }
 
 /* ---------------- the play scene ---------------- */
@@ -327,7 +365,7 @@ let burnsHooked = false;
 const BurnsKeys = { down: {}, pressed: {} };
 function burnsHookOnce() {
   if (burnsHooked) return; burnsHooked = true;
-  const map = { KeyQ: 'camL', KeyE: 'camR', KeyC: 'recenter', KeyR: 'recenter', KeyB: 'bike', KeyM: 'missions', Tab: 'missions', KeyF: 'camR', KeyI: 'camU', KeyK2: 'camD', KeyG: 'pack', KeyL: 'board' };
+  const map = { KeyQ: 'camL', KeyE: 'camR', KeyC: 'recenter', KeyR: 'recenter', KeyB: 'bike', KeyM: 'missions', Tab: 'missions', KeyF: 'camR', KeyI: 'camU', KeyK2: 'camD', KeyG: 'pack', KeyL: 'board', KeyV: 'view' };
   window.addEventListener('keydown', e => { const a = map[e.code]; if (!a || !(Game.scene instanceof BurnsPlayScene)) return; if (e.cancelable) e.preventDefault(); if (!BurnsKeys.down[a]) BurnsKeys.pressed[a] = true; BurnsKeys.down[a] = true; });
   window.addEventListener('keyup', e => { const a = map[e.code]; if (a) BurnsKeys.down[a] = false; });
   window.addEventListener('blur', () => { BurnsKeys.down = {}; });
@@ -359,6 +397,8 @@ class BurnsPlayScene {
   load() {
     if (!BurnsGL.init()) { this.state = 'nogl'; Input.setMode('ui'); this.buildNoGL(); return; }
     const d = this.def, sv = BurnsSave.get();
+    BurnsGL.configure(sv.settings.gfx || 'auto');
+    this.camMode = BURNS_CAM_MODES.indexOf(sv.settings.cam) >= 0 ? sv.settings.cam : 'normal';
     sv.lastWorld = this.worldId; BurnsSave.save();
     BURNS_ATLAS.init(); BURNS_SPRITES.init();
     this.dialog = new BurnsDialog(this);
@@ -417,7 +457,7 @@ class BurnsPlayScene {
     L.pause = { x: lefty ? safeL + 24 : W - safeR - 24, y: Math.max(12, insets.t) + 24, r: 22 }; L.r = r;
     L.split = lefty ? W * 0.55 : W * 0.45;
     // pack: the backpack pill under the HUD counters (its position is refreshed by the HUD each frame)
-    this.hudBtns = { cam: { id: 'cam', x: cx, y: cy, r: r * 0.55 }, bike: { id: 'bike', x: bx, y: by, r: r * 0.58 }, pack: (this.hudBtns && this.hudBtns.pack) || { id: 'pack', x: safeL + 50, y: 160, r: 17 } };
+    this.hudBtns = { cam: { id: 'cam', x: cx, y: cy, r: r * 0.55 }, view: { id: 'view', x: cx, y: cy - r * 1.32, r: r * 0.5 }, bike: { id: 'bike', x: bx, y: by, r: r * 0.58 }, pack: (this.hudBtns && this.hudBtns.pack) || { id: 'pack', x: safeL + 50, y: 160, r: 17 } };
     this.syncHudButtons();
   }
   // the backpack shows once ground scores exist in the story, or as soon as it holds anything
@@ -425,6 +465,7 @@ class BurnsPlayScene {
   syncHudButtons() {
     if (!this.hudBtns) return;
     const list = [this.hudBtns.cam];
+    if (this.hudBtns.view && !this.cine) list.push(this.hudBtns.view);
     if (this.player && ((this.bike && !this.cine) || this.player.vehicle)) list.push(this.hudBtns.bike);
     if (this.player && !this.cine && this.hudBtns.pack && this.packVisible()) list.push(this.hudBtns.pack);
     Input.hud = this.state === 'play' && !this.paused ? list : null;
@@ -466,7 +507,11 @@ class BurnsPlayScene {
   cutscene(steps, done, opts) {
     if (this.cine) this.cine.skip();
     this.banners = this.banners.filter(b => b.big); this.toasts.length = 0; this.bossLine = null;
-    this.cine = new BurnsCine(this, steps, (g) => { this.cine = null; this.syncHudButtons(); if (done) done(g); }, opts);
+    this.cine = new BurnsCine(this, steps, (g) => {
+      this.cine = null; this.syncHudButtons(); if (done) done(g);
+      // finishWorld() called from inside a cutscene waits for it to end
+      if (this.pendingFinish && !this.cine) { const n = this.pendingFinish; this.pendingFinish = null; this.finishWorld(n === true ? undefined : n); }
+    }, opts);
     this.syncHudButtons();
     return this.cine;
   }
@@ -522,8 +567,11 @@ class BurnsPlayScene {
   }
   talkTarget() {
     const p = this.player; let best = null, bd = 2.6;
+    let fight = !!(this.boss && this.boss.active && !this.boss.defeated);
+    if (!fight) for (const a of this.actors) { if (!a.friendly && !a.defeated && !a.hidden && !a.removed && Math.abs(a.x - p.x) < 10 && Math.abs(a.z - p.z) < 10) { fight = true; break; } }
     for (const a of this.actors) {
       if (!a.canTalk || a.hidden) continue;
+      if (fight && (a.behName === 'follow' || a.def.follower)) continue;   // a tag-along buddy never steals SPIN mid-fight
       const d = Math.hypot(a.x - p.x, a.z - p.z);
       if (d < bd && Math.abs(a.y - p.y) < 1.6) { bd = d; best = a; }
     }
@@ -612,7 +660,12 @@ class BurnsPlayScene {
   }
   boardAccept(id) { if (this.missions.start(id)) { this.missions.track(id); this.closePause(); return true; } return false; }
   // the day-of-the-week card (shown automatically at the start of a visit unless def.dayCard === false)
-  dayCard() { this.dayCardT = 0; }
+  dayCard(o) { this.dayCardT = 0; this.dayCardO = o || null; }
+  // swap to a track and lift the music for a few seconds (cutscene step { swell })
+  musicSwell(name) {
+    if (name) burnsMusic(name);
+    try { if (Sound.setMusicVolume && Save.data.settings) { const v = Save.data.settings.music === undefined ? 0.8 : Save.data.settings.music; Sound.setMusicVolume(Math.min(1, v * 1.35 + 0.05)); this.swellT = 4; this.swellV = v; } } catch (e) { /* audio is optional */ }
+  }
   groundPound(x, y, z, R, quiet) {
     if (!quiet) { burnsSfx('groundpound'); this.shake(0.3); }
     this.fx.dust(x, y + 0.1, z, 14); this.fx.ring(x, y + 0.08, z, R, '#ffffff', 0.4);
@@ -650,6 +703,24 @@ class BurnsPlayScene {
     this.saveRun();
   }
   finishWorld(next) {
+    if (this.finishing || this.state === 'results') return;
+    if (this.cine && !this.cine.finished) { this.pendingFinish = next || true; return; }
+    const p = this.player;
+    if (!this.def.noOutro && p && !p.dead && this.state === 'play') {
+      this.finishing = true; p.locked = true; p.invT = 30; p.animOverride = 'victory';
+      const a0 = p.yaw + 0.9;
+      this.cutscene([
+        { letterbox: true },
+        { do: g => { g.fx.confetti(p.x, p.y + 2, p.z, 60); burnsSfx('crowd_cheer', { vol: 0.6 }); } },
+        { swell: 'burns_victory' },
+        { slowmo: 0.45, dur: 1.4 },
+        { orbit: { actor: 'brady', r0: 3.2, r1: 4.6, h0: 1.1, h1: 2.0, a0, a1: a0 + 1.5, ty: 1.15, dur: 3.0, fov: 0.75 } }
+      ], () => { this.finishing = false; p.animOverride = null; this.finishWorldNow(next); });
+      return;
+    }
+    this.finishWorldNow(next);
+  }
+  finishWorldNow(next) {
     const sv = BurnsSave.get();
     sv.worldDone[this.worldId] = true;
     BurnsSave.unlockWorld(BurnsWorlds.next(this.worldId));   // next in BURNS_WORLD_ORDER (not id + 1)
@@ -666,7 +737,18 @@ class BurnsPlayScene {
     this.released = true;
     BurnsScenes.releaseWorld(this);
     if (toHub) Game.setScene(new BurnsHubScene({ from: this.worldId }));
-    else Game.setScene(new TitleScene());
+    else burnsToTitle();
+  }
+  // after the results: a story card carries Brady to the next world (or the hub when it isn't ready)
+  storyNext() {
+    Input.camDrag = false; Input.hud = null; Input.setMode('ui');
+    if (Sound.engine) Sound.engine(false, 0);
+    if (this.player) this.saveRun();
+    this.released = true;
+    BurnsScenes.releaseWorld(this);
+    const nx = BurnsWorlds.next(this.worldId);
+    if (nx && typeof BurnsStoryScene !== 'undefined') Game.setScene(new BurnsStoryScene({ from: this.worldId, to: nx }));
+    else Game.setScene(new BurnsHubScene({ from: this.worldId }));
   }
   openPause() { if (this.state !== 'play') return; this.paused = true; this.pauseTab = 'main'; this.menuFrom = 'pause'; Input.setMode('ui'); this.buildPause(); this.syncHudButtons(); burnsSfx('pause', null, 'select'); if (Sound.engine) Sound.engine(false, 0); }
   closePause() { this.paused = false; this.menuFrom = null; this.tradeCtx = null; Input.setMode('game'); this.syncHudButtons(); burnsSfx('select'); }
@@ -692,6 +774,7 @@ class BurnsPlayScene {
     if (I.hudPressed.cam || BurnsKeys.pressed.recenter || (pad && pad.camP)) this.inp.recenter = true;
     if (BurnsKeys.pressed.missions) this.inp.missions = true;
     if (I.hudPressed.pack || BurnsKeys.pressed.pack) this.inp.pack = true;
+    if (I.hudPressed.view || BurnsKeys.pressed.view) this.inp.view = true;
     if (BurnsKeys.pressed.board) this.inp.board = true;
     BurnsKeys.pressed = {};
   }
@@ -712,7 +795,7 @@ class BurnsPlayScene {
   update(dt) {
     this.t += dt;
     if (this.state === 'load' || this.state === 'nogl' || this.state === 'missing') {
-      if (this.state !== 'load') { const hit = UI.hitButtons(this.noglBtns); if (hit) hit.fn(); }
+      if (this.state !== 'load') { const hit = BurnsUIKit.hitButtons(this.noglBtns); if (hit) hit.fn(); }
       return;
     }
     // one place decides the input mode: menus, dialogue and cutscenes use taps
@@ -740,9 +823,10 @@ class BurnsPlayScene {
         else if (this.bike && p.grounded && !p.dead) { this.bike.x = p.x; this.bike.z = p.z; this.bike.y = p.y; this.bike.yaw = p.yaw; this.fx.dust(p.x, p.y, p.z, 10); this.fx.confetti(p.x, p.y + 1, p.z, 8); this.bike.mount(p); }
       }
     }
-    if (this.inp.recenter) { this.inp.recenter = false; this.camRecenter = 0.5; }
+    if (this.inp.recenter) { this.inp.recenter = false; if (this.camMode === 'first') this.camPitch = 0.3; else this.camRecenter = 0.5; }
+    if (this.inp.view) { this.inp.view = false; if (!this.cine) this.cycleCam(); }
     // world time (K-hole slows everything but Brady)
-    const wdt = dt * this.slow;
+    const wdt = dt * this.slow * (this.cineSlow || 1);
     W.saveMoverPrev();
     for (const T of W.traffic) T.update(wdt, this.time);
     for (const v of W.vehicles) v.idle(wdt);
@@ -790,6 +874,7 @@ class BurnsPlayScene {
     if (this.warnT > 0) this.warnT -= dt;
     if (this.bossLine) { this.bossLine.t -= dt; if (this.bossLine.t <= 0) this.bossLine = null; }
     if (this.bubble) { this.bubble.t -= dt; if (this.bubble.t <= 0) this.bubble = null; }
+    if (this.swellT > 0) { this.swellT -= dt; if (this.swellT <= 0) { try { Sound.setMusicVolume(this.swellV); } catch (e) { /* ignore */ } } }
     this.frameStep = (this.frameStep || 0) + 1;
   }
   /* ---------- camera ---------- */
@@ -820,14 +905,16 @@ class BurnsPlayScene {
       const behind = veh ? veh.yaw : Math.atan2(p.vx, p.vz);
       const fwd = Math.cos(BurnsM.wrap(behind - this.camYaw));
       // only swing when not running toward the camera (avoid flip-flopping)
-      if (fwd > -0.2) this.camYaw = BurnsM.dampAngle(this.camYaw, behind, (veh ? 2.2 : 1.1) * Math.min(1, hsp / 7), fdt);
-      this.camPitch = BurnsM.damp(this.camPitch, veh ? 0.28 : 0.3, 0.8, fdt);
+      if (fwd > -0.2 && this.camMode !== 'first') this.camYaw = BurnsM.dampAngle(this.camYaw, behind, (veh ? 2.2 : 1.1) * Math.min(1, hsp / 7), fdt);
+      if (this.camMode !== 'first') this.camPitch = BurnsM.damp(this.camPitch, this.camMode === 'far' ? 0.5 : this.camMode === 'close' ? 0.17 : veh ? 0.28 : 0.3, 0.8, fdt);
     }
     const giant = p.giant > 0 ? 1 : 0;
     this.giantK = BurnsM.damp(this.giantK || 0, giant, 3, fdt);
-    const baseDist = (veh && veh.kind === 'car' ? 13 : veh ? 7.4 : 6.4) + this.giantK * 5 + (this.boss && this.boss.active ? 2.2 : 0) + (portrait ? 1.2 : 0);
+    const mode = this.camMode || 'normal';
+    const dist0 = (veh && veh.kind === 'car' ? 13 : veh ? 7.4 : 6.4) + this.giantK * 5 + (this.boss && this.boss.active ? 2.2 : 0) + (portrait ? 1.2 : 0);
+    const baseDist = mode === 'close' ? (veh && veh.kind === 'car' ? 8 : veh ? 3.8 : 2.6) + this.giantK * 3 + (portrait ? 0.7 : 0) : mode === 'far' ? dist0 * 2.3 + 2 : dist0;
     // smoothed follow target
-    const tx = p.x, ty = p.y + 1.35 + this.giantK * 1.8, tz = p.z;
+    const tx = p.x, ty = p.y + (mode === 'close' ? 1.58 : 1.35) + this.giantK * 1.8, tz = p.z;
     if (!this.camCur || this.snapCam) { this.camCur = { x: tx, y: ty, z: tz }; this.camD = baseDist; }
     const C = this.camCur;
     C.x = BurnsM.damp(C.x, tx, 14, fdt); C.z = BurnsM.damp(C.z, tz, 14, fdt);
@@ -836,7 +923,9 @@ class BurnsPlayScene {
     // look-ahead in the movement direction
     const la = Math.min(1.6, hsp * 0.18);
     const lx = hsp > 0.5 ? p.vx / hsp * la : 0, lz = hsp > 0.5 ? p.vz / hsp * la : 0;
-    const cy = this.camYaw, ax = C.x + lx, ay = C.y, az = C.z + lz, want = baseDist;
+    // close mode looks over Brady's right shoulder
+    const sh = mode === 'close' ? 0.42 : 0;
+    const cy = this.camYaw, ax = C.x + lx - Math.cos(this.camYaw) * sh, ay = C.y, az = C.z + lz + Math.sin(this.camYaw) * sh, want = baseDist;
     // collision: first try rising over whatever blocks the view (vehicles behind Brady on the RV
     // roofs, walls), and only then pull the camera in toward him
     const probe = (pt) => { const dX = -Math.sin(cy) * Math.cos(pt), dY = Math.sin(pt), dZ = -Math.cos(cy) * Math.cos(pt); return Math.max(1.1, W.raycast(ax, ay, az, ax + dX * (want + 0.4), ay + dY * (want + 0.4), az + dZ * (want + 0.4), true) * (want + 0.4) - 0.45); };
@@ -864,6 +953,17 @@ class BurnsPlayScene {
     const asp = Game.cssW / Game.cssH;
     cam.fov = Math.max(0.9, 2 * Math.atan(Math.tan(1.05 / 2) / asp)) + this.khK * Math.sin(this.time * 0.9) * 0.08 + (p.power === 'powder' && p.powerT > 0 ? 0.06 : 0);
     cam.shift = portrait ? 0.12 : 0.04;
+    if (mode === 'far') cam.fov *= 0.84;
+    if (mode === 'first' && !p.dead) {
+      // eyes: from last frame's head bone (keeps the walk bob); drag up/down to look
+      const hp = p.ch.computed ? p.ch.headPos(this._hp || (this._hp = [0, 0, 0])) : [p.x, p.y + 1.62, p.z];
+      const yaw = this.camYaw, pitch = clamp((this.camPitch - 0.3) * 1.2, -1.05, 1.1), cp = Math.cos(pitch);
+      const ex = hp[0] + Math.sin(yaw) * 0.12, ey = hp[1] + 0.02, ez = hp[2] + Math.cos(yaw) * 0.12;
+      cam.x = ex; cam.y = ey; cam.z = ez; cam.tx = ex + Math.sin(yaw) * cp * 10; cam.ty = ey - Math.sin(pitch) * 10; cam.tz = ez + Math.cos(yaw) * cp * 10;
+      cam.fov = Math.max(1.05, 2 * Math.atan(Math.tan(1.22 / 2) / asp)) + this.khK * Math.sin(this.time * 0.9) * 0.08;
+      cam.shift = 0;
+      if (!p.vehicle && !p.locked) p.yaw = yaw;   // the body faces where you look
+    }
     cam.near = 0.15; cam.far = 1500;
   }
   /* ---------- rendering ---------- */
@@ -894,7 +994,7 @@ class BurnsPlayScene {
     const frozen = this.paused || this.state === 'results';
     const vdt = frozen ? 0 : fdt;
     // visuals that run per rendered frame
-    this.fx.update(vdt * this.slow);
+    this.fx.update(vdt * this.slow * (this.cineSlow || 1));
     this.updateCamera(vdt || 1e-4);
     const p = this.player;
     p.ch.x = p.x; p.ch.y = p.y - (p.mudSink > 0 ? Math.min(0.5, p.mudSink * 0.15) : 0); p.ch.z = p.z; p.ch.yaw = p.yaw;
@@ -902,36 +1002,77 @@ class BurnsPlayScene {
     p.ch.update(vdt); p.ch.compute();
     if (this.bike) this.bike.poseBike(vdt);
     // renderer
-    const R = this.R, gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * this.q)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * this.q));
+    const R = this.R, Q = BurnsGL.Q, qs = this.q * (Q ? Q.scale : 1);
+    const gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * qs)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * qs));
     R.resize(gw, gh);
+    const fp = this.firstPerson();
+    this.cam.near = fp ? 0.05 : 0.15;
     R.setCamera(this.cam);
     const env = BurnsEnv.build(this.palA, this.palB, this.tod, this.env, this.time);
     if (this.def.env) this.def.env(this, env);
     env.trip = p.power === 'lsd' && p.powerT > 0 ? Math.min(1, p.powerT / 2, (BURNS_POWERUPS.lsd.dur - p.powerT) * 2) : 0;
     this.collectLights(env);
-    R.begin();
+    // pose everything first: the shadow pass and the main pass draw the same characters
+    this.pickups.draw(R);
+    for (const G of this.world.groups) G.pose(this.cam);
+    const cam = this.cam, P = R.planes, vis = this._drawList || (this._drawList = []);
+    vis.length = 0;
+    const wantShadow = !!(Q && Q.shadows && env.keyDir[1] > 0.06), shD2 = 42 * 42;
+    for (const a of this.actors) {
+      if (a.removed || a.hidden) continue;
+      const d2 = (a.x - cam.x) * (a.x - cam.x) + (a.z - cam.z) * (a.z - cam.z);
+      if (d2 > 115 * 115) continue;
+      const inView = BurnsM.sphereVisible(P, a.x, a.y + 1, a.z, 2 * a.scale);
+      if (!inView && !(wantShadow && d2 < shD2)) continue;
+      a.draw(R); a.ch.update(vdt * this.slow * (this.cineSlow || 1)); a.ch.compute();
+      if (inView && a.beh.draw) a.beh.draw(a, this, R);   // per-frame behaviour effects (fire, glints, lights)
+      a._inView = inView; a._d2 = d2;
+      vis.push(a);
+    }
+    const blink = p.invT > 0 && !p.dead && Math.floor(this.time * 14) % 2 === 0;
+    const showBody = !blink && !fp;
+    const bikeOn = this.bike && this.bike.rider;
+    // ---- sun shadows (WebGL2 tiers): the same draw calls, depth only, from the sun ----
+    if (wantShadow && R.shadowBegin(env, { dist: fp ? Q.shadowDist * 0.75 : undefined })) {
+      R.statics(this.world.chunks, env, this.world, BURNS_ATLAS.T, 0);
+      R.skinBegin(env, this.world, BURNS_ATLAS.T);
+      // vehicles and movers: only the objects near the shadow circle (their own index ranges), in the detail
+      // level the main view shows (far traffic casts with its low-detail twin)
+      const c0 = R.shCenter, gr2 = (R.shR + 16) * (R.shR + 16), rg = this._shR || (this._shR = []);
+      for (const G of this.world.groups) {
+        if (!G.objs.length || !G.geo) continue;
+        let n = 0;
+        for (const o of G.objs) {
+          if (o.twinOf !== undefined || o.visible === false || o.i0 === undefined) continue;
+          const dx = o.x - c0[0], dz = o.z - c0[2]; if (dx * dx + dz * dz > gr2) continue;
+          let src = o;
+          if (o.twin !== undefined) { const far = (o.x - cam.x) * (o.x - cam.x) + (o.z - cam.z) * (o.z - cam.z) > BURNS_GROUP_LOD * BURNS_GROUP_LOD; if (far) src = G.objs[o.twin]; }
+          const r = rg[n] || (rg[n] = [0, 0]); r[0] = src.i0; r[1] = src.i1; n++;
+        }
+        R.skinRanges(G.geo, G.bones, G.objs.length, rg, n);
+      }
+      if (!p.dead) R.skin(p.model.lod || p.model.geo, p.ch.bones, p.ch.nb, null, 0, 0);
+      if (bikeOn) R.skin(this.bike.model.geo, this.bike.bones, this.bike.model.nb, null, 0, 0);
+      for (const a of vis) if (!a.cloak && a._d2 < shD2) R.skin(a.model.lod || a.model.geo, a.ch.bones, a.ch.nb, null, 0, 0);
+      for (const b of this.bosses) { if (!b.ch || b.hidden) continue; R.skin(b.model.geo, b.ch.bones, b.ch.nb, null, 0, 0); if (b.chinka && b.showChinka !== false) R.skin(b.chinka.model.lod || b.chinka.model.geo, b.chinka.bones, b.chinka.nb, null, 0, 0); }
+      if (this.def.drawShadows) this.def.drawShadows(this, R);
+      R.shadowEnd();
+    }
+    // ---- main pass ----
+    R.begin(env);
     R.sky(env);
     R.ground(this.world.ground, env, this.world);
     R.statics(this.world.chunks, env, this.world, BURNS_ATLAS.T, env.fogD > 0.02 ? 120 : 260);
     if (env.trip > 0.01 && this.world.ghosts.length) R.ghost(this.world.ghosts, env, this.world, BURNS_ATLAS.T, 0.55 + env.trip * 0.35);
     // skinned: groups (vehicles, movers, pickups), characters, bosses
-    this.pickups.draw(R);
-    for (const G of this.world.groups) G.pose(this.cam);
     R.skinBegin(env, this.world, BURNS_ATLAS.T);
     for (const G of this.world.groups) if (G.objs.length) { R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.15); if (G.effTris !== undefined) R.stats.tris += G.effTris - G.geo.count / 3; }
     for (const G of this.pickups.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.6);
-    const blink = p.invT > 0 && !p.dead && Math.floor(this.time * 14) % 2 === 0;
-    if (!blink) R.skin(p.model.geo, p.ch.bones, p.ch.nb, p.hurtT > 0 ? [1, 0.4, 0.4, 0.4] : null, p.ch.face, 0.5);
-    if (this.bike && (this.bike.rider || this.bike.visible) && this.bike.rider) R.skin(this.bike.model.geo, this.bike.bones, this.bike.model.nb, null, 0, 0.3);
-    const cam = this.cam, P = R.planes;
-    for (const a of this.actors) {
-      if (a.removed || a.hidden) continue;
-      const d2 = (a.x - cam.x) * (a.x - cam.x) + (a.z - cam.z) * (a.z - cam.z);
-      if (d2 > 115 * 115) continue;
-      if (!BurnsM.sphereVisible(P, a.x, a.y + 1, a.z, 2 * a.scale)) continue;
-      a.draw(R); a.ch.update(vdt * this.slow); a.ch.compute();
-      if (a.beh.draw) a.beh.draw(a, this, R);           // per-frame behaviour effects (fire, glints, lights)
-      if (a.cloak) continue;                             // e.g. a darkwad in the dark: logic runs, nothing drawn
+    if (showBody) R.skin(p.model.geo, p.ch.bones, p.ch.nb, p.hurtT > 0 ? [1, 0.4, 0.4, 0.4] : null, p.ch.face, 0.5);
+    if (bikeOn) R.skin(this.bike.model.geo, this.bike.bones, this.bike.model.nb, null, 0, 0.3);
+    for (const a of vis) {
+      if (!a._inView || a.cloak) continue;   // a darkwad in the dark: logic runs, nothing drawn
+      const d2 = a._d2;
       // distant characters use the low-detail model
       R.skin(d2 > BURNS_FAR_D2 && a.model.far ? a.model.far : d2 > BURNS_LOD_D2 && a.model.lod ? a.model.lod : a.model.geo, a.ch.bones, a.ch.nb, a.ch.tint, a.ch.face, a.ch.rim);
       a._vis = true;
@@ -941,34 +1082,115 @@ class BurnsPlayScene {
     // sprites: shadows, glows, particles, projectiles
     this.pushSprites(R, env);
     R.sprites(env, BURNS_SPRITES.T);
+    // first person: Brady's own arms + whatever he's holding, always in front
+    if (fp && !blink && !p.dead) this.drawViewModel(R, env);
     // dialogue portrait (rendered in GL, framed in 2D)
     if (this.dialog.open && this.dialog.cur) this.drawPortrait(R, env);
+    R.end(env, this.postFx(env));
     this.stats.draws = R.stats.draws; this.stats.tris = R.stats.tris;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(BurnsGL.canvas, 0, 0, gw, gh, 0, 0, Game.canvas.width, Game.canvas.height);
     this.stats.cpu = lerp(this.stats.cpu, performance.now() - t0, 0.1);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    BurnsUI.drawOverlay(ctx, this, fdt);
+    this.drawOverlay2D(ctx, fdt);
   }
+  // the 2D layer over the 3D frame (HUD, dialogue, menus); the title screen draws its own
+  drawOverlay2D(ctx, fdt) { BurnsUI.drawOverlay(ctx, this, fdt); }
+  /* dynamic point lights: everything that could light the scene competes on relevance
+     (intensity x reach / distance to the camera-Brady midpoint); the renderer takes the top 4 (WebGL1) to 16 */
   collectLights(env) {
-    const p = this.player, list = this.plights;
-    // nearest fires become dynamic point lights (flicker)
-    const fires = this.world.fires.concat(this.tempFires);
-    const cand = [];
-    for (const f of fires) { const d = Math.hypot(f.x - p.x, f.z - p.z); if (d < 40) cand.push([d, f]); }
-    cand.sort((a, b) => a[0] - b[0]);
-    for (let i = 0; i < cand.length && list.length < 4; i++) { const f = cand[i][1]; list.push({ x: f.x, y: (f.y || 0) + 1.4, z: f.z, r: 7 + Math.sin(this.time * 17 + i) * 0.6, c: [1, 0.55, 0.2], i: 1.2 }); }
-    if (p.power && p.powerT > 0 && list.length < 4) { const c = burnsRGBf(BURNS_POWERUPS[p.power].col); list.push({ x: p.x, y: p.y + 1.5, z: p.z, r: 5, c, i: 0.8 }); }
-    this.R.setLights(list.slice(0, 4));
+    const p = this.player, cam = this.cam, t = this.time, W = this.world;
+    const cand = this._lcand || (this._lcand = []), out = this._lout || (this._lout = []);
+    cand.length = 0; out.length = 0;
+    const max = BurnsGL.Q ? BurnsGL.Q.npl : 4, cx = (p.x + cam.x) * 0.5, cz = (p.z + cam.z) * 0.5;
+    const add = (L, pri) => { const dx = L.x - cx, dz = L.z - cz, d2 = dx * dx + dz * dz, r2 = L.r * L.r; if (d2 > (L.r + 60) * (L.r + 60)) return; cand.push([(L.i || 1) * (pri || 1) * r2 / (d2 + r2), L]); };
+    for (const L of this.plights) add(L, 1.6);   // worlds + behaviours (g.pointLight) come first on ties
+    const fires = W.fires.concat(this.tempFires);
+    for (let i = 0; i < fires.length; i++) { const f = fires[i], dx = f.x - cx, dz = f.z - cz; if (dx * dx + dz * dz > 50 * 50) continue; add({ x: f.x, y: (f.y || 0) + 1.4, z: f.z, r: 7 + Math.sin(t * 17 + i * 1.7) * 0.6 + Math.sin(t * 7.3 + i) * 0.3, c: [1, 0.55, 0.2], i: 1.25 + Math.sin(t * 23 + i * 3.1) * 0.12 }, 1.2); }
+    if (p.power && p.powerT > 0 && BURNS_POWERUPS[p.power]) add({ x: p.x, y: p.y + 1.5, z: p.z, r: 5, c: burnsRGBf(BURNS_POWERUPS[p.power].col), i: 0.8 }, 2);
+    if (max > 4) {
+      // art cars, vehicle LEDs and headlights
+      for (const o of W.movers) {
+        if (!o.visible || !o.lights.length) continue;
+        const dx = o.x - cx, dz = o.z - cz; if (dx * dx + dz * dz > 55 * 55) continue;
+        const c = Math.cos(o.yaw), s = Math.sin(o.yaw);
+        for (const L of o.lights) { if (!(L.s >= 0.5)) continue; if (!L.cc) L.cc = burnsRGBf(L.c); add({ x: o.x + L.x * c + L.z * s, y: o.y + L.y, z: o.z - L.x * s + L.z * c, r: Math.min(14, L.s * 3.2), c: L.cc, i: 0.75 }, 0.9); }
+      }
+      // lamps and neon (static glows) close by
+      const lsd = p.power === 'lsd' && p.powerT > 0;
+      for (const g of W.glows) { if (g.s < 0.55 || (g.hidden && !lsd)) continue; const dx = g.x - cx, dz = g.z - cz; if (dx * dx + dz * dz > 32 * 32) continue; add({ x: g.x, y: g.y, z: g.z, r: Math.min(10, g.s * 3.4), c: g.c, i: 0.5 * (g.blink ? 0.6 + 0.4 * Math.sin(t * g.blink + g.ph) : 1) }, 0.6); }
+    }
+    cand.sort((a, b) => b[0] - a[0]);
+    for (let i = 0; i < cand.length && out.length < max; i++) out.push(cand[i][1]);
+    this.R.setLights(out);
     this.plights = [];
+  }
+  /* ---------- camera modes: 'normal' third person, 'close' (over the shoulder), 'far' (Brady small), 'first' ---------- */
+  firstPerson() { return this.camMode === 'first' && !(this.cine && this.cine.cam) && this.state === 'play' && !this.player.dead; }
+  setCamMode(mode, quiet) {
+    if (BURNS_CAM_MODES.indexOf(mode) < 0) mode = 'normal';
+    this.camMode = mode; const sv = BurnsSave.get(); sv.settings.cam = mode; BurnsSave.save();
+    if (!quiet) { this.toast('CAMERA: ' + BURNS_CAM_LABELS[mode]); burnsSfx('select', { vol: 0.5 }); }
+    if (mode === 'first') this.camPitch = 0.3;
+    this.snapCam = true;
+  }
+  cycleCam() { const i = BURNS_CAM_MODES.indexOf(this.camMode || 'normal'); this.setCamMode(BURNS_CAM_MODES[(i + 1) % BURNS_CAM_MODES.length]); }
+  // first person: Brady's arms (with their tattoos) and the held mission item, posed in front of the eyes
+  drawViewModel(R, env) {
+    const p = this.player, gl = BurnsGL.gl, Bn = BURNS_BONES, B = R.B, cam = this.cam;
+    const ch = this.vmCh || (this.vmCh = new BurnsChar(p.model)); if (ch.model !== p.model) ch.setModel(p.model);
+    const r = ch.P.r; r.set(p.ch.P.r); ch.P.y = 0; ch.P.pitch = 0; ch.P.roll = 0; ch.P.yaw = 0; ch.P.sq = 1;
+    const t = this.time, mv = Math.min(1, Math.hypot(p.vx, p.vz) / 6), bob = Math.sin(t * 9.5) * 0.07 * mv, hold = !!p.held, bike = p.vehicle && p.vehicle.kind === 'bike';
+    const set = (b, x, y, z) => { r[b * 3] = x; r[b * 3 + 1] = y; r[b * 3 + 2] = z; };
+    if (bike) { set(Bn.UARM_R, -1.32, 0, -0.32); set(Bn.FARM_R, -0.28, 0, 0); set(Bn.UARM_L, -1.32, 0, 0.32); set(Bn.FARM_L, -0.28, 0, 0); }
+    else {
+      set(Bn.UARM_R, (hold ? -1.42 : -1.3) + bob, 0.12, -0.34); set(Bn.FARM_R, hold ? -0.55 : -0.4, 0.15, 0);
+      set(Bn.UARM_L, -1.25 - bob, -0.12, 0.34); set(Bn.FARM_L, -0.45, -0.15, 0);
+      if (p.ch.anim === 'spin' || p.ch.anim === 'throw') set(Bn.UARM_R, -1.5, 0.6, -0.5);
+    }
+    ch.x = 0; ch.y = 0; ch.z = 0; ch.yaw = 0; ch.scale = 1; ch.compute();
+    const E = ch.bonePoint(Bn.HEAD, 0, 0.13, 0.02, this._vmE || (this._vmE = [0, 0, 0]));
+    // model +X -> camera left, +Y -> up, +Z -> forward; the eyes land just behind the camera
+    const A = this._vmA || (this._vmA = new Float32Array(12));
+    A[0] = -B.rx; A[1] = B.ux; A[2] = B.fx; A[4] = -B.ry; A[5] = B.uy; A[6] = B.fy; A[8] = -B.rz; A[9] = B.uz; A[10] = B.fz;
+    const ex = cam.x - B.fx * 0.06 - B.ux * 0.02, ey = cam.y - B.fy * 0.06 - B.uy * 0.02, ez = cam.z - B.fz * 0.06 - B.uz * 0.02;
+    A[3] = ex - (A[0] * E[0] + A[1] * E[1] + A[2] * E[2]); A[7] = ey - (A[4] * E[0] + A[5] * E[1] + A[6] * E[2]); A[11] = ez - (A[8] * E[0] + A[9] * E[1] + A[10] * E[2]);
+    const out = this._vmBones || (this._vmBones = new Float32Array(ch.bones.length));
+    if (out.length !== ch.bones.length) this._vmBones = new Float32Array(ch.bones.length);
+    const show = [Bn.UARM_L, Bn.UARM_R, Bn.FARM_L, Bn.FARM_R, Bn.PROP, Bn.TAIL];
+    for (let b = 0; b < ch.nb; b++) { if (show.indexOf(b) < 0) { this._vmBones.fill(0, b * 12, b * 12 + 12); continue; } BurnsM.a34Mul(this._vmBones, b * 12, A, 0, ch.bones, b * 12); }
+    gl.depthRange(0, 0.06);
+    R.skinBegin(env, this.world, BURNS_ATLAS.T);
+    R.skin(p.model.geo, this._vmBones, ch.nb, p.hurtT > 0 ? [1, 0.4, 0.4, 0.35] : null, 0, 0.35);
+    gl.depthRange(0, 1);
+  }
+  // per-frame post-processing settings: heat shimmer, fire haze, god rays, cutscene depth of field
+  postFx(env) {
+    const fx = this._fx || (this._fx = { fires: [] }), cam = this.cam;
+    fx.heat = env.heat !== undefined ? env.heat : clamp((env.sunDir[1] - 0.22) * 2.4, 0, 1) * (1 - (this.R.night || 0)) * 0.9;
+    fx.fires.length = 0;
+    const fires = this.world.fires.concat(this.tempFires);
+    for (const f of fires) { const d = Math.hypot(f.x - cam.x, f.z - cam.z); if (d < 38) fx.fires.push([f.x, f.y || 0, f.z, Math.max(0.5, (f.r || 0.3) * 2.2), d]); }
+    if (fx.fires.length > 6) { fx.fires.sort((a, b) => a[4] - b[4]); fx.fires.length = 6; }
+    fx.rays = env.rays;
+    fx.bloom = env.bloomK;
+    fx.exposure = this.cineExposure || 1;
+    // cutscenes: focus on what the camera looks at (a step can set or clear it)
+    const C = this.cine;
+    if (C && C.cam && C.dof !== false && !this.firstPerson()) {
+      const D = C.dof || {}, f = D.focus !== undefined ? D.focus : Math.hypot(C.cam.tx - C.cam.x, C.cam.ty - C.cam.y, C.cam.tz - C.cam.z);
+      fx.dof = fx._dof || (fx._dof = {}); fx.dof.focus = f; fx.dof.aperture = D.aperture || 1.1;
+    } else fx.dof = null;
+    return fx;
   }
   pushSprites(R, env) {
     const S = BURNS_SPRITES.R, cam = this.cam, p = this.player, W = this.world, t = this.time, P = R.planes;
     // blob shadows
     const shadow = (x, y, z, s, a) => { const gy = W.surface(x, z, y + 0.3, 0.2, BURNS_SURF).y; const h = Math.max(0, y - gy); R.flat.flat(x, gy + 0.03, z, s * (1 + h * 0.08), s * (1 + h * 0.08), 0, S.shadow, [0, 0, 0], a * clamp(1 - h * 0.12, 0.25, 1), false); };
-    shadow(p.x, p.y, p.z, 1.15 * p.ch.scale, 0.6);
-    for (const a of this.actors) if (a._vis) { shadow(a.x, a.y, a.z, 1.05 * a.scale, 0.55); a._vis = false; }
+    const ck = R.shadowOn ? 0.62 : 1;   // with sun shadows the blob is just contact occlusion under the feet
+    shadow(p.x, p.y, p.z, 1.15 * p.ch.scale * (R.shadowOn ? 0.85 : 1), 0.6 * ck);
+    for (const a of this.actors) if (a._vis) { shadow(a.x, a.y, a.z, 1.05 * a.scale * (R.shadowOn ? 0.85 : 1), 0.55 * ck); a._vis = false; }
     // static glows (lamps, neon, headlights on parked cars)
     const lsd = p.power === 'lsd' && p.powerT > 0;
     for (const g of W.glows) {
@@ -1049,7 +1271,7 @@ class BurnsPlayScene {
     this.resultsT += dt;
     if (this.resultsT > 1.2 && (Input.taps.length || Input.uiKey === 'enter' || Input.jumpPressed)) {
       const next = this.resultsNext; this.resultsNext = null;
-      if (next) next(this); else this.quit(true);
+      if (next) next(this); else this.storyNext();
     }
   }
 }

@@ -156,7 +156,7 @@ BurnsWorlds.register({
     BW13.restore(g);
     if (!S.introDone) BW13.intro(g);
     // return visits: the engine's day card first, then the reminder
-    else BW1213.after(S, 4.2, () => g.banner('THE WORKSHOPS', g.missions.isDone('lostlove') ? 'Ticket revoked. Some people never learn. (You.)' : 'Two stamps. One long-lost love.', { col: '#38c8ff' }));
+    else BW1213.afterDayCard(g, S, () => g.banner('THE WORKSHOPS', g.missions.isDone('lostlove') ? 'Ticket revoked. Some people never learn. (You.)' : 'Two stamps. One long-lost love.', { col: '#38c8ff' }));
     void p;
   },
   onRespawn(g) {
@@ -181,7 +181,8 @@ BurnsWorlds.register({
     BW13.updateNap(g, dt);
     BW13.updateExercise(g, dt);
     BW13.updateTruck(g, dt);
-    if (S.planeOn) { const P = S.plane; S.planeT += dt; P.x = 70 - S.planeT * 15; P.roll = Math.sin(S.planeT * 1.4) * 0.12; P.pitch = 0.04; if (Math.random() < dt * 30) g.fx.add(P.x + 3.4, P.y + 0.05, P.z, 0, 0, 0, 1.4, 0.35, 1.6, [1, 1, 1], 0.3, 'puff', 0); }
+    if (S.planeOn) { const P = S.plane; S.planeT += dt; P.x = 6 - S.planeT * 3 + 64 * Math.exp(-S.planeT / 1.6);   // swoops in, then drifts across the frame while Brady talks
+      P.roll = Math.sin(S.planeT * 1.4) * 0.12; P.pitch = 0.04; if (Math.random() < dt * 30) g.fx.add(P.x + 3.4, P.y + 0.05, P.z, 0, 0, 0, 1.4, 0.35, 1.6, [1, 1, 1], 0.3, 'puff', 0); }
     // tokens push the morning along
     const want = Math.min(1, BurnsSave.tokenCount(13) * 0.15);
     if (g.tod < want && g.todTarget === null) g.setTod(want, 0.02);
@@ -545,7 +546,7 @@ BW13.intro = function (g) {
     { say: ['brady', ['Workshop Village. Nine o\'clock. "Where lost loves are found."', 'Okay, Chinka. I\'m here.']] },
     { say: [{ name: 'GREETER DAISY', model: BurnsRig.model(BurnsRig.npcSpec('greeter_f', 2)) }, ['WELCOME HOOOME! First workshop? Sign in at the table! Everybody signs in!']] },
     { do: g2 => { BurnsSave.flag(13, 'intro', true); S.introDone = true; p.locked = false; g2.camYaw = Math.PI; g2.snapCam = true; } },
-    { banner: ['THE WORKSHOPS', 'Sign in with the greeters. Get two stamps. Find her.', { col: '#38c8ff' }] }
+    { do: g2 => BW1213.afterDayCard(g2, S, () => g2.banner('THE WORKSHOPS', 'Sign in with the greeters. Get two stamps. Find her.', { col: '#38c8ff' })) }
   ], null);
 };
 
@@ -1046,7 +1047,7 @@ BW13.updateExercise = function (g, dt) {
   const S = BW13.state, E = S.ex, p = g.player, pearl = g.actor('pearl');
   if (!E || g.cine) return;
   const pressed = p.inp.jumpPressed || p.inp.actionPressed;
-  E.t += dt;
+  E.t += dt * (E.rate !== undefined ? E.rate : 1);   // E.rate: test knob (0 holds the light still)
   g.camYaw = BurnsM.dampAngle(g.camYaw, 0, 3, dt);
   if (E.phase === 'breathe') {
     const k = BW13.breathK(E.t), cyc = Math.floor(E.t / 3.0);
@@ -1064,7 +1065,7 @@ BW13.updateExercise = function (g, dt) {
     return;
   }
   if (E.phase === 'call') {
-    E.meter = Math.max(0, E.meter - dt * 0.1);   // forgiving: slow tappers still get there
+    E.meter = Math.max(0, E.meter - dt * (E.decay !== undefined ? E.decay : 0.1));   // forgiving: slow tappers still get there (E.decay: test knob)
     if (pressed) { E.meter = Math.min(1, E.meter + 0.13); burnsSfx('dialogue_blip', { vol: 0.25, pitch: 0.6 + E.meter }); g.fx.hearts(p.x, p.y + 1.4, p.z, 1); }
     const lines = [[0.3, 'Louder, honey!'], [0.6, 'From the heart!'], [0.85, 'From the BUN!']];
     for (const [th, l] of lines) if (E.meter >= th && E.cheer < th) { E.cheer = th; if (pearl) pearl.say(l, 1.4); }
@@ -1135,7 +1136,7 @@ BW13.goons = function (g) {
     { wait: 1.4 },
     { say: ['brady', ['Revoked. Chinka\'s on top of the Man\'s pavilion, and I\'m standing on the gate road.']] },
     { do: g2 => { const P = S.plane; P.visible = true; P.x = 70; P.y = 20; P.z = E.z - 9; P.yaw = -Math.PI / 2; S.planeT = 0; S.planeOn = true; burnsSfx('artcarHorn', { vol: 0.25, pitch: 0.5 }); p.yaw = 0.5; p.animOverride = 'bw1213_lookup'; } },
-    { cam: { x: E.x + 1.2, y: 0.9, z: E.z + 4.2, tx: E.x - 3, ty: 11, tz: E.z - 9, fov: 1.0 } },
+    { cam: { x: E.x + 1.2, y: 0.9, z: E.z + 4.2, tx: E.x - 1.5, ty: 14, tz: E.z - 9, fov: 1.0 } },
     { wait: 2.0 },
     { say: ['brady', ['If I can\'t get back in through the gate...', '...I\'ll come in from the SKY.']] },
     { banner: ['TO BE CONTINUED', '...from the sky.', { col: '#38c8ff', big: true, dur: 3 }] },
@@ -1162,12 +1163,16 @@ BW13.restore = function (g) {
    ============================================================ */
 BW13.drawSprites = function (g, R) {
   const S = BW13.state, SP = BURNS_SPRITES.R, t = g.time, p = g.player;
+  // first-person camera mode: things drawn "on Brady" go just in front of the lens instead
+  const fp = !!(g.firstPerson && g.firstPerson()), cam = g.cam;
+  const ahead = (d, dy) => { const fx = cam.tx - cam.x, fy = cam.ty - cam.y, fz = cam.tz - cam.z, l = Math.hypot(fx, fy, fz) || 1; return [cam.x + fx / l * d, cam.y + fy / l * d + (dy || 0), cam.z + fz / l * d]; };
   // stare beam (locked on Brady, or sweeping in the dome)
   const sol = g.actor('solstice');
   if (sol && !sol.hidden) {
     const eye = sol.ch.bonePoint(BURNS_BONES.HEAD, 0, 0.22, 0.2);
     if (S.gaze && S.gaze.on) {
-      const tgt = [p.x, p.y + 1.6, p.z];
+      let tgt = [p.x, p.y + 1.6, p.z];
+      if (fp) { const dx = eye[0] - cam.x, dy = eye[1] - cam.y, dz = eye[2] - cam.z, l = Math.hypot(dx, dy, dz) || 1, d = Math.min(0.9, l * 0.5); tgt = [cam.x + dx / l * d, cam.y + dy / l * d - 0.15, cam.z + dz / l * d]; }
       BW1213.FX.beam(R, eye, tgt, 0.75, [1, 0.45, 0.9], 0.5, false, SP.glow);
       BW1213.FX.beam(R, eye, tgt, 0.16 + Math.sin(t * 20) * 0.03, [0.95, 0.15, 0.7], 0.8, true);
       BW1213.FX.dots(R, eye, tgt, 10, 0.22, [1, 0.8, 1], 0.9, (t * 2) % 1);
@@ -1187,8 +1192,9 @@ BW13.drawSprites = function (g, R) {
   for (const b of S.bowls) { const k = b.rung ? 0.4 + b.k * 0.6 : bathOn ? 0.25 + Math.sin(t * 3 + b.x) * 0.1 : 0; if (k > 0.01) R.bbs.bb(b.x, b.y + 0.3, b.z, 1.6 * (b.big ? 1.6 : 1), 1.6 * (b.big ? 1.6 : 1), SP.glow, b.rung ? [0.8, 0.6, 1] : [1, 0.9, 0.6], k * 0.7, true); }
   // the breathing light in the exercise
   const E = S.ex;
-  if (E && E.phase === 'breathe') { const k = BW13.breathK(E.t); R.flat.flat(p.x, p.y + 0.06, p.z, 1.2 + k * 2.6, 1.2 + k * 2.6, 0, SP.ring, k > 0.8 ? [1, 0.6, 0.85] : [0.7, 0.6, 1], 0.5 + k * 0.4, true); R.bbs.bb(p.x, p.y + 1.2, p.z, 1 + k * 2.2, 1 + k * 2.2, SP.glow, [1, 0.55, 0.8], 0.2 + k * 0.35, true); }
-  if (E && E.phase === 'call') { const k = E.meter; R.bbs.bb(p.x, p.y + 1.5, p.z, 1 + k * 3.5, 1 + k * 3.5, SP.heart, [1, 0.35, 0.6], 0.3 + k * 0.6, true); }
+  const chest = fp ? ahead(2.4, -0.35) : [p.x, p.y + 1.2, p.z];
+  if (E && E.phase === 'breathe') { const k = BW13.breathK(E.t); R.flat.flat(p.x, p.y + 0.06, p.z, 1.2 + k * 2.6, 1.2 + k * 2.6, 0, SP.ring, k > 0.8 ? [1, 0.6, 0.85] : [0.7, 0.6, 1], 0.5 + k * 0.4, true); const gs = (fp ? 0.45 : 1) * (1 + k * 2.2); R.bbs.bb(chest[0], chest[1], chest[2], gs, gs, SP.glow, [1, 0.55, 0.8], 0.2 + k * 0.35, true); }
+  if (E && E.phase === 'call') { const k = E.meter, h = fp ? ahead(2.6, -0.1) : [p.x, p.y + 1.5, p.z], sz = (fp ? 0.6 : 1) * (1 + k * 3.5); R.bbs.bb(h[0], h[1], h[2], sz, sz, SP.heart, [1, 0.35, 0.6], 0.3 + k * 0.6, true); }
   // the heart flare over the Man's pavilion
   if (S.flare > 0) {
     const M = BW13.MAN, k = S.flare, rise = clamp((1 - k) * 5, 0, 1), y = 56 + rise * 14, sz = 20 + rise * 22;

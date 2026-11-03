@@ -84,13 +84,15 @@ class BurnsW8910Man extends BurnsManBoss {
         }
         if (u > 1.9 && this.fired === 1) {
           this.fired = 2;
-          let best = null;
-          for (let k = 0; k < 20; k++) {
-            const a = Math.random() * TAU, d = A.r * (0.25 + Math.random() * 0.5), x = A.x + Math.sin(a) * d, z = A.z + Math.cos(a) * d, dp = Math.hypot(x - p.x, z - p.z);
-            if (dp < 13) continue;
+          let best = null, far = null, farD = -1;
+          for (let k = 0; k < 24; k++) {
+            const a = Math.random() * TAU, d = A.r * (0.25 + Math.random() * 0.5), x = A.x + Math.sin(a) * d, z = A.z + Math.cos(a) * d, dp = Math.hypot(x - p.x, z - p.z), dm = Math.hypot(x - this.x, z - this.z);
+            if (dm > farD) { farD = dm; far = [x, z]; }
+            if (dp < 13 || dm < 9) continue;   // reappear somewhere new, and not on top of Brady
             if ((this.cfg.covers || []).some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3.5 * this.scale)) continue;
             best = [x, z]; if (dp > 17) break;
           }
+          if (!best) best = far;
           if (best) { this.x = best[0]; this.z = best[1]; }
           this.yaw = Math.atan2(p.x - this.x, p.z - this.z); this.hidden = false;
           for (let i = 0; i < 5; i++) g.fx.dust(this.x + (Math.random() - 0.5) * 7, this.y + Math.random() * 6, this.z + (Math.random() - 0.5) * 7, 14, '#b89a80');

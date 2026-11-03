@@ -1,6 +1,6 @@
 /* ============================================================
-   BRADY-O BURNS — shared helpers for Worlds 2, 3 and 4
-   (Finding Camp · Costume Cult & the Yellow Bike · The Orgy Dome)
+   BRADY GOES TO BURNING MAN — shared helpers for Worlds 2, 3 and 4
+   (No Camp · Costume Cult & the Yellow Bike · The Orgy Dome)
    - one helper per rounded shape (wrapping the engine's smooth
      primitives, so a signature change is a one-line fix)
    - prop builders: lamps, clock-street signposts, parked bikes,

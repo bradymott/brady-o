@@ -15,6 +15,9 @@ class Player {
     this.spin = false; this.spinVis = 0; this.pack = (g.packCarry !== undefined ? g.packCarry : null);
     this.fx = { molly: 0, khole: 0, powder: 0, lsd: 0 }; this.stunT = 0; this.slowT = 0; this.grabbedBy = null; this.grabMash = 0;
     this.carryVx = 0; this.rideVx = 0; this.pushX = 0;
+    // world tour: signature item, LSD flight (then a glide down), the rainbow trail, smoke puffs
+    this.sig = (g.sigCarry && g.level && g.level.tour) ? Object.assign({}, g.sigCarry) : null;
+    this.lsdT = 0; this.glideT = 0; this.trail = []; this.puffs = 0; this.shotT = 0;
     const gifts = (Save.data && Save.data.gifts) || {};
     this.kandi = gifts.kandi ? 1 : 0;
     const ha = hairAnchor(this.x + this.w / 2, this.y + this.h, this.facing, this.power === 0, null);
@@ -88,6 +91,7 @@ class Player {
   }
   collect(kind, src) {
     const g = this.g;
+    if (g.level && g.level.tour) return this.collectTour(kind, src);
     const packable = kind !== 'gold' && kind !== 'cassette';
     if (packable && !this.usingPack && this.busy(kind) && !this.pack) {
       this.pack = kind; Sound.play('appear'); sfx('pickup_bag', null, { vol: 0.5 });
@@ -141,6 +145,48 @@ class Player {
         break;
     }
     if (kind !== 'gold') g.flashText = null;
+  }
+  // the world tour's pickups: magic mushroom, joint, LSD tab, star, water bottle, signature items
+  collectTour(kind, src) {
+    const g = this.g;
+    if (kind === 'coffee') kind = 'mushroom'; else if (kind === 'vinyl') kind = 'joint'; else if (kind === 'eclipse') kind = 'star'; else if (kind === 'cassette') kind = 'oneup'; else if (kind === 'bufo') kind = 'lsd';
+    if (kind && kind.startsWith('sig:')) {
+      const P = TourPowers.get(kind.slice(4));
+      if (!P) return;
+      this.sig = { id: P.id, t: P.time || 0, n: 0 };
+      Sound.play('powerup'); g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 24, '#ffe08a', 'confetti');
+      g.toast(P.name + '! ' + (P.hint || ''));
+      if (P.onCollect) P.onCollect(this, g);
+      return;
+    }
+    switch (kind) {
+      case 'mushroom': // grow, and the whole screen goes colorful and dizzy for a few seconds
+        if (this.power === 0) this.setPower(1); else Sound.play('powerup');
+        Sound.play('mushroom'); g.dizzy = 4.2;
+        g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 24, '#c8a0ff', 'confetti');
+        g.toast('MAGIC MUSHROOM! WHOA... THE COLORS');
+        break;
+      case 'joint': // power 2: blow smoke puffs
+        this.setPower(2); g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 14, '#e8e8f0', 'dust');
+        Sound.play('float', { vol: 0.6 });
+        g.toast('PUFF PUFF! TAP THROW TO BLOW SMOKE');
+        break;
+      case 'lsd': // timed free flight with a rainbow trail and rainbow lasers
+        this.lsdT = 10; this.glideT = 0; this.fly = 0; this.floaty = 0; this.trail.length = 0; this.vy = Math.min(this.vy, -3 * TS);
+        TourKit.sfx('lsd', 'mushroom'); g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 30, '#ffffff', 'confetti');
+        g.toast('LSD TAB! FLY ANYWHERE  ·  THROW = RAINBOW LASERS');
+        break;
+      case 'star':
+        this.star = 10; Sound.play('disco'); g.mus('star'); g.addScore(1000, this.cx, this.y);
+        { const C = Tour.countryOf(g.id); g.toast((C && C.star && C.star.name ? C.star.name : 'GOLDEN GLOBE') + '! INVINCIBLE'); }
+        break;
+      case 'oneup':
+        Sound.play('hydrate'); g.addLife(this.cx, this.y); g.toast('WATER BOTTLE! STAY HYDRATED');
+        break;
+      case 'gold':
+        g.collectGold(src.idx, src.cx, src.cy);
+        break;
+    }
   }
   usePack() {
     const k = this.pack;
@@ -232,23 +278,42 @@ class Player {
         return;
       }
     }
+    // LSD flight: steer freely (stick / jump to rise, down to sink); then a gentle glide down
+    const tripping = this.lsdT > 0 && !this.inWater;
+    if (this.lsdT > 0) {
+      this.lsdT -= dt;
+      if (this.lsdT <= 2 && this.lsdT + dt > 2) g.toast('COMING DOWN...');
+      if (this.lsdT <= 0) { this.lsdT = 0; this.glideT = this.onGround ? 0 : 3; Sound.play('float', { pitch: 0.8, vol: 0.4 }); }
+    }
+    if (this.glideT > 0) { this.glideT -= dt; if (this.onGround || this.inWater) this.glideT = 0; }
+    if (this.lsdT > 0 || this.glideT > 0) { this.trail.unshift([this.cx - this.facing * 6, this.y + this.h * 0.55]); if (this.trail.length > 28) this.trail.pop(); }
+    else if (this.trail.length) this.trail.pop();
+    if (tripping) {
+      const up = inp.up || inp.jump, dn = inp.down;
+      this.vy = approach(this.vy, up && !dn ? -6.8 * TS : dn && !up ? 6.8 * TS : 0, 42 * TS * dt);
+      this.jumping = false;
+      inp = Object.assign({}, inp, { jump: false, jumpPressed: false, down: false });
+      if (this.y < -TS * 2) { this.y = -TS * 2; this.vy = Math.max(this.vy, 0); }
+    }
     const floating = this.floaty > 0 && !this.inWater, flying = this.fly > 0 && !this.inWater;
     if (floating && !this.onGround) inp = Object.assign({}, inp, { jumpPressed: false });
     // a balloon doesn't stay on the ground: lift off unless Brady holds down
     if (floating && this.onGround && !inp.down) { this.vy = -3 * TS; this.onGround = false; }
-    const gScale = floating ? 0.12 : (flying && inp.jump && !this.onGround) ? 0.25 : 1;
+    const gScale = tripping ? 0 : this.glideT > 0 ? 0.18 : floating ? 0.12 : (flying && inp.jump && !this.onGround) ? 0.25 : 1;
     // headbang spin: tap jump again in mid-air
     const nearGround = () => { const fy = Math.floor((this.y + this.h + 22) / TS); for (const tx of [Math.floor((this.x + 2) / TS), Math.floor((this.x + this.w - 2) / TS)]) { const t = tileAt(A, tx, fy); if (SOLID[t] || t === T.SEMI) return true; } return this.vy > 0 && g.platforms.some(pl => !pl.dead && this.x + this.w > pl.x && this.x < pl.x + pl.w && pl.y - (this.y + this.h) < 24 && pl.y > this.y); };
-    if (inp.jumpPressed && !this.onGround && !this.spin && !this.mounted && !this.inWater && !(this.fly > 0) && !(this.floaty > 0) && this.coyote <= 0 && !(this.vy > 0 && nearGround())) {
+    if (inp.jumpPressed && !this.onGround && !this.spin && !this.mounted && !this.inWater && !(this.fly > 0) && !(this.floaty > 0) && !tripping && !(this.glideT > 0) && this.coyote <= 0 && !(this.vy > 0 && nearGround())) {
       this.spin = true; this.spinVis = 0.3; inp = Object.assign({}, inp, { jumpPressed: false });
       if (this.vy > -2.4 * TS) this.vy = -2.4 * TS;
       sfx('spin', 'headbang', { vol: 0.6 }); g.burst(this.cx, this.y + 8, 6, '#ffffff', 'spark');
     }
     const gifts = Save.data.gifts || {};
-    const speedMul = (this.slowT > 0 ? 0.55 : 1) * (this.fx.powder > 0 ? 1.3 : 1) * (gifts.bike ? 1.12 : 1);
+    const sigP = this.sig ? TourPowers.get(this.sig.id) : null;
+    const speedMul = (this.slowT > 0 ? 0.55 : 1) * (this.fx.powder > 0 ? 1.3 : 1) * (gifts.bike ? 1.12 : 1) * (tripping ? 1.25 : 1) * (sigP && sigP.speedMul ? sigP.speedMul : 1);
     const jumpBoost = (this.mounted ? 1.12 : 1) * (this.fx.powder > 0 ? 1.14 : 1);
     const wasGround = this.onGround, rideWas = this.ride;
     const ev = playerPhysics(this, inp, A, dt, g.platforms, { windDx, noCrouchJump: false, jumpBoost, gScale, speedMul });
+    if (this.glideT > 0 && this.vy > 2.2 * TS) this.vy = 2.2 * TS;
     if (ev.jump && rideWas && !rideWas.carrier) this.carryVx = this.rideVx * 0.85;
     if (ev.jump && rideWas && rideWas.carrier) this.carryVx = this.rideVx;
     if (ev.bounce) { Sound.play('spring', { vol: 0.45, pitch: 1.3 }); g.burst(this.cx, this.y + this.h, 4, '#ffffff', 'dust'); }
@@ -299,8 +364,32 @@ class Player {
       const zone = { x: this.facing > 0 ? this.x + this.w - 4 : this.x - 30, y: this.y, w: 34, h: this.h };
       for (const e of g.entities) if (e.enemy && !e.dead && !e.boss && overlap(zone, e)) { e.hit('hug', this); g.addScore(200, e.cx, e.y); g.burst(e.cx, e.cy, 10, '#ff9ad8', 'confetti'); }
     }
+    // world tour actions: rainbow lasers while tripping, then the signature item, then smoke puffs
+    if (this.shotT > 0) this.shotT -= dt;
+    if (this.sig) {
+      const P = sigP;
+      if (P && P.update) P.update(this, dt, inp, g);
+      if (this.sig && this.sig.t > 0) { this.sig.t -= dt; if (this.sig.t <= 0) { this.sig = null; g.toast('THE SOUVENIR WORE OFF'); } }
+    }
+    let acted = false;
+    if (g.level && g.level.tour && inp.actionPressed && !this.crouch) {
+      if (this.lsdT > 0 && this.shotT <= 0) {
+        this.shotT = 0.16; acted = true;
+        g.spawn(new RainbowLaser(g, this.cx + this.facing * 14, this.y + (this.small ? 12 : 20), this.facing, (inp.up ? -4 : inp.down ? 4 : 0) * TS));
+        Sound.play('laser', { pitch: 1.5, vol: 0.4 }); this.throwT = 0.12;
+      } else if (this.sig && sigP && sigP.action && this.shotT <= 0) {
+        if (sigP.action(this, g)) { acted = true; this.shotT = sigP.cooldown || 0.3; this.throwT = 0.18; }
+      }
+      if (!acted && this.power === 2 && this.puffs < 3 && this.shotT <= 0) {
+        this.puffs++; this.shotT = 0.22; acted = true;
+        const pf = new SmokePuff(g, this.cx + this.facing * 14, this.y + (this.small ? 10 : 16), this.facing);
+        pf.onRemove = () => { this.puffs--; };
+        g.spawn(pf); this.throwT = 0.2;
+        Sound.play('fly', { pitch: 0.55, vol: 0.5 });
+      }
+    }
     // throw green puke balls
-    if (this.power === 2 && inp.actionPressed && this.discs < 2 && !this.crouch) {
+    if (!(g.level && g.level.tour) && this.power === 2 && inp.actionPressed && this.discs < 2 && !this.crouch) {
       this.discs++;
       const d = new Disc(g, this.cx + this.facing * 12, this.y + (this.small ? 12 : 22), this.facing);
       d.onRemove = () => { this.discs--; };
@@ -358,7 +447,8 @@ class Player {
     else if (this.mounted) st = 'ride';
     else if (this.spin && !this.onGround) st = 'headbang';
     else if (this.floaty > 0 && !this.onGround) st = 'float';
-    else if (this.fly > 0 && !this.onGround) st = 'fly';
+    else if ((this.fly > 0 || this.lsdT > 0) && !this.onGround) st = 'fly';
+    else if (this.glideT > 0 && !this.onGround) st = 'float';
     else if (this.inWater) st = 'swim';
     else if (!this.onGround) st = this.vy < 0 ? 'jump' : 'fall';
     else if (this.crouch) st = 'crouch';
@@ -387,7 +477,7 @@ class Player {
     a.stroke = this.stroke;
     this.blinkT -= dt;
     if (this.blinkT < 0) { a.blink = true; if (this.blinkT < -0.12) { a.blink = false; this.blinkT = 2 + Math.random() * 3; } }
-    a.happy = this.star > 0 || this.g.happyT > 0;
+    a.happy = this.star > 0 || this.g.happyT > 0 || this.lsdT > 0;
   }
 
   updateHair(dt) {
@@ -411,7 +501,8 @@ class Player {
     if (this.invuln > 0 && !this.dead && Math.floor(this.invuln * 16) % 2 === 0) return;
     let small = this.small;
     if (this.growT > 0) small = Math.floor(this.growT * 14) % 2 === 0 ? (this.growFrom === 0) : (this.power === 0);
-    const o = { x: this.cx, y: this.y + this.h, facing: this.facing, small, power: this.power, anim: this.anim, hair: this.hair, look: Save.data.look, star: this.star > 0, time: t, fly: this.fly > 0, floaty: this.floaty > 0 };
+    const o = { x: this.cx, y: this.y + this.h, facing: this.facing, small, power: this.power, anim: this.anim, hair: this.hair, look: Save.data.look, star: this.star > 0, time: t, fly: this.fly > 0 || this.lsdT > 0, floaty: this.floaty > 0 || (this.power === 2 && this.g.level && this.g.level.tour && !this.inWater) };
+    if (this.lsdT > 0 && this.lsdT < 2 && Math.floor(this.lsdT * 10) % 2 === 0) o.alpha = 0.45;
     if (this.mounted) {
       const moving = Math.abs(this.vx) > 10;
       if (this.hang) {

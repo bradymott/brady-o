@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — actors: NPCs, enemies, behaviours, projectiles,
+   BRADY GOES TO BURNING MAN — actors: NPCs, enemies, behaviours, projectiles,
    shockwaves, pickups, particles and the Man boss controller.
    Behaviours are data: BurnsBehaviors.register(name, { init, update, hit, talk }).
    ============================================================ */
@@ -106,9 +106,12 @@ class BurnsActor {
     if (this.defeated || this.invT > 0 || this.hidden) return false;
     if (this.beh.hit) { const r = this.beh.hit(this, this.g, kind); if (r === false) return false; if (r === 'handled') return true; }
     if (this.friendly && !this.def.hittable) return false;
-    if (kind === 'love') { this.befriend(); return true; }
+    // love (molly) wins ordinary burners over; a boss only takes it as one bonk
+    const bossy = !!(this.boss || this.def.boss || (this.def.hp || 1) > 3);
+    if (kind === 'love' && !bossy) { this.befriend(); return true; }
+    if (kind === 'love') this.g.fx.hearts(this.x, this.y + this.h * 0.8, this.z, 8);
     this.hp -= (kind === 'pound' || kind === 'giant') ? 2 : 1;
-    this.invT = 0.45; this.hurtT = 0.35;
+    this.invT = kind === 'love' ? 1.2 : 0.45; this.hurtT = 0.35;
     const dx = this.x - (fromX === undefined ? this.g.player.x : fromX), dz = this.z - (fromZ === undefined ? this.g.player.z : fromZ), d = Math.hypot(dx, dz) || 1;
     if (!this.boss) { this.vx = dx / d * 6; this.vz = dz / d * 6; this.vy = 5; this.grounded = false; }
     this.g.fx.burst(this.x, this.y + this.h * 0.6, this.z, 'star', 8, '#ffe24a');

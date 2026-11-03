@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 4: THE ORGY DOME (night, velvet fog)
+   BRADY GOES TO BURNING MAN — World 4: THE ORGY DOME (Tuesday night, velvet fog)
    Comedy, not explicit: everybody keeps their clothes on, the jokes
    are about consent, cuddle etiquette and terrible pickup lines.
    An informant ("Agent Velour") knows where the Man keeps Chinka.

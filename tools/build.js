@@ -22,7 +22,8 @@ const allFiles = fs.readdirSync(srcDir).filter(f => f.endsWith('.js')).sort();
 /* ---------- the three apps ---------- */
 // Each app bundles a subset of src/ modules. BRADY_APP tells the shared boot code which game to start.
 const isBurns = f => /^4[0-2]_burns_/.test(f);
-const isKart = f => /^3[01]_kart/.test(f);
+// Art Cart: the old WebGL1 kart (30–31) and the new 3D modules built on the Burns engine (43_cart_*, loaded after 40–42)
+const isKart = f => /^3[01]_kart/.test(f) || /^43_cart_/.test(f);
 const APPS = {
   burningman: {
     dir: 'burning-man', name: 'Brady Goes to Burning Man', short: 'Burning Man',
@@ -35,7 +36,8 @@ const APPS = {
     dir: 'super-brady-o-world', name: 'Super Brady-O World', short: 'Super Brady-O',
     desc: 'Super Brady-O travels the world: a 2D platformer across twelve countries.',
     color: '#0b1630', saveKey: 'super-brady-o-world-save-v1',
-    files: f => !isBurns(f) && !isKart(f)
+    // the world tour replaced the Black Rock City lands, their level designs, themes and city map
+    files: f => !isBurns(f) && !isKart(f) && !['08c_designs.js', '20b_world_themes.js', '24_sloth.js', '26_worlddata.js', '27_brcmap.js', '27_brcmap_land.js'].includes(f)
   },
   kart: {
     dir: 'art-cart', name: 'Art Cart', short: 'Art Cart',

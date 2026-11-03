@@ -120,6 +120,7 @@ class Play {
     this.windForce = 0; this.windT = 0;
     const start = this.checkpoint || level.start;
     const gifts = Save.data.gifts || {};
+    this.sigCarry = opts.sig || null; this.dizzy = 0;
     // Hydration Station's gift: Brady always starts big (one more health step)
     this.loadArea(start.area, start.x, start.y, Math.max(opts.power || 0, gifts.hydration ? 1 : 0));
     this.camX = clamp(this.player.cx - Game.viewW * 0.4, 0, Math.max(0, this.area.W * TS - Game.viewW));
@@ -197,7 +198,7 @@ class Play {
     arr[idx] = true; Save.data.gold[this.id] = arr; Save.save();
     Sound.play('chinka');
     this.burst(x, y, 30, '#ff9ad8', 'firework');
-    this.parts.text(x, y - 20, 'PHOTO OF CHINKA!', '#ff9ad8');
+    this.parts.text(x, y - 20, this.level.tour ? 'POSTCARD FROM CHINKA!' : 'PHOTO OF CHINKA!', '#ff9ad8');
     this.addScore(5000);
     this.happyT = 1.5;
   }
@@ -211,9 +212,13 @@ class Play {
     let n = name;
     if (n === 'secret' && this.level && this.level.arch === 'gift') n = 'gift_camp';
     if ((Sound.trackNames || []).indexOf(n) < 0 && fb[n]) n = fb[n];
+    if ((Sound.trackNames || []).indexOf(n) < 0 && this.level && this.level.tour) n = n === 'tourboss' ? 'boss' : 'w5';
     Sound.music(n);
   }
-  bossTrack(b) { return b.style === 'man' ? (b.phase === 2 ? 'man_giant' : 'man_boss') : 'boss'; }
+  bossTrack(b) {
+    if (this.level && this.level.tour) { const C = Tour.countryOf(this.id); return (b.info && b.info.music) || (C && C.music.boss) || 'boss'; }
+    return b.style === 'man' ? (b.phase === 2 ? 'man_giant' : 'man_boss') : 'boss';
+  }
   // beats elapsed (for platforms and lasers that move with the music)
   beatNow() { const bpm = (this.area && this.area.beat && this.area.beat.bpm) || 120; return this.beatClock * bpm / 60; }
   worldScale() { return this.player && this.player.fx && this.player.fx.khole > 0 ? 0.4 : 1; }
@@ -260,6 +265,7 @@ class Play {
       bump();
       if (it === 'pick') { this.spawn(new PickPop(this, tx * TS + TS / 2, ty * TS - 8)); this.addPick(); return; }
       let kind = it;
+      if (this.level.tour) { this.spawn(new TourItem(this, tx * TS + TS / 2, ty * TS, TourPowers.blockItem(it, this))); Sound.play('appear'); if (t === T.HIDDEN) { this.egg('hidden-block'); Sound.play('secret', { vol: 0.5 }); } return; }
       if (it === 'power') kind = (this.player && this.player.power > 0) ? 'vinyl' : 'coffee';
       if (it === 'oneup') kind = 'cassette';
       if (typeof it === 'string' && it.startsWith('bag:')) kind = it.slice(4);
@@ -308,14 +314,20 @@ class Play {
     const d = Save.data, id = this.id;
     d.done[id] = true;
     if (this.secretClear) d.secretExits[id] = true;
-    this.opened = WorldGame.complete(id, !!this.secretClear);
+    this.opened = (this.level.tour && typeof TourProgress !== 'undefined' ? TourProgress : WorldGame).complete(id, !!this.secretClear);
     if (FINALE_LEVELS[id]) d.beatGame = true;
     const elapsed = this.level.time - this.timeLeft;
     if (!d.best[id] || elapsed < d.best[id]) d.best[id] = Math.round(elapsed * 10) / 10;
     d.lastWorld = this.level.world;
     Save.save();
   }
-  nextLevelId() { return null; }
+  nextLevelId() {
+    if (!this.level.tour) return null;
+    const C = Tour.countryOf(this.id), i = this.level.index;
+    if (!C || i >= C.levels.length) return null;
+    const nid = C.world + '-' + (i + 1);
+    return TourProgress.isUnlocked(nid) ? nid : null;
+  }
   enterPortal(p) {
     if (this.state !== 'play' || this.player.state !== 'play') return;
     this.player.state = 'portal'; this.player.portalT = 0; this.player.vx = 0;
@@ -333,6 +345,7 @@ class Play {
     }
     this.fadeTo(1, () => {
       const power = this.player.power, pack = this.player.pack, kandi = this.player.kandi, fx = this.player.fx;
+      this.sigCarry = this.player.sig;
       this.loadArea(tg.area, tg.x, tg.y, power);
       this.player.power = power; this.player.pack = pack; this.player.kandi = kandi; this.player.fx = fx;
       this.camX = clamp(this.player.cx - Game.viewW * 0.4, 0, Math.max(0, this.area.W * TS - Game.viewW));
@@ -429,6 +442,7 @@ class Play {
     }
     if (this.state === 'tally' || this.state === 'results') { this.updateTally(dt); this.parts.update(dt); this.player.update(dt, {}); return; }
     if (this.happyT > 0) this.happyT -= dt;
+    if (this.dizzy > 0) this.dizzy -= dt;
     if (this.toastT > 0) this.toastT -= dt;
     if (this.trip > 0) this.trip = Math.max(0, this.trip - dt * 0.55);
     if (this.player.fx && this.player.fx.lsd > 0) this.trip = Math.max(this.trip || 0, 0.45);
@@ -596,8 +610,8 @@ class Play {
     const btns = [];
     const W = Game.cssW, H = Game.cssH;
     const bw = Math.min(170, W * 0.36), bh = 48, y = H * 0.5 + 90;
-    const finale = !!FINALE_LEVELS[this.id];
-    if (finale) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: 'FIND CHINKA ♥', primary: true, fn: () => this.goNext(null) });
+    const finale = this.level.tour ? Tour.isFinale(this.id) : !!FINALE_LEVELS[this.id];
+    if (finale) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: this.level.tour ? 'HOME TOGETHER ♥' : 'FIND CHINKA ♥', primary: true, fn: () => this.goNext(null) });
     else if (next) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: 'NEXT ▶', primary: true, fn: () => this.goNext(next) });
     else btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: 'MAP ▶', primary: true, fn: () => this.goNext(null) });
     btns.push({ x: W / 2 - 8 - bw, y, w: bw, h: bh, label: 'PLAY AGAIN', fn: () => { Sound.play('select'); Game.setScene(new Play(this.level, {})); } });
@@ -605,10 +619,11 @@ class Play {
   }
   goNext(next) {
     Sound.play('select');
-    if (FINALE_LEVELS[this.id]) { Game.setScene(new EndingScene(this.set)); return; }
+    if (this.level.tour && Tour.isFinale(this.id)) { Game.setScene(new TourEndingScene()); return; }
+    if (!this.level.tour && FINALE_LEVELS[this.id]) { Game.setScene(new EndingScene(this.set)); return; }
     if (!next) { goToMap(this.set, this.level.world, this.id); return; }
     const [w, i] = next.split('-').map(Number);
-    Game.setScene(new Play(getLevel(w, i), { power: this.player.power }));
+    Game.setScene(new Play(getLevel(w, i), { power: this.player.power, sig: this.level.tour ? this.player.sig : null }));
   }
 
   openPause() {
@@ -666,6 +681,7 @@ class Play {
     if (darkness > 0) this.drawLighting(ctx, camX, camY, S, darkness);
     PostFX.apply(ctx, this, Math.round(VW * S), Math.round(VH * S), gx, gy);
     WorldFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
+    if (this.level.tour && this.dizzy > 0) TourFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
     ctx.drawImage(Game.vignette, 0, 0); // vignette
     if (this.flash > 0 && !th.storm) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, this.flash * 0.7)})`; ctx.fillRect(0, 0, VW * S, VH * S); }
     ctx.restore();
@@ -929,21 +945,34 @@ class Play {
     }
     // the pack (tap to use), kandi bracelets, keys and running effects
     const px0 = gx + 84;
+    const tour = !!this.level.tour, pl = this.player;
+    if (tour) {
+      // the country's signature item (with a timer ring if it runs out)
+      this.packRect = null;
+      const sp = pl.sig ? TourPowers.get(pl.sig.id) : null;
+      ctx.fillStyle = sp ? 'rgba(40,20,60,0.75)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
+      ctx.strokeStyle = sp ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
+      if (sp) {
+        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); if (sp.icon) sp.icon(ctx, 0, 0, this.t); ctx.restore();
+        if (sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
+      } else { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = `6px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('SOUVENIR', px0 + 17, hy + 15); ctx.textAlign = 'left'; }
+    } else {
     this.packRect = { x: px0, y: hy - 2, w: 34, h: 32 };
     ctx.fillStyle = this.player.pack ? 'rgba(40,20,60,0.75)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
     ctx.strokeStyle = this.player.pack ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
     if (this.player.pack) { ctx.save(); ctx.translate(px0 + 17, hy + 16); ctx.scale(0.62, 0.62); Sprites.itemIcon(ctx, 0, 0, this.t, this.player.pack); ctx.restore(); }
     else { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('PACK', px0 + 17, hy + 15); ctx.textAlign = 'left'; }
+    }
     let ix = px0 + 42;
     const icon = (fn) => { fn(ix, hy + 14); ix += 26; };
     if (this.player.kandi > 0) icon((x, y) => { for (let i = 0; i < 3; i++) { ctx.strokeStyle = GLOW_COLS[i]; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y - 3 + i * 3, 9, 4, 0, 0, TAU); ctx.stroke(); } });
     for (const k of this.keys) icon((x, y) => { ctx.save(); ctx.translate(x, y + 2); ctx.scale(0.6, 0.6); GimmickArt.keyShape(ctx, 0, 0, k === 'secret'); ctx.restore(); });
-    const fxList = [['star', this.player.star, 10, '#ffffff'], ['bufo', this.player.fly, 12, '#c08aff'], ['joint', this.player.floaty, 9, '#e8e8f0']];
-    for (const k in this.player.fx) fxList.push([k, this.player.fx[k], BAG_KINDS[k].time, BAG_KINDS[k].col]);
+    const fxList = tour ? [['star', pl.star, 10, '#ffffff'], ['lsd', pl.lsdT, 10, '#a0f0ff']] : [['star', this.player.star, 10, '#ffffff'], ['bufo', this.player.fly, 12, '#c08aff'], ['joint', this.player.floaty, 9, '#e8e8f0']];
+    if (!tour) for (const k in this.player.fx) fxList.push([k, this.player.fx[k], BAG_KINDS[k].time, BAG_KINDS[k].col]);
     for (const [k, v, max, col] of fxList) if (v > 0) icon((x, y) => {
       ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 10, 0, TAU); ctx.stroke();
       ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 10, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(v / max, 0, 1)); ctx.stroke();
-      ctx.save(); ctx.translate(x, y); ctx.scale(0.42, 0.42); Sprites.itemIcon(ctx, 0, 0, this.t, k === 'star' ? 'eclipse' : k); ctx.restore();
+      ctx.save(); ctx.translate(x, y); ctx.scale(0.42, 0.42); Sprites.itemIcon(ctx, 0, 0, this.t, k === 'star' && !tour ? 'eclipse' : k); ctx.restore();
     });
     // right side: world & time
     const narrow = W < 600;
@@ -984,7 +1013,8 @@ class Play {
   }
   drawTutorial(ctx) {
     // first-time hints over the touch controls on the very first level
-    if (this.id !== '41-1' || Save.data.done['41-1'] || this.state !== 'play' || this.t > 14 || !Input.layout) return;
+    const first = this.level.tour ? Tour.firstLevel() : '41-1';
+    if (this.id !== first || Save.data.done[first] || this.state !== 'play' || this.t > 14 || !Input.layout) return;
     if (!Input.usingTouch && !Game.forceTouchUI) return;
     const L = Input.layout, a = clamp(Math.min(this.t - 1.7, 14 - this.t), 0, 1);
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -1107,6 +1137,7 @@ const LIQUIDS = {
 const PlayerFx = {
   under(ctx, p, t) {
     if (p.dead) return;
+    if (typeof TourPlayerFx !== 'undefined' && p.g.level && p.g.level.tour) TourPlayerFx.under(ctx, p, t);
     const cx = p.cx, cy = p.y + p.h * 0.5;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     if (p.fx.molly > 0) { const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, 48); g.addColorStop(0, 'rgba(255,120,190,0.35)'); g.addColorStop(1, 'rgba(255,120,190,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 48, cy - 48, 96, 96); }
@@ -1116,6 +1147,7 @@ const PlayerFx = {
   },
   over(ctx, p, t) {
     if (p.dead) return;
+    if (typeof TourPlayerFx !== 'undefined' && p.g.level && p.g.level.tour) TourPlayerFx.over(ctx, p, t);
     const cx = p.cx;
     if (p.spin && !p.onGround) {
       ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;

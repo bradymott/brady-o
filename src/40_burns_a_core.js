@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — 3D action-adventure engine (core)
+   BRADY GOES TO BURNING MAN — 3D action-adventure engine (core)
    ------------------------------------------------------------
    Files (concatenated alphabetically):
      40_burns_a_core.js    math, save, audio helpers, registry, data tables
@@ -169,6 +169,14 @@ function burnsMusic(name, fallback) {
   } catch (e) { /* ignore */ }
 }
 
+/* ---------------- the app's title screen ----------------
+   "Brady Goes to Burning Man" is its own app: BurnsAppStart (40_burns_l_app.js) is its title. Inside the old
+   combined build the 2D game's TitleScene is the fallback until the app title has been shown once. */
+function burnsToTitle() {
+  if (window.__burnsApp || typeof TitleScene === 'undefined') Game.setScene(new BurnsAppStart());
+  else Game.setScene(new TitleScene());
+}
+
 /* ---------------- save data: Save.data.burns ---------------- */
 const BurnsSave = {
   defaults() {
@@ -190,7 +198,7 @@ const BurnsSave = {
       lastWorld: 1,
       checkpoint: {},            // worldId -> checkpoint id (resume point)
       pack: {},                  // Brady's backpack: itemId -> count (ground scores, quest items)
-      settings: { camSens: 1, invertY: false, autoCam: true }
+      settings: { camSens: 1, invertY: false, autoCam: true, cam: 'normal', gfx: 'auto' }
     };
   },
   get() {
@@ -341,6 +349,9 @@ const BURNS_KEY_ITEMS = {
   artcar: { name: 'ART CAR KEYS', desc: 'You can drive art cars.', col: '#ff7a2a' }
 };
 const BURNS_HYDRATION_MAX = 6;
+// camera modes (HUD VIEW button, V key, settings): normal third person, over-the-shoulder, first person, far
+const BURNS_CAM_MODES = ['normal', 'close', 'first', 'far'];
+const BURNS_CAM_LABELS = { normal: 'THIRD PERSON', close: 'CLOSE', first: 'FIRST PERSON', far: 'FAR' };
 
 /* ---------------- the backpack: ground scores, quest items, trade goods ----------------
    Every power-up id is an item; worlds add more with BurnsPack.define(id, {name, desc, col, icon, kind, use(g)}).
@@ -432,5 +443,66 @@ const BurnsGoods = {
     const txt = list.map(e => this.label(e)).filter(Boolean).join(' + ');
     if (!o.quiet && txt && g && g.toast) { g.toast('GOT: ' + txt); burnsSfx('gift', null, 'pick'); }
     return txt;
+  }
+};
+
+
+/* ---------------- 2D helpers owned by the engine (the app ships without the 2D game) ---------------- */
+function burnsRR(ctx, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+// buttons, panels and titles for the engine's menus (same look and behaviour as the shared UI kit)
+const BurnsUIKit = {
+  drawButton(ctx, b, focused) {
+    ctx.save();
+    const pressed = b._press > 0, y = b.y + (pressed ? 2 : 0);
+    ctx.shadowColor = b.primary ? 'rgba(255,79,216,0.55)' : 'rgba(0,0,0,0.5)'; ctx.shadowBlur = b.primary ? 18 : 8; ctx.shadowOffsetY = pressed ? 1 : 4;
+    const g = ctx.createLinearGradient(0, y, 0, y + b.h);
+    if (b.primary) { g.addColorStop(0, '#ff6ae0'); g.addColorStop(1, '#a42ccf'); }
+    else if (b.disabled) { g.addColorStop(0, '#3a3644'); g.addColorStop(1, '#24202e'); }
+    else { g.addColorStop(0, '#3a3456'); g.addColorStop(1, '#1e1a30'); }
+    ctx.fillStyle = g; burnsRR(ctx, b.x, y, b.w, b.h, Math.min(16, b.h / 2)); ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = focused ? '#ffd84a' : b.primary ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = focused ? 2.5 : 1.2;
+    burnsRR(ctx, b.x, y, b.w, b.h, Math.min(16, b.h / 2)); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; burnsRR(ctx, b.x + 4, y + 3, b.w - 8, b.h * 0.38, Math.min(12, b.h / 3)); ctx.fill();
+    ctx.fillStyle = b.disabled ? 'rgba(255,255,255,0.4)' : '#ffffff';
+    ctx.font = `${b.size || Math.min(16, b.h * 0.36)}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(b.label, b.x + b.w / 2, y + b.h / 2 + 1);
+    ctx.restore();
+    if (b._press > 0) b._press -= 0.016;
+  },
+  drawButtons(ctx, list) { list.forEach((b, i) => this.drawButton(ctx, b, list.focus === i && !Input.usingTouch)); },
+  hitButtons(list) {
+    if (!list || !list.length) return null;
+    for (const t of Input.taps) for (const b of list) if (!b.disabled && t.x >= b.x - 6 && t.x <= b.x + b.w + 6 && t.y >= b.y - 6 && t.y <= b.y + b.h + 6) { b._press = 0.12; return b; }
+    const k = Input.uiKey;
+    if (k) {
+      if (list.focus === undefined) list.focus = 0;
+      if (k === 'down' || k === 'right') { list.focus = (list.focus + 1) % list.length; burnsSfx('select', { vol: 0.4 }); }
+      if (k === 'up' || k === 'left') { list.focus = (list.focus - 1 + list.length) % list.length; burnsSfx('select', { vol: 0.4 }); }
+      if (k === 'enter') return list[list.focus];
+    }
+    if (Input.jumpPressed && list.focus !== undefined) return list[list.focus];
+    return null;
+  },
+  panel(ctx, x, y, w, h) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 30;
+    const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(34,26,56,0.96)'); g.addColorStop(1, 'rgba(14,10,26,0.96)');
+    ctx.fillStyle = g; burnsRR(ctx, x, y, w, h, 20); ctx.fill();
+    ctx.shadowColor = 'transparent'; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 1.5; burnsRR(ctx, x, y, w, h, 20); ctx.stroke();
+    ctx.restore();
+  },
+  title(ctx, text, x, y, size) {
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${size}px ${FONT_DISPLAY}`;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillText(text, x + 2, y + 3);
+    const g = ctx.createLinearGradient(0, y - size / 2, 0, y + size / 2); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#ffd0f4');
+    ctx.fillStyle = g; ctx.fillText(text, x, y); ctx.restore();
   }
 };

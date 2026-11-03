@@ -17,7 +17,7 @@ const BURNS_W8910_END = {
       if (g) { g.released = true; BurnsScenes.releaseWorld(g); }
     } catch (e) { /* never block the ending */ }
     const sv = BurnsSave.get(); sv.beaten = true; BurnsSave.save();
-    Game.setScene(new StoryScene(this.panels(), () => Game.setScene(new BurnsW8910Credits()), 'burns_ending'));
+    Game.setScene(new BurnsW8910Epilogue(this.panels(), () => Game.setScene(new BurnsW8910Credits()), 'burns_ending'));
   },
   // epilogue panels drawn live with the game's 2D art
   panels() {
@@ -57,6 +57,16 @@ const BURNS_W8910_END = {
     ];
   }
 };
+
+/* ---------------- the epilogue: the shared story pages, but the last tap leads on to the credits ---------------- */
+class BurnsW8910Epilogue extends StoryScene {
+  draw(ctx) {
+    // (StoryScene labels its last page "TAP TO START", which reads oddly at the end of the game)
+    const own = Object.prototype.hasOwnProperty.call(ctx, 'fillText'), f = ctx.fillText;
+    ctx.fillText = function (txt, x, y, w) { return w === undefined ? f.call(this, txt === 'TAP TO START' ? 'TAP TO CONTINUE' : txt, x, y) : f.call(this, txt === 'TAP TO START' ? 'TAP TO CONTINUE' : txt, x, y, w); };
+    try { super.draw(ctx); } finally { if (own) ctx.fillText = f; else delete ctx.fillText; }
+  }
+}
 
 /* ---------------- a glowing, extruded title (the game's logo style) for any text, shrunk to fit ---------------- */
 function burnsW8910Title(ctx, txt, x, y, size, t, maxW) {
@@ -160,7 +170,14 @@ class BurnsW8910Credits {
     for (const [txt, k] of this.lines) {
       if (y > -40 && y < H + 40) {
         if (k === 'h' || k === 'h2') burnsW8910Title(ctx, txt, W / 2, y, k === 'h' ? Math.min(52, W * 0.1) : Math.min(30, W * 0.06), t, W * 0.9);
-        else { ctx.font = k === 'k' ? `13px ${FONT_DISPLAY}` : k === 's' ? `italic 15px ${FONT_UI}` : `16px ${FONT_UI}`; ctx.fillStyle = k === 'k' ? '#ffd84a' : '#ffffff'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 6; ctx.fillText(txt, W / 2, y); ctx.shadowBlur = 0; }
+        else {
+          // one line each, shrunk to fit a narrow (portrait) screen
+          const base = k === 'k' ? 13 : k === 's' ? 15 : 16, fam = k === 'k' ? FONT_DISPLAY : FONT_UI, sty = k === 's' ? 'italic ' : '';
+          ctx.font = `${sty}${base}px ${fam}`;
+          const tw = ctx.measureText(txt).width, max = W * 0.92;
+          if (tw > max) ctx.font = `${sty}${Math.max(9, base * max / tw).toFixed(1)}px ${fam}`;
+          ctx.fillStyle = k === 'k' ? '#ffd84a' : '#ffffff'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 6; ctx.fillText(txt, W / 2, y); ctx.shadowBlur = 0;
+        }
       }
       y += k === 'h' ? 80 : k === 'h2' ? 46 : 30;
     }

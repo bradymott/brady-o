@@ -45,22 +45,24 @@ const BW15W = {
     BW15W.springs = spr; BW15W.gas = gas; BW15W.hill = hill;
     T.build();
   },
+  // narrow (portrait) screens get the short version: the engine's tracker pill is at most half the screen wide
+  fit(long, short) { return Game.cssW < 600 ? short : long; },
   tracker() {
-    const S = BW15.state; if (!S) return 'Drive to Gerlach';
-    if (S.chase) return 'Lose the cops! Dust · trucks · traffic';
+    const S = BW15.state, f = BW15W.fit; if (!S) return 'Drive to Gerlach';
+    if (S.chase) return f('Lose the cops! Dust · trucks · traffic', 'Lose the cops!');
     if (S.enc) return 'KEEP IT TOGETHER!';
-    if (S.tail) return 'Shake the undercover cop!';
-    if (S.ponyAboard) return 'Drive Glitter to the Gerlach diner';
-    if (S.s > BW15.S.welcome - 30) return 'Park at the diner (right side)';
-    if (S.s > BW15.S.check - 130 && S.s < BW15.S.check + 10) return 'Checkpoint ahead: crawl through';
+    if (S.tail) return f('Shake the undercover cop!', 'Shake the undercover!');
+    if (S.ponyAboard) return f('Drive Glitter to the Gerlach diner', 'Drive Glitter to the diner');
+    if (S.s > BW15.S.welcome - 30) return f('Park at the diner (right side)', 'Park at the diner (right)');
+    if (S.s > BW15.S.check - 130 && S.s < BW15.S.check + 10) return f('Checkpoint ahead: crawl through', 'Checkpoint ahead: crawl');
     return 'Drive to Gerlach';
   },
   pulseShort() {
-    const S = BW15.state, ph = S ? S.pulse.phase : 'hold1';
-    if (ph === 'big' || ph === 'count') return 'THE BIG PULSE: make the gate!';
+    const S = BW15.state, ph = S ? S.pulse.phase : 'hold1', f = BW15W.fit;
+    if (ph === 'big' || ph === 'count') return f('THE BIG PULSE: make the gate!', 'BIG PULSE: make the gate');
     if (ph === 'go1') return 'Roll with the pulse';
-    if (ph === 'retry' || ph === 'wait' || ph === 'missed') return 'Get ready for the next pulse';
-    return 'Hold for the pulse · take the last bags';
+    if (ph === 'retry' || ph === 'wait' || ph === 'missed') return f('Get ready for the next pulse', 'Wait for the next pulse');
+    return f('Hold for the pulse · take the last bags', 'Hold · take the last bags');
   }
 };
 
@@ -78,9 +80,9 @@ BurnsWorlds.register({
       desc: 'Departing burners can\'t take their last bags with them. Take all eight. Every bag cranks the TRIP METER, and the world gets wonkier.', hint: 'Line stops, a hitchhiker, the gas station, the hot springs, and a stranded sparkle pony' },
     { id: 'springs', name: 'Scenic Detour', type: 'custom', start: 'manual', secret: true, tokenDirect: true, short: 'Take the scenic detour',
       desc: 'Hot springs, off the road behind the hills. Very scenic. Very steamy.', hint: 'A dirt track left of the highway, after the checkpoint' },
-    { id: 'pony', name: 'Pony Express', type: 'custom', start: 'manual', tokenDirect: true, short: 'Drive Glitter to the Gerlach diner',
+    { id: 'pony', name: 'Pony Express', type: 'custom', start: 'manual', tokenDirect: true, get short() { return BW15W.fit('Drive Glitter to the Gerlach diner', 'Drive Glitter to the diner'); },
       desc: 'A sparkle pony got left behind at the gas station. Give her a ride to Gerlach. She brought her own glitter.', hint: 'The tiny gas station on the highway', marker: { x: -132, z: 220 } },
-    { id: 'together', name: 'Keep It Together', type: 'custom', start: 'auto', requires: ['pulse'], silent: true, tokenDirect: true, short: 'Get through the checkpoint',
+    { id: 'together', name: 'Keep It Together', type: 'custom', start: 'auto', requires: ['pulse'], silent: true, tokenDirect: true, get short() { return BW15W.fit('Get through the checkpoint', 'Clear the checkpoint'); },
       desc: 'A checkpoint on the highway. Crawl through, hold your lane, and tap STEADY on the beat while the trip peaks.', hint: 'The checkpoint past the gas station', marker: { x: -25, z: 371 } },
     { id: 'undercover', name: 'Shake the Undercover Cop', type: 'custom', start: 'manual', tokenDirect: true, short: 'Shake the undercover cop',
       desc: 'A beige convertible, a jester hat and a gold badge he keeps flashing by accident. Lose him in the dust, behind trucks or in the traffic.', hint: 'He starts following you after the checkpoint' },
@@ -638,6 +640,7 @@ window.BW15_DEBUG = {
   ap(o) { BW15.state.ap = o; },
   place(s, lat) { const S = BW15.state, a = BW15_ROAD.at(s, lat === undefined ? -1.85 : lat, {}); BW15D.placeRV(S.g, S, { x: a.x, z: a.z, yaw: a.yaw }); S.s = s; },
   placeXZ(x, z, yaw) { const S = BW15.state; BW15D.placeRV(S.g, S, { x, z, yaw: yaw || 0 }); },
+  roadAt(s, lat) { const a = BW15_ROAD.at(s, lat === undefined ? -1.85 : lat, {}); return { x: a.x, z: a.z }; },
   take() { const S = BW15.state, G = BW15D.readyGiver(S); if (G) { BW15D.takeBag(S.g, S, G); return true; } return false; },
   // tap STEADY on every beat with the given accuracy (0..1) for sec seconds of sim
   steady(acc) { BW15.state.autoSteady = acc; },

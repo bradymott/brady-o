@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — world runtime
+   BRADY GOES TO BURNING MAN — world runtime
    BurnsCollide  colliders + spatial hash (static) + per-step dynamic grid
    BurnsGroup    rigid-skinned group (vehicles, movers, pickups): 1 draw
    BurnsWorld    terrain, painted ground, lightmap, static chunks, glows,
@@ -70,20 +70,22 @@ class BurnsGroup {
   get full() { return this.objs.length >= this.max || this.mesh.nv > 40000; }
   // add an object already built into its own mesh (bone 0); its bone index is remapped to the slot
   addBuilt(src, info, o) {
-    const idx = this.objs.length, m = this.mesh, base = m.nv;
+    const idx = this.objs.length, m = this.mesh, base = m.nv, i0 = m.ind.length;
     m.append(src);
     const u8 = m.u8; for (let i = base; i < m.nv; i++) { const b = i * 24 + 15; u8[b] = (u8[b] & 0xC0) | (idx & 63); }
     const obj = Object.assign({ idx, group: this, x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, scale: 1, visible: true, info, cols: info.cols || [], lights: info.lights || [] }, o || {});
     obj.tris = (src.ind.length / 3) | 0;
+    obj.i0 = i0; obj.i1 = m.ind.length;   // its index range (the shadow pass draws only nearby objects)
     this.objs.push(obj);
     return obj;
   }
   // build(m) appends geometry in object-local space; returns info (cols/lights...)
   add(build, o) {
-    const idx = this.objs.length, m = this.mesh;
+    const idx = this.objs.length, m = this.mesh, i0 = m.ind.length;
     m.setBone(idx); m.identity();
     const info = build(m) || {};
     const obj = Object.assign({ idx, group: this, x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, scale: 1, visible: true, info, cols: info.cols || [], lights: info.lights || [] }, o || {});
+    obj.i0 = i0; obj.i1 = m.ind.length;
     this.objs.push(obj);
     return obj;
   }
@@ -226,8 +228,11 @@ class BurnsWorld {
     opts = opts || {};
     const m = opts.hidden ? (this.ghostMesh || (this.ghostMesh = new BurnsMesh(4096))) : opts.mesh || this.cellMesh(x, z);
     m.push(); m.identity(); m.tf(x, y || 0, z, yaw || 0, 0, 0, scale || 1);
+    const v0 = m.nv, i0 = m.ind.length;
     const info = fn(m) || {};
     m.pop();
+    // baked AO for this object (its own corners + contact with the ground)
+    if (!opts.noAO && !window.__burnsNoAO && m.nv - v0 >= 8) { const W0 = this; BurnsAO.bake(m.buf, v0, m.nv, m.ind, i0, m.ind.length, { ground: (gx, gz) => W0.height(gx, gz) }); }
     const s = scale || 1, c = Math.cos(yaw || 0), sn = Math.sin(yaw || 0);
     const W = (lx, lz) => [x + (lx * c + lz * sn) * s, z + (-lx * sn + lz * c) * s];
     const cols = [];
@@ -257,6 +262,7 @@ class BurnsWorld {
     // build into a scratch mesh first, so a big object never overflows a group's 16-bit index range
     const src = new BurnsMesh(4096); src.setBone(0); src.identity();
     const info = build(src) || {};
+    if (!window.__burnsNoAO && !(o && o.noAO)) BurnsAO.bake(src.buf, 0, src.nv, src.ind, 0, src.ind.length, {});
     // o.lodTwin: the builder is deterministic, so also build a low-detail copy (engine traffic)
     let lo = null; if (o && o.lodTwin) { lo = new BurnsMesh(2048); lo.setBone(0); lo.identity(); lo.lo = true; build(lo); }
     const need = src.nv + (lo ? lo.nv : 0), slots = lo ? 2 : 1;
@@ -302,6 +308,7 @@ class BurnsWorld {
     lx.globalCompositeOperation = 'lighter';
     for (const L of this.lights) {
       const cx = (L.x - f.x0) * f.sx, cz = (L.z - f.z0) * f.sz, r = L.r * f.sx;
+      if (typeof L.c !== 'string' && !Array.isArray(L.c)) { if (!this._warnedL) { this._warnedL = true; console.warn('burns: light pool without a colour', JSON.stringify(L)); } L.c = '#ffb070'; }
       const c = burnsRGB(L.c);
       const g = lx.createRadialGradient(cx, cz, 0, cx, cz, Math.max(1, r));
       g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${L.i})`); g.addColorStop(0.45, `rgba(${c[0]},${c[1]},${c[2]},${L.i * 0.4})`); g.addColorStop(1, 'rgba(0,0,0,0)');
@@ -382,7 +389,9 @@ class BurnsWorld {
       const e = Math.sqrt(d2) - Math.sqrt(d1);
       const crack = clamp(1 - e / 2.4, 0, 1);
       const o = (y * N + X) * 4;
-      D[o] = crack * 255; D[o + 1] = mot(X, y) * 255; D[o + 2] = rng() * 255; D[o + 3] = 255;
+      const lip = clamp(e / 4, 0, 1), cup = clamp((e - 6) / 14, 0, 1);
+      const hgt = clamp(0.55 + 0.35 * lip * lip * (3 - 2 * lip) - 0.18 * cup - 0.55 * crack, 0, 1);
+      D[o] = crack * 255; D[o + 1] = mot(X, y) * 255; D[o + 2] = rng() * 255; D[o + 3] = 128 + Math.round(hgt * 127);
     }
     x.putImageData(img, 0, 0);
     BurnsWorld._det = c;

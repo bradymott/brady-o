@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — Brady (player controller) + vehicles
+   BRADY GOES TO BURNING MAN — Brady (player controller) + vehicles
    Moves: analog run, jump (variable height), double-jump flip, ground pound
    (ACTION in the air), spin attack (ACTION on the ground), enemy stomp,
    coyote time + jump buffer, ledge assist, springs, moving platforms,
@@ -28,9 +28,14 @@ class BurnsPlayer {
     this.airT = 0; this.maxFallV = 0; this.stepT = 0; this.chatT = 0;
     this.rebuildModel();
   }
+  // the mission item in Brady's right hand (third person: in his hand; first person: in view). null = empty hands.
+  // Any held-prop name works (§6.5): ticket, zipties, glowstick, icebag, idcard, parcel, wrench, map, water, phone, camera...
+  hold(item) { item = item || null; if (this.held === item) return; this.held = item; this.rebuildModel(); }
   rebuildModel() {
     const costume = BurnsSave.get().costume || 'none';
-    const spec = BurnsRig.bradySpec(costume); spec.key = 'brady:' + JSON.stringify(spec);
+    const spec = BurnsRig.bradySpec(costume);
+    if (this.held) spec.prop = BURNS_GEAR.prop[this.held] ? this.held : 'heldTag';
+    spec.key = 'brady:' + JSON.stringify(spec);
     this.model = BurnsRig.model(spec);
     if (!this.ch) this.ch = new BurnsChar(this.model); else this.ch.setModel(this.model);
     this.ch.rim = 0.5;

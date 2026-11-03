@@ -333,6 +333,8 @@ const BW15C = {
     // ---- trip meter (left column, under the pills)
     const rows = 3 + (g.packVisible && g.packVisible() ? 1 : 0);   // the engine's left column (+ its backpack pill)
     const x0 = Sf.l + 6, y0 = Sf.t + 8 + Math.min(24, W / 26) * 1.4 + 28 * rows + 6;
+    const dayUp = portrait && g.dayCardT >= 0;   // portrait: the engine's day card sits right under the left column
+    ctx.save(); if (dayUp) ctx.globalAlpha = 0.15;
     UI.pill(ctx, x0, y0, 128, 38, 'rgba(10,6,24,0.6)', 'rgba(255,255,255,0.25)');
     UI.text(ctx, 'TRIP', x0 + 8, y0 + 11, 10, '#ffffff', { align: 'left', stroke: false });
     UI.text(ctx, `BAGS ${Math.min(8, S.trip.bags)}/8`, x0 + 120, y0 + 11, 9, '#ffd0f4', { align: 'right', stroke: false, ui: true });
@@ -340,6 +342,7 @@ const BW15C = {
       const on = i < Math.round(S.trip.level * 8), bx = x0 + 8 + i * 14.4, by = y0 + 20, wob = on ? Math.sin(t * 6 + i) * tv * 1.5 : 0;
       ctx.fillStyle = on ? BW15_RAINBOW[i % 7] : 'rgba(255,255,255,0.14)'; rr(ctx, bx, by + wob, 12, 10, 3); ctx.fill();
     }
+    ctx.restore();
     // ---- speedometer
     const mph = Math.round(Math.abs(S.v) * 2.237), L = Input.layout;
     let gx = W / 2, gy = H - Sf.b - 30;
@@ -353,7 +356,7 @@ const BW15C = {
     UI.text(ctx, 'LIMIT', gx + 32, gy - 8, 6, '#1a1a22', { stroke: false, ui: true }); UI.text(ctx, String(lim), gx + 32, gy + 6, 13, '#1a1a22', { stroke: false });
     // ---- the Exodus pulse
     const P = S.pulse;
-    if (S.zone === 'line' && P.phase !== 'done' && P.phase !== 'won') {
+    if (S.zone === 'line' && P.phase !== 'done' && P.phase !== 'won' && !(g.dayCardT >= 0 && P.phase === 'hold1')) {   // (not under the engine's day card)
       const label = P.phase === 'big' ? `GATE CLOSES IN ${Math.max(0, Math.ceil(P.bigT))}` : P.phase === 'count' ? `THE BIG PULSE IN ${Math.max(1, Math.ceil(3.2 - P.t))}` : P.phase === 'go1' ? 'PULSE! ROLL!' : P.phase === 'retry' ? `NEXT PULSE IN ${Math.max(1, Math.ceil(5 - P.t))}` : 'HOLDING · TAKE THE LAST BAGS';
       const col = P.phase === 'big' ? (P.bigT < 10 && Math.floor(t * 4) % 2 ? '#ff6a6a' : '#7aff5a') : P.phase === 'go1' ? '#7aff5a' : '#ffb04a';
       const py = (g.topStack || Sf.t + 40) + 6 + g.toasts.length * 28;
@@ -402,8 +405,9 @@ const BW15C = {
   drawBubbles(ctx, g, S) {
     if (!S.bubbles.length) return;
     const R = g.R, W = Game.cssW, H = Game.cssH, o = {};
+    const hush = S.chinka && S.chinka.bubbleText;   // Chinka has the floor: signs wait their turn (no overlapping bubbles)
     for (const b of S.bubbles) {
-      if (!R.project(b.x, b.y, b.z, W, H, o) || o.w > 90) continue;
+      if ((hush && b.sign) || !R.project(b.x, b.y, b.z, W, H, o) || o.w > 90) continue;
       const a = clamp(Math.min(b.t * 3, 1), 0, 1), sc = clamp(26 / o.w, 0.7, 1.15);
       ctx.save(); ctx.globalAlpha = a; ctx.font = `600 ${Math.round(13 * sc)}px ${FONT_UI}`;
       const lines = BurnsUI.wrap(ctx, b.text, 200 * sc), lh = 16 * sc;
