@@ -153,7 +153,7 @@ Everything below is called inside `build(api, g)`. Positions are world metres. M
   - `api.torus(x, y, z, R, r, colour, {pitch, roll})`: ring or hoop (`pitch: Math.PI/2` stands it up like a wheel). No collider.
 - `api.mesh(x, z, m => { …; return {cols, lights}; }, {y, yaw, scale})`: custom geometry with `BurnsMesh` (§6) in local space. Return colliders and lights in **local** coordinates and they're transformed for you.
 - `api.collider(desc)`: a raw collider in world coordinates (§4.6).
-- `api.sign(text, x, z, {yaw, h, y, post, maxW, style: {bg, fg, size, border, glow, font}, glow})`: a signboard with real text. `\n` makes lines.
+- `api.sign(text, x, z, {yaw, h, y, post, maxW, style: {bg, fg, size, border, glow, font}, glow})`: a signboard with real text. `\n` makes lines. Each world gets a fresh 1020×1020 px sign area: signs rasterise at 72% and automatically drop to 52% and then 38% when it runs low, so 40+ signs fit without going blank. Identical text + style is cached, so repeated signs are free. `glow` is a colour.
 - `api.hidden(() => { … })`: everything built inside, geometry, colliders and glows, **only exists while Brady is on LSD**. Pair it with pickups that have `hidden: true`. Light pools (`api.light`) are baked into the lightmap and always show, so keep them out of hidden sections.
 
 ### 4.3 Dynamic things

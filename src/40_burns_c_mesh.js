@@ -92,10 +92,16 @@ const BURNS_ATLAS = {
     const tw = Math.max(...lines.map(l => x.measureText(l).width));
     const pad = o.pad === undefined ? size * 0.4 : o.pad;
     const w = Math.min(1000, Math.ceil(o.w || tw + pad * 2)), h = Math.min(500, Math.ceil(o.h || size * 1.25 * lines.length + pad * 1.4));
-    // signs are rasterised at 72% (about twice as many fit); their size in the world is set by the caller, not by pixels
-    const SC = 0.72, pw = Math.ceil(w * SC), ph = Math.ceil(h * SC);
-    if (this.sx + pw + 4 > 2048) { this.sx = 1028; this.sy += this.srow + 4; this.srow = 0; }
-    if (this.sy + ph + 4 > 1024) { console.warn('burns sign atlas full'); return this.white; }
+    // signs are rasterised at 72% (about twice as many fit); their size in the world is set by the caller, not by pixels.
+    // The area is reset for every world (signReset); when it runs low, signs shrink to 52% then 38% instead of going blank.
+    let SC = 0, pw = 0, ph = 0;
+    for (const k of [0.72, 0.52, 0.38]) {
+      pw = Math.ceil(w * k); ph = Math.ceil(h * k);
+      let sx = this.sx, sy = this.sy, srow = this.srow;
+      if (sx + pw + 4 > 2048) { sx = 1028; sy += srow + 4; srow = 0; }
+      if (sy + ph + 4 <= 1024) { this.sx = sx; this.sy = sy; this.srow = srow; SC = k; break; }
+    }
+    if (!SC) { console.warn('burns sign atlas full'); return this.white; }
     const px = this.sx, py = this.sy;
     this.sx += pw + 6; this.srow = Math.max(this.srow, ph);
     x.save(); x.beginPath(); x.rect(px, py, pw, ph); x.clip(); x.translate(px, py); x.scale(SC, SC);

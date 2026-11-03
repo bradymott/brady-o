@@ -110,6 +110,13 @@ const BurnsUI = {
       const lines = this.wrap(ctx, text, 190 * sc), lh = 16 * sc;
       const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 18 * sc, h = lines.length * lh + 12 * sc;
       let bx = clamp(o.x - w / 2, 6, W - w - 6), by = clamp(o.y - h - 12 * sc, 6, H - h - 6);
+      // keep clear of the HUD (counters, tracker, pause button, minimap): slide below or beside it
+      for (const r of (g.hudRects || [])) {
+        if (bx < r[2] && bx + w > r[0] && by < r[3] && by + h > r[1]) {
+          if (r[3] + 4 + h < H - 6) by = r[3] + 4;
+          else if (r[0] > W / 2) bx = Math.max(6, r[0] - w - 4); else bx = Math.min(W - w - 6, r[2] + 4);
+        }
+      }
       ctx.fillStyle = col || 'rgba(255,255,255,0.95)'; burnsRR(ctx, bx, by, w, h, 10 * sc); ctx.fill();
       ctx.beginPath(); ctx.moveTo(clamp(o.x, bx + 10, bx + w - 10) - 6 * sc, by + h - 1); ctx.lineTo(clamp(o.x, bx + 10, bx + w - 10) + 6 * sc, by + h - 1); ctx.lineTo(o.x, Math.min(by + h + 10 * sc, o.y - 2)); ctx.closePath(); ctx.fill();
       ctx.fillStyle = small ? '#ffffff' : '#1a1024'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
@@ -156,6 +163,7 @@ const BurnsUI = {
   drawHUD(ctx, g, S) {
     const W = Game.cssW, H = Game.cssH, p = g.player, sv = BurnsSave.get();
     let x = S.l + 6, y = S.t + 8;
+    const rects = g.hudRects || (g.hudRects = []); rects.length = 0;
     // hydration drops
     const ds = Math.min(24, W / 26);
     for (let i = 0; i < p.maxHydration; i++) this.drop(ctx, x + 10 + i * (ds * 0.95), y + ds * 0.55, ds, '#2a9aff', clamp(p.hydration - i, 0, 1));
@@ -178,6 +186,7 @@ const BurnsUI = {
       const hb = g.hudBtns && g.hudBtns.pack; if (hb) { hb.x = x + 43; hb.y = y + 12; hb.r = 22; }
       y += 28;
     }
+    rects.push([S.l, S.t, x + 96, y + 4]);   // the counters column
     // power-up timer
     if (p.power && p.powerT > 0) {
       const P = BURNS_POWERUPS[p.power], k = p.powerT / (p.powerMax || P.dur), cx = x + 22, cy = y + 24;
@@ -197,6 +206,7 @@ const BurnsUI = {
       while (label.length > 6 && ctx.measureText(label).width > tw - 22) label = label.slice(0, -2) + '…';
       ctx.restore();
       const ty = S.t + 6;
+      rects.push([tx, ty, tx + tw, ty + 28]);
       this.pill(ctx, tx, ty, tw, 26, 'rgba(10,6,24,0.6)', 'rgba(56,242,255,0.5)');
       this.text(ctx, label, tx + tw / 2, ty + 13.5, 12, '#d8fbff', { ui: true, stroke: false });
     }
@@ -207,8 +217,9 @@ const BurnsUI = {
     // pause button
     const L = Input.layout;
     if (L) { const pb = L.pause; ctx.save(); ctx.fillStyle = 'rgba(10,6,24,0.55)'; ctx.beginPath(); ctx.arc(pb.x, pb.y, pb.r, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.fillRect(pb.x - 6, pb.y - 7, 4, 14); ctx.fillRect(pb.x + 2, pb.y - 7, 4, 14); ctx.restore(); }
+    if (L) rects.push([L.pause.x - L.pause.r - 4, L.pause.y - L.pause.r - 4, W, L.pause.y + L.pause.r + 4]);
     // minimap (with the Playa Map)
-    if (sv.items.map && g.world.minimap) this.drawMinimap(ctx, g, L ? L.pause.x - (W > H ? 70 : 62) : W - 80, (L ? L.pause.y : 30) + (W > H ? 82 : 76), W > H ? 56 : 50);
+    if (sv.items.map && g.world.minimap) { const mx = L ? L.pause.x - (W > H ? 70 : 62) : W - 80, my = (L ? L.pause.y : 30) + (W > H ? 82 : 76), mr = W > H ? 56 : 50; rects.push([mx - mr - 4, my - mr - 4, mx + mr + 4, my + mr + 4]); this.drawMinimap(ctx, g, mx, my, mr); }
   },
   drawMinimap(ctx, g, cx, cy, r) {
     const M = g.world.minimap, p = g.player, sc = M.sc * 1.6;
