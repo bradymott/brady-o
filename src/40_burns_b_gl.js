@@ -667,6 +667,20 @@ void main(){
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, G.ibo); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, G.idx, gl.STATIC_DRAW);
     return G;
   },
+  // re-upload one region of a canvas texture (a freshly painted atlas tile) instead of the whole image.
+  // Returns false when the texture isn't on the GPU yet or is already due for a full upload.
+  texRegion(T, x, y, w, h) {
+    const gl = this.gl;
+    if (!gl || !T || !T.tex || T.gen !== this.gen || T.dirty) return false;
+    const c = makeCanvas(w, h); c.getContext('2d').drawImage(T.src, x, y, w, h, 0, 0, w, h);
+    const o = T.opts || {};
+    gl.bindTexture(gl.TEXTURE_2D, T.tex);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, o.premult ? 1 : 0);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, c);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
+    if (o.mips) gl.generateMipmap(gl.TEXTURE_2D);
+    return true;
+  },
   freeGeo(G) {
     if (!G || !this.gl || G.gen !== this.gen) return;
     try { this.gl.deleteBuffer(G.vbo); this.gl.deleteBuffer(G.ibo); } catch (e) { /* ignore */ }

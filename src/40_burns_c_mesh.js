@@ -16,14 +16,18 @@
 const BURNS_ATLAS_H = 3072;
 // Run a painter between save() and restore() on a shared 2D context that is at its top level (the atlas). If the
 // painter throws, or leaves a save() open, unwind the whole stack: its transform and clip must never leak onto
-// the tiles, faces and signs painted after it.
+// the tiles, faces and signs painted after it (and start clean if someone else's painter leaked one).
+function burnsCtxUnwind(x, force) {
+  const m = x.getTransform ? x.getTransform() : null;
+  if (force || (m && !m.isIdentity)) { for (let i = 0; i < 64; i++) x.restore(); x.setTransform(1, 0, 0, 1, 0, 0); }
+}
 function burnsPaintSafe(x, fn) {
+  burnsCtxUnwind(x, false);
   x.save();
   let ok = true;
   try { fn(x); } catch (err) { ok = false; console.error(err); }
   x.restore();
-  const m = x.getTransform ? x.getTransform() : null;
-  if (!ok || (m && !m.isIdentity)) { for (let i = 0; i < 64; i++) x.restore(); x.setTransform(1, 0, 0, 1, 0, 0); }
+  burnsCtxUnwind(x, !ok);
 }
 const BURNS_ATLAS = {
   W: 2048, H: BURNS_ATLAS_H, canvas: null, T: null,
@@ -88,7 +92,7 @@ const BURNS_ATLAS = {
   icon(name) { return this.regions['icon:' + name]; },
   // ---- per-world sign text (right half) ----
   signReset() {
-    const x = this.ctx; x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 2048, 2048, 1024);
+    const x = this.ctx; burnsCtxUnwind(x, false); x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 2048, 2048, 1024);
     this.sa = 0; this.sx = 1024 + 4; this.sy = 4; this.srow = 0; this.signs = {};
     if (this.T) this.T.dirty = true;
   },
@@ -120,14 +124,15 @@ const BURNS_ATLAS = {
     if (!SC) { console.warn('burns sign atlas full'); return this.white; }
     const px = this.sx, py = this.sy;
     this.sx += pw + 6; this.srow = Math.max(this.srow, ph);
-    x.save(); x.beginPath(); x.rect(px, py, pw, ph); x.clip(); x.translate(px, py); x.scale(SC, SC);
+    burnsPaintSafe(x, x => {
+    x.beginPath(); x.rect(px, py, pw, ph); x.clip(); x.translate(px, py); x.scale(SC, SC);
     if (o.bg) { x.fillStyle = o.bg; if (o.round) { burnsRR(x, 0, 0, w, h, o.round); x.fill(); } else x.fillRect(0, 0, w, h); }
     if (o.border) { x.strokeStyle = o.border; x.lineWidth = o.borderW || Math.max(3, size * 0.1); if (o.round) { burnsRR(x, x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth, o.round); x.stroke(); } else x.strokeRect(x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth); }
     x.font = `${size}px ${font}`; x.textAlign = 'center'; x.textBaseline = 'middle';
     if (o.glow) { x.shadowColor = o.glow; x.shadowBlur = size * 0.35; }
     x.fillStyle = o.fg || '#ffffff';
     lines.forEach((l, i) => x.fillText(l, w / 2, h / 2 + (i - (lines.length - 1) / 2) * size * 1.18 + size * 0.04));
-    x.restore();
+    });
     const r = this.reg(px, py, pw, ph); r.aspect = w / h;
     this.signs[key] = r;
     if (this.T) this.T.dirty = true;
@@ -357,7 +362,7 @@ const BURNS_ATLAS = {
     } catch (e) { console.warn('burns: Chinka photo bake failed', e); img = null; }
     if (!img) return;
     this.paintPhoto(this.ctx, 0, 832, img);
-    if (this.T) this.T.dirty = true;
+    if (this.T && !BurnsGL.texRegion(this.T, 0, 832, 128, 160)) this.T.dirty = true;   // just the tile, not the whole 2048 x 3072 atlas
   }
 };
 

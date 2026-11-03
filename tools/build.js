@@ -50,7 +50,7 @@ const APPS = {
 };
 // 2D-game modules the other apps still use (UI kit, title scene, portraits…). Trim as the apps separate.
 const BURNS_DEPS = ['03_themes.js', '04_tiles.js', '05_brady.js', '22_cast.js'];   // only for the 2D Chinka portrait on photo collectibles (drawChinka); the rest of the app is engine-only
-const KART_DEPS = ['04_tiles.js', '10_entities.js', '12_play.js', '06_sprites.js', '03_themes.js', '05_brady.js', '13_ui.js', '20_burn_themes.js', '21_burn_sprites.js', '22_cast.js', '25_story.js'];
+const KART_DEPS = [];   // Art Cart is engine-only now (the shared boot code guards its 2D references)
 
 function bundle(appId, files) {
   let code = `const BRADY_APP = ${JSON.stringify(appId)};\n` +
