@@ -17133,13 +17133,15 @@ Object.assign(CartRaceScene.prototype, {
     ctx.restore();
   },
   buildPause() {
-    const W = Game.cssW, H = Game.cssH, bw = Math.min(240, W * 0.6), x = (W - bw) / 2, y0 = H / 2 - 92;
+    const W = Game.cssW, H = Game.cssH, bw = Math.min(240, W * 0.6), x = (W - bw) / 2, y0 = H / 2 - 114;
     const sv = cartSave();
     this.pauseBtns = [
       { x, y: y0, w: bw, h: 44, label: 'RESUME', primary: true, fn: () => this.closePause() },
       { x, y: y0 + 52, w: bw, h: 40, label: 'RESTART', fn: () => this.restart() },
       { x, y: y0 + 100, w: bw, h: 36, size: 12, label: 'AUTO-GAS: ' + (this.autoGas ? 'ON' : 'OFF'), fn: () => { this.autoGas = !this.autoGas; sv.autoGas = this.autoGas; Save.save(); this.buildPause(); } },
-      { x, y: y0 + 144, w: bw, h: 40, label: 'QUIT TO MENU', fn: () => this.leave() }
+      { x, y: y0 + 144, w: bw / 2 - 4, h: 36, size: 11, label: cartVolLabel('MUSIC', Save.data.settings.music), fn: () => { cartCycleVol('music'); this.buildPause(); } },
+      { x: x + bw / 2 + 4, y: y0 + 144, w: bw / 2 - 4, h: 36, size: 11, label: cartVolLabel('SFX', Save.data.settings.sfx), fn: () => { cartCycleVol('sfx'); Sound.play('select'); this.buildPause(); } },
+      { x, y: y0 + 188, w: bw, h: 40, label: 'QUIT TO MENU', fn: () => this.leave() }
     ];
     this.pauseBtns.focus = 0;
   },
@@ -17267,11 +17269,20 @@ const CartShowroom = {
     for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; api.glow(Math.sin(a) * 8, 0.4, Math.cos(a) * 8, 0.7, BURNS_NEON[i % 7]); }
     W.finish();
     // golden hour: warm key, neutral fill, so every car shows its real colours
-    this.sky = Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.005, sun: [200, 9], key: '#ffe2c4', keyK: 1.05, sky: '#b8b4d0', gnd: '#8a6a5a', rim: '#ffe0f0', exposure: 1.08, hor: '#ffa070', mid: '#d08a90', midK: 0.25 });
+    // the sun sits behind the camera's shoulder, not in the viewer's eyes: no glare, no god rays, no heat haze over the car
+    this.sky = Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.004, sun: [335, 26], key: '#ffe2c4', keyK: 1.1, sky: '#b8b4d0', gnd: '#8a6a5a', rim: '#ffe0f0', exposure: 1.0, hor: '#ffa070', mid: '#d08a90', midK: 0.25, rays: 0, heat: 0, haze: 0.25, dust: 0.15, bloom: 0.7 });
     this.world = W;
     return W;
   }
 };
+// volume buttons shared by the menu and the race pause: MUSIC 60% / SFX OFF, cycling 0, 25, 50, 75, 100 %
+function cartVolLabel(name, v) { return name + ' ' + (v > 0 ? Math.round(v * 100) + '%' : 'OFF'); }
+function cartCycleVol(key) {
+  const st = Save.data.settings, steps = [0, 0.25, 0.5, 0.75, 1], cur = Math.round((st[key] === undefined ? 0.6 : st[key]) * 4) / 4;
+  st[key] = steps[(steps.indexOf(cur) + 1) % steps.length];
+  if (key === 'music') Sound.setMusicVolume(st.music); else Sound.setSfxVolume(st.sfx);
+  Save.save();
+}
 class KartMenuScene {
   constructor(o) {
     o = o || {};
@@ -17319,7 +17330,10 @@ class KartMenuScene {
         { x, y: y0 + 56, w: bw, h: 44, label: 'BATTLE ARENAS', fn: () => this.pick('battle') },
         { x, y: y0 + 108, w: bw, h: 40, label: 'TIME TRIAL', fn: () => this.pick('tt') },
         { x, y: y0 + 156, w: bw / 2 - 4, h: 34, size: 10, label: 'AUTO-GAS ' + (sv.autoGas !== false ? 'ON' : 'OFF'), fn: () => { sv.autoGas = sv.autoGas === false; Save.save(); Sound.play('select'); this.build(); } },
-        { x: x + bw / 2 + 4, y: y0 + 156, w: bw / 2 - 4, h: 34, size: 10, label: 'GFX ' + (sv.gfx || 'auto').toUpperCase(), fn: () => { const L = BURNS_GFX.names, i = L.indexOf(sv.gfx || 'auto'); sv.gfx = L[(i + 1) % L.length]; Save.save(); if (this.gl) BurnsGL.configure(sv.gfx); Sound.play('select'); this.build(); } }
+        { x: x + bw / 2 + 4, y: y0 + 156, w: bw / 2 - 4, h: 34, size: 10, label: 'GFX ' + (sv.gfx || 'auto').toUpperCase(), fn: () => { const L = BURNS_GFX.names, i = L.indexOf(sv.gfx || 'auto'); sv.gfx = L[(i + 1) % L.length]; Save.save(); if (this.gl) BurnsGL.configure(sv.gfx); Sound.play('select'); this.build(); } },
+        // music and sound levels (0 = off): the same five steps as the other apps' settings
+        { x, y: y0 + 198, w: bw / 2 - 4, h: 34, size: 10, label: cartVolLabel('MUSIC', Save.data.settings.music), fn: () => { cartCycleVol('music'); this.build(); } },
+        { x: x + bw / 2 + 4, y: y0 + 198, w: bw / 2 - 4, h: 34, size: 10, label: cartVolLabel('SFX', Save.data.settings.sfx), fn: () => { cartCycleVol('sfx'); Sound.play('select'); this.build(); } }
       ];
       // in the standalone Art Cart app this menu IS home: nothing to go back to
       if (typeof BRADY_APP === 'undefined' || BRADY_APP !== 'kart') this.btns.push(back);
