@@ -643,7 +643,12 @@ void main(){
   c += (h2(gl_FragCoord.xy + fract(t) * 61.0) - 0.5) / 255.0;
   gl_FragColor = vec4(c, 1.0);
 }`, ['aPos']);
+    // programs added by other modules (textured PBR, weighted skinning…): fn(BurnsGL, progs) adds to progs
+    for (const f of this.programHooks) { try { f(this, P); } catch (e) { console.error('burns: program hook failed', e); } }
   },
+  programHooks: [],
+  // register a program builder; it runs now (if the renderer is up) and again whenever programs are rebuilt (tier change, context loss)
+  addPrograms(fn) { this.programHooks.push(fn); if (this.progs && this.gl) { try { fn(this, this.progs); } catch (e) { console.error('burns: program hook failed', e); } } },
   // GLSL dialect: our shaders are written GLSL 1.0-style; on WebGL2 they compile as GLSL 3.00 es via macros
   header(kind) {
     let h = '';

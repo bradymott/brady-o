@@ -107,8 +107,10 @@ const CartGLB = {
       const have = new Set(Array.isArray(list) ? list : []), jobs = [];
       for (const [id, stem] of Object.entries(CART_GLB)) {
         for (const lo of [false, true]) {
-          const file = stem + (lo ? '_lo' : '') + '.glb';
-          if (!have.has(file)) continue;
+          // the build ships .glb.gz (inflated in the browser); a plain .glb is accepted too
+          let file = stem + (lo ? '_lo' : '') + '.glb';
+          if (have.has(file + '.gz') && BurnsGLTF.canInflate()) file += '.gz';
+          else if (!have.has(file)) { if (have.has(file + '.gz')) console.warn('cart: this browser cannot inflate ' + file + '.gz; using the procedural car'); continue; }
           jobs.push(BurnsGLTF.fetch(this.base() + file)
             .then(doc => { const R = this.build(doc, lo); (this.rigs[id] = this.rigs[id] || {})[lo ? 'lo' : 'hi'] = R; })
             .catch(e => { console.warn('cart: glb failed for ' + id + (lo ? ' (lo)' : '') + ': ' + (e && e.message || e)); }));

@@ -215,8 +215,14 @@ const BurnsGLTF = {
   staticGeo(D, opts) { return this.rig(D, Object.assign({}, opts || {}, { static: true, bone: () => 0 })); },
 
   /* ---- loading ---- */
+  // .glb, or .glb.gz inflated in the browser (DecompressionStream; iOS 16.4+, Chrome 80+)
   fetch(url) {
-    return fetch(url).then(r => { if (!r.ok) throw new Error('BurnsGLTF: ' + url + ' ' + r.status); return r.arrayBuffer(); }).then(ab => this.parse(ab));
-  }
+    return fetch(url).then(r => {
+      if (!r.ok) throw new Error('BurnsGLTF: ' + url + ' ' + r.status);
+      if (/\.gz$/i.test(url)) { if (typeof DecompressionStream === 'undefined') throw new Error('BurnsGLTF: this browser cannot inflate ' + url); return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer(); }
+      return r.arrayBuffer();
+    }).then(ab => this.parse(ab));
+  },
+  canInflate() { return typeof DecompressionStream !== 'undefined'; }
 };
 if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsGLTF });

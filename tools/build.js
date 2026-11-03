@@ -142,15 +142,33 @@ const manifestFor = (name, short, desc, color, icons) => ({
   ].filter(Boolean)
 });
 // copy assets/models/<appDir>/*.glb into outDir; returns the file names (sorted)
+// Models ship as <name>.glb.gz: gltfpack (quantized, nodes and extras kept) when it's installed, then gzip
+// (GitHub Pages doesn't compress .glb; the game inflates with DecompressionStream). About 5x smaller than raw.
+const zlib = require('zlib');
+const gltfpack = path.join(root, 'node_modules', '.bin', 'gltfpack');
+const packCache = path.join(dist, '.packcache');
 const copyModels = (appDir, outDir) => {
   const src = path.join(root, 'assets', 'models', appDir);
   if (!fs.existsSync(src)) return [];
   const names = fs.readdirSync(src).filter(f => f.endsWith('.glb')).sort();
-  fs.mkdirSync(outDir, { recursive: true });
-  for (const f of names) fs.copyFileSync(path.join(src, f), path.join(outDir, f));
+  fs.mkdirSync(outDir, { recursive: true }); fs.mkdirSync(packCache, { recursive: true });
+  const out = [];
+  for (const f of names) {
+    const inFile = path.join(src, f), st = fs.statSync(inFile), cached = path.join(packCache, appDir + '-' + f + '.' + st.mtimeMs + '.gz');
+    if (!fs.existsSync(cached)) {
+      let bytes = fs.readFileSync(inFile);
+      if (fs.existsSync(gltfpack)) {
+        const tmp = path.join(packCache, 'tmp-' + f);
+        try { execSync(`"${gltfpack}" -kn -ke -i "${inFile}" -o "${tmp}"`, { stdio: 'ignore' }); bytes = fs.readFileSync(tmp); fs.unlinkSync(tmp); }
+        catch (e) { console.warn('gltfpack failed for ' + f + ', shipping it raw'); }
+      }
+      fs.writeFileSync(cached, zlib.gzipSync(bytes, { level: 9 }));
+    }
+    fs.copyFileSync(cached, path.join(outDir, f + '.gz')); out.push(f + '.gz');
+  }
   // the index tells the game which models exist, so it never requests a missing one
-  fs.writeFileSync(path.join(outDir, 'index.json'), JSON.stringify(names));
-  return names.concat('index.json');
+  fs.writeFileSync(path.join(outDir, 'index.json'), JSON.stringify(out));
+  return out.concat('index.json');
 };
 const copyFontLicences = (dir) => {
   for (const f of ['OFL-bungee.txt', 'OFL-rubik.txt']) {
