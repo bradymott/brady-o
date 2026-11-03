@@ -310,7 +310,7 @@ class MzFlame extends Ent {
     this.t += dt; this.life -= dt; this.x += this.vx * dt; this.w = 24 + this.t * 40; this.h = 22 + this.t * 16; this.y -= this.t * 6 * dt;
     const g = this.g, A = g.area;
     // thorn hedges (brick tiles) burn away
-    const tx = Math.floor((this.cx + this.dir * 8) / TS), ty0 = Math.floor(this.y / TS), ty1 = Math.floor((this.y + this.h) / TS);
+    const tx = Math.floor((this.cx + this.dir * 8) / TS), ty0 = Math.floor(this.y / TS), ty1 = Math.floor((this.y + this.h + 12) / TS);
     for (let ty = ty0; ty <= ty1; ty++) if (tileAt(A, tx, ty) === T.BRICK) { g.setTile(tx, ty, T.EMPTY); g.burst(tx * TS + 16, ty * TS + 16, 12, '#ff8a2a', 'spark'); Sound.play('break', { pitch: 1.3, vol: 0.35 }); g.addScore(50, tx * TS + 16, ty * TS); }
     for (const e of g.entities) {
       if (!e.enemy || e.dead || e.remove || this.hitSet.has(e) || !overlap(this, e)) continue;

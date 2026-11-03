@@ -14,6 +14,17 @@
                  margin, so faces wrap cleanly onto round heads)
    y 2048..3072: sign page 2 (2048 x 1024): camp-heavy worlds fill page 1, then this */
 const BURNS_ATLAS_H = 3072;
+// Run a painter between save() and restore() on a shared 2D context that is at its top level (the atlas). If the
+// painter throws, or leaves a save() open, unwind the whole stack: its transform and clip must never leak onto
+// the tiles, faces and signs painted after it.
+function burnsPaintSafe(x, fn) {
+  x.save();
+  let ok = true;
+  try { fn(x); } catch (err) { ok = false; console.error(err); }
+  x.restore();
+  const m = x.getTransform ? x.getTransform() : null;
+  if (!ok || (m && !m.isIdentity)) { for (let i = 0; i < 64; i++) x.restore(); x.setTransform(1, 0, 0, 1, 0, 0); }
+}
 const BURNS_ATLAS = {
   W: 2048, H: BURNS_ATLAS_H, canvas: null, T: null,
   faceV0: 1024 / BURNS_ATLAS_H, faceV1: 2048 / BURNS_ATLAS_H, faceRowV: 128 / BURNS_ATLAS_H,   // two banks: y 1024..1536 and 1536..2048
@@ -44,7 +55,7 @@ const BURNS_ATLAS = {
     const x = this.ctx, col = i % 16, bank = Math.floor(i / 16);
     for (let r = 0; r < 4; r++) {
       const X = col * 128, Y = 1024 + bank * 512 + r * 128;
-      x.save(); x.clearRect(X, Y, 128, 128); x.beginPath(); x.rect(X + 6, Y + 6, 116, 116); x.clip(); x.translate(X + 8, Y + 8); x.scale(1.75, 1.75); this.paintFace(x, 0, 0, f, r); x.restore();
+      burnsPaintSafe(x, x => { x.clearRect(X, Y, 128, 128); x.beginPath(); x.rect(X + 6, Y + 6, 116, 116); x.clip(); x.translate(X + 8, Y + 8); x.scale(1.75, 1.75); this.paintFace(x, 0, 0, f, r); });
     }
     this.regions['face:' + f] = this.reg(col * 128 + 4, 1024 + bank * 512 + 4, 120, 120);
     if (this.T) this.T.dirty = true;
@@ -67,10 +78,8 @@ const BURNS_ATLAS = {
     if (this.canvas) this.paintExtra(i);
   },
   paintExtra(i) {
-    const e = this.extraPatterns[i], x = this.ctx, [px, py] = this.extraSlot(i);
-    x.save(); x.clearRect(px, py, 128, 128); x.beginPath(); x.rect(px, py, 128, 128); x.clip(); x.translate(px, py);
-    try { e.fn(x, mulberry32(hashStr(e.name))); } catch (err) { console.error(err); }
-    x.restore();
+    const e = this.extraPatterns[i], [px, py] = this.extraSlot(i);
+    burnsPaintSafe(this.ctx, x => { x.clearRect(px, py, 128, 128); x.beginPath(); x.rect(px, py, 128, 128); x.clip(); x.translate(px, py); e.fn(x, mulberry32(hashStr(e.name))); });
     this.regions['pat:' + e.name] = this.reg(px + 4, py + 4, 120, 120);
     if (this.T) this.T.dirty = true;
   },
@@ -298,15 +307,57 @@ const BURNS_ATLAS = {
     }
     x.restore();
   },
-  paintPhoto(x, X, Y) {
-    x.save(); x.translate(X, Y);
-    x.fillStyle = '#f8f4ec'; x.fillRect(4, 4, 120, 152);
-    const g = x.createLinearGradient(0, 12, 0, 120); g.addColorStop(0, '#3a1a5a'); g.addColorStop(0.6, '#ff7a5a'); g.addColorStop(1, '#ffb070');
-    x.fillStyle = g; x.fillRect(12, 12, 104, 108);
-    x.fillStyle = '#c88a6a'; x.fillRect(12, 104, 104, 16);
-    try { if (typeof drawChinka === 'function') drawChinka(x, { x: 64, y: 118, scale: 1.55, t: 0.4, pose: 'wave', facing: 1 }); } catch (e) { /* art from another module */ }
-    x.fillStyle = '#ff4f8a'; x.font = `14px ${FONT_DISPLAY}`; x.textAlign = 'center'; x.fillText('♥ CHINKA ♥', 64, 142);
-    x.restore();
+  /* ---- the Chinka photo: the polaroid on photo collectibles and its UI icon (cell x 0..128, y 832..992) ----
+     init() paints the frame and a playa-sunset backdrop. Once the GL renderer is up, bakePhoto(R) renders the 3D
+     Chinka model (waving, LED necklace on) over the backdrop with the engine itself; the play scene calls it on its
+     first GL frame. img: the transparent render to composite (photo area 104 x 108). */
+  photoBaked: false,
+  paintPhoto(x, X, Y, img) {
+    burnsPaintSafe(x, x => {
+      x.translate(X, Y);
+      x.clearRect(0, 0, 128, 160);
+      x.fillStyle = '#f8f4ec'; x.fillRect(4, 4, 120, 152);
+      x.save(); x.beginPath(); x.rect(12, 12, 104, 108); x.clip(); this.paintPhotoScene(x, img); x.restore();
+      x.fillStyle = '#ff4f8a'; x.font = `14px ${FONT_DISPLAY}`; x.textAlign = 'center'; x.fillText('\u2665 CHINKA \u2665', 64, 142);
+    });
+  },
+  // the photo area (12..116 x 12..120): the backdrop, the engine's render of Chinka (img) and a print vignette
+  paintPhotoScene(x, img) {
+    // sunset over the playa; the horizon sits at eye level (y 62), with the mountains and a tiny Man on it
+    const sky = x.createLinearGradient(0, 12, 0, 62); sky.addColorStop(0, '#2e1658'); sky.addColorStop(0.55, '#b0468a'); sky.addColorStop(1, '#ffb070');
+    x.fillStyle = sky; x.fillRect(12, 12, 104, 50);
+    const sun = x.createRadialGradient(98, 58, 1, 98, 58, 24); sun.addColorStop(0, 'rgba(255,246,214,1)'); sun.addColorStop(0.3, 'rgba(255,214,150,0.85)'); sun.addColorStop(1, 'rgba(255,170,110,0)');
+    x.fillStyle = sun; x.fillRect(12, 12, 104, 50);
+    x.fillStyle = 'rgba(255,255,255,0.85)'; for (const s of [[19, 17], [31, 25], [46, 15], [61, 22], [77, 14], [106, 19], [88, 27]]) x.fillRect(s[0], s[1], 1, 1);
+    x.fillStyle = '#5c2c60'; x.beginPath(); x.moveTo(12, 62); for (let i = 0; i <= 13; i++) x.lineTo(12 + i * 8, 59 - Math.abs(Math.sin(i * 1.7 + 0.4)) * 5); x.lineTo(116, 62); x.closePath(); x.fill();
+    const gnd = x.createLinearGradient(0, 62, 0, 120); gnd.addColorStop(0, '#dca07a'); gnd.addColorStop(1, '#9a604c');
+    x.fillStyle = gnd; x.fillRect(12, 62, 104, 58);
+    x.strokeStyle = 'rgba(80,36,36,0.28)'; x.lineWidth = 0.8; x.beginPath();
+    for (const c of [[14, 74, 40, 71, 52, 78], [60, 70, 88, 74, 114, 69], [12, 96, 36, 90, 58, 99], [64, 92, 90, 101, 116, 93], [30, 112, 62, 108, 98, 116]]) { x.moveTo(c[0], c[1]); x.lineTo(c[2], c[3]); x.lineTo(c[4], c[5]); }
+    x.stroke();
+    x.strokeStyle = '#2a1430'; x.lineWidth = 1.2; x.beginPath();
+    x.moveTo(27, 62); x.lineTo(27, 53); x.moveTo(27, 56); x.lineTo(23.5, 50); x.moveTo(27, 56); x.lineTo(30.5, 50); x.moveTo(25, 62); x.lineTo(27, 58.5); x.lineTo(29, 62);
+    x.stroke();
+    if (img) { x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(img, 12, 12, 104, 108); }
+    const v = x.createRadialGradient(64, 66, 34, 64, 66, 82); v.addColorStop(0, 'rgba(30,10,30,0)'); v.addColorStop(1, 'rgba(30,10,30,0.32)');
+    x.fillStyle = v; x.fillRect(12, 12, 104, 108);
+  },
+  // render the 3D Chinka into the photo (once a session; the backdrop alone still reads as a photo if it fails)
+  bakePhoto(R) {
+    if (this.photoBaked || !this.canvas || !R) return;
+    this.photoBaked = true;
+    let img = null;
+    try {
+      const model = BurnsRig.model(BurnsRig.chinkaSpec()), ch = new BurnsChar(model);
+      ch.yaw = 0.32; ch.play('wave', null, true); ch.animT = 0.16; ch.update(0); ch.compute();   // hand up, big smile
+      const env = Object.assign(BurnsEnv.build('dusk', 'dusk', 0, {}, 0), { fogD: 0, trip: 0, dust: 0, exposure: 1, emB: 1.3,
+        keyDir: [-0.42, 0.52, 0.74], keyCol: [0.96, 0.78, 0.62], sky: [0.6, 0.48, 0.78], gnd: [0.7, 0.48, 0.4], rimCol: [1.0, 0.62, 0.5] });
+      img = R.bakeImage(312, 324, { x: 0.42, y: 1.5, z: 2.75, tx: 0, ty: 1.34, tz: 0, fov: 0.5 }, env, RR => RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.8));
+      BurnsGL.freeGeo(model.geo);   // re-uploaded on demand by worlds that show her
+    } catch (e) { console.warn('burns: Chinka photo bake failed', e); img = null; }
+    if (!img) return;
+    this.paintPhoto(this.ctx, 0, 832, img);
+    if (this.T) this.T.dirty = true;
   }
 };
 

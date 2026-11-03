@@ -447,6 +447,12 @@ BURNS_ANIMS.w234lounge = (P, t) => {
   P.pitch = -0.95; P.pivot = 0.5; P.y = -0.38; P.face = 3;
 };
 
+/* ---------- low-detail building for background camps (whole city blocks are seen from vantage points) ----------
+   lo(m, fn): run a builder with the mesh in low-detail mode (fewer segments on round shapes), then restore it.
+   loProp(api, kind, o): an engine prop built in low detail, same colliders and lights as api.prop. */
+BURNS_W234.lo = function (m, fn) { const lo0 = m.lo; m.lo = true; try { return fn(); } finally { m.lo = lo0; } };
+BURNS_W234.loProp = function (api, kind, o) { return api.mesh(o.x || 0, o.z || 0, m => BURNS_W234.lo(m, () => BurnsProps[kind].call(BurnsProps, m, o)), { yaw: o.yaw || 0, y: o.y || 0, scale: o.scale || 1, cover: o.cover }); };
+
 /* ---------- carrying a heavy load (W2: the stash, the haul, the escape) ----------
    BURNS_W234.loadModels(key, build) -> { hand, ground }: one build, baked twice (held over Brady's
    head on the chest bone / resting on the ground). build(m) draws the load centred on the origin,

@@ -851,6 +851,8 @@ class BurnsSpriteBatch {
 
 /* ---------------- renderer ---------------- */
 const burnsLinC = (c, out, k) => { out = out || [0, 0, 0]; k = k === undefined ? 1 : k; out[0] = Math.pow(Math.max(0, c[0]), 2.2) * k; out[1] = Math.pow(Math.max(0, c[1]), 2.2) * k; out[2] = Math.pow(Math.max(0, c[2]), 2.2) * k; return out; };
+// IEEE half float (Uint16) -> number, for HDR read-backs on GPUs that only return HALF_FLOAT
+const burnsHalf = h => { const e = (h >> 10) & 31, m = h & 1023, s = h & 32768 ? -1 : 1; return e === 0 ? s * m * 5.960464477539063e-8 : e === 31 ? s * 65504 : s * Math.pow(2, e - 15) * (1 + m / 1024); };
 class BurnsRenderer {
   constructor() {
     this.P = new Float32Array(16); this.V = new Float32Array(16); this.VP = new Float32Array(16); this.B = {};
@@ -1220,6 +1222,87 @@ class BurnsRenderer {
     if (save.env) this.prepEnv(save.env);
     gl.disable(gl.SCISSOR_TEST); gl.viewport(0, 0, this.w, this.h); gl.clearColor(0, 0, 0, 1);
     this.post.noFx = [rect.x / this.w, 1 - (rect.y + rect.h) / this.h, (rect.x + rect.w) / this.w, 1 - rect.y / this.h];
+  }
+  /* offscreen render of posed models into a 2D canvas with a transparent background (engine-made atlas art, such as
+     the Chinka photo). Call it before the frame's setCamera: it borrows the camera and light state and puts it back.
+     cam: {x,y,z, tx,ty,tz, fov}; env: a full lighting env (BurnsEnv.build + overrides); draw(R) issues R.skin() calls.
+     HDR tiers are tone-mapped like the frame (ACES, gamma, the default grade). Returns a canvas, or null. */
+  bakeImage(w, h, cam, env, draw) {
+    const gl = BurnsGL.gl;
+    if (!gl || BurnsGL.lost) return null;
+    if (BurnsGL.gl2) this.T = BurnsGL.targets(Math.max(64, this.w), Math.max(64, this.h));   // the frame's own targets (begin() makes them anyway); this.hdr reads them
+    const hdr = this.hdr;
+    let T, out = null;
+    if (BurnsGL.gl2) T = BurnsGL.target(w, h, { fmt: hdr ? 'hdr' : 'ldr', depth: true });
+    else {   // WebGL1 (legacy tier): an RGBA8 texture and a 16-bit depth buffer
+      T = { w, h, fb: gl.createFramebuffer(), tex: gl.createTexture(), drb: gl.createRenderbuffer() };
+      gl.bindTexture(gl.TEXTURE_2D, T.tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, T.drb); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, T.tex, 0);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, T.drb);
+      T.ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    }
+    if (T.ok) {
+      const save = { P: this.P.slice(), V: this.V.slice(), VP: this.VP.slice(), cam: this.cam, B: Object.assign({}, this.B), shadowOn: this.shadowOn, pass: this.pass, env: this.envRef, pl: this.pl.slice(), pc: this.pc.slice(), npl: this.npl };
+      gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb);
+      gl.viewport(0, 0, w, h); gl.disable(gl.SCISSOR_TEST); gl.disable(gl.BLEND);
+      gl.depthMask(true); gl.clearDepth(1); gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK); gl.frontFace(gl.CCW);
+      gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
+      BurnsM.persp(this.P, cam.fov || 0.5, w / h, 0.1, 60, 0);
+      BurnsM.lookAt(this.V, this.B, cam.x, cam.y, cam.z, cam.tx, cam.ty, cam.tz);
+      BurnsM.mul4(this.VP, this.P, this.V);
+      this.cam = { x: cam.x, y: cam.y, z: cam.z };
+      this.shadowOn = false; this.pass = 'main';
+      this.setLights(cam.lights || null);
+      this.prepEnv(env);
+      this.skinBegin(env, null, BURNS_ATLAS.T);
+      draw(this);
+      out = this.readImage(T, w, h, hdr, env.exposure || 1);
+      this.P.set(save.P); this.V.set(save.V); this.VP.set(save.VP); this.cam = save.cam; Object.assign(this.B, save.B);
+      this.shadowOn = save.shadowOn; this.pass = save.pass; this.pl.set(save.pl); this.pc.set(save.pc); this.npl = save.npl;
+      if (save.env) this.prepEnv(save.env); else this.envRef = null;
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, this.w, this.h); gl.clearColor(0, 0, 0, 1);
+    BurnsGL.freeTarget(T);
+    return out;
+  }
+  // read a bake target back into a top-down 2D canvas (straight alpha); HDR targets are tone-mapped like the composite pass
+  readImage(T, w, h, hdr, exposure) {
+    const gl = BurnsGL.gl, n = w * h * 4;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb);
+    for (let i = 0; i < 8 && gl.getError() !== gl.NO_ERROR; i++) { /* drop stale errors */ }
+    let src, k = 1;
+    if (hdr) {
+      src = new Float32Array(n); gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, src);
+      if (gl.getError() !== gl.NO_ERROR) {   // some GPUs only read half floats back
+        const hf = new Uint16Array(n); gl.readPixels(0, 0, w, h, gl.RGBA, gl.HALF_FLOAT, hf);
+        if (gl.getError() !== gl.NO_ERROR) return null;
+        for (let i = 0; i < n; i++) src[i] = burnsHalf(hf[i]);
+      }
+    } else { src = new Uint8Array(n); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, src); k = 1 / 255; }
+    const c = makeCanvas(w, h), x = c.getContext('2d'), img = x.createImageData(w, h), D = img.data;
+    const ex = exposure * 0.9;
+    const aces = v => { v *= ex; v = (v * (2.51 * v + 0.03)) / (v * (2.43 * v + 0.59) + 0.14); return v <= 0 ? 0 : v >= 1 ? 1 : Math.pow(v, 1 / 2.2); };
+    const grade = (v, l) => { v = l + (v - l) * 1.08; v = v < 0 ? 0 : v > 1 ? 1 : v; return (v + (v * v * (3 - 2 * v) - v) * 0.12) * 255; };
+    for (let y = 0; y < h; y++) {
+      for (let i = 0; i < w; i++) {
+        const s = ((h - 1 - y) * w + i) * 4, d = (y * w + i) * 4, a = src[s + 3] * k;
+        if (!(a > 0.002)) { D[d + 3] = 0; continue; }
+        let r = src[s] * k, g = src[s + 1] * k, b = src[s + 2] * k;
+        if (hdr) { r = aces(r); g = aces(g); b = aces(b); }
+        const l = 0.3 * r + 0.59 * g + 0.11 * b;
+        D[d] = grade(r, l); D[d + 1] = grade(g, l); D[d + 2] = grade(b, l); D[d + 3] = Math.min(1, a) * 255;
+      }
+    }
+    x.putImageData(img, 0, 0);
+    return c;
   }
   /* ---------- post-processing: resolve, SSAO, bloom, god rays, DOF, tone map, to the canvas ----------
      fx: { dof: {focus, aperture} | null, fires: [[x,y,z,r]...], heat: 0..1, rays: 0..1, bloom, exposure, grade } */

@@ -12,7 +12,7 @@ Brady-O is four original games in one app. Pick one from the start menu.
 |---|---|
 | **Road to the Burn** | The main adventure: 100 levels in 10 worlds from the suburbs to the Burn, plus 3 secret worlds. Story scenes, camp bosses, and Lord Buzzkill at the end. |
 | **Brady-O Classic** | 32 bite-size levels in a chunky 8-bit style, with chiptune music and CRT scanlines. |
-| **Brady-O World** | A walkable Black Rock City map with 45 levels laid out around the clock streets. Ride **Slothy**, find secret exits that open hidden paths, and unlock two secret regions. |
+| **Super Brady-O World** | A trip around the world. Baron Bric-a-Brac is shrinking and stealing landmarks, so Brady flies after him across a world map: 12 countries from Mexico to the finale in Nepal, 5 levels each, every country with its own enemies, music, castle boss and signature item (tacos, booby boots, a football, a flying carpet, mime gloves, a Dutch bike…), on top of the magic mushroom, joint and LSD tab. Chinka sends postcard clues. Two secret lands hide on the map: Antarctica, and the legendary World 22. |
 | **Art Car Kart** | 3D kart racing on the playa: 8 burner racers in art-car karts, 8 tracks in two cups (Grand Prix or Time Trial), drifting with mini-turbos, and festival items like puke balls, mosquito swarms and disco shields. |
 
 The LOOK screen changes Brady's look: man bun or hair down, shades, clear glasses or none, tattoos and stubble on or off, plus hair and skin colors.

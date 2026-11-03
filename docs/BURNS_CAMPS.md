@@ -49,7 +49,7 @@ Call it inside `build(api, g)`. `x, z` is the camp origin (§4 gives each camp's
 | `onArrive(g, camp)` | — | The first time Brady enters the footprint in a visit. |
 | `mission` | — | A mission id (use `BurnsCamps.mission(kind, id)`), started and completed on arrival; the token spawns where Brady stands. |
 | `djPrompt` | `false` | `true` lets Brady play the shared `BurnsDJ` minigame at every fixed booth: talking to a stage's DJ hands him the decks (one line, then the set opens), and an unmanned booth shows a **PLAY A SET** ACTION prompt. An object is passed through as `BurnsDJ.open` options. |
-| `onEntrance(g, camp)`, `entranceR` | — | A trigger at the camp's entrance (open-world hook: load the camp's own sub-world here). |
+| `onEntrance(g, camp)`, `entranceR`, `entranceOnce` | — | A trigger at the camp's entrance (radius 5 m by default; fires on every entry unless `entranceOnce`). The open-world hook: load the camp's own sub-world here. |
 | `marker` | `false` | `true` adds a minimap marker in the camp's colour. |
 | Root Society | | `withArtCar: false` (no car), `drive: false` (it stays docked), `drive: [[lx, lz]…]` (your own tour, camp-local, from the dock back to the dock), `tour: 'short'` (a short loop round the plaza), `dockTime` (s, default 40), `carSpeed` (m/s, default 6.2), `drivable: false`, `onDock / onUndock / onBoard (g, camp, car)`. |
 | Space Cowboys | | `truck: false`, `drive: false`, `dockTime` (35). |
@@ -108,7 +108,7 @@ Call it inside `build(api, g)`. `x, z` is the camp origin (§4 gives each camp's
 
 Things to know:
 - Like `BurnsBigArt`, the module wraps `g.fx.draw` (per-frame sprites) and `g.updateCamera` (the dome clamp) on the running scene, and appends its ACTION prompts to `g.interactables` (re-adding them if a world replaces the array).
-- Camp chunks are hidden for LOD by parking their bounds out of view, never by touching their buffers.
+- Camp chunks are hidden for LOD by parking their bounds out of view, never by touching their buffers. `ownChunks: false` builds a camp into the world's ordinary cells instead (no LOD swap, slightly fewer chunks).
 - Signs use the per-world sign atlas (2–4 per camp). Placing every camp in one world fits; the atlas shrinks signs gracefully when it runs low.
 
 ---
@@ -192,7 +192,27 @@ Not built: camps whose names contain a brand or trademark were skipped (none of 
 
 ## 6. Cost (performance)
 
-COST_SECTION
+Measured in the sandbox with one camp alone at scale 1 and `crowd: 1` (static vertices are the camp's own chunks; triangles are what those chunks hold). "Draw calls added in view" is a fixed view from the camp's entrance looking in, minus an empty world (23 draws): it includes every visible character (one draw each, plus shadow-pass draws for those within ~42 m), the camp's chunks (each drawn in the colour and shadow passes) and the sprite batch. Night adds no draws (lasers, sparkles and flames share the sprite batches; point lights are uniforms).
+
+| Camp | Static vertices / triangles (chunks) | Vehicle triangles | Colliders | Actors (DJs + dancers + staff) | Draw calls added in view, day / night | Far silhouette vertices / triangles |
+|---|---|---|---|---|---|---|
+| Root Society | 134.2k / 210.2k (8) | 16.2k | 261 | 52 | +54 / +54 | 1.4k / 2.2k |
+| Playground | 46.7k / 64.8k (2) | none | 43 | 18 | +20 / +20 | 338 / 548 |
+| Opulent Temple | 20.3k / 33.6k (2) | none | 32 | 15 | +17 / +17 | 520 / 764 |
+| Camp Question Mark | 15.1k / 26.2k (2) | none | 18 | 15 | +17 / +17 | 344 / 624 |
+| Disorient | 14.0k / 24.6k (2) | none | 24 | 13 | +15 / +15 | 256 / 476 |
+| The Deep End | 9.7k / 16.3k (2) | none | 34 | 13 | +15 / +15 | 136 / 212 |
+| Death Guild Thunderdome | 11.2k / 16.8k (1) | none | 76 | 18 | +19 / +19 | 580 / 640 |
+| Center Camp | 12.3k / 19.8k (3) | none | 61 | 16 | +19 / +19 | 150 / 214 |
+| Space Cowboys | 8.7k / 14.8k (2) | 8.7k | 23 | 12 | +15 / +15 | 120 / 188 |
+| Sol System | 12.2k / 21.1k (2) | none | 56 | 13 | +15 / +15 | 384 / 648 |
+
+- **Totals in view.** Root Society's entrance view renders 77 draw calls and about 361k triangles (World 1's busiest view: about 360k). The other camps render 38–43 draw calls and 84k–137k triangles in their entrance views. Every camp stays well inside the guide's 120-draw budget.
+- **The busiest view**: Root Society with four more camps packed round it (Playground, Opulent Temple, Camp ?, Disorient, all within ~130 m, every crowd on), graphics tiers `high` and `medium`, day and night: **85 draw calls / ~419k triangles** at worst (a wide view from Root Society's gate across the camp), 60 / 370k from the plaza facing the coliseum, 53 / 222k looking across the street to Playground, 44 / 407k from overhead.
+- **What scales.** Most draws are characters: `crowd: 0.5` removes about half of each camp's dancers (DJs, staff and riders stay); `crowd: 0` leaves 5–12 per camp. Root Society carries 52 actors (4 stage DJs, 3 car riders, 35 dancers, 4 gallery spectators, 3 lounge sitters, 3 villagers); in one view you see at most ~35 of them.
+- **Vehicles** are movers in the world's shared skinned groups (no extra draw of their own in practice); the coliseum car is 16.2k triangles, the sound truck 8.7k.
+- **Silhouettes** (`lod: 'far'`) are one chunk each, 120–1,400 vertices; a skyline of all ten adds about a dozen draws.
+- **CPU.** Per step: the vehicle autopilots (O(1) each), area checks every 6 steps for camps within their radius + 25 m of Brady (a few circle/box tests), beat clocks, flame and CO2 emitters near Brady (≤ ~60 particles per burst), and per frame up to 11 point-light requests and ~150–400 laser/sparkle quads near the camera.
 
 ---
 

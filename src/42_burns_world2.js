@@ -1198,10 +1198,8 @@ BURNS_W2.moopDone = function (g) {
 };
 
 /* ---------------- low-detail building (the city is seen whole from the rocket and the Esplanade) ---------------- */
-// run a builder with the mesh in low-detail mode (fewer segments on round shapes), then restore it
-BURNS_W2.lo = function (m, fn) { const lo0 = m.lo; m.lo = true; try { return fn(); } finally { m.lo = lo0; } };
-// an engine prop built in low detail (same colliders and lights as api.prop)
-BURNS_W2.loProp = function (api, kind, o) { return api.mesh(o.x || 0, o.z || 0, m => BURNS_W2.lo(m, () => BurnsProps[kind].call(BurnsProps, m, o)), { yaw: o.yaw || 0, y: o.y || 0, scale: o.scale || 1, cover: o.cover }); };
+BURNS_W2.lo = (m, fn) => BURNS_W234.lo(m, fn);
+BURNS_W2.loProp = (api, kind, o) => BURNS_W234.loProp(api, kind, o);
 
 /* ---------------- lot builder: one camp on a city block (night) ---------------- */
 BURNS_W2.lot = function (api, x, z, yaw, seed, force, allowNpc) {

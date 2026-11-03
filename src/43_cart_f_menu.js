@@ -320,7 +320,9 @@ class KartMenuScene {
     const pw = P ? W - 28 : Math.min(330, W * 0.4), px = P ? 14 : W - Math.max(14, insets.r + 8) - pw, py = P ? H * 0.47 : Math.max(60, insets.t + 54), ph = P ? H * 0.53 - Math.max(70, insets.b + 66) : H - py - Math.max(70, insets.b + 66);
     this.drawCard(ctx, { x: px, y: py, w: pw, h: ph }, true, car.col);
     let y = py + 26;
-    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), car.col === '#2a2236' ? '#ffc83a' : car.col, { align: 'left', glow: car.light });
+    // dark paint jobs (the pyramid, the galleon, the whale) read better in their bright trim colour
+    const cn = parseInt(car.col.slice(1), 16), luma = (0.299 * (cn >> 16) + 0.587 * ((cn >> 8) & 255) + 0.114 * (cn & 255)) / 255;
+    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.42 ? car.col2 : car.col, { align: 'left', glow: car.light });
     y += 20; ctx.font = `600 11px ${FONT_UI}`;
     for (const ln of BurnsUI.wrap(ctx, car.tag, pw - 32)) { BurnsUI.text(ctx, ln, px + 16, y, 11, 'rgba(255,255,255,0.9)', { align: 'left', ui: true, stroke: false }); y += 14; }
     BurnsUI.text(ctx, 'Inspired by ' + car.nod, px + 16, y, 10, 'rgba(255,255,255,0.55)', { align: 'left', ui: true, stroke: false }); y += 20;

@@ -271,7 +271,7 @@ class TourMapScene {
     ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.fillText(`${tot.done}/${tot.total} levels  ·  ${tot.gold}/${tot.goldTotal} postcards`, this.backBtn.x + this.backBtn.w + 12, this.backBtn.y + 28);
     const W22 = Tour.countries.w22;
-    if (W22 && !TourProgress.countryUnlocked(W22)) { ctx.font = `italic 10px ${FONT_UI}`; ctx.fillStyle = `rgba(255,236,170,${0.55 + 0.2 * Math.sin(this.t * 1.5)})`; ctx.fillText('Legend speaks of a World 22…', this.backBtn.x + this.backBtn.w + 12, this.backBtn.y + 43); }
+    if (W22 && !TourProgress.countryUnlocked(W22)) { ctx.font = `italic 11px ${FONT_UI}`; ctx.fillStyle = `rgba(255,236,170,${0.85 + 0.15 * Math.sin(this.t * 1.5)})`; ctx.fillText('Legend speaks of a World 22…', this.backBtn.x + this.backBtn.w + 12, this.backBtn.y + 43); }
     ctx.restore();
     this.drawPanel(ctx);
     if (this.card) this.drawCard(ctx);

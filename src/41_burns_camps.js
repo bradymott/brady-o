@@ -188,6 +188,7 @@ function bcmCamera(g) {
 function bcmDraw(g, Rr, R) {
   if (!g.world || g.world._bcm !== R || !g.cam) return;
   const S = BURNS_SPRITES.R, cam = g.cam, once = R.frame !== g.frameN; R.frame = g.frameN;
+  if (once) R.night = bcmPalNight(g);   // cached by palette + tod: the show reacts the same frame the sky changes
   let nl = 0;
   for (const P of R.camps) {
     const dx = P.x - cam.x, dz = P.z - cam.z, d2 = dx * dx + dz * dz;

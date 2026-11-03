@@ -186,6 +186,21 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('Dutch bike: Brady rides faster and the bell stuns enemies', bike.sig === 'bike' && bike.d1 > bike.d0 * 1.2 && bike.stunned, bike);
   await page.evaluate(() => { start('8-1'); clearEnemies(); P().collect('sig:bike'); sim(0.1); sim(0.6, { right: true }); });
   await shot('08g-power-bike.png');
+  // Antarctica's penguin slide bowls enemies over
+  const slide = await page.evaluate(() => { start('13-1'); clearEnemies(); const p = P(); p.collect('sig:slide'); sim(0.1); const e = near('aqSnowball', 120); e.vx = 0; e.cool = 99; sim(0.02); const x0 = p.x; sim(0.05, { actionPressed: true }); sim(0.5); return { sig: p.sig && p.sig.id, dx: Math.round(p.x - x0), ko: e.dead || e.remove, alive: !p.dead }; });
+  check('Penguin slide: Brady whooshes along on his belly and bowls enemies over', slide.sig === 'slide' && slide.dx > 150 && slide.ko && slide.alive, slide);
+  await page.evaluate(() => { start('13-1'); clearEnemies(); P().collect('sig:slide'); sim(0.1); sim(0.05, { actionPressed: true }); sim(0.3); });
+  await shot('08h-power-slide.png');
+  // World 22's dream tricks: the echo follows 1.4 s behind; Mirror Lake is played leftwards
+  const dream = await page.evaluate(() => {
+    start('22-1'); clearEnemies(); const g = S(), p = P(); const echo = g.entities.find(e => e.constructor.name === 'W22Echo');
+    p.x = echo.home.x + 40; p.y = echo.home.y + echo.h - p.h; p.vy = 0; sim(0.3); const early = echo.on; sim(1.6, { right: true }); const later = echo.on;
+    const B = window.BRADY, L = B.getLevel(22, 2), A = L.areas[0], gate = A.spawns.find(s => s.type === 'gate' && !s.secret);
+    return { early, later, mirrored: !!A.mirrored, startRight: L.start.x > A.W * 16, goalLeft: gate.x < A.W * 16 };
+  });
+  check('World 22: your echo appears behind you, and Mirror Lake runs right to left', !dream.early && dream.later && dream.mirrored && dream.startRight && dream.goalLeft, dream);
+  await page.evaluate(() => { start('22-1'); clearEnemies(); const g = S(), p = P(); const echo = g.entities.find(e => e.constructor.name === 'W22Echo'); p.x = echo.home.x + 40; p.y = echo.home.y + echo.h - p.h; sim(1.8, { right: true }); });
+  await shot('08i-world22-echo.png');
 
   // 5. Enemies: stomping, and a two-hit piñata burro
   const stomp = await page.evaluate(() => {
@@ -219,7 +234,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('every tour level loads, simulates and renders', all.n >= 10 && all.bad.length === 0, all);
 
   // 8. Castle bosses: Mexico's piñata, then Paris's soufflé; beating Mexico flies Brady to the next country
-  for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'DJINN', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl']]) {
+  for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'DJINN', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl'], ['13-4', 'BIG TUSK', 'aq'], ['22-4', 'OTHER BRADY', 'w22']]) {
     const boss = await page.evaluate(([id]) => {
       start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
       p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.vy = 0; p.invuln = 99; sim(2.5);
@@ -239,8 +254,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     } else if (tag === 'ec') {
       await page.evaluate(() => { start('2-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(2.5); b.go('rear'); sim(0.6); });
       await shot('10b-boss-tortugon.png');
-    } else if (['mz', 'ma', 'es', 'nl'].includes(tag)) {
-      await page.evaluate(([id, act]) => { start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3); b.go(act); sim(0.9); }, [id, { mz: 'out', ma: 'walk', es: 'simmer', nl: 'fling' }[tag]]);
+    } else if (['mz', 'ma', 'es', 'nl', 'aq', 'w22'].includes(tag)) {
+      await page.evaluate(([id, act]) => { start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3); b.go(act); sim(0.9); }, [id, { mz: 'out', ma: 'walk', es: 'simmer', nl: 'fling', aq: 'tusks', w22: 'frozen' }[tag]]);
       await shot('10d-boss-' + tag + '.png');
     } else if (tag === 'br') {
       await page.evaluate(() => { start('3-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3); b.go('dive'); sim(1.2); });
@@ -277,7 +292,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       return { weak, hp0: b.maxHp, guarded, hp: b.hp, act: b.act };
     };
   });
-  for (const [id, act, what] of [['4-5', 'out', 'O Eremita is stompable once he leaves his shell'], ['5-5', 'pot', 'the Djinn pops out of his teapot after it lands'], ['6-5', 'simmer', 'Paellasaurus cools down after simmering'], ['8-5', 'fling', 'the Cheese King teeters after flinging a wheel']]) {
+  for (const [id, act, what] of [['13-4', 'flop', 'Big Tusk winds himself with a belly-flop'], ['22-4', 'walk', 'the Other Brady freezes when the clock strikes 22:22'], ['4-5', 'out', 'O Eremita is stompable once he leaves his shell'], ['5-5', 'pot', 'the Djinn pops out of his teapot after it lands'], ['6-5', 'simmer', 'Paellasaurus cools down after simmering'], ['8-5', 'fling', 'the Cheese King teeters after flinging a wheel']]) {
     const r = await page.evaluate(([id, act]) => bossWeak(id, act), [id, act]);
     check(what + ' (stomps bounce off otherwise)', r.weak && r.guarded === r.hp0 && r.hp === r.hp0 - 1, r);
   }
@@ -289,6 +304,42 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     return { cooled, tottered };
   });
   check('a tomato cools Paellasaurus at once, and the bike bell makes the Cheese King teeter', extras.cooled && extras.tottered, extras);
+  // the secret lands: hidden on the map until found; Antarctica behind a cracked wall in 8-4, World 22 behind door 22 in 5-2 (22 postcards)
+  const secrets = await page.evaluate(() => {
+    const B = window.BRADY, d = B.Save.data, TP = T.TourProgress, M = T.TourMapScene;
+    d.tour = { at: 'nl', seen: {}, freed: {}, lands: {} }; d.gold = {};
+    const st = id => { const s = T.Tour.stops[id]; return { aq: 0, w22: 0 } && TP.countryUnlocked(T.Tour.countries[id]) ? 'shown' : 'hidden'; };
+    const hiddenAtFirst = st('aq') === 'hidden' && st('w22') === 'hidden';
+    const viaDoor = (id, room) => {
+      start(id); clearEnemies(); const g = S(), p = P(); p.invuln = 99;
+      const door = g.entities.find(e => e.constructor.name === 'Portal' && e.s.target && e.s.target.area >= 1); g.enterPortal(door); sim(1.5);
+      const gate = g.entities.find(e => e.constructor.name === 'Gate' && e.secret); if (!gate) return { noGate: true };
+      const q = P(); q.invuln = 99; q.x = gate.cx - 50; q.y = gate.y + gate.h - q.h - 4; q.vy = 0; sim(0.8, { right: true }); const s1 = g.state; sim(8); return { s1, s2: g.state };
+    };
+    const aq = viaDoor('8-4');
+    const aqOpen = TP.countryUnlocked(T.Tour.countries.aq) && TP.isUnlocked('13-1');
+    const w0 = viaDoor('5-2'); const lockedOut = w0.s1 === 'play' && !TP.countryUnlocked(T.Tour.countries.w22);
+    for (const w of [1, 2, 3, 4, 5, 6, 7, 8]) d.gold[w + '-1'] = [true, true, true];
+    const w1 = viaDoor('5-2'); const w22Open = TP.countryUnlocked(T.Tour.countries.w22) && TP.isUnlocked('22-1');
+    const map = new M({ from: '5-2' }); B.Game.setScene(map); const flying = !!map.flight; for (let k = 0; k < 900 && map.flight; k++) map.update(1 / 120);
+    return { hiddenAtFirst, aq, aqOpen, lockedOut, w1, w22Open, flying, sel: map.sel, gold: TP.totals().gold };
+  });
+  check('secret lands stay hidden until found; a cracked wall in 8-4 opens Antarctica; door 22 in 5-2 opens World 22 only with 22 postcards', secrets.hiddenAtFirst && secrets.aqOpen && secrets.lockedOut && secrets.w22Open && secrets.flying && secrets.sel === 'w22', secrets);
+  await page.evaluate(() => { const s = S(); s.card = null; s.update(1 / 60); s.draw(window.BRADY.Game.ctx); });
+  await shot('12b-map-world22.png');
+  // the whole route flows: each boss flies Brady on to the next built country
+  const route = await page.evaluate(() => {
+    const B = window.BRADY, d = B.Save.data, out = [];
+    d.tour = { at: 'mx', seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {};
+    for (const C of T.Tour.mainCountries()) {
+      for (let i = 1; i <= C.levels.length; i++) { d.done[C.world + '-' + i] = true; T.TourProgress.complete(C.world + '-' + i, false); }
+      const N = T.Tour.nextCountry(C); const M = new T.TourMapScene({ from: C.world + '-' + C.levels.length }); B.Game.setScene(M);
+      out.push(C.id + '>' + (N ? (M.flight || M.sel === N.id ? N.id : 'STUCK') : 'end'));
+    }
+    d.tour = { at: null, seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {}; d.gold = {};
+    return out;
+  });
+  check('the route flows country to country, each boss flying Brady on', route.every(r => !/STUCK/.test(r)) && route[route.length - 1].endsWith('end'), route);
   const fly = await page.evaluate(() => {
     const B = window.BRADY, d = B.Save.data; for (let i = 1; i <= 5; i++) d.done['1-' + i] = true; T.TourProgress.complete('1-5', false);
     const M = new T.TourMapScene({ from: '1-5' }); B.Game.setScene(M); const flying = !!M.flight; for (let k = 0; k < 600 && M.flight; k++) M.update(1 / 120);

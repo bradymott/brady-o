@@ -2,7 +2,7 @@
 
 Super Brady-O World is a trip around the world: 12 countries plus two secret lands. Each country is one file, `src/29_tour_<cc>.js`. That file registers the country's theme, enemies, set pieces, boss, music, signature power-up and its five levels.
 
-Built so far: Mexico (`mx`), Ecuador (`ec`), Brazil (`br`), Mozambique (`mz`), Morocco (`ma`), Valencia (`es`), Paris (`fr`) and Amsterdam (`nl`), each in `src/29_tour_<cc>.js`. Copy their structure. Still to build: Bali, Vietnam, Japan, Nepal, Antarctica and World 22.
+Built so far: Mexico (`mx`), Ecuador (`ec`), Brazil (`br`), Mozambique (`mz`), Morocco (`ma`), Valencia (`es`), Paris (`fr`), Amsterdam (`nl`) and the two secret lands, Antarctica (`aq`) and World 22 (`w22`), each in `src/29_tour_<cc>.js`. Copy their structure. Still to build: Bali, Vietnam, Japan and Nepal (the finale).
 
 What each built country already uses, so yours can be different:
 
@@ -31,6 +31,8 @@ Tricks the newer countries added (all inside the country file, no engine changes
 - **Boss reactions to items:** the item calls a brain hook you define (Amsterdam's bell calls `brain.onBell(b)` if present). `noDisc(b)` can also react before refusing damage (Paellasaurus cools when a tomato or flame hits it).
 - **Light shafts:** `rays: '#color'` in a theme draws soft animated sunbeams.
 - **Background layers must sit high enough to be seen:** the ground covers background y above about 330 at the usual camera height. Keep a layer's interesting shapes between y 220 and 330 (base 300–360 for most near layers).
+- **Secret lands:** register with `secret: true` (3–5 levels are fine). A land stays hidden on the map, and out of the level and postcard totals, until it's unlocked. To unlock it, give some level elsewhere `secret: { to: '<cc>', sign: 'text', need: 22 }` and put `'secret'` (optionally `['secret', { look: 'tourDoor22' }]`) in its script: a bonus room whose far wall is fake hides a secret gate. `need` makes that gate ask for that many postcards first. Antarctica opens from Amsterdam 8-4; World 22 opens from Morocco 5-2 (the 22nd level of the route) once Brady has 22 postcards. The map shows "Legend speaks of a World 22…" until it opens.
+- **Mirrored levels:** `mirror: true` on a level spec flips its main area left to right after it's built, so it's played leftwards (World 22's Mirror Lake). Moving platforms (incl. swings and orbits), zones, beat blocks and same-area doors are flipped too.
 - **Testing while another country is half-written:** `BRADY_SKIP_TOUR=id,vn node tools/validate_levels.js` leaves those country files out of the validator.
 
 ## 1. Files and load order

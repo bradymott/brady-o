@@ -456,28 +456,29 @@ BURNS_W3.tallBike = function (m) {
 
 /* ---------------- day-city lot ---------------- */
 BURNS_W3.lot = function (api, x, z, yaw, seed, allowNpc) {
+  const loMesh = (mx, mz, fn, o) => api.mesh(mx, mz, m => BURNS_W234.lo(m, () => fn(m)), o);   // background camps: low detail
   const r = mulberry32(seed), BW = BURNS_W234, fx = Math.sin(yaw), fz = Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
   const L = (a, b) => [x + rx * a + fx * b, z + rz * a + fz * b];
   const kind = r.weighted([['rv', 3], ['dome', 2], ['tents', 1.5], ['lounge', 1.6], ['art', 0.8]]);
   let n = 0;
   const crowd = (a, b, k, beh) => { if (!allowNpc || r() > 0.5) return; const [cx, cz] = L(a, b); for (let i = 0; i < k; i++) { api.npc({ type: r.pick(['burner', 'tutu', 'furcoat', 'sparklepony', 'ledsuit', 'burner']), seed: Math.floor(r() * 1e6), x: cx + r.range(-1.5, 1.5), z: cz + r.range(-1.5, 1.5), yaw: r() * TAU, behavior: beh || r.pick(['idle', 'dance', 'sit', 'wander']), style: Math.floor(r() * 6), radius: 3, ambient: true }); n++; } };
   if (kind === 'rv') {
-    const [vx, vz] = L(r.range(-1.5, 1.5), -2.8); api.prop(r.pick(['rv', 'van', 'camper', 'boxtruck', 'bus']), { x: vx, z: vz, yaw: yaw + Math.PI / 2, seed });
+    const [vx, vz] = L(r.range(-1.5, 1.5), -2.8); BW.loProp(api, r.pick(['rv', 'van', 'camper', 'boxtruck', 'bus']), { x: vx, z: vz, yaw: yaw + Math.PI / 2, seed });
     const [sx, sz] = L(0, 1.6); api.prop('shade', { x: sx, z: sz, w: 5, d: 3.6, col: r.pick(['#f4e2c0', '#c8e0f0', '#f0c8d8', '#d8f0c8']), lights: false });
-    const [cx, cz] = L(r.range(-1.2, 1.2), 1.2); api.prop('couch', { x: cx, z: cz, yaw: yaw + Math.PI, col: r.pick(['#8a2a5a', '#2a5a8a', '#6a4a2a']) });
+    const [cx, cz] = L(r.range(-1.2, 1.2), 1.2); BW.loProp(api, 'couch', { x: cx, z: cz, yaw: yaw + Math.PI, col: r.pick(['#8a2a5a', '#2a5a8a', '#6a4a2a']) });
     crowd(0, 2.2, 2);
   } else if (kind === 'dome') {
-    const rr = 3.6 + r() * 1.6, [dx, dz] = L(0, -1); api.prop('dome', { x: dx, z: dz, r: rr, col: r.pick(['#f4f0e8', '#e8d8f0', '#d8e8f0']) });
+    const rr = 3.6 + r() * 1.6, [dx, dz] = L(0, -1); api.prop('dome', { x: dx, z: dz, r: rr, col: r.pick(['#f4f0e8', '#e8d8f0', '#d8e8f0']), frame: false });
     crowd(0, 3.4, 2, 'dance');
   } else if (kind === 'tents') {
-    for (let i = 0; i < 3; i++) { const [tx, tz] = L(-3.5 + i * 3.5, r.range(-2.4, 0.4)); api.mesh(tx, tz, m => BW.tent(m, { r: 1.1 + r() * 0.4, col: r.pick(['#3a8a6a', '#3a6aaa', '#aa5a3a', '#c8a03a', '#d84a8a']) }), { yaw: yaw + r.range(-0.5, 0.5) }); }
+    for (let i = 0; i < 3; i++) { const [tx, tz] = L(-3.5 + i * 3.5, r.range(-2.4, 0.4)); loMesh(tx, tz, m => BW.tent(m, { r: 1.1 + r() * 0.4, col: r.pick(['#3a8a6a', '#3a6aaa', '#aa5a3a', '#c8a03a', '#d84a8a']) }), { yaw: yaw + r.range(-0.5, 0.5) }); }
   } else if (kind === 'lounge') {
     const [cx, cz] = L(0, 0), c = r.pick(['#ff9ad8', '#9adcff', '#ffe28a', '#c8a0ff']);
-    api.mesh(cx, cz, m => { m.color('#4a3a3a'); BW.post(m, 0, 0, 0, 0.09, 3.1); m.color(c); BW.lathe(m, 0, 2.5, 0, [[0.1, 0.9], [3.0, 0], [3.0, 0], [2.8, 0.08], [0.2, 0.95], [0, 1.0]], { seg: 16 }); const cols = [{ t: 'cyl', x: 0, z: 0, r: 0.12, y0: 0, y1: 3.4, camPass: true }]; for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + 0.4, bx = Math.sin(a) * 1.8, bz = Math.cos(a) * 1.8; m.color(r.pick(BURNS_NEON)); BW.egg(m, bx, 0.32, bz, 0.62, 0.36, 0.62, { seg: 10, rings: 6 }); cols.push({ t: 'cyl', x: bx, z: bz, r: 0.55, y0: 0, y1: 0.55 }); } return { cols }; }, { yaw });
+    loMesh(cx, cz, m => { m.color('#4a3a3a'); BW.post(m, 0, 0, 0, 0.09, 3.1); m.color(c); BW.lathe(m, 0, 2.5, 0, [[0.1, 0.9], [3.0, 0], [3.0, 0], [2.8, 0.08], [0.2, 0.95], [0, 1.0]], { seg: 16 }); const cols = [{ t: 'cyl', x: 0, z: 0, r: 0.12, y0: 0, y1: 3.4, camPass: true }]; for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + 0.4, bx = Math.sin(a) * 1.8, bz = Math.cos(a) * 1.8; m.color(r.pick(BURNS_NEON)); BW.egg(m, bx, 0.32, bz, 0.62, 0.36, 0.62, { seg: 10, rings: 6 }); cols.push({ t: 'cyl', x: bx, z: bz, r: 0.55, y0: 0, y1: 0.55 }); } return { cols }; }, { yaw });
     crowd(0, 0.4, 2, 'sit');
   } else {
     const [ax, az] = L(0, 0), c = r.pick(BURNS_NEON);
-    api.mesh(ax, az, m => { m.color(c).shine(2); BW.ring(m, 0, 2.2, 0, 1.8, 0.2, { pitch: Math.PI / 2, seg: 22, tseg: 7 }); m.shine(0); m.color('#3a3a40'); BW.post(m, -1.8, 0, 0, 0.14, 0.9); BW.post(m, 1.8, 0, 0, 0.14, 0.9); return {}; }, { yaw });
+    loMesh(ax, az, m => { m.color(c).shine(2); BW.ring(m, 0, 2.2, 0, 1.8, 0.2, { pitch: Math.PI / 2, seg: 22, tseg: 7 }); m.shine(0); m.color('#3a3a40'); BW.post(m, -1.8, 0, 0, 0.14, 0.9); BW.post(m, 1.8, 0, 0, 0.14, 0.9); return {}; }, { yaw });
   }
   return n;
 };

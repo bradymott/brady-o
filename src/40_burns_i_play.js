@@ -1007,6 +1007,7 @@ class BurnsPlayScene {
     const R = this.R, Q = BurnsGL.Q, qs = this.q * (Q ? Q.scale : 1);
     const gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * qs)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * qs));
     R.resize(gw, gh);
+    if (!BURNS_ATLAS.photoBaked) BURNS_ATLAS.bakePhoto(R);   // once: the Chinka photo art, rendered by the engine
     const fp = this.firstPerson();
     this.cam.near = fp ? 0.05 : 0.15;
     R.setCamera(this.cam);
