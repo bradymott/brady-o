@@ -123,6 +123,14 @@ Each app's service worker is versioned per build, so phones pick up updates. The
   Winning every objective of an arena "masters" it and its powers drop in circuit races. `tools/cart_battle_test.js`
   runs every arena × objective headless with screenshots; the engine also has sky-probe reflections (§9.1).
 
+**Engine, November 2026 (local session):** the glTF pipeline is complete for everything but likeness characters:
+- `BurnsGLTF` static/rigid loader (§6.8), **skinned characters** with Mixamo-named joints and clips (§6.9,
+  `src/40_burns_bc_skin.js`, placeholder `tools/blender/mannequin.py`), **textured PBR** materials with the sky
+  probe (§6.10, `src/40_burns_bd_pbr.js`), sky-probe reflections for every material (§9.1).
+- Burning Man's RV, bus, geodesic dome, tipi, porta-potty and shade structure are Blender models
+  (`tools/blender/bm_*.py`, hook `src/41_burns_glbprops.js`, §5.1). Models ship packed and gzipped.
+- Still needed from Brady for real Brady and Chinka: Mixamo clips and the face scans/photos (`private/`).
+
 **Brady Goes to Burning Man: all 17 story worlds built and tested.**
 - **The city:** the open-world Black Rock City is playable: streaming tiles, instancing, LOD, enterable places, a fast-travel map, and HOME at Brady's tipi.
 - **Last engine pass** (finished or under way at handoff; check the commit log):
