@@ -1,6 +1,6 @@
-# Brady-O: setting up your computer for the pro graphics pass
+# Brady's Games: setting up your computer for the pro graphics pass
 
-This guide gets your computer ready so Claude agents running **on your machine** can use **Blender** (and later, if you choose, **Unreal Engine**) to take Brady-O to a professional level.
+This guide gets your computer ready so Claude agents running **on your machine** can use **Blender** (and later, if you choose, **Unreal Engine**) to take your three games (*Brady Goes to Burning Man*, *Super Brady-O World* and *Art Cart*) to a professional level.
 
 Why it has to be your computer: the cloud session that built the game runs in a remote container. It can't open apps on your computer, so Blender and Unreal have to be driven by Claude running locally.
 
@@ -24,7 +24,7 @@ To check the game builds:
 ```bash
 node tools/build.js
 ```
-Then open `dist/brady-o.html` in a browser.
+Then open `dist/site/index.html` in a browser (the launcher page with the three games).
 
 For the automated tests (optional, but the agents use them):
 ```bash
@@ -50,7 +50,7 @@ This uses the open-source **blender-mcp** project (github.com/ahujasid/blender-m
 - **Usage data.** It collects anonymous usage data by default. Turn this off in its Blender preferences, or set the `DISABLE_TELEMETRY` environment variable.
 
 ## Step 3 (optional, native path only): Connect Unreal Engine
-Only do this if you decide to rebuild Brady-O Burns as a native app (Phase 4 in the handoff doc).
+Only do this if you decide to rebuild Brady Goes to Burning Man as a native app (Phase 4 in the handoff doc).
 
 Every Unreal connector today is **third-party and unofficial**, so back up any project first. Two options:
 - **The "Unreal Engine MCP" plugin in Claude's plugin marketplace.** In the Unreal Editor, enable the **ModelContextProtocol** and **AllToolsets** plugins. Start the server from Unreal's console with `ModelContextProtocol.StartServer`, then add the plugin in Claude Code.
@@ -79,7 +79,7 @@ The handoff doc tells the local agent everything about the project:
 - the step-by-step plan for professional graphics, including how to split the work across several agents.
 
 ## Where things live
-- **The game (live):** https://bradymott.github.io/brady-o/, served from the `gh-pages` branch.
+- **The games (live):** https://bradymott.github.io/brady-o/ (a launcher page plus the three apps), served from the `gh-pages` branch.
 - **Source:** the `main` branch. Work in progress goes on feature branches.
 - **Design bible:** `docs/design/`, holding the story and worlds, the cast (your action figures) and the archetypes.
-- **3D engine guide:** `docs/BURNS_GUIDE.md`. Big art: `docs/BURNS_BIGART.md`. Camps: `docs/BURNS_CAMPS.md`.
+- **3D engine guide:** `docs/BURNS_GUIDE.md`. Big art: `docs/BURNS_BIGART.md`. Camps: `docs/BURNS_CAMPS.md`. Adding a country to Super Brady-O World: `docs/WORLD_TOUR_GUIDE.md`.
