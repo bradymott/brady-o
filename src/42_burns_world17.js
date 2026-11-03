@@ -565,7 +565,7 @@ BW17.wake = function (g, kind) {
     g.cutscene([
       { do: g2 => { p.teleport(out[0], 0, out[1], 0.1); p.animOverride = 'victory'; } },
       { swell: 'burns_w17' },
-      { crane: { from: { x: out[0] - 1.5, y: 1.1, z: out[1] - 4.5, tx: out[0], ty: 1.6, tz: out[1] + 8, fov: 0.95 }, to: { x: out[0] - 2.5, y: 4.5, z: out[1] - 7, tx: 0, ty: 9, tz: 30, fov: 1.0 }, dur: 5 } },
+      { crane: { from: { x: out[0] - 1.5, y: 1.1, z: out[1] - 4.5, tx: out[0], ty: 1.6, tz: out[1] + 8, fov: 0.95 }, to: { x: out[0] - 2.5, y: 6.5, z: out[1] - 7, tx: out[0] + 31, ty: 9, tz: out[1] + 95, fov: 1.0 }, dur: 5 } },   // over the village, into the sun (azimuth 18 deg)
       { banner: ['GOOD MORNING, BRADY', 'Sunrise from your own front door', { col: '#ffb48c' }] },
       { wait: 1.6 },
       { do: g2 => { p.animOverride = null; BW17.applyMusic(g2, true); } }

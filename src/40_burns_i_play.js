@@ -1125,8 +1125,9 @@ class BurnsPlayScene {
       a._vis = true;
     }
     for (const b of this.bosses) { if (!b.ch || b.hidden) continue; R.skin(b.model.geo, b.ch.bones, b.ch.nb, b.hurtTint || null, b.ch.face, 0.25); if (b.chinka && b.showChinka !== false) R.skin(b.chinka.model.geo, b.chinka.bones, b.chinka.nb, null, b.chinka.face, 0.5); }
-    if (this.world.crowd) this.world.crowd.draw(R, env, this.world);
     if (this.def.drawSkinned) this.def.drawSkinned(this, R);
+    // instanced crowds last: they switch to their own program (anything skinned after this calls skinBegin again)
+    if (this.world.crowd) this.world.crowd.draw(R, env, this.world);
     // sprites: shadows, glows, particles, projectiles
     this.pushSprites(R, env);
     R.sprites(env, BURNS_SPRITES.T);
