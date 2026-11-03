@@ -583,7 +583,8 @@ void main(){
   vec2 uv = vUV, off = vec2(0.0);
   float t = uHeat.z;
   if (uHeat.x > 0.0) {
-    float k = uHeat.x * smoothstep(0.1, 0.0, abs(uv.y - uHeat.y) - 0.015);
+    // shimmer near the horizon, only on what is far away (a pole across the street stays straight)
+    float k = uHeat.x * smoothstep(0.1, 0.0, abs(uv.y - uHeat.y) - 0.015) * smoothstep(35.0, 140.0, lin(texture2D(uDepth, uv).r));
     off.x += sin(uv.y * 260.0 + t * 6.0 + sin(uv.x * 37.0 + t * 1.3) * 2.0) * 0.0011 * k;
     off.y += sin(uv.x * 190.0 - t * 5.0) * 0.0006 * k;
   }

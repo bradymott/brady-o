@@ -90,11 +90,50 @@ const BURNS_ATLAS = {
   face(name) { return this.regions['face:' + name] || this.regions['face:friendly']; },
   pattern(name) { return this.regions['pat:' + name] || this.white; },   // unknown/unpainted -> transparent texel (shows the base colour)
   icon(name) { return this.regions['icon:' + name]; },
-  // ---- per-world sign text (right half) ----
+  /* ---- per-world sign text: page 1 (right half of the top) then page 2, reset per world ----
+     Signs are packed in rows from the top of the pages and kept for the whole world. Signs first asked for while a
+     streaming tile builds (signOwner, set by BurnsWorld.tileBegin) go to shelves growing up from the bottom of page 2
+     instead; each tile that uses one holds a reference, and when the last of those tiles is freed (signRelease) its
+     space is reused. A tile sign also used outside any tile is kept for good. */
   signReset() {
     const x = this.ctx; burnsCtxUnwind(x, false); x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 3072, 2048, 1024);
     this.sa = 0; this.sx = 1024 + 4; this.sy = 4; this.srow = 0; this.signs = {};
+    this.tShelves = []; this.tileTop = this.SIGN_AREAS[this.SIGN_AREAS.length - 1][3]; this.signOwner = null;
     if (this.T) this.T.dirty = true;
+  },
+  // a tile sign's slot: the best-fitting shelf with a free span, else a new shelf above the others
+  tileAlloc(pw, ph) {
+    const need = pw + 6, H = ph + 4, A = this.SIGN_AREAS[this.SIGN_AREAS.length - 1];
+    let best = null, bj = -1;
+    const look = maxH => { for (const sh of this.tShelves) { if (sh.h < H || sh.h > maxH || (best && sh.h >= best.h)) continue; const j = sh.spans.findIndex(q => q[1] - q[0] >= need); if (j >= 0) { best = sh; bj = j; } } };
+    look(H * 1.5 + 8);
+    if (!best) {
+      const hc = Math.ceil(H / 8) * 8, last = this.SIGN_AREAS.length - 1, rowsEnd = this.sa >= last ? this.sy + this.srow + 4 : A[1];
+      if (this.tileTop - hc >= rowsEnd && need <= A[2] - A[0]) { this.tileTop -= hc; best = { y: this.tileTop, h: hc, spans: [[A[0], A[2]]] }; this.tShelves.push(best); bj = 0; }
+    }
+    if (!best) look(1e9);
+    if (!best) return null;
+    const q = best.spans[bj], x = q[0]; q[0] += need;
+    return { x, y: best.y, si: this.tShelves.indexOf(best), aw: need, sh: best.h };
+  },
+  // who holds a sign: a streaming tile (counted), or the world (kept)
+  signUse(r, key) {
+    if (r.si === undefined) return;
+    const t = this.signOwner;
+    if (!t) { r.perm = true; return; }
+    const L = t.signKeys || (t.signKeys = new Set());
+    if (!L.has(key)) { L.add(key); r.refs = (r.refs || 0) + 1; }
+  },
+  // a freed tile gives back the signs no other live tile uses
+  signRelease(t) {
+    const L = t && t.signKeys; if (!L) return; t.signKeys = null;
+    for (const key of L) {
+      const r = this.signs[key]; if (!r || r.si === undefined || r.perm || --r.refs > 0) continue;
+      const sh = this.tShelves[r.si]; delete this.signs[key]; if (!sh) continue;
+      sh.spans.push([r.px, r.px + r.aw]); sh.spans.sort((a, b) => a[0] - b[0]);
+      const out = []; for (const q of sh.spans) { const P = out[out.length - 1]; if (P && q[0] <= P[1]) P[1] = Math.max(P[1], q[1]); else out.push([q[0], q[1]]); }
+      sh.spans = out;
+    }
   },
   // the sign pages and their packing, saved while an entered place (a sub-world) borrows them (BurnsOpen)
   signSnapshot() {
@@ -102,7 +141,7 @@ const BURNS_ATLAS = {
     const c = makeCanvas(2048, 2048), x = c.getContext('2d');
     x.drawImage(this.canvas, 1024, 0, 1024, 1024, 0, 0, 1024, 1024);
     x.drawImage(this.canvas, 0, 3072, 2048, 1024, 0, 1024, 2048, 1024);
-    return { c, sa: this.sa, sx: this.sx, sy: this.sy, srow: this.srow, signs: this.signs };
+    return { c, sa: this.sa, sx: this.sx, sy: this.sy, srow: this.srow, signs: this.signs, tShelves: (this.tShelves || []).map(q => ({ y: q.y, h: q.h, spans: q.spans.map(v => v.slice()) })), tileTop: this.tileTop, owner: this.signOwner };
   },
   signRestore(S) {
     if (!S || !this.canvas) return;
@@ -111,13 +150,14 @@ const BURNS_ATLAS = {
     x.drawImage(S.c, 0, 0, 1024, 1024, 1024, 0, 1024, 1024);
     x.drawImage(S.c, 0, 1024, 2048, 1024, 0, 3072, 2048, 1024);
     this.sa = S.sa; this.sx = S.sx; this.sy = S.sy; this.srow = S.srow; this.signs = S.signs;
+    this.tShelves = S.tShelves || []; this.tileTop = S.tileTop || this.SIGN_AREAS[this.SIGN_AREAS.length - 1][3]; this.signOwner = S.owner || null;
     if (this.T) this.T.dirty = true;
   },
   // opts: { w, h (px), bg, fg, font, size, border, glow, pad, align, lines }
   sign(text, o) {
     o = o || {};
     const key = text + '|' + JSON.stringify(o);
-    if (this.signs[key]) return this.signs[key];
+    if (this.signs[key]) { const r0 = this.signs[key]; this.signUse(r0, key); return r0; }
     const x = this.ctx;
     const size = o.size || 40, font = o.font || FONT_DISPLAY;
     x.font = `${size}px ${font}`;
@@ -127,21 +167,24 @@ const BURNS_ATLAS = {
     const w = Math.min(1000, Math.ceil(o.w || tw + pad * 2)), h = Math.min(500, Math.ceil(o.h || size * 1.25 * lines.length + pad * 1.4));
     // signs are rasterised at 72%; their size in the world is set by the caller, not by pixels. Two sign pages per world
     // (1020x1020 + 2044x1020, reset per world); only when both are full do signs shrink to 52% then 38%.
-    let SC = 0, pw = 0, ph = 0;
+    let SC = 0, pw = 0, ph = 0, px = 0, py = 0, slot = null;
+    const last = this.SIGN_AREAS.length - 1;
     for (const k of [0.72, 0.52, 0.38]) {
       pw = Math.ceil(w * k); ph = Math.ceil(h * k);
+      if (this.signOwner) { slot = this.tileAlloc(pw, ph); if (slot) { SC = k; px = slot.x; py = slot.y; break; } continue; }
       for (let a = this.sa || 0; a < this.SIGN_AREAS.length && !SC; a++) {
-        const A = this.SIGN_AREAS[a];
+        const A = this.SIGN_AREAS[a], bottom = a === last ? Math.min(A[3], this.tileTop || A[3]) : A[3];
         let sx = a === (this.sa || 0) ? this.sx : A[0], sy = a === (this.sa || 0) ? this.sy : A[1], srow = a === (this.sa || 0) ? this.srow : 0;
         if (sx + pw + 4 > A[2]) { sx = A[0]; sy += srow + 4; srow = 0; }
-        if (pw + 8 <= A[2] - A[0] && sy + ph + 4 <= A[3]) { this.sa = a; this.sx = sx; this.sy = sy; this.srow = srow; SC = k; }
+        if (pw + 8 <= A[2] - A[0] && sy + ph + 4 <= bottom) { this.sa = a; this.sx = sx; this.sy = sy; this.srow = srow; SC = k; }
       }
-      if (SC) break;
+      if (SC) { px = this.sx; py = this.sy; this.sx += pw + 6; this.srow = Math.max(this.srow, ph); break; }
     }
     if (!SC) { console.warn('burns sign atlas full'); return this.white; }
-    const px = this.sx, py = this.sy;
-    this.sx += pw + 6; this.srow = Math.max(this.srow, ph);
+    // a reused tile slot is cleared first (its old sign could show through a sign without a background)
+    const cw = slot ? slot.aw : pw, chh = slot ? slot.sh : ph;
     burnsPaintSafe(x, x => {
+    x.clearRect(px, py, cw, chh);
     x.beginPath(); x.rect(px, py, pw, ph); x.clip(); x.translate(px, py); x.scale(SC, SC);
     if (o.bg) { x.fillStyle = o.bg; if (o.round) { burnsRR(x, 0, 0, w, h, o.round); x.fill(); } else x.fillRect(0, 0, w, h); }
     if (o.border) { x.strokeStyle = o.border; x.lineWidth = o.borderW || Math.max(3, size * 0.1); if (o.round) { burnsRR(x, x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth, o.round); x.stroke(); } else x.strokeRect(x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth); }
@@ -151,8 +194,9 @@ const BURNS_ATLAS = {
     lines.forEach((l, i) => x.fillText(l, w / 2, h / 2 + (i - (lines.length - 1) / 2) * size * 1.18 + size * 0.04));
     });
     const r = this.reg(px, py, pw, ph); r.aspect = w / h;
-    this.signs[key] = r;
-    if (this.T && !BurnsGL.texRegion(this.T, px, py, pw, ph, true)) this.T.dirty = true;   // just this sign (streaming tiles paint signs mid-game)
+    if (slot) { r.si = slot.si; r.aw = slot.aw; r.refs = 0; }
+    this.signs[key] = r; this.signUse(r, key);
+    if (this.T && !BurnsGL.texRegion(this.T, px, py, cw, chh, true)) this.T.dirty = true;   // just this sign (streaming tiles paint signs mid-game)
     return r;
   },
   // ---------- painters ----------

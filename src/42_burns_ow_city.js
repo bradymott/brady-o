@@ -133,36 +133,43 @@ BURNS_OW.reserve = function (x, z, rad) {
 };
 
 /* ---------------- builders ---------------- */
+// pastel tints for the white tents, domes, shade and camp frontages (instanced copies multiply their colour by these)
+const BURNS_OW_WARM = [1, 0.84, 0.6];   // warm-white string lights
+const BURNS_OW_TINTS = [[1, 0.62, 0.38], [0.45, 0.86, 0.86], [1, 0.56, 0.8], [0.72, 0.58, 1], [1, 0.86, 0.42], [0.62, 0.95, 0.52], [0.5, 0.68, 1], [1, 0.48, 0.42]];
 const BURNS_OW_COLS = { rv: ['#f4f0e8', '#e8e0d0', '#f0f0f4', '#d8d4cc'], tent: ['#3a8a5a', '#c84a3a', '#2a6ac8', '#d8a020', '#8a4ac8', '#e86a2a'], shade: ['#d8c8a8', '#e8e0d0', '#c8b490', '#f0e8d8'], couch: ['#8a2a5a', '#2a5a8a', '#5a2a8a', '#8a5a2a'] };
 
 const BurnsOW = {
   // instance prototypes for the neighbourhoods (built once per visit)
   protos(api) {
     const P = BurnsProps;
-    const veh = (kind, seed, far) => api.instanceProto('ow_' + kind + seed, m => P.vehicle(m, { kind, seed }), { near: 40, mid: 150, far, farD: 330, r: 6 });
+    const veh = (kind, seed, far) => api.instanceProto('ow_' + kind + seed, m => P.vehicle(m, { kind, seed }), { near: 40, mid: 150, far, farD: 250, r: 6 });
     const boxFar = (w, h, l, col, roof) => m => { m.color(col); m.box(0, h / 2 + 0.25, 0, w, h, l); if (roof) { m.color(roof); m.box(0, h + 0.3, 0, w * 0.6, 0.18, l * 0.5); } };
     veh('rv', 11, boxFar(2.5, 3.0, 9.0, '#ece8e0', '#d8d8d8'));
-    veh('rv', 23, boxFar(2.5, 3.0, 9.0, '#e4dccc', '#d0d0d0'));
     veh('camper', 5, boxFar(2.2, 2.4, 5.6, '#d8d0c4'));
     veh('trailer', 7, boxFar(2.4, 2.6, 11.5, '#c8ccd4'));
-    veh('van', 3, boxFar(2.0, 2.3, 5.0, '#e8e4dc'));
-    veh('boxtruck', 9, boxFar(2.4, 3.4, 7.5, '#f0ece4'));
     veh('bus', 4, boxFar(2.6, 3.0, 11, '#6a3ab0', '#ffd84a'));
-    for (let i = 0; i < BURNS_OW_COLS.tent.length; i++) { const col = BURNS_OW_COLS.tent[i]; api.instanceProto('ow_tent' + i, m => this.domeTent(m, col), { near: 30, mid: 120, r: 2, far: m => { m.color(col); m.ellipsoid(0, 0, 0, 1.5, 1.25, 1.2, { seg: 6, rings: 3 }); }, farD: 260 }); }
-    api.instanceProto('ow_hexa', m => this.hexayurt(m), { near: 40, mid: 160, r: 3.5, far: m => { m.color('#d8dce4'); m.cyl(0, 0, 0, 3, 3, 2.4, 6, {}); m.lathe([[3, 2.4], [0, 3.6]], { seg: 6 }); }, farD: 320 });
-    for (let i = 0; i < 4; i++) { const col = ['#ff8a3a', '#38c8c8', '#ff6ab0', '#9a6ae8'][i]; api.instanceProto('ow_shadeC' + i, m => this.camp(m, col, i), { near: 40, mid: 160, r: 7, far: m => { m.color(col); m.box(0, 3.33, 0, 9.2, 0.1, 7.2); m.color('#3a3a44'); m.box(0, 1.6, 0, 8.6, 3.2, 0.2); }, farD: 320 }); }
+    // tents: one white tent with a lantern by the door, tinted per copy (the tent colours)
+    api.instanceProto('ow_tent', m => this.domeTent(m, '#f4f2ee', true), { near: 30, mid: 110, r: 2 });
+    api.instanceProto('ow_domeL', m => P.dome(m, { r: 4.2, col: '#e0d0f0', alt: '#b8a0e0', freq: 2, lights: true }), { near: 50, mid: 170, r: 5, far: m => { m.color('#e0d0f0'); m.dome(0, 0, 0, 4.2, 1, { frame: false }); m.color('#ff4fd8', 1); m.box(0, 0.3, 0, 8.6, 0.3, 0.3); m.emissive(0); }, farD: 280 });
+    api.instanceProto('ow_barrel', m => { m.color('#6a3a24').shine(1); m.cyl(0, 0, 0, 0.42, 0.42, 0.95, 10, { smooth: true }); m.shine(0); m.color('#ff7a2a', 1); m.cyl(0, 0.9, 0, 0.36, 0.36, 0.06, 10, {}); m.emissive(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.45, y0: 0, y1: 1.0 }] }; }, { near: 30, mid: 100, lo: false, r: 0.8 });
+    api.instanceProto('ow_totem', m => this.totem(m), { near: 45, mid: 180, r: 2, far: m => { m.color('#3a2a4a'); m.box(0, 3, 0, 0.5, 6, 0.5); m.color('#38f2ff', 1); m.box(0, 5.2, 0, 1.4, 0.6, 1.4); m.emissive(0); }, farD: 300 });
+    api.instanceProto('ow_flower', m => this.flower(m), { near: 45, mid: 180, r: 3, far: m => { m.color('#3a8a3a'); m.box(0, 2.5, 0, 0.3, 5, 0.3); m.color('#ff6ab0', 1); m.box(0, 5.2, 0, 2.6, 0.4, 2.6); m.emissive(0); }, farD: 300 });
+    api.instanceProto('ow_hexa', m => this.hexayurt(m), { near: 40, mid: 160, r: 3.5, far: m => { m.color('#d8dce4'); m.cyl(0, 0, 0, 3, 3, 2.4, 6, {}); m.lathe([[3, 2.4], [0, 3.6]], { seg: 6 }); }, farD: 260 });
+    // camp frontages (three layouts: lounge, bar, dance corner); the canopy, rug and LED colour come from the copy's tint
+    for (let i = 0; i < 3; i++) api.instanceProto('ow_shadeC' + i, m => this.camp(m, '#f6f2ea', i), { near: 40, mid: 160, r: 7, far: m => { m.color('#f6f2ea'); m.box(0, 3.33, 0, 9.2, 0.1, 7.2); m.color('#3a3a44'); m.box(0, 1.6, -3.4, 8.6, 3.2, 0.2); m.color('#ffffff', 1); m.box(0, 3.24, 3.62, 9.4, 0.12, 0.08); m.emissive(0); }, farD: 260 });
     api.instanceProto('ow_flag', m => { m.color('#4a4a52'); m.cyl(0, 0, 0, 0.06, 0.04, 6.5, 6, {}); for (let k = 0; k < 3; k++) { m.color(BURNS_NEON[k * 2]); m.box(0.55, 5.9 - k * 0.55, 0, 1.0, 0.45, 0.03); } return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 6.5 }] }; }, { near: 40, mid: 180, lo: false, r: 1.2, shadow: false });
     // far-city stand-ins: cheap blocks seen beyond the streamed neighbourhoods (never drawn up close)
-    api.instanceProto('ow_farA', m => { m.color('#e8e0d4'); m.box(-6, 1.5, 0, 2.5, 3, 9); m.box(4, 1.4, 1, 2.4, 2.8, 7); m.color('#c86a8a'); m.box(-1, 1.6, -5, 6, 0.12, 5); m.color('#ffb860', 1); m.box(-1, 3.4, -2.2, 12, 0.35, 0.35); m.color('#ff4fd8', 1); m.box(-6, 3.2, 3.8, 0.35, 0.35, 5); m.emissive(0); }, { lo: false, near: 1400, minD: 250, noCap: true, r: 9, shadow: false, noAO: true, cols: false });
-    api.instanceProto('ow_farB', m => { m.color('#d8dce4'); m.dome(0, 0, 0, 4, 1, { frame: false }); m.color('#7aa0d8'); m.box(7, 1.2, 2, 5, 2.4, 2.4); m.color('#38f2ff', 1); m.box(0, 0.6, 0, 8.6, 0.35, 0.35); m.box(0, 0.6, 0, 0.35, 0.35, 8.6); m.color('#ffd84a', 1); m.box(7, 2.7, 2, 5.2, 0.3, 0.3); m.emissive(0); }, { lo: false, near: 1400, minD: 250, noCap: true, r: 9, shadow: false, noAO: true, cols: false });
-    api.instanceProto('ow_shade', m => P.shade(m, { w: 7, d: 6, h: 3.0, col: '#e0d4bc' }), { near: 40, mid: 160, r: 5, far: m => { m.color('#e0d4bc'); m.box(0, 3.03, 0, 7.2, 0.08, 6.2); }, farD: 300 });
-    api.instanceProto('ow_shade2', m => P.shade(m, { w: 9, d: 5, h: 3.2, col: '#c8b490' }), { near: 40, mid: 160, r: 5, far: m => { m.color('#c8b490'); m.box(0, 3.23, 0, 9.2, 0.08, 5.2); }, farD: 300 });
-    api.instanceProto('ow_dome', m => P.dome(m, { r: 4.5, col: '#e8e0d0', freq: 2 }), { near: 50, mid: 170, r: 5, far: m => { m.color('#e8e0d0'); m.dome(0, 0, 0, 4.5, 1, { frame: false }); }, farD: 330 });
-    api.instanceProto('ow_domeC', m => P.dome(m, { r: 3.6, col: '#c8a0ff', alt: '#9a70d8', freq: 2 }), { near: 50, mid: 170, r: 4, far: m => { m.color('#c8a0ff'); m.dome(0, 0, 0, 3.6, 1, { frame: false }); }, farD: 330 });
-    api.instanceProto('ow_potty', m => { for (let i = 0; i < 4; i++) { m.push(); m.tf((i - 1.5) * 1.35, 0, 0); P.portapotty(m, { col: '#2a6ac8' }); m.pop(); } }, { near: 35, mid: 140, r: 3, far: m => { m.color('#2a6ac8'); m.box(0, 1.2, 0, 5.4, 2.4, 1.2); }, farD: 260 });
-    for (let i = 0; i < BURNS_OW_COLS.couch.length; i++) { const col = BURNS_OW_COLS.couch[i]; api.instanceProto('ow_couch' + i, m => P.couch(m, { col }), { near: 25, mid: 70, lo: false, r: 1.2, shadow: false }); }
+    api.instanceProto('ow_farA', m => { m.color('#e8e0d4'); m.box(-6, 1.5, 0, 2.5, 3, 9); m.box(4, 1.4, 1, 2.4, 2.8, 7); m.color('#c86a8a'); m.box(-1, 1.6, -5, 6, 0.12, 5); m.color('#ffb860', 1); m.box(-1, 3.4, -2.2, 12, 0.35, 0.35); m.color('#ff4fd8', 1); m.box(-6, 3.2, 3.8, 0.35, 0.35, 5); m.emissive(0); }, { lo: false, near: 1400, minD: 240, noCap: true, r: 9, shadow: false, noAO: true, cols: false });
+    api.instanceProto('ow_farB', m => { m.color('#d8dce4'); m.dome(0, 0, 0, 4, 1, { frame: false }); m.color('#7aa0d8'); m.box(7, 1.2, 2, 5, 2.4, 2.4); m.color('#38f2ff', 1); m.box(0, 0.6, 0, 8.6, 0.35, 0.35); m.box(0, 0.6, 0, 0.35, 0.35, 8.6); m.color('#ffd84a', 1); m.box(7, 2.7, 2, 5.2, 0.3, 0.3); m.emissive(0); }, { lo: false, near: 1400, minD: 240, noCap: true, r: 9, shadow: false, noAO: true, cols: false });
+    api.instanceProto('ow_shade', m => P.shade(m, { w: 7, d: 6, h: 3.0, col: '#f0ece4' }), { near: 40, mid: 160, r: 5 });
+    api.instanceProto('ow_dome', m => P.dome(m, { r: 4.5, col: '#f4f0ea', freq: 2 }), { near: 50, mid: 170, r: 5, far: m => { m.color('#f4f0ea'); m.dome(0, 0, 0, 4.5, 1, { frame: false }); }, farD: 280 });
+    api.instanceProto('ow_potty', m => { for (let i = 0; i < 4; i++) { m.push(); m.tf((i - 1.5) * 1.35, 0, 0); P.portapotty(m, { col: '#2a6ac8' }); m.pop(); } }, { near: 35, mid: 140, r: 3 });
     api.instanceProto('ow_lamp', m => this.lampPost(m), { near: 45, mid: 200, r: 1.5, far: m => { m.color('#3a3a44'); m.box(0, 3.4, 0, 0.16, 6.8, 0.16); m.color('#ffc070', 1); m.box(0, 6.5, 0, 0.5, 0.6, 0.5); m.emissive(0); }, farD: 360 });
     api.instanceProto('ow_bike', m => this.rider(m), { near: 30, mid: 140, r: 1.2, shadow: false, far: m => { m.color('#2a2a34'); m.box(0, 1.1, 0, 0.35, 1.2, 0.5); m.color('#ffffff', 1); m.box(0, 0.75, 0, 0.12, 0.12, 1.5); m.emissive(0); }, farD: 300 });
+    // string lights on the curbs (white bulbs: each run's tint colours them): from far off at night they read as lines of light
+    api.instanceProto('ow_string', m => this.stringLights(m), { near: 45, mid: 140, r: 6.5, shadow: false, noAO: true, far: m => this.stringFar(m), farD: 260 });
+    // three bikes parked on a curb (one with its LED wrap on)
+    api.instanceProto('ow_bikes', m => this.bikeRack(m), { near: 60, lo: false, r: 2, shadow: false });
   },
   // Esplanade lamp post: a tall wooden pole with a lantern on a crook (the lamplighters light them at dusk)
   lampPost(m) {
@@ -185,11 +192,27 @@ const BurnsOW = {
     return {};
   },
   // a dome tent: rounded body, a darker door flap and two guy lines
-  domeTent(m, col) {
+  domeTent(m, col, lantern) {
     m.color(col).shine(1); m.ellipsoid(0, 0, 0, 1.5, 1.25, 1.2, m.lo ? { seg: 7, rings: 3 } : { seg: 12, rings: 5 }); m.shine(0);
     m.color('#2a2a34'); m.ellipsoid(0, 0.02, 1.08, 0.55, 0.85, 0.16, { seg: 8, rings: 3 });
     if (!m.lo) { m.color('#e8e8ec'); m.limb(-1.4, 0.7, 0, -2.2, 0, 0, 0.012, 0.012, { seg: 3, ends: false }); m.limb(1.4, 0.7, 0, 2.2, 0, 0, 0.012, 0.012, { seg: 3, ends: false }); }
+    if (lantern) { m.color('#ffe6c0', 1); m.ball(0.75, 0.9, 1.15, 0.09, { seg: 6, rings: 4 }); m.emissive(0); }
     return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.4, hz: 1.1, y0: 0, y1: 1.2 }] };
+  },
+  // a lit totem: stacked rings and orbs on a pole (an art installation in front of a camp)
+  totem(m) {
+    m.color('#3a2a4a'); m.roundBox(0, 3, 0, 0.42, 6, 0.42, 0.08, { k: 1, m: 1 });
+    for (let k = 0; k < 4; k++) { m.color(BURNS_NEON[k * 2 % 7], 1); m.push(); m.tf(0, 1.6 + k * 1.2, 0); m.torus(0, 0, 0, 0.75 - k * 0.1, 0.07, { seg: 12, tseg: 5 }); m.pop(); }
+    m.color('#38f2ff', 1); m.ball(0, 6.4, 0, 0.45, { seg: 10, rings: 6 }); m.emissive(0);
+    return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.3, y0: 0, y1: 6 }] };
+  },
+  // a giant flower sculpture: a steel stem, glowing petals, a bench of leaves
+  flower(m) {
+    m.color('#3a8a3a'); m.limb(0, 0, 0, 0, 5.2, 0, 0.18, 0.12, { seg: 8 });
+    m.limb(0, 1.6, 0, 1.4, 2.2, 0, 0.08, 0.05, { seg: 6 }); m.limb(0, 2.4, 0, -1.3, 3.0, 0.2, 0.08, 0.05, { seg: 6 });
+    for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; m.color(k % 2 ? '#ff6ab0' : '#ff9ad0', 0.55); m.ellipsoid(Math.sin(a) * 1.0, 5.3, Math.cos(a) * 1.0, 0.7, 0.16, 0.42, { seg: 8, rings: 4 }); }
+    m.color('#ffd84a', 1); m.ball(0, 5.42, 0, 0.42, { seg: 10, rings: 6 }); m.emissive(0);
+    return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.25, y0: 0, y1: 5 }] };
   },
   // a hexayurt: the playa's insulated hexagonal hut (foil-faced panels, a low pyramid roof, a door)
   hexayurt(m) {
@@ -198,19 +221,60 @@ const BurnsOW = {
     if (!m.lo) { m.color('#ffb860', 0.6); m.box(0, 2.9, 1.2, 0.5, 0.3, 0.05); m.emissive(0); }
     return { cols: [{ t: 'cyl', x: 0, z: 0, r: 2.9, y0: 0, y1: 3.4 }] };
   },
-  // a camp frontage: a coloured shade canopy, a rug, couches, a cooler and a string of lights
+  // a camp's street front (+z faces the street): shade canopy, bunting, string lights at the back, an LED strip, and a
+  // layout: v 0 lounge (rug, two couches, a cooler), v 1 bar (counter, stools, a lit shelf), v 2 dance corner
+  // (speaker stacks, a DJ table, a mirror ball). Built near-white: each copy's tint colours it.
   camp(m, col, v) {
-    const P = BurnsProps, w = 9, d = 7, h = 3.3;
+    const P = BurnsProps, w = 9, d = 7, h = 3.3, cols = [];
     m.color('#4a4a52'); for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) m.box(sx * (w / 2 - 0.1), h / 2, sz * (d / 2 - 0.1), 0.1, h, 0.1);
     m.color(col); m.box(0, h + 0.03, 0, w + 0.2, 0.06, d + 0.2, { uv: BURNS_ATLAS.pattern('canvas'), uvFaces: ['py', 'ny'] });
     if (!m.lo) { m.color(col); for (let k = 0; k < 9; k++) { m.push(); m.tf(-w / 2 + 0.5 + k, h - 0.18, d / 2 + 0.1); m.poly([[-0.4, 0.15, 0], [0.4, 0.15, 0], [0, -0.35, 0]]); m.pop(); } }
-    m.color(['#7a2a4a', '#2a5a7a', '#5a3a7a', '#7a5a2a'][v % 4]); m.box(0, 0.02, 0.5, 6, 0.04, 4.2, { uv: BURNS_ATLAS.pattern(v % 2 ? 'plaid' : 'tiedye'), uvFaces: ['py'] });
-    m.push(); m.tf(0, 0, -1.6); P.couch(m, { col: BURNS_OW_COLS.couch[v % 4] }); m.pop();
-    m.push(); m.tf(-2.6, 0, 0.6, Math.PI / 2); P.couch(m, { col: BURNS_OW_COLS.couch[(v + 1) % 4] }); m.pop();
-    m.push(); m.tf(2.4, 0, 1.6); P.cooler(m, { col: '#2a8ac8' }); m.pop();
+    m.color('#d8d0c8'); m.box(0, 0.02, 0.5, 6, 0.04, 4.2, { uv: BURNS_ATLAS.pattern(v === 1 ? 'plaid' : 'tiedye'), uvFaces: ['py'] });
+    if (v === 0) {
+      m.push(); m.tf(0, 0, -1.6); P.couch(m, { col: '#e8d4d0' }); m.pop();
+      m.push(); m.tf(-2.6, 0, 0.6, Math.PI / 2); P.couch(m, { col: '#d0d8e8' }); m.pop();
+      m.push(); m.tf(2.4, 0, 1.6); P.cooler(m, { col: '#c8e0f0' }); m.pop();
+      cols.push({ t: 'box', x: 0, z: -1.6, hx: 1.0, hz: 0.45, y0: 0, y1: 0.95 }, { t: 'box', x: -2.6, z: 0.6, hx: 0.45, hz: 1.0, y0: 0, y1: 0.95 });
+    } else if (v === 1) {
+      m.color('#9a7a5a'); m.box(0, 0.55, 1.5, 4.4, 1.1, 0.7, { uv: BURNS_ATLAS.pattern('wood'), uvFaces: 'all' });
+      m.color('#f0e4d0'); m.box(0, 1.13, 1.5, 4.6, 0.06, 0.9);
+      if (!m.lo) for (let k = 0; k < 3; k++) { m.color('#5a5a62'); m.cyl(-1.4 + k * 1.4, 0, 2.5, 0.04, 0.04, 0.72, 5, {}); m.color('#e8e0d8'); m.cyl(-1.4 + k * 1.4, 0.72, 2.5, 0.22, 0.22, 0.07, 8, {}); }
+      m.color('#4a3a2a'); m.box(0, 1.3, -3.1, 4.2, 2.6, 0.3);
+      for (let k = 0; k < 9; k++) { m.color(BURNS_NEON[k % 7], 0.9); m.box(-1.8 + k * 0.45, 1.75, -2.9, 0.16, 0.34, 0.16); }
+      m.color('#ffffff', 1); m.box(0, 2.35, -2.92, 4.0, 0.08, 0.06); m.emissive(0);
+      cols.push({ t: 'box', x: 0, z: 1.5, hx: 2.3, hz: 0.45, y0: 0, y1: 1.15 }, { t: 'box', x: 0, z: -3.1, hx: 2.1, hz: 0.2, y0: 0, y1: 2.6 });
+    } else {
+      m.color('#2a2a30'); for (const sx of [-1, 1]) { m.box(sx * 3.3, 0.95, -2.5, 1.1, 1.9, 1.0); if (!m.lo) { m.color('#9a9aa8'); m.cyl(sx * 3.3, 0.55, -1.99, 0.3, 0.3, 0.02, 10, {}); m.cyl(sx * 3.3, 1.4, -1.99, 0.18, 0.18, 0.02, 8, {}); m.color('#2a2a30'); } }
+      m.color('#3a3a44'); m.box(0, 0.5, -2.2, 2.2, 1.0, 0.8); m.color('#ffffff', 1); m.box(0, 0.75, -1.78, 2.0, 0.08, 0.04); m.emissive(0);
+      m.color('#e8e8f0').shine(2); m.ball(0, h - 0.75, 0.4, 0.32, { seg: m.lo ? 6 : 10, rings: m.lo ? 4 : 7 }); m.shine(0); m.color('#5a5a62'); m.box(0, h - 0.3, 0.4, 0.03, 0.4, 0.03);
+      cols.push({ t: 'box', x: -3.3, z: -2.5, hx: 0.55, hz: 0.5, y0: 0, y1: 1.9 }, { t: 'box', x: 3.3, z: -2.5, hx: 0.55, hz: 0.5, y0: 0, y1: 1.9 }, { t: 'box', x: 0, z: -2.2, hx: 1.1, hz: 0.4, y0: 0, y1: 1.0 });
+    }
     if (!m.lo) for (let k = 0; k < 12; k++) { m.color(BURNS_NEON[k % 7], 1); m.ball(-w / 2 + 0.4 + k * 0.75, h - 0.35 - Math.sin(k / 11 * Math.PI) * 0.35, -d / 2 + 0.1, 0.06, { seg: 5, rings: 3 }); }
+    // LED strips along the canopy's front and sides (the copy's tint colours them; they read from far away at night)
+    m.color('#ffffff', 1); m.box(0, h - 0.04, d / 2 + 0.12, w + 0.2, 0.08, 0.05); for (const sx of [-1, 1]) m.box(sx * (w / 2 + 0.12), h - 0.04, 0, 0.05, 0.08, d + 0.2);
     m.emissive(0);
-    return { cols: [{ t: 'box', x: 0, z: -1.6, hx: 1.0, hz: 0.45, y0: 0, y1: 0.95 }, { t: 'box', x: -2.6, z: 0.6, hx: 0.45, hz: 1.0, y0: 0, y1: 0.95 }] };
+    return { cols };
+  },
+  // string lights: three poles 6 m apart along local x, two sagging runs of bulbs between them
+  stringLights(m) {
+    const L = 12, H = 3.4, n = m.lo ? 6 : 12;
+    m.color('#4a4a52'); for (const x of [-L / 2, 0, L / 2]) m.cyl(x, 0, 0, 0.05, 0.04, H + 0.15, 5, {});
+    for (const s of [0, 1]) {
+      const x0 = s ? 0 : -L / 2, x1 = s ? L / 2 : 0, y = t => H - Math.sin(t * Math.PI) * 0.6;
+      if (!m.lo) { m.color('#1a1a20'); for (let i = 0; i < 6; i++) m.limb(lerp(x0, x1, i / 6), y(i / 6), 0, lerp(x0, x1, (i + 1) / 6), y((i + 1) / 6), 0, 0.012, 0.012, { seg: 3, ends: false }); }
+      for (let i = 1; i < n; i++) { const t = i / n; m.color(i % 3 ? '#ffffff' : '#fff0d8', 1); m.ball(lerp(x0, x1, t), y(t) - 0.07, 0, m.lo ? 0.09 : 0.075, { seg: m.lo ? 4 : 6, rings: 3 }); }
+    }
+    m.emissive(0);
+    return { cols: [-L / 2, 0, L / 2].map(x => ({ t: 'cyl', x, z: 0, r: 0.08, y0: 0, y1: H, camPass: true, walk: false })) };
+  },
+  stringFar(m) { m.color('#ffffff', 1); m.box(-3, 3.12, 0, 5.8, 0.14, 0.14); m.box(3, 3.12, 0, 5.8, 0.14, 0.14); m.emissive(0); },
+  // three bikes parked on a curb (one wrapped in LED wire)
+  bikeRack(m) {
+    const cols = ['#ff4fd8', '#38c8ff', '#ffd21a'];
+    // side by side along the curb (local z), noses toward the street
+    for (let i = 0; i < 3; i++) BurnsProps.bikeShape(m, 0, 0, (i - 1) * 0.75, Math.PI / 2 + (i - 1) * 0.12, cols[i]);
+    m.color('#7aff5a', 1); m.box(0.2, 0.62, 0, 0.05, 0.05, 1.7); m.emissive(0);
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: 0.9, hz: 1.2, y0: 0, y1: 1.0, camPass: true }] };
   },
   // a heart-topped art car (W7's heart car parked on the open playa)
   heartCar(m) {
@@ -287,7 +351,7 @@ const BurnsOW = {
     const O = BURNS_OW, x = P.x, z = P.z, yaw = P.yaw, s = Math.sin(yaw), c = Math.cos(yaw);
     const back = (d, side) => [x - s * d + c * (side || 0), z - c * d - s * (side || 0)];
     switch (P.kind) {
-      case 'gate': api.prop('gateArch', { x, z: z - 8, yaw: 0 }); api.prop('booth', { x: 9, z: z - 4, yaw: Math.PI }); for (let i = 0; i < 6; i++) api.instance(i % 2 ? 'ow_van3' : 'ow_camper5', i % 2 ? 4.5 : -4.5, z + 26 + i * 9, { yaw: 0 }); break;
+      case 'gate': api.prop('gateArch', { x, z: z - 8, yaw: 0 }); api.prop('booth', { x: 9, z: z - 4, yaw: Math.PI }); for (let i = 0; i < 6; i++) api.instance(i % 2 ? 'ow_rv11' : 'ow_camper5', i % 2 ? 4.5 : -4.5, z + 26 + i * 9, { yaw: 0 }); break;
       case 'rv': api.redLightCamp(x - s * 6, z - c * 6, yaw + Math.PI / 2, { crew: 3, sign: true }); break;
       case 'bamboo': { const b = back(9); api.mesh(b[0], b[1], m => { m.color('#c8a860'); for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI - Math.PI / 2; m.cyl(Math.sin(a) * 7, 0, Math.cos(a) * 7, 0.12, 0.1, 5.5, 6, {}); } m.color('#b89850'); m.roundBox(0, 0.12, 0, 13, 0.24, 9, 0.08, { k: 1, m: 1 }); m.color('#38f2ff', 0.8); for (let i = 0; i < 7; i++) m.box(-6 + i * 2, 5.4, 0, 0.12, 0.12, 9); m.emissive(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 6.5, hz: 4.5, y0: 0, y1: 0.24 }] }; }, { yaw }); api.sign('RHYTHM WAVE', x + c * 4, z - s * 4, { yaw: yaw + Math.PI, h: 2.4, style: { bg: '#0a2a3a', fg: '#9af8ff', border: '#38f2ff' } }); break; }
       case 'costume': { const b = back(7); api.prop('shade', { x: b[0], z: b[1], yaw, w: 8, d: 7, col: '#ff9ad0' }); for (let i = 0; i < 4; i++) api.prop('crate', { x: b[0] + c * (i * 1.5 - 2.2), z: b[1] - s * (i * 1.5 - 2.2), yaw }); api.sign('COSTUMES\nFREE', x + c * 3.5, z - s * 3.5, { yaw: yaw + Math.PI, h: 2.2, style: { bg: '#3a0a2a', fg: '#ffd84a', border: '#ff4fd8' } }); break; }
@@ -336,7 +400,7 @@ BurnsWorlds.register({
   bounds: [-940, -940, 940, 1140],
   spawn: { x: 0, y: 0, z: BURNS_OW.FENCE_IN + 60, yaw: Math.PI },
   ground: { base: '#caa37f', crack: 0.26, mottle: 0.4, res: 1.06, step: 24 },
-  drawDist: 300, glowDist: 520, ao: 'fast',
+  drawDist: 300, glowDist: 520, ao: 'fast', dust: 1.5,
   // side quests that start from people in the city (region-aware: 'reach' with a region)
   missions: [
     { id: 'owTemple', side: true, name: 'Quiet Time', short: 'Sit at the Temple', type: 'reach', region: 'The Temple', giver: 'owSage', start: 'talk', desc: 'Sage at Center Camp says everyone should sit at the Temple once. Walk out past the Man toward 12:00.', hint: 'Out past the Man, toward 12:00', marker: { x: 0, z: -250 }, reward: { glow: 15 } },
@@ -395,14 +459,14 @@ BurnsWorlds.register({
     }
     // ---- the far city: stand-ins for every block still free, seen across the playa ----
     BurnsOW.farCity(api);
+    for (let k = 0; k < O.RINGS.length; k++) BurnsOW.blade(O.STREETS[k].toUpperCase(), 300);
+    for (let h = O.H0; h <= O.H1 + 1e-6; h += 0.5) BurnsOW.blade(O.hourName(h), 230);
     // ---- Esplanade lamp posts and the street signs at each Esplanade corner ----
     for (let h = O.H0; h <= O.H1 + 1e-6; h += 0.1) { const q = O.at(h, O.ESP - 11); api.instance('ow_lamp', q[0], q[1], { yaw: O.yawOut(h) }); api.light(q[0], q[1], 7.5, '#ffb060', 0.42); S.lamps++; }
     // lamps down the 3:00, 6:00 and 9:00 promenades to the Man
     for (const h of [3, 6, 9]) for (let r = 60; r < O.ESP - 20; r += 32) { const q = O.at(h + 0.012 * 300 / r, r); api.instance('ow_lamp', q[0], q[1], { yaw: O.yawOut(h) }); api.light(q[0], q[1], 7, '#ffb060', 0.38); }
-    for (let h = O.H0; h <= O.H1 + 1e-6; h += 1) {
-      const q = O.at(h, O.ESP - 13), hh = O.hourName(h);
-      api.sign(`${hh} & ESPLANADE`, q[0] + 3, q[1], { yaw: O.yawOut(h), h: 1.1, maxW: 2.6, style: { bg: '#2a1a12', fg: '#ffe0b0', border: '#8a6a48' } });
-    }
+    // street signs on the playa side of the Esplanade at every hour (the city side gets its own at each corner)
+    for (let h = O.H0; h <= O.H1 + 1e-6; h += 1) BurnsOW.streetSign(api, h, 0, O.at(h + 0.02, O.ESP - 9));
     // ---- open-playa art cars cruising around the Man (rideable movers) ----
     for (let i = 0; i < 3; i++) {
       const col = ['#3a8ac8', '#c8a03a', '#8a3ac8'][i], sc = ['#38f2ff', '#ffd84a', '#ff4fd8'][i];
@@ -410,8 +474,9 @@ BurnsWorlds.register({
       S.cars.push({ mv, r: 150 + i * 32, w: (i % 2 ? -1 : 1) * 3.4 / (150 + i * 32), a: i * 2.1 });
     }
     // ---- two art cars anyone can drive (DRIVE), parked on the open playa ----
-    for (const [x, z, yaw, col, sc] of [[-24, 236, Math.PI, '#2a8a6a', '#7aff5a'], [232, 36, -Math.PI / 2, '#8a2a6a', '#ff4fd8']]) {
-      try { api.artCar({ x, z, yaw, col, sculpt: sc, len: 8, w: 3.6 }); } catch (e) { console.error('ow art car', e); }
+    // the green one by the 6:00 promenade is Rae's race car (quicker)
+    for (const [x, z, yaw, col, sc, fast] of [[-24, 236, Math.PI, '#2a8a6a', '#7aff5a', true], [232, 36, -Math.PI / 2, '#8a2a6a', '#ff4fd8', false]]) {
+      try { const v = api.artCar(Object.assign({ x, z, yaw, col, sculpt: sc, len: 8, w: 3.6 }, fast ? { maxSpeed: 16, accel: 6, turn: 1.25 } : {})); if (fast) S.raceCar = v; } catch (e) { console.error('ow art car', e); }
     }
     // ---- the side quests' people and things ----
     { const q = O.at(6.15, 332); api.npc({ id: 'owSage', type: 'burner', seed: 23, name: 'SAGE', x: q[0], z: q[1] - 34, yaw: Math.PI, behavior: 'chill', talk: (gg, a) => BurnsOW.giver(gg, a, 'owTemple', ['Have you sat at the Temple yet?', 'Walk out past the Man, toward 12:00. Sit a while.'], ['You went. I can tell.']) }); }
@@ -433,6 +498,9 @@ BurnsWorlds.register({
     for (let i = 0; i < 70; i++) { const L = S.loops[i % S.loops.length], d = api.world.instancer().dyn('ow_bike'); if (!d) break; d.tr = 0.7 + brng() * 0.6; d.tg = 0.7 + brng() * 0.6; d.tb = 0.7 + brng() * 0.6; S.bikes.push({ d, L, s: brng() * L.len, v: 3.5 + brng() * 3 }); }
     // ---- dust devils wander the open playa by day ----
     for (let i = 0; i < 4; i++) S.devils.push({ x: Math.sin(i * 1.7) * 220, z: -Math.cos(i * 1.7) * 220, a: i * 1.3, t: i * 4 });
+    // the city's people, missions and mini-games (42_burns_ow_life.js), and other worlds' quests placed in the city
+    try { if (BurnsOW.buildLife) BurnsOW.buildLife(api, g); } catch (e) { console.error('ow life', e); }
+    try { if (BurnsOW.buildQuests) BurnsOW.buildQuests(api, g); } catch (e) { console.error('ow quests', e); }
     // where Brady starts: Gate Road the first time, afterwards wherever he was
     const sv = BurnsSave.get(), ow = sv.ow;
     if (ow && ow.x !== undefined && !g.opts.fresh && !g.opts.spawn) g.opts.spawn = { x: ow.x, y: ow.y || 0, z: ow.z, yaw: ow.yaw || 0 };
@@ -446,15 +514,23 @@ BurnsWorlds.register({
       const O = BURNS_OW;
       for (const b of O.blocks()) {
         if (b.reserved || b.cx < tile.x0 || b.cx >= tile.x1 || b.cz < tile.z0 || b.cz >= tile.z1) continue;
-        BurnsOW.fillBlock(api, g, b);
+        yield* BurnsOW.fillBlock(api, g, b);
         yield;
+      }
+      // a street sign at every intersection ('4:30 & Carousel'); on the Esplanade only beside open blocks
+      let ns = 0;
+      for (let k = 0; k < O.RINGS.length; k++) for (let h = O.H0; h <= O.H1 + 1e-6; h += 0.5) {
+        const q = O.at(h + 0.03, O.RINGS[k] + (k ? 6 : 9.5)); if (q[0] < tile.x0 || q[0] >= tile.x1 || q[1] < tile.z0 || q[1] >= tile.z1) continue;
+        if (k === 0) { const b1 = BurnsOW.blockAt(0, h), b0 = BurnsOW.blockAt(0, h - 0.5); if ((b1 && b1.reserved) || (b0 && b0.reserved)) continue; }
+        BurnsOW.streetSign(api, h, k, q);
+        if (++ns % 6 === 0) yield;
       }
       // walk-in camping beyond Firefly: scattered tents
       const rng = mulberry32(tile.i * 7331 + tile.j * 131);
       for (let n = 0; n < 14; n++) {
         const x = lerp(tile.x0, tile.x1, rng()), z = lerp(tile.z0, tile.z1, rng()), r = Math.hypot(x, z), h = O.clock(x, z);
         if (r < O.OUTER + 12 || r > O.OUTER + 75 || h < O.H0 || h > O.H1 || O.outside(x, z)) continue;
-        api.instance('ow_tent' + (n % 6), x, z, { yaw: rng() * TAU });
+        BurnsOW.tent(api, x, z, rng);
       }
     }
   },
@@ -468,6 +544,7 @@ BurnsWorlds.register({
   },
   onResume(g, sub, how) {
     BurnsOW.applyStoryTime(g, false);
+    g.missions.refresh();   // quests that wait on a story world (requires '17:arrive', unlock) open up
     const nx = BurnsOW.nextPlace();
     if (how === 'done' && nx) g.banner(BurnsWorlds.day(nx.world).toUpperCase() || 'NEXT', `Next: ${nx.name}. Follow the light.`, { col: '#ffd84a' });
   },
@@ -478,62 +555,137 @@ BurnsWorlds.register({
     if (g.tiles) g.tiles.prime(x, z, 160);
     g.banner(P.name.toUpperCase(), BurnsWorlds.day(w) || '', { col: '#ffd84a', small: true });
   },
-  update(g, dt) { BurnsOW.update(g, dt); },
+  update(g, dt) { BurnsOW.update(g, dt); if (BurnsOW.updateGames) BurnsOW.updateGames(g, dt); if (BurnsOW.questHook) BurnsOW.questHook('update', g, dt); },
   // an open world needs to see far: thinner fog than the small worlds (and thinner still from up high)
   env(g, env) { const k = g.cam && g.cam.y > 12 ? 0.32 : 0.55; env.fogD *= k; },
-  drawSkinned(g, R) { BurnsOW.drawMan(g, R); },
+  drawSkinned(g, R) { BurnsOW.drawMan(g, R); if (BurnsOW.drawGamesSkinned) BurnsOW.drawGamesSkinned(g, R); },
+  onRespawn(g) { if (BurnsOW.bungeeOn && BurnsOW.bungeeOn(g)) BW11Dome.abort(g); },
   drawShadows(g, R) { BurnsOW.drawMan(g, R); },
-  drawSprites(g, R) { BurnsOW.drawSprites(g, R); },
-  drawHUD(ctx, g, W, H, S) { BurnsOW.drawHUD(ctx, g, W, H, S); }
+  drawSprites(g, R) { BurnsOW.drawSprites(g, R); if (BurnsOW.drawGames) BurnsOW.drawGames(g, R); if (BurnsOW.questHook) BurnsOW.questHook('drawSprites', g, R); },
+  drawHUD(ctx, g, W, H, S) { BurnsOW.drawHUD(ctx, g, W, H, S); if (BurnsOW.drawGamesHUD) BurnsOW.drawGamesHUD(ctx, g, W, H, S); if (BurnsOW.questHook) BurnsOW.questHook('drawHUD', ctx, g, W, H, S); }
 });
 
 Object.assign(BurnsOW, {
   // the block fill: RVs and campers parked along both streets, camps and tents in the middle, people at the camps
-  fillBlock(api, g, b) {
-    const O = BURNS_OW, rng = mulberry32(hashStr(b.id) + 17), people = [];
-    const rm = (b.r0 + b.r1) / 2, depth = b.r1 - b.r0;
-    const arcLen = (b.h1 - b.h0) * Math.PI / 6 * rm, n = Math.max(3, Math.floor(arcLen / 10.5)), nm = Math.max(3, Math.floor(arcLen / 8));
-    const vehicles = ['ow_rv11', 'ow_rv23', 'ow_camper5', 'ow_trailer7', 'ow_van3', 'ow_boxtruck9', 'ow_rv11', 'ow_camper5', 'ow_bus4'];
-    for (let side = 0; side < 2; side++) {
-      const r = side ? b.r1 - 2.4 : b.r0 + 2.4;
-      for (let i = 0; i < n; i++) {
-        if (rng() < 0.1) continue;
-        const h = lerp(b.h0, b.h1, (i + 0.5) / n), q = O.at(h, r), tan = O.yawIn(h) + Math.PI / 2, roll = rng();
-        if (roll < 0.62) { const sh = 0.9 + rng() * 0.18; api.instance(vehicles[Math.floor(rng() * vehicles.length)], q[0], q[1], { yaw: tan + (rng() < 0.5 ? Math.PI : 0), tint: [sh, sh, sh * (0.95 + rng() * 0.1)] }); }
-        else if (roll < 0.78) api.instance('ow_hexa', q[0], q[1], { yaw: rng() * TAU });
-        else { for (let k = 0; k < 2; k++) { const qq = O.at(h + (k - 0.5) * 0.02, r + (rng() - 0.5)); api.instance('ow_tent' + Math.floor(rng() * 6), qq[0], qq[1], { yaw: rng() * TAU }); } }
+  // street-sign blades: one shared texture per street name and per radial time (24 for the whole city)
+  blade(text, w) { return BURNS_ATLAS.sign(text, { bg: '#1e4a32', fg: '#f6f6ee', border: '#f6f6ee', borderW: 3, size: 40, pad: 12, w }); },
+  blockAt(k, h) { const O = BURNS_OW; if (!O._bmap) { O._bmap = new Map(); for (const b of O.blocks()) O._bmap.set(b.k + ':' + Math.round(b.h * 2), b); } return O._bmap.get(k + ':' + Math.round(h * 2)) || null; },
+  // an intersection's street sign, BRC style: a pole with two crossed blades, the street (along the ring street) over
+  // the radial's time, so '4:30 & Carousel' reads from both streets
+  streetSign(api, h, k, q) {
+    const O = BURNS_OW, st = this.blade(O.STREETS[k].toUpperCase(), 300), hr = this.blade(O.hourName(h), 230), yR = O.yawIn(h);
+    api.mesh(q[0], q[1], m => {
+      m.color('#4a4a52'); m.cyl(0, 0, 0, 0.05, 0.045, 2.6, 6, {}); m.cyl(0, 2.6, 0, 0.03, 0.03, 0.75, 5, {});
+      const bl = (reg, y, yaw) => {
+        const bh = 0.34, w = Math.min(2.4, bh * reg.aspect);
+        m.push(); m.tf(0, 0, 0, yaw);
+        m.color('#1e4a32'); m.box(0, y, 0, w + 0.05, bh + 0.05, 0.08);
+        m.color('#ffffff', 0.25); m.decal(0, y, 0.042, w, bh, reg); m.push(); m.tf(0, 0, -0.042, Math.PI); m.decal(0, y, 0, w, bh, reg); m.pop(); m.emissive(0);
+        m.pop();
+      };
+      bl(st, 2.8, yR); bl(hr, 3.18, yR + Math.PI / 2);
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.09, y0: 0, y1: 3.3, camPass: true, walk: false }] };
+    }, { noAO: true });
+  },
+  // ---- a neighbourhood block: camp fronts line the streets (shade, string lights, people hanging out), RVs, tents
+  //      and hexayurts behind them; every lot leaves a pool of light on the street at night ----
+  // (a generator: the tile builder runs it a street front at a time)
+  *fillBlock(api, g, b) {
+    const O = BURNS_OW, rng = mulberry32(hashStr(b.id) + 17), people = [], crowd = !!api.world.crowd, K = Math.PI / 6;
+    const T = BURNS_OW_TINTS, pickT = () => T[Math.floor(rng() * T.length)];
+    const hexOf = t => '#' + t.map(v => Math.round(Math.min(1, v) * 255).toString(16).padStart(2, '0')).join('');
+    // people hanging out (instanced crowd: a few shared poses per look)
+    const folk = (q, face, n, anims, spread) => {
+      if (!crowd) return;
+      for (let k = 0; k < n; k++) { const a = rng() * TAU, r = Math.sqrt(rng()) * (spread || 1.8); api.extra(q[0] + Math.sin(a) * r, q[1] + Math.cos(a) * r, { yaw: face + (rng() - 0.5) * 2.2, anim: anims[Math.floor(rng() * anims.length)], look: Math.floor(rng() * 4), phase: rng() < 0.5 ? 0 : 0.5 }); }
+    };
+    // one lot on a street front: pt(d, s) is d m into the block from the curb and s m along the street;
+    // face: the yaw looking out at the street; along: the street's own direction; w: the lot's width
+    const lot = (pt, face, along, w) => {
+      const roll = rng(), tint = pickT(), col = hexOf(tint), hw = w / 2;
+      // (the run lies along its local x: facing the street puts it along the curb)
+      const strings = (pr, multi) => { if (rng() < pr) { const q = pt(0.7, (rng() - 0.5) * 2); api.instance('ow_string', q[0], q[1], { yaw: face, tint: multi ? tint : BURNS_OW_WARM }); } };
+      if (roll < 0.4) {
+        // a theme camp's front: shade, a lounge / bar / dance corner, its sign, a flag, people out front
+        const q = pt(4.9, 0); api.instance('ow_shadeC' + Math.floor(rng() * 3), q[0], q[1], { yaw: face, tint });
+        strings(0.85, rng() < 0.5);
+        if (rng() < 0.38) { const sq = pt(1.0, (rng() < 0.5 ? -1 : 1) * (hw - 2)), nm = this.campName(rng); api.sign(nm, sq[0], sq[1], { yaw: face, h: 1.1, maxW: 2.6, y: 1.4, style: this.campStyle(nm) }); }
+        if (rng() < 0.4) { const fq = pt(2.0, (rng() < 0.5 ? -1 : 1) * (hw - 0.8)); api.instance('ow_flag', fq[0], fq[1], { yaw: rng() * TAU }); }
+        folk(pt(1.6, (rng() - 0.5) * 3), face, 2 + Math.floor(rng() * 4), ['talk', 'idle', 'dance', 'idle']);
+        const lq = pt(3.2, 0); api.light(lq[0], lq[1], 8.5, col, 0.6);
+      } else if (roll < 0.62) {
+        // an RV with an awning and a couple of people under it
+        const q = pt(3.6, -2.8), v = rng(), sh = 0.88 + rng() * 0.2;
+        api.instance(v < 0.5 ? 'ow_rv11' : v < 0.75 ? 'ow_camper5' : v < 0.9 ? 'ow_trailer7' : 'ow_bus4', q[0], q[1], { yaw: along + (rng() < 0.5 ? Math.PI : 0), tint: [sh, sh, sh * (0.95 + rng() * 0.1)] });
+        const aq = pt(3.2, hw - 2.7); api.instance('ow_shade', aq[0], aq[1], { yaw: face, tint, scale: 0.75 });
+        strings(0.4, false);
+        folk(pt(2.4, hw - 2.7), face, 1 + Math.floor(rng() * 2), ['idle', 'talk']);
+        const lq = pt(3, hw - 2.7); api.light(lq[0], lq[1], 7, '#ffb060', 0.42);
+      } else if (roll < 0.76) {
+        // a dome (half of them lit up), people dancing in the street out front
+        const q = pt(6.0, 0); if (rng() < 0.55) api.instance('ow_domeL', q[0], q[1], { yaw: face }); else api.instance('ow_dome', q[0], q[1], { yaw: face, tint });
+        strings(0.7, true);
+        folk(pt(-0.6, 0), face + Math.PI, 2 + Math.floor(rng() * 3), ['dance', 'dance', 'idle'], 2.2);
+        const lq = pt(2.4, 0); api.light(lq[0], lq[1], 9, this.pick(rng, ['#ff4fd8', '#38f2ff', '#b06aff']), 0.6);
+      } else if (roll < 0.88) {
+        // an art piece on the street with people around it (a fire barrel sometimes)
+        const q = pt(2.8, 0), art = rng() < 0.5 ? 'ow_totem' : 'ow_flower'; api.instance(art, q[0], q[1], { yaw: rng() * TAU });
+        if (rng() < 0.4) { const fq = pt(1.4, hw - 2); api.instance('ow_barrel', fq[0], fq[1], {}); api.fire(fq[0], 1.0, fq[1], 0.32, { hazard: false }); }
+        folk(q, face, 3 + Math.floor(rng() * 3), ['idle', 'talk', 'talk'], 3.2);
+        api.light(q[0], q[1], 8, art === 'ow_totem' ? '#38f2ff' : '#ff6ab0', 0.6);
+      } else {
+        // tents (and a fire barrel)
+        const n = 2 + Math.floor(rng() * 2);
+        for (let k = 0; k < n; k++) { const q = pt(2.6 + rng() * 4, (k - (n - 1) / 2) * 3.6); this.tent(api, q[0], q[1], rng); }
+        if (rng() < 0.35) { const fq = pt(1.2, 0); api.instance('ow_barrel', fq[0], fq[1], {}); api.fire(fq[0], 1.0, fq[1], 0.32, { hazard: false }); }
+        folk(pt(1.4, 0), face, Math.floor(rng() * 2), ['idle', 'talk']);
+        const lq = pt(2.5, 0); api.light(lq[0], lq[1], 6, '#ffb060', 0.35);
       }
+      // bikes parked on the curb
+      if (rng() < 0.3) { const bq = pt(0.35, (rng() < 0.5 ? -1 : 1) * (hw - 1.2)); api.instance('ow_bikes', bq[0], bq[1], { yaw: along }); }
+    };
+    // the two ring-street fronts
+    for (let side = 0; side < 2; side++) {
+      const rc = side ? b.r1 : b.r0, inw = side ? -1 : 1;
+      const arc = (b.h1 - b.h0) * K * rc, nl = Math.max(2, Math.round(arc / 14)), w = arc / nl;
+      for (let i = 0; i < nl; i++) {
+        const hc = lerp(b.h0, b.h1, (i + 0.5) / nl);
+        lot((d, s2) => O.at(hc + s2 / (K * (rc + inw * d)), rc + inw * d), O.yawIn(hc) + (side ? Math.PI : 0), O.yawIn(hc) + Math.PI / 2, w);
+      }
+      yield;
     }
-    // the middle rows: camps facing the street, tents, domes, shade
-    const rows = Math.max(1, Math.floor((depth - 11) / 7.5));
-    let campsHere = 0;
+    // the two radial-street fronts (one lot each, mid-block)
+    const rm = (b.r0 + b.r1) / 2, depth = b.r1 - b.r0, radial = depth > 26;
+    if (radial) for (let side = 0; side < 2; side++) {
+      const hk = side ? b.h1 : b.h0, inw = side ? -1 : 1;
+      lot((d, s2) => O.at(hk + inw * d / (K * (rm + s2)), rm + s2), O.yawIn(hk) + (side ? Math.PI / 2 : -Math.PI / 2), O.yawIn(hk), Math.min(14, depth - 18));
+    }
+    yield;
+    // the middle: RVs, tents and hexayurts where people sleep (and a porta-potty bank)
+    const nm = Math.max(2, Math.floor((b.h1 - b.h0) * K * rm / 11)), rows = Math.max(0, Math.floor((depth - 20) / 7));
     for (let j = 0; j < rows; j++) for (let i = 0; i < nm; i++) {
-      if (rng() < 0.12) continue;
-      const h = lerp(b.h0, b.h1, (i + 0.5) / nm), r = b.r0 + 8.5 + j * 7.5, q = O.at(h, r), roll = rng();
-      if (roll < 0.22 && campsHere < 2) { campsHere++; api.instance('ow_shadeC' + Math.floor(rng() * 4), q[0], q[1], { yaw: O.yawIn(h) + (j ? 0 : Math.PI) }); }
-      else if (roll < 0.36) api.instance(rng() < 0.5 ? 'ow_shade' : 'ow_shade2', q[0], q[1], { yaw: O.yawIn(h) });
-      else if (roll < 0.48) api.instance(rng() < 0.7 ? 'ow_dome' : 'ow_domeC', q[0], q[1], { yaw: rng() * TAU });
-      else if (roll < 0.58) api.instance('ow_hexa', q[0], q[1], { yaw: rng() * TAU });
-      else { for (let k = 0; k < 2; k++) { const qq = O.at(h + (rng() - 0.5) * 0.03, r + (rng() - 0.5) * 3); api.instance('ow_tent' + Math.floor(rng() * 6), qq[0], qq[1], { yaw: rng() * TAU }); } }
+      if (rng() < 0.2) continue;
+      const h = lerp(b.h0, b.h1, (i + 0.5) / nm), r = b.r0 + 11.5 + j * 7, q = O.at(h, r), roll = rng(), tan = O.yawIn(h) + Math.PI / 2;
+      if (radial && Math.min(h - b.h0, b.h1 - h) * K * r < 10) continue;   // the radial fronts' lots are there
+      if (roll < 0.45) { const v = rng(), sh = 0.86 + rng() * 0.2; api.instance(v < 0.55 ? 'ow_rv11' : v < 0.8 ? 'ow_camper5' : 'ow_trailer7', q[0], q[1], { yaw: tan + (rng() < 0.5 ? Math.PI : 0), tint: [sh, sh, sh] }); }
+      else if (roll < 0.65) api.instance('ow_hexa', q[0], q[1], { yaw: rng() * TAU });
+      else { for (let k = 0; k < 2; k++) { const qq = O.at(h + (k - 0.5) * 0.02, r + (rng() - 0.5) * 2); this.tent(api, qq[0], qq[1], rng); } }
     }
-    // porta-potty banks on some corners, flags over some camps
-    if (rng() < 0.3) { const q = O.at(b.h0 + 0.02, b.r0 + 4); api.instance('ow_potty', q[0], q[1], { yaw: O.yawIn(b.h0) + Math.PI / 2 }); }
-    for (let k = 0; k < 2; k++) if (rng() < 0.5) { const q = O.at(lerp(b.h0, b.h1, rng()), b.r0 + 5); api.instance('ow_flag', q[0], q[1], { yaw: rng() * TAU }); }
-    // night: the camps' light pools and glows
-    for (let k = 0; k < 3; k++) { const q = O.at(lerp(b.h0, b.h1, 0.17 + k * 0.33), b.r0 + 9 + (k % 2) * 10); api.light(q[0], q[1], 10, this.pick(rng, ['#ff4fd8', '#38f2ff', '#ffb060', '#7aff5a', '#ffd84a']), 0.5); api.glow(q[0], 3.1, q[1], 1.4, this.pick(rng, BURNS_NEON)); }
-    // a named theme camp on the street front, with people
-    if (rng() < 0.45) {
-      const h = (b.h0 + b.h1) / 2 + (rng() - 0.5) * 0.12, front = b.r0 + 5.5, q = O.at(h, front), yaw = O.yawIn(h) + Math.PI;
-      api.sign(this.campName(rng), q[0], q[1], { yaw, h: 1.5, maxW: 3, style: { bg: this.pick(rng, ['#1a0a2a', '#0a1a2a', '#2a0a12', '#102a1a']), fg: this.pick(rng, ['#ff9af0', '#9af8ff', '#ffd84a', '#b8ff8a']), border: this.pick(rng, BURNS_NEON) } });
-      const nn = 2 + Math.floor(rng() * 3);
+    if (rng() < 0.3) { const q = O.at(b.h0 + 0.02, rm); api.instance('ow_potty', q[0], q[1], { yaw: O.yawIn(b.h0) + Math.PI / 2 }); }
+    // a couple of neighbours you can talk to (real actors) at one camp front
+    if (rng() < 0.4) {
+      const h = (b.h0 + b.h1) / 2 + (rng() - 0.5) * 0.1, side = rng() < 0.5, front = (side ? b.r1 : b.r0) + (side ? -2.2 : 2.2), yaw = O.yawIn(h) + (side ? Math.PI : 0);
+      const nn = 1 + Math.floor(rng() * 2);
       for (let k = 0; k < nn; k++) {
-        const qq = O.at(h + (rng() - 0.5) * 0.06, front + 2 + rng() * 5), look = O.PEOPLE[Math.floor(rng() * O.PEOPLE.length)];
-        const d = { type: look[0], seed: look[1], x: qq[0], z: qq[1], yaw: yaw + (rng() - 0.5), behavior: rng() < 0.55 ? 'dance' : 'chill', chatter: true };
+        const qq = O.at(h + (rng() - 0.5) * 0.04, front + (rng() - 0.5)), look = O.PEOPLE[Math.floor(rng() * O.PEOPLE.length)];
+        const d = { type: look[0], seed: look[1], x: qq[0], z: qq[1], yaw: yaw + (rng() - 0.5), behavior: rng() < 0.5 ? 'dance' : 'chill', chatter: true };
         api.npc(d); people.push(d);
       }
     }
     return people;
   },
+  // a tent: white, tinted one of the tent colours; some have a lantern by the door
+  tent(api, x, z, rng) { const T = BURNS_OW.tentTints || (BURNS_OW.tentTints = BURNS_OW_COLS.tent.map(c => burnsRGBf(c))); api.instance('ow_tent', x, z, { yaw: rng() * TAU, tint: T[Math.floor(rng() * T.length)] }); },
   // far-city stand-ins for every block (world-wide; only drawn beyond the streamed neighbourhoods)
   farCity(api) {
     const O = BURNS_OW;
@@ -555,8 +707,12 @@ Object.assign(BurnsOW, {
     const A = ['Dusty', 'Cosmic', 'Glitter', 'Midnight', 'Sunrise', 'Electric', 'Velvet', 'Wandering', 'Lunar', 'Sparkle', 'Tiny', 'Secret', 'Radiant', 'Gentle', 'Feral'];
     const B = ['Pancake', 'Unicorn', 'Owl', 'Lagoon', 'Disco', 'Noodle', 'Cactus', 'Jellyfish', 'Lantern', 'Pickle', 'Coyote', 'Waffle', 'Comet', 'Llama', 'Bubble'];
     const C = ['Camp', 'Lounge', 'Village', 'Oasis', 'Embassy', 'Society', 'Cafe', 'Collective'];
-    return `${this.pick(rng, A)} ${this.pick(rng, B)}\n${this.pick(rng, C)}`.toUpperCase();
+    // 48 names, each always the same (its sign texture is shared by every camp that uses it: the sign pages stay small)
+    const r = mulberry32(Math.floor(rng() * 48) * 7919 + 3);
+    return `${this.pick(r, A)} ${this.pick(r, B)}\n${this.pick(r, C)}`.toUpperCase();
   },
+  // a camp sign's colours come from its name (one texture per name)
+  campStyle(name) { const hs = hashStr(name); return { bg: ['#1a0a2a', '#0a1a2a', '#2a0a12', '#102a1a'][hs % 4], fg: ['#ff9af0', '#9af8ff', '#ffd84a', '#b8ff8a'][(hs >> 3) % 4], border: BURNS_NEON[(hs >> 6) % 7], size: 34, pad: 16 }; },
   /* ---- the story: which place is next, and can Brady go in ---- */
   nextPlace() {
     const sv = BurnsSave.get();
@@ -616,6 +772,17 @@ Object.assign(BurnsOW, {
     }
     // dust devils drift (day only)
     for (const D of S.devils) { D.t += dt; D.x += Math.sin(D.t * 0.13 + D.a) * dt * 2.2; D.z += Math.cos(D.t * 0.11 + D.a * 1.7) * dt * 2.2; }
+    // dust in the air by day: soft clouds rolling down the streets with the wind, all around Brady (drawn in drawSprites)
+    const cam = g.cam, day = 1 - (g.R ? (g.R.night || 0) : 0);
+    if (cam && day > 0.25) {
+      const W = S.wind || (S.wind = [0.82, 0.57]), D = S.dust || (S.dust = []);
+      const spawn = (q, fresh) => { const a = Math.random() * TAU, r = 14 + Math.random() * 60; q.x = cam.x + Math.sin(a) * r - W[0] * (fresh ? 0 : 20); q.z = cam.z + Math.cos(a) * r - W[1] * (fresh ? 0 : 20); q.s = 5 + Math.random() * 8; q.v = 2.5 + Math.random() * 3; q.t = fresh ? Math.random() * 10 : 0; q.life = 9 + Math.random() * 8; return q; };
+      while (D.length < 16) D.push(spawn({}, true));
+      for (const q of D) { q.x += W[0] * q.v * dt; q.z += W[1] * q.v * dt; q.t += dt; if (q.t > q.life || Math.hypot(q.x - cam.x, q.z - cam.z) > 95) spawn(q, false); }
+    }
+    // gusts of dust roll across the city by day
+    S.gustT = (S.gustT || 0) - dt;
+    if (S.gustT <= 0 && g.player && (g.R ? (g.R.night || 0) : 0) < 0.4) { S.gustT = 1.2 + Math.random() * 2; const p = g.player, a = Math.random() * TAU, r = 8 + Math.random() * 16; g.fx.dust(p.x + Math.sin(a) * r, 0.4, p.z + Math.cos(a) * r, 6); }
     // save where Brady is now and then (CONTINUE resumes here)
     S.saveT = (S.saveT || 0) - dt;
     if (S.saveT <= 0 && g.player && g.state === 'play' && !g.cine) { S.saveT = 4; this.saveSpot(g); }
@@ -639,8 +806,12 @@ Object.assign(BurnsOW, {
       for (let k = 0; k < 9; k++) R.bbs.bb(nx.x, y0 + 6 + k * 12, nx.z, 3.2 + k * 0.25, 13, SP.beam, [1, 0.85, 0.35], (0.55 - k * 0.04) * pul, true);
       R.bbs.bb(nx.x, y0 + 2.2, nx.z, 5, 5, SP.glow, [1, 0.85, 0.4], 0.8 * pul, true);
     }
+    // the art cars circling the Man leave light trails at night
+    if (night > 0.3) for (const C of S.cars) { const sg = Math.sign(C.w) || 1, col = [[0.2, 0.9, 1], [1, 0.85, 0.3], [1, 0.3, 0.85]][S.cars.indexOf(C) % 3]; for (let i = 1; i < 10; i++) { const a = C.a - sg * i * 0.012; R.bbs.bb(Math.sin(a) * C.r, 1.4, -Math.cos(a) * C.r, 1.6, 1.6, SP.glow, col, (1 - i / 10) * 0.55 * night, true); } }
     // the Man glows at night (neon outline at his heart)
     if (night > 0.2) R.bbs.bb(0, 7.5 + 9 * 1.45, 0.5, 6, 6, SP.glow, [0.4, 0.8, 1], night * 0.7, true);
+    // drifting dust clouds (day)
+    if (night < 0.75 && S.dust) for (const q of S.dust) { const k = Math.sin(Math.PI * Math.min(1, q.t / q.life)) * (1 - night / 0.75); if (k > 0.02) R.bbs.bb(q.x, q.s * 0.3, q.z, q.s, q.s * 0.55, SP.puff, [0.9, 0.8, 0.68], 0.11 * k, false); }
     // dust devils by day: spinning columns of dust
     if (night < 0.5) for (const D of S.devils) {
       const k = 1 - night * 2; if (Math.hypot(D.x - g.cam.x, D.z - g.cam.z) > 320) continue;

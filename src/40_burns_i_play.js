@@ -63,6 +63,13 @@ class BurnsMissions {
     }
   }
   get(id) { return this.list.find(m => m.id === id); }
+  // a requirement: a mission id in this world, or 'world:id' for one finished in another world ('17:arrive')
+  reqDone(r) {
+    const i = typeof r === 'string' ? r.indexOf(':') : -1;
+    if (i < 0) return this.isDone(r);
+    const w = +r.slice(0, i), id = r.slice(i + 1);
+    return BurnsSave.hasToken(w, id) || BurnsSave.get().missions[w + ':' + id] === 'done';
+  }
   state(id) { const m = this.get(id); return m ? m.state : null; }
   isDone(id) { return this.state(id) === 'done'; }
   active() { return this.list.filter(m => m.state === 'active'); }
@@ -71,7 +78,7 @@ class BurnsMissions {
     for (const m of this.list) {
       if (m.state !== 'locked') continue;
       const req = m.def.requires || [];
-      if (req.every(r => this.isDone(r))) m.state = 'available';
+      if (req.every(r => this.reqDone(r)) && (!m.def.unlock || m.def.unlock(this.g, m))) m.state = 'available';
     }
     for (const m of this.list) if (m.state === 'available' && m.def.start === 'auto') this.start(m.id);
   }
@@ -296,10 +303,10 @@ class BurnsCine {
     if (s.flash) { g.screenFlash(s.flash === true ? '#ffffff' : s.flash, s.alpha || 0.85); this.advance(); return; }
     if (s.swell) { g.musicSwell(s.swell); this.advance(); return; }
     if (s.title) { g.dayCard(s.title === true ? null : s.title); if (s.wait === false) this.advance(); return; }
-    if (s.orbit || s.track) { if (!this.cam) this.cam = Object.assign({}, g.camState()); }
+    if (s.orbit || s.track) { if (!this.cam) this.cam = Object.assign({}, this.opts.camFrom || g.camState()); }
     if (s.say) { this.waiting = true; g.dialog.say(s.say[0], s.say[1], () => { this.waiting = false; }); return; }
     if (s.cam && !s.cam.dur) { this.cam = Object.assign({}, s.cam); this.advance(); return; }
-    if (s.cam) { this.camFrom = this.cam ? Object.assign({}, this.cam) : Object.assign({}, g.camState()); }
+    if (s.cam) { this.camFrom = this.cam ? Object.assign({}, this.cam) : Object.assign({}, this.opts.camFrom || g.camState()); }
     if (s.fade) { g.fadeTo(s.fade === 'out' ? 1 : 0, s.dur || 0.6); }
   }
   update(dt) {
@@ -348,7 +355,7 @@ class BurnsCine {
       return;
     }
     if (s.parallel) {
-      if (!this.par) this.par = s.parallel.map(p => new BurnsCine(g, [p], null, { letterbox: this.letter }));
+      if (!this.par) this.par = s.parallel.map(p => new BurnsCine(g, [p], null, { letterbox: this.letter, camFrom: this.cam ? Object.assign({}, this.cam) : null }));   // camera moves start from this cutscene's camera
       this.par.forEach(c => c.update(dt));
       // the screen reads this cutscene's camera, letterbox, focus and slow-mo timer: a cam / dolly / orbit / track,
       // letterbox, dof or slowmo step inside the block drives them (the last one to change wins)
@@ -979,7 +986,7 @@ class BurnsPlayScene {
     const cy = this.camYaw, ax = C.x + lx - Math.cos(this.camYaw) * sh, ay = C.y, az = C.z + lz + Math.sin(this.camYaw) * sh, want = baseDist;
     // collision: first try rising over whatever blocks the view (vehicles behind Brady on the RV
     // roofs, walls), and only then pull the camera in toward him
-    const probe = (pt) => { const dX = -Math.sin(cy) * Math.cos(pt), dY = Math.sin(pt), dZ = -Math.cos(cy) * Math.cos(pt); return Math.max(1.1, W.raycast(ax, ay, az, ax + dX * (want + 0.4), ay + dY * (want + 0.4), az + dZ * (want + 0.4), true) * (want + 0.4) - 0.45); };
+    const probe = (pt) => { const dX = -Math.sin(cy) * Math.cos(pt), dY = Math.sin(pt), dZ = -Math.cos(cy) * Math.cos(pt); return Math.max(1.1, W.raycast(ax, ay, az, ax + dX * (want + 0.4), ay + dY * (want + 0.4), az + dZ * (want + 0.4), true, veh && veh.mv) * (want + 0.4) - 0.45); };
     let lift = 0;
     if (!(this.cine && this.cine.cam) && probe(this.camPitch) < want * 0.7) {
       let best = probe(this.camPitch);
@@ -988,7 +995,7 @@ class BurnsPlayScene {
     this.camLift = BurnsM.damp(this.camLift || 0, lift, lift > (this.camLift || 0) ? 6 : 1.5, fdt);
     const pitch = this.camPitch + this.camLift;
     const dirX = -Math.sin(cy) * Math.cos(pitch), dirY = Math.sin(pitch), dirZ = -Math.cos(cy) * Math.cos(pitch);
-    const hit = W.raycast(ax, ay, az, ax + dirX * (want + 0.4), ay + dirY * (want + 0.4), az + dirZ * (want + 0.4), true);
+    const hit = W.raycast(ax, ay, az, ax + dirX * (want + 0.4), ay + dirY * (want + 0.4), az + dirZ * (want + 0.4), true, veh && veh.mv);
     const allowed = Math.max(1.1, hit * (want + 0.4) - 0.45);
     this.camD = allowed < this.camD ? allowed : BurnsM.damp(this.camD, Math.min(want, allowed), 2.5, fdt);
     let x = ax + dirX * this.camD, y = ay + dirY * this.camD, z = az + dirZ * this.camD;

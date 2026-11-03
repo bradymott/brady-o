@@ -241,7 +241,7 @@ BW6.buildSolar = function (api, g) {
     chat: ['Radically inclusive art car? I\'ll buy it. All of it.', 'Bryce, I said NO blockchain. ...Unless it\'s a gold blockchain.', 'My jet has a hot tub. Your octopus has a hot tub. We\'re the same.'],
     lines: ['Is that YOUR octopus? I\'ll give you a billion dollars and a lanyard.', 'No? Radical. Very radical. Security! ...Oh, I didn\'t bring them out here.'] });
   api.npc({ id: 'bryce', name: 'BRYCE, OPTIMIZER', type: 'techbro', seed: 801, x: s.x - 8, z: s.z - 3, behavior: 'walk', path: circ(7, 14, 0.25), speed: 2.6, walkAnim: 'bw6Uni', uni: 6,
-    chat: ['Preston! Picture it: an octopus... on the BLOCKCHAIN.', 'It\'s like Uber, but for dust.', 'A drum circle is just decentralized community architecture.', 'My heart-rate variability LOVES this dust storm.'],
+    chat: ['Preston! Picture it: an octopus... on the BLOCKCHAIN.', 'It\'s like rideshare, but for dust.', 'A drum circle is just decentralized community architecture.', 'My heart-rate variability LOVES this dust storm.'],
     lines: ['This week is a networking opportunity with zero cellular friction.', 'Want in on the seed round? It\'s a DAO for shade structures. Yes, I\'m on a unicycle. It\'s optimized.'] });
   BW6.locals(api, s, [['techbro', 4]], 'intern');
 };
@@ -336,7 +336,7 @@ BW6.buildWanderers = function (api, g) {
   // tech bros on electric unicycles (enemies: pitch bubbles + they try to unplug your party)
   const bros = [[96, 20], [112, 46], [86, 48], [70, 0], [120, 10], [30, -30]];
   bros.forEach(([x, z], i) => api.enemy({ id: 'unibro' + i, name: 'TECH BRO', type: 'techbro', seed: 70 + i, x, z, behavior: 'bw6Unibro', hp: 2, drop: 3, uni: i, tag: 'unibro', defeatLine: ['Fine. I\'ll circle back.', 'My unicycle needs a firmware update.', 'Pivoting... to dancing.'][i % 3],
-    pitches: ['UBER FOR DUST!', 'AI FOR VIBES!', 'WEB3 TENTS!', 'SYNERGY!', 'OCTOPUS AS A SERVICE!', 'TERMS OF SERVICE!'] }));
+    pitches: ['RIDESHARE FOR DUST!', 'AI FOR VIBES!', 'WEB3 TENTS!', 'SYNERGY!', 'OCTOPUS AS A SERVICE!', 'TERMS OF SERVICE!'] }));
   // glow sticks scattered along the dark routes
   api.glowLine(-20, 100, -60, 60, 10); api.glowLine(60, 40, 90, 10, 8); api.glowLine(-40, -60, -80, -80, 9); api.glowLine(40, -80, 90, -90, 9); api.glowLine(-10, -70, -5, -105, 7);
   api.glowArc(-88, 1.5, 20, -94, 7, 10, 2.5, 6);

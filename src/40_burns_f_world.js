@@ -228,11 +228,13 @@ class BurnsWorld {
     this._cells0 = this.cells; this.cells = t.cells;
     this._ghost0 = this.ghostMesh; this.ghostMesh = null;
     this.cur = t;
+    BURNS_ATLAS.signOwner = t;   // signs first painted for this tile are the tile's (given back in tileFree)
   }
   tileEnd(t) {
     for (const [, e] of t.cells) for (const m of e.list) if (!m.empty) { const c = m.geo(); c.tile = t; t.chunks.push(c); this.chunks.push(c); }
     if (this.ghostMesh && !this.ghostMesh.empty) { const c = this.ghostMesh.geo(); c.tile = t; c.ghost = true; t.chunks.push(c); this.ghosts.push(c); }
     this.ghostMesh = this._ghost0; this.cells = this._cells0; this.cur = null;
+    if (BURNS_ATLAS.signOwner === t) BURNS_ATLAS.signOwner = null;
     t.own = {};
     for (const k of BURNS_TILE_OWNED) { const S = t.snap[k], a = this[k] || []; t.own[k] = S.size || a.length ? a.filter(x => !S.has(x)) : []; }
     t.snap = null; t.cells = null;
@@ -247,6 +249,7 @@ class BurnsWorld {
     if (CS.size) { this.chunks = this.chunks.filter(c => !CS.has(c)); this.ghosts = this.ghosts.filter(c => !CS.has(c)); }
     for (const G of own.groups || []) BurnsGL.freeGeo(G.geo);
     this.col.removeMany(t.cols);
+    BURNS_ATLAS.signRelease(t);
     if (own.lights && own.lights.length && this.lightmap) this.repaintLights(t.x0, t.z0, t.x1, t.z1, own.lights);
     t.chunks = []; t.cols = []; t.own = null;
   }
@@ -723,13 +726,14 @@ class BurnsWorld {
     return 2;
   }
   // segment cast for the camera (returns 0..1 fraction of the first hit)
-  raycast(ax, ay, az, bx, by, bz, skipCamPass) {
+  // ignoreMover: skip that mover's colliders (the camera looking past the art car Brady is driving)
+  raycast(ax, ay, az, bx, by, bz, skipCamPass, ignoreMover) {
     const dx = bx - ax, dy = by - ay, dz = bz - az, len = Math.hypot(dx, dz);
     const list = this._near4 || (this._near4 = []);
     this.col.near((ax + bx) / 2, (az + bz) / 2, len / 2 + 1, list);
     let tmin = 1;
     for (const c of list) {
-      if (!c.solid || (skipCamPass && c.camPass)) continue;
+      if (!c.solid || (skipCamPass && c.camPass) || (ignoreMover && c.mover === ignoreMover)) continue;
       const t = this.segT(c, ax, ay, az, dx, dy, dz);
       if (t < tmin) tmin = t;
     }

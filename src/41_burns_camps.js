@@ -2234,7 +2234,7 @@ function bcmBuildThunderdome(api, g, P) {
   });
   // the fighters, the MC, spectators on the ledges
   if (P.o.fighters !== false) {
-    const mk = side => P.api.npc({ type: 'deathguild', seed: side > 0 ? 3 : 7, prop: 'foambat', name: side > 0 ? 'IRON MAIDEN-ISH' : 'THE FOAM REAPER', x: P.F.wx(side * 4, 0), z: P.F.wz(side * 4, 0), y: P.F.wy(2), fixedY: true, collide: false, always: true, behavior: 'bcmBungee', side, camp: P, chatter: false, noDJ: true, lines: ['Two enter. Both leave. Everyone hugs. That\'s the rule.', 'Want in? Get in line. Sign the waiver. Bring a helmet.'] });
+    const mk = side => P.api.npc({ type: 'deathguild', seed: side > 0 ? 3 : 7, prop: 'foambat', name: side > 0 ? 'BUNGEE BERTHA' : 'THE FOAM REAPER', x: P.F.wx(side * 4, 0), z: P.F.wz(side * 4, 0), y: P.F.wy(2), fixedY: true, collide: false, always: true, behavior: 'bcmBungee', side, camp: P, chatter: false, noDJ: true, lines: ['Two enter. Both leave. Everyone hugs. That\'s the rule.', 'Want in? Get in line. Sign the waiver. Bring a helmet.'] });
     const A = mk(1), B = mk(-1); A.foe = B; B.foe = A;
     P.fighters = [A, B]; P.actors.push(A, B);
   }

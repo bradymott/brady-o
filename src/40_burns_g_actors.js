@@ -15,7 +15,7 @@ const BURNS_LINES = {
   driver: ["I've been driving for six days.", 'What... day is it?', 'Is THIS the line?', 'Six. Days.'],
   ranger: ['Everything okay here?', 'Stay hydrated, friend.', "I'm not a cop. I'm a Ranger."],
   dpw: ['Outta the way, sparkle pony.', "We built this city. You're welcome.", 'Hard hat zone.'],
-  techbro: ['Have you heard of my startup?', "It's like Uber, but for dust.", "Let's circle back after the burn."],
+  techbro: ['Have you heard of my startup?', "It's like rideshare, but for dust.", "Let's circle back after the burn."],
   sparklepony: ['Can I borrow some water? And food? And a tent?', "I'm, like, so dehydrated.", 'Does this glitter make me look thirsty?'],
   influencer: ['Hold on, the light is PERFECT.', 'This is for the content.', "Move, babe. You're in my shot."],
   crusty: ['It was better in the old days.', 'Back then the Man was twelve feet tall.', 'You call that dust?'],

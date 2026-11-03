@@ -587,7 +587,7 @@ BurnsWorlds.register({
     api.pickup('water', 470, 0.9, 160); api.pickup('water', 380, 0.9, 30);
     api.pickup('bag:bufo', 520, 0.9, 210); api.pickup('bag:powder', 512, 0.9, 40);
     // a tech bro pitching a skydiving app, an influencer shooting on the runway
-    api.enemy({ type: 'techbro', seed: 14, x: 440, z: 214, behavior: 'pitcher', hp: 2, pitches: ['UBER FOR SKYDIVING!', 'PLUMMET.APP!', 'SERIES A-LTITUDE!', 'DISRUPT GRAVITY!'] });
+    api.enemy({ type: 'techbro', seed: 14, x: 440, z: 214, behavior: 'pitcher', hp: 2, pitches: ['RIDESHARE FOR SKYDIVING!', 'PLUMMET.APP!', 'SERIES A-LTITUDE!', 'DISRUPT GRAVITY!'] });
     api.enemy({ type: 'influencer', seed: 14, x: 398, z: 190, behavior: 'flasher', hp: 2 });
     // air colliders for the airstrip buildings (the plane bonks off them instead of flying through)
     BW14_City.obstacle('the hangar', C.HANGAR.x - 12, 3, C.HANGAR.z, C.HANGAR.x + 12, 3, C.HANGAR.z, 9);

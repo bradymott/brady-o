@@ -89,7 +89,9 @@ class BurnsHubScene {
     this.nodes = O.map((id, i) => { const m = BurnsWorlds.meta(id), a = i / O.length * TAU, h = BURNS_WORLD_META.find(k => k.id === id) ? m.hub : { x: 0.5 + Math.sin(a) * 0.4, y: 0.5 + Math.cos(a) * 0.4 }; return { id, n: BurnsWorlds.num(id), secret: BurnsWorlds.isSecret(id), home: BurnsWorlds.isHome(id), day: BurnsWorlds.dayShort(id), x: this.map.x + h.x * this.map.w, y: this.map.y + h.y * this.map.h, col: m.col }; });
     // travel map: pins at the places' real spots in the city
     if (this.opts.travel && this.opts.travel.project) for (const n of this.nodes) { const q = this.opts.travel.project(n.id, this.map); if (q) { n.x = q.x; n.y = q.y; } }
-    this.nodeR = clamp(Math.min(this.map.w, this.map.h) / 17, 12, 17);
+    // pins at their real spots crowd together: smaller ones there
+    this.cityPins = !!(this.opts.travel && this.opts.travel.project);
+    this.nodeR = this.cityPins ? clamp(Math.min(this.map.w, this.map.h) / 30, 8, 12) : clamp(Math.min(this.map.w, this.map.h) / 17, 12, 17);
     if (this.wardrobe) this.buildWardrobe();
   }
   resize() { this.build(); }
@@ -200,7 +202,7 @@ class BurnsHubScene {
       if (un) { const tk = BurnsSave.tokenCount(n.id), tot = BurnsWorlds.tokenTotal(n.id); BurnsUI.text(ctx, reg ? `${tk}/${tot}` : 'SOON', n.x, n.y + r + 9, R0 < 15 ? 9 : 10, done ? '#7aff5a' : '#ffffff'); }
       }
       // the day of the Burn week above every pin
-      if (n.day) BurnsUI.text(ctx, n.day, n.x, n.y - r - (n.home ? 15 : 8), R0 < 15 ? 7.5 : 8.5, un ? '#ffd0f4' : 'rgba(255,255,255,0.45)', { ui: true, sw: 2.5 });
+      if (n.day && (!this.cityPins || sel || (un && !BurnsSave.get().worldDone[n.id]))) BurnsUI.text(ctx, n.day, n.x, n.y - r - (n.home ? 15 : 8), R0 < 15 ? 7.5 : 8.5, un ? '#ffd0f4' : 'rgba(255,255,255,0.45)', { ui: true, sw: 2.5 });   // (city map: only the chosen and open ones)
       if (this.newUnlock === n.id && this.t < 3) { ctx.save(); ctx.strokeStyle = `rgba(255,255,255,${1 - this.t / 3})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(n.x, n.y, 20 + this.t * 30, 0, TAU); ctx.stroke(); ctx.restore(); }
     }
     ctx.restore();
@@ -228,7 +230,7 @@ class BurnsHubScene {
     } else if (!un) { const pv = BurnsWorlds.prev(this.sel); BurnsUI.text(ctx, pv ? `Beat the boss of ${BurnsWorlds.label(pv)} to unlock.` : 'Locked.', P.x + P.w / 2, y + 10, 11, '#ffd84a', { ui: true, stroke: false }); }
     else BurnsUI.text(ctx, 'Coming soon — the burners are building it.', P.x + P.w / 2, y + 10, 11, '#ffd84a', { ui: true, stroke: false });
     this.playBtn.disabled = !(un && reg);
-    this.playBtn.label = un && reg ? (BurnsSave.tokenCount(this.sel) ? 'PLAY' : 'START') : un ? 'SOON' : 'LOCKED';
+    this.playBtn.label = un && reg ? (this.opts.travel ? 'TRAVEL HERE' : BurnsSave.tokenCount(this.sel) ? 'PLAY' : 'START') : un ? 'SOON' : 'LOCKED';
   }
   drawWardrobe(ctx) {
     const W = Game.cssW, H = Game.cssH, sv = BurnsSave.get();

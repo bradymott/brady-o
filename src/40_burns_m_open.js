@@ -68,7 +68,7 @@ class BurnsTiles {
   begin(t) {
     const g = this.g, W = g.world;
     t.state = 'building';
-    W.tileBegin(t); if (W.inst) W.inst.cur = t;
+    W.tileBegin(t); if (W.inst) W.inst.cur = t; if (W.crowd) W.crowd.cur = t;
     let it = null;
     try { const r = this.T.build(W.api, g, t); if (r && typeof r.next === 'function') it = r; } catch (e) { console.error('burns tile ' + t.key, e); }
     this.job = { t, it };
@@ -76,7 +76,7 @@ class BurnsTiles {
   end(t) {
     const g = this.g, W = g.world;
     this.job = null;
-    W.tileEnd(t); if (W.inst) W.inst.cur = null;
+    W.tileEnd(t); if (W.inst) W.inst.cur = null; if (W.crowd) W.crowd.cur = null;
     for (const d of t.own.actorDefs) this.people.push([t, d]);
     t.state = 'ready'; this.stats.built++;
     if (this.T.onLoad) { try { this.T.onLoad(g, t); } catch (e) { console.error(e); } }
@@ -95,6 +95,7 @@ class BurnsTiles {
     if (gone.size) g.actors = g.actors.filter(a => !gone.has(a));
     t.actors = [];
     if (W.inst) W.inst.freeTile(t);
+    if (W.crowd) W.crowd.freeTile(t);
     W.tileFree(t);
     t.state = 'none'; t.data = {}; this.stats.freed++;
   }
@@ -135,8 +136,10 @@ class BurnsInstancer {
     o = o || {};
     let info0 = null;
     const mk = (fn, lo) => {
-      const m = new BurnsMesh(4096); m.lo = lo;
+      const m = new BurnsMesh(4096), own = BURNS_ATLAS.signOwner; m.lo = lo;
+      BURNS_ATLAS.signOwner = null;   // a prototype outlives any tile: its signs are the world's
       try { const r = fn(m); if (!info0) info0 = r || {}; } catch (e) { console.error('burns instance proto ' + id, e); }
+      BURNS_ATLAS.signOwner = own;
       if (m.empty || !m.nv) return null;
       if (!o.noAO && !window.__burnsNoAO && this.W.aoMode !== false) BurnsAO.bake(m.buf, 0, m.nv, m.ind, 0, m.ind.length, { ground: () => 0, res: this.W.aoMode === 'fast' ? 18 : undefined });
       return m.geo();
@@ -219,6 +222,89 @@ class BurnsInstancer {
   }
 }
 
+/* ---------------- instanced crowds ----------------
+   W.crowds(looks): background people that cost almost nothing. Everyone with the same look and pose is ONE draw.
+   looks: [[type, seed], ...] (npc looks, shared with the model cache).
+   .add(x, z, { y, yaw, look, anim: 'dance' | 'idle' | 'cheer' | 'sit' ..., phase }) places one (tile-owned while a tile
+   builds). Each look keeps a few shared poses per animation (phases), so a floor of 200 dancers is a handful of draws.
+   They have no AI or collision: real actors (api.npc) stay for anyone Brady can talk to. */
+class BurnsCrowds {
+  constructor(W, looks) { this.W = W; this.looks = []; this.list = []; this.cur = null; this.banks = {}; this.map = new Map(); this.batches = []; if (looks) this.setLooks(looks); }
+  setLooks(L) {
+    this.looks = L.map(q => BurnsRig.model(BurnsRig.npcSpec(q[0], q[1], { type: q[0], seed: q[1] })));
+    this.boxes = this.looks.map(M => { try { return BurnsCrowds.boxModel(M); } catch (e) { console.error('burns crowd box model', e); return null; } });
+  }
+  bank(look, anim, phase) {
+    const k = look + '#' + anim + '#' + phase; let b = this.banks[k];
+    if (!b) { const ch = new BurnsChar(this.looks[look]); ch.play(anim, null, true); ch.animT = phase; ch.update(0); ch.compute(); b = this.banks[k] = { ch, key: k }; }
+    return b;
+  }
+  add(x, z, o) {
+    o = o || {}; if (!this.looks.length) return null;
+    const look = (o.look === undefined ? Math.floor(Math.random() * this.looks.length) : o.look) % this.looks.length;
+    const anim = o.anim || 'dance', it = { x, y: o.y || 0, z, yaw: o.yaw || 0, s: o.scale || 1, look, anim, bank: this.bank(look, anim, o.phase === undefined ? [0, 0.41, 0.83][Math.floor(Math.random() * 3)] : o.phase), vis: false };
+    this.list.push(it); if (this.cur) (this.cur.crowd || (this.cur.crowd = [])).push(it);
+    return it;
+  }
+  freeTile(t) { if (!t.crowd || !t.crowd.length) return; const S = new Set(t.crowd); this.list = this.list.filter(i => !S.has(i)); t.crowd = []; }
+  count() { return this.list.length; }
+  // per frame: advance the shared poses, cull, and bucket by look + pose + detail level
+  update(R, dt, maxD) {
+    const cam = R.cam; if (!cam || !this.looks.length) return;
+    for (const k in this.banks) { const b = this.banks[k]; if (b.used || b.ch.animT < 0.1) { b.ch.update(dt); b.ch.compute(); } b.used = false; }
+    for (const b of this.map.values()) { b.n = 0; b.dirty = true; }
+    const B = R.B, fl = Math.hypot(B.fx, B.fz) || 1, ux = B.fx / fl, uz = B.fz / fl;
+    for (const it of this.list) {
+      const dx = it.x - cam.x, dz = it.z - cam.z, d = Math.hypot(dx, dz);
+      it.vis = false; it.d = d;
+      if (d > maxD || (d > 4 && dx * ux + dz * uz < -2 - d * 0.25)) continue;
+      // detail: the full model up close, the far model to 38 m, then a few boxes; beyond 12 m everyone with the same
+      // look and animation shares one pose (fewer batches, nobody can tell)
+      // (talking hands are too small to see past 12 m: those people just stand)
+      const lv = d < 12 ? 0 : d < 38 ? 1 : 2, bk = lv ? (it.bankFar || (it.bankFar = this.bank(it.look, it.anim === 'talk' ? 'idle' : it.anim, 0))) : it.bank, key = bk.key + '|' + lv;
+      let b = this.map.get(key);
+      if (!b) { b = { look: it.look, bank: bk, lv, data: new Float32Array(32 * 8), n: 0, dirty: true }; this.map.set(key, b); }
+      if ((b.n + 1) * 8 > b.data.length) { const D2 = new Float32Array(b.data.length * 2); D2.set(b.data); b.data = D2; }
+      const o = b.n * 8, D = b.data; D[o] = it.x; D[o + 1] = it.y; D[o + 2] = it.z; D[o + 3] = it.yaw; D[o + 4] = it.s; D[o + 5] = 1; D[o + 6] = 1; D[o + 7] = 1; b.n++;
+      bk.used = true; it.vis = true;
+    }
+    this.batches = [];
+    for (const b of this.map.values()) if (b.n) this.batches.push(b);
+  }
+  draw(R, env, world) {
+    if (!this.batches.length || !R.crowdBegin(env, world, BURNS_ATLAS.T)) return;
+    for (const b of this.batches) {
+      const m = this.looks[b.look], geo = b.lv === 0 ? m.geo : b.lv === 1 ? (m.far || m.lod || m.geo) : ((this.boxes && this.boxes[b.look]) || m.far || m.lod || m.geo), ch = b.bank.ch;
+      R.crowd(geo, ch.bones, ch.nb, ch.face, 0.35, b);
+    }
+  }
+  // soft blob shadows under the near ones
+  shadows(R, S) { for (const it of this.list) if (it.vis && it.d < 40) R.flat.flat(it.x, it.y + 0.03, it.z, 1.1 * it.s, 1.1 * it.s, 0, S.shadow, [0, 0, 0], 0.5, false); }
+  release() { const gl = BurnsGL.gl; for (const b of this.map.values()) if (b.ibuf && gl) { try { gl.deleteBuffer(b.ibuf); } catch (e) { /* ignore */ } b.ibuf = null; } }
+}
+
+// a person far away: a dozen boxes in the look's colours (about 200 triangles) on the same skeleton and bones
+BurnsCrowds.boxModel = function (M) {
+  const S = M.spec || {}, B = BURNS_BONES, body = M.body || burnsBody(S.body), h = body.h || 1, w = body.w || 1;
+  const m = new BurnsMesh(1024), skin = S.skin || '#e8b996', top = S.top || {}, bot = S.bottom || {}, shoe = S.shoes || {};
+  const hair = (S.hair && S.hair.style !== 'bald' && S.hair.col) || null, topCol = top.kind === 'none' ? skin : (top.col || '#333'), botCol = bot.col || '#333';
+  const sleeves = top.kind === 'hoodie' || top.kind === 'long' || top.kind === 'suit' || !!top.long || !!S.fursuit, bareLegs = bot.kind === 'shorts' || bot.kind === 'kilt' || bot.kind === 'tutu';
+  m.setBone(B.HIPS).color(botCol); m.box(0, -0.03, 0, 0.36 * w, 0.2, 0.23);
+  m.setBone(B.CHEST).color(topCol); m.box(0, 0.12 * h, 0, 0.36 * w, 0.24 * h, 0.23); m.box(0, 0.345 * h, 0, 0.45 * w, 0.29 * h, 0.26);
+  m.setBone(B.HEAD).color(skin); m.ellipsoid(0, 0.19, 0, 0.17, 0.19, 0.165, { seg: 6, rings: 4 });
+  if (hair) { m.color(hair); m.ellipsoid(0, 0.27, -0.03, 0.18, 0.13, 0.175, { seg: 6, rings: 3 }); }
+  for (const side of [1, -1]) {
+    m.setBone(side > 0 ? B.UARM_L : B.UARM_R).color(sleeves ? topCol : skin); m.box(0, -0.135, 0, 0.125, 0.27, 0.125);
+    m.setBone(side > 0 ? B.FARM_L : B.FARM_R).color(sleeves ? topCol : skin); m.box(0, -0.15, 0, 0.11, 0.3, 0.11);
+    m.setBone(side > 0 ? B.THIGH_L : B.THIGH_R).color(botCol); m.box(0, -0.2, 0, 0.17, 0.42, 0.18);
+    m.setBone(side > 0 ? B.SHIN_L : B.SHIN_R).color(bareLegs ? skin : botCol); m.box(0, -0.19, 0, 0.15, 0.4, 0.16);
+    m.setBone(side > 0 ? B.FOOT_L : B.FOOT_R).color(shoe.col || '#222'); m.box(0, -0.01, 0.05, 0.15, 0.1, 0.28);
+  }
+  if (bot.kind === 'tutu') { m.setBone(B.HIPS).color(bot.col || '#ff9ad0'); m.cyl(0, -0.12, 0, 0.36, 0.2, 0.1, 8, {}); }
+  if (S.led) { m.setBone(B.CHEST).color(S.led, 1); m.box(0, 0.34 * h, 0.132, 0.4 * w, 0.03, 0.01); m.box(0, 0.12 * h, 0.118, 0.3 * w, 0.03, 0.01); m.emissive(0); }
+  return m.geo();
+};
+
 /* ---------------- places you can enter ----------------
    BurnsOpen.enter(g, worldId, { back: {x, y, z, yaw}, place, opts }) plays a world as a sub-world of g (the overworld
    stays built, frozen behind it). When that world is finished (after its results and story card) or left from the
@@ -253,4 +339,4 @@ const BurnsOpen = {
   root() { let s = Game.scene; while (s && s.parentScene) s = s.parentScene; return s && s.def && s.def.open ? s : null; }
 };
 
-if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsTiles, BurnsInstancer, BurnsOpen });
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsTiles, BurnsInstancer, BurnsCrowds, BurnsOpen });

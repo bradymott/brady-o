@@ -86,7 +86,12 @@ That's a complete, playable world. The hub lists it automatically once it regist
 | `tiles` | object | Streams the world in tiles around Brady (open worlds, §19.1). |
 | `open` | bool | Marks the open world (world 500). The title's CONTINUE goes there, and its pause menu shows a fast-travel MAP. |
 | `travel(g, worldId)`, `onResume(g, sub, how)` | fn | Open worlds: the MAP sends Brady to a place; `onResume` runs when an entered place (§19.2) or the map hands control back. |
-| `drawHUD(ctx, g, W, H, S)` | fn | Extra 2D HUD drawn over yours (CSS pixels; `S` holds the safe-area insets). |
+| `drawHUD(ctx, g, W, H, S)` | fn | Extra 2D HUD drawn over yours (CSS pixels; `S` holds the safe-area insets). Only during play: not in cutscenes or when the HUD is hidden. |
+| `drawUnder(g, ctx, fdt)` | fn | Your own 2D layer over the 3D frame and under the engine's HUD, every frame (screen tints, a rhythm panel). CSS pixels. |
+| `drawOverlay(g, ctx, fdt)` | fn | Your own 2D layer over the HUD, the dialogue box and the touch controls, under the fade, pause menu and results. Every frame. Use it instead of wrapping `BurnsUI.drawOverlay`. |
+| `cameraFx(g, cam, dt)` | fn | Runs on the finished camera every frame, cutscene cameras included: add wobble, roll (`cam.roll`), fov breathing or a nudge to `cam.ty`. Use it instead of wrapping `g.updateCamera`. |
+| `crowdDist` | number (m) | How far instanced crowds (§4.8) draw; default 95. |
+| `mapProject(g, worldId, M)`, `mapDraw(g, ctx, M, t)` | fn | Open worlds: put each place's pin on your own map, and draw the map under the pins (§19.4). |
 
 ### 3.1 Play order, days of the week and the home world
 
@@ -232,6 +237,14 @@ For anything repeated dozens or thousands of times (RVs, tents, lamp posts, peop
 - `api.instance(id, x, z, { y, yaw, scale, tint: [r, g, b], noCol })` places a copy. The colliders returned by the full-detail build come with every copy (`noCol` skips them). `tint` multiplies the vertex colours, so one RV prototype can come in several shades.
 - `W.instancer().dyn(id)` returns a copy you move yourself every frame (`{x, y, z, yaw, s, on}`): W500's bike riders.
 - Copies made while a tile builds belong to that tile and go away with it (§19.1).
+- **Fewer prototypes means fewer draws.** Build a near-white prototype and colour each copy with `tint` instead of making one prototype per colour (W500 has one tent, one dome, one shade and three camp fronts, all tinted). Leave out the far level (`far`) for small props: they simply stop drawing past `mid`.
+
+**Instanced crowds (background people).** For dance floors, a busy Esplanade or people hanging out in front of camps: hundreds of people for a handful of draws.
+- `api.extras([[type, seed], ...])` once: the looks (NPC specs, §6.5). Keep it to about 4 looks; every look multiplies the draws.
+- `api.extra(x, z, { yaw, anim, look, phase, scale, y })` places one person. `anim` is any animation name (`'dance'`, `'idle'`, `'talk'`, `'cheer'`...); `look` indexes the looks; `phase` (0..1, default one of three) offsets the animation.
+- Everyone with the same look, animation and phase shares one pose, so a batch is one draw. Detail by distance: the full model to 12 m, the far model to 38 m, then a box figure of about 200 triangles. Past 12 m everyone shares phase 0, and `'talk'` becomes `'idle'`.
+- Extras have no AI, no collision and no talk: use real actors (`api.npc`) for anyone Brady can speak to. They draw to `def.crowdDist` (95 m) and get a soft blob shadow up close. Extras made while a tile builds belong to that tile.
+- Budget: W500's busiest street view has about 120 extras on screen in 15–25 draws and 80–110k triangles.
 
 ## 5. Prop library (`api.prop(kind, opts)`)
 
@@ -309,7 +322,9 @@ Need something new? Write it with `api.mesh` (§6). If it's reusable, add a buil
 ### 6.2 Textures (one shared atlas)
 - `BURNS_ATLAS.pattern(name)`: tileable decals. Names: `tattoo, tattoo2, fur, disco, led, plaid, hivis, tiedye, wood, swoosh, canvas, sequin, leopard, flames, denim, rainbow`. Use them as `{uv: BURNS_ATLAS.pattern('fur'), uvFaces: 'sides'}`.
 - `BURNS_ATLAS.icon(name)`: item icons. Names: `heart, k, flake, tab, shroom, leaf, toad, bottle, drop, ticket, map, www, token, glowstick, ziptie, camera`.
-- `BURNS_ATLAS.sign(text, style)`: renders text into the per-world sign area. It's reset every world and holds about 40 signs.
+- `BURNS_ATLAS.sign(text, style)`: renders text into the per-world sign area (two pages, reset every world: about 60–80 typical signs). The same text and style share one texture.
+- **Streaming worlds:** a sign first made while a tile builds belongs to that tile; it goes to recycled shelves at the bottom of page 2 and is given back when the last tile using it is freed. Prefer a small pool of texts (W500's camp names come from 48 fixed names, each with its own colours) over a unique text per building.
+- **Faces:** 64 slots (`BURNS_ATLAS.addFace(name, recipe)`). The atlas is 2048×4096: tiles and icons, sign page 1, four face banks (y 1024–3072), then sign page 2.
 - How decals work: the atlas is premultiplied RGBA laid **over** the vertex colour. Transparent texels show the colour and opaque texels show the art. A face decal on a skin-coloured head shows skin around the eyes; a sign with a `bg` is fully opaque.
 - **Engine-made art.** The Chinka photo (the polaroid on `'photo'` pickups and its UI icon) is rendered from the 3D Chinka model by the engine on the first frame (`BURNS_ATLAS.bakePhoto`), over a painted playa-sunset backdrop. To make art of your own from a posed model, call `R.bakeImage(w, h, cam, env, draw, bgRegion)` before a frame's `setCamera`. It lights and tone-maps the model like the frame, lays it over an atlas region on the GPU, and returns a 2D canvas (it never calls `readPixels`, so nothing stalls). Paint the canvas into the atlas, then refresh just that tile with `BurnsGL.texRegion(BURNS_ATLAS.T, x, y, w, h)`.
 - **Painting into `BURNS_ATLAS.ctx` yourself:** pair every `save()` with a `restore()`, using `try/finally`. An unbalanced transform shifts every tile, sign and face painted after it. `addPattern`/`addFace` painters and signs are already guarded by the engine.
@@ -522,7 +537,8 @@ Define missions in `def.missions`. Each mission is `{id, name, short, desc, hint
 | `type` | `reach, find, collect, talk, defeat, race, stealth, escort, ride, climb, boss, custom` (table below). |
 | `start` | `'manual'` (default; you call `g.missions.start(id)`, usually from a `talk` handler), `'auto'` (starts when available), `'trigger'` (you start it from `api.trigger`), or `'board'` (accepted from the quest board, §7.1). |
 | `giver` | Actor id. It shows `'!'` while the mission is available. |
-| `requires` | `[missionIds]`. The mission stays `locked` until these are done. |
+| `requires` | `[missionIds]`. The mission stays `locked` until these are done. `'17:arrive'` means mission `arrive` finished in world 17 (any world: its Burn Token, or its saved done state). |
+| `unlock(g, m)` | Optional extra condition: the mission opens only when this returns true as well. It is checked whenever missions refresh: at the start of a visit, after any mission completes, and in the city when Brady comes back from a place. |
 | `token` | Default `true`, which makes it a Burn Token. `false` makes it a side mission (saved in `Save.data.burns.missions`). |
 | `tokenAt` | `{x,y,z}` where the token pickup spawns. The default is in front of Brady. `tokenDirect: true` awards it instantly (bosses). |
 | `target` | `{x, z, r, y}` for reach, race, stealth, ride and climb (`y` = minimum height for climb). For `talk`, an actor id. |
@@ -689,7 +705,7 @@ A palette is plain data. Override any field: `sky: Object.assign({}, BURNS_PALET
 | `zen`, `hor` | Sky gradient, top and bottom. |
 | `fog`, `fogD`, `fogH`, `fogMax`, `haze` | Fog colour, density (0.006 clear to 0.02 dusty), height falloff, maximum fog, horizon haze. |
 | `sun: [azimuthDeg, elevationDeg]`, `sunCol`, `sunSize` | The sun. |
-| `moon: [az, el]`, `moonK` | The moon. |
+| `moon: [az, el]`, `moonK` | The moon. Its lit side faces the sun, so put the sun below the horizon roughly opposite the moon for a full moon (the built-in night, dusk and dawn palettes do). |
 | `stars` | 0..1. |
 | `mtnCol`, `mtnH` | Mountain silhouette colour and height in degrees. |
 | `city: [az, el]`, `cityCol`, `cityK` | The city's glow on the horizon. |
@@ -740,7 +756,9 @@ Available in hooks, behaviours, triggers and talk handlers.
 **Feedback**
 - `g.say(who, lines, done)`: dialogue box with a 3D portrait. `who` is an actor, `'brady'`, `'man'`, or `{name, model}`. `lines` are strings or `{who, text}` objects. `done` runs after the last line.
 - `g.banner(title, sub, {col, big, small, icon, dur})`, `g.toast(text)`, `g.warn(text, secs)` (flashing warning).
-- `g.playerBubble(text, s)`, `a.say(text, s)` (speech bubbles over heads).
+- `g.playerBubble(text, s)`, `a.say(text, s)` (speech bubbles over heads). NPCs' random chatter (`def.chat` / type lines) holds while a dialogue box is open, during cutscenes and during modal minigames, and a chatter bubble already up hides then; lines you give with `a.say` always show.
+- **Minigames that own the screen:** set `g.modal = 'yourGame'` while it runs (clear it after) to hold the chatter; `g.modalOn()` is true then, during a DJ set and during a W5–7 rhythm round. `g.hideTracker = true` hides the mission tracker pill at the top (your panel can use that space).
+- **Colour trip:** set `g.colorTrip` (0..1) for the LSD-style colour rotation while you need it (0 turns it off), or set `env.trip` in `def.env`. The engine shows the strongest of yours and the power-up's.
 - `g.shake(amount 0..1)`, `g.screenFlash('#fff', alpha)`, `g.fadeTo(0|1, secs)`.
 - `g.fx` particles:
   - Elements: `dust`, `fire`, `smoke`.
@@ -794,7 +812,7 @@ Read it with `g.camMode`, set it with `g.setCamMode(mode)`, and check `g.firstPe
 | `{ move: {actor, x, z, speed, anim} }` | Walk an actor to a spot. |
 | `{ banner: [title, sub, opts] }`, `{ music }`, `{ sfx }` | Titles and audio. |
 | `{ fade: 'out'|'in', dur }`, `{ letterbox: false }` | Fades and letterbox control. |
-| `{ parallel: [steps…] }` | Run steps together. |
+| `{ parallel: [steps…] }` | Run steps together; the block ends when they all have. A camera step inside it (`cam`, `dolly`, `crane`, `orbit`, `track`) drives the cutscene's camera and starts from the current shot, and `letterbox`, `dof` and `slowmo` inside it apply too. |
 | `{ dolly: {from, to, dur, ease} }`, `{ crane: … }` | Same as a `cam` tween; use the names for readability. |
 | `{ orbit: {x, y, z \| actor, r \| r0+r1, h \| h0+h1, a0, a1, ty, dur, fov, ease, hold} }` | Circle a point or an actor (`'brady'` or an id), optionally pushing in (`r0`→`r1`) and rising (`h0`→`h1`). Angles are yaw in radians. |
 | `{ track: {actor, dist, h, side, ty, fov, dur, k} }` | Follow an actor from behind (`side` swings around them), smoothed. Good for walks and chases. |
@@ -928,7 +946,7 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
 - **Vertices.** Static chunks are split automatically. W1 rasterises about 430k triangles at its busiest views (the gate line at dusk, high tier), and about 490k by the dance crowd at the dome; keep any view under about 500k. Vehicles carry framed glass, wheel wells, bumpers and roof caps up close, and geodesic domes use open-tube struts under their hubs (about 22k triangles for a 3-frequency dome with its frame). Engine traffic gets **LOD twins**: each vehicle carries a low-detail copy that is shown beyond 38 m. Your own movers can do the same with `api.mover(build, { lodTwin: true })`, but only if `build(m)` is deterministic and side-effect free, because it runs twice (`m.lo` is true on the second run). Rounded primitives cost 3–6× a plain box, so use them where the camera gets close and use `m.lo` or plain `box` for background clutter. Characters switch LOD automatically: full detail (about 8–16k triangles) within 16 m, LOD (3–5k) to 45 m, and a crowd LOD (about 2.4k, small accessories dropped) beyond that. `api.crowd` reuses 24 looks per type, so crowds share models. Hand-placed NPCs with unique seeds each cost a model build (about 10 ms) and GPU memory, so reuse seeds for background extras.
 - **CPU.** Actors farther than 110 m from Brady don't update. Keep `update` hooks O(n) over small lists; don't scan all colliders every step. Movers farther than 110 m skip collision.
 - **Sprites.** Particles are capped at 2600; glow billboards are culled at 170 m. Emitters near the camera are cheap; don't emit every step from 50 places.
-- **Textures.** One atlas (2048×2048, with 32 face slots and 23 extra pattern slots), one sprite sheet, and per-world ground paint (≤2048²) and lightmap (≤1024²). Don't add per-world textures. The shared atlas is 2048×3072: its sign area has two pages per world, so camp-heavy worlds keep full-size signs.
+- **Textures.** One atlas (2048×4096, with 64 face slots and 23 extra pattern slots), one sprite sheet, and per-world ground paint (≤2048²) and lightmap (≤1024²). Don't add per-world textures. The atlas's sign area has two pages per world, so camp-heavy worlds keep fitting; open worlds recycle their tiles' signs (§6.2).
 - **Resolution.** The engine caps DPR at 2 and drops resolution automatically (down to 50%) when frames run slow. Never fight it.
 - **Shadows cost a second pass.** The shadow map redraws every static chunk near the camera, every vehicle group, and every character within about 42 m. Keep giant merged meshes out of the camera's way, and give background rows of props `m.lo` detail. On phones the `medium` tier uses a 1024² map and no SSAO. Test your heaviest view with `BurnsGL.configure('high')` and with `'medium'`.
 - **Point lights** are free to request (`g.pointLight`): the engine keeps only the most relevant 12–16.
@@ -1025,7 +1043,7 @@ Have fun. Make it look like a modern mobile game, keep the jokes short, and test
 
 ## 19. The open world (Black Rock City, world 500)
 
-`src/42_burns_ow_city.js` registers **world 500** (`open: true`), a stylised Black Rock City. Its parts:
+`src/42_burns_ow_city.js` registers **world 500** (`open: true`), a stylised Black Rock City; `src/42_burns_ow_life.js` adds its people, missions, mini-games, the city map and the quest hook for other worlds (§19.6). Its parts:
 - **The city:** the arc from 2:00 to 10:00 around the Man; the Esplanade (r 300 m) and six lettered streets (Arcade, Bonfire, Carousel, Dreamer, Ember, Firefly, every 45 m); radial streets every half hour; plazas at 3:00 and 9:00 & Bonfire.
 - **Center Camp and the camps:** Center Camp at 6:00, and the big sound camps along the Esplanade (Root Society at 2:00, Opulent Temple at 10:00…).
 - **Around the city:** the Temple toward 12:00, big art on the open and deep playa, the trash fence (a pentagon), Gate Road, the airport and Hell Station.
@@ -1046,7 +1064,8 @@ tiles: {
 }
 ```
 A tile owns everything its builder makes:
-- static chunks and colliders;
+- static chunks and colliders, and the signs it painted (§6.2: recycled when no live tile uses them);
+- instanced props and crowd extras (§4.8);
 - glows, beams, fires, flame jets, mud and light pools (the lightmap is repainted and uploaded just for that area);
 - drivable vehicles, actors from `api.npc`, movers and their groups;
 - ACTION prompts, LSD-ghost geometry and instanced props.
@@ -1083,24 +1102,73 @@ World 500 turns the 17 story worlds into places (`BURNS_OW.PLACES`), each with a
 
 - **Story order:** the next unfinished world's place has a tall beacon of light and a HUD arrow with its distance. Finished places stay open, and later ones answer "Not yet."
 - **Time of day:** the city follows the story day (the next place's sky) and shows the day card when the day changes.
-- **The pause menu:** its **MAP** is the hub map in fast-travel mode (`TRAVEL HERE`, and HOME warps to the tipi).
+- **The pause menu:** its **MAP** is the hub map in fast-travel mode (`TRAVEL HERE`, and HOME warps to the tipi). The map is the real city: `def.mapDraw(g, ctx, M, t)` draws the fence, the arc of streets, the camps, the Man, the Temple and a YOU marker, and `def.mapProject(g, worldId, M)` puts each place's pin where its door is (`M` is the map rectangle). On this map the pins are smaller, and only the chosen one and the open ones show their day.
 
 ### 19.3 Regions and saves
 - **Regions:** `tiles.region(x, z)` names where Brady is, for example `'4:30 & Carousel'`, `'Center Camp'`, `'Deep Playa'` or `'Outside the Fence'`. Entering a new region sets `g.region`, saves the flag `region:<name>`, sends the mission event `region` (so `{ type: 'reach', region: 'The Temple' }` completes there) and shows a toast.
 - **Position:** the city saves Brady's spot every few seconds and on entering a place (`sv.ow`). CONTINUE resumes there; a world passes its own `opts.spawn` to the engine for this.
 
-### 19.4 Things to do in the city
+### 19.4 The streets, and things to do in the city
+- **Street fronts:** every block's edges are lots about 14 m wide that face the street: a theme camp's front (a tinted shade with LED edges and a lounge, a bar or a dance corner, a sign, a flag), an RV with an awning, a lit or plain dome, an art piece (a totem or a giant flower, sometimes a fire barrel), or tents. Most lots have a run of string lights on the curb, parked bikes, people hanging out (instanced crowds) and a pool of coloured light for the night. RVs, tents and hexayurts fill the middle of the block.
+- **Street signs:** a pole with two crossed blades at every intersection, the street's name over the radial's time, so `'4:30 & Carousel'` reads from both streets (24 shared blade textures for the whole city). The HUD toast and `g.region` give the same address.
+- **Day and night:** dust clouds roll down the streets with the wind by day (and gusts kick up dust around Brady); at night the string lights, LED strips, lit domes, fire barrels and the light pools make the neighbourhoods glow, and the art cars circling the Man leave light trails.
 - **DJ sets:** every theme-camp booth has a **PLAY A SET** prompt (`BurnsCamps` with `djPrompt: true`, the shared `BurnsDJ` minigame).
-- **The Thunderdome:** foam-bat bouts at 9:00 & Bonfire.
-- **Art cars:** two you can **DRIVE**, parked on the open playa by the 6:00 and 3:00 promenades (`api.artCar`). Three more circle the Man, and you can jump on and ride along.
+- **The Thunderdome (repeatable):** talk to Auntie Thunder at the 9:00 & Bonfire dome. It's World 11's bungee bout (`BW11Dome`: bounce, kick off the lattice, swing the foam bat, first to three bonks) against the dome's own bungee fighter, with the MC and the spectators cheering. If World 11's code isn't in a build, it falls back to three foam-bat rounds on the floor.
+- **The art-car race (repeatable):** talk to Racer Rae by the 6:00 promenade, take the green art car (it's quicker) and drive through ten glowing gates around the Man in under 1:40. The clock starts at the first gate, the best time is saved, and the race ends if you leave the car for 8 s.
+- **Art cars:** two you can **DRIVE**, parked on the open playa by the 6:00 and 3:00 promenades (`api.artCar`). Three more circle the Man, and you can jump on and ride along. While you drive, the camera looks past your own car.
 - **Big art:** climbable pieces with summit views on the open and deep playa (`BurnsBigArt`).
-- **Side quests from people in the city:**
-  - *Quiet Time*: Sage at Center Camp; a `reach` mission for the region `The Temple`.
-  - *The Lost Lantern*: a lamplighter on the Esplanade; a `find` mission by the galleon.
+- **Missions from people in the city** (side quests, all in the pause menu's SIDE QUESTS):
+
+| Mission | Giver | What you do | Reward |
+|---|---|---|---|
+| Quiet Time | Sage, Center Camp | reach the Temple (`reach` with `region`) | glow |
+| The Lost Lantern | a lamplighter, Esplanade | find the lantern by the galleon | glow |
+| Cold Delivery | Frosty, Center Camp | carry a bag of ice to Melty at 8:00 & Dreamer (backpack item) | glow, a pancake |
+| Lost and Found | Lou, 3:00 plaza | find a fuzzy hat, a tutu and one sock in the streets | the tutu costume |
+| Playa Paparazzi | Flash, 4:30 & Esplanade | take photos at the Man, the galleon and the rocket (ACTION) | glow |
+| Dome Raising | Bolt, 7:00 & Bonfire | bring back four dome struts | grilled cheese ×2, glow |
+| First Burn | Nell (lost first-timer) | walk her home to 2:30 & Firefly (`escort`) | glow |
+| Stop, Bike Thief! | Rudy, 5:30 & Carousel | catch the thief near 5:00 & Ember (he runs) | glow, water |
+| Round the Man | Racer Rae | win the art-car race | glow |
+| Two Burners Enter | Auntie Thunder | win a Thunderdome bout | glow |
+
 - **Glow sticks** along the Esplanade.
 
 ### 19.5 Performance
-- **Neighbourhoods:** RVs, campers, buses, hexayurts, dome tents, shade, camp frontages, flags, porta-potties and lamp posts are instanced. There are about 1,000–2,500 copies around Brady, in 30–50 batches. Two cheap stand-ins per block show the far city out to 1.4 km.
+- **Neighbourhoods:** RVs, campers, buses, hexayurts, tents, domes, shade, camp fronts, string lights, bikes, flags, porta-potties and lamp posts are instanced, most from one near-white prototype tinted per copy. There are about 1,500–2,500 copies around Brady. Two cheap stand-ins per block show the far city past 240 m, out to 1.4 km.
+- **People:** about 1,500 crowd extras live in the loaded tiles; the busiest street views draw about 120 of them in 15–25 batches and 80–110k triangles. Talkable neighbours (real actors) are one or two at some camps.
 - **Landmarks:** the theme camps use their own `lod: 'auto'` (a silhouette beyond about 150 m), and big art and the Man are built once.
-- **Measured views** (high tier): 35–100 draws and 100k–355k triangles; the busiest is the Esplanade at Root Society at night. Tile builds are spread over frames: the worst single step measured 3.5–9 ms. A finished tile's people join three per frame, and their looks come from a small pool built while the city loads.
+- **Measured views:** busy street level at night 102–126 draws and 280–400k triangles on high (medium: 102–115 draws); the Thunderdome bout about 110 draws, the race about 60. Tile builds yield a street front at a time: in the software renderer the 95th-percentile step is about 5 ms and the worst about 8 ms. A finished tile's people join three per frame.
 - **Fog and lights:** the world thins its fog (`def.env`) so the city reads across the playa, and thins it more for high cameras. `def.glowDist` (520 m here; 170 by default) lets the camps' lights show from afar at night.
+
+### 19.6 Your world's quests in the city (`BurnsOW.addQuests`)
+Any world can put quest givers, targets and mechanics in Black Rock City. The quests then run in world 500 like the city's own: in its SIDE QUESTS list, with the `!` markers, the tracker and rewards. Call `BurnsOW.addQuests` when your file loads (every `42_burns_w*` file loads after the city files):
+```js
+if (typeof BurnsOW !== 'undefined') BurnsOW.addQuests({
+  from: 17,
+  spots: { 'The Glide': '3:30 & Carousel', 'DUST FM': '8:30 & Dreamer' },   // your own named places
+  missions: [
+    { id: 'w17c_skate', name: 'The Glide', short: 'Hit all 8 rings', type: 'custom', giver: 'w17c_granny', start: 'manual',
+      requires: ['17:neighbors'],                   // a mission done in world 17 (or ids of world 500's missions)
+      unlock: g => BurnsOW.questDone('w17c_tea'),   // optional extra condition of your own
+      desc: '…', hint: 'The Glide, 3:30 & Carousel', count: 8, reward: [{ glow: 25 }],
+      onUpdate(g, m, dt) { /* your mechanic */ }, onComplete(g) { /* … */ } }
+  ],
+  people: [
+    { id: 'w17c_granny', at: 'The Glide', type: 'burner', seed: 2, name: 'GRANNY GRIP', yaw: 0,
+      quest: 'w17c_skate', offer: ['You walk? Every day? With your FEET?'], thanks: ['Keep the skates.'] },
+    { id: 'w17c_kev', at: 'DUST FM', type: 'burner', seed: 9, name: 'KOMBUCHA KEV', talk(g, a) { /* your own talk */ },
+      when: g => !BurnsOW.questDone('w17c_radio') }
+  ],
+  pickups: [{ kind: 'glowstick', at: '3:45 & Carousel', mission: 'w17c_skate', label: 'RING' }],
+  build(api, g) { /* anything else, with the ordinary api: a rink, an antenna, triggers, ACTION prompts */ },
+  update(g, dt) {}, drawSprites(g, R) {}, drawHUD(ctx, g, W, H, S) {}   // optional, every frame in the city
+});
+```
+- **Addresses** (`at`, `spots` and `BURNS_OW.address(a)`, which returns `[x, z]`): `'4:30 & Carousel'` (or `'4:30 & C'`: just on the city side of that street), `'9:00 Plaza'`, a story place (`'The Heart Car'`, `'the Temple'`), a theme camp's entrance (`'The Deep End'`, `'Thunderdome'`, `'Center Camp'`), `'The Man'`, `'The Temple'`, one of your `spots`, or `[x, z]`.
+- **Missions** are ordinary missions (§7) pushed into world 500. Prefix their ids (`'w17c_…'`); a taken id is skipped with a warning. Side quests default to no Burn Token. When one finishes, the save flag `500:q:<id>` is set, so `BurnsOW.questDone(id)` is true anywhere in the game (your world can react to it), and your own `onComplete` still runs.
+- **People** are `api.npc` definitions placed at an address. With `quest`, they get the standard talk: the offer (`offer` lines, then the mission starts and is tracked), a reminder with its `hint` while it's active, then `thanks`. Give `talk(g, actor)` to do your own. `when(g)` false leaves them out of this visit.
+- **Pickups** appear only while their mission is active (`gate: false` keeps them always).
+- **Hooks:** `build` runs once when the city builds (after its own people); `update`, `drawSprites` and `drawHUD` run every frame in the city. Each is guarded: an error is logged once and the city carries on.
+- **Places in the city:** the heart car (W7's place, about 1:30 and 205 m out on the open playa), the Deep End (3:15 on the Esplanade), Center Camp (6:00), the Thunderdome (9:00 & Bonfire) and every story place already exist. Name a new one with `spots` and build it in `build`.
+- `BURNS_OW.at(hour, r)` and `BURNS_OW.RINGS` (the Esplanade, then A to F) help place things; `BURNS_OW.region(x, z)` names any spot.

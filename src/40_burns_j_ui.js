@@ -87,7 +87,7 @@ const BurnsUI = {
     // letterbox
     g.lbK = BurnsM.damp(g.lbK || 0, cine && g.cine.letter ? 1 : 0, 6, fdt);
     if (g.lbK > 0.01) { const bh = H * 0.1 * g.lbK; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh); }
-    if (cine && !g.dialog.open) { const sx = W - S.r - 80, sy = H - S.b - 36 - (g.lbK > 0.5 ? 0 : 0); this.pill(ctx, sx, sy, 72, 28, 'rgba(10,6,20,0.6)', 'rgba(255,255,255,0.3)'); this.text(ctx, 'SKIP ▶▶', sx + 36, sy + 14, 10, '#ffffff', { stroke: false }); g.skipRect = { x: sx, y: sy, w: 72, h: 28 }; } else g.skipRect = null;
+    if (cine && !g.dialog.open && !window.__burnsHideHUD) { const sx = W - S.r - 80, sy = H - S.b - 36 - (g.lbK > 0.5 ? 0 : 0); this.pill(ctx, sx, sy, 72, 28, 'rgba(10,6,20,0.6)', 'rgba(255,255,255,0.3)'); this.text(ctx, 'SKIP ▶▶', sx + 36, sy + 14, 10, '#ffffff', { stroke: false }); g.skipRect = { x: sx, y: sy, w: 72, h: 28 }; } else g.skipRect = null;
     if (g.state === 'play') this.drawDayCard(ctx, g, fdt);
     this.drawBanners(ctx, g, fdt);
     // warning
