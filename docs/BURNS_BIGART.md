@@ -282,9 +282,20 @@ The burn saves itself (`persist`), so the home hub shows the smouldering pile on
 
 Measured in the sandbox at scale 1 (vertex counts are static geometry merged into the 48 m chunks; each piece adds 1–3 static draws when in view plus its movers, which share the world's skinned groups).
 
-COST_TABLE
+| Piece | Static vertices / triangles | Mover vertices (movers) | Colliders | Draw calls added in view |
+|---|---|---|---|---|
+| Knotted Semi | 19.6k / 28.3k | none | 45 | +2 |
+| Pump Jack Colossus | 5.9k / 10.3k | 5.0k (beam, crank, 2 pitman halves, carrier) | 12 | +2 |
+| Sleeping Giant | 10.0k / 17.8k | 2.5k (breathing torso) | 31 | +3 |
+| Landlocked Galleon | 15.5k / 27.0k | 0.7k (zip trolley) | 21 | +3 |
+| Stick Cathedral | 11.4k / 21.0k (its own chunk) | 2.9k (collapse copies + pile, hidden until the burn) | 14 | +1 |
+| Glowshroom Grove | 9.6k / 15.7k | none | 28 | +1 |
+| Leaning Lighthouses | 13.2k / 22.6k | 0.7k (hidden bridge) | 304 (stair steps + rails) | +3 to +4, +1 per visible darkwad |
+| Retro Rocket | 8.4k / 14.6k | 0.4k (access arm) | 27 | +2 |
 
-All pieces stay inside the guide's budget: placing one or two in a world adds a few thousand to ~40k triangles and 2–6 draw calls in view. The per-frame sprite effects add < 250 quads in the worst case (Knotted Semi chase lights at night). Each piece's update is O(1) apart from the lighthouses' reveal checks (O(beams × revealables)).
+Measured with `glow: false, sign: false`; the baseline empty world draws 7 calls. Movers join the world's shared skinned groups (one draw per group of up to ~32–64 objects), so they rarely add a draw of their own. Glow sticks add 8–20 pickups per piece (shared pickup groups). The cathedral burn adds 26 spectators (one draw each when visible) and up to ~2,000 particles at its peak.
+
+All pieces stay inside the guide's budget: one or two pieces add roughly 10k–30k triangles and 1–4 draw calls in view. The per-frame sprite effects add < 250 quads in the worst case (Knotted Semi chase lights at night). Each piece's update is O(1) apart from the lighthouses' reveal checks (O(beams × revealables)).
 
 ---
 

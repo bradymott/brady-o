@@ -46,7 +46,9 @@ const BurnsUI = {
     const meta = BurnsWorlds.meta(g.worldId);
     this.text(ctx, BurnsWorlds.label(g.worldId).toUpperCase(), W / 2, H * 0.38, 14, '#ffd84a');
     this.text(ctx, (meta.name || '').toUpperCase(), W / 2, H * 0.47, Math.min(34, W / 16), '#ffffff', { glow: '#ff4fd8' });
-    this.text(ctx, 'Loading the playa' + '.'.repeat(1 + Math.floor(g.t * 4) % 3), W / 2, H * 0.58, 13, 'rgba(255,255,255,0.75)', { ui: true, stroke: false });
+    const day = BurnsWorlds.day(g.worldId);
+    if (day) this.text(ctx, day.toUpperCase(), W / 2, H * 0.47 + Math.min(34, W / 16) * 0.5 + 18, 14, '#ffb0d8', { glow: '#ff4fd8' });
+    this.text(ctx, 'Loading the playa' + '.'.repeat(1 + Math.floor(g.t * 4) % 3), W / 2, H * 0.64, 13, 'rgba(255,255,255,0.75)', { ui: true, stroke: false });
   },
   drawNoGL(ctx, g) {
     const W = Game.cssW, H = Game.cssH;
@@ -83,6 +85,7 @@ const BurnsUI = {
     g.lbK = BurnsM.damp(g.lbK || 0, cine && g.cine.letter ? 1 : 0, 6, fdt);
     if (g.lbK > 0.01) { const bh = H * 0.1 * g.lbK; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh); }
     if (cine && !g.dialog.open) { const sx = W - S.r - 80, sy = H - S.b - 36 - (g.lbK > 0.5 ? 0 : 0); this.pill(ctx, sx, sy, 72, 28, 'rgba(10,6,20,0.6)', 'rgba(255,255,255,0.3)'); this.text(ctx, 'SKIP ▶▶', sx + 36, sy + 14, 10, '#ffffff', { stroke: false }); g.skipRect = { x: sx, y: sy, w: 72, h: 28 }; } else g.skipRect = null;
+    if (g.state === 'play') this.drawDayCard(ctx, g, fdt);
     this.drawBanners(ctx, g, fdt);
     // warning
     if (g.warnT > 0 && g.warnText) { const a = 0.6 + 0.4 * Math.sin(g.time * 18); this.text(ctx, g.warnText, W / 2, H * 0.3, Math.min(40, W / 14), `rgba(255,${80 + 100 * a | 0},80,${a})`, { glow: '#ff2a2a' }); this.text(ctx, g.warnT.toFixed(1), W / 2, H * 0.3 + 34, 18, '#ffffff'); }
@@ -133,7 +136,7 @@ const BurnsUI = {
     }
     // nearby pickup labels
     for (const P of g.pickups.items) {
-      if (P.taken || !P.label || (P.hidden && !(p.power === 'lsd' && p.powerT > 0))) continue;
+      if (P.taken || !P.label || (P.score && !g.gsOn) || (P.hidden && !(p.power === 'lsd' && p.powerT > 0))) continue;
       const d = Math.hypot(P.x - p.x, P.z - p.z); if (d > 9) continue;
       if (R.project(P.x, P.y0 + 0.75, P.z, W, H, o)) this.text(ctx, P.label, o.x, o.y, 12, '#ffffff', { glow: '#ff4fd8' });
     }
@@ -162,6 +165,19 @@ const BurnsUI = {
     row('glowstick', String(g.glow), '#b8ff9a');
     row('token', `${BurnsSave.tokenCount(g.worldId)}/${BurnsWorlds.tokenTotal(g.worldId)}`, '#ffd84a');
     row('photo', `${BurnsSave.photoCount(g.worldId)}/3`, '#ffb0d8');
+    // backpack: a tappable pill (G key on keyboards)
+    if (g.packVisible && g.packVisible()) {
+      const n = BurnsPack.total(), fl = g.packFlash > 0 ? g.packFlash : 0;
+      if (fl > 0) g.packFlash = Math.max(0, fl - (g.lastFdt || 1 / 60));
+      const k = fl > 0 ? 1 + Math.sin(fl * 16) * 0.07 : 1;
+      ctx.save(); ctx.translate(x + 43, y + 12); ctx.scale(k, k);
+      this.pill(ctx, -43, -12, 86, 24, n ? 'rgba(70,16,60,0.7)' : 'rgba(10,6,24,0.55)', fl > 0 ? '#ff9ad8' : 'rgba(255,154,216,0.55)');
+      this.bagGlyph(ctx, -30, 0.5, 19, '#ff8ad0');
+      this.text(ctx, `BAG ${n}`, 7, 0.5, 12, '#ffd0f4');
+      ctx.restore();
+      const hb = g.hudBtns && g.hudBtns.pack; if (hb) { hb.x = x + 43; hb.y = y + 12; hb.r = 22; }
+      y += 28;
+    }
     // power-up timer
     if (p.power && p.powerT > 0) {
       const P = BURNS_POWERUPS[p.power], k = p.powerT / (p.powerMax || P.dur), cx = x + 22, cy = y + 24;
@@ -227,6 +243,36 @@ const BurnsUI = {
     ctx.fillStyle = 'rgba(10,6,24,0.8)'; for (let i = 1; i < b.maxHp; i++) ctx.fillRect(x + bw * i / b.maxHp - 1, y + 18, 2, 12);
     if (b.st === 'stunned') this.text(ctx, 'HE\'S DOWN! HIT THE GLOWING HEAD!', W / 2, y + 42, 12, '#ffe24a');
   },
+  // font size that makes text fit maxW (never below 55% of the asked size)
+  fitSize(ctx, s, size, maxW, ui) { ctx.save(); ctx.font = `${ui ? '600 ' : ''}${size}px ${ui ? FONT_UI : FONT_DISPLAY}`; const w = ctx.measureText(String(s)).width; ctx.restore(); return w > maxW ? Math.max(size * 0.55, size * maxW / w) : size; },
+  // centred text that wraps to at most n lines (shrinking a little first)
+  textLines(ctx, s, x, y, size, col, maxW, n, o) {
+    o = o || {}; s = String(s || ''); if (!s) return 0;
+    ctx.save(); ctx.font = `${o.ui ? '600 ' : ''}${size}px ${o.ui ? FONT_UI : FONT_DISPLAY}`; let L = this.wrap(ctx, s, maxW); ctx.restore();
+    if (L.length > n) { size = Math.max(size * 0.8, 9); ctx.save(); ctx.font = `${o.ui ? '600 ' : ''}${size}px ${o.ui ? FONT_UI : FONT_DISPLAY}`; L = this.wrap(ctx, s, maxW); ctx.restore(); }
+    L = L.slice(0, n);
+    L.forEach((l, i) => this.text(ctx, l, x, y + i * (size + 3), size, col, o));
+    return L.length;
+  },
+  // the day-of-the-week card at the start of a visit ("TUESDAY NIGHT · World 6 · The Orgy Dome")
+  drawDayCard(ctx, g, fdt) {
+    if (!(g.dayCardT >= 0)) return;
+    const day = BurnsWorlds.day(g.worldId); if (!day) { g.dayCardT = -1; return; }
+    if (g.fade > 0.6) return;   // wait for the fade-in
+    g.dayCardT += fdt; const t = g.dayCardT, D = 3.8;
+    if (t > D) { g.dayCardT = -1; return; }
+    const W = Game.cssW, H = Game.cssH, a = clamp(Math.min(t / 0.45, (D - t) / 0.7), 0, 1);
+    const y = Math.max(H * 0.2, H * 0.1 * (g.lbK || 0) + 64);
+    ctx.save(); ctx.globalAlpha = a;
+    const bh = 84, gr = ctx.createLinearGradient(0, y - bh / 2, 0, y + bh / 2);
+    gr.addColorStop(0, 'rgba(20,8,36,0)'); gr.addColorStop(0.5, 'rgba(20,8,36,0.62)'); gr.addColorStop(1, 'rgba(20,8,36,0)');
+    ctx.fillStyle = gr; ctx.fillRect(0, y - bh / 2, W, bh);
+    const s = 1 + (1 - easeOut(clamp(t / 0.55, 0, 1))) * 0.22, size = this.fitSize(ctx, day.toUpperCase(), Math.min(36, W / 13), W - 40) * s;
+    this.text(ctx, day.toUpperCase(), W / 2, y - 9, size, '#ffd84a', { glow: '#ff9a2a' });
+    const meta = BurnsWorlds.meta(g.worldId), sub = `${BurnsWorlds.label(g.worldId)} \u00b7 ${meta.name}`;
+    this.text(ctx, sub, W / 2, y + 22, this.fitSize(ctx, sub, 13, W - 40, true), '#ffffff', { ui: true });
+    ctx.restore();
+  },
   drawBanners(ctx, g, fdt) {
     const W = Game.cssW, H = Game.cssH;
     const b = g.banners[0]; if (!b) return;
@@ -242,11 +288,13 @@ const BurnsUI = {
       ctx.fillStyle = gr; ctx.fillRect(0, y - bh / 2, W, bh);
       if (b.icon) this.icon(ctx, b.icon, W / 2, y - 52 - (1 - inK) * 20, 56);
       const s = 1 + (1 - inK) * 0.4;
-      this.text(ctx, b.title, W / 2, y - 6, Math.min(40, W / 13) * s, b.col, { glow: b.col });
-      this.text(ctx, b.sub, W / 2, y + 26, 13, '#ffffff', { ui: true });
+      // titles shrink and subtitles wrap (2 lines) so long text never runs off a portrait screen
+      this.text(ctx, b.title, W / 2, y - 6, this.fitSize(ctx, b.title, Math.min(40, W / 13), W - 28) * s, b.col, { glow: b.col });
+      this.textLines(ctx, b.sub, W / 2, y + 26, 13, '#ffffff', W - 36, 2, { ui: true });
     } else {
-      this.text(ctx, b.title, W / 2 + (1 - inK) * 40, y, b.small ? 20 : 26, b.col, { glow: b.col });
-      if (b.sub) this.text(ctx, b.sub, W / 2, y + (b.small ? 20 : 26), 12, '#ffffff', { ui: true });
+      const ts = this.fitSize(ctx, b.title, b.small ? 20 : 26, W - 28);
+      this.text(ctx, b.title, W / 2 + (1 - inK) * 40, y, ts, b.col, { glow: b.col });
+      if (b.sub) this.textLines(ctx, b.sub, W / 2, y + (b.small ? 20 : 26), 12, '#ffffff', W - 36, 2, { ui: true });
     }
     ctx.restore();
   },
@@ -324,6 +372,7 @@ const BurnsUI = {
     const W = Game.cssW, H = Game.cssH, sv = BurnsSave.get(), st = Save.data.settings, bs = sv.settings;
     const bw = Math.min(260, W * 0.62), x = (W - bw) / 2;
     const list = [];
+    if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') return this.buildMenu(g);
     if (g.pauseTab === 'missions') {
       list.push({ x: Math.max(14, insets.l + 8), y: Math.max(12, insets.t + 6), w: 92, h: 38, label: '◀ BACK', fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
     } else if (g.pauseTab === 'settings') {
@@ -337,36 +386,193 @@ const BurnsUI = {
       list.push(row('SCREEN SHAKE', st.shake !== false ? 'ON' : 'OFF', () => { st.shake = st.shake === false; }, 5));
       list.push({ x, y: H * 0.2 + 6 * 46 + 6, w: bw, h: 40, label: '◀ BACK', primary: true, fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
     } else {
-      let y = Math.max(insets.t + 76, H / 2 - 110);
-      const b = (label, fn, primary) => { list.push({ x, y, w: bw, h: 42, label, primary, fn }); y += 50; };
-      b('RESUME', () => g.closePause(), true);
-      b(BurnsSave.hasItem('www') ? 'WHAT WHERE WHEN' : 'MISSIONS', () => { g.pauseTab = 'missions'; g.buildPause(); burnsSfx('map_open'); });
-      b('WORLD SELECT', () => { g.paused = false; g.quit(true); });
-      b('SETTINGS', () => { g.pauseTab = 'settings'; g.buildPause(); });
-      b('QUIT TO TITLE', () => { g.paused = false; g.quit(false); });
+      const items = [['RESUME', () => g.closePause(), true]];
+      items.push([BurnsSave.hasItem('www') ? 'WHAT WHERE WHEN' : 'MISSIONS', () => { g.pauseTab = 'missions'; g.buildPause(); burnsSfx('map_open'); }]);
+      if (g.missions.side().length) items.push(['SIDE QUESTS', () => { g.boardTab = g.boardTab || 'available'; g.pauseTab = 'board'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]);
+      if (g.packVisible()) { const n = BurnsPack.total(); items.push([n ? `BACKPACK (${n})` : 'BACKPACK', () => { g.pauseTab = 'pack'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]); }
+      items.push(['WORLD SELECT', () => { g.paused = false; g.quit(true); }]);
+      items.push(['SETTINGS', () => { g.pauseTab = 'settings'; g.buildPause(); }]);
+      items.push(['QUIT TO TITLE', () => { g.paused = false; g.quit(false); }]);
+      // one column, or two when the screen is too short (landscape phones)
+      const cols = items.length * 50 > H - Math.max(insets.t + 76, 60) - 24 ? 2 : 1, rows = Math.ceil(items.length / cols);
+      const cw = cols === 2 ? Math.min(240, (W - 70) / 2) : bw, x0 = (W - (cols * cw + (cols - 1) * 14)) / 2;
+      const y0 = Math.max(insets.t + 76, H / 2 - rows * 25 + 15);
+      items.forEach((it, i) => { const c = i % cols, r = Math.floor(i / cols); list.push({ x: x0 + c * (cw + 14), y: y0 + r * 50, w: cw, h: 42, label: it[0], fn: it[1], primary: it[2] }); });
     }
     list.focus = 0;
     return list;
   },
   updatePause(g, dt) {
-    if (Input.pausePressed) { if (g.pauseTab !== 'main') { g.pauseTab = 'main'; g.buildPause(); } else g.closePause(); return; }
+    if (Input.pausePressed) { if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') g.menuBack(); else if (g.pauseTab !== 'main') { g.pauseTab = 'main'; g.buildPause(); } else g.closePause(); return; }
     const hit = UI.hitButtons(g.pauseUI);
-    if (hit) { burnsSfx('select'); hit.fn(); }
+    if (hit) { burnsSfx('select'); hit.fn(); return; }
     if (g.pauseTab === 'missions') { for (const t of Input.taps) { if (t.y > Game.cssH * 0.15) g.missionScroll = ((g.missionScroll || 0) + (t.y > Game.cssH * 0.6 ? 1 : -1)); } }
   },
   drawPause(ctx, g) {
     const W = Game.cssW, H = Game.cssH;
     ctx.fillStyle = 'rgba(6,3,14,0.72)'; ctx.fillRect(0, 0, W, H);
     if (g.pauseTab === 'missions') { this.drawMissions(ctx, g); UI.drawButtons(ctx, g.pauseUI); return; }
+    if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') { this.drawMenu(ctx, g); return; }
     const title = g.pauseTab === 'settings' ? 'SETTINGS' : 'PAUSED';
     if (g.pauseTab !== 'settings') {
-      const L = g.pauseUI, top = L[0].y - 66, bot = L[L.length - 1].y + L[L.length - 1].h + 16;
-      const pw = Math.min(320, W * 0.8);
+      const L = g.pauseUI; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+      for (const b of L) { x0 = Math.min(x0, b.x); x1 = Math.max(x1, b.x + b.w); y0 = Math.min(y0, b.y); y1 = Math.max(y1, b.y + b.h); }
+      const top = y0 - 66, bot = y1 + 16, pw = Math.max(Math.min(320, W * 0.8), x1 - x0 + 40);
       UI.panel(ctx, W / 2 - pw / 2, top, pw, bot - top);
       UI.title(ctx, title, W / 2, top + 26, 24);
-      const meta = BurnsWorlds.meta(g.worldId);
-      this.text(ctx, `${BurnsWorlds.label(g.worldId)} · ${meta.name}`, W / 2, top + 50, 11, 'rgba(255,255,255,0.75)', { ui: true, stroke: false });
+      const meta = BurnsWorlds.meta(g.worldId), day = BurnsWorlds.day(g.worldId);
+      this.text(ctx, `${BurnsWorlds.label(g.worldId)} · ${meta.name}${day ? ' · ' + day : ''}`, W / 2, top + 50, 11, 'rgba(255,255,255,0.75)', { ui: true, stroke: false });
     } else UI.title(ctx, title, W / 2, Math.max(36, insets.t + 30), 24);
+    UI.drawButtons(ctx, g.pauseUI);
+  },
+  /* ---------- sub-menus: backpack, quest board, trade window ---------- */
+  menuFrame(g) {
+    const W = Game.cssW, H = Game.cssH, S = this.safe(), tab = g.pauseTab, portrait = H > W;
+    const top = Math.max(12, insets.t + 6);
+    const cw = Math.min(W - S.l - S.r - 12, 680), x = (W - cw) / 2;
+    const rowH = portrait ? 78 : 58;
+    const listY = top + (tab === 'board' ? 96 : 68);
+    const listB = H - Math.max(12, insets.b + 6) - (tab === 'trade' ? 58 : 4);
+    const maxRows = Math.max(1, Math.floor((listB - listY + 6) / (rowH + 6)));
+    return { W, H, top, cw, x, rowH, listY, listB, maxRows, portrait, btnW: portrait ? 84 : 96 };
+  },
+  // the rows a sub-menu shows: [{kind, ...}]
+  menuRows(g) {
+    const tab = g.pauseTab;
+    if (tab === 'pack') return BurnsPack.list().map(e => ({ kind: 'pack', id: e.id, n: e.n, def: e.def }));
+    if (tab === 'board') {
+      const want = g.boardTab || 'available', order = { active: 0, available: 1, locked: 2, done: 3 };
+      return g.missions.side().filter(m => want === 'available' ? (m.state === 'available' || m.state === 'locked') : m.state === want)
+        .sort((a, b) => order[a.state] - order[b.state]).map(m => ({ kind: 'quest', m }));
+    }
+    if (tab === 'trade') {
+      const T = g.tradeCtx || { trades: [] }, a = T.actor;
+      return (T.trades || []).map((t, i) => ({ kind: 'trade', t, i, a })).filter(r => !r.t.when || r.t.when(g, r.a));
+    }
+    return [];
+  },
+  buildMenu(g) {
+    const F = this.menuFrame(g), tab = g.pauseTab, list = [];
+    list.push({ x: Math.max(14, insets.l + 8), y: F.top, w: 92, h: 38, label: '◀ BACK', fn: () => g.menuBack() });
+    if (tab === 'board') {
+      const tabs = [['available', 'AVAILABLE'], ['active', 'ACTIVE'], ['done', 'DONE']], tw = Math.min(150, (F.cw - 24) / 3);
+      const side = g.missions.side(), cnt = { available: side.filter(m => m.state === 'available').length, active: side.filter(m => m.state === 'active').length, done: side.filter(m => m.state === 'done').length };
+      tabs.forEach((tb, i) => list.push({ x: F.W / 2 - (tw * 3 + 16) / 2 + i * (tw + 8), y: F.top + 50, w: tw, h: 34, size: 11, label: `${tb[1]} ${cnt[tb[0]]}`, primary: (g.boardTab || 'available') === tb[0], fn: () => { g.boardTab = tb[0]; g.menuScroll = 0; g.buildPause(); } }));
+    }
+    const rows = this.menuRows(g);
+    const start = clamp(g.menuScroll || 0, 0, Math.max(0, rows.length - F.maxRows)); g.menuScroll = start;
+    g.menuVis = rows.slice(start, start + F.maxRows);
+    g.menuVis.forEach((r, i) => { r.y = F.listY + i * (F.rowH + 6); });
+    const bx = F.x + F.cw - F.btnW - 10, bh = 36;
+    for (const r of g.menuVis) {
+      const by = r.y + (F.rowH - bh) / 2;
+      if (r.kind === 'pack') {
+        if (BurnsPack.usable(r.id)) list.push({ x: bx, y: by, w: F.btnW, h: bh, label: 'USE', size: 13, primary: true, fn: () => { g.closePause(); g.pack.use(r.id); } });
+      } else if (r.kind === 'quest') {
+        const m = r.m, d = m.def;
+        if (m.state === 'available' && (d.start === 'board' || (!d.giver && d.start !== 'auto' && d.start !== 'trigger'))) list.push({ x: bx, y: by, w: F.btnW, h: bh, label: 'ACCEPT', size: 12, primary: true, fn: () => g.boardAccept(m.id) });
+        else if (m.state === 'active') { const tr = g.missions.tracked === m.id; list.push({ x: bx, y: by, w: F.btnW, h: bh, label: tr ? 'TRACKED' : 'TRACK', size: 11, disabled: tr, fn: () => { g.missions.track(m.id); g.buildPause(); } }); }
+      } else if (r.kind === 'trade') {
+        const done = g.tradeDone(r.a, r.t, r.i), ok = !done && g.canPay(r.t.give);
+        list.push({ x: bx, y: by, w: F.btnW, h: bh, label: done ? 'TRADED' : 'TRADE', size: 12, primary: ok, disabled: !ok, fn: () => g.doTrade(r.a, r.t, r.i) });
+      }
+    }
+    if (rows.length > F.maxRows) {
+      const ax = F.x + F.cw - 100;
+      list.push({ x: ax, y: F.top, w: 44, h: 38, label: '▲', disabled: start <= 0, fn: () => { g.menuScroll = Math.max(0, start - Math.max(1, F.maxRows - 1)); g.buildPause(); } });
+      list.push({ x: ax + 50, y: F.top, w: 44, h: 38, label: '▼', disabled: start >= rows.length - F.maxRows, fn: () => { g.menuScroll = start + Math.max(1, F.maxRows - 1); g.buildPause(); } });
+    }
+    if (tab === 'trade') list.push({ x: F.W / 2 - 80, y: F.H - Math.max(12, insets.b + 6) - 48, w: 160, h: 44, label: 'DONE', primary: true, fn: () => g.menuBack() });
+    list.focus = tab === 'trade' ? list.length - 1 : 0;
+    return list;
+  },
+  // a tinted baggie with the item's atlas icon (or its initial)
+  itemIcon(ctx, d, x, y, s) {
+    ctx.save(); ctx.translate(x, y);
+    ctx.fillStyle = 'rgba(244,246,255,0.94)'; rr(ctx, -s * 0.36, -s * 0.46, s * 0.72, s * 0.92, s * 0.12); ctx.fill();
+    ctx.fillStyle = d.col || '#ffd84a'; rr(ctx, -s * 0.36, -s * 0.46, s * 0.72, s * 0.16, s * 0.06); ctx.fill();
+    ctx.strokeStyle = 'rgba(20,8,30,0.5)'; ctx.lineWidth = 1; rr(ctx, -s * 0.36, -s * 0.46, s * 0.72, s * 0.92, s * 0.12); ctx.stroke();
+    ctx.restore();
+    if (d.icon && BURNS_ATLAS.icon(d.icon)) this.icon(ctx, d.icon, x, y + s * 0.08, s * 0.56);
+    else this.text(ctx, String(d.name || '?').charAt(0), x, y + s * 0.08, s * 0.42, shade(d.col || '#888888', -0.35), { stroke: false });
+  },
+  bagGlyph(ctx, x, y, s, col) {
+    ctx.save(); ctx.translate(x, y); const k = s / 20; ctx.scale(k, k);
+    ctx.strokeStyle = 'rgba(20,8,30,0.9)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, -7, 4.5, Math.PI, 0); ctx.stroke();
+    ctx.fillStyle = col; rr(ctx, -8, -7, 16, 17, 5); ctx.fill(); ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.fillStyle = shade(col, -0.3); rr(ctx, -8, -7, 16, 7, 4); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; rr(ctx, -4.5, 2, 9, 5.5, 2); ctx.fill();
+    ctx.restore();
+  },
+  drawMenu(ctx, g) {
+    const F = this.menuFrame(g), W = F.W, H = F.H, tab = g.pauseTab;
+    let title = '', sub = '';
+    if (tab === 'pack') {
+      title = 'BACKPACK';
+      sub = BurnsSave.groundScore() ? 'Ground scores and goodies. USE one when the moment is right.' : 'Sunscreen, a mystery granola bar and good intentions.';
+    } else if (tab === 'board') {
+      const side = g.missions.side();
+      title = (g.def.boardTitle || 'QUEST BOARD').toUpperCase();
+      sub = `${side.filter(m => m.state === 'done').length} / ${side.length} side quests done`;
+    } else {
+      const a = g.tradeCtx && g.tradeCtx.actor;
+      title = ((a && ((a.def && a.def.name) || (a.type && g.typeName(a.type)))) || 'TRADE').toUpperCase();
+      sub = `Wants to trade · You carry ${g.glow} glow stick${g.glow === 1 ? '' : 's'}`;
+    }
+    UI.title(ctx, title, W / 2, F.top + 19, Math.min(22, W / 18));
+    this.text(ctx, sub, W / 2, F.top + 42, 11, 'rgba(255,255,255,0.8)', { ui: true, stroke: false });
+    const vis = g.menuVis || [];
+    if (!vis.length) {
+      const msg = tab === 'pack' ? (BurnsSave.groundScore() ? 'Empty. Ground scores you pick up land in here.' : 'Nothing useful in here yet.') : tab === 'board' ? ({ available: 'No new side quests right now.', active: 'No side quests in progress.', done: 'Nothing done yet. Get out there!' })[g.boardTab || 'available'] : 'Nothing to trade right now.';
+      this.text(ctx, msg, W / 2, (F.listY + F.listB) / 2, 13, '#ffd0f4', { ui: true, stroke: false });
+    }
+    const tx = F.x + 50, tw = F.cw - 50 - F.btnW - 26, lines = F.portrait ? 2 : 1;
+    const para = (s, x, y, w, col, n, size) => {
+      ctx.save(); ctx.font = `${size || 11}px ${FONT_UI}`; ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const L = this.wrap(ctx, s, w); const out = L.slice(0, n);
+      if (L.length > n && out.length) { let l = out[out.length - 1]; while (l.length > 4 && ctx.measureText(l + '…').width > w) l = l.slice(0, -1); out[out.length - 1] = l + '…'; }
+      out.forEach((l, k) => ctx.fillText(l, x, y + k * 13)); ctx.restore(); return out.length;
+    };
+    for (const r of vis) {
+      const y = r.y, h = F.rowH;
+      let bg = 'rgba(255,255,255,0.07)';
+      if (r.kind === 'quest' && r.m.state === 'active') bg = 'rgba(56,242,255,0.14)';
+      if (r.kind === 'trade' && g.tradeDone(r.a, r.t, r.i)) bg = 'rgba(122,255,90,0.08)';
+      ctx.fillStyle = bg; rr(ctx, F.x, y, F.cw, h, 10); ctx.fill();
+      if (r.kind === 'pack') {
+        const d = r.def;
+        this.itemIcon(ctx, d, F.x + 25, y + h / 2, 36);
+        this.text(ctx, d.name + (r.n > 1 ? `  ×${r.n}` : ''), tx, y + 15, 12, d.col || '#ffffff', { align: 'left' });
+        para(d.desc || (d.kind === 'quest' ? 'Quest item.' : ''), tx, y + 33, tw, 'rgba(255,255,255,0.78)', lines);
+        if (!BurnsPack.usable(r.id)) this.text(ctx, d.kind === 'quest' ? 'QUEST ITEM' : 'FOR TRADING', F.x + F.cw - F.btnW / 2 - 10, y + h / 2, 9, 'rgba(255,255,255,0.55)', { stroke: false });
+      } else if (r.kind === 'quest') {
+        const m = r.m, d = m.def, locked = m.state === 'locked', hide = locked || (d.secret && m.state === 'available');
+        ctx.save(); ctx.globalAlpha = m.state === 'done' ? 1 : d.token ? 0.9 : 0.5;
+        if (d.token) this.icon(ctx, 'token', F.x + 25, y + h / 2, 26); else this.bagGlyph(ctx, F.x + 25, y + h / 2, 22, m.state === 'done' ? '#7aff5a' : '#ffb0d8');
+        ctx.restore();
+        this.text(ctx, hide ? '???' : d.name, tx, y + 13, 12, '#ffffff', { align: 'left' });
+        const giver = d.giver && g.actor(d.giver), gname = giver ? ((giver.def && giver.def.name) || g.typeName(giver.type)) : null;
+        let desc = locked ? (d.lockedDesc || 'Do other quests first.') : hide ? 'A secret. Keep exploring.' : (d.desc || '');
+        if (!hide && d.hint) desc += ' · ' + d.hint;
+        const n = para(desc, tx, y + 29, tw, 'rgba(255,255,255,0.78)', lines);
+        const rw = d.reward ? BurnsGoods.text(d.reward) : '';
+        const foot = m.state === 'available' && gname && d.start !== 'board' ? `Talk to ${gname}` + (rw ? ' · ' : '') : '';
+        if (foot || rw || d.token) para((foot ? foot : '') + (rw ? 'REWARD: ' + rw : '') + (d.token ? (rw ? ' + ' : 'REWARD: ') + 'BURN TOKEN' : ''), tx, y + 29 + n * 13 + 2, tw, foot ? '#ffd84a' : '#9aff7a', 1);
+        if (m.state === 'done') this.text(ctx, '✓ DONE', F.x + F.cw - F.btnW / 2 - 10, y + h / 2, 11, '#7aff5a', { stroke: false });
+        else if (m.state === 'available' && !(d.start === 'board' || (!d.giver && d.start !== 'auto' && d.start !== 'trigger'))) this.text(ctx, gname ? 'SEE ' + gname.split(' ')[0] : 'FIND IT', F.x + F.cw - F.btnW / 2 - 10, y + h / 2, 9, '#ffd84a', { stroke: false });
+      } else if (r.kind === 'trade') {
+        const t = r.t, done = g.tradeDone(r.a, r.t, r.i);
+        const give = BurnsGoods.list(t.give), gd = give.find(e => e.k === 'pack');
+        this.itemIcon(ctx, gd ? BurnsPack.get(gd.id) : { name: '*', col: '#b8ff9a', icon: 'glowstick' }, F.x + 25, y + h / 2, 34);
+        const top = t.label ? t.label : null;
+        let yy = y + (top ? 12 : 17);
+        if (top) { this.text(ctx, top, tx, yy, 11, '#ffffff', { align: 'left', ui: true }); yy += 16; }
+        para('GIVE  ' + (BurnsGoods.text(t.give) || 'NOTHING'), tx, yy, tw, '#ff9ad8', 1, 12); yy += 16;
+        para('GET  ' + (BurnsGoods.text(t.get) || 'GOOD VIBES'), tx, yy, tw, '#9aff7a', 1, 12);
+        if (!done && !g.canPay(t.give) && F.rowH > 64) para('Need ' + BurnsGoods.missing(g, t.give), tx, yy + 15, tw, 'rgba(255,255,255,0.6)', 1, 10);
+      }
+    }
     UI.drawButtons(ctx, g.pauseUI);
   },
   drawMissions(ctx, g) {
@@ -374,7 +580,7 @@ const BurnsUI = {
     UI.title(ctx, www ? 'WHAT WHERE WHEN' : 'MISSIONS', W / 2, Math.max(34, insets.t + 28), 22);
     const meta = BurnsWorlds.meta(g.worldId);
     this.text(ctx, `${BurnsWorlds.label(g.worldId)}: ${meta.name} · Tokens ${BurnsSave.tokenCount(g.worldId)}/${BurnsWorlds.tokenTotal(g.worldId)} · Photos ${BurnsSave.photoCount(g.worldId)}/3`, W / 2, Math.max(56, insets.t + 50), 11, 'rgba(255,255,255,0.8)', { ui: true, stroke: false });
-    const list = g.missions.list.filter(m => www || m.state !== 'locked');
+    const list = g.missions.list.filter(m => !m.def.side && (www || m.state !== 'locked'));
     const cw = Math.min(W - 40, 640), x = (W - cw) / 2, rowH = W > H ? 46 : 58;
     const maxRows = Math.floor((H - 110) / (rowH + 6)), start = clamp(g.missionScroll || 0, 0, Math.max(0, list.length - maxRows));
     g.missionScroll = start;
