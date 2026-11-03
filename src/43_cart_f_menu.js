@@ -249,6 +249,9 @@ class KartMenuScene {
     const W = Game.cssW, H = Game.cssH, dpr = Game.dpr;
     if (this.jobs.length) { const j = this.jobs.shift(); try { j(); } catch (e) { console.error(e); Game.reportError(e); this.gl = false; } }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // the driver portraits are cached once; redo them when the skinned characters arrive after the first render
+    if (this._port !== undefined && typeof BurnsSkinActor !== 'undefined' && this._portSkin !== !!BurnsSkinActor.ready) this._port = undefined;
+    if (typeof BurnsSkinActor !== 'undefined') this._portSkin = !!BurnsSkinActor.ready;
     if (this.state === 'driver' && this.gl && CartShowroom.world && !this._port) this.portraits();
     this.ensurePreview();
     let ok = false; try { ok = this.gl && !BurnsGL.lost && !this.jobs.length && !window.__cartSkipRender && this.render3D(ctx); } catch (e) { console.error(e); Game.reportError(e); this.gl = false; }
