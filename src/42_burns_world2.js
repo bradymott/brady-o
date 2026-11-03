@@ -141,12 +141,12 @@ BurnsWorlds.register({
       const r = RR[j] - 5.6, d = 5.6 / r * 180 / Math.PI, [x, z] = at(th + d, r);
       if (!bounds(x, z, 3) || isReserved(x, z)) continue;
       const a = th * Math.PI / 180;
-      api.mesh(x, z, m => BW.signpost(m, { a: name, b: W2.LET[j], yawA: Math.atan2(-Math.cos(a), -Math.sin(a)), yawB: Math.atan2(Math.sin(a), -Math.cos(a)) }));
+      api.mesh(x, z, m => BURNS_W2.lo(m, () => BW.signpost(m, { a: name, b: W2.LET[j], yawA: Math.atan2(-Math.cos(a), -Math.sin(a)), yawB: Math.atan2(Math.sin(a), -Math.cos(a)) })));
       api.light(x, z, 6, '#ff9ad8', 0.22);
-      if ((j + Math.round(th / 15)) % 2 === 0) { const [lx, lz] = at(th - d, r); if (bounds(lx, lz, 3) && !isReserved(lx, lz)) api.mesh(lx, lz, m => BW.lamp(m, { pool: 10 }), { yaw: W2.outYaw(th) + Math.PI / 2 }); }
+      if ((j + Math.round(th / 15)) % 2 === 0) { const [lx, lz] = at(th - d, r); if (bounds(lx, lz, 3) && !isReserved(lx, lz)) api.mesh(lx, lz, m => BURNS_W2.lo(m, () => BW.lamp(m, { pool: 10 })), { yaw: W2.outYaw(th) + Math.PI / 2 }); }
     }
     // the 6:00 promenade: double row of lamps out to the pavilion
-    for (let r = 20; r < 98; r += 13) for (const s of [-1, 1]) { const [x, z] = at(s * 4.2 * 180 / Math.PI / r, r); if (bounds(x, z, 2) && !isReserved(x, z)) api.mesh(x, z, m => BW.lamp(m, { pool: 8, col: '#ffd890' }), { yaw: s > 0 ? Math.PI / 2 : -Math.PI / 2 }); }
+    for (let r = 20; r < 98; r += 13) for (const s of [-1, 1]) { const [x, z] = at(s * 4.2 * 180 / Math.PI / r, r); if (bounds(x, z, 2) && !isReserved(x, z)) api.mesh(x, z, m => BURNS_W2.lo(m, () => BW.lamp(m, { pool: 8, col: '#ffd890' })), { yaw: s > 0 ? Math.PI / 2 : -Math.PI / 2 }); }
     /* ---------------- the city: camps on every block ---------------- */
     let lotN = 0, npcN = 0;
     for (let j = 0; j < RR.length; j++) for (const side of [1, -1]) {
@@ -491,7 +491,7 @@ BurnsWorlds.register({
       const L = (a, b) => [hx + rx * a + fx * b, hz + rz * a + fz * b];
       // an RV, a dome, porta-potties, a shade, a couch and the tent with Brady's name on it
       { const [x, z] = L(-13, 4); api.prop('rv', { x, z, yaw: oy + Math.PI / 2 + 0.1, seed: 902, col: '#f0e6d4' }); }
-      { const [x, z] = L(13, 6); api.prop('dome', { x, z, r: 5, col: '#e8d8f8', alt: '#c0a8e8', lights: true, glow: '#7ad8ff' }); }
+      { const [x, z] = L(13, 6); api.prop('dome', { x, z, r: 5, col: '#e8d8f8', alt: '#c0a8e8', lights: true, glow: '#7ad8ff', frame: false }); }
       { const [x, z] = L(-6, -9); api.prop('portapotty', { x, z, yaw: oy, col: '#2a6ac8' }); const [x2, z2] = L(-4.7, -9); api.prop('portapotty', { x: x2, z: z2, yaw: oy, col: '#3a8a3a' }); }
       { const [x, z] = L(-1, 13); api.prop('shade', { x, z, w: 7, d: 5, col: '#cfe8c0' }); }
       { const [x, z] = L(1, 11); api.prop('couch', { x, z, yaw: oy + Math.PI, col: '#5a8a5a' }); }
@@ -627,7 +627,7 @@ BurnsWorlds.register({
       for (const q of S.rejectCamps) {
         const C = CAMPS[q.id], face = Math.atan2(W2.C.x - q.x, W2.C.z - q.z), fx = Math.sin(face), fz = Math.cos(face);
         api.prop('shade', { x: q.x - fx * 1.6, z: q.z - fz * 1.6, w: 6, d: 4.4, col: '#d8c8b0', yaw: face });
-        api.prop('dome', { x: q.x - fx * 6, z: q.z - fz * 6, r: 3.4, col: '#e8e0d0', lights: true, glow: C.col });
+        api.prop('dome', { x: q.x - fx * 6, z: q.z - fz * 6, r: 3.4, col: '#e8e0d0', lights: true, glow: C.col, frame: false });
         api.sign(C.name, q.x + fx * 1.4 + Math.cos(face) * 3, q.z + fz * 1.4 - Math.sin(face) * 3, { h: 1.1, yaw: face, style: { bg: '#1a1020', fg: '#ffffff', glow: C.col, size: 24, border: C.col }, glow: C.col });
         api.light(q.x, q.z, 9, C.col, 0.45);
         api.npc({ id: 'rej_' + q.id, name: C.who, type: C.type, seed: 160 + S.rejectCamps.indexOf(q), x: q.x + fx * 0.6, z: q.z + fz * 0.6, yaw: face, prop: q.id === 'dues' || q.id === 'interview' ? 'clipboard' : null,
@@ -1197,6 +1197,12 @@ BURNS_W2.moopDone = function (g) {
   });
 };
 
+/* ---------------- low-detail building (the city is seen whole from the rocket and the Esplanade) ---------------- */
+// run a builder with the mesh in low-detail mode (fewer segments on round shapes), then restore it
+BURNS_W2.lo = function (m, fn) { const lo0 = m.lo; m.lo = true; try { return fn(); } finally { m.lo = lo0; } };
+// an engine prop built in low detail (same colliders and lights as api.prop)
+BURNS_W2.loProp = function (api, kind, o) { return api.mesh(o.x || 0, o.z || 0, m => BURNS_W2.lo(m, () => BurnsProps[kind].call(BurnsProps, m, o)), { yaw: o.yaw || 0, y: o.y || 0, scale: o.scale || 1, cover: o.cover }); };
+
 /* ---------------- lot builder: one camp on a city block (night) ---------------- */
 BURNS_W2.lot = function (api, x, z, yaw, seed, force, allowNpc) {
   const r = mulberry32(seed), BW = BURNS_W234, fx = Math.sin(yaw), fz = Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
@@ -1207,16 +1213,16 @@ BURNS_W2.lot = function (api, x, z, yaw, seed, force, allowNpc) {
   const neon = () => r.pick(BURNS_NEON);
   if (kind === 'rv') {
     const [vx, vz] = L(r.range(-1.5, 1.5), -2.6);
-    api.prop(r.pick(['rv', 'rv', 'van', 'camper', 'boxtruck', 'bus', 'trailer']), { x: vx, z: vz, yaw: yaw + Math.PI / 2 + r.range(-0.08, 0.08), seed });
+    BURNS_W2.loProp(api, r.pick(['rv', 'rv', 'van', 'camper', 'boxtruck', 'bus', 'trailer']), { x: vx, z: vz, yaw: yaw + Math.PI / 2 + r.range(-0.08, 0.08), seed });
     const [sx, sz] = L(r.range(-2, 2), 1.6);
     api.prop('shade', { x: sx, z: sz, w: 4.5 + r() * 2, d: 3.4, col: r.pick(['#d8c8a8', '#c8b8e8', '#e8c8a8', '#a8d8c8', '#e8a8c8']), yaw });
-    if (r() < 0.6) { const [cx, cz] = L(r.range(-1.5, 1.5), 1.4); api.prop('couch', { x: cx, z: cz, yaw: yaw + Math.PI, col: r.pick(['#8a2a5a', '#2a5a8a', '#6a4a2a', '#5a2a8a']) }); }
+    if (r() < 0.6) { const [cx, cz] = L(r.range(-1.5, 1.5), 1.4); BURNS_W2.loProp(api, 'couch', { x: cx, z: cz, yaw: yaw + Math.PI, col: r.pick(['#8a2a5a', '#2a5a8a', '#6a4a2a', '#5a2a8a']) }); }
     if (r() < 0.35) { const [bx, bz] = L(r.pick([-3.2, 3.2]), 3.4); api.prop('barrel', { x: bx, z: bz }); }
     const [lx, lz] = L(0, 1.6); api.light(lx, lz, 7, r.pick(['#ffb070', '#ff70c0', '#70c0ff', '#c070ff']), 0.42);
     crowd(0, 2.2, 1 + Math.floor(r() * 2));
   } else if (kind === 'dome') {
     const rr = 3.6 + r() * 1.8, [dx, dz] = L(r.range(-1, 1), -0.8 - (rr - 3.6) * 0.5), c = neon();
-    api.prop('dome', { x: dx, z: dz, r: rr, col: r.pick(['#e8e0d0', '#d8c0e8', '#c8e0e8', '#f0d8c8']), lights: true, glow: c });
+    api.prop('dome', { x: dx, z: dz, r: rr, col: r.pick(['#e8e0d0', '#d8c0e8', '#c8e0e8', '#f0d8c8']), lights: true, glow: c, frame: false });
     for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; api.glow(dx + Math.sin(a) * (rr + 0.2), 0.3, dz + Math.cos(a) * (rr + 0.2), 0.45, c, { blink: 3 }); }
     api.light(dx, dz, rr * 2.2, c, 0.45);
     crowd(0, 3.2, 2, 'dance');

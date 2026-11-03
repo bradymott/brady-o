@@ -165,7 +165,7 @@ const BURNS_W234 = {
     const n = o.n || 12;
     for (let i = 0; i < n; i++) {
       const b = o.builds[i % o.builds.length];
-      const mv = api.mover(m => b(m, i), {});
+      const mv = api.mover(m => b(m, i), { lodTwin: true });   // builders are deterministic: far cars use the m.lo copy
       P.cars.push({ mv, s: (i / n) * L, len: mv.info.len || 7, w: mv.info.w || 3.6, i });
     }
     for (const c of P.cars) this.paradePlace(P, c);

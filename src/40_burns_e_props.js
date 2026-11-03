@@ -32,7 +32,7 @@ const BurnsProps = {
   win(m, x, y, z, w, h, side, lit, rng) {
     // a window on an X-facing side (side = +1 / -1), slightly proud of the surface; glass is glossy
     const glow = lit && rng && rng() < 0.55;
-    if (!m.lo) { m.color('#1e1e24').shine(1); m.roundBox(x + side * 0.006, y, z, 0.03, h + 0.08, w + 0.08, 0.025); }   // rubber frame
+    if (!m.lo) { m.color('#1e1e24').shine(1); m.box(x + side * 0.006, y, z, 0.03, h + 0.08, w + 0.08); }   // rubber frame
     m.color(glow ? '#ffc070' : '#243650', glow ? 0.85 : 0.0).shine(glow ? 0 : 3);
     if (m.lo) m.box(x + side * 0.012, y, z, 0.03, h, w); else m.roundBox(x + side * 0.02, y, z, 0.03, h, w, 0.012, { k: 1, m: 1 });
     m.emissive(0).shine(0);
@@ -45,7 +45,6 @@ const BurnsProps = {
         const a0 = Math.asin(clamp((y0 - r) / R, -0.3, 0.92)), n = m.lo ? 4 : 10, x = sd * (W / 2 + 0.006), pts = [];
         for (let i = 0; i <= n; i++) { const a = a0 + (Math.PI - 2 * a0) * i / n; pts.push([x, r + Math.sin(a) * R, z + Math.cos(a) * R]); }
         m.color('#0e0e12'); m.poly(pts, null, [0, r, z]);
-        if (!m.lo) { m.color('#2a2a30').shine(1); for (let i = 0; i < n; i++) { const p = pts[i], q = pts[i + 1]; m.limb(p[0], p[1], p[2], q[0], q[1], q[2], 0.025, 0.025, { seg: 4 }); } m.shine(0); }   // fender lip
       }
       this.wheel(m, sd * xo, r, z, r, w, o.col);
     }
@@ -54,11 +53,11 @@ const BurnsProps = {
   bumper(m, W, y, z, col) {
     m.color(col || '#26262c').shine(2);
     if (m.lo) m.box(0, y, z, W + 0.04, 0.2, 0.16);
-    else { m.roundBox(0, y, z, W + 0.06, 0.24, 0.2, 0.09); m.color('#c8ccd6').shine(3); m.roundBox(0, y + 0.03, z + Math.sign(z || 1) * 0.1, W * 0.86, 0.05, 0.025, 0.02); }
+    else { m.roundBox(0, y, z, W + 0.06, 0.24, 0.2, 0.09, { seg: 3 }); m.color('#c8ccd6').shine(3); m.box(0, y + 0.03, z + Math.sign(z || 1) * 0.1, W * 0.86, 0.05, 0.025); }
     m.shine(0);
   },
   // a softly curved roof cap over a boxy body (a flattened capsule along Z)
-  roofCap(m, W, y, z0, z1, col, k) { if (m.lo) return; m.color(col).shine(1); m.push(); m.tf(0, y, 0, 0, 0, 0, 1, k || 0.22, 1); m.limb(0, 0, z0, 0, 0, z1, W / 2 - 0.06, W / 2 - 0.06, { seg: 12 }); m.pop(); m.shine(0); },
+  roofCap(m, W, y, z0, z1, col, k) { if (m.lo) return; m.color(col).shine(1); m.push(); m.tf(0, y, 0, 0, 0, 0, 1, k || 0.22, 1); m.limb(0, 0, z0, 0, 0, z1, W / 2 - 0.06, W / 2 - 0.06, { seg: 8 }); m.pop(); m.shine(0); },
   // a thin accent stripe along both sides
   trim(m, W, y, z0, z1, col) { if (m.lo) return; m.color(col).shine(2); for (const sd of [1, -1]) m.roundBox(sd * (W / 2 + 0.008), y, (z0 + z1) / 2, 0.02, 0.09, z1 - z0, 0.01); m.shine(0); },
   // swoosh decal along a side

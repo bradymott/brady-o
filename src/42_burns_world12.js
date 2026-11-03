@@ -54,7 +54,7 @@ BurnsWorlds.register({
   // the story card into this world; no confetti-and-cheering victory orbit at the Temple (the ending has its own sunrise shot)
   story: 'The storm is over. All Brady has left of her is a blinking necklace.', noOutro: true,
   sky: BW12.SKY_A, sky2: BW12.SKY_B, tod: 0,
-  music: 'w9',
+  music: 'burns_w12',
   bounds: [-110, -150, 110, 176],
   spawn: { x: 0, y: 0, z: 150, yaw: Math.PI },
   ground: { base: '#dcc4ac', crack: 0.14, mottle: 0.3, res: 0.4 },
@@ -678,7 +678,7 @@ BW12.intro = function (g) {
   const camC = { x: C.x + 4.2, y: 1.9, z: C.z + 3.2, tx: C.x + 1.4, ty: 0.9, tz: C.z - 0.4, fov: 0.9 };
   const camD = { x: C.x - 1.5, y: 2.2, z: C.z + 5, tx: 0, ty: 12, tz: BW12.TC.z, fov: 0.75 };
   g.cutscene([
-    { music: 'w9' },
+    { music: 'burns_w12' },
     { cam: camA },
     { wait: 1.2 },   // the engine's day card (SATURDAY DAWN · World N · The Temple) plays over this shot
     { cam: { from: camA, to: camB, dur: 4.2 } },
@@ -871,7 +871,7 @@ BW12.writeScene = function (g) {
     { wait: 0.8 },
     { say: ['brady', ['Chinka.', 'I don\'t know where you are. I don\'t know if you can hear me.', 'But I\'m not done looking.']] },
     { wait: 1.0 },
-    { music: 'w9' },
+    { music: 'burns_w12' },
     { do: g2 => { p.animOverride = null; g2.missions.complete('name'); } }
   ], g2 => { p.animOverride = null; BW12.afterName(g2); });
 };
@@ -952,7 +952,7 @@ BW12.ending = function (g) {
     { cam: camRead },
     { wait: 4.2 },
     { say: [{ name: 'CHINKA (THE NOTE)', model: BurnsRig.model(BurnsRig.chinkaSpec()) }, ['"B. Not gone. The big guy carried me off in the storm, but I\'m okay."', '"Find me where lost loves are found: 9:00, the Workshops."']] },
-    { do: g2 => { card.visible = false; p.animOverride = null; g2.setTod(1, 0.35); S.glowK = 1; burnsSfx('reunion', { vol: 0.5 }, 'secret'); burnsMusic('w9'); } },
+    { do: g2 => { card.visible = false; p.animOverride = null; g2.setTod(1, 0.35); S.glowK = 1; burnsSfx('reunion', { vol: 0.5 }, 'secret'); burnsMusic('burns_w12'); } },
     { cam: { from: camRead, to: camWide, dur: 3.2 } },
     { wait: 1.0 },
     { say: ['brady', ['She\'s alive.', '...She\'s alive.']] },

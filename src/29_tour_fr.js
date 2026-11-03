@@ -139,7 +139,17 @@ const zinc = {
 };
 const parquet = {
   style: 'frParquet', cap: '#c8904a', capHi: '#f0c080', dirt: '#8a5a2a', dirt2: '#5a3a1a', rock: '#a87038',
-  paint(ctx, rng) { for (let k = 0; k < 4; k++) for (let j = 0; j < 4; j++) { ctx.fillStyle = (k + j) % 2 ? '#a8723a' : '#94622e'; ctx.save(); ctx.translate(k * 8 + 4, j * 8 + 4); ctx.rotate((k + j) % 2 ? 0.785 : -0.785); ctx.fillRect(-5, -2, 10, 4); ctx.restore(); } },
+  paint(ctx, rng) {
+    // staggered oak boards: each row its own shade, joints offset row to row, fine grain and a varnish gloss
+    for (let r = 0; r < 4; r++) {
+      const y = r * 8, j = [6, 22, 14, 30][r];
+      ctx.fillStyle = ['#a8743c', '#9a6832', '#b07c42', '#a06c36'][(r + Math.floor(rng() * 2)) % 4]; ctx.fillRect(0, y, TS, 8);
+      ctx.strokeStyle = 'rgba(70,40,15,0.22)'; ctx.lineWidth = 0.6;
+      for (let g = 0; g < 2; g++) { const gy = y + 2.5 + g * 3; ctx.beginPath(); ctx.moveTo(0, gy); ctx.bezierCurveTo(10, gy - 0.8, 20, gy + 0.8, TS, gy); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(60,32,12,0.55)'; ctx.fillRect(j - 0.5, y, 1, 8); ctx.fillRect(0, y + 7.2, TS, 0.8);
+      ctx.fillStyle = 'rgba(255,230,180,0.18)'; ctx.fillRect(0, y, TS, 1.2);
+    }
+  },
   paintCap(ctx, x0, x1) { ctx.fillStyle = '#d8a05a'; ctx.fillRect(x0, 0, x1 - x0, 5); ctx.fillStyle = '#ffd890'; ctx.fillRect(x0, 0, x1 - x0, 1.5); }
 };
 const iron = { style: 'metal', cap: '#8a6a4a', capHi: '#c89a6a', dirt: '#6a5040', dirt2: '#3a2a20', rock: '#7a5a44' };
@@ -166,8 +176,8 @@ const themes = {
     celestial: { type: 'sun', x: 0.2, y: 0.2, r: 34, color: '#fffbe8', glow: '#ffe0b0' }, stars: 0, cloudsDyn: true,
     layers: [
       { kind: 'frTower', color: '#9aa8c0', base: 330, h: 240, f: 0.03, blur: true, at: 760, dyn: 'frPigeons' },
-      { kind: 'frFacades', color: '#f0e4cc', base: 400, f: 0.14, roof: '#7a8aa0' },
-      { kind: 'frAwnings', color: '#c8b8a0', base: 440, f: 0.4 }
+      { kind: 'frFacades', color: '#f0e4cc', base: 360, f: 0.14, roof: '#7a8aa0' },
+      { kind: 'frAwnings', color: '#c8b8a0', base: 380, f: 0.4 }
     ],
     fog: '#ffe8e0', decor: ['frLamp', 'frCafe', 'frFlowers', 'frLamp', 'frBench']
   }),
@@ -178,8 +188,8 @@ const themes = {
     layers: [
       { kind: 'frTower', color: '#a8b4cc', base: 300, h: 200, f: 0.02, blur: true, at: 300 },
       { kind: 'frFacades', color: '#f2e8d4', base: 330, f: 0.08, roof: '#8a98ae' },
-      { kind: 'frSeine', color: '#d8ccb0', base: 380, f: 0.18 },
-      { kind: 'frTrees', color: '#5a9a4a', base: 452, f: 0.42 }
+      { kind: 'frSeine', color: '#d8ccb0', base: 325, f: 0.18 },
+      { kind: 'frTrees', color: '#5a9a4a', base: 385, f: 0.42 }
     ],
     fog: '#e8f0ff', liquid: 'sea', decor: ['frLamp', 'frBench', 'frLamp']
   }),
@@ -189,8 +199,8 @@ const themes = {
     celestial: { type: 'moon', x: 0.72, y: 0.2, r: 30, color: '#fff8e0', glow: '#c8d0ff' }, stars: 1,
     layers: [
       { kind: 'frTower', color: '#1a1e3a', base: 330, h: 230, f: 0.03, at: 240 },
-      { kind: 'frFacades', color: '#2a3050', base: 380, f: 0.1, night: true, roof: '#1e2440' },
-      { kind: 'frRoofs', color: '#141830', base: 430, f: 0.3 }
+      { kind: 'frFacades', color: '#2a3050', base: 350, f: 0.1, night: true, roof: '#1e2440' },
+      { kind: 'frRoofs', color: '#141830', base: 375, f: 0.3 }
     ],
     fog: '#4a4a8a', darkness: 0.5, hard: { c1: '#5a6478', c2: '#343a4a' }, decor: ['frChimney', 'frAntenna', 'frChimney']
   }),

@@ -41,7 +41,7 @@ BurnsWorlds.register({
     });
     for (const [kind, x, z, rot] of W.LAYOUT) {
       if (!BurnsCamps.kinds[kind]) continue;
-      W.camps[kind] = BurnsCamps.place(api, g, kind, x, z, { rotY: rot, marker: true });
+      W.camps[kind] = BurnsCamps.place(api, g, kind, x, z, { rotY: rot, marker: true, djPrompt: true });
     }
     // the open-world skyline test: far silhouettes of a few camps out past the trash fence line
     let k = 0;

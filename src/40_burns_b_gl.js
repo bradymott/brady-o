@@ -423,7 +423,7 @@ void main(){
   float skin0 = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r);
   float cd = length(vW - uCam);
   float fold = sin(vL.y * 44.0 + sin(vL.x * 21.0 + vL.z * 17.0) * 1.7) * 0.55 + sin(vL.y * 109.0 + vL.x * 37.0) * 0.16;
-  float weave = sin(vL.x * 820.0 + vL.z * 300.0) * sin(vL.y * 860.0) * 0.14 * (1.0 - smoothstep(1.5, 5.0, cd));
+  float weave = sin(vL.x * 560.0 + vL.z * 210.0) * sin(vL.y * 600.0) * 0.07 * (1.0 - smoothstep(1.2, 4.0, cd));
   vec3 nc = bBump(n, vW, (fold + weave) * (1.0 - smoothstep(14.0, 30.0, cd)), 0.0018);
   float cloth = (1.0 - step(0.02, t.a)) * (1.0 - step(0.15, vG)) * (1.0 - skin0) * (1.0 - step(0.5, vC.a));
   n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));

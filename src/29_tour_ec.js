@@ -102,7 +102,7 @@ const themes = {
     name: 'Middle of the World', music: 'tour_ec', particles: 'leaves',
     sky: ['#2a8ae8', '#8ad0ff', '#f0fff0'], horizonGlow: '#e8ffd8',
     celestial: { type: 'sun', x: 0.5, y: 0.1, r: 40, color: '#fffbe0', glow: '#ffe8a0' }, stars: 0, cloudsDyn: true,
-    layers: [{ kind: 'mountains', color: '#8aa0c8', base: 280, amp: 150, f: 0.03, blur: true, snow: true }, { kind: 'ecMonument', color: '#c8b898', base: 360, f: 0.08 }, { kind: 'ecAndes', color: '#4a9a4a', base: 330, f: 0.12 }, { kind: 'ecBananas', color: '#3a8a3a', base: 420, f: 0.35 }],
+    layers: [{ kind: 'mountains', color: '#8aa0c8', base: 280, amp: 150, f: 0.03, blur: true, snow: true }, { kind: 'ecMonument', color: '#c8b898', base: 360, f: 0.08 }, { kind: 'ecAndes', color: '#4a9a4a', base: 330, f: 0.12 }, { kind: 'ecBananas', color: '#3a8a3a', base: 352, f: 0.35 }],
     fog: '#e8fff0', decor: ['ecAgave', 'ecFlowers', 'ecAgave']
   }),
   ec_andes: Object.assign({}, base, {
@@ -117,7 +117,7 @@ const themes = {
     ground: { style: 'grass', cap: '#2a7a3a', capHi: '#5ab86a', dirt: '#3a2a1a', dirt2: '#1a120a', rock: '#4a3a2a' },
     sky: ['#06120e', '#0e2a1e', '#1a3a2a'], horizonGlow: '#3a8a5a',
     celestial: { type: 'moon', x: 0.8, y: 0.15, r: 24, color: '#f8fff0', glow: '#b8ffd0' }, stars: 0.6,
-    layers: [{ kind: 'ecCanopy', color: '#0e2a1a', base: 300, f: 0.08 }, { kind: 'ecCanopy', color: '#081a10', base: 400, f: 0.25 }],
+    layers: [{ kind: 'ecCanopy', color: '#0e2a1a', base: 300, f: 0.08 }, { kind: 'ecCanopy', color: '#081a10', base: 355, f: 0.25 }],
     fog: '#3a8a6a', darkness: 0.55, liquid: 'canal', semi: { style: 'log', c1: '#5a4028', c2: '#3a2818' }, decor: ['ecFern', 'ecFern', 'ecMushroom']
   }),
   ec_galapagos: Object.assign({}, base, {
@@ -130,7 +130,7 @@ const themes = {
     name: 'Ice Fort', music: 'tour_ec', particles: 'snow',
     ground: { style: 'snow', cap: '#f0f8ff', capHi: '#ffffff', dirt: '#6a8aaa', dirt2: '#3a5a7a', rock: '#8aa8c8' },
     sky: ['#3a5a9a', '#9ac0f0', '#e8f4ff'], horizonGlow: '#ffffff', celestial: { type: 'sun', x: 0.8, y: 0.16, r: 30, color: '#ffffff', glow: '#d8f0ff' }, stars: 0, cloudsDyn: true,
-    layers: [{ kind: 'ecCotopaxi', color: '#8a9ac0', base: 330, f: 0.04 }, { kind: 'pines', color: '#4a6a8a', base: 420, f: 0.2, snow: true }],
+    layers: [{ kind: 'ecCotopaxi', color: '#8a9ac0', base: 330, f: 0.04 }, { kind: 'pines', color: '#4a6a8a', base: 365, f: 0.2, snow: true }],
     fog: '#e8f4ff', liquid: 'icewater', decor: ['ecIceRock'],
     hard: { c1: '#c8e0f8', c2: '#7aa0c8' }, brick: { style: 'ice', c1: '#9fdcff', c2: '#5aa6d6', mortar: '#e6f8ff' }, semi: { style: 'ice', c1: '#c8f0ff', c2: '#7ab8dc' },
     pillar: { c1: '#b8dcf8', c2: '#6a9ac8', cap: '#ffffff', style: 'column' }

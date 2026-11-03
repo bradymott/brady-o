@@ -79,6 +79,7 @@ class CartRaceScene {
       const cars = cartShuffle(CART_CARS.map(c => c.id).filter(id => id !== this.carId), rng);
       const drivers = cartShuffle(CART_DRIVERS.map(d => d.id).filter(id => id !== this.driverId), rng);
       roster = []; for (let i = 0; i < 7; i++) roster.push({ car: cars[i % cars.length], driver: drivers[i % drivers.length] });
+      if (this.opts.rivals) roster = this.opts.rivals.slice(0, 7).map((c, i) => ({ car: cartCar(c).id, driver: drivers[i % drivers.length] }));   // tests: a fixed field
       if (this.mode === 'gp') this.gp.roster = roster;
     }
     const field = [{ car: this.carId, driver: this.driverId, player: true }].concat(this.mode === 'tt' ? [] : roster.map(r => ({ car: r.car, driver: r.driver })));
@@ -272,7 +273,7 @@ class CartRaceScene {
       inp.item = false;
     }
     const disabled = k.spinT > 0 || k.flipT > 0 || k.bubbleT > 0 || k.out;
-    if (racing && inp.fire && w.t <= 0 && !disabled && k.stunT <= 0) this.fireWeapon(k);
+    if (racing && inp.fire && w.t <= 0 && !disabled && k.stunT <= 0 && this.mode !== 'tt') this.fireWeapon(k);   // time trials are pure driving
     if (racing && inp.item && k.item && k.itemCool <= 0 && !disabled && k.stunT <= 0) this.useItem(k);
     // where are we on the track?
     let off = false;
@@ -497,7 +498,8 @@ class CartRaceScene {
     if (p) for (const k of this.karts) {
       if (k.player) continue;
       const gap = k.prog - p.prog;
-      k.rubber = gap > 30 ? 1 - Math.min(0.09, (gap - 30) / 600) : gap < -18 ? 1 + Math.min(0.1, (-gap - 18) / 260) : 1;
+      // keep a human in the pack: rivals far ahead ease off, rivals far behind push a little
+      k.rubber = gap > 25 ? 1 - Math.min(0.13, (gap - 25) / 420) : gap < -18 ? 1 + Math.min(0.08, (-gap - 18) / 300) : 1;
       if (p.finished) k.rubber = 1;
     }
   }
@@ -531,13 +533,13 @@ class CartRaceScene {
     const mz = this.muzzle(k, [0, 0, 0]), vol = k.player ? 0.9 : 0.35;
     if (k.player) this.banner(D.name + '!', D.col, 1.0, null, true);
     switch (w.id) {
-      case 'bassdrop': this.shots.push({ type: 'ring', owner: k, x: k.x, y: k.y, z: k.z, r: 1, max: D.range, t: 0, life: 0.7, hit: new Set(), col: D.col }); Sound.play('thunder', { vol, pitch: 1.4 }); Sound.play('kartBoost', { vol: vol * 0.6, pitch: 0.5 }); if (k.player) this.shakeIt(0.5); this.fx.hearts(k.x, k.y + 4, k.z, 8); break;
-      case 'dazzle': this.shots.push({ type: 'beam', owner: k, t: 0, life: 0.9, range: D.range, half: 0.2, kind: 'dazzle', col: [0.75, 0.9, 1], hit: new Set() }); Sound.play('disco', { vol }); break;
+      case 'bassdrop': this.shots.push({ type: 'ring', owner: k, x: k.x, y: k.y, z: k.z, r: 1, max: D.range, t: 0, life: 0.7, hit: new Set(), col: D.col }); Sound.play('cartBass', { vol }); if (k.player) this.shakeIt(0.5); this.fx.hearts(k.x, k.y + 4, k.z, 8); break;
+      case 'dazzle': this.shots.push({ type: 'beam', owner: k, t: 0, life: 0.9, range: D.range, half: 0.2, kind: 'dazzle', col: [0.75, 0.9, 1], hit: new Set() }); Sound.play('cartSparkle', { vol }); Sound.play('disco', { vol: vol * 0.5 }); break;
       case 'torch': this.shots.push({ type: 'torch', owner: k, t: 0, life: 1.25, range: D.range, hit: new Set() }); Sound.play('flame', { vol }); Sound.play('flame', { vol: vol * 0.7, pitch: 0.7 }); break;
       case 'fireball': for (const a of [-0.17, 0, 0.17]) { const yaw = k.yaw + a; this.shots.push({ type: 'ball', kind: 'fire', owner: k, x: mz[0], y: mz[1], z: mz[2], vx: Math.sin(yaw) * (sp + 30), vz: Math.cos(yaw) * (sp + 30), vy: 2, t: 0, life: 2.4, r: 1.9, bounces: 0, loc: { i: k.loc.i, s: 0, d: 0 } }); } Sound.play('flame', { vol, pitch: 1.3 }); break;
-      case 'bubbles': for (let i = 0; i < 6; i++) { const a = (i / 5 - 0.5) * 0.9, yaw = k.yaw + a; this.shots.push({ type: 'ball', kind: 'bubble', owner: k, x: mz[0], y: mz[1], z: mz[2], vx: Math.sin(yaw) * (sp * 0.7 + 17), vz: Math.cos(yaw) * (sp * 0.7 + 17), vy: 0, t: 0, life: 3.2, r: 2.0, home: 1, loc: { i: k.loc.i, s: 0, d: 0 } }); } Sound.play('splash', { vol, pitch: 1.6 }); Sound.play('puke', { vol: vol * 0.4, pitch: 2 }); break;
+      case 'bubbles': for (let i = 0; i < 6; i++) { const a = (i / 5 - 0.5) * 0.9, yaw = k.yaw + a; this.shots.push({ type: 'ball', kind: 'bubble', owner: k, x: mz[0], y: mz[1], z: mz[2], vx: Math.sin(yaw) * (sp * 0.7 + 17), vz: Math.cos(yaw) * (sp * 0.7 + 17), vy: 0, t: 0, life: 3.2, r: 2.0, home: 1, loc: { i: k.loc.i, s: 0, d: 0 } }); } Sound.play('cartQuack', { vol }); Sound.play('cartBubble', { vol }); break;
       case 'laser': this.shots.push({ type: 'laser', owner: k, t: 0, life: 0.8, range: D.range, a0: 1.05, a1: -1.05, hit: new Set() }); Sound.play('laser', { vol }); Sound.play('laser', { vol: vol * 0.6, pitch: 0.7 }); break;
-      case 'sprinkles': for (let i = 0; i < 4; i++) this.shots.push({ type: 'drop', owner: k, t: -i * 0.14, done: false }); Sound.play('throw', { vol }); break;
+      case 'sprinkles': for (let i = 0; i < 4; i++) this.shots.push({ type: 'drop', owner: k, t: -i * 0.14, done: false }); Sound.play('throw', { vol }); Sound.play('cartSparkle', { vol: vol * 0.6, pitch: 1.3 }); break;
       case 'cannon':
         // broadside: two balls out of each flank (left = +X local)
         for (const s of [1, -1]) for (const dz of [-0.7, 0.6]) {
@@ -545,10 +547,10 @@ class CartRaceScene {
           this.shots.push({ type: 'ball', kind: 'cannon', owner: k, x: p[0], y: p[1], z: p[2], vx: k.vx * 0.6 + lx * 34, vz: k.vz * 0.6 + lz * 34, vy: 3.5, t: 0, life: 1.3, r: 1.8, loc: { i: k.loc.i, s: 0, d: 0 } });
           this.fx.smoke(p[0], p[1], p[2], 4, '#e8e0d8');
         }
-        Sound.play('break', { vol, pitch: 0.6 }); Sound.play('thunder', { vol: vol * 0.5, pitch: 2 }); if (k.player) this.shakeIt(0.4); break;
+        Sound.play('cartBoom', { vol }); if (k.player) this.shakeIt(0.4); break;
       case 'slime': k.slimeT = 3.0; this.boost(k, 0.6, 'slime'); this.shots.push({ type: 'slimer', owner: k, t: 0, life: 3.0, next: 0 }); Sound.play('puke', { vol, pitch: 0.7 }); break;
-      case 'zap': { const tg = this.karts.filter(o => o !== k && !o.out && Math.hypot(o.x - k.x, o.z - k.z) < D.range).sort((a, b) => Math.hypot(a.x - k.x, a.z - k.z) - Math.hypot(b.x - k.x, b.z - k.z)).slice(0, 2); this.shots.push({ type: 'zap', owner: k, t: 0, life: 0.55, targets: tg }); for (const o of tg) this.hit(o, 'stun', k, { weapon: 'zap' }); Sound.play('laser', { vol, pitch: 2.2 }); Sound.play('mosquito', { vol: vol * 0.5, pitch: 3 }); break; }
-      case 'chomp': k.dashT = 0.75; this.boost(k, 0.75, 'dash'); this.shots.push({ type: 'dash', owner: k, t: 0, life: 0.75, hit: new Set() }); Sound.play('kartBoost', { vol, pitch: 0.8 }); Sound.play('stomp', { vol }); break;
+      case 'zap': { const tg = this.karts.filter(o => o !== k && !o.out && Math.hypot(o.x - k.x, o.z - k.z) < D.range).sort((a, b) => Math.hypot(a.x - k.x, a.z - k.z) - Math.hypot(b.x - k.x, b.z - k.z)).slice(0, 2); this.shots.push({ type: 'zap', owner: k, t: 0, life: 0.55, targets: tg }); for (const o of tg) this.hit(o, 'stun', k, { weapon: 'zap' }); Sound.play('cartZap', { vol }); break; }
+      case 'chomp': k.dashT = 0.75; this.boost(k, 0.75, 'dash'); this.shots.push({ type: 'dash', owner: k, t: 0, life: 0.75, hit: new Set() }); Sound.play('kartBoost', { vol, pitch: 0.8 }); Sound.play('cartChomp', { vol }); break;
       case 'geyser': { let best = null, bd = 1e9; for (const o of this.karts) { if (o === k || o.out) continue; const dx = o.x - k.x, dz = o.z - k.z, d = Math.hypot(dx, dz); if (d > D.range) continue; const ang = Math.abs(cartWrap(Math.atan2(dx, dz) - k.yaw)); const score = d * (ang < 0.8 ? 1 : 2.5); if (score < bd) { bd = score; best = o; } } const tx = best ? best.x : k.x + fx * 25, tz = best ? best.z : k.z + fz * 25; this.shots.push({ type: 'geyser', owner: k, target: best, x: tx, z: tz, t: 0, life: 1.6, fired: false, hit: new Set() }); Sound.play('splash', { vol, pitch: 0.6 }); if (best && best.player) this.banner('INCOMING WHALE SPOUT!', '#4ab0ff', 1.0); break; }
     }
   }
@@ -593,9 +595,10 @@ class CartRaceScene {
         const fx = Math.sin(k.yaw), fz = Math.cos(k.yaw);
         for (const o of this.karts) { if (o === k || s.hit.has(o) || o.out) continue; const dx = o.x - k.x, dz = o.z - k.z, along = dx * fx + dz * fz, side = Math.abs(dx * fz - dz * fx); if (along > 0 && along < 5.2 && side < 2.6) { s.hit.add(o); this.hit(o, 'flip', k, { dx: fx, dz: fz, weapon: 'chomp' }); } }
       } else if (s.type === 'geyser') {
-        if (s.target && s.t < 0.5 && !s.target.out) { s.x = lerp(s.x, s.target.x, 1 - Math.exp(-10 * dt)); s.z = lerp(s.z, s.target.z, 1 - Math.exp(-10 * dt)); }
-        if (s.t > 0.7 && !s.fired) { s.fired = true; Sound.play('splash', { vol: 0.7, pitch: 0.5 }); this.fx.burst(s.x, this.terrain.height(s.x, s.z) + 0.5, s.z, 'drop', 20, '#9adcff'); }
-        if (s.fired && s.t < 1.2) for (const o of this.karts) { if (o === k || s.hit.has(o)) continue; if (Math.hypot(o.x - s.x, o.z - s.z) < 3.4) { s.hit.add(o); this.hit(o, 'flip', k, { vy: 15, weapon: 'geyser' }); } }
+        // the spout tracks its target and leads it, so it erupts where the car will be
+        if (s.target && s.t < 0.62 && !s.target.out) { const lead = 0.72 - s.t, tg = s.target; s.x = lerp(s.x, tg.x + tg.vx * lead, 1 - Math.exp(-12 * dt)); s.z = lerp(s.z, tg.z + tg.vz * lead, 1 - Math.exp(-12 * dt)); }
+        if (s.t > 0.7 && !s.fired) { s.fired = true; Sound.play('cartGeyser', { vol: k.player || (s.target && s.target.player) ? 0.85 : 0.35 }); this.fx.burst(s.x, this.terrain.height(s.x, s.z) + 0.5, s.z, 'drop', 20, '#9adcff'); }
+        if (s.fired && s.t < 1.25) for (const o of this.karts) { if (o === k || s.hit.has(o)) continue; if (Math.hypot(o.x - s.x, o.z - s.z) < 4.2) { s.hit.add(o); this.hit(o, 'flip', k, { vy: 15, weapon: 'geyser' }); } }
       } else if (s.type === 'zap') { /* visual only; damage applied on fire */ }
       if (s.t > s.life) s.dead = true;
       if (!s.dead) out.push(s);
@@ -971,7 +974,16 @@ class CartRaceScene {
     Sound.music(pos <= 3 ? 'kart_results' : 'kart_menu'); if (pos <= 3) Sound.play('kartFinish');
     this.buildButtons();
   }
-  release() { if (Sound.engine) Sound.engine(false, 0); if (this.paused) { this.paused = false; Sound.resume(); } Input.hud = null; }
+  release() {
+    if (Sound.engine) Sound.engine(false, 0); if (this.paused) { this.paused = false; Sound.resume(); } Input.hud = null;
+    // free this course's GPU buffers (car and driver models stay cached for the next race)
+    const W = this.W; if (!W || !BurnsGL.gl || this.released) return; this.released = true;
+    try {
+      for (const c of W.chunks) BurnsGL.freeGeo(c); for (const g of W.ground.geos) BurnsGL.freeGeo(g);
+      BurnsGL.freeTex(W.ground.paintT); BurnsGL.freeTex(W.lightmap.T);
+      for (const G of this.E.crowds) BurnsGL.freeGeo(G.geo); for (const G of (this.props && this.props.groups) || []) BurnsGL.freeGeo(G.geo);
+    } catch (e) { /* ignore */ }
+  }
   leave() { this.release(); Game.setScene(new KartMenuScene()); }
   restart() { this.release(); Game.setScene(new CartRaceScene(Object.assign({}, this.opts, { gp: this.mode === 'gp' ? JSON.parse(this.gpSnap) : undefined }))); }
   openPause() { this.paused = true; Sound.play('pause'); if (Sound.engine) Sound.engine(false, 0); Input.setMode('ui'); this.layoutControls(); this.buildPause(); }

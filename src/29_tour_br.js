@@ -102,34 +102,34 @@ const themes = {
     name: 'Copacabana', music: 'tour_br', particles: 'dust',
     sky: ['#1a8ae8', '#7ad0ff', '#fff4d8'], horizonGlow: '#fff0c0',
     celestial: { type: 'sun', x: 0.78, y: 0.16, r: 40, color: '#fffbe0', glow: '#ffe8a0' }, stars: 0, cloudsDyn: true,
-    layers: [{ kind: 'brSugarloaf', color: '#5a7a6a', base: 330, f: 0.04 }, { kind: 'brSea', color: '#1aa8d8', base: 330, f: 0.06 }, { kind: 'brPalms', color: '#2a8a4a', base: 430, f: 0.3 }],
+    layers: [{ kind: 'brSugarloaf', color: '#5a7a6a', base: 330, f: 0.04 }, { kind: 'brSea', color: '#1aa8d8', base: 330, f: 0.06 }, { kind: 'brPalms', color: '#2a8a4a', base: 365, f: 0.3 }],
     fog: '#fff4e0', decor: ['brShell', 'brCooler', 'brShell']
   }),
   br_samba: Object.assign({}, base, {
     name: 'Sambadrome', music: 'tour_br_night', particles: 'confetti',
     sky: ['#140a2e', '#3a1a5a', '#8a2a6a'], horizonGlow: '#ff6ab8',
     celestial: { type: 'moon', x: 0.15, y: 0.15, r: 22, color: '#fff4e0', glow: '#ffb0e0' }, stars: 0.7,
-    layers: [{ kind: 'brSkyline', color: '#2a1a40', base: 360, f: 0.08 }, { kind: 'brStands', color: '#3a2050', base: 420, f: 0.25 }],
+    layers: [{ kind: 'brSkyline', color: '#2a1a40', base: 360, f: 0.08 }, { kind: 'brStands', color: '#3a2050', base: 350, f: 0.25 }],
     fog: '#ff8ad0', ground: { style: 'brWalk', cap: '#3a3a48', capHi: '#5a5a6a', dirt: '#4a4a58', dirt2: '#2a2a34', rock: '#5a5a68', paint: boardwalk.paint, paintCap(ctx, x0, x1) { ctx.fillStyle = '#4a4a58'; ctx.fillRect(x0, 0, x1 - x0, 8); ctx.fillStyle = '#ffffff'; for (let x = x0 + 4; x < x1; x += 16) ctx.fillRect(x, 3, 8, 2); } }
   }),
   br_falls: Object.assign({}, base, {
     name: 'Iguaçu Falls', music: 'tour_br_falls', particles: 'motes',
     sky: ['#3a8ad8', '#9ad8ff', '#e8fff8'], horizonGlow: '#ffffff', celestial: { type: 'sun', x: 0.2, y: 0.12, r: 30, color: '#fffbe8', glow: '#ffffff' }, stars: 0, cloudsDyn: true,
-    layers: [{ kind: 'brFalls', color: '#2a6a3a', base: 320, f: 0.05 }, { kind: 'brPalms', color: '#1e6a3a', base: 440, f: 0.2 }],
+    layers: [{ kind: 'brFalls', color: '#2a6a3a', base: 320, f: 0.05 }, { kind: 'brPalms', color: '#1e6a3a', base: 390, f: 0.2 }],
     fog: '#e8fff8', ground: { style: 'grass', cap: '#3aa85a', capHi: '#7ae08a', dirt: '#8a4a2a', dirt2: '#5a2a1a', rock: '#a85a3a' },
     semi: { style: 'plank', c1: '#8a8a9a', c2: '#5a5a6a' }, hard: { c1: '#5a6a5a', c2: '#2e3a30' }
   }),
   br_pantanal: Object.assign({}, base, {
     name: 'Pantanal', music: 'tour_br', particles: 'leaves', liquid: 'river',
     sky: ['#ff9a5a', '#ffd08a', '#fff4d0'], horizonGlow: '#ffe0a0', celestial: { type: 'sun', x: 0.7, y: 0.3, r: 46, color: '#fff0c0', glow: '#ffb070' }, stars: 0, cloudsDyn: true,
-    layers: [{ kind: 'brMarsh', color: '#6a9a4a', base: 360, f: 0.06 }, { kind: 'brPalms', color: '#3a6a2a', base: 440, f: 0.25 }],
+    layers: [{ kind: 'brMarsh', color: '#6a9a4a', base: 360, f: 0.06 }, { kind: 'brPalms', color: '#3a6a2a', base: 370, f: 0.25 }],
     fog: '#ffe8c0', ground: { style: 'grass', cap: '#6aa83a', capHi: '#a8d86a', dirt: '#7a5a3a', dirt2: '#4a3a24', rock: '#8a6a4a' },
     semi: { style: 'log', c1: '#7a5230', c2: '#4a301a' }, decor: ['brReeds', 'brReeds', 'brFlowerBush']
   }),
   br_barracao: Object.assign({}, base, {
     name: 'Carnival Warehouse', music: 'tour_br_night', particles: 'confetti',
     sky: ['#1a1030', '#2a1a48', '#4a2a5a'], horizonGlow: '#ff5ab8', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'brStands', color: '#2a1a3a', base: 380, f: 0.1 }],
+    layers: [{ kind: 'brStands', color: '#2a1a3a', base: 345, f: 0.1 }],
     fog: '#ff8ad0', ground: { style: 'metal', cap: '#5a5a6a', capHi: '#8a8a9a', dirt: '#3a3a48', dirt2: '#22222c', rock: '#4a4a58' }, decor: ['brMask'],
     hard: { c1: '#6a5a7a', c2: '#3a2a4a' }, semi: { style: 'plank', c1: '#ff5aa8', c2: '#b81a6a' }
   })

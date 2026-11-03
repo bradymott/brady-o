@@ -35,7 +35,7 @@ BurnsWorlds.register({
   // the story card into this world quotes her note; the ending (ticket revoked, the plane) is its own outro
   story: 'Her note said: "Find me where lost loves are found: 9:00, the Workshops."', noOutro: true,
   sky: BW13.SKY_A, sky2: BW13.SKY_B, tod: 0,
-  music: 'w7',
+  music: 'burns_w13',
   bounds: [-120, -150, 120, 135],
   spawn: { x: 0, y: 0, z: 126, yaw: Math.PI },
   ground: { base: '#dcbf9c', crack: 0.12, mottle: 0.32, res: 0.45 },
@@ -542,7 +542,7 @@ BW13.intro = function (g) {
   const camB = { x: 4, y: 2.4, z: 121, tx: 0, ty: 3.6, tz: A.z, fov: 0.85 };
   p.teleport(0, 0, 124, Math.PI); p.locked = true;
   g.cutscene([
-    { music: 'w7' },
+    { music: 'burns_w13' },
     { cam: camA },
     { cam: { from: camA, to: camB, dur: 4 } },
     { say: ['brady', ['Workshop Village. Nine o\'clock. "Where lost loves are found."', 'Okay, Chinka. I\'m here.']] },
@@ -601,18 +601,18 @@ BW13.contactStart = function (g, m) {
   if (flow) { flow.data.mode = 'dizzy'; flow.data.t = 1.8; flow.data.rt = 3; flow.say('Let me warm up my flow...', 1.8); }
   g.player.invT = 1.5;
   g.banner('ESCAPE FLOW!', 'Reach the Nap Tent. SPIN makes him pause. Three catches and you\'ve been FLOWED.', { col: '#ffb070' });
-  burnsMusic('star', 'w7');
+  burnsMusic('star', 'burns_w13');
 };
 BW13.contactReset = function (g) {
   const flow = g.actor('flow'), F = BW13.FLOOR, p = g.player;
   if (p.grabbedBy === flow) p.release(false);
   if (flow) { flow.x = F.x - 1; flow.z = F.z; flow.y = 0.26; flow.data.mode = 'class'; }
-  burnsMusic('w7');
+  burnsMusic('burns_w13');
 };
 BW13.contactDone = function (g) {
   const flow = g.actor('flow'), N = BW13.NAP, p = g.player, D = BW13.NAPDOOR;
   if (p.grabbedBy) p.release(false);
-  burnsMusic('w7');
+  burnsMusic('burns_w13');
   if (flow) { flow.x = D.x - 5; flow.z = D.z + 1.5; flow.y = g.world.height(flow.x, flow.z); flow.data.mode = 'respect'; }
   g.cutscene([
     { cam: { x: D.x + 1.5, y: 2.0, z: D.z - 4.5, tx: D.x - 4, ty: 1.1, tz: D.z + 1, fov: 0.85 } },
@@ -703,11 +703,11 @@ BW13.tantraStart = function (g) {
   if (k) { k.data.mode = 'dizzy'; k.data.t = 1.8; k.data.lt = 3; k.say('One moment! I stretch my heart!', 1.8); }
   g.player.invT = 1.5;
   g.banner('TANTRA BASICS', 'Bring 5 cushions back to the tent. Klaus wants to be your partner. Very much.', { col: '#ff8a5a' });
-  burnsMusic('burns_w3', 'w7');
+  burnsMusic('burns_w3', 'burns_w13');
 };
 BW13.tantraDone = function (g) {
   const S = BW13.state, k = g.actor('klaus'), r = g.actor('river'), T = BW13.TANTRA, p = g.player;
-  burnsMusic('w7');
+  burnsMusic('burns_w13');
   if (p.grabbedBy) p.release(false);
   for (const c of S.cushions) if (c.state !== 'pile') c.mv.visible = false;
   if (k) { k.data.mode = 'sad'; k.x = T.x - T.R - 2.4; k.z = T.z - 3; k.y = g.world.height(k.x, k.z); k.yaw = -Math.PI / 2; }
@@ -809,11 +809,11 @@ BW13.soundStart = function (g) {
   for (const b of S.bowls) { b.rung = false; b.k = 0; }
   if (s) { s.x = D.x; s.z = D.z; s.data.mode = 'bath'; s.data.ang = 0; }
   g.banner('SOUND BATH', 'Ring the 5 bowls. If the stare beam locks on, MASH JUMP to look away.', { col: '#c8a0ff' });
-  burnsMusic('secret', 'w7');
+  burnsMusic('secret', 'burns_w13');
 };
 BW13.soundDone = function (g) {
   const s = g.actor('solstice');
-  burnsMusic('w7');
+  burnsMusic('burns_w13');
   if (s) { s.data.mode = 'roam'; s.x = BW13.SOUNDDOOR.x + 2.5; s.z = BW13.SOUND.z - 2.5; }
   if (g.player.grabbedBy) g.player.release(false);
   if (s) g.say(s, ['You are now four percent more enlightened. I\'m at a hundred. Obviously.', 'My twin flame is out there. I can feel it. Probably wearing something floral.']);
@@ -1027,7 +1027,7 @@ BW13.exerciseStart = function (g) {
   g.missions.start('lostlove', true);
   const seat = { x: L.x, z: L.z - 4.2 };
   g.cutscene([
-    { do: g2 => { p.teleport(seat.x, 0.26, seat.z, 0); p.locked = true; p.animOverride = 'bw1213_floorsit'; if (pearl) { pearl.x = L.x; pearl.z = L.z; pearl.y = 0.3; pearl.def.fixedY = true; pearl.setBehavior('bw12still'); pearl.def.anim = 'bw1213_floorsit'; pearl.yaw = 0; } burnsMusic('gift_camp', 'w7'); } },
+    { do: g2 => { p.teleport(seat.x, 0.26, seat.z, 0); p.locked = true; p.animOverride = 'bw1213_floorsit'; if (pearl) { pearl.x = L.x; pearl.z = L.z; pearl.y = 0.3; pearl.def.fixedY = true; pearl.setBehavior('bw12still'); pearl.def.anim = 'bw1213_floorsit'; pearl.yaw = 0; } burnsMusic('gift_camp', 'burns_w13'); } },
     { cam: { x: L.x - 3.4, y: 2.6, z: L.z - 7.0, tx: L.x, ty: 0.8, tz: L.z - 1.0, fov: 0.85 } },
     { say: [pearl, ['Welcome, lost lovers. Finding Your Long-Lost Love. Ninety-two percent success rate.', 'Sit. Close your eyes. Breathe IN when the light grows... and out when it fades.']] },
     { do: g2 => { BW13.exerciseBegin(g2); } }
@@ -1094,7 +1094,7 @@ BW13.reveal = function (g) {
     { do: g2 => { burnsSfx('firework_burst', { vol: 0.6 }); burnsSfx('chinka', { vol: 0.6 }, 'secret'); } },
     { say: [{ name: 'A VOICE, VERY FAR AWAY', model: BurnsRig.model(BurnsRig.chinkaSpec()) }, ['...BRAAAADY!']] },
     { cam: camIn },
-    { do: g2 => { p.animOverride = 'cheer'; burnsMusic('credits', 'w7'); } },
+    { do: g2 => { p.animOverride = 'cheer'; burnsMusic('credits', 'burns_w13'); } },
     { say: ['brady', ['That\'s HER! She\'s ALIVE!', 'She\'s... on top of the Man\'s pavilion?!']] },
     { say: [pearl, ['Mm-hmm. That\'s a reply. Ninety-two percent, baby.', 'The other eight percent found a really good sandwich.']] },
     { do: g2 => { g2.missions.complete('lostlove'); } }
@@ -1108,7 +1108,7 @@ BW13.goons = function (g) {
   setCine(cop); setCine(rng);
   const march = { t: 0 };
   g.cutscene([
-    { do: g2 => { S.clearSky = 0; p.animOverride = null; p.teleport(L.x, 0, L.z + 3.2, 0); if (cop) { cop.x = door.x - 1.0; cop.z = door.z - 2.2; cop.y = 0; cop.yaw = Math.PI; } if (rng) { rng.x = door.x + 1.0; rng.z = door.z - 2.2; rng.y = 0; rng.yaw = Math.PI; } burnsMusic('castle', 'w7'); } },
+    { do: g2 => { S.clearSky = 0; p.animOverride = null; p.teleport(L.x, 0, L.z + 3.2, 0); if (cop) { cop.x = door.x - 1.0; cop.z = door.z - 2.2; cop.y = 0; cop.yaw = Math.PI; } if (rng) { rng.x = door.x + 1.0; rng.z = door.z - 2.2; rng.y = 0; rng.yaw = Math.PI; } burnsMusic('castle', 'burns_w13'); } },
     { cam: { x: L.x - 2.8, y: 2.0, z: L.z + 1.6, tx: door.x, ty: 1.3, tz: door.z - 2.0, fov: 0.8 } },
     { say: [cop || 'COP', ['Groovy. ...FREEZE!', '(He flashes his badge.) I mean... greetings, fellow burner. You\'re under... groovy arrest.']] },
     { say: [rng || 'RANGER', ['Per the principles: a formal complaint has been filed against you by a...', '(He checks his clipboard.) ...forty-foot wooden effigy.']] },
@@ -1129,7 +1129,7 @@ BW13.goons = function (g) {
       return march.t > 7.5;
     } },
     { fade: 'out', dur: 0.5 },
-    { do: g2 => { p.teleport(E.x, 0, E.z, Math.PI); p.animOverride = null; if (cop) { cop.x = E.x - 1.3; cop.z = E.z - 2.2; cop.yaw = 0.3; cop.ch.play('idle'); } if (rng) { rng.x = E.x + 1.3; rng.z = E.z - 2.2; rng.yaw = -0.3; rng.ch.play('clipboard'); } burnsMusic('w7'); } },
+    { do: g2 => { p.teleport(E.x, 0, E.z, Math.PI); p.animOverride = null; if (cop) { cop.x = E.x - 1.3; cop.z = E.z - 2.2; cop.yaw = 0.3; cop.ch.play('idle'); } if (rng) { rng.x = E.x + 1.3; rng.z = E.z - 2.2; rng.yaw = -0.3; rng.ch.play('clipboard'); } burnsMusic('burns_w13'); } },
     { fade: 'in', dur: 0.5 },
     { cam: { x: E.x + 6.2, y: 1.8, z: E.z - 1.2, tx: E.x - 0.4, ty: 1.3, tz: E.z - 1.1, fov: 0.85 } },
     { say: [rng || 'RANGER', ['This is the gate road. Gate\'s that way. Don\'t come back.', 'I\'m writing down that I told you that.']] },

@@ -148,6 +148,7 @@ Object.assign(CartRaceScene.prototype, {
     this.updateCamera(vdt || 1e-4);
     this.poseAll(vdt);
     this.engineSound();
+    if (window.__cartSkipRender) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#2a1a30'; ctx.fillRect(0, 0, W, H); this.drawHUD(ctx, fdt); return; }   // input tests
     const R = this.R, Q = BurnsGL.Q, qs = this.q * (Q ? Q.scale : 1);
     const gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * qs)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * qs));
     R.resize(gw, gh);
@@ -387,7 +388,7 @@ Object.assign(CartRaceScene.prototype, {
     if (this.state === 'count') { const n = 3 - Math.floor(this.stateT); if (n >= 1) { const u = this.stateT % 1; BurnsUI.text(ctx, String(n), W / 2, H * 0.38, 70 * (1.3 - u * 0.3), ['#ff5a5a', '#ffd84a', '#7aff8a'][3 - n], { glow: '#000' }); } BurnsUI.text(ctx, 'TAP HOP JUST BEFORE GO FOR A ROCKET START', W / 2, H * 0.38 + 54, 11, 'rgba(255,255,255,0.8)', { ui: true }); }
     // ---- banners ----
     let by = portrait ? H * 0.2 : H * 0.24;
-    for (const m of this.msgs) { const u = 1 - m.t / m.max, a = Math.min(1, m.t * 3, u * 8), s = 1 + Math.max(0, 0.25 - u) * 1.2, fs = (m.small ? Math.min(16, W * 0.04) : Math.min(26, W * 0.058)) * s; ctx.save(); ctx.globalAlpha = a; BurnsUI.text(ctx, m.text, W / 2, by, fs, m.col, { glow: m.small ? null : m.col }); if (m.sub) BurnsUI.text(ctx, m.sub, W / 2, by + fs * 0.6 + 8, 11, '#ffffff', { ui: true }); ctx.restore(); by += fs + (m.sub ? 20 : 8); }
+    if (!this.paused) for (const m of this.msgs) { const u = 1 - m.t / m.max, a = Math.min(1, m.t * 3, u * 8), s = 1 + Math.max(0, 0.25 - u) * 1.2, fs = (m.small ? Math.min(16, W * 0.04) : Math.min(26, W * 0.058)) * s; ctx.save(); ctx.globalAlpha = a; BurnsUI.text(ctx, m.text, W / 2, by, fs, m.col, { glow: m.small ? null : m.col }); if (m.sub) BurnsUI.text(ctx, m.sub, W / 2, by + fs * 0.6 + 8, 11, '#ffffff', { ui: true }); ctx.restore(); by += fs + (m.sub ? 20 : 8); }
     // ---- controls ----
     if (racing && !this.paused) this.drawControls(ctx);
     // pause button

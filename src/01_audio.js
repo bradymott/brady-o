@@ -819,6 +819,47 @@ const Sound = (() => {
     kartSwarm: (t, p, v, o) => swarm(t, 1.2, 0.11 * v, o, p)
   });
 
+  // Art Cart (3D): signature-weapon sounds (additive; nothing above is changed)
+  Object.assign(SFX, {
+    cartBass: (t, p, v, o) => {     // sub-bass drop: a falling sine, a wobbling saw, a big kick
+      tone(t, 'sine', 140 * p, 38 * p, 0.9, 0.5 * v, o, { st: 0.7, hold: 0.3 });
+      tone(t + 0.05, 'sawtooth', 70 * p, 45 * p, 0.8, 0.12 * v, o, LP(380, { vib: 260, vr: 7, hold: 0.4 }));
+      drum('K', t, 0.9 * v, o); drum('K', t + 0.32, 0.6 * v, o);
+      noise(t, 0.5, 0.18 * v, o, { ft: 'lowpass', f: 900, f1: 120 });
+    },
+    cartQuack: (t, p, v, o) => {    // rubber-duck honk with a squeaky tail
+      formant(t, [[0, 520 * p], [0.08, 610 * p], [0.22, 430 * p]], [[0, 'a'], [0.12, 'o']], 0.24, 0.32 * v, o, { vib: 30, vr: 18, a: 0.01 });
+      tone(t + 0.2, 'triangle', 1800 * p, 2600 * p, 0.12, 0.08 * v, o, { lin: 1 });
+    },
+    cartBubble: (t, p, v, o) => {   // a burst of rising bubble blips
+      for (let i = 0; i < 6; i++) { const f = (420 + R() * 380) * p; tone(t + i * 0.05 + R() * 0.02, 'sine', f, f * 2.6, 0.09, 0.16 * v, o, { st: 0.08 }); }
+    },
+    cartZap: (t, p, v, o) => {      // electric arc: buzzy square + crackling noise
+      tone(t, 'square', 180 * p, 90 * p, 0.45, 0.1 * v, o, LP(2600, { vib: 900, vr: 47 }));
+      noise(t, 0.4, 0.4 * v, o, { ft: 'highpass', f: 2500, lfo: [31, 1800], hold: 0.3 });
+      for (let i = 0; i < 4; i++) noise(t + R() * 0.3, 0.025, 0.3 * v, o, { ft: 'bandpass', f: 3000 + R() * 4000, q: 2 });
+    },
+    cartBoom: (t, p, v, o) => {     // cannon boom
+      tone(t, 'sine', 110 * p, 32, 0.6, 0.55 * v, o, { st: 0.5 });
+      noise(t, 0.7, 0.5 * v, o, { ft: 'lowpass', f: 1600 * p, f1: 160, q: 0.8 });
+      drum('K', t, 0.8 * v, o);
+    },
+    cartChomp: (t, p, v, o) => {    // a big crunchy bite
+      noise(t, 0.06, 0.5 * v, o, { ft: 'bandpass', f: 1800 * p, q: 1.5 });
+      noise(t + 0.09, 0.08, 0.55 * v, o, { ft: 'bandpass', f: 1200 * p, q: 1.5 });
+      tone(t + 0.09, 'sine', 160 * p, 60, 0.18, 0.4 * v, o);
+    },
+    cartGeyser: (t, p, v, o) => {   // whale spout: a rising gush of water
+      noise(t, 1.1, 0.45 * v, o, { ft: 'bandpass', f: 300 * p, f1: 2400 * p, q: 1.2, a: 0.08, hold: 0.4 });
+      tone(t, 'sine', 90 * p, 260 * p, 0.6, 0.18 * v, o, { st: 0.5 });
+      for (let i = 0; i < 5; i++) noise(t + 0.3 + R() * 0.6, 0.05, 0.12 * v, o, { ft: 'bandpass', f: 2000 + R() * 2000, q: 3 });
+    },
+    cartSparkle: (t, p, v, o) => {  // mirror-ball shimmer (dazzle beam, sprinkles)
+      [84, 88, 91, 96, 100, 103].forEach((m, i) => voice('glass', t + i * 0.035, m + K(p), 0.12, 0.05 * v, o));
+      noise(t, 0.5, 0.1 * v, o, { ft: 'highpass', f: 6000, a: 0.05 });
+    }
+  });
+
   // ------------------------------------------------- 8-bit SFX (setRetro) --
   const T8 = (t, w, f0, f1, dur, v, o, x) => tone(t, w, f0, f1, dur, v, o, Object.assign({ a: 0.002, hold: 0.6 }, x || {}));
   const C8 = { a: 0.002, hold: 0.8 };
@@ -1812,6 +1853,34 @@ const Sound = (() => {
       ap: '0.2.1.3.0.2.1.3.', ai: 'ep', av: 0.045, ao: 57,
       pd: 'c---------------', pi: 'pad', pv: 0.04, po: 52,
       dr: ['k.....k...k.....', '....s.......s...', '..h...h...h...h.', X(8)], dv: 0.36
+    },
+    // W12 The Temple: reverent and tender, 66 BPM. B minor / D major, piano over strings, soft bells, a slow heartbeat
+    burns_w12: {
+      bpm: 66, bars: 16, rv: 0.55, dl: 0.2,
+      ch: 'Bm G D A Bm G Em F#m G D Em Bm G D A A',
+      ld: 'F#5:8 D5:4 B4:4 | D5:8 B4:4 G4:4 | A4:6 F#5:2 A5:8 | E5:12 .:4 |' +
+          'F#5:6 B5:2 D6:8 | B5:8 G5:4 D5:4 | E5:6 G5:2 B5:8 | C#6:12 .:4 |' +
+          'D6:8 B5:4 G5:4 | F#5:8 A5:4 D6:4 | E6:6 D6:2 B5:8 | F#5:12 .:4 |' +
+          'G5:6 B5:2 D6:8 | F#6:8 E6:4 D6:4 | C#6:6 A5:2 E5:8 | A5:12 .:4',
+      li: 'piano', lv: 0.15,
+      ap: '0...1...2...1...', ai: 'bell', av: 0.025, ao: 67,
+      pd: 'c---------------', pi: 'strings', pv: 0.04, po: 50,
+      bp: 'r---------------', bi: 'sub', bv: 0.18,
+      dr: ['k..k............'], dv: 0.14
+    },
+    // W13 The Workshops: playful new-age, 100 BPM. D major, flute over harp, hand drums and shaker
+    burns_w13: {
+      bpm: 100, bars: 16, rv: 0.35, dl: 0.15, sw8: 0.15,
+      ch: 'D G D A D G Bm A G A D Bm G A D D',
+      ld: 'A5:4 F#5:2 A5:2 D6:8 | B5:4 G5:2 B5:2 D6:8 | A5:2 B5:2 A5:2 F#5:2 D5:8 | E5:4 F#5:2 G5:2 A5:8 |' +
+          'F#5:2 A5:2 D6:4 C#6:2 B5:2 A5:4 | G5:4 B5:4 D6:8 | F#5:4 D5:4 B4:8 | C#5:4 E5:4 A5:8 |' +
+          'B5:6 A5:2 G5:8 | A5:6 G5:2 E5:8 | F#5:4 A5:4 D6:8 | D6:4 C#6:4 B5:8 |' +
+          'B5:4 D6:4 G6:8 | E6:4 C#6:4 A5:8 | D6:2 C#6:2 B5:2 A5:2 F#5:4 E5:4 | D5:12 .:4',
+      li: 'whistle', lv: 0.12,
+      ap: '0.1.2.1.0.1.2.1.', ai: 'harp', av: 0.04, ao: 60,
+      pd: 'c---------------', pi: 'pad', pv: 0.035, po: 50,
+      bp: 'r-..r-..f-..r-..', bi: 'pluckb', bv: 0.26,
+      dr: ['t..m..t.t..m.m..', 'n.n.n.n.n.n.n.n.', 'k.......k.......', X(8)], dv: 0.36
     }
   });
 

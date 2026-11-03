@@ -197,7 +197,7 @@ const themes = {
       { kind: 'mxVolcano', color: '#8aa0c8', base: 300, h: 150, f: 0.03, blur: true, snow: true },
       { kind: 'mxTown', color: '#ffb07a', base: 372, f: 0.14 },
       { kind: 'mxPapel', color: '#000000', base: 70, f: 0.32 },
-      { kind: 'mxStalls', color: '#8a5a3a', base: 430, f: 0.45 }
+      { kind: 'mxStalls', color: '#8a5a3a', base: 375, f: 0.45 }
     ],
     fog: '#ffe8d0', decor: ['mxNopal', 'mxPots', 'mxCrates', 'mxLamp', 'mxPots', 'mxAgaveP']
   }),
@@ -227,7 +227,7 @@ const themes = {
     celestial: { type: 'none' }, stars: 0.3,
     layers: [
       { kind: 'mxVolcano', color: '#3a1a1a', base: 330, h: 190, f: 0.03, active: true, dyn: 'mxSmoke' },
-      { kind: 'mxAgave', color: '#3a2a20', base: 410, f: 0.2 }
+      { kind: 'mxAgave', color: '#3a2a20', base: 372, f: 0.2 }
     ],
     fog: '#ff7a3a',
     ground: { style: 'basalt', cap: '#4a3a3a', capHi: '#8a6a5a', dirt: '#3a2a2a', dirt2: '#1a1010', rock: '#5a4040' },
@@ -237,7 +237,7 @@ const themes = {
     name: 'Hacienda', music: 'tour_mx', particles: 'confetti',
     sky: ['#2a1a4a', '#c84a7a', '#ffb06a'], horizonGlow: '#ffb06a',
     celestial: { type: 'moon', x: 0.15, y: 0.18, r: 22, color: '#fff4e0', glow: '#ffc0a0' }, stars: 0.6,
-    layers: [{ kind: 'mxVolcano', color: '#5a3a6a', base: 290, h: 110, f: 0.02, blur: true, snow: true, at: 760 }, { kind: 'mxArches', color: '#f2d8b0', base: 420, f: 0.15 }],
+    layers: [{ kind: 'mxVolcano', color: '#5a3a6a', base: 290, h: 110, f: 0.02, blur: true, snow: true, at: 760 }, { kind: 'mxArches', color: '#f2d8b0', base: 360, f: 0.15 }],
     fog: '#ff9a7a', darkness: 0.1, decor: ['mxPots', 'mxLamp', 'mxNopal', 'mxPots']
   })
 };

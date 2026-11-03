@@ -143,7 +143,8 @@ const BurnsUI = {
     }
     // nearby pickup labels
     for (const P of g.pickups.items) {
-      if (P.taken || !P.label || (P.score && !g.gsOn) || (P.hidden && !(p.power === 'lsd' && p.powerT > 0))) continue;
+      // only label what Brady can actually collect right now (mission-gated pickups wait for their mission)
+      if (P.taken || !P.label || (P.score && !g.gsOn) || (P.hidden && !(p.power === 'lsd' && p.powerT > 0)) || (P.gate && g.missions.state(P.mission) !== 'active')) continue;
       const d = Math.hypot(P.x - p.x, P.z - p.z); if (d > 9) continue;
       if (R.project(P.x, P.y0 + 0.75, P.z, W, H, o)) this.text(ctx, P.label, o.x, o.y, 12, '#ffffff', { glow: '#ff4fd8' });
     }

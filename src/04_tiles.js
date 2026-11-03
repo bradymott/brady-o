@@ -299,6 +299,7 @@ function paintCap(ctx, th, st, left, right, rng) {
 }
 
 function paintIce(ctx, topOpen, style) {
+  if (typeof style === 'function') { style(ctx, topOpen); return; }   // a theme's own slippery surface (world tour)
   if (style === 'mud' || style === 'butter') {
     // slick surfaces: wet mud in the canyon, melted butter on the griddle row
     const mud = style === 'mud';

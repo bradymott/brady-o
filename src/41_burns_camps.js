@@ -315,7 +315,10 @@ function bcmAreas(g, R) {
       const A = { id: 'camp', name: P.name, camp: P };
       if (inCamp) {
         bcmEvent(g, 'bcmEnter', { camp: P, area: A });
-        if (!P.arrived) { P.arrived = true; bcmEvent(g, 'bcmArrive', P); if (P.o.onArrive) P.o.onArrive(g, P); }
+        if (!P.arrived) {
+          P.arrived = true; bcmEvent(g, 'bcmArrive', P); if (P.o.onArrive) P.o.onArrive(g, P);
+          if (P.o.mission && g.missions) { const m = g.missions.get(P.o.mission); if (m && m.state !== 'done' && m.state !== 'locked') { if (m.state === 'available') g.missions.start(P.o.mission, true); g.missions.complete(P.o.mission, { x: p.x, y: p.y + 1.2, z: p.z }); } }
+        }
         if (P.o.onEnter) P.o.onEnter(g, P, A);
       } else { bcmEvent(g, 'bcmExit', { camp: P, area: A }); if (P.o.onExit) P.o.onExit(g, P, A); }
     }
@@ -412,6 +415,12 @@ function bcmDomeCam(P, lx, lz, r) { P.R.domes.push({ x: P.F.wx(lx, lz), z: P.F.w
 function bcmLaser(P, lx, ly, lz, lyaw, o) { const q = P.F.w(lx, ly, lz); P.lasers.push(Object.assign({ x: q[0], y: q[1], z: q[2], yaw: P.F.rot + lyaw, n: 5, spread: 1.4, cols: [[1, 0.2, 0.8], [0.2, 0.95, 1]], rate: 0.7, len: 55, tilt: 0.12, ph: P.lasers.length * 1.7 }, o || {})); }
 function bcmPL(P, lx, ly, lz, r, cols, o) { const q = P.F.w(lx, ly, lz); P.plights.push(Object.assign({ x: q[0], y: q[1], z: q[2], r: r * P.F.s, cols: cols.map(c => typeof c === 'string' ? burnsRGBf(c) : c), i: 1.4 }, o || {})); }
 function bcmFlame(P, lx, ly, lz, o) { const q = P.F.w(lx, ly, lz); P.flames.push(Object.assign({ x: q[0], y: q[1], z: q[2], every: 8, ph: 0, h: 5 }, o || {})); }
+// api.npc() returns the actor's definition; this finds the live actor for it (cached)
+function bcmActorOf(g, def) {
+  if (!def || !g || !g.actors) return null;
+  if (def._bcmA && !def._bcmA.removed && g.actors.indexOf(def._bcmA) >= 0) return def._bcmA;
+  const a = g.actors.find(x => x.def === def) || null; def._bcmA = a; return a;
+}
 function bcmItem(P, it) { it._bcm = P; P.R.items.push(it); return it; }
 
 /* ======================= geometry kit (all in the current mesh transform) ======================= */
@@ -696,7 +705,6 @@ function bcmBooth(m, x, y, z, yaw, o) {
   m.color('#3a3a44').shine(2); m.limb(w / 2 - 0.15, h, -0.3, w / 2 - 0.3, h + 0.45, -0.15, 0.015, 0.012, { seg: 5 });
   m.color('#fff2c8', 1); m.ball(w / 2 - 0.32, h + 0.45, -0.13, 0.04, { seg: 6, rings: 4 }); m.emissive(0);
   m.pop(); m.shine(0);
-  const c = Math.cos(yaw), s = Math.sin(yaw);
   return [bcmC.box(x, z, w / 2, d / 2, y, y + h + 0.1, yaw)];
 }
 // a hyperbolic shade sail through four corners (both sides), edges pulled in like real sails
@@ -1199,7 +1207,7 @@ function bcmBuildRoot(api, g, P) {
       m.color('#ad8b5f').shine(1); for (const s of [-1, 1]) m.limb(x0 + sd * len, 1.0, z0 + s * 1.15, x0, 5.6, z0 + s * 1.15, 0.05, 0.05, { seg: 5 });
       m.color('#7aff5a', 1); for (const s of [-1, 1]) m.limb(x0 + sd * len, 0.5, z0 + s * 1.2, x0, 5.1, z0 + s * 1.2, 0.025, 0.025, { seg: 4 }); m.emissive(0);
       for (let k = 1; k < 4; k++) { m.color('#6a5038'); m.limb(x0 + sd * len * (1 - k / 4), 0, z0, x0 + sd * len * (1 - k / 4), 4.6 * k / 4 - 0.2, z0, 0.12, 0.12, { seg: 6 }); }
-      return { cols: [bcmC.ramp(x0 + sd * len / 2, z0, 1.1, len / 2, 0.02, 4.6, yaw), bcmC.box(x0 + sd * 0.6, z0, 0.6, 1.1, 4.3, 4.6)] };
+      return { cols: [bcmC.ramp(x0 + sd * len / 2, z0, 1.1, len / 2, 0.02, 4.6, yaw), bcmC.box(x0 - sd * 0.45, z0, 0.45, 1.1, 4.3, 4.6)] };
     });
   }
   // the root mandala (our own stage art) + the DJ booth + the riser
@@ -1247,8 +1255,7 @@ function bcmBuildRoot(api, g, P) {
   bcmCrowd(P, 0, 13, 8, 12, { face: [0, -8], lines: ['When the car docks the whole stage doubles!', 'I come for the domes, I stay for the coliseum.', 'Root Society is LOUD. I can feel it in my teeth.'] });
   if (gal) for (const a of [-1.178, -0.6545, 0.6545, 1.178]) {
     const rr = (C.ri + C.ro) / 2, x = C.cx + Math.sin(a) * rr, z = C.cz - Math.cos(a) * rr;
-    const dd = bcmCrowd(P, x, z, 0.2, 1, { y: 4.62, face: [C.cx, C.cz], behavior: 'dance', extra: { chat: ['Best seat in the coliseum!', 'Up here the bass hits you twice.'] } });
-    void dd;
+    bcmCrowd(P, x, z, 0.2, 1, { y: 4.62, face: [C.cx, C.cz], behavior: 'dance', extra: { chat: ['Best seat in the coliseum!', 'Up here the bass hits you twice.'] } });
   }
   bcmLaser(P, 0, 12.6, mz + 0.8, 0, { n: 7, spread: 1.7, cols: [[1, 0.65, 0.2], [0.5, 1, 0.35], [0.25, 0.9, 1]], len: 70, tilt: 0.08 });
   bcmPL(P, 0, 7, -4, 20, ['#ffb347', '#7aff5a', '#38d8ff', '#ff7a3a'], { i: 1.6 });
@@ -1624,8 +1631,9 @@ function bcmPlaygroundLounge(P) {
     // three dune sails: long, low, wavy surfaces on curved ribs
     const dune = (x0, z0, len, wid, h, yaw, col) => {
       m.push(); m.tf(x0, 0, z0, yaw);
-      const f = (u, v, t) => { const x = (u - 0.5) * len, z = (v - 0.5) * wid, crest = Math.sin(u * Math.PI) * (0.8 + 0.2 * Math.sin(u * 7)); t[0] = x; t[1] = h * crest * (1 - Math.pow(v - 0.5, 2) * 1.6) + 0.6; t[2] = z + Math.sin(u * 5) * 0.6; };
-      m.color(col).shine(0); m.surf(m.lo ? 8 : 14, m.lo ? 4 : 6, f, {}); m.color(shade(col, -0.25)); m.surf(m.lo ? 8 : 14, m.lo ? 4 : 6, f, { flip: true });
+      const f = (u, v, t) => { const x = (u - 0.5) * len, z = (v - 0.5) * wid, crest = Math.pow(Math.sin(u * Math.PI), 0.6) * (0.75 + 0.25 * Math.sin(u * 7)); t[0] = x; t[1] = 2.5 + h * 0.45 * crest * (1 - Math.pow(v - 0.5, 2) * 2.2) + Math.sin(u * 9 + v * 2) * 0.12; t[2] = z + Math.sin(u * 5) * 0.6; };
+      const stripe = (u) => Math.floor(u * 7) % 2 ? col : shade(col, 0.12);
+      m.color(col).shine(0); m.surf(m.lo ? 8 : 16, m.lo ? 4 : 6, f, { colFn: stripe }); m.color(shade(col, -0.25)); m.surf(m.lo ? 8 : 16, m.lo ? 4 : 6, f, { flip: true, colFn: u => shade(stripe(u), -0.22) });
       m.color('#b89a68').shine(2); for (const u of [0.15, 0.5, 0.85]) { const t0 = [0, 0, 0], t1 = [0, 0, 0]; f(u, 0, t0); f(u, 1, t1); m.limb(t0[0], 0, t0[2], t0[0], t0[1], t0[2], 0.07, 0.06, { seg: 6 }); m.limb(t1[0], 0, t1[2], t1[0], t1[1], t1[2], 0.07, 0.06, { seg: 6 }); }
       m.pop(); m.shine(0);
     };
@@ -1642,9 +1650,7 @@ function bcmPlaygroundLounge(P) {
     m.color('#ffb23a', 1); m.lathe([[3.05, 0.06], [3.05, 0.12]], { seg: 16, theta0: -0.7, theta1: 0.7 }); m.emissive(0);
     m.color('#c8c8d0').shine(3); for (let k = 0; k < 4; k++) { const a = -0.5 + k * 0.33; m.roundCyl(Math.sin(a) * 2.9, 1.2, Math.cos(a) * 2.9, 0.05, 0.22, 0.02, { seg: 8 }); }
     m.pop(); m.shine(0);
-    const bc = Math.cos(-0.9), bs = Math.sin(-0.9);
     cols.push(bcmC.box(lx + 6.2 + Math.sin(-0.9) * 2.7, lz - 3.4 + Math.cos(-0.9) * 2.7, 1.9, 0.45, 0, 1.2, -0.9));
-    void bc; void bs;
     for (const [x, y, z, c] of [[lx - 3, 3.2, lz - 1, '#ffcf8a'], [lx + 1.5, 3.5, lz - 0.5, '#ffb070'], [lx + 3.5, 2.8, lz + 4.5, '#ffcf8a'], [lx - 4.5, 2.4, lz + 5.5, '#ffe0a8']]) { bcmLantern(m, x, y, z, c, 1.1); lights.push({ x, y, z, s: 0.8, c }); }
     bcmSignMesh(m, 'THE LOUNGE\nCHILL · WATER · STARS', { bg: '#2a1c10', fg: '#ffe0a8', border: '#ffb23a', size: 34, glow: '#ffb070' }, lx - 7.5, 0.8, lz + 7.5, 1.0, { yaw: 2.4, glow: true, frame: '#5a4028' });
     cols.push(bcmC.box(lx - 7.5, lz + 7.5, 1.0, 0.12, 0, 1.9, 2.4, { walk: false }));
@@ -1827,6 +1833,758 @@ BCM_KINDS.opulentTemple = {
   build: bcmBuildTemple, sil: bcmSilTemple
 };
 
+/* ======================= 4. CAMP QUESTION MARK =======================
+   Real camp (facts): a big bass-music sound camp; its co-founders first came to Black Rock City in 1999; the camp
+   keeps "question books" full of thoughtful questions. Its obvious signature (per the owner) is a giant glowing "?".
+   Our design: a 14 m glowing "?" (a smooth LED tube + a big dot) towering over a round stage and bass walls, and a
+   coffee lounge with a chalkboard menu and a table of open question books.
+   Local layout (+Z = street): "?" plane z -15, stage (0, -8.5) r 5.5, lounge (26, 4) */
+function bcmQMCurve() {
+  const pts = [], cx = 0, cy = 11.2, r = 3.4;
+  for (let k = 0; k <= 22; k++) { const a = (150 - k / 22 * 220) * Math.PI / 180; pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
+  const e = pts[pts.length - 1];
+  for (let k = 1; k <= 6; k++) { const t = k / 6; pts.push([lerp(e[0], 0, easeInOut(t)), lerp(e[1], 6.4, t)]); }
+  for (let k = 1; k <= 3; k++) pts.push([0, 6.4 - k * 0.65]);
+  return pts;
+}
+function bcmBuildQM(api, g, P) {
+  P.bpm = 140;
+  const QZ = -15, cyan = '#38f2ff', mag = '#ff4fd8';
+  bcmPaint(P, (c, Pt, S) => {
+    const [px, pz] = Pt(0, 4); c.strokeStyle = 'rgba(40,120,160,0.35)'; c.lineWidth = 0.6 * S;
+    for (let r = 3; r < 13; r += 2.5) { c.beginPath(); c.arc(px, pz, r * S, 0, TAU); c.stroke(); }
+    c.fillStyle = 'rgba(30,40,70,0.25)'; c.beginPath(); c.arc(px, pz, 13 * S, 0, TAU); c.fill();
+  });
+  // the giant question mark
+  bcmPart(P, 0, QZ, m => {
+    const C = bcmQMCurve().map(q => [q[0], q[1], QZ]);
+    m.color('#1a2a3a').shine(2); bcmTube(m, C, 0.95, { seg: 14 });                       // the dark body
+    m.color('#dffcff', 1); bcmTube(m, C.map(q => [q[0], q[1], QZ + 0.62]), 0.38, { seg: 10 }); // the glowing face
+    m.color(cyan, 1); for (let i = 0; i < C.length; i += 2) { const q = C[i]; m.ball(q[0], q[1], QZ - 0.75, 0.2, { seg: 6, rings: 4 }); }
+    m.emissive(0);
+    m.color('#1a2a3a').shine(2); m.ball(0, 2.2, QZ, 1.7, { seg: 20, rings: 12 });
+    m.color('#dffcff', 1); m.ellipsoid(0, 2.2, QZ + 0.9, 1.1, 1.1, 0.95, { seg: 16, rings: 10 }); m.emissive(0);
+    // a plinth + bracing
+    m.color('#2a3442').shine(1); m.roundBox(0, 0.25, QZ, 6, 0.5, 4, 0.12);
+    m.color('#5a6472').shine(2); m.limb(0, 6.0, QZ - 0.4, 0, 0.5, QZ - 2.4, 0.12, 0.12, { seg: 6 }); m.limb(1.6, 10.4, QZ - 0.6, 1.2, 0.5, QZ - 2.0, 0.1, 0.1, { seg: 6 });
+    return { cols: [bcmC.box(0, QZ, 3, 2, 0, 0.5), bcmC.cyl(0, QZ, 1.7, 0.5, 3.9), bcmC.box(0, QZ, 1, 1, 0.5, 14.6, 0, { walk: false })], lights: [{ x: 0, y: 11, z: QZ + 1.5, s: 7, c: cyan }, { x: 0, y: 2.2, z: QZ + 1.5, s: 3, c: '#dffcff' }] };
+  }, { noAO: true });
+  // the round stage, booth, bass walls
+  bcmPart(P, 0, -8.5, m => {
+    const cols = [];
+    m.color('#1c2430').shine(1); m.push(); m.tf(0, 0, -9); m.roundCyl(0, 0, 0, 5.5, 1.4, 0.12, { seg: 32 }); m.pop();
+    m.color(cyan, 1); m.push(); m.tf(0, 1.3, -9); m.torus(0, 0, 0, 5.52, 0.05, { seg: 40, tseg: 4 }); m.pop(); m.color(mag, 1); m.push(); m.tf(0, 0.2, -9); m.torus(0, 0, 0, 5.52, 0.05, { seg: 40, tseg: 4 }); m.pop(); m.emissive(0);
+    cols.push(bcmC.cyl(0, -9, 5.5, 0, 1.4));
+    cols.push(...bcmBooth(m, 0, 1.4, -8.0, 0, { w: 3.0, ca: cyan, cb: mag, body: '#121820', ledFn: (u, v) => (Math.abs(u - 0.5) < 0.08 && v > 0.3) || (Math.abs(Math.hypot((u - 0.5) * 3, v - 0.75) - 0.35) < 0.08 && v > 0.55) ? '#dffcff' : (v < 0.2 ? cyan : null) }));
+    for (const sd of [-1, 1]) {
+      m.push(); m.tf(sd * 9.5, 0, -8.5, -sd * 0.4); const c = bcmSubs(m, 0, 0, 3, 3, { led: sd < 0 ? cyan : mag, col: '#141a22' });
+      for (let k = 0; k < 2; k++) bcmSpeaker(m, (k - 0.5) * 1.6, c.y1, 0.1, 1.5, 1.6, 0.9, { cones: 2, col: '#141a22' });
+      m.pop();
+      cols.push(bcmC.box(sd * 9.5, -8.5, c.hx, c.hz, 0, c.y1 + 1.6, -sd * 0.4));
+    }
+    return { cols };
+  });
+  // the coffee lounge: shade, espresso bar, chalkboard, couches, question books
+  const lx = 26, lz = 4;
+  bcmRug(P, lx, lz + 1, 6, 4, 0.1, 'rgba(40,60,110,0.85)', 'rgba(150,240,255,0.6)');
+  bcmPart(P, lx, lz, m => {
+    const cols = [], lights = [];
+    for (const [x, z] of [[lx - 6, lz - 4], [lx + 6, lz - 4], [lx - 6, lz + 6], [lx + 6, lz + 6]]) { m.color('#3a4452').shine(2); m.limb(x, 0, z, x, 4.2, z, 0.1, 0.08, { seg: 7 }); cols.push(bcmC.cyl(x, z, 0.12, 0, 4.2, { camPass: true })); }
+    bcmSail(m, [lx - 6, 4.4, lz - 4], [lx + 6, 3.4, lz - 4], [lx + 6, 4.4, lz + 6], [lx - 6, 3.4, lz + 6], { cols: ['#1c2c4c', '#26386a', '#1c2c4c', '#38f2ff'], under: '#2a3a5a', sag: 0.3 });
+    // espresso bar
+    m.push(); m.tf(lx + 3.6, 0, lz - 2.4, -0.2);
+    m.color('#5a3a26').shine(1); m.roundBox(0, 0.55, 0, 3.6, 1.1, 0.9, 0.12, { top: '#2a2a30' });
+    m.color(cyan, 1); m.roundBox(0, 0.1, 0.46, 3.4, 0.05, 0.03, 0.01); m.emissive(0);
+    m.color('#c8ccd4').shine(3); m.roundBox(-0.8, 1.45, -0.1, 0.9, 0.7, 0.55, 0.1); m.color('#2a2a30'); m.roundBox(-0.8, 1.25, 0.2, 0.5, 0.06, 0.12, 0.02);
+    m.color('#c8ccd4'); for (const sx of [-1.05, -0.55]) m.limb(sx, 1.42, 0.2, sx, 1.22, 0.32, 0.03, 0.025, { seg: 5 });
+    m.color('#f4f0e8').shine(1); for (let k = 0; k < 6; k++) { m.push(); m.tf(0.2 + k * 0.22, 1.1, 0.1); m.lathe([[0.05, 0], [0.07, 0.11], [0.07, 0.12], [0, 0.03]], { seg: 8 }); m.pop(); }
+    m.color('#8a5a3a'); m.roundCyl(1.4, 1.1, -0.2, 0.12, 0.35, 0.03, { seg: 10 });
+    m.pop(); m.shine(0);
+    cols.push(bcmC.box(lx + 3.6, lz - 2.4, 1.8, 0.45, 0, 1.1, -0.2));
+    bcmSignMesh(m, 'THE ? LOUNGE · COFFEE\nWHAT\'S YOUR QUESTION?', { bg: '#1a2420', fg: '#f4f0e0', border: '#8a6a4a', size: 34, font: '' }, lx + 3.8, 1.3, lz - 3.4, 1.1, { yaw: -0.2, frame: '#5a3a26' });
+    cols.push(bcmC.box(lx + 3.8, lz - 3.4, 1.6, 0.12, 0, 2.5, -0.2, { walk: false }));
+    // couches + the question-book table
+    cols.push(bcmCouch(m, lx - 3.5, lz + 3.5, Math.PI * 0.8, '#2a4a8a', { pillow: cyan }), bcmCouch(m, lx + 0.5, lz + 4.8, Math.PI, '#4a2a6a', { pillow: mag }), bcmCouch(m, lx - 4.2, lz - 0.6, Math.PI / 2, '#2a5a5a'));
+    m.color('#6a4a32').shine(1); m.roundBox(lx - 0.8, 0.45, lz + 1.2, 2.2, 0.9, 1.2, 0.1, { top: '#8a6a48' });
+    for (let k = 0; k < 3; k++) { const bx = lx - 1.5 + k * 0.7; m.push(); m.tf(bx, 0.92, lz + 1.2, 0.3 * (k - 1)); for (const sd of [-1, 1]) { m.push(); m.tf(sd * 0.17, 0, 0, 0, 0, -sd * 0.18); m.color(['#8a2a2a', '#2a5a8a', '#2a6a3a'][k]); m.roundBox(0, 0.02, 0, 0.34, 0.04, 0.46, 0.01); m.color('#f4efe2'); m.roundBox(0, 0.05, 0, 0.31, 0.03, 0.43, 0.005); m.pop(); } m.pop(); }
+    cols.push(bcmC.box(lx - 0.8, lz + 1.2, 1.1, 0.6, 0, 0.9));
+    for (const [x, z, c] of [[lx - 3, lz - 1, '#9af8ff'], [lx + 2.5, lz + 2.5, '#ffcf8a'], [lx - 1, lz + 4, '#ff9af0']]) { bcmLantern(m, x, 3.0, z, c, 1.0); lights.push({ x, y: 3, z, s: 0.8, c }); }
+    lights.push({ x: lx, y: 0, z: lz + 1, s: 0, c: '#9af8ff', pool: 11, i: 0.45 });
+    return { cols, lights };
+  });
+  for (const [x, z, yaw, seed] of [[lx - 3.5, lz + 3.5, Math.PI * 0.8, 3], [lx + 0.5, lz + 4.8, Math.PI, 22]]) P.actors.push(P.api.npc({ type: 'burner', seed, x: P.F.wx(x, z), z: P.F.wz(x, z), y: P.F.wy(0.12), fixedY: true, yaw: P.F.rot + yaw, behavior: 'sit', chat: ['Question for you: why are you awake?', 'Every page in that book is somebody\'s question.', 'Coffee and bass. That\'s the whole recipe.'] }));
+  // signs + people
+  bcmPart(P, 0, 22, m => { bcmSignMesh(m, 'CAMP QUESTION MARK', { bg: '#0c1828', fg: '#dffcff', border: cyan, size: 50, glow: cyan }, -8, 1.2, 21, 1.1, { yaw: 0.25, glow: true, frame: '#1a2a3a' }); return { cols: [bcmC.box(-8, 21, 2.6, 0.15, 0, 2.4, 0.25, { walk: false })] }; });
+  const st = bcmStage(P, 'bass', 'The ? Stage', 0, 1.4, -8.75, 0, [0, 5, 9], { genre: 'bass', bpm: 140 });
+  bcmDJ(P, st, { id: P.id + '_dj', name: 'DJ MAYBE SO', seed: 18, lines: ['Is this the drop? Who can say.', 'Bring a question. Leave with a bass face.'] });
+  bcmCrowd(P, 0, 4, 9, 12, { face: [0, -9], lines: ['What IS the question? I forgot the question.', 'The bass here rearranges your organs. In a good way.', 'They keep books full of questions in the lounge. I wrote one!'] });
+  bcmLaser(P, 0, 14.2, QZ, 0, { n: 7, spread: 1.6, cols: [[0.25, 0.95, 1], [1, 0.3, 0.85], [0.85, 1, 1]], len: 70, tilt: 0.06, ph: 2 });
+  bcmLaser(P, 0, 2.6, -8, 0, { n: 6, spread: 2.4, cols: [[1, 0.3, 0.85], [0.25, 0.95, 1]], len: 40, tilt: 0.25, ph: 5, rate: 1.2 });
+  bcmPL(P, 0, 7, -8, 20, [cyan, mag, '#dffcff'], { i: 1.8 });
+  bcmPL(P, lx, 3, lz + 1, 10, ['#9af8ff'], { i: 0.8, pulse: false });
+  bcmPool(P, 0, -6, 18, '#38f2ff', 0.45); bcmPool(P, 0, 4, 14, '#ff4fd8', 0.3);
+  bcmArea(P, 'stage', 'The ? Stage', 0, -2, { hx: 14, hz: 16 }); bcmArea(P, 'lounge', 'The ? Lounge', lx, lz + 1, { hx: 7, hz: 6 });
+  bcmSpot(P, 'question', 0, 0, QZ + 3, Math.PI); bcmSpot(P, 'booth', 0, 1.4, -8.75); bcmSpot(P, 'floor', 0, 0, 5, Math.PI); bcmSpot(P, 'lounge', lx - 1, 0, lz + 1, Math.PI); bcmSpot(P, 'books', lx - 0.8, 0.95, lz + 1.2); bcmSpot(P, 'coffee', lx + 3.6, 0, lz - 1.5, Math.PI);
+}
+function bcmSilQM(m, P) {
+  const C = bcmQMCurve().map(q => [q[0], q[1], -15]);
+  m.color('#dffcff', 1); bcmTube(m, C, 0.95, { seg: 6, caps: false }); m.ball(0, 2.2, -15, 1.7, { seg: 8, rings: 5 }); m.emissive(0);
+  m.color('#1c2430'); m.push(); m.tf(0, 0, -9); m.roundCyl(0, 0, 0, 5.5, 1.4, 0.2, { seg: 12 }); m.pop();
+  m.color('#1c2c4c'); m.roundBox(26, 3.9, 5, 12, 0.4, 10, 0.2);
+  return { cols: [bcmC.cyl(0, -12, 5.5, 0, 6)], lights: [{ x: 0, y: 14.6, z: -15, s: 4, c: '#38f2ff' }, { x: 0, y: 2.2, z: -14, s: 3, c: '#dffcff' }] };
+}
+BCM_KINDS.campQuestionMark = {
+  name: 'Camp Question Mark', short: 'Camp ?', bpm: 140, mapCol: '#38f2ff',
+  desc: 'A 14 m glowing "?" over a round bass stage with sub walls, and a coffee lounge with a chalkboard menu and a table of open question books.',
+  real: 'A big bass-music sound camp; its co-founders first came to Black Rock City in 1999; it keeps "question books" filled with thoughtful questions. Its signature (per the owner): a giant glowing question mark.',
+  foot: [-16, -19, 34, 24], radius: 34, height: 15, entrance: [0, 23, Math.PI],
+  build: bcmBuildQM, sil: bcmSilQM
+};
+
+/* ======================= 5. DISORIENT =======================
+   Real camp (facts): a sound, visual and performance-art collective born in New York; it has camped at Burning Man
+   since 2001; its colours are pink and orange. A big art compound with a big dance floor.
+   Our design (no logo): a neon portal stage (concentric pink and orange rings receding into a tunnel, a fan of neon
+   rays), a fabric-walled compound, a striped sail over the floor, a glowing tile floor, a neon arch tunnel entrance.
+   Local layout (+Z = street): stage z -16..-7, portal centre (0, 7.6, -12), floor (0, 3), entrance tunnel z 18..25 */
+function bcmBuildDisorient(api, g, P) {
+  P.bpm = 128;
+  const pink = '#ff4fd8', orange = '#ff7a2a', dark = '#1a0e1c';
+  bcmPaint(P, (c, Pt, S) => { const [px, pz] = Pt(0, 3); for (let k = 0; k < 7; k++) { c.strokeStyle = k % 2 ? 'rgba(255,122,42,0.32)' : 'rgba(255,79,216,0.32)'; c.lineWidth = 0.8 * S; c.beginPath(); c.arc(px, pz, (13 - k * 1.7) * S, 0, TAU); c.stroke(); } });
+  // stage + the neon portal tunnel + ray fan
+  bcmPart(P, 0, -12, m => {
+    const cols = [], lights = [];
+    m.color(dark).shine(1); m.roundBox(0, 0.6, -11.5, 20, 1.2, 9, 0.12, { top: '#2a1a2c' });
+    m.color(pink, 1); m.roundBox(0, 1.1, -7.0, 19.8, 0.05, 0.04, 0.012); m.emissive(0);
+    cols.push(bcmC.box(0, -11.5, 10, 4.5, 0, 1.2));
+    for (let k = 0; k < 6; k++) {
+      const R = 6.6 - k * 0.75, z = -11.6 - k * 0.9;
+      m.push(); m.tf(0, 7.6, z, 0, Math.PI / 2, 0);
+      m.color(dark).shine(2); m.torus(0, 0, 0, R, 0.32, { seg: 48, tseg: 6 });
+      m.color(k % 2 ? orange : pink, 1); m.push(); m.tf(0, 0.25, 0); m.torus(0, 0, 0, R - 0.05, 0.12, { seg: 48, tseg: 5 }); m.pop(); m.emissive(0);
+      m.pop();
+    }
+    // the portal's feet and the back disc (a glowing "event horizon")
+    m.color(dark).shine(2); for (const sd of [-1, 1]) m.limb(sd * 4.6, 1.2, -11.6, sd * 3.2, 3.0, -11.6, 0.3, 0.25, { seg: 8 });
+    m.push(); m.tf(0, 7.6, -16.4, 0, Math.PI / 2, 0); m.color('#3a0a3a', 0.55); m.lathe([[0, 0], [2.6, 0], [2.6, -0.1], [0, -0.1]], { seg: 32 }); m.pop(); m.emissive(0);
+    // a fan of neon rays behind
+    for (let k = 0; k < 10; k++) { const a = -1.25 + k / 9 * 2.5, x0 = Math.sin(a) * 7.4, y0 = 7.6 + Math.cos(a) * 7.4, x1 = Math.sin(a) * 10.5, y1 = 7.6 + Math.cos(a) * 10.5; m.color(k % 2 ? orange : pink, 1); m.limb(x0, Math.max(1.3, y0), -15.2, x1, Math.max(1.3, y1), -15.4, 0.12, 0.12, { seg: 5 }); }
+    m.emissive(0);
+    cols.push(...bcmBooth(m, 0, 1.2, -9.6, 0, { w: 3.0, ca: pink, cb: orange, body: dark, ledFn: (u, v) => (Math.floor(u * 12 + v * 3) % 2 ? pink : orange) }));
+    for (const sd of [-1, 1]) { m.push(); m.tf(sd * 8.2, 1.2, -9.5, -sd * 0.25); for (let i = 0; i < 3; i++) bcmSpeaker(m, 0, i * 1.45, 0, 2.0, 1.4, 1.5, { cones: 1, col: '#24182c', led: i === 2 ? (sd < 0 ? pink : orange) : null }); m.pop(); cols.push(bcmC.box(sd * 8.2, -9.5, 1.0, 0.75, 1.2, 5.6, -sd * 0.25)); }
+    lights.push({ x: 0, y: 7.6, z: -11, s: 8, c: pink });
+    return { cols, lights };
+  }, { noAO: true });
+  // the compound walls: fabric panels on poles (pink / orange), open at the front
+  bcmPart(P, 0, 4, m => {
+    const cols = [], R = 16, cz = 2;
+    const n = 18;
+    for (let i = 0; i <= n; i++) {
+      const a = -2.45 + i / n * 4.9, x = Math.sin(a) * R, z = cz + Math.cos(a) * R * 0.85;
+      if (Math.cos(a) > 0.55 && Math.abs(x) < 5.5) continue;
+      m.color('#2a1a2c').shine(2); m.limb(x, 0, z, x, 4.2, z, 0.08, 0.07, { seg: 6 }); m.color(i % 2 ? pink : orange, 1); m.ball(x, 4.3, z, 0.12, { seg: 6, rings: 4 }); m.emissive(0);
+      if (i < n) {
+        const a1 = -2.45 + (i + 1) / n * 4.9, x1 = Math.sin(a1) * R, z1 = cz + Math.cos(a1) * R * 0.85;
+        if (Math.cos((a + a1) / 2) > 0.55 && Math.abs((x + x1) / 2) < 6.5) continue;
+        const f = (u, v, t) => { t[0] = lerp(x, x1, u); t[2] = lerp(z, z1, u) + Math.sin(u * Math.PI * 3 + v) * 0.08; t[1] = lerp(3.9, 0.5, v); };
+        m.color(i % 2 ? '#ff6ad8' : '#ff8a3a'); m.surf(5, 2, f, {}); m.color(i % 2 ? '#c03aa8' : '#c85a1a'); m.surf(5, 2, f, { flip: true });
+        cols.push(bcmC.wall(x, z, x1, z1, 0.3, 0, 3.9));
+      }
+    }
+    // a striped sail over the back of the floor
+    bcmSail(m, [-11, 6.2, -5], [11, 5.0, -5], [11, 6.2, 6], [-11, 5.0, 6], { cols: [pink, '#ffd0f0', orange, '#ffe0c8', pink, '#ffd0f0', orange], under: '#3a1a3a', sag: 0.5, n: 12 });
+    for (const [x, z] of [[-11, -5], [11, -5], [-11, 6], [11, 6]]) { m.color('#2a1a2c').shine(2); m.limb(x, 0, z, x, 6.2, z, 0.12, 0.1, { seg: 7 }); cols.push(bcmC.cyl(x, z, 0.14, 0, 6.2, { camPass: true })); }
+    return { cols };
+  });
+  // glowing tile floor in front of the stage + the neon arch tunnel entrance + the sign
+  bcmPart(P, 0, -3.5, m => {
+    for (let i = 0; i < 10; i++) for (let j = 0; j < 4; j++) { const x = -9 + i * 2, z = -5.5 + j * 1.6, on = (i + j) % 2; m.color(on ? pink : orange, on ? 0.75 : 0.55); m.roundBox(x, 0.03, z, 1.85, 0.06, 1.45, 0.02); }
+    m.emissive(0);
+    return { lights: [{ x: 0, y: 0, z: -3, s: 0, c: '#ff70b0', pool: 12, i: 0.5 }] };
+  });
+  bcmPart(P, 0, 21, m => {
+    const lights = [];
+    for (let k = 0; k < 6; k++) { m.push(); m.tf(0, 0, 24 - k * 1.3, 0, Math.PI / 2, 0); m.color(dark).shine(2); m.torus(0, 0, 0, 2.9, 0.12, { seg: 28, tseg: 5, sy: 1 }); m.color(k % 2 ? orange : pink, 1); m.torus(0, 0.12, 0, 2.86, 0.06, { seg: 28, tseg: 4 }); m.emissive(0); m.pop(); if (k % 2 === 0) lights.push({ x: 0, y: 2.6, z: 24 - k * 1.3, s: 1.6, c: k % 4 ? orange : pink }); }
+    bcmSignMesh(m, 'DISORIENT', { bg: '#1a0a1a', fg: orange, border: pink, size: 60, glow: pink }, 0, 3.3, 24.4, 0.95, { glow: true, posts: false, maxW: 4.6, frame: dark });
+    return { cols: [bcmC.wall(-2.9, 24.5, -2.9, 17.4, 0.25, 0, 2.6), bcmC.wall(2.9, 24.5, 2.9, 17.4, 0.25, 0, 2.6)], lights };
+  });
+  const st = bcmStage(P, 'portal', 'The Portal', 0, 1.2, -10.35, 0, [0, 2, 9], { genre: 'techno', bpm: 128 });
+  bcmDJ(P, st, { id: P.id + '_dj', name: 'DJ VORTEXA', seed: 10, lines: ['Up is pink. Down is orange. Hope that helps.', 'Step through the portal. Bring water.'] });
+  bcmCrowd(P, 0, 2, 9, 12, { face: [0, -10], types: ['tutu', 'ledsuit', 'sparklepony', 'burner', 'furcoat'], lines: ['PINK! ORANGE! PINK!', 'I walked through the tunnel and now I live here.', 'Disorient has been doing this since 2001. Respect.'] });
+  bcmLaser(P, 0, 14.4, -12, 0, { n: 8, spread: 1.8, cols: [[1, 0.3, 0.85], [1, 0.5, 0.15]], len: 65, tilt: 0.08, ph: 3 });
+  bcmPL(P, 0, 7.6, -9, 18, [pink, orange], { i: 2.0 });
+  bcmPL(P, 0, 4, 3, 14, [orange, pink], { i: 1.0, ph: 1 });
+  bcmPool(P, 0, -4, 16, '#ff70b0', 0.5); bcmPool(P, 0, 4, 13, '#ff8a3a', 0.35);
+  bcmArea(P, 'compound', 'The Compound', 0, 2, { hx: 16, hz: 16 });
+  bcmSpot(P, 'portal', 0, 1.2, -11); bcmSpot(P, 'booth', 0, 1.2, -10.35); bcmSpot(P, 'floor', 0, 0, 2, Math.PI); bcmSpot(P, 'tunnel', 0, 0, 25, Math.PI);
+}
+function bcmSilDisorient(m, P) {
+  m.color('#1a0e1c'); m.roundBox(0, 0.6, -11.5, 20, 1.2, 9, 0.2);
+  m.push(); m.tf(0, 7.6, -11.6, 0, Math.PI / 2, 0); m.color('#ff4fd8', 1); m.torus(0, 0, 0, 6.6, 0.4, { seg: 24, tseg: 4 }); m.color('#ff7a2a', 1); m.torus(0, 0, 0, 5.2, 0.35, { seg: 20, tseg: 4 }); m.pop(); m.emissive(0);
+  m.color('#ff6ad8'); m.ellipsoid(0, 3.9, 0, 16, 2.2, 13, { seg: 12, rings: 3, phi1: Math.PI / 2 });
+  return { cols: [bcmC.box(0, -11.5, 10, 4.5, 0, 6)], lights: [{ x: 0, y: 7.6, z: -11, s: 7, c: '#ff4fd8' }] };
+}
+BCM_KINDS.disorient = {
+  name: 'Disorient', short: 'Disorient', bpm: 128, mapCol: '#ff70b0',
+  desc: 'A pink-and-orange neon portal stage (rings receding into a tunnel, a fan of rays) inside a fabric-walled compound, a striped sail, a glowing tile floor and a neon arch tunnel entrance.',
+  real: 'A sound, visual and performance-art collective born in New York; at Burning Man since 2001; its colours are pink and orange ("PORNJ"). A big art compound with a big dance floor.',
+  foot: [-18, -18, 18, 27], radius: 28, height: 15, entrance: [0, 26, Math.PI],
+  build: bcmBuildDisorient, sil: bcmSilDisorient
+};
+
+/* ======================= 6. THE DEEP END =======================
+   Real camp (facts): an OG large-scale daytime party camp from the early-to-mid 2000s.
+   Our design: a big shade over a pool-tile dance floor (lane lines, DEEP END / 9 FT markers), a lifeguard-tower DJ
+   booth under a striped umbrella, a springboard and a high dive, floats, loungers, umbrellas, a snack bar.
+   Local layout (+Z = street): floor (0, 0) 22 x 16, tower (0, -10), high dive (13, -4), snack bar (-13, -5) */
+function bcmBuildDeepEnd(api, g, P) {
+  P.bpm = 122;
+  const W = 11, Dd = 8;
+  bcmPaint(P, (c, Pt, S) => {
+    const [x0, z0] = Pt(-W, -Dd), [x1, z1] = Pt(W, Dd);
+    const L = Math.min(x0, x1), T = Math.min(z0, z1), w = Math.abs(x1 - x0), h = Math.abs(z1 - z0);
+    const gr = c.createLinearGradient(L, T, L, T + h); gr.addColorStop(0, 'rgba(30,110,200,0.78)'); gr.addColorStop(1, 'rgba(110,220,255,0.7)');
+    c.fillStyle = gr; c.fillRect(L, T, w, h);
+    c.strokeStyle = 'rgba(235,252,255,0.35)'; c.lineWidth = Math.max(1, 0.05 * S);
+    for (let k = -W; k <= W; k += 1) { const [ax, az] = Pt(k, -Dd), [bx, bz] = Pt(k, Dd); c.beginPath(); c.moveTo(ax, az); c.lineTo(bx, bz); c.stroke(); }
+    for (let k = -Dd; k <= Dd; k += 1) { const [ax, az] = Pt(-W, k), [bx, bz] = Pt(W, k); c.beginPath(); c.moveTo(ax, az); c.lineTo(bx, bz); c.stroke(); }
+    c.fillStyle = 'rgba(16,44,120,0.6)';
+    for (const lx of [-7.5, -2.5, 2.5, 7.5]) { const [ax, az] = Pt(lx - 0.22, -Dd + 1.2), [bx, bz] = Pt(lx + 0.22, Dd - 1.2); c.fillRect(Math.min(ax, bx), Math.min(az, bz), Math.abs(bx - ax), Math.abs(bz - az)); }
+    const r = mulberry32(4242); c.strokeStyle = 'rgba(220,255,255,0.25)'; c.lineWidth = Math.max(1, 0.12 * S);
+    for (let i = 0; i < 30; i++) { const xx = r() * 2 * W - W, zz = r() * 2 * Dd - Dd; c.beginPath(); for (let s = 0; s <= 6; s++) { const [px, pz] = Pt(xx + s * 0.6, zz + Math.sin(s * 1.3 + i) * 0.35); if (s) c.lineTo(px, pz); else c.moveTo(px, pz); } c.stroke(); }
+    // depth markers painted on the deck (our own text)
+    c.save(); c.fillStyle = 'rgba(20,40,90,0.9)'; c.font = `bold ${Math.round(1.1 * S)}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (const [x, z, t] of [[-8, Dd + 1.1, '9 FT'], [8, Dd + 1.1, '9 FT'], [0, Dd + 1.1, 'THE DEEP END'], [-8, -Dd - 1.1, '9 FT'], [8, -Dd - 1.1, 'NO RUNNING']]) { const [px, pz] = Pt(x, z); c.fillText(t, px, pz); }
+    c.restore();
+  });
+  // pool coping + deck + ladders
+  bcmPart(P, 0, 0, m => {
+    m.color('#eef6f8').shine(1);
+    for (const sz of [-1, 1]) m.roundBox(0, 0.06, sz * (Dd + 0.3), W * 2 + 1.2, 0.12, 0.6, 0.05);
+    for (const sx of [-1, 1]) m.roundBox(sx * (W + 0.3), 0.06, 0, 0.6, 0.12, Dd * 2, 0.05);
+    m.color('#5ad8ff', 0.8); m.roundBox(0, 0.13, Dd + 0.05, W * 2, 0.02, 0.06, 0.01); m.roundBox(0, 0.13, -Dd - 0.05, W * 2, 0.02, 0.06, 0.01); m.emissive(0);
+    m.color('#d8dce4').shine(3); for (const [x, z] of [[-6, Dd + 0.3], [6, Dd + 0.3]]) for (const sx of [-0.3, 0.3]) { m.limb(x + sx, 0.1, z, x + sx, 1.0, z, 0.035, 0.035, { seg: 6 }); m.limb(x + sx, 1.0, z, x + sx, 1.0, z - 0.35, 0.035, 0.035, { seg: 6 }); }
+    m.shine(0);
+    return {};
+  });
+  // the big shade: two hypar sails on tall poles
+  bcmPart(P, 0, -1, m => {
+    const cols = [], poles = [[-12.5, -9.5, 6.4], [12.5, -9.5, 6.4], [-12.5, 9.5, 6.4], [12.5, 9.5, 6.4], [0, -10, 7.6], [0, 10, 7.6]];
+    for (const [x, z, h] of poles) { m.color('#f4f4f0').shine(2); m.limb(x, 0, z, x, h, z, 0.15, 0.11, { seg: 8 }); m.color('#ff4a3a'); m.ball(x, h + 0.1, z, 0.16, { seg: 6, rings: 4 }); cols.push(bcmC.cyl(x, z, 0.16, 0, h, { camPass: true })); }
+    bcmSail(m, [-12.5, 6.0, -9.5], [0, 7.4, -10], [0, 5.0, 10], [-12.5, 6.4, 9.5], { cols: ['#f6faff', '#5ad8ff', '#f6faff', '#5ad8ff'], under: '#cfe8f0', sag: 0.5, n: 10 });
+    bcmSail(m, [0, 7.4, -10], [12.5, 6.0, -9.5], [12.5, 6.4, 9.5], [0, 5.0, 10], { cols: ['#5ad8ff', '#f6faff', '#5ad8ff', '#f6faff'], under: '#cfe8f0', sag: 0.5, n: 10 });
+    return { cols };
+  }, { noAO: true });
+  // the lifeguard tower DJ booth with its striped umbrella, ladder, rescue buoy, speakers
+  bcmPart(P, 0, -10.5, m => {
+    const cols = [], tz = -10.5, h = 2.6;
+    m.color('#f4f4f0').shine(1);
+    for (const [x, z] of [[-1.6, tz - 1.1], [1.6, tz - 1.1], [-1.6, tz + 1.1], [1.6, tz + 1.1]]) m.limb(x, 0, z, x * 0.82, h, z * 0.98 + tz * 0.02, 0.12, 0.1, { seg: 7 });
+    for (const sd of [-1, 1]) m.limb(sd * 1.6, 0.9, tz - 1.1, -sd * 1.4, 2.1, tz - 1.08, 0.06, 0.06, { seg: 5 });
+    m.color('#e8e4dc'); m.roundBox(0, h, tz, 3.6, 0.2, 2.6, 0.06);
+    m.color('#ff3a3a'); m.roundBox(0, h + 0.55, tz - 1.25, 3.6, 0.9, 0.12, 0.05); m.color('#ffffff'); m.roundBox(0, h + 0.55, tz - 1.18, 3.0, 0.3, 0.05, 0.02);
+    // a ship's ladder at the back (a steep stair with treads and handrails)
+    m.color('#f4f4f0'); for (const sx of [-0.5, 0.5]) { m.limb(sx, 0, tz - 5.0, sx, h, tz - 1.3, 0.06, 0.06, { seg: 5 }); m.limb(sx, 1.0, tz - 5.0, sx, h + 1.0, tz - 1.3, 0.035, 0.035, { seg: 5 }); }
+    m.color('#dcd8d0'); for (let k = 1; k < 8; k++) { const t = k / 8; m.roundBox(0, h * t - 0.03, lerp(tz - 5.0, tz - 1.3, t), 0.95, 0.06, 0.32, 0.02); }
+    // umbrella
+    m.color('#d8d8d8').shine(2); m.limb(1.2, h, tz + 0.6, 1.2, h + 3.4, tz + 0.6, 0.05, 0.05, { seg: 6 });
+    m.push(); m.tf(1.2, h + 2.9, tz + 0.6); m.shine(0); for (let k = 0; k < 8; k++) { m.color(k % 2 ? '#ff4a3a' : '#ffffff'); m.lathe([[2.2, 0], [0, 0.65]], { seg: 2, theta0: k / 8 * TAU, theta1: (k + 1) / 8 * TAU }); m.lathe([[2.2, 0], [0, 0.65]], { seg: 2, theta0: k / 8 * TAU, theta1: (k + 1) / 8 * TAU, flip: true }); } m.pop();
+    // buoy
+    m.color('#ff4a2a').shine(2); m.push(); m.tf(1.85, h - 0.6, tz + 1.15, 0, Math.PI / 2, 0); m.torus(0, 0, 0, 0.32, 0.1, { seg: 14, tseg: 6 }); m.pop();
+    cols.push(...bcmBooth(m, 0, h + 0.1, tz + 0.5, 0, { w: 2.6, ca: '#5ad8ff', cb: '#ffd84a', body: '#f4f4f0', top: '#dcd8d0', ledFn: (u, v) => (Math.sin(u * 10 + v * 6) > 0.1 ? '#5ad8ff' : '#ffffff') }));
+    for (const sd of [-1, 1]) { m.push(); m.tf(sd * 3.4, 0, tz + 0.4, -sd * 0.25); for (let i = 0; i < 2; i++) bcmSpeaker(m, 0, i * 1.3, 0, 1.4, 1.25, 1.1, { cones: 1, col: '#f0f0ec', ring: '#2a8ac8', cap: '#5ad8ff' }); m.pop(); cols.push(bcmC.box(sd * 3.4, tz + 0.4, 0.7, 0.55, 0, 2.6, -sd * 0.25)); }
+    cols.push(bcmC.box(0, tz, 1.8, 1.3, h - 0.2, h + 0.1), bcmC.ramp(0, tz - 3.15, 0.5, 1.85, 0.03, h + 0.1, 0));
+    for (const [x, z] of [[-1.6, tz - 1.1], [1.6, tz - 1.1], [-1.6, tz + 1.1], [1.6, tz + 1.1]]) cols.push(bcmC.cyl(x, z, 0.12, 0, h, { camPass: true }));
+    return { cols, lights: [{ x: 0, y: h + 1.6, z: tz + 0.5, s: 1.0, c: '#5ad8ff' }] };
+  });
+  // springboard + high dive (a 5 m platform with a ladder) beside the pool
+  bcmPart(P, 13.5, -4, m => {
+    const cols = [], hx = 14.2, hz = -4, H = 5.0;
+    m.color('#e8e4dc').shine(1);
+    for (const [x, z] of [[hx - 0.8, hz - 0.8], [hx + 0.8, hz - 0.8], [hx - 0.8, hz + 0.8], [hx + 0.8, hz + 0.8]]) m.limb(x, 0, z, x, H, z, 0.09, 0.08, { seg: 6 });
+    m.roundBox(hx, H, hz, 2.0, 0.18, 2.0, 0.05);
+    m.color('#3a8ac8').shine(2); m.push(); m.tf(hx - 1.0, H + 0.12, hz, -Math.PI / 2); m.roundBox(0, 0, 1.4, 0.7, 0.08, 2.8, 0.03); m.pop();
+    m.color('#f4f4f0'); for (const sx of [-0.35, 0.35]) m.limb(hx + 1.1, 0, hz + sx, hx + 1.1, H, hz + sx, 0.04, 0.04, { seg: 5 }); for (let k = 1; k < 10; k++) m.limb(hx + 1.1, H * k / 10, hz - 0.35, hx + 1.1, H * k / 10, hz + 0.35, 0.025, 0.025, { seg: 4 });
+    m.color('#3a8ac8'); m.push(); m.tf(W + 0.2, 0.55, 2.5, -Math.PI / 2); m.roundBox(0, 0, 0.9, 0.55, 0.07, 2.0, 0.02); m.pop(); m.color('#e8e4dc'); m.roundBox(W + 0.6, 0.27, 2.5, 0.6, 0.55, 0.6, 0.06);
+    cols.push(bcmC.box(hx, hz, 1.0, 1.0, H - 0.2, H + 0.1), bcmC.box(hx - 2.4, hz, 1.4, 0.35, H, H + 0.16));
+    for (let k = 1; k <= 8; k++) cols.push(bcmC.box(hx + 1.2, hz, 0.12, 0.35, H * k / 9 - 0.05, H * k / 9 + 0.02));
+    cols.push(bcmC.box(W + 0.6, 2.5, 0.3, 0.3, 0, 0.55));
+    return { cols };
+  });
+  // floats, loungers, umbrellas, beach balls, the snack bar
+  bcmPart(P, 0, 4, m => {
+    const cols = [], lights = [];
+    for (const [x, z, c, r] of [[-6, 3, '#ff4a7a', 0.9], [4, 5, '#ffd84a', 1.0], [7, -2, '#5aff9a', 0.8], [-3, -4, '#ff8a3a', 0.85]]) { m.color(c).shine(2); m.torus(x, 0.28, z, r, 0.28, { seg: 18, tseg: 8 }); m.color('#ffffff'); m.torus(x, 0.32, z, r, 0.29, { seg: 6, tseg: 4 }); }
+    for (const [x, z, r] of [[1, 1, 0.55], [-8, -1, 0.45], [9, 4, 0.5]]) { m.shine(2); m.surf(16, 8, (u, v, t) => { const th = u * TAU, ph = v * Math.PI; t[0] = x + Math.sin(ph) * Math.sin(th) * r; t[1] = r - Math.cos(ph) * r; t[2] = z + Math.sin(ph) * Math.cos(th) * r; }, { wrapU: true, out: true, colFn: (u, v) => (v < 0.12 || v > 0.88) ? '#ffffff' : ['#ff3b5c', '#ffffff', '#ffe24a', '#ffffff', '#38a8ff', '#ffffff'][Math.floor(u * 6) % 6] }); m.shine(0); cols.push(bcmC.cyl(x, z, r * 0.9, 0, r * 1.6)); }
+    for (const [x, z, yaw] of [[-14, 6, 0.5], [-14.5, 2.5, 0.3], [15, 7, -0.6]]) {
+      m.push(); m.tf(x, 0, z, yaw); m.color('#ffffff').shine(1); m.roundBox(0, 0.32, 0, 0.75, 0.08, 1.9, 0.03); m.push(); m.tf(0, 0.35, -0.75, 0, 0.7, 0); m.roundBox(0, 0.35, 0, 0.75, 0.08, 0.7, 0.03); m.pop();
+      m.color('#2a8ac8'); for (const sz of [-0.8, 0.8]) for (const sx of [-0.3, 0.3]) m.limb(sx, 0, sz, sx, 0.3, sz, 0.025, 0.025, { seg: 4 }); m.pop();
+      cols.push(bcmC.box(x, z, 0.4, 0.95, 0, 0.45, yaw));
+    }
+    for (const [x, z, c] of [[-15, 4.5, '#ff4a3a'], [15.5, 8.5, '#ffd84a']]) { m.color('#d8d8d8').shine(2); m.limb(x, 0, z, x, 2.6, z, 0.04, 0.04, { seg: 5 }); m.push(); m.tf(x, 2.3, z); for (let k = 0; k < 8; k++) { m.color(k % 2 ? c : '#ffffff').shine(0); m.lathe([[1.5, 0], [0, 0.45]], { seg: 2, theta0: k / 8 * TAU, theta1: (k + 1) / 8 * TAU }); m.lathe([[1.5, 0], [0, 0.45]], { seg: 2, theta0: k / 8 * TAU, theta1: (k + 1) / 8 * TAU, flip: true }); } m.pop(); }
+    // snack bar
+    m.push(); m.tf(-14.2, 0, -5.5, Math.PI / 2);
+    m.color('#5ad8ff').shine(1); m.roundBox(0, 0.55, 0, 3.2, 1.1, 0.9, 0.1, { top: '#f4f4f0' });
+    m.color('#ffffff'); for (let k = 0; k < 5; k++) m.roundBox(-1.3 + k * 0.65, 0.55, 0.46, 0.3, 1.0, 0.02, 0.01);
+    m.color('#f4f4f0'); m.roundBox(0, 2.6, -0.2, 3.6, 0.15, 1.6, 0.05); for (const sx of [-1.6, 1.6]) m.limb(sx, 0, -0.8, sx, 2.55, -0.8, 0.05, 0.05, { seg: 5 });
+    m.pop();
+    cols.push(bcmC.box(-14.2, -5.5, 1.6, 0.45, 0, 1.1, Math.PI / 2));
+    bcmSignMesh(m, 'SNACK BAR · H2O', { bg: '#ffffff', fg: '#1a4a8a', border: '#ff4a3a', size: 36 }, -14.2, 2.0, -5.5, 0.5, { yaw: Math.PI / 2, posts: false, frame: '#f4f4f0' });
+    lights.push({ x: 0, y: 0, z: 0, s: 0, c: '#5ad8ff', pool: 15, i: 0.5 });
+    return { cols, lights };
+  });
+  bcmPart(P, 0, 13, m => { bcmSignMesh(m, 'THE DEEP END', { bg: '#0a2a4a', fg: '#ffffff', border: '#5ad8ff', size: 54, glow: '#5ad8ff' }, 8, 1.1, 13, 1.1, { yaw: -0.3, glow: true, frame: '#0a2a4a' }); return { cols: [bcmC.box(8, 13, 2.2, 0.12, 0, 2.3, -0.3, { walk: false })] }; });
+  const st = bcmStage(P, 'tower', 'The Lifeguard Tower', 0, 2.7, -10.75, 0, [0, 0, 9], { genre: 'house', bpm: 122 });
+  bcmDJ(P, st, { id: P.id + '_dj', name: 'DJ CHLORINE', seed: 26, lines: ['Welcome to the deep end. Floaties optional.', 'Day party energy since the two-thousands.'] });
+  bcmCrowd(P, 0, 1, 8, 12, { face: [0, -10], types: ['tutu', 'burner', 'sparklepony', 'furcoat', 'ledsuit'], lines: ['Is it a pool party if there\'s no pool?', 'I\'m in over my head and I LOVE it.', 'The Deep End was THE day party back in the day.'] });
+  bcmLaser(P, 0, 5.4, -10.5, 0, { n: 5, spread: 1.6, cols: [[0.35, 0.85, 1], [1, 0.9, 0.3]], len: 45, tilt: 0.1, ph: 1 });
+  bcmPL(P, 0, 5, -2, 18, ['#5ad8ff', '#38a8ff', '#9af8ff'], { i: 1.4 });
+  bcmPool(P, 0, 0, 18, '#5ad8ff', 0.5);
+  bcmArea(P, 'pool', 'The Pool Deck', 0, 0, { hx: 13, hz: 12 });
+  bcmSpot(P, 'tower', 0, 2.7, -10.5); bcmSpot(P, 'booth', 0, 2.7, -10.75); bcmSpot(P, 'floor', 0, 0, 1, Math.PI); bcmSpot(P, 'highDive', 14.2, 5.0, -4, -Math.PI / 2); bcmSpot(P, 'springboard', 11.6, 0.6, 2.5, -Math.PI / 2); bcmSpot(P, 'snackBar', -13, 0, -5.5, Math.PI / 2);
+}
+function bcmSilDeepEnd(m, P) {
+  m.color('#f6faff'); m.ellipsoid(0, 5, 0, 13, 2.6, 10, { seg: 10, rings: 3, phi1: Math.PI / 2 });
+  m.color('#5ad8ff', 0.7); m.roundBox(0, 0.05, 0, 22, 0.1, 16, 0.05); m.emissive(0);
+  m.color('#f4f4f0'); m.roundBox(0, 1.3, -10.5, 3.6, 2.6, 2.6, 0.2); m.color('#ff4a3a'); m.ellipsoid(1.2, 5.5, -9.9, 2.2, 0.6, 2.2, { seg: 8, rings: 3, phi1: Math.PI / 2 });
+  return { cols: [bcmC.box(0, -10.5, 2, 1.5, 0, 3)], lights: [{ x: 0, y: 6, z: 0, s: 4, c: '#5ad8ff' }] };
+}
+BCM_KINDS.deepEnd = {
+  name: 'The Deep End', short: 'Deep End', bpm: 122, mapCol: '#5ad8ff',
+  desc: 'A daytime pool-party stage: a big shade over a pool-tile dance floor, a lifeguard-tower DJ booth with a striped umbrella, a springboard and a high dive, floats, loungers and a snack bar.',
+  real: 'An OG large-scale daytime party camp from the early-to-mid 2000s (DJs who played it describe it as a large-scale day party camp from the early days).',
+  foot: [-17, -16.5, 17, 15], radius: 24, height: 9, entrance: [0, 15, Math.PI],
+  build: bcmBuildDeepEnd, sil: bcmSilDeepEnd
+};
+
+/* ======================= 7. DEATH GUILD THUNDERDOME =======================
+   Real camp (facts): Death Guild's Thunderdome, a fixture since the late 1990s: a big climbable lattice dome; two
+   fighters in bungee harnesses hang from the top and swing at each other with foam bats while spectators climb all
+   over the outside of the dome and cheer.
+   Our design: a rusted-steel geodesic lattice (no fabric), three walkable spectator ledges around the outside (climb
+   them), two bungee fighters that bounce and bonk on their own, an MC tower, apex fire cannons.
+   Local layout (+Z = street): dome centre (0, 0) r 10.5, gate +Z, MC tower (-7, 13) */
+const BCM_TD = { R: 10.5, LEDGES: [1.5, 3.0, 4.5] };
+BurnsBehaviors.register('bcmBungee', {
+  init(a) { const D = a.data; D.y = 1.5 + Math.random(); D.vy = 0; D.sw = 0; D.vs = 0; D.ph = a.def.side > 0 ? 0 : Math.PI; D.hitT = 0; },
+  update(a, g, dt) {
+    const D = a.data, d = a.def, side = d.side, P = d.camp, F = P.F, t = P.R.t;
+    // vertical: a bungee spring with kicks off the floor; horizontal: a swing toward the middle, then a bonk
+    D.vy += (-(D.y - 2.1) * 9 - D.vy * 0.6) * dt; if (D.y < 0.05 && D.vy < 0) { D.vy = 6 + Math.random() * 2.5; }
+    D.y = Math.max(0, D.y + D.vy * dt);
+    const lunge = Math.max(0, Math.sin(t * 1.1 + D.ph * 0.2)) ** 3;
+    const want = side * (4.2 - lunge * 3.4);
+    D.vs += ((want - D.sw) * 7 - D.vs * 1.8) * dt; D.sw += D.vs * dt;
+    const lx = D.sw, lz = Math.sin(t * 0.7 + D.ph) * 1.2;
+    a.x = F.wx(lx, lz); a.z = F.wz(lx, lz); a.y = F.wy(D.y); a.vx = a.vz = 0;
+    a.yaw = F.rot + (side > 0 ? -Math.PI / 2 : Math.PI / 2);
+    D.hitT = Math.max(0, D.hitT - dt);
+    if (lunge > 0.8 && side > 0 && Math.abs(D.sw) < 1.4 && D.hitT <= 0) {
+      D.hitT = 1.2; const o = bcmActorOf(g, d.foe); if (o && o.data) { o.data.vs -= side * 7; o.data.vy += 3; }
+      g.fx.burst(a.x - Math.sin(a.yaw) * -0.8, a.y + 1.6, a.z, 'star', 8, '#ffe24a');
+      if (Math.hypot(g.player.x - a.x, g.player.z - a.z) < 30) burnsSfx('bossHit', { vol: 0.35, pitch: 1.3 });
+      bcmEvent(g, 'bcmBonk', { camp: P, actor: a });
+      for (const sd of P.spectators || []) { const s = bcmActorOf(g, sd); if (s && Math.random() < 0.3) s.say(['BONK!', 'TWO ENTER!', 'HIT HIM!', 'FOAM IS PAIN!'][Math.floor(Math.random() * 4)], 1.1); }
+    }
+    a.ch.play(lunge > 0.5 ? 'charge' : (D.y > 0.4 ? 'fall' : 'land'));
+  }
+});
+function bcmBuildThunderdome(api, g, P) {
+  const R = BCM_TD.R, rust = '#5a3a2c';
+  P.bpm = 130;
+  bcmDisc(P, 0, 0, R - 0.4, 'rgba(70,40,30,0.55)', 'rgba(255,90,58,0.5)', 0.25); bcmDisc(P, 0, 0, 2, null, 'rgba(255,90,58,0.5)', 0.25);
+  // the lattice dome (struts and hubs only), its gate, and the apex ring with bungee anchors + cannons
+  bcmPart(P, 0, 0, m => {
+    const res = bcmDome(m, { r: R, freq: 4, panels: false, frame: '#3a2c28', hub: rust, rad: 0.11, led: ['#ff5a3a'], ledE: 0.6, ledRings: false,
+      doors: [{ yaw: 0, w: 3.6, h: 3.6, col: '#2a2224', led: '#ff5a3a' }] });
+    m.color('#3a3a40').shine(2); m.torus(0, R - 0.3, 0, 1.2, 0.14, { seg: 16, tseg: 5 });
+    for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + Math.PI / 4; m.color('#2a2a30'); m.roundCyl(Math.sin(a) * 1.25, R - 0.15, Math.cos(a) * 1.25, 0.22, 0.6, 0.05, { seg: 10 }); }
+    m.color('#ff5a3a', 1); m.ball(0, R - 0.45, 0, 0.22, { seg: 8, rings: 5 }); m.emissive(0); m.shine(0);
+    // spectator ledges (walkable planks hugging the outside of the lattice)
+    const cols = res.cols;
+    for (const y of BCM_TD.LEDGES) {
+      const rr = Math.sqrt(R * R - y * y) + 0.45, n = 18;
+      for (let i = 0; i < n; i++) {
+        const a0 = i / n * TAU, a1 = (i + 1) / n * TAU, mid = (a0 + a1) / 2;
+        if (Math.abs(BurnsM.wrap(mid)) < 0.42) continue;   // the gate side stays open
+        const ax = Math.sin(a0) * rr, az = Math.cos(a0) * rr, bx = Math.sin(a1) * rr, bz = Math.cos(a1) * rr;
+        m.color('#6a5a48').shine(1); m.push(); m.tf((ax + bx) / 2, y - 0.08, (az + bz) / 2, mid + Math.PI / 2); m.roundBox(0, 0, 0, 0.7, 0.14, Math.hypot(bx - ax, bz - az) + 0.06, 0.03); m.pop();
+        cols.push({ t: 'box', x: (ax + bx) / 2, z: (az + bz) / 2, hx: 0.38, hz: Math.hypot(bx - ax, bz - az) / 2 + 0.03, y0: y - 0.18, y1: y, yaw: mid + Math.PI / 2, camPass: true });
+      }
+    }
+    return { cols, lights: [{ x: 0, y: 0, z: 0, s: 0, c: '#ff5a3a', pool: 14, i: 0.5 }, { x: 0, y: R - 0.4, z: 0, s: 2.2, c: '#ff5a3a', blink: 4 }] };
+  }, { noAO: true });
+  // the gate sign + the MC tower
+  bcmPart(P, 0, R + 1, m => {
+    const cols = [];
+    bcmSignMesh(m, 'THUNDERDOME', { bg: '#120a0a', fg: '#ff5a3a', border: '#ffb040', size: 56, glow: '#ff5a3a' }, 0, 3.8, R + 0.2, 0.95, { glow: true, posts: false, maxW: 5.4, frame: '#2a2224' });
+    bcmSignMesh(m, 'DEATH GUILD\nTWO ENTER · FOAM ONLY', { bg: '#1a1416', fg: '#e8e0d8', border: '#ff5a3a', size: 34 }, 5.2, 0.9, R + 2.4, 1.0, { yaw: -0.4, frame: '#2a2224' });
+    cols.push(bcmC.box(5.2, R + 2.4, 1.3, 0.12, 0, 2.0, -0.4, { walk: false }));
+    const tx = -7, tz = R + 2.5, th = 3.2;
+    m.color('#3a3a40').shine(2);
+    for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) m.limb(tx + sx * 1.1, 0, tz + sz * 1.1, tx + sx * 1.1, th + 1.0, tz + sz * 1.1, 0.07, 0.07, { seg: 6 });
+    for (const sd of [-1, 1]) { m.limb(tx - 1.1, 0.2, tz + sd * 1.1, tx + 1.1, th - 0.2, tz + sd * 1.1, 0.04, 0.04, { seg: 5 }); m.limb(tx + sd * 1.1, 0.2, tz - 1.1, tx + sd * 1.1, th - 0.2, tz + 1.1, 0.04, 0.04, { seg: 5 }); }
+    m.color('#2a2a30'); m.roundBox(tx, th, tz, 2.6, 0.24, 2.6, 0.06);
+    m.color('#ff3b2a', 1); for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) m.ball(tx + sx * 1.1, th + 1.1, tz + sz * 1.1, 0.12, { seg: 8, rings: 5 }); m.emissive(0);
+    for (let k = 0; k < 4; k++) { m.color('#3a3a40').shine(1); m.roundBox(tx + 1.8, (k + 1) * th / 5 - 0.06, tz - 1.2 + k * 0.6, 0.9, 0.12, 0.6, 0.03); cols.push(bcmC.box(tx + 1.8, tz - 1.2 + k * 0.6, 0.45, 0.3, 0, (k + 1) * th / 5)); }
+    cols.push(bcmC.box(tx, tz, 1.3, 1.3, th - 0.24, th));
+    for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) cols.push(bcmC.cyl(tx + sx * 1.1, tz + sz * 1.1, 0.1, 0, th + 1, { camPass: true }));
+    return { cols, lights: [{ x: tx, y: th + 1.1, z: tz, s: 0.9, c: '#ff3b2a', blink: 4 }] };
+  });
+  // the fighters, the MC, spectators on the ledges
+  if (P.o.fighters !== false) {
+    const mk = side => P.api.npc({ type: 'deathguild', seed: side > 0 ? 3 : 7, prop: 'foambat', name: side > 0 ? 'IRON MAIDEN-ISH' : 'THE FOAM REAPER', x: P.F.wx(side * 4, 0), z: P.F.wz(side * 4, 0), y: P.F.wy(2), fixedY: true, collide: false, always: true, behavior: 'bcmBungee', side, camp: P, chatter: false, noDJ: true, lines: ['Two enter. Both leave. Everyone hugs. That\'s the rule.', 'Want in? Get in line. Sign the waiver. Bring a helmet.'] });
+    const A = mk(1), B = mk(-1); A.foe = B; B.foe = A;
+    P.fighters = [A, B]; P.actors.push(A, B);
+  }
+  P.actors.push(P.api.npc({ type: 'deathguild', seed: 11, prop: 'skullstaff', name: 'THE MC', x: P.F.wx(-7, R + 2.5), z: P.F.wz(-7, R + 2.5), y: P.F.wy(3.2), yaw: P.F.rot + Math.PI * 0.85, behavior: 'idle', anim: 'yell', lookAt: false, lines: ['TWO MEN ENTER! TWO MEN... ALSO LEAVE, SAFELY!', 'Foam bats only. Hydrate between bonks.'] }));
+  P.spectators = [];
+  BCM_TD.LEDGES.forEach((y, k) => {
+    const rr = Math.sqrt(R * R - y * y) + 0.45;
+    for (let i = 0; i < 3; i++) {
+      const a = 0.9 + k * 0.5 + i * 1.75; if (Math.abs(BurnsM.wrap(a)) < 0.5) continue;
+      const x = Math.sin(a) * rr, z = Math.cos(a) * rr;
+      const s = bcmCrowd(P, x, z, 0.1, 1, { y, behavior: 'idle', face: [0, 0], extra: { anim: k === 2 ? 'cheer' : 'climb', lookAt: false, chat: ['BONK! BONK! BONK!', 'Best seat on the playa!', 'Don\'t look down. Look at the foam.'] } });
+      P.spectators.push(...s);
+    }
+  });
+  bcmCrowd(P, 0, R + 6, 4, 6, { face: [0, 0], behavior: 'idle', extra: { anim: 'cheer' }, chat: ['TWO ENTER!', 'I\'m next. I\'ve been training on a trampoline.'] });
+  P.cords = true;
+  for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + Math.PI / 4; bcmFlame(P, Math.sin(a) * 1.25, R + 0.5, Math.cos(a) * 1.25, { every: 16, ph: i * 2, h: 4 }); }
+  bcmLaser(P, 0, R + 0.4, 0, Math.PI, { n: 4, spread: TAU, cols: [[1, 0.25, 0.15], [1, 0.6, 0.2]], len: 45, tilt: 0.3, ph: 3, rate: 0.4 });
+  bcmPL(P, 0, 6, 0, 16, ['#ff5a3a', '#ffb040'], { i: 1.6 });
+  bcmPool(P, 0, 0, 15, '#ff7a3a', 0.45);
+  bcmDomeCam(P, 0, 0, R + 0.6);
+  bcmArea(P, 'arena', 'The Thunderdome', 0, 0, { r: R - 0.3 }, { dome: true });
+  bcmSpot(P, 'arena', 0, 0, 0); bcmSpot(P, 'apex', 0, R, 0); bcmSpot(P, 'gate', 0, 0, R + 1.5, Math.PI); bcmSpot(P, 'mcTower', -7, 3.2, R + 2.5);
+  BCM_TD.LEDGES.forEach((y, k) => { const rr = Math.sqrt(R * R - y * y) + 0.45; bcmSpot(P, 'ledge' + (k + 1), Math.sin(1.6) * rr, y, Math.cos(1.6) * rr, 1.6 + Math.PI); });
+  // bungee cords (dark lines from the apex to each fighter), drawn every frame
+  P.draw = (gg, Rr, S) => {
+    if (!P.fighters || !Rr.B || !S.square) return;
+    const reg = P.cordReg || (P.cordReg = { u0: lerp(S.square.u0, S.square.u1, 0.4), u1: lerp(S.square.u0, S.square.u1, 0.6), v0: lerp(S.square.v0, S.square.v1, 0.4), v1: lerp(S.square.v0, S.square.v1, 0.6) });
+    const top = P.F.w(0, R - 0.4, 0), B = Rr.B;
+    for (const fd of P.fighters) {
+      const f = bcmActorOf(gg, fd); if (!f || f.hidden) continue;
+      const x1 = f.x, y1 = f.y + 1.75, z1 = f.z, dx = x1 - top[0], dy = y1 - top[1], dz = z1 - top[2];
+      const px = dx * B.rx + dy * B.ry + dz * B.rz, py = dx * B.ux + dy * B.uy + dz * B.uz, l = Math.hypot(px, py) || 1, w = 0.05;
+      Rr.bbs.quad((top[0] + x1) / 2, (top[1] + y1) / 2, (top[2] + z1) / 2, px / 2, py / 2, -py / l * w, px / l * w, reg, 0.05, 0.04, 0.04, 0.95);
+    }
+  };
+}
+function bcmSilThunderdome(m, P) {
+  const R = BCM_TD.R;
+  m.color('#3a2c28'); const G = bcmGeodesic(2);
+  for (const [a, b] of G.e) { const A = G.v[a], B = G.v[b]; m.limb(A[0] * R, A[1] * R, A[2] * R, B[0] * R, B[1] * R, B[2] * R, 0.16, 0.16, { seg: 4, ends: false }); }
+  m.color('#ff5a3a', 1); m.push(); m.tf(0, 0.4, 0); m.torus(0, 0, 0, R, 0.14, { seg: 20, tseg: 3 }); m.pop(); m.emissive(0);
+  return { cols: [bcmC.cyl(0, 0, R * 0.8, 0, 4)], lights: [{ x: 0, y: R + 0.3, z: 0, s: 3, c: '#ff5a3a' }] };
+}
+BCM_KINDS.thunderdome = {
+  name: 'Death Guild Thunderdome', short: 'Thunderdome', bpm: 130, mapCol: '#ff5a3a',
+  desc: 'A rusted-steel lattice dome: two bungee fighters bounce and bonk with foam bats, spectators cling to three climbable ledges, an MC tower, fire cannons on the apex.',
+  real: 'Death Guild\'s Thunderdome, a fixture since the late 1990s: two fighters in bungee harnesses swing at each other with foam bats inside a big climbable dome while spectators climb all over it.',
+  foot: [-13, -13, 13, 18], radius: 18, height: 12, entrance: [0, 15, Math.PI],
+  build: bcmBuildThunderdome, sil: bcmSilThunderdome
+};
+
+/* ======================= 8. CENTER CAMP =======================
+   Real (facts): Black Rock City's central public gathering place: a huge circular shade structure around an open
+   courtyard, with a café and stages for performances, open to everyone.
+   Our design: a ring of tensile canopy (cream and saffron panels) on short outer poles and tall inner masts, a
+   central spire with banners, the round café counter, an open-mic stage, couches, rugs and bunting.
+   Local layout: ring canopy r 13..27 around (0, 0), café at the centre, open-mic stage (-18, -6) */
+function bcmBuildCenterCamp(api, g, P) {
+  const Ri = 13, Ro = 27, Hi = 9, Ho = 4.2, N = 24;
+  P.bpm = 110;
+  bcmPaint(P, (c, Pt, S) => { const [px, pz] = Pt(0, 0); c.fillStyle = 'rgba(120,90,66,0.32)'; c.beginPath(); c.arc(px, pz, Ro * S, 0, TAU); c.fill(); c.strokeStyle = 'rgba(80,60,44,0.4)'; c.lineWidth = 0.5 * S; c.beginPath(); c.arc(px, pz, Ri * S, 0, TAU); c.stroke(); c.beginPath(); c.arc(px, pz, 4.5 * S, 0, TAU); c.stroke(); });
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.3; bcmRug(P, Math.sin(a) * 20, Math.cos(a) * 20, 4.2, 3, a, ['rgba(150,50,40,0.85)', 'rgba(50,80,120,0.85)', 'rgba(160,110,40,0.85)'][i % 3]); }
+  // the ring canopy (two halves to keep each part under the vertex budget)
+  for (const half of [0, 1]) {
+    bcmPart(P, half ? 0 : 0.01, half ? 18 : -18, m => {
+      const cols = [];
+      for (let i = half * N / 2; i < (half + 1) * N / 2; i++) {
+        const a0 = i / N * TAU, a1 = (i + 1) / N * TAU;
+        const f = (u, v, t) => { const a = lerp(a0, a1, u), rr = lerp(Ri, Ro, v), scal = Math.sin(u * Math.PI); t[0] = Math.sin(a) * rr; t[2] = Math.cos(a) * rr; t[1] = lerp(Hi, Ho, v) - Math.sin(v * Math.PI) * 0.7 - scal * (v > 0.85 ? (v - 0.85) * 3.5 : 0) + scal * 0.25 * (1 - v); };
+        const col = i % 6 === 3 ? '#c87a4a' : i % 2 ? '#efe6d2' : '#e0d2b6';
+        m.color(col).shine(0); m.surf(m.lo ? 2 : 4, m.lo ? 2 : 5, f, {}); m.color(shade(col, -0.18)); m.surf(m.lo ? 2 : 4, m.lo ? 2 : 5, f, { flip: true });
+        // poles: a short outer pole and a tall inner mast per panel seam
+        const ox = Math.sin(a0) * Ro, oz = Math.cos(a0) * Ro, ix = Math.sin(a0) * Ri, iz = Math.cos(a0) * Ri;
+        m.color('#8a7058').shine(1); m.limb(ox, 0, oz, ox, Ho + 0.1, oz, 0.1, 0.08, { seg: 6 }); m.limb(ix, 0, iz, ix, Hi + 0.3, iz, 0.16, 0.12, { seg: 8 });
+        m.color('#ffcf8a', 0.9); m.ball(ix, Hi + 0.4, iz, 0.14, { seg: 6, rings: 4 }); m.emissive(0);
+        cols.push(bcmC.cyl(ox, oz, 0.12, 0, Ho, { camPass: true }), bcmC.cyl(ix, iz, 0.18, 0, Hi, { camPass: true }));
+        if (i % 3 === 0) bcmBunting(m, [ix, Hi - 0.3, iz], [Math.sin(a0 + 0.9) * Ri * 0.2, 14, Math.cos(a0 + 0.9) * Ri * 0.2], 9, BURNS_NEON, 1.2);
+      }
+      return { cols };
+    }, { noAO: true });
+  }
+  // the central spire + the round café counter + menu board
+  bcmPart(P, 0, 0, m => {
+    const cols = [], lights = [];
+    m.color('#7a6048').shine(1); m.limb(0, 0, 0, 0, 16, 0, 0.3, 0.16, { seg: 10 });
+    m.color('#ffd84a', 1); m.ball(0, 16.3, 0, 0.35, { seg: 10, rings: 6 }); m.emissive(0);
+    for (let k = 0; k < 3; k++) { const a = k / 3 * TAU; m.color(['#ff4fd8', '#38f2ff', '#ffe24a'][k]); const f = (u, v, t) => { t[0] = Math.sin(a) * (0.2 + u * 2.6) + Math.cos(a) * Math.sin(u * 4 + v) * 0.15; t[1] = 15.2 - v * 1.4 - u * 0.6; t[2] = Math.cos(a) * (0.2 + u * 2.6); }; m.surf(6, 2, f, {}); m.surf(6, 2, f, { flip: true }); }
+    m.push(); m.tf(0, 0, 0);
+    m.color('#6a4a30').shine(1); m.lathe([[3.6, 0], [3.6, 1.05], [3.95, 1.1], [3.95, 1.18], [2.9, 1.18], [2.9, 1.08], [3.0, 0]], { seg: 32 });
+    m.color('#ffb347', 1); m.lathe([[3.62, 0.08], [3.62, 0.14]], { seg: 32 }); m.emissive(0);
+    m.color('#c8ccd4').shine(3); for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + 0.4; m.roundBox(Math.sin(a) * 3.3, 1.45, Math.cos(a) * 3.3, 0.7, 0.5, 0.5, 0.08); }
+    m.color('#f4f0e8').shine(1); for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; m.push(); m.tf(Math.sin(a) * 3.45, 1.18, Math.cos(a) * 3.45); m.lathe([[0.05, 0], [0.065, 0.1], [0.065, 0.11], [0, 0.02]], { seg: 8 }); m.pop(); }
+    m.pop(); m.shine(0);
+    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + Math.PI / 4; cols.push(bcmC.box(Math.sin(a) * 3.3, Math.cos(a) * 3.3, 1.6, 0.4, 0, 1.18, a + Math.PI / 2)); }
+    bcmSignMesh(m, 'CENTER CAMP CAFÉ\nCOFFEE · CHAI · LEMONADE\nTIPS ARE HUGS', { bg: '#2a1c12', fg: '#ffe9b0', border: '#ffb347', size: 34, glow: '#ffb347' }, 0, 3.0, 0.4, 1.4, { glow: true, posts: false, frame: '#4a3422' });
+    for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; bcmLantern(m, Math.sin(a) * 5.5, 4.2, Math.cos(a) * 5.5, k % 2 ? '#ffcf8a' : '#ffb070', 1.1); if (k % 2 === 0) lights.push({ x: Math.sin(a) * 5.5, y: 4.2, z: Math.cos(a) * 5.5, s: 0.9, c: '#ffcf8a' }); }
+    cols.push(bcmC.cyl(0, 0, 0.32, 0, 16));
+    lights.push({ x: 0, y: 0, z: 0, s: 0, c: '#ffcf8a', pool: 14, i: 0.5 });
+    return { cols, lights };
+  });
+  // the open-mic stage + couches
+  bcmPart(P, -18, -6, m => {
+    const cols = [], sx = -18, sz = -6;
+    m.color('#6a4a30').shine(1); m.push(); m.tf(sx, 0, sz); m.roundCyl(0, 0, 0, 3.2, 0.6, 0.1, { seg: 24 }); m.pop();
+    m.color('#ffb347', 1); m.push(); m.tf(sx, 0.55, sz); m.torus(0, 0, 0, 3.22, 0.04, { seg: 32, tseg: 4 }); m.pop(); m.emissive(0);
+    m.color('#2a2a30').shine(2); m.limb(sx + 0.6, 0.6, sz, sx + 0.6, 2.0, sz, 0.02, 0.02, { seg: 5 }); m.limb(sx + 0.6, 2.0, sz, sx + 0.9, 2.1, sz, 0.015, 0.015, { seg: 4 }); m.ball(sx + 0.95, 2.1, sz, 0.05, { seg: 6, rings: 4 });
+    for (const sd of [-1, 1]) bcmSpeaker(m, sx + sd * 2.4, 0.6, sz + 1.2, 0.7, 1.0, 0.5, { cones: 2 });
+    cols.push(bcmC.cyl(sx, sz, 3.2, 0, 0.6));
+    for (let i = 0; i < 7; i++) { const a = 0.6 + i / 7 * (TAU - 1.2), x = Math.sin(a) * 20.5, z = Math.cos(a) * 20.5; if (Math.hypot(x - sx, z - sz) < 6) continue; cols.push(bcmCouch(m, x, z, a + Math.PI, ['#8a3a4a', '#3a5a8a', '#6a5a2a', '#7a3a6a'][i % 4], { pillow: ['#e8b04a', '#7aff5a', '#e86a4a'][i % 3] })); }
+    return { cols, lights: [{ x: sx, y: 2.4, z: sz, s: 1.0, c: '#ffcf8a' }] };
+  });
+  bcmPart(P, 0, 28, m => { bcmSignMesh(m, 'CENTER CAMP', { bg: '#2a1c12', fg: '#ffe9b0', border: '#e8b45a', size: 56 }, 6, 1.0, 29, 1.2, { yaw: -0.2, frame: '#4a3422' }); return { cols: [bcmC.box(6, 29, 2.3, 0.12, 0, 2.3, -0.2, { walk: false })] }; });
+  const st = bcmStage(P, 'openMic', 'Open Mic', -18.2, 0.6, -6, Math.PI / 2, [-11, -6, 5], { genre: 'disco', bpm: 110 });
+  const poet = P.api.npc({ id: P.id + '_poet', name: 'SLAM POET SAGE', type: 'burner', seed: 23, x: st.booth.x, z: st.booth.z, y: st.booth.y, fixedY: true, yaw: st.booth.yaw, behavior: 'idle', anim: 'talk', lookAt: false, lines: ['The dust... is also... a metaphor.', 'Snaps if you felt that. SNAPS.'] });
+  P.actors.push(poet); st.dj = poet;
+  bcmCrowd(P, -11, -6, 3.5, 5, { behavior: 'sit', face: [-18, -6], chat: ['*snap snap snap*', 'Deep. Like the playa. Which is flat.'] });
+  bcmCrowd(P, 0, 9, 7, 8, { behavior: 'wander', extra: { radius: 7 }, chat: ['Meet me at Center Camp. Everybody says that. Everybody is here.', 'I\'ve been in the coffee line since Tuesday.', 'Free hugs? Free hugs.'] });
+  for (const [x, z, yaw, seed] of [[3.9, 0.6, -Math.PI / 2, 2], [-0.6, 3.9, Math.PI, 16]]) P.actors.push(P.api.npc({ type: 'burner', seed, name: 'CAFÉ VOLUNTEER', x: P.F.wx(x * 0.75, z * 0.75), z: P.F.wz(x * 0.75, z * 0.75), yaw: P.F.rot + yaw, behavior: 'idle', anim: 'idle', lines: ['Coffee? It\'s a gift. Chai? Also a gift. Everything\'s a gift.'] }));
+  bcmPL(P, 0, 6, 0, 18, ['#ffcf8a'], { i: 1.0, pulse: false });
+  bcmPool(P, 0, 0, 26, '#ffb070', 0.32);
+  bcmArea(P, 'cafe', 'Center Camp Café', 0, 0, { r: 7 }); bcmArea(P, 'ring', 'Center Camp', 0, 0, { r: Ro });
+  bcmSpot(P, 'cafe', 0, 0, 5, Math.PI); bcmSpot(P, 'openMic', -18.2, 0.6, -6, Math.PI / 2); bcmSpot(P, 'couch', Math.sin(1.5) * 20.5, 0.5, Math.cos(1.5) * 20.5); bcmSpot(P, 'spire', 0, 16, 0);
+}
+function bcmSilCenterCamp(m, P) {
+  m.color('#efe4cc'); m.lathe([[27, 4.2], [13, 9], [13, 8.6], [27, 3.9]], { seg: 16 }); m.lathe([[27, 4.0], [13, 8.8]], { seg: 16, flip: true });
+  m.color('#7a6048'); m.limb(0, 0, 0, 0, 16, 0, 0.3, 0.16, { seg: 5 }); m.color('#ffd84a', 1); m.ball(0, 16.3, 0, 0.5, { seg: 6, rings: 3 }); m.emissive(0);
+  return { cols: [bcmC.cyl(0, 0, 0.4, 0, 16)], lights: [{ x: 0, y: 16.5, z: 0, s: 3, c: '#ffd84a' }, { x: 0, y: 5, z: 0, s: 5, c: '#ffcf8a' }] };
+}
+BCM_KINDS.centerCamp = {
+  name: 'Center Camp', short: 'Center Camp', bpm: 110, mapCol: '#ffcf8a',
+  desc: 'The big shade circle: a ring of tensile canopy on poles and masts around an open courtyard, the round café counter under a bannered spire, an open-mic stage, couches and rugs.',
+  real: 'Black Rock City\'s central public gathering place: a huge circular shade structure around an open courtyard, with a café and stages for performances, open to everyone.',
+  foot: [-28, -28, 28, 31], radius: 30, height: 17, entrance: [0, 29, Math.PI],
+  build: bcmBuildCenterCamp, sil: bcmSilCenterCamp
+};
+
+/* ======================= 9. SPACE COWBOYS (OG, 1997+) =======================
+   Real (facts): a San Francisco party collective that camped at Burning Man before theme camps had a name and took the
+   name with its 1997 camp; around 2000 it fielded the playa's first big sound vehicle, a converted off-road military
+   truck (a collaboration with the Space Lounge camp, the first large-scale sound system on the playa).
+   Our design: a space-western saloon front (porch stage, swinging doors, neon stars, rocket fins and a radar dish), a
+   rocket water tower, hay bales and a corral, and our own mutant sound truck that parks by the saloon and drives a loop.
+   Local layout (+Z = street): saloon (0, -8), porch stage z -3..0, truck dock (13, 6), floor (0, 7) */
+function bcmSCTruck(m) {
+  const cols = [], lights = [], olive = '#5a6a3a', chrome = '#c8ccd4';
+  const lo0 = m.lo; m.lo = true;
+  for (const z of [-3.2, -1.4, 3.4]) for (const sx of [-1, 1]) { m.push(); m.tf(sx * 1.25, 0.72, z, 0, 0, Math.PI / 2); m.color('#1a1a1c').shine(1); m.roundCyl(0, -0.32, 0, 0.72, 0.64, 0.2, { seg: 12 }); m.color('#8a8a92').shine(3); m.roundCyl(0, sx > 0 ? 0.3 : -0.36, 0, 0.34, 0.06, 0.02, { seg: 10 }); m.pop(); }
+  m.lo = lo0;
+  m.color('#2a2a24').shine(1); m.roundBox(0, 1.0, 0, 2.2, 0.4, 8.6, 0.1);
+  // rounded cab with a split windscreen
+  m.color(olive).shine(2); m.roundBox(0, 2.0, 3.2, 2.5, 1.7, 2.2, 0.35); m.roundBox(0, 1.35, 4.6, 2.4, 0.9, 1.0, 0.3);
+  for (const sx of [-1, 1]) { m.color(olive); m.ellipsoid(sx * 1.18, 1.25, 3.4, 0.35, 0.55, 1.2, { seg: 10, rings: 6 }); m.ellipsoid(sx * 1.18, 1.25, -1.6, 0.35, 0.55, 1.6, { seg: 10, rings: 6 }); }
+  m.color('#9ad8ff').shine(3); for (const sx of [-0.55, 0.55]) { m.push(); m.tf(sx, 2.35, 4.32, 0, -0.25, 0); m.roundBox(0, 0, 0, 1.0, 0.75, 0.05, 0.05); m.pop(); }
+  m.color('#fff2c8', 1); for (const sx of [-0.85, 0.85]) m.ball(sx, 1.45, 5.12, 0.16, { seg: 8, rings: 5 }); m.emissive(0);
+  m.color(chrome).shine(3); m.roundBox(0, 0.85, 5.15, 2.3, 0.22, 0.2, 0.06); for (const sx of [-1, 1]) m.limb(sx * 1.05, 1.5, 2.2, sx * 1.05, 3.9, 2.2, 0.08, 0.07, { seg: 7 });
+  // roll bar with lights over the cab
+  m.color('#2a2a2a').shine(2); m.limb(-1.15, 2.85, 2.6, -1.15, 3.5, 2.6, 0.06, 0.06, { seg: 6 }); m.limb(1.15, 2.85, 2.6, 1.15, 3.5, 2.6, 0.06, 0.06, { seg: 6 }); m.limb(-1.15, 3.5, 2.6, 1.15, 3.5, 2.6, 0.06, 0.06, { seg: 6 });
+  m.color('#ffe9a0', 1); for (let k = 0; k < 4; k++) m.ball(-0.75 + k * 0.5, 3.6, 2.65, 0.11, { seg: 6, rings: 4 }); m.emissive(0);
+  // the flatbed: deck, speaker wall, DJ booth, star rail
+  m.color('#6a5a40').shine(1); m.roundBox(0, 1.35, -1.2, 2.6, 0.2, 5.6, 0.06);
+  cols.push(bcmC.box(0, -1.2, 1.3, 2.8, 0.4, 1.45), bcmC.box(0, 3.4, 1.25, 1.6, 0.4, 2.9));
+  m.push(); m.tf(0, 0, 0.45, Math.PI);
+  for (let i = 0; i < 2; i++) for (let k = 0; k < 2; k++) bcmSpeaker(m, (k - 0.5) * 1.15, 1.45 + i * 1.1, 0, 1.1, 1.05, 0.9, { cones: 1, col: '#20221c', led: i === 1 ? '#ffd84a' : null });
+  m.pop();
+  cols.push(bcmC.box(0, 0.45, 1.2, 0.5, 1.45, 3.7));
+  cols.push(...bcmBooth(m, 0, 1.45, -2.4, Math.PI, { w: 2.0, d: 0.7, ca: '#ffd84a', cb: '#38f2ff', body: '#3a3a2a' }));
+  m.color(chrome).shine(3); for (const sx of [-1.25, 1.25]) m.limb(sx, 2.35, 0.9, sx, 2.35, -3.3, 0.04, 0.04, { seg: 5 });
+  m.color('#ffd84a', 1); for (let k = 0; k < 6; k++) { const z = 0.6 - k * 0.75; for (const sx of [-1.25, 1.25]) m.ball(sx, 2.42, z, 0.07, { seg: 6, rings: 4 }); } m.emissive(0);
+  // rear ladder
+  m.color('#3a3a30'); for (const sx of [-0.35, 0.35]) m.limb(sx, 0.05, -4.6, sx, 1.4, -4.15, 0.04, 0.04, { seg: 5 }); for (let k = 1; k < 4; k++) m.limb(-0.35, k * 0.35, -4.6 + k * 0.11, 0.35, k * 0.35, -4.6 + k * 0.11, 0.03, 0.03, { seg: 4 });
+  cols.push(bcmC.ramp(0, -4.65, 0.45, 0.6, 0.05, 1.45));
+  lights.push({ x: 0, y: 2.8, z: -1.6, s: 1.0, c: '#ffd84a' }, { x: 0, y: 1.5, z: 5.3, s: 1.4, c: '#fff2c8' });
+  m.shine(0);
+  return { cols, lights, seat: [0.55, 1.45, 3.0], poofers: [[-1.05, 4.0, 2.2], [1.05, 4.0, 2.2]], w: 2.6, len: 10, top: 1.45 };
+}
+const BCM_SC_TOUR = [[13, 6], [13.2, 1], [15.5, -5], [21, -10.5], [14, -20], [0, -22], [-14, -20], [-22, -10], [-24, 4], [-20, 18], [-10, 26], [4, 26], [11.5, 21], [13, 14], [13, 6]];
+function bcmBuildSpaceCowboys(api, g, P) {
+  P.bpm = 125;
+  const wood = '#8a5a34', wood2 = '#6a4224', neon = '#38f2ff', gold = '#ffd84a';
+  bcmPaint(P, (c, Pt, S) => { const [px, pz] = Pt(0, 7); c.fillStyle = 'rgba(110,78,52,0.35)'; c.beginPath(); c.arc(px, pz, 10 * S, 0, TAU); c.fill(); c.strokeStyle = 'rgba(255,216,74,0.3)'; c.lineWidth = 0.3 * S; for (let k = 0; k < 5; k++) { const a = k / 5 * TAU - Math.PI / 2; c.beginPath(); c.moveTo(px, pz); c.lineTo(px + Math.cos(a) * 9 * S, pz + Math.sin(a) * 9 * S); c.stroke(); } });
+  // the saloon: false front, porch stage, swinging doors, windows, neon stars, rocket fins, radar dish
+  bcmPart(P, 0, -8, m => {
+    const cols = [], lights = [];
+    m.color(wood2).shine(0); m.roundBox(0, 2.8, -9, 11, 5.6, 7, 0.1);
+    m.color(wood).shine(0); m.roundBox(0, 4.2, -5.4, 12, 8.4, 0.35, 0.06, { uv: BURNS_ATLAS.pattern('wood') });
+    m.color(wood2); for (let k = -5; k <= 5; k++) m.roundBox(k * 1.1, 4.2, -5.2, 0.06, 8.3, 0.04, 0.01);
+    // stepped false-front top
+    m.color(wood); m.roundBox(0, 8.7, -5.4, 7, 0.9, 0.35, 0.06); m.roundBox(0, 9.3, -5.4, 3.6, 0.6, 0.35, 0.06);
+    bcmSignMesh(m, 'SPACE COWBOYS', { bg: '#1a1020', fg: gold, border: neon, size: 54, glow: neon }, 0, 6.3, -5.15, 1.25, { glow: true, posts: false, maxW: 8, frame: '#2a1a14' });
+    // windows (glowing) + swinging doors
+    for (const sx of [-3.6, 3.6]) { m.color('#3a2414'); m.roundBox(sx, 2.4, -5.2, 2.2, 1.8, 0.12, 0.05); m.color('#ffcf8a', 0.85); m.roundBox(sx, 2.4, -5.12, 1.9, 1.5, 0.05, 0.02); m.emissive(0); m.color('#3a2414'); m.roundBox(sx, 2.4, -5.08, 0.08, 1.5, 0.05, 0.01); m.roundBox(sx, 2.4, -5.08, 1.9, 0.08, 0.05, 0.01); lights.push({ x: sx, y: 2.4, z: -4.6, s: 1.0, c: '#ffcf8a' }); }
+    m.color('#2a1a10'); m.roundBox(0, 1.9, -5.2, 2.0, 2.6, 0.1, 0.04);
+    for (const sd of [-1, 1]) { m.color(wood); m.push(); m.tf(sd * 0.5, 0, -5.0, sd * 0.25); m.roundBox(0, 1.5, 0, 0.92, 1.0, 0.06, 0.04); m.pop(); }
+    // porch (the stage): deck, posts, a roof with neon trim
+    m.color(wood).shine(1); m.roundBox(0, 0.5, -2.6, 12, 1.0, 5.2, 0.08, { top: '#9a6a40' });
+    for (let k = 0; k < 6; k++) { m.color(wood2); m.roundBox(-5.5 + k * 2.2, 0.5, -0.02, 0.12, 0.9, 0.06, 0.02); }
+    m.color(wood2); for (const sx of [-5.8, -2.2, 2.2, 5.8]) m.limb(sx, 1.0, -0.3, sx, 4.4, -0.3, 0.12, 0.11, { seg: 7 });
+    m.color(wood); m.push(); m.tf(0, 4.5, -2.6, 0, -0.12, 0); m.roundBox(0, 0, 0, 12.4, 0.18, 5.6, 0.05); m.pop();
+    m.color(neon, 1); m.roundBox(0, 4.22, -0.12, 12.2, 0.06, 0.06, 0.02); m.emissive(0);
+    // neon stars on the front + rocket fins on the corners + a radar dish on the roof
+    const star = (cx, cy, r, col) => { const pts = []; for (let k = 0; k <= 10; k++) { const a = k / 10 * TAU - Math.PI / 2, rr = k % 2 ? r * 0.45 : r; pts.push([cx + Math.cos(a) * rr, cy - Math.sin(a) * rr, -5.15]); } m.color(col, 1); bcmTube(m, pts, 0.06, { seg: 4, caps: false }); m.emissive(0); };
+    star(-4.6, 6.4, 0.8, gold); star(4.6, 6.4, 0.8, gold); star(0, 9.0, 0.45, neon);
+    for (const sd of [-1, 1]) { m.color('#c8ccd4').shine(3); m.push(); m.tf(sd * 6.1, 0, -5.4, 0, 0, sd * -0.12); m.lathe([[0.35, 0], [0.45, 2], [0.35, 6], [0.15, 8.4], [0, 9.0]], { seg: 12 }); m.pop(); m.color('#ff5a3a').shine(2); m.push(); m.tf(sd * 6.6, 0.4, -5.4, 0, 0, sd * 0.4); m.roundBox(0, 0.8, 0, 0.12, 1.6, 1.2, 0.05); m.pop(); }
+    m.color('#c8ccd4').shine(3); m.push(); m.tf(3, 5.6, -10, 0.6, -0.7, 0); m.lathe([[0, 0], [1.1, 0.35], [1.2, 0.42], [1.1, 0.42]], { seg: 16 }); m.pop(); m.limb(3, 5.6, -10, 3, 6.4, -9.7, 0.03, 0.03, { seg: 4 }); m.shine(0);
+    cols.push(bcmC.box(0, -9, 5.5, 3.5, 0, 5.6), bcmC.box(0, -5.4, 6.1, 0.2, 0, 9.6, 0, { walk: false }), bcmC.box(0, -2.6, 6, 2.6, 0, 1.0));
+    for (const sx of [-5.8, -2.2, 2.2, 5.8]) cols.push(bcmC.cyl(sx, -0.3, 0.13, 1.0, 4.4, { camPass: true }));
+    // porch steps
+    for (let k = 0; k < 2; k++) { m.color(wood); m.roundBox(0, (k + 1) * 0.33 / 2 + 0.0, 0.25 + (1 - k) * 0.45, 3.0, (k + 1) * 0.33, 0.45, 0.04); cols.push(bcmC.box(0, 0.25 + (1 - k) * 0.45, 1.5, 0.23, 0, (k + 1) * 0.33)); }
+    return { cols, lights };
+  });
+  bcmPart(P, 0, -5, m => { const cols = bcmBooth(m, 0, 1.0, -3.2, 0, { w: 2.8, ca: gold, cb: neon, body: '#3a2414', top: '#5a3a24' }); for (const sd of [-1, 1]) { m.push(); m.tf(sd * 4.2, 1.0, -3.4, -sd * 0.2); bcmSpeaker(m, 0, 0, 0, 1.3, 2.2, 0.9, { cones: 2, col: '#2a1a10', led: gold }); m.pop(); cols.push(bcmC.box(sd * 4.2, -3.4, 0.65, 0.45, 1.0, 3.2, -sd * 0.2)); } return { cols }; });
+  // the rocket water tower, hay bales, corral, wagon wheel
+  bcmPart(P, -15, -4, m => {
+    const cols = [], x = -15, z = -6;
+    m.color('#5a4a3a').shine(1); for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) m.limb(x + sx * 1.3, 0, z + sz * 1.3, x + sx * 0.9, 6, z + sz * 0.9, 0.12, 0.1, { seg: 6 });
+    for (const sd of [-1, 1]) { m.limb(x - 1.2, 1.2, z + sd * 1.2, x + 1.0, 4.6, z + sd * 1.0, 0.05, 0.05, { seg: 5 }); m.limb(x + sd * 1.2, 1.2, z - 1.2, x + sd * 1.0, 4.6, z + 1.0, 0.05, 0.05, { seg: 5 }); }
+    m.color('#d8dce4').shine(3); m.push(); m.tf(x, 6, z); m.lathe([[1.5, 0], [1.6, 0.4], [1.6, 3.2], [1.2, 4.6], [0.5, 5.8], [0, 6.4]], { seg: 20 }); m.pop();
+    m.color('#ff5a3a').shine(2); for (let k = 0; k < 3; k++) { const a = k / 3 * TAU; m.push(); m.tf(x + Math.sin(a) * 1.6, 6.2, z + Math.cos(a) * 1.6, a, 0, 0); m.roundBox(0, 0.6, 0.35, 0.1, 1.4, 0.9, 0.04); m.pop(); }
+    m.color('#38f2ff', 0.9); m.push(); m.tf(x, 8.6, z); m.torus(0, 0, 0, 1.62, 0.06, { seg: 24, tseg: 4 }); m.pop(); m.color('#ffd84a', 1); m.ball(x, 12.5, z, 0.12, { seg: 6, rings: 4 }); m.emissive(0);
+    cols.push(bcmC.cyl(x, z, 1.5, 0, 6), bcmC.cyl(x, z, 1.6, 6, 12.4));
+    for (const [hx, hz, yaw] of [[-8, 4, 0.3], [-8.5, 6.5, -0.2], [8, 3, -0.3], [-4, 11, 0.1], [4, 11.5, -0.1]]) { m.color('#d8b860').shine(0); m.roundBox(hx, 0.3, hz, 1.6, 0.6, 0.8, 0.12); m.color('#b89840'); for (const sx of [-0.4, 0.4]) m.roundBox(hx + Math.cos(yaw) * sx, 0.3, hz - Math.sin(yaw) * sx, 0.04, 0.62, 0.82, 0.01); cols.push(bcmC.box(hx, hz, 0.8, 0.4, 0, 0.6, yaw)); }
+    // a corral of rounded rails on the far side
+    const cx0 = -13.4, cx1 = -8.2, cz0 = 12, cz1 = 18;
+    m.color(wood2).shine(0); for (let k = 0; k < 6; k++) { const px = cx0 + (k % 3) * (cx1 - cx0) / 2, pz = Math.floor(k / 3) ? cz1 : cz0; m.limb(px, 0, pz, px, 1.3, pz, 0.08, 0.07, { seg: 6 }); }
+    for (const pz of [cz0, cz1]) for (const h of [0.5, 1.1]) m.limb(cx0, h, pz, cx1, h, pz, 0.05, 0.05, { seg: 5 });
+    for (const px of [cx0, cx1]) for (const h of [0.5, 1.1]) m.limb(px, h, cz0, px, h, cz1, 0.05, 0.05, { seg: 5 });
+    cols.push(bcmC.wall(cx0, cz0, cx1, cz0, 0.2, 0, 1.3), bcmC.wall(cx0, cz1, cx1, cz1, 0.2, 0, 1.3), bcmC.wall(cx0, cz0, cx0, cz1, 0.2, 0, 1.3), bcmC.wall(cx1, cz0, cx1, cz1, 0.2, 0, 1.3));
+    // a wagon wheel leaning on the saloon
+    m.color(wood2); m.push(); m.tf(-7.4, 0.95, -5.0, 0.3, Math.PI / 2 - 0.15, 0); m.torus(0, 0, 0, 0.9, 0.06, { seg: 18, tseg: 4 }); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; m.limb(0, 0, 0, Math.sin(a) * 0.88, 0, Math.cos(a) * 0.88, 0.025, 0.025, { seg: 4 }); } m.pop();
+    return { cols, lights: [{ x, y: 8.6, z, s: 2, c: '#38f2ff' }] };
+  });
+  // the sound truck (parks by the saloon, drives a loop)
+  if (P.o.truck !== false && P.o.withArtCar !== false) {
+    const V = bcmVehicle(api, g, P, { build: m => bcmSCTruck(m), dock: [13, 6, Math.PI], tour: BCM_SC_TOUR, drive: P.o.drive !== false, dockTime: P.o.dockTime || 35, speed: 5.5, slowSpeed: 2.6, core: [-9, -6, 15, 17],
+      label: 'DRIVE', hornLines: ['YEEHAW!', 'Space truck!', 'The original sound car!'], driveHint: 'DRIVING THE SOUND TRUCK! JUMP = HORN' });
+    P.artCar = V;
+    bcmRider(P, V, [0, 1.45, -1.65, Math.PI], { anim: 'dj', type: 'burner', seed: 12, name: 'DJ STARDUST', lines: ['This truck has been rocking the playa since the turn of the century. Well, its great-grandpa has.'] });
+    P.routes.truck = V.tour.pts;
+    P.stages.push({ id: 'truck', name: 'The Sound Truck', camp: P, get booth() { const c = V.car, cc = Math.cos(c.yaw), s = Math.sin(c.yaw); return { x: c.x - 1.65 * s, y: c.y + 1.45, z: c.z - 1.65 * cc, yaw: c.yaw + Math.PI }; }, floor: null, bpm: P.bpm, genre: 'disco', vehicle: V });
+  }
+  const st = bcmStage(P, 'porch', 'The Saloon Porch', 0, 1.0, -3.95, 0, [0, 7, 8], { genre: 'disco', bpm: 125 });
+  bcmDJ(P, st, { id: P.id + '_dj', name: 'DJ HIGH NOON', seed: 27, lines: ['Howdy, space partner. Two-step or moonwalk, your call.', 'This here\'s a hoedown with a bass drop.'] });
+  bcmCrowd(P, 0, 7, 7, 10, { face: [0, -4], lines: ['Yeehaw, but make it intergalactic.', 'These folks have been throwing parties since before the playa had a name for it.', 'Is that a rocket or a water tower? Yes.'] });
+  bcmLaser(P, 0, 9.8, -5.4, 0, { n: 6, spread: 1.6, cols: [[1, 0.85, 0.3], [0.25, 0.95, 1]], len: 55, tilt: 0.08, ph: 2 });
+  bcmPL(P, 0, 5, -1, 16, [gold, neon, '#ff5a3a'], { i: 1.5 });
+  bcmPool(P, 0, 2, 16, '#ffcf8a', 0.45);
+  bcmArea(P, 'saloon', 'The Saloon', 0, 2, { hx: 14, hz: 14 });
+  bcmSpot(P, 'porch', 0, 1.0, -2.6); bcmSpot(P, 'booth', 0, 1.0, -3.95); bcmSpot(P, 'floor', 0, 0, 7, Math.PI); bcmSpot(P, 'waterTower', -15, 0, -3, Math.PI); bcmSpot(P, 'truckDock', 13, 0, 6, Math.PI);
+}
+function bcmSilSpaceCowboys(m, P) {
+  m.color('#8a5a34'); m.roundBox(0, 4.4, -7.5, 12, 8.8, 7, 0.2); m.color('#38f2ff', 1); m.roundBox(0, 6.3, -3.95, 7, 1.2, 0.1, 0.05); m.emissive(0);
+  m.color('#d8dce4'); m.push(); m.tf(-15, 6, -6); m.lathe([[1.6, 0], [1.6, 3.2], [0, 6.4]], { seg: 8 }); m.pop(); m.color('#5a4a3a'); m.roundBox(-15, 3, -6, 2.4, 6, 2.4, 0.2);
+  return { cols: [bcmC.box(0, -7.5, 6, 3.5, 0, 8.8)], lights: [{ x: 0, y: 9.4, z: -5, s: 3, c: '#ffd84a' }, { x: -15, y: 12.5, z: -6, s: 2, c: '#38f2ff' }] };
+}
+BCM_KINDS.spaceCowboys = {
+  name: 'Space Cowboys', short: 'Space Cowboys', bpm: 125, mapCol: '#ffd84a', og: true,
+  desc: 'OG (1997+): a space-western saloon with a porch stage, a rocket water tower, hay bales and a corral, and a mutant sound truck that parks by the saloon and drives a loop.',
+  real: 'A San Francisco party collective that camped at Burning Man before theme camps had a name and took the name with its 1997 camp; around 2000 it fielded the playa\'s first big sound vehicle, a converted off-road military truck, born from a collaboration with the Space Lounge camp (the first large-scale sound system on the playa).',
+  foot: [-20, -16, 24, 28], radius: 32, height: 12, entrance: [0, 27, Math.PI], tourClear: [-28, -26, 28, 30],
+  build: bcmBuildSpaceCowboys, sil: bcmSilSpaceCowboys
+};
+
+/* ======================= 10. SOL SYSTEM (OG, 2004 "Sol Henge") =======================
+   Real (facts): a San Francisco collective whose 2004 camp, fondly known as "Sol Henge", was one of the big sound
+   productions of its year.
+   Our design: a henge of ten glowing trilithons around the dance floor, an inner horseshoe of five taller ones
+   around the DJ's altar stone, a golden sun disc on a frame above the altar, planets glowing on tall poles outside.
+   Local layout: henge centre (0, 0) r 12.5; altar (0, -6.5) faces +Z */
+function bcmStone(m, x, z, w, h, d, yaw, col, seed) {
+  const R = mulberry32(seed); m.color(col).shine(0); m.push(); m.tf(x, 0, z, yaw + (R() - 0.5) * 0.08, (R() - 0.5) * 0.05, (R() - 0.5) * 0.05);
+  m.roundBox(0, h / 2, 0, w, h, d, Math.min(w, d) * 0.3); m.color(shade(col, -0.12)); m.roundBox((R() - 0.5) * w * 0.3, h * (0.3 + R() * 0.4), d / 2 - 0.04, w * 0.5, h * 0.25, 0.1, 0.05);
+  m.pop();
+}
+function bcmBuildSolSystem(api, g, P) {
+  P.bpm = 126;
+  const stone = '#a8a296', R0 = 12.5, sunC = '#ffb347';
+  bcmDisc(P, 0, 0, R0 - 1.4, 'rgba(120,96,70,0.35)', 'rgba(255,179,71,0.5)', 0.3);
+  bcmPaint(P, (c, Pt, S) => { const [px, pz] = Pt(0, 0); c.strokeStyle = 'rgba(255,179,71,0.35)'; c.lineWidth = 0.2 * S; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; c.beginPath(); c.moveTo(px, pz); c.lineTo(px + Math.cos(a) * (R0 - 1.4) * S, pz + Math.sin(a) * (R0 - 1.4) * S); c.stroke(); } });
+  // the outer ring of trilithons + uplights
+  bcmPart(P, 0, 0, m => {
+    const cols = [], lights = [], n = 10;
+    for (let i = 0; i < n; i++) {
+      const a = (i + 0.5) / n * TAU; if (Math.abs(BurnsM.wrap(a)) < 0.2) continue;
+      const cx = Math.sin(a) * R0, cz = Math.cos(a) * R0, tx = Math.cos(a), tz = -Math.sin(a), h = 4.4, half = 1.25;
+      for (const sd of [-1, 1]) { const x = cx + tx * sd * half, z = cz + tz * sd * half; bcmStone(m, x, z, 1.1, h, 0.9, a, i % 2 ? stone : '#b0a898', i * 7 + sd + 3); cols.push(bcmC.box(x, z, 0.55, 0.45, 0, h, a)); m.color(i % 2 ? sunC : '#ff7a3a', 1); m.ball(x - Math.sin(a) * 0.65, 0.18, z - Math.cos(a) * 0.65, 0.16, { seg: 8, rings: 5 }); m.emissive(0); if (sd > 0) lights.push({ x: x - Math.sin(a) * 0.7, y: 0.6, z: z - Math.cos(a) * 0.7, s: 0.8, c: sunC, pool: 3.5, i: 0.4 }); }
+      m.push(); m.tf(cx, h, cz, a); m.color('#b8b0a2'); m.roundBox(0, 0.45, 0, 3.8, 0.9, 1.0, 0.25); m.color(sunC, 0.9); m.roundBox(0, 0.05, -0.51, 3.4, 0.06, 0.03, 0.01); m.emissive(0); m.pop();
+      cols.push(bcmC.box(cx, cz, 1.9, 0.5, h, h + 0.9, a));
+    }
+    return { cols, lights };
+  });
+  // the inner horseshoe of five taller trilithons around the altar
+  bcmPart(P, 0, -5, m => {
+    const cols = [];
+    for (let i = 0; i < 5; i++) {
+      const a = Math.PI + (i - 2) * 0.55, rr = 7.2, cx = Math.sin(a) * rr, cz = Math.cos(a) * rr, tx = Math.cos(a), tz = -Math.sin(a), h = 5.8, half = 1.3;
+      for (const sd of [-1, 1]) { const x = cx + tx * sd * half, z = cz + tz * sd * half; bcmStone(m, x, z, 1.3, h, 1.0, a, '#9a9488', i * 5 + sd + 50); cols.push(bcmC.box(x, z, 0.65, 0.5, 0, h, a)); }
+      m.push(); m.tf(cx, h, cz, a); m.color('#aaa294'); m.roundBox(0, 0.5, 0, 4.0, 1.0, 1.1, 0.28); m.color('#ff7a3a', 0.9); m.roundBox(0, 0.05, 0.56, 3.6, 0.06, 0.03, 0.01); m.emissive(0); m.pop();
+      cols.push(bcmC.box(cx, cz, 2.0, 0.55, h, h + 1.0, a));
+    }
+    // the altar stone (the DJ booth sits on it) + the sun disc on its frame
+    bcmStone(m, 0, -6.4, 4.2, 1.0, 2.2, 0, '#8a8478', 91);
+    cols.push(bcmC.box(0, -6.4, 2.1, 1.1, 0, 1.0));
+    cols.push(...bcmBooth(m, 0, 1.0, -6.0, 0, { w: 2.6, ca: sunC, cb: '#ff7a3a', body: '#3a342c', top: '#4a443a', ledFn: (u, v) => (Math.hypot(u - 0.5, (v - 0.4) * 0.6) < 0.18 ? '#fff0c0' : Math.sin(Math.atan2(v - 0.4, u - 0.5) * 8) > 0.3 ? sunC : null) }));
+    m.color('#5a5048').shine(2); for (const sd of [-1, 1]) m.limb(sd * 3.4, 0, -9.2, sd * 2.6, 8.6, -9.2, 0.12, 0.1, { seg: 7 }); m.limb(-2.6, 8.6, -9.2, 2.6, 8.6, -9.2, 0.1, 0.1, { seg: 6 });
+    m.push(); m.tf(0, 6.6, -9.0, 0, Math.PI / 2, 0);
+    m.color('#e0aa30').shine(2); m.torus(0, 0, 0, 2.5, 0.22, { seg: 40, tseg: 6 });
+    m.color(sunC, 1); m.lathe([[0, 0.1], [2.2, 0.05], [2.25, 0], [0, 0]], { seg: 32 }); m.color('#fff0c0', 1); m.lathe([[0, 0.16], [1.0, 0.12], [1.05, 0.1], [0, 0.1]], { seg: 24 });
+    m.pop();
+    for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, r0 = 2.8, r1 = i % 2 ? 3.6 : 4.3; m.color(i % 2 ? '#ff7a3a' : '#ffd84a', 1); m.limb(Math.cos(a) * r0, 6.6 + Math.sin(a) * r0, -9.05, Math.cos(a) * r1, 6.6 + Math.sin(a) * r1, -9.05, 0.09, 0.04, { seg: 5 }); }
+    m.emissive(0).shine(0);
+    return { cols, lights: [{ x: 0, y: 6.6, z: -8.6, s: 6, c: sunC }] };
+  }, { noAO: true });
+  // planets on tall poles around the outside (our "Sol System")
+  bcmPart(P, 0, 0, m => {
+    const cols = [], lights = [], pl = [['#c8a070', 0.5], ['#e8c890', 0.7], ['#5a9aff', 0.75], ['#e8603a', 0.6], ['#e8b878', 1.3], ['#f0d8a0', 1.1], ['#9ae8f0', 0.9], ['#5a7aff', 0.85]];
+    pl.forEach(([c, r], i) => {
+      const a = 0.35 + i / pl.length * (TAU - 0.7), rr = R0 + 4.5 + (i % 2) * 1.5, x = Math.sin(a) * rr, z = Math.cos(a) * rr, h = 6.5 + (i % 3) * 1.6;
+      m.color('#4a4440').shine(2); m.limb(x, 0, z, x, h - r, z, 0.07, 0.05, { seg: 6 });
+      m.color(c, 0.75).shine(1); m.ball(x, h, z, r, { seg: 16, rings: 10 });
+      if (i === 5) { m.color('#e8d8b0', 0.6); m.push(); m.tf(x, h, z, 0.4, 0.35, 0); m.torus(0, 0, 0, r * 1.8, r * 0.12, { seg: 28, tseg: 3, sy: 0.25 }); m.pop(); }
+      m.emissive(0).shine(0);
+      lights.push({ x, y: h, z, s: r * 2.2, c });
+      cols.push(bcmC.cyl(x, z, 0.1, 0, h, { camPass: true }));
+    });
+    return { cols, lights };
+  });
+  bcmPart(P, 0, R0 + 4, m => { bcmSignMesh(m, 'SOL SYSTEM\n· SOL HENGE ·', { bg: '#2a1a10', fg: '#ffd84a', border: sunC, size: 48, glow: sunC }, 5.5, 1.0, R0 + 4, 1.4, { yaw: -0.3, glow: true, frame: '#4a3a2a' }); return { cols: [bcmC.box(5.5, R0 + 4, 1.5, 0.12, 0, 2.5, -0.3, { walk: false })] }; });
+  const st = bcmStage(P, 'altar', 'The Altar Stone', 0, 1.0, -6.75, 0, [0, 2, 8], { genre: 'melodic', bpm: 126 });
+  bcmDJ(P, st, { id: P.id + '_dj', name: 'DJ SOLSTICE', seed: 19, lines: ['Ten stones, one sun, all night.', 'The planets are aligned. Mostly.'] });
+  bcmCrowd(P, 0, 2, 7.5, 12, { face: [0, -6], lines: ['They called this Sol Henge back in \'04.', 'The stones glow when the bass hits. I swear.', 'Which planet are we on? Dancing.'] });
+  bcmLaser(P, 0, 8.6, -9.2, 0, { n: 6, spread: 2.0, cols: [[1, 0.7, 0.2], [1, 0.4, 0.1]], len: 55, tilt: 0.1, ph: 1 });
+  bcmPL(P, 0, 5, -3, 16, [sunC, '#ff7a3a', '#ffd84a'], { i: 1.6 });
+  bcmPool(P, 0, 0, 16, '#ffb070', 0.45);
+  bcmArea(P, 'henge', 'Sol Henge', 0, 0, { r: R0 + 1 });
+  bcmSpot(P, 'altar', 0, 1.0, -6.4); bcmSpot(P, 'booth', 0, 1.0, -6.75); bcmSpot(P, 'floor', 0, 0, 2, Math.PI); bcmSpot(P, 'sun', 0, 6.6, -9); bcmSpot(P, 'gate', 0, 0, R0 + 1, Math.PI);
+}
+function bcmSilSolSystem(m, P) {
+  const R0 = 12.5;
+  for (let i = 0; i < 10; i++) { const a = (i + 0.5) / 10 * TAU; if (Math.abs(BurnsM.wrap(a)) < 0.2) continue; m.color('#a8a296'); m.push(); m.tf(Math.sin(a) * R0, 0, Math.cos(a) * R0, a); m.roundBox(0, 2.6, 0, 3.6, 5.2, 1.0, 0.3); m.pop(); }
+  m.color('#ffb347', 1); m.push(); m.tf(0, 6.6, -9, 0, Math.PI / 2, 0); m.torus(0, 0, 0, 2.5, 0.4, { seg: 16, tseg: 4 }); m.pop(); m.emissive(0);
+  return { cols: [bcmC.cyl(0, -6, 3, 0, 2)], lights: [{ x: 0, y: 6.6, z: -9, s: 5, c: '#ffb347' }] };
+}
+BCM_KINDS.solSystem = {
+  name: 'Sol System', short: 'Sol Henge', bpm: 126, mapCol: '#ffb347', og: true,
+  desc: 'OG (2004 "Sol Henge"): a henge of glowing trilithons around the dance floor, an inner horseshoe around the DJ\'s altar stone, a golden sun disc, planets glowing on poles.',
+  real: 'A San Francisco collective whose 2004 camp, fondly known as "Sol Henge", was one of that year\'s big sound productions.',
+  foot: [-19, -19, 19, 19], radius: 22, height: 9, entrance: [0, 17, Math.PI],
+  build: bcmBuildSolSystem, sil: bcmSilSolSystem
+};
+
 /* ======================= public API ======================= */
 const BurnsCamps = {
   version: 1,
@@ -1866,10 +2624,20 @@ const BurnsCamps = {
       bcmPart(P, 0, 0, m => { m.lo = true; const r = K.sil(m, P) || {}; m.lo = false; if (lod === 'auto') r.cols = []; return r; }, { noAO: true });
       P.layer = 'full';
     }
+    // optional ACTION prompts at every fixed DJ booth: PLAY A SET (the shared BurnsDJ minigame)
+    if (o.djPrompt && lod !== 'far') for (const st of P.stages) {
+      if (st.vehicle || !st.booth) continue;
+      bcmItem(P, { x: st.booth.x, z: st.booth.z, y: st.booth.y, r: 1.8, label: o.djLabel || 'PLAY A SET', when: gg => typeof BurnsDJ !== 'undefined' && !BurnsDJ.isOpen(gg) && Math.abs(gg.player.y - st.booth.y) < 1.2, fn: gg => BurnsCamps.djSet(gg, P, st.id, typeof o.djPrompt === 'object' ? o.djPrompt : {}) });
+    }
     if (o.onEntrance) api.trigger({ x: P.entrance.x, z: P.entrance.z, r: o.entranceR || 5, once: !!o.entranceOnce, onEnter: gg => o.onEntrance(gg, P) });
     if (o.marker) api.marker('camp_' + id, x, z, P.name, { col: o.markerCol || K.mapCol || '#ffd84a' });
     R.camps.push(P);
     return P;
+  },
+  // a ready-made mission for arriving at a camp (custom, completed by place(..., { mission: id }) on the first visit)
+  mission(kind, id, extra) {
+    const K = BCM_KINDS[kind] || { name: kind };
+    return Object.assign({ id, name: 'Find ' + K.name, short: 'Find ' + K.name, type: 'custom', start: 'manual', desc: K.desc || '', hint: 'Look for ' + K.name + ' on the city side' }, extra || {});
   },
   // the far-LOD silhouette only (open-world skylines): a few draw calls, glowing at night
   silhouette(api, g, kind, x, z, o) { return this.place(api, g, kind, x, z, Object.assign({}, o || {}, { lod: 'far' })); },
@@ -1885,13 +2653,14 @@ const BurnsCamps = {
     const P = typeof camp === 'string' ? this.camp(g, camp) : camp; if (!P) return null;
     const st = (stageId && P.stage(stageId)) || P.stages[0]; if (!st || typeof BurnsDJ === 'undefined') return null;
     o = Object.assign({}, o || {});
-    const b = st.booth, dj = st.dj;
+    const b = st.booth, dj = bcmActorOf(g, st.dj);
     if (dj) dj.hidden = true;
     const done = o.onDone;
     const set = BurnsDJ.open(g, Object.assign({ title: (P.name + ' · ' + st.name).toUpperCase(), bpm: st.bpm || P.bpm, genre: st.genre || 'house', difficulty: 2, duration: 60, booth: { x: b.x, y: b.y, z: b.z, yaw: b.yaw }, crowd: st.floor ? { x: st.floor.x, z: st.floor.z, r: st.floor.r } : undefined, deck3d: false }, o, {
       onDone(r) { if (dj) dj.hidden = false; bcmEvent(g, 'bcmSetDone', { camp: P, stage: st, result: r }); if (done) done(r); }
     }));
     bcmEvent(g, 'bcmSet', { camp: P, stage: st });
+    this.lastSet = set;
     return set;
   },
   // the camp's vehicle controller (Root Society's coliseum car, the Space Cowboys' sound truck)

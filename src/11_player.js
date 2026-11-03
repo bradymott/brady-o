@@ -279,7 +279,9 @@ class Player {
       }
     }
     // LSD flight: steer freely (stick / jump to rise, down to sink); then a gentle glide down
-    const tripping = this.lsdT > 0 && !this.inWater;
+    // a signature item with { flight: true } (Morocco's flying carpet) steers like the LSD flight
+    const sigFly = !!(this.sig && typeof TourPowers !== 'undefined' && (TourPowers.get(this.sig.id) || {}).flight);
+    const tripping = (this.lsdT > 0 || sigFly) && !this.inWater;
     if (this.lsdT > 0) {
       this.lsdT -= dt;
       if (this.lsdT <= 2 && this.lsdT + dt > 2) g.toast('COMING DOWN...');

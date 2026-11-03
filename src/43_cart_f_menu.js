@@ -236,7 +236,7 @@ class KartMenuScene {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (this.state === 'driver' && this.gl && CartShowroom.world && !this._port) this.portraits();
     this.ensurePreview();
-    let ok = false; try { ok = this.gl && !BurnsGL.lost && !this.jobs.length && this.render3D(ctx); } catch (e) { console.error(e); Game.reportError(e); this.gl = false; }
+    let ok = false; try { ok = this.gl && !BurnsGL.lost && !this.jobs.length && !window.__cartSkipRender && this.render3D(ctx); } catch (e) { console.error(e); Game.reportError(e); this.gl = false; }
     if (!ok) this.backdrop(ctx, W, H);
     // a soft dark gradient where the UI sits
     const P = this.portrait, g = P ? ctx.createLinearGradient(0, H * 0.35, 0, H) : ctx.createLinearGradient(W * 0.3, 0, W, 0);
