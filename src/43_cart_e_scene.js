@@ -588,6 +588,16 @@ function cartItemIcon(ctx, id, x, y, s, a) {
     case 'foam': for (const [dx, dy, r] of [[-0.25, 0.1, 0.25], [0.15, -0.1, 0.3], [0.3, 0.2, 0.2], [-0.05, 0.25, 0.22]]) { ctx.beginPath(); ctx.arc(dx * s, dy * s, r * s, 0, TAU); ctx.fill(); ctx.stroke(); } break;
     case 'shield': { const g = ctx.createRadialGradient(-s * 0.15, -s * 0.15, 1, 0, 0, s * 0.5); g.addColorStop(0, '#ffffff'); g.addColorStop(1, col); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, s * 0.45, 0, TAU); ctx.fill(); ctx.stroke(); break; }
     case 'whistle': ctx.beginPath(); ctx.arc(s * 0.1, s * 0.05, s * 0.3, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillRect(-s * 0.5, -s * 0.2, s * 0.4, s * 0.18); ctx.strokeRect(-s * 0.5, -s * 0.2, s * 0.4, s * 0.18); break;
+    default: {
+      // arena powers: their own icon if they drew one, otherwise a glowing badge with the power's initial
+      const F = CART_ITEM_FX[id];
+      if (F && F.icon) { F.icon(ctx, s, col); break; }
+      const g = ctx.createRadialGradient(-s * 0.15, -s * 0.15, 1, 0, 0, s * 0.55); g.addColorStop(0, '#ffffff'); g.addColorStop(1, col);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, s * 0.52, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#1a1020'; ctx.font = `800 ${Math.round(s * 0.62)}px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(((CART_ITEMS[id] && CART_ITEMS[id].name) || id).charAt(0), 0, s * 0.04);
+      break;
+    }
   }
   ctx.restore();
 }
