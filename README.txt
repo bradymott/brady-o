@@ -1,15 +1,13 @@
-BRADY-O — installable iPhone app
-=================================
-Put every file in this folder on any HTTPS web host (GitHub Pages, Netlify,
-Cloudflare Pages...). Then on your iPhone:
+BRADY'S GAMES: three installable iPhone apps
+============================================
+The site root is a launcher page that links three separate games:
 
-  1. Open the web address in Safari.
-  2. Tap Share (the square with the arrow), then "Add to Home Screen".
-  3. Make sure "Open as Web App" is on, then tap Add.
+  burning-man/            Brady Goes to Burning Man  (3D adventure)
+  super-brady-o-world/    Super Brady-O World        (2D platformer around the world)
+  art-cart/               Art Cart                   (3D art-car battle racing)
 
-Brady-O then launches from its own icon, full screen with no browser bars,
-turns with your phone (portrait or landscape) and keeps working offline.
+On iPhone: open a game in Safari, tap Share, then "Add to Home Screen"
+(keep "Open as Web App" on). Each game installs as its own app, with its
+own icon and save data, runs full screen and works offline.
 
-Files: index.html (the whole game), manifest.webmanifest (app settings),
-sw.js (offline cache), icon-*.png (home-screen icons), FONT-LICENSE-*.txt
-(Bungee and Rubik fonts, SIL Open Font License 1.1).
+Built from the brady-o repository with `node tools/build.js` (dist/site/).

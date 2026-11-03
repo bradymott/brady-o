@@ -1,23 +1,11 @@
-// Brady-O service worker: makes the game load instantly and work offline.
-const CACHE = 'brady-o-75b4d3af2a';
-const SHELL = ["./","./index.html","./manifest.webmanifest","./icon-180.png","./icon-192.png","./icon-512.png","./icon-maskable-512.png"];
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
-});
+// retires the old all-in-one app's service worker (the site is now a launcher plus three apps)
+self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('brady-o-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
-});
-self.addEventListener('fetch', e => {
-  const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
-  if (req.mode === 'navigate') {
-    // newest version when online, cached copy when offline
-    e.respondWith(fetch(req).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put('./index.html', copy));
-      return res;
-    }).catch(() => caches.match('./index.html')));
-    return;
-  }
-  e.respondWith(caches.match(req).then(hit => hit || fetch(req)));
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k.startsWith('brady-o-')).map(k => caches.delete(k)));
+    await self.registration.unregister();
+    const open = await self.clients.matchAll({ type: 'window' });
+    for (const c of open) { try { c.navigate(c.url); } catch (err) { /* ignore */ } }
+  })());
 });
