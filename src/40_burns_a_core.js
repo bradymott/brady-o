@@ -214,7 +214,7 @@ const BurnsSave = {
       // progression follows BURNS_WORLD_ORDER: every finished world unlocks the next one in the
       // sequence (migrates saves made under older orders, e.g. finished 2 -> unlock 16). Nothing is re-locked.
       let changed = false;
-      for (const id of BURNS_WORLD_ORDER) { if (!d.worldDone[id]) continue; const nx = BurnsWorlds.next(id); if (nx && !d.unlocked[nx]) { d.unlocked[nx] = true; changed = true; } }
+      for (const id of BURNS_WORLD_ORDER) { if (!d.worldDone[id]) continue; const nx = BurnsWorlds.next(id); if (nx && !d.unlocked[nx]) { d.unlocked[nx] = true; changed = true; } }   // next() skips unregistered ids
       // ground scores arrived with world 16: saves that already got past it keep their baggies
       if (!d.flags['0:groundscore'] && BURNS_WORLD_ORDER.some(id => d.worldDone[id] && BURNS_WORLD_ORDER.indexOf(id) > BURNS_WORLD_ORDER.indexOf(16))) { d.flags['0:groundscore'] = true; changed = true; }
       if (changed) this.save();
@@ -311,8 +311,9 @@ const BurnsWorlds = {
   isSecret(id) { return !!BURNS_WORLD_SECRET[id]; },
   // ids the hub shows: the play order, minus secret worlds that are still locked
   visible() { const sv = BurnsSave.get(); return this.order.filter(id => !this.isSecret(id) || sv.unlocked[id]); },
-  next(id) { const i = this.order.indexOf(id); return i >= 0 && i < this.order.length - 1 ? this.order[i + 1] : null; },
-  prev(id) { const i = this.order.indexOf(id); return i > 0 ? this.order[i - 1] : null; },
+  // progression steps over worlds that aren't registered (yet): a build without W16/W17 goes 2 -> 3. The order itself never changes.
+  next(id) { const i = this.order.indexOf(id); if (i < 0) return null; for (let k = i + 1; k < this.order.length; k++) if (this.defs[this.order[k]]) return this.order[k]; return null; },
+  prev(id) { const i = this.order.indexOf(id); for (let k = i - 1; k >= 0; k--) if (this.defs[this.order[k]]) return this.order[k]; return null; },
   isFinale(id) { return id === 10; },
   // the open world (a registered def with open: true), or null: the title's CONTINUE goes there instead of the hub
   open() { const k = Object.keys(this.defs).map(Number).find(k => this.defs[k].open); return k === undefined ? null : k; }

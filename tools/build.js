@@ -227,6 +227,21 @@ ${Object.entries(APPS).map(([id, A]) => tile(A, id)).join('\n')}
 <p class="how">On iPhone: open a game in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>. Each game installs as its own app.</p>
 </body></html>
 `);
+// The site root used to BE the all-in-one app, with its own offline service worker (cache prefix 'brady-o-').
+// Phones that installed it still run that worker, so the root ships a retiring worker: it clears the old
+// caches, unregisters itself and reloads open pages, so they get the launcher and the three apps fresh.
+fs.writeFileSync(path.join(siteDir, 'sw.js'), `// retires the old all-in-one app's service worker (the site is now a launcher plus three apps)
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', e => {
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k.startsWith('brady-o-')).map(k => caches.delete(k)));
+    await self.registration.unregister();
+    const open = await self.clients.matchAll({ type: 'window' });
+    for (const c of open) { try { c.navigate(c.url); } catch (err) { /* ignore */ } }
+  })());
+});
+`);
 try { const z = path.join(dist, 'Brady-Games-site.zip'); if (fs.existsSync(z)) fs.unlinkSync(z); execSync(`cd "${siteDir}" && zip -q -X -r "${z}" .`); } catch (e) { /* zip optional */ }
 
 console.log('built', allFiles.length, 'modules,', (artifact.length / 1024).toFixed(0) + 'KB', '· site:', report.join(' · '));
