@@ -275,8 +275,8 @@
     s.bottom = { kind: 'cargo', col: '#6a6e52' }; s.shoes = { kind: 'workboots', col: '#b89a6a', sole: '#5a4a3a', laces: true };
     s.gloves = '#5a5e66'; s.acc = [helmet, 'botHarness', 'kneepads', 'robotGloves', 'clipBottles']; s.strapCol = '#4a3a2a'; s.kneeCol = '#6a6a5a';
   };
-  T('fencebot_a', { anim: 'robot', lines: ['BEEP. WE ARE HUMAN AFTER ALL. MOSTLY.', 'THIS HELMET WAS A TRASH CAN. IT STILL IS.', 'ONE MORE TIME. WE MEAN IT.'], spec(s, r) { fenceBot(s, r, 'trashcanHelmet'); } });
-  T('fencebot_b', { anim: 'robot', lines: ['BOOP. THE VISOR FLICKERS. THAT IS ART.', 'IT IS A COLANDER. DO NOT ASK.', 'AROUND THE FENCE. AROUND THE FENCE.'], spec(s, r) { fenceBot(s, r, 'colanderHelmet'); } });
+  T('fencebot_a', { anim: 'robot', lines: ['BEEP. I AM ONE PERCENT ROBOT. NINETY-NINE PERCENT DUST.', 'THIS HELMET WAS A TRASH CAN. IT STILL IS.', 'SCANNING FOR SNACKS. SCANNING... SCANNING...'], spec(s, r) { fenceBot(s, r, 'trashcanHelmet'); } });
+  T('fencebot_b', { anim: 'robot', lines: ['BOOP. THE VISOR FLICKERS. THAT IS ART.', 'IT IS A COLANDER. DO NOT ASK.', 'WE PATROL THE FENCE. THE FENCE PATROLS US.'], spec(s, r) { fenceBot(s, r, 'colanderHelmet'); } });
   T('billionaire', { anim: 'idle', lines: ['Radical inclusion! (Not past the rope.)', 'My sherpas built this camp by hand. Their hands.', 'Have you tried my artisanal shade?'],
     spec(s, r) {
       s.face = 'smug'; s.hair = { style: 'short', col: '#c8b088', hi: '#f0e0b8' }; s.glasses = 'aviator'; s.lensCol = '#c8a040'; s.goggles = 'classic'; s.maskCol = '#e8e0f0';
@@ -295,4 +295,71 @@
       s.top = { kind: 'long', col: '#fbf8f0' }; s.coat = { kind: 'robe', col: '#fbf8f0', trim: '#e8e0d0' };
       s.bottom = { kind: 'pants', col: '#f4f0e6' }; s.shoes = { kind: 'barefoot' }; s.acc = ['crystal', 'kandi'];
     } });
+})();
+
+
+/* ---------- the RED LIGHT DISTRICT crew: a glam burlesque/cabaret camp (PG-13) ----------
+   Brady and Chinka hitched to the Burn in their pink RV (W1); they babysit his gear in W2.
+   type 'redlight', variant: 'bikini' | 'corset' | 'fan' | 'showgirl' | 'madame' (or 0-4). Crew list: BURNS_REDLIGHT. */
+const BURNS_REDLIGHT = {
+  camp: 'RED LIGHT DISTRICT',
+  variants: ['bikini', 'corset', 'fan', 'showgirl', 'madame'],
+  crew: [
+    { id: 'rlVelvet', name: 'MAMA VELVET', variant: 'madame', anim: 'welcome', lines: ['Sugar, you look like a lost lamb in a dust storm. Stay close to Mama.', 'First Burn? Oh, honey. Hydrate, moisturize, and never trust a man in a fur vest at sunrise.'] },
+    { id: 'rlCandi', name: 'CANDI', variant: 'bikini', anim: 'dance', lines: ['Six hundred miles in that RV and you snored the whole way, cutie.', 'Rule one: glitter is a lifestyle. Rule two: see rule one.'] },
+    { id: 'rlRoxie', name: 'ROXIE', variant: 'corset', anim: 'cheer', lines: ['Go get your girl, bun boy! We believe in you!', 'If anybody gives you trouble, they answer to the corset.'] },
+    { id: 'rlPeachy', name: 'PEACHY', variant: 'fan', anim: 'dance', lines: ['These fans have seen things. Beautiful things.', 'Showtime is midnight. Front row is yours, sweet pea.'] },
+    { id: 'rlBlush', name: 'BLUSH', variant: 'showgirl', anim: 'wave', lines: ['A gentleman always tips his hat. Watch and learn, darling.', 'You still owe us gas money. Kidding! Gifting economy!'] }
+  ]
+};
+(() => {
+  const B = BURNS_BONES, G = BURNS_GEAR, hp = BurnsRound.headPt;
+  const acc = (n, f) => { G.acc[n] = f; }, prop = (n, f) => { G.prop[n] = f; }, hat = (n, f) => { G.hat[n] = f; };
+  BURNS_ATLAS.addFace('showgirl', { eyes: 'normal', lashes: true, brows: { col: '#b08a50', tilt: 1.5, w: 6 }, mouth: 'smile', mouthW: 11, lips: '#e0204a', blush: true });
+  const ringAt = (m, A, y, off, rad, seg) => { const r = A.torsoR(y), sz = Math.abs(A.torsoPt(0, y, 0)[2]) / Math.max(0.01, r); m.push(); m.tf(0, y, 0, 0, 0, 0, 1, 1, sz); m.torus(0, 0, 0, r + off, rad, { seg: seg, tseg: 3 }); m.pop(); };
+  acc('bikiniStraps', (m, A) => {
+    const h = A.h; m.color((A.S.top && A.S.top.col) || '#ff5ab0');
+    for (const sd of [1, -1]) { const a = A.torsoPt(sd * 0.3, 0.4 * h, 0.006), b = A.torsoPt(sd * 0.85, 0.5 * h, 0.002); m.limb(a[0], a[1], a[2], b[0], b[1], b[2], 0.007, 0.007, { seg: 4 }); }
+    if (!A.lo) { const p = A.torsoPt(0, 0.35 * h, 0.014); m.color('#fff4fa', 0.35).shine(3); m.ball(p[0], p[1], p[2], 0.013, { seg: 6, rings: 4 }); m.emissive(0); m.shine(0); }
+  });
+  acc('corsetLace', (m, A) => {   // black trim, front lacing and boning on a 'corset' top
+    const h = A.h; m.color('#1a0a12').shine(1);
+    ringAt(m, A, 0.388 * h, 0.006, 0.009, A.lo ? 10 : 18); ringAt(m, A, 0.025 * h, 0.006, 0.008, A.lo ? 10 : 18);
+    if (!A.lo) {
+      for (let i = 0; i < 5; i++) { const y0 = (0.06 + i * 0.062) * h, y1 = y0 + 0.062 * h, a = A.torsoPt(-0.11, y0, 0.006), b = A.torsoPt(0.11, y1, 0.006), c = A.torsoPt(0.11, y0, 0.006), d = A.torsoPt(-0.11, y1, 0.006); m.limb(a[0], a[1], a[2], b[0], b[1], b[2], 0.004, 0.004, { seg: 3 }); m.limb(c[0], c[1], c[2], d[0], d[1], d[2], 0.004, 0.004, { seg: 3 }); }
+      m.color(shade((A.S.top && A.S.top.col) || '#c81a3a', -0.35));
+      for (const th of [-1.25, -0.6, 0.6, 1.25]) { const a = A.torsoPt(th, 0.05 * h, 0.004), b = A.torsoPt(th, 0.37 * h, 0.004); m.limb(a[0], a[1], a[2], b[0], b[1], b[2], 0.005, 0.005, { seg: 3 }); }
+    }
+    m.shine(0);
+  });
+  prop('featherFan', (m, A) => {   // a pink ostrich-feather fan
+    m.color('#2a1418').shine(2); m.limb(0, -0.02, 0.03, 0, 0.1, 0.03, 0.008, 0.006, { seg: 5 }); m.shine(0);
+    const n = A.lo ? 5 : 9;
+    for (let i = 0; i < n; i++) { const a = -1.15 + 2.3 * i / (n - 1); m.push(); m.tf(0, 0.1, 0.03, 0, 0, a); m.color(i % 2 ? '#ff6ac0' : '#ffb0e0'); m.ellipsoid(0, 0.17, 0, 0.036, 0.17, 0.009, { seg: A.lo ? 6 : 9, rings: 5 }); if (!A.lo) { m.color('#fff0f8'); m.ellipsoid(0, 0.32, 0, 0.026, 0.035, 0.009, { seg: 6, rings: 4 }); } m.pop(); }
+  });
+  prop('cane', (m, A) => { m.color('#121216').shine(2); m.limb(0, -0.78, 0.04, 0, 0.12, 0.04, 0.011, 0.011, { seg: 6 }); m.color('#f4f4f0'); m.ball(0, -0.79, 0.04, 0.014, { seg: 6, rings: 4 }); m.color('#e0b848').shine(3); m.ball(0, 0.14, 0.04, 0.026, { seg: 8, rings: 6 }); m.shine(0); });
+  hat('fascinator', (m, A, H) => {   // a tiny tilted hat with a feather plume
+    const p = hp(0.75, 0.62, 0.01); m.push(); m.tf(p[0], p[1], p[2], 0.75, -0.35, -0.5);
+    m.color(H.col || '#e0204a').shine(2); m.roundCyl(0, 0, 0, 0.055, 0.025, 0.01);
+    m.color('#ffb0e0'); for (let i = 0; i < (A.lo ? 1 : 3); i++) { m.push(); m.tf(0, 0.02, 0, 0, 0, -0.5 + 0.45 * i); m.ellipsoid(0, 0.1, 0, 0.022, 0.11, 0.006, { seg: 6, rings: 4 }); m.pop(); }
+    m.pop(); m.shine(0);
+  });
+  const blondes = [['#f6e6b0', '#fffaf0'], ['#f0d890', '#fff4d0'], ['#e8c870', '#fff0c0'], ['#f4dca0', '#ffffff']];
+  BURNS_NPC_TYPES.redlight = { anim: 'cheer', lines: ['Honey, you look thirsty. Have some water and some sparkle.', 'Red Light District, darling. We put the "glam" in "glamping."', 'Keep it classy, keep it dusty.'],
+    spec(s, r, opts) {
+      let v = opts && opts.variant !== undefined ? opts.variant : r.pick(['bikini', 'corset', 'fan', 'showgirl']);
+      if (typeof v === 'number') v = BURNS_REDLIGHT.variants[((v % 5) + 5) % 5];
+      const bl = r.pick(blondes);
+      s.body.fem = true; s.body.w = 0.86; s.body.h = v === 'madame' ? 1.04 : 0.98; s.face = 'showgirl'; s.beard = null; s.goggles = false; s.glasses = null;
+      s.hair = { style: r.pick(['long', 'wavy', 'curly']), col: bl[0], hi: bl[1] };
+      s.shoes = { kind: 'boots', col: v === 'corset' || v === 'showgirl' ? '#1a1014' : '#ff6ac0', sole: '#2a1418' };
+      s.acc = [];
+      if (v === 'bikini') { s.top = { kind: 'bikini', col: '#ff5ab0', pattern: 'sequin' }; s.bottom = { kind: 'shorts', col: '#ff6ac0', pattern: 'sequin' }; s.boaCol = '#ff7ac8'; s.acc = ['bikiniStraps', 'boa', 'bracelets']; s.glasses = 'heart'; s.lensCol = '#ff4fa8'; s.prop = null; }
+      else if (v === 'corset') { s.top = { kind: 'corset', col: '#d0183a', pattern: 'sequin' }; s.bottom = { kind: 'tutu', col: '#1a1014', tiers: ['#1a1014', '#d0183a', '#1a1014'] }; s.boaCol = '#fff4f8'; s.acc = ['corsetLace', 'boa', 'bracelets']; s.hair.style = 'curly'; s.prop = null; }
+      else if (v === 'fan') { s.top = { kind: 'bikini', col: '#ff4fa8', pattern: 'sequin' }; s.bottom = { kind: 'tutu', col: '#ff9ad0', tiers: ['#ff6ac0', '#ffd0ea', '#ff9ad0'] }; s.acc = ['bikiniStraps', 'bracelets']; s.hair.style = 'bob'; s.hat = { kind: 'fascinator', col: '#ff2a6a' }; s.prop = 'featherFan'; s.prop2 = 'featherFan'; }
+      else if (v === 'showgirl') { s.top = { kind: 'corset', col: '#c8102e', pattern: 'sequin' }; s.bottom = { kind: 'shorts', col: '#1a1014' }; s.boaCol = '#ff7ac8'; s.acc = ['corsetLace', 'boa']; s.hat = { kind: 'tophat', col: '#16101a' }; s.prop = 'cane'; }
+      else { s.top = { kind: 'corset', col: '#b0102a', pattern: 'sequin' }; s.bottom = { kind: 'kilt', col: '#b0102a', len: 0.78, pattern: 'sequin' }; s.boaCol = '#ff7ac8'; s.acc = ['corsetLace', 'boa', 'goldChain']; s.hair = { style: 'bun', col: bl[0], hi: bl[1] }; s.glasses = 'round'; s.lensCol = '#ff9ad8'; s.prop = 'coffee'; }
+      if (opts && opts.prop !== undefined) s.prop = opts.prop;
+      s.key = 'redlight:' + v + ':' + s.hair.col + ':' + s.hair.style;
+    } };
 })();

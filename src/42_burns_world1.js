@@ -1,7 +1,8 @@
 /* ============================================================
-   BRADY-O BURNS — World 1: THE LINE (Gate Road)
-   Dusk into night. A miles-long line of RVs crawls toward the gate.
-   Brady has no ticket (Chinka had both), and the Man just stole Chinka.
+   BRADY GOES TO BURNING MAN — World 1: THE LINE (Gate Road) · Sunday, arrival
+   Dusk into night. A miles-long line of RVs crawls toward the gate. First-timers Brady and
+   Chinka hitched a ride on the roof of the Red Light District camp's pink RV. Brady has no
+   ticket (Chinka had both), and the Man just stole Chinka.
    Missions (Burn Tokens):
      ticket    Golden Ticket       chase a blown-away ticket across moving RV roofs
      zipties   Zip-Tie Crisis      collect 8 bundles for a melting-down camp lead
@@ -24,6 +25,7 @@ BurnsWorlds.register({
   id: 1, name: 'The Line', sub: 'Gate Road',
   sky: 'dusk', sky2: 'night', tod: 0,
   music: 'burns_w1',
+  dayCard: false,   // the intro shows the day card itself (onStart shows it on return visits)
   bounds: [-118, -318, 118, 340],
   spawn: { x: 17.2, y: 0, z: 296, yaw: Math.PI },
   // flat playa inside the corridor; soft rolling dunes rise outside the bounds and settle again before the horizon skirt
@@ -141,17 +143,26 @@ BurnsWorlds.register({
     // people dancing on top of parked RVs
     const roofParty = (x, z, seed) => { const v = api.prop('rv', { x, z, yaw: 0.1, seed }); for (let i = 0; i < 2; i++) api.npc({ type: R.pick(['burner', 'tutu', 'furcoat', 'ledsuit']), seed: seed * 10 + i, x: x + (i - 0.5) * 0.9, z: z - 1 + i * 1.6, y: v.top, fixedY: true, behavior: 'dance', style: i * 2 }); };
     roofParty(-24, 252, 201); roofParty(24, 112, 202); roofParty(-26, -10, 203);
-    /* ---------------- start: Brady's car at the back of the line ---------------- */
-    api.prop('car', { x: W1.CAR.x, z: W1.CAR.z, yaw: Math.PI, seed: 7, roofBikes: false, col: '#2a2a34' });
+    /* ---------------- start: the Red Light District's pink RV at the back of the line ----------------
+       Brady and Chinka rode six hundred miles on its roof deck; the burlesque crew hangs out beside it. */
+    S.redLight = api.redLightCamp(W1.CAR.x, W1.CAR.z, Math.PI, {
+      spots: [[3.9, 7.5], [5.3, 5.0], [3.1, 10.2], [5.9, 9.0], [4.5, 2.2]],
+      lines: {
+        rlVelvet: ['Sugar, he took your wife AND your ticket? Oh, this is SUCH a Sunday.', 'Lucky, up at the pre-gate party, always has a spare. Go on. Mama will watch the RV.'],
+        rlCandi: ['First Burn, cutie? Rule one: hydrate. Rule two: glitter. Rule three: get your girl back.', 'Here, take some sparkle for the road.'],
+        rlRoxie: ['If that big wooden creep comes back, he answers to the corset.', 'The greeters at the gate are INTENSE. Hug back harder.']
+      },
+      gifts: { rlCandi: { kind: 'glowstick', n: 10 } }
+    });
     api.checkpoint('cp_start', 23, 289, { yaw: Math.PI, name: 'Back of the Line' });
-    api.npc({ id: 'sunny', name: 'SUNNY', type: 'tutu', seed: 5, x: 15.2, z: 291, yaw: 0.4,
+    api.npc({ id: 'sunny', name: 'SUNNY', type: 'tutu', seed: 5, x: 12.6, z: 289.2, yaw: 0.4,
       lines: [
         'Whoa. Did a giant wooden guy just steal your wife? Classic first night.',
         'Burner basics: JUMP twice to flip. SPIN to say hi to rude people. In the air, hit ACTION to slam down.',
         'Those water drops up top? Your hydration. Water bottles refill it. Hydrate or die-drate!',
         'No ticket? Lucky always has a spare. He\'s at the pre-gate party up the line, on a couch.'
       ], gift: { kind: 'glowstick', n: 10 } });
-    api.npc({ id: 'chinkaIntro', type: 'chinka', x: W1.CAR.x - 0.3, z: W1.CAR.z + 0.4, y: 1.48, fixedY: true, yaw: 0.3, behavior: 'sit', noTalk: true, chatter: false });
+    api.npc({ id: 'chinkaIntro', type: 'chinka', x: W1.CAR.x - 0.36, z: W1.CAR.z + 2.4, y: 3.36, fixedY: true, yaw: 0.3, behavior: 'sit', noTalk: true, chatter: false });
     api.pickup('water', 13.5, 0.9, 282);
     api.glowLine(14.5, 286, 14.5, 236, 11);
     api.glowArc(19.5, 1.6, 270, 19.5, 1.6, 250, 3.2, 6);
@@ -363,7 +374,7 @@ BurnsWorlds.register({
     g.tod = Math.min(0.9, BurnsSave.tokenCount(1) * 0.18);
     if (BurnsSave.hasItem('ticket') || g.missions.isDone('ticket')) S.ticket = { done: true };
     if (!S.introDone) BURNS_W1.intro(g);
-    else g.banner('THE LINE', 'Get a ticket. Get through the gate. Get Chinka back.', { col: '#ff9a4a' });
+    else { g.dayCard(); g.banner('THE LINE', 'Get a ticket. Get through the gate. Get Chinka back.', { col: '#ff9a4a' }); }
   },
   onRespawn(g) {
     const m = g.missions.get('greeters');
@@ -396,34 +407,39 @@ function burnsW1Timer(g, sec, fn) { const S = BURNS_W1.state; (S.timers || (S.ti
 /* ---------------- intro cutscene: the Man takes Chinka ---------------- */
 BURNS_W1.intro = function (g) {
   const S = BURNS_W1.state, man = S.man, C = BURNS_W1.CAR, p = g.player;
-  p.teleport(C.x + 0.4, 1.48, C.z - 0.3, 0.3); p.locked = true; p.animOverride = 'sit';
+  p.teleport(C.x + 0.36, 3.36, C.z + 2.4, 0.3); p.locked = true; p.animOverride = 'sit';
   man.hidden = true;
+  const velvet = g.actor('rlVelvet'), candi = g.actor('rlCandi');
   g.cutscene([
     { music: 'burns_intro' },
     { cam: { x: 46, y: 26, z: 380, tx: 0, ty: 0, tz: 180, fov: 0.85 } },
-    { banner: ['WORLD 1', 'THE LINE · GATE ROAD', { col: '#ff9a4a', big: true, dur: 3 }] },
-    { cam: { from: { x: 46, y: 26, z: 380, tx: 0, ty: 0, tz: 180, fov: 0.85 }, to: { x: 25, y: 4.2, z: 306, tx: C.x, ty: 1.9, tz: C.z, fov: 0.8 }, dur: 4 } },
-    { say: [g.actor('chinkaIntro'), ['Babe. We made it. Look at all these beautiful weirdos.']] },
-    { say: ['brady', ['Six more hours of line and we\'re home.']] },
+    { do: g2 => g2.dayCard() },
+    { cam: { from: { x: 46, y: 26, z: 380, tx: 0, ty: 0, tz: 180, fov: 0.85 }, to: { x: 8.5, y: 3.2, z: 284, tx: 15.5, ty: 2.0, tz: 296, fov: 0.85 }, dur: 4 } },
+    { say: [velvet || 'MAMA VELVET', ['Wakey wakey, roof babies! Six hundred miles and you two snored through Nevada.']] },
+    { say: [candi || 'CANDI', ['Welcome to the line, cuties! Only six more hours!']] },
+    { cam: { from: { x: 8.5, y: 3.2, z: 284, tx: 15.5, ty: 2.0, tz: 296, fov: 0.85 }, to: { x: 24, y: 6.6, z: 309, tx: C.x, ty: 3.9, tz: C.z + 2.4, fov: 0.8 }, dur: 2.6 } },
+    { say: [g.actor('chinkaIntro'), ['Babe. We made it. Our first Burn! Look at all these beautiful weirdos.']] },
+    { say: ['brady', ['So... what do people actually DO here? Is there a schedule? Do I need a camp?']] },
     { do: g2 => { g2.shake(0.6); burnsSfx('man_stomp'); man.hidden = false; man.x = 34; man.z = 236; man.yaw = Math.atan2(C.x - 34, C.z - 236); man.setState('walk'); } },
-    { cam: { from: { x: 25, y: 4.2, z: 306, tx: C.x, ty: 1.9, tz: C.z, fov: 0.8 }, to: { x: 14, y: 3, z: 312, tx: 30, ty: 9, tz: 250, fov: 0.9 }, dur: 1.4 } },
+    { cam: { from: { x: 24, y: 6.6, z: 309, tx: C.x, ty: 3.9, tz: C.z + 2.4, fov: 0.8 }, to: { x: 14, y: 5, z: 314, tx: 30, ty: 9, tz: 250, fov: 0.9 }, dur: 1.4 } },
     { do: g2 => { S.walkT = 0; } },
     { until: g2 => { S.walkT += 1 / 120; const k = Math.min(1, S.walkT / 3.2); man.x = lerp(34, C.x + 7, k); man.z = lerp(236, C.z - 9, k); if (Math.floor(S.walkT * 1.4) !== Math.floor((S.walkT - 1 / 120) * 1.4)) { g2.shake(0.35); burnsSfx('man_stomp', { vol: 0.6 }); g2.fx.dust(man.x, 0.2, man.z, 10); } return k >= 1; } },
     { do: g2 => { man.setState('idle'); man.yaw = Math.atan2(C.x - man.x, C.z - man.z); g2.fx.hearts(man.x, 11, man.z, 20); } },
-    { cam: { x: C.x - 6, y: 2.4, z: C.z + 7, tx: man.x, ty: 9, tz: man.z, fov: 0.95 } },
+    { cam: { x: C.x - 6, y: 4.6, z: C.z + 9, tx: man.x, ty: 9, tz: man.z, fov: 0.95 } },
     { say: ['man', ['WHO... IS... SHE?']] },
     { say: [g.actor('chinkaIntro'), ['Uh. Brady? The giant wooden guy is looking at me.']] },
     { do: g2 => { man.setState('grab'); burnsSfx('man_roar', { pitch: 1.3, vol: 0.6 }); } },
     { wait: 0.9 },
-    { do: g2 => { const ci = g2.actor('chinkaIntro'); if (ci) ci.hidden = true; man.showChinka = true; g2.fx.hearts(C.x, 2.5, C.z, 16); burnsSfx('chinka', null, 'secret'); } },
+    { do: g2 => { const ci = g2.actor('chinkaIntro'); if (ci) ci.hidden = true; man.showChinka = true; g2.fx.hearts(C.x, 4.4, C.z + 2.4, 16); burnsSfx('chinka', null, 'secret'); } },
     { wait: 1.3 },
     { say: ['man', ['I AM THE MAN. AND I AM IN LOVE.']] },
     { do: g2 => { p.locked = false; p.teleport(C.x - 2.2, 0, C.z + 1.5, Math.PI + 0.4); p.locked = true; p.animOverride = 'yell'; } },
     { say: ['brady', ['HEY! That\'s my wife, you overgrown campfire!']] },
     { do: g2 => { man.setState('walk'); man.yaw = Math.PI + 0.25; S.walkT = 0; } },
-    { cam: { from: { x: C.x - 6, y: 2.4, z: C.z + 7, tx: man.x, ty: 9, tz: man.z, fov: 0.95 }, to: { x: C.x - 3, y: 3, z: C.z + 8, tx: man.x - 6, ty: 8, tz: man.z - 60, fov: 0.9 }, dur: 3 } },
+    { cam: { from: { x: C.x - 6, y: 4.6, z: C.z + 9, tx: man.x, ty: 9, tz: man.z, fov: 0.95 }, to: { x: C.x - 3, y: 3, z: C.z + 8, tx: man.x - 6, ty: 8, tz: man.z - 60, fov: 0.9 }, dur: 3 } },
     { until: g2 => { S.walkT += 1 / 120; man.x -= Math.sin(0.25) * 9 / 120; man.z -= 9 / 120; if (Math.floor(S.walkT * 1.6) !== Math.floor((S.walkT - 1 / 120) * 1.6)) { g2.shake(0.25); burnsSfx('man_stomp', { vol: 0.4 }); g2.fx.dust(man.x, 0.2, man.z, 8); } return S.walkT > 2.2; } },
     { say: ['brady', ['CHINKA!', '...Wait. She had both tickets.']] },
+    { say: [velvet || 'MAMA VELVET', ['Honey. Go get your girl. We\'ll keep the RV running.']] },
     { fade: 'out', dur: 0.5 },
     { do: g2 => { man.hidden = false; man.showChinka = true; const ci = g2.actor('chinkaIntro'); if (ci) ci.hidden = true; man.x = BURNS_W1.MAN.x; man.z = BURNS_W1.MAN.z; man.y = 0; man.yaw = 0; man.setState('idle'); BurnsSave.flag(1, 'intro', true); S.introDone = true; p.locked = false; p.animOverride = null; p.teleport(17.2, 0, 296, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; burnsMusic('burns_w1'); } },
     { fade: 'in', dur: 0.6 },

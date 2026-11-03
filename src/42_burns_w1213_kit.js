@@ -1,6 +1,6 @@
 /* ============================================================
-   BRADY-O BURNS — shared kit for World 12 "The Temple" and
-   World 13 "The Workshops".  Everything here is prefixed BW1213.
+   Brady Goes to Burning Man — shared kit for "The Temple" (id 12) and
+   "The Workshops" (id 13).  Everything here is prefixed BW1213.
      BW1213.tex        custom textures painted into the per-world sign area
      BW1213.base       a cleared burner spec for hand-made characters
      custom gear       bw13mosaic, bw13fannypack, bw13flowercrown, bw13glasschain

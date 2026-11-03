@@ -600,12 +600,12 @@ const KART_PROP_DEFS = {
     const by = h - 2;
     for (const px of [22, w - 22]) { x.fillStyle = kGrad(x, px - 14, 0, px + 14, 0, '#3a3448', '#16121e'); x.fillRect(px - 14, 30, 28, by - 30); kOut(x); }
     x.fillStyle = kGrad(x, 0, 14, 0, 84, '#2a1a3a', '#120a1e'); rr(x, 4, 14, w - 8, 72, 18); x.fill(); kOut(x, '#ff4fd8', 4);
-    kNeonText(x, 'ART CAR KART', w / 2, 51, 42, '#ff4fd8', false);
+    kNeonText(x, 'ART CART', w / 2, 51, 42, '#ff4fd8', false);
     x.fillStyle = '#ffd84a'; for (let i = 0; i < 24; i++) { x.beginPath(); x.arc(16 + i * (w - 32) / 23, 92, 4, 0, TAU); x.fill(); }
     for (let i = 0; i < 6; i++) { x.fillStyle = (i % 2) ? '#111' : '#eee'; x.fillRect(8 + i * 8, 100, 8, 8); x.fillRect(w - 56 + i * 8, 100, 8, 8); }
   }, glow(x, w, h) {
     x.shadowColor = '#ff4fd8'; x.shadowBlur = 12; x.strokeStyle = '#ff4fd8'; x.lineWidth = 4; rr(x, 4, 14, w - 8, 72, 18); x.stroke();
-    kNeonText(x, 'ART CAR KART', w / 2, 51, 42, '#ff4fd8', true);
+    kNeonText(x, 'ART CART', w / 2, 51, 42, '#ff4fd8', true);
     x.fillStyle = '#ffd84a'; x.shadowColor = '#ffd84a'; for (let i = 0; i < 24; i++) { x.beginPath(); x.arc(16 + i * (w - 32) / 23, 92, 4, 0, TAU); x.fill(); }
   } }
 };

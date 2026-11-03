@@ -1,6 +1,21 @@
 /* ============================================================
    Main — boot, resize, fixed-step loop
    ============================================================ */
+// Which app this bundle is: 'burningman', 'world', 'kart', or 'all' (the combined test build).
+const APP = typeof BRADY_APP !== 'undefined' ? BRADY_APP : 'all';
+// The home scene of each app. Anything that asks for the old combined TitleScene lands here instead.
+function appHomeScene() {
+  if (APP === 'burningman') {
+    if (typeof BurnsAppStart !== 'undefined') return new BurnsAppStart();
+    if (typeof BurnsHubScene !== 'undefined') return new BurnsHubScene();
+    if (window.BRADY_BURNS && window.BRADY_BURNS.BurnsHubScene) return new window.BRADY_BURNS.BurnsHubScene();
+  }
+  if (APP === 'kart') {
+    if (typeof KartMenuScene !== 'undefined') return new KartMenuScene();
+    if (window.BRADY_KART && window.BRADY_KART.KartMenuScene) return new window.BRADY_KART.KartMenuScene();
+  }
+  return new TitleScene();
+}
 const Game = {
   quality: 1, // 1 = full post-processing; drops to 0 on slow devices
   canvas: null, ctx: null, scene: null, S: 2, dpr: 1, viewW: 900, viewH: VIEW_ROWS * TS,
@@ -24,12 +39,12 @@ const Game = {
     window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 250));
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        if (this.scene instanceof Play && !this.scene.paused && (this.scene.state === 'play' || this.scene.state === 'intro')) this.scene.openPause();
+        if (typeof Play !== 'undefined' && this.scene instanceof Play && !this.scene.paused && (this.scene.state === 'play' || this.scene.state === 'intro')) this.scene.openPause();
         Sound.suspend(); Save.save();
-      } else { if (!(this.scene instanceof Play && this.scene.paused)) Sound.resume(); this.last = performance.now(); }
+      } else { if (!(typeof Play !== 'undefined' && this.scene instanceof Play && this.scene.paused)) Sound.resume(); this.last = performance.now(); }
     });
     window.addEventListener('pagehide', () => Save.save());
-    this.setScene(new TitleScene());
+    this.setScene(appHomeScene());
     this.last = performance.now();
     requestAnimationFrame(t => this.frame(t));
     this.requestWakeLock();
@@ -81,6 +96,8 @@ const Game = {
   },
 
   setScene(s) {
+    // in the Burning Man and Art Cart apps, "back to the title" means that app's own home screen
+    if ((APP === 'burningman' || APP === 'kart') && typeof TitleScene !== 'undefined' && s instanceof TitleScene) s = appHomeScene();
     this.scene = s;
     Input.taps.length = 0;
   },
@@ -142,7 +159,7 @@ const Game = {
 };
 
 function boot() {
-  const start = () => { try { Game.init(); } catch (e) { console.error(e); document.body.insertAdjacentHTML('beforeend', '<p style="color:#fff;font:14px sans-serif;padding:20px">Brady-O could not start: ' + String(e) + '</p>'); } };
+  const start = () => { try { Game.init(); } catch (e) { console.error(e); document.body.insertAdjacentHTML('beforeend', '<p style="color:#fff;font:14px sans-serif;padding:20px">The game could not start: ' + String(e) + '</p>'); } };
   // wait briefly for web fonts so the first frames use them
   let done = false;
   const go = () => { if (!done) { done = true; start(); } };
@@ -178,5 +195,44 @@ window.__iconScene = (x, N, maskable) => {
   x.restore();
   x.restore();
 };
-window.BRADY = { LookScene, SettingsScene, CreditsScene, Game, Save, getLevel, Validator, WORLDS, WORLD_ORDER, CLASSIC_WORLDS, WORLD3_REGIONS, WorldGame, Input, Sound, THEMES, Play, MapScene, TitleScene, StoryScene, EndingScene, GameOverScene, goToMap, startGame };
+// Super Brady-O World icon: Brady leaping past a globe with a plane trail
+window.__iconWorld = (x, N, maskable) => {
+  x.save(); x.scale(N / 512, N / 512);
+  const g = x.createLinearGradient(0, 0, 0, 512); g.addColorStop(0, '#2a6ad8'); g.addColorStop(1, '#8ad0ff');
+  x.fillStyle = g; x.fillRect(0, 0, 512, 512);
+  const cx = 300, cy = 300, R = maskable ? 150 : 175;
+  const og = x.createRadialGradient(cx - 50, cy - 60, 20, cx, cy, R); og.addColorStop(0, '#5ac8ff'); og.addColorStop(1, '#1a5ab8');
+  x.fillStyle = og; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill();
+  x.save(); x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.clip();
+  x.fillStyle = '#4ac860';
+  for (const [ox, oy, rx, ry, rot] of [[-60, -70, 70, 45, 0.4], [40, 20, 55, 90, -0.3], [-90, 60, 40, 60, 0.2], [100, -90, 50, 30, 0.1]]) { x.beginPath(); x.ellipse(cx + ox, cy + oy, rx, ry, rot, 0, Math.PI * 2); x.fill(); }
+  x.strokeStyle = 'rgba(255,255,255,0.35)'; x.lineWidth = 3;
+  for (let k = -2; k <= 2; k++) { const ly = cy + k * R * 0.36, lw = Math.sqrt(Math.max(0, 1 - (k * 0.36) * (k * 0.36))) * R; x.beginPath(); x.ellipse(cx, ly, lw, lw * 0.12, 0, 0, Math.PI * 2); x.stroke(); }
+  for (let k = 0; k <= 2; k++) { x.beginPath(); x.ellipse(cx, cy, R * k * 0.38 + 2, R, 0, 0, Math.PI * 2); x.stroke(); }
+  x.restore();
+  // plane and dotted trail
+  x.setLineDash([10, 12]); x.strokeStyle = '#ffffff'; x.lineWidth = 6; x.beginPath(); x.moveTo(60, 380); x.quadraticCurveTo(180, 90, 430, 110); x.stroke(); x.setLineDash([]);
+  x.fillStyle = '#ffffff'; x.save(); x.translate(440, 108); x.rotate(0.1); x.beginPath(); x.moveTo(30, 0); x.lineTo(-20, -14); x.lineTo(-10, 0); x.lineTo(-20, 14); x.closePath(); x.fill(); x.restore();
+  // Brady mid-leap
+  if (typeof drawBrady !== 'undefined') {
+    x.save(); x.translate(maskable ? 170 : 150, maskable ? 400 : 420); x.scale(maskable ? 4.4 : 5, maskable ? 4.4 : 5);
+    drawBrady(x, { x: 0, y: 0, facing: 1, small: false, power: 0, anim: { state: 'jump', t: 0, phase: 0 }, hair: null, look: Save.data ? Save.data.look : { hair: 0, skin: 1 }, time: 0 });
+    x.restore();
+  }
+  x.restore();
+};
+// Art Cart icon: the art-car title card art, filling the square
+window.__iconKart = (x, N, maskable) => {
+  if (typeof TitleScene !== 'undefined' && TitleScene.prototype.cardArt) {
+    x.save();
+    const pad = maskable ? N * 0.1 : 0;
+    x.fillStyle = '#2a0a3a'; x.fillRect(0, 0, N, N);
+    TitleScene.prototype.cardArt.call({}, x, { id: 'kart' }, 0.35, pad, pad, N - pad * 2, N - pad * 2);
+    x.restore();
+  }
+};
+window.BRADY = {};
+['LookScene', 'SettingsScene', 'CreditsScene', 'Game', 'Save', 'getLevel', 'Validator', 'WORLDS', 'WORLD_ORDER', 'CLASSIC_WORLDS', 'WORLD3_REGIONS', 'WorldGame', 'Input', 'Sound', 'THEMES', 'Play', 'MapScene', 'TitleScene', 'StoryScene', 'EndingScene', 'GameOverScene', 'goToMap', 'startGame', 'appHomeScene']
+  .forEach(k => { try { const v = eval(k); if (v !== undefined) window.BRADY[k] = v; } catch (e) { /* not in this app */ } });
+window.BRADY.APP = APP;
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

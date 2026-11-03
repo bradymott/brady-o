@@ -1,19 +1,25 @@
 /* ============================================================
-   BRADY-O BURNS — World 2: FINDING CAMP (the city at night)
-   Brady is inside the city at last, with one clue: a crumpled note
-   with the camp address, smudged by a gifted margarita ("?:?? & ?").
+   BRADY-O BURNS — World 2: NO CAMP (Sunday night → Monday)
+   Brady is a first-timer with no camp. The Red Light District crew
+   (the pink RV he rode in on) babysits his gear while he asks every
+   camp in the city to take him in. Five rejections later he crashes
+   on a Center Camp couch, wakes up to slam poetry, accepts a tent
+   from a nice guy named Kevin, hauls his stuff across the city...
+   and wakes up at 4 AM to Kevin reading his aura through his soles.
    Clock streets run out from the Man's (empty) pavilion; lettered
-   streets ring it. Three clues fill in the note, then: go home.
+   streets ring it.
    Missions (Burn Tokens):
-     ranger    Ask a Ranger          learn the street signs, go stand under 6:30 & A
-     conclave  The Fire Conclave     cross two rings of fire spinners to Fire Mama Ember
-     alley     Flame Alley           timed run through Camp Combustion's poofer alley
-     lights    Bike Light Roundup    8 LED bike lights scattered between bike swarms
-     lost      Lost & Found Burners  walk three lost burners home (address practice)
-     rocket    Launch the Retro Rocket   climb the big-art gantry, push the button (city view)
-     camp      Home Is Where the Man Is  boss: the Man waits at 7:30 & E (needs all 3 clues)
-   Set pieces: the never-ending art car parade circling Brady's block,
-   the Fire Conclave rings, Flame Alley.
+     search    Camp Shopping            get rejected by five camps
+     conclave  The Fire Conclave        cross two rings of fire spinners to Fire Mama Ember
+     alley     Flame Alley              Camp Combustion's poofer-alley "audition"
+     lights    Bike Light Roundup       8 LED bike lights scattered between bike swarms
+     rocket    Launch the Retro Rocket  climb the big-art gantry, push the button
+     haul      Haul Your Stuff          carry everything from the pink RV to Kevin's tent
+     escape    Sole Survivor            (finale) flee Kevin and his Sole Circle back to the RV
+   Story missions without a token: stash, ranger, couch.
+   Side quests: lost, moop, darkwads, lanterns.
+   Set pieces: Center Camp, the never-ending art car parade around
+   Kevin's block, the Fire Conclave rings, Flame Alley, the Retro Rocket.
    ============================================================ */
 
 const BURNS_W2 = {
@@ -21,45 +27,56 @@ const BURNS_W2 = {
   R: [100, 126, 152, 178, 204, 230, 256],     // Esplanade, A..F
   LET: ['ESPLANADE', 'A', 'B', 'C', 'D', 'E', 'F'],
   CLOCK: [['5:00', -30], ['5:30', -15], ['6:00', 0], ['6:30', 15], ['7:00', 30], ['7:30', 45], ['8:00', 60], ['8:30', 75]],
-  NOTE: ['?:?? & ?', '7:?? & ?', '7:30 & ?', '7:30 & E'],
+  REJECT: ['dues', 'waitlist', 'full', 'interview', 'conclave', 'alley', 'lights'],
   state: null,
   at(th, r) { const a = th * Math.PI / 180; return [this.C.x - r * Math.sin(a), this.C.z + r * Math.cos(a)]; },
   polar(x, z) { const dx = x - this.C.x, dz = z - this.C.z; return [Math.atan2(-dx, dz) * 180 / Math.PI, Math.hypot(dx, dz)]; },
   outYaw(th) { const a = th * Math.PI / 180; return Math.atan2(-Math.sin(a), Math.cos(a)); },
-  clues(g) { let n = 0; for (const id of ['ranger', 'conclave', 'lights']) if (g ? g.missions.isDone(id) : BurnsSave.hasToken(2, id)) n++; return n; }
+  // rejections so far (saved as flags, so they count even before Camp Shopping starts)
+  rejections() { let n = 0; for (const id of this.REJECT) if (BurnsSave.flag(2, 'rej:' + id)) n++; return n; }
 };
-(() => { const W = BURNS_W2; W.CAMP = W.at(45, 230); W.MAN = W.at(45, 245); })();
+// CAMP: Kevin's camp (7:30 & E, inside the parade loop) · RLD: the Red Light District RV (5:15 & Esplanade)
+// CC: Center Camp (6:00 & Esplanade) · MANSPOT: where the Man taunts from, out on the open playa
+(() => { const W = BURNS_W2; W.CAMP = W.at(45, 230); W.RLD = W.at(-22.5, 113); W.CC = W.at(0, 113); W.MANSPOT = W.at(4, 54); })();
 
 BurnsWorlds.register({
-  id: 2, name: 'Finding Camp', sub: 'The city at night',
+  id: 2, name: 'No Camp', sub: 'Sunday night. Nowhere to sleep.', day: 'Sunday night → Monday',
   sky: Object.assign({}, BURNS_PALETTES.night, { zen: '#05061c', hor: '#3a1446', fog: '#24183a', fogD: 0.0105, haze: 0.55, moon: [215, 38], moonK: 1.1, stars: 1, mtnCol: '#120a24', city: [20, 0], cityCol: '#ff7a3a', cityK: 0.7, sky: '#4a4a8a', gnd: '#3a2a46', key: '#9aa8e8', keyK: 0.5, emB: 1.75, rim: '#b08aff' }),
-  sky2: Object.assign({}, BURNS_PALETTES.night, { zen: '#0a0414', hor: '#4a1a3a', fog: '#30203a', fogD: 0.0125, haze: 0.62, moon: [235, 22], moonK: 0.9, stars: 0.85, mtnCol: '#160a1e', city: [20, 0], cityCol: '#ff4fd8', cityK: 0.8, sky: '#54407a', gnd: '#3a2838', key: '#b09ad8', keyK: 0.45, emB: 1.85, rim: '#ff8ad8' }),
+  // the finale runs into Monday's dawn
+  sky2: Object.assign({}, BURNS_PALETTES.dawn, { fogD: 0.0085, city: [20, 0], cityCol: '#ff9a5a', cityK: 0.45, emB: 1.3 }),
   tod: 0,
   music: 'burns_w2',
   bounds: [-155, -112, 155, 112],
-  spawn: { x: 80, y: 0, z: -62, yaw: 0 },
+  spawn: (() => { const [x, z] = BURNS_W2.at(-22.5, 104); return { x, y: 0, z, yaw: BURNS_W2.outYaw(-22.5) }; })(),
   ground: { base: '#b8967c', crack: 0.22, mottle: 0.4, res: 0.5 },
   dust: 0.8,
   missions: [
-    { id: 'note', name: 'The Crumpled Note', token: false, type: 'custom', start: 'auto', silent: true, short: 'Find camp: ?:?? & ?',
-      desc: 'Your camp address, smudged by a gifted margarita. Three clues will fill it in: a Ranger, the Fire Conclave and Camp Blinky.', hint: 'Read the street signs: clock streets go out, letter streets go around' },
-    { id: 'ranger', name: 'Ask a Ranger', type: 'reach', giver: 'sage', start: 'manual', short: 'Stand under the 6:30 & A sign', marker: { x: 86, z: -60 },
-      target: { x: 0, z: 0, r: 3.2 }, desc: 'Ranger Sagebrush will teach you the street signs. Clock streets go out from the Man, letter streets go around.', hint: 'Ranger Outpost, 6:00 & Esplanade (where you start)',
-      onComplete(g) { BURNS_W2.clue(g, 1, 'RANGER SAGEBRUSH', ['Copy that, you found it! You\'re a natural.', 'And that smudge on your note? That\'s a seven. Your camp\'s on a SEVEN-something street.']); } },
+    { id: 'stash', name: 'Honey, You Have NO Camp?', token: false, type: 'custom', count: 3, start: 'auto', progressLabel: 'Gear stashed', short: 'Carry your gear into the pink RV', marker: { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] },
+      desc: 'You came with Chinka, three bags and zero plans. The Red Light District crew will babysit your stuff. Carry it into their pink RV, one load at a time.', hint: 'The pink RV where you started. Heavy stuff: no jumping.',
+      onStart(g) { BURNS_W2.stashStart(g); }, onComplete(g) { BURNS_W2.stashDone(g); } },
+    { id: 'search', name: 'Camp Shopping', type: 'custom', count: 5, start: 'auto', requires: ['stash'], progressLabel: 'Rejections', short: 'Ask camps to take you in (get rejected 5 times)', marker: { x: 62, z: -17 },
+      desc: 'One question for every camp in the city: "Can I camp with you?" Talk to camp leads (look for the ?), or audition at the Fire Conclave, Flame Alley and Camp Blinky. Collect five rejections. Character building!', hint: 'Camp leads with a ? over their heads, all over the city',
+      onStart(g) { BURNS_W234.timer(0.05, g2 => BURNS_W2.searchSync(g2)); },
+      onComplete(g) { BURNS_W2.searchDone(g); } },
+    { id: 'ranger', name: 'Ask a Ranger', token: false, type: 'reach', giver: 'sage', start: 'manual', short: 'Stand under the 6:30 & A sign', marker: { x: 86, z: -60 },
+      target: { x: 0, z: 0, r: 3.2 }, desc: 'Ranger Sagebrush will teach you the street signs. Clock streets go out from the Man, letter streets go around. Then he\'ll tell you where a first-timer can sleep.', hint: 'Ranger Outpost, 6:00 & Esplanade, across from Center Camp',
+      onComplete(g) { BURNS_W2.rangerDone(g); } },
     { id: 'conclave', name: 'The Fire Conclave', type: 'reach', giver: 'flint', start: 'manual', short: 'Cross the fire circle to Fire Mama Ember', marker: { x: 56, z: -84 },
-      target: { x: 0, z: 0, r: 2.6 }, desc: 'Fire Mama Ember can read any smudge. She\'s in the middle of the conclave. Don\'t touch the poi.', hint: 'Open playa, between 6:00 and 7:00, inside Esplanade',
-      onComplete(g) { BURNS_W2.clue(g, 2, 'FIRE MAMA EMBER', ['You walked through fire for a napkin? I respect that.', 'Mm-hm. I\'m fluent in smudge, baby. That says SEVEN-THIRTY.']); } },
+      target: { x: 0, z: 0, r: 2.6 }, desc: 'Fire Mama Ember runs the conclave camp. Walk through two rings of fire spinners and ask her if you can join. Don\'t touch the poi.', hint: 'Open playa, between 6:00 and 7:00, inside Esplanade',
+      onComplete(g) { BURNS_W2.reject(g, 'conclave', 'ember', ['You walked through FIRE to ask me something? I respect that, baby.', 'Join the conclave? Oh, sugar. Fire takes YEARS. Go practice with a sock on a string.']); } },
     { id: 'alley', name: 'Flame Alley', type: 'race', time: 20, giver: 'sparky', start: 'manual', short: 'Run Flame Alley! Ring the bell', marker: { x: 59, z: 6 },
-      target: { x: 0, z: 0, r: 2.2 }, desc: 'Camp Combustion\'s poofer alley. Ring the bell at the far end before the clock runs out.', hint: 'Camp Combustion, between 6:00 and 6:30, B to C',
+      target: { x: 0, z: 0, r: 2.2 }, desc: 'Camp Combustion\'s "audition": run their poofer alley and ring the bell at the far end before the clock runs out.', hint: 'Camp Combustion, between 6:00 and 6:30, B to C',
       onStart(g) { BURNS_W2.alleyStart(g); }, onFail(g) { BURNS_W2.alleyReset(g); },
       onComplete(g) { BURNS_W2.alleyDone(g); } },
     { id: 'lights', name: 'Bike Light Roundup', type: 'collect', count: 8, giver: 'lumen', start: 'manual', progressLabel: 'Bike lights', short: 'Collect lost bike lights', marker: { x: 34, z: 22 },
-      desc: 'A bike swarm blew through Camp Blinky and scattered 8 LED bike lights. Grab them between swarms. Don\'t stand in the bike lane.', hint: 'Camp Blinky, 6:30 & C',
+      desc: 'A bike swarm blew through Camp Blinky and scattered 8 LED bike lights. Bring them all back and Lumen might let you join. Don\'t stand in the bike lane.', hint: 'Camp Blinky, 6:30 & C',
       onStart(g) { BURNS_W2.labels(g, 'lights', 'BIKE LIGHT'); },
-      onComplete(g) { BURNS_W2.clue(g, 3, 'LUMEN', ['MY BABIES! All eight! The playa is bright again!', 'Your note? Ooh, that last bit is an E. Seven-thirty and E. Right where the parade goes round and round.']); } },
-    { id: 'lost', name: 'Lost & Found Burners', type: 'custom', count: 3, giver: 'lost1', start: 'manual', progressLabel: 'Burners home', short: 'Walk the lost burners home', marker: { x: 107, z: -32 },
-      desc: 'Three burners asked you where 4:30 is. It is not here. Walk each of them to the address they actually remember.', hint: 'Lost burners wander near Esplanade and 6:00',
-      onComplete(g) { g.banner('ADDRESS MASTER', 'You know this city better than the people who live here.', { col: '#7aff5a', small: true }); } },
+      onComplete(g) { BURNS_W2.reject(g, 'lights', 'lumen', ['MY BABIES! All eight! The playa is bright again!', 'Join Camp Blinky? Oh, sweetie. We\'re full of LIGHTS. There\'s no room for people.']); } },
+    { id: 'rocket', name: 'Launch the Retro Rocket', type: 'custom', start: 'trigger', short: 'Climb the gantry, hit LAUNCH', marker: { x: 130, z: -68 },
+      desc: 'A giant retro rocket on the open playa. Climb its gantry for a view of the whole city, then hit the big red button.', hint: 'Open playa, east of Center Camp' },
+    { id: 'lost', name: 'Lost & Found Burners', token: false, type: 'custom', count: 3, giver: 'lost1', start: 'manual', progressLabel: 'Burners home', short: 'Walk the lost burners home', marker: { x: 107, z: -32 },
+      desc: 'Three burners asked you where 4:30 is. It is not here. You don\'t have a home, but you can find everybody else\'s: walk each of them to the address they actually remember.', hint: 'Lost burners wander near Esplanade and 6:00',
+      onComplete(g) { g.banner('ADDRESS MASTER', 'No camp, but you know this city better than the people who live here.', { col: '#7aff5a', small: true }); } },
     { id: 'moop', name: 'MOOP Sweep', token: false, type: 'collect', count: 10, giver: 'captain', start: 'manual', progressLabel: 'MOOP', short: 'MOOP sweep: pick up 10 bits of litter', marker: { x: 40, z: -46 },
       desc: 'Captain Safety Third says your illumination is five lumens too dim. Sweep up 10 bits of MOOP (Matter Out Of Place) and earn a regulation headlamp.', hint: 'Safety Camp, Esplanade between 6:30 and 7:00',
       onStart(g) { BURNS_W2.labels(g, 'moop', 'MOOP'); }, onComplete(g) { BURNS_W2.moopDone(g); } },
@@ -70,15 +87,19 @@ BurnsWorlds.register({
     { id: 'lanterns', name: 'Light the Way', token: false, type: 'custom', giver: 'wick', start: 'manual', short: 'Walk with the lamplighters (stay in their light)', marker: { x: -6, z: -90 },
       desc: 'Every night the lamplighters carry lanterns out along 7:00. Walk with them and stay inside their light while they light the way.', hint: 'Lamplighters gather at 7:00 & Esplanade',
       onStart(g) { BURNS_W2.lampStart(g); }, onFail(g) { BURNS_W2.lampReset(g); }, onComplete(g) { BURNS_W2.lampDone(g); } },
-    { id: 'rocket', name: 'Launch the Retro Rocket', type: 'custom', start: 'trigger', short: 'Climb the gantry, hit LAUNCH', marker: { x: 130, z: -68 },
-      desc: 'A giant retro rocket on the open playa. Climb its gantry for a view of the whole city, then hit the big red button.', hint: 'Open playa, east of the 6:00 promenade' },
-    { id: 'camp', name: 'Home Is Where the Man Is', type: 'boss', start: 'auto', silent: true, requires: ['ranger', 'conclave', 'lights'], tokenDirect: true, short: 'Go home: 7:30 & E',
-      desc: 'Your note says 7:30 & E. Cross the art car parade and get home.', hint: 'Inside the art car parade loop', lockedDesc: 'Find all three clues first.' }
+    { id: 'couch', name: 'Couch Surfing', token: false, type: 'custom', start: 'auto', requires: ['search'], short: 'Crash on a couch at Center Camp', marker: { x: BURNS_W2.CC[0], z: BURNS_W2.CC[1] },
+      desc: 'Nobody will take you. But Center Camp is open to everyone, all night, and it has couches. Go lie down on one.', hint: 'Center Camp, 6:00 & Esplanade' },
+    { id: 'haul', name: 'Haul Your Stuff', type: 'custom', start: 'auto', requires: ['couch'], short: 'Carry your stuff from the pink RV to Kevin\'s tent', marker: { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] },
+      desc: 'Kevin has room in his tent at 7:30 & E. Get your stuff from the pink RV and carry it across the city. It\'s heavy: no jumping, and anything that knocks you over makes you drop it. Mind the bike swarms, the art cars and some very nosy "burners".', hint: 'Pink RV (Esplanade) → Kevin\'s tent (7:30 & E, inside the art car parade)',
+      onStart(g) { BURNS_W2.haulStart(g); } },
+    { id: 'escape', name: 'Sole Survivor', type: 'custom', start: 'manual', requires: ['haul'], tokenDirect: true, failOnFaint: true, short: 'RUN! Get back to the pink RV', marker: { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] },
+      desc: '4 AM. Kevin is "reading your aura through your soles". Grab your stuff and run back to the pink RV. Dodge Kevin and his barefoot Sole Circle; mash JUMP or ACTION to break free if they grab you.', hint: 'The pink RV, Esplanade near 5:00',
+      onStart(g) { BURNS_W2.escapeStart(g); }, onFail(g) { BURNS_W2.escapeFail(g); } }
   ],
   build(api, g) {
     const W2 = BURNS_W2, R = api.rng, BW = BURNS_W234, RR = W2.R;
     BW.reset(g);
-    W2.state = { introDone: !!BurnsSave.flag(2, 'intro'), followers: [], swarms: [], spinners: [], jets: [], bossStarted: false, warned: 0 };
+    W2.state = { introDone: !!BurnsSave.flag(2, 'intro'), followers: [], swarms: [], spinners: [], jets: [], warned: 0, sole: [], trail: [] };
     const S = W2.state, at = (th, r) => W2.at(th, r);
     const CAMP = W2.CAMP;
     // fix mission targets now that the geometry is known
@@ -86,7 +107,14 @@ BurnsWorlds.register({
     { const [x, z] = at(15, 126); const t = M('ranger').target; t.x = x + 3.5; t.z = z + 3.5; }
     S.conclave = { x: 56, z: -84 }; Object.assign(M('conclave').target, S.conclave);
     S.tower = { x: 18, z: -96 };
-    M('camp').marker = { x: CAMP[0], z: CAMP[1] };
+    // the four talk-only camps that turn Brady away (lots, each with a camp lead under a big sign)
+    S.rejectCamps = [
+      { id: 'dues', th: 7.5, r: 134.2 }, { id: 'waitlist', th: 37.5, r: 160.2 }, { id: 'full', th: -7.5, r: 186.2 }, { id: 'interview', th: 22.5, r: 212.2 }
+    ].map(q => { const [x, z] = at(q.th, q.r); return Object.assign(q, { x, z }); });
+    // areas kept free of random camps
+    S.capCamp = W2.at(21, 111);
+    const reserved = [[CAMP[0], CAMP[1], 27], [59, 13, 17], [34, 22, 13], [107, -32, 9], [66, -38, 7], [S.capCamp[0], S.capCamp[1], 11], [W2.CC[0], W2.CC[1], 17.5], [W2.RLD[0], W2.RLD[1], 13]].concat(S.rejectCamps.map(q => [q.x, q.z, 9]));
+    const isReserved = (x, z) => reserved.some(q => Math.hypot(x - q[0], z - q[1]) < q[2]);
     /* ---------------- ground: streets, tyre tracks, open playa ---------------- */
     api.paint((c, P, sc) => {
       // dust blotches
@@ -104,23 +132,22 @@ BurnsWorlds.register({
       // home arena: soft dark disc
       const [hx, hz] = P(CAMP[0], CAMP[1]), hr = 22 * sc;
       const g2 = c.createRadialGradient(hx, hz, hr * 0.2, hx, hz, hr); g2.addColorStop(0, 'rgba(90,60,80,0.4)'); g2.addColorStop(1, 'rgba(90,60,80,0)'); c.fillStyle = g2; c.beginPath(); c.arc(hx, hz, hr, 0, TAU); c.fill();
+      // Center Camp plaza: a pale disc and a ring road around it
+      const [ccx, ccz] = P(W2.CC[0], W2.CC[1]); c.fillStyle = 'rgba(232,212,186,0.35)'; c.beginPath(); c.arc(ccx, ccz, 14 * sc, 0, TAU); c.fill(); c.strokeStyle = 'rgba(150,112,92,0.5)'; c.lineWidth = 3.5 * sc; c.beginPath(); c.arc(ccx, ccz, 16.5 * sc, 0, TAU); c.stroke();
     });
     /* ---------------- streets: signposts + lamps at every intersection ---------------- */
     const bounds = (x, z, m) => x > -155 + m && x < 155 - m && z > -112 + m && z < 112 - m;
     for (const [name, th] of W2.CLOCK) for (let j = 0; j < RR.length; j++) {
       const r = RR[j] - 5.6, d = 5.6 / r * 180 / Math.PI, [x, z] = at(th + d, r);
-      if (!bounds(x, z, 3)) continue;
+      if (!bounds(x, z, 3) || isReserved(x, z)) continue;
       const a = th * Math.PI / 180;
       api.mesh(x, z, m => BW.signpost(m, { a: name, b: W2.LET[j], yawA: Math.atan2(-Math.cos(a), -Math.sin(a)), yawB: Math.atan2(Math.sin(a), -Math.cos(a)) }));
       api.light(x, z, 6, '#ff9ad8', 0.22);
-      if ((j + Math.round(th / 15)) % 2 === 0) { const [lx, lz] = at(th - d, r); if (bounds(lx, lz, 3)) api.mesh(lx, lz, m => BW.lamp(m, { pool: 10 }), { yaw: W2.outYaw(th) + Math.PI / 2 }); }
+      if ((j + Math.round(th / 15)) % 2 === 0) { const [lx, lz] = at(th - d, r); if (bounds(lx, lz, 3) && !isReserved(lx, lz)) api.mesh(lx, lz, m => BW.lamp(m, { pool: 10 }), { yaw: W2.outYaw(th) + Math.PI / 2 }); }
     }
     // the 6:00 promenade: double row of lamps out to the pavilion
-    for (let r = 20; r < 98; r += 13) for (const s of [-1, 1]) { const [x, z] = at(s * 4.2 * 180 / Math.PI / r, r); if (bounds(x, z, 2)) api.mesh(x, z, m => BW.lamp(m, { pool: 8, col: '#ffd890' }), { yaw: s > 0 ? Math.PI / 2 : -Math.PI / 2 }); }
+    for (let r = 20; r < 98; r += 13) for (const s of [-1, 1]) { const [x, z] = at(s * 4.2 * 180 / Math.PI / r, r); if (bounds(x, z, 2) && !isReserved(x, z)) api.mesh(x, z, m => BW.lamp(m, { pool: 8, col: '#ffd890' }), { yaw: s > 0 ? Math.PI / 2 : -Math.PI / 2 }); }
     /* ---------------- the city: camps on every block ---------------- */
-    S.capCamp = W2.at(21, 111);
-    const reserved = [[CAMP[0], CAMP[1], 27], [59, 13, 17], [34, 22, 13], [107, -32, 9], [66, -38, 7], [S.capCamp[0], S.capCamp[1], 11]];
-    const isReserved = (x, z) => reserved.some(q => Math.hypot(x - q[0], z - q[1]) < q[2]);
     let lotN = 0, npcN = 0;
     for (let j = 0; j < RR.length; j++) for (const side of [1, -1]) {
       if (j === 0 && side < 0) continue;            // inside Esplanade: open playa
@@ -147,7 +174,7 @@ BurnsWorlds.register({
       return { cols: [{ t: 'cyl', x: 0, z: 0, r: 9, y0: 0, y1: 2.6 }], lights: [{ x: 0, y: 9.4, z: 0, s: 6, c: '#ff4fd8' }, { x: 0, y: 0, z: 0, s: 0, c: '#ffb860', pool: 18 }] };
     });
     api.sign('OUT TO LUNCH\n— THE MAN', W2.C.x, W2.C.z + 10.5, { h: 1.2, y: 2.7, style: { bg: '#1a0a1a', fg: '#ffd84a', glow: '#ff9a2a', size: 28, border: '#ffd84a' }, glow: '#ffd84a' });
-    /* ---------------- 6:00 & Esplanade: Ranger Outpost (start) ---------------- */
+    /* ---------------- 6:00 & Esplanade: Ranger Outpost (across from Center Camp) ---------------- */
     {
       const [ox, oz] = [86, -60];
       api.prop('shade', { x: ox + 4, z: oz + 2, w: 6, d: 5, col: '#c8b088' });
@@ -159,12 +186,12 @@ BurnsWorlds.register({
       api.npc({ id: 'sage', name: 'RANGER SAGEBRUSH', type: 'ranger', seed: 4, x: ox + 3.5, z: oz + 1.6, yaw: Math.PI,
         talk(g2, a) {
           const st = g2.missions.state('ranger');
-          if (st === 'available') g2.say(a, ['First night? Lost? I\'m a Ranger. Not a cop. Totally different hat. The hat is VERY different. Let me explain the hat.', 'Okay, no time for the hat. The city is a clock. The Man sits in the middle. CLOCK streets go OUT like hands: 6:00, 6:30, 7:00...', 'LETTER streets go AROUND: Esplanade on the inside, then A, B, C, all the way out. Principle Number Three applies. Also Principle Seven. I\'ll summarize all ten.', '...And that is Principle Ten. Also, I\'m writing you up. Citation: one bike light, insufficiently bright. You don\'t have a bike? I\'m citing the bike you WILL have.', 'Quiz time! Go stand under the 6:30 and A sign. I\'ll wait. Rangers are great at waiting. And at paperwork.'], () => { g2.toast('CITATION: DIM BIKE LIGHT (FUTURE)'); g2.missions.start('ranger'); });
+          if (st === 'available') g2.say(a, ['First night? No camp? I\'m a Ranger. Not a cop. Totally different hat. The hat is VERY different. Let me explain the hat.', 'Okay, no time for the hat. The city is a clock. The Man sits in the middle. CLOCK streets go OUT like hands: 6:00, 6:30, 7:00...', 'LETTER streets go AROUND: Esplanade on the inside, then A, B, C, all the way out. Principle Number Three applies. Also Principle Seven. I\'ll summarize all ten.', '...And that is Principle Ten. Also, I\'m writing you up. Citation: one bike light, insufficiently bright. You don\'t have a bike? I\'m citing the bike you WILL have.', 'Quiz time! Go stand under the 6:30 and A sign. Then we\'ll talk about where you\'re sleeping tonight.'], () => { g2.toast('CITATION: DIM BIKE LIGHT (FUTURE)'); g2.missions.start('ranger'); });
           else if (st === 'active') g2.say(a, ['6:30 is one street over toward 7. A is the first ring past Esplanade. Look up at the signs, friend.']);
-          else g2.say(a, ['Seven-something, huh? Keep reading those signs. And drink water. That\'s an order. I\'m not a cop, it\'s a suggestion.']);
+          else g2.say(a, ['Ask the camp leads with the question marks. And Center Camp has couches. Drink water. That\'s an order. I\'m not a cop, it\'s a suggestion.']);
         } });
       api.npc({ type: 'ranger', seed: 9, name: 'RANGER BUTTONS', x: 100, z: -48, behavior: 'walk', path: [[100, -48], [60, -96], [100, -48]], speed: 1.2,
-        lines: ['Sign says 6:00 and Esplanade. That means you\'re at 6:00 and Esplanade. I love this job.', 'Saw a forty-foot wooden fella sneak toward the 7s. Hard to miss. Easy to lose.'], gift: { kind: 'water' } });
+        lines: ['Sign says 6:00 and Esplanade. That means you\'re at 6:00 and Esplanade. I love this job.', 'Saw a forty-foot wooden fella stomping around the open playa. Hard to miss. Easy to lose.'], gift: { kind: 'water' } });
       api.checkpoint('cp_esp', ox - 4, oz + 2, { yaw: 0, name: 'Ranger Outpost' });
       api.sign('WELCOME TO\nTHE CITY', 72, -66, { h: 1.2, style: { bg: '#24102e', fg: '#ffe0f4', glow: '#ff4fd8', size: 28, border: '#ff4fd8' }, glow: '#ff4fd8' });
       api.sign('YOU ARE HERE\n(PROBABLY)', 92, -70, { h: 0.9, yaw: -0.3, style: { bg: '#f4e8c8', fg: '#3a1a10', size: 24, border: '#3a1a10' } });
@@ -182,13 +209,13 @@ BurnsWorlds.register({
         spec: Object.assign(BurnsRig.npcSpec('burner', 31), { top: { kind: 'tee', col: '#c83a1a' }, vest: 'hivis', hat: { kind: 'hardhat', col: '#ffd84a' }, prop: 'radio', key: 'w2:flint' }),
         talk(g2, a) {
           const st = g2.missions.state('conclave');
-          if (st === 'available') g2.say(a, ['Fire safety! Fire Mama Ember is in the middle of the circle. She reads smudges. It\'s a gift.', 'Two rings of spinners, both going round. Wait for a gap. Walk, don\'t dawdle. Never hug a poi.'], () => g2.missions.start('conclave'));
+          if (st === 'available') g2.say(a, ['Looking for a camp? Fire Mama Ember runs the conclave. She\'s in the middle of the circle.', 'Two rings of spinners, both going round. Wait for a gap. Walk, don\'t dawdle. Never hug a poi.'], () => g2.missions.start('conclave'));
           else if (st === 'active') g2.say(a, ['Inner ring and outer ring turn opposite ways. Stand between them if you need a breather.']);
           else g2.say(a, ['Still got your eyebrows? Proud of you.']);
         } });
       api.npc({ id: 'ember', name: 'FIRE MAMA EMBER', type: 'burner', seed: 32, x: cx, z: cz - 0.8, y: 0.45, fixedY: true, behavior: 'dance', style: 1,
         spec: Object.assign(BurnsRig.npcSpec('burner', 32), { top: { kind: 'crop', col: '#ff6a1a' }, bottom: { kind: 'tutu', col: '#ff3b1a' }, coat: { kind: 'kimono', col: '#ffb02a', trim: '#ff3b1a' }, hair: { style: 'afro', col: '#ff5a1a', hi: '#ffd84a' }, face: 'lashes', acc: ['ledNecklace', 'bracelets'], key: 'w2:ember' }),
-        lines: ['Fire is just light that got excited.', 'Come back when you need another smudge read, baby.'] });
+        lines: ['Fire is just light that got excited.', 'Practice with a sock on a string, baby. Then we\'ll talk.'] });
       // the spinners: two rings turning opposite ways
       const rings = [{ r: 6.6, n: 7, om: 0.32 }, { r: 11.6, n: 10, om: -0.22 }];
       let si = 0;
@@ -241,7 +268,7 @@ BurnsWorlds.register({
           return { cols: [{ t: 'cyl', x: 0, z: 0, r: 1.35, y0: -0.3, y1: 0.05 }], lights: [{ x: 0, y: 0.2, z: 0, s: 2.2, c: '#ff8ad8' }] };
         }, { y: y }));
       });
-      api.pickup('photo', 104, 9.6, -97, { id: 'p3', hidden: true });
+      api.glowsticks([[104, 9.8, -97], [108, 8.6, -103], [114.5, 7.2, -106]], { hidden: true });   // LSD-only bonus up on the jellies
     }
     /* ---------------- Camp Combustion: Flame Alley ---------------- */
     {
@@ -270,9 +297,9 @@ BurnsWorlds.register({
         spec: Object.assign(BurnsRig.npcSpec('burner', 51), { top: { kind: 'tank', col: '#2a2a2a' }, goggles: true, hat: null, glasses: null, acc: ['toolbelt'], hair: { style: 'mohawk', col: '#ff6a1a', hi: '#ffd84a' }, key: 'w2:sparky' }),
         talk(g2, a) {
           const st = g2.missions.state('alley');
-          if (st === 'available') g2.say(a, ['Welcome to Camp Combustion! This is Flame Alley. Eighteen poofers, one bell, twenty seconds.', 'The fire comes in waves. Run in the gaps. Ring the bell at the end. GO GO GO!'], () => g2.missions.start('alley'));
+          if (st === 'available') g2.say(a, ['Wanna join Camp Combustion? Everybody auditions! This is Flame Alley. Eighteen poofers, one bell, twenty seconds.', 'The fire comes in waves. Run in the gaps. Ring the bell at the end. GO GO GO!'], () => g2.missions.start('alley'));
           else if (st === 'active') g2.say(a, ['Why are you talking to me?! RUN!']);
-          else g2.say(a, ['You smell like a campfire and victory. Same thing out here.']);
+          else g2.say(a, ['You smell like a campfire and victory. Still full, though. Fire code.']);
         } });
       api.light(mx, mz, 14, '#ff6a2a', 0.5);
       api.checkpoint('cp_alley', sx - dirX * 4 + sideX * 4, sz - dirZ * 4 + sideZ * 4, { yaw: yaw, name: 'Camp Combustion' });
@@ -290,9 +317,9 @@ BurnsWorlds.register({
       api.npc({ id: 'lumen', name: 'LUMEN', type: 'ledsuit', seed: 6, x: bx + 1.4, z: bz - 1.0, yaw: 0.6,
         talk(g2, a) {
           const st = g2.missions.state('lights');
-          if (st === 'available') g2.say(a, ['A bike swarm came through. Forty bikes, zero brakes. My lights went EVERYWHERE.', 'Eight LED bike lights. Bring them back and I\'ll read anything you want. I read smudges in UV.', 'Swarms ride the B and C streets. If you hear bells, get off the road!'], () => g2.missions.start('lights'));
+          if (st === 'available') g2.say(a, ['A bike swarm came through. Forty bikes, zero brakes. My lights went EVERYWHERE.', 'Eight LED bike lights. Bring them all back and we\'ll talk about you joining Camp Blinky.', 'Swarms ride the B and C streets. If you hear bells, get off the road!'], () => g2.missions.start('lights'));
           else if (st === 'active') g2.say(a, [`${g2.missions.get('lights').n} of 8! Little blinky babies, come home!`]);
-          else g2.say(a, ['Seven-thirty and E. Go home, sparkle. Go get your person.']);
+          else g2.say(a, ['Center Camp has couches, sparkle. Everybody fits on a couch.']);
         } });
       api.checkpoint('cp_blinky', bx - 5.5, bz - 1, { yaw: Math.PI / 2, name: 'Camp Blinky' });
       // the lights: on the swarm streets (B = 152 and C = 178)
@@ -387,9 +414,9 @@ BurnsWorlds.register({
         talk(g2, a) {
           if (a.w2paid) { g2.say(a, ['You\'re my favorite stranger. Today. So far.']); return; }
           if (g2.player.hydration < 3) { g2.say(a, ['Oh no, honey. You\'re thirstier than me. And I\'m a sparkle pony. Go to the pickle juice bar.']); return; }
-          g2.say(a, ['Hi! I love your bun. Can I have some water? I brought three suitcases of faux fur and no cup.', '(You pour her a little of your water.)', 'Bless. Good vibes, transferred! Here, I found this in my fur coat. I don\'t know whose it is. Now it\'s yours.'], () => {
+          g2.say(a, ['Hi! I love your bun. Can I have some water? I brought three suitcases of faux fur and no cup.', '(You pour her a little of your water.)', 'Bless. Good vibes, transferred! Here: glow sticks. I found them in my fur coat. I don\'t know whose they are. Now they\'re yours.'], () => {
             a.w2paid = true; g2.player.hydration = Math.max(1, g2.player.hydration - 1); g2.toast('-1 HYDRATION · +GOOD VIBES'); g2.fx.hearts(a.x, a.y + 2, a.z, 12);
-            g2.spawnPickup('water', a.x + 1, 0.9, a.z, { pop: true }); g2.player.givePower('molly'); burnsSfx('gift', null, 'pick');
+            if (g2.grant) g2.grant({ glow: 10 }); else { g2.glow += 10; g2.toast('+10 GLOW STICKS'); } burnsSfx('gift', null, 'pick');
           });
         } });
     }
@@ -427,7 +454,7 @@ BurnsWorlds.register({
             const st = g2.missions.state('lanterns');
             if (st === 'available') g2.say(a, ['Good evening, traveler. Every night we carry the lanterns out along 7:00, so the lost can find their way home.', 'Walk with us. Stay inside our light. The darkwads won\'t trouble you there, and the street will remember the way.'], () => g2.missions.start('lanterns'));
             else if (st === 'active') g2.say(a, ['Stay close, child. The light only reaches so far.']);
-            else g2.say(a, ['The 7:00 lanterns burn for you tonight. Go home.']);
+            else g2.say(a, ['The 7:00 lanterns burn for you tonight. Even without a home. Especially then.']);
           } }));
       });
       api.sign('LAMPLIGHTERS\nGATHER HERE', ...at(28.5, 92), { h: 0.9, yaw: W2.outYaw(30) + Math.PI, style: { bg: '#f4ecd8', fg: '#5a3a1a', size: 22, border: '#c8a060' } });
@@ -437,10 +464,10 @@ BurnsWorlds.register({
       const DW = [[[-8, 186], [14, 186]], [[-22, 214], [-2, 214]], [[2, 162], [2, 196]], [[20, 222], [20, 240], [8, 240]], [[-28, 168], [-28, 194]]];
       DW.forEach((pts, i) => { const path = pts.map(([th, r]) => at(th, r)); api.npc(BW.castDef('darkwad', 600 + i, { name: 'DARKWAD', behavior: 'w234Darkwad', path, speed: 1.0 + i * 0.1, x: path[0][0], z: path[0][1], chatter: true, hittable: true, chat: ['Lights are for people who want to be seen.', 'Shh. I\'m blending in. With the night.'] })); });
       const [cx, cz] = at(2, 60);
-      api.npc(BW.castDef('cop', 7, { id: 'cop', name: 'TOTALLY NORMAL BURNER', behavior: 'w234Cop', x: cx, z: cz, view: 15, fov: 1.0, chaseSpeed: 5.4, friendly: false, chatter: false }));
-      api.npc(BW.castDef('cop', 8, { name: 'ALSO A NORMAL BURNER', behavior: 'w234Cop', x: at(24, 176)[0], z: at(24, 176)[1], view: 13, chaseSpeed: 5.2, friendly: false, chatter: false }));
+      api.npc(BW.castDef('cop', 7, { id: 'cop', name: 'TOTALLY NORMAL BURNER', behavior: 'w234Cop', suspect: g2 => !!(BURNS_W234.S && BURNS_W234.S.carry), spotLine: 'FREEZE! I mean... HEY BRO. WHAT\'S IN THE BIG BAG?', spotToast: 'UNDERCOVER COP! He wants to search your bag', chaseLines: ['RANDOM BAG CHECK! I mean... random bag... HUG?', 'SIR! IS THAT BAG... GROOVY?', 'STOP! IN THE NAME OF... THE VIBE!'], onCatch: (g2, a) => BURNS_W2.bagSearch(g2, a), x: cx, z: cz, view: 15, fov: 1.0, chaseSpeed: 5.4, friendly: false, chatter: false }));
+      api.npc(BW.castDef('cop', 8, { name: 'ALSO A NORMAL BURNER', behavior: 'w234Cop', suspect: g2 => !!(BURNS_W234.S && BURNS_W234.S.carry), spotLine: 'FREEZE! I mean... HEY BRO. WHAT\'S IN THE BIG BAG?', spotToast: 'UNDERCOVER COP! He wants to search your bag', chaseLines: ['RANDOM BAG CHECK! I mean... random bag... HUG?', 'SIR! IS THAT BAG... GROOVY?', 'STOP! IN THE NAME OF... THE VIBE!'], onCatch: (g2, a) => BURNS_W2.bagSearch(g2, a), x: at(24, 176)[0], z: at(24, 176)[1], view: 13, chaseSpeed: 5.2, friendly: false, chatter: false }));
     }
-    /* ---------------- the art car parade (loop around Brady's block) ---------------- */
+    /* ---------------- the art car parade (a loop around Kevin's block) ---------------- */
     {
       const path = [];
       for (let th = 30; th <= 60; th += 3) path.push(at(th, 204));
@@ -458,33 +485,162 @@ BurnsWorlds.register({
       { const [x, z] = at(38, 186); api.checkpoint('cp_parade', x, z, { yaw: W2.outYaw(38), name: 'Parade Route' }); }
       api.glowArc(...(() => { const a = at(45, 198), b = at(45, 210); return [a[0], 1.2, a[1], b[0], 1.2, b[1]]; })(), 3.2, 6);
     }
-    /* ---------------- home: Camp Cozy Chaos at 7:30 & E + the Man ---------------- */
+    /* ---------------- 7:30 & E: Kevin's camp (inside the parade loop) ---------------- */
     {
       const [hx, hz] = CAMP, oy = W2.outYaw(45), fx = Math.sin(oy), fz = Math.cos(oy), rx = Math.cos(oy), rz = -Math.sin(oy);
       const L = (a, b) => [hx + rx * a + fx * b, hz + rz * a + fz * b];
-      // cover: the camp RV, a dome, porta-potties, a shade and a stack of bins
+      // an RV, a dome, porta-potties, a shade, a couch and the tent with Brady's name on it
       { const [x, z] = L(-13, 4); api.prop('rv', { x, z, yaw: oy + Math.PI / 2 + 0.1, seed: 902, col: '#f0e6d4' }); }
-      { const [x, z] = L(13, 6); api.prop('dome', { x, z, r: 5, col: '#e8d8f8', alt: '#c0a8e8', lights: true, glow: '#ff4fd8' }); }
+      { const [x, z] = L(13, 6); api.prop('dome', { x, z, r: 5, col: '#e8d8f8', alt: '#c0a8e8', lights: true, glow: '#7ad8ff' }); }
       { const [x, z] = L(-6, -9); api.prop('portapotty', { x, z, yaw: oy, col: '#2a6ac8' }); const [x2, z2] = L(-4.7, -9); api.prop('portapotty', { x: x2, z: z2, yaw: oy, col: '#3a8a3a' }); }
-      { const [x, z] = L(7, -8); api.roundBox(x, 0, z, 2.2, 1.6, 1.4, '#4a6a8a', { yaw: oy, r: 0.25, col: { cover: true } }); }
-      { const [x, z] = L(-1, 13); api.prop('shade', { x, z, w: 7, d: 5, col: '#ffcfa0' }); }
-      { const [x, z] = L(1, 11); api.prop('couch', { x, z, yaw: oy + Math.PI, col: '#8a2a5a' }); }
-      { const [x, z] = L(-14, -4); api.sign('CAMP COZY\nCHAOS', x, z, { h: 1.3, yaw: oy + Math.PI, style: { bg: '#1a0a2a', fg: '#ffe24a', glow: '#ff9a2a', size: 30, border: '#ffe24a' }, glow: '#ffe24a' }); }
-      api.light(hx, hz, 22, '#ff70c0', 0.35); api.light(hx, hz, 10, '#ffd890', 0.3);
+      { const [x, z] = L(-1, 13); api.prop('shade', { x, z, w: 7, d: 5, col: '#cfe8c0' }); }
+      { const [x, z] = L(1, 11); api.prop('couch', { x, z, yaw: oy + Math.PI, col: '#5a8a5a' }); }
+      // the guest tent: roomy, cosy, suspiciously far from everyone else's
+      const [tx, tz] = L(5, 1.5), tyaw = oy + Math.PI;
+      api.mesh(tx, tz, m => { BW.tent(m, { r: 1.9, col: '#e8a040' }); m.color('#3a2a1a'); BW.rb(m, 0, 0.06, 1.7, 1.2, 0.1, 0.9, 0.04); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 1.5, y0: 0, y1: 1.6 }] }; }, { yaw: tyaw });
+      S.tent = { x: tx + Math.sin(tyaw) * 2.6, z: tz + Math.cos(tyaw) * 2.6, yaw: tyaw, cx: tx, cz: tz };
+      { const [x, z] = L(-14, -4); api.sign('CAMP NICE GUY\nFREE SHADE', x, z, { h: 1.3, yaw: oy + Math.PI, style: { bg: '#1a2a1a', fg: '#e8ffd0', glow: '#7aff5a', size: 28, border: '#7aff5a' }, glow: '#7aff5a' }); }
+      { const [x, z] = L(8.5, -1.5); api.sign('FREE AURA\nREADINGS', x, z, { h: 0.7, yaw: oy + Math.PI + 0.3, style: { bg: '#f4ecd8', fg: '#5a3a6a', size: 21, border: '#9a6bff' } }); }
+      { const [x, z] = L(9.6, 0.2); api.mesh(x, z, m => { m.color('#f4ecd8'); BW.rb(m, 0, 1.0, 0, 0.9, 1.2, 0.06, 0.03); m.color('#c87a5a'); for (const s of [-1, 1]) BW.egg(m, s * 0.18, 1.05, 0.04, 0.12, 0.34, 0.02, { seg: 10, rings: 6 }); m.color('#5a3a2a'); BW.post(m, 0, 0, -0.05, 0.03, 0.6); return {}; }, { yaw: oy + Math.PI + 0.3 }); }
+      api.light(hx, hz, 22, '#9a7aff', 0.32); api.light(tx, tz, 8, '#ffcf8a', 0.45);
       for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; api.glow(hx + Math.sin(a) * 20, 2.6, hz + Math.cos(a) * 20, 0.7, BURNS_NEON[i % 7], { blink: 2 }); }
-      { const [x, z] = L(0, -16); api.checkpoint('cp_camp', x, z, { yaw: oy + Math.PI, name: 'Camp Cozy Chaos' }); }
+      { const [x, z] = L(0, -16); api.checkpoint('cp_camp', x, z, { yaw: oy + Math.PI, name: 'Camp Nice Guy' }); }
       for (const [a, b] of [[-9, 2], [9, 2]]) { const [x, z] = L(a, b); api.pickup('water', x, 0.9, z); }
-      api.marker('home', hx, hz, 'Home?', { col: '#ffe24a' });
-      api.region('home', hx, hz, 22);
-      const man = new BurnsManBoss(g, { x: W2.MAN[0], z: W2.MAN[1], yaw: oy + Math.PI, scale: 0.88, hp: 4, name: 'THE MAN', title: 'Lovesick Effigy · Rematch',
-        attacks: ['stomp', 'swipe', 'fire', 'flash'], stun: 5, arena: { x: hx, z: hz, r: 22 }, flashCharge: 2.4, flashDamage: 2,
-        phases: [{ hp: 1, attacks: ['stomp', 'swipe'], combo: 2, rate: 1.05 }, { hp: 0.75, attacks: ['swipe', 'fire'], combo: 3, rate: 1.1 }, { hp: 0.5, attacks: ['fire', 'stomp', 'flash'], combo: 3, rate: 1.2 }, { hp: 0.25, attacks: ['fire', 'swipe', 'flash', 'stomp'], combo: 3, rate: 1.3 }],
-        stunLine: 'I... made us... a mixtape...',
-        onPhase(g2, b, i) { g2.banner(['', 'HE BROUGHT FIRE', 'HE\'S GLOWING', 'HE\'S FURIOUS'][i], ['', 'Fireballs roll and leave flames: keep moving!', 'NEON FLASH: hide behind the RV, the dome or the porta-potties!', 'Everything at once. You got this.'][i], { col: '#ff4fd8' }); },
-        onDefeat(g2) { BURNS_W2.bossDefeated(g2); } });
+      api.marker('kevin', hx, hz, 'Kevin\'s', { col: '#7aff5a' });
+      // Kevin: barefoot, gentle, very interested in feet
+      const [kx, kz] = L(2, 6);
+      S.kevinHome = { x: kx, z: kz, yaw: oy + Math.PI };
+      api.npc({ id: 'kevin', name: 'KEVIN', type: 'burner', seed: 909, x: kx, z: kz, yaw: oy + Math.PI, behavior: 'w2Kevin', chatter: false,
+        spec: Object.assign(BurnsRig.npcSpec('burner', 909), { top: { kind: 'tee', col: '#7ab8a0', pattern: 'tiedye' }, bottom: { kind: 'cargo', col: '#8a7a5a' }, shoes: { kind: 'barefoot' }, socks: null, hat: { kind: 'bandana', col: '#9a6bff' }, hair: { style: 'short', col: '#8a6a4a' }, glasses: 'round', goggles: false, coat: null, vest: null, led: null, paint: null, beard: { col: '#8a6a4a', len: 0.04, trim: true }, face: 'serene', acc: ['beads', 'crossbag'], prop: null, key: 'w2:kevin' }),
+        talk(g2, a) { BURNS_W2.kevinTalk(g2, a); } });
+      // his "Sole Circle": barefoot friends who turn up at the street corners when Brady runs
+      const POSTS = [[30, 204, 2.5], [15, 152, -2], [0, 204, -2.5], [0, 152, 2.5], [-15, 126, -2]];
+      POSTS.forEach(([th, r, off], i) => {
+        const [x, z] = at(th + off * 180 / Math.PI / r, r);
+        api.npc({ id: 'sole' + i, name: ['SOLE SISTER SAGE', 'BROTHER ARCH', 'HEEL-ER HOLLY', 'TOE-BIAS', 'SISTER INSTEP'][i], type: 'burner', seed: 920 + i, x, z, yaw: Math.atan2(W2.C.x - x, W2.C.z - z), behavior: 'w2Sole', post: { x, z }, chatter: false, friendly: true,
+          spec: Object.assign(BurnsRig.npcSpec('burner', 920 + i), { top: { kind: 'tee', col: '#f4ecd8' }, coat: { kind: 'robe', col: ['#f4ecd8', '#e8dcc0', '#f0e0f0', '#dcecd8', '#f4e4c8'][i] }, bottom: { kind: 'pants', col: '#e8e0d0' }, shoes: { kind: 'barefoot' }, socks: null, hat: { kind: 'bandana', col: ['#9a6bff', '#7ad8a0', '#ff9ad8', '#ffd84a', '#7ab8ff'][i] }, glasses: null, goggles: false, vest: null, led: null, paint: null, beard: null, face: 'serene', acc: ['beads'], prop: null, key: 'w2:sole' + i }) });
+      });
+    }
+    /* ---------------- 5:15 & Esplanade: the Red Light District's pink RV (start, gear stash, finale) ---------------- */
+    {
+      const [rx, rz] = W2.RLD, toC = Math.atan2(W2.C.x - rx, W2.C.z - rz), yaw = toC - Math.PI / 2;   // the door (+X side) faces the Esplanade
+      const talk = { rlVelvet: (g2, a) => BURNS_W2.velvetTalk(g2, a) };
+      const lines = {
+        rlCandi: ['Welcome to the Red Light District! Cabaret at midnight, brunch at three PM.', 'You rode in with US, so you\'re family. Weird, homeless family.'],
+        rlRoxie: ['House rule: no glitter in the fridge. That\'s the only rule.', 'Your stuff is safe with us, sugar. Mostly from you.'],
+        rlPeachy: ['*fans you* You look overheated, sweetie. Emotionally.', 'Ask the camps nicely. Then ask them again, with jazz hands.'],
+        rlBlush: ['Darling, the playa is a stage. And you are... in the wings. WAY in the wings.', 'A first-timer with no camp! That\'s a whole cabaret number.']
+      };
+      let door = null;
+      if (typeof api.redLightCamp === 'function') {
+        try {
+          const RL = api.redLightCamp(rx, rz, yaw, { crew: true, talk, lines });
+          const d = RL && RL.rv && RL.rv.door;
+          if (d) door = [rx + d[0] * Math.cos(yaw) + d[1] * Math.sin(yaw), rz - d[0] * Math.sin(yaw) + d[1] * Math.cos(yaw)];
+          S.rlEngine = true;
+        } catch (e) { door = null; }
+      }
+      if (!door) {
+        // stand-in: a pink RV with marquee bulbs + the crew (until the engine's api.redLightCamp exists)
+        api.prop('rv', { x: rx, z: rz, yaw, seed: 77, col: '#ff6fb0', cabCol: '#ffd0e4', bikes: false });
+        const L = (a, b) => [rx + a * Math.cos(yaw) + b * Math.sin(yaw), rz - a * Math.sin(yaw) + b * Math.cos(yaw)];
+        for (let k = 0; k < 12; k++) { const [x, z] = L(1.32, -4.2 + k * 0.76); api.glow(x, 3.15, z, 0.32, k % 2 ? '#ffd84a' : '#ff4f7a', { blink: 3 }); }
+        for (const b of [-2.6, 2.6]) { const [x, z] = L(2.6, b); api.mesh(x, z, m => { m.color('#3a1a24'); BW.post(m, 0, 0, 0, 0.05, 2.2); m.color('#ff2a3a', 0.9); BW.egg(m, 0, 2.35, 0, 0.22, 0.3, 0.22, { seg: 10, rings: 6 }); m.emissive(0); return { lights: [{ x: 0, y: 2.35, z: 0, s: 1.2, c: '#ff2a3a' }] }; }); }
+        { const [x, z] = L(3.4, 4.4); api.sign('RED LIGHT\nDISTRICT', x, z, { h: 1.1, yaw: yaw + Math.PI / 2, style: { bg: '#2a0a14', fg: '#ff9ac8', glow: '#ff2a5a', size: 28, border: '#ff4f7a' }, glow: '#ff2a5a' }); }
+        door = L(2.3, 0.6);
+        const CREW = [['rlVelvet', 'MAMA VELVET', 'madame'], ['rlCandi', 'CANDI', 'bikini'], ['rlRoxie', 'ROXIE', 'corset'], ['rlPeachy', 'PEACHY', 'fan'], ['rlBlush', 'BLUSH', 'showgirl']];
+        CREW.forEach(([id, name, variant], i) => {
+          const [x, z] = L(3.6 + (i % 2) * 1.4, -3.4 + i * 1.7), base = { id, name, x, z, yaw: yaw + Math.PI / 2, behavior: i ? 'dance' : 'idle', style: i % 6, chatter: true, lines: lines[id], talk: talk[id] };
+          if (BW.engineType('redlight')) api.npc(Object.assign(base, { type: 'redlight', variant, seed: 60 + i }));
+          else api.npc(Object.assign(base, { type: 'burner', seed: 60 + i, rlLook: true, spec: Object.assign(BurnsRig.npcSpec('burner', 60 + i), {
+            body: { fem: true, h: i ? 1.0 : 1.06 }, face: 'lashes', hair: { style: ['wig', 'wavy', 'curly', 'bob', 'wavy'][i], col: '#ffe08a', hi: '#fff4c8' },
+            top: { kind: i === 2 || i === 4 ? 'tank' : 'halter', col: ['#c8102a', '#ff6fb0', '#d8203a', '#ff9ad8', '#c8102a'][i] }, bottom: { kind: i === 0 ? 'pants' : i === 3 ? 'tutu' : 'shorts', col: ['#c8102a', '#ff6fb0', '#2a0a14', '#ff9ad8', '#ff6fb0'][i] },
+            shoes: { kind: 'boots', col: i % 2 ? '#ffffff' : '#c8102a' }, glasses: i === 0 ? 'round' : 'heart', hat: i === 4 ? { kind: 'tophat', col: '#1a0a10' } : null, goggles: false, coat: null, vest: null, led: null, paint: null, beard: null, acc: ['beads', 'bracelets'], prop: null, key: 'w2:rl' + i }) }));
+        });
+      }
+      S.rvDoor = { x: door[0], z: door[1] };
+      api.trigger({ x: rx, z: rz, r: 9, onEnter: g2 => BURNS_W2.rvEnter(g2) });
+      api.checkpoint('cp_rv', rx + Math.sin(toC) * 9, rz + Math.cos(toC) * 9, { yaw: toC + Math.PI, name: 'The Pink RV' });
+      api.light(rx, rz, 14, '#ff4f9a', 0.5);
+      api.marker('rv', rx, rz, 'Pink RV', { col: '#ff6fb0' });
+    }
+    /* ---------------- Center Camp (6:00 & Esplanade): the big round shade, couches, cafe, slam poetry ---------------- */
+    {
+      const [cx, cz] = W2.CC, R0 = 12.5, face = Math.atan2(W2.C.x - cx, W2.C.z - cz);   // the stage side faces the Man
+      const prof = [[R0, 5.0, '#e8dcc8'], [R0 - 0.3, 5.35, '#e8dcc8'], [9.5, 6.3, '#f0e4d0'], [6.0, 7.6, '#e8dcc8'], [3.0, 8.8, '#f0e4d0'], [1.1, 9.6, '#e8dcc8'], [0, 9.8, '#e8dcc8']];
+      api.mesh(cx, cz, m => {
+        const cols = [], lights = [];
+        m.lathe(prof, { seg: m.segs(36, 18) });
+        BW.innerShell(m, prof.map(q => [q[0], q[1] - 0.04, '#c8b8a0']), { seg: m.lo ? 18 : 36 });
+        // a scalloped valance of bright fabric around the rim
+        for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; m.color(BURNS_NEON[i % 7]); BW.egg(m, Math.sin(a) * (R0 - 0.1), 4.75, Math.cos(a) * (R0 - 0.1), 0.85, 0.42, 0.08, { seg: 8, rings: 4 }); }
+        // poles: an outer ring and the centre mast with a beacon
+        m.color('#6a5a4a');
+        for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + 0.13, px = Math.sin(a) * (R0 - 0.6), pz = Math.cos(a) * (R0 - 0.6); BW.post(m, px, 0, pz, 0.12, 5.1); cols.push({ t: 'cyl', x: px, z: pz, r: 0.16, y0: 0, y1: 5.1, camPass: true }); }
+        BW.post(m, 0, 0, 0, 0.22, 11.2); cols.push({ t: 'cyl', x: 0, z: 0, r: 0.28, y0: 0, y1: 11, camPass: true });
+        m.color('#ffd890', 1); BW.ball(m, 0, 11.4, 0, 0.5); m.emissive(0);
+        lights.push({ x: 0, y: 11.4, z: 0, s: 4.5, c: '#ffd890' }, { x: 0, y: 4.6, z: 0, s: 0, c: '#ffcf90', pool: 15 });
+        return { cols, lights };
+      });
+      // couches in a ring, facing the stage
+      S.couches = [];
+      for (let i = 0; i < 7; i++) {
+        const a = face + Math.PI + (i - 3) * 0.42, rr = 6.6, x = cx + Math.sin(a) * rr, z = cz + Math.cos(a) * rr, yaw = Math.atan2(cx + Math.sin(face) * 7 - x, cz + Math.cos(face) * 7 - z);
+        api.prop('couch', { x, z, yaw, col: ['#8a2a5a', '#2a5a8a', '#6a4a2a', '#5a2a8a', '#2a6a4a', '#8a5a2a', '#3a3a6a'][i] });
+        S.couches.push({ x, z, yaw });
+      }
+      S.ccCouch = S.couches[3];
+      // the stage + mic, a speaker stack and the lighting truss (photo up top)
+      const sx = cx + Math.sin(face) * 7.4, sz = cz + Math.cos(face) * 7.4;
+      api.cylinder(sx, 0, sz, 2.6, 0.5, '#3a2a3a', { round: 0.12, col: { y1: 0.5 } });
+      api.mesh(sx, sz, m => { m.color('#2a2a30').shine(2); BW.limb(m, 0, 0.5, 0, 0, 1.95, 0, 0.025); BW.ball(m, 0, 2.0, 0, 0.07); m.shine(0); return { lights: [{ x: 0, y: 3.2, z: 0, s: 0, c: '#ff9ad8', pool: 5 }] }; });
+      S.stage = { x: sx, z: sz, yaw: face + Math.PI };
+      const rxx = Math.cos(face), rzz = -Math.sin(face);
+      const tw = (k, h) => [sx + rxx * (3.6 + k * 0.1), sz + rzz * (3.6 + k * 0.1), h];
+      [[0, 0.9], [1, 1.8]].forEach(([k, h], i) => { const [x, z] = tw(k, h); api.roundBox(x + Math.sin(face) * (i ? -1.2 : 0.2), 0, z + Math.cos(face) * (i ? -1.2 : 0.2), 1.3, h, 1.3, '#1a1a20', { r: 0.12 }); });
+      { const [x, z] = tw(2, 3.0); api.mesh(x - Math.sin(face) * 2.6, z - Math.cos(face) * 2.6, m => { m.color('#9a9aa2').shine(2); for (const [a, b] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) BW.limb(m, a, 0, b, a, 3.0, b, 0.05); m.shine(0); m.color('#3a3a44'); BW.rb(m, 0, 3.0, 0, 2.0, 0.14, 2.0, 0.05); m.color('#ff4fd8', 1); BW.ball(m, 0.7, 2.75, 0.7, 0.12); m.color('#38f2ff', 1); BW.ball(m, -0.7, 2.75, -0.7, 0.12); m.emissive(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.0, hz: 1.0, y0: 2.92, y1: 3.08 }], lights: [{ x: 0.7, y: 2.75, z: 0.7, s: 1.2, c: '#ff4fd8' }, { x: -0.7, y: 2.75, z: -0.7, s: 1.2, c: '#38f2ff' }] }; });
+        api.roundBox(x - Math.sin(face) * 1.2, 0, z - Math.cos(face) * 1.2, 1.2, 2.5, 1.2, '#2a2a30', { r: 0.12 });
+        api.pickup('photo', x - Math.sin(face) * 2.6, 3.9, z - Math.cos(face) * 2.6, { id: 'p3' }); }
+      // the cafe counter
+      const kx = cx - Math.sin(face) * 9.8, kz = cz - Math.cos(face) * 9.8;
+      api.mesh(kx, kz, m => { m.color('#6a4a32'); BW.rb(m, 0, 0.55, 0, 4.4, 1.1, 0.9, 0.2, { uv: BURNS_ATLAS.pattern('wood') }); m.color('#e8dcc8'); BW.rb(m, 0, 1.12, 0, 4.6, 0.1, 1.1, 0.04); m.color('#c8ccd4').shine(3); BW.post(m, -1.4, 1.17, 0, 0.22, 0.55); BW.post(m, 1.4, 1.17, 0, 0.22, 0.55); m.shine(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 2.2, hz: 0.45, y0: 0, y1: 1.15 }], lights: [{ x: 0, y: 1.8, z: 0, s: 1.4, c: '#ffd890' }] }; }, { yaw: face });
+      api.sign('CENTER CAMP CAFE\nCOFFEE · CHAI · OPINIONS', kx - Math.sin(face) * 1.0, kz - Math.cos(face) * 1.0, { h: 0.9, y: 2.2, yaw: face + Math.PI, style: { bg: '#2a1a10', fg: '#ffe7b0', glow: '#ff9a3a', size: 21, border: '#ffcf7a' }, glow: '#ff9a3a' });
+      api.npc({ id: 'barista', name: 'CHAI GUY', type: 'crusty', seed: 131, x: kx + Math.sin(face) * 0.9, z: kz + Math.cos(face) * 0.9, yaw: face + Math.PI, lines: ['Chai\'s free. Opinions are free. My opinion on your bun: free.', 'Center Camp never closes. Neither does my mouth.'], gift: { kind: 'water' } });
+      api.sign('CENTER\nCAMP', cx - Math.sin(face) * 13.6, cz - Math.cos(face) * 13.6, { h: 1.3, yaw: face, style: { bg: '#1a1020', fg: '#ffe7c8', glow: '#ffb860', size: 30, border: '#ffcf7a' }, glow: '#ffb860' });
+      // a few regulars + the slam poet (she has the mic at 3 AM)
+      api.npc({ id: 'poet', name: 'STARDUST, SLAM POET', type: 'burner', seed: 133, x: sx, z: sz, y: 0.5, fixedY: true, yaw: face + Math.PI, behavior: 'idle', anim: 'talk',
+        spec: Object.assign(BurnsRig.npcSpec('burner', 133), { body: { fem: true }, top: { kind: 'long', col: '#1a1a20' }, bottom: { kind: 'pants', col: '#1a1a20' }, hat: { kind: 'fedora', col: '#1a1a20' }, glasses: 'round', hair: { style: 'down', col: '#2a1a12' }, goggles: false, coat: null, vest: null, led: null, paint: null, beard: null, acc: ['bracelets'], prop: null, face: 'intense', key: 'w2:poet' }),
+        lines: ['The playa... is a dusty... MIRROR. *snap snap*', 'This next poem is called "Hydrate". It\'s just me drinking water for nine minutes.'] });
+      for (let i = 0; i < 5; i++) { const c = S.couches[i < 3 ? i : i + 1]; api.npc({ type: ['burner', 'furcoat', 'tutu', 'ledsuit', 'burner'][i], seed: 140 + i, x: c.x, z: c.z, yaw: c.yaw, behavior: 'sit', ambient: true, chat: ['*snap snap snap*', 'Deep.', 'Mmm. Yes. Words.', 'Is this the line for chai?', 'I came for the couch. I stayed for the couch.'] }); }
+      g.interactables = g.interactables || [];
+      api.checkpoint('cp_center', cx - Math.sin(face) * 15.5, cz - Math.cos(face) * 15.5, { yaw: face, name: 'Center Camp' });
+      api.marker('center', cx, cz, 'Center Camp', { col: '#ffcf7a' });
+    }
+    /* ---------------- camps that turn Brady away (the talk-only rejections) ---------------- */
+    {
+      const CAMPS = {
+        dues: { name: 'DUES PROCESS', who: 'TREASURER TIFFANY', type: 'burner', col: '#3a8a6a', lines: ['A spot? Sure! Dues are fourteen hundred dollars.', 'Plus a shift. Plus a shift to cover your shift. Plus a shift-cover cover shift.', 'No? Then no. Next!'] },
+        waitlist: { name: 'THE ETERNAL\nWAITLIST', who: 'GATEKEEPER GARY', type: 'crusty', col: '#8a5a2a', lines: ['Take a number! You are number four thousand, eight hundred and twelve.', 'We are currently serving number twelve. Since 2009.', 'Check back in a decade, buddy.'] },
+        full: { name: 'CAMP FULLY\nBOOKED', who: 'CAMP LEAD LUNA', type: 'tutu', col: '#8a3a8a', lines: ['Oh, we\'re full. Full of love. And people.', 'Mostly people. Okay, it\'s just people. Sorry, hon!'] },
+        interview: { name: 'CAMP\nINTERVIEW', who: 'HIRING MANAGER HAL', type: 'campLead', col: '#3a6aaa', lines: ['Welcome to your camp interview! Where do you see yourself in five Burns?', '..."Asleep somewhere" is not a five-year plan.', 'We\'ll circle back. We will not circle back.'] }
+      };
+      for (const q of S.rejectCamps) {
+        const C = CAMPS[q.id], face = Math.atan2(W2.C.x - q.x, W2.C.z - q.z), fx = Math.sin(face), fz = Math.cos(face);
+        api.prop('shade', { x: q.x - fx * 1.6, z: q.z - fz * 1.6, w: 6, d: 4.4, col: '#d8c8b0', yaw: face });
+        api.prop('dome', { x: q.x - fx * 6, z: q.z - fz * 6, r: 3.4, col: '#e8e0d0', lights: true, glow: C.col });
+        api.sign(C.name, q.x + fx * 1.4 + Math.cos(face) * 3, q.z + fz * 1.4 - Math.sin(face) * 3, { h: 1.1, yaw: face, style: { bg: '#1a1020', fg: '#ffffff', glow: C.col, size: 24, border: C.col }, glow: C.col });
+        api.light(q.x, q.z, 9, C.col, 0.45);
+        api.npc({ id: 'rej_' + q.id, name: C.who, type: C.type, seed: 160 + S.rejectCamps.indexOf(q), x: q.x + fx * 0.6, z: q.z + fz * 0.6, yaw: face, prop: q.id === 'dues' || q.id === 'interview' ? 'clipboard' : null,
+          marker: g2 => BurnsSave.flag(2, 'rej:' + q.id) ? null : '?',
+          talk(g2, a) { BURNS_W2.reject(g2, q.id, a, C.lines); } });
+      }
+    }
+    /* ---------------- the Man, out on the open playa (he only shows up to gloat) ---------------- */
+    {
+      const [mx, mz] = W2.MANSPOT;
+      const man = new BurnsManBoss(g, { x: mx, z: mz, yaw: Math.atan2(W2.CC[0] - mx, W2.CC[1] - mz), scale: 0.9, hp: 4, attacks: [], name: 'THE MAN', title: 'Lovesick Effigy' });
       man.hidden = true; man.showChinka = true;
       g.addBoss(man); S.man = man;
-      api.trigger({ x: hx, z: hz, r: 19, onEnter: g2 => BURNS_W2.homeEnter(g2) });
     }
     /* ---------------- glow sticks + ground score ---------------- */
     {
@@ -511,24 +667,41 @@ BurnsWorlds.register({
     }
   },
   onStart(g) {
-    const S = BURNS_W2.state, BW = BURNS_W234;
-    BURNS_W2.updateNote(g);
-    if (g.missions.isDone('lost')) for (const L of S.lost) { const a = g.actor(L.id); if (a) { a.w2home = true; a.x = L.dx; a.z = L.dz; a.setBehavior('dance'); a.home = { x: a.x, z: a.z, y: 0, yaw: 0 }; } }
+    const S = BURNS_W2.state, BW = BURNS_W234, W2 = BURNS_W2, M = g.missions;
+    if (M.isDone('lost')) for (const L of S.lost) { const a = g.actor(L.id); if (a) { a.w2home = true; a.x = L.dx; a.z = L.dz; a.setBehavior('dance'); a.home = { x: a.x, z: a.z, y: 0, yaw: 0 }; } }
     BW.wireGear(g);
-    if (g.missions.isDone('darkwads')) for (const a of g.actors) if (a.behName === 'w234Darkwad') a.w234lit = true;
+    if (M.isDone('darkwads')) for (const a of g.actors) if (a.behName === 'w234Darkwad') a.w234lit = true;
     const cap = g.actor('captain'); if (cap && !BW.engineType('safetycaptain')) BW.attach(cap, BW.attModel('respirator', m => BW.gear.respirator(m)), BURNS_BONES.HEAD);
     BW.attach(g.player, BW.attModel('headlamp', m => BW.gear.headlamp(m)), BURNS_BONES.HEAD, () => S.headlamp);
-    S.headlamp = g.missions.isDone('moop');
-    if (g.missions.isDone('lanterns')) for (const L of S.lamps) { L.lit = true; L.gl.c = L.gl.c0; }
-    if (g.missions.isDone('alley')) { S.alleyDoor.off = true; }
-    if (g.missions.isDone('camp')) { S.man.hidden = true; S.bossStarted = true; }
-    g.tod = Math.min(0.9, BurnsSave.tokenCount(2) * 0.15);
-    if (!S.introDone) BURNS_W2.intro(g);
-    else g.banner('FINDING CAMP', 'Your note says ' + BURNS_W2.NOTE[BURNS_W2.clues(g)] + '. Read the signs.', { col: '#ff4fd8' });
+    S.headlamp = M.isDone('moop');
+    if (M.isDone('lanterns')) for (const L of S.lamps) { L.lit = true; L.gl.c = L.gl.c0; }
+    if (M.isDone('alley')) { S.alleyDoor.off = true; }
+    // stand-in Red Light District crew: feather boas
+    const boa = BW.attModel('rlboa', m => { m.color('#ff8ad0'); for (let k = 0; k <= 12; k++) { const a = -2.4 + k / 12 * 4.8; BW.egg(m, Math.sin(a) * 0.19, 0.4 - Math.cos(a) * 0.05 - (Math.abs(a) > 1.8 ? (Math.abs(a) - 1.8) * 0.5 : 0), Math.cos(a) * 0.13 + 0.02, 0.07, 0.06, 0.07, { seg: 7, rings: 4 }); } });
+    for (const a of g.actors) if (a.def.rlLook) BW.attach(a, boa, BURNS_BONES.CHEST);
+    // the interactive spots: crash on the couch, sleep in Kevin's tent
+    g.interactables = g.interactables || [];
+    g.interactables.push({ x: S.ccCouch.x, z: S.ccCouch.z, r: 2.3, label: 'CRASH', when: g2 => g2.missions.state('couch') === 'active' && !BW.S.carry, fn: g2 => W2.couchSleep(g2) });
+    g.interactables.push({ x: S.tent.x, z: S.tent.z, r: 2.6, label: 'SLEEP', when: g2 => g2.missions.state('escape') === 'available' && !S.esc && !BW.S.carry, fn: g2 => W2.tentSleep(g2) });
+    // story state on (re)visits
+    if (M.state('stash') === 'active') W2.stashStart(g);
+    if (M.state('haul') === 'active') W2.haulStart(g);
+    W2.markHaul(g);
+    W2.searchSync(g);
+    if (M.isDone('escape')) { const k = g.actor('kevin'); if (k) k.data.mode = 'done'; S.bass = 1; }
+    g.tod = M.isDone('escape') ? 0.85 : 0;
+    if (!S.introDone) W2.intro(g);
+    else g.banner('NO CAMP', M.isDone('escape') ? 'Monday morning. Bamboo bass from 4:30...' : M.isDone('search') ? 'Five rejections. One couch. Zero socks.' : 'Find a camp that will take you in.', { col: '#ff4fd8' });
   },
   onRespawn(g) {
     const S = BURNS_W2.state;
     for (const a of S.followers || []) { const ac = g.actor(a); if (ac && ac.behName === 'follow') { ac.x = g.player.x + 1.5; ac.z = g.player.z + 1; } }
+    // fainted during the escape: back to the tent, run again
+    if (S.escRetry && g.missions.state('escape') === 'available') {
+      S.escRetry = false; const T = S.tent;
+      g.player.teleport(T.x + Math.sin(T.yaw) * 1.5, 0, T.z + Math.cos(T.yaw) * 1.5, T.yaw); g.camYaw = T.yaw; g.snapCam = true;
+      BURNS_W234.timer(0.4, g2 => { if (g2.missions.state('escape') === 'available') { g2.missions.start('escape', true); const k = g2.actor('kevin'); if (k) k.say('You came back! For your other sock?', 2.2); } });
+    }
   },
   env(g, env) {
     const S = BURNS_W2.state, p = g.player;
@@ -539,13 +712,16 @@ BurnsWorlds.register({
       for (const a of [a1, a2]) if (a) g.pointLight(a.x, 1.8, a.z, 7.5, [1, 0.55, 0.2], 1.3);
     }
     if (S.lampWalk) { const w = g.actor('wick'); if (w) g.pointLight(w.x, 2.2, w.z, 9, [1, 0.8, 0.45], 1.1); }
-    if (S.headlamp && !p.dead) g.pointLight(p.x + Math.sin(p.yaw) * 2.2, p.y + 1.9, p.z + Math.cos(p.yaw) * 2.2, 9, [1, 0.95, 0.82], 1.0);
+    if (S.headlamp && !p.dead && g.tod < 0.6) g.pointLight(p.x + Math.sin(p.yaw) * 2.2, p.y + 1.9, p.z + Math.cos(p.yaw) * 2.2, 9, [1, 0.95, 0.82], 1.0);
+    void env;
   },
   update(g, dt) {
     const S = BURNS_W2.state, W2 = BURNS_W2, p = g.player;
     BURNS_W234.update(g, dt);
     g.w234lamp = !!S.headlamp;
     if (!S.spinnerActors) S.spinnerActors = g.actors.filter(a => a.behName === 'w2Spinner');
+    W2.carryCheck(g);
+    if (S.esc) W2.escapeStep(g, dt);
     // walking lost burners home (followers that get boxed in by camps catch up behind Brady)
     if (g.missions.state('lost') === 'active' || g.missions.state('lost') === 'available') {
       for (const L of S.lost) {
@@ -564,13 +740,10 @@ BurnsWorlds.register({
       }
       S.lectures = S.lectures.filter(w => !w.dead);
     }
-    if (S.frozenT > 0) { S.frozenT -= dt; p.animOverride = 'idle'; if (S.frozenT <= 0 && S.frozeByMe) { S.frozeByMe = false; p.locked = false; p.animOverride = null; } }
+    if (S.frozenT > 0) { S.frozenT -= dt; if (!BURNS_W234.S.carry) p.animOverride = 'idle'; if (S.frozenT <= 0 && S.frozeByMe) { S.frozeByMe = false; p.locked = false; if (p.animOverride === 'idle') p.animOverride = null; } }
+    if (S.searchT === undefined || (S.searchT -= dt) <= 0) { S.searchT = 1; W2.searchMarker(g); }
     if (S.lampWalk) BURNS_W2.lampStep(g, dt);
-    // the parade parks for the fight
-    if (S.parade) S.parade.stopped = !!(S.bossStarted && !g.missions.isDone('camp'));
-    // tokens push the night deeper
-    const want = Math.min(1, BurnsSave.tokenCount(2) * 0.15 + (S.bossStarted && !g.missions.isDone('camp') ? 1 : 0));
-    if (g.tod < want && g.todTarget === null) g.setTod(want, 0.03);
+    if (S.bagSearchT > 0) { S.bagSearchT -= dt; if (S.bagSearchT <= 0) { p.locked = false; } }
     // lighthouse lamp + jelly bob are visual only
     S.beamA = (S.beamA || 0) + dt * 0.9;
   },
@@ -601,6 +774,10 @@ BurnsWorlds.register({
     // lighthouse beam sweeping the playa
     const T = S.tower;
     if (T) { const a = S.beamA || 0; for (let k = 1; k <= 7; k++) { const d = k * 3.2; R.bbs.bb(T.x + Math.sin(a) * d, 15 - k * 0.3, T.z + Math.cos(a) * d, 2.6 + k * 0.5, 2.6 + k * 0.5, SP.glow, [1, 0.95, 0.75], 0.32 - k * 0.03, true); } }
+    // a dropped load: a bobbing beacon so you can find your stuff
+    const BL = BURNS_W234.S && BURNS_W234.S.loads; if (BL) for (const L of BL) { if (L.air) continue; const b = Math.sin(t * 4) * 0.15; R.bbs.bb(L.x, L.y + 1.6 + b, L.z, 0.9, 0.9, SP.glow, [1, 0.45, 0.8], 0.8, true); R.bbs.bb(L.x, L.y + 1.6 + b, L.z, 0.32, 0.32, SP.square, [1, 1, 1], 0.9, false, t * 2); }
+    // Rhythm Wave's bamboo bass, way out past 5:00: pulsing light on the horizon
+    if (S.bass) { const pulse = Math.max(0, Math.sin(t * Math.PI * 2 * 2.05)), k = Math.min(1, S.bass); for (let i = 0; i < 5; i++) R.bbs.bb(205 + i * 6, 4 + i * 1.5 + pulse * 2, -10 + (i - 2) * 9, 26 + pulse * 10, 18 + pulse * 6, SP.glow, [1, 0.72 - i * 0.05, 0.3 + i * 0.08], (0.28 + pulse * 0.3) * k, true); }
     // teapot steam + jellyfish glow from the parade
     if (S.parade && Math.random() < 0.35) for (const c of S.parade.cars) { if (c.i % 6 === 1) { const d2 = (c.mv.x - cam.x) * (c.mv.x - cam.x) + (c.mv.z - cam.z) * (c.mv.z - cam.z); if (d2 < 60 * 60) g.fx.smoke(c.mv.x + Math.sin(c.mv.yaw) * 2.9, 3.4, c.mv.z + Math.cos(c.mv.yaw) * 2.9, 1, '#f4f0ff'); } }
     void t;
@@ -662,8 +839,8 @@ BURNS_W2.rocketView = function (g) {
   const c0 = { x: R.view.x, y: R.view.y + 2.4, z: R.view.z, tx: R.x, ty: R.view.y - 2, tz: R.z, fov: 0.9 }, c1 = { x: R.view.x, y: R.view.y + 2.6, z: R.view.z, tx: hx, ty: 0, tz: hz, fov: 0.7 };
   g.cutscene([
     { cam: c0 }, { cam: { from: c0, to: c1, dur: 2.4 } },
-    { say: ['brady', ['Whoa. You can see the whole city from up here.', 'And way out there... a ring of art cars going around and around one block. Somewhere around seven-something.', 'Lumen said the parade goes round and round. That has to be near our camp!']] },
-    { do: g2 => { g2.camYaw = p.yaw; g2.snapCam = true; g2.banner('CITY VIEW', 'The parade circles a block near 7:30. Now: the big red button.', { col: '#ffe24a' }); if (g2.missions.state('rocket') === 'available') g2.missions.start('rocket', true); } }
+    { say: ['brady', ['Whoa. You can see the whole city from up here. Thousands of camps.', 'And not one of them is mine.', '...Okay. Somebody down there has room for one more. I can feel it.']] },
+    { do: g2 => { g2.camYaw = p.yaw; g2.snapCam = true; g2.banner('CITY VIEW', 'Every camp in the city. Now: the big red button.', { col: '#ffe24a' }); if (g2.missions.state('rocket') === 'available') g2.missions.start('rocket', true); } }
   ]);
   if (R.big) return;   // the big-art rocket has its own LAUNCH! button
   g.interactables = g.interactables || [];
@@ -685,21 +862,288 @@ BURNS_W2.rocketLaunch = function (g) {
   ]);
 };
 
-/* ---------------- the note ---------------- */
-BURNS_W2.updateNote = function (g) {
-  const W2 = BURNS_W2, n = W2.clues(g), note = W2.NOTE[n];
-  const m = g.missions.get('note'); if (m) { m.def.short = 'Find camp: ' + note; m.def.name = 'The Crumpled Note: ' + note; }
-  const c = g.missions.get('camp'); if (c) c.def.short = n >= 3 ? 'Go home: 7:30 & E (cross the parade!)' : 'Find camp: ' + note;
-  return note;
-};
-BURNS_W2.clue = function (g, n, who, lines) {
-  const note = BURNS_W2.updateNote(g);
-  const a = g.actors.find(x => x.name === who);
-  g.say(a || { name: who, model: null }, lines, () => {
-    g.banner('THE NOTE', note, { col: '#ffe24a', big: true, dur: 3.2 });
-    burnsSfx('map_open', null, 'secret');
-    if (BURNS_W2.clues(g) >= 3) g.say('brady', ['Seven-thirty and E. Camp Cozy Chaos. Chinka, I\'m coming home.']);
+/* ---------------- the story: stash, rejections, Center Camp, the haul, the escape ---------------- */
+// who's talking: an actor if it exists, otherwise a name card
+BURNS_W2.who = function (g, id, name) { return g.actor(id) || { name, model: null }; };
+// a camp says no. Rejections are saved as flags and count toward Camp Shopping whenever they happen.
+BURNS_W2.reject = function (g, id, who, lines) {
+  const W2 = BURNS_W2, first = !BurnsSave.flag(2, 'rej:' + id);
+  const a = typeof who === 'string' ? (g.actor(who) || { name: who.toUpperCase(), model: null }) : who;
+  if (!first) { g.say(a, [lines[lines.length - 1]]); return; }
+  g.say(a, lines, () => {
+    BurnsSave.flag(2, 'rej:' + id, true);
+    const n = W2.rejections();
+    g.banner('REJECTED!', n < 5 ? `${n} of 5. Character building!` : 'Five for five. Impressive, honestly.', { col: '#ff4a5a', big: true, dur: 2.4 });
+    burnsSfx('bump', { pitch: 0.7 }); g.shake(0.15);
+    BURNS_W2.searchSync(g);
   });
+};
+BURNS_W2.searchSync = function (g) {
+  const m = g.missions.get('search'); if (!m || m.state !== 'active') return;
+  m.n = BURNS_W2.rejections();
+  if (m.n >= 5) g.missions.complete('search');
+};
+BURNS_W2.searchDone = function (g) {
+  BURNS_W234.timer(1.2, g2 => g2.say('brady', ['Five camps. Five nos. Zero tents.', 'Fine. FINE. Center Camp is open to everybody. Everybody has couches. I am everybody.']));
+};
+BURNS_W2.rangerDone = function (g) {
+  const a = g.actor('sage');
+  g.say(a || { name: 'RANGER SAGEBRUSH', model: null }, ['Copy that, you found it! You\'re a natural.', 'Now: no camp. Here\'s the deal. Ask camp leads, the ones with the question marks. Most will say no. Say thank you anyway. Principle Number... all of them.', 'And if nobody takes you, Center Camp has couches. Open all night. Right across the street from my outpost.'], () => {
+    g.glow += 10; g.toast('+10 GLOW STICKS · CITATION WAIVED'); g.spawnPickup('water', g.player.x + 1.4, 0.9, g.player.z, { pop: true });
+  });
+};
+// Mama Velvet, the Red Light District's camp mom: the voice of the stash and the haul
+BURNS_W2.velvetTalk = function (g, a) {
+  const M = g.missions;
+  if (M.state('stash') === 'active') g.say(a, ['Bags in the RV, honey. Through the door on the side. Lift with your legs!']);
+  else if (M.state('search') === 'active') g.say(a, [`${BURNS_W2.rejections()} rejections? Baby, that's a warm-up. Go ask some more. Smile. Bring jazz hands.`]);
+  else if (M.state('couch') === 'active') g.say(a, ['Nobody took you? Their loss, sugar. Center Camp has couches. Go get some sleep.']);
+  else if (M.state('haul') === 'active') g.say(a, BURNS_W234.S.carry ? ['Your stuff\'s on your head, honey. Kevin\'s at 7:30 and E. Call us if he\'s weird.'] : ['A nice man named Kevin has a TENT for you? Your stuff is right there by the door. We packed it all into one bag.', 'It weighs about as much as a small Brady. Lift with your legs!']);
+  else if (M.isDone('escape')) g.say(a, ['Go dance, honey. We\'ll keep your stuff warm. And Brady? Socks.']);
+  else if (M.isDone('haul')) g.say(a, ['Sleep tight, honey. Text us if Kevin is weird. We don\'t have phones. Just yell.']);
+  else g.say(a, ['Welcome to the city, sugar.']);
+};
+BURNS_W2.kevinTalk = function (g, a) {
+  const M = g.missions;
+  if (M.isDone('escape')) g.say(a, ['No hard feelings, man! Your aura is... a very sweaty orange. Namaste!']);
+  else if (M.isDone('haul')) g.say(a, ['Your tent\'s ready, buddy! Get some sleep. Take your shoes off. You know. For comfort.']);
+  else if (M.state('haul') === 'active') g.say(a, ['Bring it all in! The tent is right there. Shoes off inside, please. House rule. Tent rule.']);
+  else g.say(a, ['Hey there! Beautiful night. Have you ever thought about how much your feet do for you?']);
+};
+// the stash: three bags by the curb, carried one at a time through the RV door
+BURNS_W2.LOADS = {
+  duffel(m) { m.color('#4a5a32'); BURNS_W234.rb(m, 0, 0.24, 0, 0.98, 0.46, 0.46, 0.2); m.color('#2a2a26'); for (const s of [-0.28, 0.28]) BURNS_W234.ring(m, s, 0.26, 0, 0.25, 0.025, { roll: Math.PI / 2, seg: 14, tseg: 3 }); m.color('#ff6fb0'); BURNS_W234.rb(m, 0.18, 0.4, 0.235, 0.18, 0.12, 0.01, 0.02); m.color('#38f2ff'); BURNS_W234.rb(m, -0.22, 0.3, 0.235, 0.14, 0.14, 0.01, 0.02); },
+  sleepbag(m) { m.color('#2a8a9a').shine(1); m.push(); m.tf(0, 0.27, 0, 0, 0, Math.PI / 2); m.roundCyl(0, -0.45, 0, 0.27, 0.9, 0.12, { seg: 14 }); m.pop(); m.shine(0); m.color('#1a1a1e'); for (const s of [-0.25, 0.25]) BURNS_W234.ring(m, s, 0.27, 0, 0.28, 0.02, { roll: Math.PI / 2, seg: 14, tseg: 3 }); m.color('#e8f4ff', 0.15).shine(3); m.push(); m.tf(0, 0.27, 0, 0, 0, Math.PI / 2); m.roundCyl(0, -0.47, 0, 0.285, 0.94, 0.12, { seg: 14 }); m.pop(); m.shine(0).emissive(0); },
+  brie(m) { m.color('#f4ecd0'); m.roundCyl(0, 0, 0, 0.48, 0.26, 0.08, { seg: 20 }); m.color('#fff8e4'); BURNS_W234.rb(m, 0, 0.27, 0, 0.5, 0.012, 0.5, 0.005); m.color('#d8c890'); BURNS_W234.rb(m, 0.2, 0.2, 0.2, 0.16, 0.1, 0.16, 0.04); },
+  bundle(m) {
+    const L = BURNS_W2.LOADS;
+    m.push(); m.tf(0, 0, -0.05); L.duffel(m); m.pop();
+    m.push(); m.tf(0, 0.44, 0.02); L.sleepbag(m); m.pop();
+    m.push(); m.tf(0.05, 0.96, 0, 0.3); m.push(); m.tf(0, 0, 0); L.brie(m); m.pop(); m.pop();
+    m.color('#ff7ac8'); for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; BURNS_W234.egg(m, Math.sin(a) * 0.52, 0.5 + Math.sin(a * 2) * 0.06, Math.cos(a) * 0.3, 0.16, 0.12, 0.16, { seg: 8, rings: 5 }); }
+  }
+};
+BURNS_W2.loadDef = function (kind, name, o) {
+  const md = BURNS_W234.loadModels('w2' + kind, BURNS_W2.LOADS[kind]);
+  return Object.assign({ hand: md.hand, ground: md.ground, name, kind, speed: 0.62 }, o || {});
+};
+BURNS_W2.stashStart = function (g) {
+  const S = BURNS_W2.state; if (S.stashLoads) return;
+  const [rx, rz] = BURNS_W2.RLD, sp = g.def.spawn, d = S.rvDoor;
+  // between the spawn and the RV door
+  const bx = lerp(sp.x, d.x, 0.45), bz = lerp(sp.z, d.z, 0.45);
+  S.stashLoads = [['duffel', '40 IDENTICAL BLACK TEES'], ['sleepbag', 'SLEEPING BAG (STILL IN PLASTIC)'], ['brie', 'A WHOLE WHEEL OF BRIE']].map(([k, nm], i) => {
+    const o = BURNS_W2.loadDef(k, nm, { stash: true, when: g2 => g2.missions.state('stash') === 'active', onPick(g2) { g2.toast(nm + ' · CARRY IT INTO THE RV'); BURNS_W2.markHaul(g2); } , onDrop(g2, L) { BURNS_W2.markHaul(g2, L); } });
+    return BURNS_W234.loadPlace(g, o, bx + Math.cos(i * 2.1) * 1.6, bz + Math.sin(i * 2.1) * 1.6, i * 1.3);
+  });
+  void rx; void rz;
+};
+// what Brady carries in the haul and the escape: everything, strapped together, plus a gifted boa
+BURNS_W2.haulStart = function (g) {
+  const S = BURNS_W2.state; if (S.haulLoad || BURNS_W234.S.carry) return;
+  const d = S.rvDoor;
+  S.haulLoad = BURNS_W234.loadPlace(g, BURNS_W2.loadDef('bundle', 'ALL YOUR STUFF', { speed: 0.6, haul: true, when: g2 => g2.missions.state('haul') === 'active',
+    onPick(g2) { if (!S.haulPicked) { S.haulPicked = true; const v = g2.actor('rlVelvet'); if (v) v.say('Bye, baby! Call us if he\'s weird!', 3); g2.banner('HAUL YOUR STUFF', 'Kevin\'s tent: 7:30 & E, inside the art car parade. Heavy: no jumping!', { col: '#ff6fb0' }); } BURNS_W2.markHaul(g2); },
+    onDrop(g2, L) { BURNS_W2.markHaul(g2, L); } }), d.x + 0.4, d.z + 0.4, 0.5);
+  BURNS_W2.markHaul(g);
+  const k = g.actor('kevin'); if (k && S.kevinHome) { k.x = S.kevinHome.x; k.z = S.kevinHome.z; k.yaw = S.kevinHome.yaw; k.vx = k.vz = 0; }
+};
+// point the tracker at the right place: a dropped load, or the next destination
+BURNS_W2.markHaul = function (g, dropped) {
+  const S = BURNS_W2.state, BW = BURNS_W234;
+  for (const id of ['stash', 'haul']) {
+    const m = g.missions.get(id); if (!m || m.state !== 'active') continue;
+    const ground = dropped || (BW.S.loads || []).find(L => L.o[id === 'haul' ? 'haul' : 'stash']);
+    if (BW.S.carry) m.def.marker = id === 'stash' ? { x: S.rvDoor.x, z: S.rvDoor.z } : { x: S.tent.x, z: S.tent.z };
+    else if (ground) m.def.marker = { x: ground.x, z: ground.z };
+    m.def.short = id === 'stash' ? (BW.S.carry ? 'Carry it into the pink RV (side door)' : 'Pick up your gear by the pink RV') : (BW.S.carry ? 'Carry your stuff to Kevin\'s tent (7:30 & E)' : 'Pick your stuff back up!');
+  }
+};
+BURNS_W2.rvEnter = function (g) {
+  const S = BURNS_W2.state;
+  if (S.esc && g.missions.state('escape') === 'active') BURNS_W2.escapeWin(g);
+};
+BURNS_W2.carryCheck = function (g) {
+  const S = BURNS_W2.state, BW = BURNS_W234, c = BW.S.carry, p = g.player;
+  if (!c) return;
+  // stash: through the RV's side door
+  if (c.o.stash && Math.hypot(p.x - S.rvDoor.x, p.z - S.rvDoor.z) < 2.4) {
+    BW.carryEnd(g); g.fx.burst(S.rvDoor.x, 1.6, S.rvDoor.z, 'star', 12, '#ff6fb0'); burnsSfx('pick', { pitch: 1.2 });
+    g.toast('STASHED: ' + c.o.name);
+    const m = g.missions.get('stash'); const left = 3 - (m ? m.n + 1 : 3);
+    const v = g.actor('rlVelvet'); if (v) v.say(c.o.kind === 'brie' ? 'Is that... a whole BRIE? Respect.' : left > 0 ? ['Into the RV it goes! Next!', 'Lift with your LEGS, honey!'][left % 2] : 'That\'s everything? Good boy.', 2.4);
+    g.missions.progress('stash');
+    BURNS_W2.markHaul(g);
+    return;
+  }
+  // haul: into Kevin's tent
+  if (c.o.haul && g.missions.state('haul') === 'active' && Math.hypot(p.x - S.tent.x, p.z - S.tent.z) < 3.2) {
+    BW.carryEnd(g); S.haulLoad = null;
+    g.fx.confetti(S.tent.cx, 2, S.tent.cz, 24); burnsSfx('crowd_cheer', { vol: 0.5 });
+    g.missions.complete('haul', { x: S.tent.x + 1.2, y: 1.4, z: S.tent.z + 1.2 });
+    const k = g.actor('kevin'); if (k) k.say('You made it! Make yourself at home. Shoes off! ...For the tent.', 3.5);
+  }
+};
+BURNS_W2.stashDone = function (g) {
+  const v = BURNS_W2.who(g, 'rlVelvet', 'MAMA VELVET');
+  BURNS_W234.timer(0.6, g2 => g2.say(v, ['All three! Your stuff is safe with us, honey.', 'Now go find somewhere to SLEEP. Ask the camps. Somebody will take you in. Probably. Maybe.']));
+};
+
+/* ---------------- intro ---------------- */
+BURNS_W2.intro = function (g) {
+  const S = BURNS_W2.state, p = g.player, [rx, rz] = BURNS_W2.RLD, sp = g.def.spawn;
+  const V = BURNS_W2.who(g, 'rlVelvet', 'MAMA VELVET'), X = BURNS_W2.who(g, 'rlRoxie', 'ROXIE');
+  const c0 = { x: rx - 70, y: 46, z: rz + 80, tx: rx - 10, ty: 0, tz: rz + 10, fov: 0.95 }, c1 = { x: sp.x + Math.sin(sp.yaw) * -5 + 3, y: 2.6, z: sp.z + Math.cos(sp.yaw) * -5, tx: rx, ty: 1.6, tz: rz, fov: 0.8 };
+  p.locked = true;
+  g.cutscene([
+    { cam: c0 },
+    { cam: { from: c0, to: c1, dur: 4.2 } },
+    { say: [V, ['Welcome to the city, sugar! So. Where\'s your camp?']] },
+    { say: ['brady', ['My... camp? I thought you just... show up? Chinka handled the... everything.']] },
+    { say: [V, ['Honey. You have NO camp?', 'Oh, baby. Okay. Put your stuff in our RV. We\'ll babysit it while you find somewhere to sleep.']] },
+    { say: [X, ['No glitter in the fridge. That\'s the only rule.']] },
+    { do: g2 => { BurnsSave.flag(2, 'intro', true); S.introDone = true; p.locked = false; p.teleport(sp.x, 0, sp.z, sp.yaw); g2.camYaw = sp.yaw; g2.snapCam = true; } },
+    { banner: ['STASH YOUR GEAR', 'Carry your three bags into the pink RV. Heavy stuff: no jumping!', { col: '#ff6fb0' }] }
+  ], null);
+};
+
+/* ---------------- Center Camp: crash on a couch, wake up to slam poetry, the Man gloats, Kevin offers a tent ---------------- */
+BURNS_W2.couchSleep = function (g) {
+  const S = BURNS_W2.state, p = g.player, c = S.ccCouch, man = S.man, k = g.actor('kevin'), poet = BURNS_W2.who(g, 'poet', 'STARDUST, SLAM POET');
+  if (S.sleeping || g.missions.state('couch') !== 'active') return; S.sleeping = true;
+  const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
+  const c0 = { x: c.x + fx * 3.2 + fz * 1.6, y: 2.0, z: c.z + fz * 3.2 - fx * 1.6, tx: c.x, ty: 0.8, tz: c.z, fov: 0.8 };
+  const st = S.stage, c1 = { x: c.x + fx * 1.0 - fz * 1.6, y: 1.8, z: c.z + fz * 1.0 + fx * 1.6, tx: st.x, ty: 1.9, tz: st.z, fov: 0.75 };
+  const [mx, mz] = BURNS_W2.MANSPOT, cm = { x: BURNS_W2.CC[0] + Math.sin(c.yaw + Math.PI) * 0, y: 3.2, z: BURNS_W2.CC[1] - 11, tx: mx, ty: 7, tz: mz, fov: 0.7 };
+  g.cutscene([
+    { do: g2 => { p.teleport(c.x - fx * 0.15, 0.42, c.z - fz * 0.15, c.yaw); p.locked = true; p.animOverride = 'sleep'; } },
+    { cam: c0 },
+    { say: ['brady', ['Five rejections. Zero camps. One couch.', 'Goodnight, playa. ...Goodnight, mystery couch stain.']] },
+    { do: g2 => g2.fadeTo(1, 0.6) }, { wait: 0.9 },
+    { banner: ['3:12 AM', 'Center Camp never sleeps. Brady does.', { col: '#ffcf7a', dur: 2 }] }, { wait: 1.4 },
+    { do: g2 => g2.fadeTo(0, 0.6) },
+    { cam: c1 },
+    { say: [poet, ['THE PLAYA...', '...is a DUSTY... MIRROR.', 'And in that mirror... I see... a MAN... on a COUCH. *snap snap*']] },
+    { do: g2 => { p.animOverride = 'hurt'; g2.shake(0.25); burnsSfx('bump'); } },
+    { say: ['brady', ['GAH! I\'m awake! I\'m awake! Is this poem about ME?']] },
+    { say: [poet, ['Everything is about you, man. That\'s the poem. *snap*']] },
+    { do: g2 => { p.animOverride = 'idle'; man.hidden = false; man.showChinka = true; man.x = mx; man.z = mz; man.y = 0; man.setState('idle'); g2.shake(0.4); burnsSfx('man_stomp'); } },
+    { cam: cm },
+    { say: ['man', ['SLEEP WELL, BUN BOY?', 'SHE IS WITH ME. YOU HAVE... A COUCH. HA. HA. HAAA.']] },
+    { do: g2 => { S.manT = 0; burnsSfx('man_roar', { pitch: 0.8 }); } },
+    { until: g2 => { S.manT += 1 / 120; man.z -= 7 / 120; man.yaw = Math.PI; return S.manT > 2.4; } },
+    { do: g2 => { man.hidden = true; if (k) { k.x = c.x + Math.cos(c.yaw) * 1.6 + fx * 1.2; k.z = c.z - Math.sin(c.yaw) * 1.6 + fz * 1.2; k.yaw = Math.atan2(p.x - k.x, p.z - k.z); k.vx = k.vz = 0; } } },
+    { cam: c0 },
+    { say: [k || { name: 'KEVIN', model: null }, ['Hey. Hey, man. I couldn\'t help noticing you sleeping on a public couch. During a poetry slam.', 'I feel bad for you. I\'ve got room in my tent. 7:30 and E, inside the parade loop. Grab your stuff and come on over!']] },
+    { say: ['brady', ['A TENT? With WALLS? Kevin, you\'re my hero.']] },
+    { say: [k || { name: 'KEVIN', model: null }, ['Ha! Just Kevin. Just a nice guy. Bring socks. ...Or don\'t. Either way.']] },
+    { do: g2 => { p.locked = false; p.animOverride = null; S.sleeping = false; p.teleport(c.x + fx * 1.4, 0, c.z + fz * 1.4, c.yaw); g2.missions.complete('couch'); } }
+  ]);
+};
+
+/* ---------------- the escape: 4 AM, Kevin and the Sole Circle ---------------- */
+BURNS_W2.tentSleep = function (g) {
+  const S = BURNS_W2.state, p = g.player, T = S.tent, k = g.actor('kevin');
+  if (S.esc || g.missions.state('escape') !== 'available') return;
+  const fx = Math.sin(T.yaw), fz = Math.cos(T.yaw);
+  const c0 = { x: T.x + fx * 4 + fz * 2, y: 2.2, z: T.z + fz * 4 - fx * 2, tx: T.cx, ty: 0.8, tz: T.cz, fov: 0.8 };
+  g.cutscene([
+    { do: g2 => { p.locked = true; p.teleport(T.cx + fx * 0.6, 0.05, T.cz + fz * 0.6, T.yaw + Math.PI); p.animOverride = 'sleep'; if (k) { k.x = T.x + fz * 1.2; k.z = T.z - fx * 1.2; k.vx = k.vz = 0; } } },
+    { cam: c0 },
+    { say: ['brady', ['A real tent. With a real zipper. Goodnight, Kevin!']] },
+    { say: [k || { name: 'KEVIN', model: null }, ['Goodnight, buddy. Sweet dreams. Sweet... feet.']] },
+    { say: ['brady', ['What?']] },
+    { say: [k || { name: 'KEVIN', model: null }, ['What?']] },
+    { do: g2 => g2.fadeTo(1, 0.7) }, { wait: 0.9 },
+    { banner: ['4:47 AM', '*sniff sniff*', { col: '#9a6bff', dur: 2 }] }, { wait: 1.4 },
+    { do: g2 => { if (k) { k.x = T.cx + fx * 1.6; k.z = T.cz + fz * 1.6; k.yaw = T.yaw + Math.PI; k.ch.play('sit'); } g2.fadeTo(0, 0.5); } },
+    { cam: { x: T.cx + fx * 3.4 - fz * 1.5, y: 1.4, z: T.cz + fz * 3.4 + fx * 1.5, tx: T.cx + fx * 1.2, ty: 0.4, tz: T.cz + fz * 1.2, fov: 0.75 } },
+    { say: [k || { name: 'KEVIN', model: null }, ['Shhh. Shhh. Don\'t wake up. I\'m just reading your aura.', 'Through your soles. Your left heel is VERY anxious.']] },
+    { do: g2 => { p.animOverride = 'hurt'; g2.shake(0.3); burnsSfx('bump'); } },
+    { say: ['brady', ['WHY ARE YOU SMELLING MY FEET?!']] },
+    { say: [k || { name: 'KEVIN', model: null }, ['My playa name is SOLEMATE.', 'Wait. Come back. I haven\'t done your toes!']] },
+    { do: g2 => { p.animOverride = null; p.locked = false; p.teleport(T.x + fx * 1.5, 0, T.z + fz * 1.5, T.yaw); g2.camYaw = T.yaw; g2.snapCam = true; g2.missions.start('escape', true); } }
+  ]);
+};
+BURNS_W2.escapeStart = function (g) {
+  const S = BURNS_W2.state, BW = BURNS_W234, p = g.player, k = g.actor('kevin');
+  S.esc = { t: 0 }; S.trail = [];
+  if (!BW.S.carry) BW.carryStart(g, BURNS_W2.loadDef('bundle', 'ALL YOUR STUFF', { speed: 0.88, jump: true, dropOnHurt: false }));
+  if (k) { k.x = S.tent.cx + Math.sin(S.tent.yaw) * 1.4; k.z = S.tent.cz + Math.cos(S.tent.yaw) * 1.4; k.vx = k.vz = 0; k.data.mode = 'wait'; k.data.t = 1.3; }
+  for (const a of g.actors) if (a.behName === 'w2Sole') { a.hidden = false; a.data.mode = 'post'; a.x = a.def.post.x; a.z = a.def.post.z; }
+  g.banner('RUN!', 'Back to the pink RV! Mash JUMP or ACTION if they grab you.', { col: '#ff4a5a', big: true });
+  burnsSfx('yell');
+  void p;
+};
+BURNS_W2.escapeFail = function (g) {
+  const S = BURNS_W2.state; S.esc = null; S.escRetry = true;
+  BURNS_W2.soleReset(g);
+};
+BURNS_W2.soleReset = function (g) {
+  const S = BURNS_W2.state, k = g.actor('kevin');
+  if (k) { k.data.mode = 'host'; k.x = S.kevinHome.x; k.z = S.kevinHome.z; k.yaw = S.kevinHome.yaw; k.vx = k.vz = 0; }
+  for (const a of g.actors) if (a.behName === 'w2Sole') { a.hidden = true; a.data.mode = 'off'; a.x = a.def.post.x; a.z = a.def.post.z; }
+};
+// a breadcrumb trail of where Brady ran: Kevin catches up along it when he falls behind
+BURNS_W2.escapeStep = function (g, dt) {
+  const S = BURNS_W2.state, E = S.esc, p = g.player;
+  if (!E || g.missions.state('escape') !== 'active') return;
+  E.t += dt;
+  const last = S.trail[S.trail.length - 1];
+  if (!last || Math.hypot(p.x - last.x, p.z - last.z) > 1.5) { S.trail.push({ x: p.x, z: p.z }); if (S.trail.length > 120) S.trail.shift(); }
+  // dawn creeps in while you run
+  const want = Math.min(0.55, E.t / 90);
+  if (g.tod < want - 0.02 && g.todTarget === null) g.setTod(want, 0.02);
+  const [rx, rz] = BURNS_W2.RLD;
+  if (Math.hypot(p.x - rx, p.z - rz) < 9) BURNS_W2.escapeWin(g);
+};
+BURNS_W2.escapeWin = function (g) {
+  const S = BURNS_W2.state, BW = BURNS_W234, p = g.player, [rx, rz] = BURNS_W2.RLD, k = g.actor('kevin');
+  if (!S.esc || S.escWon) return; S.escWon = true; S.esc = null;
+  BW.carryEnd(g);
+  if (k) { k.data.mode = 'done'; k.x = S.kevinHome.x; k.z = S.kevinHome.z; k.vx = k.vz = 0; }
+  for (const a of g.actors) if (a.behName === 'w2Sole') { a.hidden = true; a.data.mode = 'off'; }
+  g.missions.complete('escape');
+  S.bass = 0.01;
+  const V = BURNS_W2.who(g, 'rlVelvet', 'MAMA VELVET'), C = BURNS_W2.who(g, 'rlCandi', 'CANDI');
+  const toC = Math.atan2(BURNS_W2.C.x - rx, BURNS_W2.C.z - rz), ex = rx + Math.sin(toC) * 7, ez = rz + Math.cos(toC) * 7;
+  const c0 = { x: ex + Math.cos(toC) * 6, y: 2.4, z: ez - Math.sin(toC) * 6, tx: rx, ty: 1.6, tz: rz, fov: 0.85 };
+  const c1 = { x: ex, y: 3.2, z: ez, tx: ex + 120, ty: 6, tz: ez + 10, fov: 0.8 };
+  g.cutscene([
+    { music: 'burns_victory' },
+    { do: g2 => { p.teleport(ex, 0, ez, toC + Math.PI); g2.setTod(1, 0.35); } },
+    { cam: c0 },
+    { say: ['brady', ['MAMA VELVET! Kevin... Kevin was SMELLING MY FEET!']] },
+    { say: [V, ['Oh, honey. We told you to call us if he was weird.', 'Everybody knows Kevin. He\'s harmless. He\'s just... thorough.']] },
+    { do: g2 => { S.bass = 1; g2.shake(0.12); burnsSfx('stomp', { vol: 0.5, pitch: 0.6 }); } },
+    { cam: c1 },
+    { say: ['brady', ['Wait. Do you hear that? Boom... tss... boom...', 'That sounds like... BAMBOO?']] },
+    { say: [C, ['That\'s Rhythm Wave, baby. A bamboo dance floor. Sunrise sets every morning.', 'Way out past 5:00. Some people swear it\'s at 4:30.']] },
+    { say: ['brady', ['4:30 is REAL?!']] },
+    { cam: c0 },
+    { say: [V, ['Go on. Leave your stuff with us. Go dance it off.', 'And Brady? Wear socks.']] },
+    { do: g2 => { p.victoryT = 3; burnsSfx('crowd_cheer'); } },
+    { wait: 1.0 }
+  ], g2 => g2.finishWorld());
+};
+
+// the tracker points Camp Shopping at the nearest camp that hasn't said no yet
+BURNS_W2.searchMarker = function (g) {
+  const m = g.missions.get('search'); if (!m || m.state !== 'active') return;
+  const S = BURNS_W2.state, p = g.player, opts = [];
+  for (const q of S.rejectCamps) if (!BurnsSave.flag(2, 'rej:' + q.id)) opts.push([q.x, q.z]);
+  if (!BurnsSave.flag(2, 'rej:conclave')) opts.push([S.conclave.x, S.conclave.z + 17]);
+  if (!BurnsSave.flag(2, 'rej:alley')) opts.push([S.alley.sx, S.alley.sz]);
+  if (!BurnsSave.flag(2, 'rej:lights')) opts.push([34, 22]);
+  let best = null, bd = 1e9; for (const o of opts) { const d = Math.hypot(o[0] - p.x, o[1] - p.z); if (d < bd) { bd = d; best = o; } }
+  if (best) m.def.marker = { x: best[0], z: best[1] };
+};
+// the undercover cops want to see what's in the big bag
+BURNS_W2.bagSearch = function (g, a) {
+  const S = BURNS_W2.state, p = g.player;
+  a.data.cd = 14; S.bagSearchT = 2.2; p.locked = true; p.vx = p.vz = 0;
+  a.say('Forty black t-shirts... one wheel of brie... a feather boa?! ...Groovy. Carry on, citizen.', 3);
+  g.toast('BAG SEARCHED: 40 BLACK TEES, 1 BRIE, 1 BOA. CARRY ON.'); burnsSfx('pitch_blah', { vol: 0.5 });
 };
 
 BURNS_W2.lampStart = function (g) {
@@ -937,6 +1381,74 @@ BurnsBehaviors.register('w2Drunk', {
     a.physics(dt);
   }
 });
+// Kevin: a friendly host... until 4 AM. In the escape he chases Brady, lunges, and grabs ("reading your soles").
+// If he falls far behind he catches up along Brady's trail (SOLEMATE NEVER SLEEPS).
+BurnsBehaviors.register('w2Kevin', {
+  init(a) { a.data.mode = 'host'; a.data.t = 0; a.data.cd = 0; a.data.far = 0; },
+  hit(a, g) { if (a.data.mode === 'host' || a.data.mode === 'done') return false; a.data.mode = 'dizzy'; a.data.t = 1.6; a.say('Ow! My chakras!', 1.2); return 'handled'; },
+  update(a, g, dt) {
+    const D = a.data, p = g.player, S = BURNS_W2.state;
+    D.t -= dt; if (D.cd > 0) D.cd -= dt;
+    const chasing = !!(S && S.esc) && g.missions.state('escape') === 'active';
+    if (!chasing && D.mode !== 'host' && D.mode !== 'done') D.mode = 'host';
+    const d = Math.hypot(p.x - a.x, p.z - a.z);
+    if (D.mode === 'host' || D.mode === 'done') {
+      if (d < 6) a.face(p.x, p.z, dt, 3);
+      a.vx = a.vz = 0; a.ch.play(a.bubbleT > 0 && d < 10 ? 'talk' : D.mode === 'done' ? 'wave' : 'idle');
+      if (D.mode === 'host' && d < 9 && Math.random() < dt * 0.08) a.say(['Nice night for it.', 'Ever had your arches read?', 'Socks are a social construct, man.'][Math.floor(Math.random() * 3)], 2);
+    } else if (D.mode === 'wait') { a.face(p.x, p.z, dt, 6); a.ch.play('wave'); a.vx = a.vz = 0; if (D.t <= 0) { D.mode = 'chase'; a.say('Come back! I haven\'t done your TOES!', 2); } }
+    else if (D.mode === 'chase') {
+      // speed rubber-bands so he stays scary but beatable
+      const sp = clamp(4.9 + (d - 8) * 0.12, 4.6, 6.3);
+      a.moveTo(p.x, p.z, sp, dt, 0.5); a.ch.play('run', { rate: 0.85 });
+      if (Math.random() < dt * 0.35) a.say(['Your heels are SCREAMING, man!', 'Let me read your arches!', 'Barefoot is a LIFESTYLE!', 'SOLEMATE NEVER SLEEPS!', 'I just want to help your FEET!'][Math.floor(Math.random() * 5)], 1.5);
+      if (d < 3.4 && D.cd <= 0 && !p.grabbedBy && p.invT <= 0) { D.mode = 'wind'; D.t = 0.38; a.say('HOLD STILL!', 0.8); }
+      // fell way behind (or got stuck behind a camp): reappear on Brady's trail
+      D.far = d > 26 ? D.far + dt : 0;
+      if (D.far > 1.2 && S.trail.length > 12 && !g.cine) {
+        const q = S.trail[Math.max(0, S.trail.length - 12)];
+        a.x = q.x; a.z = q.z; a.vx = a.vz = 0; D.far = 0; g.fx.smoke(a.x, 0.5, a.z, 6, '#e8e0ff');
+        a.say('SOLEMATE NEVER SLEEPS!', 1.8);
+      }
+    } else if (D.mode === 'wind') { a.face(p.x, p.z, dt, 10); a.ch.play('hug'); a.vx = a.vz = 0; if (D.t <= 0) { D.mode = 'lunge'; D.t = 0.42; D.dx = Math.sin(a.yaw); D.dz = Math.cos(a.yaw); } }
+    else if (D.mode === 'lunge') {
+      a.vx = D.dx * 9.5; a.vz = D.dz * 9.5; a.ch.play('charge');
+      if (a.touching(0.25) && !p.grabbedBy && p.invT <= 0 && !p.dead) { D.mode = 'grab'; D.t = 1.9; p.grab(a, 1.9); a.say(['Ahh. A Capricorn heel.', 'Your left foot is SO anxious.', 'I\'m sensing... dust. Lots of dust.'][Math.floor(Math.random() * 3)], 1.8); burnsSfx('bump'); }
+      else if (D.t <= 0) { D.mode = 'chase'; D.cd = 1.4; }
+    } else if (D.mode === 'grab') {
+      a.ch.play('hug'); a.vx = a.vz = 0;
+      if (Math.random() < dt * 5) g.fx.burst(a.x, a.y + 0.6, a.z, 'star', 1, '#9a6bff');
+      if (D.t <= 0) { if (p.grabbedBy === a) p.release(true); g.toast('AURA READ! (-1 HYDRATION) Mash JUMP to break free!'); D.mode = 'chase'; D.cd = 2.6; }
+    } else if (D.mode === 'dizzy') {
+      a.vx = BurnsM.damp(a.vx, 0, 4, dt); a.vz = BurnsM.damp(a.vz, 0, 4, dt); a.ch.play('hurt'); a.yaw += dt * 4;
+      if (Math.random() < dt * 6) g.fx.burst(a.x, a.y + a.h + 0.1, a.z, 'star', 1, '#ffe24a');
+      if (D.t <= 0) { D.mode = 'chase'; D.cd = 1.0; }
+    }
+    a.physics(dt);
+  }
+});
+// the Sole Circle: barefoot reflexologists posted at street corners. They rush Brady when he runs past.
+BurnsBehaviors.register('w2Sole', {
+  init(a) { a.data.mode = 'off'; a.data.t = 0; a.hidden = true; },
+  hit(a, g) { if (a.data.mode === 'off') return false; a.data.mode = 'dizzy'; a.data.t = 2; return 'handled'; },
+  update(a, g, dt) {
+    const D = a.data, p = g.player, P = a.def.post;
+    D.t -= dt;
+    if (D.mode === 'off') { a.hidden = true; a.vx = a.vz = 0; return; }
+    const d = Math.hypot(p.x - a.x, p.z - a.z);
+    if (D.mode === 'post') {
+      a.moveTo(P.x, P.z, 1.4, dt, 0.4); a.face(p.x, p.z, dt, 3); a.ch.play(d < 16 ? 'wave' : 'idle');
+      if (d < 7.5 && !p.grabbedBy && p.invT <= 0) { D.mode = 'rush'; D.t = 2.0; a.say(['FREE FOOT RUB!', 'Your arches are CRYING!', 'Sole Circle, ASSEMBLE!', 'Let us read your heels!'][Math.floor(Math.random() * 4)], 1.4); }
+    } else if (D.mode === 'rush') {
+      a.moveTo(p.x, p.z, 4.9, dt, 0.4); a.ch.play('run', { rate: 0.8 });
+      if (a.touching(0.2) && !p.grabbedBy && p.invT <= 0 && !p.dead) { D.mode = 'grab'; D.t = 1.5; p.grab(a, 1.5); a.say('Ooh, tense little toes!', 1.4); burnsSfx('bump'); }
+      else if (D.t <= 0 || d > 14) { D.mode = 'tired'; D.t = 4; }
+    } else if (D.mode === 'grab') { a.ch.play('hug'); a.vx = a.vz = 0; if (D.t <= 0) { if (p.grabbedBy === a) p.release(true); D.mode = 'tired'; D.t = 5; } }
+    else if (D.mode === 'dizzy') { a.ch.play('hurt'); a.yaw += dt * 4; a.vx = BurnsM.damp(a.vx, 0, 4, dt); a.vz = BurnsM.damp(a.vz, 0, 4, dt); if (D.t <= 0) { D.mode = 'tired'; D.t = 4; } }
+    else if (D.mode === 'tired') { a.ch.play('sit'); a.vx = a.vz = 0; if (D.t <= 0) D.mode = 'post'; }
+    a.physics(dt);
+  }
+});
 
 /* ---------------- mission helpers ---------------- */
 BURNS_W2.alleyStart = function (g) {
@@ -948,7 +1460,7 @@ BURNS_W2.alleyStart = function (g) {
 BURNS_W2.alleyReset = function (g) { const A = BURNS_W2.state.alley; g.toast('BACK TO THE START!'); g.player.teleport(A.sx - Math.sin(A.yaw) * 3.5, 0, A.sz - Math.cos(A.yaw) * 3.5, A.yaw + Math.PI); };
 BURNS_W2.alleyDone = function (g) {
   const S = BURNS_W2.state; S.alleyDoor.off = true; burnsSfx('greeter_bell'); g.fx.confetti(g.player.x, g.player.y + 2, g.player.z, 30);
-  const a = g.actor('sparky'); if (a) a.say('DING DING! LEGEND! The back door\'s open!', 3);
+  BURNS_W2.reject(g, 'alley', 'sparky', ['DING DING! LEGEND! The back door\'s open!', 'Wait. You wanted to JOIN? Oh no, buddy. The bell is just for fun. We\'re full. Like, fire-code full.']);
 };
 BURNS_W2.lostHome = function (g, a, L) {
   if (a.w2home) return;
@@ -958,75 +1470,7 @@ BURNS_W2.lostHome = function (g, a, L) {
   burnsSfx('crowd_cheer', { vol: 0.5 });
   if (g.missions.state('lost') === 'active') g.missions.progress('lost', 1);
 };
-BURNS_W2.homeEnter = function (g) {
-  const S = BURNS_W2.state;
-  if (S.bossStarted || g.missions.isDone('camp')) return;
-  if (g.missions.state('camp') !== 'active') {
-    if (g.time - S.warned > 12) { S.warned = g.time; g.playerBubble('Is this our camp? The note\'s too smudged. I need more clues.', 3); }
-    return;
-  }
-  BURNS_W2.bossIntro(g);
-};
-
-/* ---------------- intro ---------------- */
-BURNS_W2.intro = function (g) {
-  const S = BURNS_W2.state, p = g.player, sp = { x: 80, z: -62 };
-  p.locked = true;
-  g.cutscene([
-    { cam: { x: 40, y: 48, z: 60, tx: 80, ty: 0, tz: -60, fov: 0.95 } },
-    { banner: [BurnsWorlds.label ? BurnsWorlds.label(2) : 'WORLD 2', 'FINDING CAMP · THE CITY AT NIGHT', { col: '#ff4fd8', big: true, dur: 3 }] },
-    { cam: { from: { x: 40, y: 48, z: 60, tx: 80, ty: 0, tz: -60, fov: 0.95 }, to: { x: 86, y: 3.2, z: -52, tx: 80, ty: 1.6, tz: -62, fov: 0.8 }, dur: 4.2 } },
-    { say: ['brady', ['Rule number one on the playa: if you get separated, meet at camp.', 'Chinka wrote our address on a napkin. Our camp is at...']] },
-    { do: g2 => { g2.banner('THE NOTE', '?:?? & ?', { col: '#ffe24a', big: true, dur: 3 }); burnsSfx('map_open', null, 'secret'); } },
-    { say: ['brady', ['...Somebody gifted me a margarita. Onto the napkin.', 'Question-mark o\'clock and question-mark street. Great.']] },
-    { cam: { x: 84, y: 2.4, z: -56, tx: 89.5, ty: 1.6, tz: -58.4, fov: 0.8 } },
-    { say: [g.actor('sage'), ['Psst. First night? Lost? I\'m a Ranger. Not a cop. Come talk to me, I\'ll teach you to read this city.']] },
-    { do: g2 => { BurnsSave.flag(2, 'intro', true); S.introDone = true; p.locked = false; p.teleport(sp.x, 0, sp.z, 0.4); g2.camYaw = 0.4; g2.snapCam = true; } },
-    { banner: ['FIND YOUR CAMP', 'Three clues fill in the note. Read the street signs.', { col: '#ffd84a' }] }
-  ], null);
-};
-
-/* ---------------- boss: the Man at camp ---------------- */
-BURNS_W2.bossIntro = function (g) {
-  const S = BURNS_W2.state, man = S.man, p = g.player, [hx, hz] = BURNS_W2.CAMP, oy = BURNS_W2.outYaw(45);
-  if (S.bossStarted) return; S.bossStarted = true;
-  const c1 = { x: hx - Math.sin(oy) * 6, y: 2.2, z: hz - Math.cos(oy) * 6, tx: hx, ty: 2, tz: hz, fov: 0.85 };
-  const c2 = { x: hx - Math.sin(oy) * 12 + Math.cos(oy) * 6, y: 4, z: hz - Math.cos(oy) * 12 - Math.sin(oy) * 6, tx: man.x, ty: 9, tz: man.z, fov: 0.92 };
-  g.cutscene([
-    { music: 'man_boss' },
-    { cam: c1 },
-    { say: ['brady', ['Camp Cozy Chaos! The couch! The crooked shade! We\'re HOME!', 'Chinka? Babe? Honey? ...Why is it so quiet?']] },
-    { do: g2 => { man.hidden = false; man.showChinka = true; man.setState('idle'); g2.shake(0.7); burnsSfx('man_stomp'); burnsSfx('man_roar', { pitch: 0.8 }); } },
-    { cam: { from: c1, to: c2, dur: 2.4 } },
-    { banner: ['THE MAN', 'Lovesick Effigy · Rematch', { col: '#ff4fd8', big: true, dur: 3 }] },
-    { say: [{ name: 'CHINKA', model: BurnsRig.model(BurnsRig.chinkaSpec()) }, ['BRADY! He\'s been sitting in our camp for an HOUR. He ate all the trail mix. Even the raisins!']] },
-    { say: ['man', ['I KNEW YOU WOULD COME HOME, BUN BOY. I READ YOUR NAPKIN TOO.', 'I BROUGHT FIRE THIS TIME. LOVE IS A FIRE. I AM ALSO WOOD. THIS IS A PROBLEM.']] },
-    { say: ['brady', ['Put her down and step away from my couch!']] },
-    { do: g2 => { p.teleport(hx - Math.sin(oy) * 12, 0, hz - Math.cos(oy) * 12, oy); g2.camYaw = oy; g2.snapCam = true; g2.boss = man; man.start(); g2.banner('FIGHT!', 'Jump the shockwaves and whips · dodge the fireballs · hide from the flash · bonk his head!', { col: '#ffe24a' }); } }
-  ]);
-};
-BURNS_W2.bossDefeated = function (g) {
-  const S = BURNS_W2.state, man = S.man, p = g.player, [hx, hz] = BURNS_W2.CAMP, oy = BURNS_W2.outYaw(45);
-  g.missions.complete('camp');
-  g.missions.complete('note');
-  BURNS_W234.timer(1.4, () => {
-    const c1 = { x: hx - Math.sin(oy) * 8 + Math.cos(oy) * 7, y: 3.5, z: hz - Math.cos(oy) * 8 - Math.sin(oy) * 7, tx: man.x, ty: 6, tz: man.z, fov: 0.9 };
-    g.cutscene([
-      { music: 'burns_victory' },
-      { cam: c1 },
-      { say: ['man', ['MY LOGS... MY BEAUTIFUL LOGS...', 'YOU WIN THIS CAMP, SMALL MAN. BUT I WILL SEE YOU COMING. I KNOW YOUR FACE. I KNOW YOUR BUN.']] },
-      { say: [{ name: 'CHINKA', model: BurnsRig.model(BurnsRig.chinkaSpec()) }, ['Brady! He knows what you look like! Get a disguise! And something faster than your legs!']] },
-      { do: g2 => { man.defeated = false; man.active = false; man.setState('flee'); burnsSfx('man_roar'); g2.shake(0.5); S.fleeT = 0; } },
-      { cam: { from: c1, to: { x: hx, y: 6, z: hz, tx: man.x + Math.sin(oy) * 60, ty: 25, tz: man.z + Math.cos(oy) * 60, fov: 0.95 }, dur: 3.2 } },
-      { until: g2 => { S.fleeT += 1 / 120; man.y += (3 + S.fleeT * 9) / 120; man.x += Math.sin(oy) * (6 + S.fleeT * 12) / 120; man.z += Math.cos(oy) * (6 + S.fleeT * 12) / 120; for (let i = 0; i < 2; i++) { const f = man.foot(i ? 1 : -1); g2.fx.fire(f[0], f[1] - 0.5, f[2], 2.4); } if (Math.random() < 0.1) burnsSfx('flame_jet', { vol: 0.6 }); return S.fleeT > 3.2; } },
-      { do: g2 => { man.hidden = true; man.y = 0; } },
-      { cam: { x: hx - Math.sin(oy) * 4, y: 2, z: hz - Math.cos(oy) * 4, tx: hx, ty: 1.4, tz: hz, fov: 0.8 } },
-      { say: ['brady', ['A disguise. And wheels.', 'Okay, playa. Dress me up and give me a bike.']] },
-      { do: g2 => { p.victoryT = 3; burnsSfx('crowd_cheer'); } },
-      { wait: 1.0 }
-    ], g2 => g2.finishWorld());
-  });
-};
 
 /* test/debug access (the bundle is one IIFE) */
+BURNS_W2.lib = () => BURNS_W234;
 try { (window.BRADY_W234 = window.BRADY_W234 || {}).w2 = BURNS_W2; } catch (e) { /* no window */ }

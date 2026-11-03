@@ -1,6 +1,6 @@
 /* ============================================================
-   BRADY-O BURNS — World 12: THE TEMPLE (dawn, deep playa)
-   After the dust storm (World 9) Brady has only Chinka's LED necklace and
+   Brady Goes to Burning Man — THE TEMPLE (world id 12, Saturday dawn, deep playa)
+   After the dust storm (Deep Playa Showdown, id 9) Brady has only Chinka's LED necklace and
    fears the worst. At dawn he walks out to the Temple to write her name.
    Quiet, tender, respectful: no enemies, no combat, no jokes at the Temple.
    Missions (Burn Tokens, all gentle; awarded quietly):
@@ -260,7 +260,8 @@ BurnsWorlds.register({
     if (BurnsSave.flag(12, 'wrote')) BW12.inkFull(BurnsSave.flag(12, 'wroteLayout') || 'row');
     if (!S.introDone) BW12.intro(g);
     else {
-      g.banner(BurnsWorlds.label(12).toUpperCase() + ' · THE TEMPLE', g.missions.isDone('hope') ? 'The sun is up. She\'s out there.' : 'Walk out at dawn. Write her name.', { col: '#ffe0a8' });
+      // after the engine's day card has faded
+      BW1213.after(S, 4.2, () => g.banner('THE TEMPLE', g.missions.isDone('hope') ? 'The sun is up. She\'s out there.' : 'Walk out at dawn. Write her name.', { col: '#ffe0a8' }));
       BW1213.after(S, 0.2, () => {
         if (g.missions.state('notes') === 'available') g.missions.start('notes', true);
         // her name is already on the wood but the note was never read: it's still tucked there
@@ -677,8 +678,7 @@ BW12.intro = function (g) {
   g.cutscene([
     { music: 'w9' },
     { cam: camA },
-    { banner: [BurnsWorlds.label(12).toUpperCase(), 'THE TEMPLE · SATURDAY, DAWN', { col: '#ffe0a8', big: true, dur: 3.4 }] },
-    { wait: 1.2 },
+    { wait: 1.2 },   // the engine's day card (SATURDAY DAWN · World N · The Temple) plays over this shot
     { cam: { from: camA, to: camB, dur: 4.2 } },
     { say: ['brady', ['The storm\'s gone.', '...So is she.']] },
     { say: ['brady', ['All I found was her necklace. Half buried in the dust. Still blinking.']] },
@@ -881,19 +881,21 @@ BW12.traceStep = function (g, dt) {
   const keys = Input.jump || Input.action || Input.up || Input.right || Input.left || Input.down || (Input.keys && Input.keys.enter);
   const W = Game.cssW, H = Game.cssH, o = {}, before = T.s;
   if (touch && g.R) {
-    const tol = clamp(Math.min(W, H) * 0.075, 24, 52), look = 0.09;
+    const tol = clamp(Math.min(W, H) * 0.075, 24, 52), look = 0.09, sEnd = Math.min(st.total, T.s + look);
     let best = -1, bd = 1e9;
-    for (let s = T.s; s <= Math.min(st.total, T.s + look); s += 0.004) {
+    // sample ahead of the pen, always including the exact end of the window (so the last bit of a stroke can be reached)
+    for (let s = T.s, last = false; ; s += 0.004) {
+      if (s >= sEnd) { s = sEnd; last = true; }
       const q = BW12.strokeAt(st, s);
-      if (!g.R.project(q[0], q[1], q[2], W, H, o)) continue;
-      const dd = Math.hypot(o.x - touch.x, o.y - touch.y); if (dd < bd) { bd = dd; best = s; }
+      if (g.R.project(q[0], q[1], q[2], W, H, o)) { const dd = Math.hypot(o.x - touch.x, o.y - touch.y); if (dd < bd) { bd = dd; best = s; } }
+      if (last) break;
     }
     if (best >= 0 && bd < tol) { if (best > T.s) T.s = best; T.idle = 0; }
     else { T.idle += dt; if (T.idle > 0.7) T.s += 0.16 * dt; }
   } else if (keys) T.s += 0.42 * dt;
   if (T.s > before) { T.blip += T.s - before; if (T.blip > 0.07) { T.blip = 0; burnsSfx('dialogue_blip', { vol: 0.14, pitch: 0.5 + Math.random() * 0.15 }); } }
   S.ink.done = T.si; S.ink.s = T.s;
-  if (T.s >= st.total - 0.002) {
+  if (T.s >= st.total - 0.012) {
     T.si++; T.s = 0; S.ink.done = T.si; S.ink.s = 0;
     burnsSfx('pick', { pitch: 0.75, vol: 0.3 });
     if (T.si >= T.strokes.length) { T.done = true; return true; }

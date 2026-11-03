@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 15 "EXODUS": driving + the trip
+   BRADY GOES TO BURNING MAN — World 15 "EXODUS": driving + the trip
    The Party Barge controller (an override of the art car's ride),
    the TRIP METER and everything it makes wonky (rippling ribbon
    road, rainbow trails, melting sky, breathing mountains, wings,

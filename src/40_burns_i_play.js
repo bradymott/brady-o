@@ -537,8 +537,11 @@ class BurnsPlayScene {
       const sp = v.seatPos();
       if (Math.hypot(sp[0] - p.x, sp[2] - p.z) < v.r + 1.8 && Math.abs(p.y - v.y) < 4) return { label: v.o.label || 'DRIVE', fn: () => v.mount(p) };
     }
-    if (!this.interactables) return null;
-    for (const it of this.interactables) { if (it.when && !it.when(this)) continue; if (Math.hypot(it.x - p.x, it.z - p.z) < (it.r || 2.2) && Math.abs((it.y || p.y) - p.y) < 2) return it; }
+    // world-built interactables (api.questBoard ...) + the world's own g.interactables
+    for (const L of [this.world.interacts, this.interactables]) {
+      if (!L) continue;
+      for (const it of L) { if (it.when && !it.when(this)) continue; if (Math.hypot(it.x - p.x, it.z - p.z) < (it.r || 2.2) && Math.abs((it.y || p.y) - p.y) < 2) return it; }
+    }
     return null;
   }
   talkTo(a) {

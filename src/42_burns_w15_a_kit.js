@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 15 "EXODUS" (secret): kit
+   BRADY GOES TO BURNING MAN — World 15 "EXODUS" (secret): kit
    Road spline, terrain, and the rounded models used by the world:
    the Party Barge RV (+ wings, unicorn form), patrol cars, the
    undercover convertible, jellyfish, rainbow arches, the ribbon road,

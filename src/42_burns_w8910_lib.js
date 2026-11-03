@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — shared kit for Worlds 8, 9 and 10
+   BRADY GOES TO BURNING MAN — shared kit for Worlds 8, 9 and 10
    (Hell Station · Deep Playa Showdown · The Man Pavilion)
      BurnsW8910Shape  rounded, smooth-shaded shapes. One helper per shape, so
                       each can switch to the engine's rounded primitives later.

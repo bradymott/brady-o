@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — BurnsDJ: the shared DJ-decks minigame
+   BRADY GOES TO BURNING MAN — BurnsDJ: the shared DJ-decks minigame
    ------------------------------------------------------------
    BurnsDJ.open(g, { title, bpm, genre, difficulty, duration, crowd, onDone(result) })
      g           the running BurnsPlayScene

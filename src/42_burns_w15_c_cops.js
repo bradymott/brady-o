@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 15 "EXODUS": cops, the sky, the HUD
+   BRADY GOES TO BURNING MAN — World 15 "EXODUS": cops, the sky, the HUD
    Speed traps, the checkpoint and the KEEP IT TOGETHER minigame
    (hold the lane, keep a legal speed, tap STEADY on the beat while
    the trip peaks), cartoon chases (hide in dust, behind trucks, in
@@ -331,7 +331,8 @@ const BW15C = {
     if (tv > 0.15) { const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `hsla(${(t * 70) % 360},90%,60%,${Math.min(0.3, tv * 0.22)})`); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); }
     BW15C.drawBubbles(ctx, g, S);
     // ---- trip meter (left column, under the pills)
-    const x0 = Sf.l + 6, y0 = Sf.t + 8 + Math.min(24, W / 26) * 1.4 + 28 * 3 + 6;
+    const rows = 3 + (g.packVisible && g.packVisible() ? 1 : 0);   // the engine's left column (+ its backpack pill)
+    const x0 = Sf.l + 6, y0 = Sf.t + 8 + Math.min(24, W / 26) * 1.4 + 28 * rows + 6;
     UI.pill(ctx, x0, y0, 128, 38, 'rgba(10,6,24,0.6)', 'rgba(255,255,255,0.25)');
     UI.text(ctx, 'TRIP', x0 + 8, y0 + 11, 10, '#ffffff', { align: 'left', stroke: false });
     UI.text(ctx, `BAGS ${Math.min(8, S.trip.bags)}/8`, x0 + 120, y0 + 11, 9, '#ffd0f4', { align: 'right', stroke: false, ui: true });

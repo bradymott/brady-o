@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 11: the Thunderdome bungee bout (BW11Dome)
+   BRADY GOES TO BURNING MAN — World 11: the Thunderdome bungee bout (BW11Dome)
    Two fighters hang from bungee cords tied to the dome's apex, each with a
    foam bat. Bounce off the floor, kick off the lattice, swing on the cord;
    a connecting swing knocks the other fighter flying (harder the faster you

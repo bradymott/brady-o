@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 13: THE WORKSHOPS (morning, workshop village)
+   Brady Goes to Burning Man — THE WORKSHOPS (world id 13, Saturday morning, workshop village)
    Chinka's note said: "Find me where lost loves are found: 9:00, the Workshops."
    The "Finding Your Long-Lost Love" workshop needs two stamps first.
    Comedic and tasteful: innuendo and silliness only, nothing explicit.
@@ -155,7 +155,8 @@ BurnsWorlds.register({
     for (const c of g.world.chunks) if (c.bounds && c.bounds[5] < -250) c.always = true;
     BW13.restore(g);
     if (!S.introDone) BW13.intro(g);
-    else g.banner(BurnsWorlds.label(13).toUpperCase() + ' · THE WORKSHOPS', g.missions.isDone('lostlove') ? 'Ticket revoked. Some people never learn. (You.)' : 'Two stamps. One long-lost love.', { col: '#38c8ff' });
+    // return visits: the engine's day card first, then the reminder
+    else BW1213.after(S, 4.2, () => g.banner('THE WORKSHOPS', g.missions.isDone('lostlove') ? 'Ticket revoked. Some people never learn. (You.)' : 'Two stamps. One long-lost love.', { col: '#38c8ff' }));
     void p;
   },
   onRespawn(g) {
@@ -540,7 +541,6 @@ BW13.intro = function (g) {
   g.cutscene([
     { music: 'w7' },
     { cam: camA },
-    { banner: [BurnsWorlds.label(13).toUpperCase(), 'THE WORKSHOPS · SATURDAY, 8:55 A.M.', { col: '#38c8ff', big: true, dur: 3.2 }] },
     { cam: { from: camA, to: camB, dur: 4 } },
     { say: ['brady', ['Workshop Village. Nine o\'clock. "Where lost loves are found."', 'Okay, Chinka. I\'m here.']] },
     { say: [{ name: 'GREETER DAISY', model: BurnsRig.model(BurnsRig.npcSpec('greeter_f', 2)) }, ['WELCOME HOOOME! First workshop? Sign in at the table! Everybody signs in!']] },

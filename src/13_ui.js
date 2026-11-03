@@ -62,30 +62,37 @@ function drawMenuBackdrop(ctx, themeKey, t, speed) {
   ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
   return { S: S / Game.dpr };
 }
-function drawLogo(ctx, x, y, size, t) {
+const LOGO_TEXT = (typeof BRADY_APP !== 'undefined' && BRADY_APP === 'world') ? 'SUPER BRADY-O WORLD' : 'BRADY-O';
+function drawLogo(ctx, x, y, size, t, txt) {
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = `${size}px ${FONT_DISPLAY}`;
+  const text = txt || LOGO_TEXT;
+  // long titles shrink to fit the screen instead of running off the edges
+  const fit = Math.min(1, (Game.cssW * 0.92) / Math.max(1, ctx.measureText(text).width));
+  ctx.translate(x, y); ctx.scale(fit, fit); x = 0; y = 0;
   const wob = Math.sin(t * 2) * 2;
   // glow
   ctx.shadowColor = 'rgba(255,79,216,0.9)'; ctx.shadowBlur = size * 0.5;
-  ctx.fillStyle = '#ff4fd8'; ctx.fillText('BRADY-O', x, y + wob);
+  ctx.fillStyle = '#ff4fd8'; ctx.fillText(text, x, y + wob);
   ctx.shadowBlur = 0;
   // extruded layers
-  for (let i = 6; i > 0; i--) { ctx.fillStyle = `rgba(${40 + i * 10},10,${60 + i * 12},1)`; ctx.fillText('BRADY-O', x + i * 0.8, y + wob + i * 1.4); }
+  for (let i = 6; i > 0; i--) { ctx.fillStyle = `rgba(${40 + i * 10},10,${60 + i * 12},1)`; ctx.fillText(text, x + i * 0.8, y + wob + i * 1.4); }
   const g = ctx.createLinearGradient(0, y - size / 2, 0, y + size / 2);
   g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#ffe8fb'); g.addColorStop(0.5, '#ff9ae8'); g.addColorStop(1, '#8a3aff');
-  ctx.fillStyle = g; ctx.fillText('BRADY-O', x, y + wob);
-  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1; ctx.strokeText('BRADY-O', x, y + wob);
+  ctx.fillStyle = g; ctx.fillText(text, x, y + wob);
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1; ctx.strokeText(text, x, y + wob);
   ctx.restore();
 }
 
 /* ---------------- Title: four games ---------------- */
-const GAMES = [
-  { id: 'burns', title: 'BRADY-O BURNS', sub: '3D adventure: rescue Chinka', col: '#ff6a2a' },
-  { id: 'world', title: 'SUPER BRADY-O WORLD', sub: '2D platforming across the playa', col: '#7ad86a' },
-  { id: 'kart', title: 'ART CAR KART', sub: 'Race across the playa', col: '#ff4fd8' }
+const GAMES_ALL = [
+  { id: 'burns', title: 'BURNING MAN', sub: 'Brady goes to Burning Man (3D)', col: '#ff6a2a' },
+  { id: 'world', title: 'SUPER BRADY-O WORLD', sub: 'Super Brady-O travels the world', col: '#7ad86a' },
+  { id: 'kart', title: 'ART CART', sub: 'Battle-race wild art cars', col: '#ff4fd8' }
 ];
+// the standalone Super Brady-O World app shows only its own game
+const GAMES = (typeof BRADY_APP !== 'undefined' && BRADY_APP === 'world') ? GAMES_ALL.filter(g => g.id === 'world') : GAMES_ALL;
 // Brady-O Burns (3D) lives in its own modules; find its entry scene however it was exported
 function burnsScene() {
   if (typeof BurnsHubScene !== 'undefined') return BurnsHubScene;
@@ -104,7 +111,7 @@ function startGame(id) {
   } else if (id === 'kart') {
     const K = kartScenes();
     if (K) Game.setScene(new K.KartMenuScene());
-    else if (Game.scene && Game.scene.toastMsg !== undefined) Game.scene.toastMsg = 'ART CAR KART IS STILL WARMING UP';
+    else if (Game.scene && Game.scene.toastMsg !== undefined) Game.scene.toastMsg = 'ART CART IS STILL WARMING UP';
   }
 }
 // the kart racer and the city map live in their own modules; find them however they were exported
@@ -148,7 +155,13 @@ class TitleScene {
     const gap = 12;
     let cw, ch, cols, y0;
     let by;
-    if (portrait) {
+    if (GAMES.length === 1) {
+      // a single hero card for the standalone app
+      cw = Math.min(W - side * 2, portrait ? 560 : 520); ch = Math.min(portrait ? 330 : H * 0.5, cw * (portrait ? 0.95 : 0.6));
+      y0 = this.logo.y + (portrait ? 70 : 46);
+      this.cards = [{ ...GAMES[0], x: (W - cw) / 2, y: y0, w: cw, h: ch }];
+      by = y0 + ch + 14;
+    } else if (portrait) {
       // the 3D adventure gets a full-width hero card, the other two sit side by side
       cw = (W - side * 2 - gap) / 2; ch = Math.min(250, (H - 330) / 2, cw * 1.45);
       y0 = this.logo.y + 66 + Math.max(0, (H - 330 - 2 * ch) * 0.25);
@@ -311,7 +324,7 @@ class TitleScene {
     drawBrady(ctx, { x: 0, y: 0, facing: -1, small: true, power: Save.data.eggs.headbang ? 2 : 0, anim: this.anim, hair: null, look: Save.data.look, time: this.t });
     ctx.restore();
     ctx.save(); ctx.font = `10px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.textAlign = 'center';
-    ctx.fillText('Brady-O v' + GAME_VERSION + ' · original game · four ways to play', W / 2, H - Math.max(10, insets.b + 6));
+    ctx.fillText(GAMES.length === 1 ? 'Super Brady-O World v' + GAME_VERSION + ' · an original game' : 'Brady-O v' + GAME_VERSION + ' · original games', W / 2, H - Math.max(10, insets.b + 6));
     if (this.toastT > 0) { ctx.font = `13px ${FONT_DISPLAY}`; ctx.fillStyle = '#4aff8a'; ctx.fillText(this.toastShown, W / 2, this.logo.y + this.logo.size * 0.75); }
     ctx.restore();
   }
@@ -668,15 +681,18 @@ class CreditsScene {
     const bosses = [];
     if (burns) bosses.push('The Man (four times. He really loves her.)', 'The Greeter Gauntlet', 'The Velvet Creeper', 'Chad, Founder & CEO', 'The Glitter Queen', 'DPW Foreman Rusty');
     else for (const w of WORLD3_REGIONS) { const n = bossName(w); if (n && bosses.indexOf(n) < 0) bosses.push(n); }
-    const tag = this.set === 'world' ? 'SUPER BRADY-O WORLD' : 'BRADY-O BURNS';
+    // Branding: the Burning Man game never says "Brady-O" (the hero is just Brady).
+    const head = burns ? 'BRADY GOES TO BURNING MAN' : this.set === 'world' ? 'SUPER BRADY-O WORLD' : 'BRADY-O';
+    const tag = burns ? 'ONE WEEK IN BLACK ROCK CITY' : 'A TRIP AROUND THE WORLD';
+    const nWorlds = (typeof BURNS_WORLD_ORDER !== 'undefined') ? BURNS_WORLD_ORDER.length : 17;
     this.lines = [
-      ['BRADY-O', 'h'], [tag, 'k'], ['', ''], ['Chinka is safe. The Man burned. Nobody hydrated enough.', 's'], ['', ''],
+      [head, 'h'], [tag, 'k'], ['', ''], ['Chinka is safe. The Man burned. Nobody hydrated enough.', 's'], ['', ''],
       ['STARRING', 'k'], ['Brady  ·  long hair, man bun, zero chill', 'v'], ['Chinka  ·  the actual hero, honestly', 'v'], ['Slothy  ·  very fast, for a sloth', 'v'], ['Toadie & the Toad Crew  ·  hydration consultants', 'v'], ['', ''],
       ['AND INTRODUCING', 'k'], ['The Man  ·  forty feet of wood with a crush on Chinka', 'v'], ['', ''],
       ['BURNERS WHO GOT IN THE WAY', 'k'], ['Hippies who want to talk about your aura', 'v'], ['Tech bros on electric unicycles', 'v'], ['Orgy dome creepers in fur coats', 'v'], ['Sparkle ponies who forgot water', 'v'], ['Fake spiritual pagan witches', 'v'], ['DPW. Obviously DPW.', 'v'], ['', ''],
       [burns ? 'BOSSES' : 'CAMP BOSSES', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
       ...(burns ? [
-        ['YOUR STATS', 'k'], [`Burn Tokens: ${nk(B.tokens)}`, 'v'], [`Photos of Chinka: ${nk(B.photos)}`, 'v'], [`Worlds cleared: ${nk(B.worldDone)} / 10`, 'v'], ['', ''],
+        ['YOUR STATS', 'k'], [`Burn Tokens: ${nk(B.tokens)}`, 'v'], [`Photos of Chinka: ${nk(B.photos)}`, 'v'], [`Worlds cleared: ${nk(B.worldDone)} / ${nWorlds}`, 'v'], ['', ''],
         ['Six-day drivers, stressed camp leads and greeters', 's'], ['Influencers, sparkle ponies and crusty old burners', 's'], ['It was better last year. It always is.', 's'], ['', '']
       ] : [
         ['YOUR STATS', 'k'], [`Photos of Chinka: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Man got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
@@ -700,7 +716,7 @@ class CreditsScene {
     let y = H + 20 - this.t * 40;
     for (const [txt, k] of this.lines) {
       if (y > -40 && y < H + 40) {
-        if (k === 'h') { drawLogo(ctx, W / 2, y, Math.min(56, W * 0.1), this.t); }
+        if (k === 'h') { drawLogo(ctx, W / 2, y, Math.min(56, W * 0.1), this.t, txt); }
         else { ctx.font = k === 'k' ? `13px ${FONT_DISPLAY}` : k === 's' ? `italic 15px ${FONT_UI}` : `16px ${FONT_UI}`; ctx.fillStyle = k === 'k' ? '#ffd84a' : '#ffffff'; ctx.fillText(txt, W / 2, y); }
       }
       y += k === 'h' ? 80 : 30;

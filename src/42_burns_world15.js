@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 15 (secret): EXODUS
+   BRADY GOES TO BURNING MAN — World 15 (secret): EXODUS
    Monday morning. The Man has burned, Chinka is back, and the Party
    Barge has to get out of the playa and down the highway to Gerlach.
    Departing burners hand over their last bags (every one cranks the
@@ -184,7 +184,14 @@ BurnsWorlds.register({
     api.sign('EXODUS\n← THAT WAY', 21, -530, { yaw: -Math.PI / 2, h: 1.2, style: { bg: '#ff8a3a', fg: '#ffffff', size: 40 } });
     api.crowd(-46, -470, 3, 4, { behaviors: ['dance'] }); api.crowd(48, -360, 3, 4, { behaviors: ['dance'] });
     // the Man's ashes far behind, still smoking
-    put(-62, -655, m => { m.color('#4a4248'); m.lathe([[0, 0], [20, 0], [14, 2.2], [6, 4.6], [0, 5.2]], { seg: 24, rMod: th => 1 + Math.sin(th * 5) * 0.05 }); m.color('#ff6a2a', 0.9); for (let i = 0; i < 26; i++) { const a = i / 26 * TAU, r = 3 + (i % 5) * 2.4; m.ball(Math.sin(a) * r, 3.4 - r * 0.18, Math.cos(a) * r, 0.5, { seg: 6, rings: 4 }); } m.emissive(0); return { cols: [], lights: [{ x: 0, y: 5, z: 0, s: 14, c: '#ff7a3a' }] }; });
+    put(-62, -655, m => {
+      m.color('#2e2629').shine(0); m.lathe([[0, 0], [17, 0], [12, 1.8], [5, 3.6], [0, 4.0]], { seg: 22, rMod: th => 1 + Math.sin(th * 5) * 0.06 });
+      m.color('#1a1416'); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + 0.3, r = 2 + (i % 3) * 2.5; m.limb(Math.sin(a) * r, 2.6 - r * 0.25, Math.cos(a) * r, Math.sin(a + 0.6) * (r + 3.5), 5.5 + (i % 4) * 1.4, Math.cos(a + 0.6) * (r + 3.5), 0.45, 0.32, { seg: 6 }); }
+      const lights = [];
+      m.color('#ff6a2a', 1); for (let i = 0; i < 22; i++) { const a = i / 22 * TAU, r = 2.5 + (i % 5) * 2.2, y = 3.6 - r * 0.2; m.ball(Math.sin(a) * r, y, Math.cos(a) * r, 0.6, { seg: 6, rings: 4 }); if (i % 3 === 0) lights.push({ x: Math.sin(a) * r, y: y + 0.4, z: Math.cos(a) * r, s: 2.2, c: '#ff7a2a', blink: 4 }); }
+      m.emissive(0); lights.push({ x: 0, y: 5, z: 0, s: 12, c: '#ff6a2a', pool: 26, i: 0.35 });
+      return { cols: [], lights };
+    });
     /* ================= the exit gate ================= */
     prop('gateArch', { x: 0, z: BW15.GATE_Z - 1.4, w: 34, h: 9, text: 'SEE YOU NEXT YEAR!' });
     BW15.CORRIDORS.forEach((x, i) => put(x, BW15.GATE_Z, m => BW15M.booth(m, { col: BURNS_NEON[i % 7] })));
@@ -426,6 +433,10 @@ Object.assign(BW15W, {
     S.givers = BW15W.GIVERS.map((G, i) => {
       const a = i === 7 ? S.pony : g.actor('w15giver' + i);
       const P = g.pickups.items.find(q => q.id === 'bag' + (i + 1));
+      // the last bags are ground-score baggies, but in Exodus they go straight to the TRIP METER (never the
+      // backpack, never used on screen): not gated by the ground-score flag, and their own base so the
+      // engine's pickup handler stores nothing; onTake feeds the trip meter whichever way they're collected
+      if (P) { P.score = false; P.base = 'w15bag'; P.onTake = (g2, PP) => { const S2 = BW15.state; if (!S2 || S2.g !== g2) return; S2.lastBagId = PP.id; BW15D.bagTaken(g2, S2, PP.arg); }; }
       return Object.assign({}, G, { i, id: 'bag' + (i + 1), a, pick: P, state: 'wait', t: 0, side: i === 4 ? -1 : 1, when: BW15W.giverWhen(i) });
     });
     S.givers[7].state = 'done';
@@ -454,7 +465,7 @@ Object.assign(BW15W, {
     burnsMusic('burns_w15', 'burns_w7');
     g.tod = cp ? clamp(0.15 + cp.s / 1150 * 0.85, 0, 1) : 0.02;
     if (!BurnsSave.flag(15, 'intro')) BW15W.intro(g);
-    else g.banner('EXODUS', cp ? 'Back on the road. Gerlach or bust.' : 'Monday morning. Gerlach or bust.', { col: '#ffb04a' });
+    else BW15D.later(g, 4.2, () => g.banner('GERLACH OR BUST', cp ? 'Back on the road.' : 'Hold for the pulse · take the last bags', { col: '#ffb04a', small: true }));
   },
   giverWhen(i) {
     return (g, S) => {
@@ -556,10 +567,9 @@ Object.assign(BW15W, {
     const cx = rv.x, cz = rv.z, D = BW15M.DECK;
     g.cutscene([
       { music: 'burns_ending' },
-      { cam: { x: -22, y: 14, z: -612, tx: -60, ty: 3, tz: -660, fov: 0.8 } },
-      { banner: [BurnsWorlds.label(15).toUpperCase(), 'EXODUS · MONDAY MORNING', { col: '#ffb04a', big: true, dur: 3.2 }] },
-      { wait: 2.2 },
-      { cam: { from: { x: -22, y: 14, z: -612, tx: -60, ty: 3, tz: -660, fov: 0.8 }, to: { x: cx + 9, y: D + 6, z: cz - 14, tx: cx, ty: D + 1, tz: cz + 4, fov: 0.85 }, dur: 4.2 } },
+      { cam: { x: -40, y: 9, z: -626, tx: -62, ty: 3.5, tz: -655, fov: 0.8 } },
+      { wait: 3.4 },
+      { cam: { from: { x: -40, y: 9, z: -626, tx: -62, ty: 3.5, tz: -655, fov: 0.8 }, to: { x: cx + 9, y: D + 6, z: cz - 14, tx: cx, ty: D + 1, tz: cz + 4, fov: 0.85 }, dur: 4.2 } },
       { say: [ch, ['Babe. We did it. You got me back from a giant wooden man.']] },
       { say: ['brady', ['And then he burned. Which I feel... complicated about.']] },
       { say: [ch, ['He\'ll be back next year. They always are.', 'Now: Gerlach. Pancakes. It\'s, like, twelve miles.']] },
@@ -593,10 +603,12 @@ Object.assign(BW15W, {
         S.allowExit = true; S.form.mode = 'rv'; S.form.k = 0; S.trip.peak = 0;
         if (p.vehicle) p.vehicle.dismount(p);
         rv.mv.visible = true;
-        p.teleport(tb.x + Math.sin(dYaw) * 0.75, g.world.height(tb.x, tb.z), tb.z + Math.cos(dYaw) * 0.75, dYaw + Math.PI); p.locked = true; p.animOverride = 'sit';
-        if (ch) { ch.def.seat = null; ch.setBehavior('sit'); ch.def.fixedY = true; ch.x = tb.x - Math.sin(dYaw) * 0.75; ch.z = tb.z - Math.cos(dYaw) * 0.75; ch.y = g.world.height(tb.x, tb.z); ch.yaw = dYaw; }
+        // the table's benches sit either side of its long axis (table yaw = dYaw + 90deg)
+        const bx = Math.cos(dYaw), bz = -Math.sin(dYaw), gy = g.world.height(tb.x, tb.z);
+        p.teleport(tb.x + bx * 0.8, gy, tb.z + bz * 0.8, Math.atan2(-bx, -bz)); p.locked = true; p.animOverride = 'sit';
+        if (ch) { ch.def.seat = null; ch.setBehavior('sit'); ch.def.fixedY = true; ch.x = tb.x - bx * 0.8; ch.z = tb.z - bz * 0.8; ch.y = gy; ch.yaw = Math.atan2(bx, bz); }
       } },
-      { cam: { x: tb.x + Math.cos(dYaw) * 4.5 + Math.sin(dYaw) * 1.5, y: g.world.height(tb.x, tb.z) + 2.0, z: tb.z - Math.sin(dYaw) * 4.5 + Math.cos(dYaw) * 1.5, tx: tb.x, ty: g.world.height(tb.x, tb.z) + 1.0, tz: tb.z, fov: 0.85 } },
+      { cam: { x: tb.x + Math.sin(dYaw) * 3.6 + Math.cos(dYaw) * 0.7, y: g.world.height(tb.x, tb.z) + 1.75, z: tb.z + Math.cos(dYaw) * 3.6 - Math.sin(dYaw) * 0.7, tx: tb.x, ty: g.world.height(tb.x, tb.z) + 1.1, tz: tb.z, fov: 0.8 } },
       { fade: 'in', dur: 0.8 },
       { say: [ch, ['We made it. Gerlach. Actual pancakes.']] },
       { say: ['brady', ['The pancakes are... breathing.']] },

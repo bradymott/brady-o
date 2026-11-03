@@ -1,8 +1,8 @@
 /* ============================================================
-   BRADY-O BURNS — the ending (after World 10's Burn)
+   BRADY GOES TO BURNING MAN — the ending (after World 10's Burn)
    BURNS_W8910_END.start(g)  leaves the finale, plays the epilogue
                              (StoryScene panels), then the credits
-   BurnsW8910Credits         a Burns credits roll (stats from Save.data.burns,
+   BurnsW8910Credits         a credits roll (stats from Save.data.burns,
                              every registered world and its boss), then the
                              secret teaser: "Monday morning... EXODUS", which
                              unlocks the hidden World 15.
@@ -58,10 +58,47 @@ const BURNS_W8910_END = {
   }
 };
 
-/* ---------------- the Burns credits roll + the secret teaser ---------------- */
+/* ---------------- a glowing, extruded title (the game's logo style) for any text, shrunk to fit ---------------- */
+function burnsW8910Title(ctx, txt, x, y, size, t, maxW) {
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `${size}px ${FONT_DISPLAY}`;
+  const w = ctx.measureText(txt).width;
+  if (maxW && w > maxW) { size *= maxW / w; ctx.font = `${size}px ${FONT_DISPLAY}`; }
+  const wob = Math.sin(t * 2) * 2, e = size / 52;
+  ctx.shadowColor = 'rgba(255,79,216,0.9)'; ctx.shadowBlur = size * 0.5;
+  ctx.fillStyle = '#ff4fd8'; ctx.fillText(txt, x, y + wob);
+  ctx.shadowBlur = 0;
+  for (let i = 6; i > 0; i--) { ctx.fillStyle = `rgba(${40 + i * 10},10,${60 + i * 12},1)`; ctx.fillText(txt, x + i * 0.8 * e, y + wob + i * 1.4 * e); }
+  const g = ctx.createLinearGradient(0, y - size / 2, 0, y + size / 2);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#ffe8fb'); g.addColorStop(0.5, '#ff9ae8'); g.addColorStop(1, '#8a3aff');
+  ctx.fillStyle = g; ctx.fillText(txt, x, y + wob);
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1; ctx.strokeText(txt, x, y + wob);
+  ctx.restore();
+}
+
+/* ---------------- fireworks sparks for the credits sky (self-contained: the 3D app ships without the 2D game's particles) ---------------- */
+class BurnsW8910Sparks {
+  constructor() { this.p = []; }
+  burst(x, y, n, col) {
+    for (let i = 0; i < n; i++) { const a = Math.random() * TAU, sp = 40 + Math.random() * 110; this.p.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: 0, life: 0.9 + Math.random() * 0.8, col, r: 1.6 + Math.random() * 1.6 }); }
+    if (this.p.length > 600) this.p.splice(0, this.p.length - 600);
+  }
+  update(dt) {
+    for (const q of this.p) { q.t += dt; q.vy += 60 * dt; const k = 1 - Math.min(0.9, dt * 0.9); q.vx *= k; q.vy *= k; q.x += q.vx * dt; q.y += q.vy * dt; }
+    this.p = this.p.filter(q => q.t < q.life);
+  }
+  draw(ctx) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const q of this.p) { ctx.globalAlpha = Math.max(0, 1 - q.t / q.life); ctx.fillStyle = q.col; ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+}
+
+/* ---------------- the credits roll + the secret teaser ---------------- */
 class BurnsW8910Credits {
   constructor() {
-    this.t = 0; this.stage = 'roll'; this.st = 0; this.parts = new Particles();
+    this.t = 0; this.stage = 'roll'; this.st = 0; this.parts = new BurnsW8910Sparks();
     Input.setMode('ui');
     const sv = BurnsSave.get();
     const order = (BurnsWorlds.order || BURNS_WORLD_META.map(m => m.id)).filter(id => BurnsWorlds.get(id));
@@ -71,7 +108,7 @@ class BurnsW8910Credits {
     const bosses = [];
     for (const id of order) { const d = BurnsWorlds.get(id); const b = (d.missions || []).filter(m => m.type === 'boss').map(m => m.name); for (const n of b) if (bosses.indexOf(n) < 0) bosses.push(n); }
     this.lines = [
-      ['BRADY-O', 'h'], ['BRADY-O BURNS', 'k'], ['', ''], ['Chinka is safe. The Man burned. Everybody hydrated. Mostly.', 's'], ['', ''],
+      ['BRADY GOES TO', 'h2'], ['BURNING MAN', 'h'], ['', ''], ['Chinka is safe. The Man burned. Everybody hydrated. Mostly.', 's'], ['', ''],
       ['STARRING', 'k'], ['Brady  ·  man bun, broken heart, unbreakable', 'v'], ['Chinka  ·  the actual hero, honestly', 'v'], ['The Man  ·  a very big, very silly effigy', 'v'], ['El Pulpo  ·  a fire-breathing octopus with a full tank', 'v'], ['', ''],
       ['THE ROAD TO THE BURN', 'k'], ...order.map(id => [`${label(id)}  ·  ${BurnsWorlds.get(id).name}`, 'v']), ['', ''],
       ['BOSSES (NOBODY WAS HARMED. SOME WERE HUGGED.)', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
@@ -98,7 +135,7 @@ class BurnsW8910Credits {
   update(dt) {
     this.t += dt; this.st += dt; this.parts.update(dt);
     if (this.stage === 'roll') {
-      if (Math.random() < 0.06) this.parts.burst(Math.random() * Game.cssW, Game.cssH * (0.08 + Math.random() * 0.3), 30, BURNS_NEON[Math.floor(Math.random() * 7)], 'firework');
+      if (Math.random() < 0.06) this.parts.burst(Math.random() * Game.cssW, Game.cssH * (0.08 + Math.random() * 0.3), 30, BURNS_NEON[Math.floor(Math.random() * 7)]);
       if (this.done) this.toTeaser();
     } else if (this.st > 4.2 && !this.btns.length) this.build();
     const hit = UI.hitButtons(this.btns); if (hit) hit.fn();
@@ -122,10 +159,10 @@ class BurnsW8910Credits {
     let y = H + 20 - t * 38;
     for (const [txt, k] of this.lines) {
       if (y > -40 && y < H + 40) {
-        if (k === 'h') drawLogo(ctx, W / 2, y, Math.min(52, W * 0.1), t);
+        if (k === 'h' || k === 'h2') burnsW8910Title(ctx, txt, W / 2, y, k === 'h' ? Math.min(52, W * 0.1) : Math.min(30, W * 0.06), t, W * 0.9);
         else { ctx.font = k === 'k' ? `13px ${FONT_DISPLAY}` : k === 's' ? `italic 15px ${FONT_UI}` : `16px ${FONT_UI}`; ctx.fillStyle = k === 'k' ? '#ffd84a' : '#ffffff'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 6; ctx.fillText(txt, W / 2, y); ctx.shadowBlur = 0; }
       }
-      y += k === 'h' ? 80 : 30;
+      y += k === 'h' ? 80 : k === 'h2' ? 46 : 30;
     }
     ctx.restore();
     if (y < -60) this.done = true;

@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 8: HELL STATION (hot afternoon)
+   BRADY GOES TO BURNING MAN — World 8: HELL STATION (hot afternoon)
    The playa's only gas station, run by DPW. El Pulpo (the fire octopus art
    car Brady commandeered) is running on fumes. Fuel it up. Survive DPW.
    Missions (Burn Tokens):

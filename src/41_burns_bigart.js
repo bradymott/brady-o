@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — BIG ART (src/41_burns_bigart.js)
+   BRADY GOES TO BURNING MAN — BIG ART (src/41_burns_bigart.js)
    Massive, original playa art pieces Brady can climb, ride and play on.
    They are adventure points: world files drop them in while building:
 

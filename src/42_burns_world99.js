@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 99: BIG ART SANDBOX (debug only)
+   BRADY GOES TO BURNING MAN — World 99: BIG ART SANDBOX (debug only)
    Not in BURNS_WORLD_ORDER and not on the hub. Open it from the console / tests:
      window.BRADY_BURNS.debug.play(99)
    Shows every BurnsBigArt piece (src/41_burns_bigart.js) on one open playa, with the yellow

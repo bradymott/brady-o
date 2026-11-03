@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — shared kit for Worlds 5, 6 and 7 (BW567K)
+   BRADY GOES TO BURNING MAN — shared kit for Worlds 5, 6 and 7 (BW567K)
    Everything here is an extension built on the public engine API:
      · shape helpers (one per shape) over the smooth BurnsMesh primitives
      · BW567Puppet: a rigid-skinned "entity" registered through g.addBoss()
@@ -451,7 +451,9 @@ BW567K.rhythmAuto = function (g, acc) {
 BW567K.drawRhythm = function (ctx, g) {
   const st = g.bw567rhythm; if (!st || st.done) return;
   const W = Game.cssW, H = Game.cssH, S = BurnsUI.safe(), portrait = H > W;
-  const w = Math.min(W - S.l - S.r - 16, 620), x0 = (W - w) / 2, y0 = S.t + (portrait ? 70 : 10), lh = portrait ? 46 : 40, hitX = x0 + 56, span = 2.2;
+  // keep clear of the HUD: landscape sits right of the stats column (and left of pause); portrait sits below it
+  const w = portrait ? Math.min(W - S.l - S.r - 16, 620) : Math.min(620, W - S.l - S.r - 252);
+  const x0 = portrait ? (W - w) / 2 : Math.max(S.l + 168, (W - w) / 2), y0 = S.t + (portrait ? 156 : 34), lh = portrait ? 46 : 40, hitX = x0 + 56, span = 2.2;
   ctx.save();
   ctx.fillStyle = 'rgba(12,6,26,0.72)'; rr(ctx, x0 - 8, y0 - 26, w + 16, lh * 2 + 52, 14); ctx.fill();
   ctx.strokeStyle = 'rgba(255,79,216,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();

@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 10: THE MAN PAVILION (the finale, Burn night)
+   BRADY GOES TO BURNING MAN — World 10: THE MAN PAVILION (the finale, Burn night)
    Brady skydives back in, pulls on his costume, and rides the yellow bike to
    the Man's pavilion: a flying-saucer base in the middle of the great circle.
    Missions (Burn Tokens):
@@ -82,16 +82,19 @@ BurnsWorlds.register({
     W.buildPromenade(api);
     W.buildCircle(api);
     W.buildArtCars(api);
-    W.state.rocket = W.placeArt(api, g, 'retroRocket', W.ROCKET.x, W.ROCKET.z, { rotY: -0.6, mission: 'climb' }, () => W.rocket(api));
+    // the module's Retro Rocket: ladders up the gantry to the top deck (the hidden climb, token at the summit),
+    // and a photo of Chinka at the end of the access arm; the Burn's fireworks fly from its nose cone
+    W.state.rocket = W.placeArt(api, g, 'retroRocket', W.ROCKET.x, W.ROCKET.z, { rotY: -0.6, mission: 'climb', hatchReward: { kind: 'photo', id: 'p2' } }, () => W.rocket(api));
     if (!W.state.rocket.big) W.rocketGantry(api);
-    const RP = W.state.rocket.big && W.state.rocket.info && W.state.rocket.info.summit;
-    W.state.rocketTop = RP ? [RP.x, RP.y + 3, RP.z] : [W.ROCKET.x, 22, W.ROCKET.z];
+    const RK = W.state.rocket.big ? W.state.rocket.info : null, RP = RK && RK.summit, NOSE = RK && RK.spots && RK.spots.nose;
+    W.state.rocketTop = NOSE ? [NOSE[0], NOSE[1] + 0.6, NOSE[2]] : RP ? [RP.x, RP.y + 3, RP.z] : [W.ROCKET.x, 22, W.ROCKET.z];
+    if (RP) { const m = g.missions.get('climb'); if (m) Object.assign(m.def, { target: { x: RP.x, z: RP.z, r: RP.r + 0.6, y: RP.y - 0.3 }, tokenAt: { x: RP.x, y: RP.y + 1.3, z: RP.z }, hint: 'The Retro Rocket, east of the circle: up the gantry ladders' }); }
     api.trigger({ x: W.ROCKET.x, z: W.ROCKET.z, r: 13, once: true, when: g2 => g2.missions.state('climb') === 'available', onEnter: g2 => { g2.missions.start('climb'); g2.banner('HIDDEN CHALLENGE', 'Best Seat in the House: climb the Retro Rocket!', { col: '#7aff5a' }); } });
     W.buildArena(api, g);
     W.buildCast(api);
     // collectibles
     api.pickup('photo', 0, 1.2, 9.5, { id: 'p1' });
-    { const RP2 = W.state.rocket.big && W.state.rocket.info && W.state.rocket.info.summit; if (RP2) api.pickup('photo', RP2.x + 1.2, RP2.y + 0.9, RP2.z, { id: 'p2' }); else api.pickup('photo', W.ROCKET.x - 3.0, 19.5, W.ROCKET.z + 3.0, { id: 'p2' }); }
+    if (!W.state.rocket.big) api.pickup('photo', W.ROCKET.x - 3.0, 19.5, W.ROCKET.z + 3.0, { id: 'p2' });
     api.pickup('bag:lsd', -30, 0.9, 120);
     api.hidden(() => { const steps = [[-44, 1.4, 104], [-48, 2.8, 100], [-52, 4.2, 97], [-56, 5.6, 95], [-60, 7.0, 94]]; steps.forEach(([x, y, z], i) => api.roundBox(x, y - 0.3, z, 2.4, 0.3, 2.4, burnsHSL(300 + i * 18, 0.85, 0.65), { e: 0.6, r: 0.12 })); api.glow(-60, 8.2, 94, 2.6, '#ff4fd8'); });
     api.pickup('photo', -60, 7.9, 94, { id: 'p3', hidden: true });

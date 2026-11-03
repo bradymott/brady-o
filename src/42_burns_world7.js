@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 7 (8th in play order): SUNRISE SET (pre-dawn -> sunrise)
+   BRADY GOES TO BURNING MAN — World 7 (id 7; its number in play order comes from BurnsWorlds.label): SUNRISE SET (pre-dawn -> sunrise)
    Deep playa at dawn. HEARTBEAT, a heart-topped sound art car (our own design),
    parks for the legendary sunrise set. The sun comes up as Brady earns tokens.
    The DJ at the decks is a small respectful silhouette; nobody puts words in
@@ -95,7 +95,7 @@ BurnsWorlds.register({
     if (g.missions.isDone('race')) BW7.setOn(g, true);
     const q = g.actor('queen'); if (q && !g.missions.isDone('boss')) q.hidden = true;
     if (!S.introDone) BW7.intro(g);
-    else g.banner('SUNRISE SET', 'The sun waits for no one. Neither does the bass.', { col: '#ffb0d8' });
+    else BW567K.after(g, 4.6, g2 => g2.banner('SUNRISE SET', 'The sun waits for no one. Neither does the bass.', { col: '#ffb0d8' }));
   },
   onRespawn(g) { const S = BW7.state; if (S.queenOn) { const q = g.actor('queen'); if (q && !q.defeated) { q.data.mode = 'float'; q.data.t = 3; } } },
   update(g, dt) {
@@ -580,7 +580,9 @@ BW7.talkSal = function (g, a) {
 BW7.danceOff = function (g, a) {
   const D = BW7.PLAT, p = g.player;
   p.teleport(D.x - 1.5, 0.5, D.z, Math.PI / 2); a.x = D.x + 1.5; a.z = D.z; a.yaw = -Math.PI / 2;
-  const cam = { x: D.x, y: 2.6, z: D.z + 7.5, tx: D.x, ty: 1.4, tz: D.z, fov: 0.75 };
+  // both dancers in frame: portrait screens are narrow, so pull the camera back there
+  const camL = { x: D.x, y: 2.6, z: D.z + 7.5, tx: D.x, ty: 1.4, tz: D.z, fov: 0.75 }, camP = { x: D.x, y: 3.6, z: D.z + 12.5, tx: D.x, ty: 1.2, tz: D.z, fov: 0.85 };
+  const cam = () => Game.cssH > Game.cssW ? camP : camL;
   g.banner('DANCE-OFF!', 'Tap ▲ JUMP and ◉ SPIN on the beat!', { col: '#ff4fd8' });
   BW567K.rhythm(g, { title: 'DANCE-OFF vs SHUFFLE SAL', bpm: 122, duration: 22, difficulty: 0.5, cam, anim: 'dance', music: 'burns_w7',
     onBeat(g2, bt) { if (bt % 8 === 0) g2.player.ch.k = { style: (bt / 8) % 6, bpm: 122 }; },
@@ -616,7 +618,7 @@ BW7.intro = function (g) {
   g.cutscene([
     { music: 'burns_intro' },
     { cam: { x: 30, y: 24, z: -10, tx: C.x, ty: 9, tz: C.z, fov: 0.85 } },
-    { banner: [BurnsWorlds.label(7).toUpperCase(), 'SUNRISE SET · DEEP PLAYA AT DAWN', { col: '#ffb0d8', big: true, dur: 3 }] },
+    { wait: 1.6 },   // the engine's day card (day · World N · name) plays over the establishing shot
     { cam: { from: { x: 30, y: 24, z: -10, tx: C.x, ty: 9, tz: C.z, fov: 0.85 }, to: { x: 4, y: 4, z: 150, tx: 0, ty: 6, tz: 40, fov: 0.85 }, dur: 4.5 } },
     { say: ['brady', ['The night\'s almost over. Chinka would have loved this.', 'Focus, Brady. Sunrise set first. Then propane. Then the giant wooden home-wrecker.']] },
     { do: g2 => { BurnsSave.flag(7, 'intro', true); S.introDone = true; g2.camYaw = Math.PI; g2.snapCam = true; burnsMusic('burns_w7'); } },

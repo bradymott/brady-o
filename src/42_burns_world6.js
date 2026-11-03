@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 6: THE ART CAR HUNT (night, deep playa)
+   BRADY GOES TO BURNING MAN — World 6: THE ART CAR HUNT (night, deep playa)
    El Pulpo, the fire-breathing octopus art car (our own design; "El Pulpo"
    is just its nickname), rolls through deep playa on a stuck autopilot,
    towing a hot-tub party trailer. Brady hydrates its builder, climbs aboard,
@@ -107,7 +107,7 @@ BurnsWorlds.register({
     if (done('boss')) { const c = g.actor('chad'); if (c) c.hidden = true; }
     BW6.refreshInteract(g);
     if (!S.introDone) BW6.intro(g);
-    else g.banner('THE ART CAR HUNT', 'Deep playa. Lasers. Dust. A fire-breathing octopus.', { col: '#ff7a2a' });
+    else BW567K.after(g, 4.6, g2 => g2.banner('THE ART CAR HUNT', 'Deep playa. Lasers. Dust. A fire-breathing octopus.', { col: '#ff7a2a' }));
   },
   onRespawn(g) { const S = BW6.state; if (S.chadOn) { const c = g.actor('chad'); if (c && !c.defeated) { c.data.mode = 'circle'; c.data.t = 3; } } },
   update(g, dt) {
@@ -1026,7 +1026,7 @@ BW6.intro = function (g) {
   g.cutscene([
     { music: 'burns_intro' },
     { cam: { x: 30, y: 30, z: 190, tx: 20, ty: 4, tz: 60, fov: 0.85 } },
-    { banner: [BurnsWorlds.label(6).toUpperCase(), 'THE ART CAR HUNT · DEEP PLAYA', { col: '#ff7a2a', big: true, dur: 3 }] },
+    { wait: 1.6 },   // the engine's day card (day · World N · name) plays over the establishing shot
     { do: g2 => { S.belchT = 0.1; } },
     { cam: { from: { x: 30, y: 30, z: 190, tx: 20, ty: 4, tz: 60, fov: 0.85 }, to: { x: -6, y: 3.4, z: 162, tx: c.x, ty: 5, tz: c.z, fov: 0.6 }, dur: 4 } },
     { do: g2 => { S.belchT = 0.1; } },

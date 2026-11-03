@@ -461,6 +461,47 @@ class BurnsWorld {
       traffic(def) { const T = new BurnsTraffic(W, def); W.traffic.push(T); return T; },
       // a drivable art car (and walkable moving platform). o: { x, z, yaw, build(m) -> {cols, seat, poofers, w}, maxSpeed, path: [[x,z]...], pathSpeed, label }
       artCar(o) { const v = new BurnsVehicle(W.game, 'car', o || {}); W.vehicles.push(v); return v; },
+      // an ACTION prompt in the world: {x, z, y, r, label, when(g), fn(g, it)} (kept apart from the world's own g.interactables)
+      interact(it) { (W.interacts || (W.interacts = [])).push(it); return it; },
+      // a cork quest board that opens the quest board (side quests, §7.1)
+      questBoard(o) {
+        o = o || {}; const yaw = o.yaw || 0, x = o.x || 0, z = o.z || 0;
+        const r = api.prop('questBoard', { x, z, yaw, col: o.col, seed: o.seed });
+        if (o.title !== false) api.sign(o.title || 'QUEST BOARD', x + Math.sin(yaw) * 0.26, z + Math.cos(yaw) * 0.26, { yaw, y: 2.12, h: 0.32, post: false, maxW: 2.1, style: { bg: '#3a2414', fg: '#ffe0a0', border: '#c8925a' } });
+        if (o.title && W.game) W.game.boardTitle = W.game.boardTitle || o.title;
+        api.interact({ x: x + Math.sin(yaw) * 1.3, z: z + Math.cos(yaw) * 1.3, r: 2.4, label: 'QUEST BOARD', fn: g => g.openBoard() });
+        return r;
+      },
+      // the Red Light District's pink RV + its burlesque crew (W1's ride to the Burn, W2's gear stash).
+      // o: { crew: true | n | [ids], lit, rv: false, behavior, anim: {id}, lines: {id}, chat: {id}, talk: {id}, sign: false }
+      redLightCamp(x, z, yaw, o) {
+        o = o || {}; yaw = yaw || 0;
+        const c = Math.cos(yaw), s = Math.sin(yaw), at = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
+        let rv = null, doorZ = 0.8;
+        if (o.rv !== false) {
+          rv = api.prop('redlightRV', { x, z, yaw, lit: o.lit, len: o.len });
+          doorZ = rv.door ? rv.door[1] : doorZ;
+          if (o.sign !== false && rv.sign) { const sp = at(rv.sign[0], rv.sign[2] + 0.12); api.sign('RED LIGHT\nDISTRICT', sp[0], sp[1], { yaw, y: rv.sign[1] - 0.15, h: 0.85, post: false, maxW: 2.2, style: { bg: '#2a0a18', fg: '#ff7ac8', border: '#ff2a5a', glow: '#ff2a5a' }, glow: o.lit === false ? null : '#ff2a5a' }); }
+          const dp = at(-3.2, doorZ); api.light(dp[0], dp[1], 7, '#ff3a7a', o.lit === false ? 0.25 : 0.55);
+        }
+        const all = BURNS_REDLIGHT.crew;
+        const ids = o.crew === undefined || o.crew === true ? all.map(k => k.id) : typeof o.crew === 'number' ? all.slice(0, o.crew).map(k => k.id) : Array.isArray(o.crew) ? o.crew : [];
+        // default: fanned out by the door (-X side); o.spots: [[lx, lz], ...] in the RV's local frame
+        const spots = o.spots || [[-2.9, doorZ + 0.2], [-3.4, doorZ + 2.0], [-3.3, doorZ - 1.7], [-4.6, doorZ + 0.9], [-4.4, doorZ - 0.9]];
+        const crew = ids.map((id, i) => {
+          const K = all.find(k => k.id === id) || { id, name: String(id).toUpperCase(), variant: i % 5 };
+          const sp = spots[i % spots.length], p = at(sp[0], sp[1]);
+          const d = { id: K.id, name: K.name, type: 'redlight', variant: K.variant, seed: 300 + i, x: p[0], z: p[1], yaw: yaw - Math.PI / 2 + (i - 2) * 0.3,
+            anim: (o.anim && o.anim[id]) || K.anim, lines: (o.lines && o.lines[id]) || K.lines, behavior: typeof o.behavior === 'string' ? o.behavior : (o.behavior && o.behavior[id]) || 'idle' };
+          if (o.chat && o.chat[id]) d.chat = o.chat[id];
+          if (o.talk && o.talk[id]) d.talk = o.talk[id];
+          if (o.gifts && o.gifts[id]) d.gift = o.gifts[id];
+          if (o.spots && sp[2] !== undefined) d.yaw = yaw + sp[2];
+          else if (o.spots) d.yaw = Math.atan2(p[0] - x, p[1] - z);   // face away from the RV
+          return api.npc(d);
+        });
+        return { rv, crew };
+      },
       // per-frame world logic: fn(game, dt)
       update(fn) { W.updaters.push(fn); },
       npc(d) { d.friendly = true; W.actorDefs.push(d); return d; },
@@ -572,12 +613,12 @@ class BurnsWorld {
     }
     if (c.t === 'cyl') {
       const ox = ax - c.x, oz = az - c.z, A = dx * dx + dz * dz, B2 = 2 * (ox * dx + oz * dz), C = ox * ox + oz * oz - c.r * c.r;
-      if (C < 0) return (ay >= c.y0 && ay <= c.y1) ? 0 : 2;
-      if (A < 1e-9) return 2;
-      const disc = B2 * B2 - 4 * A * C; if (disc < 0) return 2;
-      const tt = (-B2 - Math.sqrt(disc)) / (2 * A);
-      if (tt >= 0 && tt <= 1) { const y = ay + dy * tt; if (y >= c.y0 && y <= c.y1) return tt; }
-      return 2;
+      if (C < 0 && ay >= c.y0 && ay <= c.y1) return 0;
+      let best = 2;
+      if (A > 1e-9) { const disc = B2 * B2 - 4 * A * C; if (disc >= 0) { const tt = (-B2 - Math.sqrt(disc)) / (2 * A); if (tt >= 0 && tt <= 1) { const y = ay + dy * tt; if (y >= c.y0 && y <= c.y1) best = tt; } } }
+      // the top and bottom discs (segments that enter through a cap: covers seen from above, cameras looking down)
+      if (Math.abs(dy) > 1e-9) for (const yp of [c.y1, c.y0]) { const tt = (yp - ay) / dy; if (tt >= 0 && tt <= 1 && tt < best) { const x = ox + dx * tt, z = oz + dz * tt; if (x * x + z * z <= c.r * c.r) best = tt; } }
+      return best;
     }
     if (c.t === 'dome') {
       const ox = ax - c.x, oy = ay - c.y0, oz = az - c.z, A = dx * dx + dy * dy + dz * dz, B2 = 2 * (ox * dx + oy * dy + oz * dz), C = ox * ox + oy * oy + oz * oz - c.r * c.r;

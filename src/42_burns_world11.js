@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 11: SOUND CAMP CRAWL (plays 7th, after the art car hunt)
+   BRADY GOES TO BURNING MAN — World 11: SOUND CAMP CRAWL (plays 7th, after the art car hunt)
    Night on the 10:00 and 2:00 sides of the city: sound camps, lasers, bikes.
    Someone saw where the Man took Chinka: a DJ. The first DJ Brady finds is the
    wrong one (DJ Loophole, who loses a DJ-off and points him to DJ Alkali).
@@ -42,6 +42,10 @@ BW11.LOOKS = {
   alkali: () => BW11.spec('burner', 34, { body: { h: 1.08, w: 0.92, fem: true }, skin: '#d8a888', skinSh: '#b08060', face: 'lashes', hair: { style: 'mohawk', col: '#f4f4ff', hi: '#ffffff' }, glasses: 'visor', lensCol: '#38f2ff', top: { kind: 'long', col: '#d8dce8' }, bottom: { kind: 'leggings', col: '#c8ccd8', pattern: 'holo' }, shoes: { kind: 'combat', col: '#f4f4ff', sole: '#c8c8d0' }, coat: { kind: 'robe', col: '#f4f0ff', trim: '#38f2ff' }, acc: ['headset', 'ledNecklace', 'kandi'], led: '#38f2ff' }, 'alkali'),
   sherpa: () => BW11.spec('burner', 35, { face: 'tired', hat: { kind: 'cap', col: '#f4f0e8' }, top: { kind: 'tee', col: '#e8e0d0' }, vest: 'hivis', bottom: { kind: 'cargo', col: '#6a6a5a' }, shoes: { kind: 'workboots', col: '#6a4a2a' }, acc: ['toolbelt'], prop: 'clipboard' }, 'sherpa'),
   guard: i => BW11.spec('burner', 40 + i, { face: 'stern', hair: { style: 'buzz', col: '#1a1a1a' }, glasses: 'wrap', top: { kind: 'button', col: '#141418', long: true }, bottom: { kind: 'pants', col: '#141418' }, shoes: { kind: 'combat', col: '#0a0a0c' }, acc: ['earbuds'], prop: 'flashlight', body: { h: 1.08, w: 1.2 } }, 'guard' + i),
+  lou: () => BW11.spec('burner', 37, { face: 'goofy', hat: { kind: 'cap', col: '#ff3b3b' }, glasses: 'shades', top: { kind: 'tank', col: '#ff3b3b' }, bottom: { kind: 'shorts', col: '#ff3b3b' }, shoes: { kind: 'sneakers', col: '#ffffff' }, acc: ['kandi'], prop: 'radio' }, 'lou'),
+  chlorine: () => BW11.spec('burner', 38, { body: { h: 1.0, w: 0.94, fem: true }, face: 'lashes', hair: { style: 'long', col: '#38c8e8', hi: '#9ae8ff' }, glasses: 'visor', lensCol: '#5ad8ff', top: { kind: 'crop', col: '#ffffff' }, bottom: { kind: 'shorts', col: '#38a8d8' }, shoes: { kind: 'sneakers', col: '#5ad8ff' }, acc: ['headset', 'ledNecklace'] }, 'chlorine'),
+  checkout: () => BW11.spec('burner', 39, { face: 'smug', hair: { style: 'short', col: '#2a1a10' }, glasses: 'shades', top: { kind: 'tee', col: '#1a1a22' }, bottom: { kind: 'pants', col: '#1a1a22' }, shoes: { kind: 'sneakers', col: '#ffd84a' }, acc: ['headset', 'kandi'] }, 'checkout'),
+  vortex: () => BW11.spec('burner', 44, { body: { h: 1.02, w: 0.94, fem: true }, face: 'lashes', hair: { style: 'mohawk', col: '#ff4fd8', hi: '#ff9ad8' }, glasses: 'visor', lensCol: '#ff7a2a', top: { kind: 'long', col: '#ff7a2a' }, bottom: { kind: 'leggings', col: '#ff4fd8' }, shoes: { kind: 'sneakers', col: '#ff7a2a' }, acc: ['headset', 'elwire'] }, 'vortex'),
   toasty: () => BW11.spec('burner', 36, { face: 'friendly', hat: { kind: 'cap', col: '#ffe24a' }, top: { kind: 'tee', col: '#ff7a2a' }, bottom: { kind: 'shorts', col: '#2a2a34' }, shoes: { kind: 'sneakers', col: '#ffe24a' }, acc: ['beads'] }, 'toasty')
 };
 
@@ -154,6 +158,7 @@ BW11.build = function (api, g) {
   const P = BW11.P, R = api.rng;
   BW11.state = { lasers: [], timers: [], showOfferings: false, usbFree: false, hornT: 2, fogT: 0, doorLock: 0 };
   BW11Dome.active = false; BW11Dome.o = null; BW11Dome.f = null;   // a bout from an earlier visit never carries over
+  BW11.lasersOff = false;
   const S = BW11.state;
   S.showOfferings = BurnsSave.get().missions['11:quest'] === 'done';
   g.interactables = g.interactables || [];
@@ -184,6 +189,10 @@ BW11.build = function (api, g) {
   BW11.buildLoop(api, g); BW11.buildRoot(api, g); BW11.buildCurtTower(api); BW11.buildTipis(api); BW11.buildTemple(api, g);
   /* ---------- the 2:00 side ---------- */
   BW11.buildQM(api, g); BW11.buildDome(api, g); BW11.buildWobble(api, g);
+  /* ---------- extra venues (side content) ---------- */
+  BW11.buildDeepEnd(api, g); BW11.buildPlayground(api, g); BW11.buildDisorient(api, g);
+  api.sign('THE DEEP END\nDAY PARTY · ALL NIGHT', -160, -86, { yaw: 0, h: 1.0, style: { bg: '#0a2a4a', fg: '#9ae8ff', border: '#5ad8ff', size: 36, glow: '#5ad8ff' }, glow: '#5ad8ff' });
+  api.sign('DISORIENT\nTHIS WAY (ANY WAY)', 96, -92, { yaw: -0.4, h: 1.0, style: { bg: '#1a0a1a', fg: '#ff9a3a', border: '#ff4fd8', size: 36, glow: '#ff4fd8' }, glow: '#ff7a2a' });
   /* ---------- theme camps on the city side ---------- */
   BW11.camp(api, -214, 34, 1101, { yaw: 0.2, dome: true });
   BW11.camp(api, -124, 70, 1102, { yaw: -0.1, sign: 'CAMP NAP TIME\n(SHHH)', fg: '#9adcff' });
@@ -215,6 +224,9 @@ BW11.build = function (api, g) {
   api.marker('dome', P.dome.x, P.dome.z, 'Thunderdome', { col: '#ff5a3a' });
   api.marker('wob', P.wob.x, P.wob.z, 'Wobble Dome', { col: '#ff4fd8' });
   api.marker('loop', P.loop.x, P.loop.z, 'DJ Loophole', { col: '#9aff7a' });
+  api.marker('deep', P.deepFloor.x, P.deepFloor.z, 'The Deep End', { col: '#5ad8ff' });
+  api.marker('play', P.playFloor.x, P.playFloor.z, 'Playground', { col: '#ff9a3a' });
+  api.marker('dis', P.disFloor.x, P.disFloor.z, 'Disorient', { col: '#ff70b0' });
   BW11.buildPeople(api, g);
   BW11.buildPickups(api, g);
   // bike traffic: two Esplanade lanes (each way) + riders crossing the playa
@@ -241,7 +253,7 @@ BW11.buildPeople = function (api, g) {
   /* ---- the plaza ---- */
   api.npc({ id: 'mel', name: 'MEGAPHONE MEL', spec: BW11.LOOKS.mel(), x: -188, z: 66, yaw: 2.6, behavior: 'idle', gift: { kind: 'glowstick', n: 10 },
     lines: ['ATTENTION, BEAUTIFUL WEIRDOS! A giant wooden guy was spotted dancing at a sound camp!', 'Word is ONE DJ saw where he went. Which DJ? The playa won\'t say.', 'Start with the loudest camp. You can\'t miss him. Please make him stop.'],
-    chat: ['WATER IS A LIFESTYLE!', 'LOST AND FOUND IS AT CENTER CAMP! SO IS YOUR DIGNITY!', 'BIKES HAVE LIGHTS! BE LIKE BIKES!'] });
+    chat: ['WATER IS A LIFESTYLE!', 'LOST AND FOUND IS AT CENTER CAMP! SO IS YOUR DIGNITY!', 'BIKES HAVE LIGHTS! BE LIKE BIKES!', 'PLAYGROUND! THE DEEP END! DISORIENT! SO MUCH BASS, SO LITTLE SLEEP!'] });
   api.npc({ type: T('burney'), seed: 3, name: 'BURNEY', x: -205, z: 58, yaw: 1.4, behavior: 'idle', gift: { kind: 'glowstick', n: 8 }, lines: ['Hold that pose! One more! ONE MORE!', 'Perfect. You look like a man on a mission. A sad, dusty mission.', 'Here, glow sticks. For the photo shoot of your life.'] });
   /* ---- DJ Loophole's camp ---- */
   const L = P.loop;
@@ -316,6 +328,27 @@ BW11.buildPeople = function (api, g) {
     lines: ['Who\'s on next? You? Okay. OKAY. I\'m breathing.', 'Do not touch the red button. There is no red button. Don\'t look for it.', 'Here, water. Everyone on my stage is hydrated or they\'re off my stage.'] });
   api.crowd(WF.x, WF.z, 9, 16, { types: ['burner', 'furcoat', 'tutu', 'ledsuit', 'sparklepony', 'burner'], behaviors: ['dance'] });
   api.npc({ type: T('furry'), seed: 9, name: 'FURRY', x: WF.x + 6, z: WF.z + 5, behavior: 'dance', style: 1, lines: ['Alkali\'s sets make my tail go round.'] });
+  /* ---- The Deep End ---- */
+  const DE = P.deep, DF = P.deepFloor, FP = S.foam;
+  api.npc({ id: 'chlorine', name: 'DJ CHLORINE', spec: BW11.LOOKS.chlorine(), x: DE.x, z: DE.z - 0.3, y: 1.4, fixedY: true, yaw: 0, behavior: 'idle', anim: 'dj', noDJ: true,
+    lines: ['Welcome to the Deep End! Floaties optional. Dancing mandatory.', 'Day party energy, night party hours.', 'This set is chlorinated for your protection.'], chat: ['Feel that? That\'s the deep end.', 'Splash zone is to my left!'] });
+  api.npc({ id: 'lou', name: 'LIFEGUARD LOU', spec: BW11.LOOKS.lou(), x: FP.x - FP.hw - 2.2, z: FP.z - 1.5, yaw: Math.PI / 2, behavior: 'idle', talk: (g2, a) => BW11.talkLou(g2, a),
+    chat: ['NO RUNNING! ...Okay, a little running.', 'FOAM POOL IS OPEN! CANNONBALLS ONLY!', 'Tuck those knees, people!'] });
+  api.crowd(DF.x, DF.z, 7.5, 9, { types: ['burner', 'tutu', 'ledsuit', 'sparklepony', 'furcoat'], behaviors: ['dance'], lines: ['Is it a pool party if there\'s no pool?', 'I\'m in over my head and I LOVE it.', 'My floatie is my emotional support animal.', 'The Deep End has been throwing this party since before I could dance.'], extra: { chat: ['Is it a pool party if there\'s no pool?', 'I\'m in over my head and I LOVE it.', 'My floatie is my emotional support animal.', 'The Deep End has been throwing this party since before I could dance.'] } });
+  /* ---- Playground ---- */
+  const PG = P.play, PF = P.playFloor, LG = P.lounge;
+  api.npc({ id: 'checkout', name: 'DJ LATE CHECKOUT', spec: BW11.LOOKS.checkout(), x: PG.x, z: PG.z + 0.4, y: 1.6, fixedY: true, yaw: 0, behavior: 'idle', anim: 'dj', noDJ: true,
+    lines: ['I\'m the warm-up. My whole job is to make everyone want the next guy.', 'Headliner goes on at sunrise. I go on now. Then I nap in a hammock.'], chat: ['Warm-up set! Warming. Up.', 'Save some energy for sunrise!'] });
+  api.crowd(PF.x, PF.z, 9, 12, { types: ['burner', 'furcoat', 'tutu', 'ledsuit', 'sparklepony', 'influencer'], behaviors: ['dance'], lines: ['Is Carl Cox on yet?!', 'Carl Cox at sunrise. I am not moving from this spot.', 'The schedule says CARL COX. My heart says CARL COX.', 'I\'ve been holding this rail since Tuesday.', 'The warm-up DJ is cooking, though.'], extra: { chat: ['Is Carl Cox on yet?!', 'Carl Cox at sunrise. I am not moving from this spot.', 'The schedule says CARL COX. My heart says CARL COX.', 'I\'ve been holding this rail since Tuesday.', 'The warm-up DJ is cooking, though.'] } });
+  api.npc({ type: T('healer'), seed: 3, name: 'LOUNGE HOST', x: LG.x - 1.6, z: LG.z + 1.8, yaw: 0, behavior: 'idle', gift: { kind: 'water' },
+    lines: ['Welcome to the Lounge. Chai, water, a couch, and zero networking.', 'Sit. Breathe. The party will still be there. It always is.'] });
+  api.npc({ type: 'burner', seed: 412, name: 'COUCH PHILOSOPHER', x: LG.x + 2.4, z: LG.z - 2.3, yaw: 0, behavior: 'sit', lines: ['I came for the headliner. I stayed for this couch.', 'Have you ever really looked at a couch?'] });
+  /* ---- Disorient ---- */
+  const DS = P.dis, DSF = P.disFloor;
+  api.npc({ id: 'vortex', name: 'DJ VORTEX', spec: BW11.LOOKS.vortex(), x: DS.x, z: DS.z + 0.1, y: 1.2, fixedY: true, yaw: 0, behavior: 'idle', anim: 'dj', noDJ: true,
+    lines: ['Welcome to Disorient. Up is pink. Down is orange.', 'You look very oriented. We can fix that.'], chat: ['PINK! ORANGE! PINK!'] });
+  api.crowd(DSF.x, DSF.z, 6.5, 8, { types: ['burner', 'tutu', 'ledsuit', 'sparklepony'], behaviors: ['dance'], lines: ['I came here years ago and I still can\'t find the exit.', 'Everything is pink and orange and I\'ve never been happier.', 'Which way is the playa? Never mind. Don\'t care.'], extra: { chat: ['I came here years ago and I still can\'t find the exit.', 'Everything is pink and orange and I\'ve never been happier.', 'Which way is the playa? Never mind. Don\'t care.'] } });
+  api.npc({ type: T('sparklepony'), seed: 6, name: 'GLITTER GIFTER', x: DSF.x - 9, z: DSF.z + 8, yaw: 2.4, behavior: 'idle', gift: { kind: 'glowstick', n: 6 }, lines: ['Gift! For you! It\'s glow sticks. It\'s always glow sticks.', 'Radical self-expression, but make it pink.'] });
 };
 BW11.buildPickups = function (api, g) {
   const P = BW11.P, S = BW11.state;
@@ -356,13 +389,17 @@ BW11.buildPickups = function (api, g) {
   api.glowArc(V.x - 9, 0.9, V.z - 6, V.x - 2.4, 1.6, V.z - 4.6, 0.6, 5);
   // the lit Esplanade and the dark shortcut
   const tmp = {}, EL = BW11.plen(P.esp);
-  for (let s = 40; s < EL - 40; s += 13) { BW11.along(P.esp, s, tmp); if (Math.abs(tmp.x) < 150) api.pickup('glowstick', tmp.x, 0.9, tmp.z); }
+  for (let s = 40; s < EL - 40; s += 15) { BW11.along(P.esp, s, tmp); if (Math.abs(tmp.x) < 150) api.pickup('glowstick', tmp.x, 0.9, tmp.z); }
   const DL = BW11.plen(S.darkPath);
   for (let s = 6; s < DL - 4; s += 10) { BW11.along(S.darkPath, s, tmp); api.pickup('glowstick', tmp.x, 0.9, tmp.z); }
   api.glowRing(QF.x, QF.z, QF.r + 1.5, 14); api.glowArc(P.qm.x - 3, 0.9, P.qm.z + 3, P.qm.x, 3.4, P.qm.z, 1.2, 4);
   api.glowRing(P.dome.x, P.dome.z, 6, 10); api.glowLine(P.dome.x, P.dome.z + 16, P.dome.x, P.dome.z + 12, 3);
   api.glowRing(P.wobFloor.x, P.wobFloor.z, P.wobFloor.r + 1.5, 16); api.glowLine(150, -60, 150, -76, 5);
   api.glowLine(118, -40, 140, -64, 6);
+  // the extra venues: a ring each, and a trail up the high dive
+  const DF = P.deepFloor, PF = P.playFloor, DSF = P.disFloor, DV = P.dive;
+  api.glowRing(DF.x, DF.z, DF.r + 1.4, 8); api.glowRing(PF.x, PF.z, PF.r + 1.6, 8); api.glowRing(DSF.x, DSF.z, DSF.r + 1.4, 8);
+  api.glowsticks([[DV.x + 0.75, 2.9, DV.z], [DV.x - 0.75, 4.9, DV.z], [DV.x + 0.75, 6.9, DV.z + 1.0]]);
 };
 
 /* ---------------- start, update, extra visuals ---------------- */
@@ -389,6 +426,16 @@ BW11.update = function (g, dt) {
   // fog at Camp ?
   const Q = P.qm;
   if (Math.hypot(p.x - Q.x, p.z - Q.z) < 70 && Math.random() < dt * 9) { const a = Math.random() * TAU, r = Math.random() * 12; g.fx.add(Q.x + Math.sin(a) * r, 0.3, Q.z + 20 + Math.cos(a) * r, (Math.random() - 0.5) * 0.4, 0.15, (Math.random() - 0.5) * 0.4, 4, 2, 5, [0.75, 0.7, 1], 0.12, 'smoke', 4); }
+  // the high dive at The Deep End: a big drop into the foam pool is a cannonball (ground pound = a perfect 10)
+  const FP = S.foam;
+  if (FP && !p.vehicle) {
+    if (!p.grounded) { S.airTop = Math.max(S.airTop === undefined ? p.y : S.airTop, p.y); if (p.pound === 2) S.airPound = true; }
+    else {
+      if (S.wasAir && S.airTop - p.y > 3.5 && Math.abs(p.x - FP.x) < FP.hw + 0.6 && Math.abs(p.z - FP.z) < FP.hl + 0.6) BW11.cannonball(g, S.airTop - p.y, !!S.airPound);
+      S.airTop = p.y; S.airPound = false;
+    }
+    S.wasAir = !p.grounded;
+  }
   // the bass is back at Root Society: notes float up from the speakers
   if (S.bassOn && Math.random() < dt * 2.5) { const c = S.rootCones[Math.floor(Math.random() * S.rootCones.length)]; if (c) g.fx.notes(c[0], c[1] + 0.5, c[2] + 0.4); }
 };
@@ -414,6 +461,21 @@ BW11.doorWarp = function (g, i) {
   g.fx.ring(p.x, p.y + 1, p.z, 2.4, '#38f2ff', 0.5); g.fx.burst(p.x, p.y + 1.2, p.z, 'star', 12, '#ff4fd8');
   burnsSfx('portal', null, 'secret');
   g.toast(['...?', 'WAIT, WHERE?', 'WHO PUT THAT DOOR THERE?', 'THE CAMP IS ASKING QUESTIONS'][Math.floor(Math.random() * 4)]);
+};
+
+/* ---------------- The Deep End: the high dive ---------------- */
+BW11.talkLou = function (g, a) {
+  if (BurnsSave.flag(11, 'cannonball')) { g.say(a, ['That cannonball is still echoing across the playa. Legend.', 'Pool\'s open all night. Go again, show-off.']); return; }
+  g.say(a, ['Welcome to the Deep End! Lifeguard on duty. Mostly.', 'See the high dive? Climb it, walk the board, cannonball into the foam.', 'Ground pound on the way down and I\'ll score you a perfect ten.']);
+};
+BW11.cannonball = function (g, drop, pound) {
+  const p = g.player, lou = g.actor('lou'), score = pound ? 10 : drop > 7 ? 8 : 7;
+  g.fx.burst(p.x, p.y + 0.5, p.z, 'dot', pound ? 46 : 30, '#ffffff'); g.fx.smoke(p.x, p.y + 0.3, p.z, pound ? 14 : 9, '#f4fbff'); g.fx.ring(p.x, p.y + 0.3, p.z, pound ? 4.5 : 3.2, '#bfe8ff', 0.6);
+  burnsSfx('splash', { vol: 0.8 }); burnsSfx('crowd_cheer', { vol: pound ? 0.8 : 0.5 }); g.shake(pound ? 0.35 : 0.2);
+  if (lou) { lou.say(score === 10 ? 'TEN! PERFECT CANNONBALL!' : score === 8 ? 'EIGHT! Huge splash!' : 'SEVEN! Tuck those knees!', 2.6); lou.ch.play('cheer'); }
+  for (const a of g.actors) if (a.friendly && !a.removed && a !== lou && Math.hypot(a.x - p.x, a.z - p.z) < 16 && a.behName === 'dance') a.ch.play('cheer');
+  g.toast(`CANNONBALL! ${score}/10`);
+  if (!BurnsSave.flag(11, 'cannonball')) { BurnsSave.flag(11, 'cannonball', true); g.addGlow(15); p.givePower('water'); BW11.after(g, 1.2, g2 => g2.toast('LIFEGUARD LOU: +15 GLOW STICKS')); }
 };
 
 /* ---------------- story: intro ---------------- */

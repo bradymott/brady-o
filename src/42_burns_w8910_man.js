@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — the Man, extended for Worlds 9 and 10.
+   BRADY GOES TO BURNING MAN — the Man, extended for Worlds 9 and 10.
    BurnsW8910Man extends the engine's BurnsManBoss (same rules: combo of
    attacks, then he collapses and only his glowing head can be bonked) and
    adds attacks:

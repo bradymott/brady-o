@@ -259,6 +259,7 @@ const BurnsUI = {
     if (!(g.dayCardT >= 0)) return;
     const day = BurnsWorlds.day(g.worldId); if (!day) { g.dayCardT = -1; return; }
     if (g.fade > 0.6) return;   // wait for the fade-in
+    if (g.dayCardT === 0 && g.banners.length && g.banners[0].big) return;   // never on top of a big banner
     g.dayCardT += fdt; const t = g.dayCardT, D = 3.8;
     if (t > D) { g.dayCardT = -1; return; }
     const W = Game.cssW, H = Game.cssH, a = clamp(Math.min(t / 0.45, (D - t) / 0.7), 0, 1);
@@ -513,7 +514,7 @@ const BurnsUI = {
       sub = BurnsSave.groundScore() ? 'Ground scores and goodies. USE one when the moment is right.' : 'Sunscreen, a mystery granola bar and good intentions.';
     } else if (tab === 'board') {
       const side = g.missions.side();
-      title = (g.def.boardTitle || 'QUEST BOARD').toUpperCase();
+      title = (g.boardTitle || g.def.boardTitle || 'QUEST BOARD').toUpperCase();
       sub = `${side.filter(m => m.state === 'done').length} / ${side.length} side quests done`;
     } else {
       const a = g.tradeCtx && g.tradeCtx.actor;

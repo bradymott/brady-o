@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 9: DEEP PLAYA SHOWDOWN (night, dust storm)
+   BRADY GOES TO BURNING MAN — World 9: DEEP PLAYA SHOWDOWN (night, dust storm)
    A dust storm rolls over the deep playa. The Temple glows far behind Brady
    (a quiet place: no fighting there). The Man is out here with Chinka.
    Missions (Burn Tokens):
@@ -79,7 +79,10 @@ BurnsWorlds.register({
     // (placed at the fixed base spot every visit; W9.LIGHT is where the beacon ends up: our tower top or the module's summit)
     const LB = W9.LIGHT_BASE || (W9.LIGHT_BASE = Object.assign({}, W9.LIGHT));
     W9.LIGHT = Object.assign({}, LB);
-    st.art.lh = W9.placeArt(api, g, 'lighthouses', LB.x, LB.z, { rotY: 0.3, onReach: g2 => { if (g2.missions.state('whiteout') === 'active') BURNS_W9.beacon(g2); } }, () => W9.lighthouses(api));
+    // the module's piece: climb a spiral stair, ACTION "LIGHT IT!" wakes the beacon (our own darkwads, so none of its own;
+    // on later visits Leaning Lou is already lit)
+    st.art.lh = W9.placeArt(api, g, 'lighthouses', LB.x, LB.z, { rotY: 0.3, darkwads: 0, lit: st.beaconOn ? [true, false, false] : undefined,
+      onLit: g2 => { if (g2.missions.state('whiteout') === 'active') BURNS_W9.beacon(g2); } }, () => W9.lighthouses(api));
     if (!st.art.lh.big) W9.lighthouseClimb(api);
     else { const P = st.art.lh.info; if (P && P.summit) { W9.LIGHT.x = P.summit.x; W9.LIGHT.z = P.summit.z; W9.LIGHT.top = P.summit.y; } }
     api.checkpoint('cp_start', 6, 146, { yaw: Math.PI, name: 'Temple Road' });
@@ -507,7 +510,7 @@ BURNS_W9.update = function (g, dt) {
   // lost burners following Brady: are they home?
   BURNS_W9.lostUpdate(g, dt);
   // the beacon switch at the top of the lighthouse
-  if (!S.beaconOn && g.missions.state('whiteout') === 'active' && Math.hypot(p.x - W9.LIGHT.x, p.z - W9.LIGHT.z) < 3.4 && p.y > W9.LIGHT.top - 1.0) BURNS_W9.beacon(g);
+  if (!(S.art && S.art.lh && S.art.lh.big) && !S.beaconOn && g.missions.state('whiteout') === 'active' && Math.hypot(p.x - W9.LIGHT.x, p.z - W9.LIGHT.z) < 3.4 && p.y > W9.LIGHT.top - 1.0) BURNS_W9.beacon(g);
 };
 BURNS_W9.env = function (g, env) {
   const S = BURNS_W9.state, k = S.storm * (S.goggles ? 0.55 : 1);
@@ -547,7 +550,7 @@ BURNS_W9.lampTalk = function (g, a) {
   } else if (st === 'active') g.say(a, [BURNS_W9.state.beaconOn ? 'The beacon is awake! Now follow the lamps north to the Outpost.' : 'The Leaning Lighthouses are just east. Climb the stairs around the tall one.']);
   else g.say(a, ['You made it through. The lamps are proud of you. So am I.']);
 };
-BURNS_W9.whiteoutShort = function (g) { const m = g.missions.get('whiteout'); if (m) m.def.short = BURNS_W9.state.beaconOn ? 'Follow the lamps to the Outpost' : 'Wake the beacon atop the Leaning Lighthouses'; if (m) m.def.marker = BURNS_W9.state.beaconOn ? { x: -10, z: 4 } : { x: 36, z: 120 }; };
+BURNS_W9.whiteoutShort = function (g) { const S = BURNS_W9.state, big = !!(S.art && S.art.lh && S.art.lh.big), m = g.missions.get('whiteout'); if (m) m.def.short = S.beaconOn ? 'Follow the lamps to the Outpost' : big ? 'Climb a lighthouse and LIGHT IT!' : 'Wake the beacon atop the Leaning Lighthouses'; if (m) m.def.marker = BURNS_W9.state.beaconOn ? { x: -10, z: 4 } : { x: 36, z: 120 }; };
 BURNS_W9.beacon = function (g) {
   const S = BURNS_W9.state; if (S.beaconOn) return;
   S.beaconOn = true; BurnsSave.flag(9, 'beacon', true);

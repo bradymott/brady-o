@@ -3101,7 +3101,7 @@ Object.assign(KartRaceScene.prototype, {
     kartMenuBackdrop(ctx, W, H, performance.now() / 1000);
     ctx.fillStyle = 'rgba(6,4,14,0.55)'; ctx.fillRect(0, 0, W, H);
     kartText(ctx, 'ENGINE TROUBLE', W / 2, H * 0.36, Math.min(32, W * 0.07), '#ffd84a', {});
-    kartText(ctx, this.noglMsg || 'Art Car Kart needs WebGL, which this browser has turned off.', W / 2, H * 0.36 + 36, 13, '#ffffff', { ui: true, stroke: false });
+    kartText(ctx, this.noglMsg || 'Art Cart needs WebGL, which this browser has turned off.', W / 2, H * 0.36 + 36, 13, '#ffffff', { ui: true, stroke: false });
     kartText(ctx, 'Try updating Safari, or turn off Low Power Mode.', W / 2, H * 0.36 + 56, 12, 'rgba(255,255,255,0.75)', { ui: true, stroke: false });
     UI.drawButtons(ctx, this.btns);
   },
@@ -3497,9 +3497,10 @@ class KartMenuScene {
       this.btns = [
         { x, y: y0, w: bw, h: 48, label: 'GRAND PRIX', primary: true, fn: () => { Sound.play('select'); this.gpMode = true; this.state = 'char'; this.build(); } },
         { x, y: y0 + 56, w: bw, h: 42, label: 'TIME TRIAL', fn: () => { Sound.play('select'); this.gpMode = false; this.state = 'char'; this.build(); } },
-        { x: x + bw * 0.12, y: y0 + 106, w: bw * 0.76, h: 34, size: 11, label: 'AUTO-GAS: ' + (ks.autoGas !== false ? 'ON' : 'OFF'), fn: () => { ks.autoGas = ks.autoGas === false; Save.save(); Sound.play('select'); this.build(); } },
-        backBtn
+        { x: x + bw * 0.12, y: y0 + 106, w: bw * 0.76, h: 34, size: 11, label: 'AUTO-GAS: ' + (ks.autoGas !== false ? 'ON' : 'OFF'), fn: () => { ks.autoGas = ks.autoGas === false; Save.save(); Sound.play('select'); this.build(); } }
       ];
+      // In the standalone Art Cart app this menu IS home, so there is nothing to go back to.
+      if (typeof BRADY_APP === 'undefined' || BRADY_APP !== 'kart') this.btns.push(backBtn);
       this.btns.focus = 0;
     } else if (this.state === 'char') {
       const top = portrait ? Math.max(100, insets.t + 96) : Math.max(64, insets.t + 58);
@@ -3586,11 +3587,11 @@ class KartMenuScene {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = `${s}px ${FONT_DISPLAY}`;
     const wob = Math.sin(this.t * 2) * 2;
-    for (let i = 6; i > 0; i--) { ctx.fillStyle = `rgba(${30 + i * 12},8,${50 + i * 10},1)`; ctx.fillText('ART CAR KART', i * 0.9, wob + i * 1.4); }
+    for (let i = 6; i > 0; i--) { ctx.fillStyle = `rgba(${30 + i * 12},8,${50 + i * 10},1)`; ctx.fillText('ART CART', i * 0.9, wob + i * 1.4); }
     ctx.shadowColor = '#ff4fd8'; ctx.shadowBlur = s * 0.45;
     const g = ctx.createLinearGradient(0, -s / 2, 0, s / 2); g.addColorStop(0, '#fff8d0'); g.addColorStop(0.45, '#ffd84a'); g.addColorStop(0.55, '#ff8a3a'); g.addColorStop(1, '#ff4fd8');
-    ctx.fillStyle = g; ctx.fillText('ART CAR KART', 0, wob);
-    ctx.shadowBlur = 0; ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.strokeText('ART CAR KART', 0, wob);
+    ctx.fillStyle = g; ctx.fillText('ART CART', 0, wob);
+    ctx.shadowBlur = 0; ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.strokeText('ART CART', 0, wob);
     ctx.restore();
   }
   drawMode(ctx) {

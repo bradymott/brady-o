@@ -82,13 +82,16 @@ class BurnsHubScene {
     const rx = W - S.r;
     this.btns.push({ x: rx - bw, y: S.t, w: bw, h: 36, label: 'STORY', size: 12, fn: () => this.playIntro() });
     if (BurnsSave.hasItem('costumes') || window.__burnsAllCostumes) this.btns.push({ x: rx - bw * 2 - 8, y: S.t, w: bw + 10, h: 36, label: 'WARDROBE', size: 11, fn: () => { this.wardrobe = true; this.buildWardrobe(); burnsSfx('costume'); } });
+    // HOME: jump straight to Brady's tipi once the home world is unlocked
+    const home = BurnsWorlds.home(), sv0 = BurnsSave.get();
+    if (home && sv0.unlocked[home] && BurnsWorlds.get(home)) this.btns.push({ x: this.map.x + 8, y: this.map.y + 8, w: 84, h: 30, label: '\u2302 HOME', size: 11, fn: () => { this.sel = home; this.play(); } });
     const P = this.panel;
     this.playBtn = { x: P.x + 12, y: P.y + P.h - 58, w: P.w - 24, h: 46, label: 'PLAY', primary: true, fn: () => this.play() };
     this.btns.push(this.playBtn);
     this.btns.focus = this.btns.length - 1;
     // one pin per world in play order (labelled by position); ids without metadata get a spot on a ring
     const O = BurnsWorlds.visible();
-    this.nodes = O.map((id, i) => { const m = BurnsWorlds.meta(id), a = i / O.length * TAU, h = BURNS_WORLD_META.find(k => k.id === id) ? m.hub : { x: 0.5 + Math.sin(a) * 0.4, y: 0.5 + Math.cos(a) * 0.4 }; return { id, n: BurnsWorlds.num(id), secret: BurnsWorlds.isSecret(id), x: this.map.x + h.x * this.map.w, y: this.map.y + h.y * this.map.h, col: m.col }; });
+    this.nodes = O.map((id, i) => { const m = BurnsWorlds.meta(id), a = i / O.length * TAU, h = BURNS_WORLD_META.find(k => k.id === id) ? m.hub : { x: 0.5 + Math.sin(a) * 0.4, y: 0.5 + Math.cos(a) * 0.4 }; return { id, n: BurnsWorlds.num(id), secret: BurnsWorlds.isSecret(id), home: BurnsWorlds.isHome(id), day: BurnsWorlds.dayShort(id), x: this.map.x + h.x * this.map.w, y: this.map.y + h.y * this.map.h, col: m.col }; });
     this.nodeR = clamp(Math.min(this.map.w, this.map.h) / 17, 12, 17);
     if (this.wardrobe) this.buildWardrobe();
   }
@@ -132,7 +135,7 @@ class BurnsHubScene {
     // header
     const S = BurnsUI.safe();
     const hy = W < H ? S.t + 58 : S.t + 18;
-    BurnsUI.text(ctx, 'BRADY-O BURNS', W / 2, hy, Math.min(26, W / 16), '#ff9a4a', { glow: '#ff4fd8' });
+    BurnsUI.text(ctx, 'BRADY GOES TO BURNING MAN', W / 2, hy, BurnsUI.fitSize(ctx, 'BRADY GOES TO BURNING MAN', Math.min(26, W / 16), W - 230), '#ff9a4a', { glow: '#ff4fd8' });
     BurnsUI.text(ctx, `Burn Tokens ${BurnsSave.tokenCount()}  ·  Photos ${BurnsSave.photoCount()}  ·  Glow ${sv.glow}`, W / 2, hy + 22, 11, 'rgba(255,255,255,0.8)', { ui: true, stroke: false });
     this.drawPanel(ctx, sv);
     UI.drawButtons(ctx, this.btns);
@@ -173,6 +176,17 @@ class BurnsHubScene {
         if (sel) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; rr(ctx, -r * 1.25, -r * 0.67, r * 2.5, r * 1.25, 7); ctx.stroke(); }
         ctx.restore(); BurnsUI.text(ctx, 'SECRET', n.x, n.y + r + 9, 10, '#ffd890', { glow: '#ffb040' }); continue;
       }
+      if (n.home) { // Brady's home: a canvas tipi with crossed poles and a warm glowing door
+        ctx.save(); ctx.translate(n.x, n.y + r * 0.15);
+        if (sel || un) { ctx.shadowColor = un ? '#ffb060' : 'transparent'; ctx.shadowBlur = sel ? 22 : 10 + Math.sin(t * 3) * 3; }
+        ctx.fillStyle = un ? '#f0dcae' : '#5a4a5a'; ctx.beginPath(); ctx.moveTo(0, -r * 1.25); ctx.lineTo(r * 1.05, r * 0.85); ctx.lineTo(-r * 1.05, r * 0.85); ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0; ctx.strokeStyle = sel ? '#ffffff' : 'rgba(255,255,255,0.65)'; ctx.lineWidth = sel ? 3 : 1.5; ctx.stroke();
+        ctx.strokeStyle = un ? '#7a4a2a' : '#3a2a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-r * 0.32, -r * 1.65); ctx.lineTo(r * 0.12, -r * 0.95); ctx.moveTo(r * 0.32, -r * 1.65); ctx.lineTo(-r * 0.12, -r * 0.95); ctx.stroke();
+        if (un) { ctx.fillStyle = '#c86a3a'; ctx.fillRect(-r * 0.9, r * 0.25, r * 1.8, r * 0.16); ctx.fillStyle = `rgba(255,${190 + 40 * Math.sin(t * 4) | 0},110,0.95)`; ctx.beginPath(); ctx.moveTo(0, r * 0.05); ctx.lineTo(r * 0.36, r * 0.85); ctx.lineTo(-r * 0.36, r * 0.85); ctx.closePath(); ctx.fill(); }
+        else BurnsUI.text(ctx, '🔒', 0, r * 0.3, Math.round(R0 * 0.6), '#ffffff', { stroke: false });
+        ctx.restore();
+        if (un) { const tk = BurnsSave.tokenCount(n.id), tot = BurnsWorlds.tokenTotal(n.id); BurnsUI.text(ctx, reg ? `HOME ${tk}/${tot}` : 'HOME', n.x, n.y + r + 11, R0 < 15 ? 9 : 10, done ? '#7aff5a' : '#ffe0a0'); }
+      } else {
       ctx.save();
       if (sel) { ctx.shadowColor = n.col; ctx.shadowBlur = 20; }
       ctx.fillStyle = un ? n.col : '#5a4a5a'; ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, TAU); ctx.fill();
@@ -180,6 +194,9 @@ class BurnsHubScene {
       ctx.restore();
       BurnsUI.text(ctx, un ? String(n.n) : '🔒', n.x, n.y + 1, un ? Math.round(R0 * 0.85) : Math.round(R0 * 0.7), un ? '#1a0a1a' : '#ffffff', { stroke: false });
       if (un) { const tk = BurnsSave.tokenCount(n.id), tot = BurnsWorlds.tokenTotal(n.id); BurnsUI.text(ctx, reg ? `${tk}/${tot}` : 'SOON', n.x, n.y + r + 9, R0 < 15 ? 9 : 10, done ? '#7aff5a' : '#ffffff'); }
+      }
+      // the day of the Burn week above every pin
+      if (n.day) BurnsUI.text(ctx, n.day, n.x, n.y - r - (n.home ? 15 : 8), R0 < 15 ? 7.5 : 8.5, un ? '#ffd0f4' : 'rgba(255,255,255,0.45)', { ui: true, sw: 2.5 });
       if (this.newUnlock === n.id && this.t < 3) { ctx.save(); ctx.strokeStyle = `rgba(255,255,255,${1 - this.t / 3})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(n.x, n.y, 20 + this.t * 30, 0, TAU); ctx.stroke(); ctx.restore(); }
     }
     ctx.restore();
@@ -190,7 +207,8 @@ class BurnsHubScene {
     UI.panel(ctx, P.x, P.y, P.w, P.h);
     const portrait = Game.cssH > Game.cssW;
     let y = P.y + 22;
-    BurnsUI.text(ctx, BurnsWorlds.label(this.sel).toUpperCase(), P.x + P.w / 2, y, 12, m.col); y += 22;
+    const day = BurnsWorlds.day(this.sel);
+    BurnsUI.text(ctx, BurnsWorlds.label(this.sel).toUpperCase() + (day ? '  \u00b7  ' + day.toUpperCase() : ''), P.x + P.w / 2, y, BurnsUI.fitSize(ctx, BurnsWorlds.label(this.sel).toUpperCase() + (day ? '  \u00b7  ' + day.toUpperCase() : ''), 12, P.w - 20), m.col); y += 22;
     ctx.save(); ctx.font = `${Math.min(18, P.w / 12)}px ${FONT_DISPLAY}`; const nl = BurnsUI.wrap(ctx, m.name.toUpperCase(), P.w - 24); ctx.restore();
     nl.forEach(l => { BurnsUI.text(ctx, l, P.x + P.w / 2, y, Math.min(18, P.w / 12), '#ffffff'); y += 22; });
     ctx.save(); ctx.font = `12px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.textAlign = 'center';
@@ -199,6 +217,8 @@ class BurnsHubScene {
     y += portrait ? 4 : 14;
     if (un && reg) {
       const rows = [['token', `${BurnsSave.tokenCount(this.sel)} / ${BurnsWorlds.tokenTotal(this.sel)} Burn Tokens`], ['photo', `${BurnsSave.photoCount(this.sel)} / 3 Photos of Chinka`], ['glowstick', `Best: ${sv.glowWorld[this.sel] || 0} glow sticks`]];
+      const wd = BurnsWorlds.get(this.sel), sideQ = wd ? wd.missions.filter(q => q && q.side) : [];
+      if (sideQ.length) rows.splice(1, 0, ['token', `${sideQ.filter(q => (q.token ? BurnsSave.hasToken(this.sel, q.id) : sv.missions[this.sel + ':' + q.id] === 'done')).length} / ${sideQ.length} side quests done`]);
       for (const r of rows) { if (y > this.playBtn.y - 24) break; BurnsUI.icon(ctx, r[0], P.x + 26, y, 20); BurnsUI.text(ctx, r[1], P.x + 44, y, 11, '#ffffff', { align: 'left', ui: true, stroke: false }); y += portrait ? 22 : 26; }
       if (sv.worldDone[this.sel]) BurnsUI.text(ctx, '✓ BOSS DEFEATED', P.x + P.w / 2, Math.min(y + 4, this.playBtn.y - 12), 11, '#7aff5a');
     } else if (!un) { const pv = BurnsWorlds.prev(this.sel); BurnsUI.text(ctx, pv ? `Beat the boss of ${BurnsWorlds.label(pv)} to unlock.` : 'Locked.', P.x + P.w / 2, y + 10, 11, '#ffd84a', { ui: true, stroke: false }); }

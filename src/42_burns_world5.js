@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY-O BURNS — World 5: COSTCO SOUL TRADING CO. (midday -> golden afternoon)
+   BRADY GOES TO BURNING MAN — World 5: COSTCO SOUL TRADING CO. (midday -> golden afternoon)
    A parody gifting "warehouse" camp (our own design; the name is a nod).
    Brady meets BISCUIT, a platonic burner buddy, who helps him find out
    where the fire-breathing octopus art car roams.
@@ -149,7 +149,7 @@ BurnsWorlds.register({
     if (g.missions.isDone('furry')) { const f = g.actor('furry'); if (f) { f.x = -4; f.z = 120; f.home = { x: -4, z: 120 }; f.setBehavior('dance'); } }
     g.tod = Math.min(1, BurnsSave.tokenCount(5) * 0.14);
     if (!S.introDone) BW5.intro(g);
-    else g.banner('COSTCO SOUL TRADING CO.', 'Gifting is not bartering. Bulk is a lifestyle.', { col: '#38f2ff' });
+    else BW567K.after(g, 4.6, g2 => g2.banner('COSTCO SOUL TRADING CO.', 'Gifting is not bartering. Bulk is a lifestyle.', { col: '#38f2ff' }));
   },
   onRespawn(g) { const S = BW5.state; if (S.baron && !S.baron.defeated && S.bossOn) { S.baron.data.mode = 'drive'; S.baron.data.t = 3; } },
   update(g, dt) {
@@ -1204,7 +1204,7 @@ BW5.intro = function (g) {
   g.cutscene([
     { music: 'burns_intro' },
     { cam: { x: 46, y: 34, z: 170, tx: 0, ty: 8, tz: 40, fov: 0.85 } },
-    { banner: [BurnsWorlds.label(5).toUpperCase(), 'COSTCO SOUL TRADING CO.', { col: '#38f2ff', big: true, dur: 3 }] },
+    { wait: 1.6 },   // the engine's day card (day · World N · name) plays over the establishing shot
     { cam: { from: { x: 46, y: 34, z: 170, tx: 0, ty: 8, tz: 40, fov: 0.85 }, to: { x: 6, y: 3.2, z: 146, tx: 0, ty: 4, tz: 60, fov: 0.85 }, dur: 4 } },
     { say: ['brady', ['The informant said everybody passes through Costco Soul Trading Co. eventually.', 'If I\'m catching a forty-foot wooden guy with a crush on my wife, I need wheels. Big ones. Preferably on fire.']] },
     { cam: { x: -2, y: 2.4, z: 70, tx: -7, ty: 1.6, tz: 62.6, fov: 0.8 } },

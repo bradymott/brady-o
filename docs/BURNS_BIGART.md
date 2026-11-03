@@ -1,4 +1,4 @@
-# BRADY-O BURNS: Big Art Guide
+# Brady Goes to Burning Man: Big Art Guide
 
 Big Art pieces are massive, original playa art installations Brady can climb, ride and play on. Each one is a self-contained adventure point: geometry, colliders, gameplay hooks, night lighting and an optional Burn Token at the summit. Drop one or two into your world with a single call.
 
@@ -177,7 +177,7 @@ A towering basket-woven cathedral of bent saplings: a pointed-arch nave and a tw
 - **Footprint** 20 × 32 m (nave z −16 … +12, door at +Z). **Height** 38 m. **Summit** the bird's nest inside the spire, 26 m.
 - **Gameplay** (a jungle gym): log step → woven nests → woven ladder → west gallery (7.6 m) → tie-beam across the nave → east gallery → nests → ladder to the crossing loft (15 m) → ladder up the spire's core to the bird's nest.
   - Day: sunlight shafts pour through the weave. Night: hanging lanterns, glowing rose window, a beacon on the spire.
-- **Options** `nestReward`, `burnable` (default `true`: builds the low-detail collapse copies the burn needs, ~4.5k mover vertices; `false` to save them if you never burn it), `burned` (force the burned state).
+- **Options** `nestReward`, `burnable` (default `true`: builds the low-detail collapse copies and the ember pile the burn needs, ~2.9k mover vertices; `false` to save them if you never burn it), `burned` (force the burned state).
 - **Spots** `nest, loft, door, westGallery, eastGallery` (`pile` once burned).
 - **Mission ideas** "Bird's Nest Bell"; hide-and-seek inside; W12 (Temple world) as a quiet climbing space; **the burn** (below).
 
@@ -302,4 +302,4 @@ All pieces stay inside the guide's budget: one or two pieces add roughly 10k–3
 ## 7. Testing
 
 - Sandbox: `window.BRADY_BURNS.debug.play(99)`; `BurnsBigArt` is on `window.BRADY_BURNS_BIGART` for tests. Set `scene.tod = 1` for night.
-- The scripted tests (Playwright) drive Brady with real inputs along each piece's `route` to its summit, ride the loop, launch off the ramp, get flung, zip, light the lamps, and launch the rocket, in both orientations with zero page errors.
+- The scripted tests (Playwright, 874×402 and 402×874, deviceScaleFactor 2, touch) drive Brady with real inputs along each piece's `route` to its summit, ride the loop, launch off the ramp through the ring of fire, get flung, zip, light the lamps (beams reveal the darkwads and the bridge), launch the rocket, and run the cathedral burn (every stage, SKIP, the saved burned state on a revisit, free-roam mode), all with zero page errors. A real-time pass uses CDP touch events on the on-screen stick, ACTION and BIKE buttons.

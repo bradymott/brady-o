@@ -137,7 +137,7 @@ const BurnsRound = (() => {
     }
     if (bot.kind === 'kilt' && !fur) {
       const kc = bot.col; m.color(kc);
-      const prof = [[0.235 * w, -0.34], [0.225 * w, -0.2], [0.19 * w, -0.02], [0.172 * w, 0.06]];
+      const kl = bot.len || 0.34, prof = [[(kl > 0.5 ? 0.3 : 0.235) * w, -kl], [0.225 * w, -Math.min(0.2, kl * 0.6)], [0.19 * w, -0.02], [0.172 * w, 0.06]];
       m.lathe(prof, { seg: A.seg(16, 10), sz: 0.78, uv: botPat || null, rMod: (t) => 1 + 0.03 * Math.sin(t * 16) });
       m.color(shade(kc, -0.3)); m.lathe(prof.map(p => [p[0] - 0.006, p[1]]), { seg: A.seg(16, 10), sz: 0.78, flip: true });
       if (bot.utility && !lo) { m.color(shade(kc, -0.15)); for (const sd of [1, -1]) m.roundBox(sd * 0.15 * w, -0.12, 0.13, 0.08, 0.1, 0.03, 0.01); }
@@ -172,6 +172,8 @@ const BurnsRound = (() => {
     else if (topKind === 'tank' || topKind === 'vest') rows = bands(A.torso, [0.43 * h], y => y > 0.43 * h ? skin : C.top);
     else if (topKind === 'offshoulder') rows = bands(A.torso, [0.39 * h], y => y > 0.39 * h ? skin : C.top);
     else if (topKind === 'halter') rows = bands(A.torso, [0.16 * h, 0.4 * h], y => y < 0.16 * h || y > 0.4 * h ? skin : C.top);
+    else if (topKind === 'bikini') rows = bands(A.torso, [0.285 * h, 0.405 * h], y => y < 0.285 * h || y > 0.405 * h ? skin : C.top);
+    else if (topKind === 'corset') rows = bands(A.torso, [0.39 * h], y => y > 0.39 * h ? skin : C.top);
     else rows = bands(A.torso, [0.49 * h], y => y > 0.49 * h ? skin : C.top);
     const tUV = topPat && !bare ? topPat : (paint && bare ? paint : (fur && fur.pattern ? pat(fur.pattern) : null));
     m.color(torsoCol).shine(disco ? 3 : bare ? skinGloss : 0);

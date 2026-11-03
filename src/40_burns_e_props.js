@@ -427,6 +427,56 @@ const BurnsProps = {
     const cols = [{ t: 'box', x: 0, z: 0, hx: W / 2, hz: L / 2, y0: 0, y1: H + 0.05, cover: true }, { t: 'box', x: 0, z: -0.5, hx: 1.4, hz: 1.6, y0: H, y1: H + 3.2 }];
     return { cols, lights: [{ x: 0, y: H + 2.2, z: -0.5, s: 4, c: o.sculpt || '#38c8ff' }], top: H + 0.05, len: L, w: W, poofers: [[W / 2 - 0.5, H + 1.4, -L / 2 + 0.8], [-W / 2 + 0.5, H + 1.4, -L / 2 + 0.8]], seat: [0, H + 0.1, L / 2 - 1.6] };
   },
+  // the RED LIGHT DISTRICT camp's RV: hot pink, 3D hearts, feather trim, marquee bulbs, red lanterns, roof deck.
+  // Door on the RV's right (-X) side; returns door: [x, z] just outside it (prop-local). o: { lit (default true), len }
+  redlightRV(m, o) {
+    o = o || {}; const lit = o.lit !== false;
+    const R = this.rv(m, { seed: 77, len: o.len || 10, col: '#ff7ac4', cabCol: '#ff5ab4', bikes: false, solar: false });
+    const L = R.len, W = R.w, H = R.top, zf = L / 2, zb = -L / 2, cab = zf - 2.2;
+    const hpts = []; for (let i = 0; i < 18; i++) { const t = i / 18 * TAU; hpts.push([16 * Math.pow(Math.sin(t), 3) * 0.022, (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * 0.022]); }
+    const heart = (x, y, z, s, side, col, e) => { m.color(col, e).shine(2); m.push(); m.tf(x, y, z, side * Math.PI / 2, 0, 0, s, s, 1); m.extrude(hpts.slice().reverse(), 0.06, { convex: false }); m.pop(); m.emissive(0).shine(0); };
+    // big hearts on both flanks, little ones between
+    for (const sd of [1, -1]) {
+      heart(sd * (W / 2 + 0.02), 1.9, (cab + zb) / 2 - 0.4, 1.0, sd, '#e0103a', lit ? 0.35 : 0);
+      for (let k = 0; k < 4; k++) heart(sd * (W / 2 + 0.015), 1.2 + (k % 2) * 0.35, zb + 1.0 + k * 1.15, 0.38, sd, k % 2 ? '#ffffff' : '#ff2a6a', lit ? 0.25 : 0);
+    }
+    // fluffy feather trim along the skirt line
+    m.color('#ffb0dc'); const fu = BURNS_ATLAS.pattern('fur');
+    for (const sd of [1, -1]) { m.push(); m.tf(sd * (W / 2 + 0.03), 0.78, (zf + zb) / 2 - 0.3); m.limb(0, 0, -(L / 2 - 0.4), 0, 0, L / 2 - 0.9, 0.07, 0.07, { seg: 7, uv: fu, rMod: th => 1 + 0.18 * Math.sin(th * 7) }); m.pop(); }
+    // marquee bulbs around the roof edge
+    const bulbs = [];
+    for (let z = zb + 0.3; z < cab; z += 0.55) for (const sd of [1, -1]) bulbs.push([sd * (W / 2 - 0.05), H + 0.04, z]);
+    for (let x = -W / 2 + 0.25; x < W / 2; x += 0.5) { bulbs.push([x, H + 0.04, zb + 0.08]); bulbs.push([x, H + 0.04, cab - 0.05]); }
+    bulbs.forEach((b, i) => { m.color(i % 3 ? '#fff0c0' : '#ff4f8a', lit ? 1 : 0.1); m.ball(b[0], b[1], b[2], 0.05, { seg: 6, rings: 4 }); });
+    m.emissive(0);
+    // roof deck rail + a heart-shaped marquee sign frame
+    m.color('#2a1418').shine(2);
+    for (const sd of [1, -1]) { m.limb(sd * (W / 2 - 0.1), H + 0.75, zb + 0.2, sd * (W / 2 - 0.1), H + 0.75, cab - 0.2, 0.025, 0.025, { seg: 5 }); for (let z = zb + 0.2; z <= cab - 0.15; z += 1.2) m.limb(sd * (W / 2 - 0.1), H, z, sd * (W / 2 - 0.1), H + 0.75, z, 0.02, 0.02, { seg: 4 }); }
+    m.shine(0);
+    heart(0, H + 0.95, cab - 0.3, 1.6, 0, '#ff2a5a', lit ? 0.6 : 0.05);
+    // striped awning over the door (on -X) + red paper lanterns
+    const dz = cab - 1.0;
+    m.color('#ff5ab4'); m.roundBox(-W / 2 - 0.7, 2.95, dz, 1.4, 0.08, 1.6, 0.03);
+    m.color('#ffffff'); for (let k = -2; k <= 2; k += 2) m.roundBox(-W / 2 - 0.7, 2.99, dz + k * 0.28, 1.42, 0.05, 0.26, 0.02);
+    m.color('#3a2a30'); m.limb(-W / 2 - 1.36, 0, dz - 0.75, -W / 2 - 1.36, 2.95, dz - 0.75, 0.025, 0.025, { seg: 5 }); m.limb(-W / 2 - 1.36, 0, dz + 0.75, -W / 2 - 1.36, 2.95, dz + 0.75, 0.025, 0.025, { seg: 5 });
+    const lights = R.lights.slice();
+    for (const k of [-0.55, 0.55]) { m.color('#e0102a', lit ? 0.8 : 0.1); m.ellipsoid(-W / 2 - 1.2, 2.55, dz + k, 0.16, 0.2, 0.16, { seg: 10, rings: 7 }); m.color('#1a0a0a'); m.roundCyl(-W / 2 - 1.2, 2.73, dz + k, 0.07, 0.05, 0.01); if (lit) lights.push({ x: -W / 2 - 1.2, y: 2.55, z: dz + k, s: 1.1, c: '#ff2a3a' }); }
+    m.emissive(0);
+    if (lit) { lights.push({ x: 0, y: H + 0.95, z: cab - 0.3, s: 2.2, c: '#ff3a7a' }); lights.push({ x: W / 2 + 0.2, y: 1.9, z: (cab + zb) / 2 - 0.4, s: 1.6, c: '#ff2a5a' }); lights.push({ x: -W / 2 - 0.2, y: 1.9, z: (cab + zb) / 2 - 0.4, s: 1.6, c: '#ff2a5a' }); }
+    const cols = R.cols.concat([{ t: 'box', x: -W / 2 - 0.7, z: dz, hx: 0.7, hz: 0.8, y0: 2.9, y1: 3.05, solid: false }]);
+    return Object.assign({}, R, { cols, lights, door: [-W / 2 - 1.0, dz], sign: [0, H + 1.9, cab - 0.3] });
+  },
+  // a cork quest board on two posts with pinned notes (api.questBoard makes it interactive)
+  questBoard(m, o) {
+    o = o || {}; const wd = BURNS_ATLAS.pattern('wood'), col = o.col || '#8a5a32';
+    m.color(col); for (const sd of [1, -1]) m.roundBox(sd * 0.95, 1.1, 0, 0.12, 2.2, 0.12, 0.03, { uv: wd });
+    m.color(shade(col, -0.15)); m.roundBox(0, 1.45, 0, 2.0, 1.3, 0.1, 0.03, { uv: wd });
+    m.color('#c8925a'); m.roundBox(0, 1.45, 0.04, 1.8, 1.1, 0.04, 0.01);
+    m.color(shade(col, -0.25)); m.roundBox(0, 2.25, 0.05, 2.3, 0.1, 0.4, 0.03, { uv: wd });
+    const notes = ['#fff8e0', '#ffd0e8', '#d0f0ff', '#e0ffd0', '#fff0a0', '#ffe0c8', '#f0e0ff'], rng = this.rngFor(o);
+    for (let i = 0; i < 9; i++) { const x = -0.7 + (i % 3) * 0.7 + (rng() - 0.5) * 0.15, y = 1.1 + Math.floor(i / 3) * 0.34 + (rng() - 0.5) * 0.06; m.color(notes[i % notes.length]); m.push(); m.tf(x, y, 0.07, 0, 0, (rng() - 0.5) * 0.3); m.box(0, 0, 0, 0.42, 0.26, 0.01); m.color(['#e02a3a', '#2a6ae0', '#e0b02a'][i % 3]); m.ball(0, 0.1, 0.012, 0.018, { seg: 6, rings: 4 }); m.color('#5a4a4a'); for (let l = 0; l < 3; l++) m.box(-0.02, 0.02 - l * 0.055, 0.007, 0.3, 0.012, 0.004); m.pop(); }
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.05, hz: 0.12, y0: 0, y1: 2.3 }], top: 2.3 };
+  },
   // a sticker-covered old wooden trunk (crusty's camp)
   trunk(m, o) {
     o = o || {}; const W = 0.95, H = 0.6, D = 0.55, st = BURNS_ATLAS.pattern('stickers'), wd = BURNS_ATLAS.pattern('wood');

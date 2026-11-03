@@ -1,10 +1,13 @@
 /* ============================================================
-   BRADY-O BURNS — World 11 kit (Sound Camp Crawl)
+   BRADY GOES TO BURNING MAN — World 11 kit (Sound Camp Crawl)
    Layout, helpers, set-piece builders, bike traffic, ambient lasers and the
    2D overlay (offerings tracker, item pop, choice picker, duel HUD).
    World definition: 42_burns_world11.js · Thunderdome duel: 42_burns_w11_dome.js
-   The three named sound camps are real camps shown by name only: every stage
-   here is our own design capturing the vibe, not a replica.
+   The named sound camps (Root Society, Opulent Temple, Camp Question Mark, plus
+   the extra venues Playground, The Deep End and Disorient) are real camps shown
+   by name only: every stage here is our own design capturing the vibe, not a
+   replica. Playground's founder appears only as a name on a schedule board and
+   in crowd chatter: no likeness, no lines.
    ============================================================ */
 
 const BW11 = {
@@ -25,7 +28,16 @@ const BW11 = {
     dome: { x: 182, z: -26, R: 12 },
     wob: { x: 150, z: -122 },
     wobFloor: { x: 150, z: -97, r: 12 },
-    cheese: { x: 0, z: 52 }
+    cheese: { x: 0, z: 52 },
+    // extra venues (side content): The Deep End (10:00, deep playa), Playground + Disorient (2:00)
+    deep: { x: -160, z: -128 },
+    deepFloor: { x: -160, z: -110, r: 11 },
+    dive: { x: -137, z: -121 },
+    play: { x: 206, z: -124 },
+    playFloor: { x: 206, z: -100, r: 13 },
+    lounge: { x: 184, z: -77 },
+    dis: { x: 84, z: -132 },
+    disFloor: { x: 84, z: -114, r: 10 }
   },
   ITEMS: [
     { id: 'talisman', mission: 'cable', name: 'ROOT-WOOD TALISMAN', camp: 'Root Society', col: '#7aff5a' },
@@ -242,7 +254,7 @@ BW11.drawChoice = function (ctx, g) {
 /* ---------------- ambient lasers + beams (sprites) ---------------- */
 BW11.beamReg = null;
 BW11.beam = function (R, x0, y0, z0, x1, y1, z1, w, col, a, segs) {
-  const S = BURNS_SPRITES.R, B = R.B; if (!B) return;
+  const S = BURNS_SPRITES.R, B = R.B; if (!B || !S || !S.streak || !R.bbs || !R.bbs.quad) return;
   const reg = BW11.beamReg || (BW11.beamReg = { u0: lerp(S.streak.u0, S.streak.u1, 0.42), u1: lerp(S.streak.u0, S.streak.u1, 0.58), v0: S.streak.v0, v1: S.streak.v1 });
   segs = segs || 4;
   for (let i = 0; i < segs; i++) {
@@ -253,20 +265,26 @@ BW11.beam = function (R, x0, y0, z0, x1, y1, z1, w, col, a, segs) {
   }
 };
 // laser rigs: { x, y, z, yaw, n, spread, col: [[r,g,b]...], rate, len, tilt }
+// every input is guarded: a laser with no phase/colours, a NaN clock or a missing sprite never throws
 BW11.drawLasers = function (g, R) {
-  const S = BW11.state, cam = g.cam, t = g.time;
+  const S = BW11.state, cam = g && g.cam;
+  if (!S || !Array.isArray(S.lasers) || !cam || !R || !R.bbs || BW11.lasersOff) return;
+  const t = Number.isFinite(g.time) ? g.time : 0, glow = BURNS_SPRITES.R && BURNS_SPRITES.R.glow;
+  try {
   for (const L of S.lasers) {
+    if (!L || !Number.isFinite(L.x) || !Number.isFinite(L.z)) continue;
     const dx = L.x - cam.x, dz = L.z - cam.z; if (dx * dx + dz * dz > 260 * 260) continue;
     if (L.when && !L.when(g)) continue;
-    const near = dx * dx + dz * dz < 90 * 90, n = near ? L.n : Math.ceil(L.n / 2);
-    const ph = +L.ph || 0, sweep = Math.sin(t * (L.rate || 0.8) + ph), nc = (L.col && L.col.length) || 0, ci = nc ? ((Math.floor(t * 0.5 + ph) % nc) + nc) % nc : 0, col = (nc && L.col[ci]) || [1, 1, 1];
-    R.bbs.bb(L.x, L.y, L.z, 1.1, 1.1, BURNS_SPRITES.R.glow, col, 0.9, true);
+    const near = dx * dx + dz * dz < 90 * 90, n = Math.max(1, near ? (L.n | 0) || 1 : Math.ceil(((L.n | 0) || 1) / 2));
+    const ph = +L.ph || 0, sweep = Math.sin(t * (L.rate || 0.8) + ph), nc = Array.isArray(L.col) ? L.col.length : 0, ci = nc ? ((Math.floor(t * 0.5 + ph) % nc) + nc) % nc : 0, cc = nc ? L.col[ci] : null, col = (cc && cc.length >= 3) ? cc : [1, 1, 1];
+    if (glow) R.bbs.bb(L.x, L.y, L.z, 1.1, 1.1, glow, col, 0.9, true);
     for (let i = 0; i < n; i++) {
       const u = n === 1 ? 0 : i / (n - 1) - 0.5, ang = (L.yaw || 0) + u * (L.spread || 1) + sweep * 0.5, el = (L.tilt || 0.18) + Math.sin(t * 0.9 + i + ph) * 0.12;
       const len = L.len || 60;
       BW11.beam(R, L.x, L.y, L.z, L.x + Math.sin(ang) * len * Math.cos(el), L.y + Math.sin(el) * len, L.z + Math.cos(ang) * len * Math.cos(el), near ? 0.07 : 0.16, col, 0.55, near ? 5 : 2);
     }
   }
+  } catch (e) { BW11.lasersOff = true; console.warn('W11 lasers disabled:', e); }   // a bad frame never takes the world down
 };
 
 /* ---------------- bike traffic (rigid movers with LED riders) ---------------- */
@@ -715,4 +733,225 @@ BW11.camp = function (api, x, z, seed, o) {
   if (o.dome) api.prop('dome', { x: x - Math.cos(yaw) * 9, z: z + Math.sin(yaw) * 9, r: 4.5, col: r.pick(['#e8e0d0', '#d8c0e8', '#c8e8f0']), lights: true, glow: r.pick(BURNS_NEON) });
   if (o.sign) api.sign(o.sign, x - 3.5, z - 3.2, { yaw: Math.PI + yaw, h: 1.0, style: { bg: o.bg || '#1a0a2a', fg: o.fg || '#ffe24a', border: o.fg || '#ffe24a', size: 38, glow: o.fg || '#ffe24a' }, glow: o.fg || '#ffe24a' });
   api.light(x, z, 9, r.pick(['#ff70c0', '#70c0ff', '#ffb070', '#a0ff80']), 0.4);
+};
+
+/* ---------------- extra venues: The Deep End, Playground, Disorient ---------------- */
+// a hyperbolic shade sail through four corners (both sides drawn), soft stripes, edges pulled in like real sails
+BW11.sail = function (m, A, B, C, D, cols, nu) {
+  nu = nu || 10;
+  const f = (u, v, t) => {
+    const k = 1 - 0.08 * (Math.sin(Math.PI * u) + Math.sin(Math.PI * v));
+    const x = lerp(lerp(A[0], B[0], u), lerp(D[0], C[0], u), v), y = lerp(lerp(A[1], B[1], u), lerp(D[1], C[1], u), v), z = lerp(lerp(A[2], B[2], u), lerp(D[2], C[2], u), v);
+    const cx = (A[0] + B[0] + C[0] + D[0]) / 4, cz = (A[2] + B[2] + C[2] + D[2]) / 4;
+    t[0] = cx + (x - cx) * k; t[1] = y - 0.35 * Math.sin(Math.PI * u) * Math.sin(Math.PI * v); t[2] = cz + (z - cz) * k;
+  };
+  const colFn = (u) => cols[Math.min(cols.length - 1, Math.floor(u * cols.length))];
+  m.surf(nu, nu, f, { colFn }); m.surf(nu, nu, f, { colFn, flip: true });
+};
+// a big striped beach ball (surf sphere so the panels can be coloured)
+BW11.beachBall = function (m, x, y, z, r) {
+  const P = ['#ff3b5c', '#ffffff', '#ffe24a', '#ffffff', '#38a8ff', '#ffffff'];
+  m.shine(2); m.surf(18, 9, (u, v, t) => { const th = u * TAU, ph = v * Math.PI; t[0] = x + Math.sin(ph) * Math.sin(th) * r; t[1] = y - Math.cos(ph) * r; t[2] = z + Math.sin(ph) * Math.cos(th) * r; },
+    { wrapU: true, out: true, colFn: (u, v) => (v < 0.1 || v > 0.9) ? '#ffffff' : P[Math.floor(u * 6) % 6] });
+  m.shine(0);
+};
+// THE DEEP END: an OG daytime dance camp. A giant shade sail over a pool-tile dance floor, a lifeguard-tower
+// DJ booth under a beach umbrella, pool floats, and a high dive over a foam pool (Lifeguard Lou scores cannonballs)
+BW11.buildDeepEnd = function (api, g) {
+  const S = BW11.state, P = BW11.P.deep, F = BW11.P.deepFloor, D = BW11.P.dive, x = P.x, z = P.z;
+  // pool-tile dance floor: tiles, swim lanes, caustics
+  api.paint((c, Pt, sc) => {
+    const [cx, cz] = Pt(F.x, F.z), R = F.r * sc;
+    c.save(); c.beginPath(); c.arc(cx, cz, R, 0, TAU); c.clip();
+    const gg = c.createRadialGradient(cx, cz, 0, cx, cz, R); gg.addColorStop(0, 'rgba(120,226,255,0.62)'); gg.addColorStop(1, 'rgba(36,128,214,0.62)');
+    c.fillStyle = gg; c.fillRect(cx - R, cz - R, R * 2, R * 2);
+    c.strokeStyle = 'rgba(236,252,255,0.32)'; c.lineWidth = Math.max(1, 0.05 * sc);
+    for (let k = -F.r; k <= F.r; k += 1) {
+      let [ax, az] = Pt(F.x + k, F.z - F.r), [bx, bz] = Pt(F.x + k, F.z + F.r); c.beginPath(); c.moveTo(ax, az); c.lineTo(bx, bz); c.stroke();
+      [ax, az] = Pt(F.x - F.r, F.z + k); [bx, bz] = Pt(F.x + F.r, F.z + k); c.beginPath(); c.moveTo(ax, az); c.lineTo(bx, bz); c.stroke();
+    }
+    c.fillStyle = 'rgba(14,44,116,0.55)';
+    for (const lx of [-6, -2, 2, 6]) { const [ax, az] = Pt(F.x + lx - 0.22, F.z - F.r + 1.4), [bx, bz] = Pt(F.x + lx + 0.22, F.z + F.r - 1.4); c.fillRect(Math.min(ax, bx), Math.min(az, bz), Math.abs(bx - ax), Math.abs(bz - az)); }
+    c.strokeStyle = 'rgba(220,255,255,0.24)'; c.lineWidth = Math.max(1, 0.12 * sc);
+    const r = mulberry32(4242);
+    for (let i = 0; i < 28; i++) { const x0 = F.x + r.range(-F.r, F.r), z0 = F.z + r.range(-F.r, F.r); c.beginPath(); for (let s = 0; s <= 6; s++) { const [px, pz] = Pt(x0 + s * 0.6, z0 + Math.sin(s * 1.3 + i) * 0.35); if (s) c.lineTo(px, pz); else c.moveTo(px, pz); } c.stroke(); }
+    c.restore();
+  });
+  api.torus(F.x, 0.06, F.z, F.r + 0.25, 0.17, '#eef6f8');
+  // the big sail: four masts (alternating high/low corners) and one hypar sail over the whole floor
+  const h = [9.6, 6.2, 9.6, 6.2], cs = [[-1, -1], [1, -1], [1, 1], [-1, 1]], E = F.r + 1.6;
+  api.mesh(F.x, F.z, m => {
+    const corner = cs.map(([sx, sz], i) => [sx * E, h[i], sz * E]);
+    m.color('#d8dce4').shine(3);
+    cs.forEach(([sx, sz], i) => {
+      m.limb(sx * E, 0, sz * E, sx * E, h[i] + 0.5, sz * E, 0.2, 0.15, { seg: 10 });
+      m.color('#ff6a5a', 0.6); m.ball(sx * E, h[i] + 0.6, sz * E, 0.22, { seg: 10, rings: 6 }); m.emissive(0); m.color('#d8dce4');
+      // guy lines out to ground stakes
+      m.color('#8a8a92'); m.limb(sx * E, h[i] + 0.3, sz * E, sx * (E + 4.5), 0.05, sz * (E + 4.5), 0.025, 0.025, { seg: 4 }); m.color('#d8dce4');
+    });
+    BW11.sail(m, corner[0], corner[1], corner[2], corner[3], ['#ff6a5a', '#fff0d8', '#38c8e8', '#fff0d8', '#ffd84a', '#fff0d8', '#ff6a5a'], 12);
+    const lights = [{ x: 0, y: 5.5, z: 0, s: 6, c: '#38c8e8' }, { x: 0, y: 0, z: 0, s: 0, c: '#5ad8ff', pool: 15, i: 0.5 }];
+    return { cols: cs.map(([sx, sz]) => ({ t: 'cyl', x: sx * E, z: sz * E, r: 0.22, y0: 0, y1: 10 })), lights };
+  });
+  // fairy lights along the sail edges
+  for (let i = 0; i < 4; i++) {
+    const [ax, az] = cs[i], [bx, bz] = cs[(i + 1) % 4];
+    for (let k = 1; k < 8; k++) { const u = k / 8, sag = Math.sin(Math.PI * u); api.glow(F.x + lerp(ax, bx, u) * E * (1 - 0.08 * sag), lerp(h[i], h[(i + 1) % 4], u) - 0.3 - 0.4 * sag, F.z + lerp(az, bz, u) * E * (1 - 0.08 * sag), 0.5, ['#fff0c8', '#5ad8ff', '#ff9ad8'][k % 3]); }
+  }
+  // the lifeguard-tower DJ booth: white deck, red-and-white legs, a striped umbrella over the decks
+  api.roundBox(x, 0, z, 10, 1.4, 5, '#e8f0f4', { r: 0.14, top: '#38a8d8' });
+  api.mesh(x, z, m => {
+    m.color('#ff3b3b').shine(2);
+    for (const sx of [-1, 1]) { m.limb(sx * 2.6, 1.4, -1.8, sx * 2.0, 4.6, -1.2, 0.12, 0.1, { seg: 8 }); m.limb(sx * 2.6, 1.4, 1.2, sx * 2.0, 4.6, -1.2, 0.12, 0.1, { seg: 8 }); }
+    m.color('#ffffff'); for (let k = 0; k < 4; k++) { const y = 2.0 + k * 0.7; m.limb(-2.5 + k * 0.08, y, -1.6, 2.5 - k * 0.08, y, -1.6, 0.05, 0.05, { seg: 5 }); }
+    m.color('#e8f0f4'); m.roundBox(0, 4.7, -1.2, 4.6, 0.2, 1.4, 0.06);
+    // umbrella
+    m.color('#c8c8d4').shine(3); m.limb(0, 1.4, -1.6, 0, 6.6, -1.6, 0.06, 0.05, { seg: 6 });
+    const prof = []; for (let i = 0; i <= 8; i++) { const r = 3.4 * (1 - i / 8); prof.push([r, 5.4 + Math.sin(i / 8 * Math.PI / 2) * 1.3, i % 2 ? '#ffffff' : '#ff3b5c']); }
+    m.push(); m.tf(0, 0, -1.6); m.lathe(prof, { seg: 16 }); m.lathe(prof, { seg: 16, flip: true }); m.pop();
+    m.color('#ffe24a', 0.9); m.ball(0, 6.75, -1.6, 0.14, { seg: 8, rings: 5 }); m.emissive(0).shine(0);
+    // lifebuoys on the front of the deck
+    for (const sx of [-3.6, 3.6]) { m.push(); m.tf(sx, 0.8, 2.52, 0, Math.PI / 2, 0); m.color('#ff3b3b').shine(2); m.torus(0, 0, 0, 0.42, 0.13, { seg: 16, tseg: 6 }); m.pop(); }
+    m.shine(0);
+    return { lights: [{ x: 0, y: 5.2, z: 0.4, s: 3.5, c: '#ffd890' }, { x: 0, y: 0, z: 4, s: 0, c: '#ffb070', pool: 9, i: 0.45 }] };
+  });
+  BW11.djTable(api, x, 1.4, z + 0.7, 0, { body: '#2a5a8a', trim: '#e8f0f4', colA: '#5ad8ff', colB: '#ff6a5a' });
+  for (const sd of [-1, 1]) api.mesh(x + sd * 7.4, z + 0.6, m => { for (let i = 0; i < 2; i++) BW11.speaker(m, 0, i * 1.6, 0, 2.2, 1.6, 1.8, { col: '#e8f0f4', cones: 1, dust: '#38a8d8' }); return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.1, hz: 0.9, y0: 0, y1: 3.2 }], lights: [{ x: 0, y: 3.4, z: 1, s: 1.2, c: '#5ad8ff' }] }; });
+  // giant pool floats + beach balls
+  api.mesh(F.x - 14, F.z + 7, m => {
+    m.color('#ff8ac8').shine(2); m.torus(0, 0.62, 0, 1.7, 0.62, { seg: 22, tseg: 10 });
+    const r = mulberry32(77); for (let i = 0; i < 26; i++) { const a = r() * TAU, rr = 1.7 + r.range(-0.35, 0.35); m.color(r.pick(BURNS_NEON), 0.3); m.roundBox(Math.sin(a) * rr, 1.22, Math.cos(a) * rr, 0.24, 0.05, 0.07, 0.02); }
+    m.emissive(0).shine(0);
+    return { cols: [{ t: 'cyl', x: 0, z: 0, r: 2.3, y0: 0, y1: 1.2 }] };
+  }, { yaw: 0.4 });
+  api.mesh(F.x + 14.5, F.z + 8, m => {
+    // a big friendly rubber duck (pool-toy yellow)
+    m.color('#ffd23a').shine(2); m.ellipsoid(0, 1.3, 0, 2.0, 1.25, 1.5, { seg: 18, rings: 10 }); m.ellipsoid(0, 3.0, 0.8, 0.95, 0.95, 0.95, { seg: 16, rings: 10 });
+    m.ellipsoid(0, 1.8, -1.6, 0.7, 0.55, 0.5, { seg: 12, rings: 8 });
+    m.color('#ff7a2a'); m.ellipsoid(0, 2.85, 1.75, 0.45, 0.16, 0.38, { seg: 12, rings: 6 });
+    m.color('#1a1a22').shine(3); for (const sx of [-0.42, 0.42]) m.ball(sx, 3.25, 1.6, 0.12, { seg: 8, rings: 5 });
+    m.shine(0);
+    return { cols: [{ t: 'dome', x: 0, z: 0, r: 1.9, y0: 0 }] };
+  }, { yaw: -0.7 });
+  api.mesh(F.x, F.z, m => { BW11.beachBall(m, -5, 0.8, 9.5, 0.8); BW11.beachBall(m, 9.5, 0.6, -4, 0.6); BW11.beachBall(m, -10, 0.7, -6.5, 0.7); return {}; });
+  // the high dive (a scaffold with a diving board) over the foam pool
+  api.prop('scaffold', { x: D.x, z: D.z, levels: 3, lh: 2.0, w: 3, d: 3 });
+  const hw = 3.2, hl = 5.0, fx = D.x + 0.75, fz = D.z + 10.2;
+  S.foam = { x: fx, z: fz, hw, hl, y: 0.42 };
+  api.mesh(D.x, D.z, m => {
+    m.color('#f4f4f0').shine(2); m.roundBox(0.75, 6.0, 3.3, 0.8, 0.12, 4.4, 0.05);
+    m.color('#38a8ff'); m.roundBox(0.75, 6.075, 3.8, 0.6, 0.02, 3.2, 0.01);
+    m.color('#c8c8d4').shine(3); for (const sx of [0.3, 1.2]) { m.limb(sx, 6.0, 1.2, sx, 7.0, 1.3, 0.035, 0.035, { seg: 6 }); m.limb(sx, 7.0, 1.3, sx, 7.0, 0.4, 0.035, 0.035, { seg: 6 }); }
+    m.color('#ff3b3b', 0.5); m.roundBox(0.75, 6.8, -1.55, 2.6, 0.7, 0.08, 0.04); m.emissive(0).shine(0);
+    return { cols: [{ t: 'box', x: 0.75, z: 3.3, hx: 0.42, hz: 2.2, y0: 5.88, y1: 6.06 }], lights: [{ x: 0.75, y: 6.6, z: 5.2, s: 1.0, c: '#5ad8ff' }] };
+  });
+  api.sign('HIGH DIVE\nCANNONBALLS ONLY', D.x - 2.6, D.z + 2.2, { yaw: -Math.PI / 2, h: 1.0, style: { bg: '#e8f8ff', fg: '#1a4a8a', border: '#ff3b3b', size: 36 } });
+  api.mesh(fx, fz, m => {
+    m.color('#e8f4f8').shine(1);
+    m.roundBox(0, 0.3, -hl - 0.3, hw * 2 + 1.2, 0.6, 0.6, 0.12); m.roundBox(0, 0.3, hl + 0.3, hw * 2 + 1.2, 0.6, 0.6, 0.12);
+    m.roundBox(-hw - 0.3, 0.3, 0, 0.6, 0.6, hl * 2, 0.12); m.roundBox(hw + 0.3, 0.3, 0, 0.6, 0.6, hl * 2, 0.12);
+    m.color('#9ad8f8'); m.roundBox(0, 0.15, 0, hw * 2, 0.3, hl * 2, 0.04);
+    const r = mulberry32(99);
+    for (let i = 0; i < 150; i++) { m.color(r.pick(['#ffffff', '#f0fbff', '#dff4ff', '#e8ecff', '#ffffff'])); m.ball(r.range(-hw + 0.3, hw - 0.3), 0.3 + r.range(0, 0.12), r.range(-hl + 0.3, hl - 0.3), r.range(0.26, 0.42), { seg: 7, rings: 5 }); }
+    return { cols: [
+      { t: 'box', x: 0, z: -hl - 0.3, hx: hw + 0.6, hz: 0.3, y0: 0, y1: 0.6 }, { t: 'box', x: 0, z: hl + 0.3, hx: hw + 0.6, hz: 0.3, y0: 0, y1: 0.6 },
+      { t: 'box', x: -hw - 0.3, z: 0, hx: 0.3, hz: hl, y0: 0, y1: 0.6 }, { t: 'box', x: hw + 0.3, z: 0, hx: 0.3, hz: hl, y0: 0, y1: 0.6 },
+      { t: 'box', x: 0, z: 0, hx: hw, hz: hl, y0: 0, y1: 0.42 }], lights: [{ x: 0, y: 0.6, z: 0, s: 3, c: '#5ad8ff' }, { x: 0, y: 0, z: 0, s: 0, c: '#5ad8ff', pool: 7, i: 0.45 }] };
+  });
+  // signs + light
+  api.sign('THE DEEP END', F.x - 9, F.z + 13.6, { yaw: 0.3, h: 1.5, style: { bg: '#0a2a4a', fg: '#ffffff', border: '#5ad8ff', size: 52, glow: '#5ad8ff' }, glow: '#5ad8ff' });
+  api.sign('NO RUNNING.\nONLY DANCING.', x + 6.5, z + 4.6, { yaw: 0, h: 0.9, style: { bg: '#e8f8ff', fg: '#ff3b3b', border: '#1a4a8a', size: 34 } });
+  api.light(F.x, F.z, 16, '#5ad8ff', 0.45); api.light(fx, fz, 8, '#9ae8ff', 0.4);
+};
+// PLAYGROUND: a huge main stage (LED wall, truss towers, line arrays, lasers) and a welcoming lounge. Our own design;
+// the camp's founder is a name on the schedule board and in crowd chatter only
+BW11.buildPlayground = function (api, g) {
+  const S = BW11.state, P = BW11.P.play, F = BW11.P.playFloor, L = BW11.P.lounge, x = P.x, z = P.z;
+  api.roundBox(x, 0, z, 22, 1.6, 7, '#16161e', { r: 0.15, top: '#24242e' });
+  // the LED wall (our own art: rings radiating from a glowing core, playground colours)
+  api.mesh(x, z - 3.8, m => {
+    m.color('#0a0a10').shine(1); m.roundBox(0, 6.4, -0.32, 25, 10.6, 0.5, 0.12);
+    const W = 24, H = 9;
+    for (let i = 0; i < W; i++) for (let j = 0; j < H; j++) {
+      const u = (i + 0.5) / W - 0.5, v = (j + 0.5) / H - 0.42, d = Math.hypot(u * 2.4, v * 1.6), ring = Math.floor(d * 7);
+      const c = d < 0.18 ? '#fff4c8' : ['#ffd84a', '#ff9a3a', '#ff4fd8', '#9a6bff', '#38f2ff', '#7aff5a', '#ff4fd8', '#38f2ff'][ring % 8];
+      m.color(c, 0.95); m.box(-W / 2 + i + 0.5, 1.6 + j + 0.5, 0, 0.92, 0.92, 0.08);
+    }
+    m.emissive(0);
+    return { cols: [{ t: 'box', x: 0, z: -0.32, hx: 12.5, hz: 0.3, y0: 0, y1: 11.7 }], lights: [{ x: 0, y: 6, z: 1.5, s: 9, c: '#ff9ad8' }, { x: 0, y: 0, z: 8, s: 0, c: '#ff70c0', pool: 20, i: 0.5 }] };
+  });
+  // truss towers with line arrays and moving-head lights
+  for (const sd of [-1, 1]) api.mesh(x + sd * 13.6, z + 0.5, m => {
+    m.color('#b8b8c4').shine(3);
+    const s = 0.7, top = 13;
+    for (const [px, pz] of [[-s, -s], [s, -s], [s, s], [-s, s]]) m.limb(px, 0, pz, px, top, pz, 0.06, 0.06, { seg: 6 });
+    for (let k = 0; k < 13; k++) { const y0 = k, y1 = k + 1; m.limb(-s, y0, s, s, y1, s, 0.03, 0.03, { seg: 4 }); m.limb(s, y0, -s, -s, y1, -s, 0.03, 0.03, { seg: 4 }); m.limb(s, y0, s, s, y1, -s, 0.03, 0.03, { seg: 4 }); m.limb(-s, y0, -s, -s, y1, s, 0.03, 0.03, { seg: 4 }); }
+    m.roundBox(0, top, 0, 1.8, 0.2, 1.8, 0.05);
+    // line array: a gently curved column of cabinets hanging off the front
+    m.color('#1a1a20').shine(1); for (let k = 0; k < 7; k++) { const a = k * 0.05; m.push(); m.tf(0, 11.6 - k * 0.62, 1.5 + Math.sin(a) * 0.8, 0, -a, 0); m.roundBox(0, 0, 0, 1.3, 0.56, 0.9, 0.06); m.color('#3a3a44'); m.roundBox(0, 0, 0.46, 1.1, 0.4, 0.02, 0.02); m.color('#1a1a20'); m.pop(); }
+    // moving heads
+    for (let k = 0; k < 4; k++) { m.color('#2a2a30').shine(2); m.roundBox(-0.6 + k * 0.4, top + 0.35, 0.7, 0.26, 0.34, 0.26, 0.06); m.color(BURNS_NEON[(k + (sd > 0 ? 3 : 0)) % 7], 1); m.ball(-0.6 + k * 0.4, top + 0.35, 0.84, 0.09, { seg: 8, rings: 5 }); m.emissive(0); }
+    m.shine(0);
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: 0.8, hz: 0.8, y0: 0, y1: top + 0.1, camPass: true }], lights: [{ x: 0, y: top + 0.4, z: 1, s: 2.4, c: sd < 0 ? '#ff4fd8' : '#38f2ff' }] };
+  });
+  // subwoofer stacks in front of the deck
+  for (const sd of [-1, 1]) api.mesh(x + sd * 9.2, z + 4.6, m => { for (let i = 0; i < 2; i++) for (let k = 0; k < 2; k++) BW11.speaker(m, (k - 0.5) * 2.2, i * 1.5, 0, 2.1, 1.5, 1.8, { col: '#1c1c22', cones: 1, dust: '#ff9a3a' }); return { cols: [{ t: 'box', x: 0, z: 0, hx: 2.2, hz: 0.9, y0: 0, y1: 3.0 }] }; });
+  BW11.djTable(api, x, 1.6, z + 1.2, 0, { body: '#1a1a22', trim: '#ffd84a', colA: '#ff9a3a', colB: '#38f2ff' });
+  // dance floor: warm dust with big soft rings of light
+  api.paint((c, Pt, sc) => {
+    for (let k = 0; k < 4; k++) { const [cx, cz] = Pt(F.x, F.z), r0 = (F.r - k * 3) * sc; c.strokeStyle = ['rgba(255,154,58,0.3)', 'rgba(255,79,216,0.28)', 'rgba(56,242,255,0.26)', 'rgba(255,216,74,0.3)'][k]; c.lineWidth = 0.9 * sc; c.beginPath(); c.arc(cx, cz, r0, 0, TAU); c.stroke(); }
+  });
+  for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; api.glow(F.x + Math.sin(a) * (F.r + 0.8), 0.3, F.z + Math.cos(a) * (F.r + 0.8), 0.6, BURNS_NEON[i % 7], { blink: 2 }); }
+  api.sign('PLAYGROUND', F.x - 15.5, F.z + 4, { yaw: -1.0, h: 1.7, style: { bg: '#100a20', fg: '#ffd84a', border: '#ff9a3a', size: 56, glow: '#ff9a3a' }, glow: '#ffd84a' });
+  // the schedule board: the only place the camp's founder appears
+  api.sign('PLAYGROUND · TONIGHT\nWARM-UP: DJ LATE CHECKOUT\nCARL COX\n· TILL SUNRISE ·', F.x + 15.5, F.z + 7, { yaw: 1.05, h: 1.9, style: { bg: '#1a1424', fg: '#ffffff', border: '#ffd84a', size: 40, glow: '#ffd84a' }, glow: '#ff9a3a' });
+  api.light(F.x, F.z, 20, '#ff9a3a', 0.45); api.light(x, z + 5, 14, '#ff4fd8', 0.4);
+  S.lasers.push({ x: x - 13.6, y: 13.6, z: z + 1.4, yaw: 0.35, n: 6, spread: 1.5, col: [[1, 0.6, 0.2], [1, 0.3, 0.85], [0.3, 1, 0.5]], rate: 0.6, len: 75, tilt: 0.1, ph: 7 });
+  S.lasers.push({ x: x + 13.6, y: 13.6, z: z + 1.4, yaw: -0.35, n: 6, spread: 1.5, col: [[0.22, 0.95, 1], [1, 0.85, 0.3], [0.6, 0.42, 1]], rate: 0.6, len: 75, tilt: 0.1, ph: 8 });
+  // the lounge: shade, rugs, couches, a chai bar, lanterns
+  api.prop('shade', { x: L.x, z: L.z, w: 10, d: 8, h: 3.2, col: '#e8d4b8' });
+  api.paint((c, Pt, sc) => {
+    const r = mulberry32(5150);
+    for (let i = 0; i < 5; i++) { const [px, pz] = Pt(L.x - 3.5 + i * 1.8, L.z + r.range(-2, 2)); c.save(); c.translate(px, pz); c.rotate(r.range(-0.4, 0.4)); c.fillStyle = r.pick(['rgba(160,40,60,0.85)', 'rgba(40,70,140,0.85)', 'rgba(170,110,40,0.85)', 'rgba(90,40,120,0.85)']); c.fillRect(-1.3 * sc, -0.9 * sc, 2.6 * sc, 1.8 * sc); c.strokeStyle = 'rgba(255,220,150,0.7)'; c.lineWidth = 0.12 * sc; c.strokeRect(-1.1 * sc, -0.7 * sc, 2.2 * sc, 1.4 * sc); c.restore(); }
+  });
+  api.prop('couch', { x: L.x - 3, z: L.z - 2.6, yaw: 0, col: '#8a2a5a' }); api.prop('couch', { x: L.x + 2.4, z: L.z - 2.8, yaw: 0, col: '#2a5a8a' });
+  api.prop('couch', { x: L.x + 4.2, z: L.z + 1.4, yaw: -Math.PI / 2, col: '#6a4a2a' });
+  api.roundBox(L.x - 2.2, 0, L.z + 2.6, 3.4, 1.0, 0.8, '#7a5032', { r: 0.1, top: '#c8a070' });
+  for (let i = 0; i < 6; i++) api.glow(L.x - 4.5 + i * 1.8, 2.9, L.z + (i % 2 ? 3.6 : -3.6), 0.55, ['#ffd890', '#ff9a3a', '#ffb070'][i % 3]);
+  api.sign('THE LOUNGE\nCHAI · WATER · HUGS (ASK FIRST)', L.x, L.z + 4.6, { yaw: 0, h: 1.0, style: { bg: '#2a1a10', fg: '#ffd890', border: '#ff9a3a', size: 34, glow: '#ffb070' }, glow: '#ffb070' });
+  api.light(L.x, L.z, 9, '#ffb070', 0.5);
+};
+// DISORIENT: a neon art compound (pink and orange everything) with a big dance floor. Our own design
+BW11.buildDisorient = function (api, g) {
+  const S = BW11.state, P = BW11.P.dis, F = BW11.P.disFloor, x = P.x, z = P.z;
+  api.roundBox(x, 0, z, 13, 1.2, 5, '#1a1020', { r: 0.12, top: '#2a1a30' });
+  api.mesh(x, z, m => {
+    // a giant neon portal framing the decks: three rings, pink to orange
+    [[6.4, '#ff4fd8'], [5.7, '#ff7a2a'], [5.0, '#ff4fd8']].forEach(([R, c], i) => { m.push(); m.tf(0, 6.6, -1.6 - i * 0.25, 0, Math.PI / 2, 0); m.color(c, 1); m.torus(0, 0, 0, R, 0.15, { seg: 44, tseg: 6 }); m.pop(); });
+    m.emissive(0);
+    m.color('#2a1a30').shine(2); for (const sd of [-1, 1]) m.limb(sd * 6.4, 0, -1.6, sd * 6.4, 6.6, -1.6, 0.18, 0.14, { seg: 8 });
+    // neon triangles stacked behind the portal
+    for (let k = 0; k < 5; k++) { const tx = -6 + k * 3, ty = 1.2, th = 3 + (k % 2) * 1.6, c = k % 2 ? '#ff7a2a' : '#ff4fd8'; m.color(c, 1); m.limb(tx - 1.4, ty, -2.3, tx, ty + th, -2.3, 0.07, 0.07, { seg: 5 }); m.limb(tx, ty + th, -2.3, tx + 1.4, ty, -2.3, 0.07, 0.07, { seg: 5 }); m.limb(tx - 1.4, ty, -2.3, tx + 1.4, ty, -2.3, 0.07, 0.07, { seg: 5 }); }
+    m.emissive(0).shine(0);
+    return { lights: [{ x: 0, y: 6.6, z: -1.2, s: 7, c: '#ff4fd8' }, { x: 0, y: 0, z: 5, s: 0, c: '#ff70b0', pool: 16, i: 0.55 }] };
+  });
+  BW11.djTable(api, x, 1.2, z + 0.9, 0, { body: '#1a1020', trim: '#ff7a2a', colA: '#ff4fd8', colB: '#ff7a2a' });
+  for (const sd of [-1, 1]) api.mesh(x + sd * 8.2, z + 1.2, m => { for (let i = 0; i < 3; i++) BW11.speaker(m, 0, i * 1.45, 0, 2.2, 1.45, 1.8, { col: '#24182c', cones: 1, dust: '#ff4fd8' }); m.color(sd < 0 ? '#ff4fd8' : '#ff7a2a', 1); m.roundBox(0, 4.45, 0.92, 2.0, 0.08, 0.04, 0.02); m.emissive(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.1, hz: 0.9, y0: 0, y1: 4.35 }] }; });
+  // neon arch tunnel at the entrance
+  api.mesh(F.x, F.z + F.r + 2.5, m => {
+    for (let k = 0; k < 5; k++) { m.push(); m.tf(0, 2.1, -k * 1.4, 0, Math.PI / 2, 0); m.color(k % 2 ? '#ff7a2a' : '#ff4fd8', 1); m.torus(0, 0, 0, 2.6, 0.09, { seg: 28, tseg: 5 }); m.pop(); }
+    m.emissive(0);
+    return { lights: [{ x: 0, y: 2.2, z: -2.8, s: 3.5, c: '#ff70b0' }] };
+  });
+  // floor: concentric pink/orange rings + chevrons
+  api.paint((c, Pt, sc) => {
+    const [cx, cz] = Pt(F.x, F.z);
+    for (let k = 0; k < 6; k++) { c.strokeStyle = k % 2 ? 'rgba(255,122,42,0.34)' : 'rgba(255,79,216,0.34)'; c.lineWidth = 0.7 * sc; c.beginPath(); c.arc(cx, cz, (F.r - k * 1.6) * sc, 0, TAU); c.stroke(); }
+  });
+  for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; api.glow(F.x + Math.sin(a) * (F.r + 0.7), 0.3, F.z + Math.cos(a) * (F.r + 0.7), 0.6, i % 2 ? '#ff7a2a' : '#ff4fd8', { blink: 3 }); }
+  api.prop('pennants', { x: 0, z: 0, x0: F.x - F.r, y0: 4.2, z0: F.z + 2, x1: F.x + F.r, y1: 4.2, z1: F.z + 2, n: 20, sag: 0.8 });
+  for (const sd of [-1, 1]) api.capsule(F.x + sd * F.r, 0, F.z + 2, 0.08, 4.3, '#3a2a40', { col: { camPass: true } });
+  api.sign('DISORIENT', F.x + 12.5, F.z + 7.5, { yaw: 0.9, h: 1.6, style: { bg: '#1a0a1a', fg: '#ff7a2a', border: '#ff4fd8', size: 56, glow: '#ff4fd8' }, glow: '#ff7a2a' });
+  api.light(F.x, F.z, 15, '#ff70b0', 0.5);
+  S.lasers.push({ x, y: 9.2, z: z - 1.4, yaw: 0, n: 5, spread: 1.3, col: [[1, 0.3, 0.85], [1, 0.5, 0.15]], rate: 0.9, len: 60, tilt: 0.14, ph: 9 });
 };
