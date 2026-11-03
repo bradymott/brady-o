@@ -72,7 +72,8 @@ const BurnsUI = {
     g.syncHudButtons();
     g.lastFdt = fdt;
     const bossOn = g.boss && g.boss.active && !g.boss.defeated;
-    g.topStack = S.t + (g.missions.tracker() ? 36 : 6) + (bossOn ? 52 : 0);
+    g._trk = this.trackerLayout(ctx, g, S);
+    g.topStack = S.t + (g._trk ? g._trk.h + 10 : 6) + (bossOn ? 52 : 0);
     // screen tints for power-ups
     if (p.power === 'khole' && p.powerT > 0) { const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.2, W / 2, H / 2, H * 0.85); v.addColorStop(0, 'rgba(80,40,160,0)'); v.addColorStop(1, `rgba(80,40,160,${0.45 + Math.sin(g.time * 2) * 0.1})`); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); }
     if (p.power === 'lsd' && p.powerT > 0) { ctx.save(); ctx.globalCompositeOperation = 'overlay'; ctx.fillStyle = `hsla(${(g.time * 90) % 360},90%,60%,0.16)`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
@@ -97,7 +98,7 @@ const BurnsUI = {
     if (g.fade > 0.001) { ctx.fillStyle = `rgba(6,3,12,${g.fade})`; ctx.fillRect(0, 0, W, H); }
     if (g.paused) this.drawPause(ctx, g);
     if (g.state === 'results') this.drawResults(ctx, g);
-    if (window.__burnsDebug) { ctx.font = `10px ${FONT_UI}`; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(`fps ${g.stats.fps.toFixed(0)} cpu ${g.stats.cpu.toFixed(1)}ms draws ${g.stats.draws} tris ${(g.stats.tris / 1000).toFixed(0)}k q ${g.q.toFixed(2)} p ${p.x.toFixed(1)},${p.y.toFixed(1)},${p.z.toFixed(1)}`, 8, H - 6); }
+    if (window.__burnsDebug) { ctx.font = `10px ${FONT_UI}`; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(`fps ${g.stats.fps.toFixed(0)} cpu ${g.stats.cpu.toFixed(1)}ms draws ${g.stats.draws}+${g.stats.shDraws || 0}sh tris ${(g.stats.tris / 1000).toFixed(0)}k+${((g.stats.shTris || 0) / 1000).toFixed(0)}k q ${g.q.toFixed(2)} p ${p.x.toFixed(1)},${p.y.toFixed(1)},${p.z.toFixed(1)}`, 8, H - 6); }
   },
   // speech bubbles, NPC markers, pickup labels (projected from 3D)
   drawWorldLabels(ctx, g) {
@@ -148,6 +149,15 @@ const BurnsUI = {
       const d = Math.hypot(P.x - p.x, P.z - p.z); if (d > 9) continue;
       if (R.project(P.x, P.y0 + 0.75, P.z, W, H, o)) this.text(ctx, P.label, o.x, o.y, 12, '#ffffff', { glow: '#ff4fd8' });
     }
+    // sales-pitch projectiles carry their pitch ('SYNERGY!') written on the bubble
+    for (const q of g.proj.list) {
+      if (q.dead || !q.text || q.kind !== 'pitch') continue;
+      const d = Math.hypot(q.x - p.x, q.z - p.z); if (d > 26 || !R.project(q.x, q.y, q.z, W, H, o) || o.w < 0.5) continue;
+      const sz = clamp(0.3 * H / (2 * (R.tanY || 0.5) * o.w), 8, 16), txt = String(q.text);   // about a third of the bubble's height
+      ctx.save(); ctx.globalAlpha = clamp((26 - d) / 6, 0, 1);
+      this.text(ctx, txt, o.x, o.y, sz, '#ffffff', { glow: '#38c8ff' });
+      ctx.restore();
+    }
     // talk / interact prompt
     const t = g.talkTarget(), it = !t && g.interactTarget();
     g.prompt = t ? 'TALK' : it ? (it.label || 'USE') : null;
@@ -160,6 +170,26 @@ const BurnsUI = {
       if (m.state === 'active' && (m.def.target === a.id || (m.def.talkTo && m.def.talkTo === a.id) || (m.data && m.data.marker === a.id))) return '?';
     }
     return null;
+  },
+  // mission tracker pill layout: one line; in portrait a long objective wraps onto a second line instead of being cut
+  trackerLayout(ctx, g, S) {
+    const tr = g.missions.tracker(); if (!tr) return null;
+    const W = Game.cssW, H = Game.cssH, p = g.player, ds = Math.min(24, W / 26);
+    ctx.save(); ctx.font = `600 12px ${FONT_UI}`;
+    const full = '\u25b6 ' + tr.text, fit = (t, w) => { if (ctx.measureText(t).width <= w) return t; while (t.length > 4 && ctx.measureText(t + '\u2026').width > w) t = t.slice(0, -1); return t.trimEnd() + '\u2026'; };
+    let tw = Math.min(W * 0.5, ctx.measureText(full).width + 26), tx = W / 2 - tw / 2;
+    const left = S.l + 6 + 10 + p.maxHydration * ds * 0.95 + 10, right = W - S.r - 58;
+    if (tx < left) { tx = left; tw = Math.min(tw, right - left); }
+    let lines = [full];
+    if (ctx.measureText(full).width > tw - 20) {
+      if (H > W && right - left > 80) {   // portrait: widen to the free space, then wrap to two lines
+        tw = right - left; tx = left;
+        const wr = this.wrap(ctx, full, tw - 20);
+        lines = wr.length > 2 ? [fit(wr[0], tw - 20), fit(wr.slice(1).join(' '), tw - 20)] : wr.map(l => fit(l, tw - 20));
+      } else lines = [fit(full, tw - 20)];
+    }
+    ctx.restore();
+    return { tx, tw, ty: S.t + 6, lines, h: lines.length > 1 ? 40 : 26 };
   },
   drawHUD(ctx, g, S) {
     const W = Game.cssW, H = Game.cssH, p = g.player, sv = BurnsSave.get();
@@ -197,19 +227,11 @@ const BurnsUI = {
       this.text(ctx, P.name + (p.power === 'liquor' ? ` ×${p.ammo}` : ''), cx + 28, cy, 11, P.col, { align: 'left' });
     }
     // mission tracker
-    const tr = g.missions.tracker();
-    if (tr) {
-      ctx.save(); ctx.font = `600 12px ${FONT_UI}`;
-      let tw = Math.min(W * 0.5, ctx.measureText('▶ ' + tr.text).width + 26), tx = W / 2 - tw / 2;
-      const left = S.l + 6 + 10 + p.maxHydration * ds * 0.95 + 10, right = W - S.r - 58;
-      if (tx < left) { tx = left; tw = Math.min(tw, right - left); }
-      let label = '▶ ' + tr.text;
-      while (label.length > 6 && ctx.measureText(label).width > tw - 20) label = label.slice(0, -2) + '…';
-      ctx.restore();
-      const ty = S.t + 6;
-      rects.push([tx, ty, tx + tw, ty + 28]);
-      this.pill(ctx, tx, ty, tw, 26, 'rgba(10,6,24,0.6)', 'rgba(56,242,255,0.5)');
-      this.text(ctx, label, tx + tw / 2, ty + 13.5, 12, '#d8fbff', { ui: true, stroke: false });
+    const TK = g._trk;
+    if (TK) {
+      rects.push([TK.tx, TK.ty, TK.tx + TK.tw, TK.ty + TK.h + 2]);
+      this.pill(ctx, TK.tx, TK.ty, TK.tw, TK.h, 'rgba(10,6,24,0.6)', 'rgba(56,242,255,0.5)');
+      TK.lines.forEach((ln, i) => this.text(ctx, ln, TK.tx + TK.tw / 2, TK.ty + 13.5 + i * 13.5, 12, '#d8fbff', { ui: true, stroke: false }));
     }
     // toasts (below the tracker / boss bar stack)
     let ty2 = g.topStack || (S.t + 40);
@@ -253,7 +275,7 @@ const BurnsUI = {
   },
   drawBossBar(ctx, g, S) {
     const b = g.boss; if (!b || !b.active || b.defeated) return;
-    const W = Game.cssW, bw = Math.min(380, W * 0.5), x = W / 2 - bw / 2, y = S.t + (g.missions.tracker() ? 34 : 6);
+    const W = Game.cssW, bw = Math.min(380, W * 0.5), x = W / 2 - bw / 2, y = S.t + (g._trk ? g._trk.h + 8 : 6);
     this.text(ctx, b.name, W / 2, y + 8, 14, '#ffd0f4', { glow: '#ff4fd8' });
     ctx.fillStyle = 'rgba(10,6,24,0.7)'; burnsRR(ctx, x, y + 18, bw, 12, 6); ctx.fill();
     const k = b.hp / b.maxHp; const gr = ctx.createLinearGradient(x, 0, x + bw, 0); gr.addColorStop(0, '#ff4fd8'); gr.addColorStop(1, '#ffd84a');
@@ -641,3 +663,34 @@ const BurnsUI = {
     if (g.resultsT > 1.2) this.text(ctx, 'TAP TO CONTINUE', W / 2, H * 0.86 + Math.sin(g.t * 4) * 2, 12, '#ffd84a');
   }
 };
+
+/* ---------------- exports + test/debug hooks ----------------
+   Made here, in the last engine module every app bundles (Art Cart has no hub or title module), so BurnsGL and the
+   debug API are always there; the hub, the title app and the worlds add their own entries. */
+window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, {
+  BurnsPlayScene, BurnsWorlds, BurnsSave, BurnsScenes, BurnsGL, BurnsRenderer, BurnsEnv, BurnsChar,
+  BurnsManBoss, BurnsRig, BurnsProps, BurnsMesh, BurnsBehaviors, BURNS_ATLAS, BURNS_SPRITES,
+  debug: {
+    scene() { return Game.scene; },
+    play(w, opts) { return BurnsScenes.play(w || 1, opts || {}); },
+    state() {
+      const s = Game.scene; if (!(s instanceof BurnsPlayScene) || !s.player) return { scene: s && s.constructor.name };
+      const p = s.player;
+      return { scene: 'BurnsPlayScene', state: s.state, world: s.worldId, x: p.x, y: p.y, z: p.z, grounded: p.grounded, hydration: p.hydration, glow: s.glow, power: p.power, tokens: BurnsSave.tokenCount(s.worldId), missions: s.missions.list.map(m => [m.id, m.state, m.n]), boss: s.boss ? { hp: s.boss.hp, st: s.boss.st } : null, cine: !!s.cine, dialog: s.dialog.open, draws: s.stats.draws, cpu: s.stats.cpu, fps: s.stats.fps, q: s.q };
+    },
+    teleport(x, z, y) { const s = Game.scene; s.player.teleport(x, y === undefined ? s.world.height(x, z) + 0.1 : y, z); s.snapCam = true; },
+    give(item) { Game.scene.giveItem(item); },
+    power(id) { Game.scene.player.givePower(id); },
+    complete(id) { Game.scene.missions.complete(id); },
+    skipCine() { const s = Game.scene; if (s.cine) s.cine.skip(); while (s.dialog.open) s.dialog.next(); },
+    // run the simulation without rendering (fast-forward)
+    sim(sec, input) {
+      const s = Game.scene, steps = Math.round(sec * 120);
+      for (let k = 0; k < steps; k++) {
+        if (input) { Object.assign(Input, input); Input.recompute && 0; }
+        s.update(1 / 120);
+        if (k === 0) { Input.jumpPressed = false; Input.actionPressed = false; Input.pausePressed = false; Input.taps.length = 0; Input.uiKey = null; for (const kk in Input.hudPressed) Input.hudPressed[kk] = false; }
+      }
+    }
+  }
+});

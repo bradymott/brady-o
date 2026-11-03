@@ -315,19 +315,25 @@ const BURNS_ATLAS = {
   /* ---- the Chinka photo: the polaroid on photo collectibles and its UI icon (cell x 0..128, y 832..992) ----
      init() paints the frame and a playa-sunset backdrop. Once the GL renderer is up, bakePhoto(R) renders the 3D
      Chinka model (waving, LED necklace on) over the backdrop with the engine itself; the play scene calls it on its
-     first GL frames. img: the transparent render to composite (photo area 104 x 108). */
+     first GL frame. img: the engine's composite (backdrop + Chinka) for the photo area (104 x 108). */
   photoBaked: false,
   paintPhoto(x, X, Y, img) {
     burnsPaintSafe(x, x => {
       x.translate(X, Y);
       x.clearRect(0, 0, 128, 160);
       x.fillStyle = '#f8f4ec'; x.fillRect(4, 4, 120, 152);
-      x.save(); x.beginPath(); x.rect(12, 12, 104, 108); x.clip(); this.paintPhotoScene(x, img); x.restore();
+      x.save(); x.beginPath(); x.rect(12, 12, 104, 108); x.clip();
+      if (img) {   // the engine's composite, then a print vignette (the backdrop it sampled has none)
+        x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(img, 12, 12, 104, 108);
+        const v = x.createRadialGradient(64, 66, 34, 64, 66, 82); v.addColorStop(0, 'rgba(30,10,30,0)'); v.addColorStop(1, 'rgba(30,10,30,0.32)');
+        x.fillStyle = v; x.fillRect(12, 12, 104, 108);
+      } else this.paintPhotoScene(x);
+      x.restore();
       x.fillStyle = '#ff4f8a'; x.font = `14px ${FONT_DISPLAY}`; x.textAlign = 'center'; x.fillText('\u2665 CHINKA \u2665', 64, 142);
     });
   },
-  // the photo area (12..116 x 12..120): the backdrop, the engine's render of Chinka (img) and a print vignette
-  paintPhotoScene(x, img) {
+  // the photo area (12..116 x 12..120): the playa-sunset backdrop the engine renders Chinka over
+  paintPhotoScene(x) {
     // sunset over the playa; the horizon sits at eye level (y 62), with the mountains and a tiny Man on it
     const sky = x.createLinearGradient(0, 12, 0, 62); sky.addColorStop(0, '#2e1658'); sky.addColorStop(0.55, '#b0468a'); sky.addColorStop(1, '#ffb070');
     x.fillStyle = sky; x.fillRect(12, 12, 104, 50);
@@ -343,30 +349,21 @@ const BURNS_ATLAS = {
     x.strokeStyle = '#2a1430'; x.lineWidth = 1.2; x.beginPath();
     x.moveTo(27, 62); x.lineTo(27, 53); x.moveTo(27, 56); x.lineTo(23.5, 50); x.moveTo(27, 56); x.lineTo(30.5, 50); x.moveTo(25, 62); x.lineTo(27, 58.5); x.lineTo(29, 62);
     x.stroke();
-    if (img) { x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(img, 12, 12, 104, 108); }
-    const v = x.createRadialGradient(64, 66, 34, 64, 66, 82); v.addColorStop(0, 'rgba(30,10,30,0)'); v.addColorStop(1, 'rgba(30,10,30,0.32)');
-    x.fillStyle = v; x.fillRect(12, 12, 104, 108);
   },
-  // render the 3D Chinka into the photo, once a session: the play scene calls this every frame until it's done (the
-  // render happens on the first call, the pixels arrive a frame or two later). The backdrop alone still reads as a
-  // photo if anything fails.
-  photoJob: null,
+  // render the 3D Chinka into the photo, once a session (the play scene calls this on its first GL frame). The
+  // backdrop alone still reads as a photo if anything fails.
   bakePhoto(R) {
     if (this.photoBaked || !this.canvas || !R) return;
+    this.photoBaked = true;
     let img = null;
     try {
-      if (!this.photoJob) {
-        const model = BurnsRig.model(BurnsRig.chinkaSpec()), ch = new BurnsChar(model);
-        ch.yaw = 0.32; ch.play('wave', null, true); ch.animT = 0.16; ch.update(0); ch.compute();   // hand up, big smile
-        const env = Object.assign(BurnsEnv.build('dusk', 'dusk', 0, {}, 0), { fogD: 0, trip: 0, dust: 0, exposure: 1, emB: 1.3,
-          keyDir: [-0.42, 0.52, 0.74], keyCol: [0.96, 0.78, 0.62], sky: [0.6, 0.48, 0.78], gnd: [0.7, 0.48, 0.4], rimCol: [1.0, 0.62, 0.5] });
-        this.photoJob = R.bakeBegin(312, 324, { x: 0.42, y: 1.5, z: 2.75, tx: 0, ty: 1.34, tz: 0, fov: 0.5 }, env, RR => RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.8));
-        BurnsGL.freeGeo(model.geo);   // re-uploaded on demand by worlds that show her
-      }
-      img = R.bakePoll(this.photoJob);
-      if (img === false) return;   // still on the GPU: next frame
-    } catch (e) { console.warn('burns: Chinka photo bake failed', e); img = null; try { R.bakeFree(this.photoJob); } catch (e2) { /* context gone */ } }
-    this.photoJob = null; this.photoBaked = true;
+      const model = BurnsRig.model(BurnsRig.chinkaSpec()), ch = new BurnsChar(model);
+      ch.yaw = 0.32; ch.play('wave', null, true); ch.animT = 0.16; ch.update(0); ch.compute();   // hand up, big smile
+      const env = Object.assign(BurnsEnv.build('dusk', 'dusk', 0, {}, 0), { fogD: 0, trip: 0, dust: 0, exposure: 1, emB: 1.3,
+        keyDir: [-0.42, 0.52, 0.74], keyCol: [0.96, 0.78, 0.62], sky: [0.6, 0.48, 0.78], gnd: [0.7, 0.48, 0.4], rimCol: [1.0, 0.62, 0.5] });
+      img = R.bakeImage(312, 324, { x: 0.42, y: 1.5, z: 2.75, tx: 0, ty: 1.34, tz: 0, fov: 0.5 }, env, RR => RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.8), this.reg(12.5, 844.5, 103, 107));
+      BurnsGL.freeGeo(model.geo);   // re-uploaded on demand by worlds that show her
+    } catch (e) { console.warn('burns: Chinka photo bake failed', e); img = null; }
     if (!img) return;
     this.paintPhoto(this.ctx, 0, 832, img);
     if (this.T && !BurnsGL.texRegion(this.T, 0, 832, 128, 160)) this.T.dirty = true;   // just the tile, not the whole 2048 x 3072 atlas

@@ -667,6 +667,29 @@ void main(){
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, G.ibo); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, G.idx, gl.STATIC_DRAW);
     return G;
   },
+  // the bake composite (compiled on first use): tone map + grade a model render like the frame's composite pass and lay
+  // it over an atlas region (R.bakeImage)
+  bakeProg() {
+    if (this._bake && this._bake.gen === this.gen) return this._bake;
+    try {
+      this._bake = this.program(`attribute vec2 aPos; varying vec2 vUv; void main(){ vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`, `precision highp float;
+varying vec2 vUv;
+uniform sampler2D uSrc; uniform sampler2D uBg; uniform vec4 uBgR; uniform vec2 uK;   // uK: x exposure, y 1 = linear HDR source
+vec3 bAces(vec3 c) { return clamp((c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14), 0.0, 1.0); }
+void main(){
+  vec4 s = texture2D(uSrc, vUv);
+  vec3 c = s.rgb;
+  if (uK.y > 0.5) c = pow(bAces(c * uK.x), vec3(1.0 / 2.2));
+  float l = dot(c, vec3(0.3, 0.59, 0.11));
+  c = clamp(mix(vec3(l), c, 1.08), 0.0, 1.0);
+  c = mix(c, c * c * (3.0 - 2.0 * c), 0.12);
+  vec3 b = texture2D(uBg, vec2(mix(uBgR.x, uBgR.z, vUv.x), mix(uBgR.y, uBgR.w, 1.0 - vUv.y))).rgb;
+  gl_FragColor = vec4(mix(b, c, clamp(s.a, 0.0, 1.0)), 1.0);
+}`, ['aPos']);
+      this._bake.gen = this.gen;
+    } catch (e) { console.warn(e); this._bake = null; }
+    return this._bake;
+  },
   // re-upload one region of a canvas texture (a freshly painted atlas tile) instead of the whole image.
   // Returns false when the texture isn't on the GPU yet or is already due for a full upload.
   texRegion(T, x, y, w, h) {
@@ -678,7 +701,8 @@ void main(){
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, o.premult ? 1 : 0);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, c);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
-    if (o.mips) gl.generateMipmap(gl.TEXTURE_2D);
+    const pot = (T.src.width & (T.src.width - 1)) === 0 && (T.src.height & (T.src.height - 1)) === 0;
+    if (o.mips && (pot || this.gl2)) gl.generateMipmap(gl.TEXTURE_2D);   // same rule as tex(): WebGL1 can't mip a non-power-of-two texture
     return true;
   },
   freeGeo(G) {
@@ -872,7 +896,7 @@ class BurnsRenderer {
     this.pl = new Float32Array(64); this.pc = new Float32Array(48); this.npl = 0;
     this.flat = new BurnsSpriteBatch(1500);
     this.bbs = new BurnsSpriteBatch(5000);
-    this.stats = { draws: 0, tris: 0 };
+    this.stats = { draws: 0, tris: 0, shDraws: 0, shTris: 0 };   // per frame: main pass, and the sun-shadow pass
     this.w = 1; this.h = 1;
     this.LVP = new Float32Array(16); this.SM = new Float32Array(16);
     this.pass = 'main'; this.shadowOn = false;
@@ -936,6 +960,9 @@ class BurnsRenderer {
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
     gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK); gl.frontFace(gl.CCW);
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
+    // main-pass counters restart here; the shadow pass (drawn before begin()) keeps its own: stats.shDraws, stats.shTris
+    if (!this.shadowRan) { this.shadowStats = 0; this.stats.shDraws = 0; }
+    this.shadowRan = false; this.stats.shTris = this.shadowStats;
     this.stats.draws = 0; this.stats.tris = 0;
     this.post.noFx = null;
   }
@@ -1035,7 +1062,7 @@ class BurnsRenderer {
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.CULL_FACE);   // thin and open shapes cast from both sides
     gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.6, 2.5);
-    this.pass = 'shadow'; this.shadowStats = 0;
+    this.pass = 'shadow'; this.shadowStats = 0; this.stats.shDraws = 0; this.shadowRan = true;
     return true;
   }
   // is a sphere near the shadow frustum? (cheap caster culling)
@@ -1104,7 +1131,7 @@ class BurnsRenderer {
         gl.bindBuffer(gl.ARRAY_BUFFER, c.vbo); BurnsGL.layoutMesh();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, c.ibo);
         gl.drawElements(gl.TRIANGLES, c.count, gl.UNSIGNED_SHORT, 0);
-        this.stats.draws++; this.shadowStats += c.count / 3;
+        this.stats.shDraws++; this.shadowStats += c.count / 3;
       }
       return;
     }
@@ -1147,7 +1174,7 @@ class BurnsRenderer {
       gl.bindBuffer(gl.ARRAY_BUFFER, geo.vbo); BurnsGL.layoutMesh();
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.ibo);
       gl.drawElements(gl.TRIANGLES, geo.count, gl.UNSIGNED_SHORT, 0);
-      this.stats.draws++; this.shadowStats += geo.count / 3;
+      this.stats.shDraws++; this.shadowStats += geo.count / 3;
       return;
     }
     const u = BurnsGL.progs.skin.u;
@@ -1168,7 +1195,7 @@ class BurnsRenderer {
     gl.uniform4fv(p.u.uB, n * 12 === bones.length ? bones : bones.subarray(0, n * 12));
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vbo); BurnsGL.layoutMesh();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.ibo);
-    for (let k = 0; k < cnt; k++) { const r = ranges[k]; if (r[1] <= r[0]) continue; gl.drawElements(gl.TRIANGLES, r[1] - r[0], gl.UNSIGNED_SHORT, r[0] * 2); this.stats.draws++; this.shadowStats += (r[1] - r[0]) / 3; }
+    for (let k = 0; k < cnt; k++) { const r = ranges[k]; if (r[1] <= r[0]) continue; gl.drawElements(gl.TRIANGLES, r[1] - r[0], gl.UNSIGNED_SHORT, r[0] * 2); if (this.pass === 'shadow') { this.stats.shDraws++; this.shadowStats += (r[1] - r[0]) / 3; } else { this.stats.draws++; this.stats.tris += (r[1] - r[0]) / 3; } }
   }
   drawBatch(batch, spriteT, env, isFlat, sort) {
     const n = batch.build(sort);
@@ -1235,18 +1262,20 @@ class BurnsRenderer {
     gl.disable(gl.SCISSOR_TEST); gl.viewport(0, 0, this.w, this.h); gl.clearColor(0, 0, 0, 1);
     this.post.noFx = [rect.x / this.w, 1 - (rect.y + rect.h) / this.h, (rect.x + rect.w) / this.w, 1 - rect.y / this.h];
   }
-  /* offscreen render of posed models into a 2D canvas with a transparent background (engine-made atlas art, such as
-     the Chinka photo). bakeBegin() renders now and starts reading the pixels back without stalling the GPU (a pack
-     buffer and a fence on WebGL2); call bakePoll(job) on later frames until it returns the canvas (false while the
-     GPU is busy, null if it failed). Call both before the frame's setCamera: they borrow the camera and light state
-     and put it back. cam: {x,y,z, tx,ty,tz, fov}; env: a full lighting env (BurnsEnv.build + overrides); draw(R)
-     issues R.skin() calls. HDR tiers are tone-mapped like the frame (ACES, gamma, the default grade). */
-  bakeBegin(w, h, cam, env, draw) {
-    const gl = BurnsGL.gl;
-    if (!gl || BurnsGL.lost) return null;
+  /* offscreen render of a posed model, composited over a background atlas region, returned as a 2D canvas (engine-made
+     atlas art, such as the Chinka photo). Call it before the frame's setCamera: it borrows the camera and light state
+     and puts it back. The model is lit and tone-mapped like the frame, composited on the GPU into a corner of the GL
+     canvas (which the frame then draws over) and copied out with drawImage: no readPixels, no GPU stall.
+     cam: {x,y,z, tx,ty,tz, fov}; env: a full lighting env (BurnsEnv.build + overrides); draw(R) issues R.skin() calls;
+     bg: an atlas region {u0,v0,u1,v1} shown behind the model. Returns a canvas (up to w x h), or null. */
+  bakeImage(w, h, cam, env, draw, bg) {
+    const gl = BurnsGL.gl, cv = BurnsGL.canvas;
+    if (!gl || BurnsGL.lost || !cv) return null;
+    const k = Math.min(1, cv.width / w, cv.height / h); w = Math.floor(w * k); h = Math.floor(h * k);
+    if (w < 16 || h < 16) return null;
     if (BurnsGL.gl2) this.T = BurnsGL.targets(Math.max(64, this.w), Math.max(64, this.h));   // the frame's own targets (begin() makes them anyway); this.hdr reads them
-    const hdr = this.hdr, job = { w, h, hdr, exposure: env.exposure || 1, gen: BurnsGL.gen, t: 0, T: null };
-    let T;
+    const hdr = this.hdr, prog = BurnsGL.bakeProg();
+    let T, out = null;
     if (BurnsGL.gl2) T = BurnsGL.target(w, h, { fmt: hdr ? 'hdr' : 'ldr', depth: true });
     else {   // WebGL1 (legacy tier): an RGBA8 texture and a 16-bit depth buffer
       T = { w, h, fb: gl.createFramebuffer(), tex: gl.createTexture(), drb: gl.createRenderbuffer() };
@@ -1260,10 +1289,9 @@ class BurnsRenderer {
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, T.drb);
       T.ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
     }
-    job.T = T;
-    if (!T.ok) job.img = null;
-    else {
+    if (T.ok && prog) {
       const save = { P: this.P.slice(), V: this.V.slice(), VP: this.VP.slice(), cam: this.cam, B: Object.assign({}, this.B), shadowOn: this.shadowOn, pass: this.pass, env: this.envRef, pl: this.pl.slice(), pc: this.pc.slice(), npl: this.npl };
+      // 1. the model, into its own target (transparent background)
       gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb);
       gl.viewport(0, 0, w, h); gl.disable(gl.SCISSOR_TEST); gl.disable(gl.BLEND);
       gl.depthMask(true); gl.clearDepth(1); gl.clearColor(0, 0, 0, 0);
@@ -1279,71 +1307,31 @@ class BurnsRenderer {
       this.prepEnv(env);
       this.skinBegin(env, null, BURNS_ATLAS.T);
       draw(this);
-      if (BurnsGL.gl2) {   // async read-back: the pixels go into a pack buffer behind a fence; bakePoll() collects them
-        for (let i = 0; i < 8 && gl.getError() !== gl.NO_ERROR; i++) { /* drop stale errors */ }
-        job.pbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, job.pbo);
-        gl.bufferData(gl.PIXEL_PACK_BUFFER, w * h * 4 * (hdr ? 4 : 1), gl.STREAM_READ);
-        gl.readPixels(0, 0, w, h, gl.RGBA, hdr ? gl.FLOAT : gl.UNSIGNED_BYTE, 0);
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-        if (gl.getError() !== gl.NO_ERROR) job.img = null;
-        else { job.sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); gl.flush(); }
-      } else job.img = this.readImage(T, w, h, job.exposure);   // WebGL1 has no pack buffers: read now
+      // 2. tone map + grade it over the background, into the bottom-left corner of the GL canvas
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, w, h);
+      gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
+      gl.useProgram(prog.p);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.uniform1i(prog.u.uSrc, 0);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bg ? BurnsGL.tex(BURNS_ATLAS.T) : BurnsGL.black); gl.uniform1i(prog.u.uBg, 1);
+      gl.activeTexture(gl.TEXTURE0);
+      const r = bg || { u0: 0, v0: 0, u1: 1, v1: 1 };
+      gl.uniform4f(prog.u.uBgR, r.u0, r.v0, r.u1, r.v1);
+      gl.uniform2f(prog.u.uK, (env.exposure || 1) * 0.9, hdr ? 1 : 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, BurnsGL.fsBuf); BurnsGL.enable(1); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      // 3. copy it out (the same path the game uses to show every frame)
+      out = makeCanvas(w, h);
+      out.getContext('2d').drawImage(cv, 0, cv.height - h, w, h, 0, 0, w, h);
+      gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
       this.P.set(save.P); this.V.set(save.V); this.VP.set(save.VP); this.cam = save.cam; Object.assign(this.B, save.B);
       this.shadowOn = save.shadowOn; this.pass = save.pass; this.pl.set(save.pl); this.pc.set(save.pc); this.npl = save.npl;
       if (save.env) this.prepEnv(save.env); else this.envRef = null;
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.w, this.h); gl.clearColor(0, 0, 0, 1);
-    return job;
-  }
-  bakePoll(job) {
-    const gl = BurnsGL.gl;
-    if (!job) return null;
-    if (job.img !== undefined) { this.bakeFree(job); return job.img; }
-    if (!gl || BurnsGL.lost || job.gen !== BurnsGL.gen) { job.img = null; return null; }   // the context went away with the job
-    if (++job.t < 600 && gl.getSyncParameter(job.sync, gl.SYNC_STATUS) !== gl.SIGNALED) return false;
-    let img = null;
-    if (gl.getSyncParameter(job.sync, gl.SYNC_STATUS) === gl.SIGNALED) {
-      const n = job.w * job.h * 4, src = job.hdr ? new Float32Array(n) : new Uint8Array(n);
-      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, job.pbo); gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, src); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-      img = this.toneImage(src, job.w, job.h, job.hdr, job.exposure);
-    }
-    this.bakeFree(job);
-    return img;
-  }
-  bakeFree(job) {
-    const gl = BurnsGL.gl;
-    if (!job || !gl || job.gen !== BurnsGL.gen) return;
-    if (job.sync) { gl.deleteSync(job.sync); job.sync = null; }
-    if (job.pbo) { gl.deleteBuffer(job.pbo); job.pbo = null; }
-    if (job.T) { BurnsGL.freeTarget(job.T); job.T = null; }
-  }
-  // synchronous read-back of an 8-bit target (the WebGL1 path)
-  readImage(T, w, h, exposure) {
-    const gl = BurnsGL.gl, src = new Uint8Array(w * h * 4);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, src);
-    return this.toneImage(src, w, h, false, exposure);
-  }
-  // raw pixels (bottom-up; Float32 linear HDR or 8-bit display values) -> a top-down 2D canvas with straight alpha,
-  // tone-mapped and graded like the composite pass
-  toneImage(src, w, h, hdr, exposure) {
-    const k = hdr ? 1 : 1 / 255, c = makeCanvas(w, h), x = c.getContext('2d'), img = x.createImageData(w, h), D = img.data;
-    const ex = exposure * 0.9;
-    const aces = v => { v *= ex; v = (v * (2.51 * v + 0.03)) / (v * (2.43 * v + 0.59) + 0.14); return v <= 0 ? 0 : v >= 1 ? 1 : Math.pow(v, 1 / 2.2); };
-    const grade = (v, l) => { v = l + (v - l) * 1.08; v = v < 0 ? 0 : v > 1 ? 1 : v; return (v + (v * v * (3 - 2 * v) - v) * 0.12) * 255; };
-    for (let y = 0; y < h; y++) {
-      for (let i = 0; i < w; i++) {
-        const s = ((h - 1 - y) * w + i) * 4, d = (y * w + i) * 4, a = src[s + 3] * k;
-        if (!(a > 0.002)) { D[d + 3] = 0; continue; }
-        let r = src[s] * k, g = src[s + 1] * k, b = src[s + 2] * k;
-        if (hdr) { r = aces(r); g = aces(g); b = aces(b); }
-        const l = 0.3 * r + 0.59 * g + 0.11 * b;
-        D[d] = grade(r, l); D[d + 1] = grade(g, l); D[d + 2] = grade(b, l); D[d + 3] = Math.min(1, a) * 255;
-      }
-    }
-    x.putImageData(img, 0, 0);
-    return c;
+    BurnsGL.freeTarget(T);
+    return out;
   }
   /* ---------- post-processing: resolve, SSAO, bloom, god rays, DOF, tone map, to the canvas ----------
      fx: { dof: {focus, aperture} | null, fires: [[x,y,z,r]...], heat: 0..1, rays: 0..1, bloom, exposure, grade } */

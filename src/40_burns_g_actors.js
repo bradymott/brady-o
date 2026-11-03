@@ -589,7 +589,7 @@ const BurnsBehaviors = {
 /* ---------------- projectiles + shockwaves ---------------- */
 class BurnsProjectiles {
   constructor(g) { this.g = g; this.list = []; this.waves = []; }
-  add(o) { const p = Object.assign({ vx: 0, vy: 0, vz: 0, life: 4, t: 0, r: 0.4, dmg: 1, dead: false }, o); if (p.speed && !o.vx && !o.vz) { const pl = this.g.player, dx = pl.x - p.x, dz = pl.z - p.z, dy = pl.y + 1.1 - p.y, d = Math.hypot(dx, dy, dz) || 1; p.vx = dx / d * p.speed; p.vy = dy / d * p.speed; p.vz = dz / d * p.speed; } this.list.push(p); return p; }
+  add(o) { const p = Object.assign({ vx: 0, vy: 0, vz: 0, life: 4, t: 0, r: 0.4, dmg: 1, dead: false }, o); if (Array.isArray(p.text)) p.text = p.text[Math.floor(Math.random() * p.text.length)];   /* text: one line, or a list to pick from */ if (p.speed && !o.vx && !o.vz) { const pl = this.g.player, dx = pl.x - p.x, dz = pl.z - p.z, dy = pl.y + 1.1 - p.y, d = Math.hypot(dx, dy, dz) || 1; p.vx = dx / d * p.speed; p.vy = dy / d * p.speed; p.vz = dz / d * p.speed; } this.list.push(p); return p; }
   wave(o) { const w = Object.assign({ r: 0.5, speed: 8, max: 10, h: 0.6, w: 0.8, dmg: 1, col: '#ff5a3a', hitDone: false }, o); w.y = w.y || this.g.world.height(w.x, w.z); w.c = burnsRGBf(w.col); this.waves.push(w); return w; }
   update(dt) {
     const g = this.g, p = g.player, W = g.world;

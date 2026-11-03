@@ -184,7 +184,10 @@ class BurnsWorld {
   constructor(def, game) {
     this.def = def; this.game = game; this.id = def.id;
     this.col = new BurnsCollide();
-    this.cells = new Map(); this.chunkSize = 48;
+    // def.chunkSize (default 48 m): static geometry is merged per cell this size (bigger: fewer draws, coarser culling).
+    // def.ao: true (default) | 'fast' (coarser baked AO, about 6x quicker to build) | false (no baked AO: huge worlds)
+    this.cells = new Map(); this.chunkSize = def.chunkSize || 48;
+    this.aoMode = def.ao === undefined ? true : def.ao;
     this.ghostMesh = null; this.chunks = []; this.ghosts = [];
     this.groups = []; this.movers = []; this.traffic = [];
     this.glows = []; this.beams = []; this.fires = []; this.jets = []; this.muds = []; this.triggers = []; this.checkpoints = []; this.markers = []; this.regions = {};
@@ -228,11 +231,13 @@ class BurnsWorld {
     opts = opts || {};
     const m = opts.hidden ? (this.ghostMesh || (this.ghostMesh = new BurnsMesh(4096))) : opts.mesh || this.cellMesh(x, z);
     m.push(); m.identity(); m.tf(x, y || 0, z, yaw || 0, 0, 0, scale || 1);
-    const v0 = m.nv, i0 = m.ind.length;
+    const v0 = m.nv, i0 = m.ind.length, lo0 = m.lo;
+    if (opts.lo) m.lo = true;   // { lo: true }: the low-detail build (background rows, far-off camps)
     const info = fn(m) || {};
+    m.lo = lo0;
     m.pop();
     // baked AO for this object (its own corners + contact with the ground)
-    if (!opts.noAO && !window.__burnsNoAO && m.nv - v0 >= 8) { const W0 = this; BurnsAO.bake(m.buf, v0, m.nv, m.ind, i0, m.ind.length, { ground: (gx, gz) => W0.height(gx, gz) }); }
+    if (!opts.noAO && !window.__burnsNoAO && this.aoMode !== false && m.nv - v0 >= 8) { const W0 = this; BurnsAO.bake(m.buf, v0, m.nv, m.ind, i0, m.ind.length, { ground: (gx, gz) => W0.height(gx, gz), res: this.aoMode === 'fast' ? 18 : undefined }); }
     const s = scale || 1, c = Math.cos(yaw || 0), sn = Math.sin(yaw || 0);
     const W = (lx, lz) => [x + (lx * c + lz * sn) * s, z + (-lx * sn + lz * c) * s];
     const cols = [];
@@ -262,7 +267,7 @@ class BurnsWorld {
     // build into a scratch mesh first, so a big object never overflows a group's 16-bit index range
     const src = new BurnsMesh(4096); src.setBone(0); src.identity();
     const info = build(src) || {};
-    if (!window.__burnsNoAO && !(o && o.noAO)) BurnsAO.bake(src.buf, 0, src.nv, src.ind, 0, src.ind.length, {});
+    if (!window.__burnsNoAO && !(o && o.noAO) && this.aoMode !== false) BurnsAO.bake(src.buf, 0, src.nv, src.ind, 0, src.ind.length, { res: this.aoMode === 'fast' ? 18 : undefined });
     // o.lodTwin: the builder is deterministic, so also build a low-detail copy (engine traffic)
     let lo = null; if (o && o.lodTwin) { lo = new BurnsMesh(2048); lo.setBone(0); lo.identity(); lo.lo = true; build(lo); }
     const need = src.nv + (lo ? lo.nv : 0), slots = lo ? 2 : 1;

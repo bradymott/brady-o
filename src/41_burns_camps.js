@@ -2180,10 +2180,12 @@ BurnsBehaviors.register('bcmBungee', {
     D.hitT = Math.max(0, D.hitT - dt);
     if (lunge > 0.8 && side > 0 && Math.abs(D.sw) < 1.4 && D.hitT <= 0) {
       D.hitT = 1.2; const o = bcmActorOf(g, d.foe); if (o && o.data) { o.data.vs -= side * 7; o.data.vy += 3; }
-      g.fx.burst(a.x - Math.sin(a.yaw) * -0.8, a.y + 1.6, a.z, 'star', 8, '#ffe24a');
-      if (Math.hypot(g.player.x - a.x, g.player.z - a.z) < 30) burnsSfx('bossHit', { vol: 0.35, pitch: 1.3 });
+      const near = Math.hypot(g.player.x - a.x, g.player.z - a.z);
+      if (near < 70) g.fx.burst(a.x - Math.sin(a.yaw) * -0.8, a.y + 1.6, a.z, 'star', 8, '#ffe24a');
+      if (near < 30) burnsSfx('bossHit', { vol: 0.35, pitch: 1.3 });
       bcmEvent(g, 'bcmBonk', { camp: P, actor: a });
-      for (const sd of P.spectators || []) { const s = bcmActorOf(g, sd); if (s && Math.random() < 0.3) s.say(['BONK!', 'TWO ENTER!', 'HIT HIM!', 'FOAM IS PAIN!'][Math.floor(Math.random() * 4)], 1.1); }
+      // the crowd only shouts when Brady is close enough to hear it (speech bubbles show on screen)
+      if (near < 45) for (const sd of P.spectators || []) { const s = bcmActorOf(g, sd); if (s && Math.random() < 0.3) s.say(['BONK!', 'TWO ENTER!', 'HIT HIM!', 'FOAM IS PAIN!'][Math.floor(Math.random() * 4)], 1.1); }
     }
     a.ch.play(lunge > 0.5 ? 'charge' : (D.y > 0.4 ? 'fall' : 'land'));
   }

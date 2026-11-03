@@ -239,31 +239,5 @@ class BurnsHubScene {
   }
 }
 
-/* ---------------- exports + test/debug hooks ---------------- */
-window.BRADY_BURNS = {
-  BurnsHubScene, BurnsPlayScene, BurnsWorlds, BurnsSave, BurnsScenes, BurnsGL,
-  BurnsManBoss, BurnsRig, BurnsProps, BurnsMesh, BurnsBehaviors, BURNS_ATLAS,
-  debug: {
-    scene() { return Game.scene; },
-    play(w, opts) { return BurnsScenes.play(w || 1, opts || {}); },
-    state() {
-      const s = Game.scene; if (!(s instanceof BurnsPlayScene) || !s.player) return { scene: s && s.constructor.name };
-      const p = s.player;
-      return { scene: 'BurnsPlayScene', state: s.state, world: s.worldId, x: p.x, y: p.y, z: p.z, grounded: p.grounded, hydration: p.hydration, glow: s.glow, power: p.power, tokens: BurnsSave.tokenCount(s.worldId), missions: s.missions.list.map(m => [m.id, m.state, m.n]), boss: s.boss ? { hp: s.boss.hp, st: s.boss.st } : null, cine: !!s.cine, dialog: s.dialog.open, draws: s.stats.draws, cpu: s.stats.cpu, fps: s.stats.fps, q: s.q };
-    },
-    teleport(x, z, y) { const s = Game.scene; s.player.teleport(x, y === undefined ? s.world.height(x, z) + 0.1 : y, z); s.snapCam = true; },
-    give(item) { Game.scene.giveItem(item); },
-    power(id) { Game.scene.player.givePower(id); },
-    complete(id) { Game.scene.missions.complete(id); },
-    skipCine() { const s = Game.scene; if (s.cine) s.cine.skip(); while (s.dialog.open) s.dialog.next(); },
-    // run the simulation without rendering (fast-forward)
-    sim(sec, input) {
-      const s = Game.scene, steps = Math.round(sec * 120);
-      for (let k = 0; k < steps; k++) {
-        if (input) { Object.assign(Input, input); Input.recompute && 0; }
-        s.update(1 / 120);
-        if (k === 0) { Input.jumpPressed = false; Input.actionPressed = false; Input.pausePressed = false; Input.taps.length = 0; Input.uiKey = null; for (const kk in Input.hudPressed) Input.hudPressed[kk] = false; }
-      }
-    }
-  }
-};
+/* ---------------- exports: the hub (the engine's own exports and debug hooks are made in 40_burns_j_ui.js) ---------------- */
+window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsHubScene });

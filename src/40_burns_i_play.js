@@ -1065,7 +1065,7 @@ class BurnsPlayScene {
     R.begin(env);
     R.sky(env);
     R.ground(this.world.ground, env, this.world);
-    R.statics(this.world.chunks, env, this.world, BURNS_ATLAS.T, env.fogD > 0.02 ? 120 : 260);
+    R.statics(this.world.chunks, env, this.world, BURNS_ATLAS.T, this.def.drawDist || (env.fogD > 0.02 ? 120 : 260));   // def.drawDist: per-world static draw distance (m)
     if (env.trip > 0.01 && this.world.ghosts.length) R.ghost(this.world.ghosts, env, this.world, BURNS_ATLAS.T, 0.55 + env.trip * 0.35);
     // skinned: groups (vehicles, movers, pickups), characters, bosses
     R.skinBegin(env, this.world, BURNS_ATLAS.T);
@@ -1090,7 +1090,7 @@ class BurnsPlayScene {
     // dialogue portrait (rendered in GL, framed in 2D)
     if (this.dialog.open && this.dialog.cur) this.drawPortrait(R, env);
     R.end(env, this.postFx(env));
-    this.stats.draws = R.stats.draws; this.stats.tris = R.stats.tris;
+    this.stats.draws = R.stats.draws; this.stats.tris = R.stats.tris; this.stats.shDraws = R.stats.shDraws; this.stats.shTris = R.stats.shTris;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(BurnsGL.canvas, 0, 0, gw, gh, 0, 0, Game.canvas.width, Game.canvas.height);

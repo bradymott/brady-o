@@ -75,6 +75,9 @@ That's a complete, playable world. The hub lists it automatically once it regist
 | `env(g, env)` | fn | Per frame: tweak the lighting `env` (for example fog during a dust storm). |
 | `onRespawn(g)` | fn | After Brady faints and respawns. |
 | `drawSkinned(g, R)`, `drawSprites(g, R)` | fn | Advanced: extra draws (§10). |
+| `drawDist` | number (m) | How far static geometry draws (default 260, or 120 in fog). Lower it for big worlds seen from high places (W2's rooftops); fog hides the edge. |
+| `chunkSize` | number (m) | Static geometry is merged per square cell this size (default 48). Bigger cells mean fewer draw calls but coarser culling. |
+| `ao` | `true` / `'fast'` / `false` | Baked ambient occlusion for props and movers: `'fast'` uses a coarser grid (about 6× quicker to build, a little softer); `false` skips it (for huge or procedurally filled worlds with long load times). Per object: `{ noAO: true }`. |
 | `day`, `dayShort` | string | Day of the week shown on the intro card, the loading card and the hub pin (for example `'Monday'`, `'MON'`). Defaults come from the table in §3.1, so you rarely need it. |
 | `dayCard` | bool | `false` skips the automatic day card at the start of a visit. Show it yourself later with `g.dayCard()` (for example at the end of your intro cutscene). |
 | `home` | bool | Marks Brady's home world (world 17 already has it). The hub shows it as a tipi pin with a HOME button. |
@@ -149,7 +152,7 @@ Everything below is called inside `build(api, g)`. Positions are world metres. M
   - `api.capsule(x, y, z, r, h, colour, {r1})`: pill of total height `h` (radius `r`, top radius `r1`). Cylinder collider. Bollards, posts, cacti, soft pillars.
   - `api.cylinder(x, y, z, r, h, colour, {r1, round})`: drum, pillar or table with softly rounded rims (`round` = rim radius); with `r1` it tapers smoothly to top radius `r1`. Cylinder collider.
   - `api.cone(x, y, z, r, h, colour)`: soft-tipped cone (traffic cones, spires, party hats). Cylinder collider (60% radius, 75% height).
-  - `api.lathe(x, y, z, profile, colour, {seg, colScale})`: any surface of revolution. `profile` is `[[radius, height, colour?, emissive?], …]` from bottom to top; start or end at radius 0 to close it, and **repeat a point** to get a crisp rim. Vases, lamps, totems, onion domes, mushrooms, trophies, bottles. Cylinder collider of the widest radius × `colScale` (0.9).
+  - `api.lathe(x, y, z, profile, colour, {seg, colScale, flip, theta0, theta1…})` (every `m.lathe` option passes through): any surface of revolution. `profile` is `[[radius, height, colour?, emissive?], …]` from bottom to top; start or end at radius 0 to close it, and **repeat a point** to get a crisp rim. Vases, lamps, totems, onion domes, mushrooms, trophies, bottles. Cylinder collider of the widest radius × `colScale` (0.9).
   - `api.torus(x, y, z, R, r, colour, {pitch, roll})`: ring or hoop (`pitch: Math.PI/2` stands it up like a wheel). No collider.
 - `api.mesh(x, z, m => { …; return {cols, lights}; }, {y, yaw, scale})`: custom geometry with `BurnsMesh` (§6) in local space. Return colliders and lights in **local** coordinates and they're transformed for you.
 - `api.collider(desc)`: a raw collider in world coordinates (§4.6).
@@ -221,6 +224,8 @@ Optional flags:
 
 All props are rounded and smooth-shaded: real tyres, soft-edged bodies and glossy glass. They face +Z (front) and sit on the ground at their origin. Every prop accepts `x, y, z, yaw, scale, seed`, and `cover: true|false` overrides its colliders' cover flag.
 
+**Low detail.** Every `api.prop(kind, opts)` (and the other `api` builders that take `opts`) accepts `lo: true` to build its low-detail version, the same one LOD twins use: fewer segments, no small parts. Use it for background rows, far-off camps and anything the camera never gets near.
+
 **Vehicles** (`rv, camper, boxtruck, car, bus, trailer, van`) come with flush tyres in dark wheel-well arches, framed reflective glass, rounded bumpers with a chrome strip, curved roof caps, side trim and (RVs) a rolled awning; head and tail lights glow at night. Their low-detail copies (traffic beyond 38 m) skip the small parts. For your own vehicle bodies, reuse the helpers on `BurnsProps`: `wheels(m, W, [axleZ…], r, w, {y0: bodyBottom})`, `bumper(m, W, y, z, col)`, `roofCap(m, W, roofY, z0, z1, col)`, `trim(m, W, y, z0, z1, col)`, `win(m, x, y, z, w, h, side, lit, rng)`.
 
 | kind | Size, top | Options |
@@ -253,7 +258,7 @@ All props are rounded and smooth-shaded: real tyres, soft-edged bodies and gloss
 | `redlightRV` | the **Red Light District** RV: hot-pink, hearts and feather trim, marquee bulbs, a RED LIGHT DISTRICT sign, red lanterns, walkable roof (3.3 m). Door on its right (−X) side | `lit` (marquee and lanterns on, default true), `len`. Returns `cols, lights, top, door` (prop-local `[x,z]` just outside the door). |
 | `questBoard` | a cork quest board on posts with pinned notes (§7.1). Use `api.questBoard` for a working one | `col, title` |
 
-**`api.redLightCamp(x, z, yaw, opts)`** places the Red Light District RV and its crew in one call (W1 uses it in the line; W2 uses it for Brady's gear stash). `opts`: `crew` (`true` = all five, a number, or an array of crew ids), `lit`, `behavior` (crew behaviour, default by variant), `lines`/`chat` overrides per id (`{rlCandi: ['…']}`), `talk` per id, `rv: false` (crew only). Returns `{ rv, crew: [actor defs] }`. Crew ids: `rlVelvet` (MAMA VELVET, `madame`), `rlCandi` (CANDI, `bikini`), `rlRoxie` (ROXIE, `corset`), `rlPeachy` (PEACHY, `fan`), `rlBlush` (BLUSH, `showgirl`).
+**`api.redLightCamp(x, z, yaw, opts)`** places the Red Light District RV and its crew in one call (W1 uses it in the line; W2 uses it for Brady's gear stash). The door, its pink light and the crew's default spots are all on the RV's **−X side** (prop-local; that's the RV's right-hand side, since its cab faces +Z). `opts`: `spots` (`[[lx, lz], …]` in that same local frame), `crew` (`true` = all five, a number, or an array of crew ids), `lit`, `behavior` (crew behaviour, default by variant), `lines`/`chat` overrides per id (`{rlCandi: ['…']}`), `talk` per id, `rv: false` (crew only). Returns `{ rv, crew: [actor defs] }`. Crew ids: `rlVelvet` (MAMA VELVET, `madame`), `rlCandi` (CANDI, `bikini`), `rlRoxie` (ROXIE, `corset`), `rlPeachy` (PEACHY, `fan`), `rlBlush` (BLUSH, `showgirl`).
 
 **`api.questBoard({x, z, yaw, title})`** builds the board prop plus an ACTION prompt (`QUEST BOARD`) that opens the world's quest board (§7.1).
 
@@ -280,7 +285,7 @@ Need something new? Write it with `api.mesh` (§6). If it's reusable, add a buil
   - `roundBox(cx, cy, cz, w, h, d, r, {top, bottom, uv})`: rounded box, **centre**-anchored, edge radius `r`.
   - `ellipsoid(cx, cy, cz, rx, ry, rz, {seg, rings, theta0, theta1, phi0, phi1, colFn(x,y,z,n)})` and `ball(cx, cy, cz, r, o)`. `phi` runs from 0 (top pole) to π (bottom), so `{phi1: Math.PI / 2}` is a dome cap; `theta` is longitude (0 = +Z).
   - `limb(x0, y0, z0, x1, y1, z1, r0, r1, {seg, mid, ends: false, sx, sz})`: tapered capsule between two points (arms, legs, pipes, branches, beams with soft ends). `mid: 0.15` bulges the middle; `ends: false` leaves the tube open.
-  - `lathe(profile, {seg, sx, sz, theta0, theta1, rMod(theta, t), uv, uvRepeat, caps})`: surface of revolution around local **Y** at the current transform: `m.push(); m.tf(x, y, z); m.lathe([[0, 0], [0.5, 0.1], [0.4, 1], [0, 1.1]]); m.pop();`. Profile rows are `[radius, y, colour?, emissive?]`; repeat a row for a hard crease. `sx`/`sz` squash the section into an oval (car bodies, tubs, boats); `rMod(theta, t)` returns a per-vertex radius scale (lumpy rocks, petals).
+  - `lathe(profile, {seg, sx, sz, theta0, theta1, rMod(theta, t), uv, uvRepeat, caps, flip})`: surface of revolution around local **Y** at the current transform: `m.push(); m.tf(x, y, z); m.lathe([[0, 0], [0.5, 0.1], [0.4, 1], [0, 1.1]]); m.pop();`. Profile rows are `[radius, y, colour?, emissive?]`; repeat a row for a hard crease. `sx`/`sz` squash the section into an oval (car bodies, tubs, boats); `rMod(theta, t)` returns a per-vertex radius scale (lumpy rocks, petals). `flip: true` turns the surface inside out (faces and normals point inward, toward the axis): the inside of a dome, tent, tunnel or bowl you can walk into or look into. Lay it just inside an outward shell for a two-sided wall.
   - `roundCyl(cx, y, cz, r, h, edge, {seg})`: cylinder with rounded rims, `y` = bottom (barrels, drums, wheels when rotated).
   - `torus(cx, cy, cz, R, r, {seg, tseg, sy})`: ring in the XZ plane. Rotate it with `m.tf(0, 0, 0, 0, Math.PI / 2)` for a tyre.
   - `m.shine(0..3)`: specular gloss for what you build next (0 matte, 1 satin/skin, 2 plastic/paint/hair, 3 glass/chrome/sunglasses). It's saved by `push`/`pop`; reset with `m.shine(0)`.
@@ -293,7 +298,7 @@ Need something new? Write it with `api.mesh` (§6). If it's reusable, add a buil
 - `BURNS_ATLAS.icon(name)`: item icons. Names: `heart, k, flake, tab, shroom, leaf, toad, bottle, drop, ticket, map, www, token, glowstick, ziptie, camera`.
 - `BURNS_ATLAS.sign(text, style)`: renders text into the per-world sign area. It's reset every world and holds about 40 signs.
 - How decals work: the atlas is premultiplied RGBA laid **over** the vertex colour. Transparent texels show the colour and opaque texels show the art. A face decal on a skin-coloured head shows skin around the eyes; a sign with a `bg` is fully opaque.
-- **Engine-made art.** The Chinka photo (the polaroid on `'photo'` pickups and its UI icon) is rendered from the 3D Chinka model by the engine in the first frames (`BURNS_ATLAS.bakePhoto`), over a painted playa-sunset backdrop. To make art of your own from a posed model, call `const job = R.bakeBegin(w, h, cam, env, draw)` before a frame's `setCamera`, then `R.bakePoll(job)` on the following frames until it returns a 2D canvas (it returns `false` while the GPU is still busy, `null` on failure). The render is tone-mapped like the frame and has a transparent background, and the read-back never stalls the GPU. Paint the canvas into the atlas, then refresh just that tile with `BurnsGL.texRegion(BURNS_ATLAS.T, x, y, w, h)`.
+- **Engine-made art.** The Chinka photo (the polaroid on `'photo'` pickups and its UI icon) is rendered from the 3D Chinka model by the engine on the first frame (`BURNS_ATLAS.bakePhoto`), over a painted playa-sunset backdrop. To make art of your own from a posed model, call `R.bakeImage(w, h, cam, env, draw, bgRegion)` before a frame's `setCamera`. It lights and tone-maps the model like the frame, lays it over an atlas region on the GPU, and returns a 2D canvas (it never calls `readPixels`, so nothing stalls). Paint the canvas into the atlas, then refresh just that tile with `BurnsGL.texRegion(BURNS_ATLAS.T, x, y, w, h)`.
 - **Painting into `BURNS_ATLAS.ctx` yourself:** pair every `save()` with a `restore()`, using `try/finally`. An unbalanced transform shifts every tile, sign and face painted after it. `addPattern`/`addFace` painters and signs are already guarded by the engine.
 
 ### 6.3 Actors (NPCs and enemies)
@@ -903,7 +908,7 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
 
 ## 15. Performance budget (60 fps on a recent iPhone)
 
-- **Draw calls per frame: aim for 120 or fewer.** World 1 renders about 55–70.
+- **Draw calls per frame: aim for 120 or fewer.** World 1 renders about 55–70. `g.stats.draws`/`tris` count the main pass, `g.stats.shDraws`/`shTris` the sun-shadow pass (set `window.__burnsDebug = true` to see both on screen).
   - Static props are merged per 48 m cell.
   - Vehicles, movers and pickups share skinned groups (about 40 per draw).
   - **Each visible character is one draw.** Keep **visible** NPCs to about 50: crowds far from the action are fine because the culling distance is 115 m, but don't put 200 dancers in one spot.
@@ -924,7 +929,7 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
 
 1. Build privately: `BRADY_DIST=$SCRATCH/dist node tools/build.js`.
 2. Playwright (`require('playwright')`, `chromium.launch()`), viewports **874×402** and **402×874**, `deviceScaleFactor: 2, isMobile: true, hasTouch: true`. Headless WebGL renders in software (slow, so FPS there means nothing).
-3. Use the debug API from `page.evaluate`:
+3. Use the debug API from `page.evaluate`. `window.BRADY_BURNS` (the engine classes such as `BurnsGL`, `BurnsRenderer` and `BurnsMesh`, plus `debug`) exists in every app that bundles the engine, Art Cart included; the hub and title modules only add their scenes to it.
    ```js
    const D = window.BRADY_BURNS.debug;
    D.play(2);                  // start world 2 (fresh save: localStorage.clear(); BRADY.Save.load())
