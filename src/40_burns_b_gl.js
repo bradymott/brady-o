@@ -268,6 +268,56 @@ const BurnsGL = {
   },
   buildPrograms() {
     const MB = this.maxBones, A = ['aPos', 'aNrm', 'aBone', 'aCol', 'aUV'];
+    const skinVS = `#define MAXB ${MB}
+attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV;
+uniform mat4 uVP; uniform vec4 uB[MAXB * 3]; uniform vec3 uFace;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
+void main(){
+  vL = aPos;
+  int i = int(mod(aBone, 64.0) + 0.5) * 3;
+  vG = floor(aBone / 64.0 + 0.01) / 3.0;
+  vec4 r0 = uB[i]; vec4 r1 = uB[i + 1]; vec4 r2 = uB[i + 2];
+  vec4 p = vec4(aPos, 1.0);
+  vW = vec3(dot(r0, p), dot(r1, p), dot(r2, p));
+  vN = vec3(dot(r0.xyz, aNrm), dot(r1.xyz, aNrm), dot(r2.xyz, aNrm));
+  vC = aCol; vT = aUV;
+  if (aUV.y >= uFace.x && aUV.y < uFace.y) vT.y += uFace.z;
+  gl_Position = uVP * vec4(vW, 1.0);
+}`;
+    const skinFS = `precision highp float;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
+uniform sampler2D uTex;
+uniform vec4 uTint; uniform vec3 uRimC; uniform float uRim;
+${BURNS_GLSL_LIGHT}
+void main(){
+  vec4 t = texture2D(uTex, vT);
+  vec3 srgb = vC.rgb * (1.0 - t.a) + t.rgb;
+  vec3 alb = bLin(srgb);
+  vec3 n = normalize(vN);
+#ifdef BUMP
+  vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.0025);
+  // cloth: soft folds + a fine weave on matte, untextured, non-skin surfaces (bone-local, so it rides the body)
+  float skin0 = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r);
+  float cd = length(vW - uCam);
+  float fold = sin(vL.y * 44.0 + sin(vL.x * 21.0 + vL.z * 17.0) * 1.7) * 0.55 + sin(vL.y * 109.0 + vL.x * 37.0) * 0.16;
+  float weave = sin(vL.x * 560.0 + vL.z * 210.0) * sin(vL.y * 600.0) * 0.07 * (1.0 - smoothstep(1.2, 4.0, cd));
+  vec3 nc = bBump(n, vW, (fold + weave) * (1.0 - smoothstep(14.0, 30.0, cd)), 0.0018);
+  float cloth = (1.0 - step(0.02, t.a)) * (1.0 - step(0.15, vG)) * (1.0 - skin0) * (1.0 - step(0.5, vC.a));
+  n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));
+#endif
+  float e = vC.a;
+  float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
+  vec3 c = mix(bShade(alb, n, vW, vG, 0.4, sh), alb * uEmB, e);
+  // warm light bleeding through skin-like albedo at the terminator (cheap subsurface)
+  float sk = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r) * (1.0 - e);
+  float nl = dot(n, uKeyD);
+  c += alb * uKeyC * vec3(0.32, 0.1, 0.06) * sk * max(0.0, 1.0 - abs(nl * 1.6 - 0.1)) * (0.4 + 0.6 * sh);
+  vec3 v = normalize(uCam - vW);
+  c += uRimC * pow(1.0 - max(dot(n, v), 0.0), 2.5) * uRim;
+  c = mix(c, bLin(uTint.rgb), uTint.a);
+  if (uTrip > 0.0) c = bTrip(c, vW);
+  gl_FragColor = bOut(bFogMix(c, vW, e), 1.0);
+}`;
     const old = this.progs;
     this.progs = {
       sky: this.program(`attribute vec2 aPos; varying vec2 vN; void main(){ vN = aPos; gl_Position = vec4(aPos, 0.99995, 1.0); }`, `precision highp float;
@@ -411,55 +461,9 @@ uniform mat4 uVP;
 varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
 void main(){ vW = aPos; vN = aNrm; vC = aCol; vT = aUV; vG = floor(aBone / 64.0 + 0.01) / 3.0; gl_Position = uVP * vec4(aPos, 1.0); }`, BURNS_GLSL_MESHFS, A),
       meshI: this.program(BURNS_GLSL_MESHVS_I, BURNS_GLSL_MESHFS, A.concat(['aI0', 'aI1'])),
-      skin: this.program(`#define MAXB ${MB}
-attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV;
-uniform mat4 uVP; uniform vec4 uB[MAXB * 3]; uniform vec3 uFace;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
-void main(){
-  vL = aPos;
-  int i = int(mod(aBone, 64.0) + 0.5) * 3;
-  vG = floor(aBone / 64.0 + 0.01) / 3.0;
-  vec4 r0 = uB[i]; vec4 r1 = uB[i + 1]; vec4 r2 = uB[i + 2];
-  vec4 p = vec4(aPos, 1.0);
-  vW = vec3(dot(r0, p), dot(r1, p), dot(r2, p));
-  vN = vec3(dot(r0.xyz, aNrm), dot(r1.xyz, aNrm), dot(r2.xyz, aNrm));
-  vC = aCol; vT = aUV;
-  if (aUV.y >= uFace.x && aUV.y < uFace.y) vT.y += uFace.z;
-  gl_Position = uVP * vec4(vW, 1.0);
-}`, `precision highp float;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
-uniform sampler2D uTex;
-uniform vec4 uTint; uniform vec3 uRimC; uniform float uRim;
-${BURNS_GLSL_LIGHT}
-void main(){
-  vec4 t = texture2D(uTex, vT);
-  vec3 srgb = vC.rgb * (1.0 - t.a) + t.rgb;
-  vec3 alb = bLin(srgb);
-  vec3 n = normalize(vN);
-#ifdef BUMP
-  vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.0025);
-  // cloth: soft folds + a fine weave on matte, untextured, non-skin surfaces (bone-local, so it rides the body)
-  float skin0 = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r);
-  float cd = length(vW - uCam);
-  float fold = sin(vL.y * 44.0 + sin(vL.x * 21.0 + vL.z * 17.0) * 1.7) * 0.55 + sin(vL.y * 109.0 + vL.x * 37.0) * 0.16;
-  float weave = sin(vL.x * 560.0 + vL.z * 210.0) * sin(vL.y * 600.0) * 0.07 * (1.0 - smoothstep(1.2, 4.0, cd));
-  vec3 nc = bBump(n, vW, (fold + weave) * (1.0 - smoothstep(14.0, 30.0, cd)), 0.0018);
-  float cloth = (1.0 - step(0.02, t.a)) * (1.0 - step(0.15, vG)) * (1.0 - skin0) * (1.0 - step(0.5, vC.a));
-  n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));
-#endif
-  float e = vC.a;
-  float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
-  vec3 c = mix(bShade(alb, n, vW, vG, 0.4, sh), alb * uEmB, e);
-  // warm light bleeding through skin-like albedo at the terminator (cheap subsurface)
-  float sk = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r) * (1.0 - e);
-  float nl = dot(n, uKeyD);
-  c += alb * uKeyC * vec3(0.32, 0.1, 0.06) * sk * max(0.0, 1.0 - abs(nl * 1.6 - 0.1)) * (0.4 + 0.6 * sh);
-  vec3 v = normalize(uCam - vW);
-  c += uRimC * pow(1.0 - max(dot(n, v), 0.0), 2.5) * uRim;
-  c = mix(c, bLin(uTint.rgb), uTint.a);
-  if (uTrip > 0.0) c = bTrip(c, vW);
-  gl_FragColor = bOut(bFogMix(c, vW, e), 1.0);
-}`, A),
+      skin: this.program(skinVS, skinFS, A),
+      // instanced crowds: one shared pose (uB) for every copy; aI0 = (x, y, z, yaw), aI1 = (scale, tint r, g, b)
+      skinI: this.program(skinVS.replace('attribute vec2 aUV;', 'attribute vec2 aUV; attribute vec4 aI0; attribute vec4 aI1;').replace('  gl_Position = uVP * vec4(vW, 1.0);', '  { float c = cos(aI0.w), s = sin(aI0.w); vec3 q = vW * aI1.x; vW = vec3(c * q.x + s * q.z, q.y, -s * q.x + c * q.z) + aI0.xyz; vN = vec3(c * vN.x + s * vN.z, vN.y, -s * vN.x + c * vN.z); vC = vec4(aCol.rgb * aI1.yzw, aCol.a); }\n  gl_Position = uVP * vec4(vW, 1.0);'), skinFS, A.concat(['aI0', 'aI1'])),
       sprite: this.program(`attribute vec3 aPos; attribute vec2 aNrm; attribute vec2 aBone; attribute vec4 aCol;
 uniform mat4 uVP; uniform vec3 uR, uU, uCam; uniform vec4 uFog; uniform float uFlat;
 varying vec2 vT; varying vec4 vC; varying float vF;
@@ -1239,6 +1243,36 @@ class BurnsRenderer {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.ibo);
     gl.drawElements(gl.TRIANGLES, geo.count, gl.UNSIGNED_SHORT, 0);
     this.stats.draws++; this.stats.tris += geo.count / 3;
+  }
+  /* instanced crowds (BurnsCrowds): every copy in a batch shares one pose. crowdBegin() once, then crowd(...) per batch
+     { data: Float32Array (8 floats a copy: x, y, z, yaw, scale, tint r, g, b), n, dirty } */
+  crowdBegin(env, world, atlasT) {
+    const gl = BurnsGL.gl, p = BurnsGL.progs.skinI; if (!p || !BurnsGL.instGL) return false;
+    gl.useProgram(p.p);
+    this.applyEnv(p, env, world);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, BurnsGL.tex(atlasT)); gl.uniform1i(p.u.uTex, 0);
+    gl.uniform3fv(p.u.uRimC, this.lin.rim); gl.uniform4f(p.u.uTint, 0, 0, 0, 0);
+    return true;
+  }
+  crowd(geo, bones, n, face, rim, b) {
+    const gl = BurnsGL.gl, I = BurnsGL.instGL, p = BurnsGL.progs.skinI;
+    if (!p || !I || !b.n) return;
+    BurnsGL.geo(geo);
+    if (!b.ibuf || b.ibufGen !== BurnsGL.gen) { b.ibuf = gl.createBuffer(); b.ibufGen = BurnsGL.gen; b.dirty = true; }
+    gl.uniform4fv(p.u.uB, n * 12 === bones.length ? bones : bones.subarray(0, n * 12));
+    gl.uniform3f(p.u.uFace, BURNS_ATLAS.faceV0, BURNS_ATLAS.faceV1, (face || 0) * BURNS_ATLAS.faceRowV);
+    gl.uniform1f(p.u.uRim, (rim === undefined ? 0.35 : rim) * 0.6);
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.vbo); BurnsGL.layoutMesh();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b.ibuf);
+    if (b.dirty) { gl.bufferData(gl.ARRAY_BUFFER, b.data.subarray(0, b.n * 8), gl.DYNAMIC_DRAW); b.dirty = false; }
+    BurnsGL.enable(7);
+    gl.vertexAttribPointer(5, 4, gl.FLOAT, false, 32, 0); gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 32, 16);
+    I.div(5, 1); I.div(6, 1);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.ibo);
+    I.draw(geo.count, 0, b.n);
+    I.div(5, 0); I.div(6, 0);
+    BurnsGL.enable(5);
+    this.stats.draws++; this.stats.tris += geo.count / 3 * b.n;
   }
   // shadow pass helper: draw only some objects of a skinned group (index ranges [[i0, i1], ...])
   skinRanges(geo, bones, n, ranges, cnt) {

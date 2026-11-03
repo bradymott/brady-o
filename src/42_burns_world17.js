@@ -215,6 +215,8 @@ BW17.build = function (api, g) {
     for (let i = 0; i < 11; i++) { const a = 0.5 + i / 11 * (TAU - 1.0); BW17.bulbs(m, lights, [Math.sin(a) * 1.4, 4.25, Math.cos(a) * 1.4], [Math.sin(a) * 13.6, 3.3, Math.cos(a) * 13.6], 11, 0.55, cols, 3); }
     return { cols: [], lights };
   }, { noAO: true });
+  // and most tipis glow warm from inside after dark
+  S.doorMv = BW17.B.tipiGlow(api, g, rs);
   // the job board by the village path
   if (api.questBoard) api.questBoard({ x: 17.5, z: -24, yaw: -0.5, title: 'ROOT SOCIETY JOB BOARD' });
   /* ---------- collectibles ---------- */
@@ -250,7 +252,7 @@ BW17.build = function (api, g) {
 BW17.fillerCamps = function (api, g) {
   const LY = BW17.LAYOUT, R = mulberry32(1717);
   const camps = [
-    [-150, 96, 0, 'CAMP NAP TIME\nQUIET (ISH) HOURS'], [-196, 96, 0.1, 'THE LOST SOCK\nEXCHANGE'], [150, 98, -0.1, 'DUST BUNNIES\nFOR JESUS... OR WHOEVER'],
+    [-150, 96, 0, 'CAMP NAP TIME\nQUIET (ISH) HOURS'], [-196, 96, 0.1, 'THE LOST SOCK\nEXCHANGE'], [150, 98, -0.1, 'DUST BUNNY\nSANCTUARY'],
     [196, 96, 0.05, 'HYDRATION\nSTATION'], [-130, -100, Math.PI / 2, 'CAMP\nOVERTHINK IT'], [130, -150, -Math.PI / 2, 'THE BLINKY\nBICYCLE CLUB'],
     [-190, -140, 0.4, 'SPOON\nTHEORY'], [196, -50, -Math.PI / 2, 'KAZOO\nKAMP']
   ];
@@ -647,15 +649,20 @@ BW17.intro = function (g) {
     { do: g2 => { g2.fx.zzz(sp.x, 0.8, sp.z); } },
     { say: [{ name: 'PASSING CYCLIST' }, ['MORNING! HAPPY TUESDAY!']] },
     { do: g2 => { p.animOverride = 'dazed'; } },
-    { say: ['brady', ['Tuesday? Last thing I remember is a pill, a yellow bike and a giant bouncy mushroom.', 'I still have glitter in places glitter shouldn\'t be.']] },
+    { say: ['brady', ['Tuesday? Last thing I remember is a yellow bike, a LOT of bass and a giant bouncy mushroom.', 'I still have glitter in places glitter shouldn\'t be.']] },
     { do: g2 => { g2.shake(0.25); burnsSfx('man_stomp', { vol: 0.25, pitch: 1.6 }); } },
     { orbit: { actor: 'brady', r0: 4, r1: 7, h0: 1.4, h1: 2.6, a0: 0.4, a1: 2.6, ty: 1.3, dur: 3 } },
     { say: ['brady', ['That bass. Three domes. A... coliseum? Okay. Follow the bass.']] },
     { do: g2 => { p.animOverride = 'walk'; S.walkT = 0; } },
-    { parallel: [
-      { track: { actor: 'brady', dist: 5.5, h: 2.0, side: 0.5, ty: 1.4, fov: 0.9, dur: 3.2 } },
-      { until: g2 => { S.walkT += 1 / 120; const k = Math.min(1, S.walkT / 3.0); p.teleport(sp.x, 0, sp.z - k * 9, Math.PI); return k >= 1; } }
-    ] },
+    // over-the-shoulder tracking shot: he walks toward the bass and the camp grows in front of him
+    // (the camera is set from here: a parallel track step would not reach the cutscene camera)
+    { until: (g2, c) => {
+      S.walkT += 1 / 120; const k = Math.min(1, S.walkT / 3.2), e = k * k * (3 - 2 * k);
+      p.teleport(sp.x, 0, sp.z - k * 9, Math.PI);
+      const a = Math.PI + 0.55 - 0.3 * e, d = 5.6 - 1.2 * e;
+      c.cam = { x: p.x - Math.sin(a) * d, y: 2.1 - 0.3 * e, z: p.z - Math.cos(a) * d, tx: p.x, ty: 1.7, tz: p.z - 3, fov: 0.9 };
+      return k >= 1;
+    } },
     { do: g2 => { p.animOverride = null; p.locked = false; BurnsSave.flag(17, 'intro', true); BW17.setClock(g2, 9); p.teleport(sp.x, 0, sp.z - 9, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; BW17.applyMusic(g2, true); } }
   ], g2 => { g2.banner('FOLLOW THE BASS', 'Root Society is straight ahead', { col: '#e8c890' }); });
 };

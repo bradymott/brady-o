@@ -154,8 +154,8 @@ BW17.lightInit = function (g) {
     }
   } catch (e) { S.lmBak = null; }
   // static glow billboards (skip the big-art module's animated ones, which carry s0)
-  S.glows = [];
-  for (const G of W.glows) { if (G.s0 !== undefined || G.bw17keep) continue; if (!G.bw17c0) G.bw17c0 = G.c.slice(); S.glows.push(G); }
+  S.glows = []; S.doorGlows = [];
+  for (const G of W.glows) { if (G.s0 !== undefined || G.bw17keep) continue; if (!G.bw17c0) G.bw17c0 = G.c.slice(); (G.bw17door ? S.doorGlows : S.glows).push(G); }
   S.lmK = -1; S.glK = -1;
 };
 BW17.applyLights = function (g, force) {
@@ -173,6 +173,10 @@ BW17.applyLights = function (g, force) {
   if (force || k !== S.glK) {
     S.glK = k; const gk = lerp(0.28, 1, k);
     for (const G of S.glows) { const c = G.bw17c0; G.c[0] = c[0] * gk; G.c[1] = c[1] * gk; G.c[2] = c[2] * gk; }
+    // lit tipi doorways: only after dark (the lit ovals are a mover, the glows fade in with the night)
+    const dk = clamp((k - 0.3) / 0.6, 0, 1);
+    for (const G of S.doorGlows || []) { const c = G.bw17c0; G.c[0] = c[0] * dk; G.c[1] = c[1] * dk; G.c[2] = c[2] * dk; }
+    if (S.doorMv) S.doorMv.visible = k > 0.35;
   }
 };
 

@@ -252,6 +252,8 @@ class BurnsWorld {
   }
   // instanced props (BurnsInstancer, 40_burns_m_open.js), made on first use
   instancer() { return this.inst || (this.inst = new BurnsInstancer(this)); }
+  // instanced crowds (BurnsCrowds): set the looks once, then add as many background people as you like
+  crowds(looks) { if (!this.crowd) this.crowd = new BurnsCrowds(this, looks); else if (looks) this.crowd.setLooks(looks); return this.crowd; }
   // repaint the lightmap where some pools appeared or went away (the pools' own extent), then upload just that part
   repaintLights(x0, z0, x1, z1, pools) {
     for (const L of pools || []) { x0 = Math.min(x0, L.x - L.r); z0 = Math.min(z0, L.z - L.r); x1 = Math.max(x1, L.x + L.r); z1 = Math.max(z1, L.z + L.r); }
@@ -614,7 +616,10 @@ class BurnsWorld {
       /* instanced props: define a prototype once, then place any number of copies (one draw per prototype and detail
          level). build(m) runs at full detail, then with m.lo = true; o.far(m) builds the cheapest copy. See §4.8. */
       instanceProto(id, build, o) { return W.instancer().proto(id, build, o); },
-      instance(id, x, z, o) { o = o || {}; return W.instancer().add(id, x, o.y || 0, z, o.yaw || 0, o.scale || 1, o.tint, o.noCol); }
+      instance(id, x, z, o) { o = o || {}; return W.instancer().add(id, x, o.y || 0, z, o.yaw || 0, o.scale || 1, o.tint, o.noCol); },
+      // instanced background people (§4.8): api.extras([[type, seed], ...]) once, then api.extra(x, z, { yaw, anim, look, phase })
+      extras(looks) { return W.crowds(looks); },
+      extra(x, z, o) { return W.crowds().add(x, z, o); }
     };
     // route static geometry into the LSD ghost layer while inside api.hidden()
     const place0 = W.place.bind(W);

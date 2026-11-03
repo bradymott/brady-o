@@ -763,7 +763,10 @@ class BurnsPlayScene {
     const g = this; this.suspended = true; Input.camDrag = false;
     Game.setScene(new BurnsHubScene({ travel: {
       go: w => { Game.setScene(g); g.resumeFrom(null, 'map'); if (g.def.travel) g.def.travel(g, w); },
-      back: () => { Game.setScene(g); g.resumeFrom(null, 'map'); }
+      back: () => { Game.setScene(g); g.resumeFrom(null, 'map'); },
+      // def.mapProject(g, worldId, rect) -> {x, y}: where a world's pin sits; def.mapDraw(g, ctx, rect, t): the city itself
+      project: g.def.mapProject ? (w, M) => g.def.mapProject(g, w, M) : null,
+      drawCity: g.def.mapDraw ? (ctx, M, t) => g.def.mapDraw(g, ctx, M, t) : null
     } }));
   }
   // after the results: a story card carries Brady to the next world (or the hub when it isn't ready)
@@ -1059,6 +1062,7 @@ class BurnsPlayScene {
     const wantShadow = !!(Q && Q.shadows && env.keyDir[1] > 0.06), shD2 = 42 * 42;
     const inst = this.world.inst;
     if (inst) inst.update(R, this.def.drawDist || 260, wantShadow ? (Q.shadowDist || 60) + 12 : 0);
+    if (this.world.crowd) this.world.crowd.update(R, vdt * this.slow * (this.cineSlow || 1), this.def.crowdDist || 95);
     for (const a of this.actors) {
       if (a.removed || a.hidden) continue;
       const d2 = (a.x - cam.x) * (a.x - cam.x) + (a.z - cam.z) * (a.z - cam.z);
@@ -1121,6 +1125,7 @@ class BurnsPlayScene {
       a._vis = true;
     }
     for (const b of this.bosses) { if (!b.ch || b.hidden) continue; R.skin(b.model.geo, b.ch.bones, b.ch.nb, b.hurtTint || null, b.ch.face, 0.25); if (b.chinka && b.showChinka !== false) R.skin(b.chinka.model.geo, b.chinka.bones, b.chinka.nb, null, b.chinka.face, 0.5); }
+    if (this.world.crowd) this.world.crowd.draw(R, env, this.world);
     if (this.def.drawSkinned) this.def.drawSkinned(this, R);
     // sprites: shadows, glows, particles, projectiles
     this.pushSprites(R, env);
@@ -1234,6 +1239,7 @@ class BurnsPlayScene {
     const ck = R.shadowOn ? 0.62 : 1;   // with sun shadows the blob is just contact occlusion under the feet
     shadow(p.x, p.y, p.z, 1.15 * p.ch.scale * (R.shadowOn ? 0.85 : 1), 0.6 * ck);
     for (const a of this.actors) if (a._vis) { shadow(a.x, a.y, a.z, 1.05 * a.scale * (R.shadowOn ? 0.85 : 1), 0.55 * ck); a._vis = false; }
+    if (W.crowd) W.crowd.shadows(R, S);
     // static glows (lamps, neon, headlights on parked cars)
     const lsd = p.power === 'lsd' && p.powerT > 0;
     const gd2 = (this.def.glowDist || 170) * (this.def.glowDist || 170);   // def.glowDist: how far static glows show (open worlds: the city's lights from afar)
@@ -1336,6 +1342,7 @@ const BurnsScenes = {
       for (const g of W.ground.geos) BurnsGL.freeGeo(g);
       BurnsGL.freeTex(W.ground.paintT); BurnsGL.freeTex(W.lightmap.T);
       if (W.inst) W.inst.release();
+      if (W.crowd) W.crowd.release();
     } catch (e) { /* ignore */ }
   }
 };

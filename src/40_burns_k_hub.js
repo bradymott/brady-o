@@ -87,6 +87,8 @@ class BurnsHubScene {
     // one pin per world in play order (labelled by position); ids without metadata get a spot on a ring
     const O = BurnsWorlds.visible();
     this.nodes = O.map((id, i) => { const m = BurnsWorlds.meta(id), a = i / O.length * TAU, h = BURNS_WORLD_META.find(k => k.id === id) ? m.hub : { x: 0.5 + Math.sin(a) * 0.4, y: 0.5 + Math.cos(a) * 0.4 }; return { id, n: BurnsWorlds.num(id), secret: BurnsWorlds.isSecret(id), home: BurnsWorlds.isHome(id), day: BurnsWorlds.dayShort(id), x: this.map.x + h.x * this.map.w, y: this.map.y + h.y * this.map.h, col: m.col }; });
+    // travel map: pins at the places' real spots in the city
+    if (this.opts.travel && this.opts.travel.project) for (const n of this.nodes) { const q = this.opts.travel.project(n.id, this.map); if (q) { n.x = q.x; n.y = q.y; } }
     this.nodeR = clamp(Math.min(this.map.w, this.map.h) / 17, 12, 17);
     if (this.wardrobe) this.buildWardrobe();
   }
@@ -148,6 +150,10 @@ class BurnsHubScene {
     // cracked-playa texture
     ctx.strokeStyle = 'rgba(80,40,30,0.18)'; ctx.lineWidth = 1;
     for (let i = 0; i < 60; i++) { const x = M.x + ((i * 97) % 1000) / 1000 * M.w, y = M.y + ((i * 61) % 1000) / 1000 * M.h; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 14, y + 6); ctx.lineTo(x + 20, y - 4); ctx.stroke(); }
+    // the open world's travel map draws the real city (its own layout); otherwise the stylised one
+    const TV = this.opts.travel;
+    if (TV && TV.drawCity) TV.drawCity(ctx, M, t);
+    else {
     // the city: concentric arcs open toward the deep playa (top), radial streets
     const cx = M.x + M.w * 0.5, cy = M.y + M.h * 0.48, R0 = Math.min(M.w, M.h) * 0.22;
     const A0 = -0.15 * Math.PI, A1 = 1.15 * Math.PI;
@@ -163,6 +169,7 @@ class BurnsHubScene {
     // path between worlds
     ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2; ctx.setLineDash([3, 6]); ctx.beginPath();
     this.nodes.filter(n => !n.secret).forEach((n, i) => i ? ctx.lineTo(n.x, n.y) : ctx.moveTo(n.x, n.y)); ctx.stroke(); ctx.setLineDash([]);
+    }
     // nodes
     for (const n of this.nodes) {
       const un = !!sv.unlocked[n.id], reg = !!BurnsWorlds.get(n.id), sel = this.sel === n.id, done = !!sv.worldDone[n.id];

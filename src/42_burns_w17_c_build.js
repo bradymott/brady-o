@@ -433,3 +433,35 @@ BW17.B.decor = function (api, t) {
   put('idframe', 1.0, -0.4, m => { m.color('#6a4a2a'); m.limb(0, 0, 0.1, 0, 0.9, 0, 0.02, 0.02, { seg: 3 }); m.limb(-0.2, 0, -0.1, 0, 0.9, 0, 0.02, 0.02, { seg: 3 }); m.limb(0.2, 0, -0.1, 0, 0.9, 0, 0.02, 0.02, { seg: 3 }); m.color('#d8b84a').shine(2); m.roundBox(0, 0.95, 0.02, 0.5, 0.36, 0.04, 0.02); m.color('#ffa86a', 0.3); m.roundBox(0, 0.95, 0.045, 0.4, 0.27, 0.01, 0.01); m.emissive(0); m.shine(0); return { cols: [] }; });
   return D;
 };
+
+/* ---------------- lit doorways: after dark most tipis glow warm from inside ----------------
+   One night-only mover holds a lit oval in front of each door's dark opening; door glows and
+   ground pools sit in the static light lists (scaled day/night by BW17.applyLights). Brady's own
+   tipi (0) is skipped: he walks through that door and has a real lantern inside. */
+BW17.B.tipiGlow = function (api, g, rs) {
+  const W = api.world, n0 = W.glows.length, V = rs ? rs.toWorld(0, 0, -54) : [0, 0, -54];
+  const friend = { 10: '#c890ff', 2: '#5ae8ff', 4: '#ffd04a', 7: '#ff9a3a', 8: '#ff9ad0' }, warm = ['#ffb45a', '#ffc87a', '#ff9a5a', '#ffd89a'], dark = [6, 13, 17, 21, 25];
+  const lit = [];
+  for (let i = 1; i < 27; i++) {
+    if (dark.indexOf(i) >= 0) continue;
+    const inner = i < 11, rr = inner ? 15 : 23, a = inner ? 0.5 + i / 11 * (TAU - 1.0) : 0.32 + (i - 11) / 16 * (TAU - 0.64);
+    const x = V[0] + Math.sin(a) * rr, z = V[2] + Math.cos(a) * rr, yaw = Math.atan2(V[0] - x, V[2] - z), r = 2.4 + (i % 3) * 0.2;
+    lit.push({ x, z, yaw, r, c: friend[i] || warm[i % 4] });
+  }
+  const mv = api.mover(m => {
+    for (const T of lit) {
+      m.push(); m.tf(T.x, 0, T.z, T.yaw); m.push(); m.tf(0, 0, T.r * 0.9 - 0.02, 0, -0.17, 0);
+      m.color(T.c, 1); m.ellipsoid(0, 0.74, 0.02, 0.44, 0.68, 0.03, { seg: 12, rings: 6 });
+      m.pop(); m.pop();
+    }
+    m.emissive(0); return { cols: [] };
+  }, { noAO: true });
+  mv.visible = false; mv.noCollide = true;
+  for (const T of lit) {
+    const sn = Math.sin(T.yaw), cs = Math.cos(T.yaw), dx = T.x + sn * (T.r * 0.9 + 0.25), dz = T.z + cs * (T.r * 0.9 + 0.25);
+    api.glow(dx, 0.85, dz, 0.5, T.c);
+    api.light(T.x + sn * (T.r + 1.2), T.z + cs * (T.r + 1.2), 2.6, T.c, 0.42);
+  }
+  for (const G of W.glows.slice(n0)) G.bw17door = true;
+  return mv;
+};
