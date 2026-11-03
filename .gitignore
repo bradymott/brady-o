@@ -11,3 +11,6 @@ touch-*.png
 
 node_modules/
 .DS_Store
+
+# Private source material (face scans, reference photos): never published
+private/
