@@ -66,7 +66,7 @@ BurnsWorlds.register({
   ground: { base: '#cba680', crack: 0.27, mottle: 0.38, res: 0.5 },
   dust: 1.0,
   missions: [
-    { id: 'arrive', name: 'Follow the Bass', short: 'Follow the bass to Root Society', type: 'custom', start: 'auto', token: false, marker: { x: 6, z: 12 },
+    { id: 'arrive', name: 'Follow the Bass', short: 'Follow the bass to Root Society', type: 'custom', start: 'auto', token: false, silent: true, marker: { x: 6, z: 12 },
       desc: 'Tuesday morning. Somewhere a sound system is purring like a giant cat. Follow it, and find whoever is in charge.', hint: 'Through the root gate on Esplanade, then the plaza by the coliseum',
       onUpdate(g, m) { if (!m.data.near && Math.hypot(g.player.x - 0, g.player.z - 40) < 22) { m.data.near = true; m.data.marker = 'jefr'; g.toast('FIND THE BEARDED GUY BY THE COLISEUM'); } } },
     { id: 'shade', name: 'Shade Patrol', short: 'Tie down the loose shade corners', type: 'custom', count: 4, giver: 'jefr', start: 'manual', requires: ['arrive'], progressLabel: 'Corners tied', marker: { x: -38, z: -17 },
@@ -183,6 +183,7 @@ BW17.build = function (api, g) {
   st('ESPLANADE\n& 6:30', -LY.radX - 7, LY.espZ - 7, Math.PI / 4); st('ESPLANADE\n& 6:00', LY.radX + 7, LY.espZ - 7, -Math.PI / 4);
   st('A ST\n& 6:30', -LY.radX - 7, LY.aZ + 7, Math.PI * 0.75); st('A ST\n& 6:00', LY.radX + 7, LY.aZ + 7, -Math.PI * 0.75);
   for (let x = -230; x <= 230; x += 32) { if (Math.abs(x) < 20) continue; const z = LY.espZ - 10; api.mesh(x, z, m => { m.color('#4a3a2a').shine(1); m.limb(0, 0, 0, 0, 3.2, 0, 0.07, 0.06, { seg: 6 }); m.limb(0, 3.1, 0, 0.5, 3.25, 0, 0.03, 0.03, { seg: 4 }); m.shine(0); BW17.lantern(m, 0.55, 2.85, 0, '#ffcf8a', 1.1); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 3.2, camPass: true }], lights: [{ x: 0.55, y: 2.85, z: 0, s: 1.0, c: '#ffcf8a', pool: 7, i: 0.4 }] }; }); }
+  for (let i = 1; i < 9; i++) { const t = i / 9, x = lerp(-4, -36, t * t) + 3.2, z = lerp(96, 268, t); api.mesh(x, z, m => { m.color('#5a4030').shine(1); m.limb(0, 0, 0, 0, 3.6, 0, 0.08, 0.06, { seg: 6 }); m.limb(0, 3.5, 0, -0.55, 3.65, 0, 0.03, 0.03, { seg: 4 }); m.shine(0); BW17.lantern(m, -0.6, 3.25, 0, i % 2 ? '#ffcf8a' : '#ff9ad0', 1.15); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 3.6, camPass: true }], lights: [{ x: -0.6, y: 3.25, z: 0, s: 1.1, c: i % 2 ? '#ffcf8a' : '#ff9ad0', pool: 6, i: 0.4 }] }; }); }
   for (let i = 0; i < 26; i++) api.prop('fence', { x: -250 + i * 20 + 10, z: -206, len: 20 });
   for (let i = 0; i < 24; i++) { const x = R.range(-240, 240), z = R.range(-200, -138); if (Math.abs(x) < 30 && z > -150) continue; api.prop('tent', { x, z, yaw: R() * TAU, col: R.pick(['#3a8a5a', '#c84a3a', '#2a6ac8', '#e8a82a', '#7a4aaa']) }); }
   for (let i = 0; i < 6; i++) api.prop('portapotty', { x: -24 + i * 1.35, z: -140, col: i % 2 ? '#2a6ac8' : '#3a8a3a' });
@@ -201,13 +202,19 @@ BW17.build = function (api, g) {
     BW17.sign(api, txt, sx, sz, t.yaw, { h: 0.62, y: 0.9, bg, fg, border: fg, size: 30 });
   }
   { const T = L.tipi, c = Math.cos(T.yaw), sn = Math.sin(T.yaw), at = (lx, lz) => [T.x + lx * c + lz * sn, T.z - lx * sn + lz * c];
-    let q = at(-1.6, T.r + 1.6); api.prop('chair', { x: q[0], z: q[1], yaw: T.yaw + 0.5, col: '#ff4fd8' });
-    q = at(-2.3, T.r + 1.1); api.prop('cooler', { x: q[0], z: q[1], yaw: T.yaw, col: '#38c8ff' });
+    let q = at(-2.0, T.r + 1.8); api.prop('chair', { x: q[0], z: q[1], yaw: T.yaw + 0.5, col: '#ff4fd8' });
+    q = at(-2.9, T.r + 1.3); api.prop('cooler', { x: q[0], z: q[1], yaw: T.yaw, col: '#38c8ff' });
     q = at(0, T.r + 0.9); api.mesh(q[0], q[1], m => { m.color('#c85a3a').shine(0); m.roundBox(0, 0.015, 0, 1.4, 0.03, 0.8, 0.012, { uv: BURNS_ATLAS.pattern('plaid') }); return { cols: [] }; }, { yaw: T.yaw }); }
   // Brady's tipi: decorations (movers) + the bedroll prompt
   S.decor = BW17.B.decor(api, L.tipi);
   api.interact({ x: L.bed[0], z: L.bed[1], r: 1.7, label: 'SLEEP', when: g2 => BurnsSave.flag(17, 'tipiOwned') || g2.missions.state('tipi') === 'active', fn: g2 => BW17.sleepMenu(g2) });
   api.interact({ x: L.tipi.x + Math.sin(L.tipi.yaw) * 1.0, z: L.tipi.z + Math.cos(L.tipi.yaw) * 1.0, r: 1.2, label: 'DECORATE', when: g2 => !!BurnsSave.flag(17, 'tipiOwned'), fn: g2 => BW17.decorMenu(g2) });
+  // festoon lights from the common dome out to every inner-ring tipi (the village glows at night)
+  if (rs) api.mesh(0, -54, m => {
+    const lights = [], cols = ['#ffcf8a', '#ff9ad0', '#9aff7a', '#ffcf8a', '#9adcff'];
+    for (let i = 0; i < 11; i++) { const a = 0.5 + i / 11 * (TAU - 1.0); BW17.bulbs(m, lights, [Math.sin(a) * 1.4, 4.25, Math.cos(a) * 1.4], [Math.sin(a) * 13.6, 3.3, Math.cos(a) * 13.6], 11, 0.55, cols, 3); }
+    return { cols: [], lights };
+  }, { noAO: true });
   // the job board by the village path
   if (api.questBoard) api.questBoard({ x: 17.5, z: -24, yaw: -0.5, title: 'ROOT SOCIETY JOB BOARD' });
   /* ---------- collectibles ---------- */
@@ -504,6 +511,7 @@ BW17.tipiScene = function (g, a) {
   ], () => BW17.choose(g, { who: 'MAKE IT YOURS', prompt: 'What goes out front?', options: ['A pink lawn flamingo', 'A pirate flag', 'A disco ball over the door'], def: 0,
     done(g2, i) {
       const id = ['flamingo', 'pirate', 'disco'][i]; BW17.giveDecor(g2, id, true); g2.fx.confetti(T.x, 3, T.z, 30); burnsSfx('gift');
+      g2.cutscene([{ cam: { x: front[0] + Math.cos(T.yaw) * 2, y: 1.8, z: front[1] - Math.sin(T.yaw) * 2, tx: T.x, ty: 1.6, tz: T.z, fov: 0.85 } }, { slowmo: 0.45, dur: 1.2 }, { flash: '#fff4d8' }, { wait: 1.1 }, { slowmo: 1 }], null, { letterbox: false });
       g2.say(a, [['A flamingo. Classy. Timeless. Slightly judgmental.', 'A pirate flag! Arr. The neighbours will love it. Granny will steal it.', 'A disco ball! Now your door is a party. Your door was always a party.'][i], 'Bedroll\'s inside. Take a siesta. You\'ve earned it.'], () => { g2.banner('YOUR TIPI', 'SLEEP on the bedroll inside', { col: '#7aff5a' }); BW17.applyMusic(g2, true); });
     } }));
 };
@@ -643,7 +651,12 @@ BW17.intro = function (g) {
     { do: g2 => { g2.shake(0.25); burnsSfx('man_stomp', { vol: 0.25, pitch: 1.6 }); } },
     { orbit: { actor: 'brady', r0: 4, r1: 7, h0: 1.4, h1: 2.6, a0: 0.4, a1: 2.6, ty: 1.3, dur: 3 } },
     { say: ['brady', ['That bass. Three domes. A... coliseum? Okay. Follow the bass.']] },
-    { do: g2 => { p.animOverride = null; p.locked = false; BurnsSave.flag(17, 'intro', true); BW17.setClock(g2, 9); g2.camYaw = Math.PI; g2.snapCam = true; BW17.applyMusic(g2, true); } }
+    { do: g2 => { p.animOverride = 'walk'; S.walkT = 0; } },
+    { parallel: [
+      { track: { actor: 'brady', dist: 5.5, h: 2.0, side: 0.5, ty: 1.4, fov: 0.9, dur: 3.2 } },
+      { until: g2 => { S.walkT += 1 / 120; const k = Math.min(1, S.walkT / 3.0); p.teleport(sp.x, 0, sp.z - k * 9, Math.PI); return k >= 1; } }
+    ] },
+    { do: g2 => { p.animOverride = null; p.locked = false; BurnsSave.flag(17, 'intro', true); BW17.setClock(g2, 9); p.teleport(sp.x, 0, sp.z - 9, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; BW17.applyMusic(g2, true); } }
   ], g2 => { g2.banner('FOLLOW THE BASS', 'Root Society is straight ahead', { col: '#e8c890' }); });
 };
 BW17.clockStep = function (g, hours) { const S = BW17.state; BW17.setClock(g, S.clock + hours, 0.25); };

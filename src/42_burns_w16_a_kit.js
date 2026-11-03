@@ -61,7 +61,8 @@ BW16.SKY_DAY = {
 };
 BW16.SKY_NIGHT = {
   zen: '#070524', hor: '#3e1554', fog: '#2a1642', fogD: 0.0088, fogH: 0.06, haze: 0.55, fogMax: 0.92,
-  sun: [292, -16], sunCol: '#000000', sunSize: 0.0001, moon: [150, 34], moonK: 1.1, stars: 1,
+  // the sun sets toward the moon's side so the sky shader lights the moon's face (and the dusk glow sits behind the Wave)
+  sun: [150, -12], sunCol: '#000000', sunSize: 0.0001, moon: [150, 34], moonK: 1.1, stars: 1,
   mtnCol: '#150a2a', mtnH: 3.0, city: [180, 0], cityCol: '#ff4fd8', cityK: 0.65,
   sky: '#5a4aa2', gnd: '#3a2a52', key: '#9aa6ff', keyK: 0.48, emB: 1.95, rim: '#c08aff',
   clouds: 0.22, cloudCol: '#382a5c', mid: '#28104a', midK: 0.35
