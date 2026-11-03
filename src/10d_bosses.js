@@ -35,7 +35,7 @@ class Boss extends Ent {
     this.brain = BOSS_BRAINS[style] || BOSS_BRAINS.greeter;
   }
   get aggression() { return 1 + (1 - this.hp / this.maxHp) * 0.6; }
-  go(act) { this.act = act; this.at = 0; this.first = true; this.vuln = false; this.guard = 'hurt'; this.pose = act; }
+  go(act) { this.act = act; this.at = 0; this.first = true; this.goN = (this.goN || 0) + 1; this.vuln = false; this.guard = 'hurt'; this.pose = act; }
   face() { const p = this.g.player; if (p) this.dir = p.cx < this.cx ? -1 : 1; }
   walk(sp) { this.vx = this.dir * sp * TS * this.aggression; }
   fall(dt) { this.vy += PHYS.gDown * 0.8 * dt; if (this.vy > PHYS.maxFall) this.vy = PHYS.maxFall; moveBody(this, this.g.area, dt, { semis: false }); }
@@ -64,8 +64,10 @@ class Boss extends Ent {
     }
     if (this.state === 'intro') { this.timer -= dt; this.face(); if (this.timer <= 0) { this.state = 'fight'; this.go('walk'); } if (!this.hush) this.fall(dt); return; }
     this.at += dt;
+    // an act started (go) during this update keeps `first` for its own first update, so its setup runs
+    const goN = this.goN;
     this.brain.update(this, dt);
-    this.first = false;
+    if (this.goN === goN) this.first = false;
     this.clampArena();
   }
   hit(kind, src) {

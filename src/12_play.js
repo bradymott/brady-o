@@ -144,11 +144,13 @@ class Play {
     computeVariants(a);
     this.area = a;
     a.entities = [];
+    this.loadingEntities = a.entities;
     for (const s of src.spawns) {
       const C = ENTITY_TYPES[s.type];
       if (!C) continue;
       try { a.entities.push(new C(this, s)); } catch (e) { console.warn('spawn failed', s.type, e); }
     }
+    this.loadingEntities = null;
     a.lavaY = a.H * TS + 40;
     return a;
   }
@@ -168,7 +170,7 @@ class Play {
 
   /* ---------- helpers used by entities ---------- */
   tint(kind) { const th = THEMES[this.area ? this.area.theme : this.level.areas[0].theme]; return (th.tint && th.tint[kind]) || '#8a6aff'; }
-  spawn(e) { this.entities.push(e); }
+  spawn(e) { (this.loadingEntities || this.entities).push(e); }   // entities spawned by a constructor while an area loads join that area
   burst(x, y, n, col, type) { this.parts.burst(x, y, n, col, type); }
   shake(a) { if (Save.data.settings.shake) this.shakeAmt = Math.max(this.shakeAmt, a); }
   get viewW() { return Game.viewW; }
@@ -227,11 +229,19 @@ class Play {
   drawToast(ctx) {
     if (!(this.toastT > 0)) return;
     const W = Game.cssW, a = Math.min(1, this.toastT * 2, (2.6 - this.toastT) * 6);
-    ctx.save(); ctx.globalAlpha = a; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const w = Math.min(W - 40, ctx.measureText(this.toastText).width + 30), y = Game.gameRect.y + Math.max(64, insets.t + 58) + (W < 600 ? 40 : 0);
-    ctx.fillStyle = 'rgba(14,8,26,0.78)'; rr(ctx, W / 2 - w / 2, y - 15, w, 30, 15); ctx.fill();
+    ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    // long messages shrink a little, then wrap onto more lines (power-up hints in portrait)
+    const maxW = W - 52, text = String(this.toastText);
+    let size = 12; ctx.font = `${size}px ${FONT_DISPLAY}`;
+    while (size > 9 && ctx.measureText(text).width > maxW) { size--; ctx.font = `${size}px ${FONT_DISPLAY}`; }
+    const lines = [];
+    if (ctx.measureText(text).width <= maxW) lines.push(text);
+    else { let cur = ''; for (const word of text.split(' ')) { const t = cur ? cur + ' ' + word : word; if (cur && ctx.measureText(t).width > maxW) { lines.push(cur); cur = word; } else cur = t; } if (cur) lines.push(cur); }
+    const lh = size + 6, tw = Math.max.apply(null, lines.map(l => ctx.measureText(l).width));
+    const w = Math.min(W - 24, tw + 30), h = Math.max(30, lines.length * lh + 12), y = Game.gameRect.y + Math.max(64, insets.t + 58) + (W < 600 ? 54 : 0);
+    ctx.fillStyle = 'rgba(14,8,26,0.78)'; rr(ctx, W / 2 - w / 2, y - 15, w, h, 15); ctx.fill();
     ctx.strokeStyle = 'rgba(255,216,74,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.fillStyle = '#ffd84a'; ctx.fillText(this.toastText, W / 2, y + 1);
+    ctx.fillStyle = '#ffd84a'; lines.forEach((l, i) => ctx.fillText(l, W / 2, y - 15 + h / 2 + (i - (lines.length - 1) / 2) * lh + 1));
     ctx.restore();
   }
 

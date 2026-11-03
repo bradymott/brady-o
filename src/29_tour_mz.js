@@ -305,7 +305,7 @@ function chiliIcon(ctx, x, y, t) {
   ctx.restore();
 }
 class MzFlame extends Ent {
-  constructor(g, x, y, dir) { super(g, null, 24, 22); this.x = x - 12; this.y = y - 11; this.dir = dir; this.life = 0.5; this.vx = dir * 7 * TS; this.hitSet = new Set(); this.friendly = true; }
+  constructor(g, x, y, dir) { super(g, null, 24, 22); this.t = 0; this.x = x - 12; this.y = y - 11; this.dir = dir; this.life = 0.5; this.vx = dir * 7 * TS; this.hitSet = new Set(); this.friendly = true; }
   update(dt) {
     this.t += dt; this.life -= dt; this.x += this.vx * dt; this.w = 24 + this.t * 40; this.h = 22 + this.t * 16; this.y -= this.t * 6 * dt;
     const g = this.g, A = g.area;

@@ -961,7 +961,8 @@ const tracks = {
 
 /* ---------------- the five levels ---------------- */
 Tour.country({
-  id: 'mx', colors: COL, tagline: 'Tacos, piñatas and a volcano with a temper',
+  id: 'mx',
+  arrival: 'Brady! The Baron shrank the Palace of Fine Arts down to the size of a piñata. Follow the confetti! ♥ C', colors: COL, tagline: 'Tacos, piñatas and a volcano with a temper',
   themes, painters, dyn, decor, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_mx', boss: 'tour_mx_boss' },
   landmark: 'the Palace of Fine Arts',

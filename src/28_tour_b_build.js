@@ -127,7 +127,7 @@ function tourRide(ctx) {
   B.themeKey = ctx.theme;
   const speed = S.scroll || 2.4 + ctx.d * 0.6;
   const vw = S.vehicleW || 10;
-  B.spawn('mplat', 1, DECK - 1, { pw: vw, carrier: true, speed, stopX: (len - vw - 1) * TS, skin: S.vehicle || 'tourBoat' });
+  B.spawn('mplat', 1, DECK - 1, { pw: vw, carrier: true, speed, stopX: (len - vw) * TS, skin: S.vehicle || 'tourBoat' });
   for (let x = 0; x < len + 2; x++) B.ghosts.push([x, DECK]);
   // the water / track below: falling in costs a life
   if (S.below === 'liquid') for (let x = 0; x < len + 40; x++) B.set(x, H - 1, T.LAVA);

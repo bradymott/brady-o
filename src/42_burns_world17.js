@@ -277,9 +277,9 @@ BW17.talkJefr = function (g, a) {
   g.say(a, lines.concat(['The job board by the village path has work if you want it. Or nap. Napping is also work.']));
 };
 BW17.meetJefr = function (g, a) {
-  const p = g.player;
+  const p = g.player, ab = Math.atan2(p.x - a.x, p.z - a.z);
   g.cutscene([
-    { orbit: { actor: 'jefr', r0: 6.5, r1: 3.6, h0: 2.6, h1: 1.7, a0: 0.6, a1: -0.3, dur: 3.2, fov: 0.9 } },
+    { orbit: { actor: 'jefr', r0: 7, r1: 4.2, h0: 2.6, h1: 1.8, a0: ab + 1.25, a1: ab + 0.75, dur: 3.2, fov: 0.9 } },
     { say: [a, ['Whoa there, little brother. You look like a man who rode a bike into a mushroom.']] },
     { say: ['brady', ['...Two mushrooms. They were bouncy. Is it Tuesday?']] },
     { say: [a, ['All day long. I\'m Jefr. J-E-F-R. The second E is on a vision quest.', 'This is Root Society. Three domes, a coliseum, a stage that drives itself, twenty-seven tipis and one kitchen dome.']] },
@@ -303,7 +303,7 @@ BW17.talkPixel = function (g, a) {
   if (M.state('cable') === 'available') { g.say(a, ['Hi. Pixel. The mains cable to the 90 foot dome got eaten by a dust devil.', 'Grab the cable at the reel, run it over all five yellow cable ramps in order, then plug it into the amp rack by the dome door.', 'Skip a ramp and somebody trips. Then they sue. Then they hug it out, but still.'], () => M.start('cable')); return; }
   if (M.state('cable') === 'active') { g.say(a, ['Reel, ramps one to five, amp rack. Go.']); return; }
   const dm = M.get('s_duck');
-  if (dm && dm.state === 'active' && !dm.data.battery) { g.say(a, ['A battery for the Disco Duck? I have eleven. Don\'t ask why.'], () => { dm.data.battery = true; g.pack.add('w17battery'); M.progress('s_duck'); }); return; }
+  if (dm && dm.state === 'active' && !dm.data.battery) { g.say(a, ['A battery for the Disco Duck? I have eleven. Don\'t ask why.'], () => { dm.data.battery = true; g.pack.add('w17battery'); BW17.duckPart(g, dm); }); return; }
   const fm = M.get('s_food');
   if (fm && fm.state === 'active' && g.pack && g.pack.has('w17cheese')) { g.say(a, ['Grilled cheese. The only food that runs on pure joy. Thank you.'], () => { g.pack.take('w17cheese'); M.progress('s_food'); }); return; }
   if (M.state('s_darkwads') === 'available' && !BW17.isNight()) { g.say(a, ['Darkwads only come out at night. Nap in your tipi till dark, then come back.']); return; }

@@ -110,6 +110,8 @@ BW17.SIDE = [
 /* ---------------- per-quest mechanics ---------------- */
 const BW17_D = (g, x, z) => Math.hypot(g.player.x - x, g.player.z - z);
 
+// Art Car CPR parts count up without completing the quest (the crank does that)
+BW17.duckPart = function (g, m) { m.n = Math.min(3, m.n + 1); g.toast(`DUCK PARTS: ${m.n}/3`); if (m.n >= 3) { g.banner('ALL THREE PARTS!', 'Back to the Disco Duck: FIX IT', { col: '#ffd21a' }); m.data.marker = 'quack'; } };
 BW17.clearItems = function (g, ids) { if (!g.pack) return; for (const id of ids) { const n = g.pack.count(id); if (n) g.pack.take(id, n); } };
 // HUG QUOTA: bump into burners (bigger reach on a LOVE BOMB); each one counts once
 BW17.hugStep = function (g, m, dt) {
@@ -272,13 +274,13 @@ BW17.buildSide = function (api, g) {
   api.npc({ id: 'wendy', name: 'WRENCH WENDY', type: 'burner', seed: 9, x: L.bike.bench[0], z: L.bike.bench[1], yaw: L.bikeYaw, anim: 'clipboard',
     talk(g2, a) {
       const dm = g2.missions.get('s_duck');
-      if (dm.state === 'active' && !dm.data.belt) { g2.say(a, ['A fan belt for the Disco Duck? Captain Quack owes me six belts.', 'Fine. Seven. Tell him I said quack.'], () => { dm.data.belt = true; g2.pack.add('w17belt'); g2.missions.progress('s_duck'); }); return; }
+      if (dm.state === 'active' && !dm.data.belt) { g2.say(a, ['A fan belt for the Disco Duck? Captain Quack owes me six belts.', 'Fine. Seven. Tell him I said quack.'], () => { dm.data.belt = true; g2.pack.add('w17belt'); BW17.duckPart(g2, dm); }); return; }
       g2.say(a, ['Flats, chains, wobbly handlebars, existential dread. I fix all of it.', 'Except the dread. Bring your own tools for the dread.']);
     } });
   api.npc({ id: 'glimmer', name: 'GLIMMER', type: 'sparklepony', seed: 7, x: L.content.front[0] + 3, z: L.content.front[1] + 1, yaw: L.contentYaw, behavior: 'idle',
     talk(g2, a) {
       const dm = g2.missions.get('s_duck');
-      if (dm.state === 'active' && !dm.data.filter) { g2.say(a, ['An air filter? For a DUCK? Babe. I have glitter tights. Triple-layer. Dust doesn\'t stand a chance.', 'Trade you for... a hug. Okay, done. Gifted!'], () => { dm.data.filter = true; g2.pack.add('w17filter'); g2.missions.progress('s_duck'); g2.fx.hearts(a.x, a.y + 2, a.z, 6); }); return; }
+      if (dm.state === 'active' && !dm.data.filter) { g2.say(a, ['An air filter? For a DUCK? Babe. I have glitter tights. Triple-layer. Dust doesn\'t stand a chance.', 'Trade you for... a hug. Okay, done. Gifted!'], () => { dm.data.filter = true; g2.pack.add('w17filter'); BW17.duckPart(g2, dm); g2.fx.hearts(a.x, a.y + 2, a.z, 6); }); return; }
       g2.say(a, ['Do you have water? And a snack? And a cup? And sunscreen? No? Same.', 'That influencer is SO fake. I\'m an authentic sparkle pony.']);
     } });
   /* --- DARKWADS: four unlit people on the dark streets (night only) --- */

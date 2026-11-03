@@ -153,7 +153,7 @@ BW16.floorStep = function (g, dt) {
 BW16.drawFloor = function (g, R) {
   const S = BW16.state, F = BW16.F, Sp = BURNS_SPRITES.R; if (!S) return;
   const k = S.aliveK || 0, b = BW16.beat(g), t = g.time;
-  if (k > 0.05 && Math.hypot(g.player.x - F.x, g.player.z - F.z) < 60) { const pulse = Math.pow(1 - (b % 1), 3); g.pointLight(F.x, F.h + 2.2, F.z, 14, burnsRGBf(burnsHSL((b * 22) % 360, 0.9, 0.6)), (0.8 + 1.4 * pulse) * k); }
+  if (k > 0.05 && Math.hypot(g.player.x - F.x, g.player.z - F.z) < 60) { const pulse = Math.pow(1 - (b % 1), 3); g.pointLight(F.x, F.h + 2.2, F.z, 14, burnsRGBf(burnsHSL((b * 22) % 360, 0.72, 0.64)), (0.6 + 0.9 * pulse) * k); }
   if (k > 0.02) {
     // concentric rings that ripple out from the centre on every beat, colour cycling
     for (let i = 0; i < 4; i++) {
@@ -495,7 +495,7 @@ BW16.overlayOver = function (ctx, g, fdt) {
     if (D && D.pop) {
       D.pop.t += fdt; const a = clamp(1.2 - D.pop.t * 1.4, 0, 1);
       if (a > 0) {
-        const py = Math.max(Sf.t + (portrait ? 274 : 140) + (portrait ? 30 : 22), portrait ? H * 0.5 : 0), sz = (portrait ? 24 : 26) * (1 + 0.25 * Math.max(0, 1 - D.pop.t * 6));
+        const py = Math.max(Sf.t + (portrait ? 274 : 140) + (portrait ? 34 : 32), portrait ? H * 0.5 : 0), sz = (portrait ? 24 : 26) * (1 + 0.25 * Math.max(0, 1 - D.pop.t * 6));
         ctx.save(); ctx.globalAlpha = a; BurnsUI.text(ctx, D.pop.text, W / 2, py + D.pop.t * 8, sz, D.pop.col, { glow: D.pop.col }); ctx.restore();
       } else D.pop = null;
     }
