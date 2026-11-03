@@ -746,7 +746,7 @@ class IdSpray extends Ent {
 }
 let SURFING = false;
 const power = {
-  id: 'surf', name: 'SURFBOARD', country: 'id', hint: 'SURF THE SEA · JUMP OFF A WAVE CREST FOR BIG AIR · THROW: SPRAY', time: 0, cooldown: 0.45,
+  id: 'surf', name: 'SURFBOARD', country: 'id', hint: 'JUMP OFF A WAVE CREST FOR BIG AIR', time: 0, cooldown: 0.45,
   get speedMul() { return SURFING ? 1.2 : 1; },
   icon(ctx, x, y, t) { boardShape(ctx, x, y + 1, 30, -0.55 + Math.sin(t * 2) * 0.08); },
   onCollect(p, g) { deckOf(g); },

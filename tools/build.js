@@ -49,7 +49,7 @@ const APPS = {
   }
 };
 // 2D-game modules the other apps still use (UI kit, title scene, portraits…). Trim as the apps separate.
-const BURNS_DEPS = ['03_themes.js', '04_tiles.js', '05_brady.js', '22_cast.js'];   // only for the 2D Chinka portrait on photo collectibles (drawChinka); the rest of the app is engine-only
+const BURNS_DEPS = [];   // the Burning Man app is engine-only (the Chinka photo is rendered from the 3D model now)
 const KART_DEPS = [];   // Art Cart is engine-only now (the shared boot code guards its 2D references)
 
 function bundle(appId, files) {

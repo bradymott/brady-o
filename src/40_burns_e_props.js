@@ -108,12 +108,23 @@ const BurnsProps = {
     this.trim(m, W, 1.12, zb + 0.3, zf - 0.4, r.pick(['#c83a2a', '#2a5aa8', '#d8a020', '#3a8a5a']));
     if (!m.lo) { m.color('#e8e8ec').shine(1); m.limb(-W / 2 - 0.09, H - 0.32, zb + 1.0, -W / 2 - 0.09, H - 0.32, cab - 1.6, 0.075, 0.075, { seg: 8 }); m.color('#9a9aa2'); for (const zz of [zb + 1.0, cab - 1.6]) m.roundBox(-W / 2 - 0.04, H - 0.32, zz, 0.08, 0.14, 0.06, 0.02); m.shine(0); }
     // roof
-    m.color('#e8e8e8'); m.box(0, H + 0.16, (cab + zb) / 2 + 0.5, 0.8, 0.32, 0.9);
+    const acz = (cab + zb) / 2 + 0.5;
+    if (m.lo) { m.color('#e8e8e8'); m.box(0, H + 0.16, acz, 0.8, 0.32, 0.9); }
+    else {   // rooftop AC: a rounded shroud, a dark fan grille on top and louvres down one side
+      m.color('#ececf0').shine(1); m.roundBox(0, H + 0.16, acz, 0.8, 0.32, 0.9, 0.07, { k: 1, m: 1 });
+      m.color('#3a3a42').shine(0); m.cyl(0, H + 0.315, acz, 0.22, 0.22, 0.02, 10, {});
+      for (let k = -2; k <= 2; k++) m.box(0.405, H + 0.16, acz + k * 0.15, 0.02, 0.16, 0.06);
+    }
     m.color('#c8c8c8'); m.box(0.6, H + 0.07, zb + 1.2, 0.4, 0.14, 0.4);
     if (o.solar || r() < 0.35) { m.color('#1a2a5a', 0.05); m.box(0, H + 0.08, zb + 2.6, 1.6, 0.06, 1.2); m.emissive(0); }
     // rear ladder + bike rack
-    m.color('#9a9aa2'); m.box(0.7, (H + 0.9) / 2, zb - 0.06, 0.04, H - 0.9, 0.04); m.box(0.35, (H + 0.9) / 2, zb - 0.06, 0.04, H - 0.9, 0.04);
-    for (let y = 1.2; y < H; y += 0.35) m.box(0.525, y, zb - 0.06, 0.35, 0.03, 0.03);
+    if (m.lo) { m.color('#9a9aa2'); m.box(0.7, (H + 0.9) / 2, zb - 0.06, 0.04, H - 0.9, 0.04); m.box(0.35, (H + 0.9) / 2, zb - 0.06, 0.04, H - 0.9, 0.04); for (let y = 1.2; y < H; y += 0.35) m.box(0.525, y, zb - 0.06, 0.35, 0.03, 0.03); }
+    else {   // round aluminium rails and rungs
+      m.color('#b4b4bc').shine(2);
+      for (const lx of [0.35, 0.7]) m.limb(lx, 0.9, zb - 0.07, lx, H - 0.02, zb - 0.07, 0.022, 0.022, { seg: 6 });
+      for (let y = 1.2; y < H; y += 0.35) m.limb(0.35, y, zb - 0.07, 0.7, y, zb - 0.07, 0.016, 0.016, { seg: 5, ends: false });
+      m.shine(0);
+    }
     m.color('#2a2a30'); m.box(-0.2, 0.95, zb - 0.32, 1.7, 0.08, 0.5);
     if (o.bikes !== false) { this.bikeShape(m, -0.55, 0.98, zb - 0.3, Math.PI / 2, r.pick(BURNS_NEON)); this.bikeShape(m, 0.15, 0.98, zb - 0.38, Math.PI / 2, r.pick(BURNS_NEON)); }
     const cols = [
