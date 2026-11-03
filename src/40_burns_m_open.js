@@ -20,7 +20,7 @@ class BurnsTiles {
   constructor(g, T) {
     this.g = g; this.T = T; this.size = T.size || 160;
     this.loadR = T.load || this.size * 2.4; this.freeR = Math.max(T.free || 0, this.loadR + this.size * 0.75);
-    this.tiles = new Map(); this.queue = []; this.job = null; this.checkT = 0;
+    this.tiles = new Map(); this.queue = []; this.job = null; this.checkT = 0; this.people = [];
     this.stats = { built: 0, freed: 0, ms: 0, worst: 0 };
     this.region = null;
   }
@@ -54,6 +54,8 @@ class BurnsTiles {
   // once per rendered frame: build for at most `budget` ms
   step(budget) {
     const t0 = performance.now(); budget = budget || this.T.budget || 4;
+    // a finished tile's people join a few per frame (each new actor costs a little)
+    for (let k = 0; k < 3 && this.people.length; k++) { const [t, d] = this.people.shift(); if (t.state !== 'ready') continue; const a = new BurnsActor(this.g, d); this.g.actors.push(a); t.actors.push(a); }
     while (performance.now() - t0 < budget) {
       if (!this.job) { const t = this.queue.shift(); if (!t) break; if (t.state !== 'queued') continue; this.begin(t); }
       const J = this.job; let done = true;
@@ -62,7 +64,7 @@ class BurnsTiles {
     }
     const ms = performance.now() - t0; this.stats.ms = ms; if (ms > this.stats.worst) this.stats.worst = ms;
   }
-  busy() { return !!this.job || this.queue.length > 0; }
+  busy() { return !!this.job || this.queue.length > 0 || this.people.length > 0; }
   begin(t) {
     const g = this.g, W = g.world;
     t.state = 'building';
@@ -75,7 +77,7 @@ class BurnsTiles {
     const g = this.g, W = g.world;
     this.job = null;
     W.tileEnd(t); if (W.inst) W.inst.cur = null;
-    for (const d of t.own.actorDefs) { const a = new BurnsActor(g, d); g.actors.push(a); t.actors.push(a); }
+    for (const d of t.own.actorDefs) this.people.push([t, d]);
     t.state = 'ready'; this.stats.built++;
     if (this.T.onLoad) { try { this.T.onLoad(g, t); } catch (e) { console.error(e); } }
     if (t.freeMe) this.free(t);
@@ -107,7 +109,10 @@ class BurnsTiles {
       const J = this.job; if (J.it) { try { while (!J.it.next().done); } catch (e) { console.error(e); } }
       this.end(t);
     }
+    this.flushPeople();
   }
+  // everyone queued joins now (prime / loading screen)
+  flushPeople() { while (this.people.length) { const [t, d] = this.people.shift(); if (t.state !== 'ready') continue; const a = new BurnsActor(this.g, d); this.g.actors.push(a); t.actors.push(a); } }
   releaseAll() { if (this.job) { const J = this.job; if (J.it) { try { while (!J.it.next().done); } catch (e) { /* ignore */ } } this.end(J.t); } for (const t of this.tiles.values()) if (t.state !== 'none') this.free(t); this.queue = []; }
   readyCount() { let n = 0; for (const t of this.tiles.values()) if (t.state === 'ready') n++; return n; }
 }

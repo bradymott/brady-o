@@ -70,6 +70,8 @@ BURNS_OW.CAMPS = [
   { kind: 'campQuestionMark', h: 9.35, front: 23, crowd: 0.5 },
   { kind: 'opulentTemple', h: 10.0, front: 33, crowd: 0.5 }
 ];
+// the neighbourhood people: a small pool of looks, all built while the city loads (no first-time model mid-game)
+BURNS_OW.PEOPLE = [['burner', 1], ['burner', 5], ['burner', 17], ['furcoat', 2], ['furcoat', 8], ['tutu', 3], ['tutu', 11], ['ledsuit', 4], ['ledsuit', 9], ['sparklepony', 6], ['sparklepony', 13], ['furcoat', 19]];
 // big art out on the open and deep playa (BurnsBigArt)
 BURNS_OW.ART = [
   { kind: 'retroRocket', h: 2.6, r: 205 },
@@ -359,8 +361,9 @@ BurnsWorlds.register({
     BurnsOW.temple(api, 0, -250);
     // ---- the trash fence ----
     BurnsOW.fence(api);
-    // ---- neighbourhood prototypes (instanced) ----
+    // ---- neighbourhood prototypes (instanced) and the people's looks ----
     BurnsOW.protos(api);
+    for (const [type, seed] of O.PEOPLE) { try { BurnsRig.model(BurnsRig.npcSpec(type, seed, { type, seed })); } catch (e) { /* built on first use */ } }
     // ---- the theme camps (full near Brady, a silhouette from afar) ----
     if (typeof BurnsCamps !== 'undefined') for (const C of O.CAMPS) {
       try {
@@ -374,7 +377,8 @@ BurnsWorlds.register({
     }
     // ---- big art on the open and deep playa ----
     if (typeof BurnsBigArt !== 'undefined') for (const A of O.ART) {
-      try { const p = O.at(A.h, A.r); S.art.push(BurnsBigArt.place(api, g, A.kind, p[0], p[1], { rotY: O.yawIn(A.h) + Math.PI, id: A.kind, vantage: false })); } catch (e) { console.error('ow art ' + A.kind, e); }
+      // open-playa pieces face the city, deep-playa pieces face the Man
+      try { const p = O.at(A.h, A.r); S.art.push(BurnsBigArt.place(api, g, A.kind, p[0], p[1], { rotY: A.r < O.ESP ? O.yawOut(A.h) : O.yawIn(A.h), id: A.kind, vantage: false })); } catch (e) { console.error('ow art ' + A.kind, e); }
     }
     // ---- the story places ----
     const home = O.PLACES.find(q => q.kind === 'home'); if (!home.home) { const q = O.at(2, 330); home.x = q[0]; home.z = q[1]; home.yaw = O.yawIn(2); }
@@ -429,10 +433,8 @@ BurnsWorlds.register({
       const O = BURNS_OW;
       for (const b of O.blocks()) {
         if (b.reserved || b.cx < tile.x0 || b.cx >= tile.x1 || b.cz < tile.z0 || b.cz >= tile.z1) continue;
-        const people = BurnsOW.fillBlock(api, g, b);
+        BurnsOW.fillBlock(api, g, b);
         yield;
-        // build each new character look on its own step (a first-time model is the slowest thing a tile makes)
-        for (const d of people) { try { BurnsRig.model(BurnsRig.npcSpec(d.type, d.seed, d)); } catch (e) { /* the actor builds it */ } yield; }
       }
       // walk-in camping beyond Firefly: scattered tents
       const rng = mulberry32(tile.i * 7331 + tile.j * 131);
@@ -510,10 +512,10 @@ Object.assign(BurnsOW, {
     if (rng() < 0.45) {
       const h = (b.h0 + b.h1) / 2 + (rng() - 0.5) * 0.12, front = b.r0 + 5.5, q = O.at(h, front), yaw = O.yawIn(h) + Math.PI;
       api.sign(this.campName(rng), q[0], q[1], { yaw, h: 1.5, maxW: 3, style: { bg: this.pick(rng, ['#1a0a2a', '#0a1a2a', '#2a0a12', '#102a1a']), fg: this.pick(rng, ['#ff9af0', '#9af8ff', '#ffd84a', '#b8ff8a']), border: this.pick(rng, BURNS_NEON) } });
-      const nn = 2 + Math.floor(rng() * 3), types = ['burner', 'furcoat', 'tutu', 'ledsuit', 'sparklepony', 'burner'];
+      const nn = 2 + Math.floor(rng() * 3);
       for (let k = 0; k < nn; k++) {
-        const qq = O.at(h + (rng() - 0.5) * 0.06, front + 2 + rng() * 5);
-        const d = { type: types[Math.floor(rng() * types.length)], seed: Math.floor(rng() * 24), x: qq[0], z: qq[1], yaw: yaw + (rng() - 0.5), behavior: rng() < 0.55 ? 'dance' : 'chill', chatter: true };
+        const qq = O.at(h + (rng() - 0.5) * 0.06, front + 2 + rng() * 5), look = O.PEOPLE[Math.floor(rng() * O.PEOPLE.length)];
+        const d = { type: look[0], seed: look[1], x: qq[0], z: qq[1], yaw: yaw + (rng() - 0.5), behavior: rng() < 0.55 ? 'dance' : 'chill', chatter: true };
         api.npc(d); people.push(d);
       }
     }
@@ -590,7 +592,7 @@ Object.assign(BurnsOW, {
     // art cars circle the Man
     for (const C of S.cars) {
       C.a += C.w * dt; const mv = C.mv;
-      mv.x = Math.sin(C.a) * C.r; mv.z = -Math.cos(C.a) * C.r; mv.y = 0; mv.yaw = C.a + (C.w > 0 ? Math.PI / 2 : -Math.PI / 2);
+      mv.x = Math.sin(C.a) * C.r; mv.z = -Math.cos(C.a) * C.r; mv.y = 0; mv.yaw = (C.w > 0 ? Math.PI / 2 : -Math.PI / 2) - C.a;   // facing along the circle
     }
     // dust devils drift (day only)
     for (const D of S.devils) { D.t += dt; D.x += Math.sin(D.t * 0.13 + D.a) * dt * 2.2; D.z += Math.cos(D.t * 0.11 + D.a * 1.7) * dt * 2.2; }

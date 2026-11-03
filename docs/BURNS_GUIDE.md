@@ -115,6 +115,7 @@ The story is one week at the Burn: Brady arrives a clueless first-timer and leav
 - **Unlocking.** `g.finishWorld()` unlocks `BurnsWorlds.next(id)`, the next world in the order (finishing id 2 unlocks 16, 16 unlocks 17, 17 unlocks 3). Old saves migrate automatically: any finished world unlocks the next one in the sequence, and nothing that was unlocked is ever re-locked (a save that had finished world 2 now also has 16 open).
 - **Labels.** Never print `'World ' + id`.
   - Use `BurnsWorlds.label(id)` (→ `"World 5"` for id 3, `"Secret World"` for 15) or `BurnsWorlds.num(id)` (→ `5`).
+  - `next(id)` and `prev(id)` step over ids that have no registered world yet. A build without W16/W17 goes 2 → 3, and saves migrate the same way. The order array itself never changes.
   - Lookups: `BurnsWorlds.idAt(n)`, `next(id)`, `prev(id)`, `isFinale(id)` (id 10), `isSecret(id)` (id 15), `isHome(id)` (id 17), `home()` (→ 17), `visible()` (the ids the hub shows).
   - The hub, loading card, day card, pause menu and results screen already do this.
 - **Days of the week.** `BurnsWorlds.day(id)` → `'Tuesday night'`, `BurnsWorlds.dayShort(id)` → `'TUE NIGHT'`. A world can override them with `day`/`dayShort` in its definition.
@@ -1087,7 +1088,17 @@ World 500 turns the 17 story worlds into places (`BURNS_OW.PLACES`), each with a
 - **Regions:** `tiles.region(x, z)` names where Brady is, for example `'4:30 & Carousel'`, `'Center Camp'`, `'Deep Playa'` or `'Outside the Fence'`. Entering a new region sets `g.region`, saves the flag `region:<name>`, sends the mission event `region` (so `{ type: 'reach', region: 'The Temple' }` completes there) and shows a toast.
 - **Position:** the city saves Brady's spot every few seconds and on entering a place (`sv.ow`). CONTINUE resumes there; a world passes its own `opts.spawn` to the engine for this.
 
-### 19.4 Performance
+### 19.4 Things to do in the city
+- **DJ sets:** every theme-camp booth has a **PLAY A SET** prompt (`BurnsCamps` with `djPrompt: true`, the shared `BurnsDJ` minigame).
+- **The Thunderdome:** foam-bat bouts at 9:00 & Bonfire.
+- **Art cars:** two you can **DRIVE**, parked on the open playa by the 6:00 and 3:00 promenades (`api.artCar`). Three more circle the Man, and you can jump on and ride along.
+- **Big art:** climbable pieces with summit views on the open and deep playa (`BurnsBigArt`).
+- **Side quests from people in the city:**
+  - *Quiet Time*: Sage at Center Camp; a `reach` mission for the region `The Temple`.
+  - *The Lost Lantern*: a lamplighter on the Esplanade; a `find` mission by the galleon.
+- **Glow sticks** along the Esplanade.
+
+### 19.5 Performance
 - **Neighbourhoods:** RVs, campers, buses, hexayurts, dome tents, shade, camp frontages, flags, porta-potties and lamp posts are instanced. There are about 1,000–2,500 copies around Brady, in 30–50 batches. Two cheap stand-ins per block show the far city out to 1.4 km.
 - **Landmarks:** the theme camps use their own `lod: 'auto'` (a silhouette beyond about 150 m), and big art and the Man are built once.
 - **Measured views** (high tier, CSS-pixel frame): 60–100 draws and 95k–315k triangles. Tile builds run about 3.5 ms a frame, and first-time character looks are built one per frame.
