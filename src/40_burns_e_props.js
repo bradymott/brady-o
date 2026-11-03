@@ -32,10 +32,35 @@ const BurnsProps = {
   win(m, x, y, z, w, h, side, lit, rng) {
     // a window on an X-facing side (side = +1 / -1), slightly proud of the surface; glass is glossy
     const glow = lit && rng && rng() < 0.55;
-    m.color(glow ? '#ffc070' : '#1c2433', glow ? 0.85 : 0.04).shine(glow ? 0 : 3);
-    if (m.lo) m.box(x + side * 0.012, y, z, 0.03, h, w); else m.roundBox(x + side * 0.012, y, z, 0.03, h, w, 0.012, { k: 1, m: 1 });
+    if (!m.lo) { m.color('#1e1e24').shine(1); m.roundBox(x + side * 0.006, y, z, 0.03, h + 0.08, w + 0.08, 0.025); }   // rubber frame
+    m.color(glow ? '#ffc070' : '#243650', glow ? 0.85 : 0.0).shine(glow ? 0 : 3);
+    if (m.lo) m.box(x + side * 0.012, y, z, 0.03, h, w); else m.roundBox(x + side * 0.02, y, z, 0.03, h, w, 0.012, { k: 1, m: 1 });
     m.emissive(0).shine(0);
   },
+  // flush wheels with dark wheel-well arches cut into the body sides. zs: axle positions; o: { y0 (body bottom), col, well: false }
+  wheels(m, W, zs, r, w, o) {
+    o = o || {}; const xo = W / 2 - w * 0.42, y0 = o.y0 === undefined ? r * 0.9 : o.y0, R = r * 1.22;
+    for (const z of zs) for (const sd of [1, -1]) {
+      if (o.well !== false && y0 < r + R * 0.92) {
+        const a0 = Math.asin(clamp((y0 - r) / R, -0.3, 0.92)), n = m.lo ? 4 : 10, x = sd * (W / 2 + 0.006), pts = [];
+        for (let i = 0; i <= n; i++) { const a = a0 + (Math.PI - 2 * a0) * i / n; pts.push([x, r + Math.sin(a) * R, z + Math.cos(a) * R]); }
+        m.color('#0e0e12'); m.poly(pts, null, [0, r, z]);
+        if (!m.lo) { m.color('#2a2a30').shine(1); for (let i = 0; i < n; i++) { const p = pts[i], q = pts[i + 1]; m.limb(p[0], p[1], p[2], q[0], q[1], q[2], 0.025, 0.025, { seg: 4 }); } m.shine(0); }   // fender lip
+      }
+      this.wheel(m, sd * xo, r, z, r, w, o.col);
+    }
+  },
+  // rounded bumper bar across the front (z > 0) or back, with a chrome strip
+  bumper(m, W, y, z, col) {
+    m.color(col || '#26262c').shine(2);
+    if (m.lo) m.box(0, y, z, W + 0.04, 0.2, 0.16);
+    else { m.roundBox(0, y, z, W + 0.06, 0.24, 0.2, 0.09); m.color('#c8ccd6').shine(3); m.roundBox(0, y + 0.03, z + Math.sign(z || 1) * 0.1, W * 0.86, 0.05, 0.025, 0.02); }
+    m.shine(0);
+  },
+  // a softly curved roof cap over a boxy body (a flattened capsule along Z)
+  roofCap(m, W, y, z0, z1, col, k) { if (m.lo) return; m.color(col).shine(1); m.push(); m.tf(0, y, 0, 0, 0, 0, 1, k || 0.22, 1); m.limb(0, 0, z0, 0, 0, z1, W / 2 - 0.06, W / 2 - 0.06, { seg: 12 }); m.pop(); m.shine(0); },
+  // a thin accent stripe along both sides
+  trim(m, W, y, z0, z1, col) { if (m.lo) return; m.color(col).shine(2); for (const sd of [1, -1]) m.roundBox(sd * (W / 2 + 0.008), y, (z0 + z1) / 2, 0.02, 0.09, z1 - z0, 0.01); m.shine(0); },
   // swoosh decal along a side
   sideDecal(m, x, y, z, len, h, side, reg) {
     const hw = len / 2, hh = h / 2, sx = x + side * 0.02;
@@ -78,7 +103,11 @@ const BurnsProps = {
     this.win(m, -W / 2 - 0.005, 2.1, cab - 1.0, 0.4, 0.45, -1, true, r);
     m.color('#3a3a40'); m.box(-W / 2 - 0.2, 0.5, cab - 1.0, 0.4, 0.08, 0.7);
     // wheels
-    for (const wz of [zf - 1.0, zb + 1.9, zb + 2.6]) { this.wheel(m, W / 2 - 0.2, 0.46, wz, 0.46, 0.3); this.wheel(m, -W / 2 + 0.2, 0.46, wz, 0.46, 0.3); }
+    this.wheels(m, W, [zf - 1.0, zb + 1.9, zb + 2.6], 0.46, 0.3, { y0: 0.72 });
+    this.bumper(m, W - 0.1, 0.6, zf + 0.06); this.bumper(m, W - 0.1, 0.62, zb - 0.02);
+    this.roofCap(m, W, H, zb + 0.45, cab - 0.25, col, 0.2);
+    this.trim(m, W, 1.12, zb + 0.3, zf - 0.4, r.pick(['#c83a2a', '#2a5aa8', '#d8a020', '#3a8a5a']));
+    if (!m.lo) { m.color('#e8e8ec').shine(1); m.limb(-W / 2 - 0.09, H - 0.32, zb + 1.0, -W / 2 - 0.09, H - 0.32, cab - 1.6, 0.075, 0.075, { seg: 8 }); m.color('#9a9aa2'); for (const zz of [zb + 1.0, cab - 1.6]) m.roundBox(-W / 2 - 0.04, H - 0.32, zz, 0.08, 0.14, 0.06, 0.02); m.shine(0); }
     // roof
     m.color('#e8e8e8'); m.box(0, H + 0.16, (cab + zb) / 2 + 0.5, 0.8, 0.32, 0.9);
     m.color('#c8c8c8'); m.box(0.6, H + 0.07, zb + 1.2, 0.4, 0.14, 0.4);
@@ -108,7 +137,8 @@ const BurnsProps = {
     this.win(m, (W + 0.15) / 2, 2.1, (zb + zf - 3) / 2, 1.2, 0.5, 1, true, r); this.win(m, -(W + 0.15) / 2, 2.1, (zb + zf - 3) / 2, 1.2, 0.5, -1, true, r);
     m.color('#fff4d0', 1); m.box(0.7, 1.0, zf + 0.01, 0.3, 0.16, 0.04); m.box(-0.7, 1.0, zf + 0.01, 0.3, 0.16, 0.04);
     m.color('#ff2a2a', 1); m.box(0.85, 1.0, zb - 0.01, 0.18, 0.25, 0.04); m.box(-0.85, 1.0, zb - 0.01, 0.18, 0.25, 0.04); m.emissive(0);
-    for (const wz of [zf - 1.0, zb + 1.2]) { this.wheel(m, W / 2 - 0.15, 0.42, wz, 0.42, 0.28); this.wheel(m, -W / 2 + 0.15, 0.42, wz, 0.42, 0.28); }
+    this.wheels(m, W, [zf - 1.0, zb + 1.2], 0.42, 0.28, { y0: 0.58 });
+    this.bumper(m, W - 0.1, 0.5, zf + 0.04); this.bumper(m, W - 0.1, 0.52, zb - 0.02, '#9a9ea8');
     if (r() < 0.6) { m.color('#3a3a40'); m.box(0, 2.82, -0.6, 1.4, 0.06, 2.0); this.bikeShape(m, 0.35, 2.85, -0.6, 0, r.pick(BURNS_NEON)); this.bikeShape(m, -0.35, 2.85, -0.6, 0, r.pick(BURNS_NEON)); }
     const cols = [
       { t: 'box', x: 0, z: zf - 0.9, hx: W / 2, hz: 0.9, y0: 0, y1: 1.33 },
@@ -132,7 +162,8 @@ const BurnsProps = {
     m.color(shade(col, -0.15)); for (let y = 1.0; y < H - 0.2; y += 0.28) m.box(0, y, zb - 0.015, W - 0.4, 0.06, 0.03);
     // side graphic: big text-free stripes
     const sc = r.pick(BURNS_NEON); m.color(sc); m.box(W / 2 + 0.01, 2.3, (boxF + zb) / 2, 0.02, 0.5, boxF - zb - 0.6); m.box(-W / 2 - 0.01, 2.3, (boxF + zb) / 2, 0.02, 0.5, boxF - zb - 0.6);
-    for (const wz of [zf - 1.2, zb + 1.3]) { this.wheel(m, W / 2 - 0.2, 0.48, wz, 0.48, 0.32); this.wheel(m, -W / 2 + 0.2, 0.48, wz, 0.48, 0.32); }
+    this.wheels(m, W, [zf - 1.2, zb + 1.3], 0.48, 0.32, { y0: 0.62 });
+    this.bumper(m, W - 0.1, 0.55, zf + 0.06);
     // lift gate step at the back
     m.color('#5a5a62'); m.box(0, 0.95, zb - 0.35, W - 0.3, 0.1, 0.7);
     if (o.cargo !== false && r() < 0.5) { m.color('#3a3a40'); m.box(0, H + 0.05, zb + 2, 1.8, 0.1, 2.5); m.color(r.pick(BURNS_NEON)); m.box(0.4, H + 0.35, zb + 2, 0.7, 0.5, 0.9); m.color('#c8a060'); m.box(-0.5, H + 0.3, zb + 1.6, 0.7, 0.4, 0.7); }
@@ -152,7 +183,8 @@ const BurnsProps = {
     m.color('#1a2232', 0.05); m.box(0, 1.22, 0.92, W - 0.35, 0.4, 0.05); m.box(0, 1.22, -1.42, W - 0.35, 0.36, 0.05); m.box(W / 2 - 0.09, 1.24, -0.25, 0.03, 0.34, 2.0); m.box(-W / 2 + 0.09, 1.24, -0.25, 0.03, 0.34, 2.0); m.emissive(0);
     m.color('#fff4d0', 1); m.box(0.65, 0.78, zf + 0.01, 0.35, 0.14, 0.04); m.box(-0.65, 0.78, zf + 0.01, 0.35, 0.14, 0.04);
     m.color('#ff2a2a', 1); m.box(0.7, 0.8, zb - 0.01, 0.3, 0.14, 0.04); m.box(-0.7, 0.8, zb - 0.01, 0.3, 0.14, 0.04); m.emissive(0);
-    for (const wz of [zf - 0.85, zb + 0.85]) { this.wheel(m, W / 2 - 0.12, 0.34, wz, 0.34, 0.24); this.wheel(m, -W / 2 + 0.12, 0.34, wz, 0.34, 0.24); }
+    this.wheels(m, W, [zf - 0.85, zb + 0.85], 0.34, 0.24, { y0: 0.38 });
+    this.bumper(m, W - 0.15, 0.48, zf + 0.04, col === '#1a1a1e' ? '#3a3a40' : '#2a2a30'); this.bumper(m, W - 0.15, 0.5, zb - 0.04);
     let top = 1.47;
     if (o.roofBikes || r() < 0.4) { m.color('#2a2a30'); m.box(0.3, 1.5, -0.25, 0.05, 0.06, 2.0); m.box(-0.3, 1.5, -0.25, 0.05, 0.06, 2.0); this.bikeShape(m, 0.3, 1.52, -0.25, 0, r.pick(BURNS_NEON)); this.bikeShape(m, -0.3, 1.52, -0.25, 0, r.pick(BURNS_NEON)); }
     else { m.color('#2a2a30'); m.box(0, 0.8, zb - 0.35, 1.3, 0.06, 0.5); this.bikeShape(m, -0.3, 0.83, zb - 0.32, Math.PI / 2, r.pick(BURNS_NEON)); this.bikeShape(m, 0.3, 0.83, zb - 0.4, Math.PI / 2, r.pick(BURNS_NEON)); }
@@ -175,7 +207,9 @@ const BurnsProps = {
     for (let i = 0; i < 7; i++) { const z = zb + 0.9 + i * 1.35; this.win(m, W / 2, 2.25, z, 1.0, 0.6, 1, true, r); this.win(m, -W / 2, 2.25, z, 1.0, 0.6, -1, true, r); }
     m.color('#1a2232', 0.04); m.box(0, 2.1, zf - 1.21, W - 0.3, 0.9, 0.04); m.emissive(0);
     m.color('#fff4d0', 1); m.box(0.85, 1.15, zf + 0.01, 0.3, 0.2, 0.04); m.box(-0.85, 1.15, zf + 0.01, 0.3, 0.2, 0.04); m.color('#ff2a2a', 1); m.box(1.0, 1.0, zb + 0.39, 0.2, 0.35, 0.04); m.box(-1.0, 1.0, zb + 0.39, 0.2, 0.35, 0.04); m.emissive(0);
-    for (const wz of [zf - 1.4, zb + 2.0]) { this.wheel(m, W / 2 - 0.2, 0.48, wz, 0.48, 0.3); this.wheel(m, -W / 2 + 0.2, 0.48, wz, 0.48, 0.3); }
+    this.wheels(m, W, [zf - 1.4, zb + 2.0], 0.48, 0.3, { y0: 0.75 });
+    this.bumper(m, W + 0.02, 0.62, zf + 0.06, '#1a1a1e'); this.bumper(m, W + 0.02, 0.66, zb - 0.06, '#1a1a1e');
+    this.roofCap(m, W, H, zb + 0.5, zf - 1.4, base, 0.24);
     // roof deck with railing + couch
     m.color('#5a3a2a'); m.box(0, H + 0.05, -0.8, W - 0.2, 0.1, 6);
     m.color('#2a2a30'); for (const sx of [1, -1]) { m.box(sx * (W / 2 - 0.12), H + 0.55, -0.8, 0.05, 0.05, 6); for (let k = 0; k < 5; k++) m.box(sx * (W / 2 - 0.12), H + 0.3, -3.6 + k * 1.4, 0.05, 0.5, 0.05); }
@@ -197,7 +231,7 @@ const BurnsProps = {
     m.color('#9aa0aa'); for (let y = 1.0; y < H; y += 0.45) m.box(0, y, 0, W + 0.02, 0.03, tL - 1.2);
     this.win(m, W / 2, 2.0, 1.5, 1.2, 0.5, 1, true, r); this.win(m, -W / 2, 2.0, 1.5, 1.2, 0.5, -1, true, r); this.win(m, W / 2, 2.0, -1.5, 1.0, 0.5, 1, true, r);
     m.color('#26262c'); m.box(0, 0.35, 0, W - 0.3, 0.2, tL - 1);
-    this.wheel(m, W / 2 - 0.15, 0.36, 0, 0.36, 0.25); this.wheel(m, -W / 2 + 0.15, 0.36, 0, 0.36, 0.25);
+    this.wheels(m, W, [0], 0.36, 0.25, { y0: 0.6 });
     m.color('#5a5a62'); m.box(0, 0.45, tL / 2 + 0.6, 0.15, 0.12, 1.4);
     m.color('#ff2a2a', 1); m.box(0.9, 0.8, -tL / 2 - 0.01, 0.2, 0.15, 0.04); m.box(-0.9, 0.8, -tL / 2 - 0.01, 0.2, 0.15, 0.04); m.emissive(0);
     m.pop();
@@ -206,7 +240,7 @@ const BurnsProps = {
     m.color(tc).shine(2); m.bbox(0, 0.85, 0, 2.1, 0.7, 5.2, 0.26); m.bbox(0, 1.55, 0.35, 1.95, 0.7, 2.0, 0.28); m.shine(0);
     m.color('#1a2232', 0.04); m.box(0, 1.6, 1.36, 1.7, 0.5, 0.04); m.emissive(0);
     m.color('#fff4d0', 1); m.box(0.7, 0.95, 2.61, 0.3, 0.15, 0.04); m.box(-0.7, 0.95, 2.61, 0.3, 0.15, 0.04); m.emissive(0);
-    for (const wz of [1.7, -1.7]) { this.wheel(m, 0.95, 0.4, wz, 0.4, 0.28); this.wheel(m, -0.95, 0.4, wz, 0.4, 0.28); }
+    this.wheels(m, 2.1, [1.7, -1.7], 0.4, 0.28, { y0: 0.5 });
     m.pop();
     const cols = [
       { t: 'box', x: 0, z: -2.6, hx: W / 2, hz: tL / 2, y0: 0, y1: H, cover: true },
@@ -221,7 +255,9 @@ const BurnsProps = {
     m.color(col).shine(1); m.bbox(0, (0.5 + H) / 2, -0.35, W, H - 0.5, L - 0.7, 0.42); m.bbox(0, 0.9, zf - 0.45, W - 0.1, 0.8, 0.9, 0.32); m.shine(0);
     m.color('#1a2232', 0.04); m.box(0, 1.75, zf - 0.72, W - 0.3, 0.7, 0.04); this.win(m, W / 2, 1.85, 0.2, 1.4, 0.5, 1, true, r); this.win(m, -W / 2, 1.85, 0.2, 1.4, 0.5, -1, true, r); m.emissive(0);
     m.color('#fff4d0', 1); m.box(0.7, 0.95, zf + 0.01, 0.28, 0.14, 0.04); m.box(-0.7, 0.95, zf + 0.01, 0.28, 0.14, 0.04); m.color('#ff2a2a', 1); m.box(0.85, 1.2, zb + 0.34, 0.12, 0.4, 0.04); m.box(-0.85, 1.2, zb + 0.34, 0.12, 0.4, 0.04); m.emissive(0);
-    for (const wz of [zf - 1.0, zb + 1.2]) { this.wheel(m, W / 2 - 0.12, 0.38, wz, 0.38, 0.24); this.wheel(m, -W / 2 + 0.12, 0.38, wz, 0.38, 0.24); }
+    this.wheels(m, W, [zf - 1.0, zb + 1.2], 0.38, 0.24, { y0: 0.5 });
+    this.bumper(m, W - 0.1, 0.45, zf + 0.04); this.bumper(m, W - 0.1, 0.47, zb - 0.04);
+    this.roofCap(m, W, H, zb + 0.4, zf - 1.0, col, 0.16);
     m.color('#2a2a30'); m.box(0, H + 0.08, -0.4, 1.7, 0.08, 3.5); m.color('#1a2a5a', 0.05); m.box(0, H + 0.14, -0.4, 1.5, 0.04, 2.6); m.emissive(0);
     const cols = [{ t: 'box', x: 0, z: -0.35, hx: W / 2, hz: (L - 0.7) / 2, y0: 0, y1: H + 0.12, cover: true }, { t: 'box', x: 0, z: zf - 0.45, hx: W / 2 - 0.05, hz: 0.45, y0: 0, y1: 1.3 }];
     return { cols, lights: [{ x: 0.7, y: 0.95, z: zf + 0.1, s: 0.9, c: '#fff0c8', beam: 0 }, { x: -0.7, y: 0.95, z: zf + 0.1, s: 0.9, c: '#fff0c8', beam: 0 }, { x: 0.85, y: 1.2, z: zb + 0.2, s: 0.6, c: '#ff3020' }, { x: -0.85, y: 1.2, z: zb + 0.2, s: 0.6, c: '#ff3020' }], top: H + 0.12, len: L, w: W };

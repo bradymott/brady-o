@@ -91,22 +91,22 @@ class KartMenuScene {
         back
       ];
     } else if (this.state === 'cup') {
-      const top = safeT + 56, bottom = H - safeB;
+      const top = safeT + (P ? 100 : 56), bottom = H - safeB;
       if (P) { const ch = (bottom - top - 12) / 2; CART_CUPS.forEach((c, i) => this.cards.push({ i, x: safeL, y: top + i * (ch + 12), w: W - safeL - safeR, h: ch })); }
       else { const cw = Math.min(330, (W - safeL - safeR - 16) / 2); CART_CUPS.forEach((c, i) => this.cards.push({ i, x: W / 2 - cw - 8 + i * (cw + 16), y: top, w: cw, h: bottom - top })); }
       this.btns = [back];
     } else if (this.state === 'track') {
-      const top = safeT + 56, bottom = H - safeB, cols = P ? 2 : 4, nr = P ? 4 : 2;
+      const top = safeT + (P ? 100 : 56), bottom = H - safeB, cols = P ? 2 : 4, nr = P ? 4 : 2;
       const cw = (W - safeL - safeR - (cols - 1) * 10) / cols, ch = (bottom - top - (nr - 1) * 10) / nr;
       CART_TRACK_ORDER.forEach((id, i) => this.cards.push({ i, id, x: safeL + (i % cols) * (cw + 10), y: top + Math.floor(i / cols) * (ch + 10), w: cw, h: ch }));
       this.btns = [back];
     } else if (this.state === 'arena') {
-      const top = safeT + 56, bottom = H - safeB, n = CART_ARENAS.length;
+      const top = safeT + (P ? 100 : 56), bottom = H - safeB, n = CART_ARENAS.length;
       if (P) { const ch = (bottom - top - (n - 1) * 10) / n; CART_ARENAS.forEach((a, i) => this.cards.push({ i, x: safeL, y: top + i * (ch + 10), w: W - safeL - safeR, h: ch })); }
       else { const cw = (W - safeL - safeR - (n - 1) * 12) / n; CART_ARENAS.forEach((a, i) => this.cards.push({ i, x: safeL + i * (cw + 12), y: top, w: cw, h: bottom - top })); }
       this.btns = [back];
     } else if (this.state === 'objective') {
-      const A = CART_ARENAS[this.arenaSel], top = safeT + 70, bottom = H - safeB, n = A.objectives.length, cols = P ? 1 : 2, nr = Math.ceil(n / cols);
+      const A = CART_ARENAS[this.arenaSel], top = safeT + (P ? 110 : 70), bottom = H - safeB, n = A.objectives.length, cols = P ? 1 : 2, nr = Math.ceil(n / cols);
       const cw = (W - safeL - safeR - (cols - 1) * 12) / cols, ch = Math.min(120, (bottom - top - (nr - 1) * 10) / nr);
       A.objectives.forEach((id, i) => this.cards.push({ i, id, x: safeL + (i % cols) * (cw + 12), y: top + Math.floor(i / cols) * (ch + 10), w: cw, h: ch }));
       this.btns = [back];
@@ -181,8 +181,8 @@ class KartMenuScene {
     // camera: frame the subject on the free side of the screen
     const cam = this.cam, M = car.M;
     // (the camera looks toward -Z, so a target to the +X side puts the subject on the left of the screen)
-    if (showStand) { const hh = (drv.man ? 2.2 : 1.9) * 1.15; cam.tx = P ? 0 : 2.3; cam.ty = hh * 0.55; cam.tz = 0; cam.x = cam.tx + 0.6; cam.y = hh * 0.7; cam.z = P ? 6.2 : 5.2; cam.fov = P ? 0.8 : 0.62; if (P) cam.ty += 1.0; }
-    else { const d = Math.max(M.len, M.h * 1.2) * (P ? 1.9 : 1.6) + 3.5; cam.tx = st === 'mode' && !P ? 3.2 : st === 'car' && !P ? 3.4 : 0; cam.ty = M.h * 0.42; cam.tz = 0; cam.x = cam.tx + Math.sin(0.35) * d; cam.y = M.h * 0.6 + 1.4; cam.z = Math.cos(0.35) * d; cam.fov = P ? 0.85 : 0.7; if (P) { cam.ty += st === 'car' ? -0.2 : 1.6; } }
+    if (showStand) { const hh = (drv.man ? 2.2 : 1.9) * 1.15; cam.tx = P ? 0 : 2.3; cam.ty = hh * 0.55; cam.tz = 0; cam.x = cam.tx + 0.6; cam.y = hh * 0.7; cam.z = P ? 6.2 : 5.2; cam.fov = P ? 0.8 : 0.62; if (P) cam.ty -= 1.15; }
+    else { const d = Math.max(M.len, M.h * 1.2) * (P ? 1.9 : 1.6) + 3.5; cam.tx = st === 'mode' && !P ? 3.2 : st === 'car' && !P ? 3.4 : 0; cam.ty = M.h * 0.42; cam.tz = 0; cam.x = cam.tx + Math.sin(0.35) * d; cam.y = M.h * 0.6 + 1.4; cam.z = Math.cos(0.35) * d; cam.fov = P ? 0.85 : 0.7; if (P) { cam.ty -= st === 'car' ? 2.6 : 1.9; } }
     const t0 = performance.now(), mq = window.__cartFixedQ || this.mq || (this.mq = 0.85);
     const gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * mq)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * mq));
     R.resize(gw, gh); R.setCamera(cam);
@@ -256,7 +256,12 @@ class KartMenuScene {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#c8946e'; ctx.fillRect(0, H * 0.72, W, H * 0.28);
   }
-  title(ctx, text) { BurnsUI.text(ctx, text, Game.cssW / 2, Math.max(28, insets.t + 26), Math.min(24, Game.cssW * 0.055), '#ffffff', { glow: '#ff4fd8' }); }
+  // in portrait the title sits under the BACK button
+  title(ctx, text, sub) {
+    const W = Game.cssW, P = this.portrait, y = P ? Math.max(76, insets.t + 70) : Math.max(28, insets.t + 26);
+    BurnsUI.text(ctx, text, W / 2, y, Math.min(24, W * (P ? 0.05 : 0.055)), '#ffffff', { glow: '#ff4fd8' });
+    if (sub) BurnsUI.text(ctx, sub, W / 2, y + 22, 11, '#ffd84a', {});
+  }
   drawLogo(ctx, x, y, s) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(-0.04);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${s}px ${FONT_DISPLAY}`;
@@ -311,7 +316,7 @@ class KartMenuScene {
   drawCar(ctx) {
     const W = Game.cssW, H = Game.cssH, P = this.portrait, car = CART_CARS[this.carSel], wp = CART_WEAPONS[car.weapon];
     this.title(ctx, 'CHOOSE YOUR ART CAR');
-    BurnsUI.text(ctx, (this.carSel + 1) + ' / ' + CART_CARS.length, P ? W / 2 : W * 0.28, Math.max(52, insets.t + 50), 11, 'rgba(255,255,255,0.75)', { ui: true });
+    BurnsUI.text(ctx, (this.carSel + 1) + ' / ' + CART_CARS.length, P ? W / 2 : W * 0.28, P ? Math.max(100, insets.t + 96) : Math.max(52, insets.t + 50), 11, 'rgba(255,255,255,0.75)', { ui: true });
     const pw = P ? W - 28 : Math.min(330, W * 0.4), px = P ? 14 : W - Math.max(14, insets.r + 8) - pw, py = P ? H * 0.47 : Math.max(60, insets.t + 54), ph = P ? H * 0.53 - Math.max(70, insets.b + 66) : H - py - Math.max(70, insets.b + 66);
     this.drawCard(ctx, { x: px, y: py, w: pw, h: ph }, true, car.col);
     let y = py + 26;
@@ -371,7 +376,7 @@ class KartMenuScene {
   }
   drawObjectives(ctx) {
     const A = CART_ARENAS[this.arenaSel], sv = cartSave();
-    this.title(ctx, A.name + ' · PICK AN OBJECTIVE');
+    this.title(ctx, 'PICK AN OBJECTIVE', A.name);
     for (const c of this.cards) {
       const O = CART_OBJECTIVES[c.id], on = c.i === this.objSel, wins = sv.wins[A.id + ':' + c.id] || 0;
       this.drawCard(ctx, c, on, A.col);

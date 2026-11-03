@@ -112,7 +112,7 @@ BurnsWorlds.register({
       for (let r = 9.5; r < 19; r += 0.9) { c.beginPath(); c.arc(tx, tz, r * sc, 0, TAU); c.stroke(); }
       // light falling through the lattice (warm stripes along the sun's ground direction)
       const sd = [-Math.sin(195 * Math.PI / 180), -Math.cos(195 * Math.PI / 180)];
-      for (let i = 0; i < 26; i++) { const a = R() * TAU, rr = R.range(9.5, 18.5), [px, pz] = P(TC.x + Math.sin(a) * rr, TC.z + Math.cos(a) * rr); c.save(); c.translate(px, pz); c.rotate(Math.atan2(sd[1], sd[0])); const lg = c.createRadialGradient(0, 0, 0, 0, 0, 2.6 * sc); lg.addColorStop(0, 'rgba(255,226,170,0.42)'); lg.addColorStop(1, 'rgba(255,226,170,0)'); c.fillStyle = lg; c.scale(1, 0.32); c.beginPath(); c.arc(0, 0, 2.6 * sc, 0, TAU); c.fill(); c.restore(); }
+      for (let i = 0; i < 26; i++) { const a = R() * TAU, rad = R.range(9.5, 18.5), [px, pz] = P(TC.x + Math.sin(a) * rad, TC.z + Math.cos(a) * rad); c.save(); c.translate(px, pz); c.rotate(Math.atan2(sd[1], sd[0])); const lg = c.createRadialGradient(0, 0, 0, 0, 0, 2.6 * sc); lg.addColorStop(0, 'rgba(255,226,170,0.42)'); lg.addColorStop(1, 'rgba(255,226,170,0)'); c.fillStyle = lg; c.scale(1, 0.32); c.beginPath(); c.arc(0, 0, 2.6 * sc, 0, TAU); c.fill(); c.restore(); }
       // where the storm ended: a churned patch of dust
       const [sx, sz] = P(BW12.CAMP.x, BW12.CAMP.z); gg = c.createRadialGradient(sx, sz, 0, sx, sz, 12 * sc); gg.addColorStop(0, 'rgba(200,170,150,0.45)'); gg.addColorStop(1, 'rgba(200,170,150,0)'); c.fillStyle = gg; c.fillRect(sx - 12 * sc, sz - 12 * sc, 24 * sc, 24 * sc);
       for (let i = 0; i < 18; i++) { const a = R() * TAU, len = R.range(3, 9) * sc; c.strokeStyle = 'rgba(150,120,100,0.25)'; c.lineWidth = 0.25 * sc; c.beginPath(); c.moveTo(sx, sz); c.quadraticCurveTo(sx + Math.cos(a + 0.6) * len * 0.5, sz + Math.sin(a + 0.6) * len * 0.5, sx + Math.cos(a) * len, sz + Math.sin(a) * len); c.stroke(); }
@@ -171,14 +171,14 @@ BurnsWorlds.register({
     api.mesh(-64, -34, m => {
       const cols = [];
       for (const sx of [-5, 5]) { m.color('#8a6440'); m.limb(sx, 0, 0, sx, 5.2, 0, 0.12, 0.09); m.color('#6a4a30'); m.roundCyl(sx, 0, 0, 0.32, 0.18, 0.06); cols.push({ t: 'cyl', x: sx, z: 0, r: 0.15, y0: 0, y1: 5.2, camPass: true }); }
-      const rr = mulberry32(77);
+      const rnd = mulberry32(77);
       for (let s = 0; s < 5; s++) {
         const y = 2.0 + s * 0.62;
         m.color('#d8c8b0'); m.limb(-5, y + 0.12, 0, 5, y + 0.12, 0, 0.006, 0.006);
         for (let k = 0; k < 14; k++) {
           const t = (k + 0.5) / 14, x = lerp(-5, 5, t), yy = y + 0.12 - Math.sin(t * Math.PI) * 0.35 - 0.18;
-          m.color(rr.pick(['#ff9ab8', '#ffd890', '#a8d8ff', '#c8a8ff', '#ffffff', '#a8f0c8']));
-          m.push(); m.tf(x, yy, (rr() - 0.5) * 0.25, rr() * TAU, 0, 0, 0.9 + rr() * 0.3);
+          m.color(rnd.pick(['#ff9ab8', '#ffd890', '#a8d8ff', '#c8a8ff', '#ffffff', '#a8f0c8']));
+          m.push(); m.tf(x, yy, (rnd() - 0.5) * 0.25, rnd() * TAU, 0, 0, 0.9 + rnd() * 0.3);
           m.extrude([[-0.13, 0], [0, -0.05], [0.13, 0], [0, 0.04]], 0.04); m.push(); m.tf(0, 0.01, 0, 0, 0, 0.4); m.extrude([[0, 0], [0.12, 0.06], [0.02, 0.01]], 0.08); m.pop(); m.push(); m.tf(0, 0.01, 0, 0, 0, -0.4); m.extrude([[0, 0], [-0.02, 0.01], [-0.12, 0.06]], 0.08); m.pop();
           m.pop();
         }
@@ -451,8 +451,8 @@ BW12.buildTemple = function (api, R, msgSub, S) {
     m.color('#ffe2b0', 0.85); m.ellipsoid(0, 1.45, 0, 0.18, 0.24, 0.18); m.emissive(0);
     const r = mulberry32(12), lights = [];
     m.lo = true;
-    for (let i = 0; i < 26; i++) { const tier = i % 3, a = r() * TAU, rr = [2.25, 1.5, 0.82][tier], y = [0.32, 0.62, 0.94][tier]; const f = BW1213.M.candle(m, Math.sin(a) * rr, y, Math.cos(a) * rr, 0.045 + r() * 0.02, 0.12 + r() * 0.2, r.pick(['#f4ecd8', '#fff4e0', '#f0d8b0'])); if (i % 2 === 0) lights.push({ x: f[0], y: f[1] + 0.05, z: f[2], s: 0.45, c: '#ffcf80' }); }
-    for (let i = 0; i < 14; i++) { const a = r() * TAU, rr = r.range(1.2, 2.4), y = rr > 1.85 ? 0.32 : 0.62; BW12.offering(m, Math.sin(a) * rr, y, Math.cos(a) * rr, a, r, photos); }
+    for (let i = 0; i < 26; i++) { const tier = i % 3, a = r() * TAU, rad = [2.25, 1.5, 0.82][tier], y = [0.32, 0.62, 0.94][tier]; const f = BW1213.M.candle(m, Math.sin(a) * rad, y, Math.cos(a) * rad, 0.045 + r() * 0.02, 0.12 + r() * 0.2, r.pick(['#f4ecd8', '#fff4e0', '#f0d8b0'])); if (i % 2 === 0) lights.push({ x: f[0], y: f[1] + 0.05, z: f[2], s: 0.45, c: '#ffcf80' }); }
+    for (let i = 0; i < 14; i++) { const a = r() * TAU, rad = r.range(1.2, 2.4), y = rad > 1.85 ? 0.32 : 0.62; BW12.offering(m, Math.sin(a) * rad, y, Math.cos(a) * rad, a, r, photos); }
     m.lo = false;
     lights.push({ x: 0, y: 0, z: 0, s: 0, c: '#ffc070', pool: 7, i: 0.5 });
     return { cols: [{ t: 'cyl', x: 0, z: 0, r: 2.6, y0: 0, y1: 0.32 }, { t: 'cyl', x: 0, z: 0, r: 1.85, y0: 0, y1: 0.62 }, { t: 'cyl', x: 0, z: 0, r: 1.1, y0: 0, y1: 0.94 }, { t: 'cyl', x: 0, z: 0, r: 0.4, y0: 0, y1: 2.3, camPass: true }], lights };
@@ -464,12 +464,12 @@ BW12.buildTemple = function (api, R, msgSub, S) {
     for (let j = half * 10; j < half * 10 + 10; j++) {
       if (entrance(j)) continue;
       const a0 = j * 18 * deg;
-      for (let q = 0; q < 6; q++) { const a = a0 + (r() - 0.5) * 15 * deg, rr = RO * Math.cos(9 * deg) - 0.55 - r() * 0.4; BW12.offering(m, Math.sin(a) * rr, 0, Math.cos(a) * rr, a + Math.PI, r, photos); }
+      for (let q = 0; q < 6; q++) { const a = a0 + (r() - 0.5) * 15 * deg, rad = RO * Math.cos(9 * deg) - 0.55 - r() * 0.4; BW12.offering(m, Math.sin(a) * rad, 0, Math.cos(a) * rad, a + Math.PI, r, photos); }
     }
     for (let k = half * 5; k < Math.min(9, half * 5 + 5); k++) {
       if (k === 0 || k === 3 || k === 6) continue;
       const c = 40 * k * deg;
-      for (let q = 0; q < 4; q++) { const a = c + (r() - 0.5) * 30 * deg, rr = RI * Math.cos(20 * deg) + 0.55 + r() * 0.3; if (Math.abs(a - BW12.WRITE_A) < 0.32 && rr < 9) continue; BW12.offering(m, Math.sin(a) * rr, 0, Math.cos(a) * rr, a, r, photos); }
+      for (let q = 0; q < 4; q++) { const a = c + (r() - 0.5) * 30 * deg, rad = RI * Math.cos(20 * deg) + 0.55 + r() * 0.3; if (Math.abs(a - BW12.WRITE_A) < 0.32 && rad < 9) continue; BW12.offering(m, Math.sin(a) * rad, 0, Math.cos(a) * rad, a, r, photos); }
     }
     m.lo = false;
     return { cols: [] };
@@ -528,7 +528,7 @@ BW12.buildBells = function (api, R, S) {
   api.mesh(B.x, B.z, m => {
     const cols = [];
     for (let i = 0; i < 7; i++) {
-      const a = 0.6 + i * 0.8, rr = 3.0 + i * 0.3, h = 1.0 + i * 0.72, x = Math.sin(a) * rr, z = Math.cos(a) * rr;
+      const a = 0.6 + i * 0.8, rad = 3.0 + i * 0.3, h = 1.0 + i * 0.72, x = Math.sin(a) * rad, z = Math.cos(a) * rad;
       m.color('#8a6440').shine(1); m.roundCyl(x, 0, z, 0.36, h - 0.18, 0.1); m.color('#6a4428'); m.roundCyl(x, h - 0.2, z, 0.64, 0.2, 0.08); m.shine(0);
       const ox = Math.sin(a) * 0.72, oz = Math.cos(a) * 0.72;
       m.color('#4a3020'); m.limb(x + ox * 0.6, h - 0.15, z + oz * 0.6, x + ox * 1.05, h - 0.15, z + oz * 1.05, 0.03, 0.03);
@@ -556,7 +556,7 @@ BW12.buildLanterns = function (api, R, S) {
   api.mesh(50, 92, m => {
     const lights = [];
     for (let i = 0; i < 12; i++) {
-      const a = i / 12 * TAU + r() * 0.3, rr = 4 + r() * 3.5, x = Math.sin(a) * rr, z = Math.cos(a) * rr, h = 2.2 + r() * 0.8;
+      const a = i / 12 * TAU + r() * 0.3, rad = 4 + r() * 3.5, x = Math.sin(a) * rad, z = Math.cos(a) * rad, h = 2.2 + r() * 0.8;
       m.color('#6a4a30'); m.limb(x, 0, z, x, h + 0.4, z, 0.05, 0.04); m.limb(x, h + 0.35, z, x + 0.35, h + 0.45, z, 0.025, 0.02);
       BW1213.M.lantern(m, x + 0.36, h, z, 0.22 + r() * 0.08, r.pick(['#ffd0d8', '#ffe2b0', '#d8d0ff', '#ffe8c8']), 0.55);
       lights.push({ x: x + 0.36, y: h, z, s: 1.1, c: '#ffd8b0' });
@@ -590,10 +590,10 @@ BW12.buildLanterns = function (api, R, S) {
   // cairns (stacked stones) rising toward the Lantern Tree
   S.cairnTop = [];
   api.mesh(64, 74, m => {
-    const cols = [], rr = mulberry32(19);
+    const cols = [], rnd = mulberry32(19);
     for (let i = 0; i < 7; i++) {
       const t = i / 6, x = lerp(-7.5, 7.0, t) + Math.sin(t * Math.PI) * 2.2, z = lerp(8.5, -8.6, t) + Math.sin(t * Math.PI) * 1.6, top = 0.7 * (i + 1);
-      const y = BW1213.M.cairn(m, x, z, top, rr);
+      const y = BW1213.M.cairn(m, x, z, top, rnd);
       cols.push({ t: 'cyl', x, z, r: 0.9, y0: 0, y1: y });
       S.cairnTop.push([64 + x, y, 74 + z]);
     }
@@ -603,8 +603,8 @@ BW12.buildLanterns = function (api, R, S) {
   const T = BW12.TREE;
   api.mesh(T.x, T.z, m => {
     m.color('#6a4a30').shine(1); m.limb(0, 0, 0, 0, 5.5, 0, 0.48, 0.3);
-    const rr = mulberry32(23), lights = [];
-    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + 0.3, y0 = 3.4 + rr() * 1.6, len = 2.0 + rr() * 1.4, x1 = Math.sin(a) * len, z1 = Math.cos(a) * len, y1 = y0 + 0.8 + rr() * 1.4; m.color('#6a4a30'); m.limb(0, y0, 0, x1, y1, z1, 0.16, 0.06); m.color('#2a2a2a'); m.limb(x1, y1, z1, x1, y1 - 0.5, z1, 0.008, 0.008); BW1213.M.lantern(m, x1, y1 - 0.75, z1, 0.22, rr.pick(['#ffd0d8', '#ffe2b0', '#d8d0ff']), 0.6); lights.push({ x: x1, y: y1 - 0.75, z: z1, s: 1.0, c: '#ffd8b0' }); }
+    const rnd = mulberry32(23), lights = [];
+    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + 0.3, y0 = 3.4 + rnd() * 1.6, len = 2.0 + rnd() * 1.4, x1 = Math.sin(a) * len, z1 = Math.cos(a) * len, y1 = y0 + 0.8 + rnd() * 1.4; m.color('#6a4a30'); m.limb(0, y0, 0, x1, y1, z1, 0.16, 0.06); m.color('#2a2a2a'); m.limb(x1, y1, z1, x1, y1 - 0.5, z1, 0.008, 0.008); BW1213.M.lantern(m, x1, y1 - 0.75, z1, 0.22, rnd.pick(['#ffd0d8', '#ffe2b0', '#d8d0ff']), 0.6); lights.push({ x: x1, y: y1 - 0.75, z: z1, s: 1.0, c: '#ffd8b0' }); }
     m.color('#7a5634'); m.roundCyl(0, 5.4, 0, 1.15, 0.24, 0.08); m.shine(0);
     return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.45, y0: 0, y1: 5.4, camPass: true }, { t: 'cyl', x: 0, z: 0, r: 1.15, y0: 5.4, y1: 5.64 }], lights };
   });
@@ -613,20 +613,20 @@ BW12.buildLanterns = function (api, R, S) {
 BW12.buildTable = function (api, R, S) {
   const T = BW12.TABLE;
   api.mesh(T.x, T.z, m => {
-    const cols = [], rr = mulberry32(51), lights = [];
+    const cols = [], rnd = mulberry32(51), lights = [];
     m.color('#a87a50').shine(1); m.roundBox(0, 0.86, 0, 18, 0.12, 1.3, 0.05); m.color('#f4ece0'); m.roundBox(0, 0.93, 0, 17.6, 0.02, 1.1, 0.008); m.shine(0);
     m.color('#7a5634'); for (let i = 0; i < 6; i++) { const x = -8.6 + i * 3.44; for (const z of [-0.5, 0.5]) m.limb(x, 0, z, x, 0.82, z, 0.06, 0.05); }
     cols.push({ t: 'box', x: 0, z: 0, hx: 9, hz: 0.65, y0: 0, y1: 0.92 });
     m.lo = true;
     for (let i = 0; i < 9; i++) for (const sd of [-1, 1]) {
       const x = -8 + i * 2, z = sd * 1.05;
-      m.push(); m.tf(x + (rr() - 0.5) * 0.2, 0, z, sd > 0 ? Math.PI : 0); const cl = BW1213.M.chair(m, rr.pick(['#c8a070', '#8ab0c8', '#e8b8c8', '#a8c8a0', '#f0e0b0', '#9a7a5a'])); m.pop();
+      m.push(); m.tf(x + (rnd() - 0.5) * 0.2, 0, z, sd > 0 ? Math.PI : 0); const cl = BW1213.M.chair(m, rnd.pick(['#c8a070', '#8ab0c8', '#e8b8c8', '#a8c8a0', '#f0e0b0', '#9a7a5a'])); m.pop();
       cols.push(Object.assign({}, cl[0], { x: x, z: z + sd * 0.0 }));
       // place setting
-      m.push(); m.tf(x, 0, sd * 0.32); m.color('#f8f4ec'); m.lathe([[0, 0.94], [0.17, 0.95], [0.19, 0.975], [0, 0.96]], { seg: 10 }); m.color(rr.pick(['#c8d8e8', '#f4d8c8', '#e8e8f0'])); m.roundCyl(0.25, 0.94, 0.05, 0.04, 0.1, 0.01); m.pop();
+      m.push(); m.tf(x, 0, sd * 0.32); m.color('#f8f4ec'); m.lathe([[0, 0.94], [0.17, 0.95], [0.19, 0.975], [0, 0.96]], { seg: 10 }); m.color(rnd.pick(['#c8d8e8', '#f4d8c8', '#e8e8f0'])); m.roundCyl(0.25, 0.94, 0.05, 0.04, 0.1, 0.01); m.pop();
     }
-    for (let i = 0; i < 6; i++) { const f = BW1213.M.candle(m, -7.5 + i * 3, 0.95, (rr() - 0.5) * 0.2, 0.05, 0.2, '#f4ecd8'); lights.push({ x: f[0], y: f[1] + 0.05, z: f[2], s: 0.45, c: '#ffcf80' }); }
-    for (let i = 0; i < 4; i++) BW12.offering(m, -6.2 + i * 4.1, 0.95, 0.15, 0, rr, S.tx.photos);
+    for (let i = 0; i < 6; i++) { const f = BW1213.M.candle(m, -7.5 + i * 3, 0.95, (rnd() - 0.5) * 0.2, 0.05, 0.2, '#f4ecd8'); lights.push({ x: f[0], y: f[1] + 0.05, z: f[2], s: 0.45, c: '#ffcf80' }); }
+    for (let i = 0; i < 4; i++) BW12.offering(m, -6.2 + i * 4.1, 0.95, 0.15, 0, rnd, S.tx.photos);
     m.lo = false;
     lights.push({ x: 0, y: 0, z: 0, s: 0, c: '#ffc890', pool: 9, i: 0.3 });
     return { cols, lights };
@@ -975,13 +975,13 @@ BW12.drawSprites = function (g, R) {
     const sd = env.sunDir, up = Math.max(0, sd[1] + 0.05), k = clamp(g.tod * 1.1, 0.25, 1) * (0.6 + up * 4);
     const L = 15, col = [1, 0.84, 0.6];
     for (let i = 0; i < 11; i++) {
-      const a = i / 11 * TAU + 0.3, rr = 10 + (i % 3) * 3.2, fx = TC.x + Math.sin(a) * rr, fz = TC.z + Math.cos(a) * rr;
+      const a = i / 11 * TAU + 0.3, rad = 10 + (i % 3) * 3.2, fx = TC.x + Math.sin(a) * rad, fz = TC.z + Math.cos(a) * rad;
       const cx = fx + sd[0] * L * 0.5, cy = 0.1 + Math.max(0.2, sd[1]) * L * 0.5 + 3.5, cz = fz + sd[2] * L * 0.5;
       const flick = 0.75 + 0.25 * Math.sin(t * 0.6 + i * 1.7);
       R.bbs.streak(cx, cy, cz, sd[0], Math.max(0.35, sd[1] + 0.3), sd[2], L, 1.3 + (i % 2) * 0.6, SP.streak, col, 0.1 * k * flick);
     }
     // dust motes drifting in the light
-    for (let i = 0; i < 40; i++) { const a = i * 2.39996, rr = 9 + (i * 37 % 11), ph = (t * 0.05 + i * 0.137) % 1; const x = TC.x + Math.sin(a) * rr + Math.sin(t * 0.3 + i) * 0.6, z = TC.z + Math.cos(a) * rr + Math.cos(t * 0.27 + i) * 0.6, y = 0.6 + ph * 6; R.bbs.bb(x, y, z, 0.07, 0.07, SP.glow, [1, 0.9, 0.7], 0.5 * Math.sin(ph * Math.PI) * k, true); }
+    for (let i = 0; i < 40; i++) { const a = i * 2.39996, rad = 9 + (i * 37 % 11), ph = (t * 0.05 + i * 0.137) % 1; const x = TC.x + Math.sin(a) * rad + Math.sin(t * 0.3 + i) * 0.6, z = TC.z + Math.cos(a) * rad + Math.cos(t * 0.27 + i) * 0.6, y = 0.6 + ph * 6; R.bbs.bb(x, y, z, 0.07, 0.07, SP.glow, [1, 0.9, 0.7], 0.5 * Math.sin(ph * Math.PI) * k, true); }
   }
   // the necklace still blinking in Brady's hands
   if (S.necklace.visible) { const n = S.necklace; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + t * 0.5; if (Math.sin(t * 5 + i * 2) < 0) continue; R.bbs.bb(n.x + Math.sin(a) * 0.1, n.y, n.z + Math.cos(a) * 0.07, 0.18, 0.18, SP.glow, burnsRGBf(BURNS_NEON[i % 7]), 0.7, true); } }

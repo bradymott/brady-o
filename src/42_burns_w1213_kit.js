@@ -409,11 +409,11 @@ BW1213.M = {
     const cols2 = [], N = o.colN || 22, bands = [];
     let yb = 0; while (yb < H * 0.86) { const yt = Math.min(H * 0.92, yb + Math.max(0.8, H / 7)); bands.push([yb, yt]); yb = yt; }
     for (const [y0, y1] of bands) {
-      const rr = R * Math.sin(Math.acos(clamp(y1 / H, 0, 1))) - 0.3;
-      if (rr < 1.2) continue;
+      const rad = R * Math.sin(Math.acos(clamp(y1 / H, 0, 1))) - 0.3;
+      if (rad < 1.2) continue;
       for (let i = 0; i < N; i++) {
         const a = (i + 0.5) / N * TAU; if (y0 < doorH - 0.2 && (a < t0 + 0.05 || a > t1 - 0.05)) continue;
-        cols2.push({ t: 'box', x: Math.sin(a) * rr, z: Math.cos(a) * rr, hx: Math.PI * rr / N + 0.14, hz: 0.25, y0, y1, yaw: a, walk: false });
+        cols2.push({ t: 'box', x: Math.sin(a) * rad, z: Math.cos(a) * rad, hx: Math.PI * rad / N + 0.14, hz: 0.25, y0, y1, yaw: a, walk: false });
       }
     }
     cols2.push({ t: 'box', x: 0, z: 0, hx: 0.5, hz: 0.5, y0: H - 0.4, y1: H + 0.05, walk: true, camPass: true });
@@ -439,10 +439,10 @@ BW1213.M = {
     m.color(o.flag || '#ffe24a'); m.push(); m.tf(0, H + 0.35, 0); m.extrude([[0, 0], [0.7, 0.12], [0, 0.25]], 0.02); m.pop();
     const cl = [], N = 20, rAt = y => { for (let i = 0; i < prof.length - 1; i++) { const p0 = prof[i], p1 = prof[i + 1]; if (y >= p0[1] && y <= p1[1]) return lerp(p0[0], p1[0], (y - p0[1]) / Math.max(1e-6, p1[1] - p0[1])); } return 0; };
     for (let yb = 0; yb < H * 0.82; yb += H / 7) {
-      const y1 = Math.min(H * 0.86, yb + H / 7), rr = rAt(y1) - 0.3; if (rr < 1.0) continue;
+      const y1 = Math.min(H * 0.86, yb + H / 7), rad = rAt(y1) - 0.3; if (rad < 1.0) continue;
       for (let i = 0; i < N; i++) {
         const a = (i + 0.5) / N * TAU; if (yb < doorH - 0.2 && (a < door / 2 + 0.05 || a > TAU - door / 2 - 0.05)) continue;
-        cl.push({ t: 'box', x: Math.sin(a) * rr, z: Math.cos(a) * rr, hx: Math.PI * rr / N + 0.14, hz: 0.25, y0: yb, y1, yaw: a, walk: false });
+        cl.push({ t: 'box', x: Math.sin(a) * rad, z: Math.cos(a) * rad, hx: Math.PI * rad / N + 0.14, hz: 0.25, y0: yb, y1, yaw: a, walk: false });
       }
     }
     cl.push({ t: 'cyl', x: 0, z: 0, r: 0.12, y0: 0, y1: H, camPass: true });

@@ -1783,6 +1783,35 @@ const Sound = (() => {
       bp: rp('r---------------', 8) + rp('..r-..r-..r-..o-', 8), bi: 'sawb', bv: 0.25,
       dr: [dots(64) + rp('t...............', 3) + 't.......t.t.tttt' + rp(FOUR, 8), dots(128) + rp(CLAP, 8), dots(128) + rp(OFFO, 8),
         dots(128) + rp(H16, 8), dots(112) + 's.s.s.s.ssssSSSS' + dots(128), dots(128) + 'x' + dots(127), dots(128) + 'f' + dots(127)], dv: 0.45
+    },
+    // W11 Sound Camp Crawl: big sound-camp house/techno, 126 BPM. A minor, offbeat bass, plucks, stabs, a snare-roll build
+    burns_w11: {
+      bpm: 126, bars: 16, rv: 0.3, dl: 0.18, pump: 0.45,
+      ch: 'Am Am F G Am Am F G Dm Dm F G Am F G E',
+      ld: 'A5:2 .:2 C6:2 .:2 E6:2 .:2 D6:2 C6:2 | A5:3 G5:3 E5:2 .:8 | F5:2 .:2 A5:2 .:2 C6:2 .:2 E6:2 D6:2 | D6:3 C6:3 B5:2 G5:8 |' +
+          'A5:2 .:2 C6:2 .:2 E6:2 .:2 G6:2 E6:2 | D6:3 C6:3 A5:2 .:8 | F5:2 A5:2 C6:2 F6:2 E6:4 C6:4 | B5:6 D6:2 G6:8 |' +
+          'A6:4 G6:2 E6:2 C6:4 E6:4 | D6:3 C6:3 A5:2 E5:8 | F6:4 E6:2 C6:2 A5:4 C6:4 | B5:6 C6:2 D6:8 |' +
+          'E6:3 E6:3 C6:2 A5:4 C6:4 | F6:6 E6:2 C6:8 | D6:2 D6:2 D6:2 D6:2 G6:2 G6:2 G6:2 G6:2 | G#6:4 E6:4 B5:4 G#5:4',
+      li: 'saw2', lv: 0.12, hx: 0.05,
+      bp: '..r-..r-..r-..o-', bi: 'sub', bv: 0.3,
+      ap: '0.1.2.3.0.1.2.3.', ai: 'pluck', av: 0.035, ao: 60,
+      a2: dots(128) + rp('c..c..c...c..c..', 8), a2i: 'stab', a2v: 0.035, a2o: 60,
+      pd: 'c---------------', pi: 'pad', pv: 0.03, po: 52,
+      dr: [FOUR, CLAP, OFFO, H16, dots(240) + 's.s.s.s.ssssSSSS', X(8)], dv: 0.45
+    },
+    // W15 Exodus: dreamy, slightly warped highway-sunrise groove, 96 BPM. E major, wobbly vox lead over electric piano
+    burns_w15: {
+      bpm: 96, bars: 16, rv: 0.45, dl: 0.25, sw8: 0.25, pump: 0.2,
+      ch: 'Emaj7 C#m7 Amaj7 B Emaj7 C#m7 Amaj7 B G#m7 C#m7 F#m7 B Amaj7 G#m7 F#m7 B',
+      ld: 'B5:6 G#5:2 E5:8 | C#6:4 B5:4 G#5:8 | A5:6 C#6:2 E6:8 | D#6:12 .:4 |' +
+          'E6:4 D#6:2 B5:2 G#5:8 | G#5:4 C#6:4 E6:8 | F#6:4 E6:4 C#6:4 A5:4 | B5:12 .:4 |' +
+          'D#6:6 B5:2 G#5:8 | E6:6 C#6:2 G#5:8 | A5:4 C#6:4 F#6:8 | D#6:6 F#6:2 B5:8 |' +
+          'C#6:4 B5:4 G#5:4 E5:4 | D#6:6 C#6:2 B5:8 | A5:4 C#6:4 F#6:4 E6:4 | D#6:8 F#6:4 B5:4',
+      li: 'vox', lv: 0.12,
+      bp: 'r---..r-..r-o-..', bi: 'sub', bv: 0.28,
+      ap: '0.2.1.3.0.2.1.3.', ai: 'ep', av: 0.045, ao: 57,
+      pd: 'c---------------', pi: 'pad', pv: 0.04, po: 52,
+      dr: ['k.....k...k.....', '....s.......s...', '..h...h...h...h.', X(8)], dv: 0.36
     }
   });
 

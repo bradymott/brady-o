@@ -2,7 +2,25 @@
 
 Super Brady-O World is a trip around the world: 12 countries plus two secret lands. Each country is one file, `src/29_tour_<cc>.js`. That file registers the country's theme, enemies, set pieces, boss, music, signature power-up and its five levels.
 
-Mexico (`29_tour_mx.js`) and Paris (`29_tour_fr.js`) are the reference countries. Copy their structure.
+Built so far: Mexico (`29_tour_mx.js`), Ecuador (`29_tour_ec.js`), Brazil (`29_tour_br.js`) and Paris (`29_tour_fr.js`). Copy their structure. Still to build: Mozambique, Morocco, Valencia, Amsterdam, Bali, Vietnam, Japan, Nepal, Antarctica and World 22.
+
+What each built country already uses, so yours can be different:
+
+| Country | Layout styles | Signature item | Boss and how to beat it |
+|---|---|---|---|
+| Mexico | run, ride (boat), swim (cave), climb (rising lava), castle | Taco toss (stun) | El Gran Piñatón: spins into a wall, gets dizzy |
+| Ecuador | run (low-gravity zones), ride (cable car), night (vine swings), swim (open sea, tidal surge), castle (ice) | Booby boots (high jumps, landing shockwave) | El Tortugón: shell too hard; stomp his head while he rears up |
+| Brazil | run (beach), night (beat drums), climb (waterfall), run (wetland rides), castle (turntables) | Football (ricochets) | O Tucanão (flying): dives, beak sticks in the floor, stomp him |
+| Paris | run, auto (river chase), night (rooftops), climb (tower), castle (mirrors) | Mime gloves (invisible walls) | Le Grand Soufflé: puffs up, then collapses |
+
+Tricks the newer countries added (all inside the country file, no engine changes):
+- **Your own liquid:** `LIQUIDS.<name> = [top, mid, deep, shimmer, glow|null, foam]` at the top of the file, then `liquid: '<name>'` in a theme. `T.LAVA` tiles in pits are drawn with it (and are still deadly).
+- **Override a generic piece for your country:** a piece with a generic name (for example `cp`) wins over the generic one for your levels. Fall back with `return Tour.pieces.cp(st, o)` when the override does not apply (Ecuador's cable-car mid-station does this).
+- **Beat blocks:** set `bpm` on the level spec, place them with `B.beat(x0, x1, y, group, kind)` and draw them with `beatArt.<kind>(ctx, k, on, warn, t)`.
+- **Time-varying forces:** zones are plain data, so an entity can change its zone each frame (`EcSurge` flips a current back and forth). The validator sees the zone as placed.
+- **Custom enemies:** subclass `TourEnemy`/`TourSwimmer` when a config is not enough (`EcPuffer` grows when Brady is near; `BrCoati` steals coins and gives them back when stomped).
+- **Level options:** `roof: false` removes a castle's ceiling row; `dark: true` turns the lights down.
+- **Path gotcha:** `TourKit.star()` adds to the current path; call `ctx.beginPath()` first.
 
 ## 1. Files and load order
 All `src/*.js` files are concatenated alphabetically into one strict-mode IIFE, so load order is the file name.

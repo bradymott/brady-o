@@ -60,8 +60,16 @@ Object.assign(CartRaceScene.prototype, {
       px = k.x - fx * d; py = k.y + h; pz = k.z - fz * d;
       fov = (portrait ? 1.32 : 1.0) + sp * 0.08 + this.boostLook * 0.12;
     }
-    // stay above the terrain (bowls, berms) and smooth
+    // keep the line of sight to the car clear of the terrain: when a berm or a ramp is in the way, the camera
+    // first slides in past it, then rises above what's left
+    if (this.state === 'race' || this.state === 'count') {
+      let pull = 0;
+      for (const u of [0.15, 0.3, 0.45]) { const h = this.terrain.height(lerp(px, k.x, u), lerp(pz, k.z, u)); if (h > lerp(py, k.y + 1.5, u) - 1.2) pull = u + 0.12; }
+      this.camPull = BurnsM.damp(this.camPull || 0, pull, pull > (this.camPull || 0) ? 6 : 1.5, fdt);
+      px = lerp(px, k.x, this.camPull); pz = lerp(pz, k.z, this.camPull); py = lerp(py, k.y + 2.6, this.camPull * 0.5);
+    }
     const gy = this.terrain.height(px, pz) + 1.2; if (py < gy) py = gy;
+    for (const u of [0.25, 0.5, 0.75]) { const h = this.terrain.height(lerp(px, tx, u), lerp(pz, tz, u)) + 0.9; if (lerp(py, ty, u) < h) py = Math.max(py, (h - ty * u) / (1 - u)); }
     const k1 = this.snapCam ? 1 : 1 - Math.exp(-14 * fdt);
     cam.x = lerp(cam.x, px, k1); cam.y = lerp(cam.y, py, k1); cam.z = lerp(cam.z, pz, k1);
     cam.tx = lerp(cam.tx, tx, k1); cam.ty = lerp(cam.ty, ty, k1); cam.tz = lerp(cam.tz, tz, k1);
@@ -456,14 +464,15 @@ Object.assign(CartRaceScene.prototype, {
     const W = Game.cssW, O = this.obj, D = CART_OBJECTIVES[this.objective], k = this.player;
     const pw = Math.min(250, W * 0.42), px = W / 2 - pw / 2;
     ctx.save(); ctx.fillStyle = 'rgba(10,4,20,0.55)'; burnsRR(ctx, px, top - 2, pw, 46, 12); ctx.fill(); ctx.restore();
+    const lbTop = W < Game.cssH ? top + 58 : top;   // portrait: the leaderboard moves below the objective panel
     BurnsUI.text(ctx, D.name, W / 2, top + 11, 13, '#ffd84a', {});
     BurnsUI.text(ctx, cartFmtClock(O.time), W / 2, top + 31, 16, O.time < 15 ? '#ff6a6a' : '#ffffff', { ui: true });
     // leaderboard
     const order = this.battleRank(), unit = this.objective === 'vibe' ? '♥' : this.objective === 'hill' ? 's' : this.objective === 'flag' ? '⚑' : '●';
     const goal = D.goal ? '/' + D.goal : '';
     const nm = q => q.player ? 'YOU' : q.car.name.length > 13 ? q.car.name.slice(0, 12) + '…' : q.car.name, vx = left + 186;
-    order.slice(0, 4).forEach((q, i) => { const y = top + 18 + i * 17, val = this.objective === 'vibe' ? (q.out ? 'OUT' : q.vibes + unit) : Math.floor(q.score) + goal + unit; ctx.fillStyle = q.car.col; ctx.beginPath(); ctx.arc(left + 5, y, 4.5, 0, TAU); ctx.fill(); BurnsUI.text(ctx, (i + 1) + '. ' + nm(q), left + 14, y, 11, q.player ? '#ffd84a' : '#ffffff', { align: 'left', ui: true }); BurnsUI.text(ctx, val, vx, y, 11, q.player ? '#ffd84a' : 'rgba(255,255,255,0.85)', { align: 'right', ui: true }); });
-    if (order.indexOf(k) >= 4) { const y = top + 18 + 4 * 17; BurnsUI.text(ctx, order.indexOf(k) + 1 + '. YOU', left + 14, y, 11, '#ffd84a', { align: 'left', ui: true }); BurnsUI.text(ctx, this.objective === 'vibe' ? (k.out ? 'OUT' : k.vibes + unit) : Math.floor(k.score) + goal + unit, vx, y, 11, '#ffd84a', { align: 'right', ui: true }); }
+    order.slice(0, 4).forEach((q, i) => { const y = lbTop + 18 + i * 17, val = this.objective === 'vibe' ? (q.out ? 'OUT' : q.vibes + unit) : Math.floor(q.score) + goal + unit; ctx.fillStyle = q.car.col; ctx.beginPath(); ctx.arc(left + 5, y, 4.5, 0, TAU); ctx.fill(); BurnsUI.text(ctx, (i + 1) + '. ' + nm(q), left + 14, y, 11, q.player ? '#ffd84a' : '#ffffff', { align: 'left', ui: true }); BurnsUI.text(ctx, val, vx, y, 11, q.player ? '#ffd84a' : 'rgba(255,255,255,0.85)', { align: 'right', ui: true }); });
+    if (order.indexOf(k) >= 4) { const y = lbTop + 18 + 4 * 17; BurnsUI.text(ctx, order.indexOf(k) + 1 + '. YOU', left + 14, y, 11, '#ffd84a', { align: 'left', ui: true }); BurnsUI.text(ctx, this.objective === 'vibe' ? (k.out ? 'OUT' : k.vibes + unit) : Math.floor(k.score) + goal + unit, vx, y, 11, '#ffd84a', { align: 'right', ui: true }); }
     // objective arrow: where to go
     let tgt = null;
     if (this.objective === 'hill') tgt = this.E.zones[O.zone];

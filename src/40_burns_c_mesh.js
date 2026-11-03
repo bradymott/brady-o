@@ -7,16 +7,19 @@
    Untextured faces sample a transparent texel, so they show the colour.
    ============================================================ */
 
-/* ---------------- shared atlas (2048 x 2048) ----------------
+/* ---------------- shared atlas (2048 x 3072) ----------------
    top-left:     pattern tiles, item icons, misc (Chinka photo)
-   top-right:    per-world sign/banner text (shelf-packed, reset per world)
-   bottom half:  faces, 16 cols x 4 expression rows of 128px (art inset 8px with a clear
-                 margin, so faces wrap cleanly onto round heads) */
+   top-right:    per-world sign/banner text, page 1 (shelf-packed, reset per world)
+   y 1024..2048: faces, 16 cols x 4 expression rows of 128px (art inset 8px with a clear
+                 margin, so faces wrap cleanly onto round heads)
+   y 2048..3072: sign page 2 (2048 x 1024): camp-heavy worlds fill page 1, then this */
+const BURNS_ATLAS_H = 3072;
 const BURNS_ATLAS = {
-  W: 2048, H: 2048, canvas: null, T: null,
-  faceV0: 1024 / 2048, faceV1: 2048 / 2048, faceRowV: 128 / 2048,   // two banks: y 1024..1536 and 1536..2048
+  W: 2048, H: BURNS_ATLAS_H, canvas: null, T: null,
+  faceV0: 1024 / BURNS_ATLAS_H, faceV1: 2048 / BURNS_ATLAS_H, faceRowV: 128 / BURNS_ATLAS_H,   // two banks: y 1024..1536 and 1536..2048
   regions: {},
-  white: { u0: 4 / 2048, v0: 4 / 2048, u1: 12 / 2048, v1: 12 / 2048 },
+  white: { u0: 4 / 2048, v0: 4 / BURNS_ATLAS_H, u1: 12 / 2048, v1: 12 / BURNS_ATLAS_H },
+  SIGN_AREAS: [[1028, 4, 2048, 1024], [4, 2052, 2048, 3072]],
   FACES: ['brady', 'bradyClean', 'friendly', 'lashes', 'tired', 'stressed', 'greeter', 'beard', 'smug', 'chinka', 'stern', 'goofy', 'grumpy', 'sleepy', 'man', 'kid'],
   PATTERNS: ['tattoo', 'tattoo2', 'fur', 'disco', 'led', 'plaid', 'hivis', 'tiedye', 'wood', 'swoosh', 'canvas', 'sequin', 'leopard', 'flames', 'denim', 'rainbow'],
   ICONS: ['heart', 'k', 'flake', 'tab', 'shroom', 'leaf', 'toad', 'bottle', 'drop', 'ticket', 'map', 'www', 'token', 'glowstick', 'ziptie', 'camera'],
@@ -76,8 +79,8 @@ const BURNS_ATLAS = {
   icon(name) { return this.regions['icon:' + name]; },
   // ---- per-world sign text (right half) ----
   signReset() {
-    const x = this.ctx; x.clearRect(1024, 0, 1024, 1024);
-    this.sx = 1024 + 4; this.sy = 4; this.srow = 0; this.signs = {};
+    const x = this.ctx; x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 2048, 2048, 1024);
+    this.sa = 0; this.sx = 1024 + 4; this.sy = 4; this.srow = 0; this.signs = {};
     if (this.T) this.T.dirty = true;
   },
   // opts: { w, h (px), bg, fg, font, size, border, glow, pad, align, lines }
@@ -92,14 +95,18 @@ const BURNS_ATLAS = {
     const tw = Math.max(...lines.map(l => x.measureText(l).width));
     const pad = o.pad === undefined ? size * 0.4 : o.pad;
     const w = Math.min(1000, Math.ceil(o.w || tw + pad * 2)), h = Math.min(500, Math.ceil(o.h || size * 1.25 * lines.length + pad * 1.4));
-    // signs are rasterised at 72% (about twice as many fit); their size in the world is set by the caller, not by pixels.
-    // The area is reset for every world (signReset); when it runs low, signs shrink to 52% then 38% instead of going blank.
+    // signs are rasterised at 72%; their size in the world is set by the caller, not by pixels. Two sign pages per world
+    // (1020x1020 + 2044x1020, reset per world); only when both are full do signs shrink to 52% then 38%.
     let SC = 0, pw = 0, ph = 0;
     for (const k of [0.72, 0.52, 0.38]) {
       pw = Math.ceil(w * k); ph = Math.ceil(h * k);
-      let sx = this.sx, sy = this.sy, srow = this.srow;
-      if (sx + pw + 4 > 2048) { sx = 1028; sy += srow + 4; srow = 0; }
-      if (sy + ph + 4 <= 1024) { this.sx = sx; this.sy = sy; this.srow = srow; SC = k; break; }
+      for (let a = this.sa || 0; a < this.SIGN_AREAS.length && !SC; a++) {
+        const A = this.SIGN_AREAS[a];
+        let sx = a === (this.sa || 0) ? this.sx : A[0], sy = a === (this.sa || 0) ? this.sy : A[1], srow = a === (this.sa || 0) ? this.srow : 0;
+        if (sx + pw + 4 > A[2]) { sx = A[0]; sy += srow + 4; srow = 0; }
+        if (pw + 8 <= A[2] - A[0] && sy + ph + 4 <= A[3]) { this.sa = a; this.sx = sx; this.sy = sy; this.srow = srow; SC = k; }
+      }
+      if (SC) break;
     }
     if (!SC) { console.warn('burns sign atlas full'); return this.white; }
     const px = this.sx, py = this.sy;

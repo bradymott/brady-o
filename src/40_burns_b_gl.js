@@ -395,8 +395,9 @@ void main(){
       skin: this.program(`#define MAXB ${MB}
 attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV;
 uniform mat4 uVP; uniform vec4 uB[MAXB * 3]; uniform vec3 uFace;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
 void main(){
+  vL = aPos;
   int i = int(mod(aBone, 64.0) + 0.5) * 3;
   vG = floor(aBone / 64.0 + 0.01) / 3.0;
   vec4 r0 = uB[i]; vec4 r1 = uB[i + 1]; vec4 r2 = uB[i + 2];
@@ -407,7 +408,7 @@ void main(){
   if (aUV.y >= uFace.x && aUV.y < uFace.y) vT.y += uFace.z;
   gl_Position = uVP * vec4(vW, 1.0);
 }`, `precision highp float;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
 uniform sampler2D uTex;
 uniform vec4 uTint; uniform vec3 uRimC; uniform float uRim;
 ${BURNS_GLSL_LIGHT}
@@ -418,7 +419,14 @@ void main(){
   vec3 n = normalize(vN);
 #ifdef BUMP
   vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.0025);
-  n = (t.a > 0.02 && t.a < 0.999) ? nb : n;
+  // cloth: soft folds + a fine weave on matte, untextured, non-skin surfaces (bone-local, so it rides the body)
+  float skin0 = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r);
+  float cd = length(vW - uCam);
+  float fold = sin(vL.y * 44.0 + sin(vL.x * 21.0 + vL.z * 17.0) * 1.7) * 0.55 + sin(vL.y * 109.0 + vL.x * 37.0) * 0.16;
+  float weave = sin(vL.x * 820.0 + vL.z * 300.0) * sin(vL.y * 860.0) * 0.14 * (1.0 - smoothstep(1.5, 5.0, cd));
+  vec3 nc = bBump(n, vW, (fold + weave) * (1.0 - smoothstep(14.0, 30.0, cd)), 0.0018);
+  float cloth = (1.0 - step(0.02, t.a)) * (1.0 - step(0.15, vG)) * (1.0 - skin0) * (1.0 - step(0.5, vC.a));
+  n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));
 #endif
   float e = vC.a;
   float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));

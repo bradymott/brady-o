@@ -359,10 +359,10 @@ BW13.buildSound = function (api, S) {
     m.color('#c8a0ff', 0.6).shine(3); m.push(); m.tf(0, D.H - 0.1, 0); m.lathe([[0, 0], [0.6, 0.55], [0.6, 0.75], [0, 1.6]], { seg: 6 }); m.pop(); m.emissive(0).shine(0);
     // tiers of seating around the inside wall (gentle steps up to the big gong)
     const tiers = [[7.0, 0.55], [7.9, 1.1], [8.7, 1.65]];
-    for (const [rr, h] of tiers) for (let k = 0; k < 14; k++) {
+    for (const [rad, h] of tiers) for (let k = 0; k < 14; k++) {
       const a = (k + 0.5) / 14 * TAU; if (Math.abs(BurnsM.wrap(a)) < 0.62) continue;
-      m.color(h > 1.5 ? '#a888c8' : h > 1 ? '#b8a0d8' : '#c8b8e8'); m.push(); m.tf(Math.sin(a) * rr, 0, Math.cos(a) * rr, a); m.roundBox(0, h / 2, 0, 2 * rr * Math.sin(Math.PI / 14) + 0.25, h, 0.95, 0.08); m.pop();
-      cols.push({ t: 'box', x: Math.sin(a) * rr, z: Math.cos(a) * rr, hx: rr * Math.sin(Math.PI / 14) + 0.12, hz: 0.47, y0: 0, y1: h, yaw: a });
+      m.color(h > 1.5 ? '#a888c8' : h > 1 ? '#b8a0d8' : '#c8b8e8'); m.push(); m.tf(Math.sin(a) * rad, 0, Math.cos(a) * rad, a); m.roundBox(0, h / 2, 0, 2 * rad * Math.sin(Math.PI / 14) + 0.25, h, 0.95, 0.08); m.pop();
+      cols.push({ t: 'box', x: Math.sin(a) * rad, z: Math.cos(a) * rad, hx: rad * Math.sin(Math.PI / 14) + 0.12, hz: 0.47, y0: 0, y1: h, yaw: a });
     }
     m.color('#e8e0f4'); m.roundCyl(0, 0, 0, 2.4, 0.08, 0.03, { seg: 24 });
     // the big gong on its stand (north side, up by the top tier)
@@ -376,8 +376,8 @@ BW13.buildSound = function (api, S) {
   // the five singing bowls (on the tiers + the big gong); rung = glowing
   const rot = a => a + Math.PI / 2;
   const bowlAt = [[rot(1.0), 7.0, 0.55], [rot(-1.4), 7.9, 1.1], [rot(2.2), 8.7, 1.65], [rot(-2.4), 7.0, 0.55], [Math.PI / 2 + Math.PI, 7.2, 2.4]];
-  bowlAt.forEach(([a, rr, y], i) => {
-    const big = i === 4, x = D.x + Math.sin(a) * rr, z = D.z + Math.cos(a) * rr;
+  bowlAt.forEach(([a, rad, y], i) => {
+    const big = i === 4, x = D.x + Math.sin(a) * rad, z = D.z + Math.cos(a) * rad;
     if (!big) api.mesh(x, z, m => { m.color(['#d8a83a', '#c8c8d0', '#b87a3a', '#e0b860'][i]).shine(3); m.lathe([[0, 0], [0.24, 0.02], [0.36, 0.14], [0.4, 0.3], [0.37, 0.31], [0.33, 0.16], [0, 0.06]], { seg: 16 }); m.shine(0); m.color('#5a3a8a'); m.roundCyl(0, -0.06, 0, 0.3, 0.06, 0.02); return { cols: [] }; }, { y });
     S.bowls.push({ x: big ? D.x - 7.2 + 0.01 : x, y: big ? 3.0 : y + 0.3, z: big ? D.z : z, rung: false, k: 0, big });
   });
@@ -400,7 +400,7 @@ BW13.buildLove = function (api, S) {
     const r = mulberry32(9), lights = [];
     for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; if (Math.abs(BurnsM.wrap(a)) < 0.3) continue; BW1213.M.cushion(m, Math.sin(a) * 4.2, 0, Math.cos(a) * 4.2, 0.9, 0.26, 0.9, i === 4 ? '#ffe24a' : r.pick(['#ff7ab0', '#ffd0e0', '#c84a8a', '#ffb0c8']), a); }
     BW1213.M.cushion(m, 0, 0, 0, 1.1, 0.3, 1.1, '#ff4f8a');
-    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + 0.4, rr = 2.8 + (i % 2) * 2.2, y = 4.6 - (i % 3) * 0.6; m.color('#5a3a3a'); m.limb(Math.sin(a) * rr, y + 0.25, Math.cos(a) * rr, Math.sin(a) * rr, y + 1.6, Math.cos(a) * rr, 0.01, 0.01); m.color('#ff6aa0', 0.75); m.push(); m.tf(Math.sin(a) * rr, y, Math.cos(a) * rr, a); m.extrude(BW1213.M.heartPts(0.22), 0.14); m.pop(); m.emissive(0); lights.push({ x: Math.sin(a) * rr, y, z: Math.cos(a) * rr, s: 1.1, c: '#ff8ab8' }); }
+    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + 0.4, rad = 2.8 + (i % 2) * 2.2, y = 4.6 - (i % 3) * 0.6; m.color('#5a3a3a'); m.limb(Math.sin(a) * rad, y + 0.25, Math.cos(a) * rad, Math.sin(a) * rad, y + 1.6, Math.cos(a) * rad, 0.01, 0.01); m.color('#ff6aa0', 0.75); m.push(); m.tf(Math.sin(a) * rad, y, Math.cos(a) * rad, a); m.extrude(BW1213.M.heartPts(0.22), 0.14); m.pop(); m.emissive(0); lights.push({ x: Math.sin(a) * rad, y, z: Math.cos(a) * rad, s: 1.1, c: '#ff8ab8' }); }
     lights.push({ x: 0, y: 0, z: 0, s: 0, c: '#ff8ab8', pool: 9, i: 0.45 });
     return { cols, lights };
   });
@@ -441,7 +441,7 @@ BW13.buildCuddle = function (api, S) {
   api.mesh(C.x, C.z, m => {
     m.color('#ffc0d8'); m.roundCyl(0, 0, 0, 5, 0.18, 0.08, { seg: 28 });
     const r = mulberry32(21);
-    for (let i = 0; i < 14; i++) { const a = r() * TAU, rr = 1 + r() * 3.6; BW1213.M.cushion(m, Math.sin(a) * rr, 0.18, Math.cos(a) * rr, 0.7 + r() * 0.3, 0.22, 0.6 + r() * 0.3, r.pick(['#ffffff', '#ff9ac0', '#c8a0ff', '#9adcff', '#fff0a0']), r() * 3); }
+    for (let i = 0; i < 14; i++) { const a = r() * TAU, rad = 1 + r() * 3.6; BW1213.M.cushion(m, Math.sin(a) * rad, 0.18, Math.cos(a) * rad, 0.7 + r() * 0.3, 0.22, 0.6 + r() * 0.3, r.pick(['#ffffff', '#ff9ac0', '#c8a0ff', '#9adcff', '#fff0a0']), r() * 3); }
     return { cols: [{ t: 'cyl', x: 0, z: 0, r: 5, y0: 0, y1: 0.18 }] };
   });
   BW13.sign(api, 'CUDDLE PUDDLE 101\nASK FIRST · FUR WELCOME', C.x + 5.5, C.z + 4.5, { yaw: 0.8, h: 1.0 });
