@@ -9,6 +9,7 @@ const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : pat
 const site = path.join(dist, 'site');
 const out = path.resolve(process.argv[2] || path.join(__dirname, '..', 'shots', 'cart'));
 const carId = process.argv[3] || 'heart';
+const raceMode = process.argv[4] || 'tt';   // 'gp' = a full Grand Prix grid (8 cars) for budget checks
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.glb': 'model/gltf-binary' };
 function serve(root) {
   return new Promise(res => {
@@ -33,7 +34,8 @@ function serve(root) {
     page.on('pageerror', e => errs.push('pageerror: ' + e.message.slice(0, 300)));
     page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text().slice(0, 300)); });
     await page.goto(url + 'art-cart/');
-    await page.waitForFunction(() => window.BRADY_BURNS && window.BRADY_BURNS.CartGLB && window.BRADY_BURNS.CartGLB.ready, null, { timeout: 60000 });
+    await page.waitForFunction(() => window.BRADY_BURNS && window.BRADY_BURNS.CartGLB && window.BRADY_BURNS.CartGLB.ready, null, { timeout: 120000 });
+    await page.evaluate(() => { window.__cartGlbMs = Math.round(performance.now()); });
     return page;
   };
   const showroom = async (page, glb) => {
@@ -61,14 +63,15 @@ function serve(root) {
   // race: a time trial on the first track with the glb car
   const lo = await page.evaluate(([id]) => { window.__cartNoGLB = false; const B = window.BRADY_BURNS, M = B.CartGLB.model(id, true); return M ? { tris: M.geo.count / 3, nv: M.geo.nv, lo: !!M.lo } : null; }, [carId]);
   console.log('glb lo     ', JSON.stringify(lo));
-  await page.evaluate(([id]) => {
+  await page.evaluate(([id, mode]) => {
     const B = window.BRADY_BURNS; window.__cartNoGLB = false; window.__burnsHideHUD = true;
-    window.BRADY.Game.setScene(new B.CartRaceScene({ mode: 'tt', track: B.CART_TRACK_ORDER[0], driver: 'brady', car: id, autoGas: true }));
-  }, [carId]);
+    const o = mode === 'gp' ? { mode: 'gp', cup: B.CART_CUPS[0].id, race: 0 } : { mode: 'tt', track: B.CART_TRACK_ORDER[0] };
+    window.BRADY.Game.setScene(new B.CartRaceScene(Object.assign(o, { driver: 'brady', car: id, autoGas: true })));
+  }, [carId, raceMode]);
   await page.waitForFunction(() => { const s = window.BRADY.Game.scene; return s && s.state && s.state !== 'load'; }, null, { timeout: 120000 });
   await page.waitForTimeout(2500);
   await page.screenshot({ path: path.join(out, 'race-glb.png'), timeout: 120000 });
-  const race = await page.evaluate(() => { const s = window.BRADY.Game.scene; return { state: s.state, draws: s.stats && s.stats.draws, tris: s.stats && s.stats.tris, carGlb: s.player && s.player.M && !!s.player.M.glb }; });
+  const race = await page.evaluate(() => { const s = window.BRADY.Game.scene; return { state: s.state, draws: s.stats && s.stats.draws, tris: s.stats && s.stats.tris, carGlb: s.player && s.player.M && !!s.player.M.glb, karts: s.karts && s.karts.length, glbKarts: s.karts && s.karts.filter(k => k.M && k.M.glb).length, loadMs: window.__cartGlbMs }; });
   console.log('race       ', JSON.stringify(race));
   await page.context().close();
   // portrait showroom

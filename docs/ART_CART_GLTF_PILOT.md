@@ -1,7 +1,8 @@
 # Art Cart: Blender → glTF pipeline (Bass Valentine pilot)
 
-Status, November 2026: the pilot car is modelled, exported and loading in the game on branch `art-cart-glb-pilot`.
-This doc is the plan for the loader and for the other 11 cars. The engine API itself is in `docs/BURNS_GUIDE.md` §6.8.
+Status, November 2026: all 12 cars are modelled in Blender, exported and loading in the game on branch
+`art-cart-glb-pilot`. This doc describes the loader and the car pipeline. The engine API itself is in
+`docs/BURNS_GUIDE.md` §6.8.
 
 ## 1. How the loader fits the engine
 
@@ -60,9 +61,40 @@ lighting pipeline for free and cost **one draw call per car**, the same as the p
 | Draw calls | 1 (plus 1 for the driver) | 16 of the ~120 budget |
 | Download | ≈ 0.7 MB + 0.3 MB uncompressed; gzip on GitHub Pages roughly halves it | 12 cars ≈ 12 MB, within the 30 MB first-load budget; meshopt/gltfpack later for ~4× less |
 
-## 4. Next steps (for Brady to approve)
+## 4. The twelve cars
 
-1. The other 11 cars, in roster order, each a `tools/blender/<car>.py` script following the pilot.
+| Car | Script (`tools/blender/`) | Showroom tris | Race tris |
+|---|---|---|---|
+| Bass Valentine | `bass_valentine.py` | 28.1k | 6.2k |
+| Glitterfin | `glitterfin.py` | 28.6k | 5.1k |
+| Calamari Inferno | `calamari_inferno.py` | 29.8k | 6.2k |
+| Sir Scorchalot | `sir_scorchalot.py` | 28.2k | 7.4k |
+| Quackzilla | `quackzilla.py` | 28.6k | 5.2k |
+| Pyramid Scheme | `pyramid_scheme.py` | 23.5k | 6.6k |
+| Frosted Fury | `frosted_fury.py` | 28.3k | 6.6k |
+| Dusty Doubloon | `dusty_doubloon.py` | 28.2k | 7.6k |
+| Turbo Escargot | `turbo_escargot.py` | 29.6k | 7.3k |
+| Jelly Jolt | `jelly_jolt.py` | 28.8k | 7.1k |
+| Dune Chomper | `dune_chomper.py` | 29.6k | 7.2k |
+| Whale of a Time | `whale_of_a_time.py` | 25.5k | 6.4k |
+
+Shared code lives in `tools/blender/cartkit.py`. Rebuild any car headless with
+`/Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/<car>.py`; it rewrites both `.glb` files, the
+`.blend` and the previews in `shots/blender/`. The 24 model files total about 13 MB uncompressed.
+
+## 5. Kit backlog (what the car scripts had to build locally)
+
+Several cars wrote the same helpers; they belong in `cartkit.py` next:
+- an `aim(direction)` matrix to point a primitive along any engine direction (portholes, nozzles, spikes);
+- a swept tube along a polyline or spline with per-point radius (arms, tentacles, frosting, catenary lights);
+- a loft between sections and a closed parametric body with merged poles (whale, shark, duck bodies);
+- per-face material assignment (two-tone wrappers, back/belly colour splits);
+- a flat-shaded option that survives `smooth_by_angle` (mirror tiles);
+- a per-object triangle report and side/top preview views.
+
+## 6. Next steps
+
+1. Stage 2 PBR path (textures, sky reflections, clear coat) in the shared engine, which Burning Man also needs.
 2. Drivers reuse the Burning Man cast once Phase 1 characters exist (no change to Art Cart needed).
-3. Stage 2 PBR path (textures, sky reflections, clear coat) in the shared engine.
-4. A studio showroom: a baked-lit stage with an HDRI-style backdrop, once stage 2 lands.
+3. A studio showroom: a baked-lit stage with an HDRI-style backdrop, once stage 2 lands.
+4. gltfpack/meshopt compression once the download size matters (about 4× smaller).
