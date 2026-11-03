@@ -16358,10 +16358,11 @@ class CartRaceScene {
       if (F.holder) { const h = F.holder; F.x = h.x; F.z = h.z; F.y = h.y + h.M.h; const c = E.captures[O.capture]; if (Math.hypot(h.x - c.x, h.z - c.z) < c.r) { h.score++; h.flag = false; F.holder = null; this.log('capture', { k: h.id, n: h.score }); this.banner(h.player ? 'CAPTURED!' : h.car.name + ' CAPTURES!', h.player ? '#7aff8a' : '#ff9a3a', 1.6, h.score + ' / ' + CART_OBJECTIVES.flag.goal); Sound.play(h.player ? 'kartFinish' : 'kartLap', { vol: 0.6 }); this.fx.confetti(c.x, 2, c.z, 40); const s = E.flagSpots[Math.floor(this.rng() * E.flagSpots.length)]; F.x = s.x; F.z = s.z; F.y = this.terrain.height(s.x, s.z); F.cool = 1.5; O.capture = (O.capture + 1 + Math.floor(this.rng() * (E.captures.length - 1))) % E.captures.length; if (h.score >= CART_OBJECTIVES.flag.goal) return this.endBattle(); } }
       else if (F.cool <= 0) for (const k of alive) { if (k.invT > 0.6 || k.air && k.y > F.y + 3) continue; if (Math.hypot(k.x - F.x, k.z - F.z) < 2.8) { F.holder = k; k.flag = true; this.log('flag', { k: k.id }); this.banner(k.player ? 'YOU GOT THE FLAG!' : k.car.name + ' HAS THE FLAG', k.player ? '#7aff8a' : '#ff4fd8', 1.4, k.player ? 'Drive it into the glowing ring' : ''); Sound.play('pick', { vol: 0.6 }); break; } }
       if (O.time <= 0) return this.endBattle();
-    } else {
+    } else if (!this.isRace) {
+      // custom objectives registered by the arena files; untimed ones (time 0) only end through their own update
       const D = CART_OBJECTIVES[this.objective];
       if (D && D.fx && D.fx.update && D.fx.update(this, dt) === true) return this.endBattle();
-      if (O.time <= 0) return this.endBattle();
+      if (D && D.time > 0 && O.time <= 0) return this.endBattle();
     }
   }
   battleRank() {
