@@ -148,5 +148,5 @@ const CartGLB = {
 if (typeof window !== 'undefined') {
   window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { CartGLB, CART_CARS, CartModels });
   // declared later in the bundle: getters, so they resolve when asked for (tests drive the app through these)
-  for (const k of ['CART_TRACK_ORDER', 'CART_ARENAS', 'CART_CUPS', 'CartRaceScene', 'KartMenuScene']) Object.defineProperty(window.BRADY_BURNS, k, { get: () => eval(k), configurable: true });
+  for (const k of ['CART_TRACK_ORDER', 'CART_ARENAS', 'CART_CUPS', 'CART_ITEMS', 'CART_OBJECTIVES', 'CART_ARENA_RULES', 'CART_ITEM_FX', 'cartSave', 'CartRaceScene', 'KartMenuScene']) Object.defineProperty(window.BRADY_BURNS, k, { get: () => eval(k), configurable: true });
 }

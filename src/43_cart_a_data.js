@@ -145,12 +145,25 @@ const CART_TOD = { day: 'DAY', sunset: 'SUNSET', night: 'NIGHT', dawn: 'DAWN', d
 
 /* ---------------- battle arenas + objectives ---------------- */
 const CART_OBJECTIVES = {
-  vibe: { name: 'VIBE CHECK', short: 'Last car standing', desc: 'Every car has 4 vibes. Each hit costs one. Lose them all and your lights go out. Last car glowing wins.', time: 180 },
-  glow: { name: 'GLOW GRAB', short: 'Collect the glow orbs', desc: 'Grab glowing orbs. Get hit and you drop some. First to 15 wins.', goal: 15, time: 150 },
-  hill: { name: 'KING OF THE HILL', short: 'Hold the zone', desc: 'Park inside the glowing zone to score. The zone moves. First to 30 seconds wins.', goal: 30, time: 150 },
-  flag: { name: 'CAPTURE THE FLAG', short: 'Bring the flag home', desc: 'Grab the camp flag and drive it into the capture ring. Getting hit drops it. First to 3 captures.', goal: 3, time: 180 },
+  vibe: { name: 'VIBE CHECK', short: 'Last car standing', desc: 'Every car has 4 vibes. Each hit costs one. Lose them all and your lights go out. Last car glowing wins.', time: 180, unit: '♥' },
+  glow: { name: 'GLOW GRAB', short: 'Collect the glow orbs', desc: 'Grab glowing orbs. Get hit and you drop some. First to 15 wins.', goal: 15, time: 150, unit: '●' },
+  hill: { name: 'KING OF THE HILL', short: 'Hold the zone', desc: 'Park inside the glowing zone to score. The zone moves. First to 30 seconds wins.', goal: 30, time: 150, unit: 's' },
+  flag: { name: 'CAPTURE THE FLAG', short: 'Bring the flag home', desc: 'Grab the camp flag and drive it into the capture ring. Getting hit drops it. First to 3 captures.', goal: 3, time: 180, unit: '⚑' },
   race: { name: 'SCRAMBLE RACE', short: '3 laps over the jumps', desc: 'A three-lap race around the course: jumps, whoops and berms.', time: 0 }
 };
+/* Arena files (43_cart_g_*.js) register themselves here:
+   CART_ARENAS.push({ id, name, sub, objectives, col, tod, powers: [itemIds], blurb })
+   CART_ARENA_RULES[id] = { gravity, music, onLoad(s), onUpdate(s, dt, racing), onStep(s, k, dt, racing),
+     vertical(s, k, dt, racing) -> true when it handled the car's vertical motion, onHit(s, k, kind, src, o),
+     aiGoal(s, k, nearestRival) -> { goal: [x, z], prey } | null, hud(s, ctx, W, H, top, left), draw(s, R, S, t), lights(s, add) }
+   CART_ITEMS[id] = { name, desc, col, arena: id }  +  CART_ITEM_FX[id] = { use(s, k), update(s, dt, racing), shot(s, shot, dt), draw(s, R, shot, S, t) }
+   CART_OBJECTIVES[id] = { name, short, desc, time, goal, unit, fx: { init(s), update(s, dt) -> true to end, rank(s) -> karts sorted, score(k) } }
+   CART_ARENA_ICONS[id] = (ctx, s, t, col) => {}   (the menu card icon, drawn centred at the origin)
+   An arena's powers drop only there until the player has won every one of its objectives ("mastered"); then they
+   join the gift-box pool in every race. */
+const CART_ARENA_RULES = {};
+const CART_ITEM_FX = {};
+const CART_ARENA_ICONS = {};
 const CART_ARENAS = [
   { id: 'skate', name: 'BOWL-O-RAMA', sub: 'Skate park: bowls, half-pipes, rails and ramps', objectives: ['glow', 'hill', 'vibe', 'flag'], col: '#5ac8ff', tod: 'sunset' },
   { id: 'mx', name: 'WHOOP-DE-DOO MX', sub: 'Dirt-bike course: jumps, whoops and berms', objectives: ['race', 'flag', 'glow', 'vibe'], col: '#ff9a3a', tod: 'day' },
@@ -173,8 +186,13 @@ function cartSave() {
   if (!k.driver || !CART_DRIVERS.some(x => x.id === k.driver)) k.driver = 'brady';
   if (!k.car || !CART_CARS.some(x => x.id === k.car)) k.car = 'heart';
   if (!k.gfx) k.gfx = 'auto';
+  if (!k.mastered) k.mastered = {};
   return k;
 }
+// an arena is mastered once every one of its objectives has been won at least once
+function cartArenaMastered(id) { const A = cartArena(id), w = cartSave().wins; return A.objectives.every(o => (w[A.id + ':' + o] || 0) > 0); }
+// the arena-only items the player has unlocked for the circuit races
+function cartMasteredItems() { const sv = cartSave(), out = []; for (const A of CART_ARENAS) if (sv.mastered[A.id] && A.powers) for (const p of A.powers) if (CART_ITEMS[p]) out.push(p); return out; }
 function cartFmtTime(t) {
   if (!isFinite(t) || t <= 0) return '--:--.--';
   const m = Math.floor(t / 60), s = t - m * 60;
@@ -185,7 +203,11 @@ function cartOrdinal(n) { return n + (n === 1 ? 'ST' : n === 2 ? 'ND' : n === 3 
 const cartWrap = a => a - TAU * Math.floor((a + Math.PI) / TAU);
 // a small seeded shuffle
 function cartShuffle(arr, rng) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr; }
-function cartRollItem(rank, n, rng) {
+function cartRollItem(rank, n, rng, arenaId) {
+  // in an arena with its own powers, almost half the boxes hold one; in races, mastered arena powers join the pool
+  const A = arenaId ? cartArena(arenaId) : null;
+  if (A && A.powers && A.powers.length && rng() < 0.45) return A.powers[Math.floor(rng() * A.powers.length)];
+  if (!arenaId) { const M = cartMasteredItems(); if (M.length && rng() < 0.22) return M[Math.floor(rng() * M.length)]; }
   const b = n <= 1 ? 1 : rank <= 1 ? 0 : rank <= 3 ? 1 : rank <= 5 ? 2 : 3, O = CART_ITEM_ODDS[b];
   let tot = 0; for (const k in O) tot += O[k];
   let r = rng() * tot; for (const k in O) { r -= O[k]; if (r <= 0) return k; }

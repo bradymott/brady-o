@@ -223,6 +223,7 @@ Object.assign(CartRaceScene.prototype, {
     }
     for (const s of this.shots) { if (s.type === 'ball') add(s.x, s.y, s.z, 6, s.kind === 'fire' ? [1, 0.5, 0.15] : s.kind === 'bubble' ? [0.6, 0.9, 1] : [1, 0.8, 0.5], 0.9, 1.5); if (s.type === 'geyser' && s.fired) add(s.x, 3, s.z, 10, [0.4, 0.7, 1], 1.2, 2); }
     for (const f of this.W.fires) add(f.x, (f.y || 0) + 1.2, f.z, 7, [1, 0.55, 0.2], 1.1, 1);
+    if (this.rules.lights) this.rules.lights(this, add);
     if (this.man && this.man.burn > 0.05) add(this.man.ch.x, 10, this.man.ch.z, 45, [1, 0.5, 0.18], 1.5 * this.man.burn, 3);
     cand.sort((a, b) => b[0] - a[0]);
     for (let i = 0; i < cand.length && out.length < max; i++) out.push(cand[i][1]);
@@ -282,8 +283,9 @@ Object.assign(CartRaceScene.prototype, {
     }
     for (const g of this.props.gifts) if (g.alive && (g.gx - cam.x) * (g.gx - cam.x) + (g.gz - cam.z) * (g.gz - cam.z) < 90 * 90) R.bbs.bb(g.x, g.y, g.z, 2.4, 2.4, S.glow, [1, 0.8, 1], 0.25 + 0.25 * night, true);
     for (const m of this.props.mines) if (m.alive) R.flat.flat(m.gx, m.y + 0.05, m.gz, 2.2, 2.2, 0, S.warn, [1, 0.5, 0.8], 0.6, true);
-    // weapon effects
-    for (const s of this.shots) this.drawShot(R, s, S, t);
+    // weapon effects (arena powers draw their own shots)
+    for (const s of this.shots) { const F = s.fx && CART_ITEM_FX[s.fx]; if (F && F.draw) F.draw(this, R, s, S, t); else this.drawShot(R, s, S, t); }
+    if (this.rules.draw) this.rules.draw(this, R, S, t);
     for (const h of this.hazards) {
       if (h.type === 'slime') { const a = clamp((h.life - h.t) / 1.5, 0, 1); R.flat.flat(h.x, h.y + 0.05, h.z, h.r * 2, h.r * 2.4, h.yaw, S.glow, [0.45, 1, 0.3], 0.55 * a, true); }
       if (h.type === 'foam') R.flat.flat(h.x, H.height(h.x, h.z) + 0.1, h.z, h.r * 2, h.r * 2, t, S.puff, [1, 1, 1], 0.5, false);
@@ -385,6 +387,7 @@ Object.assign(CartRaceScene.prototype, {
     }
     // ---- battle scoreboard ----
     if (this.isBattle && !this.isRace && (racing || this.state === 'done')) this.drawBattleHUD(ctx, top, left);
+    if (this.rules.hud && (racing || this.state === 'done') && !this.paused) this.rules.hud(this, ctx, W, H, top, left);
     if (this.isBattle && this.isRace && (racing || this.state === 'done')) BurnsUI.text(ctx, 'SCRAMBLE RACE', W / 2, top + 14, 13, '#ff9a3a', {});
     // ---- countdown ----
     if (this.state === 'count') { const n = 3 - Math.floor(this.stateT); if (n >= 1) { const u = this.stateT % 1; BurnsUI.text(ctx, String(n), W / 2, H * 0.38, 70 * (1.3 - u * 0.3), ['#ff5a5a', '#ffd84a', '#7aff8a'][3 - n], { glow: '#000' }); } BurnsUI.text(ctx, 'TAP HOP JUST BEFORE GO FOR A ROCKET START', W / 2, H * 0.38 + 54, 11, 'rgba(255,255,255,0.8)', { ui: true }); }
@@ -471,7 +474,7 @@ Object.assign(CartRaceScene.prototype, {
     BurnsUI.text(ctx, D.name, W / 2, top + 11, 13, '#ffd84a', {});
     BurnsUI.text(ctx, cartFmtClock(O.time), W / 2, top + 31, 16, O.time < 15 ? '#ff6a6a' : '#ffffff', { ui: true });
     // leaderboard
-    const order = this.battleRank(), unit = this.objective === 'vibe' ? '♥' : this.objective === 'hill' ? 's' : this.objective === 'flag' ? '⚑' : '●';
+    const order = this.battleRank(), unit = D.unit || '●';
     const goal = D.goal ? '/' + D.goal : '';
     const nm = q => q.player ? 'YOU' : q.car.name.length > 13 ? q.car.name.slice(0, 12) + '…' : q.car.name, vx = left + 186;
     order.slice(0, 4).forEach((q, i) => { const y = lbTop + 18 + i * 17, val = this.objective === 'vibe' ? (q.out ? 'OUT' : q.vibes + unit) : Math.floor(q.score) + goal + unit; ctx.fillStyle = q.car.col; ctx.beginPath(); ctx.arc(left + 5, y, 4.5, 0, TAU); ctx.fill(); BurnsUI.text(ctx, (i + 1) + '. ' + nm(q), left + 14, y, 11, q.player ? '#ffd84a' : '#ffffff', { align: 'left', ui: true }); BurnsUI.text(ctx, val, vx, y, 11, q.player ? '#ffd84a' : 'rgba(255,255,255,0.85)', { align: 'right', ui: true }); });
@@ -515,7 +518,8 @@ Object.assign(CartRaceScene.prototype, {
       const D = CART_OBJECTIVES[this.objective], win = this.results[0];
       BurnsUIKit.title(ctx, win.player ? 'YOU WIN!' : win.car + ' WINS', P.x + P.w / 2, P.y + 30, 24);
       BurnsUI.text(ctx, D.name + ' · ' + this.name, P.x + P.w / 2, P.y + 56, 12, '#ffd84a', { ui: true });
-      this.results.forEach((r, i) => { const y = P.y + 82 + i * 26; if (y > P.y + P.h - 70) return; ctx.fillStyle = r.player ? 'rgba(255,216,74,0.18)' : 'rgba(255,255,255,0.05)'; burnsRR(ctx, P.x + 16, y - 11, P.w - 32, 22, 8); ctx.fill(); BurnsUI.text(ctx, cartOrdinal(r.rank), P.x + 40, y, 12, r.rank === 1 ? '#ffd84a' : '#ffffff', {}); BurnsUI.text(ctx, r.car + ' · ' + r.name, P.x + 70, y, 11, '#ffffff', { align: 'left', ui: true }); BurnsUI.text(ctx, this.objective === 'vibe' ? (r.out ? 'OUT' : r.score + ' ♥') : r.score + (this.objective === 'hill' ? 's' : ''), P.x + P.w - 90, y, 12, '#9affc8', { align: 'right', ui: true }); BurnsUI.text(ctx, r.hits + ' hits', P.x + P.w - 28, y, 10, 'rgba(255,255,255,0.6)', { align: 'right', ui: true }); });
+      if (this.mastered) { const A = cartArena(this.arenaId), names = (A.powers || []).map(p => CART_ITEMS[p] ? CART_ITEMS[p].name : p).join(', '); BurnsUI.text(ctx, 'ARENA MASTERED! ' + (names ? names + ' now drop in every race' : ''), P.x + P.w / 2, P.y + P.h - 52, 11, '#7aff8a', { ui: true, glow: '#2a8a4a' }); }
+      this.results.forEach((r, i) => { const y = P.y + 82 + i * 26; if (y > P.y + P.h - 70) return; ctx.fillStyle = r.player ? 'rgba(255,216,74,0.18)' : 'rgba(255,255,255,0.05)'; burnsRR(ctx, P.x + 16, y - 11, P.w - 32, 22, 8); ctx.fill(); BurnsUI.text(ctx, cartOrdinal(r.rank), P.x + 40, y, 12, r.rank === 1 ? '#ffd84a' : '#ffffff', {}); BurnsUI.text(ctx, r.car + ' · ' + r.name, P.x + 70, y, 11, '#ffffff', { align: 'left', ui: true }); BurnsUI.text(ctx, this.objective === 'vibe' ? (r.out ? 'OUT' : r.score + ' ♥') : r.score + (D.unit && D.unit !== '●' ? D.unit : ''), P.x + P.w - 90, y, 12, '#9affc8', { align: 'right', ui: true }); BurnsUI.text(ctx, r.hits + ' hits', P.x + P.w - 28, y, 10, 'rgba(255,255,255,0.6)', { align: 'right', ui: true }); });
     } else {
       const me = this.results.find(r => r.player);
       BurnsUIKit.title(ctx, this.mode === 'tt' ? 'TIME TRIAL' : cartOrdinal(me.rank) + ' PLACE', P.x + P.w / 2, P.y + 30, 24);

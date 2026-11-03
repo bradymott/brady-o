@@ -115,9 +115,10 @@ class KartMenuScene {
       CART_TRACK_ORDER.forEach((id, i) => this.cards.push({ i, id, x: safeL + (i % cols) * (cw + 10), y: top + Math.floor(i / cols) * (ch + 10), w: cw, h: ch }));
       this.btns = [back];
     } else if (this.state === 'arena') {
-      const top = safeT + (P ? 100 : 56), bottom = H - safeB, n = CART_ARENAS.length;
-      if (P) { const ch = (bottom - top - (n - 1) * 10) / n; CART_ARENAS.forEach((a, i) => this.cards.push({ i, x: safeL, y: top + i * (ch + 10), w: W - safeL - safeR, h: ch })); }
-      else { const cw = (W - safeL - safeR - (n - 1) * 12) / n; CART_ARENAS.forEach((a, i) => this.cards.push({ i, x: safeL + i * (cw + 12), y: top, w: cw, h: bottom - top })); }
+      // a grid: 4 across in landscape, 2 in portrait, as many rows as the arenas need
+      const top = safeT + (P ? 100 : 56), bottom = H - safeB, n = CART_ARENAS.length, cols = Math.min(n, P ? 2 : 4), nr = Math.ceil(n / cols);
+      const cw = (W - safeL - safeR - (cols - 1) * 10) / cols, ch = (bottom - top - (nr - 1) * 10) / nr;
+      CART_ARENAS.forEach((a, i) => this.cards.push({ i, x: safeL + (i % cols) * (cw + 10), y: top + Math.floor(i / cols) * (ch + 10), w: cw, h: ch }));
       this.btns = [back];
     } else if (this.state === 'objective') {
       const A = CART_ARENAS[this.arenaSel], top = safeT + (P ? 110 : 70), bottom = H - safeB, n = A.objectives.length, cols = P ? 1 : 2, nr = Math.ceil(n / cols);
@@ -292,7 +293,7 @@ class KartMenuScene {
     const lx = P ? W / 2 : b.x + b.w / 2, ly = P ? H * 0.16 + insets.t : b.y - 84, s = Math.min(P ? 46 : 54, W * (P ? 0.11 : 0.07));
     this.drawLogo(ctx, lx, ly, s);
     BurnsUI.text(ctx, 'Battle-race wild art cars across the playa', lx, ly + s * 0.85, 12, 'rgba(255,255,255,0.92)', { ui: true });
-    BurnsUI.text(ctx, '12 art cars · 26 drivers · 8 tracks · 3 arenas', lx, ly + s * 0.85 + 18, 11, '#ffd84a', { ui: true });
+    BurnsUI.text(ctx, CART_CARS.length + ' art cars · ' + CART_DRIVERS.length + ' drivers · ' + CART_TRACK_ORDER.length + ' tracks · ' + CART_ARENAS.length + ' arenas', lx, ly + s * 0.85 + 18, 11, '#ffd84a', { ui: true });
     const sv = cartSave(), tro = CART_CUPS.map(c => sv.trophies[c.id] ? c.name + ' ' + ['', 'GOLD', 'SILVER', 'BRONZE'][sv.trophies[c.id]] : null).filter(Boolean).join('  ·  ');
     if (tro) BurnsUI.text(ctx, tro, lx, this.btns[3].y + 54, 11, '#ffd84a', { ui: true });
   }
@@ -381,13 +382,15 @@ class KartMenuScene {
   }
   drawArenas(ctx) {
     this.title(ctx, 'BATTLE · PICK AN ARENA');
+    const sv = cartSave();
     for (const c of this.cards) {
-      const A = CART_ARENAS[c.i], on = c.i === this.arenaSel;
+      const A = CART_ARENAS[c.i], on = c.i === this.arenaSel, small = c.h < 150, fs = Math.min(18, c.w * 0.07, c.h * 0.11);
       this.drawCard(ctx, c, on, A.col);
-      cartArenaIcon(ctx, A.id, c.x + c.w / 2, c.y + c.h * 0.36, Math.min(c.w, c.h) * 0.24, this.t, A.col);
-      BurnsUI.text(ctx, A.name, c.x + c.w / 2, c.y + c.h * 0.66, Math.min(18, c.w * 0.07), A.col, {});
-      ctx.font = `600 11px ${FONT_UI}`; BurnsUI.wrap(ctx, A.sub, c.w - 24).forEach((ln, i) => BurnsUI.text(ctx, ln, c.x + c.w / 2, c.y + c.h * 0.66 + 22 + i * 14, 11, 'rgba(255,255,255,0.85)', { ui: true, stroke: false }));
-      ctx.font = `600 9px ${FONT_UI}`; const ol = BurnsUI.wrap(ctx, A.objectives.map(o => CART_OBJECTIVES[o].name).join(' · '), c.w - 20); ol.forEach((ln, i) => BurnsUI.text(ctx, ln, c.x + c.w / 2, c.y + c.h - 14 - (ol.length - 1 - i) * 12, 9, 'rgba(255,255,255,0.6)', { ui: true, stroke: false }));
+      cartArenaIcon(ctx, A.id, c.x + c.w / 2, c.y + c.h * (small ? 0.3 : 0.34), Math.min(c.w, c.h) * (small ? 0.18 : 0.22), this.t, A.col);
+      BurnsUI.text(ctx, A.name, c.x + c.w / 2, c.y + c.h * (small ? 0.58 : 0.62), fs, A.col, {});
+      if (!small) { ctx.font = `600 11px ${FONT_UI}`; BurnsUI.wrap(ctx, A.sub, c.w - 24).slice(0, 2).forEach((ln, i) => BurnsUI.text(ctx, ln, c.x + c.w / 2, c.y + c.h * 0.62 + 20 + i * 14, 11, 'rgba(255,255,255,0.85)', { ui: true, stroke: false })); }
+      const won = A.objectives.filter(o => (sv.wins[A.id + ':' + o] || 0) > 0).length;
+      BurnsUI.text(ctx, sv.mastered[A.id] ? 'MASTERED ✓' : won + '/' + A.objectives.length + ' WON', c.x + c.w / 2, c.y + c.h - 12, 9, sv.mastered[A.id] ? '#7aff8a' : 'rgba(255,255,255,0.6)', { ui: true, stroke: false });
     }
   }
   drawObjectives(ctx) {
@@ -400,6 +403,11 @@ class KartMenuScene {
       BurnsUI.text(ctx, O.short, c.x + c.w - 14, c.y + 24, 10, 'rgba(255,255,255,0.7)', { align: 'right', ui: true });
       ctx.font = `600 11px ${FONT_UI}`; BurnsUI.wrap(ctx, O.desc, c.w - 32).slice(0, 3).forEach((ln, i) => BurnsUI.text(ctx, ln, c.x + 16, c.y + 48 + i * 15, 11, 'rgba(255,255,255,0.9)', { align: 'left', ui: true, stroke: false }));
       if (wins) BurnsUI.text(ctx, wins + (wins === 1 ? ' WIN' : ' WINS'), c.x + c.w - 14, c.y + c.h - 12, 10, '#7aff8a', { align: 'right' });
+    }
+    // this arena's powers, and whether they're unlocked for the circuit races
+    if (A.powers && A.powers.length) {
+      const names = A.powers.map(p => CART_ITEMS[p] ? CART_ITEMS[p].name : p).join(' · '), y = Game.cssH - Math.max(14, insets.b + 8) - 14;
+      BurnsUI.text(ctx, (sv.mastered[A.id] ? 'MASTERED: ' : 'ARENA POWERS: ') + names + (sv.mastered[A.id] ? ' now drop in every race' : ' · win every objective to unlock them in races'), Game.cssW / 2, y, 10, sv.mastered[A.id] ? '#7aff8a' : A.col, { ui: true });
     }
   }
 }
@@ -418,7 +426,8 @@ function cartTrackThumb(id) {
 function cartArenaIcon(ctx, id, x, y, s, t, col) {
   ctx.save(); ctx.translate(x, y); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.strokeStyle = col; ctx.fillStyle = rgba(col, 0.25); ctx.lineWidth = 3;
-  if (id === 'skate') { ctx.beginPath(); ctx.ellipse(-s * 0.35, s * 0.1, s * 0.5, s * 0.35, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(s * 0.2, s * 0.5); ctx.quadraticCurveTo(s * 0.25, -s * 0.2, s * 0.6, -s * 0.4); ctx.moveTo(s * 0.9, s * 0.5); ctx.quadraticCurveTo(s * 0.85, -s * 0.2, s * 0.6, -s * 0.4); ctx.stroke(); }
+  if (CART_ARENA_ICONS[id]) CART_ARENA_ICONS[id](ctx, s, t, col);
+  else if (id === 'skate') { ctx.beginPath(); ctx.ellipse(-s * 0.35, s * 0.1, s * 0.5, s * 0.35, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(s * 0.2, s * 0.5); ctx.quadraticCurveTo(s * 0.25, -s * 0.2, s * 0.6, -s * 0.4); ctx.moveTo(s * 0.9, s * 0.5); ctx.quadraticCurveTo(s * 0.85, -s * 0.2, s * 0.6, -s * 0.4); ctx.stroke(); }
   else if (id === 'mx') { ctx.beginPath(); ctx.moveTo(-s, s * 0.4); for (let i = 0; i <= 8; i++) ctx.lineTo(-s + i * s * 0.25, s * 0.4 - (i % 2 ? s * 0.3 : 0) - (i === 4 ? s * 0.4 : 0)); ctx.lineTo(s, s * 0.4); ctx.closePath(); ctx.fill(); ctx.stroke(); const bx = Math.sin(t * 2) * s * 0.6; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(bx, -s * 0.35 - Math.abs(Math.cos(t * 2)) * s * 0.2, s * 0.1, 0, TAU); ctx.fill(); }
   else { ctx.beginPath(); ctx.arc(0, 0, s * 0.8, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-s * 0.12, s * 0.3); ctx.lineTo(-s * 0.1, -s * 0.35); for (let i = 0; i < 4; i++) ctx.lineTo(-s * 0.1 + i * s * 0.07, -s * 0.55 - (i % 2) * s * 0.08); ctx.lineTo(s * 0.16, -s * 0.3); ctx.lineTo(s * 0.14, s * 0.3); ctx.closePath(); ctx.fill(); }
   ctx.restore();
