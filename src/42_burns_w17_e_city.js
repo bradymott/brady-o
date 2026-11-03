@@ -29,8 +29,8 @@ BW17C.SPOTS = {
   duck: [2.2, 255], ice: [2.4, 280], radio: [2.6, 281], trade: [2.8, 281], bacon: [3.2, 284], rink: [3.45, 262],
   cheese: [3.75, 284], bike: [4.0, 282], pancake: [4.3, 284], content: [4.6, 278], tea: [4.9, 278], hugs: [6.1, 287], heart: [12.75, 360]
 };
-// darkwads lurk on the night streets (clock hour, radius: on the radial roads between the lettered streets)
-BW17C.DARKWADS = [[3.5, 368], [3.75, 457], [2.5, 457], [4.75, 412]];
+// darkwads lurk on the night streets (clock hour, radius: on radial roads between the lettered streets, beside lived-in blocks)
+BW17C.DARKWADS = [[3.5, 368], [4.0, 412], [2.5, 457], [4.5, 412]];
 
 /* ---------------- old saves: a quest done in World 17 stays done in the city ----------------
    World 17 counts seven Burn Tokens now; the two that moved out (the sunrise, the duck) leave its count with them. */
