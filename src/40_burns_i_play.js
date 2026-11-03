@@ -286,12 +286,12 @@ class BurnsCine {
     if (!this.cur) { this.finish(); return; }
     const s = this.cur, g = this.g;
     if (s.do) { s.do(g, this); if (!this.finished) this.advance(); return; }
-    if (s.letterbox !== undefined) { this.letter = s.letterbox; this.advance(); return; }
+    if (s.letterbox !== undefined) { this.letter = s.letterbox; this.letterSet = true; this.advance(); return; }
     if (s.music) { burnsMusic(s.music); this.advance(); return; }
     if (s.sfx) { burnsSfx(s.sfx); this.advance(); return; }
     if (s.banner) { g.banner(...s.banner); this.advance(); return; }
     if (s.slowmo !== undefined) { g.cineSlow = clamp(s.slowmo, 0.05, 1); this.slowT = s.dur || 0; this.advance(); return; }
-    if (s.dof !== undefined) { this.dof = s.dof === 'auto' ? null : s.dof; this.advance(); return; }
+    if (s.dof !== undefined) { this.dof = s.dof === 'auto' ? null : s.dof; this.dofSet = true; this.advance(); return; }
     if (s.shake) { g.shake(s.shake); this.advance(); return; }
     if (s.flash) { g.screenFlash(s.flash === true ? '#ffffff' : s.flash, s.alpha || 0.85); this.advance(); return; }
     if (s.swell) { g.musicSwell(s.swell); this.advance(); return; }
@@ -347,7 +347,20 @@ class BurnsCine {
       else if (u >= 1 && this.t > s.cam.dur + s.cam.hold) this.advance();
       return;
     }
-    if (s.parallel) { if (!this.par) this.par = s.parallel.map(p => new BurnsCine(g, [p], null, { letterbox: this.letter })); this.par.forEach(c => c.update(dt)); if (this.par.every(c => c.finished)) { this.par = null; this.advance(); } return; }
+    if (s.parallel) {
+      if (!this.par) this.par = s.parallel.map(p => new BurnsCine(g, [p], null, { letterbox: this.letter }));
+      this.par.forEach(c => c.update(dt));
+      // the screen reads this cutscene's camera, letterbox, focus and slow-mo timer: a cam / dolly / orbit / track,
+      // letterbox, dof or slowmo step inside the block drives them (the last one to change wins)
+      for (const c of this.par) {
+        if (c.cam && c.cam !== c.camSeen) { this.cam = c.camSeen = c.cam; }
+        if (c.letterSet) { this.letter = c.letter; c.letterSet = false; }
+        if (c.dofSet) { this.dof = c.dof; c.dofSet = false; }
+        if (c.slowT > 0) { this.slowT = Math.max(this.slowT || 0, c.slowT); c.slowT = 0; }
+      }
+      if (this.par.every(c => c.finished)) { this.par = null; this.advance(); }
+      return;
+    }
     this.advance();
   }
   skip() {

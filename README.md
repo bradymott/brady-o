@@ -1,114 +1,142 @@
-# Brady-O
+# Brady's Games
 
-Brady (man bun, dark shades, blackwork sleeve tattoos, all black) is packing for Burning Man with his wife **Chinka** when **Lord Buzzkill** crashes the party. He's a mosquito the size of a geodesic dome, and he hates art, dancing and fun. He flies off with Chinka toward the playa. Brady has to get to the Burn and bring her home.
+Three original games for iPhone, starring **Brady** (man bun, square shades, stubble, blackwork sleeve tattoos, all black) and his wife **Chinka**. Each one is its own installable web app, with its own icon and save data.
 
-Brady-O is four original games in one app. Pick one from the start menu.
+**▶ Play: https://bradymott.github.io/brady-o/**
 
-**▶ Play it: https://bradymott.github.io/brady-o/**. On iPhone, open it in Safari, then tap Share → Add to Home Screen to install it as a full-screen app.
+| Game | Link | What it is |
+|---|---|---|
+| **Brady Goes to Burning Man** | [/burning-man/](https://bradymott.github.io/brady-o/burning-man/) | A 3D open-world adventure across Black Rock City |
+| **Super Brady-O World** | [/super-brady-o-world/](https://bradymott.github.io/brady-o/super-brady-o-world/) | A 2D platformer trip around the world: 12 countries, 68 levels |
+| **Art Cart** | [/art-cart/](https://bradymott.github.io/brady-o/art-cart/) | 3D battle racing in wild art cars |
 
-![The Brady-O start menu](screenshots/1-start-menu.png)
+## Install on iPhone
 
-| Game | What it is |
-|---|---|
-| **Road to the Burn** | The main adventure: 100 levels in 10 worlds from the suburbs to the Burn, plus 3 secret worlds. Story scenes, camp bosses, and Lord Buzzkill at the end. |
-| **Brady-O Classic** | 32 bite-size levels in a chunky 8-bit style, with chiptune music and CRT scanlines. |
-| **Super Brady-O World** | A trip around the world. Baron Bric-a-Brac is shrinking and stealing landmarks, so Brady flies after him across a world map: 12 countries from Mexico to the finale in Nepal, 5 levels each, every country with its own enemies, music, castle boss and signature item (tacos, booby boots, a football, a flying carpet, mime gloves, a Dutch bike…), on top of the magic mushroom, joint and LSD tab. Chinka sends postcard clues. Two secret lands hide on the map: Antarctica, and the legendary World 22. |
-| **Art Car Kart** | 3D kart racing on the playa: 8 burner racers in art-car karts, 8 tracks in two cups (Grand Prix or Time Trial), drifting with mini-turbos, and festival items like puke balls, mosquito swarms and disco shields. |
+1. Open a game's link in **Safari**.
+2. Tap **Share**, then **Add to Home Screen**. Keep **Open as Web App** on, then tap **Add**.
+3. Launch it from its icon. It runs full screen, turns with the phone and works offline after the first launch.
 
-The LOOK screen changes Brady's look: man bun or hair down, shades, clear glasses or none, tattoos and stubble on or off, plus hair and skin colors.
+Do this once for each game. No sound? Check the silent switch and the volume, because iPhones mute web audio in silent mode. Progress saves automatically on the device.
 
-## Install it like a real app (no browser bars, turns sideways)
+## Brady Goes to Burning Man
 
-Brady-O is hosted at **https://bradymott.github.io/brady-o/** (GitHub Pages, from the `gh-pages` branch of this repo). On the iPhone:
+Brady arrives at Burning Man as a clueless first-timer with no camp. Over one week he becomes a full-on burner, while the Man (the forty-foot effigy, who has a crush on Chinka) keeps stealing her away. It ends with the Saturday-night burn and a secret Exodus.
 
-1. Open that address in **Safari**.
-2. Tap **Share → Add to Home Screen**, keep **Open as Web App** on, and tap **Add**.
-3. Launch Brady-O from its icon. It runs full screen, turns with the phone (unlock rotation in Control Center), and works offline after the first launch.
+- **Open world:** walk, bike or drive art cars across a streaming Black Rock City:
+  - the Esplanade, the lettered and clock-face streets, and Center Camp at 6:00
+  - the Man and the Temple, and open and deep playa
+  - the trash fence, Gate Road, the airport and Hell Station
+- **Places:** 17 story places in the city, each opening into its own world with a short cinematic, from the gate line to the Orgy Dome, the Temple, the Workshops, a skydive and the Burn. Finish one and you're back at the same door.
+- **Camps and art:**
+  - theme camps, among them Root Society (three geodesic dome stages, the coliseum and its docking art car), Playground, Opulent Temple, Camp Question Mark, Disorient, The Deep End and the Thunderdome, all with playable DJ decks
+  - eight climbable big-art pieces
+- **Home:** Root Society, where Jefr gives Brady a tipi. It has 15 side quests, a backpack, ground scores, trading, and costumes and decorations to unlock.
+- **Graphics:** real-time shadows, HDR lighting with bloom, glowing nights, sunrise and sunset skies, and dust.
+- **Camera:** three views (first person with Brady's hands, close behind him, or far away), switched with **VIEW**.
 
-No sound? Check the silent switch/Action button and the volume. iPhones mute web audio in silent mode.
+**Controls**
+- Left thumb: move.
+- **JUMP**, and **SPIN** (also talk, enter, use).
+- **VIEW** changes the camera; drag on the right side to look around.
+- **Pause** opens the city **MAP** (fast travel), **HOME**, the quest board and **Settings** (graphics quality, camera, reduced motion).
 
-Progress saves automatically on the device.
+## Super Brady-O World
 
-## Controls
+Baron Bric-a-Brac is shrinking and stealing the world's landmarks, so Super Brady-O flies after him on a world map. The route runs Mexico → Ecuador → Brazil → Mozambique → Morocco → Valencia → Paris → Amsterdam → Bali → Vietnam → Japan → Nepal, where the finale happens. Chinka sends postcard clues.
 
-| Touch | Action |
-|---|---|
-| Left thumb, anywhere on the left side | Move. Push down to crouch, push up to enter porta-potty portals |
-| Big purple button | Jump. Hold for a higher jump, tap repeatedly to swim, hold to fly with the toad |
-| Pink button | Hold to run. Throws puke balls with the bottle, hugs enemies while riding Slothy |
-| Top-right button | Pause |
+- **Countries:** five levels each, with its own landmarks, enemies, music, castle boss and **signature item**:
+  - Mexico: taco toss
+  - Ecuador: booby boots
+  - Brazil: football
+  - Mozambique: piri-piri fire breath
+  - Morocco: flying carpet
+  - Valencia: tomato fight
+  - Paris: mime gloves
+  - Amsterdam: Dutch bike
+  - Bali: surfboard
+  - Vietnam: noodle lasso
+  - Japan: nunchucks
+  - Nepal: yak ride
+- **Core power-ups:** the **magic mushroom** (grow, plus a colorful, dizzy screen), the **joint** (blow smoke puffs at enemies) and the **LSD tab** (fly on a rainbow and shoot rainbow lasers).
+- **Secret lands:** **Antarctica**, and the legendary **World 22**.
+- **Every level is checked:** a solver running Brady's real jump physics proves each of the 68 levels can be finished and every postcard reached.
 
-**Art Car Kart:** gas is automatic. Steer with the left thumb, hold the jump button while turning to drift (let go for a mini-turbo), and tap the pink button to use your item. Tap DRIFT just before GO for a launch boost.
+**Controls:** left thumb to move, the big button to jump, the pink button to run, throw or use the signature item, and the top-right button to pause.
 
-Down + jump drops through thin platforms. Keyboard: arrows/WASD, Space/Z = jump, X/Shift = run/throw, Esc = pause. Bluetooth controllers work too. Settings can resize the buttons or move them to the other side.
+## Art Cart
 
-## Power-ups
+- **12 original art cars,** each with its own weapon that reloads every 6–10 seconds:
+  - Bass Valentine (a heart sound car): Bass Drop shockwave
+  - Glitterfin (mirror-ball fish): Dazzle Beam
+  - Calamari Inferno (fire octopus): Tentacle Torch
+  - Quackzilla (rubber duck): Bubble Barrage
+  - Pyramid Scheme (laser pyramid): Laser Sweep
+  - …and seven more.
+- **26 drivers:** Brady, Chinka, the Man and the whole burner cast.
+- **Grand Prix:** two cups of four tracks, at sunset, night, in a dust storm, and Burn Night.
+- **Other modes:** Quick Race, Time Trial, and **Battle** in a skate park, a dirt-bike course and a deep-playa art park.
+- **Battle objectives:** last car standing, glow-orb grab, king of the hill, capture the flag, and a scramble race.
 
-- **Glow sticks**: collect 100 for an extra life
-- **Psychedelic mushroom**: Brady grows (and the world gets very colorful)
-- **Bottle of liquor**: throw bouncing green puke balls
-- **Bufo toad**: hold jump to fly
-- **Joint**: float like a balloon (hold down to sink)
-- **Disco ball**: Disco Fever, ten seconds of invincibility
-- **Water bottle**: extra life ("hydrate or die-drate")
-- **Photos of Chinka**: three hidden in every level
-- **Slothy** (Brady-O World): wake him in his hammock and ride him. He hugs burners into submission, and if you get hit he takes a nap instead of Brady taking the damage.
-
-## Cast
-
-Burners who get in the way: hippies who want to discuss your aura, tech bros on electric unicycles, orgy-dome creepers in fur coats, sparkle ponies who forgot water, fake spiritual pagan witches, and DPW. Obviously DPW.
-
-Camp bosses in Road to the Burn: Raccoon in the Garage, The Cart Lord, Sheriff Tumbleweed, The Geyser Guardian, Captain Hard-Hat, DJ Wub-Lord, Grand Witch Moonbeam, Dust Devil Diablo, Guru Grifter, and **Lord Buzzkill**.
-
-## Worlds (Road to the Burn)
-
-1. Packing Night · 2. Reno Supply Run · 3. Highway 447 · 4. Hot Springs · 5. Gate Road ·
-6. The Esplanade · 7. Theme Camp Row · 8. Deep Playa · 9. The Temple · 10. The Burn
-
-Level types are open playa, underground, sky, underwater, tower climbs, art-car auto-scrollers and boss camps. **Three secret worlds** (15 more levels) are waiting to be found.
-
-A solver that runs Brady's real jump physics checked every level in all three platformer games (192 levels). It confirms that the exit, all three photos and every secret exit or warp can be reached.
+**Controls**
+- Steer with the stick. Gas is automatic (turn auto-gas off in the menu for GAS and BRAKE).
+- **HOP** (hold to drift for a mini-turbo), **FIRE** for your car's weapon, **ITEM** for pickups.
 
 ## Screenshots
 
-| | |
-|---|---|
-| ![Slothy napping in a hammock in Brady-O World](screenshots/2-world-slothy-hammock.png) | ![The Black Rock City map](screenshots/3-world-black-rock-city-map.png) |
-| ![Brady-O Classic in 8-bit mode](screenshots/4-classic-8bit.png) | ![A psychedelic mushroom trip](screenshots/6-mushroom-trip.png) |
+![Black Rock City, the open world](screenshots/burning-man-city.jpg)
 
-![All eight Art Car Kart tracks](screenshots/5-art-car-kart-tracks.png)
+![Rhythm Wave: the bamboo dance floor, the dance contest and the wonky ride](screenshots/burning-man-rhythm-wave.jpg)
 
-## Secrets (spoilers below)
+![Root Society, Brady's home](screenshots/burning-man-root-society.jpg)
 
-<details>
-<summary>Show secrets</summary>
+![Super Brady-O World: Mexico, Ecuador, Brazil and Paris](screenshots/super-brady-o-world.jpg)
 
-- Every world's first level hides an invisible block with an extra life near the start.
-- **Warp lounges**: in 1-2, 4-5 and 7-3, climb the big staircase at the end, jump through the gap in the ceiling and run right along the top.
-- **1-4**: a wall that isn't a wall. Behind it, a glitching portal to the **Trip Dimension**.
-- **2-2**: the bonus room's right wall is fake. The secret exit opens **World 22**.
-- **3-5**: same trick, opens **Sunrise Set**.
-- **Brady-O World**: 41-4, 43-3, 44-3 and 46-4 each hide a secret exit (look for the porta-potty up on a pillar, then the fake wall in the bonus room). They open shortcuts and the secret **Trash Fence** and **Sunrise Set** regions.
-- Stand still for 7 seconds and Brady plays air guitar. Wait longer and he checks his phone.
-- Title screen: tap Brady 5 times.
-- Title screen: swipe up, up, down, down, left, right, left, right for 30 lives and a secret hair color.
+![Super Brady-O World: Bali, Vietnam, Japan and Nepal](screenshots/super-brady-o-world-asia.jpg)
 
-</details>
+![Art Cart races](screenshots/art-cart-races.jpg)
 
-## Building from source
+![Art Cart's twelve cars](screenshots/art-cart-cars.jpg)
+
+## Building and testing
 
 ```bash
 node tools/build.js
 ```
 
-This writes `dist/index.html` (hosted version), `dist/brady-o.html` (standalone file), `dist/app/` (the installable app folder) and `dist/Brady-O-app.zip`.
+**What the build writes:**
+- `dist/site/`: the website, made of a launcher page plus `burning-man/`, `super-brady-o-world/` and `art-cart/`. Each app folder has its own `index.html`, manifest, offline service worker and icons.
+- `dist/brady-o.html`: an all-in-one build used by the test tools.
 
-**Publishing:** the website is the contents of `dist/app/` on the `gh-pages` branch. To ship an update, rebuild and replace the files on that branch. The service worker picks up the new version the next time the app is opened online.
+`BRADY_DIST=/some/folder` builds somewhere else.
 
-Other tools:
+**Tests:**
+- `node tools/apps_test.js`: boots all three apps and checks their names, save data and errors.
+- `node tools/gameplay_test.js`: Super Brady-O World checks (power-ups, bosses, the route, the ending).
+- `node tools/validate_levels.js`: proves every Super Brady-O World level can be finished.
+- `node tools/make_icon.js`: renders the three home-screen icons.
 
-- `node tools/validate_levels.js` proves every level is completable.
-- `node tools/find_seeds.js` re-rolls any level that fails.
-- `node tools/make_icon.js` renders the home-screen icons.
+**Publishing:** copy `dist/site/*` onto the root of the `gh-pages` branch, then commit and push. GitHub Pages serves it, and each app's service worker picks up the new version the next time it's opened online.
 
-Fonts: Bungee and Rubik, SIL Open Font License 1.1 (licences included in the app folder).
+**Code layout:**
+- `src/*.js` are plain modules joined into one script per app.
+- `00–02` and `99`: shared core, audio and input.
+- `03–29`: Super Brady-O World. The world tour is `28_tour_*` and `29_tour_<country>`.
+- `40_burns_*`: the 3D engine (WebGL2 with a WebGL1 fallback).
+- `41_burns_*`: the big-art, camps and DJ modules.
+- `42_burns_*`: the Burning Man worlds and the open city.
+- `43_cart_*`: Art Cart, which runs on the same 3D engine.
+
+**Docs:**
+- `docs/BURNS_GUIDE.md`: the 3D engine and world-building guide.
+- `docs/BURNS_CAMPS.md` and `docs/BURNS_BIGART.md`.
+- `docs/WORLD_TOUR_GUIDE.md`: how to add a country.
+- `docs/design/`: the story, cast and direction.
+- `docs/LOCAL_SETUP.md` and `docs/HANDOFF_LOCAL_AGENTS.md`: setting up Blender and local Claude agents for the next graphics stage.
+
+## Content notes
+
+- All characters, levels, music and art are original. Real camps and art cars appear as their general layouts and structures with our own decorations. Real DJs appear as name-drops only.
+- The tone is cartoon satire, PG-13 with cartoon censoring.
+- The games include drug references (the power-ups and ground scores), so they would get a 17+ rating if ever submitted to an app store.
+
+Fonts: Bungee and Rubik, SIL Open Font License 1.1 (licences are included in each app folder).
