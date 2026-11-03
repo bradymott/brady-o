@@ -14,3 +14,7 @@ node_modules/
 
 # Private source material (face scans, reference photos): never published
 private/
+
+# Blender backups
+*.blend1
+*.blend2

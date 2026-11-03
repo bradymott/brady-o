@@ -41,6 +41,7 @@ class KartMenuScene {
     Sound.music('kart_menu');
     this.gl = BurnsGL.init();
     if (this.gl) { BurnsGL.configure(sv.gfx || 'auto'); BURNS_ATLAS.init(); BURNS_SPRITES.init(); this.R = new BurnsRenderer(); this.env = {}; }
+    if (this.gl && typeof CartGLB !== 'undefined') { try { CartGLB.preload(); } catch (e) { console.warn('cart: glb preload failed', e); } }
     this.jobs = this.gl ? [() => CartShowroom.build(), () => this.loadPreview()] : [];
     this.build();
   }
@@ -58,7 +59,8 @@ class KartMenuScene {
   ensurePreview() {
     const car = CART_CARS[this.carSel], drv = CART_DRIVERS[this.drvSel];
     if (!this.gl) return;
-    if (!this.pcar || this.pcar.id !== car.id || !this.pdrv || this.pdrv.id !== drv.id) this.loadPreview();
+    const glb = typeof CartGLB !== 'undefined' && !!CartGLB.model(car.id, false);
+    if (!this.pcar || this.pcar.id !== car.id || !this.pdrv || this.pdrv.id !== drv.id || !!this.pcar.M.glb !== glb) this.loadPreview();
   }
   /* ---------- layout ---------- */
   build() {

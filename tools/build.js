@@ -141,6 +141,15 @@ const manifestFor = (name, short, desc, color, icons) => ({
     icons.includes('icon-maskable-512.png') && { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
   ].filter(Boolean)
 });
+// copy assets/models/<appDir>/*.glb into outDir; returns the file names (sorted)
+const copyModels = (appDir, outDir) => {
+  const src = path.join(root, 'assets', 'models', appDir);
+  if (!fs.existsSync(src)) return [];
+  const names = fs.readdirSync(src).filter(f => f.endsWith('.glb')).sort();
+  if (names.length) fs.mkdirSync(outDir, { recursive: true });
+  for (const f of names) fs.copyFileSync(path.join(src, f), path.join(outDir, f));
+  return names;
+};
 const copyFontLicences = (dir) => {
   for (const f of ['OFL-bungee.txt', 'OFL-rubik.txt']) {
     const p = path.join(root, 'assets', 'fonts', f);
@@ -162,6 +171,7 @@ const iconB64Path = path.join(dist, 'icon.b64');
 const iconData = fs.existsSync(iconB64Path) ? `data:image/png;base64,${fs.readFileSync(iconB64Path, 'utf8').trim()}` : '';
 const combinedMeta = { title: 'Brady-O', appleTitle: 'Brady-O', desc: 'All the Brady games in one build.', color: '#07040e' };
 fs.writeFileSync(path.join(dist, 'index.html'), artifact);
+for (const A of Object.values(APPS)) copyModels(A.dir, path.join(dist, 'models'));
 fs.writeFileSync(path.join(dist, 'brady-o.html'), pageHtml({ ...combinedMeta, code: allCode, extra: iconData ? `<link rel="apple-touch-icon" href="${iconData}">` : '' }));
 {
   const appDir = path.join(dist, 'app');
@@ -195,9 +205,11 @@ for (const [id, A] of Object.entries(APPS)) {
   fs.writeFileSync(path.join(dir, 'index.html'), html);
   fs.writeFileSync(path.join(dir, 'manifest.webmanifest'), JSON.stringify(manifestFor(A.name, A.short, A.desc, A.color, icons), null, 2));
   const v = crypto.createHash('sha1').update(html).digest('hex').slice(0, 10);
-  fs.writeFileSync(path.join(dir, 'sw.js'), swSource('app-' + id, v, ['./', './index.html', './manifest.webmanifest'].concat(icons.map(f => './' + f))));
+  // Blender-made models (assets/models/<app>/*.glb) ship beside the page as models/*.glb and are cached offline
+  const models = copyModels(A.dir, path.join(dir, 'models'));
+  fs.writeFileSync(path.join(dir, 'sw.js'), swSource('app-' + id, v, ['./', './index.html', './manifest.webmanifest'].concat(icons.map(f => './' + f), models.map(f => './models/' + f))));
   copyFontLicences(dir);
-  report.push(`${A.dir} ${files.length} modules ${(html.length / 1024).toFixed(0)}KB`);
+  report.push(`${A.dir} ${files.length} modules ${(html.length / 1024).toFixed(0)}KB${models.length ? ' + ' + models.length + ' glb' : ''}`);
 }
 // launcher page at the site root
 const tile = (A, id) => `<a class="app" href="${A.dir}/"><img src="${A.dir}/icon-180.png" alt="" onerror="this.style.visibility='hidden'"><span><b>${A.name}</b><small>${A.desc}</small></span></a>`;

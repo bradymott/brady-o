@@ -17,6 +17,8 @@ const CartModels = {
   cache: {},
   // hi + lo detail models for a car id
   get(id, lo) {
+    // a Blender-made .glb for this car, once it has loaded (43_cart_bb_glb.js); the procedural model until then
+    if (typeof CartGLB !== 'undefined') { const G = CartGLB.model(id, lo); if (G) return G; }
     const key = id + (lo ? ':lo' : '');
     let M = this.cache[key];
     if (!M) { M = this.build(id, lo); this.cache[key] = M; }
