@@ -6368,7 +6368,8 @@ const BURNS_SKINACTOR = {
   STAND_IN: 'mannequin',
   LOD_D2: 45 * 45,        // actors beyond this draw the procedural LOD (a few hundred triangles vs ~8k skinned)
   SPARKLE_D2: 25 * 25,    // Chinka's glints are emitted only this close to the camera
-  SPARKLE_N: 2            // ...and this many a frame (budget: <= 6)
+  SPARKLE_N: 2,           // ...and this many a frame (budget: <= 6)
+  CART_SCALE: 1.22        // Art Cart drivers are drawn this much bigger than life so they read from the chase camera
 };
 
 class BurnsSkinActor {
@@ -6406,7 +6407,7 @@ class BurnsSkinActor {
       S.play(clip, { loop: !BURNS_SKINACTOR.ONESHOT[clip], fade: this.active ? 0.15 : 0, speed, restart: true });
       this._clip = clip;
     } else S.speed = speed;
-    const sc = ch.scale * this.unit;
+    const sc = ch.scale * this.unit * (this.cart ? BURNS_SKINACTOR.CART_SCALE : 1);   // kart drivers read bigger, like the cartoon rigs
     const moved = ch.x !== this._x || ch.y !== this._y || ch.z !== this._z || ch.yaw !== this._yaw || sc !== this._sc;
     S.x = this._x = ch.x; S.y = this._y = ch.y; S.z = this._z = ch.z; S.yaw = this._yaw = ch.yaw; S.scale = this._sc = sc;
     S.tint = ch.tint || this.tint; S.face = ch.face || 0;
@@ -6418,8 +6419,14 @@ class BurnsSkinActor {
   // the palette in the car's frame: cartPoseDriver places the BurnsChar at the seat (car-local), so the same placement
   // goes under the car's body bone (bones[0..11]), exactly as the rigid driver's bones do
   seat(car) {
-    const P = this.S.palette, n = this.S.nb * 12, B = car.bones, W = this.seated || (this.seated = new Float32Array(n));
-    for (let k = 0; k < n; k += 12) BurnsM.a34Mul(W, k, B, 0, P, k);
+    // cartPoseDriver places the character so the procedural rig's hips (0.88 m above its origin) sit on the seat; a
+    // skinned seated clip keeps its hips wherever it was authored, so lift or drop the palette until its hips sit there too
+    const S = this.S, P = S.palette, n = S.nb * 12, B = car.bones, W = this.seated || (this.seated = new Float32Array(n));
+    const hp = S.jointPoint('mixamorig:Hips', 0, 0, 0, this._hp || (this._hp = [0, 0, 0]));
+    const dy = 0.88 * S.scale - (hp[1] - S.y);
+    const T = this._seatP || (this._seatP = new Float32Array(n));
+    T.set(P.subarray(0, n)); for (let k = 7; k < n; k += 12) T[k] += dy;
+    for (let k = 0; k < n; k += 12) BurnsM.a34Mul(W, k, B, 0, T, k);
     return W;
   }
   // rising white-gold glints around Chinka (the play scene's fx), a couple a frame within 25 m of the camera
@@ -6498,7 +6505,9 @@ Object.assign(BurnsSkinActor, {
   // an Art Cart driver (race or showroom): car = { bones, M }, ch = the driver's BurnsChar already placed by cartPoseDriver
   drawDriver(R, car, ch, idOrType) {
     const kind = this.kindOf(idOrType); if (!kind || !car || !car.bones) return false;
-    const B = this.of(kind, ch); if (!B || !B.sync(ch)) return false;
+    const B = this.of(kind, ch); if (!B) return false;
+    B.cart = true;
+    if (!B.sync(ch)) return false;
     const W = B.seat(car), S = B.S;
     if (R.pass === 'shadow') R.skinW(B.asset.geo, W, S.nb, null, 0, 0);
     else { R.skinW(B.asset.geo, W, S.nb, S.tint, S.face, 0.45); this.drawn++; }
