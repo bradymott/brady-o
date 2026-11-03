@@ -89,8 +89,9 @@ def capsule(p0, p1, r, r1=None, seg=16, cap=5, body=3):
 
 def limb(p0, p1, r, r1=None, seg=16, cap=5, body=3, pattern=None):
     """capsule() that also returns per-face (t, angle) parameters: t runs 0 at p0 to 1 at p1 along the axis, angle 0..TAU
-    around it (0 = the frame normal, which is engine 'up' or 'left' for a vertical limb). pattern(t, ang) -> material
-    index sets each face's material_index (tattoo sleeves, striped robes). Returns (bm, params)."""
+    around it (0 = the frame normal, which is engine 'up' or 'left' for a vertical limb). pattern(t, ang, c) -> material
+    index sets each face's material_index (tattoo sleeves, striped robes); c is the face centre in engine space.
+    Returns (bm, params)."""
     p0, p1 = E(*p0), E(*p1); r1 = r if r1 is None else r1
     axis = p1 - p0; L = axis.length; d = axis.normalized()
     q = d.to_track_quat('Z', 'Y'); R = q.to_matrix()
@@ -118,12 +119,12 @@ def limb(p0, p1, r, r1=None, seg=16, cap=5, body=3, pattern=None):
                 if len(vs) >= 3:
                     try: f = bm.faces.new(vs)
                     except ValueError: continue
-                    hc = (rows[k - 1][1] + h) / 2
-                    params[f] = (max(0.0, min(1.0, hc / L)), ((j + 0.5) / seg * TAU) % TAU)
+                    hc = (rows[k - 1][1] + h) / 2; fc = f.calc_center_median()
+                    params[f] = (max(0.0, min(1.0, hc / L)), ((j + 0.5) / seg * TAU) % TAU, (fc.x, fc.z, -fc.y))
         ring_prev = ring
     bm.normal_update()
     if pattern:
-        for f, (t, ang) in params.items(): f.material_index = int(pattern(t, ang))
+        for f, (t, ang, c) in params.items(): f.material_index = int(pattern(t, ang, c))
     return bm, params
 
 def rbox(center, size, bevel, segments=3, taper=None):

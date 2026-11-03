@@ -91,7 +91,7 @@ function serve(root) {
   }, [who, dist, side, h, clips, sim]);
   const shot = async (name) => { await page.waitForTimeout(900); await page.screenshot({ path: path.join(out, name + '.png'), timeout: 180000 }); };
   await look('brady', 0.85, 0.25, 1.66, { brady: 'talk', chinka: 'idle' }, 0.4); await shot('brady-face');
-  await look('brady', 1.7, -0.5, 1.25, { brady: 'wave', chinka: 'idle' }, 0.5); await shot('brady-tattoos');
+  await look('brady', 1.6, -1.15, 1.25, { brady: 'idle', chinka: 'idle' }, 0.5); await shot('brady-tattoos');   // from his right, away from Chinka: the medallion on the outer upper arm
   await look('chinka', 0.8, 0.2, 1.55, { brady: 'idle', chinka: 'talk' }, 0.4); await shot('chinka-face');
   await look('chinka', 3.0, 0.45, 0.85, { brady: 'idle', chinka: 'walk' }, 0.35); await shot('chinka-robe');
   // both dancing, side by side

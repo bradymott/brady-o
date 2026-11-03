@@ -13,18 +13,18 @@ import os, sys, math, random
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from charkit import *
 
-K = 1.68 / 1.8          # everything below is authored at the mannequin's 1.8 m and scaled down
+K = 1.65 / 1.8          # everything below is authored at the mannequin's 1.8 m and scaled down
 SK = Matrix.Scale(K, 4)
 
 def sc(p): return (p[0] * K, p[1] * K, p[2] * K)
 
 def build_chinka(rig):
-    skin = mat('skin_tan', '#c98a62', rough=0.72); ivory = mat('robe_ivory', '#f7f0e2', rough=0.75)
+    skin = mat('skin_tan', '#c9956c', rough=0.72); freckle = mat('freckle', '#7e5238', rough=0.8); ivory = mat('robe_ivory', '#f7f0e2', rough=0.75)
     gold_cloth = mat('robe_gold', '#e9d3a0', rough=0.7); gold = mat('gold_trim', '#ffcf5c', rough=0.3, metal=0.6, emit='#ffcf5c', strength=1.0)
     gold_hi = mat('gold_bright', '#ffd870', rough=0.25, metal=0.6, emit='#ffd870', strength=2.0)
     bead = mat('bead', '#fff2cc', rough=0.3, emit='#fff2cc', strength=4.0)
-    hair = mat('hair_dark', '#2b1a12', rough=0.5); brow = mat('brow_dark', '#17100c', rough=0.8)
-    white = mat('eye_white', '#fbfbf7', rough=0.3); iris = mat('iris', '#4b2a16', rough=0.2); pupil = mat('pupil', '#0a0806', rough=0.3)
+    hair = mat('hair_dark', '#2e1a10', rough=0.5); brow = mat('brow_dark', '#17100c', rough=0.8)
+    white = mat('eye_white', '#fbfbf7', rough=0.3); iris = mat('iris', '#3a2214', rough=0.2); pupil = mat('pupil', '#0a0806', rough=0.3)
     hl = mat('eye_hl', '#ffffff', rough=0.2, emit='#ffffff', strength=3.0); lash = mat('lash', '#0d0908', rough=0.7)
     lip = mat('lip_rose', '#c4484e', rough=0.45, coat=0.6); teeth = mat('teeth', '#f4f1ea', rough=0.4)
     L, Rr = 'Left', 'Right'
@@ -35,10 +35,10 @@ def build_chinka(rig):
     HAIRB = ['HairB1', 'HairB2', 'Head', 'Neck']
     # ---- the figure: a fitted bodice lathed over an hourglass profile, the bust and the behind under the robe ----
     prof = [(0.0, 0.90), (0.21, 0.90), (0.225, 0.95), (0.205, 1.01), (0.165, 1.075), (0.15, 1.11), (0.165, 1.16), (0.2, 1.23), (0.205, 1.29), (0.185, 1.35), (0.165, 1.41), (0.13, 1.455), (0.075, 1.48), (0.0, 1.49)]
-    part('bodice', bm_lathe(prof, 22, at=(0, 0, 0), sx=1.0, sz=0.66), ivory, SPINE, 1.3)
+    part('bodice', bm_lathe(prof, 20, at=(0, 0, 0), sx=1.0, sz=0.66), ivory, SPINE, 1.3)
     for s in (1, -1):
-        part('bust%d' % s, ellipsoid((s * 0.068, 1.272, 0.082), 0.084, 0.07, 0.072, 11, 6), ivory, ['Spine1', 'Spine2'], 0.9)
-        part('hip%d' % s, ellipsoid((s * 0.085, 0.92, -0.085), 0.105, 0.095, 0.085, 11, 6), ivory, ['Hips', s > 0 and L + 'UpLeg' or Rr + 'UpLeg'], 1.0)
+        part('bust%d' % s, ellipsoid((s * 0.068, 1.272, 0.082), 0.084, 0.07, 0.072, 10, 5), ivory, ['Spine1', 'Spine2'], 0.9)
+        part('hip%d' % s, ellipsoid((s * 0.085, 0.92, -0.085), 0.105, 0.095, 0.085, 10, 5), ivory, ['Hips', s > 0 and L + 'UpLeg' or Rr + 'UpLeg'], 1.0)
     # ---- the skirt: a double-sided loft from the hips to the ankles, drape stripes in ivory and pale gold ----
     levels = [(0.95, 0.215, 0.145, 0.0), (0.84, 0.238, 0.175, 0.0), (0.66, 0.25, 0.205, 0.0), (0.48, 0.268, 0.232, 0.0), (0.32, 0.29, 0.26, 0.0), (0.19, 0.315, 0.285, 0.0), (0.085, 0.345, 0.315, 0.02)]
     N = 24
@@ -74,55 +74,61 @@ def build_chinka(rig):
     for i in range(12):
         th = TAU * i / 12; h = 1.09 + (0.02 if i % 2 else 0.038)
         part('beltstep%d' % i, bm_box(0.022, 0.018, 0.01, (0.162 * math.cos(th), h, 0.107 * math.sin(th)), M=rot(math.atan2(math.cos(th), math.sin(th)))), gold, ['Spine', 'Spine1'], 1.2)
-    part('collar', bm_torus(0.09, 0.013, 16, 5, AY, (0, 1.465, 0.0), sy=0.8), gold_hi, ['Spine2', 'Neck'], 1.0)
+    part('collar', bm_torus(0.09, 0.013, 14, 5, AY, (0, 1.465, 0.0), sy=0.8), gold_hi, ['Spine2', 'Neck'], 1.0)
     part('collar_disc', bm_cyl(0.024, 0.024, 0.008, 12, AZ, (0, 1.42, 0.12)), gold_hi, ['Spine2', 'Neck'], 1.0)
     # ---- neck and head ----
     part('neck', capsule((0, 1.45, -0.005), (0, 1.58, -0.005), 0.047, None, 14, 3, 2), skin, ['Neck', 'Spine2', 'Head'])
-    part('head', ellipsoid((0, 1.675, -0.01), 0.088, 0.115, 0.103, 18, 11), skin, ['Head', 'Neck'], 0.6)
-    part('chin', ellipsoid((0, 1.632, 0.008), 0.076, 0.082, 0.094, 16, 7, math.pi * 0.45, math.pi), skin, ['Head', 'Neck'], 0.6)
+    part('head', ellipsoid((0, 1.675, -0.01), 0.093, 0.112, 0.102, 16, 10), skin, ['Head', 'Neck'], 0.6)
+    part('chin', ellipsoid((0, 1.636, 0.006), 0.084, 0.08, 0.095, 16, 7, math.pi * 0.45, math.pi), skin, ['Head', 'Neck'], 0.6)
+    for s in (1, -1):
+        part('cheek%d' % s, ellipsoid((s * 0.056, 1.65, 0.05), 0.03, 0.026, 0.032, 10, 6), skin, ['Head'], 0.6)
+    for i, (x, y, z) in enumerate(((0.052, 1.66, 0.084), (-0.048, 1.652, 0.087), (0.07, 1.64, 0.07), (-0.03, 1.628, 0.095), (0.036, 1.672, 0.09))):
+        part('freckle%d' % i, ellipsoid((x, y, z), 0.0035, 0.003, 0.002, 6, 3), freckle, ['Head'], 0.6)
     for s in (1, -1):
         part('ear%d' % s, ellipsoid((s * 0.088, 1.668, -0.015), 0.012, 0.026, 0.018, 10, 6), skin, ['Head'], 0.6)
         # sun-disc earrings: a gold disc with a brighter centre, hanging under the ear
-        part('earring%d' % s, bm_cyl(0.028, 0.028, 0.007, 14, AX, (s * 0.1, 1.615, -0.012)), gold, ['Head'], 0.6)
-        part('earring_c%d' % s, bm_cyl(0.011, 0.011, 0.012, 10, AX, (s * 0.1, 1.615, -0.012)), gold_hi, ['Head'], 0.6)
-        part('earring_w%d' % s, bm_rod((s * 0.095, 1.655, -0.013), (s * 0.1, 1.642, -0.012), 0.003, 5), gold, ['Head'], 0.6)
+        hx, hy, hz, hr = s * 0.1, 1.628, -0.012, 0.016
+        twist = lambda u: [(0.0068 * (1 + 0.4 * math.cos(3 * a - u * TAU * 3)) * math.cos(a), 0.0068 * (1 + 0.4 * math.cos(3 * a - u * TAU * 3)) * math.sin(a)) for a in (TAU * j / 7 for j in range(7))]
+        part('hoop%d' % s, bm_sweep(lambda u: (hx, hy + hr * math.cos(u * TAU), hz + hr * math.sin(u * TAU)), twist, 12, closed=True, ref=(1, 0, 0)), gold, ['Head'], 0.6)
     # eyes: big, with iris, pupil, highlight, an upper lash line and lash flicks
     for s in (1, -1):
-        part('eye%d' % s, ellipsoid((s * 0.036, 1.692, 0.078), 0.027, 0.022, 0.018, 10, 7), white, ['Head'], 0.6)
-        part('iris%d' % s, ellipsoid((s * 0.034, 1.692, 0.09), 0.015, 0.015, 0.007, 10, 5), iris, ['Head'], 0.6)
-        part('pupil%d' % s, ellipsoid((s * 0.034, 1.692, 0.095), 0.007, 0.007, 0.004, 8, 4), pupil, ['Head'], 0.6)
+        part('eye%d' % s, ellipsoid((s * 0.037, 1.692, 0.079), 0.028, 0.017, 0.016, 10, 7), white, ['Head'], 0.6)
+        part('iris%d' % s, ellipsoid((s * 0.035, 1.692, 0.09), 0.013, 0.013, 0.007, 10, 5), iris, ['Head'], 0.6)
+        part('pupil%d' % s, ellipsoid((s * 0.035, 1.692, 0.095), 0.0065, 0.0065, 0.004, 8, 4), pupil, ['Head'], 0.6)
         part('hl%d' % s, ellipsoid((s * 0.03, 1.697, 0.098), 0.004, 0.004, 0.003, 6, 3), hl, ['Head'], 0.6)
-        part('lash%d' % s, bm_torus(0.028, 0.0045, 12, 4, AZ, (s * 0.036, 1.694, 0.094), sweep=(math.pi * 0.08, math.pi * 0.95)), lash, ['Head'], 0.6)
+        part('lash%d' % s, bm_torus(0.028, 0.005, 12, 4, AZ, (s * 0.037, 1.692, 0.094), sweep=(math.pi * 0.05, math.pi * 0.95), sy=0.7), lash, ['Head'], 0.6)
+        part('wing%d' % s, bm_rod((s * 0.063, 1.694, 0.092), (s * 0.078, 1.703, 0.086), 0.0025, 4), lash, ['Head'], 0.6)
         for i, (dx, dy, ang) in enumerate(((0.03, 0.006, 0.9), (0.034, -0.002, 0.5))):
             part('flick%d_%d' % (s, i), bm_rod((s * (0.036 + dx * 0.9), 1.698 + dy, 0.094), (s * (0.036 + dx * 0.9 + 0.014 * math.cos(ang)), 1.698 + dy + 0.014 * math.sin(ang), 0.094), 0.0025, 4), lash, ['Head'], 0.6)
         # strong arched brows
-        part('brow%d' % s, bm_torus(0.04, 0.0065, 12, 5, AZ, (s * 0.04, 1.705, 0.085), sweep=(math.pi * 0.22, math.pi * 0.82)), brow, ['Head'], 0.6)
+        part('brow%d' % s, bm_torus(0.043, 0.0085, 12, 5, AZ, (s * 0.042, 1.703, 0.084), sweep=(math.pi * 0.2, math.pi * 0.85), sy=0.8), brow, ['Head'], 0.6)
     # a small nose, full lips with a warm smile, a hint of teeth
-    part('nose', capsule((0, 1.7, 0.088), (0, 1.66, 0.108), 0.011, 0.017, 12, 3, 2), skin, ['Head'], 0.6)
-    part('nose_tip', ellipsoid((0, 1.657, 0.11), 0.018, 0.016, 0.016, 12, 8), skin, ['Head'], 0.6)
-    part('lip_up', bm_torus(0.025, 0.006, 12, 5, AZ, (0, 1.627, 0.095), sweep=(math.pi * 1.08, math.pi * 1.92)), lip, ['Head'], 0.6)
-    part('lip_lo', bm_torus(0.022, 0.0075, 12, 5, AZ, (0, 1.621, 0.095), sweep=(math.pi * 1.1, math.pi * 1.9)), lip, ['Head'], 0.6)
-    part('teeth', bm_box(0.022, 0.0045, 0.004, (0, 1.612, 0.099)), teeth, ['Head'], 0.6)
+    part('nose', capsule((0, 1.705, 0.086), (0, 1.656, 0.109), 0.011, 0.016, 12, 3, 2), skin, ['Head'], 0.6)
+    part('nose_tip', ellipsoid((0, 1.654, 0.111), 0.018, 0.015, 0.016, 12, 8), skin, ['Head'], 0.6)
+    part('lip_up', bm_torus(0.031, 0.0055, 12, 5, AZ, (0, 1.628, 0.096), sweep=(math.pi * 1.05, math.pi * 1.95), sy=0.55), lip, ['Head'], 0.6)
+    part('lip_lo', bm_torus(0.029, 0.0055, 12, 5, AZ, (0, 1.622, 0.096), sweep=(math.pi * 1.06, math.pi * 1.94), sy=0.55), lip, ['Head'], 0.6)
+    part('teeth', bm_box(0.036, 0.0065, 0.004, (0, 1.616, 0.1)), teeth, ['Head'], 0.6)
     # the circlet: a thin gold band on the hair with a sun disc at the brow
     part('circlet', bm_torus(0.108, 0.006, 20, 4, AY, (0, 1.745, -0.02), sy=1.15), gold_hi, ['Head'], 0.6)
     part('circlet_disc', bm_cyl(0.016, 0.016, 0.008, 10, AZ, (0, 1.748, 0.1)), gold_hi, ['Head'], 0.6)
     # ---- hair: a cap, side and back sheets, then wavy strands past the shoulders ----
     part('hair_cap', ellipsoid((0, 1.72, -0.035), 0.1, 0.1, 0.13, 18, 7, 0.0, math.pi * 0.5), hair, ['Head'], 0.6)
-    part('hair_sides', hair_sheet((0, 1.72, -0.03), 0.1, 0.13, 1.72, 1.5, 0.2, 0.03, 5, 12, flare=0.03, wave=0.01), hair, ['Head', 'Neck'], 0.6)
-    part('hair_mass', hair_sheet((0, 1.5, -0.04), 0.13, 0.16, 1.5, 1.2, 0.28, 0.035, 4, 10, flare=0.02, wave=0.02), hair, HAIRB, 1.6)
+    part('hair_sides', hair_sheet((0, 1.72, -0.03), 0.1, 0.13, 1.72, 1.5, 0.25, 0.03, 5, 12, flare=0.03, wave=0.01), hair, ['Head', 'Neck'], 0.6)
+    part('hair_part', bm_tube(catmull([(0, 1.74, 0.098), (0, 1.79, 0.05), (0, 1.815, -0.02), (0, 1.805, -0.08)], 8), 0.003, 4), skin, ['Head'], 0.6)
+    part('hair_mass', hair_sheet((0, 1.5, -0.04), 0.13, 0.16, 1.5, 1.2, 0.28, 0.035, 3, 9, flare=0.02, wave=0.02), hair, HAIRB, 1.6)
     rnd = random.Random(7)
     strands = []
-    for i in range(15):
-        u = 0.19 + 0.62 * (i + 0.5) / 15        # fraction of a turn from the front, clockwise around the head
+    for i in range(14):
+        u = 0.23 + 0.54 * (i + 0.5) / 14        # fraction of a turn from the front, clockwise around the head
         a = u * TAU; side = math.sin(a)
         bones = (['HairL1', 'HairL2', 'Head'] if side > 0.35 else ['HairR1', 'HairR2', 'Head'] if side < -0.35 else ['HairB1', 'HairB2', 'Head'])
         y0 = 1.7; length = 0.5 + 0.2 * (1 - abs(side)) + 0.08 * rnd.random()
         pts = []
         for k in range(8):
             v = k / 7; y = y0 - length * v
-            r = 0.105 + 0.05 * math.sin(v * math.pi) + 0.02 * v
-            wob = 0.03 * math.sin(v * TAU * 2.2 + i * 1.3) * min(1.0, v * 2.5)
-            ang = a + 0.3 * math.sin(v * TAU * 1.6 + i * 0.7) * v
+            r = 0.105 + 0.045 * math.sin(v * math.pi) + 0.02 * v
+            wob = 0.014 * math.sin(v * TAU * 1.2 + i * 1.3) * min(1.0, v * 2.5)
+            ang = a + 0.14 * math.sin(v * TAU * 1.0 + i * 0.7) * v
             pts.append(((r + wob) * math.sin(ang), y, -0.03 + (r + wob) * math.cos(ang) * 1.15 - 0.02 * v))
         rad = [0.013, 0.017, 0.018, 0.017, 0.015, 0.012, 0.008, 0.0]
         part('strand%d' % i, bm_tube(catmull(pts, 8), [0.014, 0.018, 0.019, 0.018, 0.016, 0.012, 0.007, 0.0], 5, caps='fan'), hair, bones, 1.3)
