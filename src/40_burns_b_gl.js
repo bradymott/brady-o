@@ -22,10 +22,10 @@
 /* ---------------- quality tiers ---------------- */
 const BURNS_GFX = {
   tiers: {
-    ultra: { shadows: 2048, pcf: 9, ssao: true, bloom: 5, rays: true, dof: true, heat: true, msaa: 4, npl: 16, bump: true, scale: 1.0, shadowDist: 80 },
-    high: { shadows: 2048, pcf: 4, ssao: true, bloom: 5, rays: true, dof: true, heat: true, msaa: 4, npl: 16, bump: true, scale: 1.0, shadowDist: 70 },
-    medium: { shadows: 1024, pcf: 4, ssao: false, bloom: 4, rays: true, dof: true, heat: true, msaa: 4, npl: 12, bump: true, scale: 0.92, shadowDist: 55 },
-    low: { shadows: 0, pcf: 0, ssao: false, bloom: 3, rays: false, dof: false, heat: false, msaa: 0, npl: 8, bump: false, scale: 0.8, shadowDist: 0 }
+    ultra: { shadows: 2048, pcf: 9, ssao: true, bloom: 5, rays: true, dof: true, heat: true, msaa: 4, npl: 16, bump: true, scale: 1.0, shadowDist: 80, env: true },
+    high: { shadows: 2048, pcf: 4, ssao: true, bloom: 5, rays: true, dof: true, heat: true, msaa: 4, npl: 16, bump: true, scale: 1.0, shadowDist: 70, env: true },
+    medium: { shadows: 1024, pcf: 4, ssao: false, bloom: 4, rays: true, dof: true, heat: true, msaa: 4, npl: 12, bump: true, scale: 0.92, shadowDist: 55, env: true },
+    low: { shadows: 0, pcf: 0, ssao: false, bloom: 3, rays: false, dof: false, heat: false, msaa: 0, npl: 8, bump: false, scale: 0.8, shadowDist: 0, env: false }
   },
   names: ['auto', 'ultra', 'high', 'medium', 'low'],
   // 'auto': phones/tablets get medium, desktops high; the frame-time governor can step down later
@@ -88,6 +88,14 @@ float bShadow(vec3 w, vec3 n) {
 #else
 float bShadow(vec3 w, vec3 n) { return 1.0; }
 #endif
+#ifdef ENVMAP
+// the sky probe: this frame's sky as a small equirect HDR texture; mips stand in for roughness
+uniform sampler2D uEnv; uniform float uEnvK;
+vec3 bEnv(vec3 d, float rough) {
+  vec2 uv = vec2(atan(d.x, d.z) * 0.15915494 + 0.5, asin(clamp(d.y, -1.0, 1.0)) * 0.3183099 + 0.5);
+  return textureLod(uEnv, uv, rough * 6.0).rgb;
+}
+#endif
 #ifdef BUMP
 // bump from a scalar height via screen-space derivatives (Mikkelsen); k = height amplitude in metres
 vec3 bBump(vec3 n, vec3 w, float h, float k) {
@@ -130,8 +138,17 @@ vec3 bShade(vec3 alb, vec3 n, vec3 w, float g, float wrap, float sh) {
   float V = 0.25 / ((nlp * (1.0 - k) + k) * (nv * (1.0 - k) + k));
   c += uKeyC * min(D * F * V, 24.0) * nlp * sh * (0.35 + 0.9 * g);
   vec3 rf = reflect(-v, n);
-  vec3 env = mix(uGnd * 1.1, uSky * 1.3, smoothstep(-0.15, 0.45, rf.y));
   float fr = pow(1.0 - nv, 4.0);
+#ifdef ENVMAP
+  if (uEnvK > 0.5) {
+    // real sky reflections: sharp on chrome (tinted by its colour) and clear-coat paint, blurred on satin, a darker ground half
+    vec3 es = bEnv(rf, mix(0.95, 0.1, g)) * mix(0.55, 1.0, smoothstep(-0.35, 0.05, rf.y));
+    float f5 = pow(1.0 - nv, 5.0);
+    c += es * mix(vec3((0.04 + 0.96 * f5) * (0.08 + 0.92 * g)), mix(alb, vec3(1.0), 0.45) * (0.7 + 0.3 * f5), step(0.99, g));
+    return c;
+  }
+#endif
+  vec3 env = mix(uGnd * 1.1, uSky * 1.3, smoothstep(-0.15, 0.45, rf.y));
   c += env * fr * (0.04 + 0.4 * g) + env * alb * step(0.99, g) * 0.45;
   return c;
 }
@@ -264,6 +281,7 @@ const BurnsGL = {
     if (Q && Q.shadows) { D.SHADOWS = 1; D.PCF = Q.pcf; }
     if (Q && this.hdr) D.HDR = 1;
     if ((!Q || Q.bump) && this.derivs) D.BUMP = 1;
+    if (Q && Q.env && this.hdr && this.gl2) D.ENVMAP = 1;   // the sky probe (real reflections on chrome and paint)
     return D;
   },
   buildPrograms() {
@@ -326,7 +344,7 @@ uniform vec3 uF, uR, uU, uTan;
 uniform vec3 uZen, uHor, uFogC, uSunD, uSunC, uMoonD, uMtnC, uCityD, uCityC;
 uniform vec4 uSkyK, uCloud, uMid, uAtm;
 uniform vec3 uCloudC;
-uniform float uTime, uHaze, uTrip;
+uniform float uTime, uHaze, uTrip, uEqui;
 ${BURNS_GLSL_OUT}
 float h3(vec3 p){ p = fract(p * 0.3183099 + vec3(0.11, 0.17, 0.13)); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float h2(vec2 p){ p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
@@ -334,7 +352,9 @@ float n2(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 *
   return mix(mix(h2(i), h2(i + vec2(1.0, 0.0)), f.x), mix(h2(i + vec2(0.0, 1.0)), h2(i + vec2(1.0, 1.0)), f.x), f.y); }
 float fbm(vec2 p){ return n2(p) * 0.5 + n2(p * 2.03 + 1.7) * 0.25 + n2(p * 4.01 + 5.3) * 0.125 + n2(p * 8.07 + 9.1) * 0.0625; }
 void main(){
-  vec3 d = normalize(uF + uR * (vN.x * uTan.x) + uU * ((vN.y - uTan.z) * uTan.y));
+  vec3 d;
+  if (uEqui > 0.5) { float lon = vN.x * 3.14159265, lat = vN.y * 1.57079633; d = vec3(sin(lon) * cos(lat), sin(lat), cos(lon) * cos(lat)); }   // the probe: one pixel per direction
+  else d = normalize(uF + uR * (vN.x * uTan.x) + uU * ((vN.y - uTan.z) * uTan.y));
   float el = asin(clamp(d.y, -1.0, 1.0));
   float az = atan(d.x, d.z);
   float gy = pow(clamp(el / 1.25, 0.0, 1.0), 0.55);
@@ -1031,6 +1051,11 @@ class BurnsRenderer {
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, lm ? BurnsGL.tex(lm.T) : BurnsGL.black); gl.uniform1i(u.uLight, 1);
       gl.activeTexture(gl.TEXTURE0);
     }
+    if (u.uEnv) {
+      const T = BurnsGL.envT, ok = !!(this.probeOk && T && T.gen === BurnsGL.gen);
+      gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, ok ? T.tex : BurnsGL.black); gl.uniform1i(u.uEnv, 5); gl.activeTexture(gl.TEXTURE0);
+      gl.uniform1f(u.uEnvK, ok ? 1 : 0);
+    }
     if (u.uShadow) {
       const T = this.T, on = this.shadowOn && T && T.shadow;
       gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, T && T.shadow ? T.shadow.dtex : null); gl.uniform1i(u.uShadow, 4); gl.activeTexture(gl.TEXTURE0);
@@ -1120,9 +1145,29 @@ class BurnsRenderer {
     if (u.uAtm) gl.uniform4f(u.uAtm, env.scatter === undefined ? 1 : env.scatter, env.milkyway === undefined ? 1 : env.milkyway, this.hdr ? (env.sunHDR || 7) : 0, env.belt === undefined ? 1 : env.belt);
     if (u.uExp) gl.uniform4f(u.uExp, env.exposure || 1, 0, 0, 1);
     gl.uniform1f(u.uTime, env.time || 0); gl.uniform1f(u.uHaze, env.haze); gl.uniform1f(u.uTrip, env.trip || 0);
+    this.probe(env);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.stats.draws++;
     gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.depthFunc(gl.LEQUAL); gl.enable(gl.CULL_FACE);
+  }
+  // the sky probe: the same sky drawn into a 256 x 128 equirect HDR texture (with mips for roughness), so chrome and
+  // clear-coat paint reflect the real sunset, clouds, stars and city glow. Called by sky() with its program and uniforms set.
+  probe(env) {
+    const gl = BurnsGL.gl, p = BurnsGL.progs.sky, u = p.u;
+    if (!BurnsGL.gl2 || !BurnsGL.hdr || !BurnsGL.Q || !BurnsGL.Q.env || !u.uEqui) { this.probeOk = false; return; }
+    let T = BurnsGL.envT;
+    if (!T || T.gen !== BurnsGL.gen) {
+      T = BurnsGL.target(256, 128, { fmt: 'hdr' }); T.gen = BurnsGL.gen;
+      gl.bindTexture(gl.TEXTURE_2D, T.tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      BurnsGL.envT = T;
+    }
+    if (!T.ok) { this.probeOk = false; return; }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb); gl.viewport(0, 0, T.w, T.h);
+    gl.uniform1f(u.uEqui, 1); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.uniform1f(u.uEqui, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.T ? this.T.main.fb : null); gl.viewport(0, 0, this.w, this.h);
+    gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.generateMipmap(gl.TEXTURE_2D);
+    this.probeOk = true;
   }
   ground(G, env, world) {
     if (!G || this.pass === 'shadow') return;
