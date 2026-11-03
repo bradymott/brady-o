@@ -4142,7 +4142,12 @@ void main(){
   c += (h2(gl_FragCoord.xy + fract(t) * 61.0) - 0.5) / 255.0;
   gl_FragColor = vec4(c, 1.0);
 }`, ['aPos']);
+    // programs added by other modules (textured PBR, weighted skinning…): fn(BurnsGL, progs) adds to progs
+    for (const f of this.programHooks) { try { f(this, P); } catch (e) { console.error('burns: program hook failed', e); } }
   },
+  programHooks: [],
+  // register a program builder; it runs now (if the renderer is up) and again whenever programs are rebuilt (tier change, context loss)
+  addPrograms(fn) { this.programHooks.push(fn); if (this.progs && this.gl) { try { fn(this, this.progs); } catch (e) { console.error('burns: program hook failed', e); } } },
   // GLSL dialect: our shaders are written GLSL 1.0-style; on WebGL2 they compile as GLSL 3.00 es via macros
   header(kind) {
     let h = '';
@@ -5280,9 +5285,15 @@ const BurnsGLTF = {
   staticGeo(D, opts) { return this.rig(D, Object.assign({}, opts || {}, { static: true, bone: () => 0 })); },
 
   /* ---- loading ---- */
+  // .glb, or .glb.gz inflated in the browser (DecompressionStream; iOS 16.4+, Chrome 80+)
   fetch(url) {
-    return fetch(url).then(r => { if (!r.ok) throw new Error('BurnsGLTF: ' + url + ' ' + r.status); return r.arrayBuffer(); }).then(ab => this.parse(ab));
-  }
+    return fetch(url).then(r => {
+      if (!r.ok) throw new Error('BurnsGLTF: ' + url + ' ' + r.status);
+      if (/\.gz$/i.test(url)) { if (typeof DecompressionStream === 'undefined') throw new Error('BurnsGLTF: this browser cannot inflate ' + url); return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer(); }
+      return r.arrayBuffer();
+    }).then(ab => this.parse(ab));
+  },
+  canInflate() { return typeof DecompressionStream !== 'undefined'; }
 };
 if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsGLTF });
 
@@ -14968,8 +14979,10 @@ const CartGLB = {
       const have = new Set(Array.isArray(list) ? list : []), jobs = [];
       for (const [id, stem] of Object.entries(CART_GLB)) {
         for (const lo of [false, true]) {
-          const file = stem + (lo ? '_lo' : '') + '.glb';
-          if (!have.has(file)) continue;
+          // the build ships .glb.gz (inflated in the browser); a plain .glb is accepted too
+          let file = stem + (lo ? '_lo' : '') + '.glb';
+          if (have.has(file + '.gz') && BurnsGLTF.canInflate()) file += '.gz';
+          else if (!have.has(file)) { if (have.has(file + '.gz')) console.warn('cart: this browser cannot inflate ' + file + '.gz; using the procedural car'); continue; }
           jobs.push(BurnsGLTF.fetch(this.base() + file)
             .then(doc => { const R = this.build(doc, lo); (this.rigs[id] = this.rigs[id] || {})[lo ? 'lo' : 'hi'] = R; })
             .catch(e => { console.warn('cart: glb failed for ' + id + (lo ? ' (lo)' : '') + ': ' + (e && e.message || e)); }));
