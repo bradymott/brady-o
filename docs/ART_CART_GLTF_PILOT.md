@@ -84,13 +84,28 @@ Shared code lives in `tools/blender/cartkit.py`. Rebuild any car headless with
 
 ## 5. Kit backlog (what the car scripts had to build locally)
 
-Several cars wrote the same helpers; they belong in `cartkit.py` next:
-- an `aim(direction)` matrix to point a primitive along any engine direction (portholes, nozzles, spikes);
-- a swept tube along a polyline or spline with per-point radius (arms, tentacles, frosting, catenary lights);
-- a loft between sections and a closed parametric body with merged poles (whale, shark, duck bodies);
-- per-face material assignment (two-tone wrappers, back/belly colour splits);
-- a flat-shaded option that survives `smooth_by_angle` (mirror tiles);
-- a per-object triangle report and side/top preview views.
+Several cars wrote the same helpers. They are now in `cartkit.py` (the car scripts still carry their local copies, which
+produce identical output; new scripts should use the kit's). `tools/blender/kit_demo.py` (a playa lamp post with a
+catenary string of bulbs, exported with `run_static` to `assets/models/burning-man/kit_demo.glb`) uses every one:
+- DONE `aim(direction)`: points a primitive's local Z along any engine direction, as the `axis`/`M` of the primitives;
+  `frame(ax, ay, az)` for an aimed box or plate.
+- DONE `bm_tube(points, r, seg, closed=, caps=, section_fn=)`: a swept tube with rotation-minimising frames (`rmf()`),
+  one radius or one per point, an optional (sx, sy) squash; `bm_sweep(path_fn, section, n, frame_fn=)` for any 2D section
+  (stars, rectangles, varying sections, tips) along a path function.
+- DONE `bm_loft(sections, closed_u=, closed_v=, caps=)` and `bm_surf(..., merge=True)` (a closed parametric body whose
+  poles are welded).
+- DONE curve helpers: `catmull(pts, n, closed=)` / `catmull_at`, `hermite(ks, vs, k)`, `catenary(a, b, sag, n)`,
+  `arc_walk(fn, n)` (even spacing by arc length), `rrect_pts`, `sstep`.
+- DONE `bm_capsule(r, h, seg, rings)` and `bm_rrect_tube(w, d, r, tube_r, seg)`.
+- DONE per-face materials: `Build.obj(name, bm, [mat_a, mat_b], face_mat=lambda f: 0 | 1)`.
+- DONE flat shading that survives `smooth_by_angle`: `Build.obj(..., flat=True)` marks every edge sharp (the mesh stays
+  welded, the exporter splits the normals; `flat='split'` splits the edges instead, same glb). Note that `smooth=False`
+  alone does not survive the pass.
+- DONE a per-object triangle report (`run(..., report=True)` or `CARTKIT_DEBUG=1`: the 12 heaviest pieces per level as
+  `CARTKIT_TOP` lines) and extra previews (`run(..., views=['side', 'top'])`, `Build.preview(path, views=[...])`, named in
+  `VIEWS`); `run_static(stem, build_fn, app=)` for single-bone props.
+- Bulb cost, measured: `bm_ico(r, sub)` is 20 triangles at sub 0 or 1, 80 at sub 2 (the hi default `ico=2`, so one LED
+  bulb already costs 80, not 320), 320 at sub 3. Bulb-heavy cars override `ico=1` (20 per bulb) at hi.
 
 ## 6. Next steps
 
