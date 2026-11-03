@@ -112,11 +112,16 @@ Each app's service worker is versioned per build, so phones pick up updates. The
 - The validator passes and gameplay checks pass 59/59.
 
 **Art Cart: complete.**
-- 12 cars, 26 drivers, 2 cups (8 tracks), 3 arenas with 5 objectives.
+- 12 cars, 26 drivers, 2 cups (8 tracks), 7 arenas (each with 4–5 objectives and its own powers).
 - AI weapon use; touch, keyboard and gamepad.
 - November 2026: all 12 cars have Blender-made glTF models (`tools/blender/*.py`, `assets/models/art-cart/`),
   loaded by the engine's `BurnsGLTF` (`docs/BURNS_GUIDE.md` §6.8, plan in `docs/ART_CART_GLTF_PILOT.md`). The
   procedural cars remain as fallbacks.
+- November 2026: seven battle arenas. Each new arena lives in its own `src/43_cart_g_<id>.js` and registers its
+  rules, powers, objective and icon through the registries documented at the top of `CART_ARENA_RULES` in
+  `src/43_cart_a_data.js` (physics hooks, arena-only items with their own use/shot/draw/AI, custom objectives).
+  Winning every objective of an arena "masters" it and its powers drop in circuit races. `tools/cart_battle_test.js`
+  runs every arena × objective headless with screenshots; the engine also has sky-probe reflections (§9.1).
 
 **Brady Goes to Burning Man: all 17 story worlds built and tested.**
 - **The city:** the open-world Black Rock City is playable: streaming tiles, instancing, LOD, enterable places, a fast-travel map, and HOME at Brady's tipi.
