@@ -159,7 +159,7 @@ Object.assign(CartRaceScene.prototype, {
     this.collectLights(env);
     this.renderScene(R, env);
     R.end(env, this.postFx(env));
-    this.stats.draws = R.stats.draws; this.stats.tris = R.stats.tris;
+    this.stats.draws = R.stats.draws + (this.shadowDraws || 0); this.stats.mainDraws = R.stats.draws; this.stats.shadowDraws = this.shadowDraws || 0; this.stats.tris = R.stats.tris;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(BurnsGL.canvas, 0, 0, gw, gh, 0, 0, Game.canvas.width, Game.canvas.height);
@@ -175,7 +175,8 @@ Object.assign(CartRaceScene.prototype, {
     for (const k of this.karts) { const d2 = (k.x - cam.x) * (k.x - cam.x) + (k.z - cam.z) * (k.z - cam.z); k._d2 = d2; k._in = BurnsM.sphereVisible(P, k.x, k.y + 1.8, k.z, 4.5); if (k._in || (wantShadow && d2 < 60 * 60)) vis.push(k); }
     const heroes = this.heroes.filter(h => { const d2 = (h.ch.x - cam.x) * (h.ch.x - cam.x) + (h.ch.z - cam.z) * (h.ch.z - cam.z); h._d2 = d2; h._in = d2 < 90 * 90 && BurnsM.sphereVisible(P, h.ch.x, h.ch.y + 1, h.ch.z, 2); return h._in || (wantShadow && d2 < 40 * 40); });
     const crowds = this.E.crowds.filter(G => { const d = Math.hypot(G.cx - cam.x, G.cz - cam.z); G._d = d; return d < 160 + G.rad && BurnsM.sphereVisible(P, G.cx, 1.5, G.cz, G.rad + 2); });
-    // ---- sun shadows: the same draws, depth only ----
+    // ---- sun shadows: the same draws, depth only (counted separately: begin() resets the renderer's counter) ----
+    const d0 = R.stats.draws; this.shadowDraws = 0;
     if (wantShadow && R.shadowBegin(env)) {
       R.statics(W.chunks, env, W, A, 0);
       R.skinBegin(env, W, A);
@@ -185,6 +186,7 @@ Object.assign(CartRaceScene.prototype, {
       for (const G of crowds) if (R.shadowNear(G.cx, 1, G.cz, G.rad)) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0);
       if (this.man) R.skin(this.man.model.geo, this.man.ch.bones, this.man.ch.nb, null, 0, 0);
       R.shadowEnd();
+      this.shadowDraws = R.stats.draws - d0;
     }
     // ---- main pass ----
     R.begin(env);
@@ -617,7 +619,7 @@ window.BRADY_CART = {
     useItem() { const s = Game.scene, k = s.player; if (!k.item) return false; s.useItem(k); return true; },
     state() {
       const s = Game.scene; if (!(s instanceof CartRaceScene)) return { scene: s && s.constructor.name };
-      return { scene: 'CartRaceScene', state: s.state, mode: s.mode, objective: s.objective, track: s.trackId, arena: s.arenaId, raceT: +s.raceT.toFixed(2), draws: s.stats.draws, tris: Math.round(s.stats.tris), fps: Math.round(s.stats.fps), tier: BurnsGL.tier,
+      return { scene: 'CartRaceScene', state: s.state, mode: s.mode, objective: s.objective, track: s.trackId, arena: s.arenaId, raceT: +s.raceT.toFixed(2), draws: s.stats.draws, mainDraws: s.stats.mainDraws, shadowDraws: s.stats.shadowDraws, tris: Math.round(s.stats.tris), fps: Math.round(s.stats.fps), tier: BurnsGL.tier,
         karts: (s.karts || []).map(k => ({ id: k.id, player: k.player, x: +k.x.toFixed(1), y: +k.y.toFixed(2), z: +k.z.toFixed(1), speed: +k.speed.toFixed(1), lap: k.lap, rank: k.rank, finished: k.finished, wpn: k.wpn.id, ready: +k.wpn.t.toFixed(2), uses: k.wpn.uses, hits: k.wpn.hits, item: k.item, vibes: k.vibes, out: k.out, score: +(k.score || 0).toFixed(1) })),
         obj: s.obj ? { time: +s.obj.time.toFixed(1), zone: s.obj.zone, ended: s.obj.ended } : null, results: s.results || null };
     },
