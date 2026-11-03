@@ -146,6 +146,46 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     return { after, back: g.picks, dead: c.dead || c.remove };
   });
   check('Coatis steal coins, and stomping one gets them back', coati.after === 5 && coati.back === 10 && coati.dead, coati);
+  // Mozambique's piri-piri: fire breath knocks out enemies and burns thorn hedges
+  const piri = await page.evaluate(() => {
+    start('4-1'); clearEnemies(); const p = P(), g = S(), A = g.area; p.collect('sig:piri'); sim(0.1);
+    const tx = Math.floor((p.cx + 70) / 32), ty = Math.floor((p.y + p.h - 4) / 32); A.tiles[ty * A.W + tx] = 2;
+    const e = near('mzPrawn', 60); e.vx = 0; e.cool = 99; sim(0.02);
+    for (let k = 0; k < 4; k++) sim(0.25, { actionPressed: true });
+    return { sig: p.sig && p.sig.id, burnt: A.tiles[ty * A.W + tx] === 0, ko: e.dead || e.remove, timed: p.sig && p.sig.t > 0 && p.sig.t < 10 };
+  });
+  check('Piri-piri: ten seconds of fire breath that knocks out enemies and burns thorn hedges', piri.sig === 'piri' && piri.burnt && piri.ko && piri.timed, piri);
+  await page.evaluate(() => { start('4-1'); clearEnemies(); P().collect('sig:piri'); sim(0.1); sim(0.05, { actionPressed: true }); sim(0.12); });
+  await shot('08d-power-piri.png');
+  // Morocco's flying carpet: free flight
+  const carpet = await page.evaluate(() => { start('5-1'); clearEnemies(); const p = P(), y0 = p.y; p.collect('sig:carpet'); sim(1.2, { up: true }); const rose = y0 - p.y; sim(0.5, { right: true }); return { sig: p.sig && p.sig.id, rose: Math.round(rose), air: !p.onGround }; });
+  check('Flying carpet: Brady flies freely', carpet.sig === 'carpet' && carpet.rose > 100 && carpet.air, carpet);
+  await page.evaluate(() => { start('5-1'); clearEnemies(); P().collect('sig:carpet'); sim(0.8, { up: true, right: true }); });
+  await shot('08e-power-carpet.png');
+  // Valencia's tomatoes: a direct hit knocks out, a splat makes a puddle that sends enemies sliding
+  const tomato = await page.evaluate(() => {
+    start('6-1'); clearEnemies(); const p = P(), g = S(); p.collect('sig:tomato'); sim(0.1);
+    const e = near('esHorchata', 110); e.vx = 0; sim(0.02);
+    for (let k = 0; k < 6 && !(e.dead || e.remove); k++) sim(0.3, { actionPressed: true });
+    const ko = e.dead || e.remove;
+    const puddles = g.entities.filter(x => x.constructor.name === 'EsPuddle').length;
+    const e2 = near('esHorchata', 40); sim(0.02); const P2 = g.entities.find(x => x.constructor.name === 'EsPuddle');
+    let slid = false; if (P2) { e2.x = P2.cx - e2.w / 2; e2.y = P2.y + P2.h - e2.h; sim(0.1); slid = e2.slideT > 0 || e2.dead || e2.remove; }
+    return { sig: p.sig && p.sig.id, ko, puddles, slid };
+  });
+  check('Tomato fight: tomatoes knock enemies out and the splats make them slide', tomato.sig === 'tomato' && tomato.ko && tomato.puddles >= 1 && tomato.slid, tomato);
+  await page.evaluate(() => { start('6-1'); clearEnemies(); P().collect('sig:tomato'); sim(0.1); sim(0.05, { actionPressed: true }); sim(0.35); });
+  await shot('08f-power-tomato.png');
+  // Amsterdam's bike: faster, and the bell stuns enemies nearby
+  const bike = await page.evaluate(() => {
+    const run = sig => { start('8-1'); clearEnemies(); const p = P(); if (sig) p.collect('sig:bike'); sim(0.1); const x0 = p.x; sim(0.8, { right: true }); return p.x - x0; };
+    const d0 = run(false), d1 = run(true);
+    const p = P(), e = near('nlClog', 90); e.vx = 0; sim(0.02); sim(0.05, { actionPressed: true });
+    return { sig: p.sig && p.sig.id, d0: Math.round(d0), d1: Math.round(d1), stunned: e.stunT > 0 };
+  });
+  check('Dutch bike: Brady rides faster and the bell stuns enemies', bike.sig === 'bike' && bike.d1 > bike.d0 * 1.2 && bike.stunned, bike);
+  await page.evaluate(() => { start('8-1'); clearEnemies(); P().collect('sig:bike'); sim(0.1); sim(0.6, { right: true }); });
+  await shot('08g-power-bike.png');
 
   // 5. Enemies: stomping, and a two-hit piñata burro
   const stomp = await page.evaluate(() => {
@@ -179,7 +219,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('every tour level loads, simulates and renders', all.n >= 10 && all.bad.length === 0, all);
 
   // 8. Castle bosses: Mexico's piñata, then Paris's soufflé; beating Mexico flies Brady to the next country
-  for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['7-5', 'SOUFFLÉ', 'fr']]) {
+  for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'DJINN', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl']]) {
     const boss = await page.evaluate(([id]) => {
       start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
       p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.vy = 0; p.invuln = 99; sim(2.5);
@@ -199,6 +239,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     } else if (tag === 'ec') {
       await page.evaluate(() => { start('2-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(2.5); b.go('rear'); sim(0.6); });
       await shot('10b-boss-tortugon.png');
+    } else if (['mz', 'ma', 'es', 'nl'].includes(tag)) {
+      await page.evaluate(([id, act]) => { start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3); b.go(act); sim(0.9); }, [id, { mz: 'out', ma: 'walk', es: 'simmer', nl: 'fling' }[tag]]);
+      await shot('10d-boss-' + tag + '.png');
     } else if (tag === 'br') {
       await page.evaluate(() => { start('3-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3); b.go('dive'); sim(1.2); });
       await shot('10c-boss-tucanao.png');
@@ -223,6 +266,29 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     return { landed, hp0: b.maxHp, hp: b.hp };
   });
   check('O Tucanão dives, gets his beak stuck in the floor, and can be stomped then', tuc.landed && tuc.hp === tuc.hp0 - 1, tuc);
+  // the new bosses: each one can only be stomped in its weak moment
+  await page.evaluate(() => {
+    window.bossWeak = (id, act, setup) => {
+      start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
+      p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3);
+      b.go('walk'); sim(0.05); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 0; sim(0.4); const guarded = b.hp; sim(0.6);
+      b.go(act); if (setup) setup(b); let weak = false; for (let k = 0; k < 900 && !weak; k++) { sim(1 / 120); weak = b.vuln; }
+      p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 0; sim(0.4);
+      return { weak, hp0: b.maxHp, guarded, hp: b.hp, act: b.act };
+    };
+  });
+  for (const [id, act, what] of [['4-5', 'out', 'O Eremita is stompable once he leaves his shell'], ['5-5', 'pot', 'the Djinn pops out of his teapot after it lands'], ['6-5', 'simmer', 'Paellasaurus cools down after simmering'], ['8-5', 'fling', 'the Cheese King teeters after flinging a wheel']]) {
+    const r = await page.evaluate(([id, act]) => bossWeak(id, act), [id, act]);
+    check(what + ' (stomps bounce off otherwise)', r.weak && r.guarded === r.hp0 && r.hp === r.hp0 - 1, r);
+  }
+  const extras = await page.evaluate(() => {
+    start('6-5'); clearEnemies(); let g = S(), p = P(); let b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3);
+    b.go('simmer'); sim(0.3); b.hit('disc', p); const cooled = b.act === 'cool';
+    start('8-5'); clearEnemies(); g = S(); p = P(); b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 99; p.collect('sig:bike'); sim(3);
+    b.go('walk'); p.x = b.cx - 90; sim(0.02); sim(0.05, { actionPressed: true }); const tottered = b.act === 'totter';
+    return { cooled, tottered };
+  });
+  check('a tomato cools Paellasaurus at once, and the bike bell makes the Cheese King teeter', extras.cooled && extras.tottered, extras);
   const fly = await page.evaluate(() => {
     const B = window.BRADY, d = B.Save.data; for (let i = 1; i <= 5; i++) d.done['1-' + i] = true; T.TourProgress.complete('1-5', false);
     const M = new T.TourMapScene({ from: '1-5' }); B.Game.setScene(M); const flying = !!M.flight; for (let k = 0; k < 600 && M.flight; k++) M.update(1 / 120);

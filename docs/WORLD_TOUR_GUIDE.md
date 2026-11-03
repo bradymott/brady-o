@@ -2,7 +2,7 @@
 
 Super Brady-O World is a trip around the world: 12 countries plus two secret lands. Each country is one file, `src/29_tour_<cc>.js`. That file registers the country's theme, enemies, set pieces, boss, music, signature power-up and its five levels.
 
-Built so far: Mexico (`29_tour_mx.js`), Ecuador (`29_tour_ec.js`), Brazil (`29_tour_br.js`) and Paris (`29_tour_fr.js`). Copy their structure. Still to build: Mozambique, Morocco, Valencia, Amsterdam, Bali, Vietnam, Japan, Nepal, Antarctica and World 22.
+Built so far: Mexico (`mx`), Ecuador (`ec`), Brazil (`br`), Mozambique (`mz`), Morocco (`ma`), Valencia (`es`), Paris (`fr`) and Amsterdam (`nl`), each in `src/29_tour_<cc>.js`. Copy their structure. Still to build: Bali, Vietnam, Japan, Nepal, Antarctica and World 22.
 
 What each built country already uses, so yours can be different:
 
@@ -12,6 +12,10 @@ What each built country already uses, so yours can be different:
 | Ecuador | run (low-gravity zones), ride (cable car), night (vine swings), swim (open sea, tidal surge), castle (ice) | Booby boots (high jumps, landing shockwave) | El Tortugón: shell too hard; stomp his head while he rears up |
 | Brazil | run (beach), night (beat drums), climb (waterfall), run (wetland rides), castle (turntables) | Football (ricochets) | O Tucanão (flying): dives, beak sticks in the floor, stomp him |
 | Paris | run, auto (river chase), night (rooftops), climb (tower), castle (mirrors) | Mime gloves (invisible walls) | Le Grand Soufflé: puffs up, then collapses |
+| Mozambique | run (elephant water jets), auto (stampede), climb (baobab), night (turtle beach), castle (fortress) | Piri-piri chili (10 s of fire breath; burns brick "thorn hedges") | O Eremita (hermit crab): armoured in his shell; stomp him when he scuttles out |
+| Morocco | run (souk rugs), run (Sahara caravan, sandstorm), climb (kasbah, goats in trees), night (night market smoke), castle (riad fountains) | Flying carpet (12 s of free flight) | Djinn of the Teapot (flying): his pot hops, lands and vents; stomp him then |
+| Valencia | run (tomato trucks, pulp), swim (aquarium tunnels), night (City of Arts, beat floor lights), climb (giant falla, rockets), castle (silk exchange) | Tomato fight (lob; splats make enemies slide) | Paellasaurus: too hot while simmering; stomp when it cools (a tomato cools it at once) |
+| Amsterdam | run (canal hooks, houseboats), run (windmill sails, tulips), auto (drawbridges, trams), night (frozen canals), castle (weigh house) | Dutch bike (fast; bell stuns) | Cheese King: teeters after flinging a wheel (or after the bike bell); stomp his crown |
 
 Tricks the newer countries added (all inside the country file, no engine changes):
 - **Your own liquid:** `LIQUIDS.<name> = [top, mid, deep, shimmer, glow|null, foam]` at the top of the file, then `liquid: '<name>'` in a theme. `T.LAVA` tiles in pits are drawn with it (and are still deadly).
@@ -21,6 +25,13 @@ Tricks the newer countries added (all inside the country file, no engine changes
 - **Custom enemies:** subclass `TourEnemy`/`TourSwimmer` when a config is not enough (`EcPuffer` grows when Brady is near; `BrCoati` steals coins and gives them back when stomped).
 - **Level options:** `roof: false` removes a castle's ceiling row; `dark: true` turns the lights down.
 - **Path gotcha:** `TourKit.star()` adds to the current path; call `ctx.beginPath()` first.
+- **Flying signature items:** give the power `flight: true` (and a `time`) and Brady steers freely like the LSD flight, without its lasers or grin. Set `p.glideT = 3` just before the time runs out for a soft landing (Morocco's carpet).
+- **Your own slippery floor:** a theme's `iceStyle` can be a function `(ctx, topOpen)` that paints the `T.ICE` tile (Valencia's tomato pulp).
+- **Sliding enemies:** set `e.slideT = seconds` on a `TourEnemy`: it slides helplessly in its direction, a wall knocks it out and a ledge drops it.
+- **Boss reactions to items:** the item calls a brain hook you define (Amsterdam's bell calls `brain.onBell(b)` if present). `noDisc(b)` can also react before refusing damage (Paellasaurus cools when a tomato or flame hits it).
+- **Light shafts:** `rays: '#color'` in a theme draws soft animated sunbeams.
+- **Background layers must sit high enough to be seen:** the ground covers background y above about 330 at the usual camera height. Keep a layer's interesting shapes between y 220 and 330 (base 300–360 for most near layers).
+- **Testing while another country is half-written:** `BRADY_SKIP_TOUR=id,vn node tools/validate_levels.js` leaves those country files out of the validator.
 
 ## 1. Files and load order
 All `src/*.js` files are concatenated alphabetically into one strict-mode IIFE, so load order is the file name.

@@ -81,12 +81,14 @@ const base = {
 };
 const themes = {
   ma_souk: Object.assign({}, base, {
+    rays: '#fff0c8',
     name: 'The Souk', music: 'tour_ma', particles: 'motes',
     sky: ['#3a8ae8', '#9ad0ff', '#fff0d8'], horizonGlow: '#ffe8c0', celestial: { type: 'sun', x: 0.6, y: 0.12, r: 38, color: '#fffbe0', glow: '#ffd890' }, stars: 0, cloudsDyn: true,
     layers: [{ kind: 'maAtlas', color: '#a8a8c8', base: 300, f: 0.02, blur: true }, { kind: 'maMedina', color: '#e8b088', base: 300, f: 0.08, minaret: true }, { kind: 'maMedina', color: '#d8946a', base: 352, f: 0.25 }],
     fog: '#ffe8c8', decor: ['maPots', 'maLantern', 'maSpiceSacks']
   }),
   ma_sahara: Object.assign({}, base, {
+    rays: '#ffd8a0',
     name: 'The Sahara', music: 'tour_ma_desert', particles: 'sand', liquid: 'quicksand',
     ground: { style: 'grass', cap: '#f0c87a', capHi: '#ffe0a0', dirt: '#e8b060', dirt2: '#c88a40', rock: '#d89a50' },
     sky: ['#ff7a3a', '#ffb86a', '#ffe8b8'], horizonGlow: '#ffb070', celestial: { type: 'sun', x: 0.75, y: 0.32, r: 52, color: '#fff0c0', glow: '#ff9050' }, stars: 0,
@@ -106,6 +108,7 @@ const themes = {
     fog: '#ff9a5a', darkness: 0.45, decor: ['maLantern', 'maPots']
   }),
   ma_riad: Object.assign({}, base, {
+    rays: '#ffffff',
     name: 'Riad of Fountains', music: 'tour_ma', particles: 'motes', liquid: 'sea',
     ground: { style: 'marble', cap: '#f4ecd8', capHi: '#ffffff', dirt: '#e8dcc4', dirt2: '#c8b898', rock: '#d8c8a8' },
     sky: ['#2a6ab8', '#7ab8e8', '#e8f4ff'], horizonGlow: '#ffffff', celestial: { type: 'sun', x: 0.5, y: 0.1, r: 30, color: '#fffbe8', glow: '#ffffff' }, stars: 0,

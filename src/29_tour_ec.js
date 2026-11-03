@@ -99,6 +99,7 @@ const base = {
 };
 const themes = {
   ec_equator: Object.assign({}, base, {
+    rays: '#fff4c8',
     name: 'Middle of the World', music: 'tour_ec', particles: 'leaves',
     sky: ['#2a8ae8', '#8ad0ff', '#f0fff0'], horizonGlow: '#e8ffd8',
     celestial: { type: 'sun', x: 0.5, y: 0.1, r: 40, color: '#fffbe0', glow: '#ffe8a0' }, stars: 0, cloudsDyn: true,
@@ -106,6 +107,7 @@ const themes = {
     fog: '#e8fff0', decor: ['ecAgave', 'ecFlowers', 'ecAgave']
   }),
   ec_andes: Object.assign({}, base, {
+    rays: '#ffffff',
     name: 'The Andes', music: 'tour_ec', particles: 'dust',
     sky: ['#3a7ad8', '#a8d0ff', '#ffffff'], horizonGlow: '#ffffff',
     celestial: { type: 'sun', x: 0.25, y: 0.18, r: 34, color: '#fffbe8', glow: '#ffffff' }, stars: 0, cloudsDyn: true,
@@ -121,6 +123,7 @@ const themes = {
     fog: '#3a8a6a', darkness: 0.55, liquid: 'canal', semi: { style: 'log', c1: '#5a4028', c2: '#3a2818' }, decor: ['ecFern', 'ecFern', 'ecMushroom']
   }),
   ec_galapagos: Object.assign({}, base, {
+    rays: '#c8ffff',
     name: 'Galápagos', music: 'tour_ec_deep', particles: 'bubbles', underwater: true,
     sky: ['#5ae8ff', '#1a9ad8', '#0a4a8a'], horizonGlow: '#aaffff', celestial: { type: 'none' }, stars: 0,
     layers: [{ kind: 'rocks', color: '#16607a', base: 330, amp: 60, f: 0.08 }, { kind: 'kelp', color: '#0e6a5a', base: 400, f: 0.2 }],

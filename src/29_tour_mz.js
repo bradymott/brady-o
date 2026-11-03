@@ -90,6 +90,7 @@ const base = {
 };
 const themes = {
   mz_savanna: Object.assign({}, base, {
+    rays: '#ffe0a0',
     name: 'Gorongosa', music: 'tour_mz', particles: 'dust',
     sky: ['#ff9a4a', '#ffd08a', '#fff4d8'], horizonGlow: '#ffd8a0',
     celestial: { type: 'sun', x: 0.72, y: 0.22, r: 46, color: '#fff2c0', glow: '#ffb060' }, stars: 0, cloudsDyn: true,
@@ -97,6 +98,7 @@ const themes = {
     fog: '#ffe0b0', decor: ['mzGrass', 'mzGrass', 'mzSkull']
   }),
   mz_dunes: Object.assign({}, base, {
+    rays: '#fff4d8',
     name: 'The Dunes', music: 'tour_mz_run', particles: 'sand',
     ground: { style: 'grass', cap: '#f0d89a', capHi: '#fff0c0', dirt: '#e8c47a', dirt2: '#c89a5a', rock: '#d8b06a' },
     sky: ['#2a9ae8', '#9ad8ff', '#fff8e8'], horizonGlow: '#fff0d0', celestial: { type: 'sun', x: 0.3, y: 0.14, r: 38, color: '#fffbe0', glow: '#ffe8a0' }, stars: 0, cloudsDyn: true,
@@ -104,6 +106,7 @@ const themes = {
     fog: '#fff4d8', decor: ['mzShell', 'mzGrass']
   }),
   mz_baobab: Object.assign({}, base, {
+    rays: '#fff0c0',
     name: 'The Great Baobab', music: 'tour_mz', particles: 'leaves',
     sky: ['#3a9ae8', '#a8d8ff', '#fff4d8'], horizonGlow: '#ffffff', celestial: { type: 'sun', x: 0.25, y: 0.15, r: 34, color: '#fffbe8', glow: '#ffe8b0' }, stars: 0, cloudsDyn: true,
     layers: [{ kind: 'mzSavanna', color: '#c89a4a', base: 340, f: 0.04 }],

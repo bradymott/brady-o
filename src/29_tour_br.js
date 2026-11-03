@@ -99,6 +99,7 @@ const base = {
 };
 const themes = {
   br_beach: Object.assign({}, base, {
+    rays: '#fff0c0',
     name: 'Copacabana', music: 'tour_br', particles: 'dust',
     sky: ['#1a8ae8', '#7ad0ff', '#fff4d8'], horizonGlow: '#fff0c0',
     celestial: { type: 'sun', x: 0.78, y: 0.16, r: 40, color: '#fffbe0', glow: '#ffe8a0' }, stars: 0, cloudsDyn: true,
@@ -113,6 +114,7 @@ const themes = {
     fog: '#ff8ad0', ground: { style: 'brWalk', cap: '#3a3a48', capHi: '#5a5a6a', dirt: '#4a4a58', dirt2: '#2a2a34', rock: '#5a5a68', paint: boardwalk.paint, paintCap(ctx, x0, x1) { ctx.fillStyle = '#4a4a58'; ctx.fillRect(x0, 0, x1 - x0, 8); ctx.fillStyle = '#ffffff'; for (let x = x0 + 4; x < x1; x += 16) ctx.fillRect(x, 3, 8, 2); } }
   }),
   br_falls: Object.assign({}, base, {
+    rays: '#ffffff',
     name: 'Iguaçu Falls', music: 'tour_br_falls', particles: 'motes',
     sky: ['#3a8ad8', '#9ad8ff', '#e8fff8'], horizonGlow: '#ffffff', celestial: { type: 'sun', x: 0.2, y: 0.12, r: 30, color: '#fffbe8', glow: '#ffffff' }, stars: 0, cloudsDyn: true,
     layers: [{ kind: 'brFalls', color: '#2a6a3a', base: 320, f: 0.05 }, { kind: 'brPalms', color: '#1e6a3a', base: 390, f: 0.2 }],
@@ -120,6 +122,7 @@ const themes = {
     semi: { style: 'plank', c1: '#8a8a9a', c2: '#5a5a6a' }, hard: { c1: '#5a6a5a', c2: '#2e3a30' }
   }),
   br_pantanal: Object.assign({}, base, {
+    rays: '#ffe0a0',
     name: 'Pantanal', music: 'tour_br', particles: 'leaves', liquid: 'river',
     sky: ['#ff9a5a', '#ffd08a', '#fff4d0'], horizonGlow: '#ffe0a0', celestial: { type: 'sun', x: 0.7, y: 0.3, r: 46, color: '#fff0c0', glow: '#ffb070' }, stars: 0, cloudsDyn: true,
     layers: [{ kind: 'brMarsh', color: '#6a9a4a', base: 360, f: 0.06 }, { kind: 'brPalms', color: '#3a6a2a', base: 370, f: 0.25 }],

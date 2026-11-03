@@ -413,44 +413,48 @@ const CartCrowd = {
     const rng = mulberry32(4242), faces = ['friendly', 'goofy', 'lashes', 'greeter', 'smug', 'kid'];
     this.looks = [];
     for (let i = 0; i < 24; i++) {
-      const m = new BurnsMesh(1024); m.lo = true; m.setBone(0);
-      this.spectator(m, rng, faces[i % faces.length], i);
-      this.looks.push({ src: m });
+      // a full look and a distant twin (same seed, a third of the triangles) that shares its bones
+      const seed = rng() * 1e9 | 0, m = new BurnsMesh(1024), f = new BurnsMesh(512); m.lo = true; m.setBone(0); f.lo = true; f.far = true; f.setBone(0);
+      this.spectator(m, mulberry32(seed), faces[i % faces.length], i, false);
+      this.spectator(f, mulberry32(seed), faces[i % faces.length], i, true);
+      this.looks.push({ src: m, far: f });
     }
     return this.looks;
   },
-  spectator(m, rng, face, i) {
+  spectator(m, rng, face, i, far) {
     const skin = SKIN_TONES[Math.floor(rng() * SKIN_TONES.length)].base, hair = HAIR_COLORS[Math.floor(rng() * 8)].base;
     const top = rng.pick(BURNS_NEON.concat(['#f4f0e8', '#1a1a22', '#3a6ad8', '#e8a040'])), bot = rng.pick(['#1a1a22', '#3a4a6a', '#6a4a3a', '#e8e0d0', '#2a2a3a']);
     const h = 0.92 + rng() * 0.16, pose = i % 4, fem = rng() < 0.5;
     // legs + shoes
-    m.color(bot); for (const s of [1, -1]) m.limb(s * 0.09, 0.82 * h, 0, s * 0.11, 0.08, 0.02, 0.075, 0.06, { seg: 5 });
-    m.color(rng.pick(['#1a1a1e', '#f4f4f0', '#8a5a3a', '#ff4fd8'])); for (const s of [1, -1]) m.ellipsoid(s * 0.11, 0.05, 0.06, 0.07, 0.05, 0.12, { seg: 6, rings: 4 });
+    const sg = far ? 4 : 5, es = far ? 6 : 8, er = far ? 4 : 6;
+    m.color(bot); for (const s of [1, -1]) m.limb(s * 0.09, 0.82 * h, 0, s * 0.11, 0.08, 0.02, 0.075, 0.06, { seg: sg });
+    const shoe = rng.pick(['#1a1a1e', '#f4f4f0', '#8a5a3a', '#ff4fd8']); if (!far) { m.color(shoe); for (const s of [1, -1]) m.ellipsoid(s * 0.11, 0.05, 0.06, 0.07, 0.05, 0.12, { seg: 6, rings: 4 }); }
     // torso (shirt), optional tutu / fur coat
-    m.color(top).shine(1); m.ellipsoid(0, 1.12 * h, 0, fem ? 0.17 : 0.2, 0.3 * h, 0.13, { seg: 8, rings: 6 }); m.shine(0);
-    if (rng() < 0.3) { m.color(rng.pick(['#ff9ad8', '#9af0ff', '#ffe24a', '#c8a0ff'])); m.push(); m.tf(0, 0.86 * h, 0); m.lathe([[0.16, 0], [0.34, -0.1], [0.3, -0.14], [0.12, -0.04]], { seg: 9 }); m.pop(); }
-    else if (rng() < 0.25) { m.color(rng.pick(['#e8dcc8', '#c87ab0', '#7ab0c8', '#2a2a2a'])); m.ellipsoid(0, 1.0 * h, 0, 0.26, 0.42 * h, 0.18, { seg: 8, rings: 6 }); }
+    m.color(top).shine(1); m.ellipsoid(0, 1.12 * h, 0, fem ? 0.17 : 0.2, 0.3 * h, 0.13, { seg: es, rings: er }); m.shine(0);
+    const skirt = rng(), skirtCol = rng.pick(['#ff9ad8', '#9af0ff', '#ffe24a', '#c8a0ff']), coat = rng(), coatCol = rng.pick(['#e8dcc8', '#c87ab0', '#7ab0c8', '#2a2a2a']);
+    if (skirt < 0.3) { m.color(skirtCol); m.push(); m.tf(0, 0.86 * h, 0); m.lathe([[0.16, 0], [0.34, -0.1], [0.3, -0.14], [0.12, -0.04]], { seg: far ? 6 : 9 }); m.pop(); }
+    else if (coat < 0.25) { m.color(coatCol); m.ellipsoid(0, 1.0 * h, 0, 0.26, 0.42 * h, 0.18, { seg: es, rings: er }); }
     // arms: cheering up, waving, or one fist pumping
     m.color(rng() < 0.5 ? top : skin);
     const up = [[0.36, 1.78, 0.06], [0.34, 1.82, 0.02]], wave = [[0.4, 1.7, 0.1], [0.32, 1.0, 0.08]], pump = [[0.3, 1.86, 0.08], [0.3, 1.05, 0.12]];
     const hands = pose === 0 ? up : pose === 1 ? wave : pose === 2 ? pump : [[0.42, 1.55, 0.18], [0.42, 1.55, 0.18]];
-    m.limb(0.19, 1.34 * h, 0, hands[0][0], hands[0][1] * h, hands[0][2], 0.05, 0.042, { seg: 5 });
-    m.limb(-0.19, 1.34 * h, 0, -hands[1][0], hands[1][1] * h, hands[1][2], 0.05, 0.042, { seg: 5 });
-    m.color(skin); m.ball(hands[0][0], hands[0][1] * h + 0.03, hands[0][2], 0.05, { seg: 5, rings: 4 }); m.ball(-hands[1][0], hands[1][1] * h + 0.03, hands[1][2], 0.05, { seg: 5, rings: 4 });
+    m.limb(0.19, 1.34 * h, 0, hands[0][0], hands[0][1] * h, hands[0][2], 0.05, 0.042, { seg: sg });
+    m.limb(-0.19, 1.34 * h, 0, -hands[1][0], hands[1][1] * h, hands[1][2], 0.05, 0.042, { seg: sg });
+    if (!far) { m.color(skin); m.ball(hands[0][0], hands[0][1] * h + 0.03, hands[0][2], 0.05, { seg: 5, rings: 4 }); m.ball(-hands[1][0], hands[1][1] * h + 0.03, hands[1][2], 0.05, { seg: 5, rings: 4 }); }
     // head, face, hair or hat, shades
     const hy = 1.58 * h;
-    m.color(skin).shine(1); m.ball(0, hy, 0, 0.14, { seg: 9, rings: 7 }); m.shine(0);
+    m.color(skin).shine(1); m.ball(0, hy, 0, 0.14, { seg: far ? 7 : 9, rings: far ? 5 : 7 }); m.shine(0);
     m.color('#ffffff'); m.decal(0, hy - 0.01, 0.135, 0.2, 0.2, BURNS_ATLAS.face(face));
-    m.color(hair).shine(1); m.ellipsoid(0, hy + 0.04, -0.02, 0.15, 0.12, 0.15, { seg: 8, rings: 4, phi1: Math.PI * 0.55 });
-    if (fem && rng() < 0.6) m.limb(0, hy, -0.08, 0, hy - 0.28, -0.12, 0.09, 0.06, { seg: 5 });
+    m.color(hair).shine(1); m.ellipsoid(0, hy + 0.04, -0.02, 0.15, 0.12, 0.15, { seg: far ? 6 : 8, rings: far ? 3 : 4, phi1: Math.PI * 0.55 });
+    const pony = fem && rng() < 0.6; if (pony) m.limb(0, hy, -0.08, 0, hy - 0.28, -0.12, 0.09, 0.06, { seg: sg });
     m.shine(0);
-    const hat = rng();
-    if (hat < 0.2) { m.color(rng.pick(['#e8d8a0', '#8a5a3a', '#ff4fd8'])); m.push(); m.tf(0, hy + 0.09, 0); m.cyl(0, 0, 0, 0.3, 0.3, 0.02, 10, {}); m.lathe([[0.14, 0], [0.12, 0.13], [0, 0.15]], { seg: 8 }); m.pop(); }
-    else if (hat < 0.35) { m.color(rng.pick(['#f4f0e8', '#ffb0d8', '#c8a0ff'])).ellipsoid(0, hy + 0.1, 0, 0.17, 0.12, 0.17, { seg: 8, rings: 5 }); }
-    else if (hat < 0.45) { m.color('#ffd84a'); m.push(); m.tf(0, hy + 0.1, 0); m.lathe([[0.12, 0], [0.01, 0.3], [0, 0.31]], { seg: 7 }); m.pop(); }
-    if (rng() < 0.55) { m.color('#14141a').shine(3); m.roundBox(0, hy + 0.02, 0.13, 0.22, 0.06, 0.03, 0.015); m.shine(0); }
+    const hat = rng(), hatCol = rng.pick(['#e8d8a0', '#8a5a3a', '#ff4fd8']), capCol = rng.pick(['#f4f0e8', '#ffb0d8', '#c8a0ff']);
+    if (hat < 0.2) { m.color(hatCol); m.push(); m.tf(0, hy + 0.09, 0); m.cyl(0, 0, 0, 0.3, 0.3, 0.02, far ? 7 : 10, {}); m.lathe([[0.14, 0], [0.12, 0.13], [0, 0.15]], { seg: far ? 6 : 8 }); m.pop(); }
+    else if (hat < 0.35) { m.color(capCol).ellipsoid(0, hy + 0.1, 0, 0.17, 0.12, 0.17, { seg: far ? 6 : 8, rings: far ? 3 : 5 }); }
+    else if (hat < 0.45) { m.color('#ffd84a'); m.push(); m.tf(0, hy + 0.1, 0); m.lathe([[0.12, 0], [0.01, 0.3], [0, 0.31]], { seg: far ? 5 : 7 }); m.pop(); }
+    const shades = rng() < 0.55; if (shades && !far) { m.color('#14141a').shine(3); m.roundBox(0, hy + 0.02, 0.13, 0.22, 0.06, 0.03, 0.015); m.shine(0); }
     // a glowing LED necklace (shows at night)
-    if (rng() < 0.6) { m.color(rng.pick(BURNS_NEON), 1); m.push(); m.tf(0, 1.36 * h, 0.01, 0, 0.25, 0); m.torus(0, 0, 0, 0.12, 0.018, { seg: 10, tseg: 3 }); m.pop(); m.emissive(0); }
+    const ledCol = rng.pick(BURNS_NEON); if (rng() < 0.6) { m.color(ledCol, 1); m.push(); m.tf(0, 1.36 * h, 0.01, 0, 0.25, 0); m.torus(0, 0, 0, 0.12, 0.018, { seg: far ? 6 : 10, tseg: 3 }); m.pop(); m.emissive(0); }
   },
   // spectators [{x, z, y, yaw}] -> skinned groups (one draw call per group of up to 60)
   groups(spots, rng) {
@@ -458,11 +462,13 @@ const CartCrowd = {
     let G = null;
     for (const s of spots) {
       const L = looks[Math.floor(rng() * looks.length)];
-      if (!G || G.objs.length >= cap || G.mesh.nv + L.src.nv > 60000) { if (G) G.finish(); G = new BurnsGroup(cap); G.crowd = true; out.push(G); }
+      if (!G || G.objs.length >= cap || G.mesh.nv + L.src.nv > 60000) { if (G) G.finish(); G = new BurnsGroup(cap); G.crowd = true; G.far = new BurnsGroup(cap); out.push(G); }
       const o = G.addBuilt(L.src, {}, { x: s.x, y: s.y || 0, z: s.z, yaw: s.yaw, baseY: s.y || 0, baseYaw: s.yaw, ph: rng() * 10, hop: 0.5 + rng() * 0.8, scale: 0.95 + rng() * 0.12 });
+      G.far.addBuilt(L.far, {}, {});
       o.cx = s.x; o.cz = s.z;
     }
     if (G) G.finish();
+    for (const g of out) { if (!g.far.geo) g.far.finish(); g.far.bones = g.bones; }   // the distant twin draws with the same bone matrices
     for (const g of out) { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const o of g.objs) { x0 = Math.min(x0, o.x); z0 = Math.min(z0, o.z); x1 = Math.max(x1, o.x); z1 = Math.max(z1, o.z); } g.cx = (x0 + x1) / 2; g.cz = (z0 + z1) / 2; g.rad = Math.hypot(x1 - x0, z1 - z0) / 2 + 2; }
     return out;
   },

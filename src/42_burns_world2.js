@@ -160,7 +160,7 @@ BurnsWorlds.register({
           const face = side > 0 ? Math.atan2(W2.C.x - x, W2.C.z - z) : Math.atan2(x - W2.C.x, z - W2.C.z);
           const seed = 1000 + lotN++;
           const outer = j === RR.length - 1 && side > 0;
-          npcN += W2.lot(api, x, z, face, seed, outer ? 'tents' : null, npcN < 64);
+          npcN += W2.lot(api, x, z, face, seed, outer ? 'tents' : null, npcN < 30);
         }
       }
     }
@@ -217,7 +217,7 @@ BurnsWorlds.register({
         spec: Object.assign(BurnsRig.npcSpec('burner', 32), { top: { kind: 'crop', col: '#ff6a1a' }, bottom: { kind: 'tutu', col: '#ff3b1a' }, coat: { kind: 'kimono', col: '#ffb02a', trim: '#ff3b1a' }, hair: { style: 'afro', col: '#ff5a1a', hi: '#ffd84a' }, face: 'lashes', acc: ['ledNecklace', 'bracelets'], key: 'w2:ember' }),
         lines: ['Fire is just light that got excited.', 'Practice with a sock on a string, baby. Then we\'ll talk.'] });
       // the spinners: two rings turning opposite ways
-      const rings = [{ r: 6.6, n: 7, om: 0.32 }, { r: 11.6, n: 10, om: -0.22 }];
+      const rings = [{ r: 6.6, n: 5, om: 0.32 }, { r: 11.6, n: 7, om: -0.22 }];
       let si = 0;
       for (const rg of rings) for (let i = 0; i < rg.n; i++) {
         const kind = ['poi', 'staff', 'poi', 'fans'][si % 4];
@@ -226,7 +226,7 @@ BurnsWorlds.register({
         si++;
       }
       // fire dancers ringing the edge (ambient)
-      for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + 0.6; api.npc(i % 2 ? { type: R.pick(['burner', 'tutu', 'sparklepony']), seed: 340 + i, x: cx + Math.sin(a) * 19.5, z: cz + Math.cos(a) * 19.5, behavior: 'dance', style: i % 6, yaw: a + Math.PI } : BW.castDef('firespinner', 340 + i, { name: 'FIRE DANCER', x: cx + Math.sin(a) * 19.5, z: cz + Math.cos(a) * 19.5, behavior: 'dance', style: 5, yaw: a + Math.PI, lines: ['The conclave is family. Hot, slightly singed family.', 'Wear natural fibers near fire. Polyester is a choice. A melty choice.'] })); }
+      for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + 0.6; api.npc(i % 2 ? { type: R.pick(['burner', 'tutu', 'sparklepony']), seed: 340 + i, x: cx + Math.sin(a) * 19.5, z: cz + Math.cos(a) * 19.5, behavior: 'dance', style: i % 6, yaw: a + Math.PI } : BW.castDef('firespinner', 340 + i, { name: 'FIRE DANCER', x: cx + Math.sin(a) * 19.5, z: cz + Math.cos(a) * 19.5, behavior: 'dance', style: 5, yaw: a + Math.PI, lines: ['The conclave is family. Hot, slightly singed family.', 'Wear natural fibers near fire. Polyester is a choice. A melty choice.'] })); }
       api.checkpoint('cp_conclave', cx - 5, cz + 19, { yaw: Math.PI, name: 'Fire Conclave' });
       api.glowRing(cx, cz, 9.1, 14); api.glowRing(cx, cz, 14.2, 18);
       api.pickup('water', cx + 8, 0.9, cz + 17);
@@ -329,7 +329,7 @@ BurnsWorlds.register({
       const swarmPath = (rA, rB, th0, th1) => { const p = []; for (let th = th0; th <= th1; th += 5) p.push(at(th, rA)); p.push(at(th1, (rA + rB) / 2)); for (let th = th1; th >= th0; th -= 5) p.push(at(th, rB)); p.push(at(th0, (rA + rB) / 2)); return p; };
       const routes = [swarmPath(152, 178, -28, 55), swarmPath(178, 152, -20, 58)];
       routes.forEach((path, sw) => {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 4; i++) {
           const col = BURNS_NEON[(i + sw * 2) % 7], mv = BW.bikeMover(api, col, { led: BURNS_NEON[(i + 3) % 7] });
           const d = api.enemy({ type: R.pick(['burner', 'ledsuit', 'tutu', 'furcoat']), seed: 400 + sw * 10 + i, name: 'BIKE SWARM', behavior: 'w234Cyclist', path, startIndex: Math.floor(i * 0.6) + sw * 9, speed: 7.4 + (i % 3) * 0.3, bikeMv: mv, hazard: true, hp: 1, x: path[0][0] + i * 1.5, z: path[0][1] + (i % 2) * 1.2, collide: false,
             taunts: ['BIKE LAAANE!', 'ON YOUR LEFT! AND RIGHT!', 'DING DING DING!'], always: true });
@@ -475,7 +475,7 @@ BurnsWorlds.register({
       for (let th = 60; th >= 30; th -= 2.5) path.push(at(th, 256));
       path.push(at(28, 248), at(27, 230), at(28, 212));
       const builds = [W2.carSnail, W2.carTeapot, W2.carCupcake, W2.carWhale, W2.carJelly, W2.carDisco];
-      S.parade = BW.parade(api, { path, builds: builds.map(b => (m, i) => b.call(W2, m, i)), n: 24, speed: 2.4 });
+      S.parade = BW.parade(api, { path, builds: builds.map(b => (m, i) => b.call(W2, m, i)), n: 18, speed: 2.4 });
       S.parade.onHit = (g2) => { g2.toast('ART CARS HAVE THE RIGHT OF WAY!'); };
       // a photo riding on top of the whale
       const car = S.parade.cars[3];
@@ -490,9 +490,9 @@ BurnsWorlds.register({
       const [hx, hz] = CAMP, oy = W2.outYaw(45), fx = Math.sin(oy), fz = Math.cos(oy), rx = Math.cos(oy), rz = -Math.sin(oy);
       const L = (a, b) => [hx + rx * a + fx * b, hz + rz * a + fz * b];
       // an RV, a dome, porta-potties, a shade, a couch and the tent with Brady's name on it
-      { const [x, z] = L(-13, 4); api.prop('rv', { x, z, yaw: oy + Math.PI / 2 + 0.1, seed: 902, col: '#f0e6d4' }); }
+      { const [x, z] = L(-13, 4); BURNS_W2.loProp(api, 'rv', { x, z, yaw: oy + Math.PI / 2 + 0.1, seed: 902, col: '#f0e6d4' }); }
       { const [x, z] = L(13, 6); api.prop('dome', { x, z, r: 5, col: '#e8d8f8', alt: '#c0a8e8', lights: true, glow: '#7ad8ff', frame: false }); }
-      { const [x, z] = L(-6, -9); api.prop('portapotty', { x, z, yaw: oy, col: '#2a6ac8' }); const [x2, z2] = L(-4.7, -9); api.prop('portapotty', { x: x2, z: z2, yaw: oy, col: '#3a8a3a' }); }
+      { const [x, z] = L(-6, -9); BURNS_W2.loProp(api, 'portapotty', { x, z, yaw: oy, col: '#2a6ac8' }); const [x2, z2] = L(-4.7, -9); BURNS_W2.loProp(api, 'portapotty', { x: x2, z: z2, yaw: oy, col: '#3a8a3a' }); }
       { const [x, z] = L(-1, 13); api.prop('shade', { x, z, w: 7, d: 5, col: '#cfe8c0' }); }
       { const [x, z] = L(1, 11); api.prop('couch', { x, z, yaw: oy + Math.PI, col: '#5a8a5a' }); }
       // the guest tent: roomy, cosy, suspiciously far from everyone else's
@@ -1205,6 +1205,7 @@ BURNS_W2.loProp = function (api, kind, o) { return api.mesh(o.x || 0, o.z || 0, 
 
 /* ---------------- lot builder: one camp on a city block (night) ---------------- */
 BURNS_W2.lot = function (api, x, z, yaw, seed, force, allowNpc) {
+  const loMesh = (mx, mz, fn, o) => api.mesh(mx, mz, m => BURNS_W2.lo(m, () => fn(m)), o);   // background camps: low detail
   const r = mulberry32(seed), BW = BURNS_W234, fx = Math.sin(yaw), fz = Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
   const L = (a, b) => [x + rx * a + fx * b, z + rz * a + fz * b];
   const kind = force || r.weighted([['rv', 3], ['dome', 2], ['tents', 1.6], ['lounge', 1.6], ['art', 1], ['sound', 0.6], ['flags', 0.8]]);
@@ -1228,12 +1229,12 @@ BURNS_W2.lot = function (api, x, z, yaw, seed, force, allowNpc) {
     crowd(0, 3.2, 2, 'dance');
   } else if (kind === 'tents') {
     const n = 2 + Math.floor(r() * 3);
-    for (let i = 0; i < n; i++) { const [tx, tz] = L(-4 + i * (8 / Math.max(1, n - 1)) + r.range(-0.5, 0.5), r.range(-2.5, 0.5)); api.mesh(tx, tz, m => BW.tent(m, { r: 1.1 + r() * 0.5, col: r.pick(['#3a8a6a', '#3a6aaa', '#aa5a3a', '#8a3a8a', '#c8a03a', '#3a9aa8']) }), { yaw: yaw + r.range(-0.6, 0.6) }); }
+    for (let i = 0; i < n; i++) { const [tx, tz] = L(-4 + i * (8 / Math.max(1, n - 1)) + r.range(-0.5, 0.5), r.range(-2.5, 0.5)); loMesh(tx, tz, m => BW.tent(m, { r: 1.1 + r() * 0.5, col: r.pick(['#3a8a6a', '#3a6aaa', '#aa5a3a', '#8a3a8a', '#c8a03a', '#3a9aa8']) }), { yaw: yaw + r.range(-0.6, 0.6) }); }
     const [lx, lz] = L(r.range(-2, 2), 2.4);
-    api.mesh(lx, lz, m => BW.lamp(m, { h: 2.4, pool: 7, col: neon() }), { yaw: yaw + Math.PI / 2 });
+    loMesh(lx, lz, m => BW.lamp(m, { h: 2.4, pool: 7, col: neon() }), { yaw: yaw + Math.PI / 2 });
   } else if (kind === 'lounge') {
     const [cx, cz] = L(0, 0), c = r.pick(['#ff9ad8', '#9adcff', '#ffe28a', '#c8a0ff', '#a0ffd0']);
-    api.mesh(cx, cz, m => {
+    loMesh(cx, cz, m => {
       // a big parasol canopy (lathe) on a pole, beanbags, glowing orbs
       m.color('#4a3a3a'); BW.post(m, 0, 0, 0, 0.09, 3.1);
       m.color(c); BW.lathe(m, 0, 2.5, 0, [[0.1, 0.9], [3.2, 0], [3.2, 0], [3.0, 0.08], [0.2, 0.95], [0, 1.0]], { seg: 16 });
@@ -1246,7 +1247,7 @@ BURNS_W2.lot = function (api, x, z, yaw, seed, force, allowNpc) {
     crowd(0, 0.5, 2, 'sit');
   } else if (kind === 'art') {
     const [ax, az] = L(0, 0), c = neon(), t = r.pick(['mushroom', 'ring', 'orb', 'heart']);
-    api.mesh(ax, az, m => {
+    loMesh(ax, az, m => {
       const lights = [{ x: 0, y: 0, z: 0, s: 0, c, pool: 8 }], cols = [];
       if (t === 'mushroom') { m.color('#e8e0d0'); BW.lathe(m, 0, 0, 0, [[0.5, 0], [0.35, 1.2], [0.42, 2.4]], { seg: 12 }); m.color(c, 0.6); BW.lathe(m, 0, 2.3, 0, [[0.3, 0], [2.0, 0.2], [2.1, 0.45], [1.4, 1.1], [0, 1.35]], { seg: 16 }); m.emissive(0); lights.push({ x: 0, y: 3, z: 0, s: 2.6, c }); cols.push({ t: 'cyl', x: 0, z: 0, r: 0.5, y0: 0, y1: 2.4 }, { t: 'cyl', x: 0, z: 0, r: 2.0, y0: 2.3, y1: 3.5 }); }
       else if (t === 'ring') { m.color(c, 0.85); BW.ring(m, 0, 2.6, 0, 2.3, 0.22, { pitch: Math.PI / 2, seg: 24, tseg: 8 }); m.emissive(0); m.color('#3a3a40'); BW.post(m, -2.3, 0, 0, 0.14, 1.2); BW.post(m, 2.3, 0, 0, 0.14, 1.2); lights.push({ x: 0, y: 2.6, z: 0, s: 3.2, c }); }
@@ -1256,7 +1257,7 @@ BURNS_W2.lot = function (api, x, z, yaw, seed, force, allowNpc) {
     }, { yaw });
   } else if (kind === 'sound') {
     const [sx, sz] = L(0, -1.5), c = neon();
-    api.mesh(sx, sz, m => {
+    loMesh(sx, sz, m => {
       const cols = [];
       for (const side of [-1, 1]) for (let k = 0; k < 2; k++) {
         const bx = side * 2.2; m.color('#1a1a20'); BW.rb(m, bx, 0.7 + k * 1.4, 0, 1.4, 1.36, 1.0, 0.12);
@@ -1271,10 +1272,10 @@ BURNS_W2.lot = function (api, x, z, yaw, seed, force, allowNpc) {
     crowd(0, 3.2, 3, 'dance');
   } else if (kind === 'flags') {
     const c1 = neon(), c2 = neon();
-    for (const s of [-1, 1]) { const [px, pz] = L(s * 4, 0); api.mesh(px, pz, m => { m.color('#4a4a52'); BW.post(m, 0, 0, 0, 0.07, 5.2); m.color(s > 0 ? c1 : c2, 0.5); BW.ball(m, 0, 5.3, 0, 0.16); m.emissive(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 5.2, camPass: true }], lights: [{ x: 0, y: 5.3, z: 0, s: 0.7, c: s > 0 ? c1 : c2 }] }; }); }
+    for (const s of [-1, 1]) { const [px, pz] = L(s * 4, 0); loMesh(px, pz, m => { m.color('#4a4a52'); BW.post(m, 0, 0, 0, 0.07, 5.2); m.color(s > 0 ? c1 : c2, 0.5); BW.ball(m, 0, 5.3, 0, 0.16); m.emissive(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 5.2, camPass: true }], lights: [{ x: 0, y: 5.3, z: 0, s: 0.7, c: s > 0 ? c1 : c2 }] }; }); }
     const [a0, b0] = L(-4, 0), [a1, b1] = L(4, 0);
     api.prop('pennants', { x: 0, z: 0, x0: a0, y0: 5.0, z0: b0, x1: a1, y1: 5.0, z1: b1, n: 14, sag: 0.9 });
-    const [tx, tz] = L(r.range(-2, 2), -1.5); api.mesh(tx, tz, m => BW.tent(m, { r: 1.5, col: r.pick(['#3a8a6a', '#aa5a3a', '#8a3a8a']) }), { yaw });
+    const [tx, tz] = L(r.range(-2, 2), -1.5); loMesh(tx, tz, m => BW.tent(m, { r: 1.5, col: r.pick(['#3a8a6a', '#aa5a3a', '#8a3a8a']) }), { yaw });
     const [lx, lz] = L(0, 0); api.light(lx, lz, 7, c1, 0.35);
   }
   return npcs;

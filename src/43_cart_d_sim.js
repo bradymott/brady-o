@@ -981,7 +981,7 @@ class CartRaceScene {
     try {
       for (const c of W.chunks) BurnsGL.freeGeo(c); for (const g of W.ground.geos) BurnsGL.freeGeo(g);
       BurnsGL.freeTex(W.ground.paintT); BurnsGL.freeTex(W.lightmap.T);
-      for (const G of this.E.crowds) BurnsGL.freeGeo(G.geo); for (const G of (this.props && this.props.groups) || []) BurnsGL.freeGeo(G.geo);
+      for (const G of this.E.crowds) { BurnsGL.freeGeo(G.geo); if (G.far) BurnsGL.freeGeo(G.far.geo); } for (const G of (this.props && this.props.groups) || []) BurnsGL.freeGeo(G.geo);
     } catch (e) { /* ignore */ }
   }
   leave() { this.release(); Game.setScene(new KartMenuScene()); }

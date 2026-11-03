@@ -190,6 +190,7 @@ const baseTheme = {
 };
 const themes = {
   mx_mercado: Object.assign({}, baseTheme, {
+    rays: '#fff0c0',
     name: 'Mercado Mayhem', music: 'tour_mx', particles: 'confetti',
     sky: ['#2ab8e8', '#86dcf2', '#fff0c8'], horizonGlow: '#ffe0a0',
     celestial: { type: 'sun', x: 0.82, y: 0.18, r: 38, color: '#fff8dc', glow: '#ffd27a' }, stars: 0, cloudsDyn: true,
@@ -202,6 +203,7 @@ const themes = {
     fog: '#ffe8d0', decor: ['mxNopal', 'mxPots', 'mxCrates', 'mxLamp', 'mxPots', 'mxAgaveP']
   }),
   mx_canal: Object.assign({}, baseTheme, {
+    rays: '#fff4d0',
     name: 'Xochimilco', music: 'tour_mx', particles: 'petals',
     sky: ['#48b8f0', '#a8e4ff', '#f8ffe8'], horizonGlow: '#e8ffd0',
     celestial: { type: 'sun', x: 0.2, y: 0.22, r: 34, color: '#fffbe8', glow: '#fff0a8' }, stars: 0, cloudsDyn: true,
@@ -213,6 +215,7 @@ const themes = {
     fog: '#d8fff0', liquid: 'canal', decor: ['mxFlowers']
   }),
   mx_cenote: Object.assign({}, baseTheme, {
+    rays: '#a8f0ff',
     name: 'Cenote', music: 'tour_mx_deep', particles: 'bubbles',
     sky: ['#2aa8b8', '#0a6a7a', '#04303a'], horizonGlow: '#5affe0', underwater: true,
     celestial: { type: 'none' }, stars: 0,

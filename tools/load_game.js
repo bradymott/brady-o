@@ -10,7 +10,9 @@ module.exports = function loadGame(opts) {
   const dir = path.join(__dirname, '..', 'src');
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.js')).sort()
     .filter(f => !isBurns(f) && !isKart(f) && !WORLD_DROP.includes(f) && f !== '99_main.js')
-    .filter(f => !(opts.noSeeds && f === '08b_seeds.js'));
+    .filter(f => !(opts.noSeeds && f === '08b_seeds.js'))
+    // BRADY_SKIP_TOUR=id,vn: leave out countries that are still being written (by code)
+    .filter(f => !(process.env.BRADY_SKIP_TOUR || '').split(',').filter(Boolean).some(cc => f === '29_tour_' + cc + '.js'));
   // a canvas 2D context that accepts every call and returns harmless values
   const noop = () => proxy;
   const proxy = new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => 0 : (k === 'width' || k === 'height' ? 64 : k === 'length' ? 0 : noop), set: () => true, apply: () => proxy });

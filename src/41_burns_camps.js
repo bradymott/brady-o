@@ -136,12 +136,6 @@ function bcmPool(P, lx, lz, r, col, i) {
   if (P.o.lights === false || P.maxNight < 0.25) return;
   P.api.light(P.F.wx(lx, lz), P.F.wz(lx, lz), r * P.F.s, col, (i === undefined ? 0.5 : i) * Math.min(1, P.maxNight + 0.2));
 }
-// a dynamic glow we keep a handle on (colour / size / position animated per frame)
-function bcmDynGlow(P, lx, ly, lz, size, col) {
-  const q = { x: P.F.wx(lx, lz), y: P.F.wy(ly), z: P.F.wz(lx, lz), s: size * P.F.s, s0: size * P.F.s, c: burnsRGBf(col || '#ffffff'), ph: Math.random() * 10, blink: 0, hidden: false };
-  P.api.world.glows.push(q); P.dglows.push(q);
-  return q;
-}
 // a signboard (rounded frame, text both sides) inside a part. Returns its board height
 function bcmSignMesh(m, text, style, x, y, z, h, o) {
   o = o || {};
@@ -866,7 +860,7 @@ function bcmArcade(m, o) {
           const R = face ? ro - 0.15 : ri + 0.15, w0 = tc - (ra - 0.1) / R, w1 = tc + (ra - 0.1) / R;
           const A = pt(R, w0, yb + 1.0), B = pt(R, w1, yb + 1.0);
           m.color(trim).shine(1); m.limb(A[0], A[1], A[2], B[0], B[1], B[2], 0.07, 0.07, { seg: 6 });
-          if (!m.lo) for (let k = 0; k <= 4; k++) { const q = pt(R, lerp(w0, w1, k / 4), yb); m.push(); m.tf(q[0], yb, q[2]); m.lathe([[0.06, 0], [0.1, 0.25], [0.05, 0.6], [0.08, 0.85], [0.05, 1.0]], { seg: 6 }); m.pop(); }
+          if (!m.lo) for (let k = 0; k <= 4; k++) { const q = pt(R, lerp(w0, w1, k / 4), yb); m.push(); m.tf(q[0], yb, q[2]); m.lathe([[0.06, 0], [0.1, 0.25], [0.05, 0.6], [0.08, 0.85], [0.05, 1.0]], { seg: 5 }); m.pop(); }
           m.shine(0);
           const mid = pt(R, tc, 0), tg = tang(tc);
           cols.push({ t: 'box', x: mid[0], z: mid[2], hx: 0.12, hz: ra, y0: yb, y1: yb + 1.1, yaw: Math.atan2(tg[0], tg[2]), walk: false, camPass: true });
@@ -881,7 +875,7 @@ function bcmArcade(m, o) {
       cols.push({ t: 'box', x: mid[0], z: mid[2], hx: pw / 2, hz: depth / 2, y0: yb, y1: yb + th, yaw: -tb, walk: false });
       if (!m.lo) {
         const q0 = pt(ri - 0.12, tb, yb + 0.35), q1 = pt(ri - 0.12, tb, yTop - 0.15);
-        m.color(T.col || '#e8d8bc').shine(1); m.limb(q0[0], q0[1], q0[2], q1[0], q1[1], q1[2], 0.27, 0.24, { seg: 9 });
+        m.color(T.col || '#e8d8bc').shine(1); m.limb(q0[0], q0[1], q0[2], q1[0], q1[1], q1[2], 0.27, 0.24, { seg: 8 });
         m.color(T.cap || trim); m.push(); m.tf(q0[0], yb, q0[2], -tb); m.roundBox(0, 0.17, 0, 0.75, 0.34, 0.5, 0.06); m.pop();
         m.push(); m.tf(q1[0], yTop - 0.2, q1[2], -tb); m.roundBox(0, 0.06, 0, 0.75, 0.22, 0.52, 0.06); m.pop(); m.shine(0);
       }
@@ -1333,7 +1327,7 @@ function bcmRSDome(P, D) {
         const v = j / (ny - 1), u = i / (scr - 1), w2 = Math.sin(u * 6 + v * 4) + Math.sin(u * 13 - v * 2.5);
         const c = w2 > 0.9 ? D.glow[0] : w2 > 0.1 ? D.glow[1 % D.glow.length] : w2 > -0.6 ? D.glow[2 % D.glow.length] : null;
         if (!c) continue;
-        m.color(c, 0.9); m.roundBox(0, h0 + 0.2 + v * (sh - 0.4), 0, 0.42, sh / ny * 0.78, 0.04, 0.02);
+        const py = h0 + 0.2 + v * (sh - 0.4), hh = sh / ny * 0.39; m.color(c, 0.9); m.poly([[0.21, py - hh, 0.01], [0.21, py + hh, 0.01], [-0.21, py + hh, 0.01], [-0.21, py - hh, 0.01]], null, [0, py, -1]);
       }
       m.emissive(0);
       m.pop();
@@ -1413,7 +1407,7 @@ function bcmRSVillage(P) {
     const big = brady ? 2.8 : 2.4 + (i % 3) * 0.2, h = big * 2.25;
     bcmPart(P, x, z, m => {
       bcmTipi(m, x, z, yaw, { r: big, h, canvas: canv[i % 4], band: bands[i % 4][0], band2: bands[i % 4][1],
-        pattern: (mm, r, hh) => { if (mm.lo) return; mm.color(bands[(i + 1) % 4][0]); for (let k = 0; k < 8; k++) { const t = k / 8 * TAU; mm.push(); mm.tf(Math.sin(t) * r * 0.86, hh * 0.08, Math.cos(t) * r * 0.86, t, -0.42, 0); mm.ellipsoid(0, 0, 0.02, 0.14, 0.14, 0.03, { seg: 8, rings: 4 }); mm.pop(); } } });
+        pattern: (mm, r, hh) => { if (mm.lo) return; mm.color(bands[(i + 1) % 4][0]); for (let k = 0; k < 8; k++) { const t = k / 8 * TAU; mm.push(); mm.tf(Math.sin(t) * r * 0.86, hh * 0.08, Math.cos(t) * r * 0.86, t, -0.42, 0); mm.ellipsoid(0, 0, 0.02, 0.14, 0.14, 0.03, { seg: 6, rings: 2, phi1: Math.PI / 2 }); mm.pop(); } } });
       const cols = [], lights = [];
       if (brady) {
         // Brady's tipi: an inner canvas lining, a bedroll, a lantern, his backpack; walls with a door gap
@@ -1512,7 +1506,7 @@ BCM_KINDS.rootSociety = {
   name: 'Root Society', short: 'Root Society', bpm: 124,
   desc: 'Three geodesic dome stages (90, 60 and 50 ft), an open-air coliseum stage with a docking stage art car, a shade lounge, and the 27-tipi village around the 30 ft common dome.',
   real: 'One of the largest and loudest sound camps. Its public dance space is set by its geodesic domes (a 90 ft main dome full of lighting and subwoofers, a 60 ft dome); the living area is about 27 tipis around a 30 ft common eating/meeting dome; it sleeps 100+. Per the owner: three dome stages, an outdoor coliseum stage, and a coliseum-styled art car that docks in front of it and drives around the playa.',
-  foot: [-56, -80, 56, 60], radius: 82, height: 14, entrance: [0, 58, Math.PI], tourClear: [-76, -96, 76, 66],
+  foot: [-56, -80, 56, 60], radius: 82, height: 14, entrance: [0, 58, Math.PI], tourClear: [-80, -100, 80, 70],
   build: bcmBuildRoot, sil: bcmSilRoot
 };
 
@@ -2605,7 +2599,7 @@ const BurnsCamps = {
     const crowdK = o.crowd === false ? 0 : (o.crowd === true || o.crowd === undefined) ? 1 : clamp(+o.crowd || 0, 0, 2);
     const P = {
       kind, id, K, o, name: o.name || K.name, x, z, rot, s, y0, F: bcmFrame(x, y0, z, rot, s), R, api, g, lod, crowdK,
-      cols: [], actors: [], stages: [], areas: [], spots: {}, routes: {}, lasers: [], plights: [], flames: [], bursts: [], dglows: [], balls: [], vehicles: [], co2: [], co2T: 0, chunks: { full: [], far: [] },
+      cols: [], actors: [], stages: [], areas: [], spots: {}, routes: {}, lasers: [], plights: [], flames: [], bursts: [], balls: [], vehicles: [], co2: [], co2T: 0, chunks: { full: [], far: [] },
       maxNight: o.lights === true ? 1 : g ? bcmMaxNight(g) : 1, bpm: K.bpm || 124, beatPh: (hashStr(id) % 1000) / 250, radius: K.radius * s, lodNear: o.lodNear || 150,
       area: null, inCamp: false, arrived: false, artCar: null,
       toWorld(lx, ly, lz) { return this.F.w(lx, ly || 0, lz); },

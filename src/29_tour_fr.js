@@ -171,6 +171,7 @@ const base = {
 };
 const themes = {
   fr_morning: Object.assign({}, base, {
+    rays: '#fff0d0',
     name: 'Boulangerie Boulevard', music: 'tour_fr', particles: 'petals', ground: cobble,
     sky: ['#6aa8e8', '#c8e0ff', '#ffe8e0'], horizonGlow: '#ffd8d0',
     celestial: { type: 'sun', x: 0.2, y: 0.2, r: 34, color: '#fffbe8', glow: '#ffe0b0' }, stars: 0, cloudsDyn: true,
@@ -182,6 +183,7 @@ const themes = {
     fog: '#ffe8e0', decor: ['frLamp', 'frCafe', 'frFlowers', 'frLamp', 'frBench']
   }),
   fr_seine: Object.assign({}, base, {
+    rays: '#fff4dc',
     name: 'The Seine', music: 'tour_fr_chase', particles: 'leaves', ground: cobble,
     sky: ['#5a98e0', '#b8d8ff', '#fff0d8'], horizonGlow: '#ffe8c8',
     celestial: { type: 'sun', x: 0.75, y: 0.25, r: 38, color: '#fffbe8', glow: '#ffe0a0' }, stars: 0, cloudsDyn: true,
@@ -213,6 +215,7 @@ const themes = {
     semi: { style: 'truss', c1: '#8a6a4a', c2: '#5a4430' }
   }),
   fr_chateau: Object.assign({}, base, {
+    rays: '#ffe8b0',
     name: 'Hall of Mirrors', music: 'tour_fr', particles: 'motes', ground: parquet,
     sky: ['#f2e6c8', '#e8d4a8', '#d8b888'], horizonGlow: '#fff0c0', celestial: { type: 'none' }, stars: 0,
     layers: [{ kind: 'frMirrors', color: '#c8962a', base: 0, f: 0.15 }],
