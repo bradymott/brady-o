@@ -528,13 +528,15 @@ Object.assign(CartRaceScene.prototype, {
     ctx.restore();
   },
   buildPause() {
-    const W = Game.cssW, H = Game.cssH, bw = Math.min(240, W * 0.6), x = (W - bw) / 2, y0 = H / 2 - 92;
+    const W = Game.cssW, H = Game.cssH, bw = Math.min(240, W * 0.6), x = (W - bw) / 2, y0 = H / 2 - 114;
     const sv = cartSave();
     this.pauseBtns = [
       { x, y: y0, w: bw, h: 44, label: 'RESUME', primary: true, fn: () => this.closePause() },
       { x, y: y0 + 52, w: bw, h: 40, label: 'RESTART', fn: () => this.restart() },
       { x, y: y0 + 100, w: bw, h: 36, size: 12, label: 'AUTO-GAS: ' + (this.autoGas ? 'ON' : 'OFF'), fn: () => { this.autoGas = !this.autoGas; sv.autoGas = this.autoGas; Save.save(); this.buildPause(); } },
-      { x, y: y0 + 144, w: bw, h: 40, label: 'QUIT TO MENU', fn: () => this.leave() }
+      { x, y: y0 + 144, w: bw / 2 - 4, h: 36, size: 11, label: cartVolLabel('MUSIC', Save.data.settings.music), fn: () => { cartCycleVol('music'); this.buildPause(); } },
+      { x: x + bw / 2 + 4, y: y0 + 144, w: bw / 2 - 4, h: 36, size: 11, label: cartVolLabel('SFX', Save.data.settings.sfx), fn: () => { cartCycleVol('sfx'); Sound.play('select'); this.buildPause(); } },
+      { x, y: y0 + 188, w: bw, h: 40, label: 'QUIT TO MENU', fn: () => this.leave() }
     ];
     this.pauseBtns.focus = 0;
   },
