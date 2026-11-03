@@ -72,7 +72,7 @@ BurnsWorlds.register({
       desc: 'A bike swarm blew through Camp Blinky and scattered 8 LED bike lights. Bring them all back and Lumen might let you join. Don\'t stand in the bike lane.', hint: 'Camp Blinky, 6:30 & C',
       onStart(g) { BURNS_W2.labels(g, 'lights', 'BIKE LIGHT'); },
       onComplete(g) { BURNS_W2.reject(g, 'lights', 'lumen', ['MY BABIES! All eight! The playa is bright again!', 'Join Camp Blinky? Oh, sweetie. We\'re full of LIGHTS. There\'s no room for people.']); } },
-    { id: 'rocket', name: 'Launch the Retro Rocket', type: 'custom', start: 'trigger', short: 'Climb the gantry, hit LAUNCH', marker: { x: 130, z: -68 },
+    { id: 'rocket', name: 'Launch the Retro Rocket', type: 'custom', start: 'trigger', short: 'Climb the gantry, hit LAUNCH', marker: { x: 140, z: -96 },
       desc: 'A giant retro rocket on the open playa. Climb its gantry for a view of the whole city, then hit the big red button.', hint: 'Open playa, east of Center Camp' },
     { id: 'lost', name: 'Lost & Found Burners', token: false, type: 'custom', count: 3, giver: 'lost1', start: 'manual', progressLabel: 'Burners home', short: 'Walk the lost burners home', marker: { x: 107, z: -32 },
       desc: 'Three burners asked you where 4:30 is. It is not here. You don\'t have a home, but you can find everybody else\'s: walk each of them to the address they actually remember.', hint: 'Lost burners wander near Esplanade and 6:00',
@@ -109,7 +109,7 @@ BurnsWorlds.register({
     S.tower = { x: 18, z: -96 };
     // the four talk-only camps that turn Brady away (lots, each with a camp lead under a big sign)
     S.rejectCamps = [
-      { id: 'dues', th: 7.5, r: 134.2 }, { id: 'waitlist', th: 37.5, r: 160.2 }, { id: 'full', th: -7.5, r: 186.2 }, { id: 'interview', th: 22.5, r: 212.2 }
+      { id: 'dues', th: 7.5, r: 134.2 }, { id: 'waitlist', th: 37.5, r: 160.2 }, { id: 'full', th: -22.5, r: 160.2 }, { id: 'interview', th: 22.5, r: 212.2 }
     ].map(q => { const [x, z] = at(q.th, q.r); return Object.assign(q, { x, z }); });
     // areas kept free of random camps
     S.capCamp = W2.at(21, 111);
@@ -254,12 +254,12 @@ BurnsWorlds.register({
       api.pickup('photo', tx - 1.7, 14.5, tz + 0.6, { id: 'p1' });
     }
     /* ---------------- the Retro Rocket (big art; gantry climb + launch button) ---------------- */
-    W2.placeRocket(api, g, 130, -68);
+    W2.placeRocket(api, g, 140, -96);
     /* ---------------- LSD-only: floating jellyfish over the open playa ---------------- */
     {
-      api.pickup('bag:lsd', 112, 0.9, -78);
-      api.sign('JELLYFISH\nSIGHTINGS: 0', 118, -84, { h: 0.9, yaw: -0.8, style: { bg: '#0a1a2a', fg: '#c8f0ff', size: 23, border: '#38f2ff' } });
-      const J = [[120, 1.4, -92], [124, 2.9, -98], [121, 4.4, -104.5], [114.5, 5.9, -106], [108, 7.3, -103], [104, 8.6, -97]];
+      api.pickup('bag:lsd', 104, 0.9, -80);
+      api.sign('JELLYFISH\nSIGHTINGS: 0', 110, -86, { h: 0.9, yaw: -0.8, style: { bg: '#0a1a2a', fg: '#c8f0ff', size: 23, border: '#38f2ff' } });
+      const J = [[112, 1.4, -94], [116, 2.9, -100], [113, 4.4, -106.5], [106.5, 5.9, -108], [100, 7.3, -105], [96, 8.6, -99]];
       api.hidden(() => {
         J.forEach(([x, y, z], i) => api.mesh(x, z, m => {
           m.color(burnsHSL(290 + i * 22, 0.9, 0.62), 0.55); BW.egg(m, 0, -0.05, 0, 1.4, 0.75, 1.4, { phi1: Math.PI / 2 + 0.25, seg: 14, rings: 6 });
@@ -268,7 +268,7 @@ BurnsWorlds.register({
           return { cols: [{ t: 'cyl', x: 0, z: 0, r: 1.35, y0: -0.3, y1: 0.05 }], lights: [{ x: 0, y: 0.2, z: 0, s: 2.2, c: '#ff8ad8' }] };
         }, { y: y }));
       });
-      api.glowsticks([[104, 9.8, -97], [108, 8.6, -103], [114.5, 7.2, -106]], { hidden: true });   // LSD-only bonus up on the jellies
+      api.glowsticks([[96, 9.8, -99], [100, 8.6, -105], [106.5, 7.2, -108]], { hidden: true });   // LSD-only bonus up on the jellies
     }
     /* ---------------- Camp Combustion: Flame Alley ---------------- */
     {
@@ -931,10 +931,10 @@ BURNS_W2.stashStart = function (g) {
   const S = BURNS_W2.state; if (S.stashLoads) return;
   const [rx, rz] = BURNS_W2.RLD, sp = g.def.spawn, d = S.rvDoor;
   // between the spawn and the RV door
-  const bx = lerp(sp.x, d.x, 0.45), bz = lerp(sp.z, d.z, 0.45);
+  const bx = lerp(sp.x, d.x, 0.72), bz = lerp(sp.z, d.z, 0.72);
   S.stashLoads = [['duffel', '40 IDENTICAL BLACK TEES'], ['sleepbag', 'SLEEPING BAG (STILL IN PLASTIC)'], ['brie', 'A WHOLE WHEEL OF BRIE']].map(([k, nm], i) => {
     const o = BURNS_W2.loadDef(k, nm, { stash: true, when: g2 => g2.missions.state('stash') === 'active', onPick(g2) { g2.toast(nm + ' · CARRY IT INTO THE RV'); BURNS_W2.markHaul(g2); } , onDrop(g2, L) { BURNS_W2.markHaul(g2, L); } });
-    return BURNS_W234.loadPlace(g, o, bx + Math.cos(i * 2.1) * 1.6, bz + Math.sin(i * 2.1) * 1.6, i * 1.3);
+    return BURNS_W234.loadPlace(g, o, bx + Math.cos(i * 2.1) * 1.3, bz + Math.sin(i * 2.1) * 1.3, i * 1.3);
   });
   void rx; void rz;
 };
@@ -954,8 +954,9 @@ BURNS_W2.markHaul = function (g, dropped) {
   for (const id of ['stash', 'haul']) {
     const m = g.missions.get(id); if (!m || m.state !== 'active') continue;
     const ground = dropped || (BW.S.loads || []).find(L => L.o[id === 'haul' ? 'haul' : 'stash']);
-    if (BW.S.carry) m.def.marker = id === 'stash' ? { x: S.rvDoor.x, z: S.rvDoor.z } : { x: S.tent.x, z: S.tent.z };
-    else if (ground) m.def.marker = { x: ground.x, z: ground.z };
+    // markers point at live objects (a dropped load is still flying when this runs)
+    if (BW.S.carry) m.def.marker = id === 'stash' ? S.rvDoor : S.tent;
+    else if (ground) m.def.marker = ground;
     m.def.short = id === 'stash' ? (BW.S.carry ? 'Carry it into the pink RV (side door)' : 'Pick up your gear by the pink RV') : (BW.S.carry ? 'Carry your stuff to Kevin\'s tent (7:30 & E)' : 'Pick your stuff back up!');
   }
 };
