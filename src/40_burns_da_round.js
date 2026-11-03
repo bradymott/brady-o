@@ -580,7 +580,7 @@ const BurnsRound = (() => {
     m.shine(0);
   });
   /* ---- neck / chest pieces ---- */
-  acc('ledNecklace', (m, A) => { const h = A.h, n = A.lo ? 5 : 9; for (let i = 0; i < n; i++) { const a = -1.2 + i / (n - 1) * 2.4, p = A.torsoPt(a * 0.55, 0.455 * h - Math.cos(a) * 0.045, 0.01); m.color(BURNS_NEON[i % 5], 1); m.ball(p[0], p[1], p[2], 0.017, { seg: 6, rings: 4 }); } m.emissive(0); });
+  acc('ledNecklace', (m, A) => { const h = A.h, n = A.lo ? 5 : 9, bo = A.lo ? { seg: 6, rings: 4 } : { seg: 10, rings: 5 }; for (let i = 0; i < n; i++) { const a = -1.2 + i / (n - 1) * 2.4, p = A.torsoPt(a * 0.55, 0.455 * h - Math.cos(a) * 0.045, 0.012); m.color(BURNS_NEON[i % 5], 1); m.ball(p[0], p[1], p[2], 0.018, bo); } m.emissive(0); });   // round beads up close (they read as LEDs in close-ups)
   acc('lei', (m, A) => { const h = A.h, n = A.lo ? 7 : 13; for (let i = 0; i < n; i++) { const a = -1.5 + i / (n - 1) * 3, p = A.torsoPt(a * 0.62, 0.45 * h - Math.cos(a) * 0.08, 0.016); m.color(['#ff4f8a', '#ffe24a', '#ff8a2a', '#ffffff'][i % 4]).shine(1); m.ball(p[0], p[1], p[2], 0.03, { seg: 7, rings: 5 }); } m.shine(0); });
   acc('beads', (m, A) => { // layered bead strands with a pendant
     const h = A.h, cols = ['#ff4fd8', '#38f2ff', '#ffe24a', '#7aff5a', '#ff8a2a'];

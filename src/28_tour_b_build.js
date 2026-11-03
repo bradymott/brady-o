@@ -15,6 +15,7 @@ const TourBuild = {
     };
     const gen = TourStyles[spec.style] || TourStyles.run;
     const main = gen(ctx);
+    if (spec.mirror) tourMirror(main, ctx.areas);
     const style = spec.style || 'run';
     return {
       id, world: w, index: i, type: TOUR_STYLE_PLAN[style] || 'ow', arch: style, kind: style === 'castle' ? 'castle' : 'level',
@@ -392,7 +393,7 @@ Object.assign(Tour.pieces, {
     const h = 3, px = st.x + 3;
     B.fill(px, st.gy - h, px + 1, st.gy - 1, T.HARD);
     const roomIdx = 1 + ctx.areas.length;
-    const portal = B.spawn('portal', px, st.gy - h - 1, { kind: 'door', look: 'tourDoor', target: { area: roomIdx, x: 6 * TS + TS / 2, y: 11 * TS } });
+    const portal = B.spawn('portal', px, st.gy - h - 1, { kind: 'door', look: o.look || 'tourDoor', target: { area: roomIdx, x: 6 * TS + TS / 2, y: 11 * TS } });
     portal.x += TS / 2;
     const room = tourBonusRoom(ctx, roomIdx, o.secret ? ctx.spec.secret : null);
     ctx.areas.push(room.area);
@@ -463,8 +464,43 @@ function tourBonusRoom(ctx, idx, secret) {
     area.tiles = ext(area.tiles, (x, y) => (y < 2 || y >= 11 || x >= W2 - 2 ? T.GROUND : T.EMPTY));
     area.hide = ext(area.hide, () => 0); area.surf = ext(area.surf, () => 0);
     area.W = W2;
-    area.spawns.push({ type: 'gate', x: (W + 6) * TS, y: 11 * TS, secret: true, secretWorld: secret.to });
-    area.spawns.push({ type: 'sign', x: (W + 1) * TS + TS / 2, y: 11 * TS, text: 'A secret exit! Somewhere on the map, a new place appears.' });
+    area.spawns.push({ type: 'gate', x: (W + 6) * TS, y: 11 * TS, secret: true, secretWorld: secret.to, need: secret.need || 0 });
+    area.spawns.push({ type: 'sign', x: (W + 1) * TS + TS / 2, y: 11 * TS, text: secret.sign || 'A secret exit! Somewhere on the map, a new place appears.' });
   }
   return { area, ret, idx };
+}
+
+// mirror: flip a level's main area left to right (World 22's Mirror Lake is played leftwards)
+function tourMirror(main, rooms) {
+  const A = main.area, W = A.W, H = A.H, PX = W * TS;
+  const flip = arr => { const o = new Uint8Array(arr.length); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) o[y * W + (W - 1 - x)] = arr[y * W + x]; return o; };
+  A.tiles = flip(A.tiles); A.hide = flip(A.hide); A.surf = flip(A.surf);
+  const c = {}; for (const k in A.contents) { const [x, y] = k.split(',').map(Number); c[(W - 1 - x) + ',' + y] = A.contents[k]; } A.contents = c;
+  for (const s of A.spawns) {
+    if (s.type === 'mplat' && !s.swing && !s.orbit) { const pw = s.pw || 3, ctr = s.x - TS / 2 + pw * TS / 2; s.x = PX - ctr + TS / 2 - pw * TS / 2 - (s.ax || 0); }
+    else s.x = PX - s.x;
+    s.dir = -(s.dir || -1);
+    if (s.target && s.target.area === 0) s.target.x = PX - s.target.x;
+  }
+  for (const r of rooms) for (const s of r.spawns || []) if (s.target && s.target.area === 0) s.target.x = PX - s.target.x;
+  for (const d of A.decor) d.x = PX - d.x;
+  for (const z of A.zones) { z.x = PX - z.x - z.w; z.fx = -(z.fx || 0); }
+  A.ghosts = A.ghosts.map(([x, y]) => [W - 1 - x, y]); A.springs = A.springs.map(([x, y]) => [W - 1 - x, y]);
+  for (const b of A.beats) b.tx = W - 1 - b.tx;
+  for (const L of A.locks) L.tiles = L.tiles.map(([x, y]) => [W - 1 - x, y]);
+  main.start = Object.assign({}, main.start, { x: PX - main.start.x });
+  A.mirrored = true;
+}
+// a secret gate can ask for postcards first (World 22's door wants 22 of them)
+{
+  class Gate extends ENTITY_TYPES.gate {
+    touchPlayer(p) {
+      if (this.s.need && typeof TourProgress !== 'undefined' && TourProgress.totals().gold < this.s.need) {
+        if (!(this.toldT > this.t)) { this.toldT = this.t + 3; this.g.toast(`THIS DOOR WANTS ${this.s.need} POSTCARDS (YOU HAVE ${TourProgress.totals().gold})`); Sound.play('bump'); }
+        return;
+      }
+      super.touchPlayer(p);
+    }
+  }
+  ENTITY_TYPES.gate = Gate;
 }

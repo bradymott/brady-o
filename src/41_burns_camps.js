@@ -173,10 +173,12 @@ function bcmCamera(g) {
   const p = g.player, cam = g.cam; if (!p || !cam) return;
   for (const D of R.domes) {
     const dx = p.x - D.x, dz = p.z - D.z;
-    if (dx * dx + dz * dz > (D.r - 0.3) * (D.r - 0.3) || p.y > D.y0 + D.r * 0.75 || p.y < D.y0 - 1) continue;
+    if (dx * dx + dz * dz > (D.r - 0.1) * (D.r - 0.1) || p.y > D.y0 + D.r * 0.75 || p.y < D.y0 - 1) continue;
     const hx = p.x, hy = p.y + 1.45, hz = p.z, ex = cam.x - hx, ey = cam.y - hy, ez = cam.z - hz;
-    const rr = Math.max(1, D.r - 0.75), ox = hx - D.x, oy = hy - D.y0, oz = hz - D.z;
-    const a = ex * ex + ey * ey + ez * ez, b = 2 * (ox * ex + oy * ey + oz * ez), c = ox * ox + oy * oy + oz * oz - rr * rr;
+    const ox = hx - D.x, oy = hy - D.y0, oz = hz - D.z, hd = Math.sqrt(ox * ox + oy * oy + oz * oz);
+    // the clamp sphere always contains Brady's head (even hugging the wall) and stays inside the shell
+    const rr = Math.max(1, D.r - 0.75, Math.min(D.r - 0.2, hd + 0.2));
+    const a = ex * ex + ey * ey + ez * ez, b = 2 * (ox * ex + oy * ey + oz * ez), c = hd * hd - rr * rr;
     if (a < 1e-6 || c >= 0) return;
     const t = (-b + Math.sqrt(Math.max(0, b * b - 4 * a * c))) / (2 * a);
     if (t < 1) { cam.x = hx + ex * t; cam.y = Math.max(D.y0 + 0.5, hy + ey * t); cam.z = hz + ez * t; }
@@ -387,6 +389,8 @@ function bcmDJ(P, st, o) {
   o = o || {};
   const b = st.booth, def = Object.assign({ id: o.id, name: o.name || 'DJ', type: o.type || 'burner', seed: o.seed === undefined ? 7 : o.seed, x: b.x + Math.sin(b.yaw) * 0.55, z: b.z + Math.cos(b.yaw) * 0.55, y: b.y, fixedY: true, collide: false, yaw: b.yaw, behavior: 'idle', anim: 'dj', lookAt: false, noDJ: true, chatter: false, lines: o.lines || ['Can\'t talk. Mixing.', 'This next one goes out to the dust.'] }, o.extra || {});
   if (o.spec) { def.spec = o.spec; delete def.type; }
+  // with djPrompt on, talking to the stage's DJ hands Brady the decks (a line, then the set opens)
+  if (P.o.djPrompt) def.talk = (g, a) => g.say(a, [def.lines[0], o.handover || 'Want the decks? They\'re yours. Make the dust dance.'], () => BurnsCamps.djSet(g, P, st.id, typeof P.o.djPrompt === 'object' ? P.o.djPrompt : {}));
   const a = P.api.npc(def); st.dj = a; P.actors.push(a);
   return a;
 }

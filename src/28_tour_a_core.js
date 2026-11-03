@@ -180,7 +180,7 @@ const TourProgress = {
   countryGold(C) { let n = 0; for (const id of Tour.levelIds(C)) n += this.goldCount(id); return n; },
   totals() {
     let done = 0, total = 0, gold = 0, goldTotal = 0;
-    for (const w of Tour.worldList()) for (const id of Tour.levelIds(Tour.byWorld[w])) { total++; goldTotal += 3; if (Save.data.done[id]) done++; gold += this.goldCount(id); }
+    for (const w of Tour.worldList()) { const C = Tour.byWorld[w]; if (C.secret && !this.countryUnlocked(C)) continue; for (const id of Tour.levelIds(C)) { total++; goldTotal += 3; if (Save.data.done[id]) done++; gold += this.goldCount(id); } }
     return { done, total, gold, goldTotal };
   }
 };

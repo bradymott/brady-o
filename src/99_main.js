@@ -14,7 +14,9 @@ function appHomeScene() {
     if (typeof KartMenuScene !== 'undefined') return new KartMenuScene();
     if (window.BRADY_KART && window.BRADY_KART.KartMenuScene) return new window.BRADY_KART.KartMenuScene();
   }
-  return new TitleScene();
+  if (typeof TitleScene !== 'undefined') return new TitleScene();
+  if (typeof BurnsAppStart !== 'undefined') return new BurnsAppStart();
+  return null;
 }
 const Game = {
   quality: 1, // 1 = full post-processing; drops to 0 on slow devices
@@ -91,8 +93,10 @@ const Game = {
     this.vignette = v;
     Input.computeLayout(cssW, cssH, gr);
     if (this.scene && this.scene.resize) this.scene.resize();
-    if (this.scene instanceof Play && this.scene.paused) this.scene.pauseUI = buildPauseUI(this.scene);
-    if (this.scene instanceof Play && this.scene.state === 'results') this.scene.buildResultsUI();
+    // the 2D game's Play scene only exists in the apps that bundle it (the Burning Man app doesn't)
+    const isPlay = typeof Play !== 'undefined' && this.scene instanceof Play;
+    if (isPlay && this.scene.paused) this.scene.pauseUI = buildPauseUI(this.scene);
+    if (isPlay && this.scene.state === 'results') this.scene.buildResultsUI();
   },
 
   setScene(s) {
@@ -133,7 +137,7 @@ const Game = {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = '#07040e'; ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
       this.scene.draw(ctx);
-      if (this.gameRect.h < this.cssH - 2 && this.scene instanceof Play) this.drawPortraitPad(ctx);
+      if (this.gameRect.h < this.cssH - 2 && typeof Play !== 'undefined' && this.scene instanceof Play) this.drawPortraitPad(ctx);
     } catch (e) { this.reportError(e); }
     this.frames++;
   },

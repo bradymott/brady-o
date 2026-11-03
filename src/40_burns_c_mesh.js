@@ -614,7 +614,7 @@ class BurnsMesh {
     if (frame) {
       const sg = this.gloss, rad = Math.max(0.03, r * 0.009);
       this.c = burnsRGB(o.frameCol || '#d4d4dc'); this.e = 0; this.gloss = 2;
-      for (const [i, j] of edges.values()) { const pa = P(V[i]), pb = P(V[j]); this.limb(pa[0], pa[1], pa[2], pb[0], pb[1], pb[2], rad, rad, { seg: this.lo ? 4 : 5 }); }
+      for (const [i, j] of edges.values()) { const pa = P(V[i]), pb = P(V[j]); this.limb(pa[0], pa[1], pa[2], pb[0], pb[1], pb[2], rad, rad, { seg: this.lo ? 4 : 5, ends: false }); }   // open tubes: the hubs cover the ends (10 triangles a strut instead of 70)
       if (!this.lo) for (const vi of used) { const p = P(V[vi]); this.ball(p[0], p[1], p[2], rad * 1.9, { seg: 5, rings: 3 }); }
       this.gloss = sg;
     }

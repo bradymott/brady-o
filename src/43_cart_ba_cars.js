@@ -48,12 +48,12 @@ CART_BUILD.dragon = (K, C) => {
 /* ---------------- 7. FROSTED FURY: a tiny furious cupcake ---------------- */
 CART_BUILD.cupcake = (K, C) => {
   const m = K.m, lo = K.lo;
-  K.wheels({ x: 0.85, zf: 1.15, zr: -1.15, r: 0.38, w: 0.32, rim: '#ffffff', col: '#2a1a24' });
-  m.color('#ffffff').shine(2); m.roundBox(0, 0.55, 0.1, 1.9, 0.36, 3.2, 0.16); m.shine(0);
-  cartLeds(K, [0.96, 0.55, 1.4], [0.96, 0.55, -1.3], lo ? 4 : 8, ['#ff8ac8', '#ffe24a', '#5ac8ff'], 0.05, 3);
-  cartLeds(K, [-0.96, 0.55, 1.4], [-0.96, 0.55, -1.3], lo ? 4 : 8, ['#ff8ac8', '#ffe24a', '#5ac8ff'], 0.05, 3);
-  // the pleated wrapper
-  m.push(); m.tf(0, 0.7, -0.45);
+  K.wheels({ x: 0.85, zf: 1.45, zr: -1.45, r: 0.38, w: 0.32, rim: '#ffffff', col: '#2a1a24' });
+  m.color('#ffffff').shine(2); m.roundBox(0, 0.55, 0, 1.9, 0.36, 3.9, 0.16); m.shine(0);
+  cartLeds(K, [0.96, 0.55, 1.75], [0.96, 0.55, -1.7], lo ? 4 : 8, ['#ff8ac8', '#ffe24a', '#5ac8ff'], 0.05, 3);
+  cartLeds(K, [-0.96, 0.55, 1.75], [-0.96, 0.55, -1.7], lo ? 4 : 8, ['#ff8ac8', '#ffe24a', '#5ac8ff'], 0.05, 3);
+  // the pleated wrapper (up front)
+  m.push(); m.tf(0, 0.7, 0.75);
   m.color(C.col).shine(2); m.lathe([[0.82, 0], [1.02, 0.9], [1.05, 0.92]], { seg: lo ? 14 : 32, rMod: th => 1 + 0.045 * Math.cos(th * 16) }); m.shine(0);
   // frosting swirl, the cherry bounces
   m.color(C.col2).shine(2);
@@ -61,14 +61,14 @@ CART_BUILD.cupcake = (K, C) => {
   m.shine(0);
   if (!lo) for (let i = 0; i < 40; i++) { const a = i * 2.39996, h = 1.0 + (i % 10) * 0.14, r = 1.08 - (h - 0.9) * 0.55; m.color(BURNS_NEON[i % 7], 0.15); m.push(); m.tf(Math.sin(a) * r, h, Math.cos(a) * r, a, 0.4, i); m.limb(0, 0, -0.06, 0, 0, 0.06, 0.025, 0.025, { seg: 4 }); m.pop(); }
   m.emissive(0); m.pop();
-  K.part(0, 3.25, -0.45, (o, s) => { const b = Math.abs(Math.sin(s.t * 7)) * (0.05 + 0.15 * s.speed); o.y = b; o.roll = Math.sin(s.t * 5) * 0.1; }, mm => {
+  K.part(0, 3.25, 0.75, (o, s) => { const b = Math.abs(Math.sin(s.t * 7)) * (0.05 + 0.15 * s.speed); o.y = b; o.roll = Math.sin(s.t * 5) * 0.1; }, mm => {
     mm.color('#e8102a', 0.15).shine(3); mm.ball(0, 0, 0, 0.3, { seg: lo ? 10 : 16, rings: lo ? 7 : 12 }); mm.shine(0).emissive(0);
     mm.color('#3a6a1a'); mm.limb(0, 0.25, 0, 0.12, 0.6, -0.08, 0.025, 0.02, { seg: 5 });
   });
-  cartLamps(K, 0.6, 0.62, 1.72, -1.5, 0.62);
-  K.light(0, 3.25, -0.45, 1.4, '#ff2a4a', { big: 1 });
-  K.seat({ y: 1.12, z: 1.0, col: '#ff4fa8', accent: '#ffe24a', wheelZ: 1.6 });
-  Object.assign(K.info, { muzzle: [0, 0.8, -1.8], len: 3.6, w: 2.0, h: 3.5, driverScale: 1 });
+  cartLamps(K, 0.6, 0.62, 1.97, -1.97, 0.62);
+  K.light(0, 3.25, 0.75, 1.4, '#ff2a4a', { big: 1 });
+  K.seat({ y: 1.12, z: -1.3, col: '#ff4fa8', accent: '#ffe24a', wheelZ: -0.72 });
+  Object.assign(K.info, { muzzle: [0, 0.8, -2.2], len: 4.2, w: 2.0, h: 3.5, driverScale: 1 });
 };
 
 /* ---------------- 8. DUSTY DOUBLOON: a landlocked pirate galleon ---------------- */
@@ -138,8 +138,10 @@ CART_BUILD.snail = (K, C) => {
     for (const s of [1, -1]) { mm.color('#c8ccd8').shine(3); mm.push(); mm.tf(s * 0.95, 0.75, -0.6, 0, Math.PI / 2, 0); mm.roundCyl(0, -0.6, 0, 0.2, 1.1, 0.05); mm.color('#ff4a2a').lathe([[0.2, -0.7], [0.14, -0.6], [0.0, -0.6]], { seg: 10 }); mm.pop(); mm.shine(0); }
   });
   K.light(0, 2.45, -0.55, 2.4, C.light, { big: 1 });
-  K.seat({ y: 1.42, z: 1.1, col: '#5a2a8a', accent: '#7aff5a', wheelZ: 1.72 });
-  Object.assign(K.info, { muzzle: [0, 0.6, -2.6], len: 5.6, w: 2.3, h: 3.6, extra: { rockets: [[0.95, 1.9, -1.75], [-0.95, 1.9, -1.75]] } });
+  // the rider sits on a saddle on top of the shell (everyone can see who's driving)
+  m.color('#3a2a1a'); m.roundBox(0, 3.98, -0.62, 0.7, 0.12, 0.8, 0.05);
+  K.seat({ y: 4.2, z: -0.6, col: '#5a2a8a', accent: '#7aff5a', wheelY: 4.58, wheelZ: 0.02 });
+  Object.assign(K.info, { muzzle: [0, 0.6, -2.6], len: 5.6, w: 2.3, h: 5.1, extra: { rockets: [[0.95, 1.9, -1.75], [-0.95, 1.9, -1.75]] } });
 };
 
 /* ---------------- 10. JELLY JOLT: a floating jellyfish full of static ---------------- */
@@ -147,26 +149,26 @@ CART_BUILD.jelly = (K, C) => {
   const m = K.m, lo = K.lo;
   K.wheels({ x: 0.95, zf: 1.55, zr: -1.55, r: 0.42, w: 0.36, rim: '#5af2ff', col: '#14121a' });
   cartPlatform(K, { len: 4.2, w: 2.1, y: 0.6, h: 0.4, col: '#1a1028', led: ['#5af2ff', '#c86aff'] });
-  m.color('#c8ccd8').shine(3); for (const s of [1, -1]) m.limb(s * 0.6, 0.8, -0.4, s * 0.45, 2.1, -0.5, 0.06, 0.05, { seg: 6 }); m.shine(0);
+  m.color('#c8ccd8').shine(3); for (const s of [1, -1]) m.limb(s * 0.6, 0.8, 0.55, s * 0.45, 2.1, 0.45, 0.06, 0.05, { seg: 6 }); m.shine(0);
   // the bell pulses (squash + stretch); glowing rim; tentacles sway beneath
-  K.part(0, 2.35, -0.45, (o, s) => { const p = Math.sin(s.t * 3.2); o.sy = 1 + p * 0.07 + s.fire * 0.15; o.sx = o.sz = 1 - p * 0.05 + s.fire * 0.08; }, mm => {
+  K.part(0, 2.35, 0.5, (o, s) => { const p = Math.sin(s.t * 3.2); o.sy = 1 + p * 0.07 + s.fire * 0.15; o.sx = o.sz = 1 - p * 0.05 + s.fire * 0.08; }, mm => {
     mm.color(C.col, 0.28).shine(3); mm.lathe([[1.55, 0], [1.6, 0.18], [1.45, 0.75], [1.05, 1.25], [0.55, 1.52], [0, 1.6]], { seg: lo ? 14 : 28, rMod: (th, t) => 1 + (t < 0.2 ? 0.06 * Math.sin(th * 10) : 0) }); mm.shine(0);
     mm.color('#ff9af0', 0.55); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; mm.limb(Math.sin(a) * 1.5, 0.25, Math.cos(a) * 1.5, Math.sin(a) * 0.35, 1.48, Math.cos(a) * 0.35, 0.05, 0.03, { seg: 4 }); }
     mm.color('#5af2ff', 1); mm.push(); mm.tf(0, 0.1, 0); mm.torus(0, 0, 0, 1.58, 0.07, { seg: lo ? 14 : 28, tseg: 4 }); mm.pop();
     mm.color('#fff0ff', 0.9); mm.ball(0, 0.75, 0, 0.42, { seg: lo ? 8 : 12, rings: 8 }); mm.emissive(0);
   });
-  K.light(0, 3.0, -0.45, 4.0, C.light, { big: 1 });
+  K.light(0, 3.0, 0.5, 4.0, C.light, { big: 1 });
   for (let i = 0; i < 6; i++) {
-    const a = (i + 0.5) / 6 * TAU + 0.3, x = Math.sin(a) * 1.25, z = -0.45 + Math.cos(a) * 1.25;
-    if (Math.abs(x) < 0.5 && z > 0.3) continue;
+    const a = (i + 0.5) / 6 * TAU + 0.3, x = Math.sin(a) * 1.25, z = 0.5 + Math.cos(a) * 1.25;
+    if (Math.abs(x) < 0.5 && z < -0.3) continue;
     K.part(x, 2.3, z, (o, s) => { o.pitch = Math.sin(s.t * 2.2 + i) * 0.25 + s.speed * 0.5; o.roll = Math.sin(s.t * 1.7 + i * 2) * 0.2; }, mm => {
       for (let k = 0; k < 4; k++) { const y0 = -k * 0.42, y1 = -(k + 1) * 0.42, w = Math.sin(k * 1.3) * 0.12; mm.color(k % 2 ? '#c86aff' : '#ff9af0', 0.45); mm.limb(w, y0, 0, -w, y1, 0, 0.09 - k * 0.015, 0.075 - k * 0.015, { seg: lo ? 5 : 7 }); }
       mm.color('#5af2ff', 1); mm.ball(0, -1.7, 0, 0.08, { seg: 6, rings: 4 }); mm.emissive(0);
     });
   }
   cartLamps(K, 0.75, 0.66, 2.12, -2.12, 0.66);
-  K.seat({ y: 1.2, z: 1.15, col: '#3a1a5a', accent: '#5af2ff', wheelZ: 1.75 });
-  Object.assign(K.info, { muzzle: [0, 2.6, -0.45], len: 4.4, w: 3.3, h: 4.0 });
+  K.seat({ y: 1.2, z: -1.4, col: '#3a1a5a', accent: '#5af2ff', wheelZ: -0.82 });
+  Object.assign(K.info, { muzzle: [0, 2.6, 0.5], len: 4.4, w: 3.3, h: 4.0 });
 };
 
 /* ---------------- 11. DUNE CHOMPER: a land shark with a snapping jaw ---------------- */

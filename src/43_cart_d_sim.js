@@ -902,7 +902,7 @@ class CartRaceScene {
     if (k.out && Math.random() < dt * 4) this.fx.add(k.x, k.y + 2, k.z, 0, 1.4, 0, 2, 0.8, 2.6, [0.3, 0.3, 0.34], 0.4, 'smoke', 4);
     // every car has a personality: the octopus puffs smoke, the dragon snorts sparks, the snail drips slime, the jelly crackles
     const id = k.car.id;
-    if (id === 'octo' && Math.random() < dt * 3) { const p = cartCarPoint(k, 0, 4.7, -1.3, [0, 0, 0]); this.fx.add(p[0], p[1], p[2], 0, 1.6, 0, 1.6, 0.4, 1.6, [0.4, 0.38, 0.4], 0.35, 'smoke', 4); }
+    if (id === 'octo' && Math.random() < dt * 3) { const c = k.M.extra.chimney || [0, 4.7, -0.15], p = cartCarPoint(k, c[0], c[1], c[2], [0, 0, 0]); this.fx.add(p[0], p[1], p[2], 0, 1.6, 0, 1.6, 0.4, 1.6, [0.4, 0.38, 0.4], 0.35, 'smoke', 4); }
     if (id === 'dragon' && Math.random() < dt * 4) { const p = this.muzzle(k, [0, 0, 0]); this.fx.add(p[0], p[1], p[2], fx * 3, 0.5, fz * 3, 0.3, 0.4, 0.1, [1, 0.6, 0.2], 1, 'spark', 1); }
     if (id === 'jelly' && Math.random() < dt * 4) this.fx.spark(k.x + (Math.random() - 0.5) * 2.5, k.y + 2.3, k.z + (Math.random() - 0.5) * 2.5, 1, '#5af2ff', 3);
     if (id === 'heart' && Math.random() < dt * 1.2) this.fx.hearts(k.x, k.y + 4.2, k.z, 1);
@@ -910,7 +910,7 @@ class CartRaceScene {
     // the weapon's own look while it fires
     const w = k.wpn;
     if (w.fireT > 0) {
-      if (w.id === 'torch' && w.fireT > 0.2) for (let i = 0; i < 8; i++) { if (Math.random() > 0.55) continue; const a = (i + 0.5) / 8 * TAU, ca = Math.sin(a + k.yaw), sa = Math.cos(a + k.yaw), p0 = cartCarPoint(k, Math.sin(a) * 2.6, 0.6, -0.5 + Math.cos(a) * 2.6, [0, 0, 0]); this.fx.add(p0[0], p0[1], p0[2], ca * 14 + k.vx * 0.8, 1 + Math.random() * 2, sa * 14 + k.vz * 0.8, 0.45, 1.2, 0.3, [1, 0.55 + Math.random() * 0.3, 0.15], 1, 'flame', 1); }
+      if (w.id === 'torch' && w.fireT > 0.2) for (let i = 0; i < 8; i++) { if (Math.random() > 0.55) continue; const a = (i + 0.5) / 8 * TAU, ca = Math.sin(a + k.yaw), sa = Math.cos(a + k.yaw), p0 = cartCarPoint(k, Math.sin(a) * 2.6, 0.6, (k.M.extra.armZ || 0) + Math.cos(a) * 2.6, [0, 0, 0]); this.fx.add(p0[0], p0[1], p0[2], ca * 14 + k.vx * 0.8, 1 + Math.random() * 2, sa * 14 + k.vz * 0.8, 0.45, 1.2, 0.3, [1, 0.55 + Math.random() * 0.3, 0.15], 1, 'flame', 1); }
       if (w.id === 'slime' && Math.random() < dt * 30) { const p = cartCarPoint(k, (Math.random() - 0.5) * 1.5, 0.3, -k.M.len / 2, [0, 0, 0]); this.fx.add(p[0], p[1], p[2], 0, 0.5, 0, 0.6, 0.5, 0.2, [0.45, 1, 0.3], 1, 'drop', 1 | 2); }
     }
     if (id === 'snail' && k.slimeT > 0 && Math.random() < dt * 40) for (const r of k.M.extra.rockets || []) { const p = cartCarPoint(k, r[0], r[1], r[2], [0, 0, 0]); this.fx.add(p[0], p[1], p[2], -fx * 8, 0.2, -fz * 8, 0.3, 0.9, 0.2, [1, 0.5, 0.2], 1, 'flame', 1); }

@@ -128,7 +128,7 @@ Object.assign(Sprites, {
 DoorArt.tourDoor = true;
 const _tourDoorDraw = DoorArt.draw;
 DoorArt.draw = function (ctx, x, y, look, t, near) {
-  if (look !== 'tourDoor') return _tourDoorDraw.call(this, ctx, x, y, look, t, near);
+  if (look !== 'tourDoor' && look !== 'tourDoor22') return _tourDoorDraw.call(this, ctx, x, y, look, t, near);
   const col = TourArt.colors(), w = 30, h = 50;
   ctx.fillStyle = '#3a2a22'; rr(ctx, x - w / 2 - 4, y - h - 4, w + 8, h + 4, 15); ctx.fill();
   const g = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0); g.addColorStop(0, shade(col.a, -0.25)); g.addColorStop(1, col.a);
@@ -137,6 +137,8 @@ DoorArt.draw = function (ctx, x, y, look, t, near) {
   ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y - h + 13, 6, 0, TAU); ctx.stroke();
   ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(x + 9, y - 22, 2, 0, TAU); ctx.fill();
   if (near) { ctx.fillStyle = `rgba(255,255,255,${0.15 + 0.1 * Math.sin(t * 6)})`; rr(ctx, x - w / 2, y - h, w, h, 13); ctx.fill(); }
+  // door number 22 (World 22's hidden way in)
+  if (look === 'tourDoor22') { ctx.fillStyle = '#f4ecd8'; rr(ctx, x - 10, y - 34, 20, 13, 3); ctx.fill(); ctx.fillStyle = '#4a3a6a'; ctx.font = `bold 10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('22', x, y - 27.5); ctx.textBaseline = 'alphabetic'; }
 };
 // the default vehicle: a little painted boat
 PlatformArt.tourBoat = function (ctx, p, t) {
