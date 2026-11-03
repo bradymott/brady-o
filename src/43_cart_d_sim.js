@@ -109,7 +109,7 @@ class CartRaceScene {
       wpn: { id: car.weapon, def: CART_WEAPONS[car.weapon], t: 2.5 + slot * 0.25, fireT: 0, uses: 0, hits: 0 },
       loc: { i: 0, s: 0, d: 0 }, prevS: 0, lap: 0, prog: 0, rank: slot + 1, finished: false, finishT: 0, lapStart: 0, lapTimes: [],
       inp: { steer: 0, gas: 0, brake: 0, drift: false, driftPress: false, item: false, fire: false },
-      vibes: 3, out: false, score: 0, orbs: 0, flag: false, hitsDealt: 0, hitsTaken: 0,
+      vibes: this.objective === 'vibe' ? 4 : 3, out: false, score: 0, orbs: 0, flag: false, hitsDealt: 0, hitsTaken: 0,
       wrongT: 0, bumpT: 0, padCool: 0, rubber: 1, off: false, landT: 0, dustT: 0, sparkT: 0, animT: 0, anim: 'cartDrive', cheerT: 0, honkT: 0,
       ai: f.player ? null : { skill: 0.9, bias: (this.rng() - 0.5) * 2, avoid: 0, avoidT: 0, driftT: 0, itemT: 1 + this.rng() * 2, fireT: 0.6 + this.rng() * 1.5, stuckT: 0, revT: 0, wob: this.rng() * 10, tgt: null, tgtT: 0 }
     };
@@ -170,7 +170,7 @@ class CartRaceScene {
   }
   buildNoGL() { const W = Game.cssW, H = Game.cssH, bw = Math.min(220, W * 0.6); this.noglBtns = [{ x: (W - bw) / 2, y: H * 0.62, w: bw, h: 46, label: '◀ MENU', primary: true, fn: () => this.leave() }]; }
   log(type, o) { const e = Object.assign({ type, t: +this.raceT.toFixed(3) }, o || {}); this.events.push(e); if (this.events.length > 400) this.events.shift(); return e; }
-  banner(text, col, t, sub) { this.msgs.push({ text, col: col || '#ffffff', t: t || 1.6, max: t || 1.6, sub }); if (this.msgs.length > 4) this.msgs.shift(); }
+  banner(text, col, t, sub, small) { this.msgs.push({ text, col: col || '#ffffff', t: t || 1.6, max: t || 1.6, sub, small }); if (this.msgs.length > 3) this.msgs.shift(); }
   shakeIt(a) { if (Save.data.settings.shake !== false) this.shake = Math.max(this.shake || 0, a); }
 
   /* ---------- the fixed-step update ---------- */
@@ -440,6 +440,16 @@ class CartRaceScene {
       }
     }
   }
+  // inward distance to the arena perimeter (+ inside) and its inward normal
+  wallDist(x, z, out) {
+    const P = this.E.walls; out = out || {}; out.d = 1e9; out.nx = 0; out.nz = 0; if (!P) return out;
+    for (let i = 0, n = P.length; i < n; i++) {
+      const a = P[i], b = P[(i + 1) % n], ex = b[0] - a[0], ez = b[1] - a[1], L = Math.hypot(ex, ez);
+      let nx = -ez / L, nz = ex / L; if (-a[0] * nx - a[1] * nz < 0) { nx = -nx; nz = -nz; }
+      const d = (x - a[0]) * nx + (z - a[1]) * nz; if (d < out.d) { out.d = d; out.nx = nx; out.nz = nz; }
+    }
+    return out;
+  }
   crossLine(k) {
     k.lap++;
     if (k.lap >= 2) { const lt = this.raceT - k.lapStart; k.lapTimes.push(lt); if (k.player) this.lastLap = { t: lt, show: 3 }; }
@@ -494,7 +504,7 @@ class CartRaceScene {
   /* ---------- getting hit (cartoon effects only) ---------- */
   hit(k, kind, src, o) {
     o = o || {};
-    if (k.out || k.invT > 0 || k.dashT > 0 || (k.finished && this.isRace)) return false;
+    if (k.out || k.invT > 0 || k.dashT > 0 || (k.finished && this.isRace) || (this.obj && this.obj.ended)) return false;
     if (k.shieldT > 0) { k.shieldT = 0; k.invT = 0.8; this.fx.burst(k.x, k.y + 1.6, k.z, 'star', 16, '#ff9af0'); Sound.play('break', { vol: k.player ? 0.8 : 0.3, pitch: 1.4 }); this.log('blocked', { k: k.id, by: src && src.id, w: o.weapon }); if (k.player) this.banner('SHIELD POPPED!', '#ff9af0', 1.2); return false; }
     k.drift = 0; k.charge = 0; k.boostT = 0; k.dashT = 0;
     if (kind === 'spin' || kind === 'knock') { k.spinT = o.dur || 1.0; k.vx *= 0.45; k.vz *= 0.45; if (kind === 'knock') { k.vx += (o.dx || 0) * (o.power || 14); k.vz += (o.dz || 0) * (o.power || 14); k.vy = Math.max(k.vy, 3.5); k.air = true; } }
@@ -503,23 +513,23 @@ class CartRaceScene {
     else if (kind === 'bubble') { k.bubbleT = 1.5; }
     else if (kind === 'stun') { k.stunT = 1.7; k.vx *= 0.6; k.vz *= 0.6; }
     else if (kind === 'slip') { k.spinT = 0.75; k.slowT = 1.2; }
-    k.invT = 1.6; k.anim = 'cartHit'; k.animT = 0; k.hitsTaken++;
+    k.invT = this.isBattle ? 2.3 : 1.6; k.anim = 'cartHit'; k.animT = 0; k.hitsTaken++;
     if (src && src !== k) { src.hitsDealt++; if (o.weapon) src.wpn.hits++; src.cheerT = Math.max(src.cheerT, 0.9); }
     this.log('hit', { k: k.id, by: src && src.id, kind, w: o.weapon || o.item, player: k.player, byPlayer: !!(src && src.player) });
     if (k.player) { Sound.play('kartHit'); this.shakeIt(1); const who = src && src !== k ? src.car.name : ''; this.banner(kind === 'flip' ? 'FLIPPED!' : kind === 'bubble' ? 'BUBBLED!' : kind === 'stun' ? 'ZAPPED!' : kind === 'dazzle' ? 'DAZZLED!' : 'SPUN OUT!', '#ff6a6a', 1.2, who ? 'by ' + who : ''); }
-    else if (src && src.player) { Sound.play('kartHit', { vol: 0.35, pitch: 1.25 }); this.banner('HIT! ' + k.car.name, '#7aff8a', 0.9); }
+    else if (src && src.player) { Sound.play('kartHit', { vol: 0.35, pitch: 1.25 }); this.banner('HIT! ' + k.car.name, '#7aff8a', 0.9, null, true); }
     if (this.isBattle) this.onBattleHit(k, src);
     return true;
   }
 
   /* ---------- signature weapons ---------- */
-  muzzle(k, out) { return cartLocalToWorld(k, k.M.muzzle[0], k.M.muzzle[1], k.M.muzzle[2], out); }
+  muzzle(k, out) { return cartCarPoint(k, k.M.muzzle[0], k.M.muzzle[1], k.M.muzzle[2], out); }
   fireWeapon(k) {
     const w = k.wpn, D = w.def, fx = Math.sin(k.yaw), fz = Math.cos(k.yaw), rx = -fz, rz = fx, sp = Math.max(0, k.fwd || 0);
     w.t = D.reload; w.fireT = 1.0; w.uses++; k.anim = 'cartFire'; k.animT = 0;
     this.log('fire', { k: k.id, w: w.id, player: k.player });
     const mz = this.muzzle(k, [0, 0, 0]), vol = k.player ? 0.9 : 0.35;
-    if (k.player) this.banner(D.name + '!', D.col, 1.0);
+    if (k.player) this.banner(D.name + '!', D.col, 1.0, null, true);
     switch (w.id) {
       case 'bassdrop': this.shots.push({ type: 'ring', owner: k, x: k.x, y: k.y, z: k.z, r: 1, max: D.range, t: 0, life: 0.7, hit: new Set(), col: D.col }); Sound.play('thunder', { vol, pitch: 1.4 }); Sound.play('kartBoost', { vol: vol * 0.6, pitch: 0.5 }); if (k.player) this.shakeIt(0.5); this.fx.hearts(k.x, k.y + 4, k.z, 8); break;
       case 'dazzle': this.shots.push({ type: 'beam', owner: k, t: 0, life: 0.9, range: D.range, half: 0.2, kind: 'dazzle', col: [0.75, 0.9, 1], hit: new Set() }); Sound.play('disco', { vol }); break;
@@ -531,7 +541,7 @@ class CartRaceScene {
       case 'cannon':
         // broadside: two balls out of each flank (left = +X local)
         for (const s of [1, -1]) for (const dz of [-0.7, 0.6]) {
-          const p = cartLocalToWorld(k, s * 1.6, 1.55, dz, [0, 0, 0]), lx = -rx * s, lz = -rz * s;
+          const p = cartCarPoint(k, s * 1.6, 1.55, dz, [0, 0, 0]), lx = -rx * s, lz = -rz * s;
           this.shots.push({ type: 'ball', kind: 'cannon', owner: k, x: p[0], y: p[1], z: p[2], vx: k.vx * 0.6 + lx * 34, vz: k.vz * 0.6 + lz * 34, vy: 3.5, t: 0, life: 1.3, r: 1.8, loc: { i: k.loc.i, s: 0, d: 0 } });
           this.fx.smoke(p[0], p[1], p[2], 4, '#e8e0d8');
         }
@@ -571,13 +581,13 @@ class CartRaceScene {
         else { s.y = lerp(s.y, gh + 1.8 + Math.sin(s.t * 4) * 0.3, 1 - Math.exp(-3 * dt)); }
         if (this.TR && this.isRace) { const L = this.TR.locate(s.x, s.z, s.loc.i, s.loc), j = L.i, wr = this.TR.WR[j] - 0.5, wl = this.TR.WL[j] - 0.5; if (L.d > wr || L.d < -wl) { const side = L.d > 0 ? 1 : -1, nx = this.TR.NX[j] * side, nz = this.TR.NZ[j] * side, vn = s.vx * nx + s.vz * nz; if (vn > 0) { s.vx -= nx * vn * 2; s.vz -= nz * vn * 2; } if (s.kind === 'cannon') s.dead = true; } }
         if (this.E.walls) for (const a of this.E.art) if (Math.hypot(s.x - a.x, s.z - a.z) < a.r) s.dead = true;
-        if (this.E.walls && Math.hypot(s.x, s.z) > (this.E.R || 140)) s.dead = true;
+        if (this.E.walls && this.wallDist(s.x, s.z, this._wd3 || (this._wd3 = {})).d < 0) s.dead = true;
         for (const o of this.karts) { if (o === k && s.t < 0.6) continue; if (o === k || o.out) continue; const dx = o.x - s.x, dz = o.z - s.z; if (dx * dx + dz * dz < s.r * s.r && Math.abs(o.y + 1 - s.y) < 2.6) { const kind = s.kind === 'bubble' ? 'bubble' : s.kind === 'cannon' ? 'knock' : 'spin'; const d = Math.hypot(s.vx, s.vz) || 1; this.hit(o, kind, k, { dx: s.vx / d, dz: s.vz / d, power: 12, weapon: s.kind === 'bubble' ? 'bubbles' : s.kind === 'cannon' ? 'cannon' : 'fireball' }); s.dead = true; if (s.kind !== 'bubble') { this.fx.spark(s.x, s.y, s.z, 14, s.kind === 'fire' ? '#ff8a2a' : '#ffe8b0', 7); this.fx.smoke(s.x, s.y, s.z, 4); } else this.fx.burst(s.x, s.y, s.z, 'ring', 8, '#bff4ff'); break; } }
       } else if (s.type === 'drop') {
-        if (!s.done && s.t >= 0) { s.done = true; const p = cartLocalToWorld(k, 0, 0.6, -k.M.len / 2 - 0.8, [0, 0, 0]); this.layMine(p[0], p[2], k); }
+        if (!s.done && s.t >= 0) { s.done = true; const p = cartCarPoint(k, 0, 0.6, -k.M.len / 2 - 0.8, [0, 0, 0]); this.layMine(p[0], p[2], k); }
         if (s.done) s.dead = true;
       } else if (s.type === 'slimer') {
-        s.next -= dt; if (s.next <= 0) { s.next = 0.11; const p = cartLocalToWorld(k, 0, 0, -k.M.len / 2 - 0.5, [0, 0, 0]); this.hazards.push({ type: 'slime', x: p[0], z: p[2], y: this.terrain.height(p[0], p[2]), r: 2.3, t: 0, life: 6, owner: k, yaw: k.yaw }); }
+        s.next -= dt; if (s.next <= 0) { s.next = 0.11; const p = cartCarPoint(k, 0, 0, -k.M.len / 2 - 0.5, [0, 0, 0]); this.hazards.push({ type: 'slime', x: p[0], z: p[2], y: this.terrain.height(p[0], p[2]), r: 2.3, t: 0, life: 6, owner: k, yaw: k.yaw }); }
       } else if (s.type === 'dash') {
         // the bite: anything right in front gets flipped (collideKarts handles touches)
         const fx = Math.sin(k.yaw), fz = Math.cos(k.yaw);
@@ -604,7 +614,7 @@ class CartRaceScene {
       if (h.type === 'foam') { h.r = Math.min(11, 3 + h.t * 14); for (const o of this.karts) { if (o === h.owner) continue; if (Math.hypot(o.x - h.x, o.z - h.z) < h.r) { if (o.foamT <= 0) this.log('hit', { k: o.id, by: h.owner.id, kind: 'foam', item: 'foam' }); o.foamT = 1.8; } } h.x = h.owner.x; h.z = h.owner.z; }
       if (h.type === 'devil') {
         if (this.T) { h.s += 30 * dt; const g = this.T.at(h.s, CART_AT); h.d = Math.sin(h.t * 1.7) * g.hw * 0.6; h.x = g.x + g.nx * h.d; h.z = g.z + g.nz * h.d; }
-        else { h.x += Math.sin(h.yaw) * 24 * dt; h.z += Math.cos(h.yaw) * 24 * dt; h.yaw += Math.sin(h.t * 2) * dt * 1.5; if (this.E.walls && Math.hypot(h.x, h.z) > (this.E.R || 100) - 6) h.yaw += Math.PI; }
+        else { h.x += Math.sin(h.yaw) * 24 * dt; h.z += Math.cos(h.yaw) * 24 * dt; h.yaw += Math.sin(h.t * 2) * dt * 1.5; if (this.E.walls) { const w = this.wallDist(h.x, h.z, this._wd4 || (this._wd4 = {})); if (w.d < 6) h.yaw = Math.atan2(w.nx, w.nz) + Math.sin(h.t) * 0.5; } }
         for (const o of this.karts) { if (o === h.owner && h.t < 1.5) continue; if (Math.hypot(o.x - h.x, o.z - h.z) < 3.4) this.hit(o, 'spin', h.owner, { item: 'devil', dur: 1.2 }); }
         if (Math.random() < 0.8) this.fx.add(h.x + (Math.random() - 0.5) * 2, this.terrain.height(h.x, h.z) + Math.random() * 6, h.z + (Math.random() - 0.5) * 2, Math.cos(h.t * 9) * 6, 2 + Math.random() * 3, Math.sin(h.t * 9) * 6, 0.8, 0.8, 2.6, [0.92, 0.82, 0.66], 0.45, 'puff', 4, Math.random() * 6, 3);
       }
@@ -617,11 +627,11 @@ class CartRaceScene {
     const it = k.item; k.item = null; k.itemCool = 0.3;
     const fx = Math.sin(k.yaw), fz = Math.cos(k.yaw);
     this.log('item', { k: k.id, item: it, player: k.player });
-    if (k.player) this.banner(CART_ITEMS[it].name + '!', CART_ITEMS[it].col, 1.0);
+    if (k.player) this.banner(CART_ITEMS[it].name + '!', CART_ITEMS[it].col, 1.0, null, true);
     const vol = k.player ? 0.8 : 0.3;
     switch (it) {
       case 'glow': this.boost(k, 1.6, 'glow'); break;
-      case 'water': k.slowT = 0; k.dazzleT = 0; k.stunT = 0; k.foamT = 0; if (this.isBattle && this.objective === 'vibe' && k.vibes < 3) k.vibes++; this.boost(k, 0.7, 'water'); Sound.play('splash', { vol }); this.fx.burst(k.x, k.y + 1.5, k.z, 'drop', 14, '#7ac8ff'); break;
+      case 'water': k.slowT = 0; k.dazzleT = 0; k.stunT = 0; k.foamT = 0; if (this.isBattle && this.objective === 'vibe' && k.vibes < 4) k.vibes++; this.boost(k, 0.7, 'water'); Sound.play('splash', { vol }); this.fx.burst(k.x, k.y + 1.5, k.z, 'drop', 14, '#7ac8ff'); break;
       case 'tumble': { const t = this.props.tumbles.find(o => !o.alive) || this.props.tumbles[0]; t.alive = 1; t.visible = true; t.gx = k.x - fx * 4; t.gz = k.z - fz * 4; t.vx = Math.sin(this.windA) * 2 - fx * 1.5; t.vz = Math.cos(this.windA) * 2 - fz * 1.5; t.t = 0; t.owner = k; t.rot = 0; break; }
       case 'devil': this.hazards.push({ type: 'devil', owner: k, s: (k.loc.s || 0) + 8, d: 0, x: k.x + fx * 6, z: k.z + fz * 6, yaw: k.yaw, t: 0, life: 6 }); Sound.play('dust', { vol }); break;
       case 'potty': { const p = this.props.potties.find(o => !o.alive) || this.props.potties[0]; let x = k.x + fx * 40, z = k.z + fz * 40; if (this.T) { const g = this.T.at(k.loc.s + 48 + this.rng() * 20, CART_AT); x = g.x + g.nx * g.o; z = g.z + g.nz * g.o; } p.alive = 1; p.visible = true; p.gx = x; p.gz = z; p.t = 0; p.drop = 1.2; p.owner = k; Sound.play('throw', { vol }); break; }
@@ -652,7 +662,7 @@ class CartRaceScene {
     if (this.objective === 'glow') for (const o of P.orbs) {
       if (!o.alive) { o.t -= dt; if (o.t <= 0) this.spawnOrb(o); continue; }
       if (o.drop > 0) { o.drop -= dt; o.gx += o.vx * dt; o.gz += o.vz * dt; o.vx *= Math.exp(-2 * dt); o.vz *= Math.exp(-2 * dt); }
-      if (!racing) continue;
+      if (!racing || this.obj.ended) continue;
       for (const k of this.karts) { if (k.out || (o.cool > 0 && o.from === k)) continue; if (Math.hypot(k.x - o.gx, k.z - o.gz) < 2.8) { o.alive = 0; o.visible = false; o.t = 1.2 + this.rng() * 2; k.score++; this.log('orb', { k: k.id, n: k.score }); this.fx.burst(o.gx, o.gy + 0.5, o.gz, 'star', 10, '#9afff0'); if (k.player) Sound.play('glowstick', { vol: 0.8 }); break; } }
       if (o.cool > 0) o.cool -= dt;
     }
@@ -710,7 +720,7 @@ class CartRaceScene {
   }
   endBattle() {
     if (this.obj.ended) return; this.obj.ended = true;
-    const order = this.battleRank(); order.forEach((k, i) => { k.rank = i + 1; k.cheerT = i === 0 ? 99 : 0; if (i > 0) k.anim = 'cartSulk'; });
+    const order = this.battleRank(); this.finalOrder = order; order.forEach((k, i) => { k.rank = i + 1; k.cheerT = i === 0 ? 99 : 0; if (i > 0) k.anim = 'cartSulk'; });
     const win = order[0];
     this.log('battleEnd', { winner: win.id, player: win.player });
     this.state = 'done'; this.stateT = 0; Input.setMode('ui'); this.layoutControls(); if (Sound.engine) Sound.engine(false, 0);
@@ -722,6 +732,7 @@ class CartRaceScene {
   /* ---------- AI ---------- */
   aiInput(k, dt, racing) {
     const inp = k.inp;
+    if (k.frozen) { inp.gas = 0; inp.brake = 1; inp.steer = 0; inp.fire = false; inp.item = false; inp.drift = false; inp.driftPress = false; return; }
     if (!k.ai) k.ai = { skill: 0.9, bias: 0, avoid: 0, avoidT: 0, driftT: 0, itemT: 1, fireT: 1, stuckT: 0, revT: 0, wob: 0 };
     if (this.isRace && this.T) this.aiRace(k, dt, racing); else this.aiArena(k, dt, racing);
     // signature weapon: fire when a rival is where the weapon reaches
@@ -756,7 +767,7 @@ class CartRaceScene {
   aiWantsItem(k) {
     const it = k.item, ai = k.ai;
     if (it === 'glow') return !this.T || Math.abs(this.T.K[this.T.idx(k.loc.s + 20)]) < 0.012 || ai.itemT < -4;
-    if (it === 'water') return k.slowT > 0 || k.dazzleT > 0 || k.stunT > 0 || (this.objective === 'vibe' && k.vibes < 3) || ai.itemT < -2;
+    if (it === 'water') return k.slowT > 0 || k.dazzleT > 0 || k.stunT > 0 || (this.objective === 'vibe' && k.vibes < 4) || ai.itemT < -2;
     if (it === 'shield') return ai.itemT < -1;
     if (it === 'tumble') { for (const o of this.karts) { if (o === k) continue; const dx = o.x - k.x, dz = o.z - k.z; if ((dx * Math.sin(k.yaw) + dz * Math.cos(k.yaw)) < 0 && Math.hypot(dx, dz) < 18) return true; } return ai.itemT < -6; }
     if (it === 'foam') return this.karts.some(o => o !== k && !o.out && Math.hypot(o.x - k.x, o.z - k.z) < 9) || ai.itemT < -6;
@@ -832,9 +843,11 @@ class CartRaceScene {
       const side = (dx * tz - dz * tx) / tl;
       if (Math.abs(side) < a.r + 3.5) { const s = side > 0 ? -1 : 1; gx = k.x + (tx / tl) * along + (-tz / tl) * s * -(a.r + 5); gz = k.z + (tz / tl) * along + (tx / tl) * s * -(a.r + 5); }
     }
-    // keep off the perimeter
-    const R = E.R || 100, rr = Math.hypot(k.x, k.z);
-    if (E.walls && rr > R * 0.86) { gx = lerp(gx, 0, 0.6); gz = lerp(gz, 0, 0.6); }
+    // keep off the perimeter: goals near a wall are pulled inward, and so is a car heading into one
+    if (E.walls) {
+      const w = this.wallDist(gx, gz, this._wd || (this._wd = {})); if (w.d < 9) { gx += w.nx * (9 - w.d); gz += w.nz * (9 - w.d); }
+      const c = this.wallDist(k.x, k.z, this._wd2 || (this._wd2 = {})); if (c.d < 7 && Math.sin(k.yaw) * c.nx + Math.cos(k.yaw) * c.nz < -0.3) { gx = k.x + c.nx * 20; gz = k.z + c.nz * 20; }
+    }
     const ang = cartWrap(Math.atan2(gx - k.x, gz - k.z) - k.yaw), dist = Math.hypot(gx - k.x, gz - k.z);
     inp.steer = clamp(-ang * 2.4, -1, 1);
     const sharp = Math.abs(ang) > 1.3;
@@ -878,26 +891,26 @@ class CartRaceScene {
       for (const s of [-1, 1]) this.fx.add(k.x - fx * back + rx * s * side, k.y + 0.3, k.z - fz * back + rz * s * side, -fx * 2.5 + (Math.random() - 0.5) * 2 + rx * s, 0.6 + Math.random() * 0.9, -fz * 2.5 + (Math.random() - 0.5) * 2 + rz * s, k.off ? 1.3 : 0.9, 0.7, k.off ? 3.0 : 2.0, c, k.off ? 0.55 : 0.4, 'puff', 4, Math.random() * 6, (Math.random() - 0.5));
     }
     if (k.drift && !k.air) { k.sparkT -= dt; if (k.sparkT <= 0) { k.sparkT = 0.025; const tier = k.charge >= 2.1 ? 2 : k.charge >= 1.0 ? 1 : 0, c = tier === 2 ? [1, 0.3, 0.85] : tier === 1 ? [1, 0.85, 0.25] : [1, 1, 1]; for (const s of [-1, 1]) { if (tier === 0 && Math.random() < 0.6) continue; this.fx.add(k.x - fx * back + rx * s * side, k.y + 0.15, k.z - fz * back + rz * s * side, -fx * 3 + (Math.random() - 0.5) * 4 + rx * s * 2, 1.5 + Math.random() * 3, -fz * 3 + (Math.random() - 0.5) * 4 + rz * s * 2, 0.25 + Math.random() * 0.15, tier ? 0.22 : 0.14, 0.04, c, 1, 'spark', 1 | 2); } } }
-    if ((k.boostT > 0 || k.dashT > 0) && Math.random() < dt * 55) { const c = k.boostKind === 'mt2' ? [1, 0.35, 0.9] : k.boostKind === 'glow' ? [0.3, 1, 0.85] : k.boostKind === 'slime' ? [0.5, 1, 0.3] : [1, 0.75, 0.3]; for (const s of [-1, 1]) this.fx.add(k.x - fx * back + rx * s * side * 0.6, k.y + 0.7, k.z - fz * back + rz * s * side * 0.6, k.vx * 0.6 - fx * 5, 0.4, k.vz * 0.6 - fz * 5, 0.25, 0.8, 0.2, c, 1, 'flame', 1); }
+    if ((k.boostT > 0 || k.dashT > 0) && Math.random() < dt * 45) { const c = k.boostKind === 'mt2' ? [1, 0.35, 0.9] : k.boostKind === 'glow' ? [0.3, 1, 0.85] : k.boostKind === 'slime' ? [0.5, 1, 0.3] : [1, 0.75, 0.3]; for (const s of [-1, 1]) this.fx.add(k.x - fx * back + rx * s * side * 0.6, k.y + 0.6, k.z - fz * back + rz * s * side * 0.6, k.vx * 0.7 - fx * 4, 0.3, k.vz * 0.7 - fz * 4, 0.2, 0.5, 0.12, c, 0.9, 'flame', 1); }
     if (k.shieldT > 0 && Math.random() < dt * 20) this.fx.glint(k.x + (Math.random() - 0.5) * 3, k.y + 1 + Math.random() * 2.5, k.z + (Math.random() - 0.5) * 3, '#ff9af0');
     if (k.stunT > 0 && Math.random() < dt * 30) this.fx.spark(k.x + (Math.random() - 0.5) * 2, k.y + 1.5 + Math.random() * 1.5, k.z + (Math.random() - 0.5) * 2, 2, '#5af2ff', 4);
-    if (k.dazzleT > 0 && Math.random() < dt * 25) this.fx.glint(k.x + (Math.random() - 0.5) * 3, k.y + 2 + Math.random() * 2, k.z + (Math.random() - 0.5) * 3, '#ffffff');
+    if (k.dazzleT > 0 && Math.random() < dt * 8) this.fx.glint(k.x + (Math.random() - 0.5) * 3, k.y + 2 + Math.random() * 2, k.z + (Math.random() - 0.5) * 3, '#ffffff');
     if (k.foamT > 0 && Math.random() < dt * 20) this.fx.add(k.x + (Math.random() - 0.5) * 3, k.y + 0.6, k.z + (Math.random() - 0.5) * 3, 0, 0.6, 0, 1.0, 0.8, 1.8, [1, 1, 1], 0.6, 'puff', 4);
     if (k.out && Math.random() < dt * 4) this.fx.add(k.x, k.y + 2, k.z, 0, 1.4, 0, 2, 0.8, 2.6, [0.3, 0.3, 0.34], 0.4, 'smoke', 4);
     // every car has a personality: the octopus puffs smoke, the dragon snorts sparks, the snail drips slime, the jelly crackles
     const id = k.car.id;
-    if (id === 'octo' && Math.random() < dt * 3) { const p = cartLocalToWorld(k, 0, 4.7, -1.3, [0, 0, 0]); this.fx.add(p[0], p[1], p[2], 0, 1.6, 0, 1.6, 0.4, 1.6, [0.4, 0.38, 0.4], 0.35, 'smoke', 4); }
+    if (id === 'octo' && Math.random() < dt * 3) { const p = cartCarPoint(k, 0, 4.7, -1.3, [0, 0, 0]); this.fx.add(p[0], p[1], p[2], 0, 1.6, 0, 1.6, 0.4, 1.6, [0.4, 0.38, 0.4], 0.35, 'smoke', 4); }
     if (id === 'dragon' && Math.random() < dt * 4) { const p = this.muzzle(k, [0, 0, 0]); this.fx.add(p[0], p[1], p[2], fx * 3, 0.5, fz * 3, 0.3, 0.4, 0.1, [1, 0.6, 0.2], 1, 'spark', 1); }
     if (id === 'jelly' && Math.random() < dt * 4) this.fx.spark(k.x + (Math.random() - 0.5) * 2.5, k.y + 2.3, k.z + (Math.random() - 0.5) * 2.5, 1, '#5af2ff', 3);
     if (id === 'heart' && Math.random() < dt * 1.2) this.fx.hearts(k.x, k.y + 4.2, k.z, 1);
-    if (id === 'whale' && Math.random() < dt * 1.5) { const p = cartLocalToWorld(k, 0, 3.0, 1.0, [0, 0, 0]); for (let i = 0; i < 3; i++) this.fx.add(p[0], p[1], p[2], (Math.random() - 0.5) * 1.5, 4 + Math.random() * 2, (Math.random() - 0.5) * 1.5, 0.8, 0.3, 0.12, [0.7, 0.9, 1], 0.9, 'drop', 2); }
+    if (id === 'whale' && Math.random() < dt * 1.5) { const p = cartCarPoint(k, 0, 3.0, 1.0, [0, 0, 0]); for (let i = 0; i < 3; i++) this.fx.add(p[0], p[1], p[2], (Math.random() - 0.5) * 1.5, 4 + Math.random() * 2, (Math.random() - 0.5) * 1.5, 0.8, 0.3, 0.12, [0.7, 0.9, 1], 0.9, 'drop', 2); }
     // the weapon's own look while it fires
     const w = k.wpn;
     if (w.fireT > 0) {
-      if (w.id === 'torch' && w.fireT > 0.2) for (let i = 0; i < 8; i++) { if (Math.random() > 0.55) continue; const a = (i + 0.5) / 8 * TAU, ca = Math.sin(a + k.yaw), sa = Math.cos(a + k.yaw), p0 = cartLocalToWorld(k, Math.sin(a) * 2.6, 0.6, -0.5 + Math.cos(a) * 2.6, [0, 0, 0]); this.fx.add(p0[0], p0[1], p0[2], ca * 14 + k.vx * 0.8, 1 + Math.random() * 2, sa * 14 + k.vz * 0.8, 0.45, 1.2, 0.3, [1, 0.55 + Math.random() * 0.3, 0.15], 1, 'flame', 1); }
-      if (w.id === 'slime' && Math.random() < dt * 30) { const p = cartLocalToWorld(k, (Math.random() - 0.5) * 1.5, 0.3, -k.M.len / 2, [0, 0, 0]); this.fx.add(p[0], p[1], p[2], 0, 0.5, 0, 0.6, 0.5, 0.2, [0.45, 1, 0.3], 1, 'drop', 1 | 2); }
+      if (w.id === 'torch' && w.fireT > 0.2) for (let i = 0; i < 8; i++) { if (Math.random() > 0.55) continue; const a = (i + 0.5) / 8 * TAU, ca = Math.sin(a + k.yaw), sa = Math.cos(a + k.yaw), p0 = cartCarPoint(k, Math.sin(a) * 2.6, 0.6, -0.5 + Math.cos(a) * 2.6, [0, 0, 0]); this.fx.add(p0[0], p0[1], p0[2], ca * 14 + k.vx * 0.8, 1 + Math.random() * 2, sa * 14 + k.vz * 0.8, 0.45, 1.2, 0.3, [1, 0.55 + Math.random() * 0.3, 0.15], 1, 'flame', 1); }
+      if (w.id === 'slime' && Math.random() < dt * 30) { const p = cartCarPoint(k, (Math.random() - 0.5) * 1.5, 0.3, -k.M.len / 2, [0, 0, 0]); this.fx.add(p[0], p[1], p[2], 0, 0.5, 0, 0.6, 0.5, 0.2, [0.45, 1, 0.3], 1, 'drop', 1 | 2); }
     }
-    if (id === 'snail' && k.slimeT > 0 && Math.random() < dt * 40) for (const r of k.M.extra.rockets || []) { const p = cartLocalToWorld(k, r[0], r[1], r[2], [0, 0, 0]); this.fx.add(p[0], p[1], p[2], -fx * 8, 0.2, -fz * 8, 0.3, 0.9, 0.2, [1, 0.5, 0.2], 1, 'flame', 1); }
+    if (id === 'snail' && k.slimeT > 0 && Math.random() < dt * 40) for (const r of k.M.extra.rockets || []) { const p = cartCarPoint(k, r[0], r[1], r[2], [0, 0, 0]); this.fx.add(p[0], p[1], p[2], -fx * 8, 0.2, -fz * 8, 0.3, 0.9, 0.2, [1, 0.5, 0.2], 1, 'flame', 1); }
   }
   landFx(k) { const c = this.E.tod === 'night' ? '#8a7a7a' : '#d8b896'; this.fx.dust(k.x, k.y + 0.2, k.z, 10, c); }
   sparkBurst(x, y, z, n, col) { this.fx.spark(x, y, z, n, col, 7); }
@@ -917,7 +930,7 @@ class CartRaceScene {
     if (this.state === 'results') return;
     const me = this.player;
     if (this.isBattle) {
-      const order = this.battleRank();
+      const order = this.finalOrder || this.battleRank();
       this.results = order.map((k, i) => ({ id: k.id, name: k.name, car: k.car.name, player: k.player, score: this.objective === 'vibe' ? k.vibes : this.objective === 'hill' ? Math.floor(k.score) : k.score, hits: k.hitsDealt, out: k.out, rank: i + 1 }));
       const sv = cartSave(), key = this.arenaId + ':' + this.objective;
       if (order[0] === me) sv.wins[key] = (sv.wins[key] || 0) + 1;

@@ -51,6 +51,8 @@ BW12.GLYPHS = (() => {
 
 BurnsWorlds.register({
   id: 12, name: 'The Temple', sub: 'Dawn on the deep playa',
+  // the story card into this world; no confetti-and-cheering victory orbit at the Temple (the ending has its own sunrise shot)
+  story: 'The storm is over. All Brady has left of her is a blinking necklace.', noOutro: true,
   sky: BW12.SKY_A, sky2: BW12.SKY_B, tod: 0,
   music: 'w9',
   bounds: [-110, -150, 110, 176],
@@ -859,7 +861,9 @@ BW12.writeScene = function (g) {
     { say: ['brady', ['Okay.', 'Okay, Chinka.']] },
     { cam: { from: wide, to: eye, dur: 1.6 } },
     { do: g2 => { burnsMusic(null); g2.banner('HER NAME', Input.usingTouch ? 'Trace each glowing stroke with your finger' : 'Drag along each glowing stroke (or hold JUMP)', { col: '#ffe0a8', dur: 4 }); g2.bossSay(null, 'Trace her name', 9999); } },
+    { letterbox: false },   // full screen for the finger (and the 'Trace her name' pill stays visible in portrait)
     { until: g2 => BW12.traceStep(g2, 1 / 120) },
+    { letterbox: true },
     { do: g2 => { BW12.traceFinish(g2); } },
     { wait: 1.6 },
     { cam: { from: eye, to: wide, dur: 2.2 } },

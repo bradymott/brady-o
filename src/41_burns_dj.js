@@ -1108,7 +1108,7 @@ class BurnsDJSession {
     // brushed-metal body with a lit top edge
     ctx.save();
     const bg = ctx.createLinearGradient(0, P.y, 0, P.y + P.h); bg.addColorStop(0, '#1d1a26'); bg.addColorStop(0.08, '#14121b'); bg.addColorStop(1, '#09080d');
-    ctx.fillStyle = bg; rr(ctx, P.x - 2, P.y, P.w + 4, P.h + 20, 18); ctx.fill();
+    ctx.fillStyle = bg; burnsRR(ctx, P.x - 2, P.y, P.w + 4, P.h + 20, 18); ctx.fill();
     ctx.globalAlpha = 0.06; ctx.fillStyle = '#ffffff';
     for (let y = P.y + 6; y < P.y + P.h; y += 3) ctx.fillRect(0, y, W, 1);
     ctx.globalAlpha = 1;
@@ -1133,9 +1133,9 @@ class BurnsDJSession {
     const loaded = deck === 'A' || this.pitch.loaded;
     const col = deck === 'A' ? '#ff4fd8' : '#38f2ff';
     ctx.save();
-    ctx.fillStyle = 'rgba(8,6,14,0.82)'; rr(ctx, r.x, r.y, r.w, r.h, 6); ctx.fill();
+    ctx.fillStyle = 'rgba(8,6,14,0.82)'; burnsRR(ctx, r.x, r.y, r.w, r.h, 6); ctx.fill();
     ctx.strokeStyle = rgba(col, live ? 0.85 : 0.35); ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.beginPath(); rr(ctx, r.x + 1, r.y + 1, r.w - 2, r.h - 2, 5); ctx.clip();
+    ctx.beginPath(); burnsRR(ctx, r.x + 1, r.y + 1, r.w - 2, r.h - 2, 5); ctx.clip();
     const ph = r.x + r.w * 0.3, ppb = clamp(r.w / 22, 18, 34), cy = r.y + r.h / 2;
     const beatNow = t / spb + (deck === 'B' ? (this.pitch.locked ? 0 : this.pitch.phase) : 0);
     if (loaded) {
@@ -1177,7 +1177,7 @@ class BurnsDJSession {
     ctx.font = `600 ${Math.max(8, Math.min(10, r.h * 0.55))}px ${FONT_UI}`; ctx.textBaseline = 'middle';
     const name = `${deck}  ${loaded ? tr.name : '—'}`;
     const tw = ctx.measureText(name).width + 10;
-    ctx.fillStyle = 'rgba(8,6,14,0.75)'; rr(ctx, r.x + 4, r.y + 2, tw, r.h - 4, 4); ctx.fill();
+    ctx.fillStyle = 'rgba(8,6,14,0.75)'; burnsRR(ctx, r.x + 4, r.y + 2, tw, r.h - 4, 4); ctx.fill();
     ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.fillText(name, r.x + 9, r.y + r.h / 2 + 0.5);
     ctx.restore();
   }
@@ -1194,14 +1194,14 @@ class BurnsDJSession {
     if (!r) return;
     const col = deck === 'A' ? '#ff4fd8' : '#38f2ff', live = deck === 'B' && this.pitchLive();
     ctx.save();
-    ctx.fillStyle = '#0b0a10'; rr(ctx, r.x, r.y, r.w, r.h, 6); ctx.fill();
+    ctx.fillStyle = '#0b0a10'; burnsRR(ctx, r.x, r.y, r.w, r.h, 6); ctx.fill();
     ctx.strokeStyle = live ? rgba(col, 0.6 + 0.4 * Math.sin(this.rt * 8)) : 'rgba(255,255,255,0.15)'; ctx.lineWidth = live ? 2 : 1; ctx.stroke();
     const cx = r.x + r.w / 2;
     ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(cx - 1, r.y + 8, 2, r.h - 16);
     for (let i = 0; i <= 8; i++) { const y = r.y + 8 + (r.h - 16) * i / 8; ctx.fillRect(cx - (i === 4 ? 7 : 4), y, i === 4 ? 14 : 8, 1); }
     const v = deck === 'B' ? clamp(this.pitch.off / 8, -1, 1) : 0, ky = r.y + r.h / 2 - v * (r.h / 2 - 12);
     const kg = ctx.createLinearGradient(0, ky - 7, 0, ky + 7); kg.addColorStop(0, '#d8d8e8'); kg.addColorStop(1, '#6a6a7a');
-    ctx.fillStyle = kg; rr(ctx, r.x + 2, ky - 7, r.w - 4, 14, 4); ctx.fill();
+    ctx.fillStyle = kg; burnsRR(ctx, r.x + 2, ky - 7, r.w - 4, 14, 4); ctx.fill();
     ctx.fillStyle = col; ctx.fillRect(r.x + 4, ky - 1, r.w - 8, 2);
     BurnsUI.text(ctx, '+', cx, r.y + 6, 9, 'rgba(255,255,255,0.6)', { stroke: false });
     BurnsUI.text(ctx, '−', cx, r.y + r.h - 6, 9, 'rgba(255,255,255,0.6)', { stroke: false });
@@ -1252,7 +1252,7 @@ class BurnsDJSession {
     const bpmTxt = (deck === 'B' && !this.pitch.loaded) ? '---.-' : bpmD.toFixed(1);
     const diffB = deck === 'B' && this.pitch.loaded ? (this.pitch.locked ? 0 : this.pitch.off) : 0;
     const bcol = deck === 'B' && this.pitch.loaded ? (Math.abs(diffB) < 0.3 ? '#7aff5a' : Math.abs(diffB) < 1.5 ? '#ffe24a' : '#ff6a6a') : '#ffffff';
-    ctx.fillStyle = 'rgba(6,5,10,0.85)'; rr(ctx, x - 30, y + R * 0.46, 60, 17, 5); ctx.fill();
+    ctx.fillStyle = 'rgba(6,5,10,0.85)'; burnsRR(ctx, x - 30, y + R * 0.46, 60, 17, 5); ctx.fill();
     BurnsUI.text(ctx, bpmTxt, x, y + R * 0.46 + 9, 10, bcol, { stroke: false });
     if (deck === 'B' && this.pitchLive() && this.phase === 'play') {
       const a = 0.6 + 0.4 * Math.sin(this.rt * 7);
@@ -1266,7 +1266,7 @@ class BurnsDJSession {
   drawMixer(ctx, L, t) {
     const M = L.mixer;
     ctx.save();
-    ctx.fillStyle = 'rgba(255,255,255,0.03)'; rr(ctx, M.x, M.y, M.w, M.h, 12); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.03)'; burnsRR(ctx, M.x, M.y, M.w, M.h, 12); ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke();
     // beat LEDs 1-2-3-4
     const bpos = this.phase === 'play' && this.t >= 0 ? Math.floor(this.t / this.spb) % 4 : -1;
@@ -1275,12 +1275,12 @@ class BurnsDJSession {
     // phase meter (beatmatch): the needle drifts while the decks disagree
     const E = L.eq;
     const pm = { x: E.x + E.w * 0.08, y: ledY + 10, w: E.w * 0.84, h: 10 };
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(ctx, pm.x, pm.y, pm.w, pm.h, 5); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; burnsRR(ctx, pm.x, pm.y, pm.w, pm.h, 5); ctx.fill();
     ctx.fillStyle = 'rgba(122,255,90,0.35)'; ctx.fillRect(pm.x + pm.w / 2 - 6, pm.y, 12, pm.h);
     if (this.pitch.loaded) {
       let ph = this.pitch.phase; ph = ph - Math.round(ph);
       const nx = pm.x + pm.w / 2 + ph * pm.w * 0.9, good = this.pitch.locked || Math.abs(this.pitch.off) < 0.3;
-      ctx.fillStyle = good ? '#7aff5a' : '#ff6a6a'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8; rr(ctx, nx - 3, pm.y - 3, 6, pm.h + 6, 3); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.fillStyle = good ? '#7aff5a' : '#ff6a6a'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8; burnsRR(ctx, nx - 3, pm.y - 3, 6, pm.h + 6, 3); ctx.fill(); ctx.shadowBlur = 0;
       if (!this.pitch.locked) { const bA = (this.t / this.spb) % 1, bB = (this.t / this.spb + this.pitch.phase) % 1; ctx.fillStyle = `rgba(255,79,216,${Math.max(0.15, 1 - bA * 3)})`; ctx.beginPath(); ctx.arc(pm.x - 8, pm.y + pm.h / 2, 4, 0, TAU); ctx.fill(); ctx.fillStyle = `rgba(56,242,255,${Math.max(0.15, 1 - ((bB + 1) % 1) * 3)})`; ctx.beginPath(); ctx.arc(pm.x + pm.w + 8, pm.y + pm.h / 2, 4, 0, TAU); ctx.fill(); }
     }
     BurnsUI.text(ctx, this.pitch.locked ? 'SYNC' : 'PHASE', pm.x + pm.w / 2, pm.y + pm.h + 8, 8, this.pitch.locked ? '#7aff5a' : 'rgba(255,255,255,0.45)', { stroke: false });
@@ -1358,7 +1358,7 @@ class BurnsDJSession {
   drawXF(ctx, X) {
     const xf = this.xf, t = this.t, play = this.phase === 'play', near = play && xf.free && !xf.judged;
     ctx.save();
-    ctx.fillStyle = '#07060b'; rr(ctx, X.x, X.y + X.h / 2 - 4, X.w, 8, 4); ctx.fill();
+    ctx.fillStyle = '#07060b'; burnsRR(ctx, X.x, X.y + X.h / 2 - 4, X.w, 8, 4); ctx.fill();
     ctx.fillStyle = 'rgba(255,79,216,0.5)'; ctx.fillRect(X.x + 4, X.y + X.h / 2 - 1, X.w * 0.45, 2);
     ctx.fillStyle = 'rgba(56,242,255,0.5)'; ctx.fillRect(X.x + X.w * 0.55 - 4, X.y + X.h / 2 - 1, X.w * 0.45, 2);
     ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(X.x + X.w / 2 - 1, X.y, 2, X.h);
@@ -1367,7 +1367,7 @@ class BurnsDJSession {
     const kx = X.x + xf.pos * X.w;
     if (near) { ctx.shadowColor = '#ffe24a'; ctx.shadowBlur = 16 + Math.sin(this.rt * 9) * 8; }
     const kg = ctx.createLinearGradient(0, X.y, 0, X.y + X.h); kg.addColorStop(0, '#f0f0f8'); kg.addColorStop(1, '#7a7a8a');
-    ctx.fillStyle = kg; rr(ctx, kx - 11, X.y - 2, 22, X.h + 4, 5); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = kg; burnsRR(ctx, kx - 11, X.y - 2, 22, X.h + 4, 5); ctx.fill(); ctx.shadowBlur = 0;
     ctx.fillStyle = '#1a1a22'; ctx.fillRect(kx - 1, X.y + 2, 2, X.h - 4);
     if (near) {
       const dtb = (this.mixT - t) / this.spb;
@@ -1385,9 +1385,9 @@ class BurnsDJSession {
     // the pad: soft rubber with an RGB glow
     ctx.shadowColor = col; ctx.shadowBlur = 6 + hitK * 22;
     const pg = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); pg.addColorStop(0, shade(col, -0.45 + hitK * 0.5 + press * 0.2)); pg.addColorStop(1, shade(col, -0.75 + hitK * 0.4));
-    ctx.fillStyle = pg; rr(ctx, r.x + press * 2, r.y + press * 2, r.w - press * 4, r.h - press * 4, 10); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = pg; burnsRR(ctx, r.x + press * 2, r.y + press * 2, r.w - press * 4, r.h - press * 4, 10); ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = rgba(col, 0.7 + hitK * 0.3); ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.08)'; rr(ctx, r.x + 4, r.y + 3, r.w - 8, r.h * 0.35, 8); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'; burnsRR(ctx, r.x + 4, r.y + 3, r.w - 8, r.h * 0.35, 8); ctx.fill();
     BurnsUI.text(ctx, Ln.label, cx, r.y + r.h - 10, Math.min(10, r.w * 0.14), 'rgba(255,255,255,0.75)', { stroke: false });
     // approach rings: close on the pad's edge exactly on the hit time
     if (this.phase === 'play') {
@@ -1399,7 +1399,7 @@ class BurnsDJSession {
         const rad = half * (1 + Math.max(0, k) * 0.85);
         ctx.strokeStyle = k >= 0 ? rgba('#ffffff', 0.35 + (1 - k) * 0.65) : rgba(col, 0.7);
         ctx.lineWidth = 2.5 + (1 - Math.max(0, k)) * 2;
-        ctx.beginPath(); rr(ctx, cx - rad * (r.w / (2 * half)) , cy - rad * (r.h / (2 * half)), rad * (r.w / half), rad * (r.h / half), 10 + Math.max(0, k) * 12); ctx.stroke();
+        ctx.beginPath(); burnsRR(ctx, cx - rad * (r.w / (2 * half)) , cy - rad * (r.h / (2 * half)), rad * (r.w / half), rad * (r.h / half), 10 + Math.max(0, k) * 12); ctx.stroke();
         ctx.fillStyle = rgba(col, 0.15 + (1 - Math.max(0, k)) * 0.35); ctx.beginPath(); ctx.arc(cx, cy - 4, 4 + (1 - Math.max(0, k)) * 6, 0, TAU); ctx.fill();
       }
     }
@@ -1422,10 +1422,10 @@ class BurnsDJSession {
     ctx.restore();
     // crowd energy meter
     const mw = port ? W - s.l - s.r - 8 : Math.min(320, W * 0.34), mx = port ? s.l + 4 : (W - mw) / 2, my = port ? y + 40 : y + 6;
-    ctx.fillStyle = 'rgba(10,6,20,0.72)'; rr(ctx, mx, my, mw, 22, 11); ctx.fill();
+    ctx.fillStyle = 'rgba(10,6,20,0.72)'; burnsRR(ctx, mx, my, mw, 22, 11); ctx.fill();
     const e = this.energy, eg = ctx.createLinearGradient(mx, 0, mx + mw, 0);
     eg.addColorStop(0, '#3a6aff'); eg.addColorStop(0.35, '#7aff5a'); eg.addColorStop(0.65, '#ffe24a'); eg.addColorStop(0.85, '#ff7a2a'); eg.addColorStop(1, '#ff4fd8');
-    ctx.save(); ctx.beginPath(); rr(ctx, mx + 3, my + 3, (mw - 6) * Math.max(0.02, e), 16, 8); ctx.clip();
+    ctx.save(); ctx.beginPath(); burnsRR(ctx, mx + 3, my + 3, (mw - 6) * Math.max(0.02, e), 16, 8); ctx.clip();
     ctx.fillStyle = eg; ctx.fillRect(mx, my, mw, 22);
     ctx.globalAlpha = 0.25 + this.beatK * 0.3; ctx.fillStyle = '#ffffff'; for (let x = mx - 20 + (this.rt * 40) % 20; x < mx + mw; x += 20) { ctx.beginPath(); ctx.moveTo(x, my + 19); ctx.lineTo(x + 8, my + 3); ctx.lineTo(x + 12, my + 3); ctx.lineTo(x + 4, my + 19); ctx.fill(); }
     ctx.restore();
@@ -1452,7 +1452,7 @@ class BurnsDJSession {
       const k = clamp(s.t / 0.15, 0, 1) * clamp((1.8 - s.t) / 0.3, 0, 1);
       ctx.save(); ctx.globalAlpha = k; ctx.font = `600 11px ${FONT_UI}`;
       const w = ctx.measureText(s.text).width + 14;
-      ctx.fillStyle = 'rgba(255,255,255,0.94)'; rr(ctx, o.x - w / 2, o.y - 22 - s.t * 6, w, 18, 8); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.94)'; burnsRR(ctx, o.x - w / 2, o.y - 22 - s.t * 6, w, 18, 8); ctx.fill();
       ctx.fillStyle = '#1a1024'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s.text, o.x, o.y - 13 - s.t * 6);
       ctx.restore();
     }
@@ -1491,7 +1491,7 @@ class BurnsDJSession {
       const B = L.startBtn, pulse = 1 + Math.sin(this.rt * 5) * 0.03;
       ctx.save(); ctx.translate(B.x + B.w / 2, B.y + B.h / 2); ctx.scale(pulse, pulse);
       const bg = ctx.createLinearGradient(0, -B.h / 2, 0, B.h / 2); bg.addColorStop(0, '#ff6ae0'); bg.addColorStop(1, '#b0208a');
-      ctx.fillStyle = bg; ctx.shadowColor = '#ff4fd8'; ctx.shadowBlur = 18; rr(ctx, -B.w / 2, -B.h / 2, B.w, B.h, 22); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.fillStyle = bg; ctx.shadowColor = '#ff4fd8'; ctx.shadowBlur = 18; burnsRR(ctx, -B.w / 2, -B.h / 2, B.w, B.h, 22); ctx.fill(); ctx.shadowBlur = 0;
       BurnsUI.text(ctx, '▶ DROP IN', 0, 1, 16, '#ffffff');
       ctx.restore();
       if (!port && L.viewBot - L.viewTop < 150) { /* tight landscape: tips sit on the panel labels */ }
@@ -1506,7 +1506,7 @@ class BurnsDJSession {
     ctx.fillStyle = `rgba(8,4,18,${0.55 * k})`; ctx.fillRect(0, 0, W, H);
     const pw = Math.min(W - 32, 420), ph = port ? 330 : Math.min(H - 30, 300), px = (W - pw) / 2, py = (H - ph) / 2;
     ctx.globalAlpha = k; ctx.translate(0, (1 - easeOut(k)) * 30);
-    UI.panel(ctx, px, py, pw, ph);
+    BurnsUIKit.panel(ctx, px, py, pw, ph);
     BurnsUI.text(ctx, r.forfeit ? 'SET ENDED EARLY' : 'SET COMPLETE', W / 2, py + 24, 13, '#ff9ad8', { ui: true });
     BurnsUI.text(ctx, this.title, W / 2, py + 46, Math.min(18, pw / 16), '#ffffff');
     const gk = clamp((this.resT - 0.35) / 0.35, 0, 1), gcol = BurnsDJ.gradeCol[r.grade];
@@ -1518,7 +1518,7 @@ class BurnsDJSession {
     const ry = py + (port ? 176 : 156), cw = (pw - 30) / 2;
     rows.forEach((row, i) => {
       const x = px + 15 + (i % 2) * cw, y = ry + Math.floor(i / 2) * 40;
-      ctx.fillStyle = 'rgba(255,255,255,0.06)'; rr(ctx, x + 4, y, cw - 8, 34, 10); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.06)'; burnsRR(ctx, x + 4, y, cw - 8, 34, 10); ctx.fill();
       BurnsUI.text(ctx, row[0], x + cw / 2, y + 10, 8, 'rgba(255,255,255,0.6)', { stroke: false, ui: true });
       BurnsUI.text(ctx, row[1], x + cw / 2, y + 24, 14, '#ffffff', { stroke: false });
     });
@@ -1533,11 +1533,11 @@ class BurnsDJSession {
     const W = L.W, H = L.H;
     ctx.save();
     ctx.fillStyle = 'rgba(6,3,14,0.72)'; ctx.fillRect(0, 0, W, H);
-    UI.title(ctx, 'PAUSED', W / 2, L.menu[0].y - 34, 24);
+    BurnsUIKit.title(ctx, 'PAUSED', W / 2, L.menu[0].y - 34, 24);
     ['RESUME', 'RESTART SET', 'LEAVE THE BOOTH'].forEach((label, i) => {
       const b = L.menu[i], foc = i === this.pauseSel;
       const bg = ctx.createLinearGradient(0, b.y, 0, b.y + b.h); bg.addColorStop(0, i === 0 ? '#ff6ae0' : '#3a2a5a'); bg.addColorStop(1, i === 0 ? '#b0208a' : '#1e1430');
-      ctx.fillStyle = bg; rr(ctx, b.x, b.y, b.w, b.h, 20); ctx.fill();
+      ctx.fillStyle = bg; burnsRR(ctx, b.x, b.y, b.w, b.h, 20); ctx.fill();
       ctx.strokeStyle = foc ? '#ffd84a' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = foc ? 2.5 : 1.2; ctx.stroke();
       BurnsUI.text(ctx, label, b.x + b.w / 2, b.y + b.h / 2 + 1, 14, '#ffffff');
     });

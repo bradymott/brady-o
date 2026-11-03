@@ -117,6 +117,35 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('Mime Gloves draw an invisible wall that blocks, then fades', mime.sig === 'mime' && mime.wall && mime.blocked && mime.gone, mime);
   await page.evaluate(() => { start('7-1'); clearEnemies(); P().collect('sig:mime'); sim(0.2); sim(0.05, { actionPressed: true }); sim(0.3); });
   await shot('08-power-mime.png');
+  // Ecuador's booby boots: higher jumps, and a big landing knocks out enemies nearby
+  const boots = await page.evaluate(() => {
+    const jumpH = () => { const p = P(), y0 = p.y; let top = y0; sim(0.05, { jump: true, jumpPressed: true }); for (let k = 0; k < 120; k++) { sim(1 / 120, { jump: true }); top = Math.min(top, p.y); } sim(1); return y0 - top; };
+    start('2-1'); clearEnemies(); const h0 = jumpH();
+    start('2-1'); clearEnemies(); const p = P(), g = S(); p.collect('sig:boots'); sim(0.1); const h1 = jumpH();
+    const e = near('ecBanana', 40); e.vx = 0; sim(0.02); p.y -= 6 * 32; p.vy = 0; sim(1.2);
+    return { sig: p.sig && p.sig.id, h0: Math.round(h0), h1: Math.round(h1), ko: e.dead || e.remove };
+  });
+  check('Booby Boots: higher jumps, and big landings knock out enemies nearby', boots.sig === 'boots' && boots.h1 > boots.h0 * 1.25 && boots.ko, boots);
+  await page.evaluate(() => { start('2-1'); clearEnemies(); P().collect('sig:boots'); sim(0.1); sim(0.05, { jump: true, jumpPressed: true, right: true }); sim(0.35, { jump: true, right: true }); });
+  await shot('08b-power-boots.png');
+  // Brazil's football: kick it and it knocks out enemies, ricocheting
+  const ball = await page.evaluate(() => {
+    start('3-1'); clearEnemies(); const p = P(), g = S(); p.collect('sig:ball'); sim(0.1);
+    const e = near('brCrab', 150); e.vx = 0; sim(0.02);
+    sim(0.05, { actionPressed: true }); sim(1.2);
+    return { sig: p.sig && p.sig.id, ko: e.dead || e.remove };
+  });
+  check('Football: a kicked ball knocks out enemies', ball.sig === 'ball' && ball.ko, ball);
+  await page.evaluate(() => { start('3-1'); clearEnemies(); const p = P(); p.collect('sig:ball'); sim(0.1); near('brCrab', 220); sim(0.05, { actionPressed: true }); sim(0.25); });
+  await shot('08c-power-football.png');
+  // a coati steals coins, and gives them back when stomped
+  const coati = await page.evaluate(() => {
+    start('3-3'); clearEnemies(); const p = P(), g = S(); g.picks = 10; p.invuln = 0;
+    const c = near('brCoati', 0); c.x = p.cx - c.w / 2; c.y = p.y + p.h - c.h; sim(0.05); const after = g.picks;
+    sim(0.3); c.flee = 0; c.stunT = 0; c.x = p.cx - c.w / 2; c.y = p.y + p.h - c.h; c.vx = 0; p.y = c.y - p.h - 50; p.vy = 0; sim(0.6);
+    return { after, back: g.picks, dead: c.dead || c.remove };
+  });
+  check('Coatis steal coins, and stomping one gets them back', coati.after === 5 && coati.back === 10 && coati.dead, coati);
 
   // 5. Enemies: stomping, and a two-hit piñata burro
   const stomp = await page.evaluate(() => {
@@ -150,7 +179,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('every tour level loads, simulates and renders', all.n >= 10 && all.bad.length === 0, all);
 
   // 8. Castle bosses: Mexico's piñata, then Paris's soufflé; beating Mexico flies Brady to the next country
-  for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['7-5', 'SOUFFLÉ', 'fr']]) {
+  for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['7-5', 'SOUFFLÉ', 'fr']]) {
     const boss = await page.evaluate(([id]) => {
       start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
       p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.vy = 0; p.invuln = 99; sim(2.5);
@@ -167,19 +196,42 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     if (tag === 'mx') {
       await page.evaluate(() => { start('1-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 200; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); });
       await shot('10-boss-pinaton.png');
+    } else if (tag === 'ec') {
+      await page.evaluate(() => { start('2-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(2.5); b.go('rear'); sim(0.6); });
+      await shot('10b-boss-tortugon.png');
+    } else if (tag === 'br') {
+      await page.evaluate(() => { start('3-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3); b.go('dive'); sim(1.2); });
+      await shot('10c-boss-tucanao.png');
     } else {
       await page.evaluate(() => { start('7-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 200; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.2); });
       await shot('11-boss-souffle.png');
     }
   }
+  const tort = await page.evaluate(() => {
+    start('2-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
+    p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(2.5);
+    b.go('walk'); sim(0.05); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 0; sim(0.4); const shell = b.hp;
+    sim(1); b.go('rear'); sim(0.5); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 0; sim(0.4);
+    return { hp0: b.maxHp, shell, head: b.hp };
+  });
+  check('El Tortugón: his shell is too hard, but stomping his head while he rears up hurts him', tort.shell === tort.hp0 && tort.head === tort.hp0 - 1, tort);
+  const tuc = await page.evaluate(() => {
+    start('3-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
+    p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3);
+    b.go('dive'); let landed = false; for (let k = 0; k < 400 && !landed; k++) { sim(1 / 120); landed = b.act === 'stuck'; }
+    sim(0.3); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 0; sim(0.4);
+    return { landed, hp0: b.maxHp, hp: b.hp };
+  });
+  check('O Tucanão dives, gets his beak stuck in the floor, and can be stomped then', tuc.landed && tuc.hp === tuc.hp0 - 1, tuc);
   const fly = await page.evaluate(() => {
     const B = window.BRADY, d = B.Save.data; for (let i = 1; i <= 5; i++) d.done['1-' + i] = true; T.TourProgress.complete('1-5', false);
     const M = new T.TourMapScene({ from: '1-5' }); B.Game.setScene(M); const flying = !!M.flight; for (let k = 0; k < 600 && M.flight; k++) M.update(1 / 120);
-    return { flying, sel: M.sel, unlocked: T.TourProgress.isUnlocked('7-1') };
+    const next = T.Tour.nextCountry(T.Tour.countries.mx);
+    return { flying, sel: M.sel, next: next.id, unlocked: T.TourProgress.isUnlocked(next.world + '-1') };
   });
-  check('beating Mexico\'s boss flies Brady on to the next country (Paris)', fly.flying && fly.sel === 'fr' && fly.unlocked, fly);
+  check('beating Mexico\'s boss flies Brady on to the next country on the route', fly.flying && fly.sel === fly.next && fly.next === 'ec' && fly.unlocked, fly);
   await page.evaluate(() => { const s = S(); s.card = null; s.update(1 / 60); s.draw(window.BRADY.Game.ctx); });
-  await shot('12-map-paris.png');
+  await shot('12-map-flight.png');
 
   // 9. Pause, credits and the ending
   const pause = await page.evaluate(() => { start('7-2'); const g = S(); g.openPause(); const labels = g.pauseUI.map(b => b.label); g.closePause(); return labels; });

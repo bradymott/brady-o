@@ -22,7 +22,8 @@ const CartShowroom = {
     CartScene.art(api, 'obelisk', 30, 4, 0, true, 0.8);
     for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; api.glow(Math.sin(a) * 8, 0.4, Math.cos(a) * 8, 0.7, BURNS_NEON[i % 7]); }
     W.finish();
-    this.sky = Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.006, sun: [200, 5], keyK: 1.0, exposure: 1.05 });
+    // golden hour: warm key, neutral fill, so every car shows its real colours
+    this.sky = Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.005, sun: [200, 9], key: '#ffe2c4', keyK: 1.05, sky: '#b8b4d0', gnd: '#8a6a5a', rim: '#ffe0f0', exposure: 1.08, hor: '#ffa070', mid: '#d08a90', midK: 0.25 });
     this.world = W;
     return W;
   }
@@ -179,12 +180,14 @@ class KartMenuScene {
     if (showStand) { const s = this.pstand; s.x = P ? 0 : 0; s.y = 0.36; s.z = 0; s.yaw = Math.sin(this.time * 0.5) * 0.4; s.scale = drv.scale * 1.15; s.play(Math.floor(this.time / 3) % 2 ? 'cheer' : 'wave'); s.update(fdt); s.compute(); }
     // camera: frame the subject on the free side of the screen
     const cam = this.cam, M = car.M;
-    if (showStand) { const hh = (drv.man ? 2.2 : 1.9) * 1.15; cam.tx = P ? 0 : -1.1; cam.ty = hh * 0.55; cam.tz = 0; cam.x = cam.tx + 0.6; cam.y = hh * 0.7; cam.z = P ? 6.2 : 5.2; cam.fov = P ? 0.8 : 0.62; }
-    else { const d = Math.max(M.len, M.h * 1.2) * (P ? 1.9 : 1.6) + 3.5; cam.tx = st === 'mode' && !P ? -1.8 : st === 'car' && !P ? -2.6 : 0; cam.ty = M.h * 0.42; cam.tz = 0; cam.x = cam.tx + Math.sin(0.35) * d; cam.y = M.h * 0.6 + 1.4; cam.z = Math.cos(0.35) * d; cam.fov = P ? 0.85 : 0.7; if (P) { cam.ty += st === 'car' ? -0.2 : 1.6; } }
-    const gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * 0.9)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * 0.9));
+    // (the camera looks toward -Z, so a target to the +X side puts the subject on the left of the screen)
+    if (showStand) { const hh = (drv.man ? 2.2 : 1.9) * 1.15; cam.tx = P ? 0 : 2.3; cam.ty = hh * 0.55; cam.tz = 0; cam.x = cam.tx + 0.6; cam.y = hh * 0.7; cam.z = P ? 6.2 : 5.2; cam.fov = P ? 0.8 : 0.62; if (P) cam.ty += 1.0; }
+    else { const d = Math.max(M.len, M.h * 1.2) * (P ? 1.9 : 1.6) + 3.5; cam.tx = st === 'mode' && !P ? 3.2 : st === 'car' && !P ? 3.4 : 0; cam.ty = M.h * 0.42; cam.tz = 0; cam.x = cam.tx + Math.sin(0.35) * d; cam.y = M.h * 0.6 + 1.4; cam.z = Math.cos(0.35) * d; cam.fov = P ? 0.85 : 0.7; if (P) { cam.ty += st === 'car' ? -0.2 : 1.6; } }
+    const t0 = performance.now(), mq = window.__cartFixedQ || this.mq || (this.mq = 0.85);
+    const gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * mq)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * mq));
     R.resize(gw, gh); R.setCamera(cam);
     const env = BurnsEnv.build(CartShowroom.sky, null, 0, this.env, this.time);
-    R.setLights([{ x: 0, y: 4, z: 4, r: 12, c: [1, 0.6, 0.85], i: 0.8 }, { x: -4, y: 2, z: -3, r: 10, c: [0.4, 0.9, 1], i: 0.7 }]);
+    R.setLights([{ x: 2, y: 5, z: 6, r: 14, c: [1, 0.95, 0.9], i: 0.55 }, { x: -5, y: 2, z: -3, r: 10, c: [0.6, 0.85, 1], i: 0.35 }]);
     if (R.shadowBegin(env, { dist: 30 })) { R.statics(World.chunks, env, World, BURNS_ATLAS.T, 0); R.skinBegin(env, World, BURNS_ATLAS.T); if (showStand) R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, 0, 0); else { R.skin(M.geo, car.bones, M.nb, null, 0, 0); R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, 0, 0); } R.shadowEnd(); }
     R.begin(env); R.sky(env); R.ground(World.ground, env, World); R.statics(World.chunks, env, World, BURNS_ATLAS.T, 300);
     R.skinBegin(env, World, BURNS_ATLAS.T);
@@ -195,10 +198,13 @@ class KartMenuScene {
     if (!showStand) for (const L of M.lights) { const p = cartLocalToWorld(car, L.x, L.y, L.z, [0, 0, 0]); R.bbs.bb(p[0], p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.4 : 0.7, true); }
     R.flat.flat(0, 0.4, 0, M.w + 3, M.len + 3, car.yaw, S.glow, burnsRGBf(CART_CARS[this.carSel].light), 0.35, true);
     R.sprites(env, BURNS_SPRITES.T);
-    R.end(env, { fires: [] });
+    R.end(env, { fires: [], ao: false });
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true;
     ctx.drawImage(BurnsGL.canvas, 0, 0, gw, gh, 0, 0, Game.canvas.width, Game.canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // resolution governor: slow devices get a softer (cheaper) showroom
+    const ms = performance.now() - t0;
+    if (!window.__cartFixedQ) { if (ms > 45) this.mq = Math.max(0.3, mq * (ms > 400 ? 0.55 : 0.8)); else if (ms < 14) this.mq = Math.min(0.9, mq + 0.01); }
     return true;
   }
   // 3D driver portraits rendered once into a 2D atlas (cells 128 x 150)
@@ -213,7 +219,7 @@ class KartMenuScene {
       R.begin(env);
       CART_DRIVERS.forEach((d, i) => {
         const D = CartDrivers.model(d.id), ch = new BurnsChar(D.model); ch.scale = D.man ? 0.14 : 1; ch.yaw = 0.3; ch.play(D.man ? 'idle' : 'wave', {}, true); ch.update(0.4); ch.faceOverride = D.man ? -1 : 3; ch.compute();
-        const headY = (D.model.headY || 1.62) * ch.scale + 0.05, bg = burnsRGBf(shade(d.col, -0.55));
+        const headY = (D.model.headY || 1.62) * ch.scale - (D.man ? 0.0 : 0.12), bg = burnsRGBf(shade(d.col, -0.55));
         R.portrait({ x: (i % cols) * cw, y: Math.floor(i / cols) * chh, w: cw, h: chh }, env, BURNS_ATLAS.T, bg, headY, RR => RR.skin(D.model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
       });
       R.post.noFx = [0, 0, 1, 1];
@@ -289,7 +295,7 @@ class KartMenuScene {
       if (port) { const sx = (c.i % port.cols) * port.cw, sy = Math.floor(c.i / port.cols) * port.chh, k = Math.max((c.w - 6) / port.cw, (c.h - 18) / port.chh); ctx.drawImage(port.c, sx, sy, port.cw, port.chh, c.x + c.w / 2 - port.cw * k / 2, c.y + 3, port.cw * k, port.chh * k); }
       else { ctx.fillStyle = rgba(d.col, 0.35); ctx.fillRect(c.x, c.y, c.w, c.h); BurnsUI.text(ctx, d.name[0], c.x + c.w / 2, c.y + c.h / 2 - 6, c.h * 0.4, '#ffffff', {}); }
       ctx.restore();
-      BurnsUI.text(ctx, d.name.length > 12 ? d.name.split(' ').pop() : d.name, c.x + c.w / 2, c.y + c.h - 8, Math.min(9, c.w * 0.1), on ? '#ffd84a' : '#ffffff', { sw: 2.5 });
+      BurnsUI.text(ctx, d.short || d.name, c.x + c.w / 2, c.y + c.h - 8, Math.min(9, c.w * 0.1), on ? '#ffd84a' : '#ffffff', { sw: 2.5 });
     }
     const d = CART_DRIVERS[this.drvSel], x = P ? W / 2 : W * 0.18, y = P ? H * 0.36 : H - Math.max(70, insets.b + 64);
     BurnsUI.text(ctx, d.name, x, y, 20, d.col, { glow: d.col });
@@ -360,7 +366,7 @@ class KartMenuScene {
       cartArenaIcon(ctx, A.id, c.x + c.w / 2, c.y + c.h * 0.36, Math.min(c.w, c.h) * 0.24, this.t, A.col);
       BurnsUI.text(ctx, A.name, c.x + c.w / 2, c.y + c.h * 0.66, Math.min(18, c.w * 0.07), A.col, {});
       ctx.font = `600 11px ${FONT_UI}`; BurnsUI.wrap(ctx, A.sub, c.w - 24).forEach((ln, i) => BurnsUI.text(ctx, ln, c.x + c.w / 2, c.y + c.h * 0.66 + 22 + i * 14, 11, 'rgba(255,255,255,0.85)', { ui: true, stroke: false }));
-      BurnsUI.text(ctx, A.objectives.map(o => CART_OBJECTIVES[o].name).join(' · '), c.x + c.w / 2, c.y + c.h - 16, 9, 'rgba(255,255,255,0.55)', { ui: true, stroke: false });
+      ctx.font = `600 9px ${FONT_UI}`; const ol = BurnsUI.wrap(ctx, A.objectives.map(o => CART_OBJECTIVES[o].name).join(' · '), c.w - 20); ol.forEach((ln, i) => BurnsUI.text(ctx, ln, c.x + c.w / 2, c.y + c.h - 14 - (ol.length - 1 - i) * 12, 9, 'rgba(255,255,255,0.6)', { ui: true, stroke: false }));
     }
   }
   drawObjectives(ctx) {

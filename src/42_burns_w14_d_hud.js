@@ -69,7 +69,7 @@ const BW14_HUD = {
   },
 
   /* ---------------- drawing helpers ---------------- */
-  panel(ctx, x, y, w, h, a) { ctx.fillStyle = `rgba(12,6,26,${a === undefined ? 0.62 : a})`; rr(ctx, x, y, w, h, Math.min(12, h / 2)); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1.5; ctx.stroke(); },
+  panel(ctx, x, y, w, h, a) { ctx.fillStyle = `rgba(12,6,26,${a === undefined ? 0.62 : a})`; burnsRR(ctx, x, y, w, h, Math.min(12, h / 2)); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1.5; ctx.stroke(); },
   roundBtn(ctx, b, held, label, col, sub, pulse) {
     ctx.save(); ctx.translate(b.x, b.y); const s = (held ? 0.92 : 1) * (pulse ? 1 + Math.sin(performance.now() / 140) * 0.05 : 1); ctx.scale(s, s);
     const gg = ctx.createRadialGradient(-b.r * 0.3, -b.r * 0.35, 2, 0, 0, b.r);
@@ -107,8 +107,8 @@ const BW14_HUD = {
         this.panel(ctx, T.x - T.w / 2, T.y0, T.w, T.y1 - T.y0, 0.55);
         const fy = lerp(T.y1, T.y0, P.thr);
         const gr = ctx.createLinearGradient(0, T.y1, 0, T.y0); gr.addColorStop(0, 'rgba(56,242,255,0.55)'); gr.addColorStop(1, 'rgba(255,79,216,0.8)');
-        ctx.fillStyle = gr; rr(ctx, T.x - T.w / 2 + 5, fy, T.w - 10, Math.max(0, T.y1 - fy - 5), 6); ctx.fill();
-        ctx.fillStyle = held ? '#ffffff' : '#ffe24a'; rr(ctx, T.x - T.w / 2 - 6, fy - 9, T.w + 12, 18, 9); ctx.fill();
+        ctx.fillStyle = gr; burnsRR(ctx, T.x - T.w / 2 + 5, fy, T.w - 10, Math.max(0, T.y1 - fy - 5), 6); ctx.fill();
+        ctx.fillStyle = held ? '#ffffff' : '#ffe24a'; burnsRR(ctx, T.x - T.w / 2 - 6, fy - 9, T.w + 12, 18, 9); ctx.fill();
         BurnsUI.text(ctx, 'THROTTLE', T.x, T.y0 - 11, 10, '#ffffff', { ui: true });
         BurnsUI.text(ctx, Math.round(P.thr * 100) + '%', T.x, fy, 11, '#1a0a20', { stroke: false });
         // flip-the-stick toggle
@@ -141,8 +141,8 @@ const BW14_HUD = {
     // the toggle handle: a loop that slides down as you pull
     const y = lerp(-b.r * 0.45, b.r * 0.3, k);
     ctx.strokeStyle = '#ff4fd8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, -b.r * 0.95); ctx.lineTo(0, y - b.r * 0.2); ctx.stroke();
-    ctx.fillStyle = held ? '#ffe24a' : '#ff9ad8'; rr(ctx, -b.r * 0.32, y - b.r * 0.2, b.r * 0.64, b.r * 0.4, b.r * 0.2); ctx.fill();
-    ctx.fillStyle = '#1a0a20'; rr(ctx, -b.r * 0.2, y - b.r * 0.08, b.r * 0.4, b.r * 0.16, b.r * 0.08); ctx.fill();
+    ctx.fillStyle = held ? '#ffe24a' : '#ff9ad8'; burnsRR(ctx, -b.r * 0.32, y - b.r * 0.2, b.r * 0.64, b.r * 0.4, b.r * 0.2); ctx.fill();
+    ctx.fillStyle = '#1a0a20'; burnsRR(ctx, -b.r * 0.2, y - b.r * 0.08, b.r * 0.4, b.r * 0.16, b.r * 0.08); ctx.fill();
     ctx.restore();
     BurnsUI.text(ctx, label, b.x, b.y + b.r * 0.72, Math.round(b.r * 0.26), '#ffffff');
   },
@@ -266,7 +266,7 @@ const BW14_HUD = {
     const landed = F.mode === 'landed';
     const x = (bandL + bandR) / 2 - w / 2, y = landed ? lay.H - lay.S.b - h - 6 : lay.portrait ? lay.H * 0.6 : lay.H - lay.S.b - 62 - h - (F.mode === 'canopy' || F.mode === 'deploy' ? 16 : 0);   // canopy: room for the flare label
     this.panel(ctx, x, y, w, h, 0.72);
-    ctx.fillStyle = '#ff9a4a'; rr(ctx, x + 8, y + 8, 46, h - 16, 8); ctx.fill();
+    ctx.fillStyle = '#ff9a4a'; burnsRR(ctx, x + 8, y + 8, 46, h - 16, 8); ctx.fill();
     BurnsUI.text(ctx, '📻', x + 31, y + h / 2 - 5, 16, '#ffffff', { stroke: false }); BurnsUI.text(ctx, 'RADIO', x + 31, y + h / 2 + 11, 8, '#2a1020', { stroke: false });
     BurnsUI.text(ctx, R.who, x + 62, y + 12, 10, '#ffd84a', { align: 'left', ui: true, stroke: false });
     lines.forEach((l, i) => BurnsUI.text(ctx, l, x + 62, y + 27 + i * 15, 12, '#ffffff', { align: 'left', ui: true, stroke: false }));

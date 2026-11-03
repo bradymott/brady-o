@@ -911,7 +911,8 @@ class BurnsPlayScene {
     const giant = p.giant > 0 ? 1 : 0;
     this.giantK = BurnsM.damp(this.giantK || 0, giant, 3, fdt);
     const mode = this.camMode || 'normal';
-    const dist0 = (veh && veh.kind === 'car' ? 13 : veh ? 7.4 : 6.4) + this.giantK * 5 + (this.boss && this.boss.active ? 2.2 : 0) + (portrait ? 1.2 : 0);
+    // portrait is a tall, wide-angle view: pull in for vehicles so an RV or art car doesn't shrink to a toy
+    const dist0 = ((veh && veh.kind === 'car' ? 13 : veh ? 7.4 : 6.4) + this.giantK * 5 + (this.boss && this.boss.active ? 2.2 : 0)) * (portrait && veh ? 0.74 : 1) + (portrait ? (veh ? 0.4 : 1.2) : 0);
     const baseDist = mode === 'close' ? (veh && veh.kind === 'car' ? 8 : veh ? 3.8 : 2.6) + this.giantK * 3 + (portrait ? 0.7 : 0) : mode === 'far' ? dist0 * 2.3 + 2 : dist0;
     // smoothed follow target
     const tx = p.x, ty = p.y + (mode === 'close' ? 1.58 : 1.35) + this.giantK * 1.8, tz = p.z;
@@ -953,6 +954,7 @@ class BurnsPlayScene {
     const asp = Game.cssW / Game.cssH;
     cam.fov = Math.max(0.9, 2 * Math.atan(Math.tan(1.05 / 2) / asp)) + this.khK * Math.sin(this.time * 0.9) * 0.08 + (p.power === 'powder' && p.powerT > 0 ? 0.06 : 0);
     cam.shift = portrait ? 0.12 : 0.04;
+    if (portrait && veh) cam.fov = Math.min(cam.fov, 1.45);
     if (mode === 'far') cam.fov *= 0.84;
     if (mode === 'first' && !p.dead) {
       // eyes: from last frame's head bone (keeps the walk bob); drag up/down to look

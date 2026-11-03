@@ -53,9 +53,10 @@ Object.assign(CartRaceScene.prototype, {
       if (!spinning) this.camYaw = this.snapCam ? want : BurnsM.dampAngle(this.camYaw, want, 3.2 + Math.min(4, k.speed * 0.12), fdt);
       const sp = clamp(k.speed / 30, 0, 1.3), boost = k.boostT > 0 || k.dashT > 0 ? 1 : 0;
       this.boostLook = BurnsM.damp(this.boostLook || 0, boost, 4, fdt);
-      const d = (portrait ? 11.5 : 8.8) + sp * 1.4 + this.boostLook * 1.2, h = (portrait ? 4.6 : 3.5) + sp * 0.4;
+      // big sculptures: sit higher and further back so the road ahead stays in view
+      const tall = Math.max(0, k.M.h - 3), d = (portrait ? 11.5 : 8.8) + sp * 1.4 + this.boostLook * 1.2 + tall * 1.1 + k.M.len * 0.12, h = (portrait ? 4.6 : 3.5) + sp * 0.4 + tall * 0.85;
       const fx = Math.sin(this.camYaw), fz = Math.cos(this.camYaw);
-      tx = k.x + fx * 5; ty = k.y + 1.7; tz = k.z + fz * 5;
+      tx = k.x + fx * 6; ty = k.y + 1.7 + tall * 0.35; tz = k.z + fz * 6;
       px = k.x - fx * d; py = k.y + h; pz = k.z - fz * d;
       fov = (portrait ? 1.32 : 1.0) + sp * 0.08 + this.boostLook * 0.12;
     }
@@ -72,7 +73,9 @@ Object.assign(CartRaceScene.prototype, {
   },
   // render scale governor (on top of the engine tier): long frames lower the resolution
   adapt(fdt) {
-    if (fdt > 0.026 && fdt < 0.2) this.slowT = (this.slowT || 0) + fdt; else this.slowT = Math.max(0, (this.slowT || 0) - fdt * 0.5);
+    if (window.__cartFixedQ) { this.q = window.__cartFixedQ; return; }   // screenshots: hold the resolution
+    if (fdt > 0.25) { this.q = Math.max(0.5, this.q * 0.75); this.slowT = 0; return; }   // very slow device: step down at once
+    if (fdt > 0.026) this.slowT = (this.slowT || 0) + fdt; else this.slowT = Math.max(0, (this.slowT || 0) - fdt * 0.5);
     if (this.slowT > 2 && this.q > 0.55) { this.q = Math.max(0.55, this.q - 0.1); this.slowT = 0; }
     if (fdt < 0.018) { this.fastT = (this.fastT || 0) + fdt; if (this.fastT > 6 && this.q < 1) { this.q = Math.min(1, this.q + 0.05); this.fastT = 0; } } else this.fastT = 0;
   },
@@ -126,12 +129,12 @@ Object.assign(CartRaceScene.prototype, {
     }
     if (this.state === 'nogl') { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); this.drawNoGL(ctx); return; }
     if (BurnsGL.lost) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#07040e'; ctx.fillRect(0, 0, W, H); BurnsUI.text(ctx, 'RECONNECTING TO THE PLAYA…', W / 2, H / 2, 14, '#ffffff'); return; }
-    const now = performance.now(), fdt = this.lastFrame ? clamp((now - this.lastFrame) / 1000, 0, 0.1) : 1 / 60;
+    const now = performance.now(), rawDt = this.lastFrame ? (now - this.lastFrame) / 1000 : 1 / 60, fdt = clamp(rawDt, 0, 0.1);
     this.lastFrame = now;
     this.stats.fps = lerp(this.stats.fps, 1 / Math.max(0.001, fdt), 0.05);
     const t0 = performance.now();
     this.pollPad();
-    if (!this.paused) this.adapt(fdt);
+    if (!this.paused && this.state !== 'intro') this.adapt(rawDt);
     const vdt = this.paused ? 0 : fdt;
     this.fx.update(vdt);
     this.updateCamera(vdt || 1e-4);
@@ -187,7 +190,7 @@ Object.assign(CartRaceScene.prototype, {
       const dm = k.dModel, D = k._d2 > 45 * 45 && dm.far ? dm.far : k._d2 > 18 * 18 && dm.lod ? dm.lod : dm.geo;
       R.skin(D, k.dBones, k.ch.nb, null, k.ch.face, 0.45);
     }
-    for (const h of heroes) if (h._in) R.skin(h._d2 > 45 * 45 && h.model.far ? h.model.far : h._d2 > 16 * 16 && h.model.lod ? h.model.lod : h.model.geo, h.ch.bones, h.ch.nb, null, h.ch.face, 0.4);
+    for (const h of heroes) if (h._in) R.skin(h._d2 > 40 * 40 && h.model.far ? h.model.far : h._d2 > 10 * 10 && h.model.lod ? h.model.lod : h.model.geo, h.ch.bones, h.ch.nb, null, h.ch.face, 0.4);
     for (const G of crowds) R.skin(G.geo, G.bones, G.objs.length, null, 3, 0.3);
     for (const G of this.props.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.5);
     if (this.man) R.skin(this.man.model.geo, this.man.ch.bones, this.man.ch.nb, null, 3, 0.3);
@@ -248,7 +251,7 @@ Object.assign(CartRaceScene.prototype, {
       if (k.bubbleT > 0) R.bbs.bb(k.x, k.y + 1.8, k.z, 7.5, 7.5, S.bubble, [0.75, 0.95, 1], 0.7, false);
       if (k.flag) R.bbs.bb(k.x, k.y + k.M.h + 2.6, k.z, 3, 3, S.glow, [1, 0.3, 0.85], 0.7, true);
       if (this.objective === 'vibe' && this.state === 'race') for (let v = 0; v < k.vibes; v++) R.bbs.bb(k.x + (v - (k.vibes - 1) / 2) * 0.9, k.y + k.M.h + 0.9, k.z, 0.8, 0.8, S.heart, [1, 0.3, 0.6], 0.95, true);
-      if (k.dazzleT > 0) R.bbs.bb(k.x, k.y + 3, k.z, 2.4, 2.4, S.star, [1, 1, 1], 0.6 + Math.sin(t * 14) * 0.3, true, t * 3);
+      if (k.dazzleT > 0) R.bbs.bb(k.x, k.y + k.M.h + 0.6, k.z, 1.3, 1.3, S.star, [1, 1, 1], 0.5 + Math.sin(t * 14) * 0.25, true, t * 3);
       if (k.stunT > 0 && Math.random() < 0.5) R.bbs.streak(k.x + (Math.random() - 0.5) * 2, k.y + 2 + Math.random(), k.z + (Math.random() - 0.5) * 2, Math.random() - 0.5, 1, Math.random() - 0.5, 1.4, 0.25, S.streak, [0.4, 0.95, 1], 1);
     }
     // weapon ready glow: a halo over the player's car when FIRE is charged
@@ -341,7 +344,7 @@ Object.assign(CartRaceScene.prototype, {
     const top = Math.max(10, insets.t + 6), left = Math.max(14, insets.l + 6), portrait = H > W;
     // screen tint: dazzle white-out, boost flash, storm dust
     if (this.white > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.55, this.white * 0.6)})`; ctx.fillRect(0, 0, W, H); }
-    if (k.dazzleT > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 14; i++) { const x = (Math.sin(i * 12.9 + t * 0.7) * 0.5 + 0.5) * W, y = (Math.cos(i * 7.3 + t * 0.9) * 0.5 + 0.5) * H, r = 6 + 10 * Math.abs(Math.sin(t * 6 + i)); ctx.fillStyle = `rgba(255,255,255,${0.35 * Math.min(1, k.dazzleT)})`; ctx.beginPath(); ctx.moveTo(x, y - r * 2); ctx.lineTo(x + r * 0.4, y); ctx.lineTo(x, y + r * 2); ctx.lineTo(x - r * 0.4, y); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(x - r * 2, y); ctx.lineTo(x, y + r * 0.4); ctx.lineTo(x + r * 2, y); ctx.lineTo(x, y - r * 0.4); ctx.closePath(); ctx.fill(); } ctx.restore(); }
+    if (k.dazzleT > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 6; i++) { const ex = i % 2 ? 0.08 + 0.12 * Math.sin(i * 3.1 + t) : 0.92 - 0.12 * Math.sin(i * 2.3 + t), x = ex * W, y = (Math.cos(i * 7.3 + t * 0.9) * 0.4 + 0.5) * H, r = 4 + 6 * Math.abs(Math.sin(t * 6 + i)); ctx.fillStyle = `rgba(255,255,255,${0.22 * Math.min(1, k.dazzleT)})`; ctx.beginPath(); ctx.moveTo(x, y - r * 2); ctx.lineTo(x + r * 0.4, y); ctx.lineTo(x, y + r * 2); ctx.lineTo(x - r * 0.4, y); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(x - r * 2, y); ctx.lineTo(x, y + r * 0.4); ctx.lineTo(x + r * 2, y); ctx.lineTo(x, y - r * 0.4); ctx.closePath(); ctx.fill(); } ctx.restore(); }
     if (this.flash > 0) { ctx.fillStyle = `rgba(255,220,160,${this.flash * 0.25})`; ctx.fillRect(0, 0, W, H); }
     if (this.E.storm && this.stormK > 0.1) { ctx.fillStyle = `rgba(220,190,150,${this.stormK * 0.35})`; ctx.fillRect(0, 0, W, H); }
     const racing = this.state === 'race' || this.state === 'count';
@@ -376,7 +379,7 @@ Object.assign(CartRaceScene.prototype, {
     if (this.state === 'count') { const n = 3 - Math.floor(this.stateT); if (n >= 1) { const u = this.stateT % 1; BurnsUI.text(ctx, String(n), W / 2, H * 0.38, 70 * (1.3 - u * 0.3), ['#ff5a5a', '#ffd84a', '#7aff8a'][3 - n], { glow: '#000' }); } BurnsUI.text(ctx, 'TAP HOP JUST BEFORE GO FOR A ROCKET START', W / 2, H * 0.38 + 54, 11, 'rgba(255,255,255,0.8)', { ui: true }); }
     // ---- banners ----
     let by = portrait ? H * 0.2 : H * 0.24;
-    for (const m of this.msgs) { const u = 1 - m.t / m.max, a = Math.min(1, m.t * 3, u * 8), s = 1 + Math.max(0, 0.25 - u) * 1.2; ctx.save(); ctx.globalAlpha = a; BurnsUI.text(ctx, m.text, W / 2, by, Math.min(30, W * 0.065) * s, m.col, { glow: m.col }); if (m.sub) BurnsUI.text(ctx, m.sub, W / 2, by + 24, 12, '#ffffff', { ui: true }); ctx.restore(); by += m.sub ? 50 : 36; }
+    for (const m of this.msgs) { const u = 1 - m.t / m.max, a = Math.min(1, m.t * 3, u * 8), s = 1 + Math.max(0, 0.25 - u) * 1.2, fs = (m.small ? Math.min(16, W * 0.04) : Math.min(26, W * 0.058)) * s; ctx.save(); ctx.globalAlpha = a; BurnsUI.text(ctx, m.text, W / 2, by, fs, m.col, { glow: m.small ? null : m.col }); if (m.sub) BurnsUI.text(ctx, m.sub, W / 2, by + fs * 0.6 + 8, 11, '#ffffff', { ui: true }); ctx.restore(); by += fs + (m.sub ? 20 : 8); }
     // ---- controls ----
     if (racing && !this.paused) this.drawControls(ctx);
     // pause button
@@ -433,7 +436,7 @@ Object.assign(CartRaceScene.prototype, {
       ctx.restore();
     } else if (this.state === 'count') BurnsUI.text(ctx, '← → STEER   SPACE HOP/DRIFT   X ITEM   F FIRE   ' + (this.autoGas ? '↓ BRAKE' : '↑ GAS ↓ BRAKE'), Game.cssW / 2, Game.cssH - Math.max(20, insets.b + 16), 12, '#ffffff', { ui: true });
     // vibes (battle) next to the item slot
-    if (this.objective === 'vibe' && this.state === 'race') for (let v = 0; v < 3; v++) { const x = L.action.x - L.action.r + v * 18, y = L.action.y - L.action.r - 30; cartHeartIcon(ctx, x, y, 7, v < k.vibes ? '#ff4f8a' : 'rgba(255,255,255,0.2)'); }
+    if (this.objective === 'vibe' && this.state === 'race') for (let v = 0; v < 4; v++) { const x = L.action.x - L.action.r + v * 18, y = L.action.y - L.action.r - 30; cartHeartIcon(ctx, x, y, 7, v < k.vibes ? '#ff4f8a' : 'rgba(255,255,255,0.2)'); }
   },
   drawMinimap(ctx) {
     const T = this.TR; if (!T) return;
@@ -458,8 +461,9 @@ Object.assign(CartRaceScene.prototype, {
     // leaderboard
     const order = this.battleRank(), unit = this.objective === 'vibe' ? '♥' : this.objective === 'hill' ? 's' : this.objective === 'flag' ? '⚑' : '●';
     const goal = D.goal ? '/' + D.goal : '';
-    order.slice(0, 4).forEach((q, i) => { const y = top + 18 + i * 17, val = this.objective === 'vibe' ? (q.out ? 'OUT' : q.vibes + unit) : Math.floor(q.score) + goal + unit; ctx.fillStyle = q.car.col; ctx.beginPath(); ctx.arc(left + 5, y, 4.5, 0, TAU); ctx.fill(); BurnsUI.text(ctx, (i + 1) + '. ' + (q.player ? 'YOU' : q.car.name), left + 14, y, 11, q.player ? '#ffd84a' : '#ffffff', { align: 'left', ui: true }); BurnsUI.text(ctx, val, left + 168, y, 11, q.player ? '#ffd84a' : 'rgba(255,255,255,0.85)', { align: 'right', ui: true }); });
-    if (order.indexOf(k) >= 4) { const y = top + 18 + 4 * 17; BurnsUI.text(ctx, order.indexOf(k) + 1 + '. YOU', left + 14, y, 11, '#ffd84a', { align: 'left', ui: true }); BurnsUI.text(ctx, this.objective === 'vibe' ? (k.out ? 'OUT' : k.vibes + unit) : Math.floor(k.score) + goal + unit, left + 168, y, 11, '#ffd84a', { align: 'right', ui: true }); }
+    const nm = q => q.player ? 'YOU' : q.car.name.length > 13 ? q.car.name.slice(0, 12) + '…' : q.car.name, vx = left + 186;
+    order.slice(0, 4).forEach((q, i) => { const y = top + 18 + i * 17, val = this.objective === 'vibe' ? (q.out ? 'OUT' : q.vibes + unit) : Math.floor(q.score) + goal + unit; ctx.fillStyle = q.car.col; ctx.beginPath(); ctx.arc(left + 5, y, 4.5, 0, TAU); ctx.fill(); BurnsUI.text(ctx, (i + 1) + '. ' + nm(q), left + 14, y, 11, q.player ? '#ffd84a' : '#ffffff', { align: 'left', ui: true }); BurnsUI.text(ctx, val, vx, y, 11, q.player ? '#ffd84a' : 'rgba(255,255,255,0.85)', { align: 'right', ui: true }); });
+    if (order.indexOf(k) >= 4) { const y = top + 18 + 4 * 17; BurnsUI.text(ctx, order.indexOf(k) + 1 + '. YOU', left + 14, y, 11, '#ffd84a', { align: 'left', ui: true }); BurnsUI.text(ctx, this.objective === 'vibe' ? (k.out ? 'OUT' : k.vibes + unit) : Math.floor(k.score) + goal + unit, vx, y, 11, '#ffd84a', { align: 'right', ui: true }); }
     // objective arrow: where to go
     let tgt = null;
     if (this.objective === 'hill') tgt = this.E.zones[O.zone];
@@ -609,6 +613,10 @@ window.BRADY_CART = {
     },
     events(type) { const s = Game.scene; return (s.events || []).filter(e => !type || e.type === type); },
     gl() { return { tier: BurnsGL.tier, gl2: BurnsGL.gl2, maxBones: BurnsGL.maxBones, failed: BurnsGL.failed }; },
+    // put a car somewhere (index into karts; -1 = the player); frozen rivals sit still with the brakes on
+    place(i, x, z, yaw, o) { const s = Game.scene, k = i < 0 ? s.player : s.karts[i]; o = o || {}; k.x = x; k.z = z; k.yaw = yaw || 0; k.vx = 0; k.vz = 0; k.vy = 0; k.air = false; k.y = s.terrain.height(x, z); if (o.speed) { k.vx = Math.sin(k.yaw) * o.speed; k.vz = Math.cos(k.yaw) * o.speed; } if (o.frozen !== undefined) k.frozen = o.frozen; k.invT = 0; k.spinT = 0; k.flipT = 0; k.bubbleT = 0; k.shieldT = 0; if (s.TR) s.TR.locateGlobal(k.x, k.z, k.loc); return { id: k.id, x: k.x, z: k.z }; },
+    freezeAll(on) { for (const k of Game.scene.karts) if (!k.player) k.frozen = on !== false; },
+    rearm(i) { const s = Game.scene, k = i < 0 || i === undefined ? s.player : s.karts[i]; k.wpn.t = 0; return k.wpn.id; },
     gfx(tier) { BurnsGL.configure(tier); return BurnsGL.tier; },
     // draw one frame by hand (tests stop the rAF loop); returns milliseconds
     frame() { const t = performance.now(); Game.ctx.setTransform(1, 0, 0, 1, 0, 0); Game.scene.draw(Game.ctx); return Math.round(performance.now() - t); },

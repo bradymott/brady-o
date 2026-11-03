@@ -289,7 +289,7 @@ const BW567K = {
     const optH = portrait ? bh : Math.max(bh, 46);
     const ph = 22 + lines.length * 18 + 12 + (portrait ? n * (optH + gap) : optH) + 14 + (o.who ? 16 : 0);
     const py = H - S.b - ph - H * 0.11;
-    ctx.fillStyle = 'rgba(14,6,28,0.88)'; rr(ctx, px, py, pw, ph, 16); ctx.fill();
+    ctx.fillStyle = 'rgba(14,6,28,0.88)'; burnsRR(ctx, px, py, pw, ph, 16); ctx.fill();
     ctx.strokeStyle = 'rgba(255,79,216,0.7)'; ctx.lineWidth = 2; ctx.stroke();
     let y = py + 20;
     if (o.who) { BurnsUI.text(ctx, o.who, px + 18, y, 12, '#ffd84a', { align: 'left' }); y += 18; }
@@ -300,7 +300,7 @@ const BW567K = {
     for (let i = 0; i < n; i++) {
       const bx = portrait ? px + 12 : px + 12 + i * (optW + gap), by = portrait ? y + i * (optH + gap) : y;
       const foc = st.focus === i;
-      ctx.fillStyle = foc ? 'rgba(255,79,216,0.45)' : 'rgba(255,255,255,0.1)'; rr(ctx, bx, by, optW, optH, 12); ctx.fill();
+      ctx.fillStyle = foc ? 'rgba(255,79,216,0.45)' : 'rgba(255,255,255,0.1)'; burnsRR(ctx, bx, by, optW, optH, 12); ctx.fill();
       ctx.strokeStyle = foc ? '#ff9ad8' : 'rgba(255,255,255,0.35)'; ctx.lineWidth = foc ? 2.5 : 1.2; ctx.stroke();
       ctx.font = `600 12px ${FONT_UI}`;
       const ol = BurnsUI.wrap(ctx, o.options[i], optW - 20).slice(0, 2);
@@ -455,7 +455,7 @@ BW567K.drawRhythm = function (ctx, g) {
   const w = portrait ? Math.min(W - S.l - S.r - 16, 620) : Math.min(620, W - S.l - S.r - 252);
   const x0 = portrait ? (W - w) / 2 : Math.max(S.l + 168, (W - w) / 2), y0 = S.t + (portrait ? 156 : 34), lh = portrait ? 46 : 40, hitX = x0 + 56, span = 2.2;
   ctx.save();
-  ctx.fillStyle = 'rgba(12,6,26,0.72)'; rr(ctx, x0 - 8, y0 - 26, w + 16, lh * 2 + 52, 14); ctx.fill();
+  ctx.fillStyle = 'rgba(12,6,26,0.72)'; burnsRR(ctx, x0 - 8, y0 - 26, w + 16, lh * 2 + 52, 14); ctx.fill();
   ctx.strokeStyle = 'rgba(255,79,216,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
   BurnsUI.text(ctx, st.o.title || 'DROP THE BEAT', x0 + 4, y0 - 12, 12, '#ffd84a', { align: 'left' });
   const pct = clamp(st.t / (st.endT - 1.2), 0, 1);

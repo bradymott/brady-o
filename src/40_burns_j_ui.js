@@ -199,11 +199,11 @@ const BurnsUI = {
     const tr = g.missions.tracker();
     if (tr) {
       ctx.save(); ctx.font = `600 12px ${FONT_UI}`;
-      let tw = Math.min(W * 0.5, ctx.measureText(tr.text).width + 34), tx = W / 2 - tw / 2;
+      let tw = Math.min(W * 0.5, ctx.measureText('▶ ' + tr.text).width + 26), tx = W / 2 - tw / 2;
       const left = S.l + 6 + 10 + p.maxHydration * ds * 0.95 + 10, right = W - S.r - 58;
       if (tx < left) { tx = left; tw = Math.min(tw, right - left); }
       let label = '▶ ' + tr.text;
-      while (label.length > 6 && ctx.measureText(label).width > tw - 22) label = label.slice(0, -2) + '…';
+      while (label.length > 6 && ctx.measureText(label).width > tw - 20) label = label.slice(0, -2) + '…';
       ctx.restore();
       const ty = S.t + 6;
       rects.push([tx, ty, tx + tw, ty + 28]);
@@ -273,7 +273,7 @@ const BurnsUI = {
   },
   // the day-of-the-week card at the start of a visit ("TUESDAY NIGHT · World 6 · The Orgy Dome")
   drawDayCard(ctx, g, fdt) {
-    if (!(g.dayCardT >= 0)) return;
+    if (!(g.dayCardT >= 0)) { g.dayCardBottom = 0; return; }
     const O = g.dayCardO || {}, day = O.day || BurnsWorlds.day(g.worldId); if (!day) { g.dayCardT = -1; return; }
     if (g.fade > 0.6) return;   // wait for the fade-in
     if (g.dayCardT === 0 && g.banners.length && g.banners[0].big) return;   // never on top of a big banner
@@ -281,6 +281,7 @@ const BurnsUI = {
     if (t > D) { g.dayCardT = -1; return; }
     const W = Game.cssW, H = Game.cssH, a = clamp(Math.min(t / 0.45, (D - t) / 0.7), 0, 1);
     const y = Math.max(H * 0.2, H * 0.1 * (g.lbK || 0) + 64);
+    g.dayCardBottom = y + 46;
     ctx.save(); ctx.globalAlpha = a;
     const bh = 84, gr = ctx.createLinearGradient(0, y - bh / 2, 0, y + bh / 2);
     gr.addColorStop(0, 'rgba(20,8,36,0)'); gr.addColorStop(0.5, 'rgba(20,8,36,0.62)'); gr.addColorStop(1, 'rgba(20,8,36,0)');
@@ -298,7 +299,7 @@ const BurnsUI = {
     if (g.banners.length > 1 && !b.big && b.dur - b.t > 0.7) b.dur = b.t + 0.7;
     const inK = easeOut(clamp(b.t / 0.3, 0, 1)), outK = clamp((b.dur - b.t) / 0.35, 0, 1), a = Math.min(inK, outK);
     if (b.t > b.dur) { g.banners.shift(); return; }
-    const base = Math.max((g.topStack || 40) + 30 + g.toasts.length * 28 + (g.bossLine ? 34 : 0), H * 0.26);
+    const base = Math.max((g.topStack || 40) + 30 + g.toasts.length * 28 + (g.bossLine ? 34 : 0), H * 0.26, g.dayCardT >= 0 && g.dayCardBottom ? g.dayCardBottom + 26 : 0);
     const y = b.big ? Math.max(base + 30, H * 0.32) : base;
     ctx.save(); ctx.globalAlpha = a;
     if (b.big) {

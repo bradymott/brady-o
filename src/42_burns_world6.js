@@ -1127,7 +1127,7 @@ BW6.overlay = function (ctx, g) {
   const P = S.party, n = BW6.count(g);
   if ((P && P.on) || (g.missions.state('party') === 'active' && g.player.vehicle === S.car)) {
     const w = Math.min(W - 40, 360), x = (W - w) / 2, y = BW567K.hudY(g) + 2;
-    ctx.save(); ctx.fillStyle = 'rgba(20,6,30,0.72)'; rr(ctx, x, y, w, 40, 12); ctx.fill(); ctx.strokeStyle = 'rgba(255,79,216,0.7)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.fillStyle = 'rgba(20,6,30,0.72)'; burnsRR(ctx, x, y, w, 40, 12); ctx.fill(); ctx.strokeStyle = 'rgba(255,79,216,0.7)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
     BurnsUI.text(ctx, P && P.on ? `PARTY · ${P.spot.name}` : 'FIND A PARTY SPOT', x + 10, y + 11, 10, '#ffd84a', { align: 'left', stroke: false });
     BurnsUI.text(ctx, `${n}/${BW6.GOAL}`, x + w - 10, y + 13, 16, n >= BW6.GOAL ? '#7aff5a' : '#ffffff', { align: 'right' });
     BurnsUI.text(ctx, `JELLO ×${S.shots}`, x + w - 64, y + 13, 10, '#ff9ad8', { align: 'right', stroke: false });

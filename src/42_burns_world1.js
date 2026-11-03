@@ -155,7 +155,7 @@ BurnsWorlds.register({
       gifts: { rlCandi: { kind: 'glowstick', n: 10 } }
     });
     api.checkpoint('cp_start', 23, 289, { yaw: Math.PI, name: 'Back of the Line' });
-    api.npc({ id: 'sunny', name: 'SUNNY', type: 'tutu', seed: 5, x: 12.6, z: 289.2, yaw: 0.4,
+    api.npc({ id: 'sunny', name: 'SUNNY', type: 'tutu', seed: 5, x: 11.2, z: 285.6, yaw: 0.4,
       lines: [
         'Whoa. Did a giant wooden guy just steal your wife? Classic first night.',
         'Burner basics: JUMP twice to flip. SPIN to say hi to rude people. In the air, hit ACTION to slam down.',

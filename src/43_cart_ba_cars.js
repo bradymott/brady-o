@@ -95,10 +95,12 @@ CART_BUILD.galleon = (K, C) => {
   const mast = (z, h) => { m.color('#7a4e2a').shine(1); m.limb(0, 1.6, z, 0, 1.6 + h, z, 0.1, 0.07, { seg: lo ? 6 : 8 }); m.limb(-1.2, 1.6 + h * 0.62, z, 1.2, 1.6 + h * 0.62, z, 0.05, 0.05, { seg: 5 }); m.shine(0); };
   mast(0.9, 3.2); mast(-0.6, 3.6);
   m.color('#5a3a20'); m.roundCyl(0, 1.6 + 3.6 - 0.5, -0.6, 0.35, 0.3, 0.05);
+  // square sails that billow forward with speed (a curved sheet, two-sided), a red band across the middle
   const sail = (z, y0, h, w) => K.part(0, y0 + h / 2, z + 0.05, (o, s) => { o.sz = 0.75 + 0.5 * s.speed + Math.sin(s.t * 3 + z) * 0.06; o.yaw = s.steer * 0.12; }, mm => {
-    mm.color('#f4ead2'); mm.ellipsoid(0, 0, 0.18, w / 2, h / 2, 0.38, { seg: lo ? 8 : 12, rings: lo ? 6 : 8, theta0: -Math.PI / 2, theta1: Math.PI / 2 });
-    mm.color('#c8302a'); mm.ellipsoid(0, 0, 0.17, w / 2 + 0.005, h * 0.08, 0.39, { seg: lo ? 8 : 12, rings: 2, theta0: -Math.PI / 2, theta1: Math.PI / 2 });
-    mm.color('#ff4fd8', 0.5); mm.push(); mm.tf(0, 0.2, 0.55); mm.decal(0, 0, 0, w * 0.32, w * 0.32, BURNS_ATLAS.icon('heart') || BURNS_ATLAS.white, { both: true }); mm.pop(); mm.emissive(0);
+    const sheet = (flip) => mm.surf(lo ? 6 : 10, lo ? 6 : 10, (u, v, out) => { const x = (u - 0.5) * w * (1 - (1 - v) * 0.12), y = (v - 0.5) * h; out[0] = x; out[1] = y; out[2] = 0.42 * Math.sin(u * Math.PI) * (0.55 + 0.45 * Math.sin(v * Math.PI)) + (flip ? -0.03 : 0); }, { flip, colFn: (u, v) => Math.abs(v - 0.5) < 0.07 ? '#c8302a' : null });
+    mm.color('#f4ead2'); sheet(false); sheet(true);
+    mm.color('#7a4e2a'); mm.limb(-w / 2, h / 2, 0, w / 2, h / 2, 0, 0.04, 0.04, { seg: 5 }); mm.limb(-w / 2, -h / 2, 0, w / 2, -h / 2, 0, 0.035, 0.035, { seg: 5 });
+    mm.color('#ff4fd8', 0.5); mm.push(); mm.tf(0, 0.12, 0.45); mm.decal(0, 0, 0, w * 0.32, w * 0.32, BURNS_ATLAS.icon('heart') || BURNS_ATLAS.white, { both: true }); mm.pop(); mm.emissive(0);
   });
   sail(0.9, 2.3, 1.8, 2.2); sail(-0.6, 2.6, 2.0, 2.4);
   K.part(0, 5.3, -0.6, (o, s) => { o.yaw = Math.PI + Math.sin(s.t * 6) * 0.25; }, mm => { mm.color('#1a1a1e'); mm.box(0, 0, 0.45, 0.04, 0.42, 0.9); mm.color('#ffffff', 0.4); mm.decal(0.03, 0, 0.45, 0.3, 0.3, BURNS_ATLAS.icon('heart') || BURNS_ATLAS.white, { both: true }); mm.emissive(0); });

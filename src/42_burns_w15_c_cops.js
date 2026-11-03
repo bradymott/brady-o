@@ -340,7 +340,7 @@ const BW15C = {
     UI.text(ctx, `BAGS ${Math.min(8, S.trip.bags)}/8`, x0 + 120, y0 + 11, 9, '#ffd0f4', { align: 'right', stroke: false, ui: true });
     for (let i = 0; i < 8; i++) {
       const on = i < Math.round(S.trip.level * 8), bx = x0 + 8 + i * 14.4, by = y0 + 20, wob = on ? Math.sin(t * 6 + i) * tv * 1.5 : 0;
-      ctx.fillStyle = on ? BW15_RAINBOW[i % 7] : 'rgba(255,255,255,0.14)'; rr(ctx, bx, by + wob, 12, 10, 3); ctx.fill();
+      ctx.fillStyle = on ? BW15_RAINBOW[i % 7] : 'rgba(255,255,255,0.14)'; burnsRR(ctx, bx, by + wob, 12, 10, 3); ctx.fill();
     }
     ctx.restore();
     // ---- speedometer
@@ -352,7 +352,7 @@ const BW15C = {
     UI.pill(ctx, gx - 58, gy - 22, 116, 44, 'rgba(10,6,24,0.6)', S.enc && (S.enc.fast || S.enc.slow) ? 'rgba(255,80,80,0.9)' : 'rgba(255,255,255,0.25)');
     UI.text(ctx, String(mph), gx - 16, gy - 3, 21, !rush && mph > lim ? '#ff8a8a' : '#ffffff', { stroke: false });
     UI.text(ctx, 'MPH', gx - 16, gy + 13, 8, '#cfc8e8', { stroke: false, ui: true });
-    ctx.save(); ctx.fillStyle = '#ffffff'; rr(ctx, gx + 16, gy - 17, 32, 34, 5); ctx.fill(); ctx.strokeStyle = '#c8303a'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.fillStyle = '#ffffff'; burnsRR(ctx, gx + 16, gy - 17, 32, 34, 5); ctx.fill(); ctx.strokeStyle = '#c8303a'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
     UI.text(ctx, 'LIMIT', gx + 32, gy - 8, 6, '#1a1a22', { stroke: false, ui: true }); UI.text(ctx, String(lim), gx + 32, gy + 6, 13, '#1a1a22', { stroke: false });
     // ---- the Exodus pulse
     const P = S.pulse;
@@ -370,8 +370,8 @@ const BW15C = {
       const bw = Math.min(260, W * 0.5), bx = W / 2 - bw / 2, by = (g.topStack || Sf.t + 40) + 4 + g.toasts.length * 28;
       UI.pill(ctx, bx, by, bw, 46, 'rgba(30,6,20,0.72)', S.chase ? 'rgba(255,60,90,0.9)' : 'rgba(255,176,32,0.9)');
       UI.text(ctx, S.chase ? 'COPS ON YOUR TAIL!' : 'UNDERCOVER COP: LOSE HIM', W / 2, by + 11, 11, S.chase ? '#ff9ab0' : '#ffd890', { stroke: false });
-      ctx.fillStyle = 'rgba(255,255,255,0.15)'; rr(ctx, bx + 12, by + 22, bw - 24, 8, 4); ctx.fill();
-      const lk = clamp(C.lock, 0, 1); ctx.fillStyle = S.chase ? '#ff4a6a' : '#ffb020'; rr(ctx, bx + 12, by + 22, (bw - 24) * lk, 8, 4); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.15)'; burnsRR(ctx, bx + 12, by + 22, bw - 24, 8, 4); ctx.fill();
+      const lk = clamp(C.lock, 0, 1); ctx.fillStyle = S.chase ? '#ff4a6a' : '#ffb020'; burnsRR(ctx, bx + 12, by + 22, (bw - 24) * lk, 8, 4); ctx.fill();
       UI.text(ctx, !C.sees && S.hideWhy ? 'HIDING: ' + S.hideWhy : (C.sees ? 'HE CAN SEE YOU · DUST · TRUCKS · TRAFFIC' : 'OUT OF SIGHT...'), W / 2, by + 38, 9, !C.sees ? '#7aff9a' : '#ffffff', { stroke: false, ui: true });
     }
   },
@@ -382,11 +382,11 @@ const BW15C = {
     UI.text(ctx, 'KEEP IT TOGETHER', W / 2, by + 12, 13, '#ffd0f4', { glow: '#ff4fd8' });
     // suspicion
     UI.text(ctx, 'SUSPICION', bx + 12, by + 30, 8, '#ffffff', { align: 'left', stroke: false, ui: true });
-    ctx.fillStyle = 'rgba(255,255,255,0.15)'; rr(ctx, bx + 64, by + 26, bw - 76, 8, 4); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'; burnsRR(ctx, bx + 64, by + 26, bw - 76, 8, 4); ctx.fill();
     const k = clamp(E.susp, 0, 1), gr = ctx.createLinearGradient(bx + 64, 0, bx + bw - 12, 0); gr.addColorStop(0, '#7aff5a'); gr.addColorStop(0.6, '#ffe24a'); gr.addColorStop(1, '#ff3b5c');
-    ctx.fillStyle = gr; rr(ctx, bx + 64, by + 26, (bw - 76) * k, 8, 4); ctx.fill();
+    ctx.fillStyle = gr; burnsRR(ctx, bx + 64, by + 26, (bw - 76) * k, 8, 4); ctx.fill();
     // checks: lane, speed, beat
-    const chip = (x, ok, label) => { ctx.fillStyle = ok ? 'rgba(80,220,120,0.85)' : 'rgba(255,70,90,0.9)'; rr(ctx, x, by + 40, 60, 16, 8); ctx.fill(); UI.text(ctx, label, x + 30, by + 48.5, 8, '#ffffff', { stroke: false, ui: true }); };
+    const chip = (x, ok, label) => { ctx.fillStyle = ok ? 'rgba(80,220,120,0.85)' : 'rgba(255,70,90,0.9)'; burnsRR(ctx, x, by + 40, 60, 16, 8); ctx.fill(); UI.text(ctx, label, x + 30, by + 48.5, 8, '#ffffff', { stroke: false, ui: true }); };
     const cw = (bw - 24) / 3;
     chip(bx + 12 + (cw - 60) / 2, !E.outLane, E.outLane ? 'LANE!' : 'LANE OK');
     chip(bx + 12 + cw + (cw - 60) / 2, !E.fast && !E.slow, E.fast ? 'TOO FAST' : E.slow ? 'TOO SLOW' : 'SPEED OK');
@@ -414,7 +414,7 @@ const BW15C = {
       const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 20 * sc, h = lines.length * lh + 12 * sc;
       const bx = clamp(o.x - w / 2, 6, W - w - 6), by = clamp(o.y - h - 14 * sc, 6, H - h - 6);
       const hue = (g.time * 60) % 360;
-      ctx.fillStyle = `hsl(${hue},90%,88%)`; rr(ctx, bx, by, w, h, 11 * sc); ctx.fill();
+      ctx.fillStyle = `hsl(${hue},90%,88%)`; burnsRR(ctx, bx, by, w, h, 11 * sc); ctx.fill();
       ctx.strokeStyle = `hsl(${hue + 120},80%,55%)`; ctx.lineWidth = 2; ctx.stroke();
       ctx.beginPath(); const tx = clamp(o.x, bx + 12, bx + w - 12); ctx.moveTo(tx - 6 * sc, by + h - 1); ctx.lineTo(tx + 6 * sc, by + h - 1); ctx.lineTo(o.x, Math.min(by + h + 11 * sc, o.y - 2)); ctx.closePath(); ctx.fillStyle = `hsl(${hue},90%,88%)`; ctx.fill();
       ctx.fillStyle = '#2a1036'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';

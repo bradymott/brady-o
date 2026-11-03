@@ -32,6 +32,8 @@ BW13.SKY_B = Object.assign({}, BW13.SKY_A, { zen: '#2a6ad0', mid: '#7ab4ee', hor
 
 BurnsWorlds.register({
   id: 13, name: 'The Workshops', sub: 'Learn something. Escape everything.',
+  // the story card into this world quotes her note; the ending (ticket revoked, the plane) is its own outro
+  story: 'Her note said: "Find me where lost loves are found: 9:00, the Workshops."', noOutro: true,
   sky: BW13.SKY_A, sky2: BW13.SKY_B, tod: 0,
   music: 'w7',
   bounds: [-120, -150, 120, 135],

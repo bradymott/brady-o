@@ -144,8 +144,8 @@ BW11.icon = function (ctx, id, x, y, s, alpha) {
   } else if (id === 'jack') {
     glow('#ffd84a'); ctx.rotate(-0.6);
     const g = ctx.createLinearGradient(-6, 0, 6, 0); g.addColorStop(0, '#a87818'); g.addColorStop(0.5, '#fff0a0'); g.addColorStop(1, '#b8861a');
-    ctx.fillStyle = g; rr(ctx, -6, -2, 12, 20, 4); ctx.fill();
-    ctx.fillStyle = '#e8d070'; rr(ctx, -3.5, -18, 7, 17, 3); ctx.fill();
+    ctx.fillStyle = g; burnsRR(ctx, -6, -2, 12, 20, 4); ctx.fill();
+    ctx.fillStyle = '#e8d070'; burnsRR(ctx, -3.5, -18, 7, 17, 3); ctx.fill();
     ctx.fillStyle = '#3a2a08'; ctx.fillRect(-3.5, -12, 7, 1.6); ctx.fillRect(-3.5, -7, 7, 1.6);
     ctx.fillStyle = '#fff6c0'; ctx.beginPath(); ctx.arc(0, -19, 3.5, 0, TAU); ctx.fill();
     ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 18); ctx.quadraticCurveTo(4, 26, 12, 24); ctx.stroke();
@@ -158,7 +158,7 @@ BW11.icon = function (ctx, id, x, y, s, alpha) {
   } else if (id === 'buckle') {
     glow('#ff5a3a');
     const g = ctx.createLinearGradient(0, -14, 0, 14); g.addColorStop(0, '#e8e8f0'); g.addColorStop(1, '#6a6a78');
-    ctx.fillStyle = g; rr(ctx, -18, -13, 36, 26, 7); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = g; burnsRR(ctx, -18, -13, 36, 26, 7); ctx.fill(); ctx.shadowBlur = 0;
     ctx.fillStyle = '#1a1a22'; ctx.beginPath(); ctx.arc(0, -2, 8, Math.PI, 0); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#e8e8f0'; ctx.beginPath(); ctx.arc(-3.2, -2.5, 2.2, 0, TAU); ctx.arc(3.2, -2.5, 2.2, 0, TAU); ctx.fill();
     ctx.fillRect(-4, 3, 1.5, 3); ctx.fillRect(-0.75, 3, 1.5, 3); ctx.fillRect(2.5, 3, 1.5, 3);
@@ -232,7 +232,7 @@ BW11.drawChoice = function (ctx, g) {
   const lines = BurnsUI.wrap(ctx, o.prompt || '', pw - 36);
   const optW = port ? pw - 24 : (pw - 24 - 8 * (n - 1)) / n, optH = port ? 46 : 52;
   const ph = 26 + lines.length * 18 + 12 + (port ? n * (optH + 8) : optH) + 12 + (o.who ? 16 : 0), py = H - S.b - ph - H * 0.1;
-  ctx.fillStyle = 'rgba(14,6,28,0.9)'; rr(ctx, px, py, pw, ph, 16); ctx.fill();
+  ctx.fillStyle = 'rgba(14,6,28,0.9)'; burnsRR(ctx, px, py, pw, ph, 16); ctx.fill();
   ctx.strokeStyle = 'rgba(255,79,216,0.7)'; ctx.lineWidth = 2; ctx.stroke();
   let y = py + 20;
   if (o.who) { BurnsUI.text(ctx, o.who, px + 18, y, 12, '#ffd84a', { align: 'left' }); y += 18; }
@@ -241,7 +241,7 @@ BW11.drawChoice = function (ctx, g) {
   y += 6; st.btns = [];
   for (let i = 0; i < n; i++) {
     const bx = port ? px + 12 : px + 12 + i * (optW + 8), by = port ? y + i * (optH + 8) : y, foc = st.focus === i;
-    ctx.fillStyle = foc ? 'rgba(255,79,216,0.45)' : 'rgba(255,255,255,0.1)'; rr(ctx, bx, by, optW, optH, 12); ctx.fill();
+    ctx.fillStyle = foc ? 'rgba(255,79,216,0.45)' : 'rgba(255,255,255,0.1)'; burnsRR(ctx, bx, by, optW, optH, 12); ctx.fill();
     ctx.strokeStyle = foc ? '#ff9ad8' : 'rgba(255,255,255,0.35)'; ctx.lineWidth = foc ? 2.5 : 1.2; ctx.stroke();
     ctx.font = `600 12px ${FONT_UI}`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
     const ol = BurnsUI.wrap(ctx, o.options[i], optW - 20).slice(0, 3);

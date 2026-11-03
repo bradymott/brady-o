@@ -976,6 +976,7 @@ class BurnsRenderer {
     const kl = 0.3 * env.keyCol[0] + 0.59 * env.keyCol[1] + 0.11 * env.keyCol[2], al = 0.3 * env.sky[0] + 0.59 * env.sky[1] + 0.11 * env.sky[2];
     this.shStrength = clamp(kl / (kl + al * 0.55 + 0.02) * 1.05, 0, 0.9) * (opts && opts.strength !== undefined ? opts.strength : 1);
     if (this.shStrength < 0.05) return false;
+    if (kl < 0.32 && BurnsGL.tier !== 'ultra' && BurnsGL.tier !== 'high') return false;   // phones skip faint moon shadows (a whole extra pass)
     const cam = this.cam, B = this.B, dist = (opts && opts.dist) || Q.shadowDist, size = Q.shadows;
     // a circle on the ground ahead of the camera (third person: around Brady), constant radius = no size shimmer
     const fl = Math.hypot(B.fx, B.fz) || 1, fx = B.fx / fl, fz = B.fz / fl;

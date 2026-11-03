@@ -206,7 +206,7 @@ function cartWedge(m, f, cx, cz) {
 /* ---------------- skies (engine palettes, tuned for racing: long sight lines) ---------------- */
 const CART_SKIES = {
   day: () => Object.assign({}, BURNS_PALETTES.day, { fogD: 0.0042, clouds: 0.5 }),
-  sunset: () => Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.0058, sun: [205, 6], keyK: 0.95, clouds: 0.55 }),
+  sunset: () => Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.0052, sun: [205, 7], key: '#ffd2a8', keyK: 1.0, sky: '#a8a0c4', hor: '#ff9a62', fog: '#d89a7c', clouds: 0.55, mid: '#c87a8a', midK: 0.3 }),
   dawn: () => Object.assign({}, BURNS_PALETTES.dawn, { fogD: 0.0055 }),
   night: () => Object.assign({}, BURNS_PALETTES.night, { fogD: 0.0075, emB: 1.7, cityK: 0.7, keyK: 0.55, sky: '#5a5a92' }),
   dust: () => Object.assign({}, BURNS_PALETTES.day, { fog: '#d8bc94', fogD: 0.0125, haze: 0.85, fogMax: 0.94, clouds: 0.2, sky: '#d8c8b0', key: '#ffe8c8', keyK: 0.75, dust: 1.2 })
@@ -310,7 +310,7 @@ const CartScene = {
       return { cols: [{ t: 'box', x: 0, z: -rows * 0.5 + 0.5, hx: len / 2, hz: rows * 0.5, y0: 0, y1: rows * 0.55 }] };
     }, { hi: true });
     for (let r = 0; r < rows; r++) for (let i = 0; i < Math.floor(len / 1.25); i++) {
-      if (rng() < 0.18) continue;
+      if (rng() < 0.32) continue;
       const lx = -len / 2 + 0.6 + i * 1.25 + (rng() - 0.5) * 0.3, lz = -r * 1.0;
       spots.push({ x: x + lx * c + lz * s, z: z - lx * s + lz * c, y: 0.36 + r * 0.55, yaw: yaw + (rng() - 0.5) * 0.4 });
     }
@@ -582,7 +582,7 @@ const CartWorlds = {
     E.zones = [{ x: at(0.3).x, z: at(0.3).z, r: 7, name: 'THE TABLETOP' }, { x: 40, z: 20, r: 8, name: 'THE INFIELD' }, { x: -60, z: 10, r: 8, name: 'THE HAIRPIN' }];
     for (let i = 0; i < 40; i++) { const g = TR.at(rng() * TR.L, {}); E.orbSpots.push({ x: g.x + g.nx * (rng() - 0.5) * 14, z: g.z + g.nz * (rng() - 0.5) * 14 }); }
     E.flagSpots = [{ x: 40, z: 20 }, { x: -60, z: 10 }, { x: 10, z: -40 }];
-    E.captures = [{ x: -110, z: -70, r: 8 }, { x: 118, z: -60, r: 8 }, { x: 60, z: 100, r: 8 }];
+    E.captures = [{ x: -70, z: -60, r: 9 }, { x: 80, z: -40, r: 9 }, { x: 40, z: 75, r: 9 }, { x: -85, z: 55, r: 9 }];
     for (let f = 0.1; f < 1; f += 0.25) { const g = at(f); for (let k = -1; k <= 1; k++) E.gifts.push({ x: g.x + g.nx * k * 5, z: g.z + g.nz * k * 5 }); }
     E.spawn = []; for (let k = 0; k < 8; k++) { const g = TR.at(TR.L - 12 - k * 7.5, {}), d = (k % 2 ? 1 : -1) * g.hw * 0.42; E.spawn.push({ x: g.x + g.nx * d, z: g.z + g.nz * d, yaw: g.yaw }); }
     return this.finish(E);
