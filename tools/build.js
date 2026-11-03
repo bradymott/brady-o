@@ -148,8 +148,8 @@ const zlib = require('zlib');
 const gltfpack = path.join(root, 'node_modules', '.bin', 'gltfpack');
 const packCache = path.join(dist, '.packcache');
 // assets/models/<app>/ ships with that app; assets/models/shared/ (the characters) ships with every 3D app
-const copyModels = (appDir, outDir) => {
-  const dirs = [path.join(root, 'assets', 'models', appDir), path.join(root, 'assets', 'models', 'shared')].filter(d => fs.existsSync(d));
+const copyModels = (appDir, outDir, shared) => {
+  const dirs = [path.join(root, 'assets', 'models', appDir)].concat(shared ? [path.join(root, 'assets', 'models', 'shared')] : []).filter(d => fs.existsSync(d));
   if (!dirs.length) return [];
   const files = []; for (const d of dirs) for (const f of fs.readdirSync(d)) if (f.endsWith('.glb') && !files.some(x => x.name === f)) files.push({ name: f, dir: d });
   files.sort((a, b) => a.name.localeCompare(b.name));
@@ -230,7 +230,7 @@ for (const [id, A] of Object.entries(APPS)) {
   fs.writeFileSync(path.join(dir, 'manifest.webmanifest'), JSON.stringify(manifestFor(A.name, A.short, A.desc, A.color, icons), null, 2));
   const v = crypto.createHash('sha1').update(html).digest('hex').slice(0, 10);
   // Blender-made models (assets/models/<app>/*.glb) ship beside the page as models/*.glb and are cached offline
-  const models = copyModels(A.dir, path.join(dir, 'models'));
+  const models = copyModels(A.dir, path.join(dir, 'models'), id !== 'world');   // the 2D app needs no 3D characters
   fs.writeFileSync(path.join(dir, 'sw.js'), swSource('app-' + id, v, ['./', './index.html', './manifest.webmanifest'].concat(icons.map(f => './' + f), models.map(f => './models/' + f))));
   copyFontLicences(dir);
   report.push(`${A.dir} ${files.length} modules ${(html.length / 1024).toFixed(0)}KB${models.length ? ' + ' + models.length + ' glb' : ''}`);
