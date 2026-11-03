@@ -31,7 +31,7 @@ const BW11Dome = {
     p.update = function (dt) { BW11Dome.step(dt); };
     p.teleport(D.f[0].x, 0, D.f[0].z, D.f[0].yaw);
     const ch = o.champ;
-    if (ch) { ch.setBehavior('bw11Bungee'); ch.x = D.f[1].x; ch.z = D.f[1].z; ch.y = 0; }
+    if (ch) { ch.setBehavior('bw11Bungee'); ch.x = D.f[1].x; ch.z = D.f[1].z; ch.y = 0; D.saved.noTalk = ch.def.noTalk; ch.def.noTalk = true; }   // ACTION swings the bat, never TALK
     const champF = D.f[1];
     g.boss = { name: o.name || 'THE DOME CHAMPION', maxHp: 3, active: true, get hp() { return Math.max(0, 3 - champF.bonks); }, get defeated() { return champF.bonks >= 3; }, head() { return [champF.x, champF.y + 2.3, champF.z]; }, update() {} };
     g.camYaw = Math.PI / 2; g.snapCam = true;
@@ -153,7 +153,7 @@ const BW11Dome = {
     if (g.syncHudButtons) g.syncHudButtons();
     g.boss = null;
     const C = D.C; p.teleport(C.x, 0, C.z + C.R - 3, Math.PI); p.ch.play('idle'); g.snapCam = true; g.camYaw = 0;
-    const ch = D.o.champ; if (ch) { ch.setBehavior('idle'); ch.x = ch.home.x; ch.z = ch.home.z; ch.y = ch.home.y; ch.yaw = ch.home.yaw; }
+    const ch = D.o.champ; if (ch) { ch.setBehavior('idle'); ch.x = ch.home.x; ch.z = ch.home.z; ch.y = ch.home.y; ch.yaw = ch.home.yaw; ch.def.noTalk = D.saved.noTalk; }
     if (won && D.o.onWin) D.o.onWin(g); else if (!won && D.o.onLose) D.o.onLose(g);
   },
   abort(g) { if (this.active) { this.over = true; this.end(false); } },

@@ -239,7 +239,7 @@ All props are rounded and smooth-shaded: real tyres, soft-edged bodies and gloss
 | `pennants` | flag string (absolute local points) | `x0,y0,z0,x1,y1,z1,n,sag,drop` |
 | `lightTower` | generator light tower with a big light pool | `aim` (yaw of the lamp heads) |
 | `shade` | 4 poles + canvas top (walkable), string lights | `w, d, h, col, lights:false` |
-| `dome` | geodesic dome, walkable | `r, col, alt, freq, lights, glow` |
+| `dome` | geodesic dome, walkable: a real strut frame with inset fabric panels (some glow with `lights`) | `r, col, alt, freq, lights, glow` (`true` or a colour), `frame: false` (old solid shell), `frameCol` |
 | `scaffold` | climbable tower, alternating platforms | `levels, lh, w, d` |
 | `sign` | see `api.sign` | `text, h, y, post, style, glow` |
 | `campFlag` | (used by checkpoints) | `col` |

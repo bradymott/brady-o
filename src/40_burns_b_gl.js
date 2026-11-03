@@ -340,16 +340,29 @@ void main(){
   vec3 alb = uGround * (1.0 - p.a) + p.rgb;
   float dist = length(vW - uCam);
   float fade = clamp(1.5 - dist / 55.0, 0.0, 1.0);
-  vec4 d1 = texture2D(uDet, vW.xz * uDetK.x);
+  // natural playa: low-frequency warp breaks the crack grid, patches of smooth drifted dust vs. cracked crust,
+  // brightness/colour mottling at two scales, a second crack scale, and fine grit + specks (MOOP) up close
+  vec4 m1 = texture2D(uDet, vW.xz * 0.0071 + vec2(0.13, 0.71));
+  vec4 m2 = texture2D(uDet, vW.xz * 0.0023 + vec2(0.57, 0.29));
+  vec2 wv = (vec2(m1.g, m2.g) - 0.5) * 1.6;
+  vec4 d1 = texture2D(uDet, vW.xz * uDetK.x + wv);
   vec4 d2 = texture2D(uDet, vW.xz * uDetK.z);
-  vec4 d3 = texture2D(uDet, vW.xz * uDetK.x * 0.21 + 0.37);
+  vec4 d3 = texture2D(uDet, vW.xz * uDetK.x * 0.21 + 0.37 + wv * 0.4);
+  vec4 d4 = texture2D(uDet, vW.xz * uDetK.x * 2.7 + wv.yx * 1.3 + 0.21);
   float far = clamp((dist - 28.0) / 80.0, 0.0, 1.0);
-  alb *= 1.0 - mix(d1.r * fade, d3.r * 0.55, far) * uDetK.y;
+  float crust = smoothstep(0.26, 0.62, m2.g * 0.65 + m1.g * 0.35);   // 0 = drifted smooth dust, 1 = cracked crust
+  float ck = mix(d1.r * fade, d3.r * 0.55, far) * mix(0.25, 1.0, crust) + d4.r * 0.35 * fade * crust;
+  alb *= 1.0 - ck * uDetK.y;
   alb *= 1.0 + (d2.g - 0.5) * uDetK.w;
+  alb *= mix(0.9, 1.07, m2.g) * mix(0.96, 1.03, m1.g);
+  alb = mix(alb, alb * vec3(1.06, 1.03, 0.97), (1.0 - crust) * 0.6);   // dust drifts read paler and warmer
   alb *= 0.95 + d1.b * 0.1 * fade;
+  vec4 g1 = texture2D(uDet, vW.xz * 1.9 + 0.43);
+  float near = 1.0 - smoothstep(6.0, 20.0, dist);
+  alb *= 1.0 - (step(0.988, g1.b) * 0.4 + (g1.b - 0.5) * 0.06) * near * uDetK.y * 3.0;
   alb = bLin(alb);
 #ifdef BUMP
-  float hgt = mix(d1.a, d3.a, far);
+  float hgt = mix(d1.a, d3.a, far) * mix(0.35, 1.0, crust) + d4.a * 0.3 * crust + (g1.b - 0.5) * 0.15 * near;
   n = bBump(n, vW, hgt, mix(0.012, 0.045, far) * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y));
 #endif
   float sh = bShadow(vW, n);

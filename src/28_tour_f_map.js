@@ -324,8 +324,9 @@ class TourMapScene {
     // name tag
     ctx.font = `${sel ? 11 : 9}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     const label = s.name.toUpperCase(), tw = ctx.measureText(label).width + 10;
-    ctx.fillStyle = 'rgba(10,10,30,0.7)'; rr(ctx, x - tw / 2, y + r + 3, tw, sel ? 16 : 13, 6); ctx.fill();
-    ctx.fillStyle = st === 'soon' ? 'rgba(255,255,255,0.55)' : '#ffffff'; ctx.fillText(label, x, y + r + 5);
+    const ly = s.label === 'up' ? y - r - (sel ? 19 : 16) : y + r + 3;   // crowded pins put their tag above
+    ctx.fillStyle = 'rgba(10,10,30,0.7)'; rr(ctx, x - tw / 2, ly, tw, sel ? 16 : 13, 6); ctx.fill();
+    ctx.fillStyle = st === 'soon' ? 'rgba(255,255,255,0.55)' : '#ffffff'; ctx.fillText(label, x, ly + 2);
     ctx.restore();
   }
   drawPlane(ctx, x, y, ang) {

@@ -177,7 +177,7 @@ const BW15D = {
     const P = BURNS_POWERUPS[power] || BURNS_POWERUPS.water;
     S.trip.bags++;
     burnsSfx('pickup_bag'); g.fx.confetti(S.rv.x, S.rv.y + 4, S.rv.z, 26); g.fx.burst(S.rv.x, S.rv.y + 4, S.rv.z, 'star', 14, P.col);
-    g.banner('LAST BAG!', `${P.label} · TRIP METER ${Math.min(8, S.trip.bags)}/8`, { col: P.col, small: true });
+    g.banner('LAST BAG!', `TRIP METER ${Math.min(8, S.trip.bags)}/8`, { col: P.col, small: true });   // never named (the engine's ground-score toggle may be off)
     // persistent progress for the "Every Last Bag" token
     if (id && !BurnsSave.flag(15, id)) {
       BurnsSave.flag(15, id, true);

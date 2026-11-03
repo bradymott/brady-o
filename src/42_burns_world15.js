@@ -437,8 +437,8 @@ Object.assign(BW15W, {
       const P = g.pickups.items.find(q => q.id === 'bag' + (i + 1));
       // the last bags are ground-score baggies, but in Exodus they go straight to the TRIP METER (never the
       // backpack, never used on screen): not gated by the ground-score flag, and their own base so the
-      // engine's pickup handler stores nothing; onTake feeds the trip meter whichever way they're collected
-      if (P) { P.score = false; P.base = 'w15bag'; P.onTake = (g2, PP) => { const S2 = BW15.state; if (!S2 || S2.g !== g2) return; S2.lastBagId = PP.id; BW15D.bagTaken(g2, S2, PP.arg); }; }
+      // engine's pickup handler stores nothing (and shows no name label); onTake feeds the trip meter either way
+      if (P) { P.score = false; P.base = 'w15bag'; P.label = null; P.onTake = (g2, PP) => { const S2 = BW15.state; if (!S2 || S2.g !== g2) return; S2.lastBagId = PP.id; BW15D.bagTaken(g2, S2, PP.arg); }; }
       return Object.assign({}, G, { i, id: 'bag' + (i + 1), a, pick: P, state: 'wait', t: 0, side: i === 4 ? -1 : 1, when: BW15W.giverWhen(i) });
     });
     S.givers[7].state = 'done';

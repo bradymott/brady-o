@@ -190,7 +190,8 @@ function tourClimb(ctx) {
   st.x = 1;
   st.band = (rows) => { st.y -= rows; return st.y; };
   // every band ends on a full-width one-way floor (except where `holes` leaves columns open)
-  st.top = (y, holes) => { for (let x = 2; x <= W - 3; x++) if (!(holes && holes.some(([a, b]) => x >= a && x <= b))) { if (B.get(x, y) === T.EMPTY) B.set(x, y, T.SEMI); } st.y = y; };
+  st.tops = [];
+  st.top = (y, holes) => { for (let x = 2; x <= W - 3; x++) if (!(holes && holes.some(([a, b]) => x >= a && x <= b))) { if (B.get(x, y) === T.EMPTY) B.set(x, y, T.SEMI); } st.y = y; st.tops.push(y); };
   st.mid = Math.floor(W / 2);
   const script = (S.script || []).slice();
   for (const step of script) { st.run(step); if (st.y < 16) break; }
@@ -204,6 +205,8 @@ function tourClimb(ctx) {
   for (let x = hole; x < hole + 4; x++) B.set(x, top, T.SEMI);
   B.spawn('gate', W - 5, top - 1, {});
   B.gold(3, top - 4, 'high');
+  // spare postcard spots above the bands' one-way floors (always reachable)
+  for (const y of st.tops.slice(0, -1)) if (y > top + 4) B.gold(ctx.rng.pick([3, 4, W - 5, W - 4]), y - 2, 'spare');
   pickGold(ctx, B);
   const area = B.build(TourBuild.areaProps(ctx, { tower: true, risingLava: S.risingLava || null }));
   return { area, start: { area: 0, x: 4 * TS + TS / 2, y: (H - 2) * TS }, time: S.time || 300 };
@@ -403,7 +406,7 @@ Object.assign(Tour.pieces, {
   end(st, o) {
     const { B } = st; let x = st.x;
     st.floor(x, x + 3); x += 4;
-    const n = 4;
+    const n = clamp(st.gy - 9, 0, 4);
     for (let i = 0; i < n; i++, x++) { st.floor(x, x); B.fill(x, st.gy - 1 - i, x, st.gy - 1, T.HARD); }
     st.floor(x, x); B.fill(x, st.gy - n, x, st.gy - 1, T.HARD); x++;
     st.gold(x - 1, st.gy - n - 5, 'high');

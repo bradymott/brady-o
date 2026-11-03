@@ -576,16 +576,34 @@ class BurnsMesh {
       F = NF;
     }
     const col = this.c, col2 = o.alt ? burnsRGB(o.alt) : [Math.round(col[0] * 0.86), Math.round(col[1] * 0.86), Math.round(col[2] * 0.86)];
+    // frame: a real geodesic frame, round struts + hubs, with the panels inset between them (both sides)
+    const frame = !!o.frame, edges = frame ? new Map() : null, used = frame ? new Set() : null;
+    const P = p => [cx + p[0] * r, y + Math.max(0, p[1]) * r, cz + p[2] * r];
+    const inner = [Math.round(col[0] * 0.45), Math.round(col[1] * 0.42), Math.round(col[2] * 0.48)];
     let k = 0;
     for (const f of F) {
       const a = V[f[0]], b = V[f[1]], c = V[f[2]];
       const my = (a[1] + b[1] + c[1]) / 3;
       if (my < -0.02) continue;
-      const P = p => [cx + p[0] * r, y + Math.max(0, p[1]) * r, cz + p[2] * r];
       this.c = (k++ % 3 === 0) ? col2 : col;
       if (o.lights && k % 7 === 0) { this.c = burnsRGB(o.lights[k % o.lights.length]); this.e = 1; }
-      this.poly([P(a), P(b), P(c)], null, [cx, y, cz]);
+      let A = P(a), B = P(b), C = P(c);
+      if (frame) {
+        for (const [i, j] of [[f[0], f[1]], [f[1], f[2]], [f[2], f[0]]]) { const key = i < j ? i + '_' + j : j + '_' + i; if (!edges.has(key)) edges.set(key, [i, j]); used.add(i); used.add(j); }
+        const g = [(A[0] + B[0] + C[0]) / 3, (A[1] + B[1] + C[1]) / 3, (A[2] + B[2] + C[2]) / 3];
+        const sh = p => { const q = [p[0] + (g[0] - p[0]) * 0.05, p[1] + (g[1] - p[1]) * 0.05, p[2] + (g[2] - p[2]) * 0.05]; return [cx + (q[0] - cx) * 0.988, y + (q[1] - y) * 0.988, cz + (q[2] - cz) * 0.988]; };
+        A = sh(A); B = sh(B); C = sh(C);
+      }
+      this.poly([A, B, C], null, [cx, y, cz]);
+      if (frame && !this.lo) { const se = this.e; this.c = inner; this.e = Math.min(se, 0.35); this.poly([A, C, B], null, [cx + (A[0] + B[0] + C[0] - 3 * cx) * 2, y + (A[1] + B[1] + C[1] - 3 * y) * 2, cz + (A[2] + B[2] + C[2] - 3 * cz) * 2]); }
       this.e = o.e || 0;
+    }
+    if (frame) {
+      const sg = this.gloss, rad = Math.max(0.03, r * 0.009);
+      this.c = burnsRGB(o.frameCol || '#d4d4dc'); this.e = 0; this.gloss = 2;
+      for (const [i, j] of edges.values()) { const pa = P(V[i]), pb = P(V[j]); this.limb(pa[0], pa[1], pa[2], pb[0], pb[1], pb[2], rad, rad, { seg: this.lo ? 4 : 5 }); }
+      if (!this.lo) for (const vi of used) { const p = P(V[vi]); this.ball(p[0], p[1], p[2], rad * 1.9, { seg: 5, rings: 3 }); }
+      this.gloss = sg;
     }
     this.c = col;
     return this;

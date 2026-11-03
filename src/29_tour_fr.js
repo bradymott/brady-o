@@ -597,18 +597,21 @@ const P = {
   },
   // a chimney puffs smoke that lifts Brady over a wide alley to a higher roof
   chimney(st, o) {
-    const x = st.x, B = st.B; st.floor(x, x + 4);
+    const B = st.B; let x = st.x;
+    // up on the high roofs already: take the fire escape down first
+    while (st.gy < 12) { st.floor(x, x + 1); B.decorAt('frAntenna', x, st.gy, 0); x += 2; st.gy += 2; }
+    st.floor(x, x + 4);
     B.fill(x + 3, st.gy - 2, x + 4, st.gy - 1, T.HARD);
     B.decorAt('frChimney', x + 4, st.gy - 2, 0);
-    const rise = 7, span = 6;
-    B.zone(x + 3, st.gy - 2 - rise, 2, rise, 1.2 * TS, -115 * TS, 6.8 * TS, 'smoke', { pull: 2 });
+    // the smoke column: too high to jump, so ride it up and drift over the alley
+    const rise = Math.min(8, st.gy - 4), span = 3, ny = st.gy - 6;
+    B.zone(x + 3, st.gy - 1 - rise, 3, rise, 1.4 * TS, -115 * TS, 6.8 * TS, 'smoke');
     st.pit(x + 5, x + 5 + span - 1);
-    const ny = st.gy - 5;
-    st.gy = ny; st.floor(x + 5 + span, x + 10 + span);
-    for (let y = ny - 6; y < ny; y += 2) B.pickAt(x + 4, y - 2);
+    for (let y = st.gy - rise + 1; y < st.gy - 2; y += 2) B.pickAt(x + 4, y);
+    st.gy = ny; st.floor(x + 5 + span, x + 11 + span);
     if (o.gold) st.gold(x + 9 + span, ny - 3, 'must');
-    if (o.cat) st.enemy('frCat', x + 9 + span, ny, { edgeTurn: true });
-    return x + 11 + span;
+    if (o.cat) st.enemy('frCat', x + 10 + span, ny, { edgeTurn: true });
+    return x + 12 + span;
   },
   // a skylight and a clothesline over an alley
   clothesline(st, o) {

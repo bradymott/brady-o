@@ -16,7 +16,7 @@ fs.mkdirSync(out, { recursive: true });
   await page.goto('file://' + path.join(process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist'), 'brady-o.html'));
   await page.waitForTimeout(2500);
   await page.screenshot({ path: path.join(out, 'title.png') });
-  const ids = levels.length ? levels : ['41-1'];
+  const ids = levels.length ? levels : ['1-1'];
   for (const id of ids) {
     const [w, i] = id.split('-').map(Number);
     await page.evaluate(([w, i]) => { const B = window.BRADY; B.Game.setScene(new B.Play(B.getLevel(w, i), {})); }, [w, i]);

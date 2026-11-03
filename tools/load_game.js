@@ -1,9 +1,10 @@
 // Loads the Super Brady-O World app's modules into a Node VM (no browser needed), so the
 // level builder and validator run exactly as in the game. Browser APIs are stubbed.
 const fs = require('fs'), path = require('path'), vm = require('vm');
-// the same module list as the world app in tools/build.js (minus the boot file)
+// the world app's modules (see the 'world' entry in tools/build.js): the 2D engine and the tour live in
+// 00–29; the other apps' modules (30+) and the boot file (99) are left out
 const WORLD_DROP = ['08c_designs.js', '20b_world_themes.js', '24_sloth.js', '26_worlddata.js', '27_brcmap.js', '27_brcmap_land.js'];
-const isBurns = f => /^4[0-2]_burns_/.test(f), isKart = f => /^3[01]_kart/.test(f);
+const isBurns = f => parseInt(f, 10) >= 30, isKart = f => false;
 module.exports = function loadGame(opts) {
   opts = opts || {};
   const dir = path.join(__dirname, '..', 'src');

@@ -336,7 +336,7 @@ const BurnsProps = {
   },
   dome(m, o) {
     o = o || {}; const r = o.r || 5, col = o.col || '#e8e0d0';
-    m.color(col); m.dome(0, 0, 0, r, o.freq || 2, { alt: o.alt, lights: o.lights ? BURNS_NEON : null, e: 0 });
+    m.color(col); m.dome(0, 0, 0, r, o.freq || 2, { alt: o.alt, lights: o.lights ? BURNS_NEON : null, e: 0, frame: o.frame !== false, frameCol: o.frameCol });
     m.color('#2a1a2a'); m.box(0, 0.9, r - 0.15, 1.2, 1.8, 0.3);
     return { cols: [{ t: 'dome', x: 0, z: 0, r: r, y0: 0, cover: true }], lights: [{ x: 0, y: 0, z: 0, s: 0, c: typeof o.glow === 'string' ? o.glow : (o.glow === true && typeof o.col === 'string' ? o.col : '#ff70c0'), pool: r * 1.6 }], top: r };
   },

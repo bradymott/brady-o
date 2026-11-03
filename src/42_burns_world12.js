@@ -991,7 +991,8 @@ BW12.drawSprites = function (g, R) {
       for (let i = 0; i < upto; i++) { const q = st.pts[i]; R.bbs.bb(q[0], q[1], q[2], 0.034, 0.034, SP.dot, ink, 1, false); }
       if (tr && k >= I.done) {
         const cur = k === I.done, step = cur ? 3 : 5, al = cur ? 0.32 : 0.1;
-        for (let i = upto; i < st.pts.length; i += step) { const q = st.pts[i]; R.bbs.bb(q[0], q[1], q[2], 0.03, 0.03, SP.glow, [1, 0.85, 0.55], al, true); }
+        // a warm glow plus a soft amber dot underneath, so the guide still reads on the pale wood in full sunlight
+        for (let i = upto; i < st.pts.length; i += step) { const q = st.pts[i]; R.bbs.bb(q[0], q[1], q[2], 0.03, 0.03, SP.glow, [1, 0.85, 0.55], al, true); R.bbs.bb(q[0], q[1], q[2], 0.014, 0.014, SP.dot, [0.92, 0.5, 0.18], cur ? 0.6 : 0.16, false); }
         if (cur) {
           const q = BW12.strokeAt(st, tr.s), pulse = 0.7 + 0.3 * Math.sin(t * 8);
           R.bbs.bb(q[0], q[1], q[2], 0.16 * pulse, 0.16 * pulse, SP.glow, [1, 0.8, 0.45], 0.9, true);

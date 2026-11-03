@@ -17,7 +17,7 @@ const shots = process.argv[2] || '.';
       const ev = (type, id, x, y) => c.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', clientX: x, clientY: y, bubbles: true, cancelable: true, isPrimary: id === 1 }));
       const wait = ms => new Promise(r => setTimeout(r, ms));
       B.Save.data.lives = 5;
-      G.setScene(new B.Play(B.getLevel(41, 1), {}));
+      G.setScene(new B.Play(B.getLevel(1, 1), {}));
       await wait(2300);
       const L = I.layout, g = G.scene, p = g.player;
       const out = { layout: { stick: [Math.round(L.stickHome.x), Math.round(L.stickHome.y)], jump: [Math.round(L.jump.x), Math.round(L.jump.y)], act: [Math.round(L.action.x), Math.round(L.action.y)], pause: [Math.round(L.pause.x), Math.round(L.pause.y)] }, gameRect: G.gameRect };

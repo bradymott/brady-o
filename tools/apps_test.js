@@ -23,7 +23,8 @@ const EXPECT = {
     await page.goto('file://' + path.join(site, dir, 'index.html'));
     await page.waitForTimeout(3500);
     const info = await page.evaluate(() => ({ app: window.BRADY && window.BRADY.APP, scene: window.BRADY && window.BRADY.Game && window.BRADY.Game.scene && window.BRADY.Game.scene.constructor.name, title: document.title, key: window.BRADY && window.BRADY.Save && window.BRADY.Save.key }));
-    await page.screenshot({ path: path.join(shots, 'app-' + dir + '.png') });
+    // generous timeout: the 3D app renders slowly on a busy machine without a GPU
+    await page.screenshot({ path: path.join(shots, 'app-' + dir + '.png'), timeout: 180000 });
     const wrong = ['app', 'title', 'key'].filter(k => info[k] !== want[k]);
     const ok = !errs.length && !wrong.length;
     if (!ok) bad++;

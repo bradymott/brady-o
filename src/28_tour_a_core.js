@@ -17,7 +17,7 @@ const TOUR_ROUTE = [
   { id: 'ma', world: 5, name: 'Morocco', lon: -7.0, lat: 31.6 },
   { id: 'es', world: 6, name: 'Valencia', sub: 'Spain', lon: -0.4, lat: 39.5 },
   { id: 'fr', world: 7, name: 'Paris', sub: 'France', lon: 2.35, lat: 48.86 },
-  { id: 'nl', world: 8, name: 'Amsterdam', sub: 'the Netherlands', lon: 4.9, lat: 52.37 },
+  { id: 'nl', world: 8, name: 'Amsterdam', sub: 'the Netherlands', lon: 4.9, lat: 52.37, label: 'up' },
   { id: 'id', world: 9, name: 'Bali', sub: 'Indonesia', lon: 115.2, lat: -8.4 },
   { id: 'vn', world: 10, name: 'Vietnam', lon: 105.8, lat: 18.0 },
   { id: 'jp', world: 11, name: 'Japan', lon: 138.6, lat: 36.0 },

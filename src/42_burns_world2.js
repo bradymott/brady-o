@@ -51,17 +51,17 @@ BurnsWorlds.register({
   ground: { base: '#b8967c', crack: 0.22, mottle: 0.4, res: 0.5 },
   dust: 0.8,
   missions: [
-    { id: 'stash', name: 'Honey, You Have NO Camp?', token: false, type: 'custom', count: 3, start: 'auto', progressLabel: 'Gear stashed', short: 'Carry your gear into the pink RV', marker: { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] },
+    { id: 'stash', name: 'Honey, You Have NO Camp?', token: false, type: 'custom', count: 3, start: 'auto', progressLabel: 'Gear stashed', short: 'Stash your gear in the RV', marker: { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] },
       desc: 'You came with Chinka, three bags and zero plans. The Red Light District crew will babysit your stuff. Carry it into their pink RV, one load at a time.', hint: 'The pink RV where you started. Heavy stuff: no jumping.',
       onStart(g) { BURNS_W2.stashStart(g); }, onComplete(g) { BURNS_W2.stashDone(g); } },
-    { id: 'search', name: 'Camp Shopping', type: 'custom', count: 5, start: 'auto', requires: ['stash'], progressLabel: 'Rejections', short: 'Ask camps to take you in (get rejected 5 times)', marker: { x: 62, z: -17 },
+    { id: 'search', name: 'Camp Shopping', type: 'custom', count: 5, start: 'auto', requires: ['stash'], progressLabel: 'Rejections', short: 'Get rejected by 5 camps', marker: { x: 62, z: -17 },
       desc: 'One question for every camp in the city: "Can I camp with you?" Talk to camp leads (look for the ?), or audition at the Fire Conclave, Flame Alley and Camp Blinky. Collect five rejections. Character building!', hint: 'Camp leads with a ? over their heads, all over the city',
       onStart(g) { BURNS_W234.timer(0.05, g2 => BURNS_W2.searchSync(g2)); },
       onComplete(g) { BURNS_W2.searchDone(g); } },
     { id: 'ranger', name: 'Ask a Ranger', token: false, type: 'reach', giver: 'sage', start: 'manual', short: 'Stand under the 6:30 & A sign', marker: { x: 86, z: -60 },
       target: { x: 0, z: 0, r: 3.2 }, desc: 'Ranger Sagebrush will teach you the street signs. Clock streets go out from the Man, letter streets go around. Then he\'ll tell you where a first-timer can sleep.', hint: 'Ranger Outpost, 6:00 & Esplanade, across from Center Camp',
       onComplete(g) { BURNS_W2.rangerDone(g); } },
-    { id: 'conclave', name: 'The Fire Conclave', type: 'reach', giver: 'flint', start: 'manual', short: 'Cross the fire circle to Fire Mama Ember', marker: { x: 56, z: -84 },
+    { id: 'conclave', name: 'The Fire Conclave', type: 'reach', giver: 'flint', start: 'manual', short: 'Reach Fire Mama Ember', marker: { x: 56, z: -84 },
       target: { x: 0, z: 0, r: 2.6 }, desc: 'Fire Mama Ember runs the conclave camp. Walk through two rings of fire spinners and ask her if you can join. Don\'t touch the poi.', hint: 'Open playa, between 6:00 and 7:00, inside Esplanade',
       onComplete(g) { BURNS_W2.reject(g, 'conclave', 'ember', ['You walked through FIRE to ask me something? I respect that, baby.', 'Join the conclave? Oh, sugar. Fire takes YEARS. Go practice with a sock on a string.']); } },
     { id: 'alley', name: 'Flame Alley', type: 'race', time: 20, giver: 'sparky', start: 'manual', short: 'Run Flame Alley! Ring the bell', marker: { x: 59, z: 6 },
@@ -77,22 +77,22 @@ BurnsWorlds.register({
     { id: 'lost', name: 'Lost & Found Burners', token: false, type: 'custom', count: 3, giver: 'lost1', start: 'manual', progressLabel: 'Burners home', short: 'Walk the lost burners home', marker: { x: 107, z: -32 },
       desc: 'Three burners asked you where 4:30 is. It is not here. You don\'t have a home, but you can find everybody else\'s: walk each of them to the address they actually remember.', hint: 'Lost burners wander near Esplanade and 6:00',
       onComplete(g) { g.banner('ADDRESS MASTER', 'No camp, but you know this city better than the people who live here.', { col: '#7aff5a', small: true }); } },
-    { id: 'moop', name: 'MOOP Sweep', token: false, type: 'collect', count: 10, giver: 'captain', start: 'manual', progressLabel: 'MOOP', short: 'MOOP sweep: pick up 10 bits of litter', marker: { x: 40, z: -46 },
+    { id: 'moop', name: 'MOOP Sweep', token: false, type: 'collect', count: 10, giver: 'captain', start: 'manual', progressLabel: 'MOOP', short: 'Pick up 10 bits of MOOP', marker: { x: 40, z: -46 },
       desc: 'Captain Safety Third says your illumination is five lumens too dim. Sweep up 10 bits of MOOP (Matter Out Of Place) and earn a regulation headlamp.', hint: 'Safety Camp, Esplanade between 6:30 and 7:00',
       onStart(g) { BURNS_W2.labels(g, 'moop', 'MOOP'); }, onComplete(g) { BURNS_W2.moopDone(g); } },
-    { id: 'darkwads', name: 'Light Up the Darkwads', token: false, type: 'custom', count: 4, giver: 'captain', start: 'manual', requires: ['moop'], progressLabel: 'Darkwads lit', short: 'Spin or stomp 4 darkwads to light them up', marker: { x: -40, z: 40 },
+    { id: 'darkwads', name: 'Light Up the Darkwads', token: false, type: 'custom', count: 4, giver: 'captain', start: 'manual', requires: ['moop'], progressLabel: 'Darkwads lit', short: 'Light up 4 darkwads', marker: { x: -40, z: 40 },
       desc: 'Unlit pedestrians lurk on the outer streets. They\'re nearly invisible until you bump into them. Spin or stomp them to stick glow on them.', hint: 'Outer streets, C to E, between 5:30 and 7:00',
       onEvent(g, m, name) { if (name === 'w234lit') { g.missions.progress('darkwads'); return true; } },
       onComplete(g) { g.glow += 20; g.toast('+20 GLOW STICKS · THE STREETS ARE SAFER'); const a = g.actor('captain'); if (a) a.say('Four darkwads, illuminated. I\'m not crying. It\'s dust.', 3); } },
-    { id: 'lanterns', name: 'Light the Way', token: false, type: 'custom', giver: 'wick', start: 'manual', short: 'Walk with the lamplighters (stay in their light)', marker: { x: -6, z: -90 },
+    { id: 'lanterns', name: 'Light the Way', token: false, type: 'custom', giver: 'wick', start: 'manual', short: 'Stay in the lamplighters\' light', marker: { x: -6, z: -90 },
       desc: 'Every night the lamplighters carry lanterns out along 7:00. Walk with them and stay inside their light while they light the way.', hint: 'Lamplighters gather at 7:00 & Esplanade',
       onStart(g) { BURNS_W2.lampStart(g); }, onFail(g) { BURNS_W2.lampReset(g); }, onComplete(g) { BURNS_W2.lampDone(g); } },
-    { id: 'couch', name: 'Couch Surfing', token: false, type: 'custom', start: 'auto', requires: ['search'], short: 'Crash on a couch at Center Camp', marker: { x: BURNS_W2.CC[0], z: BURNS_W2.CC[1] },
+    { id: 'couch', name: 'Couch Surfing', token: false, type: 'custom', start: 'auto', requires: ['search'], short: 'Crash at Center Camp', marker: { x: BURNS_W2.CC[0], z: BURNS_W2.CC[1] },
       desc: 'Nobody will take you. But Center Camp is open to everyone, all night, and it has couches. Go lie down on one.', hint: 'Center Camp, 6:00 & Esplanade' },
-    { id: 'haul', name: 'Haul Your Stuff', type: 'custom', start: 'auto', requires: ['couch'], short: 'Carry your stuff from the pink RV to Kevin\'s tent', marker: { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] },
+    { id: 'haul', name: 'Haul Your Stuff', type: 'custom', start: 'auto', requires: ['couch'], short: 'Haul your stuff to Kevin\'s', marker: { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] },
       desc: 'Kevin has room in his tent at 7:30 & E. Get your stuff from the pink RV and carry it across the city. It\'s heavy: no jumping, and anything that knocks you over makes you drop it. Mind the bike swarms, the art cars and some very nosy "burners".', hint: 'Pink RV (Esplanade) → Kevin\'s tent (7:30 & E, inside the art car parade)',
       onStart(g) { BURNS_W2.haulStart(g); } },
-    { id: 'escape', name: 'Sole Survivor', type: 'custom', start: 'manual', requires: ['haul'], tokenDirect: true, failOnFaint: true, short: 'RUN! Get back to the pink RV', marker: { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] },
+    { id: 'escape', name: 'Sole Survivor', type: 'custom', start: 'manual', requires: ['haul'], tokenDirect: true, failOnFaint: true, short: 'RUN! Back to the pink RV', marker: { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] },
       desc: '4 AM. Kevin is "reading your aura through your soles". Grab your stuff and run back to the pink RV. Dodge Kevin and his barefoot Sole Circle; mash JUMP or ACTION to break free if they grab you.', hint: 'The pink RV, Esplanade near 5:00',
       onStart(g) { BURNS_W2.escapeStart(g); }, onFail(g) { BURNS_W2.escapeFail(g); } }
   ],
@@ -963,7 +963,7 @@ BURNS_W2.markHaul = function (g, dropped) {
     // markers point at live objects (a dropped load is still flying when this runs)
     if (BW.S.carry) m.def.marker = id === 'stash' ? S.rvDoor : S.tent;
     else if (ground) m.def.marker = ground;
-    m.def.short = id === 'stash' ? (BW.S.carry ? 'Carry it into the pink RV (side door)' : 'Pick up your gear by the pink RV') : (BW.S.carry ? 'Carry your stuff to Kevin\'s tent (7:30 & E)' : 'Pick your stuff back up!');
+    m.def.short = id === 'stash' ? (BW.S.carry ? 'Into the RV (side door)' : 'Grab your gear by the RV') : (BW.S.carry ? 'To Kevin\'s tent (7:30 & E)' : 'Pick your stuff back up!');
   }
 };
 BURNS_W2.rvEnter = function (g) {

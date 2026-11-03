@@ -310,7 +310,7 @@ class Player {
     const gifts = Save.data.gifts || {};
     const sigP = this.sig ? TourPowers.get(this.sig.id) : null;
     const speedMul = (this.slowT > 0 ? 0.55 : 1) * (this.fx.powder > 0 ? 1.3 : 1) * (gifts.bike ? 1.12 : 1) * (tripping ? 1.25 : 1) * (sigP && sigP.speedMul ? sigP.speedMul : 1);
-    const jumpBoost = (this.mounted ? 1.12 : 1) * (this.fx.powder > 0 ? 1.14 : 1);
+    const jumpBoost = (this.mounted ? 1.12 : 1) * (this.fx.powder > 0 ? 1.14 : 1) * (sigP && sigP.jumpBoost ? sigP.jumpBoost : 1);
     const wasGround = this.onGround, rideWas = this.ride;
     const ev = playerPhysics(this, inp, A, dt, g.platforms, { windDx, noCrouchJump: false, jumpBoost, gScale, speedMul });
     if (this.glideT > 0 && this.vy > 2.2 * TS) this.vy = 2.2 * TS;
@@ -503,6 +503,7 @@ class Player {
     if (this.growT > 0) small = Math.floor(this.growT * 14) % 2 === 0 ? (this.growFrom === 0) : (this.power === 0);
     const o = { x: this.cx, y: this.y + this.h, facing: this.facing, small, power: this.power, anim: this.anim, hair: this.hair, look: Save.data.look, star: this.star > 0, time: t, fly: this.fly > 0 || this.lsdT > 0, floaty: this.floaty > 0 || (this.power === 2 && this.g.level && this.g.level.tour && !this.inWater) };
     if (this.lsdT > 0 && this.lsdT < 2 && Math.floor(this.lsdT * 10) % 2 === 0) o.alpha = 0.45;
+    if (this.g.level && this.g.level.tour) { o.trip = this.lsdT > 0; o.held = 'joint'; }
     if (this.mounted) {
       const moving = Math.abs(this.vx) > 10;
       if (this.hang) {

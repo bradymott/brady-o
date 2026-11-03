@@ -458,7 +458,7 @@ function drawBrady(ctx, o) {
     ctx.beginPath(); ctx.moveTo(R * 0.4, R * 0.46); ctx.quadraticCurveTo(R * 0.64, R * 0.58, R * 0.88, R * 0.43); ctx.quadraticCurveTo(R * 0.64, R * 0.51, R * 0.4, R * 0.46); ctx.fill();
   } else if (mouth === 'o') { ctx.fillStyle = '#4a1a14'; ctx.beginPath(); ctx.ellipse(R * 0.66, R * 0.55, 1.6, 2, 0, 0, TAU); ctx.fill(); }
   else { ctx.strokeStyle = '#5a2a20'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(R * 0.38, R * 0.48); ctx.quadraticCurveTo(R * 0.62, R * 0.68, R * 0.88, R * 0.44); ctx.stroke(); }
-  if (o.power === 2) { ctx.fillStyle = 'rgba(255,90,110,0.38)'; ctx.beginPath(); ctx.ellipse(R * 0.45, R * 0.25, R * 0.28, R * 0.16, 0, 0, TAU); ctx.fill(); }
+  if (o.power === 2 && o.held !== 'joint') { ctx.fillStyle = 'rgba(255,90,110,0.38)'; ctx.beginPath(); ctx.ellipse(R * 0.45, R * 0.25, R * 0.28, R * 0.16, 0, 0, TAU); ctx.fill(); }
   if (o.floaty) {
     // a joint, and a lazy grin
     ctx.save(); ctx.translate(R * 0.95, R * 0.5); ctx.rotate(0.15);
@@ -515,7 +515,7 @@ function drawBrady(ctx, o) {
     ctx.moveTo(R * 0.02, ey - R * 0.2); ctx.lineTo(-R * 0.3, ey - R * 0.05); ctx.stroke();          // temple arm to the ear
     ctx.restore();
   }
-  if (o.fly) {
+  if (o.fly && !o.trip) {
     // the bufo toad rides on Brady's head while he flies
     ctx.save(); ctx.translate(-R * 0.1, -R * 1.25); ctx.scale(0.45, 0.45); Sprites.bufo(ctx, 0, 0, o.time, false); ctx.restore();
   }
@@ -529,7 +529,13 @@ function drawBrady(ctx, o) {
 
   // ---- front arm
   const [hfx, hfy] = drawArm(shX + 2.5, shY + 2, P.uaF, P.faF, false);
-  if (o.power === 2 && !o.small) {
+  if (o.power === 2 && !o.small && o.held === 'joint') {
+    // a little rolled joint in hand, its tip glowing
+    ctx.save(); ctx.translate(hbx, hby); ctx.rotate(-0.5);
+    ctx.fillStyle = '#fbf6ea'; rr(ctx, -1.2, -9, 2.4, 9, 1); ctx.fill();
+    ctx.fillStyle = `rgba(255,${130 + 60 * Math.sin((o.time || 0) * 6)},40,1)`; ctx.beginPath(); ctx.arc(0, -9.5, 1.5, 0, TAU); ctx.fill();
+    ctx.restore();
+  } else if (o.power === 2 && !o.small) {
     // a bottle in hand
     ctx.save(); ctx.translate(hbx, hby); ctx.rotate(0.3);
     ctx.fillStyle = '#4a8a3a'; rr(ctx, -2.2, -9, 4.4, 9, 1.6); ctx.fill(); ctx.fillRect(-1, -12, 2, 3);

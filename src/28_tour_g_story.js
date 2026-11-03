@@ -258,3 +258,6 @@ Sound.addTrack && Sound.addTrack('tour_map', {
   ap: 'c-..c-....c-....', ai: 'ep', av: 0.05, ao: 57,
   dr: ['k.......k.......', '....c.......c...', '..h...h...h...h.', 'l.....l.....l...'], dv: 0.38
 });
+
+// test hook (tools/gameplay_test.js)
+try { window.BRADY_TOUR = { Tour, TourProgress, TourPowers, TourBuild, TourMapScene, TourEndingScene, TourIntroPanels, TourItem, TourEnemy, TourKit, tourCreditsLines }; } catch (e) { /* not in a browser */ }
