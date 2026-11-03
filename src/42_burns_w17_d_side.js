@@ -145,13 +145,13 @@ BW17.sunriseScene = function (g) {
   S.musicLock = true;
   g.cutscene([
     { swell: 'burns_w7' },
-    { do: g2 => { S.clockTo = 5.98; S.clockRate = 0.004; p.teleport(f[0], 0, f[1] - 2, Math.atan2(H.booth[0] - f[0], H.booth[1] - f[1])); p.animOverride = 'dance'; } },
+    { do: g2 => { S.clockTo = 6.25; S.clockRate = Math.max(0.04, (6.25 - S.clock) / 9); p.teleport(f[0], 0, f[1] - 2, Math.atan2(H.booth[0] - f[0], H.booth[1] - f[1])); p.animOverride = 'dance'; } },
     { orbit: { x: H.booth[0], y: 3, z: H.booth[1], r0: 26, r1: 18, h0: 3, h1: 7, a0: Math.PI + 0.9, a1: Math.PI + 0.25, ty: 6, dur: 5, fov: 0.95 } },
     { say: [{ name: 'SUNRISE CROWD' }, ['He\'s playing the sunrise set on the heart. Every year I think it can\'t get better.', 'Every year it gets better.']] },
     { do: g2 => { for (let i = 0; i < 4; i++) BW17.after(g2, i * 0.7, g3 => g3.fx.hearts(H.top[0] + (Math.random() - 0.5) * 6, 9, H.top[1] + (Math.random() - 0.5) * 2, 8)); burnsSfx('crowd_cheer'); } },
     { crane: { from: { x: f[0] - 6, y: 1.4, z: f[1] - 9, tx: H.booth[0], ty: 7, tz: H.booth[1], fov: 0.9 }, to: { x: f[0] - 2, y: 2.2, z: f[1] - 6, tx: H.booth[0], ty: 9, tz: H.booth[1] + 30, fov: 1.0 }, dur: 4.5 } },
     { say: ['brady', ['Oh. Oh no. I\'m crying. Is this what burners are?']] },
-    { do: g2 => { p.animOverride = null; S.clockTo = null; S.clock = 6.0; BW17.applySky(g2); BW17.applyLights(g2, true); S.musicLock = false; S.sunrise = null; BurnsSave.flag(17, 'clock', 6); g2.missions.complete('s_sunrise', { x: p.x, y: p.y + 1.3, z: p.z + 2 }); } }
+    { do: g2 => { p.animOverride = null; S.clockTo = null; S.clock = 6.25; BW17.applySky(g2); BW17.applyLights(g2, true); S.musicLock = false; S.sunrise = null; BurnsSave.flag(17, 'clock', 6.25); g2.missions.complete('s_sunrise', { x: p.x, y: p.y + 1.3, z: p.z + 2 }); BW17.applyMusic(g2, true); } }
   ]);
 };
 
@@ -252,7 +252,7 @@ BW17.buildSide = function (api, g) {
   /* --- THE CATHEDRAL BURNS: the perimeter and the SIT spot --- */
   const pc = L.perimeter;
   I({ x: pc[0], z: pc[1], r: 2.4, label: 'SIT', when: g2 => g2.missions.state('s_burn') === 'active', fn: g2 => BW17.burnScene(g2) });
-  for (let i = 0; i < 9; i++) { const a = (i - 4) * 0.16, r = 31; api.npc({ type: ['burner', 'crusty', 'tutu', 'furcoat', 'greeter', 'ledsuit'][i % 6], seed: (i * 5) % 24, x: L.cathedral[0] + Math.sin(Math.PI + a) * r, z: L.cathedral[1] + Math.cos(Math.PI + a) * r, yaw: a, behavior: 'sit', chat: ['Tonight she burns.', 'I helped weave the west gallery.', 'Every burn is a little goodbye.'], ambient: true, bw17when: g2 => BW17.isNight() && BW17.storyAt(8) }); }
+  for (let i = 0; i < 5; i++) { const a = (i - 2) * 0.22, r = 31; api.npc({ type: ['burner', 'crusty', 'tutu', 'furcoat', 'greeter', 'ledsuit'][i % 6], seed: (i * 5) % 24, x: L.cathedral[0] + Math.sin(Math.PI + a) * r, z: L.cathedral[1] + Math.cos(Math.PI + a) * r, yaw: a, behavior: 'sit', chat: ['Tonight she burns.', 'I helped weave the west gallery.', 'Every burn is a little goodbye.'], ambient: true, bw17when: g2 => BW17.isNight() && BW17.storyAt(8) && g2.missions.state('s_burn') !== 'done' }); }
   /* --- ART CAR CPR: Captain Quack, the Disco Duck, the parts --- */
   api.npc({ id: 'quack', name: 'CAPTAIN QUACK', type: 'crusty', seed: 21, variant: 'kilt', x: L.duck[0] - 3.2, z: L.duck[1] + 1, yaw: Math.PI / 2,
     talk(g2, a) {
@@ -398,26 +398,21 @@ BW17.buildSide = function (api, g) {
   for (const [k, x, z, y] of L.baggies) api.pickup('bag:' + k, x, y || 0.9, z);
 };
 
-/* the Friday-night burn: sit at the perimeter, the Stick Cathedral burns */
+/* the Friday-night burn: Sparky counts it down, then the Big Art module's full Stick Cathedral burn plays
+   (crowd ring, fire up the weave, a fire tornado, the collapse, the ember pile; it persists on later visits) */
 BW17.burnScene = function (g) {
   const S = BW17.state, L = BW17.L, p = g.player, C = L.cathedral, pc = L.perimeter;
-  if (S.burning) return; S.burning = true; S.musicLock = true;
+  if (S.burning) return; S.burning = true;
   p.teleport(pc[0], 0, pc[1], Math.atan2(C[0] - pc[0], C[1] - pc[1])); p.animOverride = 'sit';
-  const piece = S.cathedral;
+  const sp = g.actor('sparky') || { name: 'SPARKY' };
+  const finish = g2 => { S.burning = false; p.animOverride = null; g2.missions.complete('s_burn', { x: p.x, y: p.y + 1.3, z: p.z - 2 });
+    g2.say('brady', ['That was the most beautiful thing I have ever seen.', 'Also I think my eyebrows are gone. Sparky, is this how it happened?']); };
   g.cutscene([
-    { music: 'burns_w17n' },
     { cam: { x: pc[0] - 4, y: 1.6, z: pc[1] - 5, tx: C[0], ty: 14, tz: C[1], fov: 0.95 } },
-    { say: [g.actor('sparky') || { name: 'SPARKY' }, ['Everybody sit. Here we go. Three...']] },
-    { banner: ['3', '', { col: '#ffb347', big: true, dur: 0.9 }] }, { wait: 0.9 },
-    { banner: ['2', '', { col: '#ff8a3a', big: true, dur: 0.9 }] }, { wait: 0.9 },
-    { banner: ['1', '', { col: '#ff5a2a', big: true, dur: 0.9 }] }, { wait: 0.9 },
-    { do: g2 => { if (typeof BurnsBigArt !== 'undefined' && piece) BurnsBigArt.burn(g2, piece, { dur: 34 }); else for (let i = 0; i < 6; i++) g2.addTempFire(C[0] + (Math.random() - 0.5) * 12, 0.5, C[1] + (Math.random() - 0.5) * 16, 2.5, 30); g2.shake(0.5); burnsSfx('flame_jet'); burnsSfx('crowd_cheer'); } },
-    { flash: '#ffb347' },
-    { orbit: { x: C[0], y: 4, z: C[1], r0: 46, r1: 40, h0: 4, h1: 12, a0: Math.PI - 0.5, a1: Math.PI + 0.5, ty: 16, dur: 7, fov: 0.9 } },
-    { do: g2 => { for (let i = 0; i < 8; i++) BW17.after(g2, i * 0.45, g3 => { g3.fx.firework(C[0] + (Math.random() - 0.5) * 20, 30 + Math.random() * 12, C[1] + (Math.random() - 0.5) * 20, BURNS_NEON[i % 7]); burnsSfx('firework_burst', { vol: 0.6 }); }); } },
-    { crane: { from: { x: pc[0] - 3, y: 1.2, z: pc[1] - 4, tx: C[0], ty: 12, tz: C[1], fov: 0.9 }, to: { x: pc[0] - 1, y: 2.6, z: pc[1] - 7, tx: C[0], ty: 26, tz: C[1], fov: 1.0 }, dur: 4 } },
-    { say: ['brady', ['It\'s so beautiful. And so... hot. My eyebrows. Sparky, is this how it happened?']] },
-    { say: [g.actor('sparky') || { name: 'SPARKY' }, ['Every. Single. Time.']] },
-    { do: g2 => { p.animOverride = null; S.musicLock = false; g2.missions.complete('s_burn', { x: p.x, y: p.y + 1.3, z: p.z - 2 }); } }
-  ]);
+    { say: [sp, ['Everybody sit. Phones away. This is the good part.', 'Three... two... ONE!']] },
+    { do: g2 => { p.animOverride = 'sit'; } }
+  ], g2 => {
+    if (typeof BurnsBigArt !== 'undefined' && S.cathedral) BurnsBigArt.burn(g2, S.cathedral, { music: 'burns_w17n', crowd: 20, onDone: g3 => finish(g3) });
+    else { for (let i = 0; i < 6; i++) g2.addTempFire(C[0] + (Math.random() - 0.5) * 12, 0.5, C[1] + (Math.random() - 0.5) * 16, 2.5, 30); finish(g2); }
+  });
 };

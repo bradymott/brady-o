@@ -1236,10 +1236,11 @@ class BurnsPlayScene {
     for (const a of this.actors) if (a._vis) { shadow(a.x, a.y, a.z, 1.05 * a.scale * (R.shadowOn ? 0.85 : 1), 0.55 * ck); a._vis = false; }
     // static glows (lamps, neon, headlights on parked cars)
     const lsd = p.power === 'lsd' && p.powerT > 0;
+    const gd2 = (this.def.glowDist || 170) * (this.def.glowDist || 170);   // def.glowDist: how far static glows show (open worlds: the city's lights from afar)
     for (const g of W.glows) {
       if (g.hidden && !lsd) continue;
       const dx = g.x - cam.x, dz = g.z - cam.z, d2 = dx * dx + dz * dz;
-      if (d2 > 170 * 170) continue;
+      if (d2 > gd2) continue;
       if (!BurnsM.sphereVisible(P, g.x, g.y, g.z, g.s)) continue;
       const fl = g.blink ? (0.6 + 0.4 * Math.sin(t * g.blink + g.ph)) : 1;
       R.bbs.bb(g.x, g.y, g.z, g.s * 1.8, g.s * 1.8, S.glow, g.c, 0.75 * fl, true);

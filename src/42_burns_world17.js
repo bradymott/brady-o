@@ -174,7 +174,7 @@ BW17.build = function (api, g) {
   // the Stick Cathedral on the open playa (burns Friday night) — with a Photo of Chinka in its bird's nest
   L.cathedral = [LY.cathedral[0], LY.cathedral[1]]; L.perimeter = [LY.cathedral[0], LY.cathedral[1] - 31];
   if (typeof BurnsBigArt !== 'undefined') {
-    S.cathedral = BurnsBigArt.place(api, g, 'stickCathedral', LY.cathedral[0], LY.cathedral[1], { rotY: LY.cathedral[2], nestReward: { kind: 'photo', id: 'p3' } });
+    S.cathedral = BurnsBigArt.place(api, g, 'stickCathedral', LY.cathedral[0], LY.cathedral[1], { rotY: LY.cathedral[2] });
   }
   for (let i = 0; i < 16; i++) { const a = Math.PI + (i - 7.5) * 0.13, x = L.cathedral[0] + Math.sin(a) * 33, z = L.cathedral[1] + Math.cos(a) * 33; api.mesh(x, z, m => { m.color('#c8c8d0').shine(2); m.limb(0, 0, 0, 0, 0.9, 0, 0.04, 0.04, { seg: 5 }); m.color('#ffb347', 0.9); m.ball(0, 1.0, 0, 0.09, { seg: 8, rings: 5 }); m.emissive(0); m.shine(0); return { cols: [], lights: [{ x: 0, y: 1.0, z: 0, s: 0.6, c: '#ffb347' }] }; }); }
   BW17.sign(api, 'BURN PERIMETER\nFRIDAY NIGHT', L.perimeter[0] + 5, L.perimeter[1] - 2, Math.PI + 0.2, { h: 0.8, y: 1.2, bg: '#2a1408', fg: '#ffb347', border: '#ff7a2a', size: 32 });
@@ -191,9 +191,19 @@ BW17.build = function (api, g) {
   for (const [x, z, col] of [[-160, -130, '#c8b8e8'], [200, 10, '#a8d8c8'], [-224, -10, '#e8c8a8'], [176, -136, '#d8c8a8']]) api.prop('shade', { x, z, w: 6, d: 5, col });
   // far skylines: neighbouring sound camps on the horizon
   if (typeof BurnsCamps !== 'undefined') { try { BurnsCamps.silhouette(api, g, 'centerCamp', -420, 260, { rotY: 0.6 }); BurnsCamps.silhouette(api, g, 'opulentTemple', 420, 300, { rotY: -0.5 }); BurnsCamps.silhouette(api, g, 'campQuestionMark', -380, -60, { rotY: 1.2 }); } catch (e) { BW17.err(e); } }
+  BW17.fillerCamps(api, g);
   /* ---------- the people of Root Society ---------- */
   BW17.buildPeople(api, g);
   BW17.buildSide(api, g);
+  // the friends' tipis get hand-painted signs
+  for (const [id, txt, bg, fg] of [['nebula', 'AUNTIE NEBULA\nTEA & GOSSIP', '#3a2a5a', '#e8d8ff'], ['pixel', 'PIXEL LAB\nDO NOT TOUCH', '#1a2a2a', '#38f2ff'], ['granny', 'GRANNY GRIP\nROLLER LEGEND', '#5a1a2a', '#ffd84a'], ['sparky', 'SPARKY\nSAFETY THIRD', '#2a1a10', '#ffb347'], ['biscuit', 'BISCUIT\'S DEN\n*HAPPY CHIRP*', '#2a3a2a', '#ffd0e4']]) {
+    const t = BW17.tipiAt(rs, LY.friends[id]), sx = t.door[0] + Math.cos(t.yaw) * 2.2, sz = t.door[1] - Math.sin(t.yaw) * 2.2;
+    BW17.sign(api, txt, sx, sz, t.yaw, { h: 0.62, y: 0.9, bg, fg, border: fg, size: 30 });
+  }
+  { const T = L.tipi, c = Math.cos(T.yaw), sn = Math.sin(T.yaw), at = (lx, lz) => [T.x + lx * c + lz * sn, T.z - lx * sn + lz * c];
+    let q = at(-1.6, T.r + 1.6); api.prop('chair', { x: q[0], z: q[1], yaw: T.yaw + 0.5, col: '#ff4fd8' });
+    q = at(-2.3, T.r + 1.1); api.prop('cooler', { x: q[0], z: q[1], yaw: T.yaw, col: '#38c8ff' });
+    q = at(0, T.r + 0.9); api.mesh(q[0], q[1], m => { m.color('#c85a3a').shine(0); m.roundBox(0, 0.015, 0, 1.4, 0.03, 0.8, 0.012, { uv: BURNS_ATLAS.pattern('plaid') }); return { cols: [] }; }, { yaw: T.yaw }); }
   // Brady's tipi: decorations (movers) + the bedroll prompt
   S.decor = BW17.B.decor(api, L.tipi);
   api.interact({ x: L.bed[0], z: L.bed[1], r: 1.7, label: 'SLEEP', when: g2 => BurnsSave.flag(17, 'tipiOwned') || g2.missions.state('tipi') === 'active', fn: g2 => BW17.sleepMenu(g2) });
@@ -203,7 +213,8 @@ BW17.build = function (api, g) {
   /* ---------- collectibles ---------- */
   const gal = spot('gallery'); if (gal) api.pickup('photo', gal.x, gal.y + 1.0, gal.z, { id: 'p1' }); else api.pickup('photo', 0, 6.4, -16, { id: 'p1' });
   api.pickup('photo', L.heartCar.top[0], L.heartCar.topY + 0.95, L.heartCar.top[1], { id: 'p2' });
-  if (typeof BurnsBigArt === 'undefined') api.pickup('photo', L.cathedral[0], 1.0, L.cathedral[1] - 20, { id: 'p3' });
+  // the third photo is up on DUST FM's roof (climb the desk, then the container)
+  { const q = L.radio.roof; api.pickup('photo', q[0], 3.5, q[1], { id: 'p3' }); }
   api.glowLine(-200, LY.espZ + 4, -20, LY.espZ + 4, 15); api.glowLine(20, LY.espZ + 4, 200, LY.espZ + 4, 15);
   api.glowLine(0, LY.espZ - 2, 0, 62, 6);
   api.glowRing(0, -54, 9.5, 14);
@@ -226,6 +237,29 @@ BW17.build = function (api, g) {
   mk('ice', LY.ice[0], LY.ice[1], 'Ice', '#9adcff'); mk('bike', LY.bike[0], LY.bike[1], 'Bike repair', '#ffd21a'); mk('duck', LY.duck[0], LY.duck[1], 'Disco Duck', '#ffd21a');
   mk('deep', LY.deepEnd[0], LY.deepEnd[1], 'Deep End', '#38c8ff'); mk('heart', LY.heart[0], LY.heart[1], 'The Heart', '#ff3b7a'); mk('cath', LY.cathedral[0], LY.cathedral[1], 'Stick Cathedral', '#ffb347');
   mk('trade', LY.trade[0], LY.trade[1], 'Trading post', '#ffe24a');
+};
+
+/* little theme camps that fill the blocks (props only, a host each): the city feels lived in */
+BW17.fillerCamps = function (api, g) {
+  const LY = BW17.LAYOUT, R = mulberry32(1717);
+  const camps = [
+    [-150, 96, 0, 'CAMP NAP TIME\nQUIET (ISH) HOURS'], [-196, 96, 0.1, 'THE LOST SOCK\nEXCHANGE'], [150, 98, -0.1, 'DUST BUNNIES\nFOR JESUS... OR WHOEVER'],
+    [196, 96, 0.05, 'HYDRATION\nSTATION'], [-130, -100, Math.PI / 2, 'CAMP\nOVERTHINK IT'], [130, -150, -Math.PI / 2, 'THE BLINKY\nBICYCLE CLUB'],
+    [-190, -140, 0.4, 'SPOON\nTHEORY'], [196, -50, -Math.PI / 2, 'KAZOO\nKAMP']
+  ];
+  camps.forEach(([x, z, yaw, name], i) => {
+    const c = Math.cos(yaw), sn = Math.sin(yaw), W = (lx, lz) => [x + lx * c + lz * sn, z - lx * sn + lz * c];
+    const col = ['#d8c8a8', '#c8b8e8', '#e8c8a8', '#a8d8c8', '#e8d8f0', '#f0d8b0'][i % 6];
+    api.prop('shade', { x, z, yaw, w: 6, d: 5, col });
+    let q = W(-1.2, -1.2); api.prop('couch', { x: q[0], z: q[1], yaw: yaw, col: R.pick(['#8a2a5a', '#2a5a8a', '#6a4a2a', '#5a2a8a']) });
+    for (let k = 0; k < 3; k++) { q = W(1.2 + k * 0.7, 0.8 + (k % 2) * 0.6); api.prop('chair', { x: q[0], z: q[1], yaw: yaw + R.range(-0.6, 0.6) + Math.PI, col: R.pick(BURNS_NEON) }); }
+    q = W(2.6, -1.6); api.prop('cooler', { x: q[0], z: q[1], yaw: yaw + 0.3, col: R.pick(['#2a8ac8', '#c83a2a', '#e8e8e8']) });
+    q = W(-0.5, -6.5); api.prop(R.pick(['rv', 'van', 'camper', 'bus']), { x: q[0], z: q[1], yaw: yaw + Math.PI / 2, seed: 100 + i });
+    q = W(-3.6, 3.4); BW17.sign(api, name, q[0], q[1], yaw + 0.3, { h: 0.85, y: 1.4, bg: R.pick(['#f4e8c8', '#e8f4ff', '#fff0f6']), fg: '#3a2414', border: '#3a2414', size: 30 });
+    q = W(0, 1.6); api.pickup('glowstick', q[0], 0.9, q[1]);
+    q = W(0.4, 0.2); api.npc({ type: R.pick(['burner', 'tutu', 'furcoat', 'crusty', 'ledsuit']), seed: (i * 7) % 24, x: q[0], z: q[1], yaw: yaw + R.range(-0.5, 0.5), behavior: R.pick(['sit', 'dance', 'idle']), style: i % 6, ambient: true,
+      chat: [['Shhh. Napping is a radical act.', 'Zzz... welcome... zzz.'], ['Got a lone sock? We have its soulmate.', 'Every sock deserves a second chance.'], ['Dust bunnies are people too.', 'Hop on by!'], ['Water! Free! Take two!', 'Pee clear, friend.'], ['Should I go to the dome? Or think about going to the dome?', 'I\'ve been planning to leave since Monday.'], ['Blink twice if you love bikes.', 'Our lights have lights.'], ['There is no spoon. There are, however, many spoons.', 'Spoon?'], ['TOOT.', 'Kazoo choir at sunset!']][i] });
+  });
 };
 
 /* if the camps module is missing: a modest stand-in (three domes, a stage, a ring of tipis) */

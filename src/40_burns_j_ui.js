@@ -361,15 +361,18 @@ const BurnsUI = {
       gg.addColorStop(0, rgba(col, held ? 0.92 : 0.7)); gg.addColorStop(1, rgba(shade(col, -0.45), held ? 0.85 : 0.55));
       ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(0, 0, b.r, 0, TAU); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#ffffff'; ctx.font = `${Math.round(b.r * (label.length > 4 ? 0.3 : 0.38))}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      // labels shrink to fit the button (long ACTION prompts: 'QUEST BOARD', 'ENTER' + a place name)
+      const fit = (txt, size, font, maxW) => { ctx.font = `${size}px ${font}`; const w = ctx.measureText(txt).width; if (w > maxW) ctx.font = `${Math.max(8, Math.floor(size * maxW / w))}px ${font}`; };
+      ctx.fillStyle = '#ffffff'; fit(label, Math.round(b.r * (label.length > 4 ? 0.3 : 0.38)), FONT_DISPLAY, b.r * 1.7); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(label, 0, sub ? -b.r * 0.12 : 1);
-      if (sub) { ctx.font = `${Math.round(b.r * 0.22)}px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillText(sub, 0, b.r * 0.3); }
+      if (sub) { fit(sub, Math.round(b.r * 0.22), FONT_UI, b.r * 1.75); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillText(sub, 0, b.r * 0.3); }
       ctx.restore();
     };
     const veh = p.vehicle;
     btn(L.jump, Input.jump, veh && veh.kind === 'car' ? 'HONK' : veh ? 'HOP' : 'JUMP', '#c04bff');
     const act = g.prompt || (veh ? (veh.kind === 'bike' ? 'BELL' : 'FIRE') : (p.power === 'liquor' && p.powerT > 0 ? 'THROW' : p.grounded ? 'SPIN' : 'POUND'));
-    btn(L.action, Input.action, act, g.prompt ? '#ffb020' : '#ff4b7d');
+    const ci = act.indexOf(': ');   // 'ENTER: THE TEMPLE' -> ENTER, with the place underneath
+    btn(L.action, Input.action, ci > 0 ? act.slice(0, ci) : act, g.prompt ? '#ffb020' : '#ff4b7d', ci > 0 ? act.slice(ci + 2) : undefined);
     const H = this.hudBtnsCache = g.hudBtns;
     if (H) {
       btn(H.cam, Input.hudHeld.cam, 'CAM', '#3a6aff');

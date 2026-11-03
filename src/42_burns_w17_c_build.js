@@ -86,7 +86,7 @@ BW17.B.radio = function (api, x, z, yaw) {
   }, { yaw });
   const W = (lx, lz) => [x + lx * Math.cos(yaw) + lz * Math.sin(yaw), z - lx * Math.sin(yaw) + lz * Math.cos(yaw)];
   const s1 = W(-0.6, 2.6); BW17.sign(api, 'DUST FM 94.5\n· ON AIR ·', s1[0], s1[1], yaw, { h: 1.0, y: 2.9, post: false, bg: '#1a0a12', fg: '#ff4a4a', border: '#ff4a4a', glow: '#ff3a3a' });
-  return { mic: W(1.3, 1.9), front: W(0, 3.4) };
+  return { mic: W(1.3, 1.9), front: W(0, 3.4), roof: W(0.8, -1.0) };
 };
 
 /* ---------------- THE STEEPING SLOTH tea lounge + PHONE JAIL ---------------- */

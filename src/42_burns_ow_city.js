@@ -153,8 +153,8 @@ const BurnsOW = {
     for (let i = 0; i < 4; i++) { const col = ['#ff8a3a', '#38c8c8', '#ff6ab0', '#9a6ae8'][i]; api.instanceProto('ow_shadeC' + i, m => this.camp(m, col, i), { near: 40, mid: 160, r: 7, far: m => { m.color(col); m.box(0, 3.33, 0, 9.2, 0.1, 7.2); m.color('#3a3a44'); m.box(0, 1.6, 0, 8.6, 3.2, 0.2); }, farD: 320 }); }
     api.instanceProto('ow_flag', m => { m.color('#4a4a52'); m.cyl(0, 0, 0, 0.06, 0.04, 6.5, 6, {}); for (let k = 0; k < 3; k++) { m.color(BURNS_NEON[k * 2]); m.box(0.55, 5.9 - k * 0.55, 0, 1.0, 0.45, 0.03); } return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 6.5 }] }; }, { near: 40, mid: 180, lo: false, r: 1.2, shadow: false });
     // far-city stand-ins: cheap blocks seen beyond the streamed neighbourhoods (never drawn up close)
-    api.instanceProto('ow_farA', m => { m.color('#e8e0d4'); m.box(-6, 1.5, 0, 2.5, 3, 9); m.box(4, 1.4, 1, 2.4, 2.8, 7); m.color('#c86a8a'); m.box(-1, 1.6, -5, 6, 0.12, 5); m.color('#ffb860', 0.8); m.box(-4.7, 1.8, 0, 0.1, 0.5, 2); m.box(5.3, 1.7, 1, 0.1, 0.5, 1.6); m.emissive(0); }, { lo: false, near: 1400, minD: 250, noCap: true, r: 9, shadow: false, noAO: true, cols: false });
-    api.instanceProto('ow_farB', m => { m.color('#d8dce4'); m.dome(0, 0, 0, 4, 1, { frame: false }); m.color('#7aa0d8'); m.box(7, 1.2, 2, 5, 2.4, 2.4); m.color('#ff4fd8', 0.9); m.box(0, 4.2, 0, 0.3, 0.3, 0.3); m.emissive(0); }, { lo: false, near: 1400, minD: 250, noCap: true, r: 9, shadow: false, noAO: true, cols: false });
+    api.instanceProto('ow_farA', m => { m.color('#e8e0d4'); m.box(-6, 1.5, 0, 2.5, 3, 9); m.box(4, 1.4, 1, 2.4, 2.8, 7); m.color('#c86a8a'); m.box(-1, 1.6, -5, 6, 0.12, 5); m.color('#ffb860', 1); m.box(-1, 3.4, -2.2, 12, 0.35, 0.35); m.color('#ff4fd8', 1); m.box(-6, 3.2, 3.8, 0.35, 0.35, 5); m.emissive(0); }, { lo: false, near: 1400, minD: 250, noCap: true, r: 9, shadow: false, noAO: true, cols: false });
+    api.instanceProto('ow_farB', m => { m.color('#d8dce4'); m.dome(0, 0, 0, 4, 1, { frame: false }); m.color('#7aa0d8'); m.box(7, 1.2, 2, 5, 2.4, 2.4); m.color('#38f2ff', 1); m.box(0, 0.6, 0, 8.6, 0.35, 0.35); m.box(0, 0.6, 0, 0.35, 0.35, 8.6); m.color('#ffd84a', 1); m.box(7, 2.7, 2, 5.2, 0.3, 0.3); m.emissive(0); }, { lo: false, near: 1400, minD: 250, noCap: true, r: 9, shadow: false, noAO: true, cols: false });
     api.instanceProto('ow_shade', m => P.shade(m, { w: 7, d: 6, h: 3.0, col: '#e0d4bc' }), { near: 40, mid: 160, r: 5, far: m => { m.color('#e0d4bc'); m.box(0, 3.03, 0, 7.2, 0.08, 6.2); }, farD: 300 });
     api.instanceProto('ow_shade2', m => P.shade(m, { w: 9, d: 5, h: 3.2, col: '#c8b490' }), { near: 40, mid: 160, r: 5, far: m => { m.color('#c8b490'); m.box(0, 3.23, 0, 9.2, 0.08, 5.2); }, farD: 300 });
     api.instanceProto('ow_dome', m => P.dome(m, { r: 4.5, col: '#e8e0d0', freq: 2 }), { near: 50, mid: 170, r: 5, far: m => { m.color('#e8e0d0'); m.dome(0, 0, 0, 4.5, 1, { frame: false }); }, farD: 330 });
@@ -336,7 +336,12 @@ BurnsWorlds.register({
   bounds: [-940, -940, 940, 1140],
   spawn: { x: 0, y: 0, z: BURNS_OW.FENCE_IN + 60, yaw: Math.PI },
   ground: { base: '#caa37f', crack: 0.26, mottle: 0.4, res: 1.06, step: 24 },
-  drawDist: 300, ao: 'fast', missions: [],
+  drawDist: 300, glowDist: 520, ao: 'fast',
+  // side quests that start from people in the city (region-aware: 'reach' with a region)
+  missions: [
+    { id: 'owTemple', side: true, name: 'Quiet Time', short: 'Sit at the Temple', type: 'reach', region: 'The Temple', giver: 'owSage', start: 'talk', desc: 'Sage at Center Camp says everyone should sit at the Temple once. Walk out past the Man toward 12:00.', hint: 'Out past the Man, toward 12:00', marker: { x: 0, z: -250 }, reward: { glow: 15 } },
+    { id: 'owLantern', side: true, name: 'The Lost Lantern', short: 'Find the lost lantern', type: 'find', giver: 'owLamp0', start: 'talk', desc: 'A lamplighter dropped a lantern out by the galleon on the deep playa. Find it.', hint: 'Deep playa, by the galleon (1:00)', marker: { x: 203, z: -351 }, reward: { glow: 20 } }
+  ],
   build(api, g) {
     const O = BURNS_OW, S = O.state = { places: [], camps: [], art: [], bikes: [], cars: [], devils: [], lamps: 0, t: 0 };
     O._blocks = null;
@@ -404,11 +409,19 @@ BurnsWorlds.register({
       const mv = api.mover(m => BurnsProps.artcar(m, { len: 8, w: 3.6, col, sculpt: sc }), {});
       S.cars.push({ mv, r: 150 + i * 32, w: (i % 2 ? -1 : 1) * 3.4 / (150 + i * 32), a: i * 2.1 });
     }
+    // ---- two art cars anyone can drive (DRIVE), parked on the open playa ----
+    for (const [x, z, yaw, col, sc] of [[-24, 236, Math.PI, '#2a8a6a', '#7aff5a'], [232, 36, -Math.PI / 2, '#8a2a6a', '#ff4fd8']]) {
+      try { api.artCar({ x, z, yaw, col, sculpt: sc, len: 8, w: 3.6 }); } catch (e) { console.error('ow art car', e); }
+    }
+    // ---- the side quests' people and things ----
+    { const q = O.at(6.15, 332); api.npc({ id: 'owSage', type: 'burner', seed: 23, name: 'SAGE', x: q[0], z: q[1] - 34, yaw: Math.PI, behavior: 'chill', talk: (gg, a) => BurnsOW.giver(gg, a, 'owTemple', ['Have you sat at the Temple yet?', 'Walk out past the Man, toward 12:00. Sit a while.'], ['You went. I can tell.']) }); }
+    api.pickup('glowstick', 203, 0.9, -351, { mission: 'owLantern', gate: true, label: 'LOST LANTERN', col: '#ffb060' });
     // ---- glow sticks along the Esplanade (ambient collectibles for the glow counter) ----
     for (let h = O.H0 + 0.1; h < O.H1; h += 0.4) { const q = O.at(h, O.ESP - 4); api.pickup('glowstick', q[0], 0.9, q[1]); }
     // ---- lamplighters walk the Esplanade at dusk carrying lanterns ----
     const lp = []; for (let h = O.H0; h <= O.H1; h += 0.1) lp.push(O.at(h, O.ESP - 6));
-    for (let i = 0; i < 6; i++) api.npc({ id: 'owLamp' + i, type: 'burner', seed: 40 + i, name: 'LAMPLIGHTER', x: lp[i * 4][0], z: lp[i * 4][1], behavior: 'lamplight', path: lp.slice(i * 4).concat(lp.slice(0, i * 4)), loop: true, speed: 1.1, hang: false, lines: ['We light the Esplanade every night.', 'Walk with us a while.'] });
+    for (let i = 0; i < 6; i++) api.npc({ id: 'owLamp' + i, type: 'burner', seed: 40 + i, name: 'LAMPLIGHTER', x: lp[i * 4][0], z: lp[i * 4][1], behavior: 'lamplight', path: lp.slice(i * 4).concat(lp.slice(0, i * 4)), loop: true, speed: 1.1, hang: false, lines: ['We light the Esplanade every night.', 'Walk with us a while.'],
+      talk: i ? undefined : (gg, a) => BurnsOW.giver(gg, a, 'owLantern', ['I dropped a lantern out by the galleon on the deep playa.', 'Could you find it? It glows orange.'], ['My lantern! The Esplanade thanks you.']) });
     // ---- bikes riding the streets (instanced, moved every frame) ----
     const loops = [];
     loops.push(arc(O.ESP + 2, O.H0, O.H1, 0.05).concat(arc(O.ESP - 2, O.H0, O.H1, 0.05).reverse()));
@@ -507,7 +520,7 @@ Object.assign(BurnsOW, {
     if (rng() < 0.3) { const q = O.at(b.h0 + 0.02, b.r0 + 4); api.instance('ow_potty', q[0], q[1], { yaw: O.yawIn(b.h0) + Math.PI / 2 }); }
     for (let k = 0; k < 2; k++) if (rng() < 0.5) { const q = O.at(lerp(b.h0, b.h1, rng()), b.r0 + 5); api.instance('ow_flag', q[0], q[1], { yaw: rng() * TAU }); }
     // night: the camps' light pools and glows
-    for (let k = 0; k < 2; k++) { const q = O.at(lerp(b.h0, b.h1, 0.25 + k * 0.5), b.r0 + 9); api.light(q[0], q[1], 8, this.pick(rng, ['#ff4fd8', '#38f2ff', '#ffb060', '#7aff5a', '#ffd84a']), 0.4); api.glow(q[0], 3.1, q[1], 1.1, this.pick(rng, BURNS_NEON)); }
+    for (let k = 0; k < 3; k++) { const q = O.at(lerp(b.h0, b.h1, 0.17 + k * 0.33), b.r0 + 9 + (k % 2) * 10); api.light(q[0], q[1], 10, this.pick(rng, ['#ff4fd8', '#38f2ff', '#ffb060', '#7aff5a', '#ffd84a']), 0.5); api.glow(q[0], 3.1, q[1], 1.4, this.pick(rng, BURNS_NEON)); }
     // a named theme camp on the street front, with people
     if (rng() < 0.45) {
       const h = (b.h0 + b.h1) / 2 + (rng() - 0.5) * 0.12, front = b.r0 + 5.5, q = O.at(h, front), yaw = O.yawIn(h) + Math.PI;
@@ -531,6 +544,13 @@ Object.assign(BurnsOW, {
     }
   },
   pick(rng, a) { return a[Math.floor(rng() * a.length)]; },
+  // a city side-quest giver: offers the quest, reminds while it's active, thanks when it's done
+  giver(g, a, id, offer, thanks) {
+    const st = g.missions.state(id);
+    if (st === 'available') g.say(a, offer, () => { if (g.missions.start(id)) g.missions.track(id); });
+    else if (st === 'done') g.say(a, thanks);
+    else g.say(a, [g.missions.get(id).def.hint || 'Go on, you can do it.']);
+  },
   campName(rng) {
     const A = ['Dusty', 'Cosmic', 'Glitter', 'Midnight', 'Sunrise', 'Electric', 'Velvet', 'Wandering', 'Lunar', 'Sparkle', 'Tiny', 'Secret', 'Radiant', 'Gentle', 'Feral'];
     const B = ['Pancake', 'Unicorn', 'Owl', 'Lagoon', 'Disco', 'Noodle', 'Cactus', 'Jellyfish', 'Lantern', 'Pickle', 'Coyote', 'Waffle', 'Comet', 'Llama', 'Bubble'];

@@ -416,9 +416,12 @@ BW16.pill = function (g) {
   const wide = { x: p.x + 0.2 + sx * 4.2 - dx * 1.2, y: p.y + 2.1, z: p.z + 0.2 + sz * 4.2 - dz * 1.2, tx: p.x + 0.1, ty: p.y + 1.3, tz: p.z + 0.6, fov: 0.8 };
   const away = { x: F.x + 4.2, y: F.h + 2.0, z: F.z - 3.2, tx: S.speakers[1].x, ty: F.h + 2.0, tz: S.speakers[1].z, fov: 0.75 };
   const face = () => ({ x: p.x + Math.sin(p.yaw) * 1.25, y: p.y + 1.62, z: p.z + Math.cos(p.yaw) * 1.25, tx: p.x, ty: p.y + 1.6, tz: p.z, fov: 0.55 });
+  p.victoryT = 0; p.animOverride = null;
   g.cutscene([
     { cam: two },
+    { do: () => { p.victoryT = 0; } },   // arms down (the token celebration raises them): Bam Bam's face stays in shot
     { say: [bam || 'bambam', ['BAM! BAM! Champion! That shuffle was PREHISTORIC!']] },
+    { do: () => { p.victoryT = 0; } },
     { cam: onBam },
     { say: [bam || 'bambam', ['Champions get the good stuff. Sassafras. Ancient recipe. Family secret.', 'Take HALF. Half! Wolfie, tell him.']] },
     { cam: wide },

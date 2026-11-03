@@ -76,6 +76,7 @@ That's a complete, playable world. The hub lists it automatically once it regist
 | `onRespawn(g)` | fn | After Brady faints and respawns. |
 | `drawSkinned(g, R)`, `drawSprites(g, R)` | fn | Advanced: extra draws (§10). |
 | `drawDist` | number (m) | How far static geometry draws (default 260, or 120 in fog). Lower it for big worlds seen from high places (W2's rooftops); fog hides the edge. |
+| `glowDist` | number (m) | How far static glows (`api.glow`) show; default 170. Open worlds raise it so lights read from afar at night. |
 | `chunkSize` | number (m) | Static geometry is merged per square cell this size (default 48). Bigger cells mean fewer draw calls but coarser culling. |
 | `ao` | `true` / `'fast'` / `false` | Baked ambient occlusion for props and movers: `'fast'` uses a coarser grid (about 6× quicker to build, a little softer); `false` skips it (for huge or procedurally filled worlds with long load times). Per object: `{ noAO: true }`. |
 | `day`, `dayShort` | string | Day of the week shown on the intro card, the loading card and the hub pin (for example `'Monday'`, `'MON'`). Defaults come from the table in §3.1, so you rarely need it. |
@@ -1101,5 +1102,5 @@ World 500 turns the 17 story worlds into places (`BURNS_OW.PLACES`), each with a
 ### 19.5 Performance
 - **Neighbourhoods:** RVs, campers, buses, hexayurts, dome tents, shade, camp frontages, flags, porta-potties and lamp posts are instanced. There are about 1,000–2,500 copies around Brady, in 30–50 batches. Two cheap stand-ins per block show the far city out to 1.4 km.
 - **Landmarks:** the theme camps use their own `lod: 'auto'` (a silhouette beyond about 150 m), and big art and the Man are built once.
-- **Measured views** (high tier, CSS-pixel frame): 60–100 draws and 95k–315k triangles. Tile builds run about 3.5 ms a frame, and first-time character looks are built one per frame.
-- **Fog:** the world thins its fog (`def.env`) so the city reads across the playa, and thins it more for high cameras.
+- **Measured views** (high tier): 35–100 draws and 100k–355k triangles; the busiest is the Esplanade at Root Society at night. Tile builds are spread over frames: the worst single step measured 3.5–9 ms. A finished tile's people join three per frame, and their looks come from a small pool built while the city loads.
+- **Fog and lights:** the world thins its fog (`def.env`) so the city reads across the playa, and thins it more for high cameras. `def.glowDist` (520 m here; 170 by default) lets the camps' lights show from afar at night.
