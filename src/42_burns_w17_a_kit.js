@@ -115,15 +115,19 @@ BW17.phase = function (h) {
   return 'dusk';
 };
 BW17.isNight = function (h) { const p = BW17.phase(h); return p === 'night' || p === 'predawn' || p === 'dusk'; };
-// set the palettes + tod from the clock (cheap: a short keyframe search)
-BW17.applySky = function (g) {
-  const S = BW17.state, K = BW17.SKY, h = ((S.clock % 24) + 24) % 24;
+// the sky at hour h: { a, b, t } palettes + blend, and the night factor (cheap: a short keyframe search)
+BW17.skyAt = function (h) {
+  const K = BW17.SKY; h = ((h % 24) + 24) % 24;
   let i = 0; while (i < K.length - 2 && h >= K[i + 1][0]) i++;
   const a = K[i], b = K[i + 1], t = clamp((h - a[0]) / Math.max(0.001, b[0] - a[0]), 0, 1);
-  g.palA = a[1]; g.palB = b[1]; g.tod = t; g.todTarget = null;
   // night factor from the blended sun elevation (same rule as the camps + big art modules)
   const A = BURNS_PALETTES[a[1]], B = BURNS_PALETTES[b[1]], el = lerp(A.sun[1], B.sun[1], t);
-  S.nightK = clamp((8 - el) / 14, 0, 1);
+  return { a: a[1], b: b[1], t, nightK: clamp((8 - el) / 14, 0, 1) };
+};
+// set the palettes + tod from the home clock
+BW17.applySky = function (g) {
+  const S = BW17.state, k = BW17.skyAt(S.clock);
+  g.palA = k.a; g.palB = k.b; g.tod = k.t; g.todTarget = null; S.nightK = k.nightK;
 };
 // move the clock: instantly, or tween at `rate` hours per second
 BW17.setClock = function (g, h, rate) {
@@ -194,16 +198,11 @@ BW17.applyPresence = function (g) {
   }
 };
 
-/* ---------------- 2D overlay (drawn after the engine HUD) ---------------- */
-(() => {
-  if (typeof BurnsUI === 'undefined' || !BurnsUI.drawOverlay) return;
-  const prev = BurnsUI.drawOverlay;
-  BurnsUI.drawOverlay = function (ctx, g, fdt) {
-    prev.call(this, ctx, g, fdt);
-    if (!g || g.worldId !== 17 || !BW17.state || BW17.state.g !== g || g.state !== 'play' || g.paused) return;
-    try { BW17.overlay(ctx, g, fdt || 1 / 60); } catch (e) { BW17.err(e); }
-  };
-})();
+/* ---------------- 2D overlay: World 17's def.drawOverlay (over the HUD, dialogue and controls) ---------------- */
+BW17.drawOverlay = function (g, ctx, fdt) {
+  if (!BW17.state || BW17.state.g !== g || g.state !== 'play' || g.paused) return;
+  try { BW17.overlay(ctx, g, fdt || 1 / 60); } catch (e) { BW17.err(e); }
+};
 BW17.overlay = function (ctx, g, fdt) {
   const S = BW17.state, W = Game.cssW, H = Game.cssH, sf = BurnsUI.safe();
   // the clock chip, beside the glow-stick counter

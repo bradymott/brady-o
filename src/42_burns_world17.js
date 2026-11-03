@@ -15,7 +15,8 @@
      tipi        A Tipi of Your Own (token) Jefr gives Brady his tipi; decorate it; siesta
      neighbors   Meet the Neighbours        Nebula, Granny, Sparky, Biscuit
      lookouts    The Man's Men     (token)  fight off the effigy's fan club with the friends; then finishWorld
-   Side quests: 42_burns_w17_d_side.js. Kit + overlay + clock: 42_burns_w17_a_kit.js.
+   Side quests: the three home jobs in 42_burns_w17_d_side.js; the twelve that happen around the city run in
+   Black Rock City (world 500) from 42_burns_w17_e_city.js. Kit + overlay + clock: 42_burns_w17_a_kit.js.
    Root Society itself (domes, coliseum, stage car, tipis, common dome) comes from BurnsCamps.
    ============================================================ */
 
@@ -35,13 +36,9 @@ if (typeof BurnsRig !== 'undefined' && BurnsRig.defineType) {
 /* ---------------- the district layout (world metres; Root Society sits at the origin, front = +Z) ---------------- */
 BW17.LAYOUT = {
   espZ: 86, radX: 104, aZ: -126,
-  studio: [-150, 52, 0], kBacon: [-128, 72, 0], kCheese: [-176, 72, 0], kPancake: [130, 72, 0],
-  trade: [-118, 26, Math.PI / 2], radio: [-130, -34, Math.PI / 2], tea: [-182, 4, Math.PI / 2], content: [-204, -52, Math.PI / 2],
-  rink: [168, 4, 0], ice: [124, -66, -Math.PI / 2], bike: [152, -112, 0], duck: [104, -30, Math.PI], deepEnd: [196, 56, 0],
-  heart: [-46, 294, 0], cathedral: [124, 198, Math.PI],
+  studio: [-150, 52, 0], deepEnd: [196, 56, 0], cathedral: [124, 198, Math.PI],
   workShade: [-38, -17, 0], generator: [40, -19, 0], amp: [-21, 8, Math.PI / 2],
   ramps: [[31, -8], [24, 2.5], [13, 9], [-2, 11.5], [-13.5, 9]],
-  darkwads: [[-44, -127, 0], [58, -125, Math.PI], [-150, -96, 0.5], [176, -150, -0.8]],
   baggies: [['weed', -90, 60], ['molly', 92, -60], ['powder', -160, 10], ['lsd', 160, -96], ['weed', 40, 120], ['shrooms', -60, 180], ['khole', 200, -20], ['molly', -210, -100]],
   friends: { nebula: 10, pixel: 2, granny: 4, sparky: 7, biscuit: 8 }
 };
@@ -92,8 +89,8 @@ BurnsWorlds.register({
   build(api, g) { BW17.build(api, g); },
   onStart(g) { BW17.start(g); },
   update(g, dt) { BW17.update(g, dt); },
-  onRespawn(g) { BW17.skatesOff(g); },
-  drawSprites(g, R) { BW17.drawSprites(g, R); }
+  drawSprites(g, R) { BW17.drawSprites(g, R); },
+  drawOverlay(g, ctx, fdt) { BW17.drawOverlay(g, ctx, fdt); }
 });
 
 /* ---------------- build ---------------- */
@@ -146,31 +143,10 @@ BW17.build = function (api, g) {
   BW17.kitchenBuild(api, g);
   /* ---------- the district ---------- */
   L.studioYaw = LY.studio[2]; L.studio = BW17.B.studio(api, LY.studio[0], LY.studio[1], LY.studio[2]);
-  L.radioYaw = LY.radio[2]; L.radio = BW17.B.radio(api, LY.radio[0], LY.radio[1], LY.radio[2]);
-  L.teaYaw = LY.tea[2]; L.tea = BW17.B.teaLounge(api, LY.tea[0], LY.tea[1], LY.tea[2]);
-  L.contentYaw = LY.content[2]; L.content = BW17.B.contentHouse(api, LY.content[0], LY.content[1], LY.content[2]);
-  L.kBacon = Object.assign(BW17.B.kiosk(api, LY.kBacon[0], LY.kBacon[1], LY.kBacon[2], { name: 'SIZZLE SANCTUARY · BACON', food: 'bacon', col: '#c84a3a' }), { yaw: LY.kBacon[2] + Math.PI });
-  L.kCheese = Object.assign(BW17.B.kiosk(api, LY.kCheese[0], LY.kCheese[1], LY.kCheese[2], { name: 'SAY CHEESE! · GRILLED', food: 'cheese', col: '#e8a82a', fg: '#6a3a10' }), { yaw: LY.kCheese[2] + Math.PI });
-  L.kPancake = Object.assign(BW17.B.kiosk(api, LY.kPancake[0], LY.kPancake[1], LY.kPancake[2], { name: 'FLAPJACK FLASHBACK', food: 'pancake', col: '#7a4aaa', fg: '#3a1a5a' }), { yaw: LY.kPancake[2] + Math.PI });
-  L.rinkYaw = LY.rink[2]; L.rink = BW17.B.rink(api, LY.rink[0], LY.rink[1], LY.rink[2]);
-  L.iceYaw = LY.ice[2]; L.ice = BW17.B.iceDepot(api, LY.ice[0], LY.ice[1], LY.ice[2]);
-  L.bikeYaw = LY.bike[2]; L.bike = BW17.B.bikeShop(api, LY.bike[0], LY.bike[1], LY.bike[2]);
-  L.heartCar = BW17.B.heartCar(api, LY.heart[0], LY.heart[1], LY.heart[2]); L.heartFloor = L.heartCar.floor;
-  BW17.B.heartDJ(api, L.heartCar.booth[0], L.heartCar.boothY, L.heartCar.booth[1], LY.heart[2] + Math.PI);
-  // the Disco Duck: parked (broken) in the 6:00 street; drivable once it's fixed
-  S.duckCar = api.artCar({ x: LY.duck[0], z: LY.duck[1], yaw: LY.duck[2], build: m => BW17.B.duckModel(m), maxSpeed: 7.5, label: 'DRIVE THE DUCK', horn: 'artcarHorn',
-    hornLines: ['QUACK QUACK!', 'IT\'S THE DISCO DUCK!', 'Duck! Duck! DUCK!'], driveHint: 'DRIVING THE DISCO DUCK · JUMP = QUACK', when: () => !!BurnsSave.flag(17, 'duckFixed') });
-  L.duck = [LY.duck[0], LY.duck[1]];
-  // the Deep End: a pool party that's a foam party today
-  if (typeof BurnsCamps !== 'undefined') {
-    S.deepEnd = BurnsCamps.place(api, g, 'deepEnd', LY.deepEnd[0], LY.deepEnd[1], { rotY: LY.deepEnd[2], crowd: 0.6, lod: 'auto', marker: false });
-    const f = S.deepEnd.spots.floor || { x: LY.deepEnd[0], z: LY.deepEnd[1] - 2 };
-    L.foam = [f.x, f.z, 6.5];
-  } else L.foam = [LY.deepEnd[0], LY.deepEnd[1], 6.5];
-  // foam cannons on stands round the pool
-  for (let i = 0; i < 3; i++) { const a = (i - 1) * 1.1 + Math.PI, cx = L.foam[0] + Math.sin(a) * 8.5, cz = L.foam[1] + Math.cos(a) * 8.5; S.foam.push([cx, 2.6, cz, Math.atan2(L.foam[0] - cx, L.foam[1] - cz)]);
-    api.mesh(cx, cz, m => { m.color('#3a3a44').shine(2); m.limb(0, 0, 0, 0, 2.4, 0, 0.06, 0.05, { seg: 6 }); m.push(); m.tf(0, 2.55, 0, 0, Math.PI / 2 - 0.35); m.color('#38c8ff').shine(2); m.roundCyl(0, -0.4, 0, 0.22, 0.8, 0.05, { seg: 12 }); m.pop(); m.shine(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 2.4, camPass: true }] }; }, { yaw: Math.atan2(L.foam[0] - cx, L.foam[1] - cz) }); }
-  BW17.sign(api, 'FOAM PARTY TODAY\nYOU WILL GET WET', L.foam[0] - 10, L.foam[1] + 12, 0.4, { h: 0.9, bg: '#e8f8ff', fg: '#2a6aa8', border: '#38c8ff', size: 32 });
+  // (DUST FM, the tea lounge, the Content House, the kiosks, The Glide, Ice Ice Playa, the bike shop, the heart car and the
+  //  Disco Duck are out in Black Rock City now, with their side quests: 42_burns_w17_e_city.js)
+  // the Deep End, east on the Esplanade (its foam party is out in the city now)
+  if (typeof BurnsCamps !== 'undefined') S.deepEnd = BurnsCamps.place(api, g, 'deepEnd', LY.deepEnd[0], LY.deepEnd[1], { rotY: LY.deepEnd[2], crowd: 0.6, lod: 'auto', marker: false });
   // the Stick Cathedral on the open playa (burns Friday night) — with a Photo of Chinka in its bird's nest
   L.cathedral = [LY.cathedral[0], LY.cathedral[1]]; L.perimeter = [LY.cathedral[0], LY.cathedral[1] - 31];
   if (typeof BurnsBigArt !== 'undefined') {
@@ -183,7 +159,6 @@ BW17.build = function (api, g) {
   st('ESPLANADE\n& 6:30', -LY.radX - 7, LY.espZ - 7, Math.PI / 4); st('ESPLANADE\n& 6:00', LY.radX + 7, LY.espZ - 7, -Math.PI / 4);
   st('A ST\n& 6:30', -LY.radX - 7, LY.aZ + 7, Math.PI * 0.75); st('A ST\n& 6:00', LY.radX + 7, LY.aZ + 7, -Math.PI * 0.75);
   for (let x = -230; x <= 230; x += 32) { if (Math.abs(x) < 20) continue; const z = LY.espZ - 10; api.mesh(x, z, m => { m.color('#4a3a2a').shine(1); m.limb(0, 0, 0, 0, 3.2, 0, 0.07, 0.06, { seg: 6 }); m.limb(0, 3.1, 0, 0.5, 3.25, 0, 0.03, 0.03, { seg: 4 }); m.shine(0); BW17.lantern(m, 0.55, 2.85, 0, '#ffcf8a', 1.1); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 3.2, camPass: true }], lights: [{ x: 0.55, y: 2.85, z: 0, s: 1.0, c: '#ffcf8a', pool: 7, i: 0.4 }] }; }); }
-  for (let i = 1; i < 9; i++) { const t = i / 9, x = lerp(-4, -36, t * t) + 3.2, z = lerp(96, 268, t); api.mesh(x, z, m => { m.color('#5a4030').shine(1); m.limb(0, 0, 0, 0, 3.6, 0, 0.08, 0.06, { seg: 6 }); m.limb(0, 3.5, 0, -0.55, 3.65, 0, 0.03, 0.03, { seg: 4 }); m.shine(0); BW17.lantern(m, -0.6, 3.25, 0, i % 2 ? '#ffcf8a' : '#ff9ad0', 1.15); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.1, y0: 0, y1: 3.6, camPass: true }], lights: [{ x: -0.6, y: 3.25, z: 0, s: 1.1, c: i % 2 ? '#ffcf8a' : '#ff9ad0', pool: 6, i: 0.4 }] }; }); }
   for (let i = 0; i < 26; i++) api.prop('fence', { x: -250 + i * 20 + 10, z: -206, len: 20 });
   for (let i = 0; i < 24; i++) { const x = R.range(-240, 240), z = R.range(-200, -138); if (Math.abs(x) < 30 && z > -150) continue; api.prop('tent', { x, z, yaw: R() * TAU, col: R.pick(['#3a8a5a', '#c84a3a', '#2a6ac8', '#e8a82a', '#7a4aaa']) }); }
   for (let i = 0; i < 6; i++) api.prop('portapotty', { x: -24 + i * 1.35, z: -140, col: i % 2 ? '#2a6ac8' : '#3a8a3a' });
@@ -221,17 +196,16 @@ BW17.build = function (api, g) {
   if (api.questBoard) api.questBoard({ x: 17.5, z: -24, yaw: -0.5, title: 'ROOT SOCIETY JOB BOARD' });
   /* ---------- collectibles ---------- */
   const gal = spot('gallery'); if (gal) api.pickup('photo', gal.x, gal.y + 1.0, gal.z, { id: 'p1' }); else api.pickup('photo', 0, 6.4, -16, { id: 'p1' });
-  api.pickup('photo', L.heartCar.top[0], L.heartCar.topY + 0.95, L.heartCar.top[1], { id: 'p2' });
-  // the third photo is up on DUST FM's roof (climb the desk, then the container)
-  { const q = L.radio.roof; api.pickup('photo', q[0], 3.5, q[1], { id: 'p3' }); }
+  // the second is up on the work shade's canvas (climb the crates, like Shade Patrol)
+  api.pickup('photo', L.shade.x + Math.cos(L.shade.yaw) * 1.2, L.shade.H + 0.95, L.shade.z - Math.sin(L.shade.yaw) * 1.2, { id: 'p2' });
+  // the third is on the generator's roof (hop up from the cable reel)
+  { const q = [LY.generator[0] + 0.2, LY.generator[1] - 0.6]; api.pickup('photo', q[0], 2.85, q[1], { id: 'p3' }); }
   api.glowLine(-200, LY.espZ + 4, -20, LY.espZ + 4, 15); api.glowLine(20, LY.espZ + 4, 200, LY.espZ + 4, 15);
   api.glowLine(0, LY.espZ - 2, 0, 62, 6);
   api.glowRing(0, -54, 9.5, 14);
   for (const sx of [-1, 1]) api.glowLine(sx * LY.radX, LY.espZ - 8, sx * LY.radX, LY.aZ + 10, 14);
   api.glowLine(-200, LY.aZ, 200, LY.aZ, 16);
-  api.glowLine(-6, 104, -40, 262, 14);
   api.glowLine(110, 110, 122, 150, 7);
-  api.glowRing(L.rink.center[0], L.rink.center[1], 12.5, 12);
   api.glowArc(L.shade.corners[1].x + 1, 1.2, L.shade.corners[1].z + 2.5, L.shade.corners[1].x + 4.5, 4.4, L.shade.corners[1].z + 2.5, 1.0, 6);
   for (const [x, z] of [[-40, 74], [60, 74], [-120, 0], [140, -20], [-60, 160], [30, 200], [0, -120]]) api.pickup('water', x, 0.9, z);
   /* ---------- checkpoints + map markers ---------- */
@@ -241,11 +215,8 @@ BW17.build = function (api, g) {
   api.checkpoint('cp_east', 112, LY.espZ - 8, { yaw: Math.PI, name: 'Esplanade & 6:00' });
   api.checkpoint('cp_playa', 8, 176, { yaw: 0, name: 'The Open Playa' });
   const mk = (id, x, z, label, col) => api.marker(id, x, z, label, { col });
-  mk('home', L.tipi.x, L.tipi.z, 'Your tipi', '#7aff5a'); mk('studio', LY.studio[0], LY.studio[1], 'Portrait studio', '#ff7ab8'); mk('radio', LY.radio[0], LY.radio[1], 'DUST FM', '#ff4a4a');
-  mk('tea', LY.tea[0], LY.tea[1], 'Tea lounge', '#9adc8a'); mk('content', LY.content[0], LY.content[1], '#ContentHouse', '#ff9ad0'); mk('rink', LY.rink[0], LY.rink[1], 'The Glide', '#ff4fd8');
-  mk('ice', LY.ice[0], LY.ice[1], 'Ice', '#9adcff'); mk('bike', LY.bike[0], LY.bike[1], 'Bike repair', '#ffd21a'); mk('duck', LY.duck[0], LY.duck[1], 'Disco Duck', '#ffd21a');
-  mk('deep', LY.deepEnd[0], LY.deepEnd[1], 'Deep End', '#38c8ff'); mk('heart', LY.heart[0], LY.heart[1], 'The Heart', '#ff3b7a'); mk('cath', LY.cathedral[0], LY.cathedral[1], 'Stick Cathedral', '#ffb347');
-  mk('trade', LY.trade[0], LY.trade[1], 'Trading post', '#ffe24a');
+  mk('home', L.tipi.x, L.tipi.z, 'Your tipi', '#7aff5a'); mk('studio', LY.studio[0], LY.studio[1], 'Portrait studio', '#ff7ab8');
+  mk('deep', LY.deepEnd[0], LY.deepEnd[1], 'Deep End', '#38c8ff'); mk('cath', LY.cathedral[0], LY.cathedral[1], 'Stick Cathedral', '#ffb347');
 };
 
 /* little theme camps that fill the blocks (props only, a host each): the city feels lived in */
@@ -254,7 +225,9 @@ BW17.fillerCamps = function (api, g) {
   const camps = [
     [-150, 96, 0, 'CAMP NAP TIME\nQUIET (ISH) HOURS'], [-196, 96, 0.1, 'THE LOST SOCK\nEXCHANGE'], [150, 98, -0.1, 'DUST BUNNY\nSANCTUARY'],
     [196, 96, 0.05, 'HYDRATION\nSTATION'], [-130, -100, Math.PI / 2, 'CAMP\nOVERTHINK IT'], [130, -150, -Math.PI / 2, 'THE BLINKY\nBICYCLE CLUB'],
-    [-190, -140, 0.4, 'SPOON\nTHEORY'], [196, -50, -Math.PI / 2, 'KAZOO\nKAMP']
+    [-190, -140, 0.4, 'SPOON\nTHEORY'], [196, -50, -Math.PI / 2, 'KAZOO\nKAMP'],
+    // the lots the city quests left behind
+    [-130, -34, Math.PI / 2, 'CAMP\nSNOOZE BUTTON'], [-182, 4, Math.PI / 2, 'THE HAMMOCK\nHOLLOW'], [168, 4, 0, 'GLITTER\nGARAGE'], [124, -66, -Math.PI / 2, 'SOCK PUPPET\nTHEATRE']
   ];
   camps.forEach(([x, z, yaw, name], i) => {
     const c = Math.cos(yaw), sn = Math.sin(yaw), W = (lx, lz) => [x + lx * c + lz * sn, z - lx * sn + lz * c];
@@ -267,7 +240,7 @@ BW17.fillerCamps = function (api, g) {
     q = W(-3.6, 3.4); BW17.sign(api, name, q[0], q[1], yaw + 0.3, { h: 0.85, y: 1.4, bg: R.pick(['#f4e8c8', '#e8f4ff', '#fff0f6']), fg: '#3a2414', border: '#3a2414', size: 30 });
     q = W(0, 1.6); api.pickup('glowstick', q[0], 0.9, q[1]);
     q = W(0.4, 0.2); api.npc({ type: R.pick(['burner', 'tutu', 'furcoat', 'crusty', 'ledsuit']), seed: (i * 7) % 24, x: q[0], z: q[1], yaw: yaw + R.range(-0.5, 0.5), behavior: R.pick(['sit', 'dance', 'idle']), style: i % 6, ambient: true,
-      chat: [['Shhh. Napping is a radical act.', 'Zzz... welcome... zzz.'], ['Got a lone sock? We have its soulmate.', 'Every sock deserves a second chance.'], ['Dust bunnies are people too.', 'Hop on by!'], ['Water! Free! Take two!', 'Pee clear, friend.'], ['Should I go to the dome? Or think about going to the dome?', 'I\'ve been planning to leave since Monday.'], ['Blink twice if you love bikes.', 'Our lights have lights.'], ['There is no spoon. There are, however, many spoons.', 'Spoon?'], ['TOOT.', 'Kazoo choir at sunset!']][i] });
+      chat: [['Shhh. Napping is a radical act.', 'Zzz... welcome... zzz.'], ['Got a lone sock? We have its soulmate.', 'Every sock deserves a second chance.'], ['Dust bunnies are people too.', 'Hop on by!'], ['Water! Free! Take two!', 'Pee clear, friend.'], ['Should I go to the dome? Or think about going to the dome?', 'I\'ve been planning to leave since Monday.'], ['Blink twice if you love bikes.', 'Our lights have lights.'], ['There is no spoon. There are, however, many spoons.', 'Spoon?'], ['TOOT.', 'Kazoo choir at sunset!'], ['Five more minutes. Five more days.', 'Hit snooze for me?'], ['Hammocks: horizontal enlightenment.', 'Swing by. Literally.'], ['Glitter is forever. You will find it in 2031.', 'Hold still, you need sparkle.'], ['Tonight: Hamlet. Starring socks.', 'To be, or knot to be.']][i] });
   });
 };
 
@@ -335,23 +308,19 @@ BW17.talkKev = function (g, a) {
   const M = g.missions;
   if (M.state('kitchen') === 'available') { g.say(a, ['A new kid! With hands! Perfect. It\'s lunch rush.', 'Burrito line: I call the ingredient, you grab it, in order. Then roll them and feed the people at the door.', 'Clock\'s ticking. The hungry are getting hangry.'], () => M.start('kitchen')); return; }
   if (M.state('kitchen') === 'active') { const st = BW17.KITCHEN[M.get('kitchen').data.step]; g.say(a, [st ? `Next: ${st.name}! ${st.where}!` : 'Feed them! FEED THEM!']); return; }
-  const fm = M.get('s_food');
-  if (M.state('s_radio') === 'active' && g.pack && g.pack.has('w17gerald')) { g.say(a, ['GERALD! My boy! You\'re so... slimy and perfect.', 'Thank you, Brady. Here: kombucha. Made by Gerald himself.'], () => { g.pack.take('w17gerald'); g.player.hold(null); M.complete('s_radio'); }); return; }
-  if (fm && fm.state === 'active') { g.say(a, [`${fm.n} of 3 delivered. Bacon to Sparky, cheese to Pixel, pancakes to Nebula!`]); return; }
-  if (BW17.offer(g, a, ['s_foam', 's_food', 's_radio'])) return;
+  // his side jobs are out in the city now (his kombucha cart at Root Society's gate on the Esplanade)
+  if (M.isDone('kitchen') && typeof BW17C !== 'undefined' && ['w17c_foam', 'w17c_radio', 'w17c_food'].some(id => !BW17C.done(id))) {
+    g.say(a, ['When the city\'s awake I run the kombucha cart at our front gate, out on the Esplanade.', 'Swing by out there: I\'ve got jobs. Also you smell. That\'s one of the jobs.']); return;
+  }
   g.say(a, BurnsRig.types.w17Kev.lines.slice(0, 2));
 };
 BW17.talkPixel = function (g, a) {
   const M = g.missions;
   if (M.state('cable') === 'available') { g.say(a, ['Hi. Pixel. The mains cable to the 90 foot dome got eaten by a dust devil.', 'Grab the cable at the reel, run it over all five yellow cable ramps in order, then plug it into the amp rack by the dome door.', 'Skip a ramp and somebody trips. Then they sue. Then they hug it out, but still.'], () => M.start('cable')); return; }
   if (M.state('cable') === 'active') { g.say(a, ['Reel, ramps one to five, amp rack. Go.']); return; }
-  const dm = M.get('s_duck');
-  if (dm && dm.state === 'active' && !dm.data.battery) { g.say(a, ['A battery for the Disco Duck? I have eleven. Don\'t ask why.'], () => { dm.data.battery = true; g.pack.add('w17battery'); BW17.duckPart(g, dm); }); return; }
-  const fm = M.get('s_food');
-  if (fm && fm.state === 'active' && g.pack && g.pack.has('w17cheese')) { g.say(a, ['Grilled cheese. The only food that runs on pure joy. Thank you.'], () => { g.pack.take('w17cheese'); M.progress('s_food'); }); return; }
-  if (M.state('s_darkwads') === 'available' && !BW17.isNight()) { g.say(a, ['Darkwads only come out at night. Nap in your tipi till dark, then come back.']); return; }
-  if (M.state('s_darkwads') === 'active') { g.say(a, [`${M.get('s_darkwads').n} of 4 lit. Use the headlamp. Look for the glint off their sunglasses.`]); return; }
-  if (BW17.offer(g, a, ['s_darkwads'])) return;
+  if (M.isDone('cable') && typeof BW17C !== 'undefined' && !BW17C.done('w17c_darkwads')) {
+    g.say(a, ['At night I do darkwad outreach on the city streets, round 3:30 & Arcade.', 'Find me out there after dark. I\'ll bring the glow sticks. You bring the eyes.']); return;
+  }
   g.say(a, BurnsRig.types.w17Pixel.lines.slice(0, 2));
 };
 BW17.talkMoss = function (g, a) {
@@ -374,23 +343,22 @@ BW17.talkFriend = function (g, a, id) {
     g.say(a, T.lines, () => { nm.data[id] = true; if (g.grant) g.grant(T.gift, { quiet: true }); g.toast(T.gl.toUpperCase()); g.fx.confetti(a.x, a.y + 2, a.z, 14); a.ch.play(id === 'granny' || id === 'biscuit' ? 'hug' : 'cheer', null, true); M.progress('neighbors'); });
     return;
   }
-  // deliveries (Meals on Wheels)
-  const fm = M.get('s_food'), want = { sparky: 'w17bacon', nebula: 'w17pancake' }[id];
-  if (fm && fm.state === 'active' && want && g.pack && g.pack.has(want)) { g.say(a, [id === 'sparky' ? 'Bacon! Cooked by somebody else\'s fire for once. Bless you.' : 'Pancakes! With dust! Just like 2001. Thank you, sweetie.'], () => { g.pack.take(want); M.progress('s_food'); }); return; }
-  if (id === 'biscuit' && M.state('s_ice') === 'active' && g.pack && g.pack.has('w17ice')) { g.say(a, ['ICE! *melting happy noises* You saved me! You SAVED me!', 'Take my spare fur coat. You\'ll need a disguise sooner or later. Trust me.'], () => { g.pack.take('w17ice'); g.player.hold(null); BW17.state.meter = null; a.ch.play('hug', null, true); g.fx.hearts(a.x, a.y + 2, a.z, 14); M.complete('s_ice'); }); return; }
-  const ACT = { s_sunrise: 'Sleep in your tipi till five, then RIDE to the heart. The sun waits for no one.', s_tea: 'Cushion. Still. Tea. Steeping Sloth, sweetie.', s_phone: 'Sneak up behind her, swipe it, Phone Jail at the tea lounge!', s_skate: 'Lace up at The Glide and hit every ring!', s_burn: 'Perimeter, sit down, don\'t move. Tonight she burns!', s_ice: 'Ice Ice Playa! Please hurry! I\'m... becoming soup.' };
-  for (const q in ACT) if (M.state(q) === 'active' && M.get(q).def.giver === id) { g.say(a, [ACT[q]]); return; }
-  // time-gated offers
-  let list = { nebula: ['s_sunrise', 's_tea'], granny: ['s_phone', 's_skate'], sparky: ['s_burn'], biscuit: ['s_ice'] }[id] || [];
-  const hints = [];
-  if (list.indexOf('s_sunrise') >= 0 && M.state('s_sunrise') === 'available') { const h = BW17.state.clock; if (h >= 7 && h < 18) { list = list.filter(q => q !== 's_sunrise'); hints.push('Ask me about the sunrise set in the evening, sweetie. It starts with a good night\'s sleep.'); } }
-  if (list.indexOf('s_burn') >= 0 && M.state('s_burn') === 'available') {
-    if (!BW17.storyAt(8)) { list = []; hints.push('The Stick Cathedral burns FRIDAY night. It\'s only ' + BW17.dayName() + '. Come home Friday!'); }
-    else if (!BW17.isNight()) { list = []; hints.push('It burns tonight! Nap in your tipi till dark, then come find me.'); }
+  // Sparky's job is the Friday burn, out past the Esplanade
+  if (id === 'sparky') {
+    if (M.state('s_burn') === 'active') { g.say(a, ['Perimeter, sit down, don\'t move. Tonight she burns!']); return; }
+    if (M.state('s_burn') === 'available') {
+      if (!BW17.storyAt(8)) { g.say(a, ['The Stick Cathedral burns FRIDAY night. It\'s only ' + BW17.dayName() + '. Come home Friday!']); return; }
+      if (!BW17.isNight()) { g.say(a, ['It burns tonight! Nap in your tipi till dark, then come find me.']); return; }
+      if (BW17.offer(g, a, ['s_burn'])) return;
+    }
   }
-  if (BW17.offer(g, a, list)) return;
+  // the others' jobs are out in Black Rock City: they say where to find them
+  const CITY = { nebula: [['w17c_tea', 'w17c_sunrise'], 'Come find me at the Steeping Sloth, sweetie: the tea lounge at 4:55 on the Esplanade. Tea first. Then a sunrise.'],
+    granny: [['w17c_skate'], 'I\'m at The Glide most days: the roller rink on the open playa at 3:30. Come skate, kiddo.'],
+    biscuit: [['w17c_ice'], 'I\'m going to the Deep End to cool off. Maybe they\'ll let me in the pool this time. Bring ice?'] }[id];
+  if (CITY && M.isDone('neighbors') && typeof BW17C !== 'undefined' && CITY[0].some(q => !BW17C.done(q))) { g.say(a, [CITY[1]]); return; }
   const idle = { nebula: BurnsRig.types.w17Nebula.lines, granny: BurnsRig.types.w17Granny.lines, sparky: BurnsRig.types.w17Sparky.lines, biscuit: ['*happy chirp*', 'Hug? Hug.', 'It\'s only a little hot in here. Like the sun.'] }[id];
-  g.say(a, hints.length ? hints : [idle[Math.floor(Math.random() * idle.length)]]);
+  g.say(a, [idle[Math.floor(Math.random() * idle.length)]]);
 };
 BW17.talkDiner = function (g, a, i) {
   const m = g.missions.get('kitchen');
@@ -525,7 +493,7 @@ BW17.sleepMenu = function (g) {
   const opts = [], to = [];
   if (h >= 6.5 && h < 16.5) { opts.push('SIESTA TILL GOLDEN HOUR'); to.push(17.6); }
   if (h < 20.5 && h >= 6) { opts.push('SLEEP TILL NIGHTFALL'); to.push(21.5); }
-  opts.push(M.state('s_sunrise') === 'active' ? 'WAKE AT 5 AM (THE HEART!)' : 'SLEEP TILL SUNRISE'); to.push(5.05);
+  opts.push('SLEEP TILL SUNRISE'); to.push(5.05);
   opts.push('SLEEP TILL MORNING'); to.push(9.5);
   opts.push('NOT TIRED'); to.push(null);
   BW17.choose(g, { who: 'BEDROLL', prompt: `It's ${BW17.hourText(h)}. Your bedroll looks incredible.`, options: opts, def: opts.length - 1, done: (g2, i) => { if (to[i] !== null) BW17.sleep(g2, to[i]); } });
@@ -546,18 +514,11 @@ BW17.sleep = function (g, hour, why) {
     { do: g2 => { p.animOverride = null; p.teleport(L.bed[0] + Math.sin(T.yaw) * 1.2, 0, L.bed[1] + Math.cos(T.yaw) * 1.2, T.yaw); g2.camYaw = T.yaw; g2.snapCam = true; S.musicLock = false; BW17.applyMusic(g2, true); } }
   ], g2 => {
     if (why === 'siesta' && M.state('tipi') === 'active') { BW17.wake(g2, 'gold'); M.complete('tipi', { x: L.tipiDoor[0], y: 1.3, z: L.tipiDoor[1] }); return; }
-    if (M.state('s_sunrise') === 'active' && hour < 6) { BW17.wake(g2, 'heart'); return; }
     BW17.wake(g2, hour >= 5 && hour < 7.4 ? 'sunrise' : null);
   });
 };
 BW17.wake = function (g, kind) {
   const S = BW17.state, L = BW17.L, T = L.tipi, p = g.player;
-  if (kind === 'heart') {
-    S.sunrise = { t: 0 }; BW17.setClock(g, 5.05); S.clockTo = 5.92; S.clockRate = 0.016; S.musicLock = true; burnsMusic('burns_w7');
-    if (!p.vehicle && g.bike) g.toast('BIKE BUTTON (OR B) TO RIDE!');
-    g.banner('IT\'S 5 AM', 'Get to the heart car before the sun comes up!', { col: '#ff9ad0', big: true });
-    return;
-  }
   if (kind === 'sunrise') {
     // the sunrise from the tipi: Brady steps out, the domes go dark against a pink sky
     const out = [L.tipiDoor[0], L.tipiDoor[1]];
@@ -626,7 +587,7 @@ BW17.start = function (g) {
   BW17.lightInit(g); BW17.applySky(g); BW17.applyLights(g, true); BW17.applyPresence(g); BW17.syncDecor(g); BW17.addPrompts(g);
   S.music = null; BW17.applyMusic(g, true);
   // headlamp from Pixel (darkwads quest) stays with Brady at home
-  if (M.isDone('s_darkwads') || M.state('s_darkwads') === 'active') p.lightR = 8;
+  if (typeof BW17C !== 'undefined') { BW17C.migrate(g); if (BW17C.done('w17c_darkwads')) p.lightR = 8; }
   const story = !!BurnsSave.flag(17, 'storyDone');
   if (!BurnsSave.flag(17, 'intro')) { BW17.intro(g); return; }
   if (story && !BurnsSave.get().checkpoint[17]) {
@@ -654,15 +615,11 @@ BW17.intro = function (g) {
     { orbit: { actor: 'brady', r0: 4, r1: 7, h0: 1.4, h1: 2.6, a0: 0.4, a1: 2.6, ty: 1.3, dur: 3 } },
     { say: ['brady', ['That bass. Three domes. A... coliseum? Okay. Follow the bass.']] },
     { do: g2 => { p.animOverride = 'walk'; S.walkT = 0; } }, { dof: false },   // keep the camp sharp: it's the reveal
-    // over-the-shoulder tracking shot: he walks toward the bass and the camp grows in front of him
-    // (the camera is set from here: a parallel track step would not reach the cutscene camera)
-    { until: (g2, c) => {
-      S.walkT += 1 / 120; const k = Math.min(1, S.walkT / 3.2), e = k * k * (3 - 2 * k);
-      p.teleport(sp.x, 0, sp.z - k * 9, Math.PI);
-      const a = Math.PI + 0.55 - 0.3 * e, d = 5.6 - 1.2 * e;
-      c.cam = { x: p.x - Math.sin(a) * d, y: 2.1 - 0.3 * e, z: p.z - Math.cos(a) * d, tx: p.x, ty: 1.7, tz: p.z - 3, fov: 0.9 };
-      return k >= 1;
-    } },
+    // over-the-shoulder tracking shot while he walks toward the bass and the camp grows in front of him
+    { parallel: [
+      { track: { actor: 'brady', dist: 5.4, h: 2.0, side: 0.5, ty: 1.7, fov: 0.9, dur: 3.3, k: 5 } },
+      { until: g2 => { S.walkT += 1 / 120; const k = Math.min(1, S.walkT / 3.2); p.teleport(sp.x, 0, sp.z - k * 9, Math.PI); return k >= 1; } }
+    ] },
     { do: g2 => { p.animOverride = null; p.locked = false; BurnsSave.flag(17, 'intro', true); BW17.setClock(g2, 9); p.teleport(sp.x, 0, sp.z - 9, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; BW17.applyMusic(g2, true); } }
   ], g2 => { g2.banner('FOLLOW THE BASS', 'Root Society is straight ahead', { col: '#e8c890' }); });
 };
@@ -683,11 +640,6 @@ BW17.update = function (g, dt) {
   BW17.shadeStep(g, dt);
   if (M.state('cable') === 'active') BW17.cableStep(g, M.get('cable'));
   // story beats that wait for a state
-  // foam cannons at the Deep End (only when someone's close enough to see them)
-  if (L.foam && Math.hypot(g.cam.x - L.foam[0], g.cam.z - L.foam[1]) < 70 && !BW17.isNight()) {
-    for (const q of S.foam) if (Math.random() < dt * 9) { const sp = 3 + Math.random() * 2, a = q[3] + (Math.random() - 0.5) * 0.5; g.fx.add(q[0] + Math.sin(q[3]) * 0.4, q[1], q[2] + Math.cos(q[3]) * 0.4, Math.sin(a) * sp, 2.5 + Math.random(), Math.cos(a) * sp, 2.2, 0.5, 1.6, [0.96, 0.98, 1], 0.75, 'puff', 2 | 4); }
-    if (Math.random() < dt * 6) { const a = Math.random() * TAU, r = Math.sqrt(Math.random()) * L.foam[2]; g.fx.add(L.foam[0] + Math.sin(a) * r, 0.3, L.foam[1] + Math.cos(a) * r, 0, 0.15, 0, 3, 1.2, 1.8, [0.95, 0.97, 1], 0.6, 'puff', 4); }
-  }
   // presence (hour-dependent actors) every half second
   S.presT2 = (S.presT2 || 0) - dt; if (S.presT2 <= 0) { S.presT2 = 0.5; BW17.applyPresence(g); }
 };
@@ -715,6 +667,4 @@ BW17.drawSprites = function (g, R) {
       }
     }
   }
-  const sm = M.get('s_skate');
-  if (sm && sm.state === 'active' && S.skates) for (let i = sm.n; i < Math.min(sm.n + 3, L.rink.rings.length); i++) { const q = L.rink.rings[i], c = burnsRGBf(BURNS_NEON[i % 7]); R.bbs.bb(q[0], 1.3, q[1], 2.8, 2.8, SP.ring, c, i === sm.n ? 0.95 : 0.4, true); }
 };

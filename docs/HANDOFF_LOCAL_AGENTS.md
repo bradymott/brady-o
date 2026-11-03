@@ -177,6 +177,34 @@ Porting all of that to another renderer would be a long, risky rewrite. Instead:
    - 2K textures at most
    - first playable within about 30 MB downloaded
 
+### Per-game art plans (Brady's own guide, "The Blender Graphics Playbook", has the user-facing version)
+- **Art Cart (start here: the smallest, self-contained job).**
+  1. Build the glTF loader once in the shared engine (`40_burns_*`). Art Cart and Burning Man both use it.
+  2. Pilot one car end to end: Bass Valentine.
+     - Bevelled body.
+     - Materials: car-paint with clear coat, chrome, glass, tyres, emissive LED strips.
+     - Separate wheels and moving parts.
+     - 20–30k triangles for the showroom version, 5–8k for racing.
+  3. Then the other 11 cars, the drivers (reused from the Burning Man cast), a studio-HDRI showroom, and a track and arena kit with baked lighting.
+- **Super Brady-O World (a pre-rendered 2D pipeline).** Brady wants a beautifully polished premium 2D look in our own style. Never use Nintendo's characters, blocks or pipes.
+  1. **Style frames:** three for Mexico (Brady running, one enemy, one background) in 2–3 candidate looks: toon EEVEE, painterly, or Line Art outlines. Brady picks one.
+  2. **Characters and items:** stylised models, rigged with Rigify, animated.
+  3. **Rendering:** an orthographic camera with a transparent background, at 2× display size, packed into atlases with Free Texture Packer or TexturePacker.
+  4. **Backgrounds and tiles:** parallax background layers (3–5 per level theme) and a tile set per country.
+  5. **Engine:** add a sprite-atlas loader to the 2D engine and swap code-drawn entities for sprites one at a time. Physics, level data and the validator stay untouched.
+  6. **Polish:** squash and stretch, particles, hit-stop, screen shake, haze.
+- **Brady Goes to Burning Man (realistic).** Make realistic Brady and Chinka first; both routes reuse them.
+  - **How to build them:**
+    - an MPFB2 or Character Creator base
+    - likeness from photos or a RealityScan scan
+    - hair cards
+    - clothes
+    - the sleeve tattoos as a texture
+    - a Mixamo-compatible rig and 3 LODs
+  - **Then a one-camp Unreal Engine 5 test** (Root Society at night with a MetaHuman Brady), shown side by side with the web game, so Brady can choose:
+    - **Route A:** upgrade the web game. Phase 2 above, plus baked lighting for the camps.
+    - **Route B:** rebuild natively in UE5. MetaHumans, Megascans through Fab, World Partition, iOS through Xcode and TestFlight. The web game is the playable blueprint.
+
 ### Phase 3: gameplay polish and device testing
 - **Real-iPhone playtests:** controls, camera, difficulty, onboarding, readability, audio mix, battery and heat, saves.
 - **A bug bash in every world**, with scripted tests plus manual play.
