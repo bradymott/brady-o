@@ -315,7 +315,7 @@ const BURNS_ATLAS = {
   /* ---- the Chinka photo: the polaroid on photo collectibles and its UI icon (cell x 0..128, y 832..992) ----
      init() paints the frame and a playa-sunset backdrop. Once the GL renderer is up, bakePhoto(R) renders the 3D
      Chinka model (waving, LED necklace on) over the backdrop with the engine itself; the play scene calls it on its
-     first GL frame. img: the transparent render to composite (photo area 104 x 108). */
+     first GL frames. img: the transparent render to composite (photo area 104 x 108). */
   photoBaked: false,
   paintPhoto(x, X, Y, img) {
     burnsPaintSafe(x, x => {
@@ -347,19 +347,26 @@ const BURNS_ATLAS = {
     const v = x.createRadialGradient(64, 66, 34, 64, 66, 82); v.addColorStop(0, 'rgba(30,10,30,0)'); v.addColorStop(1, 'rgba(30,10,30,0.32)');
     x.fillStyle = v; x.fillRect(12, 12, 104, 108);
   },
-  // render the 3D Chinka into the photo (once a session; the backdrop alone still reads as a photo if it fails)
+  // render the 3D Chinka into the photo, once a session: the play scene calls this every frame until it's done (the
+  // render happens on the first call, the pixels arrive a frame or two later). The backdrop alone still reads as a
+  // photo if anything fails.
+  photoJob: null,
   bakePhoto(R) {
     if (this.photoBaked || !this.canvas || !R) return;
-    this.photoBaked = true;
     let img = null;
     try {
-      const model = BurnsRig.model(BurnsRig.chinkaSpec()), ch = new BurnsChar(model);
-      ch.yaw = 0.32; ch.play('wave', null, true); ch.animT = 0.16; ch.update(0); ch.compute();   // hand up, big smile
-      const env = Object.assign(BurnsEnv.build('dusk', 'dusk', 0, {}, 0), { fogD: 0, trip: 0, dust: 0, exposure: 1, emB: 1.3,
-        keyDir: [-0.42, 0.52, 0.74], keyCol: [0.96, 0.78, 0.62], sky: [0.6, 0.48, 0.78], gnd: [0.7, 0.48, 0.4], rimCol: [1.0, 0.62, 0.5] });
-      img = R.bakeImage(312, 324, { x: 0.42, y: 1.5, z: 2.75, tx: 0, ty: 1.34, tz: 0, fov: 0.5 }, env, RR => RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.8));
-      BurnsGL.freeGeo(model.geo);   // re-uploaded on demand by worlds that show her
-    } catch (e) { console.warn('burns: Chinka photo bake failed', e); img = null; }
+      if (!this.photoJob) {
+        const model = BurnsRig.model(BurnsRig.chinkaSpec()), ch = new BurnsChar(model);
+        ch.yaw = 0.32; ch.play('wave', null, true); ch.animT = 0.16; ch.update(0); ch.compute();   // hand up, big smile
+        const env = Object.assign(BurnsEnv.build('dusk', 'dusk', 0, {}, 0), { fogD: 0, trip: 0, dust: 0, exposure: 1, emB: 1.3,
+          keyDir: [-0.42, 0.52, 0.74], keyCol: [0.96, 0.78, 0.62], sky: [0.6, 0.48, 0.78], gnd: [0.7, 0.48, 0.4], rimCol: [1.0, 0.62, 0.5] });
+        this.photoJob = R.bakeBegin(312, 324, { x: 0.42, y: 1.5, z: 2.75, tx: 0, ty: 1.34, tz: 0, fov: 0.5 }, env, RR => RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.8));
+        BurnsGL.freeGeo(model.geo);   // re-uploaded on demand by worlds that show her
+      }
+      img = R.bakePoll(this.photoJob);
+      if (img === false) return;   // still on the GPU: next frame
+    } catch (e) { console.warn('burns: Chinka photo bake failed', e); img = null; try { R.bakeFree(this.photoJob); } catch (e2) { /* context gone */ } }
+    this.photoJob = null; this.photoBaked = true;
     if (!img) return;
     this.paintPhoto(this.ctx, 0, 832, img);
     if (this.T && !BurnsGL.texRegion(this.T, 0, 832, 128, 160)) this.T.dirty = true;   // just the tile, not the whole 2048 x 3072 atlas

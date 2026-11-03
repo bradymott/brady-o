@@ -865,8 +865,6 @@ class BurnsSpriteBatch {
 
 /* ---------------- renderer ---------------- */
 const burnsLinC = (c, out, k) => { out = out || [0, 0, 0]; k = k === undefined ? 1 : k; out[0] = Math.pow(Math.max(0, c[0]), 2.2) * k; out[1] = Math.pow(Math.max(0, c[1]), 2.2) * k; out[2] = Math.pow(Math.max(0, c[2]), 2.2) * k; return out; };
-// IEEE half float (Uint16) -> number, for HDR read-backs on GPUs that only return HALF_FLOAT
-const burnsHalf = h => { const e = (h >> 10) & 31, m = h & 1023, s = h & 32768 ? -1 : 1; return e === 0 ? s * m * 5.960464477539063e-8 : e === 31 ? s * 65504 : s * Math.pow(2, e - 15) * (1 + m / 1024); };
 class BurnsRenderer {
   constructor() {
     this.P = new Float32Array(16); this.V = new Float32Array(16); this.VP = new Float32Array(16); this.B = {};
@@ -1238,15 +1236,17 @@ class BurnsRenderer {
     this.post.noFx = [rect.x / this.w, 1 - (rect.y + rect.h) / this.h, (rect.x + rect.w) / this.w, 1 - rect.y / this.h];
   }
   /* offscreen render of posed models into a 2D canvas with a transparent background (engine-made atlas art, such as
-     the Chinka photo). Call it before the frame's setCamera: it borrows the camera and light state and puts it back.
-     cam: {x,y,z, tx,ty,tz, fov}; env: a full lighting env (BurnsEnv.build + overrides); draw(R) issues R.skin() calls.
-     HDR tiers are tone-mapped like the frame (ACES, gamma, the default grade). Returns a canvas, or null. */
-  bakeImage(w, h, cam, env, draw) {
+     the Chinka photo). bakeBegin() renders now and starts reading the pixels back without stalling the GPU (a pack
+     buffer and a fence on WebGL2); call bakePoll(job) on later frames until it returns the canvas (false while the
+     GPU is busy, null if it failed). Call both before the frame's setCamera: they borrow the camera and light state
+     and put it back. cam: {x,y,z, tx,ty,tz, fov}; env: a full lighting env (BurnsEnv.build + overrides); draw(R)
+     issues R.skin() calls. HDR tiers are tone-mapped like the frame (ACES, gamma, the default grade). */
+  bakeBegin(w, h, cam, env, draw) {
     const gl = BurnsGL.gl;
     if (!gl || BurnsGL.lost) return null;
     if (BurnsGL.gl2) this.T = BurnsGL.targets(Math.max(64, this.w), Math.max(64, this.h));   // the frame's own targets (begin() makes them anyway); this.hdr reads them
-    const hdr = this.hdr;
-    let T, out = null;
+    const hdr = this.hdr, job = { w, h, hdr, exposure: env.exposure || 1, gen: BurnsGL.gen, t: 0, T: null };
+    let T;
     if (BurnsGL.gl2) T = BurnsGL.target(w, h, { fmt: hdr ? 'hdr' : 'ldr', depth: true });
     else {   // WebGL1 (legacy tier): an RGBA8 texture and a 16-bit depth buffer
       T = { w, h, fb: gl.createFramebuffer(), tex: gl.createTexture(), drb: gl.createRenderbuffer() };
@@ -1260,7 +1260,9 @@ class BurnsRenderer {
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, T.drb);
       T.ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
     }
-    if (T.ok) {
+    job.T = T;
+    if (!T.ok) job.img = null;
+    else {
       const save = { P: this.P.slice(), V: this.V.slice(), VP: this.VP.slice(), cam: this.cam, B: Object.assign({}, this.B), shadowOn: this.shadowOn, pass: this.pass, env: this.envRef, pl: this.pl.slice(), pc: this.pc.slice(), npl: this.npl };
       gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb);
       gl.viewport(0, 0, w, h); gl.disable(gl.SCISSOR_TEST); gl.disable(gl.BLEND);
@@ -1277,31 +1279,56 @@ class BurnsRenderer {
       this.prepEnv(env);
       this.skinBegin(env, null, BURNS_ATLAS.T);
       draw(this);
-      out = this.readImage(T, w, h, hdr, env.exposure || 1);
+      if (BurnsGL.gl2) {   // async read-back: the pixels go into a pack buffer behind a fence; bakePoll() collects them
+        for (let i = 0; i < 8 && gl.getError() !== gl.NO_ERROR; i++) { /* drop stale errors */ }
+        job.pbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, job.pbo);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, w * h * 4 * (hdr ? 4 : 1), gl.STREAM_READ);
+        gl.readPixels(0, 0, w, h, gl.RGBA, hdr ? gl.FLOAT : gl.UNSIGNED_BYTE, 0);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        if (gl.getError() !== gl.NO_ERROR) job.img = null;
+        else { job.sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); gl.flush(); }
+      } else job.img = this.readImage(T, w, h, job.exposure);   // WebGL1 has no pack buffers: read now
       this.P.set(save.P); this.V.set(save.V); this.VP.set(save.VP); this.cam = save.cam; Object.assign(this.B, save.B);
       this.shadowOn = save.shadowOn; this.pass = save.pass; this.pl.set(save.pl); this.pc.set(save.pc); this.npl = save.npl;
       if (save.env) this.prepEnv(save.env); else this.envRef = null;
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.w, this.h); gl.clearColor(0, 0, 0, 1);
-    BurnsGL.freeTarget(T);
-    return out;
+    return job;
   }
-  // read a bake target back into a top-down 2D canvas (straight alpha); HDR targets are tone-mapped like the composite pass
-  readImage(T, w, h, hdr, exposure) {
-    const gl = BurnsGL.gl, n = w * h * 4;
+  bakePoll(job) {
+    const gl = BurnsGL.gl;
+    if (!job) return null;
+    if (job.img !== undefined) { this.bakeFree(job); return job.img; }
+    if (!gl || BurnsGL.lost || job.gen !== BurnsGL.gen) { job.img = null; return null; }   // the context went away with the job
+    if (++job.t < 600 && gl.getSyncParameter(job.sync, gl.SYNC_STATUS) !== gl.SIGNALED) return false;
+    let img = null;
+    if (gl.getSyncParameter(job.sync, gl.SYNC_STATUS) === gl.SIGNALED) {
+      const n = job.w * job.h * 4, src = job.hdr ? new Float32Array(n) : new Uint8Array(n);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, job.pbo); gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, src); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      img = this.toneImage(src, job.w, job.h, job.hdr, job.exposure);
+    }
+    this.bakeFree(job);
+    return img;
+  }
+  bakeFree(job) {
+    const gl = BurnsGL.gl;
+    if (!job || !gl || job.gen !== BurnsGL.gen) return;
+    if (job.sync) { gl.deleteSync(job.sync); job.sync = null; }
+    if (job.pbo) { gl.deleteBuffer(job.pbo); job.pbo = null; }
+    if (job.T) { BurnsGL.freeTarget(job.T); job.T = null; }
+  }
+  // synchronous read-back of an 8-bit target (the WebGL1 path)
+  readImage(T, w, h, exposure) {
+    const gl = BurnsGL.gl, src = new Uint8Array(w * h * 4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb);
-    for (let i = 0; i < 8 && gl.getError() !== gl.NO_ERROR; i++) { /* drop stale errors */ }
-    let src, k = 1;
-    if (hdr) {
-      src = new Float32Array(n); gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, src);
-      if (gl.getError() !== gl.NO_ERROR) {   // some GPUs only read half floats back
-        const hf = new Uint16Array(n); gl.readPixels(0, 0, w, h, gl.RGBA, gl.HALF_FLOAT, hf);
-        if (gl.getError() !== gl.NO_ERROR) return null;
-        for (let i = 0; i < n; i++) src[i] = burnsHalf(hf[i]);
-      }
-    } else { src = new Uint8Array(n); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, src); k = 1 / 255; }
-    const c = makeCanvas(w, h), x = c.getContext('2d'), img = x.createImageData(w, h), D = img.data;
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    return this.toneImage(src, w, h, false, exposure);
+  }
+  // raw pixels (bottom-up; Float32 linear HDR or 8-bit display values) -> a top-down 2D canvas with straight alpha,
+  // tone-mapped and graded like the composite pass
+  toneImage(src, w, h, hdr, exposure) {
+    const k = hdr ? 1 : 1 / 255, c = makeCanvas(w, h), x = c.getContext('2d'), img = x.createImageData(w, h), D = img.data;
     const ex = exposure * 0.9;
     const aces = v => { v *= ex; v = (v * (2.51 * v + 0.03)) / (v * (2.43 * v + 0.59) + 0.14); return v <= 0 ? 0 : v >= 1 ? 1 : Math.pow(v, 1 / 2.2); };
     const grade = (v, l) => { v = l + (v - l) * 1.08; v = v < 0 ? 0 : v > 1 ? 1 : v; return (v + (v * v * (3 - 2 * v) - v) * 0.12) * 255; };
