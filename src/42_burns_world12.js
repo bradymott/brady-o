@@ -944,7 +944,7 @@ BW12.ending = function (g) {
     { cam: camOver },
     { wait: 0.7 },
     { say: ['brady', ['That\'s... that\'s her handwriting.']] },
-    { do: g2 => { card.x = ins.x; card.y = ins.y; card.z = ins.z; card.pitch = 0; card.scale = 1; } },
+    { do: g2 => { card.x = ins.x; card.y = ins.y; card.z = ins.z; card.pitch = 0; card.scale = 1; g2.banners.length = 0; } },   // nothing over her words
     { cam: camRead },
     { wait: 4.2 },
     { say: [{ name: 'CHINKA (THE NOTE)', model: BurnsRig.model(BurnsRig.chinkaSpec()) }, ['"B. Not gone. The big guy carried me off in the storm, but I\'m okay."', '"Find me where lost loves are found: 9:00, the Workshops."']] },

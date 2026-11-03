@@ -1,14 +1,15 @@
 /* ============================================================
-   BRADY-O BURNS — World 3: COSTUME CULT & THE YELLOW BIKE (day)
-   The Man knows Brady's face now. Brady needs a disguise and wheels.
+   BRADY GOES TO BURNING MAN — World 3: COSTUME CULT & THE YELLOW BIKE (Tuesday)
+   The Man is asking around for "a little guy with a bun". Brady needs a
+   disguise, and the yellow bike he found at Rhythm Wave gets stolen the
+   minute he parks it.
    South: a sunny grid of camps. North: open playa, yellow bikes.
    Missions (Burn Tokens):
+     thief   Bike Thief!           a thief rides off on Brady's bike: chase him down
+     flat    Fix a Flat            the thief left it with a flat: patch kit + pump, fix it at the Henge
      dress   Dress the Part        choose a costume at the Costume Cult, strut the catwalk
      vibe    Vibe Check            sneak past the Man's lookouts to the bike clinic (stealth)
-     hunt    Yellow Bike Hunt      follow the yellow ribbons to the Bike Henge
-     flat    Fix a Flat            patch kit + pump for the chained yellow bike
-     thief   The Bike Thief        a thief rides off on it: catch him (gives the YELLOW BIKE)
-     ride    First Ride            timed bike course through the Knotted Semi (loop + launch)
+     ride    Test Ride             timed bike course through the Knotted Semi (loop + launch)
      boss    The Tallbike Baron    boss of the Bike Graveyard (needs costume + bike)
    Side quests: Good Vibes Only (sparkle ponies hogging the racks), Hot Dog (an
    overheating furry), Burney's photo shoot.
@@ -23,7 +24,7 @@ const BURNS_W3 = {
 };
 
 BurnsWorlds.register({
-  id: 3, name: 'Costume Cult & the Yellow Bike', sub: 'Pick a look. Find a ride.',
+  id: 3, name: 'Costume Cult & the Yellow Bike', sub: 'Pick a look. Get your bike back.', day: 'Tuesday',
   sky: Object.assign({}, BURNS_PALETTES.day, { zen: '#2f78e0', hor: '#f0d2aa', mid: '#78b4ec', midK: 0.42, fog: '#dcc0a0', fogD: 0.006, haze: 0.5, sun: [150, 58], clouds: 0.62, cloudCol: '#fffaf2', sky: '#b0c4e0', gnd: '#a88868', key: '#fff0d8', keyK: 0.78, emB: 1.1 }),
   sky2: Object.assign({}, BURNS_PALETTES.day, { zen: '#3a6ac8', hor: '#ffc08a', mid: '#e8a080', midK: 0.45, fog: '#e0b490', fogD: 0.0066, haze: 0.55, sun: [235, 22], sunCol: '#ffd8a0', clouds: 0.5, cloudCol: '#ffe0c8', sky: '#c0a8c0', gnd: '#a07a60', key: '#ffd0a0', keyK: 0.8, rim: '#ffe0c0', emB: 1.2 }),
   tod: 0,
@@ -38,17 +39,14 @@ BurnsWorlds.register({
     { id: 'vibe', name: 'Vibe Check', type: 'stealth', requires: ['dress'], giver: 'coach', start: 'manual', short: 'Sneak past the lookouts to the bike clinic', marker: { x: -36, z: 40 },
       target: { x: 40, z: 40, r: 4.5 }, desc: 'The Man\'s lookouts patrol the street to the bike clinic. Stay out of their sight cones. Duck behind shade, cars and crowds.', hint: 'The Lookout Line, the street east of the Cult',
       onStart(g) { BURNS_W3.vibeStart(g); }, onFail(g) { BURNS_W3.vibeReset(g); } },
-    { id: 'hunt', name: 'Yellow Bike Hunt', type: 'custom', requires: ['vibe'], giver: 'wanda', start: 'manual', short: 'Follow the yellow ribbons', marker: { x: 0, z: -40 },
-      desc: 'Community bikes are yellow. Wrench Wanda tied yellow ribbons from her clinic out to where she last saw one.', hint: 'From the bike clinic, out onto the open playa',
-      onStart(g) { BURNS_W3.ribbon(g, 0); } },
-    { id: 'flat', name: 'Fix a Flat', type: 'custom', requires: ['hunt'], giver: 'wanda', start: 'manual', count: 2, progressLabel: 'Bike parts', short: 'Find a patch kit and a pump', marker: { x: -30, z: 0 },
-      desc: 'The yellow bike has a flat. Find a patch kit (the Free Store) and a pump (somebody stacked bike crates way up high), then fix it at the Bike Henge.', hint: 'Free Store west of the Henge; the crate tower to the east',
+    { id: 'flat', name: 'Fix a Flat', type: 'custom', requires: ['thief'], giver: 'wanda', start: 'auto', count: 2, progressLabel: 'Bike parts', short: 'Find a patch kit and a pump', marker: { x: -30, z: 0 },
+      desc: 'You got your bike back, with a flat: the thief took a shortcut through the Thorn Garden. Find a patch kit (the Free Store) and a pump (somebody stacked bike crates way up high), then fix it at the Bike Henge repair stand.', hint: 'Free Store west of the Henge; the crate tower to the east',
       onStart(g) { BURNS_W3.labels(g, 'flat', null); },
       onEvent(g, m, name, P) { if (name === 'pickup' && P.mission === 'flat') { m.n++; g.toast(m.n >= 2 ? 'GOT BOTH! FIX THE BIKE AT THE HENGE' : `Bike parts: ${m.n}/2`); return true; } } },
-    { id: 'thief', name: 'The Bike Thief', type: 'custom', requires: ['flat'], start: 'manual', short: 'Catch the bike thief! Spin or stomp him', marker: { x: 0, z: -40 },
-      desc: 'Somebody just rode off on YOUR yellow bike. Chase him down and spin or stomp him off it.', hint: 'He loops around the open playa', failOnFaint: false },
-    { id: 'ride', name: 'First Ride', type: 'custom', requires: ['thief'], giver: 'spokes', start: 'manual', time: 60, short: 'Ride the gates: loop the semi, launch the trailer!', marker: { x: 40, z: -44 },
-      desc: 'Coach Spokes\' First Ride course runs through the Knotted Semi. Ride through every gate in order: the loop-de-loop, then launch off the trailer.', hint: 'The Knotted Semi, open playa east',
+    { id: 'thief', name: 'Bike Thief!', type: 'custom', start: 'auto', short: 'Catch the bike thief! Spin or tackle him', marker: { x: 0, z: -40 },
+      desc: 'You parked your yellow bike for ten seconds and somebody rode off on it. Chase him down and spin or tackle him off it. He stops for selfies.', hint: 'He rides out to the open playa and loops around the Bike Henge', failOnFaint: false },
+    { id: 'ride', name: 'Test Ride', type: 'custom', requires: ['flat'], giver: 'spokes', start: 'manual', time: 60, short: 'Ride the gates: loop the semi, launch the trailer!', marker: { x: 40, z: -44 },
+      desc: 'Coach Spokes\' test-ride course runs through the Knotted Semi. Ride through every gate in order: the loop-de-loop, then launch off the trailer.', hint: 'The Knotted Semi, open playa east',
       onStart(g) { BURNS_W3.rideStart(g); }, onFail(g) { BURNS_W3.rideReset(g); },
       onEvent(g, m, name, data) {
         const R = BURNS_W3.state.ride; if (!R) return;
@@ -133,9 +131,11 @@ BurnsWorlds.register({
       S.bikeMv.x = hx + 0.6; S.bikeMv.z = hz + 1.4; S.bikeMv.yaw = 1.2; S.bikeMv.roll = 0.32;
       api.light(hx, hz, 13, '#ffe28a', 0.25);
       api.checkpoint('cp_henge', hx - 6, hz + 14, { yaw: Math.PI, name: 'Bike Henge' });
-      // ribbon trail (appears during the hunt)
-      const RB = [[44, 26], [30, 10], [18, -6], [8, -22], [hx + 1, hz + 2]];
-      RB.forEach(([x, z], i) => { S.ribbons.push({ x, z, i }); api.mesh(x, z, m => { m.color('#8a6a3a'); BW.post(m, 0, 0, 0, 0.06, 2.0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.08, y0: 0, y1: 2.0, camPass: true }] }; }); });
+      S.stand = { x: hx + 0.6, z: hz + 1.4 };   // the repair stand where the flat gets fixed
+      // the bike rack by the spawn: where Brady parks for ten whole seconds
+      S.rack = { x: -21.5, z: 94.5, yaw: Math.PI / 2 };
+      api.mesh(S.rack.x, S.rack.z, m => { m.color('#9a9aa2').shine(2); for (const zz of [-1.2, 0, 1.2]) { BW.limb(m, 0, 0, zz - 0.35, 0, 0.75, zz - 0.35, 0.035); BW.limb(m, 0, 0.75, zz - 0.35, 0, 0.75, zz + 0.35, 0.035); BW.limb(m, 0, 0.75, zz + 0.35, 0, 0, zz + 0.35, 0.035); } m.shine(0); return { cols: [{ t: 'box', x: 0, z: 0, hx: 0.12, hz: 1.6, y0: 0, y1: 0.8 }] }; });
+      api.sign('BIKE PARKING\n(UNLOCKED. TRUST.)', S.rack.x - 1.6, S.rack.z - 2.4, { h: 0.8, yaw: Math.PI / 2, style: { bg: '#ffd21a', fg: '#1a1a10', size: 21, border: '#1a1a10' } });
       api.pickup('photo', hx, 3.5, hz, { id: 'p1' });
       api.glowArc(hx - 10, 2.7, hz, hx, 3.4, hz, 1.2, 5);
     }
@@ -171,7 +171,7 @@ BurnsWorlds.register({
     api.checkpoint('cp_start', -14, 94, { yaw: Math.PI, name: 'Hammock Camp' });
     api.mesh(-24, 104, m => { m.color('#5a4a3a'); BW.post(m, -2.4, 0, 0, 0.1, 2.0); BW.post(m, 2.4, 0, 0, 0.1, 2.0); m.color('#ff9a3a'); BW.tube(m, [[-2.3, 1.7, 0], [-1.2, 1.0, 0], [0, 0.85, 0], [1.2, 1.0, 0], [2.3, 1.7, 0]], 0.18); return { cols: [] }; });
     api.npc({ id: 'gina', name: 'GREETER GINA', type: 'greeter', seed: 77, x: -16, z: 98, yaw: Math.PI,
-      lines: ['Morning, sunshine! You slept in our hammock. That makes you family.', 'Word on the playa: a giant wooden guy is looking for a dude with a man bun. That\'s... you, huh?', 'You need a disguise, honey. The Costume Cult is west. They\'ll make you unrecognizable.'], gift: { kind: 'glowstick', n: 10 } });
+      lines: ['Morning, sunshine! Welcome to the block! ...Was that your bike? Was.', 'Word on the playa: a giant wooden guy is looking for a dude with a man bun. That\'s... you, huh?', 'You need a disguise, honey. The Costume Cult is west. They\'ll make you unrecognizable.'], gift: { kind: 'glowstick', n: 10 } });
     // someone brought their mom (she is having the best week of anyone here)
     api.npc({ id: 'mom', name: 'BURNER MOM', type: 'burnermom', seed: 2, x: -6, z: 96, yaw: -2.4, behavior: 'idle', anim: 'cheer', chatter: true,
       talk(g2, a) {

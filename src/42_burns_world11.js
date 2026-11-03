@@ -1,5 +1,5 @@
 /* ============================================================
-   BRADY GOES TO BURNING MAN — World 11: SOUND CAMP CRAWL (plays 7th, after the art car hunt)
+   BRADY GOES TO BURNING MAN — World 11: SOUND CAMP CRAWL (Thursday night; plays 9th, after the art car hunt)
    Night on the 10:00 and 2:00 sides of the city: sound camps, lasers, bikes.
    Someone saw where the Man took Chinka: a DJ. The first DJ Brady finds is the
    wrong one (DJ Loophole, who loses a DJ-off and points him to DJ Alkali).
@@ -10,6 +10,9 @@
      dome      Bungee Bout     Thunderdome: win a bungee foam-bat duel           -> Champion Skull Buckle
    Plus: djoff (BurnsDJ vs DJ Loophole), heckle (out-heckle Crusty Curt),
    set (the headline set at the Wobble Dome, BurnsDJ; B or better wins the world).
+   Extra venues (side content, no tokens): The Deep End (pool-party day camp with a
+   high dive: Lifeguard Lou scores your cannonball), Playground (huge main stage +
+   lounge; the founder is a name on the schedule board only) and Disorient.
    Side: light up the darkwads on the dark playa path.
    Real camps (Root Society, Opulent Temple, Camp Question Mark, Death Guild's
    Thunderdome) appear by name only on our own original structures.
@@ -112,6 +115,7 @@ BurnsWorlds.register({
   ground: { base: '#b4977c', crack: 0.22, mottle: 0.38, res: 0.5 },
   dust: 0.6,
   bike: true,
+  dayCard: false,   // the intro shows the day card itself; onStart shows it on return visits
   missions: [
     { id: 'quest', name: 'Find the Right DJ', short: 'Find the DJ who saw the Man', type: 'custom', token: false, start: 'auto', silent: true, marker: { x: -150, z: 40 },
       desc: 'One DJ saw where the Man went. Start with the loudest camp. You can\'t miss him.', hint: 'Camp Make Some Noise, by the 10:00 plaza',
@@ -389,7 +393,7 @@ BW11.buildPickups = function (api, g) {
   api.glowArc(V.x - 9, 0.9, V.z - 6, V.x - 2.4, 1.6, V.z - 4.6, 0.6, 5);
   // the lit Esplanade and the dark shortcut
   const tmp = {}, EL = BW11.plen(P.esp);
-  for (let s = 40; s < EL - 40; s += 15) { BW11.along(P.esp, s, tmp); if (Math.abs(tmp.x) < 150) api.pickup('glowstick', tmp.x, 0.9, tmp.z); }
+  for (let s = 40; s < EL - 40; s += 17) { BW11.along(P.esp, s, tmp); if (Math.abs(tmp.x) < 150) api.pickup('glowstick', tmp.x, 0.9, tmp.z); }
   const DL = BW11.plen(S.darkPath);
   for (let s = 6; s < DL - 4; s += 10) { BW11.along(S.darkPath, s, tmp); api.pickup('glowstick', tmp.x, 0.9, tmp.z); }
   api.glowRing(QF.x, QF.z, QF.r + 1.5, 14); api.glowArc(P.qm.x - 3, 0.9, P.qm.z + 3, P.qm.x, 3.4, P.qm.z, 1.2, 4);
@@ -398,7 +402,7 @@ BW11.buildPickups = function (api, g) {
   api.glowLine(118, -40, 140, -64, 6);
   // the extra venues: a ring each, and a trail up the high dive
   const DF = P.deepFloor, PF = P.playFloor, DSF = P.disFloor, DV = P.dive;
-  api.glowRing(DF.x, DF.z, DF.r + 1.4, 8); api.glowRing(PF.x, PF.z, PF.r + 1.6, 8); api.glowRing(DSF.x, DSF.z, DSF.r + 1.4, 8);
+  api.glowRing(DF.x, DF.z, DF.r + 1.4, 7); api.glowRing(PF.x, PF.z, PF.r + 1.6, 7); api.glowRing(DSF.x, DSF.z, DSF.r + 1.4, 7);
   api.glowsticks([[DV.x + 0.75, 2.9, DV.z], [DV.x - 0.75, 4.9, DV.z], [DV.x + 0.75, 6.9, DV.z + 1.0]]);
 };
 
@@ -409,7 +413,11 @@ BW11.onStart = function (g) {
   if (BurnsSave.hasToken(11, 'usb') || g.missions.isDone('usb')) S.usbFree = true;
   S.bassOn = BurnsSave.hasToken(11, 'cable');
   if (!BurnsSave.flag(11, 'intro')) BW11.intro(g);
-  else g.banner('SOUND CAMP CRAWL', g.missions.isDone('quest') ? 'Bring DJ Alkali her four offerings' : 'Find the DJ who saw the Man', { col: '#7aff5a' });
+  else {
+    // the day card names the night and the world; the objective follows once it fades
+    g.dayCard();
+    BW11.after(g, 4.0, g2 => { if (g2.missions.isDone('set')) return; g2.banner(g2.missions.isDone('quest') ? 'FOUR OFFERINGS' : 'FIND THE RIGHT DJ', g2.missions.isDone('quest') ? 'Bring DJ Alkali her four offerings' : 'Find the DJ who saw the Man', { col: '#7aff5a' }); });
+  }
 };
 BW11.update = function (g, dt) {
   const S = BW11.state, p = g.player, P = BW11.P;
@@ -486,7 +494,7 @@ BW11.intro = function (g) {
   g.cutscene([
     { music: g.def.music },
     { cam: c0 },
-    { banner: [BurnsWorlds.label(11).toUpperCase(), 'SOUND CAMP CRAWL · THURSDAY NIGHT', { col: '#7aff5a', big: true, dur: 3 }] },
+    { do: g2 => g2.dayCard() },
     { cam: { from: c0, to: c1, dur: 3.6 } },
     { cam: { from: c1, to: c2, dur: 2.4 } },
     { say: ['brady', ['El Pulpo is running on fumes. Yellow bike it is.', 'Root Society\'s on the 10:00 side. Home camp\'s got my back.', 'Somewhere out here, somebody saw where the Man took Chinka.']] },

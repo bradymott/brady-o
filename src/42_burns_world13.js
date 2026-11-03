@@ -147,7 +147,7 @@ BurnsWorlds.register({
     });
     /* ---------------- interactables ---------------- */
     g.interactables = [];
-    api.trigger({ x: BW13.NAPDOOR.x + 3, z: BW13.NAP.z, r: 3.5, once: true, when: g2 => g2.missions.state('nap') === 'available', onEnter: g2 => { g2.missions.start('nap', true); g2.banner('HIDDEN CHALLENGE', 'Advanced Napping: lie still on the golden mat.', { col: '#ffd84a' }); } });
+    api.trigger({ x: BW13.NAPDOOR.x + 3, z: BW13.NAP.z, r: 3.5, once: true, when: g2 => g2.missions.state('nap') === 'available' && !g2.cine && g2.missions.state('contact') !== 'active', onEnter: g2 => { g2.missions.start('nap', true); g2.banner('HIDDEN CHALLENGE', 'Advanced Napping: lie still on the golden mat.', { col: '#ffd84a' }); } });
   },
   onStart(g) {
     const S = BW13.state, p = g.player;
@@ -1064,7 +1064,7 @@ BW13.updateExercise = function (g, dt) {
     return;
   }
   if (E.phase === 'call') {
-    E.meter = Math.max(0, E.meter - dt * 0.18);
+    E.meter = Math.max(0, E.meter - dt * 0.1);   // forgiving: slow tappers still get there
     if (pressed) { E.meter = Math.min(1, E.meter + 0.13); burnsSfx('dialogue_blip', { vol: 0.25, pitch: 0.6 + E.meter }); g.fx.hearts(p.x, p.y + 1.4, p.z, 1); }
     const lines = [[0.3, 'Louder, honey!'], [0.6, 'From the heart!'], [0.85, 'From the BUN!']];
     for (const [th, l] of lines) if (E.meter >= th && E.cheer < th) { E.cheer = th; if (pearl) pearl.say(l, 1.4); }
