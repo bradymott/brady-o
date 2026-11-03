@@ -112,7 +112,11 @@ class TourMapScene {
     T.seen[at] = true;
     this.cam = { lon: this.plane.lon, lat: this.plane.lat, z: 5 };
     this.drag = null;
-    Sound.music(Tour.countries[this.sel] && Tour.countries[this.sel].music.map || 'map');
+    Sound.music((Tour.countries[this.sel] && Tour.countries[this.sel].music.map) || ((Sound.trackNames || []).indexOf('tour_map') >= 0 ? 'tour_map' : 'map'));
+    // the very first visit: Chinka's first postcard
+    const C0 = Tour.countries[this.sel];
+    if (C0 && !T.cards) { T.cards = {}; }
+    if (C0 && !this.flight && !T.cards[C0.id]) { T.cards[C0.id] = true; this.card = tourArrivalCard(C0); Save.save(); }
     this.build();
   }
   resize() { this.build(); }
@@ -182,7 +186,9 @@ class TourMapScene {
       if (f.k >= 1) {
         this.flight = null; this.sel = f.id; this.layoutPanel();
         const T = TourProgress.data(), C = Tour.countries[f.id];
-        if (C && !T.seen[f.id]) { T.seen[f.id] = true; T.at = f.id; Save.save(); this.toast('WELCOME TO ' + C.name.toUpperCase() + '!'); Sound.play('checkpoint'); }
+        if (C && !T.seen[f.id]) { T.seen[f.id] = true; T.at = f.id; this.toast('WELCOME TO ' + C.name.toUpperCase() + '!'); Sound.play('checkpoint'); }
+        if (C && !(T.cards = T.cards || {})[f.id]) { T.cards[f.id] = true; this.card = tourArrivalCard(C); }
+        Save.save();
       }
     }
     // the camera follows the plane while flying, otherwise the selected stop
@@ -198,6 +204,8 @@ class TourMapScene {
         this.drag = { x: tc.x, y: tc.y };
       }
     } else { this.drag = null; this.dragged = 0; }
+    // Chinka's postcard: any tap puts it away
+    if (this.card) { if (Input.taps.length || Input.uiKey === 'enter' || Input.jumpPressed) { this.card = null; Sound.play('cardFlip'); } return; }
     // taps
     for (const tp of Input.taps) {
       const b = this.backBtn; if (tp.x >= b.x && tp.x <= b.x + b.w && tp.y >= b.y && tp.y <= b.y + b.h) { b.fn(); return; }
@@ -218,6 +226,7 @@ class TourMapScene {
   }
   draw(ctx) {
     const W = Game.cssW, H = Game.cssH, R = this.mapR, z = this.cam.z, t = this.t;
+    ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
     ctx.save();
     // the ocean
     const og = ctx.createLinearGradient(0, 0, 0, H); og.addColorStop(0, '#1d6fc4'); og.addColorStop(1, '#0c3d86');
@@ -263,12 +272,34 @@ class TourMapScene {
     ctx.fillText(`${tot.done}/${tot.total} levels  ·  ${tot.gold}/${tot.goldTotal} postcards`, this.backBtn.x + this.backBtn.w + 12, this.backBtn.y + 28);
     ctx.restore();
     this.drawPanel(ctx);
+    if (this.card) this.drawCard(ctx);
     if (this.toastT > 0) {
       ctx.save(); ctx.globalAlpha = Math.min(1, this.toastT * 2); ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const tw = ctx.measureText(this.toastMsg).width + 30, cx = R.x + R.w / 2, cy = R.y + R.h - 30;
       ctx.fillStyle = 'rgba(10,8,24,0.8)'; rr(ctx, cx - tw / 2, cy - 15, tw, 30, 15); ctx.fill();
       ctx.fillStyle = '#ffd84a'; ctx.fillText(this.toastMsg, cx, cy + 1); ctx.restore();
     }
+    ctx.restore();
+  }
+  // a postcard from Chinka, laid over the map
+  drawCard(ctx) {
+    const W = Game.cssW, H = Game.cssH, C = Tour.countries[this.sel] || {}, cols = C.colors || { a: '#ff4f8a', b: '#38c8ff', c: '#ffd84a' };
+    ctx.save(); ctx.fillStyle = 'rgba(6,10,30,0.55)'; ctx.fillRect(0, 0, W, H);
+    const cw = Math.min(W - 40, 460), ch = Math.min(H - 60, 230), x = (W - cw) / 2, y = (H - ch) / 2;
+    ctx.translate(W / 2, H / 2); ctx.rotate(-0.02 + Math.sin(this.t * 1.5) * 0.008); ctx.translate(-W / 2, -H / 2);
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 24; ctx.fillStyle = '#fffaf0'; rr(ctx, x, y, cw, ch, 6); ctx.fill(); ctx.shadowBlur = 0;
+    // the picture side: a sunset band in the country's colors
+    const g = ctx.createLinearGradient(0, y, 0, y + ch); g.addColorStop(0, cols.b); g.addColorStop(1, cols.c);
+    ctx.fillStyle = g; ctx.fillRect(x + 12, y + 12, cw * 0.36, ch - 24);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = `${Math.min(18, cw / 18)}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText((C.name || '').toUpperCase(), x + 12 + cw * 0.18, y + ch * 0.5);
+    ctx.fillStyle = cols.a; ctx.fillRect(x + cw - 52, y + 14, 38, 44);
+    ctx.strokeStyle = '#ffffff'; ctx.setLineDash([2, 2]); ctx.strokeRect(x + cw - 49, y + 17, 32, 38); ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(60,40,80,0.25)'; ctx.lineWidth = 1; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.moveTo(x + cw * 0.42, y + 76 + k * 26); ctx.lineTo(x + cw - 18, y + 76 + k * 26); ctx.stroke(); }
+    ctx.fillStyle = '#3a2a5a'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'left'; ctx.fillText(this.card.title, x + cw * 0.42, y + 34, cw * 0.4);
+    ctx.font = `italic ${Math.min(14, cw / 30)}px ${FONT_UI}`; ctx.fillStyle = '#2a2a4a'; ctx.textAlign = 'center';
+    tourWrapText(ctx, this.card.text, x + cw * 0.42 + (cw * 0.58 - 18) / 2, y + ch * 0.58, cw * 0.55 - 18, 19);
+    ctx.font = `9px ${FONT_DISPLAY}`; ctx.fillStyle = 'rgba(60,40,90,0.7)'; ctx.fillText('TAP TO CONTINUE', x + cw * 0.7, y + ch - 14);
     ctx.restore();
   }
   arc(ctx, a, b, col, dash) {

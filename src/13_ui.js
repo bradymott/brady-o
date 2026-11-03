@@ -105,6 +105,13 @@ function startGame(id) {
     if (B) Game.setScene(new B());
     else if (Game.scene && Game.scene.toastMsg !== undefined) Game.scene.toastMsg = 'BRADY-O BURNS IS STILL BEING BUILT';
   } else if (id === 'world') {
+    // Super Brady-O World: the trip around the world
+    if (typeof Tour !== 'undefined') {
+      const go = () => goToMap('world');
+      if (!Save.data.seenTourIntro) Game.setScene(new StoryScene(TourIntroPanels(), () => { Save.data.seenTourIntro = true; Save.save(); go(); }, (Sound.trackNames || []).indexOf('tour_title') >= 0 ? 'tour_title' : 'story'));
+      else go();
+      return;
+    }
     const go = () => goToMap('world', 41, Save.data.world3 && Save.data.world3.node);
     if (!Save.data.seenWorldIntro) Game.setScene(new StoryScene(worldIntroPanels(), () => { Save.data.seenWorldIntro = true; Save.save(); go(); }, 'sloth'));
     else go();
@@ -124,6 +131,7 @@ function cityMapScene() {
   return window.BRADY_MAP && (window.BRADY_MAP.BRCMapScene || window.BRADY_MAP.Scene) || null;
 }
 function goToMap(set, world, fromId) {
+  if (set === 'world' && typeof TourMapScene !== 'undefined') { Game.setScene(new TourMapScene({ from: fromId })); return; }
   if (set === 'world') {
     const M = cityMapScene();
     if (M) Game.setScene(new M({ from: fromId }));
@@ -132,6 +140,7 @@ function goToMap(set, world, fromId) {
 }
 function isLevelUnlocked(id) { return !!Save.data.unlocked[id] || id === '41-1'; }
 function setProgress(set) {
+  if (set === 'world' && typeof TourProgress !== 'undefined') { const tt = TourProgress.totals(); return { done: tt.done, total: tt.total }; }
   let done = 0, total = 0;
   for (const w of WORLD3_REGIONS) {
     if (((WORLDS[w].set) || 'road') !== set) continue;
@@ -227,6 +236,7 @@ class TitleScene {
     let prog = '';
     if (c.id === 'kart') { const k = Save.data.kart; const tr = k && k.trophies ? Object.keys(k.trophies).length : 0; prog = tr ? tr + ' trophies' : '8 racers · 8 tracks'; }
     else if (c.id === 'burns') { const b = Save.data.burns; const tk = b && b.tokens ? Object.keys(b.tokens).length : 0; prog = tk ? `${tk} burn tokens` : '10 worlds in 3D'; }
+    else if (typeof TourProgress !== 'undefined') { const p = TourProgress.totals(); prog = `${p.done}/${p.total} levels · ${Tour.mainCountries().length} countries`; }
     else { const p = setProgress(c.id); prog = `${p.done}/${p.total} levels`; }
     ctx.font = `${Math.min(11, c.w / 16)}px ${FONT_DISPLAY}`; ctx.fillStyle = c.col; ctx.fillText(prog, c.x + c.w / 2, c.y + c.h - 14);
     ctx.restore();
@@ -248,6 +258,8 @@ class TitleScene {
       ctx.save(); ctx.translate(w * 0.26, h * 0.95); ctx.scale(h / 120, h / 120);
       drawBrady(ctx, { x: 0, y: 0, facing: 1, small: false, power: 0, anim: { state: 'run', t, phase: t * 13, speed: 1 }, hair: null, look: Save.data.look, time: t });
       ctx.restore();
+    } else if (c.id === 'world' && typeof TourTitle !== 'undefined') {
+      TourTitle.cardArt(ctx, t, 0, 0, w, h);
     } else if (c.id === 'world') {
       const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0c0a1e'); g.addColorStop(1, '#2a1a3a');
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
@@ -313,7 +325,7 @@ class TitleScene {
   }
   draw(ctx) {
     const W = Game.cssW, H = Game.cssH;
-    drawMenuBackdrop(ctx, 'esplanade', this.t, 30);
+    drawMenuBackdrop(ctx, (typeof BRADY_APP !== 'undefined' && BRADY_APP === 'world' && THEMES.tour_title) ? 'tour_title' : 'esplanade', this.t, 30);
     ctx.fillStyle = 'rgba(8,4,20,0.35)'; ctx.fillRect(0, 0, W, H);
     drawLogo(ctx, this.logo.x, this.logo.y, this.logo.size, this.t);
     for (const c of this.cards) this.drawCard(ctx, c, this.t);
@@ -588,7 +600,8 @@ class SettingsScene {
   build() {
     const W = Game.cssW, H = Game.cssH, st = Save.data.settings;
     const pw = Math.min(460, W - 40), px = (W - pw) / 2;
-    const rowH = Math.min(50, (H - 140) / 7);
+    const motionRow = typeof TourKit !== 'undefined';   // Super Brady-O World: a reduced-motion switch
+    const rowH = Math.min(50, (H - 140) / (motionRow ? 8 : 7));
     let y = Math.max(70, insets.t + 64);
     const row = (label, value, fn) => { const b = { x: px, y, w: pw, h: rowH - 8, label: `${label}:  ${value}`, size: 13, fn }; y += rowH; return b; };
     const pct = v => Math.round(v * 100) + '%';
@@ -601,6 +614,7 @@ class SettingsScene {
       row('CONTROLS', st.lefty ? 'JUMP ON LEFT' : 'JUMP ON RIGHT', () => { st.lefty = !st.lefty; Game.resize(); this.build(); }),
       row('SCREEN SHAKE', st.shake ? 'ON' : 'OFF', () => { st.shake = !st.shake; this.build(); }),
       row('QUALITY', st.hq ? 'ULTRA' : 'HIGH', () => { st.hq = !st.hq; Game.resize(); this.build(); }),
+      ...(motionRow ? [row('MOTION EFFECTS', TourKit.reduceMotion() ? 'REDUCED' : 'FULL', () => { st.reduceMotion = !TourKit.reduceMotion(); this.build(); })] : []),
       row('RESET PROGRESS', this.confirmReset ? 'TAP AGAIN TO ERASE' : 'ERASE ALL', () => { if (this.confirmReset) { const look = Save.data.look; Save.reset(); Save.data.look = look; Save.save(); this.confirmReset = false; Sound.play('powerdown'); } else this.confirmReset = true; this.build(); })
     ];
     Save.save();
@@ -628,7 +642,7 @@ function buildPauseUI(play) {
   const list = [
     { x, y, w: bw, h: bh + 4, label: 'RESUME', primary: true, fn: () => play.closePause() },
     { x, y: y += 58, w: bw, h: bh, label: 'RESTART LEVEL', fn: () => { play.paused = false; Sound.resume(); Game.setScene(new Play(play.level, {})); } },
-    { x, y: y += 54, w: bw, h: bh, label: play.set === 'world' ? 'CITY MAP' : 'WORLD MAP', fn: () => { play.paused = false; Sound.resume(); Save.save(); goToMap(play.set, play.level.world, play.id); } },
+    { x, y: y += 54, w: bw, h: bh, label: play.level && play.level.tour ? 'WORLD MAP' : play.set === 'world' ? 'CITY MAP' : 'WORLD MAP', fn: () => { play.paused = false; Sound.resume(); Save.save(); goToMap(play.set, play.level.world, play.id); } },
     { x, y: y += 54, w: bw / 2 - 5, h: bh, label: st.music > 0 ? 'MUSIC ON' : 'MUSIC OFF', size: 12, fn: () => { st.music = st.music > 0 ? 0 : 0.6; Sound.setMusicVolume(st.music); Save.save(); play.pauseUI = buildPauseUI(play); } },
     { x: x + bw / 2 + 5, y, w: bw / 2 - 5, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 12, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } }
   ];
@@ -661,11 +675,11 @@ class GameOverScene {
   update(dt) { this.t += dt; if (this.t < 0.8) return; const h = UI.hitButtons(this.btns); if (h) h.fn(); }
   draw(ctx) {
     const W = Game.cssW, H = Game.cssH;
-    drawMenuBackdrop(ctx, 'citadel', this.t, 6);
+    drawMenuBackdrop(ctx, this.level && this.level.tour && THEMES.tour_dusk ? 'tour_dusk' : 'citadel', this.t, 6);
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
     UI.title(ctx, 'GAME OVER', W / 2, H / 2 - 50, Math.min(48, W * 0.09));
     ctx.save(); ctx.textAlign = 'center'; ctx.font = `13px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillText('The Man wins this round. Not the war.', W / 2, H / 2 - 12); ctx.restore();
+    ctx.fillText(this.level && this.level.tour ? 'Baron Bric-a-Brac wins this round. Not the trip.' : 'The Man wins this round. Not the war.', W / 2, H / 2 - 12); ctx.restore();
     UI.drawButtons(ctx, this.btns);
   }
 }
@@ -680,7 +694,7 @@ class CreditsScene {
     const B = (Save.data.burns || {}), nk = o => o ? Object.keys(o).length : 0;
     const bosses = [];
     if (burns) bosses.push('The Man (four times. He really loves her.)', 'The Greeter Gauntlet', 'The Velvet Creeper', 'Chad, Founder & CEO', 'The Glitter Queen', 'DPW Foreman Rusty');
-    else for (const w of WORLD3_REGIONS) { const n = bossName(w); if (n && bosses.indexOf(n) < 0) bosses.push(n); }
+    else if (typeof WORLD3_REGIONS !== 'undefined') for (const w of WORLD3_REGIONS) { const n = bossName(w); if (n && bosses.indexOf(n) < 0) bosses.push(n); }
     // Branding: the Burning Man game never says "Brady-O" (the hero is just Brady).
     const head = burns ? 'BRADY GOES TO BURNING MAN' : this.set === 'world' ? 'SUPER BRADY-O WORLD' : 'BRADY-O';
     const tag = burns ? 'ONE WEEK IN BLACK ROCK CITY' : 'A TRIP AROUND THE WORLD';
@@ -697,12 +711,13 @@ class CreditsScene {
       ] : [
         ['YOUR STATS', 'k'], [`Photos of Chinka: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Man got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
         [g.have >= g.total ? 'Every photo of Chinka. She framed them all.' : 'Some photos of Chinka are still out on the playa...', 's'],
-        [worldUnlocked(50) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', '']
+        [WORLDS[50] && worldUnlocked(50) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', '']
       ]),
 
       ['Leave no trace. Hug your sloth.', 's'], ['', ''], ['', ''],
       ['THANKS FOR PLAYING', 'h']
     ];
+    if (this.set === 'world' && typeof tourCreditsLines !== 'undefined') this.lines = [[head, 'h'], [tag, 'k'], ['', ''], ...tourCreditsLines(), ['THANKS FOR PLAYING', 'h']];
     if (this.set === 'world') { Save.data.beatGame = true; Save.save(); }
     const W = Game.cssW, H = Game.cssH;
     this.btns = [{ x: W - Math.max(14, insets.r + 8) - 110, y: H - Math.max(14, insets.b + 8) - 42, w: 110, h: 40, label: 'MENU ▶', fn: () => Game.setScene(new TitleScene()) }];
@@ -710,7 +725,7 @@ class CreditsScene {
   update(dt) { this.t += dt; const h = UI.hitButtons(this.btns); if (h) h.fn(); if (Math.random() < 0.05) this.fw = { x: Math.random(), y: Math.random() * 0.5, t: 0 }; }
   draw(ctx) {
     const W = Game.cssW, H = Game.cssH;
-    drawMenuBackdrop(ctx, this.set === 'world' ? 'deepplaya' : 'burn', this.t, 25);
+    drawMenuBackdrop(ctx, this.set === 'world' ? (THEMES.tour_dusk ? 'tour_dusk' : 'deepplaya') : 'burn', this.t, 25);
     ctx.fillStyle = 'rgba(6,4,14,0.45)'; ctx.fillRect(0, 0, W, H);
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     let y = H + 20 - this.t * 40;

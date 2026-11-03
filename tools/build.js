@@ -43,7 +43,9 @@ const APPS = {
     dir: 'art-cart', name: 'Art Cart', short: 'Art Cart',
     desc: 'Battle-race wild art cars across the playa: every car has its own weapon.',
     color: '#1a0626', saveKey: 'art-cart-save-v1',
-    files: f => /^(00|01|02|99)_/.test(f) || isKart(f) || KART_DEPS.includes(f)
+    // the shared core, the Burns 3D engine (renderer, meshes, rig, cast, props, world runtime; not its hub 'k' or
+    // title app 'l'), the new 3D Art Cart modules (43_cart_*) and the 2D modules the shared boot code still needs
+    files: f => /^(00|01|02|99)_/.test(f) || isKart(f) || KART_DEPS.includes(f) || (/^40_burns_/.test(f) && !/^40_burns_[kl]_/.test(f))
   }
 };
 // 2D-game modules the other apps still use (UI kit, title scene, portraits…). Trim as the apps separate.

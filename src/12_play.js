@@ -136,6 +136,7 @@ class Play {
     const src = this.level.areas[idx];
     const a = Object.assign({}, src);
     a.tiles = new Uint8Array(src.tiles);
+    if (src.hide) a.hide = new Uint8Array(src.hide);   // runtime changes (e.g. mime blocks) stay out of the cached level
     a.contents = Object.assign({}, src.contents);
     a.multi = {}; a.bumps = []; a.crumbles = []; a.idx = idx;
     a.zones = (src.zones || []).map(z => Object.assign({}, z));
@@ -725,7 +726,7 @@ class Play {
         const hv = hide ? hide[y * A.W + x] : 0;
         if (!fg && beatAt && beatAt[y * A.W + x]) { this.drawBeatPad(ctx, beatAt[y * A.W + x], x, y, camX, camY, S); continue; }
         if (id === T.EMPTY) continue;
-        if (hv === 1) continue;
+        if (hv === 1 || hv === 3) continue;
         if (hv === 2) { if (!fg && lsd) this.drawTripTile(ctx, x, y, camX, camY, S); continue; }
         if (fg !== (id === T.FAKE || id === T.WATER)) continue;
         const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S);
@@ -798,6 +799,7 @@ class Play {
   drawBeatPad(ctx, k, x, y, camX, camY, S) {
     const dx = (x * TS - camX) * S, dy = (y * TS - camY) * S, w = TS * S;
     const on = this.area.tiles[y * this.area.W + x] === T.SEMI;
+    if (typeof TOUR_BEAT_ART !== 'undefined' && TOUR_BEAT_ART[k.kind]) { ctx.save(); ctx.translate(dx, dy); ctx.scale(S, S); TOUR_BEAT_ART[k.kind](ctx, k, on, !!(k.warn && Math.floor(this.t * 16) % 2 === 0), this.t); ctx.restore(); return; }
     const pal = { beat: ['#ff4fd8', '#38f2ff'], strobe: ['#ffffff', '#c8d8ff'], page: ['#fffaf0', '#f4ecdc'] }[k.kind] || ['#ff4fd8', '#38f2ff'];
     const col = pal[k.grp ? 1 : 0];
     if (!on) { ctx.strokeStyle = rgba(col, 0.35); ctx.lineWidth = 1.2 * S; ctx.setLineDash([3 * S, 3 * S]); ctx.strokeRect(dx + 2 * S, dy + 1 * S, w - 4 * S, 8 * S); ctx.setLineDash([]); return; }
@@ -871,7 +873,7 @@ class Play {
       ledtree: [95, null, -52], firebarrel: [125, '#ff8a2a', -24], candles: [60, '#ffc070', -14], campsignN: [64, '#ff4fd8', -42], disco: [90, '#ffffff', -34],
       fireart: [110, '#ff7a2a', -50], elbike: [44, null, -12], neonsign: [70, '#ff4fd8', -50], smallart: [64, null, -22], altar: [60, '#ffc070', -24], steamvent: [40, '#c8fff4', -20] };
     for (const d of A.decor) {
-      const L = DL[d.kind]; if (!L || d.x < camX - 140 || d.x > camX + VW + 140) continue;
+      const L = DL[d.kind] || (typeof TOUR_DECOR_LIGHTS !== 'undefined' && TOUR_DECOR_LIGHTS[d.kind]); if (!L || d.x < camX - 140 || d.x > camX + VW + 140) continue;
       lights.push({ x: d.x, y: d.y + L[2], r: L[0], col: L[1] || GLOW_COLS[Math.floor(d.x / 7 + this.t * (d.kind === 'ledtree' ? 2 : 0)) % 5], a: 0.55 });
     }
     const x0 = Math.max(0, Math.floor(camX / TS) - 2), x1 = Math.min(A.W - 1, Math.floor((camX + VW) / TS) + 2);
@@ -955,7 +957,7 @@ class Play {
       if (sp) {
         ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); if (sp.icon) sp.icon(ctx, 0, 0, this.t); ctx.restore();
         if (sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
-      } else { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = `6px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('SOUVENIR', px0 + 17, hy + 15); ctx.textAlign = 'left'; }
+      } else { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); TourKit.star(ctx, px0 + 17, hy + 14, 7, 3, 5); ctx.fill(); }
     } else {
     this.packRect = { x: px0, y: hy - 2, w: 34, h: 32 };
     ctx.fillStyle = this.player.pack ? 'rgba(40,20,60,0.75)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();

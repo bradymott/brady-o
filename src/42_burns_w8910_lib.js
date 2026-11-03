@@ -664,4 +664,4 @@ const BURNS_W8910_ARCH = {
 })();
 
 /* test hook: lets the scripted playthroughs peek at world state (read-only use) */
-try { if (typeof window !== 'undefined' && window.BRADY_BURNS) window.BRADY_BURNS.w8910 = () => ({ w8: typeof BURNS_W8 !== 'undefined' ? BURNS_W8 : null, w9: typeof BURNS_W9 !== 'undefined' ? BURNS_W9 : null, w10: typeof BURNS_W10 !== 'undefined' ? BURNS_W10 : null }); } catch (e) { /* ignore */ }
+try { if (typeof window !== 'undefined' && window.BRADY_BURNS) window.BRADY_BURNS.w8910 = () => ({ w8: typeof BURNS_W8 !== 'undefined' ? BURNS_W8 : null, w9: typeof BURNS_W9 !== 'undefined' ? BURNS_W9 : null, w10: typeof BURNS_W10 !== 'undefined' ? BURNS_W10 : null, credits: typeof BurnsW8910Credits !== 'undefined' ? BurnsW8910Credits : null }); } catch (e) { /* ignore */ }

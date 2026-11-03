@@ -49,9 +49,9 @@ const painters = {
   },
   // strings of papel picado: cut-paper flags across the street
   mxPapel(ctx, L, rng, H) {
-    for (let s = 0; s < 3; s++) {
-      const y0 = L.base + s * 34, sag = 18 + rng() * 10;
-      for (let x = 0; x < BG_W; x += 64) {
+    for (let s = 0; s < 2; s++) {
+      const y0 = L.base + s * 46, sag = 16 + rng() * 10;
+      for (let x = s * 40; x < BG_W + s * 40; x += 96 + s * 32) {
         const yy = k => y0 + Math.sin(k * Math.PI) * sag;
         ctx.strokeStyle = 'rgba(60,40,60,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y0); ctx.quadraticCurveTo(x + 32, y0 + sag * 2, x + 64, y0); ctx.stroke();
         for (let k = 0; k < 4; k++) {

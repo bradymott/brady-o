@@ -29,6 +29,10 @@ const TOUR_ROUTE = [
 // Level styles: each level picks one so a country's levels play differently.
 //   run    side-scroller          auto   auto-scroll chase       ride   ride a moving vehicle
 //   swim   underwater             climb  vertical climb          castle boss fortress (arena at the end)
+// decor that glows in dark levels: kind -> [radius, color, y offset]
+const TOUR_DECOR_LIGHTS = {};
+// art for timed platforms made with st.B.beat(..., kind): kind -> fn(ctx, pad, on, warn, t), drawn in a 32x32 tile box
+const TOUR_BEAT_ART = {};
 const TOUR_STYLE_PLAN = { run: 'ow', night: 'ow', auto: 'auto', ride: 'auto', swim: 'water', climb: 'tower', castle: 'castle', puzzle: 'under' };
 
 const Tour = {
@@ -56,6 +60,8 @@ const Tour = {
     if (def.painters) Object.assign(BGPaint, def.painters);
     if (def.dyn) Object.assign(BGDyn, def.dyn);
     if (def.decor) Object.assign(Decor, def.decor);
+    if (def.decorLights) Object.assign(TOUR_DECOR_LIGHTS, def.decorLights);
+    if (def.beatArt) Object.assign(TOUR_BEAT_ART, def.beatArt);
     if (def.platforms) Object.assign(PlatformArt, def.platforms);
     // enemies: spawn type -> class (or a factory)
     if (def.enemies) for (const k in def.enemies) {
