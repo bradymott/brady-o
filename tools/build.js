@@ -146,9 +146,11 @@ const copyModels = (appDir, outDir) => {
   const src = path.join(root, 'assets', 'models', appDir);
   if (!fs.existsSync(src)) return [];
   const names = fs.readdirSync(src).filter(f => f.endsWith('.glb')).sort();
-  if (names.length) fs.mkdirSync(outDir, { recursive: true });
+  fs.mkdirSync(outDir, { recursive: true });
   for (const f of names) fs.copyFileSync(path.join(src, f), path.join(outDir, f));
-  return names;
+  // the index tells the game which models exist, so it never requests a missing one
+  fs.writeFileSync(path.join(outDir, 'index.json'), JSON.stringify(names));
+  return names.concat('index.json');
 };
 const copyFontLicences = (dir) => {
   for (const f of ['OFL-bungee.txt', 'OFL-rubik.txt']) {
