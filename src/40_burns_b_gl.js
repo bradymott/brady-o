@@ -157,6 +157,38 @@ vec3 bTrip(vec3 c, vec3 w) {
 
 const BURNS_GLSL_POSTVS = `attribute vec2 aPos; varying vec2 vUV; void main(){ vUV = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`;
 
+// the static mesh fragment shader (merged chunks and instanced props share it)
+const BURNS_GLSL_MESHFS = `precision highp float;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
+uniform sampler2D uTex;
+uniform float uAlphaK;
+${BURNS_GLSL_LIGHT}
+void main(){
+  vec4 t = texture2D(uTex, vT);
+  vec3 alb = bLin(vC.rgb * (1.0 - t.a) + t.rgb);
+  vec3 n = normalize(vN);
+#ifdef BUMP
+  vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.004);
+  n = t.a > 0.02 ? nb : n;
+#endif
+  float e = vC.a;
+  float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
+  vec3 c = mix(bShade(alb, n, vW, vG, 0.25, sh), alb * uEmB, e);
+  if (uTrip > 0.0) c = bTrip(c, vW);
+  gl_FragColor = bOut(bFogMix(c, vW, e) * uAlphaK, uAlphaK);
+}`;
+// instanced static props: aI0 = (x, y, z, yaw), aI1 = (scale, tint r, g, b); rotation matches BurnsMesh.tf / place()
+const BURNS_GLSL_MESHVS_I = `attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV; attribute vec4 aI0; attribute vec4 aI1;
+uniform mat4 uVP;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
+void main(){
+  float c = cos(aI0.w), s = sin(aI0.w);
+  vec3 p = aPos * aI1.x;
+  vW = vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z) + aI0.xyz;
+  vN = vec3(c * aNrm.x + s * aNrm.z, aNrm.y, -s * aNrm.x + c * aNrm.z);
+  vC = vec4(aCol.rgb * aI1.yzw, aCol.a); vT = aUV; vG = floor(aBone / 64.0 + 0.01) / 3.0;
+  gl_Position = uVP * vec4(vW, 1.0);
+}`;
 const BurnsGL = {
   canvas: null, gl: null, gl2: false, failed: false, lost: false, gen: 0, progs: null, maxBones: 32,
   failReason: '', tier: 'legacy', T: null, hdr: false, msaa: 0,
@@ -189,7 +221,7 @@ const BurnsGL = {
   setup() {
     const gl = this.gl;
     this.gen++;
-    this.enabled = [false, false, false, false, false, false];
+    this.enabled = [false, false, false, false, false, false, false, false];
     this.aniso = gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
     this.maxAniso = this.aniso ? gl.getParameter(this.aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT) : 1;
     this.derivs = this.gl2 || !!gl.getExtension('OES_standard_derivatives');
@@ -220,6 +252,10 @@ const BurnsGL = {
     gl.bufferData(gl.ARRAY_BUFFER, this.MAXQ * 4 * 32, gl.DYNAMIC_DRAW);
     this.black = this.rawTexture(2, 2, new Uint8Array(16));
     this.white = this.rawTexture(2, 2, new Uint8Array(16).fill(255));
+    // instanced drawing (WebGL2 core, or ANGLE_instanced_arrays on WebGL1): div(attrib, n), draw(count, byteOffset, instances)
+    const ia = this.gl2 ? null : gl.getExtension('ANGLE_instanced_arrays');
+    this.instGL = this.gl2 ? { div: (i, d) => gl.vertexAttribDivisor(i, d), draw: (c, o, n) => gl.drawElementsInstanced(gl.TRIANGLES, c, gl.UNSIGNED_SHORT, o, n) }
+      : ia ? { div: (i, d) => ia.vertexAttribDivisorANGLE(i, d), draw: (c, o, n) => ia.drawElementsInstancedANGLE(gl.TRIANGLES, c, gl.UNSIGNED_SHORT, o, n) } : null;
   },
   get Q() { return BURNS_GFX.tiers[this.tier] || null; },   // null on the legacy (WebGL1) path
   defines() {
@@ -373,25 +409,8 @@ void main(){
       mesh: this.program(`attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV;
 uniform mat4 uVP;
 varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
-void main(){ vW = aPos; vN = aNrm; vC = aCol; vT = aUV; vG = floor(aBone / 64.0 + 0.01) / 3.0; gl_Position = uVP * vec4(aPos, 1.0); }`, `precision highp float;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
-uniform sampler2D uTex;
-uniform float uAlphaK;
-${BURNS_GLSL_LIGHT}
-void main(){
-  vec4 t = texture2D(uTex, vT);
-  vec3 alb = bLin(vC.rgb * (1.0 - t.a) + t.rgb);
-  vec3 n = normalize(vN);
-#ifdef BUMP
-  vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.004);
-  n = t.a > 0.02 ? nb : n;
-#endif
-  float e = vC.a;
-  float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
-  vec3 c = mix(bShade(alb, n, vW, vG, 0.25, sh), alb * uEmB, e);
-  if (uTrip > 0.0) c = bTrip(c, vW);
-  gl_FragColor = bOut(bFogMix(c, vW, e) * uAlphaK, uAlphaK);
-}`, A),
+void main(){ vW = aPos; vN = aNrm; vC = aCol; vT = aUV; vG = floor(aBone / 64.0 + 0.01) / 3.0; gl_Position = uVP * vec4(aPos, 1.0); }`, BURNS_GLSL_MESHFS, A),
+      meshI: this.program(BURNS_GLSL_MESHVS_I, BURNS_GLSL_MESHFS, A.concat(['aI0', 'aI1'])),
       skin: this.program(`#define MAXB ${MB}
 attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV;
 uniform mat4 uVP; uniform vec4 uB[MAXB * 3]; uniform vec3 uFace;
@@ -467,6 +486,7 @@ void main(){
     const P = this.progs, Q = this.Q;
     if (Q && Q.shadows) {
       P.shMesh = this.program(`attribute vec3 aPos; uniform mat4 uLVP; void main(){ gl_Position = uLVP * vec4(aPos, 1.0); }`, `precision mediump float; void main(){ gl_FragColor = vec4(1.0); }`, ['aPos']);
+      P.shMeshI = this.program(`attribute vec3 aPos; attribute vec4 aI0; attribute vec4 aI1; uniform mat4 uLVP; void main(){ float c = cos(aI0.w), s = sin(aI0.w); vec3 p = aPos * aI1.x; gl_Position = uLVP * vec4(vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z) + aI0.xyz, 1.0); }`, `precision mediump float; void main(){ gl_FragColor = vec4(1.0); }`, ['aPos', 'aNrm', 'aBone', 'aCol', 'aUV', 'aI0', 'aI1']);
       P.shSkin = this.program(`#define MAXB ${MB}
 attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; uniform mat4 uLVP; uniform vec4 uB[MAXB * 3];
 void main(){ int i = int(mod(aBone, 64.0) + 0.5) * 3; vec4 p = vec4(aPos, 1.0); gl_Position = uLVP * vec4(dot(uB[i], p), dot(uB[i + 1], p), dot(uB[i + 2], p), 1.0); }`, `precision mediump float; void main(){ gl_FragColor = vec4(1.0); }`, ['aPos', 'aNrm', 'aBone']);
@@ -639,6 +659,7 @@ void main(){
   // Managed texture: { src: canvas, opts, tex, gen }. Re-uploaded after context loss or when src.dirty.
   tex(T) {
     const gl = this.gl;
+    if (T.mipsDue && T.tex && T.gen === this.gen && !T.dirty && performance.now() > T.mipsDue) { T.mipsDue = 0; gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.generateMipmap(gl.TEXTURE_2D); }
     if (T.tex && T.gen === this.gen && !T.dirty) return T.tex;
     if (!T.tex || T.gen !== this.gen) T.tex = gl.createTexture();
     T.gen = this.gen; T.dirty = false;
@@ -692,7 +713,8 @@ void main(){
   },
   // re-upload one region of a canvas texture (a freshly painted atlas tile) instead of the whole image.
   // Returns false when the texture isn't on the GPU yet or is already due for a full upload.
-  texRegion(T, x, y, w, h) {
+  // lazyMips: rebuild the mip chain a little later (once for a burst of updates, e.g. signs painted while tiles stream)
+  texRegion(T, x, y, w, h, lazyMips) {
     const gl = this.gl;
     if (!gl || !T || !T.tex || T.gen !== this.gen || T.dirty) return false;
     const c = makeCanvas(w, h); c.getContext('2d').drawImage(T.src, x, y, w, h, 0, 0, w, h);
@@ -702,7 +724,7 @@ void main(){
     gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, c);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
     const pot = (T.src.width & (T.src.width - 1)) === 0 && (T.src.height & (T.src.height - 1)) === 0;
-    if (o.mips && (pot || this.gl2)) gl.generateMipmap(gl.TEXTURE_2D);   // same rule as tex(): WebGL1 can't mip a non-power-of-two texture
+    if (o.mips && (pot || this.gl2)) { if (lazyMips) T.mipsDue = performance.now() + 350; else gl.generateMipmap(gl.TEXTURE_2D); }   // same rule as tex(): WebGL1 can't mip a non-power-of-two texture
     return true;
   },
   freeGeo(G) {
@@ -717,7 +739,7 @@ void main(){
   },
   enable(n) {
     const gl = this.gl;
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       const want = i < n;
       if (want !== this.enabled[i]) { if (want) gl.enableVertexAttribArray(i); else gl.disableVertexAttribArray(i); this.enabled[i] = want; }
     }
@@ -1152,6 +1174,37 @@ class BurnsRenderer {
       gl.drawElements(gl.TRIANGLES, c.count, gl.UNSIGNED_SHORT, 0);
       this.stats.draws++; this.stats.tris += c.count / 3;
     }
+  }
+  /* instanced static props (BurnsInstancer): batches [{ geo, data: Float32Array (8 floats a copy: x, y, z, yaw, scale,
+     tint r, g, b), n, dirty }]. One draw per batch; the shadow pass uses the depth-only variant. */
+  instances(batches, env, world, atlasT) {
+    const gl = BurnsGL.gl, I = BurnsGL.instGL;
+    if (!I || !batches || !batches.length) return;
+    const shadow = this.pass === 'shadow', p = shadow ? BurnsGL.progs.shMeshI : BurnsGL.progs.meshI;
+    if (!p) return;
+    gl.useProgram(p.p);
+    if (shadow) gl.uniformMatrix4fv(p.u.uLVP, false, this.LVP);
+    else {
+      this.applyEnv(p, env, world);
+      gl.uniform1f(p.u.uAlphaK, 1);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, BurnsGL.tex(atlasT)); gl.uniform1i(p.u.uTex, 0);
+    }
+    for (const b of batches) {
+      if (!b.n || !b.geo || !b.geo.count) continue;
+      BurnsGL.geo(b.geo);
+      if (!b.ibuf || b.ibufGen !== BurnsGL.gen) { b.ibuf = gl.createBuffer(); b.ibufGen = BurnsGL.gen; b.dirty = true; }
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.geo.vbo); BurnsGL.layoutMesh();
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.ibuf);
+      if (b.dirty) { gl.bufferData(gl.ARRAY_BUFFER, b.data.subarray(0, b.n * 8), gl.DYNAMIC_DRAW); b.dirty = false; }
+      BurnsGL.enable(7);
+      gl.vertexAttribPointer(5, 4, gl.FLOAT, false, 32, 0); gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 32, 16);
+      I.div(5, 1); I.div(6, 1);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b.geo.ibo);
+      I.draw(b.geo.count, 0, b.n);
+      I.div(5, 0); I.div(6, 0);
+      if (shadow) { this.stats.shDraws++; this.shadowStats += b.geo.count / 3 * b.n; } else { this.stats.draws++; this.stats.tris += b.geo.count / 3 * b.n; }
+    }
+    BurnsGL.enable(5);
   }
   skinBegin(env, world, atlasT) {
     const gl = BurnsGL.gl;

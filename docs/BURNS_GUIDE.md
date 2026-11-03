@@ -82,6 +82,10 @@ That's a complete, playable world. The hub lists it automatically once it regist
 | `dayCard` | bool | `false` skips the automatic day card at the start of a visit. Show it yourself later with `g.dayCard()` (for example at the end of your intro cutscene). |
 | `home` | bool | Marks Brady's home world (world 17 already has it). The hub shows it as a tipi pin with a HOME button. |
 | `boardTitle` | string | Title of this world's quest board (§7.1), e.g. `'ROOT SOCIETY JOB BOARD'`. |
+| `tiles` | object | Streams the world in tiles around Brady (open worlds, §19.1). |
+| `open` | bool | Marks the open world (world 500). The title's CONTINUE goes there, and its pause menu shows a fast-travel MAP. |
+| `travel(g, worldId)`, `onResume(g, sub, how)` | fn | Open worlds: the MAP sends Brady to a place; `onResume` runs when an entered place (§19.2) or the map hands control back. |
+| `drawHUD(ctx, g, W, H, S)` | fn | Extra 2D HUD drawn over yours (CSS pixels; `S` holds the safe-area insets). |
 
 ### 3.1 Play order, days of the week and the home world
 
@@ -219,6 +223,13 @@ Optional flags:
 - `api.region(name, x, z, r)`: a named area for your own logic (`g.world.regions[name]`).
 
 ---
+
+### 4.8 Instanced props (one draw for many copies)
+For anything repeated dozens or thousands of times (RVs, tents, lamp posts, people on bikes), define a prototype once and place copies. Each prototype and detail level is one draw call however many copies are visible. The copies are culled by distance and view, then switch detail by distance.
+- `api.instanceProto(id, build, opts)`: `build(m)` runs at full detail and again with `m.lo = true`; `opts.far(m)` builds the cheapest copy. Distances: `near` (full detail to, default 45 m), `mid` (default 140), `farD` (default 320). Also `r` (radius for culling), `shadow: false`, `noAO`, `minD` (never drawn closer: far-city stand-ins), `noCap` (ignores the world's `drawDist`), `cols: false`.
+- `api.instance(id, x, z, { y, yaw, scale, tint: [r, g, b], noCol })` places a copy. The colliders returned by the full-detail build come with every copy (`noCol` skips them). `tint` multiplies the vertex colours, so one RV prototype can come in several shades.
+- `W.instancer().dyn(id)` returns a copy you move yourself every frame (`{x, y, z, yaw, s, on}`): W500's bike riders.
+- Copies made while a tile builds belong to that tile and go away with it (§19.1).
 
 ## 5. Prop library (`api.prop(kind, opts)`)
 
@@ -531,7 +542,7 @@ What each type does automatically:
 
 | type | Completes when… |
 |---|---|
-| `reach` | Brady enters `target`. |
+| `reach` | Brady enters `target`, or (open worlds) the region named by `region` (§19.3). |
 | `race` | Same as `reach`, with `time` set. |
 | `stealth` | `reach`, but any `spotted` event fails it. Use `patrol` enemies. |
 | `ride` | Brady reaches `target` **on a vehicle** (`vehicle` filter). |
@@ -1007,3 +1018,77 @@ Read it top to bottom; it uses almost every feature.
 | 10 The Man Pavilion | Ride in on the yellow bike, in costume, to the final fight. Phase 1 on the saucer, phase 2 giant (neon flash + cover, face fire, arm fireworks). | `api.prop('saucer')`, `man.y` on the deck, cover props on the deck; phase 2 tweens `man.scale`, music `man_giant`; `finishWorld(g => Game.setScene(…ending…))`. |
 
 Have fun. Make it look like a modern mobile game, keep the jokes short, and test on both orientations.
+
+---
+
+## 19. The open world (Black Rock City, world 500)
+
+`src/42_burns_ow_city.js` registers **world 500** (`open: true`), a stylised Black Rock City. Its parts:
+- **The city:** the arc from 2:00 to 10:00 around the Man; the Esplanade (r 300 m) and six lettered streets (Arcade, Bonfire, Carousel, Dreamer, Ember, Firefly, every 45 m); radial streets every half hour; plazas at 3:00 and 9:00 & Bonfire.
+- **Center Camp and the camps:** Center Camp at 6:00, and the big sound camps along the Esplanade (Root Society at 2:00, Opulent Temple at 10:00…).
+- **Around the city:** the Temple toward 12:00, big art on the open and deep playa, the trash fence (a pentagon), Gate Road, the airport and Hell Station.
+- **The layout:** the Man is at (0, 0); 6:00 points to +Z, 12:00 to −Z and 3:00 to +X. `BURNS_OW.at(hour, r)` returns the point at clock `hour` and radius `r`.
+
+The title's CONTINUE (and START, after the prologue) goes straight into the city, at the spot Brady was last time.
+
+### 19.1 Streaming tiles (`def.tiles`)
+```js
+tiles: {
+  size: 160, load: 300, free: 480,   // tile edge; build tiles whose edge is within `load` m of Brady, free them past `free` m
+  budget: 3.5, prime: 120,           // ms of building per frame; tiles built before the first frame (around the spawn)
+  *build(api, g, tile) {             // the ordinary api; yield between pieces to spread the work over frames
+    for (const block of myBlocksIn(tile)) { fill(api, block); yield; }
+  },
+  onLoad(g, tile), onFree(g, tile),  // optional
+  region: (x, z) => 'name', onRegion(g, name, prev)
+}
+```
+A tile owns everything its builder makes:
+- static chunks and colliders;
+- glows, beams, fires, flame jets, mud and light pools (the lightmap is repainted and uploaded just for that area);
+- drivable vehicles, actors from `api.npc`, movers and their groups;
+- ACTION prompts, LSD-ghost geometry and instanced props.
+
+All of it is freed together. Updaters, triggers, markers, checkpoints and pickups stay world-wide, so build those in `def.build` (which still runs once, before the tiles). New signs are uploaded as small atlas regions, so tiles can add them mid-game without a hitch. `g.tiles` is the streamer: `readyCount()`, `prime(x, z, R)` (build now: after a teleport) and `stats` (`built`, `freed`, `worst` ms).
+
+### 19.2 Places: entering a world from the city (`BurnsOpen`)
+- `BurnsOpen.enter(g, worldId, { back: {x, y, z, yaw}, place: 'the Temple' })` plays any world as a **sub-world**. The city stays built (frozen) behind it, and its sign atlas pages are saved.
+- When the sub-world finishes, it shows its results and the story card for the next day, then `BurnsOpen.leave(sub, 'done')` drops Brady back at `back`. Leaving from its pause menu (**LEAVE …**) does the same with `'leave'`.
+- Story worlds don't change at all to become places. Their `finishWorld()` and the pause menu do the right thing when they were entered.
+- `g.parentScene` is the city while you're inside; `BurnsOpen.root()` returns it from anywhere.
+
+World 500 turns the 17 story worlds into places (`BURNS_OW.PLACES`), each with a door, a set piece and an `ENTER: …` prompt:
+
+| Place | World |
+|---|---|
+| Gate Road | 1 |
+| the Red Light RV by Center Camp | 2 |
+| Rhythm Wave | 16 |
+| Root Society, Brady's tipi (HOME) | 17 |
+| the costume camp | 3 |
+| the Orgy Dome | 4 |
+| Costco Soul Trading | 5 |
+| deep playa | 6 |
+| the sound camps | 11 |
+| the heart car | 7 |
+| Hell Station | 8 |
+| the storm | 9 |
+| the Temple | 12 |
+| the workshops | 13 |
+| the airport | 14 |
+| the Man | 10 |
+| Gate Road out | 15 |
+
+- **Story order:** the next unfinished world's place has a tall beacon of light and a HUD arrow with its distance. Finished places stay open, and later ones answer "Not yet."
+- **Time of day:** the city follows the story day (the next place's sky) and shows the day card when the day changes.
+- **The pause menu:** its **MAP** is the hub map in fast-travel mode (`TRAVEL HERE`, and HOME warps to the tipi).
+
+### 19.3 Regions and saves
+- **Regions:** `tiles.region(x, z)` names where Brady is, for example `'4:30 & Carousel'`, `'Center Camp'`, `'Deep Playa'` or `'Outside the Fence'`. Entering a new region sets `g.region`, saves the flag `region:<name>`, sends the mission event `region` (so `{ type: 'reach', region: 'The Temple' }` completes there) and shows a toast.
+- **Position:** the city saves Brady's spot every few seconds and on entering a place (`sv.ow`). CONTINUE resumes there; a world passes its own `opts.spawn` to the engine for this.
+
+### 19.4 Performance
+- **Neighbourhoods:** RVs, campers, buses, hexayurts, dome tents, shade, camp frontages, flags, porta-potties and lamp posts are instanced. There are about 1,000–2,500 copies around Brady, in 30–50 batches. Two cheap stand-ins per block show the far city out to 1.4 km.
+- **Landmarks:** the theme camps use their own `lod: 'auto'` (a silhouette beyond about 150 m), and big art and the Man are built once.
+- **Measured views** (high tier, CSS-pixel frame): 60–100 draws and 95k–315k triangles. Tile builds run about 3.5 ms a frame, and first-time character looks are built one per frame.
+- **Fog:** the world thins its fog (`def.env`) so the city reads across the playa, and thins it more for high cameras.

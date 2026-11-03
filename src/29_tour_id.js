@@ -1392,15 +1392,17 @@ const boss = {
     guardText: 'TOO CHEEKY!',
     wake(b) { K.say(b.g, b, 'OOK! NICE HAT. MINE NOW.', '#ffd84a'); },
     update(b, dt) {
+      // the first frame of a new act (the framework's own first is cleared before an act started inside update() ever runs)
+      const first = b._ent !== b.act || b.at <= (b._entAt || 0); b._ent = b.act; b._entAt = b.at;
       const g = b.g, p = g.player; b.guard = 'bounce';
       if (b.act === 'walk') { b.face(); b.walk(1.3); b.pose = 'walk'; if (b.at > 1.2) { b.cycle++; b.go(['dash', 'throw', 'selfie', 'dash', 'leap', 'selfie'][b.cycle % 6]); } }
       else if (b.act === 'dash') {
-        if (b.at < 0.6) { b.vx = 0; b.pose = 'crouch'; if (b.first) { b.face(); K.say(g, b, 'HEHEHE...', '#ffd84a'); } }
+        if (b.at < 0.6) { b.vx = 0; b.pose = 'crouch'; if (first) { b.face(); K.say(g, b, 'HEHEHE...', '#ffd84a'); } }
         else { b.walk(6.2); b.pose = 'dash'; if (b.hitWall || b.x <= b.arenaX0 + 2 || b.x >= b.arenaX1 - b.w - 2) { g.shake(4); Sound.play('bump'); b.vx = 0; b.go('walk'); } }
         if (b.at > 3) b.go('walk');
       } else if (b.act === 'throw') {
         b.vx = 0; b.pose = 'throw';
-        if (b.first) { b.face(); b.n = 0; }
+        if (first) { b.face(); b.n = 0; }
         if (b.at > 0.4 + b.n * 0.42 && b.n < (b.hp <= 2 ? 3 : 2)) {
           b.n++; const dx = p ? p.cx - b.cx : b.dir * 100;
           tourFire(g, b.cx + b.dir * 20, b.y + 14, { kind: 'flipflop', vx: clamp(dx * 0.85, -6 * TS, 6 * TS), vy: -9 * TS, grav: PHYS.gDown * 0.5, w: 16, h: 10, life: 3, thru: true, stompable: true, col: COL.a, art: (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 12); ctx.fillStyle = s.col; ctx.beginPath(); ctx.ellipse(0, 0, 9, 4.5, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-2, -4); ctx.lineTo(3, 0); ctx.lineTo(-2, 4); ctx.stroke(); ctx.restore(); } });
@@ -1408,13 +1410,13 @@ const boss = {
         }
         if (b.at > 1.6) b.go('walk');
       } else if (b.act === 'leap') {
-        if (b.first) { b.vy = -15 * TS; b.face(); b.vx = b.dir * 2.4 * TS; K.say(g, b, 'DURIAN DELIVERY!', '#d8e86a'); }
+        if (first) { b.vy = -15 * TS; b.face(); b.vx = b.dir * 2.4 * TS; K.say(g, b, 'DURIAN DELIVERY!', '#d8e86a'); }
         b.pose = 'leap';
         if (b.onGround && b.at > 0.35) { g.shake(3); g.spawn(new IdDurian(g, b.cx, b.y + 10, p && p.cx < b.cx ? -1 : 1)); b.go('walk'); }
         if (b.at > 3) b.go('walk');
       } else if (b.act === 'selfie') {
         b.vx = 0; b.pose = 'selfie';
-        if (b.first) { b.flashed = false; K.say(g, b, 'SELFIE TIME! SAY OOK!', '#ffffff'); }
+        if (first) { b.flashed = false; K.say(g, b, 'SELFIE TIME! SAY OOK!', '#ffffff'); }
         b.vuln = b.at > 0.3 && b.at < 2.5; b.guard = b.vuln ? 'hurt' : 'bounce';
         if (b.at > 2.2 && !b.flashed) { b.flashed = true; g.flash = 0.4; TourKit.sfx('camera_flash', 'select2', { vol: 0.6 }); }
         if (b.at > 2.7) b.go('walk');

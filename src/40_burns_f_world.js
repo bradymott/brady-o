@@ -29,6 +29,16 @@ class BurnsCollide {
     for (let ix = x0; ix <= x1; ix++) for (let iz = z0; iz <= z1; iz++) { const k = this.key(ix, iz); let a = grid.get(k); if (!a) { a = []; grid.set(k, a); } a.push(c); }
   }
   add(c) { this.prep(c); this.statics.push(c); this.insert(c, this.grid); return c; }
+  // remove a batch of static colliders (a streaming tile freeing its own)
+  removeMany(list) {
+    if (!list || !list.length) return;
+    const S = new Set(list), C = this.cell;
+    this.statics = this.statics.filter(c => !S.has(c));
+    for (const c of list) {
+      const x0 = Math.floor((c.x - c.ex) / C), x1 = Math.floor((c.x + c.ex) / C), z0 = Math.floor((c.z - c.ez) / C), z1 = Math.floor((c.z + c.ez) / C);
+      for (let ix = x0; ix <= x1; ix++) for (let iz = z0; iz <= z1; iz++) { const k = this.key(ix, iz), a = this.grid.get(k); if (!a) continue; const j = a.indexOf(c); if (j >= 0) { a[j] = a[a.length - 1]; a.pop(); } if (!a.length) this.grid.delete(k); }
+    }
+  }
   // dynamic colliders: call beginDyn(), addDyn(c) for each (already in world coords), each step
   beginDyn() { this.dgrid.clear(); this.dyn.length = 0; }
   addDyn(c) { const yaw = c.yaw || 0; c.cy = Math.cos(yaw); c.sy = Math.sin(yaw); if (c.t === 'box' || c.t === 'ramp') { c.ex = Math.abs(c.cy) * c.hx + Math.abs(c.sy) * c.hz; c.ez = Math.abs(c.sy) * c.hx + Math.abs(c.cy) * c.hz; } else { c.ex = c.ez = c.r; } this.dyn.push(c); this.insert(c, this.dgrid); }
@@ -180,6 +190,8 @@ class BurnsTraffic {
 }
 
 /* ---------------- world ---------------- */
+// what a streaming tile owns (arrays on BurnsWorld; see tileBegin)
+const BURNS_TILE_OWNED = ['glows', 'beams', 'fires', 'jets', 'muds', 'lights', 'vehicles', 'actorDefs', 'movers', 'groups', 'interacts'];
 class BurnsWorld {
   constructor(def, game) {
     this.def = def; this.game = game; this.id = def.id;
@@ -200,6 +212,72 @@ class BurnsWorld {
     BURNS_ATLAS.signReset();
     this.initCanvases();
     this.api = this.makeApi();
+    // streaming tiles: while a tile is being built (this.cur), everything it adds belongs to it
+    this.cur = null;
+    const add0 = this.col.add.bind(this.col);
+    this.col.add = c => { const r = add0(c); if (this.cur) this.cur.cols.push(r); return r; };
+  }
+  /* ---------- streaming tiles (def.tiles; driven by BurnsTiles in 40_burns_m_open.js) ----------
+     tileBegin(t) ... the tile's builder runs (any api call) ... tileEnd(t) bakes its chunks; tileFree(t) drops all of it.
+     A tile owns its static chunks, colliders, glows, beams, fires, flame jets, mud, light pools, drivable vehicles,
+     actors (from api.npc), movers and their groups, ACTION prompts, LSD-ghost geometry and instanced props. Updaters,
+     triggers, markers, checkpoints and pickups stay world-wide (build those in def.build). */
+  tileBegin(t) {
+    t.cells = new Map(); t.cols = []; t.chunks = []; t.snap = {};
+    for (const k of BURNS_TILE_OWNED) t.snap[k] = new Set(this[k] || []);
+    this._cells0 = this.cells; this.cells = t.cells;
+    this._ghost0 = this.ghostMesh; this.ghostMesh = null;
+    this.cur = t;
+  }
+  tileEnd(t) {
+    for (const [, e] of t.cells) for (const m of e.list) if (!m.empty) { const c = m.geo(); c.tile = t; t.chunks.push(c); this.chunks.push(c); }
+    if (this.ghostMesh && !this.ghostMesh.empty) { const c = this.ghostMesh.geo(); c.tile = t; c.ghost = true; t.chunks.push(c); this.ghosts.push(c); }
+    this.ghostMesh = this._ghost0; this.cells = this._cells0; this.cur = null;
+    t.own = {};
+    for (const k of BURNS_TILE_OWNED) { const S = t.snap[k], a = this[k] || []; t.own[k] = S.size || a.length ? a.filter(x => !S.has(x)) : []; }
+    t.snap = null; t.cells = null;
+    for (const G of t.own.groups) if (!G.geo) G.finish();
+    if (t.own.lights.length && this.lightmap) this.repaintLights(t.x0, t.z0, t.x1, t.z1, t.own.lights);
+  }
+  tileFree(t) {
+    const own = t.own || {};
+    for (const k of BURNS_TILE_OWNED) { const L = own[k]; if (!L || !L.length || !this[k]) continue; const S = new Set(L); this[k] = this[k].filter(x => !S.has(x)); }
+    const CS = new Set(t.chunks);
+    for (const c of t.chunks) BurnsGL.freeGeo(c);
+    if (CS.size) { this.chunks = this.chunks.filter(c => !CS.has(c)); this.ghosts = this.ghosts.filter(c => !CS.has(c)); }
+    for (const G of own.groups || []) BurnsGL.freeGeo(G.geo);
+    this.col.removeMany(t.cols);
+    if (own.lights && own.lights.length && this.lightmap) this.repaintLights(t.x0, t.z0, t.x1, t.z1, own.lights);
+    t.chunks = []; t.cols = []; t.own = null;
+  }
+  // instanced props (BurnsInstancer, 40_burns_m_open.js), made on first use
+  instancer() { return this.inst || (this.inst = new BurnsInstancer(this)); }
+  // repaint the lightmap where some pools appeared or went away (the pools' own extent), then upload just that part
+  repaintLights(x0, z0, x1, z1, pools) {
+    for (const L of pools || []) { x0 = Math.min(x0, L.x - L.r); z0 = Math.min(z0, L.z - L.r); x1 = Math.max(x1, L.x + L.r); z1 = Math.max(z1, L.z + L.r); }
+    const lx = this.lightX, f = this.lightXf, C = this.lightC;
+    const px0 = clamp(Math.floor((x0 - f.x0) * f.sx) - 1, 0, C.width), pz0 = clamp(Math.floor((z0 - f.z0) * f.sz) - 1, 0, C.height);
+    const px1 = clamp(Math.ceil((x1 - f.x0) * f.sx) + 1, 0, C.width), pz1 = clamp(Math.ceil((z1 - f.z0) * f.sz) + 1, 0, C.height);
+    if (px1 <= px0 || pz1 <= pz0) return;
+    lx.save(); lx.beginPath(); lx.rect(px0, pz0, px1 - px0, pz1 - pz0); lx.clip();
+    lx.fillStyle = '#000'; lx.fillRect(px0, pz0, px1 - px0, pz1 - pz0);
+    const wx0 = f.x0 + px0 / f.sx, wz0 = f.z0 + pz0 / f.sz, wx1 = f.x0 + px1 / f.sx, wz1 = f.z0 + pz1 / f.sz;
+    this.paintPools(this.lights.filter(L => L.x + L.r > wx0 && L.x - L.r < wx1 && L.z + L.r > wz0 && L.z - L.r < wz1));
+    lx.restore();
+    if (!BurnsGL.texRegion(this.lightmap.T, px0, pz0, px1 - px0, pz1 - pz0)) this.lightmap.T.dirty = true;
+  }
+  paintPools(list) {
+    const lx = this.lightX, f = this.lightXf;
+    lx.globalCompositeOperation = 'lighter';
+    for (const L of list) {
+      const cx = (L.x - f.x0) * f.sx, cz = (L.z - f.z0) * f.sz, r = L.r * f.sx;
+      if (typeof L.c !== 'string' && !Array.isArray(L.c)) { if (!this._warnedL) { this._warnedL = true; console.warn('burns: light pool without a colour', JSON.stringify(L)); } L.c = '#ffb070'; }
+      const c = burnsRGB(L.c);
+      const g = lx.createRadialGradient(cx, cz, 0, cx, cz, Math.max(1, r));
+      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${L.i})`); g.addColorStop(0.45, `rgba(${c[0]},${c[1]},${c[2]},${L.i * 0.4})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      lx.fillStyle = g; lx.fillRect(cx - r, cz - r, r * 2, r * 2);
+    }
+    lx.globalCompositeOperation = 'source-over';
   }
   height(x, z) { return this.heightFn ? this.heightFn(x, z) : 0; }
   /* ---------- painted ground + lightmap canvases ---------- */
@@ -309,17 +387,8 @@ class BurnsWorld {
     for (const g of this.groups) if (!g.geo) g.finish();
     this.buildGround();
     // lightmap pools
-    const lx = this.lightX, f = this.lightXf;
-    lx.globalCompositeOperation = 'lighter';
-    for (const L of this.lights) {
-      const cx = (L.x - f.x0) * f.sx, cz = (L.z - f.z0) * f.sz, r = L.r * f.sx;
-      if (typeof L.c !== 'string' && !Array.isArray(L.c)) { if (!this._warnedL) { this._warnedL = true; console.warn('burns: light pool without a colour', JSON.stringify(L)); } L.c = '#ffb070'; }
-      const c = burnsRGB(L.c);
-      const g = lx.createRadialGradient(cx, cz, 0, cx, cz, Math.max(1, r));
-      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${L.i})`); g.addColorStop(0.45, `rgba(${c[0]},${c[1]},${c[2]},${L.i * 0.4})`); g.addColorStop(1, 'rgba(0,0,0,0)');
-      lx.fillStyle = g; lx.fillRect(cx - r, cz - r, r * 2, r * 2);
-    }
-    lx.globalCompositeOperation = 'source-over';
+    const f = this.lightXf;
+    this.paintPools(this.lights);
     this.lightmap = { T: { src: this.lightC, opts: {} }, x0: f.x0, z0: f.z0, w: f.w, d: f.d };
     this.ground.paintT = { src: this.paintC, opts: { mips: true, premult: true, aniso: 8 } };
     this.ground.detT = { src: BurnsWorld.detailTexture(), opts: { mips: true, repeat: true, aniso: 8 } };
@@ -327,7 +396,7 @@ class BurnsWorld {
   }
   buildGround() {
     const B = this.bounds, g = this.def.ground || {};
-    const inner = 6, pad = 60;
+    const inner = g.step || 6, pad = 60;   // ground.step: grid spacing (m); a flat open world can use 20-30
     const x0 = B.x0 - pad, z0 = B.z0 - pad, x1 = B.x1 + pad, z1 = B.z1 + pad;
     const nx = Math.ceil((x1 - x0) / inner), nz = Math.ceil((z1 - z0) / inner);
     const geos = [];
@@ -541,7 +610,11 @@ class BurnsWorld {
       marker(id, x, z, label, o) { const mk = Object.assign({ id, x, z, label }, o || {}); W.markers.push(mk); return mk; },
       region(name, x, z, r) { W.regions[name] = { x, z, r: r || 10 }; },
       sign(text, x, z, o) { return api.prop('sign', Object.assign({ x, z, text }, o || {})); },
-      height(x, z) { return W.height(x, z); }
+      height(x, z) { return W.height(x, z); },
+      /* instanced props: define a prototype once, then place any number of copies (one draw per prototype and detail
+         level). build(m) runs at full detail, then with m.lo = true; o.far(m) builds the cheapest copy. See §4.8. */
+      instanceProto(id, build, o) { return W.instancer().proto(id, build, o); },
+      instance(id, x, z, o) { o = o || {}; return W.instancer().add(id, x, o.y || 0, z, o.yaw || 0, o.scale || 1, o.tint, o.noCol); }
     };
     // route static geometry into the LSD ghost layer while inside api.hidden()
     const place0 = W.place.bind(W);

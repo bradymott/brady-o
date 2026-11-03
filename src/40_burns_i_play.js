@@ -147,6 +147,7 @@ class BurnsMissions {
       if (name === 'defeat' && d.type === 'defeat' && (!d.tag || (data.def && data.def.tag === d.tag))) this.progress(m.id);
       if (name === 'talk' && d.type === 'talk' && data.id === d.target) this.complete(m.id);
       if (name === 'spotted' && d.type === 'stealth') this.fail(m.id, 'You were spotted!');
+      if (name === 'region' && d.type === 'reach' && d.region === data) this.complete(m.id);
     }
   }
   update(dt) {
@@ -423,11 +424,13 @@ class BurnsPlayScene {
     // spawn at the saved checkpoint or the world's spawn
     const cpId = this.opts.checkpoint || (this.opts.fresh ? null : sv.checkpoint[this.worldId]);
     const cp = cpId && this.world.checkpoints.find(c => c.id === cpId);
-    const sp = cp ? { x: cp.x + Math.sin(cp.yaw) * 2, y: cp.y, z: cp.z + Math.cos(cp.yaw) * 2, yaw: cp.yaw } : (d.spawn || { x: 0, y: 0, z: 0, yaw: 0 });
+    const sp = this.opts.spawn || (cp ? { x: cp.x + Math.sin(cp.yaw) * 2, y: cp.y, z: cp.z + Math.cos(cp.yaw) * 2, yaw: cp.yaw } : (d.spawn || { x: 0, y: 0, z: 0, yaw: 0 }));   // opts.spawn: an open world resuming where Brady was
     if (cp) cp.active = true;
     this.spawn = sp;
     this.player.teleport(sp.x, sp.y || this.world.height(sp.x, sp.z), sp.z, sp.yaw || 0);
     this.camYaw = (sp.yaw || 0); this.snapCam = true;
+    // streaming tiles (open worlds): the ones around the spawn are built now, the rest stream in as Brady moves
+    if (d.tiles) { this.tiles = new BurnsTiles(this, d.tiles); this.tiles.prime(this.player.x, this.player.z, d.tiles.prime); }
     this.state = 'play';
     this.layoutControls();
     burnsMusic(d.music || ('burns_w' + this.worldId));
@@ -736,8 +739,32 @@ class BurnsPlayScene {
     if (this.player) this.saveRun();
     this.released = true;
     BurnsScenes.releaseWorld(this);
+    // quitting from inside an entered place also lets go of the open world behind it
+    for (let s = this.parentScene; s; s = s.parentScene) if (!s.released) { s.released = true; try { s.saveRun(); } catch (e) { /* ignore */ } BurnsScenes.releaseWorld(s); }
     if (toHub) Game.setScene(new BurnsHubScene({ from: this.worldId }));
     else burnsToTitle();
+  }
+  // back from an entered place (BurnsOpen.leave) or the travel map: Brady at `back` (or where he was), the world's music
+  resumeFrom(sub, how) {
+    this.lastFrame = 0; this.paused = false; this.state = 'play'; this.suspended = false;
+    Input.camDrag = false; Input.hud = null; Input.setMode('game');
+    this.layoutControls(); this.syncHudButtons();
+    const p = this.player, b = sub && sub.parentBack;
+    if (b) { p.teleport(b.x, b.y === undefined ? this.world.height(b.x, b.z) : b.y, b.z, b.yaw || 0); this.camYaw = b.yaw || 0; this.snapCam = true; }
+    p.locked = false; p.animOverride = null; p.vy = 0;
+    if (this.tiles && b) this.tiles.prime(p.x, p.z);
+    burnsMusic(this.def.music || ('burns_w' + this.worldId));
+    this.fade = 1; this.fadeTo(0, 0.9);
+    if (this.def.onResume) { try { this.def.onResume(this, sub, how); } catch (e) { console.error(e); } }
+  }
+  // open worlds: the hub map works as a fast-travel map (def.travel(g, worldId) moves Brady to that place)
+  openTravelMap() {
+    if (typeof BurnsHubScene === 'undefined') return;
+    const g = this; this.suspended = true; Input.camDrag = false;
+    Game.setScene(new BurnsHubScene({ travel: {
+      go: w => { Game.setScene(g); g.resumeFrom(null, 'map'); if (g.def.travel) g.def.travel(g, w); },
+      back: () => { Game.setScene(g); g.resumeFrom(null, 'map'); }
+    } }));
   }
   // after the results: a story card carries Brady to the next world (or the hub when it isn't ready)
   storyNext() {
@@ -747,6 +774,12 @@ class BurnsPlayScene {
     this.released = true;
     BurnsScenes.releaseWorld(this);
     const nx = BurnsWorlds.next(this.worldId);
+    if (this.parentScene) {   // an entered place: the story card for the next day, then back into the open world
+      const self = this;
+      if (nx && typeof BurnsStoryScene !== 'undefined') Game.setScene(new BurnsStoryScene({ from: this.worldId, to: nx, then: () => BurnsOpen.leave(self, 'done') }));
+      else BurnsOpen.leave(self, 'done');
+      return;
+    }
     if (nx && typeof BurnsStoryScene !== 'undefined') Game.setScene(new BurnsStoryScene({ from: this.worldId, to: nx }));
     else Game.setScene(new BurnsHubScene({ from: this.worldId }));
   }
@@ -832,6 +865,7 @@ class BurnsPlayScene {
     for (const v of W.vehicles) v.idle(wdt);
     for (const fn of W.updaters) fn(this, wdt);
     if (this.def.update) this.def.update(this, wdt);
+    if (this.tiles) this.tiles.update(dt);
     W.stepMovers();
     for (const b of this.bosses) if (b.addColliders) b.addColliders();
     // ride moving platforms
@@ -995,6 +1029,8 @@ class BurnsPlayScene {
     if (!this.paused) this.adapt(fdt);
     const frozen = this.paused || this.state === 'results';
     const vdt = frozen ? 0 : fdt;
+    // streaming tiles: a few ms of building per frame (never while frozen)
+    if (this.tiles && !frozen) this.tiles.step();
     // visuals that run per rendered frame
     this.fx.update(vdt * this.slow * (this.cineSlow || 1));
     this.updateCamera(vdt || 1e-4);
@@ -1021,6 +1057,8 @@ class BurnsPlayScene {
     const cam = this.cam, P = R.planes, vis = this._drawList || (this._drawList = []);
     vis.length = 0;
     const wantShadow = !!(Q && Q.shadows && env.keyDir[1] > 0.06), shD2 = 42 * 42;
+    const inst = this.world.inst;
+    if (inst) inst.update(R, this.def.drawDist || 260, wantShadow ? (Q.shadowDist || 60) + 12 : 0);
     for (const a of this.actors) {
       if (a.removed || a.hidden) continue;
       const d2 = (a.x - cam.x) * (a.x - cam.x) + (a.z - cam.z) * (a.z - cam.z);
@@ -1038,6 +1076,7 @@ class BurnsPlayScene {
     // ---- sun shadows (WebGL2 tiers): the same draw calls, depth only, from the sun ----
     if (wantShadow && R.shadowBegin(env, { dist: fp ? Q.shadowDist * 0.75 : undefined })) {
       R.statics(this.world.chunks, env, this.world, BURNS_ATLAS.T, 0);
+      if (inst) inst.drawShadow(R);
       R.skinBegin(env, this.world, BURNS_ATLAS.T);
       // vehicles and movers: only the objects near the shadow circle (their own index ranges), in the detail
       // level the main view shows (far traffic casts with its low-detail twin)
@@ -1066,6 +1105,7 @@ class BurnsPlayScene {
     R.sky(env);
     R.ground(this.world.ground, env, this.world);
     R.statics(this.world.chunks, env, this.world, BURNS_ATLAS.T, this.def.drawDist || (env.fogD > 0.02 ? 120 : 260));   // def.drawDist: per-world static draw distance (m)
+    if (inst) inst.draw(R, env, this.world);
     if (env.trip > 0.01 && this.world.ghosts.length) R.ghost(this.world.ghosts, env, this.world, BURNS_ATLAS.T, 0.55 + env.trip * 0.35);
     // skinned: groups (vehicles, movers, pickups), characters, bosses
     R.skinBegin(env, this.world, BURNS_ATLAS.T);
@@ -1294,6 +1334,7 @@ const BurnsScenes = {
       if (scene.pickups) for (const G of scene.pickups.groups) BurnsGL.freeGeo(G.geo);
       for (const g of W.ground.geos) BurnsGL.freeGeo(g);
       BurnsGL.freeTex(W.ground.paintT); BurnsGL.freeTex(W.lightmap.T);
+      if (W.inst) W.inst.release();
     } catch (e) { /* ignore */ }
   }
 };

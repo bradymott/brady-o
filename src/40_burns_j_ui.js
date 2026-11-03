@@ -80,7 +80,7 @@ const BurnsUI = {
     if (p.hydration <= 2 && !p.dead) { const a = (0.22 + Math.sin(g.time * 5) * 0.1) * (p.hydration <= 1 ? 1.4 : 1); const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.9); v.addColorStop(0, 'rgba(255,40,40,0)'); v.addColorStop(1, `rgba(200,20,20,${a})`); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); }
     this.drawWorldLabels(ctx, g);
     const cine = !!g.cine;
-    if (!cine && g.state === 'play' && !window.__burnsHideHUD) this.drawHUD(ctx, g, S);
+    if (!cine && g.state === 'play' && !window.__burnsHideHUD) { this.drawHUD(ctx, g, S); if (g.def.drawHUD) g.def.drawHUD(ctx, g, W, H, S); }
     this.drawBossBar(ctx, g, S);
     // letterbox
     g.lbK = BurnsM.damp(g.lbK || 0, cine && g.cine.letter ? 1 : 0, 6, fdt);
@@ -437,7 +437,10 @@ const BurnsUI = {
       items.push([BurnsSave.hasItem('www') ? 'WHAT WHERE WHEN' : 'MISSIONS', () => { g.pauseTab = 'missions'; g.buildPause(); burnsSfx('map_open'); }]);
       if (g.missions.side().length) items.push(['SIDE QUESTS', () => { g.boardTab = g.boardTab || 'available'; g.pauseTab = 'board'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]);
       if (g.packVisible()) { const n = BurnsPack.total(); items.push([n ? `BACKPACK (${n})` : 'BACKPACK', () => { g.pauseTab = 'pack'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]); }
-      items.push(['WORLD SELECT', () => { g.paused = false; g.quit(true); }]);
+      // an entered place (open world) is left back into the city; the open world itself has a fast-travel map
+      if (g.parentScene) items.push(['LEAVE' + (g.placeName ? ' ' + String(g.placeName).toUpperCase() : ''), () => { g.paused = false; BurnsOpen.leave(g, 'leave'); }]);
+      else if (g.def.open) items.push(['MAP', () => { g.paused = false; g.openTravelMap(); }]);
+      else items.push(['WORLD SELECT', () => { g.paused = false; g.quit(true); }]);
       items.push(['SETTINGS', () => { g.pauseTab = 'settings'; g.buildPause(); }]);
       items.push(['QUIT TO TITLE', () => { g.paused = false; g.quit(false); }]);
       // one column, or two when the screen is too short (landscape phones)

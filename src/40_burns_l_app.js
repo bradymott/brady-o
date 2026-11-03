@@ -128,6 +128,14 @@ class BurnsAppStart extends BurnsPlayScene {
     if (this.released) return;
     this.released = true;
     BurnsScenes.releaseWorld(this);
+    // with an open world registered, CONTINUE / START go straight into the city (the prologue first, once)
+    const ow = BurnsWorlds.open();
+    if (ow) {
+      const sv = BurnsSave.get();
+      if (!sv.seenIntro) { sv.seenIntro = true; BurnsSave.save(); Game.setScene(new BurnsStoryScene({ cards: BURNS_PROLOGUE, music: 'burns_intro', then: () => BurnsScenes.play(ow) })); }
+      else BurnsScenes.play(ow);
+      return;
+    }
     Game.setScene(new BurnsHubScene());
   }
   // the world keeps living behind the menu; Brady sits on the RV roof

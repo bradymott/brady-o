@@ -58,7 +58,7 @@ class BurnsHubScene {
     if (nx && sv.unlocked[nx] && BurnsWorlds.get(nx)) this.sel = nx;
     this.newUnlock = nx && sv.worldDone[this.opts.from] ? nx : 0;
     burnsMusic('burns_hub');
-    if (!sv.seenIntro && !this.opts.noIntro) {
+    if (!sv.seenIntro && !this.opts.noIntro && !this.opts.travel) {
       sv.seenIntro = true; BurnsSave.save();
       this.deferIntro = true;
     }
@@ -73,7 +73,7 @@ class BurnsHubScene {
     const pw = portrait ? W - S.l - S.r : W - this.map.x - mw - S.r - 12;
     this.panel = portrait ? { x: S.l, y: bottom + 8, w: pw, h: H - S.b - bottom - 16 } : { x: this.map.x + mw + 12, y: top, w: pw, h: mh };
     const bw = 96;
-    this.btns = [{ x: S.l, y: S.t, w: 92, h: 36, label: '◀ BACK', size: 12, fn: () => { burnsSfx('back'); burnsToTitle(); } }];
+    this.btns = [{ x: S.l, y: S.t, w: 92, h: 36, label: '◀ BACK', size: 12, fn: () => { burnsSfx('back'); if (this.opts.travel) this.opts.travel.back(); else burnsToTitle(); } }];
     const rx = W - S.r;
     this.btns.push({ x: rx - bw, y: S.t, w: bw, h: 36, label: 'STORY', size: 12, fn: () => this.playIntro() });
     if (BurnsSave.hasItem('costumes') || window.__burnsAllCostumes) this.btns.push({ x: rx - bw * 2 - 8, y: S.t, w: bw + 10, h: 36, label: 'WARDROBE', size: 11, fn: () => { this.wardrobe = true; this.buildWardrobe(); burnsSfx('costume'); } });
@@ -81,7 +81,7 @@ class BurnsHubScene {
     const home = BurnsWorlds.home(), sv0 = BurnsSave.get();
     if (home && sv0.unlocked[home] && BurnsWorlds.get(home)) this.btns.push({ x: this.map.x + 8, y: this.map.y + 8, w: 84, h: 30, label: '\u2302 HOME', size: 11, fn: () => { this.sel = home; this.play(); } });
     const P = this.panel;
-    this.playBtn = { x: P.x + 12, y: P.y + P.h - 58, w: P.w - 24, h: 46, label: 'PLAY', primary: true, fn: () => this.play() };
+    this.playBtn = { x: P.x + 12, y: P.y + P.h - 58, w: P.w - 24, h: 46, label: this.opts.travel ? 'TRAVEL HERE' : 'PLAY', primary: true, fn: () => this.play() };
     this.btns.push(this.playBtn);
     this.btns.focus = this.btns.length - 1;
     // one pin per world in play order (labelled by position); ids without metadata get a spot on a ring
@@ -95,6 +95,8 @@ class BurnsHubScene {
   play() {
     const w = this.sel, sv = BurnsSave.get();
     if (!sv.unlocked[w]) { const pv = BurnsWorlds.prev(w); burnsSfx('bump'); this.toast = { text: pv ? `Beat ${BurnsWorlds.label(pv)}'s boss to unlock this world.` : 'This world is locked.', t: 2.4 }; return; }
+    // the open world's fast-travel map: go to that place in the city (it doesn't have to be built yet)
+    if (this.opts.travel) { burnsSfx('select'); this.opts.travel.go(w); return; }
     if (!BurnsWorlds.get(w)) { burnsSfx('bump'); this.toast = { text: 'The burners are still building this world. Soon!', t: 2.4 }; return; }
     burnsSfx('select');
     BurnsScenes.play(w);

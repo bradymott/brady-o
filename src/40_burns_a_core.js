@@ -313,7 +313,9 @@ const BurnsWorlds = {
   visible() { const sv = BurnsSave.get(); return this.order.filter(id => !this.isSecret(id) || sv.unlocked[id]); },
   next(id) { const i = this.order.indexOf(id); return i >= 0 && i < this.order.length - 1 ? this.order[i + 1] : null; },
   prev(id) { const i = this.order.indexOf(id); return i > 0 ? this.order[i - 1] : null; },
-  isFinale(id) { return id === 10; }
+  isFinale(id) { return id === 10; },
+  // the open world (a registered def with open: true), or null: the title's CONTINUE goes there instead of the hub
+  open() { const k = Object.keys(this.defs).map(Number).find(k => this.defs[k].open); return k === undefined ? null : k; }
 };
 
 /* ---------------- costumes (geometry lives in 40_burns_d_rig.js) ---------------- */

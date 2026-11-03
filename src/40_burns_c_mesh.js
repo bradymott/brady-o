@@ -96,6 +96,23 @@ const BURNS_ATLAS = {
     this.sa = 0; this.sx = 1024 + 4; this.sy = 4; this.srow = 0; this.signs = {};
     if (this.T) this.T.dirty = true;
   },
+  // the sign pages and their packing, saved while an entered place (a sub-world) borrows them (BurnsOpen)
+  signSnapshot() {
+    if (!this.canvas) return null;
+    const c = makeCanvas(2048, 2048), x = c.getContext('2d');
+    x.drawImage(this.canvas, 1024, 0, 1024, 1024, 0, 0, 1024, 1024);
+    x.drawImage(this.canvas, 0, 2048, 2048, 1024, 0, 1024, 2048, 1024);
+    return { c, sa: this.sa, sx: this.sx, sy: this.sy, srow: this.srow, signs: this.signs };
+  },
+  signRestore(S) {
+    if (!S || !this.canvas) return;
+    const x = this.ctx; burnsCtxUnwind(x, false);
+    x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 2048, 2048, 1024);
+    x.drawImage(S.c, 0, 0, 1024, 1024, 1024, 0, 1024, 1024);
+    x.drawImage(S.c, 0, 1024, 2048, 1024, 0, 2048, 2048, 1024);
+    this.sa = S.sa; this.sx = S.sx; this.sy = S.sy; this.srow = S.srow; this.signs = S.signs;
+    if (this.T) this.T.dirty = true;
+  },
   // opts: { w, h (px), bg, fg, font, size, border, glow, pad, align, lines }
   sign(text, o) {
     o = o || {};
@@ -135,7 +152,7 @@ const BURNS_ATLAS = {
     });
     const r = this.reg(px, py, pw, ph); r.aspect = w / h;
     this.signs[key] = r;
-    if (this.T) this.T.dirty = true;
+    if (this.T && !BurnsGL.texRegion(this.T, px, py, pw, ph, true)) this.T.dirty = true;   // just this sign (streaming tiles paint signs mid-game)
     return r;
   },
   // ---------- painters ----------

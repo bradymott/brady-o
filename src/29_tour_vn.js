@@ -963,27 +963,29 @@ const boss = {
     wake(b) { b.brew = 1; K.say(b.g, b, 'ONE STRONG COFFEE, COMING UP!', '#ffd84a'); },
     onLasso(b) { if (b.act !== 'empty' && b.state === 'fight') { K.say(b.g, b, 'MY LID!!', '#ffd84a'); b.go('empty'); } },
     update(b, dt) {
+      // the first frame of a new act (the framework's own first is cleared before an act started inside update() ever runs)
+      const first = b._ent !== b.act || b.at <= (b._entAt || 0); b._ent = b.act; b._entAt = b.at;
       const g = b.g, p = g.player; b.guard = 'bounce';
       if (b.act !== 'empty') b.brew = Math.min(1, (b.brew || 0) + dt * 0.25);
       if (b.act === 'walk') { b.face(); b.walk(0.9); b.pose = 'walk'; if (b.at > 1.3) { b.cycle++; b.go(['drips', 'ice', 'milk', 'empty'][b.cycle % 4]); } }
       else if (b.act === 'drips') {
         b.vx = 0; b.pose = 'rattle';
-        if (b.first) { b.n = 0; K.say(g, b, 'DRIP DRIP DRIP!', '#c8783a'); }
+        if (first) { b.n = 0; K.say(g, b, 'DRIP DRIP DRIP!', '#c8783a'); }
         if (b.at > 0.5 + b.n * 0.45 && b.n < 3) { b.n++; const k = b.hp <= 2 ? 4 : 3; for (let i = 0; i < k; i++) { const a = -Math.PI / 2 + (i - (k - 1) / 2) * 0.5 + (Math.random() - 0.5) * 0.2; tourFire(g, b.cx, b.y + 10, { kind: 'drip', vx: Math.cos(a) * 5.5 * TS + (p ? sign(p.cx - b.cx) * TS : 0), vy: Math.sin(a) * 7 * TS, grav: PHYS.gDown * 0.5, w: 10, h: 12, life: 3, thru: true, col: '#7a3a14', art: (ctx, s) => { ctx.fillStyle = '#7a3a14'; ctx.beginPath(); ctx.moveTo(s.cx, s.y); ctx.quadraticCurveTo(s.cx + 6, s.cy + 3, s.cx, s.y + s.h); ctx.quadraticCurveTo(s.cx - 6, s.cy + 3, s.cx, s.y); ctx.fill(); ctx.fillStyle = 'rgba(255,220,180,0.6)'; ctx.fillRect(s.cx - 1.5, s.cy, 1.5, 3); } }); } Sound.play('splash', { pitch: 1.6, vol: 0.4 }); }
         if (b.at > 2) b.go('walk');
       } else if (b.act === 'ice') {
         b.vx = 0; b.pose = 'pour';
-        if (b.first) { b.face(); K.say(g, b, 'ICED!', '#cfefff'); }
+        if (first) { b.face(); K.say(g, b, 'ICED!', '#cfefff'); }
         if (b.at > 0.5 && !b.fired) { b.fired = true; for (let k = 0; k < (b.hp <= 2 ? 2 : 1); k++) tourFire(g, b.cx + b.dir * (b.w / 2 + 12 + k * 28), b.floorY - 12, { kind: 'ice', vx: b.dir * (4.6 + k * 0.8) * TS, w: 22, h: 22, ground: true, life: 4, stompable: true, col: '#d8f4ff', art: (ctx, s, t) => { ctx.fillStyle = 'rgba(210,240,255,0.92)'; rr(ctx, s.x, s.y, s.w, s.h, 5); ctx.fill(); ctx.strokeStyle = '#7ab8dc'; ctx.lineWidth = 1.4; rr(ctx, s.x, s.y, s.w, s.h, 5); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.fillRect(s.x + 4, s.y + 3, 6, 3); } }); Sound.play('kick', { pitch: 1.4, vol: 0.4 }); }
         if (b.at > 1.4) { b.fired = false; b.go('walk'); }
       } else if (b.act === 'milk') {
-        if (b.first) { b.vy = -12 * TS; b.vx = 0; K.say(g, b, 'SWEET WAVE!', '#fff4d8'); }
+        if (first) { b.vy = -12 * TS; b.vx = 0; K.say(g, b, 'SWEET WAVE!', '#fff4d8'); }
         b.pose = 'hop';
         if (b.onGround && b.at > 0.3) { g.shake(6); Sound.play('stomp', { pitch: 0.5 }); for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 10), b.floorY - 12, { kind: 'milk', vx: d * 4.2 * TS, w: 26, h: 20, ground: true, life: 3, col: '#fff4d8', art: (ctx, s, t) => { ctx.fillStyle = '#fff4d8'; ctx.beginPath(); ctx.moveTo(s.x, s.y + s.h); for (let k = 0; k <= 4; k++) ctx.lineTo(s.x + k * s.w / 4, s.y + s.h * (k % 2 ? 0.1 : 0.45) + Math.sin(t * 10 + k) * 2); ctx.lineTo(s.x + s.w, s.y + s.h); ctx.fill(); ctx.fillStyle = 'rgba(200,170,120,0.6)'; ctx.fillRect(s.x + 3, s.y + s.h - 5, s.w - 6, 2); } }); b.go('walk'); }
       } else if (b.act === 'empty') {
         // out of coffee: the lid pops off and the filter cools for a moment
         b.vx = 0; b.pose = 'empty';
-        if (b.first) { b.brew = 0; K.say(g, b, '...DRIP. OUT OF COFFEE!', '#ffffff'); Sound.play('bump', { pitch: 1.6 }); g.burst(b.cx, b.y, 12, '#c8c8d0', 'spark'); }
+        if (first) { b.brew = 0; K.say(g, b, '...DRIP. OUT OF COFFEE!', '#ffffff'); Sound.play('bump', { pitch: 1.6 }); g.burst(b.cx, b.y, 12, '#c8c8d0', 'spark'); }
         b.vuln = b.at > 0.3 && b.at < 2.8; b.guard = b.vuln ? 'hurt' : 'bounce';
         if (b.at > 3) b.go('walk');
       }
