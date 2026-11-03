@@ -1122,10 +1122,10 @@ class BurnsPlayScene {
         }
         R.skinRanges(G.geo, G.bones, G.objs.length, rg, n);
       }
-      if (!p.dead) R.skin(p.model.lod || p.model.geo, p.ch.bones, p.ch.nb, null, 0, 0);
+      if (!p.dead && !BurnsSkinActor.draw(this, R, 'brady', p.ch)) R.skin(p.model.lod || p.model.geo, p.ch.bones, p.ch.nb, null, 0, 0);
       if (bikeOn) R.skin(this.bike.model.geo, this.bike.bones, this.bike.model.nb, null, 0, 0);
-      for (const a of vis) if (!a.cloak && a._d2 < shD2) R.skin(a.model.lod || a.model.geo, a.ch.bones, a.ch.nb, null, 0, 0);
-      for (const b of this.bosses) { if (!b.ch || b.hidden) continue; R.skin(b.model.geo, b.ch.bones, b.ch.nb, null, 0, 0); if (b.chinka && b.showChinka !== false) R.skin(b.chinka.model.lod || b.chinka.model.geo, b.chinka.bones, b.chinka.nb, null, 0, 0); }
+      for (const a of vis) if (!a.cloak && a._d2 < shD2 && !BurnsSkinActor.drawActor(this, R, a)) R.skin(a.model.lod || a.model.geo, a.ch.bones, a.ch.nb, null, 0, 0);
+      for (const b of this.bosses) { if (!b.ch || b.hidden) continue; R.skin(b.model.geo, b.ch.bones, b.ch.nb, null, 0, 0); if (b.chinka && b.showChinka !== false && !BurnsSkinActor.draw(this, R, 'chinka', b.chinka)) R.skin(b.chinka.model.lod || b.chinka.model.geo, b.chinka.bones, b.chinka.nb, null, 0, 0); }
       if (this.def.drawShadows) this.def.drawShadows(this, R);
       R.shadowEnd();
     }
@@ -1140,16 +1140,16 @@ class BurnsPlayScene {
     R.skinBegin(env, this.world, BURNS_ATLAS.T);
     for (const G of this.world.groups) if (G.objs.length) { R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.15); if (G.effTris !== undefined) R.stats.tris += G.effTris - G.geo.count / 3; }
     for (const G of this.pickups.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.6);
-    if (showBody) R.skin(p.model.geo, p.ch.bones, p.ch.nb, p.hurtT > 0 ? [1, 0.4, 0.4, 0.4] : null, p.ch.face, 0.5);
+    if (showBody && !BurnsSkinActor.draw(this, R, 'brady', p.ch, p.hurtT > 0 ? [1, 0.4, 0.4, 0.4] : null, 0.5)) R.skin(p.model.geo, p.ch.bones, p.ch.nb, p.hurtT > 0 ? [1, 0.4, 0.4, 0.4] : null, p.ch.face, 0.5);
     if (bikeOn) R.skin(this.bike.model.geo, this.bike.bones, this.bike.model.nb, null, 0, 0.3);
     for (const a of vis) {
       if (!a._inView || a.cloak) continue;   // a darkwad in the dark: logic runs, nothing drawn
       const d2 = a._d2;
       // distant characters use the low-detail model
-      R.skin(d2 > BURNS_FAR_D2 && a.model.far ? a.model.far : d2 > BURNS_LOD_D2 && a.model.lod ? a.model.lod : a.model.geo, a.ch.bones, a.ch.nb, a.ch.tint, a.ch.face, a.ch.rim);
+      if (!BurnsSkinActor.drawActor(this, R, a)) R.skin(d2 > BURNS_FAR_D2 && a.model.far ? a.model.far : d2 > BURNS_LOD_D2 && a.model.lod ? a.model.lod : a.model.geo, a.ch.bones, a.ch.nb, a.ch.tint, a.ch.face, a.ch.rim);
       a._vis = true;
     }
-    for (const b of this.bosses) { if (!b.ch || b.hidden) continue; R.skin(b.model.geo, b.ch.bones, b.ch.nb, b.hurtTint || null, b.ch.face, 0.25); if (b.chinka && b.showChinka !== false) R.skin(b.chinka.model.geo, b.chinka.bones, b.chinka.nb, null, b.chinka.face, 0.5); }
+    for (const b of this.bosses) { if (!b.ch || b.hidden) continue; R.skin(b.model.geo, b.ch.bones, b.ch.nb, b.hurtTint || null, b.ch.face, 0.25); if (b.chinka && b.showChinka !== false && !BurnsSkinActor.draw(this, R, 'chinka', b.chinka, null, 0.5)) R.skin(b.chinka.model.geo, b.chinka.bones, b.chinka.nb, null, b.chinka.face, 0.5); }
     if (this.def.drawSkinned) this.def.drawSkinned(this, R);
     // instanced crowds last: they switch to their own program (anything skinned after this calls skinBegin again)
     if (this.world.crowd) this.world.crowd.draw(R, env, this.world);
@@ -1338,7 +1338,7 @@ class BurnsPlayScene {
     const ch = this.pch; ch.x = 0; ch.y = 0; ch.z = 0; ch.yaw = 0.35; ch.scale = scale; ch.play(anim); ch.update(1 / 60); ch.faceOverride = model.man ? 3 : face; ch.compute();
     const r = box.portrait;
     const headY = (model.headY || 1.62) * scale + 0.05;
-    R.portrait({ x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k }, env, BURNS_ATLAS.T, [0.16, 0.1, 0.24], headY, RR => RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
+    R.portrait({ x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k }, env, BURNS_ATLAS.T, [0.16, 0.1, 0.24], headY, RR => BurnsSkinActor.draw(null, RR, who === 'brady' || who === this.player ? 'brady' : who && who.type, ch, null, 0.6) || RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
     this.portraitFrame = this.frameN;   // the dialogue box copies it over anything drawn under the box
   }
   /* ---------- pause + results ---------- */

@@ -147,14 +147,16 @@ const manifestFor = (name, short, desc, color, icons) => ({
 const zlib = require('zlib');
 const gltfpack = path.join(root, 'node_modules', '.bin', 'gltfpack');
 const packCache = path.join(dist, '.packcache');
+// assets/models/<app>/ ships with that app; assets/models/shared/ (the characters) ships with every 3D app
 const copyModels = (appDir, outDir) => {
-  const src = path.join(root, 'assets', 'models', appDir);
-  if (!fs.existsSync(src)) return [];
-  const names = fs.readdirSync(src).filter(f => f.endsWith('.glb')).sort();
+  const dirs = [path.join(root, 'assets', 'models', appDir), path.join(root, 'assets', 'models', 'shared')].filter(d => fs.existsSync(d));
+  if (!dirs.length) return [];
+  const files = []; for (const d of dirs) for (const f of fs.readdirSync(d)) if (f.endsWith('.glb') && !files.some(x => x.name === f)) files.push({ name: f, dir: d });
+  files.sort((a, b) => a.name.localeCompare(b.name));
   fs.mkdirSync(outDir, { recursive: true }); fs.mkdirSync(packCache, { recursive: true });
   const out = [];
-  for (const f of names) {
-    const inFile = path.join(src, f), st = fs.statSync(inFile), cached = path.join(packCache, appDir + '-' + f + '.' + st.mtimeMs + '.gz');
+  for (const { name: f, dir: src } of files) {
+    const inFile = path.join(src, f), st = fs.statSync(inFile), cached = path.join(packCache, path.basename(src) + '-' + f + '.' + st.mtimeMs + '.gz');
     if (!fs.existsSync(cached)) {
       let bytes = fs.readFileSync(inFile);
       if (fs.existsSync(gltfpack)) {

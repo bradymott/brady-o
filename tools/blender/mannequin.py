@@ -4,7 +4,7 @@
 # exported as glTF animations. Brady's real character, rigged by Mixamo, drops in with the same bone names.
 #
 # Headless:  /Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/mannequin.py
-# Writes assets/models/burning-man/mannequin.glb (about 7k triangles, 25 joints, 3 clips). Set BRADY_ROOT to override
+# Writes assets/models/shared/mannequin.glb (about 7k triangles, 25 joints, 3 clips). Set BRADY_ROOT to override
 # the repo root, MANNEQUIN_OUT for another output path.
 #
 # Coordinates: authored in Blender space (Z up, the figure faces -Y, its LEFT is +X); the exporter's +Y-up conversion
@@ -13,7 +13,7 @@ import bpy, bmesh, math, os, sys
 from mathutils import Vector, Matrix, Quaternion
 
 ROOT = os.environ.get('BRADY_ROOT') or os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
-OUT = os.environ.get('MANNEQUIN_OUT') or os.path.join(ROOT, 'assets', 'models', 'burning-man', 'mannequin.glb')
+OUT = os.environ.get('MANNEQUIN_OUT') or os.path.join(ROOT, 'assets', 'models', 'shared', 'mannequin.glb')
 FPS = 30
 TAU = math.tau
 

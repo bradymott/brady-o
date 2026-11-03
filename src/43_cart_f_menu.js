@@ -203,11 +203,11 @@ class KartMenuScene {
     R.resize(gw, gh); R.setCamera(cam);
     const env = BurnsEnv.build(CartShowroom.sky, null, 0, this.env, this.time);
     R.setLights([{ x: 2, y: 5, z: 6, r: 14, c: [1, 0.95, 0.9], i: 0.55 }, { x: -5, y: 2, z: -3, r: 10, c: [0.6, 0.85, 1], i: 0.35 }]);
-    if (R.shadowBegin(env, { dist: 30 })) { R.statics(World.chunks, env, World, BURNS_ATLAS.T, 0); R.skinBegin(env, World, BURNS_ATLAS.T); if (showStand) R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, 0, 0); else { R.skin(M.geo, car.bones, M.nb, null, 0, 0); R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, 0, 0); } R.shadowEnd(); }
+    if (R.shadowBegin(env, { dist: 30 })) { R.statics(World.chunks, env, World, BURNS_ATLAS.T, 0); R.skinBegin(env, World, BURNS_ATLAS.T); if (showStand) BurnsSkinActor.draw(null, R, drv.id, this.pstand) || R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, 0, 0); else { R.skin(M.geo, car.bones, M.nb, null, 0, 0); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, 0, 0); } R.shadowEnd(); }
     R.begin(env); R.sky(env); R.ground(World.ground, env, World); R.statics(World.chunks, env, World, BURNS_ATLAS.T, 300);
     R.skinBegin(env, World, BURNS_ATLAS.T);
-    if (showStand) R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, this.pstand.face, 0.6);
-    else { R.skin(M.geo, car.bones, M.nb, null, 0, 0.3); R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, drv.ch.face, 0.5); }
+    if (showStand) BurnsSkinActor.draw(null, R, drv.id, this.pstand, null, 0.6) || R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, this.pstand.face, 0.6);
+    else { R.skin(M.geo, car.bones, M.nb, null, 0, 0.3); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, drv.ch.face, 0.5); }
     const S = BURNS_SPRITES.R;
     for (const g of World.glows) R.bbs.bb(g.x, g.y, g.z, g.s * 1.8, g.s * 1.8, S.glow, g.c, 0.75, true);
     if (!showStand) for (const L of M.lights) { const p = cartLocalToWorld(car, L.x, L.y, L.z, [0, 0, 0]); R.bbs.bb(p[0], p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.4 : 0.7, true); }
@@ -235,7 +235,7 @@ class KartMenuScene {
       CART_DRIVERS.forEach((d, i) => {
         const D = CartDrivers.model(d.id), ch = new BurnsChar(D.model); ch.scale = D.man ? 0.14 : 1; ch.yaw = 0.3; ch.play(D.man ? 'idle' : 'wave', {}, true); ch.update(0.4); ch.faceOverride = D.man ? -1 : 3; ch.compute();
         const headY = (D.model.headY || 1.62) * ch.scale - (D.man ? 0.0 : 0.12), bg = burnsRGBf(shade(d.col, -0.55));
-        R.portrait({ x: (i % cols) * cw, y: Math.floor(i / cols) * chh, w: cw, h: chh }, env, BURNS_ATLAS.T, bg, headY, RR => RR.skin(D.model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
+        R.portrait({ x: (i % cols) * cw, y: Math.floor(i / cols) * chh, w: cw, h: chh }, env, BURNS_ATLAS.T, bg, headY, RR => BurnsSkinActor.draw(null, RR, d.type, ch, null, 0.6) || RR.skin(D.model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
       });
       R.post.noFx = [0, 0, 1, 1];
       R.end(env, { fires: [], bloom: 0 });

@@ -180,7 +180,7 @@ Object.assign(CartRaceScene.prototype, {
     if (wantShadow && R.shadowBegin(env)) {
       R.statics(W.chunks, env, W, A, 0);
       R.skinBegin(env, W, A);
-      for (const k of vis) { if (!R.shadowNear(k.x, k.y, k.z, 5)) continue; const M = this.carModel(k, k._d2); R.skin(M.geo, k.bones, M.nb, null, 0, 0); R.skin(k.dModel.lod || k.dModel.geo, k.dBones, k.ch.nb, null, 0, 0); }
+      for (const k of vis) { if (!R.shadowNear(k.x, k.y, k.z, 5)) continue; const M = this.carModel(k, k._d2); R.skin(M.geo, k.bones, M.nb, null, 0, 0); BurnsSkinActor.drawDriver(R, k, k.ch, k.drv.id) || R.skin(k.dModel.lod || k.dModel.geo, k.dBones, k.ch.nb, null, 0, 0); }
       for (const h of heroes) if (h._d2 < 40 * 40) R.skin(h.model.lod || h.model.geo, h.ch.bones, h.ch.nb, null, 0, 0);
       for (const G of this.props.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0);
       for (const G of crowds) if (R.shadowNear(G.cx, 1, G.cz, G.rad)) R.skin(G.far ? G.far.geo : G.geo, G.bones, G.objs.length, null, 0, 0);
@@ -199,7 +199,7 @@ Object.assign(CartRaceScene.prototype, {
       const M = this.carModel(k, k._d2), dark = k.out ? [0.05, 0.04, 0.06, 0.55] : k.invT > 0 && Math.floor(this.time * 16) % 2 === 0 ? [1, 1, 1, 0.25] : null;
       R.skin(M.geo, k.bones, M.nb, dark, 0, 0.3);
       const dm = k.dModel, D = k._d2 > 40 * 40 && dm.far ? dm.far : k._d2 > 13 * 13 && dm.lod ? dm.lod : dm.geo;
-      R.skin(D, k.dBones, k.ch.nb, null, k.ch.face, 0.45);
+      BurnsSkinActor.drawDriver(R, k, k.ch, k.drv.id) || R.skin(D, k.dBones, k.ch.nb, null, k.ch.face, 0.45);
     }
     for (const h of heroes) if (h._in) R.skin(h._d2 > 40 * 40 && h.model.far ? h.model.far : h._d2 > 10 * 10 && h.model.lod ? h.model.lod : h.model.geo, h.ch.bones, h.ch.nb, null, h.ch.face, 0.4);
     for (const G of crowds) R.skin(G._d > 50 && G.far ? G.far.geo : G.geo, G.bones, G.objs.length, null, 3, 0.3);
