@@ -607,6 +607,11 @@ window.BRADY_CART = {
         karts: (s.karts || []).map(k => ({ id: k.id, player: k.player, x: +k.x.toFixed(1), y: +k.y.toFixed(2), z: +k.z.toFixed(1), speed: +k.speed.toFixed(1), lap: k.lap, rank: k.rank, finished: k.finished, wpn: k.wpn.id, ready: +k.wpn.t.toFixed(2), uses: k.wpn.uses, hits: k.wpn.hits, item: k.item, vibes: k.vibes, out: k.out, score: +(k.score || 0).toFixed(1) })),
         obj: s.obj ? { time: +s.obj.time.toFixed(1), zone: s.obj.zone, ended: s.obj.ended } : null, results: s.results || null };
     },
-    events(type) { const s = Game.scene; return (s.events || []).filter(e => !type || e.type === type); }
+    events(type) { const s = Game.scene; return (s.events || []).filter(e => !type || e.type === type); },
+    gl() { return { tier: BurnsGL.tier, gl2: BurnsGL.gl2, maxBones: BurnsGL.maxBones, failed: BurnsGL.failed }; },
+    gfx(tier) { BurnsGL.configure(tier); return BurnsGL.tier; },
+    // draw one frame by hand (tests stop the rAF loop); returns milliseconds
+    frame() { const t = performance.now(); Game.ctx.setTransform(1, 0, 0, 1, 0, 0); Game.scene.draw(Game.ctx); return Math.round(performance.now() - t); },
+    menu(o) { Game.setScene(new KartMenuScene(o)); return Game.scene.state; }
   }
 };
