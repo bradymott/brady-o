@@ -193,24 +193,31 @@ Porting all of that to another renderer would be a long, risky rewrite. Instead:
   4. **Backgrounds and tiles:** parallax background layers (3–5 per level theme) and a tile set per country.
   5. **Engine:** add a sprite-atlas loader to the 2D engine and swap code-drawn entities for sprites one at a time. Physics, level data and the validator stay untouched.
   6. **Polish:** squash and stretch, particles, hit-stop, screen shake, haze.
-- **Brady Goes to Burning Man (realistic).** Make realistic Brady and Chinka first; both routes reuse them.
-  - **How to build them:**
-    - an MPFB2 or Character Creator base
-    - likeness from photos or a RealityScan scan
-    - hair cards
-    - clothes
-    - the sleeve tattoos as a texture
-    - a Mixamo-compatible rig and 3 LODs
-  - **Then a one-camp Unreal Engine 5 test** (Root Society at night with a MetaHuman Brady), shown side by side with the web game, so Brady can choose:
-    - **Route A:** upgrade the web game. Phase 2 above, plus baked lighting for the camps.
-    - **Route B:** rebuild natively in UE5. MetaHumans, Megascans through Fab, World Partition, iOS through Xcode and TestFlight. The web game is the playable blueprint.
+- **Brady Goes to Burning Man (realistic, Blender only).** Brady has decided against Unreal: make the web game as realistic as a phone allows.
+  1. **Engine:** a glTF loader with skinned characters, PBR materials, sky-image reflections and baked lightmaps. It's shared with Art Cart.
+  2. **Brady and Chinka:**
+     - an MPFB2 or Character Creator base
+     - likeness from photos or a RealityScan scan
+     - 2K skin, and hair cards
+     - cloth folds baked into the texture
+     - Brady's real tattoos projected on as a texture
+     - Chinka's emissive LED necklace
+     - Mixamo rig and animations, and 3 LODs
+  3. **The cast:** one base body plus a costume kit, LODs, and impostor cards for distant crowds.
+  4. **Vehicles and art cars:** bevelled, dust-masked materials and emissive LEDs.
+  5. **Camps and structures:** Geometry Nodes for repeating detail, Cycles-baked lightmaps, and night variants.
+  6. **The playa:** a real cracked-mud texture, track and footprint decals, and a mountain backdrop.
+  7. **Fire, smoke and dust:** Mantaflow simulations rendered as flipbook sprite sheets for particles.
+  8. **The final look:** a colour-grade LUT.
+  9. **First milestone:** realistic Brady in Root Society at sunset, beside a baked-lit dome and a Blender RV.
 
 ### Phase 3: gameplay polish and device testing
 - **Real-iPhone playtests:** controls, camera, difficulty, onboarding, readability, audio mix, battery and heat, saves.
 - **A bug bash in every world**, with scripted tests plus manual play.
 - **Accessibility:** button sizes, contrast, and reduced motion (it already exists for the trip effects; extend it).
 
-### Phase 4 (optional, only if Brady asks): native Unreal Engine 5
+### Phase 4 (not planned): native Unreal Engine 5
+Brady decided in November 2026 not to pursue Unreal. Keep everything on the web engine. The notes below are only for reference if he ever changes his mind.
 - It's for App Store or console-grade visuals beyond the web.
 - It needs a Mac with Xcode and the Apple Developer Program ($99/yr), and it's a months-long rebuild.
 - It reuses the design bible and the Phase 1 Blender assets.
