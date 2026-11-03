@@ -13,8 +13,8 @@
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#1a0626">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+
+
 <script>
 // offline support: cache the game after the first visit (needs https, skipped elsewhere)
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
@@ -3200,7 +3200,7 @@ const BurnsSave = {
       // progression follows BURNS_WORLD_ORDER: every finished world unlocks the next one in the
       // sequence (migrates saves made under older orders, e.g. finished 2 -> unlock 16). Nothing is re-locked.
       let changed = false;
-      for (const id of BURNS_WORLD_ORDER) { if (!d.worldDone[id]) continue; const nx = BurnsWorlds.next(id); if (nx && !d.unlocked[nx]) { d.unlocked[nx] = true; changed = true; } }
+      for (const id of BURNS_WORLD_ORDER) { if (!d.worldDone[id]) continue; const nx = BurnsWorlds.next(id); if (nx && !d.unlocked[nx]) { d.unlocked[nx] = true; changed = true; } }   // next() skips unregistered ids
       // ground scores arrived with world 16: saves that already got past it keep their baggies
       if (!d.flags['0:groundscore'] && BURNS_WORLD_ORDER.some(id => d.worldDone[id] && BURNS_WORLD_ORDER.indexOf(id) > BURNS_WORLD_ORDER.indexOf(16))) { d.flags['0:groundscore'] = true; changed = true; }
       if (changed) this.save();
@@ -3297,10 +3297,12 @@ const BurnsWorlds = {
   isSecret(id) { return !!BURNS_WORLD_SECRET[id]; },
   // ids the hub shows: the play order, minus secret worlds that are still locked
   visible() { const sv = BurnsSave.get(); return this.order.filter(id => !this.isSecret(id) || sv.unlocked[id]); },
-  // step over ids with no registered world yet, so progression never dead-ends on a world that isn't built
-  next(id) { let i = this.order.indexOf(id); if (i < 0) return null; while (++i < this.order.length) if (this.defs[this.order[i]]) return this.order[i]; return null; },
-  prev(id) { let i = this.order.indexOf(id); while (--i >= 0) if (this.defs[this.order[i]]) return this.order[i]; return null; },
-  isFinale(id) { return id === 10; }
+  // progression steps over worlds that aren't registered (yet): a build without W16/W17 goes 2 -> 3. The order itself never changes.
+  next(id) { const i = this.order.indexOf(id); if (i < 0) return null; for (let k = i + 1; k < this.order.length; k++) if (this.defs[this.order[k]]) return this.order[k]; return null; },
+  prev(id) { const i = this.order.indexOf(id); for (let k = i - 1; k >= 0; k--) if (this.defs[this.order[k]]) return this.order[k]; return null; },
+  isFinale(id) { return id === 10; },
+  // the open world (a registered def with open: true), or null: the title's CONTINUE goes there instead of the hub
+  open() { const k = Object.keys(this.defs).map(Number).find(k => this.defs[k].open); return k === undefined ? null : k; }
 };
 
 /* ---------------- costumes (geometry lives in 40_burns_d_rig.js) ---------------- */
@@ -3654,6 +3656,38 @@ vec3 bTrip(vec3 c, vec3 w) {
 
 const BURNS_GLSL_POSTVS = `attribute vec2 aPos; varying vec2 vUV; void main(){ vUV = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`;
 
+// the static mesh fragment shader (merged chunks and instanced props share it)
+const BURNS_GLSL_MESHFS = `precision highp float;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
+uniform sampler2D uTex;
+uniform float uAlphaK;
+${BURNS_GLSL_LIGHT}
+void main(){
+  vec4 t = texture2D(uTex, vT);
+  vec3 alb = bLin(vC.rgb * (1.0 - t.a) + t.rgb);
+  vec3 n = normalize(vN);
+#ifdef BUMP
+  vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.004);
+  n = t.a > 0.02 ? nb : n;
+#endif
+  float e = vC.a;
+  float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
+  vec3 c = mix(bShade(alb, n, vW, vG, 0.25, sh), alb * uEmB, e);
+  if (uTrip > 0.0) c = bTrip(c, vW);
+  gl_FragColor = bOut(bFogMix(c, vW, e) * uAlphaK, uAlphaK);
+}`;
+// instanced static props: aI0 = (x, y, z, yaw), aI1 = (scale, tint r, g, b); rotation matches BurnsMesh.tf / place()
+const BURNS_GLSL_MESHVS_I = `attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV; attribute vec4 aI0; attribute vec4 aI1;
+uniform mat4 uVP;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
+void main(){
+  float c = cos(aI0.w), s = sin(aI0.w);
+  vec3 p = aPos * aI1.x;
+  vW = vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z) + aI0.xyz;
+  vN = vec3(c * aNrm.x + s * aNrm.z, aNrm.y, -s * aNrm.x + c * aNrm.z);
+  vC = vec4(aCol.rgb * aI1.yzw, aCol.a); vT = aUV; vG = floor(aBone / 64.0 + 0.01) / 3.0;
+  gl_Position = uVP * vec4(vW, 1.0);
+}`;
 const BurnsGL = {
   canvas: null, gl: null, gl2: false, failed: false, lost: false, gen: 0, progs: null, maxBones: 32,
   failReason: '', tier: 'legacy', T: null, hdr: false, msaa: 0,
@@ -3686,7 +3720,7 @@ const BurnsGL = {
   setup() {
     const gl = this.gl;
     this.gen++;
-    this.enabled = [false, false, false, false, false, false];
+    this.enabled = [false, false, false, false, false, false, false, false];
     this.aniso = gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
     this.maxAniso = this.aniso ? gl.getParameter(this.aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT) : 1;
     this.derivs = this.gl2 || !!gl.getExtension('OES_standard_derivatives');
@@ -3717,6 +3751,10 @@ const BurnsGL = {
     gl.bufferData(gl.ARRAY_BUFFER, this.MAXQ * 4 * 32, gl.DYNAMIC_DRAW);
     this.black = this.rawTexture(2, 2, new Uint8Array(16));
     this.white = this.rawTexture(2, 2, new Uint8Array(16).fill(255));
+    // instanced drawing (WebGL2 core, or ANGLE_instanced_arrays on WebGL1): div(attrib, n), draw(count, byteOffset, instances)
+    const ia = this.gl2 ? null : gl.getExtension('ANGLE_instanced_arrays');
+    this.instGL = this.gl2 ? { div: (i, d) => gl.vertexAttribDivisor(i, d), draw: (c, o, n) => gl.drawElementsInstanced(gl.TRIANGLES, c, gl.UNSIGNED_SHORT, o, n) }
+      : ia ? { div: (i, d) => ia.vertexAttribDivisorANGLE(i, d), draw: (c, o, n) => ia.drawElementsInstancedANGLE(gl.TRIANGLES, c, gl.UNSIGNED_SHORT, o, n) } : null;
   },
   get Q() { return BURNS_GFX.tiers[this.tier] || null; },   // null on the legacy (WebGL1) path
   defines() {
@@ -3729,6 +3767,56 @@ const BurnsGL = {
   },
   buildPrograms() {
     const MB = this.maxBones, A = ['aPos', 'aNrm', 'aBone', 'aCol', 'aUV'];
+    const skinVS = `#define MAXB ${MB}
+attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV;
+uniform mat4 uVP; uniform vec4 uB[MAXB * 3]; uniform vec3 uFace;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
+void main(){
+  vL = aPos;
+  int i = int(mod(aBone, 64.0) + 0.5) * 3;
+  vG = floor(aBone / 64.0 + 0.01) / 3.0;
+  vec4 r0 = uB[i]; vec4 r1 = uB[i + 1]; vec4 r2 = uB[i + 2];
+  vec4 p = vec4(aPos, 1.0);
+  vW = vec3(dot(r0, p), dot(r1, p), dot(r2, p));
+  vN = vec3(dot(r0.xyz, aNrm), dot(r1.xyz, aNrm), dot(r2.xyz, aNrm));
+  vC = aCol; vT = aUV;
+  if (aUV.y >= uFace.x && aUV.y < uFace.y) vT.y += uFace.z;
+  gl_Position = uVP * vec4(vW, 1.0);
+}`;
+    const skinFS = `precision highp float;
+varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
+uniform sampler2D uTex;
+uniform vec4 uTint; uniform vec3 uRimC; uniform float uRim;
+${BURNS_GLSL_LIGHT}
+void main(){
+  vec4 t = texture2D(uTex, vT);
+  vec3 srgb = vC.rgb * (1.0 - t.a) + t.rgb;
+  vec3 alb = bLin(srgb);
+  vec3 n = normalize(vN);
+#ifdef BUMP
+  vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.0025);
+  // cloth: soft folds + a fine weave on matte, untextured, non-skin surfaces (bone-local, so it rides the body)
+  float skin0 = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r);
+  float cd = length(vW - uCam);
+  float fold = sin(vL.y * 44.0 + sin(vL.x * 21.0 + vL.z * 17.0) * 1.7) * 0.55 + sin(vL.y * 109.0 + vL.x * 37.0) * 0.16;
+  float weave = sin(vL.x * 560.0 + vL.z * 210.0) * sin(vL.y * 600.0) * 0.07 * (1.0 - smoothstep(1.2, 4.0, cd));
+  vec3 nc = bBump(n, vW, (fold + weave) * (1.0 - smoothstep(14.0, 30.0, cd)), 0.0018);
+  float cloth = (1.0 - step(0.02, t.a)) * (1.0 - step(0.15, vG)) * (1.0 - skin0) * (1.0 - step(0.5, vC.a));
+  n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));
+#endif
+  float e = vC.a;
+  float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
+  vec3 c = mix(bShade(alb, n, vW, vG, 0.4, sh), alb * uEmB, e);
+  // warm light bleeding through skin-like albedo at the terminator (cheap subsurface)
+  float sk = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r) * (1.0 - e);
+  float nl = dot(n, uKeyD);
+  c += alb * uKeyC * vec3(0.32, 0.1, 0.06) * sk * max(0.0, 1.0 - abs(nl * 1.6 - 0.1)) * (0.4 + 0.6 * sh);
+  vec3 v = normalize(uCam - vW);
+  c += uRimC * pow(1.0 - max(dot(n, v), 0.0), 2.5) * uRim;
+  c = mix(c, bLin(uTint.rgb), uTint.a);
+  if (uTrip > 0.0) c = bTrip(c, vW);
+  gl_FragColor = bOut(bFogMix(c, vW, e), 1.0);
+}`;
     const old = this.progs;
     this.progs = {
       sky: this.program(`attribute vec2 aPos; varying vec2 vN; void main(){ vN = aPos; gl_Position = vec4(aPos, 0.99995, 1.0); }`, `precision highp float;
@@ -3767,13 +3855,13 @@ void main(){
   if (uSkyK.y > 0.0) {
     float md = max(dot(d, uMoonD), 0.0);
     col += vec3(0.55, 0.6, 0.8) * (pow(md, 220.0) * 0.5 + pow(md, 18.0) * 0.06) * uSkyK.y;
-    // a real little moon: lit hemisphere from the sun's side, soft maria
+    // a real little moon: the hemisphere facing us, lit from the sun's side (nudged toward full), soft maria
     vec3 mr = normalize(cross(uMoonD, vec3(0.0, 1.0, 0.0))), mu = cross(mr, uMoonD);
     vec2 q = vec2(dot(d, mr), dot(d, mu)) / 0.026;
     float qd = dot(q, q);
     if (qd < 1.0 && md > 0.9) {
-      vec3 ns = normalize(mr * q.x + mu * q.y + uMoonD * sqrt(1.0 - qd));
-      float lit = smoothstep(-0.12, 0.2, dot(ns, normalize(uSunD + uMoonD * 0.25)));
+      vec3 ns = normalize(mr * q.x + mu * q.y - uMoonD * sqrt(1.0 - qd));
+      float lit = smoothstep(-0.12, 0.2, dot(ns, normalize(uSunD - uMoonD * 0.3)));
       float maria = 0.78 + 0.22 * smoothstep(0.35, 0.7, fbm(q * 2.3 + 4.0));
       vec3 mc = vec3(0.97, 0.95, 0.88) * maria * mix(0.07, 1.0, lit);
       col = mix(col, mc, smoothstep(1.0, 0.86, qd) * uSkyK.y);
@@ -3870,74 +3958,11 @@ void main(){
       mesh: this.program(`attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV;
 uniform mat4 uVP;
 varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
-void main(){ vW = aPos; vN = aNrm; vC = aCol; vT = aUV; vG = floor(aBone / 64.0 + 0.01) / 3.0; gl_Position = uVP * vec4(aPos, 1.0); }`, `precision highp float;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
-uniform sampler2D uTex;
-uniform float uAlphaK;
-${BURNS_GLSL_LIGHT}
-void main(){
-  vec4 t = texture2D(uTex, vT);
-  vec3 alb = bLin(vC.rgb * (1.0 - t.a) + t.rgb);
-  vec3 n = normalize(vN);
-#ifdef BUMP
-  vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.004);
-  n = t.a > 0.02 ? nb : n;
-#endif
-  float e = vC.a;
-  float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
-  vec3 c = mix(bShade(alb, n, vW, vG, 0.25, sh), alb * uEmB, e);
-  if (uTrip > 0.0) c = bTrip(c, vW);
-  gl_FragColor = bOut(bFogMix(c, vW, e) * uAlphaK, uAlphaK);
-}`, A),
-      skin: this.program(`#define MAXB ${MB}
-attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; attribute vec4 aCol; attribute vec2 aUV;
-uniform mat4 uVP; uniform vec4 uB[MAXB * 3]; uniform vec3 uFace;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
-void main(){
-  vL = aPos;
-  int i = int(mod(aBone, 64.0) + 0.5) * 3;
-  vG = floor(aBone / 64.0 + 0.01) / 3.0;
-  vec4 r0 = uB[i]; vec4 r1 = uB[i + 1]; vec4 r2 = uB[i + 2];
-  vec4 p = vec4(aPos, 1.0);
-  vW = vec3(dot(r0, p), dot(r1, p), dot(r2, p));
-  vN = vec3(dot(r0.xyz, aNrm), dot(r1.xyz, aNrm), dot(r2.xyz, aNrm));
-  vC = aCol; vT = aUV;
-  if (aUV.y >= uFace.x && aUV.y < uFace.y) vT.y += uFace.z;
-  gl_Position = uVP * vec4(vW, 1.0);
-}`, `precision highp float;
-varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
-uniform sampler2D uTex;
-uniform vec4 uTint; uniform vec3 uRimC; uniform float uRim;
-${BURNS_GLSL_LIGHT}
-void main(){
-  vec4 t = texture2D(uTex, vT);
-  vec3 srgb = vC.rgb * (1.0 - t.a) + t.rgb;
-  vec3 alb = bLin(srgb);
-  vec3 n = normalize(vN);
-#ifdef BUMP
-  vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.0025);
-  // cloth: soft folds + a fine weave on matte, untextured, non-skin surfaces (bone-local, so it rides the body)
-  float skin0 = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r);
-  float cd = length(vW - uCam);
-  float fold = sin(vL.y * 44.0 + sin(vL.x * 21.0 + vL.z * 17.0) * 1.7) * 0.55 + sin(vL.y * 109.0 + vL.x * 37.0) * 0.16;
-  float weave = sin(vL.x * 560.0 + vL.z * 210.0) * sin(vL.y * 600.0) * 0.07 * (1.0 - smoothstep(1.2, 4.0, cd));
-  vec3 nc = bBump(n, vW, (fold + weave) * (1.0 - smoothstep(14.0, 30.0, cd)), 0.0018);
-  float cloth = (1.0 - step(0.02, t.a)) * (1.0 - step(0.15, vG)) * (1.0 - skin0) * (1.0 - step(0.5, vC.a));
-  n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));
-#endif
-  float e = vC.a;
-  float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
-  vec3 c = mix(bShade(alb, n, vW, vG, 0.4, sh), alb * uEmB, e);
-  // warm light bleeding through skin-like albedo at the terminator (cheap subsurface)
-  float sk = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r) * (1.0 - e);
-  float nl = dot(n, uKeyD);
-  c += alb * uKeyC * vec3(0.32, 0.1, 0.06) * sk * max(0.0, 1.0 - abs(nl * 1.6 - 0.1)) * (0.4 + 0.6 * sh);
-  vec3 v = normalize(uCam - vW);
-  c += uRimC * pow(1.0 - max(dot(n, v), 0.0), 2.5) * uRim;
-  c = mix(c, bLin(uTint.rgb), uTint.a);
-  if (uTrip > 0.0) c = bTrip(c, vW);
-  gl_FragColor = bOut(bFogMix(c, vW, e), 1.0);
-}`, A),
+void main(){ vW = aPos; vN = aNrm; vC = aCol; vT = aUV; vG = floor(aBone / 64.0 + 0.01) / 3.0; gl_Position = uVP * vec4(aPos, 1.0); }`, BURNS_GLSL_MESHFS, A),
+      meshI: this.program(BURNS_GLSL_MESHVS_I, BURNS_GLSL_MESHFS, A.concat(['aI0', 'aI1'])),
+      skin: this.program(skinVS, skinFS, A),
+      // instanced crowds: one shared pose (uB) for every copy; aI0 = (x, y, z, yaw), aI1 = (scale, tint r, g, b)
+      skinI: this.program(skinVS.replace('attribute vec2 aUV;', 'attribute vec2 aUV; attribute vec4 aI0; attribute vec4 aI1;').replace('  gl_Position = uVP * vec4(vW, 1.0);', '  { float c = cos(aI0.w), s = sin(aI0.w); vec3 q = vW * aI1.x; vW = vec3(c * q.x + s * q.z, q.y, -s * q.x + c * q.z) + aI0.xyz; vN = vec3(c * vN.x + s * vN.z, vN.y, -s * vN.x + c * vN.z); vC = vec4(aCol.rgb * aI1.yzw, aCol.a); }\n  gl_Position = uVP * vec4(vW, 1.0);'), skinFS, A.concat(['aI0', 'aI1'])),
       sprite: this.program(`attribute vec3 aPos; attribute vec2 aNrm; attribute vec2 aBone; attribute vec4 aCol;
 uniform mat4 uVP; uniform vec3 uR, uU, uCam; uniform vec4 uFog; uniform float uFlat;
 varying vec2 vT; varying vec4 vC; varying float vF;
@@ -3964,6 +3989,7 @@ void main(){
     const P = this.progs, Q = this.Q;
     if (Q && Q.shadows) {
       P.shMesh = this.program(`attribute vec3 aPos; uniform mat4 uLVP; void main(){ gl_Position = uLVP * vec4(aPos, 1.0); }`, `precision mediump float; void main(){ gl_FragColor = vec4(1.0); }`, ['aPos']);
+      P.shMeshI = this.program(`attribute vec3 aPos; attribute vec4 aI0; attribute vec4 aI1; uniform mat4 uLVP; void main(){ float c = cos(aI0.w), s = sin(aI0.w); vec3 p = aPos * aI1.x; gl_Position = uLVP * vec4(vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z) + aI0.xyz, 1.0); }`, `precision mediump float; void main(){ gl_FragColor = vec4(1.0); }`, ['aPos', 'aNrm', 'aBone', 'aCol', 'aUV', 'aI0', 'aI1']);
       P.shSkin = this.program(`#define MAXB ${MB}
 attribute vec3 aPos; attribute vec3 aNrm; attribute float aBone; uniform mat4 uLVP; uniform vec4 uB[MAXB * 3];
 void main(){ int i = int(mod(aBone, 64.0) + 0.5) * 3; vec4 p = vec4(aPos, 1.0); gl_Position = uLVP * vec4(dot(uB[i], p), dot(uB[i + 1], p), dot(uB[i + 2], p), 1.0); }`, `precision mediump float; void main(){ gl_FragColor = vec4(1.0); }`, ['aPos', 'aNrm', 'aBone']);
@@ -4056,7 +4082,8 @@ void main(){
   vec2 uv = vUV, off = vec2(0.0);
   float t = uHeat.z;
   if (uHeat.x > 0.0) {
-    float k = uHeat.x * smoothstep(0.1, 0.0, abs(uv.y - uHeat.y) - 0.015);
+    // shimmer near the horizon, only on what is far away (a pole across the street stays straight)
+    float k = uHeat.x * smoothstep(0.1, 0.0, abs(uv.y - uHeat.y) - 0.015) * smoothstep(35.0, 140.0, lin(texture2D(uDepth, uv).r));
     off.x += sin(uv.y * 260.0 + t * 6.0 + sin(uv.x * 37.0 + t * 1.3) * 2.0) * 0.0011 * k;
     off.y += sin(uv.x * 190.0 - t * 5.0) * 0.0006 * k;
   }
@@ -4136,6 +4163,7 @@ void main(){
   // Managed texture: { src: canvas, opts, tex, gen }. Re-uploaded after context loss or when src.dirty.
   tex(T) {
     const gl = this.gl;
+    if (T.mipsDue && T.tex && T.gen === this.gen && !T.dirty && performance.now() > T.mipsDue) { T.mipsDue = 0; gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.generateMipmap(gl.TEXTURE_2D); }
     if (T.tex && T.gen === this.gen && !T.dirty) return T.tex;
     if (!T.tex || T.gen !== this.gen) T.tex = gl.createTexture();
     T.gen = this.gen; T.dirty = false;
@@ -4189,7 +4217,8 @@ void main(){
   },
   // re-upload one region of a canvas texture (a freshly painted atlas tile) instead of the whole image.
   // Returns false when the texture isn't on the GPU yet or is already due for a full upload.
-  texRegion(T, x, y, w, h) {
+  // lazyMips: rebuild the mip chain a little later (once for a burst of updates, e.g. signs painted while tiles stream)
+  texRegion(T, x, y, w, h, lazyMips) {
     const gl = this.gl;
     if (!gl || !T || !T.tex || T.gen !== this.gen || T.dirty) return false;
     const c = makeCanvas(w, h); c.getContext('2d').drawImage(T.src, x, y, w, h, 0, 0, w, h);
@@ -4199,7 +4228,7 @@ void main(){
     gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, c);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
     const pot = (T.src.width & (T.src.width - 1)) === 0 && (T.src.height & (T.src.height - 1)) === 0;
-    if (o.mips && (pot || this.gl2)) gl.generateMipmap(gl.TEXTURE_2D);   // same rule as tex(): WebGL1 can't mip a non-power-of-two texture
+    if (o.mips && (pot || this.gl2)) { if (lazyMips) T.mipsDue = performance.now() + 350; else gl.generateMipmap(gl.TEXTURE_2D); }   // same rule as tex(): WebGL1 can't mip a non-power-of-two texture
     return true;
   },
   freeGeo(G) {
@@ -4214,7 +4243,7 @@ void main(){
   },
   enable(n) {
     const gl = this.gl;
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       const want = i < n;
       if (want !== this.enabled[i]) { if (want) gl.enableVertexAttribArray(i); else gl.disableVertexAttribArray(i); this.enabled[i] = want; }
     }
@@ -4650,6 +4679,37 @@ class BurnsRenderer {
       this.stats.draws++; this.stats.tris += c.count / 3;
     }
   }
+  /* instanced static props (BurnsInstancer): batches [{ geo, data: Float32Array (8 floats a copy: x, y, z, yaw, scale,
+     tint r, g, b), n, dirty }]. One draw per batch; the shadow pass uses the depth-only variant. */
+  instances(batches, env, world, atlasT) {
+    const gl = BurnsGL.gl, I = BurnsGL.instGL;
+    if (!I || !batches || !batches.length) return;
+    const shadow = this.pass === 'shadow', p = shadow ? BurnsGL.progs.shMeshI : BurnsGL.progs.meshI;
+    if (!p) return;
+    gl.useProgram(p.p);
+    if (shadow) gl.uniformMatrix4fv(p.u.uLVP, false, this.LVP);
+    else {
+      this.applyEnv(p, env, world);
+      gl.uniform1f(p.u.uAlphaK, 1);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, BurnsGL.tex(atlasT)); gl.uniform1i(p.u.uTex, 0);
+    }
+    for (const b of batches) {
+      if (!b.n || !b.geo || !b.geo.count) continue;
+      BurnsGL.geo(b.geo);
+      if (!b.ibuf || b.ibufGen !== BurnsGL.gen) { b.ibuf = gl.createBuffer(); b.ibufGen = BurnsGL.gen; b.dirty = true; }
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.geo.vbo); BurnsGL.layoutMesh();
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.ibuf);
+      if (b.dirty) { gl.bufferData(gl.ARRAY_BUFFER, b.data.subarray(0, b.n * 8), gl.DYNAMIC_DRAW); b.dirty = false; }
+      BurnsGL.enable(7);
+      gl.vertexAttribPointer(5, 4, gl.FLOAT, false, 32, 0); gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 32, 16);
+      I.div(5, 1); I.div(6, 1);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b.geo.ibo);
+      I.draw(b.geo.count, 0, b.n);
+      I.div(5, 0); I.div(6, 0);
+      if (shadow) { this.stats.shDraws++; this.shadowStats += b.geo.count / 3 * b.n; } else { this.stats.draws++; this.stats.tris += b.geo.count / 3 * b.n; }
+    }
+    BurnsGL.enable(5);
+  }
   skinBegin(env, world, atlasT) {
     const gl = BurnsGL.gl;
     if (this.pass === 'shadow') { const p = BurnsGL.progs.shSkin; if (p) { gl.useProgram(p.p); gl.uniformMatrix4fv(p.u.uLVP, false, this.LVP); } return; }
@@ -4683,6 +4743,36 @@ class BurnsRenderer {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.ibo);
     gl.drawElements(gl.TRIANGLES, geo.count, gl.UNSIGNED_SHORT, 0);
     this.stats.draws++; this.stats.tris += geo.count / 3;
+  }
+  /* instanced crowds (BurnsCrowds): every copy in a batch shares one pose. crowdBegin() once, then crowd(...) per batch
+     { data: Float32Array (8 floats a copy: x, y, z, yaw, scale, tint r, g, b), n, dirty } */
+  crowdBegin(env, world, atlasT) {
+    const gl = BurnsGL.gl, p = BurnsGL.progs.skinI; if (!p || !BurnsGL.instGL) return false;
+    gl.useProgram(p.p);
+    this.applyEnv(p, env, world);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, BurnsGL.tex(atlasT)); gl.uniform1i(p.u.uTex, 0);
+    gl.uniform3fv(p.u.uRimC, this.lin.rim); gl.uniform4f(p.u.uTint, 0, 0, 0, 0);
+    return true;
+  }
+  crowd(geo, bones, n, face, rim, b) {
+    const gl = BurnsGL.gl, I = BurnsGL.instGL, p = BurnsGL.progs.skinI;
+    if (!p || !I || !b.n) return;
+    BurnsGL.geo(geo);
+    if (!b.ibuf || b.ibufGen !== BurnsGL.gen) { b.ibuf = gl.createBuffer(); b.ibufGen = BurnsGL.gen; b.dirty = true; }
+    gl.uniform4fv(p.u.uB, n * 12 === bones.length ? bones : bones.subarray(0, n * 12));
+    gl.uniform3f(p.u.uFace, BURNS_ATLAS.faceV0, BURNS_ATLAS.faceV1, (face || 0) * BURNS_ATLAS.faceRowV);
+    gl.uniform1f(p.u.uRim, (rim === undefined ? 0.35 : rim) * 0.6);
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.vbo); BurnsGL.layoutMesh();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b.ibuf);
+    if (b.dirty) { gl.bufferData(gl.ARRAY_BUFFER, b.data.subarray(0, b.n * 8), gl.DYNAMIC_DRAW); b.dirty = false; }
+    BurnsGL.enable(7);
+    gl.vertexAttribPointer(5, 4, gl.FLOAT, false, 32, 0); gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 32, 16);
+    I.div(5, 1); I.div(6, 1);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.ibo);
+    I.draw(geo.count, 0, b.n);
+    I.div(5, 0); I.div(6, 0);
+    BurnsGL.enable(5);
+    this.stats.draws++; this.stats.tris += geo.count / 3 * b.n;
   }
   // shadow pass helper: draw only some objects of a skinned group (index ranges [[i0, i1], ...])
   skinRanges(geo, bones, n, ranges, cnt) {
@@ -4937,13 +5027,13 @@ class BurnsRenderer {
    Untextured faces sample a transparent texel, so they show the colour.
    ============================================================ */
 
-/* ---------------- shared atlas (2048 x 3072) ----------------
+/* ---------------- shared atlas (2048 x 4096) ----------------
    top-left:     pattern tiles, item icons, misc (Chinka photo)
    top-right:    per-world sign/banner text, page 1 (shelf-packed, reset per world)
-   y 1024..2048: faces, 16 cols x 4 expression rows of 128px (art inset 8px with a clear
-                 margin, so faces wrap cleanly onto round heads)
-   y 2048..3072: sign page 2 (2048 x 1024): camp-heavy worlds fill page 1, then this */
-const BURNS_ATLAS_H = 3072;
+   y 1024..3072: faces, four banks of 16 cols x 4 expression rows of 128px = 64 faces (art inset 8px with a
+                 clear margin, so faces wrap cleanly onto round heads)
+   y 3072..4096: sign page 2 (2048 x 1024): camp-heavy worlds fill page 1, then this */
+const BURNS_ATLAS_H = 4096;
 // Run a painter between save() and restore() on a shared 2D context that is at its top level (the atlas). If the
 // painter throws, or leaves a save() open, unwind the whole stack: its transform and clip must never leak onto
 // the tiles, faces and signs painted after it (and start clean if someone else's painter leaked one).
@@ -4961,10 +5051,10 @@ function burnsPaintSafe(x, fn) {
 }
 const BURNS_ATLAS = {
   W: 2048, H: BURNS_ATLAS_H, canvas: null, T: null,
-  faceV0: 1024 / BURNS_ATLAS_H, faceV1: 2048 / BURNS_ATLAS_H, faceRowV: 128 / BURNS_ATLAS_H,   // two banks: y 1024..1536 and 1536..2048
+  faceV0: 1024 / BURNS_ATLAS_H, faceV1: 3072 / BURNS_ATLAS_H, faceRowV: 128 / BURNS_ATLAS_H,   // four banks of 512px: y 1024..3072
   regions: {},
   white: { u0: 4 / 2048, v0: 4 / BURNS_ATLAS_H, u1: 12 / 2048, v1: 12 / BURNS_ATLAS_H },
-  SIGN_AREAS: [[1028, 4, 2048, 1024], [4, 2052, 2048, 3072]],
+  SIGN_AREAS: [[1028, 4, 2048, 1024], [4, 3076, 2048, 4096]],
   FACES: ['brady', 'bradyClean', 'friendly', 'lashes', 'tired', 'stressed', 'greeter', 'beard', 'smug', 'chinka', 'stern', 'goofy', 'grumpy', 'sleepy', 'man', 'kid'],
   PATTERNS: ['tattoo', 'tattoo2', 'fur', 'disco', 'led', 'plaid', 'hivis', 'tiedye', 'wood', 'swoosh', 'canvas', 'sequin', 'leopard', 'flames', 'denim', 'rainbow'],
   ICONS: ['heart', 'k', 'flake', 'tab', 'shroom', 'leaf', 'toad', 'bottle', 'drop', 'ticket', 'map', 'www', 'token', 'glowstick', 'ziptie', 'camera'],
@@ -4983,7 +5073,7 @@ const BURNS_ATLAS = {
     this.signReset();
   },
   reg(x, y, w, h) { return { u0: x / this.W, v0: y / this.H, u1: (x + w) / this.W, v1: (y + h) / this.H, px: x, py: y, pw: w, ph: h }; },
-  // ---- faces: 32 slots (two banks of 16 x 4 expression rows); add more with addFace ----
+  // ---- faces: 64 slots (four banks of 16 x 4 expression rows); add more with addFace ----
   faceRecipes: {},
   paintFaceCell(i, f) {
     const x = this.ctx, col = i % 16, bank = Math.floor(i / 16);
@@ -4999,7 +5089,7 @@ const BURNS_ATLAS = {
   addFace(name, recipe) {
     this.faceRecipes[name] = recipe;
     let i = this.FACES.indexOf(name);
-    if (i < 0) { if (this.FACES.length >= 32) { console.warn('burns: face slots full'); return; } this.FACES.push(name); i = this.FACES.length - 1; }
+    if (i < 0) { if (this.FACES.length >= 64) { console.warn('burns: face slots full (64): ' + name); return; } this.FACES.push(name); i = this.FACES.length - 1; }
     if (this.canvas) this.paintFaceCell(i, name);
   },
   // ---- extra 128px pattern tiles (23 slots: y 64..320 and y 832..960): addPattern(name, fn(ctx, rng)) paints a tileable 128x128 decal ----
@@ -5020,17 +5110,74 @@ const BURNS_ATLAS = {
   face(name) { return this.regions['face:' + name] || this.regions['face:friendly']; },
   pattern(name) { return this.regions['pat:' + name] || this.white; },   // unknown/unpainted -> transparent texel (shows the base colour)
   icon(name) { return this.regions['icon:' + name]; },
-  // ---- per-world sign text (right half) ----
+  /* ---- per-world sign text: page 1 (right half of the top) then page 2, reset per world ----
+     Signs are packed in rows from the top of the pages and kept for the whole world. Signs first asked for while a
+     streaming tile builds (signOwner, set by BurnsWorld.tileBegin) go to shelves growing up from the bottom of page 2
+     instead; each tile that uses one holds a reference, and when the last of those tiles is freed (signRelease) its
+     space is reused. A tile sign also used outside any tile is kept for good. */
   signReset() {
-    const x = this.ctx; burnsCtxUnwind(x, false); x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 2048, 2048, 1024);
+    const x = this.ctx; burnsCtxUnwind(x, false); x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 3072, 2048, 1024);
     this.sa = 0; this.sx = 1024 + 4; this.sy = 4; this.srow = 0; this.signs = {};
+    this.tShelves = []; this.tileTop = this.SIGN_AREAS[this.SIGN_AREAS.length - 1][3]; this.signOwner = null;
+    if (this.T) this.T.dirty = true;
+  },
+  // a tile sign's slot: the best-fitting shelf with a free span, else a new shelf above the others
+  tileAlloc(pw, ph) {
+    const need = pw + 6, H = ph + 4, A = this.SIGN_AREAS[this.SIGN_AREAS.length - 1];
+    let best = null, bj = -1;
+    const look = maxH => { for (const sh of this.tShelves) { if (sh.h < H || sh.h > maxH || (best && sh.h >= best.h)) continue; const j = sh.spans.findIndex(q => q[1] - q[0] >= need); if (j >= 0) { best = sh; bj = j; } } };
+    look(H * 1.5 + 8);
+    if (!best) {
+      const hc = Math.ceil(H / 8) * 8, last = this.SIGN_AREAS.length - 1, rowsEnd = this.sa >= last ? this.sy + this.srow + 4 : A[1];
+      if (this.tileTop - hc >= rowsEnd && need <= A[2] - A[0]) { this.tileTop -= hc; best = { y: this.tileTop, h: hc, spans: [[A[0], A[2]]] }; this.tShelves.push(best); bj = 0; }
+    }
+    if (!best) look(1e9);
+    if (!best) return null;
+    const q = best.spans[bj], x = q[0]; q[0] += need;
+    return { x, y: best.y, si: this.tShelves.indexOf(best), aw: need, sh: best.h };
+  },
+  // who holds a sign: a streaming tile (counted), or the world (kept)
+  signUse(r, key) {
+    if (r.si === undefined) return;
+    const t = this.signOwner;
+    if (!t) { r.perm = true; return; }
+    const L = t.signKeys || (t.signKeys = new Set());
+    if (!L.has(key)) { L.add(key); r.refs = (r.refs || 0) + 1; }
+  },
+  // a freed tile gives back the signs no other live tile uses
+  signRelease(t) {
+    const L = t && t.signKeys; if (!L) return; t.signKeys = null;
+    for (const key of L) {
+      const r = this.signs[key]; if (!r || r.si === undefined || r.perm || --r.refs > 0) continue;
+      const sh = this.tShelves[r.si]; delete this.signs[key]; if (!sh) continue;
+      sh.spans.push([r.px, r.px + r.aw]); sh.spans.sort((a, b) => a[0] - b[0]);
+      const out = []; for (const q of sh.spans) { const P = out[out.length - 1]; if (P && q[0] <= P[1]) P[1] = Math.max(P[1], q[1]); else out.push([q[0], q[1]]); }
+      sh.spans = out;
+    }
+  },
+  // the sign pages and their packing, saved while an entered place (a sub-world) borrows them (BurnsOpen)
+  signSnapshot() {
+    if (!this.canvas) return null;
+    const c = makeCanvas(2048, 2048), x = c.getContext('2d');
+    x.drawImage(this.canvas, 1024, 0, 1024, 1024, 0, 0, 1024, 1024);
+    x.drawImage(this.canvas, 0, 3072, 2048, 1024, 0, 1024, 2048, 1024);
+    return { c, sa: this.sa, sx: this.sx, sy: this.sy, srow: this.srow, signs: this.signs, tShelves: (this.tShelves || []).map(q => ({ y: q.y, h: q.h, spans: q.spans.map(v => v.slice()) })), tileTop: this.tileTop, owner: this.signOwner };
+  },
+  signRestore(S) {
+    if (!S || !this.canvas) return;
+    const x = this.ctx; burnsCtxUnwind(x, false);
+    x.clearRect(1024, 0, 1024, 1024); x.clearRect(0, 3072, 2048, 1024);
+    x.drawImage(S.c, 0, 0, 1024, 1024, 1024, 0, 1024, 1024);
+    x.drawImage(S.c, 0, 1024, 2048, 1024, 0, 3072, 2048, 1024);
+    this.sa = S.sa; this.sx = S.sx; this.sy = S.sy; this.srow = S.srow; this.signs = S.signs;
+    this.tShelves = S.tShelves || []; this.tileTop = S.tileTop || this.SIGN_AREAS[this.SIGN_AREAS.length - 1][3]; this.signOwner = S.owner || null;
     if (this.T) this.T.dirty = true;
   },
   // opts: { w, h (px), bg, fg, font, size, border, glow, pad, align, lines }
   sign(text, o) {
     o = o || {};
     const key = text + '|' + JSON.stringify(o);
-    if (this.signs[key]) return this.signs[key];
+    if (this.signs[key]) { const r0 = this.signs[key]; this.signUse(r0, key); return r0; }
     const x = this.ctx;
     const size = o.size || 40, font = o.font || FONT_DISPLAY;
     x.font = `${size}px ${font}`;
@@ -5040,21 +5187,24 @@ const BURNS_ATLAS = {
     const w = Math.min(1000, Math.ceil(o.w || tw + pad * 2)), h = Math.min(500, Math.ceil(o.h || size * 1.25 * lines.length + pad * 1.4));
     // signs are rasterised at 72%; their size in the world is set by the caller, not by pixels. Two sign pages per world
     // (1020x1020 + 2044x1020, reset per world); only when both are full do signs shrink to 52% then 38%.
-    let SC = 0, pw = 0, ph = 0;
+    let SC = 0, pw = 0, ph = 0, px = 0, py = 0, slot = null;
+    const last = this.SIGN_AREAS.length - 1;
     for (const k of [0.72, 0.52, 0.38]) {
       pw = Math.ceil(w * k); ph = Math.ceil(h * k);
+      if (this.signOwner) { slot = this.tileAlloc(pw, ph); if (slot) { SC = k; px = slot.x; py = slot.y; break; } continue; }
       for (let a = this.sa || 0; a < this.SIGN_AREAS.length && !SC; a++) {
-        const A = this.SIGN_AREAS[a];
+        const A = this.SIGN_AREAS[a], bottom = a === last ? Math.min(A[3], this.tileTop || A[3]) : A[3];
         let sx = a === (this.sa || 0) ? this.sx : A[0], sy = a === (this.sa || 0) ? this.sy : A[1], srow = a === (this.sa || 0) ? this.srow : 0;
         if (sx + pw + 4 > A[2]) { sx = A[0]; sy += srow + 4; srow = 0; }
-        if (pw + 8 <= A[2] - A[0] && sy + ph + 4 <= A[3]) { this.sa = a; this.sx = sx; this.sy = sy; this.srow = srow; SC = k; }
+        if (pw + 8 <= A[2] - A[0] && sy + ph + 4 <= bottom) { this.sa = a; this.sx = sx; this.sy = sy; this.srow = srow; SC = k; }
       }
-      if (SC) break;
+      if (SC) { px = this.sx; py = this.sy; this.sx += pw + 6; this.srow = Math.max(this.srow, ph); break; }
     }
     if (!SC) { console.warn('burns sign atlas full'); return this.white; }
-    const px = this.sx, py = this.sy;
-    this.sx += pw + 6; this.srow = Math.max(this.srow, ph);
+    // a reused tile slot is cleared first (its old sign could show through a sign without a background)
+    const cw = slot ? slot.aw : pw, chh = slot ? slot.sh : ph;
     burnsPaintSafe(x, x => {
+    x.clearRect(px, py, cw, chh);
     x.beginPath(); x.rect(px, py, pw, ph); x.clip(); x.translate(px, py); x.scale(SC, SC);
     if (o.bg) { x.fillStyle = o.bg; if (o.round) { burnsRR(x, 0, 0, w, h, o.round); x.fill(); } else x.fillRect(0, 0, w, h); }
     if (o.border) { x.strokeStyle = o.border; x.lineWidth = o.borderW || Math.max(3, size * 0.1); if (o.round) { burnsRR(x, x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth, o.round); x.stroke(); } else x.strokeRect(x.lineWidth / 2, x.lineWidth / 2, w - x.lineWidth, h - x.lineWidth); }
@@ -5064,8 +5214,9 @@ const BURNS_ATLAS = {
     lines.forEach((l, i) => x.fillText(l, w / 2, h / 2 + (i - (lines.length - 1) / 2) * size * 1.18 + size * 0.04));
     });
     const r = this.reg(px, py, pw, ph); r.aspect = w / h;
-    this.signs[key] = r;
-    if (this.T) this.T.dirty = true;
+    if (slot) { r.si = slot.si; r.aw = slot.aw; r.refs = 0; }
+    this.signs[key] = r; this.signUse(r, key);
+    if (this.T && !BurnsGL.texRegion(this.T, px, py, cw, chh, true)) this.T.dirty = true;   // just this sign (streaming tiles paint signs mid-game)
     return r;
   },
   // ---------- painters ----------
@@ -5296,7 +5447,7 @@ const BURNS_ATLAS = {
     } catch (e) { console.warn('burns: Chinka photo bake failed', e); img = null; }
     if (!img) return;
     this.paintPhoto(this.ctx, 0, 832, img);
-    if (this.T && !BurnsGL.texRegion(this.T, 0, 832, 128, 160)) this.T.dirty = true;   // just the tile, not the whole 2048 x 3072 atlas
+    if (this.T && !BurnsGL.texRegion(this.T, 0, 832, 128, 160)) this.T.dirty = true;   // just the tile, not the whole 2048 x 4096 atlas
   }
 };
 
@@ -8857,6 +9008,16 @@ class BurnsCollide {
     for (let ix = x0; ix <= x1; ix++) for (let iz = z0; iz <= z1; iz++) { const k = this.key(ix, iz); let a = grid.get(k); if (!a) { a = []; grid.set(k, a); } a.push(c); }
   }
   add(c) { this.prep(c); this.statics.push(c); this.insert(c, this.grid); return c; }
+  // remove a batch of static colliders (a streaming tile freeing its own)
+  removeMany(list) {
+    if (!list || !list.length) return;
+    const S = new Set(list), C = this.cell;
+    this.statics = this.statics.filter(c => !S.has(c));
+    for (const c of list) {
+      const x0 = Math.floor((c.x - c.ex) / C), x1 = Math.floor((c.x + c.ex) / C), z0 = Math.floor((c.z - c.ez) / C), z1 = Math.floor((c.z + c.ez) / C);
+      for (let ix = x0; ix <= x1; ix++) for (let iz = z0; iz <= z1; iz++) { const k = this.key(ix, iz), a = this.grid.get(k); if (!a) continue; const j = a.indexOf(c); if (j >= 0) { a[j] = a[a.length - 1]; a.pop(); } if (!a.length) this.grid.delete(k); }
+    }
+  }
   // dynamic colliders: call beginDyn(), addDyn(c) for each (already in world coords), each step
   beginDyn() { this.dgrid.clear(); this.dyn.length = 0; }
   addDyn(c) { const yaw = c.yaw || 0; c.cy = Math.cos(yaw); c.sy = Math.sin(yaw); if (c.t === 'box' || c.t === 'ramp') { c.ex = Math.abs(c.cy) * c.hx + Math.abs(c.sy) * c.hz; c.ez = Math.abs(c.sy) * c.hx + Math.abs(c.cy) * c.hz; } else { c.ex = c.ez = c.r; } this.dyn.push(c); this.insert(c, this.dgrid); }
@@ -9008,6 +9169,8 @@ class BurnsTraffic {
 }
 
 /* ---------------- world ---------------- */
+// what a streaming tile owns (arrays on BurnsWorld; see tileBegin)
+const BURNS_TILE_OWNED = ['glows', 'beams', 'fires', 'jets', 'muds', 'lights', 'vehicles', 'actorDefs', 'movers', 'groups', 'interacts'];
 class BurnsWorld {
   constructor(def, game) {
     this.def = def; this.game = game; this.id = def.id;
@@ -9028,6 +9191,77 @@ class BurnsWorld {
     BURNS_ATLAS.signReset();
     this.initCanvases();
     this.api = this.makeApi();
+    // streaming tiles: while a tile is being built (this.cur), everything it adds belongs to it
+    this.cur = null;
+    const add0 = this.col.add.bind(this.col);
+    this.col.add = c => { const r = add0(c); if (this.cur) this.cur.cols.push(r); return r; };
+  }
+  /* ---------- streaming tiles (def.tiles; driven by BurnsTiles in 40_burns_m_open.js) ----------
+     tileBegin(t) ... the tile's builder runs (any api call) ... tileEnd(t) bakes its chunks; tileFree(t) drops all of it.
+     A tile owns its static chunks, colliders, glows, beams, fires, flame jets, mud, light pools, drivable vehicles,
+     actors (from api.npc), movers and their groups, ACTION prompts, LSD-ghost geometry and instanced props. Updaters,
+     triggers, markers, checkpoints and pickups stay world-wide (build those in def.build). */
+  tileBegin(t) {
+    t.cells = new Map(); t.cols = []; t.chunks = []; t.snap = {};
+    for (const k of BURNS_TILE_OWNED) t.snap[k] = new Set(this[k] || []);
+    this._cells0 = this.cells; this.cells = t.cells;
+    this._ghost0 = this.ghostMesh; this.ghostMesh = null;
+    this.cur = t;
+    BURNS_ATLAS.signOwner = t;   // signs first painted for this tile are the tile's (given back in tileFree)
+  }
+  tileEnd(t) {
+    for (const [, e] of t.cells) for (const m of e.list) if (!m.empty) { const c = m.geo(); c.tile = t; t.chunks.push(c); this.chunks.push(c); }
+    if (this.ghostMesh && !this.ghostMesh.empty) { const c = this.ghostMesh.geo(); c.tile = t; c.ghost = true; t.chunks.push(c); this.ghosts.push(c); }
+    this.ghostMesh = this._ghost0; this.cells = this._cells0; this.cur = null;
+    if (BURNS_ATLAS.signOwner === t) BURNS_ATLAS.signOwner = null;
+    t.own = {};
+    for (const k of BURNS_TILE_OWNED) { const S = t.snap[k], a = this[k] || []; t.own[k] = S.size || a.length ? a.filter(x => !S.has(x)) : []; }
+    t.snap = null; t.cells = null;
+    for (const G of t.own.groups) if (!G.geo) G.finish();
+    if (t.own.lights.length && this.lightmap) this.repaintLights(t.x0, t.z0, t.x1, t.z1, t.own.lights);
+  }
+  tileFree(t) {
+    const own = t.own || {};
+    for (const k of BURNS_TILE_OWNED) { const L = own[k]; if (!L || !L.length || !this[k]) continue; const S = new Set(L); this[k] = this[k].filter(x => !S.has(x)); }
+    const CS = new Set(t.chunks);
+    for (const c of t.chunks) BurnsGL.freeGeo(c);
+    if (CS.size) { this.chunks = this.chunks.filter(c => !CS.has(c)); this.ghosts = this.ghosts.filter(c => !CS.has(c)); }
+    for (const G of own.groups || []) BurnsGL.freeGeo(G.geo);
+    this.col.removeMany(t.cols);
+    BURNS_ATLAS.signRelease(t);
+    if (own.lights && own.lights.length && this.lightmap) this.repaintLights(t.x0, t.z0, t.x1, t.z1, own.lights);
+    t.chunks = []; t.cols = []; t.own = null;
+  }
+  // instanced props (BurnsInstancer, 40_burns_m_open.js), made on first use
+  instancer() { return this.inst || (this.inst = new BurnsInstancer(this)); }
+  // instanced crowds (BurnsCrowds): set the looks once, then add as many background people as you like
+  crowds(looks) { if (!this.crowd) this.crowd = new BurnsCrowds(this, looks); else if (looks) this.crowd.setLooks(looks); return this.crowd; }
+  // repaint the lightmap where some pools appeared or went away (the pools' own extent), then upload just that part
+  repaintLights(x0, z0, x1, z1, pools) {
+    for (const L of pools || []) { x0 = Math.min(x0, L.x - L.r); z0 = Math.min(z0, L.z - L.r); x1 = Math.max(x1, L.x + L.r); z1 = Math.max(z1, L.z + L.r); }
+    const lx = this.lightX, f = this.lightXf, C = this.lightC;
+    const px0 = clamp(Math.floor((x0 - f.x0) * f.sx) - 1, 0, C.width), pz0 = clamp(Math.floor((z0 - f.z0) * f.sz) - 1, 0, C.height);
+    const px1 = clamp(Math.ceil((x1 - f.x0) * f.sx) + 1, 0, C.width), pz1 = clamp(Math.ceil((z1 - f.z0) * f.sz) + 1, 0, C.height);
+    if (px1 <= px0 || pz1 <= pz0) return;
+    lx.save(); lx.beginPath(); lx.rect(px0, pz0, px1 - px0, pz1 - pz0); lx.clip();
+    lx.fillStyle = '#000'; lx.fillRect(px0, pz0, px1 - px0, pz1 - pz0);
+    const wx0 = f.x0 + px0 / f.sx, wz0 = f.z0 + pz0 / f.sz, wx1 = f.x0 + px1 / f.sx, wz1 = f.z0 + pz1 / f.sz;
+    this.paintPools(this.lights.filter(L => L.x + L.r > wx0 && L.x - L.r < wx1 && L.z + L.r > wz0 && L.z - L.r < wz1));
+    lx.restore();
+    if (!BurnsGL.texRegion(this.lightmap.T, px0, pz0, px1 - px0, pz1 - pz0)) this.lightmap.T.dirty = true;
+  }
+  paintPools(list) {
+    const lx = this.lightX, f = this.lightXf;
+    lx.globalCompositeOperation = 'lighter';
+    for (const L of list) {
+      const cx = (L.x - f.x0) * f.sx, cz = (L.z - f.z0) * f.sz, r = L.r * f.sx;
+      if (typeof L.c !== 'string' && !Array.isArray(L.c)) { if (!this._warnedL) { this._warnedL = true; console.warn('burns: light pool without a colour', JSON.stringify(L)); } L.c = '#ffb070'; }
+      const c = burnsRGB(L.c);
+      const g = lx.createRadialGradient(cx, cz, 0, cx, cz, Math.max(1, r));
+      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${L.i})`); g.addColorStop(0.45, `rgba(${c[0]},${c[1]},${c[2]},${L.i * 0.4})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      lx.fillStyle = g; lx.fillRect(cx - r, cz - r, r * 2, r * 2);
+    }
+    lx.globalCompositeOperation = 'source-over';
   }
   height(x, z) { return this.heightFn ? this.heightFn(x, z) : 0; }
   /* ---------- painted ground + lightmap canvases ---------- */
@@ -9137,17 +9371,8 @@ class BurnsWorld {
     for (const g of this.groups) if (!g.geo) g.finish();
     this.buildGround();
     // lightmap pools
-    const lx = this.lightX, f = this.lightXf;
-    lx.globalCompositeOperation = 'lighter';
-    for (const L of this.lights) {
-      const cx = (L.x - f.x0) * f.sx, cz = (L.z - f.z0) * f.sz, r = L.r * f.sx;
-      if (typeof L.c !== 'string' && !Array.isArray(L.c)) { if (!this._warnedL) { this._warnedL = true; console.warn('burns: light pool without a colour', JSON.stringify(L)); } L.c = '#ffb070'; }
-      const c = burnsRGB(L.c);
-      const g = lx.createRadialGradient(cx, cz, 0, cx, cz, Math.max(1, r));
-      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${L.i})`); g.addColorStop(0.45, `rgba(${c[0]},${c[1]},${c[2]},${L.i * 0.4})`); g.addColorStop(1, 'rgba(0,0,0,0)');
-      lx.fillStyle = g; lx.fillRect(cx - r, cz - r, r * 2, r * 2);
-    }
-    lx.globalCompositeOperation = 'source-over';
+    const f = this.lightXf;
+    this.paintPools(this.lights);
     this.lightmap = { T: { src: this.lightC, opts: {} }, x0: f.x0, z0: f.z0, w: f.w, d: f.d };
     this.ground.paintT = { src: this.paintC, opts: { mips: true, premult: true, aniso: 8 } };
     this.ground.detT = { src: BurnsWorld.detailTexture(), opts: { mips: true, repeat: true, aniso: 8 } };
@@ -9155,7 +9380,7 @@ class BurnsWorld {
   }
   buildGround() {
     const B = this.bounds, g = this.def.ground || {};
-    const inner = 6, pad = 60;
+    const inner = g.step || 6, pad = 60;   // ground.step: grid spacing (m); a flat open world can use 20-30
     const x0 = B.x0 - pad, z0 = B.z0 - pad, x1 = B.x1 + pad, z1 = B.z1 + pad;
     const nx = Math.ceil((x1 - x0) / inner), nz = Math.ceil((z1 - z0) / inner);
     const geos = [];
@@ -9369,7 +9594,14 @@ class BurnsWorld {
       marker(id, x, z, label, o) { const mk = Object.assign({ id, x, z, label }, o || {}); W.markers.push(mk); return mk; },
       region(name, x, z, r) { W.regions[name] = { x, z, r: r || 10 }; },
       sign(text, x, z, o) { return api.prop('sign', Object.assign({ x, z, text }, o || {})); },
-      height(x, z) { return W.height(x, z); }
+      height(x, z) { return W.height(x, z); },
+      /* instanced props: define a prototype once, then place any number of copies (one draw per prototype and detail
+         level). build(m) runs at full detail, then with m.lo = true; o.far(m) builds the cheapest copy. See §4.8. */
+      instanceProto(id, build, o) { return W.instancer().proto(id, build, o); },
+      instance(id, x, z, o) { o = o || {}; return W.instancer().add(id, x, o.y || 0, z, o.yaw || 0, o.scale || 1, o.tint, o.noCol); },
+      // instanced background people (§4.8): api.extras([[type, seed], ...]) once, then api.extra(x, z, { yaw, anim, look, phase })
+      extras(looks) { return W.crowds(looks); },
+      extra(x, z, o) { return W.crowds().add(x, z, o); }
     };
     // route static geometry into the LSD ghost layer while inside api.hidden()
     const place0 = W.place.bind(W);
@@ -9473,13 +9705,14 @@ class BurnsWorld {
     return 2;
   }
   // segment cast for the camera (returns 0..1 fraction of the first hit)
-  raycast(ax, ay, az, bx, by, bz, skipCamPass) {
+  // ignoreMover: skip that mover's colliders (the camera looking past the art car Brady is driving)
+  raycast(ax, ay, az, bx, by, bz, skipCamPass, ignoreMover) {
     const dx = bx - ax, dy = by - ay, dz = bz - az, len = Math.hypot(dx, dz);
     const list = this._near4 || (this._near4 = []);
     this.col.near((ax + bx) / 2, (az + bz) / 2, len / 2 + 1, list);
     let tmin = 1;
     for (const c of list) {
-      if (!c.solid || (skipCamPass && c.camPass)) continue;
+      if (!c.solid || (skipCamPass && c.camPass) || (ignoreMover && c.mover === ignoreMover)) continue;
       const t = this.segT(c, ax, ay, az, dx, dy, dz);
       if (t < tmin) tmin = t;
     }
@@ -9513,7 +9746,7 @@ const BURNS_LINES = {
   driver: ["I've been driving for six days.", 'What... day is it?', 'Is THIS the line?', 'Six. Days.'],
   ranger: ['Everything okay here?', 'Stay hydrated, friend.', "I'm not a cop. I'm a Ranger."],
   dpw: ['Outta the way, sparkle pony.', "We built this city. You're welcome.", 'Hard hat zone.'],
-  techbro: ['Have you heard of my startup?', "It's like Uber, but for dust.", "Let's circle back after the burn."],
+  techbro: ['Have you heard of my startup?', "It's like rideshare, but for dust.", "Let's circle back after the burn."],
   sparklepony: ['Can I borrow some water? And food? And a tent?', "I'm, like, so dehydrated.", 'Does this glitter make me look thirsty?'],
   influencer: ['Hold on, the light is PERFECT.', 'This is for the content.', "Move, babe. You're in my shot."],
   crusty: ['It was better in the old days.', 'Back then the Man was twelve feet tall.', 'You call that dust?'],
@@ -9550,7 +9783,7 @@ class BurnsActor {
   setBehavior(name) { this.behName = name; this.beh = BurnsBehaviors.get(name); this.data = {}; this.stT = 0; if (this.beh.init) this.beh.init(this, this.g); }
   get canTalk() { return !this.hidden && this.friendly && !this.def.noTalk && !!(this.def.lines || this.def.talk || this.def.gift || this.beh.talk); }
   get boss() { return !!this.def.boss; }
-  say(text, dur) { this.bubbleText = text; this.bubbleT = dur || Math.max(2.2, text.length * 0.07); }
+  say(text, dur) { this.bubbleText = text; this.bubbleT = dur || Math.max(2.2, text.length * 0.07); this.bubbleChat = false; }
   face(tx, tz, dt, rate) { const t = Math.atan2(tx - this.x, tz - this.z); this.yaw = BurnsM.dampAngle(this.yaw, t, rate || 6, dt); }
   distP() { const p = this.g.player; return Math.hypot(p.x - this.x, p.z - this.z); }
   // steer toward a point; returns remaining distance
@@ -9590,12 +9823,13 @@ class BurnsActor {
     if (this.bubbleT > 0) { this.bubbleT -= dt; if (this.bubbleT <= 0) this.bubbleText = null; }
     if (!this.hidden) this.beh.update(this, this.g, dt);
     // ambient chatter when the player walks by
-    if (this.friendly && !this.boss && !this.g.dialog.open && this.def.chatter !== false) {
+    // (held while a dialogue box is open, in cutscenes and during modal minigames: DJ sets, rhythm rounds, g.modal)
+    if (this.friendly && !this.boss && !this.g.dialog.open && !this.g.cine && !(this.g.modalOn && this.g.modalOn()) && this.def.chatter !== false) {
       this.chatT -= dt;
       if (this.chatT <= 0) {
         this.chatT = 7 + Math.random() * 12;
         const d = this.distP();
-        if (d < 9 && d > 1.2) { const TY = BURNS_NPC_TYPES[this.type], L = this.def.chat || (TY && TY.lines) || BURNS_LINES[this.type]; if (L && L.length) this.say(L[Math.floor(Math.random() * L.length)]); }
+        if (d < 9 && d > 1.2) { const TY = BURNS_NPC_TYPES[this.type], L = this.def.chat || (TY && TY.lines) || BURNS_LINES[this.type]; if (L && L.length) { this.say(L[Math.floor(Math.random() * L.length)]); this.bubbleChat = true; } }
       }
     }
   }
@@ -11021,6 +11255,13 @@ class BurnsMissions {
     }
   }
   get(id) { return this.list.find(m => m.id === id); }
+  // a requirement: a mission id in this world, or 'world:id' for one finished in another world ('17:arrive')
+  reqDone(r) {
+    const i = typeof r === 'string' ? r.indexOf(':') : -1;
+    if (i < 0) return this.isDone(r);
+    const w = +r.slice(0, i), id = r.slice(i + 1);
+    return BurnsSave.hasToken(w, id) || BurnsSave.get().missions[w + ':' + id] === 'done';
+  }
   state(id) { const m = this.get(id); return m ? m.state : null; }
   isDone(id) { return this.state(id) === 'done'; }
   active() { return this.list.filter(m => m.state === 'active'); }
@@ -11029,7 +11270,7 @@ class BurnsMissions {
     for (const m of this.list) {
       if (m.state !== 'locked') continue;
       const req = m.def.requires || [];
-      if (req.every(r => this.isDone(r))) m.state = 'available';
+      if (req.every(r => this.reqDone(r)) && (!m.def.unlock || m.def.unlock(this.g, m))) m.state = 'available';
     }
     for (const m of this.list) if (m.state === 'available' && m.def.start === 'auto') this.start(m.id);
   }
@@ -11105,6 +11346,7 @@ class BurnsMissions {
       if (name === 'defeat' && d.type === 'defeat' && (!d.tag || (data.def && data.def.tag === d.tag))) this.progress(m.id);
       if (name === 'talk' && d.type === 'talk' && data.id === d.target) this.complete(m.id);
       if (name === 'spotted' && d.type === 'stealth') this.fail(m.id, 'You were spotted!');
+      if (name === 'region' && d.type === 'reach' && d.region === data) this.complete(m.id);
     }
   }
   update(dt) {
@@ -11243,20 +11485,20 @@ class BurnsCine {
     if (!this.cur) { this.finish(); return; }
     const s = this.cur, g = this.g;
     if (s.do) { s.do(g, this); if (!this.finished) this.advance(); return; }
-    if (s.letterbox !== undefined) { this.letter = s.letterbox; this.advance(); return; }
+    if (s.letterbox !== undefined) { this.letter = s.letterbox; this.letterSet = true; this.advance(); return; }
     if (s.music) { burnsMusic(s.music); this.advance(); return; }
     if (s.sfx) { burnsSfx(s.sfx); this.advance(); return; }
     if (s.banner) { g.banner(...s.banner); this.advance(); return; }
     if (s.slowmo !== undefined) { g.cineSlow = clamp(s.slowmo, 0.05, 1); this.slowT = s.dur || 0; this.advance(); return; }
-    if (s.dof !== undefined) { this.dof = s.dof === 'auto' ? null : s.dof; this.advance(); return; }
+    if (s.dof !== undefined) { this.dof = s.dof === 'auto' ? null : s.dof; this.dofSet = true; this.advance(); return; }
     if (s.shake) { g.shake(s.shake); this.advance(); return; }
     if (s.flash) { g.screenFlash(s.flash === true ? '#ffffff' : s.flash, s.alpha || 0.85); this.advance(); return; }
     if (s.swell) { g.musicSwell(s.swell); this.advance(); return; }
     if (s.title) { g.dayCard(s.title === true ? null : s.title); if (s.wait === false) this.advance(); return; }
-    if (s.orbit || s.track) { if (!this.cam) this.cam = Object.assign({}, g.camState()); }
+    if (s.orbit || s.track) { if (!this.cam) this.cam = Object.assign({}, this.opts.camFrom || g.camState()); }
     if (s.say) { this.waiting = true; g.dialog.say(s.say[0], s.say[1], () => { this.waiting = false; }); return; }
     if (s.cam && !s.cam.dur) { this.cam = Object.assign({}, s.cam); this.advance(); return; }
-    if (s.cam) { this.camFrom = this.cam ? Object.assign({}, this.cam) : Object.assign({}, g.camState()); }
+    if (s.cam) { this.camFrom = this.cam ? Object.assign({}, this.cam) : Object.assign({}, this.opts.camFrom || g.camState()); }
     if (s.fade) { g.fadeTo(s.fade === 'out' ? 1 : 0, s.dur || 0.6); }
   }
   update(dt) {
@@ -11304,7 +11546,20 @@ class BurnsCine {
       else if (u >= 1 && this.t > s.cam.dur + s.cam.hold) this.advance();
       return;
     }
-    if (s.parallel) { if (!this.par) this.par = s.parallel.map(p => new BurnsCine(g, [p], null, { letterbox: this.letter })); this.par.forEach(c => c.update(dt)); if (this.par.every(c => c.finished)) { this.par = null; this.advance(); } return; }
+    if (s.parallel) {
+      if (!this.par) this.par = s.parallel.map(p => new BurnsCine(g, [p], null, { letterbox: this.letter, camFrom: this.cam ? Object.assign({}, this.cam) : null }));   // camera moves start from this cutscene's camera
+      this.par.forEach(c => c.update(dt));
+      // the screen reads this cutscene's camera, letterbox, focus and slow-mo timer: a cam / dolly / orbit / track,
+      // letterbox, dof or slowmo step inside the block drives them (the last one to change wins)
+      for (const c of this.par) {
+        if (c.cam && c.cam !== c.camSeen) { this.cam = c.camSeen = c.cam; }
+        if (c.letterSet) { this.letter = c.letter; c.letterSet = false; }
+        if (c.dofSet) { this.dof = c.dof; c.dofSet = false; }
+        if (c.slowT > 0) { this.slowT = Math.max(this.slowT || 0, c.slowT); c.slowT = 0; }
+      }
+      if (this.par.every(c => c.finished)) { this.par = null; this.advance(); }
+      return;
+    }
     this.advance();
   }
   skip() {
@@ -11381,11 +11636,13 @@ class BurnsPlayScene {
     // spawn at the saved checkpoint or the world's spawn
     const cpId = this.opts.checkpoint || (this.opts.fresh ? null : sv.checkpoint[this.worldId]);
     const cp = cpId && this.world.checkpoints.find(c => c.id === cpId);
-    const sp = cp ? { x: cp.x + Math.sin(cp.yaw) * 2, y: cp.y, z: cp.z + Math.cos(cp.yaw) * 2, yaw: cp.yaw } : (d.spawn || { x: 0, y: 0, z: 0, yaw: 0 });
+    const sp = this.opts.spawn || (cp ? { x: cp.x + Math.sin(cp.yaw) * 2, y: cp.y, z: cp.z + Math.cos(cp.yaw) * 2, yaw: cp.yaw } : (d.spawn || { x: 0, y: 0, z: 0, yaw: 0 }));   // opts.spawn: an open world resuming where Brady was
     if (cp) cp.active = true;
     this.spawn = sp;
     this.player.teleport(sp.x, sp.y || this.world.height(sp.x, sp.z), sp.z, sp.yaw || 0);
     this.camYaw = (sp.yaw || 0); this.snapCam = true;
+    // streaming tiles (open worlds): the ones around the spawn are built now, the rest stream in as Brady moves
+    if (d.tiles) { this.tiles = new BurnsTiles(this, d.tiles); this.tiles.prime(this.player.x, this.player.z, d.tiles.prime); }
     this.state = 'play';
     this.layoutControls();
     burnsMusic(d.music || ('burns_w' + this.worldId));
@@ -11694,8 +11951,35 @@ class BurnsPlayScene {
     if (this.player) this.saveRun();
     this.released = true;
     BurnsScenes.releaseWorld(this);
+    // quitting from inside an entered place also lets go of the open world behind it
+    for (let s = this.parentScene; s; s = s.parentScene) if (!s.released) { s.released = true; try { s.saveRun(); } catch (e) { /* ignore */ } BurnsScenes.releaseWorld(s); }
     if (toHub) Game.setScene(new BurnsHubScene({ from: this.worldId }));
     else burnsToTitle();
+  }
+  // back from an entered place (BurnsOpen.leave) or the travel map: Brady at `back` (or where he was), the world's music
+  resumeFrom(sub, how) {
+    this.lastFrame = 0; this.paused = false; this.state = 'play'; this.suspended = false;
+    Input.camDrag = false; Input.hud = null; Input.setMode('game');
+    this.layoutControls(); this.syncHudButtons();
+    const p = this.player, b = sub && sub.parentBack;
+    if (b) { p.teleport(b.x, b.y === undefined ? this.world.height(b.x, b.z) : b.y, b.z, b.yaw || 0); this.camYaw = b.yaw || 0; this.snapCam = true; }
+    p.locked = false; p.animOverride = null; p.vy = 0;
+    if (this.tiles && b) this.tiles.prime(p.x, p.z);
+    burnsMusic(this.def.music || ('burns_w' + this.worldId));
+    this.fade = 1; this.fadeTo(0, 0.9);
+    if (this.def.onResume) { try { this.def.onResume(this, sub, how); } catch (e) { console.error(e); } }
+  }
+  // open worlds: the hub map works as a fast-travel map (def.travel(g, worldId) moves Brady to that place)
+  openTravelMap() {
+    if (typeof BurnsHubScene === 'undefined') return;
+    const g = this; this.suspended = true; Input.camDrag = false;
+    Game.setScene(new BurnsHubScene({ travel: {
+      go: w => { Game.setScene(g); g.resumeFrom(null, 'map'); if (g.def.travel) g.def.travel(g, w); },
+      back: () => { Game.setScene(g); g.resumeFrom(null, 'map'); },
+      // def.mapProject(g, worldId, rect) -> {x, y}: where a world's pin sits; def.mapDraw(g, ctx, rect, t): the city itself
+      project: g.def.mapProject ? (w, M) => g.def.mapProject(g, w, M) : null,
+      drawCity: g.def.mapDraw ? (ctx, M, t) => g.def.mapDraw(g, ctx, M, t) : null
+    } }));
   }
   // after the results: a story card carries Brady to the next world (or the hub when it isn't ready)
   storyNext() {
@@ -11705,6 +11989,12 @@ class BurnsPlayScene {
     this.released = true;
     BurnsScenes.releaseWorld(this);
     const nx = BurnsWorlds.next(this.worldId);
+    if (this.parentScene) {   // an entered place: the story card for the next day, then back into the open world
+      const self = this;
+      if (nx && typeof BurnsStoryScene !== 'undefined') Game.setScene(new BurnsStoryScene({ from: this.worldId, to: nx, then: () => BurnsOpen.leave(self, 'done') }));
+      else BurnsOpen.leave(self, 'done');
+      return;
+    }
     if (nx && typeof BurnsStoryScene !== 'undefined') Game.setScene(new BurnsStoryScene({ from: this.worldId, to: nx }));
     else Game.setScene(new BurnsHubScene({ from: this.worldId }));
   }
@@ -11790,6 +12080,7 @@ class BurnsPlayScene {
     for (const v of W.vehicles) v.idle(wdt);
     for (const fn of W.updaters) fn(this, wdt);
     if (this.def.update) this.def.update(this, wdt);
+    if (this.tiles) this.tiles.update(dt);
     W.stepMovers();
     for (const b of this.bosses) if (b.addColliders) b.addColliders();
     // ride moving platforms
@@ -11839,7 +12130,7 @@ class BurnsPlayScene {
   updateCamera(fdt) {
     const p = this.player, cam = this.cam, sv = BurnsSave.get().settings, W = this.world;
     const portrait = Game.cssH > Game.cssW;
-    if (this.cine && this.cine.cam) { Object.assign(cam, this.cine.cam); cam.shift = portrait ? 0.06 : 0; cam.roll = 0; return; }
+    if (this.cine && this.cine.cam) { Object.assign(cam, this.cine.cam); cam.shift = portrait ? 0.06 : 0; cam.roll = 0; if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt); return; }
     // manual orbit (touch drag / mouse / keys / right stick)
     const sens = (sv.camSens || 1) * 0.0085;
     let dyaw = -Input.camDX * sens, dpitch = Input.camDY * sens * 0.7 * (sv.invertY ? -1 : 1);
@@ -11887,7 +12178,7 @@ class BurnsPlayScene {
     const cy = this.camYaw, ax = C.x + lx - Math.cos(this.camYaw) * sh, ay = C.y, az = C.z + lz + Math.sin(this.camYaw) * sh, want = baseDist;
     // collision: first try rising over whatever blocks the view (vehicles behind Brady on the RV
     // roofs, walls), and only then pull the camera in toward him
-    const probe = (pt) => { const dX = -Math.sin(cy) * Math.cos(pt), dY = Math.sin(pt), dZ = -Math.cos(cy) * Math.cos(pt); return Math.max(1.1, W.raycast(ax, ay, az, ax + dX * (want + 0.4), ay + dY * (want + 0.4), az + dZ * (want + 0.4), true) * (want + 0.4) - 0.45); };
+    const probe = (pt) => { const dX = -Math.sin(cy) * Math.cos(pt), dY = Math.sin(pt), dZ = -Math.cos(cy) * Math.cos(pt); return Math.max(1.1, W.raycast(ax, ay, az, ax + dX * (want + 0.4), ay + dY * (want + 0.4), az + dZ * (want + 0.4), true, veh && veh.mv) * (want + 0.4) - 0.45); };
     let lift = 0;
     if (!(this.cine && this.cine.cam) && probe(this.camPitch) < want * 0.7) {
       let best = probe(this.camPitch);
@@ -11896,7 +12187,7 @@ class BurnsPlayScene {
     this.camLift = BurnsM.damp(this.camLift || 0, lift, lift > (this.camLift || 0) ? 6 : 1.5, fdt);
     const pitch = this.camPitch + this.camLift;
     const dirX = -Math.sin(cy) * Math.cos(pitch), dirY = Math.sin(pitch), dirZ = -Math.cos(cy) * Math.cos(pitch);
-    const hit = W.raycast(ax, ay, az, ax + dirX * (want + 0.4), ay + dirY * (want + 0.4), az + dirZ * (want + 0.4), true);
+    const hit = W.raycast(ax, ay, az, ax + dirX * (want + 0.4), ay + dirY * (want + 0.4), az + dirZ * (want + 0.4), true, veh && veh.mv);
     const allowed = Math.max(1.1, hit * (want + 0.4) - 0.45);
     this.camD = allowed < this.camD ? allowed : BurnsM.damp(this.camD, Math.min(want, allowed), 2.5, fdt);
     let x = ax + dirX * this.camD, y = ay + dirY * this.camD, z = az + dirZ * this.camD;
@@ -11925,7 +12216,11 @@ class BurnsPlayScene {
       if (!p.vehicle && !p.locked) p.yaw = yaw;   // the body faces where you look
     }
     cam.near = 0.15; cam.far = 1500;
+    // def.cameraFx(g, cam, dt): a world's own camera effects (wobble, roll, fov breathing) on the finished camera
+    if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt);
   }
+  // a modal minigame owns the screen (DJ set, rhythm round, or any world that sets g.modal): no random chatter
+  modalOn() { return !!(this.modal || this.bw567rhythm || (typeof BurnsDJ !== 'undefined' && BurnsDJ.isOpen && BurnsDJ.isOpen(this))); }
   /* ---------- rendering ---------- */
   adapt(fdt) {
     this.slowAcc = clamp((this.slowAcc || 0) + (fdt > 0.021 ? fdt : -fdt * 0.3), 0, 3);
@@ -11953,6 +12248,8 @@ class BurnsPlayScene {
     if (!this.paused) this.adapt(fdt);
     const frozen = this.paused || this.state === 'results';
     const vdt = frozen ? 0 : fdt;
+    // streaming tiles: a few ms of building per frame (never while frozen)
+    if (this.tiles && !frozen) this.tiles.step();
     // visuals that run per rendered frame
     this.fx.update(vdt * this.slow * (this.cineSlow || 1));
     this.updateCamera(vdt || 1e-4);
@@ -11971,7 +12268,8 @@ class BurnsPlayScene {
     R.setCamera(this.cam);
     const env = BurnsEnv.build(this.palA, this.palB, this.tod, this.env, this.time);
     if (this.def.env) this.def.env(this, env);
-    env.trip = p.power === 'lsd' && p.powerT > 0 ? Math.min(1, p.powerT / 2, (BURNS_POWERUPS.lsd.dur - p.powerT) * 2) : 0;
+    // colour trip: the strongest of the world's own (g.colorTrip 0..1, or env.trip set in def.env) and the power-up's
+    env.trip = Math.max(env.trip || 0, this.colorTrip || 0, p.power === 'lsd' && p.powerT > 0 ? Math.min(1, p.powerT / 2, (BURNS_POWERUPS.lsd.dur - p.powerT) * 2) : 0);
     this.collectLights(env);
     // pose everything first: the shadow pass and the main pass draw the same characters
     this.pickups.draw(R);
@@ -11979,6 +12277,9 @@ class BurnsPlayScene {
     const cam = this.cam, P = R.planes, vis = this._drawList || (this._drawList = []);
     vis.length = 0;
     const wantShadow = !!(Q && Q.shadows && env.keyDir[1] > 0.06), shD2 = 42 * 42;
+    const inst = this.world.inst;
+    if (inst) inst.update(R, this.def.drawDist || 260, wantShadow ? (Q.shadowDist || 60) + 12 : 0);
+    if (this.world.crowd) this.world.crowd.update(R, vdt * this.slow * (this.cineSlow || 1), this.def.crowdDist || 95);
     for (const a of this.actors) {
       if (a.removed || a.hidden) continue;
       const d2 = (a.x - cam.x) * (a.x - cam.x) + (a.z - cam.z) * (a.z - cam.z);
@@ -11996,6 +12297,7 @@ class BurnsPlayScene {
     // ---- sun shadows (WebGL2 tiers): the same draw calls, depth only, from the sun ----
     if (wantShadow && R.shadowBegin(env, { dist: fp ? Q.shadowDist * 0.75 : undefined })) {
       R.statics(this.world.chunks, env, this.world, BURNS_ATLAS.T, 0);
+      if (inst) inst.drawShadow(R);
       R.skinBegin(env, this.world, BURNS_ATLAS.T);
       // vehicles and movers: only the objects near the shadow circle (their own index ranges), in the detail
       // level the main view shows (far traffic casts with its low-detail twin)
@@ -12024,6 +12326,7 @@ class BurnsPlayScene {
     R.sky(env);
     R.ground(this.world.ground, env, this.world);
     R.statics(this.world.chunks, env, this.world, BURNS_ATLAS.T, this.def.drawDist || (env.fogD > 0.02 ? 120 : 260));   // def.drawDist: per-world static draw distance (m)
+    if (inst) inst.draw(R, env, this.world);
     if (env.trip > 0.01 && this.world.ghosts.length) R.ghost(this.world.ghosts, env, this.world, BURNS_ATLAS.T, 0.55 + env.trip * 0.35);
     // skinned: groups (vehicles, movers, pickups), characters, bosses
     R.skinBegin(env, this.world, BURNS_ATLAS.T);
@@ -12040,6 +12343,8 @@ class BurnsPlayScene {
     }
     for (const b of this.bosses) { if (!b.ch || b.hidden) continue; R.skin(b.model.geo, b.ch.bones, b.ch.nb, b.hurtTint || null, b.ch.face, 0.25); if (b.chinka && b.showChinka !== false) R.skin(b.chinka.model.geo, b.chinka.bones, b.chinka.nb, null, b.chinka.face, 0.5); }
     if (this.def.drawSkinned) this.def.drawSkinned(this, R);
+    // instanced crowds last: they switch to their own program (anything skinned after this calls skinBegin again)
+    if (this.world.crowd) this.world.crowd.draw(R, env, this.world);
     // sprites: shadows, glows, particles, projectiles
     this.pushSprites(R, env);
     R.sprites(env, BURNS_SPRITES.T);
@@ -12152,12 +12457,14 @@ class BurnsPlayScene {
     const ck = R.shadowOn ? 0.62 : 1;   // with sun shadows the blob is just contact occlusion under the feet
     shadow(p.x, p.y, p.z, 1.15 * p.ch.scale * (R.shadowOn ? 0.85 : 1), 0.6 * ck);
     for (const a of this.actors) if (a._vis) { shadow(a.x, a.y, a.z, 1.05 * a.scale * (R.shadowOn ? 0.85 : 1), 0.55 * ck); a._vis = false; }
+    if (W.crowd) W.crowd.shadows(R, S);
     // static glows (lamps, neon, headlights on parked cars)
     const lsd = p.power === 'lsd' && p.powerT > 0;
+    const gd2 = (this.def.glowDist || 170) * (this.def.glowDist || 170);   // def.glowDist: how far static glows show (open worlds: the city's lights from afar)
     for (const g of W.glows) {
       if (g.hidden && !lsd) continue;
       const dx = g.x - cam.x, dz = g.z - cam.z, d2 = dx * dx + dz * dz;
-      if (d2 > 170 * 170) continue;
+      if (d2 > gd2) continue;
       if (!BurnsM.sphereVisible(P, g.x, g.y, g.z, g.s)) continue;
       const fl = g.blink ? (0.6 + 0.4 * Math.sin(t * g.blink + g.ph)) : 1;
       R.bbs.bb(g.x, g.y, g.z, g.s * 1.8, g.s * 1.8, S.glow, g.c, 0.75 * fl, true);
@@ -12224,6 +12531,7 @@ class BurnsPlayScene {
     const r = box.portrait;
     const headY = (model.headY || 1.62) * scale + 0.05;
     R.portrait({ x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k }, env, BURNS_ATLAS.T, [0.16, 0.1, 0.24], headY, RR => RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
+    this.portraitFrame = this.frameN;   // the dialogue box copies it over anything drawn under the box
   }
   /* ---------- pause + results ---------- */
   buildPause() { this.pauseUI = BurnsUI.buildPause(this); }
@@ -12252,6 +12560,8 @@ const BurnsScenes = {
       if (scene.pickups) for (const G of scene.pickups.groups) BurnsGL.freeGeo(G.geo);
       for (const g of W.ground.geos) BurnsGL.freeGeo(g);
       BurnsGL.freeTex(W.ground.paintT); BurnsGL.freeTex(W.lightmap.T);
+      if (W.inst) W.inst.release();
+      if (W.crowd) W.crowd.release();
     } catch (e) { /* ignore */ }
   }
 };
@@ -12333,24 +12643,28 @@ const BurnsUI = {
     const bossOn = g.boss && g.boss.active && !g.boss.defeated;
     g._trk = this.trackerLayout(ctx, g, S);
     g.topStack = S.t + (g._trk ? g._trk.h + 10 : 6) + (bossOn ? 52 : 0);
+    // def.drawUnder(g, ctx, fdt): a world's own 2D layer over the 3D frame, under the engine's HUD (screen tints, panels)
+    if (g.def.drawUnder) g.def.drawUnder(g, ctx, fdt);
     // screen tints for power-ups
     if (p.power === 'khole' && p.powerT > 0) { const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.2, W / 2, H / 2, H * 0.85); v.addColorStop(0, 'rgba(80,40,160,0)'); v.addColorStop(1, `rgba(80,40,160,${0.45 + Math.sin(g.time * 2) * 0.1})`); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); }
     if (p.power === 'lsd' && p.powerT > 0) { ctx.save(); ctx.globalCompositeOperation = 'overlay'; ctx.fillStyle = `hsla(${(g.time * 90) % 360},90%,60%,0.16)`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
     if (p.hydration <= 2 && !p.dead) { const a = (0.22 + Math.sin(g.time * 5) * 0.1) * (p.hydration <= 1 ? 1.4 : 1); const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.9); v.addColorStop(0, 'rgba(255,40,40,0)'); v.addColorStop(1, `rgba(200,20,20,${a})`); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); }
     this.drawWorldLabels(ctx, g);
     const cine = !!g.cine;
-    if (!cine && g.state === 'play' && !window.__burnsHideHUD) this.drawHUD(ctx, g, S);
+    if (!cine && g.state === 'play' && !window.__burnsHideHUD) { this.drawHUD(ctx, g, S); if (g.def.drawHUD) g.def.drawHUD(ctx, g, W, H, S); }
     this.drawBossBar(ctx, g, S);
     // letterbox
     g.lbK = BurnsM.damp(g.lbK || 0, cine && g.cine.letter ? 1 : 0, 6, fdt);
     if (g.lbK > 0.01) { const bh = H * 0.1 * g.lbK; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh); }
-    if (cine && !g.dialog.open) { const sx = W - S.r - 80, sy = H - S.b - 36 - (g.lbK > 0.5 ? 0 : 0); this.pill(ctx, sx, sy, 72, 28, 'rgba(10,6,20,0.6)', 'rgba(255,255,255,0.3)'); this.text(ctx, 'SKIP ▶▶', sx + 36, sy + 14, 10, '#ffffff', { stroke: false }); g.skipRect = { x: sx, y: sy, w: 72, h: 28 }; } else g.skipRect = null;
+    if (cine && !g.dialog.open && !window.__burnsHideHUD) { const sx = W - S.r - 80, sy = H - S.b - 36 - (g.lbK > 0.5 ? 0 : 0); this.pill(ctx, sx, sy, 72, 28, 'rgba(10,6,20,0.6)', 'rgba(255,255,255,0.3)'); this.text(ctx, 'SKIP ▶▶', sx + 36, sy + 14, 10, '#ffffff', { stroke: false }); g.skipRect = { x: sx, y: sy, w: 72, h: 28 }; } else g.skipRect = null;
     if (g.state === 'play') this.drawDayCard(ctx, g, fdt);
     this.drawBanners(ctx, g, fdt);
     // warning
     if (g.warnT > 0 && g.warnText) { const a = 0.6 + 0.4 * Math.sin(g.time * 18); this.text(ctx, g.warnText, W / 2, H * 0.3, Math.min(40, W / 14), `rgba(255,${80 + 100 * a | 0},80,${a})`, { glow: '#ff2a2a' }); this.text(ctx, g.warnT.toFixed(1), W / 2, H * 0.3 + 34, 18, '#ffffff'); }
     if (g.dialog.open) this.drawDialog(ctx, g);
     if (!cine && g.state === 'play' && !g.dialog.open && !g.paused && !window.__burnsHideHUD) this.drawControls(ctx, g);
+    // def.drawOverlay(g, ctx, fdt): a world's own 2D layer over the HUD, dialogue and touch controls (under the fade, pause and results)
+    if (g.def.drawOverlay) g.def.drawOverlay(g, ctx, fdt);
     // flash + fade
     if (g.flashA > 0) { ctx.fillStyle = rgba(g.flashC || '#ffffff', Math.min(1, g.flashA)); ctx.fillRect(0, 0, W, H); g.flashA = Math.max(0, g.flashA - fdt * 1.6); }
     g.fade = approach(g.fade, g.fadeTarget, fdt * g.fadeRate);
@@ -12386,7 +12700,7 @@ const BurnsUI = {
     for (const a of g.actors) {
       if (a.removed || a.hidden) continue;
       const top = a.y + a.h * 1.04 + 0.15;
-      if (a.bubbleText && a.bubbleT > 0) bubble(a.x, top, a.z, a.bubbleText, a.friendly ? null : 'rgba(255,230,230,0.96)');
+      if (a.bubbleText && a.bubbleT > 0 && !(a.bubbleChat && (g.cine || (g.modalOn && g.modalOn())))) bubble(a.x, top, a.z, a.bubbleText, a.friendly ? null : 'rgba(255,230,230,0.96)');
       // mission marker: '!' over givers of available missions, '?' over active targets
       const mk = a.def.marker ? a.def.marker(g, a) : this.markerFor(g, a);
       if (mk && R.project(a.x, top + 0.5 + Math.sin(g.time * 4) * 0.1, a.z, W, H, o) && o.w < 48) {
@@ -12432,7 +12746,7 @@ const BurnsUI = {
   },
   // mission tracker pill layout: one line; in portrait a long objective wraps onto a second line instead of being cut
   trackerLayout(ctx, g, S) {
-    const tr = g.missions.tracker(); if (!tr) return null;
+    const tr = !g.hideTracker && g.missions.tracker(); if (!tr) return null;   // g.hideTracker: a minigame owns the top of the screen
     const W = Game.cssW, H = Game.cssH, p = g.player, ds = Math.min(24, W / 26);
     ctx.save(); ctx.font = `600 12px ${FONT_UI}`;
     const full = '\u25b6 ' + tr.text, fit = (t, w) => { if (ctx.measureText(t).width <= w) return t; while (t.length > 4 && ctx.measureText(t + '\u2026').width > w) t = t.slice(0, -1); return t.trimEnd() + '\u2026'; };
@@ -12620,15 +12934,18 @@ const BurnsUI = {
       gg.addColorStop(0, rgba(col, held ? 0.92 : 0.7)); gg.addColorStop(1, rgba(shade(col, -0.45), held ? 0.85 : 0.55));
       ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(0, 0, b.r, 0, TAU); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#ffffff'; ctx.font = `${Math.round(b.r * (label.length > 4 ? 0.3 : 0.38))}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      // labels shrink to fit the button (long ACTION prompts: 'QUEST BOARD', 'ENTER' + a place name)
+      const fit = (txt, size, font, maxW) => { ctx.font = `${size}px ${font}`; const w = ctx.measureText(txt).width; if (w > maxW) ctx.font = `${Math.max(8, Math.floor(size * maxW / w))}px ${font}`; };
+      ctx.fillStyle = '#ffffff'; fit(label, Math.round(b.r * (label.length > 4 ? 0.3 : 0.38)), FONT_DISPLAY, b.r * 1.7); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(label, 0, sub ? -b.r * 0.12 : 1);
-      if (sub) { ctx.font = `${Math.round(b.r * 0.22)}px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillText(sub, 0, b.r * 0.3); }
+      if (sub) { fit(sub, Math.round(b.r * 0.22), FONT_UI, b.r * 1.75); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillText(sub, 0, b.r * 0.3); }
       ctx.restore();
     };
     const veh = p.vehicle;
     btn(L.jump, Input.jump, veh && veh.kind === 'car' ? 'HONK' : veh ? 'HOP' : 'JUMP', '#c04bff');
     const act = g.prompt || (veh ? (veh.kind === 'bike' ? 'BELL' : 'FIRE') : (p.power === 'liquor' && p.powerT > 0 ? 'THROW' : p.grounded ? 'SPIN' : 'POUND'));
-    btn(L.action, Input.action, act, g.prompt ? '#ffb020' : '#ff4b7d');
+    const ci = act.indexOf(': ');   // 'ENTER: THE TEMPLE' -> ENTER, with the place underneath
+    btn(L.action, Input.action, ci > 0 ? act.slice(0, ci) : act, g.prompt ? '#ffb020' : '#ff4b7d', ci > 0 ? act.slice(ci + 2) : undefined);
     const H = this.hudBtnsCache = g.hudBtns;
     if (H) {
       btn(H.cam, Input.hudHeld.cam, 'CAM', '#3a6aff');
@@ -12654,6 +12971,9 @@ const BurnsUI = {
     ctx.beginPath(); burnsRR(ctx, r.x, r.y, r.w, r.h, 16); ctx.rect(P.x + P.w, P.y, -P.w, P.h);
     const gr = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); gr.addColorStop(0, 'rgba(36,20,60,0.95)'); gr.addColorStop(1, 'rgba(16,8,30,0.95)');
     ctx.fillStyle = gr; ctx.fill('evenodd');
+    // the 3D portrait shows through the hole; copy it again from this frame's GL image so nothing drawn before the
+    // box (cutscene letterbox bars, power-up tints, speech bubbles) covers the face
+    if (g.portraitFrame === g.frameN && g.R && g.R.w && BurnsGL.canvas) { const k = g.R.w / Game.cssW; try { ctx.drawImage(BurnsGL.canvas, P.x * k, P.y * k, P.w * k, P.h * k, P.x, P.y, P.w, P.h); } catch (e) { /* the frame copy is a nicety */ } }
     ctx.strokeStyle = 'rgba(255,79,216,0.7)'; ctx.lineWidth = 2; burnsRR(ctx, r.x, r.y, r.w, r.h, 16); ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; burnsRR(ctx, P.x, P.y, P.w, P.h, 8); ctx.stroke();
     // name tag
@@ -12696,7 +13016,10 @@ const BurnsUI = {
       items.push([BurnsSave.hasItem('www') ? 'WHAT WHERE WHEN' : 'MISSIONS', () => { g.pauseTab = 'missions'; g.buildPause(); burnsSfx('map_open'); }]);
       if (g.missions.side().length) items.push(['SIDE QUESTS', () => { g.boardTab = g.boardTab || 'available'; g.pauseTab = 'board'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]);
       if (g.packVisible()) { const n = BurnsPack.total(); items.push([n ? `BACKPACK (${n})` : 'BACKPACK', () => { g.pauseTab = 'pack'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]); }
-      items.push(['WORLD SELECT', () => { g.paused = false; g.quit(true); }]);
+      // an entered place (open world) is left back into the city; the open world itself has a fast-travel map
+      if (g.parentScene) items.push(['LEAVE' + (g.placeName ? ' ' + String(g.placeName).toUpperCase() : ''), () => { g.paused = false; BurnsOpen.leave(g, 'leave'); }]);
+      else if (g.def.open) items.push(['MAP', () => { g.paused = false; g.openTravelMap(); }]);
+      else items.push(['WORLD SELECT', () => { g.paused = false; g.quit(true); }]);
       items.push(['SETTINGS', () => { g.pauseTab = 'settings'; g.buildPause(); }]);
       items.push(['QUIT TO TITLE', () => { g.paused = false; g.quit(false); }]);
       // one column, or two when the screen is too short (landscape phones)
@@ -12953,6 +13276,350 @@ window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, {
     }
   }
 });
+
+/* ---- 40_burns_m_open.js ---- */
+/* ============================================================
+   BRADY GOES TO BURNING MAN — open-world runtime
+   BurnsTiles      streams a world's def.tiles around Brady: tiles build a little every frame (no hitches)
+                   and are freed again when he's far away
+   BurnsInstancer  instanced props: one draw per prototype and detail level, any number of copies
+   BurnsOpen       places you can enter: push a world as a sub-world, pop back to the same spot
+   ============================================================ */
+
+/* ---------------- streaming tiles ----------------
+   def.tiles = {
+     size: 160,                 tile edge (m), aligned to the world origin
+     load: 380, free: 560,      Brady-to-tile-edge distances (m) to build / to free (free > load: hysteresis)
+     budget: 4,                 ms of building per rendered frame
+     build(api, g, tile),       builds one tile with the ordinary api. A generator function (function*) can
+                                `yield` between pieces to spread its work over frames.
+     onLoad(g, tile), onFree(g, tile), region(x, z) -> name (region-aware saves and missions)
+   }
+   tile: { i, j, key, x0, z0, x1, z1, cx, cz, state, actors, data (yours) } */
+class BurnsTiles {
+  constructor(g, T) {
+    this.g = g; this.T = T; this.size = T.size || 160;
+    this.loadR = T.load || this.size * 2.4; this.freeR = Math.max(T.free || 0, this.loadR + this.size * 0.75);
+    this.tiles = new Map(); this.queue = []; this.job = null; this.checkT = 0; this.people = [];
+    this.stats = { built: 0, freed: 0, ms: 0, worst: 0 };
+    this.region = null;
+  }
+  tileAt(i, j) {
+    const k = i + ':' + j; let t = this.tiles.get(k);
+    if (!t) { const S = this.size; t = { i, j, key: k, x0: i * S, z0: j * S, x1: (i + 1) * S, z1: (j + 1) * S, cx: (i + 0.5) * S, cz: (j + 0.5) * S, state: 'none', actors: [], inst: [], data: {} }; this.tiles.set(k, t); }
+    return t;
+  }
+  dist(t, x, z) { const S = this.size; return Math.hypot(Math.max(Math.abs(x - t.cx) - S / 2, 0), Math.max(Math.abs(z - t.cz) - S / 2, 0)); }
+  // tiles (inside the world bounds) whose edge is within R of (x, z), nearest first
+  want(x, z, R) {
+    const S = this.size, B = this.g.world.bounds, out = [];
+    const i0 = Math.floor(Math.max(B.x0, x - R) / S), i1 = Math.floor((Math.min(B.x1, x + R) - 0.01) / S);
+    const j0 = Math.floor(Math.max(B.z0, z - R) / S), j1 = Math.floor((Math.min(B.z1, z + R) - 0.01) / S);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const t = this.tileAt(i, j), d = this.dist(t, x, z); if (d <= R) out.push([t, d]); }
+    return out.sort((a, b) => a[1] - b[1]).map(e => e[0]);
+  }
+  // fixed-step update: what to queue and what to free (cheap; building happens in step())
+  update(dt) {
+    const p = this.g.player; if (!p) return;
+    if (this.T.region) {
+      const r = this.T.region(p.x, p.z) || null;
+      if (r !== this.region) { const prev = this.region; this.region = r; this.g.region = r; if (r) { BurnsSave.flag(this.g.worldId, 'region:' + r, true); this.g.missions.event('region', r); } if (this.T.onRegion) this.T.onRegion(this.g, r, prev); }
+    }
+    this.checkT -= dt; if (this.checkT > 0) return; this.checkT = 0.2;
+    const x = p.x, z = p.z;
+    for (const t of this.want(x, z, this.loadR)) if (t.state === 'none') { t.state = 'queued'; this.queue.push(t); }
+    this.queue.sort((a, b) => this.dist(a, x, z) - this.dist(b, x, z));
+    for (const t of this.tiles.values()) if (t.state !== 'none' && this.dist(t, x, z) > this.freeR) this.free(t);
+  }
+  // once per rendered frame: build for at most `budget` ms
+  step(budget) {
+    const t0 = performance.now(); budget = budget || this.T.budget || 4;
+    // a finished tile's people join a few per frame (each new actor costs a little)
+    for (let k = 0; k < 3 && this.people.length; k++) { const [t, d] = this.people.shift(); if (t.state !== 'ready') continue; const a = new BurnsActor(this.g, d); this.g.actors.push(a); t.actors.push(a); }
+    while (performance.now() - t0 < budget) {
+      if (!this.job) { const t = this.queue.shift(); if (!t) break; if (t.state !== 'queued') continue; this.begin(t); }
+      const J = this.job; let done = true;
+      if (J.it) { try { done = !!J.it.next().done; } catch (e) { console.error('burns tile ' + J.t.key, e); done = true; } }
+      if (done) this.end(J.t);
+    }
+    const ms = performance.now() - t0; this.stats.ms = ms; if (ms > this.stats.worst) this.stats.worst = ms;
+  }
+  busy() { return !!this.job || this.queue.length > 0 || this.people.length > 0; }
+  begin(t) {
+    const g = this.g, W = g.world;
+    t.state = 'building';
+    W.tileBegin(t); if (W.inst) W.inst.cur = t; if (W.crowd) W.crowd.cur = t;
+    let it = null;
+    try { const r = this.T.build(W.api, g, t); if (r && typeof r.next === 'function') it = r; } catch (e) { console.error('burns tile ' + t.key, e); }
+    this.job = { t, it };
+  }
+  end(t) {
+    const g = this.g, W = g.world;
+    this.job = null;
+    W.tileEnd(t); if (W.inst) W.inst.cur = null; if (W.crowd) W.crowd.cur = null;
+    for (const d of t.own.actorDefs) this.people.push([t, d]);
+    t.state = 'ready'; this.stats.built++;
+    if (this.T.onLoad) { try { this.T.onLoad(g, t); } catch (e) { console.error(e); } }
+    if (t.freeMe) this.free(t);
+  }
+  free(t) {
+    const g = this.g, W = g.world;
+    if (t.state === 'queued') { t.state = 'none'; this.queue = this.queue.filter(q => q !== t); return; }
+    if (t.state === 'building') { t.freeMe = true; return; }   // finish first, then free
+    if (t.state !== 'ready') return;
+    t.freeMe = false;
+    if (this.T.onFree) { try { this.T.onFree(g, t); } catch (e) { console.error(e); } }
+    const keep = a => a.keep || a.following || (g.dialog && g.dialog.open && g.dialog.cur && g.dialog.cur.who === a);
+    const gone = new Set(t.actors.filter(a => !keep(a)));
+    for (const a of gone) a.removed = true;
+    if (gone.size) g.actors = g.actors.filter(a => !gone.has(a));
+    t.actors = [];
+    if (W.inst) W.inst.freeTile(t);
+    if (W.crowd) W.crowd.freeTile(t);
+    W.tileFree(t);
+    t.state = 'none'; t.data = {}; this.stats.freed++;
+  }
+  // build everything within R of (x, z) right now (the loading screen, a teleport)
+  prime(x, z, R) {
+    for (const t of this.want(x, z, R === undefined ? this.size * 0.75 : R)) {
+      if (t.state === 'ready') continue;
+      if (this.job && this.job.t === t) { const J = this.job; if (J.it) { try { while (!J.it.next().done); } catch (e) { console.error(e); } } this.end(t); continue; }
+      if (t.state === 'queued') this.queue = this.queue.filter(q => q !== t);
+      if (this.job) { const J = this.job; if (J.it) { try { while (!J.it.next().done); } catch (e) { console.error(e); } } this.end(J.t); }
+      t.state = 'queued'; this.begin(t);
+      const J = this.job; if (J.it) { try { while (!J.it.next().done); } catch (e) { console.error(e); } }
+      this.end(t);
+    }
+    this.flushPeople();
+  }
+  // everyone queued joins now (prime / loading screen)
+  flushPeople() { while (this.people.length) { const [t, d] = this.people.shift(); if (t.state !== 'ready') continue; const a = new BurnsActor(this.g, d); this.g.actors.push(a); t.actors.push(a); } }
+  releaseAll() { if (this.job) { const J = this.job; if (J.it) { try { while (!J.it.next().done); } catch (e) { /* ignore */ } } this.end(J.t); } for (const t of this.tiles.values()) if (t.state !== 'none') this.free(t); this.queue = []; }
+  readyCount() { let n = 0; for (const t of this.tiles.values()) if (t.state === 'ready') n++; return n; }
+}
+
+/* ---------------- instanced props ----------------
+   W.instancer().proto(id, build, { lo, far, near, mid, farD, minD, noCap, r, shadow, noAO }): build(m) is called with
+     m.lo = false (up close, drawn to `near` m), again with m.lo = true (to `mid` m) and far(m) for the cheapest copy (to
+     `farD` m). minD: not drawn closer than this (far-city stand-ins); noCap: ignore the world's draw distance.
+   .add(id, x, y, z, yaw, scale, tint[r, g, b]) places one copy (tile-owned while a tile builds).
+   .dyn(id) -> a copy you move yourself every frame ({x, y, z, yaw, s, on}).
+   Copies are culled by distance and view, then drawn one batch per prototype and level. Each batch is one draw. */
+class BurnsInstancer {
+  constructor(W) {
+    this.W = W; this.protos = new Map(); this.list = []; this.dyns = []; this.cur = null;
+    this.batches = []; this.shBatches = []; this.bmap = new Map(); this.shmap = new Map();
+    this.last = null; this.dirty = true; this.t = 0;
+  }
+  proto(id, build, o) {
+    if (this.protos.has(id)) return this.protos.get(id);
+    o = o || {};
+    let info0 = null;
+    const mk = (fn, lo) => {
+      const m = new BurnsMesh(4096), own = BURNS_ATLAS.signOwner; m.lo = lo;
+      BURNS_ATLAS.signOwner = null;   // a prototype outlives any tile: its signs are the world's
+      try { const r = fn(m); if (!info0) info0 = r || {}; } catch (e) { console.error('burns instance proto ' + id, e); }
+      BURNS_ATLAS.signOwner = own;
+      if (m.empty || !m.nv) return null;
+      if (!o.noAO && !window.__burnsNoAO && this.W.aoMode !== false) BurnsAO.bake(m.buf, 0, m.nv, m.ind, 0, m.ind.length, { ground: () => 0, res: this.W.aoMode === 'fast' ? 18 : undefined });
+      return m.geo();
+    };
+    const L = [{ geo: mk(build, false), d: o.near || 45 }];
+    if (o.lo !== false) L.push({ geo: mk(build, true), d: o.mid || 140 });
+    if (o.far) L.push({ geo: mk(o.far, true), d: o.farD || 320 });
+    const P = { id, levels: L.filter(l => l.geo), shadow: o.shadow !== false, r: o.r || 4, n: 0, minD: o.minD || 0, noCap: !!o.noCap, cols: [] };
+    P.maxD = P.levels.length ? P.levels[P.levels.length - 1].d : 0;
+    if (o.cols !== false && info0 && info0.cols) P.cols = info0.cols;   // the full-detail build's colliders go with every copy
+    this.protos.set(id, P);
+    return P;
+  }
+  add(id, x, y, z, yaw, s, tint, noCol) {
+    const P = this.protos.get(id); if (!P || !P.levels.length) return null;
+    const it = { P, x, y: y || 0, z, yaw: yaw || 0, s: s || 1, tr: tint ? tint[0] : 1, tg: tint ? tint[1] : 1, tb: tint ? tint[2] : 1 };
+    this.list.push(it);
+    if (this.cur) this.cur.inst.push(it);
+    this.dirty = true;
+    // colliders (world-owned, or the building tile's)
+    if (!noCol && P.cols.length) {
+      s = s || 1; const c = Math.cos(it.yaw), sn = Math.sin(it.yaw);
+      for (const d of P.cols) {
+        const lx = d.x || 0, lz = d.z || 0, cc = Object.assign({}, d, { x: x + (lx * c + lz * sn) * s, z: z + (-lx * sn + lz * c) * s, yaw: it.yaw + (d.yaw || 0), y0: it.y + (d.y0 || 0) * s, y1: d.y1 !== undefined ? it.y + d.y1 * s : undefined });
+        if (d.hx !== undefined) { cc.hx = d.hx * s; cc.hz = d.hz * s; }
+        if (d.r !== undefined) cc.r = d.r * s;
+        if (d.ya !== undefined) { cc.ya = it.y + d.ya * s; cc.yb = it.y + d.yb * s; }
+        this.W.col.add(cc);
+      }
+    }
+    return it;
+  }
+  dyn(id) { const P = this.protos.get(id); if (!P) return null; const it = { P, x: 0, y: 0, z: 0, yaw: 0, s: 1, tr: 1, tg: 1, tb: 1, on: true }; this.dyns.push(it); return it; }
+  freeTile(t) { if (!t.inst || !t.inst.length) return; const S = new Set(t.inst); this.list = this.list.filter(i => !S.has(i)); t.inst = []; this.dirty = true; }
+  count() { return this.list.length; }
+  batch(map, P, level) {
+    const k = P.id + '#' + level; let b = map.get(k);
+    if (!b) { b = { geo: P.levels[level].geo, data: new Float32Array(64 * 8), n: 0, dirty: true }; map.set(k, b); }
+    return b;
+  }
+  push(b, it) {
+    if ((b.n + 1) * 8 > b.data.length) { const d = new Float32Array(b.data.length * 2); d.set(b.data); b.data = d; }
+    const o = b.n * 8, D = b.data; D[o] = it.x; D[o + 1] = it.y; D[o + 2] = it.z; D[o + 3] = it.yaw; D[o + 4] = it.s; D[o + 5] = it.tr; D[o + 6] = it.tg; D[o + 7] = it.tb; b.n++;
+  }
+  // cull + pick detail levels (statics when the camera moved; moving copies every frame)
+  update(R, maxD, shadowR) {
+    const cam = R.cam, B = R.B; if (!cam) return;
+    const L = this.last, moved = !L || Math.abs(L.x - cam.x) + Math.abs(L.z - cam.z) > 3 || Math.abs(L.fx - B.fx) + Math.abs(L.fz - B.fz) > 0.08 || L.maxD !== maxD;
+    const fx = B.fx, fz = B.fz, fl = Math.hypot(fx, fz) || 1, ux = fx / fl, uz = fz / fl;
+    const rebuild = (items, mm, sm, statics) => {
+      for (const b of mm.values()) { b.n = 0; b.dirty = true; }
+      for (const b of sm.values()) { b.n = 0; b.dirty = true; }
+      for (const it of items) {
+        if (it.on === false) continue;
+        const P = it.P, dx = it.x - cam.x, dz = it.z - cam.z, d = Math.hypot(dx, dz), r = P.r * it.s;
+        if (shadowR && P.shadow && d < shadowR + r) this.push(this.batch(sm, P, Math.min(1, P.levels.length - 1)), it);
+        if (d > (P.noCap ? P.maxD : Math.min(P.maxD, maxD)) + r || d < P.minD) continue;
+        if (d > r * 2 && dx * ux + dz * uz < -r - d * 0.25) continue;   // well behind the camera (the cone is generous: no popping at the edges)
+        let lv = 0; while (lv < P.levels.length - 1 && d > P.levels[lv].d) lv++;
+        this.push(this.batch(mm, P, lv), it);
+      }
+    };
+    if (moved || this.dirty) {
+      rebuild(this.list, this.bmap, this.shmap, true);
+      this.last = { x: cam.x, z: cam.z, fx: B.fx, fz: B.fz, maxD }; this.dirty = false;
+    }
+    if (this.dyns.length) {
+      if (!this.dmap) { this.dmap = new Map(); this.dsmap = new Map(); }
+      rebuild(this.dyns, this.dmap, this.dsmap, false);
+    }
+    this.batches = [...this.bmap.values(), ...(this.dmap ? this.dmap.values() : [])];
+    this.shBatches = [...this.shmap.values(), ...(this.dsmap ? this.dsmap.values() : [])];
+  }
+  draw(R, env, world) { R.instances(this.batches, env, world, BURNS_ATLAS.T); }
+  drawShadow(R) { R.instances(this.shBatches, null, null, null); }
+  release() {
+    const gl = BurnsGL.gl;
+    for (const P of this.protos.values()) for (const l of P.levels) BurnsGL.freeGeo(l.geo);
+    for (const m of [this.bmap, this.shmap, this.dmap, this.dsmap]) if (m) for (const b of m.values()) if (b.ibuf && gl) { try { gl.deleteBuffer(b.ibuf); } catch (e) { /* ignore */ } b.ibuf = null; }
+  }
+}
+
+/* ---------------- instanced crowds ----------------
+   W.crowds(looks): background people that cost almost nothing. Everyone with the same look and pose is ONE draw.
+   looks: [[type, seed], ...] (npc looks, shared with the model cache).
+   .add(x, z, { y, yaw, look, anim: 'dance' | 'idle' | 'cheer' | 'sit' ..., phase }) places one (tile-owned while a tile
+   builds). Each look keeps a few shared poses per animation (phases), so a floor of 200 dancers is a handful of draws.
+   They have no AI or collision: real actors (api.npc) stay for anyone Brady can talk to. */
+class BurnsCrowds {
+  constructor(W, looks) { this.W = W; this.looks = []; this.list = []; this.cur = null; this.banks = {}; this.map = new Map(); this.batches = []; if (looks) this.setLooks(looks); }
+  setLooks(L) {
+    this.looks = L.map(q => BurnsRig.model(BurnsRig.npcSpec(q[0], q[1], { type: q[0], seed: q[1] })));
+    this.boxes = this.looks.map(M => { try { return BurnsCrowds.boxModel(M); } catch (e) { console.error('burns crowd box model', e); return null; } });
+  }
+  bank(look, anim, phase) {
+    const k = look + '#' + anim + '#' + phase; let b = this.banks[k];
+    if (!b) { const ch = new BurnsChar(this.looks[look]); ch.play(anim, null, true); ch.animT = phase; ch.update(0); ch.compute(); b = this.banks[k] = { ch, key: k }; }
+    return b;
+  }
+  add(x, z, o) {
+    o = o || {}; if (!this.looks.length) return null;
+    const look = (o.look === undefined ? Math.floor(Math.random() * this.looks.length) : o.look) % this.looks.length;
+    const anim = o.anim || 'dance', it = { x, y: o.y || 0, z, yaw: o.yaw || 0, s: o.scale || 1, look, anim, bank: this.bank(look, anim, o.phase === undefined ? [0, 0.41, 0.83][Math.floor(Math.random() * 3)] : o.phase), vis: false };
+    this.list.push(it); if (this.cur) (this.cur.crowd || (this.cur.crowd = [])).push(it);
+    return it;
+  }
+  freeTile(t) { if (!t.crowd || !t.crowd.length) return; const S = new Set(t.crowd); this.list = this.list.filter(i => !S.has(i)); t.crowd = []; }
+  count() { return this.list.length; }
+  // per frame: advance the shared poses, cull, and bucket by look + pose + detail level
+  update(R, dt, maxD) {
+    const cam = R.cam; if (!cam || !this.looks.length) return;
+    for (const k in this.banks) { const b = this.banks[k]; if (b.used || b.ch.animT < 0.1) { b.ch.update(dt); b.ch.compute(); } b.used = false; }
+    for (const b of this.map.values()) { b.n = 0; b.dirty = true; }
+    const B = R.B, fl = Math.hypot(B.fx, B.fz) || 1, ux = B.fx / fl, uz = B.fz / fl;
+    for (const it of this.list) {
+      const dx = it.x - cam.x, dz = it.z - cam.z, d = Math.hypot(dx, dz);
+      it.vis = false; it.d = d;
+      if (d > maxD || (d > 4 && dx * ux + dz * uz < -2 - d * 0.25)) continue;
+      // detail: the full model up close, the far model to 38 m, then a few boxes; beyond 12 m everyone with the same
+      // look and animation shares one pose (fewer batches, nobody can tell)
+      // (talking hands are too small to see past 12 m: those people just stand)
+      const lv = d < 12 ? 0 : d < 38 ? 1 : 2, bk = lv ? (it.bankFar || (it.bankFar = this.bank(it.look, it.anim === 'talk' ? 'idle' : it.anim, 0))) : it.bank, key = bk.key + '|' + lv;
+      let b = this.map.get(key);
+      if (!b) { b = { look: it.look, bank: bk, lv, data: new Float32Array(32 * 8), n: 0, dirty: true }; this.map.set(key, b); }
+      if ((b.n + 1) * 8 > b.data.length) { const D2 = new Float32Array(b.data.length * 2); D2.set(b.data); b.data = D2; }
+      const o = b.n * 8, D = b.data; D[o] = it.x; D[o + 1] = it.y; D[o + 2] = it.z; D[o + 3] = it.yaw; D[o + 4] = it.s; D[o + 5] = 1; D[o + 6] = 1; D[o + 7] = 1; b.n++;
+      bk.used = true; it.vis = true;
+    }
+    this.batches = [];
+    for (const b of this.map.values()) if (b.n) this.batches.push(b);
+  }
+  draw(R, env, world) {
+    if (!this.batches.length || !R.crowdBegin(env, world, BURNS_ATLAS.T)) return;
+    for (const b of this.batches) {
+      const m = this.looks[b.look], geo = b.lv === 0 ? m.geo : b.lv === 1 ? (m.far || m.lod || m.geo) : ((this.boxes && this.boxes[b.look]) || m.far || m.lod || m.geo), ch = b.bank.ch;
+      R.crowd(geo, ch.bones, ch.nb, ch.face, 0.35, b);
+    }
+  }
+  // soft blob shadows under the near ones
+  shadows(R, S) { for (const it of this.list) if (it.vis && it.d < 40) R.flat.flat(it.x, it.y + 0.03, it.z, 1.1 * it.s, 1.1 * it.s, 0, S.shadow, [0, 0, 0], 0.5, false); }
+  release() { const gl = BurnsGL.gl; for (const b of this.map.values()) if (b.ibuf && gl) { try { gl.deleteBuffer(b.ibuf); } catch (e) { /* ignore */ } b.ibuf = null; } }
+}
+
+// a person far away: a dozen boxes in the look's colours (about 200 triangles) on the same skeleton and bones
+BurnsCrowds.boxModel = function (M) {
+  const S = M.spec || {}, B = BURNS_BONES, body = M.body || burnsBody(S.body), h = body.h || 1, w = body.w || 1;
+  const m = new BurnsMesh(1024), skin = S.skin || '#e8b996', top = S.top || {}, bot = S.bottom || {}, shoe = S.shoes || {};
+  const hair = (S.hair && S.hair.style !== 'bald' && S.hair.col) || null, topCol = top.kind === 'none' ? skin : (top.col || '#333'), botCol = bot.col || '#333';
+  const sleeves = top.kind === 'hoodie' || top.kind === 'long' || top.kind === 'suit' || !!top.long || !!S.fursuit, bareLegs = bot.kind === 'shorts' || bot.kind === 'kilt' || bot.kind === 'tutu';
+  m.setBone(B.HIPS).color(botCol); m.box(0, -0.03, 0, 0.36 * w, 0.2, 0.23);
+  m.setBone(B.CHEST).color(topCol); m.box(0, 0.12 * h, 0, 0.36 * w, 0.24 * h, 0.23); m.box(0, 0.345 * h, 0, 0.45 * w, 0.29 * h, 0.26);
+  m.setBone(B.HEAD).color(skin); m.ellipsoid(0, 0.19, 0, 0.17, 0.19, 0.165, { seg: 6, rings: 4 });
+  if (hair) { m.color(hair); m.ellipsoid(0, 0.27, -0.03, 0.18, 0.13, 0.175, { seg: 6, rings: 3 }); }
+  for (const side of [1, -1]) {
+    m.setBone(side > 0 ? B.UARM_L : B.UARM_R).color(sleeves ? topCol : skin); m.box(0, -0.135, 0, 0.125, 0.27, 0.125);
+    m.setBone(side > 0 ? B.FARM_L : B.FARM_R).color(sleeves ? topCol : skin); m.box(0, -0.15, 0, 0.11, 0.3, 0.11);
+    m.setBone(side > 0 ? B.THIGH_L : B.THIGH_R).color(botCol); m.box(0, -0.2, 0, 0.17, 0.42, 0.18);
+    m.setBone(side > 0 ? B.SHIN_L : B.SHIN_R).color(bareLegs ? skin : botCol); m.box(0, -0.19, 0, 0.15, 0.4, 0.16);
+    m.setBone(side > 0 ? B.FOOT_L : B.FOOT_R).color(shoe.col || '#222'); m.box(0, -0.01, 0.05, 0.15, 0.1, 0.28);
+  }
+  if (bot.kind === 'tutu') { m.setBone(B.HIPS).color(bot.col || '#ff9ad0'); m.cyl(0, -0.12, 0, 0.36, 0.2, 0.1, 8, {}); }
+  if (S.led) { m.setBone(B.CHEST).color(S.led, 1); m.box(0, 0.34 * h, 0.132, 0.4 * w, 0.03, 0.01); m.box(0, 0.12 * h, 0.118, 0.3 * w, 0.03, 0.01); m.emissive(0); }
+  return m.geo();
+};
+
+/* ---------------- places you can enter ----------------
+   BurnsOpen.enter(g, worldId, { back: {x, y, z, yaw}, place, opts }) plays a world as a sub-world of g (the overworld
+   stays built, frozen behind it). When that world is finished (after its results and story card) or left from the
+   pause menu, BurnsOpen.leave(sub) frees it and resumes g with Brady at `back`; g.def.onResume(g, sub, how) runs.
+   `how` is 'done' (finished) or 'leave'. */
+const BurnsOpen = {
+  enter(g, worldId, o) {
+    o = o || {};
+    if (!BurnsWorlds.get(worldId)) { if (g.toast) g.toast('The burners are still building this place. Soon!'); return null; }
+    const p = g.player;
+    if (g.saveRun) g.saveRun();
+    g.suspended = true;
+    g.atlasSnap = BURNS_ATLAS.signSnapshot();
+    if (typeof Sound !== 'undefined' && Sound.engine) Sound.engine(false, 0);
+    Input.camDrag = false;
+    const sub = new BurnsPlayScene(worldId, Object.assign({}, o.opts || {}));
+    sub.parentScene = g; sub.parentBack = o.back || { x: p.x, y: p.y, z: p.z, yaw: p.yaw }; sub.placeName = o.place || null;
+    Game.setScene(sub);
+    return sub;
+  },
+  leave(sub, how) {
+    const g = sub && sub.parentScene; if (!g) return false;
+    if (!sub.released) { sub.released = true; if (sub.player) { try { sub.saveRun(); } catch (e) { /* ignore */ } } BurnsScenes.releaseWorld(sub); }
+    if (typeof Sound !== 'undefined' && Sound.engine) Sound.engine(false, 0);
+    BURNS_ATLAS.signRestore(g.atlasSnap); g.atlasSnap = null;
+    g.suspended = false;
+    Game.setScene(g);
+    g.resumeFrom(sub, how || 'leave');
+    return true;
+  },
+  // the top-level open world behind whatever is running (null if none)
+  root() { let s = Game.scene; while (s && s.parentScene) s = s.parentScene; return s && s.def && s.def.open ? s : null; }
+};
+
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsTiles, BurnsInstancer, BurnsCrowds, BurnsOpen });
 
 /* ---- 43_cart_a_data.js ---- */
 /* ============================================================

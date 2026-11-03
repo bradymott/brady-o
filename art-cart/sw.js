@@ -1,6 +1,6 @@
 // service worker: makes the game load instantly and work offline
-const CACHE = 'app-kart-e82a51332f';
-const SHELL = ["./","./index.html","./manifest.webmanifest","./icon-180.png","./icon-192.png","./icon-512.png","./icon-maskable-512.png"];
+const CACHE = 'app-kart-5ecc7f836d';
+const SHELL = ["./","./index.html","./manifest.webmanifest"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
