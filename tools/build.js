@@ -166,6 +166,8 @@ const copyModels = (appDir, outDir) => {
     }
     fs.copyFileSync(cached, path.join(outDir, f + '.gz')); out.push(f + '.gz');
   }
+  // stale files (raw .glb from older builds) go, so the site only carries what the index lists
+  for (const f of fs.readdirSync(outDir)) if (!out.includes(f) && f !== 'index.json') fs.unlinkSync(path.join(outDir, f));
   // the index tells the game which models exist, so it never requests a missing one
   fs.writeFileSync(path.join(outDir, 'index.json'), JSON.stringify(out));
   return out.concat('index.json');
