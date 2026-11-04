@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("br_beach", {"scale":2.0,"image":"br_beach.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1291}},"anims":{},"strips":{"L0":{"w":2048,"h":562,"top":70.5,"x":0,"y":0},"L1":{"w":2048,"h":309,"top":289.5,"x":0,"y":981},"L2":{"w":2048,"h":417,"top":158.5,"x":0,"y":563}}});

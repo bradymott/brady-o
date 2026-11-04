@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ec_cotopaxi", {"scale":2.0,"image":"ec_cotopaxi.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1124}},"anims":{},"strips":{"L0":{"w":2048,"h":758,"top":8.0,"x":0,"y":0},"L1":{"w":2048,"h":364,"top":237.5,"x":0,"y":759}}});

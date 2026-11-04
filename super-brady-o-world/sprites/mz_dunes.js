@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("mz_dunes", {"scale":2.0,"image":"mz_dunes.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":903}},"anims":{},"strips":{"L0":{"w":2048,"h":399,"top":206.0,"x":0,"y":503},"L1":{"w":2048,"h":502,"top":186.5,"x":0,"y":0}}});

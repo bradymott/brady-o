@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("mz_savanna", {"scale":2.0,"image":"mz_savanna.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1289}},"anims":{},"strips":{"L0":{"w":2048,"h":418,"top":156.5,"x":0,"y":504},"L1":{"w":2048,"h":365,"top":203.0,"x":0,"y":923},"L2":{"w":2048,"h":503,"top":186.0,"x":0,"y":0}}});

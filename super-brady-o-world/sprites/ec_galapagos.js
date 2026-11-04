@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ec_galapagos", {"scale":2.0,"image":"ec_galapagos.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":990}},"anims":{},"strips":{"L0":{"w":2048,"h":441,"top":181.0,"x":0,"y":548},"L1":{"w":2048,"h":547,"top":170.5,"x":0,"y":0}}});
