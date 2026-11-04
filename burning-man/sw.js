@@ -1,5 +1,5 @@
 // service worker: makes the game load instantly and work offline
-const CACHE = 'app-burningman-db4948acac';
+const CACHE = 'app-burningman-8331c9fdac';
 const SHELL = ["./","./index.html","./manifest.webmanifest","./icon-180.png","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./models/brady.glb.gz","./models/bus.glb.gz","./models/chinka.glb.gz","./models/dome.glb.gz","./models/mannequin.glb.gz","./models/pbr_crate.glb.gz","./models/potty.glb.gz","./models/rv.glb.gz","./models/shade.glb.gz","./models/tipi.glb.gz","./models/index.json"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -17,6 +17,11 @@ self.addEventListener('fetch', e => {
       caches.open(CACHE).then(c => c.put('./index.html', copy));
       return res;
     }).catch(() => caches.match('./index.html')));
+    return;
+  }
+  if (//sprites//.test(req.url)) {
+    // sprite atlases: cached the first time a level asks for them (they are big, and most are never needed at once)
+    e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })));
     return;
   }
   e.respondWith(caches.match(req).then(hit => hit || fetch(req)));

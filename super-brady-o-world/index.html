@@ -41,6 +41,7 @@ noscript p { position: fixed; inset: 0; display: grid; place-items: center; font
 <script>
 (function(){
 const BRADY_APP = "world";
+const BRADY_SPRITES = ["mx","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_volcan"];
 /* ---- 00_core.js ---- */
 'use strict';
 /* ============================================================
@@ -6307,10 +6308,12 @@ const Decor = {
    silhouette is stamped in ink around it, then the colour goes on
    top: existing art needs no changes.
    ============================================================ */
+/* how much larger than their hitboxes characters are drawn (the physics never changes): Brady and enemies */
+const ART_SCALE = { brady: 1.2, enemy: 1.15 };
 const Ink = {
   on: true,
   color: '#1c1426',
-  width: 1.4,            // logical px (about 4 device px on an iPhone)
+  width: 1.3,            // logical px (about 4 device px on an iPhone)
   pool: [],
   canvas(i, w, h) {
     let c = this.pool[i];
@@ -11433,7 +11436,8 @@ class Player {
     if (small !== this.small) o.hair = null;
     if (this.spin && !this.onGround) o.rot = Math.sin(this.anim.t * 26) * 0.25;
     PlayerFx.under(ctx, this, t);
-    Ink.around(ctx, this.x, this.y, this.w, this.h, c => drawBrady(c, o), { pad: 34, width: 1.5 });
+    // drawn a little larger than the hitbox (ART_SCALE) so he reads on a phone; the physics box is unchanged
+    Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16' });
     PlayerFx.over(ctx, this, t);
   }
   get light() { return { r: this.g.area.water ? 150 : 170, c: 'rgba(255,240,220,' }; }
@@ -17719,14 +17723,16 @@ const TourSprite = {
   hasFrame(e, mode) { const a = this.of(e); return !!(a && (Atlas.anim(a, e.cfg.sprite + '/' + mode) || Atlas.frame(a, e.cfg.sprite + '_' + mode + '_000'))); },
   draw(ctx, e, x, y, mode, fallback) {
     const a = this.of(e); if (!a) return false;
-    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode];
+    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode], o = { scale: ART_SCALE.enemy };
     for (const m of list) {
       const id = k + '/' + m;
-      if (Atlas.anim(a, id)) return Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1);
-      if (Atlas.frame(a, k + '_' + m + '_000')) return Atlas.draw(ctx, a, k + '_' + m + '_000', x, y, e.dir || 1);
+      if (Atlas.anim(a, id)) return Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1, o);
+      if (Atlas.frame(a, k + '_' + m + '_000')) return Atlas.draw(ctx, a, k + '_' + m + '_000', x, y, e.dir || 1, o);
     }
     return false;
-  }
+  },
+  // procedural art, scaled about its origin point
+  art(ctx, e, x, y, mode) { const k = ART_SCALE.enemy; ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.translate(-x, -y); e.cfg.art(ctx, e, x, y, mode, e.g.t); ctx.restore(); }
 };
 
 class TourEnemy extends Walker {
@@ -17825,7 +17831,7 @@ class TourEnemy extends Walker {
   get sprite() { return TourSprite.of(this); }
   paint(ctx, x, y, mode) {
     if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.walk)) return;
-    if (this.cfg.art) this.cfg.art(ctx, this, x, y, mode, this.g.t);
+    if (this.cfg.art) TourSprite.art(ctx, this, x, y, mode);
   }
   draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
   drawArt(ctx) {
@@ -17879,7 +17885,7 @@ class TourFlyer extends Ent {
   get sprite() { return TourSprite.of(this); }
   paint(ctx, x, y, mode) {
     if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.fly)) return;
-    this.cfg.art(ctx, this, x, y, mode, this.g.t);
+    TourSprite.art(ctx, this, x, y, mode);
   }
   draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
   drawArt(ctx) {
@@ -17918,7 +17924,7 @@ class TourSwimmer extends Ent {
   drawArt(ctx) {
     const mode = this.knocked ? 'ko' : 'swim';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, mode, TourSprite.FALLBACK.swim)) return;
-    this.cfg.art(ctx, this, this.cx, this.cy, mode, this.g.t);
+    TourSprite.art(ctx, this, this.cx, this.cy, mode);
   }
 }
 
@@ -17944,7 +17950,7 @@ class TourLeaper extends Ent {
     if (this.state === 'wait' && !this.knocked) return;
     const mode = this.knocked ? 'ko' : this.vy < 0 ? 'up' : 'down';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, mode, TourSprite.FALLBACK.leap)) return;
-    this.cfg.art(ctx, this, this.cx, this.cy, mode, this.g.t);
+    TourSprite.art(ctx, this, this.cx, this.cy, mode);
   }
   get light() { return this.cfg.glow && this.state !== 'wait' ? { r: 70, c: this.cfg.glow } : null; }
 }
@@ -17967,7 +17973,7 @@ class TourFriend extends Ent {
   drawArt(ctx) {
     const mode = this.given ? 'wave' : 'idle';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.y + this.h, mode, TourSprite.FALLBACK.friend)) return;
-    this.cfg.art(ctx, this, this.cx, this.y + this.h, mode, this.g.t);
+    TourSprite.art(ctx, this, this.cx, this.y + this.h, mode);
   }
 }
 
@@ -28657,7 +28663,7 @@ Tour.country({
 (() => {
 const C = Tour.countries.mx;
 if (!C) return;
-C.sprites = true;                       // enemies with sprite ids draw from the 'mx' atlas
+C.sprites = true; C.spritesWired = true;   // enemies with sprite ids draw from the 'mx' atlas; 30_tour_sprites.js skips Mexico
 const layer = (atlas, id, f, fallback, shift) => ({ kind: 'image', atlas, id, f, fallback, shift: shift || 0, base: fallback.base, dyn: fallback.dyn, color: fallback.color });
 const T = THEMES;
 // 1-1 Mercado Mayhem
@@ -33439,6 +33445,52 @@ Tour.country({
       script: [['flat', { n: 4 }], ['upward', {}], ['echo', { n: 14 }], 'cp', ['clocks', { gold: true }], ['blocks', { content: 'power' }], 'arena'] }
   ]
 });
+})();
+
+/* ---- 30_tour_sprites.js ---- */
+/* ============================================================
+   Pre-rendered art for every country, by naming convention.
+   The build bakes BRADY_SPRITES, the list of atlases shipped in
+   sprites/ (assets/sprites/super-brady-o-world/<name>.js). For a
+   country whose id is an atlas name, its enemies draw from clips
+   named after their spawn type (ecBanana -> 'banana'), its coin
+   and star from 'coin/spin' and 'star/idle', its item block from
+   'qblock_idle_000' / 'used_idle_000'. For a theme whose key is an
+   atlas name, its background layers become image strips L0..Ln in
+   the theme's own layer order, and its floor tiles come from the
+   atlas's 'ground' strip. Everything keeps the procedural art as a
+   fallback. Mexico wires itself in 29_tour_mx_sprites.js.
+   Tools: tools/blender/sprites (render_country.py, pack_atlas.py).
+   ============================================================ */
+(() => {
+if (typeof Tour === 'undefined' || typeof Atlas === 'undefined') return;
+const INDEX = new Set(typeof BRADY_SPRITES !== 'undefined' ? BRADY_SPRITES : []);
+const imageLayer = (atlas, i, old) => ({
+  kind: 'image', atlas, id: 'L' + i, f: old.f, base: old.base, dyn: old.dyn, color: old.color, fallback: old,
+  // layers whose ground line sits under the floor at the usual camera are lifted so their silhouettes show
+  shift: old.base > 340 ? -Math.min(60, old.base - 335) : 0
+});
+for (const id in Tour.countries) {
+  const C = Tour.countries[id];
+  if (C.spritesWired) continue;
+  if (INDEX.has(id)) {
+    C.sprites = true; C.atlas = id;
+    for (const k in ENTITY_TYPES) {
+      if (!k.startsWith(id) || !/^[A-Z]/.test(k.slice(id.length))) continue;
+      const cls = ENTITY_TYPES[k];
+      if (cls && cls.cfg && !cls.cfg.sprite) cls.cfg.sprite = k.charAt(id.length).toLowerCase() + k.slice(id.length + 1);
+    }
+    if (C.coin && C.coin.draw) { const old = C.coin.draw; C.coin.draw = (ctx, x, y, t) => { if (!Atlas.animate(ctx, id, 'coin/spin', t || 0, x, y, 1)) old(ctx, x, y, t); }; }
+    if (C.star && C.star.draw) { const old = C.star.draw; C.star.draw = (ctx, x, y, t) => { if (!Atlas.animate(ctx, id, 'star/idle', t || 0, x, y, 1)) old(ctx, x, y, t); }; }
+    for (const key in THEMES) if (key.startsWith(id + '_')) Atlas.applyTiles(THEMES[key], id, { qblock: 'qblock_idle_000', used: 'used_idle_000', keepAtlas: true });
+  }
+  for (const key in THEMES) {
+    if (!key.startsWith(id + '_') || !INDEX.has(key)) continue;
+    const th = THEMES[key];
+    if (th.layers && !th.layers.some(L => L.kind === 'image')) th.layers = th.layers.map((L, i) => imageLayer(key, i, L));
+    Atlas.applyTiles(th, key, { ground: 'ground' });
+  }
+}
 })();
 
 /* ---- 99_main.js ---- */

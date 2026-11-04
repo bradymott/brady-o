@@ -1,1 +1,1 @@
-window.BRADY_ATLAS.register("mx_cenote", {"scale":2.0,"image":"mx_cenote.png","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1208}},"anims":{},"strips":{"bg_cave":{"w":2048,"h":888,"top":0.0,"x":0,"y":0},"bg_stalag":{"w":2048,"h":318,"top":285.0,"x":0,"y":889}}});
+window.BRADY_ATLAS.register("mx_cenote", {"scale":2.0,"image":"mx_cenote.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1208}},"anims":{},"strips":{"bg_cave":{"w":2048,"h":888,"top":0.0,"x":0,"y":0},"bg_stalag":{"w":2048,"h":318,"top":285.0,"x":0,"y":889}}});
