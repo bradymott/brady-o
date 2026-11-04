@@ -1,6 +1,6 @@
 // service worker: makes the game load instantly and work offline
-const CACHE = 'app-world-91d9044909';
-const SHELL = ["./","./index.html","./manifest.webmanifest","./icon-180.png","./icon-192.png","./icon-512.png","./icon-maskable-512.png"];
+const CACHE = 'app-world-7425f44807';
+const SHELL = ["./","./index.html","./manifest.webmanifest","./icon-180.png","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./sprites/mx.js","./sprites/mx.png","./sprites/mx_canal.js","./sprites/mx_canal.png","./sprites/mx_cenote.js","./sprites/mx_cenote.png","./sprites/mx_hacienda.js","./sprites/mx_hacienda.png","./sprites/mx_mercado.js","./sprites/mx_mercado.png","./sprites/mx_volcan.js","./sprites/mx_volcan.png"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });

@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("mx_hacienda", {"scale":2.0,"image":"mx_hacienda.png","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":699}},"anims":{},"strips":{"bg_far":{"w":2048,"h":395,"top":178.0,"x":0,"y":0},"bg_arches":{"w":2048,"h":302,"top":210.0,"x":0,"y":396}}});
