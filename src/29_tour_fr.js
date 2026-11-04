@@ -422,7 +422,121 @@ class FrLampPost extends Ent {
   draw(ctx) { Decor.frLamp(ctx, this.cx, this.y + this.h); }
   get light() { return { r: 150, c: 'rgba(255,224,160,', x: this.cx, y: this.y + 8 }; }
 }
-const entities = { frChandelier: FrChandelier, frLampPost: FrLampPost };
+/* ---------------- the ballroom's oven and mirrors (the boss mechanic) ---------------- */
+// the soufflé itself, shared by the boss and its phase-3 decoys: o = { puff (0..1), flat, dir, face ('angry' | 'scared' | 'dizzy' | 'sad'), hat }
+function souffleArt(ctx, x, by, t, o) {
+  const puff = o.puff || 0, flat = !!o.flat, d = o.dir || 1;
+  ctx.fillStyle = '#ffffff'; rr(ctx, x - 38, by - 30, 76, 30, 6); ctx.fill();
+  ctx.fillStyle = '#e8e8f0'; for (let k = 0; k < 10; k++) ctx.fillRect(x - 36 + k * 7.6, by - 28, 3, 26);
+  ctx.strokeStyle = '#c8c8d8'; ctx.lineWidth = 1.5; rr(ctx, x - 38, by - 30, 76, 30, 6); ctx.stroke();
+  const h = flat ? 10 : 34 + puff * 30 + Math.sin(t * 3) * 2, top = by - 30 - h;
+  const g = ctx.createLinearGradient(0, top, 0, by - 30); g.addColorStop(0, '#c8802a'); g.addColorStop(0.35, '#f0c060'); g.addColorStop(1, '#fff0b0');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 36, by - 30); ctx.quadraticCurveTo(x - 42 - puff * 8, top + h * 0.4, x - 26, top + 6); ctx.quadraticCurveTo(x, top - 10 - puff * 6, x + 26, top + 6); ctx.quadraticCurveTo(x + 42 + puff * 8, top + h * 0.4, x + 36, by - 30); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#b86a1a'; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(x - 20 + k * 8, top + 8 + (k % 2) * 4, 2.5, 0, TAU); ctx.fill(); }
+  if (flat) { ctx.strokeStyle = '#7a4a1a'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * 14, top + 2); ctx.lineTo(x + s * 8, top + 6); ctx.stroke(); } }
+  else {
+    const ey = top + h * 0.45;
+    if (o.face === 'dizzy') { ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * 11 - 4, ey - 4); ctx.lineTo(x + s * 11 + 4, ey + 4); ctx.moveTo(x + s * 11 + 4, ey - 4); ctx.lineTo(x + s * 11 - 4, ey + 4); ctx.stroke(); } }
+    else if (o.face === 'scared') { K.eyes(ctx, x, ey, d, 11, 6, false); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.ellipse(x, top + h * 0.68, 5, 7, 0, 0, TAU); ctx.fill(); }
+    else if (o.face === 'sad') { K.eyes(ctx, x, ey, d, 11, 5, false); ctx.strokeStyle = '#7a4a1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, top + h * 0.72, 6, Math.PI + 0.2, TAU - 0.2); ctx.stroke(); }
+    else { K.eyes(ctx, x, ey, d, 11, 5, true); ctx.strokeStyle = '#7a4a1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, top + h * 0.62, 6, 0.2, Math.PI - 0.2); ctx.stroke(); }
+    if (o.hat !== false) { const hy = top - 16 - puff * 6 + (o.hatSpin ? Math.sin(t * 30) * 2 : 0); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 8, hy, 16, 8); ctx.beginPath(); ctx.arc(x - 5, hy - 4, 6, 0, TAU); ctx.arc(x + 5, hy - 4, 6, 0, TAU); ctx.arc(x, hy - 8, 6, 0, TAU); ctx.fill(); }
+  }
+}
+// a gilded mirror panel on the wall: hit it from below and it tilts up to catch the oven's light (for a while)
+class FrMirror extends Ent {
+  constructor(g, s) { super(g, s, 44, 60); this.aimed = false; this.aimT = 0; this.side = s.side || 'left'; this.wob = 0; }
+  bump(p) {
+    this.aimed = true; this.aimT = 9; this.wob = 0.5;
+    if (p) p.vy = Math.max(p.vy, 2 * TS);
+    K.sfx('glass', 'bump', { vol: 0.6, pitch: 1.3 }); this.g.burst(this.cx, this.y + this.h, 10, '#ffe8a0', 'spark'); this.g.parts.text(this.cx, this.y - 10, 'AIMED!', '#ffe8a0');
+  }
+  droop() { if (this.aimed) { this.aimed = false; this.aimT = 0; this.wob = 0.5; K.sfx('bump', null, { vol: 0.3, pitch: 0.7 }); } }
+  update(dt) { this.t += dt; if (this.wob > 0) this.wob -= dt; if (this.aimed) { this.aimT -= dt; if (this.aimT <= 0) { this.droop(); this.g.parts.text(this.cx, this.y - 10, 'DROOPED', '#c8c8d8'); } } }
+  touchPlayer(p) { if (p.dead) return; if (p.vy < 0 && p.prevBottom - p.h >= this.y + this.h - 12) this.bump(p); }
+  draw(ctx) {
+    const x = this.cx, y = this.y, w = this.w, h = this.h, g = this.g, b = g.boss, toward = this.side === 'left' ? 1 : -1;
+    const tilt = (this.aimed ? -0.55 : 0) * toward + (this.wob > 0 ? Math.sin(this.t * 40) * 0.08 : 0);
+    Ink.ent(ctx, this, c => {
+      c.save(); c.translate(x, y + h / 2); c.rotate(tilt);
+      c.fillStyle = '#c8962a'; rr(c, -w / 2 - 4, -h / 2 - 4, w + 8, h + 8, 10); c.fill();
+      const gl = c.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2); gl.addColorStop(0, '#e8f0ff'); gl.addColorStop(0.5, this.aimed ? '#fff4c0' : '#8aa0c8'); gl.addColorStop(1, '#e8f0ff');
+      c.fillStyle = gl; rr(c, -w / 2, -h / 2, w, h, 7); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(-w / 2 + 6, -h / 2 + 6, 4, h - 12);
+      // phase 3: the real soufflé shows in the glass (the decoys do not)
+      if (b && !b.remove && b.state === 'fight' && (b.phase || 1) >= 3) { c.save(); c.beginPath(); rr(c, -w / 2, -h / 2, w, h, 7); c.clip(); const rx = clamp((b.cx - x) * 0.06, -12, 12); c.scale(0.3, 0.3); souffleArt(c, rx / 0.3, h / 2 / 0.3 - 6, this.t, { puff: 0.5, dir: 1, hat: true }); c.restore(); }
+      c.fillStyle = '#e8c870'; for (const [fx, fy] of [[-w / 2 - 2, -h / 2 - 2], [w / 2 + 2, -h / 2 - 2], [-w / 2 - 2, h / 2 + 2], [w / 2 + 2, h / 2 + 2]]) { c.beginPath(); c.arc(fx, fy, 4, 0, TAU); c.fill(); }
+      c.restore();
+    });
+    // the timer ring and the "hit me" arrow
+    if (this.aimed) { ctx.strokeStyle = '#ffe8a0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y - 14, 8, -Math.PI / 2, -Math.PI / 2 + TAU * (this.aimT / 9)); ctx.stroke(); }
+    else { ctx.fillStyle = `rgba(255,232,160,${0.5 + 0.5 * Math.sin(this.t * 6)})`; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▲', x, y + h + 16 + Math.sin(this.t * 6) * 3); }
+  }
+}
+// the great oven at the back of the ballroom: when both mirrors aim at its window it charges and flashes, baking
+// whatever stands in the column of light under it (the soufflé, a decoy... or Brady)
+class FrOven extends Ent {
+  constructor(g, s) { super(g, s, 76, 64); this.state = 'idle'; this.k = 0; this.cool = 0; this.heat = 0; this.flashes = 0; }
+  mirrors() { return this.g.entities.filter(e => e instanceof FrMirror && !e.remove && Math.abs(e.cx - this.cx) < 20 * TS); }
+  get focusW() { return 2.5 * TS; }
+  inFocus(e) { return e.cx > this.cx - this.focusW && e.cx < this.cx + this.focusW; }
+  update(dt) {
+    this.t += dt; const g = this.g, b = g.boss, ms = this.mirrors(), both = ms.length >= 2 && ms.every(m => m.aimed);
+    this.aimedN = ms.filter(m => m.aimed).length;
+    if (this.cool > 0) this.cool -= dt;
+    if (this.state === 'idle') { this.heat = approach(this.heat, 0, dt); if (both && this.cool <= 0 && b && b.state === 'fight') { this.state = 'charge'; this.k = 0; K.sfx('fire', null, { vol: 0.5, pitch: 0.6 }); g.toast('THE OVEN CHARGES! OUT OF THE LIGHT!'); } }
+    else if (this.state === 'charge') {
+      this.k += dt; this.heat = Math.min(1, this.k / 1.6);
+      if (!both) { this.state = 'idle'; this.heat = 0; return; }
+      if (this.k >= 1.6) this.flash();
+    }
+    else if (this.state === 'flash') { this.k -= dt; if (this.k <= 0) { this.state = 'idle'; this.cool = 2.4; this.heat = 0; } }
+  }
+  flash() {
+    const g = this.g, b = g.boss, p = g.player;
+    this.state = 'flash'; this.k = 0.4; this.flashes++; g.flash = 0.8; g.shake(8); K.sfx('neon_flash', 'laser', { vol: 0.7 });
+    g.burst(this.cx, this.y + this.h, 24, '#fff4c0', 'spark');
+    if (b && !b.remove && b.state === 'fight' && this.inFocus(b)) b.hit('hazard', this);
+    for (const e of g.entities) if (e instanceof FrDecoy && !e.remove && this.inFocus(e)) e.pop('BAKED! A FAKE!');
+    if (p && !p.dead && this.inFocus(p) && p.y + p.h > this.y) p.hurt(this);
+    for (const m of this.mirrors()) m.droop();
+  }
+  draw(ctx) {
+    const x = this.cx, y = this.y, h = this.h, g = this.g, t = this.t, fy = (g.boss ? g.boss.floorY : y + 10 * TS), heat = this.heat, fl = this.state === 'flash', fw = this.focusW;
+    // the column of light on the floor: faint while one mirror is aimed, pulsing red as the oven charges, white at the flash
+    if (fl) { ctx.fillStyle = 'rgba(255,250,220,0.85)'; ctx.fillRect(x - fw, y + h, fw * 2, fy - y - h); }
+    else if (heat > 0) { ctx.fillStyle = `rgba(255,${120 + 100 * (1 - heat)},60,${0.18 + 0.3 * heat * (0.6 + 0.4 * Math.sin(t * (10 + heat * 20)))})`; ctx.fillRect(x - fw, y + h, fw * 2, fy - y - h); ctx.strokeStyle = `rgba(255,80,40,${0.5 + 0.5 * Math.sin(t * 20)})`; ctx.lineWidth = 3; ctx.strokeRect(x - fw, y + h, fw * 2, fy - y - h); ctx.fillStyle = '#ffffff'; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(Math.ceil((1.6 - this.k) / 0.53) + '...', x, fy - 70); }
+    else if (this.aimedN) { ctx.fillStyle = 'rgba(255,232,160,0.08)'; ctx.fillRect(x - fw, y + h, fw * 2, fy - y - h); }
+    // the beams: oven window to each aimed mirror, and from the mirrors down to the floor column
+    for (const m of this.mirrors()) if (m.aimed) { ctx.strokeStyle = fl ? '#ffffff' : `rgba(255,232,160,${0.55 + 0.3 * Math.sin(t * 8)})`; ctx.lineWidth = fl ? 6 : 3; ctx.beginPath(); ctx.moveTo(x, y + 30); ctx.lineTo(m.cx, m.cy); ctx.lineTo(x + (m.cx < x ? -1 : 1) * fw * 0.6, fy); ctx.stroke(); }
+    Ink.ent(ctx, this, c => {
+      // a brass oven set into the back wall, with a round window that glows with the charge
+      c.fillStyle = '#5a4a3a'; rr(c, x - 38, y, 76, h, 8); c.fill(); c.fillStyle = '#c8962a'; rr(c, x - 34, y + 4, 68, h - 8, 6); c.fill();
+      c.fillStyle = '#3a2a1a'; c.beginPath(); c.arc(x, y + 30, 20, 0, TAU); c.fill();
+      c.fillStyle = fl ? '#ffffff' : `rgb(255,${Math.round(140 + 100 * (1 - heat))},${Math.round(60 + 60 * (1 - heat))})`; c.beginPath(); c.arc(x, y + 30, 16, 0, TAU); c.fill();
+      c.fillStyle = '#ffe8a0'; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(x - 20 + k * 20, y + h - 8, 3, 0, TAU); c.fill(); }
+      c.fillStyle = '#2a1a10'; c.font = `8px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.fillText('FOUR', x, y + 14);
+    });
+  }
+  get light() { return this.heat > 0 ? { r: 140, c: 'rgba(255,160,80,' } : null; }
+}
+// a phase-3 decoy: looks just like the soufflé, floats about, pops when stomped or baked
+class FrDecoy extends Ent {
+  constructor(g, s) { super(g, s, 76, 84); this.enemy = true; this.hx = this.x; this.hy = this.y; this.ph = s.phase || Math.random() * TAU; this.dir = -1; }
+  update(dt) {
+    this.t += dt; const g = this.g, b = g.boss, p = g.player;
+    if (!b || b.remove || b.state !== 'fight') { this.remove = true; return; }
+    // drifts around the real one's height, trailing Brady like the real one does
+    const tx = clamp((p ? p.cx : this.cx) + Math.sin(this.t * 0.9 + this.ph) * 5 * TS, b.arenaX0 + 40, b.arenaX1 - 40);
+    this.x = approach(this.x, tx - this.w / 2, 3.2 * TS * dt); this.y = b.floorY - this.h - 1.2 * TS + Math.sin(this.t * 2 + this.ph) * 10;
+    if (p) this.dir = p.cx < this.cx ? -1 : 1;
+  }
+  pop(text) { if (this.remove) return; this.remove = true; this.g.burst(this.cx, this.cy, 24, '#fff4d0', 'confetti'); this.g.parts.text(this.cx, this.y - 10, text || 'POP! A FAKE!', '#ffffff'); K.sfx('splat', null, { vol: 0.5, pitch: 1.4 }); }
+  hit(kind, src) { if (this.remove) return false; if (kind === 'stomp' || kind === 'spin' || kind === 'disc' || kind === 'star' || kind === 'laser') { this.pop(); return true; } return false; }
+  touchPlayer(p) { if (!this.remove) p.hurt(this); }
+  draw(ctx) { Ink.ent(ctx, this, c => souffleArt(c, this.cx, this.y + this.h, this.t, { puff: 0.5 + Math.sin(this.t * 2 + this.ph) * 0.2, dir: this.dir, face: 'angry' })); }
+}
+const entities = { frChandelier: FrChandelier, frLampPost: FrLampPost, frMirror: FrMirror, frOven: FrOven, frDecoy: FrDecoy };
 
 /* ---------------- the signature power-up: MIME GLOVES ---------------- */
 // Tap THROW: on the ground, draw an invisible wall in front of Brady (it blocks crêpes and enemies);
@@ -701,10 +815,16 @@ const P = {
     st.coins(x + 5, x + 12, st.gy - 7);
     return x + 15;
   },
+  // the boss arena: the hall of mirrors. The great oven high on the back wall, a gilded mirror on each side wall
+  // (hit them from below), chandeliers, benches and flowers, ledges to dodge the crêpes from
   arena_ballroom(st, o) {
-    const B = st.B, { x0, w, GY } = o;
-    for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
-    for (let q = 0; q < 3; q++) B.set(x0 + Math.floor(w / 2) - 1 + q, GY - 7, T.SEMI);
+    const B = st.B, { x0, w, GY } = o, mid = x0 + Math.floor(w / 2);
+    for (let q = 0; q < 3; q++) { B.set(x0 + 7 + q, GY - 4, T.SEMI); B.set(x0 + w - 10 + q, GY - 4, T.SEMI); }
+    B.decorAt('frChandelier', mid - 5, GY - 7, 0); B.decorAt('frChandelier', mid + 5, GY - 7, 1);
+    B.decorAt('frBench', x0 + 5, GY, 0); B.decorAt('frBench', x0 + w - 6, GY, 1); B.decorAt('frFlowers', mid - 6, GY, 0); B.decorAt('frFlowers', mid + 6, GY, 1);
+    B.decorAt('frFlowers', x0 + 8, GY - 4, 2); B.decorAt('frFlowers', x0 + w - 9, GY - 4, 3);
+    st.spawn('frOven', mid, GY - 7, {});
+    st.spawn('frMirror', x0 + 3, GY - 4, { side: 'left' }); st.spawn('frMirror', x0 + w - 4, GY - 4, { side: 'right' });
   }
 };
 Object.assign(decor, {
@@ -716,46 +836,107 @@ const platforms = {
 };
 
 /* ---------------- the boss: LE GRAND SOUFFLÉ ---------------- */
-// A towering cheese soufflé in its dish. It puffs up and fires macarons, slams down to send
-// cream waves along the floor, and after a big puff it collapses: stomp the top while it's flat.
+// A towering cheese soufflé in its dish. It puffs up and floats, so stomps bounce; it flings crêpe frisbees,
+// slams down to send cream waves along the floor, lobs macarons. THE OVEN AND THE MIRRORS: Brady hits the two
+// mirror panels on the walls from below so they aim at the great oven's window; the oven charges and flashes,
+// and whatever stands in the column of light is baked. The soufflé follows Brady, so lure it into the light and
+// step out before the flash. Phase 2: it hides behind the mime's invisible walls. Phase 3: it splits into
+// three; only the real one shows in the mirrors.
+const crepeArt = (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.scale(1, 0.35 + 0.1 * Math.sin(t * 20)); ctx.fillStyle = '#f2d090'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, TAU); ctx.fill(); ctx.fillStyle = '#b8783a'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(Math.cos(k * 1.3) * 6, Math.sin(k * 1.3) * 6, 1.6, 0, TAU); ctx.fill(); } ctx.restore(); };
+const macaronArt = (ctx, s, t) => { ctx.fillStyle = s.col; ctx.beginPath(); ctx.ellipse(s.cx, s.cy - 3, 7, 3.5, 0, 0, TAU); ctx.ellipse(s.cx, s.cy + 3, 7, 3.5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff4e0'; ctx.fillRect(s.cx - 6, s.cy - 1, 12, 2); };
+const creamArt = (ctx, s, t) => { ctx.fillStyle = '#fff8e8'; ctx.beginPath(); ctx.moveTo(s.x, s.y + s.h); for (let k = 0; k <= 4; k++) ctx.lineTo(s.x + k * s.w / 4, s.y + s.h * (k % 2 ? 0.1 : 0.5) + Math.sin(t * 10 + k) * 2); ctx.lineTo(s.x + s.w, s.y + s.h); ctx.fill(); };
 const boss = {
   id: 'fr_souffle', name: 'Le Grand Soufflé', hp: 5, dims: [76, 84], music: 'tour_fr_boss',
   brain: {
     guardText: 'TOO PUFFY',
-    wake(b) { say(b.g, b, 'OUI, OUI, I AM PERFECT!', '#ffd84a'); b.puff = 0; },
-    update(b, dt) {
-      const g = b.g; b.guard = 'bounce';
-      if (b.act === 'walk') { b.face(); b.walk(1.0); b.pose = 'walk'; b.puff = approach(b.puff || 0, 0, dt); if (b.at > 1.4) { b.cycle++; b.go(b.cycle % 3 === 1 ? 'puff' : b.cycle % 3 === 2 ? 'slam' : 'puff'); } }
-      else if (b.act === 'puff') {
-        b.vx = 0; b.pose = 'puff'; b.puff = Math.min(1, b.at / 1.6);
-        if (b.first) b.n = 0;
-        if (b.at > 0.5 + b.n * 0.45 && b.n < 4) { b.n++; const p = g.player, dx = p ? p.cx - b.cx : -100; tourFire(g, b.cx, b.y + 8, { kind: 'macaron', vx: clamp(dx * 0.9, -6 * TS, 6 * TS), vy: -9 * TS, grav: PHYS.gDown * 0.5, w: 14, h: 12, life: 3, thru: true, stompable: true, col: MAC[b.n % 6], art: (ctx, s, t) => { ctx.fillStyle = s.col; ctx.beginPath(); ctx.ellipse(s.cx, s.cy - 3, 7, 3.5, 0, 0, TAU); ctx.ellipse(s.cx, s.cy + 3, 7, 3.5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff4e0'; ctx.fillRect(s.cx - 6, s.cy - 1, 12, 2); } }); Sound.play('throw', { pitch: 0.8, vol: 0.5 }); }
-        if (b.at > 2.4) b.go('collapse');
-      }
-      else if (b.act === 'collapse') { b.vx = 0; b.pose = 'flat'; b.puff = 0; b.vuln = b.at > 0.3; b.guard = 'hurt'; if (b.first) { g.shake(5); Sound.play('splat', { pitch: 0.5 }); say(g, b, 'PFFFFT...', '#ffffff'); } if (b.at > 2.6) b.go('walk'); }
-      else if (b.act === 'slam') {
-        if (b.first) { b.vy = -14 * TS; b.vx = 0; b.face(); }
-        b.pose = 'slam';
-        if (b.onGround && b.at > 0.3) { g.shake(7); Sound.play('stomp', { pitch: 0.5 }); for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 8), b.floorY - 12, { kind: 'cream', vx: d * 4.4 * TS, w: 22, h: 22, ground: true, life: 3, col: '#fff8e8', art: (ctx, s, t) => { ctx.fillStyle = '#fff8e8'; ctx.beginPath(); ctx.moveTo(s.x, s.y + s.h); for (let k = 0; k <= 4; k++) ctx.lineTo(s.x + k * s.w / 4, s.y + s.h * (k % 2 ? 0.1 : 0.5) + Math.sin(t * 10 + k) * 2); ctx.lineTo(s.x + s.w, s.y + s.h); ctx.fill(); } }); b.go('walk'); }
-      }
-      b.fall(dt);
+    phases: [4, 2],
+    oven(b) { if (!b.ovenRef || b.ovenRef.remove) b.ovenRef = b.g.entities.find(e => e instanceof FrOven && !e.remove && Math.abs(e.cx - (b.arenaX0 + b.arenaX1) / 2) < 14 * TS) || null; return b.ovenRef; },
+    hoverY(b) { return b.floorY - b.h - 1.2 * TS; },
+    wake(b) { b.puff = 0.5; b.decoyT = 0; say(b.g, b, 'OUI, OUI, I AM PERFECT!', '#ffd84a'); b.g.toast('HIT BOTH MIRRORS FROM BELOW, THEN LURE HIM INTO THE OVEN LIGHT'); },
+    noDisc(b) { return b.act === 'deflate'; },
+    hit(b, kind, src) {
+      if (kind === 'stomp' || kind === 'spin') return 'bounce';
+      if (kind === 'hazard') { b.damage(1, { text: 'BAKED!', col: '#ffb060' }); return true; }
+      if (kind === 'bump' || kind === 'prop') return false;
+      return undefined;
     },
-    hurt(b) { b.go('walk'); b.vx = -b.dir * 5 * TS; say(b.g, b, pick(['MON DIEU!', 'MY BEAUTIFUL CRUST!', 'SACRÉ SOUFFLÉ!']), '#ffd84a'); b.g.burst(b.cx, b.y, 24, '#fff4d0', 'confetti'); },
+    decoy(b, side) { const g = b.g, x = clamp(b.cx + side * 4 * TS, b.arenaX0 + 60, b.arenaX1 - 60); g.spawn(new FrDecoy(g, { x, y: b.y + b.h, phase: Math.random() * TAU })); g.burst(x, b.cy, 20, '#fff4d0', 'confetti'); g.parts.text(x, b.y - 10, 'ANOTHER ME!', '#ffffff'); K.sfx('portal', null, { vol: 0.4, pitch: 1.4 }); },
+    // a mime wall between him and Brady (two blocks high, five seconds)
+    wall(b) {
+      const g = b.g, p = g.player, A = g.area; if (!p || p.dead) return;
+      const dir = p.cx < b.cx ? -1 : 1, tx = Math.floor((b.cx + dir * 2.5 * TS) / TS), fy = Math.floor((b.floorY - 2) / TS);
+      const free = (x, y) => x >= 0 && y >= 0 && x < A.W && y < A.H && A.tiles[y * A.W + x] === T.EMPTY && !overlap({ x: x * TS, y: y * TS, w: TS, h: TS }, p);
+      const cells = []; for (const y of [fy, fy - 1]) if (free(tx, y)) cells.push([tx, y]);
+      if (!cells.length) return;
+      for (const [x, y] of cells) { A.tiles[y * A.W + x] = T.HARD; A.hide[y * A.W + x] = 3; }
+      g.spawn(new MimeBlock(g, cells, 5)); say(g, b, pick(['A WALL! INVISIBLE!', 'MIME MAGIC!', 'TRÈS CHIC, NON?']), '#ffffff'); K.sfx('select2', 'pick', { pitch: 1.6, vol: 0.5 });
+    },
+    update(b, dt) {
+      const g = b.g, p = g.player, ph = b.phase || 1, ov = this.oven(b), hy = this.hoverY(b);
+      b.guard = 'bounce'; b.vuln = false; b.hatSpin = false;
+      if (b.act === 'deflate') {
+        // the finish: a long whistle, the puff goes out of him, he sinks into his dish
+        b.pose = 'deflate'; b.vx = 0; b.puff = Math.max(0, 0.5 - b.at * 0.25); b.fall(dt);
+        if (Math.floor(b.at * 3) !== Math.floor((b.at - dt) * 3) && b.at < 2) g.parts.text(b.cx + (Math.random() - 0.5) * 40, b.y - 10, 'pffffff...', '#ffffff');
+        if (b.at > 2.1 && !b.sighed) { b.sighed = true; say(g, b, 'OH LÀ LÀ...', '#ffd84a'); }
+        if (b.at > 3) b.die();
+        return;
+      }
+      // phase 3: two decoys drift about with him, and come back when popped
+      if (ph >= 3) {
+        const n = g.entities.filter(e => e instanceof FrDecoy && !e.remove).length;
+        if (n < 2) { b.decoyT = (b.decoyT || 0) - dt; if (b.decoyT <= 0) { b.decoyT = 3.5; this.decoy(b, pick([-1, 1])); } }
+      }
+      // the oven charges: he freezes in fear (if he is in the light, he is baked)
+      const charging = ov && ov.state === 'charge';
+      if (charging && b.act !== 'collapse' && b.act !== 'rise' && b.act !== 'panic') b.go('panic');
+      if (b.act === 'panic') {
+        b.pose = 'scared'; b.vx = 0; b.puff = approach(b.puff, 0.9, dt * 2); b.y = approach(b.y, hy, 4 * TS * dt);
+        if (b.first) { say(g, b, pick(['NON NON NON!', 'NOT THE OVEN!', 'ZUT ALORS!']), '#ffffff'); if (ph >= 2) this.wall(b); }
+        if ((!charging && b.at > 0.3) || b.at > 3) b.go('walk');
+      }
+      else if (b.act === 'walk') {
+        b.face(); b.pose = 'float'; b.puff = approach(b.puff, 0.5, dt);
+        b.hover(dt, hy + Math.sin(b.t * 2) * 8, p ? p.cx + (b.cx < p.cx ? -2 : 2) * TS : undefined);
+        if (b.at > 1.3) { b.cycle++; const moves = ph >= 2 ? ['crepes', 'slam', 'macarons', 'crepes', 'wall'] : ['crepes', 'slam']; b.go(moves[b.cycle % moves.length]); }
+      }
+      else if (b.act === 'crepes') {
+        // tell: the chef's hat spins, then three crêpes fly flat and true at Brady
+        b.pose = 'float'; b.hover(dt, hy); b.hatSpin = b.at < 0.6;
+        if (b.first) { b.n = 0; b.face(); }
+        if (b.at > 0.6 && b.n < 3 && b.at > 0.6 + b.n * 0.35) { b.n++; const dy = p ? clamp((p.cy - b.cy) / 1.2, -3 * TS, 3 * TS) : 0; tourFire(g, b.cx + b.dir * 30, b.cy, { kind: 'crepe', vx: b.dir * 5 * TS, vy: dy, w: 22, h: 8, life: 3, stompable: true, col: '#f2d090', art: crepeArt }); TourKit.sfx('throw', null, { pitch: 1.4, vol: 0.4 }); }
+        if (b.at > 2.0) b.go('walk');
+      }
+      else if (b.act === 'slam') {
+        // tell: it puffs up and rises, then drops like a stone; cream waves run along the floor
+        if (b.first) b.face();
+        if (b.at < 0.8) { b.pose = 'puff'; b.puff = approach(b.puff, 1, dt * 2); b.y = approach(b.y, hy - 2.5 * TS, 6 * TS * dt); b.vx = 0; }
+        else { b.pose = 'slam'; b.puff = approach(b.puff, 0.15, dt * 4); b.fall(dt); if (b.onGround) { g.shake(7); Sound.play('stomp', { pitch: 0.5 }); for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 8), b.floorY - 12, { kind: 'cream', vx: d * 4.4 * TS, w: 22, h: 22, ground: true, life: 3, col: '#fff8e8', art: creamArt }); b.go('down'); } }
+        if (b.at > 3) b.go('walk');
+      }
+      else if (b.act === 'down') { b.pose = 'float'; b.vx = 0; b.fall(dt); if (b.at > 0.5) b.go('rise'); }
+      else if (b.act === 'macarons') {
+        b.pose = 'puff'; b.hover(dt, hy); b.puff = approach(b.puff, 0.9, dt * 2);
+        if (b.first) { b.n = 0; say(g, b, 'MACARONS!', MAC[2]); }
+        if (b.at > 0.5 + b.n * 0.4 && b.n < 4) { b.n++; const dx = p ? p.cx - b.cx : -100; tourFire(g, b.cx, b.y + 8, { kind: 'macaron', vx: clamp(dx * 0.9, -6 * TS, 6 * TS), vy: -9 * TS, grav: PHYS.gDown * 0.5, w: 14, h: 12, life: 3, thru: true, stompable: true, col: MAC[b.n % 6], art: macaronArt }); Sound.play('throw', { pitch: 0.8, vol: 0.5 }); }
+        if (b.at > 2.3) b.go('walk');
+      }
+      else if (b.act === 'wall') { b.pose = 'float'; b.hover(dt, hy); if (b.first) this.wall(b); if (b.at > 0.8) b.go('walk'); }
+      else if (b.act === 'collapse') { b.vx = 0; b.pose = 'flat'; b.puff = 0; b.fall(dt); if (b.at > 2.2) b.go('rise'); }
+      else if (b.act === 'rise') { b.pose = 'float'; b.vx = 0; b.puff = approach(b.puff, 0.5, dt); b.hover(dt, hy); if (b.at > 0.8) b.go('walk'); }
+    },
+    hurt(b) { const g = b.g; b.go('collapse'); say(g, b, pick(['MON DIEU!', 'MY BEAUTIFUL CRUST!', 'SACRÉ SOUFFLÉ!']), '#ffd84a'); g.burst(b.cx, b.y, 24, '#fff4d0', 'confetti'); g.shake(5); Sound.play('splat', { pitch: 0.5 }); },
+    phase(b, n) {
+      const g = b.g; this.hurt(b);
+      if (n === 2) { g.bannerText = 'MIME WALLS GO UP!'; g.bannerT = 2.4; say(g, b, 'A MIME TAUGHT ME THIS!', '#ffffff'); }
+      else if (n === 3) { b.decoyT = 3.5; this.decoy(b, -1); this.decoy(b, 1); g.bannerText = 'THREE SOUFFLÉS! ONLY ONE IS REAL'; g.bannerT = 2.6; say(g, b, 'WHICH ONE IS ME? HA!', '#ffd84a'); g.toast('THE MIRRORS SHOW THE REAL ONE'); }
+    },
+    lastHit(b) { const g = b.g; b.go('deflate'); b.vuln = false; b.sighed = false; for (const e of g.entities) if (e instanceof FrDecoy) e.pop('POP!'); g.bannerText = 'LE GRAND DÉFLATION!'; g.bannerT = 2.6; K.sfx('whistle', 'powerdown', { vol: 0.7, pitch: 0.5 }); g.shake(6); return true; },
     draw(b, ctx, t) {
-      const x = b.cx, by = b.y + b.h, puff = b.puff || 0, flat = b.pose === 'flat';
-      // the dish
-      ctx.fillStyle = '#ffffff'; rr(ctx, x - 38, by - 30, 76, 30, 6); ctx.fill();
-      ctx.fillStyle = '#e8e8f0'; for (let k = 0; k < 10; k++) ctx.fillRect(x - 36 + k * 7.6, by - 28, 3, 26);
-      ctx.strokeStyle = '#c8c8d8'; ctx.lineWidth = 1.5; rr(ctx, x - 38, by - 30, 76, 30, 6); ctx.stroke();
-      // the soufflé itself: rises with the puff, sinks when it collapses
-      const h = flat ? 10 : 34 + puff * 30 + Math.sin(t * 3) * 2, top = by - 30 - h;
-      const g = ctx.createLinearGradient(0, top, 0, by - 30); g.addColorStop(0, '#c8802a'); g.addColorStop(0.35, '#f0c060'); g.addColorStop(1, '#fff0b0');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 36, by - 30); ctx.quadraticCurveTo(x - 42 - puff * 8, top + h * 0.4, x - 26, top + 6); ctx.quadraticCurveTo(x, top - 10 - puff * 6, x + 26, top + 6); ctx.quadraticCurveTo(x + 42 + puff * 8, top + h * 0.4, x + 36, by - 30); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(160,90,20,0.35)'; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(x - 20 + k * 8, top + 8 + (k % 2) * 4, 2.5, 0, TAU); ctx.fill(); }
-      if (!flat) { K.eyes(ctx, x, top + h * 0.45, b.dir, 11, 5, b.pose === 'puff'); ctx.strokeStyle = '#7a4a1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, top + h * 0.62, 6, 0.2, Math.PI - 0.2); ctx.stroke(); }
-      else { ctx.strokeStyle = '#7a4a1a'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * 14, top + 2); ctx.lineTo(x + s * 8, top + 6); ctx.stroke(); } TourKit.dizzy(ctx, x, top - 10, t); }
-      // a little chef's hat perched on top
-      if (!flat) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 8, top - 16 - puff * 6, 16, 8); ctx.beginPath(); ctx.arc(x - 5, top - 20 - puff * 6, 6, 0, TAU); ctx.arc(x + 5, top - 20 - puff * 6, 6, 0, TAU); ctx.arc(x, top - 24 - puff * 6, 6, 0, TAU); ctx.fill(); }
+      const P = b.pose;
+      souffleArt(ctx, b.cx, b.y + b.h, t, { puff: b.puff || 0, flat: P === 'flat', dir: b.dir, face: P === 'scared' ? 'scared' : P === 'deflate' ? 'sad' : 'angry', hatSpin: b.hatSpin, hat: P !== 'flat' });
+      if (P === 'flat') TourKit.dizzy(ctx, b.cx, b.y + b.h - 50, t);
+      if (P === 'scared') { ctx.fillStyle = '#8ad8ff'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(b.cx + 28 + k * 6, b.y + 10 + ((t * 40 + k * 13) % 30), 2.5, 4, 0, 0, TAU); ctx.fill(); } }
     }
   }
 };
@@ -847,7 +1028,7 @@ Tour.country({
       script: [['girders', { n: 4 }], 'elevator', ['girders', { n: 3, enemy: 'frKeychain', flip: true }], 'windy', ['elevator', { h: 9, gold: true }], ['girders', { n: 4 }], ['windy', { dir: -1 }], ['girders', { n: 3, flip: true }], 'elevator', ['girders', { n: 2 }]] },
     { name: 'Hall of Mirrors', style: 'castle', theme: 'fr_chateau', gimmick: 'Mirror doors, falling chandeliers and Le Grand Soufflé',
       enemies: [['frAccordion', 2], ['frBaguette', 2], ['frMime', 1]], boss: 'fr_souffle', arena: 'ballroom', arenaW: 26,
-      hint: 'Mirrors are doors: press UP in front of one',
+      hint: 'Mirrors are doors: press UP in front of one. In the ballroom, hit the wall mirrors from below to aim the oven!',
       postcard: 'The iron tower is back to full size! The Baron flew east, grumbling. Next stop: Amsterdam! ♥ C',
       script: [['mirrors', {}], 'chandeliers', ['enemies', { n: 2 }], 'gallery', 'cp', ['mirrors', { fake: true }], ['chandeliers', { n: 4 }], 'arena'] }
   ]

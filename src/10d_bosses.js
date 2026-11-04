@@ -20,6 +20,30 @@ const BOSS_INFO = {
 };
 function bossDisplayName(style) { return (BOSS_INFO[style] || BOSS_INFO.greeter).name; }
 
+/* Hurt flash: the boss is painted into a scratch canvas and tinted there, so only its own pixels light up
+   (never a box over the background). Returns false when the scratch canvas is unavailable. */
+const BossFx = {
+  scratch: null,
+  tinted(ctx, b, paint, col, alpha) {
+    const m = ctx.getTransform ? ctx.getTransform() : null;
+    if (!m) return false;
+    const S = m.a, pad = Math.max(80, b.w);
+    const w = Math.ceil((b.w + pad * 2) * S), h = Math.ceil((b.h + pad * 2) * S);
+    if (!this.scratch) this.scratch = makeCanvas(w, h);
+    const c = this.scratch;
+    if (c.width < w || c.height < h) { c.width = Math.max(c.width, w); c.height = Math.max(c.height, h); }
+    const sc = c.getContext('2d');
+    sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, w, h);
+    sc.setTransform(S, 0, 0, S, -(b.x - pad) * S, -(b.y - pad) * S);
+    paint(sc);
+    sc.setTransform(1, 0, 0, 1, 0, 0);
+    sc.globalCompositeOperation = 'source-atop'; sc.globalAlpha = alpha; sc.fillStyle = col; sc.fillRect(0, 0, w, h);
+    sc.globalCompositeOperation = 'source-over'; sc.globalAlpha = 1;
+    ctx.drawImage(c, 0, 0, w, h, b.x - pad, b.y - pad, w / S, h / S);
+    return true;
+  }
+};
+
 class Boss extends Ent {
   constructor(g, s) {
     const style = s.style || 'greeter';
@@ -48,6 +72,7 @@ class Boss extends Ent {
   update(dt) {
     this.t += dt;
     if (this.hurtT > 0) this.hurtT -= dt;
+    if (this.rings) { for (const r of this.rings) r.t += dt; this.rings = this.rings.filter(r => r.t < 0.45); if (!this.rings.length) this.rings = null; }
     this.squash = approach(this.squash, 0, dt * 4);
     const p = this.g.player;
     if (this.state === 'sleep') {
@@ -70,8 +95,16 @@ class Boss extends Ent {
     if (this.goN === goN) this.first = false;
     this.clampArena();
   }
+  /* hit(kind, src): how the world reaches the boss.
+     kinds: stomp / spin (Brady from above), bump (Brady's head from below), disc (smoke puffs), laser, star,
+            prop (a kicked or thrown world object, src = the TourProp), hazard (the arena: lava, falling things, src = whatever),
+            and any signature-item kind the country defines (taco, bell, tomato, ...).
+     A brain may define hit(b, kind, src) and return true (took damage; it calls b.damage itself), 'bounce' (Brady bounces
+     off safely), false (ignored) or undefined (fall through to the defaults below). The defaults: stomp/spin while
+     b.vuln, disc chips, star hits; everything else is ignored unless the brain handles it. */
   hit(kind, src) {
     if (this.state !== 'fight' || this.hurtT > 0) return false;
+    if (this.brain.hit) { const r = this.brain.hit(this, kind, src); if (r !== undefined) return r; }
     if (kind === 'stomp' || kind === 'spin') {
       if (this.vuln) { this.damage(1); return true; }
       return this.guard === 'bounce' ? 'bounce' : false;
@@ -80,27 +113,57 @@ class Boss extends Ent {
     if (kind === 'star') { this.damage(1); return true; }
     return false;
   }
-  damage(n) {
-    this.hp -= n; this.hurtT = n >= 1 ? 1.0 : 0.25; this.squash = 1;
-    Sound.play('bossHit'); this.g.shake(6); this.g.burst(this.cx, this.cy, 16, '#ffffff', 'spark');
+  /* damage(n, o): o.quiet skips the hurt reaction, o.text floats a word, o.col tints the flash. Phases: a brain with
+     phases: [hp, hp, ...] (descending thresholds) gets brain.phase(b, n) once each time hp drops to or below one. */
+  damage(n, o) {
+    o = o || {};
+    const p = this.g.player;
+    this.hp -= n; this.hurtT = n >= 1 ? 1.0 : 0.3; this.squash = 1; this.flashCol = o.col || null;
+    Sound.play('bossHit'); this.g.shake(n >= 1 ? 7 : 3); this.g.burst(this.cx, this.cy, n >= 1 ? 22 : 8, '#ffffff', 'spark');
+    if (n >= 1) { this.g.burst(this.cx, this.cy, 10, '#ffd84a', 'confetti'); this.g.hitStop = Math.max(this.g.hitStop || 0, 0.08); this.rings = (this.rings || []).concat([{ t: 0, x: this.cx, y: this.cy }]); }
+    if (o.text) this.g.parts.text(this.cx, this.y - 14, o.text, o.col || '#ffffff');
+    // landing a hit never costs Brady the hit back: a short grace period
+    if (p && !p.dead) p.invuln = Math.max(p.invuln || 0, 0.7);
     if (this.hp <= 0.01) { if (this.brain.lastHit && this.brain.lastHit(this)) return; this.die(); return; }
-    if (n >= 1) { this.brain.hurt ? this.brain.hurt(this) : this.go('walk'); }
+    if (this.brain.phases) {
+      const ph = this.phase || 1;
+      let n2 = ph; for (let k = 0; k < this.brain.phases.length; k++) if (this.hp <= this.brain.phases[k] + 0.01) n2 = Math.max(n2, k + 2);
+      if (n2 > ph) { this.phase = n2; if (this.brain.phase) { this.brain.phase(this, n2); return; } }
+    }
+    if (n >= 1 && !o.quiet) { this.brain.hurt ? this.brain.hurt(this) : this.go('walk'); }
   }
-  die() { this.state = 'dying'; this.timer = 1.6; this.vx = 0; Sound.play('bossDie'); this.g.shake(14); }
+  die() { this.state = 'dying'; this.timer = 1.6; this.vx = 0; this.vuln = false; Sound.play('bossDie'); this.g.shake(14); }
   touchPlayer(p) {
     if (this.state === 'sleep' || this.state === 'dying' || this.state === 'intro') return;
+    if (this.brain.touch && this.brain.touch(this, p)) return;
     if (p.vy > 0 && p.prevBottom <= this.y + this.h * 0.35) {
       const r = this.hit(p.spin ? 'spin' : 'stomp', p);
-      if (r) { p.vy = -PHYS.stompVHeld; p.jumping = true; if (r === true) this.g.addScore(1000, this.cx, this.y); else this.g.parts.text(this.cx, this.y - 8, this.brain.guardText || 'NOPE', '#ffd84a'); return; }
+      if (r) { p.vy = -PHYS.stompVHeld; p.jumping = true; p.y = Math.min(p.y, this.y - p.h - 1); if (r === true) this.g.addScore(1000, this.cx, this.y); else this.g.parts.text(this.cx, this.y - 8, this.brain.guardText || 'NOPE', '#ffd84a'); return; }
     }
-    if (this.hurtT > 0.5 || this.vuln) { if (this.vuln) { p.x += (p.cx < this.cx ? -1 : 1) * 2; } return; }
+    // rising off the top after a bounce or a stomp: never a hit
+    if (p.vy < 0 && p.y + p.h < this.y + 12) return;
+    // a headbutt from below (the bottom of the boss) reaches brains that accept 'bump'
+    if (p.vy < 0 && p.prevBottom - p.h >= this.y + this.h * 0.7) {
+      const r = this.hit('bump', p);
+      if (r) { p.vy = Math.max(p.vy, 2 * TS); if (r === true) this.g.addScore(1000, this.cx, this.y); return; }
+    }
+    // while the boss reels (or offers its weak spot) it is harmless: Brady just gets nudged off
+    if (this.hurtT > 0 || this.vuln) { p.x += (p.cx < this.cx ? -1 : 1) * 2; return; }
     p.hurt(this);
   }
   draw(ctx) {
     ctx.save();
     if (this.state === 'dying') ctx.globalAlpha = Math.max(0, this.timer / 1.6);
-    if (this.brain.draw) this.brain.draw(this, ctx, this.t); else BossArt.draw(ctx, this, this.t);
-    if (this.vuln && this.state === 'fight') { ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(this.t * 10)})`; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▼', this.cx, this.y - 10 + Math.sin(this.t * 6) * 3); }
+    const art = c => { if (this.brain.draw) this.brain.draw(this, c, this.t); else BossArt.draw(c, this, this.t); };
+    const paint = c => Ink.around(c, this.x, this.y, this.w, this.h, art, { pad: Math.max(60, this.w), width: 1.8 });
+    const flashing = this.hurtT > 0 && this.state === 'fight' && Math.floor(this.hurtT * 24) % 2 === 0;
+    if (flashing && !BossFx.tinted(ctx, this, paint, this.flashCol || '#ffffff', 0.85)) paint(ctx);
+    else paint(ctx);
+    // hit rings: a quick shockwave from each hit, the clear sign that it counted
+    if (this.rings) {
+      for (const r of this.rings) { const k = r.t / 0.45; ctx.strokeStyle = `rgba(255,255,255,${0.9 * (1 - k)})`; ctx.lineWidth = 4 * (1 - k) + 1; ctx.beginPath(); ctx.arc(r.x, r.y, 10 + k * 70, 0, TAU); ctx.stroke(); }
+    }
+    if (this.vuln && this.state === 'fight') { ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(this.t * 10)})`; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▼', this.cx, this.y - 12 + Math.sin(this.t * 6) * 3); }
     ctx.restore();
   }
   get light() { return { r: 150, c: 'rgba(220,180,255,' }; }

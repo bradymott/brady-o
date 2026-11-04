@@ -772,7 +772,165 @@ class VnRoaster extends Ent {
     for (let k = 0; k < 3; k++) { const ph = (this.t * 0.6 + k / 3) % 1; ctx.fillStyle = `rgba(120,100,90,${0.35 * (1 - ph)})`; ctx.beginPath(); ctx.arc(x - 6 + Math.sin(ph * 5 + k) * 4, y - 46 - ph * 30, 4 + ph * 6, 0, TAU); ctx.fill(); }
   }
 }
-const entities = { vnHook: VnHook, vnPho: VnPho, vnBoat: VnBoat, vnRaft: VnRaft, vnTrainSignal: VnTrainSignal, vnIce: VnIce, vnRoaster: VnRoaster };
+/* ---------------- the boss arena: the citadel courtyard and the great kettle ---------------- */
+// A giant kettle hangs on a chain from the courtyard's lacquered beam. Stomp one of the two foot pedals and the chain
+// yanks: the kettle swings up to that side, then crashes down and sweeps across the courtyard. It passes harmlessly over
+// Brady (he pulled it), but when it crashes into Ong Phin it blasts him with steam. Timing is everything: catch him
+// standing still (dripping, wobbling after a slide, blowing, conducting).
+const inArenaOf = (b, e) => e.cx >= b.arenaX0 - TS && e.cx <= b.arenaX1 + TS;
+class VnKettle extends Ent {
+  constructor(g, s) {
+    super(g, s, 60, 54); this.friendly = true; this.ghost = true;
+    this.px = s.x; this.py = -120; this.ax0 = s.ax0 * TS; this.ax1 = s.ax1 * TS;
+    this.L = s.y - 0.5 * TS - this.h / 2 - this.py;   // a long chain from high above: the kettle skims half a tile over the floor at the low point
+    this.a = 0; this.av = 0; this.tug = 0; this.hitT = 0; this.place();
+  }
+  place() { this.x = this.px + Math.sin(this.a) * this.L - this.w / 2; this.y = this.py + Math.cos(this.a) * this.L - this.h / 2; }
+  get swinging() { return Math.abs(this.av) > 0.35; }
+  // a pedal stomp: the chain is yanked and the kettle swings up to that side, then falls through and across
+  pull(dir) {
+    this.av = clamp(this.av + dir * 1.25, -1.5, 1.5); if (sign(this.av) !== dir) this.av = dir * 1.25;
+    this.tug = 0.4; Sound.play('bump', { pitch: 0.5, vol: 0.8 }); this.g.burst(this.cx, this.y, 8, '#c8ccd8', 'spark');
+  }
+  update(dt) {
+    this.t += dt; const g = this.g;
+    if (this.tug > 0) this.tug -= dt; if (this.hitT > 0) this.hitT -= dt;
+    const G = PHYS.gDown * 0.5;
+    this.av += -(G / this.L) * Math.sin(this.a) * dt; this.av *= Math.max(0, 1 - 0.16 * dt); this.a += this.av * dt;
+    if (Math.abs(this.a) < 0.02 && Math.abs(this.av) < 0.08) { this.a = 0; this.av = 0; }
+    this.place();
+    const b = g.boss;
+    if (b && !b.remove && b.state === 'fight' && b.hurtT <= 0 && this.swinging && this.hitT <= 0 && overlap(this, b)) {
+      const r = b.hit('hazard', this);
+      if (r) { this.hitT = 0.5; this.av *= -0.35; g.burst(this.cx, this.cy, 36, '#ffffff', 'dust'); g.burst(this.cx, this.cy, 14, '#e8f4ff', 'spark'); Sound.play('splash', { pitch: 0.5, vol: 0.9 }); }
+    }
+  }
+  get light() { return { r: 120, col: '#ffb070', x: this.cx, y: this.cy }; }
+  draw(ctx) {
+    const t = this.g.t, cx = this.cx, cy = this.cy;
+    // the lacquered beam across the courtyard, its brackets, and the chains from the pedals
+    ctx.fillStyle = '#a8241a'; rr(ctx, this.ax0 - 8, this.py - 14, this.ax1 - this.ax0 + 16, 14, 4); ctx.fill();
+    ctx.fillStyle = '#ffd23a'; ctx.fillRect(this.ax0 - 6, this.py - 12, this.ax1 - this.ax0 + 12, 2); ctx.fillRect(this.ax0 - 6, this.py - 4, this.ax1 - this.ax0 + 12, 1.5);
+    ctx.fillStyle = '#7a1a12'; for (let x = this.ax0 + 24; x < this.ax1; x += 64) { ctx.beginPath(); ctx.moveTo(x - 10, this.py); ctx.lineTo(x + 10, this.py); ctx.lineTo(x, this.py + 10); ctx.fill(); }
+    ctx.strokeStyle = '#5a5a66'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+    for (const px of [this.ax0 + TS * 1.5, this.ax1 - TS * 1.5]) { ctx.beginPath(); ctx.moveTo(px, this.py); ctx.lineTo(px, this.g.boss ? this.g.boss.floorY - 12 : this.py + 400); ctx.stroke(); }
+    // the chain down to the kettle (it twangs on a tug)
+    ctx.beginPath(); ctx.moveTo(this.px, this.py); const mx = (this.px + cx) / 2 + (this.tug > 0 ? Math.sin(t * 60) * 4 : 0), my = (this.py + this.y) / 2; ctx.quadraticCurveTo(mx, my, cx, this.y + 4); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#5a5a66'; ctx.beginPath(); ctx.arc(this.px, this.py, 5, 0, TAU); ctx.fill();
+    // the kettle itself, hanging straight down from its handle (it tilts with the swing)
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(this.a * 0.6);
+    if (this.swinging) { ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(-sign(this.av) * (36 + k * 8), -10 + k * 10); ctx.lineTo(-sign(this.av) * (52 + k * 10), -12 + k * 10); ctx.stroke(); } }
+    ctx.strokeStyle = '#2a2a34'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, -22, 16, Math.PI, TAU); ctx.stroke();
+    const kg = ctx.createRadialGradient(-8, -4, 4, 0, 4, 34); kg.addColorStop(0, '#6a6a7a'); kg.addColorStop(1, '#22222c');
+    ctx.fillStyle = kg; ctx.beginPath(); ctx.ellipse(0, 4, 29, 23, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#3a3a48'; rr(ctx, -12, -24, 24, 8, 3); ctx.fill(); ctx.fillStyle = '#c8322a'; ctx.beginPath(); ctx.arc(0, -24, 4, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#2a2a34'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(24, -4); ctx.quadraticCurveTo(40, -10, 40, -22); ctx.stroke(); ctx.lineCap = 'butt';
+    ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.ellipse(-10, -4, 8, 12, 0.3, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffd23a'; ctx.font = `9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('HOT', 0, 8);
+    ctx.restore();
+    // it is boiling: steam from the spout, a whole cloud after a hit
+    const n = this.hitT > 0 ? 9 : 3;
+    for (let k = 0; k < n; k++) { const ph = (t * 0.8 + k / n) % 1, big = this.hitT > 0; ctx.fillStyle = `rgba(255,255,255,${(big ? 0.7 : 0.4) * (1 - ph)})`; ctx.beginPath(); ctx.arc(cx + (big ? (k - 4) * 9 : 40) + Math.sin(ph * 6 + k) * 5, cy - (big ? 6 : 24) - ph * (big ? 70 : 34), (big ? 8 : 3) + ph * (big ? 14 : 6), 0, TAU); ctx.fill(); }
+  }
+}
+// a foot pedal on the floor: jump onto it and the chain yanks the kettle up on that side
+class VnPedal extends Ent {
+  constructor(g, s) { super(g, s, 44, 14); this.dirK = s.dir || -1; this.press = 0; this.cool = 0; }
+  update(dt) { this.t += dt; if (this.press > 0) this.press -= dt; if (this.cool > 0) this.cool -= dt; }
+  touchPlayer(p) { if (p.dead || this.cool > 0) return; if (p.vy > 0 && p.prevBottom <= this.y + 6) this.stomp(p); }
+  stomp(p) {
+    const g = this.g, k = g.entities.find(e => e instanceof VnKettle && !e.remove && Math.abs(e.px - this.cx) < 16 * TS);
+    this.press = 0.45; this.cool = 0.7;
+    if (p) { p.vy = -PHYS.stompV * 0.55; p.y = Math.min(p.y, this.y - p.h + 2); p.jumping = true; p.onGround = false; }
+    Sound.play('kick', { pitch: 0.6 }); g.burst(this.cx, this.y, 8, '#ffd84a', 'spark'); g.parts.text(this.cx, this.y - 16, 'CLANK!', '#ffd84a'); g.shake(2);
+    if (k) k.pull(this.dirK);
+  }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, k = Math.min(1, this.press / 0.45);
+    ctx.fillStyle = '#3a3a44'; rr(ctx, x - 24, y - 6, 48, 6, 2); ctx.fill();
+    ctx.save(); ctx.translate(x - this.dirK * 20, y - 6); ctx.rotate(this.dirK * (0.32 - k * 0.3));
+    ctx.fillStyle = '#c8322a'; rr(ctx, this.dirK > 0 ? -40 : 0, -8, 40, 8, 3); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.fillRect(this.dirK > 0 ? -34 : 6, -6, 28, 1.5);
+    ctx.fillStyle = '#ffffff'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('STOMP', this.dirK > 0 ? -20 : 20, -1);
+    ctx.restore();
+    // a little arrow bobbing over the pedal when the kettle is at rest
+    const kettle = this.g.entities.find(e => e instanceof VnKettle && !e.remove);
+    if (kettle && !kettle.swinging && this.press <= 0) { ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 6)})`; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▼', x, y - 22 + Math.sin(this.t * 6) * 3); }
+  }
+}
+// a paper lantern strung across the courtyard: it lights the dark phase, and Ong Phin can blow it out
+class VnArenaLantern extends Ent {
+  constructor(g, s) { super(g, s, 22, 28); this.col = LANT[(s.k || 0) % LANT.length]; this.lit = true; this.relight = 0; this.outIn = null; this.friendly = true; this.ghost = true; this.k = s.k || 0; }
+  update(dt) {
+    this.t += dt;
+    if (this.outIn != null) { this.outIn -= dt; if (this.outIn <= 0) { this.outIn = null; this.lit = false; this.relight = 1.7 + this.k * 0.12; this.g.burst(this.cx, this.cy, 6, '#9a9aa0', 'dust'); Sound.play('bump', { pitch: 2, vol: 0.15 }); } }
+    if (!this.lit) { this.relight -= dt; if (this.relight <= 0) { this.lit = true; this.g.burst(this.cx, this.cy, 6, this.col, 'spark'); Sound.play('pick', { pitch: 1.8, vol: 0.2 }); } } }
+  blowOut(delay) { if (!this.lit || this.outIn != null) return; this.outIn = Math.max(0.001, delay || 0); }
+  get light() { return this.lit && this.g.area.dark ? { r: 160, col: this.col } : null; }
+  draw(ctx) {
+    const t = this.g.t, x = this.cx + Math.sin(t * 1.2 + this.k) * 2, y = this.cy;
+    ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(this.cx, this.y - 22); ctx.lineTo(x, y - 12); ctx.stroke();
+    lantern(ctx, x, y, 11, this.lit ? this.col : shade(this.col, -0.55), t, this.lit && !!this.g.area.dark);
+    if (!this.lit) { ctx.fillStyle = 'rgba(200,200,210,0.5)'; for (let q = 0; q < 2; q++) { const ph = (t * 0.9 + q / 2) % 1; ctx.beginPath(); ctx.arc(x + Math.sin(ph * 7) * 3, y - 14 - ph * 20, 2 + ph * 3, 0, TAU); ctx.fill(); } }
+  }
+}
+// a puddle of spilled coffee: slippery as ice while it lasts
+class VnPuddle extends Ent {
+  constructor(g, x, y, w) { super(g, null, w || 90, 8); this.x = x - this.w / 2; this.y = y - 8; this.life = 7; }
+  update(dt) { this.t += dt; this.life -= dt; if (this.life <= 0) this.remove = true; }
+  touchPlayer(p) { if (p.onGround && !p.dead) { p.groundTile = T.ICE; if (!this.told) { this.told = true; K.say(this.g, p, 'SLIPPERY!', '#c8783a'); } } }
+  draw(ctx) {
+    const a = Math.min(1, this.life / 1.2), t = this.g.t;
+    ctx.fillStyle = `rgba(90,40,16,${0.85 * a})`; ctx.beginPath(); ctx.ellipse(this.cx, this.y + 6, this.w / 2, 5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = `rgba(255,220,180,${0.35 * a})`; ctx.beginPath(); ctx.ellipse(this.cx - this.w * 0.2, this.y + 4, this.w * 0.18, 1.6, 0, 0, TAU); ctx.fill();
+    for (let k = 0; k < 2; k++) { const ph = (t * 0.6 + k / 2) % 1; ctx.fillStyle = `rgba(255,255,255,${0.25 * (1 - ph) * a})`; ctx.beginPath(); ctx.arc(this.cx + (k ? 18 : -14), this.y - ph * 18, 2 + ph * 3, 0, TAU); ctx.fill(); }
+  }
+}
+// a water puppet: it waits under a trapdoor in the courtyard, ripples as a warning, then pops up on its rod (phase 3)
+class VnPuppet extends Ent {
+  constructor(g, s) { super(g, s, 30, 56); this.floor = s.y; this.kind = s.kind || 0; this.state = 'down'; this.k = 0; this.active = false; this.every = 3.8; this.timer = 1 + (s.kind || 0) * 1.2; this.rise = 0; this.h = 0; this.y = this.floor; }
+  pop(delay) { if (this.state === 'down') { this.state = 'warn'; this.k = 0.75 + (delay || 0); } }
+  update(dt) {
+    this.t += dt;
+    if (this.active && this.state === 'down') { this.timer -= dt; if (this.timer <= 0) { this.timer = this.every; this.pop(0); } }
+    if (this.state === 'warn') { this.k -= dt; if (this.k <= 0) { this.state = 'up'; this.k = 1.5; Sound.play('splash', { pitch: 1.2, vol: 0.5 }); this.g.burst(this.cx, this.floor, 12, '#8ad0ff', 'spark'); } }
+    else if (this.state === 'up') { this.k -= dt; this.rise = Math.min(1, this.rise + dt * 5); if (this.k <= 0) this.state = 'sink'; }
+    else if (this.state === 'sink') { this.rise -= dt * 3; if (this.rise <= 0) { this.rise = 0; this.state = 'down'; } }
+    this.h = 56 * this.rise; this.y = this.floor - this.h; this.enemy = this.state === 'up';
+  }
+  touchPlayer(p) { if (this.state === 'up' && this.rise > 0.5 && !p.dead) p.hurt(this); }
+  hit(kind) { return false; }
+  draw(ctx) {
+    const x = this.cx, fy = this.floor, t = this.t, r = this.rise;
+    // the trapdoor pool in the floor, always visible so the spots are known
+    ctx.fillStyle = '#2a5a8a'; ctx.beginPath(); ctx.ellipse(x, fy - 2, 22, 5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(140,210,255,0.8)'; ctx.beginPath(); ctx.ellipse(x, fy - 3, 17, 3, 0, 0, TAU); ctx.fill();
+    if (this.state === 'warn') { ctx.strokeStyle = `rgba(200,240,255,${0.5 + 0.5 * Math.sin(t * 20)})`; ctx.lineWidth = 2; for (let k = 0; k < 2; k++) { const ph = (t * 2 + k / 2) % 1; ctx.beginPath(); ctx.ellipse(x, fy - 3, 6 + ph * 16, 1.5 + ph * 4, 0, 0, TAU); ctx.stroke(); } ctx.fillStyle = '#ffd23a'; ctx.fillRect(x - 1.5, fy - 12 - Math.sin(t * 20) * 3, 3, 10); }
+    if (r <= 0) return;
+    ctx.save(); ctx.beginPath(); ctx.rect(x - 60, fy - 200, 120, 200); ctx.clip(); ctx.translate(x, fy - 56 * r + 56);
+    ctx.fillStyle = '#c8a05a'; ctx.fillRect(-2, -58, 4, 60);
+    ctx.save(); ctx.rotate(Math.sin(t * 4) * 0.12 * r);
+    if (this.kind === 0) {
+      // a golden dragon, lacquered red
+      ctx.fillStyle = '#e8323a'; ctx.beginPath(); ctx.moveTo(-14, -14); ctx.quadraticCurveTo(-6, -44, 10, -46); ctx.quadraticCurveTo(22, -42, 16, -30); ctx.quadraticCurveTo(6, -24, 12, -14); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffd23a'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-8 + k * 5, -36 + k * 5); ctx.lineTo(-4 + k * 5, -46 + k * 5); ctx.lineTo(0 + k * 5, -36 + k * 5); ctx.fill(); }
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(12, -42, 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(13, -42, 1.3, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(18, -40); ctx.lineTo(28, -44); ctx.moveTo(18, -38); ctx.lineTo(27, -34); ctx.stroke();
+    } else if (this.kind === 1) {
+      // a white duck
+      ctx.fillStyle = '#f8f4ec'; ctx.beginPath(); ctx.ellipse(0, -26, 16, 11, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(12, -42, 7, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffb02a'; ctx.beginPath(); ctx.moveTo(18, -43); ctx.lineTo(28, -40); ctx.lineTo(18, -38); ctx.fill();
+      ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(14, -44, 1.4, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#e8e0d0'; ctx.beginPath(); ctx.ellipse(-4, -26, 8, 5, -0.3, 0, TAU); ctx.fill();
+    } else {
+      // a water buffalo, black lacquer with gold horns
+      ctx.fillStyle = '#2a2430'; ctx.beginPath(); ctx.ellipse(-2, -24, 17, 11, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(12, -34, 9, 7, 0.2, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(10, -42, 9, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(16, -36, 2, 0, TAU); ctx.fill();
+    }
+    ctx.restore(); ctx.restore();
+  }
+}
+const entities = { vnHook: VnHook, vnPho: VnPho, vnBoat: VnBoat, vnRaft: VnRaft, vnTrainSignal: VnTrainSignal, vnIce: VnIce, vnRoaster: VnRoaster, vnKettle: VnKettle, vnPedal: VnPedal, vnArenaLantern: VnArenaLantern, vnPuppet: VnPuppet };
 
 /* ---------------- set pieces ---------------- */
 // the validator can't swing: give it an arc of standing spots under a hook (a swing carries Brady along it)
@@ -949,56 +1107,126 @@ const P = {
   // a lacquered hall: a gallery above, an item block
   palacehall(st, o) { const x = st.x, B = st.B; st.floor(x, x + 14); B.fill(x + 2, st.gy - 3, x + 3, st.gy - 1, T.HARD); for (let q = 0; q < 9; q++) B.set(x + 4 + q, st.gy - 5, T.SEMI); st.block(x + 8, st.gy - 9, 'star'); st.gold(x + 11, st.gy - 7, 'hidden'); st.enemy('vnBean', x + 9, st.gy - 5); st.coins(x + 5, x + 12, st.gy - 7); return x + 15; },
   pavilion(st, o) { const x = st.x, B = st.B; st.floor(x, x + 12); for (const [dx, dy] of [[2, 3], [6, 5], [10, 3]]) for (let q = 0; q < 3; q++) B.set(x + dx + q, st.gy - dy, T.SEMI); st.enemy('vnBean', x + 6, st.gy); st.enemy('vnBean', x + 10, st.gy); st.coins(x + 6, x + 8, st.gy - 7); return x + 13; },
-  arena_courtyard(st, o) { const B = st.B, { x0, w, GY } = o; for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); } B.decorAt('vnUrnPot', x0 + 1, GY, 0); B.decorAt('vnUrnPot', x0 + w - 2, GY, 1); }
+  // the boss arena: the citadel courtyard, a great kettle on a chain under the beam, a foot pedal at either end
+  arena_kettle(st, o) {
+    const B = st.B, { x0, w, GY } = o;
+    for (let q = 0; q < 3; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 6 + q, GY - 4, T.SEMI); }
+    // two stone pedestals with the citadel's urns: they stop his slides inside the kettle's sweep (hop over them to the pedals)
+    for (const px of [x0 + 4, x0 + w - 5]) { B.fill(px, GY - 2, px, GY - 1, T.HARD); B.decorAt('vnUrnPot', px, GY - 2, px % 3); }
+    B.spawn('vnKettle', x0 + 13, GY - 1, { ax0: x0, ax1: x0 + w });
+    B.spawn('vnPedal', x0 + 1, GY - 1, { dir: -1 }); B.spawn('vnPedal', x0 + w - 2, GY - 1, { dir: 1 });
+    for (let k = 0; k < 6; k++) B.spawn('vnArenaLantern', x0 + 3 + k * 4, 6, { k });
+    [7, 13, 19].forEach((dx, k) => B.spawn('vnPuppet', x0 + dx, GY - 1, { kind: k }));
+    B.decorAt('vnBonsai', x0 + 9, GY, 2); B.decorAt('vnBonsai', x0 + 17, GY, 3); B.decorAt('vnStools', x0 + 23, GY, 1); B.decorAt('vnPlants', x0 + 2, GY, 0); B.decorAt('vnBirdcage', x0 + 11, GY, 1);
+  }
 };
 
 /* ---------------- the boss: ONG PHIN, the Grand Coffee Filter ---------------- */
-// A giant drip-coffee filter on a glass of condensed milk. While it brews, its lid is too hot to touch:
-// it rains scalding drips, slides ice cubes and rolls a wave of condensed milk. When the coffee runs out,
-// the lid pops off: stomp it! (The noodle lasso can yank the lid off early.)
+// A giant drip-coffee filter on a glass of condensed milk. Its lid is far too hot to stomp. It rains scalding drips,
+// pours coffee puddles and slides across them, and from phase 2 blows the courtyard's lanterns out. The only thing that
+// gets through is the great kettle: stomp a foot pedal, the kettle swings across the courtyard, and when it crashes into
+// him he is steamed ("over-brewed"). Phase 3 raises the water-puppet stage. Beaten, he drips empty and sits down for a cup.
+const PHIN_WINDOWS = { drips: 1, wobble: 1, blow: 1, conduct: 1, stunned: 1 };
 const boss = {
-  id: 'vn_phin', name: 'Ong Phin', hp: 4, dims: [76, 92], music: 'tour_vn_boss', country: 'vn',
+  id: 'vn_phin', name: 'Ong Phin', hp: 5, dims: [76, 92], music: 'tour_vn_boss', country: 'vn',
   brain: {
     guardText: 'TOO HOT!',
-    wake(b) { b.brew = 1; K.say(b.g, b, 'ONE STRONG COFFEE, COMING UP!', '#ffd84a'); },
-    onLasso(b) { if (b.act !== 'empty' && b.state === 'fight') { K.say(b.g, b, 'MY LID!!', '#ffd84a'); b.go('empty'); } },
-    update(b, dt) {
-      // the first frame of a new act (the framework's own first is cleared before an act started inside update() ever runs)
-      const first = b._ent !== b.act || b.at <= (b._entAt || 0); b._ent = b.act; b._entAt = b.at;
-      const g = b.g, p = g.player; b.guard = 'bounce';
-      if (b.act !== 'empty') b.brew = Math.min(1, (b.brew || 0) + dt * 0.25);
-      if (b.act === 'walk') { b.face(); b.walk(0.9); b.pose = 'walk'; if (b.at > 1.3) { b.cycle++; b.go(['drips', 'ice', 'milk', 'empty'][b.cycle % 4]); } }
-      else if (b.act === 'drips') {
-        b.vx = 0; b.pose = 'rattle';
-        if (first) { b.n = 0; K.say(g, b, 'DRIP DRIP DRIP!', '#c8783a'); }
-        if (b.at > 0.5 + b.n * 0.45 && b.n < 3) { b.n++; const k = b.hp <= 2 ? 4 : 3; for (let i = 0; i < k; i++) { const a = -Math.PI / 2 + (i - (k - 1) / 2) * 0.5 + (Math.random() - 0.5) * 0.2; tourFire(g, b.cx, b.y + 10, { kind: 'drip', vx: Math.cos(a) * 5.5 * TS + (p ? sign(p.cx - b.cx) * TS : 0), vy: Math.sin(a) * 7 * TS, grav: PHYS.gDown * 0.5, w: 10, h: 12, life: 3, thru: true, col: '#7a3a14', art: (ctx, s) => { ctx.fillStyle = '#7a3a14'; ctx.beginPath(); ctx.moveTo(s.cx, s.y); ctx.quadraticCurveTo(s.cx + 6, s.cy + 3, s.cx, s.y + s.h); ctx.quadraticCurveTo(s.cx - 6, s.cy + 3, s.cx, s.y); ctx.fill(); ctx.fillStyle = 'rgba(255,220,180,0.6)'; ctx.fillRect(s.cx - 1.5, s.cy, 1.5, 3); } }); } Sound.play('splash', { pitch: 1.6, vol: 0.4 }); }
-        if (b.at > 2) b.go('walk');
-      } else if (b.act === 'ice') {
-        b.vx = 0; b.pose = 'pour';
-        if (first) { b.face(); K.say(g, b, 'ICED!', '#cfefff'); }
-        if (b.at > 0.5 && !b.fired) { b.fired = true; for (let k = 0; k < (b.hp <= 2 ? 2 : 1); k++) tourFire(g, b.cx + b.dir * (b.w / 2 + 12 + k * 28), b.floorY - 12, { kind: 'ice', vx: b.dir * (4.6 + k * 0.8) * TS, w: 22, h: 22, ground: true, life: 4, stompable: true, col: '#d8f4ff', art: (ctx, s, t) => { ctx.fillStyle = 'rgba(210,240,255,0.92)'; rr(ctx, s.x, s.y, s.w, s.h, 5); ctx.fill(); ctx.strokeStyle = '#7ab8dc'; ctx.lineWidth = 1.4; rr(ctx, s.x, s.y, s.w, s.h, 5); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.fillRect(s.x + 4, s.y + 3, 6, 3); } }); Sound.play('kick', { pitch: 1.4, vol: 0.4 }); }
-        if (b.at > 1.4) { b.fired = false; b.go('walk'); }
-      } else if (b.act === 'milk') {
-        if (first) { b.vy = -12 * TS; b.vx = 0; K.say(g, b, 'SWEET WAVE!', '#fff4d8'); }
-        b.pose = 'hop';
-        if (b.onGround && b.at > 0.3) { g.shake(6); Sound.play('stomp', { pitch: 0.5 }); for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 10), b.floorY - 12, { kind: 'milk', vx: d * 4.2 * TS, w: 26, h: 20, ground: true, life: 3, col: '#fff4d8', art: (ctx, s, t) => { ctx.fillStyle = '#fff4d8'; ctx.beginPath(); ctx.moveTo(s.x, s.y + s.h); for (let k = 0; k <= 4; k++) ctx.lineTo(s.x + k * s.w / 4, s.y + s.h * (k % 2 ? 0.1 : 0.45) + Math.sin(t * 10 + k) * 2); ctx.lineTo(s.x + s.w, s.y + s.h); ctx.fill(); ctx.fillStyle = 'rgba(200,170,120,0.6)'; ctx.fillRect(s.x + 3, s.y + s.h - 5, s.w - 6, 2); } }); b.go('walk'); }
-      } else if (b.act === 'empty') {
-        // out of coffee: the lid pops off and the filter cools for a moment
-        b.vx = 0; b.pose = 'empty';
-        if (first) { b.brew = 0; K.say(g, b, '...DRIP. OUT OF COFFEE!', '#ffffff'); Sound.play('bump', { pitch: 1.6 }); g.burst(b.cx, b.y, 12, '#c8c8d0', 'spark'); }
-        b.vuln = b.at > 0.3 && b.at < 2.8; b.guard = b.vuln ? 'hurt' : 'bounce';
-        if (b.at > 3) b.go('walk');
-      }
-      b.fall(dt);
+    phases: [3, 1],
+    wake(b) {
+      const g = b.g; b.brew = 1; g.area.dark = false;
+      b.kettle = g.entities.find(e => e instanceof VnKettle && inArenaOf(b, e)) || null;
+      b.lanterns = g.entities.filter(e => e instanceof VnArenaLantern && inArenaOf(b, e));
+      b.puppets = g.entities.filter(e => e instanceof VnPuppet && inArenaOf(b, e));
+      K.say(g, b, 'ONE STRONG COFFEE, COMING UP!', '#ffd84a'); g.toast('STOMP A PEDAL: THE KETTLE SWINGS. STEAM HIM!');
     },
-    hurt(b) { b.go('walk'); b.brew = 0.2; b.vx = -b.dir * 4.5 * TS; K.say(b.g, b, pick(['SPILLED IT!', 'MY CREMA!', 'NOT THE FILTER!']), '#ffd84a'); b.g.burst(b.cx, b.y + 20, 20, '#7a3a14', 'spark'); },
+    onLasso(b) { if (b.state === 'fight' && !PHIN_WINDOWS[b.act] && b.act !== 'scald' && b.act !== 'empty') { K.say(b.g, b, 'MY LID!! HEY!', '#ffd84a'); b.go('stunned'); } },
+    hit(b, kind, src) {
+      if (kind === 'stomp' || kind === 'spin') { if (!b.sizzT || b.t - b.sizzT > 1) { b.sizzT = b.t; K.say(b.g, b, pick(['SSSSS! HOT LID!', 'CAREFUL, IT\'S BREWING!', 'OUCH FOR YOU, NOT ME!']), '#ff8a3a'); } b.g.burst(b.cx, b.y, 8, '#ff8a3a', 'spark'); return 'bounce'; }
+      if (kind === 'hazard' && src instanceof VnKettle) { b.damage(1, { text: 'OVER-BREWED!', col: '#ffffff' }); return true; }
+      if (kind === 'prop' || kind === 'bump' || kind === 'hazard') return false;
+      return undefined;
+    },
+    hurt(b) { b.go('scald'); b.brew = Math.max(0.2, (b.brew || 1) - 0.25); K.say(b.g, b, pick(['FSSSH! TOO MUCH STEAM!', 'MY CREMA!', 'I\'M OVER-BREWED!!']), '#ffffff'); b.g.burst(b.cx, b.y + 20, 20, '#ffffff', 'dust'); },
+    phase(b, n) {
+      const g = b.g; this.hurt(b);
+      if (n === 2) { g.area.dark = true; g.bannerText = 'LIGHTS OUT!'; g.bannerT = 1.8; for (const l of b.lanterns) l.lit = true; }
+      else { for (const q of b.puppets) q.active = true; g.bannerText = 'THE PUPPET STAGE RISES!'; g.bannerT = 1.8; }
+    },
+    lastHit(b) { b.go('empty'); b.vx = 0; b.g.area.dark = false; return true; },
+    touch(b, p) { if (b.act === 'scald' || b.act === 'wobble' || b.act === 'stunned' || b.act === 'empty') { p.x += (p.cx < b.cx ? -1 : 1) * 2; return true; } return false; },
+    update(b, dt) {
+      const g = b.g, p = g.player, ph = b.phase || 1; b.guard = 'bounce';
+      if (b.act !== 'empty' && b.act !== 'scald') b.brew = Math.min(1, (b.brew || 0) + dt * 0.2);
+      if (b.act === 'walk') {
+        b.face(); b.walk(ph >= 3 ? 1.5 : 0.9); b.pose = 'walk'; b.fall(dt);
+        if (b.at > 1.2) { b.cycle++; const plan = ph >= 3 ? ['slide', 'conduct', 'drips', 'blow', 'slide', 'pour'] : ph === 2 ? ['drips', 'blow', 'slide', 'pour', 'blow', 'slide'] : ['drips', 'pour', 'slide', 'drips', 'slide']; b.go(plan[b.cycle % plan.length]); }
+      } else if (b.act === 'drips') {
+        // stands still and rattles: scalding drips rain down (and he is a sitting duck for the kettle)
+        b.vx = 0; b.pose = 'rattle'; b.fall(dt);
+        if (b.first) { b.n = 0; K.say(g, b, 'DRIP DRIP DRIP!', '#c8783a'); }
+        if (b.at > 0.5 + b.n * 0.45 && b.n < 3) { b.n++; const k = ph >= 2 ? 4 : 3; for (let i = 0; i < k; i++) { const a = -Math.PI / 2 + (i - (k - 1) / 2) * 0.5 + (Math.random() - 0.5) * 0.2; tourFire(g, b.cx, b.y + 10, { kind: 'drip', vx: Math.cos(a) * 5.5 * TS + (p ? sign(p.cx - b.cx) * TS : 0), vy: Math.sin(a) * 7 * TS, grav: PHYS.gDown * 0.5, w: 10, h: 12, life: 3, thru: true, col: '#7a3a14', art: (ctx, s) => { ctx.fillStyle = '#7a3a14'; ctx.beginPath(); ctx.moveTo(s.cx, s.y); ctx.quadraticCurveTo(s.cx + 6, s.cy + 3, s.cx, s.y + s.h); ctx.quadraticCurveTo(s.cx - 6, s.cy + 3, s.cx, s.y); ctx.fill(); ctx.fillStyle = 'rgba(255,220,180,0.6)'; ctx.fillRect(s.cx - 1.5, s.cy, 1.5, 3); } }); } Sound.play('splash', { pitch: 1.6, vol: 0.4 }); }
+        if (b.at > 2.3) b.go('walk');
+      } else if (b.act === 'pour') {
+        // tilts over and pours a long puddle of coffee on the floor: slippery as ice
+        b.vx = 0; b.pose = 'pour'; b.fall(dt);
+        if (b.first) { b.face(); K.say(g, b, 'FRESH POUR!', '#c8783a'); }
+        if (b.at > 0.6 && !b.poured) { b.poured = true; g.spawn(new VnPuddle(g, clamp(b.cx + b.dir * 90, b.arenaX0 + 50, b.arenaX1 - 50), b.floorY, 100)); Sound.play('splash', { pitch: 0.9, vol: 0.5 }); g.burst(b.cx + b.dir * 40, b.floorY - 6, 10, '#7a3a14', 'spark'); }
+        if (b.at > 1.4) { b.poured = false; b.go('walk'); }
+      } else if (b.act === 'slide') {
+        // leans back (the tell), then skids across the courtyard on its own spilled coffee until it hits the wall
+        if (b.at < 0.65) { b.vx = 0; b.pose = 'lean'; if (b.first) { b.face(); K.say(g, b, pick(['SLIP \'N SLIDE!', 'WHEEEE!', 'COMING THROUGH!']), '#ffd84a'); } }
+        else {
+          b.pose = 'slide'; b.vx = b.dir * (ph >= 3 ? 9.5 : 7.5) * TS; if (Math.random() < 0.5) g.burst(b.cx - b.dir * 30, b.floorY - 4, 1, '#7a3a14', 'spark');
+          if (b.hitWall || b.x <= b.arenaX0 + 1 || b.x >= b.arenaX1 - b.w - 1) { g.shake(5); Sound.play('bump'); b.vx = 0; b.go('wobble'); }
+        }
+        b.fall(dt); if (b.at > 3.5) b.go('walk');
+      } else if (b.act === 'wobble') {
+        // bonked the wall: rattles in place, dizzy (catch him with the kettle now)
+        b.vx = 0; b.pose = 'wobble'; b.fall(dt);
+        if (b.first) K.say(g, b, 'WOBBLE WOBBLE...', '#ffffff');
+        if (b.at > 1.5) b.go('walk');
+      } else if (b.act === 'blow') {
+        // a long breath in, then a great puff: the lanterns go out one by one, and the courtyard goes dark
+        b.vx = 0; b.fall(dt); b.pose = b.at < 0.8 ? 'inhale' : 'blow';
+        if (b.first) { b.face(); b.blown = false; K.say(g, b, '...FFFFFF...', '#cfefff'); }
+        if (b.at >= 0.8 && !b.blown) {
+          b.blown = true; Sound.play('throw', { pitch: 0.5, vol: 0.8 }); g.shake(2); K.say(g, b, 'WHOOOOSH!', '#cfefff');
+          const ls = b.lanterns.slice().sort((u, v) => Math.abs(u.cx - b.cx) - Math.abs(v.cx - b.cx)); ls.forEach((l, k) => l.blowOut(k * 0.13));
+          for (let k = 0; k < 6; k++) g.burst(b.cx + b.dir * (40 + k * 30), b.y + 20 + (k % 2) * 12, 3, '#e8f4ff', 'dust');
+        }
+        if (b.at > 0.8 && b.at < 1.6 && p && !p.dead && Math.abs(p.cy - b.cy) < 3 * TS && sign(p.cx - b.cx) === b.dir) p.pushX = (p.pushX || 0) + b.dir * 3.5 * TS;
+        if (b.at > 2.2) b.go('walk');
+      } else if (b.act === 'conduct') {
+        // the puppet master: raises the rod and the water puppets pop up one after the other
+        b.vx = 0; b.pose = 'conduct'; b.fall(dt);
+        if (b.first) { b.face(); K.say(g, b, 'PUPPETS! DANCE!', '#ffd23a'); b.puppets.slice().sort((u, v) => Math.abs(u.cx - (p ? p.cx : b.cx)) - Math.abs(v.cx - (p ? p.cx : b.cx))).forEach((q, k) => q.pop(k * 0.35)); }
+        if (b.at > 2.2) b.go('walk');
+      } else if (b.act === 'scald') {
+        // steamed: hops about in a cloud of its own steam
+        b.pose = 'scald'; if (b.first) { b.hops = 0; }
+        if (b.onGround && b.hops < 3 && b.at > 0.1) { b.hops++; b.vy = -6 * TS; b.vx = -b.dir * 2 * TS; Sound.play('bump', { pitch: 1.5, vol: 0.3 }); }
+        if (Math.random() < 0.4) g.burst(b.cx + (Math.random() - 0.5) * 50, b.y + Math.random() * 40, 1, '#ffffff', 'dust');
+        b.fall(dt); if (b.at > 1.5 && b.onGround) { b.vx = 0; b.go('walk'); }
+      } else if (b.act === 'stunned') {
+        b.vx = 0; b.pose = 'wobble'; b.fall(dt); if (b.at > 1.4) b.go('walk');
+      } else if (b.act === 'empty') {
+        // the last drip: he sighs, the lid pops, and he sits down for a cup of his own
+        b.vx = 0; b.pose = b.at < 1.0 ? 'rattle' : 'sit'; b.fall(dt); b.brew = Math.max(0, 1 - b.at);
+        if (b.first) { K.say(g, b, '...DRIP. ...DRIP. THAT\'S THE LAST ONE.', '#ffffff'); }
+        if (b.at > 1.0 && !b.sat) { b.sat = true; Sound.play('bump', { pitch: 1.6 }); g.burst(b.cx, b.y, 12, '#c8c8d0', 'spark'); K.say(g, b, '*SIGH* ...ONE FOR ME, THEN.', '#ffd84a'); }
+        if (b.at > 3.2) b.die();
+      } else b.go('walk');
+    },
     draw(b, ctx, t) {
       const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose, sq = 1 + b.squash * 0.12, brew = b.brew == null ? 1 : b.brew;
-      const wob = P === 'rattle' ? Math.sin(t * 40) * 1.5 : P === 'walk' ? Math.sin(t * 9) * 1 : 0;
+      const wob = (P === 'rattle' || P === 'wobble') ? Math.sin(t * 40) * 1.5 : P === 'walk' ? Math.sin(t * 9) * 1 : 0;
+      const tilt = P === 'lean' ? -d * 0.28 : P === 'slide' ? d * 0.22 : P === 'pour' ? d * 0.5 : P === 'sit' ? 0 : 0;
       ctx.save(); ctx.translate(x, y); ctx.scale(sq, 1 / sq);
       K.shadow(ctx, 0, 0, 36);
-      // little legs
-      ctx.fillStyle = '#5a5a66'; for (const s of [-1, 1]) { const st = P === 'walk' ? Math.sin(t * 9 + s) * 3 : 0; rr(ctx, s * 14 - 4 + st, -10, 8, 10, 3); ctx.fill(); }
+      if (P === 'slide') { ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(-d * (44 + k * 6), -20 - k * 16); ctx.lineTo(-d * (70 + k * 10), -22 - k * 16); ctx.stroke(); } }
+      // little legs (tucked up when sliding or sitting)
+      ctx.fillStyle = '#5a5a66'; for (const s of [-1, 1]) { const st = P === 'walk' ? Math.sin(t * 9 + s) * 3 : 0, up = (P === 'slide' || P === 'sit') ? 6 : 0; rr(ctx, s * 14 - 4 + st, -10 + up, 8, 10 - up, 3); ctx.fill(); }
+      ctx.save(); ctx.translate(0, P === 'sit' ? 6 : 0); ctx.rotate(tilt);
       // the glass: condensed milk at the bottom, coffee dripping in above it
       const gy0 = -50, gh = 40;
       ctx.fillStyle = 'rgba(220,240,255,0.35)'; ctx.beginPath(); ctx.moveTo(-26, gy0); ctx.lineTo(26, gy0); ctx.lineTo(22, -10); ctx.lineTo(-22, -10); ctx.closePath(); ctx.fill();
@@ -1009,19 +1237,39 @@ const boss = {
       ctx.save(); ctx.translate(wob, 0);
       const fy = gy0 - 4;
       ctx.fillStyle = '#b8bcc8'; rr(ctx, -34, fy - 2, 68, 6, 3); ctx.fill();
-      const fg = ctx.createLinearGradient(-22, 0, 22, 0); fg.addColorStop(0, '#8a8e9a'); fg.addColorStop(0.45, '#e8ecf4'); fg.addColorStop(1, '#7a7e8a');
+      const fg = ctx.createLinearGradient(-22, 0, 22, 0); fg.addColorStop(0, P === 'scald' ? '#b85a4a' : '#8a8e9a'); fg.addColorStop(0.45, P === 'scald' ? '#ffb0a0' : '#e8ecf4'); fg.addColorStop(1, P === 'scald' ? '#a84a3a' : '#7a7e8a');
       ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(-22, fy); ctx.lineTo(-20, fy - 36); ctx.lineTo(20, fy - 36); ctx.lineTo(22, fy); ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(60,40,30,0.8)'; ctx.fillRect(-19, fy - 36 + (1 - brew) * 30, 38, Math.max(0, brew * 30));
       ctx.fillStyle = fg; ctx.fillRect(-20, fy - 36, 40, 6 + (1 - brew) * 30);
-      if (P === 'empty') { ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 11 - 4, fy - 22); ctx.lineTo(s * 11 + 4, fy - 18); ctx.moveTo(s * 11 + 4, fy - 22); ctx.lineTo(s * 11 - 4, fy - 18); ctx.stroke(); } TourKit.dizzy(ctx, 0, fy - 56, t); }
-      else { K.eyes(ctx, d * 3, fy - 20, d, 9, 4.6, true); ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(d * 3, fy - 10, 6, 0.2, Math.PI - 0.2); ctx.stroke(); }
-      // the lid (off and spinning on the floor when empty)
-      if (P !== 'empty') { ctx.fillStyle = '#c8ccd8'; ctx.beginPath(); ctx.ellipse(0, fy - 37, 23, 5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#a8acb8'; rr(ctx, -4, fy - 46, 8, 9, 3); ctx.fill(); for (let k = 0; k < 3; k++) { const ph = (t * 0.7 + k / 3) % 1; ctx.fillStyle = `rgba(255,255,255,${0.45 * (1 - ph) * brew})`; ctx.beginPath(); ctx.arc(-8 + k * 8 + Math.sin(ph * 6 + k) * 3, fy - 48 - ph * 30, 3 + ph * 6, 0, TAU); ctx.fill(); } }
+      if (P === 'wobble' || P === 'sit') { ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 2; for (const s of [-1, 1]) { if (P === 'sit') { ctx.beginPath(); ctx.arc(d * 3 + s * 9, fy - 20, 3.5, 0, Math.PI); ctx.stroke(); } else { ctx.beginPath(); ctx.moveTo(s * 11 - 4, fy - 22); ctx.lineTo(s * 11 + 4, fy - 18); ctx.moveTo(s * 11 + 4, fy - 22); ctx.lineTo(s * 11 - 4, fy - 18); ctx.stroke(); } } if (P === 'wobble') TourKit.dizzy(ctx, 0, fy - 56, t); }
+      else if (P === 'inhale' || P === 'blow') {
+        // cheeks puffed, eyes squeezed shut, a round mouth and a gale of wind lines
+        ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(d * 3 + s * 9, fy - 20, 3.5, Math.PI, TAU); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(255,170,150,0.6)'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(d * 3 + s * 13, fy - 10, 6 + (P === 'inhale' ? Math.min(6, b.at * 8) : 2), 5, 0, 0, TAU); ctx.fill(); }
+        ctx.fillStyle = '#3a2a1a'; ctx.beginPath(); ctx.ellipse(d * 6, fy - 9, P === 'inhale' ? 2.5 : 4, 3.5, 0, 0, TAU); ctx.fill();
+        if (P === 'blow') { ctx.strokeStyle = 'rgba(220,240,255,0.8)'; ctx.lineWidth = 2; for (let k = 0; k < 4; k++) { const ph = (t * 3 + k / 4) % 1; ctx.beginPath(); ctx.moveTo(d * (12 + ph * 60), fy - 14 + k * 5 - 8); ctx.lineTo(d * (30 + ph * 60), fy - 14 + k * 5 - 8 + Math.sin(t * 20 + k) * 2); ctx.stroke(); } }
+      }
+      else if (P === 'scald') { ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(d * 3 + s * 9 - 3, fy - 22); ctx.lineTo(d * 3 + s * 9 + 3, fy - 18); ctx.moveTo(d * 3 + s * 9 + 3, fy - 22); ctx.lineTo(d * 3 + s * 9 - 3, fy - 18); ctx.stroke(); } ctx.fillStyle = '#3a2a1a'; ctx.beginPath(); ctx.ellipse(d * 3, fy - 9, 5, 4 + Math.abs(Math.sin(t * 20)) * 2, 0, 0, TAU); ctx.fill(); }
+      else { K.eyes(ctx, d * 3, fy - 20, d, 9, 4.6, P !== 'lean'); ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 2; ctx.beginPath(); if (P === 'lean' || P === 'slide') { ctx.arc(d * 3, fy - 12, 6, Math.PI + 0.2, TAU - 0.2); } else ctx.arc(d * 3, fy - 10, 6, 0.2, Math.PI - 0.2); ctx.stroke(); }
+      // the lid (off and spinning on the floor once he's sat down), with its steam
+      if (P !== 'sit') { ctx.fillStyle = '#c8ccd8'; ctx.beginPath(); ctx.ellipse(0, fy - 37, 23, 5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#a8acb8'; rr(ctx, -4, fy - 46, 8, 9, 3); ctx.fill(); const sn = P === 'scald' ? 7 : 3; for (let k = 0; k < sn; k++) { const ph = (t * 0.7 + k / sn) % 1; ctx.fillStyle = `rgba(255,255,255,${0.45 * (1 - ph) * Math.max(brew, P === 'scald' ? 1 : 0)})`; ctx.beginPath(); ctx.arc(-8 + k * (16 / Math.max(1, sn - 1)) + Math.sin(ph * 6 + k) * 3, fy - 48 - ph * (P === 'scald' ? 50 : 30), 3 + ph * (P === 'scald' ? 10 : 6), 0, TAU); ctx.fill(); } }
+      // the puppet master's rod
+      if (P === 'conduct') { ctx.save(); ctx.translate(d * 24, fy - 10); ctx.rotate(-d * (0.9 + Math.sin(t * 6) * 0.3)); ctx.fillStyle = '#c8a05a'; ctx.fillRect(-2, -40, 4, 40); ctx.fillStyle = '#e8323a'; ctx.beginPath(); ctx.arc(0, -42, 5, 0, TAU); ctx.fill(); ctx.restore(); }
       ctx.restore();
-      // drips falling into the glass
-      if (brew > 0.05 && P !== 'empty') { ctx.fillStyle = '#5a2810'; const dy = (t * 60) % 20; ctx.beginPath(); ctx.ellipse(0, fy + 4 + dy, 1.8, 3, 0, 0, TAU); ctx.fill(); }
+      // drips falling into the glass (a stream when pouring)
+      if (brew > 0.05 && P !== 'sit') { ctx.fillStyle = '#5a2810'; const dy = (t * 60) % 20; ctx.beginPath(); ctx.ellipse(0, fy + 4 + dy, 1.8, 3, 0, 0, TAU); ctx.fill(); }
+      if (P === 'pour') { ctx.fillStyle = '#6a3214'; ctx.beginPath(); ctx.moveTo(d * 22, -14); ctx.quadraticCurveTo(d * 40, 0, d * 60, 14); ctx.lineTo(d * 54, 16); ctx.quadraticCurveTo(d * 36, 4, d * 20, -8); ctx.fill(); }
       ctx.restore();
-      if (P === 'empty') { ctx.save(); ctx.translate(x - d * 50, y - 6); ctx.rotate(t * 6); ctx.fillStyle = '#c8ccd8'; ctx.beginPath(); ctx.ellipse(0, 0, 20, 4.5, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+      if (P === 'sit') {
+        // the lid on the floor and a tiny cup of coffee in front of him
+        ctx.save(); ctx.translate(x - d * 50, y - 6); ctx.rotate(t * 6); ctx.fillStyle = '#c8ccd8'; ctx.beginPath(); ctx.ellipse(0, 0, 20, 4.5, 0, 0, TAU); ctx.fill(); ctx.restore();
+        ctx.fillStyle = '#f4f0e8'; rr(ctx, x + d * 36 - 7, y - 14, 14, 12, 3); ctx.fill(); ctx.fillStyle = '#6a3214'; ctx.beginPath(); ctx.ellipse(x + d * 36, y - 13, 5, 2, 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = '#f4f0e8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + d * 36 + d * 8, y - 8, 4, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+        for (let k = 0; k < 2; k++) { const ph = (t * 0.6 + k / 2) % 1; ctx.fillStyle = `rgba(255,255,255,${0.4 * (1 - ph)})`; ctx.beginPath(); ctx.arc(x + d * 36 + Math.sin(ph * 5 + k) * 3, y - 18 - ph * 20, 2 + ph * 3, 0, TAU); ctx.fill(); }
+      }
+      ctx.restore();
+      // a steam marker: while he stands still he is a target for the kettle
+      if (b.state === 'fight' && PHIN_WINDOWS[b.pose === 'rattle' ? 'drips' : b.act] && b.hurtT <= 0) { ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(t * 10)})`; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('KETTLE!', x, b.y - 16 + Math.sin(t * 6) * 3); }
     }
   }
 };
@@ -1118,10 +1366,10 @@ Tour.country({
       hint: 'In a shaft, lasso the stalactite and hold UP to reel in',
       postcard: 'There\'s a whole jungle growing inside this cave. And a river. And, somewhere, a Baron. ♥ C',
       script: ['cstart', ['cledges', { n: 4 }], 'reel', ['cledges', { n: 3, flip: true, bat: true }], 'ccp', 'chamber', ['reel', { gold: true, flip: true }], ['cledges', { n: 4 }], 'reel', ['cledges', { n: 3, bat: true }]] },
-    { name: 'Hue Citadel', style: 'castle', theme: 'vn_citadel', boss: 'vn_phin', arena: 'courtyard', arenaW: 26, roof: false,
-      gimmick: 'The Baron\'s coffee works in the citadel: hot-coffee pits crossed on melting ice cubes, bean-spitting roasters, then Ong Phin',
+    { name: 'Hue Citadel', style: 'castle', theme: 'vn_citadel', boss: 'vn_phin', arena: 'kettle', arenaW: 26, roof: false,
+      gimmick: 'The Baron\'s coffee works in the citadel: hot-coffee pits crossed on melting ice cubes, bean-spitting roasters, then Ong Phin under the great kettle',
       enemies: [['vnBean', 3], ['vnRoll', 1]],
-      hint: 'When Ong Phin runs out of coffee, its lid pops off: stomp it! (Your lasso can yank the lid off)',
+      hint: 'Ong Phin is too hot to stomp. Jump on a foot pedal: the kettle swings across the courtyard and steams him!',
       postcard: 'The bridge is back in Hoi An! The Baron flew off toward Japan. He left his coffee. ♥ C',
       script: [['coffeepit', { n: 2 }], 'roasters', ['enemies', { n: 2 }], 'palacehall', 'cp', ['coffeepit', { n: 3 }], ['roasters', { gold: true }], 'pavilion', 'arena'] }
   ]

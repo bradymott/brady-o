@@ -1174,10 +1174,170 @@ class IdGongDoor extends Ent {
     ctx.restore();
   }
 }
+/* ---------------- the boss arena: the durian grove ---------------- */
+// Three durian trees grow in the ruined temple garden. Their branches are one-way platforms: land on one and the
+// whole tree shakes, and a ripe durian drops out of the crown straight down the trunk. Boss Kera loves perching at
+// the trunk right under the crown... A fallen durian is a spiky ball Brady can kick into him as well.
+const GROVE = { trunks: [4, 13, 21], low: 2, high: 4, crown: 7.4 };
+const durianPropArt = (ctx, e, x, y, t) => durianShape(ctx, x, y - e.h / 2, 0, 1);
+const IdDurianProp = TourProp.make({
+  w: 22, h: 20, durian: true, kick: 6.5, bounce: 0.45, friction: 5, roll: true, hurts: true, hp: 1, life: 16, semis: false, burst: '#c8d84a', art: durianPropArt,
+  onHitBoss(e, b) { e.g.burst(e.cx, e.cy, 16, '#d8e86a', 'debris'); Sound.play('splat', { pitch: 0.7, vol: 0.6 }); }
+});
+const coconutArt = (ctx, s, t) => {
+  ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 7);
+  ctx.fillStyle = '#6a4a2a'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#4a3018'; ctx.lineWidth = 1; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.moveTo(-6 + k * 3, -6); ctx.lineTo(-7 + k * 3, 6); ctx.stroke(); }
+  ctx.fillStyle = '#3a2410'; for (const [dx, dy] of [[-2, -3], [2, -3], [0, 1]]) { ctx.beginPath(); ctx.arc(dx, dy, 1.4, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// the grove itself: trunks, branches, crowns full of durians (and the vines, from phase 3). It watches Brady's landings.
+class IdGrove extends Ent {
+  constructor(g, s) {
+    super(g, s, 26 * TS, 14 * TS); this.x = s.ax0 * TS; this.y = (s.gy - 14) * TS; this.friendly = true; this.ghost = true;
+    const fy = s.gy * TS; this.floorY = fy; this.ax0 = s.ax0 * TS; this.ax1 = (s.ax0 + 26) * TS;
+    this.trees = GROVE.trunks.map(tx => { const x = (s.ax0 + tx) * TS + TS / 2; return { x, low: { x0: x - 2.5 * TS, x1: x + 2.5 * TS, y: fy - GROVE.low * TS }, high: { x0: x - 1.5 * TS, x1: x + 1.5 * TS, y: fy - GROVE.high * TS }, crownY: fy - GROVE.crown * TS, shake: 0, drop: 0, crown: 2, regrow: 0, on: [false, false], buck: 0, seed: tx }; });
+    this.vines = false; this.phase = 1;
+  }
+  // the grove of a given boss (castles build a second, unreachable arena past the door: match by position)
+  static of(g, b) { return g.entities.find(e => e instanceof IdGrove && !e.remove && Math.abs(e.ax0 - b.arenaX0) < 1) || null; }
+  perches() { const out = []; for (const tr of this.trees) { out.push({ tree: tr, x: tr.x, y: tr.high.y }); out.push({ tree: tr, x: tr.x, y: tr.low.y }); } return out; }
+  onBranch(p, br) { return !!(p && !p.dead && p.onGround && p.cx > br.x0 - 4 && p.cx < br.x1 + 4 && Math.abs(p.y + p.h - br.y) < 4); }
+  update(dt) {
+    this.t += dt; const g = this.g, p = g.player;
+    for (const tr of this.trees) {
+      if (tr.shake > 0) { tr.shake -= dt; if (tr.shake <= 0 && tr.drop) this.dropDurian(tr); }
+      if (tr.crown < 2) { tr.regrow -= dt; if (tr.regrow <= 0) { tr.crown++; tr.regrow = this.phase >= 3 ? 3 : 4.5; g.burst(tr.x, tr.crownY, 6, '#9ad86a', 'spark'); } }
+      // phase 3: the tree shakes back and bucks Brady off its branch
+      if (tr.buck > 0) { tr.buck -= dt; if (tr.buck <= 0 && p && !p.dead && (this.onBranch(p, tr.low) || this.onBranch(p, tr.high))) { p.vy = -7 * TS; p.vx = (sign(p.cx - tr.x) || 1) * 5 * TS; p.onGround = false; K.say(g, p, 'WOBBLE!', '#9ad86a'); Sound.play('bump', { pitch: 0.8, vol: 0.5 }); } }
+      // a landing on either branch shakes the tree
+      [tr.low, tr.high].forEach((br, k) => { const on = this.onBranch(p, br); if (on && !tr.on[k]) this.stomp(tr, br); tr.on[k] = on; });
+    }
+  }
+  stomp(tr, br) {
+    const g = this.g, p = g.player;
+    Sound.play('bump', { pitch: 1.3, vol: 0.5 }); g.burst(p.cx, br.y, 6, '#9ad86a', 'spark');
+    if (tr.crown <= 0) { g.parts.text(tr.x, tr.crownY - 30, 'NO DURIANS YET...', '#c8e8a0'); tr.shake = 0.3; return; }
+    tr.shake = 0.55; tr.drop = 1; g.shake(2);
+    if (this.phase >= 3) tr.buck = 0.9;
+  }
+  dropDurian(tr) {
+    const g = this.g; tr.drop = 0; if (tr.crown <= 0) return;
+    tr.crown--; if (tr.regrow <= 0) tr.regrow = this.phase >= 3 ? 3 : 4.5;
+    const d = new IdDurianProp(g, { x: tr.x + (tr.crown ? -9 : 9), y: tr.crownY + 20 });
+    d.vy = 2 * TS; g.spawn(d); Sound.play('throw', { pitch: 0.6, vol: 0.4 }); g.burst(tr.x, tr.crownY, 8, '#4a8a3a', 'debris');
+  }
+  draw(ctx) {
+    const t = this.g.t, fy = this.floorY, b = this.g.boss;
+    // the vines hanging from the ruined arch (phase 3)
+    if (this.vines) {
+      const px = (this.ax0 + this.ax1) / 2, swinging = b && b.pose === 'swing' && b.vineA != null;
+      ctx.strokeStyle = '#4a7a2a'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      for (const dx of [-14, 14]) { if (swinging) continue; ctx.beginPath(); ctx.moveTo(px + dx, 0); ctx.quadraticCurveTo(px + dx + Math.sin(t * 1.3) * 10, fy - 7 * TS, px + dx * 1.5 + Math.sin(t * 1.1) * 14, fy - 3.4 * TS); ctx.stroke(); }
+      ctx.lineCap = 'butt';
+      ctx.fillStyle = '#5a9a3a'; for (const dx of [-14, 14]) { ctx.beginPath(); ctx.ellipse(px + dx * 1.5 + Math.sin(t * 1.1) * 14, fy - 3.4 * TS + 4, 6, 10, 0, 0, TAU); ctx.fill(); }
+    }
+    for (const tr of this.trees) {
+      const sx = tr.shake > 0 ? Math.sin(t * 55) * 3 : 0, x = tr.x, cy = tr.crownY;
+      // the trunk, with bark lines and a root flare
+      ctx.fillStyle = '#6a4a32'; ctx.beginPath(); ctx.moveTo(x - 14, fy); ctx.lineTo(x - 7 + sx * 0.5, cy + 24); ctx.lineTo(x + 7 + sx * 0.5, cy + 24); ctx.lineTo(x + 14, fy); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#5a3a26'; ctx.beginPath(); ctx.moveTo(x - 22, fy); ctx.quadraticCurveTo(x - 10, fy - 10, x - 8, fy - 30); ctx.lineTo(x - 2, fy - 30); ctx.lineTo(x - 4, fy); ctx.fill();
+      ctx.strokeStyle = 'rgba(40,24,12,0.45)'; ctx.lineWidth = 1.5; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.moveTo(x - 6 + k * 3, fy - 10 - k * 8); ctx.lineTo(x - 7 + k * 3 + sx * 0.4, cy + 50 - k * 12); ctx.stroke(); }
+      // the branches: thick limbs over the one-way tiles, tufts of leaves along them
+      for (const br of [tr.low, tr.high]) {
+        ctx.fillStyle = '#6a4a32'; rr(ctx, br.x0 - 2 + sx, br.y - 2, br.x1 - br.x0 + 4, 12, 5); ctx.fill();
+        ctx.fillStyle = '#8a6a48'; ctx.fillRect(br.x0 + 2 + sx, br.y - 1, br.x1 - br.x0 - 4, 2);
+        ctx.fillStyle = '#2e6a2e'; for (let lx = br.x0 + 8; lx < br.x1; lx += 22) { ctx.beginPath(); ctx.ellipse(lx + sx, br.y - 6, 12, 7, 0, 0, TAU); ctx.fill(); }
+        ctx.fillStyle = '#4a9a3a'; for (let lx = br.x0 + 14; lx < br.x1; lx += 22) { ctx.beginPath(); ctx.ellipse(lx + sx, br.y - 9, 6, 4, 0, 0, TAU); ctx.fill(); }
+      }
+      // the crown
+      ctx.fillStyle = '#2e6a2e'; for (const [dx, dy, r] of [[0, 0, 36], [-34, 12, 26], [34, 12, 26], [-16, -22, 24], [18, -22, 24]]) { ctx.beginPath(); ctx.arc(x + dx + sx, cy + dy, r, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = '#4a8a3a'; for (const [dx, dy, r] of [[-18, -8, 12], [14, -14, 11], [0, 12, 10], [30, 2, 8]]) { ctx.beginPath(); ctx.arc(x + dx + sx, cy + dy, r, 0, TAU); ctx.fill(); }
+      // the ripe durians hanging under the crown
+      for (let k = 0; k < tr.crown; k++) { const dx = k === 0 ? -9 : 9; ctx.strokeStyle = '#5a7a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + dx + sx, cy + 10); ctx.lineTo(x + dx + sx * 1.5, cy + 22); ctx.stroke(); durianShape(ctx, x + dx + sx * 1.5, cy + 32 + (tr.shake > 0 ? Math.sin(t * 40) * 2 : 0), tr.shake > 0 ? Math.sin(t * 30) * 0.3 : 0, 1); }
+      // the drop zone: a dashed line from the crown onto the perched boss
+      if (b && b.state === 'fight' && b.act === 'perch' && b.perch && b.perch.tree === tr && tr.crown > 0) {
+        ctx.save(); ctx.setLineDash([6, 6]); ctx.lineDashOffset = -t * 60; ctx.strokeStyle = `rgba(255,240,120,${0.55 + 0.35 * Math.sin(t * 8)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, cy + 46); ctx.lineTo(x, b.y - 6); ctx.stroke(); ctx.restore();
+        ctx.fillStyle = '#fff6c0'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('LAND ON A BRANCH!', x, cy + 62);
+      }
+    }
+  }
+}
+// a banana peel: it sails through the air, lands, and whoever steps on it goes flying
+class IdPeel extends Ent {
+  constructor(g, x, y, vx, vy) { super(g, null, 22, 10); this.x = x - 11; this.y = y - 10; this.vx = vx; this.vy = vy; this.life = 9; this.landed = false; this.rot = 0; }
+  update(dt) {
+    this.t += dt; this.life -= dt; if (this.life <= 0) { this.remove = true; return; }
+    if (!this.landed) { this.vy += PHYS.gDown * 0.7 * dt; moveBody(this, this.g.area, dt, { semis: true }); this.rot += dt * 8; if (this.onGround) { this.landed = true; this.vx = 0; this.rot = 0; Sound.play('splat', { pitch: 1.6, vol: 0.3 }); } }
+  }
+  touchPlayer(p) {
+    if (!this.landed || p.dead || !p.onGround || p.star > 0 || this.life < 0.5) return;
+    const d = sign(p.vx) || p.facing || 1; p.vx = d * 10 * TS; p.vy = -3 * TS; p.onGround = false; this.remove = true;
+    K.say(this.g, p, 'WHOOPS!', '#ffe08a'); Sound.play('kick', { pitch: 1.5, vol: 0.5 }); this.g.burst(this.cx, this.y + this.h, 6, '#ffe08a', 'spark');
+  }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, a = this.life < 1.5 ? Math.max(0.2, this.life / 1.5) : 1;
+    ctx.save(); ctx.translate(x, y - 4); ctx.rotate(this.rot); ctx.globalAlpha = a;
+    ctx.fillStyle = '#ffe24a'; for (const ang of [-2.4, -0.7, 0.7, 2.4]) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(Math.cos(ang) * 12, Math.sin(ang) * 6 - 6, Math.cos(ang) * 14, Math.sin(ang) * 4 + 2); ctx.quadraticCurveTo(Math.cos(ang) * 8, Math.sin(ang) * 2 + 2, 0, 2); ctx.fill(); }
+    ctx.fillStyle = '#5a4a1a'; ctx.beginPath(); ctx.arc(0, -2, 2.4, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+}
+// a troop monkey: it runs for any durian lying on the floor and carries it up the nearest trunk, out of reach
+class IdTroop extends Ent {
+  constructor(g, s) { super(g, s, 20, 22); this.enemy = true; this.state = 'run'; this.carry = null; this.flat = 0; this.vx = this.dir * 2.4 * TS; }
+  update(dt) {
+    this.t += dt; if (this.knocked) return this.updateKnocked(dt);
+    if (this.dead) { this.flat -= dt; if (this.flat <= 0) this.remove = true; return; }
+    const g = this.g, grove = g.boss && g.boss.grove;
+    if (this.state === 'run') {
+      let best = null, bd = 1e9;
+      for (const e of g.entities) if (e.prop && e.cfg && e.cfg.durian && !e.remove && !e.carried && e.onGround) { const d = Math.abs(e.cx - this.cx); if (d < bd) { bd = d; best = e; } }
+      if (best) {
+        this.dir = sign(best.cx - this.cx) || this.dir; this.vx = this.dir * 3.6 * TS;
+        if (bd < 14) {
+          this.carry = best; best.carried = this; this.state = 'home';
+          const tr = grove ? grove.trees.reduce((a, q) => Math.abs(q.x - this.cx) < Math.abs(a.x - this.cx) ? q : a) : null;
+          this.homeX = tr ? tr.x : this.cx; this.homeY = tr ? tr.crownY : this.y - 200; K.say(g, this, 'OOK! MINE!', '#ffd84a');
+        }
+      } else if (!this.vx) this.vx = this.dir * 2.4 * TS;
+      this.vy += PHYS.gDown * dt; moveBody(this, g.area, dt, { semis: false });
+      if (this.hitWall) { this.dir = -this.dir; this.vx = this.dir * 2.4 * TS; }
+    } else {
+      if (Math.abs(this.cx - this.homeX) > 6) { this.dir = sign(this.homeX - this.cx) || 1; this.vx = this.dir * 3 * TS; this.vy += PHYS.gDown * dt; moveBody(this, g.area, dt, { semis: false }); }
+      else { this.vx = 0; this.vy = 0; this.y -= 4.5 * TS * dt; if (this.y + this.h < this.homeY) { this.remove = true; if (this.carry) this.carry.remove = true; g.parts.text(this.cx, this.y + 20, 'BYE BYE DURIAN!', '#ffd84a'); } }
+      if (this.carry) { if (this.carry.remove) this.carry = null; else { this.carry.x = this.cx - this.carry.w / 2; this.carry.y = this.y - this.carry.h + 4; this.carry.vx = 0; this.carry.vy = 0; this.carry.onGround = false; } }
+    }
+  }
+  dropCarry() { if (this.carry) { this.carry.carried = null; this.carry.fling((Math.random() - 0.5) * 2 * TS, -3 * TS); this.carry = null; } }
+  hit(kind, src) {
+    if (this.dead) return false; this.dropCarry();
+    if (kind === 'stomp' || kind === 'spin') { this.dead = true; this.flat = 0.5; this.vx = 0; Sound.play('stomp'); this.g.burst(this.cx, this.y + this.h, 8, '#a8988a', 'dust'); this.g.addScore(200, this.cx, this.y); return true; }
+    this.knockOff(src && src.vx ? sign(src.vx) : 1); return true;
+  }
+  touchPlayer(p) { if (!this.dead) p.hurt(this); }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, t = this.t, climbing = this.state === 'home' && Math.abs(this.cx - this.homeX) <= 6;
+    ctx.save(); ctx.translate(x, y); if (this.dead) ctx.scale(1.3, 0.4); if (this.knocked) { ctx.translate(0, -this.h / 2); ctx.rotate(Math.PI + (this.spin || 0)); ctx.translate(0, this.h / 2); }
+    ctx.scale(this.dir, 1);
+    const run = this.dead ? 0 : Math.sin(t * (climbing ? 16 : 12));
+    ctx.strokeStyle = '#8a7a6a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-7, -7); ctx.quadraticCurveTo(-18, -5, -17 + Math.sin(t * 3) * 3, -20); ctx.stroke();
+    ctx.fillStyle = '#a8988a'; ctx.beginPath(); ctx.ellipse(0, -9, 9, 8, 0, 0, TAU); ctx.fill();
+    for (const lx of [-5, 4]) ctx.fillRect(lx - 2 + run * 2 * (lx < 0 ? 1 : -1), -4, 4, 4);
+    ctx.beginPath(); ctx.arc(5, -18, 7, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#f0b8a8'; ctx.beginPath(); ctx.ellipse(7, -17, 4.5, 5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(6, -19, 1.1, 0, TAU); ctx.arc(9.5, -19, 1.1, 0, TAU); ctx.fill();
+    // arms up when carrying, pumping when running
+    ctx.strokeStyle = '#a8988a'; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.beginPath();
+    if (this.carry) { ctx.moveTo(-3, -12); ctx.lineTo(-6, -24); ctx.moveTo(5, -12); ctx.lineTo(8, -24); } else { ctx.moveTo(2, -12); ctx.lineTo(8 + run * 4, -6); }
+    ctx.stroke(); ctx.lineCap = 'butt';
+    ctx.restore();
+  }
+}
 const entities = {
   idGecko: IdGiver, idRack: IdGiver, idSurfRig: IdSurfRig, idFloat: IdFloat, idJelly: IdJelly, idGlowJelly: IdGlowJelly, idKite: IdKite,
   idSunrise: IdSunrise, idBombs: IdBombs, idHotRocks: IdHotRocks, idAngler: IdAngler, idMoray: IdMoray, idManta: IdManta, idPlankton: IdPlankton, idBiolum: IdBiolum,
-  idMonkey: IdMonkey, idDurianTree: IdDurianTree, idGong: IdGong, idGongDoor: IdGongDoor
+  idMonkey: IdMonkey, idDurianTree: IdDurianTree, idGong: IdGong, idGongDoor: IdGongDoor, idGrove: IdGrove, idDurianProp: IdDurianProp, idTroop: IdTroop
 };
 Object.assign(decor, {
   // a banyan tree: a wide crown and curtains of aerial roots
@@ -1376,63 +1536,126 @@ const P = {
     st.block(x + n + 2, st.gy - n - 4, o.content || 'power'); st.enemy('idSate', x + n + 3, st.gy - n); st.coins(x + n + 1, x + n + 4, st.gy - n - 2); st.gold(x + n + 4, st.gy - n - 5, 'hidden');
     return x + n * 2 + 7;
   },
-  arena_banyan(st, o) {
+  // the boss arena: a ruined temple garden (the banyan stays in the background) with three durian trees in front of it
+  arena_grove(st, o) {
     const B = st.B, { x0, w, GY } = o;
-    B.prop('idBanyan', x0 + Math.floor(w / 2) - 7, GY - 12, 14, 12, 'none', {});
-    for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
+    B.prop('idBanyan', x0 + Math.floor(w / 2) - 7, GY - 13, 14, 12, 'none', {});
+    for (const tx of GROVE.trunks) { for (let q = -2; q <= 2; q++) B.set(x0 + tx + q, GY - GROVE.low, T.SEMI); for (let q = -1; q <= 1; q++) B.set(x0 + tx + q, GY - GROVE.high, T.SEMI); }
+    B.spawn('idGrove', x0, GY - 1, { ax0: x0, gy: GY });
+    B.decorAt('idTorch', x0 + 1, GY, 0); B.decorAt('idTorch', x0 + w - 2, GY, 1);
+    B.decorAt('idFrangipani', x0 + 8, GY, 2); B.decorAt('idFrangipani', x0 + 17, GY, 3); B.decorAt('idRiceTuft', x0 + 10, GY, 1); B.decorAt('idRiceTuft', x0 + 24, GY, 4);
   }
 };
 
-/* ---------------- the boss: BOSS KERA, the selfie macaque ---------------- */
-// The alpha macaque of the monkey forest, in stolen sunglasses and a stolen bucket hat. He dashes to snatch,
-// flings stolen flip-flops and leaps up to drop durians... but he can never resist a selfie: while he poses, stomp him!
+/* ---------------- the boss: BOSS KERA, the monkey king of the durian grove ---------------- */
+// The alpha macaque of the monkey forest, in stolen sunglasses and a stolen bucket hat. He laughs at stomps, snatches
+// coins on his dashes, lobs coconuts from his perch and throws banana peels. His weakness: he perches at the trunk,
+// right under the crown. Land on a branch and the tree drops a durian on his head (or kick a fallen durian at him).
+// Phase 2 calls his troop to carry the durians away; phase 3 he swings on the vines and the trees shake back.
+const KERA_LAUGHS = ['OOK OOK OOK!', 'TOO CHEEKY!', 'HAT STAYS ON!', 'NICE TRY, TOURIST!'];
 const boss = {
-  id: 'id_kera', name: 'Boss Kera', hp: 4, dims: [56, 60], music: 'tour_id_boss', country: 'id',
+  id: 'id_kera', name: 'Boss Kera', hp: 5, dims: [56, 60], music: 'tour_id_boss', country: 'id',
   brain: {
-    guardText: 'TOO CHEEKY!',
-    wake(b) { K.say(b.g, b, 'OOK! NICE HAT. MINE NOW.', '#ffd84a'); },
-    update(b, dt) {
-      // the first frame of a new act (the framework's own first is cleared before an act started inside update() ever runs)
-      const first = b._ent !== b.act || b.at <= (b._entAt || 0); b._ent = b.act; b._entAt = b.at;
-      const g = b.g, p = g.player; b.guard = 'bounce';
-      if (b.act === 'walk') { b.face(); b.walk(1.3); b.pose = 'walk'; if (b.at > 1.2) { b.cycle++; b.go(['dash', 'throw', 'selfie', 'dash', 'leap', 'selfie'][b.cycle % 6]); } }
-      else if (b.act === 'dash') {
-        if (b.at < 0.6) { b.vx = 0; b.pose = 'crouch'; if (first) { b.face(); K.say(g, b, 'HEHEHE...', '#ffd84a'); } }
-        else { b.walk(6.2); b.pose = 'dash'; if (b.hitWall || b.x <= b.arenaX0 + 2 || b.x >= b.arenaX1 - b.w - 2) { g.shake(4); Sound.play('bump'); b.vx = 0; b.go('walk'); } }
-        if (b.at > 3) b.go('walk');
-      } else if (b.act === 'throw') {
-        b.vx = 0; b.pose = 'throw';
-        if (first) { b.face(); b.n = 0; }
-        if (b.at > 0.4 + b.n * 0.42 && b.n < (b.hp <= 2 ? 3 : 2)) {
-          b.n++; const dx = p ? p.cx - b.cx : b.dir * 100;
-          tourFire(g, b.cx + b.dir * 20, b.y + 14, { kind: 'flipflop', vx: clamp(dx * 0.85, -6 * TS, 6 * TS), vy: -9 * TS, grav: PHYS.gDown * 0.5, w: 16, h: 10, life: 3, thru: true, stompable: true, col: COL.a, art: (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 12); ctx.fillStyle = s.col; ctx.beginPath(); ctx.ellipse(0, 0, 9, 4.5, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-2, -4); ctx.lineTo(3, 0); ctx.lineTo(-2, 4); ctx.stroke(); ctx.restore(); } });
-          Sound.play('throw', { pitch: 1.3, vol: 0.5 });
-        }
-        if (b.at > 1.6) b.go('walk');
-      } else if (b.act === 'leap') {
-        if (first) { b.vy = -15 * TS; b.face(); b.vx = b.dir * 2.4 * TS; K.say(g, b, 'DURIAN DELIVERY!', '#d8e86a'); }
-        b.pose = 'leap';
-        if (b.onGround && b.at > 0.35) { g.shake(3); g.spawn(new IdDurian(g, b.cx, b.y + 10, p && p.cx < b.cx ? -1 : 1)); b.go('walk'); }
-        if (b.at > 3) b.go('walk');
-      } else if (b.act === 'selfie') {
-        b.vx = 0; b.pose = 'selfie';
-        if (first) { b.flashed = false; K.say(g, b, 'SELFIE TIME! SAY OOK!', '#ffffff'); }
-        b.vuln = b.at > 0.3 && b.at < 2.5; b.guard = b.vuln ? 'hurt' : 'bounce';
-        if (b.at > 2.2 && !b.flashed) { b.flashed = true; g.flash = 0.4; TourKit.sfx('camera_flash', 'select2', { vol: 0.6 }); }
-        if (b.at > 2.7) b.go('walk');
-      }
-      b.fall(dt);
+    guardText: 'OOK OOK!',
+    phases: [3, 1],
+    wake(b) { const g = b.g; b.loot = 0; b.grove = IdGrove.of(g, b); K.say(g, b, 'OOK! NICE COINS. MINE SOON.', '#ffd84a'); g.toast('LAND ON A BRANCH: THE TREE DROPS A DURIAN ON HIM'); },
+    hit(b, kind, src) {
+      if (kind === 'stomp' || kind === 'spin') { if (!b.laughT || b.t - b.laughT > 1.2) { b.laughT = b.t; K.say(b.g, b, pick(KERA_LAUGHS), '#ffd84a'); } return 'bounce'; }
+      if (kind === 'prop') { if (src && src.cfg && src.cfg.durian) { b.damage(1, { text: 'DURIAN!', col: '#d8e86a' }); return true; } return false; }
+      if (kind === 'bump' || kind === 'hazard') return false;
+      return undefined;
     },
-    hurt(b) { b.go('walk'); b.vx = -b.dir * 5 * TS; K.say(b.g, b, pick(['MY SELFIE!', 'OOK! NO PHOTOS!', 'MY SUNGLASSES!']), '#ffd84a'); b.g.burst(b.cx, b.cy, 22, '#ffd84a', 'confetti'); },
+    hurt(b) { b.go('fall'); b.vy = -7 * TS; b.vx = -b.dir * 3 * TS; b.perch = null; K.say(b.g, b, pick(['OW! MY HAT!', 'OOK?! STINKY!', 'NOT THE DURIAN!']), '#ffd84a'); b.g.burst(b.cx, b.y, 18, '#ffd84a', 'confetti'); },
+    phase(b, n) {
+      const g = b.g; this.hurt(b); if (b.grove) b.grove.phase = n;
+      if (n === 2) { b.troopCool = 0.8; g.bannerText = 'THE TROOP ARRIVES!'; g.bannerT = 1.8; }
+      else { if (b.grove) b.grove.vines = true; g.bannerText = 'VINE TIME!'; g.bannerT = 1.8; }
+    },
+    lastHit(b) { b.go('surrender'); b.vx = 0; return true; },
+    giveBack(b) { const g = b.g, n = b.loot || 0; for (let k = 0; k < n; k++) { g.spawn(new PickPop(g, b.cx + (k - n / 2) * 7, b.y)); g.addPick(); } if (n) K.say(g, b, 'HERE. YOUR COINS. ALL ' + n + '.', '#ffd84a'); b.loot = 0; },
+    touch(b, p) {
+      if (b.act === 'fall' || b.act === 'dizzy' || b.act === 'surrender' || (b.act === 'climb' && b.climbing)) { p.x += (p.cx < b.cx ? -1 : 1) * 2; return true; }
+      const fromAbove = p.vy > 0 && p.prevBottom <= b.y + b.h * 0.35;
+      if (!fromAbove && b.act === 'dash' && p.invuln <= 0 && !p.dead && b.g.picks > 0) { const n = Math.min(5, b.g.picks); b.g.picks -= n; Save.data.picks = b.g.picks; b.loot = (b.loot || 0) + n; K.say(b.g, b, 'SNATCH! −' + n, '#ffd84a'); Sound.play('pick', { pitch: 0.6 }); }
+      return false;
+    },
+    update(b, dt) {
+      const g = b.g, p = g.player, gr = b.grove, ph = b.phase || 1; b.guard = 'bounce';
+      // from phase 2 on, two troop monkeys keep running for the fallen durians
+      if (ph >= 2 && b.act !== 'surrender') {
+        b.troopCool = (b.troopCool == null ? 0.8 : b.troopCool) - dt;
+        if (b.troopCool <= 0) {
+          const n = g.entities.filter(e => e instanceof IdTroop && !e.dead && !e.remove).length;
+          if (n < 2) { b.troopCool = 7; for (let k = n; k < 2; k++) { const side = k ? 1 : -1; g.spawn(new IdTroop(g, { x: side < 0 ? b.arenaX0 + 24 : b.arenaX1 - 24, y: b.floorY, dir: -side })); } K.say(g, b, 'TROOP! FETCH THE DURIANS!', '#ffd84a'); Sound.play('throw', { pitch: 1.6, vol: 0.4 }); }
+          else b.troopCool = 2;
+        }
+      }
+      if (b.act === 'walk') {
+        b.face(); b.walk(1.6); b.pose = 'walk'; b.fall(dt);
+        if (b.at > 0.9) { b.cycle++; const plan = ph >= 3 ? ['climb', 'vine', 'dash', 'climb', 'peel', 'vine'] : ph === 2 ? ['climb', 'dash', 'peel', 'climb', 'dash'] : ['climb', 'dash', 'climb', 'peel']; b.go(plan[b.cycle % plan.length]); }
+      } else if (b.act === 'climb') {
+        // run to a tree and scamper up the trunk to a perch (right under the crown's durians)
+        if (b.first) { const ps = gr ? gr.perches() : []; const far = ps.filter(q => !p || Math.abs(q.x - p.cx) > 3 * TS); b.perch = (far.length ? pick(far) : ps[0]) || null; b.climbing = false; }
+        if (!b.perch) { b.go('walk'); return; }
+        if (!b.climbing) { b.pose = 'dash'; const dx = b.perch.x - b.cx; b.dir = sign(dx) || b.dir; b.vx = b.dir * 5 * TS; if (Math.abs(dx) < 8) { b.climbing = true; b.vx = 0; b.x = b.perch.x - b.w / 2; } b.fall(dt); }
+        else { b.pose = 'climb'; b.vx = 0; b.vy = 0; b.y = approach(b.y, b.perch.y - b.h, 7 * TS * dt); if (b.y <= b.perch.y - b.h + 0.5) { b.y = b.perch.y - b.h; b.go('perch'); } }
+        if (b.at > 4) { b.climbing = false; b.go('walk'); }
+      } else if (b.act === 'perch') {
+        // perched at the trunk, laughing and lobbing coconuts: right under the crown
+        b.vx = 0; b.vy = 0; b.onGround = true; b.pose = b.at < 0.7 ? 'laugh' : 'throw'; b.face();
+        if (b.first) { b.n = 0; b.perchT = ph >= 3 ? 2.0 : 2.8; K.say(g, b, pick(['OOK OOK! CAN\'T REACH ME!', 'KING OF THE TREE!', 'HAVE A COCONUT!']), '#ffd84a'); }
+        if (b.at > 0.8 + b.n * 0.5 && b.n < (ph >= 2 ? 3 : 2) && p) { b.n++; b.face(); const dx = p.cx - b.cx; tourFire(g, b.cx + b.dir * 16, b.y + 12, { kind: 'coconut', vx: clamp(dx * 0.9, -6 * TS, 6 * TS), vy: -6 * TS, grav: PHYS.gDown * 0.5, w: 16, h: 16, life: 3, thru: true, stompable: true, col: '#6a4a2a', art: coconutArt }); Sound.play('throw', { pitch: 1.1, vol: 0.5 }); }
+        if (b.at > b.perchT) b.go('drop');
+      } else if (b.act === 'drop') {
+        b.pose = 'leap'; if (b.first) { b.face(); b.vy = -4 * TS; b.vx = b.dir * 2.5 * TS; b.perch = null; b.onGround = false; }
+        b.fall(dt); if ((b.onGround && b.at > 0.3) || b.at > 3) b.go('walk');
+      } else if (b.act === 'dash') {
+        if (b.at < 0.6) { b.vx = 0; b.pose = 'crouch'; if (b.first) { b.face(); K.say(g, b, 'HEHEHE... COINS!', '#ffd84a'); } }
+        else { b.walk(6.4); b.pose = 'dash'; if (b.hitWall || b.x <= b.arenaX0 + 2 || b.x >= b.arenaX1 - b.w - 2) { g.shake(4); Sound.play('bump'); b.vx = 0; b.go('walk'); } }
+        if (b.at > 3) b.go('walk');
+        b.fall(dt);
+      } else if (b.act === 'peel') {
+        b.vx = 0; b.pose = 'throw'; b.fall(dt);
+        if (b.first) { b.face(); b.n = 0; K.say(g, b, 'BANANA TIME!', '#ffe08a'); }
+        if (b.at > 0.5 + b.n * 0.35 && b.n < 2 && p) { b.n++; const tx = clamp(p.cx + (b.n === 1 ? -1.5 : 1.5) * TS, b.arenaX0 + 20, b.arenaX1 - 20); g.spawn(new IdPeel(g, b.cx + b.dir * 14, b.y + 20, (tx - b.cx) / 0.9, -8 * TS)); Sound.play('throw', { pitch: 1.4, vol: 0.4 }); }
+        if (b.at > 1.4) b.go('walk');
+      } else if (b.act === 'vine') {
+        // up to the vine hanging from the ruined arch, then one great swing across the whole arena
+        const px = (b.arenaX0 + b.arenaX1) / 2, L = b.floorY - 1.0 * TS - 30;
+        if (b.first) { b.sw = b.cx < px ? 1 : -1; b.sx = b.x; b.sy = b.y; b.let = false; K.say(g, b, 'WHEEE! VINE TIME!', '#9ad86a'); Sound.play('throw', { pitch: 0.8, vol: 0.5 }); }
+        const a0 = -b.sw * 1.05, gx = px + L * Math.sin(a0) - b.w / 2, gy = L * Math.cos(a0) - b.h / 2;
+        if (b.at < 0.7) { const k = Math.min(1, b.at / 0.7); b.pose = 'leap'; b.x = lerp(b.sx, gx, k); b.y = lerp(b.sy, gy, k) - Math.sin(k * Math.PI) * 40; b.vx = b.vy = 0; b.vineA = a0; b.onGround = false; }
+        else if (b.at < 2.0) { const k = (b.at - 0.7) / 1.3, a = a0 * Math.cos(k * Math.PI); b.vineA = a; b.pose = 'swing'; b.x = px + L * Math.sin(a) - b.w / 2; b.y = L * Math.cos(a) - b.h / 2; b.dir = b.sw; b.vx = b.vy = 0; }
+        else { if (!b.let) { b.let = true; b.vy = -5 * TS; b.vx = b.sw * 3 * TS; b.vineA = null; } b.pose = 'leap'; b.fall(dt); if (b.onGround && b.at > 2.3) { b.let = false; b.go('walk'); } }
+        if (b.at > 5) { b.let = false; b.vineA = null; b.go('walk'); }
+      } else if (b.act === 'fall') {
+        // bonked off the tree: tumbles down the trunk and lands in a heap
+        b.pose = 'fall'; b.perch = null; b.fall(dt);
+        if ((b.onGround && b.at > 0.25) || b.at > 3) { g.shake(3); Sound.play('stomp', { pitch: 0.7 }); g.burst(b.cx, b.y + b.h, 10, '#a8988a', 'dust'); b.go('dizzy'); }
+      } else if (b.act === 'dizzy') {
+        b.vx = 0; b.pose = 'dizzy'; b.fall(dt);
+        if (b.at > 1.3) { b.face(); b.go('walk'); }
+      } else if (b.act === 'surrender') {
+        b.vx = 0; b.pose = 'eat'; b.fall(dt);
+        if (b.first) { b.gave = false; K.say(g, b, 'MMMF... DURIAN? ...OKAY. OKAY! YOU WIN.', '#ffffff'); Sound.play('select2', { pitch: 0.8 }); }
+        if (b.at > 1.2 && !b.gave) { b.gave = true; this.giveBack(b); }
+        if (b.at > 3.0) b.die();
+      } else b.go('walk');
+    },
     draw(b, ctx, t) {
       const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose, sq = 1 + b.squash * 0.12;
       const FUR = '#9a8a76', FUR2 = '#7a6a58', BELLY = '#cdbda4', FACE = '#f2b4a2';
       const limb = (x0, y0, x1, y1, w, c) => { ctx.strokeStyle = c || FUR; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.lineCap = 'butt'; };
       const hand = (hx, hy) => { ctx.fillStyle = FUR2; ctx.beginPath(); ctx.arc(hx, hy, 4.5, 0, TAU); ctx.fill(); };
-      ctx.save(); ctx.translate(x, y); ctx.scale(d * sq, 1 / sq);
-      const lean = P === 'dash' ? 0.25 : P === 'crouch' ? 0.12 : 0, crouch = P === 'crouch' ? 8 : P === 'leap' ? -4 : 0;
-      const run = P === 'dash' ? Math.sin(t * 30) : P === 'walk' ? Math.sin(t * 9) * 0.6 : 0;
-      K.shadow(ctx, 0, 0, 30);
+      // the vine he swings on
+      if (P === 'swing' && b.vineA != null) { const px = (b.arenaX0 + b.arenaX1) / 2; ctx.strokeStyle = '#4a7a2a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(x, b.y + 2); ctx.stroke(); }
+      ctx.save(); ctx.translate(x, y);
+      if (P === 'fall') ctx.rotate(b.at * 9 * d);
+      ctx.scale(d * sq, 1 / sq);
+      const lean = P === 'dash' ? 0.25 : P === 'crouch' ? 0.12 : P === 'swing' ? -0.3 : P === 'laugh' ? -0.15 : 0;
+      const crouch = (P === 'crouch' || P === 'eat' || P === 'dizzy') ? 8 : (P === 'leap' || P === 'swing') ? -4 : P === 'laugh' ? 4 : 0;
+      const run = P === 'dash' ? Math.sin(t * 30) : P === 'walk' ? Math.sin(t * 9) * 0.6 : P === 'climb' ? Math.sin(t * 14) : 0;
+      if (P !== 'swing' && P !== 'climb' && P !== 'fall') K.shadow(ctx, 0, 0, 30);
       // tail: long and curling up at the tip
       ctx.strokeStyle = FUR2; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-16, -20 + crouch); ctx.bezierCurveTo(-46, -14, -50, -50 + Math.sin(t * 2.5) * 5, -32, -56); ctx.stroke(); ctx.lineCap = 'butt';
       // haunches and feet
@@ -1444,35 +1667,54 @@ const boss = {
       ctx.fillStyle = BELLY; ctx.beginPath(); ctx.ellipse(5, by + 4, 11, 15, 0, 0, TAU); ctx.fill();
       ctx.strokeStyle = '#2a2a34'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-17, by - 6); ctx.lineTo(16, by + 10); ctx.stroke();
       ctx.fillStyle = COL.b; rr(ctx, 4, by + 6, 18, 11, 4); ctx.fill(); ctx.fillStyle = '#ffd84a'; ctx.fillRect(15, by + 9, 3, 5); ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(6, by + 11); ctx.lineTo(20, by + 11); ctx.stroke();
+      if (b.loot) { ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(8, by + 3, 4, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff6c0'; ctx.fillRect(7, by + 2, 2, 2); }
       // the back arm (behind the head)
       const sh = [8, by - 12];
-      if (P === 'selfie') { limb(-6, by - 12, -10, by - 34, 7); ctx.fillStyle = FUR2; ctx.beginPath(); ctx.arc(-10, by - 37, 4, 0, TAU); ctx.fill(); limb(-11, by - 39, -14, by - 47, 2.4, FUR2); limb(-9, by - 39, -7, by - 47, 2.4, FUR2); }
+      if (P === 'laugh') { limb(-6, by - 10, -16 + Math.sin(t * 16) * 2, by + 4, 7); hand(-18 + Math.sin(t * 16) * 2, by + 6); }
+      else if (P === 'swing') { limb(-6, by - 12, -8, by - 46, 7); hand(-9, by - 49); }
+      else if (P === 'climb') { limb(-6, by - 12, -10, by - 34 - run * 8, 7); hand(-11, by - 37 - run * 8); }
       else if (P === 'dash') { limb(-6, by - 10, -24, by + 4, 7); hand(-26, by + 6); }
-      else if (P === 'leap') { limb(-6, by - 12, -14, by - 40, 7); hand(-15, by - 43); }
+      else if (P === 'leap' || P === 'fall') { limb(-6, by - 12, -14, by - 40, 7); hand(-15, by - 43); }
+      else if (P === 'eat') { limb(-6, by - 10, 2, by - 20, 7); }
       else { limb(-6, by - 10, -10 - run * 4, by + 14, 7); hand(-11 - run * 4, by + 17); }
       // head: a ruff of fur, a pink heart-shaped face, sunglasses and the stolen bucket hat
-      const hx = 10, hy = by - 26;
+      const hx = 10, hy = by - 26, tilt = P === 'laugh' ? -0.35 : P === 'dizzy' ? 0.25 : 0;
+      ctx.save(); ctx.translate(hx, hy + 8); ctx.rotate(tilt); ctx.translate(-hx, -hy - 8);
       ctx.fillStyle = FUR; ctx.beginPath(); ctx.arc(hx, hy, 16, 0, TAU); ctx.fill();
       ctx.fillStyle = FUR2; for (let k = 0; k < 7; k++) { const a2 = Math.PI * 0.6 + k * 0.32; ctx.beginPath(); ctx.moveTo(hx + Math.cos(a2) * 13, hy + Math.sin(a2) * 13); ctx.lineTo(hx + Math.cos(a2 + 0.16) * 19, hy + Math.sin(a2 + 0.16) * 19); ctx.lineTo(hx + Math.cos(a2 + 0.32) * 13, hy + Math.sin(a2 + 0.32) * 13); ctx.fill(); }
       ctx.fillStyle = FACE; ctx.beginPath(); ctx.arc(hx - 15, hy - 1, 4, 0, TAU); ctx.fill();
       ctx.beginPath(); ctx.moveTo(hx + 4, hy - 12); ctx.bezierCurveTo(hx + 22, hy - 14, hx + 22, hy + 6, hx + 8, hy + 12); ctx.bezierCurveTo(hx, hy + 6, hx - 4, hy - 6, hx + 4, hy - 12); ctx.fill();
       ctx.fillStyle = 'rgba(160,80,70,0.45)'; ctx.beginPath(); ctx.ellipse(hx + 16, hy + 3, 2.4, 1.6, 0, 0, TAU); ctx.fill();
-      if (P === 'selfie') { ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(hx + 9, hy - 4, 1.8, 0, TAU); ctx.arc(hx + 16, hy - 4, 1.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(hx + 12, hy + 5, 4, 0, Math.PI); ctx.fill(); ctx.strokeStyle = '#7a2a2a'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.fillStyle = '#1a1020'; rr(ctx, hx + 2, hy - 16, 18, 5, 2); ctx.fill(); }
-      else { ctx.fillStyle = '#16121e'; rr(ctx, hx + 2, hy - 7, 19, 7, 3); ctx.fill(); ctx.fillStyle = 'rgba(140,210,255,0.75)'; ctx.fillRect(hx + 5, hy - 6, 5, 2); ctx.fillRect(hx + 13, hy - 6, 5, 2); ctx.strokeStyle = '#3a1a1a'; ctx.lineWidth = 1.6; ctx.beginPath(); if (P === 'crouch' || P === 'dash') { ctx.moveTo(hx + 6, hy + 5); ctx.quadraticCurveTo(hx + 12, hy + 10, hx + 18, hy + 4); } else { ctx.moveTo(hx + 7, hy + 6); ctx.quadraticCurveTo(hx + 12, hy + 8, hx + 17, hy + 5); } ctx.stroke(); }
+      if (P === 'dizzy' || P === 'fall') {
+        // sunglasses knocked askew, eyes crossed out
+        ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.6; for (const ex of [hx + 9, hx + 16]) { ctx.beginPath(); ctx.moveTo(ex - 2.5, hy - 6); ctx.lineTo(ex + 2.5, hy - 1); ctx.moveTo(ex + 2.5, hy - 6); ctx.lineTo(ex - 2.5, hy - 1); ctx.stroke(); }
+        ctx.save(); ctx.translate(hx + 12, hy); ctx.rotate(0.6); ctx.fillStyle = '#16121e'; rr(ctx, -10, 2, 19, 7, 3); ctx.fill(); ctx.restore();
+        ctx.strokeStyle = '#3a1a1a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(hx + 7, hy + 7); ctx.quadraticCurveTo(hx + 12, hy + 4, hx + 17, hy + 7); ctx.stroke();
+      } else if (P === 'laugh' || P === 'eat') {
+        // sunglasses pushed up on the forehead, eyes shut tight, mouth wide open (or cheeks stuffed with durian)
+        ctx.fillStyle = '#16121e'; rr(ctx, hx + 2, hy - 13, 19, 6, 3); ctx.fill();
+        ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.6; for (const ex of [hx + 9, hx + 16]) { ctx.beginPath(); ctx.arc(ex, hy - 3, 2.5, Math.PI + 0.3, TAU - 0.3); ctx.stroke(); }
+        if (P === 'laugh') { ctx.fillStyle = '#3a1a1a'; ctx.beginPath(); ctx.ellipse(hx + 12, hy + 6, 6, 4 + Math.abs(Math.sin(t * 16)) * 2, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#ff8a9a'; ctx.beginPath(); ctx.ellipse(hx + 12, hy + 9, 3, 1.6, 0, 0, TAU); ctx.fill(); }
+        else { ctx.fillStyle = FACE; ctx.beginPath(); ctx.ellipse(hx + 12, hy + 6, 9, 6, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#3a1a1a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(hx + 7, hy + 6); ctx.lineTo(hx + 17, hy + 6); ctx.stroke(); }
+      } else {
+        ctx.fillStyle = '#16121e'; rr(ctx, hx + 2, hy - 7, 19, 7, 3); ctx.fill(); ctx.fillStyle = 'rgba(140,210,255,0.75)'; ctx.fillRect(hx + 5, hy - 6, 5, 2); ctx.fillRect(hx + 13, hy - 6, 5, 2);
+        ctx.strokeStyle = '#3a1a1a'; ctx.lineWidth = 1.6; ctx.beginPath(); if (P === 'crouch' || P === 'dash') { ctx.moveTo(hx + 6, hy + 5); ctx.quadraticCurveTo(hx + 12, hy + 10, hx + 18, hy + 4); } else { ctx.moveTo(hx + 7, hy + 6); ctx.quadraticCurveTo(hx + 12, hy + 8, hx + 17, hy + 5); } ctx.stroke();
+      }
       ctx.fillStyle = '#f4e8c8'; ctx.beginPath(); ctx.ellipse(hx + 2, hy - 14, 18, 4.5, -0.12, 0, TAU); ctx.fill(); rr(ctx, hx - 9, hy - 28, 21, 15, 7); ctx.fill();
       ctx.fillStyle = COL.a; ctx.fillRect(hx - 9, hy - 18, 21, 3.5);
-      // the front arm: the phone for a selfie, a flip-flop wind-up, or swinging
-      if (P === 'selfie') {
-        limb(sh[0], sh[1], 30, by - 46, 7); hand(31, by - 48);
-        ctx.save(); ctx.translate(34, by - 54); ctx.rotate(-0.25); ctx.fillStyle = '#2a2a38'; rr(ctx, -6, -10, 12, 20, 3); ctx.fill(); ctx.fillStyle = '#4a4a5a'; ctx.beginPath(); ctx.arc(0, -5, 2, 0, TAU); ctx.fill();
-        if (b.flashed) { ctx.globalCompositeOperation = 'lighter'; const g2 = ctx.createRadialGradient(0, -5, 1, 0, -5, 30); g2.addColorStop(0, 'rgba(255,255,255,0.95)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(0, -5, 30, 0, TAU); ctx.fill(); }
-        ctx.restore();
-      } else if (P === 'throw') { const k = Math.min(1, b.at * 2.5); const ax = 8 + Math.cos(-2.4 + k * 2.6) * 24, ay = by - 12 + Math.sin(-2.4 + k * 2.6) * 24; limb(sh[0], sh[1], ax, ay, 7); hand(ax, ay); ctx.fillStyle = COL.a; ctx.beginPath(); ctx.ellipse(ax + 2, ay - 6, 7, 3.5, 0.6, 0, TAU); ctx.fill(); }
+      ctx.restore();
+      // the front arm: a coconut wind-up, a vine grip, a climb, a belly slap, a durian snack, or swinging along
+      if (P === 'throw') { const k = Math.min(1, b.at * 2.5); const ax = 8 + Math.cos(-2.4 + k * 2.6) * 24, ay = by - 12 + Math.sin(-2.4 + k * 2.6) * 24; limb(sh[0], sh[1], ax, ay, 7); hand(ax, ay); ctx.fillStyle = '#6a4a2a'; ctx.beginPath(); ctx.arc(ax + 2, ay - 7, 7, 0, TAU); ctx.fill(); }
+      else if (P === 'swing') { limb(sh[0], sh[1], 4, by - 48, 7); hand(4, by - 51); }
+      else if (P === 'climb') { limb(sh[0], sh[1], 14, by - 34 + run * 8, 7); hand(15, by - 37 + run * 8); }
+      else if (P === 'laugh') { limb(sh[0], sh[1], 18 - Math.sin(t * 16) * 2, by + 6, 7); hand(19 - Math.sin(t * 16) * 2, by + 8); }
+      else if (P === 'eat') { limb(sh[0], sh[1], 22, by - 14, 7); hand(23, by - 16); durianShape(ctx, 26, by - 22, Math.sin(t * 3) * 0.2, 0.8); }
       else if (P === 'dash') { limb(sh[0], sh[1], -10, by + 2, 7); hand(-12, by + 4); }
-      else if (P === 'leap') { limb(sh[0], sh[1], 22, by - 40, 7); hand(23, by - 43); }
+      else if (P === 'leap' || P === 'fall') { limb(sh[0], sh[1], 22, by - 40, 7); hand(23, by - 43); }
       else { limb(sh[0], sh[1], 16 + run * 4, by + 14, 7); hand(17 + run * 4, by + 17); }
       ctx.restore();
       ctx.restore();
+      if (P === 'dizzy') TourKit.dizzy(ctx, x, b.y - 8, t);
     }
   }
 };
@@ -1582,10 +1824,10 @@ Tour.country({
       hint: 'Tap jump to swim. That coin in the dark might be a fish\'s lure!',
       postcard: 'Night diving! A manta ray swam right over me like a big friendly blanket. ♥ C',
       script: ['biolum', 'reefgate', 'anglers', ['manta', { w: 18 }], 'morays', 'plankton', 'cp', ['wreck', { gold: true }], ['anglers', { n: 3 }], 'jellies', ['manta', { w: 16, gold: true }], 'morays', ['reefgate', { gold: true }], 'plankton'] },
-    { name: 'Monkey Forest Ruins', style: 'castle', theme: 'id_ruins', boss: 'id_kera', arena: 'banyan', arenaW: 26, roof: false,
-      gimmick: 'Overgrown palace ruins: macaques snatch coins, durians burst into stink clouds, gamelan gongs open the stone doors, then Boss Kera',
+    { name: 'Monkey Forest Ruins', style: 'castle', theme: 'id_ruins', boss: 'id_kera', arena: 'grove', arenaW: 26, roof: false,
+      gimmick: 'Overgrown palace ruins: macaques snatch coins, durians burst into stink clouds, gamelan gongs open the stone doors, then Boss Kera in the durian grove',
       enemies: [['idSate', 3], ['idDragonfly', 1]],
-      hint: 'Boss Kera can\'t resist a selfie. While he poses, stomp him!',
+      hint: 'Boss Kera laughs at stomps. Land on a branch of the tree he perches in: a durian drops on his head!',
       postcard: 'The rice terraces are back! The Baron flew north to Vietnam. I smell pho. ♥ C',
       script: [['monkeys', { n: 1 }], ['durians', { gold: true }], ['gongs', { n: 3 }], 'roots', 'cp', ['monkeys', { n: 2, gold: true }], 'ruinstairs', ['enemies', { n: 2 }], ['gongs', { n: 4 }], 'durians', 'arena'] }
   ]

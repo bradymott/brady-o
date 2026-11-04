@@ -271,7 +271,17 @@ const P = {
     st.enemy('w22Hourglass', x + 8, gy - 5);
     return x + n + 4;
   },
-  arena_door(st, o) { const B = st.B, { x0, w, GY } = o; for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); } B.decorAt('w22Clock', x0 + Math.floor(w / 2), GY, 0); }
+  // the last room: a mirror pane down the middle; Brady's side has a ledge, the Other Brady's side has the spike pits
+  // and the great clock's pendulum
+  arena_door(st, o) {
+    const B = st.B, { x0, w, GY } = o, mid = x0 + Math.floor(w / 2);
+    for (let q = 0; q < 4; q++) B.set(x0 + 4 + q, GY - 4, T.SEMI);
+    const pits = [];
+    for (const gx of [mid + 3, mid + 9]) { for (let x = gx; x < gx + 2; x++) { B.set(x, GY, T.EMPTY); B.set(x, GY + 1, T.EMPTY); B.set(x, GY + 2, T.SPIKES); } pits.push([gx * TS, (gx + 2) * TS]); }
+    B.decorAt('w22Clock', x0 + 1, GY, 0); B.decorAt('w22Bench', x0 + 2, GY, 0); B.decorAt('w22Lamp', x0 + w - 2, GY, 0);
+    const midPx = (x0 + w / 2) * TS;
+    st.spawn('w22Pane', mid, GY - 1, { mid: midPx }); st.spawn('w22Strike', mid, GY - 1, { pits, mid: midPx }); st.spawn('w22Pendulum', mid + 6, GY - 1, {});
+  }
 };
 Object.assign(decor, {
   // inside the upward bubble: postcards, leaves and petals drift up instead of down
@@ -282,40 +292,291 @@ const platforms = {
 };
 
 /* ---------------- the final secret boss: THE OTHER BRADY ---------------- */
-// Behind the 22nd door waits Brady's own reflection. It mirrors everything Brady does across the
-// room. Nothing can touch it... except when the great clock strikes 22:22 and time stands still
-// for it (and only for it). Stomp it then!
+// THE MIRROR. Behind the 22nd door a mirror pane splits the room. The Other Brady mirrors Brady's every move across it:
+// walks when Brady walks, jumps when Brady jumps. He cannot be stomped (he stomps back) and the pane will not let
+// Brady through. His side has the hazards: two spike pits (their mirror spots are marked on Brady's floor) and, from
+// phase 2, the great clock's pendulum. Walk so that the mirror walks HIM into them. Every 22 seconds the clock strikes
+// 22:22 and time stops for 2.2 seconds: the pane opens and Brady may cross and stomp him once.
+//   Phase 1 (hp 6-5): the plain mirror.  Phase 2 (hp 4-3): the mirror inverts (he copies instead of reflecting) and the
+//   pendulum swings.  Phase 3 (hp 2-1): two mirrors: a second copy appears. Finish: the mirror cracks, he waves goodbye.
+const OTHER_HP = 6;
+function otherMirrorX(b, px, mode) { const mid = (b.arenaX0 + b.arenaX1) / 2, half = (b.arenaX1 - b.arenaX0) / 2; const x = mode === 'invert' ? px + half : 2 * mid - px; return clamp(x, b.arenaX0 + 20, b.arenaX1 - 20); }
+// a figure painted with Brady's own sprite, then tinted (the boss hurt-flash uses the same scratch canvas: never nest)
+function tintedDraw(ctx, e, paint, col, a) {
+  if (BossFx.scratch && ctx.canvas === BossFx.scratch) { paint(ctx); return; }
+  if (!BossFx.tinted(ctx, e, paint, col, a)) paint(ctx);
+}
+function otherFigure(ctx, e, facing, frozen, alpha, t) {
+  const anim = { state: !e.onGround && !frozen ? 'jump' : Math.abs(e.vx) > 20 && !frozen ? 'run' : 'idle', t: frozen ? 0.4 : t, phase: 0 };
+  const paint = c => { c.save(); if (alpha < 1) c.globalAlpha = alpha; drawBrady(c, { x: e.cx, y: e.y + e.h, facing, small: false, anim, look: Save.data.look, time: frozen ? 0.4 : t }); c.restore(); };
+  tintedDraw(ctx, e, paint, frozen ? '#ffd8a0' : e.boss ? '#7a4ad8' : '#2aa8a0', frozen ? 0.5 : 0.55);
+  if (frozen) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,216,160,${0.5 + 0.4 * Math.sin(t * 10)})`; ctx.lineWidth = 2; rr(ctx, e.x - 5, e.y - 5, e.w + 10, e.h + 8, 8); ctx.stroke(); ctx.restore(); }
+}
+const shardArt = (ctx, s) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(s.t * 8); ctx.fillStyle = 'rgba(232,216,255,0.95)'; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(0, -5); ctx.lineTo(8, 0); ctx.lineTo(0, 5); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(-3, -1, 4, 1.5); ctx.restore(); };
+// a mirror shard: a shot that stands still while time stands still
+class W22Shard extends TourShot {
+  update(dt) { const b = this.g.boss; if (b && b.act === 'frozen' && b.state === 'fight') return; super.update(dt); }
+}
+// the mirror pane: a wall for Brady, except while the clock strikes (and after the fight it is a heap of glass)
+class W22Pane extends Ent {
+  constructor(g, s) { super(g, s, 8, 8 * TS); this.w22Pane = true; this.mid = s.mid != null ? s.mid : s.x; this.x = this.mid - 4; this.floorY = s.y; this.y = this.floorY - 8 * TS; this.h = 8 * TS; this.shatterT = 0; this.gone = false; this.told = false; }
+  get open() { const b = this.g.boss; return this.gone || !b || b.state !== 'fight' || (b.gateT || 0) > 0 || b.act === 'crack'; }
+  shatter() { if (this.gone) return; this.gone = true; this.shatterT = 1.2; Sound.play('break', { vol: 0.9 }); this.g.shake(10); for (let k = 0; k < 7; k++) this.g.burst(this.mid, this.floorY - 20 - k * 34, 10, '#e8d8ff', 'debris'); }
+  update(dt) { this.t += dt; if (this.shatterT > 0) this.shatterT -= dt; }
+  touchPlayer(p) {
+    if (this.open || p.dead) return;
+    if (p.cx < this.mid) { p.x = Math.min(p.x, this.x - p.w - 0.5); if (p.vx > 0) p.vx = 0; } else { p.x = Math.max(p.x, this.x + this.w + 0.5); if (p.vx < 0) p.vx = 0; }
+    if (!this.told) { this.told = true; this.g.toast('THE MIRROR ONLY OPENS AT 22:22'); }
+  }
+  draw(ctx) {
+    if (this.gone && this.shatterT <= 0) return;
+    const b = this.g.boss, x = this.mid, y0 = this.y, y1 = this.floorY, t = this.t, open = this.open;
+    const flip = b && b.flipT > 0 ? Math.cos((0.8 - b.flipT) / 0.8 * Math.PI) : 1;
+    ctx.save(); ctx.translate(x, 0); ctx.scale(Math.max(0.08, Math.abs(flip)), 1);
+    const g = ctx.createLinearGradient(-4, y0, 4, y1); g.addColorStop(0, 'rgba(232,216,255,0.6)'); g.addColorStop(0.5, 'rgba(255,255,255,0.3)'); g.addColorStop(1, 'rgba(200,180,255,0.6)');
+    ctx.fillStyle = open ? 'rgba(255,216,160,0.18)' : g; ctx.fillRect(-4, y0, 8, y1 - y0);
+    ctx.strokeStyle = '#c8a03a'; ctx.lineWidth = 3; ctx.strokeRect(-6, y0, 12, y1 - y0);
+    ctx.fillStyle = '#ffd8a0'; ctx.font = `bold 9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('22', 0, y0 - 5);
+    if (!open) { ctx.fillStyle = `rgba(255,255,255,${0.4 + 0.3 * Math.sin(t * 3)})`; const sy = y0 + ((t * 70) % (y1 - y0 - 20)); ctx.fillRect(-3, sy, 6, 20); }
+    else { ctx.strokeStyle = `rgba(255,216,160,${0.5 + 0.5 * Math.sin(t * 12)})`; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.strokeRect(-4, y0, 8, y1 - y0); ctx.setLineDash([]); ctx.fillStyle = '#ffd8a0'; ctx.font = `bold 10px ${FONT_DISPLAY}`; ctx.fillText('GO', 0, y0 + 26 + Math.sin(t * 8) * 3); }
+    if (this.gone) { ctx.strokeStyle = `rgba(255,255,255,${Math.max(0, this.shatterT)})`; ctx.lineWidth = 2; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.moveTo(0, y0 + k * 50); ctx.lineTo((k % 2 ? 1 : -1) * 22, y0 + k * 50 + 30); ctx.stroke(); } }
+    ctx.restore();
+  }
+}
+// the great clock on the back wall: it counts the 22 seconds, strikes 22:22, and marks on Brady's floor where the
+// mirror would put the Other Brady into a spike pit
+class W22Strike extends Ent {
+  constructor(g, s) { super(g, s, 10, 10); this.friendly = true; this.w22Strike = true; this.cx0 = s.mid != null ? s.mid : s.x; this.floorY = s.y; this.pits = s.pits || []; this.lastTick = -1; this.glazed = []; }
+  // a pit that just caught the reflection glazes over with dream-ice for a while: the other pit is the next trap
+  glaze(px) {
+    const pit = this.pits.find(([a, c]) => px >= a - 4 && px <= c + 4); if (!pit || this.glazed.some(z => z.pit === pit)) return;
+    const g = this.g, GY = Math.floor(this.floorY / TS), gx = Math.floor(pit[0] / TS);
+    for (let x = gx; x < gx + 2; x++) g.setTile(x, GY, T.ICE);
+    this.glazed.push({ pit, gx, t: 14 }); g.burst((pit[0] + pit[1]) / 2, this.floorY, 16, '#d8f0ff', 'spark'); Sound.play('crumble', { pitch: 1.6, vol: 0.4 });
+    g.parts.text((pit[0] + pit[1]) / 2, this.floorY - 40, 'GLAZED OVER', '#a8f0e8');
+  }
+  update(dt) {
+    this.t += dt;
+    for (let i = this.glazed.length - 1; i >= 0; i--) { const z = this.glazed[i]; z.t -= dt; if (z.t <= 0) { const GY = Math.floor(this.floorY / TS); for (let x = z.gx; x < z.gx + 2; x++) this.g.setTile(x, GY, T.EMPTY); this.g.burst((z.pit[0] + z.pit[1]) / 2, this.floorY, 10, '#d8f0ff', 'spark'); this.glazed.splice(i, 1); } }
+    const b = this.g.boss; if (!b || b.state !== 'fight') return; const left = 22 - (b.clockT || 0), sec = Math.ceil(left); if (left < 5.5 && sec !== this.lastTick && b.act !== 'frozen') { this.lastTick = sec; K.sfx('tick', 'bump', { vol: 0.25, pitch: 2.2 }); } }
+  draw(ctx) {
+    const b = this.g.boss, x = this.cx0, y = this.floorY - 5.6 * TS, r = 44, t = this.t;
+    const live = b && b.state === 'fight', k = live ? (b.clockT || 0) / 22 : 0, frozen = live && b.act === 'frozen';
+    // the mirror spots: where standing would send the reflection into a pit (two colours when there are two mirrors)
+    if (live && b.act !== 'crack') {
+      const modes = [[b.mode || 'reflect', '#c86a8a']]; if (b.copies) modes.push([b.mode === 'invert' ? 'reflect' : 'invert', '#2aa8a0']);
+      for (const [mode, col] of modes) for (const pit of this.pits) {
+        const [px0, px1] = pit; const a = otherMirrorX(b, px0, mode), c = otherMirrorX(b, px1, mode), m0 = Math.min(a, c), m1 = Math.max(a, c);
+        if (m1 - m0 < 10 || this.glazed.some(z => z.pit === pit)) continue;
+        ctx.fillStyle = `rgba(${mode === 'invert' ? '42,168,160' : '200,106,138'},${0.2 + 0.12 * Math.sin(t * 5)})`; ctx.fillRect(m0, this.floorY - 3, m1 - m0, 3);
+        ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.strokeRect(m0, this.floorY - 3, m1 - m0, 3); ctx.setLineDash([]);
+        ctx.fillStyle = col; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▲ ▲', (m0 + m1) / 2, this.floorY - 7 + Math.sin(t * 4) * 1.5);
+      }
+    }
+    for (const z of this.glazed) { const [a, c] = z.pit; ctx.fillStyle = `rgba(216,240,255,${0.5 + 0.2 * Math.sin(t * 6)})`; ctx.fillRect(a, this.floorY, c - a, 6); ctx.fillStyle = '#4a3a6a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(Math.ceil(z.t) + '', (a + c) / 2, this.floorY - 6); }
+    ctx.fillStyle = '#5a3a2e'; ctx.fillRect(x - 5, y - r - 26, 10, 26);
+    ctx.fillStyle = frozen ? '#fff0c8' : '#fff8ec'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.strokeStyle = '#8a6ab8'; ctx.lineWidth = 4; ctx.stroke();
+    ctx.fillStyle = 'rgba(60,40,90,0.7)'; for (let q = 0; q < 12; q++) { const a = q * TAU / 12; ctx.fillRect(x + Math.cos(a) * r * 0.84 - 1.5, y + Math.sin(a) * r * 0.84 - 1.5, 3, 3); }
+    const hA = (10 + (22 * k) / 60) / 12 * TAU - Math.PI / 2, mA = (22 * k) / 60 * TAU - Math.PI / 2;
+    ctx.strokeStyle = '#3a2a5a'; ctx.lineCap = 'round'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(hA) * r * 0.5, y + Math.sin(hA) * r * 0.5); ctx.stroke();
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(mA) * r * 0.78, y + Math.sin(mA) * r * 0.78); ctx.stroke(); ctx.lineCap = 'butt';
+    ctx.fillStyle = frozen ? '#c86a8a' : '#4a3a6a'; ctx.font = `bold 12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(frozen ? '22:22' : '22:' + String(Math.floor(22 * k)).padStart(2, '0'), x, y + r * 0.6);
+    if (live && !frozen && b.act !== 'crack') { const left = Math.ceil(22 - (b.clockT || 0)); ctx.fillStyle = left <= 5 ? '#c86a8a' : 'rgba(60,40,90,0.6)'; ctx.font = `bold 10px ${FONT_DISPLAY}`; ctx.fillText(left + ' S', x, y - r * 0.35); }
+    if (frozen) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,216,160,${0.22 + 0.18 * Math.sin(t * 20)})`; ctx.beginPath(); ctx.arc(x, y, r + 16, 0, TAU); ctx.fill(); ctx.restore(); }
+  }
+}
+// the clock's pendulum over the Other Brady's side (from phase 2): it swings low enough to catch a jumping reflection
+class W22Pendulum extends Ent {
+  constructor(g, s) { super(g, s, 32, 32); this.w22Pendulum = true; this.ax = s.x; this.ay = s.y - 8 * TS; this.len = 5 * TS; this.on = false; this.k = 0; this.cool = 0; this.a = 0; this.x = this.ax - 16; this.y = this.ay + this.len - 16; }
+  update(dt) {
+    this.t += dt; const g = this.g, b = g.boss, frozen = b && b.act === 'frozen';
+    if (this.on && !frozen) this.k += dt;
+    if (this.cool > 0) this.cool -= dt;
+    this.a = this.on ? 0.95 * Math.sin(this.k * 2.1) : 0;
+    this.x = this.ax + Math.sin(this.a) * this.len - 16; this.y = this.ay + Math.cos(this.a) * this.len - 16;
+    if (!this.on || frozen) return;
+    const bob = { x: this.x + 4, y: this.y + 4, w: 24, h: 24 };
+    if (b && b.state === 'fight' && b.hurtT <= 0 && this.cool <= 0 && overlap(bob, b)) { this.cool = 1; if (b.hit('hazard', this)) g.burst(this.cx, this.cy, 12, '#ffd8a0', 'spark'); }
+    for (const e of g.entities) if (e.w22Copy && !e.dead && overlap(bob, e)) e.knock(this);
+  }
+  touchPlayer(p) { if (this.on && this.g.boss && this.g.boss.act !== 'frozen') p.hurt(this); }
+  draw(ctx) {
+    const bx = this.cx, by = this.cy, t = this.t;
+    ctx.strokeStyle = '#8a6ab8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(this.ax, this.ay); ctx.lineTo(bx, by); ctx.stroke();
+    ctx.fillStyle = '#5a3a2e'; ctx.fillRect(this.ax - 8, this.ay - 6, 16, 8);
+    const g = ctx.createRadialGradient(bx - 5, by - 5, 2, bx, by, 16); g.addColorStop(0, '#ffe8a0'); g.addColorStop(1, '#c8a03a');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bx, by, 16, 0, TAU); ctx.fill(); ctx.strokeStyle = '#8a6a2a'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#4a3a6a'; ctx.font = `bold 10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('22', bx, by + 4);
+    if (this.on) { ctx.strokeStyle = `rgba(255,216,160,${0.3 + 0.3 * Math.sin(t * 9)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(bx, by, 21, 0, TAU); ctx.stroke(); }
+  }
+}
+// the third copy (phase 3): another reflection, through the other mirror
+class W22Copy extends Ent {
+  constructor(g, s) { super(g, s, 22, 54); this.enemy = true; this.w22Copy = true; this.mode = s.mode || 'reflect'; this.facing = 1; this.jumped = false; }
+  update(dt) {
+    this.t += dt; const g = this.g, b = g.boss, p = g.player;
+    if (this.knocked) return this.updateKnocked(dt);
+    if (this.dead) { this.remove = true; return; }
+    if (b && b.act === 'frozen') { this.vx = 0; this.vy = 0; return; }
+    if (p && !p.dead && b) {
+      const tx = otherMirrorX(b, p.cx, this.mode), dx = tx - this.cx; this.vx = Math.abs(dx) < 2 ? 0 : clamp(dx * 12, -10 * TS, 10 * TS);
+      this.facing = this.mode === 'invert' ? p.facing : -p.facing;
+      if (p.vy < -5 * TS && !p.onGround && this.onGround && !this.jumped) { this.jumped = true; this.vy = p.vy; }
+      if (this.jumped && !this.onGround && !p.onGround && p.vy < 0) this.vy = p.vy;
+      if (p.onGround) this.jumped = false;
+    } else this.vx = 0;
+    this.vy += PHYS.gDown * 0.8 * dt; if (this.vy > PHYS.maxFall) this.vy = PHYS.maxFall;
+    moveBody(this, g.area, dt, { semis: false }); otherUnstick(this);
+    if (b) this.x = clamp(this.x, b.arenaX0, b.arenaX1 - this.w);
+    if (this.onGround && otherOnSpikes(this)) this.knock({ spikes: true });
+  }
+  knock(src) { if (this.dead) return; K.say(this.g, this, 'OOF. ALSO ME.', '#a8f0e8'); this.knockOff(1); }
+  hit(kind, src) {
+    if (this.dead) return false; const b = this.g.boss;
+    if (kind === 'stomp' || kind === 'spin') { if (b && b.act === 'frozen') { this.knock(src); return true; } return 'bounce'; }
+    if (kind === 'star') { this.knock(src); return true; }
+    return false;
+  }
+  touchPlayer(p) {
+    if (this.dead || p.dead) return; const b = this.g.boss;
+    if (p.vy < 0 && p.y + p.h < this.y + 12) return;
+    if (b && b.act === 'frozen') return;
+    p.hurt(this);
+  }
+  draw(ctx) {
+    const b = this.g.boss, frozen = b && b.act === 'frozen';
+    if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(this.spin || 0); ctx.translate(-this.cx, -this.cy); otherFigure(ctx, this, this.facing, false, 0.7, this.t); ctx.restore(); return; }
+    otherFigure(ctx, this, this.facing, frozen, 0.82, this.t);
+    if (frozen) { ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(this.t * 10)})`; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▼', this.cx, this.y - 12); }
+  }
+}
+// he is not that stupid: on his feet he stops at the edge of a pit (only a mirrored jump lands him in one)
+function otherRefuse(b, dt) {
+  if (!b.onGround || !b.vx) return; const g = b.g;
+  const ahead = Math.floor((b.cx + sign(b.vx) * (b.w / 2 + 4)) / TS), fy = Math.floor((b.y + b.h + 2) / TS);
+  if (SOLID[tileAt(g.area, ahead, fy)]) return;
+  b.vx = 0; b.refuseT = (b.refuseT || 0) + dt;
+  if (b.refuseT > 1.5) { b.refuseT = -3; K.say(g, b, pick(['NICE TRY, ME.', 'I SEE THE SPIKES, ME.', 'NOT WALKING INTO THAT.']), '#e8d8ff'); }
+}
+// spikes under any part of his feet
+function otherOnSpikes(b) { const A = b.g.area, y = Math.floor((b.y + b.h + 2) / TS); for (let x = Math.floor((b.x + 3) / TS); x <= Math.floor((b.x + b.w - 3) / TS); x++) if (tileAt(A, x, y) === T.SPIKES) return true; return false; }
+// never stuck inside the floor: if his feet end up in solid tiles he is lifted onto them
+function otherUnstick(e) { const A = e.g.area; let n = 0; while (n < 4 && !regionFree(A, e.x + 3, e.y + e.h - 6, e.w - 6, 5)) { e.y -= TS; n++; } if (n) { e.y = Math.floor((e.y + e.h) / TS) * TS - e.h; e.vy = Math.min(e.vy, 0); } }
+function otherCopy(b) { const g = b.g, p = g.player; const mode = b.mode === 'invert' ? 'reflect' : 'invert'; const x = otherMirrorX(b, p ? p.cx : b.cx, mode); const c = new W22Copy(g, { x, y: b.floorY, mode }); g.spawn(c); g.burst(c.cx, c.cy, 20, '#a8f0e8', 'spark'); Sound.play('portal', { pitch: 1.4, vol: 0.4 }); return c; }
 const boss = {
-  id: 'w22_other', name: 'The Other Brady', hp: 4, dims: [26, 58], music: 'tour_w22_boss', country: 'w22',
+  id: 'w22_other', name: 'The Other Brady', hp: OTHER_HP, dims: [26, 58], music: 'tour_w22_boss', country: 'w22',
   brain: {
     guardText: 'THAT\'S MY MOVE!',
-    wake(b) { K.say(b.g, b, '...HELLO, ME.', '#e8d8ff'); b.clockT = 0; },
+    phases: [4, 2],
+    noDisc(b) { return true; },
+    wake(b) {
+      b.clockT = 0; b.freezeT = 0; b.gateT = 0; b.mode = 'reflect'; b.copies = 0; b.copyT = 0; b.shardT = 0; b.told = false;
+      // he steps out of the mirror exactly where Brady's reflection would stand
+      const p = b.g.player; if (p) b.x = otherMirrorX(b, p.cx, 'reflect') - b.w / 2; b.y = b.floorY - b.h; b.vx = 0; b.vy = 0;
+      b.g.burst(b.cx, b.cy, 24, '#e8d8ff', 'spark'); Sound.play('portal', { pitch: 1.2, vol: 0.4 }); K.say(b.g, b, '...HELLO, ME.', '#e8d8ff');
+    },
+    hit(b, kind, src) {
+      if (b.act === 'crack') return false;
+      if (kind === 'hazard') { if (b.act === 'frozen') return false; b.damage(1, { text: src && src.spikes ? 'OUCH, ME.' : 'TICK. TOCK.', col: '#ffd8a0' }); return true; }
+      if (kind === 'stomp' || kind === 'spin') { if (b.act === 'frozen') return undefined; b.counterT = 0.3; return 'bounce'; }
+      if (kind === 'bump' || kind === 'disc' || kind === 'laser' || kind === 'prop') return false;
+      return undefined;
+    },
+    // after a bounce Brady is still a pixel inside the box for a frame: that is never contact; frozen, he is harmless
+    touch(b, p) { if (b.act === 'crack') return true; if (b.act === 'frozen') return !(p.vy > 0 && p.prevBottom <= b.y + b.h * 0.35); if (p.vy < 0 && p.y + p.h < b.y + 12) return true; return false; },
+    phase(b, n) {
+      const g = b.g;
+      if (n === 2) { b.mode = 'invert'; b.hurtT = 1.6; b.flipT = 0.8; Sound.play('bell', { pitch: 0.7, vol: 0.6 }); K.say(g, b, 'THE MIRROR TURNS.', '#ffd8a0'); g.bannerText = 'THE MIRROR INVERTS'; g.bannerT = 2.2; g.flash = Math.max(g.flash || 0, 0.4); const pd = g.entities.find(e => e.w22Pendulum); if (pd) pd.on = true; g.toast('HE COPIES YOU NOW. AND THE PENDULUM SWINGS'); b.go('free'); }
+      if (n === 3) { b.hurtT = 1.6; b.copies = 1; Sound.play('bell', { pitch: 0.6, vol: 0.6 }); K.say(g, b, 'TWO MIRRORS. THREE OF US.', '#ffd8a0'); g.bannerText = 'TWO MIRRORS'; g.bannerT = 2.2; g.flash = Math.max(g.flash || 0, 0.5); otherCopy(b); b.go('free'); }
+    },
+    lastHit(b) { if (b.act !== 'crack') { b.vuln = false; b.go('crack'); } return true; },
     update(b, dt) {
-      const g = b.g, p = g.player, mid = (b.arenaX0 + b.arenaX1) / 2;
-      b.guard = 'bounce'; b.clockT = (b.clockT || 0) + dt;
+      const g = b.g, p = g.player, first = b.first, mid = (b.arenaX0 + b.arenaX1) / 2;
+      b.guard = 'bounce';
+      if (b.flipT > 0) b.flipT -= dt;
+      if (b.gateT > 0) b.gateT -= dt;
+      if (b.act === 'crack') {
+        b.vx = 0; b.vy = 0; b.pose = 'wave';
+        if (first) { const pane = g.entities.find(e => e.w22Pane); if (pane) pane.shatter(); for (const e of g.entities) if (e.w22Copy && !e.dead) e.knock(b); K.say(g, b, '...BYE, ME.', '#e8d8ff'); g.bannerText = 'THE MIRROR CRACKS'; g.bannerT = 2.5; b.face(); b.waved = false; }
+        if (b.at > 1.4 && !b.waved) { b.waved = true; K.say(g, b, 'SEE YOU AT 22:22.', '#e8d8ff'); }
+        if (b.at > 3.2) b.die();
+        return;
+      }
+      if (b.act === 'frozen') {
+        if (first) { b.freezeT = 2.2; b.gateT = 3.4; b.vx = 0; b.vy = 0; Sound.play('bell', { pitch: 0.5, vol: 0.7 }); g.shake(3); g.flash = Math.max(g.flash || 0, 0.35); g.parts.text(b.cx, b.y - 30, '22:22', '#ffd8a0'); g.bannerText = '22:22'; g.bannerT = 1.4; if (!b.told) { b.told = true; g.toast('TIME STOPS: THROUGH THE MIRROR AND STOMP HIM!'); } }
+        b.freezeT -= dt; b.vx = 0; b.vy = 0; b.pose = 'frozen'; b.vuln = true; b.guard = 'hurt';
+        if (b.freezeT <= 0) { b.vuln = false; b.clockT = 0; b.go('walk'); }
+        return;
+      }
+      // the clock
+      b.clockT += dt; if (b.clockT >= 22) { b.clockT = 22; b.go('frozen'); return; }
+      // the third copy comes back a few seconds after it falls
+      if (b.copies) { const alive = g.entities.some(e => e.w22Copy && !e.dead && !e.remove); if (!alive) { b.copyT += dt; if (b.copyT > 3) { b.copyT = 0; otherCopy(b); } } else b.copyT = 0; }
+      if (b.counterT > 0 && b.act === 'walk') { b.counterT = 0; b.go('counter'); }
       if (b.act === 'walk') {
         b.pose = 'mirror';
-        const tx = clamp(2 * mid - (p ? p.cx : mid), b.arenaX0 + b.w, b.arenaX1 - b.w);
-        b.vx = clamp((tx - b.cx) * 6, -7 * TS, 7 * TS); b.dir = p && p.cx < b.cx ? -1 : 1;
-        if (p && p.vy < -6 * TS && !p.onGround && b.onGround) b.vy = -15 * TS;
-        if (b.at > 1.2 && Math.random() < dt * 0.5) { tourFire(g, b.cx, b.y + 20, { kind: 'shard', vx: b.dir * 5 * TS, vy: 0, w: 14, h: 8, life: 3, col: '#e8d8ff', art: (ctx, s) => { ctx.fillStyle = 'rgba(232,216,255,0.9)'; ctx.beginPath(); ctx.moveTo(s.x, s.cy); ctx.lineTo(s.cx, s.y); ctx.lineTo(s.x + s.w, s.cy); ctx.lineTo(s.cx, s.y + s.h); ctx.fill(); } }); }
-        if (b.clockT > (b.hp <= 2 ? 6.5 : 5.5)) { b.clockT = 0; b.go('frozen'); }
-      } else if (b.act === 'frozen') {
-        // the clock strikes 22:22: time stands still, but only for the reflection
-        if (b.first) { Sound.play('bell', { pitch: 0.5, vol: 0.6 }); K.say(g, b, '22:22', '#ffd8a0'); g.shake(3); }
-        b.vx = 0; b.pose = 'frozen'; b.vuln = b.at > 0.1 && b.at < 2.2; b.guard = b.vuln ? 'hurt' : 'bounce';
+        if (p && !p.dead) {
+          const tx = otherMirrorX(b, p.cx, b.mode), dx = tx - b.cx;
+          b.vx = Math.abs(dx) < 2 ? 0 : clamp(dx * 12, -10 * TS, 10 * TS);
+          b.dir = b.mode === 'invert' ? p.facing : -p.facing;
+          otherRefuse(b, dt);
+          // his jump is Brady's jump: he leaves the ground when Brady does and rises exactly as Brady rises
+          if (p.vy < -5 * TS && !p.onGround && b.onGround && !b.jumped) { b.jumped = true; b.vy = p.vy; }
+          if (b.jumped && !b.onGround && !p.onGround && p.vy < 0) b.vy = p.vy;
+          if (p.onGround) b.jumped = false;
+        } else b.vx = 0;
+        b.shardT += dt;
+        if (b.shardT > 3.4 - (b.phase || 1) * 0.4) { b.shardT = 0; b.go('shard'); }
+      } else if (b.act === 'shard') {
+        b.pose = 'arm'; b.vx = 0;
+        if (first) { b.face(); Sound.play('throw', { pitch: 1.6, vol: 0.3 }); }
+        if (b.at > 0.55 && !b.fired) { b.fired = true; const sx = b.cx + b.dir * 14, sy = b.y + 18; const dx = p ? p.cx - sx : b.dir * 100, dy = p ? p.cy - sy : 0, d = Math.hypot(dx, dy) || 1; g.spawn(new W22Shard(g, sx, sy, { kind: 'shard', vx: dx / d * 6 * TS, vy: dy / d * 6 * TS, w: 14, h: 12, life: 4, thru: true, col: '#e8d8ff', art: shardArt })); Sound.play('throw', { pitch: 1.3, vol: 0.4 }); }
+        if (b.at > 0.85) { b.fired = false; b.go('walk'); }
+      } else if (b.act === 'climb') {
+        b.pose = 'mirror';
+        if (first) { b.vy = -20 * TS; b.vx = sign(otherMirrorX(b, p ? p.cx : mid, b.mode) - b.cx) * 3 * TS; }
+        if (b.onGround && b.at > 0.3) b.go('free');
+      } else if (b.act === 'free') {
+        // for a moment he refuses the mirror: he walks his own side on his own, hunting Brady
+        b.pose = 'mirror'; if (first) { b.side = b.cx < mid ? -1 : 1; b.face(); }
+        b.face(); b.walk(1.8); otherRefuse(b, dt);
+        if (b.side > 0) b.x = Math.max(b.x, mid + 8); else b.x = Math.min(b.x, mid - 8 - b.w);
         if (b.at > 2.2) b.go('walk');
-      }
-      b.fall(dt);
+      } else if (b.act === 'counter') {
+        b.pose = 'mirror';
+        if (first) { b.face(); b.vy = -12 * TS; b.vx = b.dir * 3 * TS; K.say(g, b, 'MY MOVE!', '#e8d8ff'); }
+        if (b.onGround && b.at > 0.3) b.go('walk');
+      } else b.go('walk');
+      b.fall(dt); otherUnstick(b);
+      // the spike pits on his side
+      if (b.onGround && b.hurtT <= 0 && otherOnSpikes(b)) b.hit('hazard', { spikes: true });
     },
-    hurt(b) { b.go('walk'); b.clockT = 0; K.say(b.g, b, pick(['...OUCH, ME.', 'WE BOTH FELT THAT.', 'TIME IS ON YOUR SIDE.']), '#e8d8ff'); b.g.burst(b.cx, b.cy, 24, '#e8d8ff', 'confetti'); },
+    hurt(b) {
+      const g = b.g; b.gateT = Math.max(b.gateT || 0, 1.5);
+      if (b.act === 'frozen') { b.clockT = 0; b.freezeT = 0; } else b.clockT = Math.min(b.clockT, 21);
+      const onSpikes = otherOnSpikes(b);
+      K.say(g, b, pick(['...OUCH, ME.', 'WE BOTH FELT THAT.', 'NOT FAIR, ME.', 'I HATE THIS SIDE.', 'TIME IS ON YOUR SIDE.']), '#e8d8ff');
+      g.burst(b.cx, b.cy, 24, '#e8d8ff', 'confetti');
+      if (onSpikes) { const st = g.entities.find(e => e.w22Strike); if (st) st.glaze(b.cx); b.go('climb'); } else { b.vx = 0; b.go('free'); }
+    },
     draw(b, ctx, t) {
-      const frozen = b.pose === 'frozen';
-      drawShadowBrady(ctx, b.cx, b.y + b.h, b.dir, frozen ? 0 : t, frozen ? '#8a7ab8' : '#4a2a7a');
-      if (frozen) { clockFace(ctx, b.cx, b.y - 30, 14, '#fff8ec'); ctx.fillStyle = 'rgba(255,216,160,0.35)'; ctx.fillRect(b.x - 6, b.y - 4, b.w + 12, b.h + 4); }
+      const frozen = b.act === 'frozen', alpha = b.act === 'crack' ? Math.max(0, 1 - b.at / 2.6) : 1;
+      if (alpha <= 0) return;
+      otherFigure(ctx, b, b.dir, frozen, alpha, t);
+      if (b.act === 'shard' || b.act === 'crack') {
+        // the raised arm: the throwing tell, or the goodbye wave
+        const wave = b.act === 'crack' ? Math.sin(t * 10) * 0.5 : 0, ax = b.cx + b.dir * 8, ay = b.y + 22;
+        ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = '#2a1a3a'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + b.dir * 10 + wave * 8, ay - 22); ctx.stroke(); ctx.lineCap = 'butt';
+        ctx.fillStyle = '#f2c8a8'; ctx.beginPath(); ctx.arc(ax + b.dir * 10 + wave * 8, ay - 25, 4, 0, TAU); ctx.fill();
+        if (b.act === 'shard' && b.at < 0.55) { ctx.save(); ctx.translate(ax + b.dir * 10, ay - 32); ctx.rotate(t * 8); ctx.fillStyle = `rgba(232,216,255,${0.5 + b.at})`; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(0, -5); ctx.lineTo(8, 0); ctx.lineTo(0, 5); ctx.fill(); ctx.restore(); }
+        ctx.restore();
+      }
+      if (frozen) { clockFace(ctx, b.cx, b.y - 34, 14, '#fff8ec'); ctx.fillStyle = '#ffd8a0'; ctx.font = `bold 9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('22:22', b.cx, b.y - 52); }
+      if (b.act === 'crack' && b.at > 0.3) { ctx.fillStyle = `rgba(255,120,190,${alpha * (0.6 + 0.4 * Math.sin(t * 5))})`; ctx.font = `10px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.fillText('♥', b.cx + Math.sin(t * 3) * 8, b.y - 16 - (t * 20) % 24); }
     }
   }
 };
+Object.assign(entities, { w22Pane: W22Pane, w22Strike: W22Strike, w22Pendulum: W22Pendulum, w22Copy: W22Copy });
 
 /* ---------------- music: a music-box waltz, a theremin corridor, a ticking finale ---------------- */
 const tracks = {
@@ -375,11 +636,11 @@ Tour.country({
       hint: 'If it feels like you\'ve been here before... look up',
       postcard: 'I walked down the same hallway 22 times. Then I looked up. ♥ C',
       script: [['flat', { n: 5 }], ['corridor', { gold: true }], ['doors', { pick: 2 }], 'cp', ['corridor', {}], ['doors', { pick: 0 }], ['corridor', {}], 'end'] },
-    { name: 'The 22nd Door', style: 'castle', theme: 'w22_white', gimmick: 'A quiet white dream room where the Other Brady mirrors your every move, until the great clock strikes 22:22',
+    { name: 'The 22nd Door', style: 'castle', theme: 'w22_white', gimmick: 'A quiet white dream room split by a mirror: the Other Brady mirrors your every move, so walk him into the spike pits on his side; at 22:22 time stops and the mirror opens for one stomp',
       enemies: [['w22Moth', 2], ['w22Alarm', 1]], boss: 'w22_other', arena: 'door', arenaW: 26, roof: false,
-      hint: 'When the clock strikes 22:22, time stops for your reflection: stomp it!',
+      hint: 'Your reflection copies you: walk him into the spikes on HIS side. At 22:22 the mirror opens: stomp him!',
       postcard: 'You found the 22nd door, and you were brave enough to open it. That was the whole secret. ♥ C',
-      script: [['flat', { n: 4 }], ['upward', {}], ['echo', { n: 14 }], 'cp', ['clocks', {}], ['blocks', { content: 'power' }], 'arena'] }
+      script: [['flat', { n: 4 }], ['upward', {}], ['echo', { n: 14 }], 'cp', ['clocks', { gold: true }], ['blocks', { content: 'power' }], 'arena'] }
   ]
 });
 })();

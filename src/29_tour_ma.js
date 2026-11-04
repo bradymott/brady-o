@@ -261,7 +261,98 @@ class MaStorm extends Ent {
     for (let k = 0; k < 18; k++) { const ph = (this.t * 1.4 + k * 0.17) % 1, sx = z.x + z.w - ph * z.w, sy = z.y + 10 + ((k * 37) % Math.max(20, z.h - 20)); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 26, sy - 2); ctx.stroke(); }
   }
 }
-const entities = { maStorm: MaStorm };
+// the Djinn's brass teapot: a heavy world object Brady pushes, kicks and (while the Djinn is inside) stomps shut
+const POT_W = 46, POT_H = 40;
+function potBody(ctx, x, y, t, o) {
+  o = o || {};
+  ctx.save(); ctx.translate(x, y);
+  if (o.mirage) { ctx.translate(Math.sin(t * 9) * 2, Math.sin(t * 13) * 1.2); ctx.scale(1 + Math.sin(t * 11) * 0.06, 1 - Math.sin(t * 11) * 0.06); }
+  const brass = o.mirage ? '#f0e0a8' : o.glow ? '#e8c050' : '#c8a03a', brassD = o.mirage ? '#d8c890' : '#a8801a', lidC = o.mirage ? '#f4e8b8' : '#d8b04a';
+  const lidUp = o.lidUp || 0, rattle = o.rattle ? Math.sin(t * 50) * 2.5 : 0;
+  // body, spout, handle, zellige band
+  ctx.fillStyle = brass; ctx.beginPath(); ctx.ellipse(0, -18, 22, 18, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(16, -20); ctx.quadraticCurveTo(34, -22, 36, -40); ctx.lineTo(31, -40); ctx.quadraticCurveTo(29, -28, 16, -12); ctx.fill();
+  ctx.strokeStyle = brassD; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(-22, -20, 9, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
+  ctx.fillStyle = ZEL[0]; ctx.fillRect(-20, -22, 40, 4); ctx.fillStyle = ZEL[2]; for (let k = 0; k < 5; k++) ctx.fillRect(-18 + k * 8, -21, 3, 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(-8, -26, 5, 3, -0.5, 0, TAU); ctx.fill();
+  // the lid (pops up when the Djinn is in and the pot vents; slams and locks when sealed)
+  const ly = -36 - lidUp + rattle;
+  ctx.fillStyle = lidC; ctx.beginPath(); ctx.moveTo(-13, ly); ctx.quadraticCurveTo(0, ly - 16, 13, ly); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#8a6a1a'; ctx.beginPath(); ctx.arc(0, ly - 9, 2.5, 0, TAU); ctx.fill();
+  if (o.sealed) { ctx.strokeStyle = '#5a5a68'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-18, ly + 2); ctx.lineTo(18, ly + 2); ctx.stroke(); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(0, ly + 2, 4, 0, TAU); ctx.fill(); }
+  if (o.inside && !o.sealed) { ctx.fillStyle = '#4ab8ff'; ctx.beginPath(); ctx.arc(0, ly - 2, 9, Math.PI, TAU); ctx.fill(); K.eyes(ctx, 0, ly - 4, 1, 3.2, 2, false); }
+  if (o.mirage) { ctx.fillStyle = '#ffffff'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('?', 0, -58 + Math.sin(t * 4) * 3); }
+  ctx.restore();
+}
+// the soft stuff (steam, the flying pot's sparkle trail) goes on after the ink outline, so it stays soft
+function potFx(ctx, x, y, t, o) {
+  ctx.save(); ctx.translate(x, y);
+  const ly = -36 - (o.lidUp || 0);
+  if (o.fly) for (let k = 0; k < 4; k++) { const ph = (t * 1.1 + k / 4) % 1; ctx.fillStyle = `rgba(255,230,140,${0.5 * (1 - ph)})`; ctx.beginPath(); ctx.arc(Math.sin(t * 3 + k * 2) * 12, 4 + ph * 22, 4 + ph * 5, 0, TAU); ctx.fill(); }
+  if (o.steam) for (let k = 0; k < 5; k++) { const ph = (t * 1.6 + k / 5) % 1; ctx.fillStyle = `rgba(255,255,255,${0.6 * (1 - ph)})`; ctx.beginPath(); ctx.arc(Math.sin(t * 6 + k) * 6, ly - 8 - ph * 34, 5 + ph * 8, 0, TAU); ctx.fill(); }
+  if (o.glow) { ctx.strokeStyle = `rgba(255,240,160,${0.5 + 0.4 * Math.sin(t * 12)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, -18, 28, 24, 0, 0, TAU); ctx.stroke(); }
+  ctx.restore();
+}
+const potLook = (e, t) => ({ inside: e.inside, sealed: e.sealed, fly: e.fly, rattle: e.rattle > 0, steam: e.inside || e.sealed || e.rattle > 0, glow: e.inside && !e.sealed, lidUp: e.inside && !e.sealed ? 6 + Math.sin(t * 20) * 3 : 0 });
+const MA_POT_CFG = { w: POT_W, h: POT_H, kick: 5.2, bounce: 0.3, friction: 9, hp: 0, burst: '#c8a03a', art: (ctx, e, x, y, t) => potBody(ctx, x, y, t, potLook(e, t)) };
+class MaPot extends TourProp {
+  constructor(g, s) { super(g, s, MA_POT_CFG); this.pot = true; this.inside = false; this.sealed = false; this.fly = false; this.rattle = 0; this.flyT = 0; }
+  draw(ctx) { super.draw(ctx); potFx(ctx, this.cx, this.y + this.h, this.g.t, potLook(this, this.g.t)); }
+  update(dt) {
+    if (this.rattle > 0) this.rattle -= dt;
+    if (!this.fly) { super.update(dt); return; }
+    // phase 3: the pot takes to the air and drifts around the riad
+    this.t += dt; this.flyT += dt; if (this.hot > 0) this.hot -= dt;
+    const b = this.g.boss, x0 = b ? b.arenaX0 : this.x - 200, x1 = b ? b.arenaX1 : this.x + 200, fy = b ? b.floorY : this.y + this.h;
+    const tx = (x0 + x1) / 2 + Math.sin(this.flyT * 0.3) * (x1 - x0) * 0.3 - this.w / 2;
+    const ty = fy - 5.2 * TS + Math.sin(this.flyT * 1.7) * 16 - this.h;
+    this.vx = (tx - this.x) * 2; this.vy = (ty - this.y) * 2;
+    this.x += this.vx * dt; this.y += this.vy * dt; this.onGround = false; this.fast = false;
+  }
+  touchPlayer(p) {
+    if (p.dead) return;
+    const fromAbove = p.vy > 0 && p.prevBottom <= this.y + Math.max(8, this.h * 0.4);
+    if (fromAbove && (this.inside || this.sealed)) {
+      p.vy = -(p.inp.jump ? PHYS.stompVHeld : PHYS.stompV); p.jumping = true; p.y = Math.min(p.y, this.y - p.h + 2);
+      const b = this.g.boss;
+      if (this.inside && !this.sealed && b && b.state === 'fight' && b.hit('lid', this)) { this.rattle = 1.2; return; }
+      Sound.play('bump', { vol: 0.4 }); return;
+    }
+    if (this.fly) { if (fromAbove) { p.vy = -PHYS.stompV * 0.6; p.jumping = true; Sound.play('bump', { vol: 0.3 }); } return; }
+    super.touchPlayer(p);
+  }
+}
+// a mirage pot: it shimmers, and pops the moment it is kicked into a wall or stomped
+const MA_MIRAGE_CFG = { w: POT_W, h: POT_H, kick: 7, bounce: 0.2, friction: 8, hp: 1, breakOnWall: true, burst: '#ffe8b0', art: (ctx, e, x, y, t) => potBody(ctx, x, y, t, { mirage: true }), onBreak: e => { e.g.parts.text(e.cx, e.y - 10, 'A MIRAGE!', '#ffe8b0'); K.sfx('glass', 'portal', { vol: 0.4 }); } };
+class MaMirage extends TourProp {
+  constructor(g, s) { super(g, s, MA_MIRAGE_CFG); this.mirage = true; }
+  touchPlayer(p) { if (p.dead) return; if (p.vy > 0 && p.prevBottom <= this.y + Math.max(8, this.h * 0.4)) { p.vy = -PHYS.stompV; p.jumping = true; this.break(); return; } super.touchPlayer(p); }
+}
+// the sandstorm of phase 2: gusts across the whole riad, with a warning puff of sand before each one
+class MaGale extends Ent {
+  constructor(g, s) {
+    super(g, s, 10, 10); this.x0 = s.x0; this.x1 = s.x1; this.fy = s.floorY; this.ph = 0; this.dir = 1; this.on = false; this.warn = false;
+    this.zone = { x: this.x0, y: this.fy - 10 * TS, w: this.x1 - this.x0, h: 10 * TS, fx: 0, fy: 0, vmax: 0, kind: 'storm', off: true };
+    (g.area.zones = g.area.zones || []).push(this.zone);
+  }
+  update(dt) {
+    this.t += dt; this.ph += dt;
+    const b = this.g.boss;
+    if (!b || b.state === 'dying') { this.zone.off = true; this.remove = true; return; }
+    const c = this.ph % 7.5, warn = c > 2.0 && c < 2.9, on = c >= 2.9 && c < 5.4;
+    if (warn && !this.warn) { this.dir = -this.dir; K.sfx('wind', 'crumble', { vol: 0.35 }); this.g.toast(this.dir > 0 ? 'SANDSTORM FROM THE LEFT!' : 'SANDSTORM FROM THE RIGHT!'); }
+    if (on && !this.on) this.g.shake(2);
+    this.warn = warn; this.on = on; this.zone.fx = this.dir * 3.4 * TS; this.zone.off = !on;
+  }
+  draw(ctx) {
+    const z = this.zone, t = this.t;
+    if (this.warn) { const sx = this.dir > 0 ? z.x + 20 : z.x + z.w - 20; for (let k = 0; k < 8; k++) { ctx.fillStyle = `rgba(240,200,140,${0.35 + 0.2 * Math.sin(t * 12 + k)})`; ctx.beginPath(); ctx.arc(sx + this.dir * (k % 3) * 10, z.y + 40 + k * 32, 8 + (k % 2) * 4, 0, TAU); ctx.fill(); } ctx.fillStyle = '#ffe8b0'; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(this.dir > 0 ? '>>>' : '<<<', sx + this.dir * 30, z.y + 30); return; }
+    if (!this.on) return;
+    ctx.strokeStyle = 'rgba(240,200,140,0.55)'; ctx.lineWidth = 2;
+    for (let k = 0; k < 26; k++) { const ph = (t * 1.3 + k * 0.137) % 1, sx = this.dir > 0 ? z.x + ph * z.w : z.x + z.w - ph * z.w, sy = z.y + 12 + ((k * 41) % (z.h - 24)); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + this.dir * 28, sy - 2); ctx.stroke(); }
+  }
+}
+const entities = { maStorm: MaStorm, maPot: MaPot, maMirage: MaMirage, maGale: MaGale };
 
 /* ---------------- the signature power-up: THE FLYING CARPET ---------------- */
 // twelve seconds of free flight on a magic carpet (up / jump to rise, down to sink), then a gentle glide down
@@ -432,10 +523,16 @@ const P = {
   },
   // rugs being rolled up: conveyor floors
   rolling(st) { const x = st.x, B = st.B; st.floor(x, x + 12); for (let q = 2; q < 11; q++) B.set(x + q, st.gy, T.CONV_L); st.enemy('maTagine', x + 8, st.gy); st.coins(x + 2, x + 10, st.gy - 3); return x + 13; },
+  // the boss arena: a riad courtyard with zellige galleries on both sides, a high balcony over the fountain,
+  // lanterns, pots and spice sacks everywhere, and the Djinn's brass teapot on the floor
   arena_riad(st, o) {
-    const B = st.B, { x0, w, GY } = o;
-    for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
-    B.prop('maFountain', x0 + Math.floor(w / 2) - 2, GY - 1, 4, 1, 'none', {});
+    const B = st.B, { x0, w, GY } = o, mid = x0 + Math.floor(w / 2);
+    for (let q = 0; q < 4; q++) { B.set(x0 + 2 + q, GY - 4, T.SEMI); B.set(x0 + w - 6 + q, GY - 4, T.SEMI); }
+    for (let q = 0; q < 4; q++) B.set(mid - 2 + q, GY - 7, T.SEMI);
+    B.prop('maFountain', mid - 2, GY - 1, 4, 1, 'none', {});
+    B.decorAt('maLantern', x0 + 3, GY - 4, 0); B.decorAt('maLantern', x0 + w - 4, GY - 4, 0); B.decorAt('maLantern', mid, GY - 7, 0);
+    B.decorAt('maPots', x0 + 1, GY, 0); B.decorAt('maPots', x0 + w - 2, GY, 1); B.decorAt('maSpiceSacks', x0 + 7, GY, 0); B.decorAt('maSpiceSacks', x0 + w - 8, GY, 0);
+    st.spawn('maPot', mid - 4, GY - 1, {});
   }
 };
 const platforms = {
@@ -463,72 +560,173 @@ const platforms = {
 };
 
 /* ---------------- the boss: THE DJINN OF THE TEAPOT ---------------- */
-// A grumpy blue djinn bound to a brass teapot. He floats and pours scalding tea, spins into a
-// whirlwind across the riad, and hides in his pot to hop after Brady. Each time the pot lands it has
-// to let off steam: the lid pops and the djinn's head pokes out, dizzy. Stomp it then!
+// A grumpy blue djinn bound to a brass teapot. He flings teacups, pours scalding tea and whirls across
+// the riad, but every attack leaves him running dry: he has to dive back into the pot to refill.
+// PUT HIM BACK IN THE POT: kick the pot across the room so he has to chase it, and the moment he dives
+// in, stomp the lid to trap him. Phase 2 brings a sandstorm and two mirage pots; in phase 3 he grows,
+// the pot takes to the air and a flying carpet appears so Brady can follow it up.
+const cupArt = (ctx, s, t) => {
+  ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 9 + s.x);
+  ctx.fillStyle = '#f4ecd8'; ctx.beginPath(); ctx.moveTo(-7, -5); ctx.lineTo(7, -5); ctx.lineTo(5, 5); ctx.lineTo(-5, 5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#a86a2a'; ctx.fillRect(-6, -5, 12, 2.5);
+  ctx.strokeStyle = ZEL[0]; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-6, -1); ctx.lineTo(6, -1); ctx.stroke(); ctx.beginPath(); ctx.arc(8, 0, 3, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+  ctx.restore();
+};
+const DJINN_LINES = ['MY LAMP! I MEAN POT!', 'OUCH! WISH GRANTED: PAIN!', 'LET ME OUT OF HERE!', 'IT IS DARK IN HERE!'];
 const boss = {
   id: 'ma_djinn', name: 'The Djinn of the Teapot', hp: 4, dims: [60, 64], floats: true, music: 'tour_ma_boss', country: 'ma',
   brain: {
     guardText: 'TOO HOT!',
-    noDisc(b) { return b.act === 'swirl'; },
-    wake(b) { K.say(b.g, b, 'THREE WISHES? NO. ZERO WISHES!', '#7ad8ff'); },
-    update(b, dt) {
-      const g = b.g, p = g.player, skyY = b.floorY - b.h - 4 * TS;
-      b.guard = 'bounce'; b.vuln = false;
-      if (b.act === 'walk') {
-        b.pose = 'float'; b.face(); b.hover(dt, skyY, p ? p.cx + (b.cx < p.cx ? -3 : 3) * TS : b.cx);
-        if (b.at > 0.6 && !b.fired) { b.fired = true; for (let k = 0; k < (b.hp <= 2 ? 4 : 3); k++) tourFire(g, b.cx, b.cy, { kind: 'tea', vx: (k - 1) * 2 * TS + b.dir * TS, vy: -4 * TS, grav: PHYS.gDown * 0.4, w: 10, h: 10, life: 3, thru: true, col: '#a86a2a', art: teaDrop }); Sound.play('throw', { pitch: 1.4 }); }
-        if (b.at > 2) { b.fired = false; b.cycle++; b.go(b.cycle % 2 ? 'swirl' : 'pot'); }
-      } else if (b.act === 'swirl') {
-        if (b.first) b.face();
-        b.pose = 'swirl'; b.hover(dt, b.floorY - b.h);
-        if (b.at > 0.6) { b.x += b.dir * (6 + (b.hp <= 2 ? 2 : 0)) * TS * dt; if (b.x <= b.arenaX0 + 2 || b.x >= b.arenaX1 - b.w - 2) { b.dir = -b.dir; b.turns = (b.turns || 0) + 1; } }
-        if (b.at > 4.5 || (b.turns || 0) >= 2) { b.turns = 0; b.go('pot'); }
-      } else if (b.act === 'pot') {
-        // hop after Brady inside the teapot, three hops; after each landing the lid pops: he's exposed
-        b.pose = b.vent ? 'vent' : 'pot';
-        if (b.first) { b.hops = 0; b.vy = 0; b.vent = 0; }
-        if (b.vent > 0) { b.vent -= dt; b.vuln = true; b.guard = 'hurt'; if (b.vent <= 0) { b.vent = 0; if (b.hops >= 3) b.go('rise'); } }
-        else if (b.onGround && b.at > 0.4) {
-          if (b.landed) { b.landed = false; b.vent = b.hp <= 2 ? 1.0 : 1.4; g.burst(b.cx, b.y, 14, '#ffffff', 'dust'); Sound.play('splash', { pitch: 1.6, vol: 0.4 }); }
-          else { b.face(); b.vy = -11 * TS; b.vx = b.dir * 3 * TS; b.hops++; b.landed = true; }
-        }
-        if (!b.onGround) b.landed = true;
-        b.fall(dt); if (b.onGround && !b.vent) b.vx = 0;
-        if (b.at > 9) b.go('rise');
-      } else if (b.act === 'rise') { b.pose = 'float'; b.vx = 0; b.hover(dt, skyY); if (b.at > 0.8) b.go('walk'); }
+    phases: [3, 2],
+    pot(b) { if (!b.potRef || b.potRef.remove) b.potRef = b.g.entities.find(e => e instanceof MaPot && !e.remove) || null; return b.potRef; },
+    skyY(b) { return b.floorY - b.h - (3.4 + (b.big || 0) * 0.5) * TS; },
+    wake(b) { b.big = 0; b.inside = false; b.tank = 1; b.carpetT = 0; K.say(b.g, b, 'THREE WISHES? NO. ZERO WISHES!', '#7ad8ff'); b.g.toast('KICK HIS POT AWAY. WHEN HE DIVES BACK IN, STOMP THE LID!'); },
+    noDisc(b) { return b.act === 'swirl' || b.inside || b.act === 'dive'; },
+    hit(b, kind, src) {
+      if (kind === 'lid') { if (!b.inside) return false; b.damage(1, { text: 'TRAPPED!', col: '#ffe08a' }); return true; }
+      if (kind === 'stomp' || kind === 'spin') { if (b.inside) { b.damage(1, { text: 'TRAPPED!', col: '#ffe08a' }); return true; } return 'bounce'; }
+      if (kind === 'prop') { if (src && src.pot && !b.inside && b.act !== 'dive' && b.act !== 'trapped') { b.damage(1, { text: 'CLONK!', col: '#ffe08a' }); return true; } return false; }
+      if (kind === 'bump') return false;
+      if (b.inside || b.act === 'dive') return false;
+      return undefined;
     },
-    hurt(b) { b.vent = 0; b.go('rise'); K.say(b.g, b, pick(['MY LAMP! I MEAN POT!', 'OUCH! WISH GRANTED: PAIN!', 'TOO MUCH SUGAR!']), '#7ad8ff'); b.g.burst(b.cx, b.cy, 24, '#7ad8ff', 'confetti'); },
-    draw(b, ctx, t) {
-      const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose;
-      ctx.save(); ctx.translate(x, y);
-      if (P === 'swirl') {
-        for (let k = 0; k < 6; k++) { ctx.strokeStyle = `rgba(122,216,255,${0.8 - k * 0.1})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(0, -k * 11 - 6, 14 + k * 5, 5, 0, t * 10 + k, t * 10 + k + 4.5); ctx.stroke(); }
-        ctx.restore(); return;
+    touch(b, p) { return b.inside || b.act === 'dive' || b.act === 'trapped'; },
+    update(b, dt) {
+      const g = b.g, p = g.player, pot = this.pot(b), skyY = this.skyY(b), ph = b.phase || 1;
+      b.guard = 'bounce'; b.vuln = false;
+      if (b.act === 'trapped') {
+        // the finish: the lid is shut, the pot rattles and steams, muffled complaints float up
+        if (pot) { b.x = pot.cx - b.w / 2; b.y = pot.y - 12; pot.inside = true; pot.sealed = true; pot.rattle = 1; if (!pot.fly) pot.vx = Math.sin(b.at * 40) * 1.5 * TS; }
+        if (Math.floor(b.at * 2.5) !== Math.floor((b.at - dt) * 2.5)) g.parts.text(b.cx + (Math.random() - 0.5) * 50, b.y - 20 - Math.random() * 20, pick(DJINN_LINES), '#7ad8ff');
+        if (Math.random() < 0.3) g.burst(b.cx + (Math.random() - 0.5) * 30, b.y - 10, 2, '#ffffff', 'dust');
+        if (b.at > 2.8) b.die();
+        return;
       }
-      const inPot = P === 'pot' || P === 'vent';
-      // the brass teapot
-      if (inPot) {
-        ctx.fillStyle = '#c8a03a'; ctx.beginPath(); ctx.ellipse(0, -22, 26, 22, 0, 0, TAU); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(20, -22); ctx.quadraticCurveTo(40, -24, 42, -44); ctx.lineTo(37, -44); ctx.quadraticCurveTo(34, -30, 20, -14); ctx.fill();
-        ctx.strokeStyle = '#a8801a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(-26, -24, 10, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
-        ctx.fillStyle = ZEL[0]; ctx.fillRect(-24, -26, 48, 4);
-        const lid = P === 'vent' ? -14 : 0;
-        ctx.fillStyle = '#d8b04a'; ctx.beginPath(); ctx.moveTo(-12, -42 + lid); ctx.lineTo(0, -58 + lid); ctx.lineTo(12, -42 + lid); ctx.fill();
-        if (P === 'vent') {
-          for (let k = 0; k < 5; k++) { ctx.fillStyle = `rgba(255,255,255,${0.5 - k * 0.08})`; ctx.beginPath(); ctx.arc(Math.sin(t * 6 + k) * 6, -50 - k * 10, 6 + k * 2, 0, TAU); ctx.fill(); }
-          ctx.fillStyle = '#4ab8ff'; ctx.beginPath(); ctx.arc(0, -46, 11, Math.PI, TAU); ctx.fill(); K.dizzy(ctx, 0, -60, t);
+      // phase 3: a flying carpet appears whenever Brady has none, so the airborne pot can be reached
+      if (ph >= 3 && p && !p.dead) {
+        const has = p.sig && p.sig.id === 'carpet', out = g.entities.some(e => e instanceof TourItem && e.kind === 'sig:carpet' && !e.remove);
+        b.carpetT = has || out ? 2.5 : (b.carpetT || 0) - dt;
+        if (b.carpetT <= 0) { const x = clamp(p.cx + (p.cx < (b.arenaX0 + b.arenaX1) / 2 ? 3 : -3) * TS, b.arenaX0 + 2 * TS, b.arenaX1 - 2 * TS); g.spawn(new TourItem(g, x, b.floorY - 36, 'sig:carpet')); g.parts.text(x, b.floorY - 50, 'A CARPET!', '#ffe08a'); K.sfx('appear', null, { vol: 0.5 }); b.carpetT = 2.5; }
+      }
+      if (b.act === 'walk') {
+        b.pose = 'float'; b.face(); b.hover(dt, skyY + Math.sin(b.t * 2) * 8, p ? p.cx + (b.cx < p.cx ? -3 : 3) * TS : b.cx);
+        if (b.at > 0.9) { b.cycle++; b.go(['cups', 'pour', 'swirl'][b.cycle % 3]); }
+      } else if (b.act === 'cups') {
+        // tell: he rattles a tray of cups over his head, then flings the lot
+        b.pose = 'cups'; b.hover(dt, skyY);
+        if (b.first) K.sfx('glass', 'select2', { vol: 0.4, pitch: 1.3 });
+        if (b.at > 0.7 && !b.fired) {
+          b.fired = true; b.face(); const n = ph >= 3 ? 5 : ph >= 2 ? 4 : 3;
+          for (let k = 0; k < n; k++) tourFire(g, b.cx, b.cy - 10, { kind: 'cup', vx: ((k - (n - 1) / 2) * 1.6 + b.dir * 0.8) * TS, vy: -5 * TS, grav: PHYS.gDown * 0.45, w: 14, h: 12, life: 3, thru: true, stompable: true, col: '#f4ecd8', art: cupArt });
+          Sound.play('throw', { pitch: 1.4 }); K.say(g, b, 'TEA TIME!', '#ffe0a0');
         }
-      } else {
-        // the djinn floating above his pot: a blue genie-tail, crossed arms, a fez with a tassel
-        ctx.fillStyle = '#4ab8ff'; ctx.beginPath(); ctx.moveTo(-6, -4); ctx.quadraticCurveTo(14 * Math.sin(t * 3), -20, -12, -36); ctx.lineTo(12, -36); ctx.quadraticCurveTo(10, -18, 6, -4); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(0, -46, 20, 16, 0, 0, TAU); ctx.fill();
-        ctx.fillStyle = '#2a8ad8'; ctx.fillRect(-18, -46, 36, 7);
-        ctx.fillStyle = '#4ab8ff'; ctx.beginPath(); ctx.arc(0, -66, 13, 0, TAU); ctx.fill();
-        ctx.fillStyle = '#c8323a'; ctx.beginPath(); ctx.moveTo(-8, -76); ctx.lineTo(8, -76); ctx.lineTo(6, -88); ctx.lineTo(-6, -88); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(6, -88); ctx.quadraticCurveTo(14, -86, 12, -78); ctx.stroke();
-        K.eyes(ctx, d * 3, -68, d, 4, 2.6, true);
-        ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-6 + d * 2, -60); ctx.quadraticCurveTo(d * 2, -62, 6 + d * 2, -60); ctx.stroke();
+        if (b.at > 1.5) { b.fired = false; b.go('refill'); }
+      } else if (b.act === 'pour') {
+        // tell: he tips sideways over Brady with the spout aimed down, then a scalding stream falls
+        b.pose = 'pour'; const tx = p ? p.cx : b.cx; b.hover(dt, skyY - TS, b.at < 0.7 || ph >= 3 ? tx : undefined);
+        if (b.at > 0.7 && b.at < 1.7 && Math.floor(b.at * 14) !== Math.floor((b.at - dt) * 14)) tourFire(g, b.cx + b.dir * 16, b.y + b.h - 4, { kind: 'tea', vx: (Math.random() - 0.5) * TS, vy: 4 * TS, grav: PHYS.gDown * 0.5, w: 10, h: 12, life: 2, thru: true, col: '#a86a2a', art: teaDrop });
+        if (b.at > 0.7 && !b.poured) { b.poured = true; K.say(g, b, 'HOT! HOT! HOT!', '#ffe0a0'); Sound.play('splash', { pitch: 1.3, vol: 0.4 }); }
+        if (b.at > 2.0) { b.poured = false; b.go('refill'); }
+      } else if (b.act === 'swirl') {
+        // tell: he drops to the floor and starts spinning on the spot before the whirlwind dash
+        if (b.first) { b.face(); b.turns = 0; }
+        b.pose = b.at < 0.6 ? 'spin' : 'swirl'; b.hover(dt, b.floorY - b.h);
+        if (b.at > 0.6) { b.x += b.dir * (6 + (ph >= 3 ? 2 : 0)) * TS * dt; if (b.x <= b.arenaX0 + 2 || b.x >= b.arenaX1 - b.w - 2) { b.dir = -b.dir; b.turns++; } }
+        if (b.at > 4.5 || b.turns >= 2) b.go('refill');
+      } else if (b.act === 'refill') {
+        // running dry: he flickers, the gauge over his head empties, and he has to get back to the pot
+        b.pose = 'dry'; b.tank = Math.max(0, 1 - b.at / 1.2);
+        if (b.first) K.say(g, b, pick(['RUNNING ON EMPTY...', 'MUST... REFILL...', 'WHERE IS MY POT?!']), '#7ad8ff');
+        if (!pot) { if (b.at > 1) b.go('walk'); }
+        else {
+          const tx = pot.cx, ty = pot.y - b.h - 14, sp = (pot.fly ? 5 : 4.2) * TS * dt;
+          b.x = approach(b.x, tx - b.w / 2, sp); b.y = approach(b.y, ty, sp * 1.3); b.dir = tx < b.cx ? -1 : 1;
+          if (Math.abs(b.cx - tx) < 10 && Math.abs(b.y - ty) < 10) b.go('dive');
+        }
+      } else if (b.act === 'dive') {
+        b.pose = 'dive';
+        if (pot) { b.x = pot.cx - b.w / 2; b.y = pot.y - b.h - 14 + b.at * 30; }
+        if (b.first) { K.sfx('splash', null, { pitch: 1.6, vol: 0.5 }); K.say(g, b, 'GLUG GLUG', '#ffe0a0'); }
+        if (b.at > 0.5) b.go('inside');
+      } else if (b.act === 'inside') {
+        // the weak moment: he is in the pot, the lid glows and rattles: stomp it!
+        b.pose = 'inside'; b.inside = true; b.vuln = true; b.guard = 'hurt';
+        if (b.first && pot) { pot.inside = true; pot.rattle = 0.6; g.burst(pot.cx, pot.y - 30, 10, '#ffffff', 'dust'); if (!b.lidHint) { b.lidHint = true; g.toast('NOW! STOMP THE LID!'); } }
+        if (pot) { b.x = pot.cx - b.w / 2; b.y = pot.y - 12; pot.inside = true; }
+        const stay = ph >= 3 ? 1.4 : ph >= 2 ? 1.7 : 2.1;
+        if (b.at > stay) { b.inside = false; if (pot) pot.inside = false; b.tank = 1; b.go('rise'); }
+      } else if (b.act === 'rise') {
+        b.pose = 'float'; b.vx = 0;
+        if (b.first) { if (pot) g.burst(pot.cx, pot.y - 20, 16, '#7ad8ff', 'spark'); K.sfx('portal', null, { vol: 0.4 }); K.say(g, b, pick(['AHH, REFRESHED!', 'MINT TEA. DELICIOUS.', 'FULL TANK!']), '#7ad8ff'); }
+        b.hover(dt, skyY); if (b.at > 0.8) b.go('walk');
+      }
+    },
+    hurt(b) {
+      const g = b.g, pot = this.pot(b);
+      b.inside = false; b.tank = 1; if (pot) { pot.inside = false; pot.rattle = 1.2; g.burst(pot.cx, pot.y - 20, 30, '#ffffff', 'spark'); }
+      b.go('rise'); K.say(g, b, pick(['MY LAMP! I MEAN POT!', 'OUCH! WISH GRANTED: PAIN!', 'TOO MUCH SUGAR!']), '#7ad8ff'); g.burst(b.cx, b.cy, 24, '#7ad8ff', 'confetti');
+    },
+    phase(b, n) {
+      const g = b.g, pot = this.pot(b);
+      this.hurt(b);
+      if (n === 2) {
+        g.spawn(new MaGale(g, { x: b.arenaX0, y: b.floorY, x0: b.arenaX0, x1: b.arenaX1, floorY: b.floorY }));
+        for (const k of [0.22, 0.78]) g.spawn(new MaMirage(g, { x: b.arenaX0 + (b.arenaX1 - b.arenaX0) * k, y: b.floorY }));
+        g.bannerText = 'A SANDSTORM! AND... THREE POTS?!'; g.bannerT = 2.4; K.say(g, b, 'FIND THE REAL ONE, HA HA!', '#7ad8ff');
+      } else if (n === 3) {
+        b.big = 1; if (pot) { pot.fly = true; pot.flyT = 0; }
+        g.bannerText = 'THE DJINN GROWS! THE POT TAKES OFF!'; g.bannerT = 2.6; g.shake(8); K.say(g, b, 'NO MORE MR NICE DJINN!', '#7ad8ff'); b.carpetT = 0.5;
+      }
+    },
+    lastHit(b) {
+      const g = b.g, pot = this.pot(b);
+      b.go('trapped'); b.inside = true; b.vuln = false;
+      if (pot) { pot.inside = true; pot.sealed = true; pot.rattle = 3; pot.fly = false; pot.vy = 2 * TS; }
+      g.bannerText = 'THE LID SLAMS SHUT!'; g.bannerT = 2.6; g.shake(10); K.sfx('break', null, { vol: 0.7 }); g.burst(b.cx, b.y, 30, '#ffffff', 'dust');
+      return true;
+    },
+    draw(b, ctx, t) {
+      const P = b.pose, d = b.dir;
+      if (P === 'inside' || b.act === 'trapped') return;
+      const x = b.cx, y = b.y + b.h, sc = 1 + (b.big || 0) * 0.32;
+      ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+      if (P === 'swirl' || P === 'spin') {
+        const n = P === 'spin' ? 3 : 6;
+        for (let k = 0; k < n; k++) { ctx.strokeStyle = `rgba(122,216,255,${0.8 - k * 0.1})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(0, -k * 11 - 6, 14 + k * 5, 5, 0, t * 10 + k, t * 10 + k + 4.5); ctx.stroke(); }
+        if (P === 'spin') { ctx.fillStyle = '#ffffff'; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', 0, -70); }
+        if (P === 'swirl') { ctx.restore(); return; }
+        ctx.translate(0, -30);
+      }
+      const pale = P === 'dry' && Math.sin(t * 18) > 0, skin = pale ? '#a8e0ff' : '#4ab8ff', sash = pale ? '#7ab8e8' : '#2a8ad8';
+      if (P === 'dive') { const k = Math.min(1, b.at / 0.5); ctx.translate(0, k * 20); ctx.rotate(k * 6); ctx.scale(1 - k * 0.9, 1 - k * 0.9); }
+      if (P === 'pour') ctx.rotate(d * 0.55);
+      // the djinn: a blue genie-tail, crossed arms, a fez with a tassel
+      ctx.fillStyle = skin; ctx.beginPath(); ctx.moveTo(-6, -4); ctx.quadraticCurveTo(14 * Math.sin(t * 3), -20, -12, -36); ctx.lineTo(12, -36); ctx.quadraticCurveTo(10, -18, 6, -4); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, -46, 20, 16, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = sash; ctx.fillRect(-18, -46, 36, 7);
+      ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(0, -66, 13, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#c8323a'; ctx.beginPath(); ctx.moveTo(-8, -76); ctx.lineTo(8, -76); ctx.lineTo(6, -88); ctx.lineTo(-6, -88); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(6, -88); ctx.quadraticCurveTo(14, -86, 12, -78); ctx.stroke();
+      K.eyes(ctx, d * 3, -68, d, 4, 2.6, P !== 'dry');
+      ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 2; ctx.beginPath();
+      if (P === 'dry') { ctx.arc(d * 2, -58, 4, Math.PI + 0.3, TAU - 0.3); } else { ctx.moveTo(-6 + d * 2, -60); ctx.quadraticCurveTo(d * 2, -62, 6 + d * 2, -60); }
+      ctx.stroke();
+      if (P === 'cups') {
+        // the tray of teacups held high: the tell for the volley
+        const sh = Math.sin(t * 30) * 2;
+        ctx.fillStyle = '#c8a03a'; ctx.fillRect(-26 + sh, -98, 52, 4);
+        for (let k = -1; k <= 1; k++) { ctx.fillStyle = '#f4ecd8'; ctx.fillRect(k * 16 - 6 + sh, -108, 12, 10); ctx.fillStyle = '#a86a2a'; ctx.fillRect(k * 16 - 5 + sh, -108, 10, 2); }
+      }
+      if (P === 'pour') {
+        // a little teapot in his hands, tipped over: the tell for the stream
+        ctx.save(); ctx.translate(d * 18, -40); ctx.rotate(d * 0.9); ctx.scale(0.55, 0.55); potBody(ctx, 0, 20, t, {}); ctx.restore();
+      }
+      if (P === 'dry') {
+        // the gauge: an emptying cup over his head, and an arrow down toward the pot
+        const k = b.tank == null ? 1 : b.tank;
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.strokeRect(-10, -116, 20, 14);
+        ctx.fillStyle = '#a86a2a'; ctx.fillRect(-9, -103 - 12 * k, 18, 12 * k);
+        ctx.fillStyle = '#ffffff'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(k <= 0 ? 'EMPTY!' : 'LOW', 0, -120);
       }
       ctx.restore();
     }
@@ -615,7 +813,7 @@ Tour.country({
       script: [['flat', { n: 6 }], ['grills', { gold: true }], 'juice', ['baskets', { n: 2 }], 'spices', 'cp', 'grills', 'juice', 'rugs', 'lsd', ['enemies', { n: 2 }], 'grills', 'end'] },
     { name: 'Riad of Fountains', style: 'castle', theme: 'ma_riad', gimmick: 'Fountain jets lift Brady to the galleries, mashrabiya screens slide over the pools, rugs roll underfoot; then the Djinn of the Teapot',
       enemies: [['maTagine', 2], ['maTeapot', 1]], boss: 'ma_djinn', arena: 'riad', arenaW: 26, roof: false,
-      hint: 'When the teapot lands, the lid pops: stomp the djinn!',
+      hint: 'Kick the Djinn\'s teapot across the riad. When he dives back in to refill, stomp the lid!',
       postcard: 'The kasbah is unrolled and back on its hill! The Baron went to Spain. ¡Olé! ♥ C',
       script: [['flat', { n: 4 }], ['fountain', { gold: true }], 'screens', 'rolling', 'cp', 'fountain', ['screens', {}], ['enemies', { n: 2 }], ['blocks', { content: 'power' }], 'arena'] }
   ]

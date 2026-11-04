@@ -46,7 +46,8 @@ class TourItem extends Ent {
   }
   touchPlayer(p) { if (this.emerge > 0.25) return; this.remove = true; p.collect(this.kind, this); }
   bounceFromBelow() { if (this.emerge <= 0 && this.speedX) this.vy = -9 * TS; }
-  draw(ctx) {
+  draw(ctx) { Ink.ent(ctx, this, c => this.drawArt(c)); }
+  drawArt(ctx) {
     const x = this.cx, y = this.y + this.h;
     ctx.save();
     if (this.emerge > 0) { ctx.beginPath(); ctx.rect(this.x - 10, this.baseY - TS * 2, this.w + 20, TS * 2); ctx.clip(); }

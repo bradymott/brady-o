@@ -231,7 +231,63 @@ class NlChute extends Ent {
   update(dt) { this.t += dt; this.cool -= dt; if (this.cool <= 0) { this.cool = this.every; if (this.g.onScreen(this)) { this.g.spawn(new NlWheel(this.g, this.cx + this.dir * 20, this.y + this.h, this.dir)); Sound.play('bump', { pitch: 0.7, vol: 0.4 }); } } }
   draw(ctx) { const x = this.cx, y = this.y + this.h; ctx.fillStyle = '#8a6a44'; ctx.beginPath(); ctx.moveTo(x - 20, y - 60); ctx.lineTo(x + 20, y - 60); ctx.lineTo(x + 20 * -this.dir, y - 28); ctx.lineTo(x + 20 * this.dir, y); ctx.lineTo(x - 20 * this.dir * -1, y); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ffc83a'; ctx.beginPath(); ctx.arc(x, y - 52, 10, 0, TAU); ctx.fill(); }
 }
-const entities = { nlChute: NlChute };
+// the Cheese King's ammunition: a giant Gouda wheel that rolls down the weigh-house ramps at Brady. Run INTO it to
+// kick it back (or stomp it to launch it): a wheel Brady sends back knocks the King off his throne.
+const NL_WHEEL_CFG = {
+  w: 30, h: 30, kick: 9, bounce: 0.5, friction: 0.8, roll: true, hp: 1, hurts: true, life: 18, burst: '#ffc83a', wheel: true,
+  art(ctx, e, x, y, t) {
+    ctx.save(); ctx.translate(x, y - 15);
+    ctx.fillStyle = '#ffc83a'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.arc(0, 0, 15, 0.2, 1.1); ctx.lineTo(0, 0); ctx.fill();
+    ctx.fillStyle = '#e8a82a'; for (const [hx, hy] of [[-5, -5], [6, 3], [-3, 7], [7, -7]]) { ctx.beginPath(); ctx.arc(hx, hy, 2.4, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = '#c8901a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 11, 0, TAU); ctx.stroke();
+    ctx.restore();
+  },
+  onBreak(e) { K.sfx('splat', null, { vol: 0.5, pitch: 0.8 }); }
+};
+class NlGouda extends TourProp {
+  constructor(g, s) { super(g, s, NL_WHEEL_CFG); this.stunT = 0; this.harmless = !!s.harmless; }
+  stun(t) { this.stunT = Math.max(this.stunT, t); this.g.burst(this.cx, this.y, 8, '#ffd84a', 'spark'); this.g.parts.text(this.cx, this.y - 10, 'TRING!', '#ffd84a'); }
+  update(dt) { if (this.stunT > 0) { this.stunT -= dt; this.vx = approach(this.vx, 0, 40 * TS * dt); } super.update(dt); }
+  touchPlayer(p) {
+    if (p.dead) return;
+    if (p.vy > 0 && p.prevBottom <= this.y + Math.max(8, this.h * 0.4)) { this.stunT = 0; super.touchPlayer(p); return; }
+    const side = p.cx < this.cx ? 1 : -1;
+    // running into a wheel kicks it back, even a fast one: that is the skill. Standing still gets you bowled over.
+    if (Math.abs(p.vx) > 2 * TS && sign(p.vx) === side) { this.stunT = 0; this.kick(side, p); this.g.parts.text(this.cx, this.y - 12, 'KICK!', '#ffffff'); return; }
+    if (this.fast && !this.harmless && this.stunT <= 0 && this.thrownBy !== p) { p.hurt(this); return; }
+    this.x += side * 1.5; p.x -= side;
+  }
+  draw(ctx) { super.draw(ctx); if (this.stunT > 0) K.dizzy(ctx, this.cx, this.y - 6, this.t); }
+}
+// a loft hatch high on the wall at the top of a ramp: it rattles for a moment, then a wheel rolls out
+class NlHatch extends Ent {
+  constructor(g, s) { super(g, s, 44, 44); this.dir = s.dir || -1; this.side = s.side || (this.dir < 0 ? 'right' : 'left'); this.arm = 0; this.open = 0; this.armed = null; }
+  fire(harmless) { this.arm = 0.75; this.armed = !!harmless; K.sfx('crumble', null, { vol: 0.4 }); }
+  release(harmless) {
+    const g = this.g, w = new NlGouda(g, { x: this.cx + this.dir * 26, y: this.y + this.h, harmless: harmless || this.armed });
+    w.fling(this.dir * 5.5 * TS, -1 * TS, g.boss); g.spawn(w); this.open = 0.9; this.armed = null;
+    Sound.play('bump', { pitch: 0.7, vol: 0.5 }); g.burst(this.cx + this.dir * 22, this.y + this.h, 8, '#ffc83a', 'dust');
+    return w;
+  }
+  update(dt) { this.t += dt; if (this.open > 0) this.open -= dt; if (this.arm > 0) { this.arm -= dt; if (this.arm <= 0) this.release(); } }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, d = this.dir, sh = this.arm > 0 ? Math.sin(this.t * 50) * 2 : 0;
+    // the ramp: a long plank from the hatch mouth down the steps to the floor
+    ctx.save(); ctx.strokeStyle = '#8a6a44'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x + d * 22, y - 2); ctx.lineTo(x + d * 5.4 * TS, y + 4 * TS); ctx.stroke(); ctx.strokeStyle = '#c8a070'; ctx.lineWidth = 2; for (let k = 0; k <= 5; k++) { const kx = x + d * (22 + k * (5.4 * TS - 22) / 5), ky = y - 2 + k * (4 * TS + 2) / 5; ctx.beginPath(); ctx.moveTo(kx - 6, ky + 3); ctx.lineTo(kx + 6, ky + 3); ctx.stroke(); } ctx.restore();
+    Ink.ent(ctx, this, c => {
+      c.save(); c.translate(x, y); c.scale(-d, 1);
+      // the chute mouth set into the wall, a wooden door that swings open, a cheese peeking out while it rattles
+      c.fillStyle = '#5a3a22'; c.fillRect(-22, -44, 44, 44); c.fillStyle = '#3a2412'; c.fillRect(-18, -40, 36, 36);
+      c.fillStyle = '#8a6a44'; c.fillRect(-22, -46, 48, 5); c.fillRect(-22, -4, 48, 4);
+      if (this.arm > 0) { c.fillStyle = '#ffc83a'; c.beginPath(); c.arc(sh, -22, 12, 0, TAU); c.fill(); c.fillStyle = '#e8322a'; c.beginPath(); c.arc(sh, -22, 12, 0.2, 1.1); c.lineTo(sh, -22); c.fill(); }
+      c.save(); c.translate(18, -40 + sh); c.rotate(this.open > 0 ? -1.2 : this.arm > 0 ? -0.25 - Math.abs(sh) * 0.05 : 0); c.fillStyle = '#a87a4a'; c.fillRect(-36, 0, 36, 36); c.fillStyle = '#6a4a2a'; c.fillRect(-36, 10, 36, 3); c.fillRect(-36, 24, 36, 3); c.fillStyle = '#3a3a44'; c.beginPath(); c.arc(-30, 18, 2.5, 0, TAU); c.fill(); c.restore();
+      c.restore();
+    });
+    if (this.arm > 0) { ctx.fillStyle = Math.floor(this.t * 16) % 2 ? '#ffd84a' : '#ffffff'; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 54 + Math.sin(this.t * 14) * 2); ctx.fillText(d < 0 ? '<<' : '>>', x + d * 34, y - 18); }
+  }
+}
+const entities = { nlChute: NlChute, nlGouda: NlGouda, nlHatch: NlHatch };
 
 /* ---------------- the signature power-up: THE DUTCH BIKE ---------------- */
 // ride fast, hop canals, ring the bell to stun everything nearby
@@ -254,6 +310,8 @@ const power = {
     g.spawn(new NlBellRing(g, p.cx, p.cy)); Sound.play('select', { pitch: 2.2, vol: 0.6 }); K.say(g, p, 'TRING TRING!', '#ffd84a');
     for (const e of g.entities) if (e.enemy && !e.dead && !e.boss && e.stun && Math.hypot(e.cx - p.cx, e.cy - p.cy) < 5 * TS) e.stun(2.6);
     for (const e of g.entities) if (e.boss && e.state === 'fight' && Math.hypot(e.cx - p.cx, e.cy - p.cy) < 5 * TS && e.brain.onBell) e.brain.onBell(e);
+    // a rolling cheese wheel stops dead at the bell
+    for (const e of g.entities) if (e.prop && e.cfg && e.cfg.wheel && !e.remove && e.stun && Math.hypot(e.cx - p.cx, e.cy - p.cy) < 6 * TS) e.stun(2.5);
     return true;
   },
   drawOn(p, ctx, t) {
@@ -387,9 +445,15 @@ const P = {
   },
   // cheese sledges slide back and forth over a gap
   sledges(st) { return Tour.pieces.mover(st, { span: 9, pw: 3, skin: 'nlSledge', speed: 1.8 }); },
+  // the boss arena: the weigh house. Cheese ramps (one-way steps) come down from the loft hatches on both walls,
+  // a weighing-scale ledge hangs in the middle, bikes and clogs and tulips on the floor; the throne is on the right
   arena_waag(st, o) {
-    const B = st.B, { x0, w, GY } = o;
-    for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
+    const B = st.B, { x0, w, GY } = o, mid = x0 + Math.floor(w / 2);
+    for (let k = 0; k < 5; k++) { B.set(x0 + w - 2 - k, GY - 5 + k, T.SEMI); B.set(x0 + 1 + k, GY - 5 + k, T.SEMI); }
+    for (let q = 0; q < 4; q++) B.set(mid - 2 + q, GY - 4, T.SEMI);
+    B.decorAt('nlBike', x0 + 8, GY, 0); B.decorAt('nlBike', x0 + w - 10, GY, 1); B.decorAt('nlClogsPair', x0 + 10, GY, 0);
+    B.decorAt('nlFlowerBox', mid - 1, GY - 4, 0); B.decorAt('nlFlowerBox', mid + 1, GY - 4, 1); B.decorAt('nlTulips', x0 + 13, GY, 0);
+    st.spawn('nlHatch', x0 + w - 1, GY - 6, { dir: -1, side: 'right' }); st.spawn('nlHatch', x0, GY - 6, { dir: 1, side: 'left' });
   }
 };
 Object.assign(decor, {
@@ -406,59 +470,130 @@ const platforms = {
 };
 
 /* ---------------- the boss: THE CHEESE KING ---------------- */
-// A wobbling tower of cheese wheels with a crown. He stomps and makes the floor quake, and he
-// flings his bottom wheel at Brady... which leaves him teetering and dizzy: stomp his crown!
-// Every hit costs him a wheel. Ring the bike bell next to him and he totters too.
+// A wobbling tower of cheese wheels with a crown, on a throne in the weigh house. He pulls the bell-rope and the
+// loft hatch rolls a giant Gouda wheel down the ramp at Brady. CHEESE-WHEEL VOLLEY: run into a wheel to kick it
+// back (or stomp it to launch it): a returned wheel knocks him off his throne. The bike bell stuns a rolling
+// wheel. Phase 2 opens the second ramp and freezes the floor; phase 3 puts the throne on a drawbridge that lifts
+// out of reach and comes back down, so the volley has to be timed. Finish: buried under his own wheels.
 const boss = {
   id: 'nl_cheese', name: 'The Cheese King', hp: 4, dims: [64, 92], music: 'tour_nl_boss', country: 'nl',
   brain: {
     guardText: 'TOO CHEESY!',
-    onBell(b) { if (b.act === 'walk' || b.act === 'quake') { b.go('totter'); K.say(b.g, b, 'MY EARS! WOBBLE...', '#ffd84a'); } },
-    wake(b) { K.say(b.g, b, 'I AM THE BIG CHEESE!', '#ffd84a'); },
-    update(b, dt) {
-      const g = b.g;
-      b.guard = 'bounce';
-      if (b.act === 'walk') { b.face(); b.walk(0.9); b.pose = 'walk'; if (b.at > 1.6) { b.cycle++; b.go(b.cycle % 2 ? 'quake' : 'fling'); } }
-      else if (b.act === 'quake') {
-        if (b.first) { b.vy = -13 * TS; b.vx = 0; }
-        b.pose = 'jump';
-        if (b.onGround && b.at > 0.3) {
-          g.shake(9); Sound.play('stomp', { pitch: 0.45 });
-          for (const d of [-1, 1]) g.spawn(new NlCrumbWave(g, b.cx + d * (b.w / 2 + 12), b.floorY, d));
-          b.go('walk');
-        }
-      } else if (b.act === 'fling') {
-        b.vx = 0; b.pose = 'fling';
-        if (b.at > 0.5 && !b.fired) { b.fired = true; b.face(); g.spawn(new NlWheel(g, b.cx + b.dir * 40, b.floorY, b.dir)); Sound.play('throw', { pitch: 0.7 }); }
-        if (b.at > 0.9) { b.fired = false; b.go('totter'); }
-      } else if (b.act === 'totter') {
-        b.vx = 0; b.pose = 'totter'; b.vuln = b.at > 0.15 && b.at < 1.9; b.guard = b.vuln ? 'hurt' : 'bounce';
-        if (b.at > 1.9) b.go('walk');
-      }
-      b.fall(dt);
+    phases: [3, 2],
+    hatch(b, side) { return b.g.entities.find(e => e instanceof NlHatch && e.side === side && !e.remove && Math.abs(e.cx - b.throneX) < 28 * TS) || null; },
+    wake(b) { b.throneX = b.cx; b.crownY = 0; K.say(b.g, b, 'I AM THE BIG CHEESE!', '#ffd84a'); b.g.toast('RUN INTO HIS CHEESE WHEELS TO KICK THEM BACK AT HIM!'); },
+    onBell(b) { if (b.act === 'roll' || b.act === 'walk') { b.go('totter'); K.say(b.g, b, 'MY EARS! WOBBLE...', '#ffd84a'); } },
+    hit(b, kind, src) {
+      if (kind === 'stomp' || kind === 'spin') return 'bounce';
+      if (kind === 'prop') { if (src && src.cfg && src.cfg.wheel && src.thrownBy === b.g.player && b.act !== 'knocked' && b.act !== 'buried') { b.damage(1, { text: 'GOUDA SMASH!', col: '#ffe070' }); return true; } return false; }
+      if (kind === 'bump') return false;
+      return undefined;
     },
-    hurt(b) { b.go('walk'); b.vx = -b.dir * 4 * TS; K.say(b.g, b, pick(['MY GOUDA!', 'NOT MY EDAM!', 'I\'M CRUMBLING!']), '#ffd84a'); b.g.burst(b.cx, b.y + 20, 24, '#ffc83a', 'confetti'); },
+    touch(b, p) { return b.act === 'buried'; },
+    onPlat(b) { const pl = b.plat && !b.plat.remove ? b.plat : null; if (pl) { b.x = pl.x + pl.w / 2 - b.w / 2; b.y = pl.y - b.h; b.vy = 0; b.onGround = true; } return pl; },
+    update(b, dt) {
+      const g = b.g, p = g.player, ph = b.phase || 1;
+      b.guard = 'bounce';
+      const pl = b.plat && !b.plat.remove ? b.plat : null;
+      if (b.act === 'buried') {
+        // the finish: every wheel in the loft comes down on him, the crown spins off
+        b.vx = 0; b.pose = 'buried'; b.crownY = (b.crownY || 0) + dt;
+        if (Math.floor(b.at * 4) !== Math.floor((b.at - dt) * 4) && b.at < 1.6) { for (const side of ['left', 'right']) { const h = this.hatch(b, side); if (h) h.release(true); } }
+        if (Math.floor(b.at * 2) !== Math.floor((b.at - dt) * 2)) g.parts.text(b.cx + (Math.random() - 0.5) * 60, b.y - 20, pick(['MY WHEELS!', 'MY BEAUTIFUL WHEELS!', 'TOO MUCH CHEESE!']), '#ffd84a');
+        if (b.at > 3) b.die();
+        if (pl) this.onPlat(b); else b.fall(dt);
+        return;
+      }
+      if (pl && b.act !== 'knocked' && b.act !== 'climb') this.onPlat(b);
+      if (b.act === 'walk') { b.face(); b.vx = 0; b.pose = 'sit'; if (b.at > (ph >= 3 ? 0.9 : 1.3)) { b.cycle++; b.go(b.cycle % 3 === 0 ? 'quake' : 'roll'); } }
+      else if (b.act === 'roll') {
+        // tell: he stands, hauls on the bell-rope, the hatch rattles... then the wheel rolls out and down the ramp
+        b.vx = 0; b.pose = 'pull';
+        if (b.first) {
+          b.face(); b.rollN = (b.rollN || 0) + 1; const side = ph >= 2 && b.rollN % 2 === 0 ? 'left' : 'right';
+          const h = this.hatch(b, side); if (h) h.fire();
+          if (ph >= 3) { const h2 = this.hatch(b, side === 'left' ? 'right' : 'left'); if (h2) h2.fire(); }
+          K.say(g, b, pick(['GOUDA AWAY!', 'EDAM! EDAM!', 'ROLL OUT THE CHEESE!']), '#ffd84a');
+        }
+        if (b.at > 1.2) b.go('walk');
+      }
+      else if (b.act === 'quake') {
+        if (b.first) { b.vy = -13 * TS; b.vx = 0; b.pose = 'jump'; K.say(g, b, 'CRUMBS!', '#ffd84a'); }
+        b.pose = 'jump';
+        if (pl) { if (b.at > 0.6) { g.shake(9); Sound.play('stomp', { pitch: 0.45 }); for (const d of [-1, 1]) g.spawn(new NlCrumbWave(g, b.cx + d * (b.w / 2 + 12), b.floorY, d)); b.go('walk'); } }
+        else if (b.onGround && b.at > 0.3) { g.shake(9); Sound.play('stomp', { pitch: 0.45 }); for (const d of [-1, 1]) g.spawn(new NlCrumbWave(g, b.cx + d * (b.w / 2 + 12), b.floorY, d)); b.go('walk'); }
+      }
+      else if (b.act === 'totter') { b.vx = 0; b.pose = 'totter'; if (b.at > 1.3) b.go('walk'); }
+      else if (b.act === 'knocked') {
+        // off the throne: he tumbles left and lies there seeing stars
+        b.pose = 'tumble'; if (b.first) { b.vx = -4.5 * TS; b.vy = -7 * TS; b.onGround = false; }
+        if (b.onGround && b.at > 0.4) b.vx = approach(b.vx, 0, 10 * TS * dt);
+        if (b.at > 1.7) b.go('climb');
+      }
+      else if (b.act === 'climb') {
+        // back to the throne (in phase 3 he waits under the drawbridge until it comes down)
+        b.pose = 'walk'; const tx = pl ? pl.x + pl.w / 2 - b.w / 2 : b.throneX - b.w / 2; b.dir = tx > b.x ? 1 : -1; b.vx = b.dir * 3 * TS;
+        if (Math.abs(b.x - tx) < 6) { b.x = tx; b.vx = 0; if (!pl || pl.y >= b.floorY - 30) b.go('walk'); }
+        if (b.at > 6) b.go('walk');
+      }
+      if (!pl || b.act === 'knocked' || b.act === 'climb') b.fall(dt);
+    },
+    hurt(b) { b.go('knocked'); K.say(b.g, b, pick(['MY GOUDA!', 'NOT MY EDAM!', 'OFF MY THRONE?!']), '#ffd84a'); b.g.burst(b.cx, b.y + 20, 24, '#ffc83a', 'confetti'); },
+    phase(b, n) {
+      const g = b.g;
+      this.hurt(b);
+      if (n === 2) {
+        const row = Math.floor(b.floorY / TS), tx0 = Math.floor(b.arenaX0 / TS) + 6, tx1 = Math.floor(b.arenaX1 / TS) - 8;
+        for (let tx = tx0; tx <= tx1; tx++) if (tileAt(g.area, tx, row) === T.GROUND) g.setTile(tx, row, T.ICE);
+        g.bannerText = 'THE CANAL FREEZES! TWO RAMPS!'; g.bannerT = 2.4; K.say(g, b, 'SLIPPERY, ISN\'T IT?', '#cfefff'); K.sfx('glass', 'crumble', { vol: 0.5 });
+      } else if (n === 3) {
+        b.plat = new MovingPlatform(g, { x: b.throneX - 2 * TS + TS / 2, y: b.floorY, pw: 4, ax: 0, ay: -3 * TS, speed: 1.1, skin: 'nlThroneLift' }); g.spawn(b.plat);
+        g.bannerText = 'THE THRONE RISES!'; g.bannerT = 2.4; K.say(g, b, 'UP, UP AND AWAY!', '#ffd84a'); g.shake(6);
+      }
+    },
+    lastHit(b) { b.go('buried'); b.vuln = false; b.g.bannerText = 'BURIED IN CHEESE!'; b.g.bannerT = 2.6; b.g.shake(10); K.sfx('break', null, { vol: 0.7 }); return true; },
     draw(b, ctx, t) {
-      const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose, n = Math.max(1, Math.ceil(b.hp));
+      const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose, n = Math.max(1, Math.ceil(b.hp)), g = b.g;
+      // the throne (where he sits, or on the drawbridge)
+      const pl = b.plat && !b.plat.remove ? b.plat : null, thx = pl ? pl.x + pl.w / 2 : b.throneX || x, thy = pl ? pl.y : b.floorY;
+      if (thx != null && P !== 'buried') {
+        ctx.fillStyle = '#5a3a22'; ctx.fillRect(thx - 40, thy - 104, 80, 10); ctx.fillRect(thx - 44, thy - 110, 12, 110); ctx.fillRect(thx + 32, thy - 110, 12, 110);
+        ctx.fillStyle = '#7a4a2a'; ctx.fillRect(thx - 32, thy - 100, 64, 100);
+        ctx.fillStyle = '#c8282a'; ctx.fillRect(thx - 28, thy - 96, 56, 92);
+        ctx.fillStyle = '#ffd23a'; for (const sx of [-44, 32]) { ctx.beginPath(); ctx.arc(thx + sx + 6, thy - 114, 7, 0, TAU); ctx.fill(); }
+      }
+      if (P === 'pull') { ctx.strokeStyle = '#c8a070'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + d * 30, y - 200); ctx.lineTo(x + d * 30, y - 96 + Math.sin(t * 20) * 4); ctx.stroke(); }
       ctx.save(); ctx.translate(x, y);
       if (P === 'totter') ctx.rotate(Math.sin(t * 9) * 0.12);
+      if (P === 'tumble') { ctx.rotate(b.onGround ? -1.3 : -b.at * 5); if (b.onGround) ctx.translate(0, -20); }
+      if (P === 'buried') ctx.translate(0, Math.min(40, b.at * 30));
       const wh = 84 / Math.max(3, n);
       for (let k = 0; k < n; k++) {
-        const wy = -wh * (k + 0.5), off = P === 'totter' ? Math.sin(t * 9 + k) * 4 : 0;
+        const wy = -wh * (k + 0.5), off = P === 'totter' ? Math.sin(t * 9 + k) * 4 : P === 'pull' ? Math.sin(t * 24 + k) * 1.5 : 0;
         ctx.fillStyle = '#ffc83a'; ctx.beginPath(); ctx.ellipse(off, wy, 32, wh / 2, 0, 0, TAU); ctx.fill();
         ctx.fillStyle = k % 2 ? '#e8322a' : '#e8a82a'; ctx.fillRect(-32 + off, wy - 2, 64, 4);
         ctx.fillStyle = '#e8a82a'; ctx.beginPath(); ctx.arc(off - 12, wy - 4, 3, 0, TAU); ctx.arc(off + 14, wy + 3, 2.5, 0, TAU); ctx.fill();
       }
       const ty = -wh * n;
-      // face on the top wheel, and a crown
-      if (P === 'totter') K.dizzy(ctx, 0, ty - 26, t); else K.eyes(ctx, d * 8, ty + wh * 0.45, d, 7, 4, true);
-      ctx.strokeStyle = '#7a3a1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(d * 8, ty + wh * 0.55, 6, 0.2, Math.PI - 0.2); ctx.stroke();
-      ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(-16, ty); ctx.lineTo(-16, ty - 16); ctx.lineTo(-8, ty - 8); ctx.lineTo(0, ty - 18); ctx.lineTo(8, ty - 8); ctx.lineTo(16, ty - 16); ctx.lineTo(16, ty); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.arc(0, ty - 6, 3, 0, TAU); ctx.fill();
+      // face on the top wheel, the crown, and the sceptre (a cheese on a stick) raised to pull the rope
+      if (P === 'totter' || P === 'tumble') K.dizzy(ctx, 0, ty - 26, t); else K.eyes(ctx, d * 8, ty + wh * 0.45, d, 7, 4, P !== 'buried');
+      ctx.strokeStyle = '#7a3a1a'; ctx.lineWidth = 2; ctx.beginPath(); if (P === 'buried') ctx.arc(d * 8, ty + wh * 0.7, 6, Math.PI + 0.2, TAU - 0.2); else ctx.arc(d * 8, ty + wh * 0.55, 6, 0.2, Math.PI - 0.2); ctx.stroke();
+      if (P === 'pull') { ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(d * 24, ty + 20); ctx.lineTo(d * 30, ty - 30); ctx.stroke(); ctx.fillStyle = '#ffc83a'; ctx.beginPath(); ctx.arc(d * 30, ty - 34, 7, 0, TAU); ctx.fill(); }
+      else if (P !== 'buried') { ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(d * 30, ty + 40); ctx.lineTo(d * 36, ty + 4); ctx.stroke(); ctx.fillStyle = '#ffc83a'; ctx.beginPath(); ctx.arc(d * 36, ty, 7, 0, TAU); ctx.fill(); }
+      const cy = P === 'buried' ? ty - 10 - (b.crownY || 0) * 90 : ty, cs = P === 'buried' ? Math.cos((b.crownY || 0) * 12) : 1;
+      ctx.save(); ctx.translate(0, cy); ctx.scale(cs, 1);
+      ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(-16, -16); ctx.lineTo(-8, -8); ctx.lineTo(0, -18); ctx.lineTo(8, -8); ctx.lineTo(16, -16); ctx.lineTo(16, 0); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.arc(0, -6, 3, 0, TAU); ctx.fill();
+      ctx.restore();
       ctx.restore();
     }
   }
 };
+Object.assign(platforms, {
+  // the throne's drawbridge: chains to the rafters, a plank deck
+  nlThroneLift(ctx, p) { const x = p.x, y = p.y, w = p.w; ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 2; for (const cx of [x + 6, x + w - 6]) { ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx, y - 300); ctx.stroke(); for (let k = 0; k < 30; k++) { ctx.beginPath(); ctx.arc(cx, y - 8 - k * 10, 3, 0, TAU); ctx.stroke(); } } ctx.fillStyle = '#e8e0d0'; ctx.fillRect(x - 4, y, w + 8, 10); ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 4, y + 10, w + 8, 8); ctx.fillStyle = '#a87a4a'; for (let k = 0; k < 4; k++) ctx.fillRect(x + 2 + k * (w / 4), y + 2, w / 4 - 4, 6); }
+});
+
 // the quake's ripple of cheese crumbs along the floor
 class NlCrumbWave extends Ent {
   constructor(g, x, floorY, dir) { super(g, null, 26, 14); this.x = x - 13; this.y = floorY - 14; this.dir = dir; this.life = 1.4; }
@@ -547,7 +682,7 @@ Tour.country({
       script: [['skate', { n: 12 }], 'thin', ['stall', { gold: true }], ['skate', { snowman: true }], 'bridge', 'cp', 'thin', 'secret', ['skate', { n: 16, snowman: true }], 'stall', 'oneup', 'thin', 'end'] },
     { name: 'The Weigh House', style: 'castle', theme: 'nl_waag', gimmick: 'Cheese wheels roll out of the chutes, weighing scales rise and fall, cheese sledges slide; then the Cheese King',
       enemies: [['nlCheese', 2], ['nlClog', 2]], boss: 'nl_cheese', arena: 'waag', arenaW: 26, roof: false,
-      hint: 'When the Cheese King flings a wheel he teeters: stomp his crown! (The bike bell makes him wobble too.)',
+      hint: 'Run into the Cheese King\'s wheels to kick them back at him! (The bike bell stops a rolling wheel.)',
       postcard: 'The windmill is unfolded and turning again! The Baron fled to Bali. Bring sunscreen. ♥ C',
       script: [['flat', { n: 4 }], ['chute', { gold: true }], 'scales', 'sledges', 'cp', 'sig', ['chute', { period: 2.1 }], 'scales', ['enemies', { n: 2 }], ['blocks', { content: 'power' }], 'arena'] }
   ]

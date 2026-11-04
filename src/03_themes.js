@@ -323,6 +323,11 @@ function vgrad(ctx, y0, y1, c0, c1) {
 }
 
 const BGPaint = {
+  // a pre-rendered strip (Blender) from a sprite atlas: { kind: 'image', atlas, id, base, f, fallback: { kind, ... } }
+  image(ctx, L, rng, H) {
+    if (typeof Atlas !== 'undefined' && Atlas.paintStrip(ctx, L.atlas, L.id, 0, L.shift || 0)) return;
+    const fb = L.fallback; if (fb && this[fb.kind]) this[fb.kind].call(this, ctx, Object.assign({}, L, fb), rng, H);
+  },
   hills(ctx, L, rng, H) {
     const n = periodicNoise(rng, 3);
     ctx.fillStyle = vgrad(ctx, L.base - L.amp, H, shade(L.color, 0.12), shade(L.color, -0.2));
@@ -776,7 +781,7 @@ const BG = {
     const rng = mulberry32(hashStr(themeKey));
     const bs = scale; // render at exact screen scale so layers blit without resampling
     const layers = th.layers.map((L, i) => {
-      const top = Math.max(0, (L.base || 0) - 280);
+      const top = L.kind === 'image' ? 0 : Math.max(0, (L.base || 0) - 280);
       const h = H + 60 - top;
       const c = makeCanvas(BG_W * bs, h * bs);
       const ctx = c.getContext('2d');

@@ -179,7 +179,6 @@ const BossArt = {
     const sq = b.squash || 0;
     ctx.scale(1 + sq * 0.08, 1 - sq * 0.08);
     f.call(this, ctx, b, t, b.dir || 1);
-    if (flash) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(-b.w, -b.h * 1.4, b.w * 2, b.h * 1.6); }
     ctx.restore();
   },
   eyes(ctx, x, y, r, dir, col) {
@@ -555,7 +554,6 @@ const ManArt = {
       this.figure(ctx, b.x + b.w / 2, b.y + b.h + (crouch ? 0 : 0), 1, t, { lit: true, arms: b.pose === 'arms' || b.pose === 'throw', kneel: crouch ? 0.6 : 0, angry: b.hurtT > 0 });
       // Chinka's cage rides on the saucer deck beside him
       if (b.saucer && !b.saucer.dead) { const sx = b.saucer.x + b.saucer.w - 22, sy = b.saucer.y; ctx.save(); ctx.translate(sx, sy); ctx.scale(0.55, 0.55); drawChinka(ctx, { x: 0, y: 0, scale: 1, t, pose: 'captive', facing: -1 }); ctx.restore(); ctx.strokeStyle = '#ffd8a0'; ctx.lineWidth = 1.2; ctx.strokeRect(sx - 12, sy - 34, 24, 34); for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(sx - 12 + i * 6, sy - 34); ctx.lineTo(sx - 12 + i * 6, sy); ctx.stroke(); } }
-      if (b.hurtT > 0 && Math.floor(b.hurtT * 20) % 2 === 0) { ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(b.x - 10, b.y - 10, b.w + 20, b.h + 20); }
       return;
     }
     // phase 2: the giant

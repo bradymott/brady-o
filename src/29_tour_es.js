@@ -256,7 +256,93 @@ class EsCrackers extends Ent {
     for (let i = 0; i < this.n; i++) { const cx = this.x + i * TS + 16; if (i === k) { ctx.fillStyle = '#fff4c0'; ctx.beginPath(); ctx.arc(cx, this.y + 2, 10, 0, TAU); ctx.fill(); continue; } ctx.fillStyle = warn && Math.floor(this.t * 12) % 2 ? '#ffd23a' : '#e8322a'; ctx.fillRect(cx - 3, this.y + 4, 6, 9); }
   }
 }
-const entities = { esTruck: EsTruck, esCrackers: EsCrackers };
+// the boss arena's ammunition: tomatoes are world objects Brady kicks (or stomps to launch) into the pan
+const ES_TOMATO_CFG = {
+  w: 18, h: 18, kick: 8, bounce: 0.35, friction: 4, roll: true, hp: 1, breakOnWall: true, life: 16, burst: '#e8322a', tomato: true,
+  art(ctx, e, x, y, t) {
+    ctx.save(); ctx.translate(x, y - 9);
+    ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.ellipse(0, 0, 9.5, 8.5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#2a8a3a'; for (let k = 0; k < 5; k++) { ctx.save(); ctx.translate(0, -7); ctx.rotate(k * TAU / 5); ctx.fillRect(-1, -4, 2, 4.5); ctx.restore(); }
+    ctx.fillStyle = '#ff8a7a'; ctx.beginPath(); ctx.ellipse(-3.5, -3, 2.5, 1.6, -0.4, 0, TAU); ctx.fill();
+    ctx.restore();
+  },
+  onBreak(e) { K.sfx('splat', null, { vol: 0.5, pitch: 1.3 }); }
+};
+const EsTomato = TourProp.make(ES_TOMATO_CFG);
+// a tomato crate: it spills a tomato now and then (it wobbles first), two when stomped; in phase 2 the crates hop
+// around the hall on the light-up floor tiles
+class EsCrate extends Ent {
+  constructor(g, s) { super(g, s, 36, 30); this.slot = s.slot || 0; this.every = 2.8; this.cool = 1.6 + this.slot * 0.9; this.wob = 0; this.hop = false; this.hopT = 2 + this.slot; this.squash = 0; this.lit = 0; }
+  count() { return this.g.entities.filter(e => e.prop && e.cfg.tomato && !e.remove).length; }
+  spill(n, vx) {
+    for (let k = 0; k < n; k++) { const t = new EsTomato(this.g, { x: this.cx, y: this.y + 8 }); t.fling((vx != null ? vx : (Math.random() - 0.5) * 4 * TS) + (k - (n - 1) / 2) * 1.6 * TS, -(6.5 + Math.random() * 2) * TS, null); this.g.spawn(t); }
+    Sound.play('kick', { vol: 0.4, pitch: 1.3 }); this.g.burst(this.cx, this.y, 6, '#e8322a', 'confetti'); this.squash = 1;
+  }
+  update(dt) {
+    this.t += dt; const g = this.g, b = g.boss;
+    this.squash = approach(this.squash, 0, dt * 4); if (this.lit > 0) this.lit -= dt;
+    const fighting = b && b.state === 'fight';
+    if (fighting) {
+      this.cool -= dt; this.wob = this.cool < 0.6 ? 1 : 0;
+      if (this.cool <= 0) { this.cool = this.every; if (this.count() < 4) this.spill(1); }
+      if (this.hop) {
+        this.hopT -= dt;
+        if (this.hopT <= 0 && this.onGround) {
+          this.hopT = 3.2 + Math.random(); const p = g.player;
+          const tx = clamp((p ? p.cx : this.cx) + (Math.random() - 0.5) * 12 * TS, b.arenaX0 + 2 * TS, b.arenaX1 - 2 * TS);
+          this.vx = (tx - this.cx) * 0.9; this.vy = -10 * TS; this.onGround = false; this.lit = 1; Sound.play('jump', { vol: 0.3, pitch: 0.7 });
+        }
+      }
+    }
+    this.vy += PHYS.gDown * dt; if (this.vy > PHYS.maxFall) this.vy = PHYS.maxFall;
+    const wasAir = !this.onGround;
+    moveBody(this, g.area, dt, { semis: true });
+    if (this.onGround) { this.vx = approach(this.vx, 0, 12 * TS * dt); if (wasAir && this.hop) { this.lit = 1; this.squash = 1; g.burst(this.cx, this.y + this.h, 6, '#c8945a', 'dust'); } }
+  }
+  touchPlayer(p) {
+    if (p.dead) return;
+    if (p.vy > 0 && p.prevBottom <= this.y + 12) { p.vy = -(p.inp.jump ? PHYS.stompVHeld : PHYS.stompV); p.jumping = true; p.y = Math.min(p.y, this.y - p.h + 2); if (this.count() < 6) this.spill(2, p.facing * 2 * TS); Sound.play('stomp', { vol: 0.5 }); }
+  }
+  draw(ctx) {
+    // the light-up floor tile under a hopping crate (phase 2)
+    if (this.hop) { const k = Math.max(0, this.lit), c = ['#5ad8ff', '#ff5aa8', '#ffd23a'][this.slot % 3]; ctx.fillStyle = k > 0 ? c : 'rgba(255,255,255,0.18)'; ctx.fillRect(this.x - 6, this.y + this.h - 3, this.w + 12, 5); if (k > 0) { ctx.fillStyle = `rgba(255,255,255,${0.5 * k})`; ctx.fillRect(this.x - 4, this.y + this.h - 2, this.w + 8, 2); } }
+    Ink.ent(ctx, this, c => this.drawArt(c));
+  }
+  drawArt(ctx) {
+    const x = this.cx, y = this.y + this.h, w = Math.sin(this.t * 40) * this.wob * 2;
+    ctx.save(); ctx.translate(x + w, y); ctx.scale(1 + this.squash * 0.15, 1 - this.squash * 0.2);
+    ctx.fillStyle = '#c8945a'; ctx.fillRect(-18, -26, 36, 26); ctx.fillStyle = '#a8743a'; for (let k = 0; k < 3; k++) ctx.fillRect(-18, -22 + k * 8, 36, 2.5);
+    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(-18, -26, 3, 26); ctx.fillRect(15, -26, 3, 26);
+    ctx.fillStyle = '#ffffff'; ctx.font = `bold 8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('VLC', 0, -9);
+    ctx.fillStyle = '#e8322a'; for (const [tx, ty] of [[-11, -30], [0, -32], [11, -30]]) { ctx.beginPath(); ctx.arc(tx, ty, 5.5, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#2a8a3a'; for (const tx of [-11, 0, 11]) ctx.fillRect(tx - 1, -38, 2, 4);
+    ctx.restore();
+  }
+}
+// a Las Fallas rocket: it marks its spot on the floor (a flashing ring and a lit fuse), then shoots straight up
+class EsRocket extends Ent {
+  constructor(g, s) { super(g, s, 18, 44); this.fuse = s.fuse || 1.0; this.state = 'arm'; this.fy = s.y; }
+  update(dt) {
+    this.t += dt;
+    if (this.state === 'arm') { this.fuse -= dt; if (this.fuse <= 0) { this.state = 'fly'; this.vy = -13 * TS; K.sfx('firework_launch', 'fire', { vol: 0.5 }); this.g.shake(2); } return; }
+    this.vy -= 6 * TS * dt; this.y += this.vy * dt;
+    if (this.y < this.fy - 10 * TS) { this.remove = true; K.sfx('firework_burst', 'pick', { vol: 0.5, pitch: 0.7 }); this.g.burst(this.cx, this.y, 26, FALLA[Math.floor(Math.random() * 6)], 'firework'); }
+  }
+  touchPlayer(p) { if (this.state === 'fly') p.hurt(this); }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, t = this.t;
+    if (this.state === 'arm') {
+      const k = Math.max(0, this.fuse), on = Math.floor(t * (k < 0.4 ? 24 : 10)) % 2 === 0;
+      ctx.strokeStyle = on ? '#ff5a3a' : '#ffd23a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y - 2, 22, 7, 0, 0, TAU); ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 52 + Math.sin(t * 12) * 2);
+      for (let q = 0; q < 3; q++) { ctx.fillStyle = q ? '#ffd23a' : '#ffffff'; ctx.beginPath(); ctx.arc(x + 6 + Math.sin(t * 30 + q) * 4, y - 28 - q * 3 - Math.random() * 4, 1.5 + q * 0.5, 0, TAU); ctx.fill(); }
+    } else {
+      for (let q = 0; q < 5; q++) { ctx.fillStyle = q % 2 ? '#ffd23a' : '#ff8a2a'; ctx.beginPath(); ctx.arc(x + Math.sin(t * 40 + q) * 3, y + 4 + q * 7, 5 - q * 0.7, 0, TAU); ctx.fill(); }
+    }
+    Ink.ent(ctx, this, c => { c.fillStyle = '#5a4a3a'; c.fillRect(x - 1, y - 28, 2, 28); c.fillStyle = '#e8322a'; rr(c, x - 6, y - 44, 12, 22, 3); c.fill(); c.fillStyle = '#ffd23a'; c.fillRect(x - 6, y - 38, 12, 3); c.fillRect(x - 6, y - 30, 12, 3); c.fillStyle = '#3ac8ff'; c.beginPath(); c.moveTo(x - 6, y - 44); c.lineTo(x, y - 54); c.lineTo(x + 6, y - 44); c.fill(); });
+  }
+}
+const entities = { esTruck: EsTruck, esCrackers: EsCrackers, esTomatoProp: EsTomato, esCrate: EsCrate, esRocket: EsRocket };
 
 /* ---------------- the signature power-up: TOMATO FIGHT ---------------- */
 // lob tomatoes: a direct hit knocks an enemy out; a splat leaves a slippery puddle that sends enemies sliding
@@ -278,7 +364,7 @@ class EsTomatoShot extends Ent {
     this.t += dt; this.life -= dt; this.vy += PHYS.gDown * 0.6 * dt;
     moveBody(this, this.g.area, dt, { semis: true });
     const g = this.g;
-    for (const e of g.entities) { if (!e.enemy || e.dead || e.remove || !overlap(this, e)) continue; if (e.boss) { if (e.state === 'fight') e.hit('disc', this); } else if (e.hit('tomato', this)) g.addScore(200, e.cx, e.y); return this.splat(false); }
+    for (const e of g.entities) { if (!e.enemy || e.dead || e.remove || !overlap(this, e)) continue; if (e.boss) { if (e.state === 'fight' && !e.hit('tomato', this)) e.hit('disc', this); } else if (e.hit('tomato', this)) g.addScore(200, e.cx, e.y); return this.splat(false); }
     if (this.onGround) return this.splat(true);
     if (this.hitWall || this.life <= 0) return this.splat(false);
   }
@@ -441,10 +527,17 @@ const P = {
     st.coins(x + 1, x + 7, st.gy - 6);
     x += 9; st.floor(x, x + 2); return x + 3;
   },
+  // the boss arena: the Silk Exchange's trading hall, twisted columns at the doors, galleries on both sides, lamps,
+  // flower pots, and three tomato crates (the ammunition) on the floor
   arena_lonja(st, o) {
-    const B = st.B, { x0, w, GY } = o;
+    const B = st.B, { x0, w, GY } = o, mid = x0 + Math.floor(w / 2);
     for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
+    for (let q = 0; q < 3; q++) B.set(mid - 1 + q, GY - 7, T.SEMI);
     B.fill(x0 + 1, GY - 2, x0 + 1, GY - 1, T.PILLAR); B.fill(x0 + w - 2, GY - 2, x0 + w - 2, GY - 1, T.PILLAR);
+    B.decorAt('esLamp', x0 + 4, GY - 4, 0); B.decorAt('esLamp', x0 + w - 5, GY - 4, 0);
+    B.decorAt('esPots', x0 + 9, GY, 0); B.decorAt('esPots', x0 + w - 10, GY, 1); B.decorAt('esCrates', mid, GY - 7, 0);
+    st.spawn('esCrate', x0 + 4, GY - 1, { slot: 0 }); st.spawn('esCrate', mid, GY - 1, { slot: 1 }); st.spawn('esCrate', x0 + w - 5, GY - 1, { slot: 2 });
+    st.gold(x0 + 5, GY - 7, 'high');   // a postcard over the left gallery (the castle script has no other photo spot)
   }
 };
 const platforms = {
@@ -465,54 +558,148 @@ const platforms = {
 };
 
 /* ---------------- the boss: PAELLASAURUS ---------------- */
-// A giant paella pan that grew legs. When it simmers it's too hot to touch and sprays rice;
-// when it cools off (or a tomato splats on it, sizzle!) it's soft and sleepy: stomp it!
-// It also flips over and skids across the floor like a sled.
+// A giant paella pan that grew mussel-shell legs. It boils on three flames, charges, spits rice and
+// (later) calls Las Fallas rockets up through the floor. Too hot to stomp: TOMATO ARTILLERY. The crates
+// around the hall spill tomatoes; kick (or stomp-launch) three into the pan in a row and the fire goes
+// out: cold, blue and sluggish, one stomp cracks the crust. In phase 3 it flips the pan and the whole
+// floor becomes sliding tomato pulp.
+const riceArt = (ctx, s) => { ctx.fillStyle = '#ffe070'; ctx.beginPath(); ctx.ellipse(s.cx, s.cy, 4, 2.5, s.t * 6, 0, TAU); ctx.fill(); };
+const paellaBits = [
+  (ctx, s) => { ctx.fillStyle = '#ffe070'; ctx.beginPath(); ctx.ellipse(s.cx, s.cy, 4, 2.5, s.t * 6, 0, TAU); ctx.fill(); },
+  (ctx, s) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(s.t * 5); ctx.fillStyle = '#ff7a5a'; ctx.beginPath(); ctx.ellipse(0, 0, 8, 4, 0.5, 0, TAU); ctx.fill(); ctx.restore(); },
+  (ctx, s) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(s.t * 4); ctx.fillStyle = '#2a2a3a'; ctx.beginPath(); ctx.ellipse(0, 0, 6, 3.5, -0.3, 0, TAU); ctx.fill(); ctx.restore(); },
+  (ctx, s) => { ctx.fillStyle = '#ffe85a'; ctx.beginPath(); ctx.ellipse(s.cx, s.cy, 6, 3, 0.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff8c0'; ctx.fillRect(s.cx - 4, s.cy - 1, 8, 1.5); }
+];
 const boss = {
   id: 'es_paella', name: 'Paellasaurus', hp: 4, dims: [96, 44], music: 'tour_es_boss', country: 'es',
   brain: {
     guardText: 'TOO HOT!',
-    noDisc(b) { if (b.act === 'simmer') { b.go('cool'); K.say(b.g, b, 'SSSSS... TOMATO?!', '#ffd8a0'); return true; } return b.act === 'flip'; },
-    wake(b) { K.say(b.g, b, 'YOU ARE NOT ON THE MENU... YET!', '#ffd84a'); },
-    update(b, dt) {
+    phases: [3, 2],
+    wake(b) { b.heat = 3; b.splats = []; b.coolT = 0; b.shiver = 0; K.say(b.g, b, 'YOU ARE NOT ON THE MENU... YET!', '#ffd84a'); b.g.toast('TOO HOT TO STOMP! KICK THREE TOMATOES INTO THE PAN'); },
+    noDisc(b) { return b.act === 'flip' || b.act === 'clatter'; },
+    hit(b, kind, src) {
+      if (kind === 'stomp' || kind === 'spin') { if (b.vuln) { b.damage(1, { text: 'CRUST CRACKED!', col: '#ffe070' }); return true; } return 'bounce'; }
+      // only tomatoes Brady kicked, stomp-launched or lobbed count: a crate's own spill bouncing off the pan does nothing
+      if (kind === 'tomato' || (kind === 'prop' && src && src.cfg && src.cfg.tomato)) { if (kind === 'prop' && src.thrownBy !== b.g.player) return false; this.splat(b); return true; }
+      if (kind === 'prop' || kind === 'bump') return false;
+      return undefined;
+    },
+    // a tomato lands in the pan: one flame out, a red splat on the rice; three in a row and the fire is out
+    splat(b) {
       const g = b.g;
+      if (b.heat <= 0 || b.act === 'cold' || b.act === 'relight' || b.act === 'clatter') { g.parts.text(b.cx, b.y - 20, 'SPLAT', '#ff8a8a'); g.burst(b.cx, b.y, 10, '#e8322a', 'confetti'); return; }
+      b.heat--; b.coolT = 5.5; b.splats.push({ x: (Math.random() - 0.5) * 70, y: -27 - Math.random() * 7, t: 0 }); if (b.splats.length > 6) b.splats.shift();
+      g.burst(b.cx, b.y, 16, '#e8322a', 'confetti'); K.sfx('splat', null, { vol: 0.6, pitch: 1.2 }); g.shake(2);
+      if (b.heat <= 0) b.go('cold');
+      else { g.parts.text(b.cx, b.y - 22, b.heat === 1 ? 'ONE MORE!' : 'TWO MORE!', '#ffe070'); K.say(g, b, pick(['SSSSS!', 'NOT THE TOMATOES!', 'MY FLAME!']), '#ffd8a0'); }
+    },
+    update(b, dt) {
+      const g = b.g, p = g.player, ph = b.phase || 1;
       b.guard = 'bounce';
-      if (b.act === 'walk') { b.face(); b.walk(1.0); b.pose = 'walk'; if (b.at > 1.5) { b.cycle++; b.go(b.cycle % 2 ? 'simmer' : 'flip'); } }
-      else if (b.act === 'simmer') {
-        b.vx = 0; b.pose = 'hot'; b.guard = 'hurt';
-        if (b.at > 0.5 && Math.floor(b.at * 2.5) !== b.lastSpray) { b.lastSpray = Math.floor(b.at * 2.5); for (let k = 0; k < 3; k++) tourFire(g, b.cx + (k - 1) * 20, b.y, { kind: 'rice', vx: (k - 1) * 2.6 * TS + (Math.random() - 0.5) * TS, vy: -8 * TS, grav: PHYS.gDown * 0.4, w: 8, h: 8, life: 3, thru: true, col: '#f4e8a0', art: (ctx, s) => { ctx.fillStyle = '#ffe070'; ctx.beginPath(); ctx.ellipse(s.cx, s.cy, 4, 2.5, s.t * 6, 0, TAU); ctx.fill(); } }); }
-        if (b.at > 3) b.go('cool');
-      } else if (b.act === 'cool') {
-        b.vx = 0; b.pose = 'cool'; b.vuln = b.at > 0.2 && b.at < 2.4; b.guard = b.vuln ? 'hurt' : 'bounce';
-        if (b.at > 2.4) b.go('walk');
-      } else if (b.act === 'flip') {
-        if (b.first) b.face();
-        b.pose = 'flip';
-        if (b.at > 0.5) { b.vx = b.dir * (6.5 + (b.hp <= 2 ? 1.5 : 0)) * TS; if (b.hitWall || (b.dir < 0 && b.x <= b.arenaX0 + 2) || (b.dir > 0 && b.x >= b.arenaX1 - b.w - 2)) { b.dir = -b.dir; g.shake(5); Sound.play('bump'); b.turns = (b.turns || 0) + 1; if (b.turns >= 2) { b.turns = 0; b.go('walk'); } } }
-        if (b.at > 5) { b.turns = 0; b.go('walk'); }
+      for (const s of b.splats) s.t += dt;
+      // the fire comes back if the tomatoes stop coming
+      if (b.coolT > 0 && b.act !== 'cold' && b.act !== 'relight') { b.coolT -= dt; if (b.coolT <= 0 && b.heat < 3) { b.heat = 3; b.splats = []; K.say(g, b, 'SIZZLE! BACK TO THE BOIL!', '#ff8a2a'); g.burst(b.cx, b.y + b.h - 8, 14, '#ff8a2a', 'spark'); } }
+      if (b.act === 'clatter') {
+        // the finish: the pan clatters over and the paella rains down (harmless, delicious)
+        b.vx = 0; b.pose = 'flip';
+        if (Math.floor(b.at * 24) !== Math.floor((b.at - dt) * 24) && b.at < 2.4) for (let q = 0; q < 2; q++) { const s = tourFire(g, b.cx + (Math.random() - 0.5) * 80, b.y - 10, { kind: 'paella', vx: (Math.random() - 0.5) * 9 * TS, vy: -(10 + Math.random() * 8) * TS, grav: PHYS.gDown * 0.6, w: 12, h: 10, life: 3, thru: true, col: '#ffe070', art: pick(paellaBits) }); s.enemy = false; s.friendly = true; }
+        if (Math.floor(b.at * 2) !== Math.floor((b.at - dt) * 2)) g.parts.text(b.cx + (Math.random() - 0.5) * 60, b.y - 30, pick(['¡AY!', 'MY SOCARRAT!', 'ARROZ EVERYWHERE!']), '#ffd84a');
+        if (b.at > 2.8) b.die();
+        b.fall(dt); return;
+      }
+      if (b.act === 'walk') { b.face(); b.walk(ph >= 3 ? 1.6 : 1.1); b.pose = 'walk'; if (b.at > 1.3) { b.cycle++; const moves = ph >= 3 ? ['charge', 'rice', 'skate', 'rockets'] : ph >= 2 ? ['charge', 'rice', 'rockets'] : ['charge', 'rice']; b.go(moves[b.cycle % moves.length]); } }
+      else if (b.act === 'charge') {
+        // tell: the legs stamp on the spot, ¡OLÉ!, then the pan bolts to the far wall
+        if (b.at < 0.7) { b.vx = 0; b.pose = 'stamp'; if (b.first) { b.face(); K.say(g, b, '¡OLÉ!', '#ffd84a'); } }
+        else { b.walk(6.5); b.pose = 'charge'; if ((b.dir < 0 && (b.hitWall || b.x <= b.arenaX0 + 1)) || (b.dir > 0 && (b.hitWall || b.x >= b.arenaX1 - b.w - 1))) { g.shake(6); Sound.play('bump'); b.go('skid'); } }
+        if (b.at > 3) b.go('walk');
+      }
+      else if (b.act === 'skid') { b.vx = approach(b.vx, 0, 20 * TS * dt); b.pose = 'skid'; if (b.at > 0.5) b.go('walk'); }
+      else if (b.act === 'rice') {
+        b.vx = 0; b.pose = 'hot';
+        if (b.first) { K.say(g, b, '¡ARROZ!', '#ffe070'); b.lastSpray = -1; }
+        if (b.at > 0.6 && Math.floor(b.at * 2.5) !== b.lastSpray) { b.lastSpray = Math.floor(b.at * 2.5); for (let k = 0; k < 3; k++) tourFire(g, b.cx + (k - 1) * 20, b.y, { kind: 'rice', vx: (k - 1) * 2.6 * TS + (Math.random() - 0.5) * TS, vy: -8 * TS, grav: PHYS.gDown * 0.4, w: 8, h: 8, life: 3, thru: true, col: '#f4e8a0', art: riceArt }); Sound.play('throw', { vol: 0.3, pitch: 1.5 }); }
+        if (b.at > 2.6) b.go('walk');
+      }
+      else if (b.act === 'rockets') {
+        // tell: the pan stamps, shouts, and three spots on the floor light up before the rockets fire
+        b.vx = 0; b.pose = 'stamp';
+        if (b.first) { K.say(g, b, '¡MASCLETÀ!', '#ff5a8a'); const cx = p ? p.cx : b.cx; for (let k = -1; k <= 1; k++) { const x = clamp(cx + k * 4 * TS, b.arenaX0 + TS, b.arenaX1 - TS); g.spawn(new EsRocket(g, { x, y: b.floorY, fuse: 1.0 + Math.abs(k) * 0.25 })); } Sound.play('crumble', { vol: 0.4 }); }
+        if (b.at > 1.3) b.go('walk');
+      }
+      else if (b.act === 'skate') {
+        // phase 3: tell, then it skates across the pulp, three lengths of the hall
+        if (b.first) { b.face(); b.turns = 0; K.say(g, b, '¡VAMOS!', '#ffd84a'); }
+        b.pose = b.at < 0.5 ? 'stamp' : 'skate';
+        if (b.at > 0.5) { b.vx = b.dir * 8 * TS; if ((b.dir < 0 && (b.hitWall || b.x <= b.arenaX0 + 2)) || (b.dir > 0 && (b.hitWall || b.x >= b.arenaX1 - b.w - 2))) { b.dir = -b.dir; b.x += b.dir * 4; g.shake(4); Sound.play('bump'); b.turns++; } }
+        if (b.turns >= 3 || b.at > 5) b.go('walk');
+      }
+      else if (b.act === 'flip') {
+        // phase 3 opener: it flips the pan and the pulp floods the hall floor
+        b.vx = 0; b.pose = 'flip';
+        if (b.first) { K.say(g, b, 'ENOUGH! FLIP IT!', '#ffd84a'); g.shake(4); }
+        if (b.at > 1.0 && !b.flooded) {
+          b.flooded = true; const row = Math.floor(b.floorY / TS), tx0 = Math.floor(b.arenaX0 / TS), tx1 = Math.floor(b.arenaX1 / TS) - 1;
+          for (let tx = tx0; tx <= tx1; tx++) if (tileAt(g.area, tx, row) === T.GROUND) g.setTile(tx, row, T.ICE);
+          g.bannerText = 'TOMATO PULP EVERYWHERE!'; g.bannerT = 2.4; g.shake(8); K.sfx('splat', null, { vol: 0.8, pitch: 0.6 }); for (let k = 0; k < 10; k++) g.burst(b.arenaX0 + Math.random() * (b.arenaX1 - b.arenaX0), b.floorY, 8, '#e8322a', 'confetti');
+        }
+        if (b.at > 1.8) b.go('walk');
+      }
+      else if (b.act === 'cold') {
+        // the weak moment: fire out, the pan goes blue and shivers, and the crust can be cracked
+        b.vx = approach(b.vx, 0, 8 * TS * dt); b.pose = 'cold'; b.vuln = true; b.guard = 'hurt'; b.shiver = 1;
+        if (b.first) { K.say(g, b, 'BRRR... MY FIRE...', '#8ad8ff'); g.toast('THE FIRE IS OUT! STOMP THE PAN!'); K.sfx('flame', null, { vol: 0.4, pitch: 0.5 }); g.burst(b.cx, b.y - 10, 18, '#8ad8ff', 'spark'); }
+        if (b.at > (ph >= 3 ? 4 : 5)) b.go('relight');
+      }
+      else if (b.act === 'relight') {
+        // tell: sparks under the pan, then the flames whoosh back
+        b.vx = 0; b.pose = 'relight'; b.shiver = 0;
+        if (b.first) K.say(g, b, '¡FUEGO!', '#ff8a2a');
+        if (Math.random() < 0.5) g.burst(b.cx + (Math.random() - 0.5) * 60, b.y + b.h - 6, 2, '#ffd23a', 'spark');
+        if (b.at > 0.9) { b.heat = 3; b.splats = []; b.coolT = 0; g.burst(b.cx, b.y + b.h - 6, 22, '#ff8a2a', 'spark'); K.sfx('flame_jet', 'fire', { vol: 0.5 }); b.go('walk'); }
       }
       b.fall(dt);
     },
-    hurt(b) { b.go('walk'); K.say(b.g, b, pick(['MY SOCARRAT!', '¡AY, MI ARROZ!', 'NOT THE PRAWNS!']), '#ffd84a'); b.g.burst(b.cx, b.cy, 24, '#ffe070', 'confetti'); },
+    hurt(b) { b.go('relight'); K.say(b.g, b, pick(['MY SOCARRAT!', '¡AY, MI ARROZ!', 'NOT THE PRAWNS!']), '#ffd84a'); b.g.burst(b.cx, b.cy, 24, '#ffe070', 'confetti'); },
+    phase(b, n) {
+      const g = b.g;
+      if (n === 2) { this.hurt(b); for (const e of g.entities) if (e instanceof EsCrate) e.hop = true; g.bannerText = 'LAS FALLAS! THE CRATES DANCE!'; g.bannerT = 2.4; K.say(g, b, 'ROCKETS! MUSIC! TOMATOES!', '#ff5a8a'); }
+      else if (n === 3) { b.heat = 3; b.splats = []; b.coolT = 0; b.shiver = 0; b.flooded = false; b.go('flip'); g.burst(b.cx, b.cy, 24, '#ffe070', 'confetti'); }
+    },
+    lastHit(b) { b.go('clatter'); b.vuln = false; b.g.bannerText = 'THE PAN CLATTERS OVER!'; b.g.bannerT = 2.6; b.g.shake(10); K.sfx('break', null, { vol: 0.7 }); return true; },
     draw(b, ctx, t) {
-      const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose, hot = P === 'hot';
+      const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose, hot = P === 'hot' || P === 'charge', cold = P === 'cold';
       ctx.save(); ctx.translate(x, y);
+      if (cold) ctx.translate(Math.sin(t * 40) * 1.5, 0);
+      if (P === 'skate') ctx.rotate(-d * 0.12);
       if (P === 'flip') { ctx.translate(0, -18); ctx.scale(1, -1); ctx.translate(0, -18); ctx.rotate(Math.sin(t * 30) * 0.03); }
       // mussel-shell legs
-      if (P !== 'flip') { ctx.fillStyle = '#2a2a3a'; for (const lx of [-34, -14, 14, 34]) { ctx.save(); ctx.translate(lx, -8); ctx.rotate(Math.sin(t * 10 + lx) * (P === 'walk' ? 0.3 : 0)); ctx.beginPath(); ctx.ellipse(0, 0, 5, 9, 0, 0, TAU); ctx.fill(); ctx.restore(); } }
+      if (P !== 'flip') { ctx.fillStyle = '#2a2a3a'; for (const lx of [-34, -14, 14, 34]) { ctx.save(); ctx.translate(lx, -8); const st = P === 'stamp' ? Math.sin(t * 30 + lx) * 0.5 : P === 'walk' || P === 'charge' ? Math.sin(t * (P === 'charge' ? 24 : 10) + lx) * 0.3 : 0; ctx.rotate(st); ctx.beginPath(); ctx.ellipse(0, 0, 5, 9, 0, 0, TAU); ctx.fill(); ctx.restore(); } }
       // the pan and the rice
-      ctx.fillStyle = '#3a3a44'; ctx.beginPath(); ctx.ellipse(0, -18, 52, 12, 0, 0, Math.PI); ctx.fill(); ctx.fillRect(-54, -22, 108, 5);
-      ctx.fillStyle = '#4a4a54'; ctx.fillRect(-72, -22, 18, 5); ctx.fillRect(54, -22, 18, 5);
-      const rice = ctx.createLinearGradient(0, -36, 0, -18); rice.addColorStop(0, hot ? '#ffb040' : '#ffe070'); rice.addColorStop(1, hot ? '#e8602a' : '#e8b83a');
+      ctx.fillStyle = cold ? '#4a5a6a' : '#3a3a44'; ctx.beginPath(); ctx.ellipse(0, -18, 52, 12, 0, 0, Math.PI); ctx.fill(); ctx.fillRect(-54, -22, 108, 5);
+      ctx.fillStyle = cold ? '#6a7a8a' : '#4a4a54'; ctx.fillRect(-72, -22, 18, 5); ctx.fillRect(54, -22, 18, 5);
+      const rice = ctx.createLinearGradient(0, -36, 0, -18);
+      if (cold) { rice.addColorStop(0, '#c8d8e8'); rice.addColorStop(1, '#a8b8d0'); } else { rice.addColorStop(0, hot ? '#ffb040' : '#ffe070'); rice.addColorStop(1, hot ? '#e8602a' : '#e8b83a'); }
       ctx.fillStyle = rice; ctx.beginPath(); ctx.ellipse(0, -22, 50, 12, 0, Math.PI, TAU); ctx.fill();
       ctx.fillStyle = '#ff7a5a'; for (const [px, py] of [[-28, -28], [10, -31], [30, -26]]) { ctx.beginPath(); ctx.ellipse(px, py, 8, 4, 0.5, 0, TAU); ctx.fill(); }
       ctx.fillStyle = '#2a2a3a'; for (const [px, py] of [[-10, -27], [22, -24]]) { ctx.beginPath(); ctx.ellipse(px, py, 6, 3, -0.3, 0, TAU); ctx.fill(); }
       ctx.fillStyle = '#ffe85a'; ctx.beginPath(); ctx.ellipse(-40, -26, 6, 3, 0.4, 0, TAU); ctx.fill();
+      // tomato splats on the rice (the cooling patches)
+      for (const s of b.splats || []) { const k = Math.min(1, s.t * 4); ctx.fillStyle = '#d8222a'; ctx.beginPath(); ctx.ellipse(s.x, s.y, 11 * k, 5 * k, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffd0b0'; for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.arc(s.x - 5 + q * 5, s.y + (q % 2) * 2, 1.2 * k, 0, TAU); ctx.fill(); } }
+      // the three flames under the pan: the heat gauge (each tomato puts one out)
+      if (P !== 'flip') for (let k = 0; k < 3; k++) {
+        const fx = (k - 1) * 26, on = k < (b.heat == null ? 3 : b.heat);
+        if (on) { ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.moveTo(fx - 8, 1); ctx.quadraticCurveTo(fx - 9, -12 - Math.sin(t * 14 + k) * 4, fx, -22 - Math.sin(t * 11 + k * 2) * 5); ctx.quadraticCurveTo(fx + 9, -12 + Math.sin(t * 13 + k) * 4, fx + 8, 1); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ffe070'; ctx.beginPath(); ctx.moveTo(fx - 4, 1); ctx.quadraticCurveTo(fx, -10 - Math.sin(t * 15 + k) * 3, fx + 4, 1); ctx.fill(); }
+        else if (P === 'relight') { ctx.fillStyle = Math.floor(t * 20 + k) % 2 ? '#ffd23a' : '#ff8a2a'; ctx.beginPath(); ctx.arc(fx, -4, 3, 0, TAU); ctx.fill(); }
+        else { ctx.fillStyle = '#5a5a68'; ctx.beginPath(); ctx.ellipse(fx, 0, 7, 3, 0, 0, TAU); ctx.fill(); if (cold) { ctx.fillStyle = '#a8c8e8'; ctx.beginPath(); ctx.arc(fx + Math.sin(t * 3 + k) * 2, -8 - ((t * 10 + k * 7) % 14), 2, 0, TAU); ctx.fill(); } }
+      }
+      if (cold) { ctx.fillStyle = '#e8f4ff'; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.moveTo(-45 + k * 18, -22); ctx.lineTo(-41 + k * 18, -32 - (k % 2) * 4); ctx.lineTo(-37 + k * 18, -22); ctx.fill(); } }
       if (P !== 'flip') {
-        // face peeking over the rim
-        if (P === 'cool') { ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(d * 8 + s * 8 - 4, -33); ctx.lineTo(d * 8 + s * 8 + 4, -33); ctx.stroke(); } ctx.fillStyle = '#ffffff'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('z', d * 8 + 22, -46 - (t * 10) % 8); }
+        // the face over the rim
+        if (cold) { K.eyes(ctx, d * 8, -34, d, 6, 3.2, false); ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(d * 8 - 6, -40 + Math.sin(t * 30) * 1.5); ctx.lineTo(d * 8 + 6, -40 - Math.sin(t * 30) * 1.5); ctx.stroke(); ctx.fillStyle = '#8ad8ff'; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('BRRR', d * 8 + 26, -46 + Math.sin(t * 6) * 2); }
         else K.eyes(ctx, d * 8, -34, d, 6, 3.4, true);
-        if (hot) { for (let k = 0; k < 4; k++) { const ph = (t * 1.5 + k / 4) % 1; ctx.fillStyle = `rgba(255,255,255,${0.5 * (1 - ph)})`; ctx.beginPath(); ctx.arc(-30 + k * 20, -40 - ph * 30, 6 + ph * 6, 0, TAU); ctx.fill(); } }
+        if (hot) for (let k = 0; k < 4; k++) { const ph = (t * 1.5 + k / 4) % 1; ctx.fillStyle = ph < 0.5 ? '#f4f0ff' : '#e0dcf0'; ctx.beginPath(); ctx.arc(-30 + k * 20, -40 - ph * 30, (5 + ph * 6) * (1 - ph * 0.6), 0, TAU); ctx.fill(); }
+        if (P === 'stamp') { ctx.fillStyle = '#ffffff'; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', d * 8, -52 + Math.sin(t * 12) * 2); }
       }
       ctx.restore();
     }
@@ -598,7 +785,7 @@ Tour.country({
       script: [['falla', { petardo: true }], ['rockets', { gold: true }], 'crackers', ['falla', { n: 3 }], ['rockets', { left: true }], 'crackers', ['falla', { n: 4, petardo: true }]] },
     { name: 'The Silk Exchange', style: 'castle', theme: 'es_lonja', gimmick: 'Twisted columns, swinging silk banners and merchants\' scales that rise and fall, then Paellasaurus',
       enemies: [['esHorchata', 2], ['esTomato', 2]], boss: 'es_paella', arena: 'lonja', arenaW: 26, roof: false,
-      hint: 'Paellasaurus is too hot to touch. Wait for it to cool down (or splat it with a tomato)!',
+      hint: 'Paellasaurus is too hot to stomp. Kick three tomatoes into the pan to put the fire out, then crack the crust!',
       postcard: 'The Silk Exchange is back! The Baron pedalled off to Paris. Allez! ♥ C',
       script: [['flat', { n: 4 }], 'columns', ['banners', {}], 'scales', 'cp', 'sig', ['banners', { n: 3 }], 'columns', ['enemies', { n: 2 }], ['blocks', { content: 'power' }], 'arena'] }
   ]

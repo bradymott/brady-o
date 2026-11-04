@@ -6,8 +6,8 @@ const BRADY_DIM = {
   small: { hip: 8.5, shoulder: 15, headY: 21.5, headR: 8.6, thigh: 4.6, shin: 4.4, upper: 5, fore: 4.6, torsoW: 13, legW: 5.4, armW: 4.2, hairN: 6, hairL: 3.2, hairW: 14 }
 };
 const CLOTH = {
-  jacket: '#191922', jacketHi: '#34344a', jeans: '#121219', jeansHi: '#2a2a3a', boot: '#08080b', sole: '#34343e',
-  outline: 'rgba(150,150,205,0.42)', tee: '#0c0c10'
+  jacket: '#191922', jacketHi: '#34344a', jeans: '#2f4170', jeansHi: '#4a5f96', boot: '#101014', sole: '#34343e',
+  outline: 'rgba(26,18,36,0.62)', tee: '#25252f'
 };
 
 function bradyPose(anim, small) {
@@ -130,6 +130,12 @@ function capsule(ctx, x0, y0, x1, y1, w, col) {
 function outlinedCapsule(ctx, x0, y0, x1, y1, w, col) {
   capsule(ctx, x0, y0, x1, y1, w + 2, CLOTH.outline);
   capsule(ctx, x0, y0, x1, y1, w, col);
+  // a soft rim of light along the upper-left edge: the limb reads as a rounded tube
+  if (w > 3.5) {
+    const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+    const side = (nx - ny) < 0 ? 1 : -1;   // the side facing up-left
+    capsule(ctx, x0 + nx * side * w * 0.26 + dx / L * w * 0.3, y0 + ny * side * w * 0.26 + dy / L * w * 0.3, x1 + nx * side * w * 0.26 - dx / L * w * 0.3, y1 + ny * side * w * 0.26 - dy / L * w * 0.3, Math.max(0.8, w * 0.22), 'rgba(255,255,255,0.13)');
+  }
 }
 
 // Hair chain helper (lives on the player)
@@ -318,7 +324,7 @@ function drawBrady(ctx, o) {
       const ang = Math.atan2(uy, ux);
       const sleevePath = grow => { ctx.beginPath(); ctx.arc(sx, sy, hw + grow, ang + Math.PI / 2, ang - Math.PI / 2); ctx.lineTo(mx + uy * (hw + grow) + ux * grow, my - ux * (hw + grow) + uy * grow); ctx.lineTo(mx - uy * (hw + grow) + ux * grow, my + ux * (hw + grow) + uy * grow); ctx.closePath(); };
       ctx.fillStyle = CLOTH.outline; sleevePath(1); ctx.fill();
-      ctx.fillStyle = back ? shade(CLOTH.tee, -0.3) : '#16151c'; sleevePath(0); ctx.fill();
+      ctx.fillStyle = back ? shade(CLOTH.tee, -0.3) : '#2c2b37'; sleevePath(0); ctx.fill();
     }
     if (neon) capsule(ctx, lerp(sx, ex, sleeveK * 0.85), lerp(sy, ey, sleeveK * 0.85), mx, my, 1.1, rgba(trim, 0.95));
     ctx.fillStyle = sk; ctx.beginPath(); ctx.arc(hx, hy, D.armW * 0.6, 0, TAU); ctx.fill();
@@ -356,7 +362,7 @@ function drawBrady(ctx, o) {
   const th = D.shoulder - D.hip;
   ctx.fillStyle = CLOTH.outline; rr(ctx, -tw / 2 - 1, -th - 2.5, tw + 2, th + 5, o.small ? 4 : 5); ctx.fill();
   const jg = ctx.createLinearGradient(-tw / 2, 0, tw / 2, 0);
-  jg.addColorStop(0, shade(CLOTH.tee, -0.3)); jg.addColorStop(0.6, '#15141b'); jg.addColorStop(1, '#2a2834');
+  jg.addColorStop(0, shade(CLOTH.tee, -0.3)); jg.addColorStop(0.6, '#2a2a35'); jg.addColorStop(1, '#3d3c4a');
   ctx.fillStyle = jg; rr(ctx, -tw / 2, -th - 1.5, tw, th + 3, o.small ? 3.5 : 4.5); ctx.fill();
   // crew neck and a couple of soft folds
   ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 0.8;
@@ -420,6 +426,8 @@ function drawBrady(ctx, o) {
   const fg = ctx.createLinearGradient(-R, 0, R, 0);
   fg.addColorStop(0, skin.sh); fg.addColorStop(0.55, skin.base); fg.addColorStop(1, skin.base);
   ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(0.5, 0.5, R, R * 1.06, 0, 0, TAU); ctx.fill();
+  // a cel highlight on the cheekbone and brow side: the head rounds out
+  ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.beginPath(); ctx.ellipse(R * 0.42, -R * 0.22, R * 0.5, R * 0.34, -0.5, 0, TAU); ctx.fill();
   // stubble along the jaw and upper lip
   if (beard) {
     ctx.save(); ctx.beginPath(); ctx.ellipse(0.5, 0.5, R, R * 1.06, 0, 0, TAU); ctx.clip();

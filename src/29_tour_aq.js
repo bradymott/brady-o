@@ -3,7 +3,7 @@
    13-1 The Ice Shelf        run    a penguin teaches the belly-slide: bowl through snowballs, leopard seals leap from ice holes
    13-2 Iceberg Drift        ride   drift on an iceberg: hop the growlers, dodge leaping orcas and skuas
    13-3 Aurora Station       night  a research station under the aurora: heater vents, radio masts, wandering rovers
-   13-4 The Blizzard Palace  castle blizzard gusts come in waves over cracking ice; boss Big Tusk the walrus
+   13-4 The Blizzard Palace  castle blizzard gusts come in waves over cracking ice; Big Tusk the walrus: icicles and ice blocks
    ============================================================ */
 (() => {
 const COL = { a: '#8ae8ff', b: '#2a6ad8', c: '#ffffff' };
@@ -266,13 +266,25 @@ const P = {
   /* 13-4: the blizzard palace */
   // the blizzard blows Brady back in waves: move in the lulls
   blizzard(st) { const x = st.x, B = st.B, w = 16; st.floor(x, x + w); for (let q = 1; q < w; q++) B.set(x + q, st.gy, T.ICE); B.zone(x, st.gy - 8, w, 8, -4.4 * TS, 0, 0, 'blizzard'); st.spawn('aqStorm', x + 8, st.gy - 8, { zx: x * TS }); B.fill(x + 6, st.gy - 2, x + 7, st.gy - 1, T.HARD); B.fill(x + 12, st.gy - 2, x + 13, st.gy - 1, T.HARD); st.coins(x + 2, x + 5, st.gy - 2); return x + w + 1; },
-  arena_glacier(st, o) { const B = st.B, { x0, w, GY } = o; for (let q = 2; q < w - 2; q++) B.set(x0 + q, GY, T.ICE); for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); } }
+  // the floe: an ice floor under an ice ceiling hung with icicles, two ice blocks, ledges at the sides
+  arena_glacier(st, o) {
+    const B = st.B, { x0, w, GY } = o;
+    for (let q = 2; q < w - 2; q++) B.set(x0 + q, GY, T.ICE);
+    for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
+    B.fill(x0 + 1, GY - 7, x0 + w - 2, GY - 7, T.HARD);
+    for (const q of [8, 10, 12, 14, 16, 18]) st.spawn('aqIcicle', x0 + q, GY - 7, {});   // over the open floor, clear of the ledges
+    st.spawn('aqBlock', x0 + 8, GY - 1, {}); st.spawn('aqBlock', x0 + 17, GY - 1, {});
+    st.spawn('aqFloe', x0, GY - 1, { x0, w });
+    B.decorAt('aqPenguins', x0 + 1, GY, 0); B.decorAt('aqCrates', x0 + 2, GY, 0); B.decorAt('aqFlag', x0 + w - 1, GY, 0);
+  }
 };
 Object.assign(decor, {
   aqGrowler(ctx, x, y, t, th, d) { ctx.fillStyle = '#e8faff'; ctx.beginPath(); ctx.moveTo(x - 20, y + 30); ctx.lineTo(x - 14, y - 30); ctx.lineTo(x + 4, y - 34); ctx.lineTo(x + 18, y - 22); ctx.lineTo(x + 22, y + 30); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(120,190,240,0.5)'; ctx.fillRect(x - 16, y - 10, 34, 40); },
   aqFloeArt(ctx, x, y, t, th, d) { ctx.fillStyle = '#e8faff'; ctx.beginPath(); ctx.moveTo(x - d.w / 2 - 6, y - d.h + 2); ctx.lineTo(x + d.w / 2 + 6, y - d.h); ctx.lineTo(x + d.w / 2, y - d.h + 22); ctx.lineTo(x - d.w / 2, y - d.h + 20); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(120,190,240,0.5)'; ctx.fillRect(x - d.w / 2, y - d.h + 10, d.w, 10); }
 });
 const platforms = {
+  // a section of the cracked floe (phase 3): it sinks when stood on
+  aqFloePlat(ctx, p, t) { const x = p.x, y = p.y, w = p.w; ctx.fillStyle = '#e8faff'; ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x + w + 4, y); ctx.lineTo(x + w - 2, y + 18); ctx.lineTo(x + 2, y + 20); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(120,190,240,0.5)'; ctx.fillRect(x, y + 8, w, 8); ctx.strokeStyle = 'rgba(40,90,140,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + w * 0.4, y); ctx.lineTo(x + w * 0.5, y + 10); ctx.stroke(); },
   // the iceberg carrying Brady across the Southern Ocean
   aqBerg(ctx, p, t) {
     const x = p.x, y = p.y, w = p.w;
@@ -284,52 +296,211 @@ const platforms = {
 };
 
 /* ---------------- the boss: BIG TUSK ---------------- */
-// A huge grumpy walrus. He belly-slides across the ice (keep clear), digs his tusks in to burst
-// ice spikes up under Brady, and belly-flops so hard he winds himself: stomp him then!
+// ICICLES AND ICE BLOCKS. A huge grumpy walrus who belly-slides across the floe. Stomps bounce off his blubber. Two
+// things hurt him: an ICICLE from the ice ceiling (jump and bump one with your head: it shivers, then drops) and an
+// ICE BLOCK kicked into him while he slides (he tumbles). Phase 1 (hp 6-5): slides, tusk spikes, belly flops.
+// Phase 2 (hp 4-3): he bellows and penguins skid across the ice. Phase 3 (hp 2-1): the big flop cracks the floe:
+// three floor sections become sinking floes over the water. Finish: he slides off into the water hole, thumbs up.
+const iceBlockArt = (ctx, e, x, y, t) => {
+  ctx.save(); ctx.translate(x, y - 13);
+  const g = ctx.createLinearGradient(-13, -13, 13, 13); g.addColorStop(0, '#f4fcff'); g.addColorStop(1, '#8ac8f0');
+  ctx.fillStyle = g; rr(ctx, -13, -13, 26, 26, 4); ctx.fill();
+  ctx.strokeStyle = 'rgba(70,140,200,0.8)'; ctx.lineWidth = 1.5; rr(ctx, -13, -13, 26, 26, 4); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(-9, -9, 7, 3); ctx.fillRect(-9, -4, 3, 6);
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(2, -12); ctx.lineTo(8, 2); ctx.lineTo(4, 11); ctx.stroke();
+  ctx.restore();
+  if (e.onGround && !e.fast && e.g.boss && e.g.boss.state === 'fight') { ctx.fillStyle = `rgba(200,240,255,${0.5 + 0.4 * Math.sin(t * 7)})`; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('KICK', x, y - 32 + Math.sin(t * 6) * 2); }
+};
+// a block of ice: Brady kicks it (it slides a long way on the ice); it tumbles the walrus if it hits him mid-slide
+const AqBlock = TourProp.make({
+  w: 26, h: 26, kick: 9, bounce: 0.7, friction: 1.0, hurts: true, hp: 1, burst: '#d8f4ff', art: iceBlockArt,
+  init(e) { e.iceBlock = true; },
+  think(e, dt) { const b = e.g.boss; if (b && e.y > b.floorY + TS) { e.remove = true; Sound.play('splash', { vol: 0.4 }); e.g.burst(e.cx, b.floorY + 2 * TS, 10, '#bfe8ff', 'spark'); } }
+});
+// an icicle under the ice ceiling: bump it with your head and it shivers, then drops; it hurts whoever it lands on
+class AqIcicle extends Ent {
+  constructor(g, s) { super(g, s, 14, 40); this.aqIcicle = true; this.x = s.x - 7; this.hy = s.y; this.y = this.hy; this.state = 'hang'; this.k = 0; this.vy = 0; this.shiver = 0; }
+  drop() { if (this.state !== 'hang') return; this.state = 'shake'; this.k = 0.35; Sound.play('crumble', { pitch: 2, vol: 0.4 }); }
+  update(dt) {
+    this.t += dt; const g = this.g, b = g.boss;
+    if (this.shiver > 0) this.shiver -= dt;
+    if (this.state === 'shake') { this.k -= dt; if (this.k <= 0) { this.state = 'fall'; this.vy = 0; } }
+    else if (this.state === 'fall') {
+      this.vy += PHYS.gDown * 0.8 * dt; this.y += this.vy * dt;
+      if (b && b.state === 'fight' && b.hurtT <= 0 && overlap(this, b)) { b.hit('hazard', this); this.shatter(); return; }
+      const t = tileAt(g.area, Math.floor(this.cx / TS), Math.floor((this.y + this.h) / TS));
+      if (SOLID[t] || t === T.SEMI || this.y > this.hy + 12 * TS) this.shatter();
+    }
+    else if (this.state === 'gone') { this.k -= dt; if (this.k <= 0) { this.state = 'hang'; this.y = this.hy; this.vy = 0; } }
+  }
+  shatter() { this.g.burst(this.cx, this.y + this.h, 14, '#d8f0ff', 'spark'); Sound.play('break', { pitch: 1.8, vol: 0.4 }); this.state = 'gone'; this.k = 5; this.y = this.hy; }
+  touchPlayer(p) {
+    if (this.state === 'fall') { p.hurt(this); return; }
+    if (this.state === 'hang' && p.vy < 0 && p.y <= this.y + this.h && p.prevBottom - p.h > this.y + 4) { this.drop(); p.vy = 2 * TS; Sound.play('bump', { vol: 0.5 }); this.g.burst(this.cx, this.y + this.h, 5, '#ffffff', 'spark'); }
+  }
+  draw(ctx) {
+    let a = 1; if (this.state === 'gone') { const k = 1 - this.k / 5; if (k < 0.75) return; a = (k - 0.75) / 0.25; }
+    ctx.save(); ctx.globalAlpha = a;
+    const x = this.cx + (this.state === 'shake' || this.shiver > 0 ? Math.sin(this.t * 60) * 1.8 : 0), y = this.y;
+    const g = ctx.createLinearGradient(x - 7, 0, x + 7, 0); g.addColorStop(0, '#f0faff'); g.addColorStop(1, '#8ac8f0');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 7, y); ctx.lineTo(x + 7, y); ctx.lineTo(x + 1, y + 40); ctx.lineTo(x - 1, y + 40); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(x - 4, y + 2, 2, 18);
+    if (this.state === 'shake') { ctx.fillStyle = '#ffffff'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 4); }
+    ctx.restore();
+  }
+}
+// the floe: keeps two ice blocks on the ice (new ones drop from the ceiling), cracks open in phase 3, and holds the
+// water hole Big Tusk leaves by
+class AqFloe extends Ent {
+  constructor(g, s) { super(g, s, 10, 10); this.aqFloe = true; this.friendly = true; this.x0 = s.x0 * TS; this.w = s.w * TS; this.x = this.x0; this.x1 = this.x0 + this.w; this.floorY = s.y; this.GY = Math.floor(s.y / TS); this.y = this.floorY - 7 * TS; this.h = 8 * TS; this.cool = 0; this.drops = []; this.cracked = false; this.gaps = [s.x0 + 6, s.x0 + 12, s.x0 + 18]; this.crackT = 0; }
+  blocks() { return this.g.entities.filter(e => e.iceBlock && !e.remove); }
+  update(dt) {
+    this.t += dt; const g = this.g, b = g.boss; if (this.crackT > 0) this.crackT -= dt;
+    if (!b || b.state !== 'fight') return;
+    if (this.cool > 0) this.cool -= dt;
+    for (let i = this.drops.length - 1; i >= 0; i--) { const d = this.drops[i]; d.t -= dt; if (d.t <= 0) { this.drops.splice(i, 1); g.spawn(new AqBlock(g, { x: d.x, y: this.floorY - 5 * TS })); Sound.play('crumble', { pitch: 1.4, vol: 0.4 }); } }
+    if (this.blocks().length + this.drops.length < 2 && this.cool <= 0) {
+      this.cool = 2.2; const p = g.player; let x = this.x0 + 3 * TS + Math.random() * (this.w - 6 * TS);
+      if (p && Math.abs(x - p.cx) < 2 * TS) x = p.cx + (p.cx < (this.x0 + this.x1) / 2 ? 3 : -3) * TS;
+      this.drops.push({ x, t: 0.8 });
+    }
+  }
+  crack() {
+    if (this.cracked) return; this.cracked = true; this.crackT = 1.2; const g = this.g, A = g.area, GY = this.GY;
+    for (const gx of this.gaps) {
+      for (let x = gx; x < gx + 2; x++) for (let y = GY; y < A.H; y++) g.setTile(x, y, y < GY + 2 ? T.EMPTY : T.LAVA);
+      g.spawn(new FallingPlatform(g, { x: (gx + 1) * TS, y: GY * TS, pw: 2, skin: 'aqFloePlat' }));
+      g.burst((gx + 1) * TS, GY * TS, 20, '#d8f0ff', 'debris');
+    }
+    g.refreshPlatforms(); g.dirtyVariants = true; g.shake(12); Sound.play('break', { pitch: 0.5, vol: 1 });
+  }
+  draw(ctx) {
+    const t = this.t, fy = this.floorY;
+    decor.aqHole(ctx, this.x1 - 2.5 * TS, fy, t);
+    for (const d of this.drops) { const k = 1 - d.t / 0.8; ctx.fillStyle = `rgba(20,60,110,${0.2 + 0.4 * k})`; ctx.beginPath(); ctx.ellipse(d.x, fy - 2, 12 + k * 6, 4, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', d.x, fy - 5 * TS - 6 + Math.sin(t * 20) * 2); }
+    if (this.cracked) {
+      ctx.strokeStyle = 'rgba(40,90,140,0.7)'; ctx.lineWidth = 2;
+      for (const gx of this.gaps) for (const s of [-1, 1]) { const x = s < 0 ? gx * TS : (gx + 2) * TS; ctx.beginPath(); ctx.moveTo(x, fy); ctx.lineTo(x + s * 14, fy + 10); ctx.lineTo(x + s * 8, fy + 24); ctx.lineTo(x + s * 20, fy + 40); ctx.stroke(); }
+    }
+  }
+}
+// penguins that skid across the ice on their bellies (phase 2): stompable, bowled over by a block
+const skidderArt = (ctx, e, x, y, m, t) => {
+  if (m === 'flat' || m === 'ko') { ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.5 : 1); penguin(ctx, 0, 0, t, 1.1, false); ctx.restore(); return; }
+  ctx.save(); ctx.translate(x, y - 2); ctx.scale(e.dir, 1); penguin(ctx, 4, 0, t, 1.15, true); ctx.restore();
+  ctx.strokeStyle = 'rgba(220,245,255,0.8)'; ctx.lineWidth = 1.5; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(x - e.dir * (16 + k * 6), y - 3 - k * 4); ctx.lineTo(x - e.dir * (30 + k * 8), y - 3 - k * 4); ctx.stroke(); }
+};
+const AqSkidder = TourEnemy.make({
+  w: 30, h: 18, speed: 6.5, art: skidderArt, burst: '#ffffff',
+  init(e) { e.passes = 0; e.aqSkidder = true; },
+  think(e, dt) { e.mode = 'walk'; const sp = 6.5 * TS; e.life = (e.life || 0) + dt; if (e.hitWall) { e.passes++; Sound.play('bump', { vol: 0.3, pitch: 1.5 }); } e.vx = sign(e.vx || e.dir) * sp; if (e.passes >= 2 || e.life > 9) { e.remove = true; Sound.play('splash', { vol: 0.35 }); e.g.burst(e.cx, e.y + e.h, 8, '#bfe8ff', 'spark'); } if (Math.random() < 0.3) e.g.burst(e.cx - e.dir * 14, e.y + e.h, 1, '#e8faff', 'dust'); }
+});
 class AqWave extends Ent {
   constructor(g, x, floorY, dir) { super(g, null, 26, 16); this.x = x - 13; this.y = floorY - 16; this.dir = dir; this.life = 1.4; }
-  update(dt) { this.t += dt; this.life -= dt; this.x += this.dir * 6 * TS * dt; if (this.life <= 0 || SOLID[tileAt(this.g.area, Math.floor((this.cx + this.dir * 14) / TS), Math.floor((this.y + 4) / TS))]) this.remove = true; }
+  update(dt) { this.t += dt; this.life -= dt; this.x += this.dir * 6 * TS * dt; const g = this.g, tx = Math.floor((this.cx + this.dir * 14) / TS); const under = tileAt(g.area, tx, Math.floor((this.y + this.h + 4) / TS)); if (this.life <= 0 || SOLID[tileAt(g.area, tx, Math.floor((this.y + 4) / TS))] || !(SOLID[under] || under === T.SEMI)) this.remove = true; }
   touchPlayer(p) { p.hurt(this); }
   draw(ctx) { ctx.fillStyle = '#e8faff'; for (let k = 0; k < 4; k++) { const sx = this.x + k * 7, h = 8 + ((k + Math.floor(this.t * 20)) % 3) * 4; ctx.beginPath(); ctx.moveTo(sx, this.y + this.h); ctx.lineTo(sx + 3.5, this.y + this.h - h); ctx.lineTo(sx + 7, this.y + this.h); ctx.fill(); } }
 }
+const spikeArt = (ctx, s) => { ctx.fillStyle = '#e8faff'; ctx.beginPath(); ctx.moveTo(s.x, s.y + s.h); ctx.lineTo(s.cx, s.y); ctx.lineTo(s.x + s.w, s.y + s.h); ctx.fill(); };
+function tuskFloe(b) { if (!b.floe) b.floe = b.g.entities.find(e => e.aqFloe) || null; return b.floe; }
+function tuskFlop(b, big) {
+  const g = b.g; g.shake(big ? 16 : 10); Sound.play('stomp', { pitch: 0.4 });
+  for (const d of [-1, 1]) g.spawn(new AqWave(g, b.cx + d * (b.w / 2 + 12), b.floorY, d));
+  for (const e of g.entities) if (e.aqIcicle) e.shiver = 0.5;
+  g.burst(b.cx, b.floorY, 24, '#e8faff', 'dust');
+}
+function tuskCall(b) {
+  const g = b.g; let n = 0; for (const e of g.entities) if (e.aqSkidder && !e.remove && !e.dead) n++;
+  for (let k = 0; k < 2 - n; k++) { const left = (k + b.cycle) % 2 === 0; const e = new AqSkidder(g, { x: left ? b.arenaX0 + 20 : b.arenaX1 - 20, y: b.floorY, dir: left ? 1 : -1 }); e.vx = e.dir * 6.5 * TS; g.spawn(e); g.burst(e.cx, e.y + e.h, 8, '#ffffff', 'dust'); }
+}
 const boss = {
-  id: 'aq_walrus', name: 'Big Tusk', hp: 4, dims: [100, 54], music: 'tour_aq_boss', country: 'aq',
+  id: 'aq_walrus', name: 'Big Tusk', hp: 6, dims: [100, 54], music: 'tour_aq_boss', country: 'aq',
   brain: {
     guardText: 'BLUBBER!',
-    noDisc(b) { return b.act === 'slide'; },
-    wake(b) { K.say(b.g, b, 'HARRUMPH! MY ICE!', '#bfe8ff'); },
-    update(b, dt) {
-      const g = b.g, p = g.player;
-      b.guard = 'bounce'; if (b.slideHit > 0) b.slideHit -= dt;
-      if (b.act === 'walk') { b.face(); b.walk(0.7); b.pose = 'walk'; if (b.at > 1.6) { b.cycle++; b.go(['slide', 'tusks', 'flop'][b.cycle % 3]); } }
-      else if (b.act === 'slide') {
-        if (b.first) { b.face(); b.turns = 0; }
-        b.pose = 'slide';
-        if (b.at > 0.5) { b.vx = b.dir * (7 + (b.hp <= 2 ? 1.5 : 0)) * TS; if (b.hitWall || (b.dir < 0 && b.x <= b.arenaX0 + 2) || (b.dir > 0 && b.x >= b.arenaX1 - b.w - 2)) { b.dir = -b.dir; b.turns++; g.shake(5); Sound.play('bump'); if (b.turns >= 2) b.go('walk'); } } else b.vx = 0;
-        if (b.at > 5) b.go('walk');
-      } else if (b.act === 'tusks') {
-        b.vx = 0; b.pose = 'tusks';
-        if (b.first) b.tx = p ? p.cx : b.cx;
-        if (b.at > 0.3 && b.at < 0.9 && Math.random() < 0.3) g.burst(b.tx, b.floorY, 2, '#e8faff', 'spark');
-        if (b.at > 0.9 && !b.fired) { b.fired = true; g.shake(6); Sound.play('break', { pitch: 0.7 }); for (let k = -1; k <= 1; k++) tourFire(g, b.tx + k * 34, b.floorY - 4, { kind: 'spike', vy: -9 * TS, grav: PHYS.gDown * 0.6, w: 14, h: 26, life: 0.7, thru: true, col: '#e8faff', art: (ctx, s) => { ctx.fillStyle = '#e8faff'; ctx.beginPath(); ctx.moveTo(s.x, s.y + s.h); ctx.lineTo(s.cx, s.y); ctx.lineTo(s.x + s.w, s.y + s.h); ctx.fill(); } }); }
-        if (b.at > 1.5) { b.fired = false; b.go('walk'); }
-      } else if (b.act === 'flop') {
-        if (b.first) { b.vy = -13 * TS; b.vx = b.dir * 2 * TS; b.face(); }
-        b.pose = 'flop';
-        if (b.onGround && b.at > 0.3) { g.shake(10); Sound.play('stomp', { pitch: 0.4 }); for (const d of [-1, 1]) g.spawn(new AqWave(g, b.cx + d * (b.w / 2 + 12), b.floorY, d)); b.go('winded'); }
-      } else if (b.act === 'winded') {
-        b.vx = 0; b.pose = 'winded'; b.vuln = b.at > 0.15 && b.at < 2.0; b.guard = b.vuln ? 'hurt' : 'bounce';
-        if (b.first) K.say(g, b, 'OOF... NEED... A MINUTE...', '#bfe8ff');
-        if (b.at > 2.0) b.go('walk');
+    phases: [4, 2],
+    noDisc(b) { return true; },
+    wake(b) { b.phase = 1; b.passes = 2; b.callT = 0; K.say(b.g, b, 'HARRUMPH! MY ICE!', '#bfe8ff'); },
+    hit(b, kind, src) {
+      if (b.act === 'exit') return false;
+      if (kind === 'hazard' && src && src.aqIcicle) { b.damage(1, { text: 'ICICLE!', col: '#d8f4ff' }); return true; }
+      if (kind === 'prop' && src && src.iceBlock) {
+        // only a block Brady kicked counts (one he shoved himself just skids off him)
+        if (src.thrownBy !== b.g.player) return false;
+        if (b.act === 'slide' && b.at > 0.6) { b.damage(1, { text: 'TUMBLE!', col: '#d8f4ff' }); return true; }
+        // not sliding: the block just bounces off his blubber
+        K.say(b.g, b, pick(['BLUBBER!', 'TICKLES.', 'WAIT TILL I SLIDE.']), '#bfe8ff'); src.vx = -src.vx * 0.5; src.vy = -3 * TS; return false;
       }
+      if (kind === 'stomp' || kind === 'spin') return 'bounce';
+      if (kind === 'bump' || kind === 'disc' || kind === 'laser' || kind === 'prop' || kind === 'hazard') return false;
+      return undefined;
+    },
+    // after a bounce off his back Brady is still a pixel inside the box for a frame: that is never contact
+    touch(b, p) { if (b.act === 'exit') return true; if (p.vy < 0 && p.y + p.h < b.y + 12) return true; return false; },
+    phase(b, n) {
+      const g = b.g;
+      if (n === 2) { b.hurtT = 1.4; b.passes = 3; K.say(g, b, 'PENGUINS! TO ME!', '#bfe8ff'); g.bannerText = 'THE PENGUIN SQUAD'; g.bannerT = 2; b.go('call'); }
+      if (n === 3) { b.hurtT = 1.6; b.passes = 3; K.say(g, b, 'ENOUGH! THE BIG ONE!', '#bfe8ff'); g.bannerText = 'THE FLOE CRACKS'; g.bannerT = 2; b.go('bigflop'); }
+    },
+    lastHit(b) { if (b.act !== 'exit') { b.vuln = false; b.go('exit'); } return true; },
+    update(b, dt) {
+      const g = b.g, p = g.player, first = b.first, ph = b.phase || 1;
+      b.guard = 'bounce';
+      if (b.act === 'walk') {
+        b.face(); b.walk(0.7); b.pose = 'walk';
+        if (ph >= 2) { b.callT += dt; let n = 0; for (const e of g.entities) if (e.aqSkidder && !e.remove && !e.dead) n++; if (n === 0 && b.callT > 7) { b.callT = 0; b.go('call'); } }
+        if (b.at > 1.4 && b.act === 'walk') { b.cycle++; b.go(['slide', 'tusks', 'flop', 'slide'][b.cycle % 4]); }
+      }
+      else if (b.act === 'slide') {
+        if (first) { b.face(); b.turns = 0; K.say(g, b, pick(['HARRUMPH!', 'BELLY SLIDE!', 'OUT OF MY WAY!']), '#bfe8ff'); Sound.play('bump', { pitch: 0.5, vol: 0.5 }); }
+        b.pose = b.at < 0.6 ? 'wind' : 'slide';
+        if (b.at < 0.6) b.vx = -b.dir * 1.2 * TS;
+        else {
+          b.vx = b.dir * (7 + (ph >= 2 ? 1.5 : 0) + (ph >= 3 ? 1 : 0)) * TS;
+          if (Math.random() < 0.6) g.burst(b.cx - b.dir * 40, b.floorY, 2, '#e8faff', 'dust');
+          // stationary ice blocks in his path get shoved ahead of him (mind them: they hurt)
+          for (const e of g.entities) if (e.iceBlock && !e.remove && !e.fast && overlap(e, b)) { e.fling(b.dir * 8 * TS, -4 * TS, b); Sound.play('kick', { vol: 0.4 }); }
+          if (b.hitWall || (b.dir < 0 && b.x <= b.arenaX0 + 2) || (b.dir > 0 && b.x >= b.arenaX1 - b.w - 2)) { b.dir = -b.dir; b.turns++; g.shake(5); Sound.play('bump'); if (b.turns >= b.passes) b.go('walk'); }
+        }
+        if (b.at > 7) b.go('walk');
+      }
+      else if (b.act === 'tusks') {
+        b.vx = 0; b.pose = 'tusks';
+        if (first) { b.tx = p ? p.cx : b.cx; b.face(); K.say(g, b, 'TUSKS!', '#bfe8ff'); }
+        if (b.at > 0.2 && b.at < 0.9 && Math.random() < 0.4) g.burst(b.tx + (Math.random() - 0.5) * 60, b.floorY, 2, '#e8faff', 'spark');
+        if (b.at > 0.9 && !b.fired) { b.fired = true; g.shake(6); Sound.play('break', { pitch: 0.7 }); for (let k = -1; k <= 1; k++) tourFire(g, b.tx + k * 34, b.floorY - 4, { kind: 'spike', vy: -9 * TS, grav: PHYS.gDown * 0.6, w: 14, h: 26, life: 0.7, thru: true, col: '#e8faff', art: spikeArt }); }
+        if (b.at > 1.5) { b.fired = false; b.go('walk'); }
+      }
+      else if (b.act === 'flop' || b.act === 'bigflop') {
+        const big = b.act === 'bigflop';
+        b.pose = b.at < 0.5 ? 'rear' : 'flop';
+        if (first) { b.face(); b.vx = 0; if (!big) K.say(g, b, 'BELLY FLOP!', '#bfe8ff'); }
+        if (b.at >= 0.5 && !b.fired) { b.fired = true; b.vy = -(big ? 15 : 13) * TS; b.vx = b.dir * 2 * TS; }
+        if (b.fired && b.onGround && b.at > 0.8) { b.fired = false; tuskFlop(b, big); if (big) { const f = tuskFloe(b); if (f) f.crack(); K.say(g, b, 'OOPS.', '#bfe8ff'); } b.go('walk'); b.at = 0.6; }
+      }
+      else if (b.act === 'call') { b.vx = 0; b.pose = 'call'; if (first) { b.face(); Sound.play('bump', { pitch: 0.4, vol: 0.6 }); } if (b.at > 0.8 && !b.fired) { b.fired = true; tuskCall(b); K.say(g, b, 'SKID THEM OVER!', '#bfe8ff'); } if (b.at > 1.4) { b.fired = false; b.go('walk'); } }
+      else if (b.act === 'tumble') { b.pose = 'tumble'; b.vx = -b.dir * 5 * TS * Math.max(0, 1 - b.at / 1.2); if (b.at > 1.3) b.go('walk'); }
+      else if (b.act === 'exit') {
+        b.pose = 'exit';
+        if (first) { K.say(g, b, 'OKAY. OKAY. YOU WIN. HAVE THE ICE.', '#bfe8ff'); b.splashed = false; b.sunk = 0; }
+        const hx = b.arenaX1 - 2.5 * TS;
+        if (b.at > 1.2 && !b.splashed) { b.dir = sign(hx - b.cx) || 1; b.vx = b.dir * 5 * TS; if (Math.random() < 0.5) g.burst(b.cx - b.dir * 40, b.floorY, 2, '#e8faff', 'dust'); if (Math.abs(b.cx - hx) < 12) { b.splashed = true; b.vx = 0; Sound.play('splash'); g.burst(hx, b.floorY, 40, '#bfe8ff', 'spark'); g.shake(6); } }
+        if (b.splashed) { b.vx = 0; b.sunk = Math.min(1, b.sunk + dt * 1.2); if (b.sunk >= 1 && !b.thumbed) { b.thumbed = true; K.say(g, { cx: hx, y: b.floorY - 30 }, 'THUMBS UP. GOOD FIGHT.', '#bfe8ff'); } }
+        if (b.at > 5) b.die();
+      }
+      else b.go('walk');
       b.fall(dt);
     },
-    hurt(b) { b.go('slide'); K.say(b.g, b, pick(['MY WHISKERS!', 'HARRUMPH!', 'BRRR-UTAL!']), '#bfe8ff'); b.g.burst(b.cx, b.cy, 22, '#e8faff', 'confetti'); },
+    hurt(b) { K.say(b.g, b, pick(['MY WHISKERS!', 'HARRUMPH!', 'BRRR-UTAL!']), '#bfe8ff'); b.g.burst(b.cx, b.cy, 22, '#e8faff', 'confetti'); b.go('tumble'); },
     draw(b, ctx, t) {
       const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose;
+      if (P === 'exit' && b.splashed) { ctx.save(); ctx.beginPath(); ctx.rect(b.x - 40, b.y - 60, b.w + 80, b.h + 60); ctx.clip(); ctx.translate(0, b.sunk * 70); }
       ctx.save(); ctx.translate(x, y); ctx.scale(d, 1);
       if (P === 'slide') ctx.rotate(Math.sin(t * 30) * 0.03);
-      if (P === 'winded') ctx.scale(1.06, 0.88);
+      if (P === 'wind') { ctx.translate(-Math.sin(t * 25) * 2, 0); ctx.scale(0.96, 1.04); }
+      if (P === 'rear') ctx.rotate(-0.35);
+      if (P === 'tumble') { ctx.rotate(-Math.min(1, b.at) * TAU * Math.max(0, 1 - b.at * 0.2)); ctx.scale(1, 0.95); }
+      if (P === 'flop') ctx.scale(1.06, 0.9);
+      if (P === 'call') ctx.rotate(-0.25);
       ctx.fillStyle = '#9a6a4a'; ctx.beginPath(); ctx.ellipse(-6, -24, 48, 24, 0, 0, TAU); ctx.fill();
       ctx.beginPath(); ctx.moveTo(-50, -18); ctx.lineTo(-66, -26); ctx.lineTo(-62, -8); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#7a4a32'; ctx.beginPath(); ctx.ellipse(20, -6, 12, 6, 0.3, 0, TAU); ctx.fill();
@@ -337,11 +508,17 @@ const boss = {
       ctx.fillStyle = '#c89a7a'; ctx.beginPath(); ctx.ellipse(44, -28, 10, 8, 0, 0, TAU); ctx.fill();
       ctx.fillStyle = '#fff8e8'; for (const tx of [40, 48]) { ctx.beginPath(); ctx.moveTo(tx - 2, -24); ctx.lineTo(tx + (P === 'tusks' ? 2 : 0), -4 + (P === 'tusks' ? 8 : 0)); ctx.lineTo(tx + 2, -24); ctx.fill(); }
       ctx.strokeStyle = '#5a3a22'; ctx.lineWidth = 1; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(44, -30 + k * 2); ctx.lineTo(56, -32 + k * 3); ctx.stroke(); }
-      if (P === 'winded') K.dizzy(ctx, 34, -56, t); else K.eyes(ctx, 36, -40, 1, 3, 2.6, true);
+      if (P === 'tumble') K.dizzy(ctx, 34, -56, t); else if (P === 'exit') { ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(36, -42, 3.5, 0.1, Math.PI - 0.1, true); ctx.stroke(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(32, -40, 1.6, 0, TAU); ctx.arc(40, -40, 1.6, 0, TAU); ctx.fill(); } else K.eyes(ctx, 36, -40, 1, 3, 2.6, P !== 'walk');
+      if (P === 'call') { ctx.fillStyle = '#3a1a10'; ctx.beginPath(); ctx.ellipse(46, -22, 5, 7, 0, 0, TAU); ctx.fill(); }
       ctx.restore();
+      if (P === 'exit' && b.splashed) { ctx.restore(); const hx = b.arenaX1 - 2.5 * TS; ctx.fillStyle = 'rgba(190,232,255,0.9)'; ctx.beginPath(); ctx.ellipse(hx, b.floorY - 2, 22, 6, 0, 0, TAU); ctx.fill(); if (b.sunk >= 1) { ctx.save(); ctx.translate(hx, b.floorY); ctx.rotate(Math.sin(t * 3) * 0.1); ctx.fillStyle = '#9a6a4a'; rr(ctx, -6, -30, 12, 28, 5); ctx.fill(); rr(ctx, -2, -44, 6, 18, 3); ctx.fill(); ctx.restore(); } }
+      if (P === 'wind') { ctx.fillStyle = '#ffffff'; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(d > 0 ? '▶ ▶ ▶' : '◀ ◀ ◀', x + d * 70, y - 40); }
+      if (P === 'call') { ctx.strokeStyle = `rgba(255,255,255,${0.6 + 0.4 * Math.sin(t * 20)})`; ctx.lineWidth = 2; const a0 = d > 0 ? 0 : Math.PI; for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.arc(x + d * 50, y - 30, 8 + k * 7, a0 - 0.6, a0 + 0.6); ctx.stroke(); } }
     }
   }
 };
+Object.assign(entities, { aqIcicle: AqIcicle, aqBlock: AqBlock, aqFloe: AqFloe });
+Object.assign(enemies, { aqSkidder: { cls: AqSkidder, place: 'walk' } });
 
 /* ---------------- music: glassy bells and a drifting pad; brisk for the iceberg ---------------- */
 const tracks = {
@@ -411,9 +588,9 @@ Tour.country({
       hint: 'Warm air from the heater vents lifts you up',
       postcard: 'The sky is dancing green. The scientists gave me cocoa and a very serious hat. ♥ C',
       script: [['flat', { n: 5 }], ['modules', { gold: true }], 'vent', 'mast', 'cp', 'modules', ['vent', {}], 'lsd', ['enemies', { n: 2 }], 'mast', 'end'] },
-    { name: 'The Blizzard Palace', style: 'castle', theme: 'aq_storm', gimmick: 'Blizzard gusts come in waves over cracking ice, then Big Tusk the walrus',
+    { name: 'The Blizzard Palace', style: 'castle', theme: 'aq_storm', gimmick: 'Blizzard gusts come in waves over cracking ice, then Big Tusk the walrus: drop icicles on him and trip his belly-slides with kicked ice blocks until the floe cracks',
       enemies: [['aqSnowball', 2], ['aqRover', 1]], boss: 'aq_walrus', arena: 'glacier', arenaW: 26, roof: false,
-      hint: 'When Big Tusk belly-flops he winds himself: stomp him then!',
+      hint: 'Bump the icicles down on Big Tusk, and kick ice blocks into his belly-slide',
       postcard: 'You beat Big Tusk! He says sorry and offers you a fish. Just say no thank you. ♥ C',
       script: [['flat', { n: 4 }], 'blizzard', 'crevasse', ['seracs', {}], 'cp', 'sig', ['blizzard', {}], ['bowling', { n: 12, pins: 2 }], ['blocks', { content: 'power' }], 'arena'] }
   ]

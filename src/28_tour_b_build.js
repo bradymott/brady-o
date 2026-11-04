@@ -98,7 +98,8 @@ function tourStrip(ctx, mode) {
   if (ctx.i === 1) { B.set(7, GY - 4, T.HIDDEN); B.item(7, GY - 4, 'oneup'); }
   st.x = 12;
   const script = (S.script || []).slice();
-  if (!script.some(s => s === 'end' || (Array.isArray(s) && s[0] === 'end'))) script.push(mode === 'castle' ? 'arena' : 'end');
+  const endsWith = n => script.some(s => s === n || (Array.isArray(s) && s[0] === n));
+  if (!endsWith('end') && !endsWith('arena')) script.push(mode === 'castle' ? 'arena' : 'end');
   if (!script.some(s => s === 'cp' || (Array.isArray(s) && s[0] === 'cp'))) script.splice(Math.floor(script.length / 2), 0, 'cp');
   for (let k = 0; k < script.length; k++) {
     const step = script[k];

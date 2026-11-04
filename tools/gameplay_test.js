@@ -241,69 +241,18 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       const woke = b.state !== 'sleep', nm = b.name;
       const doorRow = Math.floor(b.floorY / 32) - 1, before = g.area.tiles[doorRow * g.area.W + b.doorX];
       for (let k = 0; k < 12 && b.hp > 0.01; k++) { b.hurtT = 0; b.state = 'fight'; b.damage(1); sim(0.3); }
-      sim(2.5);
+      // the finish sequences (candy rain, a sealed pot, a goal...) take a few seconds before the door opens
+      for (let k = 0; k < 60 && g.area.tiles[doorRow * g.area.W + b.doorX] === 5; k++) sim(0.25);
       const after = g.area.tiles[doorRow * g.area.W + b.doorX];
       const gate = g.entities.find(e => e.constructor.name === 'Gate' && !e.secret);
       p.invuln = 0; p.x = gate.cx - 60; p.y = gate.y + gate.h - p.h - 4; sim(1, { right: true }); sim(8);
       return { woke, nm, removed: b.remove, before, after, state: g.state };
     }, [id]);
     check(`${name} wakes up, can be beaten and opens the way out (${id})`, boss.woke && new RegExp(name).test(boss.nm) && boss.removed && boss.before === 5 && boss.after === 0 && boss.state === 'results', boss);
-    if (tag === 'mx') {
-      await page.evaluate(() => { start('1-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 200; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); });
-      await shot('10-boss-pinaton.png');
-    } else if (tag === 'ec') {
-      await page.evaluate(() => { start('2-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(2.5); b.go('rear'); sim(0.6); });
-      await shot('10b-boss-tortugon.png');
-    } else if (['mz', 'ma', 'es', 'nl', 'aq', 'w22', 'id', 'vn', 'jp'].includes(tag)) {
-      await page.evaluate(([id, act]) => { start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3); b.go(act); sim(0.9); }, [id, { mz: 'out', ma: 'walk', es: 'simmer', nl: 'fling', aq: 'tusks', w22: 'frozen', id: 'walk', vn: 'walk', jp: 'walk' }[tag]]);
-      await shot('10d-boss-' + tag + '.png');
-    } else if (tag === 'br') {
-      await page.evaluate(() => { start('3-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 100; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3); b.go('dive'); sim(1.2); });
-      await shot('10c-boss-tucanao.png');
-    } else {
-      await page.evaluate(() => { start('7-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 200; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.2); });
-      await shot('11-boss-souffle.png');
-    }
+    await page.evaluate(([id]) => { start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 160; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); }, [id]);
+    await shot('10-boss-' + tag + '.png');
   }
-  const tort = await page.evaluate(() => {
-    start('2-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
-    p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(2.5);
-    b.go('walk'); sim(0.05); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 0; sim(0.4); const shell = b.hp;
-    sim(1); b.go('rear'); sim(0.5); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 0; sim(0.4);
-    return { hp0: b.maxHp, shell, head: b.hp };
-  });
-  check('El Tortugón: his shell is too hard, but stomping his head while he rears up hurts him', tort.shell === tort.hp0 && tort.head === tort.hp0 - 1, tort);
-  const tuc = await page.evaluate(() => {
-    start('3-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
-    p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3);
-    b.go('dive'); let landed = false; for (let k = 0; k < 400 && !landed; k++) { sim(1 / 120); landed = b.act === 'stuck'; }
-    sim(0.3); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 0; sim(0.4);
-    return { landed, hp0: b.maxHp, hp: b.hp };
-  });
-  check('O Tucanão dives, gets his beak stuck in the floor, and can be stomped then', tuc.landed && tuc.hp === tuc.hp0 - 1, tuc);
-  // the new bosses: each one can only be stomped in its weak moment
-  await page.evaluate(() => {
-    window.bossWeak = (id, act, setup) => {
-      start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
-      p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3);
-      b.go('walk'); sim(0.05); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 0; sim(0.4); const guarded = b.hp; sim(0.6);
-      b.go(act); if (setup) setup(b); let weak = false; for (let k = 0; k < 900 && !weak; k++) { sim(1 / 120); weak = b.vuln; }
-      p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 0; sim(0.4);
-      return { weak, hp0: b.maxHp, guarded, hp: b.hp, act: b.act };
-    };
-  });
-  for (const [id, act, what] of [['13-4', 'flop', 'Big Tusk winds himself with a belly-flop'], ['22-4', 'walk', 'the Other Brady freezes when the clock strikes 22:22'], ['4-5', 'out', 'O Eremita is stompable once he leaves his shell'], ['5-5', 'pot', 'the Djinn pops out of his teapot after it lands'], ['6-5', 'simmer', 'Paellasaurus cools down after simmering'], ['8-5', 'fling', 'the Cheese King teeters after flinging a wheel']]) {
-    const r = await page.evaluate(([id, act]) => bossWeak(id, act), [id, act]);
-    check(what + ' (stomps bounce off otherwise)', r.weak && r.guarded === r.hp0 && r.hp === r.hp0 - 1, r);
-  }
-  const extras = await page.evaluate(() => {
-    start('6-5'); clearEnemies(); let g = S(), p = P(); let b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3);
-    b.go('simmer'); sim(0.3); b.hit('disc', p); const cooled = b.act === 'cool';
-    start('8-5'); clearEnemies(); g = S(); p = P(); b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 99; p.collect('sig:bike'); sim(3);
-    b.go('walk'); p.x = b.cx - 90; sim(0.02); sim(0.05, { actionPressed: true }); const tottered = b.act === 'totter';
-    return { cooled, tottered };
-  });
-  check('a tomato cools Paellasaurus at once, and the bike bell makes the Cheese King teeter', extras.cooled && extras.tottered, extras);
+  // the boss fights themselves (mechanics, phases, weak moments) are checked per country by tools/boss_test.js
   // Bali, Vietnam, Japan and Nepal: each signature item works in its own country
   const sigs4 = await page.evaluate(() => {
     const out = {};

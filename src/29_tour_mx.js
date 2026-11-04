@@ -821,11 +821,18 @@ const P = {
     st.enemy('mxBurro', x + 9, st.gy);
     return x + 15;
   },
-  // the boss courtyard: a fountain in the middle, two upper ledges
-  arena_patio(st, o) {
+  // the boss patio: a pulley rail across the ceiling (the piñata hangs from it), three market stalls with
+  // bouncy awnings to reach him when the rope shortens, lamps, pots and flowers
+  arena_fiesta(st, o) {
     const B = st.B, { x0, w, GY } = o;
-    for (let q = 0; q < 3; q++) { B.set(x0 + 4 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
-    B.prop('mxFountain', x0 + Math.floor(w / 2) - 2, GY - 1, 4, 1, 'none', { jets: [], jetH: 0 });
+    for (const sx of [x0 + 1, x0 + Math.floor(w / 2) - 3, x0 + w - 6]) {
+      const ay = GY - 3;
+      B.prop('mxStall', sx, ay, 5, 3, 'none', {});
+      for (let q = 0; q < 5; q++) { B.set(sx + q, ay, T.SEMI); B.setHide(sx + q, ay, 1); B.setSurf(sx + q, ay, SURF.BOUNCE); }
+    }
+    B.spawn('mxRail', x0 + 1, 1, { x0: x0 + 1, x1: x0 + w - 1 });
+    B.decorAt('mxLamp', x0 + 7, GY, 0); B.decorAt('mxLamp', x0 + w - 8, GY, 0);
+    B.decorAt('mxPots', x0 + 8, GY, 0); B.decorAt('mxCrates', x0 + w - 9, GY, 0); B.decorAt('mxFlowers', x0 + 9, GY, 0); B.decorAt('mxFlowers', x0 + w - 10, GY, 0); B.decorAt('mxNopal', x0 + 17, GY, 0);
   }
 };
 // tiny extra decor used by the pieces
@@ -856,56 +863,233 @@ const platforms = {
 };
 
 /* ---------------- the boss: EL GRAN PIÑATÓN ---------------- */
-// A giant star piñata. It spin-dashes across the courtyard (dizzy when it hits a wall:
-// stomp its top), hops to make it rain candy, and later fires its cone tips.
+// A giant star piñata hoisted on a pulley rope across the patio ceiling. You break a piñata from BELOW:
+// stomps bounce off, headbutts land. Phase 1 he swings low and spits candy (collect it!); phase 2 the rope
+// shortens (bounce off the stall awnings to reach him), he throws spinning cones and the lights go
+// blindfold-dark in pulses; phase 3 the rope snaps and he rolls around the floor as a spiky ball: stomp him
+// while he's dizzy from hitting a wall. He bursts into a candy rain and Brady is buried in sweets.
+// the rail hangs six tiles below the roof, just under the boss's health bar: with the boss flagged `tall` the
+// camera's horizon drops (its top sits at about y = 125 with Brady on the floor) and the pulley stays in frame
+const MX_RAIL_Y = 6 * TS;
+// a wrapped candy: falls, lands, and Brady collects it for points
+class MxCandy extends Ent {
+  constructor(g, x, y, vx, vy, col) { super(g, null, 14, 14); this.x = x - 7; this.y = y - 7; this.vx = vx; this.vy = vy; this.col = col || PAPEL[Math.floor(Math.random() * 6)]; this.item = true; this.life = 8; this.rot = Math.random() * TAU; }
+  update(dt) {
+    this.t += dt; this.life -= dt; if (this.life <= 0 || this.y > this.g.area.H * TS) { this.remove = true; return; }
+    this.vy += PHYS.gDown * 0.6 * dt; if (this.vy > 14 * TS) this.vy = 14 * TS;
+    const vx = this.vx; moveBody(this, this.g.area, dt, { semis: true });
+    this.vx = this.hitWall ? -vx * 0.5 : vx;
+    if (this.onGround) this.vx = approach(this.vx, 0, 5 * TS * dt);
+    this.rot += this.vx * dt / 7;
+  }
+  touchPlayer(p) { if (this.remove || p.dead) return; this.remove = true; Sound.play('pick', { pitch: 1.3, vol: 0.5 }); this.g.addScore(100, this.cx, this.y); this.g.burst(this.cx, this.cy, 6, this.col, 'spark'); }
+  draw(ctx) {
+    ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(this.rot);
+    ctx.fillStyle = this.col; ctx.beginPath(); ctx.ellipse(0, 0, 6.5, 4.5, 0, 0, TAU); ctx.fill();
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 6, 0); ctx.lineTo(s * 11, -4); ctx.lineTo(s * 11, 4); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(-1.5, -4, 3, 8);
+    ctx.restore();
+  }
+}
+// the pulley rail across the patio ceiling: papel picado, the pulley block and the piñata's rope
+class MxRail extends Ent {
+  constructor(g, s) { super(g, s, 10, 10); this.x = s.x0 * TS; this.w = (s.x1 - s.x0) * TS; this.ry = s.ry != null ? s.ry : MX_RAIL_Y; this.y = this.ry - 10; this.h = 40; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const y = this.ry, x0 = this.x, x1 = this.x + this.w, b = this.g.boss, hung = b && b.hang && b.state !== 'sleep';
+    if (hung) {
+      ctx.strokeStyle = '#e8d8b8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(b.anchorX, y + 6); ctx.lineTo(b.cx, b.cy); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(b.anchorX + 1, y + 6); ctx.lineTo(b.cx + 1, b.cy); ctx.stroke();
+    }
+    ctx.fillStyle = '#4a2a1a'; ctx.fillRect(x0, y - 5, x1 - x0, 10); ctx.fillStyle = '#8a6a4a'; ctx.fillRect(x0, y - 5, x1 - x0, 3);
+    for (let x = x0 + 24; x < x1; x += 96) { ctx.fillStyle = '#2a1a10'; ctx.fillRect(x - 4, y - 7, 8, 14); }
+    for (let x = x0 + 6, k = 0; x < x1 - 20; x += 26, k++) {
+      const sw = Math.sin(this.t * 2 + k) * 2;
+      ctx.fillStyle = PAPEL[k % 6]; ctx.beginPath(); ctx.moveTo(x, y + 5); ctx.lineTo(x + 20, y + 5); ctx.lineTo(x + 17 + sw, y + 24); ctx.lineTo(x + 3 + sw, y + 24); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(x + 10 + sw / 2, y + 14, 3, 0, TAU); ctx.fill();
+    }
+    if (hung) {
+      ctx.fillStyle = '#3a2a2a'; rr(ctx, b.anchorX - 10, y - 8, 20, 18, 4); ctx.fill();
+      ctx.fillStyle = '#c8a040'; ctx.beginPath(); ctx.arc(b.anchorX, y + 4, 6, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#6a4a1a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(b.anchorX, y + 4, 6, 0, TAU); ctx.stroke();
+      const a = b.pulleyA || 0; ctx.beginPath(); ctx.moveTo(b.anchorX, y + 4); ctx.lineTo(b.anchorX + Math.cos(a) * 5, y + 4 + Math.sin(a) * 5); ctx.stroke();
+    }
+  }
+}
+Object.assign(entities, { mxRail: MxRail });
+const coneArt = (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 9); ctx.fillStyle = s.col; ctx.beginPath(); ctx.moveTo(-7, 6); ctx.lineTo(7, 6); ctx.lineTo(0, -9); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(-1, -4, 2, 6); ctx.restore(); };
 const boss = {
   id: 'mx_pinata', name: 'El Gran Piñatón', hp: 4, dims: [70, 70], music: 'tour_mx_boss',
   brain: {
-    guardText: 'TOO SPINNY',
-    wake(b) { say(b.g, b, '¡NADIE ROMPE A PIÑATÓN!', '#ffd84a'); },
+    guardText: '¡DESDE ABAJO!',
+    phases: [3, 1],
+    wake(b) { b.hush = true; b.tall = true; b.hang = false; b.rope = 0; b.swT = 0; b.th = 0; b.railT = 0; b.anchorX = b.cx; b.rollN = 0; b.atkT = 2.4; b.candyT = 0; b.dark0 = !!b.g.area.dark; say(b.g, b, '¡NADIE ROMPE A PIÑATÓN!', '#ffd84a'); },
+    // how long the rope is: low in phase 1 (headbutt him from the floor), high in phase 2 (bounce off the awnings)
+    ropeFor(b) { return (b.phase >= 2 ? b.floorY - 5 * TS : b.floorY - 3.1 * TS) - 35 - (MX_RAIL_Y + 6); },
+    // where the piñata hangs: the pulley slides along the rail, the rope swings like a pendulum
+    hangAt(b, dt) {
+      const sw = b.phase >= 2 ? 2.1 : 1.6, amp = b.phase >= 2 ? 0.85 : 0.75;
+      b.railT += dt; b.swT += dt * sw;
+      const mid = (b.arenaX0 + b.arenaX1) / 2, range = Math.max(0, (b.arenaX1 - b.arenaX0) / 2 - 5.5 * TS);
+      b.anchorX = mid + Math.sin(b.railT * 0.45) * range;
+      b.th = amp * Math.sin(b.swT);
+      b.rope = approach(b.rope, b.ropeTarget, 140 * dt);
+      const cx = b.anchorX + Math.sin(b.th) * b.rope, cy = MX_RAIL_Y + 6 + Math.cos(b.th) * b.rope;
+      b.dir = Math.cos(b.swT) >= 0 ? 1 : -1;
+      b.x = cx - b.w / 2; b.y = cy - b.h / 2; b.vx = 0; b.vy = 0; b.pulleyA = (b.pulleyA || 0) + dt * 6;
+    },
+    candyBurst(b, n) {
+      for (let k = 0; k < n; k++) b.g.spawn(new MxCandy(b.g, b.cx + (k - n / 2) * 6, b.cy, (k - n / 2) * 1.4 * TS, -8 * TS - Math.random() * 3 * TS));
+      b.g.burst(b.cx, b.cy, 24, '#ff9ac8', 'confetti');
+      for (let k = 0; k < 4; k++) b.g.spawn(new PickPop(b.g, b.cx + (k - 2) * 10, b.y + 10));
+    },
     update(b, dt) {
-      const g = b.g;
+      const g = b.g, p = g.player;
       b.guard = 'bounce';
-      if (b.act === 'walk') { b.face(); b.walk(1.2); b.pose = 'walk'; if (b.at > 1.3) { b.cycle++; b.go(b.cycle % 3 === 1 ? 'spin' : b.cycle % 3 === 2 ? 'hop' : (b.hp <= 2 ? 'cones' : 'spin')); } }
-      else if (b.act === 'spin') {
-        if (b.at < 0.6) { b.vx = 0; b.pose = 'windup'; }
-        else { b.walk(6.2); b.pose = 'spin'; if (b.hitWall || b.x <= b.arenaX0 + 1 || b.x >= b.arenaX1 - b.w - 1) { g.shake(8); Sound.play('bump'); g.burst(b.cx, b.cy, 20, '#ffd84a', 'confetti'); b.go('dizzy'); } }
-        if (b.at > 4) b.go('walk');
+      if (b.act === 'walk') b.go(b.hang ? 'swing' : 'hoist');
+      if (b.act === 'hoist') {
+        // the rope hoists him up off the patio floor
+        if (b.first) { b.hang = true; b.anchorX = b.cx; b.railT = 0; b.swT = 0; b.rope = b.floorY - 35 - (MX_RAIL_Y + 6); b.ropeTarget = this.ropeFor(b); K.sfx('spring', null, { pitch: 0.6, vol: 0.5 }); say(g, b, '¡ARRIBA!', '#ffd84a'); b.atkT = 2.4; }
+        b.pose = 'swing';
+        b.rope = approach(b.rope, b.ropeTarget, 150 * dt);
+        b.x = b.anchorX - b.w / 2; b.y = MX_RAIL_Y + 6 + b.rope - b.h / 2; b.vx = 0; b.vy = 0; b.pulleyA = (b.pulleyA || 0) + dt * 10;
+        if (Math.abs(b.rope - b.ropeTarget) < 1) { b.swT = 0; b.go('swing'); }
       }
-      else if (b.act === 'dizzy') { b.vx = 0; b.pose = 'dizzy'; b.vuln = true; b.guard = 'hurt'; if (b.at > 2.2) b.go('walk'); }
-      else if (b.act === 'hop') {
-        if (b.first) { b.vy = -15 * TS; b.vx = 0; b.face(); }
-        b.pose = 'hop';
-        if (b.onGround && b.at > 0.3) {
-          g.shake(6); Sound.play('stomp', { pitch: 0.6 });
-          for (let k = 0; k < 6; k++) tourFire(g, b.arenaX0 + TS * 2 + Math.random() * (b.arenaX1 - b.arenaX0 - 4 * TS), b.floorY - 9 * TS - Math.random() * 3 * TS, { kind: 'candy', vy: 1 * TS, grav: PHYS.gDown * 0.35, w: 12, h: 12, life: 3, thru: true, stompable: true, col: PAPEL[k % 6], art: (ctx, s, t) => { ctx.fillStyle = s.col; ctx.beginPath(); ctx.arc(s.cx, s.cy, 6, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(s.cx - 2, s.cy - 2, 2, 0, TAU); ctx.fill(); } });
-          b.go('walk');
+      else if (b.act === 'swing') {
+        b.ropeTarget = this.ropeFor(b);
+        this.hangAt(b, dt); b.pose = 'swing';
+        b.atkT -= dt;
+        if (b.atkT <= 0) { b.cycle++; b.go(b.phase >= 2 ? ['cones', 'blind', 'spit'][b.cycle % 3] : 'spit'); }
+      }
+      else if (b.act === 'spit') {
+        // tell: he puffs up, then spits a mouthful of candy (free points)
+        this.hangAt(b, dt); b.pose = b.at < 0.55 ? 'puff' : 'spit';
+        if (b.at > 0.55 && !b.fired) {
+          b.fired = true; say(g, b, '¡DULCES!', '#ff9ac8'); Sound.play('throw', { pitch: 0.8 });
+          for (let k = 0; k < 7; k++) g.spawn(new MxCandy(g, b.cx, b.cy + 10, (k - 3) * 1.6 * TS + (Math.random() - 0.5) * TS, -7 * TS - Math.random() * 3 * TS));
+          g.burst(b.cx, b.cy + 12, 10, '#ff9ac8', 'confetti');
         }
+        if (b.at > 1.1) { b.fired = false; b.atkT = b.phase >= 2 ? 2.2 : 3.0; b.go('swing'); }
       }
       else if (b.act === 'cones') {
-        b.vx = 0; b.pose = 'cones';
-        if (b.at > 0.7 && !b.fired) { b.fired = true; for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + (k - 2) * 0.45; tourFire(g, b.cx, b.cy - 10, { kind: 'cone', vx: Math.cos(a) * 5 * TS, vy: Math.sin(a) * 5 * TS, grav: PHYS.gDown * 0.35, w: 14, h: 14, life: 3, thru: true, col: PAPEL[k], art: (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 6); ctx.fillStyle = s.col; ctx.beginPath(); ctx.moveTo(-6, 5); ctx.lineTo(6, 5); ctx.lineTo(0, -8); ctx.fill(); ctx.restore(); } }); } Sound.play('kick', { pitch: 1.3 }); }
-        if (b.at > 1.6) { b.fired = false; b.go('walk'); }
+        // tell: he revs up (a fast wobble), then fans five spinning cones downward
+        this.hangAt(b, dt); b.pose = b.at < 0.75 ? 'rev' : 'cones';
+        if (b.first) say(g, b, '¡CONOS!', '#ffd84a');
+        if (b.at > 0.75 && !b.fired) {
+          b.fired = true; Sound.play('kick', { pitch: 1.3 });
+          for (let k = 0; k < 5; k++) { const a = Math.PI / 2 + (k - 2) * 0.42; tourFire(g, b.cx, b.cy + 10, { kind: 'cone', vx: Math.cos(a) * 4.5 * TS, vy: Math.sin(a) * 4.5 * TS, grav: PHYS.gDown * 0.3, w: 14, h: 14, life: 3, thru: true, col: PAPEL[k], art: coneArt }); }
+        }
+        if (b.at > 1.4) { b.fired = false; b.atkT = 2.0; b.go('swing'); }
       }
-      b.fall(dt);
+      else if (b.act === 'blind') {
+        // tell: eyes shut and a shout, then the patio lights go out for a moment
+        this.hangAt(b, dt); b.pose = 'blind';
+        if (b.first) say(g, b, '¡VENDA!', '#ffffff');
+        const dark = b.at > 0.5 && b.at < 1.3;
+        if (dark !== !!b.darkOn) { b.darkOn = dark; g.area.dark = dark || b.dark0; if (dark) Sound.play('select', { pitch: 0.5, vol: 0.4 }); }
+        if (b.at > 1.5) { b.atkT = 1.8; b.go('swing'); }
+      }
+      else if (b.act === 'snap') {
+        // the rope snaps: he drops onto the floor
+        if (b.first) { b.hang = false; say(g, b, '¡AY! ¡MI CUERDA!', '#ffd84a'); Sound.play('break', { vol: 0.6 }); b.vy = 2 * TS; b.vx = 0; g.area.dark = b.dark0; b.darkOn = false; }
+        b.pose = 'fall'; b.fall(dt);
+        if (b.onGround && b.at > 0.2) { g.shake(9); Sound.play('stomp', { pitch: 0.5 }); g.burst(b.cx, b.y + b.h, 16, '#e8be86', 'dust'); b.go('rev'); }
+      }
+      else if (b.act === 'rev') {
+        // tell: he sprouts spikes and shakes before rolling
+        b.vx = 0; b.pose = 'rev'; b.fall(dt);
+        if (b.first) { b.face(); say(g, b, pick(['¡AHORA PICO!', '¡RUEDO!', '¡CUIDADO!']), '#ffd84a'); }
+        if (b.at > 0.7) b.go('roll');
+      }
+      else if (b.act === 'roll') {
+        b.pose = 'roll';
+        if (b.first) { b.face(); b.rollN++; }
+        b.vx = b.dir * (5.5 + Math.min(2.5, b.rollN * 0.6)) * TS; b.fall(dt);
+        if (b.onGround && Math.random() < 0.02) b.vy = -5 * TS;
+        if (b.hitWall || b.x <= b.arenaX0 + 1 || b.x >= b.arenaX1 - b.w - 1) { g.shake(8); Sound.play('bump'); g.burst(b.cx + b.dir * 30, b.cy, 18, '#ffd84a', 'confetti'); b.go('dizzy'); }
+        if (b.at > 4) b.go('dizzy');
+      }
+      else if (b.act === 'dizzy') {
+        // the weak moment: dizzy against the wall, spikes drooping, stomp him
+        b.vx = 0; b.pose = 'dizzy'; b.vuln = true; b.guard = 'hurt'; b.fall(dt);
+        if (b.first) say(g, b, pick(['¡AY, MI CABEZA!', '¿DÓNDE ESTOY?']), '#ffd84a');
+        if (b.at > 2.4) b.go('rev');
+      }
+      else if (b.act === 'burst') {
+        // the finish: candy rains over the whole patio and Brady is buried in sweets
+        b.vx = 0; b.vuln = true; b.pose = 'burst'; b.fall(dt);
+        if (b.first) { g.bannerText = '¡PIÑATA ROTA!'; g.bannerT = 2.4; say(g, b, '¡NOOO, MIS DULCES!', '#ffd84a'); g.shake(10); Sound.play('break'); this.candyBurst(b, 10); }
+        if (b.at < 2.0) {
+          b.candyT -= dt;
+          while (b.candyT <= 0) {
+            b.candyT += 0.04;
+            g.spawn(new MxCandy(g, b.arenaX0 + TS + Math.random() * (b.arenaX1 - b.arenaX0 - 2 * TS), MX_RAIL_Y + 20, (Math.random() - 0.5) * 2 * TS, 2 * TS));
+            if (p && Math.random() < 0.5) g.spawn(new MxCandy(g, p.cx + (Math.random() - 0.5) * 140, p.y - 6 * TS, 0, 0));
+          }
+          if (Math.random() < 0.3) g.burst(b.cx + (Math.random() - 0.5) * 60, b.cy, 6, PAPEL[Math.floor(Math.random() * 6)], 'confetti');
+        }
+        if (b.at > 2.6) b.die();
+      }
     },
-    hurt(b) { b.go('walk'); b.vx = -b.dir * 5 * TS; say(b.g, b, pick(['¡AY, MIS DULCES!', 'NOT THE CANDY!', '¡OYE!']), '#ffd84a'); for (let k = 0; k < 8; k++) b.g.spawn(new PickPop(b.g, b.cx + (k - 4) * 6, b.y + 10)); b.g.burst(b.cx, b.cy, 30, '#ff9ac8', 'confetti'); },
+    hit(b, kind, src) {
+      if (b.act === 'burst' || b.act === 'snap') return false;
+      if (b.hang) {
+        if (kind === 'bump') { b.damage(1, { text: pick(['¡DALE!', '¡DURO!', '¡OTRA!']), col: '#ffd84a' }); return true; }
+        if (kind === 'stomp' || kind === 'spin') return 'bounce';
+        if (kind === 'star') return undefined;
+        return false;   // tacos just bounce off paper
+      }
+      if (b.act === 'dizzy' && (kind === 'stomp' || kind === 'spin')) { b.damage(1, { text: '¡ROTO!', col: '#ffffff' }); return true; }
+      if (kind === 'star') return undefined;
+      return false;   // a rolling spiky ball: nothing touches it (and the spikes hurt)
+    },
+    hurt(b) { this.candyBurst(b, 6); say(b.g, b, pick(['¡AY, MIS DULCES!', 'NOT THE CANDY!', '¡OYE!']), '#ffd84a'); if (b.hang) { b.atkT = Math.max(b.atkT || 0, 1.2); b.go('swing'); } },
+    phase(b, n) {
+      const g = b.g;
+      if (n === 2) { say(g, b, '¡MÁS ALTO! ¡MÁS ALTO!', '#ffd84a'); this.candyBurst(b, 8); b.atkT = 1.4; b.cycle = 0; g.area.dark = b.dark0; b.darkOn = false; Sound.play('spring', { pitch: 0.7 }); b.go('swing'); }
+      else if (n === 3) { this.candyBurst(b, 8); b.go('snap'); }
+    },
+    lastHit(b) { b.g.area.dark = b.dark0; b.darkOn = false; b.go('burst'); return true; },
     draw(b, ctx, t) {
-      const x = b.cx, y = b.y + b.h / 2, sq = 1 + b.squash * 0.15;
-      const spin = b.pose === 'spin' ? t * 18 : b.pose === 'windup' ? Math.sin(t * 20) * 0.2 : Math.sin(t * 2) * 0.08;
-      ctx.save(); ctx.translate(x, y); ctx.scale(sq, 1 / sq); ctx.rotate(spin);
+      const x = b.cx, y = b.cy, P = b.pose, sq = 1 + b.squash * 0.15;
+      const spiky = ['rev', 'roll', 'dizzy', 'burst', 'fall'].indexOf(P) >= 0;
+      let rot = 0;
+      if (P === 'roll') rot = b.at * 14 * b.dir;
+      else if (P === 'rev' || P === 'cones') rot = Math.sin(t * 30) * 0.12;
+      else if (P === 'fall') rot = b.at * 3;
+      else if (b.hang) rot = b.th * 0.5 + Math.sin(t * 2) * 0.05;
+      const split = P === 'burst' ? Math.min(1, b.at / 0.5) : 0;
+      ctx.save(); ctx.translate(x, y); ctx.scale(sq, 1 / sq); ctx.rotate(rot);
+      const R = spiky ? 42 : 46;
       for (let k = 0; k < 5; k++) {
         const a = -Math.PI / 2 + k * TAU / 5;
         ctx.fillStyle = PAPEL[k % PAPEL.length];
-        ctx.beginPath(); ctx.moveTo(Math.cos(a - 0.3) * 22, Math.sin(a - 0.3) * 22); ctx.lineTo(Math.cos(a) * 46, Math.sin(a) * 46); ctx.lineTo(Math.cos(a + 0.3) * 22, Math.sin(a + 0.3) * 22); ctx.fill();
-        for (let q = 0; q < 3; q++) { ctx.strokeStyle = PAPEL[(k + q + 1) % 6]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 46, Math.sin(a) * 46); ctx.lineTo(Math.cos(a + 0.2 * (q - 1)) * 56 + Math.sin(t * 6 + q) * 2, Math.sin(a + 0.2 * (q - 1)) * 56 + 6); ctx.stroke(); }
+        ctx.beginPath(); ctx.moveTo(Math.cos(a - 0.3) * 22, Math.sin(a - 0.3) * 22); ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R); ctx.lineTo(Math.cos(a + 0.3) * 22, Math.sin(a + 0.3) * 22); ctx.fill();
+        if (spiky) {
+          // prickly: every point sprouts thorns (they droop when he's dizzy)
+          const dr = P === 'dizzy' ? 0.5 : 1;
+          ctx.fillStyle = '#f4ecd8';
+          for (let q = -1; q <= 1; q++) { const aa = a + q * 0.22, r0 = 30 + Math.abs(q) * 6; ctx.beginPath(); ctx.moveTo(Math.cos(aa - 0.08) * r0, Math.sin(aa - 0.08) * r0); ctx.lineTo(Math.cos(aa) * (r0 + 16 * dr), Math.sin(aa) * (r0 + 16 * dr)); ctx.lineTo(Math.cos(aa + 0.08) * r0, Math.sin(aa + 0.08) * r0); ctx.fill(); }
+        } else {
+          for (let q = 0; q < 3; q++) { ctx.strokeStyle = PAPEL[(k + q + 1) % 6]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 46, Math.sin(a) * 46); ctx.lineTo(Math.cos(a + 0.2 * (q - 1)) * 56 + Math.sin(t * 6 + q) * 2, Math.sin(a + 0.2 * (q - 1)) * 56 + 6); ctx.stroke(); }
+        }
       }
-      ctx.fillStyle = '#ff9ac8'; ctx.beginPath(); ctx.arc(0, 0, 26, 0, TAU); ctx.fill();
+      const puff = P === 'puff' ? 1 + Math.min(0.25, b.at * 0.5) : 1;
+      ctx.fillStyle = '#ff9ac8'; ctx.beginPath(); ctx.arc(0, 0, 26 * puff, 0, TAU); ctx.fill();
       for (let r = 0; r < 4; r++) { ctx.fillStyle = PAPEL[(r + 2) % 6]; for (let q = -24; q < 24; q += 4) { const yy = -18 + r * 10; if (q * q + yy * yy > 600) continue; ctx.beginPath(); ctx.moveTo(q, yy); ctx.lineTo(q + 4, yy); ctx.lineTo(q + 2, yy + 5); ctx.fill(); } }
+      if (split > 0) { ctx.strokeStyle = '#3a1020'; ctx.lineWidth = 3 + split * 4; ctx.beginPath(); ctx.moveTo(-4, -26); ctx.lineTo(6, -10); ctx.lineTo(-6, 4); ctx.lineTo(5, 18); ctx.lineTo(-2, 28); ctx.stroke(); }
       ctx.restore();
       // the face never spins with the body
-      if (b.pose !== 'spin') {
-        if (b.pose === 'dizzy') { ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + s * 9, y - 4, 4, t * 8, t * 8 + 4.5); ctx.stroke(); } TourKit.dizzy(ctx, x, b.y - 6, t); }
+      if (P !== 'roll') {
+        if (P === 'dizzy') { ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + s * 9, y - 4, 4, t * 8, t * 8 + 4.5); ctx.stroke(); } TourKit.dizzy(ctx, x, b.y + 2, t); }
+        else if (P === 'blind') {
+          // the blindfold: a party scarf over the eyes
+          ctx.fillStyle = COL.a; ctx.fillRect(x - 20, y - 11, 40, 11); ctx.fillStyle = COL.c; for (let q = 0; q < 4; q++) ctx.fillRect(x - 18 + q * 10, y - 9, 4, 7);
+          ctx.strokeStyle = COL.a; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 20, y - 6); ctx.lineTo(x + 30, y - 14 + Math.sin(t * 8) * 3); ctx.moveTo(x + 20, y - 4); ctx.lineTo(x + 32, y + 2 + Math.sin(t * 7) * 3); ctx.stroke();
+          ctx.fillStyle = '#7a1a3a'; ctx.beginPath(); ctx.arc(x, y + 8, 5, 0, Math.PI); ctx.fill();
+        }
+        else if (P === 'fall' || P === 'burst') { K.eyes(ctx, x, y - 5, b.dir, 9, 6, false); ctx.fillStyle = '#7a1a3a'; ctx.beginPath(); ctx.ellipse(x, y + 9, 5, 7, 0, 0, TAU); ctx.fill(); }
+        else if (P === 'puff' || P === 'spit') { K.eyes(ctx, x, y - 6, b.dir, 9, 5, true); ctx.fillStyle = '#7a1a3a'; ctx.beginPath(); ctx.ellipse(x, y + 9, P === 'spit' ? 9 : 4, P === 'spit' ? 7 : 3, 0, 0, TAU); ctx.fill(); }
         else { K.eyes(ctx, x, y - 5, b.dir, 9, 5, true); ctx.fillStyle = '#7a1a3a'; ctx.beginPath(); ctx.arc(x, y + 8, 6, 0, Math.PI); ctx.fill(); }
       }
     }
@@ -1003,9 +1187,9 @@ Tour.country({
       hint: 'Up, up, up! The lava is rising',
       postcard: 'The Baron tried to bottle the volcano. It did not agree. ♥ C',
       script: [['vledges', { n: 4 }], 'vvent', ['vledges', { n: 3, crumble: true, enemy: 'mxArmadillo' }], 'vroll', 'vblobs', ['vledges', { n: 3, flip: true }], ['vvent', { h: 10, gold: true }], ['vledges', { n: 4, crumble: true }], 'vblobs', ['vledges', { n: 3 }]] },
-    { name: 'Hacienda Fiesta', style: 'castle', theme: 'mx_hacienda', gimmick: 'Swinging piñatas, candy cannons, then El Gran Piñatón',
-      enemies: [['mxSalsa', 2], ['mxBurro', 2], ['mxPepper', 1]], boss: 'mx_pinata', arena: 'patio', arenaW: 26,
-      hint: 'When the big piñata gets dizzy, stomp it!',
+    { name: 'Hacienda Fiesta', style: 'castle', theme: 'mx_hacienda', gimmick: 'Swinging piñatas, candy cannons, then El Gran Piñatón on his pulley rope',
+      enemies: [['mxSalsa', 2], ['mxBurro', 2], ['mxPepper', 1]], boss: 'mx_pinata', arena: 'fiesta', arenaW: 26,
+      hint: 'Break the piñata from BELOW: headbutt him when he swings low. Bounce off the awnings when he rises!',
       postcard: 'You did it! The Palace of Fine Arts popped back to full size. Next stop: Ecuador! ♥ C',
       script: [['swingers', { n: 3 }], 'cannons', ['enemies', { n: 2 }], 'cp', 'balcony', ['swingers', { n: 4 }], 'cannons', 'arena'] }
   ]

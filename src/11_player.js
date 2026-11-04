@@ -529,7 +529,7 @@ class Player {
     if (small !== this.small) o.hair = null;
     if (this.spin && !this.onGround) o.rot = Math.sin(this.anim.t * 26) * 0.25;
     PlayerFx.under(ctx, this, t);
-    drawBrady(ctx, o);
+    Ink.around(ctx, this.x, this.y, this.w, this.h, c => drawBrady(c, o), { pad: 34, width: 1.5 });
     PlayerFx.over(ctx, this, t);
   }
   get light() { return { r: this.g.area.water ? 150 : 170, c: 'rgba(255,240,220,' }; }

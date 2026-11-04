@@ -675,10 +675,20 @@ const P = {
     x += span; st.floor(x, x + 2);
     return x + 3;
   },
-  arena_icecave(st, o) {
+  // the boss cave: three volcano vents in the floor, the lever that pops them, two ledges, and the
+  // equator's low-gravity bubbles over each half (switched on in phase 2; the validator ignores pulsing zones)
+  arena_vents(st, o) {
     const B = st.B, { x0, w, GY } = o;
-    for (let q = 2; q < w - 2; q++) B.set(x0 + q, GY, T.ICE);
-    for (let q = 0; q < 3; q++) { B.set(x0 + 4 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
+    for (let q = 0; q < 3; q++) { B.set(x0 + 5 + q, GY - 4, T.SEMI); B.set(x0 + w - 8 + q, GY - 4, T.SEMI); }
+    [x0 + 3, x0 + 11, x0 + 19].forEach((vx, i) => B.spawn('ecVent', vx + 0.5, GY - 1, { idx: i }));
+    B.spawn('ecLever', x0 + 15, GY - 1, {});
+    const zh = Math.min(10, GY - 2);
+    B.zone(x0 + 1, GY - zh, 11, zh, 0, -58 * TS, 0, 'lowgrav', { pulse: true, off: true, ecTag: 'L' });
+    B.zone(x0 + w - 12, GY - zh, 11, zh, 0, -58 * TS, 0, 'lowgrav', { pulse: true, off: true, ecTag: 'R' });
+    B.spawn('ecGravZone', x0 + 1, GY - zh, { tx: x0 + 1, ty: GY - zh, w: 11, h: zh, tag: 'L' });
+    B.spawn('ecGravZone', x0 + w - 12, GY - zh, { tx: x0 + w - 12, ty: GY - zh, w: 11, h: zh, tag: 'R' });
+    B.decorAt('ecIceRock', x0 + 8, GY, 0); B.decorAt('ecIceRock', x0 + w - 4, GY, 1); B.decorAt('ecAgave', x0 + 1, GY, 0);
+    B.decorAt('ecFlowers', x0 + 6, GY - 4, 0); B.decorAt('ecFlowers', x0 + w - 7, GY - 4, 0); B.decorAt('ecFern', x0 + 23, GY, 0); B.decorAt('ecFern', x0 + 9, GY, 0);
   }
 };
 const platforms = {
@@ -724,28 +734,11 @@ const platforms = {
 };
 
 /* ---------------- the boss: EL TORTUGÓN ---------------- */
-// The Baron's giant grumpy tortoise, guarding the ice fort. His shell is too hard to stomp,
-// he sneezes rolling snowballs and skids across the ice in his shell. But when he rears up
-// to roar, his head is exposed: stomp it! Then he slams down: icicles and a ground quake.
-class EcSnowball extends Ent {
-  constructor(g, x, y, dir) { super(g, null, 20, 20); this.x = x - 10; this.y = y - 20; this.vx = dir * 4.2 * TS; this.dir = dir; this.r = 10; this.life = 6; }
-  update(dt) {
-    this.t += dt; this.life -= dt;
-    this.vy += PHYS.gDown * dt;
-    moveBody(this, this.g.area, dt, { semis: false });
-    if (this.r < 22) { const cx = this.cx, by = this.y + this.h; this.r = Math.min(22, this.r + dt * 6); this.w = this.h = this.r * 2; this.x = cx - this.r; this.y = by - this.h; }
-    if (this.hitWall || this.life <= 0) this.pop();
-  }
-  pop() { if (this.remove) return; this.remove = true; this.g.burst(this.cx, this.cy, 14, '#ffffff', 'debris'); Sound.play('break', { vol: 0.35 }); }
-  touchPlayer(p) { p.hurt(this); }
-  hit(kind) { if (kind === 'stomp') return false; this.pop(); return true; }
-  draw(ctx) {
-    ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(this.t * 6 * this.dir);
-    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, this.r, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#c8e0f0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, this.r * 0.6, 0.4, 2.2); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, this.r * 0.75, 3.4, 4.6); ctx.stroke();
-    ctx.restore();
-  }
-}
+// The Baron's giant grumpy tortoise. His shell is too hard to stomp: FLIP him. Three volcano vents sit in
+// the arena floor; stomp the lever to pop the next one, and when he walks (or spins) over a popping vent
+// he's launched onto his back, legs waving: now stomp the belly. Phase 2 he tucks in and spins across the
+// floor like a disc while the equator's low-gravity bubbles switch on and off; phase 3 the floor tilts
+// (ice floes drift in) and the lever fires two vents at once. Beaten, he sulks into his shell and rolls off.
 // the slam's quake: a ridge of ice shards racing along the floor
 class EcQuake extends Ent {
   constructor(g, x, floorY, dir) { super(g, null, 26, 18); this.x = x - 13; this.y = floorY - 18; this.dir = dir; this.life = 1.5; }
@@ -753,86 +746,198 @@ class EcQuake extends Ent {
   touchPlayer(p) { p.hurt(this); }
   draw(ctx) { ctx.fillStyle = '#d8f4ff'; for (let k = 0; k < 4; k++) { const sx = this.x + k * 7, h = 10 + ((k + Math.floor(this.t * 20)) % 3) * 4; ctx.beginPath(); ctx.moveTo(sx, this.y + this.h); ctx.lineTo(sx + 3.5, this.y + this.h - h); ctx.lineTo(sx + 7, this.y + this.h); ctx.fill(); } }
 }
+// a volcano vent grate in the floor: idle, a rattling warning, then a column of hot steam that launches
+// whoever stands on it (the tortoise lands on his back; Brady just gets a free ride up)
+class EcVent extends Ent {
+  constructor(g, s) { super(g, s, 2 * TS, 12); this.x = s.x - TS; this.y = s.y - 12; this.idx = s.idx || 0; this.state = 'idle'; this.st = 0; this.floorY = s.y; this.armed = false; }
+  fire() { if (this.state === 'idle') { this.state = 'warn'; this.st = 0; Sound.play('wind', { vol: 0.4, pitch: 1.6 }); } }
+  update(dt) {
+    this.t += dt; if (this.state === 'idle') return;
+    this.st += dt;
+    if (this.state === 'warn') { if (Math.random() < 0.3) this.g.burst(this.x + Math.random() * this.w, this.y, 1, '#ffffff', 'dust'); if (this.st > 0.5) { this.state = 'erupt'; this.st = 0; Sound.play('fire', { vol: 0.6 }); this.g.shake(4); } return; }
+    if (Math.random() < 0.7) this.g.burst(this.x + 6 + Math.random() * (this.w - 12), this.y - Math.random() * 4 * TS, 2, Math.random() < 0.5 ? '#ff9a3a' : '#ffffff', 'spark');
+    const b = this.g.boss, p = this.g.player;
+    if (b && b.state === 'fight' && b.cx > this.x - 10 && b.cx < this.x + this.w + 10 && b.y + b.h >= this.floorY - 6 && b.brain.flip) b.brain.flip(b, this);
+    if (p && !p.dead && p.cx > this.x && p.cx < this.x + this.w && p.y + p.h <= this.floorY + 4 && p.y + p.h > this.floorY - 5 * TS && p.vy > -8 * TS) { p.vy = -16 * TS; p.jumping = true; p.onGround = false; Sound.play('spring', { pitch: 1.4, vol: 0.4 }); }
+    if (this.st > 0.8) { this.state = 'idle'; this.st = 0; }
+  }
+  get light() { return this.state === 'erupt' ? { r: 140, c: 'rgba(255,160,60,' } : null; }
+  draw(ctx) {
+    const x = this.x, y = this.floorY, w = this.w, sh = this.state === 'warn' ? Math.sin(this.t * 60) * 1.5 : 0;
+    ctx.fillStyle = '#3a3a44'; rr(ctx, x + 2, y - 10 + sh, w - 4, 10, 3); ctx.fill();
+    ctx.fillStyle = '#1a1a22'; for (let k = 0; k < 5; k++) ctx.fillRect(x + 6 + k * (w - 12) / 4 - 2, y - 8 + sh, 4, 6);
+    // the "next" light: the armed vent blinks red
+    ctx.fillStyle = this.armed && Math.sin(this.t * 10) > 0 ? '#ff3a3a' : '#5a2a2a'; ctx.beginPath(); ctx.arc(x + w - 7, y - 5 + sh, 3, 0, TAU); ctx.fill();
+    if (this.state === 'erupt') {
+      const k = Math.min(1, this.st * 4), fade = this.st > 0.6 ? Math.max(0, (0.8 - this.st) / 0.2) : 1, H = 6 * TS * k;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const gr = ctx.createLinearGradient(0, y - H, 0, y); gr.addColorStop(0, 'rgba(255,200,120,0)'); gr.addColorStop(0.5, `rgba(255,140,60,${0.55 * fade})`); gr.addColorStop(1, `rgba(255,255,255,${0.8 * fade})`);
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x + 4, y); ctx.lineTo(x + w - 4, y); ctx.lineTo(x + w + 10, y - H); ctx.lineTo(x - 10, y - H); ctx.fill();
+      ctx.restore();
+    } else if (this.state === 'warn') { ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.3 * Math.sin(this.t * 40)})`; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(x + 12 + k * 20, y - 16 - (this.st * 60 + k * 10) % 30, 4, 0, TAU); ctx.fill(); } }
+  }
+}
+// the vent lever: stomp it to pop the next vent (two at once in phase 3)
+class EcLever extends Ent {
+  constructor(g, s) { super(g, s, 40, 26); this.cool = 0; this.flip = 0; this.next = 0; }
+  update(dt) {
+    this.t += dt; if (this.cool > 0) this.cool -= dt; this.flip = approach(this.flip, 0, dt * 2);
+    const b = this.g.boss, n = b && b.phase >= 3 ? 2 : 1;
+    for (const v of this.vents()) v.armed = (v.idx - this.next + 3) % 3 < n;
+  }
+  // this lever's own vents (the castle builder lays out a second arena further on; its vents are not ours)
+  vents() { return this.g.entities.filter(e => e instanceof EcVent && !e.remove && Math.abs(e.cx - this.cx) < 14 * TS).sort((a, c) => a.idx - c.idx); }
+  press() {
+    if (this.cool > 0) return;
+    const g = this.g, b = g.boss, vents = this.vents();
+    if (!vents.length) return;
+    this.cool = 1.1; this.flip = 1; Sound.play('select', { pitch: 0.7 }); g.burst(this.cx, this.y, 8, '#ffd23a', 'spark'); g.parts.text(this.cx, this.y - 14, 'CLANK!', '#ffd23a');
+    const n = b && b.phase >= 3 ? 2 : 1;
+    for (let k = 0; k < n; k++) vents[(this.next + k) % vents.length].fire();
+    this.next = (this.next + n) % vents.length;
+  }
+  touchPlayer(p) {
+    if (p.vy > 0 && p.prevBottom <= this.y + 12) { p.vy = -(p.inp.jump ? PHYS.stompVHeld : PHYS.stompV) * 0.8; p.jumping = true; p.y = Math.min(p.y, this.y - p.h + 2); this.press(); }
+  }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h;
+    ctx.fillStyle = '#6a6a7a'; rr(ctx, x - 20, y - 14, 40, 14, 3); ctx.fill(); ctx.fillStyle = '#8a8a9a'; ctx.fillRect(x - 18, y - 14, 36, 3);
+    ctx.fillStyle = '#2a2a34'; ctx.fillRect(x - 4, y - 22, 8, 8);
+    const a = -1.1 + this.flip * 2.2;
+    ctx.strokeStyle = '#e8323a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(x + Math.cos(a) * 18, y - 18 + Math.sin(a) * 18); ctx.stroke(); ctx.lineCap = 'butt';
+    ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 18, y - 18 + Math.sin(a) * 18, 4, 0, TAU); ctx.fill();
+    const b = this.g.boss;
+    if (b && b.state === 'fight' && this.cool <= 0) { ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(this.t * 8)})`; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('STOMP', x, y - 32 + Math.sin(this.t * 5) * 3); }
+  }
+}
+// the equator's low-gravity bubble over half the arena, switched on and off by the boss in phase 2
+class EcGravZone extends Ent {
+  constructor(g, s) { super(g, s, s.w * TS, s.h * TS); this.x = s.tx * TS; this.y = s.ty * TS; this.tag = s.tag; this.zone = null; this.on = false; }
+  update(dt) { this.t += dt; if (!this.zone) this.zone = (this.g.area.zones || []).find(z => z.ecTag === this.tag && Math.abs(z.x - this.x) < 2) || null; if (this.zone) this.zone.off = !this.on; }
+  draw(ctx) {
+    if (!this.on) return;
+    Decor.ecBubble(ctx, this.cx, this.y + this.h, this.t, null, { w: this.w, h: this.h });
+    ctx.strokeStyle = `rgba(200,240,255,${0.35 + 0.2 * Math.sin(this.t * 4)})`; ctx.lineWidth = 2; ctx.setLineDash([8, 8]); ctx.strokeRect(this.x + 2, this.y + 2, this.w - 4, this.h - 4); ctx.setLineDash([]);
+  }
+}
+Object.assign(entities, { ecVent: EcVent, ecLever: EcLever, ecGravZone: EcGravZone });
+const icicleArt = (ctx, s) => { ctx.fillStyle = '#d8f4ff'; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + s.w, s.y); ctx.lineTo(s.cx, s.y + s.h); ctx.fill(); };
 const boss = {
   id: 'ec_tortoise', name: 'El Tortugón', hp: 4, dims: [84, 58], music: 'tour_ec_boss', country: 'ec',
   brain: {
     guardText: 'HARD SHELL!',
-    noDisc(b) { return b.act === 'slide'; },
-    wake(b) { K.say(b.g, b, 'SLOW... BUT... GRUMPY!', '#ffd84a'); },
+    phases: [3, 2],
+    wake(b) { b.tall = true; b.gravT = 0; b.spinA = 0; K.say(b.g, b, 'SLOW... BUT... UNFLIPPABLE!', '#ffd84a'); },
+    // a vent erupts under him: up he goes, and down on his back
+    flip(b, vent) {
+      if (['walk', 'pause', 'rear', 'slam', 'tuck', 'spin', 'peek'].indexOf(b.act) < 0 || b.hurtT > 0) return false;
+      b.go('flip'); b.vy = -14 * TS; b.vx = (b.cx < vent.cx ? -1 : 1) * 1.5 * TS; b.y -= 2; b.spinA = 0;
+      Sound.play('spring', { pitch: 0.8 }); b.g.shake(6); K.say(b.g, b, pick(['¡¿QUÉ?!', 'WHOOOA!', 'NOT THE VENT!']), '#ffd84a'); b.g.burst(b.cx, b.y + b.h, 20, '#ffffff', 'spark');
+      return true;
+    },
     update(b, dt) {
-      const g = b.g;
+      const g = b.g, ph = b.phase || 1;
       b.guard = 'bounce';
+      // phase 2+: the equator bubbles pulse on and off, left half then right half
+      if (ph >= 2 && b.act !== 'sulk') {
+        b.gravT += dt; const k = b.gravT % 7;
+        for (const z of g.entities) { if (!(z instanceof EcGravZone)) continue; const want = z.tag === 'L' ? (k > 0.5 && k < 3.2) : (k > 4 && k < 6.7); if (want !== z.on) { z.on = want; if (want) { Sound.play('float', { vol: 0.4 }); g.parts.text(z.cx, z.y + z.h - 5 * TS, 'LOW-G!', '#cfefff'); } } }
+      }
       if (b.act === 'walk') {
-        b.face(); b.walk(0.7); b.pose = 'walk';
-        if (b.at > 1.7) { b.cycle++; b.go(['sneeze', 'slide', 'rear'][b.cycle % 3]); }
-      } else if (b.act === 'sneeze') {
-        b.vx = 0; b.pose = b.at < 0.9 ? 'ahh' : 'choo';
-        if (b.first) { b.face(); K.say(g, b, 'AH... AHH...', '#cfefff'); }
-        if (b.at > 0.9 && !b.fired) {
-          b.fired = true; K.say(g, b, 'ACHÚÚ!', '#ffffff'); g.shake(4); Sound.play('kick', { pitch: 0.6 });
-          const n = b.hp <= 2 ? 2 : 1;
-          for (let k = 0; k < n; k++) g.spawn(new EcSnowball(g, b.cx + b.dir * (b.w / 2 + 14 + k * 30), b.y + b.h - 2, b.dir));
-          g.burst(b.cx + b.dir * b.w / 2, b.y + 20, 14, '#ffffff', 'spark');
-        }
-        if (b.at > 1.6) { b.fired = false; b.go('walk'); }
-      } else if (b.act === 'slide') {
-        // tucks into his shell and skids across the ice, bouncing off the walls
-        if (b.first) { b.face(); b.bounces = 0; b.bonkT = 0; }
-        if (b.at < 0.5) { b.vx = 0; b.pose = 'tuck'; }
-        else {
-          b.pose = 'shell'; b.vx = b.dir * (6 + (b.hp <= 2 ? 1.5 : 0)) * TS;
-          const atWall = b.hitWall || (b.dir < 0 && b.x <= b.arenaX0 + 2) || (b.dir > 0 && b.x >= b.arenaX1 - b.w - 2);
-          if (atWall && b.at - b.bonkT > 0.3) { b.bonkT = b.at; b.dir = -b.dir; b.bounces++; g.shake(5); Sound.play('bump'); g.burst(b.cx - b.dir * b.w / 2, b.cy, 10, '#d8f4ff', 'debris'); if (b.bounces >= 2) b.go('peek'); }
-        }
-        if (b.at > 5) b.go('peek');
-      } else if (b.act === 'peek') {
-        b.vx = 0; b.pose = 'peek'; if (b.at > 0.7) b.go('walk');
-      } else if (b.act === 'rear') {
-        // he rears up to roar: his head is exposed
+        b.face(); b.walk(0.75); b.pose = 'walk';
+        if (b.at > (ph >= 3 ? 1.4 : 1.9)) { b.cycle++; const seq = ph >= 2 ? ['rear', 'tuck', 'rear'] : ['rear', 'pause']; b.go(seq[b.cycle % seq.length]); }
+      } else if (b.act === 'pause') { b.vx = 0; b.pose = 'walk'; if (b.first) b.face(); if (b.at > 0.8) b.go('walk'); }
+      else if (b.act === 'rear') {
+        // he rears up to roar: the tell for the shell slam
         b.vx = 0; b.pose = 'rear';
-        if (b.first) { b.face(); K.say(g, b, '¡SOY EL REY DEL HIELO!', '#ffd84a'); }
-        b.vuln = b.at > 0.25 && b.at < 1.7; b.guard = b.vuln ? 'hurt' : 'bounce';
-        if (b.at > 1.7) b.go('slam');
+        if (b.first) { b.face(); K.say(g, b, pick(['¡SOY EL REY DEL HIELO!', '¡PUM!', 'GRRRUMP!']), '#ffd84a'); }
+        if (b.at > 0.75) b.go('slam');
       } else if (b.act === 'slam') {
         b.vx = 0; b.pose = 'slam';
         if (b.first) {
           g.shake(10); Sound.play('stomp', { pitch: 0.4 });
           for (const d of [-1, 1]) g.spawn(new EcQuake(g, b.cx + d * (b.w / 2 + 14), b.floorY, d));
-          for (let k = 0; k < 4 + (b.hp <= 2 ? 2 : 0); k++) tourFire(g, b.arenaX0 + TS * 2 + Math.random() * (b.arenaX1 - b.arenaX0 - 4 * TS), b.floorY - 10 * TS - Math.random() * 2 * TS, { kind: 'icicle', vy: 2 * TS, grav: PHYS.gDown * 0.5, w: 12, h: 20, life: 3, thru: true, col: '#d8f4ff', art: (ctx, s) => { ctx.fillStyle = '#d8f4ff'; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + s.w, s.y); ctx.lineTo(s.cx, s.y + s.h); ctx.fill(); } });
+          if (ph >= 3) for (let k = 0; k < 4; k++) tourFire(g, b.arenaX0 + TS * 2 + Math.random() * (b.arenaX1 - b.arenaX0 - 4 * TS), b.floorY - 10 * TS - Math.random() * 2 * TS, { kind: 'icicle', vy: 2 * TS, grav: PHYS.gDown * 0.5, w: 12, h: 20, life: 3, thru: true, col: '#d8f4ff', art: icicleArt });
         }
         if (b.at > 0.9) b.go('walk');
+      } else if (b.act === 'tuck') { b.vx = 0; b.pose = 'tuck'; if (b.first) { b.face(); K.say(g, b, 'SPIN TIME!', '#cfefff'); } if (b.at > 0.6) b.go('spin'); }
+      else if (b.act === 'spin') {
+        // tucked in, he skids across the floor like a disc, bouncing off the walls
+        if (b.first) { b.bounces = 0; b.bonkT = 0; }
+        b.pose = 'shell'; b.vx = b.dir * (6 + (ph >= 3 ? 1.5 : 0)) * TS;
+        const atWall = b.hitWall || (b.dir < 0 && b.x <= b.arenaX0 + 2) || (b.dir > 0 && b.x >= b.arenaX1 - b.w - 2);
+        if (atWall && b.at - b.bonkT > 0.3) { b.bonkT = b.at; b.dir = -b.dir; b.bounces++; g.shake(5); Sound.play('bump'); g.burst(b.cx - b.dir * b.w / 2, b.cy, 10, '#d8f4ff', 'debris'); if (b.bounces >= 3) b.go('peek'); }
+        if (b.at > 5) b.go('peek');
+      } else if (b.act === 'peek') { b.vx = 0; b.pose = 'peek'; if (b.at > 0.7) b.go('walk'); }
+      else if (b.act === 'flip') {
+        b.pose = 'flip'; b.spinA += dt * 9;
+        if (b.onGround && b.at > 0.35) { g.shake(8); Sound.play('stomp', { pitch: 0.7 }); g.burst(b.cx, b.y + b.h, 16, '#d8f4ff', 'debris'); b.go('belly'); }
+      } else if (b.act === 'belly') {
+        // the weak moment: on his back, legs waving
+        b.vx = 0; b.pose = 'belly'; b.vuln = true; b.guard = 'hurt';
+        if (b.first) K.say(g, b, pick(['¡AYUDA! ¡AYUDA!', 'MY LEGS! THEY DO NOTHING!', 'SO UNDIGNIFIED']), '#ffd84a');
+        if (b.at > (ph >= 3 ? 3.0 : 3.8)) b.go('rightup');
+      } else if (b.act === 'rightup') { b.vx = 0; b.pose = 'rightup'; if (b.first) Sound.play('bump', { pitch: 0.8 }); if (b.at > 0.9) b.go('walk'); }
+      else if (b.act === 'sulk') {
+        // the finish: into the shell, and the shell rolls off like a ball
+        b.pose = b.at < 1 ? 'tuck' : 'shell'; b.vuln = true;
+        if (b.first) { b.vx = 0; K.say(g, b, 'FINE. I\'M GOING HOME.', '#ffd84a'); b.dir = b.cx < (b.arenaX0 + b.arenaX1) / 2 ? 1 : -1; b.spinA = 0; }
+        if (b.at > 1) { b.vx = b.dir * Math.min(9, (b.at - 1) * 7) * TS; b.spinA += b.vx * dt / 40; if (Math.random() < 0.3) g.burst(b.cx - b.dir * 30, b.y + b.h, 2, '#d8f4ff', 'dust'); if (b.hitWall || b.x <= b.arenaX0 + 1 || b.x >= b.arenaX1 - b.w - 1) { g.burst(b.cx, b.cy, 20, '#d8f4ff', 'debris'); b.die(); } }
+        if (b.at > 4) b.die();
       }
       b.fall(dt);
     },
-    hurt(b) { b.go('walk'); b.vx = 0; K.say(b.g, b, pick(['¡MI CABEZA!', 'HMPH! RUDE!', 'TOO... FAST...']), '#ffd84a'); b.g.burst(b.cx, b.y, 20, '#d8f4ff', 'confetti'); },
+    hit(b, kind, src) {
+      if (b.act === 'sulk') return false;
+      const open = b.act === 'belly';
+      if (kind === 'stomp' || kind === 'spin') { if (open) { b.damage(1, { text: pick(['¡PANZA!', 'BELLY!', 'SQUISH!']), col: '#ffd84a' }); return true; } return 'bounce'; }
+      if (kind === 'disc' || kind === 'prop') return open ? undefined : false;
+      if (kind === 'star') return undefined;
+      return false;
+    },
+    hurt(b) { b.go('rightup'); K.say(b.g, b, pick(['¡MI PANZA!', 'HMPH! RUDE!', 'OKAY THAT ONE HURT']), '#ffd84a'); b.g.burst(b.cx, b.y, 20, '#d8f4ff', 'confetti'); },
+    phase(b, n) {
+      const g = b.g; b.go('rightup'); g.burst(b.cx, b.y, 20, '#d8f4ff', 'confetti');
+      if (n === 2) { K.say(g, b, 'THE EQUATOR IS MINE!', '#cfefff'); b.gravT = 0; }
+      else if (n === 3) {
+        K.say(g, b, '¡TIEMBLA, TIEMBLA!', '#ffd84a'); g.shake(12); Sound.play('thunder', { vol: 0.5 }); g.bannerText = 'THE FLOOR TILTS'; g.bannerT = 1.6;
+        // the floor tilts: ice floes drift in over the vents (and the lever now pops two at once)
+        for (const [tx, dir] of [[b.arenaX0 / TS + 2, 1], [b.arenaX1 / TS - 8, -1]]) g.spawn(new ENTITY_TYPES.mplat(g, { x: tx * TS + TS / 2, y: b.floorY - 7 * TS, pw: 3, ax: dir * 5 * TS, ay: TS, speed: 2.2, skin: 'ecFloe' }));
+      }
+    },
+    lastHit(b) { b.go('sulk'); return true; },
     draw(b, ctx, t) {
       const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose, inShell = P === 'shell' || P === 'tuck';
       ctx.save(); ctx.translate(x, y);
       if (P === 'rear') { ctx.translate(-d * 34, 0); ctx.rotate(-d * 0.5); ctx.translate(d * 34, 0); }
-      if (P === 'shell') ctx.rotate(Math.sin(t * 40) * 0.04);
+      if (P === 'shell') ctx.rotate(b.act === 'sulk' ? b.spinA : Math.sin(t * 40) * 0.04);
       if (P === 'slam' && b.at < 0.2) ctx.scale(1.08, 0.9);
-      // legs
-      if (!inShell) { ctx.fillStyle = '#7a7a5a'; for (const lx of [-30, -14, 14, 30]) { rr(ctx, lx - 7, -15, 14, 15, 5); ctx.fill(); } }
+      if (P === 'flip') { ctx.translate(0, -29); ctx.rotate(b.spinA); ctx.translate(0, 29); }
+      const upside = P === 'belly' || P === 'rightup';
+      if (upside) { const k = P === 'rightup' ? 1 - Math.min(1, b.at / 0.9) : 1; ctx.translate(0, -29); ctx.rotate(Math.PI * k); ctx.translate(0, 29); }
+      // legs (waving helplessly when he's on his back)
+      if (!inShell) { ctx.fillStyle = '#7a7a5a'; for (const lx of [-30, -14, 14, 30]) { ctx.save(); ctx.translate(lx, -15); if (upside) ctx.rotate(Math.sin(t * 12 + lx) * 0.5); rr(ctx, -7, 0, 14, upside ? 17 : 15, 5); ctx.fill(); ctx.restore(); } }
       // the head on its long neck, with a striped scarf
       if (!inShell) {
-        const hx = d * (P === 'peek' ? 34 : P === 'rear' ? 46 : 44), hy = P === 'ahh' ? -40 : P === 'peek' ? -24 : -30 + Math.sin(t * 2) * 2;
+        const hx = d * (P === 'peek' ? 34 : P === 'rear' ? 46 : 44), hy = P === 'peek' ? -24 : -30 + Math.sin(t * 2) * 2;
         ctx.strokeStyle = '#8a8a6a'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(d * 24, -22); ctx.lineTo(hx - d * 6, hy + 4); ctx.stroke(); ctx.lineCap = 'butt';
         for (let k = 0; k < 4; k++) { ctx.fillStyle = WOVEN[k]; ctx.beginPath(); ctx.arc(d * (26 + k * 3), -24 - k * 2, 6.5, 0, TAU); ctx.fill(); }
-        ctx.save(); ctx.translate(hx, hy); ctx.rotate(P === 'ahh' ? -d * 0.4 : P === 'choo' ? d * 0.3 : 0);
+        ctx.save(); ctx.translate(hx, hy); if (upside) ctx.rotate(Math.PI);
         ctx.fillStyle = '#9a9a7a'; ctx.beginPath(); ctx.ellipse(0, 0, 14, 10, 0, 0, TAU); ctx.fill();
-        if (P === 'ahh') { ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(d * 3, -3, 2, 0, TAU); ctx.fill(); ctx.fillStyle = '#5a2a2a'; ctx.beginPath(); ctx.ellipse(d * 9, 4, 3, 4, 0, 0, TAU); ctx.fill(); }
-        else if (P === 'choo') { ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(d * 1, -4); ctx.lineTo(d * 6, -2); ctx.stroke(); }
+        if (P === 'belly' || P === 'flip') { ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.5; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(d * 4 + s * 3 - 2, -5); ctx.lineTo(d * 4 + s * 3 + 2, -1); ctx.moveTo(d * 4 + s * 3 + 2, -5); ctx.lineTo(d * 4 + s * 3 - 2, -1); ctx.stroke(); } ctx.fillStyle = '#5a2a2a'; ctx.beginPath(); ctx.ellipse(d * 8, 4, 4, 3, 0, 0, TAU); ctx.fill(); }
+        else if (P === 'rear') { K.eyes(ctx, d * 4, -3, d, 3, 2.8, true); ctx.fillStyle = '#5a2a2a'; ctx.beginPath(); ctx.ellipse(d * 8, 4, 5, 4, 0, 0, TAU); ctx.fill(); }
         else { K.eyes(ctx, d * 4, -3, d, 3, 2.6, true); ctx.strokeStyle = '#3a3a2a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(d * 2, 5); ctx.lineTo(d * 11, 4); ctx.stroke(); }
         ctx.restore();
       }
       // the shell
       const sg = ctx.createLinearGradient(0, -60, 0, -10); sg.addColorStop(0, '#7a9a5a'); sg.addColorStop(1, '#3a5a2a');
       ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(0, -16, 42, 40, 0, Math.PI, TAU); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#c8b878'; ctx.fillRect(-42, -18, 84, 6);
+      ctx.fillStyle = upside ? '#e8d8a0' : '#c8b878'; ctx.fillRect(-42, -18, 84, 6);
       ctx.strokeStyle = '#2a3a1a'; ctx.lineWidth = 2;
       for (const [cx, cy] of [[0, -40], [-22, -30], [22, -30]]) { ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = k * TAU / 6; ctx.lineTo(cx + Math.cos(a) * 10, cy + Math.sin(a) * 8); } ctx.closePath(); ctx.stroke(); }
       ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.ellipse(-12, -50, 14, 4, -0.2, 0, TAU); ctx.fill();
       ctx.restore();
+      if (P === 'belly') { K.dizzy(ctx, x - d * 40, b.y + b.h - 44, t); ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('BELLY!', x, b.y - 24); }
     }
   }
 };
@@ -921,8 +1026,8 @@ Tour.country({
       postcard: 'A sea lion stole my sunglasses and gave them back. Islands are magic. ♥ C',
       script: ['surface', ['arches', { gold: true }], 'puffers', ['penguins', { w: 12 }], 'iguanas', 'surge', 'grotto', 'arches', 'puffers', 'surge', ['penguins', { w: 10, dir: -1 }], 'iguanas', 'arches'] },
     { name: 'Ice Fort of Cotopaxi', style: 'castle', theme: 'ec_cotopaxi', gimmick: 'Slippery ice, dropping icicles and sinking ice floes, then El Tortugón',
-      enemies: [['ecAlpaca', 1], ['ecIceCube', 3]], boss: 'ec_tortoise', arena: 'icecave', arenaW: 26, roof: false,
-      hint: 'El Tortugón\'s shell is too hard. Stomp his head when he rears up!',
+      enemies: [['ecAlpaca', 1], ['ecIceCube', 3]], boss: 'ec_tortoise', arena: 'vents', arenaW: 26, roof: false,
+      hint: 'Stomp the lever to pop a vent under El Tortugón: flipped on his back, his belly is open!',
       postcard: 'The Equator monument is back where it belongs! The Baron flew to Brazil. Samba time! ♥ C',
       script: [['ice', { n: 12 }], 'floes', ['enemies', { n: 2 }], 'cp', ['ice', { n: 14 }], ['pillars', { n: 3 }], ['blocks', { content: 'power' }], 'arena'] }
   ]

@@ -315,7 +315,7 @@ class MzFlame extends Ent {
     for (const e of g.entities) {
       if (!e.enemy || e.dead || e.remove || this.hitSet.has(e) || !overlap(this, e)) continue;
       this.hitSet.add(e);
-      if (e.boss) { if (e.state === 'fight') e.hit('disc', this); continue; }
+      if (e.boss) { if (e.state === 'fight') e.hit('fire', this); continue; }
       if (e.hit('fire', this)) { g.addScore(200, e.cx, e.y); g.burst(e.cx, e.cy, 10, '#ff6a1a', 'spark'); }
     }
     if (this.life <= 0) this.remove = true;
@@ -471,10 +471,17 @@ const P = {
     for (let i = 0; i < n; i++) { st.pit(x, x + 2); st.B.fill(x, st.gy + 1, x + 2, st.H - 1, T.LAVA); x += 3; st.B.fill(x, st.gy - 1, x, st.H - 1, T.PILLAR); st.coins(x, x, st.gy - 3); x += 1; }
     st.floor(x, x + 2); return x + 3;
   },
-  arena_fort(st, o) {
+  // the boss beach: the sea laps in at both ends (kick the empty shells into it), three borrowed shells on
+  // the sand, two ledges, a chili basket on a mid platform and the great baobab leaning over the fort wall
+  arena_tidepool(st, o) {
     const B = st.B, { x0, w, GY } = o;
-    for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
-    B.decorAt('mzCannonDecor', x0 + 2, GY, 0); B.decorAt('mzCannonDecor', x0 + w - 3, GY, 0);
+    for (const tx of [x0 + 1, x0 + 2, x0 + w - 3, x0 + w - 2]) for (let y = GY; y <= GY + 2; y++) B.set(tx, y, T.WATER);
+    for (let q = 0; q < 3; q++) { B.set(x0 + 5 + q, GY - 4, T.SEMI); B.set(x0 + w - 8 + q, GY - 4, T.SEMI); B.set(x0 + 11 + q, GY - 6, T.SEMI); }
+    B.prop('mzBaobabProp', x0 + 10, GY - 9, 6, 9, 'none', {});
+    B.spawn('mzChiliBasket', x0 + 12, GY - 7, {});
+    B.spawn('mzShellPot', x0 + 6, GY - 1, {}); B.spawn('mzShellBucket', x0 + 12, GY - 1, {}); B.spawn('mzShellBottle', x0 + 18, GY - 1, {});
+    B.decorAt('mzCannonDecor', x0 + 6, GY - 4, 0); B.decorAt('mzCannonDecor', x0 + w - 7, GY - 4, 0);
+    B.decorAt('mzShell', x0 + 9, GY, 0); B.decorAt('mzSkull', x0 + 17, GY, 0); B.decorAt('mzGrass', x0 + 3, GY, 0); B.decorAt('mzGrass', x0 + w - 4, GY, 0); B.decorAt('mzShell', x0 + 19, GY, 0);
   }
 };
 const platforms = {
@@ -492,56 +499,282 @@ const platforms = {
 };
 
 /* ---------------- the boss: O EREMITA ---------------- */
-// A giant hermit crab living in a stolen lighthouse-shell. Inside his shell he's armoured:
-// he rolls, and peeks out to lob coconuts. Then he scuttles out to chase Brady: stomp his soft body!
+// A giant hermit crab with no shell of his own: he borrows the fort's junk (a clay pot, a tin bucket, a
+// bottle). Inside a shell he's armoured and stomps bounce off. Piri-piri fire breath HEATS the shell until
+// he jumps out, hot and soft: stomp him. Kick the empty shells into the sea on either side so he has
+// nowhere left to hide. Phase 2 the tide floods the floor edges and coconuts drop from the baobab; phase 3
+// he's shell-less: claw sweeps, fast scuttling and sulking sprints. Beaten, he grabs a thimble and runs.
+const shellArt = {
+  pot(ctx, x, y, t, heat) {
+    ctx.fillStyle = '#c8663a'; ctx.beginPath(); ctx.moveTo(x - 22, y - 44); ctx.quadraticCurveTo(x - 34, y - 20, x - 20, y); ctx.lineTo(x + 20, y); ctx.quadraticCurveTo(x + 34, y - 20, x + 22, y - 44); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#a84a2a'; rr(ctx, x - 26, y - 50, 52, 9, 3); ctx.fill();
+    for (let k = 0; k < 5; k++) { ctx.fillStyle = CAPU[k]; ctx.fillRect(x - 24 + k * 10, y - 30, 8, 7); }
+    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x - 18, y - 40, 4, 30);
+  },
+  bucket(ctx, x, y, t, heat) {
+    ctx.fillStyle = '#5a8ab8'; ctx.beginPath(); ctx.moveTo(x - 26, y - 46); ctx.lineTo(x + 26, y - 46); ctx.lineTo(x + 20, y); ctx.lineTo(x - 20, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#3a6a98'; ctx.fillRect(x - 27, y - 48, 54, 6); ctx.fillRect(x - 23, y - 24, 46, 4);
+    ctx.strokeStyle = '#2a2a34'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y - 44, 24, Math.PI, TAU); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(x - 18, y - 40, 5, 34);
+  },
+  bottle(ctx, x, y, t, heat) {
+    ctx.fillStyle = '#2a8a4a'; rr(ctx, x - 28, y - 34, 44, 34, 10); ctx.fill();
+    ctx.fillStyle = '#2a8a4a'; rr(ctx, x + 10, y - 26, 20, 16, 4); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.fillRect(x + 26, y - 27, 5, 18);
+    ctx.fillStyle = '#e8e0c8'; ctx.fillRect(x - 20, y - 28, 24, 20); ctx.fillStyle = '#c8323a'; ctx.fillRect(x - 17, y - 24, 18, 5);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x - 24, y - 31, 36, 4);
+  }
+};
+// a borrowed shell: Brady kicks it, stomps it to launch it; into the sea it's gone for good
+class MzShell extends TourProp {
+  constructor(g, s, kind) {
+    super(g, s, { w: 56, h: 50, kick: 7, bounce: 0.4, friction: 4, hp: 0, burst: '#c8a080', art: (ctx, p, x, y, t) => p.paint(ctx, x, y, t) });
+    this.kind = kind; this.kindName = kind.toUpperCase(); this.held = false; this.hotT = 0;
+  }
+  update(dt) {
+    this.t += dt; if (this.hotT > 0) this.hotT -= dt;
+    const b = this.g.boss;
+    if (this.held) {
+      if (!b || b.remove || b.shell !== this) { this.held = false; return; }
+      this.x = b.cx - this.w / 2 - b.dir * 10; this.y = b.y + b.h - this.h; this.vx = this.vy = 0; this.fast = false; this.onGround = true; return;
+    }
+    super.update(dt);
+    if (this.remove) return;
+    if (tileAt(this.g.area, Math.floor(this.cx / TS), Math.floor((this.y + this.h * 0.7) / TS)) === T.WATER) {
+      this.remove = true; Sound.play('splash', { vol: 0.7 }); this.g.burst(this.cx, this.y + this.h, 24, '#8ad8ff', 'spark'); this.g.parts.text(this.cx, this.y - 10, 'SPLOOSH!', '#8ad8ff'); this.g.addScore(500, this.cx, this.y);
+      if (b && b.state === 'fight') K.say(this.g, b, pick(['NO! MY ' + this.kindName + '!', 'THAT WAS A GOOD ONE!', 'YOU MONSTER!']), '#ffd84a');
+    }
+  }
+  touchPlayer(p) { if (this.held) return; super.touchPlayer(p); }
+  paint(ctx, x, y, t) {
+    const b = this.g.boss, heat = this.held && b ? (b.heat || 0) / 3 : (this.hotT > 0 ? Math.min(1, this.hotT / 2.5) : 0);
+    shellArt[this.kind](ctx, x, y, t, heat);
+    if (heat > 0) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,${120 - heat * 80},40,${0.15 + heat * 0.35 + Math.sin(t * 20) * 0.08 * heat})`;
+      ctx.beginPath(); ctx.ellipse(x, y - 24, 30, 26, 0, 0, TAU); ctx.fill(); ctx.restore();
+      ctx.strokeStyle = `rgba(255,255,255,${0.35 * heat})`; ctx.lineWidth = 1.5;
+      for (let k = -1; k <= 1; k++) { ctx.beginPath(); for (let q = 0; q < 6; q++) { const yy = y - 54 - q * 5 - ((t * 40) % 10); ctx.lineTo(x + k * 12 + Math.sin(t * 12 + q + k) * 3, yy); } ctx.stroke(); }
+      if (Math.random() < 0.2 * heat) this.g.burst(x + (Math.random() - 0.5) * 30, y - 50, 1, '#aaaaaa', 'dust');
+    }
+  }
+}
+const mzShellOf = kind => class extends MzShell { constructor(g, s) { super(g, s, kind); } };
+// the chili basket: restocks a piri-piri whenever Brady has none
+class MzChiliBasket extends Ent {
+  constructor(g, s) { super(g, s, 30, 22); this.cool = 1; }
+  update(dt) {
+    this.t += dt; const g = this.g, p = g.player, b = g.boss; if (!b || b.state === 'sleep') return;
+    this.cool -= dt; if (this.cool > 0) return;
+    const has = g.entities.some(e => e instanceof TourItem && e.kind === 'sig:piri' && !e.remove && Math.abs(e.cx - this.cx) < 16 * TS);
+    const hot = p && p.sig && p.sig.id === 'piri';
+    if (!has && !hot) { this.cool = 3; g.spawn(new TourItem(g, this.cx, this.y - 30, 'sig:piri')); Sound.play('appear', { vol: 0.5 }); g.burst(this.cx, this.y, 8, '#e8222a', 'spark'); }
+    else this.cool = 0.5;
+  }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h;
+    ctx.fillStyle = '#c8a050'; ctx.beginPath(); ctx.moveTo(x - 16, y - 16); ctx.lineTo(x + 16, y - 16); ctx.lineTo(x + 12, y); ctx.lineTo(x - 12, y); ctx.closePath(); ctx.fill();
+    for (let k = 0; k < 3; k++) { ctx.fillStyle = CAPU[k]; ctx.fillRect(x - 15 + k, y - 13 + k * 4, 30 - k * 2, 2); }
+    for (let k = -1; k <= 1; k++) chiliIcon(ctx, x + k * 8, y - 20, this.t + k);
+  }
+}
+Object.assign(entities, { mzShellPot: mzShellOf('pot'), mzShellBucket: mzShellOf('bucket'), mzShellBottle: mzShellOf('bottle'), mzChiliBasket: MzChiliBasket });
+// a shadow on the floor under a falling coconut: the tell
+class MzShadow extends Ent {
+  constructor(g, x, floorY, life) { super(g, null, 40, 8); this.x = x - 20; this.y = floorY - 6; this.life = life; this.max = life; }
+  update(dt) { this.t += dt; this.life -= dt; if (this.life <= 0) this.remove = true; }
+  draw(ctx) { const k = 1 - this.life / this.max; ctx.fillStyle = `rgba(0,0,0,${0.15 + 0.3 * k})`; ctx.beginPath(); ctx.ellipse(this.cx, this.y + 6, 8 + 14 * k, 3 + 4 * k, 0, 0, TAU); ctx.fill(); ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(this.t * 20)})`; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', this.cx, this.y - 4); }
+}
+const coconutDropArt = (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 5); ctx.fillStyle = '#6a4a2a'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a2a1a'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(Math.cos(k * 2.1) * 3, Math.sin(k * 2.1) * 3, 1.3, 0, TAU); ctx.fill(); } ctx.restore(); };
+const clawWaveArt = (ctx, s, t) => { const d = s.dir; ctx.fillStyle = '#e85a3a'; ctx.beginPath(); ctx.moveTo(s.x, s.y + s.h); ctx.lineTo(s.x + s.w / 2, s.y + 2 + Math.sin(t * 30) * 2); ctx.lineTo(s.x + s.w, s.y + s.h); ctx.fill(); ctx.fillStyle = '#ff8a6a'; ctx.beginPath(); ctx.arc(s.cx + d * 4, s.y + 10, 5, 0, TAU); ctx.fill(); };
 const boss = {
   id: 'mz_hermit', name: 'O Eremita', hp: 4, dims: [80, 60], music: 'tour_mz_boss', country: 'mz',
   brain: {
     guardText: 'SHELL!',
-    noDisc(b) { return b.act === 'roll'; },
-    wake(b) { K.say(b.g, b, 'THIS SHELL IS MINE!', '#ffd84a'); },
+    phases: [3, 2],
+    wake(b) { b.tall = true; b.heat = 0; b.heatT = 0; b.shell = null; b.exposed = false; b.tide = 0; b.target = null; K.say(b.g, b, 'A SHELL! MINE! ALL MINE!', '#ffd84a'); },
+    // the empty shells he can still reach (inside this arena and off the sea troughs)
+    shells(b) { const [x0, x1] = this.bounds(b); return b.g.entities.filter(e => e instanceof MzShell && !e.remove && !e.held && !e.fast && e.cx > x0 + b.w / 2 - 24 && e.cx < x1 + b.w / 2 + 24); },
+    nearestShell(b) { let best = null, bd = 1e9; for (const s of this.shells(b)) { const d = Math.abs(s.cx - b.cx) + (s === b.lastShell ? 3 * TS : 0); if (d < bd) { bd = d; best = s; } } return best; },
+    // the sea troughs at both ends are off limits to him (he'd sink)
+    bounds(b) { const m = (b.phase >= 2 && b.tide >= 1.5 ? 5 : 3) * TS; return [b.arenaX0 + m, b.arenaX1 - m - b.w]; },
+    atEdge(b) { const [x0, x1] = this.bounds(b); return b.hitWall || b.x <= x0 + 1 || b.x >= x1 - 1; },
     update(b, dt) {
-      const g = b.g, p = g.player;
+      const g = b.g, p = g.player, ph = b.phase || 1;
+      this.guardText = b.shell ? 'SHELL!' : 'CLAWS!';
       b.guard = 'bounce';
-      if (b.act === 'walk') { b.face(); b.walk(0.6); b.pose = 'shell'; if (b.at > 1.4) { b.cycle++; b.go(['roll', 'lob', 'out'][b.cycle % 3]); } }
-      else if (b.act === 'roll') {
-        if (b.first) b.face();
-        b.pose = 'roll'; b.vx = b.dir * (5.5 + (b.hp <= 2 ? 1.5 : 0)) * TS;
-        if (b.hitWall || (b.dir < 0 && b.x <= b.arenaX0 + 2) || (b.dir > 0 && b.x >= b.arenaX1 - b.w - 2)) { b.dir = -b.dir; g.shake(5); Sound.play('bump'); b.bounces = (b.bounces || 0) + 1; if (b.bounces >= 2) { b.bounces = 0; b.go('walk'); } }
-        if (b.at > 5) { b.bounces = 0; b.go('walk'); }
-      } else if (b.act === 'lob') {
-        b.vx = 0; b.pose = 'peek';
-        if (b.at > 0.5 && !b.fired) { b.fired = true; b.face(); const n = b.hp <= 2 ? 3 : 2; for (let k = 0; k < n; k++) tourFire(g, b.cx, b.y, { kind: 'coconut', vx: b.dir * (2 + k * 1.6) * TS, vy: -9 * TS, grav: PHYS.gDown * 0.45, w: 16, h: 16, life: 3, stompable: true, thru: true, col: '#6a4a2a', art: (ctx, s, t) => { ctx.fillStyle = '#6a4a2a'; ctx.beginPath(); ctx.arc(s.cx, s.cy, 8, 0, TAU); ctx.fill(); } }); Sound.play('throw'); }
-        if (b.at > 1.4) { b.fired = false; b.go('walk'); }
-      } else if (b.act === 'out') {
-        // he leaves the shell and scuttles after Brady: soft and stompable!
-        if (b.first) K.say(g, b, 'BRB, SHELL SHOPPING!', '#ffd84a');
-        b.pose = 'out'; b.vuln = b.at > 0.3; b.guard = b.vuln ? 'hurt' : 'bounce';
-        b.face(); b.vx = b.dir * 2.4 * TS * b.aggression;
-        if (b.at > 3) b.go('walk');
+      if (b.heat > 0) { b.heatT += dt; if (b.heatT > 4) { b.heatT = 0; b.heat--; } }
+      if (b.act === 'walk') b.go(b.exposed ? 'dash' : 'scuttle');
+      if (b.act === 'scuttle') {
+        // off to the nearest shell (soft and stompable on the way)
+        b.pose = 'run'; b.vuln = true; b.guard = 'hurt';
+        const s = b.target && !b.target.remove && !b.target.held && !b.target.fast ? b.target : (b.target = this.nearestShell(b));
+        if (!s) { b.exposed = true; K.say(g, b, 'NO SHELLS?! FINE! NO SHELLS!', '#ffd84a'); b.go('dash'); }
+        else {
+          b.dir = s.cx < b.cx ? -1 : 1; b.vx = b.dir * 4.2 * TS;
+          if (Math.abs(s.cx - b.cx) < 30) { b.vx = 0; b.go('enter'); }
+          if (b.at > 4) { b.target = null; b.at = 0; }
+        }
+      } else if (b.act === 'enter') {
+        b.pose = 'hop'; b.vuln = true; b.guard = 'hurt';
+        if (b.first) b.vy = -6 * TS;
+        if (b.at > 0.3 && b.onGround) {
+          const s = b.target;
+          if (s && !s.remove && !s.held && !s.fast) { s.held = true; b.shell = s; b.lastShell = s; b.heat = 0; Sound.play('bump', { pitch: 1.2 }); g.burst(b.cx, b.y + b.h, 8, '#e8e0d0', 'dust'); K.say(g, b, pick(['HOME SWEET ' + s.kindName + '!', 'COSY.', 'MINE.']), '#ffd84a'); b.go('inshell'); }
+          else { b.target = null; b.go('scuttle'); }
+        }
+      } else if (b.act === 'inshell') {
+        b.pose = 'shell'; b.face(); b.walk(0.55);
+        if (b.at > 2.2) { b.cycle++; const seq = ph >= 2 ? ['lunge', 'rain'] : ['lunge']; b.go(seq[b.cycle % seq.length]); }
+      } else if (b.act === 'lunge') {
+        // tell: the claw comes up and clicks, then he lunges out of the shell
+        b.pose = b.at < 0.65 ? 'claw' : 'lunge';
+        if (b.first) { b.face(); b.vx = 0; K.say(g, b, 'CLICK CLICK!', '#ffffff'); }
+        if (b.at < 0.65) b.vx = 0;
+        else { if (!b.fired) { b.fired = true; Sound.play('kick', { pitch: 0.8 }); } b.vx = b.dir * 6 * TS; }
+        if (b.at > 1.5 || (b.at > 0.7 && this.atEdge(b))) { b.fired = false; b.go('inshell'); }
+      } else if (b.act === 'rain') {
+        // tell: a whistle, the baobab shakes, shadows on the floor; then the coconuts drop
+        b.pose = 'whistle'; b.vx = 0;
+        if (b.first) { K.say(g, b, pick(['COCOS! AGORA!', 'TREE! DO YOUR THING!']), '#ffd84a'); g.shake(3); Sound.play('wind', { vol: 0.4, pitch: 1.8 }); }
+        if (b.at > 0.5 && !b.fired) {
+          b.fired = true;
+          const px = p ? p.cx : b.cx, xs = [px, px - (3.5 + Math.random()) * TS, px + (3.5 + Math.random()) * TS];
+          for (const x0 of xs) { const x = clamp(x0, b.arenaX0 + TS, b.arenaX1 - TS); g.spawn(new MzShadow(g, x, b.floorY, 0.95)); tourFire(g, x, b.floorY - 11 * TS, { kind: 'coconut', vx: 0, vy: 1 * TS, grav: PHYS.gDown * 0.42, w: 16, h: 16, life: 2.5, thru: true, stompable: true, col: '#6a4a2a', art: coconutDropArt }); }
+        }
+        if (b.at > 1.3) { b.fired = false; b.go('inshell'); }
+      } else if (b.act === 'eject') {
+        // too hot: he bails out and runs about, soft and stompable
+        b.pose = 'hot'; b.vuln = true; b.guard = 'hurt';
+        if (b.first) {
+          const s = b.shell; if (s) { s.held = false; s.x = b.cx - s.w / 2; s.hotT = 2.5; s.vx = -b.dir * 2 * TS; } b.shell = null; b.heat = 0; b.vy = -9 * TS; b.vx = b.dir * 3 * TS;
+          Sound.play('fire', { pitch: 1.4 }); K.say(g, b, pick(['QUENTE! QUENTE! QUENTE!', 'HOT HOT HOT HOT!', 'AIIIEEEE!']), '#ff7a2a'); g.burst(b.cx, b.cy, 20, '#ff8a2a', 'spark');
+        }
+        if (b.onGround && b.at > 0.3) { b.vx = Math.sin(b.at * 5) * 4.5 * TS; b.dir = b.vx < 0 ? -1 : 1; }
+        if (Math.random() < 0.2) g.burst(b.cx, b.y + 10, 1, '#aaaaaa', 'dust');
+        if (b.at > 3.4) { b.target = null; b.go('scuttle'); }
+      } else if (b.act === 'dash') {
+        // shell-less: he scuttles fast after Brady (soft!)
+        b.pose = 'run'; b.vuln = true; b.guard = 'hurt';
+        if (b.first || Math.floor(b.at * 2) !== Math.floor((b.at - dt) * 2)) b.face();
+        b.vx = b.dir * 3.6 * TS;
+        if (b.at > 2.2) { b.cycle++; b.go(b.cycle % 2 ? 'sweep' : 'sprint'); }
+      } else if (b.act === 'sweep') {
+        // tell: both claws up and snapping, then claw waves race along the floor both ways
+        b.pose = 'claw'; b.vx = 0;
+        if (b.first) { b.face(); K.say(g, b, 'SNAP SNAP!', '#ffffff'); }
+        if (b.at > 0.7 && !b.fired) { b.fired = true; Sound.play('kick', { pitch: 0.6 }); g.shake(4); for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 10), b.floorY - 12, { kind: 'claw', vx: d * 6 * TS, w: 22, h: 24, ground: true, life: 2.5, col: '#e85a3a', art: clawWaveArt }); }
+        if (b.at > 1.3) { b.fired = false; b.go('dash'); }
+      } else if (b.act === 'sprint') {
+        // the sulking sprint: tell is a stamp and a complaint, then wall to wall at full tilt
+        b.pose = b.at < 0.55 ? 'stamp' : 'sprint';
+        if (b.first) { b.face(); b.vx = 0; K.say(g, b, pick(['I HATE THIS BEACH!', 'EVERYONE LEAVE!', 'NOT FAIR NOT FAIR']), '#ffd84a'); }
+        if (b.at < 0.55) b.vx = 0;
+        else { b.vx = b.dir * 8.5 * TS; if (Math.random() < 0.4) g.burst(b.cx - b.dir * 30, b.y + b.h, 2, '#e8e0d0', 'dust'); if (this.atEdge(b)) { g.shake(8); Sound.play('bump'); g.burst(b.cx + b.dir * 30, b.cy, 14, '#e8e0d0', 'debris'); b.go('dazed'); } }
+        if (b.at > 3) b.go('dazed');
+      } else if (b.act === 'dazed') {
+        b.pose = 'dazed'; b.vx = 0; b.vuln = true; b.guard = 'hurt';
+        if (b.at > 2.2) b.go('dash');
+      } else if (b.act === 'thimble') {
+        // the finish: he finds a thimble, declares it perfect, and runs off into the sea
+        b.pose = 'thimble'; b.vuln = true;
+        if (b.first) { b.vx = 0; K.say(g, b, 'A THIMBLE! PERFECT. GOODBYE.', '#ffd84a'); b.dir = b.cx < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1; Sound.play('select', { pitch: 1.4 }); }
+        if (b.at > 1.1) { b.vx = b.dir * 6 * TS; if (Math.random() < 0.3) g.burst(b.cx - b.dir * 20, b.y + b.h, 2, '#e8e0d0', 'dust'); }
+        if (b.at > 1.1 && this.atEdge(b)) { g.burst(b.cx, b.cy, 20, '#8ad8ff', 'spark'); Sound.play('splash'); b.die(); }
+        if (b.at > 3.5) b.die();
       }
       b.fall(dt);
+      const [x0, x1] = this.bounds(b); b.x = clamp(b.x, x0, x1);
+      // phase 2: the tide comes in (a sloshing tell, then the floor edges flood)
+      if (b.tide > 0 && b.tide < 1.5) { b.tide += dt; if (Math.random() < 0.4) for (const tx of [b.arenaX0 + 3.5 * TS, b.arenaX1 - 3.5 * TS]) g.burst(tx + (Math.random() - 0.5) * 40, b.floorY, 1, '#8ad8ff', 'spark'); if (b.tide >= 1.5) this.flood(b); }
     },
-    hurt(b) { b.go('roll'); K.say(b.g, b, pick(['MY SOFT BITS!', 'OUCH! PINCH!', 'NOT FAIR!']), '#ffd84a'); b.g.burst(b.cx, b.cy, 20, '#ff7a5a', 'confetti'); },
+    flood(b) {
+      const g = b.g, x0 = Math.round(b.arenaX0 / TS), x1 = Math.round(b.arenaX1 / TS), GY = Math.round(b.floorY / TS);
+      for (const tx of [x0 + 3, x0 + 4, x1 - 5, x1 - 4]) for (let ty = GY; ty <= GY + 2; ty++) g.setTile(tx, ty, T.WATER);
+      Sound.play('splash'); g.shake(5); g.parts.text((b.arenaX0 + b.arenaX1) / 2, b.floorY - 3 * TS, 'HIGH TIDE!', '#8ad8ff');
+      for (const tx of [x0 + 3.5, x1 - 4.5]) g.burst(tx * TS + 16, b.floorY, 24, '#8ad8ff', 'spark');
+    },
+    touch(b, p) {
+      // inside a shell he's passive (except when lunging): Brady just gets nudged off
+      if (!b.shell || b.act === 'lunge') return false;
+      const stomping = p.vy > 0 && p.prevBottom <= b.y + b.h * 0.35, bumping = p.vy < 0 && p.prevBottom - p.h >= b.y + b.h * 0.7;
+      if (stomping || bumping) return false;
+      p.x += (p.cx < b.cx ? -1 : 1) * 2.5; return true;
+    },
+    hit(b, kind, src) {
+      if (b.act === 'thimble') return false;
+      const soft = ['scuttle', 'enter', 'eject', 'dash', 'dazed'].indexOf(b.act) >= 0;
+      if (kind === 'fire') {
+        if (b.shell && b.act !== 'eject') {
+          b.heat = Math.min(3, b.heat + 1); b.heatT = 0;
+          b.g.parts.text(b.cx, b.y - 16, ['HOT!', 'HOTTER!', 'TOO HOT!!'][b.heat - 1], '#ff7a2a'); b.g.burst(b.cx, b.cy, 10, '#ff8a2a', 'spark'); Sound.play('fire', { pitch: 1.1, vol: 0.4 });
+          if (b.heat >= 3) b.go('eject');
+          return false;
+        }
+        // out of the shell, fire only makes him complain: the stomp is the hit
+        if (soft && Math.random() < 0.3) K.say(b.g, b, pick(['ALREADY HOT!', 'STOP THAT!']), '#ff7a2a');
+        return false;
+      }
+      if (kind === 'stomp' || kind === 'spin') { if (soft) { b.damage(1, { text: pick(['SOFT BITS!', 'SQUISH!', 'PINCHED!']), col: '#ff9a6a' }); return true; } return 'bounce'; }
+      if (kind === 'prop') { if (soft && src.thrownBy) { b.damage(1, { text: 'BONK!', col: '#ffffff' }); return true; } return false; }
+      if (kind === 'disc') return soft ? undefined : false;
+      if (kind === 'star') return undefined;
+      return false;
+    },
+    hurt(b) {
+      K.say(b.g, b, pick(['MY SOFT BITS!', 'OUCH! RUDE!', 'I NEED A SHELL!']), '#ffd84a'); b.g.burst(b.cx, b.cy, 20, '#ff7a5a', 'confetti'); b.target = null;
+      if (b.exposed) b.go('sprint'); else { b.go('scuttle'); b.vy = -5 * TS; }
+    },
+    phase(b, n) {
+      const g = b.g; b.target = null; g.burst(b.cx, b.cy, 20, '#ff7a5a', 'confetti');
+      if (n === 2) { K.say(g, b, 'THE TIDE! AND THE COCONUTS!', '#ffd84a'); g.bannerText = 'THE TIDE COMES IN'; g.bannerT = 1.6; b.tide = 0.01; b.go('scuttle'); b.vy = -5 * TS; }
+      else if (n === 3) {
+        b.exposed = true; K.say(g, b, 'BASTA! NO MORE SHELLS!', '#ffd84a'); g.bannerText = 'SHELL-LESS!'; g.bannerT = 1.6; g.shake(8);
+        const s = b.shell; if (s) { s.held = false; b.shell = null; const d = b.cx < (b.arenaX0 + b.arenaX1) / 2 ? -1 : 1; s.fling(d * 10 * TS, -8 * TS, null); }
+        b.heat = 0; b.go('sprint');
+      }
+    },
+    lastHit(b) { b.go('thimble'); return true; },
     draw(b, ctx, t) {
-      const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose;
+      const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose, inShell = !!b.shell;
       ctx.save(); ctx.translate(x, y);
-      if (P === 'roll') { ctx.translate(0, -30); ctx.rotate(t * 10 * d); ctx.translate(0, 30); }
-      // the shell: a striped spiral (it once was a lighthouse's top)
-      const shellX = P === 'out' ? -d * 54 : 0;
-      ctx.save(); ctx.translate(shellX, 0);
-      ctx.fillStyle = '#e8d8c0'; ctx.beginPath(); ctx.ellipse(0, -30, 38, 30, 0, 0, TAU); ctx.fill();
-      ctx.strokeStyle = '#c8323a'; ctx.lineWidth = 7; ctx.beginPath(); for (let a = 0; a < 9; a += 0.2) { const r = 34 - a * 3.4; ctx.lineTo(Math.cos(a) * r, -30 + Math.sin(a) * r * 0.85); } ctx.stroke();
+      if (P === 'hop') ctx.rotate(-d * 0.2);
+      if (P === 'sprint') ctx.rotate(d * 0.25);
+      if (P === 'stamp') ctx.translate(0, Math.abs(Math.sin(t * 20)) * -4);
+      // the crab: soft pink body (peeking out of the shell, or all of him when he's out)
+      const bx = inShell ? d * 28 : 0, bw = inShell ? 16 : 30, hot = P === 'hot';
+      ctx.fillStyle = hot ? '#ff6a4a' : P === 'sprint' || P === 'stamp' ? '#ff7a5a' : '#ff8a6a';
+      ctx.beginPath(); ctx.ellipse(bx, -18, bw, 15, 0, 0, TAU); ctx.fill();
+      // legs scuttle
+      ctx.strokeStyle = '#e85a3a'; ctx.lineWidth = 3;
+      const run = P === 'run' || P === 'sprint' || P === 'hot' || P === 'lunge' || P === 'thimble';
+      for (let k = 0; k < (inShell ? 3 : 6); k++) { const lx = bx - (inShell ? 10 : 24) + k * (inShell ? 10 : 10), ph = run ? Math.sin(t * 22 + k * 1.3) * 5 : Math.sin(t * 3 + k) * 1.5; ctx.beginPath(); ctx.moveTo(lx, -8); ctx.lineTo(lx + ph - 3, 0); ctx.stroke(); }
+      // claws: raised for the tell, snapping for the sweep
+      const up = P === 'claw' || P === 'stamp' || P === 'dazed';
+      const snap = P === 'claw' ? Math.abs(Math.sin(t * 25)) * 0.6 : 0.2;
+      for (const s of (inShell ? [1] : [-1, 1])) {
+        const cx = bx + s * d * 26, cy = up ? -44 : -26;
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(s * d * (up ? -0.9 : 0.3));
+        ctx.fillStyle = '#e85a3a'; ctx.beginPath(); ctx.ellipse(0, 0, 13, 8, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#d84a2a'; ctx.beginPath(); ctx.moveTo(6, -6); ctx.lineTo(18, -8 - snap * 10); ctx.lineTo(12, 0); ctx.fill(); ctx.beginPath(); ctx.moveTo(6, 4); ctx.lineTo(18, 6 + snap * 10); ctx.lineTo(12, 0); ctx.fill();
+        ctx.restore();
+      }
+      // eyes on stalks
+      for (const s of [-1, 1]) {
+        const ex = bx + s * 7 + d * 4, wob = P === 'dazed' ? Math.sin(t * 10 + s) * 4 : 0;
+        ctx.fillStyle = '#e85a3a'; ctx.fillRect(ex - 1, -46, 2, 16);
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(ex + wob, -47, 4, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(ex + wob + d * 1.5, -47 + (hot ? -1 : 0), 2, 0, TAU); ctx.fill();
+      }
+      // the mouth: a grin, a scream when hot, a pout when sulking
+      ctx.strokeStyle = '#8a2a1a'; ctx.lineWidth = 2; ctx.beginPath();
+      if (hot) { ctx.ellipse(bx + d * 6, -12, 5, 6, 0, 0, TAU); ctx.stroke(); ctx.fillStyle = '#5a1a1a'; ctx.fill(); }
+      else if (P === 'sprint' || P === 'stamp' || P === 'dazed') { ctx.moveTo(bx + d * 2, -10); ctx.quadraticCurveTo(bx + d * 8, -14, bx + d * 14, -10); ctx.stroke(); }
+      else { ctx.moveTo(bx + d * 2, -12); ctx.quadraticCurveTo(bx + d * 8, -6, bx + d * 14, -12); ctx.stroke(); }
+      if (P === 'thimble') { ctx.fillStyle = '#c8c8d0'; ctx.beginPath(); ctx.moveTo(bx + d * 30 - 5, -34); ctx.lineTo(bx + d * 30 + 5, -34); ctx.lineTo(bx + d * 30 + 4, -24); ctx.lineTo(bx + d * 30 - 4, -24); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#8a8a9a'; for (let k = 0; k < 3; k++) ctx.fillRect(bx + d * 30 - 3 + k * 3, -31, 1.5, 1.5); }
       ctx.restore();
-      if (P !== 'roll' && P !== 'shell') {
-        // the crab himself: soft pink body, claws, eyes on stalks
-        const bx = P === 'out' ? d * 6 : d * 30;
-        ctx.fillStyle = '#ff8a6a'; ctx.beginPath(); ctx.ellipse(bx, -16, P === 'out' ? 26 : 14, 14, 0, 0, TAU); ctx.fill();
-        ctx.strokeStyle = '#e85a3a'; ctx.lineWidth = 3; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(bx - 10 + k * 10, -6); ctx.lineTo(bx - 14 + k * 12 + Math.sin(t * 16 + k) * 3, 0); ctx.stroke(); }
-        ctx.fillStyle = '#e85a3a'; ctx.beginPath(); ctx.ellipse(bx + d * 22, -24, 12, 8, d * 0.4, 0, TAU); ctx.fill();
-        for (const s of [-1, 1]) { ctx.fillStyle = '#e85a3a'; ctx.fillRect(bx + s * 6 - 1, -40, 2, 12); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(bx + s * 6, -41, 3, 0, TAU); ctx.fill(); }
-      } else { ctx.fillStyle = '#ff8a6a'; ctx.beginPath(); ctx.arc(d * 30, -12, 7, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(d * 32, -18, 2, 0, TAU); ctx.fill(); }
-      ctx.restore();
+      if (P === 'dazed') K.dizzy(ctx, x, b.y - 2, t);
+      if (hot && Math.random() < 0.5) ctx.fillStyle = 'rgba(255,120,40,0.6)';
+      if (hot) { ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.fillText('SOFT!', x, b.y - 24); }
+      if (inShell && b.heat > 0) { ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#ff7a2a'; ctx.fillText('♨'.repeat(b.heat), x, b.y - 10 + Math.sin(t * 6) * 2); }
     }
   }
 };
@@ -624,8 +857,8 @@ Tour.country({
       postcard: 'Baby turtles were racing to the sea tonight. Everyone made it. I cried a little. ♥ C',
       script: [['flat', { n: 6 }], ['turtles', { gold: true }], 'lighthouse', 'rocks', ['crabs', { n: 2 }], 'cp', ['turtles', { span: 12 }], 'rocks', 'lighthouse', 'oneup', ['turtles', {}], 'end'] },
     { name: 'Ilha Fortress', style: 'castle', theme: 'mz_fort', gimmick: 'Coconut cannons on the ramparts, flooded cisterns and thorn barricades, then O Eremita the hermit crab',
-      enemies: [['mzPrawn', 3], ['mzCashew', 1]], boss: 'mz_hermit', arena: 'fort', arenaW: 26, roof: false,
-      hint: 'O Eremita is armoured in his shell. Stomp him when he leaves it!',
+      enemies: [['mzPrawn', 3], ['mzCashew', 1]], boss: 'mz_hermit', arena: 'tidepool', arenaW: 26, roof: false,
+      hint: 'Heat O Eremita\'s shell with piri-piri fire until he jumps out, then stomp him. Kick empty shells into the sea!',
       postcard: 'The baobab is back, full size, and the birds moved right back in. The Baron flew north to Morocco! ♥ C',
       script: [['flat', { n: 4 }], ['rampart', { gold: true }], 'cistern', ['thorns', { h: 3 }], 'cp', ['rampart', {}], ['cistern', { n: 4 }], 'sig', ['enemies', { n: 2 }], ['blocks', { content: 'power' }], 'arena'] }
   ]

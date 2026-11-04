@@ -111,6 +111,20 @@ Each app's service worker is versioned per build, so phones pick up updates. The
 - 12 countries and 2 secret lands, 68 levels, 14 bosses, 13 signature items.
 - The validator passes and gameplay checks pass 59/59.
 
+**Super Brady-O World, November 2026 (local session): the Fiesta Toon look and the boss redesign.**
+- Brady chose the "Fiesta Toon" look (flat cel shading, dark outlines) from three style frames, and wants his
+  character to stay the **code-drawn Brady** (man bun, glasses): he found the Blender-rendered one ugly.
+- Engine: `src/06a_ink.js` (the ink outline around characters, enemies, items, bosses), `src/03a_atlas.js` (sprite
+  atlases: backgrounds, tiles, enemy clips, with procedural fallbacks), `src/29_tour_mx_sprites.js` (Mexico wired up).
+  Pipeline and conventions: `docs/WORLD_TOUR_GUIDE.md` §13, tools in `tools/blender/sprites/`, atlases in
+  `assets/sprites/super-brady-o-world/` (shipped as `sprites/` beside the app, cached by the service worker).
+- Mexico is fully converted (5 themes, 12 enemies, coin, star, item block). The other countries still draw
+  procedurally (with the ink line); convert them the same way: models per country, `render_country.py`, `pack_atlas.py`,
+  a `29_tour_<cc>_sprites.js` file.
+- Bosses: the `Boss` framework gained custom hit rules, phases, world-object props (`TourProp`) and a proper
+  silhouette hurt flash (the old white box is gone). `docs/BOSS_REDESIGN.md` is the brief for the fourteen unique
+  fights; `tools/boss_test.js` runs `tools/boss_tests/<cc>.js`.
+
 **Art Cart: complete.**
 - 12 cars, 26 drivers, 2 cups (8 tracks), 7 arenas (each with 4–5 objectives and its own powers).
 - AI weapon use; touch, keyboard and gamepad.

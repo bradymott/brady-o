@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("mx_canal", {"scale":2.0,"image":"mx_canal.png","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1079}},"anims":{},"strips":{"bg_far":{"w":2048,"h":250,"top":177.0,"x":0,"y":828},"bg_mid":{"w":2048,"h":558,"top":165.0,"x":0,"y":0},"bg_near":{"w":2048,"h":268,"top":281.0,"x":0,"y":559}}});

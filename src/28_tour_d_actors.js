@@ -12,9 +12,35 @@ class TourShot extends Shot {
 }
 function tourFire(g, x, y, o) { const s = new TourShot(g, x, y, o); g.spawn(s); return s; }
 
+/* Pre-rendered enemies: an enemy config with sprite: 'kind' draws from its country's atlas (Tour.country atlas, or
+   cfg.atlas) once that atlas is in: clips 'kind/<mode>' or single frames 'kind_<mode>_000'; modes without art fall
+   back along FALLBACK lists; until the atlas loads the procedural art(...) draws as before. */
+const TourSprite = {
+  FALLBACK: {
+    walk: { walk: ['walk', 'idle'], idle: ['idle', 'walk'], hop: ['hop', 'walk', 'idle'], notice: ['notice', 'idle', 'walk'], charge: ['charge', 'walk'], throw: ['throw', 'idle', 'walk'], curl: ['curl', 'idle', 'walk'], roll: ['roll', 'curl', 'walk'], stun: ['stun', 'idle', 'walk'], flat: ['flat', 'ko', 'idle', 'walk'], ko: ['ko', 'stun', 'idle', 'walk'] },
+    fly: { fly: ['fly'], swoop: ['swoop', 'fly'], stun: ['stun', 'fly'], ko: ['ko', 'stun', 'fly'] },
+    swim: { swim: ['swim'], ko: ['ko', 'swim'] },
+    leap: { up: ['up'], down: ['down', 'up'], ko: ['ko', 'down', 'up'] },
+    friend: { idle: ['idle'], wave: ['wave', 'idle'] }
+  },
+  atlasOf(e) { const c = e.cfg; if (c.atlas) return c.atlas; const C = e.g && e.g.level && e.g.level.country ? Tour.countries[e.g.level.country] : null; return C ? C.atlas || C.id : null; },
+  of(e) { const c = e.cfg; if (!c || !c.sprite || typeof Atlas === 'undefined') return null; const a = this.atlasOf(e); return a && Atlas.has(a) ? a : null; },
+  hasFrame(e, mode) { const a = this.of(e); return !!(a && (Atlas.anim(a, e.cfg.sprite + '/' + mode) || Atlas.frame(a, e.cfg.sprite + '_' + mode + '_000'))); },
+  draw(ctx, e, x, y, mode, fallback) {
+    const a = this.of(e); if (!a) return false;
+    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode];
+    for (const m of list) {
+      const id = k + '/' + m;
+      if (Atlas.anim(a, id)) return Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1);
+      if (Atlas.frame(a, k + '_' + m + '_000')) return Atlas.draw(ctx, a, k + '_' + m + '_000', x, y, e.dir || 1);
+    }
+    return false;
+  }
+};
+
 class TourEnemy extends Walker {
   static make(cfg) {
-    return class extends TourEnemy { constructor(g, s) { super(g, s, cfg); } };
+    const cls = class extends TourEnemy { constructor(g, s) { super(g, s, cfg); } }; cls.cfg = cfg; return cls;
   }
   constructor(g, s, cfg) {
     super(g, s, cfg.w || 22, cfg.h || 26, cfg.speed != null ? cfg.speed : 1.2);
@@ -105,11 +131,19 @@ class TourEnemy extends Walker {
     return true;
   }
   touchPlayer(p) { if (this.dead || this.stunT > 0) return; p.hurt(this); }
-  paint(ctx, x, y, mode) { if (this.cfg.art) this.cfg.art(ctx, this, x, y, mode, this.g.t); }
-  draw(ctx) {
+  get sprite() { return TourSprite.of(this); }
+  paint(ctx, x, y, mode) {
+    if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.walk)) return;
+    if (this.cfg.art) this.cfg.art(ctx, this, x, y, mode, this.g.t);
+  }
+  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  drawArt(ctx) {
     if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI + (this.spin || 0)); this.paint(ctx, 0, this.h / 2, 'ko'); ctx.restore(); return; }
     if (this.friendT) { this.drawFriend(ctx, c => this.paint(c, 0, 0, 'walk')); return; }
-    if (this.dead) { ctx.save(); ctx.translate(this.cx, this.y + this.h); ctx.scale(1.25, 0.35); this.paint(ctx, 0, 0, 'flat'); ctx.restore(); return; }
+    if (this.dead) {
+      if (this.sprite && TourSprite.hasFrame(this, 'flat')) { this.paint(ctx, this.cx, this.y + this.h, 'flat'); return; }
+      ctx.save(); ctx.translate(this.cx, this.y + this.h); ctx.scale(1.25, 0.35); this.paint(ctx, 0, 0, 'flat'); ctx.restore(); return;
+    }
     this.paint(ctx, this.cx, this.y + this.h, this.mode);
     if (this.stunT > 0) TourKit.dizzy(ctx, this.cx, this.y - 4, this.t);
   }
@@ -118,7 +152,7 @@ class TourEnemy extends Walker {
 
 // flyers: drift on a sine path around home; some swoop at Brady
 class TourFlyer extends Ent {
-  static make(cfg) { return class extends TourFlyer { constructor(g, s) { super(g, s, cfg); } }; }
+  static make(cfg) { const cls = class extends TourFlyer { constructor(g, s) { super(g, s, cfg); } }; cls.cfg = cfg; return cls; }
   constructor(g, s, cfg) {
     super(g, s, cfg.w || 24, cfg.h || 18); this.cfg = cfg; this.enemy = true; this.hx = this.x; this.hy = this.y;
     this.range = (s.range || cfg.range || 3) * TS; this.stunT = 0; this.state = 'drift'; this.st = 0; this.cool = 1 + Math.random() * 2; this.mode = 'fly';
@@ -151,10 +185,16 @@ class TourFlyer extends Ent {
     this.knockOff(src && src.vx ? sign(src.vx) : 1); this.cfg.onDefeat && this.cfg.onDefeat(this); return true;
   }
   touchPlayer(p) { if (!this.dead && this.stunT <= 0) p.hurt(this); }
-  draw(ctx) {
+  get sprite() { return TourSprite.of(this); }
+  paint(ctx, x, y, mode) {
+    if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.fly)) return;
+    this.cfg.art(ctx, this, x, y, mode, this.g.t);
+  }
+  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  drawArt(ctx) {
     ctx.save();
-    if (this.knocked) { ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI + (this.spin || 0)); this.cfg.art(ctx, this, 0, 0, 'ko', this.g.t); ctx.restore(); return; }
-    this.cfg.art(ctx, this, this.cx, this.cy, this.dead ? 'ko' : this.stunT > 0 ? 'stun' : this.mode, this.g.t);
+    if (this.knocked) { ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI + (this.spin || 0)); this.paint(ctx, 0, 0, 'ko'); ctx.restore(); return; }
+    this.paint(ctx, this.cx, this.cy, this.dead ? 'ko' : this.stunT > 0 ? 'stun' : this.mode);
     ctx.restore();
     if (this.stunT > 0) TourKit.dizzy(ctx, this.cx, this.y - 4, this.t);
   }
@@ -162,7 +202,7 @@ class TourFlyer extends Ent {
 
 // swimmers: patrol the water, chase Brady when he's close
 class TourSwimmer extends Ent {
-  static make(cfg) { return class extends TourSwimmer { constructor(g, s) { super(g, s, cfg); } }; }
+  static make(cfg) { const cls = class extends TourSwimmer { constructor(g, s) { super(g, s, cfg); } }; cls.cfg = cfg; return cls; }
   constructor(g, s, cfg) { super(g, s, cfg.w || 28, cfg.h || 18); this.cfg = cfg; this.enemy = true; this.hx = this.x; this.vx = -(cfg.speed || 1.6) * TS; this.stunT = 0; }
   update(dt) {
     this.t += dt;
@@ -182,12 +222,18 @@ class TourSwimmer extends Ent {
   }
   hit(kind, src) { if (this.dead) return false; if (kind === 'taco') { this.stunT = 2.5; return true; } if (kind === 'stomp') return false; this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead && this.stunT <= 0) p.hurt(this); }
-  draw(ctx) { this.cfg.art(ctx, this, this.cx, this.cy, this.knocked ? 'ko' : 'swim', this.g.t); }
+  get sprite() { return TourSprite.of(this); }
+  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  drawArt(ctx) {
+    const mode = this.knocked ? 'ko' : 'swim';
+    if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, mode, TourSprite.FALLBACK.swim)) return;
+    this.cfg.art(ctx, this, this.cx, this.cy, mode, this.g.t);
+  }
 }
 
 // leapers: jump out of water or lava in an arc, then dive back in
 class TourLeaper extends Ent {
-  static make(cfg) { return class extends TourLeaper { constructor(g, s) { super(g, s, cfg); } }; }
+  static make(cfg) { const cls = class extends TourLeaper { constructor(g, s) { super(g, s, cfg); } }; cls.cfg = cfg; return cls; }
   constructor(g, s, cfg) { super(g, s, cfg.w || 20, cfg.h || 24); this.cfg = cfg; this.enemy = true; this.homeY = this.y; this.wait = (s.delay || 0) + 1 + Math.random() * 1.5; this.state = 'wait'; }
   update(dt) {
     this.t += dt;
@@ -201,13 +247,20 @@ class TourLeaper extends Ent {
   }
   hit(kind, src) { if (this.dead || this.state === 'wait') return false; if (kind === 'stomp' && this.cfg.stompable) { this.knockOff(1); return true; } if (kind === 'stomp' || kind === 'spin') return this.cfg.fiery && kind === 'spin' ? 'bounce' : false; this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead && this.state !== 'wait') p.hurt(this); }
-  draw(ctx) { if (this.state === 'wait' && !this.knocked) return; this.cfg.art(ctx, this, this.cx, this.cy, this.vy < 0 ? 'up' : 'down', this.g.t); }
+  get sprite() { return TourSprite.of(this); }
+  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  drawArt(ctx) {
+    if (this.state === 'wait' && !this.knocked) return;
+    const mode = this.knocked ? 'ko' : this.vy < 0 ? 'up' : 'down';
+    if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, mode, TourSprite.FALLBACK.leap)) return;
+    this.cfg.art(ctx, this, this.cx, this.cy, mode, this.g.t);
+  }
   get light() { return this.cfg.glow && this.state !== 'wait' ? { r: 70, c: this.cfg.glow } : null; }
 }
 
 // a friendly local who hands Brady something when touched (once)
 class TourFriend extends Ent {
-  static make(cfg) { return class extends TourFriend { constructor(g, s) { super(g, s, cfg); } }; }
+  static make(cfg) { const cls = class extends TourFriend { constructor(g, s) { super(g, s, cfg); } }; cls.cfg = cfg; return cls; }
   constructor(g, s, cfg) { super(g, s, cfg.w || 24, cfg.h || 40); this.cfg = cfg; this.given = false; this.give = s.give || cfg.give || 'mushroom'; }
   update(dt) { this.t += dt; }
   touchPlayer(p) {
@@ -218,5 +271,77 @@ class TourFriend extends Ent {
     TourKit.sfx('gift', 'appear');
     g.spawn(new TourItem(g, this.cx + (p.cx < this.cx ? -20 : 20), this.y + 6, this.give));
   }
-  draw(ctx) { this.cfg.art(ctx, this, this.cx, this.y + this.h, this.given ? 'wave' : 'idle', this.g.t); }
+  get sprite() { return TourSprite.of(this); }
+  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  drawArt(ctx) {
+    const mode = this.given ? 'wave' : 'idle';
+    if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.y + this.h, mode, TourSprite.FALLBACK.friend)) return;
+    this.cfg.art(ctx, this, this.cx, this.y + this.h, mode, this.g.t);
+  }
+}
+
+/* TourProp: a world object Brady can push, kick and stomp-launch, and that bosses can fling. While it moves fast it
+   hits what it meets: the boss gets b.hit('prop', prop) (its brain decides what that does), ordinary enemies are
+   knocked out, and (when cfg.hurts) Brady is hurt unless he threw it himself.
+   cfg: { w, h, art(ctx, e, x, y, t) (x, y = feet centre), kick (speed in tiles/s, 7), bounce (wall restitution, 0.6),
+          friction (tiles/s², 6), roll (true: it rolls; e.rot is the angle), hurts, hp (boss hits before it breaks, 1;
+          0 = never breaks), life (seconds, optional), breakOnWall, burst (colour), onBreak(e), onHitBoss(e, b), gravity (1) }
+   Spawn one with g.spawn(new TourProp(g, { x, y }, cfg)), or register TourProp.make(cfg) as an entity type. */
+class TourProp extends Ent {
+  static make(cfg) { return class extends TourProp { constructor(g, s) { super(g, s, cfg); } }; }
+  constructor(g, s, cfg) {
+    super(g, s, cfg.w || 24, cfg.h || 24); this.cfg = cfg; this.prop = true; this.hp = cfg.hp != null ? cfg.hp : 1;
+    this.rot = 0; this.life = cfg.life || 0; this.hot = 0; this.thrownBy = null; this.fast = false;
+    if (cfg.init) cfg.init(this, s);
+  }
+  get moving() { return Math.abs(this.vx) > 2.5 * TS || Math.abs(this.vy) > 4 * TS; }
+  fling(vx, vy, by) { this.vx = vx; this.vy = vy; this.thrownBy = by || null; this.hot = 0.3; this.onGround = false; }
+  kick(dir, p) { this.vx = dir * (this.cfg.kick || 7) * TS; this.vy = Math.min(this.vy, -2 * TS); this.thrownBy = p; Sound.play('kick', { vol: 0.5 }); this.g.burst(this.cx, this.y + this.h, 5, '#ffffff', 'spark'); }
+  update(dt) {
+    this.t += dt; const c = this.cfg, g = this.g;
+    if (this.dead) { this.updateKnocked(dt); return; }
+    if (this.life) { this.life -= dt; if (this.life <= 0) { this.break(); return; } }
+    if (this.hot > 0) this.hot -= dt;
+    if (c.think) c.think(this, dt);
+    this.vy += PHYS.gDown * (c.gravity != null ? c.gravity : 1) * dt; if (this.vy > PHYS.maxFall) this.vy = PHYS.maxFall;
+    const before = this.vx;
+    moveBody(this, g.area, dt, { semis: c.semis !== false });
+    if (this.hitWall) { this.vx = -before * (c.bounce != null ? c.bounce : 0.6); if (Math.abs(before) > 3 * TS) { Sound.play('bump', { vol: 0.4 }); if (c.breakOnWall) { this.break(); return; } } }
+    if (this.onGround) this.vx = approach(this.vx, 0, (c.friction != null ? c.friction : 6) * TS * dt);
+    if (c.roll) this.rot += this.vx * dt / (this.w / 2);
+    this.fast = this.moving;
+    if (this.fast) {
+      const b = g.boss;
+      if (b && !b.remove && b.state === 'fight' && overlap(this, b)) {
+        const r = b.hit('prop', this);
+        if (r) { c.onHitBoss && c.onHitBoss(this, b); this.hp--; if (this.hp <= 0 && c.hp !== 0) { this.break(); } else { this.vx = -sign(this.vx || 1) * 4 * TS; this.vy = -5 * TS; this.thrownBy = null; } return; }
+      }
+      for (const e of g.entities) if (e.enemy && !e.boss && !e.dead && !e.remove && e !== this && overlap(this, e)) { if (e.hit('bump', this)) g.addScore(200, e.cx, e.y); }
+    }
+    if (this.y > g.area.H * TS + 100) this.remove = true;
+  }
+  break() { const c = this.cfg; this.remove = true; this.g.burst(this.cx, this.cy, 14, c.burst || '#ffffff', 'debris'); Sound.play('break', { vol: 0.6 }); c.onBreak && c.onBreak(this); }
+  hit(kind, src) { return false; }
+  touchPlayer(p) {
+    const c = this.cfg;
+    if (p.dead || c.ghost) return;
+    if (p.vy > 0 && p.prevBottom <= this.y + Math.max(8, this.h * 0.4)) {
+      // a stomp launches it up and forward
+      p.vy = -(p.inp.jump ? PHYS.stompVHeld : PHYS.stompV); p.jumping = true; p.y = Math.min(p.y, this.y - p.h + 2);
+      this.fling(p.facing * (c.kick || 7) * 0.7 * TS, -7 * TS, p); Sound.play('stomp', { vol: 0.5 }); return;
+    }
+    if (this.fast && c.hurts && this.thrownBy !== p) { p.hurt(this); return; }
+    // push or kick from the side
+    const side = p.cx < this.cx ? 1 : -1;
+    if (Math.abs(p.vx) > 2 * TS && sign(p.vx) === side) this.kick(side, p);
+    else { this.x += side * 1.5; p.x -= side; }
+  }
+  draw(ctx) { Ink.ent(ctx, this, c => this.drawArt(c)); }
+  drawArt(ctx) {
+    if (this.dead && this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(this.spin || 0); this.cfg.art(ctx, this, 0, this.h / 2, this.g.t); ctx.restore(); return; }
+    ctx.save();
+    if (this.cfg.roll) { ctx.translate(this.cx, this.cy); ctx.rotate(this.rot); ctx.translate(-this.cx, -this.cy); }
+    this.cfg.art(ctx, this, this.cx, this.y + this.h, this.g.t);
+    ctx.restore();
+  }
 }

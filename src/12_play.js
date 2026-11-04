@@ -159,6 +159,8 @@ class Play {
     this.area = this.rt[idx];
     this.entities = this.area.entities;
     this.themeKey = this.area.theme;
+    // pre-rendered art for this theme and country (draws procedurally until it arrives)
+    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey], C = this.level && this.level.country && typeof Tour !== 'undefined' ? Tour.countries[this.level.country] : null; Atlas.need([th && th.atlas, C && (C.atlas || (C.sprites ? C.id : null))]); }
     this.lavaY = this.area.lavaY;
     const keepPower = this.player ? this.player.power : (power || 0);
     this.player = new Player(this, x, y, keepPower);
@@ -431,6 +433,8 @@ class Play {
   }
 
   update(dt) {
+    // hit-stop: a few frames of slow time after a solid boss hit, so it lands
+    if (this.hitStop > 0) { this.hitStop -= dt; dt *= 0.25; }
     // fades
     if (this.fade.a !== this.fade.target) {
       this.fade.a = approach(this.fade.a, this.fade.target, dt * this.fade.speed);

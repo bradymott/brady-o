@@ -174,6 +174,16 @@ const copyModels = (appDir, outDir, shared) => {
   fs.writeFileSync(path.join(outDir, 'index.json'), JSON.stringify(out));
   return out.concat('index.json');
 };
+// assets/sprites/<app>/ (pre-rendered sprite atlases: <name>.png + <name>.js) ships beside the page as sprites/
+const copySprites = (appDir, outDir) => {
+  const src = path.join(root, 'assets', 'sprites', appDir);
+  if (!fs.existsSync(src)) return [];
+  fs.mkdirSync(outDir, { recursive: true });
+  const files = fs.readdirSync(src).filter(f => /\.(png|js|json)$/.test(f)).sort();
+  for (const f of files) fs.copyFileSync(path.join(src, f), path.join(outDir, f));
+  for (const f of fs.readdirSync(outDir)) if (!files.includes(f)) fs.unlinkSync(path.join(outDir, f));
+  return files;
+};
 const copyFontLicences = (dir) => {
   for (const f of ['OFL-bungee.txt', 'OFL-rubik.txt']) {
     const p = path.join(root, 'assets', 'fonts', f);
@@ -195,7 +205,7 @@ const iconB64Path = path.join(dist, 'icon.b64');
 const iconData = fs.existsSync(iconB64Path) ? `data:image/png;base64,${fs.readFileSync(iconB64Path, 'utf8').trim()}` : '';
 const combinedMeta = { title: 'Brady-O', appleTitle: 'Brady-O', desc: 'All the Brady games in one build.', color: '#07040e' };
 fs.writeFileSync(path.join(dist, 'index.html'), artifact);
-for (const A of Object.values(APPS)) copyModels(A.dir, path.join(dist, 'models'));
+for (const A of Object.values(APPS)) { copyModels(A.dir, path.join(dist, 'models')); copySprites(A.dir, path.join(dist, 'sprites')); }
 fs.writeFileSync(path.join(dist, 'brady-o.html'), pageHtml({ ...combinedMeta, code: allCode, extra: iconData ? `<link rel="apple-touch-icon" href="${iconData}">` : '' }));
 {
   const appDir = path.join(dist, 'app');
@@ -231,9 +241,10 @@ for (const [id, A] of Object.entries(APPS)) {
   const v = crypto.createHash('sha1').update(html).digest('hex').slice(0, 10);
   // Blender-made models (assets/models/<app>/*.glb) ship beside the page as models/*.glb and are cached offline
   const models = copyModels(A.dir, path.join(dir, 'models'), id !== 'world');   // the 2D app needs no 3D characters
-  fs.writeFileSync(path.join(dir, 'sw.js'), swSource('app-' + id, v, ['./', './index.html', './manifest.webmanifest'].concat(icons.map(f => './' + f), models.map(f => './models/' + f))));
+  const sprites = copySprites(A.dir, path.join(dir, 'sprites'));                 // the 2D app's pre-rendered atlases
+  fs.writeFileSync(path.join(dir, 'sw.js'), swSource('app-' + id, v, ['./', './index.html', './manifest.webmanifest'].concat(icons.map(f => './' + f), models.map(f => './models/' + f), sprites.map(f => './sprites/' + f))));
   copyFontLicences(dir);
-  report.push(`${A.dir} ${files.length} modules ${(html.length / 1024).toFixed(0)}KB${models.length ? ' + ' + models.length + ' glb' : ''}`);
+  report.push(`${A.dir} ${files.length} modules ${(html.length / 1024).toFixed(0)}KB${models.length ? ' + ' + models.length + ' glb' : ''}${sprites.length ? ' + ' + sprites.length + ' sprite files' : ''}`);
 }
 // launcher page at the site root
 const tile = (A, id) => `<a class="app" href="${A.dir}/"><img src="${A.dir}/icon-180.png" alt="" onerror="this.style.visibility='hidden'"><span><b>${A.name}</b><small>${A.desc}</small></span></a>`;

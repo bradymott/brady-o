@@ -544,11 +544,16 @@ const P = {
   },
   // the bateria: rows of drums pop up on the beat
   bateria(st, o) { return P.drums(st, { n: o.n || 5 }); },
-  arena_barracao(st, o) {
+  // the boss pitch: surdo drums pop up on the beat (phase 2 he dives on it), two stands, the ball cannon
+  // on the left and the goal net on the right; phase 3 cracks the floor open
+  arena_estadio(st, o) {
     const B = st.B, { x0, w, GY } = o;
-    for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
-    for (let q = 0; q < 6; q++) B.set(x0 + Math.floor(w / 2) - 3 + q, GY - 7, T.SEMI);
-    for (const dx of [2, w - 3]) B.decorAt('brMask', x0 + dx, GY, 0);
+    B.beat(x0 + 6, x0 + 8, GY - 3, 0, 'brDrum'); B.beat(x0 + 17, x0 + 19, GY - 3, 1, 'brDrum'); B.beat(x0 + 11, x0 + 14, GY - 6, 0, 'brDrum');
+    for (let q = 0; q < 3; q++) { B.set(x0 + 2 + q, GY - 5, T.SEMI); B.set(x0 + w - 6 + q, GY - 5, T.SEMI); }
+    B.spawn('brBallCannon', x0 + 1, GY - 1, { dir: 1 });
+    B.prop('brGoal', x0 + w - 4, GY - 4, 3, 4, 'none', {});
+    B.decorAt('brMask', x0 + 3, GY - 5, 0); B.decorAt('brMask', x0 + w - 5, GY - 5, 0);
+    B.decorAt('brCoconutStand', x0 + 10, GY, 0); B.decorAt('brCooler', x0 + 16, GY, 0); B.decorAt('brFlowerBush', x0 + 21, GY, 0); B.decorAt('brShell', x0 + 4, GY, 0);
   }
 };
 // logs tumbling down the falls' chute
@@ -606,52 +611,214 @@ const platforms = {
 };
 
 /* ---------------- the boss: O TUCANÃO ---------------- */
-// The Baron's giant toucan circles the warehouse, drops cashew fruit and dive-bombs Brady
-// beak first... which gets stuck in the floor. That's the moment to stomp him!
+// The Baron's giant toucan rules the air: the only thing that reaches him is a FOOTBALL. The ball cannon
+// keeps the pitch stocked; run into a ball to kick it along the floor (for his low swoops), stomp a ball
+// to volley it straight up at him. A ball in the face knocks him out of the sky to the floor, where he
+// staggers (stomp him for a bonus hit). Phase 2 the carnival drums kick in and he dives on the beat, beak
+// stuck in the floor for a moment (bump him from below, or a ball hurts him double); phase 3 a flock of
+// toucanitos joins in and the pitch cracks open. The last ball sends him into the goal net. GOOOOL.
+const toucanitoArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y - 8); ctx.scale(e.dir || 1, 1);
+  const f = Math.sin(e.t * 9);
+  ctx.fillStyle = '#14141c'; ctx.beginPath(); ctx.ellipse(0, 0, 11, 7, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#1e1e28'; ctx.beginPath(); ctx.moveTo(-4, -2); ctx.quadraticCurveTo(-10, -12 - f * 6, -20, -6 - f * 8); ctx.lineTo(0, 1); ctx.fill();
+  ctx.fillStyle = '#fff4c8'; ctx.beginPath(); ctx.ellipse(5, -2, 5, 5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.moveTo(8, -6); ctx.quadraticCurveTo(22, -8, 26, -1); ctx.quadraticCurveTo(18, -1, 8, 0); ctx.fill();
+  ctx.fillStyle = '#3a8aff'; ctx.beginPath(); ctx.arc(6, -4, 2.2, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(6.5, -4, 1, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ff3d3d'; ctx.fillRect(-8, 4, 10, 3);
+  ctx.restore();
+};
+const BrToucanito = TourFlyer.make({ w: 26, h: 16, range: 3, speed: 1.0, swoop: true, art: toucanitoArt, burst: '#ffd23a' });
+// the football: kick it (run into it) along the floor, or stomp it to volley it high
+const BrFootball = TourProp.make({
+  w: 18, h: 18, kick: 9, bounce: 0.8, roll: true, gravity: 0.45, friction: 3, hp: 0, burst: '#ffffff',
+  art(ctx, p, x, y) { ballIcon(ctx, x, y - p.h / 2, 0); },
+  think(ball, dt) {
+    if (ball.thrownBy && ball.hot > 0.2 && !ball.volley) { ball.volley = true; ball.vy = -22 * TS; ball.vx *= 0.6; ball.g.parts.text(ball.cx, ball.y - 10, 'VOLLEY!', '#ffd23a'); Sound.play('kick', { pitch: 1.5 }); ball.g.burst(ball.cx, ball.cy, 8, '#ffffff', 'spark'); }
+    if (ball.hot <= 0 && ball.onGround) ball.volley = false;
+    if (ball.fast && Math.random() < 0.25) ball.g.burst(ball.cx, ball.cy, 1, 'rgba(255,255,255,0.6)', 'dust');
+  },
+  onHitBoss(ball, b) { ball.g.burst(ball.cx, ball.cy, 16, '#ffd23a', 'confetti'); }
+});
+// the ball cannon at the side of the pitch keeps two balls in play
+class BrBallCannon extends Ent {
+  constructor(g, s) { super(g, s, 44, 40); this.dir = s.dir || 1; this.cool = 1.5; this.recoil = 0; }
+  update(dt) {
+    this.t += dt; this.recoil = Math.max(0, this.recoil - dt * 3);
+    const g = this.g, b = g.boss; if (!b || b.state === 'sleep' || b.state === 'dying') return;
+    this.cool -= dt;
+    const balls = g.entities.filter(e => e instanceof BrFootball && !e.remove && Math.abs(e.cx - this.cx) < 16 * TS).length;
+    if (this.cool <= 0 && balls < 2) {
+      this.cool = balls ? 4 : 2.2; this.recoil = 1; Sound.play('kick', { pitch: 0.9, vol: 0.5 }); g.burst(this.cx + this.dir * 24, this.y + 8, 8, '#ffffff', 'dust');
+      const ball = new BrFootball(g, { x: this.cx + this.dir * 26, y: this.y + 16 }); ball.fling(this.dir * 4.5 * TS, -11 * TS, null); g.spawn(ball);
+    }
+  }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, d = this.dir;
+    ctx.fillStyle = '#2a6a3a'; rr(ctx, x - 20, y - 16, 40, 16, 4); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.fillRect(x - 20, y - 16, 40, 3);
+    ctx.save(); ctx.translate(x, y - 24); ctx.scale(d, 1); ctx.translate(-this.recoil * 5, 0);
+    ctx.fillStyle = '#1aa85a'; rr(ctx, -12, -10, 36, 20, 7); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.fillRect(20, -11, 5, 22); ctx.fillRect(-4, -10, 3, 20);
+    ctx.restore();
+    ballIcon(ctx, x - 14, y - 40, this.t);
+  }
+}
+Object.assign(entities, { brFootball: BrFootball, brBallCannon: BrBallCannon, brToucanito: BrToucanito });
+// a shadow on the floor under a falling coconut: the tell
+class BrShadow extends Ent {
+  constructor(g, x, floorY, life) { super(g, null, 40, 8); this.x = x - 20; this.y = floorY - 6; this.life = life; this.max = life; }
+  update(dt) { this.t += dt; this.life -= dt; if (this.life <= 0) this.remove = true; }
+  draw(ctx) { const k = 1 - this.life / this.max; ctx.fillStyle = `rgba(0,0,0,${0.15 + 0.3 * k})`; ctx.beginPath(); ctx.ellipse(this.cx, this.y + 6, 8 + 14 * k, 3 + 4 * k, 0, 0, TAU); ctx.fill(); ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(this.t * 20)})`; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', this.cx, this.y - 4); }
+}
+// phase 3: the pitch cracks, then opens into a pit
+class BrCrack extends Ent {
+  constructor(g, tx0, tx1, GY) { super(g, null, (tx1 - tx0 + 1) * TS, 12); this.x = tx0 * TS; this.y = GY * TS - 6; this.tx0 = tx0; this.tx1 = tx1; this.GY = GY; this.t = 0; Sound.play('crumble', { vol: 0.7 }); }
+  update(dt) {
+    this.t += dt; if (Math.random() < 0.3) this.g.burst(this.x + Math.random() * this.w, this.y + 6, 1, '#c8a070', 'dust');
+    if (this.t > 1.3) { const A = this.g.area; for (let tx = this.tx0; tx <= this.tx1; tx++) for (let ty = this.GY; ty < A.H; ty++) this.g.setTile(tx, ty, T.EMPTY); this.g.burst(this.cx, this.y + 6, 24, '#8a6a3a', 'debris'); Sound.play('break'); this.g.shake(6); this.remove = true; }
+  }
+  draw(ctx) {
+    const k = Math.min(1, this.t / 1.3);
+    ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 1 + k * 3; ctx.beginPath();
+    for (let x = this.x + 6; x < this.x + this.w; x += 14) { ctx.moveTo(x, this.y + 6); ctx.lineTo(x + 5, this.y + 6 + 10 * k); ctx.lineTo(x - 3, this.y + 6 + 22 * k); }
+    ctx.stroke();
+    ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(this.t * 16)})`; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('CRACK!', this.cx, this.y - 6);
+  }
+}
+const coconutShotArt = (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 5); ctx.fillStyle = '#6a4a2a'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a2a1a'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(Math.cos(k * 2.1) * 3, Math.sin(k * 2.1) * 3, 1.3, 0, TAU); ctx.fill(); } ctx.restore(); };
+// the first surface under a point (drums count only while they're up)
+const landY = (g, cx, y0, floorY) => { const tx = Math.floor(cx / TS); for (let ty = Math.max(0, Math.floor(y0 / TS)); ty * TS < floorY; ty++) { const t = tileAt(g.area, tx, ty); if (SOLID[t] || t === T.SEMI) return ty * TS; } return floorY; };
+Object.assign(decor, {
+  // the goal net at the back of the pitch
+  brGoal(ctx, x, y, t, th, d) {
+    const w = d.w, h = d.h, x0 = x - w / 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1;
+    for (let k = 0; k <= 6; k++) { ctx.beginPath(); ctx.moveTo(x0 + 6 + k * (w - 12) / 6, y - h + 6); ctx.lineTo(x0 + 6 + k * (w - 12) / 6, y); ctx.stroke(); }
+    for (let k = 0; k <= 6; k++) { ctx.beginPath(); ctx.moveTo(x0 + 6, y - h + 6 + k * (h - 6) / 6); ctx.lineTo(x0 + w - 6, y - h + 6 + k * (h - 6) / 6); ctx.stroke(); }
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x0, y - h, 6, h); ctx.fillRect(x0 + w - 6, y - h, 6, h); ctx.fillRect(x0, y - h, w, 6);
+    ctx.fillStyle = '#1aa85a'; ctx.fillRect(x0 + 8, y - h - 14, w - 16, 10); ctx.fillStyle = '#ffd23a'; ctx.font = `9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('GOL', x, y - h - 6);
+  }
+});
 const boss = {
-  id: 'br_toucan', name: 'O Tucanão', hp: 4, dims: [70, 56], floats: true, music: 'tour_br_boss', country: 'br',
+  id: 'br_toucan', name: 'O Tucanão', hp: 5, dims: [70, 56], floats: true, music: 'tour_br_boss', country: 'br',
   brain: {
-    guardText: 'TOO FLOATY!',
-    wake(b) { K.say(b.g, b, 'BOM DIA! NOW GO HOME!', '#ffd84a'); },
+    guardText: 'TOO FEATHERY!',
+    phases: [4, 2],
+    wake(b) { b.tall = true; b.flockT = 0; K.say(b.g, b, 'BOM DIA! THIS IS MY PITCH!', '#ffd84a'); },
+    skyY(b) { return b.floorY - b.h - 5 * TS; },
     update(b, dt) {
-      const g = b.g, p = g.player, skyY = b.floorY - b.h - 6 * TS;
+      const g = b.g, p = g.player, ph = b.phase || 1, skyY = this.skyY(b);
       b.guard = 'bounce'; b.vx = 0;
-      if (b.act === 'walk') {
-        b.pose = 'fly'; b.face(); b.hover(dt, skyY, p ? p.cx : b.cx);
-        if (b.at > 1.8) { b.cycle++; b.go(b.cycle % 2 ? 'dive' : 'fruit'); }
-      } else if (b.act === 'fruit') {
-        b.pose = 'fly'; b.hover(dt, skyY);
-        if (b.at > 0.4 && !b.fired) {
+      if (b.act === 'walk') b.go('fly');
+      if (b.act === 'fly') {
+        b.pose = 'fly'; b.face(); b.hover(dt, skyY + Math.sin(b.t * 2) * 10, p ? p.cx + (p.cx < b.cx ? 1 : -1) * 2 * TS : b.cx);
+        if (b.at > (ph >= 3 ? 1.2 : 1.7)) { b.cycle++; const seq = ph >= 2 ? ['aim', 'dive', 'coco', 'aim', 'dive'] : ['aim', 'coco']; b.go(seq[b.cycle % seq.length]); }
+      } else if (b.act === 'coco') {
+        // tell: a squawk, and shadows on the floor where the coconuts will land
+        b.pose = 'squawk'; b.hover(dt, skyY);
+        if (b.first) { b.face(); K.say(g, b, pick(['COCOS!', 'HEADS UP!', 'FRUIT DELIVERY!']), '#ffd84a'); }
+        if (b.at > 0.55 && !b.fired) {
           b.fired = true; Sound.play('throw');
-          const n = b.hp <= 2 ? 5 : 3;
-          for (let k = 0; k < n; k++) tourFire(g, b.cx + b.dir * 30, b.cy, { kind: 'cashew', vx: (k - (n - 1) / 2) * 2.2 * TS, vy: -3 * TS, grav: PHYS.gDown * 0.4, w: 14, h: 14, life: 3, thru: true, stompable: true, col: '#ff7a2a', art: (ctx, s) => { ctx.fillStyle = '#ff7a2a'; ctx.beginPath(); ctx.ellipse(s.cx, s.cy - 2, 6, 7, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#c8a070'; ctx.beginPath(); ctx.ellipse(s.cx + 1, s.cy + 6, 4, 3, 0.4, 0, TAU); ctx.fill(); } });
+          const px = p ? p.cx : b.cx, xs = [px, px - (3.5 + Math.random()) * TS, px + (3.5 + Math.random()) * TS];
+          for (const x0 of xs) { const x = clamp(x0, b.arenaX0 + TS, b.arenaX1 - TS); g.spawn(new BrShadow(g, x, b.floorY, 0.95)); tourFire(g, x, b.y + b.h, { kind: 'coconut', vx: 0, vy: 1 * TS, grav: PHYS.gDown * 0.42, w: 16, h: 16, life: 2.5, thru: true, stompable: true, col: '#6a4a2a', art: coconutShotArt }); }
         }
-        if (b.at > 1.3) { b.fired = false; b.go('walk'); }
-      } else if (b.act === 'dive') {
-        if (b.first) { b.tx = p ? p.cx : b.cx; b.face(); }
-        if (b.at < 0.7) { b.pose = 'aim'; b.hover(dt, skyY - TS); }
-        else {
-          b.pose = 'dive';
-          const sp = (b.hp <= 2 ? 11 : 9) * TS * dt, dx = b.tx - b.cx;
-          b.x += clamp(dx, -sp, sp); b.y += 12 * TS * dt;
-          if (b.y + b.h >= b.floorY) { b.y = b.floorY - b.h; g.shake(8); Sound.play('stomp', { pitch: 0.6 }); g.burst(b.cx + b.dir * 30, b.floorY, 16, '#c8a070', 'debris'); b.go('stuck'); }
+        if (b.at > 1.2) { b.fired = false; b.go('fly'); }
+      } else if (b.act === 'aim') {
+        // tell: he swings out to one side, low, and lines up a swoop along the floor
+        if (b.first) { b.side = p && p.cx > (b.arenaX0 + b.arenaX1) / 2 ? 1 : -1; K.say(g, b, pick(['VOANDO BAIXO!', 'LOW PASS!', 'RASANTE!']), '#ffd84a'); }
+        b.pose = 'aim'; b.dir = b.side;
+        const sx = b.side > 0 ? b.arenaX0 + b.w / 2 + TS : b.arenaX1 - b.w / 2 - TS, ty = b.floorY - b.h - 10;
+        b.x = approach(b.x, sx - b.w / 2, 12 * TS * dt); b.y = approach(b.y, ty, 9 * TS * dt);
+        if ((Math.abs(b.x - (sx - b.w / 2)) < 2 && Math.abs(b.y - ty) < 2 && b.at > 0.7) || b.at > 2.2) b.go('swoop');
+      } else if (b.act === 'swoop') {
+        b.pose = 'swoop'; b.dir = b.side;
+        if (b.first) Sound.play('wind', { vol: 0.5, pitch: 1.2 });
+        b.x += b.side * (9 + (ph >= 3 ? 2 : 0)) * TS * dt; b.y = approach(b.y, b.floorY - b.h - 10 + Math.sin(b.at * 10) * 4, 10 * TS * dt);
+        if (Math.random() < 0.3) g.burst(b.cx - b.side * 30, b.cy, 1, '#ffffff', 'dust');
+        if ((b.side > 0 && b.x >= b.arenaX1 - b.w - 4) || (b.side < 0 && b.x <= b.arenaX0 + 4) || b.at > 2) b.go('rise');
+      } else if (b.act === 'rise') { b.pose = 'fly'; b.hover(dt, skyY); if (b.at > 0.8) b.go('fly'); }
+      else if (b.act === 'dive') {
+        // phase 2: he bobs on the beat above Brady, then dives on the downbeat
+        if (b.first) { b.beat0 = Math.floor(g.beatNow()); b.plunge = false; b.face(); K.say(g, b, pick(['NO RITMO!', 'UM, DOIS, TRÊS!', 'ON THE BEAT!']), '#ffd84a'); }
+        const bt = g.beatNow();
+        if (!b.plunge) {
+          // locked on: he tracks Brady fast and bobs with the beat
+          b.pose = 'aim'; b.hover(dt, skyY - TS - Math.sin((bt % 1) * Math.PI) * 14); if (p) b.x = approach(b.x, p.cx - b.w / 2, 10 * TS * dt);
+          if (bt >= b.beat0 + 2) { b.plunge = true; Sound.play('wind', { vol: 0.5 }); }
+          if (b.at > 3) b.go('fly');
+        } else {
+          b.pose = 'dive'; b.y += 15 * TS * dt;
+          const ly = landY(g, b.cx, b.y + b.h, b.floorY);
+          if (b.y + b.h >= ly) { b.y = ly - b.h; g.shake(8); Sound.play('stomp', { pitch: 0.6 }); g.burst(b.cx + b.dir * 30, ly, 16, '#c8a070', 'debris'); b.plunge = false; b.go('stuck'); }
         }
       } else if (b.act === 'stuck') {
-        b.pose = 'stuck'; if (b.first) K.say(g, b, 'MY BEAK! IT\'S STUCK!', '#ffd84a');
-        b.vuln = b.at > 0.15 && b.at < 2.2; b.guard = b.vuln ? 'hurt' : 'bounce';
-        if (b.at > 2.2) b.go('rise');
-      } else if (b.act === 'rise') {
-        b.pose = 'fly'; b.hover(dt, skyY); if (b.at > 0.9) b.go('walk');
+        // beak in the floor: bump him from below (or a ball hurts double)
+        b.pose = 'stuck'; if (b.first) K.say(g, b, pick(['MY BEAK! IT\'S STUCK!', 'ESTOU PRESO!']), '#ffd84a');
+        if (b.at > 1.6) b.go('rise');
+      } else if (b.act === 'floored') {
+        // a ball to the face: he tumbles out of the sky
+        b.pose = 'tumble'; b.tumble = (b.tumble || 0) + dt * 10; b.vy = (b.vy || 0) + PHYS.gDown * 0.9 * dt; b.y += b.vy * dt; b.x += (b.kx || 0) * dt;
+        if (b.y + b.h >= b.floorY) { b.y = b.floorY - b.h; b.vy = 0; g.shake(7); Sound.play('stomp', { pitch: 0.5 }); g.burst(b.cx, b.floorY, 14, '#ffd23a', 'confetti'); b.go('stagger'); }
+      } else if (b.act === 'stagger') {
+        // the bonus weak moment: grounded and dizzy
+        b.pose = 'stagger'; b.vuln = true; b.guard = 'hurt';
+        if (b.first) K.say(g, b, pick(['AI, AI, AI!', 'WHO TURNED OFF THE SKY?', 'MY FEATHERS!']), '#ffd84a');
+        b.x += Math.sin(b.at * 9) * 40 * dt;
+        if (b.at > 2.6) b.go('rise');
+      } else if (b.act === 'goal') {
+        // the finish: the last ball sends him into the net at the back of the pitch
+        b.pose = 'tumble'; b.tumble = (b.tumble || 0) + dt * 14; b.vuln = true;
+        const nx = b.arenaX1 - 2.5 * TS - b.w / 2, ny = b.floorY - b.h - 1.5 * TS;
+        if (!b.netted) {
+          b.x = approach(b.x, nx, 11 * TS * dt); b.y = approach(b.y, ny, 8 * TS * dt); if (Math.random() < 0.5) g.burst(b.cx, b.cy, 2, '#ffd23a', 'confetti');
+          if (Math.abs(b.x - nx) < 2) { b.netted = true; b.at = 0; g.bannerText = 'GOOOOOOOL!'; g.bannerT = 2.6; K.sfx('crowd', 'clear', { vol: 0.8 }); g.shake(10); g.burst(b.cx, b.cy, 40, '#ffd23a', 'confetti'); g.burst(b.cx, b.cy, 40, '#1aa85a', 'confetti'); K.say(g, b, 'ISSO NÃO VALE!', '#ffffff'); }
+        } else if (b.at > 1.6) b.die();
+      }
+      // phase 3: the flock keeps coming
+      if (ph >= 3 && b.act !== 'goal') {
+        b.flockT -= dt;
+        if (b.flockT <= 0) {
+          const n = g.entities.filter(e => e instanceof BrToucanito && !e.dead && !e.remove && e.cx > b.arenaX0 && e.cx < b.arenaX1).length;
+          if (n < 3) { b.flockT = 2.5; const x = b.arenaX0 + TS * 2 + Math.random() * (b.arenaX1 - b.arenaX0 - 4 * TS); g.spawn(new BrToucanito(g, { x, y: b.floorY - 6 * TS - Math.random() * 3 * TS, dir: Math.random() < 0.5 ? -1 : 1 })); g.burst(x, b.floorY - 7 * TS, 10, '#ffd23a', 'spark'); } else b.flockT = 1;
+        }
       }
     },
-    hurt(b) { b.go('rise'); K.say(b.g, b, pick(['AI, AI, AI!', 'MY FEATHERS!', 'NOT THE BEAK!']), '#ffd84a'); b.g.burst(b.cx, b.cy, 24, '#ffd23a', 'confetti'); },
+    hit(b, kind, src) {
+      if (b.act === 'goal') return false;
+      if (kind === 'prop') {
+        if (!src.thrownBy) return false;   // the cannon's own balls just bounce off: Brady has to kick them
+        const stuck = b.act === 'stuck';
+        b.knock = ['fly', 'coco', 'aim', 'swoop', 'rise', 'dive'].indexOf(b.act) >= 0; b.kx = sign(src.vx || 1) * 3 * TS;
+        b.damage(stuck ? 2 : 1, { text: stuck ? 'GOLAÇO!' : pick(['NA CARA!', 'HEADER!', 'GOL!']), col: '#ffd23a' });
+        return true;
+      }
+      if (kind === 'bump') { if (b.act === 'stuck') { b.damage(2, { text: 'BICO!', col: '#ffd23a' }); return true; } return false; }
+      if (kind === 'stomp' || kind === 'spin') { if (b.act === 'stagger') { b.damage(1, { text: 'PISÃO!', col: '#ffffff' }); return true; } return 'bounce'; }
+      if (kind === 'disc') return b.act === 'stagger' || b.act === 'stuck' ? undefined : false;
+      if (kind === 'star') return undefined;
+      return false;
+    },
+    react(b) { if (b.knock) { b.knock = false; b.vy = -2 * TS; b.go('floored'); } else b.go('rise'); K.say(b.g, b, pick(['AI!', 'FALTA!', 'NOT THE BEAK!']), '#ffd84a'); b.g.burst(b.cx, b.cy, 24, '#ffd23a', 'confetti'); },
+    hurt(b) { this.react(b); },
+    phase(b, n) {
+      this.react(b); const g = b.g;
+      if (n === 2) { K.say(g, b, 'BATERIA! TOCA!', '#ffd84a'); g.bannerText = 'THE DRUMS KICK IN'; g.bannerT = 1.6; }
+      else if (n === 3) {
+        K.say(g, b, 'MINHA GALERA! ATACAR!', '#ffd84a'); g.bannerText = 'THE PITCH CRACKS'; g.bannerT = 1.6; g.shake(10); b.flockT = 0.5;
+        const x0 = Math.round(b.arenaX0 / TS), GY = Math.round(b.floorY / TS);
+        g.spawn(new BrCrack(g, x0 + 9, x0 + 10, GY)); g.spawn(new BrCrack(g, x0 + 15, x0 + 16, GY));
+      }
+    },
+    lastHit(b) { b.netted = false; b.go('goal'); return true; },
     draw(b, ctx, t) {
       const x = b.cx, y = b.cy, d = b.dir, P = b.pose;
       ctx.save(); ctx.translate(x, y);
       if (P === 'dive') ctx.rotate(d * 0.9);
       if (P === 'stuck') { ctx.translate(0, 6); ctx.rotate(d * 1.1 + Math.sin(t * 14) * 0.08); }
+      if (P === 'tumble') ctx.rotate(b.tumble || 0);
+      if (P === 'swoop') ctx.rotate(d * 0.12);
+      if (P === 'stagger') ctx.rotate(Math.sin(t * 7) * 0.15);
       ctx.scale(d, 1);
-      const flap = P === 'dive' ? -0.2 : P === 'aim' ? 1 : Math.sin(t * 10);
+      const flap = P === 'dive' || P === 'swoop' ? -0.3 : P === 'aim' ? 1 : P === 'stagger' ? -0.8 : Math.sin(t * 10);
       // wings and tail
       ctx.fillStyle = '#14141c'; ctx.beginPath(); ctx.moveTo(-26, 6); ctx.lineTo(-44, 20); ctx.lineTo(-30, 22); ctx.fill();
       ctx.save(); ctx.translate(-6, -6); ctx.rotate(-0.6 - flap * 0.6); ctx.fillStyle = '#1e1e28'; ctx.beginPath(); ctx.ellipse(-16, 0, 26, 10, 0, 0, TAU); ctx.fill(); ctx.restore();
@@ -660,13 +827,19 @@ const boss = {
       ctx.fillStyle = '#fff4c8'; ctx.beginPath(); ctx.ellipse(12, -4, 12, 12, 0, 0, TAU); ctx.fill();
       ctx.fillStyle = '#ff3d3d'; ctx.beginPath(); ctx.ellipse(10, 20, 10, 4, 0, 0, TAU); ctx.fill();
       ctx.fillStyle = '#3a8aff'; ctx.beginPath(); ctx.arc(16, -12, 6, 0, TAU); ctx.fill();
-      if (P === 'stuck') K.dizzy(ctx, 4, -30, t); else { ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(17, -12, 2.6, 0, TAU); ctx.fill(); }
-      // the enormous beak
+      if (P === 'stuck' || P === 'stagger' || P === 'tumble') K.dizzy(ctx, 4, -30, t);
+      else if (P === 'aim' || P === 'swoop') { ctx.fillStyle = '#1a1020'; ctx.fillRect(13, -14, 8, 3); }
+      else { ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(17, -12, 2.6, 0, TAU); ctx.fill(); }
+      // the enormous beak (open when he squawks)
+      const open = P === 'squawk' ? 6 : 0;
       const bg = ctx.createLinearGradient(20, -18, 70, 0); bg.addColorStop(0, '#ffd23a'); bg.addColorStop(0.6, '#ff8a2a'); bg.addColorStop(1, '#e8422a');
-      ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(20, -18); ctx.quadraticCurveTo(56, -22, 72, -2); ctx.quadraticCurveTo(50, -4, 20, 0); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.moveTo(64, -8); ctx.quadraticCurveTo(70, -6, 72, -2); ctx.lineTo(62, -3); ctx.fill();
+      ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(20, -18); ctx.quadraticCurveTo(56, -22 - open, 72, -2 - open); ctx.quadraticCurveTo(50, -4 - open, 20, -2); ctx.closePath(); ctx.fill();
+      if (open) { ctx.fillStyle = '#e8422a'; ctx.beginPath(); ctx.moveTo(20, 0); ctx.quadraticCurveTo(50, 2, 66, 8); ctx.quadraticCurveTo(48, 10, 20, 6); ctx.closePath(); ctx.fill(); }
+      ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.moveTo(64, -8 - open); ctx.quadraticCurveTo(70, -6 - open, 72, -2 - open); ctx.lineTo(62, -3 - open); ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(22, -8); ctx.quadraticCurveTo(46, -10, 70, -3); ctx.stroke();
       ctx.restore();
+      if (b.netted) { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1; for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(x - 36, y + k * 10); ctx.lineTo(x + 36, y + k * 10 + 4); ctx.moveTo(x + k * 10, y - 36); ctx.lineTo(x + k * 10 + 3, y + 36); ctx.stroke(); } }
+      if (P === 'stuck') { ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('BUMP!', x, b.y - 18); }
     }
   }
 };
@@ -755,8 +928,8 @@ Tour.country({
       postcard: 'A capybara gave me a ride. A bird was riding on IT. We were a tower of friends. ♥ C',
       script: [['flat', { n: 5 }], 'capybaras', 'jaguar', 'caimans', ['nest', { gold: true }], 'piranhas', 'cp', ['capybaras', { span: 12 }], 'sig', ['caimans', { n: 4 }], 'jaguar', 'piranhas', 'oneup', 'end'] },
     { name: 'Carnival Warehouse', style: 'castle', theme: 'br_barracao', gimmick: 'The float workshop: spinning turntables, confetti cannons and drum platforms on the beat, then O Tucanão',
-      enemies: [['brPandeiro', 2], ['brBrigadeiro', 2]], boss: 'br_toucan', arena: 'barracao', arenaW: 26, bpm: 124,
-      hint: 'When O Tucanão\'s beak gets stuck in the floor, stomp him!',
+      enemies: [['brPandeiro', 2], ['brBrigadeiro', 2]], boss: 'br_toucan', arena: 'estadio', arenaW: 26, bpm: 124,
+      hint: 'Only a football reaches O Tucanão: run into a ball to kick it, stomp a ball to volley it up!',
       postcard: 'Sugarloaf is back by the bay, full size! The Baron sailed for Africa. Next stop: Mozambique! ♥ C',
       script: [['flat', { n: 4 }], ['turntable', { gold: true }], 'cannons', ['bateria', { n: 4 }], 'cp', 'turntable', ['enemies', { n: 2 }], ['cannons', { gold: true }], ['blocks', { content: 'power' }], 'arena'] }
   ]

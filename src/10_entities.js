@@ -339,7 +339,8 @@ class Item extends Ent {
     p.collect(this.kind, this);
   }
   bounceFromBelow() { if (this.emerge <= 0) { this.vy = -9 * TS; if (this.vx) this.vx = sign(this.vx) * Math.abs(this.vx); } }
-  draw(ctx) {
+  draw(ctx) { Ink.ent(ctx, this, c => this.drawArt(c)); }
+  drawArt(ctx) {
     const x = this.cx, y = this.y + this.h;
     ctx.save();
     if (this.emerge > 0) { ctx.beginPath(); ctx.rect(this.x - 10, this.baseY - TS * 2, this.w + 20, TS * 2); ctx.clip(); }
@@ -365,7 +366,7 @@ class Gold extends Ent {
   constructor(g, s) { super(g, s, 28, 28); this.y = s.y - 16 - 14; this.idx = s.idx; this.had = g.goldHad(this.idx); }
   update(dt) { this.t += dt; }
   touchPlayer(p) { this.remove = true; p.collect('gold', this); }
-  draw(ctx) { Sprites.goldRecord(ctx, this.cx, this.cy + Math.sin(this.t * 2) * 3, this.t, this.had); }
+  draw(ctx) { Ink.ent(ctx, this, c => Sprites.goldRecord(c, this.cx, this.cy + Math.sin(this.t * 2) * 3, this.t, this.had)); }
   get light() { return { r: 60, c: 'rgba(255,220,100,' }; }
 }
 

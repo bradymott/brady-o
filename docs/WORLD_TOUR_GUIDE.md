@@ -332,3 +332,36 @@ BRADY_DIST=<your scratch>/dist node tools/apps_test.js
 Then play it at `<dist>/site/super-brady-o-world/index.html` (874×402 and 402×874).
 
 `window.BRADY` exposes `Game`, `getLevel`, `Play` and `Save`, which is handy for jumping straight into a level from the console.
+
+## 13. Pre-rendered art: the Fiesta Toon sprite pipeline (November 2026)
+Brady chose the "Fiesta Toon" look: flat cel shading with a dark outline, rendered from Blender. Mexico is the
+reference conversion. Brady himself stays the code-drawn character (`05_brady.js`), now with blue jeans, a charcoal
+tee, cel highlights and the ink line.
+
+**The ink line.** `src/06a_ink.js` draws a thick dark outline around anything painted through `Ink.around` /
+`Ink.ent`. Brady, every tour enemy, items, postcards and bosses go through it, so code-drawn art pops off the
+background with no changes to the art itself. Sprite-drawn enemies skip it (their outline is baked in).
+
+**Atlases.** `src/03a_atlas.js` (`Atlas`) loads `sprites/<name>.js` + `.png` from `assets/sprites/super-brady-o-world/`
+(the build copies them beside the app and lists them in the service worker). A level preloads its theme's atlas
+(`theme.atlas`) and its country's sprite atlas (`country.sprites` = true -> atlas named after the country id).
+Everything falls back to the procedural art until the atlas is in, then the tile and background caches rebuild.
+- **Backgrounds:** a layer `{ kind: 'image', atlas, id, f, shift, fallback: { kind, ... } }` blits a seamless
+  1024-px strip (rendered at 2 texels per px; its ground line is baked in at the engine's `base` row; `shift` moves it).
+- **Tiles:** `Atlas.applyTiles(theme, atlas, { ground: 'ground', qblock, used, brick, hard, semi, keepAtlas })` gives the
+  theme painter hooks that cut tiles from the atlas (the ground frame is an 8 x 3 tile strip: cap row, two fill rows).
+- **Enemies:** an enemy config with `sprite: 'kind'` draws clips `kind/<mode>` or frames `kind_<mode>_000` (3 texels
+  per px, feet-centre origin for walkers, centre origin for flyers, swimmers and leapers), with fallbacks per mode
+  (`TourSprite.FALLBACK`). Set it from a separate `29_tour_<cc>_sprites.js` file (see Mexico's) so the country's
+  gameplay file stays art-agnostic.
+- **Coins, stars, blocks:** override `country.coin.draw` / `star.draw` with `Atlas.animate`, and the item block with
+  `applyTiles(..., { qblock, used, keepAtlas: true })`.
+
+**Making the art (`tools/blender/sprites/`, headless Blender 5.2 only).**
+- `lookkit.py`: the looks (toon / paint / ink), camera, lights; 1 m = 28.1 px; `*_glow` materials render unlit.
+- Models: `mx_pepper.py`, `mx_enemies_a.py`, `mx_enemies_b.py` (API: `KINDS`, `POSES`, `HEIGHT`/`SIZE`, `ORIGIN`,
+  `build(kind, pose, t)`, `clear()`); backgrounds: `mx_mercado.py`, `mx_canal.py`, `mx_cenote.py`, `mx_volcan.py`,
+  `mx_hacienda.py` (API: `P`, `LAYERS`, `BASES`, `build(seed)`, `build_ground(seed)`, `clear()`).
+- `render_country.py`: `JOB=enemies:<module>` or `JOB=bg:<module>` renders frames/strips and a pack spec;
+  `pack_atlas.py -- spec.json [spec2.json ...] assets/sprites/super-brady-o-world/<name>` packs them.
+- `styleframe.py`, `brady_sprite.py`: the style-frame tools from the look selection (kept for reference).

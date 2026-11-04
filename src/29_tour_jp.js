@@ -986,7 +986,44 @@ decor.jpCageRoof = (ctx, x, y, t, th, d) => {
   for (let k = 40; k < w - 20; k += 120) { ctx.fillStyle = '#fffbe0'; ctx.fillRect(x0 + k, y - 1, 26, 5); }
 };
 decorLights.jpCageRoof = [110, '#fff4d0', 6];
-const entities = { jpShiba: JpShiba, jpPole: JpPole, jpShoot: JpShoot, jpLowBar: JpLowBar, jpTunnel: JpTunnel, jpPlateLoop: JpPlateLoop, jpChopsticks: JpChopsticks, jpSteam: JpSteam, jpPitcher: JpPitcher, jpTarget: JpTarget, jpShutter: JpShutter, jpClaw: JpClaw, jpNightingale: JpNightingale, jpRevolve: JpRevolve };
+/* ---------------- the boss arena: the kappa's garden pond ---------------- */
+// The castle garden ends in a koi pond. The Great Kappa refills the dish on his head there whenever a polite bow has
+// made him spill it. The garden's stepping stones can be pushed onto the pond to block it: then his refill takes
+// much longer (he has to shove every stone out first) and he stays weak the whole time.
+const stoneArt = (ctx, e, x, y, t) => {
+  ctx.fillStyle = '#8a8680'; ctx.beginPath(); ctx.ellipse(x, y - 11, 17, 11, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#a8a49a'; ctx.beginPath(); ctx.ellipse(x - 3, y - 14, 11, 6, -0.2, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(90,140,70,0.55)'; ctx.beginPath(); ctx.ellipse(x + 6, y - 19, 5, 2.2, 0.3, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(60,56,50,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 8, y - 8); ctx.lineTo(x + 2, y - 10); ctx.stroke();
+};
+const JpStone = TourProp.make({ w: 34, h: 22, stone: true, kick: 3.4, bounce: 0.15, friction: 16, roll: false, hurts: false, hp: 0, burst: '#a8a49a', art: stoneArt });
+class JpPond extends Ent {
+  constructor(g, s) { super(g, s, (s.pw || 4) * TS, 16); this.x = s.px0 * TS; this.y = s.y - 10; this.floor = s.y; this.friendly = true; this.ghost = true; this.koi = [0, 1, 2].map(k => ({ ph: k * 2.1, sp: 0.5 + k * 0.2, col: k === 1 ? '#ffffff' : '#ff6a1a' })); this.flood = 0; }
+  stonesIn() { return this.g.entities.filter(e => e.prop && e.cfg && e.cfg.stone && !e.remove && e.cx > this.x + 4 && e.cx < this.x + this.w - 4 && e.y + e.h > this.floor - 30); }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const t = this.g.t, x0 = this.x, x1 = this.x + this.w, y = this.floor;
+    // a stone rim, lily pads, the water, and koi cruising back and forth
+    ctx.fillStyle = '#8a8680'; rr(ctx, x0 - 10, y - 14, this.w + 20, 14, 5); ctx.fill();
+    ctx.fillStyle = '#2a5a8a'; rr(ctx, x0 - 4, y - 11, this.w + 8, 9, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(80,170,240,0.85)'; rr(ctx, x0 - 2, y - 10, this.w + 4, 6, 2); ctx.fill();
+    for (const k of this.koi) { const kx = x0 + 16 + ((Math.sin(t * k.sp + k.ph) + 1) / 2) * (this.w - 32), dir = Math.cos(t * k.sp + k.ph) >= 0 ? 1 : -1; ctx.fillStyle = k.col; ctx.beginPath(); ctx.ellipse(kx, y - 7, 7, 2.6, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(kx - dir * 6, y - 7); ctx.lineTo(kx - dir * 11, y - 10); ctx.lineTo(kx - dir * 11, y - 4); ctx.fill(); if (k.col === '#ffffff') { ctx.fillStyle = '#ff6a1a'; ctx.beginPath(); ctx.arc(kx + dir * 2, y - 7.5, 1.8, 0, TAU); ctx.fill(); } }
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; for (let k = 0; k < 3; k++) ctx.fillRect(x0 + 10 + k * 36 + Math.sin(t * 2 + k) * 4, y - 9, 10, 1.2);
+    ctx.fillStyle = '#4a9a4a'; for (const [dx, r] of [[22, 6], [this.w - 26, 5]]) { ctx.beginPath(); ctx.arc(x0 + dx, y - 9, r, 0.3, TAU - 0.3); ctx.lineTo(x0 + dx, y - 9); ctx.fill(); }
+    ctx.fillStyle = '#ff9ad8'; ctx.beginPath(); ctx.arc(x0 + 22, y - 11, 2.2, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8a8680'; for (const dx of [-6, this.w + 2]) rr(ctx, x0 + dx, y - 16, 6, 16, 2), ctx.fill();
+    ctx.fillStyle = '#e8e4dc'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('KOI POND', x0 + this.w / 2, y - 18);
+  }
+}
+// the kappa's parting gift: a cucumber (it is as good as a mushroom)
+class JpCucumberGift extends Ent {
+  constructor(g, x, y) { super(g, null, 26, 14); this.x = x - 13; this.y = y - 14; this.item = true; this.vy = -6 * TS; }
+  update(dt) { this.t += dt; this.vy += PHYS.gDown * 0.8 * dt; moveBody(this, this.g.area, dt, { semis: true }); if (this.onGround) this.vx = 0; }
+  touchPlayer(p) { if (p.dead || this.remove) return; this.remove = true; p.collect('mushroom', this); this.g.parts.text(this.cx, this.y - 10, 'A CUCUMBER!', '#bfff8a'); }
+  draw(ctx) { const x = this.cx, y = this.cy + Math.sin(this.t * 4) * 1.5; ctx.save(); ctx.translate(x, y); ctx.rotate(-0.25); ctx.fillStyle = '#3a8a2a'; rr(ctx, -13, -6, 26, 12, 6); ctx.fill(); ctx.fillStyle = '#8ad05a'; for (let q = -2; q <= 2; q++) { ctx.beginPath(); ctx.arc(q * 5, -1, 1.4, 0, TAU); ctx.fill(); } ctx.fillStyle = '#c8e8a0'; ctx.beginPath(); ctx.ellipse(12, 0, 2.4, 4.5, 0, 0, TAU); ctx.fill(); ctx.restore(); ctx.fillStyle = `rgba(255,255,255,${0.4 + 0.4 * Math.sin(this.t * 8)})`; ctx.beginPath(); ctx.arc(x - 6, y - 8, 1.6, 0, TAU); ctx.fill(); }
+}
+const koiShotArt = (ctx, s, t) => koiArt(ctx, s, s.cx, s.cy + 12, 'up', t);
+const entities = { jpShiba: JpShiba, jpPole: JpPole, jpShoot: JpShoot, jpLowBar: JpLowBar, jpTunnel: JpTunnel, jpPlateLoop: JpPlateLoop, jpChopsticks: JpChopsticks, jpSteam: JpSteam, jpPitcher: JpPitcher, jpTarget: JpTarget, jpShutter: JpShutter, jpClaw: JpClaw, jpNightingale: JpNightingale, jpRevolve: JpRevolve, jpPond: JpPond, jpStone: JpStone };
 
 /* ---------------- the bullet train (the carrier's skin) ---------------- */
 // white with a sakura-pink stripe and a long nose, riding an elevated viaduct; Brady rides on the roof
@@ -1165,73 +1202,144 @@ const P = {
   revolve(st, o) { const x = st.x, B = st.B; st.floor(x, x + 9); B.fill(x + 5, 0, x + 5, st.gy - 4, T.HARD); st.spawn('jpRevolve', x + 5, st.gy - 1, { h: 3 }); st.coins(x + 1, x + 3, st.gy - 2); st.coins(x + 7, x + 9, st.gy - 2); if (o.first) st.sign(x + 2, 'Some walls in this castle spin round. Walk into one and keep pushing!'); return x + 10; },
   // the cherry-tree garden: beams, a bento block, a hopping umbrella
   garden(st, o) { const x = st.x; st.floor(x, x + 14); st.semi(x + 3, x + 6, st.gy - 3); st.semi(x + 8, x + 11, st.gy - 5); st.block(x + 9, st.gy - 8, 'power'); st.decor('jpStoneLantern', x + 1); st.decor('jpPine', x + 13); st.enemy('jpUmbrella', x + 7, st.gy); st.enemy('jpTop', x + 12, st.gy); st.gold(x + 4, st.gy - 6, 'hidden'); return x + 15; },
-  arena_garden(st, o) { const B = st.B, { x0, w, GY } = o; for (let q = 0; q < 3; q++) { B.set(x0 + 4 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); } B.decorAt('jpStoneLantern', x0 + 1, GY, 0); B.decorAt('jpStoneLantern', x0 + w - 2, GY, 1); }
+  // the boss arena: the castle garden with its koi pond at the far end and three stepping stones to push about
+  arena_pond(st, o) {
+    const B = st.B, { x0, w, GY } = o;
+    for (let q = 0; q < 3; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + 11 + q, GY - 4, T.SEMI); B.set(x0 + w - 8 + q, GY - 4, T.SEMI); }
+    B.spawn('jpPond', x0 + 21, GY - 1, { px0: x0 + 20, pw: 4 });
+    for (const dx of [8, 14, 17]) B.spawn('jpStone', x0 + dx, GY - 1, {});
+    B.decorAt('jpStoneLantern', x0 + 1, GY, 0); B.decorAt('jpPine', x0 + 6, GY, 1); B.decorAt('jpStoneLantern', x0 + 19, GY, 2); B.decorAt('jpIkebana', x0 + 10, GY, 3); B.decorAt('jpTeapot', x0 + 13, GY, 1); B.decorAt('jpFern', x0 + 25, GY, 2);
+  }
 };
 
 /* ---------------- the boss: THE GREAT KAPPA ---------------- */
-// A pond-dwelling kappa with a dish of water on his head. Full dish = full strength. Every big splash
-// sloshes some out; when it's empty he's woozy: stomp his head! He is also terribly polite:
-// bow to him (hold DOWN, facing him) and he bows right back... and spills the lot.
+// A pond-dwelling kappa with a dish of water on his head: full dish, full strength, and a shell too hard to stomp.
+// But a kappa is terribly polite. When he stops to glare, crouch (hold DOWN) facing him: he must bow back, the water
+// spills, and he is weak until he staggers to the koi pond to refill. Push the garden's stepping stones onto the pond and
+// the refill takes far longer. Phase 2 the koi leap at Brady; phase 3 the pond overflows and floods the garden.
 const boss = {
-  id: 'jp_kappa', name: 'The Great Kappa', hp: 4, dims: [70, 80], music: 'tour_jp_boss', country: 'jp',
+  id: 'jp_kappa', name: 'The Great Kappa', hp: 5, dims: [70, 80], music: 'tour_jp_boss', country: 'jp',
   brain: {
     guardText: 'HARD SHELL!',
-    wake(b) { b.water = 1; K.say(b.g, b, 'KAPPA! WHO DARES ENTER MY POND?', '#bfff8a'); },
-    onWhirl(b, p) { if (b.act !== 'dizzy') { K.say(b.g, b, 'TINK!', '#ffffff'); Sound.play('bump', { pitch: 1.6, vol: 0.4 }); } },
-    onBall(b, s) { if (s.kind === 'cucumber') { K.say(b.g, b, pick(['MUNCH! MORE CUCUMBER!', 'CRUNCH! DELICIOUS!']), '#bfff8a'); b.g.burst(b.cx, b.y + 20, 8, '#5ab84a', 'spark'); } else { K.say(b.g, b, 'TINK!', '#ffffff'); } },
-    noDisc(b) { return true; },
+    phases: [3, 1],
+    wake(b) {
+      const g = b.g; b.water = 1; b.glareN = 0;
+      b.pond = g.entities.find(e => e instanceof JpPond && e.cx >= b.arenaX0 && e.cx <= b.arenaX1) || null;
+      this.drain(b);
+      K.say(g, b, 'KAPPA! WHO DARES ENTER MY POND?', '#bfff8a'); g.toast('HE IS VERY POLITE: CROUCH (HOLD DOWN) WHEN HE GLARES AT YOU');
+    },
+    onWhirl(b, p) { if (!b.vuln) { K.say(b.g, b, 'TINK!', '#ffffff'); Sound.play('bump', { pitch: 1.6, vol: 0.4 }); } },
+    onBall(b, s) { if (s.kind === 'cucumber') { K.say(b.g, b, pick(['MUNCH! MORE CUCUMBER!', 'CRUNCH! DELICIOUS!']), '#bfff8a'); b.g.burst(b.cx, b.y + 20, 8, '#5ab84a', 'spark'); } else if (b.vuln) b.hit('disc', s); else K.say(b.g, b, 'TINK!', '#ffffff'); },
+    noDisc(b) { return !b.vuln; },
+    hit(b, kind, src) {
+      if (kind === 'stomp' || kind === 'spin') { if (b.vuln) { b.damage(1, { text: 'SPLAT!', col: '#8ad0ff' }); return true; } if (!b.tinkT || b.t - b.tinkT > 1) { b.tinkT = b.t; K.say(b.g, b, pick(['TINK! HARD SHELL!', 'MY SHELL IS A FORTRESS', 'BOW, DON\'T BOUNCE']), '#bfff8a'); } return 'bounce'; }
+      if (kind === 'prop') { if (src && src.cfg && src.cfg.stone) K.say(b.g, b, 'OOF. A STONE.', '#ffffff'); return false; }
+      if (kind === 'bump' || kind === 'hazard') return false;
+      return undefined;
+    },
+    hurt(b) { const weak = b.act === 'weak' || b.act === 'refill'; b.go(weak ? 'weak' : 'walk'); b.vx = -b.dir * 4 * TS; K.say(b.g, b, pick(['GEROGERO!', 'MY POOR HEAD!', 'SO UNDIGNIFIED!']), '#bfff8a'); b.g.burst(b.cx, b.y, 18, '#8ad0ff', 'spark'); },
+    phase(b, n) {
+      const g = b.g; this.hurt(b);
+      if (n === 2) { g.bannerText = 'THE KOI AWAKEN!'; g.bannerT = 1.8; K.say(g, b, 'KOI! TO ME!', '#ffffff'); }
+      else { b.flood = 0; g.bannerText = 'THE POND OVERFLOWS!'; g.bannerT = 1.8; Sound.play('splash', { pitch: 0.5, vol: 0.8 }); }
+    },
+    lastHit(b) { this.drain(b); b.go('finalbow'); b.vx = 0; return true; },
+    // the flood: the pond spills over the garden floor, column by column (and drains away again when he is beaten)
+    drain(b) { const g = b.g, A = g.area, ty = Math.floor(b.floorY / TS) - 1; for (let tx = Math.floor(b.arenaX0 / TS); tx < Math.floor(b.arenaX1 / TS); tx++) if (tileAt(A, tx, ty) === T.WATER) g.setTile(tx, ty, T.EMPTY); b.flood = null; },
+    flood(b, dt) {
+      const g = b.g, A = g.area, ty = Math.floor(b.floorY / TS) - 1, x1 = Math.floor(b.arenaX1 / TS) - 1, x0 = Math.floor(b.arenaX0 / TS);
+      b.flood += dt * 14; const n = Math.min(x1 - x0 + 1, Math.floor(b.flood));
+      for (let k = 0; k < n; k++) { const tx = x1 - k; if (tileAt(A, tx, ty) === T.EMPTY) { g.setTile(tx, ty, T.WATER); g.burst(tx * TS + TS / 2, ty * TS + 8, 3, '#bfe8ff', 'spark'); } }
+      if (b.flood > 40 && !b.flooded) { b.flooded = true; K.say(g, b, 'SPLISH SPLASH! MY GARDEN, MY RULES!', '#8af0ff'); }
+    },
+    // the bow: Brady crouches (holds DOWN) near him and facing him while he glares
+    bowing(b) { const g = b.g, p = g.player, inp = g.input ? g.input() : Input; return !!(p && !p.dead && (p.onGround || p.inWater) && inp.down && Math.abs(p.cx - b.cx) < 6 * TS && Math.abs(p.y + p.h - (b.y + b.h)) < 2.5 * TS && sign(b.cx - p.cx) === p.facing); },
+    touch(b, p) { if (b.act === 'bow' || b.act === 'bonk' || b.act === 'finalbow' || b.act === 'tuck') { p.x += (p.cx < b.cx ? -1 : 1) * 2; return true; } return false; },
     update(b, dt) {
-      // the first frame of a new act (the framework's own first is cleared before an act started inside update() ever runs)
-      const first = b._ent !== b.act || b.at <= (b._entAt || 0); b._ent = b.act; b._entAt = b.at;
-      const g = b.g, p = g.player; b.guard = 'bounce'; if (b.water == null) b.water = 1;
-      // a bow is answered with a bow
-      if (b.bowCool > 0) b.bowCool -= dt;
-      if (b.act === 'walk' && b.at > 0.4 && p && !p.dead && p.onGround && Input.down && b.water > 0.3 && Math.abs(p.cx - b.cx) < 8 * TS && sign(b.cx - p.cx) === p.facing) { if (b.bowCool > 0) { if (!b.nodT || b.t - b.nodT > 3) { b.nodT = b.t; K.say(g, b, '*NODS* NOT AGAIN, LITTLE ONE.', '#bfff8a'); } } else { b.bowCool = 8; b.go('bow'); } }
-      if (b.act === 'walk') { b.face(); b.walk(b.hp <= 2 ? 1.3 : 0.9); b.pose = 'walk'; if (b.at > 1.7) { b.cycle++; b.go(['cucumber', 'slap', 'splash', 'cucumber', 'splash'][b.cycle % 5]); } }
-      else if (b.act === 'cucumber') {
-        b.vx = 0; b.pose = 'throw';
-        if (first) { b.face(); b.n = 0; K.say(g, b, 'CUCUMBER STORM!', '#bfff8a'); }
-        const k = b.hp <= 2 ? 4 : 3;
-        if (b.at > 0.45 + b.n * 0.4 && b.n < k && p) { b.n++; const dx = p.cx - b.cx, tt = 0.9; tourFire(g, b.cx + b.dir * 24, b.y + 18, { kind: 'cucumber', vx: clamp(dx / tt, -8 * TS, 8 * TS) + (Math.random() - 0.5) * TS, vy: -9 * TS, grav: PHYS.gDown * 0.36, w: 22, h: 12, life: 3, thru: true, stompable: true, col: '#5ab84a', art: (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 8); ctx.fillStyle = '#3a8a2a'; rr(ctx, -11, -5, 22, 10, 5); ctx.fill(); ctx.fillStyle = '#8ad05a'; for (let q = -2; q <= 2; q++) { ctx.beginPath(); ctx.arc(q * 4, -1, 1.2, 0, TAU); ctx.fill(); } ctx.fillStyle = '#c8e8a0'; ctx.beginPath(); ctx.ellipse(10, 0, 2, 4, 0, 0, TAU); ctx.fill(); ctx.restore(); } }); Sound.play('throw', { pitch: 0.9, vol: 0.4 }); }
-        if (b.at > 0.6 + k * 0.4) b.go('walk');
-      } else if (b.act === 'slap') {
-        // a mighty palm-thrust: a gust rolls along the floor
-        b.vx = 0; b.pose = b.at > 0.5 ? 'slap' : 'wind';
-        if (first) { b.face(); K.say(g, b, 'HAKKEYOI!', '#ffd84a'); }
-        if (b.at > 0.5 && !b.fired) { b.fired = true; g.shake(4); Sound.play('stomp', { pitch: 0.7 }); tourFire(g, b.cx + b.dir * (b.w / 2 + 12), b.floorY - 14, { kind: 'gust', vx: b.dir * 5.5 * TS, w: 26, h: 28, ground: true, life: 2.6, col: '#d8f0ff', art: (ctx, s, t) => { ctx.strokeStyle = 'rgba(220,240,255,0.85)'; ctx.lineWidth = 3; for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.arc(s.cx - sign(s.vx) * q * 6, s.cy, 8 + q * 4, -1.1, 1.1); ctx.stroke(); } } }); }
-        if (b.at > 1.3) { b.fired = false; b.go('walk'); }
-      } else if (b.act === 'splash') {
-        if (first) { b.vy = -15 * TS; b.vx = b.dir * 2 * TS; K.say(g, b, 'BELLY FLOP!', '#8af0ff'); }
-        b.pose = 'hop';
-        if (b.onGround && b.at > 0.3) {
-          g.shake(8); Sound.play('splash', { pitch: 0.6, vol: 0.7 }); g.burst(b.cx, b.floorY - 10, 20, '#bfe8ff', 'spark');
-          for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 10), b.floorY - 12, { kind: 'wave', vx: d * 4.5 * TS, w: 28, h: 22, ground: true, life: 3, col: '#8ad0ff', art: (ctx, s, t) => { ctx.fillStyle = 'rgba(120,200,255,0.85)'; ctx.beginPath(); ctx.moveTo(s.x, s.y + s.h); ctx.quadraticCurveTo(s.cx - sign(s.vx) * 6, s.y - 4, s.x + s.w, s.y + s.h); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(s.cx - sign(s.vx) * 4, s.y + 4, 3, 0, TAU); ctx.fill(); } });
-          b.water = Math.max(0, b.water - 0.55); b.vx = 0;
-          b.go(b.water < 0.2 ? 'dizzy' : 'walk');
-        }
+      const g = b.g, p = g.player, ph = b.phase || 1, pond = b.pond; b.guard = 'bounce';
+      if (b.flood != null && b.act !== 'finalbow') this.flood(b, dt);
+      const inWater = ph >= 3 && b.flood > 2;
+      if (b.act === 'walk') {
+        b.face(); b.walk(inWater ? 2.4 : ph === 2 ? 1.3 : 0.9); b.pose = 'walk'; b.fall(dt);
+        if (inWater && Math.random() < 0.3) g.burst(b.cx - b.dir * 20, b.floorY - 6, 1, '#bfe8ff', 'spark');
+        if (b.at > (ph >= 3 ? 1.0 : 1.4)) b.go('glare');
+      } else if (b.act === 'glare') {
+        // he stops and glares: the moment to bow. If nobody bows, he attacks.
+        b.vx = 0; b.pose = 'glare'; b.face(); b.fall(dt);
+        if (b.first) { b.glareN++; Sound.play('select2', { pitch: 0.6, vol: 0.4 }); K.say(g, b, b.glareN <= 2 ? 'HMPH! *GLARES* (CROUCH TO BOW!)' : pick(['HMPH!', '*GLARES*', 'WELL?', 'NO MANNERS?']), '#bfff8a'); }
+        if (b.at > 0.3 && b.water > 0.3 && this.bowing(b)) { b.go('bow'); return; }
+        if (b.at > (ph >= 3 ? 1.2 : 1.7)) { b.cycle++; const plan = ph >= 3 ? ['koi', 'slide', 'cucumber', 'koi', 'slide'] : ph === 2 ? ['cucumber', 'koi', 'slide', 'koi'] : ['cucumber', 'slide', 'cucumber']; b.go(plan[b.cycle % plan.length]); }
       } else if (b.act === 'bow') {
         // a deep, polite bow... and the water pours out of his dish
-        b.vx = 0; b.pose = 'bow';
-        if (first) { K.say(g, b, 'OH! HOW POLITE. *BOWS*', '#bfff8a'); Sound.play('select2', { pitch: 1.2, vol: 0.4 }); }
-        if (b.at > 0.35) { b.water = Math.max(0, b.water - dt * 2); if (Math.random() < 0.6) g.burst(b.cx + b.dir * 30, b.y + 30, 2, '#8ad0ff', 'spark'); }
-        if (b.at > 1) b.go('dizzy');
-      } else if (b.act === 'dizzy') {
-        b.vx = 0; b.pose = 'dizzy'; b.water = 0;
-        if (first) { K.say(g, b, 'MY DISH... IT\'S EMPTY...', '#ffffff'); Sound.play('bump', { pitch: 0.6 }); }
-        b.vuln = b.at > 0.2 && b.at < 2.8; b.guard = b.vuln ? 'hurt' : 'bounce';
-        if (b.at > 3) { b.water = 1; K.say(g, b, 'REFILLED!', '#8af0ff'); b.go('walk'); }
-      }
-      b.fall(dt);
+        b.vx = 0; b.pose = 'bow'; b.fall(dt);
+        if (b.first) { K.say(g, b, 'OH! HOW POLITE. *BOWS*', '#bfff8a'); Sound.play('select2', { pitch: 1.2, vol: 0.4 }); g.addScore(500, b.cx, b.y); }
+        if (b.at > 0.35) { b.water = Math.max(0, b.water - dt * 2); if (Math.random() < 0.7) g.burst(b.cx + b.dir * 30, b.y + 30, 2, '#8ad0ff', 'spark'); }
+        if (b.at > 1.1) { b.water = 0; b.go('weak'); }
+      } else if (b.act === 'weak') {
+        // dish empty: woozy and open to a stomp; he staggers for the pond
+        b.vuln = true; b.guard = 'hurt'; b.pose = 'dizzy'; b.fall(dt);
+        if (b.first) { K.say(g, b, pick(['MY DISH... EMPTY...', 'THE POND... MUST... REFILL...', 'SO... WOOZY...']), '#ffffff'); Sound.play('bump', { pitch: 0.6 }); }
+        const tx = pond ? pond.cx : b.arenaX1 - 2 * TS; b.dir = sign(tx - b.cx) || b.dir; b.vx = b.dir * (inWater ? 2.6 : 1.5) * TS * (0.7 + 0.3 * Math.sin(b.at * 9));
+        if (Math.abs(tx - b.cx) < 24 || b.at > 10) b.go('refill');
+      } else if (b.act === 'refill') {
+        // head in the pond: it takes a moment, plus a long moment for every stone blocking the pond (he shoves them out)
+        b.vuln = true; b.guard = 'hurt'; b.vx = 0; b.pose = 'dunk'; b.fall(dt);
+        if (b.first) { b.need = 0.9 + 1.3 * (pond ? pond.stonesIn().length : 0); b.shoveT = 0.6; K.say(g, b, b.need > 1 ? 'WHO PUT STONES IN MY POND?!' : 'GLUG GLUG GLUG...', '#8af0ff'); }
+        if (Math.random() < 0.5) g.burst(b.cx + b.dir * 20, b.floorY - 8, 2, '#bfe8ff', 'spark');
+        b.shoveT -= dt;
+        if (b.shoveT <= 0 && pond) { const st = pond.stonesIn()[0]; b.shoveT = 1.3; if (st) { st.fling(-b.dir * 7.5 * TS, -9 * TS, b); K.say(g, b, pick(['OUT OF MY POND!', 'SHOO, STONE!', 'GRR... HEAVY...']), '#ffffff'); Sound.play('kick', { pitch: 0.7 }); } }
+        if (b.at > b.need) { b.water = 1; b.vuln = false; b.guard = 'bounce'; K.say(g, b, 'AAAH. REFILLED!', '#8af0ff'); g.burst(b.cx, b.y - 4, 12, '#8ad0ff', 'spark'); b.go('walk'); }
+      } else if (b.act === 'cucumber') {
+        b.vx = 0; b.pose = 'throw'; b.fall(dt);
+        if (b.first) { b.face(); b.n = 0; K.say(g, b, 'CUCUMBER STORM!', '#bfff8a'); }
+        const k = ph >= 2 ? 4 : 3;
+        if (b.at > 0.5 + b.n * 0.4 && b.n < k && p) { b.n++; const dx = p.cx - b.cx, tt = 0.9; tourFire(g, b.cx + b.dir * 24, b.y + 18, { kind: 'cucumber', vx: clamp(dx / tt, -8 * TS, 8 * TS) + (Math.random() - 0.5) * TS, vy: -9 * TS, grav: PHYS.gDown * 0.36, w: 22, h: 12, life: 3, thru: true, stompable: true, col: '#5ab84a', art: (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 8); ctx.fillStyle = '#3a8a2a'; rr(ctx, -11, -5, 22, 10, 5); ctx.fill(); ctx.fillStyle = '#8ad05a'; for (let q = -2; q <= 2; q++) { ctx.beginPath(); ctx.arc(q * 4, -1, 1.2, 0, TAU); ctx.fill(); } ctx.fillStyle = '#c8e8a0'; ctx.beginPath(); ctx.ellipse(10, 0, 2, 4, 0, 0, TAU); ctx.fill(); ctx.restore(); } }); Sound.play('throw', { pitch: 0.9, vol: 0.4 }); }
+        if (b.at > 0.7 + k * 0.4) b.go('walk');
+      } else if (b.act === 'slide') {
+        // tucks into his shell (the tell), then skids across the garden until the wall stops him
+        if (b.at < 0.6) { b.vx = 0; b.pose = 'tuck'; if (b.first) { b.face(); K.say(g, b, 'SHELL SLIDE!', '#ffd84a'); } }
+        else { b.pose = 'slide'; b.vx = b.dir * (inWater ? 10 : 7) * TS; if (b.hitWall || b.x <= b.arenaX0 + 1 || b.x >= b.arenaX1 - b.w - 1) { g.shake(5); Sound.play('bump'); b.vx = 0; b.go('bonk'); } }
+        b.fall(dt); if (b.at > 3.5) b.go('walk');
+      } else if (b.act === 'bonk') {
+        b.vx = 0; b.pose = 'bonk'; b.fall(dt); if (b.first) K.say(g, b, 'OOF.', '#ffffff');
+        if (b.at > 0.9) b.go('walk');
+      } else if (b.act === 'koi') {
+        // claps: koi leap out of the pond (or, once the garden is flooded, out of the floor anywhere) in arcs at Brady
+        b.vx = 0; b.pose = 'clap'; b.fall(dt);
+        if (b.first) { b.face(); b.n = 0; K.say(g, b, 'KOI! LEAP!', '#ffffff'); Sound.play('select2', { pitch: 1.5, vol: 0.4 }); }
+        const k = ph >= 3 ? 4 : 3;
+        if (b.at > 0.6 + b.n * 0.42 && b.n < k && p) {
+          b.n++; const sx = inWater ? b.arenaX0 + TS + Math.random() * (b.arenaX1 - b.arenaX0 - 2 * TS) : (pond ? pond.cx + (Math.random() - 0.5) * 60 : b.cx);
+          const vy = -17 * TS, tt = 1.0; tourFire(g, sx, b.floorY - 10, { kind: 'koi', vx: clamp((p.cx - sx) / tt, -9 * TS, 9 * TS), vy, grav: PHYS.gDown * 0.4, w: 18, h: 26, life: 2.6, thru: true, stompable: true, col: '#ff6a1a', art: koiShotArt });
+          Sound.play('splash', { pitch: 1.3, vol: 0.4 }); g.burst(sx, b.floorY - 8, 8, '#bfe8ff', 'spark');
+        }
+        if (b.at > 0.9 + k * 0.42) b.go('walk');
+      } else if (b.act === 'finalbow') {
+        // beaten: the deepest bow of all, and a cucumber for the worthy opponent
+        b.vx = 0; b.pose = 'finalbow'; b.fall(dt);
+        if (b.first) { b.gave = false; K.say(g, b, 'YOU HAVE BESTED ME. *DEEP BOW*', '#bfff8a'); Sound.play('select2', { pitch: 0.9, vol: 0.5 }); }
+        if (b.at > 1.4 && !b.gave) { b.gave = true; K.say(g, b, 'PLEASE... A CUCUMBER. FOR YOU.', '#bfff8a'); g.spawn(new JpCucumberGift(g, b.cx + b.dir * 50, b.y + 40)); }
+        if (b.at > 3.2) b.die();
+      } else b.go('walk');
     },
-    hurt(b) { b.water = 1; b.go('walk'); b.vx = -b.dir * 4 * TS; K.say(b.g, b, pick(['GEROGERO!', 'MY POOR HEAD!', 'NOT THE DISH!']), '#bfff8a'); b.g.burst(b.cx, b.y, 18, '#8ad0ff', 'spark'); },
     draw(b, ctx, t) {
       const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose, sq = 1 + b.squash * 0.12, water = b.water == null ? 1 : b.water;
-      const bow = P === 'bow' ? Math.min(1, (b.at || 0) * 3) : 0, walkB = P === 'walk' ? Math.abs(Math.sin(t * 7)) * 3 : 0;
+      const bow = P === 'bow' ? Math.min(1, (b.at || 0) * 3) : P === 'dunk' ? 1.15 : P === 'finalbow' ? Math.min(1.25, (b.at || 0) * 2) : 0, walkB = P === 'walk' ? Math.abs(Math.sin(t * 7)) * 3 : 0;
       ctx.save(); ctx.translate(x, y); ctx.scale(sq * d, 1 / sq);
       K.shadow(ctx, 0, 0, 34);
-      // legs
-      ctx.fillStyle = '#5a9a3a'; for (const s of [-1, 1]) { const st = P === 'walk' ? Math.sin(t * 7 + s) * 4 : 0; rr(ctx, s * 14 - 6 + st, -16, 12, 16, 4); ctx.fill(); ctx.fillStyle = '#4a8a2a'; ctx.beginPath(); ctx.ellipse(s * 14 + st + 2, -1, 9, 3, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#5a9a3a'; }
-      ctx.save(); ctx.translate(0, -16 - walkB); ctx.rotate(bow * 0.85);
+      if (P === 'tuck' || P === 'slide') {
+        // tucked into the shell: a sliding ball with just the eyes peeking out
+        if (P === 'slide') { ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(-40 - k * 6, -14 - k * 12); ctx.lineTo(-62 - k * 8, -14 - k * 12); ctx.stroke(); } }
+        ctx.save(); ctx.translate(0, -30); if (P === 'slide') ctx.rotate(t * 10);
+        ctx.fillStyle = '#7a5a2a'; ctx.beginPath(); ctx.ellipse(0, 0, 32, 28, 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = '#4a3418'; ctx.lineWidth = 1.6; for (const [hx, hy] of [[0, -12], [-12, 4], [12, 4], [0, 16], [-16, -8], [16, -8]]) { ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; ctx.lineTo(hx + Math.cos(a) * 7, hy + Math.sin(a) * 7); } ctx.closePath(); ctx.stroke(); }
+        ctx.restore();
+        if (P === 'tuck') { ctx.fillStyle = '#6aaa4a'; ctx.beginPath(); ctx.ellipse(26, -22, 10, 8, 0, 0, TAU); ctx.fill(); K.eyes(ctx, 28, -24, 1, 3.5, 2.4, true); ctx.fillStyle = '#e8eef4'; ctx.beginPath(); ctx.ellipse(26, -31, 9, 3, 0, 0, TAU); ctx.fill(); if (water > 0.02) { ctx.fillStyle = 'rgba(80,170,240,0.9)'; ctx.beginPath(); ctx.ellipse(26, -31, 7 * water, 2 * water, 0, 0, TAU); ctx.fill(); } }
+        ctx.restore(); return;
+      }
+      // legs (planted wide for the glare)
+      ctx.fillStyle = '#5a9a3a'; for (const s of [-1, 1]) { const st = P === 'walk' ? Math.sin(t * 7 + s) * 4 : P === 'glare' ? s * 4 : 0; rr(ctx, s * 14 - 6 + st, -16, 12, 16, 4); ctx.fill(); ctx.fillStyle = '#4a8a2a'; ctx.beginPath(); ctx.ellipse(s * 14 + st + 2, -1, 9, 3, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#5a9a3a'; }
+      ctx.save(); ctx.translate(0, -16 - walkB); ctx.rotate(bow * 0.85 + (P === 'dizzy' ? Math.sin(t * 5) * 0.08 : 0));
       // the shell on his back
       ctx.fillStyle = '#7a5a2a'; ctx.beginPath(); ctx.ellipse(-16, -28, 20, 28, -0.15, 0, TAU); ctx.fill();
       ctx.strokeStyle = '#4a3418'; ctx.lineWidth = 1.6; for (const [hx, hy] of [[-18, -40], [-24, -24], [-12, -24], [-18, -10]]) { ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; ctx.lineTo(hx + Math.cos(a) * 6, hy + Math.sin(a) * 6); } ctx.closePath(); ctx.stroke(); }
@@ -1240,22 +1348,26 @@ const boss = {
       ctx.fillStyle = '#d8e08a'; ctx.beginPath(); ctx.ellipse(8, -24, 15, 20, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(120,130,40,0.45)'; ctx.lineWidth = 1; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(-4, -24 + k * 7); ctx.quadraticCurveTo(8, -21 + k * 7, 20, -24 + k * 7); ctx.stroke(); }
       // arms
       ctx.fillStyle = '#6aaa4a';
-      const armA = P === 'throw' ? -2.2 + Math.sin(t * 12) * 0.3 : P === 'slap' ? -1.45 : P === 'wind' ? 0.6 : P === 'dizzy' ? 0.3 + Math.sin(t * 5) * 0.2 : P === 'bow' ? 0.2 : 0.5 + Math.sin(t * 7) * 0.2;
-      ctx.save(); ctx.translate(14, -40); ctx.rotate(armA); rr(ctx, -5, 0, 10, 24, 5); ctx.fill(); ctx.fillStyle = '#5a9a3a'; ctx.beginPath(); ctx.arc(0, 26, 7, 0, TAU); ctx.fill(); if (P === 'throw' && b.at % 0.4 < 0.25) { ctx.fillStyle = '#3a8a2a'; rr(ctx, -4, 22, 8, 16, 4); ctx.fill(); } ctx.restore();
-      ctx.save(); ctx.translate(-8, -40); ctx.rotate(-armA * 0.4 + 0.3); ctx.fillStyle = '#5a9a3a'; rr(ctx, -5, 0, 10, 22, 5); ctx.fill(); ctx.restore();
+      const armA = P === 'throw' ? -2.2 + Math.sin(t * 12) * 0.3 : P === 'clap' ? -1.6 + Math.sin(t * 14) * 0.5 : P === 'glare' ? 0.9 : P === 'dizzy' ? 0.3 + Math.sin(t * 5) * 0.2 : (P === 'bow' || P === 'dunk' || P === 'finalbow') ? 0.2 : P === 'bonk' ? -0.6 : 0.5 + Math.sin(t * 7) * 0.2;
+      ctx.save(); ctx.translate(14, -40); ctx.rotate(armA); rr(ctx, -5, 0, 10, 24, 5); ctx.fill(); ctx.fillStyle = '#5a9a3a'; ctx.beginPath(); ctx.arc(0, 26, 7, 0, TAU); ctx.fill(); if (P === 'throw' && b.at % 0.4 < 0.25) { ctx.fillStyle = '#3a8a2a'; rr(ctx, -4, 22, 8, 16, 4); ctx.fill(); } if (P === 'finalbow' && b.at > 1.0) { ctx.fillStyle = '#3a8a2a'; rr(ctx, -2, 24, 26, 10, 5); ctx.fill(); } ctx.restore();
+      ctx.save(); ctx.translate(-8, -40); ctx.rotate(P === 'clap' ? -armA : -armA * 0.4 + 0.3); ctx.fillStyle = '#5a9a3a'; rr(ctx, -5, 0, 10, 22, 5); ctx.fill(); ctx.restore();
       // the head: beak, eyes, a fringe of hair round the dish
       ctx.fillStyle = '#6aaa4a'; ctx.beginPath(); ctx.ellipse(6, -62, 18, 16, 0, 0, TAU); ctx.fill();
       ctx.fillStyle = '#ffc83a'; ctx.beginPath(); ctx.moveTo(18, -62); ctx.quadraticCurveTo(32, -58, 30, -52); ctx.quadraticCurveTo(22, -50, 16, -54); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#c8901a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(18, -56); ctx.lineTo(28, -55); ctx.stroke();
-      if (P === 'dizzy') { ctx.strokeStyle = '#1a1a10'; ctx.lineWidth = 1.6; for (const ex of [4, 14]) { ctx.beginPath(); for (let k = 0; k < 14; k++) { const a = k * 0.6 + t * 6, r = k * 0.32; ctx.lineTo(ex + Math.cos(a) * r, -66 + Math.sin(a) * r); } ctx.stroke(); } }
-      else K.eyes(ctx, 10, -66, 1, 4.6, 3, P === 'throw' || P === 'slap');
+      if (P === 'dizzy' || P === 'bonk') { ctx.strokeStyle = '#1a1a10'; ctx.lineWidth = 1.6; for (const ex of [4, 14]) { ctx.beginPath(); for (let k = 0; k < 14; k++) { const a = k * 0.6 + t * 6, r = k * 0.32; ctx.lineTo(ex + Math.cos(a) * r, -66 + Math.sin(a) * r); } ctx.stroke(); } }
+      else if (P === 'glare') { ctx.fillStyle = '#ffffff'; for (const ex of [5, 15]) { ctx.beginPath(); ctx.ellipse(ex, -66, 4.6, 2.2, 0, 0, TAU); ctx.fill(); } ctx.fillStyle = '#1a1020'; for (const ex of [6, 16]) { ctx.beginPath(); ctx.arc(ex, -66, 1.6, 0, TAU); ctx.fill(); } ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(0, -72); ctx.lineTo(10, -69); ctx.moveTo(20, -73); ctx.lineTo(11, -69); ctx.stroke(); }
+      else K.eyes(ctx, 10, -66, 1, 4.6, 3, P === 'throw' || P === 'clap');
       ctx.fillStyle = '#2a5a2a'; for (let k = -4; k <= 4; k++) { ctx.beginPath(); ctx.ellipse(6 + k * 4.2, -75 + Math.abs(k) * 0.6, 3, 5, k * 0.2, 0, TAU); ctx.fill(); }
       // the dish and its water
       ctx.fillStyle = '#e8eef4'; ctx.beginPath(); ctx.ellipse(6, -78, 15, 5, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#a8b4c0'; ctx.lineWidth = 1.2; ctx.stroke();
       if (water > 0.02) { ctx.fillStyle = 'rgba(80,170,240,0.9)'; ctx.beginPath(); ctx.ellipse(6, -78 + (1 - water) * 1.5, 13 * Math.sqrt(water), 3.6 * Math.sqrt(water), 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(1, -80, 4 * water, 1.2); }
       if (P === 'bow' && water > 0) { ctx.fillStyle = 'rgba(80,170,240,0.8)'; for (let k = 0; k < 4; k++) { const ph = (t * 3 + k / 4) % 1; ctx.beginPath(); ctx.arc(22 + ph * 6, -76 + ph * 50, 2.5, 0, TAU); ctx.fill(); } }
+      if (P === 'dunk') { ctx.fillStyle = 'rgba(140,210,255,0.8)'; for (let k = 0; k < 5; k++) { const ph = (t * 2.5 + k / 5) % 1; ctx.beginPath(); ctx.arc(10 + (k - 2) * 8, -70 - ph * 30, 2 + ph * 2, 0, TAU); ctx.fill(); } }
       ctx.restore();
       ctx.restore();
-      if (P === 'dizzy') TourKit.dizzy(ctx, x, b.y - 8, t);
+      if (P === 'dizzy' || P === 'bonk') TourKit.dizzy(ctx, x, b.y - 8, t);
+      if (P === 'glare' && b.state === 'fight') { const k = 0.5 + 0.5 * Math.sin(t * 12); ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * k})`; ctx.font = `16px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, b.y - 10 - k * 4); ctx.font = `9px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffffff'; ctx.fillText('BOW: HOLD ▼', x, b.y + b.h + 14); }
+      if ((P === 'dizzy' || P === 'dunk') && b.state === 'fight' && b.vuln) { ctx.fillStyle = '#ffffff'; ctx.font = `9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(P === 'dunk' ? 'REFILLING...' : 'WEAK! STOMP!', x, b.y - 26); }
     }
   }
 };
@@ -1353,10 +1465,10 @@ Tour.country({
       hint: 'Whirl the nunchucks as a pitch reaches you: it flies back at the target',
       postcard: 'Neon everywhere, and machines that throw baseballs at you. For FUN. I love it here. ♥ C',
       script: [['cage', { id: 1, first: true }], 'signs', ['claw', { first: true }], 'cp', ['enemies', { n: 2 }], ['cage', { id: 2, two: true }], 'vending', ['claw', { gold: true }], 'signs', 'bonus', 'end'] },
-    { name: 'Kappa Castle', style: 'castle', theme: 'jp_castle', boss: 'jp_kappa', arena: 'garden', arenaW: 26, roof: false,
-      gimmick: 'Nightingale floors chirp underfoot and wake the spinning-top traps (hop the beams to stay quiet), revolving secret walls, a koi moat; then the Great Kappa',
+    { name: 'Kappa Castle', style: 'castle', theme: 'jp_castle', boss: 'jp_kappa', arena: 'pond', arenaW: 26, roof: false,
+      gimmick: 'Nightingale floors chirp underfoot and wake the spinning-top traps (hop the beams to stay quiet), revolving secret walls, a koi moat; then the Great Kappa at his garden pond',
       enemies: [['jpUmbrella', 2], ['jpTop', 2]],
-      hint: 'Kappa are VERY polite. Bow to him (hold DOWN, facing him) and see what happens',
+      hint: 'Kappa are VERY polite. When he glares, crouch (hold DOWN) facing him: he bows back and spills his dish. Block his pond with the stones!',
       postcard: 'The golden fish are back on the castle roof! The Baron took off toward the Himalaya. This is it, Brady. ♥ C',
       script: [['shiba', { quiet: true }], 'moat', 'nightingale', ['enemies', { n: 2 }], ['revolve', { first: true }], 'cp', ['nightingale', { n: 14 }], 'garden', ['moat', { gold: true }], 'revolve', 'arena'] }
   ]
