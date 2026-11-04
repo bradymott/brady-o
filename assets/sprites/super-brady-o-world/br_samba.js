@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("br_samba", {"scale":2.0,"image":"br_samba.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1378}},"anims":{},"strips":{"L0":{"w":2048,"h":784,"top":52.0,"x":0,"y":0},"L1":{"w":2048,"h":592,"top":148.0,"x":0,"y":785}}});

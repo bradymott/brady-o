@@ -26,10 +26,11 @@ def render_enemies(mod, look, out, name, scale):
     px_m = LK.PPM * scale
     spec = {'name': name, 'scale': scale, 'frames': [], 'anims': {}}
     kinds = os.environ.get('KINDS', '').split(',') if os.environ.get('KINDS') else mod.KINDS
-    sizes = getattr(mod, 'SIZE', None) or getattr(mod, 'HEIGHT')
+    heights = getattr(mod, 'HEIGHT', {}) or {}; sizes = getattr(mod, 'SIZE', {}) or {}
     origins = getattr(mod, 'ORIGIN', {})
     for kind in kinds:
-        size = sizes[kind]; origin = origins.get(kind, 'feet')
+        origin = origins.get(kind, 'feet')
+        size = (sizes.get(kind) if origin == 'centre' else heights.get(kind)) or sizes.get(kind) or heights.get(kind)
         cx, cz, bw, bh, oxf, oyf = frame_box(size, origin)
         res_w, res_h = int(round(bw * px_m)), int(round(bh * px_m))
         LK.ortho_camera(cx, cz, bw, bh, res_w, res_h)

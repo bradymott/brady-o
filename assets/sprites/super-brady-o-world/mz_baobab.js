@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("mz_baobab", {"scale":2.0,"image":"mz_baobab.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":531}},"anims":{},"strips":{"L0":{"w":2048,"h":530,"top":160.5,"x":0,"y":0}}});

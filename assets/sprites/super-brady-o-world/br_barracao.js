@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("br_barracao", {"scale":2.0,"image":"br_barracao.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":735}},"anims":{},"strips":{"L0":{"w":2048,"h":734,"top":77.0,"x":0,"y":0}}});

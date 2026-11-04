@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ec_amazon", {"scale":2.0,"image":"ec_amazon.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1542}},"anims":{},"strips":{"L0":{"w":2048,"h":714,"top":0.0,"x":0,"y":827},"L1":{"w":2048,"h":826,"top":0.0,"x":0,"y":0}}});

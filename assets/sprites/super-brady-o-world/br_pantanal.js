@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("br_pantanal", {"scale":2.0,"image":"br_pantanal.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":722}},"anims":{},"strips":{"L0":{"w":2048,"h":348,"top":270.0,"x":0,"y":373},"L1":{"w":2048,"h":372,"top":186.0,"x":0,"y":0}}});
