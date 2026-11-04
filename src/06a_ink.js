@@ -6,10 +6,12 @@
    silhouette is stamped in ink around it, then the colour goes on
    top: existing art needs no changes.
    ============================================================ */
+/* how much larger than their hitboxes characters are drawn (the physics never changes): Brady and enemies */
+const ART_SCALE = { brady: 1.2, enemy: 1.15 };
 const Ink = {
   on: true,
   color: '#1c1426',
-  width: 1.4,            // logical px (about 4 device px on an iPhone)
+  width: 1.3,            // logical px (about 4 device px on an iPhone)
   pool: [],
   canvas(i, w, h) {
     let c = this.pool[i];

@@ -52,8 +52,10 @@ const APPS = {
 const BURNS_DEPS = [];   // the Burning Man app is engine-only (the Chinka photo is rendered from the 3D model now)
 const KART_DEPS = [];   // Art Cart is engine-only now (the shared boot code guards its 2D references)
 
+// the atlas names shipped with the 2D app (assets/sprites/super-brady-o-world/<name>.js), baked into the bundle
+const spriteIndex = () => { const d = path.join(root, 'assets', 'sprites', 'super-brady-o-world'); return fs.existsSync(d) ? fs.readdirSync(d).filter(f => f.endsWith('.js')).map(f => f.replace(/\.js$/, '')).sort() : []; };
 function bundle(appId, files) {
-  let code = `const BRADY_APP = ${JSON.stringify(appId)};\n` +
+  let code = `const BRADY_APP = ${JSON.stringify(appId)};\nconst BRADY_SPRITES = ${JSON.stringify(spriteIndex())};\n` +
     files.map(f => `/* ---- ${f} ---- */\n` + fs.readFileSync(path.join(srcDir, f), 'utf8')).join('\n');
   code = `(function(){\n${code}\n})();`;
   if (code.includes('</script')) throw new Error('source contains </script');
@@ -126,6 +128,11 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match('./index.html')));
     return;
   }
+  if (/\/sprites\//.test(req.url)) {
+    // sprite atlases: cached the first time a level asks for them (they are big, and most are never needed at once)
+    e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })));
+    return;
+  }
   e.respondWith(caches.match(req).then(hit => hit || fetch(req)));
 });
 `;
@@ -179,7 +186,7 @@ const copySprites = (appDir, outDir) => {
   const src = path.join(root, 'assets', 'sprites', appDir);
   if (!fs.existsSync(src)) return [];
   fs.mkdirSync(outDir, { recursive: true });
-  const files = fs.readdirSync(src).filter(f => /\.(png|js|json)$/.test(f)).sort();
+  const files = fs.readdirSync(src).filter(f => /\.(png|webp|js|json)$/.test(f)).sort();
   for (const f of files) fs.copyFileSync(path.join(src, f), path.join(outDir, f));
   for (const f of fs.readdirSync(outDir)) if (!files.includes(f)) fs.unlinkSync(path.join(outDir, f));
   return files;
@@ -242,7 +249,7 @@ for (const [id, A] of Object.entries(APPS)) {
   // Blender-made models (assets/models/<app>/*.glb) ship beside the page as models/*.glb and are cached offline
   const models = copyModels(A.dir, path.join(dir, 'models'), id !== 'world');   // the 2D app needs no 3D characters
   const sprites = copySprites(A.dir, path.join(dir, 'sprites'));                 // the 2D app's pre-rendered atlases
-  fs.writeFileSync(path.join(dir, 'sw.js'), swSource('app-' + id, v, ['./', './index.html', './manifest.webmanifest'].concat(icons.map(f => './' + f), models.map(f => './models/' + f), sprites.map(f => './sprites/' + f))));
+  fs.writeFileSync(path.join(dir, 'sw.js'), swSource('app-' + id, v, ['./', './index.html', './manifest.webmanifest'].concat(icons.map(f => './' + f), models.map(f => './models/' + f))));
   copyFontLicences(dir);
   report.push(`${A.dir} ${files.length} modules ${(html.length / 1024).toFixed(0)}KB${models.length ? ' + ' + models.length + ' glb' : ''}${sprites.length ? ' + ' + sprites.length + ' sprite files' : ''}`);
 }

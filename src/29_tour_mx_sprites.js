@@ -9,7 +9,7 @@
 (() => {
 const C = Tour.countries.mx;
 if (!C) return;
-C.sprites = true;                       // enemies with sprite ids draw from the 'mx' atlas
+C.sprites = true; C.spritesWired = true;   // enemies with sprite ids draw from the 'mx' atlas; 30_tour_sprites.js skips Mexico
 const layer = (atlas, id, f, fallback, shift) => ({ kind: 'image', atlas, id, f, fallback, shift: shift || 0, base: fallback.base, dyn: fallback.dyn, color: fallback.color });
 const T = THEMES;
 // 1-1 Mercado Mayhem

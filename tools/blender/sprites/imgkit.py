@@ -22,6 +22,19 @@ def save(arr, path):
     bpy.data.images.remove(img)
     return path
 
+def save_webp(arr, path, quality=90):
+    """Lossy WebP with alpha (about 4x smaller than PNG), straight (unpremultiplied) colour like save()."""
+    h, w = arr.shape[:2]
+    img = bpy.data.images.new(os.path.basename(path), w, h, alpha=True, float_buffer=False)
+    img.pixels.foreach_set(np.ascontiguousarray(np.clip(arr[::-1], 0, 1), dtype=np.float32).ravel())
+    os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+    sc = bpy.context.scene; st = sc.render.image_settings
+    st.file_format = 'WEBP'; st.color_mode = 'RGBA'; st.quality = quality
+    sc.view_settings.view_transform = 'Standard'
+    img.save_render(path, scene=sc)
+    bpy.data.images.remove(img)
+    return path
+
 def over(dst, src, x, y):
     """Alpha-composite src onto dst at integer (x, y) (top-left), premultiplying on the fly. Clips to dst."""
     H, W = dst.shape[:2]; h, w = src.shape[:2]

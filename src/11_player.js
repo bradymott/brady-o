@@ -529,7 +529,8 @@ class Player {
     if (small !== this.small) o.hair = null;
     if (this.spin && !this.onGround) o.rot = Math.sin(this.anim.t * 26) * 0.25;
     PlayerFx.under(ctx, this, t);
-    Ink.around(ctx, this.x, this.y, this.w, this.h, c => drawBrady(c, o), { pad: 34, width: 1.5 });
+    // drawn a little larger than the hitbox (ART_SCALE) so he reads on a phone; the physics box is unchanged
+    Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16' });
     PlayerFx.over(ctx, this, t);
   }
   get light() { return { r: this.g.area.water ? 150 : 170, c: 'rgba(255,240,220,' }; }

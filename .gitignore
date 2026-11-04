@@ -20,3 +20,4 @@ private/
 *.blend2
 __pycache__/
 __pycache__/
+.claude/settings.local.json

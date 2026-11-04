@@ -43,7 +43,8 @@ def main():
     for sp in specs:
         spec['frames'] += sp.get('frames', []); spec['strips'] += sp.get('strips', []); spec['anims'].update(sp.get('anims', {}))
     maxw = spec.get('max', 2048)
-    images = {}; items = []; meta = {'scale': spec.get('scale', 3), 'image': os.path.basename(out) + '.png', 'frames': {}, 'anims': spec.get('anims', {}), 'strips': {}}
+    fmt = os.environ.get('ATLAS_FORMAT', 'webp')
+    images = {}; items = []; meta = {'scale': spec.get('scale', 3), 'image': os.path.basename(out) + '.' + fmt, 'frames': {}, 'anims': spec.get('anims', {}), 'strips': {}}
     for f in spec.get('frames', []):
         a = IK.load(f['file']); x0 = y0 = 0
         if not f.get('notrim'): a, x0, y0 = trim(a)
@@ -61,10 +62,13 @@ def main():
     for id_, (x, y) in pos.items():
         im = images[id_]; sheet[y:y + im.shape[0], x:x + im.shape[1]] = im
         d = meta['frames'].get(id_) or meta['strips'].get(id_); d['x'] = x; d['y'] = y
-    IK.save(sheet, out + '.png')
+    if fmt == 'webp': IK.save_webp(sheet, out + '.webp', int(os.environ.get('ATLAS_QUALITY', '90')))
+    else: IK.save(sheet, out + '.png')
+    for stale in ('.png', '.webp'):
+        if stale != '.' + fmt and os.path.exists(out + stale): os.remove(out + stale)
     with open(out + '.js', 'w') as fh:
         fh.write('window.BRADY_ATLAS.register(%s, %s);\n' % (json.dumps(spec['name']), json.dumps(meta, separators=(',', ':'))))
-    print('PACKED', out + '.png', W, 'x', H, len(meta['frames']), 'frames', len(meta['strips']), 'strips')
+    print('PACKED', out + '.' + fmt, W, 'x', H, len(meta['frames']), 'frames', len(meta['strips']), 'strips', os.path.getsize(out + '.' + fmt) // 1024, 'KB')
 
 if __name__ == '__main__':
     try: main()

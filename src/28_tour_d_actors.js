@@ -28,14 +28,16 @@ const TourSprite = {
   hasFrame(e, mode) { const a = this.of(e); return !!(a && (Atlas.anim(a, e.cfg.sprite + '/' + mode) || Atlas.frame(a, e.cfg.sprite + '_' + mode + '_000'))); },
   draw(ctx, e, x, y, mode, fallback) {
     const a = this.of(e); if (!a) return false;
-    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode];
+    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode], o = { scale: ART_SCALE.enemy };
     for (const m of list) {
       const id = k + '/' + m;
-      if (Atlas.anim(a, id)) return Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1);
-      if (Atlas.frame(a, k + '_' + m + '_000')) return Atlas.draw(ctx, a, k + '_' + m + '_000', x, y, e.dir || 1);
+      if (Atlas.anim(a, id)) return Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1, o);
+      if (Atlas.frame(a, k + '_' + m + '_000')) return Atlas.draw(ctx, a, k + '_' + m + '_000', x, y, e.dir || 1, o);
     }
     return false;
-  }
+  },
+  // procedural art, scaled about its origin point
+  art(ctx, e, x, y, mode) { const k = ART_SCALE.enemy; ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.translate(-x, -y); e.cfg.art(ctx, e, x, y, mode, e.g.t); ctx.restore(); }
 };
 
 class TourEnemy extends Walker {
@@ -134,7 +136,7 @@ class TourEnemy extends Walker {
   get sprite() { return TourSprite.of(this); }
   paint(ctx, x, y, mode) {
     if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.walk)) return;
-    if (this.cfg.art) this.cfg.art(ctx, this, x, y, mode, this.g.t);
+    if (this.cfg.art) TourSprite.art(ctx, this, x, y, mode);
   }
   draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
   drawArt(ctx) {
@@ -188,7 +190,7 @@ class TourFlyer extends Ent {
   get sprite() { return TourSprite.of(this); }
   paint(ctx, x, y, mode) {
     if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.fly)) return;
-    this.cfg.art(ctx, this, x, y, mode, this.g.t);
+    TourSprite.art(ctx, this, x, y, mode);
   }
   draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
   drawArt(ctx) {
@@ -227,7 +229,7 @@ class TourSwimmer extends Ent {
   drawArt(ctx) {
     const mode = this.knocked ? 'ko' : 'swim';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, mode, TourSprite.FALLBACK.swim)) return;
-    this.cfg.art(ctx, this, this.cx, this.cy, mode, this.g.t);
+    TourSprite.art(ctx, this, this.cx, this.cy, mode);
   }
 }
 
@@ -253,7 +255,7 @@ class TourLeaper extends Ent {
     if (this.state === 'wait' && !this.knocked) return;
     const mode = this.knocked ? 'ko' : this.vy < 0 ? 'up' : 'down';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, mode, TourSprite.FALLBACK.leap)) return;
-    this.cfg.art(ctx, this, this.cx, this.cy, mode, this.g.t);
+    TourSprite.art(ctx, this, this.cx, this.cy, mode);
   }
   get light() { return this.cfg.glow && this.state !== 'wait' ? { r: 70, c: this.cfg.glow } : null; }
 }
@@ -276,7 +278,7 @@ class TourFriend extends Ent {
   drawArt(ctx) {
     const mode = this.given ? 'wave' : 'idle';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.y + this.h, mode, TourSprite.FALLBACK.friend)) return;
-    this.cfg.art(ctx, this, this.cx, this.y + this.h, mode, this.g.t);
+    TourSprite.art(ctx, this, this.cx, this.y + this.h, mode);
   }
 }
 

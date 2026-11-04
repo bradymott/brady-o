@@ -1,0 +1,228 @@
+== aq world 13: The secret land at the bottom of the world
+   coin=SNOWFLAKE star=GOLDEN PENGUIN power=PENGUIN SLIDE
+   level The Ice Shelf (run, theme aq_shelf): A penguin teaches the belly-slide: bowl through snowballs on long ice sheets, hop ice holes where leopard seals leap
+   level Iceberg Drift (ride, theme aq_sea): Drift on an iceberg across the Southern Ocean: hop the growlers, grab goodies on passing floes, dodge orcas and skuas
+   level Aurora Station (night, theme aq_station): A research station under the aurora: climb the modules, ride the heater vents, scale the radio mast, dodge the rovers
+   level The Blizzard Palace (castle, theme aq_storm): Blizzard gusts come in waves over cracking ice, then Big Tusk the walrus: drop icicles on him and trip his belly-slides with kicked ice blocks until the floe cracks
+   theme aq_shelf: 'The Ice Shelf' ground=snow dark=False underwater=False liquid=icewater sky=['#6aa8e8', '#c8e8ff', '#ffffff']
+      layers (back to front, index = Li): L0: mountains base=290 f=0.03 color=#b8d0e8 blur | L1: aqBergs base=320 f=0.08 color=#e8f6ff | L2: aqShelf base=360 f=0.2 color=#d0eaff
+   theme aq_sea: 'The Southern Ocean' ground=snow dark=False underwater=False liquid=icewater sky=['#4a7ab8', '#a8c8e8', '#f0f8ff']
+      layers (back to front, index = Li): L0: mountains base=300 f=0.03 color=#a8c0d8 blur | L1: aqBergs base=340 f=0.12 color=#f0f8ff
+   theme aq_station: 'Aurora Station' ground=snow dark=False underwater=False liquid=icewater sky=['#040a1a', '#0a1a34', '#1a2a48']
+      layers (back to front, index = Li): L0: mountains base=300 f=0.03 color=#1a2a40 | L1: aqStation base=345 f=0.12 color=#c8d0d8
+   theme aq_storm: 'The Blizzard Palace' ground=snow dark=False underwater=False liquid=icewater sky=['#8a9ab0', '#c8d4e0', '#f0f4f8']
+      layers (back to front, index = Li): L0: mountains base=300 f=0.03 color=#c8d4e4 dyn:aqBlizzard blur | L1: aqShelf base=350 f=0.15 color=#d8e8f8
+   enemies: aqSkua(fly,32x14,), aqSeal(here,30x16,), aqSnowball(walk,22x22,roll), aqRover(walk,28x26,walk,hp2), aqOrca(here,40x20,), aqSkidder(walk,30x18,)
+== br world 3: Beaches, carnival, waterfalls and wetlands
+   coin=PÃO DE QUEIJO star=GOLDEN TOUCAN power=FOOTBALL
+   level Copacabana Boardwalk (run, theme br_beach): The wavy mosaic boardwalk: kiosk umbrellas to bounce up, crumbling sandcastles, a beach-ball bounce and snack-stealing gulls
+   level Sambadrome Night (night, theme br_samba): The whole avenue moves to the samba beat: surdo drums pop up on the beat, parade floats glide over gaps, tambourines roll
+   level Iguaçu Falls (climb, theme br_falls): Climb beside the roaring falls: slippery wet rocks, tumbling logs, mist that lifts you, and coatis that steal your coins
+   level Pantanal Wetlands (run, theme br_pantanal): Ride swimming capybaras, hop sinking caiman backs, dodge leaping piranhas and charging jaguars
+   level Carnival Warehouse (castle, theme br_barracao): The float workshop: spinning turntables, confetti cannons and drum platforms on the beat, then O Tucanão
+   theme br_beach: 'Copacabana' ground=brWalk dark=False underwater=False liquid=None sky=['#1a8ae8', '#7ad0ff', '#fff4d8']
+      layers (back to front, index = Li): L0: brSugarloaf base=330 f=0.04 color=#5a7a6a | L1: brSea base=330 f=0.06 color=#1aa8d8 | L2: brPalms base=365 f=0.3 color=#2a8a4a
+   theme br_samba: 'Sambadrome' ground=brWalk dark=False underwater=False liquid=None sky=['#140a2e', '#3a1a5a', '#8a2a6a']
+      layers (back to front, index = Li): L0: brSkyline base=360 f=0.08 color=#2a1a40 | L1: brStands base=350 f=0.25 color=#3a2050
+   theme br_falls: 'Iguaçu Falls' ground=grass dark=False underwater=False liquid=None sky=['#3a8ad8', '#9ad8ff', '#e8fff8']
+      layers (back to front, index = Li): L0: brFalls base=320 f=0.05 color=#2a6a3a | L1: brPalms base=390 f=0.2 color=#1e6a3a
+   theme br_pantanal: 'Pantanal' ground=grass dark=False underwater=False liquid=river sky=['#ff9a5a', '#ffd08a', '#fff4d0']
+      layers (back to front, index = Li): L0: brMarsh base=360 f=0.06 color=#6a9a4a | L1: brPalms base=370 f=0.25 color=#3a6a2a
+   theme br_barracao: 'Carnival Warehouse' ground=metal dark=False underwater=False liquid=None sky=['#1a1030', '#2a1a48', '#4a2a5a']
+      layers (back to front, index = Li): L0: brStands base=345 f=0.1 color=#2a1a3a
+   enemies: brCrab(walk,26x16,walk), brCoconut(walk,22x22,roll), brGull(fly,30x14,), brBrigadeiro(walk,20x22,hop), brPandeiro(walk,26x26,walk), brCoati(walk,NonexNone,,CUSTOM-CLASS skip), brJaguar(walk,40x26,charge,hp2), brPiranha(here,22x18,)
+== ec world 2: The middle of the world, the Andes and the Galápagos
+   coin=CACAO BEAN star=GOLDEN TORTOISE power=BOOBY BOOTS
+   level Middle of the World (run, theme ec_equator): The equator line's low-gravity bubbles, banana-leaf platforms and rolling cacao pods; a booby lends its blue boots
+   level Cable Car Climb (ride, theme ec_andes): Ride an open gondola up the Andes: duck the tower arms, hop the snowy ridges, dodge swooping condors
+   level Amazon Canopy (night, theme ec_amazon): Swing on vines across the dark canopy and hop sinking giant lily pads, lit by glowing frogs and mushrooms
+   level Galápagos Snorkel (swim, theme ec_galapagos): Snorkel a sunlit sea: lava-rock arches, puffers that puff up, penguins in a current and a tidal surge
+   level Ice Fort of Cotopaxi (castle, theme ec_cotopaxi): Slippery ice, dropping icicles and sinking ice floes, then El Tortugón
+   theme ec_equator: 'Middle of the World' ground=grass dark=False underwater=False liquid=None sky=['#2a8ae8', '#8ad0ff', '#f0fff0']
+      layers (back to front, index = Li): L0: mountains base=280 f=0.03 color=#8aa0c8 blur | L1: ecMonument base=360 f=0.08 color=#c8b898 | L2: ecAndes base=330 f=0.12 color=#4a9a4a | L3: ecBananas base=352 f=0.35 color=#3a8a3a
+   theme ec_andes: 'The Andes' ground=grass dark=False underwater=False liquid=None sky=['#3a7ad8', '#a8d0ff', '#ffffff']
+      layers (back to front, index = Li): L0: mountains base=300 f=0.03 color=#9ab0d8 dyn:ecCables blur | L1: ecCotopaxi base=330 f=0.05 color=#7a8ab0 | L2: clouds base=360 f=0.1 color=#ffffff | L3: ecAndes base=380 f=0.2 color=#5aa85a
+   theme ec_amazon: 'Amazon Canopy' ground=grass dark=False underwater=False liquid=canal sky=['#06120e', '#0e2a1e', '#1a3a2a']
+      layers (back to front, index = Li): L0: ecCanopy base=300 f=0.08 color=#0e2a1a | L1: ecCanopy base=355 f=0.25 color=#081a10
+   theme ec_galapagos: 'Galápagos' ground=coral dark=False underwater=True liquid=None sky=['#5ae8ff', '#1a9ad8', '#0a4a8a']
+      layers (back to front, index = Li): L0: rocks base=330 f=0.08 color=#16607a | L1: kelp base=400 f=0.2 color=#0e6a5a
+   theme ec_cotopaxi: 'Ice Fort' ground=snow dark=False underwater=False liquid=icewater sky=['#3a5a9a', '#9ac0f0', '#e8f4ff']
+      layers (back to front, index = Li): L0: ecCotopaxi base=330 f=0.04 color=#8a9ac0 | L1: pines base=365 f=0.2 color=#4a6a8a
+   enemies: ecBanana(walk,16x32,walk), ecCacao(walk,24x18,roll), ecAlpaca(walk,26x46,throw,hp2), ecCondor(fly,34x16,), ecFrog(walk,18x16,hop), ecIguana(walk,30x18,throw), ecIceCube(walk,24x24,walk), ecSeaLion(swim,36x16,), ecPuffer(swim,NonexNone,,CUSTOM-CLASS skip), ecPenguin(swim,26x14,)
+== es world 6: Tomatoes, oranges, fallas and the city of the future
+   coin=ORANGE star=GOLDEN FAN power=TOMATO FIGHT
+   level La Tomatina (run, theme es_tomatina): Tomato trucks lob tomatoes over pulp-slick streets: slide carefully, climb crate stacks and balconies
+   level The Aquarium (swim, theme es_aquarium): Swim through glass tunnels past sharks and pulsing jellyfish, ride the pump currents
+   level City of Arts by Night (night, theme es_arts): White ribs arch over reflecting pools, floor lights switch with the beat, and a lifting deck carries you up
+   level The Giant Falla (climb, theme es_fallas): Climb a giant papier-mâché sculpture: rocket launchers fire you upward, firecracker strings pop in waves
+   level The Silk Exchange (castle, theme es_lonja): Twisted columns, swinging silk banners and merchants' scales that rise and fall, then Paellasaurus
+   theme es_tomatina: 'La Tomatina' ground=grass dark=False underwater=False liquid=None sky=['#2a8ae8', '#8ad0ff', '#fff4e0']
+      layers (back to front, index = Li): L0: esGrove base=300 f=0.05 color=#3a8a3a | L1: esTown base=340 f=0.15 color=#f4f0e8
+   theme es_aquarium: 'The Aquarium' ground=coral dark=False underwater=True liquid=None sky=['#6ae8ff', '#1a8ad8', '#0a3a7a']
+      layers (back to front, index = Li): L0: rocks base=330 f=0.08 color=#1a5a8a | L1: kelp base=360 f=0.2 color=#0e6a6a
+   theme es_arts: 'City of Arts' ground=marble dark=False underwater=False liquid=pool sky=['#0a0e2a', '#1a2a5a', '#3a4a8a']
+      layers (back to front, index = Li): L0: esArts base=330 f=0.08 color=#e8f0f8
+   theme es_fallas: 'Las Fallas' ground=grass dark=False underwater=False liquid=None sky=['#3a6ad8', '#9ac8ff', '#fff0e8']
+      layers (back to front, index = Li): L0: esTown base=330 f=0.04 color=#f0e8dc | L1: esFallas base=360 f=0.12 color=#e8dcc8
+   theme es_lonja: 'The Silk Exchange' ground=marble dark=False underwater=False liquid=None sky=['#2a1e1a', '#4a3a2a', '#6a5038']
+      layers (back to front, index = Li): L0: esHall base=360 f=0.08 color=#5a4a38
+   enemies: esTomato(walk,22x24,hop), esOrange(walk,20x20,roll), esHorchata(walk,18x30,walk), esBat(fly,30x14,), esJelly(swim,NonexNone,,CUSTOM-CLASS skip), esShark(swim,44x16,), esPetardo(walk,14x26,charge)
+== fr world 7: Croissants, mimes and a tower made of iron lace
+   coin=MACARON star=GOLDEN CROISSANT power=MIME GLOVES
+   level Boulangerie Boulevard (run, theme fr_morning): Café umbrellas, a bakery conveyor and croissants rolling downhill
+   level Seine Chase (auto, theme fr_seine): Chase the blimp along the quay: book-box lids snap open and shut, barges drift by
+   level Rooftops by Moonlight (night, theme fr_night): Zinc rooftops at night: chimney smoke lifts you over the alleys; cats prowl
+   level The Iron Tower (climb, theme fr_tower): Climb the lattice tower: elevators, girders and gusts of wind at the top
+   level Hall of Mirrors (castle, theme fr_chateau): Mirror doors, falling chandeliers and Le Grand Soufflé
+   theme fr_morning: 'Boulangerie Boulevard' ground=frCobble dark=False underwater=False liquid=None sky=['#6aa8e8', '#c8e0ff', '#ffe8e0']
+      layers (back to front, index = Li): L0: frTower base=330 f=0.03 color=#9aa8c0 dyn:frPigeons blur | L1: frFacades base=360 f=0.14 color=#f0e4cc | L2: frAwnings base=380 f=0.4 color=#c8b8a0
+   theme fr_seine: 'The Seine' ground=frCobble dark=False underwater=False liquid=sea sky=['#5a98e0', '#b8d8ff', '#fff0d8']
+      layers (back to front, index = Li): L0: frTower base=300 f=0.02 color=#a8b4cc blur | L1: frFacades base=330 f=0.08 color=#f2e8d4 | L2: frSeine base=325 f=0.18 color=#d8ccb0 | L3: frTrees base=385 f=0.42 color=#5a9a4a
+   theme fr_night: 'Rooftops by Moonlight' ground=frZinc dark=False underwater=False liquid=None sky=['#0a0e2a', '#1a2050', '#3a3a6a']
+      layers (back to front, index = Li): L0: frTower base=330 f=0.03 color=#1a1e3a | L1: frFacades base=350 f=0.1 color=#2a3050 | L2: frRoofs base=375 f=0.3 color=#141830
+   theme fr_tower: 'The Iron Tower' ground=metal dark=False underwater=False liquid=None sky=['#4a90e8', '#a8d0ff', '#f0f8ff']
+      layers (back to front, index = Li): L0: frFacades base=450 f=0.05 color=#e8dcc4 | L1: clouds base=260 f=0.1 color=#ffffff
+   theme fr_chateau: 'Hall of Mirrors' ground=frParquet dark=False underwater=False liquid=None sky=['#f2e6c8', '#e8d4a8', '#d8b888']
+      layers (back to front, index = Li): L0: frMirrors base=0 f=0.15 color=#c8962a
+   enemies: frBaguette(walk,14x38,walk), frCroissant(walk,24x18,roll), frMime(walk,16x46,throw), frPigeon(fly,24x16,), frPoodle(walk,24x22,charge), frCat(walk,24x16,charge), frKeychain(walk,16x36,hop), frAccordion(walk,26x30,throw)
+== id world 9: Surf breaks, rice terraces and a volcano sunrise
+   coin=GOLDEN FRANGIPANI star=GOLDEN GECKO power=SURFBOARD
+   level Kuta Surf Break (auto, theme id_surf): A gecko lends a surfboard: ride the rolling swells, launch off the crests for big air, hop the lava-rock reefs
+   level Kite Festival (run, theme id_kites): Giant fish and bird kites swoop back and forth over the ravines between the rice terraces: ride them like a relay; wade the flooded paddies; duck parades
+   level Batur Sunrise Trek (night, theme id_batur): Climb the volcano in the dark: lava bombs land on glowing rings, rocks heat up red-hot, civets prowl; the sky turns to sunrise as you climb
+   level Manta Point Night Dive (swim, theme id_dive): A night dive on a black reef that glows: plankton lights up as you swim, anglerfish dangle fake coins, morays lunge from holes, a manta's slipstream sweeps you along
+   level Monkey Forest Ruins (castle, theme id_ruins): Overgrown palace ruins: macaques snatch coins, durians burst into stink clouds, gamelan gongs open the stone doors, then Boss Kera in the durian grove
+   theme id_surf: 'Kuta Surf Break' ground=sand dark=False underwater=False liquid=id_sea sky=['#1a86e8', '#78d4ff', '#fff2d0']
+      layers (back to front, index = Li): L0: idVolcanoes base=236 f=0.02 color=#7a9ac8 blur | L1: idCoast base=240 f=0.035 color=#e8cc8a | L2: idOcean base=244 f=0.06 color=#2aaed0 dyn:idBreakers
+   theme id_kites: 'Kite Festival' ground=grass dark=False underwater=False liquid=None sky=['#2a8ee8', '#9adcff', '#f6fff0']
+      layers (back to front, index = Li): L0: idVolcanoes base=232 f=0.02 color=#8aa8cc dyn:idSkyKites blur | L1: idTerraces base=300 f=0.09 color=#5aa83a | L2: idPalms base=352 f=0.26 color=#2a5e2a
+   theme id_batur: 'Batur Sunrise Trek' ground=basalt dark=False underwater=False liquid=id_lava sky=['#05061a', '#16123a', '#2a2050']
+      layers (back to front, index = Li): L0: idNone base=0 f=0 color=#000000 dyn:idNightSky | L1: idVolcanoes base=250 f=0.025 color=#1c1c36 | L2: idCrater base=330 f=0.16 color=#151020
+   theme id_dive: 'Manta Point' ground=coral dark=False underwater=True liquid=None sky=['#062a48', '#041a30', '#020a16']
+      layers (back to front, index = Li): L0: idDeep base=0 f=0.04 color=#0a3050 dyn:idMantasBg | L1: idReefBg base=320 f=0.14 color=#0c3450 dyn:idGlowDots
+   theme id_ruins: 'Monkey Forest Ruins' ground=idMoss dark=False underwater=False liquid=None sky=['#2a6a52', '#8acaa8', '#eaf8e0']
+      layers (back to front, index = Li): L0: idJungle base=250 f=0.04 color=#2e6440 blur | L1: idRuinsBg base=340 f=0.12 color=#7a8270 | L2: idVines base=0 f=0.22 color=#1e4a2a
+   enemies: idFlyfish(here,22x12,), idUrchin(walk,22x18,still), idDuck(walk,NonexNone,,CUSTOM-CLASS skip), idScarecrow(walk,26x50,throw,hp2), idDragonfly(fly,30x12,), idSate(walk,14x44,walk), idCivet(walk,30x16,charge), idBat(fly,30x16,), idLionfish(swim,30x18,)
+== jp world 11: Bamboo groves, bullet trains and a very polite kappa
+   coin=GOLDEN KOBAN star=GOLDEN SAKURA power=NUNCHUCKS
+   level Bamboo Grove (run, theme jp_bamboo): A Shiba hands over nunchucks; bending bamboo bows under you and carries you forward (jump as it springs back for a huge vault); bamboo shoots burst out of the path, rice-ball hoppers, charging beetles, a koi pond
+   level Bullet Train (ride, theme jp_rail): Ride the roof of a bullet train past Mt. Fuji: duck under the signal gantries, crouch through the tunnels' low lamps, swat crows and runaway umbrellas
+   level Sushi Carousel (run, theme jp_sushi): A giant conveyor-belt sushi bar: ride the plate wheel over the soy sauce, dodge (or knock away) the giant chopsticks, float up on the steam of a giant tea cup
+   level Neon Batting Cages (night, theme jp_neon): Pitching machines fire baseballs: whirl the nunchucks to knock them back into the target and roll up the shutters; ride the crane-game claw over the canal; lucky-cat toys throw coins
+   level Kappa Castle (castle, theme jp_castle): Nightingale floors chirp underfoot and wake the spinning-top traps (hop the beams to stay quiet), revolving secret walls, a koi moat; then the Great Kappa at his garden pond
+   theme jp_bamboo: 'Bamboo Grove' ground=jpMoss dark=False underwater=False liquid=jp_pond sky=['#9ac8b8', '#d8ecd8', '#f4f8e8']
+      layers (back to front, index = Li): L0: jpHills base=300 f=0.02 color=#a8c4b0 blur | L1: jpBamboo base=270 f=0.06 color=#8ab894 blur | L2: jpBamboo base=270 f=0.16 color=#5a9a52
+   theme jp_rail: 'Bullet Train' ground=jpStation dark=False underwater=False liquid=None sky=['#4a8ad8', '#a8d0f0', '#eef6fc']
+      layers (back to front, index = Li): L0: jpFuji base=300 f=0.01 color=#6a7aa8 | L1: jpFields base=326 f=0.12 color=#8ab85a | L2: jpPoles base=360 f=0.7 color=#4a4a58
+   theme jp_sushi: 'Sushi Carousel' ground=jpCounter dark=False underwater=False liquid=jp_soy sky=['#5a3a24', '#7a5236', '#9a6a44']
+      layers (back to front, index = Li): L0: jpSushiBar base=336 f=0.08 color=#c89a62 dyn:jpBelt
+   theme jp_neon: 'Neon Batting Cages' ground=jpAsphalt dark=False underwater=False liquid=jp_canal sky=['#0a0620', '#1e0e3a', '#3a1450']
+      layers (back to front, index = Li): L0: jpNeonCity base=300 f=0.04 color=#1a1430 blur | L1: jpNeonCity base=330 f=0.1 color=#241a3e dyn:jpNeonBlink | L2: jpNets base=352 f=0.2 color=#5aff9a
+   theme jp_castle: 'Kappa Castle' ground=jpIshigaki dark=False underwater=False liquid=jp_moat sky=['#e88aa0', '#f8c8c8', '#fff0e0']
+      layers (back to front, index = Li): L0: jpCastle base=300 f=0.03 color=#8a8a90 | L1: jpSakura base=340 f=0.12 color=#ffc0d0
+   enemies: jpOnigiri(walk,26x24,hop), jpBeetle(walk,34x22,charge), jpCrow(fly,30x16,), jpTamago(walk,26x22,walk), jpTako(walk,22x22,roll), jpWasabi(walk,24x20,hop), jpCapsule(walk,22x22,roll), jpLuckyCat(walk,24x40,throw), jpUmbrella(walk,22x44,hop), jpUmbrellaFly(fly,34x22,), jpTop(walk,24x24,roll), jpKoi(here,18x30,)
+== ma world 5: Souks, the Sahara and the Atlas mountains
+   coin=DATE star=GOLDEN LANTERN power=FLYING CARPET
+   level Souk Spice Maze (run, theme ma_souk): Bounce across draped rugs, hop spice pyramids and cobra baskets, and take the flying-carpet route over the souk
+   level Sahara Caravan (run, theme ma_sahara): Ride a camel caravan over quicksand, walk in the lulls of a sandstorm, and rest at an oasis
+   level Atlas Kasbah (climb, theme ma_atlas): Climb the kasbah walls and an argan tree full of goats, then the mule switchbacks to the snow
+   level Jemaa el-Fnaa Nights (night, theme ma_night): A lantern-lit night market: grill smoke lifts Brady to the awnings, juice-cart oranges roll, snail-soup snails crawl
+   level Riad of Fountains (castle, theme ma_riad): Fountain jets lift Brady to the galleries, mashrabiya screens slide over the pools, rugs roll underfoot; then the Djinn of the Teapot
+   theme ma_souk: 'The Souk' ground=grass dark=False underwater=False liquid=None sky=['#3a8ae8', '#9ad0ff', '#fff0d8']
+      layers (back to front, index = Li): L0: maAtlas base=300 f=0.02 color=#a8a8c8 blur | L1: maMedina base=300 f=0.08 color=#e8b088 | L2: maMedina base=352 f=0.25 color=#d8946a
+   theme ma_sahara: 'The Sahara' ground=grass dark=False underwater=False liquid=quicksand sky=['#ff7a3a', '#ffb86a', '#ffe8b8']
+      layers (back to front, index = Li): L0: maSahara base=300 f=0.04 color=#e8a860 dyn:maSand | L1: maSahara base=350 f=0.2 color=#f0b870
+   theme ma_atlas: 'The Atlas' ground=grass dark=False underwater=False liquid=None sky=['#3a7ad8', '#a0d0ff', '#ffffff']
+      layers (back to front, index = Li): L0: maAtlas base=330 f=0.03 color=#8a8ab0 | L1: maKasbah base=360 f=0.1 color=#c8784a
+   theme ma_night: 'Jemaa el-Fnaa' ground=grass dark=False underwater=False liquid=None sky=['#0e0a24', '#2a1a40', '#6a3a4a']
+      layers (back to front, index = Li): L0: maMedina base=320 f=0.08 color=#3a2a3a | L1: maMedina base=355 f=0.22 color=#2a1e2a
+   theme ma_riad: 'Riad of Fountains' ground=marble dark=False underwater=False liquid=sea sky=['#2a6ab8', '#7ab8e8', '#e8f4ff']
+      layers (back to front, index = Li): L0: maMedina base=330 f=0.08 color=#f0e0c8
+   enemies: maTagine(walk,28x30,hop), maTeapot(walk,26x30,throw), maCobra(here,22x30,), maScarab(walk,22x18,roll), maFennec(walk,24x20,hop), maGoat(walk,30x26,charge), maOrange(walk,20x20,roll), maSnail(walk,30x20,walk,hp2)
+== mz world 4: Savanna, dunes, baobabs and the Indian Ocean
+   coin=CASHEW NUT star=GOLDEN BAOBAB power=PIRI-PIRI CHILI
+   level Gorongosa Savanna (run, theme mz_savanna): Elephants spray water jets that lift Brady into the baobab crowns; termite mounds; thorn hedges that piri-piri burns away
+   level Dune Stampede (auto, theme mz_dunes): The herd thunders behind you: race over the dunes, bounce on dhow sails and cross crumbling sand bridges
+   level The Great Baobab (climb, theme mz_baobab): Climb a giant baobab: zigzag branches, bouncy weaver nests, a hollow trunk, sticky honeycomb and fruit-throwing monkeys
+   level Turtle Beach (night, theme mz_beach): A dark beach lit by glowing plankton and a sweeping lighthouse: ride slow sea turtles over tide pools, dodge ghost crabs
+   level Ilha Fortress (castle, theme mz_fort): Coconut cannons on the ramparts, flooded cisterns and thorn barricades, then O Eremita the hermit crab
+   theme mz_savanna: 'Gorongosa' ground=grass dark=False underwater=False liquid=None sky=['#ff9a4a', '#ffd08a', '#fff4d8']
+      layers (back to front, index = Li): L0: mountains base=280 f=0.03 color=#c8907a blur | L1: mzSavanna base=300 f=0.1 color=#c89a4a | L2: mzSavanna base=352 f=0.3 color=#b8883a
+   theme mz_dunes: 'The Dunes' ground=grass dark=False underwater=False liquid=None sky=['#2a9ae8', '#9ad8ff', '#fff8e8']
+      layers (back to front, index = Li): L0: mzDunes base=320 f=0.06 color=#f0d08a dyn:mzDust | L1: mzDunes base=352 f=0.22 color=#e8c070
+   theme mz_baobab: 'The Great Baobab' ground=grass dark=False underwater=False liquid=None sky=['#3a9ae8', '#a8d8ff', '#fff4d8']
+      layers (back to front, index = Li): L0: mzSavanna base=340 f=0.04 color=#c89a4a
+   theme mz_beach: 'Turtle Beach' ground=grass dark=False underwater=False liquid=glowsea sky=['#040814', '#0a1a34', '#1a3050']
+      layers (back to front, index = Li): L0: mzNightSea base=320 f=0.06 color=#0e2a4a
+   theme mz_fort: 'Ilha Fortress' ground=grass dark=False underwater=False liquid=sea sky=['#3a8ad8', '#9ad0ff', '#fff4e0']
+      layers (back to front, index = Li): L0: mzFort base=330 f=0.08 color=#c8b898
+   enemies: mzWarthog(walk,36x24,charge), mzCashew(walk,18x26,hop), mzWeaver(fly,22x14,), mzPrawn(walk,30x20,walk), mzMonkey(walk,20x36,throw), mzGhostCrab(walk,22x14,walk), mzMango(walk,22x20,roll)
+== nl world 8: Canals, bikes, tulips and windmills
+   coin=STROOPWAFEL star=GOLDEN CLOG power=DUTCH BIKE
+   level Canal Ring (run, theme nl_canals): Hoisting hooks swing out from the gables over the canals, houseboats bob, bridges are crowded with bikes
+   level Tulips & Windmills (run, theme nl_tulips): Ride a windmill's sails round and round, bounce on tulip beds, lean into the polder gusts
+   level Bike Lane Rush (auto, theme nl_rush): Pedal the busy bike lane at speed: drawbridges rise and fall, hop on passing trams, jump the canals
+   level Frozen Canals (night, theme nl_frozen): Skate the frozen canals by lantern light: thin ice cracks underfoot, snowmen throw snowballs
+   level The Weigh House (castle, theme nl_waag): Cheese wheels roll out of the chutes, weighing scales rise and fall, cheese sledges slide; then the Cheese King
+   theme nl_canals: 'The Canal Ring' ground=brick dark=False underwater=False liquid=canal sky=['#4a8ad8', '#a8d0f0', '#f4f4f0']
+      layers (back to front, index = Li): L0: nlCanalHouses base=300 f=0.08 color=#7a3a2a | L1: nlCanal base=330 f=0.12 color=#4a7a7a
+   theme nl_tulips: 'Tulip Fields' ground=grass dark=False underwater=False liquid=None sky=['#3a8ae8', '#9ad0ff', '#ffffff']
+      layers (back to front, index = Li): L0: nlPolder base=300 f=0.06 color=#3a8a3a
+   theme nl_rush: 'Bike Lane' ground=brick dark=False underwater=False liquid=canal sky=['#ff9a6a', '#ffd0a0', '#fff4e8']
+      layers (back to front, index = Li): L0: nlCanalHouses base=300 f=0.1 color=#5a2a2a | L1: nlCanal base=340 f=0.16 color=#5a7a8a
+   theme nl_frozen: 'Frozen Canals' ground=snow dark=False underwater=False liquid=icewater sky=['#0a1430', '#1a2a50', '#3a4a70']
+      layers (back to front, index = Li): L0: nlCanalHouses base=300 f=0.08 color=#2a2a3a | L1: nlIce base=335 f=0.12 color=#c8e0f0
+   theme nl_waag: 'The Weigh House' ground=wood dark=False underwater=False liquid=None sky=['#3a2a1e', '#5a4030', '#7a5a40']
+      layers (back to front, index = Li): L0: nlHall base=360 f=0.08 color=#5a4030
+   enemies: nlHerring(walk,28x16,hop), nlCheese(walk,24x24,roll), nlClog(walk,28x18,walk), nlGull(fly,30x14,), nlBee(fly,18x14,), nlSnowman(walk,22x40,throw,hp2), nlStroop(walk,24x24,roll)
+== np world 12: Suspension bridges, a yak named Hrumph and the roof of the world
+   coin=GOLDEN MOHAR star=GOLDEN RHODODENDRON power=YAK RIDE
+   level Suspension Bridges (run, theme np_hills): A yak pen lends Brady a shaggy yak (it walks right up stone steps); long suspension bridges sag under every step and some planks are missing; momo dumplings hop, monal pheasants swoop
+   level Yak Caravan Pass (run, theme np_pass): Ride the yak up the stone stairways of the high pass and CHARGE through snow-choked gullies; marmots pelt you with pebbles; snowballs roll down the icy stretches
+   level Blizzard Night (night, theme np_blizzard): White-out gusts blow Brady backwards: shelter in the lee of the boulders, cross the crevasses in the lulls; a snowball-throwing yeti; snow walls for the yak
+   level Khumbu Icefall (climb, theme np_icefall): Climb the great icefall: aluminium ladder bridges over the crevasses, icicles that drop when you pass beneath, seracs that crumble underfoot, alpine choughs
+   level Baron's Fortress (castle, theme np_fortress): The Baron's vault: shrink-ray security cameras sweep the halls, wind-up souvenir goons, crate walls for the yak to smash, conveyor floors; then Baron Bric-a-Brac on the summit, who throws the stolen landmarks (kick them back!): his airship, his bric-a-brac mech, then on foot in the gales
+   theme np_hills: 'Suspension Bridges' ground=npHill dark=False underwater=False liquid=np_river sky=['#4a90d8', '#a8d4f4', '#f0f8ff']
+      layers (back to front, index = Li): L0: npPeaks base=250 f=0.01 color=#8a9ac8 blur | L1: npTerraces base=320 f=0.06 color=#7aa85a | L2: npRhodo base=350 f=0.14 color=#2e5a2e
+   theme np_pass: 'Yak Caravan Pass' ground=npSnowRock dark=False underwater=False liquid=np_crevasse sky=['#2a6ac8', '#8ac0f0', '#e8f4ff']
+      layers (back to front, index = Li): L0: npPeaks base=260 f=0.015 color=#7a8ab8 blur | L1: npGompa base=310 f=0.05 color=#8a94a8 | L2: npPeaks base=330 f=0.1 color=#6a7488
+   theme np_blizzard: 'Blizzard Night' ground=npSnowRock dark=False underwater=False liquid=np_crevasse sky=['#0a1430', '#1a2a50', '#3a4a70']
+      layers (back to front, index = Li): L0: npPeaks base=270 f=0.015 color=#2a3a5a blur | L1: npDrifts base=330 f=0.08 color=#5a6a8a dyn:npStorm
+   theme np_icefall: 'Khumbu Icefall' ground=npGlacier dark=False underwater=False liquid=None sky=['#8ac8f0', '#c8e8fa', '#f4fbff']
+      layers (back to front, index = Li): L0: npIceWall base=0 f=0.05 color=#5a98c8
+   theme np_fortress: 'Baron's Fortress' ground=npMarble dark=False underwater=False liquid=np_vault sky=['#2a0a4a', '#4a1a6a', '#6a2a8a']
+      layers (back to front, index = Li): L0: npVault base=340 f=0.08 color=#3a1460
+   enemies: npMomo(walk,26x22,hop), npRoti(walk,24x22,roll), npMonal(fly,30x16,), npMarmot(walk,22x30,throw), npChough(fly,28x14,), npYeti(walk,40x54,throw,hp2), npSnowball(walk,24x24,roll), npTinBot(walk,22x46,walk), npBobble(walk,24x36,hop), npGlobe(walk,24x26,roll)
+== vn world 10: Train Street, emerald bays and a river of lanterns
+   coin=GOLDEN XU star=GOLDEN LOTUS power=NOODLE LASSO
+   level Train Street (run, theme vn_street): A pho cart lends a noodle lasso: the train rumbles down the street (get up on a doorstep!), wind-up toy scooters zoom, swing over the rooftop gaps on the tangled wires
+   level Ha Long Bay (run, theme vn_bay): Limestone karsts rising from emerald water: lasso the cliff-side trees and swing from karst to karst; bobbing fishing rafts, leaping squid, mantis shrimp that punch
+   level Hoi An Lantern River (night, theme vn_river): A lantern-lit river at night: lasso a moored sampan to pull it over, then ride it back across; swing on the lantern strings; mosquitoes and toads
+   level Phong Nha Cave (climb, theme vn_cave): Climb a giant cave toward its skylight: lasso the stalactites and reel yourself up the sheer shafts; glowing fungi, bats, blind cave crabs
+   level Hue Citadel (castle, theme vn_citadel): The Baron's coffee works in the citadel: hot-coffee pits crossed on melting ice cubes, bean-spitting roasters, then Ong Phin under the great kettle
+   theme vn_street: 'Train Street' ground=vnPave dark=False underwater=False liquid=None sky=['#5aa0d8', '#bfe0f0', '#fff4dc']
+      layers (back to front, index = Li): L0: vnTubeHouses base=300 f=0.05 color=#c8b8a8 blur | L1: vnTubeHouses base=340 f=0.14 color=#d8c8b8 | L2: vnWires base=330 f=0.22 color=#2a2a30
+   theme vn_bay: 'Ha Long Bay' ground=grass dark=False underwater=False liquid=vn_bay sky=['#7ab0d8', '#cfe6ec', '#f2f6e8']
+      layers (back to front, index = Li): L0: vnKarsts base=286 f=0.02 color=#a8bcc4 blur | L1: vnKarsts base=296 f=0.05 color=#6a8c84 | L2: vnBay base=298 f=0.08 color=#3aa894 dyn:vnJunks
+   theme vn_river: 'Hoi An Lantern River' ground=vnRiverStone dark=False underwater=False liquid=vn_river sky=['#0c0a24', '#24183e', '#4a2a4a']
+      layers (back to front, index = Li): L0: vnOldTown base=316 f=0.1 color=#c8943a dyn:vnLanterns | L1: vnRiverBg base=322 f=0.14 color=#1a2a44 dyn:vnFloaters
+   theme vn_cave: 'Phong Nha Cave' ground=mineral dark=False underwater=False liquid=None sky=['#0a1410', '#06100c', '#020604']
+      layers (back to front, index = Li): L0: vnCaveWall base=0 f=0.05 color=#1e2a26 dyn:vnSkylight
+   theme vn_citadel: 'Hue Citadel' ground=vnTiles dark=False underwater=False liquid=vn_coffee sky=['#e8a05a', '#f8d8a8', '#fff2dc']
+      layers (back to front, index = Li): L0: vnGate base=300 f=0.04 color=#b89a7a | L1: vnFlameTrees base=342 f=0.14 color=#5a6a3a
+   enemies: vnScooter(walk,36x30,charge), vnBao(walk,26x24,hop), vnRoll(walk,26x16,roll), vnShrimp(walk,NonexNone,,CUSTOM-CLASS skip), vnSquid(here,20x26,), vnCormorant(fly,30x16,), vnMosquito(fly,18x14,), vnToad(walk,24x18,hop), vnGoi(walk,18x36,walk), vnBat(fly,28x14,), vnCaveCrab(walk,28x16,walk), vnBean(walk,20x30,walk)
+== w22 world 22: Where every clock says 22:22
+   coin=STAR star=GOLDEN CLOCK power=None
+   level The Station of Clocks (run, theme w22_dusk): Clock faces drift in slow circles, your echo follows 1.4 s behind you, and in the bubbles things fall upward
+   level Mirror Lake (run, theme w22_lake): The whole level is mirrored, so run left! The lake reflects Brady upside down; doors numbered 22 hide the way on
+   level The Endless Corridor (night, theme w22_corridor): Corridors loop back on themselves until you find the way up, and doors numbered 22 shuffle you around
+   level The 22nd Door (castle, theme w22_white): A quiet white dream room split by a mirror: the Other Brady mirrors your every move, so walk him into the spike pits on his side; at 22:22 time stops and the mirror opens for one stomp
+   theme w22_dusk: 'The Station of Clocks' ground=marble dark=False underwater=False liquid=dream sky=['#2a1a4a', '#8a6ab8', '#ffc8b8']
+      layers (back to front, index = Li): L0: w22Clocks base=300 f=0.04 color=#fff0e0 dyn:w22Cards | L1: w22Doors base=350 f=0.12 color=#6a5a9a
+   theme w22_lake: 'Mirror Lake' ground=marble dark=False underwater=False liquid=dream sky=['#1a3a4a', '#6ab8b8', '#e8d8ff']
+      layers (back to front, index = Li): L0: w22Clocks base=300 f=0.04 color=#e8fff8 dyn:w22Cards | L1: w22Doors base=345 f=0.1 color=#3a6a7a
+   theme w22_corridor: 'The Endless Corridor' ground=wood dark=False underwater=False liquid=dream sky=['#1a1024', '#2a1a3a', '#3a2848']
+      layers (back to front, index = Li): L0: w22Hall base=360 f=0.06 color=#4a3458
+   theme w22_white: 'The 22nd Door' ground=marble dark=False underwater=False liquid=dream sky=['#e8e0ff', '#fff4f8', '#ffffff']
+      layers (back to front, index = Li): L0: w22White base=360 f=0.06 color=#f4f0ff
+   enemies: w22Alarm(walk,22x26,hop), w22Moth(fly,26x16,), w22Envelope(walk,24x26,walk), w22Hourglass(walk,20x26,roll)
