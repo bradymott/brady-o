@@ -9,7 +9,7 @@ const CartShowroom = {
   world: null,
   build() {
     if (this.world) return this.world;
-    const W = new BurnsWorld({ id: 3001, bounds: [-40, -40, 40, 40], ground: { base: '#c9a27e', crack: 0.3 } }, null), api = W.api;
+    const W = new BurnsWorld({ id: 3001, bounds: [-40, -40, 40, 40], ground: { base: '#202635', crack: 0.03 } }, null), api = W.api;
     api.mesh(0, 0, m => {
       m.color('#2a2236').shine(2); m.roundCyl(0, 0, 0, 4.6, 0.35, 0.12); m.shine(0);
       m.color('#ff4fd8', 1); m.push(); m.tf(0, 0.36, 0); m.torus(0, 0, 0, 4.5, 0.06, { seg: 40, tseg: 5 }); m.pop();
@@ -17,14 +17,14 @@ const CartShowroom = {
       return { cols: [] };
     }, { noAO: true });
     api.light(0, 0, 9, '#ff7ac8', 0.6);
-    CartScene.art(api, 'lotus', -16, -22, 0.3, true, 0.9);
-    CartScene.art(api, 'spinner', 18, -26, 0, true, 0.9);
-    CartScene.art(api, 'obelisk', 30, 4, 0, true, 0.8);
+    // A quiet presentation stage keeps the silhouette readable.
+    
+    
     for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; api.glow(Math.sin(a) * 8, 0.4, Math.cos(a) * 8, 0.7, BURNS_NEON[i % 7]); }
     W.finish();
     // golden hour: warm key, neutral fill, so every car shows its real colours
     // the sun sits behind the camera's shoulder, not in the viewer's eyes: no glare, no god rays, no heat haze over the car
-    this.sky = Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.004, sun: [335, 26], key: '#ffe2c4', keyK: 1.1, sky: '#b8b4d0', gnd: '#8a6a5a', rim: '#ffe0f0', exposure: 1.0, hor: '#ffa070', mid: '#d08a90', midK: 0.25, rays: 0, heat: 0, haze: 0.25, dust: 0.15, bloom: 0.7 });
+    this.sky = Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.006, sun: [335, 32], key: '#ffe9da', keyK: 1.15, sky: '#8eacc8', gnd: '#303947', rim: '#afc9eb', exposure: 0.98, hor: '#697a97', mid: '#404e73', midK: 0.18, rays: 0, heat: 0, haze: 0.08, dust: 0, bloom: 0.35 });
     this.world = W;
     return W;
   }
@@ -196,7 +196,7 @@ class KartMenuScene {
     // camera: frame the subject on the free side of the screen
     const cam = this.cam, M = car.M;
     // (the camera looks toward -Z, so a target to the +X side puts the subject on the left of the screen)
-    if (showStand) { const hh = (drv.man ? 2.2 : 1.9) * 1.15; cam.tx = P ? 0 : 2.3; cam.ty = hh * 0.55; cam.tz = 0; cam.x = cam.tx + 0.6; cam.y = hh * 0.7; cam.z = P ? 6.2 : 5.2; cam.fov = P ? 0.8 : 0.62; if (P) cam.ty -= 1.15; }
+    if (showStand) { const hh = (drv.man ? 2.2 : 1.9) * 1.15; cam.tx = P ? 0 : 1.05; cam.ty = hh * 0.55; cam.tz = 0; cam.x = cam.tx + 0.6; cam.y = hh * 0.7; cam.z = P ? 6.2 : 6.4; cam.fov = P ? 0.8 : 0.62; if (P) cam.ty -= 1.15; }
     else { const d = Math.max(M.len, M.h * 1.2) * (P ? 1.9 : 1.6) + 3.5; cam.tx = st === 'mode' && !P ? 3.2 : st === 'car' && !P ? 3.4 : 0; cam.ty = M.h * 0.42; cam.tz = 0; cam.x = cam.tx + Math.sin(0.35) * d; cam.y = M.h * 0.6 + 1.4; cam.z = Math.cos(0.35) * d; cam.fov = P ? 0.85 : 0.7; if (P) { cam.ty -= st === 'car' ? 2.6 : 1.9; } }
     const t0 = performance.now(), mq = window.__cartFixedQ || this.mq || (this.mq = 0.85);
     const gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * mq)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * mq));
@@ -206,14 +206,14 @@ class KartMenuScene {
     if (R.shadowBegin(env, { dist: 30 })) { R.statics(World.chunks, env, World, BURNS_ATLAS.T, 0); R.skinBegin(env, World, BURNS_ATLAS.T); if (showStand) BurnsSkinActor.draw(null, R, drv.id, this.pstand) || R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, 0, 0); else { R.skin(M.geo, car.bones, M.nb, null, 0, 0); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, 0, 0); } R.shadowEnd(); }
     R.begin(env); R.sky(env); R.ground(World.ground, env, World); R.statics(World.chunks, env, World, BURNS_ATLAS.T, 300);
     R.skinBegin(env, World, BURNS_ATLAS.T);
-    if (showStand) BurnsSkinActor.draw(null, R, drv.id, this.pstand, null, 0.6) || R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, this.pstand.face, 0.6);
-    else { R.skin(M.geo, car.bones, M.nb, null, 0, 0.3); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, drv.ch.face, 0.5); }
+    if (showStand) BurnsSkinActor.draw(null, R, drv.id, this.pstand, null, 0.6) || R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, this.pstand.face, 0.18);
+    else { R.skin(M.geo, car.bones, M.nb, null, 0, 0.3); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, drv.ch.face, 0.18); }
     const S = BURNS_SPRITES.R;
     for (const g of World.glows) R.bbs.bb(g.x, g.y, g.z, g.s * 1.8, g.s * 1.8, S.glow, g.c, 0.75, true);
     if (!showStand) for (const L of M.lights) { const p = cartLocalToWorld(car, L.x, L.y, L.z, [0, 0, 0]); R.bbs.bb(p[0], p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.4 : 0.7, true); }
     R.flat.flat(0, 0.4, 0, M.w + 3, M.len + 3, car.yaw, S.glow, burnsRGBf(CART_CARS[this.carSel].light), 0.35, true);
     R.sprites(env, BURNS_SPRITES.T);
-    R.end(env, { fires: [], ao: false });
+    R.end(env, { fires: [], bloom: 0.35 });
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true;
     ctx.drawImage(BurnsGL.canvas, 0, 0, gw, gh, 0, 0, Game.canvas.width, Game.canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -235,7 +235,7 @@ class KartMenuScene {
       CART_DRIVERS.forEach((d, i) => {
         const D = CartDrivers.model(d.id), ch = new BurnsChar(D.model); ch.scale = D.man ? 0.14 : 1; ch.yaw = 0.3; ch.play(D.man ? 'idle' : 'wave', {}, true); ch.update(0.4); ch.faceOverride = D.man ? -1 : 3; ch.compute();
         const headY = (D.model.headY || 1.62) * ch.scale - (D.man ? 0.0 : 0.12), bg = burnsRGBf(shade(d.col, -0.55));
-        R.portrait({ x: (i % cols) * cw, y: Math.floor(i / cols) * chh, w: cw, h: chh }, env, BURNS_ATLAS.T, bg, headY, RR => BurnsSkinActor.draw(null, RR, d.type, ch, null, 0.6) || RR.skin(D.model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
+        R.portrait({ x: (i % cols) * cw, y: Math.floor(i / cols) * chh, w: cw, h: chh }, env, BURNS_ATLAS.T, bg, headY, RR => BurnsSkinActor.draw(null, RR, d.type, ch, null, 0.6) || RR.skin(D.model.geo, ch.bones, ch.nb, null, ch.face, 0.18));
       });
       R.post.noFx = [0, 0, 1, 1];
       R.end(env, { fires: [], bloom: 0 });
@@ -435,3 +435,4 @@ function cartArenaIcon(ctx, id, x, y, s, t, col) {
   else { ctx.beginPath(); ctx.arc(0, 0, s * 0.8, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-s * 0.12, s * 0.3); ctx.lineTo(-s * 0.1, -s * 0.35); for (let i = 0; i < 4; i++) ctx.lineTo(-s * 0.1 + i * s * 0.07, -s * 0.55 - (i % 2) * s * 0.08); ctx.lineTo(s * 0.16, -s * 0.3); ctx.lineTo(s * 0.14, s * 0.3); ctx.closePath(); ctx.fill(); }
   ctx.restore();
 }
+

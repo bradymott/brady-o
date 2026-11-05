@@ -96,6 +96,7 @@ const CartGLB = {
     if (CART_BONES.P0 + parts.length > 16) throw new Error('cart glb: too many parts');
     const R = BurnsGLTF.rig(doc, { bone: this.boneFn(parts), minBones: CART_BONES.P0 + parts.length, ao: !lo, aoRes: 30 });
     R.partNames = parts;
+    if (typeof CartCarFinish !== 'undefined') CartCarFinish.apply(R, lo);
     return R;
   },
   preload() {
@@ -152,3 +153,4 @@ if (typeof window !== 'undefined') {
   // declared later in the bundle: getters, so they resolve when asked for (tests drive the app through these)
   for (const k of ['CART_TRACK_ORDER', 'CART_ARENAS', 'CART_CUPS', 'CART_ITEMS', 'CART_OBJECTIVES', 'CART_ARENA_RULES', 'CART_ITEM_FX', 'cartSave', 'cartRollItem', 'cartArenaMastered', 'CartRaceScene', 'KartMenuScene']) Object.defineProperty(window.BRADY_BURNS, k, { get: () => eval(k), configurable: true });
 }
+
