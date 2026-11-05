@@ -47,7 +47,7 @@ const BurnsRig = {
       kind: 'brady', face: look.beard === false ? 'bradyClean' : 'brady', skin: skin.base, skinSh: skin.sh,
       hair: { style: look.style === 'down' ? 'down' : 'bun', col: hair.base, hi: hair.hi },
       glasses: look.glasses || 'shades', tattoos: look.tattoos !== false,
-      top: { kind: 'tee', col: '#17161d' }, bottom: { kind: 'jeans', col: '#14141c' }, shoes: { kind: 'sneakers', col: '#0d0d11', sole: '#3a3a46' },
+      top: { kind: 'tee', col: '#17161d' }, bottom: { kind: 'pants', col: '#18181c' }, shoes: { kind: 'sneakers', col: '#0d0d11', sole: '#3a3a46' },
       costume: costume || 'none', body: { h: 1, w: 1.04 }
     };
   },
@@ -691,3 +691,4 @@ class BurnsChar {
   bonePoint(b, x, y, z, out) { return BurnsM.a34Pt(this.bones, b * 12, x, y, z, out || [0, 0, 0]); }
   headPos(out) { return this.bonePoint(BURNS_BONES.HEAD, 0, 0.2, 0, out); }
 }
+

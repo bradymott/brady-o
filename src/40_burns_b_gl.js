@@ -24,7 +24,7 @@ const BURNS_GFX = {
   tiers: {
     ultra: { shadows: 2048, pcf: 9, ssao: true, bloom: 5, rays: true, dof: true, heat: true, msaa: 4, npl: 16, bump: true, scale: 1.0, shadowDist: 80, env: true },
     high: { shadows: 2048, pcf: 4, ssao: true, bloom: 5, rays: true, dof: true, heat: true, msaa: 4, npl: 16, bump: true, scale: 1.0, shadowDist: 70, env: true },
-    medium: { shadows: 1024, pcf: 4, ssao: false, bloom: 4, rays: true, dof: true, heat: true, msaa: 4, npl: 12, bump: true, scale: 0.92, shadowDist: 55, env: true },
+    medium: { shadows: 1024, pcf: 4, ssao: false, bloom: 4, rays: true, dof: false, heat: true, msaa: 4, npl: 12, bump: true, scale: 0.92, shadowDist: 55, env: true },
     low: { shadows: 0, pcf: 0, ssao: false, bloom: 3, rays: false, dof: false, heat: false, msaa: 0, npl: 8, bump: false, scale: 0.8, shadowDist: 0, env: false }
   },
   names: ['auto', 'ultra', 'high', 'medium', 'low'],
@@ -457,7 +457,14 @@ void main(){
   vec4 d4 = texture2D(uDet, vW.xz * uDetK.x * 2.7 + wv.yx * 1.3 + 0.21);
   float far = clamp((dist - 28.0) / 80.0, 0.0, 1.0);
   float crust = smoothstep(0.26, 0.62, m2.g * 0.65 + m1.g * 0.35);   // 0 = drifted smooth dust, 1 = cracked crust
-  float ck = mix(d1.r * fade, d3.r * 0.55, far) * mix(0.25, 1.0, crust) + d4.r * 0.35 * fade * crust;
+  // Filter fine crust by its screen footprint. Grazing views on a phone otherwise
+  // turn the high-frequency cracks into a crawling grid even with MSAA enabled.
+  float crustAA = fade;
+#ifdef BUMP
+  vec2 footprint = fwidth(vW.xz * uDetK.x);
+  crustAA *= 1.0 - smoothstep(0.015, 0.065, max(footprint.x, footprint.y));
+#endif
+  float ck = mix(d1.r * crustAA, d3.r * 0.55, far) * mix(0.25, 1.0, crust) + d4.r * 0.35 * crustAA * crust;
   alb *= 1.0 - ck * uDetK.y;
   alb *= 1.0 + (d2.g - 0.5) * uDetK.w;
   alb *= mix(0.9, 1.07, m2.g) * mix(0.96, 1.03, m1.g);
@@ -466,10 +473,16 @@ void main(){
   vec4 g1 = texture2D(uDet, vW.xz * 1.9 + 0.43);
   float near = 1.0 - smoothstep(6.0, 20.0, dist);
   alb *= 1.0 - (step(0.988, g1.b) * 0.4 + (g1.b - 0.5) * 0.06) * near * uDetK.y * 3.0;
+  // Broad wind-combed deposits connect close-up grit to the distant playa.
+  // Fade before the ripples become subpixel; painted paths retain their contrast.
+  float rippleFade = 1.0 - smoothstep(5.0, 22.0, dist);
+  float wind = sin(vW.x * 6.5 + vW.z * 2.1 + m1.g * 8.0);
+  float drift = wind * 0.025 * rippleFade * (1.0 - crust) * (1.0 - p.a);
+  alb *= 1.0 + drift;
   alb = bLin(alb);
 #ifdef BUMP
   float hgt = mix(d1.a, d3.a, far) * mix(0.35, 1.0, crust) + d4.a * 0.3 * crust + (g1.b - 0.5) * 0.15 * near;
-  n = bBump(n, vW, hgt, mix(0.012, 0.045, far) * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y));
+  n = bBump(n, vW, hgt, mix(0.012 * crustAA, 0.025, far) * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y));
 #endif
   float sh = bShadow(vW, n);
   vec3 c = bShade(alb, n, vW, 0.05, 0.0, sh);
@@ -1567,3 +1580,4 @@ class BurnsRenderer {
     gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.enable(gl.CULL_FACE);
   }
 }
+
