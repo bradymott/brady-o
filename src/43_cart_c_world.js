@@ -365,6 +365,19 @@ const CART_TRACKS = {
 };
 const CART_TRACK_ORDER = ['esplanade', 'gateroad', 'deepplaya', 'dawn', 'centercamp', 'storm', 'neon', 'burn'];
 
+// Each circuit has a controlled material/lighting palette; bloom stays on the lights,
+// while cars, road edges and landmarks retain separation from the background.
+const CART_TRACK_ART = {
+  esplanade: { road:'#a27a68', edge:'#ffe0ac', sky:{bloom:0.55,haze:0.28} },
+  gateroad: { road:'#ab8e70', edge:'#f6eee0', sky:{clouds:0.35,haze:0.22} },
+  deepplaya: { road:'#625f79', edge:'#88d9ed', sky:{sky:'#52647f',emB:1.35,bloom:0.65} },
+  dawn: { road:'#b48c80', edge:'#fff0c8', sky:{sky:'#b5bad2',fog:'#d4abb0',bloom:0.45} },
+  centercamp: { road:'#a58d77', edge:'#e9f2e7', sky:{sky:'#b9cbd5',clouds:0.6} },
+  storm: { road:'#b99c7c', edge:'#fff0c8', sky:{bloom:0.35} },
+  neon: { road:'#524e70', edge:'#64eadf', sky:{sky:'#625c91',emB:1.4,bloom:0.7} },
+  burn: { road:'#7d625c', edge:'#ffc47d', sky:{sky:'#796282',fog:'#805f65',emB:1.4,bloom:0.65} }
+};
+
 /* ---------------- building a race world ----------------
    returns E: { world, track, terrain, sky, music, gifts[], boosts[], pads, crowds[], heroes[], spawn[], bounds,
                 walls (arena polygon), zones, orbSpots, flagSpots, capture, objectsR, man, dust, night } */
@@ -388,17 +401,27 @@ const CartWorlds = {
     const pad = 70, b = T.bounds;
     const E = this.base(1000 + CART_TRACK_ORDER.indexOf(id), [b.x0 - pad, b.z0 - pad, b.x1 + pad, b.z1 + pad], D.theme === 'storm' ? '#d4b48c' : '#c9a27e');
     Object.assign(E, { id, def: D, track: T, sky: CART_SKIES[D.tod](), tod: D.tod, music: D.music, night, storm: !!D.storm, fireworks: !!D.fireworks });
+    const art = CART_TRACK_ART[id] || CART_TRACK_ART.esplanade;
+    Object.assign(E.sky, art.sky);
     const api = E.api, A = (f, out) => T.at(((f % 1) + 1) % 1 * T.L, out || {});
     // obstacles (art on the road) register before the racing line is final
     // ground paint: compacted road band, tyre ruts, edge lines, the start grid
     api.paint((ctx, P, S) => {
-      const path = (off) => { ctx.beginPath(); for (let i = 0; i <= T.N; i += 2) { const k = i % T.N, x = T.X[k] + T.NX[k] * off, z = T.Z[k] + T.NZ[k] * off, q = P(x, z); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); } ctx.closePath(); };
+      const path = (off) => { ctx.beginPath(); for (let i = 0; i <= T.N; i += 2) { const k = i % T.N, d = typeof off === 'function' ? off(k) : off, x = T.X[k] + T.NX[k] * d, z = T.Z[k] + T.NZ[k] * d, q = P(x, z); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); } ctx.closePath(); };
+      const band = extra => {
+        ctx.beginPath();
+        for(const side of [1,-1])for(let j=0;j<=T.N;j+=2){
+          const i=side>0?j:T.N-j,k=i%T.N,d=side*(T.HW[k]+extra),q=P(T.X[k]+T.NX[k]*d,T.Z[k]+T.NZ[k]*d);
+          if(side===1&&j===0)ctx.moveTo(q[0],q[1]);else ctx.lineTo(q[0],q[1]);
+        }
+        ctx.closePath();ctx.fill();
+      };
       ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-      ctx.strokeStyle = 'rgba(120,88,64,0.28)'; ctx.lineWidth = (T.HW[0] * 2 + 9) * S; path(0); ctx.stroke();
-      ctx.strokeStyle = D.theme === 'storm' ? 'rgba(150,118,86,0.5)' : 'rgba(156,120,92,0.55)'; ctx.lineWidth = T.HW[0] * 2 * S; path(0); ctx.stroke();
+      ctx.fillStyle = 'rgba(120,88,64,0.28)'; band(4.5);
+      ctx.fillStyle = art.road; ctx.globalAlpha = night ? 0.58 : 0.5; band(0); ctx.globalAlpha = 1;
       ctx.strokeStyle = 'rgba(96,70,52,0.22)'; ctx.lineWidth = 0.5 * S; for (const o of [-6, -3.4, 3.4, 6]) { path(o); ctx.stroke(); }
       ctx.setLineDash([4 * S, 5 * S]); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 0.35 * S; path(0); ctx.stroke(); ctx.setLineDash([]);
-      ctx.strokeStyle = night ? 'rgba(255,79,216,0.55)' : 'rgba(255,255,255,0.55)'; ctx.lineWidth = 0.5 * S; path(T.HW[0] - 0.4); ctx.stroke(); path(-T.HW[0] + 0.4); ctx.stroke();
+      ctx.strokeStyle = art.edge; ctx.globalAlpha=0.7; ctx.lineWidth = 0.4 * S; path(k=>T.HW[k]-0.4); ctx.stroke(); path(k=>-T.HW[k]+0.4); ctx.stroke();ctx.globalAlpha=1;
       // checkered start line
       const a = T.at(0, {}), sq = 1.2;
       for (let i = -Math.ceil(a.hw / sq); i < Math.ceil(a.hw / sq); i++) for (let r = 0; r < 2; r++) {
@@ -615,3 +638,4 @@ const CartWorlds = {
     return this.finish(E);
   }
 };
+

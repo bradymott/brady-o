@@ -233,7 +233,8 @@ const BurnsRound = (() => {
     m.shine(0);
 
     /* ===== head ===== */
-    if (fur && fur.head) fur.head(m, A);
+    if (S.cartArt && typeof CartDriverArt !== 'undefined' && !(fur && fur.head)) CartDriverArt.head(m, A);
+    else if (fur && fur.head) fur.head(m, A);
     else {
       const R = BURNS_ATLAS.face(S.face || 'friendly');
       m.color(skin).shine(skinGloss);
@@ -252,12 +253,15 @@ const BurnsRound = (() => {
     if (S.beard) BURNS_GEAR.acc.beard3d(m, A, S.beard);
     // hair (hidden under helmets / hoods)
     const hood = costume === 'spaceman' || costume === 'unicorn' || S.hood;
-    if (!hood && !fur) buildHair(m, A);
+    if (!hood && !fur) {
+      if (!(S.cartArt && typeof CartDriverArt !== 'undefined' && CartDriverArt.hair(m, A))) buildHair(m, A);
+    }
     else if (costume === 'unicorn' && S.hair && S.hair.style === 'bun') { m.setBone(B.HAIR); m.color(S.hair.col).shine(2); m.push(); m.tf(0, -0.34, 0.12); m.ellipsoid(0, 0.44, -0.2, 0.08, 0.075, 0.075); m.pop(); m.shine(0); m.setBone(B.HEAD); }
     // head gear
     m.setBone(B.HEAD);
     const gl = costume === 'spaceman' ? 'visor' : S.glasses;
-    if (gl && BURNS_GEAR.glasses[gl] && (!A.far || gl === 'visor' || gl === 'wrap')) BURNS_GEAR.glasses[gl](m, A);
+    if (S.cartArt && gl === 'shades' && typeof CartDriverArt !== 'undefined') CartDriverArt.shades(m, A);
+    else if (gl && BURNS_GEAR.glasses[gl] && (!A.far || gl === 'visor' || gl === 'wrap')) BURNS_GEAR.glasses[gl](m, A);
     if (S.goggles || costume === 'tutu') BURNS_GEAR.acc.goggles(m, A, S.goggles === true || !S.goggles ? (costume === 'tutu' ? 'tutu' : 'classic') : S.goggles);
     const hat = costume === 'pirate' ? { kind: 'tricorn', col: '#1a1010' } : costume === 'furcoat' ? { kind: 'furhat', col: '#ff8ad8' } : S.hat;
     if (hat && BURNS_GEAR.hat[hat.kind]) { m.setBone(B.HEAD); BURNS_GEAR.hat[hat.kind](m, A, hat); }
@@ -1081,3 +1085,4 @@ BURNS_GEAR.acc.harness = (m, A) => { // black harness with badges, kandi, a gadg
     return mdl;
   };
 })();
+
