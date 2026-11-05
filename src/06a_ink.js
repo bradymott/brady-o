@@ -7,7 +7,7 @@
    top: existing art needs no changes.
    ============================================================ */
 /* how much larger than their hitboxes characters are drawn (the physics never changes): Brady and enemies */
-const ART_SCALE = { brady: 1.2, enemy: 1.15 };
+const ART_SCALE = { brady: 1.24, enemy: 1.24 };
 const Ink = {
   on: true,
   color: '#1c1426',
@@ -51,6 +51,16 @@ const Ink = {
     s1.globalCompositeOperation = 'source-over';
     // 3. stamp the ink around, then the colour on top
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // A quiet light keyline keeps the black hero readable in caves and at night.
+    // Reuse the silhouette canvas; no extra per-frame surfaces or pixel readbacks.
+    if (o.rim) {
+      s1.globalCompositeOperation = 'source-in'; s1.fillStyle = o.rim; s1.fillRect(0, 0, bw, bh);
+      s1.globalCompositeOperation = 'source-over';
+      const rimR = r + 0.8 * S;
+      for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; ctx.drawImage(c1, 0, 0, bw, bh, bx + Math.cos(a) * rimR, by + Math.sin(a) * rimR, bw, bh); }
+      s1.globalCompositeOperation = 'source-in'; s1.fillStyle = o.color || this.color; s1.fillRect(0, 0, bw, bh);
+      s1.globalCompositeOperation = 'source-over';
+    }
     const n = r > 3 ? 16 : 8;
     for (let k = 0; k < n; k++) { const a = k / n * TAU; ctx.drawImage(c1, 0, 0, bw, bh, bx + Math.cos(a) * r, by + Math.sin(a) * r, bw, bh); }
     if (r > 2.5) for (let k = 0; k < 8; k++) { const a = (k + 0.5) / 8 * TAU; ctx.drawImage(c1, 0, 0, bw, bh, bx + Math.cos(a) * r * 0.55, by + Math.sin(a) * r * 0.55, bw, bh); }
@@ -60,3 +70,4 @@ const Ink = {
   // around an entity (x, y, w, h), with slack for art that spills past the hitbox
   ent(ctx, e, fn, opts) { this.around(ctx, e.x, e.y, e.w, e.h, fn, Object.assign({ pad: Math.max(16, e.w * 0.6, e.h * 0.4) }, opts || {})); }
 };
+
