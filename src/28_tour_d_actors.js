@@ -16,6 +16,8 @@ function tourFire(g, x, y, o) { const s = new TourShot(g, x, y, o); g.spawn(s); 
    cfg.atlas) once that atlas is in: clips 'kind/<mode>' or single frames 'kind_<mode>_000'; modes without art fall
    back along FALLBACK lists; until the atlas loads the procedural art(...) draws as before. */
 const TourSprite = {
+  // Modest size lift, anchored at the original feet/centre. Collision stays unchanged.
+  scale(e) { return Math.max(ART_SCALE.enemy, Math.min(1.42, 30 / Math.max(1, Math.min(e.w, e.h)))); },
   FALLBACK: {
     walk: { walk: ['walk', 'idle'], idle: ['idle', 'walk'], hop: ['hop', 'walk', 'idle'], notice: ['notice', 'idle', 'walk'], charge: ['charge', 'walk'], throw: ['throw', 'idle', 'walk'], curl: ['curl', 'idle', 'walk'], roll: ['roll', 'curl', 'walk'], stun: ['stun', 'idle', 'walk'], flat: ['flat', 'ko', 'idle', 'walk'], ko: ['ko', 'stun', 'idle', 'walk'] },
     fly: { fly: ['fly'], swoop: ['swoop', 'fly'], stun: ['stun', 'fly'], ko: ['ko', 'stun', 'fly'] },
@@ -28,7 +30,7 @@ const TourSprite = {
   hasFrame(e, mode) { const a = this.of(e); return !!(a && (Atlas.anim(a, e.cfg.sprite + '/' + mode) || Atlas.frame(a, e.cfg.sprite + '_' + mode + '_000'))); },
   draw(ctx, e, x, y, mode, fallback) {
     const a = this.of(e); if (!a) return false;
-    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode], o = { scale: ART_SCALE.enemy };
+    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode], o = { scale: this.scale(e) };
     for (const m of list) {
       const id = k + '/' + m;
       if (Atlas.anim(a, id)) return Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1, o);
@@ -37,7 +39,7 @@ const TourSprite = {
     return false;
   },
   // procedural art, scaled about its origin point
-  art(ctx, e, x, y, mode) { const k = ART_SCALE.enemy; ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.translate(-x, -y); e.cfg.art(ctx, e, x, y, mode, e.g.t); ctx.restore(); }
+  art(ctx, e, x, y, mode) { const k = this.scale(e); ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.translate(-x, -y); e.cfg.art(ctx, e, x, y, mode, e.g.t); ctx.restore(); }
 };
 
 class TourEnemy extends Walker {
@@ -138,7 +140,7 @@ class TourEnemy extends Walker {
     if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.walk)) return;
     if (this.cfg.art) TourSprite.art(ctx, this, x, y, mode);
   }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { Ink.ent(ctx, this, c => this.drawArt(c)); }
   drawArt(ctx) {
     if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI + (this.spin || 0)); this.paint(ctx, 0, this.h / 2, 'ko'); ctx.restore(); return; }
     if (this.friendT) { this.drawFriend(ctx, c => this.paint(c, 0, 0, 'walk')); return; }
@@ -192,7 +194,7 @@ class TourFlyer extends Ent {
     if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.fly)) return;
     TourSprite.art(ctx, this, x, y, mode);
   }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { Ink.ent(ctx, this, c => this.drawArt(c)); }
   drawArt(ctx) {
     ctx.save();
     if (this.knocked) { ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI + (this.spin || 0)); this.paint(ctx, 0, 0, 'ko'); ctx.restore(); return; }
@@ -225,7 +227,7 @@ class TourSwimmer extends Ent {
   hit(kind, src) { if (this.dead) return false; if (kind === 'taco') { this.stunT = 2.5; return true; } if (kind === 'stomp') return false; this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead && this.stunT <= 0) p.hurt(this); }
   get sprite() { return TourSprite.of(this); }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { Ink.ent(ctx, this, c => this.drawArt(c)); }
   drawArt(ctx) {
     const mode = this.knocked ? 'ko' : 'swim';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, mode, TourSprite.FALLBACK.swim)) return;
@@ -250,7 +252,7 @@ class TourLeaper extends Ent {
   hit(kind, src) { if (this.dead || this.state === 'wait') return false; if (kind === 'stomp' && this.cfg.stompable) { this.knockOff(1); return true; } if (kind === 'stomp' || kind === 'spin') return this.cfg.fiery && kind === 'spin' ? 'bounce' : false; this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead && this.state !== 'wait') p.hurt(this); }
   get sprite() { return TourSprite.of(this); }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { Ink.ent(ctx, this, c => this.drawArt(c)); }
   drawArt(ctx) {
     if (this.state === 'wait' && !this.knocked) return;
     const mode = this.knocked ? 'ko' : this.vy < 0 ? 'up' : 'down';
@@ -274,7 +276,7 @@ class TourFriend extends Ent {
     g.spawn(new TourItem(g, this.cx + (p.cx < this.cx ? -20 : 20), this.y + 6, this.give));
   }
   get sprite() { return TourSprite.of(this); }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { Ink.ent(ctx, this, c => this.drawArt(c)); }
   drawArt(ctx) {
     const mode = this.given ? 'wave' : 'idle';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.y + this.h, mode, TourSprite.FALLBACK.friend)) return;
@@ -347,3 +349,4 @@ class TourProp extends Ent {
     ctx.restore();
   }
 }
+

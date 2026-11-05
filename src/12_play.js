@@ -659,11 +659,18 @@ class Play {
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     ctx.beginPath(); ctx.rect(0, 0, VW * S, VH * S); ctx.clip();
     BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash);
+    // Atmospheric separation belongs behind solids, collectibles and characters.
+    // Keep each country's own sky/fog colour rather than flattening every world to grey.
+    if (this.level.tour) {
+      const th = THEMES[this.themeKey];
+      ctx.fillStyle = rgba(th.fog || th.sky[1], 0.16);
+      ctx.fillRect(0, 0, VW * S, VH * S);
+    }
     // world transform
     const wt = () => ctx.setTransform(S, 0, 0, S, gx - camX * S, gy - camY * S);
     wt();
     const th = THEMES[this.themeKey];
-    for (const d of A.decor) { const hw = (d.w || 0) / 2 + 80; if (d.x > camX - hw && d.x < camX + VW + hw) Decor.draw(ctx, d, this.t, th); }
+    for (const d of A.decor) { const hw = (d.w || 0) / 2 + 80; if (d.x > camX - hw && d.x < camX + VW + hw) { ctx.save(); if (this.level.tour) ctx.globalAlpha = 0.76; Decor.draw(ctx, d, this.t, th); ctx.restore(); } }
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     this.drawTiles(ctx, camX, camY, false);
     wt();
@@ -1192,3 +1199,4 @@ const WorldFx = {
 };
 // test hook: the entity classes by spawn type (used by tools/gameplay_test.js)
 window.BRADY_TYPES = ENTITY_TYPES;
+
