@@ -44,3 +44,13 @@ The kit now preserves the live window context and clears orphaned generated acti
 - Run full gameplay/transition tests and the original character/skinactor tests on a stable browser setup. Recheck Art Cart drivers because hero assets and the renderer are shared.
 - Profile representative busy worlds on an actual iPhone, including The Line, Root Society and Black Rock City at day/night. Check memory, frame time, silhouettes and touch interactions before deployment.
 - The work improves the existing procedural style; it does not reach GTA/Red Dead realism or provide a photo-matched likeness. Bespoke skin/hair/cloth textures, higher-quality hands and facial animation, authored landmark/vehicle art, and final world-specific composition remain future art work. The entire cast and every unique set piece have not been individually remodelled.
+
+## Final in-engine screenshots
+
+Idle silhouettes and materials:
+
+![Final Brady and Chinka](graphics-pass/characters.png)
+
+Dance pose and cloth/rig deformation:
+
+![Final dance pose](graphics-pass/dance.png)
