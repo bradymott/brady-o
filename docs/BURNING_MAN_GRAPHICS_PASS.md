@@ -1,35 +1,46 @@
-# Burning Man graphics pass — work in progress
+# Burning Man graphics pass
 
-This branch starts from main at `823a4d9e5434abc989c9ce340ee01be66d0a2a38`.
-It is a draft for integration with Claude's continuing development, not a deployed graphics release.
+Draft integration work on `codex/burning-man-graphics-pass`, based on main `823a4d9e5434abc989c9ce340ee01be66d0a2a38`. Not merged or deployed.
 
-## Changes
+## Delivered changes
 
-- `tools/blender/brady.py`: replaces the stacked head/jaw and fixed toothy smile with a continuous jaw/cheek/temple surface, recessed sockets, a defined nose, closed lips, ear detail and fine geometric stubble. Uses black trousers and dark soles, short tied-back hair, squarer shades, continuous geometric ink across both upper arms and forearms, and restrained collar/cloth construction. Keeps the existing skeleton and animation builder.
-- `src/40_burns_d_rig.js`: the procedural fallback also wears black trousers without the denim pattern.
-- `src/40_burns_b_gl.js`: filters fine ground cracks by screen footprint on derivative-capable tiers, reduces distant bump amplitude, adds subtle close-range wind-combed dust, and disables depth of field on medium quality to preserve gameplay clarity. High and ultra retain it.
+- Brady: continuous head and tee torso, relaxed closed mouth, nose/ear detail, fine stubble, tied bun, square shades, black trousers/shoes and geometric sleeves. Final GLB: 23,840 triangles, 26 joints, all 19 animation clips.
+- Chinka: continuous face and bodice, smaller eyes and brows, relaxed mouth, matte skin/ivory fabric, pleated skirt and restrained gold emission. Final GLB: 11,726 triangles, 41 joints, all 19 clips. Zero-radius loft rows use single tips to avoid degenerate faces.
+- NPCs throughout the game: continuous jaw/temple geometry and inner-ear detail while retaining face atlases, hair/headgear anchors, costumes, skeletons and existing LODs. Matte skin and more directional character lighting reduce the toy-like response.
+- Shared renderer: clearer nearby silhouettes through fog, subtle metre-scale variation on untextured matte scenery, filtered cloth weave to reduce shimmer. Earlier changes to the playa crack filtering, wind-combed dust and medium-tier depth of field remain.
+- Procedural vehicles and bikes: near-LOD wheel vents/lugs, sky bands and lower seals on glass, open spoked bicycle wheels. Distant LODs remain inexpensive.
+- Camps: tent doors/seams, shade framing/braces and visible light cables in procedural fallbacks.
+- Detailed exported RV, bus, shade, dome, tipi and utility prop: baked neutral surface variation, restrained dusty lower surfaces and glass gradients using vertex colours. Existing recolouring, model roots, geometry footprints and collider APIs are retained. No extra runtime texture maps or draw calls for the baked finish.
+- Eight revised GLBs are included, so the character/model work can actually appear after building.
 
-## What was checked
+## Build and verification
 
-- Python source compilation passed.
-- Changed JavaScript files passed `node --check`.
-- `node tools/build.js` passed using a source-only local checkout. Models, sprite atlases and embedded fonts were not downloaded for that local build.
-- All three app bundles passed JavaScript parsing with `vm.Script`.
+- Python AST checks and changed JavaScript syntax checks passed.
+- Full asset build passed with `node tools/build.js`.
+- All three app startup smoke tests passed (Burning Man, Super Brady-O World, Art Cart).
+- One controlled rendering regression passed all 20 registered worlds (1–17, 98, 99, 500), 38 hero clips, 20 prop/LOD builds, and low/medium/high quality paths. Screenshots of all worlds were inspected as a contact sheet. This run preceded the final hero torso refinements; final heroes were checked separately below.
+- Final Brady and Chinka assets were loaded in the engine, each clip sampled at three times with finite joint palettes verified. Idle and dance screenshots were inspected at an iPhone-sized 874 × 402 viewport. A bodice artefact found during review was corrected and re-exported before saving this pass.
+- Exported prop roots and COLOR_0 attributes were checked; both heroes contain exactly 19 clips. The final eight-model batch exported without warnings.
+- Later repeated browser checks stalled during scene/tier changes. The original `char_test.js` fast-forward run also stalled and was stopped; it is not counted as passed. Do not treat rendering smoke coverage as a complete gameplay regression.
 
-## Blocking verification
+The controlled test is `node tools/graphics_test.js [output-dir]`. Optional `GRAPHICS_WORLDS=1,17` filters worlds; `GRAPHICS_SKIP_WORLDS=1` tests hero palettes/prop LODs/quality paths only. It avoids fast-forwarding the entire city's AI. Its captures and palette checks do not measure real-device frame rate or prove all gameplay transitions.
 
-Blender 5.2.3 crashed during Metal GPU detection before the script ran. The revised Brady asset has therefore **not been exported or visually validated**. `assets/models/shared/brady.glb` is unchanged on this branch. Building the web app alone will not display the revised Blender character.
+## Rebuilding assets
 
-The browser inspection also stalled. No screenshot comparison, WebGL shader compilation, animation/skin deformation test, gameplay regression test, or real-iPhone performance test has passed in this session. The source changes must remain a draft until these checks are complete.
+Use a dedicated Blender scene: the batch replaces the current scene.
 
-## Next integration steps
+```sh
+BM_PREVIEWS=0 blender -b -P tools/blender/graphics_pass.py
+node tools/build.js
+```
 
-1. On a working Blender installation, run `CHAR_PREVIEWS=/tmp/brady-pass /Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/brady.py`.
-2. Inspect the face, profile, tattoos and motion renders. Check head-surface normals, neck join, facial silhouette, ink resolution and triangle count; simplify as needed toward the existing 15–25k hero budget. This is a procedural model improvement, not a scanned or photo-matched likeness.
-3. Commit the resulting `assets/models/shared/brady.glb` only after visual approval. The shared asset and renderer also affect Art Cart, so inspect both games.
-4. Build from a full checkout, run `tools/apps_test.js`, `tools/char_test.js`, `tools/skinactor_test.js` and the existing rendering tests. Compare medium and low WebGL paths, particularly the playa at a grazing camera angle.
-5. On an iPhone, inspect Root Society at sunset/night and the busy Esplanade. Measure frame rate and check interaction visibility before publishing.
+This session's Blender 5.2.3 background startup crashes during Metal device detection, before Python executes. Running the scripts inside an already-open Blender window worked. From its Python Console, use `import runpy; runpy.run_path('/absolute/path/to/tools/blender/graphics_pass.py', run_name='__main__')`. Set `BM_PREVIEWS=0` in the environment to skip prop preview renders.
 
-## Remaining art scope
+The kit now preserves the live window context and clears orphaned generated actions/data between builds; it avoids duplicate clip names and suffixed material/root names. Source meshes can be regenerated; generated .blend files and dist bundles are not part of this source commit.
 
-Chinka, the wider cast, vehicles, camp structures and landmarks have not been remodelled in this draft. Achieving the requested realism still needs authored skin/hair/cloth textures, detailed character meshes, environment assets and device profiling. Keep further assets modular and retain the current world and mission APIs.
+## Next pass with Claude
+
+- Preserve mission, collider, world and actor APIs when integrating; this pass primarily changes visuals.
+- Run full gameplay/transition tests and the original character/skinactor tests on a stable browser setup. Recheck Art Cart drivers because hero assets and the renderer are shared.
+- Profile representative busy worlds on an actual iPhone, including The Line, Root Society and Black Rock City at day/night. Check memory, frame time, silhouettes and touch interactions before deployment.
+- The work improves the existing procedural style; it does not reach GTA/Red Dead realism or provide a photo-matched likeness. Bespoke skin/hair/cloth textures, higher-quality hands and facial animation, authored landmark/vehicle art, and final world-specific composition remain future art work. The entire cast and every unique set piece have not been individually remodelled.

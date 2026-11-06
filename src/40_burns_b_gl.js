@@ -154,7 +154,8 @@ vec3 bShade(vec3 alb, vec3 n, vec3 w, float g, float wrap, float sh) {
 }
 vec3 bFogMix(vec3 c, vec3 w, float e) {
   vec3 dv = w - uCam; float d = length(dv);
-  float f = (1.0 - exp(-d * uFog.x)) * mix(1.0, exp(-max(w.y, 0.0) * uFog.y), 0.65);
+  // Let nearby faces, controls and vehicle silhouettes retain contrast in every world.
+  float f = (1.0 - exp(-max(d - 4.0, 0.0) * uFog.x)) * mix(1.0, exp(-max(w.y, 0.0) * uFog.y), 0.65);
   float dn = sin(w.x * 0.043 + uTime * 0.21) * sin(w.z * 0.037 - uTime * 0.16) * 0.5 + 0.5;
   f = clamp(f * (1.0 + uExp.y * (dn - 0.35) * exp(-max(w.y, 0.0) * 0.22)), 0.0, 1.0);
   f = min(f, uFog.w) * (1.0 - e * uFog.z);
@@ -184,6 +185,11 @@ void main(){
   vec4 t = texture2D(uTex, vT);
   vec3 alb = bLin(vC.rgb * (1.0 - t.a) + t.rgb);
   vec3 n = normalize(vN);
+  // Quiet, metre-scale dust breakup on matte scenery; no new texture or draw call.
+  // Keep signs, emissive art and chrome clean and readable.
+  float matte = (1.0 - smoothstep(0.28, 0.65, vG)) * (1.0 - step(0.02, t.a)) * (1.0 - step(0.1, vC.a));
+  float patina = sin(vW.x * 2.7 + sin(vW.z * 1.9)) * sin(vW.y * 3.1 + vW.z * 2.3);
+  alb *= 1.0 + patina * 0.045 * matte;
 #ifdef BUMP
   vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.004);
   n = t.a > 0.02 ? nb : n;
@@ -318,14 +324,16 @@ void main(){
   float skin0 = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r);
   float cd = length(vW - uCam);
   float fold = sin(vL.y * 44.0 + sin(vL.x * 21.0 + vL.z * 17.0) * 1.7) * 0.55 + sin(vL.y * 109.0 + vL.x * 37.0) * 0.16;
-  float weave = sin(vL.x * 560.0 + vL.z * 210.0) * sin(vL.y * 600.0) * 0.07 * (1.0 - smoothstep(1.2, 4.0, cd));
+  vec2 weaveUV = vec2(vL.x * 560.0 + vL.z * 210.0, vL.y * 600.0);
+  float weaveAA = 1.0 - smoothstep(0.8, 2.5, max(length(dFdx(weaveUV)), length(dFdy(weaveUV))));
+  float weave = sin(weaveUV.x) * sin(weaveUV.y) * 0.07 * weaveAA * (1.0 - smoothstep(1.2, 4.0, cd));
   vec3 nc = bBump(n, vW, (fold + weave) * (1.0 - smoothstep(14.0, 30.0, cd)), 0.0018);
   float cloth = (1.0 - step(0.02, t.a)) * (1.0 - step(0.15, vG)) * (1.0 - skin0) * (1.0 - step(0.5, vC.a));
   n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));
 #endif
   float e = vC.a;
   float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
-  vec3 c = mix(bShade(alb, n, vW, vG, 0.4, sh), alb * uEmB, e);
+  vec3 c = mix(bShade(alb, n, vW, vG, 0.22, sh), alb * uEmB, e);
   // warm light bleeding through skin-like albedo at the terminator (cheap subsurface)
   float sk = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r) * (1.0 - e);
   float nl = dot(n, uKeyD);

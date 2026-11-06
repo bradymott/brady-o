@@ -123,7 +123,7 @@ const BurnsRound = (() => {
     const bare = topKind === 'none';
     const longSleeve = topKind === 'hoodie' || (top.long && !bare) || topKind === 'long' || topKind === 'suit' || !!fur;
     const shortSleeve = !longSleeve && (topKind === 'tee' || topKind === 'button');
-    const skinGloss = fur ? 0 : 1;
+    const skinGloss = 0; // broad, matte skin response; reserve sharp reflections for accessories
 
     /* ===== hips / pelvis ===== */
     m.setBone(B.HIPS);
@@ -237,16 +237,27 @@ const BurnsRound = (() => {
     else {
       const R = BURNS_ATLAS.face(S.face || 'friendly');
       m.color(skin).shine(skinGloss);
-      m.ellipsoid(HD.cx, HD.cy, HD.cz, HD.rx, HD.ry, HD.rz, {
-        seg: A.seg(22, 12), rings: A.seg(15, 8), theta0: -Math.PI, theta1: Math.PI,
-        uvFn: (x, y, z) => {
-          const th = Math.atan2(x / HD.rx, z / HD.rz), ph = Math.acos(clamp(y / HD.ry, -1, 1));
+      // A continuous jaw/temple surface, retaining the face atlas and headgear anchors.
+      m.surf(A.seg(28, 12), A.seg(18, 8), (u, v, out) => {
+        const th = (u - 0.5) * TAU, ph = v * Math.PI, sy = Math.cos(ph), sn = Math.sin(ph);
+        const front = Math.pow(Math.max(0, Math.cos(th)), 6);
+        const jaw = 1 - 0.16 * sm(0.15, -0.85, sy);
+        out[0] = HD.cx + HD.rx * sn * Math.sin(th) * jaw;
+        out[1] = HD.cy + HD.ry * sy;
+        out[2] = HD.cz + HD.rz * sn * Math.cos(th)
+          + front * (-0.008 * Math.exp(-Math.pow((sy - 0.06) / 0.18, 2))
+          + 0.006 * Math.exp(-Math.pow((sy + 0.36) / 0.18, 2)));
+      }, {
+        out: [HD.cx, HD.cy, HD.cz],
+        uvFn: (u, v) => {
+          const th = (u - 0.5) * TAU, ph = v * Math.PI;
           return [lerp(R.u0, R.u1, clamp(0.5 + th / (2 * TF), 0, 1)), lerp(R.v0, R.v1, clamp((ph - PH0) / (PH1 - PH0), 0, 1))];
         }
       });
       m.color(shade(skin, -0.015)); m.ellipsoid(0, 0.172, HD.cz + HD.rz * 0.975, 0.022, 0.03, 0.026, { seg: A.seg(10, 6), rings: A.seg(7, 4) });
       m.color(shade(skin, -0.07));
       for (const sd of [1, -1]) { const p = headPt(sd * Math.PI / 2, 1.66, -0.012); m.ellipsoid(p[0], p[1], p[2] - 0.008, 0.024, 0.05, 0.036, { seg: A.seg(8, 6), rings: A.seg(6, 4) }); }
+      if (!lo) for (const sd of [1, -1]) { const p = headPt(sd * Math.PI / 2, 1.66, -0.012); m.color(shade(skin, -0.22)); m.ellipsoid(p[0] + sd * 0.017, p[1], p[2], 0.006, 0.028, 0.018, { seg: 6, rings: 5 }); }
       m.shine(0);
     }
     if (S.beard) BURNS_GEAR.acc.beard3d(m, A, S.beard);
@@ -1081,3 +1092,4 @@ BURNS_GEAR.acc.harness = (m, A) => { // black harness with badges, kandi, a gadg
     return mdl;
   };
 })();
+

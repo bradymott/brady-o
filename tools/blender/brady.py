@@ -1,9 +1,7 @@
 # Brady: the owner's likeness as a rigged, animated glTF character for the Burns engine (BurnsSkin, docs/BURNS_GUIDE.md
-# §6.9), built on tools/blender/charkit.py. Long wavy medium-brown hair tied in a loose high bun with curls escaping at
-# the temples and nape, a high forehead receding at the temples, a longer face with a strong jaw and chin, a prominent
-# straight nose, a wide toothy grin, a short stubble goatee with a light beard shadow, round-rectangular dark shades,
-# black tee, black trousers, black sneakers, and blackwork mandala medallions on both upper arms (per-face ink on the arm skin;
-# the forearms are bare but for a thin elbow band). Lean athletic build, 1.85 m, fair skin with a tan.
+# §6.9), built on tools/blender/charkit.py. A lean human-proportioned hero with a continuous
+# facial surface, a relaxed closed mouth, short tied-back brown hair and a high bun, stubble,
+# square dark sunglasses, all-black clothing and sacred-geometry sleeves on both arms.
 # Mixamo bone names (25) plus one `Bun` bone for the hair's secondary motion; the 19 clips come from charkit.CLIPS.
 #
 # Headless:  /Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/brady.py
@@ -43,7 +41,7 @@ def curl(rig, name, s, x, y0, z0, turns, drop, rad, mats, bones, soft=0.6, phase
     rig.part(name, bm_tube(catmull(pts, 9), [0.008, 0.0105, 0.0105, 0.01, 0.0095, 0.0085, 0.007, 0.005, 0.0], 4, caps='fan'), mats, bones, soft)
 
 def build_brady(rig):
-    skin = mat('skin', '#e0ac86', rough=0.72); ink = mat('ink', '#1c1a22', rough=0.78)
+    skin = mat('skin', '#d6a582', rough=0.86); ink = mat('ink', '#252329', rough=0.86)
     shadow = mat('beard_shadow', '#d6a27f', rough=0.8); stubble = mat('stubble', '#d2a07a', rough=0.85); lipshadow = mat('lip_shadow', '#d8a67f', rough=0.85)
     lip = mat('lip', '#b4746a', rough=0.7); teeth = mat('teeth', '#f4f1ea', rough=0.4)
     tee = mat('tee_black', '#1b1a20', rough=0.9); jeans = mat('trousers_black', '#1b1c20', rough=0.92)
@@ -54,8 +52,11 @@ def build_brady(rig):
     def part(name, bm, mats, bones, soft=1.0, wfn=None):
         bm_xf(bm, SK); rig.part(name, bm, mats, bones, soft, wfn)
     # lean torso (tee), belly, hips (jeans)
-    part('chest', rbox((0, 1.28, 0), (0.4, 0.38, 0.215), 0.1, 4, taper=(0.72, 0.85)), tee, ['Spine1', 'Spine2', 'Spine', 'Hips', L + 'Shoulder', Rr + 'Shoulder'], 1.3)
-    part('belly', rbox((0, 1.06, -0.005), (0.28, 0.17, 0.185), 0.07, 3), tee, ['Spine', 'Hips', 'Spine1'], 1.3)
+    torso = [(1.0,.148,.098),(1.06,.145,.099),(1.14,.150,.103),
+             (1.24,.176,.112),(1.34,.195,.112),(1.41,.198,.102),
+             (1.445,.165,.092),(1.465,.091,.066),(1.475,.054,.048)]
+    rings = [[(rx*math.sin(TAU*j/24),y,rz*math.cos(TAU*j/24)) for j in range(24)] for y,rx,rz in torso]
+    part('tee_torso', bm_loft(rings, closed_u=True, caps=True), tee, ['Spine1', 'Spine2', 'Spine', 'Hips', L + 'Shoulder', Rr + 'Shoulder'], 1.1)
     part('hips', rbox((0, 0.93, 0), (0.3, 0.22, 0.205), 0.08, 3), jeans, ['Hips', L + 'UpLeg', Rr + 'UpLeg', 'Spine'], 1.2)
     part('belt', bm_torus(0.155, 0.013, 24, 6, AY, (0, 1.0, 0), sy=0.68), mat('belt', '#2a1d14', rough=0.7), ['Hips', 'Spine'], 1.2)
     seam = mat('cloth_seam', '#35343a', rough=.96)
@@ -104,7 +105,7 @@ def build_brady(rig):
     # Fine stubble laid on the facial surface; stable geometry, no frame-to-frame noise.
     import random
     rng = random.Random(22)
-    for i in range(230):
+    for i in range(110):
         y = rng.uniform(1.571, 1.647); th = rng.uniform(-1.42, 1.42)
         if abs(th) < .38 and y > 1.601: continue
         for a, b in zip(rows, rows[1:]):

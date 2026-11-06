@@ -27,6 +27,14 @@ const BurnsProps = {
     m.shine(0); m.color('#26262c'); m.cyl(0, -w * 0.4, 0, r - tr, r - tr, w * 0.8, 10, { caps: false });
     m.color('#b8bcc8').shine(3); m.cyl(0, -w * 0.36, 0, r * 0.52, r * 0.52, w * 0.72, 10, { smooth: true });
     m.color('#6a6e78'); m.cyl(0, -w * 0.4, 0, r * 0.17, r * 0.17, w * 0.8, 6, { smooth: true });
+    // Recessed rim vents and lug heads on both faces. These live only on the near LOD.
+    for (const sd of [-1, 1]) for (let k = 0; k < 5; k++) {
+      const a = k * Math.PI * 2 / 5, sn = Math.sin(a), cs = Math.cos(a);
+      m.color('#292d33').shine(0);
+      m.cyl(sn * r * 0.36, sd * (w * 0.36 + 0.002), cs * r * 0.36, r * 0.075, r * 0.075, 0.012, 5);
+      m.color('#c2bdad').shine(2);
+      m.cyl(sn * r * 0.23, sd * (w * 0.40 + 0.006), cs * r * 0.23, r * 0.027, r * 0.027, 0.014, 5);
+    }
     m.shine(0); m.pop();
   },
   win(m, x, y, z, w, h, side, lit, rng) {
@@ -35,6 +43,11 @@ const BurnsProps = {
     if (!m.lo) { m.color('#1e1e24').shine(1); m.box(x + side * 0.006, y, z, 0.03, h + 0.08, w + 0.08); }   // rubber frame
     m.color(glow ? '#ffc070' : '#243650', glow ? 0.85 : 0.0).shine(glow ? 0 : 3);
     if (m.lo) m.box(x + side * 0.012, y, z, 0.03, h, w); else m.roundBox(x + side * 0.02, y, z, 0.03, h, w, 0.012, { k: 1, m: 1 });
+    if (!m.lo && !glow) {
+      // Cool sky band and a dark lower seal make opaque glass read as glass.
+      m.color('#526a7e').shine(2); m.box(x + side * 0.037, y + h * 0.29, z, 0.006, h * 0.14, w * 0.91);
+      m.color('#121b25').shine(1); m.box(x + side * 0.037, y - h * 0.42, z, 0.006, h * 0.08, w * 0.94);
+    }
     m.emissive(0).shine(0);
   },
   // flush wheels with dark wheel-well arches cut into the body sides. zs: axle positions; o: { y0 (body bottom), col, well: false }
@@ -70,7 +83,17 @@ const BurnsProps = {
     // a little parked bicycle (frame + wheels), y = ground under the wheels
     m.push(); m.tf(x, y, z, yaw);
     m.color('#1a1a1a');
-    for (const wz of [-0.5, 0.5]) { m.push(); m.tf(0, 0.34, wz, 0, 0, Math.PI / 2); m.cyl(0, -0.025, 0, 0.34, 0.34, 0.05, 8, { caps: true }); m.pop(); }
+    for (const wz of [-0.5, 0.5]) {
+      m.push(); m.tf(0, 0.34, wz, 0, 0, Math.PI / 2);
+      if (m.lo) m.cyl(0, -0.025, 0, 0.34, 0.34, 0.05, 8, { caps: true });
+      else {
+        m.color('#26262a').shine(0); m.torus(0, 0, 0, 0.318, 0.022, { seg: 18, tseg: 4 });
+        m.color('#a5a5a0').shine(2); m.torus(0, 0, 0, 0.294, 0.008, { seg: 18, tseg: 3 });
+        for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; m.beam(0, 0, 0, Math.sin(a) * 0.29, 0, Math.cos(a) * 0.29, 0.006); }
+        m.cyl(0, -0.035, 0, 0.035, 0.035, 0.07, 6);
+      }
+      m.pop(); m.shine(0); m.color('#1a1a1a');
+    }
     m.color(col || '#ff4fd8');
     m.beam(0, 0.36, -0.5, 0, 0.72, 0.02, 0.05); m.beam(0, 0.36, -0.5, 0, 0.62, 0.35, 0.05); m.beam(0, 0.72, 0.02, 0, 0.62, 0.35, 0.05); m.beam(0, 0.62, 0.35, 0, 0.36, 0.5, 0.045);
     m.color('#2a2a2a'); m.box(0, 0.78, 0.02, 0.1, 0.04, 0.2); m.beam(-0.25, 0.86, 0.4, 0.25, 0.86, 0.4, 0.035);
@@ -375,6 +398,17 @@ const BurnsProps = {
     o = o || {}; const w = o.w || 5, d = o.d || 5, h = o.h || 2.9, col = o.col || '#d8c8a8';
     m.color('#5a5a62'); for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) m.box(sx * (w / 2 - 0.1), h / 2, sz * (d / 2 - 0.1), 0.1, h, 0.1);
     m.color(col); m.box(0, h + 0.03, 0, w + 0.2, 0.06, d + 0.2, { uv: BURNS_ATLAS.pattern('canvas'), uvFaces: ['py', 'ny'] });
+    if (!m.lo) {
+      // Exposed frame and stitched perimeter under the fabric roof.
+      m.color('#686864').shine(1);
+      for (const sd of [-1, 1]) {
+        m.beam(-w / 2, h - 0.035, sd * d / 2, w / 2, h - 0.035, sd * d / 2, 0.045);
+        m.beam(sd * w / 2, h - 0.035, -d / 2, sd * w / 2, h - 0.035, d / 2, 0.045);
+        m.beam(sd * (w / 2 - 0.1), h - 0.6, d / 2 - 0.1, sd * (w / 2 - 0.55), h - 0.04, d / 2 - 0.1, 0.025);
+      }
+      m.shine(0);
+      if (o.lights !== false) { m.color('#29272a'); for (let i = 0; i < 9; i++) { const t = i / 9, u = (i + 1) / 9; m.beam(-w / 2 + t * w, h - 0.15 - Math.sin(t * Math.PI) * 0.3, d / 2, -w / 2 + u * w, h - 0.15 - Math.sin(u * Math.PI) * 0.3, d / 2, 0.008); } }
+    }
     if (o.lights !== false) { for (let i = 0; i < 10; i++) { const t = i / 9; m.color(BURNS_NEON[i % 7], 1); m.box(-w / 2 + t * w, h - 0.15 - Math.sin(t * Math.PI) * 0.3, d / 2, 0.09, 0.09, 0.09); } m.emissive(0); }
     const lights = []; if (o.lights !== false) for (let i = 0; i < 10; i += 2) { const t = i / 9; lights.push({ x: -w / 2 + t * w, y: h - 0.15 - Math.sin(t * Math.PI) * 0.3, z: d / 2, s: 0.4, c: BURNS_NEON[i % 7] }); }
     lights.push({ x: 0, y: 0, z: 0, s: 0, c: '#ffb070', pool: Math.max(w, d) * 0.9 });
@@ -391,6 +425,14 @@ const BurnsProps = {
     m.color(col); m.push(); m.tf(0, 0, 0);
     m.poly([[-1.2, 0, 1.2], [1.2, 0, 1.2], [0, 1.4, 0]]); m.poly([[1.2, 0, -1.2], [-1.2, 0, -1.2], [0, 1.4, 0]]);
     m.color(shade(col, -0.15)); m.poly([[1.2, 0, 1.2], [1.2, 0, -1.2], [0, 1.4, 0]]); m.poly([[-1.2, 0, -1.2], [-1.2, 0, 1.2], [0, 1.4, 0]]);
+    if (!m.lo) {
+      m.color(shade(col, -0.32));
+      // Door follows the tent's front slope; seams give the flysheet construction.
+      m.poly([[-0.44, 0.035, 1.18], [0.44, 0.035, 1.18], [0, 1.08, 0.29]]);
+      m.color(shade(col, 0.2));
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.beam(sx * 1.19, 0.015, sz * 1.19, 0, 1.41, 0, 0.014);
+      m.color('#b5a98e'); m.beam(0, 0.04, 1.19, 0, 1.08, 0.30, 0.009);
+    }
     m.pop();
     return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.1, hz: 1.1, y0: 0, y1: 1.0 }], lights: [], top: 1.0 };
   },
@@ -701,3 +743,4 @@ const BurnsBikeModel = {
     return model;
   }
 };
+

@@ -252,7 +252,23 @@ def weights_for(rig, p, bones, soft):
     return [(b, w / tot) for b, w in ws]
 
 def clear_scene():
-    bpy.ops.wm.read_factory_settings(use_empty=True)
+    if bpy.app.background:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+    else:
+        # Keep the live window/context valid when invoked from Blender's console.
+        if bpy.context.object and bpy.context.object.mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+        for obj in list(bpy.context.scene.objects):
+            bpy.data.objects.remove(obj, do_unlink=True)
+        for collection in (bpy.data.meshes, bpy.data.armatures, bpy.data.materials):
+            for block in list(collection):
+                if block.users == 0: collection.remove(block)
+        # Generated clips have fake users. Drop only orphaned kit clips so a second
+        # character does not export the previous rig's actions or '.001' names.
+        clip_names = {clip[0] for clip in CLIPS}
+        for action in list(bpy.data.actions):
+            if action.name.split('.')[0] in clip_names and action.users == int(action.use_fake_user):
+                bpy.data.actions.remove(action)
     bpy.context.scene.render.fps = FPS
     bpy.context.scene.unit_settings.system = 'METRIC'
     MATS.clear()
@@ -681,3 +697,4 @@ def build(rig, out_glb=None, out_blend=None, previews=None, height=None):
         os.makedirs(os.path.dirname(out_blend), exist_ok=True)
         bpy.ops.wm.save_as_mainfile(filepath=out_blend, compress=True)
     return dict(tris=tris, verts=len(mesh.data.vertices), joints=len(arm.data.bones), bytes=size, arm=arm, mesh=mesh)
+
