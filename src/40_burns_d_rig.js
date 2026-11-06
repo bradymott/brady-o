@@ -608,6 +608,28 @@ const BURNS_ANIMS = (() => {
 })();
 
 /* ---------------- character instance ---------------- */
+// Contact feet retreat by exactly the root travel; recovery feet lift clear of the ground.
+function burnsTravelPose(P, phase, body, running) {
+  const B=BURNS_BONES, off=body.off, l1=Math.abs(off[B.SHIN_L][1]), l2=Math.abs(off[B.FOOT_L][1]);
+  const h=(l1+l2)/.8, contact=running?.32:.60, cycle=(running?3:1.45)*h, span=cycle*contact;
+  const feet=[phase%1,(phase+.5)%1].map(u=>u<contact?{z:span*(.5-u/contact),y:0,stance:true}:{z:-span*.5*Math.cos(Math.PI*(u-contact)/(1-contact)),y:(running?.24:.10)*h*Math.sin(Math.PI*(u-contact)/(1-contact)),stance:false});
+  let hip=l1+l2-.015*h;
+  for(const f of feet)if(f.stance)hip=Math.min(hip,Math.sqrt(Math.max(.01,(l1+l2-.015*h)**2-f.z*f.z)));
+  if(running&&!feet.some(f=>f.stance)){const u=(phase%.5-contact)/(.5-contact);hip+=.17*h*Math.sin(Math.PI*u);}
+  P.y=hip-(l1+l2);
+  for(let i=0;i<2;i++){
+    const f=feet[i], y=hip-f.y, d=Math.min(l1+l2-.001,Math.max(Math.abs(l1-l2)+.001,Math.hypot(y,f.z)));
+    const thigh=Math.atan2(f.z,y)+Math.acos(clamp((l1*l1+d*d-l2*l2)/(2*l1*d),-1,1));
+    const knee=Math.PI-Math.acos(clamp((l1*l1+l2*l2-d*d)/(2*l1*l2),-1,1));
+    P.r[(i?B.THIGH_R:B.THIGH_L)*3]=-thigh;P.r[(i?B.SHIN_R:B.SHIN_L)*3]=knee;P.r[(i?B.FOOT_R:B.FOOT_L)*3]=thigh-knee;
+  }
+  const swing=Math.sin(phase*TAU), amp=running?.85:.40;
+  P.r[B.UARM_L*3]=swing*amp;P.r[B.UARM_R*3]=-swing*amp;
+  P.r[B.UARM_L*3+2]=.10;P.r[B.UARM_R*3+2]=-.10;
+  P.r[B.FARM_L*3]=P.r[B.FARM_R*3]=running?-1.05:-.30;
+  P.r[B.CHEST*3]=running?.12:.035;P.r[B.HEAD*3]=running?-.08:-.025;
+}
+
 class BurnsChar {
   constructor(model) {
     this.model = model; this.nb = model.nb;
@@ -635,8 +657,17 @@ class BurnsChar {
     this.animT += dt;
     if (this.blend < 1) this.blend = Math.min(1, this.blend + dt / this.blendDur);
     const P = burnsPoseClear(this.tmp);
-    const fn = this.poseFn || BURNS_ANIMS[this.anim] || BURNS_ANIMS.idle;
-    fn(P, this.animT, this.k);
+    const fn = this.poseFn || (this.model.man && this.anim === 'idle' ? BurnsManModel.pose : null) || BURNS_ANIMS[this.anim] || BURNS_ANIMS.idle;
+    const travel=Number.isFinite(this._strideX)?Math.hypot(this.x-this._strideX,this.z-this._strideZ):0;
+    this._strideX=this.x;this._strideZ=this.z;
+    if(!this.poseFn&&!this.model.man&&(this.anim==='walk'||this.anim==='run')){
+      const h=(Math.abs(this.model.body.off[BURNS_BONES.SHIN_L][1])+Math.abs(this.model.body.off[BURNS_BONES.FOOT_L][1]))/.8;
+      const scale=Math.max(.1,this.scale), cycle=(this.anim==='run'?3:1.45)*h;
+      // Shared instanced crowd poses have no individual root; their bank opts into an in-place cadence.
+      const advance=this.k.inPlace?dt*(this.anim==='run'?1.4:1)*(this.k.rate||1):(travel<5*scale?travel/scale/cycle:0);
+      this._stridePhase=((this._stridePhase||0)+advance)%1;
+      burnsTravelPose(P,this._stridePhase,this.model.body,this.anim==='run');
+    }else fn(P, this.animT, this.k);
     const out = this.P;
     if (this.blend < 1) {
       const w = easeInOut(this.blend), f = this.from;

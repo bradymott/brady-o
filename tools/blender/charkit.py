@@ -414,29 +414,53 @@ def clip_idle(P, t, rig):
     P.ctx.update(gait=0, phase=t * TAU / 2.5)
 
 def gait(P, t, rig, period, stride, bob, lean, armswing, knee_k, run=False):
-    ph = t * TAU / period; pl, pr = ph, ph + math.pi
-    def leg(p):
-        thigh = stride * math.sin(p)
-        swing = max(0.0, math.cos(p - 0.35))
-        knee = 0.1 + knee_k * swing ** 1.6
-        foot = 0.3 * max(0.0, -math.sin(p + 0.6)) - 0.15 * max(0.0, math.sin(p - 0.3))
-        return thigh, knee, foot
-    tl, kl, fl = leg(pl); tr, kr, fr = leg(pr)
-    P.leg('L', thigh=tl, knee=kl, foot=fl); P.leg('R', thigh=tr, knee=kr, foot=fr)
-    b = bob * abs(math.cos(ph))
-    P.hips = (0.0, -0.015 * rig.k + b, 0.0); P.hipsR = (lean, 0.0, -0.06 * math.sin(ph))
-    P.spine = (0.02, -0.03 * math.sin(ph), 0.02 * math.sin(ph)); P.spine1 = (0.0, -0.04 * math.sin(ph), 0.03 * math.sin(ph))
-    P.spine2 = (-0.02 + lean * 0.5, -0.05 * math.sin(ph), 0.04 * math.sin(ph))
-    P.neck = (0.02, 0, 0); P.head = (0.02 + 0.015 * math.cos(2 * ph), 0, -0.03 * math.sin(ph))
-    hang(P, 1.2 if not run else 1.1)
-    P.arm('L', swing=armswing * math.sin(pr), flex=(0.3 + 0.2 * max(0.0, math.sin(pr))) if not run else 1.3)
-    P.arm('R', swing=armswing * math.sin(pl), flex=(0.3 + 0.2 * max(0.0, math.sin(pl))) if not run else 1.3)
-    P.ctx.update(gait=2 if run else 1, phase=ph, legL=tl, legR=tr)
+    phase = (t / period) % 1.0; ph = phase * TAU
+    contact = .32 if run else .60
+    cycle_metres = 3.0 if run else 1.45
+    span = cycle_metres * contact
+    reach = .845
+    def path_at(q):
+        if q <= contact:
+            u = q / contact
+            return span * (.5 - u), 0.0, True
+        u = (q - contact) / (1 - contact)
+        z = -span * .5 * math.cos(math.pi * u)
+        return z, (.24 if run else .10) * math.sin(math.pi * u), False
+    left = path_at(phase); right = path_at((phase + .5) % 1)
+    supports = [math.sqrt(max(.1, reach*reach - z*z)) for z, lift, on in (left,right) if on]
+    if supports:
+        hip_drop = min(supports)
+    else:
+        # Short flight between contacts, continuous at take-off and landing.
+        q = phase % .5
+        u = (q - contact) / (.5 - contact)
+        edge = math.sqrt(reach*reach - (span*.5)**2)
+        hip_drop = edge + .17 * math.sin(math.pi * u)
+    def solve(track):
+        z, lift, on = track
+        down = hip_drop - lift
+        d = min(.858, max(.15, math.hypot(z,down)))
+        knee = math.acos(max(-1,min(1,(d*d-.45*.45-.41*.41)/(2*.45*.41))))
+        thigh = math.atan2(z,down) + math.acos(max(-1,min(1,(.45*.45+d*d-.41*.41)/(2*.45*d))))
+        foot = thigh-knee + (0 if on else .12*lift/(.24 if run else .10))
+        return thigh,knee,foot
+    tl,kl,fl = solve(left);tr,kr,fr = solve(right)
+    P.leg('L',thigh=tl,knee=kl,foot=fl);P.leg('R',thigh=tr,knee=kr,foot=fr)
+    P.hips = (0,(hip_drop-.86)*rig.k,0)
+    P.hipsR = (0,.015*math.sin(ph),0)
+    P.spine = (lean*.35,.035*math.sin(ph),.012*math.sin(ph))
+    P.spine1 = (lean*.35,.025*math.sin(ph),0)
+    P.spine2 = (lean*.3,.025*math.sin(ph),0)
+    P.neck = (-lean*.15,0,0);P.head = (-lean*.2,0,-.01*math.sin(ph))
+    hang(P,1.45,.25)
+    P.arm('L',swing=-armswing*math.cos(ph),flex=.95 if run else .28)
+    P.arm('R',swing=armswing*math.cos(ph),flex=.95 if run else .28)
+    P.ctx.update(gait=2 if run else 1,phase=ph,legL=tl,legR=tr)
 
-def clip_walk(P, t, rig): gait(P, t, rig, 1.0, 0.5, 0.025, 0.05, 0.45, 0.95)
+def clip_walk(P, t, rig): gait(P, t, rig, 1.0, 0.42, 0.025, 0.05, 0.38, 0.95)
 def clip_run(P, t, rig):
-    gait(P, t, rig, 0.8, 0.75, 0.05, 0.22, 0.7, 1.4, run=True)
-    P.hips = (0.0, -0.03 * rig.k + 0.05 * abs(math.cos(P.ctx['phase'])), 0.0)
+    gait(P, t, rig, 0.8, 0.65, 0.05, 0.16, 0.58, 1.4, run=True)
+    # gait() already compensates pelvis height for the supporting leg.
 
 def clip_jump(P, t, rig):
     # 1.0 s, not looped: crouch (0-0.25), launch (0.25-0.4), tuck in the air (0.4-0.8), extend for the landing

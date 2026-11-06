@@ -236,7 +236,7 @@ class BurnsCrowds {
   }
   bank(look, anim, phase) {
     const k = look + '#' + anim + '#' + phase; let b = this.banks[k];
-    if (!b) { const ch = new BurnsChar(this.looks[look]); ch.play(anim, null, true); ch.animT = phase; ch.update(0); ch.compute(); b = this.banks[k] = { ch, key: k }; }
+    if (!b) { const ch = new BurnsChar(this.looks[look]); ch.play(anim, {inPlace:true}, true); ch._stridePhase = phase % 1; ch.animT = phase; ch.update(0); ch.compute(); b = this.banks[k] = { ch, key: k }; }
     return b;
   }
   add(x, z, o) {
@@ -340,3 +340,4 @@ const BurnsOpen = {
 };
 
 if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsTiles, BurnsInstancer, BurnsCrowds, BurnsOpen });
+

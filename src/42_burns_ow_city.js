@@ -285,9 +285,7 @@ const BurnsOW = {
   pavilion(api) {
     const H = 7.5;
     api.mesh(0, 0, m => {
-      m.color('#8a6a48'); m.lathe([[0, 0], [17, 0], [17, 1.2], [13, 1.2], [13, 3.6], [9.5, 3.6], [9.5, H], [0, H]], { seg: 8 });
-      m.color('#5a4030'); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + Math.PI / 8; m.push(); m.tf(Math.sin(a) * 9.6, 0, Math.cos(a) * 9.6, a); m.box(0, H / 2 + 0.4, 0, 1.2, H - 0.8, 0.5); m.pop(); }
-      m.color('#ffb860', 1); for (let k = 0; k < 16; k++) { const a = k / 16 * TAU; m.box(Math.sin(a) * 13.1, 3.65, Math.cos(a) * 13.1, 0.4, 0.12, 0.4); } m.emissive(0);
+      BurnsProps.manPavilion(m,{h:H,r:17});
       return { cols: [{ t: 'cyl', x: 0, z: 0, r: 9.5, y0: 0, y1: H }, { t: 'cyl', x: 0, z: 0, r: 13, y0: 0, y1: 3.6 }, { t: 'cyl', x: 0, z: 0, r: 17, y0: 0, y1: 1.2 }] };
     }, { noAO: false });
     // ramps up the tiers on four sides (walkable)
@@ -425,7 +423,7 @@ BurnsWorlds.register({
     for (const h of [3, 9]) { const q = O.at(h, O.RINGS[2]); api.patch(q[0], q[1], 36, '#b48a6a', 0.35); O.reserve(q[0], q[1], 36); }
     // ---- the Man and the Temple ----
     BurnsOW.pavilion(api);
-    S.man = { x: 0, y: 7.5, z: 0, scale: 1.45 };
+    S.man = { x: 0, y: 7.5, z: 0, scale: 2.45 };
     O.reserve(0, 0, 40);
     BurnsOW.temple(api, 0, -250);
     // ---- the trash fence ----
@@ -557,7 +555,7 @@ BurnsWorlds.register({
   },
   update(g, dt) { BurnsOW.update(g, dt); if (BurnsOW.updateGames) BurnsOW.updateGames(g, dt); if (BurnsOW.questHook) BurnsOW.questHook('update', g, dt); },
   // an open world needs to see far: thinner fog than the small worlds (and thinner still from up high)
-  env(g, env) { const k = g.cam && g.cam.y > 12 ? 0.32 : 0.55; env.fogD *= k; },
+  env(g, env) { const k = g.cam && g.cam.y > 12 ? 0.32 : 0.55; env.fogD *= k; if(g.plights)g.plights.unshift({x:-8,y:25,z:10,r:48,c:[1,.76,.45],i:1.2},{x:8,y:16,z:-8,r:42,c:[1,.63,.32],i:.8}); },
   drawSkinned(g, R) { BurnsOW.drawMan(g, R); if (BurnsOW.drawGamesSkinned) BurnsOW.drawGamesSkinned(g, R); },
   onRespawn(g) { if (BurnsOW.bungeeOn && BurnsOW.bungeeOn(g)) BW11Dome.abort(g); },
   drawShadows(g, R) { BurnsOW.drawMan(g, R); },
@@ -837,3 +835,4 @@ Object.assign(BurnsOW, {
 });
 
 if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsOW, BURNS_OW });
+

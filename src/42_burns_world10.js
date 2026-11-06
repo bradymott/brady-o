@@ -275,26 +275,8 @@ BURNS_W10.rocketGantry = function (api) {
 /* ---------------- the arena, the saucer and the Man ---------------- */
 BURNS_W10.saucerMesh = function (m) {
   const D = BURNS_W10.DECK, R = BURNS_W10.SAUCER_R;
-  m.color('#a8b0c4').shine(3);
-  m.lathe([[0, 3.2, '#c8d0e0'], [4.5, 3.35], [9, 3.9], [13.4, 4.8], [15.8, 5.45], [R + 0.2, 5.78, '#8890a4'], [R, 6.0, '#8890a4'], [R, 6.0, '#5a5e70'], [14.8, D, '#5a5e70'], [0, D, '#5a5e70']], { seg: 40 });
-  m.shine(0);
-  // glowing rings on the deck and the rim
-  for (const [r, c] of [[5.5, '#ff4fd8'], [10, '#38f2ff'], [14.4, '#ffe24a']]) { m.color(c, 1); m.torus(0, D + 0.03, 0, r, 0.08, { seg: 40, tseg: 4, sy: 0.4 }); }
-  m.emissive(0);
-  for (let i = 0; i < 28; i++) { const a = i / 28 * TAU; m.color(BURNS_NEON[i % 7], 1); m.ball(Math.sin(a) * (R + 0.15), 5.6, Math.cos(a) * (R + 0.15), 0.24, { seg: 6, rings: 4 }); }
-  m.emissive(0);
-  // landing legs + pads
-  m.color('#6a7082').shine(2);
-  for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + Math.PI / 4; m.limb(Math.sin(a) * 9, 3.9, Math.cos(a) * 9, Math.sin(a) * 12.5, 0.4, Math.cos(a) * 12.5, 0.45, 0.35); m.roundCyl(Math.sin(a) * 12.5, 0, Math.cos(a) * 12.5, 1.2, 0.4, 0.15); }
-  m.shine(0);
-  // underside lights + the belly orb + tractor-beam emitters
-  m.color('#ffd84a', 1); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; m.ball(Math.sin(a) * 8, 3.8, Math.cos(a) * 8, 0.3, { seg: 6, rings: 4 }); }
-  m.color('#ff4fd8', 1); m.ball(0, 3.0, 0, 0.9); m.emissive(0);
-  m.color('#9aff9a', 1); for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + Math.PI / 4; m.push(); m.tf(Math.sin(a) * 15.2, 5.0, Math.cos(a) * 15.2, 0, Math.PI, 0); m.roundCyl(0, 0, 0, 0.7, 0.2, 0.06); m.pop(); }
-  m.emissive(0);
-  const lights = [{ x: 0, y: 3.0, z: 0, s: 5, c: '#ff4fd8' }];
-  for (let i = 0; i < 28; i += 2) { const a = i / 28 * TAU; lights.push({ x: Math.sin(a) * (R + 0.2), y: 5.6, z: Math.cos(a) * (R + 0.2), s: 1.3, c: BURNS_NEON[i % 7] }); }
-  for (let i = 0; i < 12; i += 3) { const a = i / 12 * TAU; lights.push({ x: Math.sin(a) * 8, y: 3.6, z: Math.cos(a) * 8, s: 1.6, c: '#ffd84a' }); }
+  BurnsProps.manPavilion(m,{h:D,r:R,fullDeck:true});
+  const lights=[];for(let i=0;i<12;i++){const a=i/12*TAU;lights.push({x:Math.sin(a)*R*.83,y:4,z:Math.cos(a)*R*.83,s:1.2,c:'#ffc172'});}
   const cols = [{ t: 'cyl', x: 0, z: 0, r: R, y0: 4.6, y1: D, cover: true }];
   // the engine's cylinder ray test only sees rays entering through the side wall, so four rotated
   // (non-solid) slabs make the deck block the neon flash from above too: hiding under the saucer works
@@ -468,6 +450,7 @@ BURNS_W10.mortarUpdate = function (g, dt) {
 };
 BURNS_W10.env = function (g, env) {
   const S = BURNS_W10.state;
+  if(!S.burnK && g.plights) g.plights.unshift({x:-5,y:14,z:9,r:34,c:[1,.76,.45],i:1.1},{x:7,y:9,z:-8,r:30,c:[1,.63,.32],i:.8});
   // the engine lights the scene with the first 4 point lights queued; during the Burn the fire comes first
   // (the eight fire spinners each queue one, and would otherwise crowd it out)
   if (S.burnK > 0 && g.plights) {
@@ -795,3 +778,4 @@ BURNS_W10.afterBurn = function (g, inCine) {
     for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; g.addTempFire(Math.sin(a) * 4, W.DECK, Math.cos(a) * 4, 1.2, 1e6); }
   }
 };
+

@@ -625,11 +625,57 @@ const BurnsProps = {
 };
 
 /* ---------------- the Man (boss model; original design) ----------------
-   A tall wooden lattice figure with raised arms, a glowing diamond head,
-   a neon outline and a glowing heart (he is very much in love).
+   A timber-clad articulated effigy with carved buttons, a faceted wooden head
+   and restrained amber accents. Shared by the adventure, portraits and Art Cart.
    Built on the shared 16-bone layout so BurnsChar can drive it. Height ~13m. */
+// Shared original pavilion: timber saucer with an open, unfurling chrysalis crown.
+// H/r are supplied by each world so existing encounter decks and collision footprints stay aligned.
+BurnsProps.manPavilion = function(m,o) {
+  o=o||{};const H=o.h||7.5,R=o.r||17,n=m.lo?24:48;
+  const grain=BURNS_ATLAS.pattern('wood');
+  m.color('#94704b').shine(0);
+  m.lathe(o.fullDeck ? [[0,H*.53],[R*.55,H*.62],[R,H-.8],[R,H],[0,H]] : [[0,0],[R*.88,0],[R,.6],[R,1.2],[R*.78,1.2],[R*.78,H*.48],[R*.56,H*.48],[R*.56,H],[0,H]],{seg:n,uv:grain});
+  // Wide timber flying-saucer skirt: radial battens, a raised outer lip and lantern apertures.
+  for(let i=0;i<n;i++){
+    const a=i/n*TAU,s=Math.sin(a),c=Math.cos(a);
+    m.color(i%3?'#bd9665':'#d1af7e');
+    m.beam(s*R*.55,H-.1,c*R*.55,s*R*.96,H*.29,c*R*.96,.12,.10);
+    if(i%2===0){m.color('#ffbf6b',.45);m.box(s*R*.83,H*.37,c*R*.83,.24,.38,.24);m.emissive(0);}
+  }
+  m.color('#765333');m.torus(0,H*.29,0,R*.96,.12,{seg:n,tseg:4});
+  // Independently drawn split shell petals; the front approach is left open.
+  const petals=m.lo?8:12;
+  for(let k=0;k<petals;k++){
+    const a=(k+.5)/petals*TAU;
+    if(Math.cos(a)>.72)continue;
+    let prev=null;
+    for(let j=0;j<=6;j++){
+      const t=j/6,ang=a+.16*Math.sin(t*Math.PI);
+      const r=R*(.26+.14*Math.sin(t*Math.PI)-.025*t);
+      const p=[Math.sin(ang)*r,H+t*(8.5+(k%3)*.6),Math.cos(ang)*r];
+      if(prev){m.color(k%2?'#d1b181':'#af8451');m.beam(...prev,...p,.21,.17);
+        if(j<5){const tangent=[Math.cos(ang),0,-Math.sin(ang)],w=.38+.62*Math.sin(t*Math.PI),wp=.38+.62*Math.sin((j-1)/6*Math.PI);
+          const panel=[[prev[0]-tangent[0]*wp,prev[1],prev[2]-tangent[2]*wp],[p[0]-tangent[0]*w,p[1],p[2]-tangent[2]*w],[p[0]+tangent[0]*w,p[1]-.22,p[2]+tangent[2]*w],[prev[0]+tangent[0]*wp,prev[1]-.12,prev[2]+tangent[2]*wp]];
+          m.color(j%2?'#ba9563':'#d1b183');m.poly(panel);m.poly(panel.slice().reverse());
+        }
+        // Open slatted membrane: sparse paired crosspieces, no borrowed decorative pattern.
+        const tangent=[Math.cos(ang),0,-Math.sin(ang)],w=.45+.7*Math.sin(t*Math.PI);
+        m.color('#ad8556');m.beam(p[0]-tangent[0]*w,p[1],p[2]-tangent[2]*w,p[0]+tangent[0]*w,p[1]+.24,p[2]+tangent[2]*w,.075,.075);
+      }
+      prev=p;
+    }
+  }
+  m.emissive(0);m.shine(0);
+};
+
 const BurnsManModel = {
   cache: null,
+  pose(P,t) {
+    const B=BURNS_BONES,s=Math.sin(t*.6)*.012;
+    P.r[B.UARM_L*3+2]=2.55+s;P.r[B.UARM_R*3+2]=-2.55-s;
+    P.r[B.FARM_L*3+2]=.15;P.r[B.FARM_R*3+2]=-.15;
+    P.r[B.CHEST*3+1]=s*.3;P.y=0;
+  },
   body() {
     return {
       h: 1, w: 1,
@@ -644,69 +690,59 @@ const BurnsManModel = {
   },
   build(o) {
     if (this.cache && !o) return this.cache;
-    o = o || {};
+    const custom = !!o; o = o || {};
     const m = new BurnsMesh(16384), B = BURNS_BONES;
-    const wood = o.wood || '#c89a6a', dark = o.dark || '#8a5a3a', neon = o.neon || '#38f2ff', heart = o.heart || '#ff4fa8';
-    // rounded wooden members: rails are soft-ended timbers, braces and rings are thinner dowels
-    const rail = (a, b, r) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r * 0.92, { seg: 8 });
-    const dowel = (a, b, r) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r, { seg: 6, ends: false });
-    // lattice limb: 4 rails + zig-zag braces + rings between y0..y1 (local Y), widths w0 (top) w1 (bottom)
-    const lattice = (y0, y1, w0, w1, d, n) => {
-      const corners = (y, w) => [[w / 2, y, d / 2], [-w / 2, y, d / 2], [-w / 2, y, -d / 2], [w / 2, y, -d / 2]];
-      const A = corners(y0, w0), Bc = corners(y1, w1);
-      m.color(wood).shine(1);
-      for (let k = 0; k < 4; k++) rail(A[k], Bc[k], 0.12);
-      m.color(dark).shine(0);
-      for (let i = 0; i < n; i++) {
-        const t0 = i / n, t1 = (i + 1) / n;
-        const P = (t, k) => { const a = A[k], b = Bc[k]; return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; };
-        for (let k = 0; k < 4; k++) dowel(P(i % 2 ? t0 : t1, k), P(i % 2 ? t1 : t0, (k + 1) % 4), 0.075);
-        for (let k = 0; k < 4; k++) dowel(P(t0, k), P(t0, (k + 1) % 4), 0.065);
+    const wood = o.wood || '#b98b54', dark = o.dark || '#65462b';
+    const grain = BURNS_ATLAS.pattern('wood'), edge = o.neon || '#ffc172';
+    // Original timber-clad effigy: articulated boardwork, not the festival's logo or a copied mesh.
+    const clad = (y0, y1, w0, w1, depth, boards) => {
+      m.color(dark).shine(0); m.box(0,(y0+y1)/2,0,Math.min(w0,w1)*.94,Math.abs(y1-y0),depth*.92);
+      for (const sd of [-1,1]) for (let i=0;i<boards;i++) {
+        const u=(i+.5)/boards-.5, a=(i/boards-.5), b=((i+1)/boards-.5), gap=.018;
+        m.color(shade(wood, ((i*7)%5-2)*.035));
+        const z=sd*(depth/2+.012);
+        const pts=[[a*w0+gap,y0,z],[b*w0-gap,y0,z],[b*w1-gap,y1,z],[a*w1+gap,y1,z]];
+        if ((y1>y0) === (sd<0)) pts.reverse();
+        m.poly(pts,[[grain.u0,grain.v1],[grain.u1,grain.v1],[grain.u1,grain.v0],[grain.u0,grain.v0]]);
+        // Thin battens show the board edges and keep the silhouette solid.
+        if(i===0 || i===boards-1) m.beam(u*w0,y0,z,u*w1,y1,z,.055,.08);
       }
+      m.color(dark);
+      for(const sd of [-1,1]) m.beam(sd*w0/2,y0,0,sd*w1/2,y1,0,.11,depth);
     };
-    const neonRail = (x0, y0, z0, x1, y1, z1) => { m.color(neon, 1); m.limb(x0, y0, z0, x1, y1, z1, 0.065, 0.065, { seg: 6 }); m.emissive(0); };
-    // hips
-    m.setBone(B.HIPS); lattice(-0.3, 0.4, 2.6, 2.6, 1.2, 1);
-    m.color(dark); m.roundBox(0, 0.05, 0, 2.8, 0.28, 1.3, 0.12);
-    // torso (wider at the shoulders)
-    m.setBone(B.CHEST); lattice(0, 4.3, 3.2, 2.2, 1.3, 4);
-    m.color(wood).shine(1); m.limb(-2.05, 4.1, 0, 2.05, 4.1, 0, 0.2, 0.2, { seg: 10 }); m.shine(0); // shoulder beam
-    neonRail(1.1, 0, 0.66, 2.0, 4.2, 0.66); neonRail(-1.1, 0, 0.66, -2.0, 4.2, 0.66);
-    // the glowing heart in the chest (puffy: two layers)
-    m.color(heart, 1); m.push(); m.tf(0, 2.5, 0.2);
-    const hp = []; for (let i = 0; i < 24; i++) { const t = i / 24 * TAU; const x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); hp.push([x * 0.045, y * 0.045]); }
-    m.extrude(hp.slice().reverse(), 0.5, { convex: false });
-    m.color('#ffb0d8', 1); m.push(); m.tf(0, 0, 0.26, 0, 0, 0, 0.7, 0.7, 1); m.extrude(hp.slice().reverse(), 0.06, { convex: false }); m.pop();
-    m.pop(); m.emissive(0);
-    // head: a smooth glowing spindle with neon meridians and a halo ring
-    m.setBone(B.HEAD);
-    m.color(wood).shine(1); m.limb(0, -0.1, 0, 0, 0.62, 0, 0.3, 0.26, { seg: 10 }); m.shine(0);
-    const hy = 1.9, hh = 1.35, hw = 1.0;
-    m.color(o.headCol || '#ffd0f0', 0.85);
-    m.push(); m.tf(0, hy, 0); m.lathe([[0, -hh], [hw * 0.42, -hh * 0.55], [hw * 0.82, -hh * 0.18], [hw, 0], [hw * 0.82, hh * 0.2], [hw * 0.42, hh * 0.6], [0, hh]], { seg: 16, sz: 0.75 }); m.pop();
-    m.emissive(0);
-    m.color(neon, 1);
-    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + Math.PI / 4, sx = Math.sin(a), sz = Math.cos(a) * 0.75; const prof = [[0, -hh], [0.42, -hh * 0.55], [0.82, -hh * 0.18], [1, 0], [0.82, hh * 0.2], [0.42, hh * 0.6], [0, hh]]; for (let i = 0; i < prof.length - 1; i++) { const p0 = prof[i], p1 = prof[i + 1]; m.limb(sx * p0[0] * hw * 1.03, hy + p0[1], sz * p0[0] * hw * 1.03, sx * p1[0] * hw * 1.03, hy + p1[1], sz * p1[0] * hw * 1.03, 0.05, 0.05, { seg: 5 }); } }
-    m.push(); m.tf(0, hy, 0, 0, 0, 0, 1, 1, 0.75); m.torus(0, 0, 0, hw * 1.04, 0.06, { seg: 24, tseg: 5 }); m.pop();
-    m.emissive(0);
-    // arms (raised in the default pose via animation)
-    for (const side of [1, -1]) {
-      m.setBone(side > 0 ? B.UARM_L : B.UARM_R); lattice(0.2, -2.6, 0.75, 0.65, 0.75, 3); neonRail(side * 0.42, 0.1, 0.4, side * 0.36, -2.6, 0.38);
-      m.color(wood).shine(1); m.ball(0, 0.1, 0, 0.42, { seg: 12, rings: 8 }); m.shine(0);
-      m.setBone(side > 0 ? B.FARM_L : B.FARM_R); lattice(0, -2.4, 0.62, 0.5, 0.6, 3); neonRail(side * 0.34, 0, 0.32, side * 0.28, -2.4, 0.3);
-      m.color(wood).shine(1); m.ball(0, 0, 0, 0.36, { seg: 12, rings: 8 });
-      m.roundBox(0, -2.75, 0, 0.8, 0.7, 0.5, 0.2); // hand
-      for (let f = 0; f < 3; f++) { m.color(dark); m.limb((f - 1) * 0.25, -3.0, 0, (f - 1) * 0.27, -3.45, 0, 0.09, 0.07, { seg: 6 }); }
-      m.shine(0);
-      m.setBone(side > 0 ? B.THIGH_L : B.THIGH_R); lattice(0, -2.8, 1.0, 0.85, 0.9, 3); neonRail(side * 0.53, 0, 0.47, side * 0.46, -2.8, 0.44);
-      m.setBone(side > 0 ? B.SHIN_L : B.SHIN_R); lattice(0, -2.5, 0.85, 0.75, 0.8, 3); neonRail(side * 0.45, 0, 0.42, side * 0.4, -2.5, 0.4);
-      m.color(wood).shine(1); m.ball(0, 0, 0, 0.45, { seg: 12, rings: 8 }); m.shine(0);
-      m.setBone(side > 0 ? B.FOOT_L : B.FOOT_R); m.color(dark); m.roundBox(0, -0.25, 0.35, 1.2, 0.5, 2.0, 0.22); m.color(neon, 1); m.push(); m.tf(0, -0.02, 0.35, 0, 0, 0, 0.6, 1, 1); m.torus(0, 0, 0, 1.0, 0.04, { seg: 18, tseg: 4 }); m.pop(); m.emissive(0);
+    const seam = (y,w,z) => { m.color(dark);m.box(0,y,z,w,.035,.025); };
+    m.setBone(B.HIPS); clad(-.3,.4,2.45,2.45,1.22,7);
+    m.setBone(B.CHEST); clad(0,4.15,2.25,3.9,1.35,11);
+    m.color(wood);m.beam(-2.05,4.08,0,2.05,4.08,0,.28,.95);
+    // Three carved wooden buttons, with inset fastening holes.
+    for(const y of [.8,1.85,2.9]) {
+      m.push();m.tf(0,y,.72,0,Math.PI/2,0);
+      m.color('#765330').shine(0);m.roundCyl(0,0,0,.19,.085,.025,{seg:12});
+      m.color('#35281d');for(const dx of [-.055,.055])for(const dz of [-.055,.055])m.cyl(dx,.086,dz,.018,.018,.006,5);
+      m.pop();
     }
-    const model = { geo: m.geo(), nb: BURNS_NB, body: this.body(), headY: 11.4, height: 13, man: true };
-    if (!o || !Object.keys(o).length) this.cache = model;
-    return model;
+    seam(.18,2.25,.705);seam(3.88,3.72,.705);
+    m.setBone(B.HEAD);m.color(dark);m.box(0,.24,0,.48,.7,.48);
+    // Faceted wooden spindle, with restrained amber edge lighting.
+    m.push();m.tf(0,1.9,0);m.color(o.headCol||wood);
+    m.lathe([[0,-1.35],[.45,-.92],[.88,-.3],[1,0],[.85,.38],[.42,1.03],[0,1.35]],{seg:8,sz:.72,uv:grain});
+    m.pop();
+    for(const sd of [-1,1]) {
+      m.color(dark);m.beam(sd*.15,.7,.54,sd*.72,1.8,.55,.035,.04);m.beam(sd*.72,1.8,.55,sd*.16,3.0,.25,.035,.04);
+      m.color(edge,.22);m.beam(sd*.18,.68,.57,sd*.78,1.9,.57,.024,.024);m.emissive(0);
+    }
+    for(const side of [1,-1]) {
+      m.setBone(side>0?B.UARM_L:B.UARM_R);clad(.12,-2.6,.83,.67,.78,4);
+      m.setBone(side>0?B.FARM_L:B.FARM_R);clad(0,-2.4,.65,.53,.64,4);
+      m.color(wood);m.box(0,-2.8,0,.65,.85,.48);seam(-2.8,.64,.25);
+      m.setBone(side>0?B.THIGH_L:B.THIGH_R);clad(0,-2.8,1.05,.88,.94,5);
+      m.setBone(side>0?B.SHIN_L:B.SHIN_R);clad(0,-2.5,.88,.76,.84,5);
+      m.setBone(side>0?B.FOOT_L:B.FOOT_R);m.color(dark);m.roundBox(0,-.25,.32,1.05,.5,1.65,.06);
+    }
+    const model={geo:m.geo(),nb:BURNS_NB,body:this.body(),headY:11.4,height:13,man:true};
+    if(!custom)this.cache=model;return model;
   }
+
 };
 
 /* ---------------- the yellow community bike (rigged: frame, wheels, cranks) ---------------- */

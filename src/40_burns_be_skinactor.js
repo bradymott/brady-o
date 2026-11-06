@@ -67,7 +67,14 @@ class BurnsSkinActor {
     let dt = same && ch.animT >= this._animT ? ch.animT - this._animT : ch.animT;
     if (dt > 2) dt = 2; if (dt < 0) dt = 0;
     this._anim = ch.anim; this._animT = ch.animT;
-    const speed = (clip === 'walk' || clip === 'run') && ch.k && ch.k.rate ? ch.k.rate : 1;
+    const locomotion=clip==='walk'||clip==='run';
+    // Match stance to metres travelled. The source clips cover a human stride, while
+    // the game can move Brady at sprint speed; the old k.rate left him gliding.
+    const sc0=Math.max(.1,ch.scale*this.unit);
+    const travel=Number.isFinite(this._x)?Math.hypot(ch.x-this._x,ch.z-this._z):0;
+    const cycleMetres=clip==='walk'?1.45:3.0;
+    const advance=locomotion?(travel<5*sc0?travel/sc0/cycleMetres*this.asset.clips[clip].duration:0):dt;
+    const speed=1;
     if (clip !== this._clip || (!same && BURNS_SKINACTOR.ONESHOT[clip])) {
       S.play(clip, { loop: !BURNS_SKINACTOR.ONESHOT[clip], fade: this.active ? 0.15 : 0, speed, restart: true });
       this._clip = clip;
@@ -76,8 +83,8 @@ class BurnsSkinActor {
     const moved = ch.x !== this._x || ch.y !== this._y || ch.z !== this._z || ch.yaw !== this._yaw || sc !== this._sc;
     S.x = this._x = ch.x; S.y = this._y = ch.y; S.z = this._z = ch.z; S.yaw = this._yaw = ch.yaw; S.scale = this._sc = sc;
     S.tint = ch.tint || this.tint; S.face = ch.face || 0;
-    if (dt > 0) S.update(dt);
-    if (dt > 0 || moved || !S.computed) S.compute();
+    if (advance > 0) S.update(advance);
+    if (advance > 0 || moved || !S.computed) S.compute();
     this.active = true;
     return true;
   }
@@ -190,3 +197,4 @@ if (typeof window !== 'undefined') {
   if (typeof BRADY_APP === 'undefined' || BRADY_APP !== 'world') setTimeout(() => { try { BurnsSkinActor.preload(); } catch (e) { console.warn('skin actors: ' + (e && e.message || e)); } }, 700);
   setTimeout(() => { const B = window.BRADY_BURNS; if (B && B.debug) B.debug.skinActor = () => BurnsSkinActor.stats(); }, 0);
 }
+

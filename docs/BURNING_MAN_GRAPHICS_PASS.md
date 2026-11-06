@@ -1,5 +1,7 @@
 # Burning Man graphics pass
 
+See [the cinematic, Man and movement follow-up](CINEMATICS_MAN_AND_MOVEMENT.md) for the latest story-camera, landmark and gait changes.
+
 Draft integration work on `codex/burning-man-graphics-pass`, based on main `823a4d9e5434abc989c9ce340ee01be66d0a2a38`. Not merged or deployed.
 
 ## Delivered changes
@@ -47,10 +49,6 @@ The kit now preserves the live window context and clears orphaned generated acti
 
 ## Final in-engine screenshots
 
-Idle silhouettes and materials:
-
 ![Final Brady and Chinka](graphics-pass/characters.png)
-
-Dance pose and cloth/rig deformation:
 
 ![Final dance pose](graphics-pass/dance.png)
