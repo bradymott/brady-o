@@ -443,7 +443,7 @@ const CartWorlds = {
     for (let k = 0; k < 6; k++) { const s = T.L * (0.1 + k * 0.15), g = T.at(s, {}), side = k % 2 ? 1 : -1, off = side > 0 ? g.wr + 3.5 : -g.wl - 3.5; api.sign(CART_JOKE_SIGNS[(k + nameIx) % CART_JOKE_SIGNS.length], g.x + g.nx * off, g.z + g.nz * off, { yaw: g.yaw + Math.PI, h: 1.0, y: 1.6, post: true, maxW: 2.6, style: { bg: '#ffe24a', fg: '#1a1a1a', border: '#1a1a1a' }, glow: night ? '#ffe24a' : null }); }
     // infield art pieces
     for (const [kind, ax, az] of D.art) {
-      if (kind === 'man') { if (!this.clear(T, ax * 1.25, az * 1.25, 17)) continue; E.man = { x: ax * 1.25, z: az * 1.25 }; CartScene.mesh(api, E.man.x, E.man.z, 0, m => { m.color('#6a4a32').shine(1); m.lathe([[16, 0], [14, 2.2], [9, 2.4], [8.5, 5.2], [0, 5.4]], { seg: 8, uv: BURNS_ATLAS.pattern('wood') }); m.shine(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 15, y0: 0, y1: 5.3 }] }; }, { hi: true }); E.art.push({ x: E.man.x, z: E.man.z, r: 15.5 }); api.light(E.man.x, E.man.z, 40, '#ff8a3a', 0.8); continue; }
+      if (kind === 'man') { if (!this.clear(T, ax * 1.25, az * 1.25, 17)) continue; E.man = { x: ax * 1.25, z: az * 1.25 }; CartScene.mesh(api, E.man.x, E.man.z, 0, m => { BurnsProps.manPavilion(m,{h:5.4,r:16}); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 15, y0: 0, y1: 5.3 }] }; }, { hi: true }); E.art.push({ x: E.man.x, z: E.man.z, r: 15.5 }); api.light(E.man.x, E.man.z, 40, '#ff8a3a', 0.8); continue; }
       const kx = kind === 'gate' ? T.at(T.L * 0.5).x : ax * 1.2, kz = kind === 'gate' ? T.at(T.L * 0.5).z : az * 1.2;
       const yaw = kind === 'gate' ? T.at(T.L * 0.5).yaw : rng() * TAU;
       if (kind !== 'gate' && !this.clear(T, kx, kz, kind === 'temple' ? 14 : kind === 'ribs' ? 12 : 7)) continue;
@@ -615,3 +615,4 @@ const CartWorlds = {
     return this.finish(E);
   }
 };
+

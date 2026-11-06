@@ -85,6 +85,35 @@ def catenary(p0, p1, sag, n):
         out.append(tuple(p0[k] + (p1[k] - p0[k]) * t - (sag * math.sin(math.pi * t) if k == 1 else 0) for k in range(3)))
     return out
 
+def surface_finish(B):
+    """Baked, deterministic wear with no runtime textures or additional geometry.
+    Retains neutral multipliers so the engine can recolour every camp and vehicle.
+    Glass gets a restrained sky/ground gradient; lamps and polished trim stay clean.
+    """
+    for ob in B.objs:
+        if ob.type != 'MESH' or not ob.data.vertices: continue
+        me = ob.data
+        attr = me.color_attributes.get('SurfaceFinish') or me.color_attributes.new(name='SurfaceFinish', type='FLOAT_COLOR', domain='POINT')
+        me.color_attributes.active_color = attr
+        zs = [v.co.z for v in me.vertices]; lo, hi = min(zs), max(zs)
+        for v in me.vertices:
+            x, z, y = v.co.x, -v.co.y, v.co.z
+            mat0 = me.materials[0] if me.materials else None
+            name = mat0.name.lower() if mat0 else ''
+            node = next((n for n in mat0.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None) if mat0 and mat0.use_nodes else None
+            rough = node.inputs['Roughness'].default_value if node else 1
+            emit = node.inputs['Emission Strength'].default_value if node else 0
+            if 'glass' in name:
+                f = (y - lo) / max(hi - lo, .001)
+                attr.data[v.index].color = (.68 + .30*f, .73 + .25*f, .80 + .20*f, 1)
+            elif emit > .05 or rough < .23:
+                attr.data[v.index].color = (1, 1, 1, 1)
+            else:
+                drift = .5 + .5 * math.sin(x * 3.1 + math.sin(z * 2.7)) * math.sin(y * 2.9 + z)
+                foot = max(0, 1 - max(0, y) / 1.15)
+                value = .94 + .06 * drift - .09 * foot
+                attr.data[v.index].color = (value, value * (1 - .018*foot), value * (1 - .05*foot), 1)
+
 def run_static(stem, build_fn, preview=True, views=None, save=True, level=None, max_tris=12000):
     """Build and export one static prop: build_fn(B) adds pieces to the Build B (parent = the `body` root bone, or
     another root made with B.bone(name, at) when the game emits it separately). Writes
@@ -92,16 +121,16 @@ def run_static(stem, build_fn, preview=True, views=None, save=True, level=None, 
     if bpy.context.object and bpy.context.object.mode != 'OBJECT': bpy.ops.object.mode_set(mode='OBJECT')
     clear(stem)
     L = dict(PROP_LEVEL); L.update(level or {})
-    B = Build(stem, 'hi', {'hi': L}); build_fn(B); B.smooth_by_angle()
+    B = Build(stem, 'hi', {'hi': L}); build_fn(B); surface_finish(B); B.smooth_by_angle()
     t, v, per = B.tris()
-    path = os.path.join(OUT_BM, stem + '.glb'); size = B.export(path)
+    path = os.path.join(OUT_BM, stem + '.glb'); size = B.export(path, vertex_color='ACTIVE')
     lo, hi = B.bounds()
     # Blender bounds (x, y, z) -> engine (x, y=z, z=-y)
     bounds = dict(x=[round(lo.x, 3), round(hi.x, 3)], y=[round(lo.z, 3), round(hi.z, 3)], z=[round(-hi.y, 3), round(-lo.y, 3)])
     report = dict(tris=t, verts=v, bytes=size, path=path, bounds=bounds, per=per)
     if v > 65535: report['error'] = 'too many vertices for the engine (max 65535)'
     elif t > max_tris: report['warning'] = 'over the %d-triangle prop budget' % max_tris
-    if preview:
+    if preview and os.environ.get('BM_PREVIEWS', '1') != '0':
         vws = views or [((0.8, -1, 0.45), 'front'), ((-0.9, 0.8, 0.4), 'rear')]
         report['previews'] = [B.preview(os.path.join(SHOTS, '%s_%s.png' % (stem, tag)), view=vw) for vw, tag in vws]
     if save: bpy.ops.wm.save_as_mainfile(filepath=os.path.join(BLEND_DIR, stem + '.blend'), compress=True)

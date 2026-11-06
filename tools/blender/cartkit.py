@@ -607,13 +607,14 @@ class Build:
             bpy.ops.object.shade_auto_smooth(angle=math.radians(40))
         except Exception as e:
             print('smooth_by_angle skipped:', e)
-    def export(self, path):
+    def export(self, path, vertex_color='MATERIAL'):
         bpy.ops.object.select_all(action='DESELECT')
         for o in self.objs: o.select_set(True)
         bpy.context.view_layer.objects.active = self.body
         bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_apply=True, export_yup=True,
                                   export_extras=True, export_materials='EXPORT', export_normals=True, export_animations=False,
-                                  export_skins=False, export_lights=False, export_cameras=False, export_image_format='NONE', export_tangents=False)
+                                  export_skins=False, export_lights=False, export_cameras=False, export_image_format='NONE', export_tangents=False,
+                                  export_vertex_color=vertex_color)
         return os.path.getsize(path)
     def bounds(self):
         dg = bpy.context.evaluated_depsgraph_get(); lo = Vector((1e9, 1e9, 1e9)); hi = Vector((-1e9, -1e9, -1e9))
@@ -729,3 +730,4 @@ def bootstrap(script_file):
     import sys
     d = os.path.dirname(os.path.abspath(script_file))
     if d not in sys.path: sys.path.insert(0, d)
+

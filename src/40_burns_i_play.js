@@ -284,7 +284,7 @@ class BurnsCine {
     this.g = g; this.done = done; this.opts = opts || {}; this.i = -1; this.t = 0; this.cur = null; this.cam = null; this.letter = this.opts.letterbox !== false; this.finished = false;
     // dolly / crane are camera tweens with friendlier names
     this.steps = steps.map(s => s && (s.dolly || s.crane) && !s.cam ? Object.assign({}, s, { cam: s.dolly || s.crane }) : s);
-    this.dof = this.opts.dof === undefined ? null : this.opts.dof;
+    this.dof = this.opts.dof === undefined ? false : this.opts.dof;
     this.advance();
   }
   advance() {
@@ -935,10 +935,54 @@ class BurnsPlayScene {
     this.frameStep = (this.frameStep || 0) + 1;
   }
   /* ---------- camera ---------- */
+  // Compose dialogue in the upper safe frame instead of underneath the text panel.
+  frameDialogue(cam) {
+    const C=this.cine, who=this.dialog.cur && this.dialog.cur.who;
+    const man=(this.bosses||[]).find(b=>!b.hidden&&!b.defeated);
+    let actor=typeof who==='string' ? (who==='brady'?this.player:who==='man'?man||this.boss:this.actor(who)) : who;
+    if(actor&&!Number.isFinite(actor.x)&&/chinka/i.test(actor.name||'')&&man&&man.chinka&&man.showChinka)actor=man.chinka;
+    if(actor && Number.isFinite(actor.x) && Number.isFinite(actor.z)) {
+      if(actor!==this.player) C.lastSpeaker=actor;
+      const targets=[actor], other=actor===this.player?C.lastSpeaker:this.player;
+      if(other && Number.isFinite(other.x) && Math.hypot(other.x-actor.x,other.z-actor.z)<9) targets.push(other);
+      let x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity,y0=Infinity,y1=-Infinity;
+      for(const a of targets) {
+        const h=((a.model||a.ch&&a.ch.model||{}).height||1.85)*(a.scale||a.ch&&a.ch.scale||1);
+        const r=Math.max(.4,h*.18),y=a.y||0;
+        x0=Math.min(x0,a.x-r);x1=Math.max(x1,a.x+r);z0=Math.min(z0,a.z-r);z1=Math.max(z1,a.z+r);y0=Math.min(y0,y);y1=Math.max(y1,y+h);
+      }
+      const tx=(x0+x1)/2,tz=(z0+z1)/2,ty=(y0+y1)/2;
+      let dx=cam.x-tx,dz=cam.z-tz,l=Math.hypot(dx,dz);
+      if(l<.1){dx=Math.sin(actor.yaw||0);dz=Math.cos(actor.yaw||0);l=1;}
+      const asp=Game.cssW/Game.cssH,tan=Math.tan(.8/2);
+      const halfH=(y1-y0)/2,halfW=Math.hypot(x1-x0,z1-z0)/2;
+      const safe=clamp((Game.cssH- BurnsUI.dialogRect(this).h-Game.cssH*.13)/Game.cssH,.40,.75);
+      const dist=Math.max(4.6,halfH/(tan*safe)*1.12,halfW/(tan*asp*.78));
+      const baseYaw=Math.atan2(dx,dz), pitch=clamp((cam.y-ty)/Math.max(l,.1),.22,.65);
+      let best=null;
+      for(const turn of [0,.6,-.6,1.15,-1.15]) for(const lift of [0,1.2,2.4]) {
+        const a=baseYaw+turn,ex=tx+Math.sin(a)*dist,ez=tz+Math.cos(a)*dist,ey=ty+pitch*dist+lift;
+        let score=this.world.raycast(tx,ty,tz,ex,ey,ez,true)*30-Math.abs(turn)-lift*.3;
+        const vx=ex-tx,vy=ey-ty,vz=ez-tz,den=vx*vx+vy*vy+vz*vz;
+        for(const n of this.actors) { if(targets.includes(n)||n.hidden)continue;
+          const nx=n.x-tx,ny=(n.y||0)+.95-ty,nz=n.z-tz,u=(nx*vx+ny*vy+nz*vz)/den;
+          const nh=((n.model||n.ch&&n.ch.model||{}).height||1.85)*(n.scale||1)+.3,py=ty+u*vy;
+          if(u>.12&&u<1.15&&Math.hypot(nx-u*vx,nz-u*vz)<.9&&py>(n.y||0)-.2&&py<(n.y||0)+nh)score-=45;
+        }
+        if(!best||score>best.score)best={score,x:ex,y:ey,z:ez};
+      }
+      cam.x=best.x;cam.y=best.y;cam.z=best.z;
+      cam.tx=tx;cam.ty=ty;cam.tz=tz;cam.fov=.8;
+    }
+    // Includes captions, bottom safe area and the top letterbox; zero horizontal lens offset.
+    const r=BurnsUI.dialogRect(this), top=this.cine.letter?Game.cssH*.1:8;
+    const center=(top+r.y)/2;
+    cam.shift=clamp(1-2*center/Game.cssH,0,.48);
+  }
   updateCamera(fdt) {
     const p = this.player, cam = this.cam, sv = BurnsSave.get().settings, W = this.world;
     const portrait = Game.cssH > Game.cssW;
-    if (this.cine && this.cine.cam) { Object.assign(cam, this.cine.cam); cam.shift = portrait ? 0.06 : 0; cam.roll = 0; if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt); return; }
+    if (this.cine && (this.cine.cam || this.dialog.open)) { if(this.cine.cam)Object.assign(cam, this.cine.cam); cam.fov=clamp(cam.fov||.85,.45,1.2);cam.shift=0;cam.roll=0; if(this.dialog.open && this.cine.opts.framing!==false)this.frameDialogue(cam);cam.near=.12;cam.far=1500;return; }
     // manual orbit (touch drag / mouse / keys / right stick)
     const sens = (sv.camSens || 1) * 0.0085;
     let dyaw = -Input.camDX * sens, dpitch = Input.camDY * sens * 0.7 * (sv.invertY ? -1 : 1);
@@ -1247,14 +1291,15 @@ class BurnsPlayScene {
     const fires = this.world.fires.concat(this.tempFires);
     for (const f of fires) { const d = Math.hypot(f.x - cam.x, f.z - cam.z); if (d < 38) fx.fires.push([f.x, f.y || 0, f.z, Math.max(0.5, (f.r || 0.3) * 2.2), d]); }
     if (fx.fires.length > 6) { fx.fires.sort((a, b) => a[4] - b[4]); fx.fires.length = 6; }
-    fx.rays = env.rays;
+    if(this.cine) fx.heat *= .2;
+    fx.rays = this.cine ? (env.rays || 0)*.5 : env.rays;
     fx.bloom = env.bloomK;
     fx.exposure = this.cineExposure || 1;
     // cutscenes: focus on what the camera looks at (a step can set or clear it)
     const C = this.cine;
-    if (C && C.cam && C.dof !== false && !this.firstPerson()) {
-      const D = C.dof || {}, f = D.focus !== undefined ? D.focus : Math.hypot(C.cam.tx - C.cam.x, C.cam.ty - C.cam.y, C.cam.tz - C.cam.z);
-      fx.dof = fx._dof || (fx._dof = {}); fx.dof.focus = f; fx.dof.aperture = D.aperture || 1.1;
+    if (C && C.cam && C.dof && !this.firstPerson()) {
+      const D = C.dof || {}, f = D.focus !== undefined ? D.focus : Math.hypot(cam.tx - cam.x, cam.ty - cam.y, cam.tz - cam.z);
+      fx.dof = fx._dof || (fx._dof = {}); fx.dof.focus = f; fx.dof.aperture = clamp(D.aperture === undefined ? .12 : D.aperture, .02, .2);
     } else fx.dof = null;
     return fx;
   }
@@ -1373,3 +1418,4 @@ const BurnsScenes = {
     } catch (e) { /* ignore */ }
   }
 };
+

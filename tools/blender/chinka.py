@@ -19,14 +19,14 @@ SK = Matrix.Scale(K, 4)
 def sc(p): return (p[0] * K, p[1] * K, p[2] * K)
 
 def build_chinka(rig):
-    skin = mat('skin_tan', '#c9956c', rough=0.72); freckle = mat('freckle', '#7e5238', rough=0.8); ivory = mat('robe_ivory', '#f7f0e2', rough=0.75)
-    gold_cloth = mat('robe_gold', '#e9d3a0', rough=0.7); gold = mat('gold_trim', '#ffcf5c', rough=0.3, metal=0.6, emit='#ffcf5c', strength=1.0)
-    gold_hi = mat('gold_bright', '#ffd870', rough=0.25, metal=0.6, emit='#ffd870', strength=2.0)
-    bead = mat('bead', '#fff2cc', rough=0.3, emit='#fff2cc', strength=4.0)
+    skin = mat('skin_tan', '#c9956c', rough=0.86); freckle = mat('freckle', '#7e5238', rough=0.8); ivory = mat('robe_ivory', '#eee7d9', rough=0.9)
+    gold_cloth = mat('robe_gold', '#e9d3a0', rough=0.85); gold = mat('gold_trim', '#d3a345', rough=0.3, metal=0.6, emit='#ffcf5c', strength=0.12)
+    gold_hi = mat('gold_bright', '#e9bc65', rough=0.25, metal=0.6, emit='#ffd870', strength=0.55)
+    bead = mat('bead', '#fff2cc', rough=0.3, emit='#fff2cc', strength=2.0)
     hair = mat('hair_dark', '#2e1a10', rough=0.5); brow = mat('brow_dark', '#17100c', rough=0.8)
     white = mat('eye_white', '#fbfbf7', rough=0.3); iris = mat('iris', '#3a2214', rough=0.2); pupil = mat('pupil', '#0a0806', rough=0.3)
-    hl = mat('eye_hl', '#ffffff', rough=0.2, emit='#ffffff', strength=3.0); lash = mat('lash', '#0d0908', rough=0.7)
-    lip = mat('lip_rose', '#c4484e', rough=0.45, coat=0.6); teeth = mat('teeth', '#f4f1ea', rough=0.4)
+    hl = mat('eye_hl', '#e4d9c6', rough=0.25); lash = mat('lash', '#251812', rough=0.7)
+    lip = mat('lip_rose', '#aa6762', rough=0.65, coat=0.15); teeth = mat('teeth', '#f4f1ea', rough=0.4)
     L, Rr = 'Left', 'Right'
     def part(name, bm, mats, bones, soft=1.0, wfn=None):
         bm_xf(bm, SK); rig.part(name, bm, mats, bones, soft, wfn)
@@ -35,14 +35,24 @@ def build_chinka(rig):
     HAIRB = ['HairB1', 'HairB2', 'Head', 'Neck']
     # ---- the figure: a fitted bodice lathed over an hourglass profile, the bust and the behind under the robe ----
     prof = [(0.0, 0.90), (0.21, 0.90), (0.225, 0.95), (0.205, 1.01), (0.165, 1.075), (0.15, 1.11), (0.165, 1.16), (0.2, 1.23), (0.205, 1.29), (0.185, 1.35), (0.165, 1.41), (0.13, 1.455), (0.075, 1.48), (0.0, 1.49)]
-    part('bodice', bm_lathe(prof, 20, at=(0, 0, 0), sx=1.0, sz=0.66), ivory, SPINE, 1.3)
-    for s in (1, -1):
-        part('bust%d' % s, ellipsoid((s * 0.068, 1.272, 0.082), 0.084, 0.07, 0.072, 10, 5), ivory, ['Spine1', 'Spine2'], 0.9)
-        part('hip%d' % s, ellipsoid((s * 0.085, 0.92, -0.085), 0.105, 0.095, 0.085, 10, 5), ivory, ['Hips', s > 0 and L + 'UpLeg' or Rr + 'UpLeg'], 1.0)
+    bodice_rows = []
+    for radius, y in prof:
+        if radius == 0:
+            bodice_rows.append([(0, y, 0)])
+            continue
+        ring = []
+        for j in range(28):
+            th = TAU*j/28
+            # Shape the robe itself rather than layering spheres over the chest.
+            front = max(0, math.sin(th)) ** 3
+            fullness = .022 * math.exp(-((y-1.28)/.075)**2) * front
+            ring.append((radius*math.cos(th),y,.66*radius*math.sin(th)+fullness))
+        bodice_rows.append(ring)
+    part('bodice', bm_loft(bodice_rows, closed_u=True, caps=True), ivory, SPINE, 1.3)
     # ---- the skirt: a double-sided loft from the hips to the ankles, drape stripes in ivory and pale gold ----
     levels = [(0.95, 0.215, 0.145, 0.0), (0.84, 0.238, 0.175, 0.0), (0.66, 0.25, 0.205, 0.0), (0.48, 0.268, 0.232, 0.0), (0.32, 0.29, 0.26, 0.0), (0.19, 0.315, 0.285, 0.0), (0.085, 0.345, 0.315, 0.02)]
-    N = 24
-    rings = [[(rx * math.cos(TAU * j / N), y + w * math.sin(5 * TAU * j / N), rz * math.sin(TAU * j / N)) for j in range(N)] for y, rx, rz, w in levels]
+    N = 40
+    rings = [[((rx + 0.006 * math.cos(10 * TAU * j / N)) * math.cos(TAU * j / N), y + w * math.sin(5 * TAU * j / N), (rz + 0.006 * math.cos(10 * TAU * j / N)) * math.sin(TAU * j / N)) for j in range(N)] for y, rx, rz, w in levels]
     skirt = bm_loft(rings, closed_u=True, closed_v=False, caps=False); shell(skirt, 0.012)
     for f in skirt.faces:
         c = f.calc_center_median(); th = math.atan2(-c.y, c.x)
@@ -78,10 +88,21 @@ def build_chinka(rig):
     part('collar_disc', bm_cyl(0.024, 0.024, 0.008, 12, AZ, (0, 1.42, 0.12)), gold_hi, ['Spine2', 'Neck'], 1.0)
     # ---- neck and head ----
     part('neck', capsule((0, 1.45, -0.005), (0, 1.58, -0.005), 0.047, None, 14, 3, 2), skin, ['Neck', 'Spine2', 'Head'])
-    part('head', ellipsoid((0, 1.675, -0.01), 0.093, 0.112, 0.102, 16, 10), skin, ['Head', 'Neck'], 0.6)
-    part('chin', ellipsoid((0, 1.636, 0.006), 0.084, 0.08, 0.095, 16, 7, math.pi * 0.45, math.pi), skin, ['Head', 'Neck'], 0.6)
-    for s in (1, -1):
-        part('cheek%d' % s, ellipsoid((s * 0.056, 1.65, 0.05), 0.03, 0.026, 0.032, 10, 6), skin, ['Head'], 0.6)
+    # Continuous cheek, jaw and forehead surface, rather than intersecting face spheres.
+    face_rows = [(1.565, .015, .035, .010), (1.580, .042, .063, .004),
+                 (1.610, .068, .084, -.004), (1.640, .082, .098, -.008),
+                 (1.666, .090, .101, -.010), (1.690, .091, .100, -.012),
+                 (1.714, .087, .100, -.014), (1.745, .077, .086, -.018),
+                 (1.774, .046, .055, -.022), (1.790, .001, .001, -.022)]
+    rings = []
+    for y, rx, rz, cz in face_rows:
+        ring = []
+        for j in range(40):
+            th = TAU * j / 40; front = max(0, math.cos(th)) ** 6
+            z = cz + rz * math.cos(th) - front * .006 * math.exp(-((y-1.692)/.016)**2)
+            ring.append((rx * math.sin(th), y, z))
+        rings.append(ring)
+    part('sculpted_head', bm_loft(rings, closed_u=True, caps=True), skin, ['Head'], 0.6)
     for i, (x, y, z) in enumerate(((0.052, 1.66, 0.084), (-0.048, 1.652, 0.087), (0.07, 1.64, 0.07), (-0.03, 1.628, 0.095), (0.036, 1.672, 0.09))):
         part('freckle%d' % i, ellipsoid((x, y, z), 0.0035, 0.003, 0.002, 6, 3), freckle, ['Head'], 0.6)
     for s in (1, -1):
@@ -92,7 +113,7 @@ def build_chinka(rig):
         part('hoop%d' % s, bm_sweep(lambda u: (hx, hy + hr * math.cos(u * TAU), hz + hr * math.sin(u * TAU)), twist, 12, closed=True, ref=(1, 0, 0)), gold, ['Head'], 0.6)
     # eyes: big, with iris, pupil, highlight, an upper lash line and lash flicks
     for s in (1, -1):
-        part('eye%d' % s, ellipsoid((s * 0.037, 1.692, 0.079), 0.028, 0.017, 0.016, 10, 7), white, ['Head'], 0.6)
+        part('eye%d' % s, ellipsoid((s * 0.037, 1.692, 0.079), 0.025, 0.012, 0.016, 12, 7), white, ['Head'], 0.6)
         part('iris%d' % s, ellipsoid((s * 0.035, 1.692, 0.09), 0.013, 0.013, 0.007, 10, 5), iris, ['Head'], 0.6)
         part('pupil%d' % s, ellipsoid((s * 0.035, 1.692, 0.095), 0.0065, 0.0065, 0.004, 8, 4), pupil, ['Head'], 0.6)
         part('hl%d' % s, ellipsoid((s * 0.03, 1.697, 0.098), 0.004, 0.004, 0.003, 6, 3), hl, ['Head'], 0.6)
@@ -101,13 +122,13 @@ def build_chinka(rig):
         for i, (dx, dy, ang) in enumerate(((0.03, 0.006, 0.9), (0.034, -0.002, 0.5))):
             part('flick%d_%d' % (s, i), bm_rod((s * (0.036 + dx * 0.9), 1.698 + dy, 0.094), (s * (0.036 + dx * 0.9 + 0.014 * math.cos(ang)), 1.698 + dy + 0.014 * math.sin(ang), 0.094), 0.0025, 4), lash, ['Head'], 0.6)
         # strong arched brows
-        part('brow%d' % s, bm_torus(0.043, 0.0085, 12, 5, AZ, (s * 0.042, 1.703, 0.084), sweep=(math.pi * 0.2, math.pi * 0.85), sy=0.8), brow, ['Head'], 0.6)
+        part('brow%d' % s, bm_torus(0.036, 0.0045, 12, 5, AZ, (s * 0.039, 1.706, 0.084), sweep=(math.pi * 0.2, math.pi * 0.85), sy=0.55), brow, ['Head'], 0.6)
     # a small nose, full lips with a warm smile, a hint of teeth
     part('nose', capsule((0, 1.705, 0.086), (0, 1.656, 0.109), 0.011, 0.016, 12, 3, 2), skin, ['Head'], 0.6)
     part('nose_tip', ellipsoid((0, 1.654, 0.111), 0.018, 0.015, 0.016, 12, 8), skin, ['Head'], 0.6)
-    part('lip_up', bm_torus(0.031, 0.0055, 12, 5, AZ, (0, 1.628, 0.096), sweep=(math.pi * 1.05, math.pi * 1.95), sy=0.55), lip, ['Head'], 0.6)
-    part('lip_lo', bm_torus(0.029, 0.0055, 12, 5, AZ, (0, 1.622, 0.096), sweep=(math.pi * 1.06, math.pi * 1.94), sy=0.55), lip, ['Head'], 0.6)
-    part('teeth', bm_box(0.036, 0.0065, 0.004, (0, 1.616, 0.1)), teeth, ['Head'], 0.6)
+    part('lip_up', ellipsoid((0,1.620,.094),.022,.003,.004,16,5), lip, ['Head'], .6)
+    part('lip_lo', ellipsoid((0,1.614,.095),.021,.004,.004,16,5), lip, ['Head'], .6)
+    part('mouth_line', capsule((-.021, 1.617, .094), (.021, 1.617, .094), .001, .001, 6, 2, 2), lash, ['Head'], 0.6)
     # the circlet: a thin gold band on the hair with a sun disc at the brow
     part('circlet', bm_torus(0.108, 0.006, 20, 4, AY, (0, 1.745, -0.02), sy=1.15), gold_hi, ['Head'], 0.6)
     part('circlet_disc', bm_cyl(0.016, 0.016, 0.008, 10, AZ, (0, 1.748, 0.1)), gold_hi, ['Head'], 0.6)
