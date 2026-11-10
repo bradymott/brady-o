@@ -345,7 +345,7 @@ const TourPanel = {
     this.cloudT = (this.cloudT || 0) + dt;
   };
   P.drawWorldFx = function (ctx, layer) {
-    const T = TourProgress.data(), t = this.t, z = this.cam.z;
+    const T = TourProgress.data(), t = this.t, z = this.cam.z; T.jars = T.jars || {};
     if (layer === 'under') {
       // secret-flight arcs: gold dotted, with a tiny plane
       for (const to in T.flights || {}) {
