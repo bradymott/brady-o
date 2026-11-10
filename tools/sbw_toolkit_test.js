@@ -90,7 +90,7 @@ section('progress', () => {
   const sc = TourProgress.exit('1-6', 'main');
   check('a shortcut exit (node:1-5) unlocks 1-5 and draws a gold trail', TourProgress.isUnlocked('1-5') && sc.length === 1 && sc[0].kind === 'path' && sc[0].gold && sc[0].to === 4, sc);
   const hs = TourProgress.exit('1-6', 'secret');
-  check('a house exit reveals the stand (path, then house)', hs.length === 2 && hs[1].kind === 'house' && hs[1].id === 'mx-test' && hs[0].to === 6, hs);
+  check('a house exit reveals the stand (path, then house)', hs.length === 2 && hs[1].kind === 'house' && hs[1].id === 'mx-test' && hs[0].to === TourProgress.stopIndex(MX, 'house:mx-test') && hs[0].to >= MX.levels.length, hs);
   hs.forEach(q => TourProgress.revealDone(q));
   check('isRevealed(house)', TourProgress.isRevealed('house:mx-test') && TourProgress.isRevealed('mx-test'));
   Save.data.done['1-6'] = true;

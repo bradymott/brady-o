@@ -56,7 +56,8 @@ const stampsOk=(m,tag)=>{
 {
   const C=Tour.countries.mx,orig=C.levels,base=orig.map(L=>Object.assign({},L));
   const branchy=base.concat([Object.assign({},base[0],{name:'Secret Cenote',mapCell:[0,2],mapFrom:1}),Object.assign({},base[1],{name:'Hidden Grotto',mapCell:[2,2],mapFrom:3,mapHidden:true})]);
-  const nine=base.concat(base.slice(0,4).map((L,k)=>Object.assign({},L,{name:'Extra '+(k+1)})));
+  const plain=L=>{const o=Object.assign({},L);delete o.mapCell;delete o.mapFrom;return o;};
+  const nine=base.map(plain).concat(base.slice(0,4).map((L,k)=>Object.assign(plain(L),{name:'Extra '+(k+1)})));
   let cases=0;
   for(const [W,H] of [[874,402],[390,844],[667,375],[568,320],[320,568]]){
     B.Game.cssW=W;B.Game.cssH=H;
