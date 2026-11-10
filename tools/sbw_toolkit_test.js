@@ -1,7 +1,7 @@
 // The level toolkit's interface (LEVEL_OVERHAUL.md §7): spec v2, stamps, the area graph, exits and progress, and the
 // validator v2 primitives, each on a small fixture level. Node only (no browser); the browser checks of the same
 // objects live in tools/sbw_toolkit_shots.js.
-// usage: node tools/sbw_toolkit_test.js [section ...]   sections: spec stamps graph progress validator gens objects behave gear map
+// usage: node tools/sbw_toolkit_test.js [section ...]   sections: spec stamps graph progress validator gens objects systems behave gear map
 const loadGame = require('./load_game');
 const G = loadGame();
 const { Tour, TourProgress, TourBuild, TourStamp, Validator, Save, T, TS } = G;
@@ -152,6 +152,30 @@ section('objects', () => {
     ['a lever lock without its lever', [(st) => { const x = st.x; st.floor(x, x + 8); st.B.locks.push({ id: 'L9', tiles: [[x + 6, st.gy - 1], [x + 6, st.gy - 2], [x + 6, st.gy - 3]] }); st.B.fill(x + 6, 0, x + 6, st.gy - 1, st.T.HARD); return x + 9; }]]
   ];
   for (const [what, steps] of neg) { const { r } = validate(strip(steps)); check('negative: ' + what + ' blocks the exit', !r.exits.main, r.exits); }
+});
+
+section('systems', () => {
+  for (const [name, spec] of Object.entries(fixtures.systems)) {
+    const { lvl, r } = validate(spec);
+    check(`system ${name} validates`, r.ok && !(lvl.problems || []).length, { exits: r.exits, gold: r.gold, held: r.held, pace: r.pace, problems: lvl.problems });
+  }
+  // the flip band is really walked upside down: some search nodes stand on the ceiling
+  { const lvl = build(fixtures.systems.flip); const r = Validator.run(lvl, { trace: true }); const up = (r.trace || []).filter(t => t[4] === 1).length; check('flip: the search stands on the ceiling inside the band', up > 5 && r.ok, { upsideDownNodes: up }); }
+  const strip = (steps, extra) => ({ name: 'neg', arch: 'lab', theme: 'mx_mercado', exits: { main: { to: null } }, areas: [Object.assign({ id: 'o', gen: 'strip', script: [['flat', { n: 4 }]].concat(steps, [['postcard', { kind: 'must' }], ['postcard', { kind: 'high', dx: 2 }], ['postcard', { kind: 'risky', dx: 4 }], ['flat', { n: 6 }], ['end', { exit: 'main' }]]) }, extra || {})] });
+  const wall = h => st => { const x = st.x; st.floor(x, x + 3); st.B.fill(x + 4, st.gy - h, x + 5, st.gy - 1, st.T.HARD); st.floor(x + 4, x + 12); return x + 13; };
+  const neg = [
+    ['a 14-tile spike floor with no flip band', [st => { const x = st.x; st.floor(x, x + 19); for (let k = x + 3; k < x + 17; k++) st.B.set(k, st.gy, st.T.SPIKES); return x + 20; }]],
+    ['the tide wall with no tide', [wall(7)]],
+    ['an 8-high wall with no balloon', [wall(8)]],
+    ['a 6-high wall with no seesaw', [wall(6)]],
+    ['the wheel pit with no wheel', [st => { const x = st.x; st.floor(x, x + 1); st.pit(x + 2, x + 12); st.floor(x + 13, x + 15); return x + 16; }]],
+    ['the thief lock with no thief stops', [st => { const x = st.x; st.floor(x, x + 8); st.B.locks.push({ id: 'stamp3', tiles: [[x + 6, st.gy - 1], [x + 6, st.gy - 2], [x + 6, st.gy - 3]] }); st.B.fill(x + 6, 0, x + 6, st.gy - 1, st.T.HARD); return x + 9; }]],
+    ['a fast doom (8 t/s) outruns Brady (pace)', [['flat', { n: 20 }]], { chase: { speed: 8 } }]
+  ];
+  for (const [what, steps, extra] of neg) { const { r } = validate(strip(steps, extra)); check('negative: ' + what + ' fails', !r.ok, { exits: r.exits, pace: r.pace }); }
+  // the mirror solver: the default layout has a setting that lights the receptor
+  const B = { get: () => 0 }; const sol = G.TourBeam ? G.TourBeam.solve(B, [0, 10], [[4, 10], [4, 7]], [8, 7]) : null;
+  check('mirror solver finds the two angles', !!sol && sol.join() === '0,0', sol);
 });
 
 console.log(bad ? `${bad} of ${n} TOOLKIT CHECK(S) FAILED` : `ALL ${n} TOOLKIT CHECKS PASSED`);

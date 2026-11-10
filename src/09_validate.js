@@ -41,10 +41,11 @@ const Validator = {
     if (waterLine != null) for (let y = waterLine; y < H; y++) for (let x = 0; x < W; x++) if (tiles[y * W + x] === T.EMPTY) tiles[y * W + x] = T.WATER;
     const A = { W, H, tiles, water: area.water, gravity: area.gravity || 1, springs, surf: area.surf || null, zones: z2, locks, waterLine, carry: area.carry || null, fallCap: area.fallCap || 0, airSteer: area.airSteer || 0 };
     A.mixed = !area.water && tiles.indexOf(T.WATER) >= 0;
+    A.hasFlip = z2.some(z => z.kind === 'flip');
     return A;
   },
   openLocks(A, held) {
-    for (const L of A.locks) if (!L.open && held.has(L.id)) { L.open = true; for (const [x, y] of L.tiles) A.tiles[y * A.W + x] = T.EMPTY; }
+    for (const L of A.locks) if (!L.open && held.has(L.id)) { L.open = true; for (const [x, y] of L.tiles) A.tiles[y * A.W + x] = T.EMPTY; A.tileRev = (A.tileRev || 0) + 1; }
   },
   // crawlways: rows with a lintel overhead, one free row and a floor; their two ends as standing spots
   crawlways(A) {
@@ -102,9 +103,11 @@ const Validator = {
     const startTx = Math.floor(level.start.x / TS), startTy = Math.floor(level.start.y / TS);
     const exitAt = {};   // exit key -> distance (tiles) along the search
     let curDist = 0;
-    const push = (ai, tx, ty, mask, d) => {
-      const k = ((mask * 64 + ai) * 4096 + tx) * 1024 + ty;
-      if (seen.has(k)) return; seen.add(k); queue.push([ai, tx, ty, mask, d == null ? curDist : d]);
+    // a node: area, tile, toggle mask, distance and f (1 = standing upside down on a ceiling inside a flip band)
+    const push = (ai, tx, ty, mask, d, f) => {
+      f = f ? 1 : 0;
+      const k = (((mask * 2 + f) * 64 + ai) * 4096 + tx) * 1024 + ty;
+      if (seen.has(k)) return; seen.add(k); queue.push([ai, tx, ty, mask, d == null ? curDist : d, f]);
     };
     const markBox = (ai, b) => {
       for (const k of keys) if (k.ai === ai && !held.has(k.id) && overlap(b, k)) { held.add(k.id); if (useful.has(k.id)) newKey = true; }
@@ -127,8 +130,10 @@ const Validator = {
       for (const e of edges) if (e.ai === ai && overlap(b, { x: e.from[0] * TS, y: e.from[1] * TS, w: TS, h: TS })) push(e.area, e.to[0], e.to[1], curMask, curDist + Math.abs(e.to[0] - e.from[0]) + Math.abs(e.to[1] - e.from[1]));
       for (const s of switches) if (s.ai === ai && overlap(b, { x: s.tx * TS, y: s.ty * TS, w: TS, h: TS })) { const tx = Math.floor((b.x + b.w / 2) / TS), ty = Math.floor((b.y + b.h + 1) / TS); push(ai, tx, ty, curMask ^ (1 << s.g), curDist + 1); }
     };
-    const standable = (A, tx, ty) => {
+    const standable = (A, tx, ty, f) => {
       const t = tileAt(A, tx, ty);
+      // upside down (a flip band): the ceiling tile is the floor, the two tiles below are the headroom
+      if (f) return !!SOLID[t] && t !== T.SPIKES_CEIL && !(A.surf && A.surf[ty * A.W + tx] === SURF.BOUNCE) && !SOLID[tileAt(A, tx, ty + 1)] && !SOLID[tileAt(A, tx, ty + 2)];
       if (!(SOLID[t] || t === T.SEMI) || t === T.SPIKES) return false;
       if (A.surf && A.surf[ty * A.W + tx] === SURF.BOUNCE) return false;   // you never stand still on a trampoline
       return !SOLID[tileAt(A, tx, ty - 1)] && !SOLID[tileAt(A, tx, ty - 2)];
@@ -149,35 +154,36 @@ const Validator = {
       push(level.start.area, startTx, startTy, 0, 0);
       let guard = 0;
       while (queue.length && guard++ < guardMax) {
-        const [ai, tx, ty, mask, d] = queue.shift();
+        const [ai, tx, ty, mask, d, f] = queue.shift();
         curMask = mask; curDist = d;
         const A = proxy(ai, mask);
         res.nodes++;
         res.areasReached[ai] = true;
-        if (opts.trace) (res.trace = res.trace || []).push([ai, tx, ty, mask]);
-        for (const au of autos) if (au.ai === ai) push(ai, tx, ty, mask ^ (1 << au.g), d + 1);
+        if (opts.trace) (res.trace = res.trace || []).push([ai, tx, ty, mask, f]);
+        for (const au of autos) if (au.ai === ai) push(ai, tx, ty, mask ^ (1 << au.g), d + 1, f);
         if (A.water) { this.flood(A, ai, tx, ty, markBox, portalCheck); continue; }
         // a water line (valve, tide, flood) in a dry area: swim the connected water, climb out at its edges
-        if (A.mixed && (tileAt(A, tx, ty - 1) === T.WATER || tileAt(A, tx, ty - 2) === T.WATER)) { this.swimOut(A, ai, tx, ty, mask, d, markBox, portalCheck, push, standable); continue; }
+        if (!f && A.mixed && (tileAt(A, tx, ty - 1) === T.WATER || tileAt(A, tx, ty - 2) === T.WATER)) { this.swimOut(A, ai, tx, ty, mask, d, markBox, portalCheck, push, standable); continue; }
         // v2: a spot inside solid rock is no place to stand (dug soil is the exception)
-        if (v2) { const t1 = tileAt(A, tx, ty - 1), t2 = tileAt(A, tx, ty - 2); if ((SOLID[t1] && t1 !== T.SOIL) || (SOLID[t2] && t2 !== T.SOIL)) continue; }
-        const nodeBody = { x: tx * TS + TS / 2 - D.w / 2, y: ty * TS - D.h, w: D.w, h: D.h };
+        if (v2 && !f) { const t1 = tileAt(A, tx, ty - 1), t2 = tileAt(A, tx, ty - 2); if ((SOLID[t1] && t1 !== T.SOIL) || (SOLID[t2] && t2 !== T.SOIL)) continue; }
+        if (f && (SOLID[tileAt(A, tx, ty + 1)] || SOLID[tileAt(A, tx, ty + 2)])) continue;
+        const nodeBody = { x: tx * TS + TS / 2 - D.w / 2, y: f ? (ty + 1) * TS : ty * TS - D.h, w: D.w, h: D.h };
         markBox(ai, nodeBody); portalCheck(ai, nodeBody);
         // a crawlway with the knee pads: in at one end, out at the other
-        if (held.has('gear:pads')) for (const c of A.crawl) { if (c.a[0] === tx && c.a[1] === ty) push(ai, c.b[0], c.b[1], mask, d + c.b[0] - c.a[0]); if (c.b[0] === tx && c.b[1] === ty) push(ai, c.a[0], c.a[1], mask, d + c.b[0] - c.a[0]); }
+        if (!f && held.has('gear:pads')) for (const c of A.crawl) { if (c.a[0] === tx && c.a[1] === ty) push(ai, c.b[0], c.b[1], mask, d + c.b[0] - c.a[0]); if (c.b[0] === tx && c.b[1] === ty) push(ai, c.a[0], c.a[1], mask, d + c.b[0] - c.a[0]); }
         // dig down through soil (the soil under Brady's feet goes; he stands on what is below)
-        if (tileAt(A, tx, ty) === T.SOIL) push(ai, tx, ty + 1, mask, d + 1);
-        for (const dir of [-1, 1]) if (standable(A, tx + dir, ty) && !SOLID[tileAt(A, tx + dir, ty - 1)]) push(ai, tx + dir, ty, mask, d + 1);
+        if (!f && tileAt(A, tx, ty) === T.SOIL) push(ai, tx, ty + 1, mask, d + 1);
+        for (const dir of [-1, 1]) if (standable(A, tx + dir, ty, f) && !SOLID[tileAt(A, tx + dir, f ? ty + 1 : ty - 1)]) push(ai, tx + dir, ty, mask, d + 1, f);
         // down a dug hole (soil all around): only digging on, or stepping out sideways into a cavern
-        if (tileAt(A, tx, ty - 1) === T.SOIL || tileAt(A, tx, ty - 2) === T.SOIL) {
+        if (!f && (tileAt(A, tx, ty - 1) === T.SOIL || tileAt(A, tx, ty - 2) === T.SOIL)) {
           for (const dir of [-1, 1]) { res.sims++; const land = this.simulate(A, ai, tx, ty, { dir, sp: PHYS.walk, off: 0, hold: 0, jump: false }, D, markBox, 1); if (land) push(ai, land[0], land[1], mask, d + 1); }
           continue;
         }
-        const runwayBack = dir => { let n = 0; while (n < 8 && standable(A, tx - dir * (n + 1), ty)) n++; return n; };
-        const onSpring = A.springs.has(tx + ',' + ty);
+        const runwayBack = dir => { let n = 0; while (n < 8 && standable(A, tx - dir * (n + 1), ty, f)) n++; return n; };
+        const onSpring = !f && A.springs.has(tx + ',' + ty);
         const maneuvers = [];
         for (const dir of [-1, 1]) {
-          const edge = !standable(A, tx + dir, ty);
+          const edge = !standable(A, tx + dir, ty, f);
           const rb = runwayBack(dir);
           const speeds = [0, rb >= 1 ? PHYS.walk : PHYS.walk * 0.55];
           if (rb >= 5) speeds.push(PHYS.run);
@@ -202,8 +208,8 @@ const Validator = {
         const jumpBoost = A.carry && !held.has('deliver') ? (A.carry.jumpMul || 0.92) : 1;
         for (const m of maneuvers) {
           res.sims++;
-          const land = this.simulate(A, ai, tx, ty, m, D, markBox, jumpBoost);
-          if (land) push(ai, land[0], land[1], mask, d + Math.abs(land[0] - tx) + Math.abs(land[1] - ty));
+          const land = this.simulate(A, ai, tx, ty, m, D, markBox, jumpBoost, f);
+          if (land) push(ai, land[0], land[1], mask, d + Math.abs(land[0] - tx) + Math.abs(land[1] - ty), land[2]);
         }
         if (opts.earlyExit && done()) break;
       }
@@ -265,8 +271,8 @@ const Validator = {
     return { ok: !errors.length, errors, warnings };
   },
 
-  simulate(A, ai, tx, ty, m, D, markBox, jumpBoost) {
-    const b = { x: 0, y: ty * TS - D.h, w: D.w, h: D.h, vx: m.dir * m.sp, vy: 0, onGround: true, coyote: PHYS.coyote, jumpBuf: 0, jumping: false, runT: m.sp >= PHYS.run ? 1 : 0, airMax: Math.max(PHYS.walk, m.sp), facing: m.dir || 1, crouch: false, inWater: false, stroke: 0, groundTile: T.GROUND, groundTx: tx, groundTy: ty, dropT: 0 };
+  simulate(A, ai, tx, ty, m, D, markBox, jumpBoost, f) {
+    const b = { x: 0, y: f ? (ty + 1) * TS : ty * TS - D.h, w: D.w, h: D.h, vx: m.dir * m.sp, vy: 0, onGround: true, coyote: PHYS.coyote, jumpBuf: 0, jumping: false, runT: m.sp >= PHYS.run ? 1 : 0, airMax: Math.max(PHYS.walk, m.sp), facing: m.dir || 1, crouch: false, inWater: false, stroke: 0, groundTile: T.GROUND, groundTx: tx, groundTy: ty, dropT: 0, flipped: !!f };
     const cx = tx * TS + TS / 2;
     b.x = m.off ? (m.dir > 0 ? tx * TS + TS - b.w / 2 - 1 : tx * TS + b.w / 2 + 1) - b.w / 2 : cx - b.w / 2;
     if (m.spring) { b.vy = -PHYS.springV; b.onGround = false; b.coyote = 0; b.jumping = true; }
@@ -285,10 +291,10 @@ const Validator = {
       inp.jumpPressed = m.jump && t === 0;
       if (m.mash && b.inWater) inp.jumpPressed = Math.floor(t / 0.28) !== Math.floor((t - dt) / 0.28);
       inp.jump = (m.jump || m.spring) ? t < m.hold : (m.mash ? true : false);
-      playerPhysics(b, inp, A, dt, null, popts);
+      playerPhysicsFlip(b, inp, A, dt, null, popts);
       t += dt;
       markBox(ai, b);
-      if (b.y > A.H * TS + 40) return null;
+      if (b.y > A.H * TS + 40 || b.y + b.h < -40) return null;
       if (lavaContact(b, A)) return null;
       if (spikeContact(b, A)) return null;
       if (!b.onGround) air = true;
@@ -299,11 +305,11 @@ const Validator = {
         if (A.springs.has(lx + ',' + lt) || A.springs.has(b.groundTx + ',' + lt)) {
           b.vy = -PHYS.springV; b.onGround = false; b.jumping = true; air = true; inp.jump = true; m = Object.assign({}, m, { hold: t + 2, jump: true }); continue;
         }
-        return [lx, lt];
+        return [lx, lt, b.flipped ? 1 : 0];
       }
       if (b.onGround && !air && t > 0.5) {
         // walked without leaving the ground: report where we ended
-        return [Math.floor((b.x + b.w / 2) / TS), b.groundTy];
+        return [Math.floor((b.x + b.w / 2) / TS), b.groundTy, b.flipped ? 1 : 0];
       }
     }
     return null;

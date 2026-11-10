@@ -78,7 +78,7 @@ Rules of thumb:
 | level `n`, `arch`, `secret: true`, `exits { main, secret, … }`, `areas`, `mapCell`, `mapFrom` | tested | `n` mismatches and main-after-secret go to `Tour.problems` (reported by `--rules`) |
 | legacy `style`/`script` levels | tested | build byte-identical (`tools/sbw_snapshot.js`); legacy `secret: { to }` becomes `exits.secret = { to: 'land:<to>' }` |
 | `C.mainCount`, `Tour.isBoss`, `isFinale`, WORLDS `kinds`/`mainCount` | tested | |
-| country `stamps`, `skins`, `houses`, `map` | implemented | stamps and skins are used by fixtures; houses are in the progress API and tests; the panel does not draw houses yet (W13) |
+| country `stamps`, `skins`, `houses`, `map` | implemented | used by Mexico 1-1 and Ecuador 2-2; houses are in the progress API and tests; the panel does not draw houses yet (W13) |
 | `Tour.amend(cc, patch)` (extra, not in §7) | tested | used by the progress tests |
 | `TourBuild.fromSpec(C, spec, i)` (extra) | tested | builds an unregistered spec (fixtures, lab) |
 
@@ -112,34 +112,39 @@ Rules of thumb:
 | `sync` | tested | |
 | `anchor { name }`, `vkey { id, dx, dy }` (extras) | tested | |
 | `fork` | tested | rail |
-| `gearStand` `keyLock` `lever` `toggle` `plate` `timedDoor` `zip` `catapult` `seesaw` `wheel` `teleport` `fan` `balloon` `breakwall` `mirrors` `valve` `ring` `belt` `iceRun` `honey` `bouncePad` `crumbleRow` `pedestal` `lantern` `flipline` `hold` `thief` `rival` `watcher` `ball` `bottle` `shop` | not yet | W10 (object library) |
-| gimmick pieces `geyser pancake bubbler roller barrel laser sweeper subwoofer horn poiring dropper banner discoball jellypad` | not yet | the entity types exist (engine gimmicks); the pieces come with W10 |
+| `gearStand` `keyLock` `lever` `toggle` `plate` `timedDoor` `zip` `catapult` `teleport` `fan` `breakwall` `valve` `ring` `belt` `iceRun` `honey` `bouncePad` `crumbleRow` | tested | `LAB.objects` fixtures validate; `tools/sbw_toolkit_shots.js objects` drives each one in the game (+ 3 negative checks) |
+| `seesaw` `wheel` `balloon` `mirrors` `pedestal` `lantern` (relight / phase) `flipline` `hold` `thief` + `thiefStop` `rival` `watcher` + `alarmShutter` + `hideSpot` `ball` `bottle` `shop` | tested | `LAB.systems` fixtures validate (+ 7 negative checks); `sbw_toolkit_shots.js systems` drives each one in the game. Extras: `pedestal { deliver, lockAt }`, `flipline { spikes }`, `thiefStop { n, lock }` |
+| gimmick pieces `geyser pancake bubbler roller barrel laser sweeper subwoofer horn poiring dropper banner discoball jellypad` | tested | `look` picks a country skin |
 
 ### Entity types (§7.4.3)
 | Type | Status |
 |---|---|
 | `trapdoor`, `railSwitch` (+ `railCart`, `railTrack`, `tourCurtain`, `tourDraft`) | tested / implemented (curtain, draft) |
-| `lever toggleSwitch plate crate timedDoor zipLine catapult seesaw wheel teleport fan balloon breakWall mirror sunReceptor valve ring pedestal carryItem lantern gearStand bottle souvenirShop` | not yet |
-| `tourDoom holdArena tourThief tourRival watcher tourBall` | not yet |
+| `lever toggleSwitch plate crate timedDoor zip catapult teleport fan breakWall gearStand` (`src/28_tour_h_objects.js`, gear stand in `28_tour_dg_gear.js`) | tested |
+| `seesaw wheelHub balloon mirror sunSource sunReceptor pedestal lampPost phaseBlocks flipLine bottle souvenirShop` (`src/28_tour_hb_systems.js`) | tested |
+| `tourDoom holdArena tourThief tourRival watcher alarmShutter hideSpot` (`28_tour_hb_systems.js`), `tourBall` (`28_tour_i_behave.js`) | tested |
 
 ### Behaviours (§7.4.4)
-All 30 (`splitter … hoverDart`): **not yet** (W11). `onPhase` / `onLight` hooks: not yet.
+All 30 (`splitter … hoverDart`) in `src/28_tour_i_behave.js` (`TourBehave`): **tested**. `tools/sbw_toolkit_shots.js behave` makes a lab critter per behaviour and scripts each one through its tell, attack and weak moment (the state sequence is checked), with a screenshot each. Walkers, flyers (`grabber`, `hoverDart`, `swarm`) and swimmers wrap `TourEnemy`, `TourFlyer`, `TourSwimmer`. `onPhase` is called by `setPhase`; `lightFrozen` reads the lights list.
 
 ### Power-ups (§7.4.5)
-Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial globe`, the HANDS / BUFFS slots and the Backpack swap: **not yet** (W12). The validator already understands gear stands as vkeys `gear:<id>` (crawlways open with `gear:pads`).
+Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial globe` (`src/28_tour_dg_gear.js`, `TourGear`), the FORM / HANDS / BUFFS slots, the hit order (star → hat absorbs → HANDS drops for 2 s → FORM) and the Backpack swap: **tested** (`sbw_toolkit_test.js gear`, `sbw_toolkit_shots.js gear`). Gear stands are vkeys `gear:<id>`.
 
 ### Area systems (§7.4.6)
 | Key | Status | Notes |
 |---|---|---|
 | `dark`, `water`, `gravity`, `wind`, `bpm`, `autoscroll`, `risingLava`, `roof` | tested (legacy) | |
 | `waterLine` | implemented | static water line (tiles below are water for the validator; `area.waterTop` in the game) |
-| `tide { low, high, period, hold }` | implemented | the water line cycles in the game; the validator treats it as an auto toggle when a toggle group of kind `tide` is present (W9 wires it automatically: not yet) |
+| `tide { low, high, period, hold }` | tested | the water line cycles in the game; the build adds an auto toggle group of kind `tide`, so the validator tries both water lines everywhere |
 | `risingWater`, `autoscrollY` | tested | rise gen |
 | `bottomKill` | tested | |
 | `camera: 'lanes' / 'shaft' / 'room' / 'free'` | tested | `'tower'` is the legacy tower camera |
-| `carry { jumpMul }` | tested (validator) | the carried item and pedestals come with W10 |
-| `chase { speed }` | tested (validator pace) | the `TourDoom` front comes with W10 |
-| `flip`, `lamp`, `phase`, `mirror` (v2 areas) | not yet | `mirror` works for legacy levels |
+| `carry { jumpMul }` | tested | pedestals, the carried item drawn over Brady, lower jumps in the game too; a hit, a 6-row fall or water sends it home |
+| `chase { speed, ramp, period, look: 'dust'/'lava'/'wave', lethal }` | tested | the `TourDoom` front (pace in the validator) |
+| flip (zones of kind `flip`, the `flipline` piece) | tested | `playerPhysicsFlip` runs the physics in a mirrored copy of the area; the validator stands on ceilings inside the band (node flag `f`) |
+| `lamp { decay, r0, r1 }` | tested | the area is dark; Brady's light shrinks; `lantern { kind: 'relight' }` posts relight it |
+| `phase { night, day, start }` | tested | the `lantern { kind: 'phase' }` piece: a toggle group of day-only / night-only blocks + the theme swap |
+| `mirror` (v2 areas) | not yet | works for legacy levels |
 
 ### Validator v2 (§6.1)
 | Primitive | Status |
@@ -156,7 +161,7 @@ Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial glob
 | coverage: every exit, 3 postcards, every area | tested |
 | budget (§5.3 rules 1-3) | implemented (v2 levels only; rule 4-7 not yet) |
 | archetype rules (§0) in `--rules` | implemented |
-| flip standing | not yet |
+| flip standing | tested (`LAB.systems.flip`, plus the "no flip band" negative) |
 | result `{ ok, exits, gold, areasReached, pace, budget, nodes, ms }` | tested |
 
 ### Progress API (§7.4.7)
@@ -170,9 +175,22 @@ Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial glob
 ### Map (§3.6, §3.7)
 Country panel from `mapCell`/`mapFrom` with hidden stops (`mapHidden`, from the graphics pass): exists. Houses on the panel, reveal animations, exit pips, `ARCH_LABEL`, panel Brady walker, world-map flights/bottles/lighthouse/airship: **not yet** (W13).
 
+## Levels in the v2 format
+| Level | Where | Status |
+|---|---|---|
+| 1-1 Mercado Mayhem (PARADE: `mercado` layered → `bodega` room (secret) → `tienda` gate) | `src/29_tour_mx.js` | validates (main + secret exits, 3 postcards, both areas); runs in the game (`sbw_toolkit_shots.js levels`) |
+| 2-2 Canopy of Baños (islands → treehouse and cascada rooms) | `src/29_tour_ec_levels.js` | validates; runs in the game |
+| the other 66 | unchanged legacy specs | build byte-identical (`sbw_snapshot.js`); all finishable (`validate_levels.js`) |
+
 ## Spec deviations (decided while building; the spec text was updated where it matters)
 - `src/28_tour_b2_gens.js` would load **before** `28_tour_b_build.js` (files load in name order and `2` sorts before `_`), so the generators live in `src/28_tour_bb_gens.js`.
 - The save object keeps the engine's own version field (`v: 3`); the §3.5 sketch said `v: 1`, which would trigger the engine's old progress wipe.
 - Strip-like v2 areas never get an automatic `end`: the level says where it ends (HUB sub-areas end in stamps, LAIR lead-ins in a door).
 - The layered gen opens a hole in the lane above every launcher (bounce, spring, updraft) by default; otherwise awnings and springs on the street would hit the underside of the roof slab.
 - Rooms without a `theme` use the level theme's cave look; rooms are padded to at least 28 x 14 tiles.
+- Gear lives in `src/28_tour_dg_gear.js` (not in `28_tour_c_powers.js`): it needs the actor classes from `28_tour_d_actors.js` and loads right after them.
+- Ecuador 2-2 is in its own file `src/29_tour_ec_levels.js` (`Tour.amend('ec', …)`) so `29_tour_ec.js` stays with the art branch; it uses `ecFrog` where the spec says `ecGlassFrog` (no such type exists yet).
+- Souvenir Stand prices are 30 / 60 / 90, not 100: the coin counter rolls over into a 1-up at 100, so 100 coins can never be held.
+- Brady in a flip band ignores moving platforms (they are not mirrored); flip bands should not contain them.
+- THIEF: the thief leaps between its stops (`thiefStop n`) in arcs rather than running the terrain, so it can never get stuck; it is caught by a stomp or any hit while it waits at a stop.
+- RACE: the rival's course is read from the tiles at run time (the highest standable surface per column, leaping gaps); it waits at an unlit checkpoint when Brady is 15+ tiles behind.

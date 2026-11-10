@@ -269,6 +269,28 @@ LAB.objects = {
   gimmicks: obj('Gimmicks', [['geyser', {}], ['pancake', {}], ['bubbler', {}], ['roller', {}], ['barrel', {}], ['laser', {}], ['sweeper', { len: 3 }], ['subwoofer', {}], ['horn', {}], ['poiring', {}], ['dropper', {}], ['banner', { len: 3 }], ['discoball', { len: 3 }], ['jellypad', {}]])
 };
 
+/* ---------- area systems and level-flow entities (W9, W10 batch B) ---------- */
+const tideWall = st => { const x = st.x; st.floor(x, x + 3); st.B.fill(x + 4, st.gy - 7, x + 5, st.gy - 1, st.T.HARD); st.floor(x + 4, x + 12); return x + 13; };
+LAB.systems = {
+  flip: obj('Flip band over spikes', [['flipline', { w: 16, spikes: true }]]),
+  lamp: obj('Lamp and relight post', [flat(8), ['lantern', { kind: 'relight' }], flat(8)], { lamp: { decay: 20, r0: 170, r1: 70 } }),
+  phase: obj('Sun-moon lantern', [['lantern', { kind: 'phase', g: 0, A: [[5, -4, 8, -4]], B: [[10, -4, 13, -4]] }], flat(12)], { phase: { night: 'mx_bodega' } }),
+  tide: obj('Tide over a wall', [tideWall], { tide: { low: 17, high: 7, period: 12 } }),
+  chase: obj('Doom chase', [flat(20)], { chase: { speed: 3.5 } }),
+  carry: obj('Carry an egg', [['pedestal', { item: 'egg', start: true }], flat(10), ['pedestal', { deliver: true, lockAt: 2 }]], { carry: { jumpMul: 0.92 } }),
+  wheel: obj('Wheel over a pit', [['wheel', { r: 4, arms: 4, speed: 0.6 }]]),
+  seesaw: obj('Seesaw', [['seesaw', { len: 6 }], (st) => { const x = st.x; st.floor(x, x + 2); st.B.fill(x + 3, st.gy - 6, x + 4, st.gy - 1, st.T.HARD); st.floor(x + 3, x + 8); return x + 9; }]),
+  balloon: obj('Balloon over a wall', [['balloon', { rise: 9, drift: 2 }], (st) => { const x = st.x; st.B.fill(x, st.gy - 8, x + 1, st.gy - 1, st.T.HARD); st.floor(x, x + 8); return x + 9; }]),
+  mirrors: obj('Mirrors and the sun receptor', [['mirrors', { lockAt: 2 }]]),
+  hold: obj('Hold-out plaza', [['hold', { w: 26, dur: 12 }]]),
+  thief: obj('Thief chase', [['thief', {}], flat(12), ['thiefStop', { n: 1 }], flat(12), ['thiefStop', { n: 2 }], flat(12), ['thiefStop', { n: 3, lock: true }]]),
+  rival: obj('Rival race', [['rival', { speed: 5.5 }], flat(30)]),
+  sneak: obj('Searchlight, guard, bush and alarm shutter', [['watcher', { kind: 'light', h: 6 }], ['watcher', { kind: 'guard', len: 14 }], ['alarmShutter', { h: 3 }], flat(4)]),
+  ball: obj('Ball and a ball wall', [['ball', { kind: 'snow' }], flat(6), ['breakwall', { needs: 'ball', h: 3 }]]),
+  bottle: obj('Bottle Mail', [['bottle', { n: 1 }]]),
+  shop: obj('Souvenir Stand counter', [['shop', {}]])
+};
+
 /* ---------- behaviours (W11): a walled hall with a ceiling and some one-way shelves to test enemies in ---------- */
 LAB.levels.hall = { name: 'Behaviour hall', arch: 'lab', theme: 'mx_mercado', exits: { main: { to: null } }, areas: [{ id: 'hall', gen: 'room', stamp: room([
   '##################################################',

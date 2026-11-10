@@ -30,7 +30,7 @@ module.exports = function loadGame(opts) {
   win.window = win; win.self = win;
   vm.createContext(win);
   const src = 'const BRADY_APP = "world";\n' + files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
-  vm.runInContext(src + '\n;this.API = { WORLDS, WORLD_ORDER, getLevel, generateLevel, Validator, T, TS, SURF, THEMES, Tour, TourProgress, Save, LevelCache, TourBuild, TourStamp, TourGens, AreaBuilder, ENTITY_TYPES, PHYS, PLAYER_DIM, TourGear };', win, { filename: 'world-app.js' });
+  vm.runInContext(src + '\n;this.API = { WORLDS, WORLD_ORDER, getLevel, generateLevel, Validator, T, TS, SURF, THEMES, Tour, TourProgress, Save, LevelCache, TourBuild, TourStamp, TourGens, AreaBuilder, ENTITY_TYPES, PHYS, PLAYER_DIM, TourGear, TourBeam };', win, { filename: 'world-app.js' });
   const A = win.API;
   if (opts.load) A.Save.load(); else A.Save.data = A.Save.defaults();
   A.store = store;

@@ -219,6 +219,75 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       await shot(`obj-${n}.png`);
     }
   });
+  // area systems and level-flow entities (W9, W10 batch B): each scripted in the game
+  await run('systems', async () => {
+    const r = await page.evaluate(() => {
+      const out = {};
+      const go = n => { lab('systems.' + n); const g = S(), p = P(); for (const e of g.entities) if (e.enemy && !e.constructor.name.startsWith('Tour') ) e.remove = true; sim(0.05); return [g, p]; };
+      const ent = (g, name) => g.entities.find(e => e.constructor.name === name);
+      const to = (p, e, dx) => { p.x = e.cx + (dx || 0) - p.w / 2; p.y = e.y + e.h - p.h - 2; p.vx = p.vy = 0; sim(0.15); };
+      { const [g, p] = go('flip'); const fl = ent(g, 'TourFlipLine'); p.x = fl.x - 3 * 32; p.y = (g.area.H - 4) * 32 - p.h; let up = false, minY = 1e9; for (let k = 0; k < 120; k++) { sim(0.05, { right: true }); if (p.flipped) up = true; minY = Math.min(minY, p.y); } out.flip = { up, ceiling: Math.round(minY / 32), after: !p.flipped, alive: !p.dead, x: Math.round(p.cx / 32), end: Math.round((fl.x + fl.w) / 32) }; }
+      { const [g, p] = go('lamp'); const L0 = g.collectLights(g.camX, g.camY)[0].r; sim(10); const L1 = g.collectLights(g.camX, g.camY)[0].r; const lp = ent(g, 'TourLampPost'); to(p, lp); sim(0.3); const L2 = g.collectLights(g.camX, g.camY)[0].r; out.lamp = { L0: Math.round(L0), L1: Math.round(L1), L2: Math.round(L2), dark: !!g.area.dark }; }
+      { const [g, p] = go('phase'); const sw = ent(g, 'TourToggleSwitch'), pb = g.entities.filter(e => e.constructor.name === 'TourPhaseBlocks'); const day = pb.map(b => b.solid); const th0 = g.area.theme; to(p, sw); sim(0.05, { actionPressed: true }); sim(0.5); out.phase = { day, night: pb.map(b => b.solid), th0, th1: g.area.theme, isNight: !!g.area.night }; }
+      { const [g, p] = go('tide'); const w = []; for (let k = 0; k < 5; k++) { w.push(Math.round(g.area.waterTop / 32)); sim(3); } out.tide = { w }; }
+      { const [g, p] = go('chase'); const d = ent(g, 'TourDoom'); const f0 = d.front; sim(4); const f1 = d.front; const x0 = p.x; for (let k = 0; k < 120 && p.x <= x0 + 10; k++) sim(0.05); out.chase = { moved: Math.round((f1 - f0) / 32), shoved: p.x > x0 + 10, alive: !p.dead }; }
+      { const [g, p] = go('carry'); const ps = g.entities.filter(e => e.constructor.name === 'TourPedestal'), sh = ent(g, 'TourShutter'); to(p, ps[0]); sim(0.2); const carrying = !!p.carrying; to(p, ps[1]); sim(0.4); out.carry = { carrying, delivered: !!ps[1].done, open: sh.open }; }
+      { const [g, p] = go('wheel'); const pl = g.entities.filter(e => e.isPlatform && e.orbit); const a = pl.map(e => Math.round(e.y)); sim(1); out.wheel = { n: pl.length, moved: pl.some((e, i) => Math.round(e.y) !== a[i]), hub: !!ent(g, 'TourWheelHub') }; }
+      { const [g, p] = go('seesaw'); const s = ent(g, 'TourSeesaw'); const hi = -s.tilt; p.x = s.cx + hi * s.w * 0.38 - p.w / 2; p.y = s.y - 7 * 32; p.vy = 0; let vy = 0; for (let k = 0; k < 120; k++) { sim(0.01); vy = Math.min(vy, p.vy); } out.seesaw = { tilt: s.tilt, launched: Math.round(vy / 32) }; }
+      { const [g, p] = go('balloon'); const b = ent(g, 'TourBalloon'); const y0 = b.y; p.x = b.cx - p.w / 2; p.y = b.y - p.h - 4; p.vy = 0; sim(5); out.balloon = { rose: Math.round((y0 - b.y) / 32), onIt: p.ride === b }; }
+      { const [g, p] = go('mirrors'); const ms = g.entities.filter(e => e.constructor.name === 'TourMirror'), rc = ent(g, 'TourSunReceptor'), sh = ent(g, 'TourShutter'); sim(0.2); const lit0 = rc.lit; for (const m of ms) if (m.state !== m.s.set) { m.cool = 0; m.turn(); } sim(0.3); out.mirrors = { lit0, lit: rc.lit, open: sh.open }; }
+      { const [g, p] = go('hold'); const h = ent(g, 'TourHoldArena'); to(p, h); p.onGround = true; sim(0.5); const locked = !!g.bossLock, wall = g.area.tiles[(h.gy - 2) * g.area.W + h.tx0]; let foes = 0;
+        for (let k = 0; k < 400 && h.state === 'run'; k++) { sim(0.25); for (const e of h.mine) if (!e.dead) { foes++; e.hit('star', p); e.remove = true; } }
+        out.hold = { locked, wall, foes, waves: h.wave + 1, done: h.state === 'done', unlocked: !g.bossLock, open: g.area.tiles[(h.gy - 2) * g.area.W + h.tx0] }; }
+      { const [g, p] = go('thief'); const th = ent(g, 'TourThief'), sh = ent(g, 'TourShutter'); to(p, th, -100); sim(2.5); const fled = th.stop; const cat = [];
+        for (let n = 0; n < 3; n++) { for (let k = 0; k < 80 && th.hop; k++) sim(0.05); p.x = th.cx - p.w / 2; p.y = th.y - p.h - 40; p.vy = 4 * 32; p.prevBottom = p.y + p.h; sim(0.02); for (let k = 0; k < 30 && th.caught === n; k++) { p.x = th.cx - p.w / 2; p.y = th.y - p.h + 3; p.vy = 6 * 32; p.prevBottom = p.y + p.h - 4; sim(0.01); } cat.push(th.caught); }
+        sim(0.5); out.thief = { fled, cat, open: sh.open, keys: [...g.keys] }; }
+      { const [g, p] = go('rival'); const rv = ent(g, 'TourRival'); rv.state = 'count'; rv.ct = 3.4; const x0 = rv.cx; sim(3.2); const waited = Math.abs(rv.cx - x0) < 4; p.x = rv.cx - 6 * 32; sim(3); out.rival = { waited, ran: Math.round((rv.cx - x0) / 32), path: rv.path.length };
+        lab('systems.rival'); const g2 = S(), p2 = P(), rv2 = ent(g2, 'TourRival'); rv2.ct = 0.01; sim(0.05); p2.x = rv2.gateX - 2 * 32; p2.y = rv2.y + rv2.h - p2.h; sim(0.3); out.rival.win = rv2.state; }
+      { const [g, p] = go('sneak'); const w = g.entities.find(e => e.constructor.name === 'TourWatcher' && e.kind === 'light'); const as = ent(g, 'TourAlarmShutter'); p.x = w.cx - p.w / 2; p.y = (Math.floor((w.y + w.reach) / 32)) * 32 - p.h; let alarm = false, closed = false; for (let k = 0; k < 40; k++) { w.ang = 0; w.t = 0; sim(0.05); if (g.alarmT > 0) alarm = true; if (!as.open) closed = true; }
+        lab('systems.sneak'); const g2 = S(), p2 = P(); const w2 = g2.entities.find(e => e.constructor.name === 'TourWatcher' && e.kind === 'light'), bush = ent(g2, 'TourHideSpot'); bush.x = w2.cx - bush.w / 2; p2.x = bush.cx - p2.w / 2; p2.y = bush.y + bush.h - p2.h; let alarm2 = false; for (let k = 0; k < 40; k++) { w2.ang = 0; w2.t = 0; sim(0.05, { down: true }); if (g2.alarmT > 0) alarm2 = true; } p2.inp.down = true;
+        out.sneak = { alarm, closed, hiddenAlarm: alarm2, hid: window.BRADY_TOUR.TourSneak.hidden(p2) }; }
+      { const [g, p] = go('ball'); const b = g.entities.find(e => e.ball), w = ent(g, 'TourBreakWall'); const s0 = b.scale; p.x = b.x - p.w - 2; p.y = b.y + b.h - p.h; for (let k = 0; k < 40 && !w.remove; k++) { if (b.vx < 40) { p.x = b.x - p.w - 20; p.y = b.y + b.h - p.h; p.vx = 6 * 32; sim(0.15, { right: true, action: true }); } sim(0.1); } out.ball = { grew: b.scale > s0, broken: !!w.remove }; }
+      { const [g, p] = go('bottle'); window.BRADY.Save.data.tour.bottles = {}; const b = ent(g, 'TourBottle'); to(p, b); sim(0.2); out.bottle = { got: !!window.BRADY.Save.data.tour.bottles[1] }; }
+      { const [g, p] = go('shop'); const sh = ent(g, 'TourShop'); g.picks = 70; p.pack = null; p.x = sh.slotX(0) - p.w / 2; p.y = sh.y + sh.h - p.h - 2; sim(0.2); sim(0.05, { actionPressed: true }); sim(0.2); out.shop = { picks: g.picks, pack: p.pack, items: sh.items.map(i => i.kind + ':' + i.price), sold: sh.items[0].sold }; }
+      return out;
+    });
+    check('flip: past the line Brady falls up and walks the ceiling, back down after the band', r.flip.up && r.flip.ceiling <= 2 && r.flip.after && r.flip.alive && r.flip.x > r.flip.end, r.flip);
+    check('lamp: the light shrinks, a lamp post relights it', r.lamp.dark && r.lamp.L1 < r.lamp.L0 - 30 && r.lamp.L2 > r.lamp.L1 + 30, r.lamp);
+    check('phase: the sun-moon lantern swaps the blocks and the theme', r.phase.isNight && r.phase.th1 !== r.phase.th0 && r.phase.day.join() !== r.phase.night.join(), r.phase);
+    check('tide: the water line rises and falls', Math.max(...r.tide.w) - Math.min(...r.tide.w) >= 6, r.tide);
+    check('doom: the front advances and shoves Brady on', r.chase.moved >= 6 && r.chase.shoved && r.chase.alive, r.chase);
+    check('carry: take the egg, set it on the delivery pedestal, the shutter opens', r.carry.carrying && r.carry.delivered && r.carry.open, r.carry);
+    check('wheel: four seats ride round the hub', r.wheel.n === 4 && r.wheel.moved && r.wheel.hub, r.wheel);
+    check('seesaw: landing on the high end throws Brady at spring strength', r.seesaw.launched <= -18, r.seesaw);
+    check('balloon: stand in the basket and it rises', r.balloon.rose >= 3 && r.balloon.onIt, r.balloon);
+    check('mirrors: turning them lights the receptor, the shutter opens', !r.mirrors.lit0 && r.mirrors.lit && r.mirrors.open, r.mirrors);
+    check('hold: the arena locks, plays three waves, opens', r.hold.locked && r.hold.wall !== 0 && r.hold.waves === 3 && r.hold.done && r.hold.unlocked && r.hold.open === 0 && r.hold.foes >= 6, r.hold);
+    check('thief: snatches, flees, three catches open the stamp lock', r.thief.fled === 1 && r.thief.cat.join() === '1,2,3' && r.thief.open, r.thief);
+    check('rival: counts down, runs the course; Brady at the gate first wins', r.rival.waited && r.rival.ran >= 10 && r.rival.path > 20 && r.rival.win === 'lost', r.rival);
+    check('sneak: the searchlight sounds the alarm and slams the shutter; crouched in the bush, nothing', r.sneak.alarm && r.sneak.closed && !r.sneak.hiddenAlarm && r.sneak.hid, r.sneak);
+    check('ball: kicked along it grows and smashes the ball wall', r.ball.grew && r.ball.broken, r.ball);
+    check('bottle mail: the bottle is saved', r.bottle.got, r.bottle);
+    check('souvenir stand: buy the cheapest item into the Backpack', r.shop.picks === 40 && r.shop.pack && r.shop.sold, r.shop);
+    const pics = { flip: ['TourFlipLine', 4, 'flip'], lamp: ['TourLampPost', -60], phase: ['TourToggleSwitch', 40, 'night'], tide: [null, 0], chase: ['TourDoom', 0, 'chase'], carry: ['TourPedestal', -40, 'carry'], wheel: ['TourWheelHub', -40], seesaw: ['TourSeesaw', -70], balloon: ['TourBalloon', 0, 'ride'], mirrors: ['TourSunSource', 60, 'lit'], hold: ['TourHoldArena', 0, 'hold'], thief: ['TourThief', -60], rival: ['TourRival', -40], sneak: ['TourWatcher', -40], bottle: ['TourBottle', -60], shop: ['TourShop', 0], ball: ['TourBall', -50] };
+    for (const [n, [cls, dx, how]] of Object.entries(pics)) {
+      await page.evaluate(([n, cls, dx, how]) => {
+        lab('systems.' + n); const g = S(), p = P(); const e = cls ? g.entities.find(x => x.constructor.name === cls) : null;
+        if (e && how !== 'chase') { p.x = e.cx + dx - p.w / 2; p.y = Math.min(e.y + e.h, (g.area.H - 3) * 32) - p.h - 2; }
+        if (how === 'flip') { p.x = e.x + 5 * 32; p.y = 2 * 32; p.flipped = true; for (let k = 0; k < 30; k++) sim(0.03, { right: true }); }
+        else if (how === 'night') { g.flipToggle(0); sim(0.6); }
+        else if (how === 'chase') { p.x = 14 * 32; sim(3.6); }
+        else if (how === 'carry') { const ps = g.entities.filter(x => x.constructor.name === 'TourPedestal'); p.x = ps[0].cx - p.w / 2; sim(0.3); for (let k = 0; k < 10; k++) sim(0.05, { right: true }); }
+        else if (how === 'ride') { p.x = e.cx - p.w / 2; p.y = e.y - p.h - 4; sim(3.5); }
+        else if (how === 'lit') { for (const m of g.entities.filter(x => x.constructor.name === 'TourMirror')) if (m.state !== m.s.set) { m.cool = 0; m.turn(); } sim(0.5); }
+        else if (how === 'hold') { p.x = e.cx - p.w / 2; p.onGround = true; sim(5); }
+        else if (n === 'tide') sim(4);
+        else sim(0.4);
+        g.player.invuln = 0; freeze();
+      }, [n, cls, dx, how]);
+      await shot(`sys-${n}.png`);
+    }
+  });
   // the behaviour library (§4.2): a lab critter per behaviour, each scripted through its tell, attack and weak moment
   await run('behave', async () => {
     await page.evaluate(() => {

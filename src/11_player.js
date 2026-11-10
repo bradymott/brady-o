@@ -338,7 +338,7 @@ class Player {
     const gifts = Save.data.gifts || {};
     const sigP = this.sig ? TourPowers.get(this.sig.id) : null;
     const speedMul = (this.slowT > 0 ? 0.55 : 1) * (this.fx.powder > 0 ? 1.3 : 1) * (gifts.bike ? 1.12 : 1) * (tripping ? 1.25 : 1) * (sigP && sigP.speedMul ? sigP.speedMul : 1);
-    const jumpBoost = (this.mounted ? 1.12 : 1) * (this.fx.powder > 0 ? 1.14 : 1) * (sigP && sigP.jumpBoost ? sigP.jumpBoost : 1);
+    const jumpBoost = (this.mounted ? 1.12 : 1) * (this.fx.powder > 0 ? 1.14 : 1) * (sigP && sigP.jumpBoost ? sigP.jumpBoost : 1) * (this.carrying ? ((A.carry && A.carry.jumpMul) || 0.92) : 1);
     const wasGround = this.onGround, rideWas = this.ride;
     // gear: the buffs tick, the item in hands acts every frame (glide, swim speed, crawl, the box)
     if (this.buffs) for (const k in this.buffs) if (this.buffs[k] > 0) { this.buffs[k] -= dt; if (this.buffs[k] <= 0) { this.buffs[k] = 0; g.toast && g.toast((TourGear.get(k) || { name: k }).name + ' WORE OFF'); } }
@@ -348,7 +348,7 @@ class Player {
     if (gearG && gearG.update) gearG.update(this, dt, inp, g);
     if (this.boxed) inp = Object.assign({}, inp, { jump: false, jumpPressed: false });
     const gearMul = gearG && gearG.id === 'fins' && !this.inWater ? 0.9 : 1;
-    const ev = playerPhysics(this, inp, A, dt, g.platforms, { windDx, noCrouchJump: false, jumpBoost, gScale, speedMul: speedMul * gearMul * (this.boxed ? 0.4 : 1), swimMul: this.swimMul, airBoost: this.airBoost, crawl: pads });
+    const ev = playerPhysicsFlip(this, inp, A, dt, g.platforms, { live: true, windDx, noCrouchJump: false, jumpBoost, gScale, speedMul: speedMul * gearMul * (this.boxed ? 0.4 : 1), swimMul: this.swimMul, airBoost: this.airBoost, crawl: pads });
     if (this.glideT > 0 && this.vy > 2.2 * TS) this.vy = 2.2 * TS;
     if (gearG && gearG.after && this.hands) gearG.after(this, dt, inp, g);
     if (ev.jump && rideWas && !rideWas.carrier) this.carryVx = this.rideVx * 0.85;
