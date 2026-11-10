@@ -988,6 +988,8 @@ class BurnsManBoss {
     const ch = this.ch; ch.x = this.x; ch.y = this.y; ch.z = this.z; ch.yaw = this.yaw; ch.scale = this.scale;
     ch.update(dt); ch.compute();
     this.headGlow = BurnsM.damp(this.headGlow, this.st === 'flash' ? 1 + this.flashK * 2 : this.st === 'stunned' ? 0.3 : 1, 5, dt);
+    // the neon telegraphs it too: red when he's hit, a slow red throb while he's stunned (his head is open to a bonk)
+    const geo = this.model.geo; if (geo.rainbow) geo.rainHurt = BurnsM.damp(geo.rainHurt || 0, this.defeated ? 0 : this.st === 'hurt' ? 1 : this.st === 'stunned' ? 0.55 + 0.25 * Math.sin(this.t * 3) : 0, 6, dt);
     if (this.chinka) {
       const hp = this.hand(1);
       const c = this.chinka; c.x = hp[0]; c.y = hp[1] - 0.9; c.z = hp[2]; c.yaw = this.yaw; c.update(dt); c.compute();

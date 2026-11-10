@@ -24,7 +24,7 @@ const BURNS_GFX = {
   tiers: {
     ultra: { shadows: 2048, pcf: 9, ssao: true, bloom: 5, rays: true, dof: true, heat: true, msaa: 4, npl: 16, bump: true, scale: 1.0, shadowDist: 80, env: true },
     high: { shadows: 2048, pcf: 4, ssao: true, bloom: 5, rays: true, dof: true, heat: true, msaa: 4, npl: 16, bump: true, scale: 1.0, shadowDist: 70, env: true },
-    medium: { shadows: 1024, pcf: 4, ssao: false, bloom: 4, rays: true, dof: true, heat: true, msaa: 4, npl: 12, bump: true, scale: 0.92, shadowDist: 55, env: true },
+    medium: { shadows: 1024, pcf: 4, ssao: false, bloom: 4, rays: true, dof: false, heat: true, msaa: 4, npl: 12, bump: true, scale: 0.92, shadowDist: 55, env: true },
     low: { shadows: 0, pcf: 0, ssao: false, bloom: 3, rays: false, dof: false, heat: false, msaa: 0, npl: 8, bump: false, scale: 0.8, shadowDist: 0, env: false }
   },
   names: ['auto', 'ultra', 'high', 'medium', 'low'],
@@ -306,6 +306,7 @@ void main(){
 varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
 uniform sampler2D uTex;
 uniform vec4 uTint; uniform vec3 uRimC; uniform float uRim;
+uniform vec4 uRain; uniform vec2 uRainK;   // the Man's neon: heart position (world), 1/scale (0 = off); x hurt 0..1
 ${BURNS_GLSL_LIGHT}
 void main(){
   vec4 t = texture2D(uTex, vT);
@@ -318,12 +319,33 @@ void main(){
   float skin0 = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r);
   float cd = length(vW - uCam);
   float fold = sin(vL.y * 44.0 + sin(vL.x * 21.0 + vL.z * 17.0) * 1.7) * 0.55 + sin(vL.y * 109.0 + vL.x * 37.0) * 0.16;
-  float weave = sin(vL.x * 560.0 + vL.z * 210.0) * sin(vL.y * 600.0) * 0.07 * (1.0 - smoothstep(1.2, 4.0, cd));
+  // the weave fades out once a period shrinks toward a pixel (it otherwise shimmers on a phone screen)
+  vec2 weaveUV = vec2(vL.x * 560.0 + vL.z * 210.0, vL.y * 600.0);
+  float weaveAA = 1.0 - smoothstep(0.8, 2.5, max(length(dFdx(weaveUV)), length(dFdy(weaveUV))));
+  float weave = sin(weaveUV.x) * sin(weaveUV.y) * 0.07 * weaveAA * (1.0 - smoothstep(1.2, 4.0, cd));
   vec3 nc = bBump(n, vW, (fold + weave) * (1.0 - smoothstep(14.0, 30.0, cd)), 0.0018);
   float cloth = (1.0 - step(0.02, t.a)) * (1.0 - step(0.15, vG)) * (1.0 - skin0) * (1.0 - step(0.5, vC.a));
   n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));
 #endif
   float e = vC.a;
+  if (uRain.w > 0.0 && e > 0.5) {
+    // white tubes: a rainbow travelling out from the heart in slow waves (a point changes colour over seconds; the
+    // brightest band passes about every 4 s, so nothing flashes); the red heart beats about once a second.
+    // By day (uExp.z ~ 0) they are unlit glass and red paint. Hurt turns the neon red.
+    float nt = smoothstep(0.15, 0.6, uExp.z), d = length(vW - uRain.xyz) * uRain.w;
+    if (vC.g > 0.9 && vC.b > 0.9) {
+      vec3 hue = 0.18 + 0.82 * (0.5 + 0.5 * cos(6.2832 * (fract(d * 0.11 - uTime * 0.07) + vec3(0.0, 0.3333, 0.6667))));
+      float wave = 0.62 + 0.38 * smoothstep(-0.3, 0.9, sin(d * 0.8 - uTime * 1.5)), breathe = 0.88 + 0.12 * sin(uTime * 0.6);
+      vec3 nc = mix(hue * wave * breathe, vec3(1.0, 0.1, 0.12) * (0.75 + 0.25 * wave), uRainK.x);
+      float tube = step(0.95, e);
+      alb = mix(mix(bLin(vec3(0.86, 0.74, 0.6)), bLin(vec3(0.5, 0.53, 0.58)), tube), bLin(nc) * mix(0.5, 1.0, tube), nt);
+      e = nt;
+    } else if (vC.r > 0.9 && vC.g < 0.4) {
+      float beat = pow(max(0.0, sin(uTime * 5.65)), 8.0);
+      alb = bLin(vec3(1.0, 0.13 + 0.12 * beat, 0.3)) * (1.0 + nt * (0.45 * beat + 0.4 * uRainK.x));
+      e = mix(0.12, 1.0, nt);
+    }
+  }
   float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
   vec3 c = mix(bShade(alb, n, vW, vG, 0.4, sh), alb * uEmB, e);
   // warm light bleeding through skin-like albedo at the terminator (cheap subsurface)
@@ -457,7 +479,14 @@ void main(){
   vec4 d4 = texture2D(uDet, vW.xz * uDetK.x * 2.7 + wv.yx * 1.3 + 0.21);
   float far = clamp((dist - 28.0) / 80.0, 0.0, 1.0);
   float crust = smoothstep(0.26, 0.62, m2.g * 0.65 + m1.g * 0.35);   // 0 = drifted smooth dust, 1 = cracked crust
-  float ck = mix(d1.r * fade, d3.r * 0.55, far) * mix(0.25, 1.0, crust) + d4.r * 0.35 * fade * crust;
+  // Filter fine crust by its screen footprint. Grazing views on a phone otherwise
+  // turn the high-frequency cracks into a crawling grid even with MSAA enabled.
+  float crustAA = fade;
+#ifdef BUMP
+  vec2 footprint = fwidth(vW.xz * uDetK.x);
+  crustAA *= 1.0 - smoothstep(0.015, 0.065, max(footprint.x, footprint.y));
+#endif
+  float ck = mix(d1.r * crustAA, d3.r * 0.55, far) * mix(0.25, 1.0, crust) + d4.r * 0.35 * crustAA * crust;
   alb *= 1.0 - ck * uDetK.y;
   alb *= 1.0 + (d2.g - 0.5) * uDetK.w;
   alb *= mix(0.9, 1.07, m2.g) * mix(0.96, 1.03, m1.g);
@@ -469,7 +498,7 @@ void main(){
   alb = bLin(alb);
 #ifdef BUMP
   float hgt = mix(d1.a, d3.a, far) * mix(0.35, 1.0, crust) + d4.a * 0.3 * crust + (g1.b - 0.5) * 0.15 * near;
-  n = bBump(n, vW, hgt, mix(0.012, 0.045, far) * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y));
+  n = bBump(n, vW, hgt, mix(0.012 * crustAA, 0.025, far) * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y));
 #endif
   float sh = bShadow(vW, n);
   vec3 c = bShade(alb, n, vW, 0.05, 0.0, sh);
@@ -1271,6 +1300,7 @@ class BurnsRenderer {
     gl.uniform3fv(u.uRimC, this.lin.rim);
     this.faceV0 = BURNS_ATLAS.faceV0; this.faceV1 = BURNS_ATLAS.faceV1; this.faceRowV = BURNS_ATLAS.faceRowV;
     this._lastTint = null;
+    if (u.uRain) { gl.uniform4f(u.uRain, 0, 0, 0, 0); this._rain = false; }
   }
   // geo: skinned geometry; bones: Float32Array (n*12); tint [r,g,b,a]; face row 0..3
   skin(geo, bones, n, tint, face, rim) {
@@ -1290,6 +1320,13 @@ class BurnsRenderer {
     if (tint) gl.uniform4f(u.uTint, tint[0], tint[1], tint[2], tint[3]); else gl.uniform4f(u.uTint, 0, 0, 0, 0);
     gl.uniform3f(u.uFace, this.faceV0, this.faceV1, (face || 0) * this.faceRowV);
     gl.uniform1f(u.uRim, (rim === undefined ? 0.35 : rim) * 0.6);
+    // the Man's rainbow neon: anchor (his heart) and scale come from his own bone palette
+    if (u.uRain && (geo.rainbow || this._rain)) {
+      const rb = geo.rainbow;
+      if (rb) { const o = rb.bone * 12, a = rb.at, sc = Math.hypot(bones[o], bones[o + 4], bones[o + 8]) || 1; gl.uniform4f(u.uRain, bones[o] * a[0] + bones[o + 1] * a[1] + bones[o + 2] * a[2] + bones[o + 3], bones[o + 4] * a[0] + bones[o + 5] * a[1] + bones[o + 6] * a[2] + bones[o + 7], bones[o + 8] * a[0] + bones[o + 9] * a[1] + bones[o + 10] * a[2] + bones[o + 11], 1 / sc); gl.uniform2f(u.uRainK, geo.rainHurt || 0, 0); }
+      else gl.uniform4f(u.uRain, 0, 0, 0, 0);
+      this._rain = !!rb;
+    }
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vbo); BurnsGL.layoutMesh();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.ibo);
     gl.drawElements(gl.TRIANGLES, geo.count, gl.UNSIGNED_SHORT, 0);

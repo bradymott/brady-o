@@ -1,0 +1,227 @@
+{
+ "note": "graphics_test.js budget baseline: main build, 874x402 @1x, spawn camera",
+ "worlds": [
+  {
+   "id": 1,
+   "name": "The Line",
+   "draws": 92,
+   "tris": 535618
+  },
+  {
+   "id": 2,
+   "name": "No Camp",
+   "draws": 70,
+   "tris": 307097
+  },
+  {
+   "id": 3,
+   "name": "Costume Cult & the Yellow Bike",
+   "draws": 89,
+   "tris": 284776
+  },
+  {
+   "id": 4,
+   "name": "The Orgy Dome",
+   "draws": 64,
+   "tris": 174878
+  },
+  {
+   "id": 5,
+   "name": "Costco Soul Trading Co.",
+   "draws": 70,
+   "tris": 459053
+  },
+  {
+   "id": 6,
+   "name": "The Art Car Hunt",
+   "draws": 50,
+   "tris": 185114
+  },
+  {
+   "id": 7,
+   "name": "Sunrise Set",
+   "draws": 53,
+   "tris": 146725
+  },
+  {
+   "id": 8,
+   "name": "Hell Station",
+   "draws": 60,
+   "tris": 217525
+  },
+  {
+   "id": 9,
+   "name": "Deep Playa Showdown",
+   "draws": 36,
+   "tris": 96108
+  },
+  {
+   "id": 10,
+   "name": "The Man Pavilion",
+   "draws": 51,
+   "tris": 317586
+  },
+  {
+   "id": 11,
+   "name": "Sound Camp Crawl",
+   "draws": 66,
+   "tris": 245490
+  },
+  {
+   "id": 12,
+   "name": "The Temple",
+   "draws": 49,
+   "tris": 236700
+  },
+  {
+   "id": 13,
+   "name": "The Workshops",
+   "draws": 88,
+   "tris": 204382
+  },
+  {
+   "id": 14,
+   "name": "Skydive Into the Burn",
+   "draws": 59,
+   "tris": 280250
+  },
+  {
+   "id": 15,
+   "name": "Exodus",
+   "draws": 65,
+   "tris": 422876
+  },
+  {
+   "id": 16,
+   "name": "Rhythm Wave",
+   "draws": 66,
+   "tris": 258026
+  },
+  {
+   "id": 17,
+   "name": "Root Society",
+   "draws": 59,
+   "tris": 461794
+  },
+  {
+   "id": 98,
+   "name": "Theme Camp Sandbox",
+   "draws": 82,
+   "tris": 465160
+  },
+  {
+   "id": 99,
+   "name": "Big Art Sandbox",
+   "draws": 33,
+   "tris": 123470
+  },
+  {
+   "id": 500,
+   "name": "Black Rock City",
+   "draws": 63,
+   "tris": 132067
+  }
+ ],
+ "props": [
+  {
+   "name": "wheel",
+   "lo": false,
+   "tris": 268
+  },
+  {
+   "name": "wheel",
+   "lo": true,
+   "tris": 48
+  },
+  {
+   "name": "bikeShape",
+   "lo": false,
+   "tris": 160
+  },
+  {
+   "name": "bikeShape",
+   "lo": true,
+   "tris": 128
+  },
+  {
+   "name": "tent",
+   "lo": false,
+   "tris": 4
+  },
+  {
+   "name": "tent",
+   "lo": true,
+   "tris": 4
+  },
+  {
+   "name": "shade",
+   "lo": false,
+   "tris": 2348
+  },
+  {
+   "name": "shade",
+   "lo": true,
+   "tris": 180
+  },
+  {
+   "name": "car",
+   "lo": false,
+   "tris": 2084
+  },
+  {
+   "name": "car",
+   "lo": true,
+   "tris": 748
+  },
+  {
+   "name": "camper",
+   "lo": false,
+   "tris": 2216
+  },
+  {
+   "name": "camper",
+   "lo": true,
+   "tris": 760
+  },
+  {
+   "name": "van",
+   "lo": false,
+   "tris": 1872
+  },
+  {
+   "name": "van",
+   "lo": true,
+   "tris": 440
+  },
+  {
+   "name": "boxtruck",
+   "lo": false,
+   "tris": 1736
+  },
+  {
+   "name": "boxtruck",
+   "lo": true,
+   "tris": 596
+  },
+  {
+   "name": "trailer",
+   "lo": false,
+   "tris": 2250
+  },
+  {
+   "name": "trailer",
+   "lo": true,
+   "tris": 642
+  },
+  {
+   "name": "artcar",
+   "lo": false,
+   "tris": 2188
+  },
+  {
+   "name": "artcar",
+   "lo": true,
+   "tris": 1050
+  }
+ ]
+}
