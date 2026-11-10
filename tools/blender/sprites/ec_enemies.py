@@ -8,13 +8,15 @@
 #
 #   banana    a cheeky standing banana with a brown stem, peels open when knocked out      walk(t) stun flat ko
 #   cacao     a ridged orange cacao pod that tucks in and tumbles along                    walk(t) curl roll(t) stun flat ko
-#   alpaca    a fluffy cream alpaca in a woven scarf that spits (2 hp: shorn when hurt)    walk(t) hurt_walk(t) idle(t) throw(t) stun flat ko
+#   alpaca    a fluffy cream alpaca in a woven scarf that spits (2 hp: shorn when hurt)    walk(t) idle(t) throw(t) stun flat ko
 #   condor    a soaring Andean condor: white ruff, pink head, fingered wings               fly(t) swoop stun ko
 #   frog      a glowing green canopy frog with blue glow spots and orange toes             walk(t) hop stun flat ko
 #   iguana    a marine iguana with a pale crest and a rust flank that sneezes salt         walk(t) idle(t) throw(t) stun flat ko
 #   iceCube   a living block of glacier ice on little skates                               walk(t) stun flat ko
 #   seaLion   a sleek brown Galapagos sea lion with whiskers                               swim(t) ko
 #   penguin   a torpedo Galapagos penguin with the white cheek stripe                      swim(t) ko
+#   puffer    a spotted yellow pufferfish (custom class EcPuffer) that swells into a spiky ball  swim(t) puff(4 steps) ko
+#   booby     the friendly blue-footed booby (ecBooby, the friend who lends the boots)     idle(t: foot dance) wave(t)
 #   coin      the CACAO BEAN: a gold coin with a cacao bean on each face                   spin(t: rotation about Z)
 #   star      the GOLDEN TORTOISE: a hovering golden giant tortoise                        idle(t: hover)
 #   qblock    the item block: a woven Andean textile cube with white diamond motifs        idle(t: wobble)
@@ -38,18 +40,20 @@ PX = 28.1
 X, Y, Z = Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, 1))
 SCRATCH = '/private/tmp/claude-501/-Users-bradymott-brady-o/f5bf6cf3-6fc7-437d-a9b3-6005c5b7ac2b/scratchpad/ecen'
 
-KINDS = ['banana', 'cacao', 'alpaca', 'condor', 'frog', 'iguana', 'iceCube', 'seaLion', 'penguin',
+KINDS = ['banana', 'cacao', 'alpaca', 'condor', 'frog', 'iguana', 'iceCube', 'seaLion', 'penguin', 'puffer', 'booby',
          'coin', 'star', 'qblock', 'used']
 POSES = {
     'banana': ['walk', 'stun', 'flat', 'ko'],
     'cacao': ['walk', 'curl', 'roll', 'stun', 'flat', 'ko'],
-    'alpaca': ['walk', 'hurt_walk', 'idle', 'throw', 'stun', 'flat', 'ko'],
+    'alpaca': ['walk', 'idle', 'throw', 'stun', 'flat', 'ko'],      # (hurt_walk is modelled but the game never asks for it)
     'condor': ['fly', 'swoop', 'stun', 'ko'],
     'frog': ['walk', 'hop', 'stun', 'flat', 'ko'],
     'iguana': ['walk', 'idle', 'throw', 'stun', 'flat', 'ko'],
     'iceCube': ['walk', 'stun', 'flat', 'ko'],
     'seaLion': ['swim', 'ko'],
     'penguin': ['swim', 'ko'],
+    'puffer': ['swim', 'puff', 'ko'],
+    'booby': ['idle', 'wave'],
     'coin': ['spin'],
     'star': ['idle'],
     'qblock': ['idle'],
@@ -59,15 +63,19 @@ POSES = {
 CYCLES = {('banana', 'walk'), ('cacao', 'walk'), ('cacao', 'roll'), ('alpaca', 'walk'), ('alpaca', 'hurt_walk'),
           ('alpaca', 'idle'), ('alpaca', 'throw'), ('condor', 'fly'), ('frog', 'walk'), ('iguana', 'walk'),
           ('iguana', 'idle'), ('iguana', 'throw'), ('iceCube', 'walk'), ('seaLion', 'swim'), ('penguin', 'swim'),
-          ('coin', 'spin'), ('star', 'idle'), ('qblock', 'idle')}
+          ('coin', 'spin'), ('star', 'idle'), ('qblock', 'idle'), ('puffer', 'swim'), ('puffer', 'puff'), ('booby', 'idle'),
+          ('booby', 'wave')}
+# render_country.py frame counts that differ from its defaults: the item blocks are drawn from frame 000 only, and the
+# puffer's 'puff' is four inflation steps (25 % .. 100 %) that EcPuffer picks from by how puffed it is
+FRAMES = {('qblock', 'idle'): (1, 1), ('used', 'idle'): (1, 1), ('puffer', 'puff'): (4, 8)}
 ORIGIN = {'banana': 'feet', 'cacao': 'feet', 'alpaca': 'feet', 'frog': 'feet', 'iguana': 'feet', 'iceCube': 'feet',
-          'condor': 'centre', 'seaLion': 'centre', 'penguin': 'centre', 'coin': 'centre', 'star': 'centre',
+          'booby': 'feet', 'condor': 'centre', 'seaLion': 'centre', 'penguin': 'centre', 'puffer': 'centre', 'coin': 'centre', 'star': 'centre',
           'qblock': 'centre', 'used': 'centre'}
 # nominal standing height (hit box height) for the feet kinds; the frog and the iguana are wider than tall, so they
 # take the hit-box width (the renderer's frame box is 2.1 x this: the iguana's tail and sneeze need the room)
-HEIGHT = {'banana': 32 / PX, 'cacao': 18 / PX, 'alpaca': 46 / PX, 'frog': 18 / PX, 'iguana': 30 / PX, 'iceCube': 24 / PX}
+HEIGHT = {'booby': 44 / PX, 'banana': 32 / PX, 'cacao': 18 / PX, 'alpaca': 46 / PX, 'frog': 18 / PX, 'iguana': 30 / PX, 'iceCube': 24 / PX}
 # nominal size for the centre kinds: the larger hit-box side, so the wide swimmers and the condor's span never clip
-SIZE = {'condor': 34 / PX, 'seaLion': 36 / PX, 'penguin': 26 / PX, 'coin': 17 / PX, 'star': 24 / PX,
+SIZE = {'puffer': 34 / PX, 'condor': 34 / PX, 'seaLion': 36 / PX, 'penguin': 26 / PX, 'coin': 17 / PX, 'star': 24 / PX,
         'qblock': 32 / PX, 'used': 32 / PX}
 SIZE.update(HEIGHT)
 
@@ -98,6 +106,12 @@ COLORS = {
     'star_pupil': '#1a1020', 'star_mouth': '#a86a1a',
     'qblock_red': '#e8323a', 'qblock_yellow': '#ffd23a', 'qblock_blue': '#2a6ad8', 'qblock_green': '#2aa85a',
     'qblock_orange': '#ff7a2a', 'qblock_purple': '#8a3ab8', 'qblock_white': '#fff8f0', 'qblock_edge': '#5a1a1a',
+    'booby_body': '#8a6a4a', 'booby_wing': '#765638', 'booby_belly': '#ffffff',
+    'booby_head': '#f2ece0', 'booby_beak': '#6a8aaa', 'booby_beak_dark': '#34465e',
+    'booby_foot': '#2ab4ff', 'booby_foot_dark': '#1a84d8', 'booby_eye_white': '#ffffff', 'booby_pupil': '#1a1020',
+    'puffer_body': '#f2d86a', 'puffer_belly': '#fff4c8', 'puffer_spot': '#a8783a', 'puffer_spine': '#c8a03a',
+    'puffer_fin': '#e8b84a', 'puffer_lips': '#e8703a', 'puffer_mouth': '#6a2a18', 'puffer_eye_white': '#ffffff',
+    'puffer_pupil': '#1a1020',
     'used_cloth': '#a89078', 'used_line': '#7a6450', 'used_thread': '#8a7460',
 }
 
@@ -1527,11 +1541,154 @@ QBLOCK = {'idle': dict(M=lambda t: rot_y(2.0 * math.sin(TAU * t)) @ scl(1 + 0.01
 USED = {'idle': dict(M=lambda t: scl(1.02, 1.0, 0.96))}
 
 
+# ================================================================ BOOBY (feet, 1.57 m, the friend with the blue boots)
+BOOBY_POSE = {
+    'idle': dict(sx=1.00, sz=1.00, lean=0, wave=False),
+    'wave': dict(sx=1.00, sz=1.00, lean=-3, wave=True),
+}
+
+
+def build_booby(b, pose, t, P):
+    """A blue-footed booby doing its high-stepping foot dance (idle) or waving a wing goodbye (wave).  Faces +X."""
+    wave = P['wave']
+    step_l = max(0.0, math.sin(TAU * t)) if not wave else 0.0          # the famous high-step: one foot up at a time
+    step_r = max(0.0, -math.sin(TAU * t)) if not wave else 0.0
+    sway = 3.0 * math.sin(TAU * t) if not wave else 2.0 * math.sin(TAU * t)
+    M = b.M @ about(V(0, 0, 0.3), rot_x(sway))
+    # body: a plump egg of brown back, white belly front
+    bc, br = V(-0.02, 0, 0.62), (0.31, 0.27, 0.40)
+    b.part('body', xf(blob(bc, *br, seg=26, rows=14), about(bc, rot_y(14))), 'body', M=M)
+    b.part('belly', xf(ellipsoid(bc, Y * br[1] * 1.01, Z * br[2] * 1.01, X * br[0] * 1.01, seg=24, rows=10, phi1=math.radians(72)),
+                       about(bc, rot_y(14))), 'belly', M=M)
+    # tail: a dark pointed wedge
+    b.part('tail', cone(V(-0.24, 0, 0.42), V(-0.5, 0, 0.26), 0.11, flat=0.45, seg=10), 'wing', M=M)
+    # neck and head: pale head, a long pointed blue-grey beak, big friendly eyes
+    nod = 3 * math.sin(2 * TAU * t)
+    MH = M @ about(V(0.08, 0, 1.0), rot_y(nod))
+    b.part('neck', tube([V(0.06, 0, 0.95), V(0.11, 0, 1.08), V(0.15, 0, 1.18)], 0.13, 0.11, seg=14), 'head', M=MH)
+    hc, hr = V(0.17, 0, 1.27), (0.17, 0.15, 0.15)
+    b.part('head', blob(hc, *hr, seg=22, rows=12), 'head', M=MH)
+    bd = (X - Z * 0.22).normalized()
+    root = hc + V(0.13, 0, -0.02)
+    b.part('beak', tube([root, root + bd * 0.16, root + bd * 0.31], 0.075, 0.016, seg=12, radii=[0.075, 0.055, 0.016]), 'beak', M=MH)
+    b.part('beak_line', tube([root + V(0.0, -0.0, -0.012), root + bd * 0.2 + V(0, 0, -0.012), root + bd * 0.29 + V(0, 0, -0.01)],
+                             0.012, 0.006, seg=6), 'beak_dark', subsurf=1, M=MH)
+    b.part('face_mask', blob(hc + V(0.1, 0, 0.0), 0.07, 0.11, 0.07, seg=14, rows=8), 'beak', M=MH)
+    for side, az in (('r', -0.55), ('l', -1.25)):
+        c, n = on_ellipsoid(hc, hr, az, 0.22)
+        b.eye(side, c - n * 0.012, n, 0.07, pupil=0.5, lid=0.12, lid_mat='head', look=V(0.4, -0.85, 0.0), M=MH)
+    # wings: folded along the back (idle, flicking a little with each step), or the camera-side one raised forward
+    # and waving (wave)
+    for side_name, side in (('l', -1), ('r', 1)):
+        if wave and side == -1:
+            a = math.radians(20 + 26 * math.sin(TAU * t))
+            S = V(0.08, 0.27 * side, 0.86)
+            d = V(math.cos(a), 0, math.sin(a))
+            ch = V(-math.sin(a), 0, math.cos(a))
+
+            def wing(u, v, S=S, d=d, ch=ch):
+                return S + d * 0.5 * u + ch * (0.1 - 0.2 * v) * (1 - 0.45 * u) + V(0, side * 0.06 * u, 0)
+            b.part('wing_' + side_name, sheet(wing, 6, 4, lambda u, v: 0.04 - 0.015 * u), 'wing', M=M)
+            for k in range(3):
+                root = wing(0.95, 0.15 + 0.35 * k)
+                tip = root + d * (0.1 - 0.02 * k) + ch * (0.03 - 0.04 * k)
+                b.part('feather_%d' % k, tube([root, tip], 0.03, 0.012, seg=6), 'wing', subsurf=1, M=M)
+            continue
+        flick = 7 * (step_l if side == -1 else step_r)
+        wc = bc + V(-0.13, 0.205 * side, 0.08)
+        W = tr(wc) @ rot_y(48 + flick) @ rot_x(side * 4)
+        b.part('wing_' + side_name, xf(blob((0, 0, 0), 0.33, 0.05, 0.12, seg=18, rows=10), W), 'wing', M=M)
+    # short legs and the stars of the show: big bright blue webbed feet
+    for side_name, side, up in (('l', -1, step_l), ('r', 1, step_r)):
+        hip = M @ V(0.03, 0.12 * side, 0.3)
+        lift = 0.2 * up
+        foot = V(0.04 + 0.1 * up, 0.13 * side, 0.04 + lift)
+        knee = (hip + foot) / 2 + V(0.05 * up + 0.02, 0, 0)
+        b.part('leg_' + side_name, tube([hip, knee, foot + V(0, 0, 0.02)], 0.06, 0.05, seg=10), 'foot', M=Matrix.Identity(4))
+        Mf = tr(foot) @ rot_y(-30 * up)
+        web = [V(-0.08, 0, 0), V(0.24, -0.15, 0), V(0.3, 0, 0), V(0.24, 0.15, 0)]
+        b.part('web_' + side_name, xf(flat_poly(web, 0.045), Mf), 'foot', subsurf=1, M=Matrix.Identity(4))
+        for k, yy in enumerate((-0.13, 0.0, 0.13)):
+            b.part('toe_%s%d' % (side_name, k), xf(tube([V(-0.02, 0, 0.025), V(0.24, yy, 0.025), V(0.3, yy * 1.05, 0.02)], 0.03, 0.022, seg=8), Mf),
+                   'foot_dark', subsurf=1, M=Matrix.Identity(4))
+
+
+BOOBY = {p: dict(M=lambda t, P=P, p=p: pose_matrix(P, bob=0.015 * abs(math.sin(TAU * t)) if p == 'idle' else 0.0), P=P)
+         for p, P in BOOBY_POSE.items()}
+
+
+# ================================================================ PUFFER (centre swimmer, 0.71 m -> 1.2 m puffed)
+PUFFER = {
+    'swim': dict(M=lambda t: rot_y(3 * math.sin(TAU * t)), ns=1),
+    'puff': dict(M=lambda t: Matrix.Identity(4), ns=1),
+    'ko':   dict(M=lambda t: rot_x(180) @ rot_y(10), ns=-1),
+}
+
+
+def build_puffer(b, pose, t, P):
+    """A spotted yellow pufferfish.  swim(t): a plump fish fanning its fins; puff(t): t = 0, .25, .5, .75 are the four
+    inflation steps (25 % .. 100 %): it swells to a spiky ball with alarmed eyes and an 'o' mouth; ko: belly up."""
+    ns = P['ns']
+    pf = (t + 0.25) if pose == 'puff' else 0.0                      # 0.25 .. 1.0
+    ko = pose == 'ko'
+    fan = math.sin(TAU * t) if pose == 'swim' else 0.0
+    rx = lerp(0.40, 0.56, pf)
+    ry = lerp(0.30, 0.54, pf)
+    rz = lerp(0.33, 0.55, pf)
+    bc = V(0.0, 0, 0.0)
+    b.part('body', blob(bc, rx, ry, rz, seg=28, rows=16), 'body')
+    b.part('belly', ellipsoid(bc, X * rx * 1.01, Y * ry * 1.01, Z * rz * 1.01, seg=28, rows=6, phi0=math.radians(112)), 'belly')
+    # brown spots on the back and flank
+    for k, (az, el) in enumerate(((-1.4, 0.55), (-2.0, 0.35), (-2.5, 0.6), (-1.0, 0.85), (-2.9, 0.25), (-1.7, 0.05), (-2.3, -0.05), (2.6, 0.7))):
+        c, n = on_ellipsoid(bc, (rx, ry, rz), az, el)
+        ax, ay = perp_frame(n)
+        rs = 0.045 * (1 + 0.3 * pf)
+        b.part('spot%d' % k, ellipsoid(c + n * 0.003, ax * rs, ay * rs, n * 0.012, seg=10, rows=6), 'spot', subsurf=1)
+    # spines (puffed only): cones around the silhouette, none facing the camera (they would read as dots)
+    if pf > 0:
+        L = 0.04 + 0.13 * pf
+        k = 0
+        for el in (-1.15, -0.75, -0.35, 0.0, 0.35, 0.75, 1.15):
+            ring = max(4, int(round(14 * math.cos(el))))
+            for j in range(ring):
+                az = TAU * (j + 0.5 * (abs(round(el / 0.35)) % 2)) / ring
+                c, n = on_ellipsoid(bc, (rx, ry, rz), az, el)
+                if n.y < -0.45 or (math.cos(az) > 0.75 and abs(el) < 0.6):
+                    continue                      # keep the camera-facing side and the face clear
+                b.part('spine%d' % k, cone(c - n * 0.01, c + n * L, 0.026 + 0.012 * pf, seg=6), 'spine', subsurf=0, smooth=False)
+                k += 1
+    # tail fin: a little fan that sweeps side to side
+    tb = V(-rx * 0.92, 0, 0.0)
+    sw = 0.08 * fan
+
+    def tail(u, v):
+        return tb + V(-0.2 * u, sw * u * u + (0.0), (v * 2 - 1) * (0.06 + 0.14 * u))
+    b.part('tail', sheet(tail, 4, 4, 0.02), 'fin')
+    # pectoral fins fluttering: little paddles just behind the eyes
+    for side_name, side in (('l', -1), ('r', 1)):
+        c, n = on_ellipsoid(bc, (rx, ry, rz), side * 1.45, -0.15)
+        Mp = tr(c + n * 0.03) @ rot_z(side * (25 + 30 * fan)) @ rot_y(-20)
+        b.part('pec_' + side_name, xf(blob((-0.07, 0, 0), 0.085, 0.018, 0.05, seg=12, rows=6), Mp), 'fin', subsurf=1)
+    c, n = on_ellipsoid(bc, (rx, ry, rz), math.pi, 1.2)
+    b.part('dorsal', cone(c, c + V(-0.1, 0, 0.1), 0.06, flat=0.3, seg=8), 'fin', subsurf=1)
+    # face: big eyes (wide and alarmed when puffed), puckered lips
+    er = 0.085 * (1 + 0.25 * pf)
+    for side, az in (('r', -0.42), ('l', -1.05)):
+        c, n = on_ellipsoid(bc, (rx, ry, rz), az * ns, 0.38)
+        b.eye(side, c - n * 0.015, n, er, pupil=0.5 - 0.15 * pf, lid=0.0 if pf else 0.18, lid_mat='body',
+              shut='x' if ko else None, look=V(0.55, -0.8 * ns, 0.05))
+    mc, mn = on_ellipsoid(bc, (rx, ry, rz), -0.12 * ns, -0.12)
+    lr = 0.055 + 0.03 * pf
+    b.part('lips', torus_bm(mc + mn * 0.01, mn, lr, 0.028 + 0.008 * pf, seg=16, sides=8), 'lips')
+    b.part('mouth', blob(mc + mn * 0.015, 0.02, lr * 0.75, lr * 0.75, seg=10, rows=6), 'mouth', subsurf=1)
+
+
 # ---------------------------------------------------------------- public API
 BUILDERS = {
     'banana': (build_banana, BANANA), 'cacao': (build_cacao, CACAO), 'alpaca': (build_alpaca, ALPACA),
     'condor': (build_condor, CONDOR), 'frog': (build_frog, FROG), 'iguana': (build_iguana, IGUANA),
     'iceCube': (build_ice_cube, ICE), 'seaLion': (build_sea_lion, SEALION), 'penguin': (build_penguin, PENGUIN),
+    'puffer': (build_puffer, PUFFER), 'booby': (build_booby, BOOBY),
     'coin': (build_coin, COIN), 'star': (build_star, STAR), 'qblock': (build_qblock, QBLOCK), 'used': (build_used, USED),
 }
 
