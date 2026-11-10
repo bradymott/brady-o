@@ -41,7 +41,7 @@ noscript p { position: fixed; inset: 0; display: grid; place-items: center; font
 <script>
 (function(){
 const BRADY_APP = "kart";
-const BRADY_SPRITES = ["br","br_barracao","br_beach","br_falls","br_pantanal","br_samba","ec","ec_amazon","ec_andes","ec_cotopaxi","ec_equator","ec_galapagos","mx","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_volcan","mz","mz_baobab","mz_beach","mz_dunes","mz_fort","mz_savanna"];
+const BRADY_SPRITES = ["br","br_barracao","br_beach","br_falls","br_pantanal","br_samba","ec","ec_amazon","ec_andes","ec_cotopaxi","ec_equator","ec_galapagos","es","es_aquarium","es_arts","es_fallas","es_lonja","es_mancha","es_pintxos","es_teide","es_tomatina","es_x","fr","fr_chateau","fr_morning","fr_night","fr_seine","fr_tower","ma","ma_atlas","ma_azul","ma_azul_night","ma_cielo","ma_night","ma_riad","ma_sahara","ma_souk","ma_x","mx","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_volcan","mz","mz_baobab","mz_beach","mz_dunes","mz_fort","mz_savanna","nl","nl_canals","nl_frozen","nl_rush","nl_tulips","nl_waag"];
 /* ---- 00_core.js ---- */
 'use strict';
 /* ============================================================
@@ -15192,7 +15192,7 @@ const CART_CARS = [
     col: '#c86aff', col2: '#5af2ff', light: '#5af2ff' },
   { id: 'shark', name: 'DUNE CHOMPER', tag: 'Swims through sand. Bites through bumpers.',
     nod: 'a cruising land-shark car', weapon: 'chomp', stats: { speed: 4, accel: 4, handling: 3, weight: 3 },
-    col: '#6a8ab0', col2: '#f4f4f8', light: '#38c8ff' },
+    col: '#4a82b8', col2: '#f4f4f8', light: '#38c8ff' },
   { id: 'whale', name: 'WHALE OF A TIME', tag: 'A happy blue whale with a very powerful blowhole.',
     nod: 'a giant whale party bus', weapon: 'geyser', stats: { speed: 3, accel: 3, handling: 3, weight: 5 },
     col: '#2a6ad8', col2: '#bfe8ff', light: '#4ab0ff' }
@@ -15464,6 +15464,25 @@ function cartLamps(K, x, y, z, zb, yb) {
   }
   m.emissive(0).shine(0);
 }
+// a heartbeat "lub-dub" (0..~1) from the part clock: a strong beat, a softer echo, then rest (about 66 bpm)
+function cartLubDub(t) {
+  const ph = (t * 1.1) % 1, g = (c, w) => Math.exp(-((ph - c) * (ph - c)) / (w * w));
+  return g(0.06, 0.045) + 0.62 * g(0.25, 0.05);
+}
+// pose a heart part: base scale k, swelling on each beat (wider than tall, a squishy pump) and on firing; returns the beat
+function cartHeartBeat(o, s, k) {
+  const b = cartLubDub(s.t), p = k * (1 + 0.13 * b + 0.14 * s.fire);
+  o.sx = p * (1 + 0.035 * b); o.sz = o.sx; o.sy = p * (1 - 0.02 * b);
+  o.yaw = Math.sin(s.t * 0.9) * 0.12; o.roll = Math.sin(s.t * 0.7) * 0.03;
+  return b;
+}
+// pose a speaker-cone part facing +X (sx = 1), -X (sx = -1) or -Z (sz = -1): it punches out on the music's beat,
+// a little later per cone (lag in seconds), and buzzes with speed
+function cartConePump(o, s, sx, sz, lag) {
+  const b = Math.pow(Math.max(0, Math.sin((s.t - lag) * 2.1 * Math.PI)), 6), p = 0.85 * b + 0.15 * s.fire + 0.05 * s.speed * Math.abs(Math.sin(s.t * 37));
+  o.x = sx * 0.05 * p; o.z = sz * 0.05 * p;
+  const k = 1 + 0.05 * p; o.sx = k; o.sy = k; o.sz = k;
+}
 // puffy 3D heart (two lobes + a rounded point), centred at the origin, facing +Z; size ~ s
 function cartHeart(m, s, lo) {
   const seg = lo ? 10 : 18, rings = lo ? 7 : 12;
@@ -15494,15 +15513,20 @@ CART_BUILD.heart = (K, C) => {
   // body: glossy black sound truck
   m.color('#16121a').shine(2); m.roundBox(0, 1.0, -0.1, 2.5, 1.0, 5.0, 0.28); m.shine(0);
   m.color('#0a080c'); m.roundBox(0, 0.5, -0.1, 2.2, 0.3, 4.6, 0.1);
-  // speaker cones along both flanks (chrome rim + pink glow ring)
+  // speaker cones along both flanks: the chrome rim and pink glow ring sit on the body, the cone + dust cap is a part
+  // that punches out on the beat (cartConePump)
   for (const s of [1, -1]) for (let i = 0; i < 3; i++) {
     const z = -1.6 + i * 1.25;
-    m.push(); m.tf(s * 1.26, 1.05, z, s * Math.PI / 2, 0, 0);
+    m.push(); m.tf(s * 1.26, 1.05, z, 0, 0, -s * Math.PI / 2);
     m.color('#2a2630').shine(2); m.roundCyl(0, -0.02, 0, 0.36, 0.06, 0.02);
-    m.color('#0c0a10').shine(1); m.lathe([[0.3, 0.02], [0.18, -0.05], [0.06, -0.09], [0, -0.1]], { seg: lo ? 8 : 14 });
-    m.color('#c8ccd8').shine(3); m.ball(0, -0.06, 0, 0.07, { seg: 8, rings: 5 });
-    m.color(C.light, 0.9); m.push(); m.tf(0, 0.045, 0); m.torus(0, 0, 0, 0.36, 0.025, { seg: lo ? 10 : 18, tseg: 4 }); m.pop(); m.emissive(0).shine(0);
+    m.color('#c8ccd8').shine(3); m.push(); m.tf(0, 0.1, 0); m.torus(0, 0, 0, 0.32, 0.03, { seg: lo ? 10 : 18, tseg: 4 }); m.pop();
+    m.color(C.light, 0.9); m.push(); m.tf(0, 0.06, 0); m.torus(0, 0, 0, 0.38, 0.022, { seg: lo ? 10 : 18, tseg: 4 }); m.pop(); m.emissive(0).shine(0);
     m.pop();
+    K.part(s * 1.26, 1.05, z, (o, st) => cartConePump(o, st, s, 0, i * 0.12), mm => {
+      mm.tf(0, 0, 0, 0, 0, -s * Math.PI / 2);
+      mm.color('#0c0a10').shine(1); mm.lathe([[0.3, 0.1], [0.18, 0.04], [0.06, 0.01], [0, 0.0]], { seg: lo ? 8 : 14 });
+      mm.color(C.col).shine(2); mm.ball(0, 0.03, 0, 0.07, { seg: 8, rings: 5 }); mm.shine(0);
+    });
   }
   // front grille with pink LEDs + lamps
   m.color('#2a2230').shine(3); m.roundBox(0, 1.0, 2.42, 1.9, 0.62, 0.12, 0.05); m.shine(0);
@@ -15510,24 +15534,37 @@ CART_BUILD.heart = (K, C) => {
   cartLamps(K, 0.95, 1.18, 2.42, -2.62, 1.05);
   // a low sub stack across the back, behind the driver (facing back)
   m.color('#1e1a24').shine(1); m.roundBox(0, 1.82, -2.12, 2.2, 0.66, 0.8, 0.12); m.shine(0);
-  for (const s of [1, -1]) { m.push(); m.tf(s * 0.55, 1.82, -2.54, 0, -Math.PI / 2, 0); m.color('#0c0a10'); m.lathe([[0.27, 0.0], [0.17, 0.06], [0.06, 0.09], [0, 0.1]], { seg: lo ? 8 : 14 }); m.color(C.light, 0.9); m.torus(0, -0.01, 0, 0.29, 0.03, { seg: lo ? 10 : 18, tseg: 4 }); m.emissive(0); m.pop(); }
+  for (const s of [1, -1]) {
+    m.push(); m.tf(s * 0.55, 1.82, -2.54, 0, -Math.PI / 2, 0); m.color(C.light, 0.9); m.torus(0, -0.01, 0, 0.29, 0.03, { seg: lo ? 10 : 18, tseg: 4 }); m.emissive(0); m.pop();
+    K.part(s * 0.55, 1.82, -2.54, (o, st) => cartConePump(o, st, 0, -1, 0.05), mm => {
+      mm.tf(0, 0, 0, 0, -Math.PI / 2, 0); mm.color('#0c0a10'); mm.lathe([[0.27, 0.0], [0.17, 0.06], [0.06, 0.09], [0, 0.1]], { seg: lo ? 8 : 14 });
+      mm.color('#c8ccd8').shine(3); mm.ball(0, 0.07, 0, 0.06, { seg: 8, rings: 5 }); mm.shine(0);
+    });
+  }
   // deck rail with pink bulbs
   m.color('#3a2a3a').shine(2);
   for (const s of [1, -1]) m.limb(s * 1.15, 1.85, 1.6, s * 1.15, 1.85, -1.4, 0.035, 0.035, { seg: 5 });
   m.shine(0);
   cartLeds(K, [1.15, 1.9, 1.6], [1.15, 1.9, -1.4], lo ? 4 : 8, ['#ff3a6a', '#ffffff'], 0.05);
   cartLeds(K, [-1.15, 1.9, 1.6], [-1.15, 1.9, -1.4], lo ? 4 : 8, ['#ff3a6a', '#ffffff'], 0.05);
-  // pedestal for the heart
-  m.color('#c8ccd8').shine(3); m.roundCyl(0, 1.5, 0.8, 0.42, 0.55, 0.08); m.shine(0);
-  // the heart (pulses to the beat), up front where everyone sees it
-  K.part(0, 3.15, 0.8, (o, s) => { const p = 1 + 0.07 * s.beat + 0.12 * s.fire; o.sx = p; o.sy = p; o.sz = p; o.yaw = Math.sin(s.t * 0.9) * 0.18; }, mm => {
-    mm.color(C.col, 0.32).shine(2); cartHeart(mm, 1.35, lo); mm.shine(0);
-    mm.color('#ffffff', 1); if (!lo) for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; mm.ball(Math.sin(a) * 1.25, Math.cos(a) * 0.95 + 0.15, 0.62, 0.05, { seg: 5, rings: 3 }); }
+  // a short chrome pedestal with a glowing collar for the heart
+  m.color('#c8ccd8').shine(3); m.roundCyl(0, 1.5, 0.8, 0.42, 0.3, 0.08); m.shine(0);
+  m.color(C.light, 1); m.torus(0, 1.8, 0.8, 0.4, 0.025, { seg: lo ? 10 : 18, tseg: 4 }); m.emissive(0);
+  // the heart (beats lub-dub), low enough that the chase camera sees the road over it; a ring of marquee bulbs
+  // follows its outline so it reads from behind too
+  const hs = 1.05;
+  K.part(0, 2.62, 0.8, (o, s) => { cartHeartBeat(o, s, 1); }, mm => {
+    mm.color(C.col, 0.32).shine(2); cartHeart(mm, hs, lo); mm.shine(0);
+    const n = lo ? 12 : 22;
+    for (let i = 0; i < n; i++) {
+      const t = i / n * TAU, x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      mm.color(i % 2 ? '#ffffff' : '#ffd0e0', 1); mm.ball(x * 0.062 * hs, y * 0.062 * 0.85 * hs + 0.08 * hs, 0, 0.055, { seg: lo ? 4 : 6, rings: lo ? 3 : 4 });
+    }
     mm.emissive(0);
   });
-  K.light(0, 3.2, 0.8, 4.2, C.light, { big: 1 });
+  K.light(0, 2.7, 0.8, 4.2, C.light, { big: 1 });
   K.seat({ y: 1.62, z: -1.25, col: '#5a1a2a', accent: '#ff3a6a' });
-  Object.assign(K.info, { muzzle: [0, 3.0, 0.8], len: 5.2, w: 2.6, h: 4.5 });
+  Object.assign(K.info, { muzzle: [0, 2.7, 0.8], len: 5.2, w: 2.6, h: 3.5, extra: { sight: [3.45, 0.8] } });
 };
 
 /* ---------------- 2. GLITTERFIN: a mirror-tiled fish (ride on its back) ---------------- */
@@ -16121,34 +16158,120 @@ const CART_GLB = {   // car id -> file stem under models/ (hi: <stem>.glb, race:
 };
 // part node name (without "part_") -> fn(o, s): the same pose functions as the procedural cars (43_cart_b_models.js,
 // 43_cart_ba_cars.js), so a Blender part must be authored in the same local frame as the procedural K.part build.
+// A body extra `rigV` picks a newer table, CART_GLB_PARTS['<id>:<rigV>'], so a rebuilt .glb can change its parts
+// while an older file on a phone's cache keeps the poses it was made for.
 const CART_GLB_PARTS = {
+  // Bass Valentine before the quality-bar rebuild: its heart is shrunk and lowered here so it no longer hides the road
   heart: {
-    heart: (o, s) => { const p = 1 + 0.07 * s.beat + 0.12 * s.fire; o.sx = p; o.sy = p; o.sz = p; o.yaw = Math.sin(s.t * 0.9) * 0.18; }
+    heart: (o, s) => { const k = cartHeartBeat(o, s, 0.78); o.y = -0.45 + 0.02 * k; }
+  },
+  // the rebuilt Bass Valentine (tools/blender/bass_valentine.py, rigV 2): a heart at its final size, pumping cones
+  'heart:2': {
+    heart: (o, s) => { cartHeartBeat(o, s, 1); },
+    coneL0: (o, s) => cartConePump(o, s, 1, 0, 0), coneL1: (o, s) => cartConePump(o, s, 1, 0, 0.12), coneL2: (o, s) => cartConePump(o, s, 1, 0, 0.24),
+    coneR0: (o, s) => cartConePump(o, s, -1, 0, 0), coneR1: (o, s) => cartConePump(o, s, -1, 0, 0.12), coneR2: (o, s) => cartConePump(o, s, -1, 0, 0.24),
+    subL: (o, s) => cartConePump(o, s, 0, -1, 0.05), subR: (o, s) => cartConePump(o, s, 0, -1, 0.05)
   },
   fish: {
     finL: (o, st) => { o.roll = 1 * (0.25 + Math.sin(st.t * 6 + 1) * 0.25 * (0.4 + st.speed)); },
     finR: (o, st) => { o.roll = -1 * (0.25 + Math.sin(st.t * 6 - 1) * 0.25 * (0.4 + st.speed)); },
     tail: (o, st) => { o.yaw = Math.sin(st.t * (3 + st.speed * 7)) * (0.25 + 0.25 * st.speed); }
   },
+  // the rebuilt Glitterfin (tools/blender/glitterfin.py, rigV 2): the mirror-tiled fish swims on its hull (the tiles
+  // shimmer as it turns), the fins and tail ride on it and swish, the chin mirror ball spins
+  'fish:2': {
+    fish: (o, s) => { const p = cartFishSwim(s); o.yaw = p.yaw; o.pitch = p.pitch; o.roll = p.roll; o.y = p.y; },
+    finL: (o, s) => { cartFollow(o, CART_FISH_J.finL, CART_FISH_J.fish, cartFishSwim(s)); o.roll += 0.22 + Math.sin(s.t * 5 + 1) * 0.3 * (0.5 + s.speed); },
+    finR: (o, s) => { cartFollow(o, CART_FISH_J.finR, CART_FISH_J.fish, cartFishSwim(s)); o.roll -= 0.22 + Math.sin(s.t * 5 - 1) * 0.3 * (0.5 + s.speed); },
+    tail: (o, s) => { cartFollow(o, CART_FISH_J.tail, CART_FISH_J.fish, cartFishSwim(s)); o.yaw += Math.sin(s.t * 4.2 - 0.8) * (0.3 + 0.2 * Math.min(1, s.speed)); },
+    ball: (o, s) => { cartFollow(o, CART_FISH_J.ball, CART_FISH_J.fish, cartFishSwim(s)); o.yaw += s.t * (1.3 + 7 * s.fire); }
+  },
   octo: Object.assign({ head: (o, s) => { o.y = Math.sin(s.t * 2.2) * 0.06; o.pitch = -0.12 + Math.sin(s.t * 1.1) * 0.05; o.yaw = s.steer * 0.12; } },
     ...[0, 1, 2, 3, 4, 5, 6, 7].map(i => { const a = (i + 0.5) / 8 * TAU, ph = i * 0.8; return { ['arm' + i]: (o, s) => { const w = Math.sin(s.t * 2.6 + ph); o.yaw = a; o.pitch = -0.15 + w * 0.18 - s.fire * 0.5; o.roll = Math.sin(s.t * 1.9 + ph) * 0.15; } }; })),
+  // the rebuilt Calamari Inferno (tools/blender/calamari_inferno.py, rigV 2): the mantle bobs and looks around, the eight
+  // arms (authored along +Z, yawed into place here) curl and uncurl, wave, and rear up with their torches when firing
+  'octo:2': Object.assign({ head: (o, s) => { o.y = Math.sin(s.t * 2.2) * 0.05; o.pitch = -0.05 + Math.sin(s.t * 1.1) * 0.05; o.yaw = s.steer * 0.15 + Math.sin(s.t * 0.6) * 0.1; o.roll = Math.sin(s.t * 1.4) * 0.03; } },
+    ...[0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ ['arm' + i]: (o, s) => cartOctoArm(o, s, i) }))),
   dragon: {
     neck: (o, s) => { o.pitch = -0.1 + Math.sin(s.t * 2.4) * 0.06 - s.fire * 0.45; o.yaw = s.steer * 0.3 + Math.sin(s.t * 0.7) * 0.08; },
     wingL: (o, st) => { const k = 0.35 + 0.6 * Math.max(st.boost, st.air); o.roll = 1 * (0.25 + Math.sin(st.t * (3 + 9 * k)) * 0.45 * k); },
     wingR: (o, st) => { const k = 0.35 + 0.6 * Math.max(st.boost, st.air); o.roll = -1 * (0.25 + Math.sin(st.t * (3 + 9 * k)) * 0.45 * k); },
     tail: (o, s) => { o.yaw = Math.sin(s.t * (2 + s.speed * 4)) * 0.35; }
   },
+  // the rebuilt Sir Scorchalot (tools/blender/sir_scorchalot.py, rigV 2): the neck sways and rears back when firing, the
+  // jaw rides on it and gapes (with a few idle chomps), the wings flap gently (hard on boost / in the air), the tail wags
+  // and its spade end follows a beat later
+  'dragon:2': {
+    neck: (o, s) => { const p = cartDragonNeck(s); o.pitch = p.pitch; o.yaw = p.yaw; },
+    jaw: (o, s) => { cartFollow(o, CART_DRAGON_J.jaw, CART_DRAGON_J.neck, cartDragonNeck(s)); o.pitch += 0.03 + 0.06 * Math.pow(Math.max(0, Math.sin(s.t * 1.3)), 8) + 0.5 * s.fire; },
+    wingL: (o, s) => cartDragonWing(o, s, 1), wingR: (o, s) => cartDragonWing(o, s, -1),
+    tail: (o, s) => { o.yaw = Math.sin(s.t * 2.6) * (0.26 + 0.1 * Math.min(1, s.speed)) - s.steer * 0.12; },
+    tailTip: (o, s) => {
+      const P = CART_DRAGON_P; P.yaw = Math.sin(s.t * 2.6) * (0.26 + 0.1 * Math.min(1, s.speed)) - s.steer * 0.12; P.pitch = 0; P.roll = 0; P.x = P.y = P.z = 0;
+      cartFollow(o, CART_DRAGON_J.tailTip, CART_DRAGON_J.tail, P); o.yaw += Math.sin(s.t * 2.6 - 1.1) * 0.38; o.pitch += Math.sin(s.t * 1.3) * 0.06;
+    }
+  },
   duck: {
     wingL: (o, st) => { o.roll = 1 * (0.1 + Math.max(0, Math.sin(st.t * 14)) * 0.5 * Math.max(st.boost, st.air)); },
     wingR: (o, st) => { o.roll = -1 * (0.1 + Math.max(0, Math.sin(st.t * 14)) * 0.5 * Math.max(st.boost, st.air)); },
     head: (o, s) => { o.pitch = Math.sin(s.t * 3.1) * 0.08 - s.fire * 0.25; o.roll = Math.sin(s.t * 1.7) * 0.1; o.yaw = s.steer * 0.25; }
   },
+  // the rebuilt Quackzilla (tools/blender/quackzilla.py, rigV 2): the duck floats on its bath water (bobs, rocks, leans
+  // into turns, lifts its chest at speed); the wings, head and party hat ride on it, the head tilts and looks into turns,
+  // the hat wobbles on the head, the foam drifts and the ripples breathe
+  'duck:2': {
+    duck: (o, s) => cartChain(o, CART_DUCK2.duck, cartDuckFloat(s)),
+    wingL: (o, s) => cartChain(o, CART_DUCK2.wingL, cartDuckFloat(s), cartDuckWing(s, 1)),
+    wingR: (o, s) => cartChain(o, CART_DUCK2.wingR, cartDuckFloat(s), cartDuckWing(s, -1)),
+    head: (o, s) => cartChain(o, CART_DUCK2.head, cartDuckFloat(s), cartDuckHead(s)),
+    hat: (o, s) => cartChain(o, CART_DUCK2.hat, cartDuckFloat(s), cartDuckHead(s), cartDuckHat(s)),
+    foam: (o, s) => { o.y = Math.sin(s.t * 1.7 + 0.5) * 0.025; o.yaw = Math.sin(s.t * 0.45) * 0.07; },
+    ripple: (o, s) => { const k = 1 + 0.045 * Math.sin(s.t * 2.2) + 0.03 * Math.min(1, s.speed); o.sx = k; o.sz = k; }
+  },
   pyramid: { turret: (o, s) => { o.yaw = s.t * (1.2 + s.fire * 9); } },
+  // the rebuilt Pyramid Scheme (tools/blender/pyramid_scheme.py, rigV 2): the capstone turns, its four laser emitters
+  // ride it and sweep, the laser-line rings pulse tier by tier, the tower subs pump
+  'pyramid:2': {
+    cap: (o, s) => cartChain(o, CART_PYR2.cap, cartPyrCap(s)),
+    emit0: (o, s) => cartChain(o, CART_PYR2.emit[0], cartPyrCap(s), cartPyrEmit(s, 0)),
+    emit1: (o, s) => cartChain(o, CART_PYR2.emit[1], cartPyrCap(s), cartPyrEmit(s, 1)),
+    emit2: (o, s) => cartChain(o, CART_PYR2.emit[2], cartPyrCap(s), cartPyrEmit(s, 2)),
+    emit3: (o, s) => cartChain(o, CART_PYR2.emit[3], cartPyrCap(s), cartPyrEmit(s, 3)),
+    glow0: (o, s) => cartPyrGlow(o, s, 0), glow1: (o, s) => cartPyrGlow(o, s, 1), glow2: (o, s) => cartPyrGlow(o, s, 2), glow3: (o, s) => cartPyrGlow(o, s, 3),
+    subs: (o, s) => cartConePump(o, s, 0, -1, 0.05)
+  },
   cupcake: { cherry: (o, s) => { const b = Math.abs(Math.sin(s.t * 7)) * (0.05 + 0.15 * s.speed); o.y = b; o.roll = Math.sin(s.t * 5) * 0.1; } },
+  // the rebuilt Frosted Fury (tools/blender/frosted_fury.py, rigV 2): jiggling frosting, a cherry riding it, twinkling glints
+  'cupcake:2': {
+    frosting: (o, s) => cartCupPose(o, s, 1),
+    cherry: (o, s) => cartCupCherry(o, s),
+    glintA: (o, s) => cartCupGlint(o, s, 0), glintB: (o, s) => cartCupGlint(o, s, 0.5)
+  },
   galleon: {
     sailFore: (o, s) => { o.sz = 0.75 + 0.5 * s.speed + Math.sin(s.t * 3 + 0.9) * 0.06; o.yaw = s.steer * 0.12; },
     sailMain: (o, s) => { o.sz = 0.75 + 0.5 * s.speed + Math.sin(s.t * 3 - 0.6) * 0.06; o.yaw = s.steer * 0.12; },
     flag: (o, s) => { o.yaw = Math.PI + Math.sin(s.t * 6) * 0.25; }
+  },
+  // the rebuilt Dusty Doubloon (tools/blender/dusty_doubloon.py, rigV 2): the hull rocks on its trailer like a ship at
+  // anchor (about the captain's deck, so the driver stays put); the sails billow with speed and gusts, the pennant
+  // streams and flutters, the stern lanterns swing; all of them ride the hull's rock
+  'galleon:2': {
+    hull: (o, s) => cartChain(o, CART_GALLEON.hull, cartGalleonRock(s)),
+    sailFore: (o, s) => { cartChain(o, CART_GALLEON.sailFore, cartGalleonRock(s), cartGalleonSail(s, 0)); o.sz = cartGalleonBillow(s, 0.9); },
+    sailMain: (o, s) => { cartChain(o, CART_GALLEON.sailMain, cartGalleonRock(s), cartGalleonSail(s, 1)); o.sz = cartGalleonBillow(s, -0.6); },
+    flag: (o, s) => cartChain(o, CART_GALLEON.flag, cartGalleonRock(s), cartGalleonFlag(s)),
+    lanternL: (o, s) => cartChain(o, CART_GALLEON.lanternL, cartGalleonRock(s), cartGalleonLantern(s, 0)),
+    lanternR: (o, s) => cartChain(o, CART_GALLEON.lanternR, cartGalleonRock(s), cartGalleonLantern(s, 1))
+  },
+  // the rebuilt Turbo Escargot (tools/blender/turbo_escargot.py, rigV 2): the slug squashes and stretches in a slow
+  // wave (longer at speed), the eye stalks sway and bob, the shell wobbles and its chase lights flow out along the spiral
+  // (faster with speed, racing on a boost); the eyes and shell ride the squash
+  'snail:2': {
+    slug: (o, s) => cartSnailSquash(o, s),
+    eyeL: (o, s) => cartChain(o, CART_SNAIL.eyeL, cartSnailRide(s, CART_SNAIL.eyeL, 0), cartSnailEye(s, 0)),
+    eyeR: (o, s) => cartChain(o, CART_SNAIL.eyeR, cartSnailRide(s, CART_SNAIL.eyeR, 1), cartSnailEye(s, 1)),
+    shell: (o, s) => cartChain(o, CART_SNAIL.shell, cartSnailRide(s, CART_SNAIL.shell, 2), cartSnailShell(s)),
+    chase: (o, s) => { const ph = cartSnailChase(s); cartChain(o, CART_SNAIL.chase, cartSnailRide(s, CART_SNAIL.shell, 2), cartSnailShell(s), CART_SNAIL_L.chase); o.sx = o.sy = o.sz = Math.exp(-0.12 * ph); }
   },
   snail: {
     eyeL: (o, st) => { o.pitch = -0.3 + Math.sin(st.t * 4 + 1) * 0.18 - st.speed * 0.3; o.roll = 1 * (0.2 + Math.sin(st.t * 3.1 + 2) * 0.15); },
@@ -16157,18 +16280,288 @@ const CART_GLB_PARTS = {
   },
   jelly: Object.assign({ bell: (o, s) => { const p = Math.sin(s.t * 3.2); o.sy = 1 + p * 0.07 + s.fire * 0.15; o.sx = o.sz = 1 - p * 0.05 + s.fire * 0.08; } },
     ...[0, 1, 3, 4, 5].map(i => ({ ['tentacle' + i]: (o, s) => { o.pitch = Math.sin(s.t * 2.2 + i) * 0.25 + s.speed * 0.5; o.roll = Math.sin(s.t * 1.7 + i * 2) * 0.2; } }))),
+  // the rebuilt Jelly Jolt (tools/blender/jelly_jolt.py, rigV 2): the bell pulses (a quick contraction, a slow relax)
+  // and hovers, leaning into its swim; the static bolts flicker on and off and jump about (always on when it fires);
+  // four two-jointed tentacles sway and trail back with speed, the lower half lagging the upper
+  'jelly:2': Object.assign({
+    bell: (o, s) => { const K = cartJellyPulse(s); cartChain(o, CART_JELLY.bell, cartJellyFloat(s, CART_JELLY.bell, 4)); o.sx = o.sz = K[0]; o.sy = K[1]; },
+    zap: (o, s) => { cartChain(o, CART_JELLY.zap, cartJellyFloat(s, CART_JELLY.zap, 5), cartJellyZap(s)); o.sx = o.sy = o.sz = CART_JELLY_L.zapK; }
+  }, ...[0, 1, 2, 3].map(i => ({
+    ['tent' + i + 'a']: (o, s) => cartChain(o, CART_JELLY.tent[i], cartJellyFloat(s, CART_JELLY.tent[i], i), cartJellyTent(s, i, 0)),
+    ['tent' + i + 'b']: (o, s) => cartChain(o, CART_JELLY.knee[i], cartJellyFloat(s, CART_JELLY.tent[i], i), cartJellyTent(s, i, 0), cartJellyTent(s, i, 1))
+  }))),
   shark: {
     jaw: (o, s) => { o.pitch = 0.08 + s.fire * 0.75 + Math.max(0, Math.sin(s.t * 10)) * 0.05 * s.speed; },
     tail: (o, s) => { o.yaw = Math.sin(s.t * (3 + s.speed * 6)) * 0.4; }
+  },
+  // the rebuilt Dune Chomper (tools/blender/dune_chomper.py, rigV 2): the jaw chomps (eases open, snaps shut; gapes when
+  // firing), the tail sweeps, the dorsal fin flexes after it and leans into turns, the pectoral fins paddle
+  'shark:2': {
+    jaw: (o, s) => {
+      const ph = (s.t * 0.85) % 1, c = ph < 0.7 ? 0.5 - 0.5 * Math.cos(ph / 0.7 * Math.PI) : ph < 0.8 ? 1 : Math.max(0, 1 - (ph - 0.8) / 0.07);
+      o.pitch = 0.04 + 0.26 * c * (1 - s.fire) + 0.62 * s.fire + Math.max(0, Math.sin(s.t * 10)) * 0.04 * s.speed;
+    },
+    tail: (o, s) => { const w = s.t * 4.2; o.yaw = Math.sin(w) * (0.3 + 0.14 * Math.min(1, s.speed)); o.roll = Math.sin(w) * 0.05; },
+    dorsal: (o, s) => { const w = s.t * 4.2 - 1.1; o.roll = Math.sin(w) * 0.07 - s.steer * 0.1; o.yaw = Math.sin(w) * 0.05; },
+    pecL: (o, s) => { o.roll = Math.sin(s.t * 2.6) * 0.14 - 0.05 * s.speed; o.pitch = -0.06 * s.speed; },
+    pecR: (o, s) => { o.roll = -Math.sin(s.t * 2.6) * 0.14 + 0.05 * s.speed; o.pitch = -0.06 * s.speed; }
   },
   whale: {
     flipperL: (o, st) => { o.roll = 1 * (-0.2 + Math.sin(st.t * 3 + 1) * 0.3); },
     flipperR: (o, st) => { o.roll = -1 * (-0.2 + Math.sin(st.t * 3 - 1) * 0.3); },
     tail: (o, s) => { o.pitch = Math.sin(s.t * (2 + s.speed * 3)) * 0.3; }
-  }
+  },
+  // the rebuilt Whale of a Time (tools/blender/whale_of_a_time.py, rigV 2): flippers paddle, flukes beat, the spout
+  // burbles and puffs (and erupts when firing), the eyes blink, alternate rail bulbs twinkle (shrunk across the rail)
+  'whale:2': Object.assign({
+    flipperL: (o, s) => { o.roll = -0.15 + Math.sin(s.t * 3 + 1) * 0.32; o.pitch = Math.sin(s.t * 3 + 2.2) * 0.08; },
+    flipperR: (o, s) => { o.roll = 0.15 - Math.sin(s.t * 3 + 1) * 0.32; o.pitch = Math.sin(s.t * 3 + 2.2) * 0.08; },
+    tail: (o, s) => { o.pitch = Math.sin(s.t * 2.6) * (0.22 + 0.12 * Math.min(1, s.speed)); },
+    spout: (o, s) => {
+      const ph = (s.t * 0.45) % 1, puff = ph < 0.16 ? Math.sin(ph / 0.16 * Math.PI) : 0;
+      const k = 0.5 + 0.05 * Math.sin(s.t * 9) + 0.45 * puff + 1.1 * s.fire;
+      o.sy = k; o.sx = o.sz = 0.7 + 0.3 * k;
+    },
+    eyes: (o, s) => { const ph = (s.t * 0.29) % 1, b = ph > 0.955 ? Math.sin((ph - 0.955) / 0.045 * Math.PI) : 0; o.sy = 1 - 0.88 * b; }
+  }, ...[['twLA', 0], ['twLB', Math.PI], ['twRA', Math.PI / 2], ['twRB', Math.PI * 1.5]].map(([n, p]) => ({
+    [n]: (o, s) => { const k = 0.4 + 0.65 * Math.pow(0.5 + 0.5 * Math.sin(s.t * 5.3 + p), 2.5) + 0.08 * Math.sin(s.t * 13 + p * 2); o.sx = k; o.sy = k; }
+  })))
 };
+// ---- part-on-part helpers for the Glitterfin / Calamari Inferno / Sir Scorchalot rebuilds (rigV 2) ----
+// Every part bone hangs off the body, so a part that rides on another part (a fin on the swimming fish, a jaw on the
+// neck) copies its parent's pose: cartFollow sets o's angles to the parent's and its offset so that the part (joint J)
+// turns rigidly about the parent's joint P; the caller then adds its own angles on top (exact for an extra pitch when
+// the parent has no roll, and close for the small parent angles used here).
+const CART_FOLLOW_M = new Float32Array(12);
+function cartFollow(o, J, P, p) {
+  const A = CART_FOLLOW_M; BurnsM.a34Set(A, 0, 0, 0, 0, p.yaw, p.pitch, p.roll, 1, 1, 1);
+  const dx = J[0] - P[0], dy = J[1] - P[1], dz = J[2] - P[2];
+  o.x = A[0] * dx + A[1] * dy + A[2] * dz - dx + p.x; o.y = A[4] * dx + A[5] * dy + A[6] * dz - dy + p.y; o.z = A[8] * dx + A[9] * dy + A[10] * dz - dz + p.z;
+  o.yaw = p.yaw; o.pitch = p.pitch; o.roll = p.roll;
+}
+// Glitterfin's joints (tools/blender/glitterfin.py FJ, FIN_J, TAIL_J, BALL_J) and its swim: a gentle S-sway, roll and bob
+const CART_FISH_J = { fish: [0, 2.4, 0.1], finL: [1.1, 1.75, 0.6], finR: [-1.1, 1.75, 0.6], tail: [0, 1.95, -2.2], ball: [0, 0.98, 2.3] };
+const CART_FISH_P = { yaw: 0, pitch: 0, roll: 0, x: 0, y: 0, z: 0 };
+function cartFishSwim(s) {
+  const p = CART_FISH_P, k = 1 + 0.6 * Math.min(1, s.speed);
+  p.yaw = Math.sin(s.t * 2.3) * 0.05 * k + s.steer * 0.04; p.roll = Math.sin(s.t * 1.7 + 1) * 0.03 - s.steer * 0.03;
+  p.pitch = Math.sin(s.t * 1.3) * 0.015 - s.fire * 0.04; p.y = Math.sin(s.t * 2.6) * 0.025;
+  return p;
+}
+// one Calamari Inferno arm: yawed to its place round the body, a slow wave (pitch) and sideways sweep (roll), a curl that
+// bunches the arm up (taller, shorter: the curled tip tightens) and lets it stretch out again, a tremble that jiggles the
+// torch flame at its tip (harder while firing), and every arm rears up when the car fires
+function cartOctoArm(o, s, i) {
+  const a = (i + 0.5) / 8 * TAU, ph = i * 0.8, w = Math.sin(s.t * 2.4 + ph), c = Math.sin(s.t * 1.6 + ph * 1.3);
+  o.yaw = a + Math.sin(s.t * 1.9 + ph) * 0.1;
+  o.pitch = -0.05 + w * 0.14 - s.fire * 0.4 + Math.sin(s.t * 19 + i * 2.1) * 0.008 * (1 + 2 * s.fire);
+  o.roll = Math.sin(s.t * 1.7 + ph) * 0.12;
+  o.sy = 1 + 0.12 * c; o.sz = 1 - 0.07 * c;
+}
+// Sir Scorchalot's joints (tools/blender/sir_scorchalot.py NECK_J, its printed JAW_J, TAIL_J, TIP_J) and the neck's sway
+const CART_DRAGON_J = { neck: [0, 2.0, 1.6], jaw: [0, 2.9196, 2.7229], tail: [0, 1.45, -2.25], tailTip: [0, 1.25, -3.45] };
+const CART_DRAGON_P = { yaw: 0, pitch: 0, roll: 0, x: 0, y: 0, z: 0 }, CART_DRAGON_N = { yaw: 0, pitch: 0, roll: 0, x: 0, y: 0, z: 0 };
+function cartDragonNeck(s) {
+  const p = CART_DRAGON_N;
+  p.pitch = -0.08 + Math.sin(s.t * 2.4) * 0.05 - s.fire * 0.3; p.yaw = s.steer * 0.3 + Math.sin(s.t * 0.7) * 0.12;
+  return p;
+}
+// a wing (side 1 = left): a slow, gentle flap with a little sweep; beats harder and faster on boost or in the air
+function cartDragonWing(o, s, side) {
+  const k = Math.max(s.boost, s.air), f = Math.sin(s.t * 3.2) * (1 - k) + Math.sin(s.t * 9) * k;
+  o.roll = side * (0.18 + f * (0.16 + 0.3 * k)); o.yaw = side * Math.sin(s.t * 3.2 - 0.8) * 0.05;
+}
+// ---- chained parts for the Quackzilla / Pyramid Scheme / Frosted Fury rebuilds (rigV 2) ----
+// cartChain poses a part that rides a chain of other parts' motions, exactly: each link L is { j: [x, y, z] (its joint,
+// car space at rest), x, y, z (offset), yaw, pitch, roll } and turns everything after it about its joint; the outermost
+// link comes first and the part's own motion last. The part's joint J then gets the composed offset and angles.
+// A link with `ax` turns in a frame yawed by ax (its pitch then tips about the horizontal axis across direction ax).
+const CART_CHAIN = { m: new Float32Array(12), a: new Float32Array(12), t: new Float32Array(12), q: new Float32Array(12) };
+function cartChain(o, J, l0, l1, l2) {
+  const M = CART_CHAIN.m, A = CART_CHAIN.a, T = CART_CHAIN.t, Q = CART_CHAIN.q;
+  BurnsM.a34Set(M, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1);
+  for (const L of [l0, l1, l2]) {
+    if (!L) continue;
+    const j = L.j;
+    if (L.ax) {
+      BurnsM.a34Set(T, 0, j[0] + (L.x || 0), j[1] + (L.y || 0), j[2] + (L.z || 0), L.ax, 0, 0, 1, 1, 1);
+      BurnsM.a34Set(Q, 0, 0, 0, 0, L.yaw || 0, L.pitch || 0, L.roll || 0, 1, 1, 1); BurnsM.a34Mul(A, 0, T, 0, Q, 0);
+      BurnsM.a34Set(Q, 0, 0, 0, 0, -L.ax, 0, 0, 1, 1, 1); BurnsM.a34Mul(T, 0, A, 0, Q, 0); A.set(T);
+    } else BurnsM.a34Set(A, 0, j[0] + (L.x || 0), j[1] + (L.y || 0), j[2] + (L.z || 0), L.yaw || 0, L.pitch || 0, L.roll || 0, 1, 1, 1);
+    A[3] -= A[0] * j[0] + A[1] * j[1] + A[2] * j[2]; A[7] -= A[4] * j[0] + A[5] * j[1] + A[6] * j[2]; A[11] -= A[8] * j[0] + A[9] * j[1] + A[10] * j[2];
+    BurnsM.a34Mul(T, 0, M, 0, A, 0); M.set(T);
+  }
+  o.x = M[0] * J[0] + M[1] * J[1] + M[2] * J[2] + M[3] - J[0];
+  o.y = M[4] * J[0] + M[5] * J[1] + M[6] * J[2] + M[7] - J[1];
+  o.z = M[8] * J[0] + M[9] * J[1] + M[10] * J[2] + M[11] - J[2];
+  o.pitch = Math.asin(Math.max(-1, Math.min(1, -M[6]))); o.yaw = Math.atan2(M[2], M[10]); o.roll = Math.atan2(M[4], M[5]);
+}
+// Pyramid Scheme's joints (tools/blender/pyramid_scheme.py CAP_J, the emitters, the laser rings, SUBS_J) and motions
+const CART_PYR2 = { cap: [0, 2.58, 0.5], emit: [0, 1, 2, 3].map(k => { const a = TAU * (k + 0.5) / 4; return [Math.sin(a) * 0.5, 2.73, 0.5 + Math.cos(a) * 0.5]; }) };
+const CART_PYR2_L = { c: { j: CART_PYR2.cap }, e: [0, 1, 2, 3].map(k => ({ j: CART_PYR2.emit[k], ax: TAU * (k + 0.5) / 4 })) };
+function cartPyrCap(s) { const L = CART_PYR2_L.c; L.yaw = s.t * 0.7; return L; }
+// an emitter sweeps its beam up and down (out of step with the others); firing, all four scan fast across the road
+function cartPyrEmit(s, k) {
+  const L = CART_PYR2_L.e[k];
+  L.pitch = (0.32 * Math.sin(s.t * 2.2 + k * 1.57) - 0.12) * (1 - s.fire) + s.fire * (0.1 + 0.3 * Math.sin(s.t * 11 + k));
+  return L;
+}
+// a tier's bright laser ring: lit (scale 1, standing just proud of the face) or sunk back into the tier (scale 0.8);
+// the rings chase bottom to top, all light on the music's beat and while firing
+function cartPyrGlow(o, s, i) {
+  const ph = ((s.t * 1.4 - i * 0.22) % 1 + 1) % 1, v = 0.5 + 0.5 * Math.cos(ph * TAU);
+  const on = Math.max(Math.min(1, Math.max(0, (v - 0.35) / 0.3)), s.beat || 0, s.fire);
+  const k = 0.8 + 0.2 * on; o.sx = k; o.sz = k;
+}
+// Frosted Fury's joints (tools/blender/frosted_fury.py FROST_J, CHERRY): the frosting jiggles (squash and stretch, a sway
+// into turns, wilder at speed and when firing), the cherry rides it and bounces, the glints twinkle in turn
+const CART_CUP2 = { frost: [0, 1.6, 0.75], cherry: [0, 3.25, 0.75] };
+const CART_CUP2_L = { f: { j: CART_CUP2.frost }, c: { j: CART_CUP2.cherry } };
+function cartCupFrost(s) {
+  const L = CART_CUP2_L.f, a = 0.03 + 0.04 * Math.min(1, s.speed) + 0.08 * s.fire, w = Math.sin(s.t * 6.5);
+  L.sy = 1 + a * w; L.sxz = 1 - 0.5 * a * w;
+  L.roll = 0.04 * Math.sin(s.t * 3.1) - 0.05 * s.steer; L.pitch = 0.03 * Math.sin(s.t * 2.3 + 1);
+  return L;
+}
+function cartCupPose(o, s, g) {
+  const L = cartCupFrost(s); o.sx = o.sz = L.sxz * g; o.sy = L.sy * g; o.roll = L.roll; o.pitch = L.pitch;
+}
+function cartCupGlint(o, s, ph0) {
+  const ph = ((s.t * 0.8 + ph0) % 1 + 1) % 1, on = Math.max(0, 1 - Math.abs(ph - 0.1) / 0.1, s.fire);
+  cartCupPose(o, s, 0.84 + 0.16 * on);
+}
+function cartCupCherry(o, s) {
+  const F = cartCupFrost(s), C = CART_CUP2_L.c;
+  C.roll = Math.sin(s.t * 5) * 0.12; C.pitch = Math.sin(s.t * 4.3 + 1) * 0.08;
+  cartChain(o, CART_CUP2.cherry, F, C);
+  o.y += (CART_CUP2.cherry[1] - CART_CUP2.frost[1]) * (F.sy - 1) + Math.abs(Math.sin(s.t * 7)) * (0.03 + 0.1 * Math.min(1, s.speed));
+}
+// Quackzilla's joints (tools/blender/quackzilla.py PIVOT, WING_J, HEAD_J, HAT_J) and its float, wing, head and hat motions
+const CART_DUCK2 = { duck: [0, 1.0, 0], wingL: [1.12, 1.86, 0.32], wingR: [-1.12, 1.86, 0.32], head: [0, 2.3, 1.3], hat: [0.17, 3.67, 1.45] };
+const CART_DUCK2_L = { f: { j: CART_DUCK2.duck }, h: { j: CART_DUCK2.head }, t: { j: CART_DUCK2.hat }, wL: { j: CART_DUCK2.wingL }, wR: { j: CART_DUCK2.wingR } };
+function cartDuckFloat(s) {
+  const L = CART_DUCK2_L.f, sp = Math.min(1, s.speed);
+  L.y = 0.045 * Math.sin(s.t * 1.8) + 0.015 * Math.sin(s.t * 4.3 + 1) + 0.03 * s.fire;
+  L.pitch = 0.03 * Math.sin(s.t * 1.3 + 0.6) - 0.04 * sp + 0.05 * s.fire;
+  L.roll = 0.04 * Math.sin(s.t * 1.1) - 0.07 * s.steer; L.yaw = 0.025 * Math.sin(s.t * 0.7);
+  return L;
+}
+function cartDuckWing(s, side) {
+  const L = side > 0 ? CART_DUCK2_L.wL : CART_DUCK2_L.wR;
+  L.roll = side * (0.04 + 0.04 * Math.sin(s.t * 2.3 + side) + Math.max(0, Math.sin(s.t * 14)) * 0.5 * Math.max(s.boost, s.air));
+  return L;
+}
+function cartDuckHead(s) {
+  const L = CART_DUCK2_L.h;
+  L.pitch = Math.sin(s.t * 3.1) * 0.05 - s.fire * 0.22; L.roll = Math.sin(s.t * 1.7) * 0.09; L.yaw = s.steer * 0.3 + Math.sin(s.t * 0.8) * 0.08;
+  return L;
+}
+function cartDuckHat(s) {
+  const L = CART_DUCK2_L.t, k = 0.7 + 0.5 * Math.min(1, s.speed) + 0.6 * s.fire;
+  L.roll = Math.sin(s.t * 5.3 - 0.8) * 0.1 * k; L.pitch = Math.sin(s.t * 4.1 + 0.4) * 0.07 * k;
+  return L;
+}
+// Dusty Doubloon's joints (tools/blender/dusty_doubloon.py: hull at the origin, SAIL_FORE / SAIL_MAIN pivots, the flag
+// at the main mast top, LANT hooks) and its motions. The rock pivot sits at the captain's seat on the stern deck.
+const CART_GALLEON = { hull: [0, 0, 0], sailFore: [0, 3.1, 1.08], sailMain: [0, 3.35, -0.42], flag: [0, 4.97, -0.5], lanternL: [1.13, 3.28, -2.58], lanternR: [-1.13, 3.28, -2.58] };
+const CART_GALLEON_L = { rock: { j: [0, 2.9, -1.85] }, sail: [{ j: CART_GALLEON.sailFore }, { j: CART_GALLEON.sailMain }], flag: { j: CART_GALLEON.flag }, lant: [{ j: CART_GALLEON.lanternL }, { j: CART_GALLEON.lanternR }] };
+function cartGalleonRock(s) {   // a slow roll and pitch, a lean out of turns, the bow lifting with speed
+  const L = CART_GALLEON_L.rock, sp = Math.min(1, s.speed);
+  L.roll = 0.02 * Math.sin(s.t * 1.3) + 0.008 * Math.sin(s.t * 0.47 + 2) - 0.03 * s.steer;
+  L.pitch = 0.012 * Math.sin(s.t * 0.9 + 1) - 0.014 * sp - 0.02 * s.boost + 0.03 * s.fire * Math.sin(s.t * 20);
+  return L;
+}
+function cartGalleonSail(s, i) {   // the sails lean a little into turns and luff in the gusts
+  const L = CART_GALLEON_L.sail[i]; L.yaw = s.steer * 0.1 + Math.sin(s.t * 1.1 + i * 2) * 0.03; L.roll = Math.sin(s.t * 2.3 + i) * 0.015;
+  return L;
+}
+function cartGalleonBillow(s, ph) {   // the canvas fills with speed (z scale of the billow), breathing in the gusts
+  return 0.8 + 0.42 * Math.min(1.2, s.speed) + Math.sin(s.t * 3 + ph) * 0.06 + Math.sin(s.t * 7.7 + ph * 3) * 0.025 * (0.4 + s.speed);
+}
+function cartGalleonFlag(s) {   // streaming back from the mast top, flicking side to side
+  const L = CART_GALLEON_L.flag; L.yaw = Math.PI + Math.sin(s.t * 6) * 0.2 + Math.sin(s.t * 13.1) * 0.06 + s.steer * 0.25; L.roll = Math.sin(s.t * 9.5) * 0.14;
+  return L;
+}
+function cartGalleonLantern(s, i) {   // a pendulum: swings back as the ship speeds up, out of the turns, and keeps swaying
+  const L = CART_GALLEON_L.lant[i], ph = i * 1.7;
+  L.pitch = 0.18 * Math.min(1, s.speed) + Math.sin(s.t * 2.3 + ph) * 0.1; L.roll = Math.sin(s.t * 1.9 + ph) * 0.12 + s.steer * 0.3;
+  return L;
+}
+// Turbo Escargot's joints (tools/blender/turbo_escargot.py: slug at the origin, eye stalk roots, SHELL_AT, the spiral's
+// centre) and motions. The slug squashes about its sole (SOLE_Y, SOLE_Z); a part riding it moves with that point.
+const CART_SNAIL = { eyeL: [0.22, 2.3, 2.55], eyeR: [-0.22, 2.3, 2.55], shell: [0, 1.15, -0.55], chase: [0, 2.45, -0.55], sole: [0.45, 0.3], da2: 1.261357 };
+const CART_SNAIL_L = { ride: [{ j: CART_SNAIL.eyeL }, { j: CART_SNAIL.eyeR }, { j: CART_SNAIL.shell }], eye: [{ j: CART_SNAIL.eyeL }, { j: CART_SNAIL.eyeR }], shell: { j: CART_SNAIL.shell }, chase: { j: CART_SNAIL.chase }, k: [1, 1, 1] };
+function cartSnailK(s) {   // the squash: [sx, sy, sz], a peristaltic wave; the body stretches longer with speed
+  const K = CART_SNAIL_L.k, w = Math.sin(s.t * 3.4), sp = Math.min(1, s.speed);
+  K[0] = 1 - 0.012 * w; K[1] = 1 + 0.03 * w - 0.015 * sp; K[2] = 1 - 0.022 * w + 0.03 * sp + 0.03 * s.boost;
+  return K;
+}
+function cartSnailSquash(o, s) {
+  const K = cartSnailK(s), so = CART_SNAIL.sole;
+  o.sx = K[0]; o.sy = K[1]; o.sz = K[2]; o.y = so[0] * (1 - K[1]); o.z = so[1] * (1 - K[2]);
+}
+function cartSnailRide(s, J, i) {   // where the squash carries a riding part's joint J
+  const L = CART_SNAIL_L.ride[i], K = cartSnailK(s), so = CART_SNAIL.sole;
+  L.x = J[0] * (K[0] - 1); L.y = (J[1] - so[0]) * (K[1] - 1); L.z = (J[2] - so[1]) * (K[2] - 1);
+  return L;
+}
+function cartSnailEye(s, i) {   // the stalks lean back at speed, sway out of phase and bob as the eyes look around
+  const L = CART_SNAIL_L.eye[i], side = i ? -1 : 1, ph = i * 1.9;
+  L.pitch = -0.2 + Math.sin(s.t * 2.6 + ph) * 0.14 - 0.3 * Math.min(1, s.speed) - 0.2 * s.boost;
+  L.roll = side * (0.16 + Math.sin(s.t * 1.9 + ph) * 0.13) - s.steer * 0.2; L.yaw = Math.sin(s.t * 1.3 + ph) * 0.25;
+  L.y = 0.04 * Math.sin(s.t * 4.4 + ph);
+  return L;
+}
+function cartSnailShell(s) {   // a gentle wobble, rocking back on a boost
+  const L = CART_SNAIL_L.shell; L.roll = Math.sin(s.t * 2.2) * 0.035 - s.steer * 0.03; L.pitch = -s.boost * 0.06 + Math.sin(s.t * 1.7) * 0.012;
+  return L;
+}
+function cartSnailChase(s) {   // the chase lights' phase: turning back along the spiral (outward), looping every two slots
+  const dt = s._snT === undefined ? 0 : Math.max(0, Math.min(0.1, s.t - s._snT)); s._snT = s.t;
+  s._snPh = ((s._snPh || 0) + dt * (0.7 + 1.1 * Math.min(1, s.speed) + 3 * s.boost + 2 * s.fire)) % CART_SNAIL.da2;
+  CART_SNAIL_L.chase.pitch = -s._snPh;
+  return -s._snPh;
+}
+// Jelly Jolt's joints (tools/blender/jelly_jolt.py: BELL_AT, the core, TENT_A roots at TENT_R / TENT_Y, knees SEG1
+// below) and motions. The bell scales about BELL_AT; a riding part's joint moves with that scale.
+const CART_JELLY = (() => {
+  const B = [0, 2.1, 0.45], tent = [40, 140, 220, 320].map(d => [Math.sin(d * Math.PI / 180) * 1.22, 2.2, B[2] + Math.cos(d * Math.PI / 180) * 1.22]);
+  return { bell: B, zap: [0, B[1] + 0.72, B[2]], tent, knee: tent.map(p => [p[0], p[1] - 0.56, p[2]]) };
+})();
+const CART_JELLY_L = { k: [1, 1], float: [0, 1, 2, 3, 4, 5].map(() => ({ j: CART_JELLY.bell })), zap: { j: CART_JELLY.zap }, zapK: 1,
+  tent: [0, 1, 2, 3].map(i => [{ j: CART_JELLY.tent[i] }, { j: CART_JELLY.knee[i] }]) };
+function cartJellyC(s) {   // the swim stroke: 0..1, a quick contraction then a slow relax (about 0.8 strokes a second)
+  const ph = (s.t * 0.8) % 1;
+  return ph < 0.22 ? 0.5 - 0.5 * Math.cos(ph / 0.22 * Math.PI) : Math.exp(-(ph - 0.22) * 5);
+}
+function cartJellyPulse(s) {   // [radial, vertical] scale of the bell: narrower and taller on the stroke, puffed up when firing
+  const K = CART_JELLY_L.k, c = cartJellyC(s);
+  K[0] = 1 - 0.085 * c + 0.07 * s.fire; K[1] = 1 + 0.07 * c + 0.12 * s.fire;
+  return K;
+}
+function cartJellyFloat(s, J, i) {   // the hover (rises on the stroke, leans into its swim) plus where the pulse carries J
+  const L = CART_JELLY_L.float[i], K = cartJellyPulse(s), c = cartJellyC(s), B = CART_JELLY.bell, sp = Math.min(1, s.speed);
+  L.x = (J[0] - B[0]) * (K[0] - 1); L.z = (J[2] - B[2]) * (K[0] - 1);
+  L.y = (J[1] - B[1]) * (K[1] - 1) + 0.06 * c - 0.03 + 0.02 * Math.sin(s.t * 1.3);
+  L.pitch = 0.07 * sp + 0.02 * Math.sin(s.t * 0.9); L.roll = -0.05 * s.steer + 0.025 * Math.sin(s.t * 0.7 + 1);
+  return L;
+}
+function cartJellyZap(s) {   // static: on and off in a jittery rhythm, a new direction each flick, always crackling when it fires
+  const n = Math.floor(s.t * 13), f = Math.abs((Math.sin(n * 91.7 + 0.3) * 43758.5453) % 1), L = CART_JELLY_L.zap;
+  L.yaw = n * 2.39996; L.pitch = (f - 0.5) * 0.2;
+  CART_JELLY_L.zapK = s.fire > 0.05 || f > 0.45 ? 0.85 + 0.35 * ((f * 7.3) % 1) + 0.3 * s.fire : 0.001;
+  return L;
+}
+function cartJellyTent(s, i, seg) {   // seg 0: the upper half sways and trails; seg 1: the lower half follows a beat later
+  const L = CART_JELLY_L.tent[i][seg], sp = Math.min(1.2, s.speed), c = cartJellyC(s), ph = i * 1.6 - seg * 1.1;
+  L.pitch = (seg ? 0.3 : 0.42) * sp + (seg ? 0.26 : 0.17) * Math.sin(s.t * 2.2 + ph) - (seg ? 0.1 : 0.16) * c;
+  L.roll = (seg ? 0.2 : 0.14) * Math.sin(s.t * 1.7 + i * 2 - seg * 0.9) + (seg ? 0 : 0.12 * s.steer);
+  return L;
+}
 // per-car points the race sim reads from M.extra (the procedural values; a glb's body extras.extra JSON overrides)
+// sight: [y, z] of the top of a tall sculpture, car-local: the chase camera rises just enough to see the road over it
 const CART_GLB_EXTRA = {
+  heart: { sight: [3.66, 0.8] },
   octo: { arms: 8, armZ: 0.55, chimney: [0, 4.7, -0.15] },
   galleon: { cannons: [[1.6, 1.55, -0.7], [1.6, 1.55, 0.6], [-1.6, 1.55, -0.7], [-1.6, 1.55, 0.6]] },
   snail: { rockets: [[0.95, 1.9, -1.75], [-0.95, 1.9, -1.75]] }
@@ -16229,7 +16622,7 @@ const CartGLB = {
     const R = lo ? (rigs.lo || rigs.hi) : (rigs.hi || rigs.lo); if (!R) return null;
     const key = id + (R === rigs.lo ? ':lo' : ':hi');
     if (this.models[key]) return this.models[key];
-    const E = R.empties, X = R.extras || {}, b = R.bounds, fns = CART_GLB_PARTS[id] || {};
+    const E = R.empties, X = R.extras || {}, b = R.bounds, fns = (X.rigV && CART_GLB_PARTS[id + ':' + X.rigV]) || CART_GLB_PARTS[id] || {};
     const pt = (n, d) => E[n] ? [E[n].x, E[n].y, E[n].z] : d;
     const lights = [];
     for (const [n, e] of Object.entries(E)) {
@@ -17947,9 +18340,17 @@ Object.assign(CartRaceScene.prototype, {
       const sp = clamp(k.speed / 30, 0, 1.3), boost = k.boostT > 0 || k.dashT > 0 ? 1 : 0;
       this.boostLook = BurnsM.damp(this.boostLook || 0, boost, 4, fdt);
       // big sculptures: sit higher and further back so the road ahead stays in view
-      const tall = Math.max(0, k.M.h - 3), d = (portrait ? 11.5 : 8.8) + sp * 1.4 + this.boostLook * 1.2 + tall * 1.1 + k.M.len * 0.12, h = (portrait ? 4.6 : 3.5) + sp * 0.4 + tall * 0.85;
+      // a car that names its sculpture's top (M.extra.sight = [y, z], car-local) instead gets the height that keeps the
+      // road visible over it from `reach` metres ahead, without backing off (backing off would need more height still)
+      const sight = k.M.extra && k.M.extra.sight;
+      const tall = sight ? 0 : Math.max(0, k.M.h - 3), d = (portrait ? 11.5 : 8.8) + sp * (sight ? 0.7 : 1.4) + this.boostLook * 1.2 + tall * 1.1 + k.M.len * 0.12 - (sight ? 0.4 : 0);
+      let h = (portrait ? 4.6 : 3.5) + sp * 0.4 + tall * 0.85, ahead = 6;
+      if (sight) {
+        const reach = portrait ? 32 : 26, dObs = d + sight[1];
+        h = clamp(Math.max(h, sight[0] * reach / Math.max(4, reach - dObs) + 0.15), h, 7.5); ahead = 6 + (h - 3.5) * 1.6;
+      }
       const fx = Math.sin(this.camYaw), fz = Math.cos(this.camYaw);
-      tx = k.x + fx * 6; ty = k.y + 1.7 + tall * 0.35; tz = k.z + fz * 6;
+      tx = k.x + fx * ahead; ty = k.y + 1.7 + tall * 0.35; tz = k.z + fz * ahead;
       px = k.x - fx * d; py = k.y + h; pz = k.z - fz * d;
       fov = (portrait ? 1.32 : 1.0) + sp * 0.08 + this.boostLook * 0.12;
     }
@@ -18550,33 +18951,12 @@ window.BRADY_CART = {
    ART CART — menus. KartMenuScene is the app's home screen:
    mode → driver → art car (with its signature weapon) → cup / track /
    arena + objective. A live 3D showroom (the engine's renderer) turns the
-   chosen car with its driver on a neon stage at sunset; driver portraits
-   are rendered once in 3D and cached into a 2D atlas.
+   chosen car with its driver on a turntable in a blue-hour studio
+   (CartShowroom, 43_cart_fa_stage.js); driver portraits are rendered once
+   in 3D and cached into a 2D atlas.
+   The camera frames the subject into a screen rectangle that each layout
+   leaves free (this.stageRect), so nothing hides under the UI.
    ============================================================ */
-const CartShowroom = {
-  world: null,
-  build() {
-    if (this.world) return this.world;
-    const W = new BurnsWorld({ id: 3001, bounds: [-40, -40, 40, 40], ground: { base: '#c9a27e', crack: 0.3 } }, null), api = W.api;
-    api.mesh(0, 0, m => {
-      m.color('#2a2236').shine(2); m.roundCyl(0, 0, 0, 4.6, 0.35, 0.12); m.shine(0);
-      m.color('#ff4fd8', 1); m.push(); m.tf(0, 0.36, 0); m.torus(0, 0, 0, 4.5, 0.06, { seg: 40, tseg: 5 }); m.pop();
-      m.color('#38f2ff', 1); m.push(); m.tf(0, 0.12, 0); m.torus(0, 0, 0, 4.66, 0.05, { seg: 40, tseg: 5 }); m.pop(); m.emissive(0);
-      return { cols: [] };
-    }, { noAO: true });
-    api.light(0, 0, 9, '#ff7ac8', 0.6);
-    CartScene.art(api, 'lotus', -16, -22, 0.3, true, 0.9);
-    CartScene.art(api, 'spinner', 18, -26, 0, true, 0.9);
-    CartScene.art(api, 'obelisk', 30, 4, 0, true, 0.8);
-    for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; api.glow(Math.sin(a) * 8, 0.4, Math.cos(a) * 8, 0.7, BURNS_NEON[i % 7]); }
-    W.finish();
-    // golden hour: warm key, neutral fill, so every car shows its real colours
-    // the sun sits behind the camera's shoulder, not in the viewer's eyes: no glare, no god rays, no heat haze over the car
-    this.sky = Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.004, sun: [335, 26], key: '#ffe2c4', keyK: 1.1, sky: '#b8b4d0', gnd: '#8a6a5a', rim: '#ffe0f0', exposure: 1.0, hor: '#ffa070', mid: '#d08a90', midK: 0.25, rays: 0, heat: 0, haze: 0.25, dust: 0.15, bloom: 0.7 });
-    this.world = W;
-    return W;
-  }
-};
 // volume buttons shared by the menu and the race pause: MUSIC 60% / SFX OFF, cycling 0, 25, 50, 75, 100 %
 function cartVolLabel(name, v) { return name + ' ' + (v > 0 ? Math.round(v * 100) + '%' : 'OFF'); }
 function cartCycleVol(key) {
@@ -18593,7 +18973,15 @@ class KartMenuScene {
     this.drvSel = Math.max(0, CART_DRIVERS.findIndex(d => d.id === sv.driver));
     this.carSel = Math.max(0, CART_CARS.findIndex(c => c.id === sv.car));
     this.mode = o.mode || 'gp'; this.cupSel = 0; this.trackSel = 0; this.arenaSel = 0; this.objSel = 0;
-    this.spin = 0; this.cam = { x: 0, y: 3, z: 10, tx: 0, ty: 1.5, tz: 0, fov: 0.75 };
+    this.spin = 0; this.spinV = CART_SPIN; this.cam = { x: 0, y: 3, z: 10, tx: 0, ty: 1.5, tz: 0, fov: 0.75, shift: 0 }; this.camGoal = { x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, fov: 0.75, shift: 0, d: 10 }; this.camSnap = true;
+    // per-frame scratch (the render loop allocates nothing)
+    this.mirB = new Float32Array(64 * 12); this.ringB = new Float32Array(12); this.tmp3 = [0, 0, 0]; this.black = [0, 0, 0];
+    this.ledTint = [1, 1, 1, 1]; this.ledCol = [1, 1, 1]; this.ledFor = null;
+    this.fx = { fires: [], ao: false, bloom: 0.1, rays: 0, dof: { focus: 8, aperture: 0.6 } };
+    this.driveOpts = { steer: 0, speed: 0.3 };
+    this.lights = [0, 1, 2].map(() => ({ x: 0, y: 0, z: 0, r: 10, c: [1, 1, 1], i: 1 }));
+    this.lights[0].c = [0.42, 0.7, 1]; this.lights[1].c = [0.55, 0.85, 1]; this.lights[2].c = [1, 0.96, 0.92];
+    this._dragFn = t => this.dragTouch(t); this._dragDX = 0; this._dragAny = false;
     Input.setMode('ui'); Input.hud = null;
     Sound.music('kart_menu');
     this.gl = BurnsGL.init();
@@ -18612,6 +19000,18 @@ class KartMenuScene {
     this.pdrv.ch.play('cartDrive', { steer: 0 }, true);
     this.pstand = new BurnsChar(D.model); this.pstand.play('wave', {}, true);
     this.pst = { t: 0, speed: 0.3, steer: 0, fire: 0, boost: 0, air: 0, beat: 0, night: 1 };
+    this.measure();
+  }
+  // the turning subject's real size, measured once per car + driver from the posed geometry (tails, wings and decks stick out
+  // past the model's nominal len / w / h): the widest radius from the turntable axis and the top, with a little room for the
+  // parts that flap and bob
+  measure() {
+    const car = this.pcar, drv = this.pdrv, M = car.M, e = this.fitE || (this.fitE = { rh: 0, top: 0 });
+    car.yaw = 0; car.y = 0; car.driverScale = drv.scale; car.driverMan = drv.man;
+    cartPoseCar(M, car, this.pst, car.bones); drv.ch.update(0); cartPoseDriver(car, M, drv.ch, drv.bones);
+    e.rh = 0; e.top = 0;
+    cartGeoExtent(M.geo, car.bones, e); cartGeoExtent(drv.model.geo, drv.bones, e);
+    this.fit = { rh: e.rh * 1.05, top: e.top * 1.04 };
   }
   ensurePreview() {
     const car = CART_CARS[this.carSel], drv = CART_DRIVERS[this.drvSel];
@@ -18625,6 +19025,9 @@ class KartMenuScene {
     const safeT = Math.max(12, insets.t + 6), safeB = Math.max(14, insets.b + 8), safeL = Math.max(14, insets.l + 8), safeR = Math.max(14, insets.r + 8);
     const back = { x: safeL, y: safeT, w: 92, h: 38, label: '◀ BACK', fn: () => this.back() };
     this.cards = []; this.btns = [];
+    // the free screen area the 3D subject is framed into (CSS px); each state below narrows it
+    const sr = this.stageRect = this.stageRect || {}; sr.x = safeL; sr.y = safeT + 40; sr.w = W - safeL - safeR; sr.h = H - sr.y - safeB;
+    const setRect = (x0, y0, x1, y1) => { sr.x = x0; sr.y = y0; sr.w = Math.max(40, x1 - x0); sr.h = Math.max(40, y1 - y0); };
     if (this.state === 'mode') {
       const bw = Math.min(260, W * 0.62), x = P ? (W - bw) / 2 : W - safeR - bw - 10, y0 = P ? H * 0.5 : H * 0.3;
       this.btns = [
@@ -18639,16 +19042,36 @@ class KartMenuScene {
       ];
       // in the standalone Art Cart app this menu IS home: nothing to go back to
       if (typeof BRADY_APP === 'undefined' || BRADY_APP !== 'kart') this.btns.push(back);
+      // the car: left of the buttons in landscape; between the logo and the buttons in portrait
+      if (P) setRect(safeL, H * 0.16 + insets.t + Math.min(46, W * 0.11) * 0.85 + 34, W - safeR, y0 - 10);
+      else setRect(safeL, safeT + 30, x - 24, H - safeB);
     } else if (this.state === 'driver') {
       const top = P ? H * 0.42 : safeT + 52, cols = P ? 5 : 7, gx = P ? safeL : W * 0.36, gw = P ? W - safeL - safeR : W - gx - safeR, rows = Math.ceil(CART_DRIVERS.length / cols);
       const cw = (gw - (cols - 1) * 6) / cols, ch = Math.min(cw * 1.2, (H - top - safeB - 60 - (rows - 1) * 6) / rows);
       CART_DRIVERS.forEach((d, i) => this.cards.push({ i, x: gx + (i % cols) * (cw + 6), y: top + Math.floor(i / cols) * (ch + 6), w: cw, h: ch }));
       this.btns = [{ x: P ? W / 2 - 90 : gx + gw / 2 - 90, y: H - safeB - 48, w: 180, h: 46, label: 'NEXT ▶', primary: true, fn: () => this.confirmDriver() }, back];
+      // the standing driver: under the title and above the name line (portrait), left of the grid above the name (landscape)
+      if (P) setRect(safeL, Math.max(92, insets.t + 88), W - safeR, H * 0.36 - 24);
+      else setRect(safeL, safeT + 44, gx - 12, H - Math.max(92, insets.b + 86));
     } else if (this.state === 'car') {
-      const aw = 52, ay = P ? H * 0.3 : H * 0.42;
+      // the info card: right column in landscape; the lower part of the screen in portrait (the car gets everything above it)
+      const pw = P ? W - 28 : Math.min(330, W * 0.4), px = P ? 14 : W - safeR - pw, py = P ? H * (H < 740 ? 0.52 : 0.55) : Math.max(60, insets.t + 54);
+      this.cardRect = { x: px, y: py, w: pw, h: H - py - Math.max(70, insets.b + 66) };
+      const aw = 52, ah = 52;
+      let ax0, ax1, ay;
+      if (P) {
+        // arrows sit at the plinth's front edge, below the car, not over it
+        ay = py - 10 - ah; ax0 = safeL; ax1 = W - safeR - aw;
+        setRect(safeL, Math.max(112, insets.t + 108), W - safeR, ay - 4);
+      } else {
+        // arrows at mid height either side of the car; the car stays between them
+        const x1 = px - 14; ax0 = safeL; ax1 = x1 - aw;
+        setRect(safeL + aw + 6, Math.max(62, insets.t + 56), ax1 - 6, H - Math.max(40, insets.b + 36));
+        ay = sr.y + sr.h * 0.5 - ah / 2;
+      }
       this.btns = [
-        { x: safeL, y: ay, w: aw, h: 52, label: '◀', fn: () => this.stepCar(-1) },
-        { x: P ? W - safeR - aw : W * 0.55 - aw, y: ay, w: aw, h: 52, label: '▶', fn: () => this.stepCar(1) },
+        { x: ax0, y: ay, w: aw, h: ah, label: '◀', fn: () => this.stepCar(-1) },
+        { x: ax1, y: ay, w: aw, h: ah, label: '▶', fn: () => this.stepCar(1) },
         { x: P ? W / 2 - 90 : W - safeR - 190, y: H - safeB - 48, w: 180, h: 46, label: 'NEXT ▶', primary: true, fn: () => this.confirmCar() },
         back
       ];
@@ -18684,7 +19107,7 @@ class KartMenuScene {
     this.state = prev; this.build();
   }
   confirmDriver() { Sound.play('select'); const sv = cartSave(); sv.driver = CART_DRIVERS[this.drvSel].id; Save.save(); this.state = 'car'; this.build(); }
-  stepCar(d) { this.carSel = (this.carSel + d + CART_CARS.length) % CART_CARS.length; this.spin = 0; Sound.play('select', { vol: 0.5 }); }
+  stepCar(d) { this.carSel = (this.carSel + d + CART_CARS.length) % CART_CARS.length; this.spin = 0; this.spinV = CART_SPIN; Sound.play('select', { vol: 0.5 }); }
   confirmCar() { Sound.play('select'); const sv = cartSave(); sv.car = CART_CARS[this.carSel].id; Save.save(); this.state = this.mode === 'gp' ? 'cup' : this.mode === 'tt' ? 'track' : 'arena'; this.build(); }
   start(o) {
     Sound.play('select');
@@ -18693,8 +19116,24 @@ class KartMenuScene {
     if (o.mode === 'gp') o.gp = { points: {}, results: [] };
     Game.setScene(new CartRaceScene(o));
   }
+  // the turntable: a slow steady turn; a finger dragged across the stage spins it by hand (a quick flick still browses
+  // cars), and on release it eases back to the steady turn
+  dragTouch(t) {
+    const r = this.stageRect;
+    if (!r || t.sx < r.x || t.sx > r.x + r.w || t.sy < r.y || t.sy > r.y + r.h) return;
+    for (const b of this.btns) if (t.sx >= b.x && t.sx <= b.x + b.w && t.sy >= b.y && t.sy <= b.y + b.h) return;
+    if (t._spinX !== undefined) this._dragDX += t.x - t._spinX;
+    t._spinX = t.x; this._dragAny = true;
+  }
+  turn(dt) {
+    this._dragDX = 0; this._dragAny = false;
+    if (this.state === 'car' || this.state === 'mode') Input.touches.forEach(this._dragFn);
+    if (this._dragAny) { const a = this._dragDX * 0.012; this.spin += a; this.spinV = lerp(this.spinV, a / Math.max(dt, 1 / 120), 0.35); }
+    else { this.spinV += (CART_SPIN - this.spinV) * (1 - Math.exp(-dt * 1.2)); this.spin += this.spinV * dt; }
+  }
   update(dt) {
     this.t += dt;
+    this.turn(dt);
     const key = Input.uiKey, n = this.cards.length;
     if (key === 'pause') { Input.uiKey = null; this.back(); return; }
     if (this.state === 'car' && (key === 'left' || key === 'right')) { Input.uiKey = null; this.stepCar(key === 'left' ? -1 : 1); return; }
@@ -18726,42 +19165,131 @@ class KartMenuScene {
     else if (this.state === 'objective') this.start({ mode: 'battle', arena: CART_ARENAS[this.arenaSel].id, objective: CART_ARENAS[this.arenaSel].objectives[i] });
   }
   /* ---------- 3D: the showroom stage + cached driver portraits ---------- */
+  // aim the camera so a vertical cylinder on the turntable axis (radius rh, from y0 to y1) fills a screen rectangle (CSS px):
+  // the camera orbits at azimuth az and elevation el; a sideways offset and the lens shift put the subject at the rectangle's centre
+  aim(out, rect, y0, y1, rh, az, el, fov) {
+    const W = Game.cssW, H = Game.cssH, tanY = Math.tan(fov / 2), tanX = tanY * W / H;
+    const nx = (rect.x + rect.w / 2) / W * 2 - 1, ny = 1 - (rect.y + rect.h / 2) / H * 2, hx = rect.w / W, hy = rect.h / H;
+    const ce = Math.cos(el), se = Math.sin(el), sa = Math.sin(az), ca = Math.cos(az);
+    const vh = ((y1 - y0) * ce + 2 * rh * se) / 2;
+    // fit both ways, plus the near half of the cylinder (it is closer, so it looks bigger)
+    const d = Math.max(vh / (hy * tanY), rh / (hx * tanX)) + rh * 0.42;
+    const cy = (y0 + y1) / 2, off = -nx * tanX * d;
+    out.x = sa * ce * d + ca * off; out.y = cy + se * d; out.z = ca * ce * d - sa * off;
+    out.tx = ca * off; out.ty = cy; out.tz = -sa * off; out.fov = fov; out.shift = ny; out.d = d;
+    return out;
+  }
+  // test helper (tools/cart_showroom_shots.js): does the turning car fit its frame? Poses the car and its driver at n turntable
+  // angles, projects every k-th vertex through the current camera and returns the worst overflow (CSS px, > 0 = cut off) past
+  // the stage rectangle and past the screen edges. Not used in play.
+  fitCheck(n, k) {
+    const R = this.R, car = this.pcar, drv = this.pdrv; if (!R || !car) return null;
+    const W = Game.cssW, H = Game.cssH, sr = this.stageRect, o = {}, M = car.M, yaw0 = car.yaw;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const scan = (geo, B) => {
+      const f = new Float32Array(geo.data), u = new Uint8Array(geo.data);
+      for (let v = 0; v < geo.nv; v += k) {
+        const b = (u[v * 24 + 15] & 63) * 12, x = f[v * 6], y = f[v * 6 + 1], z = f[v * 6 + 2];
+        if (!R.project(B[b] * x + B[b + 1] * y + B[b + 2] * z + B[b + 3], B[b + 4] * x + B[b + 5] * y + B[b + 6] * z + B[b + 7], B[b + 8] * x + B[b + 9] * y + B[b + 10] * z + B[b + 11], W, H, o)) continue;
+        x0 = Math.min(x0, o.x); x1 = Math.max(x1, o.x); y0 = Math.min(y0, o.y); y1 = Math.max(y1, o.y);
+      }
+    };
+    for (let i = 0; i < n; i++) {
+      car.yaw = i / n * TAU; cartPoseCar(M, car, this.pst, car.bones); cartPoseDriver(car, M, drv.ch, drv.bones);
+      scan(M.geo, car.bones); scan(drv.model.geo, drv.bones);
+    }
+    car.yaw = yaw0;
+    const r1 = v => Math.round(v * 10) / 10;
+    return { rect: [r1(sr.x), r1(sr.y), r1(sr.x + sr.w), r1(sr.y + sr.h)], bbox: [r1(x0), r1(y0), r1(x1), r1(y1)],
+      overStage: r1(Math.max(sr.x - x0, x1 - sr.x - sr.w, sr.y - y0, y1 - sr.y - sr.h)), overScreen: r1(Math.max(-x0, x1 - W, -y0, y1 - H)),
+      fill: r1(Math.max((x1 - x0) / sr.w, (y1 - y0) / sr.h)) };
+  }
+  drawSubject(R, showStand, rimCar, rimDrv) {
+    const car = this.pcar, drv = this.pdrv, s = this.pstand, M = car.M, sh = R.pass === 'shadow';
+    if (showStand) BurnsSkinActor.draw(null, R, drv.id, s, null, rimDrv) || R.skin(drv.model.geo, s.bones, s.nb, null, sh ? 0 : s.face, rimDrv);
+    else { R.skin(M.geo, car.bones, M.nb, null, 0, rimCar); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, sh ? 0 : drv.ch.face, rimDrv); }
+  }
   render3D(ctx) {
-    const W = Game.cssW, H = Game.cssH, dpr = Game.dpr, R = this.R, World = CartShowroom.world;
+    const W = Game.cssW, H = Game.cssH, dpr = Game.dpr, R = this.R, World = CartShowroom.world, gl = BurnsGL.gl;
     if (!World || !this.pcar) return false;
-    const fdt = 1 / 60; this.time += fdt; this.spin += fdt;
-    const P = this.portrait, st = this.state;
+    const fdt = 1 / 60; this.time += fdt;
+    const P = this.portrait, st = this.state, SH = CART_STAGE.H;
     // the subject: car (with driver) on the turntable, or the driver standing and waving
-    const car = this.pcar, drv = this.pdrv;
-    car.yaw = this.spin * 0.45 + 0.6; car.y = 0.36; car.wheelA = this.time * 3;
+    const car = this.pcar, drv = this.pdrv, M = car.M, cdef = CART_CARS[this.carSel];
+    car.yaw = this.spin + 0.6; car.y = SH; car.wheelA = 0;
     this.pst.t = this.time; this.pst.beat = Math.pow(Math.max(0, Math.sin(this.time * 2.1 * Math.PI)), 6); this.pst.fire = (this.time % 4) < 0.8 ? 1 - (this.time % 4) / 0.8 : 0;
-    cartPoseCar(car.M, car, this.pst, car.bones);
-    drv.ch.play(this.pst.fire > 0.3 ? 'cartFire' : 'cartDrive', { steer: Math.sin(this.time * 0.8) * 0.5, speed: 0.3 }); drv.ch.update(fdt);
-    Object.assign(car, { driverScale: drv.scale, driverMan: drv.man });
-    cartPoseDriver(car, car.M, drv.ch, drv.bones);
-    const showStand = st === 'driver';
-    if (showStand) { const s = this.pstand; s.x = P ? 0 : 0; s.y = 0.36; s.z = 0; s.yaw = Math.sin(this.time * 0.5) * 0.4; s.scale = drv.scale * 1.15; s.play(Math.floor(this.time / 3) % 2 ? 'cheer' : 'wave'); s.update(fdt); s.compute(); }
-    // camera: frame the subject on the free side of the screen
-    const cam = this.cam, M = car.M;
-    // (the camera looks toward -Z, so a target to the +X side puts the subject on the left of the screen)
-    if (showStand) { const hh = (drv.man ? 2.2 : 1.9) * 1.15; cam.tx = P ? 0 : 2.3; cam.ty = hh * 0.55; cam.tz = 0; cam.x = cam.tx + 0.6; cam.y = hh * 0.7; cam.z = P ? 6.2 : 5.2; cam.fov = P ? 0.8 : 0.62; if (P) cam.ty -= 1.15; }
-    else { const d = Math.max(M.len, M.h * 1.2) * (P ? 1.9 : 1.6) + 3.5; cam.tx = st === 'mode' && !P ? 3.2 : st === 'car' && !P ? 3.4 : 0; cam.ty = M.h * 0.42; cam.tz = 0; cam.x = cam.tx + Math.sin(0.35) * d; cam.y = M.h * 0.6 + 1.4; cam.z = Math.cos(0.35) * d; cam.fov = P ? 0.85 : 0.7; if (P) { cam.ty -= st === 'car' ? 2.6 : 1.9; } }
+    cartPoseCar(M, car, this.pst, car.bones);
+    this.driveOpts.steer = Math.sin(this.time * 0.8) * 0.5;
+    drv.ch.play(this.pst.fire > 0.3 ? 'cartFire' : 'cartDrive', this.driveOpts); drv.ch.update(fdt);
+    car.driverScale = drv.scale; car.driverMan = drv.man;
+    cartPoseDriver(car, M, drv.ch, drv.bones);
+    const showStand = st === 'driver', s = this.pstand;
+    if (showStand) { s.x = 0; s.y = SH; s.z = 0; s.yaw = Math.sin(this.time * 0.5) * 0.4; s.scale = drv.scale * 1.15; s.play(Math.floor(this.time / 3) % 2 ? 'cheer' : 'wave'); s.update(fdt); s.compute(); }
+    // per-car colours (cached: the LED ring and the light pools take the car's light colour)
+    if (this.ledFor !== cdef.id) {
+      this.ledFor = cdef.id; const c = burnsRGBf(cdef.light), k = 2.4;
+      this.ledCol[0] = c[0]; this.ledCol[1] = c[1]; this.ledCol[2] = c[2];
+      this.ledTint[0] = c[0] * k; this.ledTint[1] = c[1] * k; this.ledTint[2] = c[2] * k; this.ledTint[3] = 1;
+    }
+    // camera: frame the subject into the free part of the screen, with a slow, gentle drift
+    const goal = this.camGoal, az = 0.38 + Math.sin(this.time * 0.11) * 0.06, el = 0.17 + Math.sin(this.time * 0.07 + 1) * 0.015;
+    if (showStand) {
+      const hh = (drv.man ? 2.25 : 1.95) * s.scale;
+      this.aim(goal, this.stageRect, SH - 0.05, SH + hh + 0.3 * s.scale, 0.55 * s.scale, az * 0.6, 0.17, P ? 0.82 : 0.6);
+    } else {
+      // the car turns, so fit the circle it sweeps (measured from its geometry, with the driver up on top)
+      this.aim(goal, this.stageRect, SH - 0.1, SH + this.fit.top, this.fit.rh, az, el, P ? 0.82 : 0.6);
+    }
+    const cam = this.cam, k = this.camSnap ? 1 : 1 - Math.exp(-fdt * 3.2); this.camSnap = false;
+    cam.x += (goal.x - cam.x) * k; cam.y += (goal.y - cam.y) * k; cam.z += (goal.z - cam.z) * k;
+    cam.tx += (goal.tx - cam.tx) * k; cam.ty += (goal.ty - cam.ty) * k; cam.tz += (goal.tz - cam.tz) * k;
+    cam.fov += (goal.fov - cam.fov) * k; cam.shift += (goal.shift - cam.shift) * k;
     const t0 = performance.now(), mq = window.__cartFixedQ || this.mq || (this.mq = 0.85);
     const gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * mq)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * mq));
     R.resize(gw, gh); R.setCamera(cam);
-    const env = BurnsEnv.build(CartShowroom.sky, null, 0, this.env, this.time);
-    R.setLights([{ x: 2, y: 5, z: 6, r: 14, c: [1, 0.95, 0.9], i: 0.55 }, { x: -5, y: 2, z: -3, r: 10, c: [0.6, 0.85, 1], i: 0.35 }]);
-    if (R.shadowBegin(env, { dist: 30 })) { R.statics(World.chunks, env, World, BURNS_ATLAS.T, 0); R.skinBegin(env, World, BURNS_ATLAS.T); if (showStand) BurnsSkinActor.draw(null, R, drv.id, this.pstand) || R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, 0, 0); else { R.skin(M.geo, car.bones, M.nb, null, 0, 0); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, 0, 0); } R.shadowEnd(); }
-    R.begin(env); R.sky(env); R.ground(World.ground, env, World); R.statics(World.chunks, env, World, BURNS_ATLAS.T, 300);
-    R.skinBegin(env, World, BURNS_ATLAS.T);
-    if (showStand) BurnsSkinActor.draw(null, R, drv.id, this.pstand, null, 0.6) || R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, this.pstand.face, 0.6);
-    else { R.skin(M.geo, car.bones, M.nb, null, 0, 0.3); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, drv.ch.face, 0.5); }
-    const S = BURNS_SPRITES.R;
-    for (const g of World.glows) R.bbs.bb(g.x, g.y, g.z, g.s * 1.8, g.s * 1.8, S.glow, g.c, 0.75, true);
-    if (!showStand) for (const L of M.lights) { const p = cartLocalToWorld(car, L.x, L.y, L.z, [0, 0, 0]); R.bbs.bb(p[0], p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.4 : 0.7, true); }
-    R.flat.flat(0, 0.4, 0, M.w + 3, M.len + 3, car.yaw, S.glow, burnsRGBf(CART_CARS[this.carSel].light), 0.35, true);
+    const env = CartShowroom.envFor(this.time);
+    // two cool rim lights behind the subject (as seen from the camera) and a soft neutral fill from the camera's right;
+    // the warm key is the env's sun, high behind the camera's left shoulder (CartShowroom.sky)
+    const Ls = this.lights, back = az + Math.PI;
+    Ls[0].x = Math.sin(back + 0.95) * 5.2; Ls[0].y = 3.6; Ls[0].z = Math.cos(back + 0.95) * 5.2; Ls[0].r = 10.5; Ls[0].i = 1.25;
+    Ls[1].x = Math.sin(back - 0.85) * 5.2; Ls[1].y = 2.8; Ls[1].z = Math.cos(back - 0.85) * 5.2; Ls[1].r = 10; Ls[1].i = 1.0;
+    Ls[2].x = Math.sin(az + 1.0) * 7; Ls[2].y = 2.4; Ls[2].z = Math.cos(az + 1.0) * 7; Ls[2].r = 13; Ls[2].i = 0.3;
+    R.setLights(Ls);
+    if (R.shadowBegin(env, { dist: 26 })) { R.statics(World.chunks, env, null, BURNS_ATLAS.T, 0); R.skinBegin(env, null, BURNS_ATLAS.T); this.drawSubject(R, showStand, 0, 0); R.shadowEnd(); }
+    R.begin(env); R.sky(env);
+    R.statics(World.chunks, env, null, BURNS_ATLAS.T, 400);
+    R.skinBegin(env, null, BURNS_ATLAS.T);
+    // the turntable's LED ring turns with the car
+    BurnsM.a34Set(this.ringB, 0, 0, 0, 0, showStand ? this.time * 0.3 : car.yaw, 0, 0, 1, 1, 1);
+    R.skin(World.ring, this.ringB, 1, this.ledTint, 0, 0);
+    this.drawSubject(R, showStand, 0.6, 0.6);
+    // the car's mirror image under the smoked-glass top (mirrored geometry winds the other way)
+    if (!showStand && M.nb * 12 <= this.mirB.length) {
+      cartMirrorBones(car.bones, this.mirB, M.nb, SH);
+      gl.frontFace(gl.CW); R.skin(M.geo, this.mirB, M.nb, null, 0, 0); gl.frontFace(gl.CCW);
+    }
+    // the glass, blended over the reflection (it doesn't write depth, so the reflected lights below it still show)
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+    R.statics(World.glass, env, null, BURNS_ATLAS.T, 400, 0.7);
+    gl.depthMask(true); gl.disable(gl.BLEND);
+    const S = BURNS_SPRITES.R, tm = this.time, p = this.tmp3;
+    // out-of-focus playa lights far behind the stage
+    for (const b of World.bokeh) R.bbs.bb(b.x, b.y, b.z, b.s, b.s, S.core, b.c, b.a * (0.75 + 0.25 * Math.sin(tm * b.w + b.ph)), true);
+    if (!showStand) {
+      for (const L of M.lights) {
+        cartLocalToWorld(car, L.x, L.y, L.z, p);
+        R.bbs.bb(p[0], p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.4 : 0.7, true);
+        R.bbs.bb(p[0], 2 * SH - p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.12 : 0.22, true);
+      }
+      // a soft contact shadow and a pool of the car's light colour on the glass
+      R.flat.flat(0, SH + 0.012, 0, M.w * 1.35, M.len * 1.12, car.yaw, S.shadow, this.black, 0.6, false);
+      R.flat.flat(0, SH + 0.014, 0, M.w + 2.4, M.len + 2.4, car.yaw, S.glow, this.ledCol, 0.16, true);
+    } else R.flat.flat(0, SH + 0.012, 0, 1.4 * s.scale, 1.4 * s.scale, 0, S.shadow, this.black, 0.5, false);
+    // the plinth's underglow on the floor
+    R.flat.flat(0, 0.012, 0, (CART_STAGE.R + 0.3) * 2.2, (CART_STAGE.R + 0.3) * 2.2, 0, S.ring, this.ledCol, 0.55, true);
     R.sprites(env, BURNS_SPRITES.T);
-    R.end(env, { fires: [], ao: false });
+    const fx = this.fx; fx.dof.focus = Math.hypot(cam.x, cam.y - cam.ty, cam.z); fx.dof.aperture = 0.55;
+    R.end(env, fx);
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true;
     ctx.drawImage(BurnsGL.canvas, 0, 0, gw, gh, 0, 0, Game.canvas.width, Game.canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -18805,7 +19333,7 @@ class KartMenuScene {
     let ok = false; try { ok = this.gl && !BurnsGL.lost && !this.jobs.length && !window.__cartSkipRender && this.render3D(ctx); } catch (e) { console.error(e); Game.reportError(e); this.gl = false; }
     if (!ok) this.backdrop(ctx, W, H);
     // a soft dark gradient where the UI sits
-    const P = this.portrait, g = P ? ctx.createLinearGradient(0, H * 0.35, 0, H) : ctx.createLinearGradient(W * 0.3, 0, W, 0);
+    const P = this.portrait, cr = this.state === 'car' && this.cardRect, g = P ? ctx.createLinearGradient(0, cr ? cr.y - 30 : H * 0.35, 0, H) : ctx.createLinearGradient(cr ? cr.x - 50 : W * 0.3, 0, W, 0);
     g.addColorStop(0, 'rgba(10,4,20,0)'); g.addColorStop(1, 'rgba(10,4,20,0.72)');
     if (this.state !== 'mode' || P) { ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
     if (this.state === 'mode') this.drawMode(ctx);
@@ -18882,13 +19410,14 @@ class KartMenuScene {
   drawCar(ctx) {
     const W = Game.cssW, H = Game.cssH, P = this.portrait, car = CART_CARS[this.carSel], wp = CART_WEAPONS[car.weapon];
     this.title(ctx, 'CHOOSE YOUR ART CAR');
-    BurnsUI.text(ctx, (this.carSel + 1) + ' / ' + CART_CARS.length, P ? W / 2 : W * 0.28, P ? Math.max(100, insets.t + 96) : Math.max(52, insets.t + 50), 11, 'rgba(255,255,255,0.75)', { ui: true });
-    const pw = P ? W - 28 : Math.min(330, W * 0.4), px = P ? 14 : W - Math.max(14, insets.r + 8) - pw, py = P ? H * 0.47 : Math.max(60, insets.t + 54), ph = P ? H * 0.53 - Math.max(70, insets.b + 66) : H - py - Math.max(70, insets.b + 66);
+    const sr = this.stageRect, scx = sr.x + sr.w / 2;
+    BurnsUI.text(ctx, (this.carSel + 1) + ' / ' + CART_CARS.length, P ? W / 2 : scx, P ? Math.max(100, insets.t + 96) : Math.max(52, insets.t + 50), 11, 'rgba(255,255,255,0.75)', { ui: true });
+    const cr = this.cardRect, pw = cr.w, px = cr.x, py = cr.y, ph = cr.h;
     this.drawCard(ctx, { x: px, y: py, w: pw, h: ph }, true, car.col);
     let y = py + 26;
     // dark paint jobs (the pyramid, the galleon, the whale) read better in their bright trim colour
     const cn = parseInt(car.col.slice(1), 16), luma = (0.299 * (cn >> 16) + 0.587 * ((cn >> 8) & 255) + 0.114 * (cn & 255)) / 255;
-    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.42 ? car.col2 : car.col, { align: 'left', glow: car.light });
+    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.5 ? car.col2 : car.col, { align: 'left', glow: car.light });
     y += 20; ctx.font = `600 11px ${FONT_UI}`;
     for (const ln of BurnsUI.wrap(ctx, car.tag, pw - 32)) { BurnsUI.text(ctx, ln, px + 16, y, 11, 'rgba(255,255,255,0.9)', { align: 'left', ui: true, stroke: false }); y += 14; }
     BurnsUI.text(ctx, 'Inspired by ' + car.nod, px + 16, y, 10, 'rgba(255,255,255,0.55)', { align: 'left', ui: true, stroke: false }); y += 20;
@@ -18896,13 +19425,14 @@ class KartMenuScene {
     ctx.fillStyle = rgba(wp.col, 0.18); burnsRR(ctx, px + 10, y - 10, pw - 20, 74, 10); ctx.fill();
     cartWeaponIcon(ctx, car.weapon, px + 38, y + 24, 28, 1, this.t);
     BurnsUI.text(ctx, 'WEAPON: ' + wp.name, px + 66, y + 4, 13, wp.col, { align: 'left' });
-    BurnsUI.text(ctx, 'RELOAD ' + wp.reload + 's', px + pw - 18, y + 4, 10, '#ffffff', { align: 'right', ui: true });
+    BurnsUI.text(ctx, 'RELOAD ' + wp.reload + 's', px + pw - 18, y + 56, 10, '#ffffff', { align: 'right', ui: true });   // bottom corner: long weapon names own the top line
     ctx.font = `600 10px ${FONT_UI}`; let yy = y + 20;
     for (const ln of BurnsUI.wrap(ctx, wp.desc, pw - 86)) { BurnsUI.text(ctx, ln, px + 66, yy, 10, 'rgba(255,255,255,0.88)', { align: 'left', ui: true, stroke: false }); yy += 13; }
     y += 84;
-    if (y + 60 < py + ph) this.drawStatBars(ctx, car, px + 16, y, Math.min(pw - 32, 260));
+    if (y + 60 < py + ph) this.drawStatBars(ctx, car, px + 16, y, P ? pw - 32 : Math.min(pw - 32, 260));
     const d = CART_DRIVERS[this.drvSel];
-    BurnsUI.text(ctx, 'DRIVER: ' + d.name, P ? W / 2 : W * 0.28, H - Math.max(24, insets.b + 20), 12, d.col, {});
+    // portrait: between the arrows, at the plinth's front edge; landscape: under the stage
+    BurnsUI.text(ctx, 'DRIVER: ' + d.name, P ? W / 2 : scx, P ? this.btns[0].y + this.btns[0].h / 2 : H - Math.max(24, insets.b + 20), 12, d.col, {});
   }
   drawCups(ctx) {
     const sv = cartSave();
@@ -18982,6 +19512,124 @@ function cartArenaIcon(ctx, id, x, y, s, t, col) {
   else if (id === 'mx') { ctx.beginPath(); ctx.moveTo(-s, s * 0.4); for (let i = 0; i <= 8; i++) ctx.lineTo(-s + i * s * 0.25, s * 0.4 - (i % 2 ? s * 0.3 : 0) - (i === 4 ? s * 0.4 : 0)); ctx.lineTo(s, s * 0.4); ctx.closePath(); ctx.fill(); ctx.stroke(); const bx = Math.sin(t * 2) * s * 0.6; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(bx, -s * 0.35 - Math.abs(Math.cos(t * 2)) * s * 0.2, s * 0.1, 0, TAU); ctx.fill(); }
   else { ctx.beginPath(); ctx.arc(0, 0, s * 0.8, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-s * 0.12, s * 0.3); ctx.lineTo(-s * 0.1, -s * 0.35); for (let i = 0; i < 4; i++) ctx.lineTo(-s * 0.1 + i * s * 0.07, -s * 0.55 - (i % 2) * s * 0.08); ctx.lineTo(s * 0.16, -s * 0.3); ctx.lineTo(s * 0.14, s * 0.3); ctx.closePath(); ctx.fill(); }
   ctx.restore();
+}
+
+/* ---- 43_cart_fa_stage.js ---- */
+/* ============================================================
+   ART CART — the showroom stage (the car-select scene's set).
+   A blue-hour studio on the playa: a bevelled turntable plinth (graphite
+   body, chrome lip, an inset LED ring in the car's light colour, a smoked
+   glass top that mirrors the car), a glossy dark floor that melts into the
+   horizon glow, and out-of-focus playa lights far behind.
+   Lighting: a warm key from high behind the camera's left shoulder (the
+   env's sun: never on screen, but clear-coat and chrome reflect it through
+   the sky probe as a bright glint, and it casts the car's shadow), two cool
+   rim lights behind the car, a soft neutral fill, and the skin shader's
+   fresnel rim in ice blue. A lighter band high in the sky reads as a strip
+   light on glossy paint; the city's warm glow sits on the horizon behind.
+   Everything is built once; nothing here allocates per frame.
+   Draws (main pass): sky 1, floor + plinth 1, LED ring 1, car 1 + driver 1,
+   mirrored car 1, glass 1, sprites 2, then post.
+   ============================================================ */
+const CART_STAGE = { H: 0.3, R: 3.9 };
+const CART_SPIN = 0.3;   // the turntable's steady turn (rad/s): once round in about 21 s
+const CartShowroom = {
+  world: null, sky: null, env: null,
+  build() {
+    if (this.world) return this.world;
+    const H = CART_STAGE.H, R = CART_STAGE.R;
+    // 1. opaque statics: the floor (an annulus round the plinth: the plinth's glass top shows what's under it) and the plinth body
+    const m = new BurnsMesh(8192);
+    m.shine(2);
+    // floor: glossy blue-black, a touch lighter close to the stage; it fades into the fog colour (= the sky below the horizon)
+    m.lathe([[420, 0, '#07080f'], [110, 0, '#07080f'], [45, 0, '#0a0b15'], [18, 0, '#10111c'], [9, 0, '#15161f'], [R + 0.5, 0, '#191a24'], [R - 0.2, 0, '#191a24']], { seg: 72 });
+    // plinth body: a dark toe-kick (shadow gap), a graphite clear-coat wall, a bevelled chrome lip
+    m.shine(1);
+    m.lathe([[R - 0.2, 0, '#050508'], [R - 0.2, 0.06, '#050508'], [R - 0.2, 0.06, '#1d1e27'], [R - 0.02, 0.075, '#1d1e27'], [R, 0.095, '#22232e']], { seg: 96 });
+    m.shine(2);
+    m.lathe([[R, 0.095, '#262734'], [R, H - 0.045, '#2c2d3b']], { seg: 96 });
+    m.shine(3);
+    m.lathe([[R, H - 0.045, '#7c808c'], [R - 0.01, H - 0.018, '#a2a6b2'], [R - 0.035, H - 0.004, '#a2a6b2'], [R - 0.08, H, '#6c707c']], { seg: 96 });
+    // the inset groove that holds the LED ring (dark, just proud of the glass)
+    m.shine(1);
+    m.lathe([[R - 0.08, H + 0.004, '#0b0b10'], [R - 0.36, H + 0.004, '#0b0b10']], { seg: 96 });
+    const opaque = m.geo(); opaque.always = true;
+    // 2. the LED ring: emissive dashes on their own bone, turning with the car (a turntable you can see turn), tinted per car
+    const L = new BurnsMesh(4096);
+    L.color('#ffffff', 1); L.shine(0);
+    const n = 48, r0 = R - 0.27, r1 = R - 0.17, y = H + 0.008;
+    for (let i = 0; i < n; i++) {
+      const a0 = i / n * TAU, a1 = a0 + TAU / n * 0.72, s = i % 6 === 0 ? 1.25 : 1;
+      const p = [];
+      for (let k = 0; k <= 3; k++) { const a = a0 + (a1 - a0) * k / 3; p.push([Math.sin(a) * (r1 + 0.02 * (s - 1)), y, Math.cos(a) * (r1 + 0.02 * (s - 1))]); }
+      for (let k = 3; k >= 0; k--) { const a = a0 + (a1 - a0) * k / 3; p.push([Math.sin(a) * r0, y, Math.cos(a) * r0]); }
+      L.poly(p, null, [0, 1, 0]);
+    }
+    const ring = L.geo();
+    // 3. smoked glass: the plinth top, drawn blended over the mirrored car; fine concentric bands read as a brushed finish
+    const G = new BurnsMesh(4096);
+    G.shine(2);
+    const prof = [[R - 0.36, H]];
+    for (let r = R - 0.42, k = 0; r > 0.2; r -= 0.07, k++) prof.push([r, H, k % 2 ? '#2a2c38' : '#171921']);
+    prof.push([0, H, '#171921']);
+    prof[0][2] = '#171921';
+    G.lathe(prof, { seg: 96 });
+    const glass = G.geo(); glass.always = true;
+    // 4. bokeh: playa lights far behind the stage (billboards; the depth of field softens them further)
+    const pal = ['#ffb15a', '#ff4fd8', '#38f2ff', '#ffe2c0', '#9a7aff', '#ff7a4a', '#7affc8'].map(c => burnsRGBf(c));
+    const rng = mulberry32(31), bokeh = [];
+    for (let i = 0; i < 44; i++) {
+      // behind the car as seen from the showroom camera (which sits on +Z, a little to +X), low on the horizon
+      const a = Math.PI + 0.38 + (rng() - 0.5) * 2.8, d = 26 + rng() * 40;
+      bokeh.push({ x: Math.sin(a) * d, y: 0.3 + rng() * rng() * 3.2, z: Math.cos(a) * d, s: 1.0 + rng() * 1.8, c: pal[i % pal.length], a: 0.3 + rng() * 0.4, w: 0.4 + rng() * 1.3, ph: rng() * TAU });
+    }
+    // the city on the horizon: a long low band of small warm camp lights, denser behind the stage
+    const warm = ['#ffc27a', '#ffd9a8', '#ff9a6a', '#ff6ab0', '#9ad2ff'].map(c => burnsRGBf(c));
+    for (let i = 0; i < 70; i++) {
+      const a = Math.PI + 0.38 + (rng() - 0.5) * (rng() < 0.6 ? 1.6 : 3.4), d = 110 + rng() * 90;
+      bokeh.push({ x: Math.sin(a) * d, y: 0.4 + rng() * rng() * 3, z: Math.cos(a) * d, s: 0.7 + rng() * 1.1, c: warm[(rng() * warm.length) | 0], a: 0.35 + rng() * 0.4, w: 1 + rng() * 3, ph: rng() * TAU });
+    }
+    this.world = { chunks: [opaque], glass: [glass], ring, bokeh, lightmap: null, glows: [] };
+    // blue hour: a deep navy zenith, a lighter band higher up (on clear-coat paint it reads as a studio strip light), the city's
+    // warm glow on the horizon right behind the car. The "sun" is the key light: high behind the camera's left shoulder, never
+    // on screen, but paint and chrome reflect it as a bright glint (the sky probe), and it casts the car's shadow
+    this.sky = {
+      zen: '#0a1440', hor: '#3e4488', mid: '#41509e', midK: 0.55, fog: '#463f86', fogD: 0.006, fogH: 0.04, haze: 0.35, fogMax: 1,
+      sun: [328, 38], sunCol: '#ffe6cc', sunSize: 0.005, moon: [150, 30], moonK: 0, stars: 0.45,
+      mtnCol: '#2a3068', mtnH: 0, city: [205, 0], cityCol: '#ff8a7a', cityK: 0.8,
+      sky: '#9aa0b4', gnd: '#3d3640', key: '#ffe2c6', keyK: 1.3, emB: 1.4, rim: '#9ad2ff', clouds: 0, cloudCol: '#2a2a50'
+    };
+    return this.world;
+  },
+  // the renderer env, built once (BurnsEnv.build allocates); only its clock moves per frame
+  envFor(time) {
+    if (!this.env) {
+      this.env = BurnsEnv.build(this.sky, null, 0, {}, 0);
+      Object.assign(this.env, { scatter: 0.75, belt: 0.45, milkyway: 0.25, exposure: 1.05, bloom: 1, grade: [1.1, 0.16, 0.5], dust: 0 });
+    }
+    this.env.time = time;
+    return this.env;
+  }
+};
+// a mirror copy of rigid bone rows (3x4, row-major) about the horizontal plane y = h
+function cartMirrorBones(src, dst, nb, h) {
+  for (let b = 0; b < nb; b++) {
+    const k = b * 12;
+    dst[k] = src[k]; dst[k + 1] = src[k + 1]; dst[k + 2] = src[k + 2]; dst[k + 3] = src[k + 3];
+    dst[k + 4] = -src[k + 4]; dst[k + 5] = -src[k + 5]; dst[k + 6] = -src[k + 6]; dst[k + 7] = 2 * h - src[k + 7];
+    dst[k + 8] = src[k + 8]; dst[k + 9] = src[k + 9]; dst[k + 10] = src[k + 10]; dst[k + 11] = src[k + 11];
+  }
+  return dst;
+}
+// grow e.rh (widest distance from the y axis) and e.top (highest point) over a posed rigid-skinned geometry (24-byte vertices)
+function cartGeoExtent(geo, B, e) {
+  const f = new Float32Array(geo.data), u = new Uint8Array(geo.data);
+  for (let v = 0; v < geo.nv; v++) {
+    const b = (u[v * 24 + 15] & 63) * 12, x = f[v * 6], y = f[v * 6 + 1], z = f[v * 6 + 2];
+    const wx = B[b] * x + B[b + 1] * y + B[b + 2] * z + B[b + 3], wy = B[b + 4] * x + B[b + 5] * y + B[b + 6] * z + B[b + 7], wz = B[b + 8] * x + B[b + 9] * y + B[b + 10] * z + B[b + 11];
+    const r = wx * wx + wz * wz; if (r > e.rh * e.rh) e.rh = Math.sqrt(r); if (wy > e.top) e.top = wy;
+  }
+  return e;
 }
 
 /* ---- 43_cart_g_deep.js ---- */
