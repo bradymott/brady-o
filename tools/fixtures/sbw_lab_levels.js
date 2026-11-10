@@ -210,6 +210,21 @@ LAB.gens.layered = lv('Layered lanes', [
     '##############################'
   ], { doors: [{ to: 'lanes@roomBack' }], gold: { '*': 'hidden' } }) }
 ], { exits: { main: { to: null }, secret: { to: 'house:mx-lab' } } });
+// mirror (§7.4.6): a strip played right to left, with a door into a room and back out (the door anchors are flipped too)
+LAB.gens.mirror = lv('Mirrored strip', [
+  { id: 'lake', gen: 'strip', mirror: true, W: 110, script: [['itemBlock', { item: 'power' }], 'gap', ['door', { to: 'boathouse@in', back: 'porch' }], ['postcard', { kind: 'must', dy: -4 }], 'floating', 'cp', 'spring', 'gap', ['end', { exit: 'main' }]] },
+  { id: 'boathouse', gen: 'room', role: 'secret', stamp: room([
+    '############################',
+    '#..........................#',
+    '#.........*................#',
+    '#......-----...............#',
+    '#..........................#',
+    '#..........................#',
+    '#..@..D.............g......#',
+    '############################',
+    '############################'
+  ], { doors: [{ to: 'lake@porch' }], gold: { '*': 'hidden' } }) }
+], { exits: { main: { to: null }, secret: { to: 'house:mx-lab', hint: 'a boathouse' } } });
 LAB.gens.islands = lv('Sky islands', [{ id: 'sky', gen: 'islands', W: 140, H: 26, script: [['itemBlock', { item: 'power' }], 'floating', ['flat', { n: 6 }], 'mover', ['postcard', { kind: 'must', dy: -4 }], 'gap', 'fallers', ['flat', { n: 8 }], 'end'] }]);
 LAB.gens.shaft = lv('Freefall shaft', [{ id: 'pit', gen: 'shaft', W: 22, H: 120 }]);
 LAB.gens.riseScroll = lv('Rising climb (camera)', [{ id: 'up', gen: 'rise', W: 28, H: 80, rise: { speed: 0.5, delay: 3 }, script: [['blockBand', { item: 'power' }], ['zigzag', { n: 4 }], ['zigzag', { n: 4, flip: true, gold: true }], ['zigzag', { n: 4, crumble: true }], ['zigzag', { n: 4, flip: true }], ['zigzag', { n: 4 }]] }]);

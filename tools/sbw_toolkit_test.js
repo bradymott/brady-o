@@ -130,6 +130,12 @@ section('gens', () => {
     const ok = r.ok && !(lvl.problems || []).some(p => !/is not defined yet/.test(p));
     check(`gen ${name}: ${lvl.areas.map(a => a.gen + ' ' + a.W + 'x' + a.H).join(' + ')} validates (exits, postcards, areas, pace)`, ok, { exits: r.exits, gold: r.gold, areas: r.areasReached, pace: r.pace, problems: lvl.problems, guard: r.guardHit });
   }
+  {
+    // mirror: Brady starts at the right end, the gate is on the left, the room's way out lands by the flipped door
+    const lvl = build(fixtures.gens.mirror), A = lvl.areas[0], gate = A.spawns.find(s => s.type === 'gate'), door = A.spawns.find(s => s.type === 'portal');
+    const back = lvl.areas[1].spawns.find(s => s.type === 'portal');
+    check('mirror: a v2 strip plays right to left (start right, gate left, door anchors flipped)', A.mirrored && lvl.start.x > A.W * TS * 0.9 && gate.x < A.W * TS * 0.25 && back.target.area === 0 && back.target.x < door.x && Math.abs(back.target.x - door.x) < 8 * TS, { start: lvl.start, W: A.W, gate: gate.x, door: door.x, back: back.target });
+  }
 });
 
 section('gear', () => {

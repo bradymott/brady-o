@@ -37,6 +37,7 @@ Object.assign(TourBuild, {
       area.role = role; area.aid = A.id || ('area' + k); area.gen = A.gen || 'strip';
       if (A.bottomKill) area.bottomKill = true;
       if (A.camera) area.camera = A.camera;
+      if (A.mirror) tourMirrorArea(area, r.B, k, r.anchors);
       built.push({ A, area, anchors: Object.assign({}, r.anchors), B: r.B, time: r.time });
     });
     // rooms made by legacy pieces (bonus) come after the spec's areas
@@ -73,6 +74,39 @@ Object.assign(TourBuild, {
     return S.v2 ? this.generateV2(C, S, C.world, i || 99, 0) : this.generateLegacy(C, S, C.world, i || 99, 0);
   }
 });
+
+/* §7.4.6 mirror: the area plays right to left (World 22's Mirror Lake). Runs right after the gen, in place, so the
+   builder, the door anchors and the postcard pick all see the flipped area. Flips tiles, items, spawns (and same-area
+   door targets), decor, zones, ghosts, springs, beats, locks, anchors, vkeys, edges, toggles, routes, no-grab spans
+   and postcard spots. Not flipped: boss arenas and rail forks (their pieces assume left to right). */
+function tourMirrorArea(A, B, k, anchors) {
+  const W = A.W, H = A.H, PX = W * TS, fx = x => W - 1 - x;
+  for (const arr of [A.tiles, A.hide, A.surf]) for (let y = 0; y < H; y++) { const row = arr.subarray(y * W, y * W + W); row.reverse(); }
+  const c = {}; for (const key in A.contents) { const [x, y] = key.split(',').map(Number); c[fx(x) + ',' + y] = A.contents[key]; }
+  for (const key in A.contents) delete A.contents[key]; Object.assign(A.contents, c);
+  for (const s of A.spawns) {
+    if (s.type === 'mplat' && !s.swing && !s.orbit) { const pw = s.pw || 3, ctr = s.x - TS / 2 + pw * TS / 2; s.x = PX - ctr + TS / 2 - pw * TS / 2 - (s.ax || 0); }
+    else s.x = PX - s.x;
+    s.dir = -(s.dir || -1);
+    if (s.target && s.target.area === k) s.target.x = PX - s.target.x;
+  }
+  for (const d of A.decor) d.x = PX - d.x;
+  for (const z of A.zones) { z.x = PX - z.x - z.w; z.fx = -(z.fx || 0); }
+  const flipList = list => { for (const p of list || []) p[0] = fx(p[0]); };
+  flipList(A.ghosts); flipList(A.springs); flipList(A.route);
+  for (const b of A.beats || []) b.tx = fx(b.tx);
+  for (const L of A.locks || []) flipList(L.tiles);
+  for (const v of A.vkeys || []) flipList(v.tiles);
+  for (const e of A.edges || []) { e.from[0] = fx(e.from[0]); if (e.area == null || e.area === k) e.to[0] = fx(e.to[0]); }
+  const rect = r => { const a = fx(r[2]), b = fx(r[0]); r[0] = a; r[2] = b; };
+  for (const g in A.toggles || {}) { const G = A.toggles[g]; for (const r of G.A) rect(r); for (const r of G.B) rect(r); flipList(G.switches); }
+  for (const n of A.noGrabs || []) { const a = fx(n[1]), b = fx(n[0]); n[0] = a; n[1] = b; }
+  // the gen's anchors and the area's share objects: flip each one once
+  const an = new Set(Object.values(A.anchors || {}).concat(Object.values(anchors || {})));
+  for (const a of an) if (a) a.x = PX - a.x;
+  if (B) for (const g of B.goldSpots) g.tx = fx(g.tx);
+  A.mirrored = true;
+}
 
 /* postcards across every area: 'must' spots first, then one each of hidden, risky and high, then the rest spread out,
    then a fallback in the main area (as pickGold does for one area) */
