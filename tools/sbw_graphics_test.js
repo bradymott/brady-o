@@ -1,5 +1,5 @@
 // Non-browser regression checks for the country map, render paths and touch targets.
-// node tools/graphics_test.js (build first)
+// node tools/sbw_graphics_test.js (build first; BRADY_DIST=<folder> for a private build)
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const calls = [];
 const ctx = new Proxy({}, {
@@ -44,14 +44,21 @@ for(const [W,H] of [[874,402],[390,844],[667,375],[568,320],[320,568]]) {
     layouts++;
   }
 }
-// Actual render dispatch: loaded sprite enemies must use Ink too.
+// Render dispatch: atlas art has its outline baked in, so only the procedural fallback goes through Ink, decided
+// per frame actually drawn (an atlas can be loaded yet have no art for this kind or mode).
 const Enemy=w.BRADY_TYPES.mxElote;
 const g={t:1,level:{country:'mx'},burst(){}};
 const e=new Enemy(g,{x:100,y:100});
 const old=B.Ink.ent;let inked=0;B.Ink.ent=(c,e,fn)=>{inked++;fn(c);};
-e.draw(ctx); assert.equal(inked,1);
+e.draw(ctx); assert.equal(inked,1,'no atlas: procedural art is inked');
 B.Atlas.atlases.mx={ready:true,meta:{frames:{},anims:{}},img:{},scale:3};
-e.draw(ctx);assert.equal(inked,2,'loaded atlas must keep the ink pass');B.Ink.ent=old;
+e.draw(ctx);assert.equal(inked,2,'atlas loaded but without this enemy: the procedural fallback is still inked');
+const fr={x:0,y:0,w:30,h:30,ox:15,oy:30};
+B.Atlas.atlases.mx.meta.frames[e.cfg.sprite+'_walk_000']=fr;
+e.mode='walk';e.draw(ctx);assert.equal(inked,2,'atlas frame drawn: no second ink pass');
+e.mode='stun';e.draw(ctx);assert.equal(inked,2,'missing mode falls back to an atlas frame: no ink');
+e.knocked=true;e.draw(ctx);assert.equal(inked,2,'knocked out: falls back to the walk frame, no ink');
+e.knocked=false;delete B.Atlas.atlases.mx;B.Ink.ent=old;
 // Fresh saves still open only the first stage; layout must not mutate progression.
 B.Save.data=B.Save.defaults();
 assert(TourProgress.isUnlocked('1-1'));assert(!TourProgress.isUnlocked('1-2'));

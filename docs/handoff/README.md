@@ -44,7 +44,7 @@ All three branch from `main` at `823a4d9`. ChatGPT's own notes say its browser t
 **Merge order (the PRs overlap):**
 1. **#3, Burning Man, first.** It is the biggest and changes the shared engine.
 2. **#1, Art Cart, second.** It shares `src/40_burns_da_round.js`, `src/43_cart_c_world.js` and `src/43_cart_f_menu.js` with #3. The Art Cart agent resolves those conflicts.
-3. **#2, Super Brady-O World, any time.** Its only clash is `tools/graphics_test.js`, which #3 also adds. Whichever lands second renames its copy (e.g. `tools/sbw_graphics_test.js`).
+3. **#2, Super Brady-O World, any time.** Its old clash with #3 over `tools/graphics_test.js` is gone: its copy is now `tools/sbw_graphics_test.js`.
 
 If you are running in parallel and #3 hasn't landed yet, the Art Cart agent waits, or coordinates with the Burning Man agent through Brady.
 

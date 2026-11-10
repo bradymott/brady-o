@@ -35,13 +35,13 @@ Read its notes: `git show origin/codex/super-brady-o-graphics-pass:docs/GRAPHICS
 - **Size:** the player is drawn 1.24× its collision box, and enemies 1.24–1.42×. Collisions are unchanged.
 - **Depth:** a 16% fog-colour veil over the background, and decorative objects at 76% opacity.
 - **A new country map:** an island landscape panel with a trail, landmarks, numbered stops and a boss fort (`src/28_tour_fa_landscape.js`).
-- **A new test:** `tools/graphics_test.js`, covering 70 country × viewport cases.
+- **A new test:** `tools/sbw_graphics_test.js` (named `graphics_test.js` in the PR), covering 70 country × viewport cases.
 - **What ChatGPT did not do:** run it in a real browser, take screenshots, or test on an iPhone.
 
 **Integration steps:**
-1. Check it out, build, and run `validate_levels`, `gameplay_test`, `boss_test` and its `graphics_test`.
+1. Check it out, build, and run `validate_levels`, `gameplay_test`, `boss_test` and `sbw_graphics_test`.
 2. **Take screenshots and look at them.** In particular check dark caves, underwater levels, power-up effects, the short landscape country panel, enemy art against its collision box, and the cost of outlining atlas sprites.
-3. If PR #3 (Burning Man) already added its own `tools/graphics_test.js`, rename yours to `tools/sbw_graphics_test.js`.
+3. Done: the Super Brady-O World copy is `tools/sbw_graphics_test.js`, so it no longer clashes with PR #3's `tools/graphics_test.js`.
 4. Merge, then show Brady screenshots.
 
 ## Then: the polish list, in priority order

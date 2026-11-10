@@ -14,7 +14,7 @@ Based on main at `823a4d9e5434abc989c9ce340ee01be66d0a2a38`.
 ## Validation
 
 - `node tools/build.js`: passed for all three applications.
-- `node tools/graphics_test.js`: passed 70 country/viewport combinations (874×402, 390×844, 667×375, 568×320, 320×568), finite rendering coordinates, contained/nonoverlapping touch targets, procedural/loaded-atlas enemy outline dispatch, and fresh-save stage unlocks.
+- `node tools/sbw_graphics_test.js` (renamed from `graphics_test.js`, which PR #3 also adds): passed 70 country/viewport combinations (874×402, 390×844, 667×375, 568×320, 320×568), finite rendering coordinates, contained/nonoverlapping touch targets, procedural/loaded-atlas enemy outline dispatch, and fresh-save stage unlocks.
 - `node tools/validate_levels.js`: all 68 levels finishable, all postcards reachable.
 - All source modules parse with Node's JavaScript parser.
 
