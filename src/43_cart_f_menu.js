@@ -2,33 +2,12 @@
    ART CART — menus. KartMenuScene is the app's home screen:
    mode → driver → art car (with its signature weapon) → cup / track /
    arena + objective. A live 3D showroom (the engine's renderer) turns the
-   chosen car with its driver on a neon stage at sunset; driver portraits
-   are rendered once in 3D and cached into a 2D atlas.
+   chosen car with its driver on a turntable in a blue-hour studio
+   (CartShowroom, 43_cart_fa_stage.js); driver portraits are rendered once
+   in 3D and cached into a 2D atlas.
+   The camera frames the subject into a screen rectangle that each layout
+   leaves free (this.stageRect), so nothing hides under the UI.
    ============================================================ */
-const CartShowroom = {
-  world: null,
-  build() {
-    if (this.world) return this.world;
-    const W = new BurnsWorld({ id: 3001, bounds: [-40, -40, 40, 40], ground: { base: '#c9a27e', crack: 0.3 } }, null), api = W.api;
-    api.mesh(0, 0, m => {
-      m.color('#2a2236').shine(2); m.roundCyl(0, 0, 0, 4.6, 0.35, 0.12); m.shine(0);
-      m.color('#ff4fd8', 1); m.push(); m.tf(0, 0.36, 0); m.torus(0, 0, 0, 4.5, 0.06, { seg: 40, tseg: 5 }); m.pop();
-      m.color('#38f2ff', 1); m.push(); m.tf(0, 0.12, 0); m.torus(0, 0, 0, 4.66, 0.05, { seg: 40, tseg: 5 }); m.pop(); m.emissive(0);
-      return { cols: [] };
-    }, { noAO: true });
-    api.light(0, 0, 9, '#ff7ac8', 0.6);
-    CartScene.art(api, 'lotus', -16, -22, 0.3, true, 0.9);
-    CartScene.art(api, 'spinner', 18, -26, 0, true, 0.9);
-    CartScene.art(api, 'obelisk', 30, 4, 0, true, 0.8);
-    for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; api.glow(Math.sin(a) * 8, 0.4, Math.cos(a) * 8, 0.7, BURNS_NEON[i % 7]); }
-    W.finish();
-    // golden hour: warm key, neutral fill, so every car shows its real colours
-    // the sun sits behind the camera's shoulder, not in the viewer's eyes: no glare, no god rays, no heat haze over the car
-    this.sky = Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.004, sun: [335, 26], key: '#ffe2c4', keyK: 1.1, sky: '#b8b4d0', gnd: '#8a6a5a', rim: '#ffe0f0', exposure: 1.0, hor: '#ffa070', mid: '#d08a90', midK: 0.25, rays: 0, heat: 0, haze: 0.25, dust: 0.15, bloom: 0.7 });
-    this.world = W;
-    return W;
-  }
-};
 // volume buttons shared by the menu and the race pause: MUSIC 60% / SFX OFF, cycling 0, 25, 50, 75, 100 %
 function cartVolLabel(name, v) { return name + ' ' + (v > 0 ? Math.round(v * 100) + '%' : 'OFF'); }
 function cartCycleVol(key) {
@@ -45,7 +24,15 @@ class KartMenuScene {
     this.drvSel = Math.max(0, CART_DRIVERS.findIndex(d => d.id === sv.driver));
     this.carSel = Math.max(0, CART_CARS.findIndex(c => c.id === sv.car));
     this.mode = o.mode || 'gp'; this.cupSel = 0; this.trackSel = 0; this.arenaSel = 0; this.objSel = 0;
-    this.spin = 0; this.cam = { x: 0, y: 3, z: 10, tx: 0, ty: 1.5, tz: 0, fov: 0.75 };
+    this.spin = 0; this.spinV = CART_SPIN; this.cam = { x: 0, y: 3, z: 10, tx: 0, ty: 1.5, tz: 0, fov: 0.75, shift: 0 }; this.camGoal = { x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, fov: 0.75, shift: 0, d: 10 }; this.camSnap = true;
+    // per-frame scratch (the render loop allocates nothing)
+    this.mirB = new Float32Array(64 * 12); this.ringB = new Float32Array(12); this.tmp3 = [0, 0, 0]; this.black = [0, 0, 0];
+    this.ledTint = [1, 1, 1, 1]; this.ledCol = [1, 1, 1]; this.ledFor = null;
+    this.fx = { fires: [], ao: false, bloom: 0.1, rays: 0, dof: { focus: 8, aperture: 0.6 } };
+    this.driveOpts = { steer: 0, speed: 0.3 };
+    this.lights = [0, 1, 2].map(() => ({ x: 0, y: 0, z: 0, r: 10, c: [1, 1, 1], i: 1 }));
+    this.lights[0].c = [0.42, 0.7, 1]; this.lights[1].c = [0.55, 0.85, 1]; this.lights[2].c = [1, 0.96, 0.92];
+    this._dragFn = t => this.dragTouch(t); this._dragDX = 0; this._dragAny = false;
     Input.setMode('ui'); Input.hud = null;
     Sound.music('kart_menu');
     this.gl = BurnsGL.init();
@@ -64,6 +51,18 @@ class KartMenuScene {
     this.pdrv.ch.play('cartDrive', { steer: 0 }, true);
     this.pstand = new BurnsChar(D.model); this.pstand.play('wave', {}, true);
     this.pst = { t: 0, speed: 0.3, steer: 0, fire: 0, boost: 0, air: 0, beat: 0, night: 1 };
+    this.measure();
+  }
+  // the turning subject's real size, measured once per car + driver from the posed geometry (tails, wings and decks stick out
+  // past the model's nominal len / w / h): the widest radius from the turntable axis and the top, with a little room for the
+  // parts that flap and bob
+  measure() {
+    const car = this.pcar, drv = this.pdrv, M = car.M, e = this.fitE || (this.fitE = { rh: 0, top: 0 });
+    car.yaw = 0; car.y = 0; car.driverScale = drv.scale; car.driverMan = drv.man;
+    cartPoseCar(M, car, this.pst, car.bones); drv.ch.update(0); cartPoseDriver(car, M, drv.ch, drv.bones);
+    e.rh = 0; e.top = 0;
+    cartGeoExtent(M.geo, car.bones, e); cartGeoExtent(drv.model.geo, drv.bones, e);
+    this.fit = { rh: e.rh * 1.05, top: e.top * 1.04 };
   }
   ensurePreview() {
     const car = CART_CARS[this.carSel], drv = CART_DRIVERS[this.drvSel];
@@ -77,6 +76,9 @@ class KartMenuScene {
     const safeT = Math.max(12, insets.t + 6), safeB = Math.max(14, insets.b + 8), safeL = Math.max(14, insets.l + 8), safeR = Math.max(14, insets.r + 8);
     const back = { x: safeL, y: safeT, w: 92, h: 38, label: '◀ BACK', fn: () => this.back() };
     this.cards = []; this.btns = [];
+    // the free screen area the 3D subject is framed into (CSS px); each state below narrows it
+    const sr = this.stageRect = this.stageRect || {}; sr.x = safeL; sr.y = safeT + 40; sr.w = W - safeL - safeR; sr.h = H - sr.y - safeB;
+    const setRect = (x0, y0, x1, y1) => { sr.x = x0; sr.y = y0; sr.w = Math.max(40, x1 - x0); sr.h = Math.max(40, y1 - y0); };
     if (this.state === 'mode') {
       const bw = Math.min(260, W * 0.62), x = P ? (W - bw) / 2 : W - safeR - bw - 10, y0 = P ? H * 0.5 : H * 0.3;
       this.btns = [
@@ -91,16 +93,36 @@ class KartMenuScene {
       ];
       // in the standalone Art Cart app this menu IS home: nothing to go back to
       if (typeof BRADY_APP === 'undefined' || BRADY_APP !== 'kart') this.btns.push(back);
+      // the car: left of the buttons in landscape; between the logo and the buttons in portrait
+      if (P) setRect(safeL, H * 0.16 + insets.t + Math.min(46, W * 0.11) * 0.85 + 34, W - safeR, y0 - 10);
+      else setRect(safeL, safeT + 30, x - 24, H - safeB);
     } else if (this.state === 'driver') {
       const top = P ? H * 0.42 : safeT + 52, cols = P ? 5 : 7, gx = P ? safeL : W * 0.36, gw = P ? W - safeL - safeR : W - gx - safeR, rows = Math.ceil(CART_DRIVERS.length / cols);
       const cw = (gw - (cols - 1) * 6) / cols, ch = Math.min(cw * 1.2, (H - top - safeB - 60 - (rows - 1) * 6) / rows);
       CART_DRIVERS.forEach((d, i) => this.cards.push({ i, x: gx + (i % cols) * (cw + 6), y: top + Math.floor(i / cols) * (ch + 6), w: cw, h: ch }));
       this.btns = [{ x: P ? W / 2 - 90 : gx + gw / 2 - 90, y: H - safeB - 48, w: 180, h: 46, label: 'NEXT ▶', primary: true, fn: () => this.confirmDriver() }, back];
+      // the standing driver: under the title and above the name line (portrait), left of the grid above the name (landscape)
+      if (P) setRect(safeL, Math.max(92, insets.t + 88), W - safeR, H * 0.36 - 24);
+      else setRect(safeL, safeT + 44, gx - 12, H - Math.max(92, insets.b + 86));
     } else if (this.state === 'car') {
-      const aw = 52, ay = P ? H * 0.3 : H * 0.42;
+      // the info card: right column in landscape; the lower part of the screen in portrait (the car gets everything above it)
+      const pw = P ? W - 28 : Math.min(330, W * 0.4), px = P ? 14 : W - safeR - pw, py = P ? H * (H < 740 ? 0.52 : 0.55) : Math.max(60, insets.t + 54);
+      this.cardRect = { x: px, y: py, w: pw, h: H - py - Math.max(70, insets.b + 66) };
+      const aw = 52, ah = 52;
+      let ax0, ax1, ay;
+      if (P) {
+        // arrows sit at the plinth's front edge, below the car, not over it
+        ay = py - 10 - ah; ax0 = safeL; ax1 = W - safeR - aw;
+        setRect(safeL, Math.max(112, insets.t + 108), W - safeR, ay - 4);
+      } else {
+        // arrows at mid height either side of the car; the car stays between them
+        const x1 = px - 14; ax0 = safeL; ax1 = x1 - aw;
+        setRect(safeL + aw + 6, Math.max(62, insets.t + 56), ax1 - 6, H - Math.max(40, insets.b + 36));
+        ay = sr.y + sr.h * 0.5 - ah / 2;
+      }
       this.btns = [
-        { x: safeL, y: ay, w: aw, h: 52, label: '◀', fn: () => this.stepCar(-1) },
-        { x: P ? W - safeR - aw : W * 0.55 - aw, y: ay, w: aw, h: 52, label: '▶', fn: () => this.stepCar(1) },
+        { x: ax0, y: ay, w: aw, h: ah, label: '◀', fn: () => this.stepCar(-1) },
+        { x: ax1, y: ay, w: aw, h: ah, label: '▶', fn: () => this.stepCar(1) },
         { x: P ? W / 2 - 90 : W - safeR - 190, y: H - safeB - 48, w: 180, h: 46, label: 'NEXT ▶', primary: true, fn: () => this.confirmCar() },
         back
       ];
@@ -136,7 +158,7 @@ class KartMenuScene {
     this.state = prev; this.build();
   }
   confirmDriver() { Sound.play('select'); const sv = cartSave(); sv.driver = CART_DRIVERS[this.drvSel].id; Save.save(); this.state = 'car'; this.build(); }
-  stepCar(d) { this.carSel = (this.carSel + d + CART_CARS.length) % CART_CARS.length; this.spin = 0; Sound.play('select', { vol: 0.5 }); }
+  stepCar(d) { this.carSel = (this.carSel + d + CART_CARS.length) % CART_CARS.length; this.spin = 0; this.spinV = CART_SPIN; Sound.play('select', { vol: 0.5 }); }
   confirmCar() { Sound.play('select'); const sv = cartSave(); sv.car = CART_CARS[this.carSel].id; Save.save(); this.state = this.mode === 'gp' ? 'cup' : this.mode === 'tt' ? 'track' : 'arena'; this.build(); }
   start(o) {
     Sound.play('select');
@@ -145,8 +167,24 @@ class KartMenuScene {
     if (o.mode === 'gp') o.gp = { points: {}, results: [] };
     Game.setScene(new CartRaceScene(o));
   }
+  // the turntable: a slow steady turn; a finger dragged across the stage spins it by hand (a quick flick still browses
+  // cars), and on release it eases back to the steady turn
+  dragTouch(t) {
+    const r = this.stageRect;
+    if (!r || t.sx < r.x || t.sx > r.x + r.w || t.sy < r.y || t.sy > r.y + r.h) return;
+    for (const b of this.btns) if (t.sx >= b.x && t.sx <= b.x + b.w && t.sy >= b.y && t.sy <= b.y + b.h) return;
+    if (t._spinX !== undefined) this._dragDX += t.x - t._spinX;
+    t._spinX = t.x; this._dragAny = true;
+  }
+  turn(dt) {
+    this._dragDX = 0; this._dragAny = false;
+    if (this.state === 'car' || this.state === 'mode') Input.touches.forEach(this._dragFn);
+    if (this._dragAny) { const a = this._dragDX * 0.012; this.spin += a; this.spinV = lerp(this.spinV, a / Math.max(dt, 1 / 120), 0.35); }
+    else { this.spinV += (CART_SPIN - this.spinV) * (1 - Math.exp(-dt * 1.2)); this.spin += this.spinV * dt; }
+  }
   update(dt) {
     this.t += dt;
+    this.turn(dt);
     const key = Input.uiKey, n = this.cards.length;
     if (key === 'pause') { Input.uiKey = null; this.back(); return; }
     if (this.state === 'car' && (key === 'left' || key === 'right')) { Input.uiKey = null; this.stepCar(key === 'left' ? -1 : 1); return; }
@@ -178,42 +216,131 @@ class KartMenuScene {
     else if (this.state === 'objective') this.start({ mode: 'battle', arena: CART_ARENAS[this.arenaSel].id, objective: CART_ARENAS[this.arenaSel].objectives[i] });
   }
   /* ---------- 3D: the showroom stage + cached driver portraits ---------- */
+  // aim the camera so a vertical cylinder on the turntable axis (radius rh, from y0 to y1) fills a screen rectangle (CSS px):
+  // the camera orbits at azimuth az and elevation el; a sideways offset and the lens shift put the subject at the rectangle's centre
+  aim(out, rect, y0, y1, rh, az, el, fov) {
+    const W = Game.cssW, H = Game.cssH, tanY = Math.tan(fov / 2), tanX = tanY * W / H;
+    const nx = (rect.x + rect.w / 2) / W * 2 - 1, ny = 1 - (rect.y + rect.h / 2) / H * 2, hx = rect.w / W, hy = rect.h / H;
+    const ce = Math.cos(el), se = Math.sin(el), sa = Math.sin(az), ca = Math.cos(az);
+    const vh = ((y1 - y0) * ce + 2 * rh * se) / 2;
+    // fit both ways, plus the near half of the cylinder (it is closer, so it looks bigger)
+    const d = Math.max(vh / (hy * tanY), rh / (hx * tanX)) + rh * 0.42;
+    const cy = (y0 + y1) / 2, off = -nx * tanX * d;
+    out.x = sa * ce * d + ca * off; out.y = cy + se * d; out.z = ca * ce * d - sa * off;
+    out.tx = ca * off; out.ty = cy; out.tz = -sa * off; out.fov = fov; out.shift = ny; out.d = d;
+    return out;
+  }
+  // test helper (tools/cart_showroom_shots.js): does the turning car fit its frame? Poses the car and its driver at n turntable
+  // angles, projects every k-th vertex through the current camera and returns the worst overflow (CSS px, > 0 = cut off) past
+  // the stage rectangle and past the screen edges. Not used in play.
+  fitCheck(n, k) {
+    const R = this.R, car = this.pcar, drv = this.pdrv; if (!R || !car) return null;
+    const W = Game.cssW, H = Game.cssH, sr = this.stageRect, o = {}, M = car.M, yaw0 = car.yaw;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const scan = (geo, B) => {
+      const f = new Float32Array(geo.data), u = new Uint8Array(geo.data);
+      for (let v = 0; v < geo.nv; v += k) {
+        const b = (u[v * 24 + 15] & 63) * 12, x = f[v * 6], y = f[v * 6 + 1], z = f[v * 6 + 2];
+        if (!R.project(B[b] * x + B[b + 1] * y + B[b + 2] * z + B[b + 3], B[b + 4] * x + B[b + 5] * y + B[b + 6] * z + B[b + 7], B[b + 8] * x + B[b + 9] * y + B[b + 10] * z + B[b + 11], W, H, o)) continue;
+        x0 = Math.min(x0, o.x); x1 = Math.max(x1, o.x); y0 = Math.min(y0, o.y); y1 = Math.max(y1, o.y);
+      }
+    };
+    for (let i = 0; i < n; i++) {
+      car.yaw = i / n * TAU; cartPoseCar(M, car, this.pst, car.bones); cartPoseDriver(car, M, drv.ch, drv.bones);
+      scan(M.geo, car.bones); scan(drv.model.geo, drv.bones);
+    }
+    car.yaw = yaw0;
+    const r1 = v => Math.round(v * 10) / 10;
+    return { rect: [r1(sr.x), r1(sr.y), r1(sr.x + sr.w), r1(sr.y + sr.h)], bbox: [r1(x0), r1(y0), r1(x1), r1(y1)],
+      overStage: r1(Math.max(sr.x - x0, x1 - sr.x - sr.w, sr.y - y0, y1 - sr.y - sr.h)), overScreen: r1(Math.max(-x0, x1 - W, -y0, y1 - H)),
+      fill: r1(Math.max((x1 - x0) / sr.w, (y1 - y0) / sr.h)) };
+  }
+  drawSubject(R, showStand, rimCar, rimDrv) {
+    const car = this.pcar, drv = this.pdrv, s = this.pstand, M = car.M, sh = R.pass === 'shadow';
+    if (showStand) BurnsSkinActor.draw(null, R, drv.id, s, null, rimDrv) || R.skin(drv.model.geo, s.bones, s.nb, null, sh ? 0 : s.face, rimDrv);
+    else { R.skin(M.geo, car.bones, M.nb, null, 0, rimCar); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, sh ? 0 : drv.ch.face, rimDrv); }
+  }
   render3D(ctx) {
-    const W = Game.cssW, H = Game.cssH, dpr = Game.dpr, R = this.R, World = CartShowroom.world;
+    const W = Game.cssW, H = Game.cssH, dpr = Game.dpr, R = this.R, World = CartShowroom.world, gl = BurnsGL.gl;
     if (!World || !this.pcar) return false;
-    const fdt = 1 / 60; this.time += fdt; this.spin += fdt;
-    const P = this.portrait, st = this.state;
+    const fdt = 1 / 60; this.time += fdt;
+    const P = this.portrait, st = this.state, SH = CART_STAGE.H;
     // the subject: car (with driver) on the turntable, or the driver standing and waving
-    const car = this.pcar, drv = this.pdrv;
-    car.yaw = this.spin * 0.45 + 0.6; car.y = 0.36; car.wheelA = this.time * 3;
+    const car = this.pcar, drv = this.pdrv, M = car.M, cdef = CART_CARS[this.carSel];
+    car.yaw = this.spin + 0.6; car.y = SH; car.wheelA = 0;
     this.pst.t = this.time; this.pst.beat = Math.pow(Math.max(0, Math.sin(this.time * 2.1 * Math.PI)), 6); this.pst.fire = (this.time % 4) < 0.8 ? 1 - (this.time % 4) / 0.8 : 0;
-    cartPoseCar(car.M, car, this.pst, car.bones);
-    drv.ch.play(this.pst.fire > 0.3 ? 'cartFire' : 'cartDrive', { steer: Math.sin(this.time * 0.8) * 0.5, speed: 0.3 }); drv.ch.update(fdt);
-    Object.assign(car, { driverScale: drv.scale, driverMan: drv.man });
-    cartPoseDriver(car, car.M, drv.ch, drv.bones);
-    const showStand = st === 'driver';
-    if (showStand) { const s = this.pstand; s.x = P ? 0 : 0; s.y = 0.36; s.z = 0; s.yaw = Math.sin(this.time * 0.5) * 0.4; s.scale = drv.scale * 1.15; s.play(Math.floor(this.time / 3) % 2 ? 'cheer' : 'wave'); s.update(fdt); s.compute(); }
-    // camera: frame the subject on the free side of the screen
-    const cam = this.cam, M = car.M;
-    // (the camera looks toward -Z, so a target to the +X side puts the subject on the left of the screen)
-    if (showStand) { const hh = (drv.man ? 2.2 : 1.9) * 1.15; cam.tx = P ? 0 : 2.3; cam.ty = hh * 0.55; cam.tz = 0; cam.x = cam.tx + 0.6; cam.y = hh * 0.7; cam.z = P ? 6.2 : 5.2; cam.fov = P ? 0.8 : 0.62; if (P) cam.ty -= 1.15; }
-    else { const d = Math.max(M.len, M.h * 1.2) * (P ? 1.9 : 1.6) + 3.5; cam.tx = st === 'mode' && !P ? 3.2 : st === 'car' && !P ? 3.4 : 0; cam.ty = M.h * 0.42; cam.tz = 0; cam.x = cam.tx + Math.sin(0.35) * d; cam.y = M.h * 0.6 + 1.4; cam.z = Math.cos(0.35) * d; cam.fov = P ? 0.85 : 0.7; if (P) { cam.ty -= st === 'car' ? 2.6 : 1.9; } }
+    cartPoseCar(M, car, this.pst, car.bones);
+    this.driveOpts.steer = Math.sin(this.time * 0.8) * 0.5;
+    drv.ch.play(this.pst.fire > 0.3 ? 'cartFire' : 'cartDrive', this.driveOpts); drv.ch.update(fdt);
+    car.driverScale = drv.scale; car.driverMan = drv.man;
+    cartPoseDriver(car, M, drv.ch, drv.bones);
+    const showStand = st === 'driver', s = this.pstand;
+    if (showStand) { s.x = 0; s.y = SH; s.z = 0; s.yaw = Math.sin(this.time * 0.5) * 0.4; s.scale = drv.scale * 1.15; s.play(Math.floor(this.time / 3) % 2 ? 'cheer' : 'wave'); s.update(fdt); s.compute(); }
+    // per-car colours (cached: the LED ring and the light pools take the car's light colour)
+    if (this.ledFor !== cdef.id) {
+      this.ledFor = cdef.id; const c = burnsRGBf(cdef.light), k = 2.4;
+      this.ledCol[0] = c[0]; this.ledCol[1] = c[1]; this.ledCol[2] = c[2];
+      this.ledTint[0] = c[0] * k; this.ledTint[1] = c[1] * k; this.ledTint[2] = c[2] * k; this.ledTint[3] = 1;
+    }
+    // camera: frame the subject into the free part of the screen, with a slow, gentle drift
+    const goal = this.camGoal, az = 0.38 + Math.sin(this.time * 0.11) * 0.06, el = 0.17 + Math.sin(this.time * 0.07 + 1) * 0.015;
+    if (showStand) {
+      const hh = (drv.man ? 2.25 : 1.95) * s.scale;
+      this.aim(goal, this.stageRect, SH - 0.05, SH + hh + 0.3 * s.scale, 0.55 * s.scale, az * 0.6, 0.17, P ? 0.82 : 0.6);
+    } else {
+      // the car turns, so fit the circle it sweeps (measured from its geometry, with the driver up on top)
+      this.aim(goal, this.stageRect, SH - 0.1, SH + this.fit.top, this.fit.rh, az, el, P ? 0.82 : 0.6);
+    }
+    const cam = this.cam, k = this.camSnap ? 1 : 1 - Math.exp(-fdt * 3.2); this.camSnap = false;
+    cam.x += (goal.x - cam.x) * k; cam.y += (goal.y - cam.y) * k; cam.z += (goal.z - cam.z) * k;
+    cam.tx += (goal.tx - cam.tx) * k; cam.ty += (goal.ty - cam.ty) * k; cam.tz += (goal.tz - cam.tz) * k;
+    cam.fov += (goal.fov - cam.fov) * k; cam.shift += (goal.shift - cam.shift) * k;
     const t0 = performance.now(), mq = window.__cartFixedQ || this.mq || (this.mq = 0.85);
     const gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * mq)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * mq));
     R.resize(gw, gh); R.setCamera(cam);
-    const env = BurnsEnv.build(CartShowroom.sky, null, 0, this.env, this.time);
-    R.setLights([{ x: 2, y: 5, z: 6, r: 14, c: [1, 0.95, 0.9], i: 0.55 }, { x: -5, y: 2, z: -3, r: 10, c: [0.6, 0.85, 1], i: 0.35 }]);
-    if (R.shadowBegin(env, { dist: 30 })) { R.statics(World.chunks, env, World, BURNS_ATLAS.T, 0); R.skinBegin(env, World, BURNS_ATLAS.T); if (showStand) BurnsSkinActor.draw(null, R, drv.id, this.pstand) || R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, 0, 0); else { R.skin(M.geo, car.bones, M.nb, null, 0, 0); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, 0, 0); } R.shadowEnd(); }
-    R.begin(env); R.sky(env); R.ground(World.ground, env, World); R.statics(World.chunks, env, World, BURNS_ATLAS.T, 300);
-    R.skinBegin(env, World, BURNS_ATLAS.T);
-    if (showStand) BurnsSkinActor.draw(null, R, drv.id, this.pstand, null, 0.6) || R.skin(drv.model.geo, this.pstand.bones, this.pstand.nb, null, this.pstand.face, 0.6);
-    else { R.skin(M.geo, car.bones, M.nb, null, 0, 0.3); BurnsSkinActor.drawDriver(R, car, drv.ch, drv.id) || R.skin(drv.model.geo, drv.bones, drv.ch.nb, null, drv.ch.face, 0.5); }
-    const S = BURNS_SPRITES.R;
-    for (const g of World.glows) R.bbs.bb(g.x, g.y, g.z, g.s * 1.8, g.s * 1.8, S.glow, g.c, 0.75, true);
-    if (!showStand) for (const L of M.lights) { const p = cartLocalToWorld(car, L.x, L.y, L.z, [0, 0, 0]); R.bbs.bb(p[0], p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.4 : 0.7, true); }
-    R.flat.flat(0, 0.4, 0, M.w + 3, M.len + 3, car.yaw, S.glow, burnsRGBf(CART_CARS[this.carSel].light), 0.35, true);
+    const env = CartShowroom.envFor(this.time);
+    // two cool rim lights behind the subject (as seen from the camera) and a soft neutral fill from the camera's right;
+    // the warm key is the env's sun, high behind the camera's left shoulder (CartShowroom.sky)
+    const Ls = this.lights, back = az + Math.PI;
+    Ls[0].x = Math.sin(back + 0.95) * 5.2; Ls[0].y = 3.6; Ls[0].z = Math.cos(back + 0.95) * 5.2; Ls[0].r = 10.5; Ls[0].i = 1.25;
+    Ls[1].x = Math.sin(back - 0.85) * 5.2; Ls[1].y = 2.8; Ls[1].z = Math.cos(back - 0.85) * 5.2; Ls[1].r = 10; Ls[1].i = 1.0;
+    Ls[2].x = Math.sin(az + 1.0) * 7; Ls[2].y = 2.4; Ls[2].z = Math.cos(az + 1.0) * 7; Ls[2].r = 13; Ls[2].i = 0.3;
+    R.setLights(Ls);
+    if (R.shadowBegin(env, { dist: 26 })) { R.statics(World.chunks, env, null, BURNS_ATLAS.T, 0); R.skinBegin(env, null, BURNS_ATLAS.T); this.drawSubject(R, showStand, 0, 0); R.shadowEnd(); }
+    R.begin(env); R.sky(env);
+    R.statics(World.chunks, env, null, BURNS_ATLAS.T, 400);
+    R.skinBegin(env, null, BURNS_ATLAS.T);
+    // the turntable's LED ring turns with the car
+    BurnsM.a34Set(this.ringB, 0, 0, 0, 0, showStand ? this.time * 0.3 : car.yaw, 0, 0, 1, 1, 1);
+    R.skin(World.ring, this.ringB, 1, this.ledTint, 0, 0);
+    this.drawSubject(R, showStand, 0.6, 0.6);
+    // the car's mirror image under the smoked-glass top (mirrored geometry winds the other way)
+    if (!showStand && M.nb * 12 <= this.mirB.length) {
+      cartMirrorBones(car.bones, this.mirB, M.nb, SH);
+      gl.frontFace(gl.CW); R.skin(M.geo, this.mirB, M.nb, null, 0, 0); gl.frontFace(gl.CCW);
+    }
+    // the glass, blended over the reflection (it doesn't write depth, so the reflected lights below it still show)
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+    R.statics(World.glass, env, null, BURNS_ATLAS.T, 400, 0.7);
+    gl.depthMask(true); gl.disable(gl.BLEND);
+    const S = BURNS_SPRITES.R, tm = this.time, p = this.tmp3;
+    // out-of-focus playa lights far behind the stage
+    for (const b of World.bokeh) R.bbs.bb(b.x, b.y, b.z, b.s, b.s, S.core, b.c, b.a * (0.75 + 0.25 * Math.sin(tm * b.w + b.ph)), true);
+    if (!showStand) {
+      for (const L of M.lights) {
+        cartLocalToWorld(car, L.x, L.y, L.z, p);
+        R.bbs.bb(p[0], p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.4 : 0.7, true);
+        R.bbs.bb(p[0], 2 * SH - p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.12 : 0.22, true);
+      }
+      // a soft contact shadow and a pool of the car's light colour on the glass
+      R.flat.flat(0, SH + 0.012, 0, M.w * 1.35, M.len * 1.12, car.yaw, S.shadow, this.black, 0.6, false);
+      R.flat.flat(0, SH + 0.014, 0, M.w + 2.4, M.len + 2.4, car.yaw, S.glow, this.ledCol, 0.16, true);
+    } else R.flat.flat(0, SH + 0.012, 0, 1.4 * s.scale, 1.4 * s.scale, 0, S.shadow, this.black, 0.5, false);
+    // the plinth's underglow on the floor
+    R.flat.flat(0, 0.012, 0, (CART_STAGE.R + 0.3) * 2.2, (CART_STAGE.R + 0.3) * 2.2, 0, S.ring, this.ledCol, 0.55, true);
     R.sprites(env, BURNS_SPRITES.T);
-    R.end(env, { fires: [], ao: false });
+    const fx = this.fx; fx.dof.focus = Math.hypot(cam.x, cam.y - cam.ty, cam.z); fx.dof.aperture = 0.55;
+    R.end(env, fx);
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true;
     ctx.drawImage(BurnsGL.canvas, 0, 0, gw, gh, 0, 0, Game.canvas.width, Game.canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -257,7 +384,7 @@ class KartMenuScene {
     let ok = false; try { ok = this.gl && !BurnsGL.lost && !this.jobs.length && !window.__cartSkipRender && this.render3D(ctx); } catch (e) { console.error(e); Game.reportError(e); this.gl = false; }
     if (!ok) this.backdrop(ctx, W, H);
     // a soft dark gradient where the UI sits
-    const P = this.portrait, g = P ? ctx.createLinearGradient(0, H * 0.35, 0, H) : ctx.createLinearGradient(W * 0.3, 0, W, 0);
+    const P = this.portrait, cr = this.state === 'car' && this.cardRect, g = P ? ctx.createLinearGradient(0, cr ? cr.y - 30 : H * 0.35, 0, H) : ctx.createLinearGradient(cr ? cr.x - 50 : W * 0.3, 0, W, 0);
     g.addColorStop(0, 'rgba(10,4,20,0)'); g.addColorStop(1, 'rgba(10,4,20,0.72)');
     if (this.state !== 'mode' || P) { ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
     if (this.state === 'mode') this.drawMode(ctx);
@@ -334,13 +461,14 @@ class KartMenuScene {
   drawCar(ctx) {
     const W = Game.cssW, H = Game.cssH, P = this.portrait, car = CART_CARS[this.carSel], wp = CART_WEAPONS[car.weapon];
     this.title(ctx, 'CHOOSE YOUR ART CAR');
-    BurnsUI.text(ctx, (this.carSel + 1) + ' / ' + CART_CARS.length, P ? W / 2 : W * 0.28, P ? Math.max(100, insets.t + 96) : Math.max(52, insets.t + 50), 11, 'rgba(255,255,255,0.75)', { ui: true });
-    const pw = P ? W - 28 : Math.min(330, W * 0.4), px = P ? 14 : W - Math.max(14, insets.r + 8) - pw, py = P ? H * 0.47 : Math.max(60, insets.t + 54), ph = P ? H * 0.53 - Math.max(70, insets.b + 66) : H - py - Math.max(70, insets.b + 66);
+    const sr = this.stageRect, scx = sr.x + sr.w / 2;
+    BurnsUI.text(ctx, (this.carSel + 1) + ' / ' + CART_CARS.length, P ? W / 2 : scx, P ? Math.max(100, insets.t + 96) : Math.max(52, insets.t + 50), 11, 'rgba(255,255,255,0.75)', { ui: true });
+    const cr = this.cardRect, pw = cr.w, px = cr.x, py = cr.y, ph = cr.h;
     this.drawCard(ctx, { x: px, y: py, w: pw, h: ph }, true, car.col);
     let y = py + 26;
     // dark paint jobs (the pyramid, the galleon, the whale) read better in their bright trim colour
     const cn = parseInt(car.col.slice(1), 16), luma = (0.299 * (cn >> 16) + 0.587 * ((cn >> 8) & 255) + 0.114 * (cn & 255)) / 255;
-    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.42 ? car.col2 : car.col, { align: 'left', glow: car.light });
+    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.5 ? car.col2 : car.col, { align: 'left', glow: car.light });
     y += 20; ctx.font = `600 11px ${FONT_UI}`;
     for (const ln of BurnsUI.wrap(ctx, car.tag, pw - 32)) { BurnsUI.text(ctx, ln, px + 16, y, 11, 'rgba(255,255,255,0.9)', { align: 'left', ui: true, stroke: false }); y += 14; }
     BurnsUI.text(ctx, 'Inspired by ' + car.nod, px + 16, y, 10, 'rgba(255,255,255,0.55)', { align: 'left', ui: true, stroke: false }); y += 20;
@@ -348,13 +476,14 @@ class KartMenuScene {
     ctx.fillStyle = rgba(wp.col, 0.18); burnsRR(ctx, px + 10, y - 10, pw - 20, 74, 10); ctx.fill();
     cartWeaponIcon(ctx, car.weapon, px + 38, y + 24, 28, 1, this.t);
     BurnsUI.text(ctx, 'WEAPON: ' + wp.name, px + 66, y + 4, 13, wp.col, { align: 'left' });
-    BurnsUI.text(ctx, 'RELOAD ' + wp.reload + 's', px + pw - 18, y + 4, 10, '#ffffff', { align: 'right', ui: true });
+    BurnsUI.text(ctx, 'RELOAD ' + wp.reload + 's', px + pw - 18, y + 56, 10, '#ffffff', { align: 'right', ui: true });   // bottom corner: long weapon names own the top line
     ctx.font = `600 10px ${FONT_UI}`; let yy = y + 20;
     for (const ln of BurnsUI.wrap(ctx, wp.desc, pw - 86)) { BurnsUI.text(ctx, ln, px + 66, yy, 10, 'rgba(255,255,255,0.88)', { align: 'left', ui: true, stroke: false }); yy += 13; }
     y += 84;
-    if (y + 60 < py + ph) this.drawStatBars(ctx, car, px + 16, y, Math.min(pw - 32, 260));
+    if (y + 60 < py + ph) this.drawStatBars(ctx, car, px + 16, y, P ? pw - 32 : Math.min(pw - 32, 260));
     const d = CART_DRIVERS[this.drvSel];
-    BurnsUI.text(ctx, 'DRIVER: ' + d.name, P ? W / 2 : W * 0.28, H - Math.max(24, insets.b + 20), 12, d.col, {});
+    // portrait: between the arrows, at the plinth's front edge; landscape: under the stage
+    BurnsUI.text(ctx, 'DRIVER: ' + d.name, P ? W / 2 : scx, P ? this.btns[0].y + this.btns[0].h / 2 : H - Math.max(24, insets.b + 20), 12, d.col, {});
   }
   drawCups(ctx) {
     const sv = cartSave();

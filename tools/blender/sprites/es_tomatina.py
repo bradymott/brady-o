@@ -39,7 +39,7 @@ GP = 8 * (32 / PPM)                        # ground period: 8 tiles of 32 px = 9
 GROUND_DEPTH = 3 * (32 / PPM)              # 3 tiles tall: z from 0 down to -3.42 m
 RES = (1024, 444)
 SKY = ['#2a8ae8', '#8ad0ff', '#fff4e0']
-SCRATCH = '/private/tmp/claude-501/-Users-bradymott-brady-o/f5bf6cf3-6fc7-437d-a9b3-6005c5b7ac2b/scratchpad/esbg'
+SCRATCH = os.environ.get('SCRATCH', '/tmp/brady-sprites/esbg')
 TAU = math.tau
 T = 32 / PPM                               # one floor tile (1.139 m): ground elements never cross a tile edge
 CELL_MARGIN = 0.045                        # mortar kept clear inside every tile edge
@@ -795,7 +795,7 @@ def build_L0(rng):
     fill_below(TH, L, 'floor', top=0.25, depth=3.0, y=3.0)
     Builder('L0_path', L, TH).box('path', (P / 2, 1.2, 0.08), (P + 2 * OVER, 1.2, 0.16), bevel=0.0).done(period=None)
     B = Builder('L0_back_trees', L, TH)
-    for x in jittered(rng, 14, 0.3):
+    for x in jittered(rng, 10, 0.3):
         h = rng.uniform(2.8, 3.6)
         for dx in wraps(x, h * 0.6):
             orange_tree(B, x + dx, rng.uniform(2.4, 3.2), h, FAR_TREE_ROLES, rng)
@@ -834,7 +834,7 @@ def build_L1(rng):
         y = rng.choice([0.0, 0.35, 0.7])
         roles = dict(HOUSE_ROLES, wall=walls[i % 4])
         balcony = 1 if (h > 3.8 and rng.random() < 0.5) else None
-        house(B, x, y, w, h, roles, rng, balcony=balcony, splats=rng.randint(1, 3), door=(i != truck_at))
+        house(B, x, y, w, h, roles, rng, balcony=balcony, splats=rng.randint(0, 2), door=(i != truck_at))
         # bunting from this roof to the next (the last string wraps to the first house at x + P)
         nx = x + w
         if rng.random() < 0.7:

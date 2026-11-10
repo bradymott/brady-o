@@ -54,9 +54,17 @@ Object.assign(CartRaceScene.prototype, {
       const sp = clamp(k.speed / 30, 0, 1.3), boost = k.boostT > 0 || k.dashT > 0 ? 1 : 0;
       this.boostLook = BurnsM.damp(this.boostLook || 0, boost, 4, fdt);
       // big sculptures: sit higher and further back so the road ahead stays in view
-      const tall = Math.max(0, k.M.h - 3), d = (portrait ? 11.5 : 8.8) + sp * 1.4 + this.boostLook * 1.2 + tall * 1.1 + k.M.len * 0.12, h = (portrait ? 4.6 : 3.5) + sp * 0.4 + tall * 0.85;
+      // a car that names its sculpture's top (M.extra.sight = [y, z], car-local) instead gets the height that keeps the
+      // road visible over it from `reach` metres ahead, without backing off (backing off would need more height still)
+      const sight = k.M.extra && k.M.extra.sight;
+      const tall = sight ? 0 : Math.max(0, k.M.h - 3), d = (portrait ? 11.5 : 8.8) + sp * (sight ? 0.7 : 1.4) + this.boostLook * 1.2 + tall * 1.1 + k.M.len * 0.12 - (sight ? 0.4 : 0);
+      let h = (portrait ? 4.6 : 3.5) + sp * 0.4 + tall * 0.85, ahead = 6;
+      if (sight) {
+        const reach = portrait ? 32 : 26, dObs = d + sight[1];
+        h = clamp(Math.max(h, sight[0] * reach / Math.max(4, reach - dObs) + 0.15), h, 7.5); ahead = 6 + (h - 3.5) * 1.6;
+      }
       const fx = Math.sin(this.camYaw), fz = Math.cos(this.camYaw);
-      tx = k.x + fx * 6; ty = k.y + 1.7 + tall * 0.35; tz = k.z + fz * 6;
+      tx = k.x + fx * ahead; ty = k.y + 1.7 + tall * 0.35; tz = k.z + fz * ahead;
       px = k.x - fx * d; py = k.y + h; pz = k.z - fz * d;
       fov = (portrait ? 1.32 : 1.0) + sp * 0.08 + this.boostLook * 0.12;
     }

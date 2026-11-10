@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("nl_tulips", {"scale":2.0,"image":"nl_tulips.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":680}},"anims":{},"strips":{"L0":{"w":2048,"h":679,"top":104.5,"x":0,"y":0}}});

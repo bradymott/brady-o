@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("fr_tower", {"scale":2.0,"image":"fr_tower.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":615}},"anims":{},"strips":{"L0":{"w":2048,"h":417,"top":235.5,"x":0,"y":0},"L1":{"w":2048,"h":196,"top":105.0,"x":0,"y":418}}});

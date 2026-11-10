@@ -58,7 +58,7 @@ const CART_CARS = [
     col: '#c86aff', col2: '#5af2ff', light: '#5af2ff' },
   { id: 'shark', name: 'DUNE CHOMPER', tag: 'Swims through sand. Bites through bumpers.',
     nod: 'a cruising land-shark car', weapon: 'chomp', stats: { speed: 4, accel: 4, handling: 3, weight: 3 },
-    col: '#6a8ab0', col2: '#f4f4f8', light: '#38c8ff' },
+    col: '#4a82b8', col2: '#f4f4f8', light: '#38c8ff' },
   { id: 'whale', name: 'WHALE OF A TIME', tag: 'A happy blue whale with a very powerful blowhole.',
     nod: 'a giant whale party bus', weapon: 'geyser', stats: { speed: 3, accel: 3, handling: 3, weight: 5 },
     col: '#2a6ad8', col2: '#bfe8ff', light: '#4ab0ff' }

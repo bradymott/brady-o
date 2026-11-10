@@ -47,7 +47,7 @@ from mathutils import Matrix, Vector
 TAU = math.tau
 X, Y, Z = Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, 1))
 PX = 28.1
-SCRATCH = '/private/tmp/claude-501/-Users-bradymott-brady-o/f5bf6cf3-6fc7-437d-a9b3-6005c5b7ac2b/scratchpad/maen'
+SCRATCH = os.environ.get('SCRATCH', '/tmp/brady-sprites/maen')
 
 KINDS = ['tagine', 'teapot', 'cobra', 'scarab', 'fennec', 'goat', 'orange', 'snail', 'coin', 'star', 'qblock', 'used']
 POSES = {
@@ -58,12 +58,14 @@ POSES = {
     'fennec': ['walk', 'hop', 'stun', 'flat', 'ko'],
     'goat': ['walk', 'notice', 'charge', 'stun', 'flat', 'ko'],
     'orange': ['walk', 'curl', 'roll', 'stun', 'flat', 'ko'],
-    'snail': ['walk', 'hurt_walk', 'stun', 'flat', 'ko'],
+    'snail': ['walk', 'stun', 'flat', 'ko'],          # hurt_walk exists in the model but the game never asks for it
     'coin': ['spin'],
     'star': ['idle'],
     'qblock': ['idle'],
     'used': ['idle'],
 }
+# the item blocks are drawn from frame 000 only
+FRAMES = {('qblock', 'idle'): (1, 1), ('used', 'idle'): (1, 1)}
 # (kind, pose) pairs whose t is a 0..1 cycle phase
 CYCLES = {('tagine', 'walk'), ('teapot', 'walk'), ('teapot', 'idle'), ('teapot', 'throw'), ('cobra', 'up'),
           ('cobra', 'down'), ('scarab', 'walk'), ('scarab', 'roll'), ('fennec', 'walk'), ('goat', 'walk'),
@@ -93,7 +95,7 @@ COLORS = {
     'fennec_fur': '#f0d8a8', 'fennec_cream': '#fff4e0', 'fennec_ear': '#ffb8a8', 'fennec_nose': '#1a1020',
     'fennec_tip': '#5a3a2a', 'fennec_paw': '#d8b888', 'fennec_eye_white': '#fbfbf2', 'fennec_pupil': '#1a1020',
     'fennec_mouth': '#5a2a2a',
-    'goat_coat': '#f4f0e8', 'goat_muzzle': '#e8e0d0', 'goat_nose': '#3a2a28', 'goat_beard': '#d8d0c0',
+    'goat_coat': '#f0e4cc', 'goat_patch': '#a8683a', 'goat_muzzle': '#e8e0d0', 'goat_nose': '#3a2a28', 'goat_beard': '#d8d0c0',
     'goat_horn': '#8a7a6a', 'goat_hoof': '#3a2a20', 'goat_twig': '#6a5a3a', 'goat_leaf': '#4a8a3a',
     'goat_fruit': '#c8c84a', 'goat_ear': '#e8b8a8', 'goat_eye_white': '#fbfbf2', 'goat_pupil': '#1a1020',
     'goat_mouth': '#3a1a1a',
@@ -985,7 +987,12 @@ def build_goat(root, pose, t):
         nod = 3 * math.sin(TAU * t)
     M = T((0, 0, bob)) @ rot_y(lean) @ diag(sx, sx, sz)
     bc = V(-0.08, 0, 0.52)
-    make_part('body', superellipsoid(bc, 0.4, 0.22, 0.23, 0.6, seg=28, rows=14), 'goat_coat', root, M)
+    br = (0.4, 0.24, 0.25)
+    make_part('body', blob(bc, *br, seg=28, rows=16), 'goat_coat', root, M)
+    # brown patches on the flank and the rump break up the white coat so the goat reads as an animal, not a box
+    make_part('patch0', ell_cap(bc, br, (-0.55, -0.6, 0.55), 30, seg=18, rows=5), 'goat_patch', root, M)
+    make_part('patch1', ell_cap(bc, br, (0.25, -0.85, 0.2), 20, seg=16, rows=5), 'goat_patch', root, M)
+    make_part('tuft', blob(V(0.24, 0, 0.5), 0.12, 0.17, 0.14, seg=16, rows=10), 'goat_coat', root, M)
     MH = M @ about((0.3, 0, 0.62), rot_y(P['pitch'] + nod))
     hc, hr = V(0.42, 0, 0.74), (0.2, 0.15, 0.16)
     make_part('head', blob(hc, *hr, seg=24, rows=14), 'goat_coat', root, MH)
@@ -1016,7 +1023,7 @@ def build_goat(root, pose, t):
         make_part('fruit', ellipsoid(twig[1] + V(0.02, -0.02, -0.06), X * 0.03, Y * 0.03, Z * 0.04, seg=10, rows=6), 'goat_fruit', root, MH, subsurf=1)
     make_part('tail', tube([V(-0.47, 0, 0.66), V(-0.52, 0, 0.74), V(-0.54, 0, 0.82)], 0.035, 0.025, seg=8), 'goat_coat', root, M)
     hips = {'fl': V(0.2, -0.12, 0.36), 'fr': V(0.2, 0.12, 0.36), 'bl': V(-0.3, -0.12, 0.36), 'br': V(-0.3, 0.12, 0.36)}
-    quad_legs('goat', root, M, P, t, hips, 0.04, 0.045, (0.07, 0.055, 0.04), 'goat_coat', A=0.1, H=0.06, foot_mat='goat_hoof')
+    quad_legs('goat', root, M, P, t, hips, 0.04, 0.06, (0.075, 0.06, 0.045), 'goat_coat', A=0.1, H=0.06, foot_mat='goat_hoof')
 
 
 # ================================================================ ORANGE
