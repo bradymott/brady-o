@@ -129,5 +129,30 @@ section('gens', () => {
   }
 });
 
+section('gear', () => {
+  const ids = Object.keys(G.TourGear ? G.TourGear.list : {});
+  for (const [name, spec] of Object.entries(fixtures.gear)) {
+    const { lvl, r } = validate(spec);
+    check(`gear fixture ${name} validates (gear stands are virtual keys gear:<id>)`, r.ok, { exits: r.exits, gold: r.gold, held: r.held });
+  }
+  const { r } = validate(fixtures.gear.stands);
+  check('all ten gear stands are held keys', ['plane', 'hat', 'pads', 'magnet', 'fins', 'box', 'kazoo', 'wand', 'sundial', 'globe'].every(i => r.held.includes('gear:' + i)), r.held);
+});
+
+section('objects', () => {
+  for (const [name, spec] of Object.entries(fixtures.objects)) {
+    const { lvl, r } = validate(spec);
+    check(`object ${name} validates`, r.ok && !(lvl.problems || []).length, { exits: r.exits, gold: r.gold, held: r.held, problems: lvl.problems });
+  }
+  // negative checks: without the thing that opens the way, the exit is out of reach
+  const strip = (steps) => ({ name: 'neg', arch: 'lab', theme: 'mx_mercado', exits: { main: { to: null } }, areas: [{ id: 'o', gen: 'strip', script: [['flat', { n: 4 }]].concat(steps, [['postcard', { kind: 'must' }], ['postcard', { kind: 'high', dx: 2 }], ['postcard', { kind: 'risky', dx: 4 }], ['flat', { n: 6 }], ['end', { exit: 'main' }]]) }] });
+  const neg = [
+    ['a breakwall for the hat with no hat stand', [['breakwall', { needs: 'hat' }]]],
+    ['a 12-tile pit without the ring', [(st) => { const x = st.x; st.floor(x, x + 1); st.pit(x + 2, x + 13); st.floor(x + 14, x + 16); return x + 17; }]],
+    ['a lever lock without its lever', [(st) => { const x = st.x; st.floor(x, x + 8); st.B.locks.push({ id: 'L9', tiles: [[x + 6, st.gy - 1], [x + 6, st.gy - 2], [x + 6, st.gy - 3]] }); st.B.fill(x + 6, 0, x + 6, st.gy - 1, st.T.HARD); return x + 9; }]]
+  ];
+  for (const [what, steps] of neg) { const { r } = validate(strip(steps)); check('negative: ' + what + ' blocks the exit', !r.exits.main, r.exits); }
+});
+
 console.log(bad ? `${bad} of ${n} TOOLKIT CHECK(S) FAILED` : `ALL ${n} TOOLKIT CHECKS PASSED`);
 process.exit(bad ? 1 : 0);

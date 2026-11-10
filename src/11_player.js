@@ -18,6 +18,10 @@ class Player {
     // world tour: signature item, LSD flight (then a glide down), the rainbow trail, smoke puffs
     this.sig = (g.sigCarry && g.level && g.level.tour) ? Object.assign({}, g.sigCarry) : null;
     this.lsdT = 0; this.glideT = 0; this.trail = []; this.puffs = 0; this.shotT = 0;
+    // world tour gear (§5.2): HANDS (gear; the signature item uses this.sig), BUFFS timers, the Backpack is this.pack
+    this.hands = g.handsCarry ? Object.assign({}, g.handsCarry) : null;
+    this.buffs = Object.assign({ magnet: 0, sundial: 0 }, g.buffsCarry || {});
+    if (g.level && g.level.tour && this.pack == null && Save.data && Save.data.pack && typeof Save.data.pack === 'string') this.pack = Save.data.pack;
     const gifts = (Save.data && Save.data.gifts) || {};
     this.kandi = gifts.kandi ? 1 : 0;
     const ha = hairAnchor(this.x + this.w / 2, this.y + this.h, this.facing, this.power === 0, null);
@@ -208,6 +212,12 @@ class Player {
     if (dug) { if (typeof TourKit !== 'undefined') TourKit.sfx('dig', 'crumble', { vol: 0.6 }); else Sound.play('crumble'); g.shake(2); if (!dir) { this.onGround = false; this.vy = 2 * TS; } }
     return dug;
   }
+  // the magnet belt: coins within 5 tiles fly in, loose pickups drift over
+  magnetPull(dt) {
+    const g = this.g, A = g.area, r = 5, cx = Math.floor(this.cx / TS), cy = Math.floor(this.cy / TS);
+    for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) if (tileAt(A, x, y) === T.PICK && (x - cx) ** 2 + (y - cy) ** 2 <= r * r) { g.setTile(x, y, T.EMPTY); g.spawn(new GearCoin(g, x * TS + TS / 2, y * TS + TS / 2)); }
+    for (const e of g.entities) if (e instanceof TourItem && !e.dropped && e.emerge <= 0 && Math.hypot(e.cx - this.cx, e.cy - this.cy) < r * TS) { const d = Math.hypot(this.cx - e.cx, this.cy - e.cy) || 1; e.x += (this.cx - e.cx) / d * 12 * TS * dt; e.y += (this.cy - e.cy) / d * 12 * TS * dt; if (e.hoverY != null) e.hoverY = e.y; }
+  }
   stun(t) { if (this.star > 0 || this.fx.molly > 0) return; this.stunT = Math.max(this.stunT, t); this.vx *= 0.3; this.g.parts.text(this.cx, this.y - 10, 'DAZED', '#ffffff'); }
   slowDown(t) { if (this.star > 0 || this.fx.molly > 0) return; this.slowT = Math.max(this.slowT, t); }
 
@@ -263,9 +273,11 @@ class Player {
     if (this.ride && !this.ride.dead) { this.x += this.ride.dx || 0; this.y += this.ride.dy || 0; this.rideVx = (this.ride.dx || 0) / dt; }
     else if (this.onGround) this.rideVx = 0;
 
-    // crouch (big only)
-    const wantCrouch = inp.down && this.onGround && this.power > 0 && !this.inWater;
-    if (wantCrouch && !this.crouch) { this.crouch = true; const b = this.y + this.h; this.h = PLAYER_DIM.crouch.h; this.y = b - this.h; }
+    // crouch (big only; the knee pads let small Brady crawl too)
+    const pads = !!(this.hands && this.hands.id === 'pads');
+    const wantCrouch = inp.down && this.onGround && (this.power > 0 || pads) && !this.inWater && !(this.hands && this.hands.id === 'box');
+    if (wantCrouch && !this.crouch) { this.crouch = true; if (this.power > 0) { const b = this.y + this.h; this.h = PLAYER_DIM.crouch.h; this.y = b - this.h; } }
+    else if (!wantCrouch && this.crouch && this.power === 0) this.crouch = false;
     else if (!wantCrouch && this.crouch && this.power > 0) {
       const b = this.y + this.h;
       if (regionFree(A, this.x, b - PLAYER_DIM.big.h, this.w, PLAYER_DIM.big.h)) { this.crouch = false; this.h = PLAYER_DIM.big.h; this.y = b - this.h; }
@@ -328,8 +340,17 @@ class Player {
     const speedMul = (this.slowT > 0 ? 0.55 : 1) * (this.fx.powder > 0 ? 1.3 : 1) * (gifts.bike ? 1.12 : 1) * (tripping ? 1.25 : 1) * (sigP && sigP.speedMul ? sigP.speedMul : 1);
     const jumpBoost = (this.mounted ? 1.12 : 1) * (this.fx.powder > 0 ? 1.14 : 1) * (sigP && sigP.jumpBoost ? sigP.jumpBoost : 1);
     const wasGround = this.onGround, rideWas = this.ride;
-    const ev = playerPhysics(this, inp, A, dt, g.platforms, { windDx, noCrouchJump: false, jumpBoost, gScale, speedMul });
+    // gear: the buffs tick, the item in hands acts every frame (glide, swim speed, crawl, the box)
+    if (this.buffs) for (const k in this.buffs) if (this.buffs[k] > 0) { this.buffs[k] -= dt; if (this.buffs[k] <= 0) { this.buffs[k] = 0; g.toast && g.toast((TourGear.get(k) || { name: k }).name + ' WORE OFF'); } }
+    if (this.buffs && this.buffs.magnet > 0) this.magnetPull(dt);
+    this.swimMul = 1; this.airBoost = 1; this.boxed = false;
+    const gearG = this.hands ? TourGear.get(this.hands.id) : null;
+    if (gearG && gearG.update) gearG.update(this, dt, inp, g);
+    if (this.boxed) inp = Object.assign({}, inp, { jump: false, jumpPressed: false });
+    const gearMul = gearG && gearG.id === 'fins' && !this.inWater ? 0.9 : 1;
+    const ev = playerPhysics(this, inp, A, dt, g.platforms, { windDx, noCrouchJump: false, jumpBoost, gScale, speedMul: speedMul * gearMul * (this.boxed ? 0.4 : 1), swimMul: this.swimMul, airBoost: this.airBoost, crawl: pads });
     if (this.glideT > 0 && this.vy > 2.2 * TS) this.vy = 2.2 * TS;
+    if (gearG && gearG.after && this.hands) gearG.after(this, dt, inp, g);
     if (ev.jump && rideWas && !rideWas.carrier) this.carryVx = this.rideVx * 0.85;
     if (ev.jump && rideWas && rideWas.carrier) this.carryVx = this.rideVx;
     if (ev.bounce) { Sound.play('spring', { vol: 0.45, pitch: 1.3 }); g.burst(this.cx, this.y + this.h, 4, '#ffffff', 'dust'); }
@@ -372,7 +393,7 @@ class Player {
       if (this.vyBeforeLand > 9 * TS) g.burst(this.cx, this.y + this.h, 6, '#ffffff', 'dust');
     }
     this.vyBeforeLand = this.vy;
-    if (ev.bonks) for (const b of ev.bonks) g.bumpBlock(b.tx, b.ty, this.power > 0, this);
+    if (ev.bonks) for (const b of ev.bonks) g.bumpBlock(b.tx, b.ty, this.power > 0 || !!(this.hands && this.hands.id === 'hat'), this);
 
     // Slothy's hug turns a hostile burner into a friend
     if (this.mounted && inp.actionPressed && this.hugT <= 0 && this.power !== 2) {
@@ -393,6 +414,8 @@ class Player {
         this.shotT = 0.16; acted = true;
         g.spawn(new RainbowLaser(g, this.cx + this.facing * 14, this.y + (this.small ? 12 : 20), this.facing, (inp.up ? -4 : inp.down ? 4 : 0) * TS));
         Sound.play('laser', { pitch: 1.5, vol: 0.4 }); this.throwT = 0.12;
+      } else if (gearG && gearG.action && this.shotT <= 0) {
+        if (gearG.action(this, g)) { acted = true; this.shotT = gearG.cooldown || 0.3; this.throwT = 0.18; }
       } else if (this.sig && sigP && sigP.action && this.shotT <= 0) {
         if (sigP.action(this, g)) { acted = true; this.shotT = sigP.cooldown || 0.3; this.throwT = 0.18; }
       }

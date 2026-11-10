@@ -70,6 +70,9 @@ const Validator = {
     const proxy = (ai, mask) => { const k = ai * 16 + mask; let A = proxies.get(k); if (!A) { A = this.proxyArea(level.areas[ai], mask); A.crawl = this.crawlways(A); proxies.set(k, A); } this.openLocks(A, held); return A; };
     const golds = [], gates = [], portals = [], keys = [], vkeys = [], edges = [], switches = [], autos = [];
     let newKey = false;
+    // keys that change the search (a lock uses them, or the carry / crawl rules): only these restart a pass
+    const useful = new Set(['deliver', 'gear:pads']);
+    for (const a of level.areas) for (const L of a.locks || []) useful.add(L.id);
     level.areas.forEach((a, ai) => {
       for (const s of a.spawns) {
         if (s.type === 'key') keys.push({ ai, id: s.id, x: s.x - 12, y: s.y - 30, w: 24, h: 30 });
@@ -78,6 +81,14 @@ const Validator = {
         if (VALIDATOR_PORTALS[s.type]) portals.push({ ai, s, x: s.x - 14, y: s.y - 52, w: 28, h: 52, hit: false });
       }
       for (const v of a.vkeys || []) vkeys.push({ ai, id: v.id, mode: v.mode || 'any', tiles: v.tiles, touched: new Set() });
+      // abilities granted on the spot (for walls only they break): 'big' under a mushroom block, 'sig' at a signature
+      // block or a friend who gives one, 'ball' where a ball waits
+      for (const k in a.contents || {}) { const c = a.contents[k], [x, y] = k.split(',').map(Number); if (c === 'power' && useful.has('big')) vkeys.push({ ai, id: 'big', mode: 'any', tiles: [[x, y + 1], [x, y + 2], [x, y + 3]], touched: new Set() }); if ((c === 'sig' || String(c).startsWith('sig:')) && useful.has('sig')) vkeys.push({ ai, id: 'sig', mode: 'any', tiles: [[x, y + 1], [x, y + 2], [x, y + 3]], touched: new Set() }); }
+      for (const s of a.spawns) {
+        const C = ENTITY_TYPES[s.type], give = s.give || (C && C.cfg && C.cfg.give);
+        if (give && String(give).startsWith('sig:') && useful.has('sig')) vkeys.push({ ai, id: 'sig', mode: 'any', tiles: [[Math.floor(s.x / TS), Math.floor((s.y - 1) / TS)]], touched: new Set() });
+        if ((s.type === 'tourBall' || s.ball) && useful.has('ball')) vkeys.push({ ai, id: 'ball', mode: 'any', tiles: [[Math.floor(s.x / TS), Math.floor((s.y - 1) / TS)]], touched: new Set() });
+      }
       for (const e of a.edges || []) edges.push({ ai, from: e.from, to: e.to, area: e.area != null ? e.area : ai });
       const tg = a.toggles || {};
       for (const g in tg) { for (const sw of tg[g].switches || []) switches.push({ ai, g: +g, tx: sw[0], ty: sw[1] }); if (tg[g].auto) autos.push({ ai, g: +g }); }
@@ -96,13 +107,13 @@ const Validator = {
       if (seen.has(k)) return; seen.add(k); queue.push([ai, tx, ty, mask, d == null ? curDist : d]);
     };
     const markBox = (ai, b) => {
-      for (const k of keys) if (k.ai === ai && !held.has(k.id) && overlap(b, k)) { held.add(k.id); newKey = true; }
+      for (const k of keys) if (k.ai === ai && !held.has(k.id) && overlap(b, k)) { held.add(k.id); if (useful.has(k.id)) newKey = true; }
       for (const g of golds) if (!g.hit && g.ai === ai && overlap(b, g)) { g.hit = true; res.gold[g.idx] = true; }
       for (const g of gates) if (g.ai === ai && overlap(b, g)) { if (!g.hit) { g.hit = true; res.exits[g.key] = true; } if (exitAt[g.key] == null || curDist < exitAt[g.key]) exitAt[g.key] = curDist; }
       for (const v of vkeys) {
         if (v.ai !== ai || held.has(v.id)) continue;
         for (const [x, y] of v.tiles) if (overlap(b, { x: x * TS, y: y * TS, w: TS, h: TS })) v.touched.add(x + ',' + y);
-        if (v.mode === 'all' ? v.touched.size >= v.tiles.length : v.touched.size > 0) { held.add(v.id); newKey = true; }
+        if (v.mode === 'all' ? v.touched.size >= v.tiles.length : v.touched.size > 0) { held.add(v.id); if (useful.has(v.id)) newKey = true; }
       }
     };
     let curMask = 0;
@@ -146,6 +157,8 @@ const Validator = {
         if (opts.trace) (res.trace = res.trace || []).push([ai, tx, ty, mask]);
         for (const au of autos) if (au.ai === ai) push(ai, tx, ty, mask ^ (1 << au.g), d + 1);
         if (A.water) { this.flood(A, ai, tx, ty, markBox, portalCheck); continue; }
+        // a water line (valve, tide, flood) in a dry area: swim the connected water, climb out at its edges
+        if (A.mixed && (tileAt(A, tx, ty - 1) === T.WATER || tileAt(A, tx, ty - 2) === T.WATER)) { this.swimOut(A, ai, tx, ty, mask, d, markBox, portalCheck, push, standable); continue; }
         // v2: a spot inside solid rock is no place to stand (dug soil is the exception)
         if (v2) { const t1 = tileAt(A, tx, ty - 1), t2 = tileAt(A, tx, ty - 2); if ((SOLID[t1] && t1 !== T.SOIL) || (SOLID[t2] && t2 !== T.SOIL)) continue; }
         const nodeBody = { x: tx * TS + TS / 2 - D.w / 2, y: ty * TS - D.h, w: D.w, h: D.h };
@@ -296,6 +309,27 @@ const Validator = {
     return null;
   },
 
+  // swimming in a water line: flood the connected water; every dry standing spot next to it (a leap of about 3 tiles
+  // up out of the surface, or a step onto a bank) becomes a node. One flood per region and mask.
+  swimOut(A, ai, tx, ty, mask, d, markBox, portalCheck, push, standable) {
+    const W = A.W, H = A.H, key = mask + ':' + ai;
+    A.swum = A.swum || {}; const done = A.swum[key] || (A.swum[key] = new Uint8Array(W * H));
+    const wet = (x, y) => x >= 0 && x < W && y >= 0 && y < H && A.tiles[y * W + x] === T.WATER;
+    const st = [[tx, ty - 1]], seen = new Uint8Array(W * H);
+    while (st.length) {
+      const [x, y] = st.pop();
+      if (!wet(x, y) || seen[y * W + x]) continue;
+      seen[y * W + x] = 1;
+      if (done[y * W + x]) continue;
+      done[y * W + x] = 1;
+      const b = { x: x * TS + 5, y: (y - 1) * TS + 4, w: 22, h: 54 };
+      markBox(ai, b); portalCheck(ai, b);
+      if (!wet(x, y - 1)) for (let k = -3; k <= 3; k++) for (let ys = y - 3; ys <= y + 1; ys++) if (!wet(x + k, ys - 1) && standable(A, x + k, ys)) push(ai, x + k, ys, mask, d + Math.abs(k) + Math.abs(ys - y));
+      if (SOLID[tileAt(A, x, y + 1)] && !wet(x - 1, y) && standable(A, x - 1, y + 1)) push(ai, x - 1, y + 1, mask, d + 1);
+      if (SOLID[tileAt(A, x, y + 1)] && !wet(x + 1, y) && standable(A, x + 1, y + 1)) push(ai, x + 1, y + 1, mask, d + 1);
+      st.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+  },
   flood(A, ai, sx, sy, markBox, portalCheck) {
     const W = A.W, H = A.H;
     const free = (x, y) => x >= 0 && x < W && y >= 0 && y < H && !SOLID[A.tiles[y * W + x]] && A.tiles[y * W + x] !== T.LAVA;

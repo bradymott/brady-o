@@ -195,7 +195,7 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
   const zf = zoneForce(area, p);
 
   if (water) {
-    const target = dir * PHYS.swimMaxX;
+    const target = dir * PHYS.swimMaxX * (opts.swimMul || 1);
     p.vx = approach(p.vx, target, (dir ? PHYS.swimAccel : PHYS.swimDrag) * dt);
     if (inp.jumpPressed) {
       p.vy = Math.min(p.vy, 0) - PHYS.swimStroke * 0.85;
@@ -222,8 +222,10 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
     const running = inp.action || p.runT > PHYS.runDelay;
     let maxS;
     if (p.onGround) { maxS = (running ? PHYS.run : PHYS.walk) * smul; p.airMax = maxS; }
-    else maxS = Math.max(PHYS.walk * (opts.speedMul || 1), p.airMax || PHYS.walk);
-    if (p.crouch && p.onGround) {
+    else maxS = Math.max(PHYS.walk * (opts.speedMul || 1), p.airMax || PHYS.walk) * (opts.airBoost || 1);
+    // crawling (knee pads): move while crouched at 0.8x walk
+    if (opts.crawl && p.crouch && p.onGround) maxS = PHYS.walk * 0.8 * smul;
+    if (p.crouch && p.onGround && !opts.crawl) {
       p.vx = approach(p.vx, 0, PHYS.decel * (ice ? 0.15 : 0.6) * dt);
     } else if (dir !== 0) {
       let a;

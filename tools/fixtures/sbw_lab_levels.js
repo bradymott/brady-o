@@ -225,5 +225,49 @@ LAB.gens.arena = lv('Arena', [
 ], { boss: 'mx_pinata', arch: 'lair' });
 LAB.gens.facade = lv('Facade climb', [{ id: 'wall', gen: 'climb', variant: 'facade', W: 34, H: 70, script: [['blockBand', { item: 'power' }], ['zigzag', { n: 3 }], ['waterfall', { h: 10 }], ['zigzag', { n: 4, flip: true, gold: true }], ['gondola', { rise: 8 }], ['zigzag', { n: 4 }]] }]);
 
+/* ---------- gear (W12): a street of gear stands, and a crawlway that needs the knee pads ---------- */
+LAB.gear = {};
+LAB.gear.stands = lv('Gear street', [{ id: 'gear', gen: 'strip', script: [
+  ['gearStand', { item: 'plane' }], flat(3), ['gearStand', { item: 'hat' }], flat(3), ['gearStand', { item: 'pads' }], flat(3), ['gearStand', { item: 'magnet' }], flat(3), ['gearStand', { item: 'fins' }],
+  flat(3), ['gearStand', { item: 'box' }], flat(3), ['gearStand', { item: 'kazoo' }], flat(3), ['gearStand', { item: 'wand' }], flat(3), ['gearStand', { item: 'sundial' }], flat(3), ['gearStand', { item: 'globe' }],
+  ['postcard', { kind: 'must' }], ['enemies', { n: 3 }], ['postcard', { kind: 'high', dy: -4 }], 'gap', ['postcard', { kind: 'risky', dy: -2 }], flat(8), ['end', { exit: 'main' }]
+] }]);
+LAB.gear.crawl = lv('Crawl with pads', [{ id: 'tunnel', gen: 'room', stamp: room([
+  '##############################',
+  '#..........######............#',
+  '#..........######............#',
+  '#..........######............#',
+  '#..........######............#',
+  '#..........######............#',
+  '#..........######............#',
+  '#..........TTTTTT............#',
+  '#.@.p...*..........*.*..G....#',
+  '##############################',
+  '##############################'
+], { legend: { p: ['gear', 'pads'] } }) }]);
+
+/* ---------- the object library (W10): one small level per object ---------- */
+const P3 = [['postcard', { kind: 'must', dy: -2 }], flat(3), ['postcard', { kind: 'high', dy: -2 }], flat(3), ['postcard', { kind: 'risky', dy: -2 }]];
+const obj = (name, steps, extra) => lv(name, [Object.assign({ id: 'o', gen: 'strip', script: [flat(4)].concat(steps, P3, [flat(6), ['end', { exit: 'main' }]]) }, extra || {})]);
+LAB.objects = {
+  keyLock: obj('Key and lock', [['keyLock', { id: 'k1', keyAt: 3, lockAt: 9 }]]),
+  lever: obj('Lever', [['lever', { opens: 'L1', lockAt: 6 }]]),
+  timedDoor: obj('Timed door', [['timedDoor', { lever: 1, door: 8, t: 6 }]]),
+  toggleBridge: obj('Toggle bridge', [['toggle', { g: 0, kind: 'valve', bridge: 8 }]]),
+  toggleWall: obj('Toggle wall', [['toggle', { g: 0, kind: 'switch', wall: 4 }]]),
+  valve: lv('Valve', [{ id: 'o', gen: 'strip', script: [flat(4)].concat(P3, [['valve', { g: 1, low: 17, high: 6 }], (st, o) => { const x = st.x; st.floor(x, x + 4); st.B.fill(x + 5, 5, x + 9, 5, st.T.GROUND); st.B.fill(x + 10, 0, x + 10, st.gy - 1, st.T.HARD); st.floor(x + 5, x + 10); st.B.spawn('gate', x + 8, 4, { exit: 'main' }); return x + 11; }]) }]),
+  plate: obj('Plate and crate', [['plate', { opens: 'P1', crateDx: -4, lockAt: 4 }]]),
+  zip: obj('Zip line', [['zip', { dx: 14, dy: 3 }]]),
+  catapult: obj('Catapult', [['catapult', { to: [12, -4] }]]),
+  ring: obj('Ring', [['ring', { len: 4, w: 12 }]]),
+  fan: obj('Fan', [['fan', { w: 2, h: 10 }], (st, o) => { const x = st.x; st.B.fill(x - 4, st.gy - 8, x + 2, st.gy - 8, st.T.SEMI); st.floor(x, x + 2); st.B.fill(x + 3, st.gy - 9, x + 6, st.gy - 1, st.T.HARD); st.floor(x + 3, x + 10); return x + 11; }]),
+  fanToggle: obj('Fan on a switch', [['toggle', { g: 0, kind: 'wind' }], ['fan', { w: 2, h: 10, g: 0 }], (st, o) => { const x = st.x; st.B.fill(x - 4, st.gy - 8, x + 2, st.gy - 8, st.T.SEMI); st.floor(x, x + 2); st.B.fill(x + 3, st.gy - 9, x + 6, st.gy - 1, st.T.HARD); st.floor(x + 3, x + 10); return x + 11; }]),
+  breakwallHat: obj('Wall for the hard hat', [['gearStand', { item: 'hat' }], flat(2), ['breakwall', { needs: 'hat', h: 3 }]]),
+  breakwallBig: obj('Wall for big Brady', [['itemBlock', { item: 'power' }], flat(2), ['breakwall', { needs: 'big', h: 3 }]]),
+  teleport: obj('Teleport pair', [['teleport', { pair: 'a' }], (st, o) => { const x = st.x; st.floor(x, x + 3); st.B.fill(x + 1, 0, x + 2, st.gy - 1, st.T.HARD); return x + 4; }, ['teleport', { pair: 'a' }]]),
+  surfaces: obj('Surfaces', [['belt', { dir: 1, n: 8 }], ['iceRun', { n: 8 }], ['honey', { n: 6 }], ['bouncePad', { gold: false }], ['crumbleRow', { n: 5 }]]),
+  gimmicks: obj('Gimmicks', [['geyser', {}], ['pancake', {}], ['bubbler', {}], ['roller', {}], ['barrel', {}], ['laser', {}], ['sweeper', { len: 3 }], ['subwoofer', {}], ['horn', {}], ['poiring', {}], ['dropper', {}], ['banner', { len: 3 }], ['discoball', { len: 3 }], ['jellypad', {}]])
+};
+
 if (typeof module !== 'undefined' && module.exports) module.exports = LAB; else root.SBW_LAB = LAB;
 })(typeof window !== 'undefined' ? window : this);
