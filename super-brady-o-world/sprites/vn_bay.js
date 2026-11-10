@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("vn_bay", {"scale":2.0,"image":"vn_bay.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":931}},"anims":{},"strips":{"L0":{"w":2048,"h":335,"top":147.5,"x":0,"y":0},"L1":{"w":2048,"h":299,"top":175.5,"x":0,"y":336},"L2":{"w":2048,"h":294,"top":297.0,"x":0,"y":636}}});

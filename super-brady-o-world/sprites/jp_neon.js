@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("jp_neon", {"scale":2.0,"image":"jp_neon.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1794}},"anims":{},"strips":{"L0":{"w":2048,"h":690,"top":68.5,"x":0,"y":0},"L1":{"w":2048,"h":645,"top":121.0,"x":0,"y":691},"L2":{"w":2048,"h":456,"top":125.0,"x":0,"y":1337}}});

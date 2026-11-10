@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("id_ijen", {"scale":2.0,"image":"id_ijen.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":953}},"anims":{},"strips":{"L0":{"w":2048,"h":559,"top":86.0,"x":0,"y":0},"L1":{"w":2048,"h":392,"top":229.5,"x":0,"y":560}}});

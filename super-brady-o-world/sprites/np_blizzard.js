@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("np_blizzard", {"scale":2.0,"image":"np_blizzard.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":802}},"anims":{},"strips":{"L0":{"w":2048,"h":535,"top":88.0,"x":0,"y":0},"L1":{"w":2048,"h":265,"top":283.0,"x":0,"y":536}}});

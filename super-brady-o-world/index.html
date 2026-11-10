@@ -41,7 +41,7 @@ noscript p { position: fixed; inset: 0; display: grid; place-items: center; font
 <script>
 (function(){
 const BRADY_APP = "world";
-const BRADY_SPRITES = ["br","br_barracao","br_beach","br_falls","br_pantanal","br_samba","ec","ec_amazon","ec_andes","ec_cotopaxi","ec_equator","ec_galapagos","es","es_aquarium","es_arts","es_fallas","es_lonja","es_mancha","es_pintxos","es_teide","es_tomatina","es_x","fr","fr_chateau","fr_morning","fr_night","fr_seine","fr_tower","ma","ma_atlas","ma_azul","ma_azul_night","ma_cielo","ma_night","ma_riad","ma_sahara","ma_souk","ma_x","mx","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_volcan","mz","mz_baobab","mz_beach","mz_dunes","mz_fort","mz_savanna","nl","nl_canals","nl_frozen","nl_rush","nl_tulips","nl_waag"];
+const BRADY_SPRITES = ["br","br_barracao","br_beach","br_falls","br_pantanal","br_samba","ec","ec_amazon","ec_andes","ec_cotopaxi","ec_equator","ec_galapagos","es","es_aquarium","es_arts","es_fallas","es_lonja","es_mancha","es_pintxos","es_teide","es_tomatina","es_x","fr","fr_chateau","fr_morning","fr_night","fr_seine","fr_tower","id","id_batur","id_dive","id_ijen","id_kites","id_rimba","id_ruins","id_surf","id_x","jp","jp_bamboo","jp_bamboo_night","jp_castle","jp_fuji","jp_gacha","jp_neon","jp_rail","jp_sushi","jp_tower","jp_x","ma","ma_atlas","ma_azul","ma_azul_night","ma_cielo","ma_night","ma_riad","ma_sahara","ma_souk","ma_x","mx","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_volcan","mz","mz_baobab","mz_beach","mz_dunes","mz_fort","mz_savanna","nl","nl_canals","nl_frozen","nl_rush","nl_tulips","nl_waag","np","np_blizzard","np_depot","np_fortress","np_hills","np_icefall","np_khadal","np_pass","np_x","vn","vn_bay","vn_cave","vn_citadel","vn_mekong","vn_river","vn_street","vn_x"];
 /* ---- 00_core.js ---- */
 'use strict';
 /* ============================================================
@@ -24220,6 +24220,15 @@ const decor = {
 const decorLights = { idTorch: [120, '#ffa040', -60] };
 
 /* ---------------- enemies ---------------- */
+/* pre-rendered art from the 'id' atlas (tools/blender/sprites/id_enemies.py) for the custom classes below:
+   the clip 'kind/pose' or the frame 'kind_pose_000'; false until the atlas is in, so the procedural art stays the
+   fallback */
+const idSprite = (ctx, kind, pose, t, x, y, dir, o) => {
+  if (typeof Atlas === 'undefined' || !Tour.countries.id || !Tour.countries.id.sprites) return false;
+  const opt = Object.assign({ scale: ART_SCALE.enemy }, o);
+  return Atlas.animate(ctx, 'id', kind + '/' + pose, t, x, y, dir || 1, opt) || Atlas.draw(ctx, 'id', kind + '_' + pose + '_000', x, y, dir || 1, opt);
+};
+const idJellyVar = (col, list) => ['', 'b', 'c'][Math.max(0, list.indexOf(col))];
 const jellyArt = (ctx, x, y, t, col, glow) => {
   ctx.save(); ctx.translate(x, y);
   if (glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(0, -2, 1, 0, -2, 22); g.addColorStop(0, rgba(col, 0.5)); g.addColorStop(1, rgba(col, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, -2, 22, 0, TAU); ctx.fill(); ctx.restore(); }
@@ -24241,7 +24250,12 @@ class IdJelly extends Ent {
   }
   hit(kind) { if (this.dead) return false; if (kind === 'stomp' || kind === 'spin') { this.dead = true; this.k = 0.4; Sound.play('splat', { pitch: 1.6, vol: 0.5 }); this.g.burst(this.cx, this.cy, 10, this.col, 'spark'); return true; } this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead) p.hurt(this); }
-  draw(ctx) { if (this.dead) { ctx.save(); ctx.translate(this.cx, this.y + this.h); ctx.scale(1.4, 0.3); jellyArt(ctx, 0, 0, this.t, this.col); ctx.restore(); return; } jellyArt(ctx, this.cx, this.y + 12, this.t, this.col); }
+  draw(ctx) {
+    const v = idJellyVar(this.col, ['#c88aff', '#ff8ad0', '#8ad0ff']);
+    if (this.dead) { if (idSprite(ctx, 'jelly', 'flat' + v, this.t, this.cx, this.y + this.h - 4, 1)) return; ctx.save(); ctx.translate(this.cx, this.y + this.h); ctx.scale(1.4, 0.3); jellyArt(ctx, 0, 0, this.t, this.col); ctx.restore(); return; }
+    if (idSprite(ctx, 'jelly', 'swim' + v, this.t, this.cx, this.cy, 1, this.knocked ? { scale: ART_SCALE.enemy, rot: Math.PI } : null)) return;
+    jellyArt(ctx, this.cx, this.y + 12, this.t, this.col);
+  }
 }
 // a glowing night-dive jellyfish: drifts up and down, lights the reef, stings
 class IdGlowJelly extends Ent {
@@ -24249,7 +24263,14 @@ class IdGlowJelly extends Ent {
   update(dt) { this.t += dt; if (this.knocked) return this.updateKnocked(dt); this.y = this.hy + Math.sin(this.t * 0.8 + this.ph) * this.range * 0.5; this.x = this.hx + Math.sin(this.t * 0.31 + this.ph) * 8; }
   hit(kind) { if (this.dead || kind === 'stomp') return false; this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead) p.hurt(this); }
-  draw(ctx) { if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI); jellyArt(ctx, 0, 0, this.t, this.col, true); ctx.restore(); return; } jellyArt(ctx, this.cx, this.cy + 2, this.t, this.col, true); }
+  draw(ctx) {
+    if (typeof Atlas !== 'undefined' && Atlas.frame('id', 'glowJelly_ko_000')) {
+      // the soft halo stays code-drawn under the pre-rendered jelly
+      if (!this.knocked) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(this.cx, this.cy, 1, this.cx, this.cy, 22); g.addColorStop(0, rgba(this.col, 0.5)); g.addColorStop(1, rgba(this.col, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(this.cx, this.cy, 22, 0, TAU); ctx.fill(); ctx.restore(); }
+      if (idSprite(ctx, 'glowJelly', this.knocked ? 'ko' : 'swim' + idJellyVar(this.col, ['#7af0ff', '#c8a0ff', '#9aff9a']), this.t, this.cx, this.cy, 1)) return;
+    }
+    if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI); jellyArt(ctx, 0, 0, this.t, this.col, true); ctx.restore(); return; } jellyArt(ctx, this.cx, this.cy + 2, this.t, this.col, true);
+  }
   get light() { return this.dead ? null : { r: 95, c: 'rgba(' + hexToRgb(this.col).join(',') + ',' }; }
 }
 const flyfishArt = (ctx, e, x, y, m) => {
@@ -24296,7 +24317,17 @@ class IdDuck extends TourEnemy {
     if (this.panic > 0) { this.panic -= dt; this.mode = this.onGround ? 'walk' : 'hop'; if (this.onGround) { this.vx = this.dir * 3.2 * TS; if (Math.random() < dt * 2.5) { this.vy = -8 * TS; this.onGround = false; if (Math.random() < 0.5) this.dir = -this.dir; } } return; }
     super.think(dt);
   }
+  // pre-rendered (sprite 'duck'): the leader walks with its little flag ('duck/lead'); the panic '?!' stays code-drawn
+  paint(ctx, x, y, mode) {
+    if (this.lead && mode === 'walk' && this.sprite && TourSprite.draw(ctx, this, x, y, 'lead', TourSprite.FALLBACK.walk)) return;
+    super.paint(ctx, x, y, mode);
+  }
+  drawArt(ctx) {
+    super.drawArt(ctx);
+    if (this.sprite && this.panic > 0 && !this.dead) { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('?!', this.cx, this.y - 10); }
+  }
 }
+IdDuck.cfg = DUCK;
 const scarecrowArt = (ctx, e, x, y, m, t) => {
   ctx.save(); ctx.translate(x, y); if (m === 'flat') ctx.scale(1.2, 0.35);
   const shake = m === 'throw' ? Math.sin(t * 40) * 0.12 : Math.sin(t * 1.5) * 0.04;
@@ -24576,6 +24607,10 @@ class IdGiver extends Ent {
     }
     // the gecko, sitting up, holding a board taller than itself
     K.shadow(ctx, x, y, 16);
+    if (idSprite(ctx, 'gecko', has ? 'wave' : 'idle', t, x, y, 1, { scale: 1.1 })) {
+      if (!has) { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 48 + Math.sin(t * 5) * 2); }
+      return;
+    }
     if (!has) { ctx.save(); ctx.translate(x + 12, y - 22); boardShape(ctx, 0, 0, 44, Math.PI / 2 - 0.1); ctx.restore(); }
     ctx.save(); ctx.translate(x, y);
     ctx.strokeStyle = '#6a8ab8'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-6, -4); ctx.quadraticCurveTo(-20, -2, -22, -12 + Math.sin(t * 3) * 3); ctx.stroke(); ctx.lineCap = 'butt';
@@ -24731,6 +24766,7 @@ class IdAngler extends Ent {
     ctx.save(); if (this.knocked) { ctx.translate(x, y); ctx.rotate(Math.PI); ctx.translate(-x, -y); }
     ctx.strokeStyle = 'rgba(200,220,180,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + d * 4, y - 12); ctx.quadraticCurveTo(x + d * 20, y - 30, L.x, L.y); ctx.stroke();
     ctx.save(); ctx.translate(L.x, L.y); ctx.scale(0.8, 0.8); COIN.draw(ctx, 0, 0, this.t); ctx.restore();
+    if (typeof Atlas !== 'undefined' && Atlas.frame('id', 'angler_ko_000')) { ctx.restore(); if (idSprite(ctx, 'angler', this.knocked ? 'ko' : this.state === 'lunge' ? 'lunge' : 'swim', this.t, x, y, d)) return; ctx.save(); if (this.knocked) { ctx.translate(x, y); ctx.rotate(Math.PI); ctx.translate(-x, -y); } }
     ctx.fillStyle = '#2a2a3a'; ctx.beginPath(); ctx.ellipse(x, y, 16, 13, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = '#3a3a4e'; ctx.beginPath(); ctx.ellipse(x - d * 4, y - 4, 10, 6, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = '#1a1424'; ctx.beginPath(); ctx.moveTo(x - d * 14, y); ctx.lineTo(x - d * 24, y - 8); ctx.lineTo(x - d * 24, y + 8); ctx.fill();
@@ -24757,6 +24793,7 @@ class IdMoray extends Ent {
     const d = this.dir, bx = this.dir > 0 ? this.hx : this.hx + 22, y = this.cy, len = 8 + this.out * 2.6 * TS;
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(200,255,120,0.9)'; ctx.beginPath(); ctx.arc(bx + d * (len - 2), y - 3, 1.8, 0, TAU); ctx.fill(); ctx.restore();
     if (this.out < 0.05) return;
+    if (this.knocked ? idSprite(ctx, 'moray', 'ko', this.t, this.cx, this.cy, d) : idSprite(ctx, 'moray', 'out_00' + Math.max(0, Math.min(5, Math.round(this.out * 6) - 1)), this.t, bx, y, d, { scale: 1 })) return;
     ctx.strokeStyle = '#5a7a2a'; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bx - d * 6, y + 2); ctx.quadraticCurveTo(bx + d * len * 0.5, y + Math.sin(this.t * 8) * 4, bx + d * (len - 6), y); ctx.stroke(); ctx.lineCap = 'butt';
     ctx.fillStyle = 'rgba(30,50,10,0.5)'; for (let k = 0; k < len - 10; k += 6) { ctx.beginPath(); ctx.arc(bx + d * k, y + (k % 12 ? -2 : 2), 1.4, 0, TAU); ctx.fill(); }
     ctx.fillStyle = '#6a8a32'; ctx.beginPath(); ctx.ellipse(bx + d * len, y, 9, 6.5, 0, 0, TAU); ctx.fill();
@@ -24841,6 +24878,11 @@ class IdMonkey extends Ent {
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, t = this.t;
     if (this.state === 'perch' || this.state === 'climb') { ctx.strokeStyle = '#5a7a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(this.s.x, this.hy - 200); ctx.lineTo(this.s.x, this.hy + 4); ctx.stroke(); }
+    const pose = this.knocked ? 'ko' : this.dead ? 'flat' : this.state;
+    if (idSprite(ctx, 'monkey', pose, t, x, y, this.dir, this.knocked ? { scale: ART_SCALE.enemy, rot: this.spin || 0 } : null)) {
+      if (this.loot) { ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(x - this.dir * 6, y - 14, 4, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff6c0'; ctx.fillRect(x - this.dir * 6 - 1, y - 15, 2, 2); }
+      return;
+    }
     ctx.save(); ctx.translate(x, y); if (this.dead) ctx.scale(1.3, 0.4); if (this.knocked) { ctx.translate(0, -this.h / 2); ctx.rotate(Math.PI + (this.spin || 0)); ctx.translate(0, this.h / 2); }
     ctx.scale(this.dir, 1);
     ctx.strokeStyle = '#8a7a6a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-8, -8); ctx.quadraticCurveTo(-22, -6, -20 + Math.sin(t * 3) * 3, -24); ctx.stroke();
@@ -25090,6 +25132,7 @@ class IdTroop extends Ent {
   touchPlayer(p) { if (!this.dead) p.hurt(this); }
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, t = this.t, climbing = this.state === 'home' && Math.abs(this.cx - this.homeX) <= 6;
+    if (idSprite(ctx, 'troop', this.knocked ? 'ko' : this.dead ? 'flat' : climbing ? 'climb' : this.carry ? 'carry' : 'run', t, x, y, this.dir, this.knocked ? { scale: ART_SCALE.enemy, rot: this.spin || 0 } : null)) return;
     ctx.save(); ctx.translate(x, y); if (this.dead) ctx.scale(1.3, 0.4); if (this.knocked) { ctx.translate(0, -this.h / 2); ctx.rotate(Math.PI + (this.spin || 0)); ctx.translate(0, this.h / 2); }
     ctx.scale(this.dir, 1);
     const run = this.dead ? 0 : Math.sin(t * (climbing ? 16 : 12));
@@ -26216,7 +26259,7 @@ const power = {
 /* ---------------- entities ---------------- */
 // a Shiba with a pair of nunchucks: hands them over whenever Brady has none
 class JpShiba extends Ent {
-  constructor(g, s) { super(g, s, 34, 30); this.cool = 0; this.wag = 0; }
+  constructor(g, s) { super(g, s, 34, 30); this.cfg = JpShiba.cfg; this.cool = 0; this.wag = 0; }
   update(dt) { this.t += dt; if (this.cool > 0) this.cool -= dt; this.wag += dt * (this.cool > 0 ? 18 : 7); const p = this.g.player; if (p) this.dir = p.cx < this.cx ? -1 : 1; }
   touchPlayer(p) {
     if (this.cool > 0 || p.dead || (p.sig && p.sig.id === 'nunchuck')) return;
@@ -26226,6 +26269,8 @@ class JpShiba extends Ent {
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, d = this.dir || 1, t = this.t, has = this.g.player && this.g.player.sig && this.g.player.sig.id === 'nunchuck';
     K.shadow(ctx, x, y, 18);
+    // pre-rendered art (sprite 'shiba': idle = offering the nunchucks, wave = once Brady has them); procedural below is the fallback
+    if (TourSprite.of(this) && TourSprite.draw(ctx, this, x, y, has ? 'wave' : 'idle', TourSprite.FALLBACK.friend)) return;
     ctx.save(); ctx.translate(x, y); ctx.scale(d, 1);
     // curly tail
     ctx.strokeStyle = '#d8843a'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(-13, -20, 5, Math.PI * 0.3 + Math.sin(this.wag) * 0.4, Math.PI * 1.8 + Math.sin(this.wag) * 0.4); ctx.stroke(); ctx.lineCap = 'butt';
@@ -26247,6 +26292,8 @@ class JpShiba extends Ent {
     if (!has) { ctx.save(); ctx.translate(x + d * 16, y - 20); ctx.rotate(Math.sin(t * 3) * 0.15); for (const dx of [-5, 5]) { ctx.fillStyle = '#a8603a'; rr(ctx, dx - 2, -1, 4, 13, 2); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.fillRect(dx - 2, 10, 4, 2); } ctx.strokeStyle = '#d8d8e0'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.quadraticCurveTo(0, -4, 5, 0); ctx.stroke(); ctx.restore(); }
   }
 }
+// a static cfg so 30_tour_sprites.js names its pre-rendered art ('shiba/idle', 'shiba/wave')
+JpShiba.cfg = { w: 34, h: 30 };
 // bending bamboo: a tall culm with a leafy perch on top. Under Brady's weight it bows forward and down,
 // carrying him along; jump while it's bent and it springs back, flinging him high
 class JpPole extends Ent {
@@ -31092,16 +31139,20 @@ const power = {
 /* ---------------- entities ---------------- */
 // a little yak pen: the yak inside is happy to carry Brady for a while
 class NpPen extends Ent {
-  constructor(g, s) { super(g, s, 56, 40); this.cool = 0; }
+  constructor(g, s) { super(g, s, 56, 40); this.cfg = NpPen.cfg; this.cool = 0; }
   update(dt) { this.t += dt; if (this.cool > 0) this.cool -= dt; }
   touchPlayer(p) { if (this.cool > 0 || p.dead || (p.sig && p.sig.id === 'yak')) return; this.cool = 1.5; K.say(this.g, this, 'HRUMPH! (HOP ON)', '#ffd84a'); TourKit.sfx('gift', 'appear'); p.collect('sig:yak'); }
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, has = this.g.player && this.g.player.sig && this.g.player.sig.id === 'yak';
+    // pre-rendered art (sprite 'pen': idle = the yak in its pen, wave = the empty pen once Brady rides it); procedural below is the fallback
+    if (TourSprite.of(this) && TourSprite.draw(ctx, this, x, y, has ? 'wave' : 'idle', TourSprite.FALLBACK.friend)) return;
     ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 3; for (const dx of [-28, -10, 10, 28]) { ctx.beginPath(); ctx.moveTo(x + dx, y); ctx.lineTo(x + dx, y - 22); ctx.stroke(); } for (const dy of [-8, -18]) { ctx.beginPath(); ctx.moveTo(x - 30, y + dy); ctx.lineTo(x + 30, y + dy); ctx.stroke(); }
     if (!has) yakArt(ctx, x, y, 1, this.t * 0.4, false, false);
     else { ctx.fillStyle = '#c8a05a'; ctx.beginPath(); ctx.ellipse(x, y - 4, 16, 5, 0, 0, TAU); ctx.fill(); }
   }
 }
+// a static cfg so 30_tour_sprites.js names its pre-rendered art ('pen/idle', 'pen_wave_000')
+NpPen.cfg = { w: 56, h: 40 };
 // a wall of packed snow: only a charging yak gets through (its tiles are put in place at runtime)
 class NpSnowWall extends Ent {
   constructor(g, s) {
@@ -32206,6 +32257,13 @@ const decor = {
 const decorLights = { vnLanternPost: [110, '#ffa040', -50], vnFungi: [70, '#5affb4', -8] };
 
 /* ---------------- enemies ---------------- */
+/* pre-rendered art from the 'vn' atlas (tools/blender/sprites/vn_enemies.py) for the custom classes below: the clip
+   'kind/pose' or the frame 'kind_pose_000'; false until the atlas is in, so the procedural art stays the fallback */
+const vnSprite = (ctx, kind, pose, t, x, y, dir, o) => {
+  if (typeof Atlas === 'undefined' || !Tour.countries.vn || !Tour.countries.vn.sprites) return false;
+  const opt = Object.assign({ scale: 1 }, o);
+  return Atlas.animate(ctx, 'vn', kind + '/' + pose, t, x, y, dir || 1, opt) || Atlas.draw(ctx, 'vn', kind + '_' + pose + '_000', x, y, dir || 1, opt);
+};
 // a wind-up tin toy scooter, piled impossibly high with cargo
 const scooterArt = (ctx, e, x, y, m, t) => {
   ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.4 : 1);
@@ -32320,10 +32378,13 @@ const beanArt = (ctx, e, x, y, m) => {
   ctx.restore();
 };
 // the mantis shrimp: its punch knocks Brady clean off his feet
+const SHRIMP = { w: 30, h: 20, speed: 0.8, behavior: 'charge', range: 6, chargeSpeed: 7, windup: 0.5, chargeT: 0.7, art: shrimpArt, burst: '#2ad8a0', onNotice: e => K.say(e.g, e, 'POW?', '#ffd23a') };
 class VnShrimp extends TourEnemy {
-  constructor(g, s) { super(g, s, { w: 30, h: 20, speed: 0.8, behavior: 'charge', range: 6, chargeSpeed: 7, windup: 0.5, chargeT: 0.7, art: shrimpArt, burst: '#2ad8a0', onNotice: e => K.say(e.g, e, 'POW?', '#ffd23a') }); }
+  constructor(g, s) { super(g, s, SHRIMP); }
   touchPlayer(p) { if (this.dead || this.stunT > 0) return; if (this.state === 'charge' && !p.invuln && !p.star) { p.vx = this.dir * 9 * TS; p.vy = -6 * TS; K.say(this.g, p, 'POW!', '#ff7a3a'); } p.hurt(this); }
 }
+// a static cfg so 30_tour_sprites.js names its pre-rendered art ('shrimp/walk', ...); shrimpArt stays the fallback
+VnShrimp.cfg = SHRIMP;
 const enemies = {
   vnScooter: { cls: TourEnemy.make({ w: 36, h: 30, inkPad: 6, speed: 1.4, behavior: 'charge', range: 8, chargeSpeed: 8.2, windup: 0.6, chargeT: 1.5, art: scooterArt, burst: '#e8323a', onNotice: e => { K.say(e.g, e, 'BEEP BEEP!', '#ffd23a'); TourKit.sfx('bike_bell', 'select2', { vol: 0.4, pitch: 1.3 }); } }), place: 'walk' },
   vnBao: { cls: TourEnemy.make({ w: 26, h: 24, speed: 1.0, behavior: 'hop', hopV: 9, hopEvery: 1.3, art: baoArt, burst: '#ffffff' }), place: 'walk' },
@@ -32500,6 +32561,7 @@ class VnPho extends Ent {
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, t = this.t, has = this.g.player && this.g.player.sig && this.g.player.sig.id === 'noodle';
     K.shadow(ctx, x, y, 26);
+    if (vnSprite(ctx, 'pho', 'idle', t, x, y, 1)) { if (!has) { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('PHO!', x, y - 62 + Math.sin(t * 4) * 1.5); } return; }
     ctx.fillStyle = '#3a3a44'; for (const wx of [x - 16, x + 16]) { ctx.beginPath(); ctx.arc(wx, y - 6, 6, 0, TAU); ctx.fill(); }
     ctx.fillStyle = '#2a7ad8'; rr(ctx, x - 24, y - 30, 48, 20, 3); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.fillRect(x - 24, y - 22, 48, 3);
     ctx.fillStyle = '#e8e8f0'; ctx.fillRect(x - 22, y - 46, 3, 16); ctx.fillRect(x + 19, y - 46, 3, 16);
@@ -32785,14 +32847,15 @@ class VnPuppet extends Ent {
     if (this.state === 'warn') { ctx.strokeStyle = `rgba(200,240,255,${0.5 + 0.5 * Math.sin(t * 20)})`; ctx.lineWidth = 2; for (let k = 0; k < 2; k++) { const ph = (t * 2 + k / 2) % 1; ctx.beginPath(); ctx.ellipse(x, fy - 3, 6 + ph * 16, 1.5 + ph * 4, 0, 0, TAU); ctx.stroke(); } ctx.fillStyle = '#ffd23a'; ctx.fillRect(x - 1.5, fy - 12 - Math.sin(t * 20) * 3, 3, 10); }
     if (r <= 0) return;
     ctx.save(); ctx.beginPath(); ctx.rect(x - 60, fy - 200, 120, 200); ctx.clip(); ctx.translate(x, fy - 56 * r + 56);
+    // pre-rendered puppets ('puppet_fish/duck/buffalo_000', feet on the rod's end); water puppets are animals only
+    if (vnSprite(ctx, 'puppet', ['fish', 'duck', 'buffalo'][this.kind] || 'fish', t, 0, 2, 1, { rot: Math.sin(t * 4) * 0.12 * r })) { ctx.restore(); return; }
     ctx.fillStyle = '#c8a05a'; ctx.fillRect(-2, -58, 4, 60);
     ctx.save(); ctx.rotate(Math.sin(t * 4) * 0.12 * r);
     if (this.kind === 0) {
-      // a golden dragon, lacquered red
-      ctx.fillStyle = '#e8323a'; ctx.beginPath(); ctx.moveTo(-14, -14); ctx.quadraticCurveTo(-6, -44, 10, -46); ctx.quadraticCurveTo(22, -42, 16, -30); ctx.quadraticCurveTo(6, -24, 12, -14); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#ffd23a'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-8 + k * 5, -36 + k * 5); ctx.lineTo(-4 + k * 5, -46 + k * 5); ctx.lineTo(0 + k * 5, -36 + k * 5); ctx.fill(); }
-      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(12, -42, 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(13, -42, 1.3, 0, TAU); ctx.fill();
-      ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(18, -40); ctx.lineTo(28, -44); ctx.moveTo(18, -38); ctx.lineTo(27, -34); ctx.stroke();
+      // a lacquered red carp with gold fins
+      ctx.fillStyle = '#e8323a'; ctx.beginPath(); ctx.ellipse(2, -34, 15, 9, -0.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(-12, -30); ctx.lineTo(-24, -40); ctx.lineTo(-22, -24); ctx.closePath(); ctx.fill(); for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(-4 + k * 6, -34, 2.2, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(11, -37, 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(12, -37, 1.3, 0, TAU); ctx.fill();
     } else if (this.kind === 1) {
       // a white duck
       ctx.fillStyle = '#f8f4ec'; ctx.beginPath(); ctx.ellipse(0, -26, 16, 11, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(12, -42, 7, 0, TAU); ctx.fill();
