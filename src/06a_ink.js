@@ -67,7 +67,13 @@ const Ink = {
     ctx.drawImage(c0, 0, 0, bw, bh, bx, by, bw, bh);
     ctx.restore();
   },
-  // around an entity (x, y, w, h), with slack for art that spills past the hitbox
-  ent(ctx, e, fn, opts) { this.around(ctx, e.x, e.y, e.w, e.h, fn, Object.assign({ pad: Math.max(16, e.w * 0.6, e.h * 0.4) }, opts || {})); }
+  /* around an entity (x, y, w, h), with slack for art that spills past the hitbox. opts.scale: how much larger than
+     the hitbox the art is drawn (default ART_SCALE.enemy); the slack grows with it so tails, hats and raised arms
+     are never cut off at the edge of the scratch canvas. opts.extra: more slack for unusually far-reaching art. */
+  ent(ctx, e, fn, opts) {
+    const k = opts && opts.scale || ART_SCALE.enemy, big = Math.max(e.w, e.h);
+    const pad = Math.max(16, e.w * 0.6, e.h * 0.4) * k + (k - 1) * big + (opts && opts.extra || 0);
+    this.around(ctx, e.x, e.y, e.w, e.h, fn, Object.assign({ pad }, opts || {}));
+  }
 };
 

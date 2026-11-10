@@ -260,4 +260,4 @@ Sound.addTrack && Sound.addTrack('tour_map', {
 });
 
 // test hook (tools/gameplay_test.js)
-try { window.BRADY_TOUR = { Tour, TourProgress, TourPowers, TourBuild, TourMapScene, TourEndingScene, TourIntroPanels, TourItem, TourEnemy, TourKit, tourCreditsLines }; } catch (e) { /* not in a browser */ }
+try { window.BRADY_TOUR = { Tour, TourProgress, TourPowers, TourBuild, TourMapScene, TourEndingScene, TourIntroPanels, TourItem, TourEnemy, TourSprite, TourKit, tourCreditsLines }; } catch (e) { /* not in a browser */ }
