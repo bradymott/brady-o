@@ -468,7 +468,7 @@ class KartMenuScene {
     let y = py + 26;
     // dark paint jobs (the pyramid, the galleon, the whale) read better in their bright trim colour
     const cn = parseInt(car.col.slice(1), 16), luma = (0.299 * (cn >> 16) + 0.587 * ((cn >> 8) & 255) + 0.114 * (cn & 255)) / 255;
-    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.42 ? car.col2 : car.col, { align: 'left', glow: car.light });
+    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.5 ? car.col2 : car.col, { align: 'left', glow: car.light });
     y += 20; ctx.font = `600 11px ${FONT_UI}`;
     for (const ln of BurnsUI.wrap(ctx, car.tag, pw - 32)) { BurnsUI.text(ctx, ln, px + 16, y, 11, 'rgba(255,255,255,0.9)', { align: 'left', ui: true, stroke: false }); y += 14; }
     BurnsUI.text(ctx, 'Inspired by ' + car.nod, px + 16, y, 10, 'rgba(255,255,255,0.55)', { align: 'left', ui: true, stroke: false }); y += 20;

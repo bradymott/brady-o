@@ -1,13 +1,23 @@
-# Sir Scorchalot (Art Cart car #4): a scaly gentleman dragon with very bad manners.
-# Headless:  /Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/sir_scorchalot.py
-# Writes assets/models/art-cart/sir_scorchalot.glb (showroom, 20–30k tris) and sir_scorchalot_lo.glb (race, 5–8k).
-# Rig: body (bone 0), wheel_*, steer, part_neck (0, 2.0, 1.6), part_wingL/R (±0.75, 2.1, 0.1), part_tail (0, 1.45, -2.25);
-# the pose functions live in CART_GLB_PARTS.dragon (src/43_cart_bb_glb.js), the same ones as the procedural car.
+# Sir Scorchalot (Art Cart car #4): a scaly gentleman dragon with very bad manners, on a glossy emerald coach.
+# Run it inside an open Blender (Blender 5.2 crashes headless on Brady's Mac):
+#   import runpy; runpy.run_path('/abs/path/tools/blender/sir_scorchalot.py', run_name='__main__')
+# Writes assets/models/art-cart/sir_scorchalot.glb (showroom, <= 30k tris) and sir_scorchalot_lo.glb (race, <= 7k).
+# Rig (rigV 2, posed by CART_GLB_PARTS['dragon:2'] in src/43_cart_bb_glb.js; the joints are repeated there as
+# CART_DRAGON_J, keep them in step):
+#   part_neck (0, 2.0, 1.6)        neck and head: sways, looks into turns, rears back when firing
+#   part_jaw  (JAW_J)              the lower jaw with its glowing mouth: rides on the neck, gapes when firing
+#   part_wingL/R (±0.75, 2.1, 0.1) the wings: a gentle flap, beating hard on boost and in the air
+#   part_tail (0, 1.45, -2.25)     the tail's root half: wags
+#   part_tailTip (TIP_J)           the tail's end and the gold spade: rides on the tail and wags a beat later
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cartkit import *
 
 COL, COL2, LIGHT, WING = '#2ab060', '#ffd84a', '#7aff5a', '#7a3ad8'   # CART_CARS.dragon palette
+NECK_J = (0, 2.0, 1.6)
+TAIL_J = (0, 1.45, -2.25)
+TIP_J = (0, 1.25, -3.45)          # TAIL_J + the tail spine's third point
+HULL_Y = 0.72
 AYn = RX(180)   # primitive axis -> engine -Y (down)
 
 # ---------------- small helpers (local to this car) ----------------
@@ -45,6 +55,20 @@ def N(th, z):
     if n[0] * o[0] + n[1] * o[1] + n[2] * o[2] < 0: n = (-n[0], -n[1], -n[2])
     return norm(n)
 
+def shift(bm, J):
+    """Move a piece built in a parent's space into the local space of a part whose joint (in that space) is J."""
+    xf(bm, Matrix.Translation(-E(*J))); return bm
+def hull_ring(z, w, h, r, seg, yc=HULL_Y, splits=(0.6,)):
+    """A rounded-rectangle section of the coach at z with extra points at the heights in `splits` (absolute y)."""
+    pts = rrect_pts(w, h, r, seg); out = []
+    lo_y, hi_y = -h / 2 + r + 0.004, h / 2 - r - 0.004
+    ys = sorted(min(hi_y, max(lo_y, s - yc)) for s in splits)
+    for i, (x, y) in enumerate(pts):
+        out.append((x, y)); nx, ny = pts[(i + 1) % len(pts)]
+        if abs(x - w / 2) < 1e-6 and abs(nx - w / 2) < 1e-6 and ny > y: out += [(w / 2, s) for s in ys if y < s < ny]
+        if abs(x + w / 2) < 1e-6 and abs(nx + w / 2) < 1e-6 and ny < y: out += [(-w / 2, s) for s in reversed(ys) if ny < s < y]
+    return [(x, yc + y, z) for x, y in out]
+
 def fin_bm(h, seg, lean=-0.35):
     """A gold dorsal fin (sabre plate) of height h; thin in x, leaning back."""
     prof = [(0.34 * h, 0), (0.3 * h, 0.18 * h), (0.19 * h, 0.52 * h), (0.07 * h, 0.86 * h), (0.0, h)]
@@ -60,7 +84,7 @@ def build(B):
     M_dark = paint('hide_dark', '#17703c', coat=0.6, rough=0.4, metal=0.05)         # lids, brows, paws
     M_goldp = paint('gold_paint', COL2, coat=1.0, rough=0.3, metal=0.3)             # belly, fins, spade
     M_gold = metal('gold', COL2, 0.25)                                              # rims, rivets, trim (chrome-mapped gold)
-    M_wing = satin('wing_purple', WING, rough=0.5)
+    M_wing = paint('wing_purple', WING, coat=0.6, rough=0.36, metal=0.05)
     M_horn = paint('horn_cream', '#ffe8b0', coat=0.5, rough=0.35, metal=0.0)
     M_hat = matte('hat_felt', '#15101a', rough=0.85)
     M_lip = matte('lip_dark', '#0c1a10')
@@ -70,12 +94,39 @@ def build(B):
     ledg, ledgold = led(LIGHT), led(COL2)
 
     # ======================= BODY (bone 0) =======================
-    # chassis platform with the green/gold LED rows, wheel arches, chrome bumpers
-    B.platform(4.7, 2.3, 0.66, 0.48, '#1a2a1e', leds=[LIGHT, COL2])
-    plat = [o for o in B.objs if o.name == 'platform']
-    for i, (x, z) in enumerate([(1.2, 1.75), (-1.2, 1.75), (1.2, -1.75), (-1.2, -1.75)]):
-        B.cut(plat, bm_cyl(0.6, 0.6, 0.6, L['arch'], AX, (x, 0.5, z)), 'arch_%d' % i)
-    for z in (2.4, -2.4): B.obj('bumper_%d' % (z > 0), bm_box(2.0, 0.1, 0.14, (0, 0.6, z)), chrome(), bevel=0.04, bevel_angle=False, segments=2)
+    B.export_try = VCOL_EXPORT
+    # the coach: a lofted emerald clear-coat body over a black sill, gold shoulder trim, gold-flared wheel arches,
+    # green under-glow, gold tube bumpers, bezelled lamps
+    M_coach = paint('coach_emerald', '#0f4a2a', coat=1.0, rough=0.2, metal=0.35); M_sill = paint('coach_black', '#0a120c', coat=1.0, rough=0.22, metal=0.2)
+    cs = B.pick(6, 2)
+    rings = [hull_ring(2.5, 1.7, 0.36, 0.16, cs, yc=0.74), hull_ring(2.42, 2.06, 0.54, 0.22, cs), hull_ring(2.26, 2.3, 0.64, 0.24, cs)]
+    if not lo: rings += [hull_ring(0.0, 2.32, 0.66, 0.24, cs)]
+    rings += [hull_ring(-2.26, 2.3, 0.64, 0.24, cs), hull_ring(-2.42, 2.06, 0.54, 0.22, cs), hull_ring(-2.5, 1.7, 0.36, 0.16, cs, yc=0.74)]
+    coach = B.obj('coach', bm_loft(rings, closed_u=True, caps=True), [M_coach, M_sill], face_mat=lambda f: 1 if f.calc_center_median().z < 0.6 else 0)
+    B.vcol(coach, lambda x, y, z: (lambda t: (0.7 + 0.3 * t, 0.8 + 0.2 * t, 0.75 + 0.25 * t))(sstep((y - 0.55) / 0.5)))
+    for i, (x, z) in enumerate([(1.08, 1.75), (-1.08, 1.75), (1.08, -1.75), (-1.08, -1.75)]):
+        B.cut([coach], bm_cyl(0.64, 0.64, 0.9, L['arch'], AX, (math.copysign(1.28, x), 0.5, z)), 'arch_%d' % i)
+        B.obj('flare_%d' % i, bm_torus(0.655, 0.036, B.pick(18, 12), B.pick(4, 3), AX, (math.copysign(1.165, x), 0.5, z), sweep=(math.pi / 2, 3 * math.pi / 2)), M_gold)
+    for s in (1, -1):
+        B.obj('shoulder_%d' % (s > 0), bm_tube(catmull([(s * 0.9, 1.0, 2.45), (s * 1.14, 1.04, 1.9), (s * 1.16, 1.04, -1.9), (s * 0.9, 1.0, -2.45)], B.pick(12, 4)), 0.022, B.pick(8, 4)), M_gold)
+        B.strip((s * 1.14, 0.44, 2.1), (s * 1.14, 0.44, -2.1), LIGHT, th=0.04)
+        B.light(s * 1.0, 0.25, 0.0, 2.4, LIGHT, led=1)
+        if not lo:   # a row of gold-ringed green marker lamps along the flank between the arches
+            for k, z in enumerate((0.7, 0.0, -0.7)):
+                B.obj('marker_%d_%d' % (s > 0, k), bm_ellipsoid(0.07, 0.07, 0.07, 10, 3, (s * 1.16, 0.8, z), aim((s, 0, 0)), phi1=math.pi / 2), ledg)
+                B.obj('marker_ring_%d_%d' % (s > 0, k), bm_torus(0.075, 0.016, 10, 3, aim((s, 0, 0)), (s * 1.162, 0.8, z)), M_gold)
+    B.strip((-0.85, 0.44, 2.5), (0.85, 0.44, 2.5), LIGHT, th=0.035); B.strip((-0.85, 0.44, -2.5), (0.85, 0.44, -2.5), LIGHT, th=0.035)
+    for zs, zc in ((1, 2.66), (-1, -2.66)):
+        B.obj('bumper_%d' % (zs > 0), bm_tube(catmull([(1.12, 0.55, zc - zs * 0.42), (1.0, 0.55, zc - zs * 0.1), (0.6, 0.55, zc), (-0.6, 0.55, zc), (-1.0, 0.55, zc - zs * 0.1), (-1.12, 0.55, zc - zs * 0.42)], B.pick(16, 7)), 0.06, B.pick(8, 6)), M_gold)
+    for s in (1, -1):
+        hx = s * 0.72
+        B.obj('head_cup_%d' % (s > 0), bm_closed_lathe([(0, -0.06), (0.14, -0.05), (0.15, 0.0), (0.0, 0.01)], L['cyl_s'], AZ, (hx, 0.8, 2.49)), dark_chrome())
+        B.obj('head_bezel_%d' % (s > 0), bm_torus(0.145, 0.026, B.pick(16, 10), B.pick(4, 3), AZ, (hx, 0.8, 2.505)), M_gold)
+        B.obj('head_lens_%d' % (s > 0), bm_ellipsoid(0.12, 0.032, 0.12, L['cyl_s'], B.pick(5, 2), (hx, 0.8, 2.5), phi1=math.pi / 2, M=AZ), led('#fff0d8'))
+        B.light(hx, 0.8, 2.64, 1.3, '#fff2c8', head=1)
+        B.obj('tail_ring_%d' % (s > 0), bm_torus(0.1, 0.02, B.pick(12, 8), 3, AZn, (s * 0.66, 0.82, -2.525)), M_gold)
+        B.obj('taillamp_%d' % (s > 0), bm_ellipsoid(0.085, 0.03, 0.085, L['cyl_s'], B.pick(4, 2), (s * 0.66, 0.82, -2.52), phi1=math.pi / 2, M=AZn), led('#ff2a1a'))
+        B.light(s * 0.66, 0.82, -2.64, 0.9, '#ff2a3a', tail=1)
     # the dragon's trunk: a lathe along z (fat chest, tapered rump, flatter belly)
     nrow = B.pick(22, 12)
     prof = [(R(BC[2] - 2.3 * math.cos(math.pi * i / nrow)), BC[2] - 2.3 * math.cos(math.pi * i / nrow)) for i in range(nrow + 1)]
@@ -89,7 +140,7 @@ def build(B):
     B.obj('belly', bm_surf(B.pick(44, 18), B.pick(6, 4), belly, flip=True), M_goldp)
     # scales: staggered rows of clear-coated shingle domes over the back and flanks (none under the saddle)
     M_scale2 = paint('scale_green2', '#36c070', coat=1.0, rough=0.28, metal=0.15)
-    rows, per = B.pick(10, 5), B.pick(8, 4); spread = 1.95
+    rows, per = B.pick(9, 3), B.pick(7, 4); spread = 1.95
     for i in range(rows):
         z = 1.8 - i * (3.75 / (rows - 1)); k = R(z) / 0.9
         for j in range(per):
@@ -116,7 +167,7 @@ def build(B):
             tag = '%d_%d' % (sx > 0, sz > 0)
             B.obj('leg_' + tag, bm_rod((sx * 0.5, 1.4, sz * 1.5), (sx * 1.0, 1.05, sz * 1.75), 0.25, L['cyl_s'], r1=0.2), M_hide)
             B.obj('paw_' + tag, bm_ellipsoid(0.34, 0.2, 0.4, B.pick(12, 8), B.pick(6, 4), (sx * 1.08, 1.02, sz * 1.75)), M_dark)
-            for k, dx in enumerate((-0.17, 0.0, 0.17)):
+            for k, dx in enumerate((-0.17, 0.0, 0.17) if not lo else (-0.12, 0.12)):
                 B.obj('claw_%s_%d' % (tag, k), cone(0.055, 0.26, (sx * 1.08 + dx, 0.95, sz * 1.75 + 0.3), (0, -0.45, 0.89), B.pick(8, 5)), M_gold)
     # steering column from the wheel down to a chrome base on the chest
     B.obj('column', bm_rod((0, 2.82, 0.42), (0, 2.38, 0.6), 0.04, L['rod']), dark_chrome())
@@ -159,9 +210,21 @@ def build(B):
     def head(name, bm, m, **kw): return B.obj(name, place(bm, HEAD_AT, HEAD_M), m, parent=NK, **kw)
     head('cranium', bm_ellipsoid(0.5, 0.45, 0.62, L['cyl'], L['cyl_s'] // 2 + 2), M_hide)
     head('snout', bm_ellipsoid(0.34, 0.25, 0.56, L['cyl_s'] + 4, L['cyl_s'] // 2 + 1, (0, -0.12, 0.64)), M_hide)
-    head('chin', bm_ellipsoid(0.31, 0.11, 0.42, L['cyl_s'], 5, (0, -0.3, 0.55)), M_goldp)
     head('lip', bm_torus(0.355, 0.016, L['torus'], 4, AY, (0, -0.255, 0.6), sweep=(-math.pi / 2 - 1.45, -math.pi / 2 + 1.45), sy=1.38), M_lip, smooth=False)
-    if not lo: head('ember', bm_torus(0.35, 0.011, L['torus'], 4, AY, (0, -0.275, 0.6), sweep=(-math.pi / 2 - 1.2, -math.pi / 2 + 1.2), sy=1.38), M_ember, smooth=False)
+    head('palate', bm_ellipsoid(0.3, 0.05, 0.42, B.pick(14, 8), 3, (0, -0.3, 0.6), phi0=math.pi / 2), mat('mouth_dark', '#3a0a0a', rough=0.5))
+    # ---- the lower jaw (part_jaw, hinged under the cheeks): gold chin, a glowing ember mouth, lower fangs ----
+    JH = (0, -0.22, 0.1); jn = h2n(JH)
+    JAW = B.part('jaw', add(NECK_J, jn))
+    def jaw(name, bm, m, **kw): return B.obj(name, shift(place(bm, HEAD_AT, HEAD_M), jn), m, parent=JAW, **kw)
+    jaw('chin', bm_ellipsoid(0.31, 0.11, 0.42, L['cyl_s'], 5, (0, -0.3, 0.55)), M_goldp)
+    jaw('mouth', bm_ellipsoid(0.27, 0.035, 0.38, B.pick(14, 8), 3, (0, -0.215, 0.56), phi1=math.pi / 2), mat('mouth_red', '#5a0e0a', rough=0.4))
+    jaw('ember_core', bm_ellipsoid(0.15, 0.03, 0.24, B.pick(12, 6), 3, (0, -0.2, 0.5), phi1=math.pi / 2), led('#ff7a1a', 4.0))
+    if not lo:
+        jaw('ember', bm_torus(0.35, 0.011, L['torus'], 4, AY, (0, -0.275, 0.6), sweep=(-math.pi / 2 - 1.2, -math.pi / 2 + 1.2), sy=1.38), M_ember, smooth=False)
+        for k in range(4):
+            a = (k / 3 - 0.5) * 1.3
+            jaw('ltooth_%d' % k, cone(0.035, 0.1, (math.sin(a) * 0.26, -0.24, 0.6 + math.cos(a) * 0.34), (0, 1, 0), 6), paint('tooth', '#ffffff', coat=0.4, rough=0.3, metal=0))
+    B.light(*add(NECK_J, h2n((0, -0.2, 0.7))), 0.7, '#ff7a1a', led=1)
     for s in (1, -1):
         # orange cartoon eyes with hooded angry lids and a furrowed brow
         B.eye(h2n((s * 0.3, 0.2, 0.32)), 0.15, '#c84a1a', look=(s * 0.4, 0), parent=NK, name='eye_%d' % (s > 0))
@@ -187,7 +250,7 @@ def build(B):
             a = (k / 5 - 0.5) * 1.6
             head('tooth_%d' % k, cone(0.04, 0.13, (math.sin(a) * 0.3, -0.24, 0.62 + math.cos(a) * 0.4), (0, -1, 0), 6), paint('tooth', '#ffffff', coat=0.4, rough=0.3, metal=0))
     # the monocle (right eye): chrome ring and a bead chain down the cheek
-    head('monocle', bm_torus(0.2, 0.02, L['torus'], L['tube'], AZ, (-0.31, 0.2, 0.49)), chrome())
+    if not lo: head('monocle', bm_torus(0.2, 0.02, L['torus'], L['tube'], AZ, (-0.31, 0.2, 0.49)), chrome())
     if not lo:
         for i in range(6):
             t = i / 5
@@ -210,9 +273,10 @@ def build(B):
             p = LE(u); return (p[0] - s * 0.05 * u, p[1] - 0.28 - 0.15 * u, p[2] - chord(u))
         def fn(u, v):
             p = lerp3(LE(u), TE(u), v); return (p[0], p[1] - 0.06 * math.sin(math.pi * v) * math.sin(math.pi * u), p[2])
-        nu, nv = B.pick(30, 12), B.pick(6, 3)
-        B.obj(name + '_membrane', bm_surf(nu, nv, fn), M_wing, parent=W)
-        B.obj(name + '_membrane_b', bm_surf(nu, nv, fn, flip=True), M_wing, parent=W)
+        nu, nv = B.pick(24, 10), B.pick(5, 3)
+        for side, fl in (('', False), ('_b', True)):
+            mb = B.obj(name + '_membrane' + side, bm_surf(nu, nv, fn, flip=fl), M_wing, parent=W)
+            B.vcol(mb, lambda x, y, z: (lambda t: (0.75 + 0.5 * t, 0.7 + 0.1 * t, 1.0))(sstep(abs(x) / 2.0)))   # violet root to magenta tips
         B.obj(name + '_arm', bm_rod(root, elbow, 0.11, L['cyl_s'], r1=0.085), M_hide, parent=W)
         B.obj(name + '_elbow', bm_uv(0.09, L['cyl_s'], L['cyl_s'] // 2, elbow), M_hide, parent=W)
         B.obj(name + '_forearm', bm_rod(elbow, tip, 0.085, L['cyl_s'], r1=0.05), M_hide, parent=W)
@@ -224,37 +288,44 @@ def build(B):
             B.obj(name + '_fclaw_%d' % k, cone(0.03, 0.14, add(b, dirn, -0.02), dirn, B.pick(8, 5)), M_gold, parent=W)
 
     # ======================= TAIL (part_tail at (0, 1.45, -2.25)) =======================
-    T = B.part('tail', (0, 1.45, -2.25))
+    T = B.part('tail', TAIL_J)
     P = [(0, 0, 0.05), (0, -0.12, -0.6), (0, -0.2, -1.2), (0, -0.05, -1.7), (0, 0.12, -2.1)]
     rad = [0.42, 0.33, 0.23, 0.14, 0.07]
+    TP = B.part('tailTip', add(TAIL_J, P[2]))
+    def tip(name, bm, m, **kw): return B.obj(name, shift(bm, P[2]), m, parent=TP, **kw)
     for i in range(4):
-        B.obj('tail_%d' % i, bm_rod(P[i], P[i + 1], rad[i], B.pick(L['cyl_s'] + 4, L['cyl_s']), r1=rad[i + 1]), M_hide, parent=T)
-        if i: B.obj('tail_j%d' % i, bm_uv(rad[i], B.pick(12, 8), B.pick(6, 4), P[i]), M_hide, parent=T)
+        put = (lambda n, bm, m: B.obj(n, bm, m, parent=T)) if i < 2 else tip
+        put('tail_%d' % i, bm_rod(P[i], P[i + 1], rad[i], B.pick(L['cyl_s'] + 4, L['cyl_s']), r1=rad[i + 1]), M_hide)
+        if i: put('tail_j%d' % i, bm_uv(rad[i] * 1.01, B.pick(14, 8), B.pick(7, 4), P[i]), M_hide)
     for i, h in ((1, 0.3), (2, 0.24), (3, 0.18)):
         if lo and i == 2: continue
-        B.obj('tail_fin_%d' % i, place(fin_bm(h, B.pick(8, 6)), add(P[i], (0, rad[i] - 0.03, 0)), None), M_goldp, parent=T)
+        put = (lambda n, bm, m: B.obj(n, bm, m, parent=T)) if i < 2 else tip
+        put('tail_fin_%d' % i, place(fin_bm(h, B.pick(8, 6)), add(P[i], (0, rad[i] - 0.03, 0)), None), M_goldp)
     for i in B.pick((1, 2), (1,)):
         dd = norm(add(P[i + 1], P[i - 1], -1))
-        B.obj('tail_band_%d' % i, bm_torus(rad[i] + 0.005, 0.04, L['torus'], L['tube'], aim(dd), P[i], sweep=(math.pi, TAU)), M_goldp, parent=T)
+        put = (lambda n, bm, m: B.obj(n, bm, m, parent=T)) if i < 2 else tip
+        put('tail_band_%d' % i, bm_torus(rad[i] + 0.012, 0.04, L['torus'], L['tube'], aim(dd), P[i], sweep=(math.pi, TAU)), M_goldp)
     if not lo:
         for i in range(2):
             for j, phi in enumerate((0.5, 1.2, 1.95, 2.65)):
                 c = lerp3(P[i], P[i + 1], 0.5); r = (rad[i] + rad[i + 1]) / 2
                 p = add(c, (math.cos(phi) * r, math.sin(phi) * r, 0), 1); n = norm((math.cos(phi), math.sin(phi), 0))
-                B.obj('tail_scale_%d_%d' % (i, j), bm_ellipsoid(0.13, 0.05, 0.14, 10, 2, add(p, n, -0.03), aim(n), phi1=math.pi / 2), M_scale, parent=T)
-    # the gold spade: a puffy heart profile turned to point backward, on a short stem
+                B.obj('tail_scale_%d_%d' % (i, j), bm_ellipsoid(0.13, 0.05, 0.14, 8, 2, add(p, n, -0.03), aim(n), phi1=math.pi / 2), M_scale, parent=T)
+    # the gold spade: a puffy heart turned to point backward, on a short stem, with a glowing green gem
     k = 0.021
-    spade = [(hy * k, hx * k) for hx, hy in [(16 * math.sin(t) ** 3, 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)) for t in (TAU * i / B.pick(28, 16) for i in range(B.pick(28, 16)))]]
-    sp = B.obj('spade', bm_profile(spade, 0.06, (0, 0.14, -2.3), rot(yaw=-math.pi / 2)), M_goldp, parent=T)
+    spade = [(hy * k, hx * k) for hx, hy in [(16 * math.sin(t) ** 3, 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)) for t in (TAU * i / B.pick(28, 12) for i in range(B.pick(28, 12)))]]
+    sp = tip('spade', bm_profile(spade, 0.06, (0, 0.14, -2.3), rot(yaw=-math.pi / 2)), M_goldp)
     B.bevel(sp, 0.028, angle=True, segments=B.pick(3, 1), profile=0.6)
-    B.obj('tail_stem', bm_rod(P[4], (0, 0.14, -2.3), 0.07, L['rod'], r1=0.04), M_hide, parent=T)
+    tip('tail_stem', bm_rod(P[4], (0, 0.14, -2.3), 0.07, L['rod'], r1=0.04), M_hide)
+    for sx in (1, -1): tip('spade_gem_%d' % (sx > 0), bm_ellipsoid(0.05, 0.07, 0.05, B.pick(10, 6), B.pick(4, 2), (sx * 0.04, 0.16, -2.32), aim((sx, 0, 0)), phi1=math.pi / 2), ledg)
 
     # ======================= lights, wheels, seat, info =======================
-    B.lamps(0.85, 0.8, 2.36, -2.36, 0.85)
     B.light(0, 3.2, 2.7, 1.6, '#ff7a2a', big=1)
-    B.wheels(1.08, 1.75, -1.75, r=0.5, w=0.4, rim=COL2, tyre='#141a14', cap=LIGHT)
+    B.wheels_pro(1.08, 1.75, -1.75, r=0.5, w=0.42, rim=COL2, tyre='#141a14', cap=LIGHT, stripe=LIGHT)
     B.seat(0, 2.5, -0.25, col='#5a2a8a', accent=LIGHT, wheelY=2.86, wheelZ=0.4, column=False)
     B.info(5.6, 3.4, 3.8, muzzle=(0, 3.0, 3.1), wheelR=0.5)
+    B.body['rigV'] = 2
+    if not lo: print('sir_scorchalot JAW_J', tuple(round(c, 4) for c in add(NECK_J, jn)))
 
 if __name__ == '__main__':
-    run('sir_scorchalot', build, level_overrides={'hi': dict(bevel=3, cyl=28, torus=16, tube=6, arch=16), 'lo': dict(torus=10, tube=4, arch=8)})
+    run('sir_scorchalot', build, report=True, views=['side', 'high'], level_overrides={'hi': dict(bevel=3, cyl=28, torus=16, tube=4, arch=16, sph=16, ring=10), 'lo': dict(torus=8, tube=3, arch=8, cyl=10, cyl_s=6, rod=5)})
