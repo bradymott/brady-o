@@ -13,8 +13,8 @@
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#0b1630">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+
+
 <script>
 // offline support: cache the game after the first visit (needs https, skipped elsewhere)
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
@@ -4053,15 +4053,23 @@ function drawTripSky(ctx, W, H, S, t) {
            strips: { id: { x, y, w, h, top } } }      background strips: `top` = the strip's row offset in the layer
    Art falls back to the procedural drawing until the atlas is in,
    and the tile and background caches are flushed when it arrives.
+   Memory: a decoded atlas is 4-17 MB, so a level start calls
+   Atlas.keep([...]) with the atlases it uses (its country's and its
+   areas' themes) and every other atlas is dropped; one that comes
+   back later reloads from its kept meta (no script refetch), drawing
+   procedurally until its image is decoded again.
    ============================================================ */
 const Atlas = {
   base: 'sprites/',
   atlases: {}, pending: {}, failed: {}, listeners: [],
+  metas: {},          // name -> meta, kept after an atlas is dropped so a reload needs only the image
+  keepSet: null,      // Set of the atlas names the current level uses (null: keep everything)
   has(name) { const a = this.atlases[name]; return !!(a && a.ready); },
   get(name) { return this.atlases[name] || null; },
   /* load(name): fetch the atlas once; resolves when its image is drawable (or on failure, quietly). */
   load(name) {
     if (this.atlases[name] || this.pending[name] || this.failed[name]) return;
+    if (this.metas[name]) { this.pending[name] = true; this.register(name, this.metas[name]); return; }
     if (typeof document === 'undefined') return;
     this.pending[name] = true;
     const s = document.createElement('script');
@@ -4071,16 +4079,43 @@ const Atlas = {
   },
   need(names) { for (const n of names || []) if (n) this.load(n); },
   register(name, meta) {
+    this.metas[name] = meta;
     const a = { name, meta, img: new Image(), ready: false, scale: meta.scale || 3 };
     this.atlases[name] = a;
-    a.img.onload = () => { a.ready = true; delete this.pending[name]; this.arrived(name); };
-    a.img.onerror = () => { delete this.pending[name]; delete this.atlases[name]; this.failed[name] = true; };
+    a.img.onload = () => {
+      if (this.atlases[name] !== a) return;                                   // dropped while loading
+      delete this.pending[name];
+      if (this.keepSet && !this.keepSet.has(name)) { this.drop(name); return; } // the level moved on meanwhile
+      a.ready = true; this.arrived(name);
+    };
+    a.img.onerror = () => { if (this.atlases[name] !== a) return; delete this.pending[name]; delete this.atlases[name]; this.failed[name] = true; };
     a.img.src = this.base + (meta.image || name + '.png');
+  },
+  /* keep(names): the atlases the current level uses; every other one is dropped now (and any still loading is
+     dropped when it lands). Call it when a level starts, before need(). */
+  keep(names) {
+    this.keepSet = new Set((names || []).filter(Boolean));
+    let dropped = false;
+    for (const n of Object.keys(this.atlases)) if (!this.keepSet.has(n)) { this.drop(n); dropped = true; }
+    if (dropped) this.flushCaches();
+  },
+  /* drop(name): forget an atlas's image so the browser can free its decoded pixels; the meta stays for a reload */
+  drop(name) {
+    const a = this.atlases[name]; if (!a) return;
+    delete this.atlases[name]; delete this.pending[name];
+    a.ready = false; a.img.onload = a.img.onerror = null;
+    try { a.img.removeAttribute('src'); } catch (e) { /* not a DOM image */ }
+    a.img = null;
+  },
+  /* memory held by decoded atlas images, in MB (for tests and the debug overlay) */
+  decodedMB() { let b = 0; for (const n in this.atlases) { const a = this.atlases[n]; if (a.ready && a.img) b += (a.img.naturalWidth || 0) * (a.img.naturalHeight || 0) * 4; } return Math.round(b / 1e5) / 10; },
+  flushCaches() {
+    if (typeof TileArt !== 'undefined') TileArt.cache = {};
+    if (typeof BG !== 'undefined') BG.cache = {};
   },
   arrived(name) {
     // painted caches were built without this art: rebuild them on the next frame
-    if (typeof TileArt !== 'undefined') TileArt.cache = {};
-    if (typeof BG !== 'undefined') BG.cache = {};
+    this.flushCaches();
     for (const fn of this.listeners) { try { fn(name); } catch (e) { console.warn('atlas listener', e); } }
   },
   onLoad(fn) { this.listeners.push(fn); },
@@ -4887,7 +4922,7 @@ const BRADY_DIM = {
   small: { hip: 8.5, shoulder: 15, headY: 21.5, headR: 8.6, thigh: 4.6, shin: 4.4, upper: 5, fore: 4.6, torsoW: 13, legW: 5.4, armW: 4.2, hairN: 6, hairL: 3.2, hairW: 14 }
 };
 const CLOTH = {
-  jacket: '#191922', jacketHi: '#34344a', jeans: '#2f4170', jeansHi: '#4a5f96', boot: '#101014', sole: '#34343e',
+  jacket: '#191922', jacketHi: '#34344a', jeans: '#20232c', jeansHi: '#454956', boot: '#101014', sole: '#34343e',
   outline: 'rgba(26,18,36,0.62)', tee: '#25252f'
 };
 
@@ -5101,36 +5136,72 @@ function drawHairMass(ctx, pts, wTop, wTip, base, hi, sx, sy, facing) {
 */
 const INK = '#17141c';
 
-// an arm segment with an optional blackwork (geometric) tattoo between fractions a..b
-function inkedLimb(ctx, x0, y0, x1, y1, w, skinCol, inkA, inkB, small) {
+// the outline of a limb capsule as a path (for clipping the tattoo to the arm)
+function limbPath(ctx, x0, y0, x1, y1, r) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  ctx.moveTo(x0 + Math.cos(a + Math.PI / 2) * r, y0 + Math.sin(a + Math.PI / 2) * r);
+  ctx.arc(x0, y0, r, a + Math.PI / 2, a - Math.PI / 2); ctx.arc(x1, y1, r, a - Math.PI / 2, a + Math.PI / 2); ctx.closePath();
+}
+/* an arm segment with an optional blackwork sleeve between fractions a..b: solid black triangles along both edges
+   (their points nearly meet, leaving a chain of skin diamonds down the middle, each with a dot) and, with endBand,
+   a crisp double band where the sleeve stops. Black ink only, a few bold shapes so it still reads at phone size. */
+function inkedLimb(ctx, x0, y0, x1, y1, w, skinCol, inkA, inkB, small, endBand) {
   outlinedCapsule(ctx, x0, y0, x1, y1, w, skinCol);
   if (inkB <= inkA) return;
   const ax = lerp(x0, x1, inkA), ay = lerp(y0, y1, inkA), bx = lerp(x0, x1, inkB), by = lerp(y0, y1, inkB);
-  const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len, px = -uy, py = ux;
-  capsule(ctx, ax, ay, bx, by, w * 0.84, 'rgba(23,20,28,0.3)');
-  ctx.strokeStyle = INK; ctx.fillStyle = INK; ctx.lineCap = 'round';
-  if (small) {
-    ctx.lineWidth = 0.8;
-    for (const k of [0.15, 0.55, 0.9]) { const cx = ax + dx * k, cy = ay + dy * k; ctx.beginPath(); ctx.moveTo(cx + px * w * 0.38, cy + py * w * 0.38); ctx.lineTo(cx - px * w * 0.38, cy - py * w * 0.38); ctx.stroke(); }
-    return;
-  }
-  const n = Math.max(3, Math.round(len / 1.9));
+  const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1, px = -dy / len, py = dx / len;
   const at = (k, off) => [ax + dx * k + px * off, ay + dy * k + py * off];
-  // zig-zag spine
-  ctx.lineWidth = 0.75; ctx.beginPath();
-  for (let i = 0; i <= n; i++) { const [x, y] = at(i / n, (i % 2 ? 1 : -1) * w * 0.3); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-  ctx.stroke();
-  // solid diamonds in alternate cells, dots in the others
-  for (let i = 0; i < n; i++) {
-    const [cx, cy] = at((i + 0.5) / n, 0), r = w * 0.2;
-    if (i % 2 === 0) {
-      ctx.beginPath(); ctx.moveTo(cx + ux * r * 1.5, cy + uy * r * 1.5); ctx.lineTo(cx + px * r, cy + py * r);
-      ctx.lineTo(cx - ux * r * 1.5, cy - uy * r * 1.5); ctx.lineTo(cx - px * r, cy - py * r); ctx.closePath(); ctx.fill();
-    } else { ctx.beginPath(); ctx.arc(cx, cy, w * 0.07, 0, TAU); ctx.fill(); }
+  ctx.save();
+  ctx.beginPath(); limbPath(ctx, x0, y0, x1, y1, w / 2); ctx.clip();
+  ctx.fillStyle = INK; ctx.strokeStyle = INK; ctx.lineCap = 'butt';
+  if (small) {
+    // little Brady: two bold bands
+    ctx.lineWidth = 0.9;
+    for (const k of [0.3, 0.75]) { const [p0x, p0y] = at(k, w), [p1x, p1y] = at(k, -w); ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke(); }
+  } else if (!endBand) {
+    // upper arm: a fringe of three bold triangles hanging from under the tee sleeve toward the elbow mandala
+    const h = w / 2 + 0.4, deep = Math.min(0.62, 3.2 / len);
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const o0 = -h + i * (2 * h / 3), o1 = o0 + 2 * h / 3, om = (o0 + o1) / 2;
+      const [x0b, y0b] = at(0, o0), [x1b, y1b] = at(0, o1), [xm, ym] = at(0.12 + deep, om);
+      ctx.moveTo(x0b, y0b); ctx.lineTo(x1b, y1b); ctx.lineTo(xm, ym); ctx.closePath();
+    }
+    ctx.fill();
+    const [b0x, b0y] = at(0, h), [b1x, b1y] = at(0, -h), [b2x, b2y] = at(0.13, -h), [b3x, b3y] = at(0.13, h);
+    ctx.beginPath(); ctx.moveTo(b0x, b0y); ctx.lineTo(b1x, b1y); ctx.lineTo(b2x, b2y); ctx.lineTo(b3x, b3y); ctx.closePath(); ctx.fill();
+  } else {
+    // forearm: a solid diamond with a skin eye between the mandala and the end bands
+    const k0 = Math.min(0.5, (w * 0.75) / len), k1 = 1 - 2.4 / len, km = (k0 + k1) / 2, r = w * 0.36;
+    if (k1 > k0) {
+      const [c0x, c0y] = at(k0, 0), [c1x, c1y] = at(k1, 0), [l0x, l0y] = at(km, r), [l1x, l1y] = at(km, -r);
+      ctx.beginPath(); ctx.moveTo(c0x, c0y); ctx.lineTo(l0x, l0y); ctx.lineTo(c1x, c1y); ctx.lineTo(l1x, l1y); ctx.closePath(); ctx.fill();
+      const [ex2, ey2] = at(km, 0); ctx.fillStyle = skinCol; ctx.beginPath(); ctx.arc(ex2, ey2, r * 0.32, 0, TAU); ctx.fill(); ctx.fillStyle = INK;
+    }
   }
-  // border bands at each end of the piece
-  ctx.lineWidth = 0.95;
-  for (const k of [0, 1]) { const [x0b, y0b] = at(k, w * 0.4), [x1b, y1b] = at(k, -w * 0.4); ctx.beginPath(); ctx.moveTo(x0b, y0b); ctx.lineTo(x1b, y1b); ctx.stroke(); }
+  if (endBand) {
+    // where the sleeve stops: a bold band and a thin one just above it
+    const band = (k, lw) => { const [p0x, p0y] = at(k, w), [p1x, p1y] = at(k, -w); ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke(); };
+    band(1 - 0.55 / len, small ? 0.8 : 1.1);
+    if (!small) band(1 - 2.0 / len, 0.45);
+  }
+  ctx.restore();
+}
+// the elbow mandala: a black rosette with scalloped petals, a skin ring and a black centre, clipped to the arm
+function elbowMandala(ctx, sx, sy, ex, ey, hx, hy, w, wf, skinCol, small) {
+  ctx.save();
+  ctx.beginPath(); limbPath(ctx, sx, sy, ex, ey, w / 2); limbPath(ctx, ex, ey, hx, hy, wf / 2); ctx.clip('nonzero');
+  const R = w * (small ? 0.42 : 0.6);
+  ctx.fillStyle = skinCol; ctx.beginPath(); ctx.arc(ex, ey, R + 0.45, 0, TAU); ctx.fill();   // a clean skin gap around it
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(ex, ey, R, 0, TAU); ctx.fill();
+  if (!small) {
+    ctx.fillStyle = skinCol;
+    for (let i = 0; i < 8; i++) { const a = i * TAU / 8; ctx.beginPath(); ctx.arc(ex + Math.cos(a) * R, ey + Math.sin(a) * R, R * 0.2, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = skinCol; ctx.lineWidth = R * 0.16; ctx.beginPath(); ctx.arc(ex, ey, R * 0.55, 0, TAU); ctx.stroke();
+    for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + TAU / 8; ctx.beginPath(); ctx.moveTo(ex + Math.cos(a) * R * 0.55, ey + Math.sin(a) * R * 0.55); ctx.lineTo(ex + Math.cos(a) * R * 0.9, ey + Math.sin(a) * R * 0.9); ctx.stroke(); }
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(ex, ey, R * 0.24, 0, TAU); ctx.fill();
+  } else { ctx.fillStyle = skinCol; ctx.beginPath(); ctx.arc(ex, ey, R * 0.4, 0, TAU); ctx.fill(); }
+  ctx.restore();
 }
 
 function drawBrady(ctx, o) {
@@ -5196,8 +5267,10 @@ function drawBrady(ctx, o) {
     const [ex, ey] = limbEnd(sx, sy, ua, D.upper);
     const [hx, hy] = limbEnd(ex, ey, fa, D.fore);
     const sk = back ? skin.sh : skin.base;
+    // 3/4 blackwork sleeves: from under the tee sleeve to mid-forearm, a mandala on the elbow
     inkedLimb(ctx, sx, sy, ex, ey, D.armW, sk, tattoos ? sleeveK - 0.05 : 1, tattoos ? 1.0 : 0, o.small);
-    inkedLimb(ctx, ex, ey, hx, hy, D.armW - 0.5, sk, 0, tattoos ? 0.62 : 0, o.small);
+    inkedLimb(ctx, ex, ey, hx, hy, D.armW - 0.5, sk, 0, tattoos ? 0.62 : 0, o.small, true);
+    if (tattoos) elbowMandala(ctx, sx, sy, ex, ey, hx, hy, D.armW, D.armW - 0.5, sk, o.small);
     // tee sleeve over the shoulder, with a flat hem
     const [mx, my] = [lerp(sx, ex, sleeveK), lerp(sy, ey, sleeveK)];
     {
@@ -5249,7 +5322,7 @@ function drawBrady(ctx, o) {
   ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 0.8;
   ctx.beginPath(); ctx.ellipse(tw * 0.18, -th - 1.2, tw * 0.22, o.small ? 1.4 : 2.2, 0, 0, Math.PI); ctx.stroke();
   if (!o.small) { ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(-tw * 0.1, -th * 0.55); ctx.quadraticCurveTo(tw * 0.1, -th * 0.4, tw * 0.3, -th * 0.6); ctx.stroke(); }
-  // waistband of black jeans
+  // waistband of black trousers
   ctx.fillStyle = '#060608'; ctx.fillRect(-tw / 2, -1.2, tw, 2.4);
   if (neon) {
     ctx.save(); ctx.shadowColor = trim; ctx.shadowBlur = 5; ctx.strokeStyle = trim; ctx.lineWidth = 1.1;
@@ -5444,6 +5517,8 @@ function drawBrady(ctx, o) {
   }
   ctx.restore();
 }
+// test and screenshot hook: draw Brady anywhere (tools only)
+try { window.BRADY_DRAW = drawBrady; } catch (e) { /* not in a browser */ }
 
 /* ---- 06_sprites.js ---- */
 /* ============================================================
@@ -6309,7 +6384,7 @@ const Decor = {
    top: existing art needs no changes.
    ============================================================ */
 /* how much larger than their hitboxes characters are drawn (the physics never changes): Brady and enemies */
-const ART_SCALE = { brady: 1.2, enemy: 1.15 };
+const ART_SCALE = { brady: 1.24, enemy: 1.24 };
 const Ink = {
   on: true,
   color: '#1c1426',
@@ -6353,15 +6428,32 @@ const Ink = {
     s1.globalCompositeOperation = 'source-over';
     // 3. stamp the ink around, then the colour on top
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // A quiet light keyline keeps the black hero readable in caves and at night.
+    // Reuse the silhouette canvas; no extra per-frame surfaces or pixel readbacks.
+    if (o.rim) {
+      s1.globalCompositeOperation = 'source-in'; s1.fillStyle = o.rim; s1.fillRect(0, 0, bw, bh);
+      s1.globalCompositeOperation = 'source-over';
+      const rimR = r + 0.8 * S;
+      for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; ctx.drawImage(c1, 0, 0, bw, bh, bx + Math.cos(a) * rimR, by + Math.sin(a) * rimR, bw, bh); }
+      s1.globalCompositeOperation = 'source-in'; s1.fillStyle = o.color || this.color; s1.fillRect(0, 0, bw, bh);
+      s1.globalCompositeOperation = 'source-over';
+    }
     const n = r > 3 ? 16 : 8;
     for (let k = 0; k < n; k++) { const a = k / n * TAU; ctx.drawImage(c1, 0, 0, bw, bh, bx + Math.cos(a) * r, by + Math.sin(a) * r, bw, bh); }
     if (r > 2.5) for (let k = 0; k < 8; k++) { const a = (k + 0.5) / 8 * TAU; ctx.drawImage(c1, 0, 0, bw, bh, bx + Math.cos(a) * r * 0.55, by + Math.sin(a) * r * 0.55, bw, bh); }
     ctx.drawImage(c0, 0, 0, bw, bh, bx, by, bw, bh);
     ctx.restore();
   },
-  // around an entity (x, y, w, h), with slack for art that spills past the hitbox
-  ent(ctx, e, fn, opts) { this.around(ctx, e.x, e.y, e.w, e.h, fn, Object.assign({ pad: Math.max(16, e.w * 0.6, e.h * 0.4) }, opts || {})); }
+  /* around an entity (x, y, w, h), with slack for art that spills past the hitbox. opts.scale: how much larger than
+     the hitbox the art is drawn (default ART_SCALE.enemy); the slack grows with it so tails, hats and raised arms
+     are never cut off at the edge of the scratch canvas. opts.extra: more slack for unusually far-reaching art. */
+  ent(ctx, e, fn, opts) {
+    const k = opts && opts.scale || ART_SCALE.enemy, big = Math.max(e.w, e.h);
+    const pad = Math.max(16, e.w * 0.6, e.h * 0.4) * k + (k - 1) * big + (opts && opts.extra || 0);
+    this.around(ctx, e.x, e.y, e.w, e.h, fn, Object.assign({ pad }, opts || {}));
+  }
 };
+
 
 /* ---- 07_physics.js ---- */
 /* ============================================================
@@ -11127,6 +11219,9 @@ class Player {
 
     if (this.invuln > 0) this.invuln -= dt;
     for (const f in this.fx) if (this.fx[f] > 0) { this.fx[f] -= dt; if (this.fx[f] <= 0) { this.fx[f] = 0; Sound.play('float', { pitch: 0.7, vol: 0.4 }); } }
+    // the boss-arena entry walk (Play.bossStart): a few steps right, then control comes back
+    const ew = g.entryWalk;
+    if (ew) { ew.t -= dt; if (ew.t <= 0 || this.x >= ew.x || this.dead || inp.left || inp.jumpPressed) g.entryWalk = null; else inp = { left: false, right: true, up: false, down: false, jump: false, action: false, jumpPressed: false, actionPressed: false }; }
     if (this.stunT > 0) { this.stunT -= dt; inp = { left: false, right: false, up: false, down: false, jump: false, action: false, jumpPressed: false, actionPressed: false }; }
     if (this.slowT > 0) this.slowT -= dt;
     if (this.spinVis > 0) this.spinVis -= dt;
@@ -11437,11 +11532,12 @@ class Player {
     if (this.spin && !this.onGround) o.rot = Math.sin(this.anim.t * 26) * 0.25;
     PlayerFx.under(ctx, this, t);
     // drawn a little larger than the hitbox (ART_SCALE) so he reads on a phone; the physics box is unchanged
-    Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16' });
+    Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16', rim: '#e7e3d7' });
     PlayerFx.over(ctx, this, t);
   }
   get light() { return { r: this.g.area.water ? 150 : 170, c: 'rgba(255,240,220,' }; }
 }
+
 
 /* ---- 12_play.js ---- */
 /* ============================================================
@@ -11567,6 +11663,8 @@ class Play {
     const start = this.checkpoint || level.start;
     const gifts = Save.data.gifts || {};
     this.sigCarry = opts.sig || null; this.dizzy = 0;
+    // atlas memory: keep only what this level draws (its country's and its areas' themes); drop the rest
+    if (typeof Atlas !== 'undefined') Atlas.keep(this.atlasNames());
     // Hydration Station's gift: Brady always starts big (one more health step)
     this.loadArea(start.area, start.x, start.y, Math.max(opts.power || 0, gifts.hydration ? 1 : 0));
     this.camX = clamp(this.player.cx - Game.viewW * 0.4, 0, Math.max(0, this.area.W * TS - Game.viewW));
@@ -11606,7 +11704,7 @@ class Play {
     this.entities = this.area.entities;
     this.themeKey = this.area.theme;
     // pre-rendered art for this theme and country (draws procedurally until it arrives)
-    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey], C = this.level && this.level.country && typeof Tour !== 'undefined' ? Tour.countries[this.level.country] : null; Atlas.need([th && th.atlas, C && (C.atlas || (C.sprites ? C.id : null))]); }
+    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey]; Atlas.need([th && th.atlas, this.countryAtlas()]); }
     this.lavaY = this.area.lavaY;
     const keepPower = this.player ? this.player.power : (power || 0);
     this.player = new Player(this, x, y, keepPower);
@@ -11614,6 +11712,9 @@ class Play {
     this.boss = this.entities.find(e => e.boss && !e.remove) || null;
     this.refreshPlatforms();
   }
+  countryAtlas() { const C = this.level && this.level.country && typeof Tour !== 'undefined' ? Tour.countries[this.level.country] : null; return C ? C.atlas || (C.sprites ? C.id : null) : null; }
+  // every atlas this level can draw from: the country's, and each area's theme
+  atlasNames() { const n = [this.countryAtlas()]; for (const a of this.level.areas || []) { const th = THEMES[a.theme]; if (th && th.atlas) n.push(th.atlas); } return n; }
   refreshPlatforms() { this.platforms = this.entities.filter(e => (e.isPlatform || e.solidTop) && !e.dead && !(e instanceof Spring)); }
 
   /* ---------- helpers used by entities ---------- */
@@ -11817,6 +11918,10 @@ class Play {
   }
   bossStart(b) {
     this.bossLock = { x0: b.arenaX0, x1: b.arenaX1 };
+    // Brady walks a few steps in during the intro banner: the locked camera puts the arena's left edge at the
+    // bottom-left of the screen, right under the touch joystick, which hid him at the start of every fight
+    const p = this.player, walkTo = Math.min(b.arenaX0 + 3.5 * TS, b.x - 2.5 * TS);
+    if (p && walkTo > p.x + 4) { this.entryWalk = { x: walkTo, t: 1.3 }; }
     this.mus(this.bossTrack(b));
     // seal the arena entrance
     const tx = Math.floor(b.arenaX0 / TS) - 1;
@@ -12105,6 +12210,13 @@ class Play {
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     ctx.beginPath(); ctx.rect(0, 0, VW * S, VH * S); ctx.clip();
     BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash);
+    // Atmospheric separation belongs behind solids, collectibles and characters.
+    // Keep each country's own sky/fog colour rather than flattening every world to grey.
+    if (this.level.tour) {
+      const th = THEMES[this.themeKey];
+      ctx.fillStyle = rgba(th.fog || th.sky[1], 0.16);
+      ctx.fillRect(0, 0, VW * S, VH * S);
+    }
     // world transform
     const wt = () => ctx.setTransform(S, 0, 0, S, gx - camX * S, gy - camY * S);
     wt();
@@ -12394,7 +12506,7 @@ class Play {
     ctx.fillText('×' + Math.max(0, Save.data.lives), left + 32, hy + 15);
     // picks
     pill(left + 82, hy, 78, 28);
-    ctx.save(); ctx.translate(left + 98, hy + 14); ctx.scale(0.8, 0.8); Sprites.pick(ctx, 0, 0, this.t, 1); ctx.restore();
+    ctx.save(); ctx.translate(left + 98, hy + 14); ctx.scale(0.8, 0.8); Sprites.pick(ctx, 0, 0, 0.45, 1); ctx.restore();   // a still coin, face-on (frame 4 of the 10 fps spin clips is the widest)
     ctx.fillStyle = '#ffd84a'; ctx.fillText('×' + String(this.picks).padStart(2, '0'), left + 112, hy + 15);
     // gold records
     const gx = left + 168;
@@ -12638,6 +12750,7 @@ const WorldFx = {
 };
 // test hook: the entity classes by spawn type (used by tools/gameplay_test.js)
 window.BRADY_TYPES = ENTITY_TYPES;
+
 
 /* ---- 13_ui.js ---- */
 /* ============================================================
@@ -16722,15 +16835,15 @@ class EndingScene {
 
 // Every stop on the tour, in route order. A stop becomes playable when its
 // country file registers it; until then the map shows it "under construction".
-// world: the level-id prefix ("7-3" = Paris, level 3). lon/lat place the pin on the map.
+// world: the level-id prefix ("7-3" = France, level 3). lon/lat place the pin on the map.
 const TOUR_ROUTE = [
   { id: 'mx', world: 1, name: 'Mexico', lon: -99.1, lat: 19.4 },
   { id: 'ec', world: 2, name: 'Ecuador', sub: 'and the Galápagos', lon: -78.5, lat: -0.9 },
   { id: 'br', world: 3, name: 'Brazil', lon: -43.2, lat: -22.9 },
   { id: 'mz', world: 4, name: 'Mozambique', lon: 35.5, lat: -18.6 },
   { id: 'ma', world: 5, name: 'Morocco', lon: -7.0, lat: 31.6 },
-  { id: 'es', world: 6, name: 'Valencia', sub: 'Spain', lon: -0.4, lat: 39.5 },
-  { id: 'fr', world: 7, name: 'Paris', sub: 'France', lon: 2.35, lat: 48.86 },
+  { id: 'es', world: 6, name: 'Spain', lon: -0.4, lat: 39.5 },
+  { id: 'fr', world: 7, name: 'France', lon: 2.35, lat: 48.86 },
   { id: 'nl', world: 8, name: 'Amsterdam', sub: 'the Netherlands', lon: 4.9, lat: 52.37, label: 'up' },
   { id: 'id', world: 9, name: 'Bali', sub: 'Indonesia', lon: 115.2, lat: -8.4 },
   { id: 'vn', world: 10, name: 'Vietnam', lon: 105.8, lat: 18.0 },
@@ -17711,6 +17824,10 @@ function tourFire(g, x, y, o) { const s = new TourShot(g, x, y, o); g.spawn(s); 
    cfg.atlas) once that atlas is in: clips 'kind/<mode>' or single frames 'kind_<mode>_000'; modes without art fall
    back along FALLBACK lists; until the atlas loads the procedural art(...) draws as before. */
 const TourSprite = {
+  /* Art size over the hitbox, anchored at the feet/centre (collision never changes): ART_SCALE.enemy (1.24) for
+     everyone, easing up to 1.3 only for the really tiny ones (longest side under 24 px). Keyed on the LONGEST side so
+     wide, flat enemies are never stretched. */
+  scale(e) { const big = Math.max(e.w, e.h); return big >= 24 ? ART_SCALE.enemy : ART_SCALE.enemy + 0.06 * Math.min(1, (24 - big) / 8); },
   FALLBACK: {
     walk: { walk: ['walk', 'idle'], idle: ['idle', 'walk'], hop: ['hop', 'walk', 'idle'], notice: ['notice', 'idle', 'walk'], charge: ['charge', 'walk'], throw: ['throw', 'idle', 'walk'], curl: ['curl', 'idle', 'walk'], roll: ['roll', 'curl', 'walk'], stun: ['stun', 'idle', 'walk'], flat: ['flat', 'ko', 'idle', 'walk'], ko: ['ko', 'stun', 'idle', 'walk'] },
     fly: { fly: ['fly'], swoop: ['swoop', 'fly'], stun: ['stun', 'fly'], ko: ['ko', 'stun', 'fly'] },
@@ -17721,18 +17838,30 @@ const TourSprite = {
   atlasOf(e) { const c = e.cfg; if (c.atlas) return c.atlas; const C = e.g && e.g.level && e.g.level.country ? Tour.countries[e.g.level.country] : null; return C ? C.atlas || C.id : null; },
   of(e) { const c = e.cfg; if (!c || !c.sprite || typeof Atlas === 'undefined') return null; const a = this.atlasOf(e); return a && Atlas.has(a) ? a : null; },
   hasFrame(e, mode) { const a = this.of(e); return !!(a && (Atlas.anim(a, e.cfg.sprite + '/' + mode) || Atlas.frame(a, e.cfg.sprite + '_' + mode + '_000'))); },
-  draw(ctx, e, x, y, mode, fallback) {
-    const a = this.of(e); if (!a) return false;
-    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode], o = { scale: ART_SCALE.enemy };
+  /* pick(e, mode, fallback): the atlas clip ('kind/mode') or frame ('kind_mode_000') this enemy would draw for
+     mode, or null when the atlas isn't in or has no art for that kind/mode (then the procedural art draws). */
+  pick(e, mode, fallback) {
+    const a = this.of(e); if (!a) return null;
+    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode];
     for (const m of list) {
-      const id = k + '/' + m;
-      if (Atlas.anim(a, id)) return Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1, o);
-      if (Atlas.frame(a, k + '_' + m + '_000')) return Atlas.draw(ctx, a, k + '_' + m + '_000', x, y, e.dir || 1, o);
+      const id = k + '/' + m; if (Atlas.anim(a, id)) return id;
+      const f = k + '_' + m + '_000'; if (Atlas.frame(a, f)) return f;
     }
-    return false;
+    return null;
+  },
+  /* atlas art has its outline baked in, so only the procedural fallback goes through Ink: decide per frame actually
+     drawn (an atlas can be in yet lack this kind or mode) */
+  inked(ctx, e, mode, fallback) {
+    if (this.pick(e, mode, fallback)) e.drawArt(ctx);
+    else Ink.ent(ctx, e, c => e.drawArt(c), { scale: this.scale(e), extra: e.cfg.inkPad || 0 });  // cfg.inkPad: extra slack for art that reaches far out
+  },
+  draw(ctx, e, x, y, mode, fallback) {
+    const id = this.pick(e, mode, fallback); if (!id) return false;
+    const a = this.of(e), o = { scale: this.scale(e) };
+    return id.indexOf('/') >= 0 ? Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1, o) : Atlas.draw(ctx, a, id, x, y, e.dir || 1, o);
   },
   // procedural art, scaled about its origin point
-  art(ctx, e, x, y, mode) { const k = ART_SCALE.enemy; ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.translate(-x, -y); e.cfg.art(ctx, e, x, y, mode, e.g.t); ctx.restore(); }
+  art(ctx, e, x, y, mode) { const k = this.scale(e); ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.translate(-x, -y); e.cfg.art(ctx, e, x, y, mode, e.g.t); ctx.restore(); }
 };
 
 class TourEnemy extends Walker {
@@ -17758,7 +17887,7 @@ class TourEnemy extends Walker {
     this.t += dt;
     if (this.knocked) return this.updateKnocked(dt);
     if (this.dead) { this.flatT -= dt; if (this.flatT <= 0) this.remove = true; return; }
-    // slideT > 0: sliding helplessly (Valencia's tomato puddles); a wall knocks it out, a ledge drops it
+    // slideT > 0: sliding helplessly (Spain's tomato puddles); a wall knocks it out, a ledge drops it
     if (this.slideT > 0) { this.slideT -= dt; this.vx = this.dir * 7 * TS; this.mode = 'stun'; this.walk(dt); if (this.hitWall) { this.slideT = 0; this.hit('bump', this); } return; }
     if (this.stunT > 0) { this.stunT -= dt; this.vx = 0; this.mode = 'stun'; this.walk(dt); return; }
     if (this.cool > 0) this.cool -= dt;
@@ -17833,7 +17962,8 @@ class TourEnemy extends Walker {
     if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.walk)) return;
     if (this.cfg.art) TourSprite.art(ctx, this, x, y, mode);
   }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  get artMode() { return this.knocked ? 'ko' : this.friendT ? 'walk' : this.dead ? 'flat' : this.mode; }
+  draw(ctx) { TourSprite.inked(ctx, this, this.artMode, TourSprite.FALLBACK.walk); }
   drawArt(ctx) {
     if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI + (this.spin || 0)); this.paint(ctx, 0, this.h / 2, 'ko'); ctx.restore(); return; }
     if (this.friendT) { this.drawFriend(ctx, c => this.paint(c, 0, 0, 'walk')); return; }
@@ -17887,7 +18017,8 @@ class TourFlyer extends Ent {
     if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.fly)) return;
     TourSprite.art(ctx, this, x, y, mode);
   }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  get artMode() { return this.knocked || this.dead ? 'ko' : this.stunT > 0 ? 'stun' : this.mode; }
+  draw(ctx) { TourSprite.inked(ctx, this, this.artMode, TourSprite.FALLBACK.fly); }
   drawArt(ctx) {
     ctx.save();
     if (this.knocked) { ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI + (this.spin || 0)); this.paint(ctx, 0, 0, 'ko'); ctx.restore(); return; }
@@ -17920,7 +18051,7 @@ class TourSwimmer extends Ent {
   hit(kind, src) { if (this.dead) return false; if (kind === 'taco') { this.stunT = 2.5; return true; } if (kind === 'stomp') return false; this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead && this.stunT <= 0) p.hurt(this); }
   get sprite() { return TourSprite.of(this); }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { TourSprite.inked(ctx, this, this.knocked ? 'ko' : 'swim', TourSprite.FALLBACK.swim); }
   drawArt(ctx) {
     const mode = this.knocked ? 'ko' : 'swim';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, mode, TourSprite.FALLBACK.swim)) return;
@@ -17945,7 +18076,7 @@ class TourLeaper extends Ent {
   hit(kind, src) { if (this.dead || this.state === 'wait') return false; if (kind === 'stomp' && this.cfg.stompable) { this.knockOff(1); return true; } if (kind === 'stomp' || kind === 'spin') return this.cfg.fiery && kind === 'spin' ? 'bounce' : false; this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead && this.state !== 'wait') p.hurt(this); }
   get sprite() { return TourSprite.of(this); }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { if (this.state === 'wait' && !this.knocked) return; TourSprite.inked(ctx, this, this.knocked ? 'ko' : this.vy < 0 ? 'up' : 'down', TourSprite.FALLBACK.leap); }
   drawArt(ctx) {
     if (this.state === 'wait' && !this.knocked) return;
     const mode = this.knocked ? 'ko' : this.vy < 0 ? 'up' : 'down';
@@ -17969,7 +18100,7 @@ class TourFriend extends Ent {
     g.spawn(new TourItem(g, this.cx + (p.cx < this.cx ? -20 : 20), this.y + 6, this.give));
   }
   get sprite() { return TourSprite.of(this); }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { TourSprite.inked(ctx, this, this.given ? 'wave' : 'idle', TourSprite.FALLBACK.friend); }
   drawArt(ctx) {
     const mode = this.given ? 'wave' : 'idle';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.y + this.h, mode, TourSprite.FALLBACK.friend)) return;
@@ -18042,6 +18173,7 @@ class TourProp extends Ent {
     ctx.restore();
   }
 }
+
 
 /* ---- 28_tour_e_art.js ---- */
 /* ============================================================
@@ -18445,7 +18577,7 @@ class TourMapScene {
       const n = list[(i + (k === 'right' ? 1 : list.length - 1)) % list.length]; if (n) this.select(n.id);
     }
     if (k === 'up' || k === 'down') { const n = this.stamps.length; if (n) { this.focus = ((this.focus || 0) + (k === 'down' ? 1 : n - 1)) % n; Sound.play('select', { vol: 0.4 }); } }
-    if (k === 'enter' && this.stamps.length) this.play((this.focus || 0) + 1);
+    if (k === 'enter' && this.stamps.length) this.play(this.stamps[Math.min(this.focus || 0, this.stamps.length - 1)].i);
     if (k === 'back' || Input.pausePressed) this.backBtn.fn();
   }
   draw(ctx) {
@@ -18639,6 +18771,296 @@ function tourWrapText(ctx, text, x, y, maxW, lineH) {
   lines.forEach((l, i) => ctx.fillText(l, x, y0 + i * lineH));
   return lines.length * lineH;
 }
+
+/* ---- 28_tour_fa_landscape.js ---- */
+/* Country dioramas for the tour map's country panel: a little island with a winding trail, the level stops, a
+   regional landmark and the boss fort. All coordinates are CSS pixels; the stamps stay the panel's input targets,
+   and progression, saves and flight logic are untouched.
+
+   Stop layout is data-driven: the island is a grid of cells and every level sits in its own cell, so stops never
+   overlap however many there are. By default the levels snake through the grid (bottom row left to right, the next
+   row right to left, ...). A level can pin its cell with `mapCell: [col, row]` (row 0 = the bottom row) and say
+   which stop its trail comes from with `mapFrom: <0-based level index>`: that is how secret levels and branching
+   paths go in. `mapHidden: true` keeps a stop (and its trail) off the map until it is unlocked; its cell stays
+   reserved so nothing moves when it appears. A free cell gets the landmark.
+
+   Landmarks are original, non-sacred miniatures (sacred sites stay in level backgrounds, never as map icons). */
+const TourLandscape = {
+  // sky, water, far hills, land, light land, path, landmark
+  looks: {
+    mx: ['#f5c887', '#48a8b5', '#b98b85', '#75a565', '#b7cf7b', '#f9dea0', 'cactus'],
+    ec: ['#b9e6e7', '#409eae', '#799aa0', '#5d9f7b', '#a5c68d', '#f4e4b7', 'volcano'],
+    br: ['#bce5ee', '#39a8bb', '#6d9faa', '#68aa69', '#b3cf79', '#fff0b3', 'sugarloaf'],
+    mz: ['#c8edef', '#42b9c3', '#8eb4a2', '#85b875', '#e2d99b', '#fff0c8', 'palm'],
+    ma: ['#f1d7b4', '#559fae', '#bf9d98', '#bf9870', '#e4c896', '#fff0c9', 'gate'],
+    es: ['#f6ddb2', '#56b9c7', '#b4aaa4', '#8ca56c', '#d7c789', '#fff0bf', 'orange'],
+    fr: ['#ddddea', '#689eaf', '#a09db9', '#85ac91', '#c1d1a6', '#f8edcd', 'tower'],
+    nl: ['#d7ebee', '#5ea4b7', '#9aadb7', '#8bb481', '#c6d494', '#fff0c4', 'mill'],
+    id: ['#f3d7c8', '#58b7be', '#9899ae', '#64a47f', '#b9c582', '#ffe6b4', 'terraces'],
+    vn: ['#d5e8cf', '#4f9e9a', '#7fa894', '#5f9a6f', '#b3c67e', '#f5e5ac', 'karst'],
+    jp: ['#f1dce7', '#79b3c0', '#a39ebc', '#86ae94', '#d1d7ab', '#fff1d5', 'train'],
+    np: ['#cfe2f2', '#4f8fb8', '#8492b8', '#78a67f', '#c9dca5', '#f7e8c8', 'peaks'],
+    aq: ['#d6edf6', '#4b97ba', '#92b8cd', '#bed9df', '#edf7ee', '#eaf4fb', 'iceberg'],
+    w22: ['#d8c6ec', '#8876b9', '#a19acc', '#9ba5c2', '#d3d4b5', '#fff0c8', 'portal']
+  },
+  look(id) { return this.looks[id] || this.looks.mx; },
+  STYLE: { run: 'RUN', night: 'NIGHT', auto: 'CHASE', ride: 'RIDE', swim: 'SWIM', climb: 'CLIMB', castle: 'BOSS', puzzle: 'PUZZLE' },
+
+  /* grid(levels): { cols, rows, cells: [[col, row] per level], from: [index of the stop each trail comes from] } */
+  grid(levels) {
+    const n = levels.length, cols = Math.max(1, Math.min(3, n));
+    const cells = [], from = [];
+    let rows = Math.ceil(n / cols), maxCol = cols - 1;
+    levels.forEach((L, k) => {
+      let c;
+      if (L.mapCell) c = L.mapCell.slice(0, 2);
+      else { const row = Math.floor(k / cols), i = k % cols; c = [row % 2 ? cols - 1 - i : i, row]; }
+      cells.push(c); rows = Math.max(rows, c[1] + 1); maxCol = Math.max(maxCol, c[0]);
+      from.push(L.mapFrom != null ? L.mapFrom : k - 1);
+    });
+    return { cols: maxCol + 1, rows, cells, from };
+  },
+
+  // Original vector miniatures. Origin = bottom centre, the art fits about 50 x 50 units at size 40.
+  landmark(ctx, kind, x, y, size, ink, accent) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(size / 40, size / 40);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.lineWidth = 2;
+    ctx.strokeStyle = ink || '#3d5362'; ctx.fillStyle = accent || '#ffdf95';
+    const poly = pts => { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fill(); ctx.stroke(); };
+    const line = (a, b, c, d) => { ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); };
+    const blob = (cx, cy, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill(); ctx.stroke(); };
+    switch (kind) {
+      case 'cactus': {   // a saguaro with two arms and a flower
+        ctx.fillStyle = '#4f9a62';
+        const arm = (x0, dir) => { ctx.beginPath(); ctx.moveTo(x0, -14); ctx.lineTo(x0 + dir * 9, -14); ctx.quadraticCurveTo(x0 + dir * 13, -14, x0 + dir * 13, -19); ctx.lineTo(x0 + dir * 13, -27); ctx.arc(x0 + dir * 10, -27, 3, 0, Math.PI, true); ctx.lineTo(x0 + dir * 7, -19); ctx.lineTo(x0, -19); ctx.closePath(); ctx.fill(); ctx.stroke(); };
+        arm(-4, -1); arm(4, 1);
+        ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(-5, -34); ctx.arc(0, -34, 5, Math.PI, 0); ctx.lineTo(5, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.2; line(-1.5, -4, -1.5, -34); line(1.8, -4, 1.8, -32);
+        ctx.strokeStyle = ink; ctx.lineWidth = 1.5; blob(0, -40, 2.6, '#ff6f91'); break;
+      }
+      case 'volcano':   // a snow cone with a puff of smoke
+        poly([[-25, 0], [-9, -30], [9, -30], [25, 0]]);
+        ctx.fillStyle = '#f6f2df'; poly([[-9, -30], [9, -30], [13, -23], [7, -20], [2, -24], [-3, -19], [-13, -23]]);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.5;
+        for (const [px, py, pr] of [[2, -36, 4], [7, -41, 5], [13, -46, 4]]) { ctx.beginPath(); ctx.arc(px, py, pr, 0, TAU); ctx.fill(); ctx.stroke(); }
+        break;
+      case 'sugarloaf':   // two rounded granite domes over the bay with a cable car between them (no statue)
+        ctx.beginPath(); ctx.moveTo(-26, 0); ctx.quadraticCurveTo(-24, -20, -13, -21); ctx.quadraticCurveTo(-5, -21, -3, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-6, 0); ctx.bezierCurveTo(-6, -30, 2, -42, 10, -42); ctx.bezierCurveTo(19, -42, 24, -26, 26, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(70,120,80,0.55)'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.bezierCurveTo(-5, -10, 0, -14, 6, -13); ctx.bezierCurveTo(14, -11, 22, -9, 26, 0); ctx.closePath(); ctx.fill();
+        ctx.lineWidth = 1; line(-13, -21, 10, -42);
+        ctx.fillStyle = '#e8584f'; ctx.lineWidth = 1.2; ctx.fillRect(-2.5, -34, 5, 4); ctx.strokeRect(-2.5, -34, 5, 4); line(0, -34, 0, -36.5);
+        break;
+      case 'tower':
+        poly([[-19, 0], [-9, -20], [-3, -42], [0, -55], [3, -42], [9, -20], [19, 0], [9, 0], [0, -13], [-9, 0]]);
+        line(-9, -19, 9, -19); line(-5, -31, 5, -31); break;
+      case 'mill':
+        poly([[-12, 0], [-8, -27], [7, -27], [12, 0]]); poly([[-11, -27], [0, -38], [11, -27]]);
+        ctx.strokeStyle = '#fff3d7'; ctx.lineWidth = 4; line(-19, -43, 19, -9); line(19, -43, -19, -9); ctx.fillStyle = '#334f63'; ctx.beginPath(); ctx.arc(0, -26, 3, 0, TAU); ctx.fill(); break;
+      case 'palm':
+        ctx.strokeStyle = '#8b7555'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.quadraticCurveTo(5, -17, 1, -34); ctx.stroke();
+        ctx.strokeStyle = '#3c816a'; ctx.lineWidth = 5;
+        for (let i = 0; i < 5; i++) { const a = -Math.PI + i * Math.PI / 4; ctx.beginPath(); ctx.moveTo(1, -34); ctx.quadraticCurveTo(Math.cos(a) * 15, -43 + Math.sin(a) * 4, Math.cos(a) * 24, -28 + Math.sin(a) * 14); ctx.stroke(); }
+        break;
+      case 'gate':
+        poly([[-23, 0], [-23, -34], [-16, -34], [-16, -29], [16, -29], [16, -34], [23, -34], [23, 0]]);
+        ctx.fillStyle = '#826e71'; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-8, -13); ctx.bezierCurveTo(-15, -23, 15, -23, 8, -13); ctx.lineTo(8, 0); ctx.fill(); break;
+      case 'orange': {   // an orange tree in a terracotta pot
+        ctx.fillStyle = '#c96a3f'; poly([[-8, 0], [-10, -9], [10, -9], [8, 0]]);
+        ctx.strokeStyle = ink; ctx.lineWidth = 3; line(0, -9, 0, -20); ctx.lineWidth = 2;
+        ctx.fillStyle = '#4c9a58'; ctx.beginPath(); ctx.arc(-8, -27, 10, 0, TAU); ctx.arc(8, -27, 10, 0, TAU); ctx.arc(0, -36, 11, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(-8, -27, 10, 0.5, 3.6); ctx.stroke(); ctx.beginPath(); ctx.arc(8, -27, 10, -0.5, 2.6); ctx.stroke(); ctx.beginPath(); ctx.arc(0, -36, 11, 3.4, 6.0); ctx.stroke();
+        ctx.lineWidth = 1.2;
+        for (const [ox, oy] of [[-11, -29], [-3, -38], [6, -33], [11, -24], [-4, -24], [5, -42]]) blob(ox, oy, 3, '#ff9a2e');
+        break;
+      }
+      case 'terraces': {   // stepped rice terraces down a hill, with a little palm
+        const bands = ['#9ccf6b', '#86c05e', '#72b153', '#5f9f48'];
+        for (let i = 0; i < 4; i++) {
+          const yy = -30 + i * 8, hw = 10 + i * 6;
+          ctx.fillStyle = bands[i]; ctx.beginPath(); ctx.moveTo(-hw, yy + 8); ctx.quadraticCurveTo(-hw, yy, -hw + 5, yy); ctx.lineTo(hw - 5, yy); ctx.quadraticCurveTo(hw, yy, hw, yy + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1; line(-hw + 4, yy + 3, hw - 4, yy + 3); ctx.strokeStyle = ink; ctx.lineWidth = 2;
+        }
+        ctx.strokeStyle = '#8b7555'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(14, -30); ctx.quadraticCurveTo(17, -38, 15, -46); ctx.stroke();
+        ctx.strokeStyle = '#3c816a'; ctx.lineWidth = 3;
+        for (let i = 0; i < 5; i++) { const a = -Math.PI + i * Math.PI / 4; ctx.beginPath(); ctx.moveTo(15, -46); ctx.quadraticCurveTo(15 + Math.cos(a) * 7, -50 + Math.sin(a) * 2, 15 + Math.cos(a) * 11, -43 + Math.sin(a) * 6); ctx.stroke(); }
+        break;
+      }
+      case 'karst': {   // three tall limestone towers rising from the bay, a sailing junk in front
+        const tower = (cx, w, h, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(cx - w, 0); ctx.bezierCurveTo(cx - w - 2, -h * 0.5, cx - w * 0.9, -h, cx, -h); ctx.bezierCurveTo(cx + w * 0.9, -h, cx + w + 2, -h * 0.5, cx + w, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); };
+        tower(-14, 7, 32, '#8eb59a'); tower(12, 8, 38, '#7aa688'); tower(-1, 8, 46, '#6c9b7c');
+        ctx.fillStyle = 'rgba(80,140,90,0.7)'; ctx.beginPath(); ctx.ellipse(-1, -43, 7, 3.5, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#c0583e'; ctx.lineWidth = 1.5; poly([[14, -6], [14, -20], [24, -8]]);
+        ctx.fillStyle = '#6a4a35'; poly([[6, -3], [27, -3], [24, 1], [9, 1]]);
+        break;
+      }
+      case 'train': {   // a bullet train crossing a viaduct, a stand of bamboo behind
+        ctx.strokeStyle = '#5c9c55'; ctx.lineWidth = 3;
+        for (const bx of [-20, -15, -10]) line(bx, 0, bx + 1, -36);
+        ctx.strokeStyle = '#7bbf6a'; ctx.lineWidth = 2; for (const [bx, by] of [[-20, -28], [-15, -33], [-10, -24]]) { line(bx, by, bx + 6, by - 4); line(bx, by + 6, bx - 5, by + 2); }
+        ctx.strokeStyle = ink; ctx.lineWidth = 2;
+        ctx.fillStyle = '#c9c3b6'; ctx.fillRect(-26, -10, 54, 4); ctx.strokeRect(-26, -10, 54, 4);
+        for (const px of [-18, 2, 22]) { ctx.fillRect(px - 2, -6, 4, 6); ctx.strokeRect(px - 2, -6, 4, 6); }
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(-24, -10); ctx.lineTo(-24, -20); ctx.lineTo(12, -20); ctx.quadraticCurveTo(28, -19, 30, -10); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#2f6fb3'; ctx.fillRect(-24, -14, 50, 2.2);
+        ctx.fillStyle = '#334f63'; for (let wx = -21; wx < 10; wx += 6) ctx.fillRect(wx, -18.5, 3.5, 3); ctx.beginPath(); ctx.moveTo(15, -19); ctx.quadraticCurveTo(23, -18, 25, -15); ctx.lineTo(16, -15); ctx.closePath(); ctx.fill();
+        break;
+      }
+      case 'peaks':   // a Himalayan ridge: three jagged snow peaks
+        ctx.fillStyle = '#8a97b9'; poly([[-27, 0], [-15, -26], [-6, -14], [3, -44], [13, -22], [18, -30], [27, 0]]);
+        ctx.fillStyle = '#f7f6ef'; poly([[-15, -26], [-10, -18], [-13, -19], [-18, -20]]);
+        poly([[3, -44], [9, -31], [5, -33], [1, -28], [-2, -33]]); poly([[18, -30], [21, -22], [17, -24], [15, -25]]);
+        break;
+      case 'iceberg':
+        ctx.fillStyle = '#eef8fb'; poly([[-24, 0], [-18, -18], [-9, -24], [-2, -38], [8, -26], [16, -30], [24, 0]]);
+        ctx.fillStyle = 'rgba(120,180,210,0.5)'; ctx.beginPath(); ctx.moveTo(-2, -38); ctx.lineTo(8, -26); ctx.lineTo(4, 0); ctx.lineTo(-6, 0); ctx.closePath(); ctx.fill();
+        break;
+      case 'portal':   // World 22's glowing ring with a star
+        ctx.lineWidth = 5; ctx.strokeStyle = '#ffd86b'; ctx.beginPath(); ctx.ellipse(0, -22, 15, 20, 0, 0, TAU); ctx.stroke();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = ink; ctx.beginPath(); ctx.ellipse(0, -22, 18, 23, 0, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.ellipse(0, -22, 12, 17, 0, 0, TAU); ctx.stroke();
+        ctx.fillStyle = '#fff3c4'; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 3.2 : 7.5; ctx.lineTo(Math.cos(a) * r, -22 + Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.stroke();
+        break;
+      default:
+        poly([[-20, 0], [0, -30], [20, 0]]);
+    }
+    ctx.restore();
+  },
+
+  scenery(ctx, R, id, t, lm) {
+    const c = this.look(id), X = R.x, Y = R.y, W = R.w, H = R.h;
+    ctx.save(); ctx.beginPath(); rr(ctx, X, Y, W, H, 18); ctx.clip();
+    const sky = ctx.createLinearGradient(0, Y, 0, Y + H); sky.addColorStop(0, c[0]); sky.addColorStop(1, c[1]); ctx.fillStyle = sky; ctx.fillRect(X, Y, W, H);
+    ctx.fillStyle = 'rgba(255,250,229,0.58)'; ctx.beginPath(); ctx.arc(X + W * .81, Y + H * .16, Math.min(22, H * 0.1), 0, TAU); ctx.fill();
+    for (let i = 0; i < 3; i++) { const xx = X + W * (.12 + i * .34) + Math.sin(t * .12 + i) * 4, yy = Y + H * (.08 + (i % 2) * .07); ctx.fillStyle = 'rgba(255,255,255,0.38)'; rr(ctx, xx, yy, 47, 7, 4); ctx.fill(); }
+    ctx.fillStyle = c[2]; ctx.beginPath(); ctx.moveTo(X, Y + H * .56);
+    for (let i = 0; i <= 8; i++) ctx.lineTo(X + W * i / 8, Y + H * (i % 2 ? .38 : .22)); ctx.lineTo(X + W, Y + H); ctx.lineTo(X, Y + H); ctx.fill();
+    // the island: water shadow, sandy shore, green plateau
+    for (const [dy, col] of [[9, c[1]], [4, c[5]], [0, c[3]]]) { ctx.save(); ctx.translate(0, dy); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(X + W * .04, Y + H * .84); ctx.bezierCurveTo(X - W * .06, Y + H * .5, X + W * .14, Y + H * .06, X + W * .5, Y + H * .12); ctx.bezierCurveTo(X + W * .96, Y + H * .02, X + W * 1.06, Y + H * .6, X + W * .92, Y + H * .84); ctx.quadraticCurveTo(X + W * .56, Y + H * 1.06, X + W * .04, Y + H * .84); ctx.fill(); ctx.restore(); }
+    ctx.strokeStyle = c[4]; ctx.lineWidth = 2;
+    for (let i = 0; i < 9; i++) { const xx = X + W * (.13 + ((i * 37) % 73) / 100), yy = Y + H * (.35 + ((i * 19) % 49) / 100); ctx.beginPath(); ctx.moveTo(xx - 4, yy); ctx.lineTo(xx - 2, yy - 4); ctx.lineTo(xx, yy); ctx.stroke(); }
+    if (lm) { ctx.fillStyle = 'rgba(30,55,54,0.2)'; ctx.beginPath(); ctx.ellipse(lm.x, lm.y, lm.size * 0.6, lm.size * 0.1, 0, 0, TAU); ctx.fill(); this.landmark(ctx, c[6], lm.x, lm.y, lm.size, '#2f4752', c[5]); }
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < 4; i++) { const xx = X + W * (.2 + i * .2), yy = Y + H * .97; ctx.beginPath(); ctx.moveTo(xx, yy); ctx.quadraticCurveTo(xx + 5, yy - 3, xx + 12, yy); ctx.stroke(); }
+    ctx.restore();
+  },
+
+  // fit text to a width: whole, or cut with an ellipsis
+  fit(ctx, s, w) {
+    if (ctx.measureText(s).width <= w) return s;
+    let lo = 0, hi = s.length;
+    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (ctx.measureText(s.slice(0, m).trimEnd() + '…').width <= w) lo = m; else hi = m - 1; }
+    return s.slice(0, lo).trimEnd() + '…';
+  },
+  // up to `max` lines: words wrap, whatever is left goes on the last line, each line ellipsised to the width
+  wrap(ctx, s, w, max) {
+    const lines = []; let cur = '';
+    for (const wd of s.split(' ')) {
+      const next = cur ? cur + ' ' + wd : wd;
+      if (!cur || ctx.measureText(next).width <= w) cur = next; else { lines.push(cur); cur = wd; }
+    }
+    lines.push(cur);
+    if (lines.length > max) { const rest = lines.slice(max - 1).join(' '); lines.length = max - 1; lines.push(rest); }
+    return lines.map(l => this.fit(ctx, l, w));
+  },
+  lock(ctx, x, y, s, col) {   // a padlock centred at (x, y), s = its height
+    ctx.save(); ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.6, s * 0.16);
+    ctx.beginPath(); ctx.arc(x, y - s * 0.12, s * 0.26, Math.PI, 0); ctx.lineTo(x + s * 0.26, y + s * 0.02); ctx.moveTo(x - s * 0.26, y + s * 0.02); ctx.lineTo(x - s * 0.26, y - s * 0.12); ctx.stroke();
+    rr(ctx, x - s * 0.4, y, s * 0.8, s * 0.55, s * 0.1); ctx.fill();
+    ctx.restore();
+  }
+};
+
+(() => {
+  const oldPanel = TourMapScene.prototype.drawPanel;
+  TourMapScene.prototype.layoutPanel = function () {
+    const C = Tour.countries[this.sel], R = this.panelR; this.stamps = []; this.terrainR = null; this.landmarkAt = null;
+    if (!C) return;
+    const head = 56, foot = C.power ? 44 : 12;
+    const A = { x: R.x + 8, y: R.y + head, w: R.w - 16, h: Math.max(90, R.h - head - foot) };
+    this.terrainR = A;
+    const G = TourLandscape.grid(C.levels), cw = A.w / G.cols, ch = A.h / G.rows;
+    // the stop's parts, top to bottom: postcard marks, circle, name (1-2 lines), level type. Compact cells: 1 line, no type.
+    const compact = ch < 62, r = Math.max(9, Math.min(14, ch * 0.15)), lh = cw > 100 ? 13 : 12;
+    const blockH = 7 + 2 * r + 4 + (compact ? lh + 2 : 2 * lh + 12);
+    this.stopLook = { r, lh, compact, cw, ch };
+    const used = {};
+    this.stampAt = {};
+    C.levels.forEach((L, k) => {
+      const [col, row] = G.cells[k]; used[col + ',' + row] = true;
+      if (L.mapHidden && !TourProgress.isUnlocked(C.world + '-' + (k + 1))) return;
+      const x = A.x + col * cw, y = A.y + (G.rows - 1 - row) * ch;
+      const slack = Math.max(0, ch - 4 - blockH), jit = (col % 2 ? -1 : 1) * Math.min(slack / 2, ch * 0.1);
+      const top = y + 2 + slack / 2 + jit;
+      const st = { i: k + 1, x: x + 2, y: y + 2, w: cw - 4, h: ch - 4, cx: x + cw / 2, cy: top + 7 + r, top, from: G.from[k] };
+      this.stamps.push(st); this.stampAt[k] = st;
+    });
+    // the landmark: in a free cell (top row first), otherwise small in the hills at the back
+    let free = null;
+    for (let row = G.rows - 1; row >= 0 && !free; row--) for (let col = 0; col < G.cols; col++) if (!used[col + ',' + row]) { free = [col, row]; break; }
+    if (free) { const s = Math.min(cw * 0.62, ch * 0.72, 72); this.landmarkAt = { x: A.x + (free[0] + 0.5) * cw, y: A.y + (G.rows - 1 - free[1]) * ch + ch * 0.5 + s * 0.5, size: s }; }
+    else this.landmarkAt = { x: A.x + A.w * 0.9, y: A.y + A.h * 0.3, size: Math.min(26, A.h * 0.16) };
+  };
+  TourMapScene.prototype.drawPanel = function (ctx) {
+    const C = Tour.countries[this.sel], R = this.panelR, s = Tour.stops[this.sel];
+    if (!C || TourMap.stopState(s) === 'locked' || !this.terrainR) { oldPanel.call(this, ctx); return; }
+    const c = TourLandscape.look(this.sel), A = this.terrainR, K = this.stopLook;
+    ctx.save();
+    ctx.fillStyle = '#152c3c'; rr(ctx, R.x, R.y, R.w, R.h, 19); ctx.fill(); ctx.strokeStyle = 'rgba(255,244,214,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = c[5]; ctx.font = `${Math.min(20, R.w / 12)}px ${FONT_DISPLAY}`; ctx.fillText(s.name.toUpperCase(), R.x + 16, R.y + 21, R.w - 32);
+    ctx.fillStyle = '#c9dde0'; ctx.font = `11px ${FONT_UI}`; ctx.fillText(TourLandscape.fit(ctx, C.tagline || s.sub || 'Choose your next adventure', R.w - 32), R.x + 16, R.y + 41);
+    TourLandscape.scenery(ctx, A, this.sel, this.t, this.landmarkAt);
+    // the trail: done stretches solid, future ones dotted
+    ctx.lineCap = 'round';
+    this.stamps.forEach(b => {
+      const a = this.stampAt[b.from]; if (!a) return;
+      const open = TourProgress.isUnlocked(C.world + '-' + b.i);
+      const trail = () => { ctx.beginPath(); ctx.moveTo(a.cx, a.cy); const my = (a.cy + b.cy) / 2; if (Math.abs(a.cy - b.cy) < 4) ctx.bezierCurveTo((a.cx * 2 + b.cx) / 3, a.cy + 10, (a.cx + b.cx * 2) / 3, b.cy - 10, b.cx, b.cy); else ctx.bezierCurveTo(a.cx + (a.cx > A.x + A.w / 2 ? 26 : -26), my, b.cx + (b.cx > A.x + A.w / 2 ? 26 : -26), my, b.cx, b.cy); };
+      ctx.strokeStyle = 'rgba(45,67,63,0.35)'; ctx.lineWidth = 10; trail(); ctx.stroke();
+      ctx.strokeStyle = open ? c[5] : 'rgba(255,244,215,0.7)'; ctx.lineWidth = 6; ctx.setLineDash(open ? [] : [2, 7]); trail(); ctx.stroke(); ctx.setLineDash([]);
+    });
+    const active = this.stamps.find(b => TourProgress.isUnlocked(C.world + '-' + b.i) && !Save.data.done[C.world + '-' + b.i]);
+    const r = K.r, lh = K.lh, labelW = Math.max(40, K.cw - 8);
+    this.stamps.forEach((b, k) => {
+      const id = C.world + '-' + b.i, L = C.levels[b.i - 1], open = TourProgress.isUnlocked(id), done = !!Save.data.done[id], boss = L.style === 'castle', foc = this.focus === k && !Input.usingTouch;
+      const x = b.cx, y = b.cy;
+      // postcards found (three marks above the stop)
+      const gold = Save.data.gold[id] || [];
+      for (let q = 0; q < 3; q++) { ctx.fillStyle = gold[q] ? '#ffdc71' : 'rgba(35,69,69,0.35)'; rr(ctx, x - 9.5 + q * 7, b.top, 5, 4, 1); ctx.fill(); }
+      ctx.fillStyle = 'rgba(30,55,54,0.25)'; ctx.beginPath(); ctx.ellipse(x, y + r + 2, r + 3, 3, 0, 0, TAU); ctx.fill();
+      if (active === b || foc) { ctx.strokeStyle = foc ? '#ffd84a' : '#fff7d8'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(x, y, r + 4.5, 0, TAU); ctx.stroke(); }
+      ctx.fillStyle = done ? '#f5c75e' : open ? '#fff7df' : '#6d8483'; ctx.strokeStyle = '#30474f'; ctx.lineWidth = 2;
+      if (boss) {   // the boss fort: battlements and a door
+        rr(ctx, x - r, y - r * 0.8, r * 2, r * 1.8, 3); ctx.fill(); ctx.stroke();
+        for (let q = -1; q <= 1; q++) { ctx.fillRect(x + q * r * 0.7 - 2.5, y - r * 0.8 - 4, 5, 5); ctx.strokeRect(x + q * r * 0.7 - 2.5, y - r * 0.8 - 4, 5, 5); }
+        if (open) { ctx.fillStyle = '#30474f'; rr(ctx, x - 3.5, y + r * 0.1, 7, r * 0.9, 3); ctx.fill(); }
+        else TourLandscape.lock(ctx, x, y - r * 0.15, r * 1.1, '#2b3e45');
+      } else {
+        ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke();
+        if (!open) TourLandscape.lock(ctx, x, y - r * 0.12, r * 1.15, '#2b3e45');
+        else { ctx.fillStyle = '#30474f'; ctx.textAlign = 'center'; ctx.font = `${Math.round(r * 1.05)}px ${FONT_DISPLAY}`; ctx.fillText(done ? '✓' : String(b.i), x, y + 1); }
+      }
+      // the name on a pill, one or two lines, then the level type
+      ctx.font = `${lh - 1.5}px ${FONT_UI}`; ctx.textAlign = 'center';
+      const lines = TourLandscape.wrap(ctx, L.name, labelW - 8, K.compact ? 1 : 2);
+      let pw = 0; for (const l of lines) pw = Math.max(pw, ctx.measureText(l).width);
+      const ly = y + r + 4, type = K.compact ? '' : TourLandscape.STYLE[L.style] || 'RUN';
+      if (type) { ctx.font = `bold 10px ${FONT_UI}`; pw = Math.max(pw, ctx.measureText(type).width); }
+      ctx.fillStyle = open ? 'rgba(18,52,62,0.93)' : 'rgba(52,78,82,0.9)'; rr(ctx, x - pw / 2 - 5, ly, pw + 10, lines.length * lh + (type ? 12 : 2), 5); ctx.fill();
+      ctx.font = `${lh - 1.5}px ${FONT_UI}`; ctx.fillStyle = open ? '#fff5d9' : '#cfdcd7';
+      lines.forEach((l, i) => ctx.fillText(l, x, ly + 1 + lh * (i + 0.5)));
+      if (type) { ctx.font = `bold 10px ${FONT_UI}`; ctx.fillStyle = boss ? '#ffb27a' : open ? '#8fd6c4' : '#a9bdb8'; ctx.fillText(type, x, ly + lines.length * lh + 6.5); }
+      if (active === b) { ctx.fillStyle = '#fff4d4'; ctx.strokeStyle = '#30474f'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x + r + 3, y - r - 6); ctx.lineTo(x + r + 11, y - r - 6); ctx.lineTo(x + r + 7, y - r); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    });
+    // the country's souvenir (signature power-up)
+    if (C.power) {
+      const y = R.y + R.h - 24;
+      ctx.save(); ctx.translate(R.x + 24, y); ctx.scale(0.75, 0.75); if (C.power.icon) C.power.icon(ctx, 0, 0, this.t); ctx.restore();
+      ctx.textAlign = 'left'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffd84a'; ctx.fillText(TourLandscape.fit(ctx, 'SOUVENIR: ' + C.power.name.toUpperCase(), R.w - 54), R.x + 44, y - 6);
+      ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = '#c3d6da'; ctx.fillText(TourLandscape.fit(ctx, C.power.hint || '', R.w - 54), R.x + 44, y + 9);
+    }
+    ctx.restore();
+  };
+})();
 
 /* ---- 28_tour_g_story.js ---- */
 /* ============================================================
@@ -18903,7 +19325,7 @@ Sound.addTrack && Sound.addTrack('tour_map', {
 });
 
 // test hook (tools/gameplay_test.js)
-try { window.BRADY_TOUR = { Tour, TourProgress, TourPowers, TourBuild, TourMapScene, TourEndingScene, TourIntroPanels, TourItem, TourEnemy, TourKit, tourCreditsLines }; } catch (e) { /* not in a browser */ }
+try { window.BRADY_TOUR = { Tour, TourProgress, TourPowers, TourBuild, TourMapScene, TourEndingScene, TourIntroPanels, TourItem, TourEnemy, TourSprite, TourKit, tourCreditsLines }; } catch (e) { /* not in a browser */ }
 
 /* ---- 29_tour_aq.js ---- */
 /* ============================================================
@@ -19808,7 +20230,15 @@ class BrCoati extends TourEnemy {
     p.hurt(this);
   }
   giveBack() { const g = this.g; for (let k = 0; k < this.loot; k++) { g.spawn(new PickPop(g, this.cx + (k - this.loot / 2) * 6, this.y)); g.addPick(); } if (this.loot) K.say(g, this, 'FINE, TAKE THEM!', '#ffd84a'); this.loot = 0; }
+  // pre-rendered art (30_tour_sprites.js sets COATI.sprite = 'coati': walk, flee, stun, flat, ko): the stolen
+  // coins ride on its back as the country's spinning coin; coatiArt (which draws its own loot) stays the fallback
+  paint(ctx, x, y, mode) {
+    super.paint(ctx, x, y, mode);
+    const a = this.sprite;
+    if (a && this.loot && mode !== 'flat' && mode !== 'ko') Atlas.animate(ctx, a, 'coin/spin', this.t, x - (this.dir || 1) * 3, y - 25, 1, { scale: 0.8 });
+  }
 }
+BrCoati.cfg = COATI;
 const enemies = {
   brCrab: { cls: TourEnemy.make({ w: 26, h: 16, speed: 1.3, behavior: 'walk', art: crabArt, burst: '#e8422a' }), place: 'walk' },
   brCoconut: { cls: TourEnemy.make({ w: 22, h: 22, speed: 0.7, behavior: 'roll', range: 8, rollSpeed: 6, art: coconutArt, burst: '#3a8a3a' }), place: 'walk' },
@@ -20777,8 +21207,9 @@ const iguanaArt = (ctx, e, x, y, m) => {
   ctx.restore();
 };
 // puffers inflate (and get bigger) when Brady swims close
+const PUFFER = { w: 20, h: 20, speed: 0.8, range: 2, chase: false, art: pufferArt };
 class EcPuffer extends TourSwimmer {
-  constructor(g, s) { super(g, s, { w: 20, h: 20, speed: 0.8, range: 2, chase: false, art: pufferArt }); this.puff = 0; }
+  constructor(g, s) { super(g, s, PUFFER); this.puff = 0; }
   update(dt) {
     super.update(dt);
     if (this.knocked) return;
@@ -20786,7 +21217,18 @@ class EcPuffer extends TourSwimmer {
     const np = approach(this.puff, want, dt * (want ? 4 : 1.2));
     if (np !== this.puff) { const cx = this.cx, cy = this.cy, s = 20 + np * 14; this.puff = np; this.w = this.h = s; this.x = cx - s / 2; this.y = cy - s / 2; }
   }
+  // pre-rendered art (30_tour_sprites.js sets PUFFER.sprite): the calm 'puffer/swim' clip, then four inflation
+  // steps 'puffer_puff_000'..'_003' picked by how puffed it is; pufferArt stays the fallback
+  drawArt(ctx) {
+    const a = this.sprite;
+    if (a && !this.knocked && this.puff > 0.12) {
+      const k = Math.max(0, Math.min(3, Math.round(this.puff * 4) - 1));
+      if (Atlas.draw(ctx, a, 'puffer_puff_00' + k, this.cx, this.cy, this.dir || 1, { scale: ART_SCALE.enemy })) return;
+    }
+    super.drawArt(ctx);
+  }
 }
+EcPuffer.cfg = PUFFER;
 // living ice blocks, cut from the glacier: they skate along the ice
 const iceCubeArt = (ctx, e, x, y, m) => {
   ctx.save(); ctx.translate(x, y); if (m === 'flat') ctx.scale(1.2, 0.4);
@@ -20864,7 +21306,17 @@ class EcSurge extends Ent {
     for (let i = 0; i < 12; i++) { const ph = ((this.t * 0.9 * d + i * 0.29) % 1 + 1) % 1, sx = z.x + ph * z.w, sy = z.y + 20 + ((i * 61) % Math.max(40, z.h - 40)); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - d * 22 * k, sy); ctx.stroke(); }
   }
 }
-const entities = { ecBooby: TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: 'BLUE BOOTS! BOUNCY!', art: boobyArt }), ecIcicle: EcIcicle, ecSurge: EcSurge };
+// the pre-rendered booby (sprite 'booby': idle = its foot dance, wave once it has lent the boots) turns to face
+// Brady and keeps the procedural art's '!' until the boots are handed over
+class EcBooby extends TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: 'BLUE BOOTS! BOUNCY!', art: boobyArt }) {
+  drawArt(ctx) {
+    const p = this.g.player, spr = this.sprite;
+    if (spr && p) this.dir = p.cx < this.cx ? -1 : 1;
+    super.drawArt(ctx);
+    if (spr && !this.given) { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', this.cx, this.y + this.h - 54 + Math.sin(this.g.t * 5) * 2); }
+  }
+}
+const entities = { ecBooby: EcBooby, ecIcicle: EcIcicle, ecSurge: EcSurge };
 
 /* ---------------- the signature power-up: BOOBY BOOTS ---------------- */
 // bright blue boots (like a blue-footed booby's feet): super-bouncy jumps; a big landing sends out a shockwave
@@ -21483,7 +21935,7 @@ Tour.country({
 
 /* ---- 29_tour_es.js ---- */
 /* ============================================================
-   VALENCIA (world 6)
+   SPAIN (world 6)
    6-1 La Tomatina          run    tomato trucks lob tomatoes, slippery pulp streets, crate stacks, balconies
    6-2 The Aquarium         swim   glass tunnels, pulsing jellyfish, pump currents and big tanks
    6-3 City of Arts by Night night white ribbed arches, reflecting pools, light-up floor tiles on the beat, a lifting "eyelid" deck
@@ -22270,7 +22722,7 @@ Tour.country({
     { name: 'The Silk Exchange', style: 'castle', theme: 'es_lonja', gimmick: 'Twisted columns, swinging silk banners and merchants\' scales that rise and fall, then Paellasaurus',
       enemies: [['esHorchata', 2], ['esTomato', 2]], boss: 'es_paella', arena: 'lonja', arenaW: 26, roof: false,
       hint: 'Paellasaurus is too hot to stomp. Kick three tomatoes into the pan to put the fire out, then crack the crust!',
-      postcard: 'The Silk Exchange is back! The Baron pedalled off to Paris. Allez! ♥ C',
+      postcard: 'The Silk Exchange is back! The Baron pedalled off to France. Allez! ♥ C',
       script: [['flat', { n: 4 }], 'columns', ['banners', {}], 'scales', 'cp', 'sig', ['banners', { n: 3 }], 'columns', ['enemies', { n: 2 }], ['blocks', { content: 'power' }], 'arena'] }
   ]
 });
@@ -22278,7 +22730,7 @@ Tour.country({
 
 /* ---- 29_tour_fr.js ---- */
 /* ============================================================
-   PARIS, FRANCE (world 7) — second reference country.
+   FRANCE (world 7) — second reference country.
    7-1 Boulangerie Boulevard  run    café umbrellas, a bakery conveyor, croissants rolling downhill
    7-2 Seine Chase            auto   chase the Baron along the quay: book-box lids snap open and shut
    7-3 Rooftops by Moonlight  night  zinc rooftops: chimney smoke lifts you over the alleys, cats prowl
@@ -27905,7 +28357,7 @@ const enemies = {
   mxPepper: { cls: TourEnemy.make({ w: 16, h: 24, speed: 1.1, behavior: 'hop', hopV: 9.5, hopEvery: 1.1, art: pepperArt, burst: '#5ad04a' }), place: 'walk' },
   mxElote: { cls: TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'walk', art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') }), place: 'walk' },
   mxBurro: { cls: TourEnemy.make({ w: 30, h: 30, speed: 1.0, behavior: 'walk', hp: 2, art: burroArt, onDefeat: e => { for (let k = 0; k < 6; k++) e.g.spawn(new PickPop(e.g, e.cx + (k - 2.5) * 6, e.y)); e.g.addPick(); e.g.burst(e.cx, e.cy, 24, '#ff9ac8', 'confetti'); } }), place: 'walk' },
-  mxChihuahua: { cls: TourEnemy.make({ w: 22, h: 16, speed: 1.5, behavior: 'charge', range: 7, chargeSpeed: 7, windup: 0.35, art: (ctx, e, x, y, m) => {
+  mxChihuahua: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 1.5, behavior: 'charge', range: 7, chargeSpeed: 7, windup: 0.35, art: (ctx, e, x, y, m) => {
     ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.4 : 1);
     const run = m === 'charge' ? Math.sin(e.t * 30) * 2 : Math.sin(e.t * 12);
     ctx.fillStyle = '#d8a86a'; for (const lx of [-7, -3, 3, 7]) ctx.fillRect(lx - 1, -6, 2, 6 - Math.abs(run) * (lx % 2 ? 1 : 0.5));
@@ -27929,7 +28381,7 @@ const enemies = {
   } }), place: 'walk' }
 };
 const entities = {
-  mxXolo: TourFriend.make({ w: 30, h: 30, give: 'sig:taco', line: '¡TACOS! TAP THROW', art: xoloArt }),
+  mxXolo: TourFriend.make({ w: 30, h: 30, inkPad: 8, give: 'sig:taco', line: '¡TACOS! TAP THROW', art: xoloArt }),
   // a cart that rolls watermelons down the street toward Brady
   mxMelonCart: class extends Ent {
     constructor(g, s) { super(g, s, 30, 26); this.period = s.period || 2.6; this.k = s.phase || 0; }
@@ -30574,7 +31026,7 @@ const enemies = {
   npYeti: { cls: TourEnemy.make({ w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'throw', pace: true, range: 10, every: 2.2, art: yetiArt, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'OOF! *FLUFF*', '#e8f0ff'), shoot: (e, p) => { tourFire(e.g, e.cx + e.dir * 18, e.y + 10, { kind: 'snowball', vx: e.dir * 6 * TS, vy: -5 * TS, grav: PHYS.gDown * 0.35, w: 16, h: 16, life: 3, thru: true, stompable: true, col: '#ffffff', art: snowShotArt }); } }), place: 'walk' },
   npSnowball: { cls: TourEnemy.make({ w: 24, h: 24, speed: 0.8, behavior: 'roll', range: 9, rollSpeed: 7, rollT: 2.8, art: snowballArt, burst: '#ffffff' }), place: 'walk' },
   npTinBot: { cls: TourEnemy.make({ w: 22, h: 46, speed: 1.1, behavior: 'walk', art: tinBotArt, burst: '#9aa0b0' }), place: 'walk' },
-  npBobble: { cls: TourEnemy.make({ w: 24, h: 36, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, art: bobbleArt, burst: '#7a2ac8' }), place: 'walk' },
+  npBobble: { cls: TourEnemy.make({ w: 24, h: 36, inkPad: 10, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, art: bobbleArt, burst: '#7a2ac8' }), place: 'walk' },
   npGlobe: { cls: TourEnemy.make({ w: 24, h: 26, speed: 0.8, behavior: 'roll', range: 8, rollSpeed: 6.8, rollT: 2.4, art: globeArt, burst: '#bfe8ff' }), place: 'walk' }
 };
 
@@ -31870,7 +32322,7 @@ class VnShrimp extends TourEnemy {
   touchPlayer(p) { if (this.dead || this.stunT > 0) return; if (this.state === 'charge' && !p.invuln && !p.star) { p.vx = this.dir * 9 * TS; p.vy = -6 * TS; K.say(this.g, p, 'POW!', '#ff7a3a'); } p.hurt(this); }
 }
 const enemies = {
-  vnScooter: { cls: TourEnemy.make({ w: 36, h: 30, speed: 1.4, behavior: 'charge', range: 8, chargeSpeed: 8.2, windup: 0.6, chargeT: 1.5, art: scooterArt, burst: '#e8323a', onNotice: e => { K.say(e.g, e, 'BEEP BEEP!', '#ffd23a'); TourKit.sfx('bike_bell', 'select2', { vol: 0.4, pitch: 1.3 }); } }), place: 'walk' },
+  vnScooter: { cls: TourEnemy.make({ w: 36, h: 30, inkPad: 6, speed: 1.4, behavior: 'charge', range: 8, chargeSpeed: 8.2, windup: 0.6, chargeT: 1.5, art: scooterArt, burst: '#e8323a', onNotice: e => { K.say(e.g, e, 'BEEP BEEP!', '#ffd23a'); TourKit.sfx('bike_bell', 'select2', { vol: 0.4, pitch: 1.3 }); } }), place: 'walk' },
   vnBao: { cls: TourEnemy.make({ w: 26, h: 24, speed: 1.0, behavior: 'hop', hopV: 9, hopEvery: 1.3, art: baoArt, burst: '#ffffff' }), place: 'walk' },
   vnRoll: { cls: TourEnemy.make({ w: 26, h: 16, speed: 0.8, behavior: 'roll', range: 8, rollSpeed: 6.4, rollT: 2.4, art: rollArt, burst: '#f0b050' }), place: 'walk' },
   vnShrimp: { cls: VnShrimp, place: 'walk' },
@@ -33491,6 +33943,38 @@ for (const id in Tour.countries) {
     Atlas.applyTiles(th, key, { ground: 'ground' });
   }
 }
+/* Seamless atlas floors. Every floor tile is cached in its own canvas, clipped exactly to its square; at the
+   fractional scales a phone uses, the anti-aliased edges of two neighbours each cover only part of the shared
+   pixel, so a faint line of background shows between every pair of tiles (most visible on dark floors such as
+   2-4's reef). Each atlas-cut body and cap tile therefore paints 1 px past every side that has a neighbouring tile
+   (the overlap lands in the tile cache's padding), but never past an open edge, which keeps its outline and its
+   rounded corners. Applies to every theme whose floor comes from an atlas, Mexico's included. */
+const BLEED = 1;
+const seamless = th => {
+  const G = th.ground;
+  if (!G || G.seamless || typeof G.paint !== 'function' || typeof G.paintCap !== 'function') return;
+  const paint = G.paint, cap = G.paintCap;
+  th.ground = Object.assign({}, G, {
+    seamless: true,
+    paint(ctx, rng, s) {
+      const round = (s.top && (s.left || s.right)) || (s.bottom && (s.left || s.right));
+      if (round) return paint.call(this, ctx, rng, s);
+      // leave paintGround's clip (one save level), paint the tile stretched over its closed sides, re-open a level
+      const x0 = s.left ? 0 : -BLEED, x1 = s.right ? TS : TS + BLEED, y0 = s.top ? 0 : -BLEED, y1 = s.bottom ? TS : TS + BLEED;
+      ctx.restore(); ctx.save();
+      ctx.translate(x0, y0); ctx.scale((x1 - x0) / TS, (y1 - y0) / TS);
+      paint.call(this, ctx, rng, s);
+      ctx.restore(); ctx.save();
+    },
+    paintCap(ctx, cx0, cx1, rng, left, right) {
+      const x0 = left ? 0 : -BLEED, x1 = right ? TS : TS + BLEED;
+      ctx.save(); ctx.translate(x0, 0); ctx.scale((x1 - x0) / TS, (TS + BLEED) / TS);
+      cap.call(this, ctx, cx0, cx1, rng, left, right);
+      ctx.restore();
+    }
+  });
+};
+for (const key in THEMES) { const th = THEMES[key]; if (th && th.atlas && INDEX.has(th.atlas)) seamless(th); }
 })();
 
 /* ---- 99_main.js ---- */
