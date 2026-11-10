@@ -219,6 +219,107 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       await shot(`obj-${n}.png`);
     }
   });
+  // the behaviour library (§4.2): a lab critter per behaviour, each scripted through its tell, attack and weak moment
+  await run('behave', async () => {
+    await page.evaluate(() => {
+      const TT = window.BRADY_TOUR, TYPES = window.BRADY_TYPES;
+      const PAL = ['#ff6a5a', '#ffb83a', '#7ad84a', '#3ac8d8', '#8a6aff', '#ff6ab8', '#e8e070', '#5ae0a8', '#ff8a3a', '#6ab0ff'];
+      // a round critter: body, belly, eyes that widen in a tell, little feet; flyers get wings
+      const TAU = Math.PI * 2;
+      const shade = (hex, a) => { const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(a >= 0 ? v + (255 - v) * a : v * (1 + a))); return '#' + c.map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join(''); };
+      const critter = (col, fly) => (ctx, e, x, y, mode, t) => {
+        const r = Math.min(e.w, e.h) * 0.55, cy = fly ? y : y - r, tell = /tell|aim|puff|stack|flip|grab|reveal|wake/.test(mode);
+        if (fly) { ctx.fillStyle = shade(col, 0.3); for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(x + s * r * 0.9, cy - r * 0.2 + Math.sin(t * 22) * 3, r * 0.7, r * 0.3, s * 0.5, 0, TAU); ctx.fill(); } }
+        const g = ctx.createRadialGradient(x - r * 0.35, cy - r * 0.4, r * 0.1, x, cy, r); g.addColorStop(0, shade(col, 0.35)); g.addColorStop(1, shade(col, -0.15));
+        ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, cy, r * (mode === 'big' ? 1.1 : 1), r * 0.92, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(x, cy + r * 0.35, r * 0.6, r * 0.38, 0, 0, TAU); ctx.fill();
+        TT.TourKit.eyes(ctx, x + (e.dir || 1) * r * 0.25, cy - r * 0.25, e.dir || 1, r * 0.3, r * (tell ? 0.3 : 0.22), /chase|pounce|dart|lash|inhale|breathe/.test(mode));
+        if (!fly) TT.TourKit.feet(ctx, x, y, t, shade(col, -0.35), r * 0.45, 4, /idle|hidden|statue|sleep|crouch|disguise/.test(mode));
+      };
+      const B = ['splitter', 'regrower', 'camouflage', 'burrower', 'trailLayer', 'saltSneezer', 'inhaleBlast', 'ceilingDrop', 'wallCrawl', 'inflater', 'pouncer', 'itemThief', 'timeSlow', 'curlShield', 'mimic', 'echo', 'stacker', 'boomerang', 'swarm', 'platEater', 'alarmCaller', 'frostBreath', 'lightFrozen', 'inkBlot', 'tongue', 'pusher', 'sleeper', 'blinker'];
+      B.forEach((b, k) => { TYPES['lab_' + b] = TT.TourEnemy.make({ behavior: b, w: 24, h: 24, speed: 1, art: critter(PAL[k % PAL.length]), child: 'lab_child', n: b === 'swarm' ? 5 : 3 }); });
+      TYPES.lab_child = TT.TourEnemy.make({ behavior: 'hop', w: 14, h: 14, speed: 1.2, hopV: 7, hopEvery: 0.6, art: critter('#fff4c0') });
+      TYPES.lab_sleeper2 = TT.TourEnemy.make({ behavior: 'sleeper', base: 'walk', w: 24, h: 24, speed: 1, art: critter('#9a8aff') });
+      TYPES.lab_grabber = TT.TourFlyer.make({ behavior: 'grabber', w: 30, h: 20, speed: 1, art: critter('#f4f4f4', true) });
+      TYPES.lab_hoverDart = TT.TourFlyer.make({ behavior: 'hoverDart', w: 22, h: 18, speed: 1, art: critter('#3ae8c8', true) });
+      TYPES.lab_swarmFly = TT.TourFlyer.make({ behavior: 'swarm', n: 5, w: 20, h: 14, speed: 1.2, harmless: true, art: critter('#5a6a8a', true) });
+    });
+    const r = await page.evaluate(() => {
+      const out = {}, TT = window.BRADY_TOUR;
+      const hall = () => { lab('levels.hall'); const g = S(), p = P(); p.invuln = 999; for (const e of g.entities) if (e.enemy) e.remove = true; sim(0.05); return [g, p]; };
+      const put = (g, type, tx, ty, props) => { const C = window.BRADY_TYPES[type]; const e = new C(g, Object.assign({ x: tx * 32 + 16, y: (ty + 1) * 32, dir: -1 }, props || {})); g.spawn(e); return e; };
+      const watch = (e, sec, step) => { const seen = []; for (let k = 0; k < sec / 0.05; k++) { sim(0.05); const s = e.bst || e.mode; if (seen[seen.length - 1] !== s) seen.push(s); if (step) step(k); } return seen; };
+      const at = (p, tx) => { p.x = tx * 32 + 16 - p.w / 2; p.y = 10 * 32 + 32 - p.h; p.vx = 0; p.vy = 0; };
+      { const [g, p] = hall(); const e = put(g, 'lab_splitter', 20, 10); at(p, 20); p.y -= 90; sim(0.6); out.splitter = { kids: g.entities.filter(o => o.s && o.s.child).length }; }
+      { const [g, p] = hall(); const e = put(g, 'lab_regrower', 20, 10); e.vx = 0; at(p, 20); p.y -= 90; for (let k = 0; k < 40 && !e.tiny; k++) sim(0.02); at(p, 5); out.regrower = watch(e, 4.5); }
+      { const [g, p] = hall(); const e = put(g, 'lab_camouflage', 30, 10); at(p, 5); out.camouflage = watch(e, 5); }
+      { const [g, p] = hall(); const e = put(g, 'lab_burrower', 26, 10); at(p, 24); out.burrower = watch(e, 6); }
+      { const [g, p] = hall(); const e = put(g, 'lab_trailLayer', 20, 10); at(p, 5); sim(3); out.trailLayer = { trails: (g.area.trails || []).length }; }
+      { const [g, p] = hall(); const e = put(g, 'lab_saltSneezer', 25, 10); at(p, 5); out.saltSneezer = watch(e, 4.5); out.saltPlat = g.entities.some(o => o.constructor.name === 'TourSaltPlat'); }
+      { const [g, p] = hall(); const e = put(g, 'lab_inhaleBlast', 22, 10); e.cool = 0; at(p, 18); out.inhaleBlast = watch(e, 4.5); }
+      { const [g, p] = hall(); const e = put(g, 'lab_ceilingDrop', 20, 5); at(p, 20); out.ceilingDrop = watch(e, 4.5, k => { if (k === 14) at(p, 26); }); }
+      { const [g, p] = hall(); const e = put(g, 'lab_wallCrawl', 4, 10, { dir: -1 }); at(p, 12); let sides = new Set(); for (let k = 0; k < 260; k++) { sim(0.05); sides.add(e.side); } out.wallCrawl = { sides: [...sides] }; }
+      { const [g, p] = hall(); const e = put(g, 'lab_inflater', 22, 10); at(p, 20); out.inflater = watch(e, 5); }
+      { const [g, p] = hall(); const e = put(g, 'lab_pouncer', 25, 10); e.cool = 0; at(p, 21); out.pouncer = watch(e, 3.5); }
+      { const [g, p] = hall(); p.collect('gear:kazoo'); const e = put(g, 'lab_itemThief', 24, 10); at(p, 20); out.itemThief = watch(e, 3); out.stolen = !p.hands; }
+      { const [g, p] = hall(); const e = put(g, 'lab_timeSlow', 22, 10); at(p, 20); let slowed = false; out.timeSlow = watch(e, 8, () => { if (p.slowT > 0) slowed = true; }); out.slowed = slowed; }
+      { const [g, p] = hall(); const e = put(g, 'lab_curlShield', 20, 10); e.vx = 0; at(p, 21); p.y -= 64; p.vy = -2; out.curlShield = watch(e, 2.5); }
+      { const [g, p] = hall(); const e = put(g, 'lab_mimic', 20, 10); at(p, 30); sim(0.3); at(p, 21); out.mimic = watch(e, 1.5); }
+      { const [g, p] = hall(); const e = put(g, 'lab_echo', 10, 10); at(p, 10); sim(0.5); for (let k = 0; k < 30; k++) sim(0.05, { right: true }); out.echo = { on: !!e.on, behind: Math.round(p.cx - e.cx) }; }
+      { const [g, p] = hall(); const e = put(g, 'lab_stacker', 26, 10); e.cool = 0; at(p, 21); out.stacker = watch(e, 3.5); }
+      { const [g, p] = hall(); const e = put(g, 'lab_boomerang', 26, 10); at(p, 20); let shot = false; out.boomerang = watch(e, 4, () => { if (g.entities.some(o => o.constructor.name === 'TourBoomerang')) shot = true; }); out.boomShot = shot; }
+      { const [g, p] = hall(); const e = put(g, 'lab_swarm', 26, 10); at(p, 5); sim(1); out.swarm = { followers: g.entities.filter(o => o.constructor.name === 'TourSwarmling').length }; }
+      { const [g, p] = hall(); const e = put(g, 'lab_platEater', 30, 3); at(p, 5); sim(4); out.platEater = { eaten: g.entities.filter(o => o.constructor.name === 'TourRegrow').length }; }
+      { const [g, p] = hall(); const a = put(g, 'lab_alarmCaller', 25, 10, { dir: -1 }); const sl = put(g, 'lab_sleeper2', 35, 10); at(p, 22); out.alarm = watch(a, 2); out.woke = sl.bst; }
+      { const [g, p] = hall(); const e = put(g, 'lab_frostBreath', 24, 10); e.cool = 0; at(p, 21); let frozen = false; out.frostBreath = watch(e, 3.5, () => { if (p.frozenT > 0) frozen = true; }); out.frozen = frozen; }
+      { const [g, p] = hall(); const e = put(g, 'lab_lightFrozen', 36, 10); at(p, 5); sim(0.5); const far = e.bst; at(p, Math.floor(e.cx / 32) - 2); sim(0.3); out.lightFrozen = { far, near: e.bst }; }
+      { const [g, p] = hall(); const e = put(g, 'lab_inkBlot', 23, 10); e.cool = 0; at(p, 20); out.inkBlot = watch(e, 1.5); out.blots = (g.inkBlots || []).length; }
+      { const [g, p] = hall(); g.picks = 20; const e = put(g, 'lab_tongue', 23, 10); e.cool = 0; at(p, 20); out.tongue = watch(e, 1.5); out.coins = g.picks; }
+      { const [g, p] = hall(); const e = put(g, 'lab_pusher', 30, 10); at(p, 10); sim(3); out.pusher = { ball: !!e.ball, scale: e.ball ? +e.ball.scale.toFixed(2) : 0 }; }
+      { const [g, p] = hall(); const e = put(g, 'lab_sleeper', 22, 10); at(p, 10); sim(1); const still = e.bst; for (let k = 0; k < 34 && e.bst === 'sleep'; k++) sim(0.05, { right: true, action: true }); out.sleeper = { still, then: e.bst }; }
+      { const [g, p] = hall(); const e = put(g, 'lab_blinker', 30, 10); at(p, 15); const x0 = e.cx; out.blinker = watch(e, 4); out.closer = Math.abs(e.cx - p.cx) < Math.abs(x0 - p.cx); }
+      { const [g, p] = hall(); const e = put(g, 'lab_hoverDart', 24, 6); e.cool = 0; at(p, 20); out.hoverDart = watch(e, 3.5); }
+      { const [g, p] = hall(); const e = put(g, 'lab_grabber', 20, 5); at(p, 20); out.grabber = watch(e, 6, k => { if (k === 30) {} }); }
+      return out;
+    });
+    const has = (seq, ...want) => { let i = 0; for (const s of seq || []) if (s === want[i]) i++; return i === want.length; };
+    check('splitter: a stomp bursts it into children', r.splitter.kids === 3, r.splitter);
+    check('regrower: stomped tiny, flashes, regrows', has(r.regrower, 'tiny', 'regrow', 'walk'), r.regrower);
+    check('camouflage: hidden, then shows', has(r.camouflage, 'hidden', 'show'), r.camouflage);
+    check('burrower: under, tell, pop, exposed, dig', has(r.burrower, 'under', 'tell', 'pop', 'exposed', 'dig'), r.burrower);
+    check('trail layer: lays a trail', r.trailLayer.trails > 2, r.trailLayer);
+    check('salt sneezer: tell, sneeze, a salt platform', has(r.saltSneezer, 'tell', 'sneeze') && r.saltPlat, r.saltSneezer);
+    check('inhale blast: tell, inhale, blast, gasp', has(r.inhaleBlast, 'tell', 'inhale', 'blast', 'gasp'), r.inhaleBlast);
+    check('ceiling drop: tell, drop, stuck, climb', has(r.ceilingDrop, 'tell', 'drop', 'stuck', 'climb'), r.ceilingDrop);
+    check('wall crawl: floor, then the wall, then the ceiling', r.wallCrawl.sides.includes('wall') && r.wallCrawl.sides.includes('ceil'), r.wallCrawl);
+    check('inflater: puff, big, deflate', has(r.inflater, 'puff', 'big', 'deflate'), r.inflater);
+    check('pouncer: tell, pounce, land', has(r.pouncer, 'tell', 'pounce', 'land'), r.pouncer);
+    check('item thief: grabs the HANDS item and flees', has(r.itemThief, 'grab', 'flee') && r.stolen, r.itemThief);
+    check('time slow: flip, field (Brady slowed)', has(r.timeSlow, 'flip', 'field') && r.slowed, r.timeSlow);
+    check('curl shield: curl, ball, uncurl', has(r.curlShield, 'curl', 'ball', 'uncurl'), r.curlShield);
+    check('mimic: disguise, reveal, chase', has(r.mimic, 'disguise', 'reveal', 'chase') || has(r.mimic, 'reveal', 'chase'), r.mimic);
+    check('echo: a copy follows behind', r.echo.on && r.echo.behind > 20, r.echo);
+    check('stacker: stack, topple, stun', has(r.stacker, 'stack', 'topple', 'stun'), r.stacker);
+    check('boomerang: tell, throw (a ride-able projectile)', has(r.boomerang, 'tell', 'throw') && r.boomShot, r.boomerang);
+    check('swarm: a leader and five followers', r.swarm.followers === 5, r.swarm);
+    check('plat eater: eats one-way tiles that regrow', r.platEater.eaten >= 1, r.platEater);
+    check('alarm caller: tell, call, the sleeper wakes', has(r.alarm, 'tell', 'call') && r.woke !== 'sleep', { alarm: r.alarm, woke: r.woke });
+    check('frost breath: tell, breathe (Brady frozen), pant', has(r.frostBreath, 'tell', 'breathe', 'pant') && r.frozen, r.frostBreath);
+    check('light frozen: walks in the dark, a statue in the light', r.lightFrozen.far !== 'statue' && r.lightFrozen.near === 'statue', r.lightFrozen);
+    check('ink blot: tell, squirt (a blot on the view)', has(r.inkBlot, 'tell', 'squirt') && r.blots === 1, r.inkBlot);
+    check('tongue: tell, lash (takes coins)', has(r.tongue, 'tell', 'lash') && r.coins < 20, { seq: r.tongue, coins: r.coins });
+    check('pusher: rolls a growing ball', r.pusher.ball && r.pusher.scale > 1.05, r.pusher);
+    check('sleeper: asleep until Brady runs close', r.sleeper.still === 'sleep' && r.sleeper.then !== 'sleep', r.sleeper);
+    check('blinker: fade, gone, appear closer', has(r.blinker, 'fade', 'gone', 'appear') && r.closer, r.blinker);
+    check('hover dart: aim, dart, recover', has(r.hoverDart, 'aim', 'dart', 'recover'), r.hoverDart);
+    check('grabber: tell, swoop, carry, rest', has(r.grabber, 'tell', 'swoop', 'carry'), r.grabber);
+    // pictures of the tells and attacks
+    const pics = [['inhaleBlast', 22, 10, 18, 1.0], ['saltSneezer', 25, 10, 5, 3.2], ['burrower', 26, 10, 20, 2.5], ['frostBreath', 24, 10, 21, 1.1], ['stacker', 26, 10, 21, 1.0], ['pouncer', 25, 10, 21, 0.8], ['tongue', 23, 10, 20, 0.7], ['inflater', 22, 10, 20, 1.2], ['boomerang', 26, 10, 20, 3.0], ['camouflage', 30, 10, 26, 1.0], ['mimic', 24, 10, 30, 0.3], ['blinker', 30, 10, 15, 2.9], ['echo', 10, 10, 10, 1.6], ['hoverDart', 24, 6, 20, 0.4], ['trailLayer', 20, 10, 5, 2.5], ['swarm', 26, 10, 18, 1.0], ['sleeper', 22, 10, 18, 0.5], ['regrower', 20, 10, 5, 1.0], ['grabber', 20, 5, 20, 1.3], ['ceilingDrop', 20, 5, 20, 0.25]];
+    for (const [b, tx, ty, px, t] of pics) {
+      await page.evaluate(([b, tx, ty, px, t]) => { lab('levels.hall'); const g = S(), p = P(); p.invuln = 999; for (const e of g.entities) if (e.enemy) e.remove = true; const C = window.BRADY_TYPES['lab_' + b]; const e = new C(g, { x: tx * 32 + 16, y: (ty + 1) * 32, dir: -1 }); e.cool = 0; g.spawn(e); p.x = px * 32 + 16 - p.w / 2; p.y = 11 * 32 - p.h; if (b === 'regrower') { p.x = e.cx - p.w / 2; p.y = e.y - 90; } if (b === 'echo') { for (let k = 0; k < 25; k++) sim(0.05, { right: true }); } sim(t, b === 'echo' ? { right: true } : null); g.camX = Math.max(0, Math.min(g.area.W * 32 - window.BRADY.Game.viewW, (e.cx + p.cx) / 2 - window.BRADY.Game.viewW / 2)); freeze(); }, [b, tx, ty, px, t]);
+      await shot(`behave-${b}.png`);
+    }
+  });
   // the two levels rewritten in the v2 format (§7.5): Mexico 1-1 and Ecuador 2-2
   await run('levels', async () => {
     const lvShot = async (id, name, fn) => {
