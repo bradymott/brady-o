@@ -331,8 +331,8 @@ PALETTE = {
     'iron': '#9aa8c0', 'deck': '#a6b2c8',
     # L1 facades (#f0e4cc), roofs #7a8aa0
     'stone': '#f0e4cc', 'stone2': '#f6ecd8', 'stone3': '#e9dcc2', 'stone_light': '#faf4e6', 'stone_dark': '#d4c6ac',
-    'roof': '#8a98ae', 'roof_dark': '#7a88a0', 'window': '#7484a2', 'window_hi': '#c4cede', 'dormer_win': '#b8c8e0', 'dormer_glow': '#ffd890',
-    'win_glow': '#ffd890', 'win_dark': '#1a2034', 'chimney': '#b87a5a', 'pot': '#d08a6a', 'balcony': '#4a4c5c', 'door': '#5a4636', 'shop_win': '#6a7a98',
+    'roof': '#8a98ae', 'roof_dark': '#7a88a0', 'window': '#8492ae', 'window_hi': '#ccd4e2', 'dormer_win': '#b8c8e0', 'dormer_glow': '#ffd890',
+    'win_glow': '#ffd890', 'win_dark': '#1a2034', 'chimney': '#b87a5a', 'pot': '#d08a6a', 'balcony': '#62647a', 'door': '#5a4636', 'shop_win': '#6a7a98',
     'flower_a': '#ff6a8a', 'flower_b': '#ffd84a', 'flower_c': '#ff9a3a', 'leaf': '#3a8a3a',
     # L2 awnings (#c8b8a0)
     'shop': '#aa9c88', 'shop_dark': '#8e8270', 'cream': '#fff4e8', 'red': '#c8283a', 'blue': '#2a6ac8', 'green': '#2a8a5a', 'orange': '#c87a2a',
