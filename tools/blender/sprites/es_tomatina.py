@@ -471,31 +471,36 @@ def house(B, x, y, w, h, roles, rng, z0=-2.6, floors=None, door=True, balcony=No
     for k in range(int(w / 0.3)):
         B.sphere(roles['roof_dark'], (x - 0.16 + (k + 0.5) * (w + 0.32) / int(w / 0.3), y - 1.0, h + 0.03), 0.07, subdiv=0)
     # windows: rows every 1.1 m from 1.0 up, columns every 0.75 m; shutters as two green leaves with a cream frame
-    floors = floors or max(1, int((h - 0.9) / 1.15))
-    cols = max(1, int((w - 0.4) / 0.78))
+    floors = floors or max(1, int((h - 0.9) / 1.35))
+    cols = max(1, int((w - 0.3) / 1.05))
     for fi in range(floors):
-        wz = 1.25 + fi * 1.15
-        if wz + 0.4 > h - 0.1:
+        wz = 1.35 + fi * 1.35
+        if wz + 0.5 > h - 0.1:
             break
         for ci in range(cols):
-            wx = x + w / 2 + (ci - (cols - 1) / 2) * 0.78
-            if fi == 0 and door and abs(wx - cx) < 0.3 and cols % 2 == 1:
+            wx = x + w / 2 + (ci - (cols - 1) / 2) * 1.05
+            if fi == 0 and door and abs(wx - cx) < 0.4:
                 continue
-            B.box(roles['frame'], (wx, y - 0.82, wz), (0.5, 0.06, 0.62), bevel=0.0)
-            B.box(roles['glass'], (wx, y - 0.84, wz), (0.36, 0.04, 0.5), bevel=0.0)
+            B.box(roles['frame'], (wx, y - 0.82, wz), (0.66, 0.06, 0.84), bevel=0.0)
+            B.box(roles['glass'], (wx, y - 0.84, wz), (0.5, 0.04, 0.7), bevel=0.0)
             if shutters:
                 for s in (-1, 1):
-                    B.box(roles['shutter'], (wx + s * 0.31, y - 0.86, wz), (0.14, 0.05, 0.6), bevel=0.01)
+                    B.box(roles['shutter'], (wx + s * 0.43, y - 0.86, wz), (0.2, 0.05, 0.84), bevel=0.01)
             # flower box under the sill
-            B.box(roles['pot'], (wx, y - 0.9, wz - 0.4), (0.44, 0.16, 0.12), bevel=0.02)
+            B.box(roles['pot'], (wx, y - 0.9, wz - 0.52), (0.6, 0.18, 0.16), bevel=0.02)
             for k in range(3):
-                B.sphere(rng.choice(roles['flowers']), (wx - 0.14 + k * 0.14, y - 0.96, wz - 0.3), 0.075, subdiv=1)
-            B.sphere(roles['leaf'], (wx, y - 0.95, wz - 0.33), 0.2, scale=(1.2, 0.5, 0.4), subdiv=1)
+                B.sphere(rng.choice(roles['flowers']), (wx - 0.19 + k * 0.19, y - 0.98, wz - 0.38), 0.1, subdiv=1)
+            B.sphere(roles['leaf'], (wx, y - 0.96, wz - 0.42), 0.28, scale=(1.2, 0.5, 0.4), subdiv=1)
     if door:
-        B.arch(roles['door'], (cx, y - 0.84, 0.0), 0.8, 1.6, 0.06)
-        B.arch(roles['frame'], (cx, y - 0.82, 0.0), 0.96, 1.72, 0.04)
+        B.arch(roles['door'], (cx, y - 0.84, 0.0), 0.95, 1.9, 0.06)
+        B.arch(roles['frame'], (cx, y - 0.82, 0.0), 1.15, 2.02, 0.04)
+        if 'awning' in roles and rng.random() < 0.5:                 # a striped awning over the door
+            aw = min(w - 0.4, 1.8)
+            B.box(rng.choice(roles['awning']), (cx, y - 1.05, 2.2), (aw, 0.6, 0.08), bevel=0.0, rot=(0.35, 0, 0))
+            for k in range(int(aw / 0.3)):
+                B.slab(roles['frame'], [(-0.1, 0.0), (0.1, 0.0), (0.0, -0.16)], 0.03, at=(cx - aw / 2 + (k + 0.5) * aw / int(aw / 0.3), y - 1.35, 2.1))
     if balcony is not None:
-        bz = 1.25 + balcony * 1.15 - 0.45
+        bz = 1.35 + balcony * 1.35 - 0.5
         B.box(roles['wall'], (cx, y - 1.0, bz), (min(w - 0.5, 2.4), 0.5, 0.1), bevel=0.0)
         for k in range(int(min(w - 0.5, 2.4) / 0.22) + 1):
             bx = cx - min(w - 0.5, 2.4) / 2 + k * 0.22
@@ -503,7 +508,7 @@ def house(B, x, y, w, h, roles, rng, z0=-2.6, floors=None, door=True, balcony=No
         B.box(roles['iron'], (cx, y - 1.22, bz + 0.56), (min(w - 0.5, 2.4) + 0.05, 0.03, 0.04), bevel=0.0)
     for k in range(splats):
         sx = x + rng.uniform(0.3, w - 0.3); sz = rng.uniform(0.3, min(h - 0.4, 2.6))
-        splat(B, sx, y - 0.84, sz, rng.uniform(0.18, 0.34), roles, rng)
+        splat(B, sx, y - 0.84, sz, rng.uniform(0.3, 0.5), roles, rng)
 
 def splat(B, x, y, z, r, roles, rng, drips=True):
     """A tomato splat on a wall: a lumpy red disc (a ring of overlapping discs) with a couple of drips running down."""
@@ -516,9 +521,9 @@ def splat(B, x, y, z, r, roles, rng, drips=True):
     if drips:
         for k in range(2):
             dx = x + rng.uniform(-0.6, 0.6) * r
-            ln = rng.uniform(0.2, 0.5)
-            B.rod(roles['splat'], (dx, y, z), (dx, y, z - ln), 0.03, segs=4)
-            B.sphere(roles['splat'], (dx, y, z - ln), 0.045, subdiv=0)
+            ln = rng.uniform(0.4, 0.9)
+            B.rod(roles['splat'], (dx, y, z), (dx, y, z - ln), 0.045, segs=4)
+            B.sphere(roles['splat'], (dx, y, z - ln), 0.07, subdiv=0)
 
 def orange_tree(B, x, y, h, roles, rng, oranges=True):
     """A lumpy orange tree: a short dark trunk, three overlapping crown blobs, a scatter of orange fruit."""
@@ -764,7 +769,7 @@ PALETTE = {
     'trunk': '#5a3a22', 'crown': '#3a8a3a', 'crown2': '#2f7a32', 'crown_far': '#4a9448', 'crown_far2': '#3f8640',
     'orange': '#ff8a1a', 'crate': '#b8884a', 'crate_dark': '#8a6030',
     # L1 town (#f4f0e8)
-    'wall_a': '#f4f0e8', 'wall_b': '#ebe5d8', 'wall_c': '#f8f2e4', 'wall_d': '#f2e8dc', 'street': '#dcd4c4', 'kerb': '#c8bea8',
+    'wall_a': '#f4f0e8', 'wall_b': '#f0e0d4', 'wall_c': '#f8f2e4', 'wall_d': '#f6ecc4', 'street': '#dcd4c4', 'kerb': '#c8bea8',
     'roof': '#c8603a', 'roof_dark': '#a84a2c', 'shutter': '#2a7a4a', 'frame': '#fffaf0', 'glass': '#9ab8c8', 'door': '#6a4a30',
     'iron': '#2a2a30', 'pot': '#b86a3a', 'leaf': '#3a8a3a',
     'fl_pink': '#ff5a8a', 'fl_yellow': '#ffd23a', 'fl_blue': '#3ac8ff', 'fl_violet': '#b86aff', 'fl_orange': '#ff8a2a',
@@ -778,25 +783,26 @@ TREE_ROLES = {'trunk': 'trunk', 'crown': 'crown', 'crown2': 'crown2', 'orange': 
 FAR_TREE_ROLES = dict(TREE_ROLES, crown='crown_far', crown2='crown_far2')
 HOUSE_ROLES = {'roof': 'roof', 'roof_dark': 'roof_dark', 'shutter': 'shutter', 'frame': 'frame', 'glass': 'glass', 'door': 'door',
                'iron': 'iron', 'pot': 'pot', 'leaf': 'leaf', 'flowers': ['fl_pink', 'fl_yellow', 'fl_blue', 'fl_violet', 'fl_orange'],
-               'splat': 'splat', 'splat_dark': 'splat_dark', 'string': 'string', 'flags': ['fl_pink', 'fl_yellow', 'fl_blue', 'fl_violet', 'fl_orange']}
+               'splat': 'splat', 'splat_dark': 'splat_dark', 'string': 'string', 'flags': ['fl_pink', 'fl_yellow', 'fl_blue', 'fl_violet', 'fl_orange'],
+               'awning': ['fl_pink', 'fl_blue', 'fl_orange', 'shutter']}
 
 def build_L0(rng):
     """The grove: a pale green ridge behind, a dark grove floor, a back row of smaller trees, a front row of big
     lumpy orange trees, crates of oranges and a dirt path."""
     L = 'L0'
-    ridge_slab(TH, L, 'L0_ridge', periodic_fn(rng, 1.6, 3.2, 3), 'ridge', y=5.0, depth=1.0, zb=-2.5)
-    ridge_slab(TH, L, 'L0_ridge2', periodic_fn(rng, 0.9, 2.0, 4), 'ridge2', y=4.2, depth=0.8, zb=-2.5)
+    ridge_slab(TH, L, 'L0_ridge', periodic_fn(rng, 3.0, 5.2, 3), 'ridge', y=5.0, depth=1.0, zb=-2.5)
+    ridge_slab(TH, L, 'L0_ridge2', periodic_fn(rng, 1.8, 3.4, 4), 'ridge2', y=4.2, depth=0.8, zb=-2.5)
     fill_below(TH, L, 'floor', top=0.25, depth=3.0, y=3.0)
     Builder('L0_path', L, TH).box('path', (P / 2, 1.2, 0.08), (P + 2 * OVER, 1.2, 0.16), bevel=0.0).done(period=None)
     B = Builder('L0_back_trees', L, TH)
     for x in jittered(rng, 14, 0.3):
-        h = rng.uniform(2.0, 2.6)
+        h = rng.uniform(2.8, 3.6)
         for dx in wraps(x, h * 0.6):
             orange_tree(B, x + dx, rng.uniform(2.4, 3.2), h, FAR_TREE_ROLES, rng)
     B.done(period=None)
     B = Builder('L0_front_trees', L, TH)
     for x in jittered(rng, 11, 0.3):
-        h = rng.uniform(2.6, 3.4)
+        h = rng.uniform(3.4, 4.4)
         for dx in wraps(x, h * 0.6):
             orange_tree(B, x + dx, rng.uniform(-0.3, 0.6), h, TREE_ROLES, rng)
     B.done(period=None)
@@ -824,10 +830,10 @@ def build_L1(rng):
     B = Builder('L1_houses', L, TH)
     truck_at = rng.randrange(n)
     for i, w in enumerate(ws):
-        h = rng.uniform(3.0, 5.2)
+        h = rng.choice([2.6, 3.0, 3.9, 4.3, 5.2]) + rng.uniform(-0.15, 0.15)
         y = rng.choice([0.0, 0.35, 0.7])
         roles = dict(HOUSE_ROLES, wall=walls[i % 4])
-        balcony = 1 if (h > 3.6 and rng.random() < 0.5) else None
+        balcony = 1 if (h > 3.8 and rng.random() < 0.5) else None
         house(B, x, y, w, h, roles, rng, balcony=balcony, splats=rng.randint(1, 3), door=(i != truck_at))
         # bunting from this roof to the next (the last string wraps to the first house at x + P)
         nx = x + w

@@ -10,8 +10,10 @@
 #   gull        a smug beach gull with a stolen ring biscuit in its beak                    fly(t) swoop stun ko
 #   brigadeiro  a chocolate truffle covered in carnival sprinkles, hopping in its paper cup  walk(t) hop stun flat ko
 #   pandeiro    a tambourine that rolls on its rim, jingles spinning, face on the skin       walk(t) stun flat ko
-#   jaguar      a rosetted jaguar that charges; 2 hp (hurt: bandage, bump, tongue out)      walk(t) hurt_walk(t) notice charge stun flat ko
+#   coati       a ringed-tail coin thief (custom class BrCoati), tail up like a flag         walk(t) flee(t: gallop) stun flat ko
+#   jaguar      a rosetted jaguar that charges; 2 hp (hurt_walk modelled, not rendered)    walk(t) notice charge stun flat ko
 #   piranha     a deep-bodied silver piranha with a red belly and a mouthful of teeth       up(t) down(t) ko
+#   toucanito   a little black toucan with a big orange beak: O Tucanao's flock (boss minion)  fly(t) swoop stun ko
 #   coin        PAO DE QUEIJO: a golden cheese bun with pale cracks                          spin(t: rotation about Z)
 #   star        GOLDEN TOUCAN: a chubby gold toucan with a huge beak                         idle(t: hover + flutter)
 #   qblock      Brazil's item block: a carnival feather box (gold frame, gold star, fan of feathers)  idle(t: sway)
@@ -35,15 +37,17 @@ TAU = math.tau
 PX = 28.1
 SCRATCH = '/private/tmp/claude-501/-Users-bradymott-brady-o/f5bf6cf3-6fc7-437d-a9b3-6005c5b7ac2b/scratchpad/bren'
 
-KINDS = ['crab', 'coconut', 'gull', 'brigadeiro', 'pandeiro', 'jaguar', 'piranha', 'coin', 'star', 'qblock', 'used']
+KINDS = ['crab', 'coconut', 'gull', 'brigadeiro', 'pandeiro', 'coati', 'jaguar', 'piranha', 'toucanito', 'coin', 'star', 'qblock', 'used']
 POSES = {
     'crab': ['walk', 'stun', 'flat', 'ko'],
     'coconut': ['walk', 'curl', 'roll', 'stun', 'flat', 'ko'],
     'gull': ['fly', 'swoop', 'stun', 'ko'],
     'brigadeiro': ['walk', 'hop', 'stun', 'flat', 'ko'],
     'pandeiro': ['walk', 'stun', 'flat', 'ko'],
-    'jaguar': ['walk', 'hurt_walk', 'notice', 'charge', 'stun', 'flat', 'ko'],
+    'coati': ['walk', 'flee', 'stun', 'flat', 'ko'],
+    'jaguar': ['walk', 'notice', 'charge', 'stun', 'flat', 'ko'],      # (hurt_walk is modelled but the game never asks for it)
     'piranha': ['up', 'down', 'ko'],
+    'toucanito': ['fly', 'swoop', 'stun', 'ko'],
     'coin': ['spin'],
     'star': ['idle'],
     'qblock': ['idle'],
@@ -52,13 +56,17 @@ POSES = {
 # poses whose t parameter is a 0..1 cycle phase
 CYCLES = {('crab', 'walk'), ('coconut', 'walk'), ('coconut', 'roll'), ('gull', 'fly'), ('brigadeiro', 'walk'),
           ('pandeiro', 'walk'), ('jaguar', 'walk'), ('jaguar', 'hurt_walk'), ('piranha', 'up'), ('piranha', 'down'),
-          ('coin', 'spin'), ('star', 'idle'), ('qblock', 'idle')}
-ORIGIN = {'crab': 'feet', 'coconut': 'feet', 'gull': 'centre', 'brigadeiro': 'feet', 'pandeiro': 'feet',
+          ('coin', 'spin'), ('star', 'idle'), ('qblock', 'idle'), ('coati', 'walk'), ('coati', 'flee'), ('toucanito', 'fly')}
+# render_country.py frame counts that differ from its defaults: the item blocks are drawn from frame 000 only; the
+# coati's 'flee' is a quick gallop
+FRAMES = {('qblock', 'idle'): (1, 1), ('used', 'idle'): (1, 1), ('coati', 'walk'): (8, 10), ('coati', 'flee'): (8, 18)}
+ORIGIN = {'crab': 'feet', 'coconut': 'feet', 'coati': 'feet', 'toucanito': 'centre', 'gull': 'centre', 'brigadeiro': 'feet', 'pandeiro': 'feet',
           'jaguar': 'feet', 'piranha': 'centre', 'coin': 'centre', 'star': 'centre', 'qblock': 'centre', 'used': 'centre'}
 # nominal height of the feet-origin kinds (hitbox height / 28.1)
-HEIGHT = {'crab': 16 / PX, 'coconut': 22 / PX, 'brigadeiro': 22 / PX, 'pandeiro': 26 / PX, 'jaguar': 26 / PX}
+# (the coati's frame takes 22 px, not its 18 px hitbox, to fit the tail it holds up like a flag)
+HEIGHT = {'coati': 22 / PX, 'crab': 16 / PX, 'coconut': 22 / PX, 'brigadeiro': 22 / PX, 'pandeiro': 26 / PX, 'jaguar': 26 / PX}
 # nominal size of the centre-origin kinds; the renderer reads SIZE for every kind, so the feet kinds repeat HEIGHT here
-SIZE = {'gull': 14 / PX, 'piranha': 18 / PX, 'coin': 17 / PX, 'star': 24 / PX, 'qblock': 32 / PX, 'used': 32 / PX}
+SIZE = {'toucanito': 26 / PX, 'gull': 14 / PX, 'piranha': 18 / PX, 'coin': 17 / PX, 'star': 24 / PX, 'qblock': 32 / PX, 'used': 32 / PX}
 SIZE.update(HEIGHT)
 
 CARN = ['#ff4a4a', '#ff9a2a', '#ffe02a', '#4ad84a', '#3a8aff', '#8a4aff']
@@ -87,6 +95,11 @@ COLORS = {
     'qblock_paper': '#e8408a', 'qblock_gold': '#ffd23a', 'qblock_quill': '#f8f0e0',
     'qblock_f_red': '#ff4a4a', 'qblock_f_orange': '#ff9a2a', 'qblock_f_yellow': '#ffe02a', 'qblock_f_green': '#4ad84a',
     'qblock_f_blue': '#3a8aff',
+    'coati_fur': '#a8622e', 'coati_fur_dark': '#5a3418', 'coati_cream': '#f2dcb0', 'coati_nose': '#2e1c14',
+    'coati_eye_white': '#ffffff', 'coati_pupil': '#1a1020', 'coati_mouth': '#4a2014',
+    'toucanito_body': '#1a1a24', 'toucanito_wing': '#2e2e40', 'toucanito_bib': '#fff4c8', 'toucanito_under': '#ff3d3d',
+    'toucanito_beak': '#ff8a2a', 'toucanito_beak_top': '#ffd23a', 'toucanito_beak_tip': '#2a1a1a', 'toucanito_eye_ring': '#3a8aff',
+    'toucanito_leg': '#5a7ad8', 'toucanito_eye_white': '#ffffff', 'toucanito_pupil': '#1a1020',
     'used_card': '#a07890', 'used_rim': '#7a5a6a', 'used_quill': '#c8b8c0',
 }
 
@@ -1176,10 +1189,127 @@ def build_used(b, pose, t, P):
     b.part('lid_band', xf(box_bm((0.5, 0.2, 0.05)), tr(0, -0.05, H * 0.97 / 2 + 0.01)), 'rim', subsurf=0, smooth=False)
 
 
+# ================================================================= coati (custom class BrCoati: steals coins, then flees)
+COATI = {
+    'walk': dict(sx=1.0, sz=1.0, lean=0, lid=0.15, mouth='smile', feet='walk', tail='up'),
+    'flee': dict(sx=1.06, sz=0.93, lean=7, lid=0.4, mouth='grin', feet='walk', tail='back', fast=True),
+    'stun': dict(sx=1.03, sz=0.95, lean=-5, lid=0.5, mouth='wobble', feet='stand', tail='droop', dazed=True),
+    'flat': dict(sx=1.1, sz=0.4, lean=0, lid=1.0, mouth='flat', feet='flat', tail='flat', shut=True),
+    'ko':   dict(sx=1.0, sz=0.95, lean=-8, lid=1.0, mouth='o', feet='limp', tail='droop', shut=True),
+}
+
+
+def ringed_tail(b, path, r0, r1, n=9, mats=('fur_dark', 'cream')):
+    """A tail of n short tube segments along a Catmull-Rom path, alternating ring colours."""
+    pts = [tuple(p) for p in path]
+    for k in range(n):
+        u0, u1 = k / n, (k + 1) / n
+        a, m, c = (Vector(catmull(pts, u)) for u in (u0, (u0 + u1) / 2, u1))
+        ra, rc = lerp(r0, r1, u0), lerp(r0, r1, u1)
+        if k % 2:      # the pale rings sit a touch proud so the bands read at game size
+            ra, rc = ra * 1.1, rc * 1.1
+        b.part('tail%d' % k, tube([a - (m - a) * 0.15, m, c + (c - m) * 0.15], ra, rc, seg=10), mats[k % 2])
+    b.part('tail_tip', sphere(Vector(catmull(pts, 1.0)), r1 * 1.05, 10, 6), mats[(n - 1) % 2], subsurf=1)
+
+
+def build_coati(b, pose, t, P):
+    fast = P.get('fast', False)
+    bc, brad = V(-0.05, 0, 0.36), (0.36, 0.17, 0.17)
+    b.part('body', blob(bc, *brad, seg=24, rows=12), 'fur')
+    b.part('belly', ellipsoid(bc + Z * 0.004, X * brad[0] * 0.97, Y * brad[1] * 1.01, -Z * brad[2] * 1.02, seg=22, rows=6, phi1=math.radians(55)), 'cream')
+    nod = (6 if fast else 4) * math.sin(TAU * t) if pose in ('walk', 'flee') else 0.0
+    MH = b.M @ about(V(0.26, 0, 0.42), rot_y(nod))
+    b.part('neck', tube([V(0.2, 0, 0.4), V(0.32, 0, 0.45)], 0.13, 0.12, seg=14), 'fur', M=MH)
+    hc, hrad = V(0.36, 0, 0.47), (0.15, 0.13, 0.13)
+    b.part('head', blob(hc, *hrad, seg=20, rows=12), 'fur', M=MH)
+    # the long, slightly upturned snout with its dark rubbery tip, cream cheek and brow marks
+    snout = [V(0.44, 0, 0.45), V(0.56, 0, 0.42), V(0.68, 0, 0.42)]
+    b.part('snout', tube(snout, 0.0, seg=12, radii=[0.08, 0.06, 0.04]), 'fur', M=MH)
+    b.part('nose', sphere(V(0.71, 0, 0.43), 0.042, 12, 8), 'nose', M=MH)
+    b.part('muzzle', tube([V(0.45, -0.05, 0.4), V(0.58, -0.035, 0.395)], 0.03, 0.02, seg=8), 'cream', subsurf=1, M=MH)
+    for side, y in (('l', -0.08), ('r', 0.08)):
+        b.part('ear_' + side, ellipsoid(V(0.29, y, 0.6), X * 0.04, Y * 0.045, Z * 0.05, 10, 6), 'fur_dark', M=MH)
+        b.part('ear_in_' + side, ellipsoid(V(0.305, y * 1.05, 0.6), X * 0.02, Y * 0.03, Z * 0.035, 8, 5), 'cream', subsurf=1, M=MH)
+    for side, az in (('r', -0.45), ('l', -1.2)):
+        p, n = on_ellipsoid(hc, hrad, az, 0.22)
+        b.part('mark_' + side, ellipsoid(p - n * 0.005 + Z * 0.045, perp_frame(n)[0] * 0.05, perp_frame(n)[1] * 0.025, n * 0.02, 10, 6), 'cream', subsurf=1, M=MH)
+        b.eye(side, p - n * 0.015, n, 0.055, shut=P.get('shut', False), lid=P['lid'], lid_mat='fur', dazed=P.get('dazed', False),
+              pupil=0.55, look=Vector((0.55, -0.8, 0.0)), M=MH)
+    if P['mouth'] in ('o', 'open'):
+        b.mouth_on(hc, hrad, 'o', -0.35, -0.9, -0.4, M=MH)
+    else:
+        b.mouth_on(hc, hrad, 'grin' if P['mouth'] == 'grin' else P['mouth'], -0.15, -1.1, -0.38, r=0.012, M=MH)
+    # the ringed tail: held up like a flag on the prowl, streaming back when it bolts
+    sway = 0.04 * math.sin(TAU * t)
+    tails = {
+        'up':    [V(-0.36, 0, 0.42), V(-0.5, 0, 0.6), V(-0.52 + sway, 0, 0.84), V(-0.44 + sway * 1.5, 0, 1.02)],
+        'back':  [V(-0.36, 0, 0.42), V(-0.58, 0, 0.5), V(-0.8, 0, 0.58 + sway), V(-0.98, 0, 0.66 + sway)],
+        'droop': [V(-0.36, 0, 0.4), V(-0.52, 0, 0.32), V(-0.66, 0, 0.18), V(-0.72, 0, 0.06)],
+        'flat':  [V(-0.36, 0, 0.36), V(-0.6, 0, 0.3), V(-0.84, 0, 0.26), V(-1.0, 0, 0.24)],
+    }
+    ringed_tail(b, tails[P['tail']], 0.065, 0.04)
+    hips = {'fl': V(0.2, -0.1, 0.27), 'fr': V(0.2, 0.1, 0.27), 'bl': V(-0.28, -0.1, 0.27), 'br': V(-0.28, 0.1, 0.27)}
+    quad_legs(b, P, t, hips, 0.035, 0.045, (0.065, 0.045, 0.035), 'fur_dark', A=0.15 if fast else 0.09, H=0.09 if fast else 0.05)
+
+
+# ================================================================= toucanito (O Tucanao's flock minion)
+TOUCANITO = {
+    'fly':   dict(flap=lambda t: 45 * math.cos(TAU * t), sweep=10, M=lambda t: tr(-0.1, 0, 0.02 * math.sin(TAU * t)), ns=1),
+    'swoop': dict(flap=lambda t: 20, sweep=50, M=lambda t: tr(-0.1, 0, 0) @ rot_y(24), ns=1),
+    'stun':  dict(flap=lambda t: -60, sweep=4, M=lambda t: tr(-0.1, 0, 0) @ rot_y(-8), ns=1, dazed=True),
+    'ko':    dict(flap=lambda t: -68, sweep=10, M=lambda t: tr(-0.1, 0, 0) @ rot_x(180) @ rot_y(-12), ns=-1),
+}
+
+
+def build_toucanito(b, pose, t, P):
+    ns = P['ns']
+    pts = [(0.2, 0.00, 1.0, 1.0), (0.17, 0.1, 1.0, 1.0), (0.05, 0.15, 1.05, 1.0), (-0.1, 0.14, 1.0, 1.0),
+           (-0.22, 0.09, 1.0, 0.85), (-0.3, 0.0, 1.0, 1.0)]
+    sp = Spine([(x, 0.0, 0.0, r, kz, ky) for x, r, kz, ky in pts])
+    b.part('body', sp.mesh(rings=18, seg=18), 'body')
+    hc = V(0.2, 0, 0.1) if pose != 'swoop' else V(0.23, 0, 0.06)
+    head_r = (0.13, 0.12, 0.12)
+    b.part('head', blob(hc, *head_r, seg=18, rows=12), 'body')
+    # the cream bib on the throat and chest, red under the tail
+    b.part('bib', ellipsoid(hc + V(0.04, 0, -0.06), X * 0.11, Y * 0.105, Z * 0.1, 16, 10), 'bib')
+    b.part('undertail', blob((-0.2, 0, -0.08), 0.08, 0.06, 0.05, 12, 8), 'under')
+    # the huge orange beak with a yellow ridge and a dark tip, curving down
+    bd = (X - Z * 0.1).normalized()
+    b0 = hc + V(0.1, 0, 0.0)
+    beak = [b0, b0 + bd * 0.13, b0 + bd * 0.26 - Z * 0.02, b0 + bd * 0.36 - Z * 0.06]
+    b.part('beak', tube(beak, 0.0, seg=14, radii=[0.085, 0.08, 0.055, 0.02]), 'beak')
+    b.part('beak_ridge', tube([p + Z * (0.07 - 0.02 * k) for k, p in enumerate(beak[:3])], 0.0, seg=10, radii=[0.035, 0.03, 0.02]), 'beak_top', subsurf=1)
+    b.part('beak_tip', tube([beak[2] + bd * 0.04, beak[3]], 0.045, 0.02, seg=10), 'beak_tip', subsurf=1)
+    for side, az in (('r', -0.45), ('l', -1.2)):
+        c, n = on_ellipsoid(hc, head_r, az * ns, 0.3)
+        b.part('ring_' + side, torus_bm(c - n * 0.006, n, 0.04, 0.011, seg=14, sides=6), 'eye_ring', subsurf=1)
+        b.eye(side, c - n * 0.012, n, 0.045, shut=pose == 'ko', pupil=0.55, lid=0.45 if pose == 'stun' else 0.1, lid_mat='body',
+              dazed=P.get('dazed', False), look=Vector((0.5, -0.85, -0.1)))
+    flap, sweep = P['flap'](t), P['sweep']
+    for side_name, side in (('l', -1), ('r', 1)):
+        W = wing_frame(V(-0.02, 0.1 * side, 0.08), side, flap, sweep)
+
+        def wing(u, v, W=W):
+            span = 0.36 * u
+            le = 0.1 - 0.1 * u * u
+            chord = 0.24 * (1 - 0.55 * u)
+            return W @ V(le - chord * v, span, -0.02 * u * u)
+        b.part('wing_' + side_name, sheet(wing, 6, 4, lambda u, v: 0.024 - 0.01 * u), 'wing')
+
+    def tail(u, v):
+        return V(-0.27 - 0.2 * u, (v * 2 - 1) * (0.05 + 0.03 * u), 0.02 - 0.03 * u)
+    b.part('tail', sheet(tail, 4, 4, 0.014), 'body')
+    for side_name, side in (('l', -1), ('r', 1)):
+        y = 0.05 * side
+        path = [V(0.0, y, -0.1), V(-0.06, y, -0.16), V(-0.1, y, -0.18)] if pose not in ('stun', 'ko') else [V(0.0, y, -0.1), V(0.02, y, -0.19), V(0.05, y, -0.23)]
+        b.part('leg_' + side_name, tube(path, 0.018, 0.014, seg=8), 'leg')
+        b.part('foot_' + side_name, ellipsoid(path[-1] + X * 0.025, X * 0.04, Y * 0.025, Z * 0.012, 10, 6), 'leg', subsurf=1)
+
+
 # ---------------------------------------------------------------- public API
 FEET_BUILDERS = {'crab': (build_crab, CRAB), 'coconut': (build_coconut, COCONUT), 'brigadeiro': (build_brigadeiro, BRIGADEIRO),
-                 'pandeiro': (build_pandeiro, PANDEIRO), 'jaguar': (build_jaguar, JAGUAR)}
-CENTRE_BUILDERS = {'gull': (build_gull, GULL), 'piranha': (build_piranha, PIRANHA), 'coin': (build_coin, COIN),
+                 'pandeiro': (build_pandeiro, PANDEIRO), 'jaguar': (build_jaguar, JAGUAR), 'coati': (build_coati, COATI)}
+CENTRE_BUILDERS = {'toucanito': (build_toucanito, TOUCANITO), 'gull': (build_gull, GULL), 'piranha': (build_piranha, PIRANHA), 'coin': (build_coin, COIN),
                    'star': (build_star, STAR), 'qblock': (build_qblock, QBLOCK), 'used': (build_used, USED)}
 
 
@@ -1193,7 +1323,7 @@ def build(kind, pose, t=0.0):
         fn, table = FEET_BUILDERS[kind]
         P = dict(table[pose])
         bob = 0.0
-        if pose in ('walk', 'hurt_walk') and kind != 'pandeiro':
+        if pose in ('walk', 'hurt_walk', 'flee') and kind != 'pandeiro':
             bob = 0.012 * (1 + math.sin(2 * TAU * t))
         elif kind == 'pandeiro' and pose == 'walk':
             bob = 0.02 * abs(math.sin(TAU * t * 2.5))

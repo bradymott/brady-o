@@ -16,6 +16,10 @@ function tourFire(g, x, y, o) { const s = new TourShot(g, x, y, o); g.spawn(s); 
    cfg.atlas) once that atlas is in: clips 'kind/<mode>' or single frames 'kind_<mode>_000'; modes without art fall
    back along FALLBACK lists; until the atlas loads the procedural art(...) draws as before. */
 const TourSprite = {
+  /* Art size over the hitbox, anchored at the feet/centre (collision never changes): ART_SCALE.enemy (1.24) for
+     everyone, easing up to 1.3 only for the really tiny ones (longest side under 24 px). Keyed on the LONGEST side so
+     wide, flat enemies are never stretched. */
+  scale(e) { const big = Math.max(e.w, e.h); return big >= 24 ? ART_SCALE.enemy : ART_SCALE.enemy + 0.06 * Math.min(1, (24 - big) / 8); },
   FALLBACK: {
     walk: { walk: ['walk', 'idle'], idle: ['idle', 'walk'], hop: ['hop', 'walk', 'idle'], notice: ['notice', 'idle', 'walk'], charge: ['charge', 'walk'], throw: ['throw', 'idle', 'walk'], curl: ['curl', 'idle', 'walk'], roll: ['roll', 'curl', 'walk'], stun: ['stun', 'idle', 'walk'], flat: ['flat', 'ko', 'idle', 'walk'], ko: ['ko', 'stun', 'idle', 'walk'] },
     fly: { fly: ['fly'], swoop: ['swoop', 'fly'], stun: ['stun', 'fly'], ko: ['ko', 'stun', 'fly'] },
@@ -26,18 +30,30 @@ const TourSprite = {
   atlasOf(e) { const c = e.cfg; if (c.atlas) return c.atlas; const C = e.g && e.g.level && e.g.level.country ? Tour.countries[e.g.level.country] : null; return C ? C.atlas || C.id : null; },
   of(e) { const c = e.cfg; if (!c || !c.sprite || typeof Atlas === 'undefined') return null; const a = this.atlasOf(e); return a && Atlas.has(a) ? a : null; },
   hasFrame(e, mode) { const a = this.of(e); return !!(a && (Atlas.anim(a, e.cfg.sprite + '/' + mode) || Atlas.frame(a, e.cfg.sprite + '_' + mode + '_000'))); },
-  draw(ctx, e, x, y, mode, fallback) {
-    const a = this.of(e); if (!a) return false;
-    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode], o = { scale: ART_SCALE.enemy };
+  /* pick(e, mode, fallback): the atlas clip ('kind/mode') or frame ('kind_mode_000') this enemy would draw for
+     mode, or null when the atlas isn't in or has no art for that kind/mode (then the procedural art draws). */
+  pick(e, mode, fallback) {
+    const a = this.of(e); if (!a) return null;
+    const k = e.cfg.sprite, list = (fallback && fallback[mode]) || [mode];
     for (const m of list) {
-      const id = k + '/' + m;
-      if (Atlas.anim(a, id)) return Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1, o);
-      if (Atlas.frame(a, k + '_' + m + '_000')) return Atlas.draw(ctx, a, k + '_' + m + '_000', x, y, e.dir || 1, o);
+      const id = k + '/' + m; if (Atlas.anim(a, id)) return id;
+      const f = k + '_' + m + '_000'; if (Atlas.frame(a, f)) return f;
     }
-    return false;
+    return null;
+  },
+  /* atlas art has its outline baked in, so only the procedural fallback goes through Ink: decide per frame actually
+     drawn (an atlas can be in yet lack this kind or mode) */
+  inked(ctx, e, mode, fallback) {
+    if (this.pick(e, mode, fallback)) e.drawArt(ctx);
+    else Ink.ent(ctx, e, c => e.drawArt(c), { scale: this.scale(e), extra: e.cfg.inkPad || 0 });  // cfg.inkPad: extra slack for art that reaches far out
+  },
+  draw(ctx, e, x, y, mode, fallback) {
+    const id = this.pick(e, mode, fallback); if (!id) return false;
+    const a = this.of(e), o = { scale: this.scale(e) };
+    return id.indexOf('/') >= 0 ? Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1, o) : Atlas.draw(ctx, a, id, x, y, e.dir || 1, o);
   },
   // procedural art, scaled about its origin point
-  art(ctx, e, x, y, mode) { const k = ART_SCALE.enemy; ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.translate(-x, -y); e.cfg.art(ctx, e, x, y, mode, e.g.t); ctx.restore(); }
+  art(ctx, e, x, y, mode) { const k = this.scale(e); ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.translate(-x, -y); e.cfg.art(ctx, e, x, y, mode, e.g.t); ctx.restore(); }
 };
 
 class TourEnemy extends Walker {
@@ -63,7 +79,7 @@ class TourEnemy extends Walker {
     this.t += dt;
     if (this.knocked) return this.updateKnocked(dt);
     if (this.dead) { this.flatT -= dt; if (this.flatT <= 0) this.remove = true; return; }
-    // slideT > 0: sliding helplessly (Valencia's tomato puddles); a wall knocks it out, a ledge drops it
+    // slideT > 0: sliding helplessly (Spain's tomato puddles); a wall knocks it out, a ledge drops it
     if (this.slideT > 0) { this.slideT -= dt; this.vx = this.dir * 7 * TS; this.mode = 'stun'; this.walk(dt); if (this.hitWall) { this.slideT = 0; this.hit('bump', this); } return; }
     if (this.stunT > 0) { this.stunT -= dt; this.vx = 0; this.mode = 'stun'; this.walk(dt); return; }
     if (this.cool > 0) this.cool -= dt;
@@ -138,7 +154,8 @@ class TourEnemy extends Walker {
     if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.walk)) return;
     if (this.cfg.art) TourSprite.art(ctx, this, x, y, mode);
   }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  get artMode() { return this.knocked ? 'ko' : this.friendT ? 'walk' : this.dead ? 'flat' : this.mode; }
+  draw(ctx) { TourSprite.inked(ctx, this, this.artMode, TourSprite.FALLBACK.walk); }
   drawArt(ctx) {
     if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI + (this.spin || 0)); this.paint(ctx, 0, this.h / 2, 'ko'); ctx.restore(); return; }
     if (this.friendT) { this.drawFriend(ctx, c => this.paint(c, 0, 0, 'walk')); return; }
@@ -192,7 +209,8 @@ class TourFlyer extends Ent {
     if (this.sprite && TourSprite.draw(ctx, this, x, y, mode, TourSprite.FALLBACK.fly)) return;
     TourSprite.art(ctx, this, x, y, mode);
   }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  get artMode() { return this.knocked || this.dead ? 'ko' : this.stunT > 0 ? 'stun' : this.mode; }
+  draw(ctx) { TourSprite.inked(ctx, this, this.artMode, TourSprite.FALLBACK.fly); }
   drawArt(ctx) {
     ctx.save();
     if (this.knocked) { ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI + (this.spin || 0)); this.paint(ctx, 0, 0, 'ko'); ctx.restore(); return; }
@@ -225,7 +243,7 @@ class TourSwimmer extends Ent {
   hit(kind, src) { if (this.dead) return false; if (kind === 'taco') { this.stunT = 2.5; return true; } if (kind === 'stomp') return false; this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead && this.stunT <= 0) p.hurt(this); }
   get sprite() { return TourSprite.of(this); }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { TourSprite.inked(ctx, this, this.knocked ? 'ko' : 'swim', TourSprite.FALLBACK.swim); }
   drawArt(ctx) {
     const mode = this.knocked ? 'ko' : 'swim';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, mode, TourSprite.FALLBACK.swim)) return;
@@ -250,7 +268,7 @@ class TourLeaper extends Ent {
   hit(kind, src) { if (this.dead || this.state === 'wait') return false; if (kind === 'stomp' && this.cfg.stompable) { this.knockOff(1); return true; } if (kind === 'stomp' || kind === 'spin') return this.cfg.fiery && kind === 'spin' ? 'bounce' : false; this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead && this.state !== 'wait') p.hurt(this); }
   get sprite() { return TourSprite.of(this); }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { if (this.state === 'wait' && !this.knocked) return; TourSprite.inked(ctx, this, this.knocked ? 'ko' : this.vy < 0 ? 'up' : 'down', TourSprite.FALLBACK.leap); }
   drawArt(ctx) {
     if (this.state === 'wait' && !this.knocked) return;
     const mode = this.knocked ? 'ko' : this.vy < 0 ? 'up' : 'down';
@@ -274,7 +292,7 @@ class TourFriend extends Ent {
     g.spawn(new TourItem(g, this.cx + (p.cx < this.cx ? -20 : 20), this.y + 6, this.give));
   }
   get sprite() { return TourSprite.of(this); }
-  draw(ctx) { if (this.sprite) this.drawArt(ctx); else Ink.ent(ctx, this, c => this.drawArt(c)); }
+  draw(ctx) { TourSprite.inked(ctx, this, this.given ? 'wave' : 'idle', TourSprite.FALLBACK.friend); }
   drawArt(ctx) {
     const mode = this.given ? 'wave' : 'idle';
     if (this.sprite && TourSprite.draw(ctx, this, this.cx, this.y + this.h, mode, TourSprite.FALLBACK.friend)) return;
@@ -347,3 +365,4 @@ class TourProp extends Ent {
     ctx.restore();
   }
 }
+

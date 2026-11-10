@@ -41,4 +41,36 @@ for (const id in Tour.countries) {
     Atlas.applyTiles(th, key, { ground: 'ground' });
   }
 }
+/* Seamless atlas floors. Every floor tile is cached in its own canvas, clipped exactly to its square; at the
+   fractional scales a phone uses, the anti-aliased edges of two neighbours each cover only part of the shared
+   pixel, so a faint line of background shows between every pair of tiles (most visible on dark floors such as
+   2-4's reef). Each atlas-cut body and cap tile therefore paints 1 px past every side that has a neighbouring tile
+   (the overlap lands in the tile cache's padding), but never past an open edge, which keeps its outline and its
+   rounded corners. Applies to every theme whose floor comes from an atlas, Mexico's included. */
+const BLEED = 1;
+const seamless = th => {
+  const G = th.ground;
+  if (!G || G.seamless || typeof G.paint !== 'function' || typeof G.paintCap !== 'function') return;
+  const paint = G.paint, cap = G.paintCap;
+  th.ground = Object.assign({}, G, {
+    seamless: true,
+    paint(ctx, rng, s) {
+      const round = (s.top && (s.left || s.right)) || (s.bottom && (s.left || s.right));
+      if (round) return paint.call(this, ctx, rng, s);
+      // leave paintGround's clip (one save level), paint the tile stretched over its closed sides, re-open a level
+      const x0 = s.left ? 0 : -BLEED, x1 = s.right ? TS : TS + BLEED, y0 = s.top ? 0 : -BLEED, y1 = s.bottom ? TS : TS + BLEED;
+      ctx.restore(); ctx.save();
+      ctx.translate(x0, y0); ctx.scale((x1 - x0) / TS, (y1 - y0) / TS);
+      paint.call(this, ctx, rng, s);
+      ctx.restore(); ctx.save();
+    },
+    paintCap(ctx, cx0, cx1, rng, left, right) {
+      const x0 = left ? 0 : -BLEED, x1 = right ? TS : TS + BLEED;
+      ctx.save(); ctx.translate(x0, 0); ctx.scale((x1 - x0) / TS, (TS + BLEED) / TS);
+      cap.call(this, ctx, cx0, cx1, rng, left, right);
+      ctx.restore();
+    }
+  });
+};
+for (const key in THEMES) { const th = THEMES[key]; if (th && th.atlas && INDEX.has(th.atlas)) seamless(th); }
 })();

@@ -8,15 +8,15 @@
 
 // Every stop on the tour, in route order. A stop becomes playable when its
 // country file registers it; until then the map shows it "under construction".
-// world: the level-id prefix ("7-3" = Paris, level 3). lon/lat place the pin on the map.
+// world: the level-id prefix ("7-3" = France, level 3). lon/lat place the pin on the map.
 const TOUR_ROUTE = [
   { id: 'mx', world: 1, name: 'Mexico', lon: -99.1, lat: 19.4 },
   { id: 'ec', world: 2, name: 'Ecuador', sub: 'and the Galápagos', lon: -78.5, lat: -0.9 },
   { id: 'br', world: 3, name: 'Brazil', lon: -43.2, lat: -22.9 },
   { id: 'mz', world: 4, name: 'Mozambique', lon: 35.5, lat: -18.6 },
   { id: 'ma', world: 5, name: 'Morocco', lon: -7.0, lat: 31.6 },
-  { id: 'es', world: 6, name: 'Valencia', sub: 'Spain', lon: -0.4, lat: 39.5 },
-  { id: 'fr', world: 7, name: 'Paris', sub: 'France', lon: 2.35, lat: 48.86 },
+  { id: 'es', world: 6, name: 'Spain', lon: -0.4, lat: 39.5 },
+  { id: 'fr', world: 7, name: 'France', lon: 2.35, lat: 48.86 },
   { id: 'nl', world: 8, name: 'Amsterdam', sub: 'the Netherlands', lon: 4.9, lat: 52.37, label: 'up' },
   { id: 'id', world: 9, name: 'Bali', sub: 'Indonesia', lon: 115.2, lat: -8.4 },
   { id: 'vn', world: 10, name: 'Vietnam', lon: 105.8, lat: 18.0 },

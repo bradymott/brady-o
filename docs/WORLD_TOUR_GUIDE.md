@@ -2,7 +2,7 @@
 
 Super Brady-O World is a trip around the world: 12 countries plus two secret lands. Each country is one file, `src/29_tour_<cc>.js`. That file registers the country's theme, enemies, set pieces, boss, music, signature power-up and its five levels.
 
-Built so far: Mexico (`mx`), Ecuador (`ec`), Brazil (`br`), Mozambique (`mz`), Morocco (`ma`), Valencia (`es`), Paris (`fr`), Amsterdam (`nl`) and the two secret lands, Antarctica (`aq`) and World 22 (`w22`), each in `src/29_tour_<cc>.js`. Copy their structure. Still to build: Bali, Vietnam, Japan and Nepal (the finale).
+Built so far: Mexico (`mx`), Ecuador (`ec`), Brazil (`br`), Mozambique (`mz`), Morocco (`ma`), Spain (`es`), France (`fr`), Amsterdam (`nl`) and the two secret lands, Antarctica (`aq`) and World 22 (`w22`), each in `src/29_tour_<cc>.js`. Copy their structure. Still to build: Bali, Vietnam, Japan and Nepal (the finale).
 
 What each built country already uses, so yours can be different:
 
@@ -11,10 +11,10 @@ What each built country already uses, so yours can be different:
 | Mexico | run, ride (boat), swim (cave), climb (rising lava), castle | Taco toss (stun) | El Gran Piñatón: spins into a wall, gets dizzy |
 | Ecuador | run (low-gravity zones), ride (cable car), night (vine swings), swim (open sea, tidal surge), castle (ice) | Booby boots (high jumps, landing shockwave) | El Tortugón: shell too hard; stomp his head while he rears up |
 | Brazil | run (beach), night (beat drums), climb (waterfall), run (wetland rides), castle (turntables) | Football (ricochets) | O Tucanão (flying): dives, beak sticks in the floor, stomp him |
-| Paris | run, auto (river chase), night (rooftops), climb (tower), castle (mirrors) | Mime gloves (invisible walls) | Le Grand Soufflé: puffs up, then collapses |
+| France | run, auto (river chase), night (rooftops), climb (tower), castle (mirrors) | Mime gloves (invisible walls) | Le Grand Soufflé: puffs up, then collapses |
 | Mozambique | run (elephant water jets), auto (stampede), climb (baobab), night (turtle beach), castle (fortress) | Piri-piri chili (10 s of fire breath; burns brick "thorn hedges") | O Eremita (hermit crab): armoured in his shell; stomp him when he scuttles out |
 | Morocco | run (souk rugs), run (Sahara caravan, sandstorm), climb (kasbah, goats in trees), night (night market smoke), castle (riad fountains) | Flying carpet (12 s of free flight) | Djinn of the Teapot (flying): his pot hops, lands and vents; stomp him then |
-| Valencia | run (tomato trucks, pulp), swim (aquarium tunnels), night (City of Arts, beat floor lights), climb (giant falla, rockets), castle (silk exchange) | Tomato fight (lob; splats make enemies slide) | Paellasaurus: too hot while simmering; stomp when it cools (a tomato cools it at once) |
+| Spain | run (tomato trucks, pulp), swim (aquarium tunnels), night (City of Arts, beat floor lights), climb (giant falla, rockets), castle (silk exchange) | Tomato fight (lob; splats make enemies slide) | Paellasaurus: too hot while simmering; stomp when it cools (a tomato cools it at once) |
 | Amsterdam | run (canal hooks, houseboats), run (windmill sails, tulips), auto (drawbridges, trams), night (frozen canals), castle (weigh house) | Dutch bike (fast; bell stuns) | Cheese King: teeters after flinging a wheel (or after the bike bell); stomp his crown |
 
 Tricks the newer countries added (all inside the country file, no engine changes):
@@ -26,7 +26,7 @@ Tricks the newer countries added (all inside the country file, no engine changes
 - **Level options:** `roof: false` removes a castle's ceiling row; `dark: true` turns the lights down.
 - **Path gotcha:** `TourKit.star()` adds to the current path; call `ctx.beginPath()` first.
 - **Flying signature items:** give the power `flight: true` (and a `time`) and Brady steers freely like the LSD flight, without its lasers or grin. Set `p.glideT = 3` just before the time runs out for a soft landing (Morocco's carpet).
-- **Your own slippery floor:** a theme's `iceStyle` can be a function `(ctx, topOpen)` that paints the `T.ICE` tile (Valencia's tomato pulp).
+- **Your own slippery floor:** a theme's `iceStyle` can be a function `(ctx, topOpen)` that paints the `T.ICE` tile (Spain's tomato pulp).
 - **Sliding enemies:** set `e.slideT = seconds` on a `TourEnemy`: it slides helplessly in its direction, a wall knocks it out and a ledge drops it.
 - **Boss reactions to items:** the item calls a brain hook you define (Amsterdam's bell calls `brain.onBell(b)` if present). `noDisc(b)` can also react before refusing damage (Paellasaurus cools when a tomato or flame hits it).
 - **Light shafts:** `rays: '#color'` in a theme draws soft animated sunbeams.
@@ -68,8 +68,8 @@ The world app's module list is in `tools/build.js` (the `world` entry). Your new
 | br | 3 | Brazil | vn | 10 | Vietnam |
 | mz | 4 | Mozambique | jp | 11 | Japan |
 | ma | 5 | Morocco | np | 12 | Nepal (finale) |
-| es | 6 | Valencia | aq | 13 | Antarctica (secret) |
-| fr | 7 | Paris | w22 | 22 | World 22 (secret) |
+| es | 6 | Spain | aq | 13 | Antarctica (secret) |
+| fr | 7 | France | w22 | 22 | World 22 (secret) |
 
 - Level ids are `<world>-<n>`, e.g. `2-3` is Ecuador level 3.
 - A stop shows "coming soon" on the map until its file registers it.
@@ -237,7 +237,7 @@ A theme is a `THEMES` entry. Copy one from Mexico:
 Painter hooks let you draw tiles your own way:
 - `ground.paint(ctx, rng, sides)` and `ground.paintCap(ctx, x0, x1, rng)`
 - `brick.paint(ctx)`, `hard.paint(ctx)`, `semi.paint(ctx, part, x0, x1)`
-- `qblockArt(ctx, th, frame)` and `usedArt(ctx, th)`: the country's item block (Mexico: a paper piñata; Paris: a pâtisserie box). **Never a question-mark block.**
+- `qblockArt(ctx, th, frame)` and `usedArt(ctx, th)`: the country's item block (Mexico: a paper piñata; France: a pâtisserie box). **Never a question-mark block.**
 
 Background painters:
 - They paint a seamless 1024-px-wide strip; `L.base` is the ground line (logical px out of 448).
@@ -267,7 +267,7 @@ Read and write Brady's state through `p`: `p.vx`, `p.vy`, `p.onGround`, `p.facin
 
 ## 9. Music
 - Songs are synthesized. Register new ones with `tracks: { name: {...} }` (or `Sound.addTrack(name, def)`); existing songs can't be replaced.
-- Keep each country's sound inspired by its local instruments (Mexico: brass + strings + plucked guitars; Paris: a musette waltz on the reed accordion, `bpb: 3`).
+- Keep each country's sound inspired by its local instruments (Mexico: brass + strings + plucked guitars; France: a musette waltz on the reed accordion, `bpb: 3`).
 
 Track format:
 
