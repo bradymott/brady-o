@@ -40,7 +40,7 @@ GP = 8 * (32 / PPM)                        # ground period: 8 tiles of 32 px = 9
 GROUND_DEPTH = 3 * (32 / PPM)              # 3 tiles tall: z from 0 down to -3.42 m
 RES = (1024, 444)
 SKY = ['#4a8ad8', '#a8d0f0', '#f4f4f0']
-SCRATCH = '/private/tmp/claude-501/-Users-bradymott-brady-o/f5bf6cf3-6fc7-437d-a9b3-6005c5b7ac2b/scratchpad/nlbg'
+SCRATCH = os.environ.get('SCRATCH', '/private/tmp/claude-501/-Users-bradymott-brady-o/71b2e596-7cb8-425f-a055-e086cc0da06c/scratchpad/nlbg')
 TAU = math.tau
 T = 32 / PPM                               # one floor tile (1.139 m): ground elements never cross a tile edge
 CELL_MARGIN = 0.045                        # mortar kept clear inside every tile edge
@@ -895,7 +895,7 @@ GABLE = ['#7a3a2a', '#3a4a5a', '#5a2a2a', '#2a3a2a', '#8a6a4a', '#4a3a5a']
 PALETTE = {
     # L0 canal houses (#7a3a2a)
     **{f'canals_wall{i}': c for i, c in enumerate(GABLE)},
-    'canals_trim': '#f2ece0', 'canals_glass': '#d8e8f4', 'canals_door': '#1e3a3a', 'canals_step': '#9a9aa2', 'canals_hook': '#2e2e38',
+    'canals_trim': '#dcd4c4', 'canals_glass': '#a4bcd2', 'canals_door': '#1e3a3a', 'canals_step': '#9a9aa2', 'canals_hook': '#2e2e38',
     'canals_pave': '#aeaeb6', 'canals_quay': '#8a4636', 'canals_flower_box': '#6a4a2a',
     'canals_flower_a': '#e8322a', 'canals_flower_b': '#ffd23a', 'canals_flower_c': '#ff6ab8',
     'canals_trunk': '#5a4030', 'canals_leaf': '#4a9a4a', 'canals_leaf2': '#3a8438',
@@ -903,7 +903,7 @@ PALETTE = {
     'canals_water': '#4a7a7a', 'canals_water_light': '#8cbcb6', 'canals_water_dark': '#365e5e',
     'canals_bridge': '#7a4a3a', 'canals_rail': '#f2ece0',
     'canals_hull_a': '#2a5a3a', 'canals_hull_b': '#2a3a6a', 'canals_hull_c': '#6a2a2a',
-    'canals_boat_cabin': '#ece6d4', 'canals_boat_trim': '#f8f4ea', 'canals_boat_glass': '#5ab8e8', 'canals_boat_roof': '#e8322a', 'canals_pot': '#b85a3a',
+    'canals_boat_cabin': '#b8b2a2', 'canals_boat_trim': '#c8c2b2', 'canals_boat_glass': '#5a8aa8', 'canals_boat_roof': '#4a6a66', 'canals_pot': '#b85a3a',
     'canals_bollard': '#2a2a30', 'canals_bike': '#1e1e26', 'canals_bike_hub': '#9a9aa2', 'canals_bike_saddle': '#6a4a2a',
     'canals_duck': '#ffffff', 'canals_beak': '#ff9a1a',
     # ground (brick)

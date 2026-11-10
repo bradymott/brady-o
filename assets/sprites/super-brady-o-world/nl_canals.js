@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("nl_canals", {"scale":2.0,"image":"nl_canals.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1068}},"anims":{},"strips":{"L0":{"w":2048,"h":679,"top":51.5,"x":0,"y":0},"L1":{"w":2048,"h":387,"top":250.5,"x":0,"y":680}}});
