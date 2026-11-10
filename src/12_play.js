@@ -100,6 +100,8 @@ class Weather {
   }
 }
 
+// atlases a theme's background strips come from besides its own (a theme can borrow another atlas's layer for depth)
+function themeLayerAtlases(th) { return th && th.layers ? th.layers.filter(L => L.kind === 'image' && L.atlas && L.atlas !== th.atlas).map(L => L.atlas) : []; }
 class Play {
   constructor(level, opts) {
     opts = opts || {};
@@ -167,7 +169,7 @@ class Play {
     this.entities = this.area.entities;
     this.themeKey = this.area.theme;
     // pre-rendered art for this theme and country (draws procedurally until it arrives)
-    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey]; Atlas.need([th && th.atlas, this.countryAtlas()]); }
+    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey]; Atlas.need([th && th.atlas, this.countryAtlas()].concat(themeLayerAtlases(th))); }
     this.lavaY = this.area.lavaY;
     const keepPower = this.player ? this.player.power : (power || 0);
     this.player = new Player(this, x, y, keepPower);
@@ -177,7 +179,7 @@ class Play {
   }
   countryAtlas() { const C = this.level && this.level.country && typeof Tour !== 'undefined' ? Tour.countries[this.level.country] : null; return C ? C.atlas || (C.sprites ? C.id : null) : null; }
   // every atlas this level can draw from: the country's, and each area's theme
-  atlasNames() { const n = [this.countryAtlas()]; for (const a of this.level.areas || []) { const th = THEMES[a.theme]; if (th && th.atlas) n.push(th.atlas); } return n; }
+  atlasNames() { const n = [this.countryAtlas()]; for (const a of this.level.areas || []) { const th = THEMES[a.theme]; if (th && th.atlas) n.push(th.atlas); n.push(...themeLayerAtlases(th)); } return n; }
   refreshPlatforms() { this.platforms = this.entities.filter(e => (e.isPlatform || e.solidTop) && !e.dead && !(e instanceof Spring)); }
 
   /* ---------- helpers used by entities ---------- */
