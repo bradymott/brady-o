@@ -1,4 +1,4 @@
-// Paris 7-5: Le Grand Soufflé. The oven and the mirrors: stomps bounce off the puff; Brady bumps both wall mirrors
+// France 7-5: Le Grand Soufflé. The oven and the mirrors: stomps bounce off the puff; Brady bumps both wall mirrors
 // from below so they aim at the oven, the oven charges and flashes, and the soufflé is baked if it is in the light.
 module.exports = async ({ page, check, shot }) => {
   const r = await page.evaluate(() => {

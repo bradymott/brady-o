@@ -6,7 +6,7 @@ Read [README.md](README.md) first: owner, ownership rules, appearance rules, dep
 
 ## What exists (on `main`)
 **The game:** a 2D canvas platformer (`src/03`–`src/30`). Super Brady-O flies around the world chasing Baron Bric-a-Brac.
-- **12 countries × 5 levels:** Mexico, Ecuador, Brazil, Mozambique, Morocco, Valencia, Paris, Amsterdam, Bali, Vietnam, Japan and Nepal (the finale).
+- **12 countries × 5 levels:** Mexico, Ecuador, Brazil, Mozambique, Morocco, Spain, France, Amsterdam, Bali, Vietnam, Japan and Nepal (the finale).
 - **2 secret lands:** Antarctica (behind a cracked wall in 8-4) and World 22 (needs 22 postcards). That's 68 levels in all.
 - **Each country** has its own enemies, music, signature item and boss.
 - **Core power-ups:** the magic mushroom, the joint (smoke puffs) and the LSD tab (rainbow flight).
@@ -19,7 +19,7 @@ Read [README.md](README.md) first: owner, ownership rules, appearance rules, dep
 - Ink outlines: `src/06a_ink.js`. Sprite atlases with procedural fallbacks: `src/03a_atlas.js`. The Mexico wiring is `src/29_tour_mx_sprites.js` and the generic wiring is `src/30_tour_sprites.js`.
 - Atlases (WebP) live in `assets/sprites/super-brady-o-world/`, made by `tools/blender/sprites/` (`render_country.py`, `pack_atlas.py`). Brief: `docs/SPRITE_BRIEF.md` and `WORLD_TOUR_GUIDE.md` §13.
 - **Converted so far:** Mexico fully. Ecuador, Brazil and Mozambique have backgrounds, floors, enemy casts and items.
-- **Still procedural** (they have the ink line but no sprite art): Morocco, Valencia, Paris, Amsterdam, Bali, Vietnam, Japan, Nepal, Antarctica and World 22.
+- **Still procedural** (they have the ink line but no sprite art): Morocco, Spain, France, Amsterdam, Bali, Vietnam, Japan, Nepal, Antarctica and World 22.
 - **The player stays the code-drawn Brady** (Brady's decision). Never swap in a Blender-rendered Brady.
 
 **The bosses** were redesigned per `docs/BOSS_REDESIGN.md`:
@@ -46,7 +46,7 @@ Read its notes: `git show origin/codex/super-brady-o-graphics-pass:docs/GRAPHICS
 
 ## Then: the polish list, in priority order
 1. **Convert the remaining 10 lands to Fiesta Toon** the way Mexico was done: Blender models per country, render, pack, then a `29_tour_<cc>_sprites.js`.
-   - **Order:** finish Ecuador, Brazil and Mozambique (anything left), then Morocco, Valencia, Paris, Amsterdam, Bali, Vietnam, Japan and Nepal, then Antarctica and World 22.
+   - **Order:** finish Ecuador, Brazil and Mozambique (anything left), then Morocco, Spain, France, Amsterdam, Bali, Vietnam, Japan and Nepal, then Antarctica and World 22.
    - **Show Brady one country before batch-producing the next.**
    - **Respect rules:** people and sacred sites are background only. Use no Christ the Redeemer, show the Eiffel Tower only in daylight or with generic lights, and use no existing Japanese characters.
 2. **Polish ("juice"):**

@@ -1,4 +1,4 @@
-// Valencia 6-5: Paellasaurus. Tomato artillery: stomps bounce off the boiling pan; three tomatoes kicked into
+// Spain 6-5: Paellasaurus. Tomato artillery: stomps bounce off the boiling pan; three tomatoes kicked into
 // the pan put the fire out, and only then does a stomp crack the crust.
 module.exports = async ({ page, check, shot }) => {
   const r = await page.evaluate(() => {

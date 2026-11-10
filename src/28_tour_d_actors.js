@@ -79,7 +79,7 @@ class TourEnemy extends Walker {
     this.t += dt;
     if (this.knocked) return this.updateKnocked(dt);
     if (this.dead) { this.flatT -= dt; if (this.flatT <= 0) this.remove = true; return; }
-    // slideT > 0: sliding helplessly (Valencia's tomato puddles); a wall knocks it out, a ledge drops it
+    // slideT > 0: sliding helplessly (Spain's tomato puddles); a wall knocks it out, a ledge drops it
     if (this.slideT > 0) { this.slideT -= dt; this.vx = this.dir * 7 * TS; this.mode = 'stun'; this.walk(dt); if (this.hitWall) { this.slideT = 0; this.hit('bump', this); } return; }
     if (this.stunT > 0) { this.stunT -= dt; this.vx = 0; this.mode = 'stun'; this.walk(dt); return; }
     if (this.cool > 0) this.cool -= dt;

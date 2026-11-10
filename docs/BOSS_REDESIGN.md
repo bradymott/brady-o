@@ -92,7 +92,7 @@ the moment he dives in Brady **stomps the lid** (a lid prop or the pot itself wh
 Phases: 1 flying teacups; 2 sandstorm (wind zone, `B.zone`) and mirages: two fake pots (props that break); 3 he grows,
 the carpet (signature) appears so Brady can fly, and the pot flies too. Finish: the lid slams, the pot rattles, steam.
 
-### Valencia 6-5: Paellasaurus (`29_tour_es.js`)
+### Spain 6-5: Paellasaurus (`29_tour_es.js`)
 Mechanic: **tomato artillery.** He is a boiling paella pan on legs; stomps burn (`'bounce'`, TOO HOT). Tomato crates
 around the arena spill **tomatoes** (`TourProp`, splat on walls); a tomato in the pan cools a patch, and **three tomatoes
 in a row put the fire out**: then he is cold and sluggish and one stomp cracks the crust (damage). Phases: 1 charges and
@@ -100,7 +100,7 @@ rice spits; 2 Las Fallas rockets launch from the floor (telegraphed), the crates
 flips the pan: the arena fills with sliding tomato pulp (`T.ICE` tiles via `iceStyle`) and he skates. Finish: the pan
 clatters over and a shower of paella rains.
 
-### Paris 7-5: Le Grand Soufflé (`29_tour_fr.js`)
+### France 7-5: Le Grand Soufflé (`29_tour_fr.js`)
 Mechanic: **the oven lever and the mirrors.** The castle of mirrors. The soufflé puffs up and floats; Brady cannot stomp
 a puff. Two **mirror panels** on the walls tilt when Brady hits them from below (`bump` on special blocks, or props);
 when both mirrors aim at the oven window, the oven **flashes** and the soufflé collapses (damage) if he is in the beam.
