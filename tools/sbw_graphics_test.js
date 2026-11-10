@@ -68,8 +68,8 @@ const stampsOk=(m,tag)=>{
       const m=Object.create(TourMapScene.prototype);Object.assign(m,{sel:'mx',cam:{z:4},plane:{lon:0,lat:0},t:1,focus:0});m.build();m.drawPanel(ctx);
       const want=tag==='branches'?6:levels.length;
       assert.equal(m.stamps.length,want,`${tag} ${W}x${H}: ${want} stops shown`);
-      if(tag.startsWith('branches')){const s6=m.stamps.find(b=>b.i===6);assert(s6&&s6.from===1,'secret stop 6 branches from stop 2');}
-      if(tag==='branches+hidden open'){const s7=m.stamps.find(b=>b.i===7);assert(s7&&s7.from===3,'hidden stop 7 appears, branching from stop 4');}
+      if(tag.startsWith('branches')){const s6=m.stamps.find(b=>b.i===6);assert(s6&&[].concat(s6.from).includes(1),'secret stop 6 branches from stop 2');}
+      if(tag==='branches+hidden open'){const s7=m.stamps.find(b=>b.i===7);assert(s7&&[].concat(s7.from).includes(3),'hidden stop 7 appears, branching from stop 4');}
       stampsOk(m,`${tag} ${W}x${H}`);cases++;
     }
   }
