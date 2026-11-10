@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("id_ruins", {"scale":2.0,"image":"id_ruins.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1256}},"anims":{},"strips":{"L0":{"w":2048,"h":475,"top":148.5,"x":0,"y":0},"L1":{"w":2048,"h":420,"top":215.5,"x":0,"y":476},"L2":{"w":2048,"h":358,"top":0.0,"x":0,"y":897}}});

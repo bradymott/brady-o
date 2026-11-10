@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("id_rimba", {"scale":2.0,"image":"id_rimba.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1678}},"anims":{},"strips":{"L0":{"w":2048,"h":566,"top":62.5,"x":0,"y":832},"L1":{"w":2048,"h":831,"top":0.0,"x":0,"y":0},"L2":{"w":2048,"h":278,"top":0.0,"x":0,"y":1399}}});

@@ -328,6 +328,13 @@ const decor = {
 const decorLights = { vnLanternPost: [110, '#ffa040', -50], vnFungi: [70, '#5affb4', -8] };
 
 /* ---------------- enemies ---------------- */
+/* pre-rendered art from the 'vn' atlas (tools/blender/sprites/vn_enemies.py) for the custom classes below: the clip
+   'kind/pose' or the frame 'kind_pose_000'; false until the atlas is in, so the procedural art stays the fallback */
+const vnSprite = (ctx, kind, pose, t, x, y, dir, o) => {
+  if (typeof Atlas === 'undefined' || !Tour.countries.vn || !Tour.countries.vn.sprites) return false;
+  const opt = Object.assign({ scale: 1 }, o);
+  return Atlas.animate(ctx, 'vn', kind + '/' + pose, t, x, y, dir || 1, opt) || Atlas.draw(ctx, 'vn', kind + '_' + pose + '_000', x, y, dir || 1, opt);
+};
 // a wind-up tin toy scooter, piled impossibly high with cargo
 const scooterArt = (ctx, e, x, y, m, t) => {
   ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.4 : 1);
@@ -442,10 +449,13 @@ const beanArt = (ctx, e, x, y, m) => {
   ctx.restore();
 };
 // the mantis shrimp: its punch knocks Brady clean off his feet
+const SHRIMP = { w: 30, h: 20, speed: 0.8, behavior: 'charge', range: 6, chargeSpeed: 7, windup: 0.5, chargeT: 0.7, art: shrimpArt, burst: '#2ad8a0', onNotice: e => K.say(e.g, e, 'POW?', '#ffd23a') };
 class VnShrimp extends TourEnemy {
-  constructor(g, s) { super(g, s, { w: 30, h: 20, speed: 0.8, behavior: 'charge', range: 6, chargeSpeed: 7, windup: 0.5, chargeT: 0.7, art: shrimpArt, burst: '#2ad8a0', onNotice: e => K.say(e.g, e, 'POW?', '#ffd23a') }); }
+  constructor(g, s) { super(g, s, SHRIMP); }
   touchPlayer(p) { if (this.dead || this.stunT > 0) return; if (this.state === 'charge' && !p.invuln && !p.star) { p.vx = this.dir * 9 * TS; p.vy = -6 * TS; K.say(this.g, p, 'POW!', '#ff7a3a'); } p.hurt(this); }
 }
+// a static cfg so 30_tour_sprites.js names its pre-rendered art ('shrimp/walk', ...); shrimpArt stays the fallback
+VnShrimp.cfg = SHRIMP;
 const enemies = {
   vnScooter: { cls: TourEnemy.make({ w: 36, h: 30, inkPad: 6, speed: 1.4, behavior: 'charge', range: 8, chargeSpeed: 8.2, windup: 0.6, chargeT: 1.5, art: scooterArt, burst: '#e8323a', onNotice: e => { K.say(e.g, e, 'BEEP BEEP!', '#ffd23a'); TourKit.sfx('bike_bell', 'select2', { vol: 0.4, pitch: 1.3 }); } }), place: 'walk' },
   vnBao: { cls: TourEnemy.make({ w: 26, h: 24, speed: 1.0, behavior: 'hop', hopV: 9, hopEvery: 1.3, art: baoArt, burst: '#ffffff' }), place: 'walk' },
@@ -622,6 +632,7 @@ class VnPho extends Ent {
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, t = this.t, has = this.g.player && this.g.player.sig && this.g.player.sig.id === 'noodle';
     K.shadow(ctx, x, y, 26);
+    if (vnSprite(ctx, 'pho', 'idle', t, x, y, 1)) { if (!has) { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('PHO!', x, y - 62 + Math.sin(t * 4) * 1.5); } return; }
     ctx.fillStyle = '#3a3a44'; for (const wx of [x - 16, x + 16]) { ctx.beginPath(); ctx.arc(wx, y - 6, 6, 0, TAU); ctx.fill(); }
     ctx.fillStyle = '#2a7ad8'; rr(ctx, x - 24, y - 30, 48, 20, 3); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.fillRect(x - 24, y - 22, 48, 3);
     ctx.fillStyle = '#e8e8f0'; ctx.fillRect(x - 22, y - 46, 3, 16); ctx.fillRect(x + 19, y - 46, 3, 16);
@@ -907,14 +918,15 @@ class VnPuppet extends Ent {
     if (this.state === 'warn') { ctx.strokeStyle = `rgba(200,240,255,${0.5 + 0.5 * Math.sin(t * 20)})`; ctx.lineWidth = 2; for (let k = 0; k < 2; k++) { const ph = (t * 2 + k / 2) % 1; ctx.beginPath(); ctx.ellipse(x, fy - 3, 6 + ph * 16, 1.5 + ph * 4, 0, 0, TAU); ctx.stroke(); } ctx.fillStyle = '#ffd23a'; ctx.fillRect(x - 1.5, fy - 12 - Math.sin(t * 20) * 3, 3, 10); }
     if (r <= 0) return;
     ctx.save(); ctx.beginPath(); ctx.rect(x - 60, fy - 200, 120, 200); ctx.clip(); ctx.translate(x, fy - 56 * r + 56);
+    // pre-rendered puppets ('puppet_fish/duck/buffalo_000', feet on the rod's end); water puppets are animals only
+    if (vnSprite(ctx, 'puppet', ['fish', 'duck', 'buffalo'][this.kind] || 'fish', t, 0, 2, 1, { rot: Math.sin(t * 4) * 0.12 * r })) { ctx.restore(); return; }
     ctx.fillStyle = '#c8a05a'; ctx.fillRect(-2, -58, 4, 60);
     ctx.save(); ctx.rotate(Math.sin(t * 4) * 0.12 * r);
     if (this.kind === 0) {
-      // a golden dragon, lacquered red
-      ctx.fillStyle = '#e8323a'; ctx.beginPath(); ctx.moveTo(-14, -14); ctx.quadraticCurveTo(-6, -44, 10, -46); ctx.quadraticCurveTo(22, -42, 16, -30); ctx.quadraticCurveTo(6, -24, 12, -14); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#ffd23a'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-8 + k * 5, -36 + k * 5); ctx.lineTo(-4 + k * 5, -46 + k * 5); ctx.lineTo(0 + k * 5, -36 + k * 5); ctx.fill(); }
-      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(12, -42, 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(13, -42, 1.3, 0, TAU); ctx.fill();
-      ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(18, -40); ctx.lineTo(28, -44); ctx.moveTo(18, -38); ctx.lineTo(27, -34); ctx.stroke();
+      // a lacquered red carp with gold fins
+      ctx.fillStyle = '#e8323a'; ctx.beginPath(); ctx.ellipse(2, -34, 15, 9, -0.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(-12, -30); ctx.lineTo(-24, -40); ctx.lineTo(-22, -24); ctx.closePath(); ctx.fill(); for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(-4 + k * 6, -34, 2.2, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(11, -37, 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(12, -37, 1.3, 0, TAU); ctx.fill();
     } else if (this.kind === 1) {
       // a white duck
       ctx.fillStyle = '#f8f4ec'; ctx.beginPath(); ctx.ellipse(0, -26, 16, 11, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(12, -42, 7, 0, TAU); ctx.fill();

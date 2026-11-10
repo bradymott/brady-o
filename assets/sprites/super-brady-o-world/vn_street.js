@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("vn_street", {"scale":2.0,"image":"vn_street.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1145}},"anims":{},"strips":{"L0":{"w":2048,"h":410,"top":124.0,"x":0,"y":0},"L1":{"w":2048,"h":357,"top":190.5,"x":0,"y":787},"L2":{"w":2048,"h":375,"top":171.5,"x":0,"y":411}}});
