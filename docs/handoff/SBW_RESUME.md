@@ -6,16 +6,10 @@ Baseline: `main` at 5d07239 passed `validate_levels` (68 levels, 0 unfinishable)
 
 ## Branches (all pushed to origin, none merged to main)
 
-### `sbw/graphics-pass-fixed` (tip a20a678): PR #2 plus fixes
+### `sbw/graphics-pass-fixed`: PR #2 plus fixes (ready to merge)
 Done: sprite enemies no longer inked, with per-frame fallback inking (`TourSprite.pick/inked` in `src/28_tour_d_actors.js`); enemy scale 1.24–1.3 and ink padding (0 of 107 procedural enemies clipped); decorations opaque again; atlas eviction (`Atlas.keep/drop`, `tools/sbw_atlas_test.js`); Spain/France renames; rebuilt island country panel (grid cells, `mapCell`/`mapFrom` per level, non-sacred landmarks, no cross on Brazil); test renamed `tools/sbw_graphics_test.js`.
 
-Still to do before merging:
-1. Brady's tattoos in `src/05_brady.js` (~lines 250–260): 3/4 sleeves on both arms, black only, sacred-geometry blackwork, a mandala on each elbow, readable at phone size. Brady does not need to review. Remove the PR's capsule tint and circles. Check the HUD icon and title-screen Brady match.
-2. HUD coin icon shows as a sliver mid-spin; check whether Brady starts boss fights under the joystick in normal play.
-3. Decide on the 16% fog veil (`src/12_play.js` ~line 663) from screenshots.
-4. Review the France, Vietnam, portrait and 568x320 map shots; add a test with more than 5 stops.
-5. Run `validate_levels`, `gameplay_test`, `boss_test`, `apps_test`; re-run the ink-calls-per-frame comparison in Mexico 1-1; take Brady, enemy and level screenshots and look at them.
-6. Merge to `main`, push, deploy to gh-pages.
+Then finished: Brady's 3/4 blackwork sleeves with elbow mandalas; static face-on HUD coin; Brady walks clear of the joystick when a boss fight starts; fog veil kept; map panel reviewed at every size, with hidden stops and a 6-9 stop test. All suites pass (see the branch's last commit). Left: merge to `main`, push, deploy to gh-pages.
 
 ### `sbw/ec-br-art` (tip 710a865): Ecuador and Brazil leftover art
 Blender route that works on this Mac: a separate GUI instance per job with `--factory-startup` (never `-b`, never the shared MCP window); see `tools/blender/sprites/gui/bl.sh` and `driver.py`. Those scripts still hard-code an old scratchpad path; fix before reuse.

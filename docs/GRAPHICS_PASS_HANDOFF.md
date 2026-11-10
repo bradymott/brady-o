@@ -27,3 +27,14 @@ Run `node tools/gameplay_test.js` in an environment with Playwright available. B
 ## Art direction for subsequent work
 
 Use original, rounded adventure-platformer shapes, strong foreground silhouettes and softer distant scenery. Preserve country-specific architecture and flora. Keep Brady's black outfit and geometric sleeve tattoos; do not introduce blue jeans or a curtain of hair behind the bun. Prefer readable character features over fine detail that disappears at phone size. The existing country atlases are retained rather than regenerated in this pass.
+
+## Fixes before merging (Claude, 10 Nov 2026, branch `sbw/graphics-pass-fixed`)
+
+- Atlas enemies are no longer inked a second time (their outline is baked in; the extra pass doubled draw time and clipped art). The choice is made per frame drawn, so a procedural fallback for a kind or mode missing from a loaded atlas is still inked.
+- Enemy art scale is 1.24, up to 1.3 only for tiny enemies, keyed on the longest side; `Ink.ent` slack grows with it and `cfg.inkPad` adds more where art reaches far. 0 of 107 procedural enemies clip.
+- Decorations are fully opaque again. The 16% fog veil stays: it is subtle and separates Brady from busy backgrounds.
+- Brady's tattoos are clean 3/4 blackwork sleeves: a triangle fringe under the tee sleeve, a mandala on each elbow, a diamond and double band ending mid-forearm. Black only.
+- The country panel puts every stop in its own grid cell (`mapCell`, `mapFrom`, `mapHidden` per level for secret levels and branches), with non-sacred landmarks, 10-11px labels, level types, padlocks and the SOUVENIR line.
+- Atlas memory: each level keeps only its own atlases (`Atlas.keep`).
+- The HUD coin is still and face-on; Brady walks a few steps into boss arenas so he doesn't start under the touch joystick.
+- World 6 is "Spain" and world 7 is "France".
