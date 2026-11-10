@@ -6,7 +6,7 @@ const BRADY_DIM = {
   small: { hip: 8.5, shoulder: 15, headY: 21.5, headR: 8.6, thigh: 4.6, shin: 4.4, upper: 5, fore: 4.6, torsoW: 13, legW: 5.4, armW: 4.2, hairN: 6, hairL: 3.2, hairW: 14 }
 };
 const CLOTH = {
-  jacket: '#191922', jacketHi: '#34344a', jeans: '#2f4170', jeansHi: '#4a5f96', boot: '#101014', sole: '#34343e',
+  jacket: '#191922', jacketHi: '#34344a', jeans: '#20232c', jeansHi: '#454956', boot: '#101014', sole: '#34343e',
   outline: 'rgba(26,18,36,0.62)', tee: '#25252f'
 };
 
@@ -247,6 +247,17 @@ function inkedLimb(ctx, x0, y0, x1, y1, w, skinCol, inkA, inkB, small) {
       ctx.lineTo(cx - ux * r * 1.5, cy - uy * r * 1.5); ctx.lineTo(cx - px * r, cy - py * r); ctx.closePath(); ctx.fill();
     } else { ctx.beginPath(); ctx.arc(cx, cy, w * 0.07, 0, TAU); ctx.fill(); }
   }
+  // Interlocking circles: readable sacred geometry on the exposed sleeve.
+  ctx.save();
+  capsule(ctx, ax, ay, bx, by, w * 0.7, 'rgba(23,20,28,0.08)');
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.48;
+  for (let i = 1; i < 4; i++) {
+    const [cx, cy] = at(i / 4, 0), r = w * 0.29;
+    for (const side of [-1, 1]) {
+      ctx.beginPath(); ctx.arc(cx + px * r * side * 0.45, cy + py * r * side * 0.45, r, 0, TAU); ctx.stroke();
+    }
+  }
+  ctx.restore();
   // border bands at each end of the piece
   ctx.lineWidth = 0.95;
   for (const k of [0, 1]) { const [x0b, y0b] = at(k, w * 0.4), [x1b, y1b] = at(k, -w * 0.4); ctx.beginPath(); ctx.moveTo(x0b, y0b); ctx.lineTo(x1b, y1b); ctx.stroke(); }
@@ -368,7 +379,7 @@ function drawBrady(ctx, o) {
   ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 0.8;
   ctx.beginPath(); ctx.ellipse(tw * 0.18, -th - 1.2, tw * 0.22, o.small ? 1.4 : 2.2, 0, 0, Math.PI); ctx.stroke();
   if (!o.small) { ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(-tw * 0.1, -th * 0.55); ctx.quadraticCurveTo(tw * 0.1, -th * 0.4, tw * 0.3, -th * 0.6); ctx.stroke(); }
-  // waistband of black jeans
+  // waistband of black trousers
   ctx.fillStyle = '#060608'; ctx.fillRect(-tw / 2, -1.2, tw, 2.4);
   if (neon) {
     ctx.save(); ctx.shadowColor = trim; ctx.shadowBlur = 5; ctx.strokeStyle = trim; ctx.lineWidth = 1.1;
@@ -563,3 +574,4 @@ function drawBrady(ctx, o) {
   }
   ctx.restore();
 }
+

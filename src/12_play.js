@@ -121,6 +121,8 @@ class Play {
     const start = this.checkpoint || level.start;
     const gifts = Save.data.gifts || {};
     this.sigCarry = opts.sig || null; this.dizzy = 0;
+    // atlas memory: keep only what this level draws (its country's and its areas' themes); drop the rest
+    if (typeof Atlas !== 'undefined') Atlas.keep(this.atlasNames());
     // Hydration Station's gift: Brady always starts big (one more health step)
     this.loadArea(start.area, start.x, start.y, Math.max(opts.power || 0, gifts.hydration ? 1 : 0));
     this.camX = clamp(this.player.cx - Game.viewW * 0.4, 0, Math.max(0, this.area.W * TS - Game.viewW));
@@ -160,7 +162,7 @@ class Play {
     this.entities = this.area.entities;
     this.themeKey = this.area.theme;
     // pre-rendered art for this theme and country (draws procedurally until it arrives)
-    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey], C = this.level && this.level.country && typeof Tour !== 'undefined' ? Tour.countries[this.level.country] : null; Atlas.need([th && th.atlas, C && (C.atlas || (C.sprites ? C.id : null))]); }
+    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey]; Atlas.need([th && th.atlas, this.countryAtlas()]); }
     this.lavaY = this.area.lavaY;
     const keepPower = this.player ? this.player.power : (power || 0);
     this.player = new Player(this, x, y, keepPower);
@@ -168,6 +170,9 @@ class Play {
     this.boss = this.entities.find(e => e.boss && !e.remove) || null;
     this.refreshPlatforms();
   }
+  countryAtlas() { const C = this.level && this.level.country && typeof Tour !== 'undefined' ? Tour.countries[this.level.country] : null; return C ? C.atlas || (C.sprites ? C.id : null) : null; }
+  // every atlas this level can draw from: the country's, and each area's theme
+  atlasNames() { const n = [this.countryAtlas()]; for (const a of this.level.areas || []) { const th = THEMES[a.theme]; if (th && th.atlas) n.push(th.atlas); } return n; }
   refreshPlatforms() { this.platforms = this.entities.filter(e => (e.isPlatform || e.solidTop) && !e.dead && !(e instanceof Spring)); }
 
   /* ---------- helpers used by entities ---------- */
@@ -659,6 +664,13 @@ class Play {
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     ctx.beginPath(); ctx.rect(0, 0, VW * S, VH * S); ctx.clip();
     BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash);
+    // Atmospheric separation belongs behind solids, collectibles and characters.
+    // Keep each country's own sky/fog colour rather than flattening every world to grey.
+    if (this.level.tour) {
+      const th = THEMES[this.themeKey];
+      ctx.fillStyle = rgba(th.fog || th.sky[1], 0.16);
+      ctx.fillRect(0, 0, VW * S, VH * S);
+    }
     // world transform
     const wt = () => ctx.setTransform(S, 0, 0, S, gx - camX * S, gy - camY * S);
     wt();
@@ -1192,3 +1204,4 @@ const WorldFx = {
 };
 // test hook: the entity classes by spawn type (used by tools/gameplay_test.js)
 window.BRADY_TYPES = ENTITY_TYPES;
+

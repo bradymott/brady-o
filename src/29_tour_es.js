@@ -1,5 +1,5 @@
 /* ============================================================
-   VALENCIA (world 6)
+   SPAIN (world 6)
    6-1 La Tomatina          run    tomato trucks lob tomatoes, slippery pulp streets, crate stacks, balconies
    6-2 The Aquarium         swim   glass tunnels, pulsing jellyfish, pump currents and big tanks
    6-3 City of Arts by Night night white ribbed arches, reflecting pools, light-up floor tiles on the beat, a lifting "eyelid" deck
@@ -786,7 +786,7 @@ Tour.country({
     { name: 'The Silk Exchange', style: 'castle', theme: 'es_lonja', gimmick: 'Twisted columns, swinging silk banners and merchants\' scales that rise and fall, then Paellasaurus',
       enemies: [['esHorchata', 2], ['esTomato', 2]], boss: 'es_paella', arena: 'lonja', arenaW: 26, roof: false,
       hint: 'Paellasaurus is too hot to stomp. Kick three tomatoes into the pan to put the fire out, then crack the crust!',
-      postcard: 'The Silk Exchange is back! The Baron pedalled off to Paris. Allez! ♥ C',
+      postcard: 'The Silk Exchange is back! The Baron pedalled off to France. Allez! ♥ C',
       script: [['flat', { n: 4 }], 'columns', ['banners', {}], 'scales', 'cp', 'sig', ['banners', { n: 3 }], 'columns', ['enemies', { n: 2 }], ['blocks', { content: 'power' }], 'arena'] }
   ]
 });

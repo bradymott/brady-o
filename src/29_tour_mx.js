@@ -450,7 +450,7 @@ const enemies = {
   mxPepper: { cls: TourEnemy.make({ w: 16, h: 24, speed: 1.1, behavior: 'hop', hopV: 9.5, hopEvery: 1.1, art: pepperArt, burst: '#5ad04a' }), place: 'walk' },
   mxElote: { cls: TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'walk', art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') }), place: 'walk' },
   mxBurro: { cls: TourEnemy.make({ w: 30, h: 30, speed: 1.0, behavior: 'walk', hp: 2, art: burroArt, onDefeat: e => { for (let k = 0; k < 6; k++) e.g.spawn(new PickPop(e.g, e.cx + (k - 2.5) * 6, e.y)); e.g.addPick(); e.g.burst(e.cx, e.cy, 24, '#ff9ac8', 'confetti'); } }), place: 'walk' },
-  mxChihuahua: { cls: TourEnemy.make({ w: 22, h: 16, speed: 1.5, behavior: 'charge', range: 7, chargeSpeed: 7, windup: 0.35, art: (ctx, e, x, y, m) => {
+  mxChihuahua: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 1.5, behavior: 'charge', range: 7, chargeSpeed: 7, windup: 0.35, art: (ctx, e, x, y, m) => {
     ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.4 : 1);
     const run = m === 'charge' ? Math.sin(e.t * 30) * 2 : Math.sin(e.t * 12);
     ctx.fillStyle = '#d8a86a'; for (const lx of [-7, -3, 3, 7]) ctx.fillRect(lx - 1, -6, 2, 6 - Math.abs(run) * (lx % 2 ? 1 : 0.5));
@@ -474,7 +474,7 @@ const enemies = {
   } }), place: 'walk' }
 };
 const entities = {
-  mxXolo: TourFriend.make({ w: 30, h: 30, give: 'sig:taco', line: '¡TACOS! TAP THROW', art: xoloArt }),
+  mxXolo: TourFriend.make({ w: 30, h: 30, inkPad: 8, give: 'sig:taco', line: '¡TACOS! TAP THROW', art: xoloArt }),
   // a cart that rolls watermelons down the street toward Brady
   mxMelonCart: class extends Ent {
     constructor(g, s) { super(g, s, 30, 26); this.period = s.period || 2.6; this.k = s.phase || 0; }
