@@ -1543,8 +1543,8 @@ USED = {'idle': dict(M=lambda t: scl(1.02, 1.0, 0.96))}
 
 # ================================================================ BOOBY (feet, 1.57 m, the friend with the blue boots)
 BOOBY_POSE = {
-    'idle': dict(sx=1.00, sz=1.00, lean=0, wave=False),
-    'wave': dict(sx=1.00, sz=1.00, lean=-3, wave=True),
+    'idle': dict(sx=1.16, sz=1.08, lean=0, wave=False),        # a chunky, plump booby so it reads beside Brady
+    'wave': dict(sx=1.16, sz=1.08, lean=-3, wave=True),
 }
 
 
@@ -1556,7 +1556,7 @@ def build_booby(b, pose, t, P):
     sway = 3.0 * math.sin(TAU * t) if not wave else 2.0 * math.sin(TAU * t)
     M = b.M @ about(V(0, 0, 0.3), rot_x(sway))
     # body: a plump egg of brown back, white belly front
-    bc, br = V(-0.02, 0, 0.62), (0.31, 0.27, 0.40)
+    bc, br = V(-0.02, 0, 0.62), (0.34, 0.3, 0.41)
     b.part('body', xf(blob(bc, *br, seg=26, rows=14), about(bc, rot_y(14))), 'body', M=M)
     b.part('belly', xf(ellipsoid(bc, Y * br[1] * 1.01, Z * br[2] * 1.01, X * br[0] * 1.01, seg=24, rows=10, phi1=math.radians(72)),
                        about(bc, rot_y(14))), 'belly', M=M)
@@ -1565,8 +1565,8 @@ def build_booby(b, pose, t, P):
     # neck and head: pale head, a long pointed blue-grey beak, big friendly eyes
     nod = 3 * math.sin(2 * TAU * t)
     MH = M @ about(V(0.08, 0, 1.0), rot_y(nod))
-    b.part('neck', tube([V(0.06, 0, 0.95), V(0.11, 0, 1.08), V(0.15, 0, 1.18)], 0.13, 0.11, seg=14), 'head', M=MH)
-    hc, hr = V(0.17, 0, 1.27), (0.17, 0.15, 0.15)
+    b.part('neck', tube([V(0.06, 0, 0.95), V(0.11, 0, 1.08), V(0.15, 0, 1.18)], 0.16, 0.13, seg=14), 'head', M=MH)
+    hc, hr = V(0.17, 0, 1.27), (0.19, 0.17, 0.17)
     b.part('head', blob(hc, *hr, seg=22, rows=12), 'head', M=MH)
     bd = (X - Z * 0.22).normalized()
     root = hc + V(0.13, 0, -0.02)
@@ -1604,12 +1604,12 @@ def build_booby(b, pose, t, P):
         lift = 0.2 * up
         foot = V(0.04 + 0.1 * up, 0.13 * side, 0.04 + lift)
         knee = (hip + foot) / 2 + V(0.05 * up + 0.02, 0, 0)
-        b.part('leg_' + side_name, tube([hip, knee, foot + V(0, 0, 0.02)], 0.06, 0.05, seg=10), 'foot', M=Matrix.Identity(4))
+        b.part('leg_' + side_name, tube([hip, knee, foot + V(0, 0, 0.02)], 0.07, 0.06, seg=10), 'foot', M=Matrix.Identity(4))
         Mf = tr(foot) @ rot_y(-30 * up)
-        web = [V(-0.08, 0, 0), V(0.24, -0.15, 0), V(0.3, 0, 0), V(0.24, 0.15, 0)]
+        web = [V(-0.09, 0, 0), V(0.28, -0.17, 0), V(0.35, 0, 0), V(0.28, 0.17, 0)]
         b.part('web_' + side_name, xf(flat_poly(web, 0.045), Mf), 'foot', subsurf=1, M=Matrix.Identity(4))
         for k, yy in enumerate((-0.13, 0.0, 0.13)):
-            b.part('toe_%s%d' % (side_name, k), xf(tube([V(-0.02, 0, 0.025), V(0.24, yy, 0.025), V(0.3, yy * 1.05, 0.02)], 0.03, 0.022, seg=8), Mf),
+            b.part('toe_%s%d' % (side_name, k), xf(tube([V(-0.02, 0, 0.025), V(0.28, yy, 0.025), V(0.35, yy * 1.05, 0.02)], 0.034, 0.025, seg=8), Mf),
                    'foot_dark', subsurf=1, M=Matrix.Identity(4))
 
 
