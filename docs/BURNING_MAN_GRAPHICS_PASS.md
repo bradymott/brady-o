@@ -15,7 +15,6 @@ to keep its good half. This file says what was kept, changed and dropped, and wh
 | Anti-shimmer filtering | `src/40_burns_b_gl.js` | Cloth weave fades by its screen footprint; fine playa crust is filtered by `fwidth`. Both sit inside `#ifdef BUMP`, which only exists when derivatives are available (WebGL2 on iOS). |
 | Spoked bike wheels, near LOD only | `src/40_burns_e_props.js` (`bikeShape`) | Rebuilt cheaply: an open rim and two crossing spokes. `bikeShape` 160 → 200 triangles near (the PR's version was 808); the far LOD is unchanged. |
 | Brady's code-drawn fallback in black trousers | `src/40_burns_d_rig.js` | `bottom: 'pants'` instead of jeans. |
-| Art Cart driver preview framing | `src/43_cart_f_menu.js` | Only the PR's hunk: the Man driver's head is no longer cut off. |
 | Tests | `tools/graphics_test.js`, `cinematic_test.js`, `npc_gait_test.js`, `gait_test.py` | Adapted to what we kept; all exit non-zero on failure. `graphics_test` compares every world's draws/triangles at its spawn camera and every procedural prop with `tools/graphics_baseline.json` (main's build): at most +4% triangles and +3 draws per world, +50% per prop. |
 
 ## Dropped, and why
@@ -29,6 +28,7 @@ to keep its good half. This file says what was kept, changed and dropped, and wh
 - **Heat shimmer and god rays turned down in cutscenes**: main's behaviour is kept (the PR switched god rays off in every world that doesn't set `env.rays`).
 - **NPC head remodel and matte skin** (`40_burns_da_round.js`): barely visible, and that file is shared with Art Cart's PR #1.
 - **Wheel vents, window glass bands, shade frames and cables, tent seams**: 2–5x heavier near-LOD props for sub-pixel detail.
+- **The Art Cart driver-preview framing hunk** (`43_cart_f_menu.js`): main's Art Cart showroom was rewritten by its owner after this branch started (the camera code it patched is gone), so the hunk was dropped to merge cleanly; Art Cart files are untouched here.
 - **Skinned-shader light wrap 0.4 → 0.22**, the Man boss's lost hurt cue, the PR's notes and its `docs/graphics-pass`, `docs/cinematic-pass` image folders.
 
 ## The Man (new)
