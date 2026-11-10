@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("jp_fuji", {"scale":2.0,"image":"jp_fuji.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":940}},"anims":{},"strips":{"L0":{"w":2048,"h":659,"top":56.0,"x":0,"y":0},"L1":{"w":2048,"h":279,"top":304.5,"x":0,"y":660}}});

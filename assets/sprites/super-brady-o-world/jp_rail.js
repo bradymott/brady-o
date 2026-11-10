@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("jp_rail", {"scale":2.0,"image":"jp_rail.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1195}},"anims":{},"strips":{"L0":{"w":2048,"h":557,"top":107.0,"x":0,"y":0},"L1":{"w":2048,"h":310,"top":273.0,"x":0,"y":884},"L2":{"w":2048,"h":325,"top":201.5,"x":0,"y":558}}});

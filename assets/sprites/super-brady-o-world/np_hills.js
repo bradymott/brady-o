@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("np_hills", {"scale":2.0,"image":"np_hills.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1225}},"anims":{},"strips":{"L0":{"w":2048,"h":541,"top":65.0,"x":0,"y":0},"L1":{"w":2048,"h":320,"top":245.5,"x":0,"y":904},"L2":{"w":2048,"h":361,"top":255.0,"x":0,"y":542}}});
