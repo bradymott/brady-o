@@ -481,6 +481,7 @@ class BurnsPlayScene {
     L.split = lefty ? W * 0.55 : W * 0.45;
     // pack: the backpack pill under the HUD counters (its position is refreshed by the HUD each frame)
     this.hudBtns = { cam: { id: 'cam', x: cx, y: cy, r: r * 0.55 }, view: { id: 'view', x: cx, y: cy - r * 1.32, r: r * 0.5 }, bike: { id: 'bike', x: bx, y: by, r: r * 0.58 }, pack: (this.hudBtns && this.hudBtns.pack) || { id: 'pack', x: safeL + 50, y: 160, r: 17 } };
+    if (typeof BurnsNav !== 'undefined') BurnsNav.layout(this, r, lefty);   // the RUN button
     this.syncHudButtons();
   }
   // the backpack shows once ground scores exist in the story, or as soon as it holds anything
@@ -491,6 +492,7 @@ class BurnsPlayScene {
     if (this.hudBtns.view && !this.cine) list.push(this.hudBtns.view);
     if (this.player && ((this.bike && !this.cine) || this.player.vehicle)) list.push(this.hudBtns.bike);
     if (this.player && !this.cine && this.hudBtns.pack && this.packVisible()) list.push(this.hudBtns.pack);
+    if (typeof BurnsNav !== 'undefined') BurnsNav.hudList(this, list);
     Input.hud = this.state === 'play' && !this.paused ? list : null;
     Input.camDrag = this.state === 'play' && !this.paused;
   }
@@ -898,6 +900,7 @@ class BurnsPlayScene {
       p.x = o.x + dx * c + dz * s; p.z = o.z - dx * s + dz * c; p.y += o.y - o.py; p.yaw += dyaw;
       if (Math.abs(dyaw) > 1e-6 && !this.manualCam) this.camYaw += dyaw;
     }
+    if (typeof BurnsNav !== 'undefined') BurnsNav.step(this, dt);   // run, e-bike swap, guide target (41_burns_nav.js)
     p.update(dt);
     p.inp.jumpPressed = false; p.inp.actionPressed = false;
     // actors (far ones idle cheaply)
@@ -958,6 +961,7 @@ class BurnsPlayScene {
     // ease behind the player while running (unless the player recently orbited)
     if (boss) { /* boss framing owns the yaw */ }
     else if (this.camRecenter > 0) { this.camRecenter -= fdt; this.camYaw = BurnsM.dampAngle(this.camYaw, p.yaw, 10, fdt); this.camPitch = BurnsM.damp(this.camPitch, 0.3, 8, fdt); }
+    else if (typeof BurnsNav !== 'undefined' && BurnsNav.followCam(this, fdt)) { /* setting: the camera stays behind Brady */ }
     else if (sv.autoCam !== false && this.time - this.lastManual > 1.2 && (hsp > 2 || veh)) {
       const behind = veh ? veh.yaw : Math.atan2(p.vx, p.vz);
       const fwd = Math.cos(BurnsM.wrap(behind - this.camYaw));
@@ -1372,6 +1376,7 @@ class BurnsPlayScene {
     for (const b of this.bosses) if (b.draw && !b.hidden) b.draw(R);
     this.proj.draw(R);
     if (this.def.drawSprites) this.def.drawSprites(this, R);
+    if (typeof BurnsNav !== 'undefined') BurnsNav.drawSprites(this, R);   // the guide arrow (sprites: no extra draw calls)
     this.fx.draw(R);
   }
   drawPortrait(R, env) {

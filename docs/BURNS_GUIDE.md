@@ -596,6 +596,7 @@ Define missions in `def.missions`. Each mission is `{id, name, short, desc, hint
 | `vehicle` | For `ride`: `'bike'` or `'car'`. |
 | `companion` | For `escort`: the actor id that must reach `target`. |
 | `marker` | `{x, z}` for the minimap and What Where When. |
+| `guide` | Where the **guide arrow** points while this mission is active (§10.1): a point `{x, z, label}`, `[x, z]`, an actor id, an array of those, or `(g, m) => …` returning one of them (`null` = nothing to go to, `undefined` = the engine's default). At runtime you can also set `m.data.guide`. Only needed when the default (target, nearest pickup or enemy, `marker`) points at the wrong place. |
 | `secret` | Hidden as `???` until started. |
 | `silent` | No start banner. |
 | `failOnFaint` | Fails if Brady faints. Timed missions always do. |
@@ -674,6 +675,7 @@ Any world can have side quests; the home world (17) is built around them. A side
 
 ### 8.2 Vehicles
 - **Yellow bike** (World 3 unlocks it with `g.giveItem('bike')`). The BIKE button or the B key summons it and EXIT dismounts.
+- **E-bike** (key item `ebike`, earned in the city after World 8, §19.7): in **open worlds** (`def.open`) the BIKE button summons it instead of the yellow bike (settings **CITY BIKE** switches back). 18 m/s, accel 10; a dark frame, a battery with light strips, glowing rims, a hub motor and a headlight (`BurnsEBikeModel`, `41_burns_nav.js`, same five bones as the yellow bike: one draw call, its lights are sprites). Story worlds keep the yellow bike, so their races and `ride` missions stay tuned. Numbers: `BURNS_NAV.ebike`.
   - On the bike: fast (12.5 m/s), small hops on JUMP, bell on ACTION. Friendly NPCs step aside, and the `bell` event fires.
   - Riding into enemies knocks them over.
   - `ride` missions with `vehicle: 'bike'` work out of the box.
@@ -845,6 +847,28 @@ Read it with `g.camMode`, set it with `g.setCamMode(mode)`, and check `g.firstPe
 
 ---
 
+### 10.1 Getting around: guide arrow, map page, RUN, camera behind Brady (`41_burns_nav.js`)
+
+**Speeds (m/s):** walk (stick part-way) 2–4, jog (stick fully pushed, the old top speed) 7.6, **RUN 10.6**, yellow bike 12.5, **e-bike 18**.
+
+**The guide arrow.** A pause-menu toggle (**GUIDE ARROW**, also in SETTINGS; saved as `settings.guide`, off by default). When it's on, a glowing arrow lies on the ground just in front of Brady pointing at the current objective, with its name and distance under it; a pin and the distance float over the spot when it's on screen, and the spot itself gets a ring and a thin beam of light. It hides when there's nothing to go to, and shrinks to a ring when Brady is there. It costs no draw calls (sprites).
+- **What it points at.** `def.guide(g)` if your world has one (or `BurnsNav.guides[worldId] = fn` from another file), returning the targets best first: a point `{x, z, y, label, col}`, `[x, z]`, an actor or actor id, or an array of them. Return `null` for "nothing to go to", `undefined` for the default.
+- **The default** (`BurnsNav.defaultTargets`): a Burn Token lying on the ground nearby; then the tracked mission, the other active main missions, and active side quests. For each mission: its `guide` field (§7) or `m.data.guide`, a `talk` target, the actor carrying its `?` (`m.data.marker`), the nearest untaken pickup for `collect`/`find`, the nearest enemy (with `tag`) for `defeat`, the companion if an `escort` buddy is far behind, `target`, `marker`, and last the giver. With nothing active, it shows the nearest `'!'` giver of a main mission.
+- **Read it:** `g.navGuide` (`{x, z, label, dist, yaw}`; null when off or nothing), `g.navTargets` (all highlighted spots), `g.navArrow` (where the ground arrow is). Targets refresh four times a second; the bearing updates every step.
+- **Wiring a world:** give a `custom` mission a `guide` when its `marker` is only where it started (a fetch, a chase, a "go back to X"). Set `m.data.guide` as the steps change.
+
+**The map page.** A world with `def.cityMap` gets a full-screen map in the pause menu (its MAP button): the world's own drawing, labels placed most important first without overlapping, the guide's targets as pulsing rings, and Brady as an arrow pointing the way he faces. Buttons: **ZOOM IN** (around Brady) / **WHOLE CITY**, **GUIDE ARROW**, **FAST TRAVEL** (the hub travel map).
+```js
+def.cityMap = { title: 'Black Rock City', bounds: { x0, x1, z0, z1 }, legend: '…',
+  draw(g, ctx, P, sc, t) { /* P(x, z) -> [px, py]; sc = px per metre */ },
+  labels(g) { return [{ x, z, text, col, pri, mark: 'dot' | 'diamond' | 'square' }]; } };
+```
+`g._cityMap` holds what was drawn (`brady: {x, y, rot}`, `targets`) for tests. +x is right and +z is down (6:00 at the bottom).
+
+**RUN.** A round **RUN** button left of BIKE (touch): tap it and Brady runs (x1.4, `BURNS_NAV.runMul`) until he stops for a moment, mounts a vehicle or a cutscene starts; it lights up while on. **Shift** runs while held (it stays ACTION in menus and other apps). `g.running` is true while he runs; the player's `runK` multiplies his speed.
+
+**Camera behind Brady.** Setting **CAMERA BEHIND BRADY** (`settings.follow`, off by default): the camera turns to sit behind the way Brady faces (or his vehicle) on its own, so CAM is never needed. It turns faster the more he heads away from the camera (running sideways makes a wide, slow turn, not a spin; running at the camera holds it), settles behind him half a second after he stops, waits a second after you orbit by hand, and holds still in dialogue. Cutscene cameras, boss framing, CAM recentering and first person (where his body already follows the look) come first.
+
 ## 11. Cutscenes
 
 `g.cutscene([...steps], done)` runs steps in order with letterbox bars. The player can **SKIP** at any time. Skipping runs the remaining `do` steps, so put state changes in `do` steps and story stays consistent.
@@ -958,7 +982,7 @@ World 10 should pass `next` to roll into the ending; `StoryScene` and `CreditsSc
 ```
 { v, unlocked:{1:true,…}, tokens:{'w:missionId':true}, photos:{'w:id':true}, items:{ticket,map,www,bike,costumes,artcar},
   costume:'none', costumesOwned, glow (lifetime), glowWorld:{w:best}, worldDone:{w:true}, missions:{'w:id':'done'},
-  flags:{'w:key':value}, seenIntro, lastWorld, checkpoint:{w:cpId}, settings:{camSens, invertY, autoCam, cam, gfx},
+  flags:{'w:key':value}, seenIntro, lastWorld, checkpoint:{w:cpId}, settings:{camSens, invertY, autoCam, cam, gfx, guide, follow, ride},
   pack:{itemId:count} }
 ```
 - `BurnsSave.get()` returns the data (and creates or migrates it).
@@ -1025,7 +1049,8 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
    window.__burnsDebug = true; // fps / draws / position overlay
    ```
    Example: talk to an NPC with `D.teleport(a.x + 1.5, a.z); D.sim(1/120, {actionPressed: true})`, then close dialogue with `while (D.scene().dialog.open) D.scene().dialog.next()`.
-4. Checklist:
+4. Navigation (guide arrow, map page, RUN, follow camera, e-bike, saved settings): `node tools/burns_nav_test.js` (exits 1 on failure).
+5. Checklist:
    - Zero page errors (`page.on('pageerror')` and `window.__bradyErrors`).
    - Every token mission can be completed.
    - Three photos are reachable.
@@ -1035,7 +1060,7 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
    - Pause, quit to title and back all work.
    - Saves survive a reload.
    - Draw count is about 120 or less (`D.state().draws`).
-5. Reference tests (World 1, written for the engine) are in `/tmp/claude-0/-home-user-brady-o/55338a3e-dd1f-51fb-b998-1b26dc729d6a/scratchpad/burns/`, if that folder is still there. Copy their patterns:
+6. Reference tests (World 1, written for the engine) are in `/tmp/claude-0/-home-user-brady-o/55338a3e-dd1f-51fb-b998-1b26dc729d6a/scratchpad/burns/`, if that folder is still there. Copy their patterns:
    - `play1.js`: scripted mission run-through.
    - `ui_test.js`: real touch via CDP `Input.dispatchTouchEvent`, both orientations, pause/quit, no-WebGL and context loss.
    - `gallery.js`: costumes, cast, bike, art car and power-ups.
@@ -1155,7 +1180,7 @@ World 500 turns the 17 story worlds into places (`BURNS_OW.PLACES`), each with a
 
 - **Story order:** the next unfinished world's place has a tall beacon of light and a HUD arrow with its distance. Finished places stay open, and later ones answer "Not yet."
 - **Time of day:** the city follows the story day (the next place's sky) and shows the day card when the day changes.
-- **The pause menu:** its **MAP** is the hub map in fast-travel mode (`TRAVEL HERE`, and HOME warps to the tipi). The map is the real city: `def.mapDraw(g, ctx, M, t)` draws the fence, the arc of streets, the camps, the Man, the Temple and a YOU marker, and `def.mapProject(g, worldId, M)` puts each place's pin where its door is (`M` is the map rectangle). On this map the pins are smaller, and only the chosen one and the open ones show their day.
+- **The pause menu:** its **MAP** opens the city map page (§10.1, `def.cityMap` in `42_burns_ow_nav.js`), whose **FAST TRAVEL** button is the hub map in fast-travel mode (`TRAVEL HERE`, and HOME warps to the tipi). The map is the real city: `def.mapDraw(g, ctx, M, t)` draws the fence, the arc of streets, the camps, the Man, the Temple and a YOU marker, and `def.mapProject(g, worldId, M)` puts each place's pin where its door is (`M` is the map rectangle). On this map the pins are smaller, and only the chosen one and the open ones show their day.
 
 ### 19.3 Regions and saves
 - **Regions:** `tiles.region(x, z)` names where Brady is, for example `'4:30 & Carousel'`, `'Center Camp'`, `'Deep Playa'` or `'Outside the Fence'`. Entering a new region sets `g.region`, saves the flag `region:<name>`, sends the mission event `region` (so `{ type: 'reach', region: 'The Temple' }` completes there) and shows a toast.
@@ -1193,6 +1218,11 @@ World 500 turns the 17 story worlds into places (`BURNS_OW.PLACES`), each with a
 - **Landmarks:** the theme camps use their own `lod: 'auto'` (a silhouette beyond about 150 m), and big art and the Man are built once.
 - **Measured views:** busy street level at night 102–126 draws and 280–400k triangles on high (medium: 102–115 draws); the Thunderdome bout about 110 draws, the race about 60. Tile builds yield a street front at a time: in the software renderer the 95th-percentile step is about 5 ms and the worst about 8 ms. A finished tile's people join three per frame.
 - **Fog and lights:** the world thins its fog (`def.env`) so the city reads across the playa, and thins it more for high cameras. `def.glowDist` (520 m here; 170 by default) lets the camps' lights show from afar at night.
+
+### 19.7 Getting around the city (`42_burns_ow_nav.js`)
+- **The guide in the city** (`def.guide`): a Burn Token on the ground, the tracked quest and other active quests (city quests have their own spots: Melty, the nearest photo spot, the next race gate or the art car, Auntie Thunder; quests from other worlds without a spot use the address in their `hint`, via `BurnsOW.hintSpot`), then the next story place. While the guide arrow is on, it replaces the city's yellow story arrow.
+- **The map page** labels the Man, the Temple, Center Camp, HOME (Root Society), the next story place and the finished ones, the theme camps and the big art, with the clock times round the city.
+- **The e-bike:** after World 8 (Hell Station) **Volta** at Hell Station's door offers **Juice Box**: carry the flat battery to the **Solar Juice Bar** on the 3:00 plaza and press **CHARGE**. The reward is the `ebike` key item. Change the world, the giver's place or the charger in `BURNS_OW_EBIKE`.
 
 ### 19.6 Your world's quests in the city (`BurnsOW.addQuests`)
 Any world can put quest givers, targets and mechanics in Black Rock City. The quests then run in world 500 like the city's own: in its SIDE QUESTS list, with the `!` markers, the tracker and rewards. Call `BurnsOW.addQuests` when your file loads (every `42_burns_w*` file loads after the city files):
