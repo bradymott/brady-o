@@ -97,7 +97,7 @@ COLORS = {
     'qblock_f_blue': '#3a8aff',
     'coati_fur': '#a8622e', 'coati_fur_dark': '#5a3418', 'coati_cream': '#f2dcb0', 'coati_nose': '#2e1c14',
     'coati_eye_white': '#ffffff', 'coati_pupil': '#1a1020', 'coati_mouth': '#4a2014',
-    'toucanito_body': '#1a1a24', 'toucanito_wing': '#24242e', 'toucanito_bib': '#fff4c8', 'toucanito_under': '#ff3d3d',
+    'toucanito_body': '#1a1a24', 'toucanito_wing': '#2e2e40', 'toucanito_bib': '#fff4c8', 'toucanito_under': '#ff3d3d',
     'toucanito_beak': '#ff8a2a', 'toucanito_beak_top': '#ffd23a', 'toucanito_beak_tip': '#2a1a1a', 'toucanito_eye_ring': '#3a8aff',
     'toucanito_leg': '#5a7ad8', 'toucanito_eye_white': '#ffffff', 'toucanito_pupil': '#1a1020',
     'used_card': '#a07890', 'used_rim': '#7a5a6a', 'used_quill': '#c8b8c0',
@@ -1206,6 +1206,8 @@ def ringed_tail(b, path, r0, r1, n=9, mats=('fur_dark', 'cream')):
         u0, u1 = k / n, (k + 1) / n
         a, m, c = (Vector(catmull(pts, u)) for u in (u0, (u0 + u1) / 2, u1))
         ra, rc = lerp(r0, r1, u0), lerp(r0, r1, u1)
+        if k % 2:      # the pale rings sit a touch proud so the bands read at game size
+            ra, rc = ra * 1.1, rc * 1.1
         b.part('tail%d' % k, tube([a - (m - a) * 0.15, m, c + (c - m) * 0.15], ra, rc, seg=10), mats[k % 2])
     b.part('tail_tip', sphere(Vector(catmull(pts, 1.0)), r1 * 1.05, 10, 6), mats[(n - 1) % 2], subsurf=1)
 
@@ -1280,7 +1282,7 @@ def build_toucanito(b, pose, t, P):
     b.part('beak_tip', tube([beak[2] + bd * 0.04, beak[3]], 0.045, 0.02, seg=10), 'beak_tip', subsurf=1)
     for side, az in (('r', -0.45), ('l', -1.2)):
         c, n = on_ellipsoid(hc, head_r, az * ns, 0.3)
-        b.part('ring_' + side, torus_bm(c - n * 0.01, n, 0.05, 0.016, seg=14, sides=6), 'eye_ring', subsurf=1)
+        b.part('ring_' + side, torus_bm(c - n * 0.006, n, 0.04, 0.011, seg=14, sides=6), 'eye_ring', subsurf=1)
         b.eye(side, c - n * 0.012, n, 0.045, shut=pose == 'ko', pupil=0.55, lid=0.45 if pose == 'stun' else 0.1, lid_mat='body',
               dazed=P.get('dazed', False), look=Vector((0.5, -0.85, -0.1)))
     flap, sweep = P['flap'](t), P['sweep']

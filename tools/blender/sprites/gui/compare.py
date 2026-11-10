@@ -1,6 +1,6 @@
 # compare.py -- <old_base> <new_base> <out.png> [prefix]: per-frame diff of two packed atlases + side-by-side sheet
 import sys, os, json, numpy as np
-sys.path.insert(0, '/private/tmp/claude-501/-Users-bradymott-brady-o/71b2e596-7cb8-425f-a055-e086cc0da06c/scratchpad/art/tools/blender/sprites')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # tools/blender/sprites (imgkit)
 import imgkit as IK
 argv = sys.argv[sys.argv.index('--') + 1:]
 def meta(base):

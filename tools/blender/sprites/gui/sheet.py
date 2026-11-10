@@ -1,6 +1,6 @@
 # sheet.py -- <out.png> <scale> <atlas_base> id [id ...]: contact sheet of atlas frames (bottom-aligned), upscaled by scale
 import sys, os, json, numpy as np
-sys.path.insert(0, '/private/tmp/claude-501/-Users-bradymott-brady-o/71b2e596-7cb8-425f-a055-e086cc0da06c/scratchpad/art/tools/blender/sprites')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # tools/blender/sprites (imgkit)
 import imgkit as IK
 argv = sys.argv[sys.argv.index('--') + 1:]
 out, sc, base, ids = argv[0], float(argv[1]), argv[2], argv[3:]
