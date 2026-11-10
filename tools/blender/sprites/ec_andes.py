@@ -6,7 +6,8 @@
 #                                                            the gliding cabins on top
 #   L1  ecCotopaxi (base 330, #7a8ab0)                       the perfect cone with its snow cap and a wisp of steam
 #   L2  clouds     (base 360, #ffffff)                       a fluffy cloud bank sitting on its ground line
-#   L3  ecAndes    (base 380, #5aa85a)                       green domed ridges quilted with patchwork fields
+#   L3  ecAndes    (base 380, #5aa85a)                       the hazy valley far below: low ridges with a painted
+#                                                            patchwork of fields, farmsteads, valley mist
 #   ground                                                   grass: turf cap over soil
 #
 # Contract, conventions and the shared toolkit: see ec_equator.py.
@@ -33,8 +34,11 @@ PALETTE = {
     # L2 clouds (#ffffff)
     'andes_cloud': '#ffffff', 'andes_cloud_fill': '#eef4ff',
     # L3 ridges (#5aa85a)
-    'andes_hill': '#5aa85a', 'andes_hill2': '#4c924c',
-    'andes_field_a': '#b0cc6a', 'andes_field_b': '#86c062', 'andes_field_c': '#c8c070', 'andes_field_d': '#6ab454',
+    # (pale and blue-shifted: the valley is far below the gondola, seen through the air)
+    'andes_hill': '#7cb486', 'andes_hill2': '#8fbaa6',
+    'andes_field_a': '#9cc48a', 'andes_field_b': '#8abc80', 'andes_field_c': '#b4c896', 'andes_field_d': '#a6c48c',
+    'andes_field_e': '#9cc2aa', 'andes_field_f': '#a8c6a8', 'andes_field_g': '#94bca6',
+    'andes_wall': '#f4f0e6', 'andes_roof': '#d07a5a', 'andes_tree': '#5e9a72', 'andes_mist': '#eef6f8',
     # ground (grass)
     'andes_g_turf': '#5ab84a', 'andes_g_turf_hi': '#a8e86a', 'andes_g_soil': '#7e5236', 'andes_g_soil_dark': '#5a3a24', 'andes_g_rock': '#a87a5a',
 }
@@ -87,8 +91,55 @@ def build_L2(rng):
     B.done(period=None)
 
 def build_L3(rng):
-    K.andean_ridges(TH, 'L3', rng, {'hill': 'andes_hill', 'hill2': 'andes_hill2', 'field_a': 'andes_field_a', 'field_b': 'andes_field_b',
-                                    'field_c': 'andes_field_c', 'field_d': 'andes_field_d'}, hmax=2.4)
+    """The valley far below the gondola: low, hazy green ridges with a patchwork of fields painted on their faces
+    (flat colour patches that follow the contours, no ink of their own, so nothing reads as a platform), a few tiny
+    farmsteads and trees, and drifting valley mist along the foot. Everything stays low (under ~1.3 m = 36 px above
+    the ground line) and pale, so it sits clearly behind and below the ride."""
+    L = 'L3'
+    rows = [  # (y, z offset, skyline min/max, hill role, field roles)
+        (4.0, -0.55, (0.35, 1.0), 'andes_hill2', ['andes_field_e', 'andes_field_f', 'andes_field_g', 'andes_hill2']),
+        (1.6, -0.15, (0.0, 0.85), 'andes_hill', ['andes_field_a', 'andes_field_b', 'andes_field_c', 'andes_field_d', 'andes_hill']),
+    ]
+    for r, (y, zo, (z0, z1), hill, fields) in enumerate(rows):
+        zf = K.periodic_fn(rng, z0 + zo, z1 + zo, 3)
+        K.ridge_slab(TH, L, f'L3_ridge{r}', zf, hill, y=y, depth=1.0, zb=-3.2)
+        # the quilt: columns of irregular width, each split into contour-following bands
+        B = Builder(f'L3_fields{r}', L, TH)
+        x, k = 0.0, 0
+        edges = []
+        while x < P - 0.8:
+            edges.append(x); x += rng.uniform(1.6, 3.2)
+        edges.append(P)
+        for i, (xa, xb) in enumerate(zip(edges, edges[1:])):
+            depths = [0.12, rng.uniform(0.45, 0.7), rng.uniform(1.0, 1.4), 2.2]
+            for j, (da, db) in enumerate(zip(depths, depths[1:])):
+                role = fields[(i * 3 + j * 2 + rng.randint(0, 1)) % len(fields)]
+                n = 6
+                xs = [xa + 0.04 + (xb - xa - 0.08) * q / n for q in range(n + 1)]
+                bot = [(xx, zf(xx) - db) for xx in xs]                  # left to right along the bottom,
+                top = [(xx, zf(xx) - da) for xx in reversed(xs)]        # then back along the top (CCW from -Y)
+                B.slab(role, bot + top, 0.03, at=(0, y - 0.05, 0))
+                k += 1
+        ob = B.done(period=None); ob['outline'] = 0.0
+        # tiny farmsteads (white walls, red roofs) and round trees along the front row's slopes
+        if r == 1:
+            T = Builder('L3_farms', L, TH)
+            for xh in K.jittered(rng, 5, 0.3):
+                zh = zf(xh) - rng.uniform(0.25, 0.5)
+                T.box('andes_wall', (xh, y - 0.15, zh + 0.1), (0.36, 0.2, 0.22), bevel=0.02)
+                T.slab('andes_roof', [(xh - 0.24, zh + 0.2), (xh + 0.24, zh + 0.2), (xh, zh + 0.38)], 0.24, at=(0, y - 0.27, 0))
+            for xt in K.jittered(rng, 14, 0.4):
+                zt = zf(xt) - rng.uniform(0.1, 0.9)
+                T.sphere('andes_tree', (xt, y - 0.2, zt + 0.16), 0.17, scale=(1.0, 0.6, 1.15), subdiv=1)
+            ob = T.done(period=None); ob['outline'] = 0.35
+    # valley mist drifting along the foot of the near ridges
+    Mz = Builder('L3_mist', L, TH)
+    for i in range(18):
+        xm = (i / 18) * P + rng.uniform(0, 1.2)
+        rm = rng.uniform(0.7, 1.3)
+        for dx in K.wraps(xm, rm * 1.6):
+            Mz.sphere('andes_mist', (xm + dx, 0.6, rng.uniform(-1.2, -0.8)), rm, scale=(1.6, 0.5, 0.45), subdiv=2)
+    ob = Mz.done(period=None); ob['outline'] = 0.0
 
 def build(seed=1):
     """Build every parallax layer (clears first; deterministic for a seed). Returns {layer: Collection}."""

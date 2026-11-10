@@ -64,6 +64,8 @@ POSES = {
 CYCLES = {('warthog', 'walk'), ('cashew', 'walk'), ('weaver', 'fly'), ('prawn', 'walk'), ('monkey', 'walk'),
           ('monkey', 'idle'), ('monkey', 'throw'), ('ghostCrab', 'walk'), ('mango', 'walk'), ('mango', 'roll'),
           ('coin', 'spin'), ('star', 'idle'), ('qblock', 'idle')}
+# the game draws the item blocks from frame 000 only (render_country.py FRAMES override)
+FRAMES = {('qblock', 'idle'): (1, 1), ('used', 'idle'): (1, 1)}
 ORIGIN = {'warthog': 'feet', 'cashew': 'feet', 'weaver': 'centre', 'prawn': 'feet', 'monkey': 'feet',
           'ghostCrab': 'feet', 'mango': 'feet', 'coin': 'centre', 'star': 'centre', 'qblock': 'centre', 'used': 'centre'}
 # nominal standing height of the feet-origin kinds (hitbox height / 28.1)

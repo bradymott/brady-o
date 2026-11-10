@@ -1,5 +1,7 @@
 # Renders one job of a country's sprite set in the chosen look and writes the frames plus a pack spec fragment.
 #   JOB=enemies:<module>  (mx_enemies_a / mx_enemies_b / mx_pepper via the 'pepper' shim)   -> character frames + clips
+#                         (a module may set FRAMES = {(kind, pose): (n, fps)} to override CYCLES below, e.g. a
+#                          one-frame item block, or a 4-step 'puff' sequence the game picks frames from)
 #   JOB=bg:<module>       (mx_mercado, mx_canal, ...)                                        -> layer strips + ground + tiles
 #   LOOK=toon OUT=<dir> NAME=<atlas name> SCALE=3 (characters) / 2 (backgrounds)
 #   /Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/sprites/render_country.py
@@ -34,8 +36,9 @@ def render_enemies(mod, look, out, name, scale):
         cx, cz, bw, bh, oxf, oyf = frame_box(size, origin)
         res_w, res_h = int(round(bw * px_m)), int(round(bh * px_m))
         LK.ortho_camera(cx, cz, bw, bh, res_w, res_h)
+        frames = getattr(mod, 'FRAMES', {}) or {}      # per-module override: {(kind, pose): (frames, fps)}
         for pose in mod.POSES[kind]:
-            n, fps = CYCLES.get(pose, (1, 1))
+            n, fps = frames.get((kind, pose)) or CYCLES.get(pose, (1, 1))
             ids = []
             for k in range(n):
                 t = k / n if n > 1 else 0.0
