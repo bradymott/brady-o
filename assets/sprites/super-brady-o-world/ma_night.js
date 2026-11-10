@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ma_night", {"scale":2.0,"image":"ma_night.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1139}},"anims":{},"strips":{"L0":{"w":2048,"h":681,"top":65.0,"x":0,"y":0},"L1":{"w":2048,"h":456,"top":212.5,"x":0,"y":682}}});

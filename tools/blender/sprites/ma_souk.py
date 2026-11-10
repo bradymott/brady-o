@@ -31,7 +31,7 @@ GP = 8 * (32 / 28.1)                       # ground period: 8 tiles of 32 px = 9
 GROUND_DEPTH = 3 * (32 / 28.1)             # 3 tiles tall: z from 0 down to -3.42 m
 RES = (1024, 444)
 SKY = ['#3a8ae8', '#9ad0ff', '#fff0d8']    # the theme's sky gradient (preview composite only)
-SCRATCH = '/private/tmp/claude-501/-Users-bradymott-brady-o/f5bf6cf3-6fc7-437d-a9b3-6005c5b7ac2b/scratchpad/mabg'
+SCRATCH = os.environ.get('SCRATCH', '/tmp/brady-sprites/mabg')
 TAU = math.tau
 
 # ----------------------------------------------------------------------------------------------- materials
@@ -284,7 +284,7 @@ def triangle_count(names=None):
 def plain(L, name, role, y=2.0, depth=5.0, top=0.0, bottom=-3.0):
     """A full-period slab from `top` down to `bottom`: the solid ground under a layer so nothing shows through."""
     B = Builder(name, L)
-    B.box(role, (P / 2, y, (top + bottom) / 2), (P, depth, top - bottom), bevel=0.0)
+    B.box(role, (P / 2, y, (top + bottom) / 2), (P + 2.0, depth, top - bottom), bevel=0.0)   # past both edges: no outline at the seam
     return B.done(period=None)
 
 
@@ -535,41 +535,12 @@ def build(seed=1):
 # ----------------------------------------------------------------------------------------------- ground
 def build_ground(seed=1):
     """The theme's floor in the engine's 'grass' style with the souk's colours: a packed-earth cap along the walking
-    surface (z = 0) with a pale highlight line and a lumpy underside, over red clay with embedded stones and darker
-    patches, 3 tiles deep. Laid out per 32-px tile (see cell_rects: at most 2 rows of at most 2 elements) so the
-    engine can draw the tiles in any order. Periodic in x with period GP (not P), its own collection 'ground'."""
-    L = GROUND_COLL
-    c = new_collection(L)
-    rng = random.Random(seed)
-    D = GROUND_DEPTH
-    B = Builder('ground_backing', L)
-    B.box('g_dirt', (GP / 2, 0.5, -D / 2), (GP, 1.0, D), bevel=0.0)
-    B.done(period=None)
-    B = Builder('ground_stones', L)
-    for col in range(8):
-        for row in range(3):
-            for xc, zc, w, h in cell_rects(col, row, rng, rows=(1, 2), cols=(1, 2), gap=0.12, top=(0.4 if row == 0 else 0.0), jitter=0.3):
-                r = rng.random()
-                if r < 0.42:
-                    sw, sh = w * rng.uniform(0.55, 0.85), h * rng.uniform(0.55, 0.85)
-                    B.rbox('g_rock', (xc + rng.uniform(-1, 1) * (w - sw) / 2, -0.08, zc + rng.uniform(-1, 1) * (h - sh) / 2), (sw, 0.4, sh), bevel=0.14, segments=2)
-                elif r < 0.72:
-                    B.box('g_dirt2', (xc, 0.25, zc), (w, 0.3, h), bevel=0.03)
-    B.done(period=None)
-    B = Builder('ground_cap', L)
-    B.box('g_cap', (GP / 2, 0.1, -0.21), (GP, 0.9, 0.32), bevel=0.0)          # z -0.05 .. -0.37
-    B.box('g_cap_hi', (GP / 2, 0.04, -0.09), (GP, 0.96, 0.05), bevel=0.0)
-    for col in range(8):
-        x0 = col * T + CELL_MARGIN + 0.1
-        for k in range(2):
-            xc = x0 + (k + 0.5) * (T - 0.3) / 2 + rng.uniform(-0.08, 0.08)
-            B.sphere('g_cap', (xc, 0.0, -0.37), rng.uniform(0.12, 0.17), scale=(1.5, 0.8, 0.7), subdiv=1)
-        for k in range(2):
-            xc = x0 + rng.uniform(0.0, T - 0.32)
-            hb = rng.uniform(0.1, 0.16)
-            B.lathe('g_cap_hi', [(0.045, 0.0), (0.0, hb)], 4, at=(xc, -0.12, -0.02 - hb), rot=(0, rng.uniform(-0.35, 0.35), 0), cap_bottom=True)
-    B.done(period=None)
-    return c
+    surface (z = 0) with a pale highlight line, a lumpy underside and earth crumbs, over red clay with chunky stones
+    and darker patches, 3 tiles deep, laid out per 32-px tile (ma_kit.ground_earth). Its own collection 'ground'."""
+    import ma_kit as K
+    K.use(MODULE, PALETTE, LAYERS)
+    COLL[GROUND_COLL] = K.ground_earth(seed, tufts='nubs')
+    return COLL[GROUND_COLL]
 
 # ----------------------------------------------------------------------------------------------- preview render
 FRAME_H = P * RES[1] / RES[0]
