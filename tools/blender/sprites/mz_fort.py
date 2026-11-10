@@ -40,6 +40,8 @@ PALETTE = {
     'wall': '#c8b898', 'wall_lt': '#dccfb0', 'wall_dk': '#b0a082', 'course': '#a89878', 'bastion': '#c0b090', 'merlon': '#d2c2a2',
     'shadow': '#5a4e3c', 'tile_roof': '#b8603a', 'pennant': '#ffd23a', 'pennant2': '#1a9a5a', 'cannon': '#3a3a44', 'coconut': '#6a4a2a',
     'palm_trunk': '#8a6a40', 'palm_leaf': '#3a9a5a',
+    'sea_far': '#6ab8dc', 'sea_far_hi': '#c8ecf8', 'isle': '#8ab89a', 'isle_sand': '#efe2c0', 'isle_palm': '#5a9a7a',
+    'hull': '#8a6a50', 'sail': '#f6f0e0',
     'g_cap': '#c8b898', 'g_cap_hi': '#e8dcc0', 'g_dirt': '#a89878', 'g_dirt2': '#7a6a50', 'g_rock': '#b8a888',
 }
 
@@ -380,6 +382,24 @@ def build_L0(rng):
     B.box('sea', (P / 2, 2.5, -3.0), (P, 5.0, 6.0), bevel=0.0)
     B.box('sea_deep', (P / 2, 2.4, -4.6), (P, 5.0, 2.8), bevel=0.0)
     ripples(B, rng, 'sea_hi', 26, -2.4, -0.15, 0.5, 1.6, y=-0.1)
+    B.done(period=None)
+    # the open sea behind the walls, up to a hazy horizon above the merlons, with a far palm islet and dhows
+    B = Builder('L0_horizon', L)
+    B.box('sea_far', (P / 2, 5.6, 1.9), (P + 1.2, 0.4, 5.0), bevel=0.0)
+    B.box('sea_far_hi', (P / 2, 5.3, 4.35), (P + 1.2, 0.2, 0.1), bevel=0.0)
+    ix = P * rng.uniform(0.55, 0.7)
+    B.lathe('isle', [(2.6, 4.2), (1.6, 4.75), (0.0, 4.9)], 9, at=(ix, 5.0, 0), yscale=0.25, cap_top=True)
+    B.box('isle_sand', (ix, 4.95, 4.26), (5.0, 0.2, 0.14), bevel=0.0)
+    for k, (dx, h) in enumerate(((-0.9, 1.1), (-0.2, 1.4), (0.7, 1.0))):
+        base = Vector((ix + dx, 4.8, 4.7)); top = base + Vector((0.15 * (k - 1), 0, h))
+        B.rod('isle_palm', base, top, 0.05, segs=4, r2=0.035)
+        for a in range(5):
+            ang = -0.6 + a * 0.3
+            B.rod('isle_palm', top, top + Vector((math.sin(ang * 2.2) * 0.55, 0, -0.18 - abs(ang) * 0.2)), 0.06, segs=4, r2=0.015)
+    for k in range(2):
+        dx = (P * (0.12 + 0.45 * k) + rng.uniform(-1, 1)) % P
+        B.slab('hull', [(dx - 0.7, 4.3), (dx + 0.8, 4.3), (dx + 0.55, 4.55), (dx - 0.5, 4.55)], 0.2, at=(0, 4.6, 0))
+        B.slab('sail', [(dx - 0.2, 4.55), (dx + 0.6, 4.55), (dx - 0.35, 5.8)], 0.06, at=(0, 4.5, 0))
     B.done(period=None)
     features = ['gate', 'cannons', 'turret', 'stair']
     rng.shuffle(features)
