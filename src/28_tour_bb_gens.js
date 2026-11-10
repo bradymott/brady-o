@@ -133,7 +133,7 @@ TourGens.climb = (ctx, A) => { const r = tourClimb(ctx); r.area.variant = A.vari
 // sky islands: no ground row; islands 3-12 wide hang in open sky, falling past the bottom kills
 TourGens.islands = (ctx, A) => {
   const H = A.H || 30, S = ctx.spec;
-  S.H = H; S.GY = A.GY || H - 9; S.gyMin = A.gyMin || 5; S.gyMax = A.gyMax || H - 6; if (!A.W && !S.width) S.width = 190 + 40;
+  S.H = H; S.GY = A.GY || H - 9; S.gyMin = A.gyMin || 5; S.gyMax = A.gyMax || H - 6;
   ctx.stripOpts = { sky: true };
   const r = tourStrip(ctx, 'run');
   ctx.stripOpts = null;
@@ -180,7 +180,7 @@ TourGens.arena = (ctx, A) => {
 TourGens.layered = (ctx, A) => {
   const S = ctx.spec, H = A.H || 30, lanes = Object.assign({}, A.lanes || { roof: 12, street: 21, cellar: 27 });
   const names = Object.keys(lanes).sort((a, b) => lanes[a] - lanes[b]);
-  const B = new AreaBuilder(A.W ? A.W + 60 : 420, H);
+  const B = new AreaBuilder(Math.max(420, (A.W || 0) + 120), H);
   B.themeKey = ctx.theme;
   const band = {}; names.forEach((n, k) => { band[n] = { y0: k === 0 ? 0 : lanes[names[k - 1]] + 2, y1: k === names.length - 1 ? H - 1 : lanes[n] + 1 }; });
   const main = A.lane || (lanes.street != null ? 'street' : names[Math.floor(names.length / 2)]);

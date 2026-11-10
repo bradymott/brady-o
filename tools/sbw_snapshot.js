@@ -20,16 +20,17 @@ const digest = lvl => {
   h.update(JSON.stringify(lvl.start));
   return h.digest('hex').slice(0, 16);
 };
-const out = {};
-for (const id of Tour.allLevelIds()) { const [w, i] = id.split('-').map(Number); out[id] = digest(getLevel(w, i)); }
+const out = {}, v2 = [];
+for (const id of Tour.allLevelIds()) { const [w, i] = id.split('-').map(Number); const L = getLevel(w, i); if (L.v2) { v2.push(id); continue; } out[id] = digest(L); }
+if (v2.length) console.log('rewritten in the v2 format (not compared):', v2.join(' '));
 if (write) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(out, null, 1) + '\n'); console.log('wrote', Object.keys(out).length, 'level digests to', file); process.exit(0); }
 const old = JSON.parse(fs.readFileSync(file, 'utf8'));
 let bad = 0;
 for (const id in old) {
-  if (out[id] === old[id]) continue;
+  if (out[id] === old[id] || v2.includes(id)) continue;
   if (expected.includes(id)) { console.log('changed (expected)', id); continue; }
   console.log('CHANGED', id, old[id], '->', out[id] || 'missing'); bad++;
 }
 for (const id in out) if (!(id in old)) console.log('new level', id);
-console.log(bad ? `${bad} legacy level(s) no longer build the same` : `all ${Object.keys(old).length} snapshot levels build identically`);
+console.log(bad ? `${bad} legacy level(s) no longer build the same` : `all ${Object.keys(old).length - v2.filter(id => id in old).length} legacy levels build identically`);
 process.exit(bad ? 1 : 0);

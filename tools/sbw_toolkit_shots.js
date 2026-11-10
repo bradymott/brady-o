@@ -219,6 +219,29 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       await shot(`obj-${n}.png`);
     }
   });
+  // the two levels rewritten in the v2 format (§7.5): Mexico 1-1 and Ecuador 2-2
+  await run('levels', async () => {
+    const lvShot = async (id, name, fn) => {
+      await page.evaluate(([id, fn]) => { const B = window.BRADY; B.Save.data.lives = 9; const [w, i] = id.split('-').map(Number); const g = new B.Play(B.getLevel(w, i), {}); B.Game.setScene(g); sim(2); const p = P(); p.invuln = 999; (new Function('g', 'p', fn))(g, p); g.camX = Math.max(0, Math.min(g.area.W * 32 - window.BRADY.Game.viewW, p.cx - window.BRADY.Game.viewW * 0.42)); g.camY = g.camTargetY(true); sim(0.1); freeze(); }, [id, fn]);
+      await shot(name);
+    };
+    await lvShot('1-1', 'lv-1-1-start.png', '');
+    await lvShot('1-1', 'lv-1-1-roof.png', "const A = g.area; standAt(60, 2); sim(0.6);");
+    await lvShot('1-1', 'lv-1-1-plaza.png', "const gy = g.entities.find(e => e.constructor.name === 'Geyser'); standAt(Math.floor(gy.cx / 32) - 4, 14); sim(0.4);");
+    await lvShot('1-1', 'lv-1-1-trapdoor.png', "const td = g.entities.find(e => e.constructor.name === 'TourTrapdoor'); p.x = td.cx - 110; p.y = td.y - p.h; sim(0.3);");
+    await lvShot('1-1', 'lv-1-1-bodega.png', "const door = g.entities.find(e => e.constructor.name === 'TourTrapdoor'); g.enterPortal(door.portal); sim(3); p.invuln = 0; const q = P(); q.x += 300; sim(0.5);");
+    await lvShot('2-2', 'lv-2-2-start.png', '');
+    await lvShot('2-2', 'lv-2-2-vines.png', "standAt(30, 2); sim(0.5);");
+    await lvShot('2-2', 'lv-2-2-curtain.png', "const c = g.entities.find(e => e.constructor.name === 'TourCurtain'); p.x = c.cx - 90; p.y = c.y + c.h - p.h; sim(0.3);");
+    await lvShot('2-2', 'lv-2-2-swing.png', "const c = g.entities.find(e => e.constructor.name === 'TourCatapult'); p.x = c.cx - 60; p.y = c.y - p.h; sim(0.3);");
+    await lvShot('2-2', 'lv-2-2-treehouse.png', "const d = g.entities.find(e => e.s && e.s.secretDoor); g.enterPortal(d); sim(3); const q = P(); q.x += 260; sim(0.4);");
+    const r = await page.evaluate(() => {
+      const B = window.BRADY, out = {};
+      for (const id of ['1-1', '2-2']) { const [w, i] = id.split('-').map(Number); const g = new B.Play(B.getLevel(w, i), {}); B.Game.setScene(g); for (let k = 0; k < 600; k++) g.update(1 / 120); g.draw(B.Game.ctx); out[id] = { areas: g.level.areas.length, v2: !!g.level.v2, dead: g.player.dead }; }
+      return out;
+    });
+    check('Mexico 1-1 and Ecuador 2-2 run in the v2 format', r['1-1'].v2 && r['2-2'].v2 && r['1-1'].areas === 2 && r['2-2'].areas === 3 && !r['1-1'].dead && !r['2-2'].dead, r);
+  });
   check('no page errors', errors.length === 0, errors.slice(0, 5));
   console.log(failures ? `${failures} LAB CHECK(S) FAILED` : 'ALL LAB CHECKS PASSED');
   await browser.close();

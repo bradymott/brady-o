@@ -107,7 +107,8 @@ const TourStyles = {
 function tourStrip(ctx, mode) {
   const S = ctx.spec, rng = ctx.rng;
   const H = S.H || 18, GY = S.GY || 14;
-  const B = new AreaBuilder(S.width || (ctx.v2 && S.W) || 420, H);
+  // v2 W is the designed length, not a hard cap: the builder has room to spare and trims to what the script built
+  const B = new AreaBuilder(S.width || (ctx.v2 ? Math.max(420, (S.W || 0) + 120) : 420), H);
   B.themeKey = ctx.theme;
   const st = tourState(ctx, B, Object.assign({ GY, H, mode, auto: mode === 'auto', gyMin: S.gyMin || 8, gyMax: S.gyMax || 15, ceil: S.ceil || 0 }, ctx.stripOpts || {}));
   st.floor(0, 11, GY);
@@ -426,7 +427,8 @@ Object.assign(Tour.pieces, {
   end(st, o) {
     const { B } = st; let x = st.x;
     st.floor(x, x + 3); x += 4;
-    const n = clamp(st.gy - 9, 0, 4);
+    // the stairs up to the finale (never into the lane above in a layered area)
+    const n = clamp(B.band ? Math.min(st.gy - 9, st.gy - B.band.y0 - 6) : st.gy - 9, 0, 4);
     for (let i = 0; i < n; i++, x++) { st.floor(x, x); B.fill(x, st.gy - 1 - i, x, st.gy - 1, T.HARD); }
     st.floor(x, x); B.fill(x, st.gy - n, x, st.gy - 1, T.HARD); x++;
     st.gold(x - 1, st.gy - n - 5, 'high');
