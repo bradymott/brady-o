@@ -670,7 +670,7 @@ class Play {
     const wt = () => ctx.setTransform(S, 0, 0, S, gx - camX * S, gy - camY * S);
     wt();
     const th = THEMES[this.themeKey];
-    for (const d of A.decor) { const hw = (d.w || 0) / 2 + 80; if (d.x > camX - hw && d.x < camX + VW + hw) { ctx.save(); if (this.level.tour) ctx.globalAlpha = 0.76; Decor.draw(ctx, d, this.t, th); ctx.restore(); } }
+    for (const d of A.decor) { const hw = (d.w || 0) / 2 + 80; if (d.x > camX - hw && d.x < camX + VW + hw) Decor.draw(ctx, d, this.t, th); }
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     this.drawTiles(ctx, camX, camY, false);
     wt();
