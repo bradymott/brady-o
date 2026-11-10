@@ -120,7 +120,7 @@ def outline_material(color='#2a1f2e'):
 
 def add_outline(obj, width_m):
     """Inverted-hull outline: a flipped, backface-culled shell `width_m` thick (world units)."""
-    if obj.type != 'MESH' or width_m <= 0: return
+    if obj.type != 'MESH' or width_m <= 0 or float(obj.get('outline', 1.0)) <= 0: return   # obj['outline'] = 0: no ink
     om = outline_material()
     if om.name not in [m.name for m in obj.data.materials if m]:
         obj.data.materials.append(om)
