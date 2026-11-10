@@ -96,7 +96,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   const life = await page.evaluate(() => { start('1-1'); const B = window.BRADY, l0 = B.Save.data.lives; P().collect('oneup'); return { l0, l1: B.Save.data.lives }; });
   check('the water bottle gives an extra life', life.l1 === life.l0 + 1, life);
 
-  // 4. Signature power-ups: Mexico's taco toss and Paris's mime gloves
+  // 4. Signature power-ups: Mexico's taco toss and France's mime gloves
   const taco = await page.evaluate(() => {
     start('1-1'); clearEnemies(); const p = P(), g = S(); p.collect('sig:taco');
     const e = near('mxElote', 110); sim(0.02);
@@ -162,7 +162,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('Flying carpet: Brady flies freely', carpet.sig === 'carpet' && carpet.rose > 100 && carpet.air, carpet);
   await page.evaluate(() => { start('5-1'); clearEnemies(); P().collect('sig:carpet'); sim(0.8, { up: true, right: true }); });
   await shot('08e-power-carpet.png');
-  // Valencia's tomatoes: a direct hit knocks out, a splat makes a puddle that sends enemies sliding
+  // Spain's tomatoes: a direct hit knocks out, a splat makes a puddle that sends enemies sliding
   const tomato = await page.evaluate(() => {
     start('6-1'); clearEnemies(); const p = P(), g = S(); p.collect('sig:tomato'); sim(0.1);
     const e = near('esHorchata', 110); e.vx = 0; sim(0.02);
@@ -233,7 +233,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   });
   check('every tour level loads, simulates and renders', all.n >= 10 && all.bad.length === 0, all);
 
-  // 8. Castle bosses: Mexico's piñata, then Paris's soufflé; beating Mexico flies Brady to the next country
+  // 8. Castle bosses: Mexico's piñata, then France's soufflé; beating Mexico flies Brady to the next country
   for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'DJINN', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl'], ['9-5', 'KERA', 'id'], ['10-5', 'PHIN', 'vn'], ['11-5', 'KAPPA', 'jp'], ['13-4', 'BIG TUSK', 'aq'], ['22-4', 'OTHER BRADY', 'w22']]) {
     const boss = await page.evaluate(([id]) => {
       start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);

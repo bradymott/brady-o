@@ -6,7 +6,7 @@ const BRADY_DIM = {
   small: { hip: 8.5, shoulder: 15, headY: 21.5, headR: 8.6, thigh: 4.6, shin: 4.4, upper: 5, fore: 4.6, torsoW: 13, legW: 5.4, armW: 4.2, hairN: 6, hairL: 3.2, hairW: 14 }
 };
 const CLOTH = {
-  jacket: '#191922', jacketHi: '#34344a', jeans: '#2f4170', jeansHi: '#4a5f96', boot: '#101014', sole: '#34343e',
+  jacket: '#191922', jacketHi: '#34344a', jeans: '#20232c', jeansHi: '#454956', boot: '#101014', sole: '#34343e',
   outline: 'rgba(26,18,36,0.62)', tee: '#25252f'
 };
 
@@ -220,36 +220,72 @@ function drawHairMass(ctx, pts, wTop, wTip, base, hi, sx, sy, facing) {
 */
 const INK = '#17141c';
 
-// an arm segment with an optional blackwork (geometric) tattoo between fractions a..b
-function inkedLimb(ctx, x0, y0, x1, y1, w, skinCol, inkA, inkB, small) {
+// the outline of a limb capsule as a path (for clipping the tattoo to the arm)
+function limbPath(ctx, x0, y0, x1, y1, r) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  ctx.moveTo(x0 + Math.cos(a + Math.PI / 2) * r, y0 + Math.sin(a + Math.PI / 2) * r);
+  ctx.arc(x0, y0, r, a + Math.PI / 2, a - Math.PI / 2); ctx.arc(x1, y1, r, a - Math.PI / 2, a + Math.PI / 2); ctx.closePath();
+}
+/* an arm segment with an optional blackwork sleeve between fractions a..b: solid black triangles along both edges
+   (their points nearly meet, leaving a chain of skin diamonds down the middle, each with a dot) and, with endBand,
+   a crisp double band where the sleeve stops. Black ink only, a few bold shapes so it still reads at phone size. */
+function inkedLimb(ctx, x0, y0, x1, y1, w, skinCol, inkA, inkB, small, endBand) {
   outlinedCapsule(ctx, x0, y0, x1, y1, w, skinCol);
   if (inkB <= inkA) return;
   const ax = lerp(x0, x1, inkA), ay = lerp(y0, y1, inkA), bx = lerp(x0, x1, inkB), by = lerp(y0, y1, inkB);
-  const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len, px = -uy, py = ux;
-  capsule(ctx, ax, ay, bx, by, w * 0.84, 'rgba(23,20,28,0.3)');
-  ctx.strokeStyle = INK; ctx.fillStyle = INK; ctx.lineCap = 'round';
-  if (small) {
-    ctx.lineWidth = 0.8;
-    for (const k of [0.15, 0.55, 0.9]) { const cx = ax + dx * k, cy = ay + dy * k; ctx.beginPath(); ctx.moveTo(cx + px * w * 0.38, cy + py * w * 0.38); ctx.lineTo(cx - px * w * 0.38, cy - py * w * 0.38); ctx.stroke(); }
-    return;
-  }
-  const n = Math.max(3, Math.round(len / 1.9));
+  const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1, px = -dy / len, py = dx / len;
   const at = (k, off) => [ax + dx * k + px * off, ay + dy * k + py * off];
-  // zig-zag spine
-  ctx.lineWidth = 0.75; ctx.beginPath();
-  for (let i = 0; i <= n; i++) { const [x, y] = at(i / n, (i % 2 ? 1 : -1) * w * 0.3); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-  ctx.stroke();
-  // solid diamonds in alternate cells, dots in the others
-  for (let i = 0; i < n; i++) {
-    const [cx, cy] = at((i + 0.5) / n, 0), r = w * 0.2;
-    if (i % 2 === 0) {
-      ctx.beginPath(); ctx.moveTo(cx + ux * r * 1.5, cy + uy * r * 1.5); ctx.lineTo(cx + px * r, cy + py * r);
-      ctx.lineTo(cx - ux * r * 1.5, cy - uy * r * 1.5); ctx.lineTo(cx - px * r, cy - py * r); ctx.closePath(); ctx.fill();
-    } else { ctx.beginPath(); ctx.arc(cx, cy, w * 0.07, 0, TAU); ctx.fill(); }
+  ctx.save();
+  ctx.beginPath(); limbPath(ctx, x0, y0, x1, y1, w / 2); ctx.clip();
+  ctx.fillStyle = INK; ctx.strokeStyle = INK; ctx.lineCap = 'butt';
+  if (small) {
+    // little Brady: two bold bands
+    ctx.lineWidth = 0.9;
+    for (const k of [0.3, 0.75]) { const [p0x, p0y] = at(k, w), [p1x, p1y] = at(k, -w); ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke(); }
+  } else if (!endBand) {
+    // upper arm: a fringe of three bold triangles hanging from under the tee sleeve toward the elbow mandala
+    const h = w / 2 + 0.4, deep = Math.min(0.62, 3.2 / len);
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const o0 = -h + i * (2 * h / 3), o1 = o0 + 2 * h / 3, om = (o0 + o1) / 2;
+      const [x0b, y0b] = at(0, o0), [x1b, y1b] = at(0, o1), [xm, ym] = at(0.12 + deep, om);
+      ctx.moveTo(x0b, y0b); ctx.lineTo(x1b, y1b); ctx.lineTo(xm, ym); ctx.closePath();
+    }
+    ctx.fill();
+    const [b0x, b0y] = at(0, h), [b1x, b1y] = at(0, -h), [b2x, b2y] = at(0.13, -h), [b3x, b3y] = at(0.13, h);
+    ctx.beginPath(); ctx.moveTo(b0x, b0y); ctx.lineTo(b1x, b1y); ctx.lineTo(b2x, b2y); ctx.lineTo(b3x, b3y); ctx.closePath(); ctx.fill();
+  } else {
+    // forearm: a solid diamond with a skin eye between the mandala and the end bands
+    const k0 = Math.min(0.5, (w * 0.75) / len), k1 = 1 - 2.4 / len, km = (k0 + k1) / 2, r = w * 0.36;
+    if (k1 > k0) {
+      const [c0x, c0y] = at(k0, 0), [c1x, c1y] = at(k1, 0), [l0x, l0y] = at(km, r), [l1x, l1y] = at(km, -r);
+      ctx.beginPath(); ctx.moveTo(c0x, c0y); ctx.lineTo(l0x, l0y); ctx.lineTo(c1x, c1y); ctx.lineTo(l1x, l1y); ctx.closePath(); ctx.fill();
+      const [ex2, ey2] = at(km, 0); ctx.fillStyle = skinCol; ctx.beginPath(); ctx.arc(ex2, ey2, r * 0.32, 0, TAU); ctx.fill(); ctx.fillStyle = INK;
+    }
   }
-  // border bands at each end of the piece
-  ctx.lineWidth = 0.95;
-  for (const k of [0, 1]) { const [x0b, y0b] = at(k, w * 0.4), [x1b, y1b] = at(k, -w * 0.4); ctx.beginPath(); ctx.moveTo(x0b, y0b); ctx.lineTo(x1b, y1b); ctx.stroke(); }
+  if (endBand) {
+    // where the sleeve stops: a bold band and a thin one just above it
+    const band = (k, lw) => { const [p0x, p0y] = at(k, w), [p1x, p1y] = at(k, -w); ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke(); };
+    band(1 - 0.55 / len, small ? 0.8 : 1.1);
+    if (!small) band(1 - 2.0 / len, 0.45);
+  }
+  ctx.restore();
+}
+// the elbow mandala: a black rosette with scalloped petals, a skin ring and a black centre, clipped to the arm
+function elbowMandala(ctx, sx, sy, ex, ey, hx, hy, w, wf, skinCol, small) {
+  ctx.save();
+  ctx.beginPath(); limbPath(ctx, sx, sy, ex, ey, w / 2); limbPath(ctx, ex, ey, hx, hy, wf / 2); ctx.clip('nonzero');
+  const R = w * (small ? 0.42 : 0.6);
+  ctx.fillStyle = skinCol; ctx.beginPath(); ctx.arc(ex, ey, R + 0.45, 0, TAU); ctx.fill();   // a clean skin gap around it
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(ex, ey, R, 0, TAU); ctx.fill();
+  if (!small) {
+    ctx.fillStyle = skinCol;
+    for (let i = 0; i < 8; i++) { const a = i * TAU / 8; ctx.beginPath(); ctx.arc(ex + Math.cos(a) * R, ey + Math.sin(a) * R, R * 0.2, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = skinCol; ctx.lineWidth = R * 0.16; ctx.beginPath(); ctx.arc(ex, ey, R * 0.55, 0, TAU); ctx.stroke();
+    for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + TAU / 8; ctx.beginPath(); ctx.moveTo(ex + Math.cos(a) * R * 0.55, ey + Math.sin(a) * R * 0.55); ctx.lineTo(ex + Math.cos(a) * R * 0.9, ey + Math.sin(a) * R * 0.9); ctx.stroke(); }
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(ex, ey, R * 0.24, 0, TAU); ctx.fill();
+  } else { ctx.fillStyle = skinCol; ctx.beginPath(); ctx.arc(ex, ey, R * 0.4, 0, TAU); ctx.fill(); }
+  ctx.restore();
 }
 
 function drawBrady(ctx, o) {
@@ -315,8 +351,10 @@ function drawBrady(ctx, o) {
     const [ex, ey] = limbEnd(sx, sy, ua, D.upper);
     const [hx, hy] = limbEnd(ex, ey, fa, D.fore);
     const sk = back ? skin.sh : skin.base;
+    // 3/4 blackwork sleeves: from under the tee sleeve to mid-forearm, a mandala on the elbow
     inkedLimb(ctx, sx, sy, ex, ey, D.armW, sk, tattoos ? sleeveK - 0.05 : 1, tattoos ? 1.0 : 0, o.small);
-    inkedLimb(ctx, ex, ey, hx, hy, D.armW - 0.5, sk, 0, tattoos ? 0.62 : 0, o.small);
+    inkedLimb(ctx, ex, ey, hx, hy, D.armW - 0.5, sk, 0, tattoos ? 0.62 : 0, o.small, true);
+    if (tattoos) elbowMandala(ctx, sx, sy, ex, ey, hx, hy, D.armW, D.armW - 0.5, sk, o.small);
     // tee sleeve over the shoulder, with a flat hem
     const [mx, my] = [lerp(sx, ex, sleeveK), lerp(sy, ey, sleeveK)];
     {
@@ -368,7 +406,7 @@ function drawBrady(ctx, o) {
   ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 0.8;
   ctx.beginPath(); ctx.ellipse(tw * 0.18, -th - 1.2, tw * 0.22, o.small ? 1.4 : 2.2, 0, 0, Math.PI); ctx.stroke();
   if (!o.small) { ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(-tw * 0.1, -th * 0.55); ctx.quadraticCurveTo(tw * 0.1, -th * 0.4, tw * 0.3, -th * 0.6); ctx.stroke(); }
-  // waistband of black jeans
+  // waistband of black trousers
   ctx.fillStyle = '#060608'; ctx.fillRect(-tw / 2, -1.2, tw, 2.4);
   if (neon) {
     ctx.save(); ctx.shadowColor = trim; ctx.shadowBlur = 5; ctx.strokeStyle = trim; ctx.lineWidth = 1.1;
@@ -563,3 +601,5 @@ function drawBrady(ctx, o) {
   }
   ctx.restore();
 }
+// test and screenshot hook: draw Brady anywhere (tools only)
+try { window.BRADY_DRAW = drawBrady; } catch (e) { /* not in a browser */ }

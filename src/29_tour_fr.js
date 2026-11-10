@@ -1,5 +1,5 @@
 /* ============================================================
-   PARIS, FRANCE (world 7) — second reference country.
+   FRANCE (world 7) — second reference country.
    7-1 Boulangerie Boulevard  run    café umbrellas, a bakery conveyor, croissants rolling downhill
    7-2 Seine Chase            auto   chase the Baron along the quay: book-box lids snap open and shut
    7-3 Rooftops by Moonlight  night  zinc rooftops: chimney smoke lifts you over the alleys, cats prowl

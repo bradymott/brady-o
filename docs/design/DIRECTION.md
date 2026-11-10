@@ -45,8 +45,8 @@ A classic-feeling 2D overworld platformer with better graphics. **Super Brady-O 
 3. Brazil
 4. Mozambique
 5. Morocco (Marrakech souks, Sahara, the Atlas mountains)
-6. Valencia (Spain)
-7. Paris (France)
+6. Spain
+7. France
 8. Amsterdam (Netherlands)
 9. Bali (Indonesia)
 10. Vietnam
@@ -64,7 +64,7 @@ Plus two secret lands: e.g. Antarctica, and the hidden **World 22**, a nod to th
 - Levels must all be really different.
 
 **Humor:**
-- Build the gags from food, animals, objects, landmarks and folklore, e.g. Paris: walking baguettes and mimes throwing crepes.
+- Build the gags from food, animals, objects, landmarks and folklore, e.g. France: walking baguettes and mimes throwing crepes.
 - Never caricature the people of a country or their sacred figures and sites. Temples, stupas and prayer flags are respectful background only.
 
 **Landmark rights:**
@@ -93,8 +93,8 @@ Plus two secret lands: e.g. Antarctica, and the hidden **World 22**, a nod to th
 | Brazil | **Football** | Kick a ball that ricochets off walls and enemies. |
 | Mozambique | **Piri-piri chili** | Breathe fire for a few seconds. |
 | Morocco | **Flying carpet** | Ride it through the sky section of the level. |
-| Valencia | **Tomato fight** | Lob splatting tomatoes; the splats leave slippery puddles that enemies slide on. |
-| Paris | **Mime gloves** | Draw invisible walls and stairs to block crepes and climb. |
+| Spain | **Tomato fight** | Lob splatting tomatoes; the splats leave slippery puddles that enemies slide on. |
+| France | **Mime gloves** | Draw invisible walls and stairs to block crepes and climb. |
 | Amsterdam | **Dutch bike** | Ride fast, hop canals, ring the bell to stun. |
 | Bali | **Surfboard** | Surf the wave levels. |
 | Vietnam | **Noodle lasso** | Swing across gaps on a pho noodle. |

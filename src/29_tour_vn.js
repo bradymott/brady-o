@@ -447,7 +447,7 @@ class VnShrimp extends TourEnemy {
   touchPlayer(p) { if (this.dead || this.stunT > 0) return; if (this.state === 'charge' && !p.invuln && !p.star) { p.vx = this.dir * 9 * TS; p.vy = -6 * TS; K.say(this.g, p, 'POW!', '#ff7a3a'); } p.hurt(this); }
 }
 const enemies = {
-  vnScooter: { cls: TourEnemy.make({ w: 36, h: 30, speed: 1.4, behavior: 'charge', range: 8, chargeSpeed: 8.2, windup: 0.6, chargeT: 1.5, art: scooterArt, burst: '#e8323a', onNotice: e => { K.say(e.g, e, 'BEEP BEEP!', '#ffd23a'); TourKit.sfx('bike_bell', 'select2', { vol: 0.4, pitch: 1.3 }); } }), place: 'walk' },
+  vnScooter: { cls: TourEnemy.make({ w: 36, h: 30, inkPad: 6, speed: 1.4, behavior: 'charge', range: 8, chargeSpeed: 8.2, windup: 0.6, chargeT: 1.5, art: scooterArt, burst: '#e8323a', onNotice: e => { K.say(e.g, e, 'BEEP BEEP!', '#ffd23a'); TourKit.sfx('bike_bell', 'select2', { vol: 0.4, pitch: 1.3 }); } }), place: 'walk' },
   vnBao: { cls: TourEnemy.make({ w: 26, h: 24, speed: 1.0, behavior: 'hop', hopV: 9, hopEvery: 1.3, art: baoArt, burst: '#ffffff' }), place: 'walk' },
   vnRoll: { cls: TourEnemy.make({ w: 26, h: 16, speed: 0.8, behavior: 'roll', range: 8, rollSpeed: 6.4, rollT: 2.4, art: rollArt, burst: '#f0b050' }), place: 'walk' },
   vnShrimp: { cls: VnShrimp, place: 'walk' },

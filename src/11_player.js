@@ -220,6 +220,9 @@ class Player {
 
     if (this.invuln > 0) this.invuln -= dt;
     for (const f in this.fx) if (this.fx[f] > 0) { this.fx[f] -= dt; if (this.fx[f] <= 0) { this.fx[f] = 0; Sound.play('float', { pitch: 0.7, vol: 0.4 }); } }
+    // the boss-arena entry walk (Play.bossStart): a few steps right, then control comes back
+    const ew = g.entryWalk;
+    if (ew) { ew.t -= dt; if (ew.t <= 0 || this.x >= ew.x || this.dead || inp.left || inp.jumpPressed) g.entryWalk = null; else inp = { left: false, right: true, up: false, down: false, jump: false, action: false, jumpPressed: false, actionPressed: false }; }
     if (this.stunT > 0) { this.stunT -= dt; inp = { left: false, right: false, up: false, down: false, jump: false, action: false, jumpPressed: false, actionPressed: false }; }
     if (this.slowT > 0) this.slowT -= dt;
     if (this.spinVis > 0) this.spinVis -= dt;
@@ -530,8 +533,9 @@ class Player {
     if (this.spin && !this.onGround) o.rot = Math.sin(this.anim.t * 26) * 0.25;
     PlayerFx.under(ctx, this, t);
     // drawn a little larger than the hitbox (ART_SCALE) so he reads on a phone; the physics box is unchanged
-    Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16' });
+    Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16', rim: '#e7e3d7' });
     PlayerFx.over(ctx, this, t);
   }
   get light() { return { r: this.g.area.water ? 150 : 170, c: 'rgba(255,240,220,' }; }
 }
+
