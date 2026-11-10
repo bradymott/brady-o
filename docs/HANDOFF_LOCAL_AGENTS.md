@@ -1,5 +1,7 @@
 # Brady's Games: handoff for local Claude agents
 
+> **Newest handoff (November 2026): start with [docs/handoff/README.md](handoff/README.md).** It names one agent per game and lists ChatGPT's three open pull requests. This file stays the reference for the ground rules and the history.
+
 You're continuing three games that a cloud Claude session built with the owner, Brady. He plays on an iPhone and isn't a programmer, so talk to him plainly and show screenshots. His goal is games that are **as professional as possible**, and graphics are his #1 priority for *Brady Goes to Burning Man*. Your job is the next stage:
 - professional 3D assets made in Blender (and, only if he chooses, Unreal);
 - testing and polish on a real device.
