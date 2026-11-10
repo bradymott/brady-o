@@ -39,7 +39,7 @@ const Validator = {
     const locks = (area.locks || []).map(L => ({ id: L.id, tiles: L.tiles }));
     // tiles under the water line are water (tide and valve levels)
     if (waterLine != null) for (let y = waterLine; y < H; y++) for (let x = 0; x < W; x++) if (tiles[y * W + x] === T.EMPTY) tiles[y * W + x] = T.WATER;
-    const A = { W, H, tiles, water: area.water, gravity: area.gravity || 1, springs, surf: area.surf || null, zones: z2, locks, waterLine, carry: area.carry || null };
+    const A = { W, H, tiles, water: area.water, gravity: area.gravity || 1, springs, surf: area.surf || null, zones: z2, locks, waterLine, carry: area.carry || null, fallCap: area.fallCap || 0, airSteer: area.airSteer || 0 };
     A.mixed = !area.water && tiles.indexOf(T.WATER) >= 0;
     return A;
   },
@@ -146,6 +146,8 @@ const Validator = {
         if (opts.trace) (res.trace = res.trace || []).push([ai, tx, ty, mask]);
         for (const au of autos) if (au.ai === ai) push(ai, tx, ty, mask ^ (1 << au.g), d + 1);
         if (A.water) { this.flood(A, ai, tx, ty, markBox, portalCheck); continue; }
+        // v2: a spot inside solid rock is no place to stand (dug soil is the exception)
+        if (v2) { const t1 = tileAt(A, tx, ty - 1), t2 = tileAt(A, tx, ty - 2); if ((SOLID[t1] && t1 !== T.SOIL) || (SOLID[t2] && t2 !== T.SOIL)) continue; }
         const nodeBody = { x: tx * TS + TS / 2 - D.w / 2, y: ty * TS - D.h, w: D.w, h: D.h };
         markBox(ai, nodeBody); portalCheck(ai, nodeBody);
         // a crawlway with the knee pads: in at one end, out at the other
@@ -153,6 +155,11 @@ const Validator = {
         // dig down through soil (the soil under Brady's feet goes; he stands on what is below)
         if (tileAt(A, tx, ty) === T.SOIL) push(ai, tx, ty + 1, mask, d + 1);
         for (const dir of [-1, 1]) if (standable(A, tx + dir, ty) && !SOLID[tileAt(A, tx + dir, ty - 1)]) push(ai, tx + dir, ty, mask, d + 1);
+        // down a dug hole (soil all around): only digging on, or stepping out sideways into a cavern
+        if (tileAt(A, tx, ty - 1) === T.SOIL || tileAt(A, tx, ty - 2) === T.SOIL) {
+          for (const dir of [-1, 1]) { res.sims++; const land = this.simulate(A, ai, tx, ty, { dir, sp: PHYS.walk, off: 0, hold: 0, jump: false }, D, markBox, 1); if (land) push(ai, land[0], land[1], mask, d + 1); }
+          continue;
+        }
         const runwayBack = dir => { let n = 0; while (n < 8 && standable(A, tx - dir * (n + 1), ty)) n++; return n; };
         const onSpring = A.springs.has(tx + ',' + ty);
         const maneuvers = [];
@@ -214,6 +221,7 @@ const Validator = {
     if (a0.chase && a0.chase.speed) { const gx = this.exitX(a0); tHazard = gx / a0.chase.speed; }
     else if (a0.risingLava && a0.risingLava.speed) tHazard = (a0.risingLava.delay || 0) + (a0.H - 4) / a0.risingLava.speed;
     else if (a0.risingWater && a0.risingWater.speed) tHazard = (a0.risingWater.delay || 0) + (a0.H - 4) / a0.risingWater.speed;
+    else if (a0.autoscrollY && a0.autoscrollY.speed) tHazard = (a0.autoscrollY.delay || 0) + (a0.H - 4) / a0.autoscrollY.speed;
     if (tHazard != null) { out.margin = Math.round((tHazard / tBrady - 1) * 100) / 100; if (level.v2) out.ok = out.margin >= 0.25; }
     return out;
   },

@@ -147,6 +147,8 @@ function moveBody(b, area, dt, opts) {
 
 function bodyInWater(b, area) {
   if (area.water) return true;
+  // a moving water line (tide, valve, rising flood): everything below it is water
+  if (area.waterTop != null && b.y + b.h * 0.4 > area.waterTop) return true;
   const tx = Math.floor((b.x + b.w / 2) / TS), ty = Math.floor((b.y + b.h * 0.4) / TS);
   return tileAt(area, tx, ty) === T.WATER;
 }
@@ -225,7 +227,7 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
       p.vx = approach(p.vx, 0, PHYS.decel * (ice ? 0.15 : 0.6) * dt);
     } else if (dir !== 0) {
       let a;
-      if (!p.onGround) a = PHYS.airAccel;
+      if (!p.onGround) a = PHYS.airAccel * (area.airSteer || 1);
       else if (p.vx !== 0 && sign(p.vx) !== dir) a = PHYS.turn;
       else a = PHYS.accel;
       if (ice) a *= 0.32;
@@ -254,7 +256,9 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
       if (zf.vmax && p.vy < -zf.vmax) p.vy = -zf.vmax;
       if (zf.fy < 0) p.jumping = false;
     }
-    if (p.vy > PHYS.maxFall) p.vy = PHYS.maxFall;
+    // freefall shafts cap the fall speed (area.fallCap, tiles/s)
+    const maxFall = area.fallCap ? Math.min(PHYS.maxFall, area.fallCap * TS) : PHYS.maxFall;
+    if (p.vy > maxFall) p.vy = maxFall;
     if (p.vy >= 0) p.jumping = false;
   }
   // conveyor carry

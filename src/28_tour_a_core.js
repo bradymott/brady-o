@@ -262,7 +262,7 @@ const TourProgress = {
     if (!L || !this.countryUnlocked(C)) return false;
     if (i === 1) return true;
     // main levels also open when the main level before them is done (saves from before exits were recorded)
-    if (!L.secret && i <= C.mainCount && Save.data.done[C.world + '-' + (i - 1)]) return true;
+    if (!L.secret && Save.data.done[C.world + '-' + (i - 1)]) return true;
     return this.exitInto(id);
   },
   // has any taken exit got this level as its target?

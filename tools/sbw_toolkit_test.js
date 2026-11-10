@@ -66,6 +66,11 @@ section('graph', () => {
   check('a legacy level is one main area plus its bonus room, roles set', l84.areas[0].role === 'main' && l84.areas[1].role === 'secret' && !l84.v2);
 });
 
+section('guide', () => {
+  const { lvl, r } = validate(fixtures.levels.guide, 6);
+  check('the worked example in TOOLKIT_STATUS.md builds and validates (both exits, 3 postcards, both areas)', r.ok && r.exits.main && r.exits.secret && !lvl.problems.length, { exits: r.exits, gold: r.gold, areas: r.areasReached, problems: lvl.problems });
+});
+
 section('progress', () => {
   // a test copy of Mexico with a secret level, a house and a shortcut (this VM only)
   fresh();
@@ -113,6 +118,14 @@ section('validator', () => {
       else if (k === 'held') got.held = f.expect.held.every(h => r.held.includes(h));
     }
     check(`validator fixture ${name}: ${f.what}`, Object.values(got).every(Boolean), { got, exits: r.exits, areas: r.areasReached, pace: r.pace, held: r.held, gold: r.gold, problems: lvl.problems });
+  }
+});
+
+section('gens', () => {
+  for (const [name, spec] of Object.entries(fixtures.gens)) {
+    const { lvl, r } = validate(spec);
+    const ok = r.ok && !(lvl.problems || []).some(p => !/is not defined yet/.test(p));
+    check(`gen ${name}: ${lvl.areas.map(a => a.gen + ' ' + a.W + 'x' + a.H).join(' + ')} validates (exits, postcards, areas, pace)`, ok, { exits: r.exits, gold: r.gold, areas: r.areasReached, pace: r.pace, problems: lvl.problems, guard: r.guardHit });
   }
 });
 

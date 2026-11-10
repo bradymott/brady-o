@@ -154,6 +154,11 @@ class Play {
     }
     this.loadingEntities = null;
     a.lavaY = a.H * TS + 40;
+    // a moving water line: tide (rows low <-> high), a valve (toggle), a rising flood
+    if (src.risingWater) a.waterTop = a.H * TS + 40;
+    else if (src.tide) a.waterTop = src.tide.low * TS;
+    else if (src.waterLine != null) a.waterTop = src.waterLine * TS;
+    if (src.autoscrollY) a.scrollY = null;
     return a;
   }
   loadArea(idx, x, y, power) {
@@ -405,6 +410,22 @@ class Play {
   /* ---------- camera ---------- */
   camTargetY(snap) {
     const A = this.area, p = this.player;
+    // v2 camera modes (§7.4.6): lanes, shaft, room, free; a climbing autoscroll
+    const vmax = Math.max(0, A.H * TS - Game.viewH);
+    if (A.autoscrollY && A.scrollY != null) return clamp(Math.min(A.scrollY, p.y + p.h - Game.viewH * 0.2), 0, vmax);
+    if (A.camera === 'lanes' && A.lanes) {
+      // the floor of the lane Brady is in, at 68 % of the view (small hops never move the camera)
+      const names = Object.keys(A.lanes).sort((a, b) => A.lanes[a] - A.lanes[b]), fy = (p.y + p.h) / TS;
+      let lane = A.lanes[names[names.length - 1]];
+      for (const n of names) if (fy <= A.lanes[n] + 1.5) { lane = A.lanes[n]; break; }
+      return clamp(lane * TS - Game.viewH * 0.68, 0, vmax);
+    }
+    if (A.camera === 'shaft') return clamp(p.y + p.h - Game.viewH * 0.35, 0, vmax);
+    if (A.camera === 'free' || A.sky) return clamp(p.y + p.h - Game.viewH * 0.55, 0, vmax);
+    if (A.camera === 'room' && A.cell) {
+      const ch = A.cell[1] * TS, y0 = Math.floor((p.y + p.h - 1) / ch) * ch;
+      return ch <= Game.viewH ? clamp(y0 + ch / 2 - Game.viewH / 2, 0, vmax) : clamp(p.y + p.h - Game.viewH * 0.6, y0, y0 + ch - Game.viewH);
+    }
     const maxY = Math.max(0, A.H * TS - Game.viewH - (A.tower || A.water ? 0 : TS));
     // a tall boss (the Man on his saucer, then giant) gets a lower horizon so his head stays on screen
     let ty = p.y + p.h - Game.viewH * (A.tower ? 0.55 : (this.bossLock && this.boss && this.boss.tall) ? 0.84 : 0.68);
@@ -429,6 +450,8 @@ class Play {
         const b = this.boss;
         if (b && b.focusX && w >= Game.viewW) tx = clamp(Math.max(tx, Math.min(b.focusX - Game.viewW, p.cx - 1.5 * TS)), this.bossLock.x0 - TS, this.bossLock.x1 - Game.viewW + TS);
       }
+      // a maze cell: the camera stays inside the room Brady is in
+      if (A.camera === 'room' && A.cell) { const cw = A.cell[0] * TS, x0 = Math.floor(p.cx / cw) * cw; tx = cw <= Game.viewW ? x0 + cw / 2 - Game.viewW / 2 : clamp(tx, x0, x0 + cw - Game.viewW); }
       tx = clamp(tx, 0, maxX);
       this.camX += (tx - this.camX) * (1 - Math.exp(-dt * 9));
       if (Math.abs(tx - this.camX) > Game.viewW) this.camX = tx;
@@ -511,6 +534,26 @@ class Play {
       const minLava = p.y + p.h + Game.viewH * 0.9;
       if (this.lavaY > minLava) this.lavaY = minLava;
       A.lavaY = this.lavaY;
+    }
+    // v2 area systems: rising water, the tide, the camera climbing on its own (§7.4.6)
+    if (A.risingWater && this.state === 'play') {
+      if (this.t > (A.risingWater.delay || 0)) A.waterTop -= (A.risingWater.speed || 0.6) * TS * dt * ws;
+      A.waterTop = Math.min(A.waterTop, p.y + p.h + Game.viewH * 0.9);
+    }
+    if (A.tide && this.state === 'play') {
+      const td = A.tide, per = td.period || 12, hold = td.hold != null ? td.hold : per * 0.25, k = (this.t % per) / per;
+      // low, rise, high (hold), fall: a smooth cycle
+      const mv = (per - 2 * hold) / 2 / per, h1 = hold / per;
+      const f = k < h1 ? 0 : k < h1 + mv ? (k - h1) / mv : k < 2 * h1 + mv ? 1 : 1 - (k - 2 * h1 - mv) / mv;
+      const target = (td.low + (td.high - td.low) * easeInOut(clamp(f, 0, 1))) * TS;
+      A.waterTop = target;
+    }
+    if (A.autoscrollY && this.state === 'play') {
+      const as = A.autoscrollY;
+      if (A.scrollY == null) A.scrollY = this.camY;
+      if (this.t > (as.delay || 0)) A.scrollY = Math.max(0, A.scrollY - (as.speed || 1) * TS * dt * ws);
+      // the bottom edge of the screen kills
+      if (p.y > A.scrollY + Game.viewH + 8 && p.state === 'play') p.die('pit');
     }
     // the pack: tap the slot in the HUD (or press C / Q) to use the spare power-up
     if (Input.packTapped) { Input.packTapped = false; if (this.state === 'play' && p.state === 'play') { if (!p.usePack()) Sound.play('bump', { vol: 0.3 }); } }
@@ -693,7 +736,7 @@ class Play {
     const layers = [[], [], [], []];
     for (const e of this.entities) {
       if (e.remove || !vis(e)) continue;
-      if (e.isPlatform || e instanceof Gate || e instanceof Checkpoint || e instanceof Sign || e instanceof Portal || e instanceof Spring) layers[0].push(e);
+      if (e.isPlatform || e.back || e instanceof Gate || e instanceof Checkpoint || e instanceof Sign || e instanceof Portal || e instanceof Spring) layers[0].push(e);
       else if (e.item || e instanceof Gold || e instanceof PickPop) layers[1].push(e);
       else if (e.friendly) layers[3].push(e);
       else layers[2].push(e);
@@ -705,6 +748,7 @@ class Play {
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     this.drawTiles(ctx, camX, camY, true);
     wt();
+    if (A.waterTop != null && A.waterTop < A.H * TS) this.drawWaterLine(ctx, camX, VW);
     this.parts.draw(ctx);
     this.weather.draw(ctx, this.t);
     for (const e of layers[0]) if (e instanceof Sign) e.drawBubble(ctx);
@@ -759,6 +803,8 @@ class Play {
         const id = A.tiles[y * A.W + x];
         const hv = hide ? hide[y * A.W + x] : 0;
         if (!fg && beatAt && beatAt[y * A.W + x]) { this.drawBeatPad(ctx, beatAt[y * A.W + x], x, y, camX, camY, S); continue; }
+        // dug earth: below the surface of a dig area, empty tiles show the dark wall of the tunnel
+        if (id === T.EMPTY && !fg && A.dig && y > A.surface) { const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S); ctx.fillStyle = A.tunnelCol || '#2a1a12'; ctx.fillRect(dx, dy, Math.ceil(TS * S) + 1, Math.ceil(TS * S) + 1); if ((x * 7 + y * 3) % 5 === 0) { ctx.fillStyle = 'rgba(255,220,170,0.06)'; ctx.beginPath(); ctx.arc(dx + 10 * S, dy + 14 * S, 5 * S, 0, TAU); ctx.fill(); } continue; }
         if (id === T.EMPTY) continue;
         if (hv === 1 || hv === 3) continue;
         if (hv === 2) { if (!fg && lsd) this.drawTripTile(ctx, x, y, camX, camY, S); continue; }
@@ -785,6 +831,8 @@ class Play {
           case T.CRUMBLE: img = atlas.crumble; ox = crumbleOf(x, y); break;
           case T.PILLAR: { const part = ['L', 'R', 'S'][v & 3] || 'S'; img = atlas.pillar[part + (v & 4 ? 't' : 'b')]; break; }
           case T.GLITCH: img = atlas.glitch[Math.floor(t * 12 + x) % 3]; break;
+          case T.SOIL: img = atlas.soil ? atlas.soil[y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]] ? 0 : 1] : null; break;
+          case T.LINTEL: img = atlas.lintel || null; break;
           case T.PICK: {
             ctx.setTransform(S, 0, 0, S, Game.gameRect.x * Game.dpr + dx, Game.gameRect.y * Game.dpr + dy);
             Sprites.pickFast(ctx, TS / 2, TS / 2 + Math.sin(t * 3 + x * 0.7) * 1.5, t, Math.cos(t * 3 + x * 0.5), (x * 3 + y) % 5);
@@ -877,6 +925,25 @@ class Play {
     for (let x = camX - 10; x <= camX + VW + 10; x += 16) ctx.lineTo(x, y + Math.sin(t * 3 + x * 0.05) * 4 + Math.sin(t * 1.7 + x * 0.013) * 3);
     ctx.lineTo(camX + VW + 10, y + 400); ctx.closePath(); ctx.fill();
     ctx.fillRect(camX - 10, y + 400, VW + 20, Game.viewH + 400);
+  }
+  // the body of water under a moving water line (tide, valve, rising flood): drawn over the scene, see-through
+  drawWaterLine(ctx, camX, VW) {
+    const A = this.area, y = A.waterTop, t = this.t;
+    if (y > this.camY + Game.viewH + 20) return;
+    const L = LIQUIDS[A.waterLook || 'sea'] || LIQUIDS.sea;
+    ctx.save();
+    const g = ctx.createLinearGradient(0, y, 0, y + 260); g.addColorStop(0, rgba(L[0], 0.42)); g.addColorStop(0.3, rgba(L[1], 0.46)); g.addColorStop(1, rgba(L[2], 0.6));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(camX - 10, y + 2000);
+    for (let x = camX - 10; x <= camX + VW + 10; x += 12) ctx.lineTo(x, y + Math.sin(t * 2.2 + x * 0.045) * 3 + Math.sin(t * 1.3 + x * 0.012) * 2);
+    ctx.lineTo(camX + VW + 10, y + 2000); ctx.closePath(); ctx.fill();
+    // the bright surface line and drifting glints
+    ctx.strokeStyle = 'rgba(235,252,255,0.85)'; ctx.lineWidth = 2; ctx.beginPath();
+    for (let x = camX - 10; x <= camX + VW + 10; x += 12) { const yy = y + Math.sin(t * 2.2 + x * 0.045) * 3 + Math.sin(t * 1.3 + x * 0.012) * 2; x === camX - 10 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy); }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    for (let k = 0; k < 9; k++) { const gx = camX + ((k * 137 + t * 30) % (VW + 40)) - 20, gy = y + 10 + ((k * 53) % 90); ctx.fillRect(gx, gy, 6, 1.5); }
+    ctx.restore();
   }
   drawUnderwater(ctx, W, H) {
     const g = ctx.createLinearGradient(0, 0, 0, H);

@@ -524,7 +524,7 @@ edges: 22-2┄s┄22-5
 
 **Save v2** (key `super-brady-o-world-save-v2`):
 ```js
-{ v: 1,
+{ v: 3,                                 // the engine's save version (v < 3 would wipe progress again)
   unlocked: { '1-1': true },            // level ids (still written; isUnlocked also derives from exits)
   done: {}, gold: {}, best: {},
   exits: { '1-3': { main: true, secret: true } },   // which exits were taken
@@ -898,7 +898,7 @@ Ownership: everything is Super Brady-O World territory (`src/03`–`src/30`, `to
 | **W5** | Generalised exits: gate spawn `exit: 'main'|'secret'` (legacy `secret: true` = `'secret'`); `Play.levelClear` stores `this.exitKey`; `recordProgress` calls `TourProgress.exit(id, key)` and stores `Save.data.exits`; TourProgress v2 (unlock graph, reveal list); `nextLevelId` follows `exits.main` | `src/12_play.js`, `src/28_tour_a_core.js`, `src/28_tour_b_build.js` (Gate class) | M | the 8-4 → aq and 5-2 → w22 tests pass via the new path |
 | **W6** | Validator v2: `vkey`, `edge`, `toggle`/`switchAt`, light-only, soil, lintel, flip standing, carry physics, pace, coverage, budget and archetype rules | `src/08_levels.js` (AreaBuilder methods), `src/09_validate.js`, `tools/validate_levels.js` | L | all old levels still pass; unit fixtures for each primitive pass |
 | **W7** | New tiles `T.SOIL = 21`, `T.LINTEL = 22` (`SOLID` for both; lintel blocks standing-height passage); tile art hooks `soil.paint`, `lintel.paint`; dig action in player physics | `src/00_core.js` (2 enum entries, additive), `src/06*` tile painter, `src/07_physics.js`, `src/11_player.js` | S/M | `dump_level` shows them; digging works in a fixture |
-| **W8** | Gens: `layered`, `islands`, `shaft`, `room`, `maze`, `rail`, `rise`, `dig`, `arena`; `climb` variants `interior`/`facade`/`exterior`; `strip` accepts `lanes`/`ceil`/`bottomKill` | new `src/28_tour_b2_gens.js` (loads after `b_build`) | L | each gen has a fixture level that validates |
+| **W8** | Gens: `layered`, `islands`, `shaft`, `room`, `maze`, `rail`, `rise`, `dig`, `arena`; `climb` variants `interior`/`facade`/`exterior`; `strip` accepts `lanes`/`ceil`/`bottomKill` | new `src/28_tour_bb_gens.js` (loads after `b_build`: files load in name order, and `b2` would sort before `b_`) | L | each gen has a fixture level that validates |
 | **W9** | Area systems: `tide` water line (`area.waterLine` read by `inWater` and drawing), `flip` zones (gravity sign in `playerPhysics`, camera centring), `phase` (theme swap + tile-cache rebuild + enemy state hook `onPhase`), `lamp` radius, `chase` (`TourDoom` continuous; periodic reuses `updateChasers`), `autoscrollY`, `risingWater`, `carry`, `bottomKill`, camera modes `lanes`/`shaft`/`room` | `src/07_physics.js`, `src/11_player.js`, `src/12_play.js` | L | each system has a fixture and a screenshot |
 | **W10** | Object library (§6.2): entities + pieces + validator writes | new `src/28_tour_h_objects.js` | M/L | each object has a fixture that validates and a gameplay check |
 | **W11** | Behaviour library (§4.2): `TourBehave.*`, dispatch from `TourEnemy.think`/`TourFlyer`/`TourSwimmer` | new `src/28_tour_i_behave.js`, `src/28_tour_d_actors.js` (3-line dispatch hook) | M | each behaviour has a scripted test (tell → attack → weak window) |
@@ -1026,8 +1026,8 @@ stamps: {
 #### 7.4.1 Generators (`TourGens[gen](ctx, areaSpec) → { area, anchors }`)
 | gen | Defaults | Options | Builder state extras |
 |---|---|---|---|
-| `strip` | W 420 cap, H 18, GY 14 | `GY, gyMin, gyMax, ceil, mode: 'run'|'auto'|'castle', scroll, bottomKill` | as today |
-| `layered` | H 30, `lanes: { roof: 12, street: 21, cellar: 27 }` | `lanes`; a step's `lane: 'roof'|'street'|'cellar'` runs it on that lane's own cursor; `['sync']` aligns all cursors to the furthest; upper lanes build 2-row slabs (`st.sky` floors) | `st.lane`, `st.lx[lane]`, `st.laneY[lane]` |
+| `strip` | W 420 cap, H 18, GY 14 | `GY, gyMin, gyMax, ceil, mode: 'run'|'auto'|'castle', scroll, bottomKill`. A v2 strip gets no automatic `end` (say where the area ends) | as today |
+| `layered` | H 30, `lanes: { roof: 12, street: 21, cellar: 27 }` | `lanes`; a step's `lane: 'roof'|'street'|'cellar'` runs it on that lane's own cursor; `['sync']` aligns all cursors to the furthest; upper lanes build 2-row slabs (`st.sky` floors); every launcher (bouncy surface, spring, updraft) opens a hole in the lane above (`autoOpen: false` to place them by hand) | `st.lane`, `st.lx[lane]`, `st.laneY[lane]` |
 | `islands` | H 30, W 190, `bottomKill: true` | `H, startIsland: 8` | `st.island(x0, x1, y)` returns the island; `st.sky = true` |
 | `shaft` | W 22, H 160 | `W, H` | `st.y` grows downward; `st.shelf(y, holes)` (a full-width ledge with holes) |
 | `room` | from the stamp | `stamp` | — |

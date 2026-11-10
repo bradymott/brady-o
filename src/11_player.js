@@ -199,6 +199,15 @@ class Player {
     this.g.burst(this.cx, this.cy, 12, '#ffd84a', 'spark');
     return true;
   }
+  // dig the soil under Brady's boots: the tile he stands on plus its neighbour on the side he leans to (2x1)
+  dig(dir) {
+    const g = this.g, A = g.area, ty = Math.floor((this.y + this.h + 2) / TS);
+    const cx = Math.floor(this.cx / TS), tiles = dir ? [[cx + dir, Math.floor((this.y + this.h - 4) / TS)]] : [[cx, ty], [Math.floor((this.cx + this.facing * 12) / TS) === cx ? cx + this.facing : Math.floor((this.cx + this.facing * 12) / TS), ty]];
+    let dug = 0;
+    for (const [tx, y] of tiles) if (tileAt(A, tx, y) === T.SOIL) { g.setTile(tx, y, T.EMPTY); dug++; g.burst(tx * TS + TS / 2, y * TS + TS / 2, 10, '#8a6040', 'debris'); g.burst(tx * TS + TS / 2, y * TS + 4, 6, '#c8a070', 'dust'); }
+    if (dug) { if (typeof TourKit !== 'undefined') TourKit.sfx('dig', 'crumble', { vol: 0.6 }); else Sound.play('crumble'); g.shake(2); if (!dir) { this.onGround = false; this.vy = 2 * TS; } }
+    return dug;
+  }
   stun(t) { if (this.star > 0 || this.fx.molly > 0) return; this.stunT = Math.max(this.stunT, t); this.vx *= 0.3; this.g.parts.text(this.cx, this.y - 10, 'DAZED', '#ffffff'); }
   slowDown(t) { if (this.star > 0 || this.fx.molly > 0) return; this.slowT = Math.max(this.slowT, t); }
 
@@ -263,6 +272,8 @@ class Player {
     }
     // drop through one-way platforms
     if (inp.down && inp.jumpPressed && this.onGround && this.groundTile === T.SEMI) { this.dropT = 0.22; this.y += 2; this.onGround = false; inp = Object.assign({}, inp, { jumpPressed: false }); }
+    // dig: down + jump on soil stomps a 2x1 hole and Brady drops into it
+    if (inp.down && inp.jumpPressed && this.onGround && this.groundTile === T.SOIL) { this.dig(); inp = Object.assign({}, inp, { jumpPressed: false }); }
 
     this.prevBottom = this.y + this.h;
     const windDx = (g.windForce || 0) + (this.pushX || 0);

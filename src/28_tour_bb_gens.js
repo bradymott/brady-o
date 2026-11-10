@@ -24,7 +24,8 @@ Object.assign(TourBuild, {
       const role = A.role || (k === 0 ? 'main' : 'sub');
       const S = Object.assign({}, spec, { script: null, style: null }, A);
       // a theme that doesn't exist yet (new art comes later) falls back to the level's own, or its cave look for rooms
-      let theme = A.theme || spec.theme;
+      // a room without its own theme is an interior: the level theme's cave look (as legacy bonus rooms)
+      let theme = A.theme || (A.gen === 'room' ? caveVariant(spec.theme) : spec.theme);
       if (!THEMES[theme]) { const fb = (role === 'sub' || role === 'secret') && A.gen === 'room' ? caveVariant(spec.theme) : spec.theme; if (A.theme) problems.push(`area ${A.id}: theme ${A.theme} is not defined yet, using ${fb}`); theme = THEMES[fb] ? fb : spec.theme; }
       S.theme = theme;
       const actx = Object.assign({}, ctx, { spec: S, R: S, theme, areaIndex: k, areaRole: role, area: A,
@@ -90,6 +91,12 @@ function tourPickGoldV2(ctx, built) {
     chosen.push(take(far.length ? far : spots));
   }
   const B0 = built[0].B;
+  // tall areas (climbs, shafts): spare spots over standable ledges, every dozen rows
+  if (B0 && B0.H > B0.W && chosen.length < 3) {
+    for (let y = 6; y < B0.H - 3 && chosen.length < 3; y += 13) for (let x = 2; x < B0.W - 2; x++) {
+      if ((SOLID[B0.get(x, y)] || B0.get(x, y) === T.SEMI) && B0.get(x, y - 1) === T.EMPTY && B0.get(x, y - 2) === T.EMPTY && B0.get(x, y - 3) === T.EMPTY && !chosen.some(c => c.ai === 0 && Math.abs(c.ty - y) < 8)) { chosen.push({ ai: 0, B: B0, tx: x, ty: y - 2, kind: 'fallback' }); break; }
+    }
+  }
   let fx = 24 + rng.int(0, 10);
   while (chosen.length < 3 && B0 && fx < B0.W - 12) {
     let floor = -1;
@@ -138,11 +145,12 @@ TourGens.room = (ctx, A) => {
   const S = TourStamp.get(A.stamp, ctx.C.id);
   if (!S) { ctx.problems.push(`area ${A.id}: unknown stamp '${A.stamp}'`); return TourGens.room(ctx, Object.assign({}, A, { stamp: TOUR_EMPTY_ROOM })); }
   const P = TourStamp.parse(S);
-  const minW = A.minW || 28, W = Math.max(P.W, minW), H = P.H;
+  const minW = A.minW || 28, W = Math.max(P.W, minW), H = Math.max(P.H, A.minH || 14);
   const B = new AreaBuilder(W, H);
   B.themeKey = ctx.theme;
-  // narrower than the screen: solid rock to the right of the stamp
+  // smaller than the screen: solid rock to the right of the stamp and under it
   if (W > P.W) B.fill(P.W, 0, W - 1, H - 1, T.GROUND);
+  if (H > P.H) B.fill(0, P.H, W - 1, H - 1, T.GROUND);
   const st = tourState(ctx, B, { GY: P.floor, H, W, mode: 'room' });
   const placed = TourStamp.place(st, S, 0, 0, { first: ctx.areaIndex === 0 });
   if (!placed.anchors.in && !placed.anchors.start) { const a = B.anchor(ctx.areaIndex === 0 ? 'start' : 'in', 2, P.floor - 1); placed.anchors.in = a; }
@@ -210,6 +218,17 @@ TourGens.layered = (ctx, A) => {
   const endX = Math.max(...names.map(n => lx[n]));
   for (const n of names) if (lx[n] < endX) { use(n); slab(lx[n], endX - 1); }
   B.band = null;
+  // launchers open the lane above: over every bouncy surface, spring and updraft in a lower lane the slab of the
+  // lane above gets a hole (a light well) so the launch reaches it (A.autoOpen: false to place holes by hand)
+  if (A.autoOpen !== false) {
+    const wells = new Set();
+    const laneAbove = y => { let best = null; for (const n of names) if (lanes[n] < y - 1 && (best == null || lanes[n] > lanes[best])) best = n; return best; };
+    const open = (x, y) => { const up = laneAbove(y); if (!up) return; for (const yy of [lanes[up], lanes[up] + 1]) if (SOLID[B.get(x, yy)] && B.get(x, yy) !== T.HARD) { B.set(x, yy, T.EMPTY); wells.add(x + ',' + yy); } };
+    for (let y = 0; y < H; y++) for (let x = 0; x < endX; x++) if (B.surf[y * B.W + x] === SURF.BOUNCE) open(x, y);
+    for (const sp of B.springs) for (let dx = -1; dx <= 1; dx++) open(sp[0] + dx, sp[1]);
+    for (const z of B.zones) if (z.fy < 0) for (let x = Math.floor(z.x / TS); x < Math.ceil((z.x + z.w) / TS); x++) open(x, Math.floor((z.y + z.h) / TS));
+    st.wells = wells;
+  }
   B.trim(endX);
   resolvePendingReturns(st);
   const area = B.build(TourBuild.areaProps(ctx, { lanes, camera: A.camera || 'lanes' }));
@@ -284,3 +303,286 @@ Object.assign(Tour.pieces, {
     return x;
   };
 }
+
+/* ---------- more generators (W8) ---------- */
+/* FALL: a narrow shaft played top to bottom. st.y is the next free row going down; st.shelf(y, holes) lays a
+   full-width ledge with holes ([x0, x1] pairs). Brady starts on a lip at the top; the bottom is a splash pool and
+   the gate. Area: fallCap 11 t/s, air steering x1.4, camera 'shaft' (Brady at 35 % from the top). */
+TourGens.shaft = (ctx, A) => {
+  const W = A.W || 22, H = A.H || 160;
+  const B = new AreaBuilder(W, H);
+  B.themeKey = ctx.theme;
+  B.fill(0, 0, 0, H - 1, T.HARD); B.fill(W - 1, 0, W - 1, H - 1, T.HARD); B.fill(0, 0, W - 1, 1, T.HARD);
+  const st = tourState(ctx, B, { GY: 6, H, W, mode: 'shaft' });
+  st.mid = Math.floor(W / 2);
+  // the lip at the top: stand on the left, step off to the right
+  B.fill(1, 6, Math.floor(W / 2) - 2, 6, T.GROUND); B.fill(1, 7, Math.floor(W / 2) - 2, 7, T.GROUND);
+  B.anchor('start', 3, 5); st.y = 9; st.x = 1;
+  st.shelf = (y, holes) => { for (let x = 1; x <= W - 2; x++) if (!(holes || []).some(([a, b]) => x >= a && x <= b)) { if (B.get(x, y) === T.EMPTY) B.set(x, y, T.GROUND); } };
+  st.down = n => { st.y += n; return st.y; };
+  // generic pieces (cp, blocks, enemies...) get a one-row ledge on the side instead of ground to the bottom
+  st.floor = (x0, x1, gy) => { gy = gy == null ? st.gy : gy; B.fill(Math.max(1, x0), gy, Math.min(W - 2, x1), gy, T.GROUND); };
+  const script = (A.script || []).slice();
+  if (!script.length) script.push('ledges', 'ringFall', ['shelf', { cp: true }], ['ledges', { gold: true }], 'spikeShelf', 'updraft', 'ledges');
+  for (const step of script) {
+    const y0 = st.y; st.gy = st.y + 4; st.x = st.rng.chance(0.5) ? 2 : W - 9;
+    st.run(step);
+    if (st.y === y0) st.y += 6;
+    if (st.y > H - 16) break;
+  }
+  // the bottom: an underground river to splash into (water), then the gate on a bank
+  const by = H - 2, pool = Math.max(st.y + 3, H - 9);
+  B.fill(1, by, W - 2, H - 1, T.GROUND);
+  for (let y = pool; y < by; y++) for (let x = 1; x <= W - 7; x++) B.set(x, y, T.WATER);
+  B.fill(W - 6, by - 2, W - 2, by - 1, T.GROUND);
+  B.spawn('gate', W - 4, by - 3, { exit: 'main' });
+  B.gold(W - 4, by - 6, 'high');
+  const area = B.build(TourBuild.areaProps(ctx, { tower: true, camera: A.camera || 'shaft', fallCap: A.fallCap || 11, airSteer: A.airSteer || 1.4 }));
+  return { area, anchors: Object.assign({ in: B.anchors.start }, B.anchors), B, time: A.time || 240 };
+};
+/* RISE: the climb builder with the floor falling away (camera autoscroll up, autoscrollY) or a rising flood
+   (risingWater: Brady swims in it). */
+TourGens.rise = (ctx, A) => {
+  const S = ctx.spec;
+  S.W = A.W || 28; S.H = A.H || 120;
+  if (A.rise) S.autoscrollY = A.rise; if (A.risingWater) S.risingWater = A.risingWater;
+  const r = tourClimb(ctx);
+  if (A.rise) r.area.autoscrollY = Object.assign({ speed: 1.0, delay: 3 }, A.rise);
+  if (A.risingWater) r.area.risingWater = Object.assign({ speed: 0.6, delay: 4 }, A.risingWater);
+  r.area.gen = 'rise';
+  return { area: r.area, anchors: tourAnchors(r), B: r.B, time: r.time };
+};
+/* MAZE: one area of room cells (default 3 x 3 cells of 26 x 14). script: rows of cell stamps (names or objects);
+   links: [{ from: [c, r], to: [c, r], kind: 'door' | 'drop' | 'oneway', at: [dx, dy], toAt: [dx, dy] }].
+   Doors are same-area portals; a drop opens the floor between two stacked cells. Camera 'room': one cell at a time. */
+TourGens.maze = (ctx, A) => {
+  const [CW, CH] = A.cell || [26, 14], [NC, NR] = A.cells || [3, 3];
+  const B = new AreaBuilder(NC * CW, NR * CH);
+  B.themeKey = ctx.theme;
+  B.fill(0, 0, NC * CW - 1, NR * CH - 1, T.GROUND);
+  const st = tourState(ctx, B, { GY: CH - 1, H: NR * CH, W: NC * CW, mode: 'maze' });
+  const rows = A.script || [];
+  const cellOf = (c, r) => ({ x: c * CW, y: r * CH });
+  for (let r = 0; r < NR; r++) for (let c = 0; c < NC; c++) {
+    const S = TourStamp.get((rows[r] || [])[c], ctx.C.id) || tourMazeCell(CW, CH);
+    const { x, y } = cellOf(c, r);
+    const placed = TourStamp.place(st, S, x, y, { first: ctx.areaIndex === 0 && r === 0 && c === 0 });
+    if (r === 0 && c === 0 && !B.anchors.start) B.anchor('start', x + 3, y + CH - 3);
+  }
+  for (const L of A.links || []) {
+    const a = cellOf(L.from[0], L.from[1]), b = cellOf(L.to[0], L.to[1]);
+    const at = L.at || [CW - 4, CH - 3], toAt = L.toAt || [3, CH - 3];
+    if (L.kind === 'drop') {
+      // open the floor of the upper cell into the lower one (one way: too high to jump back)
+      const up = L.from[1] < L.to[1] ? a : b, x0 = up.x + (L.at ? L.at[0] : Math.floor(CW / 2) - 2);
+      for (let x = x0; x < x0 + 4; x++) for (let y = up.y + CH - 2; y <= up.y + CH; y++) B.set(x, y, T.EMPTY);
+      continue;
+    }
+    const p1 = B.spawn('portal', a.x + at[0], a.y + at[1], { kind: 'door', look: L.look || 'tourDoor', target: { area: ctx.areaIndex || 0, x: (b.x + toAt[0]) * TS + TS / 2, y: (b.y + toAt[1] + 1) * TS }, sym: L.sym || null });
+    if (L.kind !== 'oneway') B.spawn('portal', b.x + toAt[0], b.y + toAt[1], { kind: 'door', look: L.look || 'tourDoor', target: { area: ctx.areaIndex || 0, x: (a.x + at[0]) * TS + TS / 2, y: (a.y + at[1] + 1) * TS }, sym: L.sym || null });
+  }
+  const area = B.build(TourBuild.areaProps(ctx, { camera: A.camera || 'room', cell: [CW, CH], maze: true }));
+  // same-area door targets are set directly: fix their area index once the level knows it (the generateV2 pass)
+  return { area, anchors: Object.assign({ in: B.anchors.start }, B.anchors), B, time: A.time || 300 };
+};
+// a default maze cell: walls, a floor, two ledges
+function tourMazeCell(CW, CH) {
+  const rows = [];
+  for (let y = 0; y < CH; y++) {
+    if (y === 0 || y >= CH - 1) { rows.push('#'.repeat(CW)); continue; }
+    let r = '#' + '.'.repeat(CW - 2) + '#';
+    if (y === CH - 6) r = '#' + '.'.repeat(4) + '-----' + '.'.repeat(CW - 16) + '-----' + '#';
+    rows.push(r);
+  }
+  return { rows, floor: CH - 1 };
+}
+/* RAIL: a cart on a track with forks. Decks: lower (default) and upper; a fork piece { len, upper: [steps],
+   lower: [steps] } runs both branches side by side and a lever post before it picks one. */
+TourGens.rail = (ctx, A) => {
+  const S = ctx.spec, H = A.H || 18, decks = Object.assign({ upper: 6, lower: 11 }, A.decks || {}), len = A.len || 200;
+  const B = new AreaBuilder(len + 40, H);
+  B.themeKey = ctx.theme;
+  const speed = A.scroll || 2.4 + ctx.d * 0.6;
+  const st = tourState(ctx, B, { GY: decks.lower, H, mode: 'rail', deck: decks.lower, decks, speed, len });
+  st.forks = [];
+  // the track bed: lower deck along the whole length (a ghost path the cart rides); falling below costs a life
+  if (A.below === 'liquid') for (let x = 0; x < len + 40; x++) B.set(x, H - 1, T.LAVA);
+  B.fill(0, decks.lower, 3, H - 1, T.GROUND);
+  st.x = 16;
+  const script = (A.script || []).slice();
+  if (!script.includes('cp')) script.splice(Math.floor(script.length / 2), 0, 'cp');
+  for (const step of script) { st.x = st.run(step); st.x += ctx.rng.int(2, 4); if (st.x > len - 18) break; }
+  // the track profile: lower deck, with forks splitting off; the cart picks the deck at each fork's lever
+  const track = [];
+  for (let x = 0; x < len + 2; x++) track.push(decks.lower);
+  for (let x = 0; x < len + 2; x++) B.ghosts.push([x, decks.lower]);
+  for (const f of st.forks) for (let x = f.x0; x <= f.x1; x++) { const k = Math.min(x - f.x0, f.x1 - x, 3) / 3, y = Math.round(decks.lower + (decks.upper - decks.lower) * k); B.ghosts.push([x, y]); }
+  const vw = A.vehicleW || 6;
+  B.spawn('railTrack', 0, decks.lower - 1, { len: len + 2, forks: st.forks, decks, skin: A.track || null });
+  B.spawn('railCart', 1, decks.lower - 1, { pw: vw, speed, stopX: (len - vw) * TS, forks: st.forks, decks, skin: A.vehicle || null });
+  B.fill(len, decks.lower, len + 21, H - 1, T.GROUND);
+  B.spawn('gate', len + 13, decks.lower - 1, { exit: 'main' });
+  B.gold(len + 5, decks.lower - 5, 'high');
+  B.anchor('start', 2, decks.lower - 1);
+  B.trim(len + 22);
+  const area = B.build(TourBuild.areaProps(ctx, { autoscroll: speed, carrier: true, rail: { decks, forks: st.forks } }));
+  return { area, anchors: Object.assign({ in: B.anchors.start }, B.anchors), B, time: A.time || 400 };
+};
+/* DIG: a surface strip over deep soil (rows soilFrom..H-3). st.cavern(x0, y0, x1, y1) carves air, st.rock(...) sets
+   undiggable rock, st.pocket(x, y, item) a treasure niche. Steps run left to right along the surface with st.y the
+   depth cursor; the gate waits in the deepest cavern (the 'exit' piece, added at the end if the script has none). */
+TourGens.dig = (ctx, A) => {
+  const W = A.W || 130, H = A.H || 40, top = A.surface || 8, soil = A.soilFrom || top + 1;
+  const B = new AreaBuilder(W, H);
+  B.themeKey = ctx.theme;
+  B.fill(0, top, W - 1, H - 1, T.SOIL);
+  B.fill(0, H - 2, W - 1, H - 1, T.HARD); B.fill(0, 0, 0, H - 1, T.HARD); B.fill(W - 1, 0, W - 1, H - 1, T.HARD);
+  // the start pad is firm ground; the rest of the surface is soil to dig
+  B.fill(1, top, 7, H - 3, T.GROUND);
+  const st = tourState(ctx, B, { GY: top, H, W, mode: 'dig' });
+  // a 'floor' on the surface is a firm (undiggable) path
+  st.floor = (x0, x1) => B.fill(x0, top, x1, top, T.GROUND);
+  st.cavern = (x0, y0, x1, y1) => B.fill(x0, y0, x1, y1, T.EMPTY);
+  st.rock = (x0, y0, x1, y1) => B.fill(x0, y0, x1, y1, T.HARD);
+  st.soilAt = (x0, x1) => B.fill(x0, top, x1, top, T.SOIL);
+  st.pocket = (x, y, item) => { B.fill(x - 1, y - 1, x + 1, y, T.EMPTY); if (item) st.block(x, y - 2 < top ? y : y - 1, item); };
+  st.y = soil; st.x = 10;
+  B.anchor('start', 4, top - 1);
+  const script = (A.script || []).slice();
+  if (!script.some(s => s === 'exit' || (Array.isArray(s) && s[0] === 'exit'))) script.push('exit');
+  for (const step of script) st.x = st.run(step);
+  const area = B.build(TourBuild.areaProps(ctx, { camera: A.camera || 'free', dig: true, surface: top, tunnelCol: A.tunnelCol || null }));
+  return { area, anchors: Object.assign({ in: B.anchors.start }, B.anchors), B, time: A.time || 300 };
+};
+
+/* ---------- generic pieces for the new gens ---------- */
+Object.assign(Tour.pieces, {
+  // shaft: side ledges zig-zagging down, coins between
+  ledges(st, o) {
+    if (st.mode !== 'shaft') return Tour.pieces.flat(st, o);
+    const B = st.B, W = st.W, n = o.n || 4;
+    for (let k = 0; k < n; k++) {
+      const y = st.down(o.gap || 6), left = (k + (o.flip ? 1 : 0)) % 2 === 0, x0 = left ? 1 : W - 7;
+      B.fill(x0, y, x0 + 5, y, T.GROUND);
+      st.coins(left ? x0 + 7 : x0 - 4, left ? x0 + 9 : x0 - 2, y - 3);
+      if (k === 1 && o.gold) st.gold(left ? x0 + 1 : x0 + 4, y - 2, 'high');
+      if (k === 2 && o.enemy) st.enemy(o.enemy, x0 + 2, y, { edgeTurn: true });
+    }
+    st.down(3); return st.x;
+  },
+  // shaft: a full-width ledge with a gap to fall through (a wide shelf doubles as a checkpoint landing)
+  shelf(st, o) {
+    if (st.mode !== 'shaft') return Tour.pieces.flat(st, o);
+    const y = st.down(o.gap || 5), W = st.W, h0 = o.hole != null ? o.hole : (st.rng.chance(0.5) ? 3 : W - 7);
+    st.shelf(y, [[h0, h0 + 3]]);
+    st.coins(h0, h0 + 3, y - 2);
+    if (o.cp) st.spawn('checkpoint', h0 > W / 2 ? 4 : W - 5, y - 1);
+    st.down(3); return st.x;
+  },
+  // shaft: a ring of coins to fall through
+  ringFall(st, o) {
+    if (st.mode !== 'shaft') return Tour.pieces.flat(st, o);
+    const n = o.n || 3;
+    for (let k = 0; k < n; k++) { const cy = st.down(6), cx = 5 + ((k * 7) % (st.W - 10)); for (let a = 0; a < 8; a++) st.B.pickAt(Math.round(cx + Math.cos(a * TAU / 8) * 2), Math.round(cy + Math.sin(a * TAU / 8) * 2)); if (k === 1) st.gold(cx, cy, o.goldKind || 'risky'); }
+    st.down(3); return st.x;
+  },
+  // shaft: a shelf studded with spikes and one safe gap; fall through the gap
+  spikeShelf(st, o) {
+    if (st.mode !== 'shaft') return Tour.pieces.spikes(st, o);
+    const y = st.down(o.gap || 6), W = st.W, hx = o.hole != null ? o.hole : st.rng.int(4, W - 8);
+    for (let x = 1; x <= W - 2; x++) { if (x >= hx && x <= hx + 3) continue; st.B.set(x, y, T.GROUND); st.B.set(x, y - 1, T.SPIKES); }
+    for (let x = hx; x <= hx + 3; x++) { st.B.set(x, y - 1, T.EMPTY); }
+    st.coins(hx, hx + 3, y - 4);
+    st.down(3); return st.x;
+  },
+  // an updraft column (in a shaft it brakes the fall; in a strip it lifts): { w, h, force }
+  updraft(st, o) {
+    const B = st.B;
+    if (st.mode === 'shaft') {
+      const h = o.h || 8, w = o.w || 4, x0 = o.x != null ? o.x : st.rng.int(3, st.W - w - 3), y0 = st.y + 1;
+      B.zone(x0, y0, w, h, 0, -(o.force || 70) * TS, (o.vmax || 2) * TS, 'updraft', { pull: 1 });
+      B.spawn('vent', x0 + Math.floor(w / 2), y0 + h, { w, look: o.look || 'steam' });
+      st.down(h + 2); return st.x;
+    }
+    const x = st.x, w = o.w || 2, h = o.h || 7; st.floor(x, x + w + 3);
+    B.zone(x + 2, st.gy - h, w, h, 0, -(o.force || 110) * TS, (o.vmax || 7.2) * TS, 'updraft', { pull: 3 });
+    B.spawn('vent', x + 2 + Math.floor(w / 2), st.gy - 1, { w, look: o.look || 'steam' });
+    return x + w + 4;
+  },
+  // rail: a fork. Both branches are built side by side (upper deck and lower deck); a lever post before it picks one
+  fork(st, o) {
+    if (st.mode !== 'rail') return Tour.pieces.flat(st, o);
+    const x0 = st.x + 3, len = o.len || 40, x1 = x0 + len, d = st.decks;
+    st.spawn('railSwitch', st.x, d.lower - 1, { fork: st.forks.length, skin: o.skin || null });
+    st.forks.push({ x0, x1, upper: d.upper, lower: d.lower });
+    const run = (deck, steps) => { const sx = st.x, sg = st.gy; st.gy = deck; st.deck = deck; st.x = x0 + 4; for (const s of steps || []) { st.x = st.run(s); st.x += 2; if (st.x > x1 - 4) break; } st.x = sx; st.gy = sg; st.deck = d.lower; };
+    run(d.upper, o.upper || ['coinsRow']); run(d.lower, o.lower || ['coinsRow']);
+    // a postcard over each branch: the high road and the low road both pay
+    if (o.gold !== false) { st.gold(x0 + Math.floor(len / 2), d.upper - 3, 'high'); st.gold(x0 + Math.floor(len * 0.7), d.lower - 3, 'risky'); }
+    return x1 + 2;
+  },
+  coinsRow(st, o) { const x = st.x; st.coins(x, x + (o.n || 6) - 1, (st.deck || st.gy) - 2); return x + (o.n || 6); },
+  // dig: a cavern at depth with a coin row; { w, h, dy } from the depth cursor
+  cavern(st, o) {
+    if (st.mode !== 'dig') return Tour.pieces.flat(st, o);
+    const x = st.x, w = o.w || 10, h = o.h || 4, y = Math.min(st.B.H - 4 - h, st.y + (o.dy || 4));
+    st.cavern(x, y, x + w - 1, y + h - 1); st.coins(x + 1, x + w - 2, y + h - 2);
+    if (o.gold) st.gold(x + Math.floor(w / 2), y + h - 2, o.gold === true ? 'hidden' : o.gold);
+    st.y = y + h; return x + w + (o.gap || 3);
+  },
+  // dig: a band of rock to dig around
+  rockBand(st, o) { if (st.mode !== 'dig') return st.x; const x = st.x, w = o.w || 6; st.rock(x, st.y + (o.dy || 1), x + w - 1, st.y + (o.dy || 1) + (o.h || 2) - 1); return x + w; },
+  // dig: a treasure pocket { item }
+  pocket(st, o) { if (st.mode !== 'dig') return st.x; st.pocket(st.x + 1, st.y + (o.dy || 2), o.item || 'pick'); return st.x + 4; },
+  // dig: the exit cavern at the bottom with the gate
+  exit(st, o) {
+    if (st.mode !== 'dig') return Tour.pieces.end(st, o);
+    const B = st.B, x = Math.min(st.x, B.W - 16), y1 = B.H - 3, y0 = y1 - 4;
+    st.cavern(x, y0, x + 12, y1); B.spawn('gate', x + 8, y1, { exit: o.exit || 'main' }); st.gold(x + 3, y1 - 2, 'high');
+    return x + 13;
+  }
+});
+// climbs (climb / rise gens): generic bands
+Object.assign(Tour.pieces, {
+  // a band of ledges zig-zagging up, with a one-way floor on top: { n, crumble, enemy, gold }
+  zigzag(st, o) {
+    if (st.mode !== 'climb') return Tour.pieces.flat(st, o);
+    const B = st.B, W = st.W, n = o.n || 4, mid = st.mid; let y = st.y;
+    for (let k = 0; k < n; k++) {
+      y = st.y - 3 * (k + 1);
+      const left = (k + (o.flip ? 1 : 0)) % 2 === 0, x0 = left ? 2 : W - 9;
+      if (o.crumble && k % 2) for (let q = 0; q < 7; q++) B.set(x0 + q, y, T.CRUMBLE); else B.fill(x0, y, x0 + 6, y, T.GROUND);
+      st.coins(x0 + 1, x0 + 5, y - 2);
+      if (k === 1 && o.enemy) st.enemy(o.enemy, x0 + 3, y, { edgeTurn: true });
+      if (k === 2 && o.gold) st.gold(x0 + 3, y - 3, o.gold === true ? 'high' : o.gold);
+      if (k < n - 1) for (let q = -2; q < 2; q++) B.set(mid + q, y - 2, T.SEMI);
+    }
+    st.top(y - 2);
+  },
+  // a climb band with an item block on a ledge: { item }
+  blockBand(st, o) {
+    if (st.mode !== 'climb') return Tour.pieces.blocks(st, o);
+    const B = st.B, W = st.W, y = st.y - 3, x0 = o.left ? 2 : W - 9;
+    B.fill(x0, y, x0 + 6, y, T.GROUND); st.block(x0 + 3, y - 4, o.item || 'power');
+    for (let q = -2; q < 2; q++) B.set(st.mid + q, y, T.SEMI);
+    st.top(y - 3);
+  },
+  // facade climbs: a waterfall column that pushes Brady down while he's in it: { x, w, h }
+  waterfall(st, o) {
+    if (st.mode !== 'climb') return st.x;
+    const B = st.B, w = o.w || 2, h = o.h || 12, x0 = o.x != null ? o.x : st.mid - 1, y0 = st.y - h;
+    B.zone(x0, y0, w, h, 0, (o.force || 40) * TS, 0, 'waterfall');
+    B.spawn('tourCurtain', x0 + w / 2, st.y - 1, { look: 'waterfall', h, skin: o.skin || null, ghost: true });
+    return st.x;
+  },
+  // exterior climbs: a gondola (window-washer cradle) that lifts Brady { rise, x }
+  gondola(st, o) {
+    if (st.mode !== 'climb') return Tour.pieces.lift(st, o);
+    const B = st.B, rise = o.rise || 8, x = o.x != null ? o.x : (o.left ? 3 : st.W - 7), y0 = st.y;
+    B.spawn('mplat', x, y0 - 1, { pw: 3, ax: 0, ay: -rise * TS, speed: 1.4, skin: o.skin || 'tourGondola' });
+    for (let y = y0 - rise; y <= y0; y++) for (let k = 0; k < 3; k++) B.ghosts.push([x - 1 + k, y]);
+    const y1 = y0 - rise, lx = x > st.mid ? x - 7 : x + 3;
+    B.fill(lx, y1, lx + 4, y1, T.GROUND); st.coins(lx, lx + 4, y1 - 2);
+    st.top(y1 - 3);
+  }
+});
