@@ -172,8 +172,17 @@ Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial glob
 | `isUnlocked`, `isRevealed`, `exitsFound`, `countryUnlocked`, `bossDone`, `totals` | tested |
 | `complete(id, secret, key)` (legacy entry point, now a wrapper) | tested |
 
-### Map (§3.6, §3.7)
-Country panel from `mapCell`/`mapFrom` with hidden stops (`mapHidden`, from the graphics pass): exists. Houses on the panel, reveal animations, exit pips, `ARCH_LABEL`, panel Brady walker, world-map flights/bottles/lighthouse/airship: **not yet** (W13).
+### Map (§3.6, §3.7) — `src/28_tour_fb_mapgraph.js`
+| Item | Status | Notes |
+|---|---|---|
+| panel grid over levels + houses, `mapFrom` arrays, visibility from `tour.revealed` | tested | `sbw_toolkit_shots.js mapgraph`; `sbw_graphics_test.js` layouts still pass |
+| trails solid (walked / opened) / dotted / gold from or to a secret | implemented | |
+| secret-level ring + star, house awning + coin, fort roof motif per `map.fort`, exit pips after the first clear, `TourLandscape.ARCH_LABEL` | implemented (ARCH_LABEL tested) | |
+| reveal queue: trail grows 1 s with a sparkle, stop pops 0.45 s with 12 sparks, banner 1.6 s; written on finish; reduced motion = 0.3 s steps | tested | a tap speeds a step up |
+| Brady on the panel: BFS over visible trails at 160 px/s, dust puffs, a tap mid-walk jumps there, a second tap opens the stop | tested | |
+| houses: `Tour.houseLevel(id)` builds the stand room (country stamp `stand` or the default) with the `shop` counter; leaving counts a visit (`tour.houses`), no level progress | tested | |
+| world map: contrail, landmarks in the Baron's jar (shatter + grow + postmark once the boss falls, `tour.jars`), the airship over the next country, secret-flight arcs, bottle currents, the Postcard Lighthouse (tap lights it: `?` flags on stops with hidden exits), cloud shadows, ice cracks for a new land | tested (jar, lighthouse, flight arc) / implemented | |
+| World 22 ghost pin ("22?") | not yet | needs a save flag for the 5-2 door |
 
 ## Levels in the v2 format
 | Level | Where | Status |
@@ -194,3 +203,4 @@ Country panel from `mapCell`/`mapFrom` with hidden stops (`mapHidden`, from the 
 - Brady in a flip band ignores moving platforms (they are not mirrored); flip bands should not contain them.
 - THIEF: the thief leaps between its stops (`thiefStop n`) in arcs rather than running the terrain, so it can never get stuck; it is caught by a stomp or any hit while it waits at a stop.
 - RACE: the rival's course is read from the tiles at run time (the highest standable surface per column, leaping gaps); it waits at an unlit checkpoint when Brady is 15+ tiles behind.
+- Bottle Mail sends its currents from the country of each bottle's level (2-6 ec, 3-4 br, 4-4 mz, 6-6 es, 9-1 id); the lighthouse is a world-map node you tap (no room behind it).

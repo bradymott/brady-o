@@ -109,4 +109,4 @@ Tour.pieces.stamp = function (st, o) {
   TourStamp.place(st, S, x0, y0, { first: false });
   return x0 + P.W;
 };
-try { Object.assign(window.BRADY_TOUR, { TourStamp }); } catch (e) { /* not in a browser */ }
+try { Object.assign(window.BRADY_TOUR, { TourStamp, TourPanel, TourPanelFx, TourLandscape }); } catch (e) { /* not in a browser */ }

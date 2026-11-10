@@ -1094,7 +1094,7 @@ class Play {
     const narrow = W < 600;
     const rx = narrow ? left + 244 + 132 > W - right - 44 ? W - right : W - right - 48 : W - right - (Input.layout && !Input.layout.lefty ? 48 : 0);
     const ry = narrow ? hy + 42 : hy;
-    const wl = (WORLDS[this.level.world].label || this.level.world) + '-' + this.level.index;
+    const wl = this.level.house ? 'SHOP' : (WORLDS[this.level.world].label || this.level.world) + '-' + this.level.index;
     ctx.textAlign = 'right';
     if (narrow && ix > rx - 140) { /* keep the right pill below the icon row */ }
     const hy0 = hy;
@@ -1154,7 +1154,7 @@ class Play {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const Wd = WORLDS[this.level.world];
     const kindTag = { haunt: '  ·  HAUNTED HOUSE', fort: '  ·  FORTRESS', castle: '  ·  CASTLE', gift: '  ·  GIFT CAMP' }[this.level.kind] || '';
-    const wl = (Wd.secret ? 'SECRET LAND ' + Wd.label : 'LAND ' + Wd.label) + ' - ' + this.level.index + kindTag;
+    const wl = this.level.house ? 'SOUVENIR STAND' : (Wd.secret ? 'SECRET LAND ' + Wd.label : 'LAND ' + Wd.label) + ' - ' + this.level.index + kindTag;
     ctx.font = `13px ${FONT_DISPLAY}`; ctx.fillStyle = THEMES[this.level.areas[0].theme].accent;
     ctx.fillText(wl.toUpperCase() + '  ·  ' + this.level.worldName.toUpperCase(), W / 2, H / 2 - 36);
     ctx.font = `${Math.min(40, W * 0.07)}px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffffff';
