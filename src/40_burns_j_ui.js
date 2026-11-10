@@ -246,6 +246,7 @@ const BurnsUI = {
     if (L) { const pb = L.pause; ctx.save(); ctx.fillStyle = 'rgba(10,6,24,0.55)'; ctx.beginPath(); ctx.arc(pb.x, pb.y, pb.r, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.fillRect(pb.x - 6, pb.y - 7, 4, 14); ctx.fillRect(pb.x + 2, pb.y - 7, 4, 14); ctx.restore(); }
     if (L) rects.push([L.pause.x - L.pause.r - 4, L.pause.y - L.pause.r - 4, W, L.pause.y + L.pause.r + 4]);
     // minimap (with the Playa Map)
+    if (typeof BurnsNav !== 'undefined') BurnsNav.drawHUD(ctx, g, S);   // the guide arrow's label
     if (sv.items.map && g.world.minimap) { const mx = L ? L.pause.x - (W > H ? 70 : 62) : W - 80, my = (L ? L.pause.y : 30) + (W > H ? 82 : 76), mr = W > H ? 56 : 50; rects.push([mx - mr - 4, my - mr - 4, mx + mr + 4, my + mr + 4]); this.drawMinimap(ctx, g, mx, my, mr); }
   },
   drawMinimap(ctx, g, cx, cy, r) {
@@ -382,6 +383,7 @@ const BurnsUI = {
       btn(H.cam, Input.hudHeld.cam, 'CAM', '#3a6aff');
       if (H.view && Input.hud && Input.hud.indexOf(H.view) >= 0) btn(H.view, Input.hudHeld.view, 'VIEW', '#22a890', ({ normal: '3RD', close: 'CLOSE', first: '1ST', far: 'FAR' })[g.camMode || 'normal']);
       if (Input.hud && Input.hud.indexOf(H.bike) >= 0) btn(H.bike, Input.hudHeld.bike, veh ? 'EXIT' : 'BIKE', '#ffc21a');
+      if (typeof BurnsNav !== 'undefined') BurnsNav.drawControls(ctx, g, btn);   // RUN
     }
     ctx.restore();
   },
@@ -426,10 +428,11 @@ const BurnsUI = {
     const bw = Math.min(260, W * 0.62), x = (W - bw) / 2;
     const list = [];
     if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') return this.buildMenu(g);
+    if (g.pauseTab === 'citymap' && typeof BurnsNav !== 'undefined') return BurnsNav.buildMap(g);
     if (g.pauseTab === 'missions') {
       list.push({ x: Math.max(14, insets.l + 8), y: Math.max(12, insets.t + 6), w: 92, h: 38, label: '◀ BACK', fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
     } else if (g.pauseTab === 'settings') {
-      const two = H < 620, cw2 = two ? Math.min(250, (W - 60) / 2) : bw, x0 = two ? (W - cw2 * 2 - 12) / 2 : x, y0 = Math.max(insets.t + 62, H * 0.2);
+      const two = H < 620, cw2 = two ? Math.min(250, (W - 60) / 2) : bw, x0 = two ? (W - cw2 * 2 - 12) / 2 : x, y0 = two ? Math.max(insets.t + 56, 58) : Math.max(insets.t + 62, H * 0.2);
       const row = (label, val, fn, i) => ({ x: two ? x0 + (i % 2) * (cw2 + 12) : x0, y: y0 + (two ? Math.floor(i / 2) : i) * 46, w: cw2, h: 38, label: `${label}: ${val}`, size: 12, fn: () => { fn(); BurnsSave.save(); Save.save(); g.buildPause(); } });
       const pct = v => Math.round(v * 100) + '%', cyc = (v, a) => a[(a.indexOf(v) + 1) % a.length];
       list.push(row('MUSIC', pct(st.music), () => { st.music = cyc(Math.round(st.music * 4) / 4, [0, 0.25, 0.5, 0.75, 1]); Sound.setMusicVolume(st.music); }, 0));
@@ -440,16 +443,18 @@ const BurnsUI = {
       list.push(row('SCREEN SHAKE', st.shake !== false ? 'ON' : 'OFF', () => { st.shake = st.shake === false; }, 5));
       list.push(row('CAMERA', BURNS_CAM_LABELS[g.camMode || 'normal'], () => { const i = BURNS_CAM_MODES.indexOf(g.camMode || 'normal'); g.setCamMode(BURNS_CAM_MODES[(i + 1) % BURNS_CAM_MODES.length], true); }, 6));
       list.push(row('GRAPHICS', String(bs.gfx || 'auto').toUpperCase() + (BurnsGL.gl2 ? '' : ' (BASIC)'), () => { const N = BURNS_GFX.names; bs.gfx = N[(N.indexOf(bs.gfx || 'auto') + 1) % N.length]; BurnsGL.configure(bs.gfx); }, 7));
-      const rows = two ? 4 : 8;
+      if (typeof BurnsNav !== 'undefined') BurnsNav.settingsRows(g, (label, val, fn) => list.push(row(label, val, fn, list.length)));   // guide arrow, camera behind Brady, city bike
+      const rows = two ? Math.ceil(list.length / 2) : list.length;
       list.push({ x: W / 2 - bw / 2, y: y0 + rows * 46 + 6, w: bw, h: 40, label: '◀ BACK', primary: true, fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
     } else {
       const items = [['RESUME', () => g.closePause(), true]];
       items.push([BurnsSave.hasItem('www') ? 'WHAT WHERE WHEN' : 'MISSIONS', () => { g.pauseTab = 'missions'; g.buildPause(); burnsSfx('map_open'); }]);
+      if (typeof BurnsNav !== 'undefined') items.push(['GUIDE ARROW: ' + (BurnsNav.on('guide') ? 'ON' : 'OFF'), () => { BurnsNav.toggle('guide'); g.buildPause(); }]);
       if (g.missions.side().length) items.push(['SIDE QUESTS', () => { g.boardTab = g.boardTab || 'available'; g.pauseTab = 'board'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]);
       if (g.packVisible()) { const n = BurnsPack.total(); items.push([n ? `BACKPACK (${n})` : 'BACKPACK', () => { g.pauseTab = 'pack'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]); }
       // an entered place (open world) is left back into the city; the open world itself has a fast-travel map
       if (g.parentScene) items.push(['LEAVE' + (g.placeName ? ' ' + String(g.placeName).toUpperCase() : ''), () => { g.paused = false; BurnsOpen.leave(g, 'leave'); }]);
-      else if (g.def.open) items.push(['MAP', () => { g.paused = false; g.openTravelMap(); }]);
+      else if (g.def.open) items.push(['MAP', () => { if (g.def.cityMap && typeof BurnsNav !== 'undefined') BurnsNav.openMap(g); else { g.paused = false; g.openTravelMap(); } }]);
       else items.push(['WORLD SELECT', () => { g.paused = false; g.quit(true); }]);
       items.push(['SETTINGS', () => { g.pauseTab = 'settings'; g.buildPause(); }]);
       items.push(['QUIT TO TITLE', () => { g.paused = false; g.quit(false); }]);
@@ -472,6 +477,7 @@ const BurnsUI = {
     const W = Game.cssW, H = Game.cssH;
     ctx.fillStyle = 'rgba(6,3,14,0.72)'; ctx.fillRect(0, 0, W, H);
     if (g.pauseTab === 'missions') { this.drawMissions(ctx, g); BurnsUIKit.drawButtons(ctx, g.pauseUI); return; }
+    if (g.pauseTab === 'citymap' && typeof BurnsNav !== 'undefined') { BurnsNav.drawMap(ctx, g); BurnsUIKit.drawButtons(ctx, g.pauseUI); return; }
     if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') { this.drawMenu(ctx, g); return; }
     const title = g.pauseTab === 'settings' ? 'SETTINGS' : 'PAUSED';
     if (g.pauseTab !== 'settings') {
