@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("fr_morning", {"scale":2.0,"image":"fr_morning.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1504}},"anims":{},"strips":{"L0":{"w":2048,"h":670,"top":6.5,"x":0,"y":0},"L1":{"w":2048,"h":476,"top":151.0,"x":0,"y":671},"L2":{"w":2048,"h":355,"top":259.5,"x":0,"y":1148}}});

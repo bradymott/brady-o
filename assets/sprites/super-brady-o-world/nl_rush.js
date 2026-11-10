@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("nl_rush", {"scale":2.0,"image":"nl_rush.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1024}},"anims":{},"strips":{"L0":{"w":2048,"h":655,"top":63.5,"x":0,"y":0},"L1":{"w":2048,"h":367,"top":260.5,"x":0,"y":656}}});
