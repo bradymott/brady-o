@@ -779,7 +779,7 @@ MONKEY_POSE = {
 }
 
 
-def build_macaque(root, kind, pose, t, s):
+def build_macaque(root, kind, pose, t, s, on_head=None):
     P = dict(MONKEY_POSE[pose])
     P.update(er=0.066, skin=kind + '_fur')
     body = P['body']
@@ -868,6 +868,8 @@ def build_macaque(root, kind, pose, t, s):
     else:
         tail = [tb, tb + V(-0.16, 0, 0.04), tb + V(-0.3, 0, 0.16 + w), tb + V(-0.32, 0, 0.32 + w)]
     make_part('tail', tube(tail, 0.045, 0.028, seg=10), fur2, root, Mx)
+    if on_head:
+        on_head(MH, fsurf, fc)
 
 
 def build_monkey(root, pose, t):
