@@ -323,6 +323,7 @@ class Play {
     this.player.state = 'clear'; this.player.clearGate = gate; this.player.clearT = 0;
     this.player.star = 0; this.player.invuln = 0;
     this.mus('clear');
+    this.exitKey = gate.exitKey || (gate.secret ? 'secret' : 'main');
     this.secretClear = gate.secret ? (gate.secretWorld || 'world') : null;
     this.secretFoundNow = !!gate.secret;
     this.recordProgress();
@@ -332,19 +333,22 @@ class Play {
     const d = Save.data, id = this.id;
     d.done[id] = true;
     if (this.secretClear) d.secretExits[id] = true;
-    this.opened = (this.level.tour && typeof TourProgress !== 'undefined' ? TourProgress : WorldGame).complete(id, !!this.secretClear);
+    this.opened = this.level.tour && typeof TourProgress !== 'undefined' ? TourProgress.complete(id, !!this.secretClear, this.exitKey) : WorldGame.complete(id, !!this.secretClear);
     if (FINALE_LEVELS[id]) d.beatGame = true;
     const elapsed = this.level.time - this.timeLeft;
     if (!d.best[id] || elapsed < d.best[id]) d.best[id] = Math.round(elapsed * 10) / 10;
     d.lastWorld = this.level.world;
     Save.save();
   }
+  // the level after this one: where the exit Brady took leads, if that is a level in the same country
   nextLevelId() {
     if (!this.level.tour) return null;
-    const C = Tour.countryOf(this.id), i = this.level.index;
-    if (!C || i >= C.levels.length) return null;
-    const nid = C.world + '-' + (i + 1);
-    return TourProgress.isUnlocked(nid) ? nid : null;
+    const C = Tour.countryOf(this.id), L = C && C.levels[this.level.index - 1];
+    if (!C || !L) return null;
+    const ex = L.exits && L.exits[this.exitKey || 'main'];
+    const tg = ex ? Tour.target(ex.to, C) : null;
+    if (!tg || tg.kind !== 'level' || Tour.countryOf(tg.id) !== C) return null;
+    return TourProgress.isUnlocked(tg.id) ? tg.id : null;
   }
   enterPortal(p) {
     if (this.state !== 'play' || this.player.state !== 'play') return;

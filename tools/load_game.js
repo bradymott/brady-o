@@ -17,7 +17,7 @@ module.exports = function loadGame(opts) {
   const noop = () => proxy;
   const proxy = new Proxy(function () {}, { get: (t, k) => k === Symbol.toPrimitive ? () => 0 : (k === 'width' || k === 'height' ? 64 : k === 'length' ? 0 : noop), set: () => true, apply: () => proxy });
   const canvas = () => ({ width: 64, height: 64, style: {}, getContext: () => proxy, addEventListener() {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 900, height: 450 }), toDataURL: () => '' });
-  const store = {};
+  const store = opts.store || {};   // localStorage contents (tools/save_test.js seeds old saves here)
   const win = {
     console, Date, Math, JSON, performance: { now: () => Date.now() }, setTimeout, clearTimeout, setInterval, clearInterval,
     navigator: { userAgent: 'node', getGamepads: () => [] },
@@ -30,9 +30,10 @@ module.exports = function loadGame(opts) {
   win.window = win; win.self = win;
   vm.createContext(win);
   const src = 'const BRADY_APP = "world";\n' + files.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
-  vm.runInContext(src + '\n;this.API = { WORLDS, WORLD_ORDER, getLevel, generateLevel, Validator, T, TS, SURF, THEMES, Tour, TourProgress, Save, LevelCache };', win, { filename: 'world-app.js' });
+  vm.runInContext(src + '\n;this.API = { WORLDS, WORLD_ORDER, getLevel, generateLevel, Validator, T, TS, SURF, THEMES, Tour, TourProgress, Save, LevelCache, TourBuild, TourStamp, TourGens, AreaBuilder, ENTITY_TYPES, PHYS, PLAYER_DIM };', win, { filename: 'world-app.js' });
   const A = win.API;
-  A.Save.data = A.Save.defaults();
+  if (opts.load) A.Save.load(); else A.Save.data = A.Save.defaults();
+  A.store = store;
   // every playable world, in route order
   A.ALL_WORLDS = A.Tour.worldList();
   return A;

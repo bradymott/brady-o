@@ -6,22 +6,29 @@
    ============================================================ */
 const TourBuild = {
   generate(w, i, attempt) {
-    const C = Tour.byWorld[w], spec = C.levels[i - 1], id = w + '-' + i;
+    const C = Tour.byWorld[w], spec = C.levels[i - 1];
+    return spec.v2 ? this.generateV2(C, spec, w, i, attempt) : this.generateLegacy(C, spec, w, i, attempt);
+  },
+  // a level spec without areas: one layout style, its bonus rooms after it (built exactly as before the v2 format)
+  generateLegacy(C, spec, w, i, attempt) {
+    const id = w + '-' + i;
     const rng = mulberry32(hashStr('tour:' + id + ':' + (attempt || 0)));
     const d = Tour.difficulty(w, i);
     const ctx = {
-      rng, w, i, id, d, C, spec, R: spec, theme: spec.theme, areas: [], world: WORLDS[w],
+      rng, w, i, id, d, C, spec, R: spec, theme: spec.theme, areas: [], world: WORLDS[w], areaBase: 1,
       pool: (spec.enemies || []).map(e => Array.isArray(e) ? e : [e, 1])
     };
     const gen = TourStyles[spec.style] || TourStyles.run;
     const main = gen(ctx);
     if (spec.mirror) tourMirror(main, ctx.areas);
     const style = spec.style || 'run';
+    main.area.role = 'main'; main.area.aid = 'main';
+    ctx.areas.forEach((a, k) => { a.role = a.role || (a.spawns.some(s => s.type === 'gate') ? 'secret' : 'sub'); a.aid = a.aid || 'room' + (k + 1); });
     return {
       id, world: w, index: i, type: TOUR_STYLE_PLAN[style] || 'ow', arch: style, kind: style === 'castle' ? 'castle' : 'level',
       name: spec.name, worldName: C.name, areas: [main.area].concat(ctx.areas), start: main.start, time: main.time || spec.time || 300, d,
-      secret: spec.secret ? { kind: 'secretExit', to: spec.secret.to } : null, warps: null, hint: spec.hint || null, design: spec,
-      tour: true, country: C.id
+      secret: spec.legacySecret ? { kind: 'secretExit', to: spec.legacySecret.to } : null, warps: null, hint: spec.hint || null, design: spec,
+      tour: true, country: C.id, exits: spec.exits
     };
   },
   // area properties shared by every style
@@ -30,14 +37,24 @@ const TourBuild = {
     return Object.assign({
       theme: ctx.theme, music: S.music || ctx.C.music.level, water: false, dark: !!S.dark, autoscroll: 0, gravity: 1,
       wind: S.wind || null, dust: S.dust || 0, liquid: S.liquid || th.liquid || null, beat: S.bpm ? { bpm: S.bpm } : null, tour: true
-    }, extra || {});
+    }, ctx.v2 ? TourBuild.areaSystems(S) : null, extra || {});
+  },
+  // the v2 area systems (§7.4.6) copied from an area spec onto the built area
+  SYSTEMS: ['waterLine', 'tide', 'flip', 'chase', 'autoscrollY', 'risingWater', 'lamp', 'phase', 'carry', 'bottomKill', 'camera', 'mirror', 'roof', 'lanes', 'variant'],
+  areaSystems(S) {
+    const o = {};
+    for (const k of this.SYSTEMS) if (S[k] != null) o[k] = S[k];
+    if (S.water != null) o.water = !!S.water;
+    if (S.gravity != null) o.gravity = S.gravity;
+    if (S.autoscroll != null && typeof S.autoscroll === 'number') o.autoscroll = S.autoscroll;
+    return o;
   }
 };
 
 /* ---------- builder state: what a set piece works with ---------- */
 // st.x = next free column, st.gy = current ground row (top surface). Pieces return the new st.x.
 function tourState(ctx, B, o) {
-  const st = Object.assign({ ctx, B, rng: ctx.rng, d: ctx.d, x: 0, gy: o.GY, R: ctx.spec, sky: false, cave: false }, o);
+  const st = Object.assign({ ctx, B, rng: ctx.rng, d: ctx.d, x: 0, gy: o.GY, R: ctx.spec, sky: false, cave: false, T, SURF }, o);
   st.floor = (x0, x1, gy) => { gy = gy == null ? st.gy : gy; if (st.sky) B.fill(x0, gy, x1, Math.min(B.H - 1, gy + 2), T.GROUND); else B.ground(x0, x1, gy); };
   st.pit = (x0, x1) => { for (let x = x0; x <= x1; x++) B.clearCol(x, 0, B.H - 1); if (st.ceil) for (let x = x0; x <= x1; x++) B.fill(x, 0, x, st.ceil, T.GROUND); };
   st.coins = (x0, x1, y) => B.picksRow(x0, x1, y);
@@ -90,17 +107,18 @@ const TourStyles = {
 function tourStrip(ctx, mode) {
   const S = ctx.spec, rng = ctx.rng;
   const H = S.H || 18, GY = S.GY || 14;
-  const B = new AreaBuilder(S.width || 420, H);
+  const B = new AreaBuilder(S.width || (ctx.v2 && S.W) || 420, H);
   B.themeKey = ctx.theme;
-  const st = tourState(ctx, B, { GY, H, mode, auto: mode === 'auto', gyMin: S.gyMin || 8, gyMax: S.gyMax || 15, ceil: S.ceil || 0 });
+  const st = tourState(ctx, B, Object.assign({ GY, H, mode, auto: mode === 'auto', gyMin: S.gyMin || 8, gyMax: S.gyMax || 15, ceil: S.ceil || 0 }, ctx.stripOpts || {}));
   st.floor(0, 11, GY);
   st.dress(1, 10, 0.25);
-  if (ctx.i === 1) { B.set(7, GY - 4, T.HIDDEN); B.item(7, GY - 4, 'oneup'); }
+  if (ctx.i === 1 && !ctx.areaIndex) { B.set(7, GY - 4, T.HIDDEN); B.item(7, GY - 4, 'oneup'); }
   st.x = 12;
   const script = (S.script || []).slice();
   const endsWith = n => script.some(s => s === n || (Array.isArray(s) && s[0] === n));
-  if (!endsWith('end') && !endsWith('arena')) script.push(mode === 'castle' ? 'arena' : 'end');
-  if (!script.some(s => s === 'cp' || (Array.isArray(s) && s[0] === 'cp'))) script.splice(Math.floor(script.length / 2), 0, 'cp');
+  // legacy levels end with the goal (or the boss arena) and get a checkpoint half way; v2 areas say where they end
+  if (!ctx.v2 && !endsWith('end') && !endsWith('arena')) script.push(mode === 'castle' ? 'arena' : 'end');
+  if ((!ctx.v2 || ctx.areaRole === 'main') && !script.some(s => s === 'cp' || (Array.isArray(s) && s[0] === 'cp'))) script.splice(Math.floor(script.length / 2), 0, 'cp');
   for (let k = 0; k < script.length; k++) {
     const step = script[k];
     const nm = Array.isArray(step) ? step[0] : step;
@@ -112,12 +130,12 @@ function tourStrip(ctx, mode) {
   if (st.ceil) for (let cx = 0; cx < st.x; cx++) if (B.get(cx, 0) === T.EMPTY) B.fill(cx, 0, cx, st.ceil, T.GROUND);
   B.trim(st.x);
   resolvePendingReturns(st);
-  pickGold(ctx, B);
+  if (!ctx.deferGold) pickGold(ctx, B);
   const area = B.build(TourBuild.areaProps(ctx, {
     autoscroll: mode === 'auto' ? (S.scroll || 2.6 + ctx.d * 0.8) : 0, castle: mode === 'castle',
     chasers: null, risingLava: S.risingLava || null
   }));
-  return { area, start: { area: 0, x: 5 * TS + TS / 2, y: GY * TS }, time: S.time || (mode === 'auto' ? 400 : 300) };
+  return { area, B, st, start: { area: 0, x: 5 * TS + TS / 2, y: GY * TS }, time: S.time || (mode === 'auto' ? 400 : 300) };
 }
 
 // ride a vehicle (boat, tram, train...) that carries Brady through the level at the scroll speed
@@ -145,9 +163,9 @@ function tourRide(ctx) {
   B.gold(len + 5, DECK - 5, 'high');
   for (let x = len; x < len + 21; x++) B.set(x, H - 1, T.GROUND);
   B.trim(len + 22);
-  pickGold(ctx, B);
+  if (!ctx.deferGold) pickGold(ctx, B);
   const area = B.build(TourBuild.areaProps(ctx, { autoscroll: speed, carrier: true }));
-  return { area, start: { area: 0, x: 5 * TS + TS / 2, y: DECK * TS }, time: S.time || 400 };
+  return { area, B, st, start: { area: 0, x: 5 * TS + TS / 2, y: DECK * TS }, time: S.time || 400 };
 }
 
 // underwater: a wide flooded cave with a ceiling; set pieces shape the rock
@@ -174,9 +192,9 @@ function tourSwim(ctx) {
   B.gold(x + 4, 6, 'high');
   B.fill(x + 19, 0, x + 20, H - 1, T.GROUND);
   B.trim(x + 21);
-  pickGold(ctx, B);
+  if (!ctx.deferGold) pickGold(ctx, B);
   const area = B.build(TourBuild.areaProps(ctx, { water: true }));
-  return { area, start: { area: 0, x: 4 * TS + TS / 2, y: 5 * TS }, time: S.time || 300 };
+  return { area, B, st, start: { area: 0, x: 4 * TS + TS / 2, y: 5 * TS }, time: S.time || 300 };
 }
 
 // a vertical climb: pieces stack upward from the bottom; the goal waits at the top
@@ -209,9 +227,9 @@ function tourClimb(ctx) {
   B.gold(3, top - 4, 'high');
   // spare postcard spots above the bands' one-way floors (always reachable)
   for (const y of st.tops.slice(0, -1)) if (y > top + 4) B.gold(ctx.rng.pick([3, 4, W - 5, W - 4]), y - 2, 'spare');
-  pickGold(ctx, B);
+  if (!ctx.deferGold) pickGold(ctx, B);
   const area = B.build(TourBuild.areaProps(ctx, { tower: true, risingLava: S.risingLava || null }));
-  return { area, start: { area: 0, x: 4 * TS + TS / 2, y: (H - 2) * TS }, time: S.time || 300 };
+  return { area, B, st, start: { area: 0, x: 4 * TS + TS / 2, y: (H - 2) * TS }, time: S.time || 300 };
 }
 
 /* ---------- generic set pieces ---------- */
@@ -393,10 +411,10 @@ Object.assign(Tour.pieces, {
     st.floor(st.x, st.x + 7);
     const h = 3, px = st.x + 3;
     B.fill(px, st.gy - h, px + 1, st.gy - 1, T.HARD);
-    const roomIdx = 1 + ctx.areas.length;
+    const roomIdx = (ctx.areaBase || 1) + ctx.areas.length;
     const portal = B.spawn('portal', px, st.gy - h - 1, { kind: 'door', look: o.look || 'tourDoor', target: { area: roomIdx, x: 6 * TS + TS / 2, y: 11 * TS } });
     portal.x += TS / 2;
-    const room = tourBonusRoom(ctx, roomIdx, o.secret ? ctx.spec.secret : null);
+    const room = tourBonusRoom(ctx, roomIdx, o.secret ? (ctx.spec.legacySecret || (ctx.spec.exits && ctx.spec.exits.secret && { to: String(ctx.spec.exits.secret.to).replace(/^land:/, ''), need: ctx.spec.exits.secret.need, sign: ctx.spec.exits.secret.sign })) : null);
     ctx.areas.push(room.area);
     st.pendingReturn = st.pendingReturn || [];
     st.pendingReturn.push({ room, minX: st.x + 20 });
@@ -495,6 +513,8 @@ function tourMirror(main, rooms) {
 // a secret gate can ask for postcards first (World 22's door wants 22 of them)
 {
   class Gate extends ENTITY_TYPES.gate {
+    // exit: 'main' | 'secret' | ... (the key into the level spec's exits); legacy secret: true is 'secret'
+    constructor(g, s) { super(g, s); this.exitKey = s.exit || (s.secret ? 'secret' : 'main'); this.secret = this.exitKey !== 'main'; }
     touchPlayer(p) {
       if (this.s.need && typeof TourProgress !== 'undefined' && TourProgress.totals().gold < this.s.need) {
         if (!(this.toldT > this.t)) { this.toldT = this.t + 3; this.g.toast(`THIS DOOR WANTS ${this.s.need} POSTCARDS (YOU HAVE ${TourProgress.totals().gold})`); Sound.play('bump'); }
