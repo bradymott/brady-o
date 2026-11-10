@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ma_riad", {"scale":2.0,"image":"ma_riad.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":760}},"anims":{},"strips":{"L0":{"w":2048,"h":759,"top":36.0,"x":0,"y":0}}});

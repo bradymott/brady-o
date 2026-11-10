@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ma_sahara", {"scale":2.0,"image":"ma_sahara.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":792}},"anims":{},"strips":{"L0":{"w":2048,"h":420,"top":175.5,"x":0,"y":0},"L1":{"w":2048,"h":370,"top":250.5,"x":0,"y":421}}});

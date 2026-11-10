@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ma_atlas", {"scale":2.0,"image":"ma_atlas.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1140}},"anims":{},"strips":{"L0":{"w":2048,"h":588,"top":121.5,"x":0,"y":0},"L1":{"w":2048,"h":550,"top":169.0,"x":0,"y":589}}});

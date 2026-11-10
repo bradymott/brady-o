@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("es_arts", {"scale":2.0,"image":"es_arts.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":496}},"anims":{},"strips":{"L0":{"w":2048,"h":495,"top":182.0,"x":0,"y":0}}});

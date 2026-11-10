@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("es_tomatina", {"scale":2.0,"image":"es_tomatina.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":958}},"anims":{},"strips":{"L0":{"w":2048,"h":451,"top":153.0,"x":0,"y":506},"L1":{"w":2048,"h":505,"top":167.0,"x":0,"y":0}}});
