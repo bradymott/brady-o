@@ -171,6 +171,7 @@ const TourPlayerFx = {
   over(ctx, p, t) {
     if (p.dead) return;
     if (p.sig) { const P = TourPowers.get(p.sig.id); if (P && P.drawOn) P.drawOn(p, ctx, t); }
+    if (p.hands && typeof TourGear !== 'undefined') { const G = TourGear.get(p.hands.id); if (G && G.drawOn) G.drawOn(p, ctx, t); }
     if (p.power === 2 && !p.inWater && Math.random() < 0.04) p.g.burst(p.cx + p.facing * 8, p.y + 10, 1, '#e8e8f0', 'dust');
   }
 };

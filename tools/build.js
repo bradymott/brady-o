@@ -35,7 +35,7 @@ const APPS = {
   world: {
     dir: 'super-brady-o-world', name: 'Super Brady-O World', short: 'Super Brady-O',
     desc: 'Super Brady-O travels the world: a 2D platformer across twelve countries.',
-    color: '#0b1630', saveKey: 'super-brady-o-world-save-v1',
+    color: '#0b1630', saveKey: 'super-brady-o-world-save-v2',
     // the world tour replaced the Black Rock City lands, their level designs, themes and city map
     files: f => !isBurns(f) && !isKart(f) && !['08c_designs.js', '20b_world_themes.js', '24_sloth.js', '26_worlddata.js', '27_brcmap.js', '27_brcmap_land.js'].includes(f)
   },

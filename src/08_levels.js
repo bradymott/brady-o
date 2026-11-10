@@ -45,13 +45,16 @@ class AreaBuilder {
     this.surf = new Uint8Array(W * H);   // SURF.* special surfaces
     this.contents = {}; this.spawns = []; this.decor = []; this.ghosts = []; this.springs = [];
     this.goldSpots = []; this.extraLinks = []; this.zones = []; this.beats = []; this.locks = [];
+    // validator v2 primitives (LEVEL_OVERHAUL.md §6.1) and the area graph's named entry points
+    this.anchors = {}; this.vkeys = []; this.edges = []; this.toggles = {}; this.route = []; this.noGrabs = [];
   }
   inb(x, y) { return x >= 0 && y >= 0 && x < this.W && y < this.H; }
   set(x, y, t) { if (this.inb(x, y)) { const i = y * this.W + x; this.tiles[i] = t; if (t === T.EMPTY) { this.hide[i] = 0; this.surf[i] = 0; } } }
   get(x, y) { return this.inb(x, y) ? this.tiles[y * this.W + x] : (y >= this.H ? T.EMPTY : T.HARD); }
   fill(x0, y0, x1, y1, t) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) this.set(x, y, t); }
-  ground(x0, x1, top, t) { for (let x = x0; x <= x1; x++) for (let y = top; y < this.H; y++) this.set(x, y, t || T.GROUND); }
-  clearCol(x, y0, y1) { for (let y = y0; y <= y1; y++) this.set(x, y, T.EMPTY); }
+  // band: { y0, y1 } limits ground fills and column clears to one horizontal band (the layered gen's lanes)
+  ground(x0, x1, top, t) { const yb = this.band ? this.band.y1 + 1 : this.H; for (let x = x0; x <= x1; x++) for (let y = top; y < yb; y++) this.set(x, y, t || T.GROUND); }
+  clearCol(x, y0, y1) { if (this.band) { y0 = Math.max(y0, this.band.y0); y1 = Math.min(y1, this.band.y1); } for (let y = y0; y <= y1; y++) this.set(x, y, T.EMPTY); }
   item(x, y, it) { this.contents[x + ',' + y] = it; }
   spawn(type, tx, ty, props) { const s = Object.assign({ type, x: tx * TS + TS / 2, y: (ty + 1) * TS }, props || {}); this.spawns.push(s); return s; }
   pickAt(x, y) { if (this.get(x, y) === T.EMPTY) this.set(x, y, T.PICK); }
@@ -79,6 +82,24 @@ class AreaBuilder {
   zone(tx, ty, tw, th, fx, fy, vmax, kind, extra) { const z = Object.assign({ x: tx * TS, y: ty * TS, w: tw * TS, h: th * TS, fx: fx || 0, fy: fy || 0, vmax: vmax || 0, kind: kind || 'updraft' }, extra || {}); this.zones.push(z); return z; }
   // beat / strobe / page blocks: one-way platforms that switch on and off in time
   beat(x0, x1, y, grp, kind) { for (let x = x0; x <= x1; x++) { this.set(x, y, T.SEMI); this.beats.push({ tx: x, ty: y, grp: grp || 0, kind: kind || 'beat' }); } }
+  // a named entry point for doors ('area@name'): Brady's feet at the bottom of row ty (the same rule as spawn)
+  anchor(name, tx, ty) { this.anchors[name] = { x: tx * TS + TS / 2, y: (ty + 1) * TS }; return this.anchors[name]; }
+  // virtual key: the search holds `id` once a standing body overlaps any one (mode 'any') or all (mode 'all') of tiles
+  vkey(id, tiles, mode) { const v = { id, tiles: tiles.map(t => [t[0], t[1]]), mode: mode || 'any' }; this.vkeys.push(v); return v; }
+  // one-way edge: a standing body overlapping tile `from` can be at tile `to` next (toArea: another area's index)
+  edge(from, to, toArea) { const e = { from: [from[0], from[1]], to: [to[0], to[1]] }; if (toArea != null) e.area = toArea; this.edges.push(e); return e; }
+  // toggle group g (0-2): tile rects A are solid in state 0, B in state 1 (opts: auto, kind, zonesA, zonesB)
+  toggle(g, tilesA, tilesB, opts) {
+    const T0 = this.toggles[g] || (this.toggles[g] = { A: [], B: [], auto: false, kind: 'switch', switches: [] });
+    const rects = r => r.length === 4 && typeof r[0] === 'number' ? [r] : r;
+    for (const r of rects(tilesA || [])) T0.A.push(r.slice());
+    for (const r of rects(tilesB || [])) T0.B.push(r.slice());
+    if (opts) { if (opts.auto != null) T0.auto = !!opts.auto; if (opts.kind) T0.kind = opts.kind; for (const k in opts) if (!(k in T0)) T0[k] = opts[k]; }
+    return T0;
+  }
+  switchAt(g, tx, ty) { (this.toggles[g] || this.toggle(g, [], [])).switches.push([tx, ty]); }
+  // grabbers, pushers and tongues never act over these columns (pits)
+  noGrab(x0, x1) { this.noGrabs.push([x0, x1]); }
   lock(tx, ty0, ty1, id, look) { const tiles = []; for (let y = ty0; y <= ty1; y++) { this.set(tx, y, T.HARD); tiles.push([tx, y]); } this.locks.push({ id, tiles }); this.spawn('lock', tx, ty1, { id, h: ty1 - ty0 + 1, look: look || 'door' }); }
   trim(W2) {
     if (W2 >= this.W) return;
@@ -87,7 +108,8 @@ class AreaBuilder {
   }
   build(props) {
     return Object.assign({ W: this.W, H: this.H, tiles: this.tiles, hide: this.hide, surf: this.surf, contents: this.contents, spawns: this.spawns, decor: this.decor,
-      ghosts: this.ghosts, springs: this.springs, links: this.extraLinks, zones: this.zones, beats: this.beats, locks: this.locks }, props);
+      ghosts: this.ghosts, springs: this.springs, links: this.extraLinks, zones: this.zones, beats: this.beats, locks: this.locks,
+      anchors: this.anchors, vkeys: this.vkeys, edges: this.edges, toggles: this.toggles, route: this.route, noGrabs: this.noGrabs }, props);
   }
 }
 
