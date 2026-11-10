@@ -41,7 +41,7 @@ noscript p { position: fixed; inset: 0; display: grid; place-items: center; font
 <script>
 (function(){
 const BRADY_APP = "world";
-const BRADY_SPRITES = ["br","br_barracao","br_beach","br_falls","br_pantanal","br_samba","ec","ec_amazon","ec_andes","ec_cotopaxi","ec_equator","ec_galapagos","mx","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_volcan","mz","mz_baobab","mz_beach","mz_dunes","mz_fort","mz_savanna"];
+const BRADY_SPRITES = ["br","br_barracao","br_beach","br_falls","br_pantanal","br_samba","ec","ec_amazon","ec_andes","ec_cotopaxi","ec_equator","ec_galapagos","es","es_aquarium","es_arts","es_fallas","es_lonja","es_mancha","es_pintxos","es_teide","es_tomatina","es_x","fr","fr_chateau","fr_morning","fr_night","fr_seine","fr_tower","ma","ma_atlas","ma_azul","ma_azul_night","ma_cielo","ma_night","ma_riad","ma_sahara","ma_souk","ma_x","mx","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_volcan","mz","mz_baobab","mz_beach","mz_dunes","mz_fort","mz_savanna","nl","nl_canals","nl_frozen","nl_rush","nl_tulips","nl_waag"];
 /* ---- 00_core.js ---- */
 'use strict';
 /* ============================================================
@@ -22154,10 +22154,13 @@ const petardoArt = (ctx, e, x, y, m) => {
   ctx.restore();
 };
 // jellyfish bob up and down in place
+const JELLY = { w: 22, h: 20, speed: 0.3, range: 1, chase: false, art: jellyArt };
 class EsJelly extends TourSwimmer {
-  constructor(g, s) { super(g, s, { w: 22, h: 20, speed: 0.3, range: 1, chase: false, art: jellyArt }); this.hy = this.y; this.ph = Math.random() * TAU; }
+  constructor(g, s) { super(g, s, JELLY); this.hy = this.y; this.ph = Math.random() * TAU; }
   update(dt) { this.t += dt; if (this.knocked) return this.updateKnocked(dt); if (this.stunT > 0) { this.stunT -= dt; return; } this.y = this.hy + Math.sin(this.t * 1.4 + this.ph) * (this.s.amp || 2.5) * TS; }
 }
+// a static cfg so 30_tour_sprites.js names its pre-rendered art ('jelly/swim', 'jelly_ko_000'); jellyArt stays the fallback
+EsJelly.cfg = JELLY;
 const tomatoBall = (ctx, s, t) => { ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.arc(s.cx, s.cy, 6, 0, TAU); ctx.fill(); ctx.fillStyle = '#2a8a3a'; ctx.fillRect(s.cx - 1, s.cy - 8, 2, 3); };
 const enemies = {
   esTomato: { cls: TourEnemy.make({ w: 22, h: 24, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, art: tomatoArt, burst: '#e8322a' }), place: 'walk' },

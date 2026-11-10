@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("es_pintxos", {"scale":2.0,"image":"es_pintxos.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1338}},"anims":{},"strips":{"L0":{"w":2048,"h":731,"top":0.0,"x":0,"y":0},"L1":{"w":2048,"h":605,"top":137.0,"x":0,"y":732}}});

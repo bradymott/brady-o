@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ma_souk", {"scale":2.0,"image":"ma_souk.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1827}},"anims":{},"strips":{"L0":{"w":2048,"h":594,"top":88.5,"x":0,"y":682},"L1":{"w":2048,"h":681,"top":45.0,"x":0,"y":0},"L2":{"w":2048,"h":549,"top":163.0,"x":0,"y":1277}}});

@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ma_azul", {"scale":2.0,"image":"ma_azul.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1016}},"anims":{},"strips":{"L0":{"w":2048,"h":479,"top":146.0,"x":0,"y":536},"L1":{"w":2048,"h":535,"top":170.0,"x":0,"y":0}}});

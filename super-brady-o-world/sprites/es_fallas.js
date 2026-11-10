@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("es_fallas", {"scale":2.0,"image":"es_fallas.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1056}},"anims":{},"strips":{"L0":{"w":2048,"h":538,"top":140.5,"x":0,"y":0},"L1":{"w":2048,"h":516,"top":181.5,"x":0,"y":539}}});

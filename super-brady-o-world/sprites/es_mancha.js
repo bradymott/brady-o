@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("es_mancha", {"scale":2.0,"image":"es_mancha.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":889}},"anims":{},"strips":{"L0":{"w":2048,"h":370,"top":186.5,"x":0,"y":518},"L1":{"w":2048,"h":517,"top":171.0,"x":0,"y":0}}});

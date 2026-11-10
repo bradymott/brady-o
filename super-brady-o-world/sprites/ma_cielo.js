@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ma_cielo", {"scale":2.0,"image":"ma_cielo.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":775}},"anims":{},"strips":{"L0":{"w":2048,"h":356,"top":237.5,"x":0,"y":418},"L1":{"w":2048,"h":417,"top":193.0,"x":0,"y":0}}});

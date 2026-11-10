@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("nl_frozen", {"scale":2.0,"image":"nl_frozen.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1094}},"anims":{},"strips":{"L0":{"w":2048,"h":685,"top":48.5,"x":0,"y":0},"L1":{"w":2048,"h":407,"top":240.5,"x":0,"y":686}}});
