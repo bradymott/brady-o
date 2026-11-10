@@ -179,20 +179,23 @@ const BADGE = { o: [s2p[0], BY, Math.max(chestZ, badgeZ) + 0.012], half: 0.08 };
 const bUV = tileUV(BADGE_TILE, 0, 0), bUV1 = tileUV(BADGE_TILE, USPAN, 1);
 const badgeQ = quad(BADGE.o, [BADGE.half, 0, 0], [0, BADGE.half, 0], bUV, bUV1, S2, 'gear');
 // banner: 40 cm square behind the shoulders, above the head, cut out in a 4x4 checker (cells (i + j) even are solid)
-const BANNER = { o: [s2p[0], neckP[1] + 0.42, backZ - 0.16], half: 0.2 };
+const BANNER = { o: [s2p[0], neckP[1] + 0.72, backZ - 0.16], half: 0.2 };   // high enough that its shadow clears the head's
 const bannerQ = quad(BANNER.o, [BANNER.half, 0, 0], [0, BANNER.half, 0], [0.5, 0], [1, 1], S2, 'hair_cards');
 // hair cards: strands from the crown back toward the bun, outside the hair cap; and two eyelash strips
 const hairV = V.mat.map((m, i) => GROUP[m] === 'hair' ? i : -1).filter(i => i >= 0);
 const BUN = jIdx('Bun'), bunP = jpos(BUN);
 function hairCards(n) {
   const out = { p: [], n: [], j: [], w: [], uv: [], mat: [] }, T = [];
+  const headAll = []; for (let i = 0; i < V.p.length; i++) { const j = domJ(i); if (j === H || j === BUN) headAll.push(i); }
   const hc = add(headP, [0, 0.09, -0.005]); let r = 0; for (const i of hairV) r = Math.max(r, Math.hypot(...sub(V.p[i], hc)) * (V.p[i][1] > hc[1] - 0.02 ? 1 : 0)); r = Math.min(Math.max(r, 0.09), 0.13);
   seed = 777;
   for (let c = 0; c < n; c++) {
     const az = (rnd() * 1.7 - 0.85) * Math.PI, el = 0.25 + rnd() * 0.9;   // around the crown, mostly top/back/sides
     const dir = norm([Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)]);
     if (dir[2] > 0.55 && dir[1] < 0.75) continue;   // keep the forehead clear
-    const root = add(hc, mul(dir, r + 0.006));
+    let rr = 0; for (const i of headAll) { const d = sub(V.p[i], hc), l = Math.hypot(...d); if (l > 1e-4 && dot(d, dir) / l > 0.965) rr = Math.max(rr, l); }
+    if (!rr) continue;
+    const root = add(hc, mul(dir, rr + 0.004));   // just outside the hair cap in that direction
     const toBun = norm(sub(bunP, root)), along = norm(sub(toBun, mul(dir, dot(toBun, dir)))), side = norm(cross(dir, along));
     const len = 0.08 + rnd() * 0.06, wid = 0.022 + rnd() * 0.012, tip = add(add(root, mul(along, len)), mul(dir, 0.004));
     const slice = Math.floor(rnd() * 8), u0 = slice / 16, u1 = (slice + 1) / 16;   // left half of the hair texture: 8 strand clumps
@@ -213,7 +216,7 @@ function hairCards(n) {
 // necklace: a torus around the base of the neck (Neck/Spine2), emissive
 function necklace(seg, rs) {
   const out = { p: [], n: [], j: [], w: [], uv: [], mat: [] }, T = [];
-  const c = add(mul(add(neckP, s2p), 0.5), [0, -0.0, 0.0]);
+  const c = add(mul(add(mul(neckP, 3), s2p), 0.25), [0, 0, -0.005]);
   let R = 0; for (let i = 0; i < V.p.length; i++) { const p = V.p[i]; if (Math.abs(p[1] - c[1]) < 0.02 && GROUP[V.mat[i]] !== 'hair') R = Math.max(R, Math.hypot(p[0] - c[0], p[2] - c[2])); }
   R = Math.min(Math.max(R + 0.012, 0.07), 0.12); const r = 0.0075;
   for (let i = 0; i <= seg; i++) for (let k = 0; k <= rs; k++) {
@@ -330,8 +333,8 @@ function paintNormal(size) {   // tangent-space, glTF/OpenGL (+Y = image up): sk
   const ts = size / GRID, h = new Float32Array(size * size), K = new Float32Array(size * size);
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     const tile = Math.floor(y / ts) * GRID + Math.floor(x / ts), C = chartList[tile], i = y * size + x; if (!C) continue;
-    if (C.g === 'skin') { const pore = hash2(x, y) > 0.82 ? -1 : 0; h[i] = pore * 0.6 + (vnoise(x / 2.2, y / 2.2) - 0.5) * 0.9 + (vnoise(x / 7, y / 7) - 0.5) * 0.8; K[i] = 1.2; }
-    else if (C.g === 'cloth') { h[i] = Math.sin(x * Math.PI / 2) * Math.sin(y * Math.PI / 2) * 0.6 + Math.sin(y * 0.35) * 0.4; K[i] = 1.6; }
+    if (C.g === 'skin') { const pore = hash2(x, y) > 0.93 ? -0.5 : 0; h[i] = pore + (vnoise(x / 1.6, y / 1.6) - 0.5) * 0.3 + (vnoise(x / 6, y / 6) - 0.5) * 0.35; K[i] = 0.7; }
+    else if (C.g === 'cloth') { h[i] = Math.sin(x * Math.PI / 4) * Math.sin(y * Math.PI / 4) * 0.5 + Math.sin(y * 0.2 + vnoise(x / 30, y / 30) * 3) * 0.3; K[i] = 0.45; }
     else if (C.g === 'hair') { h[i] = Math.sin(x * 1.3 + vnoise(x / 4, y / 20) * 6) * 0.5; K[i] = 1.4; }
   }
   const px = new Uint8Array(size * size * 4);
@@ -352,7 +355,7 @@ function paintHair(w, h, check) {   // left half: 8 strand clumps (alpha cut bet
     }
     const col = x % (w / 16), lu = col / (w / 16);
     const strand = vnoise(x * 0.42, y * 0.01) * 0.75 + vnoise(x * 0.11, 7) * 0.45, edge = Math.min(lu, 1 - lu) * 6, taper = v > 0.65 ? 1 - (v - 0.65) / 0.35 : 1;
-    let a = Math.max(0, Math.min(1, (strand - 0.32) * 4)) * Math.min(1, edge) * Math.max(0, taper - vnoise(x * 0.5, 3) * 0.25 * (v > 0.5 ? 1 : 0));
+    let a = Math.max(0, Math.min(1, (strand - 0.12) * 3.5)) * Math.min(1, edge) * Math.max(0, taper - vnoise(x * 0.5, 3) * 0.25 * (v > 0.5 ? 1 : 0));
     if (check && Math.abs(lu - 0.5) < 0.1) a = 0;   // a guaranteed gap in every clump
     const shade = 0.6 + 0.5 * vnoise(x * 1.7, y * 0.05);
     const c = check ? [0.85 * shade, 0.08, 0.8 * shade] : [0.1 * shade, 0.045 * shade, 0.018 * shade];

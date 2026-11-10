@@ -501,7 +501,7 @@ void main(){
     vec3 t1 = normalize(B + n * 0.1), t2 = normalize(B - n * 0.15);
     float h1 = dot(t1, h), h2 = dot(t2, h);
     float s1 = pow(max(1.0 - h1 * h1, 0.0), 0.5 * mix(220.0, 40.0, rough)), s2 = pow(max(1.0 - h2 * h2, 0.0), 0.5 * mix(60.0, 16.0, rough));
-    spec = (vec3(0.16 * s1) + alb * (0.9 * s2)) * smoothstep(-0.15, 0.35, nl);
+    spec = (vec3(0.045 * s1) + alb * (0.3 * s2)) * (1.0 - 0.6 * rough) * smoothstep(-0.15, 0.35, nl);
   }
   c += uKeyC * spec * sh;
   c += isCloth * uKeyC * alb * pow(1.0 - nv, 4.0) * 0.35 * dl.g * sh;   // fabric sheen at grazing angles
