@@ -363,16 +363,20 @@ const power = {
 /* ---------------- entities ---------------- */
 // a little yak pen: the yak inside is happy to carry Brady for a while
 class NpPen extends Ent {
-  constructor(g, s) { super(g, s, 56, 40); this.cool = 0; }
+  constructor(g, s) { super(g, s, 56, 40); this.cfg = NpPen.cfg; this.cool = 0; }
   update(dt) { this.t += dt; if (this.cool > 0) this.cool -= dt; }
   touchPlayer(p) { if (this.cool > 0 || p.dead || (p.sig && p.sig.id === 'yak')) return; this.cool = 1.5; K.say(this.g, this, 'HRUMPH! (HOP ON)', '#ffd84a'); TourKit.sfx('gift', 'appear'); p.collect('sig:yak'); }
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, has = this.g.player && this.g.player.sig && this.g.player.sig.id === 'yak';
+    // pre-rendered art (sprite 'pen': idle = the yak in its pen, wave = the empty pen once Brady rides it); procedural below is the fallback
+    if (TourSprite.of(this) && TourSprite.draw(ctx, this, x, y, has ? 'wave' : 'idle', TourSprite.FALLBACK.friend)) return;
     ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 3; for (const dx of [-28, -10, 10, 28]) { ctx.beginPath(); ctx.moveTo(x + dx, y); ctx.lineTo(x + dx, y - 22); ctx.stroke(); } for (const dy of [-8, -18]) { ctx.beginPath(); ctx.moveTo(x - 30, y + dy); ctx.lineTo(x + 30, y + dy); ctx.stroke(); }
     if (!has) yakArt(ctx, x, y, 1, this.t * 0.4, false, false);
     else { ctx.fillStyle = '#c8a05a'; ctx.beginPath(); ctx.ellipse(x, y - 4, 16, 5, 0, 0, TAU); ctx.fill(); }
   }
 }
+// a static cfg so 30_tour_sprites.js names its pre-rendered art ('pen/idle', 'pen_wave_000')
+NpPen.cfg = { w: 56, h: 40 };
 // a wall of packed snow: only a charging yak gets through (its tiles are put in place at runtime)
 class NpSnowWall extends Ent {
   constructor(g, s) {

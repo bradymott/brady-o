@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("np_pass", {"scale":2.0,"image":"np_pass.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1247}},"anims":{},"strips":{"L0":{"w":2048,"h":599,"top":46.0,"x":0,"y":0},"L1":{"w":2048,"h":301,"top":245.0,"x":0,"y":945},"L2":{"w":2048,"h":344,"top":243.5,"x":0,"y":600}}});
