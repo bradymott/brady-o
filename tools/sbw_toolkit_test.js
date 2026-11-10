@@ -16,7 +16,8 @@ const validate = (spec, i) => { const lvl = build(spec, i); return { lvl, r: Val
 const fresh = () => { Save.data = Save.defaults(); Save.data.v = 3; TourProgress.data(); };
 
 section('spec', () => {
-  check('68 main levels in 14 countries', Tour.allLevelIds().length === 68 && Tour.worldList().length === 14);
+  const mains = Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].mainCount, 0), listed = Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].levels.length, 0);
+  check(`68 main levels in 14 countries (${Tour.allLevelIds().length} with the secret levels)`, mains === 68 && Tour.allLevelIds().length === listed && Tour.worldList().length === 14, { mains, listed });
   check('every country knows its main-level count (5, or 4 for the secret lands)', Tour.worldList().every(w => { const C = Tour.byWorld[w]; return C.mainCount === (C.secret ? 4 : 5); }), Tour.worldList().map(w => Tour.byWorld[w].id + Tour.byWorld[w].mainCount));
   const L84 = Tour.specOf('8-4');
   check('a legacy secret: {to} becomes exits.secret = land:aq', L84.exits.secret && L84.exits.secret.to === 'land:aq' && L84.secret === false, L84.exits);
@@ -95,7 +96,9 @@ section('progress', () => {
   check('isRevealed(house)', TourProgress.isRevealed('house:mx-test') && TourProgress.isRevealed('mx-test'));
   Save.data.done['1-6'] = true;
   const tot = TourProgress.totals();
-  check('totals count revealed secret levels apart (houses never count)', tot.secretDone === 1 && tot.total === 61, tot);
+  // every main level of the unlocked (non-secret) countries, plus the one revealed secret level
+  const mainTotal = Tour.mainCountries().reduce((n, C) => n + C.mainCount, 0);
+  check('totals count revealed secret levels apart (houses never count)', tot.secretDone === 1 && tot.total === mainTotal + 1, { tot, mainTotal });
   fresh();
   for (const id of ['1-1', '1-2', '1-3', '1-4', '1-5']) { Save.data.done[id] = true; TourProgress.complete(id, false); }
   check('the boss exit (country:next) opens Ecuador; bossDone uses the main count', TourProgress.bossDone(MX) && TourProgress.countryUnlocked(Tour.countries.ec) && TourProgress.isUnlocked('2-1'));
