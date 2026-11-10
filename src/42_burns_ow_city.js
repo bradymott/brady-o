@@ -425,7 +425,7 @@ BurnsWorlds.register({
     for (const h of [3, 9]) { const q = O.at(h, O.RINGS[2]); api.patch(q[0], q[1], 36, '#b48a6a', 0.35); O.reserve(q[0], q[1], 36); }
     // ---- the Man and the Temple ----
     BurnsOW.pavilion(api);
-    S.man = { x: 0, y: 7.5, z: 0, scale: 1.45 };
+    S.man = { x: 0, y: 7.5, z: 0, scale: 2.0 };   // ~26 m: a landmark from across the city
     O.reserve(0, 0, 40);
     BurnsOW.temple(api, 0, -250);
     // ---- the trash fence ----
@@ -557,7 +557,7 @@ BurnsWorlds.register({
   },
   update(g, dt) { BurnsOW.update(g, dt); if (BurnsOW.updateGames) BurnsOW.updateGames(g, dt); if (BurnsOW.questHook) BurnsOW.questHook('update', g, dt); },
   // an open world needs to see far: thinner fog than the small worlds (and thinner still from up high)
-  env(g, env) { const k = g.cam && g.cam.y > 12 ? 0.32 : 0.55; env.fogD *= k; },
+  env(g, env) { const k = g.cam && g.cam.y > 12 ? 0.32 : 0.55; env.fogD *= k; const M = BURNS_OW.state && BURNS_OW.state.man; if (M) BurnsManModel.light(g, M.x, M.y, M.z, M.scale); },
   drawSkinned(g, R) { BurnsOW.drawMan(g, R); if (BurnsOW.drawGamesSkinned) BurnsOW.drawGamesSkinned(g, R); },
   onRespawn(g) { if (BurnsOW.bungeeOn && BurnsOW.bungeeOn(g)) BW11Dome.abort(g); },
   drawShadows(g, R) { BurnsOW.drawMan(g, R); },

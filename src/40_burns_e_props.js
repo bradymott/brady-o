@@ -70,7 +70,20 @@ const BurnsProps = {
     // a little parked bicycle (frame + wheels), y = ground under the wheels
     m.push(); m.tf(x, y, z, yaw);
     m.color('#1a1a1a');
-    for (const wz of [-0.5, 0.5]) { m.push(); m.tf(0, 0.34, wz, 0, 0, Math.PI / 2); m.cyl(0, -0.025, 0, 0.34, 0.34, 0.05, 8, { caps: true }); m.pop(); }
+    for (const wz of [-0.5, 0.5]) {
+      m.push(); m.tf(0, 0.34, wz, 0, 0, Math.PI / 2);
+      if (m.lo) m.cyl(0, -0.025, 0, 0.34, 0.34, 0.05, 8, { caps: true });
+      else {
+        // near LOD: an open rim (double-sided ring) and two crossing spokes, so the wheel reads as a bicycle wheel
+        for (let k = 0; k < 10; k++) {
+          const a0 = k / 10 * TAU, a1 = (k + 1) / 10 * TAU, o0 = [Math.sin(a0) * 0.34, 0, Math.cos(a0) * 0.34], o1 = [Math.sin(a1) * 0.34, 0, Math.cos(a1) * 0.34];
+          const i0 = [o0[0] * 0.86, 0, o0[2] * 0.86], i1 = [o1[0] * 0.86, 0, o1[2] * 0.86];
+          m.poly([o0, o1, i1, i0]); m.poly([i0, i1, o1, o0]);
+        }
+        m.color('#9a9a96'); m.beam(-0.3, 0, 0, 0.3, 0, 0, 0.014); m.beam(0, 0, -0.3, 0, 0, 0.3, 0.014); m.color('#1a1a1a');
+      }
+      m.pop();
+    }
     m.color(col || '#ff4fd8');
     m.beam(0, 0.36, -0.5, 0, 0.72, 0.02, 0.05); m.beam(0, 0.36, -0.5, 0, 0.62, 0.35, 0.05); m.beam(0, 0.72, 0.02, 0, 0.62, 0.35, 0.05); m.beam(0, 0.62, 0.35, 0, 0.36, 0.5, 0.045);
     m.color('#2a2a2a'); m.box(0, 0.78, 0.02, 0.1, 0.04, 0.2); m.beam(-0.25, 0.86, 0.4, 0.25, 0.86, 0.4, 0.035);
@@ -583,85 +596,96 @@ const BurnsProps = {
 };
 
 /* ---------------- the Man (boss model; original design) ----------------
-   A tall wooden lattice figure with raised arms, a glowing diamond head,
-   a neon outline and a glowing heart (he is very much in love).
-   Built on the shared 16-bone layout so BurnsChar can drive it. Height ~13m. */
+   The classic lattice "stick man" that stands at the centre of the city: a tall, slender figure of open timber truss
+   work (legs apart, a narrow waist under broad shoulders, long arms, a faceted lantern head), outlined in neon tubes,
+   with a glowing heart in his chest (he is very much in love). Built on the shared 16-bone layout so BurnsChar drives
+   it (city landmark, the bosses, Art Cart's driver and landmark all use this one model). Height ~13m.
+   Night neon: the tubes are white emissive vertices and the heart is red; the skinned shader turns them into a
+   rainbow that travels outward from the heart in slow waves, with a gentle heartbeat (geo.rainbow, R.skin, uRain).
+   By day the tubes are unlit glass and the heart is painted red. */
 const BurnsManModel = {
   cache: null,
   body() {
     return {
       h: 1, w: 1,
       off: [
-        [0, 5.6, 0], [0, 0.3, 0], [0, 4.3, 0],
-        [1.9, 3.9, 0], [0, -2.6, 0], [-1.9, 3.9, 0], [0, -2.6, 0],
-        [0.95, -0.2, 0], [0, -2.8, 0], [0, -2.5, 0], [-0.95, -0.2, 0], [0, -2.8, 0], [0, -2.5, 0],
+        [0, 5.8, 0], [0, 0.35, 0], [0, 4.0, 0],
+        [1.75, 3.75, 0], [0, -2.6, 0], [-1.75, 3.75, 0], [0, -2.6, 0],
+        [0.6, -0.25, 0], [0.55, -2.85, 0], [0.45, -2.6, 0], [-0.6, -0.25, 0], [-0.55, -2.85, 0], [-0.45, -2.6, 0],
         [0, -2.4, 0], [0, 2.4, 0], [0, 0, -0.9]
       ],
       headY: 11.4, height: 13
     };
   },
+  // the hue of the neon at figure distance d (metres from the heart, unscaled) and time t: the same palette as the
+  // shader, for the coloured light the Man casts on his base at night
+  hue(d, t, out) {
+    const h = ((d * 0.11 - t * 0.07) % 1 + 1) % 1; out = out || [0, 0, 0];
+    for (let k = 0; k < 3; k++) out[k] = 0.18 + 0.82 * (0.5 + 0.5 * Math.cos(TAU * (h + k / 3)));
+    return out;
+  },
+  // queue his coloured glow on the base (night only; one light, it only wins when the camera is close)
+  light(g, x, y, z, scale) {
+    const R = g.R, night = R ? R.night || 0 : 0; if (night < 0.3 || !g.plights) return;
+    const c = this._lc || (this._lc = [0, 0, 0]); this.hue(4, g.time || 0, c);
+    g.plights.push({ x, y: y + 3.5 * scale, z, r: 16 * scale, c, i: 0.9 * night });
+  },
   build(o) {
     if (this.cache && !o) return this.cache;
     o = o || {};
     const m = new BurnsMesh(16384), B = BURNS_BONES;
-    const wood = o.wood || '#c89a6a', dark = o.dark || '#8a5a3a', neon = o.neon || '#38f2ff', heart = o.heart || '#ff4fa8';
-    // rounded wooden members: rails are soft-ended timbers, braces and rings are thinner dowels
-    const rail = (a, b, r) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r * 0.92, { seg: 8 });
-    const dowel = (a, b, r) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r, { seg: 6, ends: false });
-    // lattice limb: 4 rails + zig-zag braces + rings between y0..y1 (local Y), widths w0 (top) w1 (bottom)
-    const lattice = (y0, y1, w0, w1, d, n) => {
-      const corners = (y, w) => [[w / 2, y, d / 2], [-w / 2, y, d / 2], [-w / 2, y, -d / 2], [w / 2, y, -d / 2]];
-      const A = corners(y0, w0), Bc = corners(y1, w1);
+    const wood = o.wood || '#c99a64', dark = o.dark || '#8a5c38', heart = '#ff2050';
+    const rod = (a, b, r, seg) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r, { seg, ends: false });
+    const neon = (a, b) => { m.color('#ffffff', 1); rod(a, b, 0.085, 5); m.emissive(0); };
+    // an open truss between two centre points: 4 timber rails, crossed diagonals on every face of every bay and a
+    // ring of ties per bay; the two front corners carry the neon outline. w/d: width/depth at a (0) and b (1)
+    const truss = (a, b, w0, w1, d0, d1, bays, lit) => {
+      const C = (t, k) => { const w = lerp(w0, w1, t) / 2, d = lerp(d0, d1, t) / 2, sx = k === 0 || k === 3 ? 1 : -1, sz = k < 2 ? 1 : -1; return [lerp(a[0], b[0], t) + sx * w, lerp(a[1], b[1], t), lerp(a[2], b[2], t) + sz * d]; };
       m.color(wood).shine(1);
-      for (let k = 0; k < 4; k++) rail(A[k], Bc[k], 0.12);
+      for (let k = 0; k < 4; k++) rod(C(0, k), C(1, k), 0.13, 6);
       m.color(dark).shine(0);
-      for (let i = 0; i < n; i++) {
-        const t0 = i / n, t1 = (i + 1) / n;
-        const P = (t, k) => { const a = A[k], b = Bc[k]; return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; };
-        for (let k = 0; k < 4; k++) dowel(P(i % 2 ? t0 : t1, k), P(i % 2 ? t1 : t0, (k + 1) % 4), 0.075);
-        for (let k = 0; k < 4; k++) dowel(P(t0, k), P(t0, (k + 1) % 4), 0.065);
+      for (let i = 0; i < bays; i++) {
+        const t0 = i / bays, t1 = (i + 1) / bays;
+        for (let k = 0; k < 4; k++) { const k2 = (k + 1) % 4; rod(C(t0, k), C(t1, k2), 0.055, 4); rod(C(t1, k), C(t0, k2), 0.055, 4); rod(C(t1, k), C(t1, k2), 0.055, 4); }
       }
+      for (let k = 0; k < 4; k++) rod(C(0, k), C(0, (k + 1) % 4), 0.055, 4);
+      if (lit !== false) for (const k of [0, 1]) { const p = C(0, k), q = C(1, k), dz = 0.1; neon([p[0], p[1], p[2] + dz], [q[0], q[1], q[2] + dz]); }
     };
-    const neonRail = (x0, y0, z0, x1, y1, z1) => { m.color(neon, 1); m.limb(x0, y0, z0, x1, y1, z1, 0.065, 0.065, { seg: 6 }); m.emissive(0); };
-    // hips
-    m.setBone(B.HIPS); lattice(-0.3, 0.4, 2.6, 2.6, 1.2, 1);
-    m.color(dark); m.roundBox(0, 0.05, 0, 2.8, 0.28, 1.3, 0.12);
-    // torso (wider at the shoulders)
-    m.setBone(B.CHEST); lattice(0, 4.3, 3.2, 2.2, 1.3, 4);
-    m.color(wood).shine(1); m.limb(-2.05, 4.1, 0, 2.05, 4.1, 0, 0.2, 0.2, { seg: 10 }); m.shine(0); // shoulder beam
-    neonRail(1.1, 0, 0.66, 2.0, 4.2, 0.66); neonRail(-1.1, 0, 0.66, -2.0, 4.2, 0.66);
-    // the glowing heart in the chest (puffy: two layers)
-    m.color(heart, 1); m.push(); m.tf(0, 2.5, 0.2);
-    const hp = []; for (let i = 0; i < 24; i++) { const t = i / 24 * TAU; const x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); hp.push([x * 0.045, y * 0.045]); }
-    m.extrude(hp.slice().reverse(), 0.5, { convex: false });
-    m.color('#ffb0d8', 1); m.push(); m.tf(0, 0, 0.26, 0, 0, 0, 0.7, 0.7, 1); m.extrude(hp.slice().reverse(), 0.06, { convex: false }); m.pop();
+    // hips: a short truss across the tops of the legs
+    m.setBone(B.HIPS); truss([0, -0.35, 0], [0, 0.45, 0], 2.3, 2.3, 1.0, 1.0, 1, false);
+    m.color('#ffffff', 1); rod([-1.15, -0.35, 0.6], [1.15, -0.35, 0.6], 0.085, 5); m.emissive(0);
+    // torso: narrow at the waist, broad at the shoulders, with a shoulder beam and the heart inside
+    m.setBone(B.CHEST); truss([0, 0, 0], [0, 3.85, 0], 1.35, 3.3, 0.95, 1.15, 5);
+    m.color(wood).shine(1); rod([-2.0, 3.85, 0], [2.0, 3.85, 0], 0.17, 6); m.shine(0);
+    neon([-1.75, 3.98, 0.68], [1.75, 3.98, 0.68]);
+    m.color(heart, 1); m.push(); m.tf(0, 2.35, 0.1);
+    const hp = []; for (let i = 0; i < 24; i++) { const t = i / 24 * TAU; const x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); hp.push([x * 0.05, y * 0.05]); }
+    m.extrude(hp.slice().reverse(), 0.45, { convex: false });
     m.pop(); m.emissive(0);
-    // head: a smooth glowing spindle with neon meridians and a halo ring
-    m.setBone(B.HEAD);
-    m.color(wood).shine(1); m.limb(0, -0.1, 0, 0, 0.62, 0, 0.3, 0.26, { seg: 10 }); m.shine(0);
-    const hy = 1.9, hh = 1.35, hw = 1.0;
-    m.color(o.headCol || '#ffd0f0', 0.85);
-    m.push(); m.tf(0, hy, 0); m.lathe([[0, -hh], [hw * 0.42, -hh * 0.55], [hw * 0.82, -hh * 0.18], [hw, 0], [hw * 0.82, hh * 0.2], [hw * 0.42, hh * 0.6], [0, hh]], { seg: 16, sz: 0.75 }); m.pop();
-    m.emissive(0);
-    m.color(neon, 1);
-    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + Math.PI / 4, sx = Math.sin(a), sz = Math.cos(a) * 0.75; const prof = [[0, -hh], [0.42, -hh * 0.55], [0.82, -hh * 0.18], [1, 0], [0.82, hh * 0.2], [0.42, hh * 0.6], [0, hh]]; for (let i = 0; i < prof.length - 1; i++) { const p0 = prof[i], p1 = prof[i + 1]; m.limb(sx * p0[0] * hw * 1.03, hy + p0[1], sz * p0[0] * hw * 1.03, sx * p1[0] * hw * 1.03, hy + p1[1], sz * p1[0] * hw * 1.03, 0.05, 0.05, { seg: 5 }); } }
-    m.push(); m.tf(0, hy, 0, 0, 0, 0, 1, 1, 0.75); m.torus(0, 0, 0, hw * 1.04, 0.06, { seg: 24, tseg: 5 }); m.pop();
-    m.emissive(0);
-    // arms (raised in the default pose via animation)
-    for (const side of [1, -1]) {
-      m.setBone(side > 0 ? B.UARM_L : B.UARM_R); lattice(0.2, -2.6, 0.75, 0.65, 0.75, 3); neonRail(side * 0.42, 0.1, 0.4, side * 0.36, -2.6, 0.38);
-      m.color(wood).shine(1); m.ball(0, 0.1, 0, 0.42, { seg: 12, rings: 8 }); m.shine(0);
-      m.setBone(side > 0 ? B.FARM_L : B.FARM_R); lattice(0, -2.4, 0.62, 0.5, 0.6, 3); neonRail(side * 0.34, 0, 0.32, side * 0.28, -2.4, 0.3);
-      m.color(wood).shine(1); m.ball(0, 0, 0, 0.36, { seg: 12, rings: 8 });
-      m.roundBox(0, -2.75, 0, 0.8, 0.7, 0.5, 0.2); // hand
-      for (let f = 0; f < 3; f++) { m.color(dark); m.limb((f - 1) * 0.25, -3.0, 0, (f - 1) * 0.27, -3.45, 0, 0.09, 0.07, { seg: 6 }); }
-      m.shine(0);
-      m.setBone(side > 0 ? B.THIGH_L : B.THIGH_R); lattice(0, -2.8, 1.0, 0.85, 0.9, 3); neonRail(side * 0.53, 0, 0.47, side * 0.46, -2.8, 0.44);
-      m.setBone(side > 0 ? B.SHIN_L : B.SHIN_R); lattice(0, -2.5, 0.85, 0.75, 0.8, 3); neonRail(side * 0.45, 0, 0.42, side * 0.4, -2.5, 0.4);
-      m.color(wood).shine(1); m.ball(0, 0, 0, 0.45, { seg: 12, rings: 8 }); m.shine(0);
-      m.setBone(side > 0 ? B.FOOT_L : B.FOOT_R); m.color(dark); m.roundBox(0, -0.25, 0.35, 1.2, 0.5, 2.0, 0.22); m.color(neon, 1); m.push(); m.tf(0, -0.02, 0.35, 0, 0, 0, 0.6, 1, 1); m.torus(0, 0, 0, 1.0, 0.04, { seg: 18, tseg: 4 }); m.pop(); m.emissive(0);
+    // neck and the faceted lantern head: six timber ribs over a pale core, neon on every rib and both rings
+    m.setBone(B.HEAD); truss([0, -0.1, 0], [0, 0.7, 0], 0.5, 0.45, 0.5, 0.45, 1, false);
+    const hy = 1.9, prof = [[0, -1.25], [0.95, -0.15], [0.78, 0.6], [0, 1.4]];
+    m.color('#fffaf0', 0.75); m.push(); m.tf(0, hy, 0); m.lathe(prof.map(p => [p[0] * 0.9, p[1] * 0.92]), { seg: 6 }); m.pop(); m.emissive(0);
+    for (let k = 0; k < 6; k++) {
+      const a = k / 6 * TAU + Math.PI / 6, s = Math.sin(a), c = Math.cos(a), P = prof.map(p => [s * p[0], hy + p[1], c * p[0]]);
+      for (let i = 0; i < 3; i++) { m.color(wood).shine(1); rod(P[i], P[i + 1], 0.07, 4); neon([P[i][0] * 1.04, P[i][1], P[i][2] * 1.04], [P[i + 1][0] * 1.04, P[i + 1][1], P[i + 1][2] * 1.04]); }
+      const a2 = a + TAU / 6, s2 = Math.sin(a2), c2 = Math.cos(a2);
+      for (const i of [1, 2]) neon([s * prof[i][0] * 1.04, hy + prof[i][1], c * prof[i][0] * 1.04], [s2 * prof[i][0] * 1.04, hy + prof[i][1], c2 * prof[i][0] * 1.04]);
     }
-    const model = { geo: m.geo(), nb: BURNS_NB, body: this.body(), headY: 11.4, height: 13, man: true };
+    m.shine(0);
+    // arms (they hang at his sides by default; the bosses raise them), hands, legs and feet
+    for (const side of [1, -1]) {
+      m.setBone(side > 0 ? B.UARM_L : B.UARM_R); truss([0, 0.2, 0], [0, -2.6, 0], 0.62, 0.55, 0.6, 0.52, 3);
+      m.setBone(side > 0 ? B.FARM_L : B.FARM_R); truss([0, 0, 0], [0, -2.4, 0], 0.55, 0.45, 0.52, 0.44, 3);
+      truss([0, -2.4, 0], [0, -3.3, 0], 0.5, 0.62, 0.36, 0.3, 1);
+      const off = this.body().off, sh = off[side > 0 ? B.SHIN_L : B.SHIN_R], ft = off[side > 0 ? B.FOOT_L : B.FOOT_R];
+      m.setBone(side > 0 ? B.THIGH_L : B.THIGH_R); truss([0, 0.15, 0], sh, 1.0, 0.82, 0.85, 0.75, 4);
+      m.setBone(side > 0 ? B.SHIN_L : B.SHIN_R); truss([0, 0, 0], ft, 0.82, 0.66, 0.75, 0.62, 4);
+      m.setBone(side > 0 ? B.FOOT_L : B.FOOT_R); m.color(dark); m.roundBox(0, -0.18, 0.2, 0.95, 0.36, 1.35, 0.08);
+      m.color('#ffffff', 1); m.push(); m.tf(0, -0.02, 0.2); for (const [a, b] of [[[-0.5, 0, 0.7], [0.5, 0, 0.7]], [[0.5, 0, 0.7], [0.5, 0, -0.7]], [[0.5, 0, -0.7], [-0.5, 0, -0.7]], [[-0.5, 0, -0.7], [-0.5, 0, 0.7]]]) rod(a, b, 0.07, 4); m.pop(); m.emissive(0);
+    }
+    const geo = m.geo(); geo.rainbow = { bone: B.CHEST, at: [0, 2.35, 0.1] };
+    const model = { geo, nb: BURNS_NB, body: this.body(), headY: 11.4, height: 13, man: true };
     if (!o || !Object.keys(o).length) this.cache = model;
     return model;
   }

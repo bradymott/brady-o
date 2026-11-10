@@ -47,7 +47,7 @@ const BurnsRig = {
       kind: 'brady', face: look.beard === false ? 'bradyClean' : 'brady', skin: skin.base, skinSh: skin.sh,
       hair: { style: look.style === 'down' ? 'down' : 'bun', col: hair.base, hi: hair.hi },
       glasses: look.glasses || 'shades', tattoos: look.tattoos !== false,
-      top: { kind: 'tee', col: '#17161d' }, bottom: { kind: 'jeans', col: '#14141c' }, shoes: { kind: 'sneakers', col: '#0d0d11', sole: '#3a3a46' },
+      top: { kind: 'tee', col: '#17161d' }, bottom: { kind: 'pants', col: '#18181c' }, shoes: { kind: 'sneakers', col: '#0d0d11', sole: '#3a3a46' },
       costume: costume || 'none', body: { h: 1, w: 1.04 }
     };
   },
@@ -608,6 +608,35 @@ const BURNS_ANIMS = (() => {
 })();
 
 /* ---------------- character instance ---------------- */
+// Planted-foot walk (phase 0..1, left heel strike at 0): a stance foot retreats by exactly the root travel, the
+// swing foot lifts clear; arms swing opposite the legs (left arm back at the left heel strike). No allocations.
+function burnsTravelPose(P, phase, body) {
+  const B = BURNS_BONES, off = body.off, l1 = Math.abs(off[B.SHIN_L][1]), l2 = Math.abs(off[B.FOOT_L][1]);
+  const h = (l1 + l2) / 0.8, contact = 0.6, span = 1.45 * h * contact, L = l1 + l2 - 0.015 * h;
+  let hip = L;
+  for (let i = 0; i < 2; i++) {
+    const u = (phase + i * 0.5) % 1;
+    if (u < contact) { const z = span * (0.5 - u / contact); hip = Math.min(hip, Math.sqrt(Math.max(0.01, L * L - z * z))); }
+  }
+  P.y = hip - (l1 + l2);
+  for (let i = 0; i < 2; i++) {
+    const u = (phase + i * 0.5) % 1, sw = (u - contact) / (1 - contact);
+    const fz = u < contact ? span * (0.5 - u / contact) : -span * 0.5 * Math.cos(Math.PI * sw);
+    const fy = u < contact ? 0 : 0.1 * h * Math.sin(Math.PI * sw);
+    const y = hip - fy, d = Math.min(l1 + l2 - 0.001, Math.max(Math.abs(l1 - l2) + 0.001, Math.hypot(y, fz)));
+    const thigh = Math.atan2(fz, y) + Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+    const knee = Math.PI - Math.acos(clamp((l1 * l1 + l2 * l2 - d * d) / (2 * l1 * l2), -1, 1));
+    P.r[(i ? B.THIGH_R : B.THIGH_L) * 3] = -thigh; P.r[(i ? B.SHIN_R : B.SHIN_L) * 3] = knee; P.r[(i ? B.FOOT_R : B.FOOT_L) * 3] = thigh - knee;
+  }
+  const s = Math.sin(phase * TAU), c = Math.cos(phase * TAU);
+  P.r[B.UARM_L * 3] = c * 0.42; P.r[B.UARM_R * 3] = -c * 0.42; P.r[B.UARM_L * 3 + 2] = 0.1; P.r[B.UARM_R * 3 + 2] = -0.1;
+  P.r[B.FARM_L * 3] = -0.3 - 0.12 * Math.max(0, -c); P.r[B.FARM_R * 3] = -0.3 - 0.12 * Math.max(0, c);
+  // the hips turn with the leading leg, the chest counter-rotates, the hair bobs with the step
+  P.r[B.HIPS * 3 + 1] = c * 0.06; P.r[B.CHEST * 3] = 0.035; P.r[B.CHEST * 3 + 1] = -c * 0.07; P.r[B.HEAD * 3] = -0.025; P.r[B.HEAD * 3 + 1] = c * 0.04;
+  P.r[B.HAIR * 3] = 0.1 + Math.abs(s) * 0.08;
+}
+const BURNS_GAIT = { walk: { cycle: 1.45, cps: 7.5 / TAU }, run: { cycle: 3.6, cps: 11 / TAU }, k1: { rate: 1 } };
+
 class BurnsChar {
   constructor(model) {
     this.model = model; this.nb = model.nb;
@@ -636,7 +665,18 @@ class BurnsChar {
     if (this.blend < 1) this.blend = Math.min(1, this.blend + dt / this.blendDur);
     const P = burnsPoseClear(this.tmp);
     const fn = this.poseFn || BURNS_ANIMS[this.anim] || BURNS_ANIMS.idle;
-    fn(P, this.animT, this.k);
+    const G = !this.poseFn && !this.model.man && this.model.body && this.model.body.off && BURNS_GAIT[this.anim];
+    if (G) {
+      // walk/run cadence follows the ground actually covered (no skating); when the character isn't moving
+      // (blocked, a dialogue portrait, a teleport, a shared crowd pose) it falls back to the clock
+      const travel = Number.isFinite(this._strideX) ? Math.hypot(this.x - this._strideX, this.z - this._strideZ) : 0;
+      const off = this.model.body.off, h = (Math.abs(off[BURNS_BONES.SHIN_L][1]) + Math.abs(off[BURNS_BONES.FOOT_L][1])) / 0.8;
+      const sc = Math.max(0.1, this.scale), byClock = dt * G.cps * (this.k && this.k.rate || 1), byGround = travel / sc / (G.cycle * h);
+      this._stridePhase = ((this._stridePhase || 0) + (byGround > byClock * 0.3 && travel < 5 * sc ? byGround : byClock)) % 1;
+      if (this.anim === 'walk') burnsTravelPose(P, this._stridePhase, this.model.body);
+      else fn(P, this._stridePhase * TAU / 11, BURNS_GAIT.k1);
+    } else fn(P, this.animT, this.k);
+    this._strideX = this.x; this._strideZ = this.z;
     const out = this.P;
     if (this.blend < 1) {
       const w = easeInOut(this.blend), f = this.from;
