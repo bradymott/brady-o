@@ -54,7 +54,7 @@ const stampsOk=(m,tag)=>{
     assert(!(x.x<y.x+y.w&&x.x+x.w>y.x&&x.y<y.y+y.h&&x.y+x.h>y.y),`${tag}: stops ${x.i} and ${y.i} overlap`);}
 };
 {
-  const C=Tour.countries.mx,orig=C.levels,base=orig.map(L=>Object.assign({},L));
+  const C=Tour.countries.mx,orig=C.levels,origHouses=C.houses,base=orig.map(L=>Object.assign({},L));C.houses=[];   // level-only layouts (houses are covered by sbw_toolkit_shots mapgraph)
   const branchy=base.concat([Object.assign({},base[0],{name:'Secret Cenote',mapCell:[0,2],mapFrom:1}),Object.assign({},base[1],{name:'Hidden Grotto',mapCell:[2,2],mapFrom:3,mapHidden:true})]);
   const plain=L=>{const o=Object.assign({},L);delete o.mapCell;delete o.mapFrom;return o;};
   const nine=base.map(plain).concat(base.slice(0,4).map((L,k)=>Object.assign(plain(L),{name:'Extra '+(k+1)})));
@@ -73,7 +73,7 @@ const stampsOk=(m,tag)=>{
       stampsOk(m,`${tag} ${W}x${H}`);cases++;
     }
   }
-  C.levels=orig;
+  C.levels=orig;C.houses=origHouses;
   console.log(`PASS ${cases} more-than-five-stop layouts (branches, hidden stop, nine stops)`);
 }
 // Render dispatch: atlas art has its outline baked in, so only the procedural fallback goes through Ink, decided
