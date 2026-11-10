@@ -224,6 +224,9 @@ ENTITY_TYPES.pedestal = TourPedestal;
   Player.prototype.hurt = function (src) { if (this.carrying && this.invuln <= 0 && this.star <= 0) this.dropCarry('DROPPED IT!'); return hurt.call(this, src); };
   const dr = TourPlayerFx.over;
   TourPlayerFx.over = function (ctx, p, t) { dr.call(this, ctx, p, t); if (p.carrying && !p.dead) TourCarryArt.draw(ctx, p.carrying.item, p.cx, p.y - 2 + Math.sin(t * 6) * 1, t); };
+  // a door to another area makes a new Player: whatever he carried goes home to its pedestal instead of vanishing
+  const la = Play.prototype.loadArea;
+  Play.prototype.loadArea = function (idx, x, y, power) { const p = this.player; if (p && p.carrying && p.dropCarry) p.dropCarry('SET DOWN'); return la.call(this, idx, x, y, power); };
 }
 
 /* ---------- 9. wheel: platforms on rotating arms ---------- */
