@@ -16,7 +16,7 @@ SKY = ['#2a6ab8', '#7ab8e8', '#e8f4ff']
 PALETTE = {
     'wall': '#f0e0c8', 'wall2': '#e8d4b8', 'plaster': '#f8eedc', 'plaster_dk': '#d8c4a4', 'arch_dk': '#8a9cbc', 'arch_dk2': '#7a8cae',
     'z_blue': '#1a6ab8', 'z_teal': '#1a9a8a', 'z_cream': '#f4ecd8', 'z_green': '#2a8a4a', 'z_navy': '#2a3a6a', 'z_gold': '#c8a03a',
-    'cedar': '#8a5a3a', 'cedar_dk': '#6a4028', 'roof': '#2a8a5a', 'roof_dk': '#1e6a44', 'plain': '#e8d8bc',
+    'cedar': '#8a5a3a', 'cedar_dk': '#6a4028', 'roof': '#8ab89a', 'roof_dk': '#7aa88a', 'plain': '#e8d8bc',
     'potb': '#1a6ab8', 'pott': '#1a9a8a', 'leaf': '#3a8a3a', 'leaf2': '#2e7a32', 'fruit': '#ff9a1a', 'trunk': '#7a5a3a', 'palm': '#3a8a3a', 'palm2': '#2a6a2e',
     # ground (zellige floor)
     'g_grout': '#e8dcc4', 'g_cap': '#f4ecd8', 'g_cap_hi': '#ffffff', 'g_inlay': '#1a6ab8',
@@ -95,9 +95,10 @@ def build_L0(rng):
         B.box('plaster_dk', ((k + 0.5) * 0.6, 0.88, 3.75), (0.16, 0.04, 0.16), bevel=0.0, rot=(0, math.pi / 4, 0))
     B.box('cedar', (P / 2, 0.9, 4.2), (P + 2.0, 0.3, 0.26), bevel=0.0)
     B.box('cedar_dk', (P / 2, 0.86, 6.2), (P + 2.0, 0.4, 0.2), bevel=0.0)
-    for k in range(int(P / 0.4) + 6):
-        x = -1.0 + k * 0.4
-        B.rod('roof' if k % 2 else 'roof_dk', (x, 0.2, 6.3), (x, 1.2, 6.62), 0.19, segs=6)
+    # a low eave of glazed tiles, muted and small so it never reads as a ledge
+    for k in range(int(P / 0.3) + 8):
+        x = -1.0 + k * 0.3
+        B.rod('roof' if k % 2 else 'roof_dk', (x, 0.5, 6.28), (x, 1.2, 6.42), 0.11, segs=6)
     B.done(period=None)
     O.done(period=None)['outline'] = 0.45
     # potted orange trees under every other arch, palms rising behind the eave
