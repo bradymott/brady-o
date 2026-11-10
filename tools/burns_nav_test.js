@@ -43,14 +43,14 @@ const check = (ok, what, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + what 
     const s = G.scene; return { scene: s.constructor.name, state: s.state, world: s.worldId };
   }, [n, input || null]);
   const S = (fn, arg) => page.evaluate(fn, arg);
-  const waitPlay = async () => { for (let i = 0; i < 300; i++) { const r = await run(1); if (r.state === 'play' && r.scene === 'BurnsPlayScene') return r; await page.waitForTimeout(100); } return run(1); };
+  const waitPlay = async (world) => { for (let i = 0; i < 300; i++) { const r = await run(1); if (r.state === 'play' && r.scene === 'BurnsPlayScene' && (!world || r.world === world)) return r; await page.waitForTimeout(100); } return run(1); };
   const settle = async () => { for (let i = 0; i < 40; i++) { await S(() => window.BRADY_BURNS.debug.skipCine()); await run(2); const c = await S(() => { const s = window.BRADY.Game.scene; return !!s.cine || s.dialog.open; }); if (!c) break; } };
   await boot(true);
   const hasInput = await S(() => !!(window.BRADY.Input || window.Input));
   if (!hasInput) { console.log('FAIL no Input global'); process.exit(1); }
   // the city, fresh save, with the yellow bike
   await S(() => window.BRADY_BURNS.debug.play(500));
-  await waitPlay(); await settle();
+  await waitPlay(500); await settle();
   await S(() => { const s = window.BRADY.Game.scene; s.giveItem('bike', true); s.dayCardT = -1; s.banners.length = 0; });
   await run(3);
 
@@ -123,7 +123,7 @@ const check = (ok, what, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + what 
     await run(60);   // 2 s standing
     const still = await S(() => { const s = window.BRADY.Game.scene, w = a => a - 2 * Math.PI * Math.floor((a + Math.PI) / (2 * Math.PI)); return +Math.abs(w(s.camYaw - s.player.yaw)).toFixed(3); });
     await run(45, { right: true });   // 1.5 s running off to the right of the camera (a turn), then he stops
-    await run(45, { right: false });
+    await run(60, { right: false });
     const afterRun = await S(() => { const s = window.BRADY.Game.scene, w = a => a - 2 * Math.PI * Math.floor((a + Math.PI) / (2 * Math.PI)); return +Math.abs(w(s.camYaw - s.player.yaw)).toFixed(3); });
     return { still, afterRun };
   };
@@ -188,8 +188,10 @@ const check = (ok, what, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + what 
   await boot(false);
   r = await S(() => { const B = window.BRADY_BURNS, st = B.BurnsSave.get().settings; return { guide: st.guide, follow: st.follow, ride: st.ride, ebike: B.BurnsSave.hasItem('ebike'), w8: !!B.BurnsSave.get().worldDone[8], q: B.BurnsSave.get().missions['500:owEbike'] }; });
   check(r.guide === true && r.follow === true && r.ride === 'ebike' && r.ebike && r.w8 && r.q === 'done', 'settings and the e-bike survive a reload', r);
-  await S(() => window.BRADY.Game.scene.toHub && window.BRADY.Game.scene.toHub());   // CONTINUE
-  await waitPlay(); await settle(); await run(4);
+  await waitPlay(900);   // the title
+  await S(() => window.BRADY.Game.scene.toHub());   // CONTINUE
+  await run(2); await S(() => { const s = window.BRADY.Game.scene; if (s.go) s.go(); });   // the prologue cards, the first time
+  await waitPlay(500); await settle(); await run(4);
   r = await S(() => { const s = window.BRADY.Game.scene; return { world: s.worldId, guide: !!s.navGuide, ebike: !!(s.bike && s.bike.ebike) }; });
   check(r.world === 500 && r.guide && r.ebike, 'after CONTINUE: guide arrow up, the BIKE button brings the e-bike', r);
   // an old save: strip the new settings, reload, nothing else lost

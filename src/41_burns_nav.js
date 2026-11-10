@@ -198,11 +198,14 @@ const BurnsNav = {
     const G = g.navGuide; if (!G || g.cine || g.state !== 'play') return;
     const col = G.col ? burnsRGBf(G.col) : BURNS_NAV.col, pul = 0.78 + 0.22 * Math.sin(t * 5);
     if (G.dist > BURNS_NAV.arrive) {
-      const veh = p.vehicle, ahead = veh ? (veh.kind === 'car' ? 7 : 3.4) : g.camMode === 'first' ? 3 : 1.75, len = veh ? (veh.kind === 'car' ? 3.4 : 2.1) : 1.45;
+      const veh = p.vehicle, ahead = veh ? (veh.kind === 'car' ? 7.5 : 3.8) : g.camMode === 'first' ? 3 : 2.5, len = veh ? (veh.kind === 'car' ? 3.6 : 2.4) : 1.9;
       const ax = p.x + Math.sin(G.yaw) * ahead, az = p.z + Math.cos(G.yaw) * ahead;
       const gy = g.world.surface(ax, az, p.y + 1.2, 0.2, BURNS_SURF).y;
-      R.flat.flat(ax, gy + 0.05, az, len * 0.95, len * 1.12, G.yaw, S.arrow, [0.02, 0.04, 0.08], 0.45, false);
-      R.flat.flat(ax, gy + 0.07, az, len * 0.8, len, G.yaw, S.arrow, col, 0.95 * pul, true);
+      // a dark edge, the arrow itself (opaque enough for the bright playa by day) and a glow on top (night)
+      const ay = G.yaw + Math.PI;   // the 'arrow' sprite's tip is at its far end in v: turn it to lead along the bearing
+      R.flat.flat(ax, gy + 0.05, az, len * 0.98, len * 1.16, ay, S.arrow, [0.02, 0.04, 0.08], 0.55, false);
+      R.flat.flat(ax, gy + 0.06, az, len * 0.8, len, ay, S.arrow, col, 0.92, false);
+      R.flat.flat(ax, gy + 0.07, az, len * 0.8, len, ay, S.arrow, col, 0.45 * pul * (0.3 + night), true);
       g.navArrow = { x: ax, y: gy, z: az, yaw: G.yaw };
     } else g.navArrow = null;
     // the spot itself: a ring on the ground and a thin beam of light
@@ -223,15 +226,18 @@ const BurnsNav = {
       ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(7, 0); ctx.lineTo(0, 9); ctx.lineTo(-7, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
       BurnsUI.text(ctx, dtxt, o.x, o.y - 17, 11, '#ffffff', { ui: true });
     }
-    // the label under the arrow (or under Brady when he's arrived)
-    const A = g.navArrow, p = g.player;
-    if (!R.project(A ? A.x : p.x, A ? A.y : p.y, A ? A.z : p.z, W, H, o)) return;
+    // the label under Brady's feet, with a little compass arrow (up = straight ahead on screen)
+    const p = g.player;
+    if (!R.project(p.x, p.y, p.z, W, H, o)) return;
     const txt = G.dist > BURNS_NAV.arrive ? `${G.label}  ${dtxt}` : `${G.label}: HERE`;
-    ctx.save(); ctx.font = `600 11px ${FONT_UI}`; const tw = Math.min(W - 24, ctx.measureText(txt).width + 22); ctx.restore();
-    const x = clamp(o.x, tw / 2 + 8, W - tw / 2 - 8), y = clamp(o.y + 22, 60, H - 30);
-    BurnsUI.pill(ctx, x - tw / 2, y - 11, tw, 22, 'rgba(8,20,30,0.62)', rgba(col, 0.75));
-    BurnsUI.text(ctx, txt, x, y + 0.5, BurnsUI.fitSize(ctx, txt, 11, tw - 16, true), '#e8fdff', { ui: true, stroke: false });
-    g.navLabel = { x, y, w: tw };
+    ctx.save(); ctx.font = `600 11px ${FONT_UI}`; const tw = Math.min(W - 24, ctx.measureText(txt).width + 40); ctx.restore();
+    const x = clamp(o.x, tw / 2 + 8, W - tw / 2 - 8), y = clamp(o.y + 30, 60, H - 30);
+    BurnsUI.pill(ctx, x - tw / 2, y - 12, tw, 24, 'rgba(8,20,30,0.66)', rgba(col, 0.8));
+    const rel = BurnsM.wrap(G.yaw - (g.firstPerson() ? p.yaw : g.camYaw)), sa = -rel;
+    ctx.save(); ctx.translate(x - tw / 2 + 14, y); ctx.rotate(sa); ctx.fillStyle = col;
+    ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(6, 5); ctx.lineTo(0, 2); ctx.lineTo(-6, 5); ctx.closePath(); ctx.fill(); ctx.restore();
+    BurnsUI.text(ctx, txt, x + 9, y + 0.5, BurnsUI.fitSize(ctx, txt, 11, tw - 34, true), '#e8fdff', { ui: true, stroke: false });
+    g.navLabel = { x, y, w: tw, rot: sa };
   },
   /* ---------- the map page (pause menu) ----------
      def.cityMap = { bounds: {x0, x1, z0, z1}, draw(g, ctx, P, sc, t), labels(g) -> [{x, z, text, col, pri, mark}] }
@@ -295,6 +301,7 @@ const BurnsNav = {
       const q = P(L.x, L.z);
       if (L.mark) { ctx.fillStyle = L.col || '#ffffff'; ctx.beginPath(); if (L.mark === 'diamond') { ctx.moveTo(q[0], q[1] - 4); ctx.lineTo(q[0] + 4, q[1]); ctx.lineTo(q[0], q[1] + 4); ctx.lineTo(q[0] - 4, q[1]); } else if (L.mark === 'square') ctx.rect(q[0] - 2.5, q[1] - 2.5, 5, 5); else ctx.arc(q[0], q[1], 2.8, 0, TAU); ctx.fill(); }
       if (!L.text) continue;
+      if (!L.target && T.some(tq => { const s = P(tq.x, tq.z); return Math.hypot(s[0] - q[0], s[1] - q[1]) < 8; })) continue;   // the target's own label says it
       ctx.font = `600 ${fs}px ${FONT_UI}`; const w = ctx.measureText(L.text).width + 4, h = fs + 3;
       let r = null;
       for (const [dx, dy] of [[0, -9], [0, 10], [w / 2 + 6, 0], [-w / 2 - 6, 0]]) { const c = [q[0] + dx - w / 2, q[1] + dy - h / 2, q[0] + dx + w / 2, q[1] + dy + h / 2]; if (fits(c)) { r = c; break; } }
@@ -325,7 +332,7 @@ const BurnsNav = {
     const line = (txt, col, size, o) => { BurnsUI.text(ctx, txt, px, y, BurnsUI.fitSize(ctx, txt, size, pw, true), col, Object.assign({ ui: true, align: 'left', stroke: false }, o || {})); y += size + 8; };
     line(g.region ? 'YOU: ' + String(g.region).toUpperCase() : 'YOU ARE HERE', '#ffffff', 12);
     if (!T.length) line('Nothing to chase right now. Explore!', 'rgba(255,255,255,0.75)', 11);
-    for (const q of T.slice(0, M.portrait ? 3 : 4)) {
+    for (const q of T.slice(0, M.portrait ? 6 : 4)) {
       const d = Math.hypot(q.x - p.x, q.z - p.z), dt = d > 999 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m';
       ctx.fillStyle = q.col || BURNS_NAV.hex; ctx.beginPath(); ctx.arc(px + 5, y, 4.5, 0, TAU); ctx.fill();
       const tx = `${q.label || 'GO HERE'} · ${dt}`;

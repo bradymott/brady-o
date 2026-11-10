@@ -15,7 +15,7 @@ const BURNS_OW_EBIKE = { after: 8, giverPlace: 8, charger: '3:00 Plaza', charger
   const charger = () => { const c = O.address(BURNS_OW_EBIKE.charger); return { x: c[0] + BURNS_OW_EBIKE.chargerOff[0], z: c[1] + BURNS_OW_EBIKE.chargerOff[1] }; };
   BurnsOW.ebikeCharger = charger;
   if (!D.missions.find(m => m.id === 'owEbike')) D.missions.push({
-    id: 'owEbike', side: true, name: 'Juice Box', short: 'Charge the e-bike battery at the 3:00 plaza', type: 'custom', giver: 'owVolta', start: 'manual',
+    id: 'owEbike', side: true, token: false, name: 'Juice Box', short: 'Charge the e-bike battery at the 3:00 plaza', type: 'custom', giver: 'owVolta', start: 'manual',
     unlock: () => !!BurnsSave.get().worldDone[BURNS_OW_EBIKE.after],
     desc: 'Volta at Hell Station rescued an e-bike from the DPW scrap pile. Its battery is flat: charge it at the solar camp on the 3:00 plaza and the bike is yours.',
     hint: 'The solar camp, 3:00 plaza', reward: { item: 'ebike' },
@@ -85,7 +85,7 @@ const BURNS_OW_EBIKE = { after: 8, giverPlace: 8, charger: '3:00 Plaza', charger
     bounds: { x0: -700, x1: 700, z0: -700, z1: 890 },
     legend: '▲ YOU   ◆ STORY PLACE   ● CAMP   ■ BIG ART',
     draw(g, ctx, P, sc, t) {
-      const cx = P(0, 0), arcA = h => h * Math.PI / 6 - Math.PI / 2 + Math.PI;   // clock hour -> canvas angle (6:00 down)
+      const cx = P(0, 0), arcA = h => h * Math.PI / 6 - Math.PI / 2;   // clock hour -> canvas angle (6:00 down: O.dir(h) on a +z-down map)
       // the open playa (a lighter disc) and the trash fence
       ctx.fillStyle = 'rgba(255,214,170,0.07)'; ctx.beginPath(); ctx.arc(cx[0], cx[1], O.ESP * sc, 0, TAU); ctx.fill();
       ctx.strokeStyle = 'rgba(255,140,60,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.beginPath();
