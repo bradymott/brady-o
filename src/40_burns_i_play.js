@@ -1053,12 +1053,12 @@ class BurnsPlayScene {
     if (!a || !Number.isFinite(a.x) || !Number.isFinite(a.z) || a.hidden) return null;
     const sc = a.scale || (a.ch && a.ch.scale) || 1, h = Math.min(30, ((a.model || (a.ch && a.ch.model) || {}).height || 1.8) * sc);
     const ay = a.y || 0, yaw = a.yaw || 0, portrait = Game.cssH > Game.cssW, asp = Game.cssW / Game.cssH;
-    // knees-up framing in the free area above the dialogue box
+    // thighs-up framing (hats included) in the free area above the dialogue box
     const r = BurnsUI.dialogRect(this), top = this.cine && this.cine.letter ? Game.cssH * 0.1 : 8;
-    const safe = clamp((r.y - top) / Game.cssH, 0.35, 0.8), span = h * 0.68;
+    const safe = clamp((r.y - top) / Game.cssH, 0.35, 0.8), span = h * 0.8;
     const fov = portrait ? 0.95 : 0.62, tn = Math.tan(fov / 2);
-    const dist = Math.max(1.6 * Math.sqrt(sc), (span / 2) / (tn * safe) * 1.1, (h * 0.38) / (tn * asp));
-    const tx = a.x, ty = ay + h - span * 0.48, tz = a.z, W = this.world;
+    const dist = Math.max(1.6 * Math.sqrt(sc), (span / 2) / (tn * safe) * 1.2, (h * 0.38) / (tn * asp));
+    const tx = a.x, ty = ay + h - span * 0.44, tz = a.z, W = this.world;
     const others = this.actors.concat([this.player]);
     let best = null;
     for (const off of [0.5, -0.5, 0.85, -0.85, 0.2, -0.2, 1.25, -1.25]) {
