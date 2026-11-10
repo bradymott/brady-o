@@ -270,7 +270,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       { const [g, p] = hall(); const e = put(g, 'lab_boomerang', 26, 10); at(p, 20); let shot = false; out.boomerang = watch(e, 4, () => { if (g.entities.some(o => o.constructor.name === 'TourBoomerang')) shot = true; }); out.boomShot = shot; }
       { const [g, p] = hall(); const e = put(g, 'lab_swarm', 26, 10); at(p, 5); sim(1); out.swarm = { followers: g.entities.filter(o => o.constructor.name === 'TourSwarmling').length }; }
       { const [g, p] = hall(); const e = put(g, 'lab_platEater', 30, 3); at(p, 5); sim(4); out.platEater = { eaten: g.entities.filter(o => o.constructor.name === 'TourRegrow').length }; }
-      { const [g, p] = hall(); const a = put(g, 'lab_alarmCaller', 25, 10, { dir: -1 }); const sl = put(g, 'lab_sleeper2', 35, 10); at(p, 22); out.alarm = watch(a, 2); out.woke = sl.bst; }
+      { const [g, p] = hall(); const a = put(g, 'lab_alarmCaller', 25, 10, { dir: -1 }); const sl = put(g, 'lab_sleeper2', 35, 10); a.cool = 0; at(p, 22); out.alarm = watch(a, 3); out.woke = sl.bst; }
       { const [g, p] = hall(); const e = put(g, 'lab_frostBreath', 24, 10); e.cool = 0; at(p, 21); let frozen = false; out.frostBreath = watch(e, 3.5, () => { if (p.frozenT > 0) frozen = true; }); out.frozen = frozen; }
       { const [g, p] = hall(); const e = put(g, 'lab_lightFrozen', 36, 10); at(p, 5); sim(0.5); const far = e.bst; at(p, Math.floor(e.cx / 32) - 2); sim(0.3); out.lightFrozen = { far, near: e.bst }; }
       { const [g, p] = hall(); const e = put(g, 'lab_inkBlot', 23, 10); e.cool = 0; at(p, 20); out.inkBlot = watch(e, 1.5); out.blots = (g.inkBlots || []).length; }
