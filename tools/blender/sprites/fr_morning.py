@@ -16,7 +16,7 @@
 # This module also holds the toolkit shared by the other Paris themes (fr_seine, fr_night, fr_tower, fr_chateau
 # import it): the material-prefixing Theme, the lattice tower, the facade row, the four Paris floors (cobble, zinc,
 # iron plate, parquet) and the lookkit-based preview renderer. The chunky-part Builder, tiling and the tile-aligned
-# floor helpers come from ec_equator.py.
+# floor helpers come from fr_kit.py.
 #
 # Contract (same as mx_canal.py): every layer stands on its own ground line z = 0, is periodic in x with period P
 # (anything crossing x = 0 or x = P is duplicated at x ± P) and stays within y in [-6, 6] (the camera looks along
@@ -33,14 +33,14 @@ import bpy
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
-import ec_equator as K
-from ec_equator import Builder, P, TAU, OVER, GP, GROUND_DEPTH, T, CELL_MARGIN, PPM, wraps, cell_rects, tile_span
+import fr_kit as K
+from fr_kit import Builder, P, TAU, OVER, GP, GROUND_DEPTH, T, CELL_MARGIN, PPM, wraps, cell_rects, tile_span
 
 MODULE = 'fr_morning'
 LAYERS = ['L0', 'L1', 'L2']
 BASES = {'L0': 330, 'L1': 360, 'L2': 380}
 SKY = ['#6aa8e8', '#c8e0ff', '#ffe8e0']
-SCRATCH = '/private/tmp/claude-501/-Users-bradymott-brady-o/f5bf6cf3-6fc7-437d-a9b3-6005c5b7ac2b/scratchpad/frbg'
+SCRATCH = K.SCRATCH
 STRIP_H = 444
 CAP_H = 0.32                               # the continuous cap band along the top of floor row 0 (9 px)
 
@@ -112,7 +112,7 @@ def lattice_tower(th, L, name, x, h, roles, y=0.0, detail=True):
 # ---------------------------------------------------------------------------------------------- Haussmann facades
 GF, FH, RH = 1.4, 0.85, 0.8                # ground-floor height, storey height, mansard height (m)
 
-def building(th, L, name, x0, w, nf, rng, roles, night=False, flowers=True, y=0.0):
+def building(th, L, name, x0, w, nf, rng, roles, night=False, flowers=True, y=0.0, detail=True):
     """One Haussmann house with its left edge at x0: a stone body, a cornice, a zinc mansard with dormers and a
     chimney with two pots, tall windows (lit or dark at night) with wrought-iron balconies on alternate floors,
     flower boxes along the top floor by day, a shop band with an arched door at street level."""
@@ -148,8 +148,11 @@ def building(th, L, name, x0, w, nf, rng, roles, night=False, flowers=True, y=0.
                 B.box(role, (wx, y - 0.03, wz), (0.34, 0.08, 0.56), bevel=0.0)
             else:
                 B.box(roles['window'], (wx, y - 0.03, wz), (0.34, 0.08, 0.56), bevel=0.0)
-                B.box(roles['window_hi'], (wx - 0.1, y - 0.08, wz), (0.08, 0.02, 0.5), bevel=0.0)
-            if f % 2 == 0:
+                if detail:
+                    B.box(roles['window_hi'], (wx - 0.1, y - 0.08, wz), (0.08, 0.02, 0.5), bevel=0.0)
+            if f % 2 == 0 and not detail:
+                B.box(roles['iron'], (wx, y - 0.1, wz - 0.3), (0.5, 0.22, 0.05), bevel=0.0)
+            elif f % 2 == 0:
                 B.box(roles['iron'], (wx, y - 0.1, wz - 0.3), (0.5, 0.22, 0.04), bevel=0.0)
                 B.box(roles['iron'], (wx, y - 0.2, wz - 0.03), (0.5, 0.02, 0.025), bevel=0.0)
                 for q in range(4):
@@ -167,7 +170,7 @@ def building(th, L, name, x0, w, nf, rng, roles, night=False, flowers=True, y=0.
             B.box(roles['shop_win'], (sx, y - 0.05, 0.62), (0.9, 0.04, 0.9), bevel=0.0)
     B.done()
 
-def facade_row(th, L, rng, roles, floors=(4, 5), night=False, flowers=True):
+def facade_row(th, L, rng, roles, floors=(4, 5), night=False, flowers=True, detail=True):
     """A continuous row of houses exactly one period long (the widths are scaled to sum to P), the first one
     starting just left of x = 0 so it straddles the seam and gets tiled."""
     widths = []
@@ -177,7 +180,7 @@ def facade_row(th, L, rng, roles, floors=(4, 5), night=False, flowers=True):
     widths = [w * s for w in widths]
     x = rng.uniform(-1.0, -0.2)
     for i, w in enumerate(widths):
-        building(th, L, f'{L}_house_{i}', x, w, rng.randint(*floors), rng, roles, night=night, flowers=flowers, y=rng.choice([0.0, 0.45]))
+        building(th, L, f'{L}_house_{i}', x, w, rng.randint(*floors), rng, roles, night=night, flowers=flowers, y=rng.choice([0.0, 0.45]), detail=detail)
         x += w
 
 # ---------------------------------------------------------------------------------------------- the Paris floors
@@ -328,8 +331,8 @@ PALETTE = {
     'iron': '#9aa8c0', 'deck': '#a6b2c8',
     # L1 facades (#f0e4cc), roofs #7a8aa0
     'stone': '#f0e4cc', 'stone2': '#f6ecd8', 'stone3': '#e9dcc2', 'stone_light': '#faf4e6', 'stone_dark': '#d4c6ac',
-    'roof': '#7a8aa0', 'roof_dark': '#6a7890', 'window': '#4a5a78', 'window_hi': '#aab6cc', 'dormer_win': '#b8c8e0', 'dormer_glow': '#ffd890',
-    'win_glow': '#ffd890', 'win_dark': '#1a2034', 'chimney': '#a86a4a', 'pot': '#c87a5a', 'balcony': '#2a2a34', 'door': '#5a4636', 'shop_win': '#6a7a98',
+    'roof': '#8a98ae', 'roof_dark': '#7a88a0', 'window': '#7484a2', 'window_hi': '#c4cede', 'dormer_win': '#b8c8e0', 'dormer_glow': '#ffd890',
+    'win_glow': '#ffd890', 'win_dark': '#1a2034', 'chimney': '#b87a5a', 'pot': '#d08a6a', 'balcony': '#4a4c5c', 'door': '#5a4636', 'shop_win': '#6a7a98',
     'flower_a': '#ff6a8a', 'flower_b': '#ffd84a', 'flower_c': '#ff9a3a', 'leaf': '#3a8a3a',
     # L2 awnings (#c8b8a0)
     'shop': '#aa9c88', 'shop_dark': '#8e8270', 'cream': '#fff4e8', 'red': '#c8283a', 'blue': '#2a6ac8', 'green': '#2a8a5a', 'orange': '#c87a2a',
@@ -343,7 +346,7 @@ FACADE_ROLES = {k: k for k in ('stone', 'stone2', 'stone3', 'stone_light', 'ston
 FACADE_ROLES['iron'] = 'balcony'
 
 def build_L0(rng):
-    lattice_tower(TH, 'L0', 'L0_tower', P * 760 / 1024, 240 / PPM, {'iron': 'iron', 'deck': 'deck'}, y=2.0)
+    lattice_tower(TH, 'L0', 'L0_tower', P * 760 / 1024, 310 / PPM, {'iron': 'iron', 'deck': 'deck'}, y=2.0)
 
 def build_L1(rng):
     facade_row(TH, 'L1', rng, FACADE_ROLES, floors=(4, 5))
