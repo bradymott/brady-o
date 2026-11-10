@@ -113,6 +113,25 @@ function cartLamps(K, x, y, z, zb, yb) {
   }
   m.emissive(0).shine(0);
 }
+// a heartbeat "lub-dub" (0..~1) from the part clock: a strong beat, a softer echo, then rest (about 66 bpm)
+function cartLubDub(t) {
+  const ph = (t * 1.1) % 1, g = (c, w) => Math.exp(-((ph - c) * (ph - c)) / (w * w));
+  return g(0.06, 0.045) + 0.62 * g(0.25, 0.05);
+}
+// pose a heart part: base scale k, swelling on each beat (wider than tall, a squishy pump) and on firing; returns the beat
+function cartHeartBeat(o, s, k) {
+  const b = cartLubDub(s.t), p = k * (1 + 0.13 * b + 0.14 * s.fire);
+  o.sx = p * (1 + 0.035 * b); o.sz = o.sx; o.sy = p * (1 - 0.02 * b);
+  o.yaw = Math.sin(s.t * 0.9) * 0.12; o.roll = Math.sin(s.t * 0.7) * 0.03;
+  return b;
+}
+// pose a speaker-cone part facing +X (sx = 1), -X (sx = -1) or -Z (sz = -1): it punches out on the music's beat,
+// a little later per cone (lag in seconds), and buzzes with speed
+function cartConePump(o, s, sx, sz, lag) {
+  const b = Math.pow(Math.max(0, Math.sin((s.t - lag) * 2.1 * Math.PI)), 6), p = 0.85 * b + 0.15 * s.fire + 0.05 * s.speed * Math.abs(Math.sin(s.t * 37));
+  o.x = sx * 0.05 * p; o.z = sz * 0.05 * p;
+  const k = 1 + 0.05 * p; o.sx = k; o.sy = k; o.sz = k;
+}
 // puffy 3D heart (two lobes + a rounded point), centred at the origin, facing +Z; size ~ s
 function cartHeart(m, s, lo) {
   const seg = lo ? 10 : 18, rings = lo ? 7 : 12;
@@ -143,15 +162,20 @@ CART_BUILD.heart = (K, C) => {
   // body: glossy black sound truck
   m.color('#16121a').shine(2); m.roundBox(0, 1.0, -0.1, 2.5, 1.0, 5.0, 0.28); m.shine(0);
   m.color('#0a080c'); m.roundBox(0, 0.5, -0.1, 2.2, 0.3, 4.6, 0.1);
-  // speaker cones along both flanks (chrome rim + pink glow ring)
+  // speaker cones along both flanks: the chrome rim and pink glow ring sit on the body, the cone + dust cap is a part
+  // that punches out on the beat (cartConePump)
   for (const s of [1, -1]) for (let i = 0; i < 3; i++) {
     const z = -1.6 + i * 1.25;
-    m.push(); m.tf(s * 1.26, 1.05, z, s * Math.PI / 2, 0, 0);
+    m.push(); m.tf(s * 1.26, 1.05, z, 0, 0, -s * Math.PI / 2);
     m.color('#2a2630').shine(2); m.roundCyl(0, -0.02, 0, 0.36, 0.06, 0.02);
-    m.color('#0c0a10').shine(1); m.lathe([[0.3, 0.02], [0.18, -0.05], [0.06, -0.09], [0, -0.1]], { seg: lo ? 8 : 14 });
-    m.color('#c8ccd8').shine(3); m.ball(0, -0.06, 0, 0.07, { seg: 8, rings: 5 });
-    m.color(C.light, 0.9); m.push(); m.tf(0, 0.045, 0); m.torus(0, 0, 0, 0.36, 0.025, { seg: lo ? 10 : 18, tseg: 4 }); m.pop(); m.emissive(0).shine(0);
+    m.color('#c8ccd8').shine(3); m.push(); m.tf(0, 0.1, 0); m.torus(0, 0, 0, 0.32, 0.03, { seg: lo ? 10 : 18, tseg: 4 }); m.pop();
+    m.color(C.light, 0.9); m.push(); m.tf(0, 0.06, 0); m.torus(0, 0, 0, 0.38, 0.022, { seg: lo ? 10 : 18, tseg: 4 }); m.pop(); m.emissive(0).shine(0);
     m.pop();
+    K.part(s * 1.26, 1.05, z, (o, st) => cartConePump(o, st, s, 0, i * 0.12), mm => {
+      mm.tf(0, 0, 0, 0, 0, -s * Math.PI / 2);
+      mm.color('#0c0a10').shine(1); mm.lathe([[0.3, 0.1], [0.18, 0.04], [0.06, 0.01], [0, 0.0]], { seg: lo ? 8 : 14 });
+      mm.color(C.col).shine(2); mm.ball(0, 0.03, 0, 0.07, { seg: 8, rings: 5 }); mm.shine(0);
+    });
   }
   // front grille with pink LEDs + lamps
   m.color('#2a2230').shine(3); m.roundBox(0, 1.0, 2.42, 1.9, 0.62, 0.12, 0.05); m.shine(0);
@@ -159,24 +183,37 @@ CART_BUILD.heart = (K, C) => {
   cartLamps(K, 0.95, 1.18, 2.42, -2.62, 1.05);
   // a low sub stack across the back, behind the driver (facing back)
   m.color('#1e1a24').shine(1); m.roundBox(0, 1.82, -2.12, 2.2, 0.66, 0.8, 0.12); m.shine(0);
-  for (const s of [1, -1]) { m.push(); m.tf(s * 0.55, 1.82, -2.54, 0, -Math.PI / 2, 0); m.color('#0c0a10'); m.lathe([[0.27, 0.0], [0.17, 0.06], [0.06, 0.09], [0, 0.1]], { seg: lo ? 8 : 14 }); m.color(C.light, 0.9); m.torus(0, -0.01, 0, 0.29, 0.03, { seg: lo ? 10 : 18, tseg: 4 }); m.emissive(0); m.pop(); }
+  for (const s of [1, -1]) {
+    m.push(); m.tf(s * 0.55, 1.82, -2.54, 0, -Math.PI / 2, 0); m.color(C.light, 0.9); m.torus(0, -0.01, 0, 0.29, 0.03, { seg: lo ? 10 : 18, tseg: 4 }); m.emissive(0); m.pop();
+    K.part(s * 0.55, 1.82, -2.54, (o, st) => cartConePump(o, st, 0, -1, 0.05), mm => {
+      mm.tf(0, 0, 0, 0, -Math.PI / 2, 0); mm.color('#0c0a10'); mm.lathe([[0.27, 0.0], [0.17, 0.06], [0.06, 0.09], [0, 0.1]], { seg: lo ? 8 : 14 });
+      mm.color('#c8ccd8').shine(3); mm.ball(0, 0.07, 0, 0.06, { seg: 8, rings: 5 }); mm.shine(0);
+    });
+  }
   // deck rail with pink bulbs
   m.color('#3a2a3a').shine(2);
   for (const s of [1, -1]) m.limb(s * 1.15, 1.85, 1.6, s * 1.15, 1.85, -1.4, 0.035, 0.035, { seg: 5 });
   m.shine(0);
   cartLeds(K, [1.15, 1.9, 1.6], [1.15, 1.9, -1.4], lo ? 4 : 8, ['#ff3a6a', '#ffffff'], 0.05);
   cartLeds(K, [-1.15, 1.9, 1.6], [-1.15, 1.9, -1.4], lo ? 4 : 8, ['#ff3a6a', '#ffffff'], 0.05);
-  // pedestal for the heart
-  m.color('#c8ccd8').shine(3); m.roundCyl(0, 1.5, 0.8, 0.42, 0.55, 0.08); m.shine(0);
-  // the heart (pulses to the beat), up front where everyone sees it
-  K.part(0, 3.15, 0.8, (o, s) => { const p = 1 + 0.07 * s.beat + 0.12 * s.fire; o.sx = p; o.sy = p; o.sz = p; o.yaw = Math.sin(s.t * 0.9) * 0.18; }, mm => {
-    mm.color(C.col, 0.32).shine(2); cartHeart(mm, 1.35, lo); mm.shine(0);
-    mm.color('#ffffff', 1); if (!lo) for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; mm.ball(Math.sin(a) * 1.25, Math.cos(a) * 0.95 + 0.15, 0.62, 0.05, { seg: 5, rings: 3 }); }
+  // a short chrome pedestal with a glowing collar for the heart
+  m.color('#c8ccd8').shine(3); m.roundCyl(0, 1.5, 0.8, 0.42, 0.3, 0.08); m.shine(0);
+  m.color(C.light, 1); m.torus(0, 1.8, 0.8, 0.4, 0.025, { seg: lo ? 10 : 18, tseg: 4 }); m.emissive(0);
+  // the heart (beats lub-dub), low enough that the chase camera sees the road over it; a ring of marquee bulbs
+  // follows its outline so it reads from behind too
+  const hs = 1.05;
+  K.part(0, 2.62, 0.8, (o, s) => { cartHeartBeat(o, s, 1); }, mm => {
+    mm.color(C.col, 0.32).shine(2); cartHeart(mm, hs, lo); mm.shine(0);
+    const n = lo ? 12 : 22;
+    for (let i = 0; i < n; i++) {
+      const t = i / n * TAU, x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      mm.color(i % 2 ? '#ffffff' : '#ffd0e0', 1); mm.ball(x * 0.062 * hs, y * 0.062 * 0.85 * hs + 0.08 * hs, 0, 0.055, { seg: lo ? 4 : 6, rings: lo ? 3 : 4 });
+    }
     mm.emissive(0);
   });
-  K.light(0, 3.2, 0.8, 4.2, C.light, { big: 1 });
+  K.light(0, 2.7, 0.8, 4.2, C.light, { big: 1 });
   K.seat({ y: 1.62, z: -1.25, col: '#5a1a2a', accent: '#ff3a6a' });
-  Object.assign(K.info, { muzzle: [0, 3.0, 0.8], len: 5.2, w: 2.6, h: 4.5 });
+  Object.assign(K.info, { muzzle: [0, 2.7, 0.8], len: 5.2, w: 2.6, h: 3.5, extra: { sight: [3.45, 0.8] } });
 };
 
 /* ---------------- 2. GLITTERFIN: a mirror-tiled fish (ride on its back) ---------------- */

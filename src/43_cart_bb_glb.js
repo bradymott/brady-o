@@ -19,9 +19,19 @@ const CART_GLB = {   // car id -> file stem under models/ (hi: <stem>.glb, race:
 };
 // part node name (without "part_") -> fn(o, s): the same pose functions as the procedural cars (43_cart_b_models.js,
 // 43_cart_ba_cars.js), so a Blender part must be authored in the same local frame as the procedural K.part build.
+// A body extra `rigV` picks a newer table, CART_GLB_PARTS['<id>:<rigV>'], so a rebuilt .glb can change its parts
+// while an older file on a phone's cache keeps the poses it was made for.
 const CART_GLB_PARTS = {
+  // Bass Valentine before the quality-bar rebuild: its heart is shrunk and lowered here so it no longer hides the road
   heart: {
-    heart: (o, s) => { const p = 1 + 0.07 * s.beat + 0.12 * s.fire; o.sx = p; o.sy = p; o.sz = p; o.yaw = Math.sin(s.t * 0.9) * 0.18; }
+    heart: (o, s) => { const k = cartHeartBeat(o, s, 0.78); o.y = -0.45 + 0.02 * k; }
+  },
+  // the rebuilt Bass Valentine (tools/blender/bass_valentine.py, rigV 2): a heart at its final size, pumping cones
+  'heart:2': {
+    heart: (o, s) => { cartHeartBeat(o, s, 1); },
+    coneL0: (o, s) => cartConePump(o, s, 1, 0, 0), coneL1: (o, s) => cartConePump(o, s, 1, 0, 0.12), coneL2: (o, s) => cartConePump(o, s, 1, 0, 0.24),
+    coneR0: (o, s) => cartConePump(o, s, -1, 0, 0), coneR1: (o, s) => cartConePump(o, s, -1, 0, 0.12), coneR2: (o, s) => cartConePump(o, s, -1, 0, 0.24),
+    subL: (o, s) => cartConePump(o, s, 0, -1, 0.05), subR: (o, s) => cartConePump(o, s, 0, -1, 0.05)
   },
   fish: {
     finL: (o, st) => { o.roll = 1 * (0.25 + Math.sin(st.t * 6 + 1) * 0.25 * (0.4 + st.speed)); },
@@ -66,7 +76,9 @@ const CART_GLB_PARTS = {
   }
 };
 // per-car points the race sim reads from M.extra (the procedural values; a glb's body extras.extra JSON overrides)
+// sight: [y, z] of the top of a tall sculpture, car-local: the chase camera rises just enough to see the road over it
 const CART_GLB_EXTRA = {
+  heart: { sight: [3.66, 0.8] },
   octo: { arms: 8, armZ: 0.55, chimney: [0, 4.7, -0.15] },
   galleon: { cannons: [[1.6, 1.55, -0.7], [1.6, 1.55, 0.6], [-1.6, 1.55, -0.7], [-1.6, 1.55, 0.6]] },
   snail: { rockets: [[0.95, 1.9, -1.75], [-0.95, 1.9, -1.75]] }
@@ -127,7 +139,7 @@ const CartGLB = {
     const R = lo ? (rigs.lo || rigs.hi) : (rigs.hi || rigs.lo); if (!R) return null;
     const key = id + (R === rigs.lo ? ':lo' : ':hi');
     if (this.models[key]) return this.models[key];
-    const E = R.empties, X = R.extras || {}, b = R.bounds, fns = CART_GLB_PARTS[id] || {};
+    const E = R.empties, X = R.extras || {}, b = R.bounds, fns = (X.rigV && CART_GLB_PARTS[id + ':' + X.rigV]) || CART_GLB_PARTS[id] || {};
     const pt = (n, d) => E[n] ? [E[n].x, E[n].y, E[n].z] : d;
     const lights = [];
     for (const [n, e] of Object.entries(E)) {

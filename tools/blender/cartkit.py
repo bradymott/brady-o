@@ -611,9 +611,18 @@ class Build:
         bpy.ops.object.select_all(action='DESELECT')
         for o in self.objs: o.select_set(True)
         bpy.context.view_layer.objects.active = self.body
-        bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_apply=True, export_yup=True,
-                                  export_extras=True, export_materials='EXPORT', export_normals=True, export_animations=False,
-                                  export_skins=False, export_lights=False, export_cameras=False, export_image_format='NONE', export_tangents=False)
+        kw = dict(filepath=path, export_format='GLB', use_selection=True, export_apply=True, export_yup=True,
+                  export_extras=True, export_materials='EXPORT', export_normals=True, export_animations=False,
+                  export_skins=False, export_lights=False, export_cameras=False, export_image_format='NONE', export_tangents=False)
+        # a car that painted vertex colours (Build.vcol) sets self.export_try: extra exporter options to try in order
+        # (their names differ between Blender versions); the first one the exporter accepts wins
+        for extra in getattr(self, 'export_try', None) or []:
+            try:
+                bpy.ops.export_scene.gltf(**kw, **extra); print('CARTKIT_EXPORT %s %s' % (os.path.basename(path), extra))
+                return os.path.getsize(path)
+            except TypeError as e:
+                print('CARTKIT_EXPORT option not accepted %s: %s' % (extra, e))
+        bpy.ops.export_scene.gltf(**kw)
         return os.path.getsize(path)
     def bounds(self):
         dg = bpy.context.evaluated_depsgraph_get(); lo = Vector((1e9, 1e9, 1e9)); hi = Vector((-1e9, -1e9, -1e9))
@@ -729,3 +738,139 @@ def bootstrap(script_file):
     import sys
     d = os.path.dirname(os.path.abspath(script_file))
     if d not in sys.path: sys.path.insert(0, d)
+
+# ---------------- quality-bar helpers (added with the Bass Valentine rebuild; nothing above uses them) ----------------
+def heart_outline(n, w=2.1, h=1.81, top=0.86):
+    """n points (x, y) evenly spaced by arc length around a rounded, balloon-like heart outline: soft lobes, a soft
+    valley at the top and a rounded (not needle-sharp) tip. w wide, h tall, the lobe tops at y = top, centred on x = 0.
+    Point 0 is the top valley, point n/2 the tip. Star-shaped about (0, 0), as bm_puffy needs."""
+    K = [(0.0, 0.52), (0.28, 0.78), (0.62, 0.86), (0.92, 0.70), (1.05, 0.40), (1.0, 0.05), (0.80, -0.30), (0.50, -0.62),
+         (0.22, -0.86), (0.0, -0.95), (-0.22, -0.86), (-0.50, -0.62), (-0.80, -0.30), (-1.0, 0.05), (-1.05, 0.40),
+         (-0.92, 0.70), (-0.62, 0.86), (-0.28, 0.78)]
+    sx, sy = w / 2.1, h / 1.81
+    K = [(x * sx, (y - 0.86) * sy + top) for x, y in K]
+    ts = arc_walk(lambda t: (*catmull_at(K, t, True), 0.0), n, closed=True)
+    return [catmull_at(K, t, True) for t in ts]
+def puffy_point(p, phi, depth_fn, dc, centre=(0.0, 0.0), ex=0.7):
+    """The point of an inflated outline (bm_puffy) above outline point p at 'latitude' phi (-pi/2 back pole, 0 the rim,
+    +pi/2 front pole): (x, y, z) in the piece's local engine space. Use it to sit bulbs, gems or decals on the surface."""
+    s, c = math.sin(phi), math.cos(phi)
+    rf = max(c, 0.0) ** ex
+    d = depth_fn(p); k = s * s
+    z = s * (d * (1 - k) + dc * k)
+    return (centre[0] + (p[0] - centre[0]) * rf, centre[1] + (p[1] - centre[1]) * rf, z)
+def bm_puffy(outline, depth_fn, dc, nv, centre=(0.0, 0.0), ex=0.7, at=(0, 0, 0), M=None):
+    """An inflated, balloon-like solid from a closed star-shaped 2D outline [(x, y), …] (engine XY, depth along Z):
+    every outline point is swept from the back pole over the rim to the front pole. depth_fn((x, y)) is the half-depth
+    near that part of the rim (fat lobes, a thinner tip), dc the half-depth at the poles, ex < 1 makes it fuller.
+    nv rings from pole to pole (the poles are single welded vertices: watertight, smooth). Hearts, cushions, pillows,
+    balloon letters, puffy stars."""
+    rings = [[(centre[0], centre[1], -dc)]]
+    for i in range(1, nv):
+        phi = -math.pi / 2 + math.pi * i / nv
+        rings.append([puffy_point(p, phi, depth_fn, dc, centre, ex) for p in outline])
+    rings.append([(centre[0], centre[1], dc)])
+    return bm_loft(rings, closed_u=True, caps=False, at=at, M=M)
+def bm_closed_lathe(profile, seg, axis=AY, at=(0, 0, 0), rmod=None):
+    """bm_lathe for a closed solid whose profile starts and ends on the axis (r = 0): speaker cones with a front and a
+    back face, cups, lenses. Watertight, so its normals are consistent and it never shows a missing back face."""
+    return bm_lathe(profile, seg, at=at, axis=axis, rmod=rmod, caps=False)
+def perp_basis(d):
+    """Two unit engine vectors perpendicular to the engine direction d (and to each other)."""
+    v = Vector(d).normalized(); a = Vector((0, 1, 0)) if abs(v.y) < 0.9 else Vector((1, 0, 0))
+    u = v.cross(a).normalized(); return u, v.cross(u).normalized()
+def _vcol(self, ob, fn, name='Col'):
+    """Paint a per-vertex colour (linear RGB multipliers 0..1, exported as COLOR_0, which the game multiplies into the
+    material colour, emissive included) from fn(x, y, z) of each vertex in the piece's local engine coordinates.
+    Set self.export_try (see export) so the exporter writes it. Use it for candy gradients, dirt, two-tone fades."""
+    me = ob.data
+    try: attr = me.color_attributes.new(name, 'FLOAT_COLOR', 'POINT')
+    except Exception: attr = me.vertex_colors.new(name=name); attr = None
+    if attr is None:
+        print('vcol: no color_attributes API, skipped'); return
+    for i, v in enumerate(me.vertices):
+        r, g, b = fn(v.co.x, v.co.z, -v.co.y); attr.data[i].color = (r, g, b, 1.0)
+    for k, val in (('active_color_name', name), ('render_color_index', me.color_attributes.find(name))):
+        try: setattr(me.color_attributes, k, val)
+        except Exception: pass
+    try: me.color_attributes.active_color = attr
+    except Exception: pass
+Build.vcol = _vcol
+# exporter options that write the active colour attribute as COLOR_0 (Blender 4.2+ names first, then older ones)
+VCOL_EXPORT = [dict(export_vertex_color='ACTIVE'), dict(export_colors=True)]
+def _tyre_rings(r, w, seg, lo, tread=True):
+    """Rings (engine points around the X axis, wheel-local) of a tyre: bead, sidewall with a raised lettering band,
+    shoulder, tread with staggered blocks (hi). Closed both ways (a torus-like solid)."""
+    if lo: prof = [(0.64, -0.44), (0.86, -0.5), (1.0, -0.36), (1.0, 0.36), (0.86, 0.5), (0.64, 0.44)]
+    else:
+        prof = [(0.63, -0.43), (0.72, -0.495), (0.785, -0.515), (0.82, -0.51), (0.9, -0.495), (0.965, -0.45), (1.0, -0.34),
+                (1.0, -0.12), (1.0, 0.12), (1.0, 0.34), (0.965, 0.45), (0.9, 0.495), (0.82, 0.51), (0.785, 0.515), (0.72, 0.495), (0.63, 0.43)]
+    tread_rows = set() if lo or not tread else {6, 7, 8, 9}
+    rings = []
+    for k, (rr, hh) in enumerate(prof):
+        ring = []
+        for j in range(seg):
+            th = TAU * j / seg; R = rr * r
+            if k in tread_rows and ((j // 2 + (k % 2)) % 2): R -= 0.018   # groove: staggered blocks, two segments each
+            ring.append((hh * w, math.cos(th) * R, math.sin(th) * R))
+        rings.append(ring)
+    return rings
+def _wheels_pro(self, x, zf, zr, r=0.5, w=0.42, rim='#ff6a9a', tyre='#141416', cap='#ff4fd8', spokes=6, stripe='#ff5c8a'):
+    """Four premium wheels on bones wheel_FL/FR/RL/RR: a lathed tyre (bead, sidewall with a raised lettering band and a
+    pinstripe, shoulders, staggered tread blocks), a deep-dish rim (chrome lip, candy-tinted dish, twin chrome spokes,
+    chrome hub, glowing cap). The race level keeps a rounded tyre, the lip, the dish and the cap."""
+    L = self.L; lo = self.lo; out = []
+    m_tyre = mat('tyre_pro', tyre, rough=0.62); m_wall = mat('tyre_wall', '#1c1c20', rough=0.5)
+    m_dish = metal('rim_dish_' + rim.lstrip('#'), rim, 0.16)
+    for name, px, pz in (('wheel_FL', x, zf), ('wheel_FR', -x, zf), ('wheel_RL', x, zr), ('wheel_RR', -x, zr)):
+        side = 1 if px > 0 else -1
+        root = self.bone(name, (px, r, pz)); out.append(root)
+        seg = self.pick(36, 14)
+        self.obj(name + '_tyre', bm_loft(_tyre_rings(r, w, seg, lo), closed_u=True, closed_v=True, caps=False), [m_tyre, m_wall], parent=root,
+                 face_mat=None if lo else (lambda f: 1 if abs(f.calc_center_median().x) > w * 0.47 else 0))
+        rs = self.pick(28, 12)
+        # the barrel (closed) fills the tyre; its outer face is the dish
+        self.obj(name + '_dish', bm_cyl(r * 0.62, r * 0.62, w * 0.78, rs, AX, (-side * w * 0.02, 0, 0)), m_dish, parent=root)
+        self.obj(name + '_lip', bm_torus(r * 0.62, 0.026 if not lo else 0.03, rs, self.pick(4, 3), AX, (side * w * 0.38, 0, 0)), chrome(), parent=root)
+        if not lo:
+            for k in range(spokes):
+                for dv in (-0.09, 0.09):
+                    a = k / spokes * TAU + dv
+                    self.obj(name + '_spoke_%d%s' % (k, 'ab'[dv > 0]), bm_rod((side * w * 0.42, math.cos(a) * r * 0.12, math.sin(a) * r * 0.12),
+                             (side * w * 0.37, math.cos(a + dv * 0.6) * r * 0.57, math.sin(a + dv * 0.6) * r * 0.57), 0.022, 6, r1=0.016), chrome(), parent=root)
+            self.obj(name + '_hub', bm_cyl(r * 0.17, r * 0.15, 0.06, 16, AX if side > 0 else AXn, (side * w * 0.41, 0, 0)), chrome(), parent=root, bevel=0.012, segments=2)
+            self.obj(name + '_stripe', bm_torus(r * 0.79, 0.011, 28, 3, AX, (side * w * 0.512, 0, 0)), satin('pinstripe_' + stripe.lstrip('#'), stripe, 0.35), parent=root)
+        self.obj(name + '_cap', bm_cyl(r * 0.1, r * 0.1, 0.04, self.pick(14, 8), AX, (side * w * 0.45, 0, 0)), led(cap, 3.0), parent=root)
+    self.body['wheelR'] = float(r)
+    return out
+Build.wheels_pro = _wheels_pro
+def _speaker_pro(self, at, d, r, name, glow='#ff3a6a', part=None, guard=False, cap=None, plate='#141118'):
+    """A real speaker facing engine direction d at `at` (on the panel surface), cone radius r: a mounting plate, a
+    chrome trim ring, a glowing LED ring, a rubber surround (hi), and a two-sided cone with a dust cap. part='coneL0'
+    puts the cone and cap on their own bone part_<part> (joint at the cone's centre) so the game can pump them;
+    guard=True adds a chrome grille ring on four struts in front (hi). The rubber surround is part of the cone's lathe
+    profile (a half-roll at its rim) on the showroom level. Returns the part bone or None."""
+    L = self.L; lo = self.lo; S = self.pick(16, 10); A = aim(d); dv = Vector(d).normalized()
+    P = lambda h, base=at: tuple(base[k] + dv[k] * h for k in range(3))
+    if not lo: self.obj(name + '_plate', bm_cyl(r + 0.1, r + 0.1, 0.03, S, A, P(-0.005)), satin('spk_plate_' + plate.lstrip('#'), plate, 0.45))
+    self.obj(name + '_trim', bm_torus(r + 0.035, 0.03, S, 4, A, P(0.022)), chrome())
+    self.obj(name + '_glow', bm_torus(r + 0.085, 0.017, S, 3, A, P(0.012)), led(glow))
+    bone = self.part(part, at) if part else None
+    c = (0, 0, 0) if bone else at; Pc = lambda h: P(h, c)
+    # hi: dish, then the rubber surround as a half-roll at the rim, then the back of the cone
+    prof = ([(0, -0.035), (r * 0.25, -0.03), (r * 0.55, -0.012), (r * 0.8, 0.004), (r * 0.86, 0.03), (r * 0.93, 0.04), (r * 1.0, 0.025), (r * 1.02, -0.01), (r * 0.9, -0.035), (r * 0.3, -0.1), (0, -0.105)]
+            if not lo else [(0, -0.03), (r * 0.6, -0.005), (r * 0.9, 0.006), (r * 0.9, -0.03), (0, -0.09)])
+    # cone heights run from the panel plane outward along d (negative: recessed into the box)
+    prof = [(rr, hh - 0.04) for rr, hh in prof]
+    self.obj(name + '_cone', bm_closed_lathe(prof, S, A, c), mat('spk_cone', '#16131a', rough=0.55), parent=bone)
+    capm = cap or paint('spk_cap', '#ff2a5a', coat=1.0, rough=0.22, metal=0.1)
+    self.obj(name + '_cap', bm_ellipsoid(r * 0.3, r * 0.14, r * 0.3, self.pick(12, 8), self.pick(5, 3), Pc(-0.075), M=A), capm, parent=bone)
+    if guard and not lo:
+        u, v = perp_basis(d)
+        self.obj(name + '_guard', bm_torus(r * 0.5, 0.012, S, 4, A, P(0.075)), chrome())
+        for k in range(4):
+            a = TAU * k / 4 + TAU / 8; rad = u * math.cos(a) + v * math.sin(a)
+            p0 = Vector(P(0.075)) + rad * (r * 0.5); p1 = Vector(P(0.03)) + rad * (r + 0.03)
+            self.obj(name + '_strut_%d' % k, bm_rod(tuple(p0), tuple(p1), 0.01, 4), chrome())
+    return bone
+Build.speaker_pro = _speaker_pro

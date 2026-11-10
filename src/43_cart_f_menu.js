@@ -476,11 +476,11 @@ class KartMenuScene {
     ctx.fillStyle = rgba(wp.col, 0.18); burnsRR(ctx, px + 10, y - 10, pw - 20, 74, 10); ctx.fill();
     cartWeaponIcon(ctx, car.weapon, px + 38, y + 24, 28, 1, this.t);
     BurnsUI.text(ctx, 'WEAPON: ' + wp.name, px + 66, y + 4, 13, wp.col, { align: 'left' });
-    BurnsUI.text(ctx, 'RELOAD ' + wp.reload + 's', px + pw - 18, y + 4, 10, '#ffffff', { align: 'right', ui: true });
+    BurnsUI.text(ctx, 'RELOAD ' + wp.reload + 's', px + pw - 18, y + 56, 10, '#ffffff', { align: 'right', ui: true });   // bottom corner: long weapon names own the top line
     ctx.font = `600 10px ${FONT_UI}`; let yy = y + 20;
     for (const ln of BurnsUI.wrap(ctx, wp.desc, pw - 86)) { BurnsUI.text(ctx, ln, px + 66, yy, 10, 'rgba(255,255,255,0.88)', { align: 'left', ui: true, stroke: false }); yy += 13; }
     y += 84;
-    if (y + 60 < py + ph) this.drawStatBars(ctx, car, px + 16, y, Math.min(pw - 32, 260));
+    if (y + 60 < py + ph) this.drawStatBars(ctx, car, px + 16, y, P ? pw - 32 : Math.min(pw - 32, 260));
     const d = CART_DRIVERS[this.drvSel];
     // portrait: between the arrows, at the plinth's front edge; landscape: under the stage
     BurnsUI.text(ctx, 'DRIVER: ' + d.name, P ? W / 2 : scx, P ? this.btns[0].y + this.btns[0].h / 2 : H - Math.max(24, insets.b + 20), 12, d.col, {});
