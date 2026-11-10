@@ -218,10 +218,13 @@ const petardoArt = (ctx, e, x, y, m) => {
   ctx.restore();
 };
 // jellyfish bob up and down in place
+const JELLY = { w: 22, h: 20, speed: 0.3, range: 1, chase: false, art: jellyArt };
 class EsJelly extends TourSwimmer {
-  constructor(g, s) { super(g, s, { w: 22, h: 20, speed: 0.3, range: 1, chase: false, art: jellyArt }); this.hy = this.y; this.ph = Math.random() * TAU; }
+  constructor(g, s) { super(g, s, JELLY); this.hy = this.y; this.ph = Math.random() * TAU; }
   update(dt) { this.t += dt; if (this.knocked) return this.updateKnocked(dt); if (this.stunT > 0) { this.stunT -= dt; return; } this.y = this.hy + Math.sin(this.t * 1.4 + this.ph) * (this.s.amp || 2.5) * TS; }
 }
+// a static cfg so 30_tour_sprites.js names its pre-rendered art ('jelly/swim', 'jelly_ko_000'); jellyArt stays the fallback
+EsJelly.cfg = JELLY;
 const tomatoBall = (ctx, s, t) => { ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.arc(s.cx, s.cy, 6, 0, TAU); ctx.fill(); ctx.fillStyle = '#2a8a3a'; ctx.fillRect(s.cx - 1, s.cy - 8, 2, 3); };
 const enemies = {
   esTomato: { cls: TourEnemy.make({ w: 22, h: 24, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, art: tomatoArt, burst: '#e8322a' }), place: 'walk' },

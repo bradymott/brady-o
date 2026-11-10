@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("es_aquarium", {"scale":2.0,"image":"es_aquarium.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":944}},"anims":{},"strips":{"L0":{"w":2048,"h":471,"top":174.0,"x":0,"y":0},"L1":{"w":2048,"h":471,"top":204.0,"x":0,"y":472}}});

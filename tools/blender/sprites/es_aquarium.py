@@ -94,26 +94,12 @@ def build_L0(rng):
         x = (k + 0.5) * P / 4
         tunnel_rib(B, x, -0.3, R, RZ, rng)
     B.done()
-    B = Builder('L0_glass', L, TH)
-    for zi, (zz, rr) in enumerate(((2.4, R * 0.98), (4.1, R * 0.8), (5.0, R * 0.4))):
-        for k in range(4):
-            x0 = (k + 0.5) * P / 4
-            x1 = x0 + P / 4
-            for s in (-1, 1):
-                B.rod('glass', (x0 + s * rr, -0.95, zz + 0.6), (x1 - s * rr, -0.95, zz + 0.6), 0.025, segs=4) if s == 1 else None
-    B.done()
     B = Builder('L0_glints', L, TH)
     for x in K.jittered(rng, 7, 0.5):
         z = rng.uniform(4.0, 5.4)
         for dx in K.wraps(x, 0.5):
             B.box('glint', (x + dx, -1.0, z), (rng.uniform(0.4, 0.8), 0.03, 0.05), bevel=0.0, rot=(0, 0.6, 0))
     B.done(period=None)
-    B = Builder('L0_lamps', L, TH)
-    for k in range(8):
-        x = (k + 0.5) * P / 8
-        B.rod('rib_dark', (x, -0.9, 5.45), (x, -0.9, 4.95), 0.03, segs=4)
-        B.sphere('lamp_glow', (x, -0.9, 4.8), 0.16, subdiv=1)
-    B.done()
 
 def kelp(B, x, y, h, w, ph, rng):
     """One kelp stalk: a tapering wavy chain with alternating blades (flat ellipsoids) every node."""
@@ -138,8 +124,8 @@ def build_L1(rng):
     L = 'L1'
     K.fill_below(TH, L, 'kelp_fill', top=0.2, depth=3.0, y=2.5)
     B = Builder('L1_kelp', L, TH)
-    for x in K.jittered(rng, 22, 0.45):
-        h = rng.uniform(3.5, 6.5)
+    for x in K.jittered(rng, 12, 0.45):         # sparse enough that the tunnel and the rocks read behind it
+        h = rng.uniform(2.6, 5.2)
         for dx in K.wraps(x, 0.9):
             kelp(B, x + dx, rng.uniform(-0.5, 2.0), h, rng.uniform(0.2, 0.36), rng.uniform(0, TAU), rng)
     B.done(period=None)
