@@ -938,7 +938,7 @@ class BurnsPlayScene {
   updateCamera(fdt) {
     const p = this.player, cam = this.cam, sv = BurnsSave.get().settings, W = this.world;
     const portrait = Game.cssH > Game.cssW;
-    if (this.cine && this.cine.cam) { Object.assign(cam, this.cine.cam); cam.shift = portrait ? 0.06 : 0; cam.roll = 0; if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt); return; }
+    if (this.cine && this.cine.cam) { Object.assign(cam, this.cine.cam); cam.shift = portrait ? 0.06 : 0; cam.roll = 0; this.dialogFrame(cam, fdt); if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt); return; }
     // manual orbit (touch drag / mouse / keys / right stick)
     const sens = (sv.camSens || 1) * 0.0085;
     let dyaw = -Input.camDX * sens, dpitch = Input.camDY * sens * 0.7 * (sv.invertY ? -1 : 1);
@@ -1024,8 +1024,60 @@ class BurnsPlayScene {
       if (!p.vehicle && !p.locked) p.yaw = yaw;   // the body faces where you look
     }
     cam.near = 0.15; cam.far = 1500;
+    this.dialogFrame(cam, fdt);
     // def.cameraFx(g, cam, dt): a world's own camera effects (wobble, roll, fov breathing) on the finished camera
     if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt);
+  }
+  /* Dialogue framing: while a cutscene line is spoken and the cutscene has no camera of its own, ease to a 3/4 front
+     shot of the speaker, composed in the screen area above the dialogue box. Never in first-person view, never over
+     an authored camera. Force it with { say: [...], frame: true | false } on the step, or cutscene(steps, done,
+     { framing: true | false }), or def.dialogFraming for a whole world. */
+  dialogFrame(cam, fdt) {
+    const C = this.cine, D = this.dialog, st = C && C.cur;
+    const f = st && st.frame !== undefined ? st.frame : C && C.opts.framing !== undefined ? C.opts.framing : this.def.dialogFraming;
+    const want = !!(C && D.open && D.cur && f !== false && (f === true || !C.cam) && this.camMode !== 'first' && !this.player.dead);
+    let shot = want && this.dialogShot(D.cur);
+    this.dlgK = BurnsM.damp(this.dlgK || 0, shot ? 1 : 0, 3.2, fdt);
+    if (!shot) { if (this.dlgK < 0.002) { this.dlgK = 0; this.dlgCam = null; return; } shot = this.dlgCam; if (!shot) return; }
+    const F = this.dlgCam || (this.dlgCam = Object.assign({}, cam));
+    for (const k of ['x', 'y', 'z', 'tx', 'ty', 'tz', 'fov', 'shift']) { F[k] = BurnsM.damp(F[k] === undefined ? cam[k] || 0 : F[k], shot[k], 4, fdt); cam[k] = lerp(cam[k] || 0, F[k], easeInOut(this.dlgK)); }
+    cam.roll = 0;
+  }
+  // the framed shot for one dialogue line (chosen once per line: a clear 3/4 front view of the speaker's face)
+  dialogShot(line) {
+    if (this._dlgLine === line) return this._dlgShot;
+    this._dlgLine = line; this._dlgShot = null;
+    const who = line.who, man = (this.bosses || []).find(b => !b.hidden && !b.defeated);
+    let a = typeof who === 'string' ? (who === 'brady' ? this.player : who === 'man' ? man || this.boss : this.actor(who)) : who;
+    if (a && !Number.isFinite(a.x) && /chinka/i.test(a.name || '') && man && man.chinka && man.showChinka) a = man.chinka;
+    if (!a || !Number.isFinite(a.x) || !Number.isFinite(a.z) || a.hidden) return null;
+    const sc = a.scale || (a.ch && a.ch.scale) || 1, h = Math.min(30, ((a.model || (a.ch && a.ch.model) || {}).height || 1.8) * sc);
+    const ay = a.y || 0, yaw = a.yaw || 0, portrait = Game.cssH > Game.cssW, asp = Game.cssW / Game.cssH;
+    // knees-up framing in the free area above the dialogue box
+    const r = BurnsUI.dialogRect(this), top = this.cine && this.cine.letter ? Game.cssH * 0.1 : 8;
+    const safe = clamp((r.y - top) / Game.cssH, 0.35, 0.8), span = h * 0.68;
+    const fov = portrait ? 0.95 : 0.62, tn = Math.tan(fov / 2);
+    const dist = Math.max(1.6 * Math.sqrt(sc), (span / 2) / (tn * safe) * 1.1, (h * 0.38) / (tn * asp));
+    const tx = a.x, ty = ay + h - span * 0.48, tz = a.z, W = this.world;
+    const others = this.actors.concat([this.player]);
+    let best = null;
+    for (const off of [0.5, -0.5, 0.85, -0.85, 0.2, -0.2, 1.25, -1.25]) {
+      const ang = yaw + off, ex = tx + Math.sin(ang) * dist, ez = tz + Math.cos(ang) * dist;
+      const ey = Math.max(ty + dist * 0.08 + 0.05, W.height(ex, ez) + 0.5);
+      let score = W.raycast(tx, ty + h * 0.15, tz, ex, ey, ez, true) * 30 - Math.abs(off) * 2;
+      const vx = ex - tx, vy = ey - ty, vz = ez - tz, den = vx * vx + vy * vy + vz * vz;
+      for (const n of others) {
+        if (n === a || n.hidden || !Number.isFinite(n.x)) continue;
+        const nx = n.x - tx, nz = n.z - tz, u = (nx * vx + nz * vz) / den;
+        if (u < 0.08 || u > 1.05) continue;
+        const nh = ((n.model || (n.ch && n.ch.model) || {}).height || 1.8) * (n.scale || 1), py = ty + u * vy - (n.y || 0);
+        if (Math.hypot(nx - u * vx, nz - u * vz) < 0.5 && py > -0.2 && py < nh + 0.1) score -= 40;
+      }
+      if (!best || score > best.score) best = { score, x: ex, y: ey, z: ez };
+    }
+    const c = (top + r.y) / 2;
+    this._dlgShot = { x: best.x, y: best.y, z: best.z, tx, ty, tz, fov, shift: clamp(1 - 2 * c / Game.cssH, 0, 0.48), boxY: r.y };
+    return this._dlgShot;
   }
   // a modal minigame owns the screen (DJ set, rhythm round, or any world that sets g.modal): no random chatter
   modalOn() { return !!(this.modal || this.bw567rhythm || (typeof BurnsDJ !== 'undefined' && BurnsDJ.isOpen && BurnsDJ.isOpen(this))); }

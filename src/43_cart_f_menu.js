@@ -194,9 +194,9 @@ class KartMenuScene {
     const showStand = st === 'driver';
     if (showStand) { const s = this.pstand; s.x = P ? 0 : 0; s.y = 0.36; s.z = 0; s.yaw = Math.sin(this.time * 0.5) * 0.4; s.scale = drv.scale * 1.15; s.play(Math.floor(this.time / 3) % 2 ? 'cheer' : 'wave'); s.update(fdt); s.compute(); }
     // camera: frame the subject on the free side of the screen
-    const cam = this.cam, M = car.M;
+    const cam = this.cam, M = car.M; cam.shift=0;
     // (the camera looks toward -Z, so a target to the +X side puts the subject on the left of the screen)
-    if (showStand) { const hh = (drv.man ? 2.2 : 1.9) * 1.15; cam.tx = P ? 0 : 2.3; cam.ty = hh * 0.55; cam.tz = 0; cam.x = cam.tx + 0.6; cam.y = hh * 0.7; cam.z = P ? 6.2 : 5.2; cam.fov = P ? 0.8 : 0.62; if (P) cam.ty -= 1.15; }
+    if (showStand) { const hh = (drv.man ? 2.8 : 1.9) * 1.15; cam.tx = P ? 0 : 2.3; cam.ty = hh * 0.55; cam.tz = 0; cam.x = cam.tx + 0.6; cam.y = hh * 0.7; cam.z = P ? 6.2 : 5.2; cam.fov = P ? 0.8 : drv.man ? .72 : .62; cam.shift=drv.man&&!P?.1:0; if (P) cam.ty -= 1.15; }
     else { const d = Math.max(M.len, M.h * 1.2) * (P ? 1.9 : 1.6) + 3.5; cam.tx = st === 'mode' && !P ? 3.2 : st === 'car' && !P ? 3.4 : 0; cam.ty = M.h * 0.42; cam.tz = 0; cam.x = cam.tx + Math.sin(0.35) * d; cam.y = M.h * 0.6 + 1.4; cam.z = Math.cos(0.35) * d; cam.fov = P ? 0.85 : 0.7; if (P) { cam.ty -= st === 'car' ? 2.6 : 1.9; } }
     const t0 = performance.now(), mq = window.__cartFixedQ || this.mq || (this.mq = 0.85);
     const gw = Math.max(64, Math.round(W * Math.min(dpr, 2) * mq)), gh = Math.max(64, Math.round(H * Math.min(dpr, 2) * mq));

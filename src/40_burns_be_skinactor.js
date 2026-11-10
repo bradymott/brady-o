@@ -77,6 +77,8 @@ class BurnsSkinActor {
     S.x = this._x = ch.x; S.y = this._y = ch.y; S.z = this._z = ch.z; S.yaw = this._yaw = ch.yaw; S.scale = this._sc = sc;
     S.tint = ch.tint || this.tint; S.face = ch.face || 0;
     if (dt > 0) S.update(dt);
+    // walk/run: the clip follows the BurnsChar's stride phase (ground covered; the clock when it isn't moving)
+    if ((clip === 'walk' || clip === 'run') && ch._stridePhase !== undefined && S.anim) S.animT = ch._stridePhase * S.anim.duration;
     if (dt > 0 || moved || !S.computed) S.compute();
     this.active = true;
     return true;

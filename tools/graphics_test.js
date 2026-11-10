@@ -2,6 +2,10 @@
 // all 19 clips, procedural prop LODs, and the low/medium/high shader paths.
 // Build first, then: node tools/graphics_test.js [output directory]
 // Uses the normal world loader and renderer, without fast-forwarding city AI.
+// Budget guard: every world's draws/triangles at its spawn camera and every procedural prop's triangles are compared
+// with tools/graphics_baseline.json (made from main's build): a world may add at most 4% triangles and 3 draw calls,
+// a prop at most 50% triangles. Re-make the baseline from a build of main with GRAPHICS_WRITE_BASELINE=1.
+// Exits non-zero on any failure.
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path'), http = require('http');
 const site = path.resolve(process.env.BRADY_DIST || 'dist', 'site');
@@ -95,10 +99,30 @@ const clips = ['idle','walk','run','jump','land','hurt','knocked','dance','wave'
       report.tiers.push(result); if(result.failed) throw new Error('Tier failed '+tier);
       await page.screenshot({path:path.join(out,'characters-'+tier+'.png')});
     }
+    // ---- budget vs main
+    const basePath = process.env.GRAPHICS_BASELINE || path.join(__dirname, 'graphics_baseline.json');
+    if (process.env.GRAPHICS_WRITE_BASELINE) {
+      fs.writeFileSync(basePath, JSON.stringify({ note: 'graphics_test.js budget baseline: main build, 874x402 @1x, spawn camera', worlds: report.worlds, props: report.props }, null, 1) + '\n');
+      console.log('BASELINE written', basePath);
+    } else if (fs.existsSync(basePath)) {
+      const base = JSON.parse(fs.readFileSync(basePath, 'utf8')), over = [];
+      for (const w of report.worlds) {
+        const b = base.worlds.find(x => x.id === w.id); if (!b) continue;
+        report.budget = report.budget || [];
+        report.budget.push({ id: w.id, draws: [b.draws, w.draws], tris: [b.tris, w.tris] });
+        if (w.tris > b.tris * 1.04 + 500) over.push('world ' + w.id + ' tris ' + b.tris + ' -> ' + w.tris);
+        if (w.draws > b.draws + 3) over.push('world ' + w.id + ' draws ' + b.draws + ' -> ' + w.draws);
+      }
+      for (const p of report.props) { const b = base.props.find(x => x.name === p.name && x.lo === p.lo); if (b && p.tris > b.tris * 1.5 + 8) over.push('prop ' + p.name + (p.lo ? ' lo' : '') + ' tris ' + b.tris + ' -> ' + p.tris); }
+      console.log('BUDGET', JSON.stringify(report.budget || []));
+      if (over.length) throw new Error('Budget regression vs main:\n' + over.join('\n'));
+    } else console.log('BUDGET skipped: no baseline at ' + basePath);
+    for (const c of report.characters) if (c.tris > 25000) throw new Error(c.name + ' over the 25k-triangle hero budget: ' + c.tris);
     console.log('CHARACTERS', JSON.stringify(report.characters));
     console.log('TIERS', JSON.stringify(report.tiers));
     if(report.errors.length) throw new Error(report.errors.join('\n'));
-    console.log('PASS: '+report.worlds.length+' worlds, 38 hero clips, 20 prop/LOD builds, 3 quality tiers');
+    console.log('PROPS', JSON.stringify(report.props));
+    console.log('PASS: '+report.worlds.length+' worlds, 38 hero clips, 20 prop/LOD builds, 3 quality tiers, budget vs main');
   } finally {
     fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,2));
     await browser.close();await new Promise(r=>server.close(r));
