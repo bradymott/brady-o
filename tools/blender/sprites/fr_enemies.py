@@ -67,7 +67,7 @@ COLORS = {
     'poodle_fur': '#ffc4dc', 'poodle_fur_shade': '#f4a8c8', 'poodle_skin': '#f8b4cc', 'poodle_bow': '#d8205a',
     'poodle_nose': '#2a1a24', 'poodle_eye_white': '#ffffff', 'poodle_pupil': '#1a1020', 'poodle_mouth': '#a03050',
     'poodle_collar': '#3a6ad8', 'poodle_tag': '#ffd23a',
-    'cat_fur': '#6a6e90', 'cat_fur_light': '#8a8eaa', 'cat_chest': '#e8e8f0', 'cat_ear': '#e88aa0', 'cat_nose': '#ff8aa0',
+    'cat_fur': '#9498ba', 'cat_fur_light': '#b0b4d0', 'cat_chest': '#e8e8f0', 'cat_ear': '#e88aa0', 'cat_nose': '#ff8aa0',
     'cat_eye_white': '#d8ff4a', 'cat_pupil': '#101018', 'cat_mouth': '#101018', 'cat_whisker': '#d8d8e8',
     'keychain_brass': '#d8a850', 'keychain_brass_dark': '#a87a30', 'keychain_brass_light': '#f4d488', 'keychain_ring': '#d8dce8',
     'keychain_plate': '#f4e8c8', 'keychain_eye_white': '#ffffff', 'keychain_pupil': '#1a1020', 'keychain_mouth': '#6a3a1a',
