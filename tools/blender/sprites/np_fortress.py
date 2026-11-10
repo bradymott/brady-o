@@ -16,13 +16,14 @@ PALETTE = {
     'wall': '#3a1460', 'wall2': '#42186a', 'trim': '#c8a03a', 'banner': '#4a1a8a', 'emblem': '#ffd84a',
     'shelf': '#4a2a6a', 'gbase': '#2e2240', 'glass': '#cfe8f8', 'glint': '#f0faff',
     's_gold': '#e8b838', 's_silver': '#c8c8d0', 's_red': '#d8322a', 's_blue': '#3ab0e8', 's_green': '#5ad04a', 's_white': '#f4f0e8',
+    'crate': '#a8804a', 'crate2': '#7a5a30',
     'g_cap': '#c8a03a', 'g_cap_hi': '#ffe88a', 'g_dirt': '#3a1260', 'g_rock': '#5a2a8a', 'g_rock2': '#4e2280', 'g_vein': '#9a6ac8',
 }
 K.use(MODULE, PALETTE, LAYERS)
 Z = lambda row: (340 - row) / PX
 
 
-def build_L0(rng):
+def build_L0(rng, crates=False):
     L = 'L0'
     W = Builder('L0_wall', L)
     n = 16
@@ -47,7 +48,15 @@ def build_L0(rng):
     for sy in (Z(340 - 150), Z(340 - 90)):
         S.box('shelf', (P / 2, 0.3, sy - 0.1), (P + 2.0, 0.6, 0.22), bevel=0.0)
         x = 14 / PX
-        while x < P:
+        while crates and x < P:
+            # the depot's shelves hold the Baron's crates (stencilled with his monocle) instead of snow globes
+            w = rng.choice((0.9, 1.1, 1.3))
+            G.box('crate', (x + w / 2, 0.1, sy + w / 2), (w, 0.6, w), bevel=0.03)
+            G.box('crate2', (x + w / 2, -0.21, sy + w / 2), (w - 0.16, 0.02, w - 0.16), bevel=0.0)
+            G.rod('crate2', (x + 0.1, -0.23, sy + 0.1), (x + w - 0.1, -0.23, sy + w - 0.1), 0.035, segs=4)
+            G.lathe('emblem', [(0.14, -0.02), (0.14, 0.02), (0.09, 0.02), (0.09, -0.02)], 12, at=(x + w * 0.7, -0.25, sy + w * 0.7), rot=(math.pi / 2, 0, 0))
+            x += w + rng.uniform(0.15, 0.6)
+        while not crates and x < P:
             G.box('gbase', (x, 0.1, sy + 0.1), (0.56, 0.4, 0.2), bevel=0.03)
             G.sphere('glass', (x, 0.1, sy + 0.55), 0.36, subdiv=2)
             G.sphere('glint', (x - 0.12, -0.2, sy + 0.7), 0.06, scale=(1.0, 0.4, 1.4), subdiv=1)
@@ -70,8 +79,9 @@ def veins(B, rng, x0, x1):
     pass
 
 
-def build_ground(seed=1):
-    K.use(MODULE, PALETTE, LAYERS)
+def build_ground(seed=1, keep=False):
+    if not keep:
+        K.use(MODULE, PALETTE, LAYERS)
     c = K.ground_blocks(seed, cap_h=0.2, rows=(1,), cols=(1,), gap=0.06, jitter=0.0, roles=('g_rock', 'g_rock2'), bevel=0.03, hi_h=0.06)
     # pale veins across the slabs, kept inside each tile
     B = K.Builder('ground_veins', K.GROUND_COLL)

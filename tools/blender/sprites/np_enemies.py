@@ -14,6 +14,8 @@
 #   tinBot   the Baron's wind-up tin robot (souvenir goon) with a turning key             walk stun flat ko
 #   bobble   the Baron's bobble-head toy of himself: top hat, monocle, curly moustache     walk hop stun flat ko
 #   globe    a stolen snow globe on little feet, a gold tower inside                      walk curl roll stun flat ko
+#   (level overhaul, not used by the game yet: yeti tell / breathe / pant for its frost breath, marmot sleep / tell /
+#    whistle for the sleeper and alarm-caller behaviours; the frost cone and the Zzz are drawn by the engine)
 #   pen      the friend (custom class NpPen): the shaggy yak in its little wooden pen (idle); once it is lent, the
 #            empty pen with a heap of hay (wave)                                           idle wave
 #   coin     the GOLDEN MOHAR: a round gold coin with a square inner field and dots       spin                centre
@@ -33,7 +35,16 @@ from jp_charkit import (TAU, X, Y, Z, V, T, diag, rot_x, rot_y, rot_z, about, el
                         lathe, torus, prism, lathe_surf, ellipsoid_surf, oval_patch, make_part, new_root, eye_one, brow,
                         mouth_bm, biped_legs, quad_legs, superellipsoid, ring_mesh, box_bm, perp_frame, smooth01, xf)
 import jp_enemies as JE
-from jp_enemies import STD_POSE, walk_bob, face_frame, blush, flat_mouth
+from jp_enemies import STD_POSE as JP_POSE, walk_bob, face_frame, blush, flat_mouth
+
+STD_POSE = dict(JP_POSE)
+STD_POSE.update({
+    'sleep':   dict(sx=1.06, sz=0.9, lean=10, lid=1.0, mouth='small', feet='stand'),
+    'tell':    dict(sx=1.06, sz=1.02, lean=-6, lid=0.0, mouth='o', feet='stand', eye=1.15, pupil=0.8),
+    'whistle': dict(sx=0.96, sz=1.08, lean=-8, lid=0.4, mouth='o', feet='stand'),
+    'breathe': dict(sx=1.04, sz=1.0, lean=8, lid=0.55, mouth='open', feet='stand'),
+    'pant':    dict(sx=1.02, sz=0.94, lean=-10, lid=0.45, mouth='grin', feet='stand'),
+})
 
 PX = 28.1
 KINDS = ['momo', 'roti', 'monal', 'marmot', 'chough', 'yeti', 'snowball', 'tinBot', 'bobble', 'globe', 'pen',
@@ -42,9 +53,9 @@ POSES = {
     'momo': ['walk', 'hop', 'stun', 'flat', 'ko'],
     'roti': ['walk', 'curl', 'roll', 'stun', 'flat', 'ko'],
     'monal': ['fly', 'swoop', 'stun', 'ko'],
-    'marmot': ['walk', 'idle', 'throw', 'stun', 'flat', 'ko'],
+    'marmot': ['walk', 'idle', 'throw', 'stun', 'flat', 'ko', 'sleep', 'tell', 'whistle'],
     'chough': ['fly', 'swoop', 'stun', 'ko'],
-    'yeti': ['walk', 'idle', 'throw', 'stun', 'flat', 'ko'],
+    'yeti': ['walk', 'idle', 'throw', 'stun', 'flat', 'ko', 'tell', 'breathe', 'pant'],
     'snowball': ['walk', 'curl', 'roll', 'stun', 'flat', 'ko'],
     'tinBot': ['walk', 'stun', 'flat', 'ko'],
     'bobble': ['walk', 'hop', 'stun', 'flat', 'ko'],
@@ -56,7 +67,8 @@ POSES = {
     'used': ['idle'],
 }
 FRAMES = {('qblock', 'idle'): (1, 1), ('used', 'idle'): (1, 1), ('marmot', 'idle'): (4, 5), ('marmot', 'throw'): (4, 6),
-          ('yeti', 'idle'): (4, 5), ('yeti', 'throw'): (6, 8), ('pen', 'idle'): (4, 4), ('pen', 'wave'): (1, 1)}
+          ('yeti', 'idle'): (4, 5), ('yeti', 'throw'): (6, 8),
+          ('yeti', 'pant'): (1, 1), ('marmot', 'sleep'): (1, 1), ('yeti', 'walk'): (6, 8), ('pen', 'idle'): (4, 4), ('pen', 'wave'): (1, 1)}
 ORIGIN = {k: 'feet' for k in KINDS}
 ORIGIN.update({'monal': 'centre', 'chough': 'centre', 'coin': 'centre', 'star': 'centre', 'qblock': 'centre', 'used': 'centre'})
 HEIGHT = {'momo': 22 / PX, 'roti': 22 / PX, 'marmot': 30 / PX, 'yeti': 54 / PX, 'snowball': 24 / PX, 'tinBot': 46 / PX,
@@ -81,7 +93,7 @@ COLORS = {
     'chough_feet': '#e83a3a', 'chough_eye_white': '#fbfbf2', 'chough_pupil': '#1a1020', 'chough_mouth': '#2a2030',
     'yeti_fur': '#f4f8ff', 'yeti_fur2': '#dce6f4', 'yeti_face': '#8ab0d8', 'yeti_face2': '#a8c8e8', 'yeti_hand': '#7aa0cc',
     'yeti_scarf': '#e8384f', 'yeti_scarf2': '#ffd23a', 'yeti_snow': '#ffffff', 'yeti_tooth': '#ffffff', 'yeti_horn': '#c8b898',
-    'yeti_eye_white': '#fbfbf2', 'yeti_pupil': '#1a1020', 'yeti_mouth': '#3a2a5a',
+    'yeti_frost': '#2a6ad8', 'yeti_frostglow': '#d8f4ff', 'yeti_eye_white': '#fbfbf2', 'yeti_pupil': '#1a1020', 'yeti_mouth': '#3a2a5a',
     'snowball_snow': '#f4f8ff', 'snowball_shade': '#c8d8f0', 'snowball_twig': '#6a4a2a', 'snowball_pebble': '#7a7e8a',
     'snowball_eye_white': '#fbfbf2', 'snowball_pupil': '#1a1020', 'snowball_mouth': '#3a4a6a',
     'tinBot_tin': '#a8aebc', 'tinBot_tin2': '#8a909e', 'tinBot_band': '#ffd84a', 'tinBot_belt': '#7a2ac8', 'tinBot_eyeglow': '#ff4a4a',
@@ -273,7 +285,7 @@ def build_marmot(root, pose, t):
     make_part('body', blob(bc, 0.24, 0.22, 0.3, seg=24, rows=14), 'marmot_fur', root, Mx)
     bsurf = ellipsoid_surf(bc, 0.24, 0.22, 0.3)
     make_part('belly', oval_patch(bsurf, bc.z - 0.02, 0.2, -1.2, 0.6), 'marmot_belly', root, Mx)
-    hc = V(0.05, 0, 0.74)
+    hc = V(0.05, 0, 0.74) if pose != 'sleep' else V(0.1, 0, 0.62)
     make_part('head', blob(hc, 0.17, 0.16, 0.15, seg=22, rows=12), 'marmot_fur', root, Mx)
     hsurf = ellipsoid_surf(hc, 0.17, 0.16, 0.15)
     make_part('cap', ell_cap(hc, (0.17, 0.16, 0.15), (-0.2, -0.1, 1), 55, seg=18, rows=5), 'marmot_fur2', root, Mx)
@@ -297,12 +309,23 @@ def build_marmot(root, pose, t):
         ang = 20 + 15 * math.sin(TAU * t)
     elif pose == 'stun':
         ang = -60
+    elif pose == 'whistle':
+        ang = -125
+    elif pose == 'tell':
+        ang = -20
+    elif pose == 'sleep':
+        ang = 60
     else:
         ang = 30
     sh = V(0.12, -0.16, 0.5)
     MA = Mx @ about(sh, rot_y(-ang))
     make_part('arm', tube([sh, sh + V(0.06, 0, -0.08), sh + V(0.12, 0, -0.14)], 0.045, 0.04, seg=8), 'marmot_fur', root, MA)
     make_part('paw', sphere(sh + V(0.14, 0, -0.16), 0.045, seg=10, rows=6), 'marmot_fur2', root, MA)
+    if pose == 'whistle':
+        for k in range(3):
+            c0 = hc + V(0.3 + 0.08 * k, -0.1, 0.05 + 0.1 * k)
+            ob = make_part('note%d' % k, tube([c0, c0 + V(0.05, 0, 0.04), c0 + V(0.1, 0, 0.0)], 0.012, seg=4), 'marmot_tooth', root, Mx, subsurf=0)
+            ob['outline'] = 0.6
     if pose in ('throw', 'idle', 'walk') and not (pose == 'throw' and t >= 0.55):
         make_part('pebble', sphere(sh + V(0.17, -0.04, -0.14), 0.055, seg=10, rows=6), 'marmot_pebble', root, MA, subsurf=1)
     make_part('arm2', tube([V(0.1, 0.14, 0.5), V(0.18, 0.14, 0.38)], 0.04, seg=8), 'marmot_fur2', root, Mx)
@@ -345,6 +368,17 @@ def build_yeti(root, pose, t):
     for side, az in (('r', -0.85), ('l', -1.5)):
         p, n = hsurf(hc.z + 0.05, az)
         eye_one('yeti', side, p + n * 0.025, n, root, HM, P)
+    if pose in ('tell', 'breathe'):
+        for k, az in enumerate((-0.6, -1.75)):
+            make_part('bluecheek%d' % k, oval_patch(hsurf, hc.z - 0.07, 0.06, az, 0.22, thick=0.04), 'yeti_frost', root, HM)
+    if pose == 'breathe':
+        p, n = hsurf(hc.z - 0.12, -1.2)
+        for k in range(3):
+            ob = make_part('puff%d' % k, sphere(p + n * (0.12 + 0.14 * k) + V(0.1 * k, 0, 0.02 * k), 0.07 + 0.03 * k, seg=10, rows=6), 'yeti_frostglow', root, HM)
+            ob['outline'] = 0.5
+    if pose == 'pant':
+        p, n = hsurf(hc.z - 0.18, -1.2)
+        make_part('pant_tongue', ellipsoid(p + n * 0.05 - Z * 0.06, X * 0.05, Y * 0.03, Z * 0.08, seg=10, rows=6), 'jp_tongue', root, HM, subsurf=1)
     if P['mouth']:
         JE.open_mouth('yeti', root, HM, hsurf, P['mouth'], hc.z - 0.12, math.radians(-45), math.radians(-100), scale=1.2, tongue=True)
         if P['mouth'] == 'grin':
@@ -370,6 +404,10 @@ def build_yeti(root, pose, t):
         ang = 8 + 6 * math.sin(TAU * t)
     elif pose == 'stun':
         ang = -120
+    elif pose in ('tell', 'breathe'):
+        ang = -30
+    elif pose == 'pant':
+        ang = 25
     else:
         ang = 40
     for side, sg, a0 in (('far', 1, -ang * 0.5 + 12), ('near', -1, ang)):
