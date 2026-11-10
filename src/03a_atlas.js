@@ -11,15 +11,23 @@
            strips: { id: { x, y, w, h, top } } }      background strips: `top` = the strip's row offset in the layer
    Art falls back to the procedural drawing until the atlas is in,
    and the tile and background caches are flushed when it arrives.
+   Memory: a decoded atlas is 4-17 MB, so a level start calls
+   Atlas.keep([...]) with the atlases it uses (its country's and its
+   areas' themes) and every other atlas is dropped; one that comes
+   back later reloads from its kept meta (no script refetch), drawing
+   procedurally until its image is decoded again.
    ============================================================ */
 const Atlas = {
   base: 'sprites/',
   atlases: {}, pending: {}, failed: {}, listeners: [],
+  metas: {},          // name -> meta, kept after an atlas is dropped so a reload needs only the image
+  keepSet: null,      // Set of the atlas names the current level uses (null: keep everything)
   has(name) { const a = this.atlases[name]; return !!(a && a.ready); },
   get(name) { return this.atlases[name] || null; },
   /* load(name): fetch the atlas once; resolves when its image is drawable (or on failure, quietly). */
   load(name) {
     if (this.atlases[name] || this.pending[name] || this.failed[name]) return;
+    if (this.metas[name]) { this.pending[name] = true; this.register(name, this.metas[name]); return; }
     if (typeof document === 'undefined') return;
     this.pending[name] = true;
     const s = document.createElement('script');
@@ -29,16 +37,43 @@ const Atlas = {
   },
   need(names) { for (const n of names || []) if (n) this.load(n); },
   register(name, meta) {
+    this.metas[name] = meta;
     const a = { name, meta, img: new Image(), ready: false, scale: meta.scale || 3 };
     this.atlases[name] = a;
-    a.img.onload = () => { a.ready = true; delete this.pending[name]; this.arrived(name); };
-    a.img.onerror = () => { delete this.pending[name]; delete this.atlases[name]; this.failed[name] = true; };
+    a.img.onload = () => {
+      if (this.atlases[name] !== a) return;                                   // dropped while loading
+      delete this.pending[name];
+      if (this.keepSet && !this.keepSet.has(name)) { this.drop(name); return; } // the level moved on meanwhile
+      a.ready = true; this.arrived(name);
+    };
+    a.img.onerror = () => { if (this.atlases[name] !== a) return; delete this.pending[name]; delete this.atlases[name]; this.failed[name] = true; };
     a.img.src = this.base + (meta.image || name + '.png');
+  },
+  /* keep(names): the atlases the current level uses; every other one is dropped now (and any still loading is
+     dropped when it lands). Call it when a level starts, before need(). */
+  keep(names) {
+    this.keepSet = new Set((names || []).filter(Boolean));
+    let dropped = false;
+    for (const n of Object.keys(this.atlases)) if (!this.keepSet.has(n)) { this.drop(n); dropped = true; }
+    if (dropped) this.flushCaches();
+  },
+  /* drop(name): forget an atlas's image so the browser can free its decoded pixels; the meta stays for a reload */
+  drop(name) {
+    const a = this.atlases[name]; if (!a) return;
+    delete this.atlases[name]; delete this.pending[name];
+    a.ready = false; a.img.onload = a.img.onerror = null;
+    try { a.img.removeAttribute('src'); } catch (e) { /* not a DOM image */ }
+    a.img = null;
+  },
+  /* memory held by decoded atlas images, in MB (for tests and the debug overlay) */
+  decodedMB() { let b = 0; for (const n in this.atlases) { const a = this.atlases[n]; if (a.ready && a.img) b += (a.img.naturalWidth || 0) * (a.img.naturalHeight || 0) * 4; } return Math.round(b / 1e5) / 10; },
+  flushCaches() {
+    if (typeof TileArt !== 'undefined') TileArt.cache = {};
+    if (typeof BG !== 'undefined') BG.cache = {};
   },
   arrived(name) {
     // painted caches were built without this art: rebuild them on the next frame
-    if (typeof TileArt !== 'undefined') TileArt.cache = {};
-    if (typeof BG !== 'undefined') BG.cache = {};
+    this.flushCaches();
     for (const fn of this.listeners) { try { fn(name); } catch (e) { console.warn('atlas listener', e); } }
   },
   onLoad(fn) { this.listeners.push(fn); },
