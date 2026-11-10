@@ -300,7 +300,15 @@ class BrCoati extends TourEnemy {
     p.hurt(this);
   }
   giveBack() { const g = this.g; for (let k = 0; k < this.loot; k++) { g.spawn(new PickPop(g, this.cx + (k - this.loot / 2) * 6, this.y)); g.addPick(); } if (this.loot) K.say(g, this, 'FINE, TAKE THEM!', '#ffd84a'); this.loot = 0; }
+  // pre-rendered art (30_tour_sprites.js sets COATI.sprite = 'coati': walk, flee, stun, flat, ko): the stolen
+  // coins ride on its back as the country's spinning coin; coatiArt (which draws its own loot) stays the fallback
+  paint(ctx, x, y, mode) {
+    super.paint(ctx, x, y, mode);
+    const a = this.sprite;
+    if (a && this.loot && mode !== 'flat' && mode !== 'ko') Atlas.animate(ctx, a, 'coin/spin', this.t, x - (this.dir || 1) * 3, y - 25, 1, { scale: 0.8 });
+  }
 }
+BrCoati.cfg = COATI;
 const enemies = {
   brCrab: { cls: TourEnemy.make({ w: 26, h: 16, speed: 1.3, behavior: 'walk', art: crabArt, burst: '#e8422a' }), place: 'walk' },
   brCoconut: { cls: TourEnemy.make({ w: 22, h: 22, speed: 0.7, behavior: 'roll', range: 8, rollSpeed: 6, art: coconutArt, burst: '#3a8a3a' }), place: 'walk' },

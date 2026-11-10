@@ -36,6 +36,7 @@ TAU = math.tau
 # colour roles; the Blender material is named '<MODULE>_<role>' so the five Mozambique themes never clash.
 # Roles whose name contains 'glow' render unlit (the look kit makes them emissive).
 PALETTE = {
+    'far_range': '#c4b4c8', 'far_massif': '#ab9eb8',
     'sav_plain': '#c89a4a', 'sav_hill': '#d6a85a', 'sav_hill2': '#c08e42', 'sav_trunk': '#6e4e26', 'sav_crown': '#8a7030',
     'sav_eleph': '#8a6a50', 'sav_tusk': '#f0e6d0', 'sav_mound': '#b4763a', 'sav_grass': '#e0b85c',
     'great_trunk': '#7a5830', 'great_fruit': '#a89a68', 'water': '#5ab0b8', 'water_hi': '#a8e0e4', 'water_rim': '#a0783a',
@@ -344,6 +345,14 @@ def tuft(B, x, y, z, s, role, rng):
 def build_L0(rng):
     L = 'L0'
     plain(L, 'L0_plain', 'sav_plain', y=2.0, depth=5.0, top=0.02, bottom=-3.0)
+    # the far horizon: a hazy blue-violet massif (the plain's mountain) and a paler range behind it, exactly periodic
+    for k, (y, zmin, zmax, role, harm) in enumerate(((5.8, 1.2, 3.2, 'far_range', 4), (5.2, 0.4, 2.1, 'far_massif', 3))):
+        terms = [(rng.uniform(0.4, 1.0) / n, n, rng.uniform(0, TAU)) for n in range(1, harm + 1)]
+        raw = lambda x, terms=terms: sum(a * math.sin(TAU * c * x / P + ph) for a, c, ph in terms)
+        smp = [raw(P * i / 256) for i in range(256)]; lo, hi = min(smp), max(smp)
+        zf = lambda x, raw=raw, lo=lo, hi=hi, zmin=zmin, zmax=zmax: zmin + (zmax - zmin) * (raw(x) - lo) / (hi - lo)
+        xs = [-0.6 + (P + 1.2) * i / 120 for i in range(121)]
+        Builder(f'L0_far_{k}', L).slab(role, [(xs[0], -0.5), (xs[-1], -0.5)] + [(x, zf(x)) for x in reversed(xs)], 0.4, at=(0, y, 0)).done(period=None)
     for i in range(6):
         hill(L, f'L0_hill_{i}', i * P / 6 + rng.uniform(0, 3), 4.2 - (i % 2) * 1.3, rng.uniform(5.5, 8.5), rng.uniform(0.6, 1.1), 'sav_hill' if i % 2 == 0 else 'sav_hill2', yscale=0.25, rng=rng)
     # the great baobab: 6.2 m, so its crown stays inside the strip above base 340

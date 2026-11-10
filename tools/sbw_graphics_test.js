@@ -44,6 +44,37 @@ for(const [W,H] of [[874,402],[390,844],[667,375],[568,320],[320,568]]) {
     layouts++;
   }
 }
+// More than five stops: secret levels and branches (mapCell / mapFrom), a stop hidden until unlocked, and a plain
+// 9-stop snake. Every stop gets its own non-overlapping, contained target at every viewport size.
+const stampsOk=(m,tag)=>{
+  for(const b of m.stamps){assert([b.x,b.y,b.w,b.h,b.cx,b.cy].every(Number.isFinite),tag+': finite');
+    assert(b.x>=m.panelR.x&&b.x+b.w<=m.panelR.x+m.panelR.w&&b.y>=m.panelR.y&&b.y+b.h<=m.panelR.y+m.panelR.h,tag+': inside the panel');
+    assert(b.w>=40&&b.h>=40,tag+': targets at least 40px');}
+  for(let a=0;a<m.stamps.length;a++)for(let c=a+1;c<m.stamps.length;c++){const x=m.stamps[a],y=m.stamps[c];
+    assert(!(x.x<y.x+y.w&&x.x+x.w>y.x&&x.y<y.y+y.h&&x.y+x.h>y.y),`${tag}: stops ${x.i} and ${y.i} overlap`);}
+};
+{
+  const C=Tour.countries.mx,orig=C.levels,base=orig.map(L=>Object.assign({},L));
+  const branchy=base.concat([Object.assign({},base[0],{name:'Secret Cenote',mapCell:[0,2],mapFrom:1}),Object.assign({},base[1],{name:'Hidden Grotto',mapCell:[2,2],mapFrom:3,mapHidden:true})]);
+  const nine=base.concat(base.slice(0,4).map((L,k)=>Object.assign({},L,{name:'Extra '+(k+1)})));
+  let cases=0;
+  for(const [W,H] of [[874,402],[390,844],[667,375],[568,320],[320,568]]){
+    B.Game.cssW=W;B.Game.cssH=H;
+    for(const [tag,levels,unlockHidden] of [['branches',branchy,false],['branches+hidden open',branchy,true],['nine',nine,false]]){
+      C.levels=levels;B.Save.data=B.Save.defaults();
+      for(let k=1;k<=levels.length;k++){B.Save.data.done['1-'+k]=true;}
+      if(!unlockHidden){delete B.Save.data.done['1-6'];}   // 1-7 (hidden) needs 1-6 done
+      const m=Object.create(TourMapScene.prototype);Object.assign(m,{sel:'mx',cam:{z:4},plane:{lon:0,lat:0},t:1,focus:0});m.build();m.drawPanel(ctx);
+      const want=tag==='branches'?6:levels.length;
+      assert.equal(m.stamps.length,want,`${tag} ${W}x${H}: ${want} stops shown`);
+      if(tag.startsWith('branches')){const s6=m.stamps.find(b=>b.i===6);assert(s6&&s6.from===1,'secret stop 6 branches from stop 2');}
+      if(tag==='branches+hidden open'){const s7=m.stamps.find(b=>b.i===7);assert(s7&&s7.from===3,'hidden stop 7 appears, branching from stop 4');}
+      stampsOk(m,`${tag} ${W}x${H}`);cases++;
+    }
+  }
+  C.levels=orig;
+  console.log(`PASS ${cases} more-than-five-stop layouts (branches, hidden stop, nine stops)`);
+}
 // Render dispatch: atlas art has its outline baked in, so only the procedural fallback goes through Ink, decided
 // per frame actually drawn (an atlas can be loaded yet have no art for this kind or mode).
 const Enemy=w.BRADY_TYPES.mxElote;

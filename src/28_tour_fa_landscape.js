@@ -6,7 +6,8 @@
    overlap however many there are. By default the levels snake through the grid (bottom row left to right, the next
    row right to left, ...). A level can pin its cell with `mapCell: [col, row]` (row 0 = the bottom row) and say
    which stop its trail comes from with `mapFrom: <0-based level index>`: that is how secret levels and branching
-   paths go in. A free cell gets the landmark.
+   paths go in. `mapHidden: true` keeps a stop (and its trail) off the map until it is unlocked; its cell stays
+   reserved so nothing moves when it appears. A free cell gets the landmark.
 
    Landmarks are original, non-sacred miniatures (sacred sites stay in level backgrounds, never as map icons). */
 const TourLandscape = {
@@ -208,17 +209,20 @@ const TourLandscape = {
     const blockH = 7 + 2 * r + 4 + (compact ? lh + 2 : 2 * lh + 12);
     this.stopLook = { r, lh, compact, cw, ch };
     const used = {};
+    this.stampAt = {};
     C.levels.forEach((L, k) => {
       const [col, row] = G.cells[k]; used[col + ',' + row] = true;
+      if (L.mapHidden && !TourProgress.isUnlocked(C.world + '-' + (k + 1))) return;
       const x = A.x + col * cw, y = A.y + (G.rows - 1 - row) * ch;
       const slack = Math.max(0, ch - 4 - blockH), jit = (col % 2 ? -1 : 1) * Math.min(slack / 2, ch * 0.1);
       const top = y + 2 + slack / 2 + jit;
-      this.stamps.push({ i: k + 1, x: x + 2, y: y + 2, w: cw - 4, h: ch - 4, cx: x + cw / 2, cy: top + 7 + r, top, from: G.from[k] });
+      const st = { i: k + 1, x: x + 2, y: y + 2, w: cw - 4, h: ch - 4, cx: x + cw / 2, cy: top + 7 + r, top, from: G.from[k] };
+      this.stamps.push(st); this.stampAt[k] = st;
     });
     // the landmark: in a free cell (top row first), otherwise small in the hills at the back
     let free = null;
     for (let row = G.rows - 1; row >= 0 && !free; row--) for (let col = 0; col < G.cols; col++) if (!used[col + ',' + row]) { free = [col, row]; break; }
-    if (free) { const s = Math.min(cw * 0.62, ch * 0.72, 54); this.landmarkAt = { x: A.x + (free[0] + 0.5) * cw, y: A.y + (G.rows - 1 - free[1]) * ch + ch * 0.5 + s * 0.5, size: s }; }
+    if (free) { const s = Math.min(cw * 0.62, ch * 0.72, 72); this.landmarkAt = { x: A.x + (free[0] + 0.5) * cw, y: A.y + (G.rows - 1 - free[1]) * ch + ch * 0.5 + s * 0.5, size: s }; }
     else this.landmarkAt = { x: A.x + A.w * 0.9, y: A.y + A.h * 0.3, size: Math.min(26, A.h * 0.16) };
   };
   TourMapScene.prototype.drawPanel = function (ctx) {
@@ -233,7 +237,7 @@ const TourLandscape = {
     // the trail: done stretches solid, future ones dotted
     ctx.lineCap = 'round';
     this.stamps.forEach(b => {
-      const a = this.stamps[b.from]; if (!a) return;
+      const a = this.stampAt[b.from]; if (!a) return;
       const open = TourProgress.isUnlocked(C.world + '-' + b.i);
       const trail = () => { ctx.beginPath(); ctx.moveTo(a.cx, a.cy); const my = (a.cy + b.cy) / 2; if (Math.abs(a.cy - b.cy) < 4) ctx.bezierCurveTo((a.cx * 2 + b.cx) / 3, a.cy + 10, (a.cx + b.cx * 2) / 3, b.cy - 10, b.cx, b.cy); else ctx.bezierCurveTo(a.cx + (a.cx > A.x + A.w / 2 ? 26 : -26), my, b.cx + (b.cx > A.x + A.w / 2 ? 26 : -26), my, b.cx, b.cy); };
       ctx.strokeStyle = 'rgba(45,67,63,0.35)'; ctx.lineWidth = 10; trail(); ctx.stroke();
@@ -242,7 +246,7 @@ const TourLandscape = {
     const active = this.stamps.find(b => TourProgress.isUnlocked(C.world + '-' + b.i) && !Save.data.done[C.world + '-' + b.i]);
     const r = K.r, lh = K.lh, labelW = Math.max(40, K.cw - 8);
     this.stamps.forEach((b, k) => {
-      const id = C.world + '-' + b.i, L = C.levels[k], open = TourProgress.isUnlocked(id), done = !!Save.data.done[id], boss = L.style === 'castle', foc = this.focus === k && !Input.usingTouch;
+      const id = C.world + '-' + b.i, L = C.levels[b.i - 1], open = TourProgress.isUnlocked(id), done = !!Save.data.done[id], boss = L.style === 'castle', foc = this.focus === k && !Input.usingTouch;
       const x = b.cx, y = b.cy;
       // postcards found (three marks above the stop)
       const gold = Save.data.gold[id] || [];

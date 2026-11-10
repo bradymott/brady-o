@@ -220,6 +220,9 @@ class Player {
 
     if (this.invuln > 0) this.invuln -= dt;
     for (const f in this.fx) if (this.fx[f] > 0) { this.fx[f] -= dt; if (this.fx[f] <= 0) { this.fx[f] = 0; Sound.play('float', { pitch: 0.7, vol: 0.4 }); } }
+    // the boss-arena entry walk (Play.bossStart): a few steps right, then control comes back
+    const ew = g.entryWalk;
+    if (ew) { ew.t -= dt; if (ew.t <= 0 || this.x >= ew.x || this.dead || inp.left || inp.jumpPressed) g.entryWalk = null; else inp = { left: false, right: true, up: false, down: false, jump: false, action: false, jumpPressed: false, actionPressed: false }; }
     if (this.stunT > 0) { this.stunT -= dt; inp = { left: false, right: false, up: false, down: false, jump: false, action: false, jumpPressed: false, actionPressed: false }; }
     if (this.slowT > 0) this.slowT -= dt;
     if (this.spinVis > 0) this.spinVis -= dt;

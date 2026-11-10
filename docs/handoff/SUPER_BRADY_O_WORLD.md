@@ -67,6 +67,7 @@ Read its notes: `git show origin/codex/super-brady-o-graphics-pass:docs/GRAPHICS
   - `node tools/gameplay_test.js`
   - `node tools/boss_test.js`
   - `node tools/apps_test.js`
+  - `node tools/sbw_graphics_test.js` (country map layouts, enemy ink dispatch) and `node tools/sbw_atlas_test.js` (atlas memory)
 
 ## First message (Brady pastes this)
 ```

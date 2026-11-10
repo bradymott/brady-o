@@ -380,6 +380,10 @@ class Play {
   }
   bossStart(b) {
     this.bossLock = { x0: b.arenaX0, x1: b.arenaX1 };
+    // Brady walks a few steps in during the intro banner: the locked camera puts the arena's left edge at the
+    // bottom-left of the screen, right under the touch joystick, which hid him at the start of every fight
+    const p = this.player, walkTo = Math.min(b.arenaX0 + 3.5 * TS, b.x - 2.5 * TS);
+    if (p && walkTo > p.x + 4) { this.entryWalk = { x: walkTo, t: 1.3 }; }
     this.mus(this.bossTrack(b));
     // seal the arena entrance
     const tx = Math.floor(b.arenaX0 / TS) - 1;
@@ -964,7 +968,7 @@ class Play {
     ctx.fillText('×' + Math.max(0, Save.data.lives), left + 32, hy + 15);
     // picks
     pill(left + 82, hy, 78, 28);
-    ctx.save(); ctx.translate(left + 98, hy + 14); ctx.scale(0.8, 0.8); Sprites.pick(ctx, 0, 0, this.t, 1); ctx.restore();
+    ctx.save(); ctx.translate(left + 98, hy + 14); ctx.scale(0.8, 0.8); Sprites.pick(ctx, 0, 0, 0.45, 1); ctx.restore();   // a still coin, face-on (frame 4 of the 10 fps spin clips is the widest)
     ctx.fillStyle = '#ffd84a'; ctx.fillText('×' + String(this.picks).padStart(2, '0'), left + 112, hy + 15);
     // gold records
     const gx = left + 168;

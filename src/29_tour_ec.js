@@ -330,8 +330,9 @@ const iguanaArt = (ctx, e, x, y, m) => {
   ctx.restore();
 };
 // puffers inflate (and get bigger) when Brady swims close
+const PUFFER = { w: 20, h: 20, speed: 0.8, range: 2, chase: false, art: pufferArt };
 class EcPuffer extends TourSwimmer {
-  constructor(g, s) { super(g, s, { w: 20, h: 20, speed: 0.8, range: 2, chase: false, art: pufferArt }); this.puff = 0; }
+  constructor(g, s) { super(g, s, PUFFER); this.puff = 0; }
   update(dt) {
     super.update(dt);
     if (this.knocked) return;
@@ -339,7 +340,18 @@ class EcPuffer extends TourSwimmer {
     const np = approach(this.puff, want, dt * (want ? 4 : 1.2));
     if (np !== this.puff) { const cx = this.cx, cy = this.cy, s = 20 + np * 14; this.puff = np; this.w = this.h = s; this.x = cx - s / 2; this.y = cy - s / 2; }
   }
+  // pre-rendered art (30_tour_sprites.js sets PUFFER.sprite): the calm 'puffer/swim' clip, then four inflation
+  // steps 'puffer_puff_000'..'_003' picked by how puffed it is; pufferArt stays the fallback
+  drawArt(ctx) {
+    const a = this.sprite;
+    if (a && !this.knocked && this.puff > 0.12) {
+      const k = Math.max(0, Math.min(3, Math.round(this.puff * 4) - 1));
+      if (Atlas.draw(ctx, a, 'puffer_puff_00' + k, this.cx, this.cy, this.dir || 1, { scale: ART_SCALE.enemy })) return;
+    }
+    super.drawArt(ctx);
+  }
 }
+EcPuffer.cfg = PUFFER;
 // living ice blocks, cut from the glacier: they skate along the ice
 const iceCubeArt = (ctx, e, x, y, m) => {
   ctx.save(); ctx.translate(x, y); if (m === 'flat') ctx.scale(1.2, 0.4);
@@ -417,7 +429,17 @@ class EcSurge extends Ent {
     for (let i = 0; i < 12; i++) { const ph = ((this.t * 0.9 * d + i * 0.29) % 1 + 1) % 1, sx = z.x + ph * z.w, sy = z.y + 20 + ((i * 61) % Math.max(40, z.h - 40)); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - d * 22 * k, sy); ctx.stroke(); }
   }
 }
-const entities = { ecBooby: TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: 'BLUE BOOTS! BOUNCY!', art: boobyArt }), ecIcicle: EcIcicle, ecSurge: EcSurge };
+// the pre-rendered booby (sprite 'booby': idle = its foot dance, wave once it has lent the boots) turns to face
+// Brady and keeps the procedural art's '!' until the boots are handed over
+class EcBooby extends TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: 'BLUE BOOTS! BOUNCY!', art: boobyArt }) {
+  drawArt(ctx) {
+    const p = this.g.player, spr = this.sprite;
+    if (spr && p) this.dir = p.cx < this.cx ? -1 : 1;
+    super.drawArt(ctx);
+    if (spr && !this.given) { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', this.cx, this.y + this.h - 54 + Math.sin(this.g.t * 5) * 2); }
+  }
+}
+const entities = { ecBooby: EcBooby, ecIcicle: EcIcicle, ecSurge: EcSurge };
 
 /* ---------------- the signature power-up: BOOBY BOOTS ---------------- */
 // bright blue boots (like a blue-footed booby's feet): super-bouncy jumps; a big landing sends out a shockwave

@@ -2,7 +2,8 @@
 # Collection per parallax layer, for the pre-rendered 2D sprite pipeline. Original art: the volcano Cotopaxi
 # standing over a snowy pine forest.
 #
-#   L0  ecCotopaxi (base 330, #8a9ac0)  the perfect cone with its snow cap and a wisp of steam, foothills
+#   L0  ecCotopaxi (base 330, #8a9ac0)  the perfect cone with its snow cap and a wisp of steam, foothills, and the
+#                                       Ice Fort far off at its foot (towers, crenellated wall, keep, pennants)
 #   L1  pines      (base 365, #4a6a8a)  a dense snowy forest: tiered pines with snow collars, round trees with
 #                                       snow caps, snow mounds and a dusting along the base
 #   ground                              snow: a snow cap (with icicles) over packed ice blocks
@@ -25,6 +26,9 @@ SKY = ['#3a5a9a', '#9ac0f0', '#e8f4ff']
 PALETTE = {
     # L0 Cotopaxi (#8a9ac0)
     'cotopaxi_cone': '#8a9ac0', 'cotopaxi_cone_snow': '#ffffff', 'cotopaxi_steam': '#f4f8ff', 'cotopaxi_foot': '#7a8ab0',
+    # the distant Ice Fort (pale ice blues, a red pennant)
+    'cotopaxi_fort': '#b8d4ec', 'cotopaxi_fort_hi': '#d4e8f8', 'cotopaxi_fort_line': '#94b4d4', 'cotopaxi_fort_gate': '#5a7aa0',
+    'cotopaxi_fort_roof': '#e8f4ff', 'cotopaxi_flag': '#e8323a',
     # L1 pines (#4a6a8a)
     'cotopaxi_pine': '#4a6a8a', 'cotopaxi_pine2': '#3f5c7a', 'cotopaxi_trunk': '#2e3e54', 'cotopaxi_pine_snow': '#f0f8ff',
     'cotopaxi_drift': '#e4f0fc', 'cotopaxi_forest_fill': '#425f7e',
@@ -34,8 +38,34 @@ PALETTE = {
 }
 TH = K.Theme(MODULE, LAYERS, BASES, PALETTE, SKY)
 
+def ice_fort(L, x0, y, z0):
+    """The Ice Fort itself, far off at the volcano's foot: a crenellated wall of ice blocks between two round towers
+    with cone roofs and pennants, a gate arch, and a tall keep behind."""
+    B = Builder('L0_fort', L, TH)
+    W, H = 5.6, 1.7
+    B.box('cotopaxi_fort', (x0 + W / 2, y, z0 + H / 2), (W, 0.8, H), bevel=0.06)
+    for k in range(9):                                            # crenels
+        B.box('cotopaxi_fort_hi', (x0 + 0.3 + k * (W - 0.6) / 8, y - 0.05, z0 + H + 0.18), (0.34, 0.7, 0.36), bevel=0.04)
+    for k in range(4):                                            # block courses
+        B.box('cotopaxi_fort_line', (x0 + W / 2, y - 0.42, z0 + 0.4 + k * 0.38), (W - 0.2, 0.04, 0.05), bevel=0.0)
+    B.arch('cotopaxi_fort_gate', (x0 + W / 2, y - 0.45, z0), 1.0, 1.1, 0.1)
+    for tx, th in ((x0, 2.9), (x0 + W, 2.6)):
+        B.lathe('cotopaxi_fort', [(0.75, -0.3), (0.72, th)], 10, at=(tx, y, z0), yscale=0.8, cap_top=True)
+        B.lathe('cotopaxi_fort_roof', [(0.95, th), (0.0, th + 1.3)], 10, at=(tx, y, z0), yscale=0.8, cap_top=False)
+        B.rod('cotopaxi_trunk', (tx, y, z0 + th + 1.2), (tx, y, z0 + th + 2.0), 0.04, segs=4)
+        B.slab('cotopaxi_flag', [(tx, z0 + th + 1.95), (tx + 0.7, z0 + th + 1.8), (tx, z0 + th + 1.6)], 0.04, at=(0, y - 0.1, 0))
+    kx = x0 + W * 0.62
+    B.box('cotopaxi_fort_hi', (kx, y + 0.9, z0 + 1.9), (1.6, 0.8, 3.8), bevel=0.06)
+    B.lathe('cotopaxi_fort_roof', [(1.05, 3.8), (0.0, 5.1)], 4, at=(kx, y + 0.9, z0), yscale=0.6, cap_top=False, phase=math.pi / 4)
+    B.done(period=None)
+    B = Builder('L0_fort_snow', L, TH)                            # snow banked against the foot of the walls
+    for k in range(7):
+        B.sphere('cotopaxi_steam', (x0 - 0.6 + k * 1.15, y - 0.6, z0 - 0.1), 0.65, scale=(1.3, 0.6, 0.45), subdiv=1)
+    B.done(period=None)
+
 def build_L0(rng):
     K.volcano_cone(TH, 'L0', rng, {'rock': 'cotopaxi_cone', 'snow': 'cotopaxi_cone_snow', 'steam': 'cotopaxi_steam', 'foot': 'cotopaxi_foot'}, h=8.6, R=11.2)
+    ice_fort('L0', P * 0.08, 2.2, 0.35)
 
 def pine(B, x, y, h, w, role, ph):
     """A tiered pine: four stacked cones (6 sides) on a short trunk, each tier with a zig-zag snow collar."""

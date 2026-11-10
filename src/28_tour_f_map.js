@@ -225,7 +225,7 @@ class TourMapScene {
       const n = list[(i + (k === 'right' ? 1 : list.length - 1)) % list.length]; if (n) this.select(n.id);
     }
     if (k === 'up' || k === 'down') { const n = this.stamps.length; if (n) { this.focus = ((this.focus || 0) + (k === 'down' ? 1 : n - 1)) % n; Sound.play('select', { vol: 0.4 }); } }
-    if (k === 'enter' && this.stamps.length) this.play((this.focus || 0) + 1);
+    if (k === 'enter' && this.stamps.length) this.play(this.stamps[Math.min(this.focus || 0, this.stamps.length - 1)].i);
     if (k === 'back' || Input.pausePressed) this.backBtn.fn();
   }
   draw(ctx) {
