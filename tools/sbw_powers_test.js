@@ -54,7 +54,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       out.one = { list: TP().list(p), visible: TP().visible(g), use: p.actionUse() };
       p.collect('joint'); sim(0.05);
       out.two = { list: TP().list(p), active: TP().active(p), visible: TP().visible(g) };
-      p.collect('gear:plane'); sim(0.8);
+      p.collect('gear:plane'); sim(1.6);
       out.three = { list: TP().list(p), active: TP().active(p), hands: p.handsKind(), pack: p.pack };
       // the action button fires the active power: the plane flies
       sim(0.05, { actionPressed: true }); out.planeThrown = !!(p.hands && p.hands.thrown); sim(2.5);
@@ -123,6 +123,43 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       return { air, jumped, vy: Math.round(p.vy) };
     });
     check('jump buffering kept: a press just before landing jumps on touchdown', buf.air && buf.jumped, buf);
+  });
+
+  /* ---------- trip moments ---------- */
+  await section('trips', async () => {
+    const r = await page.evaluate(() => {
+      const B = window.BRADY, T = window.BRADY_POWERS.TripFX, st = B.Save.data.settings, out = {};
+      const run = calm => {
+        st.reduceMotion = calm; const o = {};
+        let g = lab('gear.stands'), p = P(); p.hurt = () => {};
+        // the joint: green for about 1.35 s with a slow-mo, then clear
+        p.collect('joint'); sim(0.08); o.jointStart = +T.levels(g).joint.toFixed(2); sim(0.3); o.jointMid = +T.levels(g).joint.toFixed(2); o.slowmo = +T.timeScale(g).toFixed(2);
+        const t0 = g.t; sim(0.5); o.worldDt = +((g.t - t0) / 0.5).toFixed(2); sim(1.2); o.jointEnd = T.levels(g).joint;
+        // LSD: strong first, subtle while flying, gone after the flight
+        p.collect('lsd'); sim(1.2); o.lsdPeak = +T.levels(g).lsd.toFixed(2); sim(4); o.lsdLow = +T.levels(g).lsd.toFixed(2); o.flying = p.lsdT > 0;
+        sim(9); o.lsdEnd = +T.levels(g).lsd.toFixed(3);
+        // the mushroom
+        p.collect('mushroom'); sim(0.8); o.shroom = +T.levels(g).shroom.toFixed(2); sim(5); o.shroomEnd = T.levels(g).shroom;
+        // draw a frame with every trip on (no errors), and check the breath copy only happens at full motion
+        g.tripJoint = 0.8; g.lsdK = 1; g.dizzy = 2; B.PostFX = window.BRADY_POWERS.PostFX; window.BRADY_POWERS.PostFX.tripWarp = null;
+        B.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); g.draw(B.Game.ctx); o.breath = !!window.BRADY_POWERS.PostFX.tripWarp;
+        o.frames = T.frames.length;
+        return o;
+      };
+      out.full = run(false); out.calm = run(true); st.reduceMotion = false;
+      return out;
+    });
+    const f = r.full, c = r.calm;
+    check('joint pickup: a green moment that starts at once, holds, then clears (~1.35 s)', f.jointStart > 0 && f.jointMid > 0.9 && f.jointEnd === 0, f);
+    check('joint pickup: the world eases into slow-mo (and out)', f.slowmo < 0.7 && f.worldDt < 0.95, { slowmo: f.slowmo, worldDt: f.worldDt });
+    check('LSD: strong at first, a subtle level while flying, gone after the flight', f.lsdPeak > 0.9 && f.lsdLow > 0.2 && f.lsdLow < 0.4 && f.flying && f.lsdEnd === 0, f);
+    check('mushroom: same family, starts and ends', f.shroom > 0.9 && f.shroomEnd === 0, f);
+    check('fractal frames cached (built a few rows at a time)', f.frames > 0, f.frames);
+    check('full effects: the world breathes (a warped copy of the view)', f.breath, f);
+    check('reduced effects: no slow-mo, no breath, the trips still start and end', c.slowmo === 1 && c.worldDt > 0.98 && !c.breath && c.jointMid > 0.9 && c.jointEnd === 0 && c.lsdEnd === 0, c);
+    // the pause menu offers the switch in tour levels
+    const pause = await page.evaluate(() => { const g = S(); g.openPause(); const labels = g.pauseUI.map(b => b.label); const fx = g.pauseUI.find(b => /^FX /.test(b.label)); const before = fx.label; fx.fn(); const after = g.pauseUI.find(b => /^FX /.test(b.label)).label; fx.fn(); g.closePause(); return { labels, before, after }; });
+    check('pause menu: an FX FULL / FX CALM switch', pause.before === 'FX FULL' && pause.after === 'FX CALM', pause);
   });
 
   check('no page errors', errors.length === 0, errors.slice(0, 5));
