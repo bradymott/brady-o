@@ -304,6 +304,8 @@ const Validator = {
       const a = level.areas[p.ai];
       if (p.ai > 0 && a.role !== 'arena' && a.gen !== 'arena') return true;
       if (p.hidden) return true;
+      // behind a secret mechanism: next to light-only stones or a fake wall
+      for (let y = p.y - 3; y <= p.y + 3; y++) for (let x = p.x - 3; x <= p.x + 3; x++) { if (x < 0 || y < 0 || x >= a.W || y >= a.H) continue; const i = y * a.W + x; if (a.tiles[i] === T.FAKE || (a.hide && a.hide[i] === 3)) return true; }
       return a.spawns.some(s => s.type === 'gold' && (s.kind === 'risky' || s.kind === 'hidden') && Math.abs(s.x / TS - p.x) <= 5 && Math.abs(s.y / TS - p.y) <= 6);
     };
     if (!premium.length) errors.push('no premium item (L, S, sundial, 1UP or magnet) in a secret or risky spot (rule 5)');
