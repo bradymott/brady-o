@@ -1,10 +1,9 @@
 /* ============================================================
-   BRAZIL (world 3)
-   3-1 Copacabana Boardwalk  run    wavy mosaic promenade, beach-kiosk umbrellas, crumbling sandcastles, a beach-ball bounce
-   3-2 Sambadrome Night      night  the whole street moves to the samba beat: drum platforms pop up on the beat, parade floats
-   3-3 Iguaçu Falls          climb  wet slippery rocks beside the falls, tumbling logs, mist updrafts, coatis that steal coins
-   3-4 Pantanal Wetlands     run    ride swimming capybaras, hop sinking caiman backs, piranhas leap, jaguars charge
-   3-5 Carnival Warehouse    castle turntables, confetti cannons, drum platforms; boss O Tucanão
+   BRAZIL (world 3): art, enemies, set pieces, the boss O Tucanão,
+   music and the football. The six levels (v2 format: 3-1 Samba
+   Sunrise, 3-2 Coati Caper, 3-3 Iguaçu Falls, 3-4 Lençóis Lagoons,
+   3-5 Estádio do Tucanão, 3-6 Rio Hang-Glide) and the pieces only
+   they use are in 29_tour_br_levels.js.
    ============================================================ */
 (() => {
 const COL = { a: '#ffd23a', b: '#1aa85a', c: '#2a6ad8' };
@@ -914,32 +913,7 @@ Tour.country({
     ctx.fillStyle = '#c8901a'; ctx.beginPath(); ctx.arc(1, -3, 1.6, 0, TAU); ctx.fill();
     ctx.restore();
   } },
-  levels: [
-    { name: 'Copacabana Boardwalk', style: 'run', theme: 'br_beach', gimmick: 'The wavy mosaic boardwalk: kiosk umbrellas to bounce up, crumbling sandcastles, a beach-ball bounce and snack-stealing gulls',
-      enemies: [['brCrab', 3], ['brCoconut', 2], ['brBrigadeiro', 2]],
-      hint: 'Kick the football at crabs and coconuts. It bounces off walls!',
-      postcard: 'Copacabana! The sidewalk waves look like the sea. I bought you a coconut. I drank it. ♥ C',
-      script: [['flat', { n: 5 }], 'sig', 'kiosks', 'gap', 'sandcastle', 'crabs', 'cp', ['volley', { gold: true }], 'kiosks', 'gulls', 'sandcastle', 'bonus', ['crabs', { n: 3 }], 'end'] },
-    { name: 'Sambadrome Night', style: 'night', theme: 'br_samba', gimmick: 'The whole avenue moves to the samba beat: surdo drums pop up on the beat, parade floats glide over gaps, tambourines roll',
-      enemies: [['brPandeiro', 3], ['brBrigadeiro', 1]], bpm: 124,
-      hint: 'The drums pop up on the beat: listen and jump!',
-      postcard: 'The Baron hid in a parade float. Everyone thought he was part of the show. ♥ C',
-      script: [['flat', { n: 6 }], 'drums', ['parade', { item: 'power' }], ['float', { gold: true }], ['drums', { n: 5 }], 'stands', 'cp', 'parade', 'float', ['drums', { n: 6 }], 'lsd', ['parade', { n: 3 }], 'end'] },
-    { name: 'Iguaçu Falls', style: 'climb', theme: 'br_falls', gimmick: 'Climb beside the roaring falls: slippery wet rocks, tumbling logs, mist that lifts you, and coatis that steal your coins',
-      enemies: [['brCoati', 2]], W: 24, H: 100,
-      hint: 'Coatis steal coins! Stomp them to get your coins back',
-      postcard: 'Iguaçu is so loud I can\'t hear myself think. A coati took my sandwich. ♥ C',
-      script: [['wetrocks', { gold: true }], ['walkway', {}], ['logs', {}], ['mist', { left: true }], ['wetrocks', { n: 3 }], ['logs', { left: true }], ['walkway', { n: 2 }], ['mist', {}], ['wetrocks', {}]] },
-    { name: 'Pantanal Wetlands', style: 'run', theme: 'br_pantanal', gimmick: 'Ride swimming capybaras, hop sinking caiman backs, dodge leaping piranhas and charging jaguars',
-      enemies: [['brJaguar', 1], ['brCoati', 1], ['brCrab', 1]],
-      hint: 'Capybaras are the best boats. Caimans are NOT boats.',
-      postcard: 'A capybara gave me a ride. A bird was riding on IT. We were a tower of friends. ♥ C',
-      script: [['flat', { n: 5 }], 'capybaras', 'jaguar', 'caimans', ['nest', { gold: true }], 'piranhas', 'cp', ['capybaras', { span: 12 }], 'sig', ['caimans', { n: 4 }], 'jaguar', 'piranhas', 'oneup', 'end'] },
-    { name: 'Carnival Warehouse', style: 'castle', theme: 'br_barracao', gimmick: 'The float workshop: spinning turntables, confetti cannons and drum platforms on the beat, then O Tucanão',
-      enemies: [['brPandeiro', 2], ['brBrigadeiro', 2]], boss: 'br_toucan', arena: 'estadio', arenaW: 26, bpm: 124,
-      hint: 'Only a football reaches O Tucanão: run into a ball to kick it, stomp a ball to volley it up!',
-      postcard: 'Sugarloaf is back by the bay, full size! The Baron sailed for Africa. Next stop: Mozambique! ♥ C',
-      script: [['flat', { n: 4 }], ['turntable', { gold: true }], 'cannons', ['bateria', { n: 4 }], 'cp', 'turntable', ['enemies', { n: 2 }], ['cannons', { gold: true }], ['blocks', { content: 'power' }], 'arena'] }
-  ]
+  // the six levels (v2 format) are in 29_tour_br_levels.js
+  levels: []
 });
 })();

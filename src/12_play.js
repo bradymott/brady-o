@@ -100,6 +100,8 @@ class Weather {
   }
 }
 
+// atlases a theme's background strips come from besides its own (a theme can borrow another atlas's layer for depth)
+function themeLayerAtlases(th) { return th && th.layers ? th.layers.filter(L => L.kind === 'image' && L.atlas && L.atlas !== th.atlas).map(L => L.atlas) : []; }
 class Play {
   constructor(level, opts) {
     opts = opts || {};
@@ -167,7 +169,7 @@ class Play {
     this.entities = this.area.entities;
     this.themeKey = this.area.theme;
     // pre-rendered art for this theme and country (draws procedurally until it arrives)
-    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey]; Atlas.need([th && th.atlas, this.countryAtlas()]); }
+    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey]; Atlas.need([th && th.atlas, this.countryAtlas()].concat(this.extraAtlases(), themeLayerAtlases(th))); }
     this.lavaY = this.area.lavaY;
     const keepPower = this.player ? this.player.power : (power || 0);
     this.player = new Player(this, x, y, keepPower);
@@ -177,7 +179,17 @@ class Play {
   }
   countryAtlas() { const C = this.level && this.level.country && typeof Tour !== 'undefined' ? Tour.countries[this.level.country] : null; return C ? C.atlas || (C.sprites ? C.id : null) : null; }
   // every atlas this level can draw from: the country's, and each area's theme
-  atlasNames() { const n = [this.countryAtlas()]; for (const a of this.level.areas || []) { const th = THEMES[a.theme]; if (th && th.atlas) n.push(th.atlas); } return n; }
+  atlasNames() { const n = [this.countryAtlas()]; for (const a of this.level.areas || []) { const th = THEMES[a.theme]; if (th && th.atlas) n.push(th.atlas); n.push(...themeLayerAtlases(th)); } return n.concat(this.extraAtlases()); }
+  /* atlases beyond the country's and the area themes': a PHASE area's night theme, and enemies drawn from their own
+     atlas (cfg.atlas, e.g. the overhaul casts in '<cc>_x'), spawned directly or by a hold arena's waves / a watcher */
+  extraAtlases() {
+    const n = new Set(), type = t => { const C = t && ENTITY_TYPES[t]; if (C && C.cfg && C.cfg.atlas) n.add(C.cfg.atlas); };
+    for (const a of this.level.areas || []) {
+      const ph = a.phase && THEMES[a.phase.night]; if (ph && ph.atlas) n.add(ph.atlas);
+      for (const s of a.spawns || []) { type(s.type); type(s.spawn); type(s.art); if (Array.isArray(s.waves)) for (const w of s.waves) for (const t of [].concat(w)) type(t); }
+    }
+    return [...n];
+  }
   refreshPlatforms() { this.platforms = this.entities.filter(e => (e.isPlatform || e.solidTop) && !e.dead && !(e instanceof Spring)); }
 
   /* ---------- helpers used by entities ---------- */
@@ -804,8 +816,8 @@ class Play {
         const id = A.tiles[y * A.W + x];
         const hv = hide ? hide[y * A.W + x] : 0;
         if (!fg && beatAt && beatAt[y * A.W + x]) { this.drawBeatPad(ctx, beatAt[y * A.W + x], x, y, camX, camY, S); continue; }
-        // dug earth: below the surface of a dig area, empty tiles show the dark wall of the tunnel
-        if (id === T.EMPTY && !fg && A.dig && y > A.surface) { const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S); ctx.fillStyle = A.tunnelCol || '#2a1a12'; ctx.fillRect(dx, dy, Math.ceil(TS * S) + 1, Math.ceil(TS * S) + 1); if ((x * 7 + y * 3) % 5 === 0) { ctx.fillStyle = 'rgba(255,220,170,0.06)'; ctx.beginPath(); ctx.arc(dx + 10 * S, dy + 14 * S, 5 * S, 0, TAU); ctx.fill(); } continue; }
+        // dug earth: below the surface of a dig area, empty tiles (and coins and water in caverns) show the dark wall of the tunnel
+        if ((id === T.EMPTY || id === T.PICK || id === T.WATER) && !fg && A.dig && y > A.surface) { const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S); ctx.fillStyle = A.tunnelCol || '#2a1a12'; ctx.fillRect(dx, dy, Math.ceil(TS * S) + 1, Math.ceil(TS * S) + 1); if ((x * 7 + y * 3) % 5 === 0) { ctx.fillStyle = 'rgba(255,220,170,0.06)'; ctx.beginPath(); ctx.arc(dx + 10 * S, dy + 14 * S, 5 * S, 0, TAU); ctx.fill(); } if (id === T.EMPTY) continue; }
         if (id === T.EMPTY) continue;
         if (hv === 1 || hv === 3) continue;
         if (hv === 2) { if (!fg && lsd) this.drawTripTile(ctx, x, y, camX, camY, S); continue; }

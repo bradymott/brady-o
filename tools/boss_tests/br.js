@@ -11,10 +11,12 @@ module.exports = async ({ page, check, shot }) => {
     window.finish = () => { const g = S(), p = P(); const gate = g.entities.find(e => e.constructor.name === 'Gate' && !e.secret); p.invuln = 0; p.x = gate.cx - 60; p.y = gate.y + gate.h - p.h - 4; sim(1, { right: true }); sim(8); return g.state; };
     window.balls = () => S().entities.filter(e => e.constructor.name === 'BrFootball' || (e.prop && e.cfg && e.cfg.kick === 9)).filter(e => !e.remove);
     window.newBall = (x, y) => { const C = ctor('brFootball'); const e = new C(S(), { x, y }); S().spawn(e); return e; };
+    // 3-5 is a v2 lair: the players' tunnel first, then the pitch (the area with role 'arena')
+    window.startArena = (id) => { start(id); const g = S(); const k = g.level.areas.findIndex(a => a.role === 'arena'); if (k >= 0 && g.area !== g.rt[k]) { const an = g.level.areas[k].anchors.in; g.loadArea(k, an.x, an.y); sim(0.5); } };
   });
   // (a) wake: he takes to the air over the pitch; the ball cannon starts serving balls
   const a = await page.evaluate(() => {
-    start('3-5'); clearEnemies(); const p = P(); p.invuln = 99; const b = (window.B1 = enterArena(64));
+    startArena('3-5'); clearEnemies(); const p = P(); p.invuln = 99; const b = (window.B1 = enterArena(64));
     const cannon = S().entities.some(e => e.constructor.name === 'BrBallCannon');
     waitFor(() => balls().length > 0, 4);
     return { state: b.state, act: b.act, cannon, balls: balls().length, high: b.y + b.h < b.floorY - 3 * 32, name: b.name };
