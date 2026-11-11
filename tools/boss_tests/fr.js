@@ -5,7 +5,7 @@ module.exports = async ({ page, check, shot }) => {
     const out = {}, TSZ = 32;
     start('7-5');
     // the ballroom is its own area (v2 LAIR): go through the ballroom door
-    { const g0 = S(), ai = g0.level.areas.findIndex(a => a.role === 'arena'), door = g0.entities.find(e => e.s && e.s.target && e.s.target.area === ai); g0.enterPortal(door); sim(2); }
+    { const g0 = S(), ai = g0.level.areas.findIndex(a => a.role === 'arena'), door = g0.entities.find(e => e.s && e.s.target && e.s.target.area === ai); if (door) { g0.enterPortal(door); sim(2); } }
     clearEnemies();
     const g = S(), p = P(), b = boss(); window.__frBoss = b;
     const oven = g.entities.find(e => e.constructor.name === 'FrOven'), ms = g.entities.filter(e => e.constructor.name === 'FrMirror' && Math.abs(e.cx - oven.cx) < 20 * TSZ);

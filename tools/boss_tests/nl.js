@@ -5,7 +5,7 @@ module.exports = async ({ page, check, shot }) => {
     const out = {}, TSZ = 32;
     start('8-5');
     // the weigh house hall is its own area (v2 LAIR): go through the door from the cheese market
-    { const g0 = S(), ai = g0.level.areas.findIndex(a => a.role === 'arena'), door = g0.entities.find(e => e.s && e.s.target && e.s.target.area === ai); g0.enterPortal(door); sim(2); }
+    { const g0 = S(), ai = g0.level.areas.findIndex(a => a.role === 'arena'), door = g0.entities.find(e => e.s && e.s.target && e.s.target.area === ai); if (door) { g0.enterPortal(door); sim(2); } }
     clearEnemies();
     const g = S(), p = P(), b = boss(); window.__nlBoss = b;
     out.hatches = g.entities.filter(e => e.constructor.name === 'NlHatch').length;
