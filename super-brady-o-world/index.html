@@ -41,7 +41,7 @@ noscript p { position: fixed; inset: 0; display: grid; place-items: center; font
 <script>
 (function(){
 const BRADY_APP = "world";
-const BRADY_SPRITES = ["aq","aq_aurora","aq_sea","aq_shelf","aq_station","aq_storm","aq_x","br","br_barracao","br_beach","br_falls","br_pantanal","br_samba","ec","ec_amazon","ec_andes","ec_cotopaxi","ec_equator","ec_galapagos","es","es_aquarium","es_arts","es_fallas","es_lonja","es_mancha","es_pintxos","es_teide","es_tomatina","es_x","fr","fr_baie","fr_chateau","fr_ciel","fr_morning","fr_night","fr_perigord","fr_place","fr_provence","fr_seine","fr_tower","fr_x","id","id_batur","id_dive","id_ijen","id_kites","id_rimba","id_ruins","id_surf","id_x","jp","jp_bamboo","jp_bamboo_night","jp_castle","jp_fuji","jp_gacha","jp_neon","jp_rail","jp_sushi","jp_tower","jp_x","ma","ma_atlas","ma_azul","ma_azul_night","ma_cielo","ma_night","ma_riad","ma_sahara","ma_souk","ma_x","mx","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_volcan","mz","mz_baobab","mz_baobab_near","mz_beach","mz_beach_near","mz_dunes","mz_fort","mz_fort_near","mz_savanna","nl","nl_canals","nl_frozen","nl_polder","nl_rush","nl_tulips","nl_veiling","nl_waag","nl_x","np","np_blizzard","np_depot","np_fortress","np_hills","np_icefall","np_khadal","np_pass","np_x","vn","vn_bay","vn_cave","vn_citadel","vn_mekong","vn_river","vn_street","vn_x","w22","w22_corridor","w22_desk","w22_dusk","w22_lake","w22_white","w22_x"];
+const BRADY_SPRITES = ["aq","aq_aurora","aq_sea","aq_shelf","aq_station","aq_storm","aq_x","br","br_barracao","br_beach","br_falls","br_garganta","br_lencois","br_pantanal","br_samba","br_toca","br_x","ec","ec_amazon","ec_amazon_dusk","ec_andes","ec_cotopaxi","ec_equator","ec_fabrica","ec_galapagos","ec_islas","ec_pailon","ec_x","es","es_aquarium","es_arts","es_fallas","es_lonja","es_mancha","es_pintxos","es_teide","es_tomatina","es_x","fr","fr_baie","fr_chateau","fr_ciel","fr_morning","fr_night","fr_perigord","fr_place","fr_provence","fr_seine","fr_tower","fr_x","id","id_batur","id_dive","id_ijen","id_kites","id_rimba","id_ruins","id_surf","id_x","jp","jp_bamboo","jp_bamboo_night","jp_castle","jp_fuji","jp_gacha","jp_neon","jp_rail","jp_sushi","jp_tower","jp_x","ma","ma_atlas","ma_azul","ma_azul_night","ma_cielo","ma_night","ma_riad","ma_sahara","ma_souk","ma_x","mx","mx_bodega","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_sotano","mx_volcan","mx_x","mz","mz_areia","mz_baobab","mz_baobab_near","mz_beach","mz_beach_near","mz_cupim","mz_dunes","mz_fort","mz_fort_near","mz_savanna","mz_x","nl","nl_canals","nl_frozen","nl_polder","nl_rush","nl_tulips","nl_veiling","nl_waag","nl_x","np","np_blizzard","np_depot","np_fortress","np_hills","np_icefall","np_khadal","np_pass","np_x","vn","vn_bay","vn_cave","vn_citadel","vn_mekong","vn_river","vn_street","vn_x","w22","w22_corridor","w22_desk","w22_dusk","w22_lake","w22_white","w22_x"];
 /* ---- 00_core.js ---- */
 'use strict';
 /* ============================================================
@@ -1143,6 +1143,35 @@ const Sound = (() => {
       tone(t + 0.18, 'sine', 130 * p, 32, 0.4, 0.6 * v, o);
       noise(t + 0.18, 0.3, 0.45 * v, o, { ft: 'lowpass', f: 1600, f1: 200 });
       noise(t + 0.18, 0.05, 0.25 * v, o, { ft: 'highpass', f: 2500 });
+    },
+    chill: (t, p, v, o) => {        // the joint moment: a slow exhale and a warm, lazy chord (~1.4 s)
+      noise(t, 1.1, 0.16 * v, o, { ft: 'lowpass', f: 1400 * p, f1: 300, q: 0.7, a: 0.25, hold: 0.25 });
+      const k = K(p);
+      [50, 57, 62, 65].forEach((m, i) => voice('ep', t + 0.08 + i * 0.07, m + k, 1.1, 0.05 * v, o));
+      tone(t + 0.1, 'sine', 220 * p, 180 * p, 1.2, 0.06 * v, o, { vib: 18, vr: 3, a: 0.3, hold: 0.4 });
+    },
+    // jump powers (28_tour_di_jumps.js)
+    boing: (t, p, v, o) => {        // spring socks: a springy boing and a little whoosh
+      tone(t, 'triangle', 220 * p, 880 * p, 0.22, 0.22 * v, o, { vib: 90, vr: 18, st: 0.2 });
+      tone(t, 'sine', 440 * p, 1320 * p, 0.14, 0.08 * v, o, { st: 0.12 });
+      noise(t, 0.18, 0.12 * v, o, { ft: 'bandpass', f: 800, f1: 2600, q: 1.5 });
+    },
+    poundTuck: (t, p, v, o) => noise(t, 0.16, 0.3 * v, o, { ft: 'bandpass', f: 1800 * p, f1: 600 * p, q: 2 }),
+    poundDrop: (t, p, v, o) => tone(t, 'sawtooth', 900 * p, 160 * p, 0.25, 0.06 * v, o, LP(1600)),
+    poundLand: (t, p, v, o) => {    // a deep cartoon THUD with a rattle
+      tone(t, 'sine', 120 * p, 38, 0.45, 0.7 * v, o);
+      noise(t, 0.35, 0.5 * v, o, { ft: 'lowpass', f: 1200, f1: 120 });
+      noise(t + 0.04, 0.25, 0.18 * v, o, { ft: 'bandpass', f: 2400, q: 3, lfo: [32, 900] });
+    },
+    fart: (t, p, v, o) => {         // a comic trumpet-ish raspberry, slightly different every time
+      tone(t, 'sawtooth', 95 * p, 70 * p, 0.32, 0.22 * v, o, Object.assign(LP(700), { vib: 260, vr: 34, hold: 0.5 }));
+      noise(t, 0.3, 0.32 * v, o, { ft: 'bandpass', f: 260 * p, q: 2.5, lfo: [30, 120], hold: 0.4 });
+      tone(t + 0.22, 'square', 140 * p, 220 * p, 0.08, 0.05 * v, o, LP(900));
+    },
+    fartEmpty: (t, p, v, o) => noise(t, 0.12, 0.2 * v, o, { ft: 'bandpass', f: 500 * p, q: 3 }),
+    pantsSnap: (t, p, v, o) => {    // the elastic snaps back
+      tone(t, 'square', 1400 * p, 300 * p, 0.06, 0.12 * v, o, LP(4000));
+      noise(t, 0.04, 0.3 * v, o, { ft: 'highpass', f: 3000 });
     },
     spin: (t, p, v, o) => {         // headbang spin attack: swirling whoosh + two power-chord chugs
       noise(t, 0.38, 0.32 * v, o, { ft: 'bandpass', f: 900 * p, q: 2, lfo: [9, 700], a: 0.02, hold: 0.5 });
@@ -2671,6 +2700,9 @@ const Input = {
   camDX: 0, camDY: 0,
   hud: null,             // game mode: extra round buttons [{id, x, y, r}] checked before jump/action
   hudPressed: {}, hudHeld: {},
+  actionArt: null,       // optional (ctx, button) -> true: draws the action button's icon (the 2D world tour's active power)
+  jumpArt: null,         // optional (ctx, button): drawn over the jump button (a held jump power's badge)
+  overlay: null,         // optional (ctx, layout): drawn after the touch controls (the power picker chip)
 
   init(canvas) {
     this.canvas = canvas;
@@ -2952,7 +2984,7 @@ const Input = {
     ctx.beginPath(); ctx.arc(kx, ky, L.r * 0.5, 0, TAU); ctx.fill();
 
     // buttons
-    const btn = (b, held, label, col) => {
+    const btn = (b, held, label, col, art) => {
       ctx.save();
       ctx.translate(b.x, b.y);
       const s = held ? 0.92 : 1;
@@ -2963,15 +2995,21 @@ const Input = {
       ctx.fillStyle = gg;
       ctx.beginPath(); ctx.arc(0, 0, b.r, 0, TAU); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.font = `${Math.round(b.r * 0.62)}px ${FONT_DISPLAY}`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(label, 0, 2);
+      let drawn = false;
+      if (art) { try { drawn = !!art(ctx, b, held); } catch (e) { drawn = false; } }
+      if (!drawn) {
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.font = `${Math.round(b.r * 0.62)}px ${FONT_DISPLAY}`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(label, 0, 2);
+      }
       ctx.restore();
     };
     ctx.globalAlpha = alpha;
     btn(L.jump, this.jump, '▲', '#c04bff');
-    btn(L.action, this.action, '◉', '#ff4b7d');
+    btn(L.action, this.action, '◉', '#ff4b7d', this.actionArt);
+    if (this.jumpArt) { try { this.jumpArt(ctx, L.jump); } catch (e) { /* ignore */ } }
+    if (this.overlay) { try { this.overlay(ctx, L); } catch (e) { /* ignore */ } }
     ctx.restore();
   }
 };
@@ -5086,6 +5124,31 @@ function bradyPose(anim, small) {
       P.thF = 0.2; P.shF = 0.05; P.thB = -0.1; P.shB = -0.2; P.head = 0.12; P.mouth = 'smile';
       break;
     }
+    // jump powers (28_tour_di_jumps.js): a tucked somersault, the ground pound's ball and slam, the fart squat
+    case 'flip': {
+      P.crouch = 0.55; P.thF = 2.3; P.shF = -0.9; P.thB = 2.0; P.shB = -1.1;
+      P.uaF = 1.9; P.faF = 0.5; P.uaB = 1.6; P.faB = 0.3; P.lean = 0.35; P.mouth = 'grin';
+      break;
+    }
+    case 'tuck': {
+      P.crouch = 0.6; P.thF = 2.5; P.shF = -0.6; P.thB = 2.3; P.shB = -0.8;
+      P.uaF = 1.5; P.faF = 0.2; P.uaB = 1.3; P.faB = 0.1; P.lean = 0.45; P.head = 0.25; P.mouth = 'o';
+      break;
+    }
+    case 'pound': {
+      const w = Math.sin(t * 40) * 0.05;
+      P.thF = 0.08; P.shF = 0; P.thB = -0.08; P.shB = 0;
+      P.uaF = 2.75 + w; P.faF = 2.95; P.uaB = -2.75 - w; P.faB = -2.95; P.mouth = 'o'; P.head = -0.1;
+      break;
+    }
+    case 'squat': {
+      // squatting in mid-air, arms out for balance; a puff bounces him a little (anim.phase = time since the last puff)
+      const k = Math.max(0, 1 - (anim.phase || 0) * 5);
+      P.crouch = 0.9; P.thF = 1.45; P.shF = -0.05 - k * 0.2; P.thB = 1.25; P.shB = -0.2 - k * 0.2;
+      P.uaF = 1.2 + k * 0.5; P.faF = 1.9 + k * 0.4; P.uaB = -1.1 - k * 0.6; P.faB = -0.5; P.lean = 0.28 + k * 0.12;
+      P.head = -0.12 + k * 0.1; P.mouth = k > 0.3 ? 'o' : 'grin'; P.bob = -k * 1.5;
+      break;
+    }
     case 'enter': {
       P.uaF = 0.1; P.faF = 0.2; P.uaB = -0.1; P.faB = -0.2;
       break;
@@ -5096,6 +5159,12 @@ function bradyPose(anim, small) {
   return P;
 }
 
+// Brady's boxers for the fart float: white with little red hearts, a pink waistband
+const BOXERS = { base: '#fbf4ee', shade: '#e2d8d2', band: '#ff6fa8', heart: '#e8344f' };
+function boxerHearts(ctx, pts, small) {
+  const s = small ? 0.7 : 1; ctx.fillStyle = BOXERS.heart;
+  for (const [x, y] of pts) { ctx.beginPath(); ctx.moveTo(x, y + 1.3 * s); ctx.bezierCurveTo(x - 2.2 * s, y - 0.2 * s, x - 1 * s, y - 1.9 * s, x, y - 0.6 * s); ctx.bezierCurveTo(x + 1 * s, y - 1.9 * s, x + 2.2 * s, y - 0.2 * s, x, y + 1.3 * s); ctx.fill(); }
+}
 function limbEnd(x, y, a, l) { return [x + Math.sin(a) * l, y + Math.cos(a) * l]; }
 function capsule(ctx, x0, y0, x1, y1, w, col) {
   ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round';
@@ -5348,12 +5417,30 @@ function drawBrady(ctx, o) {
   const [hbx, hby] = drawArm(shX - 2.5, shY + 2, P.uaB, P.faB, true);
 
   // ---- legs with black sneakers
+  const pd = o.pants || 0;   // trousers down (0..1): the fart float squat shows bare legs and the boxers
   const legFoot = (th, sh, col, front) => {
     const hx = hipX + (front ? 2 : -2), hy = hipY;
     const [kx, ky] = limbEnd(hx, hy, th, D.thigh);
     const [ax, ay] = limbEnd(kx, ky, sh, D.shin);
-    outlinedCapsule(ctx, hx, hy, kx, ky, D.legW, col);
-    outlinedCapsule(ctx, kx, ky, ax, ay, D.legW - 0.6, col);
+    if (pd > 0) {
+      const sk = front ? skin.base : skin.sh;
+      outlinedCapsule(ctx, hx, hy, kx, ky, D.legW - 0.4, sk);
+      // the boxers' leg: halfway down the thigh, with the heart print
+      const bx1 = lerp(hx, kx, 0.55), by1 = lerp(hy, ky, 0.55);
+      outlinedCapsule(ctx, hx, hy, bx1, by1, D.legW + (o.small ? 1.2 : 2.2), front ? BOXERS.base : BOXERS.shade);
+      boxerHearts(ctx, [[lerp(hx, bx1, 0.35), lerp(hy, by1, 0.35)], [lerp(hx, bx1, 0.85), lerp(hy, by1, 0.85) + 0.6]], o.small);
+      // the trousers, bunched: their top slides from the hip down to the knee as they drop
+      const tk = 0.15 + 0.85 * pd, tx0 = lerp(hx, kx, tk), ty0 = lerp(hy, ky, tk);
+      if (tk < 0.98) outlinedCapsule(ctx, tx0, ty0, kx, ky, D.legW + 0.6, col);
+      outlinedCapsule(ctx, kx, ky, ax, ay, D.legW + 0.4, col);
+      // the crumpled waistband ring
+      ctx.fillStyle = shade(col, 0.45); ctx.strokeStyle = CLOTH.outline; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.ellipse(tx0, ty0, D.legW * 0.78, D.legW * 0.34, th + Math.PI / 2, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.moveTo(lerp(kx, ax, 0.3) - 2, lerp(ky, ay, 0.3)); ctx.lineTo(lerp(kx, ax, 0.3) + 2, lerp(ky, ay, 0.3) + 1); ctx.stroke();
+    } else {
+      outlinedCapsule(ctx, hx, hy, kx, ky, D.legW, col);
+      outlinedCapsule(ctx, kx, ky, ax, ay, D.legW - 0.6, col);
+    }
     if (neon && front) capsule(ctx, hx + 1.5, hy, kx + 1.5, ky, 0.9, rgba(trim, 0.9));
     ctx.save(); ctx.translate(ax, ay); ctx.rotate(-sh * 0.35);
     const bw = o.small ? 7.5 : 10, bh = o.small ? 4 : 5.2;
@@ -5380,8 +5467,13 @@ function drawBrady(ctx, o) {
   ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 0.8;
   ctx.beginPath(); ctx.ellipse(tw * 0.18, -th - 1.2, tw * 0.22, o.small ? 1.4 : 2.2, 0, 0, Math.PI); ctx.stroke();
   if (!o.small) { ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(-tw * 0.1, -th * 0.55); ctx.quadraticCurveTo(tw * 0.1, -th * 0.4, tw * 0.3, -th * 0.6); ctx.stroke(); }
-  // waistband of black trousers
-  ctx.fillStyle = '#060608'; ctx.fillRect(-tw / 2, -1.2, tw, 2.4);
+  // waistband of black trousers (or, with the trousers down, the boxers' seat and their pink elastic)
+  if (pd > 0) {
+    ctx.fillStyle = CLOTH.outline; rr(ctx, -tw / 2 - 1.5, -2.2, tw + 3, (o.small ? 5 : 7) + 1.5, 2.5); ctx.fill();
+    ctx.fillStyle = BOXERS.base; rr(ctx, -tw / 2 - 0.8, -1.6, tw + 1.6, o.small ? 5 : 7, 2.2); ctx.fill();
+    boxerHearts(ctx, [[-tw * 0.25, 2.2], [tw * 0.2, 3.4]], o.small);
+    ctx.fillStyle = BOXERS.band; ctx.fillRect(-tw / 2 - 0.8, -1.8, tw + 1.6, 1.9);
+  } else { ctx.fillStyle = '#060608'; ctx.fillRect(-tw / 2, -1.2, tw, 2.4); }
   if (neon) {
     ctx.save(); ctx.shadowColor = trim; ctx.shadowBlur = 5; ctx.strokeStyle = trim; ctx.lineWidth = 1.1;
     ctx.beginPath(); ctx.ellipse(tw * 0.18, -th - 1.2, tw * 0.22, o.small ? 1.4 : 2.2, 0, 0, Math.PI); ctx.moveTo(-tw / 2 + 1, -1.8); ctx.lineTo(tw / 2 - 1, -1.8); ctx.stroke(); ctx.restore();
@@ -9234,9 +9326,11 @@ const Validator = {
        by depth for shafts); 4 the archetype's gear from a gear stand before the twist beat (the first half of the main
        area), and any gear a lock or crawlway needs from a stand in the same level; 5 one premium item (L, S, sundial,
        1UP, magnet) in a secret or risky spot (another area, a hidden block, or next to a hidden / risky postcard);
-     6 boss levels: two opportunities in the lead-in before the arena. */
+     6 boss levels: two opportunities in the lead-in before the arena; 8 jump powers: at most 2, none in a boss
+     area or a CARRY area. */
   ARCH_GEAR: { dive: 'fins', tide: 'fins', dig: 'hat', lamp: 'hat', sneak: 'box', glide: 'plane', fall: 'plane', beat: 'kazoo' },
   PREMIUM: { lsd: true, star: true, sundial: true, oneup: true, magnet: true },
+  JUMP: { socks: true, cake: true, beans: true },
   budget(level) {
     const errors = [], warnings = [];
     if (!level.v2) return { ok: true, errors, warnings, skipped: true };
@@ -9304,6 +9398,17 @@ const Validator = {
       }
       if (lead < 2) errors.push(`only ${lead} power-up opportunities in the boss lead-in (needs 2, rule 6)`);
     }
+    // rule 8: the jump powers (spring socks, pound cake, magic beans) are bonuses: at most two per level, never inside a
+    // boss arena (or a boss's area), never in a CARRY area (they would skip the carry's lower jumps); the search above
+    // never uses them, so every exit and postcard is already reachable without one
+    let jumps = 0;
+    level.areas.forEach(a => {
+      const here = items(a).filter(k => this.JUMP[a.contents[k]]).length + a.spawns.filter(s => s.type === 'gearStand' && this.JUMP[s.item]).length;
+      jumps += here;
+      if (here && (arena(a) || a.spawns.some(s => s.type === 'boss'))) errors.push(`a jump power inside a boss area '${a.aid || a.idx}' (rule 8): put it in the lead-in`);
+      if (here && a.carry) errors.push(`a jump power in the CARRY area '${a.aid || a.idx}' (rule 8)`);
+    });
+    if (jumps > 2) errors.push(`${jumps} jump powers in one level (max 2, rule 8)`);
     return { ok: !errors.length, errors, warnings };
   },
 
@@ -11515,11 +11620,13 @@ class Player {
         break;
       case 'joint': // power 2: blow smoke puffs
         this.setPower(2); g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 14, '#e8e8f0', 'dust');
-        Sound.play('float', { vol: 0.6 });
+        Sound.play('float', { vol: 0.6 }); sfx('chill', null, { vol: 0.7 });
+        g.tripJoint = 1.35;   // the green, smoky moment (TripFX)
+        for (let k = 0; k < 3; k++) g.burst(this.cx + (k - 1) * 10, this.y + 6, 6, k === 1 ? '#d8f4d0' : '#b8e8b0', 'dust');
         g.toast('PUFF PUFF! TAP THROW TO BLOW SMOKE');
         break;
       case 'lsd': // timed free flight with a rainbow trail and rainbow lasers
-        this.lsdT = 10; this.glideT = 0; this.fly = 0; this.floaty = 0; this.trail.length = 0; this.vy = Math.min(this.vy, -3 * TS);
+        this.lsdT = 10; this.glideT = 0; g.lsdK = Math.max(g.lsdK || 0, 0.2); this.fly = 0; this.floaty = 0; this.trail.length = 0; this.vy = Math.min(this.vy, -3 * TS);
         TourKit.sfx('lsd', 'mushroom'); g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 30, '#ffffff', 'confetti');
         g.toast('LSD TAB! FLY ANYWHERE  ·  THROW = RAINBOW LASERS');
         break;
@@ -11671,12 +11778,10 @@ class Player {
     // a balloon doesn't stay on the ground: lift off unless Brady holds down
     if (floating && this.onGround && !inp.down) { this.vy = -3 * TS; this.onGround = false; }
     const gScale = tripping ? 0 : this.glideT > 0 ? 0.18 : floating ? 0.12 : (flying && inp.jump && !this.onGround) ? 0.25 : 1;
-    // headbang spin: tap jump again in mid-air
-    const nearGround = () => { const fy = Math.floor((this.y + this.h + 22) / TS); for (const tx of [Math.floor((this.x + 2) / TS), Math.floor((this.x + this.w - 2) / TS)]) { const t = tileAt(A, tx, fy); if (SOLID[t] || t === T.SEMI) return true; } return this.vy > 0 && g.platforms.some(pl => !pl.dead && this.x + this.w > pl.x && this.x < pl.x + pl.w && pl.y - (this.y + this.h) < 24 && pl.y > this.y); };
-    if (inp.jumpPressed && !this.onGround && !this.spin && !this.mounted && !this.inWater && !(this.fly > 0) && !(this.floaty > 0) && !tripping && !(this.glideT > 0) && this.coyote <= 0 && !(this.vy > 0 && nearGround())) {
-      this.spin = true; this.spinVis = 0.3; inp = Object.assign({}, inp, { jumpPressed: false });
-      if (this.vy > -2.4 * TS) this.vy = -2.4 * TS;
-      sfx('spin', 'headbang', { vol: 0.6 }); g.burst(this.cx, this.y + 8, 6, '#ffffff', 'spark');
+    // a second jump press in mid-air does nothing visible by default (it stays in the jump buffer, so a press just
+    // before landing still jumps); a held jump power (28_tour_di_jumps.js) acts on it instead
+    if (this.airJump && inp.jumpPressed && !this.onGround && this.coyote <= 0 && !this.mounted && !this.inWater && !(this.fly > 0) && !(this.floaty > 0) && !tripping && !(this.glideT > 0) && !this.hang && !this.grabbedBy) {
+      if (this.airJump(inp)) inp = Object.assign({}, inp, { jumpPressed: false });
     }
     const gifts = Save.data.gifts || {};
     const sigP = this.sig ? TourPowers.get(this.sig.id) : null;
@@ -11697,19 +11802,7 @@ class Player {
     if (ev.jump && rideWas && !rideWas.carrier) this.carryVx = this.rideVx * 0.85;
     if (ev.jump && rideWas && rideWas.carrier) this.carryVx = this.rideVx;
     if (ev.bounce) { Sound.play('spring', { vol: 0.45, pitch: 1.3 }); g.burst(this.cx, this.y + this.h, 4, '#ffffff', 'dust'); }
-    // a spin landing breaks bricks and pops blocks under Brady's boots
-    if (this.spin && ev.landed) {
-      let broke = false;
-      const ty = Math.floor((this.y + this.h + 2) / TS);
-      for (const tx of [Math.floor((this.x + 3) / TS), Math.floor((this.x + this.w - 3) / TS)]) {
-        const t = tileAt(A, tx, ty);
-        if (t === T.BRICK) { g.bumpBlock(tx, ty, true, this); broke = true; }
-        else if (t === T.QBLOCK || t === T.QBRICK) { g.bumpBlock(tx, ty, true, this); }
-      }
-      if (broke) { this.onGround = false; this.vy = 3 * TS; g.shake(3); }
-      else { this.spin = false; }
-    }
-    if (this.onGround || this.inWater || this.fly > 0 || this.floaty > 0 || this.hang) this.spin = false;
+    this.spin = false;
     // bufo flight: hold jump to climb, let go to glide
     if (this.fly > 0 && !this.inWater) {
       if (inp.jump && !this.onGround) this.vy = approach(this.vy, -7.5 * TS, 70 * TS * dt);
@@ -11753,16 +11846,18 @@ class Player {
     }
     let acted = false;
     if (g.level && g.level.tour && inp.actionPressed && !this.crouch) {
-      if (this.lsdT > 0 && this.shotT <= 0) {
+      // the power picker (28_tour_dh_picker.js) says which power the action button uses: the LSD lasers, the item in
+      // Brady's hands (gear or the country's signature item) or the joint's smoke puffs
+      const use = this.actionUse ? this.actionUse() : (this.lsdT > 0 ? 'lsd' : (gearG && gearG.action) || (this.sig && sigP && sigP.action) ? 'hands' : this.power === 2 ? 'joint' : null);
+      if (use === 'lsd' && this.lsdT > 0 && this.shotT <= 0) {
         this.shotT = 0.16; acted = true;
         g.spawn(new RainbowLaser(g, this.cx + this.facing * 14, this.y + (this.small ? 12 : 20), this.facing, (inp.up ? -4 : inp.down ? 4 : 0) * TS));
         Sound.play('laser', { pitch: 1.5, vol: 0.4 }); this.throwT = 0.12;
-      } else if (gearG && gearG.action && this.shotT <= 0) {
+      } else if (use === 'hands' && gearG && gearG.action && this.shotT <= 0) {
         if (gearG.action(this, g)) { acted = true; this.shotT = gearG.cooldown || 0.3; this.throwT = 0.18; }
-      } else if (this.sig && sigP && sigP.action && this.shotT <= 0) {
+      } else if (use === 'hands' && this.sig && sigP && sigP.action && this.shotT <= 0) {
         if (sigP.action(this, g)) { acted = true; this.shotT = sigP.cooldown || 0.3; this.throwT = 0.18; }
-      }
-      if (!acted && this.power === 2 && this.puffs < 3 && this.shotT <= 0) {
+      } else if (use === 'joint' && this.power === 2 && this.puffs < 3 && this.shotT <= 0) {
         this.puffs++; this.shotT = 0.22; acted = true;
         const pf = new SmokePuff(g, this.cx + this.facing * 14, this.y + (this.small ? 10 : 16), this.facing);
         pf.onRemove = () => { this.puffs--; };
@@ -11827,7 +11922,6 @@ class Player {
     let st;
     if (this.hang) st = 'hang';
     else if (this.mounted) st = 'ride';
-    else if (this.spin && !this.onGround) st = 'headbang';
     else if (this.floaty > 0 && !this.onGround) st = 'float';
     else if ((this.fly > 0 || this.lsdT > 0) && !this.onGround) st = 'fly';
     else if (this.glideT > 0 && !this.onGround) st = 'float';
@@ -11907,7 +12001,6 @@ class Player {
     }
     if (this.dead) o.rot = 0;
     if (small !== this.small) o.hair = null;
-    if (this.spin && !this.onGround) o.rot = Math.sin(this.anim.t * 26) * 0.25;
     PlayerFx.under(ctx, this, t);
     // drawn a little larger than the hitbox (ART_SCALE) so he reads on a phone; the physics box is unchanged
     Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16', rim: '#e7e3d7' });
@@ -12404,6 +12497,8 @@ class Play {
   update(dt) {
     // hit-stop: a few frames of slow time after a solid boss hit, so it lands
     if (this.hitStop > 0) { this.hitStop -= dt; dt *= 0.25; }
+    // trip moments (15_postfx.js TripFX): their timers run in real time; the joint eases the world into a short slow-mo
+    if (this.level.tour && !this.paused && typeof TripFX !== 'undefined') { TripFX.tick(this, dt); dt *= TripFX.timeScale(this); }
     // fades
     if (this.fade.a !== this.fade.target) {
       this.fade.a = approach(this.fade.a, this.fade.target, dt * this.fade.speed);
@@ -12654,6 +12749,8 @@ class Play {
       const th = THEMES[this.themeKey];
       ctx.fillStyle = rgba(th.fog || th.sky[1], 0.16);
       ctx.fillRect(0, 0, VW * S, VH * S);
+      // trip moments: the strong part (fractals, the green haze) sits behind the tiles and characters
+      TripFX.back(ctx, this, Math.round(VW * S), Math.round(VH * S));
     }
     // world transform
     const wt = () => ctx.setTransform(S, 0, 0, S, gx - camX * S, gy - camY * S);
@@ -12693,7 +12790,7 @@ class Play {
     if (darkness > 0) this.drawLighting(ctx, camX, camY, S, darkness);
     PostFX.apply(ctx, this, Math.round(VW * S), Math.round(VH * S), gx, gy);
     WorldFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
-    if (this.level.tour && this.dizzy > 0) TourFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
+    if (this.level.tour) TripFX.post(ctx, this, Math.round(VW * S), Math.round(VH * S));
     if (this.player && this.player.buffs && this.player.buffs.sundial > 0) { const W = Math.round(VW * S), H = Math.round(VH * S), k = Math.min(1, this.player.buffs.sundial, 0.9 + (TourKit.reduceMotion() ? 0 : 0.1 * Math.sin(this.t * 4))); const gg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.65); gg.addColorStop(0, 'rgba(120,80,30,0)'); gg.addColorStop(1, `rgba(120,80,30,${0.45 * k})`); ctx.fillStyle = gg; ctx.fillRect(0, 0, W, H); }
     ctx.drawImage(Game.vignette, 0, 0); // vignette
     if (this.flash > 0 && !th.storm) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, this.flash * 0.7)})`; ctx.fillRect(0, 0, VW * S, VH * S); }
@@ -12997,24 +13094,36 @@ class Play {
     const tour = !!this.level.tour, pl = this.player;
     let tourIx = 0;
     if (tour) {
-      // HANDS: the gear or the country's signature item (with a timer ring if it runs out, dots for the globe's shakes)
+      // the power picker's slots (28_tour_dh_picker.js): the ACTIVE power (what THROW does: a pink action dot says so)
+      // and, when Brady holds more, the NEXT one (tap either, or press Q / E / C, to switch)
+      const TP = typeof TourPicker !== 'undefined' ? TourPicker : null;
+      const list = TP ? TP.list(pl) : [], act = TP ? TP.active(pl) : null;
       const sp = pl.sig ? TourPowers.get(pl.sig.id) : null, gr = pl.hands && typeof TourGear !== 'undefined' ? TourGear.get(pl.hands.id) : null;
-      const held = gr || sp;
-      ctx.fillStyle = held ? 'rgba(40,20,60,0.75)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
-      ctx.strokeStyle = held ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
-      if (held) {
-        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); if (held.icon) held.icon(ctx, 0, 0, this.t); ctx.restore();
-        if (sp && sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
-        if (gr && gr.uses) for (let k = 0; k < gr.uses; k++) { ctx.fillStyle = k < pl.hands.uses ? '#e8f6ff' : 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.arc(px0 + 5 + k * 6, hy + 28, 1.8, 0, TAU); ctx.fill(); }
-        if (gr && pl.hands.thrown) { ctx.fillStyle = 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill(); }
+      const actHands = act && act !== 'lsd' && act !== 'joint';
+      ctx.fillStyle = act ? 'rgba(40,20,60,0.78)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
+      ctx.strokeStyle = act ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
+      if (act) {
+        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); TP.icon(ctx, act, 0, 0, this.t, this); ctx.restore();
+        if (actHands && sp && sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
+        if (actHands && gr && gr.uses) for (let k = 0; k < gr.uses; k++) { ctx.fillStyle = k < pl.hands.uses ? '#e8f6ff' : 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.arc(px0 + 5 + k * 6, hy + 28, 1.8, 0, TAU); ctx.fill(); }
+        if (!TP.ready(pl, act) && (act !== 'gear:fins' && act !== 'gear:pads')) { ctx.fillStyle = 'rgba(10,8,18,0.5)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill(); }
+        // the action dot: the same pink as the action button
+        ctx.fillStyle = '#ff4b7d'; ctx.beginPath(); ctx.arc(px0 + 31, hy + 1, 4.2, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px0 + 31, hy + 1, 1.5, 0, TAU); ctx.fill();
       } else { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); TourKit.star(ctx, px0 + 17, hy + 14, 7, 3, 5); ctx.fill(); }
-      // the Backpack: tap it to swap with HANDS
+      // the second slot: the next power in the cycle (or, with nothing else held, an empty Backpack)
       const bx = px0 + 40;
-      this.packRect = { x: bx, y: hy - 2, w: 30, h: 32 };
-      ctx.fillStyle = pl.pack ? 'rgba(60,34,20,0.8)' : 'rgba(10,8,18,0.45)'; rr(ctx, bx, hy, 30, 28, 9); ctx.fill();
-      ctx.fillStyle = pl.pack ? '#8a5a34' : 'rgba(255,255,255,0.12)'; rr(ctx, bx + 6, hy - 3, 18, 6, 3); ctx.fill();
-      ctx.strokeStyle = pl.pack ? 'rgba(255,216,74,0.7)' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2; rr(ctx, bx, hy, 30, 28, 9); ctx.stroke();
-      if (pl.pack && typeof TourGear !== 'undefined') { ctx.save(); ctx.translate(bx + 15, hy + 14); ctx.scale(0.58, 0.58); TourGear.icon(ctx, pl.pack, 0, 0, this.t, this); ctx.restore(); }
+      this.packRect = { x: px0, y: hy - 2, w: 70, h: 32 };
+      const nxt = list.length >= 2 ? list[(Math.max(0, list.indexOf(act)) + 1) % list.length] : null;
+      ctx.fillStyle = nxt ? 'rgba(30,20,44,0.7)' : 'rgba(10,8,18,0.45)'; rr(ctx, bx, hy, 30, 28, 9); ctx.fill();
+      ctx.strokeStyle = nxt ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2; rr(ctx, bx, hy, 30, 28, 9); ctx.stroke();
+      if (nxt) {
+        ctx.save(); ctx.globalAlpha = 0.75; ctx.translate(bx + 15, hy + 14); ctx.scale(0.5, 0.5); TP.icon(ctx, nxt, 0, 0, this.t, this); ctx.restore();
+        // a little cycle arrow and the count
+        ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(bx + 24, hy + 5, 3.4, -2.6, 1.6); ctx.stroke();
+        ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.moveTo(bx + 24 + 3.4 * Math.cos(1.6) - 2, hy + 5 + 3.4 * Math.sin(1.6) - 1); ctx.lineTo(bx + 24 + 3.4 * Math.cos(1.6) + 2.4, hy + 5 + 3.4 * Math.sin(1.6) + 0.4); ctx.lineTo(bx + 24 + 3.4 * Math.cos(1.6) - 0.8, hy + 5 + 3.4 * Math.sin(1.6) + 2.6); ctx.closePath(); ctx.fill();
+        if (list.length > 2) { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(list.length + '', bx + 6, hy + 23); ctx.textAlign = 'left'; }
+      } else if (pl.pack && typeof TourGear !== 'undefined') { ctx.save(); ctx.translate(bx + 15, hy + 14); ctx.scale(0.58, 0.58); TourGear.icon(ctx, pl.pack, 0, 0, this.t, this); ctx.restore(); }
       else { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = `6px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('BAG', bx + 15, hy + 15); ctx.textAlign = 'left'; }
       tourIx = 36;
     } else {
@@ -13028,6 +13137,7 @@ class Play {
     const icon = (fn) => { fn(ix, hy + 14); ix += 26; };
     if (this.player.kandi > 0) icon((x, y) => { for (let i = 0; i < 3; i++) { ctx.strokeStyle = GLOW_COLS[i]; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y - 3 + i * 3, 9, 4, 0, 0, TAU); ctx.stroke(); } });
     for (const k of this.keys) icon((x, y) => { ctx.save(); ctx.translate(x, y + 2); ctx.scale(0.6, 0.6); GimmickArt.keyShape(ctx, 0, 0, k === 'secret'); ctx.restore(); });
+    if (tour && pl.jumpPow && typeof JumpHud !== 'undefined') { ix += 4; icon((x, y) => JumpHud.hudIcon(ctx, x, y, this)); ix += 4; }
     const fxList = tour ? [['star', pl.star, 10, '#ffffff'], ['lsd', pl.lsdT, 10, '#a0f0ff']].concat(pl.buffs && typeof TourGear !== 'undefined' ? Object.keys(pl.buffs).filter(k => pl.buffs[k] > 0).map(k => ['gear:' + k, pl.buffs[k], (TourGear.get(k) || {}).time || 10, (TourGear.get(k) || {}).glow || '#ffffff']) : []) : [['star', this.player.star, 10, '#ffffff'], ['bufo', this.player.fly, 12, '#c08aff'], ['joint', this.player.floaty, 9, '#e8e8f0']];
     if (!tour) for (const k in this.player.fx) fxList.push([k, this.player.fx[k], BAG_KINDS[k].time, BAG_KINDS[k].col]);
     for (const [k, v, max, col] of fxList) if (v > 0) icon((x, y) => {
@@ -13089,7 +13199,7 @@ class Play {
     };
     const bob = Math.sin(this.t * 4) * 3;
     tag(L.stickHome.x, L.stickHome.y - L.stickHome.r - 22 + bob, '◀ SLIDE TO MOVE ▶');
-    tag(L.jump.x, L.jump.y - L.jump.r - 20 + bob, this.t < 8 ? 'JUMP' : 'TAP AGAIN IN AIR: HEADBANG');
+    tag(L.jump.x, L.jump.y - L.jump.r - 20 + bob, this.t < 8 ? 'JUMP' : 'HOLD FOR A HIGHER JUMP');
     tag(L.action.x, L.action.y - L.action.r - 20 + bob, 'RUN · THROW');
     ctx.restore();
   }
@@ -13223,11 +13333,6 @@ const PlayerFx = {
     if (p.dead) return;
     if (typeof TourPlayerFx !== 'undefined' && p.g.level && p.g.level.tour) TourPlayerFx.over(ctx, p, t);
     const cx = p.cx;
-    if (p.spin && !p.onGround) {
-      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;
-      for (let i = 0; i < 3; i++) { const a = t * 20 + i * 2.1; ctx.beginPath(); ctx.arc(cx, p.y + p.h * 0.4, p.w * 0.95, a, a + 0.9); ctx.stroke(); }
-      ctx.restore();
-    }
     if (p.fx.powder > 0 && Math.random() < 0.5) p.g.burst(p.cx - p.facing * 8, p.y + p.h * Math.random(), 1, '#ffffff', 'spark');
     if (p.fx.molly > 0 && Math.random() < 0.08) p.g.parts.text(cx + (Math.random() - 0.5) * 30, p.y, '♥', '#ff7ab8');
     if (p.stunT > 0) { ctx.fillStyle = '#ffd84a'; for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 12, p.y - 4 + Math.sin(a) * 4, 2.4, 0, TAU); ctx.fill(); } }
@@ -13898,8 +14003,15 @@ function buildPauseUI(play) {
     { x, y, w: bw, h: bh + 4, label: 'RESUME', primary: true, fn: () => play.closePause() },
     { x, y: y += 58, w: bw, h: bh, label: 'RESTART LEVEL', fn: () => { play.paused = false; Sound.resume(); Game.setScene(new Play(play.level, {})); } },
     { x, y: y += 54, w: bw, h: bh, label: play.level && play.level.tour ? 'WORLD MAP' : play.set === 'world' ? 'CITY MAP' : 'WORLD MAP', fn: () => { play.paused = false; Sound.resume(); Save.save(); goToMap(play.set, play.level.world, play.id); } },
-    { x, y: y += 54, w: bw / 2 - 5, h: bh, label: st.music > 0 ? 'MUSIC ON' : 'MUSIC OFF', size: 12, fn: () => { st.music = st.music > 0 ? 0 : 0.6; Sound.setMusicVolume(st.music); Save.save(); play.pauseUI = buildPauseUI(play); } },
-    { x: x + bw / 2 + 5, y, w: bw / 2 - 5, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 12, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } }
+    ...(play.level && play.level.tour && typeof TourKit !== 'undefined' ? [
+      // the world tour: a third switch for the trip effects (the same setting as MOTION EFFECTS in Settings)
+      { x, y: y += 54, w: bw / 3 - 4, h: bh, label: st.music > 0 ? 'MUSIC ON' : 'MUSIC OFF', size: 10, fn: () => { st.music = st.music > 0 ? 0 : 0.6; Sound.setMusicVolume(st.music); Save.save(); play.pauseUI = buildPauseUI(play); } },
+      { x: x + bw / 3 + 2, y, w: bw / 3 - 4, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 10, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } },
+      { x: x + bw * 2 / 3 + 4, y, w: bw / 3 - 4, h: bh, label: TourKit.reduceMotion() ? 'FX CALM' : 'FX FULL', size: 10, fn: () => { st.reduceMotion = !TourKit.reduceMotion(); Save.save(); play.pauseUI = buildPauseUI(play); } }
+    ] : [
+      { x, y: y += 54, w: bw / 2 - 5, h: bh, label: st.music > 0 ? 'MUSIC ON' : 'MUSIC OFF', size: 12, fn: () => { st.music = st.music > 0 ? 0 : 0.6; Sound.setMusicVolume(st.music); Save.save(); play.pauseUI = buildPauseUI(play); } },
+      { x: x + bw / 2 + 5, y, w: bw / 2 - 5, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 12, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } }
+    ])
   ];
   list.focus = 0;
   return list;
@@ -14084,6 +14196,220 @@ const PostFX = {
     }
   }
 };
+
+/* ============================================================
+   Trip moments (world tour pickups), one family of effects:
+   - JOINT (about 1.35 s): the world washes green, slow smoke
+     wisps drift across, time eases into a short slow-mo, then
+     it all clears;
+   - LSD TAB (the flight): fractal kaleidoscope patterns bloom
+     through the background, the colours shift, the world
+     "breathes" in and out; strongest for the first ~2.5 s, then
+     a subtle level while he flies, then it fades out;
+   - MAGIC MUSHROOM (dizzy, ~4 s): the same family in purples
+     and pinks, a gentler breath, soft glowing sparkles.
+   Budget: the fractal is a Julia set computed at 224 x 126 into
+   a cache of 40 frames (a few rows per frame until the cache is
+   full, once per session), coloured each frame through a
+   256-entry palette (28k pixels) and scaled up by drawImage.
+   The breath is one copy of the game view drawn back scaled
+   about Brady (he stays put, the HUD is drawn later). Gameplay
+   stays readable: the strong fractal goes behind the tiles and
+   characters, only a faint tint lies over them, nothing flashes.
+   Reduced motion (Settings / pause: EFFECTS CALM): no breath,
+   no slow-mo, no spin, a still fractal at half strength.
+   Game.quality 0 (the adaptive switch): no breath, no fractal
+   (a gradient wash instead).
+   ============================================================ */
+const TripFX = {
+  FW: 224, FH: 126, N: 40,
+  frames: [], gen: null,
+  calm() { return typeof TourKit !== 'undefined' && TourKit.reduceMotion(); },
+  // per-source strengths (0..1) for this frame
+  levels(play) {
+    const jr = play.tripJoint || 0, JD = 1.35;
+    const joint = jr > 0 ? clamp((JD - jr) / 0.15, 0, 1) * clamp(jr / 0.55, 0, 1) : 0;
+    const dz = play.dizzy || 0;
+    const shroom = dz > 0 ? clamp(Math.min(dz, (4.2 - dz) / 0.35), 0, 1) : 0;
+    return { joint, lsd: play.lsdK || 0, shroom };
+  },
+  // called from Play.update: the LSD envelope (strong first, then subtle while he flies, then out) and the joint timer
+  tick(play, dt) {
+    const p = play.player;
+    if (play.tripJoint > 0) play.tripJoint = Math.max(0, play.tripJoint - dt);
+    let target = 0;
+    if (p && p.lsdT > 0) target = (10 - p.lsdT) < 2.6 ? 1 : 0.3;
+    else if (p && p.glideT > 0) target = 0.12;
+    const k = play.lsdK || 0;
+    play.lsdK = target > k ? Math.min(target, k + dt * 4) : Math.max(target, k - dt * (k > 0.35 ? 0.55 : 0.4));
+    if (this.active(play) && Game.quality >= 1) this.build(0.9);
+  },
+  active(play) { const L = this.levels(play); return L.joint > 0.001 || L.lsd > 0.001 || L.shroom > 0.001; },
+  // slow-mo during the joint moment (world dt multiplier)
+  timeScale(play) { if (this.calm()) return 1; const j = this.levels(play).joint; return 1 - 0.42 * j; },
+
+  /* ---------- the fractal cache ---------- */
+  build(budgetMs) {
+    if (this.frames.length >= this.N) return;
+    const W = this.FW, H = this.FH, t0 = performance.now();
+    if (!this.gen) this.gen = { f: this.frames.length, row: 0, buf: new Uint8Array(W * H) };
+    const G = this.gen;
+    const a = G.f / this.N * TAU, cr = 0.7885 * Math.cos(a), ci = 0.7885 * Math.sin(a), sx = 3.3 / W, sy = 1.86 / H, MAX = 40;
+    while (G.row < H) {
+      const y0 = (G.row - H / 2) * sy;
+      for (let x = 0; x < W; x++) {
+        let zr = (x - W / 2) * sx, zi = y0, n = 0, m = 0;
+        while (n < MAX && (m = zr * zr + zi * zi) < 16) { const t = zr * zr - zi * zi + cr; zi = 2 * zr * zi + ci; zr = t; n++; }
+        let v = 0;
+        if (n < MAX) { const nu = n + 1 - Math.log2(Math.max(1.0001, Math.log2(m) / 2)); v = clamp(Math.round(nu * 6), 1, 254); }
+        else v = 255;
+        G.buf[G.row * W + x] = v;
+      }
+      G.row++;
+      if (performance.now() - t0 > budgetMs) return;
+    }
+    this.frames.push(G.buf); this.gen = null;
+  },
+  frame(t) {
+    const n = this.frames.length; if (!n) return null;
+    // ping-pong through the frames we have at 10 fps
+    const k = Math.floor(t * 10) % (2 * n), i = k < n ? k : 2 * n - 1 - k;
+    return this.frames[i];
+  },
+  // colour a cached frame into the small canvas: bands of rotating hue, the far outside and the deep inside transparent
+  paint(buf, hue, sat, alpha, tint) {
+    const W = this.FW, H = this.FH, c = PostFX.ensure('tripSmall', W, H), x = c.getContext('2d');
+    if (!this.img) this.img = x.createImageData(W, H);
+    const pal = this.pal || (this.pal = new Uint32Array(256)), d = new Uint32Array(this.img.data.buffer);
+    // cel-shaded bands (about one per 1.7 iterations) with a dark ink line between them; the filled inside of the set
+    // is a deep complementary colour, so the shapes read as shapes and not as noise
+    for (let i = 0; i < 256; i++) {
+      let r, g, b, a;
+      if (i >= 96) { [r, g, b] = hsl2rgb(((hue + 180) % 360) / 360, sat, tint ? 0.3 : 0.34); a = 0.78; }
+      else {
+        const band = Math.floor(i / 10), edge = i % 10 === 0 && i < 90;
+        [r, g, b] = edge ? [24, 14, 34] : hsl2rgb(((hue + band * 47) % 360) / 360, sat, (band % 2 ? 0.6 : 0.5) + (tint ? -0.06 : 0));
+        a = clamp((i - 14) / 22, 0, 1) * (edge ? 0.7 : 0.85);
+      }
+      pal[i] = (Math.round(255 * alpha * a) << 24) | (b << 16) | (g << 8) | r;
+    }
+    for (let i = 0; i < W * H; i++) d[i] = pal[buf[i]];
+    x.putImageData(this.img, 0, 0);
+    return c;
+  },
+
+  /* ---------- behind the tiles and characters: the strong part ---------- */
+  back(ctx, play, W, H) {
+    const L = this.levels(play); if (L.lsd <= 0.001 && L.shroom <= 0.001 && L.joint <= 0.001) return;
+    const calm = this.calm(), t = calm ? 0 : play.t;
+    ctx.save();
+    if (L.joint > 0.001) {
+      // a green haze settles over the background
+      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, `rgba(120,230,120,${0.28 * L.joint})`); g.addColorStop(1, `rgba(60,160,80,${0.4 * L.joint})`);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
+    const k = Math.max(L.lsd, L.shroom * 0.7);
+    if (k > 0.001) {
+      const buf = Game.quality >= 1 ? this.frame(calm ? 0 : t) : null;
+      if (buf) {
+        const lsd = L.lsd >= L.shroom * 0.7, hue = lsd ? (t * 70) % 360 : 260 + Math.sin(t * 0.8) * 40;
+        const c = this.paint(buf, hue, lsd ? 0.95 : 0.8, 1, !lsd);
+        // a kaleidoscope: the frame and its mirror image turning against each other, scaled to cover the view
+        const R = Math.hypot(W, H) * (1.08 + 0.1 * Math.sin(t * 0.7)), cx = W / 2, cy = H / 2;
+        ctx.imageSmoothingEnabled = true;
+        ctx.save(); ctx.globalAlpha = 0.8 * k * (calm ? 0.5 : 1); ctx.translate(cx, cy); ctx.rotate(t * 0.1);
+        ctx.drawImage(c, -R / 2, -R * 0.28, R, R * 0.5625); ctx.restore();
+      } else {
+        // the cheap version: a slow rainbow gradient
+        const g = ctx.createLinearGradient(0, 0, W, H);
+        for (let i = 0; i <= 4; i++) g.addColorStop(i / 4, `hsla(${(t * 60 + i * 72) % 360},90%,60%,${0.35 * k})`);
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      }
+    }
+    ctx.restore();
+  },
+
+  /* ---------- over the whole game view (before the HUD): breath, colour, smoke ---------- */
+  post(ctx, play, W, H) {
+    const L = this.levels(play); if (L.lsd <= 0.001 && L.shroom <= 0.001 && L.joint <= 0.001) return;
+    const calm = this.calm(), t = play.t, S = Game.S, p = play.player;
+    ctx.save();
+    // the breath: the world swells and settles around Brady (never below 1: no empty edges)
+    const amp = calm || Game.quality < 1 ? 0 : 0.045 * L.lsd + 0.025 * L.shroom + 0.012 * L.joint;
+    if (amp > 0.002 && p) {
+      const tmp = PostFX.ensure('tripWarp', W, H), tx = tmp.getContext('2d');
+      tx.globalCompositeOperation = 'copy'; tx.drawImage(ctx.canvas, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr, W, H, 0, 0, W, H);
+      const br = 0.5 + 0.5 * Math.sin(t * TAU / 2.6), sx = 1 + amp * (0.35 + 0.65 * br), sy = 1 + amp * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * TAU / 2.6 + 0.9)));
+      const px = clamp((p.cx - play.camX) * S, W * 0.2, W * 0.8), py = clamp((p.cy - play.camY) * S, H * 0.2, H * 0.8);
+      ctx.translate(px, py); ctx.scale(sx, sy); ctx.translate(-px, -py);
+      ctx.drawImage(tmp, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr);
+    }
+    // LSD: weird colours over everything (a hue wash), and a faint fractal sheen so it is "in" the tiles too
+    if (L.lsd > 0.001) {
+      ctx.globalCompositeOperation = 'hue'; ctx.globalAlpha = 0.22 * L.lsd;
+      const g = ctx.createLinearGradient(0, 0, W, H);
+      for (let i = 0; i <= 4; i++) g.addColorStop(i / 4, `hsl(${((calm ? 200 : t * 90) + i * 80) % 360},100%,55%)`);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      const c = PostFX.tripSmall;
+      if (c && Game.quality >= 1 && L.lsd > 0.4) { ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = 0.3 * L.lsd; ctx.drawImage(c, 0, 0, W, H); }
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    }
+    // the mushroom: a softer purple-pink colour shift and slow glowing sparkles
+    if (L.shroom > 0.001) {
+      const hue = calm ? 300 : (t * 80) % 360;
+      ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = 0.2 * L.shroom;
+      const g = ctx.createLinearGradient(0, 0, W, H);
+      for (let i = 0; i <= 4; i++) g.addColorStop(i / 4, `hsl(${(hue + i * 60) % 360},90%,62%)`);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'lighter';
+      const n = calm ? 6 : 16;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * TAU + (calm ? 0 : t * 0.35), r = (0.3 + ((i * 37) % 10) / 16) * Math.min(W, H) * 0.62;
+        const x = W / 2 + Math.cos(a) * r * 1.3, y = H / 2 + Math.sin(a) * r * 0.75, sz = (16 + (i % 3) * 8) * S * (0.7 + 0.3 * Math.sin(t * 3 + i));
+        ctx.globalAlpha = 0.5 * L.shroom; ctx.drawImage(PostFX.glow(`hsl(${(hue + i * 40) % 360},100%,70%)`), x - sz, y - sz, sz * 2, sz * 2);
+      }
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    }
+    // the joint: a green wash, then the smoke wisps and a hazy green rim composed at quarter resolution and laid over
+    // the view with one scaled draw (fill-rate friendly on a phone)
+    if (L.joint > 0.001) {
+      ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = `rgba(80,220,90,${0.55 * L.joint})`; ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+      const qw = Math.max(32, Math.round(W / 4)), qh = Math.max(16, Math.round(H / 4)), q = PostFX.ensure('tripSmoke', qw, qh), qx = q.getContext('2d');
+      qx.globalCompositeOperation = 'copy'; qx.fillStyle = `rgba(150,230,140,${0.1 * L.joint})`; qx.fillRect(0, 0, qw, qh);
+      qx.globalCompositeOperation = 'source-over';
+      const wisp = this.wisp(), e = 1.35 - (play.tripJoint || 0);
+      for (let i = 0; i < 9; i++) {
+        const sd = i * 1.618, ww = (0.36 + (i % 4) * 0.1) * qw;
+        const x = ((sd * 0.37 % 1) * 1.3 - 0.15) * qw + (calm ? 0 : Math.sin(e * 0.9 + sd) * 0.05 * qw + e * (i % 2 ? 5.5 : -4) * S);
+        const y = ((sd * 0.61 % 1) * 1.1 - 0.05) * qh - (calm ? 0 : e * 4.5 * S);
+        qx.globalAlpha = (0.55 + (i % 3) * 0.12) * L.joint;
+        qx.drawImage(wisp, x - ww / 2, y - ww * 0.32, ww, ww * 0.64);
+      }
+      qx.globalAlpha = 1;
+      const g = qx.createRadialGradient(qw / 2, qh / 2, qh * 0.3, qw / 2, qh / 2, qw * 0.62);
+      g.addColorStop(0, 'rgba(120,220,120,0)'); g.addColorStop(1, `rgba(90,190,100,${0.45 * L.joint})`);
+      qx.fillStyle = g; qx.fillRect(0, 0, qw, qh);
+      ctx.drawImage(q, 0, 0, W, H);
+    }
+    ctx.restore();
+  },
+  // a soft lumpy smoke sprite, made once
+  wisp() {
+    if (this.wispC) return this.wispC;
+    const c = makeCanvas(160, 104), x = c.getContext('2d');
+    const blobs = [[80, 56, 40], [52, 60, 30], [110, 58, 32], [70, 40, 26], [98, 42, 24], [35, 66, 20], [128, 66, 20]];
+    for (const [bx, by, r] of blobs) { const g = x.createRadialGradient(bx, by, 2, bx, by, r); g.addColorStop(0, 'rgba(240,252,236,0.7)'); g.addColorStop(0.55, 'rgba(215,242,210,0.32)'); g.addColorStop(1, 'rgba(200,235,200,0)'); x.fillStyle = g; x.fillRect(0, 0, 160, 104); }
+    return (this.wispC = c);
+  }
+};
+function hsl2rgb(h, s, l) {
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = t => { t = (t % 1 + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  return [Math.round(f(h + 1 / 3) * 255), Math.round(f(h) * 255), Math.round(f(h - 1 / 3) * 255)];
+}
+try { window.BRADY_POWERS = Object.assign(window.BRADY_POWERS || {}, { TripFX, PostFX }); } catch (e) { /* not in a browser */ }
 
 /* ---- 20_burn_themes.js ---- */
 /* ============================================================
@@ -19138,42 +19464,9 @@ class RainbowLaser extends Ent {
   get light() { return { r: 50, c: 'rgba(255,255,255,' }; }
 }
 
-/* ---------- screen effects (device px, game view) ---------- */
-const TourFx = {
-  // magic mushroom: hue cycling, a gentle wobble and kaleidoscope sparkles for a few seconds
-  apply(ctx, play, W, H) {
-    const dz = play.dizzy || 0;
-    if (dz <= 0) return;
-    const k = Math.min(1, dz, 1.2);
-    const calm = TourKit.reduceMotion();
-    ctx.save();
-    if (!calm && Game.quality >= 1) {
-      // wobble: redraw the frame slightly rotated and scaled (cheap, one pass)
-      const tmp = PostFX.ensure('tourWob', W, H), tx = tmp.getContext('2d');
-      tx.globalCompositeOperation = 'copy'; tx.drawImage(ctx.canvas, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr, W, H, 0, 0, W, H);
-      const a = Math.sin(play.t * 2.2) * 0.022 * k, s = 1 + 0.03 * k + Math.sin(play.t * 3.1) * 0.01 * k;
-      ctx.translate(W / 2, H / 2); ctx.rotate(a); ctx.scale(s, s); ctx.translate(-W / 2, -H / 2);
-      ctx.drawImage(tmp, 0, 0);
-      ctx.setTransform(1, 0, 0, 1, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr);
-    }
-    // hue cycling wash
-    const hue = calm ? 300 : (play.t * 120) % 360;
-    ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = 0.28 * k;
-    const g = ctx.createLinearGradient(0, 0, W, H);
-    for (let i = 0; i <= 4; i++) g.addColorStop(i / 4, `hsl(${(hue + i * 72) % 360},100%,60%)`);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    // kaleidoscope sparkles
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.8 * k;
-    const n = calm ? 8 : 26, cx = W / 2, cy = H / 2;
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * TAU + (calm ? 0 : play.t * 0.8), r = (0.25 + ((i * 37) % 10) / 14) * Math.min(W, H) * 0.6;
-      const px = cx + Math.cos(a) * r, py = cy + Math.sin(a) * r * 0.7, sz = (3 + (i % 3) * 2) * Game.S * (0.6 + 0.4 * Math.sin(play.t * 5 + i));
-      ctx.fillStyle = `hsl(${(hue + i * 40) % 360},100%,70%)`;
-      ctx.beginPath(); TourKit.star(ctx, px, py, sz, sz * 0.35, 4); ctx.fill();
-    }
-    ctx.restore();
-  }
-};
+/* ---------- screen effects ---------- */
+// the magic mushroom's dizzy colours now belong to the trip family in 15_postfx.js (TripFX); kept for old callers
+const TourFx = { apply(ctx, play, W, H) { TripFX.post(ctx, play, W, H); } };
 
 /* ---- 28_tour_d_actors.js ---- */
 /* ============================================================
@@ -19977,6 +20270,659 @@ Tour.pieces.gearStand = function (st, o) {
   st.B.vkey('gear:' + (o.item || 'plane'), [[tx, ty], [tx, ty - 1]]);
   return o.here ? x : x + 4;
 };
+
+/* ---- 28_tour_dh_picker.js ---- */
+/* ============================================================
+   World tour: the power picker.
+   Brady can hold several powers that want the one action button:
+   the item in his hands (gear or the country's signature item), a
+   second item in the Backpack, the joint's smoke puffs and, while
+   he flies, the LSD tab's rainbow lasers. The picker says which one
+   the action button uses:
+   - touch: a small chip above the action button (shown only when
+     Brady holds two or more); tap it (or swipe across it) to cycle
+     through them, a little carousel and a name label show the pick;
+   - keyboard: Q / E / C cycle, 1-5 pick directly; the HUD slot can
+     be tapped too;
+   - the action button and the HUD's first slot show the active
+     power's icon, so it is always clear what THROW will do.
+   Nothing is lost by switching: picking the Backpack item swaps it
+   into Brady's hands (the old Backpack swap, now driven from here),
+   picking smoke or lasers leaves the hands item where it is (its
+   passive effects keep running). Buffs, the mushroom size and the
+   star are passive and never in the list. The pick is remembered on
+   the Play scene for the rest of the level run (doors included); a
+   new pickup becomes the active power, and when a power ends (the
+   LSD wears off) the previous pick comes back.
+   ============================================================ */
+const TourPicker = {
+  NAMES: { joint: 'SMOKE PUFFS', lsd: 'RAINBOW LASERS' },
+  // the powers Brady holds that the action button can use, in the order he got them
+  list(p) {
+    if (!p || !p.g || !p.g.level || !p.g.level.tour) return [];
+    const g = p.g, out = [];
+    const add = k => { if (k && out.indexOf(k) < 0) out.push(k); };
+    const base = k => k ? String(k).split('#')[0] : k;
+    if (p.lsdT > 0) add('lsd');
+    add(base(p.handsKind ? p.handsKind() : null));
+    if (p.pack && (p.pack.startsWith('gear:') || p.pack.startsWith('sig:'))) add(base(p.pack));
+    if (p.power === 2) add('joint');
+    const seq = g.powSeq || {};
+    return out.sort((a, b) => (seq[a] || 0) - (seq[b] || 0));
+  },
+  // remember that a power was just picked up (it becomes the active one)
+  got(g, key) {
+    if (!g || !key) return;
+    key = String(key).split('#')[0];
+    g.powSeq = g.powSeq || {}; g.powN = (g.powN || 0) + 1;
+    if (!g.powSeq[key]) g.powSeq[key] = g.powN;
+    this.push(g, key);
+  },
+  push(g, key) { g.powHist = (g.powHist || []).filter(k => k !== key); g.powHist.push(key); if (g.powHist.length > 12) g.powHist.shift(); },
+  // the Backpack's item (a HANDS kind) as a picker key, or null
+  packKey(p) { return p.pack && (p.pack.startsWith('gear:') || p.pack.startsWith('sig:')) ? p.pack.split('#')[0] : null; },
+  // the active power: the latest pick that Brady still holds and that is not riding in the Backpack (picking the
+  // Backpack's item swaps it into his hands first); otherwise the old priority (lasers, hands, smoke)
+  active(p) {
+    const pk = this.packKey(p), L = this.list(p).filter(k => k !== pk); if (!L.length) return null;
+    const H = (p.g.powHist || []);
+    for (let i = H.length - 1; i >= 0; i--) if (L.indexOf(H[i]) >= 0) return H[i];
+    if (L.indexOf('lsd') >= 0) return 'lsd';
+    const hk = p.handsKind && p.handsKind(); if (hk && L.indexOf(hk.split('#')[0]) >= 0) return hk.split('#')[0];
+    return L[0];
+  },
+  // what the action button does: 'lsd' | 'hands' | 'joint' | null
+  use(p) {
+    const k = this.active(p); if (!k) return null;
+    if (k === 'lsd' || k === 'joint') return k;
+    return 'hands';
+  },
+  // a picked Backpack item goes into Brady's hands (the item he held goes into the Backpack: nothing is lost)
+  sync(p, key) {
+    if (!key || key === 'lsd' || key === 'joint' || this.packKey(p) !== key || !p.usePackTour) return;
+    p.usePackTour(true);
+  },
+  select(p, key, quiet) {
+    const g = p.g, L = this.list(p); if (L.indexOf(key) < 0) return false;
+    const was = this.active(p);
+    this.sync(p, key); this.push(g, key);
+    if (!quiet && key !== was) {
+      g.pickFx = { from: was, to: key, t: 0, dir: (L.indexOf(key) >= L.indexOf(was) ? 1 : -1) };
+      Sound.play('select', { vol: 0.5, pitch: 1.2 }); g.burst(p.cx, p.y + 6, 6, '#ffd84a', 'spark');
+    }
+    return true;
+  },
+  cycle(p, dir) {
+    const L = this.list(p); if (L.length < 2) { if (L.length === 1) this.select(p, L[0], true); Sound.play('bump', { vol: 0.3 }); return false; }
+    const i = Math.max(0, L.indexOf(this.active(p)));
+    const k = L[((i + (dir || 1)) % L.length + L.length) % L.length];
+    const ok = this.select(p, k);
+    if (ok && p.g.pickFx) p.g.pickFx.dir = dir || 1;
+    return ok;
+  },
+  name(key) {
+    if (this.NAMES[key]) return this.NAMES[key];
+    return TourPowers.name(key);
+  },
+  // can the active power act right now? (a thrown plane, a box: no)
+  ready(p, key) {
+    if (key === 'lsd') return p.lsdT > 0;
+    if (key === 'joint') return p.power === 2 && p.puffs < 3;
+    if (key && key.startsWith('gear:')) { const G = TourGear.get(key); if (!G || !G.action) return false; if (p.hands && p.hands.thrown) return false; if (G.id === 'fins') return !!p.inWater; if (G.id === 'pads') return !!p.crawling; return true; }
+    if (key && key.startsWith('sig:')) { const P = TourPowers.get(key.slice(4)); return !!(P && P.action); }
+    return false;
+  },
+  // the icon of a power key, without the pickup glow, centred on (x, y)
+  icon(ctx, key, x, y, t, g) {
+    const g0 = TourItemArt.glow; TourItemArt.glow = () => {};
+    try {
+      if (key === 'joint') { ctx.save(); ctx.translate(x + 2, y - 2); ctx.scale(1.15, 1.15); TourItemArt.joint(ctx, 0, 12, t); ctx.restore(); }
+      else if (key === 'lsd') TourItemArt.lsd(ctx, x, y + 12, t);
+      else TourGear.icon(ctx, key, x, y, t, g);
+    } finally { TourItemArt.glow = g0; }
+  },
+
+  /* ---------- the chip next to the action button (touch) ---------- */
+  chip() {
+    const L = Input.layout; if (!L) return null;
+    const a = L.action, r = clamp(L.r * 0.5, 17, 26);
+    // above the action button and a little toward the screen centre: the right thumb reaches it from either button
+    const side = L.lefty ? 1 : -1;
+    let x = a.x + side * a.r * 0.25, y = a.y - a.r - r - Math.max(8, L.r * 0.22);
+    if (L.portrait) y = Math.max(Game.gameRect.y + Game.gameRect.h + r + 6, y);
+    return { x, y, r };
+  },
+  visible(play) {
+    if (!(play instanceof Play) || !play.level || !play.level.tour || play.paused || play.state !== 'play') return false;
+    const p = play.player; return !!(p && !p.dead && this.list(p).length >= 2);
+  },
+  drawChip(ctx) {
+    const play = Game.scene; if (!this.visible(play)) return;
+    const c = this.chip(); if (!c) return;
+    const p = play.player, L = this.list(p), k = this.active(p), t = play.t, fx = play.pickFx;
+    ctx.save();
+    // the plate: a dark disc with a gold rim and a pip for each power around its lower edge
+    const held = this.touchId != null;
+    ctx.translate(c.x, c.y); if (held) ctx.scale(0.92, 0.92);
+    ctx.fillStyle = 'rgba(14,10,26,0.62)'; ctx.beginPath(); ctx.arc(0, 0, c.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,216,74,0.75)'; ctx.lineWidth = 1.6; ctx.stroke();
+    // two tiny chevrons: this cycles
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * (c.r - 3), -3); ctx.lineTo(s * (c.r + 0.5), 0); ctx.lineTo(s * (c.r - 3), 3); ctx.stroke(); }
+    const n = L.length, i0 = L.indexOf(k);
+    for (let i = 0; i < n; i++) { const ang = Math.PI / 2 + (i - (n - 1) / 2) * 0.32; ctx.fillStyle = i === i0 ? '#ffd84a' : 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(Math.cos(ang) * (c.r + 4.5), Math.sin(ang) * (c.r + 4.5), i === i0 ? 2.4 : 1.7, 0, TAU); ctx.fill(); }
+    // the icon, with a short carousel slide when the pick changes
+    const sc = c.r / 22;
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, c.r - 2, 0, TAU); ctx.clip();
+    if (fx && fx.t < 0.28 && fx.from) {
+      const e = easeInOut(clamp(fx.t / 0.28, 0, 1)), d = fx.dir || 1;
+      ctx.globalAlpha = 1 - e; ctx.save(); ctx.translate(-d * e * c.r * 1.6, 0); ctx.scale(sc * 0.8, sc * 0.8); this.icon(ctx, fx.from, 0, 0, t, play); ctx.restore();
+      ctx.globalAlpha = e; ctx.save(); ctx.translate(d * (1 - e) * c.r * 1.6, 0); ctx.scale(sc * 0.8, sc * 0.8); this.icon(ctx, fx.to, 0, 0, t, play); ctx.restore();
+    } else if (k) { ctx.save(); ctx.scale(sc * 0.8, sc * 0.8); this.icon(ctx, k, 0, 0, t, play); ctx.restore(); }
+    ctx.restore();
+    ctx.restore();
+    // the name label pops above the chip for a moment after a switch
+    if (fx && fx.t < 1.3 && fx.to) this.label(ctx, this.name(fx.to), c.x, c.y - c.r - 14, clamp(Math.min(fx.t * 8, (1.3 - fx.t) * 4), 0, 1));
+    // first time ever: a hint over the chip
+    const tips = Save.data.tips || {};
+    if (play.pickTipT > 0) this.label(ctx, 'TAP TO SWITCH POWERS', c.x, c.y - c.r - 14 - (fx && fx.t < 1.3 ? 22 : 0) + Math.sin(t * 4) * 2, clamp(Math.min(play.pickTipT, 4.5 - play.pickTipT) * 2, 0, 1), true);
+    else if (!tips.picker && play.pickTipT == null) { play.pickTipT = 4.5; tips.picker = true; Save.data.tips = tips; }
+  },
+  label(ctx, txt, x, y, a, tip) {
+    ctx.save(); ctx.globalAlpha = a; ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(txt).width + 16, W = Game.cssW;
+    x = clamp(x, w / 2 + 6, W - w / 2 - 6);
+    ctx.fillStyle = 'rgba(14,8,26,0.82)'; rr(ctx, x - w / 2, y - 10, w, 20, 10); ctx.fill();
+    ctx.strokeStyle = tip ? 'rgba(255,216,74,0.8)' : 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.1; ctx.stroke();
+    ctx.fillStyle = tip ? '#ffd84a' : '#ffffff'; ctx.fillText(txt, x, y + 1);
+    ctx.restore();
+  },
+  // the action button wears the active power's icon (dimmed when it can't fire right now)
+  actionArt(ctx, b) {
+    const play = Game.scene; if (!(play instanceof Play) || !play.level || !play.level.tour || !play.player) return false;
+    const p = play.player, k = this.active(p); if (!k) return false;
+    const ok = this.ready(p, k);
+    ctx.save(); ctx.globalAlpha *= ok ? 1 : 0.45; const s = b.r / 19; ctx.scale(s, s); this.icon(ctx, k, 0, 0, play.t, play); ctx.restore();
+    return true;
+  },
+  // a touch on the chip (before the jump / action buttons see it); a tap cycles forward, a swipe picks the direction
+  hit(x, y) {
+    if (!this.visible(Game.scene)) return false;
+    const c = this.chip(), L = Input.layout; if (!c || !L) return false;
+    const d = Math.hypot(x - c.x, y - c.y);
+    return d < c.r * 1.3 && d < Math.hypot(x - L.action.x, y - L.action.y) && d < Math.hypot(x - L.jump.x, y - L.jump.y);
+  }
+};
+
+/* ---------- Brady: the picker drives the action button ---------- */
+Object.assign(Player.prototype, {
+  actionUse() { return TourPicker.use(this); }
+});
+{
+  // every pickup that can use the action button becomes the active power
+  const ct0 = Player.prototype.collectTour;
+  Player.prototype.collectTour = function (kind, src) {
+    const r = ct0.call(this, kind, src), g = this.g;
+    if (kind === 'vinyl') kind = 'joint'; else if (kind === 'bufo') kind = 'lsd';
+    if (kind === 'joint' && this.power === 2) TourPicker.got(g, 'joint');
+    else if (kind === 'lsd' && this.lsdT > 0) TourPicker.got(g, 'lsd');
+    else if (kind && (kind.startsWith('sig:') || kind.startsWith('gear:'))) { const hk = this.handsKind(); if (hk && hk.split('#')[0] === kind.split('#')[0]) TourPicker.got(g, hk); }
+    return r;
+  };
+  // the old Backpack swap now goes through the picker (the HUD slot, C / Q): it cycles the powers
+  const upt = Player.prototype.usePackTour;
+  Player.prototype.usePackTour = function (raw) {
+    if (raw) return upt.call(this);
+    const L = TourPicker.list(this);
+    if (L.length >= 2) return TourPicker.cycle(this, 1);
+    const r = upt.call(this); const hk = this.handsKind(); if (r && hk) TourPicker.push(this.g, hk.split('#')[0]); return r;
+  };
+}
+/* ---------- input: the chip, the HUD slot, the keys ---------- */
+(function hookPickerInput() {
+  const down0 = Input.onDown, up0 = Input.onUp;
+  Input.onDown = function (e) {
+    if (this.mode === 'game' && typeof Play !== 'undefined' && Game.scene instanceof Play) {
+      const q = this.pos(e);
+      if (TourPicker.hit(q.x, q.y)) {
+        if (e.cancelable) e.preventDefault();
+        try { this.canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        TourPicker.touchId = e.pointerId;
+        this.touches.set(e.pointerId, { role: 'pick', ox: q.x, oy: q.y, x: q.x, y: q.y, sx: q.x, sy: q.y, t: performance.now() });
+        return;
+      }
+    }
+    return down0.call(this, e);
+  };
+  Input.onUp = function (e, cancel) {
+    const t = this.touches.get(e.pointerId);
+    if (t && t.role === 'pick') {
+      if (e.cancelable) e.preventDefault();
+      this.touches.delete(e.pointerId); TourPicker.touchId = null;
+      if (!cancel) { const q = this.pos(e), dx = q.x - t.sx, dy = q.y - t.sy; this.pickCycle = Math.abs(dx) > 18 && Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : -1) : 1; }
+      this.recompute(); return;
+    }
+    return up0.call(this, e, cancel);
+  };
+  window.addEventListener('keydown', e => {
+    if (Input.mode !== 'game') return;
+    if (e.code === 'KeyE') Input.pickCycle = 1;
+    const m = /^Digit([1-5])$/.exec(e.code); if (m) Input.pickSlot = +m[1];
+  });
+  Input.actionArt = (ctx, b) => TourPicker.actionArt(ctx, b);
+  Input.overlay = ctx => TourPicker.drawChip(ctx);
+})();
+// the Play scene: apply a queued cycle / pick, run the carousel timer
+{
+  const u0 = Play.prototype.update;
+  Play.prototype.update = function (dt) {
+    if (this.level && this.level.tour && !this.paused) {
+      const p = this.player;
+      if (this.pickFx) this.pickFx.t += dt;
+      if (this.pickTipT > 0) this.pickTipT = Math.max(0, this.pickTipT - dt);
+      if (p && this.state === 'play' && p.state === 'play' && !p.dead) {
+        if (Input.pickCycle) { TourPicker.cycle(p, Input.pickCycle); }
+        if (Input.pickSlot) { const L = TourPicker.list(p), k = L[Input.pickSlot - 1]; if (k) TourPicker.select(p, k); else Sound.play('bump', { vol: 0.3 }); }
+      }
+    }
+    Input.pickCycle = 0; Input.pickSlot = 0;
+    return u0.call(this, dt);
+  };
+}
+try { window.BRADY_POWERS = Object.assign(window.BRADY_POWERS || {}, { TourPicker }); } catch (e) { /* not in a browser */ }
+
+/* ---- 28_tour_di_jumps.js ---- */
+/* ============================================================
+   World tour: jump powers (a FEET slot, p.jumpPow). Pressing jump
+   again in mid-air uses the one Brady holds:
+   - SPRING SOCKS  (socks): a second, slightly lower jump, once per
+     airtime: a tucked somersault and a dust ring underfoot;
+   - POUND CAKE    (cake): he tucks into a ball, then slams straight
+     down; the landing sends a shockwave that stuns enemies within
+     3.5 tiles for 2.5 s (harmless, stompable, walk-through), breaks
+     bricks, crumble and soil under his boots, with a short hit-pause
+     and a gentle shake;
+   - MAGIC BEANS   (beans): every mid-air tap he drops into a squat,
+     trousers at his knees, heart-print boxers out, and a green puff
+     fires downward and pops him up a little; the gas meter (6 puffs)
+     refills on the ground; the puffs travel ~2.5 tiles down and
+     knock out the ordinary enemies they touch (a normal hit for a
+     boss); landing snaps the trousers back up.
+   One jump power at a time (a new one replaces it); found in item
+   blocks and gear stands like gear ('socks', 'cake', 'beans'); lost
+   on a hit after the HANDS item (it floats for 2 s, re-grabbable);
+   kept through doors for the level run. They are bonuses: the
+   validator ignores them (every level is finishable without), they
+   are off while Brady carries something (CARRY), and in a locked
+   boss arena he cannot leave its bounds with them.
+   ============================================================ */
+const TourJump = {
+  IDS: ['socks', 'cake', 'beans'],
+  GAS: 6,                  // puffs per full meter
+  is(id) { return this.IDS.indexOf(id) >= 0; },
+  // falling and about to land: the press is a buffered jump, not a jump power
+  nearGround(p) {
+    const A = p.g.area, fy = Math.floor((p.y + p.h + 22) / TS);
+    for (const tx of [Math.floor((p.x + 2) / TS), Math.floor((p.x + p.w - 2) / TS)]) { const t = tileAt(A, tx, fy); if (SOLID[t] || t === T.SEMI) return true; }
+    return p.vy > 0 && p.g.platforms.some(pl => !pl.dead && p.x + p.w > pl.x && p.x < pl.x + pl.w && pl.y - (p.y + p.h) < 24 && pl.y > p.y);
+  },
+  sfx(name, fb, o) { if (typeof TourKit !== 'undefined') TourKit.sfx(name, fb, o); else Sound.play(fb, o); },
+  tip: { socks: 'TAP JUMP AGAIN IN THE AIR: DOUBLE JUMP', cake: 'TAP JUMP AGAIN IN THE AIR: GROUND POUND', beans: 'TAP JUMP IN THE AIR AGAIN AND AGAIN: FART FLOAT' }
+};
+
+/* ---------- the three items (registered as gear in the FEET slot: blocks, stands, names and icons for free) ---------- */
+const JumpArt = {
+  socks(ctx, x, y, t) {
+    ctx.save(); ctx.translate(x, y);
+    for (const s of [-1, 1]) {
+      ctx.save(); ctx.translate(s * 5.5, -1 + (s > 0 ? Math.sin(t * 6) : Math.cos(t * 6)) * 0.8);
+      // a coil spring under each sock
+      ctx.strokeStyle = '#9aa0b0'; ctx.lineWidth = 1.4; ctx.beginPath(); for (let k = 0; k <= 6; k++) { const yy = 6 + k * 1.1; ctx.lineTo((k % 2 ? 2.6 : -2.6), yy); } ctx.stroke();
+      // the sock: a tube with a foot, stripes in red, white and teal
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(-3, -9); ctx.lineTo(3, -9); ctx.lineTo(3, 2); ctx.quadraticCurveTo(3, 6, s * 6 + 1, 5.5); ctx.lineTo(s * 6, 7.5); ctx.quadraticCurveTo(-4, 8, -3, 3); ctx.closePath(); ctx.fill();
+      ctx.save(); ctx.clip();
+      ['#ff4f6a', '#38c8c8', '#ff4f6a'].forEach((c, k) => { ctx.fillStyle = c; ctx.fillRect(-6, -8 + k * 3.4, 14, 1.7); });
+      ctx.fillStyle = '#ffd84a'; ctx.fillRect(-6, 4, 14, 4);
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(40,20,40,0.55)'; ctx.lineWidth = 0.8; ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  },
+  cake(ctx, x, y, t) {
+    ctx.save(); ctx.translate(x, y + 1);
+    // a golden loaf with a domed, cracked top and white icing drizzle, sitting heavy on a little "1 LB" weight tag
+    ctx.fillStyle = '#c87a2a'; rr(ctx, -11, -4, 22, 12, 3); ctx.fill();
+    ctx.fillStyle = '#e8a848'; ctx.beginPath(); ctx.moveTo(-11, -2); ctx.quadraticCurveTo(-10, -11, 0, -11); ctx.quadraticCurveTo(10, -11, 11, -2); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#a85a1a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-6, -8); ctx.lineTo(-2, -6); ctx.lineTo(2, -8.5); ctx.lineTo(6, -6.5); ctx.stroke();
+    ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.moveTo(-10, -3); for (let k = 0; k <= 8; k++) { const xx = -10 + k * 2.5; ctx.lineTo(xx, -3 + (k % 2 ? 3 + (k % 3) : 0)); } ctx.lineTo(10, -4); ctx.quadraticCurveTo(0, -7, -10, -4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5a5a66'; rr(ctx, 4, 3, 10, 7, 2); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = `bold 5px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.fillText('1LB', 9, 8.4);
+    // a little "heavy" wobble line under it
+    ctx.strokeStyle = `rgba(255,255,255,${0.4 + 0.3 * Math.sin(t * 8)})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-12, 10.5); ctx.lineTo(-4, 10.5); ctx.stroke();
+    ctx.restore();
+  },
+  beans(ctx, x, y, t) {
+    ctx.save(); ctx.translate(x, y + 2);
+    // a green gas cloud rising out of the open tin
+    for (let k = 0; k < 3; k++) { const ph = (t * 0.8 + k / 3) % 1; ctx.fillStyle = `rgba(150,220,90,${0.75 * (1 - ph)})`; ctx.beginPath(); ctx.arc(-3 + k * 3 + Math.sin(ph * 6 + k) * 2, -11 - ph * 9, 3 + ph * 3, 0, TAU); ctx.fill(); }
+    // the tin: silver rim, a green label with three beans
+    ctx.fillStyle = '#b8bcc8'; rr(ctx, -8, -8, 16, 16, 2); ctx.fill();
+    ctx.fillStyle = '#4aa83a'; ctx.fillRect(-8, -4, 16, 9);
+    ctx.fillStyle = '#c86a3a'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(-4.5 + k * 4.5, 0.5, 1.9, 1.3, 0.4, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#e8ecf4'; ctx.beginPath(); ctx.ellipse(0, -8, 8, 2.4, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8a5a3a'; ctx.beginPath(); ctx.ellipse(0, -8, 6.5, 1.6, 0, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+};
+TourGear.register({ id: 'socks', name: 'SPRING SOCKS', hint: 'TAP JUMP AGAIN IN THE AIR: DOUBLE JUMP', slot: 'feet', glow: '#ffb0c8', icon(ctx, x, y, t) { JumpArt.socks(ctx, x, y, t); } });
+TourGear.register({ id: 'cake', name: 'POUND CAKE', hint: 'TAP JUMP AGAIN IN THE AIR: GROUND POUND', slot: 'feet', glow: '#ffd890', icon(ctx, x, y, t) { JumpArt.cake(ctx, x, y, t); } });
+TourGear.register({ id: 'beans', name: 'MAGIC BEANS', hint: 'TAP JUMP IN THE AIR, AGAIN AND AGAIN: FART FLOAT', slot: 'feet', glow: '#b8f080', icon(ctx, x, y, t) { JumpArt.beans(ctx, x, y, t); } });
+
+/* ---------- effects ---------- */
+// the double jump's dust ring: an expanding ellipse at Brady's feet
+class JumpRing extends Ent {
+  constructor(g, x, y, col, r1) { super(g, null, 8, 8); this.x = x - 4; this.y = y - 4; this.friendly = true; this.life = 0.34; this.col = col || '#ffffff'; this.r1 = r1 || 26; this.t = 0; }
+  update(dt) { this.t += dt; if (this.t >= this.life) this.remove = true; }
+  draw(ctx) {
+    const k = clamp(this.t / this.life, 0, 1), e = 1 - (1 - k) * (1 - k), r = 6 + e * this.r1;
+    ctx.save(); ctx.globalAlpha = 1 - k;
+    ctx.strokeStyle = 'rgba(60,36,70,0.45)'; ctx.lineWidth = 3 * (1 - k) + 3; ctx.beginPath(); ctx.ellipse(this.cx, this.cy, r, r * 0.3, 0, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = this.col; ctx.lineWidth = 3 * (1 - k) + 1;
+    ctx.beginPath(); ctx.ellipse(this.cx, this.cy, r, r * 0.3, 0, 0, TAU); ctx.stroke();
+    // two little puffs flung out sideways
+    ctx.fillStyle = 'rgba(255,250,240,0.85)'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(this.cx + s * r * 1.05, this.cy - 2 - e * 4, 3.5 * (1 - k) + 1.5, 0, TAU); ctx.fill(); }
+    ctx.globalAlpha = 0.5 * (1 - k); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(this.cx, this.cy, r * 0.62, r * 0.2, 0, 0, TAU); ctx.stroke();
+    ctx.restore();
+  }
+}
+// the ground pound's shockwave along the floor
+class PoundWave extends Ent {
+  constructor(g, x, y, R) { super(g, null, 8, 8); this.x = x - 4; this.y = y - 4; this.friendly = true; this.life = 0.5; this.R = R; this.t = 0; }
+  update(dt) { this.t += dt; if (this.t >= this.life) this.remove = true; }
+  draw(ctx) {
+    const k = clamp(this.t / this.life, 0, 1), e = 1 - Math.pow(1 - k, 3), r = 10 + e * this.R, x = this.cx, y = this.cy;
+    ctx.save();
+    ctx.globalAlpha = (1 - k) * 0.9;
+    ctx.strokeStyle = 'rgba(70,40,30,0.5)'; ctx.lineWidth = 7 * (1 - k) + 3; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.26, 0, Math.PI, TAU); ctx.stroke();
+    ctx.strokeStyle = '#fff3c8'; ctx.lineWidth = 6 * (1 - k) + 1.5;
+    ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.26, 0, Math.PI, TAU); ctx.stroke();
+    // a flash of light where he hit
+    if (k < 0.35) { ctx.globalAlpha = (0.35 - k) * 2; ctx.fillStyle = '#fff6d0'; ctx.beginPath(); ctx.ellipse(x, y - 2, 26 * (0.5 + k), 9 * (0.5 + k), 0, 0, TAU); ctx.fill(); ctx.globalAlpha = (1 - k) * 0.9; }
+    ctx.strokeStyle = '#ffb83a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, r * 0.75, r * 0.16, 0, Math.PI, TAU); ctx.stroke();
+    // little shock spikes on both sides
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { const xx = x + s * (r - 4 - i * 9), h = (10 - i * 3) * (1 - k); ctx.beginPath(); ctx.moveTo(xx, y - 2); ctx.lineTo(xx + s * 3, y - 2 - h); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+// a green fart puff: falls ~2.5 tiles, swells, knocks out the ordinary enemies it touches
+class GasPuff extends Ent {
+  constructor(g, x, y, dir) {
+    super(g, null, 20, 20); this.x = x - 10; this.y = y - 10; this.vy = 7.5 * TS; this.vx = -dir * 0.9 * TS; this.friendly = true; this.life = 0.55; this.r = 6; this.seed = Math.random() * 10; this.hitSet = new Set(); this.flat = 0; this.t = 0;
+  }
+  update(dt) {
+    this.t += dt; this.life -= dt; const g = this.g;
+    if (!this.flat) { this.vy *= Math.pow(0.18, dt); this.x += this.vx * dt; this.y += this.vy * dt; }
+    this.r = 6 + Math.min(1, this.t / 0.35) * 12 + this.flat * 8;
+    if (!this.flat && SOLID[tileAt(g.area, Math.floor(this.cx / TS), Math.floor((this.cy + 6) / TS))]) { this.flat = 1; this.life = Math.min(this.life, 0.3); }
+    if (this.life <= 0) { this.remove = true; return; }
+    if (this.life < 0.12) return;
+    const box = { x: this.cx - this.r * 0.75, y: this.cy - this.r * 0.7, w: this.r * 1.5, h: this.r * 1.4 };
+    for (const e of g.entities) {
+      if (!e.enemy || e.dead || e.remove || e.boss || this.hitSet.has(e) || !overlap(box, e)) continue;
+      this.hitSet.add(e);
+      if (e.hit('disc', this)) { g.addScore(200, e.cx, e.y); g.burst(e.cx, e.cy, 10, '#a8e85a', 'dust'); g.parts.text(e.cx, e.y - 10, 'PEE-YEW!', '#b8f080'); }
+    }
+    const b = g.boss; if (b && !b.dead && !this.hitSet.has(b) && overlap(box, b)) { this.hitSet.add(b); b.hit('disc', this); }
+  }
+  draw(ctx) {
+    const a = clamp(this.life / 0.3, 0, 1), cx = this.cx, cy = this.cy, r = this.r;
+    ctx.save();
+    // an outlined cartoon cloud in two greens, flattened when it hits the floor
+    ctx.translate(cx, cy); ctx.scale(1 + this.flat * 0.6, 1 - this.flat * 0.35);
+    const lumps = [[0, 0, 0.62], [-0.45, 0.15, 0.45], [0.45, 0.12, 0.48], [-0.15, -0.38, 0.42], [0.25, -0.32, 0.4]];
+    ctx.globalAlpha = 0.9 * a; ctx.fillStyle = '#3e7a22';
+    for (const [lx, ly, lr] of lumps) { ctx.beginPath(); ctx.arc(lx * r, ly * r, lr * r + 1.6, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#8fdc4a';
+    for (const [lx, ly, lr] of lumps) { ctx.beginPath(); ctx.arc(lx * r, ly * r, lr * r, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(220,255,170,0.75)'; ctx.beginPath(); ctx.arc(-0.2 * r, -0.3 * r, 0.22 * r, 0, TAU); ctx.fill();
+    ctx.restore();
+    // stink lines
+    ctx.save(); ctx.globalAlpha = 0.7 * a; ctx.strokeStyle = '#6ab83a'; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
+    for (let i = -1; i <= 1; i++) { const x = cx + i * r * 0.55, w = Math.sin(this.t * 14 + i + this.seed) * 2; ctx.beginPath(); ctx.moveTo(x, cy + r * 0.6); ctx.quadraticCurveTo(x + w + 2, cy + r * 0.9, x - w, cy + r * 1.2); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+
+/* ---------- Brady ---------- */
+Object.assign(Player.prototype, {
+  // called by Player.update on a mid-air jump press (11_player.js); true = the press was used
+  airJump(inp) {
+    const J = this.jumpPow, g = this.g;
+    if (!J || !(g.level && g.level.tour) || this.carrying || this.state !== 'play') return false;
+    if (this.vy > 0 && TourJump.nearGround(this)) return false;     // about to land: keep it as a buffered jump
+    if (J.id === 'socks') {
+      if (J.used) return false;
+      J.used = true; this.vy = -14.2 * TS; this.jumping = true; this.flipT = 0.42; this.pound = null;
+      g.spawn(new JumpRing(g, this.cx, this.y + this.h + 2, '#ffffff', 28)); g.burst(this.cx, this.y + this.h, 8, '#ffffff', 'dust');
+      TourJump.sfx('boing', 'jump', { pitch: 1.35, vol: 0.7 });
+      return true;
+    }
+    if (J.id === 'cake') {
+      if (this.pound) return false;
+      this.pound = { phase: 'tuck', t: 0, y: this.y }; this.vx = 0; this.vy = 0; this.jumping = false;
+      TourJump.sfx('poundTuck', 'fly', { pitch: 1.3, vol: 0.6 });
+      return true;
+    }
+    if (J.id === 'beans') {
+      const need = 1 / TourJump.GAS;
+      if (J.gas < need - 1e-6) { J.emptyT = 0.6; g.burst(this.cx - this.facing * 6, this.y + this.h - 8, 3, '#b8e890', 'dust'); TourJump.sfx('fartEmpty', 'bump', { pitch: 1.6, vol: 0.35 }); return true; }
+      J.gas = Math.max(0, J.gas - need); J.puffT = 0; J.down = true;
+      // the lift (none near the top of the view: he never floats off screen)
+      if (this.y > g.camY + 1.5 * TS) this.vy = Math.min(this.vy, -7.4 * TS); else this.vy = Math.max(this.vy, 0);
+      this.jumping = false;
+      g.spawn(new GasPuff(g, this.cx - this.facing * 6, this.y + this.h - 6, this.facing));
+      TourJump.sfx('fart', 'splat', { pitch: 0.7 + Math.random() * 0.25, vol: 0.7 });
+      return true;
+    }
+    return false;
+  },
+  // after the physics step: the pound's tuck and slam, the fart float, landings, the arena bounds
+  jumpAfter(dt, inp) {
+    const J = this.jumpPow, g = this.g, A = g.area;
+    if (this.squashT > 0) this.squashT -= dt;
+    if (this.flipT > 0) { this.flipT -= dt; if (this.onGround || this.inWater) this.flipT = 0; }
+    if (!J) { this.pound = null; return; }
+    if (this.onGround || this.inWater || this.hang || this.mounted) {
+      if (J.id === 'socks') J.used = false;
+    }
+    // the ground pound
+    const pd = this.pound;
+    if (pd) {
+      pd.t += dt;
+      if (this.inWater || this.hang || this.mounted || this.dead || this.carrying) this.pound = null;
+      else if (pd.phase === 'tuck') {
+        this.y = pd.y; this.vy = 0; this.vx = 0;
+        if (pd.t >= 0.17) { pd.phase = 'slam'; pd.t = 0; this.vy = 21 * TS; TourJump.sfx('poundDrop', 'fly', { pitch: 0.6, vol: 0.5 }); }
+      } else {
+        if (this.vy < 0) this.pound = null;              // bounced off an enemy (a stomp): the pound ends there
+        else if (this.onGround) this.poundLand();
+        else { this.vy = Math.max(this.vy, 21 * TS); this.vx *= Math.pow(0.02, dt); if (Math.random() < 0.6) g.burst(this.cx + (Math.random() - 0.5) * 10, this.y - 2, 1, '#ffffff', 'dust'); }
+      }
+    }
+    // the fart float: lighter gravity while squatting, a capped fall, the meter refills on the ground
+    if (J.id === 'beans') {
+      J.puffT = (J.puffT || 0) + dt; if (J.emptyT > 0) J.emptyT -= dt;
+      if (this.onGround || this.inWater || this.hang || this.mounted) {
+        if (J.pants > 0.5) { J.snapT = 0.35; TourJump.sfx('pantsSnap', 'select', { pitch: 1.6, vol: 0.55 }); g.parts.text(this.cx, this.y - 8, '*SNAP*', '#ffffff'); }
+        J.down = false; if (this.onGround) J.gas = Math.min(1, (J.gas || 0) + dt * 1.25);
+      } else if (J.down && !this.carrying) {
+        this.vy -= PHYS.gDown * 0.5 * dt; if (this.vy > 4.2 * TS) this.vy = 4.2 * TS;
+        if (Math.random() < 0.12) g.burst(this.cx - this.facing * 6, this.y + this.h - 6, 1, '#b8e890', 'dust');
+      }
+      J.pants = J.down ? Math.min(1, (J.pants || 0) + dt / 0.12) : Math.max(0, (J.pants || 0) - dt / 0.14);
+      if (J.snapT > 0) J.snapT -= dt;
+    }
+    // a locked boss arena keeps Brady inside it
+    if (g.bossLock) { const L = g.bossLock; if (this.x < L.x0) this.x = L.x0; if (this.x + this.w > L.x1) this.x = L.x1 - this.w; }
+    if (this.y < -TS * 2) { this.y = -TS * 2; this.vy = Math.max(this.vy, 0); }
+  },
+  poundLand() {
+    const g = this.g, A = g.area, R = 3.5 * TS, x = this.cx, y = this.y + this.h;
+    // the floor under his boots: bricks break, ?-blocks pop, crumble falls, soil is dug; then he keeps falling
+    let broke = false;
+    const ty = Math.floor((y + 2) / TS);
+    for (const tx of [Math.floor((this.x + 3) / TS), Math.floor((this.x + this.w - 3) / TS)]) {
+      const t = tileAt(A, tx, ty);
+      if (t === T.BRICK) { g.bumpBlock(tx, ty, true, this); broke = true; }
+      else if (t === T.QBLOCK || t === T.QBRICK) g.bumpBlock(tx, ty, true, this);
+      else if (t === T.CRUMBLE) { g.setTile(tx, ty, T.EMPTY); A.crumbles.push({ tx, ty, t: 5, state: 'gone' }); g.burst(tx * TS + 16, ty * TS + 16, 8, '#d8b080', 'debris'); broke = true; }
+      else if (t === T.SOIL) { g.setTile(tx, ty, T.EMPTY); g.burst(tx * TS + 16, ty * TS + 16, 8, '#8a6040', 'debris'); broke = true; }
+    }
+    // the shockwave: every ordinary enemy within 3.5 tiles (and 2 tiles up or down) is stunned for 2.5 s
+    let n = 0;
+    for (const e of g.entities) {
+      if (!e.enemy || e.dead || e.remove || e.boss || e.friendly) continue;
+      if (Math.abs(e.cx - x) > R || Math.abs((e.y + e.h) - y) > 2 * TS) continue;
+      if (e.stun) { e.stun(2.5); n++; } else if ('stunT' in e) { e.stunT = 2.5; n++; }
+      e.poundT = 2.5;
+    }
+    g.spawn(new PoundWave(g, x, y, R)); g.burst(x, y, 14, '#ffffff', 'dust'); g.burst(x, y, 10, '#ffd84a', 'spark');
+    for (const s of [-1, 1]) for (let k = 1; k <= 3; k++) g.burst(x + s * k * TS * 0.9, y - 2, 4, '#f4ead8', 'dust');
+    g.hitStop = Math.max(g.hitStop || 0, 0.07); g.shake(5);
+    TourJump.sfx('poundLand', 'stomp', { pitch: 0.6, vol: 0.9 });
+    if (n) g.parts.text(x, this.y - 14, n > 1 ? 'STUNNED x' + n : 'STUNNED!', '#ffd84a');
+    this.squashT = 0.18;
+    if (broke) { this.onGround = false; this.vy = 4 * TS; this.pound.phase = 'slam'; }
+    else this.pound = null;
+  },
+  takeJump(G) {
+    const g = this.g, had = this.jumpPow && this.jumpPow.id;
+    if (had === G.id) { this.jumpPow.gas = 1; Sound.play('pick', { pitch: 1.4 }); return; }
+    this.jumpPow = { id: G.id, gas: 1, used: false, pants: 0 }; this.pound = null;
+    Sound.play('powerup'); g.burst(this.cx, this.cy, 20, G.glow || '#fff2c0', 'confetti');
+    g.toast(G.name + '! ' + (G.hint || ''));
+    // the first time ever: a one-line tip over the jump button
+    const tips = Save.data.tips || (Save.data.tips = {});
+    if (!tips[G.id]) { tips[G.id] = true; g.jumpTip = { text: TourJump.tip[G.id], t: 5.5 }; Save.save(); }
+  }
+});
+{
+  // FEET items go to their own slot (they never touch HANDS or the Backpack)
+  const tg = Player.prototype.takeGear;
+  Player.prototype.takeGear = function (G, src) { if (G.slot === 'feet') return this.takeJump(G); return tg.call(this, G, src); };
+  // the hit order (§5.2 + this slot): star, hard hat, the HANDS item, then the jump power, then FORM
+  const hurt0 = Player.prototype.hurt;
+  Player.prototype.hurt = function (src) {
+    if (this.jumpPow && this.g.level && this.g.level.tour && !this.dead && this.state === 'play' && !(this.star > 0) && !(this.invuln > 0) && !this.grabbedBy && !this.mounted && !(this.kandi > 0) && !(this.fx.molly > 0) && !this.handsKind() && !this.carrying) {
+      const k = 'gear:' + this.jumpPow.id; this.jumpPow = null; this.pound = null; this.dropKind(k, 2);
+      this.invuln = 1.8; this.hurtFlash = 0.3; this.g.shake(4); if (src && src.x !== undefined) this.vx = (this.cx < (src.x + (src.w || 0) / 2) ? -1 : 1) * 4 * TS; this.vy = Math.min(this.vy, -6 * TS);
+      Sound.play('powerdown', { vol: 0.6 }); this.g.parts.text(this.cx, this.y - 10, 'DROPPED IT!', '#ffffff');
+      return;
+    }
+    return hurt0.call(this, src);
+  };
+  // the update: the jump power acts after the physics step; the pose follows
+  const up = Player.prototype.update;
+  Player.prototype.update = function (dt, inp) {
+    const r = up.call(this, dt, inp);
+    if (this.state === 'play' && !this.dead && this.g.level && this.g.level.tour) this.jumpAfter(dt, inp || {});
+    return r;
+  };
+  const ua = Player.prototype.updateAnim;
+  Player.prototype.updateAnim = function (dt, inp) {
+    ua.call(this, dt, inp);
+    const J = this.jumpPow, a = this.anim;
+    if (this.onGround || this.inWater || this.hang || this.mounted || this.state !== 'play') return;
+    if (this.pound) a.state = this.pound.phase === 'tuck' ? 'tuck' : 'pound';
+    else if (this.flipT > 0) a.state = 'flip';
+    else if (J && J.id === 'beans' && J.pants > 0.3) { a.state = 'squat'; a.phase = J.puffT || 0; }
+  };
+  // the carry, the doors and a respawn: the slot travels with the other carries
+  const ep = Play.prototype.enterPortal;
+  Play.prototype.enterPortal = function (portal) { if (this.player) this.jumpCarry = this.player.jumpPow ? Object.assign({}, this.player.jumpPow, { pants: 0, down: false }) : null; return ep.call(this, portal); };
+  const la = Play.prototype.loadArea;
+  Play.prototype.loadArea = function (idx, x, y, power) { const r = la.call(this, idx, x, y, power); if (this.jumpCarry && this.player) { this.player.jumpPow = this.jumpCarry; } return r; };
+  // drawing: the trousers come down for the fart float; the somersault and the tuck spin about his middle
+  const dr = Player.prototype.draw;
+  Player.prototype.draw = function (ctx, t) {
+    const J = this.jumpPow;
+    this.drawPants = J && J.id === 'beans' ? J.pants || 0 : 0;
+    return dr.call(this, ctx, t);
+  };
+}
+// drawBrady gets the trousers and the spin from the player (one small hook in the options object)
+{
+  const db = drawBrady;
+  drawBrady = function (ctx, o) {
+    const sc = typeof Game !== 'undefined' ? Game.scene : null, p = sc && sc.player;
+    if (p && o && o.anim === p.anim) {
+      if (p.drawPants > 0) o = Object.assign({}, o, { pants: p.drawPants });
+      let rot = 0;
+      if (p.flipT > 0) rot = (1 - p.flipT / 0.42) * TAU * p.facing;
+      else if (p.pound && p.pound.phase === 'tuck') rot = Math.min(1, p.pound.t / 0.17) * TAU * p.facing;
+      if (p.squashT > 0) {
+        // the landing squash after a ground pound
+        const k = p.squashT / 0.18; ctx.save(); ctx.translate(o.x, o.y); ctx.scale(1 + 0.16 * k, 1 - 0.18 * k); ctx.translate(-o.x, -o.y); db(ctx, o); ctx.restore(); return;
+      }
+      if (rot) {
+        // spin about his middle, not his feet
+        const D = o.small ? BRADY_DIM.small : BRADY_DIM.big, mid = D.hip * 0.9 * (o.scale || 1);
+        ctx.save(); ctx.translate(o.x, o.y - mid); ctx.rotate(rot); ctx.translate(-o.x, -(o.y - mid));
+        db(ctx, o); ctx.restore(); return;
+      }
+    }
+    return db(ctx, o);
+  };
+}
+
+/* ---------- HUD: the badge on the jump button, the gas meter, the first-time tip ---------- */
+const JumpHud = {
+  badge(ctx, b) {
+    const play = Game.scene; if (!(play instanceof Play) || !play.level || !play.level.tour || !play.player) return;
+    const p = play.player, J = p.jumpPow;
+    if (J) {
+      const r = Math.max(11, b.r * 0.36), x = b.x + b.r * 0.72, y = b.y - b.r * 0.72;
+      const off = !!p.carrying || (J.id === 'socks' && J.used && !p.onGround) || (J.id === 'beans' && J.gas < 1 / TourJump.GAS - 1e-6);
+      ctx.save();
+      ctx.fillStyle = 'rgba(14,10,26,0.8)'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.globalAlpha = off ? 0.45 : 1; ctx.save(); ctx.translate(x, y); ctx.scale(r / 15, r / 15); TourGear.icon(ctx, 'gear:' + J.id, 0, 0, play.t, play); ctx.restore(); ctx.globalAlpha = 1;
+      if (J.id === 'beans') this.meter(ctx, x, y, r + 3, J.gas, J.emptyT > 0);
+      ctx.restore();
+    }
+    const tip = play.jumpTip;
+    if (tip && tip.t > 0 && play.state === 'play') {
+      const a = clamp(Math.min(tip.t, 5.5 - tip.t) * 2, 0, 1);
+      if (typeof TourPicker !== 'undefined') TourPicker.label(ctx, tip.text, b.x - b.r * 1.4, b.y - b.r - 58 + Math.sin(play.t * 4) * 2, a, true);
+    }
+  },
+  // the HUD icon (12_play.js drawHUD calls it in the row of running effects): the item, its gas meter
+  hudIcon(ctx, x, y, play) {
+    const J = play.player && play.player.jumpPow; if (!J) return;
+    ctx.save(); ctx.fillStyle = 'rgba(10,8,18,0.55)'; ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU); ctx.fill();
+    ctx.globalAlpha = play.player.carrying ? 0.45 : 1; ctx.translate(x, y); ctx.scale(0.6, 0.6); TourGear.icon(ctx, 'gear:' + J.id, 0, 0, play.t, play); ctx.restore();
+    if (J.id === 'beans') { ctx.save(); this.meter(ctx, x, y, 14, J.gas, J.emptyT > 0); ctx.restore(); }
+  },
+  // six segments around the badge, green while there is gas
+  meter(ctx, x, y, r, gas, flash) {
+    const n = TourJump.GAS, full = gas * n;
+    ctx.lineCap = 'butt';
+    for (let i = 0; i < n; i++) {
+      const a0 = -Math.PI / 2 + i * TAU / n + 0.08, a1 = a0 + TAU / n - 0.16, k = clamp(full - i, 0, 1);
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, r, a0, a1); ctx.stroke();
+      if (k > 0) { ctx.strokeStyle = k >= 1 ? '#8fdc4a' : 'rgba(143,220,74,0.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r, a0, a0 + (a1 - a0) * k); ctx.stroke(); }
+      else if (flash) { ctx.strokeStyle = 'rgba(255,90,90,0.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r, a0, a1); ctx.stroke(); }
+    }
+  }
+};
+{
+  const ja = Input.jumpArt;
+  Input.jumpArt = (ctx, b) => { if (ja) ja(ctx, b); JumpHud.badge(ctx, b); };
+  const u0 = Play.prototype.update;
+  Play.prototype.update = function (dt) { if (this.jumpTip && this.jumpTip.t > 0 && !this.paused) this.jumpTip.t -= dt; return u0.call(this, dt); };
+}
+try { window.BRADY_POWERS = Object.assign(window.BRADY_POWERS || {}, { TourJump, JumpHud, GasPuff, PoundWave, JumpRing }); } catch (e) { /* not in a browser */ }
 
 /* ---- 28_tour_e_art.js ---- */
 /* ============================================================
@@ -26804,12 +27750,14 @@ ENTITY_TYPES.brPiranha.cfg.sprite = ENTITY_TYPES.brPiranha.cfg.sprite || 'piranh
 const enemies = {
   brPandeiro: { cls: TourEnemy.make(PANDEIRO), place: 'walk' },
   brBrigadeiro: { cls: TourEnemy.make(BRIGADEIRO), place: 'walk' },
-  brParrot: { cls: TourFlyer.make({ w: 28, h: 16, range: 4, speed: 1.0, swoop: true, art: parrotArt, burst: '#e8302a' }), place: 'fly' },
-  brSloth: { cls: TourEnemy.make({ w: 26, h: 26, speed: 0.5, behavior: 'ceilingDrop', tell: 0.6, stuckT: 2.5, climbSpeed: 0.6, art: slothArt, burst: '#9a8060' }), place: 'here' },
-  brSwift: { cls: TourFlyer.make({ w: 26, h: 12, range: 7, speed: 1.0, behavior: 'hoverDart', art: swiftArt, burst: '#3a3a48' }), place: 'here' },
-  brPiranha: { cls: TourSwimmer.make({ w: 22, h: 16, speed: 1.2, behavior: 'swarm', n: 4, range: 4, art: piranhaSchoolArt, burst: '#e8422a' }), place: 'swim' },
+  brParrot: { cls: TourFlyer.make({ w: 28, h: 16, range: 4, speed: 1.0, swoop: true, art: parrotArt, burst: '#e8302a', atlas: 'br_x' }), place: 'fly' },
+  brSloth: { cls: TourEnemy.make({ w: 26, h: 26, speed: 0.5, behavior: 'ceilingDrop', tell: 0.6, stuckT: 2.5, climbSpeed: 0.6, art: slothArt, burst: '#9a8060', atlas: 'br_x' }), place: 'here' },
+  brSwift: { cls: TourFlyer.make({ w: 26, h: 12, range: 7, speed: 1.0, behavior: 'hoverDart', art: swiftArt, burst: '#3a3a48', atlas: 'br_x' }), place: 'here' },
+  brPiranha: { cls: TourSwimmer.make({ w: 22, h: 16, speed: 1.2, behavior: 'swarm', n: 4, range: 4, atlas: 'br_x', burst: '#e8422a',
+    // the school's followers always draw through cfg.art, so the art reaches for the atlas itself
+    art: (ctx, e, x, y, m) => { if (!(typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'br_x', m === 'ko' ? 'piranha_ko_000' : 'piranha/swim', e.t || 0, x, y, e.dir || -1))) piranhaSchoolArt(ctx, e, x, y, m); } }), place: 'swim' },
   brPiranhaLeap: { cls: ENTITY_TYPES.brPiranha, place: 'here' },
-  brKite: { cls: TourFlyer.make({ w: 22, h: 30, range: 3, speed: 0.7, swoop: true, art: kiteArt, burst: '#ffd23a', init(e) { e.seedK = Math.floor(Math.random() * 6); } }), place: 'fly' }
+  brKite: { cls: TourFlyer.make({ w: 22, h: 30, range: 3, speed: 0.7, swoop: true, art: kiteArt, burst: '#ffd23a', atlas: 'br_x', init(e) { e.seedK = Math.floor(Math.random() * 6); } }), place: 'fly' }
 };
 for (const k in enemies) { ENTITY_TYPES[k] = enemies[k].cls; Tour.enemyInfo[k] = { place: enemies[k].place, country: 'br' }; }
 // swifts start hidden behind the falls' curtain: a dark shape until Brady is close
@@ -26955,6 +27903,8 @@ const skins = {
   // Quati: a coati in a bandit mask with a satchel of stamps
   brQuati(ctx, e, t) {
     const x = e.cx, y = e.y + e.h, d = e.dir || 1, b = e.hop ? Math.sin(t * 20) * 2 : 0;
+    // the pre-rendered Quati (br_x): leaping off with the satchel, grabbing, caught (just after a catch), taunting
+    if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'br_x', e.hop ? 'quati/run' : e.state === 'snatch' ? 'quati_grab_000' : e.cool > 0.5 ? 'quati_caught_000' : 'quati/idle', t, x, y, d, { scale: ART_SCALE.enemy })) return;
     Ink.around(ctx, e.x - 14, e.y - 18, e.w + 28, e.h + 20, c => {
       c.save(); c.translate(x, y + b); ENTITY_TYPES.brCoati.cfg.art(c, { dir: d, t, loot: 0 }, 0, 0, e.hop ? 'flee' : 'walk'); c.restore();
       c.fillStyle = '#1a1020'; c.fillRect(x + d * 6, y - 15 + b, d * 9, 3);
@@ -27158,6 +28108,7 @@ const stamps = {
 };
 // the keeper of the Banca do Quati: a coati in a straw hat leaning on the counter
 Decor.brKeeperQuati = (ctx, x, y, t) => {
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'br_x', 'quatiKeeper/idle', t, x + 20, y + 30, -1, { scale: 1.4 })) return;
   ctx.save(); ctx.translate(x + 20, y + 30); ctx.scale(1.4, 1.4); ENTITY_TYPES.brCoati.cfg.art(ctx, { dir: -1, t, loot: 0 }, 0, 0, 'walk'); ctx.restore();
   ctx.fillStyle = '#e8c870'; ctx.beginPath(); ctx.ellipse(x + 8, y + 2, 16, 4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(x + 8, y - 2, 8, 6, 0, Math.PI, TAU); ctx.fill(); ctx.fillStyle = '#ff3d8b'; ctx.fillRect(x, y - 3, 16, 2);
 };
@@ -27631,7 +28582,7 @@ Object.assign(TOUR_BEAT_ART, {
 });
 
 /* ================= houses and the country panel ================= */
-const houses = [{ id: 'br-quati', mapLabel: 'Banca', kind: 'stand', name: 'Banca do Quati', keeper: 'coati', theme: 'br_pantanal', stock: ['kazoo', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:ball'], mapCell: [0, 1], mapFrom: 1 }];
+const houses = [{ id: 'br-quati', mapLabel: 'Banca', kind: 'stand', name: 'Banca do Quati', keeper: 'coati', theme: 'br_pantanal', roomTheme: 'br_toca', stock: ['kazoo', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:ball'], mapCell: [0, 1], mapFrom: 1 }];
 const map = { fort: 'stadium', start: [0, 0] };
 
 /* ================= the levels ================= */
@@ -27649,6 +28600,7 @@ const levels = [
       { id: 'avenida', gen: 'strip', W: 230, H: 18, bpm: 124, script: [
         ['opening', { decor: [['brBunting', 6], ['brSurdos', 1]] }],
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
         ['standSign', { item: 'kazoo', text: 'KAZOO! THROW = HONK. BELL GATES OPEN TO A HONK' }],
         // ① the beat
         ['drums', { n: 3 }],
@@ -27756,6 +28708,7 @@ const levels = [
         ['opening', { decor: [['brDuneGrass', 2], ['brShell', 5]] }],
         ['standSign', { item: 'fins', text: 'FLIPPER FINS: THE LAGOONS FILL EVERY 14 SECONDS' }],
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
         // ① the water climbs: walk the bed or swim over
         ['lagoon', { w: 10, bed: 6 }],
         ['dune', { w: 10, h: 3 }],
@@ -27839,6 +28792,8 @@ const levels = [
     ] }
 ];
 
+Decor.brKeeperQuati.atlas = 'br_x';   // a level that places this decor (the Banca) loads br_x (29_tour_mx.js extraAtlases hook)
+skins.brQuati.atlas = 'br_x';         // ... and one whose spawns use this look (3-2's thief)
 Tour.amend('br', { stamps, skins, houses, map, levels });
 })();
 
@@ -28252,6 +29207,9 @@ const iceCubeArt = (ctx, e, x, y, m) => {
   ctx.restore();
 };
 const salt = (ctx, s) => { ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fillRect(s.cx - 3, s.cy - 3, 6, 6); ctx.fillStyle = 'rgba(200,230,255,0.9)'; ctx.fillRect(s.cx - 1, s.cy - 1, 2, 2); };
+/* the rebuilt cast's pre-rendered art (tools/blender/sprites/ec_extras.py -> the 'ec_x' atlas): cfg.atlas makes a level that
+   spawns them load it; their sprite names are 30_tour_sprites.js's defaults ('glassFrog', 'crab', ...) */
+const EC_X = 'ec_x';
 const enemies = {
   ecBanana: { cls: TourEnemy.make({ w: 16, h: 32, speed: 1.0, behavior: 'walk', art: bananaArt, burst: '#ffe04a' }), place: 'walk' },
   ecCacao: { cls: TourEnemy.make({ w: 24, h: 18, speed: 0.8, behavior: 'roll', range: 9, rollSpeed: 6.4, art: cacaoArt, burst: '#e8902a' }), place: 'walk' },
@@ -28262,12 +29220,12 @@ const enemies = {
   ecCondor: { cls: TourFlyer.make({ w: 34, h: 16, range: 4, speed: 0.6, swoop: true, art: condorArt, burst: '#1a1a22' }), place: 'fly' },
   ecFrog: { cls: TourEnemy.make({ w: 18, h: 16, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.4, art: frogArt, glow: 'rgba(120,255,200,', burst: '#2ae88a' }), place: 'walk' },
   // the headline enemy: a marine iguana that sneezes salt; the puff sets into a stepping stone (the fast upper route)
-  ecIguanaSalt: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.5, behavior: 'saltSneezer', every: 3, platT: 5, art: iguanaArt, burst: '#3a3a44' }), place: 'walk' },
-  ecGlassFrog: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 0, behavior: 'camouflage', revealEvery: 2.4, art: glassFrogArt, burst: '#96f0aa' }), place: 'walk' },
-  ecHummingbird: { cls: TourFlyer.make({ w: 22, h: 12, speed: 1, behavior: 'hoverDart', range: 7, art: hummingArt, burst: '#2ac88a' }), place: 'fly' },
-  ecCrab: { cls: TourEnemy.make({ w: 24, h: 14, inkPad: 6, speed: 2.6, behavior: 'walk', art: crabArt, burst: '#ff5a2a' }), place: 'walk' },
-  ecDipper: { cls: TourEnemy.make({ w: 20, h: 18, inkPad: 6, speed: 0.6, behavior: 'ceilingDrop', tell: 0.5, stuckT: 1.6, art: dipperArt, burst: '#5a3a2a' }), place: 'here' },
-  ecSeaLionLand: { cls: TourEnemy.make({ w: 36, h: 16, speed: 0.6, behavior: 'charge', range: 7, chargeSpeed: 7.5, windup: 0.5, art: seaLionArt, burst: '#8a7a6a' }), place: 'walk' },
+  ecIguanaSalt: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.5, behavior: 'saltSneezer', every: 3, platT: 5, art: iguanaArt, burst: '#3a3a44', atlas: EC_X }), place: 'walk' },
+  ecGlassFrog: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 0, behavior: 'camouflage', revealEvery: 2.4, art: glassFrogArt, burst: '#96f0aa', atlas: EC_X }), place: 'walk' },
+  ecHummingbird: { cls: TourFlyer.make({ w: 22, h: 12, speed: 1, behavior: 'hoverDart', range: 7, art: hummingArt, burst: '#2ac88a', atlas: EC_X }), place: 'fly' },
+  ecCrab: { cls: TourEnemy.make({ w: 24, h: 14, inkPad: 6, speed: 2.6, behavior: 'walk', art: crabArt, burst: '#ff5a2a', atlas: EC_X }), place: 'walk' },
+  ecDipper: { cls: TourEnemy.make({ w: 20, h: 18, inkPad: 6, speed: 0.6, behavior: 'ceilingDrop', tell: 0.5, stuckT: 1.6, art: dipperArt, burst: '#5a3a2a', atlas: EC_X }), place: 'here' },
+  ecSeaLionLand: { cls: TourEnemy.make({ w: 36, h: 16, speed: 0.6, behavior: 'charge', range: 7, chargeSpeed: 7.5, windup: 0.5, art: seaLionArt, burst: '#8a7a6a', atlas: EC_X }), place: 'walk' },
   ecIguana: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.4, behavior: 'throw', every: 2.2, range: 7, pace: true, art: iguanaArt, burst: '#3a3a44', shoot: (e) => {
     for (let k = -1; k <= 1; k++) tourFire(e.g, e.cx + e.dir * 16, e.y + 4, { kind: 'salt', vx: e.dir * (2.4 + k * 0.6) * TS, vy: (-2.6 + k) * TS, grav: PHYS.gDown * 0.12, w: 8, h: 8, life: 2.2, col: '#ffffff', art: salt });
     K.say(e.g, e, 'ACHOO!', '#ffffff'); Sound.play('throw', { pitch: 2, vol: 0.3 });
@@ -28328,7 +29286,13 @@ class EcSurge extends Ent {
 }
 // the pre-rendered booby (sprite 'booby': idle = its foot dance, wave once it has lent the boots) turns to face
 // Brady and keeps the procedural art's '!' until the boots are handed over
-class EcBooby extends TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: 'BLUE BOOTS! BOUNCY!', art: boobyArt }) {
+// PATA AZUL, 2-3's racing booby: the race rival (TourRival) draws through this cfg's art with 'chase' / 'idle'; it runs
+// from the ec_x atlas (pataAzul: a racing bib and a sweatband), the procedural booby stays the fallback
+const boobyRaceArt = (ctx, e, x, y, m, t) => {
+  if (typeof TourRival !== 'undefined' && e instanceof TourRival && typeof Atlas !== 'undefined' && Atlas.animate(ctx, EC_X, m === 'chase' ? 'pataAzul/run' : 'pataAzul/idle', t || 0, x, y, e.dir || 1, { scale: ART_SCALE.enemy })) return;
+  boobyArt(ctx, e, x, y, m, t);
+};
+class EcBooby extends TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: 'BLUE BOOTS! BOUNCY!', art: boobyRaceArt }) {
   drawArt(ctx) {
     const p = this.g.player, spr = this.sprite;
     if (spr && p) this.dir = p.cx < this.cx ? -1 : 1;
@@ -28338,7 +29302,11 @@ class EcBooby extends TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: '
 }
 const entities = { ecBooby: EcBooby, ecIcicle: EcIcicle, ecSurge: EcSurge };
 // the booby minding La Tienda del Cacao (the Souvenir Stand), behind the counter
-decor.ecKeeperBooby = (ctx, x, y, t) => { ctx.save(); ctx.translate(0, -20); boobyArt(ctx, { t, dir: -1, given: true }, x, y, 'idle', t); ctx.restore(); };
+decor.ecKeeperBooby = (ctx, x, y, t) => {
+  // the pre-rendered booby from the 'ec' atlas (its foot dance, facing the door), else the procedural one
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'ec', 'booby/idle', t, x, y - 20, -1, { scale: ART_SCALE.enemy })) return;
+  ctx.save(); ctx.translate(0, -20); boobyArt(ctx, { t, dir: -1, given: true }, x, y, 'idle', t); ctx.restore();
+};
 
 /* ---------------- the signature power-up: BOOBY BOOTS ---------------- */
 // bright blue boots (like a blue-footed booby's feet): super-bouncy jumps; a big landing sends out a shockwave
@@ -28985,6 +29953,14 @@ if (!THEMES.ec_fabrica && THEMES.ec_equator) {
     hard: { c1: '#9a6a4a', c2: '#5a3a28' }, semi: { style: 'wood', c1: '#8a6a52', c2: '#5a3a28' }, liquid: 'choc', decor: ['ecSack', 'ecPipe']
   });
 }
+// interior rooms without a theme of their own (2-1's chocolatería, La Tienda del Cacao) would get the level theme's
+// '_cave' look (03_themes.js caveVariant); they are cacao rooms, so they borrow the cacao works' pre-rendered wall
+// (tools/blender/sprites/ec_fabrica.py) and floor instead
+if (!THEMES.ec_equator_cave && THEMES.ec_fabrica && typeof Atlas !== 'undefined') {
+  const F = THEMES.ec_fabrica, th = THEMES.ec_equator_cave = Object.assign({}, F, { name: 'La Chocolatería', darkness: 0.06 });
+  th.layers = F.layers.map((L, i) => ({ kind: 'image', atlas: 'ec_fabrica', id: 'L' + i, f: L.f, base: L.base, dyn: L.dyn, color: L.color, fallback: L, shift: L.base > 340 ? -Math.min(60, L.base - 335) : 0 }));
+  Atlas.applyTiles(th, 'ec_fabrica', { ground: 'ground' });
+}
 // 2-7's waterfall gorge: deep green walls, mist, a white torrent
 if (!THEMES.ec_pailon && THEMES.ec_amazon) {
   THEMES.ec_pailon = Object.assign({}, THEMES.ec_amazon, {
@@ -29567,6 +30543,7 @@ const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_du
         ['startStamp', { id: 'copa' }],
         // ① vines between giant trees
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
         ['vines', { n: 3 }],
         ['branches', {}],
         ['secretDoor', { to: 'treehouse@in', look: 'ecLeafLadder', back: 'treeBack' }],
@@ -29636,6 +30613,7 @@ const L4 = { n: 4, name: 'Cacao Works', arch: 'factory', theme: 'ec_fabrica',
       script: [
         ['startStamp', { id: 'muelle' }],
         ['itemBlock', { item: 'power' }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         ['tip', { text: 'A HARD HAT! IT BREAKS FOIL WALLS AND SOAKS UP ONE HIT. TAP THROW TO SHOULDER-DASH' }],
         ['gearStand', { item: 'hat' }],
         // ① belts carry pods and Brady
@@ -31179,6 +32157,7 @@ Tour.amend('es', {
           // ① plaza one: tomato waves, a truck lobbing more
           ['plaza', { k: 1 }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           'cp',
           // ② plaza two: a floor of pulp and loose crates
           ['plaza', { k: 2 }],
@@ -31235,6 +32214,7 @@ Tour.amend('es', {
       areas: [
         { id: 'ciutat', gen: 'strip', W: 215, H: 18, dark: true, script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           ['gearStand', { item: 'kazoo' }],
           // ① the beat floor
           'ribs',
@@ -33583,6 +34563,7 @@ const levels = [
       { id: 'baie', gen: 'strip', W: 210, H: 22, tide: { low: 20, high: 9, period: 16, hold: 4 },
         script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           ['pool', { w: 4 }],
           ['enemies', { kind: 'frCrab', n: 2, len: 10 }],
           ['quicksand', { n: 6 }],
@@ -33629,6 +34610,7 @@ const levels = [
       { id: 'perigord', gen: 'dig', W: 140, H: 40, surface: 8,
         script: [
           ['gearStand', { item: 'hat' }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           ['trufflePig', { spots: [28, 52, 84] }],
           ['oak', { gold: 'must' }],
           ['pocket', { item: 'power' }],
@@ -41435,6 +42417,7 @@ Tour.amend('ma', {
         { id: 'medina', gen: 'strip', W: 200, H: 22, phase: { night: 'ma_azul_night' }, script: [
           // ① day: blue stairs, laundry lines, napping cats
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
           ['blueHouse', { w: 8, h: 5, gold: 'must' }],
           ['enemies', { kind: 'maCat', n: 1 }],
           ['lines', { n: 6 }],
@@ -41953,7 +42936,11 @@ const xoloArt = (ctx, e, x, y, m, t) => {
   if (m !== 'wave') { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 46 + Math.sin(t * 5) * 2); }
 };
 // Xolo minding La Tiendita (the Souvenir Stand): wagging behind the counter
-decor.mxKeeperXolo = (ctx, x, y, t) => { ctx.save(); ctx.translate(x, y - 26); xoloArt(ctx, { t, dir: 1 }, 0, 0, 'wave', t); ctx.restore(); };
+decor.mxKeeperXolo = (ctx, x, y, t) => {
+  // the pre-rendered Xolo from the 'mx' atlas (waving, facing the door), else the procedural one
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'mx', 'xolo/wave', t, x, y - 26, -1, { scale: ART_SCALE.enemy })) return;
+  ctx.save(); ctx.translate(x, y - 26); xoloArt(ctx, { t, dir: 1 }, 0, 0, 'wave', t); ctx.restore();
+};
 const axolotlArt = (ctx, e, x, y, m) => {
   ctx.save(); ctx.translate(x, y); ctx.rotate(m === 'up' ? -0.4 : 0.6);
   ctx.fillStyle = '#ffaacc'; ctx.beginPath(); ctx.ellipse(0, 0, 13, 7, 0, 0, TAU); ctx.fill();
@@ -42135,11 +43122,67 @@ TourBehave.mxBlindCharge = {
 };
 // a flock of swallows: harmless to touch, they only nudge Brady a tile sideways
 TourBehave.mxFlock = Object.assign({}, TourBehave.swarm, { touch(e, p) { p.pushX = (p.pushX || 0) + e.dir * 4 * TS; return true; } });
+/* ---------------- the rebuilt cast's pre-rendered art (tools/blender/sprites/mx_extras.py -> the 'mx_x' atlas) ----------------
+   cfg.atlas = 'mx_x' makes a level that spawns them load the atlas; every one keeps its procedural art as the fallback. */
+const MX_X = 'mx_x';
+// the elote keeps the 'mx' art; its burst pose (shown while it pops) is in mx_x, which a level with elotes loads because
+// their popcorn draws from it (see the extraAtlases hook below)
+const EloteBase = TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'splitter', n: 3, child: 'mxPopcorn', childLife: 3, art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') });
+class MxElote extends EloteBase {
+  drawArt(ctx) {
+    if (this.dead && !this.knocked && this.mode === 'burst' && typeof Atlas !== 'undefined' && Atlas.draw(ctx, MX_X, 'elote_burst_000', this.cx, this.y + this.h, this.dir || 1, { scale: TourSprite.scale(this) })) return;
+    super.drawArt(ctx);
+  }
+}
+MxElote.cfg = EloteBase.cfg;
+// more art that brings its own atlas into a level's atlas set (Play.extraAtlases only follows spawn types):
+//   enemies an enemy spawns (cfg.child: the elote's popcorn), decor drawn from an atlas (Decor[kind].atlas: a shop
+//   keeper), and skins (TOUR_SKINS[look].atlas) used by a spawn's look (a race rival, a thief)
+if (typeof Play !== 'undefined' && !Play.prototype.extraAtlasesChild) {
+  const ex = Play.prototype.extraAtlases;
+  Play.prototype.extraAtlasesChild = true;
+  Play.prototype.extraAtlases = function () {
+    const n = new Set(ex.call(this));
+    for (const a of (this.level && this.level.areas) || []) {
+      for (const sp of a.spawns || []) {
+        const C = ENTITY_TYPES[sp.type], ch = C && C.cfg && C.cfg.child && ENTITY_TYPES[C.cfg.child];
+        if (ch && ch.cfg && ch.cfg.atlas) n.add(ch.cfg.atlas);
+        const sk = sp.look && typeof TOUR_SKINS !== 'undefined' && TOUR_SKINS[sp.look];
+        if (sk && sk.atlas) n.add(sk.atlas);
+      }
+      for (const d of a.decor || []) { const D = typeof Decor !== 'undefined' && Decor[d.kind]; if (D && D.atlas) n.add(D.atlas); }
+    }
+    return [...n];
+  };
+}
+// the swimming axolotl: its tiny (regrowing) self has its own frames
+const AxoSwimBase = TourSwimmer.make({ w: 26, h: 14, speed: 1.0, behavior: 'mxSwimRegrow', regrowT: 3, art: axolotlArt, atlas: MX_X, sprite: 'axoswim' });
+class MxAxoSwim extends AxoSwimBase {
+  drawArt(ctx) { if (this.tiny && !this.knocked && TourSprite.draw(ctx, this, this.cx, this.cy, 'tiny', { tiny: ['tiny', 'swim'] })) return; super.drawArt(ctx); }
+}
+MxAxoSwim.cfg = AxoSwimBase.cfg;
+// the blind fish shows its states: the quiver (tell), the gaping charge, the daze
+const BLIND_FB = { swim: ['swim'], tell: ['tell', 'swim'], charge: ['charge', 'swim'], stun: ['stun', 'swim'], ko: ['ko', 'swim'] };
+const BlindBase = TourSwimmer.make({ w: 30, h: 16, speed: 1.2, behavior: 'mxBlindCharge', art: blindFishArt, atlas: MX_X, sprite: 'blindfish' });
+class MxBlindFish extends BlindBase {
+  drawArt(ctx) {
+    const m = this.knocked ? 'ko' : BLIND_FB[this.mode] ? this.mode : 'swim';
+    ctx.save(); if (m === 'tell') ctx.translate(Math.sin(this.t * 50) * 1.5, 0);
+    if (!(this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, m, BLIND_FB))) TourSprite.art(ctx, this, this.cx, this.cy, m);
+    ctx.restore();
+  }
+}
+MxBlindFish.cfg = BlindBase.cfg;
+// swallows fly in a flock whose followers always draw through cfg.art, so the art itself reaches for the atlas
+const swallowSprite = (ctx, e, x, y, m) => {
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, MX_X, m === 'ko' ? 'swallow_ko_000' : 'swallow/fly', (e.t || 0) + (e.k || 0) * 0.13, x, y, e.dir || 1)) return;
+  swallowArt(ctx, e, x, y, m);
+};
 const enemies = {
   mxPepper: { cls: TourEnemy.make({ w: 16, h: 24, speed: 1.1, behavior: 'hop', hopV: 9.5, hopEvery: 1.1, art: pepperArt, burst: '#5ad04a' }), place: 'walk' },
   // the elote pops: stomp it and it bursts into three popcorn puffs (stomp them for coins, or let them fade)
-  mxElote: { cls: TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'splitter', n: 3, child: 'mxPopcorn', childLife: 3, art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') }), place: 'walk' },
-  mxPopcorn: { cls: TourEnemy.make({ w: 14, h: 14, inkPad: 5, speed: 1.5, behavior: 'hop', hopV: 7.5, hopEvery: 0.55, art: popcornArt, burst: '#fff6dc' }), place: 'walk' },
+  mxElote: { cls: MxElote, place: 'walk' },
+  mxPopcorn: { cls: TourEnemy.make({ w: 14, h: 14, inkPad: 5, speed: 1.5, behavior: 'hop', hopV: 7.5, hopEvery: 0.55, art: popcornArt, burst: '#fff6dc', atlas: MX_X, sprite: 'popcorn' }), place: 'walk' },
   mxBurro: { cls: TourEnemy.make({ w: 30, h: 30, speed: 1.0, behavior: 'walk', hp: 2, art: burroArt, onDefeat: e => { for (let k = 0; k < 6; k++) e.g.spawn(new PickPop(e.g, e.cx + (k - 2.5) * 6, e.y)); e.g.addPick(); e.g.burst(e.cx, e.cy, 24, '#ff9ac8', 'confetti'); } }), place: 'walk' },
   mxChihuahua: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 1.5, behavior: 'charge', range: 7, chargeSpeed: 7, windup: 0.35, art: (ctx, e, x, y, m) => {
     ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.4 : 1);
@@ -42154,10 +43197,10 @@ const enemies = {
     if (m === 'notice') { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('YIP!', x, y - 30); }
   }, onNotice: e => K.sfx('bump', null, { pitch: 2.2, vol: 0.4 }) }), place: 'walk' },
   mxAxolotl: { cls: MxAxolotl, place: 'here' },
-  mxAxolotlWalk: { cls: TourEnemy.make({ w: 24, h: 16, inkPad: 6, speed: 0.8, behavior: 'regrower', regrowT: 3, art: axolotlWalkArt, burst: '#ffaacc' }), place: 'walk' },
-  mxAxolotlSwim: { cls: TourSwimmer.make({ w: 26, h: 14, speed: 1.0, behavior: 'mxSwimRegrow', regrowT: 3, art: axolotlArt }), place: 'swim' },
-  mxBlindFish: { cls: TourSwimmer.make({ w: 30, h: 16, speed: 1.2, behavior: 'mxBlindCharge', art: blindFishArt }), place: 'swim' },
-  mxSwallow: { cls: TourFlyer.make({ w: 20, h: 12, speed: 1.6, behavior: 'mxFlock', n: 6, harmless: true, art: swallowArt }), place: 'fly' },
+  mxAxolotlWalk: { cls: TourEnemy.make({ w: 24, h: 16, inkPad: 6, speed: 0.8, behavior: 'regrower', regrowT: 3, art: axolotlWalkArt, burst: '#ffaacc', atlas: MX_X, sprite: 'axowalk' }), place: 'walk' },
+  mxAxolotlSwim: { cls: MxAxoSwim, place: 'swim' },
+  mxBlindFish: { cls: MxBlindFish, place: 'swim' },
+  mxSwallow: { cls: TourFlyer.make({ w: 20, h: 12, speed: 1.6, behavior: 'mxFlock', n: 6, harmless: true, art: swallowSprite, atlas: MX_X }), place: 'fly' },
   mxHeron: { cls: TourFlyer.make({ w: 28, h: 16, range: 3, speed: 0.8, swoop: true, art: heronArt }), place: 'fly' },
   mxFish: { cls: TourSwimmer.make({ w: 28, h: 14, speed: 1.5, range: 4, art: fishArt }), place: 'swim' },
   mxBat: { cls: TourFlyer.make({ w: 26, h: 16, range: 2.5, speed: 1.4, swoop: true, art: batArt }), place: 'fly' },
@@ -43100,6 +44143,14 @@ Object.assign(Decor, {
   // the cellar canal under the street: brick vaults, a lantern, jars and a strip of dark water behind the walkway
   mxVault(ctx, x, y, t, th, d) {
     const w = 8 * TS, h = 4 * TS + 6, x0 = x - w / 2, seed = d.seed || 0;
+    // the pre-rendered bay (mx_vault.py, packed into the mx_bodega atlas: 1-1 loads it for its bodega room); the canal's
+    // moving glints and the lantern's flicker are drawn on top of it
+    if (typeof Atlas !== 'undefined' && Atlas.draw(ctx, 'mx_bodega', seed % 2 === 0 ? 'vaulta_idle_000' : 'vaultb_idle_000', x, y, 1)) {
+      ctx.save(); ctx.fillStyle = 'rgba(120,220,230,0.45)';
+      for (let k = 0; k < 5; k++) { const gx = x0 + ((k * 53 + t * 20 + seed * 9) % w); ctx.fillRect(gx, y - 9 + (k % 2) * 4, 12, 1.5); }
+      if (seed % 2 === 0) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,200,110,${0.12 + 0.08 * Math.sin(t * 6 + seed)})`; ctx.beginPath(); ctx.arc(x0 + 10, y - h + 34, 14, 0, TAU); ctx.fill(); }
+      ctx.restore(); return;
+    }
     ctx.save();
     const g = ctx.createLinearGradient(0, y - h, 0, y); g.addColorStop(0, '#3a2016'); g.addColorStop(1, '#5a3420');
     ctx.fillStyle = g; ctx.fillRect(x0, y - h, w + 1, h);
@@ -43665,6 +44716,8 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         // ③ the plaza joins all three lanes
         ['stamp', { id: 'plaza', lane: 'street' }],
         ['pinatas', { lane: 'street' }],
+        ['itemBlock', { lane: 'street', item: 'socks', y: 4 }],   // the first jump power, with its tip sign
+        ['tip', { lane: 'street', text: 'SPRING SOCKS! TAP JUMP AGAIN IN THE AIR FOR A SECOND JUMP' }],
         ['fountain', { lane: 'street' }],
         ['rooftops', { lane: 'roof', n: 1 }],
         ['flat', { lane: 'cellar', n: 10 }],
@@ -43767,6 +44820,7 @@ const L4 = { n: 4, name: 'Volcán Escape', arch: 'tower', theme: 'mx_volcan',
         ['vledges', { n: 4, crumble: true }],
         ['blockBand', { item: 'star' }],
         ['vledges', { n: 3, flip: true, enemy: 'mxBat' }],
+        ['blockBand', { item: 'beans', left: true }],   // a jump power (bonus): fart-float up the chimney
         // ③ armadillos, lava blobs, the double chimney
         'vroll',
         ['sideGold', { kind: 'must' }],
@@ -43847,6 +44901,34 @@ const L6 = { n: 6, name: 'Pit of Swallows', arch: 'fall', secret: true, theme: '
     { id: 'nido', gen: 'room', role: 'secret', stamp: 'nido' }
   ] };
 
+/* ---------------- pre-rendered scenes (tools/blender/sprites/mx_bodega.py, mx_sotano.py): Mexico wires its own atlases
+   (29_tour_mx_sprites.js), so the two new themes are wired here: their background strip, floor tiles and the piñata block ---------------- */
+if (typeof Atlas !== 'undefined') for (const key of ['mx_bodega', 'mx_sotano']) {
+  const th = THEMES[key]; if (!th || !th.layers) continue;
+  th.layers = th.layers.map((L, i) => ({ kind: 'image', atlas: key, id: 'L' + i, f: L.f, base: L.base, dyn: L.dyn, color: L.color, fallback: L, shift: 0 }));
+  Atlas.applyTiles(th, key, { ground: 'ground' });
+  Atlas.applyTiles(th, 'mx', { qblock: 'pinata_block_idle_000', used: 'pinata_block_used_000', keepAtlas: true });
+}
+// interior rooms without a theme of their own get the level theme's '_cave' look (03_themes.js caveVariant); Mexico's
+// get real rooms instead: La Tiendita and the hacienda pantry are cellars like the bodega, the swallows' nest is in the
+// pit's wall, the cenote's air pocket keeps the cenote wall (shift: the strip's floor line onto the room's floor)
+if (typeof Atlas !== 'undefined') {
+  const room = (key, from, shift, extra) => {
+    const src = THEMES[from]; if (THEMES[key] || !src) return;
+    const th = THEMES[key] = Object.assign({}, src, extra || {});
+    th.layers = src.layers.map(L => Object.assign({}, L, { shift: (L.shift || 0) + shift }));
+  };
+  room('mx_mercado_cave', 'mx_bodega', -85, { name: 'La Tiendita', darkness: 0.2 });
+  room('mx_hacienda_cave', 'mx_bodega', -32, { name: 'Hacienda Pantry', darkness: 0.25 });
+  room('mx_sotano_cave', 'mx_sotano', 0, { name: 'Swallow Nest', darkness: 0.15 });
+  if (!THEMES.mx_cenote_cave && THEMES.mx_cenote) {
+    const cv = THEMES.mx_cenote, th = THEMES.mx_cenote_cave = Object.assign({}, cv, { name: 'Air Pocket', underwater: false, particles: 'dust', darkness: 0.2 });
+    th.layers = [{ kind: 'image', atlas: 'mx_cenote', id: 'bg_cave', f: 0.08, base: 0, color: cv.layers[0].color, fallback: cv.layers[0], shift: 0 },
+                 { kind: 'image', atlas: 'mx_cenote', id: 'bg_stalag', f: 0.3, base: 420, color: cv.layers[1].color, fallback: cv.layers[1], shift: -40 }];
+    Atlas.applyTiles(th, 'mx_cenote', { ground: 'ground' });
+    Atlas.applyTiles(th, 'mx', { qblock: 'pinata_block_idle_000', used: 'pinata_block_used_000', keepAtlas: true });
+  }
+}
 Tour.amend('mx', { stamps, skins, levels: [L1, L2, L3, L4, L5, L6] });
 })();
 
@@ -44946,6 +46028,7 @@ const decor = {
   mzLantern(ctx, x, y, t) { ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y - 90); ctx.lineTo(x, y - 34); ctx.stroke(); ctx.fillStyle = `rgba(255,${200 + Math.sin(t * 6) * 20},110,0.95)`; rr(ctx, x - 6, y - 32, 12, 15, 3); ctx.fill(); },
   // a hornbill keeper behind the Banca's counter
   mzKeeperHornbill(ctx, x, y, t) {
+    if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'mz_x', 'hornbill/idle', t, x + 18, y + 2, -1, { scale: ART_SCALE.enemy })) return;
     ctx.save(); ctx.translate(x + 18, y + 2);
     ctx.fillStyle = '#2a2a34'; ctx.beginPath(); ctx.ellipse(0, -16, 14, 18, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = '#f4ecd8'; ctx.beginPath(); ctx.ellipse(2, -10, 8, 11, 0, 0, TAU); ctx.fill();
@@ -45040,11 +46123,11 @@ const fruitBatArt = (ctx, e, x, y, m) => {
 };
 const enemies = {
   mzGhostCrab: { cls: TourEnemy.make(GHOST), place: 'walk' },
-  mzDungBeetle: { cls: TourEnemy.make({ w: 26, h: 20, speed: 0.9, behavior: 'pusher', maxScale: 2, ballKind: 'dung', art: beetleArt, burst: '#1a9a4a' }), place: 'walk' },
-  mzPangolin: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.9, behavior: 'curlShield', curlT: 1.5, art: pangolinArt, burst: '#9a7a4a' }), place: 'walk' },
-  mzChameleon: { cls: TourEnemy.make({ w: 24, h: 20, speed: 0, behavior: 'tongue', len: 3, art: chameleonArt, burst: '#4aa04a', init(e) { e.seed = Math.random() * 360; } }), place: 'walk' },
-  mzMoleRat: { cls: TourEnemy.make({ w: 26, h: 22, speed: 1.2, behavior: 'burrower', art: moleRatArt, burst: '#c8907a' }), place: 'walk' },
-  mzFruitBat: { cls: TourFlyer.make({ w: 26, h: 14, range: 3, speed: 1.3, swoop: true, art: fruitBatArt, burst: '#8a5a3a' }), place: 'fly' }
+  mzDungBeetle: { cls: TourEnemy.make({ w: 26, h: 20, speed: 0.9, behavior: 'pusher', maxScale: 2, ballKind: 'dung', art: beetleArt, burst: '#1a9a4a', atlas: 'mz_x' }), place: 'walk' },
+  mzPangolin: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.9, behavior: 'curlShield', curlT: 1.5, art: pangolinArt, burst: '#9a7a4a', atlas: 'mz_x' }), place: 'walk' },
+  mzChameleon: { cls: TourEnemy.make({ w: 24, h: 20, speed: 0, behavior: 'tongue', len: 3, art: chameleonArt, burst: '#4aa04a', atlas: 'mz_x', init(e) { e.seed = Math.random() * 360; } }), place: 'walk' },
+  mzMoleRat: { cls: TourEnemy.make({ w: 26, h: 22, speed: 1.2, behavior: 'burrower', art: moleRatArt, burst: '#c8907a', atlas: 'mz_x' }), place: 'walk' },
+  mzFruitBat: { cls: TourFlyer.make({ w: 26, h: 14, range: 3, speed: 1.3, swoop: true, art: fruitBatArt, burst: '#8a5a3a', atlas: 'mz_x' }), place: 'fly' }
 };
 for (const k in enemies) { ENTITY_TYPES[k] = enemies[k].cls; Tour.enemyInfo[k] = { place: enemies[k].place, country: 'mz' }; }
 
@@ -45076,6 +46159,11 @@ class MzKeyShutter extends ENTITY_TYPES.shutter {
 // 4-1: the rival, an ostrich in a racing number
 TOUR_SKINS.mzOstrichRival = (ctx, e, t) => {
   const x = e.cx, y = e.y + e.h, run = e.state === 'run', b = run ? Math.abs(Math.sin(t * 16)) * 3 : 0, l = run ? Math.sin(t * 16) * 8 : 0;
+  // the pre-rendered AVESTRUZ (mz_x): running, puffing when it has won or waits, else ready at the line
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'mz_x', run ? 'ostrich/run' : e.state === 'won' ? 'ostrich_tired_000' : 'ostrich/idle', t, x, y, e.dir || 1, { scale: ART_SCALE.enemy })) {
+    if (e.state === 'count' && e.ct > 0) TourObj.label(ctx, String(Math.ceil(e.ct)), x, e.y - 50, 24, '#ffd84a');
+    return;
+  }
   Ink.around(ctx, e.x - 20, e.y - 44, e.w + 40, e.h + 46, c => {
     c.strokeStyle = '#e8b0a0'; c.lineWidth = 3; for (const s of [-1, 1]) { c.beginPath(); c.moveTo(x + s * 3, y - 18 - b); c.lineTo(x + s * 2 + s * l, y - 8); c.lineTo(x + s * 4 + s * l * 0.5, y); c.stroke(); }
     c.fillStyle = '#2a2a2a'; c.beginPath(); c.ellipse(x - 2, y - 24 - b, 15, 11, -0.15, 0, TAU); c.fill();
@@ -45520,7 +46608,7 @@ Tour.pieces['mz.arena_tidepool'] = (st, o) => {
 };
 
 /* ================= houses and the country panel ================= */
-const houses = [{ id: 'mz-gorongosa', mapLabel: 'Banca', kind: 'stand', name: 'Banca da Gorongosa', keeper: 'hornbill', theme: 'mz_savanna', stock: ['hat', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:piri'], mapCell: [0, 1], mapFrom: 0 }];
+const houses = [{ id: 'mz-gorongosa', mapLabel: 'Banca', kind: 'stand', name: 'Banca da Gorongosa', keeper: 'hornbill', theme: 'mz_savanna', roomTheme: 'mz_cupim', stock: ['hat', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:piri'], mapCell: [0, 1], mapFrom: 0 }];
 const map = { fort: 'seafort', start: [0, 0] };
 
 /* ================= the levels ================= */
@@ -45677,6 +46765,7 @@ const levels = [
       { id: 'muralha', gen: 'strip', mode: 'castle', W: 84, H: 18, script: [
         ['opening', { decor: [['mzRampartPalm', 3]] }],
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         ['rampart', { gold: true }],
         'sig',
         ['potTrough'],
@@ -45713,6 +46802,8 @@ const levels = [
     ] }
 ];
 
+Decor.mzKeeperHornbill.atlas = 'mz_x';   // the Banca's keeper (29_tour_mx.js extraAtlases hook)
+TOUR_SKINS.mzOstrichRival.atlas = 'mz_x';
 Tour.amend('mz', { stamps, skins, houses, map, levels });
 })();
 
@@ -46801,6 +47892,7 @@ const levels = [
       { id: 'veiling', gen: 'strip', W: 200, H: 20,
         script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
           ['trolleys', { n: 2 }],
           ['enemies', { kind: 'nlBulb', n: 1, len: 8 }],
           ['gearStand', { item: 'sundial' }],
