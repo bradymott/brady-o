@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("aq_aurora", {"scale":2.0,"image":"aq_aurora.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":835}},"anims":{},"strips":{"L0":{"w":2048,"h":450,"top":160.5,"x":0,"y":0},"L1":{"w":2048,"h":383,"top":252.5,"x":0,"y":451}}});

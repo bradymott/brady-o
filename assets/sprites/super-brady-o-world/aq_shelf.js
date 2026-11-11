@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("aq_shelf", {"scale":2.0,"image":"aq_shelf.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1208}},"anims":{},"strips":{"L0":{"w":2048,"h":501,"top":125.0,"x":0,"y":0},"L1":{"w":2048,"h":380,"top":243.5,"x":0,"y":502},"L2":{"w":2048,"h":324,"top":282.0,"x":0,"y":883}}});
