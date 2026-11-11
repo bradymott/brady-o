@@ -652,6 +652,7 @@ const levels = [
         script: [
           ['gearStand', { item: 'plane' }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           // ① kites over the terraces
           ['terraceIsle', { n: 3 }],
           ['glideGap', { w: 12, drop: 3 }],
@@ -783,6 +784,7 @@ const levels = [
         script: [
           ['gearStand', { item: 'wand' }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           // ① lianas between the giant trees
           ['lianas', { n: 3 }],
           'rafflesiaIsle',
