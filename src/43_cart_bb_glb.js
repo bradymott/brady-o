@@ -151,6 +151,15 @@ const CART_GLB_PARTS = {
     ['tent' + i + 'a']: (o, s) => cartChain(o, CART_JELLY.tent[i], cartJellyFloat(s, CART_JELLY.tent[i], i), cartJellyTent(s, i, 0)),
     ['tent' + i + 'b']: (o, s) => cartChain(o, CART_JELLY.knee[i], cartJellyFloat(s, CART_JELLY.tent[i], i), cartJellyTent(s, i, 0), cartJellyTent(s, i, 1))
   }))),
+  // Jelly Jolt touch-up (rigV 3): the same motions on the new layout (CART_JELLY3: the bell floats higher, tipped up at
+  // the front, with the driver under it and the tentacles hanging round the seat)
+  'jelly:3': Object.assign({
+    bell: (o, s) => { const R = CART_JELLY3, L = CART_JELLY3_L, K = cartJellyPulse(s, L); cartChain(o, R.bell, cartJellyFloat(s, R.bell, 4, R, L)); o.sx = o.sz = K[0]; o.sy = K[1]; },
+    zap: (o, s) => { const R = CART_JELLY3, L = CART_JELLY3_L; cartChain(o, R.zap, cartJellyFloat(s, R.zap, 5, R, L), cartJellyZap(s, L)); o.sx = o.sy = o.sz = L.zapK; }
+  }, ...[0, 1, 2, 3].map(i => ({
+    ['tent' + i + 'a']: (o, s) => cartChain(o, CART_JELLY3.tent[i], cartJellyFloat(s, CART_JELLY3.tent[i], i, CART_JELLY3, CART_JELLY3_L), cartJellyTent(s, i, 0, CART_JELLY3_L)),
+    ['tent' + i + 'b']: (o, s) => cartChain(o, CART_JELLY3.knee[i], cartJellyFloat(s, CART_JELLY3.tent[i], i, CART_JELLY3, CART_JELLY3_L), cartJellyTent(s, i, 0, CART_JELLY3_L), cartJellyTent(s, i, 1, CART_JELLY3_L))
+  }))),
   shark: {
     jaw: (o, s) => { o.pitch = 0.08 + s.fire * 0.75 + Math.max(0, Math.sin(s.t * 10)) * 0.05 * s.speed; },
     tail: (o, s) => { o.yaw = Math.sin(s.t * (3 + s.speed * 6)) * 0.4; }
@@ -160,7 +169,8 @@ const CART_GLB_PARTS = {
   'shark:2': {
     jaw: (o, s) => {
       const ph = (s.t * 0.85) % 1, c = ph < 0.7 ? 0.5 - 0.5 * Math.cos(ph / 0.7 * Math.PI) : ph < 0.8 ? 1 : Math.max(0, 1 - (ph - 0.8) / 0.07);
-      o.pitch = 0.04 + 0.26 * c * (1 - s.fire) + 0.62 * s.fire + Math.max(0, Math.sin(s.t * 10)) * 0.04 * s.speed;
+      // capped at 0.3 rad (tools/blender/dune_chomper.py JAW_MAX): any wider and the jaw dips into the nose deck
+      o.pitch = Math.min(0.3, 0.03 + 0.19 * c * (1 - s.fire) + 0.27 * s.fire + Math.max(0, Math.sin(s.t * 10)) * 0.03 * s.speed);
     },
     tail: (o, s) => { const w = s.t * 4.2; o.yaw = Math.sin(w) * (0.3 + 0.14 * Math.min(1, s.speed)); o.roll = Math.sin(w) * 0.05; },
     dorsal: (o, s) => { const w = s.t * 4.2 - 1.1; o.roll = Math.sin(w) * 0.07 - s.steer * 0.1; o.yaw = Math.sin(w) * 0.05; },
@@ -217,7 +227,10 @@ function cartOctoArm(o, s, i) {
   o.yaw = a + Math.sin(s.t * 1.9 + ph) * 0.1;
   o.pitch = -0.05 + w * 0.14 - s.fire * 0.4 + Math.sin(s.t * 19 + i * 2.1) * 0.008 * (1 + 2 * s.fire);
   o.roll = Math.sin(s.t * 1.7 + ph) * 0.12;
-  o.sy = 1 + 0.12 * c; o.sz = 1 - 0.07 * c;
+  // the torch flicker: a fast irregular breath across the arm (sx) and along it (sy); the side tongues of the rebuilt
+  // flames sit off the arm's plane, so they lick outward and back while the arm itself barely changes
+  const f = Math.sin(s.t * 17 + i * 1.3) * 0.6 + Math.sin(s.t * 29.7 + i * 2.9) * 0.4, g = Math.sin(s.t * 23.3 + i * 0.7);
+  o.sx = 1 + (0.08 + 0.06 * s.fire) * f; o.sy = 1 + 0.12 * c + 0.025 * g; o.sz = 1 - 0.07 * c;
 }
 // Sir Scorchalot's joints (tools/blender/sir_scorchalot.py NECK_J, its printed JAW_J, TAIL_J, TIP_J) and the neck's sway
 const CART_DRAGON_J = { neck: [0, 2.0, 1.6], jaw: [0, 2.9196, 2.7229], tail: [0, 1.45, -2.25], tailTip: [0, 1.25, -3.45] };
@@ -391,30 +404,38 @@ const CART_JELLY = (() => {
 })();
 const CART_JELLY_L = { k: [1, 1], float: [0, 1, 2, 3, 4, 5].map(() => ({ j: CART_JELLY.bell })), zap: { j: CART_JELLY.zap }, zapK: 1,
   tent: [0, 1, 2, 3].map(i => [{ j: CART_JELLY.tent[i] }, { j: CART_JELLY.knee[i] }]) };
+// the rigV 3 layout (tools/blender/jelly_jolt.py prints these as JELLY_RIG3: BELL_AT, the zap joint at the tilted core,
+// the four tentacle roots on the tilted rim; the knees hang SEG1 below)
+const CART_JELLY3 = (() => {
+  const tent = [[0.973, 2.6655, 0.4815], [0.6901, 2.4439, -0.7752], [-0.6901, 2.4439, -0.7752], [-0.973, 2.6655, 0.4815]];
+  return { bell: [0, 2.5, 0.05], zap: [0, 3.124, -0.06], tent, knee: tent.map(p => [p[0], p[1] - 0.56, p[2]]) };
+})();
+const CART_JELLY3_L = { k: [1, 1], float: [0, 1, 2, 3, 4, 5].map(() => ({ j: CART_JELLY3.bell })), zap: { j: CART_JELLY3.zap }, zapK: 1,
+  tent: [0, 1, 2, 3].map(i => [{ j: CART_JELLY3.tent[i] }, { j: CART_JELLY3.knee[i] }]) };
 function cartJellyC(s) {   // the swim stroke: 0..1, a quick contraction then a slow relax (about 0.8 strokes a second)
   const ph = (s.t * 0.8) % 1;
   return ph < 0.22 ? 0.5 - 0.5 * Math.cos(ph / 0.22 * Math.PI) : Math.exp(-(ph - 0.22) * 5);
 }
-function cartJellyPulse(s) {   // [radial, vertical] scale of the bell: narrower and taller on the stroke, puffed up when firing
-  const K = CART_JELLY_L.k, c = cartJellyC(s);
+function cartJellyPulse(s, LL = CART_JELLY_L) {   // [radial, vertical] scale of the bell: narrower and taller on the stroke, puffed up when firing
+  const K = LL.k, c = cartJellyC(s);
   K[0] = 1 - 0.085 * c + 0.07 * s.fire; K[1] = 1 + 0.07 * c + 0.12 * s.fire;
   return K;
 }
-function cartJellyFloat(s, J, i) {   // the hover (rises on the stroke, leans into its swim) plus where the pulse carries J
-  const L = CART_JELLY_L.float[i], K = cartJellyPulse(s), c = cartJellyC(s), B = CART_JELLY.bell, sp = Math.min(1, s.speed);
+function cartJellyFloat(s, J, i, R = CART_JELLY, LL = CART_JELLY_L) {   // the hover (rises on the stroke, leans into its swim) plus where the pulse carries J
+  const L = LL.float[i], K = cartJellyPulse(s, LL), c = cartJellyC(s), B = R.bell, sp = Math.min(1, s.speed);
   L.x = (J[0] - B[0]) * (K[0] - 1); L.z = (J[2] - B[2]) * (K[0] - 1);
   L.y = (J[1] - B[1]) * (K[1] - 1) + 0.06 * c - 0.03 + 0.02 * Math.sin(s.t * 1.3);
   L.pitch = 0.07 * sp + 0.02 * Math.sin(s.t * 0.9); L.roll = -0.05 * s.steer + 0.025 * Math.sin(s.t * 0.7 + 1);
   return L;
 }
-function cartJellyZap(s) {   // static: on and off in a jittery rhythm, a new direction each flick, always crackling when it fires
-  const n = Math.floor(s.t * 13), f = Math.abs((Math.sin(n * 91.7 + 0.3) * 43758.5453) % 1), L = CART_JELLY_L.zap;
+function cartJellyZap(s, LL = CART_JELLY_L) {   // static: on and off in a jittery rhythm, a new direction each flick, always crackling when it fires
+  const n = Math.floor(s.t * 13), f = Math.abs((Math.sin(n * 91.7 + 0.3) * 43758.5453) % 1), L = LL.zap;
   L.yaw = n * 2.39996; L.pitch = (f - 0.5) * 0.2;
-  CART_JELLY_L.zapK = s.fire > 0.05 || f > 0.45 ? 0.85 + 0.35 * ((f * 7.3) % 1) + 0.3 * s.fire : 0.001;
+  LL.zapK = s.fire > 0.05 || f > 0.45 ? 0.85 + 0.35 * ((f * 7.3) % 1) + 0.3 * s.fire : 0.001;
   return L;
 }
-function cartJellyTent(s, i, seg) {   // seg 0: the upper half sways and trails; seg 1: the lower half follows a beat later
-  const L = CART_JELLY_L.tent[i][seg], sp = Math.min(1.2, s.speed), c = cartJellyC(s), ph = i * 1.6 - seg * 1.1;
+function cartJellyTent(s, i, seg, LL = CART_JELLY_L) {   // seg 0: the upper half sways and trails; seg 1: the lower half follows a beat later
+  const L = LL.tent[i][seg], sp = Math.min(1.2, s.speed), c = cartJellyC(s), ph = i * 1.6 - seg * 1.1;
   L.pitch = (seg ? 0.3 : 0.42) * sp + (seg ? 0.26 : 0.17) * Math.sin(s.t * 2.2 + ph) - (seg ? 0.1 : 0.16) * c;
   L.roll = (seg ? 0.2 : 0.14) * Math.sin(s.t * 1.7 + i * 2 - seg * 0.9) + (seg ? 0 : 0.12 * s.steer);
   return L;
