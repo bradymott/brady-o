@@ -54,7 +54,7 @@ const stampsOk=(m,tag)=>{
     assert(!(x.x<y.x+y.w&&x.x+x.w>y.x&&x.y<y.y+y.h&&x.y+x.h>y.y),`${tag}: stops ${x.i} and ${y.i} overlap`);}
 };
 {
-  const C=Tour.countries.mx,orig=C.levels,origHouses=C.houses,base=orig.map(L=>Object.assign({},L));C.houses=[];   // level-only layouts (houses are covered by sbw_toolkit_shots mapgraph)
+  const C=Tour.countries.mx,orig=C.levels,origHouses=C.houses,base=orig.slice(0,C.mainCount).map(L=>Object.assign({},L,{secret:false}));C.houses=[];   // the main levels only: the extra stops below are 6 and 7   // level-only layouts (houses are covered by sbw_toolkit_shots mapgraph)
   const branchy=base.concat([Object.assign({},base[0],{name:'Secret Cenote',mapCell:[0,2],mapFrom:1}),Object.assign({},base[1],{name:'Hidden Grotto',mapCell:[2,2],mapFrom:3,mapHidden:true})]);
   const plain=L=>{const o=Object.assign({},L);delete o.mapCell;delete o.mapFrom;return o;};
   const nine=base.map(plain).concat(base.slice(0,4).map((L,k)=>Object.assign(plain(L),{name:'Extra '+(k+1)})));

@@ -331,6 +331,51 @@ const iguanaArt = (ctx, e, x, y, m) => {
 };
 // puffers inflate (and get bigger) when Brady swims close
 const PUFFER = { w: 20, h: 20, speed: 0.8, range: 2, chase: false, art: pufferArt };
+// a glass frog: see-through green with its little red heart always faintly showing
+const glassFrogArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  ctx.fillStyle = 'rgba(150,240,170,0.75)'; ctx.beginPath(); ctx.ellipse(0, -8, 11, 8, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(40,120,60,0.9)'; ctx.lineWidth = 1.4; ctx.stroke();
+  ctx.fillStyle = 'rgba(150,240,170,0.75)'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 8, -1, 5, 2.5, 0, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#e83a4a'; ctx.beginPath(); ctx.arc(-1, -8, 2.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(-4, -12, 3, 1.5, -0.4, 0, TAU); ctx.fill();
+  for (const s of [-1, 1]) { ctx.fillStyle = '#fff4c0'; ctx.beginPath(); ctx.arc(4 + s * 4, -15, 3.2, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(5 + s * 4, -15, 1.6, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// a hummingbird: iridescent green and violet, a long beak, wings a blur
+const hummingArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  const f = Math.sin(e.t * 60);
+  ctx.fillStyle = 'rgba(200,255,230,0.45)'; ctx.beginPath(); ctx.ellipse(-2, -6 - f * 2, 9, 4, -0.5, 0, TAU); ctx.fill();
+  const g = ctx.createLinearGradient(-8, -4, 8, 4); g.addColorStop(0, '#2ac88a'); g.addColorStop(1, '#8a4aff');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 8, 5, 0.15, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-6, 1); ctx.lineTo(-13, 5); ctx.lineTo(-10, -1); ctx.fill();
+  ctx.fillStyle = '#ff3a6a'; ctx.beginPath(); ctx.ellipse(4, 2, 3, 2, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#2a2a30'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(7, -1); ctx.lineTo(16, -2); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(5, -2, 1.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(5.4, -2, 0.8, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+// a Sally Lightfoot crab: red-orange with blue spots, scuttles fast sideways
+const crabArt = (ctx, e, x, y, m) => {
+  const sq = m === 'flat' ? 0.4 : 1; ctx.save(); ctx.translate(x, y); ctx.scale(1, sq);
+  const k = Math.sin(e.t * 22);
+  ctx.strokeStyle = '#c83a1a'; ctx.lineWidth = 2; for (const s of [-1, 1]) for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.moveTo(s * 6, -6); ctx.lineTo(s * (11 + q * 2), -2 + (q % 2 ? k : -k) * 2); ctx.lineTo(s * (12 + q * 2), 0); ctx.stroke(); }
+  ctx.fillStyle = '#ff5a2a'; ctx.beginPath(); ctx.ellipse(0, -8, 10, 6, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#3a8aff'; for (const [dx, dy] of [[-4, -10], [3, -9], [-1, -6]]) { ctx.beginPath(); ctx.arc(dx, dy, 1.6, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#ff5a2a'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 11, -11, 4, 3, 0, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#1a1020'; for (const s of [-1, 1]) { ctx.fillRect(s * 3 - 1, -17, 2, 4); ctx.beginPath(); ctx.arc(s * 3, -17, 1.8, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// a white-capped dipper: a little brown river bird with a white throat
+const dipperArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  ctx.fillStyle = '#5a3a2a'; ctx.beginPath(); ctx.ellipse(0, -8, 9, 7, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-7, -9); ctx.lineTo(-12, -14); ctx.lineTo(-8, -6); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(4, -6, 4, 3, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(2, -15, 3, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#e8902a'; ctx.beginPath(); ctx.moveTo(7, -11); ctx.lineTo(11, -10); ctx.lineTo(7, -9); ctx.fill();
+  ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(5, -12, 1.2, 0, TAU); ctx.fill();
+  ctx.restore();
+};
 class EcPuffer extends TourSwimmer {
   constructor(g, s) { super(g, s, PUFFER); this.puff = 0; }
   update(dt) {
@@ -371,6 +416,13 @@ const enemies = {
   } }), place: 'walk' },
   ecCondor: { cls: TourFlyer.make({ w: 34, h: 16, range: 4, speed: 0.6, swoop: true, art: condorArt, burst: '#1a1a22' }), place: 'fly' },
   ecFrog: { cls: TourEnemy.make({ w: 18, h: 16, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.4, art: frogArt, glow: 'rgba(120,255,200,', burst: '#2ae88a' }), place: 'walk' },
+  // the headline enemy: a marine iguana that sneezes salt; the puff sets into a stepping stone (the fast upper route)
+  ecIguanaSalt: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.5, behavior: 'saltSneezer', every: 3, platT: 5, art: iguanaArt, burst: '#3a3a44' }), place: 'walk' },
+  ecGlassFrog: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 0, behavior: 'camouflage', revealEvery: 2.4, art: glassFrogArt, burst: '#96f0aa' }), place: 'walk' },
+  ecHummingbird: { cls: TourFlyer.make({ w: 22, h: 12, speed: 1, behavior: 'hoverDart', range: 7, art: hummingArt, burst: '#2ac88a' }), place: 'fly' },
+  ecCrab: { cls: TourEnemy.make({ w: 24, h: 14, inkPad: 6, speed: 2.6, behavior: 'walk', art: crabArt, burst: '#ff5a2a' }), place: 'walk' },
+  ecDipper: { cls: TourEnemy.make({ w: 20, h: 18, inkPad: 6, speed: 0.6, behavior: 'ceilingDrop', tell: 0.5, stuckT: 1.6, art: dipperArt, burst: '#5a3a2a' }), place: 'here' },
+  ecSeaLionLand: { cls: TourEnemy.make({ w: 36, h: 16, speed: 0.6, behavior: 'charge', range: 7, chargeSpeed: 7.5, windup: 0.5, art: seaLionArt, burst: '#8a7a6a' }), place: 'walk' },
   ecIguana: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.4, behavior: 'throw', every: 2.2, range: 7, pace: true, art: iguanaArt, burst: '#3a3a44', shoot: (e) => {
     for (let k = -1; k <= 1; k++) tourFire(e.g, e.cx + e.dir * 16, e.y + 4, { kind: 'salt', vx: e.dir * (2.4 + k * 0.6) * TS, vy: (-2.6 + k) * TS, grav: PHYS.gDown * 0.12, w: 8, h: 8, life: 2.2, col: '#ffffff', art: salt });
     K.say(e.g, e, 'ACHOO!', '#ffffff'); Sound.play('throw', { pitch: 2, vol: 0.3 });
@@ -440,6 +492,8 @@ class EcBooby extends TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: '
   }
 }
 const entities = { ecBooby: EcBooby, ecIcicle: EcIcicle, ecSurge: EcSurge };
+// the booby minding La Tienda del Cacao (the Souvenir Stand), behind the counter
+decor.ecKeeperBooby = (ctx, x, y, t) => { ctx.save(); ctx.translate(0, -20); boobyArt(ctx, { t, dir: -1, given: true }, x, y, 'idle', t); ctx.restore(); };
 
 /* ---------------- the signature power-up: BOOBY BOOTS ---------------- */
 // bright blue boots (like a blue-footed booby's feet): super-bouncy jumps; a big landing sends out a shockwave
@@ -700,10 +754,13 @@ const P = {
   // the boss cave: three volcano vents in the floor, the lever that pops them, two ledges, and the
   // equator's low-gravity bubbles over each half (switched on in phase 2; the validator ignores pulsing zones)
   arena_vents(st, o) {
-    const B = st.B, { x0, w, GY } = o;
-    for (let q = 0; q < 3; q++) { B.set(x0 + 5 + q, GY - 4, T.SEMI); B.set(x0 + w - 8 + q, GY - 4, T.SEMI); }
-    [x0 + 3, x0 + 11, x0 + 19].forEach((vx, i) => B.spawn('ecVent', vx + 0.5, GY - 1, { idx: i }));
-    B.spawn('ecLever', x0 + 15, GY - 1, {});
+    const B = st.B, { x0, w, GY } = o, bowl = w >= 30;
+    // the crater bowl (wide arenas): the floor steps up two tiles at both rims; a postcard over the left rim
+    if (bowl) { B.fill(x0, GY - 2, x0 + 2, GY - 1, T.GROUND); B.fill(x0 + w - 3, GY - 2, x0 + w - 1, GY - 1, T.GROUND); st.gold(x0 + 1, GY - 6, 'risky'); }
+    const off = bowl ? 2 : 0;
+    for (let q = 0; q < 3; q++) { B.set(x0 + 5 + off + q, GY - 4, T.SEMI); B.set(x0 + w - 8 - off + q, GY - 4, T.SEMI); }
+    [x0 + 3 + off, x0 + 11 + off, x0 + 19 + off].forEach((vx, i) => B.spawn('ecVent', vx + 0.5, GY - 1, { idx: i }));
+    B.spawn('ecLever', x0 + 15 + off, GY - 1, {});
     const zh = Math.min(10, GY - 2);
     B.zone(x0 + 1, GY - zh, 11, zh, 0, -58 * TS, 0, 'lowgrav', { pulse: true, off: true, ecTag: 'L' });
     B.zone(x0 + w - 12, GY - zh, 11, zh, 0, -58 * TS, 0, 'lowgrav', { pulse: true, off: true, ecTag: 'R' });
@@ -1026,32 +1083,7 @@ Tour.country({
     ctx.strokeStyle = '#c8901a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, -4, 4, 0, TAU); ctx.stroke();
     ctx.restore();
   } },
-  levels: [
-    { name: 'Middle of the World', style: 'run', theme: 'ec_equator', gimmick: 'The equator line\'s low-gravity bubbles, banana-leaf platforms and rolling cacao pods; a booby lends its blue boots',
-      enemies: [['ecBanana', 3], ['ecCacao', 2], ['ecAlpaca', 1]],
-      hint: 'On the equator line every jump floats. The blue boots bounce extra high!',
-      postcard: 'Standing on the equator! Half of me is in the north, half in the south, all of me misses you. ♥ C',
-      script: ['booby', ['flat', { n: 4 }], ['equator', { gold: true }], 'bananas', 'gap', 'cacao', 'cp', 'terraces', ['equator', { w: 10 }], ['enemies', { n: 2 }], 'bonus', ['bananas', { n: 2 }], 'end'] },
-    { name: 'Cable Car Climb', style: 'ride', theme: 'ec_andes', gimmick: 'Ride an open gondola up the Andes: duck the tower arms, hop the snowy ridges, dodge swooping condors',
-      enemies: [['ecCondor', 1]], vehicle: 'ecGondola', vehicleW: 6, deck: 10, below: 'none', scroll: 2.4, len: 170,
-      hint: 'Tower arms come at head height: duck (or hop) them!',
-      postcard: 'The Baron\'s blimp is heading for the jungle. Bring bug spray. ♥ C',
-      script: ['tower', 'condors', 'ridge', ['catwalk', { gold: true }], 'tower', 'condors', ['ridge', { w: 2 }], 'tower', 'catwalk', 'condors', 'tower', 'ridge', ['catwalk', { gold: true }], 'tower', 'condors', ['ridge', { w: 2 }]] },
-    { name: 'Amazon Canopy', style: 'night', theme: 'ec_amazon', gimmick: 'Swing on vines across the dark canopy and hop sinking giant lily pads, lit by glowing frogs and mushrooms',
-      enemies: [['ecFrog', 3]], dark: true,
-      hint: 'Ride the swinging vines across the gaps',
-      postcard: 'The jungle at night GLOWS. A frog winked at me. I think. ♥ C',
-      script: [['glow', { n: 8 }], 'vines', ['branches', { gold: true }], ['glow', { n: 7, frogs: true }], 'lilies', ['vines', { n: 2, gold: true }], 'cp', ['glow', { n: 6 }], 'branches', ['lilies', { n: 4 }], ['vines', { n: 2 }], 'oneup', ['glow', { n: 8, frogs: true }], 'end'] },
-    { name: 'Galápagos Snorkel', style: 'swim', theme: 'ec_galapagos', gimmick: 'Snorkel a sunlit sea: lava-rock arches, puffers that puff up, penguins in a current and a tidal surge',
-      enemies: [['ecSeaLion', 1]], H: 18, width: 240,
-      hint: 'Tap jump to swim. Puffers puff up when you get close!',
-      postcard: 'A sea lion stole my sunglasses and gave them back. Islands are magic. ♥ C',
-      script: ['surface', ['arches', { gold: true }], 'puffers', ['penguins', { w: 12 }], 'iguanas', 'surge', 'grotto', 'arches', 'puffers', 'surge', ['penguins', { w: 10, dir: -1 }], 'iguanas', 'arches'] },
-    { name: 'Ice Fort of Cotopaxi', style: 'castle', theme: 'ec_cotopaxi', gimmick: 'Slippery ice, dropping icicles and sinking ice floes, then El Tortugón',
-      enemies: [['ecAlpaca', 1], ['ecIceCube', 3]], boss: 'ec_tortoise', arena: 'vents', arenaW: 26, roof: false,
-      hint: 'Stomp the lever to pop a vent under El Tortugón: flipped on his back, his belly is open!',
-      postcard: 'The Equator monument is back where it belongs! The Baron flew to Brazil. Samba time! ♥ C',
-      script: [['ice', { n: 12 }], 'floes', ['enemies', { n: 2 }], 'cp', ['ice', { n: 14 }], ['pillars', { n: 3 }], ['blocks', { content: 'power' }], 'arena'] }
-  ]
+  // the levels (v2 format) are in 29_tour_ec_levels.js
+  levels: []
 });
 })();

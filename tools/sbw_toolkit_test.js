@@ -16,7 +16,8 @@ const validate = (spec, i) => { const lvl = build(spec, i); return { lvl, r: Val
 const fresh = () => { Save.data = Save.defaults(); Save.data.v = 3; TourProgress.data(); };
 
 section('spec', () => {
-  check('68 main levels in 14 countries (secret levels come on top)', Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].mainCount, 0) === 68 && Tour.allLevelIds().length >= 68 && Tour.worldList().length === 14);
+  const mains = Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].mainCount, 0), listed = Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].levels.length, 0);
+  check(`68 main levels in 14 countries (${Tour.allLevelIds().length} with the secret levels)`, mains === 68 && Tour.allLevelIds().length === listed && Tour.worldList().length === 14, { mains, listed });
   check('every country knows its main-level count (5, or 4 for the secret lands)', Tour.worldList().every(w => { const C = Tour.byWorld[w]; return C.mainCount === (C.secret ? 4 : 5); }), Tour.worldList().map(w => Tour.byWorld[w].id + Tour.byWorld[w].mainCount));
   const L84 = Tour.specOf('8-4');
   check('a legacy secret: {to} becomes exits.secret = land:aq', L84.exits.secret && L84.exits.secret.to === 'land:aq' && L84.secret === false, L84.exits);
@@ -97,7 +98,9 @@ section('progress', () => {
   check('isRevealed(house)', TourProgress.isRevealed('house:mx-test') && TourProgress.isRevealed('mx-test'));
   Save.data.done['1-6'] = true;
   const tot = TourProgress.totals();
-  check('totals count revealed secret levels apart (houses never count)', tot.secretDone === 1 && tot.total === 61, tot);
+  // every main level of the unlocked (non-secret) countries, plus the one revealed secret level
+  const mainTotal = Tour.mainCountries().reduce((n, C) => n + C.mainCount, 0);
+  check('totals count revealed secret levels apart (houses never count)', tot.secretDone === 1 && tot.total === mainTotal + 1, { tot, mainTotal });
   fresh();
   for (const id of ['1-1', '1-2', '1-3', '1-4', '1-5']) { Save.data.done[id] = true; TourProgress.complete(id, false); }
   check('the boss exit (country:next) opens Ecuador; bossDone uses the main count', TourProgress.bossDone(MX) && TourProgress.countryUnlocked(Tour.countries.ec) && TourProgress.isUnlocked('2-1'));
@@ -129,6 +132,38 @@ section('gens', () => {
     const ok = r.ok && !(lvl.problems || []).some(p => !/is not defined yet/.test(p));
     check(`gen ${name}: ${lvl.areas.map(a => a.gen + ' ' + a.W + 'x' + a.H).join(' + ')} validates (exits, postcards, areas, pace)`, ok, { exits: r.exits, gold: r.gold, areas: r.areasReached, pace: r.pace, problems: lvl.problems, guard: r.guardHit });
   }
+  {
+    // mirror: Brady starts at the right end, the gate is on the left, the room's way out lands by the flipped door
+    const lvl = build(fixtures.gens.mirror), A = lvl.areas[0], gate = A.spawns.find(s => s.type === 'gate'), door = A.spawns.find(s => s.type === 'portal');
+    const back = lvl.areas[1].spawns.find(s => s.type === 'portal');
+    const ss = build(fixtures.gens.startStamp), A0 = ss.areas[0];
+    check('startStamp: the stamp replaces the start pad (Brady at its @, its hidden 1UP, its blocks)', ss.start.x === 2 * TS + TS / 2 && ss.start.y === 14 * TS && A0.contents['5,10'] === 'oneup' && A0.tiles[11 * A0.W + 10] === T.HARD && A0.tiles[14 * A0.W + 3] === T.GROUND, { start: ss.start, contents: A0.contents });
+    check('mirror: a v2 strip plays right to left (start right, gate left, door anchors flipped)', A.mirrored && lvl.start.x > A.W * TS * 0.9 && gate.x < A.W * TS * 0.25 && back.target.area === 0 && back.target.x < door.x && Math.abs(back.target.x - door.x) < 8 * TS, { start: lvl.start, W: A.W, gate: gate.x, door: door.x, back: back.target });
+  }
+});
+
+section('budget', () => {
+  // the §5.3 placement budget on small strips (Validator.budget only; no search)
+  const B = (arch, script, extra) => { const lvl = build(Object.assign({ name: 'Budget', arch, theme: 'mx_mercado', enemies: [['mxPepper', 1]], exits: { main: { to: null } }, areas: [{ id: 'run', gen: 'strip', W: 120, script: script.concat([['end', { exit: 'main' }]]) }] }, extra || {})); return G.Validator.budget(lvl); };
+  const has = (r, re) => r.errors.some(e => re.test(e));
+  const ok1 = B('lab', [['itemBlock', { item: 'power' }], ['flat', { n: 20 }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 40 }]]);
+  check('budget: an early block and a hidden 1UP pass rules 1-6', ok1.ok, ok1.errors);
+  check('budget rule 1: one opportunity is not enough', has(B('lab', [['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 40 }]]), /needs 2/));
+  check('budget rule 3: the first opportunity late in the area fails', has(B('lab', [['flat', { n: 60 }], ['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }]]), /% into the main area/));
+  check('budget rule 4: DIVE without a fins stand fails', has(B('dive', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 40 }]]), /fins gear stand/));
+  check('budget rule 4: DIVE with a fins stand up front passes', B('dive', [['gearStand', { item: 'fins' }], ['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 60 }]]).ok);
+  check('budget rule 4: a fins stand after the twist fails', has(B('dive', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 70 }], ['gearStand', { item: 'fins' }], ['flat', { n: 10 }]]), /before the twist/));
+  check('budget rule 4: a hat wall without a hat stand fails', has(B('lab', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['breakwall', { needs: 'hat' }], ['flat', { n: 40 }]]), /needs hat/));
+  G.Validator.STRICT5 = true;
+  check('budget rule 5: premium items all in plain sight fail (an error with STRICT5, a warning until release)', has(B('lab', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'lsd' }], ['flat', { n: 40 }]]), /plain sight/));
+  G.Validator.STRICT5 = false;
+  const six = [1, 2, 3, 4, 5, 6].map(() => ['itemBlock', { item: 'power' }]).concat([['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 30 }]]);
+  check('budget rule 2: seven blocks in a main level fail', has(B('lab', six), /item blocks in the main area/));
+  check('budget rule 7: a secret level may hold up to seven', B('lab', six, { secret: true }).ok, B('lab', six, { secret: true }).errors);
+  const lair = G.Validator.budget(build({ name: 'Lair', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata', exits: { main: { to: null } }, areas: [
+    { id: 'patio', gen: 'strip', W: 60, script: [['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 20 }], ['door', { to: 'fiesta@in', perch: 0 }]] },
+    { id: 'fiesta', gen: 'arena', role: 'arena', layout: 'fiesta', arenaW: 24 }] }, 93));
+  check('budget rule 6: a boss lead-in with one opportunity fails', lair.errors.some(e => /boss lead-in/.test(e)), lair.errors);
 });
 
 section('gear', () => {
