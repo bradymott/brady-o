@@ -127,6 +127,14 @@ Object.assign(Decor, {
   // the cellar canal under the street: brick vaults, a lantern, jars and a strip of dark water behind the walkway
   mxVault(ctx, x, y, t, th, d) {
     const w = 8 * TS, h = 4 * TS + 6, x0 = x - w / 2, seed = d.seed || 0;
+    // the pre-rendered bay (mx_vault.py, packed into the mx_bodega atlas: 1-1 loads it for its bodega room); the canal's
+    // moving glints and the lantern's flicker are drawn on top of it
+    if (typeof Atlas !== 'undefined' && Atlas.draw(ctx, 'mx_bodega', seed % 2 === 0 ? 'vaulta_idle_000' : 'vaultb_idle_000', x, y, 1)) {
+      ctx.save(); ctx.fillStyle = 'rgba(120,220,230,0.45)';
+      for (let k = 0; k < 5; k++) { const gx = x0 + ((k * 53 + t * 20 + seed * 9) % w); ctx.fillRect(gx, y - 9 + (k % 2) * 4, 12, 1.5); }
+      if (seed % 2 === 0) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,200,110,${0.12 + 0.08 * Math.sin(t * 6 + seed)})`; ctx.beginPath(); ctx.arc(x0 + 10, y - h + 34, 14, 0, TAU); ctx.fill(); }
+      ctx.restore(); return;
+    }
     ctx.save();
     const g = ctx.createLinearGradient(0, y - h, 0, y); g.addColorStop(0, '#3a2016'); g.addColorStop(1, '#5a3420');
     ctx.fillStyle = g; ctx.fillRect(x0, y - h, w + 1, h);
@@ -874,5 +882,33 @@ const L6 = { n: 6, name: 'Pit of Swallows', arch: 'fall', secret: true, theme: '
     { id: 'nido', gen: 'room', role: 'secret', stamp: 'nido' }
   ] };
 
+/* ---------------- pre-rendered scenes (tools/blender/sprites/mx_bodega.py, mx_sotano.py): Mexico wires its own atlases
+   (29_tour_mx_sprites.js), so the two new themes are wired here: their background strip, floor tiles and the piñata block ---------------- */
+if (typeof Atlas !== 'undefined') for (const key of ['mx_bodega', 'mx_sotano']) {
+  const th = THEMES[key]; if (!th || !th.layers) continue;
+  th.layers = th.layers.map((L, i) => ({ kind: 'image', atlas: key, id: 'L' + i, f: L.f, base: L.base, dyn: L.dyn, color: L.color, fallback: L, shift: 0 }));
+  Atlas.applyTiles(th, key, { ground: 'ground' });
+  Atlas.applyTiles(th, 'mx', { qblock: 'pinata_block_idle_000', used: 'pinata_block_used_000', keepAtlas: true });
+}
+// interior rooms without a theme of their own get the level theme's '_cave' look (03_themes.js caveVariant); Mexico's
+// get real rooms instead: La Tiendita and the hacienda pantry are cellars like the bodega, the swallows' nest is in the
+// pit's wall, the cenote's air pocket keeps the cenote wall (shift: the strip's floor line onto the room's floor)
+if (typeof Atlas !== 'undefined') {
+  const room = (key, from, shift, extra) => {
+    const src = THEMES[from]; if (THEMES[key] || !src) return;
+    const th = THEMES[key] = Object.assign({}, src, extra || {});
+    th.layers = src.layers.map(L => Object.assign({}, L, { shift: (L.shift || 0) + shift }));
+  };
+  room('mx_mercado_cave', 'mx_bodega', -85, { name: 'La Tiendita', darkness: 0.2 });
+  room('mx_hacienda_cave', 'mx_bodega', -32, { name: 'Hacienda Pantry', darkness: 0.25 });
+  room('mx_sotano_cave', 'mx_sotano', 0, { name: 'Swallow Nest', darkness: 0.15 });
+  if (!THEMES.mx_cenote_cave && THEMES.mx_cenote) {
+    const cv = THEMES.mx_cenote, th = THEMES.mx_cenote_cave = Object.assign({}, cv, { name: 'Air Pocket', underwater: false, particles: 'dust', darkness: 0.2 });
+    th.layers = [{ kind: 'image', atlas: 'mx_cenote', id: 'bg_cave', f: 0.08, base: 0, color: cv.layers[0].color, fallback: cv.layers[0], shift: 0 },
+                 { kind: 'image', atlas: 'mx_cenote', id: 'bg_stalag', f: 0.3, base: 420, color: cv.layers[1].color, fallback: cv.layers[1], shift: -40 }];
+    Atlas.applyTiles(th, 'mx_cenote', { ground: 'ground' });
+    Atlas.applyTiles(th, 'mx', { qblock: 'pinata_block_idle_000', used: 'pinata_block_used_000', keepAtlas: true });
+  }
+}
 Tour.amend('mx', { stamps, skins, levels: [L1, L2, L3, L4, L5, L6] });
 })();

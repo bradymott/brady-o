@@ -400,7 +400,11 @@ const xoloArt = (ctx, e, x, y, m, t) => {
   if (m !== 'wave') { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 46 + Math.sin(t * 5) * 2); }
 };
 // Xolo minding La Tiendita (the Souvenir Stand): wagging behind the counter
-decor.mxKeeperXolo = (ctx, x, y, t) => { ctx.save(); ctx.translate(x, y - 26); xoloArt(ctx, { t, dir: 1 }, 0, 0, 'wave', t); ctx.restore(); };
+decor.mxKeeperXolo = (ctx, x, y, t) => {
+  // the pre-rendered Xolo from the 'mx' atlas (waving, facing the door), else the procedural one
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'mx', 'xolo/wave', t, x, y - 26, -1, { scale: ART_SCALE.enemy })) return;
+  ctx.save(); ctx.translate(x, y - 26); xoloArt(ctx, { t, dir: 1 }, 0, 0, 'wave', t); ctx.restore();
+};
 const axolotlArt = (ctx, e, x, y, m) => {
   ctx.save(); ctx.translate(x, y); ctx.rotate(m === 'up' ? -0.4 : 0.6);
   ctx.fillStyle = '#ffaacc'; ctx.beginPath(); ctx.ellipse(0, 0, 13, 7, 0, 0, TAU); ctx.fill();
@@ -582,11 +586,60 @@ TourBehave.mxBlindCharge = {
 };
 // a flock of swallows: harmless to touch, they only nudge Brady a tile sideways
 TourBehave.mxFlock = Object.assign({}, TourBehave.swarm, { touch(e, p) { p.pushX = (p.pushX || 0) + e.dir * 4 * TS; return true; } });
+/* ---------------- the rebuilt cast's pre-rendered art (tools/blender/sprites/mx_extras.py -> the 'mx_x' atlas) ----------------
+   cfg.atlas = 'mx_x' makes a level that spawns them load the atlas; every one keeps its procedural art as the fallback. */
+const MX_X = 'mx_x';
+// the elote keeps the 'mx' art; its burst pose (shown while it pops) is in mx_x, which a level with elotes loads because
+// their popcorn draws from it (see the extraAtlases hook below)
+const EloteBase = TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'splitter', n: 3, child: 'mxPopcorn', childLife: 3, art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') });
+class MxElote extends EloteBase {
+  drawArt(ctx) {
+    if (this.dead && !this.knocked && this.mode === 'burst' && typeof Atlas !== 'undefined' && Atlas.draw(ctx, MX_X, 'elote_burst_000', this.cx, this.y + this.h, this.dir || 1, { scale: TourSprite.scale(this) })) return;
+    super.drawArt(ctx);
+  }
+}
+MxElote.cfg = EloteBase.cfg;
+// enemies an enemy spawns (cfg.child: the elote's popcorn) bring their own atlas: a level that places the parent loads it
+if (typeof Play !== 'undefined' && !Play.prototype.extraAtlasesChild) {
+  const ex = Play.prototype.extraAtlases;
+  Play.prototype.extraAtlasesChild = true;
+  Play.prototype.extraAtlases = function () {
+    const n = new Set(ex.call(this));
+    for (const a of (this.level && this.level.areas) || []) for (const sp of a.spawns || []) {
+      const C = ENTITY_TYPES[sp.type], ch = C && C.cfg && C.cfg.child && ENTITY_TYPES[C.cfg.child];
+      if (ch && ch.cfg && ch.cfg.atlas) n.add(ch.cfg.atlas);
+    }
+    return [...n];
+  };
+}
+// the swimming axolotl: its tiny (regrowing) self has its own frames
+const AxoSwimBase = TourSwimmer.make({ w: 26, h: 14, speed: 1.0, behavior: 'mxSwimRegrow', regrowT: 3, art: axolotlArt, atlas: MX_X, sprite: 'axoswim' });
+class MxAxoSwim extends AxoSwimBase {
+  drawArt(ctx) { if (this.tiny && !this.knocked && TourSprite.draw(ctx, this, this.cx, this.cy, 'tiny', { tiny: ['tiny', 'swim'] })) return; super.drawArt(ctx); }
+}
+MxAxoSwim.cfg = AxoSwimBase.cfg;
+// the blind fish shows its states: the quiver (tell), the gaping charge, the daze
+const BLIND_FB = { swim: ['swim'], tell: ['tell', 'swim'], charge: ['charge', 'swim'], stun: ['stun', 'swim'], ko: ['ko', 'swim'] };
+const BlindBase = TourSwimmer.make({ w: 30, h: 16, speed: 1.2, behavior: 'mxBlindCharge', art: blindFishArt, atlas: MX_X, sprite: 'blindfish' });
+class MxBlindFish extends BlindBase {
+  drawArt(ctx) {
+    const m = this.knocked ? 'ko' : BLIND_FB[this.mode] ? this.mode : 'swim';
+    ctx.save(); if (m === 'tell') ctx.translate(Math.sin(this.t * 50) * 1.5, 0);
+    if (!(this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, m, BLIND_FB))) TourSprite.art(ctx, this, this.cx, this.cy, m);
+    ctx.restore();
+  }
+}
+MxBlindFish.cfg = BlindBase.cfg;
+// swallows fly in a flock whose followers always draw through cfg.art, so the art itself reaches for the atlas
+const swallowSprite = (ctx, e, x, y, m) => {
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, MX_X, m === 'ko' ? 'swallow_ko_000' : 'swallow/fly', (e.t || 0) + (e.k || 0) * 0.13, x, y, e.dir || 1)) return;
+  swallowArt(ctx, e, x, y, m);
+};
 const enemies = {
   mxPepper: { cls: TourEnemy.make({ w: 16, h: 24, speed: 1.1, behavior: 'hop', hopV: 9.5, hopEvery: 1.1, art: pepperArt, burst: '#5ad04a' }), place: 'walk' },
   // the elote pops: stomp it and it bursts into three popcorn puffs (stomp them for coins, or let them fade)
-  mxElote: { cls: TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'splitter', n: 3, child: 'mxPopcorn', childLife: 3, art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') }), place: 'walk' },
-  mxPopcorn: { cls: TourEnemy.make({ w: 14, h: 14, inkPad: 5, speed: 1.5, behavior: 'hop', hopV: 7.5, hopEvery: 0.55, art: popcornArt, burst: '#fff6dc' }), place: 'walk' },
+  mxElote: { cls: MxElote, place: 'walk' },
+  mxPopcorn: { cls: TourEnemy.make({ w: 14, h: 14, inkPad: 5, speed: 1.5, behavior: 'hop', hopV: 7.5, hopEvery: 0.55, art: popcornArt, burst: '#fff6dc', atlas: MX_X, sprite: 'popcorn' }), place: 'walk' },
   mxBurro: { cls: TourEnemy.make({ w: 30, h: 30, speed: 1.0, behavior: 'walk', hp: 2, art: burroArt, onDefeat: e => { for (let k = 0; k < 6; k++) e.g.spawn(new PickPop(e.g, e.cx + (k - 2.5) * 6, e.y)); e.g.addPick(); e.g.burst(e.cx, e.cy, 24, '#ff9ac8', 'confetti'); } }), place: 'walk' },
   mxChihuahua: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 1.5, behavior: 'charge', range: 7, chargeSpeed: 7, windup: 0.35, art: (ctx, e, x, y, m) => {
     ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.4 : 1);
@@ -601,10 +654,10 @@ const enemies = {
     if (m === 'notice') { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('YIP!', x, y - 30); }
   }, onNotice: e => K.sfx('bump', null, { pitch: 2.2, vol: 0.4 }) }), place: 'walk' },
   mxAxolotl: { cls: MxAxolotl, place: 'here' },
-  mxAxolotlWalk: { cls: TourEnemy.make({ w: 24, h: 16, inkPad: 6, speed: 0.8, behavior: 'regrower', regrowT: 3, art: axolotlWalkArt, burst: '#ffaacc' }), place: 'walk' },
-  mxAxolotlSwim: { cls: TourSwimmer.make({ w: 26, h: 14, speed: 1.0, behavior: 'mxSwimRegrow', regrowT: 3, art: axolotlArt }), place: 'swim' },
-  mxBlindFish: { cls: TourSwimmer.make({ w: 30, h: 16, speed: 1.2, behavior: 'mxBlindCharge', art: blindFishArt }), place: 'swim' },
-  mxSwallow: { cls: TourFlyer.make({ w: 20, h: 12, speed: 1.6, behavior: 'mxFlock', n: 6, harmless: true, art: swallowArt }), place: 'fly' },
+  mxAxolotlWalk: { cls: TourEnemy.make({ w: 24, h: 16, inkPad: 6, speed: 0.8, behavior: 'regrower', regrowT: 3, art: axolotlWalkArt, burst: '#ffaacc', atlas: MX_X, sprite: 'axowalk' }), place: 'walk' },
+  mxAxolotlSwim: { cls: MxAxoSwim, place: 'swim' },
+  mxBlindFish: { cls: MxBlindFish, place: 'swim' },
+  mxSwallow: { cls: TourFlyer.make({ w: 20, h: 12, speed: 1.6, behavior: 'mxFlock', n: 6, harmless: true, art: swallowSprite, atlas: MX_X }), place: 'fly' },
   mxHeron: { cls: TourFlyer.make({ w: 28, h: 16, range: 3, speed: 0.8, swoop: true, art: heronArt }), place: 'fly' },
   mxFish: { cls: TourSwimmer.make({ w: 28, h: 14, speed: 1.5, range: 4, art: fishArt }), place: 'swim' },
   mxBat: { cls: TourFlyer.make({ w: 26, h: 16, range: 2.5, speed: 1.4, swoop: true, art: batArt }), place: 'fly' },
