@@ -34,6 +34,7 @@ module.exports = function loadGame(opts) {
   const A = win.API;
   if (opts.load) A.Save.load(); else A.Save.data = A.Save.defaults();
   A.store = store;
+  A.run = code => vm.runInContext(code, win);   // evaluate in the game's realm (Play, entities, Game) for headless sims
   // every playable world, in route order
   A.ALL_WORLDS = A.Tour.worldList();
   return A;

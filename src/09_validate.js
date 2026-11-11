@@ -99,7 +99,7 @@ const Validator = {
     const seen = new Set();
     const dist = new Map();
     const queue = [];
-    const D = PLAYER_DIM.big;
+    const D = opts.dim || PLAYER_DIM.big;   // Brady's body (tools/sbw_items_test.js asks about small Brady too)
     const startTx = Math.floor(level.start.x / TS), startTy = Math.floor(level.start.y / TS);
     const exitAt = {};   // exit key -> distance (tiles) along the search
     let curDist = 0;
@@ -112,6 +112,7 @@ const Validator = {
     const markBox = (ai, b) => {
       for (const k of keys) if (k.ai === ai && !held.has(k.id) && overlap(b, k)) { held.add(k.id); if (useful.has(k.id)) newKey = true; }
       for (const g of golds) if (!g.hit && g.ai === ai && overlap(b, g)) { g.hit = true; res.gold[g.idx] = true; }
+      if (opts.probes) for (const q of opts.probes) if (!q.hit && q.ai === ai && overlap(b, q)) q.hit = true;   // boxes a test asks about (tools/sbw_items_test.js)
       for (const g of gates) if (g.ai === ai && overlap(b, g)) { if (!g.hit) { g.hit = true; res.exits[g.key] = true; } if (exitAt[g.key] == null || curDist < exitAt[g.key]) exitAt[g.key] = curDist; }
       for (const v of vkeys) {
         if (v.ai !== ai || held.has(v.id)) continue;
@@ -212,6 +213,7 @@ const Validator = {
           if (land) push(ai, land[0], land[1], mask, d + Math.abs(land[0] - tx) + Math.abs(land[1] - ty), land[2]);
         }
         if (opts.earlyExit && done()) break;
+        if (opts.probes && opts.untilProbes && (typeof opts.untilProbes === 'function' ? opts.untilProbes() : opts.probes.every(q => q.hit))) break;   // the probes asked about are answered
       }
       if (guard >= guardMax) res.guardHit = true;
       if (opts.earlyExit && done()) break;
