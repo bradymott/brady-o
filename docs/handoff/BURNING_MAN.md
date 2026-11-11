@@ -26,6 +26,7 @@ He doesn't want "stick figures". He wants believable people, vehicles and camps,
 - **Brady and Chinka** are rigged, animated `.glb` files with 19 clips each, in `assets/models/shared/`. Brady plays as the skinned model.
 - **Burning Man props:** the RV, bus, geodesic dome, tipi, porta-potty and shade are Blender models (`tools/blender/bm_*.py`, hooked in by `src/41_burns_glbprops.js`).
 - **Size:** models ship packed and gzipped.
+- **Textured heroes (Nov 10):** a skinned `.glb` with UVs and textures now draws through `BurnsSkinPBR` (`src/40_burns_bf_skinpbr.js`): skin/cloth/hair shading, cutout hair cards, 3 LODs, 2K/1K tier textures, blink/talk face poses. The Blender side exports against the **character GLB contract** in `docs/BURNS_GUIDE.md` §6.12; `tools/skinpbr_test.js` proves it with a generated fixture (`tools/make_skin_fixture.js`).
 
 ## Waiting for you: ChatGPT's PR #3 (draft) (`codex/burning-man-graphics-pass`)
 **Read its notes:**
