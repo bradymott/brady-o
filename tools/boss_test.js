@@ -45,9 +45,16 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     window.clearEnemies = () => { const g = window.S(); for (const e of g.entities) if (e.enemy && !e.boss) e.remove = true; sim(0.02); };
     window.near = (type, dx, props) => { const g = S(), p = P(); const C = ctor(type); const e = new C(g, Object.assign({ x: p.cx + (dx || 60), y: p.y + p.h, dir: -1 }, props || {})); g.spawn(e); return e; };
     window.spawnAt = (type, x, y, props) => { const g = S(); const C = ctor(type); const e = new C(g, Object.assign({ x, y, dir: -1 }, props || {})); g.spawn(e); return e; };
-    window.boss = () => S().entities.find(e => e.boss && !e.remove);
+    // the boss of the current area; in a v2 boss level (a lead-in, then an arena area) Brady is first taken to the arena
+    window.boss = () => {
+      const g = S(); let b = g.entities.find(e => e.boss && !e.remove); if (b) return b;
+      const k = g.level.areas.findIndex(a => a.role === 'arena' || a.spawns.some(s => s.type === 'boss'));
+      if (k < 0 || g.area === g.level.areas[k]) return b;
+      const a = g.level.areas[k], an = (a.anchors && (a.anchors.in || a.anchors.start)) || { x: 3 * 32 + 16, y: (a.H - 4) * 32 };
+      g.loadArea(k, an.x, an.y, g.player.power || 0); return g.entities.find(e => e.boss && !e.remove);
+    };
     // Brady walks into the arena; the boss wakes and its intro plays out
-    window.enterArena = (dx) => { const p = P(), b = boss(); p.x = b.arenaX0 + (dx || 64); p.y = b.floorY - p.h - 4; p.vy = 0; sim(2.6); return b; };
+    window.enterArena = (dx) => { const b = boss(), p = P(); p.x = b.arenaX0 + (dx || 64); p.y = b.floorY - p.h - 4; p.vy = 0; sim(2.6); return b; };
   });
   const dir = path.join(__dirname, 'boss_tests');
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.js')).sort().filter(f => !want.length || want.includes(f.replace('.js', '')));
