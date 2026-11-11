@@ -887,11 +887,13 @@ class BurnsManBoss {
       const pump = Math.abs(Math.sin(u * 5));
       S(B.UARM_L, -0.1, 0, 2.8 + pump * 0.2); S(B.UARM_R, -0.1, 0, -2.8 - pump * 0.2); S(B.CHEST, -0.1); S(B.HEAD, -0.35);
     } else if (st === 'stunned') {
+      // a slump onto hands and knees: knees down, shins flat behind, hands planted under the shoulders, head hanging
+      // (the head ends up where the old kneel put it, so the bonk is unchanged; arms out wide read as spider legs)
       const k = clamp(u / 0.6, 0, 1), wob = Math.sin(t * 3) * 0.05;
-      S(B.THIGH_L, -1.25 * k); S(B.SHIN_L, 2.1 * k); S(B.THIGH_R, -1.25 * k); S(B.SHIN_R, 2.1 * k);
-      S(B.CHEST, 1.15 * k + wob); S(B.HEAD, 0.3 * k);
-      S(B.UARM_L, -1.2 * k, 0, 0.6); S(B.UARM_R, -1.2 * k, 0, -0.6); S(B.FARM_L, -0.3, 0, 0); S(B.FARM_R, -0.3, 0, 0);
-      P.y = -4.4 * k;
+      S(B.THIGH_L, -0.55 * k); S(B.SHIN_L, 1.95 * k); S(B.FOOT_L, 0.4 * k); S(B.THIGH_R, -0.55 * k); S(B.SHIN_R, 1.95 * k); S(B.FOOT_R, 0.4 * k);
+      S(B.CHEST, 1.2 * k + wob); S(B.HEAD, 0.75 * k);
+      S(B.UARM_L, -1.05 * k, 0, 0.1); S(B.UARM_R, -1.05 * k, 0, -0.1); S(B.FARM_L, -0.9 * k); S(B.FARM_R, -0.9 * k);
+      P.y = -3.55 * k;
     } else if (st === 'hurt') {
       const k = Math.max(0, 1 - u / 1.0);
       S(B.CHEST, -0.5 * k); S(B.HEAD, -0.6 * k + Math.sin(t * 25) * 0.1 * k); S(B.UARM_L, -0.5, 0, 2.0); S(B.UARM_R, -0.5, 0, -2.0);
