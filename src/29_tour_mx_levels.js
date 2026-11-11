@@ -60,6 +60,10 @@ Object.assign(Decor, {
     ctx.restore();
     for (let q = 0; q < 5; q++) { const u = (t * 0.6 + q / 5) % 1; ctx.fillStyle = 'rgba(232,252,255,0.8)'; ctx.beginPath(); ctx.arc(x - 30 + q * 15, y - u * 60, 2.5, 0, TAU); ctx.fill(); }
   },
+  // a short string of papel picado hanging under a ceiling
+  mxPapelHang(ctx, x, y, t) { for (let k = 0; k < 4; k++) { const fx = x - 30 + k * 15, sw = Math.sin(t * 2 + k + x) * 1.5; ctx.fillStyle = PAPEL[(k + Math.floor(x / 64)) % 6]; ctx.beginPath(); ctx.moveTo(fx, y - 60); ctx.lineTo(fx + 13, y - 60); ctx.lineTo(fx + 13 + sw, y - 42); ctx.lineTo(fx + 6.5 + sw, y - 46); ctx.lineTo(fx + sw, y - 42); ctx.closePath(); ctx.fill(); } ctx.strokeStyle = 'rgba(60,40,60,0.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 34, y - 60); ctx.lineTo(x + 32, y - 60); ctx.stroke(); },
+  // a swallow's mud nest stuck to the ceiling
+  mxMudNest(ctx, x, y, t) { ctx.fillStyle = '#8a6a4a'; ctx.beginPath(); ctx.arc(x, y - 30, 14, 0, Math.PI); ctx.fill(); ctx.fillStyle = '#6a4a2a'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(x - 10 + k * 5, y - 26 + (k % 2) * 3, 3, 0, TAU); ctx.fill(); } ctx.fillStyle = '#1a1210'; ctx.beginPath(); ctx.arc(x, y - 24, 4, 0, TAU); ctx.fill(); },
   // the hacienda's gate: thick adobe posts, an iron-studded double door swung open, bougainvillea over the lintel
   mxHaciendaGate(ctx, x, y, t) {
     ctx.save();
@@ -73,6 +77,31 @@ Object.assign(Decor, {
   // a glassy obsidian cluster
   mxObsidian(ctx, x, y, t) {
     for (const [dx, h, w] of [[-10, 34, 9], [0, 46, 11], [11, 28, 8]]) { ctx.fillStyle = '#1a1424'; ctx.beginPath(); ctx.moveTo(x + dx - w, y); ctx.lineTo(x + dx - w * 0.3, y - h); ctx.lineTo(x + dx + w * 0.4, y - h + 6); ctx.lineTo(x + dx + w, y); ctx.fill(); ctx.strokeStyle = 'rgba(180,140,255,0.6)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x + dx - w * 0.3, y - h); ctx.lineTo(x + dx - w * 0.1, y - 4); ctx.stroke(); }
+  },
+  // a string of papel picado across the pit, with gaps to fall through
+  mxPapelLine(ctx, x, y, t, th, d) {
+    const x0 = x - d.w / 2, x1 = x + d.w / 2, yy = y - 24;
+    ctx.strokeStyle = 'rgba(60,40,60,0.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x1, yy); ctx.stroke();
+    for (let fx = x0 + 34; fx < x1 - 20; fx += 15) {
+      const tx = Math.floor(fx / TS); if ((d.holes || []).some(([a, b]) => tx >= a && tx <= b)) continue;
+      const k = Math.floor(fx / 15), sw = Math.sin(t * 3 + k) * 1.5;
+      ctx.fillStyle = PAPEL[k % 6]; ctx.beginPath(); ctx.moveTo(fx, yy); ctx.lineTo(fx + 13, yy); ctx.lineTo(fx + 13 + sw, yy + 18); ctx.lineTo(fx + 6.5 + sw, yy + 14); ctx.lineTo(fx + sw, yy + 18); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(fx + 6.5, yy + 7, 2, 0, TAU); ctx.fill();
+    }
+  },
+  // a flower whose updraft brakes your fall
+  mxUpFlower(ctx, x, y, t) {
+    for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + t; ctx.fillStyle = k % 2 ? '#ff6ab0' : '#ffd84a'; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * 9, y - 12 + Math.sin(a) * 4, 7, 4, a, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#ff9a2a'; ctx.beginPath(); ctx.arc(x, y - 12, 5, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(255,240,200,0.6)'; for (let q = 0; q < 5; q++) { const u = (t * 0.8 + q / 5) % 1; ctx.beginPath(); ctx.arc(x - 30 + q * 15, y - 20 - u * 150, 2, 0, TAU); ctx.fill(); }
+  },
+  // the hole in the pit wall with a swallow darting in and out (the tell for the nest room)
+  mxNestHole(ctx, x, y, t, th, d) {
+    const dir = d.seed ? -1 : 1, hx = x + dir * 10;
+    ctx.fillStyle = '#1a1210'; ctx.beginPath(); ctx.ellipse(hx, y - 34, 16, 26, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8a6a4a'; for (let k = 0; k < 7; k++) { ctx.beginPath(); ctx.arc(hx - 14 + k * 4.5, y - 8 + Math.sin(k) * 2, 4, 0, TAU); ctx.fill(); }
+    const u = (t * 0.45) % 1, bx = hx + dir * (130 * (1 - u)), by = y - 34 - Math.sin(u * Math.PI) * 50;
+    if (u < 0.95) { ctx.save(); ctx.translate(bx, by); ctx.scale(-dir, 1); ctx.fillStyle = '#2a3a6a'; ctx.beginPath(); ctx.ellipse(0, 0, 8, 4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-13, -4); ctx.lineTo(-10, 0); ctx.lineTo(-13, 4); ctx.fill(); const f = Math.sin(t * 20); ctx.beginPath(); ctx.moveTo(-1, -1); ctx.lineTo(2, -9 - f * 4); ctx.lineTo(4, -1); ctx.fill(); ctx.fillStyle = '#f4e4c8'; ctx.beginPath(); ctx.arc(4, 1.5, 2.5, 0, TAU); ctx.fill(); ctx.restore(); }
   },
   // a cut-paper flag planted on the crater rim
   mxRimFlag(ctx, x, y, t) {
@@ -321,6 +350,51 @@ Object.assign(P, {
     st.y = y - 1;
   }
 });
+Object.assign(P, {
+  // shaft: the Paper Plane stand on the lip at the top, with its tip
+  lipStand(st, o) {
+    const B = st.B; Tour.pieces.gearStand(st, { item: 'plane', here: true }); const s = B.spawns[B.spawns.length - 1]; s.x = 7 * TS + TS / 2; s.y = 6 * TS;
+    B.vkeys[B.vkeys.length - 1].tiles = [[7, 5], [7, 4]];
+    if (o.sign) B.spawn('sign', 4, 5, { text: o.sign });
+  },
+  // shaft: a flock of swallows wheeling across the shaft (harmless; they nudge you sideways): { n }
+  swallows(st, o) { const y = st.down(o.gap || 5); st.spawn('mxSwallow', st.rng.int(5, st.W - 6), y, { range: 4 }); st.down(4); },
+  // shaft: a string of papel picado across the shaft; fall through the gaps, touching the flags slows you
+  papelLine(st, o) {
+    const B = st.B, W = st.W, y = st.down(o.gap || 6), gaps = o.gaps || [[st.rng.int(3, 7), 0], [st.rng.int(12, W - 6), 0]];
+    const holes = gaps.map(([a]) => [a, a + 2]);
+    B.decor.push({ kind: 'mxPapelLine', x: W * TS / 2, y: y * TS, w: W * TS, holes, seed: y });
+    let x = 1;
+    while (x < W - 1) { const hole = holes.find(([a, b]) => x >= a && x <= b); if (hole) { x = hole[1] + 1; continue; } let x2 = x; while (x2 + 1 < W - 1 && !holes.some(([a]) => x2 + 1 === a)) x2++; B.zone(x, y - 1, x2 - x + 1, 2, 0, -60 * TS, 1.5 * TS, 'drag', {}); x = x2 + 1; }
+    for (const [a, b] of holes) st.coins(a, b, y + 1);
+    st.down(3);
+  },
+  // shaft: a ledge on the side wall with an item block over it: { item, left }
+  blockLedge(st, o) { const B = st.B, W = st.W, y = st.down(o.gap || 6), x0 = o.left ? 1 : W - 7; B.fill(x0, y, x0 + 5, y, T.GROUND); st.block(x0 + 3, y - 4, o.item || 'power'); if (o.gold) st.gold(o.left ? x0 + 1 : x0 + 5, y - 2, o.gold); st.down(3); },
+  // shaft: a gap in the wall where a swallow keeps flying in: the nest room behind it: { to, left }
+  nestHole(st, o) {
+    const B = st.B, W = st.W, y = st.down(o.gap || 6), left = o.left !== false, x0 = left ? 1 : W - 6;
+    B.fill(x0, y, x0 + 4, y, T.GROUND);
+    const wx = left ? 0 : W - 1; B.set(wx, y - 1, T.EMPTY); B.set(wx, y - 2, T.EMPTY);
+    B.decorAt('mxNestHole', wx, y, left ? 0 : 1);
+    B.spawn('portal', left ? 1 : W - 2, y - 1, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
+    B.anchor(o.back || 'nestBack', left ? 3 : W - 4, y - 1);
+    st.down(3);
+  },
+  // shaft: two spike shelves close together, their gaps offset; a postcard in the narrow slot between them
+  spikePair(st, o) {
+    const B = st.B, W = st.W;
+    const sh = (y, hx) => { for (let x = 1; x <= W - 2; x++) { if (x >= hx && x <= hx + 3) continue; B.set(x, y, T.GROUND); B.set(x, y - 1, T.SPIKES); } };
+    const y1 = st.down(o.gap || 7), h1 = o.h1 != null ? o.h1 : st.mid; sh(y1, h1);
+    if (o.updraft !== false) { B.zone(h1, y1 - 7, 4, 6, 0, -70 * TS, 2 * TS, 'updraft', { pull: 1 }); B.decorAt('mxUpFlower', h1 + 2, y1 - 1, 0); }
+    const y2 = st.down(5), h2 = o.h2 != null ? o.h2 : h1 + 4; sh(y2, h2);
+    // a safe patch of the lower shelf right under the first gap: land, then walk to the second gap
+    for (let x = h1; x <= h1 + 3; x++) B.set(x, y2 - 1, T.EMPTY);
+    st.gold(Math.round((h1 + h2) / 2) + 1, y2 - 3, 'risky');
+    st.coins(h1, h1 + 3, y1 + 2);
+    st.down(3);
+  }
+});
 for (const k in P) Tour.pieces['mx.' + k] = P[k];
 
 /* ---------------- country looks for library objects ---------------- */
@@ -519,6 +593,45 @@ const stamps = {
     items: ['oneup'],
     doors: [{ to: 'patio@pantryBack' }],
     gold: { '*': 'hidden' }
+  },
+  // 1-6's swallow nest in the pit wall: mud nests, an LSD tab, P2
+  nido: {
+    floor: 9,
+    rows: [
+      '############################',
+      '#..........................#',
+      '#..n.....n.....n...........#',
+      '#..........*...............#',
+      '#........-----.....?.......#',
+      '#..........................#',
+      '#..o.o.o.o.o...............#',
+      '#..........................#',
+      '#.@D.......................#',
+      '############################',
+      '############################'
+    ],
+    legend: { n: ['decor', 'mxMudNest'] },
+    items: ['lsd'],
+    doors: [{ to: 'sotano@nestBack' }],
+    gold: { '*': 'hidden' }
+  },
+  // La Tiendita, the Souvenir Stand Xolo keeps (1-1's hidden exit): papel picado, jars, the counter ($ is the shop)
+  stand: {
+    floor: 9,
+    rows: [
+      '############################',
+      '#..........................#',
+      '#..p.....p.....p.....p.....#',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#.@...j....$...x.....j..G..#',
+      '############################',
+      '############################'
+    ],
+    legend: { p: ['decor', 'mxPapelHang'], j: ['decor', 'mxPots'], x: ['decor', 'mxKeeperXolo'] }
   },
   // 1-1's finale: the fiesta stage at the end of the market, the gate on the dais
   escenario: {
@@ -720,5 +833,46 @@ const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacie
     { id: 'fiesta', gen: 'arena', role: 'arena', layout: 'fiesta', arenaW: 24, H: 22 }
   ] };
 
-Tour.amend('mx', { stamps, skins, levels: [L1, L2, L3, L4, L5] });
+// 1-6's pit: limestone walls lit from far above, swallows' nests, roots (procedural until its Blender scene exists)
+if (!THEMES.mx_sotano && THEMES.mx_cenote) THEMES.mx_sotano = Object.assign({}, THEMES.mx_cenote, {
+  name: 'Pit of Swallows', music: 'tour_mx_deep', particles: 'dust', underwater: false, rays: '#fff8d8',
+  sky: ['#fff6d8', '#d8c098', '#6a5038'], horizonGlow: '#fff4c0', darkness: 0.05, fog: '#e8d8b0',
+  layers: [{ kind: 'mxCenote', color: '#b8a070', base: 0, f: 0.08 }]
+});
+const L6 = { n: 6, name: 'Pit of Swallows', arch: 'fall', secret: true, theme: 'mx_sotano',
+  gimmick: 'Freefall down a giant pit: swallow flocks, strings of papel picado, flowers whose updrafts brake you',
+  hint: 'Hold jump to glide with the Paper Plane. Fall through the gaps in the flags',
+  postcard: 'A secret pit full of swallows! They swoop like little paper planes. ♥ C',
+  enemies: [['mxSwallow', 1], ['mxBat', 1]],
+  mapCell: [1, 1], mapFrom: 2,
+  exits: { main: { to: 'node:1-5' } },
+  areas: [
+    { id: 'sotano', gen: 'shaft', W: 22, H: 182,
+      script: [
+        ['lipStand', { sign: 'A PAPER PLANE! HOLD JUMP WHILE FALLING TO GLIDE DOWN THE PIT' }],
+        // ① swallows and coin rings
+        ['ledges', { n: 2 }],
+        ['swallows', {}],
+        ['ledges', { n: 1, flip: true }],
+        ['ringFall', { n: 1, goldKind: 'high' }],
+        ['blockLedge', { item: 'power', gold: 'must' }],
+        ['swallows', {}],
+        ['ledges', { n: 1 }],
+        // ② papel picado lines: fall through the gaps
+        ['papelLine', {}],
+        ['nestHole', { to: 'nido@in' }],
+        ['papelLine', {}],
+        ['shelf', { cp: true }],
+        ['swallows', {}],
+        ['ledges', { n: 1, flip: true }],
+        ['papelLine', {}],
+        // ③ flower updrafts brake you over the spike shelves
+        ['spikePair', {}],
+        ['ledges', { n: 1, enemy: 'mxBat' }],
+        ['spikePair', { h1: 5, h2: 9 }]
+      ] },
+    { id: 'nido', gen: 'room', role: 'secret', stamp: 'nido' }
+  ] };
+
+Tour.amend('mx', { stamps, skins, levels: [L1, L2, L3, L4, L5, L6] });
 })();

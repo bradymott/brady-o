@@ -1,10 +1,8 @@
 /* ============================================================
-   MEXICO (world 1) — reference country for the world tour.
-   1-1 Mercado Mayhem      run    bouncy market awnings, rolling watermelons, fountain jets
-   1-2 Xochimilco Float    ride   ride a painted trajinera: posts to hop, axolotls, herons
-   1-3 Cenote Dive         swim   a flooded limestone cave: roots, currents, light shafts
-   1-4 Volcán Escape       climb  climb out of a volcano while the lava rises
-   1-5 Hacienda Fiesta     castle swinging piñatas, candy cannons; boss El Gran Piñatón
+   MEXICO (world 1) — reference country for the world tour: art,
+   enemies, set pieces, the boss and music. The six levels (v2
+   format) are in 29_tour_mx_levels.js; the atlases are wired in
+   29_tour_mx_sprites.js.
    ============================================================ */
 (() => {
 const COL = { a: '#ff3d8b', b: '#18c2c2', c: '#ffb81a' };
@@ -401,6 +399,8 @@ const xoloArt = (ctx, e, x, y, m, t) => {
   ctx.restore();
   if (m !== 'wave') { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 46 + Math.sin(t * 5) * 2); }
 };
+// Xolo minding La Tiendita (the Souvenir Stand): wagging behind the counter
+decor.mxKeeperXolo = (ctx, x, y, t) => { ctx.save(); ctx.translate(x, y - 26); xoloArt(ctx, { t, dir: 1 }, 0, 0, 'wave', t); ctx.restore(); };
 const axolotlArt = (ctx, e, x, y, m) => {
   ctx.save(); ctx.translate(x, y); ctx.rotate(m === 'up' ? -0.4 : 0.6);
   ctx.fillStyle = '#ffaacc'; ctx.beginPath(); ctx.ellipse(0, 0, 13, 7, 0, 0, TAU); ctx.fill();
@@ -1386,7 +1386,7 @@ const skins = {
   }
 };
 
-/* ---------------- the five levels ---------------- */
+/* ---------------- the country (its levels: 29_tour_mx_levels.js) ---------------- */
 Tour.country({
   id: 'mx',
   arrival: 'Brady! The Baron shrank the Palace of Fine Arts down to the size of a piñata. Follow the confetti! ♥ C', colors: COL, tagline: 'Tacos, piñatas and a volcano with a temper',
@@ -1412,71 +1412,7 @@ Tour.country({
     ctx.fillStyle = '#18c2c2'; ctx.beginPath(); ctx.arc(10, -7, 1.2, 0, TAU); ctx.fill();
     ctx.restore();
   } },
-  levels: [
-    // 1-1 in the v2 format (LEVEL_OVERHAUL.md §7.5.1): three lanes, a cellar shop behind a trapdoor, a secret exit
-    { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
-      gimmick: 'Three lanes at once: rooftops, street and cellar canal. Awnings bounce you up, trapdoors drop you down',
-      hint: 'Hold jump on an awning to bounce up to the rooftops',
-      postcard: 'Brady! The market has three floors and the melons use all of them. ♥ C',
-      enemies: [['mxPepper', 3], ['mxElote', 2], ['mxChihuahua', 1]],
-      mapCell: [0, 0], mapFrom: -1,
-      exits: {
-        main: { to: '1-2' },
-        secret: { to: 'house:mx-tienda', hint: 'Chili dust puffs out from under a crate in the market...' }
-      },
-      areas: [
-        { id: 'mercado', gen: 'layered', W: 214, H: 30, lanes: { roof: 12, street: 21, cellar: 27 }, camera: 'lanes',
-          script: [
-            // ① awnings link street and roof
-            ['xolo', { lane: 'street' }],
-            ['itemBlock', { lane: 'street', item: 'power', y: 4 }],
-            ['stalls', { lane: 'street', n: 2 }],
-            ['rooftops', { lane: 'roof', n: 2 }],
-            ['flat', { lane: 'cellar', n: 30 }],
-            ['sync'],
-            // ② melons on the street, gaps and papel-picado ropes on the roof; a gap in the street drops to the canal
-            ['melons', { lane: 'street' }],
-            ['banner', { lane: 'roof', len: 4, look: 'mxPapelPicado' }],
-            ['gap', { lane: 'roof', n: 3 }],
-            ['gearStand', { lane: 'roof', item: 'plane' }],
-            ['postcard', { lane: 'roof', kind: 'must', dy: -3 }],
-            ['gap', { lane: 'street', n: 3 }],
-            ['trapdoor', { lane: 'street', to: 'bodega@in', crate: true, back: 'bodegaBack', look: 'mxTrapdoor' }],
-            ['flat', { lane: 'cellar', n: 6 }],
-            ['spring', { lane: 'cellar', gold: false }],
-            ['enemies', { lane: 'cellar', n: 2 }],
-            ['sync'],
-            'cp',
-            // ③ the plaza joins all three lanes
-            ['stamp', { id: 'plaza', lane: 'street' }],
-            ['pinatas', { lane: 'street' }],
-            ['fountain', { lane: 'street' }],
-            ['rooftops', { lane: 'roof', n: 1 }],
-            ['sync'],
-            ['end', { lane: 'street', exit: 'main' }]
-          ] },
-        { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega' }
-      ] },
-    { name: 'Xochimilco Float', style: 'ride', theme: 'mx_canal', gimmick: 'Ride a painted trajinera: hop the posts, dodge axolotls and herons',
-      enemies: [['mxHeron', 1]], vehicle: 'mxTrajinera', vehicleW: 9, below: 'liquid', scroll: 2.6, len: 175,
-      hint: 'Jump the mooring posts or you\'ll fall in the canal',
-      postcard: 'The Baron\'s blimp smells like churros. I followed it along the canals. ♥ C',
-      script: [['arch', {}], 'posts', 'axolotls', ['chinampa', { gold: true }], 'posts', 'herons', ['bridge', { gold: true }], 'axolotls', 'vendor', 'posts', ['chinampa', {}], ['arch', { gold: true }], 'posts', 'herons', 'bridge', 'axolotls', 'posts'] },
-    { name: 'Cenote Dive', style: 'swim', theme: 'mx_cenote', gimmick: 'Swim a flooded limestone cave: hanging roots, currents and light shafts',
-      enemies: [['mxFish', 1]], H: 18, width: 220,
-      hint: 'Tap jump to swim. Currents carry you along',
-      postcard: 'Underwater, the cenote glows like a jewel. The Baron dropped a souvenir map here! ♥ C',
-      script: ['shaft', ['roots', { n: 4 }], ['current', { w: 12, dir: 1 }], 'lightwell', 'slalom', ['roots', { n: 3 }], ['current', { w: 10, dir: 1 }], 'slalom'] },
-    { name: 'Volcán Escape', style: 'climb', theme: 'mx_volcan', gimmick: 'Climb out of a volcano while the lava rises; ride the steam vents',
-      enemies: [['mxArmadillo', 1]], W: 24, H: 100, risingLava: { delay: 5, speed: 0.42 },
-      hint: 'Up, up, up! The lava is rising',
-      postcard: 'The Baron tried to bottle the volcano. It did not agree. ♥ C',
-      script: [['vledges', { n: 4 }], 'vvent', ['vledges', { n: 3, crumble: true, enemy: 'mxArmadillo' }], 'vroll', 'vblobs', ['vledges', { n: 3, flip: true }], ['vvent', { h: 10, gold: true }], ['vledges', { n: 4, crumble: true }], 'vblobs', ['vledges', { n: 3 }]] },
-    { name: 'Hacienda Fiesta', style: 'castle', theme: 'mx_hacienda', gimmick: 'Swinging piñatas, candy cannons, then El Gran Piñatón on his pulley rope',
-      enemies: [['mxSalsa', 2], ['mxBurro', 2], ['mxPepper', 1]], boss: 'mx_pinata', arena: 'fiesta', arenaW: 26,
-      hint: 'Break the piñata from BELOW: headbutt him when he swings low. Bounce off the awnings when he rises!',
-      postcard: 'You did it! The Palace of Fine Arts popped back to full size. Next stop: Ecuador! ♥ C',
-      script: [['swingers', { n: 3 }], 'cannons', ['enemies', { n: 2 }], 'cp', 'balcony', ['swingers', { n: 4 }], 'cannons', 'arena'] }
-  ]
+  // the levels (v2 format) are in 29_tour_mx_levels.js
+  levels: []
 });
 })();

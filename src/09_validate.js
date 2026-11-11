@@ -269,7 +269,7 @@ const Validator = {
     const cap = S.secret ? 7 : 5;
     if (mainBlocks > cap) errors.push(`${mainBlocks} item blocks in the main area (max ${cap})`);
     // how far into the main area a tile is, from where Brady starts (0 = the start, 1 = the far end)
-    const vertical = main.tower || main.gen === 'climb' || main.gen === 'rise', shaft = main.gen === 'shaft';
+    const shaft = main.gen === 'shaft', vertical = !shaft && (main.tower || main.gen === 'climb' || main.gen === 'rise');
     const along = (x, y) => vertical ? (main.H - y) / main.H : shaft ? y / main.H : (main.mirrored ? (main.W - 1 - x) / main.W : x / main.W);
     const pos = [];
     for (const k of items(main)) { const [x, y] = k.split(',').map(Number); pos.push([x, y]); }
