@@ -262,7 +262,7 @@ class Play {
     if (ctx.measureText(text).width <= maxW) lines.push(text);
     else { let cur = ''; for (const word of text.split(' ')) { const t = cur ? cur + ' ' + word : word; if (cur && ctx.measureText(t).width > maxW) { lines.push(cur); cur = word; } else cur = t; } if (cur) lines.push(cur); }
     const lh = size + 6, tw = Math.max.apply(null, lines.map(l => ctx.measureText(l).width));
-    const w = Math.min(W - 24, tw + 30), h = Math.max(30, lines.length * lh + 12), y = Game.gameRect.y + Math.max(64, insets.t + 58) + (W < 600 ? 54 : 0);
+    const w = Math.min(W - 24, tw + 30), h = Math.max(30, lines.length * lh + 12), y = Game.gameRect.y + Math.max(64, insets.t + 58) + (W < 600 ? 54 : 0) + (this.boss && this.bossLock && !this.boss.remove ? 34 : 0);   // under the boss bar while it shows
     ctx.fillStyle = 'rgba(14,8,26,0.78)'; rr(ctx, W / 2 - w / 2, y - 15, w, h, 15); ctx.fill();
     ctx.strokeStyle = 'rgba(255,216,74,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
     ctx.fillStyle = '#ffd84a'; lines.forEach((l, i) => ctx.fillText(l, W / 2, y - 15 + h / 2 + (i - (lines.length - 1) / 2) * lh + 1));
