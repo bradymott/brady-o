@@ -426,7 +426,7 @@ Tour.amend('ma', {
           'cp',
           ['secretDoor', { to: 'riad@in', look: 'painted', skin: 'maBlueDoor', back: 'riadBack' }],
           ['enemies', { kind: 'maCat', n: 2 }],
-          ['nightLedge', { y: 5, item: 'lsd', gold: 'risky' }],
+          ['nightLedge', { y: 4, item: 'lsd', gold: 'risky' }],   // y 4: the ledge is in jump reach, so the box over it opens
           ['sunMoon', {}],
           ['lines', { n: 6, day: false, night: true, nightY: 4 }],
           // ③ flip between them: a laundry line and a lantern string share one long gap

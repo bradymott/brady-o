@@ -713,7 +713,7 @@ const stamps = {
   // 13-3: the module: a heater, the lab door, the airlock to the hangar
   module: {
     floor: 11,
-    rows: room(34, 14, 11, [[2, 10, '@'], [6, 10, 'k'], [10, 6, '-----'], [11, 4, 'o.o.o'], [13, 2, '?'], [17, 10, 'DK'], [24, 10, 'c'], [30, 10, 'D']]),
+    rows: room(34, 14, 11, [[2, 10, '@'], [6, 10, 'k'], [10, 7, '-----'], [11, 4, 'o.o.o'], [13, 3, '?'], [17, 10, 'DK'], [24, 10, 'c'], [30, 10, 'D']]),
     legend: { k: ['decor', 'aqCrates'], K: ['anchor', 'labBack'] },
     items: ['power'], doors: [{ to: 'lab@in', look: 'aqLabDoor' }, { to: 'plough@in', look: 'aqAirlock' }]
   },
