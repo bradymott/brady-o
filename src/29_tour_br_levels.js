@@ -80,7 +80,7 @@ T_.br_samba_dawn = borrow('br_samba', 'br_samba', {
   celestial: { type: 'sun', x: 0.82, y: 0.62, r: 46, color: '#fff2c0', glow: '#ffb070' }, stars: 0.06,
   fog: '#ffc8a0'
 }, [{ kind: 'brDawnClouds', color: '#ff9aa8', base: 220, f: 0.02 }]);
-T_.br_samba_dawn.layers[2] = Object.assign({}, T_.br_samba_dawn.layers[2], { shift: 70 });
+T_.br_samba_dawn.layers[2] = Object.assign({}, T_.br_samba_dawn.layers[2], { shift: 100 });
 // 3-4: the white dunes of Lençóis Maranhenses with their rain lagoons
 T_.br_lencois = Object.assign({}, THEMES.br_beach, {
   name: 'Lençóis Maranhenses', music: 'tour_br', particles: 'dust', liquid: null,
@@ -1155,12 +1155,14 @@ const levels = [
         ['capybaras', { span: 12 }],
         ['thiefStop', { n: 1 }],
         ['postcard', { kind: 'must', dx: 3, dy: -4 }],
+        ['step', { h: 2 }],
         // ② sloths drop from branches, caimans float like logs
         ['slothGrove', { n: 2, sign: 'SLOTHS DROP WHEN YOU WALK UNDER. WAIT FOR THE SHAKE!' }],
         ['caimans', { n: 3 }],
         'cp',
         ['leapers', { span: 9 }],
         ['slothGrove', { n: 3 }],
+        ['step', { h: -2 }],
         ['thiefStop', { n: 2 }],
         ['hollowTree', { to: 'toca@in', back: 'tocaBack' }],
         // ③ the jaguar prowls while Quati hides up a nest tree
@@ -1285,7 +1287,8 @@ const levels = [
         ['isle', { gap: 4, gy: 13, w: 6, enemy: 'brGull', tight: true }],
         ['isle', { gap: 7, gy: 26, w: 5, gold: ['risky', 2, -2], ring: false, tight: true }],
         ['thermalLift', { w: 3, top: 8, bottom: 32, tight: true }],
-        ['isle', { gy: 14, w: 8, stand: true, decor: 'brBeachSet', cp: true, tight: true }],
+        ['isle', { gy: 14, w: 8, stand: true, decor: 'brBeachSet', tight: true }],
+        ['cp', { tight: true }],
         ['isle', { gap: 4, gy: 12, w: 7, enemy: 'brKite', tight: true }],
         // ③ the volleyball net throws you high; a long glide through the rings to the beach
         ['volleyIsland', { gap: 2, gy: 12, tight: true }],

@@ -185,7 +185,7 @@ Object.assign(TOUR_DECOR_LIGHTS, { mzLantern: [120, '#ffc070', -26], mzMushroomG
 const mzLit = e => {
   const g = e.g, p = g.player;
   if (g.mzLitFrame !== g.t) { g.mzLitFrame = g.t; g.mzLitList = g.collectLights ? g.collectLights(g.camX - 400, g.camY - 300).filter(L => !(p && L.x === p.cx && L.y === p.cy)) : []; }
-  for (const L of g.mzLitList) if (Math.hypot(L.x - e.cx, L.y - e.cy) < L.r * 0.75) return true;
+  for (const L of g.mzLitList) if (!(L.x === e.cx && L.y === e.cy) && Math.hypot(L.x - e.cx, L.y - e.cy) < L.r * 0.75) return true;   // its own pale glow doesn't count
   return false;
 };
 const ghostCrabArt = ENTITY_TYPES.mzGhostCrab.cfg.art;
@@ -289,6 +289,7 @@ class MzBeam extends Ent {
 }
 // 4-4: a shutter that opens once the key it waits for is held anywhere in the level (the lever is in another area)
 class MzKeyShutter extends ENTITY_TYPES.shutter {
+  constructor(g, s) { super(g, s); this.friendly = true; }   // friendly: updated off screen too
   update(dt) { if (!this.open && this.g.keys && this.g.keys.has(this.id)) this.setOpen(true); super.update(dt); }
 }
 // 4-1: the rival, an ostrich in a racing number
@@ -335,7 +336,7 @@ const skins = {
   // a flat stepping stone in the cistern that is really a lid (4-5)
   mzStoneHatch(ctx, e, t) { const x = e.x, y = e.y, w = e.w, k = e.open || 0; ctx.save(); ctx.translate(x + w / 2, y); ctx.rotate(-k * 0.6); ctx.fillStyle = '#a89878'; rr(ctx, -w / 2, -2, w, 9, 3); ctx.fill(); ctx.strokeStyle = 'rgba(60,40,20,0.5)'; ctx.lineWidth = 1; ctx.strokeRect(-w / 2 + 3, 0, w - 6, 5); ctx.restore(); if (Math.random() < 0.03 && e.g) e.g.burst(x + w / 2, y - 2, 1, '#8ad8ff', 'spark'); },
   // the lighthouse lever (a brass crank)
-  mzLighthouseLever(ctx, e, t) { const x = e.cx, y = e.y + e.h, on = e.on || e.done; ctx.fillStyle = '#5a5866'; rr(ctx, x - 12, y - 10, 24, 10, 3); ctx.fill(); ctx.save(); ctx.translate(x, y - 8); ctx.rotate(on ? 0.8 : -0.8); ctx.fillStyle = '#c8902a'; ctx.fillRect(-2, -26, 4, 26); ctx.fillStyle = '#e8222a'; ctx.beginPath(); ctx.arc(0, -27, 5, 0, TAU); ctx.fill(); ctx.restore(); },
+  mzLighthouseLever(ctx, e, t) { const x = e.cx, y = e.y + e.h, k = e.k || 0; ctx.fillStyle = '#5a5866'; rr(ctx, x - 12, y - 10, 24, 10, 3); ctx.fill(); ctx.save(); ctx.translate(x, y - 8); ctx.rotate(-0.8 + k * 1.6); ctx.fillStyle = '#c8902a'; ctx.fillRect(-2, -26, 4, 26); ctx.fillStyle = '#e8222a'; ctx.beginPath(); ctx.arc(0, -27, 5, 0, TAU); ctx.fill(); ctx.restore(); },
   // a sea-worn rock wall you can shoulder through with the hard hat (4-6)
   mzHullRock(ctx, e, t) { const x = e.x, y = e.y, w = e.w, h = e.h; ctx.fillStyle = '#8a7a6a'; rr(ctx, x - 2, y, w + 4, h, 6); ctx.fill(); ctx.strokeStyle = 'rgba(40,30,20,0.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 6, y + 6); ctx.lineTo(x + 18, y + h * 0.4); ctx.lineTo(x + 8, y + h * 0.7); ctx.lineTo(x + 20, y + h - 4); ctx.stroke(); const G = TourGear.get('hat'); if (G) { ctx.save(); ctx.globalAlpha = 0.8; ctx.translate(x + w / 2, y + h / 2); ctx.scale(0.5, 0.5); G.icon(ctx, 0, 0, t); ctx.restore(); } },
   // the lighthouse door (4-4)
