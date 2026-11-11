@@ -1120,6 +1120,7 @@ const levels = [
       { id: 'avenida', gen: 'strip', W: 230, H: 18, bpm: 124, script: [
         ['opening', { decor: [['brBunting', 6], ['brSurdos', 1]] }],
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
         ['standSign', { item: 'kazoo', text: 'KAZOO! THROW = HONK. BELL GATES OPEN TO A HONK' }],
         // ① the beat
         ['drums', { n: 3 }],
@@ -1227,6 +1228,7 @@ const levels = [
         ['opening', { decor: [['brDuneGrass', 2], ['brShell', 5]] }],
         ['standSign', { item: 'fins', text: 'FLIPPER FINS: THE LAGOONS FILL EVERY 14 SECONDS' }],
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
         // ① the water climbs: walk the bed or swim over
         ['lagoon', { w: 10, bed: 6 }],
         ['dune', { w: 10, h: 3 }],
