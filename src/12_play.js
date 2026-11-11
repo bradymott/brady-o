@@ -852,7 +852,7 @@ class Play {
           case T.CRUMBLE: img = atlas.crumble; ox = crumbleOf(x, y); break;
           case T.PILLAR: { const part = ['L', 'R', 'S'][v & 3] || 'S'; img = atlas.pillar[part + (v & 4 ? 't' : 'b')]; break; }
           case T.GLITCH: img = atlas.glitch[Math.floor(t * 12 + x) % 3]; break;
-          case T.SOIL: img = atlas.soil ? atlas.soil[y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]] ? 0 : 1] : null; break;
+          case T.SOIL: { const bur = y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]], nv = bur && atlas.soilV ? atlas.soilV.length : 0; img = atlas.soil ? (nv ? atlas.soilV[((Math.imul(x ^ 0x5bd1e995, 374761393) ^ Math.imul(y + 0x27d4eb2d, 668265263)) >>> 13) % nv] : atlas.soil[bur ? 0 : 1]) : null; break; }
           case T.LINTEL: img = atlas.lintel || null; break;
           case T.PICK: {
             ctx.setTransform(S, 0, 0, S, Game.gameRect.x * Game.dpr + dx, Game.gameRect.y * Game.dpr + dy);
