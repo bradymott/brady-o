@@ -807,7 +807,41 @@ Object.assign(decor, {
   // a slice of bread as a platform (body): crust and crumb, a topping on top
   esBread(ctx, x, y, t, th, d) { const w = d.w, h = d.h, x0 = x - w / 2; ctx.fillStyle = '#c8803a'; rr(ctx, x0, y - h, w, h, 10); ctx.fill(); ctx.fillStyle = '#f4dca0'; rr(ctx, x0 + 5, y - h + 5, w - 10, h - 8, 7); ctx.fill(); ctx.fillStyle = 'rgba(200,150,80,0.5)'; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(x0 + 12 + (k * 23) % (w - 20), y - h + 14 + (k * 17) % Math.max(8, h - 20), 2, 0, TAU); ctx.fill(); } const tc = ['#d83a2a', '#7a8a98', '#ffc030', '#3a8a3a'][(d.seed || 0) % 4]; ctx.fillStyle = tc; ctx.beginPath(); ctx.ellipse(x, y - h + 2, w * 0.35, 7, 0, Math.PI, TAU); ctx.fill(); },
   // a giant salt shaker (body): glass with salt inside, a steel cap with holes
-  esShaker(ctx, x, y, t, th, d) { const w = d.w, h = d.h, x0 = x - w / 2; ctx.fillStyle = 'rgba(220,240,255,0.85)'; rr(ctx, x0, y - h + 24, w, h - 24, 12); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.fillRect(x0 + 6, y - h * 0.55, w - 12, h * 0.55 - 6); ctx.fillStyle = '#b8b8c8'; rr(ctx, x0 - 2, y - h, w + 4, 28, 10); ctx.fill(); ctx.fillStyle = '#5a5a68'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(x0 + 12 + k * (w - 24) / 4, y - h + 8, 2.5, 0, TAU); ctx.fill(); } ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(x0 + 8, y - h + 32, 6, h - 50); },
+  esShaker(ctx, x, y, t, th, d) {
+    const w = d.w, h = d.h, x0 = x - w / 2, top = y - h, capH = 30;
+    Ink.around(ctx, x0 - 6, top - 6, w + 12, h + 8, c => {
+      // the glass: a cool blue tint with a darker rim so it reads against the pale bar wall
+      c.fillStyle = '#b8d8ec'; rr(c, x0, top + capH - 6, w, h - capH + 6, 14); c.fill();
+      // the salt inside, a heap with grains on top
+      c.fillStyle = '#fbfbf6'; c.beginPath(); c.moveTo(x0 + 6, y - 6); c.lineTo(x0 + 6, y - h * 0.5); c.quadraticCurveTo(x, y - h * 0.6, x0 + w - 6, y - h * 0.5); c.lineTo(x0 + w - 6, y - 6); c.closePath(); c.fill();
+      c.fillStyle = '#c8ccd4'; for (let k = 0; k < 18; k++) { c.fillRect(x0 + 10 + (k * 37) % (w - 20), y - h * 0.48 + (k * 23) % Math.max(10, h * 0.42), 2, 2); }
+      // a red and white label band
+      c.fillStyle = '#e8322a'; c.fillRect(x0, y - h * 0.36, w, 16); c.fillStyle = '#ffffff'; c.font = `bold 10px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.fillText('SAL', x, y - h * 0.36 + 12);
+      // glass shine
+      c.fillStyle = 'rgba(255,255,255,0.75)'; c.fillRect(x0 + 8, top + capH + 4, 5, h - capH - 40); c.fillRect(x0 + 16, top + capH + 4, 2, h - capH - 60);
+      c.strokeStyle = '#5a88a8'; c.lineWidth = 2; rr(c, x0, top + capH - 6, w, h - capH + 6, 14); c.stroke();
+      // the steel cap with its holes
+      const g = c.createLinearGradient(x0, 0, x0 + w, 0); g.addColorStop(0, '#8a94a4'); g.addColorStop(0.35, '#e8eef4'); g.addColorStop(1, '#7a8494');
+      c.fillStyle = g; rr(c, x0 - 3, top, w + 6, capH, 12); c.fill();
+      c.fillStyle = '#6a7484'; c.fillRect(x0 - 3, top + capH - 7, w + 6, 4);
+      c.fillStyle = '#2a3040'; for (let k = 0; k < 5; k++) { c.beginPath(); c.arc(x0 + 12 + k * (w - 24) / 4, top + 9, 2.6, 0, TAU); c.fill(); }
+    }, { pad: 6 });
+  },
+  // a basalt perch over the lava (6-4): hexagonal columns, a lighter worn top, ember cracks
+  esBasaltPerch(ctx, x, y, t, th, d) {
+    const w = d.w, h = d.h, x0 = x - w / 2;
+    Ink.around(ctx, x0 - 4, y - h - 4, w + 8, h + 10, c => {
+      const n = Math.max(2, Math.round(w / 16)), cw = w / n;
+      for (let k = 0; k < n; k++) {
+        const cx0 = x0 + k * cw, dh = (k % 2) * 3;
+        c.fillStyle = k % 2 ? '#3e3a44' : '#4a4652'; c.fillRect(cx0, y - h + dh, cw, h - dh + 6);
+        c.fillStyle = '#7a7684'; c.beginPath(); c.moveTo(cx0, y - h + dh + 3); c.lineTo(cx0 + cw * 0.25, y - h + dh); c.lineTo(cx0 + cw * 0.75, y - h + dh); c.lineTo(cx0 + cw, y - h + dh + 3); c.lineTo(cx0 + cw * 0.75, y - h + dh + 6); c.lineTo(cx0 + cw * 0.25, y - h + dh + 6); c.closePath(); c.fill();
+        c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(cx0 + cw - 2, y - h + dh + 6, 2, h);
+      }
+      const glow = 0.6 + 0.4 * Math.sin(t * 3 + x * 0.01);
+      c.strokeStyle = `rgba(255,120,40,${glow})`; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x0 + w * 0.3, y + 4); c.lineTo(x0 + w * 0.35, y - h * 0.4); c.lineTo(x0 + w * 0.45, y - h * 0.55); c.moveTo(x0 + w * 0.7, y + 4); c.lineTo(x0 + w * 0.66, y - h * 0.3); c.stroke();
+    }, { pad: 5 });
+  },
   // the cheese wedge (body) with its mouse hole (6-2's crawlway)
   esCheese(ctx, x, y, t, th, d) { const w = d.w, h = d.h, x0 = x - w / 2; ctx.fillStyle = '#f4c84a'; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0, y - h * 0.55); ctx.lineTo(x0 + w, y - h); ctx.lineTo(x0 + w, y); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#d8a82a'; for (let k = 0; k < 7; k++) { ctx.beginPath(); ctx.arc(x0 + 20 + (k * 37) % (w - 30), y - 20 - (k * 23) % Math.max(10, h * 0.45), 5 + (k % 3) * 3, 0, TAU); ctx.fill(); } ctx.fillStyle = '#e8b830'; ctx.fillRect(x0, y - h * 0.55, 6, h * 0.55); ctx.fillStyle = '#2a1a10'; ctx.beginPath(); ctx.arc(x0 + 18, y, 14, Math.PI, TAU); ctx.fill(); },
   // a dragon tree on an island (6-4): a thick trunk forking into an umbrella crown
@@ -1086,9 +1120,13 @@ Object.assign(P, {
     st.floor(x, x + 2); st.pit(x + 3, x + span);
     for (let k = 0; k < n; k++) {
       const px = x + 7 + k * 6, py = gy0 + k + 1;
-      if (k < n - 1) { B.set(px, py, T.HARD); B.set(px + 1, py, T.HARD); B.setHide(px, py, 0); }
-      const cx = x + 5 + k * 6, cy = gy0 - 2 + k; for (let a = 0; a < 8; a++) B.pickAt(Math.round(cx + Math.cos(a * TAU / 8) * 2), Math.round(cy + Math.sin(a * TAU / 8) * 2));
-      if (o.gold && k === Math.floor(n / 2)) st.gold(cx, cy, o.gold === true ? 'must' : o.gold);
+      if (k < n - 1) B.prop('esBasaltPerch', px, py, 2, 1, 'body', {});
+      // the coins: one clean arc per hop, from the last perch (or the ledge) over to the next one, so the chain reads
+      // as a path down the slope (the glide line with the plane)
+      const ax0 = k === 0 ? x + 3 : x + 1 + k * 6 + 2, ax1 = x + 6 + k * 6, base = k === 0 ? gy0 - 2 : gy0 + k - 1;
+      B.picksArc(ax0, ax1, base, 2);
+      const cx = x + 5 + k * 6, cy = base - 2;
+      if (o.gold && k === Math.floor(n / 2)) st.gold(cx, cy - 1, o.gold === true ? 'must' : o.gold);
     }
     st.gy = Math.min(st.gyMax || gy0 + n, gy0 + n);
     st.floor(x + span + 1, x + span + 4);
