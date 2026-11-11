@@ -37,6 +37,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     window.P = () => window.BRADY.Game.scene.player;
     window.S = () => window.BRADY.Game.scene;
     window.ctor = type => window.BRADY_TYPES[type];
+    // a v2 boss level keeps its arena in its own area (role 'arena'): walk through the door that leads there
+    window.toArena = () => { const g = window.S(); if (g.entities.some(e => e.boss)) return; const ai = g.level.areas.findIndex(a => a.role === 'arena'); const door = ai < 0 ? null : g.entities.find(e => e.s && e.s.target && e.s.target.area === ai); if (door) { g.enterPortal(door); window.sim(2); } };
     window.clearEnemies = () => { const g = window.S(); for (const e of g.entities) if (e.enemy && !e.boss) e.remove = true; sim(0.02); };
     // drop an entity right in front of Brady, on his floor
     window.near = (type, dx, props) => { const g = S(), p = P(); const C = ctor(type); const e = new C(g, Object.assign({ x: p.cx + (dx || 60), y: p.y + p.h, dir: -1 }, props || {})); g.spawn(e); return e; };
@@ -236,7 +238,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   // 8. Castle bosses: Mexico's piñata, then France's soufflé; beating Mexico flies Brady to the next country
   for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'DJINN', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl'], ['9-5', 'KERA', 'id'], ['10-5', 'PHIN', 'vn'], ['11-5', 'KAPPA', 'jp'], ['13-4', 'BIG TUSK', 'aq'], ['22-4', 'OTHER BRADY', 'w22']]) {
     const boss = await page.evaluate(([id]) => {
-      start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
+      start(id); toArena(); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
       p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.vy = 0; p.invuln = 99; sim(2.5);
       const woke = b.state !== 'sleep', nm = b.name;
       const doorRow = Math.floor(b.floorY / 32) - 1, before = g.area.tiles[doorRow * g.area.W + b.doorX];
@@ -249,7 +251,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       return { woke, nm, removed: b.remove, before, after, state: g.state };
     }, [id]);
     check(`${name} wakes up, can be beaten and opens the way out (${id})`, boss.woke && new RegExp(name).test(boss.nm) && boss.removed && boss.before === 5 && boss.after === 0 && boss.state === 'results', boss);
-    await page.evaluate(([id]) => { start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 160; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); }, [id]);
+    await page.evaluate(([id]) => { start(id); toArena(); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 160; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); }, [id]);
     await shot('10-boss-' + tag + '.png');
   }
   // the boss fights themselves (mechanics, phases, weak moments) are checked per country by tools/boss_test.js
