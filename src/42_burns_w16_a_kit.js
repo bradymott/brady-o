@@ -36,7 +36,7 @@ const BW16 = {
 
 /* ---------------- small helpers ---------------- */
 BW16.err = function (e) { try { if (Game.reportError) Game.reportError(e); else console.error(e); } catch (x) { /* ignore */ } };
-BW16.has = function (name) { try { return !!(window.Sound && Sound.trackNames && Sound.trackNames.indexOf(name) >= 0); } catch (e) { return false; } };
+BW16.has = function (name) { try { return !!(typeof Sound !== 'undefined' && Sound.trackNames && Sound.trackNames.indexOf(name) >= 0); } catch (e) { return false; } };   // Sound is a bundle global, not on window
 BW16.track = function (a, b) { return BW16.has(a) ? a : b; };
 // reduced motion: the screen-shake setting off, or the OS asks for less motion
 BW16.calm = function () {

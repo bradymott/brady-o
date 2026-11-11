@@ -150,7 +150,7 @@ const BURNS_SFX_FALLBACK = {
 const BURNS_MUSIC_FALLBACK = {
   burns_hub: 'map', burns_intro: 'story', burns_w1: 'w5', burns_w2: 'w6', burns_w3: 'w7', burns_w4: 'w7', burns_w5: 'w6',
   burns_w6: 'w8', burns_w7: 'w9', burns_w8: 'w8', burns_w9: 'w9', burns_w10: 'final', man_boss: 'boss', man_giant: 'final',
-  burns_victory: 'clear', burns_ending: 'ending'
+  burns_victory: 'clear', burns_ending: 'ending', burns_title: 'burns_hub', burns_w14: 'burns_w3'
 };
 function burnsHas(list, name) { try { return !!(list && list.indexOf(name) >= 0); } catch (e) { return false; } }
 function burnsSfx(name, opts, fallback) {
@@ -160,9 +160,13 @@ function burnsSfx(name, opts, fallback) {
     if (fb) Sound.play(fb, opts);
   } catch (e) { /* audio must never break the game */ }
 }
+// The Burning Man app's soundtrack (41_burns_music.js) sets BURNS_MUSIC_ROUTE.fn: it turns any track name the game
+// asks for into one of its own house tracks. Apps without it (Art Cart) keep the plain names.
+const BURNS_MUSIC_ROUTE = { fn: null };
 function burnsMusic(name, fallback) {
   try {
     if (!name) { Sound.stopMusic && Sound.stopMusic(); return; }
+    if (BURNS_MUSIC_ROUTE.fn) { const r = BURNS_MUSIC_ROUTE.fn(name, fallback); if (r && burnsHas(Sound.trackNames, r)) { Sound.music(r); return; } }
     if (burnsHas(Sound.trackNames, name)) { Sound.music(name); return; }
     const fb = fallback || BURNS_MUSIC_FALLBACK[name];
     if (fb) Sound.music(fb);

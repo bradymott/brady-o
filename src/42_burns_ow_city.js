@@ -757,6 +757,8 @@ Object.assign(BurnsOW, {
   update(g, dt) {
     const O = BURNS_OW, S = O.state; if (!S) return;
     S.t += dt;
+    // the soundtrack: the day groove by day, the deeper night track once the city is dark (with a little hysteresis)
+    if (typeof BurnsHouse !== 'undefined' && g.R) { const nt = g.R.night || 0; if (BurnsHouse.cityNight ? nt < 0.3 : nt > 0.6) BurnsHouse.setCityNight(!BurnsHouse.cityNight); }
     // bikes along their loops
     for (const B of S.bikes) {
       B.s = (B.s + B.v * dt) % B.L.len;

@@ -382,12 +382,12 @@ const BW14_W = {
     ]);
   }
 };
-function bw14Music(g) { burnsMusic(burnsHas(Sound.trackNames, 'burns_w14') ? 'burns_w14' : 'burns_w3'); }
+function bw14Music(g) { burnsMusic('burns_w14', 'burns_w3'); }
 
 BurnsWorlds.register({
   id: 14, name: 'Skydive Into the Burn', sub: 'Fly in. Fall in. Land on your bike.',
   sky: BW14_SKY_A, sky2: BW14_SKY_B, tod: 0.05,
-  music: 'burns_w3',
+  music: 'burns_w14',   // the house soundtrack's Freefall (fallback: burns_w3)
   bounds: BW14_CFG.BOUNDS,
   spawn: { x: BW14_CFG.SPAWN.x, y: 0, z: BW14_CFG.SPAWN.z, yaw: Math.PI },
   ground: { base: '#d6ae86', crack: 0.24, mottle: 0.36, res: 0.625 },

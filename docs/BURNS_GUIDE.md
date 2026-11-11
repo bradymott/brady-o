@@ -1059,10 +1059,17 @@ World 10 should pass `next` to roll into the ending; `StoryScene` and `CreditsSc
 
 ## 14. Audio names
 
-Tracks:
-- Hub and story: `burns_hub`, `burns_intro`, `burns_victory`, `burns_ending`.
-- Worlds: `burns_w1`…`burns_w10`.
-- The Man: `man_boss`, `man_giant`.
+Tracks (names the game asks for):
+- Hub and story: `burns_title`, `burns_hub` (the city: day or night by itself), `burns_intro`, `burns_victory`, `burns_ending`.
+- Worlds: `burns_w1`…`burns_w17` (`burns_w17n` = Root Society at night, `burns_w15_chase`, `burns_w16_wonk`).
+- Bosses: `boss`, `man_boss`, `man_giant`.
+
+**The soundtrack is house music made in code** (`src/41_burns_music.js`, `BurnsHouse`). `burnsMusic(name)` routes every
+name above to a house track through `BurnsHouse.ROUTE` (e.g. `burns_w7` → `bm_sunrise`); a name with no route plays the
+city's day groove, never the old chiptune. To give a new place its own track: `BurnsHouse.add('bm_myplace', {...})`
+(format in the file header: tempo, chords per bar, drum/bass patterns, sections with filter sweeps and builds) and add
+`my_name: 'bm_myplace'` to `BurnsHouse.ROUTE`. The city switches day/night with `BurnsHouse.setCityNight(on)`.
+Test: `tools/burns_music_test.js` (renders every track offline and measures tempo, kicks, loudness, spectrum, loop seam).
 
 SFX:
 - Movement: `footstep, land, jump3d, doublejump, groundpound, spin`.
