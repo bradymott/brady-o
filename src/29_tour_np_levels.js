@@ -650,6 +650,7 @@ const levels = [
         script: [
           ['pen', { first: true }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           // ① the swaying bridges
           'terrace',
           ['skyBridge', { n: 10 }],
@@ -684,6 +685,7 @@ const levels = [
         script: [
           ['pen', { first: true }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           // ① a snowball that grows as you push it
           ['snowBank', { gold: 'must' }],
           ['snowball', { sign: true }],

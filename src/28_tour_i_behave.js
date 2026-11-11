@@ -478,13 +478,13 @@ TourBehave.platEater = {
     e.eatT = (e.eatT || 0) + dt;
     if (e.onGround && e.eatT > TB.par(e, 'every', 1.2)) {
       const tx = Math.floor((e.cx - e.dir * (e.w / 2 + 4)) / TS), ty = Math.floor((e.y + e.h + 2) / TS), A = e.g.area;
-      if (tileAt(A, tx, ty) === T.SEMI) { e.eatT = 0; e.g.setTile(tx, ty, T.EMPTY); e.g.spawn(new TourRegrow(e.g, tx, ty, TB.par(e, 'regrow', 6))); TB.tell(e, 'munch', 'pick'); e.g.burst(tx * TS + 16, ty * TS + 4, 6, '#c8a070', 'debris'); e.mode = 'eat'; }
+      if (tileAt(A, tx, ty) === T.SEMI) { e.eatT = 0; e.g.setTile(tx, ty, T.EMPTY); (A.eaten || (A.eaten = new Set())).add(ty * A.W + tx); e.g.spawn(new TourRegrow(e.g, tx, ty, TB.par(e, 'regrow', 6))); TB.tell(e, 'munch', 'pick'); e.g.burst(tx * TS + 16, ty * TS + 4, 6, '#c8a070', 'debris'); e.mode = 'eat'; }
     }
   }
 };
 class TourRegrow extends Ent {
   constructor(g, tx, ty, t) { super(g, null, TS, TS); this.x = tx * TS; this.y = ty * TS; this.tx = tx; this.ty = ty; this.life = t; this.back = true; }
-  update(dt) { this.t += dt; this.life -= dt; if (this.life <= 0 && !overlap(this.g.player, { x: this.x, y: this.y - 2, w: TS, h: 6 })) { this.g.setTile(this.tx, this.ty, T.SEMI); this.remove = true; this.g.burst(this.cx, this.y + 4, 6, '#7ad85a', 'spark'); } }
+  update(dt) { this.t += dt; this.life -= dt; if (this.life <= 0 && !overlap(this.g.player, { x: this.x, y: this.y - 2, w: TS, h: 6 })) { this.g.setTile(this.tx, this.ty, T.SEMI); const A = this.g.area; if (A.eaten) A.eaten.delete(this.ty * A.W + this.tx); this.remove = true; this.g.burst(this.cx, this.y + 4, 6, '#7ad85a', 'spark'); } }
   draw(ctx) { const k = clamp(1 - this.life / 1.5, 0, 1); if (k <= 0) { ctx.fillStyle = 'rgba(120,90,60,0.35)'; ctx.fillRect(this.x + 4, this.y, TS - 8, 2); return; } ctx.fillStyle = '#5ab84a'; for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.ellipse(this.x + 8 + q * 8, this.y + 4 - k * 4, 2 + k * 2, 4 * k + 1, (q - 1) * 0.5, 0, TAU); ctx.fill(); } }
 }
 /* 22. alarmCaller: Brady in its cone: it inhales (tell), then calls: every sleeper nearby wakes up facing him */

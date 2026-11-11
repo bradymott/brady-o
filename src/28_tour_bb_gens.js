@@ -459,7 +459,9 @@ TourGens.rail = (ctx, A) => {
   B.fill(len, decks.lower, len + 21, H - 1, T.GROUND);
   B.spawn('gate', len + 13, decks.lower - 1, { exit: 'main' });
   B.gold(len + 5, decks.lower - 5, 'high');
-  B.anchor('start', 2, decks.lower - 1);
+  // Brady starts standing in the middle of the cart, not on the dock beside it: on the dock (the same height as the deck)
+  // he stood on the tiles, the cart left without him and the scrolling screen pushed him into the water every time
+  B.anchor('start', 1 + Math.ceil(vw / 2), decks.lower - 1);
   B.trim(len + 22);
   const area = B.build(TourBuild.areaProps(ctx, { autoscroll: speed, carrier: true, rail: { decks, forks: st.forks } }));
   return { area, anchors: Object.assign({ in: B.anchors.start }, B.anchors), B, time: A.time || 400 };

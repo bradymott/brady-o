@@ -542,6 +542,7 @@ const levels = [
     areas: [
       { id: 'station', gen: 'strip', W: 156, H: 18, phase: { night: 'w22_2222' }, script: [
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
         // ① clock faces drift round
         ['clocks', {}],
         ['postcard', { kind: 'must', dx: -9, dy: -8 }],
@@ -608,6 +609,7 @@ const levels = [
     areas: [
       { id: 'lake', gen: 'strip', W: 164, H: 18, GY: 9, gyMin: 6, gyMax: 11, mirror: true, script: [
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         // ① stepping stones
         ['stones', { n: 4, gold: 'must' }],
         ['stairs', { n: 3 }],

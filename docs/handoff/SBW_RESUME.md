@@ -1,36 +1,29 @@
-# Super Brady-O World: where work paused (10 Nov 2026)
+# Super Brady-O World: state of the work (11 Nov 2026)
 
-Brady approved the whole plan with no per-country sign-off: merge PR #2 with fixes, finish the Fiesta Toon art, and overhaul the levels (no repeated level types, secret exits and levels, branching map, unique enemy powers, more power-ups and objects). Push and deploy as work lands; he plays it and asks for edits after. All save progress resets when the new levels ship. World 6 is "Spain", world 7 is "France". The player stays the code-drawn Brady.
+Everything below is on `main` and deployed to https://bradymott.github.io/brady-o/super-brady-o-world/ (only the `super-brady-o-world/` folder of `gh-pages` is replaced on each deploy, so the other two games are untouched).
 
-Baseline: `main` at 5d07239 passed `validate_levels` (68 levels, 0 unfinishable), `gameplay_test` (51/0), `boss_test` (151/0) and `apps_test` (3/3).
+## What shipped
+- **PR #2 (ChatGPT's graphics pass)** merged with fixes: black trousers, cream keyline, 3/4 blackwork sleeves with elbow mandalas, atlas memory eviction. Its GitHub PR is superseded by `main`.
+- **Fiesta Toon art for all 14 lands**, plus extras atlases (`<cc>_x`) and extra themes for the rebuilt levels.
+- **The level overhaul** (`docs/design/LEVEL_OVERHAUL.md`): 88 levels (68 main, 20 secret) in the v2 format, one `src/29_tour_<cc>_levels.js` per land; toolkit status and the "how to write a level" guide in `docs/design/TOOLKIT_STATUS.md`. Save key is v2 (progress was wiped once).
+- **Brady's playtest requests** (11 Nov): power picker chip, joint and acid pickup trips, mid-air twitch removed, three jump powers (Spring Socks, Pound Cake, Magic Beans) placed in every land, readability pass (phone zoom Near/Far, lit "toon2" sprite look with every cast re-rendered, shadows and light outlines; see `docs/ART_READABILITY.md`), and the walkable overworld map (`src/28_tour_fc_maplayouts.js`, `fd_overworld`, `fe_owpaint`, `ff_owscenes`).
+- **Freeze report (Mexico "first water level")**: not reproduced as a true freeze. Fixed: Brady started 1-2 on the dock instead of in the boat and drowned every life. Added: a per-entity error safety net, a real-time soak test (`tools/sbw_soak_test.js`), seeded and fixed-step boss tests.
 
-## Branches (all pushed to origin, none merged to main)
+## Run before every merge
+`validate_levels --rules`, `gameplay_test <shots>`, `boss_test --shots <dir>`, `apps_test "" <dir>`, `sbw_graphics_test`, `sbw_atlas_test`, `sbw_toolkit_test`, `sbw_powers_test`, `sbw_overworld_test`, `sbw_soak_test`, `save_test`, `sbw_snapshot`, `levels_br_mz_test`, `levels_aq_w22_test`, `sbw_toolkit_shots <outdir> --checks` (the first argument is the output folder). Last full run on `main`: all passing, 88 levels finishable, gameplay 52/52, bosses 172/172.
 
-### `sbw/graphics-pass-fixed`: PR #2 plus fixes (ready to merge)
-Done: sprite enemies no longer inked, with per-frame fallback inking (`TourSprite.pick/inked` in `src/28_tour_d_actors.js`); enemy scale 1.24–1.3 and ink padding (0 of 107 procedural enemies clipped); decorations opaque again; atlas eviction (`Atlas.keep/drop`, `tools/sbw_atlas_test.js`); Spain/France renames; rebuilt island country panel (grid cells, `mapCell`/`mapFrom` per level, non-sacred landmarks, no cross on Brazil); test renamed `tools/sbw_graphics_test.js`.
+## Open items
+1. **Nothing has been verified on a real iPhone by an agent.** Unknown: frame rate during the acid trip, the overworld's one-off map repaint after a reveal, how Zoom: Near feels, and whether the freeze Brady saw is gone. Ask Brady.
+2. **Readability may need a second step** if Brady still finds sprites small or flat: grow enemies relative to tiles (hitboxes too, then re-validate), recolour enemies that match their backdrop (measured contrast barely moved).
+3. **Still code-drawn:** all 14 bosses and the mini-bosses (Brass Owl, Tin Yak, Snow-Plough Bot); many objects and room interiors; new casts for Indonesia, Vietnam, Japan, Nepal, Antarctica and World 22 beyond what their `_x` atlases hold. Each level agent's missing-art list is in the commit history of its branch (`sbw/levels-*`).
+4. **Art re-renders wanted:** `es_pintxos` ghost shapes, `es_teide` cloud collar at play height, `np_pass` monastery behind the finale (safer removed), ground strips without the block outline, strips drawn too low for the phone camera (`fr_provence`, `fr_baie`, `nl_veiling`), a vertical `jp_tower`.
+5. **Overworld:** Bali, Antarctica and World 22 maps are sparser than Mexico's.
+6. **Feel:** in portrait the view is narrower than the 1-2 boat; holding right on ride levels walks Brady off the boat; validator rule 5 (premium item tucked away) is a warning, not an error; the level checker does not simulate gliding or swimming.
+7. **Save:** not reset again after the last six lands were rebuilt. Bump the key if Brady wants a clean slate.
+8. Names invented by an agent, pending Brady's say: Spring Socks, Pound Cake, Magic Beans; Berrad the Magnificent (Morocco's boss, replacing the genie).
 
-Then finished: Brady's 3/4 blackwork sleeves with elbow mandalas; static face-on HUD coin; Brady walks clear of the joystick when a boss fight starts; fog veil kept; map panel reviewed at every size, with hidden stops and a 6-9 stop test. All suites pass (see the branch's last commit). Left: merge to `main`, push, deploy to gh-pages.
-
-### `sbw/ec-br-art` (tip 710a865): Ecuador and Brazil leftover art
-Blender route that works on this Mac: a separate GUI instance per job with `--factory-startup` (never `-b`, never the shared MCP window); see `tools/blender/sprites/gui/bl.sh` and `driver.py`. Those scripts still hard-code an old scratchpad path; fix before reuse.
-
-Done: booby and puffer modelled, rendered, packed into `ec.webp` and wired in `src/29_tour_ec.js`. Coati and toucanito modelled in `br_enemies.py` and wired in `src/29_tour_br.js`, but never rendered; `br.webp` is not re-packed.
-
-Still to do:
-1. Render `KINDS=coati,toucanito`, check a contact sheet, then render and pack all of br.
-2. Ecuador 2-2: the confusing "ground" is background layer L3 (`ec_equator.andean_ridges()`); rebuild it in `ec_andes.py` as a hazy valley far below. 2-2 is a ride level with no ground.
-3. Tile seams (Mexico too): in `src/30_tour_sprites.js`, bleed atlas ground tiles 1 px past edges that have a neighbour.
-4. Enrich `ec_galapagos` and `ec_cotopaxi` backgrounds if they look thin; consider a chunkier booby.
-5. Update `docs/SPRITE_BRIEF.md` (KINDS must include friends, minions and custom-class enemies; the working Blender route) and `build_country.sh`.
-6. Run `gameplay_test` and `boss_test`, take after-shots, merge after the graphics-pass branch.
-
-## Level overhaul design: `docs/design/LEVEL_OVERHAUL.md`
-Sections 0–2 are complete (30 archetypes; the full 88-level lineup, 68 main plus 20 secret). Sections 3–7 are binding notes to be written out in full; section 8 (art impact) is not started. Finish the document, then build the engine toolkit from its section 7, pilot on Mexico and Ecuador, then br, mz, ma, es, fr, nl, id, vn, jp, np, aq, w22.
-
-Check for originality before building: the "Shrink Cookie" power-up and the item-disguised tanuki must not resemble Nintendo's equivalents.
-
-## Notes for whoever resumes
-- Scene scripts for Morocco (`ma_enemies.py`, `ma_souk.py`), Spain, France and Amsterdam are on `main`, finished but never rendered.
-- Designs to change when reached: Morocco's blue genie boss (too close to a film character), Bali's boss fight inside a temple garden, the France tower at night (unlit silhouette only), the mime enemy (replace with an object).
-- Screenshot tools: pin full resolution before capturing, or headless adaptive resolution blurs the shots. The worktrees and scripts under `/private/tmp/claude-501/...` may be gone after a restart; recreate worktrees from the branches.
-- `gh` is not installed on this Mac. PR #2 on GitHub is superseded by `sbw/graphics-pass-fixed`.
+## Practical notes
+- Blender: a private GUI instance per job via `tools/blender/sprites/gui/bl.sh` / `build_country.sh <cc> <workdir> [parts]` (`extras` rebuilds `<cc>_x`). Never `-b`, never the shared MCP window.
+- Screenshots: pin full resolution first (see `tools/sbw_toolkit_shots.js`).
+- The Art Cart agent also pushes to `main`; fetch and merge before pushing.
+- Feature branches `sbw/*` on origin are all merged and can be deleted.

@@ -857,6 +857,7 @@ const levels = [
         script: [
           'shiba',
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           // ① the belts on their counters, the plate wheel over the soy
           ['kaiten', { n: 8, h: 2, first: true }],
           ['kaiten', { n: 9, h: -1, gap: 3, enemy: 'jpTamago' }],
@@ -922,6 +923,7 @@ const levels = [
       { id: 'chikurin', gen: 'strip', W: 220, H: 20, phase: { night: 'jp_bamboo_night' },
         script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
           // ① by day: bending bamboo, bursting shoots, a lazy rice ball
           ['vault', { n: 2, first: true }],
           ['step', { h: 2 }],
