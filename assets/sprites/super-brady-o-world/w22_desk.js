@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("w22_desk", {"scale":2.0,"image":"w22_desk.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1266}},"anims":{},"strips":{"L0":{"w":2048,"h":827,"top":0.0,"x":0,"y":0},"L1":{"w":2048,"h":437,"top":225.5,"x":0,"y":828}}});

@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("nl_polder", {"scale":2.0,"image":"nl_polder.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1047}},"anims":{},"strips":{"L0":{"w":2048,"h":658,"top":115.0,"x":0,"y":0},"L1":{"w":2048,"h":387,"top":250.5,"x":0,"y":659}}});
