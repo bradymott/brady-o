@@ -5,6 +5,8 @@
 //   fixture  small rooms: a ceiling, the top of the area, a one-way panel, a box closed on three and on four sides; the
 //            open-above pop unchanged; tiles growing back over an item (crumble, toggle group); a dropped item under a
 //            low ceiling; a mushroom between two walls; a magnet pulling an item against a wall
+//   lifts    every updraft / vent / steam / smoke lift of the game: it never holds Brady against a ceiling for long,
+//            and holding DOWN drops him out of it
 //   open     a box on the floor opens from above (landing, the pound), when hit by anything thrown, and by a kick
 //   levels   every item block of all 88 levels, bumped from below (small Brady, and big Brady for mushroom blocks, in
 //            every toggle state of its area): the item must never be inside a solid, inside a one-way panel or out of
@@ -265,6 +267,62 @@ const { Tour, T, TS, TourBuild } = G;
     check('a taco, a smoke puff, a kicked thing and a rolling enemy each open a box they hit', res.taco && res.puff && res.kicked && res.rolling, res);
     check('THROW next to a box with no throwing power kicks it open (the item comes out)', res.kick.open && res.kick.item, res.kick);
     check('just walking into a box does not open it', !res.walkInto, res);
+  });
+
+  /* ---------- lifts (updrafts, vents, steam, smoke...) never pin Brady; DOWN drops him out (07_physics.js) ---------- */
+  await runSection('lifts', () => {
+    const lift = G.run(`(function (lvl, ai, z, power, downAt) {
+      Save.data = Save.defaults(); Save.data.lives = 9;
+      const g = new Play(lvl, { power }); Game.scene = g;
+      const h = power ? PLAYER_DIM.big.h : PLAYER_DIM.small.h, A0 = lvl.areas[ai];
+      // a free spot near the bottom of the zone, in its middle third
+      let sx = null, sy = null;
+      for (let y = z.y + z.h - 2; y > z.y + h && sx == null; y -= TS / 2) for (const fx of [0.5, 0.35, 0.65, 0.2, 0.8]) { const x = z.x + z.w * fx; if (regionFree(A0, x - 12, y - h - 2, 24, h + 2)) { sx = x; sy = y; break; } }
+      if (sx == null) return { skip: true };
+      g.loadArea(ai, sx, sy, power); g.state = 'play'; g.fade.a = 0; g.fade.target = 0;
+      for (const e of g.entities) if (e.enemy || e.boss) e.remove = true;
+      const p = g.player; p.invuln = 1e9; p.power = power; g.timeLeft = 999;
+      p.y -= 4; p.onGround = false; p.vy = -2 * TS;
+      for (const k in Input) if (typeof Input[k] === 'boolean') Input[k] = false;
+      let fell = false, pin = 0, maxPin = 0, maxPinAt = null, y0 = null, yDown = null, landedDown = false;
+      for (let k = 0; k < 120 * 6; k++) {
+        if (downAt != null && k === Math.round(downAt * 120)) { Input.down = true; y0 = p.y; }
+        g.camX = Math.max(0, p.cx - Game.viewW / 2); g.camY = g.camTargetY(true);
+        g.update(1 / 120);
+        if (p.state !== 'play' || p.dead) { fell = true; break; }   // out of the lift and down a pit: not held up
+        const head = !p.onGround && !regionFree(g.area, p.x + 1, p.y - 2, p.w - 2, 2);
+        pin = head ? pin + 1 / 120 : 0; if (pin > maxPin) { maxPin = pin; maxPinAt = [Math.round(p.cx), Math.round(p.y)]; }
+        if (downAt != null && k > downAt * 120) { yDown = p.y; if (p.onGround) landedDown = true; if (k > (downAt + 1.6) * 120) break; }
+      }
+      Input.down = false;
+      return { fell, maxPin: +maxPin.toFixed(2), at: maxPinAt, dropped: y0 == null ? null : +(yDown - y0).toFixed(1), landedDown, start: [Math.round(sx), Math.round(sy)] };
+    })`);
+    const ids = opt('--levels') ? opt('--levels').split(',') : Tour.allLevelIds();
+    const pinned = [], stuck = [], ceilings = [];
+    let zones = 0;
+    for (const id of ids) {
+      const [w, i] = id.split('-').map(Number), lvl = G.getLevel(w, i);
+      lvl.areas.forEach((A, ai) => {
+        if (A.water) return;
+        for (const z of A.zones || []) {
+          if (!((z.fy || 0) < 0)) continue;
+          zones++;
+          const tag = `${id} ${A.aid || 'a' + ai} ${z.kind || 'zone'} @(${Math.floor(z.x / TS)},${Math.floor(z.y / TS)}) ${Math.round(z.w / TS)}x${Math.round(z.h / TS)}`;
+          // a solid ceiling inside the zone or right over its top: where a lift could hold Brady against it
+          let roof = 0; for (let x = Math.floor(z.x / TS); x <= Math.floor((z.x + z.w - 1) / TS); x++) { const t0 = Math.max(0, Math.floor(z.y / TS) - 1); for (let y = t0; y < Math.floor((z.y + z.h) / TS); y++) if (G.run('SOLID')[A.tiles[y * A.W + x]] && y > 0 && !G.run('SOLID')[A.tiles[(y + 1) * A.W + x]]) { roof++; break; } }
+          if (roof) ceilings.push(`${tag}: ${roof} column(s) with a ceiling`);
+          for (const power of [0, 1]) {
+            const r = lift(lvl, ai, z, power, null); if (r.skip) continue;
+            if (r.maxPin > 1.3) pinned.push(`${tag}${power ? ' big' : ''}: held against a ceiling ${r.maxPin} s at ${r.at}`);
+            const d = lift(lvl, ai, z, power, 2.5);
+            if (!d.skip && !(d.fell || d.dropped > TS || d.landedDown)) stuck.push(`${tag}${power ? ' big' : ''}: DOWN did not drop him (moved ${d.dropped} px)`);
+          }
+        }
+      });
+    }
+    console.log(`  ${zones} lift zones; ${ceilings.length} with a ceiling over or inside them:\n    ` + (ceilings.join('\n    ') || '-'));
+    check('no lift holds Brady against a ceiling for more than about a second', !pinned.length, pinned);
+    check('holding DOWN in any lift lets Brady drop out of it', !stuck.length, stuck);
   });
 
   /* ---------- every item block of the game ---------- */
