@@ -281,8 +281,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   });
   check('Baron Bric-a-Brac fights in three phases; beating him leads home, to the ending and the credits', fin.phases === '1,2,3' && fin.beaten && fin.results === 'results' && fin.ending === 'TourEndingScene' && fin.credits === 'CreditsScene', fin);
   // the route on the map: Mexico to Nepal in order, and the postcard count across all lands
-  const order = await page.evaluate(() => ({ route: T.Tour.mainCountries().map(C => C.id).join(','), secret: T.Tour.worldList().filter(w => T.Tour.byWorld[w].secret).join(','), levels: T.Tour.allLevelIds().length }));
-  check('the map route runs Mexico to Nepal with both secret lands, 68 levels in all', order.route === 'mx,ec,br,mz,ma,es,fr,nl,id,vn,jp,np' && order.secret === '13,22' && order.levels === 68, order);
+  const order = await page.evaluate(() => ({ route: T.Tour.mainCountries().map(C => C.id).join(','), secret: T.Tour.worldList().filter(w => T.Tour.byWorld[w].secret).join(','), levels: T.Tour.allLevelIds().length, main: T.Tour.worldList().reduce((n, w) => n + T.Tour.byWorld[w].mainCount, 0) }));
+  // 68 main levels (12 x 5 + 2 x 4); secret levels come on top as the countries add them
+  check('the map route runs Mexico to Nepal with both secret lands, 68 main levels in all', order.route === 'mx,ec,br,mz,ma,es,fr,nl,id,vn,jp,np' && order.secret === '13,22' && order.main === 68 && order.levels >= order.main, order);
   // the secret lands: hidden on the map until found; Antarctica behind a cracked wall in 8-4, World 22 behind door 22 in 5-2 (22 postcards)
   const secrets = await page.evaluate(() => {
     const B = window.BRADY, d = B.Save.data, TP = T.TourProgress, M = T.TourMapScene;
