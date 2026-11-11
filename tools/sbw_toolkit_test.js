@@ -16,7 +16,8 @@ const validate = (spec, i) => { const lvl = build(spec, i); return { lvl, r: Val
 const fresh = () => { Save.data = Save.defaults(); Save.data.v = 3; TourProgress.data(); };
 
 section('spec', () => {
-  check('68 main levels in 14 countries', Tour.allLevelIds().length === 68 && Tour.worldList().length === 14);
+  // secret levels (x-6, x-7, 13-5, 22-5) come on top of the 68 main ones as countries are rewritten
+  check('68 main levels in 14 countries', Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].mainCount, 0) === 68 && Tour.allLevelIds().length >= 68 && Tour.worldList().length === 14);
   check('every country knows its main-level count (5, or 4 for the secret lands)', Tour.worldList().every(w => { const C = Tour.byWorld[w]; return C.mainCount === (C.secret ? 4 : 5); }), Tour.worldList().map(w => Tour.byWorld[w].id + Tour.byWorld[w].mainCount));
   const L84 = Tour.specOf('8-4');
   check('a legacy secret: {to} becomes exits.secret = land:aq', L84.exits.secret && L84.exits.secret.to === 'land:aq' && L84.secret === false, L84.exits);
