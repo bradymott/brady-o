@@ -874,3 +874,106 @@ def _speaker_pro(self, at, d, r, name, glow='#ff3a6a', part=None, guard=False, c
             self.obj(name + '_strut_%d' % k, bm_rod(tuple(p0), tuple(p1), 0.01, 4), chrome())
     return bone
 Build.speaker_pro = _speaker_pro
+# ---------------- soft forms (added in the touch-up pass; nothing above uses them) ----------------
+def bm_softbox(w, h, d, seg=16, rings=10, at=(0, 0, 0), M=None, p=4.0):
+    """A rounded 'soft box' (a superellipsoid): w (x) × h (y) × d (z), centred at `at`, M an extra rotation. p = 2 is an
+    ellipsoid, p = 4 a pillow-like box with fully rounded edges and corners (no hard edges at any detail level), larger p
+    squarer. Watertight with single-vertex poles. Cushions, seat backs, plinths, decks, lamp blocks."""
+    e = 2.0 / p
+    def sp(c): return math.copysign(abs(c) ** e, c)
+    def fn(u, v):
+        th = TAU * u; ph = math.pi * v
+        s = math.sin(ph)
+        return (w / 2 * sp(s) * sp(math.cos(th)), h / 2 * sp(math.cos(ph)), d / 2 * sp(s) * sp(math.sin(th)))
+    return bm_surf(seg, rings, fn, at=at, M=M, wrap_u=True, merge=True)
+def _seat_round(self, x, y, z, col='#2a1a2a', accent='#ff4fd8', wheelY=None, wheelZ=None, tilt=0.45, column=True):
+    """Build.seat with rounded, pillowy cushions (bm_softbox) instead of bevelled boxes: same markers (`seat` empty, the
+    `steer` bone and its pieces), same placement and arguments. Returns the steer bone."""
+    L = self.L; wy = y + 0.42 if wheelY is None else wheelY; wz = z + 0.62 if wheelZ is None else wheelZ
+    sm = satin('seat_' + col.lstrip('#'), col); sm2 = matte('seatbase_' + col.lstrip('#'), col)
+    sg, rg = self.pick(12, 8), self.pick(8, 6)
+    self.obj('seat_cushion', bm_softbox(0.64, 0.18, 0.6, sg, rg, (x, y - 0.14, z - 0.05)), sm)
+    self.obj('seat_back', bm_softbox(0.62, 0.72, 0.16, sg, rg, (x, y + 0.26, z - 0.36), rot(pitch=-0.12)), sm)
+    self.obj('seat_base', bm_softbox(0.5, 0.24, 0.5, self.pick(12, 8), self.pick(6, 4), (x, y - 0.32, z - 0.05), p=3.0), sm2)
+    if column: self.obj('column', bm_rod((x, wy - 0.05, wz + 0.05), (x, y - 0.1, wz + 0.36), 0.04, L['rod']), dark_chrome())
+    st = self.bone('steer', (x, wy, wz))
+    self.obj('steer_ring', bm_torus(0.19, 0.03, L['torus'], L['tube'], AZ), dark_chrome(), parent=st)
+    self.obj('steer_spoke', bm_rod((-0.17, 0, 0), (0.17, 0, 0), 0.018, L['rod']), chrome(), parent=st)
+    self.obj('steer_hub', bm_uv(0.05, L['cyl_s'], max(4, L['cyl_s'] // 2)), chrome(), parent=st)
+    self.obj('steer_accent', bm_uv(0.025, max(6, L['cyl_s'] // 2), 4, (0, 0, 0.04)), led(accent), parent=st)
+    self.empty('seat', (x, y, z)); self.body['steerTilt'] = float(tilt)
+    return st
+Build.seat_round = _seat_round
+# ---------------- touch-up helpers (added in the touch-up pass; nothing above uses them) ----------------
+def bm_pillow(w, h, d, r, seg=3, phis=None, at=(0, 0, 0), M=None, crown=0.0):
+    """A rounded, cushion-like solid w (x) × h (y) × d (z): a rounded-rectangle outline (corner radius r, `seg` per
+    corner) whose top and bottom edges roll over with radius r (rings at the angles `phis`, degrees, 0 = the wall), flat
+    caps. crown lifts the middle of the top cap a little (a stuffed cushion). Every step stays under the 40-degree
+    auto-smooth angle, so it shades smooth: seats, pads, plinths, dashboards, rounded slabs."""
+    r = min(r, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3)
+    phis = phis or [-75, -50, -25, 0, 0, 25, 50, 75]
+    rings = []; prev0 = False
+    for k, ph in enumerate(phis):
+        a = math.radians(ph); ins = r * (1 - math.cos(a))
+        top = ph > 0 or (ph == 0 and prev0)
+        yy = (h / 2 - r) * (1 if top else -1) + r * math.sin(a); prev0 = ph == 0
+        rings.append([(x, yy, z) for x, z in rrect_pts(w - 2 * ins, d - 2 * ins, max(r - ins, 0.01) if r > ins else 0.01, seg)])
+    if crown:
+        last = rings[-1]; rings.append([(x * 0.5, h / 2 + crown, z * 0.5) for x, _, z in last])
+    return bm_loft([[(x, y, z) for x, y, z in ring] for ring in rings], closed_u=True, caps='ngon', at=at, M=M)
+def _seat_pro(self, x, y, z, col='#2a1a2a', accent='#ff4fd8', wheelY=None, wheelZ=None, tilt=0.45, column=True, piping=None, wheel=True):
+    """Seat() with an upholstered, fully rounded seat in place of the bevelled boxes (same hips point, steering wheel on
+    bone `steer`, `seat` empty and tilt): a stuffed cushion on a rounded plinth and a reclined rounded backrest; the
+    showroom level adds three stitched channels and side bolsters on the backrest, two rolls on the cushion and
+    contrasting piping round the backrest. The race level keeps the cushion and backrest (smooth, no box edges).
+    wheel=False leaves the `steer` bone empty for a car that hangs its own wheel on it (a ship's wheel, a tiller)."""
+    L = self.L; lo = self.lo; wy = y + 0.42 if wheelY is None else wheelY; wz = z + 0.62 if wheelZ is None else wheelZ
+    sm = satin('seat_' + col.lstrip('#'), col, 0.42); sm2 = satin('seatbase_' + col.lstrip('#'), col, 0.6)
+    pip = satin('piping_' + (piping or accent).lstrip('#'), piping or accent, 0.35)
+    P = (lambda: dict(seg=2, phis=[-60, -30, 0, 0, 30, 60])) if lo else (lambda: dict(seg=3))
+    self.obj('seat_cushion', bm_pillow(0.64, 0.17, 0.6, 0.07, at=(x, y - 0.14, z - 0.04), crown=0.0 if lo else 0.025, **(dict(seg=2, phis=[-45, 0, 0, 45]) if lo else P())), sm)
+    back_at = (x, y + 0.27, z - 0.37); Mb = rot(pitch=-0.14)
+    self.obj('seat_back', bm_pillow(0.62, 0.72, 0.16, 0.07, at=back_at, M=Mb, **P()), sm)
+    if not lo:
+        self.obj('seat_base', bm_pillow(0.5, 0.22, 0.5, 0.06, at=(x, y - 0.33, z - 0.05), seg=2, phis=[-60, -30, 0, 0, 30, 60]), sm2)
+        T = Matrix.Translation(E(*back_at)) @ Mb
+        def place(bm, p):
+            xf(bm, T @ Matrix.Translation(E(*p))); return bm
+        for k, cx in enumerate((-0.15, 0.0, 0.15)):   # stitched channels on the backrest
+            self.obj('seat_roll_%d' % k, place(bm_capsule(0.058, 0.5, 8, 2), (cx, -0.01, 0.06)), sm)
+        for s in (1, -1):                                # side bolsters
+            self.obj('seat_bolster_%d' % (s > 0), place(bm_capsule(0.06, 0.66, 8, 2), (s * 0.27, 0.0, 0.07)), sm)
+            self.obj('seat_croll_%d' % (s > 0), bm_capsule(0.055, 0.52, 8, 2, (x + s * 0.13, y - 0.04, z - 0.04), AZ), sm)
+        ring = [(px, py, 0.083) for px, py in rrect_pts(0.6, 0.7, 0.07, 3)]
+        self.obj('seat_piping', place(bm_tube(ring, 0.013, 5, closed=True), (0, 0, 0)), pip)
+    if column: self.obj('column', bm_rod((x, wy - 0.05, wz + 0.05), (x, y - 0.1, wz + 0.36), 0.04, L['rod']), dark_chrome())
+    st = self.bone('steer', (x, wy, wz))
+    if wheel:
+        self.obj('steer_ring', bm_torus(0.19, 0.03, L['torus'], L['tube'], AZ), dark_chrome(), parent=st)
+        self.obj('steer_spoke', bm_rod((-0.17, 0, 0), (0.17, 0, 0), 0.018, L['rod']), chrome(), parent=st)
+        self.obj('steer_hub', bm_uv(0.05, L['cyl_s'], max(4, L['cyl_s'] // 2)), chrome(), parent=st)
+        self.obj('steer_accent', bm_uv(0.025, max(6, L['cyl_s'] // 2), 4, (0, 0, 0.04)), led(accent), parent=st)
+    self.empty('seat', (x, y, z)); self.body['steerTilt'] = float(tilt)
+    return st
+Build.seat_pro = _seat_pro
+def keep_soft(B, *obs):
+    """Mark pieces as organic: after the Build's smooth_by_angle pass their auto-smooth is undone, so they shade fully
+    smooth even with few segments (a 6-sided race-level limb would otherwise show hard facets at the 40 degree split).
+    Call it with the objects B.obj() returned; the first call wraps this Build's smooth_by_angle."""
+    if not hasattr(B, '_soft'):
+        B._soft = []; orig = B.smooth_by_angle
+        def smooth_then_soften():
+            orig()
+            for ob in B._soft:
+                try:
+                    for md in [m for m in ob.modifiers if m.type == 'NODES' and 'mooth' in m.name]: ob.modifiers.remove(md)
+                    me = ob.data
+                    for e in me.edges: e.use_edge_sharp = False
+                    for p in me.polygons: p.use_smooth = True
+                    try: me.set_sharp_from_angle(angle=math.pi)
+                    except Exception: pass
+                except Exception as e:
+                    print('keep_soft skipped %s: %s' % (ob.name, e))
+        B.smooth_by_angle = smooth_then_soften
+    B._soft.extend(o for o in obs if o is not None)
+    return obs[0] if len(obs) == 1 else obs

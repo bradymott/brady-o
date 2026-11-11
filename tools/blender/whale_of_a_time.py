@@ -64,6 +64,7 @@ def skin(x, y, z):
 
 def build(B):
     L = B.L; lo = B.lo
+    PL = dict(seg=2, phis=[-45, 0, 0, 45]) if lo else dict(seg=3)   # bm_pillow tessellation (rounded boxes)
     B.export_try = VCOL_EXPORT
     # ---- materials ----
     M_blue = paint('whale_blue', COL, coat=1.0, rough=0.2, metal=0.15)
@@ -116,7 +117,7 @@ def build(B):
         B.obj('head_lens_%d' % (s > 0), bm_ellipsoid(0.115, 0.032, 0.115, L['cyl_s'], B.pick(5, 2), (hx, 0.66, 2.54), phi1=math.pi / 2, M=AZ), led('#fff0d8'))
         B.light(hx, 0.66, 2.65, 1.3, '#fff2c8', head=1)
         B.obj('tail_ring_%d' % (s > 0), bm_rrect_tube(0.42, 0.13, 0.055, 0.015, B.pick(4, 1), 4, at=(s * 0.78, 0.66, -2.545), axis=AZn), cr)
-        B.obj('tail_%d' % (s > 0), bm_box(0.38, 0.09, 0.04, (s * 0.78, 0.66, -2.54)), led('#ff1a2a'))
+        B.obj('tail_%d' % (s > 0), bm_capsule(0.046, 0.38, B.pick(10, 5), B.pick(2, 1), (s * 0.78, 0.66, -2.545), AX), led('#ff1a2a'))
         B.light(s * 0.78, 0.66, -2.65, 0.9, '#ff2a3a', tail=1)
 
     # ================= the whale: clear-coat blue back, grooved pale belly, chrome waterline =================
@@ -166,7 +167,7 @@ def build(B):
         at = Vector((s * 1.0, 0.0, 0.0)); r = 0.21
         _, n = body_side(EY, EZ); n = Vector((s * n.x, n.y, n.z))
         look = (n + Vector((0, 0.02, 0.4))).normalized()   # outward along the flank, a touch forward
-        B.obj('eye_white_%d' % (s > 0), bm_uv(r, B.pick(20, 8), B.pick(10, 5), tuple(at)), M_eye, parent=Ep)
+        B.obj('eye_white_%d' % (s > 0), bm_uv(r, B.pick(18, 8), B.pick(9, 5), tuple(at)), M_eye, parent=Ep)
         B.obj('eye_iris_%d' % (s > 0), bm_uv(r * 0.5, B.pick(14, 8), B.pick(8, 5), tuple(at + look * r * 0.8)), M_iris, parent=Ep)
         B.obj('eye_hl_%d' % (s > 0), bm_uv(r * 0.13, B.pick(8, 5), B.pick(5, 3), tuple(at + look * r * 1.18 + Vector((s * 0.03, 0.06, -0.02)))), led_w, parent=Ep)
         if not lo: B.obj('eye_hl2_%d' % (s > 0), bm_uv(r * 0.06, 6, 4, tuple(at + look * r * 1.12 + Vector((s * 0.02, -0.05, 0.04)))), led_w, parent=Ep)
@@ -224,18 +225,23 @@ def build(B):
     npl = B.pick(6, 3); gap = 0.014; pw = (1.5 - gap * (npl - 1)) / npl
     for k in range(npl):
         x = -0.75 + pw / 2 + k * (pw + gap)
-        B.obj('plank_%d' % k, bm_box(pw, 0.07, 2.2, (x, DY - 0.035, DZ)), M_wood_a if k % 2 == 0 else M_wood_b, bevel=0.012, bevel_angle=False, segments=1)
+        if lo: continue
+        B.obj('plank_%d' % k, bm_pillow(pw, 0.07, 2.2 - (0.06 if k in (0, npl - 1) else 0.0), 0.03, seg=2, phis=[-45, 0, 0, 45], at=(x, DY - 0.035, DZ)), M_wood_a if k % 2 == 0 else M_wood_b)
+    if lo: B.obj('deck_top', bm_pillow(1.5, 0.07, 2.2, 0.034, seg=2, phis=[-45, 0, 0, 45], at=(0, DY - 0.035, DZ)), M_wood_a)
     B.obj('deck_edge', bm_rrect_tube(1.56, 2.26, 0.12, 0.028, B.pick(4, 1), B.pick(8, 5), at=(0, DY, DZ)), cr)
-    # the skirt: a rounded navy apron from under the planks down into the whale's back
-    ring_top = [(x, DY - 0.08, DZ + y) for x, y in rrect_pts(1.5, 2.2, 0.1, B.pick(3, 1))]
-    ring_bot = [(x, min(DY - 0.12, body_top(x * 0.97, DZ + y * 0.97)[0].y - 0.12), DZ + y * 0.97) for x, y in rrect_pts(1.5, 2.2, 0.1, B.pick(3, 1))]
-    B.obj('deck_skirt', bm_loft([ring_bot, ring_top], closed_u=True, caps=True), M_navy)
+    # the skirt: a soft, rounded navy apron from under the planks down into the whale's back: it rolls out under the
+    # deck edge, then tucks in as it settles into the back (rounder corners than the deck, so no box shows)
+    outline = rrect_pts(1.46, 2.16, 0.3, B.pick(4, 2)); y_top = DY - 0.07
+    def y_bot(x, z): return min(DY - 0.12, body_top(x, DZ + z)[0].y - 0.12)
+    prof = [(1.0, 0.0), (1.02, 0.14), (1.0, 0.38), (0.975, 0.68), (0.95, 1.0)] if not lo else [(1.0, 0.0), (1.015, 0.25), (0.95, 1.0)]
+    rings = [[(x * k, y_top + (y_bot(x * k, z * k) - y_top) * t, DZ + z * k) for x, z in outline] for k, t in prof]
+    B.obj('deck_skirt', bm_loft(rings[::-1], closed_u=True, caps=True), M_navy)
     # posts at the four corners, all at one rail height, with chrome ball caps; rails along both sides and across the ends
     for s in (1, -1):
         for z in (ZF, ZR):
             B.obj('post_%d_%d' % (s > 0, z > 0), bm_rod((s * 0.72, DY, z), (s * 0.72, RAIL, z), 0.03, L['rod']), cr)
-            B.obj('post_cap_%d_%d' % (s > 0, z > 0), bm_uv(0.045, B.pick(10, 6), B.pick(6, 4), (s * 0.72, RAIL + 0.02, z)), cr)
-            if not lo: B.obj('post_foot_%d_%d' % (s > 0, z > 0), bm_cyl(0.06, 0.05, 0.03, 12, AY, (s * 0.72, DY + 0.015, z)), dcr)
+            B.obj('post_cap_%d_%d' % (s > 0, z > 0), bm_uv(0.045, B.pick(10, 6), B.pick(6, 3), (s * 0.72, RAIL + 0.02, z)), cr)
+            if not lo: B.obj('post_foot_%d_%d' % (s > 0, z > 0), bm_cyl(0.06, 0.05, 0.03, 10, AY, (s * 0.72, DY + 0.015, z)), dcr)
         B.obj('rail_%d' % (s > 0), bm_rod((s * 0.72, RAIL, ZF), (s * 0.72, RAIL, ZR), 0.025, L['rod']), cr)
         # pennants on short masts above the front posts
         B.obj('mast_%d' % (s > 0), bm_rod((s * 0.72, RAIL, ZF), (s * 0.72, RAIL + 0.32, ZF), 0.015, B.pick(6, 4)), cr)
@@ -252,12 +258,12 @@ def build(B):
         for i in range(n):
             z = ZF - (ZF - ZR) * (i + 0.5) / n
             B.obj('rail_bulb_%d_%d' % (s > 0, i), bm_ico(0.05, 1, (0, 0, z)), led(BULBS[i % 3]), parent=parts[i % 2])
-            B.obj('socket_%d_%d' % (s > 0, i), bm_cyl(0.03, 0.026, 0.045, B.pick(10, 6), AY, (s * 0.72, RAIL + 0.018, z)), dcr)
+            if not lo: B.obj('socket_%d_%d' % (s > 0, i), bm_cyl(0.03, 0.026, 0.045, 8, AY, (s * 0.72, RAIL + 0.018, z)), dcr)
             if i % 2 == 0: B.light(s * 0.72, jy, z, 0.45, BULBS[i % 3], led=1)
     # festoon strings: across the front and back, and a swag along each side under the rail
     def festoon(name, a, b, sag, nb, cols, r=0.036):
         P = catenary(a, b, sag, B.pick(14, 6))
-        B.obj(name + '_wire', bm_tube(P, 0.009, B.pick(5, 3)), M_wire)
+        B.obj(name + '_wire', bm_tube(P, 0.009, B.pick(4, 3)), M_wire)
         for i in range(nb if not lo else max(2, nb // 2)):
             k = nb if not lo else max(2, nb // 2)
             t = (i + 1) / (k + 1); p = Vector(a).lerp(Vector(b), t) - Vector((0, sag * (1 - (2 * t - 1) ** 2), 0))
@@ -268,10 +274,10 @@ def build(B):
     for s in (1, -1):
         festoon('fest_side_%d' % (s > 0), (s * 0.76, RAIL - 0.04, ZF), (s * 0.76, RAIL - 0.04, ZR), 0.16, 6, BULBS[2:] + BULBS[:2])
     # deck props: a cooler (left rear) and a little DJ speaker box (right rear) facing backwards
-    B.obj('cooler', bm_box(0.42, 0.28, 0.3, (0.42, DY + 0.14, -1.3)), M_cooler, bevel=0.04, bevel_angle=False, segments=B.pick(3, 1))
-    B.obj('cooler_lid', bm_box(0.45, 0.07, 0.33, (0.42, DY + 0.31, -1.3)), M_cyan, bevel=0.03, bevel_angle=False, segments=B.pick(3, 1))
+    B.obj('cooler', bm_pillow(0.42, 0.28, 0.3, 0.05, **PL, at=(0.42, DY + 0.14, -1.3)), M_cooler)
+    if not lo: B.obj('cooler_lid', bm_pillow(0.45, 0.07, 0.33, 0.034, **PL, at=(0.42, DY + 0.31, -1.3), crown=0.02), M_cyan)
     B.obj('cooler_handle', bm_tube(catmull([(0.42, DY + 0.34, -1.2), (0.42, DY + 0.39, -1.24), (0.42, DY + 0.39, -1.36), (0.42, DY + 0.34, -1.4)], B.pick(8, 4)), 0.014, B.pick(6, 4)), cr)
-    B.obj('dj_box', bm_box(0.42, 0.38, 0.3, (-0.42, DY + 0.19, -1.3)), satin('dj_box', '#1a1e2c', 0.45), bevel=0.04, bevel_angle=False, segments=B.pick(3, 1))
+    B.obj('dj_box', bm_pillow(0.42, 0.38, 0.3, 0.05, **PL, at=(-0.42, DY + 0.19, -1.3)), satin('dj_box', '#1a1e2c', 0.45))
     B.speaker_pro((-0.42, DY + 0.19, -1.452), (0, 0, -1), 0.11, 'dj_spk', '#ff4fd8')
     if not lo: B.obj('dj_dial', bm_cyl(0.03, 0.03, 0.02, 10, AY, (-0.42, DY + 0.39, -1.3)), cr)
     B.light(-0.42, DY + 0.19, -1.55, 0.5, '#ff4fd8', led=1)
@@ -281,7 +287,7 @@ def build(B):
     # ================= lifebuoy on the left flank, hung on a chrome hook =================
     p, n = body_side(1.95, -1.0); ax = aim((n.x, n.y, n.z)); c = p + n * 0.07
     for k in range(4):
-        B.obj('buoy_%d' % k, bm_torus(0.3, 0.075, B.pick(8, 4), B.pick(10, 6), ax, tuple(c), sweep=(k * math.pi / 2, (k + 1) * math.pi / 2)), M_orange if k % 2 == 0 else M_white)
+        B.obj('buoy_%d' % k, bm_torus(0.3, 0.075, B.pick(7, 4), B.pick(9, 6), ax, tuple(c), sweep=(k * math.pi / 2, (k + 1) * math.pi / 2)), M_orange if k % 2 == 0 else M_white)
     B.obj('buoy_hook', bm_rod(tuple(p + Vector((0, 0.33, 0))), tuple(c + Vector((0, 0.36, 0))), 0.02, B.pick(8, 5)), cr)
     if not lo:
         for k in range(4):
@@ -290,7 +296,7 @@ def build(B):
 
     # ================= wheels, seat (on the deck), size info =================
     B.wheels_pro(1.15, 1.85, -1.85, r=0.5, w=0.42, rim='#5ab0ff', tyre='#121620', cap='#38f2ff', stripe='#38f2ff')
-    B.seat(0, DY + 0.38, -0.55, col='#1a3a7a', accent=COL2, wheelY=DY + 0.74, wheelZ=0.1, column=False)
+    B.seat_pro(0, DY + 0.38, -0.55, col='#1a3a7a', accent=COL2, wheelY=DY + 0.74, wheelZ=0.1, column=False, piping='#e8f4ff')
     top = RAIL + 0.08
     B.info(6.0, 3.2, 3.6, muzzle=(0, DY, 1.0), wheelR=0.5, extra={'sight': [round(top, 2), ZR]})
     B.body['rigV'] = 2

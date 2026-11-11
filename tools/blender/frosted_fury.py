@@ -69,14 +69,14 @@ def bm_sweep(nu, frame_fn, section_fn, caps=True):
                 except ValueError: pass
     bm.normal_update(); bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return bm
-def bm_arch(c, Rin, Rout, w, a0, a1, seg):
+def bm_arch(c, Rin, Rout, w, a0, a1, seg, rounded=False):
     """A solid mudguard arch over a wheel at c: a rectangular section (thickness Rout-Rin, width w across x) swept
     through the YZ plane from angle a0 to a1 (0 = forward, pi/2 = up)."""
     Rm = (Rin + Rout) / 2; t = Rout - Rin; C0 = Vector(c)
     def frame(u):
         a = a0 + (a1 - a0) * u; n = Vector((0, math.sin(a), math.cos(a)))
         return C0 + n * Rm, n, Vector((1, 0, 0))
-    sec = [(-t / 2, -w / 2), (t / 2, -w / 2), (t / 2, w / 2), (-t / 2, w / 2)]
+    sec = [(-t / 2, -w / 2), (t / 2, -w / 2), (t / 2, w / 2), (-t / 2, w / 2)] if not rounded else rrect_pts(t, w, t * 0.45, 1)
     return bm_sweep(seg, frame, lambda u: sec)
 def bm_arc_tube(zc, R, y, a0, a1, r, seg, tseg):
     """A round tube bent along a horizontal arc of radius R about (0, y, zc): angle 0 = forward."""
@@ -106,19 +106,39 @@ def rope_frame(u):
     N2 = T.cross(N1)
     if N2.y < 0: N2 = -N2
     return C, N1, N2
+RIDGES, AMP_HI = 6, 0.32                              # the star tip: six deep ridges that twist along the rope
+def twist(u): return NT * u * TAU * 2.6
+def pastel(u):
+    """The piped frosting's colour along the rope (vertex-colour multipliers on the pale frosting): strawberry pink at the
+    base, lilac in the middle laps, vanilla cream at the tip."""
+    K = [(0.0, (1.0, 0.62, 0.8)), (0.3, (1.0, 0.74, 0.88)), (0.55, (0.84, 0.76, 1.0)), (0.8, (0.98, 0.9, 0.98)), (1.0, (1.0, 0.97, 0.92))]
+    for (u0, c0), (u1, c1) in zip(K, K[1:]):
+        if u <= u1:
+            t = sstep((u - u0) / (u1 - u0)); return tuple(c0[i] + (c1[i] - c0[i]) * t for i in range(3))
+    return K[-1][1]
 def rope_pt(u, ph, ridges, amp):
     """Surface point and (approximate) outward normal of the rope at u, section angle ph (0 = outward, pi/2 = up)."""
     C, N1, N2 = rope_frame(u); r = rope_r(u)
-    rr = r * (1 + amp * math.cos(ridges * ph + NT * u * 0.9))
+    rr = r * (1 + amp * math.cos(ridges * ph + twist(u)))
     P = C + N1 * (math.cos(ph) * rr * SQ_OUT) + N2 * (math.sin(ph) * rr * SQ_UP)
     n = N1 * (math.cos(ph) / SQ_OUT) + N2 * (math.sin(ph) / SQ_UP); n.normalize()
     T = rope_c(min(1, u + 1e-3)) - rope_c(max(0, u - 1e-3)); T.normalize()
     return P, n, T
-def bm_rope(nu, nv, ridges, amp):
+def bm_rope(nu, nv, ridges, amp, cols=None):
+    """The piped rope; `cols` (a list) receives each vertex's colour in creation order: the pastel gradient along the rope,
+    darkened down in the grooves between the ridges so the star-tip piping reads under the bright showroom lights."""
     def sec(u):
         r = rope_r(u)
-        if r < 0.004: return None
-        tw = NT * u * 0.9; out = []
+        if r < 0.004:
+            if cols is not None: cols.append(pastel(u))
+            return None
+        tw = twist(u); out = []
+        if cols is not None:
+            base = pastel(u)
+            for j in range(nv):
+                g = 0.5 + 0.5 * math.cos(ridges * TAU * j / nv + tw) if amp > 0 else 1.0
+                k = 0.56 + 0.44 * g ** 0.8
+                cols.append(tuple(c * k for c in base))
         for j in range(nv):
             ph = TAU * j / nv; rr = r * (1 + amp * math.cos(ridges * ph + tw))
             out.append((math.cos(ph) * rr * SQ_OUT, math.sin(ph) * rr * SQ_UP))
@@ -143,9 +163,10 @@ def to_local(bm, J):
 
 def build(B):
     L = B.L; lo = B.lo; rng = random.Random(77)
+    PL = dict(seg=2, phis=[-45, 0, 0, 45]) if lo else dict(seg=3)   # bm_pillow tessellation
     B.export_try = VCOL_EXPORT   # the body, the wrapper and the frosting carry vertex-colour gradients
     # ---- materials: pearlescent frosting, candy-paper wrapper, white/pink clear coats, chrome, chocolate, neon sprinkles ----
-    M_frost = paint('frosting', COL2, coat=1.0, rough=0.2, metal=0.06)
+    M_frost = paint('frosting', '#fff0f4', coat=1.0, rough=0.24, metal=0.0)
     M_wrapP = paint('wrap_pink', COL, coat=1.0, rough=0.24, metal=0.0)
     M_wrapW = paint('wrap_white', '#fff8fb', coat=1.0, rough=0.24, metal=0.0)
     M_plate = paint('plate_white', '#ffffff', coat=1.0, rough=0.16, metal=0.1)
@@ -171,7 +192,7 @@ def build(B):
     for i, (x, z) in enumerate([(0.85, 1.45), (-0.85, 1.45), (0.85, -1.45), (-0.85, -1.45)]):
         B.cut([plate], bm_cyl(0.45, 0.45, 0.5, L['arch'], AX, (x * 1.12, 0.38, z)), 'arch_%d' % i)
         s = 1 if x > 0 else -1
-        B.obj('fender_%d' % i, bm_arch((x, 0.38, z), 0.47, 0.56, 0.42, math.radians(14), math.radians(166), B.pick(18, 10)), M_fender, bevel=B.pick(0.03, None), segments=B.pick(2, 1))
+        B.obj('fender_%d' % i, bm_arch((x, 0.38, z), 0.47, 0.56, 0.42, math.radians(14), math.radians(166), B.pick(18, 8), rounded=lo), M_fender, bevel=B.pick(0.03, None), segments=B.pick(2, 1))
         if not lo:
             for a in (0.5, 1.06):
                 a_ = a * math.pi
@@ -184,10 +205,10 @@ def build(B):
     # chrome tube bumpers front and rear (gentle arcs), with ball ends
     for s, zc in ((1, 2.08), (-1, -2.08)):
         R = 2.125; am = math.asin(0.9 / R); a0 = (0 if s > 0 else math.pi)
-        B.obj('bumper_%d' % (s > 0), bm_arc_tube(zc - s * R, R, 0.41, a0 - am, a0 + am, 0.05, B.pick(20, 10), B.pick(8, 6)), cr)
+        B.obj('bumper_%d' % (s > 0), bm_arc_tube(zc - s * R, R, 0.41, a0 - am, a0 + am, 0.05, B.pick(16, 10), B.pick(7, 6)), cr)
         for x in (0.9, -0.9):
             zz = zc - s * R + s * R * math.cos(am)
-            B.obj('bumper_end_%d_%d' % (s > 0, x > 0), bm_uv(0.06, B.pick(10, 8), B.pick(6, 5), (x, 0.41, zz)), cr)
+            B.obj('bumper_end_%d_%d' % (s > 0, x > 0), bm_uv(0.06, B.pick(8, 6), B.pick(6, 4), (x, 0.41, zz)), cr)
     # bezelled headlights in the nose, chrome-ringed tail lights
     for s in (1, -1):
         hx = s * 0.52
@@ -196,7 +217,7 @@ def build(B):
         B.obj('head_lens_%d' % (s > 0), bm_ellipsoid(0.1, 0.03, 0.1, L['cyl_s'], B.pick(5, 2), (hx, 0.58, 1.98), phi1=math.pi / 2, M=AZ), led('#fff0d8'))
         B.light(hx, 0.58, 2.08, 1.1, '#fff2c8', head=1)
         B.obj('tail_ring_%d' % (s > 0), bm_rrect_tube(0.3, 0.12, 0.05, 0.014, B.pick(4, 1), 4, at=(s * 0.55, 0.6, -1.995), axis=AZn), cr)
-        B.obj('tail_%d' % (s > 0), bm_box(0.26, 0.08, 0.04, (s * 0.55, 0.6, -1.99)), led('#ff1a2a'), bevel=0.012, bevel_angle=False, segments=1)
+        B.obj('tail_%d' % (s > 0), bm_capsule(0.13, 0.042, B.pick(10, 6), lo, (s * 0.55, 0.6, -1.99), (1, 0, 0)), led('#ff1a2a'))
         B.light(s * 0.55, 0.6, -2.1, 0.8, '#ff2a3a', tail=1)
 
     # ---- the pleated wrapper: a 16-flute lathe with crisp creases, candy-striped pink/white, chrome beads ----
@@ -209,16 +230,16 @@ def build(B):
         return 1 if pleat % 2 else 0
     wr = B.obj('wrapper', bm_lathe([(0.82, 0), (0.83, 0.035), (1.02, 0.9), (1.05, 0.92)], 32, CUP, rmod=rmod), [M_wrapP, M_wrapW], face_mat=pleat_mat)
     B.vcol(wr, lambda x, y, z: (0.82 + 0.18 * sstep((y - 0.7) / 0.8),) * 3)
-    B.obj('wrap_lip', bm_lathe([(1.01, 0.895), (1.075, 0.925), (1.01, 0.955)], 32, CUP, rmod=rmod), cr)
-    B.obj('wrap_base', bm_torus(0.84, 0.028, B.pick(28, 16), B.pick(5, 4), AY, (0, 0.735, CUP[2])), cr)
+    B.obj('wrap_lip', bm_lathe([(1.01, 0.895), (1.075, 0.925), (1.01, 0.955)], B.pick(32, 16), CUP, rmod=rmod), cr)
+    B.obj('wrap_base', bm_torus(0.84, 0.028, B.pick(24, 16), B.pick(4, 4), AY, (0, 0.735, CUP[2])), cr)
 
     # ---- the face on the wrapper: big glossy eyes glaring inward, furious chocolate brows, a tight little frown ----
     for s in (1, -1):
         c, n = wrap_pt(s * 0.27, 1.27, 0.035)
         A = aim(tuple(n))
-        B.obj('eye_white_%d' % (s > 0), bm_ellipsoid(0.15, 0.06, 0.18, B.pick(20, 10), B.pick(10, 5), tuple(c), M=A), M_eye)
+        B.obj('eye_white_%d' % (s > 0), bm_ellipsoid(0.15, 0.06, 0.18, B.pick(18, 10), B.pick(9, 5), tuple(c), M=A), M_eye)
         pc = c + n * 0.045 + Vector((-s * 0.045, -0.035, 0))
-        B.obj('eye_pupil_%d' % (s > 0), bm_ellipsoid(0.075, 0.03, 0.085, B.pick(16, 8), B.pick(8, 4), tuple(pc), M=A), M_pupil)
+        B.obj('eye_pupil_%d' % (s > 0), bm_ellipsoid(0.075, 0.03, 0.085, B.pick(14, 8), B.pick(7, 4), tuple(pc), M=A), M_pupil)
         B.obj('eye_hl_%d' % (s > 0), bm_ico(0.026, B.pick(2, 1), tuple(pc + n * 0.03 + Vector((s * 0.015, 0.03, 0)))), led_w)
         # the angry lid: a pink cap slanting down toward the nose over the top of the eye
         lid = [tuple(wrap_pt(s * (0.1 + 0.36 * t), 1.39 + 0.12 * t + 0.035 * math.sin(t * math.pi), 0.06)[0]) for t in (k / 8 for k in range(9))]
@@ -232,22 +253,41 @@ def build(B):
     for i in range(1, 11):
         u = 0.1 + 0.85 * i / 10; prof.append((max(0.02, rope_R(u) - 0.35 * rope_r(u)), rope_c(u).y))
     prof.append((0, rope_c(0.97).y))
-    def frost_col(x, y, z):   # local to FROST_J: a strawberry-milk blush at the base fading to pearl white at the top
-        t = sstep((y - 0.05) / 1.3); return (1.0, 0.86 + 0.14 * t, 0.92 + 0.08 * t)
-    core = B.obj('frost_core', to_local(bm_lathe(prof, B.pick(28, 14), (0, 0, CUP[2])), FROST_J), M_frost, parent=F)
-    rope = B.obj('frost_rope', to_local(bm_rope(B.pick(124, 56), B.pick(19, 7), 7, B.pick(0.16, 0.0)), FROST_J), M_frost, parent=F)
-    B.vcol(core, frost_col); B.vcol(rope, frost_col)
+    amp = B.pick(AMP_HI, 0.0)
+    def frost_col(x, y, z):   # local to FROST_J: the rope's pastel gradient by height (the core peeks out between laps)
+        return tuple(c * 0.86 for c in pastel(min(1.0, max(0.0, (y - 0.2) / 1.4))))
+    core = B.obj('frost_core', to_local(bm_lathe(prof, B.pick(20, 8), (0, 0, CUP[2])), FROST_J), M_frost, parent=F)
+    cols = []
+    rope = B.obj('frost_rope', to_local(bm_rope(B.pick(96, 56), B.pick(24, 7), RIDGES, amp, cols), FROST_J), M_frost, parent=F)
+    B.vcol(core, frost_col)
+    it = iter(cols); nverts = len(rope.data.vertices)
+    B.vcol(rope, (lambda x, y, z: next(it)) if len(cols) == nverts else frost_col)
+    # a glossy chocolate drizzle zig-zagging over the lower laps, with drips running down the outside (showroom)
+    if not lo:
+        dz = []
+        for i in range(64):
+            u = 0.05 + 0.5 * i / 63; ph = math.pi * (0.33 + 0.17 * math.sin(u * NT * TAU * 2.0))
+            P, n, T = rope_pt(u, ph, RIDGES, amp); dz.append(tuple(P + n * 0.04 - Vector(FROST_J)))
+        B.obj('drizzle', bm_tube(dz, [0.015] + [0.058] * 62 + [0.015], 6), M_choc, parent=F)
+        for k in range(4):   # a drip hangs from each outermost swing of the zig-zag
+            u = (0.75 + k) / (NT * 2.0); dl = 0.12 + 0.06 * (k % 3)
+            pts = []; rs = []
+            for j in range(6):
+                ph = math.pi * (0.16 - (0.3 + dl) * j / 5)
+                P, n, T = rope_pt(u, ph, RIDGES, amp); pts.append(tuple(P + n * 0.036 - Vector(FROST_J))); rs.append(0.04 - 0.012 * j / 5)
+            B.obj('drip_%d' % k, bm_tube(pts, rs, 6), M_choc, parent=F)
+            B.obj('drip_bead_%d' % k, bm_ico(0.042, 1, pts[-1]), M_choc, parent=F)
     # sprinkles: deterministic scatter over the rope's top and outer face
-    n_sp = B.pick(44, 12); placed = 0; tries = 0; spots = []
+    n_sp = B.pick(44, 10); placed = 0; tries = 0; spots = []
     while placed < n_sp and tries < 600:
         tries += 1
         u = rng.uniform(0.04, 0.9); ph = rng.uniform(-0.25 * math.pi, 0.72 * math.pi)
-        P, n, T = rope_pt(u, ph, 7, B.pick(0.16, 0.0))
+        P, n, T = rope_pt(u, ph, RIDGES, amp)
         if n.y < -0.05: continue
         t2 = n.cross(T); psi = rng.uniform(0, TAU); d = T * math.cos(psi) + t2 * math.sin(psi)
         at = P + n * 0.018 - Vector(FROST_J)
         col = NEON[(placed * 3 + rng.randrange(7)) % 7]
-        B.obj('sprinkle_%d' % placed, bm_capsule(0.072, 0.026, B.pick(7, 5), lo, (at.x, at.y, at.z), (d.x, d.y, d.z)), sprk(col), parent=F)
+        B.obj('sprinkle_%d' % placed, bm_capsule(0.072, 0.026, B.pick(6, 5), lo, (at.x, at.y, at.z), (d.x, d.y, d.z)), sprk(col), parent=F)
         spots.append((P, n)); placed += 1
     # glints: little four-point stars beside some sprinkles, two groups that twinkle in turn (part_glintA / glintB)
     for gi, gname in enumerate(('glintA', 'glintB')):
@@ -257,12 +297,12 @@ def build(B):
             c = P + n * 0.06 - Vector(FROST_J); u_, v_ = perp_basis(tuple(n))
             for m_, (a, b) in enumerate(((u_, 0.09), (v_, 0.09))):
                 p0 = c - a * b; p1 = c + a * b
-                B.obj('%s_%d_%d' % (gname, k, m_), bm_tube([tuple(p0), tuple(c), tuple(p1)], [0.0, 0.014, 0.0], 4, caps=False), led_w, parent=G)
+                B.obj('%s_%d_%d' % (gname, k, m_), bm_tube([tuple(p0), tuple(c), tuple(p1)], [0.0, 0.014, 0.0], B.pick(4, 3), caps=False), led_w, parent=G)
             B.obj('%s_%d_c' % (gname, k), bm_ico(0.022, 1, tuple(c)), led_w, parent=G)
 
     # ---- the cherry (part_cherry): a glossy red ball with a stem and a leaf; it rides the frosting, bounces, wobbles ----
     CH = B.part('cherry', CHERRY)
-    ball = B.obj('cherry_ball', bm_uv(0.3, B.pick(24, 12), B.pick(16, 8)), M_cherry, parent=CH)
+    ball = B.obj('cherry_ball', bm_uv(0.3, B.pick(20, 12), B.pick(12, 8)), M_cherry, parent=CH)
     B.vcol(ball, lambda x, y, z: (0.62 + 0.38 * sstep((y + 0.3) / 0.6),) * 3)
     B.obj('cherry_dimple', bm_uv(0.07, B.pick(10, 6), B.pick(6, 4), (0, 0.27, 0)), mat('cherry_dark', '#9a0818', rough=0.2, coat=1.0), parent=CH)
     if not lo: B.obj('cherry_hl', bm_uv(0.045, 8, 5, (0.12, 0.2, 0.2)), led_w, parent=CH)
@@ -284,16 +324,16 @@ def build(B):
     B.light(*CHERRY, 1.4, '#ff2a4a', big=1)
 
     # ---- cockpit: a candy dash with chrome gauges, the seat behind the cupcake, a sprinkle-mine dropper at the back ----
-    B.obj('dash', bm_box(0.7, 0.18, 0.24, (0, 1.04, -0.3)), M_fender, bevel=0.06, bevel_angle=False, segments=B.pick(3, 1))
+    B.obj('dash', bm_pillow(0.7, 0.18, 0.24, 0.07, **PL, at=(0, 1.04, -0.3)), M_fender)
     if not lo:
         for s, gc in ((1, '#ffe6a0'), (-1, '#9ad8ff')):
-            B.obj('gauge_rim_%d' % (s > 0), bm_torus(0.07, 0.014, 14, 5, AZ, (s * 0.18, 1.1, -0.43)), cr)
+            B.obj('gauge_rim_%d' % (s > 0), bm_torus(0.07, 0.014, 12, 4, AZ, (s * 0.18, 1.1, -0.43)), cr)
             B.obj('gauge_face_%d' % (s > 0), bm_cyl(0.065, 0.065, 0.02, 14, AZ, (s * 0.18, 1.1, -0.43)), glow('gauge_' + gc.lstrip('#'), gc, strength=1.2, rough=0.2))
-    B.seat(0, 1.12, -1.3, col='#ff4fa8', accent='#ffe24a', wheelZ=-0.72)
-    B.obj('drop_mount', bm_box(0.42, 0.22, 0.3, (0, 0.8, -1.82)), M_fender, bevel=0.05, bevel_angle=False, segments=B.pick(2, 1))
+    B.seat_pro(0, 1.12, -1.3, col='#ff4fa8', accent='#ffe24a', wheelZ=-0.72, piping='#fff4f8')
+    B.obj('drop_mount', bm_pillow(0.42, 0.22, 0.3, 0.07, **PL, at=(0, 0.8, -1.82)), M_fender)
     B.obj('drop_funnel', bm_cyl(0.1, 0.17, 0.42, L['cyl_s'], AZn, (0, 0.8, -1.99)), cr, bevel=0.02)
     B.obj('drop_bore', bm_cyl(0.145, 0.145, 0.1, L['cyl_s'], AZn, (0, 0.8, -2.16), caps=False, flip=True), M_bore)
-    B.obj('drop_ring', bm_torus(0.165, 0.018, B.pick(20, 10), B.pick(6, 4), AZ, (0, 0.8, -2.2)), led_p)
+    B.obj('drop_ring', bm_torus(0.165, 0.018, B.pick(16, 10), B.pick(4, 4), AZ, (0, 0.8, -2.2)), led_p)
     B.obj('drop_mine', bm_uv(0.08, B.pick(12, 8), B.pick(8, 5), (0, 0.78, -2.1)), sprk('#ffe24a'))
     for s in (1, -1):
         B.obj('exh_%d' % (s > 0), bm_cyl(0.05, 0.065, 0.3, B.pick(12, 8), AZn, (s * 0.34, 0.5, -2.02)), cr)

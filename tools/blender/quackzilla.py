@@ -92,7 +92,7 @@ def build(B):
     B.vcol(tub, lambda x, y, z: (0.78 + 0.22 * sstep((y - 0.44) / 0.4), 0.8 + 0.2 * sstep((y - 0.44) / 0.4), 0.95 + 0.05 * sstep((y - 0.44) / 0.4)))
     B.obj('tub_rim', bm_rrect_tube(2.6, 4.58, 0.72, 0.075, B.pick(7, 3), B.pick(9, 5), at=(0, TUB_TOP, 0)), M_enamel)
     B.obj('tub_trim', bm_rrect_tube(2.53, 4.5, 0.68, 0.022, B.pick(8, 3), B.pick(6, 4), at=(0, 0.66, 0)), cr)
-    B.obj('chassis', bm_box(1.6, 0.26, 3.5, (0, 0.36, 0)), M_under, bevel=0.06, bevel_angle=False, segments=B.pick(2, 1))
+    B.obj('chassis', bm_pillow(1.6, 0.26, 3.5, 0.1, **(dict(seg=2, phis=[-45, 0, 0, 45]) if B.lo else dict(seg=3, phis=[-50, -20, 0, 0, 20, 50])), at=(0, 0.36, 0)), M_under)
     # the bath water: a disc inside the rim with a ripple-and-foam gradient (pale near the duck, deep blue at the walls)
     nr = B.pick(7, 3); bound = rrect_pts(2.5, 4.46, 0.66, B.pick(8, 3))
     secs = [[(0.0, WATER_Y, 0.0)]] + [[(x * k, WATER_Y, z * k) for x, z in bound] for k in [(i + 1) / nr for i in range(nr)]]
@@ -104,7 +104,7 @@ def build(B):
     B.vcol(water, water_col)
     # LED rows along the tub's flank (yellow and cyan, every 3rd bulb a game light), cyan under-glow below
     for s in (1, -1):
-        B.leds((s * 1.3, 0.74, 1.6), (s * 1.3, 0.74, -1.6), B.pick(11, 5), [LIGHT, CYAN], 0.05, 3, prefix='tled%d' % (s > 0))
+        B.leds((s * 1.3, 0.74, 1.6), (s * 1.3, 0.74, -1.6), B.pick(8, 4), [LIGHT, CYAN], 0.05, 3, prefix='tled%d' % (s > 0))
         B.strip((s * 0.95, 0.47, 1.7), (s * 0.95, 0.47, -1.7), CYAN, th=0.04)
         B.light(s * 0.9, 0.25, 0.0, 2.4, CYAN, led=1)
     B.leds((0.45, 0.76, -2.3), (-0.45, 0.76, -2.3), B.pick(4, 2), [LIGHT, CYAN], 0.045, 0, prefix='rled')   # the back wall, for the cars behind
@@ -121,7 +121,7 @@ def build(B):
         B.obj('head_lens_%d' % (s > 0), bm_ellipsoid(0.12, 0.035, 0.12, L['cyl_s'], B.pick(5, 2), (hx, 0.66, 2.25), phi1=math.pi / 2, M=AZ), ledw)
         B.light(hx, 0.66, 2.36, 1.3, '#fff2c8', head=1)
         B.obj('tail_ring_%d' % (s > 0), bm_rrect_tube(0.4, 0.13, 0.06, 0.016, B.pick(4, 1), 4, at=(s * 0.74, 0.68, -2.26), axis=AZn), cr)
-        B.obj('tail_%d' % (s > 0), bm_box(0.36, 0.09, 0.04, (s * 0.74, 0.68, -2.255)), led('#ff1a2a'), bevel=0.015, bevel_angle=False, segments=1)
+        B.obj('tail_%d' % (s > 0), bm_capsule(0.046, 0.36, B.pick(10, 5), B.pick(2, 1), (s * 0.74, 0.68, -2.26), AX), led('#ff1a2a'))
         B.light(s * 0.74, 0.68, -2.38, 0.9, '#ff2a3a', tail=1)
 
     # ---- hood ornament: a chrome bath tap on the rim, hot and cold handles, a glowing drip ----
@@ -143,7 +143,7 @@ def build(B):
     if not lo:
         for i in range(7):
             p = catmull_at([(0, 0.66, -2.34), (0, 0.84, -2.36), (0, 0.92, -2.2)], i / 6)
-            B.obj('chain_%d' % i, bm_torus(0.026, 0.008, 10, 4, AX if i % 2 else AZ, p), cr)
+            B.obj('chain_%d' % i, bm_torus(0.026, 0.008, B.pick(8, 6), 3, AX if i % 2 else AZ, p), cr)
 
     # ---- the duck (part_duck): a sculpted vinyl body on the float pivot, warm gradient, upturned tail ----
     D = B.part('duck', PIVOT)
@@ -205,9 +205,9 @@ def build(B):
     for s in (1, -1):
         d = Vector((s * 0.4, 0.36, 0.84)).normalized(); c = Vector(HEAD_C) + d * (HEAD_R - 0.12)
         A = aim(tuple(d))
-        B.obj('eye_white_%d' % (s > 0), bm_ellipsoid(0.23, 0.2, 0.23, B.pick(24, 10), B.pick(12, 5), tuple(c), M=A @ rot(pitch=0)), M_eye, parent=H)
+        B.obj('eye_white_%d' % (s > 0), bm_ellipsoid(0.23, 0.2, 0.23, B.pick(20, 10), B.pick(10, 5), tuple(c), M=A @ rot(pitch=0)), M_eye, parent=H)
         look = (d + Vector((s * 0.05, 0.06, 0.3))).normalized(); pc = c + look * 0.155
-        B.obj('eye_pupil_%d' % (s > 0), bm_ellipsoid(0.15, 0.07, 0.15, B.pick(18, 8), B.pick(9, 4), tuple(pc), M=aim(tuple(look))), M_pupil, parent=H)
+        B.obj('eye_pupil_%d' % (s > 0), bm_ellipsoid(0.15, 0.07, 0.15, B.pick(16, 8), B.pick(8, 4), tuple(pc), M=aim(tuple(look))), M_pupil, parent=H)
         B.obj('eye_hl_%d' % (s > 0), bm_ico(0.04, B.pick(2, 1), tuple(pc + look * 0.07 + Vector((s * 0.03, 0.05, 0)))), led('#ffffff', 3.0), parent=H)
         if not lo:
             B.obj('eye_hl2_%d' % (s > 0), bm_ico(0.018, 1, tuple(pc + look * 0.07 + Vector((-s * 0.04, -0.045, 0)))), led('#ffffff', 3.0), parent=H)
@@ -235,7 +235,7 @@ def build(B):
     # ---- bubble clusters floating on the water (part_foam) and the glowing ripples round the duck (part_ripple) ----
     F = B.part('foam', (0, WATER_Y, 0))
     clusters = [(1.0, 1.2), (-1.0, 1.0), (0.95, -0.6), (-0.98, -0.9), (0.6, -1.85), (-0.55, -1.9), (0.0, 2.02), (1.02, 0.2), (-1.04, 0.1)]
-    if lo: clusters = clusters[:6]
+    if lo: clusters = clusters[:5]
     for ci, (cx, cz) in enumerate(clusters):
         for k in range(B.pick(3, 2)):
             a = ci * 1.7 + k * 2.1; r = (0.11, 0.08, 0.065, 0.05)[k]
@@ -247,10 +247,10 @@ def build(B):
     R = B.part('ripple', (0, WATER_Y, 0))
     for i, (Rr, sy, z) in enumerate(((1.12, 1.62, 0.0), (1.2, 1.74, -0.05))):
         if lo and i: continue
-        B.obj('ripple_%d' % i, bm_torus(Rr, 0.014, B.pick(40, 28), B.pick(4, 3), AY, (0, 0.012, z), sy=sy), M_ripple, parent=R)
+        B.obj('ripple_%d' % i, bm_torus(Rr, 0.014, B.pick(36, 24), 3, AY, (0, 0.012, z), sy=sy), M_ripple, parent=R)
 
     # ---- the rider's seat on the duck's back, the steering wheel on a chrome post ----
-    B.seat(0, 2.48, -0.3, col=COL2, accent=CYAN, wheelY=2.86, wheelZ=0.3)
+    B.seat_pro(0, 2.48, -0.3, col=COL2, accent=CYAN, wheelY=2.86, wheelZ=0.3, piping='#fff4c8')
     B.obj('wheel_post', bm_rod((0, 2.3, 0.36), (0, 2.81, 0.36), 0.04, L['rod']), cr)
 
     # ---- wheels and size info ----
