@@ -112,9 +112,11 @@ function pageHelpers() {
   let page = await open('burning-man');
   await page.waitForFunction(() => window.BRADY_BURNS && window.BRADY_BURNS.debug && window.BRADY_BURNS.BurnsSkinActor && window.BRADY_BURNS.BurnsSkinActor.ready && window.BRADY_BURNS.debug.skinHero, null, { timeout: 120000 });
   await page.evaluate(pageHelpers);
-  // the shipped characters stay on the untextured path
+  // the shipped characters: Brady is the textured realistic hero (36-byte path, LOD0 within the 35k budget), Chinka
+  // stays on the untextured 32-byte path
   const old = await page.evaluate(() => { const A = window.BRADY_BURNS.BurnsSkinActor.assets; return Object.keys(A).map(k => ({ kind: k, name: A[k].name, textured: !!A[k].textured, stub: !!A[k].geo.skinPbr, stride: A[k].geo.stride, tris: A[k].tris })); });
-  check('old GLBs (brady, chinka) take the untextured 32-byte path', old.length >= 2 && old.every(a => !a.textured && !a.stub && a.stride === 32), old);
+  const oB = old.find(a => a.kind === 'brady'), oC = old.find(a => a.kind === 'chinka');
+  check('shipped GLBs: brady textured (36-byte, <= 35k tris), chinka untextured (32-byte)', !!oB && oB.textured && oB.stub && oB.stride === 36 && oB.tris <= 35000 && !!oC && !oC.textured && !oC.stub && oC.stride === 32, old);
   await page.evaluate(() => { localStorage.clear(); window.__burnsHideHUD = true; window.BRADY_BURNS.debug.play(1); });
   await page.waitForFunction(() => { const s = window.BRADY_BURNS.debug.scene(); return s && s.player && s.world && s.state !== 'load'; }, null, { timeout: 120000 });
   await page.evaluate(() => { const D = window.BRADY_BURNS.debug, s = D.scene(); D.skipCine(); s.dayCardT = -1; __T.hook(s); const p = s.player; D.teleport(p.x + 40, p.z + 6); p.yaw = Math.PI; s.camYaw = Math.PI; D.sim(0.5); });
@@ -244,11 +246,11 @@ function pageHelpers() {
       f.set('jaw', null); f.set('blink', null);
       let blinks = 0; for (let i = 0; i < 600; i++) { h.update(1 / 60); if (f.w.blink > 0.5) blinks++; }
       f.say(1.5); let talk = 0; for (let i = 0; i < 60; i++) { h.update(1 / 60); talk = Math.max(talk, f.w.jaw); }
-      const viaChar = !!X.face(window.BRADY_BURNS.debug.scene().player.ch) === false;   // the untextured player has no face poses
-      return { jawMoved: Math.hypot(jaw1[0] - jaw0[0], jaw1[1] - jaw0[1], jaw1[2] - jaw0[2]), lidMoved: Math.hypot(lid1[0] - lid0[0], lid1[1] - lid0[1], lid1[2] - lid0[2]), blinkFrames: blinks, talkJaw: +talk.toFixed(2), oldPlayerNoFace: viaChar };
+      const viaChar = !!X.face(window.BRADY_BURNS.debug.scene().player.ch);   // the shipped (realistic) player Brady carries face poses
+      return { jawMoved: Math.hypot(jaw1[0] - jaw0[0], jaw1[1] - jaw0[1], jaw1[2] - jaw0[2]), lidMoved: Math.hypot(lid1[0] - lid0[0], lid1[1] - lid0[1], lid1[2] - lid0[2]), blinkFrames: blinks, talkJaw: +talk.toFixed(2), playerHasFace: viaChar };
     });
     check('face poses move the jaw and eyelid joints', face.jawMoved > 0.01 && face.lidMoved > 0.01, face);
-    check('automatic blink fires within 10 s, say() drives the jaw, untextured characters get no face', face.blinkFrames > 0 && face.talkJaw > 0.3 && face.oldPlayerNoFace, face);
+    check('automatic blink fires within 10 s, say() drives the jaw, the shipped player Brady has face poses', face.blinkFrames > 0 && face.talkJaw > 0.3 && face.playerHasFace, face);
   }
   // behind the same BurnsSkinActor API: the fixture stands in as the player's Brady
   if (want('actor')) {
