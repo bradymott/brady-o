@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("vn_mekong", {"scale":2.0,"image":"vn_mekong.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":791}},"anims":{},"strips":{"L0":{"w":2048,"h":391,"top":180.0,"x":0,"y":399},"L1":{"w":2048,"h":398,"top":245.0,"x":0,"y":0}}});

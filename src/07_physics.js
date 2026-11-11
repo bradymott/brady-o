@@ -147,6 +147,8 @@ function moveBody(b, area, dt, opts) {
 
 function bodyInWater(b, area) {
   if (area.water) return true;
+  // a moving water line (tide, valve, rising flood): everything below it is water
+  if (area.waterTop != null && b.y + b.h * 0.4 > area.waterTop) return true;
   const tx = Math.floor((b.x + b.w / 2) / TS), ty = Math.floor((b.y + b.h * 0.4) / TS);
   return tileAt(area, tx, ty) === T.WATER;
 }
@@ -193,7 +195,7 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
   const zf = zoneForce(area, p);
 
   if (water) {
-    const target = dir * PHYS.swimMaxX;
+    const target = dir * PHYS.swimMaxX * (opts.swimMul || 1);
     p.vx = approach(p.vx, target, (dir ? PHYS.swimAccel : PHYS.swimDrag) * dt);
     if (inp.jumpPressed) {
       p.vy = Math.min(p.vy, 0) - PHYS.swimStroke * 0.85;
@@ -220,12 +222,14 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
     const running = inp.action || p.runT > PHYS.runDelay;
     let maxS;
     if (p.onGround) { maxS = (running ? PHYS.run : PHYS.walk) * smul; p.airMax = maxS; }
-    else maxS = Math.max(PHYS.walk * (opts.speedMul || 1), p.airMax || PHYS.walk);
-    if (p.crouch && p.onGround) {
+    else maxS = Math.max(PHYS.walk * (opts.speedMul || 1), p.airMax || PHYS.walk) * (opts.airBoost || 1);
+    // crawling (knee pads): move while crouched at 0.8x walk
+    if (opts.crawl && p.crouch && p.onGround) maxS = PHYS.walk * 0.8 * smul;
+    if (p.crouch && p.onGround && !opts.crawl) {
       p.vx = approach(p.vx, 0, PHYS.decel * (ice ? 0.15 : 0.6) * dt);
     } else if (dir !== 0) {
       let a;
-      if (!p.onGround) a = PHYS.airAccel;
+      if (!p.onGround) a = PHYS.airAccel * (area.airSteer || 1);
       else if (p.vx !== 0 && sign(p.vx) !== dir) a = PHYS.turn;
       else a = PHYS.accel;
       if (ice) a *= 0.32;
@@ -254,7 +258,9 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
       if (zf.vmax && p.vy < -zf.vmax) p.vy = -zf.vmax;
       if (zf.fy < 0) p.jumping = false;
     }
-    if (p.vy > PHYS.maxFall) p.vy = PHYS.maxFall;
+    // freefall shafts cap the fall speed (area.fallCap, tiles/s)
+    const maxFall = area.fallCap ? Math.min(PHYS.maxFall, area.fallCap * TS) : PHYS.maxFall;
+    if (p.vy > maxFall) p.vy = maxFall;
     if (p.vy >= 0) p.jumping = false;
   }
   // conveyor carry
@@ -280,4 +286,39 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
 function newPlayerBody(x, y, big) {
   const d = big ? PLAYER_DIM.big : PLAYER_DIM.small;
   return { x: x - d.w / 2, y: y - d.h, w: d.w, h: d.h, vx: 0, vy: 0, onGround: false, coyote: 0, jumpBuf: 0, jumping: false, runT: 0, airMax: PHYS.walk, facing: 1, crouch: false, inWater: false, stroke: 0, groundTile: 0, ride: null, dropT: 0 };
+}
+
+/* ---------- gravity flip bands (FLIP, LEVEL_OVERHAUL.md §1 #9) ----------
+   Inside a zone of kind 'flip' gravity points up and Brady walks on the ceiling. The physics runs unchanged in a
+   vertically mirrored copy of the area (cached until a tile changes: area.tileRev), so the game and the validator share
+   it. Body coordinates stay in world space outside this function. */
+function flipZoneAt(area, x, y) {
+  const Z = area.zones; if (!Z) return null;
+  for (const z of Z) if (z.kind === 'flip' && !z.off && x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h) return z;
+  return null;
+}
+function flippedArea(area) {
+  const rev = area.tileRev || 0;
+  if (area._flip && area._flip.rev === rev) return area._flip.A;
+  const W = area.W, H = area.H;
+  const mir = arr => { if (!arr) return arr; const o = new arr.constructor(arr.length); for (let y = 0; y < H; y++) o.set(arr.subarray((H - 1 - y) * W, (H - y) * W), y * W); return o; };
+  const A = Object.assign({}, area, { tiles: mir(area.tiles), surf: mir(area.surf), hide: mir(area.hide), _flip: null,
+    zones: (area.zones || []).filter(z => z.kind !== 'flip').map(z => Object.assign({}, z, { y: H * TS - (z.y + z.h), fy: -(z.fy || 0) })), flippedOf: area });
+  if (area.springs && area.springs.has) A.springs = new Set([...area.springs].map(k => { const [x, y] = k.split(',').map(Number); return x + ',' + (H - 1 - y); }));
+  area._flip = { rev, A };
+  return A;
+}
+// one physics step that honours flip bands; p.flipped tells whether it ran upside down
+function playerPhysicsFlip(p, inp, area, dt, platforms, opts) {
+  const inFlip = area.hasFlip && flipZoneAt(area, p.x + p.w / 2, p.y + p.h / 2);
+  if (!inFlip) { p.flipped = false; return playerPhysics(p, inp, area, dt, platforms, opts); }
+  const H = area.H * TS, mirrorY = () => { p.y = H - (p.y + p.h); p.vy = -p.vy; if (p.groundTy != null) p.groundTy = area.H - 1 - p.groundTy; };
+  if (!p.flipped) p.onGround = false;   // crossing the line in mid-air: the ceiling is the new floor
+  mirrorY();
+  if (opts && opts.live) area.tileRev = (area.tileRev || 0) + 1;   // in the game tiles change under Brady (bumps, crumbles): mirror afresh
+  const ev = playerPhysics(p, inp, flippedArea(area), dt, null, opts);
+  mirrorY();
+  if (ev.bonks) ev.bonks = ev.bonks.map(b => ({ tx: b.tx, ty: area.H - 1 - b.ty }));
+  p.flipped = true;
+  return ev;
 }

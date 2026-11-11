@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("id_kites", {"scale":2.0,"image":"id_kites.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1300}},"anims":{},"strips":{"L0":{"w":2048,"h":343,"top":117.5,"x":0,"y":956},"L1":{"w":2048,"h":505,"top":133.0,"x":0,"y":0},"L2":{"w":2048,"h":449,"top":215.5,"x":0,"y":506}}});

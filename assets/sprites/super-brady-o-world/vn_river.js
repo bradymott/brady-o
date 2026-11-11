@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("vn_river", {"scale":2.0,"image":"vn_river.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":537}},"anims":{},"strips":{"L0":{"w":2048,"h":281,"top":204.5,"x":0,"y":0},"L1":{"w":2048,"h":254,"top":317.0,"x":0,"y":282}}});

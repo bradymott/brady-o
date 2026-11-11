@@ -607,7 +607,7 @@ const power = {
 /* ---------------- entities ---------------- */
 // a Shiba with a pair of nunchucks: hands them over whenever Brady has none
 class JpShiba extends Ent {
-  constructor(g, s) { super(g, s, 34, 30); this.cool = 0; this.wag = 0; }
+  constructor(g, s) { super(g, s, 34, 30); this.cfg = JpShiba.cfg; this.cool = 0; this.wag = 0; }
   update(dt) { this.t += dt; if (this.cool > 0) this.cool -= dt; this.wag += dt * (this.cool > 0 ? 18 : 7); const p = this.g.player; if (p) this.dir = p.cx < this.cx ? -1 : 1; }
   touchPlayer(p) {
     if (this.cool > 0 || p.dead || (p.sig && p.sig.id === 'nunchuck')) return;
@@ -617,6 +617,8 @@ class JpShiba extends Ent {
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, d = this.dir || 1, t = this.t, has = this.g.player && this.g.player.sig && this.g.player.sig.id === 'nunchuck';
     K.shadow(ctx, x, y, 18);
+    // pre-rendered art (sprite 'shiba': idle = offering the nunchucks, wave = once Brady has them); procedural below is the fallback
+    if (TourSprite.of(this) && TourSprite.draw(ctx, this, x, y, has ? 'wave' : 'idle', TourSprite.FALLBACK.friend)) return;
     ctx.save(); ctx.translate(x, y); ctx.scale(d, 1);
     // curly tail
     ctx.strokeStyle = '#d8843a'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(-13, -20, 5, Math.PI * 0.3 + Math.sin(this.wag) * 0.4, Math.PI * 1.8 + Math.sin(this.wag) * 0.4); ctx.stroke(); ctx.lineCap = 'butt';
@@ -638,6 +640,8 @@ class JpShiba extends Ent {
     if (!has) { ctx.save(); ctx.translate(x + d * 16, y - 20); ctx.rotate(Math.sin(t * 3) * 0.15); for (const dx of [-5, 5]) { ctx.fillStyle = '#a8603a'; rr(ctx, dx - 2, -1, 4, 13, 2); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.fillRect(dx - 2, 10, 4, 2); } ctx.strokeStyle = '#d8d8e0'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.quadraticCurveTo(0, -4, 5, 0); ctx.stroke(); ctx.restore(); }
   }
 }
+// a static cfg so 30_tour_sprites.js names its pre-rendered art ('shiba/idle', 'shiba/wave')
+JpShiba.cfg = { w: 34, h: 30 };
 // bending bamboo: a tall culm with a leafy perch on top. Under Brady's weight it bows forward and down,
 // carrying him along; jump while it's bent and it springs back, flinging him high
 class JpPole extends Ent {

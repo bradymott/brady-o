@@ -448,6 +448,15 @@ const decor = {
 const decorLights = { idTorch: [120, '#ffa040', -60] };
 
 /* ---------------- enemies ---------------- */
+/* pre-rendered art from the 'id' atlas (tools/blender/sprites/id_enemies.py) for the custom classes below:
+   the clip 'kind/pose' or the frame 'kind_pose_000'; false until the atlas is in, so the procedural art stays the
+   fallback */
+const idSprite = (ctx, kind, pose, t, x, y, dir, o) => {
+  if (typeof Atlas === 'undefined' || !Tour.countries.id || !Tour.countries.id.sprites) return false;
+  const opt = Object.assign({ scale: ART_SCALE.enemy }, o);
+  return Atlas.animate(ctx, 'id', kind + '/' + pose, t, x, y, dir || 1, opt) || Atlas.draw(ctx, 'id', kind + '_' + pose + '_000', x, y, dir || 1, opt);
+};
+const idJellyVar = (col, list) => ['', 'b', 'c'][Math.max(0, list.indexOf(col))];
 const jellyArt = (ctx, x, y, t, col, glow) => {
   ctx.save(); ctx.translate(x, y);
   if (glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(0, -2, 1, 0, -2, 22); g.addColorStop(0, rgba(col, 0.5)); g.addColorStop(1, rgba(col, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, -2, 22, 0, TAU); ctx.fill(); ctx.restore(); }
@@ -469,7 +478,12 @@ class IdJelly extends Ent {
   }
   hit(kind) { if (this.dead) return false; if (kind === 'stomp' || kind === 'spin') { this.dead = true; this.k = 0.4; Sound.play('splat', { pitch: 1.6, vol: 0.5 }); this.g.burst(this.cx, this.cy, 10, this.col, 'spark'); return true; } this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead) p.hurt(this); }
-  draw(ctx) { if (this.dead) { ctx.save(); ctx.translate(this.cx, this.y + this.h); ctx.scale(1.4, 0.3); jellyArt(ctx, 0, 0, this.t, this.col); ctx.restore(); return; } jellyArt(ctx, this.cx, this.y + 12, this.t, this.col); }
+  draw(ctx) {
+    const v = idJellyVar(this.col, ['#c88aff', '#ff8ad0', '#8ad0ff']);
+    if (this.dead) { if (idSprite(ctx, 'jelly', 'flat' + v, this.t, this.cx, this.y + this.h - 4, 1)) return; ctx.save(); ctx.translate(this.cx, this.y + this.h); ctx.scale(1.4, 0.3); jellyArt(ctx, 0, 0, this.t, this.col); ctx.restore(); return; }
+    if (idSprite(ctx, 'jelly', 'swim' + v, this.t, this.cx, this.cy, 1, this.knocked ? { scale: ART_SCALE.enemy, rot: Math.PI } : null)) return;
+    jellyArt(ctx, this.cx, this.y + 12, this.t, this.col);
+  }
 }
 // a glowing night-dive jellyfish: drifts up and down, lights the reef, stings
 class IdGlowJelly extends Ent {
@@ -477,7 +491,14 @@ class IdGlowJelly extends Ent {
   update(dt) { this.t += dt; if (this.knocked) return this.updateKnocked(dt); this.y = this.hy + Math.sin(this.t * 0.8 + this.ph) * this.range * 0.5; this.x = this.hx + Math.sin(this.t * 0.31 + this.ph) * 8; }
   hit(kind) { if (this.dead || kind === 'stomp') return false; this.knockOff(1); return true; }
   touchPlayer(p) { if (!this.dead) p.hurt(this); }
-  draw(ctx) { if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI); jellyArt(ctx, 0, 0, this.t, this.col, true); ctx.restore(); return; } jellyArt(ctx, this.cx, this.cy + 2, this.t, this.col, true); }
+  draw(ctx) {
+    if (typeof Atlas !== 'undefined' && Atlas.frame('id', 'glowJelly_ko_000')) {
+      // the soft halo stays code-drawn under the pre-rendered jelly
+      if (!this.knocked) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(this.cx, this.cy, 1, this.cx, this.cy, 22); g.addColorStop(0, rgba(this.col, 0.5)); g.addColorStop(1, rgba(this.col, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(this.cx, this.cy, 22, 0, TAU); ctx.fill(); ctx.restore(); }
+      if (idSprite(ctx, 'glowJelly', this.knocked ? 'ko' : 'swim' + idJellyVar(this.col, ['#7af0ff', '#c8a0ff', '#9aff9a']), this.t, this.cx, this.cy, 1)) return;
+    }
+    if (this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(Math.PI); jellyArt(ctx, 0, 0, this.t, this.col, true); ctx.restore(); return; } jellyArt(ctx, this.cx, this.cy + 2, this.t, this.col, true);
+  }
   get light() { return this.dead ? null : { r: 95, c: 'rgba(' + hexToRgb(this.col).join(',') + ',' }; }
 }
 const flyfishArt = (ctx, e, x, y, m) => {
@@ -524,7 +545,17 @@ class IdDuck extends TourEnemy {
     if (this.panic > 0) { this.panic -= dt; this.mode = this.onGround ? 'walk' : 'hop'; if (this.onGround) { this.vx = this.dir * 3.2 * TS; if (Math.random() < dt * 2.5) { this.vy = -8 * TS; this.onGround = false; if (Math.random() < 0.5) this.dir = -this.dir; } } return; }
     super.think(dt);
   }
+  // pre-rendered (sprite 'duck'): the leader walks with its little flag ('duck/lead'); the panic '?!' stays code-drawn
+  paint(ctx, x, y, mode) {
+    if (this.lead && mode === 'walk' && this.sprite && TourSprite.draw(ctx, this, x, y, 'lead', TourSprite.FALLBACK.walk)) return;
+    super.paint(ctx, x, y, mode);
+  }
+  drawArt(ctx) {
+    super.drawArt(ctx);
+    if (this.sprite && this.panic > 0 && !this.dead) { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('?!', this.cx, this.y - 10); }
+  }
 }
+IdDuck.cfg = DUCK;
 const scarecrowArt = (ctx, e, x, y, m, t) => {
   ctx.save(); ctx.translate(x, y); if (m === 'flat') ctx.scale(1.2, 0.35);
   const shake = m === 'throw' ? Math.sin(t * 40) * 0.12 : Math.sin(t * 1.5) * 0.04;
@@ -804,6 +835,10 @@ class IdGiver extends Ent {
     }
     // the gecko, sitting up, holding a board taller than itself
     K.shadow(ctx, x, y, 16);
+    if (idSprite(ctx, 'gecko', has ? 'wave' : 'idle', t, x, y, 1, { scale: 1.1 })) {
+      if (!has) { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 48 + Math.sin(t * 5) * 2); }
+      return;
+    }
     if (!has) { ctx.save(); ctx.translate(x + 12, y - 22); boardShape(ctx, 0, 0, 44, Math.PI / 2 - 0.1); ctx.restore(); }
     ctx.save(); ctx.translate(x, y);
     ctx.strokeStyle = '#6a8ab8'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-6, -4); ctx.quadraticCurveTo(-20, -2, -22, -12 + Math.sin(t * 3) * 3); ctx.stroke(); ctx.lineCap = 'butt';
@@ -959,6 +994,7 @@ class IdAngler extends Ent {
     ctx.save(); if (this.knocked) { ctx.translate(x, y); ctx.rotate(Math.PI); ctx.translate(-x, -y); }
     ctx.strokeStyle = 'rgba(200,220,180,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + d * 4, y - 12); ctx.quadraticCurveTo(x + d * 20, y - 30, L.x, L.y); ctx.stroke();
     ctx.save(); ctx.translate(L.x, L.y); ctx.scale(0.8, 0.8); COIN.draw(ctx, 0, 0, this.t); ctx.restore();
+    if (typeof Atlas !== 'undefined' && Atlas.frame('id', 'angler_ko_000')) { ctx.restore(); if (idSprite(ctx, 'angler', this.knocked ? 'ko' : this.state === 'lunge' ? 'lunge' : 'swim', this.t, x, y, d)) return; ctx.save(); if (this.knocked) { ctx.translate(x, y); ctx.rotate(Math.PI); ctx.translate(-x, -y); } }
     ctx.fillStyle = '#2a2a3a'; ctx.beginPath(); ctx.ellipse(x, y, 16, 13, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = '#3a3a4e'; ctx.beginPath(); ctx.ellipse(x - d * 4, y - 4, 10, 6, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = '#1a1424'; ctx.beginPath(); ctx.moveTo(x - d * 14, y); ctx.lineTo(x - d * 24, y - 8); ctx.lineTo(x - d * 24, y + 8); ctx.fill();
@@ -985,6 +1021,7 @@ class IdMoray extends Ent {
     const d = this.dir, bx = this.dir > 0 ? this.hx : this.hx + 22, y = this.cy, len = 8 + this.out * 2.6 * TS;
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(200,255,120,0.9)'; ctx.beginPath(); ctx.arc(bx + d * (len - 2), y - 3, 1.8, 0, TAU); ctx.fill(); ctx.restore();
     if (this.out < 0.05) return;
+    if (this.knocked ? idSprite(ctx, 'moray', 'ko', this.t, this.cx, this.cy, d) : idSprite(ctx, 'moray', 'out_00' + Math.max(0, Math.min(5, Math.round(this.out * 6) - 1)), this.t, bx, y, d, { scale: 1 })) return;
     ctx.strokeStyle = '#5a7a2a'; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bx - d * 6, y + 2); ctx.quadraticCurveTo(bx + d * len * 0.5, y + Math.sin(this.t * 8) * 4, bx + d * (len - 6), y); ctx.stroke(); ctx.lineCap = 'butt';
     ctx.fillStyle = 'rgba(30,50,10,0.5)'; for (let k = 0; k < len - 10; k += 6) { ctx.beginPath(); ctx.arc(bx + d * k, y + (k % 12 ? -2 : 2), 1.4, 0, TAU); ctx.fill(); }
     ctx.fillStyle = '#6a8a32'; ctx.beginPath(); ctx.ellipse(bx + d * len, y, 9, 6.5, 0, 0, TAU); ctx.fill();
@@ -1069,6 +1106,11 @@ class IdMonkey extends Ent {
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, t = this.t;
     if (this.state === 'perch' || this.state === 'climb') { ctx.strokeStyle = '#5a7a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(this.s.x, this.hy - 200); ctx.lineTo(this.s.x, this.hy + 4); ctx.stroke(); }
+    const pose = this.knocked ? 'ko' : this.dead ? 'flat' : this.state;
+    if (idSprite(ctx, 'monkey', pose, t, x, y, this.dir, this.knocked ? { scale: ART_SCALE.enemy, rot: this.spin || 0 } : null)) {
+      if (this.loot) { ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(x - this.dir * 6, y - 14, 4, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff6c0'; ctx.fillRect(x - this.dir * 6 - 1, y - 15, 2, 2); }
+      return;
+    }
     ctx.save(); ctx.translate(x, y); if (this.dead) ctx.scale(1.3, 0.4); if (this.knocked) { ctx.translate(0, -this.h / 2); ctx.rotate(Math.PI + (this.spin || 0)); ctx.translate(0, this.h / 2); }
     ctx.scale(this.dir, 1);
     ctx.strokeStyle = '#8a7a6a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-8, -8); ctx.quadraticCurveTo(-22, -6, -20 + Math.sin(t * 3) * 3, -24); ctx.stroke();
@@ -1318,6 +1360,7 @@ class IdTroop extends Ent {
   touchPlayer(p) { if (!this.dead) p.hurt(this); }
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, t = this.t, climbing = this.state === 'home' && Math.abs(this.cx - this.homeX) <= 6;
+    if (idSprite(ctx, 'troop', this.knocked ? 'ko' : this.dead ? 'flat' : climbing ? 'climb' : this.carry ? 'carry' : 'run', t, x, y, this.dir, this.knocked ? { scale: ART_SCALE.enemy, rot: this.spin || 0 } : null)) return;
     ctx.save(); ctx.translate(x, y); if (this.dead) ctx.scale(1.3, 0.4); if (this.knocked) { ctx.translate(0, -this.h / 2); ctx.rotate(Math.PI + (this.spin || 0)); ctx.translate(0, this.h / 2); }
     ctx.scale(this.dir, 1);
     const run = this.dead ? 0 : Math.sin(t * (climbing ? 16 : 12));

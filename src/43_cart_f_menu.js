@@ -16,6 +16,14 @@ function cartCycleVol(key) {
   if (key === 'music') Sound.setMusicVolume(st.music); else Sound.setSfxVolume(st.sfx);
   Save.save();
 }
+// a game update swaps the offline cache while the page is already running on the old one, which would leave new code
+// drawing the previous version's car models; reload once, from the menu, as soon as the new cache has taken over
+const CartFresh = { stale: false, check() { if (this.stale) { this.stale = false; location.reload(); } } };
+if (typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.serviceWorker.controller) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => { CartFresh.stale = true; if (Game.scene instanceof KartMenuScene) CartFresh.check(); });
+  // ask for the update now rather than whenever the browser gets round to it
+  navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
+}
 class KartMenuScene {
   constructor(o) {
     o = o || {};
@@ -33,6 +41,7 @@ class KartMenuScene {
     this.lights = [0, 1, 2].map(() => ({ x: 0, y: 0, z: 0, r: 10, c: [1, 1, 1], i: 1 }));
     this.lights[0].c = [0.42, 0.7, 1]; this.lights[1].c = [0.55, 0.85, 1]; this.lights[2].c = [1, 0.96, 0.92];
     this._dragFn = t => this.dragTouch(t); this._dragDX = 0; this._dragAny = false;
+    CartFresh.check();
     Input.setMode('ui'); Input.hud = null;
     Sound.music('kart_menu');
     this.gl = BurnsGL.init();
@@ -468,7 +477,7 @@ class KartMenuScene {
     let y = py + 26;
     // dark paint jobs (the pyramid, the galleon, the whale) read better in their bright trim colour
     const cn = parseInt(car.col.slice(1), 16), luma = (0.299 * (cn >> 16) + 0.587 * ((cn >> 8) & 255) + 0.114 * (cn & 255)) / 255;
-    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.5 ? car.col2 : car.col, { align: 'left', glow: car.light });
+    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.6 ? car.col2 : car.col, { align: 'left', glow: car.light });
     y += 20; ctx.font = `600 11px ${FONT_UI}`;
     for (const ln of BurnsUI.wrap(ctx, car.tag, pw - 32)) { BurnsUI.text(ctx, ln, px + 16, y, 11, 'rgba(255,255,255,0.9)', { align: 'left', ui: true, stroke: false }); y += 14; }
     BurnsUI.text(ctx, 'Inspired by ' + car.nod, px + 16, y, 10, 'rgba(255,255,255,0.55)', { align: 'left', ui: true, stroke: false }); y += 20;

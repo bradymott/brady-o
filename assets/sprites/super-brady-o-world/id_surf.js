@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("id_surf", {"scale":2.0,"image":"id_surf.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":762}},"anims":{},"strips":{"L0":{"w":2048,"h":358,"top":114.0,"x":0,"y":403},"L1":{"w":2048,"h":168,"top":185.0,"x":0,"y":955},"L2":{"w":2048,"h":402,"top":243.0,"x":0,"y":0}}});

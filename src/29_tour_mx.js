@@ -121,6 +121,27 @@ const painters = {
     }
     ctx.fillStyle = shade(L.color, 0.15); ctx.fillRect(0, top, BG_W, 6);
   },
+  // 1-1's bodega: a vaulted brick cellar with shelves of jars, hanging chili ristras and barrels
+  mxCellar(ctx, L, rng, H) {
+    ctx.fillStyle = vgrad(ctx, 0, H, shade(L.color, -0.25), shade(L.color, -0.6)); ctx.fillRect(0, 0, BG_W, H);
+    // brick courses
+    for (let y = 0; y < H; y += 14) for (let x = (y / 14) % 2 ? -18 : 0; x < BG_W; x += 36) { ctx.fillStyle = rgba(shade(L.color, (rng() - 0.5) * 0.25), 0.55); ctx.fillRect(x + 1, y + 1, 34, 12); }
+    for (let x = 0; x < BG_W; x += 256) {
+      // a vault arch with a shelf of jars inside it
+      const ax = x + 40, aw = 176, top = L.base - 230;
+      ctx.fillStyle = shade(L.color, -0.55); ctx.beginPath(); ctx.moveTo(ax, L.base); ctx.lineTo(ax, top + aw / 2); ctx.arc(ax + aw / 2, top + aw / 2, aw / 2, Math.PI, TAU); ctx.lineTo(ax + aw, L.base); ctx.fill();
+      ctx.strokeStyle = shade(L.color, 0.2); ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(ax + aw / 2, top + aw / 2, aw / 2 + 3, Math.PI, TAU); ctx.stroke();
+      for (const sy of [L.base - 140, L.base - 80]) {
+        ctx.fillStyle = '#6a3e1c'; ctx.fillRect(ax + 10, sy, aw - 20, 6);
+        for (let k = 0; k < 7; k++) { const jx = ax + 22 + k * 21, jh = 18 + rng() * 14, col = ['#c84a2a', '#e8a83a', '#5a8a3a', '#d86a8a', '#e8d8a8'][Math.floor(rng() * 5)]; ctx.fillStyle = rgba('#e8f4ff', 0.35); rr(ctx, jx - 7, sy - jh, 14, jh, 4); ctx.fill(); ctx.fillStyle = col; rr(ctx, jx - 6, sy - jh * 0.7, 12, jh * 0.7 - 1, 3); ctx.fill(); ctx.fillStyle = '#8a5a34'; ctx.fillRect(jx - 5, sy - jh - 3, 10, 4); }
+      }
+      // a chili ristra hanging between the vaults
+      const rx = x + 236; ctx.strokeStyle = '#8a6a44'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(rx, top - 20); ctx.lineTo(rx, top + 110); ctx.stroke();
+      for (let k = 0; k < 12; k++) { ctx.fillStyle = k % 3 ? '#d82a1a' : '#a81a10'; ctx.beginPath(); ctx.ellipse(rx + (k % 2 ? 5 : -5), top - 10 + k * 10, 3.5, 8, (k % 2 ? 0.5 : -0.5), 0, TAU); ctx.fill(); }
+      // barrels on the floor
+      for (let k = 0; k < 2; k++) { const bx = x + 20 + k * 220; ctx.fillStyle = '#7a4a24'; rr(ctx, bx, L.base - 46, 34, 46, 8); ctx.fill(); ctx.fillStyle = '#4a4654'; ctx.fillRect(bx, L.base - 38, 34, 4); ctx.fillRect(bx, L.base - 12, 34, 4); }
+    }
+  },
   // limestone cenote walls with roots hanging down from the jungle above
   mxCenote(ctx, L, rng, H) {
     ctx.fillStyle = vgrad(ctx, 0, H, shade(L.color, 0.1), shade(L.color, -0.4)); ctx.fillRect(0, 0, BG_W, H);
@@ -201,6 +222,13 @@ const themes = {
       { kind: 'mxStalls', color: '#8a5a3a', base: 375, f: 0.45 }
     ],
     fog: '#ffe8d0', decor: ['mxNopal', 'mxPots', 'mxCrates', 'mxLamp', 'mxPots', 'mxAgaveP']
+  }),
+  // 1-1's secret cellar shop (procedural until its Blender scene exists)
+  mx_bodega: Object.assign({}, baseTheme, {
+    name: 'La Bodega', music: 'tour_mx', particles: 'dust', cave: true,
+    sky: ['#1a0e08', '#2e1a10', '#3e2416'], horizonGlow: '#ff9a4a', celestial: { type: 'none' }, stars: 0, cloudsDyn: false, darkness: 0.35,
+    layers: [{ kind: 'mxCellar', color: '#9a5a34', base: 400, f: 0.18 }],
+    ground: Object.assign({}, cobble, { cap: '#8a5a3a', capHi: '#c08a5a' }), fog: '#3a2416', decor: ['mxPots']
   }),
   mx_canal: Object.assign({}, baseTheme, {
     rays: '#fff4d0',
@@ -1143,11 +1171,114 @@ const tracks = {
   }
 };
 
+/* ---------------- v2 (LEVEL_OVERHAUL.md §7.5.1): stamps, country looks for library objects, the map, houses ---------------- */
+const stamps = {
+  // the cellar shop: P2 on the shelf, an item block, the FAKE back shelf hides the secret gate to the Souvenir Stand
+  bodega: {
+    floor: 11,
+    rows: [
+      '########################################',
+      '#............................#.........#',
+      '#..o.o.o.o.o.................#..o.o.o..#',
+      '#.......l...........l........#....l....#',
+      '#............................#.........#',
+      '#............................#.........#',
+      '#..................*.........#.........#',
+      '#........?......-------......#.........#',
+      '#............................F.........#',
+      '#............................F.........#',
+      '#.@..D....k.......k..........F....g....#',
+      '########################################',
+      '########################################',
+      '########################################'
+    ],
+    legend: { k: ['decor', 'mxChiliSack'], l: ['decor', 'mxCellarLamp'] },
+    items: ['power'],
+    doors: [{ to: 'mercado@bodegaBack', look: 'mxCellarStairs' }],
+    gold: { '*': 'hidden' }
+  },
+  // the plaza (beat 3), placed on the street lane: a fountain jet, two awnings, a piñata block row
+  plaza: {
+    floor: 9,
+    rows: [
+      '..........................',
+      '.....o.o.o.......*........',
+      '....---------...-----.....',
+      '..........................',
+      '..f.......r.........?.....',
+      '.bbbb...######....bbbb....',
+      '.####...######....####....',
+      '..........................',
+      '..........................',
+      '##########################'
+    ],
+    legend: { f: ['spawn', 'geyser', { look: 'mxFountain', period: 3 }], r: ['enemy', 'mxElote'] },
+    items: ['pick'],
+    gold: { '*': 'risky' }
+  }
+};
+// a lantern hanging from the cellar vault (it lights the dark room)
+decor.mxCellarLamp = (ctx, x, y, t) => {
+  ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y - 96); ctx.lineTo(x, y - 30); ctx.stroke();
+  ctx.fillStyle = '#4a3a2a'; ctx.fillRect(x - 8, y - 32, 16, 3);
+  ctx.fillStyle = `rgba(255,${200 + Math.sin(t * 6) * 20},110,0.95)`; rr(ctx, x - 6, y - 29, 12, 15, 3); ctx.fill();
+  ctx.strokeStyle = '#4a3a2a'; ctx.lineWidth = 1.2; ctx.strokeRect(x - 6, y - 29, 12, 15); ctx.beginPath(); ctx.moveTo(x, y - 29); ctx.lineTo(x, y - 14); ctx.stroke();
+  ctx.fillStyle = '#4a3a2a'; ctx.fillRect(x - 7, y - 15, 14, 3);
+};
+// chili sacks in the cellar
+decor.mxChiliSack = (ctx, x, y) => {
+  ctx.fillStyle = '#c8955a'; ctx.beginPath(); ctx.moveTo(x - 12, y); ctx.quadraticCurveTo(x - 14, y - 16, x - 7, y - 22); ctx.lineTo(x + 7, y - 22); ctx.quadraticCurveTo(x + 14, y - 16, x + 12, y); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 7, y - 22); ctx.lineTo(x + 7, y - 22); ctx.stroke();
+  for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? '#e8382a' : '#c82018'; ctx.beginPath(); ctx.ellipse(x - 6 + k * 4, y - 23 - (k % 2) * 2, 2.4, 4.5, -0.4 + k * 0.25, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#8a2a1a'; ctx.font = `bold 6px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.fillText('CHILE', x, y - 8);
+};
+const skins = {
+  // a wooden cellar hatch with a stencilled chili (the trapdoor) and the crate that sits on it
+  mxTrapdoor(ctx, e, t) {
+    const x = e.x, y = e.y, w = e.w, k = e.open || 0;
+    ctx.fillStyle = '#2a160c'; rr(ctx, x - 3, y - 1, w + 6, 10, 2); ctx.fill();
+    ctx.fillStyle = '#0c0608'; ctx.fillRect(x + 1, y + 1, w - 2, 6);
+    for (const [x0, dir] of [[x + 1, 1], [x + w - 1, -1]]) { ctx.save(); ctx.translate(x0, y + 1); ctx.scale(dir, Math.cos(k * Math.PI / 2)); TourObj.plank(ctx, 0, -1, w / 2 - 1, 7, ['#c8783a', '#8a4a1c', '#5e3417', '#f0a868']); ctx.restore(); }
+    if (k < 0.4) { ctx.fillStyle = '#d23a2a'; ctx.beginPath(); ctx.ellipse(x + w / 2, y + 3, 7, 2.5, -0.2, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a8a3a'; ctx.fillRect(x + w / 2 + 5, y + 1, 2, 2.5); }
+    if (e.crate) e.crateArt(ctx);
+  },
+  // the cellar stairs back up to the street: a little arched doorway with steps
+  mxCellarStairs(ctx, e, t) {
+    const x = e.cx, y = e.y + e.h;
+    ctx.fillStyle = '#e8c89a'; rr(ctx, x - 18, y - 54, 36, 54, 16); ctx.fill();
+    ctx.fillStyle = '#2a1810'; rr(ctx, x - 13, y - 48, 26, 48, 12); ctx.fill();
+    for (let k = 0; k < 5; k++) { ctx.fillStyle = k % 2 ? '#8a5a34' : '#a06a40'; ctx.fillRect(x - 13 + k * 2, y - 8 - k * 8, 26 - k * 4, 8); }
+    ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(x, y - 44, 3, 0, TAU); ctx.fill();
+  },
+  // papel picado on a rope (the Banner gimmick): bright cut-paper flags that sting from below
+  mxPapelPicado(ctx, e, t) {
+    const x0 = e.x, y = e.y + 4, w = e.w;
+    ctx.strokeStyle = '#4a3a2a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0 - 6, y - 4); ctx.quadraticCurveTo(x0 + w / 2, y + 6, x0 + w + 6, y - 4); ctx.stroke();
+    for (let k = 0, x = x0; x < x0 + w - 6; x += 15, k++) {
+      const sag = Math.sin((x - x0) / w * Math.PI) * 6, sw = Math.sin(t * 3 + k) * 1.5;
+      ctx.fillStyle = PAPEL[k % PAPEL.length]; ctx.beginPath(); ctx.moveTo(x, y + sag - 2); ctx.lineTo(x + 13, y + sag - 2); ctx.lineTo(x + 13 + sw, y + sag + 16); ctx.lineTo(x + 6.5 + sw, y + sag + 12); ctx.lineTo(x + sw, y + sag + 16); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(x + 6.5 + sw * 0.5, y + sag + 5, 2.2, 0, TAU); ctx.fill(); ctx.fillRect(x + 3 + sw * 0.5, y + sag + 9, 7, 1.2);
+    }
+  },
+  // the plaza fountain as a geyser: a tiled basin whose jet erupts on its period
+  mxFountain(ctx, e, t) {
+    const x = e.cx, y = e.y + e.h, st = e.stage;
+    ctx.fillStyle = '#d8c8a8'; rr(ctx, x - 30, y - 18, 60, 18, 4); ctx.fill();
+    for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? '#2a8ad8' : '#f4f0e0'; ctx.fillRect(x - 26 + k * 9, y - 14, 8, 8); }
+    ctx.fillStyle = '#5ac8e0'; ctx.beginPath(); ctx.ellipse(x, y - 18, 26, 4, 0, 0, TAU); ctx.fill();
+    if (st === 'warn') for (let i = 0; i < 4; i++) { ctx.fillStyle = 'rgba(220,250,255,0.85)'; ctx.beginPath(); ctx.arc(x + Math.sin(t * 20 + i * 2) * 8, y - 22 - ((t * 30 + i * 6) % 14), 2.6, 0, TAU); ctx.fill(); }
+    if (st === 'erupt') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 7; i++) { const yy = y - 22 - i * 26, w = 10 + i * 2 + Math.sin(t * 20 + i) * 3; ctx.fillStyle = `rgba(190,240,255,${0.55 - i * 0.05})`; ctx.beginPath(); ctx.ellipse(x + Math.sin(t * 13 + i) * 3, yy, w, 16, 0, 0, TAU); ctx.fill(); } ctx.restore(); }
+  }
+};
+
 /* ---------------- the five levels ---------------- */
 Tour.country({
   id: 'mx',
   arrival: 'Brady! The Baron shrank the Palace of Fine Arts down to the size of a piñata. Follow the confetti! ♥ C', colors: COL, tagline: 'Tacos, piñatas and a volcano with a temper',
-  themes, painters, dyn, decor, platforms, enemies, entities, pieces: P, boss, power, tracks,
+  themes, painters, dyn, decor, platforms, enemies, entities, pieces: P, boss, power, tracks, stamps, skins,
+  decorLights: { mxCellarLamp: [150, '#ffc070', -22] },
+  map: { fort: 'hacienda', start: [0, 0] },
+  houses: [{ id: 'mx-tienda', kind: 'stand', name: 'La Tiendita', keeper: 'xolo', stock: ['plane', 'fins', 'kazoo', 'oneup', 'sundial', 'magnet'], mapCell: [0, 1], mapFrom: 0 }],
   music: { level: 'tour_mx', boss: 'tour_mx_boss' },
   landmark: 'the Palace of Fine Arts',
   coin: { name: 'GOLDEN LIME', draw(ctx, x, y) {
@@ -1167,11 +1298,50 @@ Tour.country({
     ctx.restore();
   } },
   levels: [
-    { name: 'Mercado Mayhem', style: 'run', theme: 'mx_mercado', gimmick: 'Bouncy market awnings, rolling watermelons and fountain jets',
-      enemies: [['mxPepper', 3], ['mxElote', 3], ['mxBurro', 1]],
-      hint: 'Hold jump on an awning to bounce sky-high',
-      postcard: 'Brady! The Baron shrank the Palace of Fine Arts into a snow globe and flew south. Follow my postcards! ♥ C',
-      script: ['xolo', ['flat', { n: 5 }], 'stalls', 'gap', 'pinatas', 'melons', 'cp', 'fountain', 'rooftops', ['enemies', { n: 2 }], 'bonus', ['stalls', { n: 2 }], 'end'] },
+    // 1-1 in the v2 format (LEVEL_OVERHAUL.md §7.5.1): three lanes, a cellar shop behind a trapdoor, a secret exit
+    { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
+      gimmick: 'Three lanes at once: rooftops, street and cellar canal. Awnings bounce you up, trapdoors drop you down',
+      hint: 'Hold jump on an awning to bounce up to the rooftops',
+      postcard: 'Brady! The market has three floors and the melons use all of them. ♥ C',
+      enemies: [['mxPepper', 3], ['mxElote', 2], ['mxChihuahua', 1]],
+      mapCell: [0, 0], mapFrom: -1,
+      exits: {
+        main: { to: '1-2' },
+        secret: { to: 'house:mx-tienda', hint: 'Chili dust puffs out from under a crate in the market...' }
+      },
+      areas: [
+        { id: 'mercado', gen: 'layered', W: 214, H: 30, lanes: { roof: 12, street: 21, cellar: 27 }, camera: 'lanes',
+          script: [
+            // ① awnings link street and roof
+            ['xolo', { lane: 'street' }],
+            ['itemBlock', { lane: 'street', item: 'power', y: 4 }],
+            ['stalls', { lane: 'street', n: 2 }],
+            ['rooftops', { lane: 'roof', n: 2 }],
+            ['flat', { lane: 'cellar', n: 30 }],
+            ['sync'],
+            // ② melons on the street, gaps and papel-picado ropes on the roof; a gap in the street drops to the canal
+            ['melons', { lane: 'street' }],
+            ['banner', { lane: 'roof', len: 4, look: 'mxPapelPicado' }],
+            ['gap', { lane: 'roof', n: 3 }],
+            ['gearStand', { lane: 'roof', item: 'plane' }],
+            ['postcard', { lane: 'roof', kind: 'must', dy: -3 }],
+            ['gap', { lane: 'street', n: 3 }],
+            ['trapdoor', { lane: 'street', to: 'bodega@in', crate: true, back: 'bodegaBack', look: 'mxTrapdoor' }],
+            ['flat', { lane: 'cellar', n: 6 }],
+            ['spring', { lane: 'cellar', gold: false }],
+            ['enemies', { lane: 'cellar', n: 2 }],
+            ['sync'],
+            'cp',
+            // ③ the plaza joins all three lanes
+            ['stamp', { id: 'plaza', lane: 'street' }],
+            ['pinatas', { lane: 'street' }],
+            ['fountain', { lane: 'street' }],
+            ['rooftops', { lane: 'roof', n: 1 }],
+            ['sync'],
+            ['end', { lane: 'street', exit: 'main' }]
+          ] },
+        { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega' }
+      ] },
     { name: 'Xochimilco Float', style: 'ride', theme: 'mx_canal', gimmick: 'Ride a painted trajinera: hop the posts, dodge axolotls and herons',
       enemies: [['mxHeron', 1]], vehicle: 'mxTrajinera', vehicleW: 9, below: 'liquid', scroll: 2.6, len: 175,
       hint: 'Jump the mooring posts or you\'ll fall in the canal',
