@@ -596,8 +596,11 @@ class Play {
     if (Input.packTapped) { Input.packTapped = false; if (this.state === 'play' && p.state === 'play') { if (!p.usePack()) Sound.play('bump', { vol: 0.3 }); } }
     Save.data.pack = p.pack || null;
     // entities (a K-hole slows everything but Brady)
-    const cx0 = this.camX - 4 * TS, cx1 = this.camX + Game.viewW + 5 * TS;
-    const cy0 = this.camY - 8 * TS, cy1 = this.camY + Game.viewH + 8 * TS;
+    // the active window is the standard (Far) view's, whatever the zoom: a closer camera never freezes an enemy,
+    // an icicle or a boss prop that the level was designed to have running
+    const zx = Math.max(0, Game.viewW * (VIEW_ROWS / Game.rows - 1)) / 2, zy = Math.max(0, (VIEW_ROWS - Game.rows) * TS) / 2;
+    const cx0 = this.camX - 4 * TS - zx, cx1 = this.camX + Game.viewW + 5 * TS + zx;
+    const cy0 = this.camY - 8 * TS - zy, cy1 = this.camY + Game.viewH + 8 * TS + zy;
     const edt = dt * ws;
     for (let i = 0; i < this.entities.length; i++) {
       const e = this.entities[i];
@@ -883,7 +886,9 @@ class Play {
           case T.SOIL: { const bur = y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]], nv = bur && atlas.soilV ? atlas.soilV.length : 0; img = atlas.soil ? (nv ? atlas.soilV[((Math.imul(x ^ 0x5bd1e995, 374761393) ^ Math.imul(y + 0x27d4eb2d, 668265263)) >>> 13) % nv] : atlas.soil[bur ? 0 : 1]) : null; break; }
           case T.LINTEL: img = atlas.lintel || null; break;
           case T.PICK: {
-            ctx.setTransform(S, 0, 0, S, Game.gameRect.x * Game.dpr + dx, Game.gameRect.y * Game.dpr + dy);
+            // coins are drawn 15 % larger than their tile slot so they read as pickups on a phone
+            const ck = 1.15, co = TS / 2 * S * (1 - ck);
+            ctx.setTransform(S * ck, 0, 0, S * ck, Game.gameRect.x * Game.dpr + dx + co, Game.gameRect.y * Game.dpr + dy + co);
             Sprites.pickFast(ctx, TS / 2, TS / 2 + Math.sin(t * 3 + x * 0.7) * 1.5, t, Math.cos(t * 3 + x * 0.5), (x * 3 + y) % 5);
             ctx.setTransform(1, 0, 0, 1, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr);
             continue;
