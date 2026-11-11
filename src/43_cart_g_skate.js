@@ -451,7 +451,7 @@ const CartSkFeat = {
 };
 CartWorlds.arena_skate = function (A, night) {
   const E = this.base(2001, [-125, -125, 125, 125], '#9a948a', 0.05);
-  Object.assign(E, { id: 'skate', arena: A, sky: Object.assign(CART_SKIES.sunset(), { fogD: 0.0042, hor: '#ff9a6a', sky: '#9a94c8' }), tod: A.tod, music: 'kart2', night: night || A.tod === 'sunset', R: 115 });
+  Object.assign(E, { id: 'skate', arena: A, sky: Object.assign(CART_SKIES.sunset(), { fogD: 0.0042, hor: '#ff9a6a', sky: '#9a94c8', haze: 0.35, fogMax: 0.7 }), tod: A.tod, music: 'kart2', night: night || A.tod === 'sunset', R: 115 });
   const api = E.api, T = E.terrain, rng = mulberry32(9), nite = E.night;
   E.rails = []; E.skFeats = [];
   const feat = (id, x, z, yaw, back, fwd, worth) => { const dx = Math.sin(yaw), dz = Math.cos(yaw); E.skFeats.push({ id, x, z, dx, dz, ax: x - dx * back, az: z - dz * back, ex: x + dx * fwd, ez: z + dz * fwd, len: fwd, worth: worth || 1 }); };

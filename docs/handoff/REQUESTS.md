@@ -22,3 +22,9 @@ Requests from game agents to the engine owner (the Burning Man agent). Add new o
 
 5. **Flame sprites.** `BURNS_SPRITES` has one smooth teardrop `flame`. Ask: 2–4 ragged/forked flame-tongue sprites (or a small flipbook) so fire drawn as billboards (Calamari Inferno's arm flames) has broken edges.
 6. **Official hooks Art Cart currently works around:** `BURNS_SPRITES.add(name, paintFn)` (Art Cart paints 5 cells into free atlas cells at runtime) and `BurnsFX.addKind(name)` (it pushes onto the race's `fx.kinds`). Also `BurnsFX.draw` allocates every frame (`kinds.map`, `[1,1,1]`).
+
+## From the Art Cart agent (N1, tracks and arenas), 2026-11-10
+
+7. **`api.sign` lifts every sign twice.** `api.sign(text, x, z, o)` passes `o` to `api.prop('sign', o)`, which uses `o.y` as the placement height, and `BurnsProps.sign` uses the same `o.y` as the board height, so a sign with `y: 2.5` stands on 2.5 m stilts with its board at 5 m. Art Cart now overrides `api.sign` for its own worlds (`CartWorlds.base` in `src/43_cart_c_world.js`). Ask: place the sign prop at `y: 0` inside `api.sign` (Burning Man's signs float the same way).
+8. **`BurnsInstancer.update()` allocates every frame** (`[...this.bmap.values(), ...]` for `batches` and `shBatches`). Art Cart now draws its barriers, lamps and roadside art through the instancer. Ask: rebuild those arrays only when the batch maps change.
+9. **The Man at scale.** Art Cart's Burn Night Man is now `ch.scale = 1.65` on a 6.8 m stage. `BurnsManModel.light()` takes a scale, but nothing else in the Man's burn (flames, glow) knows about scale; Art Cart scales its own effects. Nice to have: a `BurnsManModel.burnFx(g, ch, burn)` helper that respects `ch.scale`.

@@ -160,7 +160,7 @@ class CartRaceScene {
       ch.x = h.x; ch.z = h.z; ch.y = this.terrain.height(h.x, h.z); ch.yaw = h.yaw; ch.play(h.anim, h.anim === 'dance' ? { style: i % 6 } : h.anim === 'firespin' ? { tool: 'poi' } : {}, true); ch.animT = i * 0.7;
       return { ch, model, h, fire: h.type === 'firespinner' };
     });
-    if (E.man) { const model = BurnsManModel.build(), ch = new BurnsChar(model); ch.x = E.man.x; ch.z = E.man.z; ch.y = 5.4; ch.yaw = 0; ch.scale = 1; ch.play('idle', {}, true); this.man = { ch, model, burn: 0 }; }
+    if (E.man) { const model = BurnsManModel.build(), ch = new BurnsChar(model); ch.x = E.man.x; ch.z = E.man.z; ch.y = E.man.y || 5.4; ch.yaw = 0; ch.scale = E.man.scale || 1; ch.play('idle', {}, true); this.man = { ch, model, burn: 0 }; }
     // objective setup
     this.obj = { t: 0, time: this.isBattle ? CART_OBJECTIVES[this.objective].time : 0, zone: 0, zoneT: 25, capture: 0, flag: null, ended: false };
     if (this.objective === 'flag') { const s = E.flagSpots[0]; this.obj.flag = { x: s.x, z: s.z, y: this.terrain.height(s.x, s.z), holder: null, t: 0, cool: 0 }; }
@@ -1010,7 +1010,7 @@ class CartRaceScene {
     // free this course's GPU buffers (car and driver models stay cached for the next race)
     const W = this.W; if (!W || !BurnsGL.gl || this.released) return; this.released = true;
     try {
-      for (const c of W.chunks) BurnsGL.freeGeo(c); for (const g of W.ground.geos) BurnsGL.freeGeo(g);
+      for (const c of W.chunks) BurnsGL.freeGeo(c); for (const g of W.ground.geos) BurnsGL.freeGeo(g); if (W.inst) W.inst.release();
       BurnsGL.freeTex(W.ground.paintT); BurnsGL.freeTex(W.lightmap.T);
       for (const G of this.E.crowds) { BurnsGL.freeGeo(G.geo); if (G.far) BurnsGL.freeGeo(G.far.geo); } for (const G of (this.props && this.props.groups) || []) BurnsGL.freeGeo(G.geo);
     } catch (e) { /* ignore */ }
