@@ -299,7 +299,7 @@ const CartScene = {
       return { x, z, r: 8.8 * s };
     }
     if (kind === 'gate') {   // a festival gate arch over the road
-      CartScene.prop(api, 'gateArch', { x, z, yaw, w: 26 * s, h: 9, text: 'ART CART', hi: true });
+      CartScene.prop(api, 'gateArch', { x, z, yaw, w: 26 * s, h: 9, text: 'SUPER ART KART', hi: true });
       return { x, z, r: 0 };
     }
     return { x, z, r: 0 };
@@ -391,6 +391,7 @@ const CartWorlds = {
     return E;
   },
   track(id) {
+    if (CART_TRACKS[id] && CART_TRACKS[id].world) return CART_TRACKS[id].world(id, CART_TRACKS[id]);   // a career track builds its own world (43_cart_j_*, see docs/ART_CART_LEVEL_RECIPE.md)
     const D = CART_TRACKS[id] || CART_TRACKS.esplanade, T = new CartTrack(D), night = D.tod === 'night', rng = mulberry32(hashStr(id));
     const pad = 70, b = T.bounds;
     const E = this.base(1000 + CART_TRACK_ORDER.indexOf(id), [b.x0 - pad, b.z0 - pad, b.x1 + pad, b.z1 + pad], D.theme === 'storm' ? '#d4b48c' : '#c9a27e');

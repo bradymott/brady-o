@@ -1,5 +1,5 @@
 // Renders the home-screen icons with the game's own art.
-//   dist/icons/<app>/icon-180.png, icon-192.png, icon-512.png, icon-maskable-512.png  (one set per app)
+//   dist/icons/<app>/icon-180.png, icon-192.png, icon-512.png, icon-maskable-512.png  (one set per app; kart: tools/cart_icon.js)
 //   dist/icons/icon-*.png + dist/icon.png/.b64 (the combined build; same art as Burning Man)
 // Run after a build (it renders from dist/brady-o.html), then build again so the apps pick the icons up.
 const { chromium } = require('playwright');
@@ -11,7 +11,7 @@ const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : pat
   await page.goto('file://' + path.join(dist, 'brady-o.html'));
   await page.waitForTimeout(1800);
   const sizes = [['icon-180.png', 180, false], ['icon-192.png', 192, false], ['icon-512.png', 512, false], ['icon-maskable-512.png', 512, true]];
-  const apps = { burningman: '__iconScene', world: '__iconWorld', kart: '__iconKart' };
+  const apps = { burningman: '__iconScene', world: '__iconWorld' };   // Super Art Kart (kart) has its own: node tools/cart_icon.js dist/icons/kart
   for (const [app, fn] of Object.entries(apps)) {
     const out = path.join(dist, 'icons', app);
     fs.mkdirSync(out, { recursive: true });

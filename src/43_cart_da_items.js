@@ -120,6 +120,7 @@ function cartItemsLoad(s) {
   for (let i = 0; i < CART_IX_POOL.missile; i++) add(m => CartIxMesh.missile(m), ix.missiles);
   if (G) G.finish();
   for (const o of ix.ducks) { o.vx = o.vy = o.vz = 0; o.t = 0; o.life = 0; o.delay = 0; o.spin = 0; o.kick = 0; o.owner = null; o.rest = false; o.ph = 0; }
+  if (typeof cartDrvLoad === 'function') cartDrvLoad(s);   // the drivers' specials: their pooled meshes (43_cart_j_drivers.js)
 }
 // a pooled mesh object (oldest recycled when all are in use)
 function cartIxTake(pool) { let best = null; for (const o of pool) { if (!o.live) return o; if (!best || o.t > best.t) best = o; } return best; }
@@ -1128,6 +1129,7 @@ const CART_IX_RIDES = { glide: 'DRAGON FLIGHT', breach: 'SKY BREACH', hover: 'ST
 function cartItemsHud(s, ctx, W, H) {
   const ix = s.ix, p = s.player; if (!ix || !p || s.state !== 'race') return;
   const t = s.time;
+  for (const r of ix.list) { const K = CART_IX_KIND[r.type]; if (K.hud) K.hud(s, ctx, W, H, r); }   // an effect's own 2D layer (speech bubbles, signs: 43_cart_j_drivers.js)
   if (p.foamT > 0) { const a = Math.min(1, p.foamT); ctx.save(); for (let i = 0; i < 18; i++) { const x = (i + 0.5) / 18 * W + Math.sin(i * 3.1) * 18, y = H - Math.abs(Math.sin(i * 1.7 + 0.4)) * 46 * a - 4, r = 18 + (i * 7) % 14; const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 2, x, y, r); g.addColorStop(0, 'rgba(255,255,255,' + (0.95 * a).toFixed(3) + ')'); g.addColorStop(1, 'rgba(210,222,240,' + (0.85 * a).toFixed(3) + ')'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); } for (let i = 0; i < 6; i++) { const x = i < 3 ? 10 + i * 22 : W - 10 - (i - 3) * 22, y = 20 + (i % 3) * 16; ctx.fillStyle = 'rgba(255,255,255,' + (0.8 * a).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(x, y, 14 - (i % 3) * 3, 0, TAU); ctx.fill(); } ctx.restore(); }
   if (p.charmT > 0) { const a = Math.min(1, p.charmT); ctx.save(); const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.7); g.addColorStop(0, 'rgba(255,80,160,0)'); g.addColorStop(1, 'rgba(255,80,160,' + (0.45 * a).toFixed(3) + ')'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); for (let i = 0; i < 8; i++) { const x = (i % 2 ? W - 40 : 40) + Math.sin(t * 2 + i) * 14, y = ((t * 30 + i * 70) % (H + 40)) - 20; cartHeartIcon(ctx, x, H - y, 10 + (i % 3) * 3, 'rgba(255,90,170,' + (0.8 * a).toFixed(3) + ')'); } ctx.restore(); }
   if (p.gooT > 0) { const a = Math.min(1, p.gooT * 1.5); ctx.save(); ctx.fillStyle = 'rgba(255,150,210,' + (0.9 * a).toFixed(3) + ')'; ctx.fillRect(0, 0, W, 10); for (let i = 0; i < 14; i++) { const x = (i + 0.3) / 14 * W, h = 20 + ((i * 37) % 50) * a + Math.sin(t * 2 + i) * 6; ctx.fillRect(x - 7, 0, 14, h); ctx.beginPath(); ctx.arc(x, h, 9, 0, TAU); ctx.fill(); } ctx.restore(); }

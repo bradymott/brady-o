@@ -30,14 +30,19 @@ class CartRaceScene {
     const sv = cartSave();
     this.opts = opts;
     this.mode = opts.mode || 'gp';                 // gp | tt | quick | battle
-    this.isBattle = this.mode === 'battle';
-    this.objective = this.isBattle ? (opts.objective || 'vibe') : 'race';
+    this.isBattle = this.mode === 'battle' || this.mode === 'royale';   // royale: car combat to the last car (43_cart_i_royale.js)
+    this.objective = this.mode === 'royale' ? 'royale' : this.isBattle ? (opts.objective || 'vibe') : 'race';
+    if (typeof CART_RETIRED_OBJECTIVES !== 'undefined' && CART_RETIRED_OBJECTIVES[this.objective]) this.objective = 'vibe';   // King of the Hill / Capture the Flag are retired (43_cart_h_career.js)
     this.isRace = this.objective === 'race';
     this.cup = cartCup(opts.cup); this.raceIdx = opts.race || 0;
     this.trackId = opts.track || (this.mode === 'gp' ? this.cup.tracks[this.raceIdx] : 'esplanade');
     if (!CART_TRACKS[this.trackId]) this.trackId = 'esplanade';
     this.arenaId = this.isBattle ? cartArena(opts.arena).id : null;
-    this.rules = this.isBattle ? (CART_ARENA_RULES[this.arenaId] || {}) : {};   // the arena's special physics and powers
+    this.rules = this.isBattle ? (CART_ARENA_RULES[this.arenaId] || {}) : ((typeof CART_TRACK_RULES !== 'undefined' && CART_TRACK_RULES[this.trackId]) || {});   // the arena's (or a career track's, 43_cart_j_*) special physics, hazards and enemies
+    this.poolCar = !this.isBattle && typeof cartTrackPoolCar === 'function' ? cartTrackPoolCar(this.trackId) : null;   // on a car's own level its signature special is in everyone's gift boxes
+    // a Career / Battle Royale / secret-level stage (43_cart_h_career.js): its run, the level's car, a final's rules
+    this.run = opts.run || null; if (opts.levelCar) this.poolCar = opts.levelCar;
+    if (!this.isBattle && opts.final && typeof CART_RACE_RULES !== 'undefined' && CART_RACE_RULES[opts.final]) this.rules = CART_RACE_RULES[opts.final];
     this.G = this.rules.gravity || CART_G;
     this.driverId = cartDriver(opts.driver || sv.driver).id; this.carId = cartCar(opts.car || sv.car).id;
     this.autoGas = opts.autoGas !== undefined ? !!opts.autoGas : sv.autoGas !== false;
@@ -87,11 +92,11 @@ class CartRaceScene {
     const field = [{ car: this.carId, driver: this.driverId, player: true }].concat(this.mode === 'tt' ? [] : roster.map(r => ({ car: r.car, driver: r.driver })));
     // grid: Grand Prix race 1 the player starts last, then by the last finish; battles spread around the arena
     let order = field.slice(1); cartShuffle(order, rng);
-    let pSlot = this.mode === 'gp' || this.mode === 'quick' ? order.length : 0;
+    let pSlot = this.mode === 'gp' || this.mode === 'quick' || this.mode === 'career' ? order.length : 0;
     if (this.mode === 'gp' && this.gp.lastPos) pSlot = clamp(this.gp.lastPos - 1, 0, order.length);
     if (this.isBattle) pSlot = Math.floor(rng() * (order.length + 1));
     order.splice(pSlot, 0, field[0]);
-    const base = this.mode === 'gp' ? 0.88 + this.raceIdx * 0.025 + (this.cup.id === 'fire' ? 0.035 : 0) : 0.9;
+    const base = (this.mode === 'gp' ? 0.88 + this.raceIdx * 0.025 + (this.cup.id === 'fire' ? 0.035 : 0) : 0.9) + (typeof cartAiScale === 'function' ? cartAiScale(this) : 0);   // rivals sharpen with the player's stat points
     this.karts = order.map((f, slot) => {
       const k = this.makeKart(f, slot);
       if (!k.player) k.ai.skill = clamp(base + (rng() - 0.5) * 0.06 + (slot < 3 ? 0.015 : 0), 0.8, 1.03);
@@ -100,7 +105,8 @@ class CartRaceScene {
     this.player = this.karts.find(k => k.player);
   }
   makeKart(f, slot) {
-    const car = cartCar(f.car), drv = cartDriver(f.driver), st = car.stats, E = this.E, sp = E.spawn[slot % E.spawn.length];
+    const car = cartCar(f.car), drv = cartDriver(f.driver), E = this.E, sp = E.spawn[slot % E.spawn.length];
+    const st = typeof cartKartStats === 'function' ? cartKartStats(car, drv, f) : car.stats;   // + the driver's stat pip (43_cart_j_drivers.js)
     const k = {
       id: car.id + ':' + drv.id, car, drv, player: !!f.player, slot, name: drv.name,
       vmax: 25.5 + st.speed * 0.75, acc: 8.5 + st.accel * 2.7, turn: 1.4 + st.handling * 0.14, grip: 6.2 + st.handling * 0.9,
@@ -165,7 +171,7 @@ class CartRaceScene {
     this.obj = { t: 0, time: this.isBattle ? CART_OBJECTIVES[this.objective].time : 0, zone: 0, zoneT: 25, capture: 0, flag: null, ended: false };
     if (this.objective === 'flag') { const s = E.flagSpots[0]; this.obj.flag = { x: s.x, z: s.z, y: this.terrain.height(s.x, s.z), holder: null, t: 0, cool: 0 }; }
     if (this.objective === 'glow') for (const o of this.props.orbs) this.spawnOrb(o);
-    { const OD = CART_OBJECTIVES[this.objective]; if (OD && OD.fx && OD.fx.init) OD.fx.init(this); }
+    { const OD = CART_OBJECTIVES[this.objective]; this.ofx = (OD && OD.fx) || null; if (this.ofx && this.ofx.init) this.ofx.init(this); }
     if (this.rules.onLoad) this.rules.onLoad(this);
     this.windA = rng() * TAU;
     this.storm = { t: 8 + rng() * 6, k: 0, phase: 'calm' };
@@ -235,7 +241,7 @@ class CartRaceScene {
     if (this.rules.onUpdate) this.rules.onUpdate(this, dt, racing);
     for (const id in CART_ITEM_FX) { const F = CART_ITEM_FX[id]; if (F.update) F.update(this, dt, racing); }
     if (this.E.storm) this.updateStorm(dt);
-    if (this.man) this.man.burn = Math.min(1, this.man.burn + dt * 0.02);
+    if (this.man && !this.manHold) this.man.burn = Math.min(1, this.man.burn + dt * 0.02);   // (held unlit for the career final)
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 3);
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 3);
     if (this.white > 0) this.white = Math.max(0, this.white - dt * 0.8);
@@ -299,6 +305,7 @@ class CartRaceScene {
     if (k.gooT > 0) vmax *= 0.4;     // stuck in frosting (FROSTING FLOOD)
     if (k.dazzleT > 0) vmax *= 0.82;
     if (k.stunT > 0) vmax *= 0.45;
+    if (k.crawlT > 0) vmax *= 0.45;  // crawling: a 5 MPH zone, a lecture (43_cart_j_drivers.js)
     if (k.slimeT > 0) vmax *= 1.18;
     if (k.boostT > 0) vmax = Math.max(vmax, k.vmax * (k.boostKind === 'mt2' || k.boostKind === 'glow' ? 1.34 : 1.26));
     if (k.dashT > 0) vmax = Math.max(vmax, k.vmax * 1.55);
@@ -320,6 +327,7 @@ class CartRaceScene {
     const spinning = k.spinT > 0 || k.flipT > 0;
     let wob = k.dazzleT > 0 ? Math.sin(this.t * 9 + k.slot) * 0.65 : 0;
     if (k.foamT > 0) wob += Math.sin(this.t * 5.3 + k.slot * 2) * 0.35;   // slithering in the foam
+    if (k.steerFx) wob += k.steerFx(this, k, inp.steer);   // driver specials: steering backwards (AIR HORN), lost in the dark (LIGHTS OUT)
     if (k.charmT > 0 && k.charmBy && !k.charmBy.out) wob += clamp(-cartWrap(Math.atan2(k.charmBy.x - k.x, k.charmBy.z - k.z) - k.yaw) * 1.4, -0.75, 0.75);   // drifting toward the crush
     k.steer = approach(k.steer, spinning ? 0 : clamp(inp.steer + wob, -1, 1), dt * (k.player && Input.stick.active ? 12 : 7));
     const auth = Math.max(clamp(sp / 5.5, 0, 1), inp.gas > 0 || inp.brake > 0 ? 0.5 : 0) * (1 - 0.3 * clamp((sp - 20) / 12, 0, 1));
@@ -414,7 +422,7 @@ class CartRaceScene {
       const dx = k.x - g.gx, dz = k.z - g.gz;
       if (dx * dx + dz * dz < 4.4 && Math.abs(k.y - this.terrain.height(g.gx, g.gz)) < 2.5) {
         g.alive = 0; g.t = 2.6; this.fx.confetti(g.gx, k.y + 1.2, g.gz, 14);
-        if (!k.item && k.roul <= 0) { k.roul = k.player ? 1.6 : 0.9; k.roulItem = cartRollItem(this.isRace ? k.rank : 4, this.isRace ? this.karts.length : 8, this.rng, this.isBattle ? this.arenaId : null, k.car.id); k.cheerT = 1.0; }
+        if (!k.item && k.roul <= 0) { k.roul = k.player ? 1.6 : 0.9; k.roulItem = cartRollItem(this.isRace ? k.rank : 4, this.isRace ? this.karts.length : 8, this.rng, this.isBattle ? this.arenaId : null, k.car.id, k.drv.id, this.poolCar); k.cheerT = 1.0; }
         if (k.player) Sound.play('gift', { vol: 0.5 });
       }
     }
@@ -483,7 +491,7 @@ class CartRaceScene {
         if (!k.ai) k.ai = { skill: 0.86, bias: 0, avoid: 0, avoidT: 0, driftT: 0, itemT: 99, fireT: 99, stuckT: 0, revT: 0, wob: 0 };
         this.fx.confetti(k.x, k.y + 2, k.z, 40); Sound.play('crowd', { vol: 0.6 });
       }
-    } else if (k.player && k.lap >= 2) {
+    } else if (k.player && k.lap >= 2 && !this.rules.noLaps) {
       if (k.lap === this.laps) { Sound.play('kartFinalLap'); this.banner('FINAL LAP!', '#ff4fd8', 2.0); }
       else { Sound.play('kartLap'); this.banner('LAP ' + k.lap + '/' + this.laps, '#38f2ff', 1.4); }
     }
@@ -500,6 +508,7 @@ class CartRaceScene {
       A.x -= nx * pen * ta; A.z -= nz * pen * ta; Bk.x += nx * pen * tb; Bk.z += nz * pen * tb;
       const vr = (Bk.vx - A.vx) * nx + (Bk.vz - A.vz) * nz;
       if (vr < 0) {
+        if (this.onRam) this.onRam(A, Bk, nx, nz);   // royale: ram damage (velocities before the bounce)
         const j = -1.5 * vr / (1 / ma + 1 / mb);
         A.vx -= nx * j / ma; A.vz -= nz * j / ma; Bk.vx += nx * j / mb; Bk.vz += nz * j / mb;
         if (-vr > 3 && (A.player || Bk.player)) { Sound.play('bump', { vol: clamp(-vr / 20, 0.2, 0.7) }); this.shakeIt(0.35); }
@@ -543,9 +552,9 @@ class CartRaceScene {
     k.invT = this.isBattle ? 2.3 : 1.6; k.anim = 'cartHit'; k.animT = 0; k.hitsTaken++;
     if (src && src !== k) { src.hitsDealt++; if (o.weapon) src.wpn.hits++; src.cheerT = Math.max(src.cheerT, 0.9); }
     this.log('hit', { k: k.id, by: src && src.id, kind, w: o.weapon || o.item, player: k.player, byPlayer: !!(src && src.player) });
-    if (k.player) { Sound.play('kartHit'); this.shakeIt(1); const who = src && src !== k ? src.car.name : ''; this.banner(kind === 'flip' ? 'FLIPPED!' : kind === 'bubble' ? 'BUBBLED!' : kind === 'stun' ? 'ZAPPED!' : kind === 'dazzle' ? 'DAZZLED!' : kind === 'foam' ? 'FOAMED!' : kind === 'whirl' ? 'WHIRLED UP!' : kind === 'launch' ? 'BLASTED!' : kind === 'charm' ? 'LOVESTRUCK!' : kind === 'goo' ? 'STUCK IN FROSTING!' : 'SPUN OUT!', '#ff6a6a', 1.2, who ? 'by ' + who : ''); }
+    if (k.player) { Sound.play('kartHit'); this.shakeIt(1); const who = src && src !== k ? src.car.name : ''; this.banner(o.banner ? o.banner : kind === 'flip' ? 'FLIPPED!' : kind === 'bubble' ? 'BUBBLED!' : kind === 'stun' ? 'ZAPPED!' : kind === 'dazzle' ? 'DAZZLED!' : kind === 'foam' ? 'FOAMED!' : kind === 'whirl' ? 'WHIRLED UP!' : kind === 'launch' ? 'BLASTED!' : kind === 'charm' ? 'LOVESTRUCK!' : kind === 'goo' ? 'STUCK IN FROSTING!' : 'SPUN OUT!', '#ff6a6a', 1.2, who ? 'by ' + who : ''); }
     else if (src && src.player) { Sound.play('kartHit', { vol: 0.35, pitch: 1.25 }); this.banner('HIT! ' + k.car.name, '#7aff8a', 0.9, null, true); }
-    if (this.isBattle) this.onBattleHit(k, src);
+    if (this.isBattle) this.onBattleHit(k, src, kind, o);
     if (this.rules.onHit) this.rules.onHit(this, k, kind, src, o);
     return true;
   }
@@ -695,7 +704,8 @@ class CartRaceScene {
     o.alive = 1; o.visible = true; o.gx = x; o.gz = z; o.gy = this.terrain.height(x, z) + 1.0; o.ph = this.rng() * 10; o.from = from || null; o.cool = from ? 1.0 : 0;
   }
   /* ---------- battle objectives ---------- */
-  onBattleHit(k, src) {
+  onBattleHit(k, src, kind, o) {
+    if (this.ofx && this.ofx.onHit) this.ofx.onHit(this, k, src, kind, o);   // e.g. royale damage
     const O = this.obj;
     if (this.objective === 'vibe' && !k.out) {
       k.vibes = Math.max(0, k.vibes - 1);
@@ -824,6 +834,7 @@ class CartRaceScene {
     if (skill > 0.92) for (const b of this.E.boosts) { let ds = b.s - k.loc.s; if (ds < 0) ds += T.L; if (ds > 8 && ds < 45) { const L = T.locate(b.x, b.z, k.loc.i, CART_TMPL2); off = lerp(off, L.d, 0.6); break; } }
     // hunt: drift toward a rival just ahead when the weapon is ready (cone/shot/dash weapons)
     if ((k.wpn.t <= 0 && /cone|shot|dash/.test(k.wpn.def.kind)) || k.sunk) { for (const o of this.karts) { if (o === k || o.out || o.finished) continue; let ds = o.loc.s - k.loc.s; if (ds < -T.L / 2) ds += T.L; if (ds > 4 && ds < 30) { off = lerp(off, o.loc.d, k.sunk ? 0.95 : 0.5); break; } } }
+    if (this.rules.aiOffset) off = this.rules.aiOffset(this, k, off);   // a final's goal on the road (43_cart_hb_final.js)
     off = clamp(off, -f.hw + 1.8, f.hw - 1.8);
     const tx = f.x + f.nx * off, tz = f.z + f.nz * off;
     const ang = cartWrap(Math.atan2(tx - k.x, tz - k.z) - k.yaw);
@@ -855,11 +866,9 @@ class CartRaceScene {
       ai.tgtT = 0.35 + this.rng() * 0.3;
       let g = null, prey = null;
       const nearestRival = () => { let b = null, bd = 1e9; for (const o of this.karts) { if (o === k || o.out) continue; const d = Math.hypot(o.x - k.x, o.z - k.z) * (o.player ? 0.85 : 1); if (d < bd) { bd = d; b = o; } } return b; };
-      const custom = this.rules.aiGoal ? this.rules.aiGoal(this, k, nearestRival) : null;
+      const custom = (this.rules.aiGoal ? this.rules.aiGoal(this, k, nearestRival) : null) || (this.ofx && this.ofx.aiGoal ? this.ofx.aiGoal(this, k, nearestRival) : null);
       if (custom) { g = custom.goal || null; prey = custom.prey || null; }
       else if (this.objective === 'glow') { let bd = 1e9; for (const o of this.props.orbs) { if (!o.alive || (o.cool > 0 && o.from === k)) continue; const d = Math.hypot(o.gx - k.x, o.gz - k.z) + (this.rng() - 0.5) * 6; if (d < bd) { bd = d; g = [o.gx, o.gz]; } } if (bd > 40 || k.wpn.t <= 0) { const r = nearestRival(); if (r && Math.hypot(r.x - k.x, r.z - k.z) < 22) prey = r; } }
-      else if (this.objective === 'hill') { const z = E.zones[O.zone]; const a = this.t * 0.5 + k.slot; g = [z.x + Math.sin(a) * z.r * 0.4, z.z + Math.cos(a) * z.r * 0.4]; if (Math.hypot(z.x - k.x, z.z - k.z) < z.r * 1.6) { const r = nearestRival(); if (r && r.inZone) prey = r; } }
-      else if (this.objective === 'flag') { const F = O.flag; if (F.holder === k) { const c = E.captures[O.capture]; g = [c.x, c.z]; } else if (F.holder) { prey = F.holder; } else g = [F.x, F.z]; }
       else { prey = nearestRival(); }
       if (prey) { const lead = Math.min(1.2, Math.hypot(prey.x - k.x, prey.z - k.z) / 25); g = [prey.x + prey.vx * lead, prey.z + prey.vz * lead]; }
       if (!g) g = [Math.sin(k.slot + this.t * 0.2) * 30, Math.cos(k.slot + this.t * 0.2) * 30];
@@ -883,7 +892,7 @@ class CartRaceScene {
     inp.steer = clamp(-ang * 2.4, -1, 1);
     const sharp = Math.abs(ang) > 1.3;
     inp.gas = sharp && k.speed > 8 ? 0 : 1; inp.brake = sharp && k.speed > 14 ? 0.5 : 0;
-    if (dist < 4 && !ai.prey && this.objective !== 'hill') inp.gas = 0.5;
+    if (dist < 4 && !ai.prey) inp.gas = 0.5;
     inp.driftPress = false; inp.drift = false;
     if (Math.abs(ang) > 0.9 && k.speed > 13 && !k.air && this.rng() < dt * 3) { inp.driftPress = true; inp.drift = true; }
     if (k.drift) inp.drift = Math.abs(ang) > 0.35;
@@ -927,7 +936,7 @@ class CartRaceScene {
     if (k.stunT > 0 && Math.random() < dt * 30) this.fx.spark(k.x + (Math.random() - 0.5) * 2, k.y + 1.5 + Math.random() * 1.5, k.z + (Math.random() - 0.5) * 2, 2, '#5af2ff', 4);
     if (k.dazzleT > 0 && Math.random() < dt * 8) this.fx.glint(k.x + (Math.random() - 0.5) * 3, k.y + 2 + Math.random() * 2, k.z + (Math.random() - 0.5) * 3, '#ffffff');
     if (k.foamT > 0 && Math.random() < dt * 20) this.fx.add(k.x + (Math.random() - 0.5) * 3, k.y + 0.6, k.z + (Math.random() - 0.5) * 3, 0, 0.6, 0, 1.0, 0.8, 1.8, [1, 1, 1], 0.6, 'puff', 4);
-    if (k.out && Math.random() < dt * 4) this.fx.add(k.x, k.y + 2, k.z, 0, 1.4, 0, 2, 0.8, 2.6, [0.3, 0.3, 0.34], 0.4, 'smoke', 4);
+    if (k.out && !k.hidden && Math.random() < dt * 4) this.fx.add(k.x, k.y + 2, k.z, 0, 1.4, 0, 2, 0.8, 2.6, [0.3, 0.3, 0.34], 0.4, 'smoke', 4);
     // every car has a personality: the octopus puffs smoke, the dragon snorts sparks, the snail drips slime, the jelly crackles
     const id = k.car.id;
     if (id === 'octo' && Math.random() < dt * 3) { const c = k.M.extra.chimney || [0, 4.7, -0.15], p = cartCarPoint(k, c[0], c[1], c[2], [0, 0, 0]); this.fx.add(p[0], p[1], p[2], 0, 1.6, 0, 1.6, 0.4, 1.6, [0.4, 0.38, 0.4], 0.35, 'smoke', 4); }
@@ -967,7 +976,8 @@ class CartRaceScene {
       const sv = cartSave(), key = this.arenaId + ':' + this.objective;
       if (order[0] === me) sv.wins[key] = (sv.wins[key] || 0) + 1;
       // winning every objective of an arena unlocks its powers as gift-box drops in the circuit races
-      if (order[0] === me && !sv.mastered[this.arenaId] && cartArenaMastered(this.arenaId)) { sv.mastered[this.arenaId] = true; this.mastered = true; this.log('mastered', { arena: this.arenaId }); }
+      if (this.ofx && this.ofx.finish) this.ofx.finish(this);   // royale: the result for the career flow
+      if (order[0] === me && this.objective !== 'royale' && !sv.mastered[this.arenaId] && cartArenaMastered(this.arenaId)) { sv.mastered[this.arenaId] = true; this.mastered = true; this.log('mastered', { arena: this.arenaId }); }
       Save.save();
     } else {
       const T = this.T, avg = k => Math.max(8, k.vmax * 0.8);

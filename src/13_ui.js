@@ -89,7 +89,7 @@ function drawLogo(ctx, x, y, size, t, txt) {
 const GAMES_ALL = [
   { id: 'burns', title: 'BURNING MAN', sub: 'Brady goes to Burning Man (3D)', col: '#ff6a2a' },
   { id: 'world', title: 'SUPER BRADY-O WORLD', sub: 'Super Brady-O travels the world', col: '#7ad86a' },
-  { id: 'kart', title: 'ART CART', sub: 'Battle-race wild art cars', col: '#ff4fd8' }
+  { id: 'kart', title: 'SUPER ART KART', sub: 'Battle-race wild art cars', col: '#ff4fd8' }
 ];
 // the standalone Super Brady-O World app shows only its own game
 const GAMES = (typeof BRADY_APP !== 'undefined' && BRADY_APP === 'world') ? GAMES_ALL.filter(g => g.id === 'world') : GAMES_ALL;
@@ -118,7 +118,7 @@ function startGame(id) {
   } else if (id === 'kart') {
     const K = kartScenes();
     if (K) Game.setScene(new K.KartMenuScene());
-    else if (Game.scene && Game.scene.toastMsg !== undefined) Game.scene.toastMsg = 'ART CART IS STILL WARMING UP';
+    else if (Game.scene && Game.scene.toastMsg !== undefined) Game.scene.toastMsg = 'SUPER ART KART IS STILL WARMING UP';
   }
 }
 // the kart racer and the city map live in their own modules; find them however they were exported

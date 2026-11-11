@@ -102,7 +102,7 @@ class CartGuide {
     const row = (id, tag, tagCol) => { const I = CART_ITEMS[id], T = cartGuideText(id), col = lit(I.col); return { id, name: I.name, col, bg: rgba(col, 0.1), what: T[0], kind: T[1], tip: T[2], tag, tagCol: tagCol ? lit(tagCol) : '#ffffff' }; };
     this.tabs = [
       { label: 'GIFT BOXES', intro: 'Drive through a gift box to grab one. Tap ITEM to use it.', rows: CART_ITEM_IDS.filter(id => CART_ITEMS[id] && !CART_ITEMS[id].car && !CART_ITEMS[id].arena).map(id => row(id, '', '')) },
-      { label: 'CAR SPECIALS', intro: 'Every car has its own special. Only that car finds it in gift boxes.', rows: CART_CARS.filter(c => CART_SPECIALS[c.id]).map(c => row(CART_SPECIALS[c.id].id, c.name, luma(c.col) < 0.6 ? c.col2 : c.col)) },
+      { label: 'SPECIALS', intro: 'Every car and every driver has a special. Only they find it in gift boxes.', rows: CART_CARS.filter(c => CART_SPECIALS[c.id]).map(c => row(CART_SPECIALS[c.id].id, c.name, luma(c.col) < 0.6 ? c.col2 : c.col)).concat(CART_DRIVERS.filter(d => d.special && CART_ITEMS[d.special]).map(d => row(d.special, d.short || d.name, d.col))) },   // C3: + the drivers' specials
       { label: 'ARENA POWERS', intro: 'Found in their own arena. Win all its objectives to get them in races.', rows: [] }
     ];
     for (const A of CART_ARENAS) for (const p of A.powers || []) if (CART_ITEMS[p]) this.tabs[2].rows.push(row(p, A.name + (sv.mastered[A.id] ? ' ✓' : ''), A.col));
@@ -184,7 +184,10 @@ class KartMenuScene {
     const sv = cartSave();
     this.drvSel = Math.max(0, CART_DRIVERS.findIndex(d => d.id === sv.driver));
     this.carSel = Math.max(0, CART_CARS.findIndex(c => c.id === sv.car));
-    this.mode = o.mode || 'gp'; this.cupSel = 0; this.trackSel = 0; this.arenaSel = 0; this.objSel = 0;
+    // career / royale / secret screens open on a car (o.car) and a run kind (o.kind); o.complete: the prize screen leads on to the celebration
+    if (o.car) { const ci = CART_CARS.findIndex(c => c.id === o.car); if (ci >= 0) this.carSel = ci; }
+    this.kind = o.kind || null; this.thenComplete = !!o.complete;
+    this.mode = o.mode || o.kind || 'gp'; this.cupSel = 0; this.trackSel = 0; this.arenaSel = 0; this.objSel = 0;
     this.spin = 0; this.spinV = CART_SPIN; this.cam = { x: 0, y: 3, z: 10, tx: 0, ty: 1.5, tz: 0, fov: 0.75, shift: 0 }; this.camGoal = { x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, fov: 0.75, shift: 0, d: 10 }; this.camSnap = true;
     // per-frame scratch (the render loop allocates nothing)
     this.mirB = new Float32Array(64 * 12); this.ringB = new Float32Array(12); this.tmp3 = [0, 0, 0]; this.black = [0, 0, 0];
@@ -242,25 +245,32 @@ class KartMenuScene {
     const sr = this.stageRect = this.stageRect || {}; sr.x = safeL; sr.y = safeT + 40; sr.w = W - safeL - safeR; sr.h = H - sr.y - safeB;
     const setRect = (x0, y0, x1, y1) => { sr.x = x0; sr.y = y0; sr.w = Math.max(40, x1 - x0); sr.h = Math.max(40, y1 - y0); };
     if (this.state === 'mode') {
-      const bw = Math.min(260, W * 0.62), x = P ? (W - bw) / 2 : W - safeR - bw - 10, y0 = P ? H * 0.5 : H * 0.3;
-      this.btns = [
-        { x, y: y0, w: bw, h: 48, label: 'GRAND PRIX', primary: true, fn: () => this.pick('gp') },
-        { x, y: y0 + 56, w: bw, h: 44, label: 'BATTLE ARENAS', fn: () => this.pick('battle') },
-        { x, y: y0 + 108, w: bw, h: 40, label: 'TIME TRIAL', fn: () => this.pick('tt') },
-        { x, y: y0 + 156, w: bw / 2 - 4, h: 34, size: 10, label: 'AUTO-GAS ' + (sv.autoGas !== false ? 'ON' : 'OFF'), fn: () => { sv.autoGas = sv.autoGas === false; Save.save(); Sound.play('select'); this.build(); } },
-        { x: x + bw / 2 + 4, y: y0 + 156, w: bw / 2 - 4, h: 34, size: 10, label: 'GFX ' + (sv.gfx || 'auto').toUpperCase(), fn: () => { const L = BURNS_GFX.names, i = L.indexOf(sv.gfx || 'auto'); sv.gfx = L[(i + 1) % L.length]; Save.save(); if (this.gl) BurnsGL.configure(sv.gfx); Sound.play('select'); this.build(); } },
-        // music and sound levels (0 = off): the same five steps as the other apps' settings
-        { x, y: y0 + 198, w: bw / 2 - 4, h: 34, size: 10, label: cartVolLabel('MUSIC', Save.data.settings.music), fn: () => { cartCycleVol('music'); this.build(); } },
-        { x: x + bw / 2 + 4, y: y0 + 198, w: bw / 2 - 4, h: 34, size: 10, label: cartVolLabel('SFX', Save.data.settings.sfx), fn: () => { cartCycleVol('sfx'); Sound.play('select'); this.build(); } }
-      ];
+      // home: CAREER · BATTLE ROYALE · SECRET LEVELS · QUICK RACE · POWER-UPS, then the settings in two small rows
+      const bw = P ? Math.min(270, W * 0.7) : Math.min(250, W * 0.34), x = P ? (W - bw) / 2 : W - safeR - bw - 6, tot = 50 + 46 + 42 + 42 + 38 + 30 + 30 + 6 * 7;
+      const y0 = P ? Math.min(H * 0.44, H - safeB - tot - 4) : Math.max(safeT, (H - tot) / 2);
+      let y = y0; const row = (h, b) => { b.x = b.x === undefined ? x : b.x; b.y = y; b.h = h; b.w = b.w || bw; this.btns.push(b); return b; }, step = h => { y += h + 7; };
+      const anyKey = CART_CARS.some(c => cartSecretUnlocked(c.id));
+      row(50, { label: 'CAREER', primary: true, fn: () => this.pick('career') }); step(50);
+      row(46, { label: 'BATTLE ROYALE', fn: () => this.pick('royale') }); step(46);
+      this.secretBtn = row(42, { label: 'SECRET LEVELS', locked: !anyKey, fn: () => this.pick('secret') }); step(42);
+      row(42, { label: 'QUICK RACE', fn: () => this.pick('quick') }); step(42);
+      this.guideBtn = row(38, { size: 13, label: 'POWER-UPS', fn: () => this.openGuide() }); step(38);
+      const half = bw / 2 - 4;
+      row(30, { w: half, size: 10, label: 'AUTO-GAS ' + (sv.autoGas !== false ? 'ON' : 'OFF'), fn: () => { sv.autoGas = sv.autoGas === false; Save.save(); Sound.play('select'); this.build(); } });
+      row(30, { x: x + bw / 2 + 4, w: half, size: 10, label: 'GFX ' + (sv.gfx || 'auto').toUpperCase(), fn: () => { const L = BURNS_GFX.names, i = L.indexOf(sv.gfx || 'auto'); sv.gfx = L[(i + 1) % L.length]; Save.save(); if (this.gl) BurnsGL.configure(sv.gfx); Sound.play('select'); this.build(); } }); step(30);
+      // music and sound levels (0 = off): the same five steps as the other apps' settings
+      row(30, { w: half, size: 10, label: cartVolLabel('MUSIC', Save.data.settings.music), fn: () => { cartCycleVol('music'); this.build(); } });
+      row(30, { x: x + bw / 2 + 4, w: half, size: 10, label: cartVolLabel('SFX', Save.data.settings.sfx), fn: () => { cartCycleVol('sfx'); Sound.play('select'); this.build(); } });
+      this.lastRowY = y + 30;
       // in the standalone Art Cart app this menu IS home: nothing to go back to
       const home = typeof BRADY_APP !== 'undefined' && BRADY_APP === 'kart';
       if (!home) this.btns.push(back);
-      // the power-ups guide: top left (beside BACK when there is one), out of the way of the logo and the mode buttons
-      this.btns.push(this.guideBtn = { x: home ? safeL : safeL + back.w + 8, y: safeT, w: 146, h: 38, size: 12, label: 'POWER-UPS', fn: () => this.openGuide() });
-      // the car: left of the buttons in landscape; between the logo and the buttons in portrait
-      if (P) setRect(safeL, H * 0.16 + insets.t + Math.min(46, W * 0.11) * 0.85 + 34, W - safeR, y0 - 10);
-      else setRect(safeL, safeT + 46, x - 24, H - safeB);
+      // the logo: top centre (portrait), top of the free left area (landscape); the car turns below it
+      const ls = this.logoS = Math.min(P ? 46 : 52, W * (P ? 0.11 : 0.065));
+      this.logoX = P ? W / 2 : (safeL + x - 24) / 2; this.logoY = P ? H * 0.14 + insets.t : safeT + (home ? 34 : 70);
+      const under = this.logoY + ls * 0.85 + 46;
+      if (P) setRect(safeL, under, W - safeR, y0 - 10);
+      else setRect(safeL, under, x - 24, H - safeB);
     } else if (this.state === 'guide') {
       if (!this.guide) this.openGuide(true); else this.guide.build();
     } else if (this.state === 'driver') {
@@ -281,7 +291,7 @@ class KartMenuScene {
       if (P) {
         // arrows sit at the plinth's front edge, below the car, not over it
         ay = py - 10 - ah; ax0 = safeL; ax1 = W - safeR - aw;
-        setRect(safeL, Math.max(112, insets.t + 108), W - safeR, ay - 4);
+        setRect(safeL, Math.max(134, insets.t + 130), W - safeR, ay - 4);
       } else {
         // arrows at mid height either side of the car; the car stays between them
         const x1 = px - 14; ax0 = safeL; ax1 = x1 - aw;
@@ -291,9 +301,11 @@ class KartMenuScene {
       this.btns = [
         { x: ax0, y: ay, w: aw, h: ah, label: '◀', fn: () => this.stepCar(-1) },
         { x: ax1, y: ay, w: aw, h: ah, label: '▶', fn: () => this.stepCar(1) },
-        { x: P ? W / 2 - 90 : W - safeR - 190, y: H - safeB - 48, w: 180, h: 46, label: 'NEXT ▶', primary: true, fn: () => this.confirmCar() },
+        { x: P ? W / 2 - 169 + 158 : W - safeR - 180, y: H - safeB - 48, w: 180, h: 46, label: 'NEXT ▶', primary: true, fn: () => this.confirmCar() },
         back
       ];
+      // the garage: spend this car's stat points (43_cart_hc_screens.js)
+      this.btns.push(this.garageBtn = { x: P ? W / 2 - 169 : W - safeR - 180 - 138, y: H - safeB - 48, w: 130, h: 46, size: 13, label: 'GARAGE', fn: () => this.openGarage('car') });
     } else if (this.state === 'cup') {
       const top = safeT + (P ? 100 : 56), bottom = H - safeB;
       if (P) { const ch = (bottom - top - 12) / 2; CART_CUPS.forEach((c, i) => this.cards.push({ i, x: safeL, y: top + i * (ch + 12), w: W - safeL - safeR, h: ch })); }
@@ -310,6 +322,8 @@ class KartMenuScene {
       const cw = (W - safeL - safeR - (cols - 1) * 10) / cols, ch = (bottom - top - (nr - 1) * 10) / nr;
       CART_ARENAS.forEach((a, i) => this.cards.push({ i, x: safeL + (i % cols) * (cw + 10), y: top + Math.floor(i / cols) * (ch + 10), w: cw, h: ch }));
       this.btns = [back];
+    } else if (this['layout_' + this.state]) {
+      this['layout_' + this.state]({ W, H, P, safeT, safeB, safeL, safeR, back, setRect, sr, sv });
     } else if (this.state === 'objective') {
       const A = CART_ARENAS[this.arenaSel], top = safeT + (P ? 110 : 70), bottom = H - safeB, n = A.objectives.length, cols = P ? 1 : 2, nr = Math.ceil(n / cols);
       const cw = (W - safeL - safeR - (cols - 1) * 12) / cols, ch = Math.min(120, (bottom - top - (nr - 1) * 10) / nr);
@@ -318,7 +332,12 @@ class KartMenuScene {
     }
     this.btns.focus = 0;
   }
-  pick(mode) { Sound.play('select'); this.mode = mode; this.state = 'driver'; this.build(); }
+  // home picks: career / royale → driver → car → the run map; quick → GRAND PRIX or TIME TRIAL; secret → the secret levels
+  pick(mode) {
+    Sound.play('select');
+    if (mode === 'quick' || mode === 'secret') { this.state = mode; this.build(); return; }
+    this.mode = mode; this.kind = mode === 'career' || mode === 'royale' ? mode : null; this.state = 'driver'; this.build();
+  }
   // the POWER-UPS guide (CartGuide below), over the turning showroom; its BACK returns home
   openGuide(quiet) {
     if (!quiet) Sound.play('select');
@@ -328,13 +347,13 @@ class KartMenuScene {
   }
   back() {
     Sound.play('back');
-    const prev = { driver: 'mode', car: 'driver', cup: 'car', track: 'car', arena: 'car', objective: 'arena' }[this.state];
+    const prev = { driver: this.mode === 'gp' || this.mode === 'tt' ? 'quick' : 'mode', car: 'driver', cup: 'car', track: 'car', arena: 'car', objective: 'arena', quick: 'mode', secret: 'mode', secretGames: 'secret', run: 'car', garage: this.garageBack || 'car', prize: 'run', complete: 'mode' }[this.state];
     if (!prev) { if (typeof BRADY_APP === 'undefined' || BRADY_APP !== 'kart') Game.setScene(new TitleScene()); return; }
     this.state = prev; this.build();
   }
   confirmDriver() { Sound.play('select'); const sv = cartSave(); sv.driver = CART_DRIVERS[this.drvSel].id; Save.save(); this.state = 'car'; this.build(); }
   stepCar(d) { this.carSel = (this.carSel + d + CART_CARS.length) % CART_CARS.length; this.spin = 0; this.spinV = CART_SPIN; Sound.play('select', { vol: 0.5 }); }
-  confirmCar() { Sound.play('select'); const sv = cartSave(); sv.car = CART_CARS[this.carSel].id; Save.save(); this.state = this.mode === 'gp' ? 'cup' : this.mode === 'tt' ? 'track' : 'arena'; this.build(); }
+  confirmCar() { Sound.play('select'); const sv = cartSave(); sv.car = CART_CARS[this.carSel].id; Save.save(); this.state = this.mode === 'gp' ? 'cup' : this.mode === 'tt' ? 'track' : this.kind ? 'run' : 'arena'; this.build(); }
   start(o) {
     Sound.play('select');
     const sv = cartSave();
@@ -353,7 +372,7 @@ class KartMenuScene {
   }
   turn(dt) {
     this._dragDX = 0; this._dragAny = false;
-    if (this.state === 'car' || this.state === 'mode') Input.touches.forEach(this._dragFn);
+    if (this.state === 'car' || this.state === 'mode' || this.state === 'garage' || this.state === 'prize' || this.state === 'complete') Input.touches.forEach(this._dragFn);
     if (this._dragAny) { const a = this._dragDX * 0.012; this.spin += a; this.spinV = lerp(this.spinV, a / Math.max(dt, 1 / 120), 0.35); }
     else { this.spinV += (CART_SPIN - this.spinV) * (1 - Math.exp(-dt * 1.2)); this.spin += this.spinV * dt; }
   }
@@ -361,8 +380,10 @@ class KartMenuScene {
     this.t += dt;
     this.turn(dt);
     if (this.state === 'guide' && this.guide) { this.guide.update(); return; }
-    const key = Input.uiKey, n = this.cards.length;
+    const key = Input.uiKey;
     if (key === 'pause') { Input.uiKey = null; this.back(); return; }
+    if (this['update_' + this.state] && this['update_' + this.state](dt)) return;
+    const n = { driver: 1, cup: 1, track: 1, arena: 1, objective: 1 }[this.state] ? this.cards.length : 0;
     if (this.state === 'car' && (key === 'left' || key === 'right')) { Input.uiKey = null; this.stepCar(key === 'left' ? -1 : 1); return; }
     if (this.state === 'car' && key === 'enter') { Input.uiKey = null; this.confirmCar(); return; }
     if (n && key) {
@@ -377,7 +398,8 @@ class KartMenuScene {
     if (hit) { hit.fn(); return; }
     for (const tp of Input.taps) for (const c of this.cards) {
       if (tp.x < c.x || tp.x > c.x + c.w || tp.y < c.y || tp.y > c.y + c.h) continue;
-      if (this.state === 'driver') { if (this.drvSel === c.i) this.confirmDriver(); else { this.drvSel = c.i; Sound.play('select', { vol: 0.5 }); } }
+      if (c.fn) { if (!c.disabled) c.fn(); else if (c.why) { Sound.play('back'); this.why = { text: c.why, t: 2.2 }; } }
+      else if (this.state === 'driver') { if (this.drvSel === c.i) this.confirmDriver(); else { this.drvSel = c.i; Sound.play('select', { vol: 0.5 }); } }
       else this.choose(c.i);
       return;
     }
@@ -563,8 +585,9 @@ class KartMenuScene {
     if (typeof BurnsSkinActor !== 'undefined') this._portSkin = !!BurnsSkinActor.ready;
     if (this.state === 'driver' && this.gl && CartShowroom.world && !this._port) this.portraits();
     this.ensurePreview();
-    let ok = false; try { ok = this.gl && !BurnsGL.lost && !this.jobs.length && !window.__cartSkipRender && this.render3D(ctx); } catch (e) { console.error(e); Game.reportError(e); this.gl = false; }
-    if (!ok) this.backdrop(ctx, W, H);
+    const stage = !CART_NO_STAGE[this.state];
+    let ok = false; try { ok = stage && this.gl && !BurnsGL.lost && !this.jobs.length && !window.__cartSkipRender && this.render3D(ctx); } catch (e) { console.error(e); Game.reportError(e); this.gl = false; }
+    if (!ok) { if (stage) this.backdrop(ctx, W, H); else this.mapBackdrop(ctx, W, H); }
     // a soft dark gradient where the UI sits
     const P = this.portrait, cr = this.state === 'car' && this.cardRect, g = P ? ctx.createLinearGradient(0, cr ? cr.y - 30 : H * 0.35, 0, H) : ctx.createLinearGradient(cr ? cr.x - 50 : W * 0.3, 0, W, 0);
     g.addColorStop(0, 'rgba(10,4,20,0)'); g.addColorStop(1, 'rgba(10,4,20,0.72)');
@@ -577,8 +600,12 @@ class KartMenuScene {
     else if (this.state === 'arena') this.drawArenas(ctx);
     else if (this.state === 'objective') this.drawObjectives(ctx);
     else if (this.state === 'guide' && this.guide) this.guide.draw(ctx);
+    else if (this['draw_' + this.state]) this['draw_' + this.state](ctx);
     BurnsUIKit.drawButtons(ctx, this.btns);
-    if (this.state === 'mode' && this.guideBtn) this.drawGuideBtn(ctx, this.guideBtn);
+    if (this['over_' + this.state]) this['over_' + this.state](ctx);   // badges and locks drawn over the buttons
+    if (this.state === 'mode' && this.guideBtn) { this.drawGuideBtn(ctx, this.guideBtn); if (this.secretBtn && this.secretBtn.locked) cartLockIcon(ctx, this.secretBtn.x + 24, this.secretBtn.y + this.secretBtn.h / 2, 9, '#ffd84a'); }
+    if (this.state === 'car' && this.garageBtn) this.drawGarageBadge(ctx, this.garageBtn);
+    if (this.why && (this.why.t -= 1 / 60) > 0) { const W2 = Game.cssW; ctx.save(); ctx.font = `600 12px ${FONT_UI}`; const tw = Math.min(W2 - 30, ctx.measureText(this.why.text).width + 30); ctx.globalAlpha = Math.min(1, this.why.t * 3); BurnsUI.pill(ctx, W2 / 2 - tw / 2, Game.cssH * 0.5 - 16, tw, 32, 'rgba(12,6,26,0.92)', 'rgba(255,216,74,0.7)'); BurnsUI.text(ctx, this.why.text, W2 / 2, Game.cssH * 0.5, 12, '#ffd84a', { ui: true, stroke: false }); ctx.restore(); }
   }
   // the POWER-UPS button's gift box, and a NEW tag until the guide has been opened once
   drawGuideBtn(ctx, b) {
@@ -610,23 +637,31 @@ class KartMenuScene {
     ctx.save(); ctx.translate(x, y); ctx.rotate(-0.04);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${s}px ${FONT_DISPLAY}`;
     const wob = Math.sin(this.t * 2) * 2;
-    for (let i = 6; i > 0; i--) { ctx.fillStyle = `rgba(${30 + i * 12},8,${50 + i * 10},1)`; ctx.fillText('ART CART', i * 0.9, wob + i * 1.4); }
+    for (let i = 6; i > 0; i--) { ctx.fillStyle = `rgba(${30 + i * 12},8,${50 + i * 10},1)`; ctx.fillText('ART KART', i * 0.9, wob + i * 1.4); }
     ctx.shadowColor = '#ff4fd8'; ctx.shadowBlur = s * 0.45;
     const g = ctx.createLinearGradient(0, -s / 2, 0, s / 2); g.addColorStop(0, '#fff8d0'); g.addColorStop(0.45, '#ffd84a'); g.addColorStop(0.55, '#ff8a3a'); g.addColorStop(1, '#ff4fd8');
-    ctx.fillStyle = g; ctx.fillText('ART CART', 0, wob);
-    ctx.shadowBlur = 0; ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.strokeText('ART CART', 0, wob);
+    ctx.fillStyle = g; ctx.fillText('ART KART', 0, wob);
+    ctx.shadowBlur = 0; ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.strokeText('ART KART', 0, wob);
+    // SUPER ART KART: "SUPER" is a tilted hot-pink sticker slapped on the top-left corner of ART (it fits the landscape top edge)
+    const tw = ctx.measureText('ART KART').width, bw = s * 1.42, bh = s * 0.44, pop = 1 + 0.05 * Math.max(0, Math.sin(this.t * 3));
+    ctx.save(); ctx.translate(-tw / 2 - s * 0.6, -s * 0.36 + wob); ctx.rotate(-0.16); ctx.scale(pop, pop);
+    ctx.fillStyle = '#2a0838'; burnsRR(ctx, -bw / 2 + 2, -bh / 2 + 3, bw, bh, bh / 2); ctx.fill();
+    const pg = ctx.createLinearGradient(0, -bh / 2, 0, bh / 2); pg.addColorStop(0, '#ff7ae0'); pg.addColorStop(1, '#d81e9a');
+    ctx.fillStyle = pg; burnsRR(ctx, -bw / 2, -bh / 2, bw, bh, bh / 2); ctx.fill();
+    ctx.lineWidth = Math.max(1.5, s * 0.05); ctx.strokeStyle = '#ffd84a'; ctx.stroke();
+    ctx.font = `${Math.round(s * 0.3)}px ${FONT_DISPLAY}`; ctx.lineJoin = 'round'; ctx.lineWidth = s * 0.08; ctx.strokeStyle = '#2a0838'; ctx.strokeText('SUPER', 0, 1);
+    ctx.fillStyle = '#ffffff'; ctx.fillText('SUPER', 0, 1);
+    ctx.restore();
     ctx.restore();
   }
   drawMode(ctx) {
-    const W = Game.cssW, H = Game.cssH, P = this.portrait, b = this.btns[0];
-    const lx = P ? W / 2 : b.x + b.w / 2, ly = P ? H * 0.16 + insets.t : b.y - 84, s = Math.min(P ? 46 : 54, W * (P ? 0.11 : 0.07));
+    const lx = this.logoX, ly = this.logoY, s = this.logoS;
     this.drawLogo(ctx, lx, ly, s);
     BurnsUI.text(ctx, 'Battle-race wild art cars across the playa', lx, ly + s * 0.85, 12, 'rgba(255,255,255,0.92)', { ui: true });
-    BurnsUI.text(ctx, CART_CARS.length + ' art cars · ' + CART_DRIVERS.length + ' drivers · ' + CART_TRACK_ORDER.length + ' tracks · ' + CART_ARENAS.length + ' arenas', lx, ly + s * 0.85 + 18, 11, '#ffd84a', { ui: true });
-    const sv = cartSave(), tro = CART_CUPS.map(c => sv.trophies[c.id] ? c.name + ' ' + ['', 'GOLD', 'SILVER', 'BRONZE'][sv.trophies[c.id]] : null).filter(Boolean).join('  ·  ');
-    // under the last row of settings buttons (it used to sit on top of MUSIC / SFX)
-    const lb = this.btns[6];
-    if (tro) BurnsUI.text(ctx, tro, lx, Math.min(lb.y + lb.h + 14, H - Math.max(10, insets.b + 2) - 6), 11, '#ffd84a', { ui: true });
+    const sv = cartSave(), tro = CART_CUPS.map(c => sv.trophies[c.id] ? c.name + ' ' + ['', 'GOLD', 'SILVER', 'BRONZE'][sv.trophies[c.id]] : null).filter(Boolean);
+    const won = CART_CARS.filter(c => cartCarComplete(c.id)).length;
+    if (won) tro.unshift('GAME WON WITH ' + won + '/' + CART_CARS.length + ' CARS');
+    BurnsUI.text(ctx, tro.length ? tro.join('  ·  ') : CART_CARS.length + ' art cars · ' + CART_DRIVERS.length + ' drivers · win a Career and a Battle Royale with each', lx, ly + s * 0.85 + 18, 11, '#ffd84a', { ui: true });
   }
   drawCard(ctx, c, on, col) {
     ctx.save();
@@ -651,14 +686,23 @@ class KartMenuScene {
     const d = CART_DRIVERS[this.drvSel], x = P ? W / 2 : W * 0.18, y = P ? H * 0.36 : H - Math.max(70, insets.b + 64);
     BurnsUI.text(ctx, d.name, x, y, 20, d.col, { glow: d.col });
     BurnsUI.text(ctx, '"' + d.line + '"', x, y + 22, 12, '#ffffff', { ui: true });
+    // ---- C3 (drivers): the driver's stat pip and special, one compact line under the quote ----
+    if (d.special && CART_ITEMS[d.special]) {
+      const SP = CART_ITEMS[d.special], st = '+1 ' + String(d.stat || '').toUpperCase(), yy = P ? y - 30 : y + 44;   // portrait: above the name (the grid starts right under the quote)
+      ctx.save(); ctx.font = `800 11px ${FONT_UI}`; const w1 = ctx.measureText(st).width + 16, w2 = ctx.measureText(SP.name).width, tw = w1 + 8 + 30 + w2 + 12, x0 = clamp(x - tw / 2, 6, W - tw - 6);
+      BurnsUI.pill(ctx, x0, yy - 12, w1, 24, 'rgba(255,216,74,0.18)', 'rgba(255,216,74,0.7)'); BurnsUI.text(ctx, st, x0 + w1 / 2, yy, 11, '#ffd84a', { ui: true, stroke: false });
+      BurnsUI.pill(ctx, x0 + w1 + 8, yy - 12, tw - w1 - 8, 24, 'rgba(10,6,24,0.7)', rgba(SP.col, 0.7)); cartItemIcon(ctx, d.special, x0 + w1 + 8 + 15, yy, 20, 1);
+      BurnsUI.text(ctx, SP.name, x0 + w1 + 8 + 30, yy, 11, SP.col, { ui: true, stroke: false, align: 'left' }); ctx.restore();
+    }
+    // ---- end C3 ----
   }
   // the four stat bars: one per row, or two per row (grid) where the card is short (landscape phones)
   drawStatBars(ctx, car, x, y, w, grid) {
-    const cw = grid ? (w - 16) / 2 : w, lw = grid ? 60 : 72, fs = grid ? 9 : 10, bw = (cw - lw) / 5;
+    const cw = grid ? (w - 16) / 2 : w, lw = grid ? 60 : 72, fs = grid ? 9 : 10, bw = (cw - lw) / 5, parts = cartStatParts(car.id, CART_DRIVERS[this.drvSel] && CART_DRIVERS[this.drvSel].id);
     for (let i = 0; i < 4; i++) {
-      const S = CART_STAT_ROWS[i], xx = grid ? x + (i & 1) * (cw + 16) : x, yy = grid ? y + (i >> 1) * 17 : y + i * 17;
+      const S = CART_STAT_ROWS[i], xx = grid ? x + (i & 1) * (cw + 16) : x, yy = grid ? y + (i >> 1) * 17 : y + i * 17, q = parts[S[1]];
       BurnsUI.text(ctx, S[0], xx, yy, fs, 'rgba(255,255,255,0.85)', CART_TXT_L);
-      for (let k = 0; k < 5; k++) { ctx.fillStyle = k < car.stats[S[1]] ? S[2] : 'rgba(255,255,255,0.14)'; burnsRR(ctx, xx + lw + k * bw, yy - 5, bw - (grid ? 3 : 4), 10, 4); ctx.fill(); }
+      for (let k = 0; k < 5; k++) cartPip(ctx, xx + lw + k * bw, yy - 5, bw - (grid ? 3 : 4), 10, k < q[0] ? 0 : k < q[0] + q[2] ? 2 : k < q[0] + q[2] + q[1] ? 1 : -1, S[2]);
     }
   }
   // the car card's text, wrapped and fitted once per car and card width (not every frame)
@@ -690,6 +734,7 @@ class KartMenuScene {
     const sr = this.stageRect, scx = sr.x + sr.w / 2;
     BurnsUI.text(ctx, (this.carSel + 1) + ' / ' + CART_CARS.length, P ? W / 2 : scx, P ? Math.max(100, insets.t + 96) : Math.max(52, insets.t + 50), 11, 'rgba(255,255,255,0.75)', { ui: true });
     const cr = this.cardRect, pw = cr.w, px = cr.x, py = cr.y, ph = cr.h, c = this.cardText(ctx, car, pw);
+    this.drawCarProgress(ctx, P ? W / 2 : scx, P ? Math.max(120, insets.t + 116) : H - Math.max(48, insets.b + 44));   // Career · Royale · secret level (43_cart_hc_screens.js)
     this.drawCard(ctx, cr, true, car.col);
     let y = py + 26;
     BurnsUI.text(ctx, car.name, px + 16, y, c.nameFs, c.nameCol, { align: 'left', glow: car.light });

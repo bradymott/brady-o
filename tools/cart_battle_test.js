@@ -1,4 +1,5 @@
-// Battle-arena smoke test: runs every arena × objective headless for a while and screenshots each.
+// Battle-arena smoke test: runs every secret-level arena × its three games headless for a while and screenshots each
+// (King of the Hill and Capture the Flag are retired: 43_cart_h_career.js; royale arenas have their own test).
 //   node tools/cart_battle_test.js [outDir=shots/battle] [arenaId] [seconds=40]
 // For each combo: loads the arena, drops straight into the race with the player on autopilot, steps the sim,
 // reports the objective state, the draw/triangle counts and any error. Fails on page errors or exceptions.
@@ -22,11 +23,12 @@ function serve(root) { return new Promise(res => { const srv = http.createServer
   page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text().slice(0, 300)); });
   await page.goto(url + 'art-cart/');
   await page.waitForFunction(() => window.BRADY_BURNS && window.BRADY_BURNS.CartGLB && window.BRADY_BURNS.CartGLB.ready, null, { timeout: 120000 });
-  const combos = await page.evaluate(() => window.BRADY_BURNS.CART_ARENAS.flatMap(a => a.objectives.map(o => [a.id, o])));
-  // the menus: the arena grid, and the objective screen of the arena under test
-  await page.evaluate(() => { const s = window.BRADY.Game.scene; s.mode = 'battle'; s.state = 'arena'; s.build(); });
-  await page.waitForTimeout(600); await page.screenshot({ path: path.join(out, 'menu-arenas.png'), timeout: 120000 });
-  if (only) { await page.evaluate(([id]) => { const B = window.BRADY_BURNS, s = window.BRADY.Game.scene; s.arenaSel = Math.max(0, B.CART_ARENAS.findIndex(a => a.id === id)); s.objSel = 0; s.state = 'objective'; s.build(); }, [only]); await page.waitForTimeout(600); await page.screenshot({ path: path.join(out, 'menu-objectives-' + only + '.png'), timeout: 120000 }); }
+  const combos = await page.evaluate(() => window.BRADY_BURNS.CART_ARENAS.filter(a => a.secretOf).flatMap(a => a.objectives.map(o => [a.id, o])));
+  if (combos.some(c => c[1] === 'hill' || c[1] === 'flag')) { console.log('FAIL: a retired objective is still on an arena', JSON.stringify(combos)); process.exit(1); }
+  // the menus: the secret levels, and the three games of the arena under test
+  await page.evaluate(() => { const s = window.BRADY.Game.scene; s.state = 'secret'; s.build(); });
+  await page.waitForTimeout(600); await page.screenshot({ path: path.join(out, 'menu-secret.png'), timeout: 120000 });
+  if (only) { await page.evaluate(([id]) => { const B = window.BRADY_BURNS, s = window.BRADY.Game.scene, A = B.CART_ARENAS.find(a => a.id === id); s.carSel = Math.max(0, B.CART_CARS.findIndex(c => c.id === (A && A.secretOf))); s.state = 'secretGames'; s.build(); }, [only]); await page.waitForTimeout(600); await page.screenshot({ path: path.join(out, 'menu-games-' + only + '.png'), timeout: 120000 }); }
   let bad = 0;
   for (const [arena, objective] of combos) {
     if (only && arena !== only) continue;

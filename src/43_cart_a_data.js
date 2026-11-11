@@ -17,7 +17,8 @@
    Entry: new KartMenuScene()   ·   Direct start: new CartRaceScene({mode, cup, race, track,
      arena, objective, driver, car, autoGas})
    Save: Save.data.cart = { driver, car, autoGas, trophies:{cupId:1|2|3}, best:{trackId:{lap,total}},
-     wins:{arena:objective:n}, gfx }
+     wins:{arena:objective:n}, gfx,
+     prog:{carId:{career, royale (runs), careerWon, royaleWon, points, alloc:{stat:n}, secret:{game:n}, celebrated}} }   (43_cart_h_career.js)
    All art cars, names, drivers, weapons and tracks are original designs. Real art cars are
    inspiration only; nothing here copies a real car's name, artwork or logo, or any game.
    ============================================================ */
@@ -82,35 +83,26 @@ const CART_WEAPONS = {
   geyser: { name: 'BLOWHOLE GEYSER', desc: 'A water spout erupts under the car ahead and launches it skyward.', reload: 10, kind: 'target', range: 60, col: '#4ab0ff' }
 };
 
-/* ---------------- drivers: Brady, Chinka, the Man and the action-figure cast ----------------
-   type: an engine character type (40_burns_db_cast.js); 'brady' / 'chinka' / 'man' are special. */
+/* ---------------- drivers: Brady, Chinka and ten burner cliches (C3, Nov 11) ----------------
+   type: an engine character type (40_burns_db_cast.js); 'brady' / 'chinka' are special.
+   stat: the one stat pip the driver adds to any car they drive; special: the driver's own gift-box special (its
+   effect, icon and HUD live in 43_cart_j_drivers.js; the two new characters' types 'messiah' and 'partyboy' are
+   defined there too). The rest of the old cast (and the Man, now the boss) are no
+   longer drivers: they stay in the world as crowd and roadside heroes (by engine type), and a saved driver that is no
+   longer here falls back to Brady (cartSave). */
 const CART_DRIVERS = [
-  { id: 'brady', name: 'BRADY', type: 'brady', line: 'First burn. Fastest burn.', col: '#ff4fd8' },
-  { id: 'chinka', name: 'CHINKA', type: 'chinka', line: 'Already lapped you, babe.', col: '#ff8a3a' },
-  { id: 'man', name: 'THE MAN', type: 'man', line: 'Burns brightest. Drives worst.', col: '#38f2ff' },
-  { id: 'crusty', short: 'CRUSTY', name: 'CRUSTY OLD BURNER', type: 'crusty', line: 'Racing was better on Baker Beach.', col: '#c8925a' },
-  { id: 'firespinner', short: 'SPINNER', name: 'FIRE SPINNER', type: 'firespinner', line: 'Every lap is a fire circle.', col: '#ff7a2a' },
-  { id: 'gatestaff', short: 'GATE', name: 'GATE STAFF', type: 'gatestaff', line: 'Ticket and ID. Then eat my dust.', col: '#e8e8e8' },
-  { id: 'greeter_f', short: 'GREETER', name: 'GREETER (HER)', type: 'greeter_f', line: 'Welcome home! Now get out of my way!', col: '#ff6ab8' },
-  { id: 'greeter_m', short: 'GREETER', name: 'GREETER (HIM)', type: 'greeter_m', line: 'Hugs at the finish line!', col: '#ffb84a' },
-  { id: 'darkwad', name: 'DARKWAD', type: 'darkwad', line: 'Headlights? Never heard of them.', col: '#6a6a7a' },
-  { id: 'badideaguy', short: 'BAD IDEA', name: 'BAD IDEA GUY', type: 'badideaguy', line: 'Hold my water bottle. Watch this.', col: '#ffd84a' },
-  { id: 'undercovercop', short: 'COP', name: 'UNDERCOVER COP', type: 'undercovercop', line: 'Just a regular groovy burner. Pull over.', col: '#3a6aff' },
-  { id: 'furry', name: 'FURRY', type: 'furry', line: 'It is SO hot in here. Worth it.', col: '#ff6ab0' },
-  { id: 'deathguild', short: 'DEATH GUILD', name: 'DEATH GUILD', type: 'deathguild', line: 'Two cars enter. Foam bats only.', col: '#8a8a92' },
-  { id: 'ranger', short: 'RANGER', name: 'OVERZEALOUS RANGER', type: 'ranger', line: 'I am going to need you to slow down.', col: '#9ab07a' },
-  { id: 'burney', name: 'BURNEY', type: 'burney', line: 'Smile for the photo finish!', col: '#3ab0d8' },
-  { id: 'playaartist', short: 'ARTIST', name: 'PLAYA ARTIST', type: 'playaartist', line: 'This lap is a sculpture.', col: '#e88a4a' },
-  { id: 'dpw', name: 'DPW PUNK', type: 'dpw', line: 'Built this road. Own this road.', col: '#ff8a1a' },
-  { id: 'lamplighter', short: 'LAMPLIGHTER', name: 'LAMP LIGHTER', type: 'lamplighter', line: 'Lighting the way, lap after lap.', col: '#ffe0a0' },
-  { id: 'annoyingdj', short: 'DJ', name: 'ANNOYING DJ', type: 'annoyingdj', line: 'MAKE SOME NOOOISE!', col: '#7aff5a' },
-  { id: 'sparklepony', short: 'SPARKLE', name: 'SPARKLE PONY', type: 'sparklepony', line: 'Can I borrow your boost? And your water?', col: '#c8a0ff' },
-  { id: 'partiedtoohard', short: 'PARTIED', name: 'PARTIED TOO HARD', type: 'partiedtoohard', line: 'What lap is it? What DAY is it?', col: '#b8c8a0' },
-  { id: 'burnerkid', short: 'KID', name: 'BURNER KID', type: 'burnerkid', line: 'Mom, please stop waving.', col: '#3ad8c8' },
-  { id: 'burnermom', short: 'MOM', name: 'BURNER MOM', type: 'burnermom', line: 'WOOO! This is the best week of my life!', col: '#ff9ac8' },
-  { id: 'cultleader', short: 'BUBBLEGUM', name: 'BROTHER BUBBLEGUM', type: 'cultleader', line: 'Join my pit crew. We have snacks.', col: '#ff4fa8' },
-  { id: 'fencebot_a', name: 'FENCE BOT A', type: 'fencebot_a', line: 'BEEP. FENCE. BOOP. FAST.', col: '#7aff5a' },
-  { id: 'fencebot_b', name: 'FENCE BOT B', type: 'fencebot_b', line: 'COLANDER MODE: ENGAGED.', col: '#5af2ff' }
+  { id: 'brady', name: 'BRADY', type: 'brady', line: 'First burn. Fastest burn.', col: '#ff4fd8', stat: 'speed', special: 'firstburn' },
+  { id: 'chinka', name: 'CHINKA', type: 'chinka', line: 'Already lapped you, babe.', col: '#ffd27a', stat: 'handling', special: 'lapped' },
+  { id: 'sparklepony', short: 'SPARKLE', name: 'SPARKLE PONY', type: 'sparklepony', line: 'Can I borrow your boost? And your water?', col: '#c8a0ff', stat: 'accel', special: 'borrow' },
+  { id: 'dpw', name: 'DPW PUNK', type: 'dpw', line: 'Built this road. Own this road.', col: '#ff8a1a', stat: 'weight', special: 'roadwork' },
+  { id: 'deathguild', short: 'DEATH GUILD', name: 'DEATH GUILD', type: 'deathguild', line: 'Two cars enter. Foam bats only.', col: '#8a8a92', stat: 'weight', special: 'bungee' },
+  { id: 'crusty', short: 'CRUSTY', name: 'CRUSTY OLD BURNER', type: 'crusty', line: 'Racing was better on Baker Beach.', col: '#c8925a', stat: 'handling', special: 'lecture' },
+  { id: 'ranger', short: 'RANGER', name: 'OVERZEALOUS RANGER', type: 'ranger', line: 'I am going to need you to slow down.', col: '#9ab07a', stat: 'handling', special: 'fivemph' },
+  { id: 'annoyingdj', short: 'DJ', name: 'ANNOYING DJ', type: 'annoyingdj', line: 'MAKE SOME NOOOISE!', col: '#7aff5a', stat: 'accel', special: 'airhorn' },
+  { id: 'darkwad', name: 'DARKWAD', type: 'darkwad', line: 'Headlights? Never heard of them.', col: '#8a7aa8', stat: 'speed', special: 'lightsout' },
+  { id: 'badideaguy', short: 'BAD IDEA', name: 'BAD IDEA GUY', type: 'badideaguy', line: 'Hold my water bottle. Watch this.', col: '#ffd84a', stat: 'speed', special: 'holdwater' },
+  { id: 'messiah', short: 'MESSIAH', name: 'MESSIAH COMPLEX', type: 'messiah', line: 'Make way. I am kind of a big deal.', col: '#fff0c8', stat: 'accel', special: 'parting' },
+  { id: 'partyboy', short: 'PARTY BOY', name: 'PARTY BOY', type: 'partyboy', line: 'Where\'s the afterparty? Is THIS the afterparty?', col: '#38f2ff', stat: 'weight', special: 'afterparty' }
 ];
 
 /* ---------------- pickups (gift boxes on the course; our own festival items) ---------------- */
@@ -228,11 +220,15 @@ function cartOrdinal(n) { return n + (n === 1 ? 'ST' : n === 2 ? 'ND' : n === 3 
 const cartWrap = a => a - TAU * Math.floor((a + Math.PI) / TAU);
 // a small seeded shuffle
 function cartShuffle(arr, rng) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr; }
-function cartRollItem(rank, n, rng, arenaId, carId) {
+function cartRollItem(rank, n, rng, arenaId, carId, drvId, poolCar) {
   const b = n <= 1 ? 1 : rank <= 1 ? 0 : rank <= 3 ? 1 : rank <= 5 ? 2 : 3, O = CART_ITEM_ODDS[b];
-  // the car's own signature special (rarer for the leader)
-  const SP = carId && CART_SPECIALS[carId];
-  if (SP && rng() < CART_SPECIAL_ODDS[b]) return SP.id;
+  // the car's own signature special, or the driver's own special (C3): together 1.4x the car-only rate (still rarer for
+  // the leader), split evenly between the two
+  const SP = carId && CART_SPECIALS[carId], DV = drvId ? CART_DRIVERS.find(d => d.id === drvId) : null, DS = DV && DV.special && CART_ITEMS[DV.special] ? DV.special : null;
+  if ((SP || DS) && rng() < CART_SPECIAL_ODDS[b] * (SP && DS ? 1.4 : 1)) return SP && DS ? (rng() < 0.5 ? SP.id : DS) : SP ? SP.id : DS;
+  // on a car's own level that car's signature special is in everyone's pool (poolCar: the level's car)
+  const PS = poolCar && poolCar !== carId && CART_SPECIALS[poolCar];
+  if (PS && rng() < 0.12) return PS.id;
   // in an arena with its own powers, almost half the boxes hold one; in races, mastered arena powers join the pool
   const A = arenaId ? cartArena(arenaId) : null;
   if (A && A.powers && A.powers.length && rng() < 0.45) return A.powers[Math.floor(rng() * A.powers.length)];

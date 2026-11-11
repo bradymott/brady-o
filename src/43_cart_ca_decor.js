@@ -354,7 +354,7 @@ const CartDecor = {
       return { cols: [{ t: 'cyl', x: -W / 2, z: 0, r: 1.1, y0: 0, y1: H }, { t: 'cyl', x: W / 2, z: 0, r: 1.1, y0: 0, y1: H }], lights: lights.filter(L => L.s > 0 || L.pool) };
     }, { hi: true });
     // the name board in the middle of the arch (a sign each way)
-    api.sign('ART CART', g.x, g.z, { yaw: g.yaw + Math.PI, h: 1.9, y: H + 0.1, post: false, maxW: 9, style: { bg: '#1a0a24', fg: '#ffffff', border: '#ff4fd8' }, glow: night ? '#ff4fd8' : null });
+    api.sign('SUPER ART KART', g.x, g.z, { yaw: g.yaw + Math.PI, h: 1.9, y: H + 0.1, post: false, maxW: 9, style: { bg: '#1a0a24', fg: '#ffffff', border: '#ff4fd8' }, glow: night ? '#ff4fd8' : null });
   },
 
   /* ---------- the Man's stage on Burn Night: a tiered wooden base with LED rings, uplights, fire barrels ---------- */

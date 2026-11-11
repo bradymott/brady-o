@@ -7,6 +7,7 @@
    ============================================================ */
 const CART_HUD = { pad: 12 };
 const CART_HEAD_COL = [1, 0.9, 0.74];   // headlight pools
+const CART_DARK_TINT = [0.03, 0.02, 0.07, 0.86];   // a car that went dark (LIGHTS OUT)
 const CART_ZONE_COL = [1, 0.84, 0.25], CART_CAPTURE_COL = [0.4, 1, 0.5];   // objective light walls
 Object.assign(CartRaceScene.prototype, {
   /* ---------- touch layout (the engine's Input, our own buttons) ---------- */
@@ -38,7 +39,8 @@ Object.assign(CartRaceScene.prototype, {
   },
   /* ---------- chase camera ---------- */
   updateCamera(fdt) {
-    const k = this.player, cam = this.cam, W = Game.cssW, H = Game.cssH, portrait = H > W * 1.05;
+    // camKart: a royale spectator follows another car
+    const k = this.camKart && !this.camKart.hidden ? this.camKart : this.player, cam = this.cam, W = Game.cssW, H = Game.cssH, portrait = H > W * 1.05;
     if (!k) return;
     const asp = W / Math.max(1, H);
     let tx, ty, tz, px, py, pz, fov = portrait ? 1.32 : 1.0;
@@ -70,6 +72,9 @@ Object.assign(CartRaceScene.prototype, {
       px = k.x - fx * d; py = k.y + h; pz = k.z - fz * d;
       fov = (portrait ? 1.32 : 1.0) + sp * 0.08 + this.boostLook * 0.12;
     }
+    // a final can take the camera (the Man igniting: 43_cart_hb_final.js)
+    const rc = this.rules.camera && this.rules.camera(this, fdt);
+    if (rc) { tx = rc.tx; ty = rc.ty; tz = rc.tz; px = rc.px; py = rc.py; pz = rc.pz; fov = rc.fov || fov; }
     // keep the line of sight to the car clear of the terrain: when a berm or a ramp is in the way, the camera
     // first slides in past it, then rises above what's left
     if (this.state === 'race' || this.state === 'count') {
@@ -197,7 +202,7 @@ Object.assign(CartRaceScene.prototype, {
     const W = this.W, cam = this.cam, P = R.planes, Q = BurnsGL.Q, A = BURNS_ATLAS.T;
     const wantShadow = !!(Q && Q.shadows && env.keyDir[1] > 0.06);
     const vis = this._vis || (this._vis = []); vis.length = 0;
-    for (const k of this.karts) { const d2 = (k.x - cam.x) * (k.x - cam.x) + (k.z - cam.z) * (k.z - cam.z); k._d2 = d2; k._in = BurnsM.sphereVisible(P, k.x, k.y + 1.8, k.z, 4.5); if (k._in || (wantShadow && d2 < 60 * 60)) vis.push(k); }
+    for (const k of this.karts) { const d2 = (k.x - cam.x) * (k.x - cam.x) + (k.z - cam.z) * (k.z - cam.z); k._d2 = d2; k._in = !k.hidden && BurnsM.sphereVisible(P, k.x, k.y + 1.8, k.z, 4.5); if (k._in || (!k.hidden && wantShadow && d2 < 60 * 60)) vis.push(k); }   // hidden: a royale car that poofed away
     this.pickHi();
     const heroes = this._heroV || (this._heroV = []), crowds = this._crowdV || (this._crowdV = []); heroes.length = 0; crowds.length = 0;
     for (const h of this.heroes) { const d2 = (h.ch.x - cam.x) * (h.ch.x - cam.x) + (h.ch.z - cam.z) * (h.ch.z - cam.z); h._d2 = d2; h._in = d2 < 90 * 90 && BurnsM.sphereVisible(P, h.ch.x, h.ch.y + 1, h.ch.z, 2); if (h._in || (wantShadow && d2 < 40 * 40)) heroes.push(h); }
@@ -231,7 +236,7 @@ Object.assign(CartRaceScene.prototype, {
     R.skinBegin(env, W, A);
     for (const k of vis) {
       if (!k._in) continue;
-      const M = this.carModel(k), dark = k.out ? [0.05, 0.04, 0.06, 0.55] : k.invT > 0 && Math.floor(this.time * 16) % 2 === 0 ? [1, 1, 1, 0.25] : null;
+      const M = this.carModel(k), dark = k.out ? [0.05, 0.04, 0.06, 0.55] : k.darkT > 0 ? CART_DARK_TINT : k.invT > 0 && Math.floor(this.time * 16) % 2 === 0 ? [1, 1, 1, 0.25] : null;
       R.skin(M.geo, k.bones, M.nb, dark, 0, 0.3);
       const dm = k.dModel, D = k._d2 > 40 * 40 && dm.far ? dm.far : (k._d2 > 13 * 13 || !k._hi) && dm.lod ? dm.lod : dm.geo;   // full-detail drivers ride the full-detail cars
       BurnsSkinActor.drawDriver(R, k, k.ch, k.drv.id) || R.skin(D, k.dBones, k.ch.nb, null, k.ch.face, 0.45);
@@ -240,6 +245,7 @@ Object.assign(CartRaceScene.prototype, {
     for (const G of crowds) R.skin(!G._near && G.far ? G.far.geo : G.geo, G.bones, G.objs.length, null, 3, 0.3);
     for (const G of this.props.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.5);
     cartItemsRender(this, R);   // rubber ducks, bombs, sky missiles (43_cart_da_items.js)
+    if (this.ofx && this.ofx.render) this.ofx.render(this, R); if (this.rules.render) this.rules.render(this, R);   // royale repair kits, an arena's moving pieces
     if (this.man) R.skin(this.man.model.geo, this.man.ch.bones, this.man.ch.nb, null, 3, 0.3);
     this.pushSprites(R, env);
     R.sprites(env, BURNS_SPRITES.T);
@@ -292,7 +298,7 @@ Object.assign(CartRaceScene.prototype, {
       if (!k._in) continue;
       const gy = H.height(k.x, k.z), hgt = Math.max(0, k.y - gy), sz = (k.M.w + k.M.len) * 0.55 * (1 + hgt * 0.06);
       R.flat.flat(k.x, gy + 0.04, k.z, sz * 0.7, sz * 1.15, k.yaw, S.shadow, [0, 0, 0], 0.62 * ck * clamp(1 - hgt * 0.1, 0.25, 1), false);
-      if (k.out) continue;
+      if (k.out || k.darkT > 0) continue;   // out, or gone dark (LIGHTS OUT, 43_cart_j_drivers.js)
       if (night > 0.15) {
         const c = k.car.light, cc = burnsRGBf(c);
         R.flat.flat(k.x, gy + 0.06, k.z, k.M.w + 3.2, k.M.len + 3.5, k.yaw, S.glow, cc, 0.38 * night, true);   // underglow
@@ -332,6 +338,7 @@ Object.assign(CartRaceScene.prototype, {
     // weapon effects (arena powers draw their own shots)
     for (const s of this.shots) { const F = s.fx && CART_ITEM_FX[s.fx]; if (F && F.draw) F.draw(this, R, s, S, t); else this.drawShot(R, s, S, t); }
     if (this.rules.draw) this.rules.draw(this, R, S, t);
+    if (this.ofx && this.ofx.draw) this.ofx.draw(this, R, S, t);
     cartItemsSprites(this, R, S, t);   // item effects and how hit cars look (foamed, lovestruck, frosted…)
     for (const h of this.hazards) {
       if (h.type === 'slime') { const a = clamp((h.life - h.t) / 1.5, 0, 1); R.flat.flat(h.x, h.y + 0.05, h.z, h.r * 2, h.r * 2.4, h.yaw, S.glow, [0.45, 1, 0.3], 0.55 * a, true); }
@@ -404,7 +411,7 @@ Object.assign(CartRaceScene.prototype, {
     const W = Game.cssW, H = Game.cssH, t = performance.now() / 1000;
     const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1a0626'); g.addColorStop(0.6, '#5a1a4a'); g.addColorStop(1, '#ff8a4a');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    BurnsUI.text(ctx, this.isBattle ? cartArena(this.arenaId).name : (CART_TRACKS[this.trackId] || {}).name || 'ART CART', W / 2, H * 0.4, Math.min(34, W * 0.07), '#ffffff', { glow: '#ff4fd8' });
+    BurnsUI.text(ctx, this.isBattle ? cartArena(this.arenaId).name : (CART_TRACKS[this.trackId] || {}).name || 'SUPER ART KART', W / 2, H * 0.4, Math.min(34, W * 0.07), '#ffffff', { glow: '#ff4fd8' });
     BurnsUI.text(ctx, this.loadMsg + '…', W / 2, H * 0.4 + 36, 13, 'rgba(255,255,255,0.85)', { ui: true, stroke: false });
     const bw = Math.min(260, W * 0.6); ctx.fillStyle = 'rgba(255,255,255,0.15)'; burnsRR(ctx, W / 2 - bw / 2, H * 0.4 + 58, bw, 10, 5); ctx.fill();
     ctx.fillStyle = '#ffd84a'; burnsRR(ctx, W / 2 - bw / 2, H * 0.4 + 58, Math.max(10, bw * (this.loadP || 0.04)), 10, 5); ctx.fill();
@@ -413,7 +420,7 @@ Object.assign(CartRaceScene.prototype, {
   drawNoGL(ctx) {
     const W = Game.cssW, H = Game.cssH;
     ctx.fillStyle = '#140a22'; ctx.fillRect(0, 0, W, H);
-    BurnsUI.text(ctx, 'ART CART NEEDS 3D GRAPHICS', W / 2, H * 0.36, Math.min(22, W * 0.05), '#ffffff');
+    BurnsUI.text(ctx, 'SUPER ART KART NEEDS 3D GRAPHICS', W / 2, H * 0.36, Math.min(22, W * 0.036), '#ffffff');
     BurnsUI.text(ctx, this.noglMsg || 'WebGL is not available on this device or browser.', W / 2, H * 0.36 + 32, 12, 'rgba(255,255,255,0.8)', { ui: true, stroke: false });
     BurnsUIKit.drawButtons(ctx, this.noglBtns || []);
   },
@@ -434,14 +441,15 @@ Object.assign(CartRaceScene.prototype, {
       const y = portrait ? H * 0.22 : H * 0.2;
       ctx.fillStyle = 'rgba(10,4,20,0.55)'; ctx.fillRect(0, y - 46, W, 112);
       BurnsUI.text(ctx, this.name, W / 2, y, Math.min(34, W * 0.075), '#ffffff', { glow: '#ff4fd8' });
-      const sub = this.isBattle ? CART_OBJECTIVES[this.objective].name + ' · ' + CART_OBJECTIVES[this.objective].short : (this.mode === 'gp' ? this.cup.name + ' · RACE ' + (this.raceIdx + 1) + '/4' : this.mode === 'tt' ? 'TIME TRIAL' : 'QUICK RACE') + ' · ' + CART_TOD[this.E.tod];
+      const sub = this.run && typeof CartCareer !== 'undefined' ? CartCareer.introSub(this) : this.isBattle ? CART_OBJECTIVES[this.objective].name + ' · ' + CART_OBJECTIVES[this.objective].short : (this.mode === 'gp' ? this.cup.name + ' · RACE ' + (this.raceIdx + 1) + '/4' : this.mode === 'tt' ? 'TIME TRIAL' : 'QUICK RACE') + ' · ' + CART_TOD[this.E.tod];
       BurnsUI.text(ctx, sub, W / 2, y + 32, 13, '#ffd84a', {});
-      if (this.isBattle) { ctx.font = `600 12px ${FONT_UI}`; const lines = BurnsUI.wrap(ctx, CART_OBJECTIVES[this.objective].desc, Math.min(520, W - 40)); lines.forEach((ln, i) => BurnsUI.text(ctx, ln, W / 2, y + 54 + i * 16, 12, 'rgba(255,255,255,0.9)', { ui: true, stroke: false })); }
+      const desc = this.isBattle ? CART_OBJECTIVES[this.objective].desc : this.rules.desc;   // a final explains itself too (43_cart_hb_final.js)
+      if (desc) { ctx.font = `600 12px ${FONT_UI}`; const lines = BurnsUI.wrap(ctx, desc, Math.min(520, W - 40)); lines.forEach((ln, i) => BurnsUI.text(ctx, ln, W / 2, y + 54 + i * 16, 12, 'rgba(255,255,255,0.9)', { ui: true, stroke: false })); }
       BurnsUI.text(ctx, 'TAP TO START', W / 2, H - Math.max(30, insets.b + 24), 13, 'rgba(255,255,255,' + (0.5 + 0.5 * Math.sin(t * 5)) + ')', {});
       ctx.restore();
     }
     // ---- position / laps / time (races) ----
-    if (this.isRace && (racing || this.state === 'done')) {
+    if (this.isRace && !this.rules.noRaceHud && (racing || this.state === 'done')) {
       const rk = k.rank, col = rk === 1 ? '#ffd84a' : rk <= 3 ? '#ffffff' : '#ff9ad8';
       if (this.mode !== 'tt') { BurnsUI.text(ctx, cartOrdinal(rk), left + 34, top + 30, 34, col, { glow: rk === 1 ? '#ffb020' : null }); BurnsUI.text(ctx, '/' + this.karts.length, left + 78, top + 38, 14, 'rgba(255,255,255,0.7)', { align: 'left' }); }
       const ly = this.mode === 'tt' ? top + 22 : top + 66;
@@ -556,6 +564,7 @@ Object.assign(CartRaceScene.prototype, {
     for (const k of this.karts.slice().sort((a, b2) => a.player - b2.player)) { const px = x0 + S / 2 + (k.x - cx) * -sc, py = y0 + S / 2 + (k.z - cz) * -sc; ctx.fillStyle = k.player ? '#ffffff' : k.car.col; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(px, py, k.player ? 4.5 : 3.2, 0, TAU); ctx.fill(); ctx.stroke(); }
   },
   drawBattleHUD(ctx, top, left) {
+    if (this.ofx && this.ofx.hud && this.ofx.hud(this, ctx, top, left)) return;   // the royale draws its own
     const W = Game.cssW, O = this.obj, D = CART_OBJECTIVES[this.objective], k = this.player;
     const pw = Math.min(250, W * 0.42), px = W / 2 - pw / 2;
     ctx.save(); ctx.fillStyle = 'rgba(10,4,20,0.55)'; burnsRR(ctx, px, top - 2, pw, 46, 12); ctx.fill(); ctx.restore();

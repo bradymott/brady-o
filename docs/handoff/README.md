@@ -4,7 +4,7 @@ Three agents now finish the three games, one agent per game. **Read this file fi
 
 | Game | Your handoff | Live app |
 |---|---|---|
-| Art Cart | [ART_CART.md](ART_CART.md) | https://bradymott.github.io/brady-o/art-cart/ |
+| Super Art Kart (formerly Art Cart) | [ART_CART.md](ART_CART.md) | https://bradymott.github.io/brady-o/art-cart/ |
 | Super Brady-O World | [SUPER_BRADY_O_WORLD.md](SUPER_BRADY_O_WORLD.md) | https://bradymott.github.io/brady-o/super-brady-o-world/ |
 | Brady Goes to Burning Man | [BURNING_MAN.md](BURNING_MAN.md) | https://bradymott.github.io/brady-o/burning-man/ |
 

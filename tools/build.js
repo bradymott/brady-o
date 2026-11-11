@@ -7,7 +7,7 @@
 //       index.html                     launcher page linking the three apps
 //       burning-man/                   "Brady Goes to Burning Man"  (3D adventure)
 //       super-brady-o-world/           "Super Brady-O World"        (2D platformer)
-//       art-cart/                      "Art Cart"                   (kart battle racer)
+//       art-cart/                      "Super Art Kart"             (kart battle racer; was "Art Cart")
 //     each with index.html, manifest.webmanifest, sw.js (offline), icons, font licences
 // Set BRADY_DIST=/some/dir to build into a private folder (agents do this).
 const fs = require('fs');
@@ -40,7 +40,7 @@ const APPS = {
     files: f => !isBurns(f) && !isKart(f) && !['08c_designs.js', '20b_world_themes.js', '24_sloth.js', '26_worlddata.js', '27_brcmap.js', '27_brcmap_land.js'].includes(f)
   },
   kart: {
-    dir: 'art-cart', name: 'Art Cart', short: 'Art Cart',
+    dir: 'art-cart', name: 'Super Art Kart', short: 'Super Art Kart',
     desc: 'Battle-race wild art cars across the playa: every car has its own weapon.',
     color: '#1a0626', saveKey: 'art-cart-save-v1',
     // the shared core, the Burns 3D engine (renderer, meshes, rig, cast, props, world runtime; not its hub 'k' or

@@ -1,6 +1,8 @@
-# Art Cart: handoff for its agent
+# Super Art Kart (formerly Art Cart): handoff for its agent
 
 Read [README.md](README.md) first: owner, ownership rules, appearance rules, deploy.
+
+**Name (Nov 11 2026):** the game is shown to players as **Super Art Kart**. Only the display name changed: the URL `art-cart/`, the save key `art-cart-save-v1`, the app id `kart`, file names and code names (Cart…) stay as they are, so saves and bookmarks keep working. Its home-screen icon is drawn by `tools/cart_icon.js` (3 designs; `--sheet` makes a contact sheet), not by `tools/make_icon.js`.
 
 **Your mission:** make Art Cart's graphics **very, very highly polished**, at showroom quality. Brady's words: "the art cart graphics should be very very highly polished". Keep the gameplay working.
 
