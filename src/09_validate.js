@@ -261,7 +261,7 @@ const Validator = {
     if (!level.v2) return { ok: true, errors, warnings, skipped: true };
     const S = level.design || {}, main = level.areas[0];
     const items = a => Object.keys(a.contents || {}).filter(k => a.contents[k] && a.contents[k] !== 'pick' && a.contents[k] !== 'picks');
-    const giver = s => s.type === 'gearStand' || s.type === 'souvenirShop' || (s.type && /Xolo|Friend|friend/.test(s.type)) || s.give;
+    const giver = s => s.type === 'gearStand' || s.type === 'souvenirShop' || (s.type && /Xolo|Friend|friend/.test(s.type)) || s.give || !!(ENTITY_TYPES[s.type] && ENTITY_TYPES[s.type].cfg && ENTITY_TYPES[s.type].cfg.give);
     const opp = a => items(a).length + a.spawns.filter(giver).length;
     let total = 0; for (const a of level.areas) total += opp(a);
     if (total < 2) errors.push(`only ${total} power-up opportunities (needs 2)`);

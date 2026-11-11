@@ -160,7 +160,9 @@ function tourRide(ctx) {
   for (const step of script) { st.x = st.run(step); st.x += ctx.rng.int(2, 4); if (st.x > len - 18) break; }
   // the landing at the end of the ride
   B.fill(len, DECK, len + 21, H - 1, T.GROUND);
-  B.spawn('gate', len + 13, DECK - 1, {});
+  // v2: a boss level's ride ends at a door into the arena (endDoor: 'area@anchor'), not at a gate
+  if (ctx.v2 && S.endDoor) { const s = B.spawn('portal', len + 13, DECK - 1, { kind: 'door', look: S.endLook || 'tourDoor', targetRef: S.endDoor }); B.anchor('landing', len + 3, DECK - 1); }
+  else B.spawn('gate', len + 13, DECK - 1, {});
   B.gold(len + 5, DECK - 5, 'high');
   for (let x = len; x < len + 21; x++) B.set(x, H - 1, T.GROUND);
   B.trim(len + 22);
