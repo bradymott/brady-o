@@ -167,7 +167,9 @@ def main():
                     (os.path.join(pv, 'brady_captive.png'), 'captive', 20, (-0.3, 1, 0.3), 1.0, None),
                     (os.path.join(pv, 'brady_photo.png'), 'photo', 12, (0.0, -1, 0.1), 1.0, None),
                     (os.path.join(pv, 'brady_arm.png'), 'idle', 10, (1, -0.25, 0.1), 0.3, (0.27 * K, 0, 1.15 * K))]
-    out = os.environ.get('CHAR_OUT') or os.path.join(MODELS, 'brady.glb')
+    # the shipped brady.glb is the realistic one (tools/blender/realistic_brady/); this procedural Brady is kept as
+    # assets/models/legacy/brady_classic.glb (the skin test fixture is built from it, it does not ship)
+    out = os.environ.get('CHAR_OUT') or os.path.join(ROOT, 'assets', 'models', 'legacy', 'brady_classic.glb')
     blend = os.environ.get('CHAR_BLEND') or os.path.join(BLEND_DIR, 'brady.blend')
     build(rig, out, blend, previews)
 
