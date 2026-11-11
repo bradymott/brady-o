@@ -230,7 +230,7 @@ const themes = {
   }),
   mx_canal: Object.assign({}, baseTheme, {
     rays: '#fff4d0',
-    name: 'Xochimilco', music: 'tour_mx', particles: 'petals',
+    name: 'Xochimilco', music: 'tour_mx_canal', particles: 'petals',
     sky: ['#48b8f0', '#a8e4ff', '#f8ffe8'], horizonGlow: '#e8ffd0',
     celestial: { type: 'sun', x: 0.2, y: 0.22, r: 34, color: '#fffbe8', glow: '#fff0a8' }, stars: 0, cloudsDyn: true,
     layers: [
@@ -1299,52 +1299,219 @@ const boss = {
   }
 };
 
-/* ---------------- music: mariachi-inspired (trumpets, violins, guitarrón, vihuela) ---------------- */
-const tracks = {
-  tour_mx: {
-    bpm: 148, bpb: 3, bars: 16, rv: 0.22, dl: 0.08, hx: 0.08,
-    ch: 'D A A D D G A D Bm Em A D G D A D',
-    ld: 'F#5:4 A5:4 D6:4 | E6:6 C#6:2 A5:4 | G5:4 E5:4 C#5:4 | D5:8 F#5:4 |' +
-        'A5:4 F#5:4 A5:4 | B5:6 D6:2 B5:4 | A5:4 G5:4 E5:4 | F#5:8 .:4 |' +
-        'D6:4 C#6:4 B5:4 | G5:6 B5:2 E6:4 | E6:4 D6:4 C#6:4 | D6:8 A5:4 |' +
-        'B5:4 D6:4 G6:4 | F#6:6 E6:2 D6:4 | E6:4 C#6:4 A5:4 | D6:12',
-      li: 'brass', lv: 0.15,
-      l2: 'D5:12 | C#5:12 | E5:12 | F#5:12 | A4:12 | D5:12 | C#5:12 | D5:12 | F#5:12 | E5:12 | E5:12 | F#5:12 | D5:12 | A5:12 | G5:12 | F#5:12', l2i: 'strings', l2v: 0.06,
-      bp: 'r...f...o...', bi: 'pluckb', bv: 0.3,
-      ap: '....c-..c-..', ai: 'pluck', av: 0.06, ao: 55,
-      dr: ['k...........', '....g...g...', 'l.....l.....', '..n...n...n.'], dv: 0.4
-  },
-  tour_mx_boss: {
-    bpm: 168, bars: 8, rv: 0.2, hx: 0.1,
-    ch: 'Dm Dm Bb A Dm Gm A A',
-    ld: 'D5:2 F5:2 A5:2 D6:2 C#6:2 A5:2 F5:4 | E5:2 F5:2 G5:2 A5:2 Bb5:4 A5:4 | F5:2 D5:2 Bb4:2 D5:2 F5:4 G5:4 | A5:8 C#6:4 E6:4 |' +
-        'F6:2 E6:2 D6:2 C#6:2 D6:4 A5:4 | Bb5:2 A5:2 G5:2 F5:2 G5:4 D5:4 | E5:2 F5:2 G5:2 A5:2 C#6:4 E6:4 | D6:12 .:4',
-    li: 'brass', lv: 0.16,
-    bp: 'r-..r-.or-..r-o.', bi: 'pluckb', bv: 0.3,
-    ap: 'c-.c-.c-c-.c-.c-', ai: 'pluck', av: 0.05, ao: 55,
-    dr: ['k...k...k...k...', '....s.......s.s.', 'h.h.h.h.h.h.h.h.', 'w.....w.....w...'], dv: 0.45
-  },
-  tour_mx_deep: {
-    bpm: 84, bpb: 3, bars: 8, rv: 0.65, dl: 0.25,
-    ch: 'Em C Am B7 Em C Am B7',
-    ld: 'B5:6 G5:3 E5:3 | E6:9 D6:3 | C6:6 A5:6 | B5:12 | G5:6 B5:3 E6:3 | G6:9 F#6:3 | E6:6 C6:3 A5:3 | B5:12',
-    li: 'vibes', lv: 0.13,
-    bp: 'r...........', bi: 'sub', bv: 0.24,
-    ap: '0.2.4.1.3.5.', ai: 'harp', av: 0.04, ao: 64,
-    pd: 'c-----------', pi: 'pad', pv: 0.04, po: 52,
-    dr: ['u.....u.....', '......n.....'], dv: 0.3
-  },
-  tour_mx_volcan: {
-    bpm: 132, bars: 8, rv: 0.25,
-    ch: 'Em Em C D Em Em C B',
-    ld: 'E5:2 G5:2 B5:4 A5:2 G5:2 E5:4 | F#5:2 G5:2 A5:4 B5:8 | C6:2 B5:2 A5:2 G5:2 E5:4 G5:4 | F#5:4 A5:4 D6:8 |' +
-        'E6:2 D6:2 B5:4 G5:2 A5:2 B5:4 | E5:4 G5:4 B5:8 | C6:4 E6:4 C6:4 A5:4 | B5:8 D#6:8',
-    li: 'brass', lv: 0.14,
-    bp: 'r.r.r.o.r.r.r.f.', bi: 'sawb', bv: 0.28,
-    ap: 'c-..c-..c-..c-..', ai: 'twang', av: 0.05, ao: 52,
-    dr: ['k.......k.k.....', '....s.......s...', 'h.h.h.h.h.h.h.h.', 'd...d...d.d.d...'], dv: 0.45
-  }
-};
+/* ---------------- music: mariachi-inspired (trumpets, violins, guitarrón, vihuela) ----------------
+   All original. Every Mexico song quotes the game's main motif (5 6 | 1 3 2 1 6 | 5, see TourTune in
+   28_tour_g_story.js). The level song is a 6/8 son in D: trumpets in thirds, violins answering, the
+   vihuela strumming 6/8 against 3/4 (sesquiáltera), guitarrón, a harp-and-zapateado interlude.
+   Variants: a vals for the Xochimilco canals, an echoing cenote, a driving minor volcano, and a boss
+   son that turns the hook into a chase. Songs with v2: 1 use the newer voices and mixer (01_audio.js). */
+const tracks = (() => {
+  const T = TourTune, L = T.L, R = T.rest;
+  const D_ = 2;   // D major
+  const S6 = 12;  // 16th steps in a 6/8 bar (bpm counts eighth notes)
+  const seq6 = (...p) => T.seq(S6, ...p);
+  // the strum: 6/8 (down, chop, up / down, chop, up) against 3/4 (down-up three times)
+  const ST68 = 'C.x.u.C.x.u.', ST34 = 'C.u.C.u.C.u.';
+  const B68 = 'R:6 F:4 A:2', B34 = 'R:4 F:4 O:4';
+
+  /* --- tour_mx: the level song. D major 6/8, 324 eighths/min, 62 bars: intro 4 | A 16 | B 16 | A' 16 | harp 8 | turn 2 (loop ~64 s) --- */
+  const mx = (() => {
+    const CH = 'D D A7 A7 ' +
+      'D D Bm A G E7 A7 D D D A7 D G A7 A7 D ' +
+      'G G D D A7 A7 D D7 G G D B7 Em A7 D A7 ' +
+      'D D Bm A G E7 A7 D D D A7 D G A7 A7 D ' +
+      'D G A7 D D G A7 A7 ' +
+      'G A7';
+    const A = ['D5:4:1.15 F#5:2 E5:2 D5:2 B4:2', 'A4:6 .:2 A4:2 B4:2', 'D5:4:1.1 F#5:2 A5:4 B5:2', 'A5:6 F#5:2 E5:2 D5:2',
+      'B5:4:1.1 A5:2 G5:2 F#5:2 E5:2', 'E5:2 G#5:2 B5:2 D6:4 B5:2', 'C#6:4:1.1 A5:2 B5:2 G5:2 E5:2', 'D5:6 .:2 A4:2 B4:2',
+      'D5:4:1.15 F#5:2 E5:2 D5:2 B4:2', 'A4:6 .:2 F#5:2 G5:2', 'A5:4:1.1 B5:2 A5:2 G5:2 E5:2', 'F#5:6 D5:2 E5:2 F#5:2',
+      'D5:4:1.15 G5:4 B5:4:1.1', 'C#6:4:1.15 B5:4 A5:4:1.1', 'E5:2 G5:2 C#6:2 E6:4 C#6:2', 'D6:6:1.15 .:6'];
+    const tptB = [...R(3, S6), '.:6 D5:2 E5:2 F#5:2', ...R(3, S6), '.:6 C5:2 B4:2 A4:2', ...R(7, S6), '.:4 E5:2 C#5:2 A4:2 B4:2'];
+    const tpt = L(['.:12', '.:12', '.:12', '.:8 A4:2 B4:2', ...A, ...tptB, ...A, ...R(8, S6), 'D5:4:1.15 G5:4 B5:4:1.1', 'C#6:4:1.15 A5:4 A4:2 B4:2']);
+    const vB = ['B5:4 C6:2 D6:6', 'E6:4 D6:2 B5:6', 'A5:4 B5:2 A5:2 F#5:2 D5:2', 'F#5:6 .:6', 'E5:4 F#5:2 G5:6', 'A5:4 B5:2 C#6:6', 'D6:4 C#6:2 B5:2 A5:2 F#5:2', 'A5:6 .:6',
+      'B5:4 C6:2 D6:6', 'E6:4 D6:2 B5:6', 'A5:4 B5:2 A5:2 F#5:2 D5:2', 'D#5:4 F#5:2 A5:4 B5:2', 'B5:4:1.1 A5:4 G5:4', 'G5:4:1.1 F#5:4 E5:4', 'F#5:4 E5:2 D5:6', '.:12'];
+    const vA2 = ['A5:12', 'A5:6 B5:2 A5:2 F#5:2', 'B5:12', 'C#6:12', 'D6:12', 'G#5:12', 'A5:6 G5:6', 'F#5:6 E5:2 F#5:2 A5:2',
+      'A5:12', 'A5:6 D6:2 C#6:2 B5:2', 'C#6:12', 'A5:12', 'B5:4 D6:4 G6:4', 'A6:4 G6:4 E6:4', 'G6:4 E6:4 C#6:4', 'D6:6 .:6'];
+    const vln = L(['.:12', '.:12', 'C#6:12:0.6', 'E6:8:0.6 .:4', ...R(16, S6), ...vB, ...vA2, ...R(8, S6), 'B5:4 D6:4 G6:4', 'E6:8 .:4']);
+    const vln2 = L([...R(20, S6), ...T.dia(L(vB), -2, D_).split(' | '), ...R(26, S6)]);
+    const harp = L([...R(52, S6), 'A4:2 B4:2 D5:2 F#5:2 E5:2 D5:2', 'B4:2 D5:2 G5:2 B5:2 A5:2 G5:2', 'A4:2 C#5:2 E5:2 G5:2 E5:2 C#5:2', 'D5:2 F#5:2 A5:2 D6:2 A5:2 F#5:2',
+      'A5:2 B5:2 D6:2 F#6:2 E6:2 D6:2', 'B5:2 G5:2 D5:2 B5:2 G5:2 D5:2', 'C#6:2 A5:2 E5:2 G5:2 E5:2 C#5:2', 'E5:2 G5:2 A5:2 C#6:2 E6:2 G6:2', ...R(2, S6)]);
+    // sesquiáltera: 6/8 and 3/4 bars alternate under the tune; both hemiola bars and the turnaround are 3/4
+    const meter = b => (b >= 4 && b < 20 && (b - 4 === 12 || b - 4 === 13)) || (b >= 36 && b < 52 && (b - 36 === 12 || b - 36 === 13)) || b >= 60 ? 34 : (b % 2 ? 34 : 68);
+    let strum = '', perc = ['', '', '', '', '', ''];
+    for (let b = 0; b < 62; b++) {
+      const m = meter(b), sec = b < 4 ? 'i' : b < 20 ? 'A' : b < 36 ? 'B' : b < 52 ? 'A2' : b < 60 ? 'C' : 'T';
+      strum += b < 2 ? (m === 68 ? 'C.x.u.C.x.u.' : 'C.u.C.u.C.u.') : sec === 'C' ? (m === 68 ? 'c.x.u.c.x.u.' : 'c.u.c.u.c.u.') : (m === 68 ? ST68 : ST34);
+      const k68 = 'k.....k.....', k34 = 'k...k...k...';
+      perc[0] += sec === 'i' && b < 3 ? '............' : sec === 'C' ? 'k...........' : m === 68 ? k68 : k34;                                  // kick
+      perc[1] += sec === 'A2' || sec === 'T' ? (m === 68 ? '......s.....' : '....s...s...') : '............';                                // snare
+      perc[2] += sec === 'i' ? '............' : sec === 'C' ? (b % 2 ? 'z.z.Z.zzz.Z.' : 'Z.z.z.Z.z.z.') : sec === 'B' ? '..z.....z...' : '............';   // zapateado
+      perc[3] += sec === 'i' || sec === 'C' ? '............' : 'n.n.n.n.n.n.';                                                                // shaker
+      perc[4] += sec === 'B' && m === 34 ? 'r...r...r...' : '............';                                                                   // claves
+      perc[5] += b === 4 || b === 36 ? 'x...........' : b === 20 || b === 52 ? 'i...........' : b === 11 || b === 19 || b === 43 || b === 59 ? '........q...' : '............';
+    }
+    return {
+      v2: 1, bpm: 324, bpb: 6, spb: 2, bars: 62, lb: 4, rv: 0.42, dl: 0.14, dtb: 3,
+      ch: CH,
+      parts: [
+        { n: 'tpt1', ln: tpt, i: 'tpt', v: 0.27, g: 0.88, pan: 0.14, rv: 0.75, dl: 0.4 },
+        { n: 'tpt2', ln: T.dia(tpt, -2, D_), i: 'tpt', v: 0.16, g: 0.88, pan: -0.14, rv: 0.75, low: 1 },
+        { n: 'vln1', ln: vln, i: 'vln', v: 0.17, pan: -0.4, rv: 1, dl: 0.4 },
+        { n: 'vln2', ln: vln2, i: 'vln', v: 0.1, pan: 0.42, rv: 1, low: 1 },
+        { n: 'harp', ln: harp, i: 'harp', v: 0.3, pan: 0.25, rv: 0.9, dl: 0.5 },
+        { n: 'gtrn', ln: T.bass(CH, b => b < 2 ? '.:12' : meter(b) === 68 ? B68 : B34, S6, 38), i: 'gtrn', v: 0.24, pan: 0, rv: 0.05 }
+      ],
+      a2: strum, a2i: 'vihuela', a2v: 0.5, a2o: 57,
+      mix: { C: { pan: -0.3, rv: 0.45 } },
+      dr: perc, dv: 0.44
+    };
+  })();
+
+  /* --- tour_mx_canal: Xochimilco, a calm vals. G major 3/4, 96 bpm, 34 bars: intro 2 | A 16 | B 16 (loop 60 s) --- */
+  const canal = (() => {
+    const S = 12, G_ = 7;
+    const CH = 'G D7 ' + 'G Em C D7 G Em Am7 D7 G Em C D7 Bm7 E7 Am7,D7 G ' + 'C Bm7 Am7 D7 G Em A7 D7 C Cm6 Bm7 E7 Am7 D7 G G';
+    const A1 = ['G5:4:1.1 B5:4 A5:2 G5:2', 'E5:4 D5:8', 'G5:4 B5:4 D6:2 E6:2', 'D6:6 C6:2 B5:2 A5:2', 'B5:4:1.1 D6:4 C6:2 B5:2', 'G5:4 E5:8', 'A5:4 C6:4 B5:2 A5:2', 'F#5:8 D5:2 E5:2'];
+    const A2 = ['G5:4:1.1 B5:4 A5:2 G5:2', 'E5:4 D5:8', 'G5:4 B5:4 D6:2 E6:2', 'E6:6 D6:2 C6:2 A5:2', 'D6:4 B5:4 F#5:2 A5:2', 'G#5:4 B5:4 D6:4', 'C6:6 B5:2 A5:2 F#5:2', 'G5:12'];
+    const Bm = ['E5:8 G5:2 C6:2', 'B5:8 A5:2 F#5:2', 'A5:8 G5:2 E5:2', 'F#5:8 A5:2 C6:2', 'B5:8 A5:2 G5:2', 'E5:8 F#5:2 G5:2', 'A5:4 C#6:4 E6:4', 'D6:8 .:4',
+      'E6:8 D6:2 C6:2', 'Eb6:8 D6:2 C6:2', 'D6:8 B5:2 A5:2', 'G#5:8 B5:2 D6:2', 'C6:8 B5:2 A5:2', 'F#5:6 G5:2 A5:2 C6:2', 'B5:12', '.:8 D5:2 E5:2'];
+    const vln = L(['.:12', '.:8 D5:2 E5:2', ...A1, ...R(8, S), ...Bm]);
+    const flute = L([...R(10, S), ...A2, ...R(8, S), ...T.dia(L(Bm.slice(8, 15)), -5, G_).split(' | '), '.:12']);
+    const vlnH = L([...R(10, S), ...T.dia(L(A2), -2, G_).split(' | '), ...R(16, S)]);
+    return {
+      v2: 1, bpm: 96, bpb: 3, bars: 34, lb: 2, rv: 0.55, dl: 0.2, dtb: 1.5,
+      ch: CH,
+      parts: [
+        { n: 'vln', ln: vln, i: 'vln', v: 0.2, g: 0.95, pan: -0.15, rv: 1, dl: 0.5 },
+        { n: 'flute', ln: flute, i: 'flute', v: 0.2, g: 0.92, pan: 0.2, rv: 1, dl: 0.6 },
+        { n: 'vlnH', ln: vlnH, i: 'vln', v: 0.1, pan: -0.35, rv: 1, low: 1 },
+        { n: 'gtrn', ln: T.bass(CH, b => b % 2 ? 'R:4 .:4 A:4' : 'R:4 .:8', S, 38), i: 'gtrn', v: 0.22, pan: 0, rv: 0.08 }
+      ],
+      a2: T.seq(S, ['....c...c...', 34]), a2i: 'guitar', a2v: 0.45, a2o: 55,
+      ap: T.seq(S, ['0.1.2.3.4.5.', 2], ['............', 16], ['0...2...4...', 15], ['0.2.4.5.7.9.', 1]), ai: 'harp', av: 0.3, ao: 60,
+      pd: T.seq(S, ['............', 18], ['c-----------', 16]), pi: 'pad2', pv: 0.035, po: 55,
+      mix: { C: { pan: 0.3, rv: 0.6 }, A: { pan: 0.4, rv: 1.2, dl: 0.6 } },
+      dr: [T.seq(S, ['............', 2], ['....n...n...', 32]), T.seq(S, ['i...........', 1], ['............', 1], ['i...........', 1], ['............', 15], ['i...........', 1], ['............', 15]),
+        T.seq(S, ['............', 5], ['..........p.', 1], ['............', 9], ['......p.....', 1], ['............', 11], ['....p.......', 1], ['............', 6])], dv: 0.4
+    };
+  })();
+
+  /* --- tour_mx_deep: the cenote. E dorian 6/8, 168 eighths/min, 30 bars: intro 2 | A 8 | B 8 | A' 8 | drift 4 (loop 60 s) --- */
+  const deep = (() => {
+    const E_ = 4;
+    const CH = 'Em9 Em9 ' + 'Em9 A Em9 A G D Bm A ' + 'Cmaj7 G D Em9 Cmaj7 G D D ' + 'Em9 A Em9 A G D Bm A ' + 'Cmaj7 Cmaj7 Bm A';
+    const A = ['E5:4:1.1 G5:2 F#5:2 E5:2 C#5:2', 'B4:12', 'E5:4 G5:2 B5:4 C#6:2', 'B5:6 .:2 A5:2 G5:2', 'F#5:4 G5:2 D5:6', 'A5:6 F#5:6', 'D5:4 F#5:2 B5:6', 'C#5:6 .:2 B4:2 C#5:2'];
+    const Bm = ['G5:12', 'D6:6 B5:6', 'A5:12', 'F#5:6 G5:6', 'E6:6 D6:6', 'B5:12', 'A5:6 F#5:6', 'D5:8 B4:2 C#5:2'];
+    const mar = L(['.:12', '.:8 B4:2 C#5:2', ...A, ...Bm, ...T.dia(L(A), -2, E_, T.DOR).split(' | '), ...R(3, S6), '.:8 B4:2 C#5:2']);
+    const cel = L([...R(18, S6), ...A.map(b => T.tr(b, 12)), ...R(4, S6)]);
+    return {
+      v2: 1, bpm: 168, bpb: 6, spb: 2, bars: 30, lb: 2, rv: 0.85, dl: 0.45, dtb: 3, dip: -1.5,
+      ch: CH,
+      parts: [
+        { n: 'marimba', ln: mar, i: 'marimba', v: 0.34, pan: -0.15, rv: 1, dl: 1 },
+        { n: 'celesta', ln: cel, i: 'celesta', v: 0.16, pan: 0.3, rv: 1.2, dl: 1 },
+        { n: 'bass', ln: T.bass(CH, 'R:12', S6, 36), i: 'upright', v: 0.2, g: 0.98, pan: 0, rv: 0.2 }
+      ],
+      ap: seq6(['0.......2...', 2], ['0...1...2...', 8], ['0.2.4.......', 8], ['0...1...2...', 8], ['0.2.4.5.7...', 4]), ai: 'harp', av: 0.3, ao: 55,
+      pd: seq6(['c-----------', 30]), pi: 'pad2', pv: 0.06, po: 52,
+      mix: { A: { pan: 0.35, rv: 1.3, dl: 0.8 }, P: { pan: -0.05, rv: 1.4 } },
+      dr: [seq6(['d...........', 2], ['d.....d.....', 28]), seq6(['..u.....u...', 3], ['.......u..u.', 2], ['..u.........', 25]), seq6(['............', 4], ['......p.....', 1], ['............', 6], ['..p.........', 1], ['............', 6], ['........p...', 1], ['............', 11]),
+        seq6(['............', 10], ['i...........', 1], ['............', 19])], dv: 0.36
+    };
+  })();
+
+  /* --- tour_mx_volcan: driving minor. E minor 4/4, 152 bpm, 44 bars: intro 2 | A 8 | A' 8 | B 8 | breakdown 8 | A 8 | turn 2 (loop 66 s) --- */
+  const volcan = (() => {
+    const S = 16, E_ = 4;
+    const Ach = 'Em Em C B7 Em Em Am,B7 Em ';
+    const CH = 'Em B7 ' + Ach + Ach + 'C D G Em Am D G B7 ' + 'Em C Em C Am B7 Em B7 ' + Ach + 'C B7';
+    const A = ['E5:3:1.15 G5:3 F#5:2 E5:4 C5:4', 'B4:8 .:4 B4:2 C5:2', 'E5:3:1.15 G5:3 B5:2 C6:4 B5:4', 'A5:4 F#5:4 .:4 F#5:2 G5:2',
+      'B5:3:1.15 G5:3 F#5:2 E5:4 G5:4', 'F#5:3 E5:3 D#5:2 E5:8', 'C6:3:1.1 B5:3 A5:2 F#5:4 D#5:4', 'E5:12 B4:2 C5:2'];
+    const A2 = A.slice(0, 7).concat(['E5:12 .:4']);
+    const tptB = ['.:16', '.:16', 'G5:3:1.15 B5:3 A5:2 G5:4 E5:4', 'D5:8 .:4 D5:2 E5:2', '.:16', '.:16', 'G5:3:1.15 B5:3 D6:2 E6:4 D6:4', 'D#6:8 B5:4 .:4'];
+    const tptC = ['B4:4 C5:4 E5:8', 'G5:8 F#5:8', 'E5:8 C5:8', 'B4:16', 'C5:8 E5:8', 'F#5:8 A5:8', 'G5:16', 'F#5:8 .:4 B4:2 C5:2'];
+    const tpt = L(['.:16', '.:12 B4:2 C5:2', ...A, ...A2, ...tptB, ...tptC, ...A, 'C6:4:1.1 B5:4 A5:4 G5:4', 'F#5:8:1.1 D#5:4 B4:2 C5:2']);
+    const vB = ['G5:6 A5:2 B5:8', 'A5:6 B5:2 C6:8', '.:16', '.:16', 'C6:6 B5:2 A5:8', 'F#5:6 G5:2 A5:8', '.:16', '.:16'];
+    const trem = (n, k) => Array(k).fill(n + ':1').join(' ');
+    const vC = ['E6', 'E6', 'G6', 'G6', 'A6', 'B6', 'G6', 'F#6'].map(n => trem(n, 16));
+    const vln = L([...R(10, S), 'B5:16:0.8', 'B5:16:0.8', 'C6:16:0.8', 'D#6:16:0.8', 'E6:16:0.8', 'E6:16:0.8', 'C6:8 B5:8', 'B5:12 .:4', ...vB, ...vC, ...R(10, S)]);
+    const bassT = b => b < 2 ? 'R:4 .:4 R:4 .:4' : (b >= 26 && b < 34) ? 'R:2 R:2 O:2 R:2 R:2 R:2 O:2 R:2' : 'R:4 .:4 F:4 A:4';
+    const strum = T.seq(S, ['x...x...x...x.u.', 2], ['..u.C.u...u.C.u.', 16], ['C.u.C.u.C.u.C.u.', 8], ['x.x.x.x.x.x.x.x.', 8], ['..u.C.u...u.C.u.', 8], ['C.C.C.C.C.C.CCCC', 2]);
+    return {
+      v2: 1, bpm: 152, bars: 44, lb: 2, rv: 0.32, dl: 0.1, dtb: 0.75,
+      ch: CH,
+      parts: [
+        { n: 'tpt1', ln: tpt, i: 'tpt', v: 0.27, g: 0.86, pan: 0.14, rv: 0.6, dl: 0.4 },
+        { n: 'tpt2', ln: T.dia(tpt, -2, E_, T.HARM), i: 'tpt', v: 0.16, g: 0.86, pan: -0.14, rv: 0.6, low: 1 },
+        { n: 'vln', ln: vln, i: 'vlnShort', v: 0.19, g: 0.75, pan: -0.4, rv: 0.8 },
+        { n: 'gtrn', ln: T.bass(CH, bassT, S, 40), i: 'gtrn', v: 0.26, pan: 0, rv: 0.05 }
+      ],
+      a2: strum, a2i: 'vihuela', a2v: 0.5, a2o: 57,
+      mix: { C: { pan: 0.35, rv: 0.35 } },
+      dr: [
+        T.seq(S, ['k.......k.......', 2], ['k...k...k...k...', 24], ['k..k..k.k..k..k.', 8], ['k...k...k...k...', 8], ['k...k...k.k.k.k.', 2]),
+        T.seq(S, ['................', 2], ['....s.......s...', 24], ['................', 7], ['....s...s.s.ssss', 1], ['....s.......s...', 8], ['s.s.s.s.s.s.ssss', 2]),
+        T.seq(S, ['................', 2], ['h.h.h.h.h.h.h.h.', 16], ['h.hhh.h.h.hhh.h.', 8], ['................', 8], ['h.h.h.h.h.h.h.h.', 10]),
+        T.seq(S, ['t...........t.t.', 2], ['................', 24], ['t.....t.....m.m.', 8], ['................', 10]),
+        T.seq(S, ['................', 2], ['x...............', 1], ['................', 7], ['x...............', 1], ['................', 7], ['x...............', 1], ['................', 7], ['q...............', 1], ['................', 7], ['x...............', 1], ['................', 9])
+      ], dv: 0.46
+    };
+  })();
+
+  /* --- tour_mx_boss: the hook as a chase. D minor 6/8, 360 eighths/min, 52 bars: alarm 2 | A 8 | A' 8 | B 16 | C 8 | D 8 | turn 2 (loop 50 s) --- */
+  const boss = (() => {
+    const Dm_ = 2;
+    const Ach = 'Dm Dm Gm A7 Dm Bb Gm,A7 Dm ';
+    const CH = 'A7 A7 ' + Ach + Ach + 'Bb Bb C C Dm Dm E7 E7 A7 Gm A7 A7 Bb C A7 A7 ' + 'Dm Dm Gm Gm Bb Bb A7 A7 ' + 'Dm Gm A7 Dm Bb Gm E7 A7 ' + 'A7 A7';
+    const A = ['D5:4:1.15 F5:2 E5:2 D5:2 Bb4:2', 'A4:6 .:2 A4:2 Bb4:2', 'D5:4:1.1 G5:2 Bb5:4 A5:2', 'A5:6 G5:2 F5:2 E5:2',
+      'F5:4:1.1 A5:2 D6:4 C#6:2', 'D6:4 C6:2 Bb5:4 A5:2', 'G5:2 Bb5:2 D6:2 C#6:2 E6:2 G6:2', 'F6:4 E6:2 D6:2 A4:2 Bb4:2'];
+    const A2 = A.slice(0, 7).concat(['D6:6:1.15 .:6']);
+    const B = ['D5:4:1.15 F5:4 Bb5:4', 'A5:4 F5:4 D5:4', 'E5:4:1.15 G5:4 C6:4', 'Bb5:4 G5:4 E5:4', 'F5:4:1.15 A5:4 D6:4', 'C6:4 A5:4 F5:4', 'G#5:4:1.15 B5:4 E6:4', 'D6:4 B5:4 G#5:4',
+      'A5:2 Bb5:2 D6:2 F6:2 E6:2 D6:2', 'Bb5:6 A5:6', 'C#6:2 E6:2 G6:2 E6:2 C#6:2 A5:2', 'A5:12', 'D6:4 C6:2 Bb5:2 A5:2 G5:2', 'E5:4 F5:2 G5:2 A5:2 Bb5:2', 'C#6:4 D6:2 E6:4 F6:2', 'E6:12:1.1'];
+    const tptD = ['D6:4:1.15 F6:2 E6:2 D6:2 Bb5:2', 'A5:6 .:2 A5:2 Bb5:2', 'D6:4:1.1 G6:2 F6:2 E6:2 C#6:2', 'D6:6 .:2 A5:2 Bb5:2', 'D6:4 F6:2 E6:2 D6:2 Bb5:2', 'G5:4 Bb5:2 D6:4 C6:2', 'B5:4 D6:2 G#5:4 B5:2', 'C#6:6:1.1 E6:6'];
+    const alarm = 'A4:2:1.1 A4:2 A4:2 A4:2:1.1 A4:2 A4:2';
+    const tpt = L([alarm, 'A4:2:1.1 A4:2 A4:2 A4:2 A4:2 Bb4:2', ...A, ...A2, ...B, ...R(4, S6), 'D5:4:1.1 F5:4 A5:4', 'Bb5:4:1.1 A5:4 G5:4', 'A5:4:1.1 C#6:4 E6:4', 'G6:4:1.15 E6:4 C#6:4', ...tptD, alarm, 'A4:2:1.1 A4:2 A4:2 A4:2 A4:2 Bb4:2']);
+    const pizz = L([...R(34, S6), 'D5:4 F5:2 E5:2 D5:2 Bb4:2', 'A4:6 .:2 A4:2 Bb4:2', 'D5:4 G5:2 Bb5:4 A5:2', 'A5:6 G5:2 F5:2 E5:2', ...R(4, S6), ...R(10, S6)]);
+    const vln = L([...R(10, S6), 'A5:12', 'A5:12', 'Bb5:12', 'C#6:12', 'D6:12', 'D6:12', 'Bb5:6 C#6:6', 'D6:6 .:6',
+      ...T.dia(L(B), 2, Dm_, T.HARM).split(' | '), ...R(8, S6), ...tptD.map(b => T.tr(b, 12)), ...R(2, S6)]);
+    const meter = b => (b >= 18 && b < 26) || b < 2 || b >= 50 ? 34 : (b % 2 ? 34 : 68);
+    let strum = '', perc = ['', '', '', '', ''];
+    for (let b = 0; b < 52; b++) {
+      const m = meter(b), sec = b < 2 ? 'i' : b < 18 ? 'A' : b < 34 ? 'B' : b < 42 ? 'C' : b < 50 ? 'D' : 'T';
+      strum += sec === 'C' && b < 38 ? 'x.x.x.x.x.x.' : (m === 68 ? ST68 : ST34);
+      perc[0] += m === 68 ? 'k.....k.....' : 'k...k...k...';
+      perc[1] += sec === 'i' || sec === 'T' ? 'm.m.t.t.T.T.' : sec === 'C' ? '............' : m === 68 ? '......S.....' : '....s...S...';
+      perc[2] += sec === 'C' ? (b % 2 ? 'zzz.Z.zzz.Z.' : 'Z.zzZ.z.zzZ.') : sec === 'B' || sec === 'D' ? 'z.....z.....' : '............';
+      perc[3] += sec === 'C' ? '............' : 'h.h.h.h.h.h.';
+      perc[4] += b === 2 || b === 18 || b === 42 ? 'x...........' : b === 9 || b === 41 || b === 49 ? '........q...' : '............';
+    }
+    return {
+      v2: 1, bpm: 360, bpb: 6, spb: 2, bars: 52, lb: 2, rv: 0.3, dl: 0.08, dtb: 3,
+      ch: CH,
+      parts: [
+        { n: 'tpt1', ln: tpt, i: 'tpt', v: 0.28, g: 0.85, pan: 0.14, rv: 0.6, dl: 0.3 },
+        { n: 'tpt2', ln: T.dia(tpt, -2, Dm_, T.HARM), i: 'tpt', v: 0.17, g: 0.85, pan: -0.14, rv: 0.6, low: 1 },
+        { n: 'vln', ln: vln, i: 'vln', v: 0.14, pan: -0.4, rv: 0.8 },
+        { n: 'pizz', ln: pizz, i: 'pizz', v: 0.4, pan: 0.3, rv: 0.6 },
+        { n: 'gtrn', ln: T.bass(CH, b => meter(b) === 68 ? B68 : B34, S6, 38), i: 'gtrn', v: 0.27, pan: 0, rv: 0.05 }
+      ],
+      a2: strum, a2i: 'vihuela', a2v: 0.5, a2o: 57,
+      mix: { C: { pan: 0.35, rv: 0.3 } },
+      dr: perc, dv: 0.48
+    };
+  })();
+
+  return {
+    tour_mx: mx, tour_mx_canal: canal, tour_mx_deep: deep, tour_mx_volcan: volcan, tour_mx_boss: boss,
+    // the map's tune in Mexico's colours: muted trumpet and violin, vihuela, guitarrón, claves
+    tour_map_mx: T.mapSong({
+      lead: 'tptSoft', leadV: 0.2, lead2: 'vln', lead2V: 0.15, bell: 'harp', strum: 'vihuela', strumV: 0.45, strumO: 57, bass: 'gtrn', bassV: 0.22, bassLo: 38, sw8: 0.2, padV: 0,
+      strumPat: T.seq(16, ['C.u.x.u.C.u.x.u.', 16], ['C.u.C.u.C.u.C.u.', 8], ['C.u.x.u.C.u.x.u.', 8]),
+      extraParts: (TT, l1) => [{ n: 'tpt2', ln: TT.dia(l1, -2, 5), i: 'tptSoft', v: 0.12, g: 0.88, pan: -0.15, rv: 0.7, low: 1 }],
+      drums: [T.seq(16, ['k.......k.......', 32]), T.seq(16, ['r..r..r...r.r...', 32]), T.seq(16, ['n.n.n.n.n.n.n.n.', 32]), T.seq(16, ['x...............', 1], ['................', 15], ['i...............', 1], ['................', 7], ['....q...........', 1], ['................', 7])]
+    })
+  };
+})();
 
 /* ---------------- v2 (LEVEL_OVERHAUL.md §7.5.1): stamps, country looks for library objects, the map, houses ---------------- */
 const stamps = {
@@ -1454,7 +1621,7 @@ Tour.country({
   decorLights: { mxCellarLamp: [150, '#ffc070', -22] },
   map: { fort: 'hacienda', start: [0, 0] },
   houses: [{ id: 'mx-tienda', kind: 'stand', name: 'La Tiendita', keeper: 'xolo', stock: ['plane', 'fins', 'kazoo', 'oneup', 'sundial', 'magnet'], mapCell: [0, 1], mapFrom: 0 }],
-  music: { level: 'tour_mx', boss: 'tour_mx_boss' },
+  music: { level: 'tour_mx', boss: 'tour_mx_boss', map: 'tour_map_mx' },
   landmark: 'the Palace of Fine Arts',
   coin: { name: 'GOLDEN LIME', draw(ctx, x, y) {
     ctx.fillStyle = '#c8901a'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();

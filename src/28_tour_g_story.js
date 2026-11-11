@@ -236,28 +236,167 @@ function tourCreditsLines() {
   ];
 }
 
-/* ---------- songs for the title and the map ---------- */
-Sound.addTrack && Sound.addTrack('tour_title', {
-  bpm: 120, bars: 8, rv: 0.25, dl: 0.12, pump: 0.3,
-  ch: 'C G Am F C G F,G C',
-  ld: 'E5:2 G5:2 C6:4 B5:2 A5:2 G5:4 | D5:2 G5:2 B5:4 A5:2 G5:2 D5:4 | C5:2 E5:2 A5:4 G5:2 E5:2 C5:4 | F5:4 A5:4 C6:8 |' +
-      'E6:2 D6:2 C6:4 G5:2 A5:2 C6:4 | B5:2 A5:2 G5:4 D6:4 B5:4 | A5:2 C6:2 F6:4 E6:2 D6:2 B5:4 | C6:12 .:4',
-  li: 'brass', lv: 0.13, hx: 0.05,
-  l2: 'C5:16 | B4:16 | A4:16 | A4:16 | G4:16 | G4:16 | A4:8 B4:8 | C5:16', l2i: 'strings', l2v: 0.05,
-  bp: 'r...r.f.r...o...', bi: 'pluckb', bv: 0.28,
-  ap: '0.2.1.3.0.2.1.3.', ai: 'harp', av: 0.04, ao: 64,
-  dr: ['k.......k..k....', '....c.......c...', 'h.h.h.h.h.h.h.h.', 'w...........w...'], dv: 0.42
-});
-Sound.addTrack && Sound.addTrack('tour_map', {
-  bpm: 100, bars: 8, rv: 0.3, dl: 0.15, sw: 0.1,
-  ch: 'F C Dm Bb F C Bb,C F',
-  ld: 'A5:4 C6:2 A5:2 G5:4 F5:4 | E5:4 G5:2 C6:2 G5:8 | F5:4 A5:2 D6:2 C6:4 A5:4 | Bb5:6 A5:2 F5:8 |' +
-      'A5:2 C6:2 F6:4 E6:2 C6:2 A5:4 | G5:4 C6:4 E6:8 | D6:2 C6:2 Bb5:4 A5:2 G5:2 E5:4 | F5:12 .:4',
-  li: 'whistle', lv: 0.12,
-  bp: 'r.......f...o...', bi: 'sub', bv: 0.28,
-  ap: 'c-..c-....c-....', ai: 'ep', av: 0.05, ao: 57,
-  dr: ['k.......k.......', '....c.......c...', '..h...h...h...h.', 'l.....l.....l...'], dv: 0.38
-});
+/* ---------- music: the game's main motif, helpers for writing songs, the title and the map ----------
+   Every song is original. The main "Brady-O" motif is the scale-degree figure 5 6 | 1 3 2 1 6 | 5
+   (a two-note pick-up, then a 3+3+2 "tresillo" kick up to the third and back down to the fifth below).
+   The title states it, the map hums it, and each land quotes it in its own key, metre and band
+   (Mexico: 6/8 son, trumpets in thirds). Songs that set v2: 1 use the newer voices, kit and mixer of
+   src/01_audio.js; see docs/MUSIC.md. */
+const TourTune = (() => {
+  const PCS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }, NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+  const num = x => { const r = /^([A-G])([#b]?)(-?\d)$/.exec(x); return r ? 12 * (+r[3] + 1) + PCS[r[1]] + (r[2] === '#' ? 1 : r[2] === 'b' ? -1 : 0) : null; };
+  const nm = m => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+  const pc = x => ((x % 12) + 12) % 12;
+  const MAJ = [0, 2, 4, 5, 7, 9, 11], MIN = [0, 2, 3, 5, 7, 8, 10], HARM = [0, 2, 3, 5, 7, 8, 11], DOR = [0, 2, 3, 5, 7, 9, 10];
+  // bars given as an array -> one line ("NOTE:steps[:velocity]" tokens, '.' rest, '|' bar line)
+  const L = bars => bars.join(' | ');
+  const rest = (n, spBar) => Array(n).fill('.:' + spBar);
+  // run every note of a line through fn(midi) -> midi, or null for a rest
+  function mapNotes(line, fn) {
+    return line.replace(/\|/g, ' | ').trim().split(/\s+/).map(tk => {
+      if (tk === '|') return tk;
+      const p = tk.split(':'), m = num(p[0]);
+      if (m == null) return tk;
+      const x = fn(m);
+      if (x == null) return '.:' + p[1];
+      p[0] = nm(x); return p.join(':');
+    }).join(' ');
+  }
+  const tr = (line, n) => mapNotes(line, m => m + n);
+  // a second voice `steps` scale steps away (-2 a third below, -5 a sixth below) in the key (tonic pitch class, scale)
+  function dia(line, steps, tonic, scale) {
+    scale = scale || MAJ;
+    return mapNotes(line, m => {
+      let rel = pc(m - tonic), anchor = m - rel, i = scale.indexOf(rel);
+      for (let k = 1; i < 0 && k < 12; k++) { let r2 = rel - k; if (r2 < 0) { r2 += 12; anchor -= 12; rel += 12; } i = scale.indexOf(r2); }
+      const n = scale.length, j = i + steps;
+      return anchor + scale[((j % n) + n) % n] + 12 * Math.floor(j / n);
+    });
+  }
+  // chord symbol -> { r root pitch class, t third, f fifth } (semitones above the root)
+  function chord(sym) {
+    const r = /^([A-G])([#b]?)(.*)$/.exec(sym), q = r[3];
+    const root = pc(PCS[r[1]] + (r[2] === '#' ? 1 : r[2] === 'b' ? -1 : 0));
+    const t = /^sus4|^7sus4/.test(q) ? 5 : /^sus2/.test(q) ? 2 : (/^m(?!aj)/.test(q) || /^dim/.test(q)) ? 3 : 4;
+    return { r: root, t, f: /dim|b5/.test(q) ? 6 : /aug/.test(q) ? 8 : 7 };
+  }
+  // a bass line from a chord string (one token per bar, "A,B" = two halves) and a per-bar rhythm template
+  // (string, or function(bar) -> string) of tokens R root, F fifth, T third, O octave, L low fifth,
+  // A approach (a semitone under the next chord's root), N next root, '.' rest; each "TOKEN:steps".
+  function bass(chords, tpl, spBar, lo) {
+    const bars = chords.trim().split(/\s+/).map(b => b.split(',').map(chord));
+    const at = (b, s) => { const cs = bars[Math.min(b, bars.length - 1)]; return cs[Math.min(cs.length - 1, Math.floor(s / (spBar / cs.length)))]; };
+    const place = r => lo + pc(r - lo);
+    const out = [];
+    for (let b = 0; b < bars.length; b++) {
+      const t = typeof tpl === 'function' ? tpl(b) : tpl; let pos = 0; const toks = [];
+      for (const tk of t.trim().split(/\s+/)) {
+        const [k, d] = tk.split(':'), n = +d, c = at(b, pos);
+        const nxt = pos + n >= spBar ? at(b + 1 >= bars.length ? 0 : b + 1, 0) : at(b, pos + n);
+        let m = null; const R = place(c.r);
+        if (k === 'R') m = R; else if (k === 'F') m = R + c.f > lo + 16 ? R + c.f - 12 : R + c.f; else if (k === 'T') m = R + c.t;
+        else if (k === 'O') m = R + 12; else if (k === 'L') m = R + c.f - 12 >= lo - 5 ? R + c.f - 12 : R + c.f;
+        else if (k === 'A') { const nr = place(nxt.r); m = nr === R ? R + c.f - 12 : nr - 1; if (m < lo - 3) m += 12; }
+        else if (k === 'N') m = place(nxt.r);
+        toks.push(m == null ? '.:' + n : nm(m) + ':' + n); pos += n;
+      }
+      out.push(toks.join(' '));
+    }
+    return L(out);
+  }
+  // a pattern lane built section by section: seq(spBar, [pattern, bars], ...); a pattern may span several bars
+  function seq(spBar, ...parts) { let s = ''; for (const [p, n] of parts) { const len = n * spBar; for (let i = 0; i < len; i++) s += p[i % p.length]; } return s; }
+  return { num, nm, tr, dia, chord, bass, seq, L, rest, MAJ, MIN, HARM, DOR, MOTIF: '5 6 | 1 3 2 1 6 | 5' };
+})();
+
+/* the title: the main theme. C major, 116 bpm, 32 bars (2 intro + 30 looping, ~62 s):
+   intro | A hook (trumpets in thirds) | B lift (violins sing, trumpets answer) | A again under a violin
+   counter-melody | bridge (the motif in A minor on celesta) | turnaround, back to A */
+(() => {
+  const T = TourTune, S = 16;
+  const CH = 'C G7 ' + 'C Em7 F G Am7 Fmaj7 Dm7,G7 C ' + 'F G Em7 Am7 Dm7 G Fmaj7,Em7 Dm7,G7 ' + 'C Em7 F G Am7 Fmaj7 Dm7,G7 C ' + 'Am F Dm E7 ' + 'F,G G7';
+  const hookA = ['C5:3:1.1 E5:3 D5:2 C5:4 A4:4', 'G4:8 .:4 G4:2 A4:2', 'C5:3:1.1 E5:3 G5:2 A5:4 G5:4', 'E5:4 D5:4 .:4 A4:2 C5:2',
+    'D5:3:1.1 E5:3 G5:2 E5:4 D5:4', 'C5:3 A4:3 C5:2 D5:4 E5:4', 'F5:3:1.1 E5:3 D5:2 B4:4 D5:4', 'C5:12 .:4'];
+  const tpt = T.L([...T.rest(1, S), '.:12 G4:2 A4:2', ...hookA,
+    '.:16', '.:8 D5:3 E5:3 G5:2', '.:16', '.:4 C5:3 E5:3 D5:2 C5:4', '.:16', '.:8 B4:3 D5:3 G5:2', '.:16', '.:12 G4:2 A4:2',
+    ...hookA, ...T.rest(4, S), 'F5:4:1.1 E5:4 D5:4 B4:4', 'G5:8:1.15 .:4 G4:2 A4:2']);
+  const vln = T.L([...T.rest(10, S),
+    'A5:6 G5:2 A5:4 C6:4', 'B5:6 A5:2 G5:8', 'G5:6 E5:2 G5:4 B5:4', 'A5:12 .:4', 'F5:6 E5:2 F5:4 A5:4', 'G5:6 F5:2 E5:4 D5:4', 'E5:4 F5:4 G5:4 A5:4', 'B5:4 D6:8 .:4',
+    'G5:16', 'G5:4 A5:4 B5:8', 'C6:16', 'B5:4 A5:4 G5:4 .:4', 'C6:8 B5:8', 'A5:16', 'A5:8 G5:4 F5:4', 'E5:12 .:4',
+    'E5:16:0.8', 'F5:16:0.8', 'A5:16:0.8', 'G#5:16:0.85', 'A5:8 B5:8', 'B5:12 .:4']);
+  const vln2 = T.L([...T.rest(10, S), ...T.dia(T.L(['A5:6 G5:2 A5:4 C6:4', 'B5:6 A5:2 G5:8', 'G5:6 E5:2 G5:4 B5:4', 'A5:12 .:4', 'F5:6 E5:2 F5:4 A5:4', 'G5:6 F5:2 E5:4 D5:4', 'E5:4 F5:4 G5:4 A5:4', 'B5:4 D6:8 .:4']), -2, 0).split(' | '), ...T.rest(14, S)]);
+  const motifMinor = ['A5:3 C6:3 B5:2 A5:4 E5:4', 'F5:3 A5:3 G5:2 F5:4 C6:4', 'D6:3 F6:3 E6:2 D6:4 A5:4', 'G#5:4 B5:4 D6:4 E6:4'];
+  const cel = T.L(['G5:2 A5:2 C6:4 E6:4 D6:4', 'C6:4 A5:4 G5:4 .:4', ...T.rest(7, S), '.:12 G5:2 A5:2', ...T.rest(7, S), '.:8 C6:2 E6:2 G6:2 C7:2', ...T.rest(7, S), '.:12 E6:2 G6:2', ...motifMinor, ...T.rest(2, S)]);
+  const pizz = T.L([...T.rest(26, S), ...motifMinor.map(b => T.tr(b, -12)), ...T.rest(2, S)]);
+  const bassTpl = b => b === 0 ? '.:16' : b === 1 ? 'R:8 .:4 F:4' : b < 10 || (b >= 18 && b < 26) ? 'R:3 R:3 F:2 O:4 A:4' : b < 18 ? 'R:4 F:4 R:4 A:4' : b < 30 ? 'R:8 F:4 A:4' : b === 30 ? 'R:4 R:4 R:4 R:4' : 'R:4 F:4 R:2 R:2 A:4';
+  const S16 = (...p) => T.seq(S, ...p);
+  Sound.addTrack && Sound.addTrack('tour_title', {
+    v2: 1, bpm: 116, bars: 32, lb: 2, rv: 0.5, dl: 0.22, dtb: 0.75,
+    ch: CH,
+    parts: [
+      { n: 'tpt1', ln: tpt, i: 'tpt', v: 0.27, g: 0.9, pan: 0.12, rv: 0.8, dl: 0.5 },
+      { n: 'tpt2', ln: T.dia(tpt, -2, 0), i: 'tpt', v: 0.15, g: 0.9, pan: -0.12, rv: 0.8, low: 1 },
+      { n: 'vln1', ln: vln, i: 'vln', v: 0.17, pan: -0.28, rv: 1.1, dl: 0.4 },
+      { n: 'vln2', ln: vln2, i: 'vln', v: 0.1, pan: 0.3, rv: 1.1, low: 1 },
+      { n: 'cel', ln: cel, i: 'celesta', v: 0.08, pan: 0.35, rv: 1, dl: 1 },
+      { n: 'pizz', ln: pizz, i: 'pizz', v: 0.34, pan: -0.35, rv: 0.8 },
+      { n: 'bass', ln: T.bass(CH, bassTpl, S, 36), i: 'upright', v: 0.2, g: 0.95, pan: 0, rv: 0.05 }
+    ],
+    a2: S16(['C...............', 1], ['................', 1], ['C.u.x.uuC.u.x.u.', 8], ['C.u.C.u.C.u.C.u.', 8], ['C.u.x.uuC.u.x.u.', 8], ['C...............', 4], ['C.C.C.C.C.C.C.C.', 2]),
+    a2i: 'guitar', a2v: 0.36, a2o: 52,
+    pd: S16(['................', 2], ['c---------------', 28], ['c-------c-------', 2]), pi: 'pad2', pv: 0.05, po: 55,
+    mix: { C: { pan: -0.22, rv: 0.5 }, P: { pan: 0.05, rv: 1.3 } },
+    dr: [
+      S16(['................', 1], ['............k.k.', 1], ['k.....k.....k...', 8], ['k.......k.......', 8], ['k.....k.....k...', 8], ['................', 3], ['k...........k...', 1], ['k...k...k...k...', 2]),
+      S16(['................', 2], ['....s.......s...', 8], ['....s.......s...', 8], ['....s..g....s.g.', 8], ['................', 4], ['....s.......s...', 1], ['s...s...s.s.ssss', 1]),
+      S16(['................', 2], ['h.h.h.h.h.h.h.h.', 8], ['..h...h...h...h.', 8], ['h.hhh.h.h.hhh.h.', 8], ['................', 4], ['h.h.h.h.h.h.h.h.', 2]),
+      S16(['................', 10], ['n.n.n.n.n.n.n.n.', 8], ['....j.......j...', 8], ['................', 6]),
+      S16(['................', 2], ['x...............', 1], ['................', 7], ['x...............', 1], ['................', 7], ['x...............', 1], ['................', 7], ['i...............', 1], ['................', 2], ['........t.t.m.m.', 1], ['x...............', 1], ['................', 1])
+    ], dv: 0.44
+  });
+})();
+
+/* the map: the motif hummed for travelling. F major, 100 bpm with a gentle shuffle, 32 bars (~77 s):
+   A (accordion) | A' (flute) | B (the two trade phrases) | A'' (both, in thirds). Each land can ask for its
+   own flavour of the same tune (another lead, strum, bass and kit): TourTune.mapSong({...}). */
+TourTune.mapSong = o => {
+  const T = TourTune, S = 16; o = o || {};
+  const A = 'F Dm7 Bb C7 Gm7 Bbmaj7 Gm7,C7 F ', CH = A + A + 'Bbmaj7 C7 Am7 Dm7 Gm7 C7 Am7,D7 Gm7,C7 ' + A.trim();
+  const a = ['F5:4:1.1 A5:4 G5:2 F5:2 D5:4', 'C5:8 .:4 C5:2 D5:2', 'F5:4:1.1 A5:4 C6:2 D6:2 C6:4', 'A5:4 G5:4 .:4 D5:2 F5:2',
+    'G5:4:1.1 A5:4 C6:2 A5:2 G5:4', 'F5:4 D5:4 F5:2 G5:2 A5:4', 'Bb5:4 A5:4 G5:4 E5:4', 'F5:12 C5:2 D5:2'];
+  const a2 = a.slice(0, 7).concat(['F5:12 A5:2 C6:2']);
+  const call = ['D6:6:1.1 C6:2 A5:4 F5:4', 'G5:6 A5:2 Bb5:8'], call2 = ['Bb5:6:1.1 A5:2 G5:4 D5:4', 'E5:4 G5:4 C6:8'];
+  const resp = ['C6:6 Bb5:2 G5:4 E5:4', 'F5:6 E5:2 D5:8'], resp2 = ['C6:4 A5:4 F#5:4 A5:4', 'G5:4 Bb5:4 E5:4 C5:2 D5:2'];
+  const R2 = T.rest(2, S);
+  const lead1 = T.L([...a, ...T.rest(8, S), ...call, ...R2, ...call2, ...R2, ...a]);
+  const lead2 = T.L([...T.rest(8, S), ...a2, ...R2, ...resp, ...R2, ...resp2, ...T.dia(T.L(a), -2, 5).split(' | ')]);
+  const bell = T.L([...T.rest(7, S), '.:8 C6:2 F6:2 A6:2 C7:2', ...T.rest(7, S), '.:12 F6:2 A6:2', ...T.rest(7, S), '.:8 D6:2 F6:2 A6:2 .:2', ...T.rest(8, S)]);
+  const bassTpl = b => b >= 16 && b < 24 ? 'R:4 T:4 F:4 A:4' : 'R:6 R:2 F:4 A:4';
+  const S16 = (...p) => T.seq(S, ...p);
+  return {
+    v2: 1, bpm: o.bpm || 100, bars: 32, rv: 0.45, dl: 0.18, dtb: 0.75, sw8: o.sw8 == null ? 0.4 : o.sw8,
+    ch: CH,
+    parts: [
+      { n: 'lead1', ln: lead1, i: o.lead || 'accord', v: o.leadV || 0.2, g: 0.88, pan: 0.15, rv: 0.7, dl: 0.6 },
+      { n: 'lead2', ln: lead2, i: o.lead2 || 'flute', v: o.lead2V || 0.17, g: 0.9, pan: -0.2, rv: 0.9, dl: 0.5 },
+      { n: 'bell', ln: bell, i: o.bell || 'celesta', v: 0.09, pan: 0.35, rv: 1, dl: 1, low: 1 },
+      { n: 'bass', ln: T.bass(CH, o.bassTpl || bassTpl, S, o.bassLo || 36), i: o.bass || 'upright', v: o.bassV || 0.26, pan: 0, rv: 0.05 }
+    ].concat(o.extraParts ? o.extraParts(T, lead1, lead2) : []),
+    a2: o.strumPat || S16(['C...x.u.C...x.u.', 16], ['C.u.C.u.C.u.C.u.', 8], ['C...x.u.C...x.u.', 8]),
+    a2i: o.strum || 'uke', a2v: o.strumV || 0.4, a2o: o.strumO || 60,
+    pd: S16(['c-------c-------', 32]), pi: 'pad2', pv: o.padV == null ? 0.035 : o.padV, po: 53,
+    dr: o.drums || [
+      S16(['k.......k.......', 32]),
+      S16(['....s.......s...', 16], ['....s.......s.g.', 8], ['....s.......s...', 8]),
+      S16(['h.h.h.h.h.h.h.h.', 32]),
+      S16(['................', 16], ['n.n.n.n.n.n.n.n.', 8], ['................', 8]),
+      S16(['x...............', 1], ['................', 15], ['i...............', 1], ['................', 15])
+    ], dv: o.dv || 0.36
+  };
+};
+Sound.addTrack && Sound.addTrack('tour_map', TourTune.mapSong());
+// Super Brady-O World's title screen asks the shared code for 'title': play the world's own main theme there
+Sound.alias && Sound.alias('title', 'tour_title');
 
 // test hook (tools/gameplay_test.js)
 try { window.BRADY_TOUR = { Tour, TourProgress, TourPowers, TourBuild, TourMapScene, TourEndingScene, TourIntroPanels, TourItem, TourEnemy, TourFlyer, TourSwimmer, TourLeaper, TourFriend, TourProp, TourSprite, TourKit, tourCreditsLines, TourGear }; } catch (e) { /* not in a browser */ }
