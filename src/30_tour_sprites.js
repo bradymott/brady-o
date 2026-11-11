@@ -47,6 +47,25 @@ for (const id in Tour.countries) {
    2-4's reef). Each atlas-cut body and cap tile therefore paints 1 px past every side that has a neighbouring tile
    (the overlap lands in the tile cache's padding), but never past an open edge, which keeps its outline and its
    rounded corners. Applies to every theme whose floor comes from an atlas, Mexico's included. */
+/* Dark grid lines. A floor strip ('ground': 8 tiles x 3 rows) is rendered as one block, so its outer texel columns
+   (left of tile column 0, right of column 7) and its bottom texel rows carry the block's ink outline. A tile cut from
+   an outer column then brings a 1-2 texel dark line into the middle of a floor (3-2, 4-4: dark verticals between tile
+   pairs). Floor tiles therefore sample 2 texels in from the strip's outer edges (left, right, bottom; the cap's top
+   line is wanted), stretched back to the full tile: invisible at 63/64, and the line is gone. */
+const INSET = 2;
+const paintTile0 = Atlas.paintTile;
+Atlas.paintTile = function (ctx, name, id, col, row, dx, dy, w, h) {
+  if (id !== 'ground') return paintTile0.apply(this, arguments);
+  const a = this.atlases[name]; if (!a || !a.ready) return false;
+  const f = a.meta.frames[id]; if (!f) return false;
+  const k = a.scale, tw = (w || TS) * k, th = (h || TS) * k;
+  let sx = f.x + col * tw, sy = f.y + row * th, sw = tw, sh = th;
+  if (col === 0) { sx += INSET; sw -= INSET; }
+  if ((col + 1) * tw >= f.w) sw -= INSET;
+  if ((row + 1) * th >= f.h) sh -= INSET;
+  ctx.drawImage(a.img, sx, sy, sw, sh, dx || 0, dy || 0, w || TS, h || TS);
+  return true;
+};
 const BLEED = 1;
 const seamless = th => {
   const G = th.ground;
