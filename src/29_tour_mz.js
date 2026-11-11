@@ -113,6 +113,8 @@ const themes = {
   }),
   mz_beach: Object.assign({}, base, {
     name: 'Turtle Beach', music: 'tour_mz_night', particles: 'fireflies', liquid: 'glowsea',
+    // moonlit rock stacks in the surf: cool grey-violet stone, a pale moonlit cap (the warm terracotta glowed at night)
+    pillar: { c1: '#6a6880', c2: '#3a3850', cap: '#b8b8cc', style: 'column' },
     ground: { style: 'grass', cap: '#d8c8a0', capHi: '#f0e4c0', dirt: '#8a7a5a', dirt2: '#4a4030', rock: '#6a6050' },
     sky: ['#040814', '#0a1a34', '#1a3050'], horizonGlow: '#3a6a8a', celestial: { type: 'moon', x: 0.2, y: 0.16, r: 26, color: '#f8f4e0', glow: '#a0c0ff' }, stars: 1,
     layers: [{ kind: 'mzNightSea', color: '#0e2a4a', base: 320, f: 0.06 }],

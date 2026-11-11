@@ -114,17 +114,25 @@ const themes = {
 // canal ring's strips, the flower auction (8-2) and the windmill row (8-6) the tulip fields. The tulip strip's fields
 // sit low in the picture, under the floor line at the usual camera, so it is lifted (shift) for these levels.
 const atlasLayers = (atlas, layers, shifts) => layers.map((L, i) => ({ kind: 'image', atlas, id: 'L' + i, f: L.f, base: L.base, dyn: L.dyn, color: L.color, fallback: L, shift: shifts && shifts[i] != null ? shifts[i] : (L.base > 340 ? -Math.min(60, L.base - 335) : 0) }));
+// [strip id, f, fallback, shift]: the canal (base 330) is lifted onto the floor line of the usual phone camera
+const ownLayers = (atlas, list) => list.map(([id, f, fb, shift]) => ({ kind: 'image', atlas, id, f, base: fb.base, dyn: fb.dyn, color: fb.color, fallback: fb, shift: shift || 0 }));
 const borrow = (from, over, shifts, under) => { const th = Object.assign({}, themes[from], over); th.layers = (under || []).concat(atlasLayers(from, themes[from].layers, shifts)); th.atlasBorrow = from; return th; };
 // a plain field colour behind a lifted strip, so tall areas never show the sky under its bottom edge
 painters.nlFieldFill = (ctx, L, rng, H) => { ctx.fillStyle = L.color; ctx.fillRect(0, L.base, BG_W, H - L.base); };
 const FIELD_FILL = [{ kind: 'nlFieldFill', color: '#3a8a3a', base: 250, f: 0.06 }];
 const TULIP_LIFT = -110;
 Object.assign(themes, {
-  nl_polder: borrow('nl_canals', { name: 'The Polder', particles: 'leaves' }),
-  nl_veiling: borrow('nl_tulips', { name: 'The Flower Auction', particles: 'petals' }, [TULIP_LIFT], FIELD_FILL),
+  // the polder (8-1) and the flower auction hall (8-2) have their own Fiesta Toon strips (nl_polder: the polder with
+  // windmills and the brick pumping station, then the canal; nl_veiling: the whole hall with its auction clock and
+  // flower trolleys); the painters are the fallback while they load
+  nl_polder: Object.assign({}, themes.nl_canals, { name: 'The Polder', particles: 'leaves', sky: ['#5a9ae8', '#b4dcf8', '#f4f4ec'],
+    layers: ownLayers('nl_polder', [['L0', 0.06, { kind: 'nlPolder', color: '#5a9a4a', base: 300 }], ['L1', 0.12, { kind: 'nlCanal', color: '#4a7a7a', base: 330 }, -24]]) }),
+  nl_veiling: Object.assign({}, themes.nl_canals, { name: 'The Flower Auction', particles: 'petals', liquid: undefined, sky: ['#c8d4dc', '#dce4e8', '#eef2f0'],
+    horizonGlow: '#ffffff', celestial: { type: 'none' }, cloudsDyn: false, rays: null, fog: '#eef2f0', decor: ['nlTulips', 'nlFlowerBox', 'nlTulips', 'nlClogsPair'],
+    layers: ownLayers('nl_veiling', [['L0', 0.08, { kind: 'nlHall', color: '#a8b4bc', base: 360 }, -84]]) }),
   nl_molens: borrow('nl_tulips', { name: 'Windmill Row', particles: 'petals' }, [TULIP_LIFT], FIELD_FILL)
 });
-if (typeof Atlas !== 'undefined') for (const k of ['nl_polder', 'nl_veiling', 'nl_molens']) {
+if (typeof Atlas !== 'undefined') for (const k of ['nl_molens']) {
   const th = themes[k], G = th.ground || {};
   Atlas.applyTiles(th, th.atlasBorrow, { ground: 'ground', groundFallback: G.paint ? (c, r, sd) => G.paint(c, r, sd) : null, capFallback: G.paintCap ? (c, a, b2, r, l, rt) => G.paintCap(c, a, b2, r, l, rt) : null });
 }
@@ -239,6 +247,13 @@ const bulbArt = (ctx, e, x, y, m, t) => {
 };
 // the gull on a cargo bike (8-3's racing rival): a box bike with a crate of herring in front
 const cargoGullArt = (ctx, e, x, y, m, t) => {
+  // the racing rival calls this directly (it has no cfg of its own): the nl_x atlas's gull on its cargo bike, else
+  // the procedural bike with the ink line
+  if (!e.cfg) {
+    if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'nl_x', m === 'chase' ? 'gullBike/walk' : 'gullBike_walk_000', (t || 0) * 1.4, x, y, e.dir || 1, { scale: 1.15 })) return;
+    Ink.around(ctx, x - 40, y - 60, 80, 64, c => cargoGullArt(c, { dir: e.dir, cfg: true }, x, y, m, t), { pad: 6 });
+    return;
+  }
   ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
   const sp = (t || 0) * 12;
   ctx.strokeStyle = '#1a1a22'; ctx.lineWidth = 2; for (const wx of [-16, 16]) { ctx.beginPath(); ctx.arc(wx, -8, 8, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(wx + Math.cos(sp) * 8, -8 + Math.sin(sp) * 8); ctx.lineTo(wx - Math.cos(sp) * 8, -8 - Math.sin(sp) * 8); ctx.stroke(); }
@@ -276,7 +291,7 @@ const enemies = {
   // the tulip bulb: a moving soil bump under Brady; it pops up as a tulip bloom (tell 0.7 s), then sits stunned
   nlBulb: { cls: modal(TourEnemy.make({ w: 24, h: 24, speed: 1.5, behavior: 'burrower', art: bulbArt, burst: '#c89a6a' }), { pop: 'idle', exposed: 'stun', dig: 'walk' }), place: 'walk' },
   // the gull on a cargo bike: 8-3's rival (art only; TourRival draws it)
-  nlCargoGull: { cls: TourEnemy.make({ w: 34, h: 30, speed: 0, behavior: 'still', art: cargoGullArt }), place: 'walk' },
+  nlCargoGull: { cls: TourEnemy.make({ w: 34, h: 30, speed: 0, behavior: 'still', art: cargoGullArt, atlas: 'nl_x', sprite: 'gullBike' }), place: 'walk' },
   nlBee: { cls: TourFlyer.make({ w: 18, h: 14, range: 2, speed: 2.2, swoop: true, art: beeArt, burst: '#ffd23a' }), place: 'fly' },
   nlSnowman: { cls: TourEnemy.make({ w: 22, h: 40, speed: 0.3, behavior: 'throw', every: 2.2, range: 9, pace: true, hp: 2, art: snowmanArt, burst: '#ffffff', shoot: e => {
     tourFire(e.g, e.cx + e.dir * 12, e.y + 8, { kind: 'snowball', vx: e.dir * 4 * TS, vy: -5 * TS, grav: PHYS.gDown * 0.4, w: 10, h: 10, life: 3, col: '#ffffff', stompable: true, art: snowball }); K.say(e.g, e, 'BRRR!', '#cfefff');

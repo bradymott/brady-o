@@ -1407,15 +1407,26 @@ class MaMirageSlab extends Ent {
     }
   }
   draw(ctx) {
-    const a = this.on ? (this.warn ? 0.45 + 0.4 * Math.sin(this.t * 40) : 0.95) : 0.12;
-    ctx.save(); ctx.globalAlpha = a;
-    // a shimmering sandstone slab with heat ripples, inked so it reads against the dunes
-    ctx.fillStyle = '#e0a050'; rr(ctx, this.x + 2, this.y, this.w - 4, 14, 4); ctx.fill();
-    ctx.fillStyle = '#f8d890'; rr(ctx, this.x + 2, this.y, this.w - 4, 5, 3); ctx.fill();
-    ctx.strokeStyle = '#6a3a14'; ctx.lineWidth = 2; rr(ctx, this.x + 2, this.y, this.w - 4, 14, 4); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'; for (let k = 0; k < 3; k++) ctx.fillRect(this.x + 8 + k * 30 + Math.sin(this.t * 6 + k) * 3, this.y + 7, 12, 2);
-    ctx.restore();
-    if (!this.on) { ctx.strokeStyle = 'rgba(255,248,220,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.strokeRect(this.x + 3, this.y + 1, this.w - 6, 12); ctx.setLineDash([]); }
+    // a mirage reads as water on the sand: a cool turquoise slab of shimmering "water", inked dark so it pops against the
+    // warm dunes; it flickers for the last 0.4 s; while gone a dashed ghost and a faint glint mark where it comes back
+    const x = this.x + 2, y = this.y, w = this.w - 4;
+    if (this.on) {
+      const a = this.warn ? 0.68 + 0.32 * Math.sin(this.t * 40) : 1;
+      ctx.save(); ctx.globalAlpha = a;
+      ctx.fillStyle = 'rgba(40,20,10,0.25)'; ctx.beginPath(); ctx.ellipse(this.cx, y + 20, w / 2, 4, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#2ab0c8'; rr(ctx, x, y, w, 14, 5); ctx.fill();
+      ctx.fillStyle = '#8ae8f4'; rr(ctx, x, y, w, 6, 4); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; for (let k = 0; k < Math.floor(w / 30); k++) ctx.fillRect(x + 8 + k * 30 + Math.sin(this.t * 6 + k) * 4, y + 9, 12, 2);
+      ctx.strokeStyle = '#123a52'; ctx.lineWidth = 2.5; rr(ctx, x, y, w, 14, 5); ctx.stroke();
+      // heat shimmer above it
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.2;
+      for (let k = 0; k < 3; k++) { const sx = x + (k + 0.5) * w / 3, ph = (this.t * 1.5 + k * 0.33) % 1; ctx.globalAlpha = a * (1 - ph); ctx.beginPath(); ctx.moveTo(sx, y - 4 - ph * 14); ctx.quadraticCurveTo(sx + 4, y - 8 - ph * 14, sx, y - 12 - ph * 14); ctx.stroke(); }
+      ctx.restore();
+    } else {
+      ctx.save(); ctx.fillStyle = 'rgba(138,232,244,0.22)'; rr(ctx, x, y, w, 14, 5); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2; ctx.setLineDash([6, 5]); rr(ctx, x, y + 1, w, 12, 5); ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
+    }
   }
 }
 // 5-3: laundry lines (day only) and strings of lanterns to stand on (night only), drawn over their toggle tiles
@@ -1615,7 +1626,7 @@ Tour.country({
   star: { name: 'GOLDEN LANTERN', draw(ctx, x, y, t) { ctx.save(); ctx.translate(x, y); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.moveTo(-6, -8); ctx.lineTo(6, -8); ctx.lineTo(8, 2); ctx.lineTo(0, 10); ctx.lineTo(-8, 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff4c0'; ctx.fillRect(-2, -4, 4, 6); ctx.restore(); } },
   skins: maSkins, bosses: [owlBoss],
   map: { fort: 'riad', start: [0, 0] },
-  houses: [{ id: 'ma-bazar', kind: 'stand', name: 'Bazar Bleu', keeper: 'fennec', stock: ['kazoo', 'plane', 'oneup', 'sundial', 'magnet', 'wand'], mapCell: [2, 2], mapFrom: 2 }],
+  houses: [{ id: 'ma-bazar', mapLabel: 'Bazar', kind: 'stand', name: 'Bazar Bleu', keeper: 'fennec', stock: ['kazoo', 'plane', 'oneup', 'sundial', 'magnet', 'wand'], mapCell: [2, 2], mapFrom: 2 }],
   // the levels are registered by 29_tour_ma_levels.js (Tour.amend)
   levels: []
 });

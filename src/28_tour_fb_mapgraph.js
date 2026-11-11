@@ -212,7 +212,8 @@ const TourPanel = {
         if (T.lighthouse && done) { const E = TourProgress.exitsFound(id); if (E.found < E.total) TourPanelFx.flag(ctx, x - r - 4, y - r, t); }
       }
       ctx.font = `${lh - 1.5}px ${FONT_UI}`; ctx.textAlign = 'center';
-      const lines = TourLandscape.wrap(ctx, isHouse ? (S.H.name || 'Souvenir Stand') : L.name, labelW - 8, K.compact ? 1 : 2);
+      // on a small screen (one line per stop) a level or house may give a short map label (mapLabel) instead of its cut name
+      const lines = TourLandscape.wrap(ctx, isHouse ? ((K.compact && S.H.mapLabel) || S.H.name || 'Souvenir Stand') : ((K.compact && L.mapLabel) || L.name), labelW - 8, K.compact ? 1 : 2);
       let pw = 0; for (const l of lines) pw = Math.max(pw, ctx.measureText(l).width);
       const ly = y + r + 4, type = K.compact ? '' : isHouse ? 'SOUVENIRS' : TourLandscape.label(L);
       if (type) { ctx.font = `bold 10px ${FONT_UI}`; pw = Math.max(pw, ctx.measureText(type).width); }

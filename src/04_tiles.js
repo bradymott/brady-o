@@ -51,6 +51,10 @@ const TileArt = {
     for (let f = 0; f < 3; f++) A.glitch[f] = this.tile(S, ctx => paintGlitch(ctx, f));
     // diggable soil (open top / buried) and the low beam over a crawlway (themes can paint their own: soil.paint, lintel.paint)
     A.soil = [0, 1].map(top => this.tile(S, ctx => paintSoil(ctx, th, !!top)));
+    // opt-in: a theme's soil.variants buried tiles (soil.paint(ctx, false, v)), scattered by position so a dig field
+    // is not one tile repeated
+    A.soilV = []; const nv = (th.soil && typeof th.soil.paint === 'function' && th.soil.variants) || 0;
+    for (let v = 0; v < nv; v++) A.soilV.push(this.tile(S, ctx => th.soil.paint(ctx, false, v)));
     A.lintel = this.tile(S, ctx => paintLintel(ctx, th));
     return A;
   }

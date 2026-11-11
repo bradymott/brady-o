@@ -251,7 +251,7 @@ class Play {
   worldScale() { return this.player && this.player.fx && this.player.fx.khole > 0 ? 0.4 : 1; }
   toast(msg) { this.toastText = msg; this.toastT = 2.6; }
   drawToast(ctx) {
-    if (!(this.toastT > 0)) return;
+    if (!(this.toastT > 0)) { this.toastBottom = 0; return; }
     const W = Game.cssW, a = Math.min(1, this.toastT * 2, (2.6 - this.toastT) * 6);
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     // long messages shrink a little, then wrap onto more lines (power-up hints in portrait)
@@ -262,7 +262,8 @@ class Play {
     if (ctx.measureText(text).width <= maxW) lines.push(text);
     else { let cur = ''; for (const word of text.split(' ')) { const t = cur ? cur + ' ' + word : word; if (cur && ctx.measureText(t).width > maxW) { lines.push(cur); cur = word; } else cur = t; } if (cur) lines.push(cur); }
     const lh = size + 6, tw = Math.max.apply(null, lines.map(l => ctx.measureText(l).width));
-    const w = Math.min(W - 24, tw + 30), h = Math.max(30, lines.length * lh + 12), y = Game.gameRect.y + Math.max(64, insets.t + 58) + (W < 600 ? 54 : 0) + (this.boss && this.bossLock && !this.boss.remove ? 34 : 0);   // under the boss bar while it shows
+    const w = Math.min(W - 24, tw + 30), h = Math.max(30, lines.length * lh + 12), y = Math.max(Game.gameRect.y + Math.max(64, insets.t + 58) + (W < 600 ? 54 : 0), (this.hudBottom || 0) + 23);
+    this.toastBottom = y - 15 + h;   // the banner keeps clear of it
     ctx.fillStyle = 'rgba(14,8,26,0.78)'; rr(ctx, W / 2 - w / 2, y - 15, w, h, 15); ctx.fill();
     ctx.strokeStyle = 'rgba(255,216,74,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
     ctx.fillStyle = '#ffd84a'; lines.forEach((l, i) => ctx.fillText(l, W / 2, y - 15 + h / 2 + (i - (lines.length - 1) / 2) * lh + 1));
@@ -851,7 +852,7 @@ class Play {
           case T.CRUMBLE: img = atlas.crumble; ox = crumbleOf(x, y); break;
           case T.PILLAR: { const part = ['L', 'R', 'S'][v & 3] || 'S'; img = atlas.pillar[part + (v & 4 ? 't' : 'b')]; break; }
           case T.GLITCH: img = atlas.glitch[Math.floor(t * 12 + x) % 3]; break;
-          case T.SOIL: img = atlas.soil ? atlas.soil[y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]] ? 0 : 1] : null; break;
+          case T.SOIL: { const bur = y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]], nv = bur && atlas.soilV ? atlas.soilV.length : 0; img = atlas.soil ? (nv ? atlas.soilV[((Math.imul(x ^ 0x5bd1e995, 374761393) ^ Math.imul(y + 0x27d4eb2d, 668265263)) >>> 13) % nv] : atlas.soil[bur ? 0 : 1]) : null; break; }
           case T.LINTEL: img = atlas.lintel || null; break;
           case T.PICK: {
             ctx.setTransform(S, 0, 0, S, Game.gameRect.x * Game.dpr + dx, Game.gameRect.y * Game.dpr + dy);
@@ -1141,7 +1142,8 @@ class Play {
       const g = ctx.createLinearGradient(bx, 0, bx + bw, 0); g.addColorStop(0, '#ff4fd8'); g.addColorStop(1, '#ffd84a');
       ctx.fillStyle = g; rr(ctx, bx, by + 6, Math.max(0, bw * b.hp / b.maxHp), 8, 4); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(b.name, W / 2, by + 1);
-    }
+      this.hudBottom = by + 18;   // the toast and the banner stack below the boss bar
+    } else this.hudBottom = 0;
     // pause button
     if (Input.layout) {
       const pb = Input.layout.pause;
@@ -1191,9 +1193,21 @@ class Play {
   drawBanner(ctx) {
     const W = Game.cssW, H = Game.cssH, a = Math.min(1, this.bannerT * 2);
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `${Math.min(34, W * 0.06)}px ${FONT_DISPLAY}`;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(this.bannerText, W / 2 + 2, H * 0.3 + 2);
-    ctx.fillStyle = '#ffd84a'; ctx.fillText(this.bannerText, W / 2, H * 0.3);
+    // a long banner shrinks, then breaks onto two lines, to fit the screen; it sits below the boss bar and any toast
+    const text = String(this.bannerText), maxW = W - 40;
+    let size = Math.min(34, W * 0.06); ctx.font = `${size}px ${FONT_DISPLAY}`;
+    while (size > 18 && ctx.measureText(text).width > maxW) { size--; ctx.font = `${size}px ${FONT_DISPLAY}`; }
+    let lines = [text];
+    if (ctx.measureText(text).width > maxW) {
+      const words = text.split(' '); let best = null;
+      for (let i = 1; i < words.length; i++) { const l = [words.slice(0, i).join(' '), words.slice(i).join(' ')], m = Math.max(ctx.measureText(l[0]).width, ctx.measureText(l[1]).width); if (!best || m < best.m) best = { l, m }; }
+      if (best) { lines = best.l; while (size > 14 && best.m > maxW) { size--; ctx.font = `${size}px ${FONT_DISPLAY}`; best.m = Math.max(ctx.measureText(lines[0]).width, ctx.measureText(lines[1]).width); } }
+    }
+    const lh = size * 1.15, top = Math.max(H * 0.3 - (lines.length - 1) * lh / 2, Math.max(this.toastBottom || 0, this.hudBottom || 0) + 10 + size / 2);
+    lines.forEach((l, i) => {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(l, W / 2 + 2, top + i * lh + 2);
+      ctx.fillStyle = '#ffd84a'; ctx.fillText(l, W / 2, top + i * lh);
+    });
     ctx.restore();
   }
   drawResults(ctx) {

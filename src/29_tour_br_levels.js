@@ -80,7 +80,9 @@ T_.br_samba_dawn = borrow('br_samba', 'br_samba', {
   celestial: { type: 'sun', x: 0.82, y: 0.62, r: 46, color: '#fff2c0', glow: '#ffb070' }, stars: 0.06,
   fog: '#ffc8a0'
 }, [{ kind: 'brDawnClouds', color: '#ff9aa8', base: 220, f: 0.02 }]);
-T_.br_samba_dawn.layers[2] = Object.assign({}, T_.br_samba_dawn.layers[2], { shift: 100 });
+// the grandstand strip (its crowd sat under the street and showed inside every pit): at dawn the avenue has no stands,
+// so the pits drop into the skyline's dusk instead
+T_.br_samba_dawn.layers.splice(2, 1);
 // 3-4: the white dunes of Lençóis Maranhenses with their rain lagoons
 T_.br_lencois = Object.assign({}, THEMES.br_beach, {
   name: 'Lençóis Maranhenses', music: 'tour_br', particles: 'dust', liquid: null,
@@ -88,9 +90,15 @@ T_.br_lencois = Object.assign({}, THEMES.br_beach, {
   celestial: { type: 'sun', x: 0.25, y: 0.14, r: 36, color: '#fffbe8', glow: '#fff0b0' }, stars: 0, cloudsDyn: true,
   layers: [{ kind: 'brLencoisFar', color: '#e8e0cc', base: 320, f: 0.05 }, { kind: 'brLencoisNear', color: '#f4ecd8', base: 360, f: 0.22 }],
   fog: '#e8f6ff', decor: ['brDuneGrass', 'brShell', 'brDuneGrass'],
-  ground: { style: 'grass', cap: '#fbf4e2', capHi: '#ffffff', dirt: '#eadcb8', dirt2: '#d6c49a', rock: '#c8b488',
-    paint(ctx, rng) { ctx.fillStyle = 'rgba(190,160,110,0.25)'; for (let k = 0; k < 9; k++) ctx.fillRect(rng() * TS, rng() * TS, 2, 1.5); },
-    paintCap(ctx, x0, x1) { ctx.fillStyle = '#fffaf0'; ctx.fillRect(x0, 0, x1 - x0, 8); ctx.strokeStyle = 'rgba(200,170,120,0.55)'; ctx.lineWidth = 1; for (let r = 0; r < 2; r++) { ctx.beginPath(); for (let x = x0; x <= x1; x += 2) ctx.lineTo(x, 4 + r * 3 + Math.sin(x * 0.3 + r) * 1); ctx.stroke(); } } },
+  // golden packed sand (a step warmer and darker than the white dunes behind, so the walkable cliffs read), wind-cut
+  // strata, a pale crust on top with a dark line under it
+  ground: { style: 'grass', cap: '#fbf4e2', capHi: '#ffffff', dirt: '#e4c58c', dirt2: '#cfa66a', rock: '#b88e56',
+    paint(ctx, rng) {
+      ctx.fillStyle = 'rgba(150,100,45,0.32)'; for (let r = 0; r < 3; r++) { const y = 5 + r * 10; ctx.beginPath(); ctx.moveTo(0, y); for (let x = 0; x <= TS; x += 4) ctx.lineTo(x, y + Math.sin(x * TAU / TS + r * 2) * 1.2); ctx.lineTo(TS, y + 2); ctx.lineTo(0, y + 2); ctx.closePath(); ctx.fill(); }
+      ctx.fillStyle = 'rgba(255,248,230,0.5)'; for (let k = 0; k < 4; k++) ctx.fillRect(rng() * TS, rng() * TS, 2, 1.5);
+      ctx.fillStyle = 'rgba(120,80,40,0.35)'; for (let k = 0; k < 3; k++) ctx.fillRect(rng() * TS, rng() * TS, 2, 2);
+    },
+    paintCap(ctx, x0, x1) { ctx.fillStyle = '#fff6e0'; ctx.fillRect(x0, 0, x1 - x0, 8); ctx.fillStyle = '#a8804a'; ctx.fillRect(x0, 8, x1 - x0, 1.6); ctx.strokeStyle = 'rgba(200,160,100,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); for (let x = x0; x <= x1; x += 2) ctx.lineTo(x, 4 + Math.sin(x * 0.3) * 1); ctx.stroke(); } },
   semi: { style: 'plank', c1: '#c89a5a', c2: '#8a5e2a' }, hard: { c1: '#e0d0a8', c2: '#b8a070' }
 });
 // 3-6: Rio from the air: Sugarloaf (no statue anywhere), the bay and the beach palms
@@ -1094,14 +1102,14 @@ Object.assign(TOUR_BEAT_ART, {
 });
 
 /* ================= houses and the country panel ================= */
-const houses = [{ id: 'br-quati', kind: 'stand', name: 'Banca do Quati', keeper: 'coati', theme: 'br_pantanal', stock: ['kazoo', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:ball'], mapCell: [0, 2], mapFrom: 1 }];
+const houses = [{ id: 'br-quati', mapLabel: 'Banca', kind: 'stand', name: 'Banca do Quati', keeper: 'coati', theme: 'br_pantanal', stock: ['kazoo', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:ball'], mapCell: [0, 1], mapFrom: 1 }];
 const map = { fort: 'stadium', start: [0, 0] };
 
 /* ================= the levels ================= */
 const levels = [
   // 3-1 BEAT: the Sambadrome at sunrise. ① surdos pop up on the beat ② floats step per bar, cannons on beat 4
   // ③ the off-beat light floor with a float and cannons together. The barracão hides behind the grandstand panel.
-  { n: 1, name: 'Samba Sunrise', arch: 'beat', theme: 'br_samba_dawn', bpm: 124,
+  { n: 1, name: 'Samba Sunrise', mapLabel: 'Samba', arch: 'beat', theme: 'br_samba_dawn', bpm: 124,
     gimmick: 'The avenue moves to 124 bpm: surdo drums pop up on the beat, floats step once a bar, cannons fire on beat four',
     hint: 'Count to four with the music: drums pop up on the beat, the floats move on ONE, the cannons fire on FOUR',
     postcard: 'The parade ran all night. At sunrise the drums are still going. So am I. ♥ C',
@@ -1138,7 +1146,7 @@ const levels = [
     ] },
 
   // 3-2 THIEF: Quati snatches Chinka's stamps and runs through the Pantanal
-  { n: 2, name: 'Coati Caper', arch: 'thief', theme: 'br_pantanal',
+  { n: 2, name: 'Coati Caper', mapLabel: 'Coati', arch: 'thief', theme: 'br_pantanal',
     gimmick: 'Quati the coati grabs the passport stamps: chase him on capybaras and caimans, catch him three times',
     hint: 'Stomp Quati (or kick the football at him) while he waits: three catches open the ranger gate',
     postcard: 'A coati stole my stamps. A different coati stole my sandwich. They work as a team. ♥ C',
@@ -1177,7 +1185,7 @@ const levels = [
     ] },
 
   // 3-3 TOWER (b) facade: three falls push you down; catwalks, logs, a sloth; rainbow bridges and swifts up top
-  { n: 3, name: 'Iguaçu Falls', arch: 'tower', theme: 'br_falls',
+  { n: 3, name: 'Iguaçu Falls', mapLabel: 'Iguaçu', arch: 'tower', theme: 'br_falls',
     gimmick: 'Climb the face of the falls: three cascades push you down, logs tumble, rainbows bridge the mist',
     hint: 'Waterfalls push you down: climb beside them, not in them. Rainbows in the mist are solid!',
     postcard: 'Iguaçu is so loud I can\'t hear myself think. A rainbow held me up. True story. ♥ C',
@@ -1207,7 +1215,7 @@ const levels = [
     ] },
 
   // 3-4 TIDE: rain squalls fill the lagoons every 14 s; walk the beds at low water, swim over the dunes at high
-  { n: 4, name: 'Lençóis Lagoons', arch: 'tide', theme: 'br_lencois',
+  { n: 4, name: 'Lençóis Lagoons', mapLabel: 'Lençóis', arch: 'tide', theme: 'br_lencois',
     gimmick: 'White dunes and rain lagoons: the water rises and falls every 14 seconds',
     hint: 'Low water: walk the lagoon beds. High water: swim over the dunes. Fins swim faster!',
     postcard: 'Sand like sugar and lagoons like glass. A crab pinched me. It was worth it. ♥ C',
@@ -1243,7 +1251,7 @@ const levels = [
     ] },
 
   // 3-5 LAIR: the players' tunnel teaches the ball (kick it into targets to roll up shutters), then the pitch
-  { n: 5, name: 'Estádio do Tucanão', arch: 'lair', theme: 'br_barracao',
+  { n: 5, name: 'Estádio do Tucanão', mapLabel: 'Estádio', arch: 'lair', theme: 'br_barracao',
     gimmick: 'The players\' tunnel: kick footballs into targets to open the shutters, then O Tucanão\'s pitch',
     hint: 'Only a football reaches O Tucanão: run into a ball to kick it, stomp a ball to volley it up!',
     postcard: 'Sugarloaf is back by the bay, full size! The Baron sailed for Africa. Next stop: Mozambique! ♥ C',
@@ -1267,7 +1275,7 @@ const levels = [
     ] },
 
   // 3-6 GLIDE (secret): launch from a granite peak, ride thermals over Copacabana, re-launch off the volleyball net
-  { n: 6, name: 'Rio Hang-Glide', arch: 'glide', secret: true, theme: 'br_rio_sky',
+  { n: 6, name: 'Rio Hang-Glide', mapLabel: 'Hang-Glide', arch: 'glide', secret: true, theme: 'br_rio_sky',
     gimmick: 'Hang-glide over Rio: thermals lift you, gulls and kites drift, every landing has a fresh glider',
     hint: 'Hold jump while falling to glide. Thermals (the shimmering columns) lift you up',
     postcard: 'Sugarloaf from above! I waved at a cable car. A gull waved back. Probably. ♥ C',
