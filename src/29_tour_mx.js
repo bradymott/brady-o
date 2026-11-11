@@ -599,15 +599,22 @@ class MxElote extends EloteBase {
   }
 }
 MxElote.cfg = EloteBase.cfg;
-// enemies an enemy spawns (cfg.child: the elote's popcorn) bring their own atlas: a level that places the parent loads it
+// more art that brings its own atlas into a level's atlas set (Play.extraAtlases only follows spawn types):
+//   enemies an enemy spawns (cfg.child: the elote's popcorn), decor drawn from an atlas (Decor[kind].atlas: a shop
+//   keeper), and skins (TOUR_SKINS[look].atlas) used by a spawn's look (a race rival, a thief)
 if (typeof Play !== 'undefined' && !Play.prototype.extraAtlasesChild) {
   const ex = Play.prototype.extraAtlases;
   Play.prototype.extraAtlasesChild = true;
   Play.prototype.extraAtlases = function () {
     const n = new Set(ex.call(this));
-    for (const a of (this.level && this.level.areas) || []) for (const sp of a.spawns || []) {
-      const C = ENTITY_TYPES[sp.type], ch = C && C.cfg && C.cfg.child && ENTITY_TYPES[C.cfg.child];
-      if (ch && ch.cfg && ch.cfg.atlas) n.add(ch.cfg.atlas);
+    for (const a of (this.level && this.level.areas) || []) {
+      for (const sp of a.spawns || []) {
+        const C = ENTITY_TYPES[sp.type], ch = C && C.cfg && C.cfg.child && ENTITY_TYPES[C.cfg.child];
+        if (ch && ch.cfg && ch.cfg.atlas) n.add(ch.cfg.atlas);
+        const sk = sp.look && typeof TOUR_SKINS !== 'undefined' && TOUR_SKINS[sp.look];
+        if (sk && sk.atlas) n.add(sk.atlas);
+      }
+      for (const d of a.decor || []) { const D = typeof Decor !== 'undefined' && Decor[d.kind]; if (D && D.atlas) n.add(D.atlas); }
     }
     return [...n];
   };
