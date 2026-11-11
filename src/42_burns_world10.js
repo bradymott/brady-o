@@ -472,7 +472,7 @@ BURNS_W10.env = function (g, env) {
   // (the eight fire spinners each queue one, and would otherwise crowd it out)
   if (S.burnK > 0 && g.plights) {
     const k = S.burnK, fl = 1 + Math.sin(g.time * 13) * 0.06 + Math.sin(g.time * 31) * 0.04;
-    g.plights.unshift({ x: 0, y: BURNS_W10.DECK + 10, z: 0, r: 60, c: [1, 0.5, 0.15], i: 2.2 * k * fl }, { x: 0, y: 2, z: 30, r: 40, c: [1, 0.55, 0.2], i: 1.2 * k * fl }, { x: 0, y: 4, z: 47, r: 24, c: [1, 0.5, 0.18], i: 0.9 * k * fl });
+    g.plights.unshift({ x: 0, y: Math.max(BURNS_W10.DECK + 4, S.fireY || BURNS_W10.DECK + 10), z: 0, r: 60, c: [1, 0.5, 0.15], i: 2.4 * k * fl }, { x: 0, y: 2, z: 30, r: 40, c: [1, 0.55, 0.2], i: 1.2 * k * fl }, { x: 0, y: 4, z: 47, r: 24, c: [1, 0.5, 0.18], i: 0.9 * k * fl });
   }
   if (S.burnK > 0) { env.emB += S.burnK * 0.3; env.fogCol = env.fogCol.map((c, i) => lerp(c, [0.45, 0.2, 0.1][i], S.burnK * 0.35)); env.haze = Math.min(1, env.haze + S.burnK * 0.2); }
   if (S.phase === 2 && S.man && S.man.st === 'flash') env.emB += S.man.flashK * 0.6;
@@ -755,30 +755,51 @@ BURNS_W10.burnUpdate = function (g, dt) {
   S.burnT = (S.burnT || 0) + dt;
   S.burnK = Math.min(1, S.burnK + dt / 3);
   S.fireH = Math.min(1, S.fireH + dt / 6);
-  man.hurtTint = [1, 0.45, 0.12, 0.15 + 0.5 * S.fireH];
+  man.hurtTint = [1, 0.45, 0.12, 0.08 + 0.17 * S.fireH];   // a little firelight; the skin shader burns the timber itself (W.drawBurn)
   // the base: fires all around the saucer
   if (Math.random() < dt * 12) { const a = Math.random() * TAU, r = 3 + Math.random() * 14; g.fx.fire(Math.sin(a) * r, W.DECK + 0.2, Math.cos(a) * r, 2.2); }
   if (!S.baseFires) { S.baseFires = true; for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; g.addTempFire(Math.sin(a) * 17.5, 0, Math.cos(a) * 17.5, 1.0, 60); } }
 };
 BURNS_W10.drawBurn = function (g, R) {
-  const W = BURNS_W10, S = W.state, man = S.man, SP = BURNS_SPRITES.R, t = g.time;
+  const W = BURNS_W10, S = W.state, man = S.man, SP = BURNS_SPRITES.R, t = g.time, B = BURNS_BONES, sc = man.scale;
   if (!S.burning) return;
-  // flames climb the structure as the fire rises
-  const pts = [[BURNS_BONES.FOOT_L, 0, -0.2, 0], [BURNS_BONES.FOOT_R, 0, -0.2, 0], [BURNS_BONES.SHIN_L, 0, -1.2, 0], [BURNS_BONES.SHIN_R, 0, -1.2, 0], [BURNS_BONES.THIGH_L, 0, -1.4, 0], [BURNS_BONES.THIGH_R, 0, -1.4, 0], [BURNS_BONES.HIPS, 0, 0.2, 0], [BURNS_BONES.CHEST, 0, 1.5, 0], [BURNS_BONES.CHEST, 0, 3.2, 0], [BURNS_BONES.UARM_L, 0, -1.3, 0], [BURNS_BONES.UARM_R, 0, -1.3, 0], [BURNS_BONES.FARM_L, 0, -1.4, 0], [BURNS_BONES.FARM_R, 0, -1.4, 0], [BURNS_BONES.HEAD, 0, 1.9, 0]];
-  const reach = S.fireH * pts.length;
-  for (let i = 0; i < pts.length && i < reach; i++) {
-    const q = pts[i], w = man.ch.bonePoint(q[0], q[1], q[2], q[3]);
-    for (let k = 0; k < 2; k++) g.fx.add(w[0] + (Math.random() - 0.5) * 1.2, w[1] + (Math.random() - 0.5) * 0.8, w[2] + (Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 1.2, 3 + Math.random() * 3, (Math.random() - 0.5) * 1.2, 0.55 + Math.random() * 0.3, 2.2, 0.8, [1, 0.5 + Math.random() * 0.3, 0.15], 1, 'flame', 1);
-    if (Math.random() < 0.1) g.fx.add(w[0], w[1], w[2], 0, 2.5, 0, 2.2, 1.2, 4.5, [0.22, 0.16, 0.16], 0.35, 'smoke', 4);
+  // the fire front climbs from his feet to his raised hands over ~6 s; the skin shader sets the timber alight below it
+  // and fades the neon out (geo.rainBurn: refreshed every frame, ignored once stale, so other worlds' Man is untouched)
+  const hd = man.head(), top = Math.max(man.hand(1)[1], man.hand(-1)[1], hd[1] + 1.5 * sc), frontY = lerp(man.y - 0.6 * sc, top + 1.2 * sc, S.fireH);
+  const heart = man.ch.bonePoint(B.CHEST, 0, 2.35, 0.1);
+  man.model.geo.rainBurn = { k: S.fireH, front: (frontY - heart[1]) / sc, t: performance.now() };
+  // flames along every truss below the front (sprites: no extra draw calls)
+  const segs = W.BURN_SEGS || (W.BURN_SEGS = [
+    [B.SHIN_L, 0, 0, -2.6, 3], [B.SHIN_R, 0, 0, -2.6, 3], [B.THIGH_L, 0, 0.15, -2.85, 3], [B.THIGH_R, 0, 0.15, -2.85, 3],
+    [B.HIPS, 0.9, 0, 0, 1], [B.HIPS, -0.9, 0, 0, 1], [B.CHEST, 0.5, 0.2, 3.7, 4], [B.CHEST, -0.5, 0.2, 3.7, 4], [B.CHEST, 1.4, 3.8, 3.8, 1], [B.CHEST, -1.4, 3.8, 3.8, 1],
+    [B.UARM_L, 0, 0.2, -2.6, 3], [B.UARM_R, 0, 0.2, -2.6, 3], [B.FARM_L, 0, 0, -3.2, 3], [B.FARM_R, 0, 0, -3.2, 3], [B.HEAD, 0, 0.8, 2.8, 2]]);
+  const w = [0, 0, 0];
+  let i = 0;
+  for (const q of segs) for (let k = 0; k < q[4]; k++, i++) {
+    const u = q[4] > 1 ? k / (q[4] - 1) : 0.5;
+    man.ch.bonePoint(q[0], q[1], lerp(q[2], q[3], u), 0, w);
+    const under = (frontY - w[1]) / sc; if (under < 0) continue;
+    const grow = clamp(under / 1.5, 0, 1), f = 0.8 + 0.2 * Math.sin(t * 11 + i * 1.7) + 0.12 * Math.sin(t * 23 + i * 3.1), fw = (1.5 + (i % 3) * 0.3) * sc * grow, fh = fw * (1.7 + 0.5 * f);
+    R.bbs.bb(w[0], w[1] + fh * 0.32, w[2], fw * f, fh, SP.flame, [1, 0.55 + 0.15 * f, 0.18], 0.95, true);
+    if (i % 2) R.bbs.bb(w[0], w[1] + fh * 0.2, w[2], fw * 2.8, fw * 2.8, SP.glow, [1, 0.42, 0.1], 0.36 * grow * f, true);   // every other one: fill rate
+    if (Math.random() < 0.35) g.fx.add(w[0] + (Math.random() - 0.5) * sc, w[1] + Math.random() * sc, w[2] + (Math.random() - 0.5) * sc, (Math.random() - 0.5) * 1.2, 3 + Math.random() * 3, (Math.random() - 0.5) * 1.2, 0.5 + Math.random() * 0.3, 2.0 * sc, 0.7 * sc, [1, 0.5 + Math.random() * 0.3, 0.15], 1, 'flame', 1);
+    if (Math.random() < 0.05) g.fx.add(w[0], w[1] + 2 * sc, w[2], 0, 2.5, 0, 2.6, 1.6 * sc, 6 * sc, [0.2, 0.15, 0.15], 0.3, 'smoke', 4);
   }
-  // embers swirling up into a fire tornado
-  const n = 6;
-  for (let i = 0; i < n; i++) { const a = t * 3 + i / n * TAU, r = 3 + (i % 3) * 1.5, y = W.DECK + Math.random() * 26 * S.fireH; g.fx.add(Math.sin(a) * r, y, Math.cos(a) * r, Math.cos(a) * 6, 6 + Math.random() * 4, -Math.sin(a) * 6, 1.2, 0.18, 0.05, [1, 0.7, 0.3], 1, 'spark', 1 | 4); }
-  // the glow
-  const h = man.head(), k = S.burnK;
-  R.bbs.bb(0, W.DECK + 8, 0, 34 * k, 40 * k, SP.glow, [1, 0.5, 0.15], 0.55 * k, true);
-  R.bbs.bb(h[0], h[1], h[2], 14 * k, 14 * k, SP.glow, [1, 0.7, 0.3], 0.6 * k, true);
+  // once he's fully alight, tall tongues of flame lick up off his head and hands
+  const crown = clamp((S.fireH - 0.75) / 0.25, 0, 1);
+  if (crown > 0) for (const [hx, hy2, hz] of [hd, man.hand(1), man.hand(-1)]) for (let j = 0; j < 3; j++) {
+    const f = 0.75 + 0.25 * Math.sin(t * 9 + j * 2.1 + hx), fw = (2.6 - j * 0.5) * sc * crown, fh = fw * (2.2 + 0.6 * f);
+    R.bbs.bb(hx + Math.sin(t * 2 + j * 2) * 0.4 * sc, hy2 + (0.6 + j * 1.6) * sc * f, hz, fw, fh, SP.flame, [1, 0.5 + 0.1 * j, 0.15], 0.9 - j * 0.2, true);
+  }
+  // embers swirling up into a fire tornado, more as the fire grows
+  const n = 6 + Math.round(10 * S.fireH);
+  for (let k = 0; k < n; k++) { const a = t * 3 + k / n * TAU, r = 3 + (k % 3) * 1.5, y = W.DECK + Math.random() * 26 * S.fireH; g.fx.add(Math.sin(a) * r, y, Math.cos(a) * r, Math.cos(a) * 6, 6 + Math.random() * 4, -Math.sin(a) * 6, 1.2, 0.18, 0.05, [1, 0.7, 0.3], 1, 'spark', 1 | 4); }
+  // the glow: a column of light around him and a pool on the playa
+  const k = S.burnK, mid = (W.DECK + frontY) / 2;
+  R.bbs.bb(0, mid, 0, 34 * k, Math.max(20, frontY - W.DECK + 16) * k, SP.glow, [1, 0.5, 0.15], 0.55 * k, true);
+  R.bbs.bb(0, frontY, 0, 16 * k * sc, 16 * k * sc, SP.glow, [1, 0.7, 0.3], 0.5 * k, true);
   R.flat.flat(0, 0.08, 0, 70 * k, 70 * k, 0, SP.glow, [1, 0.45, 0.12], 0.45 * k, true);
+  S.fireY = frontY;
   // (the fire's point lights are queued in BURNS_W10.env, ahead of the fire spinners' own lights)
 };
 // after the Burn (also on revisits): the Man is an ember pile, the circle glows, Chinka hangs out

@@ -64,9 +64,27 @@ const check = (ok, what, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + what 
   for (const spot of [[-150, 120, 0.3], [260, -180, 2.2]]) {
     await S((sp) => { const s = window.BRADY.Game.scene; s.player.teleport(sp[0], s.world.height(sp[0], sp[1]) + 0.05, sp[1], sp[2]); s.navTT = 0; }, spot);
     await run(4);
-    r = await S(() => { const s = window.BRADY.Game.scene, p = s.player, G = s.navGuide, A = s.navArrow; if (!G) return null; const want = Math.atan2(G.x - p.x, G.z - p.z); const wrap = a => a - 2 * Math.PI * Math.floor((a + Math.PI) / (2 * Math.PI)); return { label: G.label, dist: Math.round(G.dist), err: Math.abs(wrap(G.yaw - want)), arrowErr: A ? Math.abs(wrap(Math.atan2(A.x - p.x, A.z - p.z) - want)) : 9, next: (window.BRADY_BURNS.BurnsOW.nextPlace() || {}).name, tx: Math.round(G.x), tz: Math.round(G.z) }; });
+    r = await S(() => { const s = window.BRADY.Game.scene, p = s.player, G = s.navGuide, A = s.navArrow; if (!G) return null; const want = Math.atan2(G.x - p.x, G.z - p.z); const wrap = a => a - 2 * Math.PI * Math.floor((a + Math.PI) / (2 * Math.PI)); return { label: G.label, dist: Math.round(G.dist), err: Math.abs(wrap(G.yaw - want)), arrowErr: A ? Math.abs(wrap(A.yaw - want)) : 9, next: (window.BRADY_BURNS.BurnsOW.nextPlace() || {}).name, tx: Math.round(G.x), tz: Math.round(G.z) }; });
     check(r && r.err < 0.01 && r.arrowErr < 0.03 && r.label === String(r.next).toUpperCase(), `arrow points at the next story place from (${spot[0]}, ${spot[1]})`, r);
   }
+  // the arrow stays readable: on screen and clear of Brady's body with the target dead ahead or behind the camera
+  for (const [tag, w, h] of [['landscape', 874, 402], ['portrait', 402, 874]]) {
+    await page.setViewportSize({ width: w, height: h }); await S(() => { const G = window.BRADY.Game; if (G.resize) G.resize(); });
+    for (const [nm, rel] of [['ahead', 0], ['behind', Math.PI], ['right', -Math.PI / 2]]) {
+      await S(() => { const s = window.BRADY.Game.scene; s.player.teleport(-150, s.world.height(-150, 120) + 0.05, 120, 0); s.navTT = 0; });
+      await run(2);
+      await S((rel) => { const s = window.BRADY.Game.scene; s.player.yaw = s.camYaw = s.navGuide.yaw + rel; s.snapCam = true; }, rel);
+      await run(3);
+      r = await S(() => { const s = window.BRADY.Game.scene, G = window.BRADY.Game, W = G.cssW, H = G.cssH, p = s.player, A = s.navArrow, o = {}, ob = {}, oh = {};
+        if (!A) return null;
+        const on = s.R.project(A.x, A.y + 0.1, A.z, W, H, o); s.R.project(p.x, p.y, p.z, W, H, ob); s.R.project(p.x, p.y + 1.8, p.z, W, H, oh);
+        const bw = (ob.y - oh.y) * 0.3, body = [ob.x - bw, oh.y, ob.x + bw, ob.y];
+        const inBody = o.x > body[0] && o.x < body[2] && o.y > body[1] && o.y < body[3];
+        return { on, x: Math.round(o.x), y: Math.round(o.y), W, H, body: body.map(Math.round), inBody }; });
+      check(r && r.on && r.x > 20 && r.x < r.W - 20 && r.y > 40 && r.y < r.H - 20 && !r.inBody, `guide arrow readable with the target ${nm} (${tag})`, r);
+    }
+  }
+  await page.setViewportSize({ width: 874, height: 402 }); await S(() => { const G = window.BRADY.Game; if (G.resize) G.resize(); });
   // a side quest takes over: Playa Paparazzi points at the nearest photo spot not yet taken
   r = await S(() => { const s = window.BRADY.Game.scene, M = s.missions; const m = M.get('owPhoto'); if (m.state === 'locked') m.state = 'available'; M.start('owPhoto', true); M.track('owPhoto'); s.navTT = 0; return M.state('owPhoto'); });
   await run(3);
@@ -88,6 +106,19 @@ const check = (ok, what, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + what 
   check(r.dx < 0.5 && r.dy < 0.5 && r.inMap, 'map: Brady\'s marker at his projected spot', r);
   check(r.rotErr < 0.01 && Math.abs(r.headingVec[0] - r.want[0]) < 0.01 && Math.abs(r.headingVec[1] - r.want[1]) < 0.01, 'map: the marker points the way Brady faces', r);
   check(r.targets >= 2 && r.hitsPhoto, 'map: the objective is highlighted', r);
+  // map labels: never on top of each other, and the objective's label always shows (whole city and zoomed, both orientations)
+  const labelCheck = () => S(() => { const C = window.BRADY.Game.scene._cityMap, L = C.labels || [], ov = [];
+    for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) { const a = L[i].r, b = L[j].r; if (a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]) ov.push([L[i].text, L[j].text]); }
+    const T = window.BRADY.Game.scene.navTargets || []; return { n: L.length, overlaps: ov, main: T[0] && L.some(l => l.target && l.text === (T[0].label || 'GO HERE')), streets: L.filter(l => /^(ESPLANADE|ARCADE|BONFIRE|CAROUSEL|DREAMER|EMBER|FIREFLY)$/.test(l.text)).length }; });
+  for (const [tag, w, h] of [['landscape', 874, 402], ['portrait', 402, 874]]) {
+    await page.setViewportSize({ width: w, height: h }); await S(() => { const G = window.BRADY.Game; if (G.resize) G.resize(); const s = G.scene; s.buildPause(); });
+    for (const zoom of [false, true]) {
+      await S((z) => { const s = window.BRADY.Game.scene; s.mapZoom = z; s.buildPause(); }, zoom); await run(1);
+      r = await labelCheck();
+      check(r.n > 4 && r.overlaps.length === 0 && r.main && (!zoom || r.streets > 0), `map labels don't overlap, objective labelled${zoom ? ', street names' : ''} (${tag}${zoom ? ', zoomed' : ''})`, r);
+    }
+  }
+  await page.setViewportSize({ width: 874, height: 402 }); await S(() => { const G = window.BRADY.Game; if (G.resize) G.resize(); const s = G.scene; s.mapZoom = false; s.buildPause(); }); await run(1);
   r = await S(() => { const s = window.BRADY.Game.scene; const z = s.pauseUI.find(b => b.label === 'ZOOM IN'); z.fn(); return { zoom: !!s.mapZoom }; });
   await run(1);
   r = await S(() => { const s = window.BRADY.Game.scene, C = s._cityMap; return { sc: C.sc, x: C.brady.x, y: C.brady.y, M: C.M }; });
@@ -112,8 +143,14 @@ const check = (ok, what, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + what 
   check(sprint.latchAfterStop === false, 'RUN switches itself off when Brady stops', sprint);
   r = await S(() => { const I = window.BRADY.Input || window.Input; window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft', key: 'Shift' })); const on = window.BRADY_BURNS.BurnsNav.shift, act = !!I.keys.action; window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ShiftLeft', key: 'Shift' })); return { on, act, off: window.BRADY_BURNS.BurnsNav.shift }; });
   check(r.on && !r.act && !r.off, 'Shift runs (and is not ACTION) while playing', r);
-  r = await S(() => { const s = window.BRADY.Game.scene, H = s.hudBtns, L = (window.BRADY.Input || window.Input).layout; const R = H.run; const others = [['jump', L.jump], ['action', L.action], ['cam', H.cam], ['view', H.view], ['bike', H.bike], ['stick', L.stickHome]]; return others.map(([n, b]) => [n, +(Math.hypot(b.x - R.x, b.y - R.y) - b.r - R.r).toFixed(1)]); });
-  check(r.every(q => q[1] > 2), 'RUN button clear of the other controls (landscape)', r);
+  // RUN: >= 10 px from every other control and outside the joystick's half of the screen, in both orientations
+  for (const [tag, w, h] of [['landscape', 874, 402], ['portrait', 402, 874]]) {
+    await page.setViewportSize({ width: w, height: h }); await S(() => { const G = window.BRADY.Game; if (G.resize) G.resize(); });
+    await run(2);
+    r = await S(() => { const s = window.BRADY.Game.scene, H = s.hudBtns, L = (window.BRADY.Input || window.Input).layout; const R = H.run; const others = [['jump', L.jump], ['action', L.action], ['cam', H.cam], ['view', H.view], ['bike', H.bike], ['pack', H.pack], ['pause', L.pause], ['stick', L.stickHome]]; return { gaps: others.filter(q => q[1]).map(([n, b]) => [n, +(Math.hypot(b.x - R.x, b.y - R.y) - b.r - R.r).toFixed(1)]), stickSide: +(R.x - R.r - L.split).toFixed(1), shown: (window.BRADY.Input || window.Input).hud.indexOf(R) >= 0 }; });
+    check(r.shown && r.gaps.every(q => q[1] >= 10) && r.stickSide >= 10, `RUN button clear of the other controls and the joystick half (${tag})`, r);
+  }
+  await page.setViewportSize({ width: 874, height: 402 }); await S(() => { const G = window.BRADY.Game; if (G.resize) G.resize(); }); await run(2);
 
   /* ---- 4. camera behind Brady ---- */
   const camTest = async () => {

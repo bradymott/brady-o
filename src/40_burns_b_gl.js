@@ -306,7 +306,7 @@ void main(){
 varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
 uniform sampler2D uTex;
 uniform vec4 uTint; uniform vec3 uRimC; uniform float uRim;
-uniform vec4 uRain; uniform vec2 uRainK;   // the Man's neon: heart position (world), 1/scale (0 = off); x hurt 0..1
+uniform vec4 uRain; uniform vec4 uRainK;   // the Man's neon: heart position (world), 1/scale (0 = off); x hurt 0..1, y burn 0..1, z fire front (figure units above the heart)
 ${BURNS_GLSL_LIGHT}
 void main(){
   vec4 t = texture2D(uTex, vT);
@@ -328,6 +328,8 @@ void main(){
   n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));
 #endif
   float e = vC.a;
+  // the Burn: everything below the fire front is alight (the front climbs from his feet to his raised hands)
+  float hy = (vW.y - uRain.y) * uRain.w, burnL = uRain.w > 0.0 && uRainK.y > 0.0 ? smoothstep(uRainK.z + 0.8, uRainK.z - 1.6, hy) : 0.0;
   if (uRain.w > 0.0 && e > 0.5) {
     // white tubes: a rainbow travelling out from the heart in slow waves (a point changes colour over seconds; the
     // brightest band passes about every 4 s, so nothing flashes); the red heart beats about once a second.
@@ -336,7 +338,7 @@ void main(){
     if (vC.g > 0.9 && vC.b > 0.9) {
       vec3 hue = 0.18 + 0.82 * (0.5 + 0.5 * cos(6.2832 * (fract(d * 0.11 - uTime * 0.07) + vec3(0.0, 0.3333, 0.6667))));
       float wave = 0.62 + 0.38 * smoothstep(-0.3, 0.9, sin(d * 0.8 - uTime * 1.5)), breathe = 0.88 + 0.12 * sin(uTime * 0.6);
-      vec3 nc = mix(hue * wave * breathe, vec3(1.0, 0.1, 0.12) * (0.75 + 0.25 * wave), uRainK.x);
+      vec3 nc = mix(hue * wave * breathe, vec3(1.0, 0.1, 0.12) * (0.75 + 0.25 * wave), uRainK.x) * (1.0 - 0.85 * uRainK.y) * (1.0 - burnL);   // the neon dies as the fire takes him
       float tube = step(0.95, e);
       alb = mix(mix(bLin(vec3(0.86, 0.74, 0.6)), bLin(vec3(0.5, 0.53, 0.58)), tube), bLin(nc) * mix(0.5, 1.0, tube), nt);
       e = nt;
@@ -355,6 +357,14 @@ void main(){
   vec3 v = normalize(uCam - vW);
   c += uRimC * pow(1.0 - max(dot(n, v), 0.0), 2.5) * uRim;
   c = mix(c, bLin(uTint.rgb), uTint.a);
+  if (burnL > 0.0) {
+    // burning timber: flickering orange-to-yellow tongues that run up the trusses, a white-hot band at the front
+    float fl = 0.5 + 0.5 * sin(vW.y * 2.6 - uTime * 8.0 + sin(vW.x * 1.7 + vW.z * 1.3 + uTime * 2.1) * 2.6);
+    float edge = smoothstep(1.8, 0.0, abs(hy - uRainK.z));
+    vec3 fire = mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.72, 0.28), clamp(fl * 0.6 + edge * 0.5, 0.0, 1.0)) * (1.2 + 1.1 * fl + 1.2 * edge);
+    c = mix(c * 0.35, fire, burnL * (0.55 + 0.4 * fl));
+    e = max(e, burnL);
+  }
   if (uTrip > 0.0) c = bTrip(c, vW);
   gl_FragColor = bOut(bFogMix(c, vW, e), 1.0);
 }`;
@@ -1323,7 +1333,7 @@ class BurnsRenderer {
     // the Man's rainbow neon: anchor (his heart) and scale come from his own bone palette
     if (u.uRain && (geo.rainbow || this._rain)) {
       const rb = geo.rainbow;
-      if (rb) { const o = rb.bone * 12, a = rb.at, sc = Math.hypot(bones[o], bones[o + 4], bones[o + 8]) || 1; gl.uniform4f(u.uRain, bones[o] * a[0] + bones[o + 1] * a[1] + bones[o + 2] * a[2] + bones[o + 3], bones[o + 4] * a[0] + bones[o + 5] * a[1] + bones[o + 6] * a[2] + bones[o + 7], bones[o + 8] * a[0] + bones[o + 9] * a[1] + bones[o + 10] * a[2] + bones[o + 11], 1 / sc); gl.uniform2f(u.uRainK, geo.rainHurt || 0, 0); }
+      if (rb) { const o = rb.bone * 12, a = rb.at, sc = Math.hypot(bones[o], bones[o + 4], bones[o + 8]) || 1; gl.uniform4f(u.uRain, bones[o] * a[0] + bones[o + 1] * a[1] + bones[o + 2] * a[2] + bones[o + 3], bones[o + 4] * a[0] + bones[o + 5] * a[1] + bones[o + 6] * a[2] + bones[o + 7], bones[o + 8] * a[0] + bones[o + 9] * a[1] + bones[o + 10] * a[2] + bones[o + 11], 1 / sc); const bn = geo.rainBurn && performance.now() - geo.rainBurn.t < 400 ? geo.rainBurn : null; gl.uniform4f(u.uRainK, geo.rainHurt || 0, bn ? bn.k : 0, bn ? bn.front : 0, 0); }
       else gl.uniform4f(u.uRain, 0, 0, 0, 0);
       this._rain = !!rb;
     }
