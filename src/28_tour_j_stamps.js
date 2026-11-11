@@ -104,8 +104,8 @@ Tour.pieces.stamp = function (st, o) {
   const P = TourStamp.parse(S);
   const floorRow = o.at == null || o.at === 'ground' ? st.gy : o.at;
   const y0 = floorRow - P.floor, x0 = st.x;
-  // solid ground under the stamp first (unless it sits in the sky), then the stamp over it
-  if (!st.sky && o.under !== false) st.floor(x0, x0 + P.W - 1, floorRow + 1 <= st.B.H - 1 ? floorRow : floorRow);
+  // solid ground under the stamp first (unless it sits in the sky; a layered lane gets its slab), then the stamp over it
+  if ((!st.sky || st.lanes) && o.under !== false) st.floor(x0, x0 + P.W - 1, floorRow + 1 <= st.B.H - 1 ? floorRow : floorRow);
   TourStamp.place(st, S, x0, y0, { first: false });
   return x0 + P.W;
 };
