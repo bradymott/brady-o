@@ -348,6 +348,8 @@ const pepperArt = (ctx, e, x, y, m) => {
 };
 const eloteArt = (ctx, e, x, y, m, t) => {
   const sq = m === 'flat' ? 0.35 : 1;
+  // the stomp that pops it: kernels fly off in every direction
+  if (m === 'burst') { for (let k = 0; k < 10; k++) { const a = k / 10 * TAU + 0.3; ctx.fillStyle = k % 2 ? '#fff8e0' : '#ffd84a'; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 14, y - 14 + Math.sin(a) * 14, 3.2, 0, TAU); ctx.fill(); } }
   ctx.save(); ctx.translate(x, y);
   if (m !== 'flat' && m !== 'ko') K.feet(ctx, 0, 0, e.t, '#3a6a2a', 4, 6, m === 'stun');
   ctx.translate(0, -6);
@@ -355,6 +357,16 @@ const eloteArt = (ctx, e, x, y, m, t) => {
   ctx.fillStyle = '#ffd84a'; rr(ctx, -6, -24 * sq, 12, 24 * sq, 6); ctx.fill();
   ctx.fillStyle = '#f0b81a'; for (let r = 0; r < 6; r++) for (let k = 0; k < 3; k++) ctx.fillRect(-5 + k * 4, (-22 + r * 3.6) * sq, 2.6, 2.4 * sq);
   if (m !== 'flat' && m !== 'ko') K.eyes(ctx, 0, -16, e.dir, 2.6, 2.1, false);
+  ctx.restore();
+};
+// popcorn: what an elote pops into; puffy kernels with a little face, they hop twice and fade
+const popcornArt = (ctx, e, x, y, m, t) => {
+  const sq = m === 'flat' ? 0.4 : 1;
+  ctx.save(); ctx.translate(x, y);
+  ctx.fillStyle = '#fff6dc';
+  for (const [dx, dy, r] of [[-4, -5, 4.6], [4, -5, 4.6], [0, -10, 4.8], [0, -3, 4.4], [-5, -9, 3.4], [5, -9, 3.4]]) { ctx.beginPath(); ctx.arc(dx, dy * sq, r, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#f2b830'; ctx.beginPath(); ctx.arc(1, -2 * sq, 2.4, 0, TAU); ctx.fill();
+  if (m !== 'flat' && m !== 'ko') K.eyes(ctx, 0, -8, e.dir || 1, 2.3, 1.5, false);
   ctx.restore();
 };
 const burroArt = (ctx, e, x, y, m) => {
@@ -474,9 +486,107 @@ function tacoShape(ctx, x, y, a) {
   ctx.strokeStyle = '#c8902a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 2, 10, Math.PI, TAU); ctx.stroke();
   ctx.restore();
 }
+// an axolotl walking on land (the air pocket in the cenote): pink, frilly gills, a smile
+const axolotlWalkArt = (ctx, e, x, y, m) => {
+  const sq = m === 'flat' ? 0.45 : 1;
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, sq);
+  ctx.fillStyle = '#ffaacc'; for (const lx of [-8, -3, 4, 9]) ctx.fillRect(lx - 1.5, -4, 3, 4 + Math.max(0, Math.sin(e.t * 10 + lx)) * 1.5);
+  ctx.beginPath(); ctx.ellipse(0, -8, 12, 6, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-10, -8); ctx.quadraticCurveTo(-20, -14 + Math.sin(e.t * 6) * 2, -21, -6); ctx.quadraticCurveTo(-15, -4, -10, -5); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(10, -11, 7, 6, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ff5a9a'; for (const s2 of [-1, 1]) for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(8 + k * 2.2, -11 + s2 * (6 + k * 1.4), 1.6, 3.8, s2 * (0.6 + k * 0.3), 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(13, -13, 1.4, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#c84a7a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(14, -10, 2, 0.2, 1.6); ctx.stroke();
+  ctx.restore();
+};
+// a pale, eyeless cave fish: it only notices Brady when he swims fast
+const blindFishArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  if (m === 'tell') ctx.translate(Math.sin(e.t * 50) * 1.5, 0);
+  ctx.fillStyle = '#f2e8ee'; ctx.beginPath(); ctx.ellipse(0, 0, 15, 8, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-22, -8 + Math.sin(e.t * 9) * 2); ctx.lineTo(-22, 8 + Math.sin(e.t * 9) * 2); ctx.fill();
+  ctx.fillStyle = '#e8c8d8'; ctx.beginPath(); ctx.moveTo(-4, -7); ctx.lineTo(4, -13); ctx.lineTo(6, -7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,140,170,0.45)'; for (let k = 0; k < 3; k++) ctx.fillRect(-6 + k * 5, -5, 2, 10);
+  // no eyes: a little pink pit where they'd be, and whiskers that twitch
+  ctx.fillStyle = '#e8a8c0'; ctx.beginPath(); ctx.arc(8, -2, 1.8, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#c8a0b8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(13, 2); ctx.lineTo(19, 5 + Math.sin(e.t * 8) * 2); ctx.moveTo(13, 2); ctx.lineTo(20, 1); ctx.stroke();
+  if (m === 'charge') { ctx.fillStyle = '#7a2a4a'; ctx.beginPath(); ctx.ellipse(13, 2, 2.5, 3, 0, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// a swallow: a little dark bird with a forked tail and a cream throat
+const swallowArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  const f = Math.sin(e.t * 18 + (e.k || 0));
+  ctx.fillStyle = '#2a3a6a'; ctx.beginPath(); ctx.ellipse(0, 0, 9, 4.5, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-15, -4); ctx.lineTo(-11, 0); ctx.lineTo(-15, 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#3a4a8a'; ctx.beginPath(); ctx.moveTo(-2, -1); ctx.quadraticCurveTo(-6, -10 - f * 6, 4, -6 - f * 8); ctx.lineTo(3, -1); ctx.fill();
+  ctx.fillStyle = '#f4e4c8'; ctx.beginPath(); ctx.ellipse(4, 2, 4, 2.5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#c84a2a'; ctx.beginPath(); ctx.arc(7, -1, 1.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(6, -2, 1.3, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(6.4, -2, 0.7, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+// the headline enemy: an axolotl that leaps out of the canal. Stomp it and it shrinks to a harmless baby that regrows
+// in 3 s (it flashes in the last second); stomp the baby to finish it. Tacos, puffs and planes beat it at once.
+const AxoLeap = TourLeaper.make({ w: 22, h: 14, jumpV: 21, every: 1.8, art: axolotlArt, splash: '#7ae0d0' });
+class MxAxolotl extends AxoLeap {
+  update(dt) {
+    if (this.tiny && !this.knocked) { this.tinyT += dt; if (this.tinyT > 3.4) { this.tiny = false; this.g.burst(this.cx, this.cy, 8, '#ffaacc', 'spark'); K.sfx('pop', 'jump', { vol: 0.4, pitch: 0.8 }); } }
+    super.update(dt);
+  }
+  hit(kind, src) {
+    if (this.dead || this.state === 'wait') return false;
+    if (kind === 'stomp' || kind === 'spin') {
+      if (this.tiny) { this.knockOff(1); return true; }
+      this.tiny = true; this.tinyT = 0; Sound.play('stomp', { pitch: 1.4 }); this.g.burst(this.cx, this.cy, 8, '#ffffff', 'spark');
+      this.g.parts.text(this.cx, this.y - 6, 'TINY!', '#ffaacc'); return 'bounce';
+    }
+    this.knockOff(1); return true;
+  }
+  touchPlayer(p) { if (!this.tiny) super.touchPlayer(p); }
+  draw(ctx) {
+    if (!this.tiny || this.knocked) return super.draw(ctx);
+    if (this.state === 'wait') return;
+    ctx.save(); ctx.translate(this.cx, this.cy); ctx.scale(0.55, 0.55); ctx.translate(-this.cx, -this.cy);
+    if (this.tinyT > 2.4 && Math.floor(this.t * 12) % 2) ctx.globalAlpha = 0.45;
+    super.draw(ctx); ctx.restore();
+  }
+}
+MxAxolotl.cfg = AxoLeap.cfg;
+// swimmers: a regrower that patrols its stretch of water and turns at walls
+TourBehave.mxSwimRegrow = Object.assign({}, TourBehave.regrower, {
+  think(e, dt) {
+    if (e.hitWall) e.dir = -e.dir;
+    if (e.cx < e.hx0 - 4 * TS) e.dir = 1; else if (e.cx > e.hx0 + 4 * TS) e.dir = -1;
+    e.vy = Math.sin(e.t * 1.6) * 0.5 * TS;
+    TourBehave.regrower.think(e, dt);
+    e.vx = e.dir * e.speed * (e.bst === 'tiny' ? 0.5 : 1);
+  }
+});
+// the blind fish: drifts; only fast swimming (a dash, or swimming with the Fins) wakes it: a quiver (0.6 s), then a
+// straight charge at where Brady was, then it drifts dazed (1 s), when a bump or a stomp beats it
+TourBehave.mxBlindCharge = {
+  think(e, dt) {
+    const p = TB.p(e), st = e.bst || 'drift';
+    if (!e.bst) TB.go(e, 'drift');
+    if (st === 'drift') {
+      e.mode = 'swim'; if (e.hitWall) e.dir = -e.dir; if (Math.abs(e.cx - e.hx0) > 3 * TS) e.dir = -sign(e.cx - e.hx0) || e.dir;
+      e.vx = e.dir * e.speed * 0.6; e.vy = Math.sin(e.t * 1.3) * 0.4 * TS;
+      const H = p && p.hands, fast = p && ((H && H.dashT > 0) || Math.hypot(p.vx, p.vy) > (H && H.id === 'fins' ? 3.5 : 5) * TS);
+      if (p && fast && e.cool <= 0 && TB.dist(e, p) < 5) { TB.go(e, 'tell'); e.aim = { x: p.cx, y: p.cy }; TB.face(e, p); TB.tell(e, 'growl', 'select'); }
+    } else if (st === 'tell') { e.vx = 0; e.vy = 0; e.mode = 'tell'; if (e.bt > 0.6) { TB.go(e, 'charge'); const dx = e.aim.x - e.cx, dy = e.aim.y - e.cy, d = Math.hypot(dx, dy) || 1; e.vx = dx / d * 7 * TS; e.vy = dy / d * 7 * TS; } }
+    else if (st === 'charge') { e.mode = 'charge'; if (e.bt > 0.7 || e.hitWall) { TB.go(e, 'dazed'); e.vx = 0; e.vy = 0; } }
+    else if (st === 'dazed') { e.mode = 'stun'; e.vx = 0; e.vy = 0.3 * TS; if (e.bt > 1.0) { TB.go(e, 'drift'); e.cool = 1.5; } }
+  },
+  hit(e, kind) { if (kind === 'stomp' || kind === 'bump') return e.bst === 'dazed' ? undefined : (kind === 'stomp' ? 'bounce' : false); return undefined; },
+  draw(e, ctx, d) { d(); if (e.bst === 'tell') TB.tellMark(ctx, e, '#ffaacc'); if (e.bst === 'dazed') TourKit.dizzy(ctx, e.cx, e.y - 4, e.t); }
+};
+// a flock of swallows: harmless to touch, they only nudge Brady a tile sideways
+TourBehave.mxFlock = Object.assign({}, TourBehave.swarm, { touch(e, p) { p.pushX = (p.pushX || 0) + e.dir * 4 * TS; return true; } });
 const enemies = {
   mxPepper: { cls: TourEnemy.make({ w: 16, h: 24, speed: 1.1, behavior: 'hop', hopV: 9.5, hopEvery: 1.1, art: pepperArt, burst: '#5ad04a' }), place: 'walk' },
-  mxElote: { cls: TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'walk', art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') }), place: 'walk' },
+  // the elote pops: stomp it and it bursts into three popcorn puffs (stomp them for coins, or let them fade)
+  mxElote: { cls: TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'splitter', n: 3, child: 'mxPopcorn', childLife: 3, art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') }), place: 'walk' },
+  mxPopcorn: { cls: TourEnemy.make({ w: 14, h: 14, inkPad: 5, speed: 1.5, behavior: 'hop', hopV: 7.5, hopEvery: 0.55, art: popcornArt, burst: '#fff6dc' }), place: 'walk' },
   mxBurro: { cls: TourEnemy.make({ w: 30, h: 30, speed: 1.0, behavior: 'walk', hp: 2, art: burroArt, onDefeat: e => { for (let k = 0; k < 6; k++) e.g.spawn(new PickPop(e.g, e.cx + (k - 2.5) * 6, e.y)); e.g.addPick(); e.g.burst(e.cx, e.cy, 24, '#ff9ac8', 'confetti'); } }), place: 'walk' },
   mxChihuahua: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 1.5, behavior: 'charge', range: 7, chargeSpeed: 7, windup: 0.35, art: (ctx, e, x, y, m) => {
     ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.4 : 1);
@@ -490,7 +600,11 @@ const enemies = {
     ctx.restore();
     if (m === 'notice') { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('YIP!', x, y - 30); }
   }, onNotice: e => K.sfx('bump', null, { pitch: 2.2, vol: 0.4 }) }), place: 'walk' },
-  mxAxolotl: { cls: TourLeaper.make({ w: 22, h: 14, jumpV: 21, every: 1.8, art: axolotlArt, splash: '#7ae0d0' }), place: 'here' },
+  mxAxolotl: { cls: MxAxolotl, place: 'here' },
+  mxAxolotlWalk: { cls: TourEnemy.make({ w: 24, h: 16, inkPad: 6, speed: 0.8, behavior: 'regrower', regrowT: 3, art: axolotlWalkArt, burst: '#ffaacc' }), place: 'walk' },
+  mxAxolotlSwim: { cls: TourSwimmer.make({ w: 26, h: 14, speed: 1.0, behavior: 'mxSwimRegrow', regrowT: 3, art: axolotlArt }), place: 'swim' },
+  mxBlindFish: { cls: TourSwimmer.make({ w: 30, h: 16, speed: 1.2, behavior: 'mxBlindCharge', art: blindFishArt }), place: 'swim' },
+  mxSwallow: { cls: TourFlyer.make({ w: 20, h: 12, speed: 1.6, behavior: 'mxFlock', n: 6, harmless: true, art: swallowArt }), place: 'fly' },
   mxHeron: { cls: TourFlyer.make({ w: 28, h: 16, range: 3, speed: 0.8, swoop: true, art: heronArt }), place: 'fly' },
   mxFish: { cls: TourSwimmer.make({ w: 28, h: 14, speed: 1.5, range: 4, art: fishArt }), place: 'swim' },
   mxBat: { cls: TourFlyer.make({ w: 26, h: 16, range: 2.5, speed: 1.4, swoop: true, art: batArt }), place: 'fly' },
@@ -731,6 +845,7 @@ const P = {
   // a snack boat moored alongside: Xolo hands over tacos
   vendor(st, o) {
     const x = st.x, B = st.B, vy = st.deck - 3;
+    if (Decor.mxVendorHull) B.decorAt('mxVendorHull', x + 3, st.deck, 0);
     for (let q = 0; q < 6; q++) B.set(x + q, vy, T.SEMI);
     B.prop('mxStall', x, vy - 3, 6, 3, 'none', {});
     st.spawn('mxXolo', x + 3, vy - 1, {});
@@ -1187,12 +1302,12 @@ const stamps = {
       '#........?......-------......#.........#',
       '#............................F.........#',
       '#............................F.........#',
-      '#.@..D....k.......k..........F....g....#',
+      '#.@..D....k.......k.........dF....g....#',
       '########################################',
       '########################################',
       '########################################'
     ],
-    legend: { k: ['decor', 'mxChiliSack'], l: ['decor', 'mxCellarLamp'] },
+    legend: { k: ['decor', 'mxChiliSack'], l: ['decor', 'mxCellarLamp'], d: ['spawn', 'tourDraft', { look: 'fake' }] },
     items: ['power'],
     doors: [{ to: 'mercado@bodegaBack', look: 'mxCellarStairs' }],
     gold: { '*': 'hidden' }
