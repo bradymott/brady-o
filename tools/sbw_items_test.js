@@ -5,6 +5,7 @@
 //   fixture  small rooms: a ceiling, the top of the area, a one-way panel, a box closed on three and on four sides; the
 //            open-above pop unchanged; tiles growing back over an item (crumble, toggle group); a dropped item under a
 //            low ceiling; a mushroom between two walls; a magnet pulling an item against a wall
+//   open     a box on the floor opens from above (landing, the pound), when hit by anything thrown, and by a kick
 //   levels   every item block of all 88 levels, bumped from below (small Brady, and big Brady for mushroom blocks, in
 //            every toggle state of its area): the item must never be inside a solid, inside a one-way panel or out of
 //            the area, must not be lost in a pit or lava at once, and (where it did not simply pop up into open air)
@@ -94,7 +95,9 @@ function scanLevel(G, id, reachAll) {
       const c = A.contents[key]; if (c === 'pick' || c === 'picks') continue;
       const [tx, ty] = key.split(',').map(Number);
       if (!blockTiles.has(A.tiles[ty * A.W + tx])) continue;
-      const row = { id, ai, aid: A.aid, tx, ty, c, above: ty === 0 ? 'TOP' : tname(A.tiles[(ty - 1) * A.W + tx]), runs: [], under: { ai, x: tx * TS + 3, y: (ty + 1) * TS, w: TS - 6, h: 8 } };
+      const row = { id, ai, aid: A.aid, tx, ty, c, above: ty === 0 ? 'TOP' : tname(A.tiles[(ty - 1) * A.W + tx]), runs: [], under: { ai, x: tx * TS + 3, y: (ty + 1) * TS, w: TS - 6, h: 8 },
+        // the other ways in (src/28_tour_dj_boxes.js): landing on top, or standing right beside it (a kick, a throw)
+        top: { ai, x: tx * TS + 3, y: ty * TS - 6, w: TS - 6, h: 6 }, left: { ai, x: tx * TS - 6, y: ty * TS + 4, w: 6, h: TS - 8 }, right: { ai, x: (tx + 1) * TS, y: ty * TS + 4, w: 6, h: TS - 8 } };
       for (const mask of masksOf(A)) for (const power of (c === 'power' ? [0, 1] : [0])) { const r = bump(lvl, ai, tx, ty, power, mask); r.power = power; r.mask = mask; row.runs.push(JSON.parse(JSON.stringify(r))); }
       rows.push(row);
     }
@@ -104,16 +107,18 @@ function scanLevel(G, id, reachAll) {
   const slot = row => { const A = lvl.areas[row.ai], t = row.ty < 2 ? -1 : A.tiles[(row.ty - 2) * A.W + row.tx]; return row.ty < 2 || G.run('SOLID')[t] === 1; };
   // ... and a block up high (nothing to stand on in the four rows under it): what floats over it may be out of reach
   const high = row => { const A = lvl.areas[row.ai], S = G.run('SOLID'); for (let y = row.ty + 1; y <= row.ty + 4; y++) { const t = y < A.H ? A.tiles[y * A.W + row.tx] : 0; if (S[t] || t === T.SEMI) return false; } return true; };
-  const need = rows.filter(row => reachAll || slot(row) || high(row) || row.runs.some(r => !r.none && (!r.up || r.lava || (r.goneAt != null && r.goneAt < 1.5))));
+  // ... and a box with no room under it (on the floor, in a wall): bumping it from below was the only way in before
+  const ground = row => { const A = lvl.areas[row.ai], S = G.run('SOLID'); return row.ty + 1 >= A.H || S[A.tiles[(row.ty + 1) * A.W + row.tx]] === 1; };
+  const need = rows.filter(row => reachAll || slot(row) || high(row) || ground(row) || row.runs.some(r => !r.none && (!r.up || r.lava || (r.goneAt != null && r.goneAt < 1.5))));
   let ms = 0;
   if (need.length) {
     const probes = [];
-    for (const row of need) { probes.push(row.under); for (const r of row.runs) { r.probes = (r.samples || []).map(b => Object.assign({ ai: row.ai }, b)); probes.push(...r.probes); } }
+    for (const row of need) { probes.push(row.under, row.top, row.left, row.right); for (const r of row.runs) { r.probes = (r.samples || []).map(b => Object.assign({ ai: row.ai }, b)); probes.push(...r.probes); } }
     // stop the search once every block has been bumped and every item touched (somewhere on its path)
-    const groups = need.flatMap(row => [[row.under], ...row.runs.filter(r => r.probes.length).map(r => r.probes)]);
+    const groups = need.flatMap(row => [[row.under, row.top, row.left, row.right], ...row.runs.filter(r => r.probes.length).map(r => r.probes)]);
     const answered = () => groups.every(gr => gr.some(q => q.hit));
     const t0 = Date.now(); Validator.run(lvl, { probes, untilProbes: answered }); ms = Date.now() - t0;
-    for (const row of need) { row.checked = true; row.bumpable = !!row.under.hit; for (const r of row.runs) r.reach = r.probes.some(q => q.hit); }
+    for (const row of need) { row.checked = true; row.bumpable = !!row.under.hit; row.openable = !!(row.under.hit || row.top.hit || row.left.hit || row.right.hit); for (const r of row.runs) r.reach = r.probes.some(q => q.hit); }
     // the search moves big Brady; an item that small Brady bumped out only has to be in small Brady's reach
     const small = need.filter(row => row.bumpable).flatMap(row => row.runs.filter(r => !r.power && !r.reach && r.probes.length));
     if (small.length) {
@@ -229,6 +234,39 @@ const { Tour, T, TS, TourBuild } = G;
     }
   });
 
+  /* ---------- a box opens from any side (src/28_tour_dj_boxes.js) ---------- */
+  await runSection('open', () => {
+    const build = rows => TourBuild.fromSpec(Tour.countries.mx, { name: 'box lab', arch: 'lab', theme: 'mx_mercado', exits: { main: { to: null } }, areas: [{ id: 'r', gen: 'room', stamp: { floor: rows.length - 2, rows, items: ['power'] } }] }, 90);
+    // a box on the floor at (6, 6); Brady live (his real update), nothing frozen
+    const rows = ['##############', '#............#', '#............#', '#............#', '#............#', '#............#', '#.@...?......#', '##############', '##############'];
+    const live = G.run(`(function (lvl, px, py) {
+      Save.data = Save.defaults(); Save.data.lives = 9; Save.data.tips = { box: true };
+      const g = new Play(lvl, {}); Game.scene = g; g.state = 'play'; g.fade.a = 0; g.fade.target = 0;
+      for (const k in Input) if (typeof Input[k] === 'boolean') Input[k] = false;
+      const p = g.player; p.x = px - p.w / 2; p.y = py - p.h; p.vx = p.vy = 0; p.invuln = 99;
+      for (const e of g.entities) if (e.enemy) e.remove = true;
+      g.camX = Math.max(0, p.cx - Game.viewW / 2); g.camY = g.camTargetY(true); globalThis.__noCollect = false;
+      return g;
+    })`);
+    const step = (g, n, inp) => { const I = G.run('Input'); for (let k = 0; k < n; k++) { Object.assign(I, inp || {}); g.update(1 / 120); if (k === 0) { I.actionPressed = false; I.jumpPressed = false; } } for (const k in (inp || {})) I[k] = false; };
+    const T_ = G.T, used = g => g.area.tiles[6 * g.area.W + 6] === T_.USED;
+    const item = g => g.entities.find(e => e.item);
+    const res = {};
+    { const g = live(build(rows), 6 * TS + 16, 4 * TS); step(g, 90); res.stomp = { open: used(g), power: g.player.power, item: !!item(g) }; }
+    { const g = live(build(rows), 5 * TS + 10, 7 * TS); g.player.facing = 1; g.player.poundLand(); step(g, 2); res.pound = used(g); }
+    { const g = live(build(rows), 4 * TS + 8, 7 * TS); const P = G.run("TourPowers.get('taco')"), p = g.player; p.facing = 1; p.sig = { id: 'taco', t: 0, n: 0 }; P.action(p, g); step(g, 60); res.taco = used(g); }
+    { const g = live(build(rows), 3 * TS, 7 * TS); const C = G.run('SmokePuff'); g.spawn(new C(g, 4 * TS, 6 * TS + 16, 1)); step(g, 60); res.puff = used(g); }
+    { const g = live(build(rows), 2 * TS, 7 * TS); const E = G.run('Ent'); const b = new E(g, { x: 4 * TS, y: 7 * TS }, 16, 16); b.thrownBy = g.player; b.vx = 6 * TS; b.update = function (dt) { this.x += this.vx * dt; }; g.spawn(b); step(g, 60); res.kicked = used(g); }
+    { const g = live(build(rows), 2 * TS, 7 * TS); const E = G.run('Ent'); const b = new E(g, { x: 4 * TS, y: 7 * TS }, 20, 16); b.enemy = true; b.mode = 'roll'; b.vx = 6 * TS; b.update = function (dt) { this.x += this.vx * dt; }; b.hit = () => false; g.spawn(b); step(g, 60); res.rolling = used(g); }
+    { const g = live(build(rows), 6 * TS - 12, 7 * TS); g.player.facing = 1; step(g, 2); step(g, 2, { actionPressed: true, action: true }); step(g, 60); res.kick = { open: used(g), item: !!item(g) || g.player.power > 0 }; }
+    { const g = live(build(rows), 6 * TS - 12, 7 * TS); g.player.facing = 1; step(g, 30, { right: true }); res.walkInto = used(g); }
+    check('a box on the floor opens when Brady lands on it, and he gets the mushroom', res.stomp.open && res.stomp.power === 1, res.stomp);
+    check('the Pound Cake pound opens a box right beside his boots', res.pound, res);
+    check('a taco, a smoke puff, a kicked thing and a rolling enemy each open a box they hit', res.taco && res.puff && res.kicked && res.rolling, res);
+    check('THROW next to a box with no throwing power kicks it open (the item comes out)', res.kick.open && res.kick.item, res.kick);
+    check('just walking into a box does not open it', !res.walkInto, res);
+  });
+
   /* ---------- every item block of the game ---------- */
   await runSection('levels', async () => {
     const ids = opt('--levels') ? opt('--levels').split(',') : Tour.allLevelIds();
@@ -243,11 +281,11 @@ const { Tour, T, TS, TourBuild } = G;
       results.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
     }
     let blocks = 0, runs = 0, checked = 0;
-    const problems = [], design = [], unbump = [], moved = [];
+    const problems = [], design = [], unbump = [], moved = [], dead = [];
     for (const { rows } of results) for (const row of rows) {
       blocks++;
       const where = `${row.id} ${row.aid || 'a' + row.ai} (${row.tx},${row.ty}) ${row.c} [above: ${row.above}]`;
-      if (row.checked) { checked++; if (!row.bumpable) unbump.push(where); }
+      if (row.checked) { checked++; if (!row.bumpable) unbump.push(`${where}: ${row.openable ? 'opens now (' + ['top', 'left', 'right'].filter(k => row[k].hit).join(', ') + ')' : 'STILL CLOSED'}`); if (!row.openable) dead.push(where); }
       for (const r of row.runs) {
         runs++;
         const tag = `${where}${r.power ? ' big' : ''}${r.mask ? ' mask ' + r.mask : ''} -> ${r.kind || '-'}`;
@@ -255,14 +293,17 @@ const { Tour, T, TS, TourBuild } = G;
         if (!r.up && r.emerged) moved.push(`${tag}: out at (${Math.round(r.emerged.x)},${Math.round(r.emerged.y)})`);
         if (r.worst) { problems.push(`${tag}: ${r.worst.why} at ${r.worst.at} s (${r.worst.x},${r.worst.y})`); continue; }
         const lost = r.goneAt != null && r.goneAt < 1.5 ? `lost in a pit after ${r.goneAt.toFixed(2)} s` : r.lava ? 'into the lava' : null;
-        if (lost && !(row.checked && row.bumpable && r.reach)) { design.push(`${tag}: ${lost}${row.checked && row.bumpable ? ', never in Brady\'s reach on the way' : ''}`); continue; }
-        if (row.checked && row.bumpable && !r.reach) design.push(`${tag}: Brady can't reach it (${Math.round(r.final.x)},${Math.round(r.final.y)})`);
+        if (lost && !(row.checked && row.openable && r.reach)) { design.push(`${tag}: ${lost}${row.checked && row.openable ? ', never in Brady\'s reach on the way' : ''}`); continue; }
+        // a box under soil is reached by digging (down onto it, or into its pocket): the validator's dig model is too
+        // coarse to follow the item there, so only the solid / pit checks apply to it
+        if (row.checked && row.openable && !r.reach && row.above !== 'SOIL') design.push(`${tag}: Brady can't reach it (${Math.round(r.final.x)},${Math.round(r.final.y)})`);
       }
     }
     if (LIST) console.log("  reach search ms: " + results.filter(r => r.ms).map(r => r.id + " " + r.ms).join(", "));
     console.log(`  ${ids.length} levels, ${blocks} item blocks, ${runs} bumps, ${checked} blocks reach-checked, ${Date.now() - t0} ms`);
     if (LIST || moved.length) console.log('  items that do not pop straight up (a solid, a panel or the top over the block):\n    ' + (moved.join('\n    ') || '-'));
-    if (unbump.length) console.log('  reach-checked blocks the validator never gets under (their items are not reach-checked):\n    ' + unbump.join('\n    '));
+    if (unbump.length) console.log('  boxes that could not be bumped from below (the only way in before), and how they open now:\n    ' + unbump.join('\n    '));
+    check('every box Brady can get to opens (from below, by landing on it, or from a side)', !dead.length, dead);
     check('no item ends inside a solid, inside a one-way panel or out of the area', !problems.length, problems);
     check('no item is lost in a pit or lava at once, and Brady can reach every item he can bump out', !design.length, design);
   });
