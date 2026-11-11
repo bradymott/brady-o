@@ -192,7 +192,22 @@ function playerPhysics(p, inp, area, dt, platforms, opts) {
   const sticky = gsurf === SURF.STICKY;
   const smul = (opts.speedMul || 1) * (sticky ? 0.5 : 1);
   if (dir) p.facing = dir;
-  const zf = zoneForce(area, p);
+  let zf = zoneForce(area, p);
+  // a lift (updraft, vent, steam, smoke, gust) never pins Brady: holding DOWN cancels it; pressed against a solid
+  // ceiling inside one it eases off after a moment; held still in the air under a zone for over a second, he is let go
+  // for a second (p.liftOff) so he drops clear. Not in water (currents). The validator runs this same code (its sims never
+  // hold down).
+  if (zf && zf.fy < 0 && !water) {
+    // pinned: head on a solid and not moving sideways either (a lift that carries him along a ceiling is by design)
+    const still = p.liftPx != null && Math.abs(p.x - p.liftPx) < 0.3, head = still && !p.onGround && !regionFree(area, p.x + 1, p.y - 2, p.w - 2, 2);
+    p.liftPin = head ? (p.liftPin || 0) + dt : Math.max(0, (p.liftPin || 0) - dt * 2);
+    p.liftStill = still && !p.onGround && Math.abs(p.vy) < 0.5 * TS ? (p.liftStill || 0) + dt : 0;
+    if (p.liftStill > 1 || p.liftPin > 0.65) { p.liftOff = 0.6; p.liftPin = 0; p.liftStill = 0; }
+    p.liftPx = p.x;
+    const k = inp.down || p.liftOff > 0 ? 0 : p.liftPin > 0.3 ? Math.max(0, 1 - (p.liftPin - 0.3) / 0.35) : 1;
+    if (k < 1) zf = { fx: zf.fx, fy: zf.fy * k, vmax: zf.vmax };
+  } else { p.liftPin = 0; p.liftStill = 0; p.liftPx = null; }
+  if (p.liftOff > 0) p.liftOff -= dt;
 
   if (water) {
     const target = dir * PHYS.swimMaxX * (opts.swimMul || 1);
