@@ -118,7 +118,7 @@ const TripFX = {
     const jr = play.tripJoint || 0, JD = 1.35;
     const joint = jr > 0 ? clamp((JD - jr) / 0.15, 0, 1) * clamp(jr / 0.55, 0, 1) : 0;
     const dz = play.dizzy || 0;
-    const shroom = dz > 0 ? clamp(Math.min(dz, (4.2 - dz) / 0.35), 0, 1) : 0;
+    const shroom = dz > 0 ? this.shroomK(dz) : 0;
     return { joint, lsd: play.lsdK || 0, shroom };
   },
   // called from Play.update: the LSD envelope (strong first, then subtle while he flies, then out) and the joint timer
@@ -196,11 +196,11 @@ const TripFX = {
       const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, `rgba(120,230,120,${0.28 * L.joint})`); g.addColorStop(1, `rgba(60,160,80,${0.4 * L.joint})`);
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     }
-    const k = Math.max(L.lsd, L.shroom * 0.7);
+    const k = L.lsd;   // (the mushroom trips the level itself: TripFX.shroom, no fractal)
     if (k > 0.001) {
       const buf = Game.quality >= 1 ? this.frame(calm ? 0 : t) : null;
       if (buf) {
-        const lsd = L.lsd >= L.shroom * 0.7, hue = lsd ? (t * 70) % 360 : 260 + Math.sin(t * 0.8) * 40;
+        const lsd = true, hue = lsd ? (t * 70) % 360 : 260 + Math.sin(t * 0.8) * 40;
         const c = this.paint(buf, hue, lsd ? 0.95 : 0.8, 1, !lsd);
         // a kaleidoscope: the frame and its mirror image turning against each other, scaled to cover the view
         const R = Math.hypot(W, H) * (1.08 + 0.1 * Math.sin(t * 0.7)), cx = W / 2, cy = H / 2;
@@ -223,7 +223,7 @@ const TripFX = {
     const calm = this.calm(), t = play.t, S = Game.S, p = play.player;
     ctx.save();
     // the breath: the world swells and settles around Brady (never below 1: no empty edges)
-    const amp = calm || Game.quality < 1 ? 0 : 0.045 * L.lsd + 0.025 * L.shroom + 0.012 * L.joint;
+    const amp = calm || Game.quality < 1 ? 0 : 0.045 * L.lsd + 0.012 * L.joint;
     if (amp > 0.002 && p) {
       const tmp = PostFX.ensure('tripWarp', W, H), tx = tmp.getContext('2d');
       tx.globalCompositeOperation = 'copy'; tx.drawImage(ctx.canvas, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr, W, H, 0, 0, W, H);
@@ -243,22 +243,8 @@ const TripFX = {
       if (c && Game.quality >= 1 && L.lsd > 0.4) { ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = 0.3 * L.lsd; ctx.drawImage(c, 0, 0, W, H); }
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     }
-    // the mushroom: a softer purple-pink colour shift and slow glowing sparkles
-    if (L.shroom > 0.001) {
-      const hue = calm ? 300 : (t * 80) % 360;
-      ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = 0.2 * L.shroom;
-      const g = ctx.createLinearGradient(0, 0, W, H);
-      for (let i = 0; i <= 4; i++) g.addColorStop(i / 4, `hsl(${(hue + i * 60) % 360},90%,62%)`);
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.globalCompositeOperation = 'lighter';
-      const n = calm ? 6 : 16;
-      for (let i = 0; i < n; i++) {
-        const a = (i / n) * TAU + (calm ? 0 : t * 0.35), r = (0.3 + ((i * 37) % 10) / 16) * Math.min(W, H) * 0.62;
-        const x = W / 2 + Math.cos(a) * r * 1.3, y = H / 2 + Math.sin(a) * r * 0.75, sz = (16 + (i % 3) * 8) * S * (0.7 + 0.3 * Math.sin(t * 3 + i));
-        ctx.globalAlpha = 0.5 * L.shroom; ctx.drawImage(PostFX.glow(`hsl(${(hue + i * 40) % 360},100%,70%)`), x - sz, y - sz, sz * 2, sz * 2);
-      }
-      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    }
+    // the mushroom: the level itself goes multicoloured and wobbly (TripFX.shroom)
+    if (L.shroom > 0.001) this.shroom(ctx, play, W, H, L.shroom, calm);
     // the joint: a green wash, then the smoke wisps and a hazy green rim composed at quarter resolution and laid over
     // the view with one scaled draw (fill-rate friendly on a phone)
     if (L.joint > 0.001) {
@@ -280,6 +266,35 @@ const TripFX = {
       g.addColorStop(0, 'rgba(120,220,120,0)'); g.addColorStop(1, `rgba(90,190,100,${0.45 * L.joint})`);
       qx.fillStyle = g; qx.fillRect(0, 0, qw, qh);
       ctx.drawImage(q, 0, 0, W, H);
+    }
+    ctx.restore();
+  },
+  /* ---------- the magic mushroom (dizzy, 4.2 s): the old "everything goes multicoloured and wobbly", smoother ----------
+     The scene's own pixels change colour: a slowly travelling rainbow laid on with the 'hue' blend, so every tile,
+     enemy and Brady keeps its own light, shade and saturation (white stays white, ink stays ink) and only the hues
+     cycle. Then the finished view is copied once and drawn back in thin horizontal strips that sway on a sine wave
+     (each strip stretched a little so no edge shows). Eased in over 0.6 s and out over 1.4 s. Both work on iOS
+     Safari (no ctx.filter). FX CALM: the colours only, softer and slower; Game.quality 0: no wobble. Before the HUD. */
+  shroomK(dz) { const D = 4.2, a = clamp((D - dz) / 0.6, 0, 1), b = clamp(dz / 1.4, 0, 1); return a * a * (3 - 2 * a) * b * b * (3 - 2 * b); },
+  shroom(ctx, play, W, H, k, calm) {
+    const t = play.t, S = Game.S;
+    ctx.save();
+    const base = calm ? 290 + Math.sin(t * 0.3) * 30 : (t * 70) % 360, sw = calm ? 0 : Math.sin(t * 0.45) * W * 0.25;
+    const g = ctx.createLinearGradient(-W * 0.2 + sw, 0, W * 1.2 + sw, H * 0.6);
+    for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, `hsl(${(base + i * 60) % 360},90%,55%)`);
+    ctx.fillStyle = g;
+    ctx.globalCompositeOperation = 'hue'; ctx.globalAlpha = (calm ? 0.25 : 0.45) * k; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = (calm ? 0.1 : 0.2) * k; ctx.fillRect(0, 0, W, H);   // a touch of colour into the pale and grey parts too
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    if (!calm && Game.quality >= 1) {
+      const tmp = PostFX.ensure('shroomWob', W, H), tx = tmp.getContext('2d');
+      tx.globalCompositeOperation = 'copy'; tx.drawImage(ctx.canvas, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr, W, H, 0, 0, W, H);
+      const A = 5 * S * k, sh = Math.max(2, Math.round(5 * Game.dpr));
+      ctx.imageSmoothingEnabled = true;
+      for (let y = 0; y < H; y += sh) {
+        const h = Math.min(sh, H - y), dx = A * Math.sin((y + h / 2) / H * TAU * 1.4 + t * 3.0);
+        ctx.drawImage(tmp, 0, y, W, h, dx - A, y, W + 2 * A, h);
+      }
     }
     ctx.restore();
   },
