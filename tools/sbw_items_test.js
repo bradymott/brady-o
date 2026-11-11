@@ -68,7 +68,7 @@ function boot() {
       }
       out.goneAt = goneAt; out.final = box(it);
       // the pop: straight up into the open cell over the block, where it has always gone
-      out.up = !!out.emerged && out.emerged.y >= (ty - 1) * TS - 0.01 && out.emerged.y <= (ty - 1) * TS + 4.01 && Math.abs(out.emerged.x - (tx * TS + 4)) < 1;   // (a floating item may sit 4 px lower, its bob clear of a ceiling)
+      out.up = !!out.emerged && out.emerged.y >= (ty - 1) * TS - 0.01 && out.emerged.y <= (ty - 1) * TS + 8.01 && Math.abs(out.emerged.x - (tx * TS + 4)) < 1;   // (a floating item may sit 4 px lower, its bob clear of a ceiling; a walker stands on the box, 8 px lower)
       // a floating item bobs: the box Brady can touch is its whole swing
       if (!it.speedX && !it.remove) out.samples = [{ x: it.x, y: (it.hoverY != null ? it.hoverY : it.y) - 4, w: it.w, h: it.h + 8 }];
       globalThis.__noCollect = false;
@@ -168,7 +168,7 @@ const { Tour, T, TS, TourBuild } = G;
       const [tx, ty] = blockAt(lvl); const g = play(lvl, 0, tx, ty, 1, 0);
       const it = spawned(g, () => g.bumpBlock(tx, ty, true, g.player));
       const y0 = it.y; step(g, 0.25); const yMid = it.y; step(g, 0.3);
-      check('open above: the joint rises one tile out of the block and floats there, as before', y0 === ty * TS && Math.abs(yMid - (ty * TS - TS / 2)) < 2 && Math.abs(it.hoverY - (ty - 1) * TS) < 0.01 && it.x === tx * TS + 4, { y0, yMid, hoverY: it.hoverY, x: it.x, tx, ty });
+      check('open above: the joint rises one tile out of the block (eased) and floats there, as before', y0 === ty * TS && Math.abs(yMid - (ty * TS - TS * 0.75)) < 2 && Math.abs(it.hoverY - (ty - 1) * TS) < 0.01 && it.x === tx * TS + 4, { y0, yMid, hoverY: it.hoverY, x: it.x, tx, ty });
     }
     bumpCase('ceiling right above', ['##########', '#........#', '#...#....#', '#...?....#', '#........#', '#........#', '#.@......#', '##########', '##########'], 'power', 1,
       { say: 'it comes out of the bottom, toward Brady', ok: (f, tx, ty) => f.y > (ty + 1) * TS - 1 });
