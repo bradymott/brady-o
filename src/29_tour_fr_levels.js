@@ -80,6 +80,12 @@ class FrTrufflePig extends Ent {
   }
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, d = this.dir, bob = Math.abs(this.cx - (this.spots[this.k] || this.cx)) > 6 ? Math.abs(Math.sin(this.t * 14)) * 2 : 0;
+    // the fr_x atlas pig (sniffing as it trots, waving while it waits for Brady, pointing at the dig spot)
+    const clip = this.sniff > 0.3 ? 'trufflePig_point_000' : this.sniff > 0 || bob ? 'trufflePig/idle' : 'trufflePig/wave';
+    if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'fr_x', clip, this.t, x, y - bob, d, { scale: 1.15 })) {
+      if (this.sniff > 0.3) { ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 8)})`; ctx.font = `14px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▼', x + d * 22, y - 34 + Math.sin(this.t * 8) * 3); }
+      return;
+    }
     Ink.around(ctx, this.x - 10, this.y - 30, this.w + 20, this.h + 34, c => {
       c.save(); c.translate(x, y - bob); c.scale(d, 1);
       c.fillStyle = '#e8a0a8'; for (const lx of [-9, -4, 5, 10]) c.fillRect(lx - 1.5, -7, 3, 7);
@@ -95,6 +101,7 @@ class FrTrufflePig extends Ent {
     if (this.sniff > 0.3) { ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 8)})`; ctx.font = `14px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▼', x + d * 22, y - 30 + Math.sin(this.t * 8) * 3); }
   }
 }
+FrTrufflePig.cfg = { atlas: 'fr_x' };   // so a level with the pig preloads its atlas (Play.extraAtlases)
 Object.assign(ENTITY_TYPES, { frParcel: FrParcel, frHatch: FrHatch, frTrufflePig: FrTrufflePig });
 
 /* ---------------- pieces ---------------- */
