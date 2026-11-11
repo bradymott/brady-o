@@ -521,6 +521,7 @@ const levels = [
         script: [
           'pho',
           ['gearStand', { item: 'hat' }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
           // ① the lantern shops
           ['lanternShop', {}],
           ['oldstreet', {}],
@@ -605,6 +606,7 @@ const levels = [
       { id: 'vuon', gen: 'strip', role: 'sub', W: 70, H: 18,
         enemies: [['vnToad', 2]],
         script: [
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           ['orchard', { gold: 'must' }],
           ['sampans', { span: 8 }],
           ['orchard', {}],
