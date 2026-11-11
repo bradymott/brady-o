@@ -70,25 +70,29 @@ T_.mz_copas = Object.assign({}, THEMES.mz_baobab, {
     strip('mz_savanna', 'L0', 0.015, -46, { kind: 'mountains', color: '#c8907a', base: 280, amp: 60 }),
     { kind: 'mzSunsetHaze', color: '#ffb0a0', base: 300, f: 0.02 },
     strip('mz_baobab', 'L0', 0.05, 0, { kind: 'mzSavanna', color: '#c89a4a', base: 340 }),
+    strip('mz_baobab_near', 'L1', 0.22, 0, { kind: 'mzSavanna', color: '#b8883a', base: 365 }),
     { kind: 'mzNearBoughs', color: '#3a2418', base: 380, f: 0.45 }
   ],
   semi: { style: 'log', c1: '#9a7a5a', c2: '#6a4a2e' }
 });
 T_.mz_copas.atlas = 'mz_baobab';
-// the night beach and the fort get the depth their single strips lack (borrowed strips + painted layers)
+// the night beach, the fort and the baobab get the depth their single strips lack: a far layer (painted or borrowed)
+// behind, and their own near strip in front (mz_beach_near, mz_fort_near, mz_baobab_near)
 THEMES.mz_beach.layers = [
   { kind: 'mzHeadland', color: '#0a1830', base: 300, f: 0.02 },
   strip('mz_beach', 'L0', 0.06, 0, THEMES.mz_beach.layers[0]),
-  { kind: 'mzNightGrass', color: '#06101e', base: 400, f: 0.4 }
+  strip('mz_beach_near', 'L1', 0.2, 0, { kind: 'mzNightGrass', color: '#0a1a30', base: 360 })
 ];
 THEMES.mz_fort.layers = [
   strip('mz_dunes', 'L0', 0.02, -40, { kind: 'mzFarIsle', color: '#5a9a6a', base: 300 }),
   { kind: 'mzFarIsle', color: '#4a8a5a', base: 316, f: 0.035 },
-  strip('mz_fort', 'L0', 0.08, 0, THEMES.mz_fort.layers[0])
+  strip('mz_fort', 'L0', 0.08, 0, THEMES.mz_fort.layers[0]),
+  strip('mz_fort_near', 'L1', 0.22, 0, { kind: 'mzFarIsle', color: '#b8a888', base: 365 })
 ];
 THEMES.mz_baobab.layers = [
   strip('mz_savanna', 'L0', 0.015, -46, { kind: 'mountains', color: '#c8907a', base: 280, amp: 60 }),
-  strip('mz_baobab', 'L0', 0.05, 0, THEMES.mz_baobab.layers[0])
+  strip('mz_baobab', 'L0', 0.05, 0, THEMES.mz_baobab.layers[0]),
+  strip('mz_baobab_near', 'L1', 0.22, 0, { kind: 'mzSavanna', color: '#b8883a', base: 365 })
 ];
 // 4-6: under the dunes (the surface is the beach dunes)
 T_.mz_areia = Object.assign({}, THEMES.mz_dunes, {
