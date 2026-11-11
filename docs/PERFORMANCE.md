@@ -13,8 +13,9 @@ laggy". This pass measured every level, boss fight and map, found what costs the
   number. Chromium with the GPU (`--gpu`, ANGLE Metal) and CDP CPU throttling (`--throttle 4`) shows the JavaScript side
   of a phone-class CPU. Frame cost = the time of one `Game.frame` (update + draw + raster with `--flush`).
 - **Paired runs.** `--pair <other build>` measures a second build on the same scenario at the same time in its own
-  browser. Agents and tests share this Mac, so absolute times swing by 1.5x from hour to hour; the before/after RATIO
-  of a paired run holds. Rankings below are from paired runs.
+  browser. Agents and tests share this Mac, so absolute times swing by 2x and more from hour to hour; the before/after
+  RATIO of a paired run holds. `--ref 1-1` measures the reference level right after every scenario, in both builds,
+  so each scenario is compared with a reference taken under the same load. Rankings below are from such runs.
 - **Profile window** (instrumented, not timed): Ink passes, drawImage calls and the device pixels each painter covers
   (`pxBy`), fillRect pixels, text calls, gradients, read-backs, canvases created, particles, weather, entities updated
   and drawn, JS heap and allocation rate, draw time per entity class.
@@ -85,7 +86,9 @@ drawing is the cost), the tier (and the AUTO level) and the canvas resolution. A
 arena, Brazil 3-1 and 3-5, and the overworld.
 
 ## Regression guard
-`BRADY_DIST=<dist> node tools/sbw_perf_test.js --short` runs the reference levels (1-1, 1-2), Mexico 1-5, Brazil
-3-1, 3-3, 3-4, 3-5, the 1-5 and 3-5 boss fights and two maps on WebKit, checks every scenario's mean and p95 frame cost
-relative to the same run's 1-1 against `tools/perf_baseline.json` (tolerance 1.35x, `PERF_TOL` to change), and checks
-the tier controller. `--write-baseline` (with the same scenario set) rewrites the baseline after an intended change.
+`BRADY_DIST=<dist> node tools/sbw_perf_test.js --short` (about 10 minutes) runs the reference levels (1-1, 1-2),
+Mexico 1-5, Brazil 3-1, 3-3, 3-4, 3-5, the 1-5 and 3-5 boss fights and two maps on WebKit with the raster flushed,
+divides every scenario's mean and p95 frame cost by the mean of 1-1 measured right after it, and fails when one is
+over `tools/perf_baseline.json` x 1.35 (`PERF_TOL` to change). It also checks the tier controller on synthetic frame
+times and that held ink pictures match live ink pixel for pixel. `--short --write-baseline` rewrites the baseline
+after an intended change (say why in the commit).

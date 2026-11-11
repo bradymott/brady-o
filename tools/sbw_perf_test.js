@@ -355,6 +355,7 @@ const SHORT_MAPS = ['mx', 'route'];
 // --pair <dist>: a second build measured at the same time on the same scenario in its own browser (both runs see the
 // same load from the rest of the machine, so their ratio holds on a busy machine); results.pair holds its numbers
 const PAIR = opt('--pair', null);
+const REF = opt('--ref', SHORT ? '1-1' : null);
 async function main() {
   const launchArgs = engine === 'chromium' ? ['--enable-precise-memory-info', '--js-flags=--expose-gc'].concat(GPU ? ['--enable-gpu', '--use-angle=metal', '--enable-gpu-rasterization', '--ignore-gpu-blocklist'] : []) : [];
   const sides = [];
@@ -404,6 +405,13 @@ async function main() {
     try {
       const all = await Promise.all([page.evaluate(fn, { id, o })].concat(sides.slice(1).map(sd => sd.page.evaluate(fn, { id, o }))));
       const r = all[0];
+      // --ref <id>: the reference level measured right after, in the same pages, so every scenario has a reference
+      // taken under the same machine load (agents share this Mac; absolute times drift by 2x over an hour)
+      if (REF) {
+        const ro = Object.assign({}, o, { spots: 6, profile: false });
+        const rr = await Promise.all([page.evaluate(({ id, o }) => window.__perf.level(id, o), { id: REF, o: ro })].concat(sides.slice(1).map(sd => sd.page.evaluate(({ id, o }) => window.__perf.level(id, o), { id: REF, o: ro }))));
+        r.ref = { id: REF, cost: rr[0].cost }; if (all[1]) all[1].ref = { id: REF, cost: rr[1].cost };
+      }
       if (all[1]) { results.pair[kind][id] = all[1]; const q = all[1].cost || {}; console.log(`  pair   ${id.padEnd(6)} mean ${(q.mean || 0).toFixed(2).padStart(6)}  p95 ${(q.p95 || 0).toFixed(2).padStart(6)}  ratio mean ${((r.cost || {}).mean / q.mean).toFixed(2)} p95 ${((r.cost || {}).p95 / q.p95).toFixed(2)}`); }
       results[kind][id] = r;
       const c = r.cost || {};
@@ -482,9 +490,12 @@ async function main() {
   // the regression guard
   let failed = errors.length;
   const ref = results.levels['1-1'];
+  // each scenario relative to its reference: the 1-1 measured right after it (--ref, on by default with --short), else
+  // the run's own 1-1 (machine independent, and robust to the machine's load drifting during the run)
+  const refOf = r => (r.ref && r.ref.cost) || (ref && ref.cost);
   if (WRITE_BASE && ref) {
-    const base = { meta: results.meta, ref: '1-1', note: 'p95 and mean frame cost of each scenario divided by the same run\'s 1-1 mean (machine independent); see tools/sbw_perf_test.js', rel: {} };
-    for (const { k, r } of rows) base.rel[k] = { p95: +(r.cost.p95 / ref.cost.mean).toFixed(3), mean: +(r.cost.mean / ref.cost.mean).toFixed(3) };
+    const base = { meta: results.meta, ref: '1-1', note: 'p95 and mean frame cost of each scenario divided by the mean of 1-1 measured right after it (machine independent); see tools/sbw_perf_test.js and docs/PERFORMANCE.md', rel: {} };
+    for (const { k, r } of rows) { const rc = refOf(r); base.rel[k] = { p95: +(r.cost.p95 / rc.mean).toFixed(3), mean: +(r.cost.mean / rc.mean).toFixed(3) }; }
     fs.writeFileSync(WRITE_BASE, JSON.stringify(base, null, 1)); console.log('wrote the baseline ' + WRITE_BASE);
   } else if (SHORT && ref) {
     const base = fs.existsSync(BASE_FILE) ? JSON.parse(fs.readFileSync(BASE_FILE, 'utf8')) : null;
@@ -492,7 +503,7 @@ async function main() {
     if (!base) { console.log('no baseline at ' + BASE_FILE); failed++; }
     else for (const { k, r } of rows) {
       const b = base.rel[k]; if (!b) continue;
-      const rel = r.cost.mean / ref.cost.mean, relP = r.cost.p95 / ref.cost.mean;
+      const rc = refOf(r), rel = r.cost.mean / rc.mean, relP = r.cost.p95 / rc.mean;
       const ok = rel <= b.mean * TOL + 0.05 && relP <= b.p95 * TOL + 0.15;
       console.log((ok ? 'PASS ' : 'FAIL ') + `${k}: mean ${rel.toFixed(2)}x of 1-1 (baseline ${b.mean}), p95 ${relP.toFixed(2)}x (baseline ${b.p95}), tolerance ${TOL}x`);
       if (!ok) failed++;
