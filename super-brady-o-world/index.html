@@ -9224,27 +9224,82 @@ const Validator = {
   exitX(a) { const g = a.spawns.find(s => s.type === 'gate'); return g ? g.x / TS : a.W; },
 
   /* the power-up budget of §5.3 (counted over all areas; 'opportunity' = item block, hidden block with an item, gear
-     stand, friend who gives something, shop) */
+     stand, friend who gives something, shop). Rules:
+     1 at least 2 opportunities; 2 at most 5 item blocks in the main area (7 in a secret level: rule 7);
+     3 the first opportunity within the first 25 % of the main area (by x from the start side, by height for climbs,
+       by depth for shafts); 4 the archetype's gear from a gear stand before the twist beat (the first half of the main
+       area), and any gear a lock or crawlway needs from a stand in the same level; 5 one premium item (L, S, sundial,
+       1UP, magnet) in a secret or risky spot (another area, a hidden block, or next to a hidden / risky postcard);
+     6 boss levels: two opportunities in the lead-in before the arena. */
+  ARCH_GEAR: { dive: 'fins', tide: 'fins', dig: 'hat', lamp: 'hat', sneak: 'box', glide: 'plane', fall: 'plane', beat: 'kazoo' },
+  PREMIUM: { lsd: true, star: true, sundial: true, oneup: true, magnet: true },
   budget(level) {
     const errors = [], warnings = [];
     if (!level.v2) return { ok: true, errors, warnings, skipped: true };
     const S = level.design || {}, main = level.areas[0];
     const items = a => Object.keys(a.contents || {}).filter(k => a.contents[k] && a.contents[k] !== 'pick' && a.contents[k] !== 'picks');
-    const opp = a => items(a).length + a.spawns.filter(s => s.type === 'gearStand' || s.type === 'souvenirShop' || (s.type && /Xolo|Friend|friend/.test(s.type)) || s.give).length;
+    const giver = s => s.type === 'gearStand' || s.type === 'souvenirShop' || (s.type && /Xolo|Friend|friend/.test(s.type)) || s.give || !!(ENTITY_TYPES[s.type] && ENTITY_TYPES[s.type].cfg && ENTITY_TYPES[s.type].cfg.give);
+    const opp = a => items(a).length + a.spawns.filter(giver).length;
     let total = 0; for (const a of level.areas) total += opp(a);
     if (total < 2) errors.push(`only ${total} power-up opportunities (needs 2)`);
     const mainBlocks = items(main).length;
     const cap = S.secret ? 7 : 5;
     if (mainBlocks > cap) errors.push(`${mainBlocks} item blocks in the main area (max ${cap})`);
-    // the first opportunity within the first 25 % of the main area (by x; by height for climbs, by depth for shafts)
+    // how far into the main area a tile is, from where Brady starts (0 = the start, 1 = the far end)
+    const shaft = main.gen === 'shaft', vertical = !shaft && (main.tower || main.gen === 'climb' || main.gen === 'rise');
+    const along = (x, y) => vertical ? (main.H - y) / main.H : shaft ? y / main.H : (main.mirrored ? (main.W - 1 - x) / main.W : x / main.W);
     const pos = [];
     for (const k of items(main)) { const [x, y] = k.split(',').map(Number); pos.push([x, y]); }
-    for (const s of main.spawns) if (s.type === 'gearStand' || s.give || /Xolo|Friend/.test(s.type || '')) pos.push([Math.floor(s.x / TS), Math.floor(s.y / TS)]);
+    for (const s of main.spawns) if (giver(s)) pos.push([Math.floor(s.x / TS), Math.floor(s.y / TS)]);
     if (pos.length) {
-      const vertical = main.tower || main.gen === 'climb' || main.gen === 'rise', shaft = main.gen === 'shaft';
-      const f = vertical ? Math.min(...pos.map(p => (main.H - p[1]) / main.H)) : shaft ? Math.min(...pos.map(p => p[1] / main.H)) : Math.min(...pos.map(p => p[0] / main.W));
+      const f = Math.min(...pos.map(p => along(p[0], p[1])));
       if (f > 0.25) errors.push(`the first power-up opportunity is ${Math.round(f * 100)} % into the main area (max 25 %)`);
     } else if (total) warnings.push('no power-up opportunity in the main area');
+    // rule 4: the archetype's gear from a stand, before the twist; gear a lock or crawlway needs comes from a stand
+    const stands = [];
+    level.areas.forEach((a, ai) => { for (const s of a.spawns) if (s.type === 'gearStand') stands.push({ ai, item: s.item || 'plane', f: ai === 0 ? along(Math.floor(s.x / TS), Math.floor((s.y - 1) / TS)) : 0 }); });
+    const arch = S.arch, flood = main.gen === 'rise' && main.risingWater;
+    const need = flood ? 'fins' : this.ARCH_GEAR[arch];
+    if (need) {
+      const st = stands.filter(s => s.item === need);
+      if (!st.length) errors.push(`${(arch || '').toUpperCase()} needs a ${need} gear stand (rule 4)`);
+      else if (Math.min(...st.map(s => s.f)) > 0.5) errors.push(`the ${need} gear stand is ${Math.round(Math.min(...st.map(s => s.f)) * 100)} % in: put it before the twist (first half, rule 4)`);
+    }
+    const needed = new Set();
+    for (const a of level.areas) {
+      for (const L of a.locks || []) if (/^gear:/.test(L.id)) needed.add(L.id.slice(5));
+      if (a.tiles && a.tiles.indexOf(T.LINTEL) >= 0) needed.add('pads');
+    }
+    for (const g of needed) if (!stands.some(s => s.item === g)) errors.push(`a lock or crawlway needs ${g}: add a ${g} gear stand to this level (rule 4)`);
+    // rule 5: one premium item in a secret or risky spot
+    const premium = [];
+    level.areas.forEach((a, ai) => {
+      for (const k of items(a)) if (this.PREMIUM[a.contents[k]]) { const [x, y] = k.split(',').map(Number); premium.push({ ai, x, y, hidden: a.tiles[y * a.W + x] === T.HIDDEN }); }
+      for (const s of a.spawns) if (s.type === 'gearStand' && this.PREMIUM[s.item]) premium.push({ ai, x: Math.floor(s.x / TS), y: Math.floor((s.y - 1) / TS) });
+    });
+    const tucked = p => {
+      const a = level.areas[p.ai];
+      if (p.ai > 0 && a.role !== 'arena' && a.gen !== 'arena') return true;
+      if (p.hidden) return true;
+      // behind a secret mechanism: next to light-only stones or a fake wall
+      for (let y = p.y - 3; y <= p.y + 3; y++) for (let x = p.x - 3; x <= p.x + 3; x++) { if (x < 0 || y < 0 || x >= a.W || y >= a.H) continue; const i = y * a.W + x; if (a.tiles[i] === T.FAKE || (a.hide && a.hide[i] === 3)) return true; }
+      return a.spawns.some(s => s.type === 'gold' && (s.kind === 'risky' || s.kind === 'hidden') && Math.abs(s.x / TS - p.x) <= 5 && Math.abs(s.y / TS - p.y) <= 6);
+    };
+    // a warning for now (levels written before the rule landed); an error at release
+    const r5 = Validator.STRICT5 ? errors : warnings;
+    if (!premium.length) r5.push('no premium item (L, S, sundial, 1UP or magnet) in a secret or risky spot (rule 5)');
+    else if (!premium.some(tucked)) r5.push('the premium items are all in plain sight: put one in a secret or risky spot (rule 5)');
+    // rule 6: a boss level hands out two opportunities on the way to the arena
+    const arena = a => a.role === 'arena' || a.gen === 'arena';
+    if (S.arch === 'lair' || S.kind === 'castle') {
+      let lead = 0;
+      for (const a of level.areas) {
+        if (arena(a) || a.role === 'secret') continue;
+        const boss = a.spawns.find(s => s.type === 'boss'), x0 = boss && boss.arenaX0 != null ? boss.arenaX0 : Infinity;
+        lead += items(a).filter(k => +k.split(',')[0] < x0).length + a.spawns.filter(s => giver(s) && s.x / TS < x0).length;
+      }
+      if (lead < 2) errors.push(`only ${lead} power-up opportunities in the boss lead-in (needs 2, rule 6)`);
+    }
     return { ok: !errors.length, errors, warnings };
   },
 
@@ -12672,6 +12727,11 @@ class Play {
     }
     const hide = A.hide, lsd = p.fx && p.fx.lsd > 0;
     const beatAt = this.beatMap(A);
+    // light-only tiles (hide 3) are always solid but show only inside light: lamps, beams, glowing things; Brady's own
+    // glow counts in a lamp area or under a headlamp (LEVEL_OVERHAUL §1 LAMP, §2 1-3)
+    if (A.hasLight3 == null) A.hasLight3 = !!hide && hide.indexOf(3) >= 0;
+    const lit3 = !fg && A.hasLight3 ? this.collectLights(camX, camY).filter((L, k) => k > 0 || A.lamp || (p.hands && p.hands.id === 'hat')) : null;
+    const litAt = (x, y) => { let k = 0; const cx = x * TS + TS / 2, cy = y * TS + TS / 2; for (const L of lit3) { const d = Math.hypot(L.x - cx, L.y - cy); k = Math.max(k, clamp((L.r * 0.9 - d) / (L.r * 0.35), 0, 1)); } return k; };
     for (let y = y1; y >= y0; y--) {
       for (let x = x0; x <= x1; x++) {
         const id = A.tiles[y * A.W + x];
@@ -12680,7 +12740,9 @@ class Play {
         // dug earth: below the surface of a dig area, empty tiles (and coins and water in caverns) show the dark wall of the tunnel
         if ((id === T.EMPTY || id === T.PICK || id === T.WATER) && !fg && A.dig && y > A.surface) { const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S); ctx.fillStyle = A.tunnelCol || '#2a1a12'; ctx.fillRect(dx, dy, Math.ceil(TS * S) + 1, Math.ceil(TS * S) + 1); if ((x * 7 + y * 3) % 5 === 0) { ctx.fillStyle = 'rgba(255,220,170,0.06)'; ctx.beginPath(); ctx.arc(dx + 10 * S, dy + 14 * S, 5 * S, 0, TAU); ctx.fill(); } if (id === T.EMPTY) continue; }
         if (id === T.EMPTY) continue;
-        if (hv === 1 || hv === 3) continue;
+        let shimmer = 0;
+        if (hv === 1) continue;
+        if (hv === 3) { if (!lit3) continue; shimmer = litAt(x, y); if (shimmer < 0.04) continue; ctx.globalAlpha = shimmer * (0.8 + 0.2 * Math.sin(t * 4 + x * 1.3 + y)); }
         if (hv === 2) { if (!fg && lsd) this.drawTripTile(ctx, x, y, camX, camY, S); continue; }
         if (fg !== (id === T.FAKE || id === T.WATER)) continue;
         const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S);
@@ -12722,6 +12784,7 @@ class Play {
           }
         }
         if (img) ctx.drawImage(img, dx - pad + ox * S, dy - pad + oy * S, dw + pad * 2, dh + pad * 2);
+        if (shimmer) { ctx.fillStyle = `rgba(220,255,250,${0.25 * shimmer})`; ctx.fillRect(dx, dy, dw, dh); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(dx + ((t * 30 + x * 9) % TS) * S, dy, 2 * S, 2 * S); ctx.globalAlpha = 1; }
         if (id === T.FAKE || id === T.HIDDEN) ctx.globalAlpha = 1;
       }
     }
@@ -12839,10 +12902,14 @@ class Play {
     const toHex = c => { const m = /rgba?\((\d+),(\d+),(\d+)/.exec(c || ''); return m ? rgbToHex(+m[1], +m[2], +m[3]) : '#ffd8a0'; };
     for (const e of this.entities) {
       if (e.remove) continue;
-      const L = e.light; if (!L) continue;
-      const x = L.x !== undefined ? L.x : e.cx, y = L.y !== undefined ? L.y : e.cy;
-      if (x < camX - 200 || x > camX + VW + 200 || y < camY - 200 || y > camY + VH + 200) continue;
-      lights.push({ x, y, r: L.r, col: L.col || toHex(L.c), a: 0.5 });
+      // an entity gives one light (light) or several (lights: a sunbeam is a column of them)
+      const Ls = e.lights || (e.light ? [e.light] : null); if (!Ls) continue;
+      for (const L of Ls) {
+        if (!L || !(L.r > 0)) continue;
+        const x = L.x !== undefined ? L.x : e.cx, y = L.y !== undefined ? L.y : e.cy;
+        if (x < camX - 200 || x > camX + VW + 200 || y < camY - 200 || y > camY + VH + 200) continue;
+        lights.push({ x, y, r: L.r, col: L.col || toHex(L.c), a: L.a || 0.5 });
+      }
     }
     const DL = { lamp: [130, '#ffe0a0', -66], torch: [120, '#ffa040', -40], brazier: [120, '#ffa040', -28], crystal: [70, th.accent, -12], crystalred: [70, '#ff3a3a', -12],
       ledtree: [95, null, -52], firebarrel: [125, '#ff8a2a', -24], candles: [60, '#ffc070', -14], campsignN: [64, '#ff4fd8', -42], disco: [90, '#ffffff', -34],
@@ -17476,11 +17543,12 @@ for (const s of TOUR_ROUTE) Tour.stops[s.id] = s;
 //   revealed: { '1-6': true, 'house:mx-tienda': true }  secret stops already shown on their panel
 //   paths:    { 'mx:2>5': true }                         secret trails already drawn (by panel stop index)
 //   pending:  [reveal, ...]                              reveals the map has not played yet (§3.6)
+//   doors:    { w22: true }                              a land's door found but still shut (the World 22 ghost pin)
 const TourProgress = {
   data() {
     const d = Save.data; if (!d.tour) d.tour = { at: null, seen: {}, freed: {}, lands: {} };
     const T = d.tour;
-    for (const k of ['seen', 'freed', 'lands', 'revealed', 'paths', 'flights', 'bottles', 'houses']) if (!T[k] || typeof T[k] !== 'object') T[k] = {};
+    for (const k of ['seen', 'freed', 'lands', 'revealed', 'paths', 'flights', 'bottles', 'houses', 'doors']) if (!T[k] || typeof T[k] !== 'object') T[k] = {};
     if (!Array.isArray(T.pending)) T.pending = [];
     if (T.lighthouse == null) T.lighthouse = false;
     if (!d.exits) d.exits = {};
@@ -17607,6 +17675,11 @@ const TourProgress = {
     if (tg && tg.kind === 'land') out.secretLand = tg.id;
     if (tg && tg.kind === 'flight') out.flight = tg.id;
     return out;
+  },
+  // the door to a secret land: { id (level), need (postcards) } from the exit that targets land:<cc>
+  landDoor(cc) {
+    for (const w of Tour.worldList()) { const C = Tour.byWorld[w]; for (let k = 0; k < C.levels.length; k++) for (const key in C.levels[k].exits) { const ex = C.levels[k].exits[key]; if (ex && ex.to === 'land:' + cc) return { id: C.world + '-' + (k + 1), key, need: ex.need || 0 }; } }
+    return null;
   },
   goldCount(id) { const g = Save.data.gold[id]; return g ? g.filter(Boolean).length : 0; },
   countryGold(C) { let n = 0; for (const id of Tour.levelIds(C)) n += this.goldCount(id); return n; },
@@ -17827,7 +17900,9 @@ function tourRide(ctx) {
   for (const step of script) { st.x = st.run(step); st.x += ctx.rng.int(2, 4); if (st.x > len - 18) break; }
   // the landing at the end of the ride
   B.fill(len, DECK, len + 21, H - 1, T.GROUND);
-  B.spawn('gate', len + 13, DECK - 1, {});
+  // v2: a boss level's ride ends at a door into the arena (endDoor: 'area@anchor'), not at a gate
+  if (ctx.v2 && S.endDoor) { const s = B.spawn('portal', len + 13, DECK - 1, { kind: 'door', look: S.endLook || 'tourDoor', targetRef: S.endDoor }); B.anchor('landing', len + 3, DECK - 1); }
+  else B.spawn('gate', len + 13, DECK - 1, {});
   B.gold(len + 5, DECK - 5, 'high');
   for (let x = len; x < len + 21; x++) B.set(x, H - 1, T.GROUND);
   B.trim(len + 22);
@@ -17852,6 +17927,10 @@ function tourSwim(ctx) {
   const script = (S.script || []).slice();
   if (!script.includes('cp')) script.splice(Math.floor(script.length / 2), 0, 'cp');
   for (const step of script) { st.x = st.run(step); st.x += 2; }
+  if (ctx.v2 && S.ending === false) {
+    // v2: the script built its own way out; close the cave behind it
+    B.fill(st.x, 0, st.x + 1, H - 1, T.GROUND); B.trim(st.x + 2);
+  } else {
   // the exit: a ledge with the goal at the end of the cave
   const x = st.x + 2;
   st.water(x, 2, x + 18, FLOOR - 1);
@@ -17860,6 +17939,7 @@ function tourSwim(ctx) {
   B.gold(x + 4, 6, 'high');
   B.fill(x + 19, 0, x + 20, H - 1, T.GROUND);
   B.trim(x + 21);
+  }
   if (!ctx.deferGold) pickGold(ctx, B);
   const area = B.build(TourBuild.areaProps(ctx, { water: true }));
   return { area, B, st, start: { area: 0, x: 4 * TS + TS / 2, y: 5 * TS }, time: S.time || 300 };
@@ -17882,7 +17962,13 @@ function tourClimb(ctx) {
   st.top = (y, holes) => { for (let x = 2; x <= W - 3; x++) if (!(holes && holes.some(([a, b]) => x >= a && x <= b))) { if (B.get(x, y) === T.EMPTY) B.set(x, y, T.SEMI); } st.y = y; st.tops.push(y); };
   st.mid = Math.floor(W / 2);
   const script = (S.script || []).slice();
-  for (const step of script) { st.run(step); if (st.y < 16) break; }
+  for (const step of script) { st.run(step); if (st.y < (ctx.v2 && S.summit === false ? 3 : 16)) break; }
+  if (ctx.v2 && S.summit === false) {
+    // v2: the script built its own summit (and the gate)
+    if (!ctx.deferGold) pickGold(ctx, B);
+    const area = B.build(TourBuild.areaProps(ctx, { tower: true, risingLava: S.risingLava || null }));
+    return { area, B, st, start: { area: 0, x: 4 * TS + TS / 2, y: (H - 2) * TS }, time: S.time || 300 };
+  }
   // the summit: a wide ledge with the goal
   const top = Math.max(6, st.y - 3);
   B.fill(1, top, W - 2, top, T.GROUND); B.fill(1, top + 1, W - 2, top + 1, T.GROUND);
@@ -18187,6 +18273,9 @@ function tourMirror(main, rooms) {
     touchPlayer(p) {
       if (this.s.need && typeof TourProgress !== 'undefined' && TourProgress.totals().gold < this.s.need) {
         if (!(this.toldT > this.t)) { this.toldT = this.t + 3; this.g.toast(`THIS DOOR WANTS ${this.s.need} POSTCARDS (YOU HAVE ${TourProgress.totals().gold})`); Sound.play('bump'); }
+        // remember the door: the world map shows the land's ghost pin from now on (§3.7)
+        const L = this.g.level, ex = L && L.exits && L.exits[this.exitKey], to = (ex && ex.to) || (this.s.secretWorld ? 'land:' + this.s.secretWorld : '');
+        if (/^land:/.test(to)) { const D = TourProgress.data().doors; if (!D[to.slice(5)]) { D[to.slice(5)] = true; Save.save(); } }
         return;
       }
       super.touchPlayer(p);
@@ -18235,6 +18324,7 @@ Object.assign(TourBuild, {
       area.role = role; area.aid = A.id || ('area' + k); area.gen = A.gen || 'strip';
       if (A.bottomKill) area.bottomKill = true;
       if (A.camera) area.camera = A.camera;
+      if (A.mirror) tourMirrorArea(area, r.B, k, r.anchors);
       built.push({ A, area, anchors: Object.assign({}, r.anchors), B: r.B, time: r.time });
     });
     // rooms made by legacy pieces (bonus) come after the spec's areas
@@ -18271,6 +18361,39 @@ Object.assign(TourBuild, {
     return S.v2 ? this.generateV2(C, S, C.world, i || 99, 0) : this.generateLegacy(C, S, C.world, i || 99, 0);
   }
 });
+
+/* §7.4.6 mirror: the area plays right to left (World 22's Mirror Lake). Runs right after the gen, in place, so the
+   builder, the door anchors and the postcard pick all see the flipped area. Flips tiles, items, spawns (and same-area
+   door targets), decor, zones, ghosts, springs, beats, locks, anchors, vkeys, edges, toggles, routes, no-grab spans
+   and postcard spots. Not flipped: boss arenas and rail forks (their pieces assume left to right). */
+function tourMirrorArea(A, B, k, anchors) {
+  const W = A.W, H = A.H, PX = W * TS, fx = x => W - 1 - x;
+  for (const arr of [A.tiles, A.hide, A.surf]) for (let y = 0; y < H; y++) { const row = arr.subarray(y * W, y * W + W); row.reverse(); }
+  const c = {}; for (const key in A.contents) { const [x, y] = key.split(',').map(Number); c[fx(x) + ',' + y] = A.contents[key]; }
+  for (const key in A.contents) delete A.contents[key]; Object.assign(A.contents, c);
+  for (const s of A.spawns) {
+    if (s.type === 'mplat' && !s.swing && !s.orbit) { const pw = s.pw || 3, ctr = s.x - TS / 2 + pw * TS / 2; s.x = PX - ctr + TS / 2 - pw * TS / 2 - (s.ax || 0); }
+    else s.x = PX - s.x;
+    s.dir = -(s.dir || -1);
+    if (s.target && s.target.area === k) s.target.x = PX - s.target.x;
+  }
+  for (const d of A.decor) d.x = PX - d.x;
+  for (const z of A.zones) { z.x = PX - z.x - z.w; z.fx = -(z.fx || 0); }
+  const flipList = list => { for (const p of list || []) p[0] = fx(p[0]); };
+  flipList(A.ghosts); flipList(A.springs); flipList(A.route);
+  for (const b of A.beats || []) b.tx = fx(b.tx);
+  for (const L of A.locks || []) flipList(L.tiles);
+  for (const v of A.vkeys || []) flipList(v.tiles);
+  for (const e of A.edges || []) { e.from[0] = fx(e.from[0]); if (e.area == null || e.area === k) e.to[0] = fx(e.to[0]); }
+  const rect = r => { const a = fx(r[2]), b = fx(r[0]); r[0] = a; r[2] = b; };
+  for (const g in A.toggles || {}) { const G = A.toggles[g]; for (const r of G.A) rect(r); for (const r of G.B) rect(r); flipList(G.switches); }
+  for (const n of A.noGrabs || []) { const a = fx(n[1]), b = fx(n[0]); n[0] = a; n[1] = b; }
+  // the gen's anchors and the area's share objects: flip each one once
+  const an = new Set(Object.values(A.anchors || {}).concat(Object.values(anchors || {})));
+  for (const a of an) if (a) a.x = PX - a.x;
+  if (B) for (const g of B.goldSpots) g.tx = fx(g.tx);
+  A.mirrored = true;
+}
 
 /* postcards across every area: 'must' spots first, then one each of hidden, risky and high, then the rest spread out,
    then a fallback in the main area (as pickGold does for one area) */
@@ -18386,7 +18509,9 @@ TourGens.layered = (ctx, A) => {
   const lx = {}, lgy = {};
   for (const n of names) { lx[n] = 12; lgy[n] = lanes[n]; }
   st.lanes = lanes; st.lx = lx; st.laneY = lgy; st.lane = main;
-  const slab = (x0, x1, gy) => { gy = gy == null ? st.gy : gy; const bd = band[st.lane]; for (let x = x0; x <= x1; x++) for (let y = gy; y <= bd.y1; y++) B.set(x, y, T.GROUND); };
+  // laneTile: { roof: 'HARD' } gives a lane's slab its own tile (rooftops in adobe over a cobbled street)
+  const slabTile = n => (A.laneTile && T[A.laneTile[n]]) || T.GROUND;
+  const slab = (x0, x1, gy) => { gy = gy == null ? st.gy : gy; const bd = band[st.lane], tt = slabTile(st.lane); for (let x = x0; x <= x1; x++) for (let y = gy; y <= bd.y1; y++) B.set(x, y, tt); };
   st.floor = (x0, x1, gy) => slab(x0, x1, gy);
   const use = n => { st.lane = n; st.x = lx[n]; st.gy = lgy[n]; B.band = band[n]; st.sky = n !== names[names.length - 1]; st.gyMin = band[n].y0 + 3; st.gyMax = band[n].y1 - (st.sky ? 1 : 2); };
   const keep = () => { lx[st.lane] = st.x; lgy[st.lane] = st.gy; };
@@ -18421,7 +18546,7 @@ TourGens.layered = (ctx, A) => {
   if (A.autoOpen !== false) {
     const wells = new Set();
     const laneAbove = y => { let best = null; for (const n of names) if (lanes[n] < y - 1 && (best == null || lanes[n] > lanes[best])) best = n; return best; };
-    const open = (x, y) => { const up = laneAbove(y); if (!up) return; for (const yy of [lanes[up], lanes[up] + 1]) if (SOLID[B.get(x, yy)] && B.get(x, yy) !== T.HARD) { B.set(x, yy, T.EMPTY); wells.add(x + ',' + yy); } };
+    const open = (x, y) => { const up = laneAbove(y); if (!up) return; for (const yy of [lanes[up], lanes[up] + 1]) { const t = B.get(x, yy); if (SOLID[t] && (t !== T.HARD || t === slabTile(up))) { B.set(x, yy, T.EMPTY); wells.add(x + ',' + yy); } } };
     for (let y = 0; y < H; y++) for (let x = 0; x < endX; x++) if (B.surf[y * B.W + x] === SURF.BOUNCE) open(x, y);
     for (const sp of B.springs) for (let dx = -1; dx <= 1; dx++) open(sp[0] + dx, sp[1]);
     for (const z of B.zones) if (z.fy < 0) for (let x = Math.floor(z.x / TS); x < Math.ceil((z.x + z.w) / TS); x++) open(x, Math.floor((z.y + z.h) / TS));
@@ -21105,6 +21230,8 @@ const TourPanel = {
         if (fx && fx.t < 1.2) { ctx.save(); ctx.strokeStyle = 'rgba(220,240,255,0.9)'; ctx.lineWidth = 1.5; for (const sh of fx.shards) { const d = sh.v * fx.t, sx = x + 16 + Math.cos(sh.a) * d, sy = y - 2 + Math.sin(sh.a) * d + 40 * fx.t * fx.t; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 4, sy - 3); ctx.lineTo(sx + 2, sy + 3); ctx.closePath(); ctx.stroke(); } ctx.fillStyle = '#fff8d0'; for (let q = 0; q < 5; q++) { ctx.beginPath(); TourKit.star(ctx, x + 16 + Math.sin(q * 2.1 + t * 3) * 14, y - 4 + Math.cos(q * 1.7 + t * 3) * 10, 4, 1.5, 3); ctx.fill(); } ctx.restore(); }
         if (freed || (fx && fx.t > 0.8)) TourPanelFx.postmark(ctx, x - 22, y + 30, C.colors ? C.colors.a : '#ff4f8a');
       }
+      // a secret land whose door was found but is still shut: its ghost pin flickers ("22?")
+      for (const s of this.ghostPins()) TourPanelFx.ghostPin(ctx, this.sx(s.lon), this.sy(s.lat), t, s.world === 22 ? '22?' : String(s.world) + '?');
       // the Postcard Lighthouse (all five bottles)
       if (Object.keys(T.bottles || {}).filter(n => T.bottles[n]).length >= 5) TourPanelFx.lighthouse(ctx, this.sx(LIGHTHOUSE.lon), this.sy(LIGHTHOUSE.lat), t, !!T.lighthouse);
     } else {
@@ -21124,6 +21251,11 @@ const TourPanel = {
       }
       ctx.restore();
     }
+  };
+  // secret lands shown as ghost pins: the door is found (tour.doors) and the land is still shut
+  P.ghostPins = function () {
+    const D = TourProgress.data().doors || {};
+    return TOUR_ROUTE.filter(s => s.secret && D[s.id] && Tour.countries[s.id] && !TourProgress.countryUnlocked(Tour.countries[s.id]));
   };
   // the country whose level has a flight exit to `to`
   P.flightFrom = function (to) {
@@ -21148,6 +21280,11 @@ const TourPanel = {
     const T = TourProgress.data();
     if (!this.reveal && !this.card && Object.keys(T.bottles || {}).filter(n => T.bottles[n]).length >= 5) {
       for (const tp of Input.taps) { if (Math.hypot(tp.x - this.sx(LIGHTHOUSE.lon), tp.y - this.sy(LIGHTHOUSE.lat)) < 26) { if (!T.lighthouse) { T.lighthouse = true; Save.save(); this.toast('THE BEAM IS LIT: ? FLAGS MARK HIDDEN EXITS'); Sound.play('checkpoint'); } else this.toast('THE POSTCARD LIGHTHOUSE'); Input.taps.length = 0; break; } }
+    }
+    // a ghost pin is tapped: what the door wants
+    if (!this.reveal && !this.card) for (const s of this.ghostPins()) {
+      const tp = Input.taps.find(q => Math.hypot(q.x - this.sx(s.lon), q.y - this.sy(s.lat)) < 26);
+      if (tp) { const D = TourProgress.landDoor(s.id), need = (D && D.need) || 22; this.toast(`THIS DOOR WANTS ${need} POSTCARDS (YOU HAVE ${TourProgress.totals().gold})`); Sound.play('bump', { vol: 0.5 }); Input.taps.length = 0; break; }
     }
     return up2.call(this, dt);
   };
@@ -21189,6 +21326,15 @@ const TourPanelFx = {
     ctx.fillStyle = lit ? '#ffe070' : '#8a8aa0'; ctx.fillRect(-3.5, -24, 7, 6); ctx.strokeRect(-3.5, -24, 7, 6);
     ctx.fillStyle = '#ff5a5a'; ctx.beginPath(); ctx.moveTo(-5, -24); ctx.lineTo(0, -29); ctx.lineTo(5, -24); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = 'rgba(10,10,30,0.7)'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center'; rr(ctx, -30, 4, 60, 12, 5); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText('LIGHTHOUSE', 0, 13);
+    ctx.restore();
+  },
+  // a secret land's ghost pin: a flickering outline at 30 % alpha with a question
+  ghostPin(ctx, x, y, t, label) {
+    const a = 0.3 * (0.75 + 0.25 * Math.sin(t * 7) * Math.sin(t * 2.3)) + (Math.sin(t * 13) > 0.97 ? 0.15 : 0), r = TourMap.pinR;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.fillStyle = '#b8a8ff'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    ctx.setLineDash([3, 3]); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#ffffff'; ctx.font = `${Math.round(r * 0.85)}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y + 1);
     ctx.restore();
   },
   crack(ctx, x, y, k) { ctx.save(); ctx.strokeStyle = 'rgba(230,250,255,0.95)'; ctx.lineWidth = 2; for (let q = 0; q < 5; q++) { const a = q / 5 * TAU + 0.4; ctx.beginPath(); ctx.moveTo(x, y); let px = x, py = y; for (let s = 1; s <= 4 * k; s++) { px += Math.cos(a + (s % 2 ? 0.4 : -0.4)) * 7; py += Math.sin(a + (s % 2 ? 0.4 : -0.4)) * 7; ctx.lineTo(px, py); } ctx.stroke(); } ctx.restore(); },
@@ -21691,6 +21837,7 @@ class TourRailTrack extends Ent {
   constructor(g, s) { super(g, s, (s.len || 100) * TS, 8); this.x = 0; this.y = (s.decks.upper - 1) * TS; this.h = (g.area ? 0 : 0) + 12 * TS; this.len = s.len; this.forks = s.forks || []; this.decks = s.decks; this.skinName = s.skin; this.back = true; }
   update(dt) { this.t += dt; }
   draw(ctx) {
+    if (TourObj.skin(ctx, this, this.skinName)) return;   // a country's own track (canals, ropes...)
     const g = this.g, x0 = Math.max(0, Math.floor(g.camX / TS) - 2), x1 = Math.min(this.len, Math.ceil((g.camX + Game.viewW) / TS) + 2), d = this.decks;
     const lay = (tx, row) => {
       const x = tx * TS, y = row * TS;
@@ -23894,10 +24041,25 @@ Tour.pieces.stamp = function (st, o) {
   const P = TourStamp.parse(S);
   const floorRow = o.at == null || o.at === 'ground' ? st.gy : o.at;
   const y0 = floorRow - P.floor, x0 = st.x;
-  // solid ground under the stamp first (unless it sits in the sky), then the stamp over it
-  if (!st.sky && o.under !== false) st.floor(x0, x0 + P.W - 1, floorRow + 1 <= st.B.H - 1 ? floorRow : floorRow);
+  // solid ground under the stamp first (unless it sits in the sky; a layered lane gets its slab), then the stamp over it
+  if ((!st.sky || st.lanes) && o.under !== false) st.floor(x0, x0 + P.W - 1, floorRow + 1 <= st.B.H - 1 ? floorRow : floorRow);
   TourStamp.place(st, S, x0, y0, { first: false });
   return x0 + P.W;
+};
+/* the 'startStamp' piece: the first step of a strip-like area (strip, islands, layered) swaps the generic 12-tile start
+   pad for a stamp, so every level opens on its own scenery: { id }. The stamp's floor row sits on the ground; its '@'
+   is where Brady starts (in the level's first area); the cursor carries on after it. */
+Tour.pieces.startStamp = function (st, o) {
+  const S = TourStamp.get(o.id, st.ctx.C && st.ctx.C.id);
+  if (!S) { if (st.ctx.problems) st.ctx.problems.push(`unknown stamp '${o.id}'`); return st.x; }
+  const B = st.B, P = TourStamp.parse(S), W = P.W, band = B.band, inBand = y => !band || (y >= band.y0 && y <= band.y1 + 1);
+  for (let x = 0; x < W; x++) B.clearCol(x, 0, B.H - 1);
+  // what the generic pad left there: its dressing and the level-1 hidden block
+  B.decor = B.decor.filter(d => !(d.x < W * TS && inBand(Math.round(d.y / TS))));
+  for (const k of Object.keys(B.contents)) { const [x, y] = k.split(',').map(Number); if (x < W && inBand(y)) delete B.contents[k]; }
+  if (o.under !== false) st.floor(0, W - 1);
+  TourStamp.place(st, S, 0, st.gy - P.floor, { first: !st.ctx.areaIndex });
+  return Math.max(st.x, W);
 };
 try { Object.assign(window.BRADY_TOUR, { TourStamp, TourPanel, TourPanelFx, TourLandscape }); } catch (e) { /* not in a browser */ }
 
@@ -27064,6 +27226,51 @@ const iguanaArt = (ctx, e, x, y, m) => {
 };
 // puffers inflate (and get bigger) when Brady swims close
 const PUFFER = { w: 20, h: 20, speed: 0.8, range: 2, chase: false, art: pufferArt };
+// a glass frog: see-through green with its little red heart always faintly showing
+const glassFrogArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  ctx.fillStyle = 'rgba(150,240,170,0.75)'; ctx.beginPath(); ctx.ellipse(0, -8, 11, 8, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(40,120,60,0.9)'; ctx.lineWidth = 1.4; ctx.stroke();
+  ctx.fillStyle = 'rgba(150,240,170,0.75)'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 8, -1, 5, 2.5, 0, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#e83a4a'; ctx.beginPath(); ctx.arc(-1, -8, 2.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(-4, -12, 3, 1.5, -0.4, 0, TAU); ctx.fill();
+  for (const s of [-1, 1]) { ctx.fillStyle = '#fff4c0'; ctx.beginPath(); ctx.arc(4 + s * 4, -15, 3.2, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(5 + s * 4, -15, 1.6, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// a hummingbird: iridescent green and violet, a long beak, wings a blur
+const hummingArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  const f = Math.sin(e.t * 60);
+  ctx.fillStyle = 'rgba(200,255,230,0.45)'; ctx.beginPath(); ctx.ellipse(-2, -6 - f * 2, 9, 4, -0.5, 0, TAU); ctx.fill();
+  const g = ctx.createLinearGradient(-8, -4, 8, 4); g.addColorStop(0, '#2ac88a'); g.addColorStop(1, '#8a4aff');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 8, 5, 0.15, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-6, 1); ctx.lineTo(-13, 5); ctx.lineTo(-10, -1); ctx.fill();
+  ctx.fillStyle = '#ff3a6a'; ctx.beginPath(); ctx.ellipse(4, 2, 3, 2, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#2a2a30'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(7, -1); ctx.lineTo(16, -2); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(5, -2, 1.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(5.4, -2, 0.8, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+// a Sally Lightfoot crab: red-orange with blue spots, scuttles fast sideways
+const crabArt = (ctx, e, x, y, m) => {
+  const sq = m === 'flat' ? 0.4 : 1; ctx.save(); ctx.translate(x, y); ctx.scale(1, sq);
+  const k = Math.sin(e.t * 22);
+  ctx.strokeStyle = '#c83a1a'; ctx.lineWidth = 2; for (const s of [-1, 1]) for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.moveTo(s * 6, -6); ctx.lineTo(s * (11 + q * 2), -2 + (q % 2 ? k : -k) * 2); ctx.lineTo(s * (12 + q * 2), 0); ctx.stroke(); }
+  ctx.fillStyle = '#ff5a2a'; ctx.beginPath(); ctx.ellipse(0, -8, 10, 6, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#3a8aff'; for (const [dx, dy] of [[-4, -10], [3, -9], [-1, -6]]) { ctx.beginPath(); ctx.arc(dx, dy, 1.6, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#ff5a2a'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 11, -11, 4, 3, 0, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#1a1020'; for (const s of [-1, 1]) { ctx.fillRect(s * 3 - 1, -17, 2, 4); ctx.beginPath(); ctx.arc(s * 3, -17, 1.8, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// a white-capped dipper: a little brown river bird with a white throat
+const dipperArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  ctx.fillStyle = '#5a3a2a'; ctx.beginPath(); ctx.ellipse(0, -8, 9, 7, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-7, -9); ctx.lineTo(-12, -14); ctx.lineTo(-8, -6); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(4, -6, 4, 3, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(2, -15, 3, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#e8902a'; ctx.beginPath(); ctx.moveTo(7, -11); ctx.lineTo(11, -10); ctx.lineTo(7, -9); ctx.fill();
+  ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(5, -12, 1.2, 0, TAU); ctx.fill();
+  ctx.restore();
+};
 class EcPuffer extends TourSwimmer {
   constructor(g, s) { super(g, s, PUFFER); this.puff = 0; }
   update(dt) {
@@ -27104,6 +27311,13 @@ const enemies = {
   } }), place: 'walk' },
   ecCondor: { cls: TourFlyer.make({ w: 34, h: 16, range: 4, speed: 0.6, swoop: true, art: condorArt, burst: '#1a1a22' }), place: 'fly' },
   ecFrog: { cls: TourEnemy.make({ w: 18, h: 16, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.4, art: frogArt, glow: 'rgba(120,255,200,', burst: '#2ae88a' }), place: 'walk' },
+  // the headline enemy: a marine iguana that sneezes salt; the puff sets into a stepping stone (the fast upper route)
+  ecIguanaSalt: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.5, behavior: 'saltSneezer', every: 3, platT: 5, art: iguanaArt, burst: '#3a3a44' }), place: 'walk' },
+  ecGlassFrog: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 0, behavior: 'camouflage', revealEvery: 2.4, art: glassFrogArt, burst: '#96f0aa' }), place: 'walk' },
+  ecHummingbird: { cls: TourFlyer.make({ w: 22, h: 12, speed: 1, behavior: 'hoverDart', range: 7, art: hummingArt, burst: '#2ac88a' }), place: 'fly' },
+  ecCrab: { cls: TourEnemy.make({ w: 24, h: 14, inkPad: 6, speed: 2.6, behavior: 'walk', art: crabArt, burst: '#ff5a2a' }), place: 'walk' },
+  ecDipper: { cls: TourEnemy.make({ w: 20, h: 18, inkPad: 6, speed: 0.6, behavior: 'ceilingDrop', tell: 0.5, stuckT: 1.6, art: dipperArt, burst: '#5a3a2a' }), place: 'here' },
+  ecSeaLionLand: { cls: TourEnemy.make({ w: 36, h: 16, speed: 0.6, behavior: 'charge', range: 7, chargeSpeed: 7.5, windup: 0.5, art: seaLionArt, burst: '#8a7a6a' }), place: 'walk' },
   ecIguana: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.4, behavior: 'throw', every: 2.2, range: 7, pace: true, art: iguanaArt, burst: '#3a3a44', shoot: (e) => {
     for (let k = -1; k <= 1; k++) tourFire(e.g, e.cx + e.dir * 16, e.y + 4, { kind: 'salt', vx: e.dir * (2.4 + k * 0.6) * TS, vy: (-2.6 + k) * TS, grav: PHYS.gDown * 0.12, w: 8, h: 8, life: 2.2, col: '#ffffff', art: salt });
     K.say(e.g, e, 'ACHOO!', '#ffffff'); Sound.play('throw', { pitch: 2, vol: 0.3 });
@@ -27173,6 +27387,8 @@ class EcBooby extends TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: '
   }
 }
 const entities = { ecBooby: EcBooby, ecIcicle: EcIcicle, ecSurge: EcSurge };
+// the booby minding La Tienda del Cacao (the Souvenir Stand), behind the counter
+decor.ecKeeperBooby = (ctx, x, y, t) => { ctx.save(); ctx.translate(0, -20); boobyArt(ctx, { t, dir: -1, given: true }, x, y, 'idle', t); ctx.restore(); };
 
 /* ---------------- the signature power-up: BOOBY BOOTS ---------------- */
 // bright blue boots (like a blue-footed booby's feet): super-bouncy jumps; a big landing sends out a shockwave
@@ -27433,10 +27649,13 @@ const P = {
   // the boss cave: three volcano vents in the floor, the lever that pops them, two ledges, and the
   // equator's low-gravity bubbles over each half (switched on in phase 2; the validator ignores pulsing zones)
   arena_vents(st, o) {
-    const B = st.B, { x0, w, GY } = o;
-    for (let q = 0; q < 3; q++) { B.set(x0 + 5 + q, GY - 4, T.SEMI); B.set(x0 + w - 8 + q, GY - 4, T.SEMI); }
-    [x0 + 3, x0 + 11, x0 + 19].forEach((vx, i) => B.spawn('ecVent', vx + 0.5, GY - 1, { idx: i }));
-    B.spawn('ecLever', x0 + 15, GY - 1, {});
+    const B = st.B, { x0, w, GY } = o, bowl = w >= 30;
+    // the crater bowl (wide arenas): the floor steps up two tiles at both rims; a postcard over the left rim
+    if (bowl) { B.fill(x0, GY - 2, x0 + 2, GY - 1, T.GROUND); B.fill(x0 + w - 3, GY - 2, x0 + w - 1, GY - 1, T.GROUND); st.gold(x0 + 1, GY - 6, 'risky'); }
+    const off = bowl ? 2 : 0;
+    for (let q = 0; q < 3; q++) { B.set(x0 + 5 + off + q, GY - 4, T.SEMI); B.set(x0 + w - 8 - off + q, GY - 4, T.SEMI); }
+    [x0 + 3 + off, x0 + 11 + off, x0 + 19 + off].forEach((vx, i) => B.spawn('ecVent', vx + 0.5, GY - 1, { idx: i }));
+    B.spawn('ecLever', x0 + 15 + off, GY - 1, {});
     const zh = Math.min(10, GY - 2);
     B.zone(x0 + 1, GY - zh, 11, zh, 0, -58 * TS, 0, 'lowgrav', { pulse: true, off: true, ecTag: 'L' });
     B.zone(x0 + w - 12, GY - zh, 11, zh, 0, -58 * TS, 0, 'lowgrav', { pulse: true, off: true, ecTag: 'R' });
@@ -27759,49 +27978,31 @@ Tour.country({
     ctx.strokeStyle = '#c8901a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, -4, 4, 0, TAU); ctx.stroke();
     ctx.restore();
   } },
-  levels: [
-    { name: 'Middle of the World', style: 'run', theme: 'ec_equator', gimmick: 'The equator line\'s low-gravity bubbles, banana-leaf platforms and rolling cacao pods; a booby lends its blue boots',
-      enemies: [['ecBanana', 3], ['ecCacao', 2], ['ecAlpaca', 1]],
-      hint: 'On the equator line every jump floats. The blue boots bounce extra high!',
-      postcard: 'Standing on the equator! Half of me is in the north, half in the south, all of me misses you. ♥ C',
-      script: ['booby', ['flat', { n: 4 }], ['equator', { gold: true }], 'bananas', 'gap', 'cacao', 'cp', 'terraces', ['equator', { w: 10 }], ['enemies', { n: 2 }], 'bonus', ['bananas', { n: 2 }], 'end'] },
-    { name: 'Cable Car Climb', style: 'ride', theme: 'ec_andes', gimmick: 'Ride an open gondola up the Andes: duck the tower arms, hop the snowy ridges, dodge swooping condors',
-      enemies: [['ecCondor', 1]], vehicle: 'ecGondola', vehicleW: 6, deck: 10, below: 'none', scroll: 2.4, len: 170,
-      hint: 'Tower arms come at head height: duck (or hop) them!',
-      postcard: 'The Baron\'s blimp is heading for the jungle. Bring bug spray. ♥ C',
-      script: ['tower', 'condors', 'ridge', ['catwalk', { gold: true }], 'tower', 'condors', ['ridge', { w: 2 }], 'tower', 'catwalk', 'condors', 'tower', 'ridge', ['catwalk', { gold: true }], 'tower', 'condors', ['ridge', { w: 2 }]] },
-    { name: 'Amazon Canopy', style: 'night', theme: 'ec_amazon', gimmick: 'Swing on vines across the dark canopy and hop sinking giant lily pads, lit by glowing frogs and mushrooms',
-      enemies: [['ecFrog', 3]], dark: true,
-      hint: 'Ride the swinging vines across the gaps',
-      postcard: 'The jungle at night GLOWS. A frog winked at me. I think. ♥ C',
-      script: [['glow', { n: 8 }], 'vines', ['branches', { gold: true }], ['glow', { n: 7, frogs: true }], 'lilies', ['vines', { n: 2, gold: true }], 'cp', ['glow', { n: 6 }], 'branches', ['lilies', { n: 4 }], ['vines', { n: 2 }], 'oneup', ['glow', { n: 8, frogs: true }], 'end'] },
-    { name: 'Galápagos Snorkel', style: 'swim', theme: 'ec_galapagos', gimmick: 'Snorkel a sunlit sea: lava-rock arches, puffers that puff up, penguins in a current and a tidal surge',
-      enemies: [['ecSeaLion', 1]], H: 18, width: 240,
-      hint: 'Tap jump to swim. Puffers puff up when you get close!',
-      postcard: 'A sea lion stole my sunglasses and gave them back. Islands are magic. ♥ C',
-      script: ['surface', ['arches', { gold: true }], 'puffers', ['penguins', { w: 12 }], 'iguanas', 'surge', 'grotto', 'arches', 'puffers', 'surge', ['penguins', { w: 10, dir: -1 }], 'iguanas', 'arches'] },
-    { name: 'Ice Fort of Cotopaxi', style: 'castle', theme: 'ec_cotopaxi', gimmick: 'Slippery ice, dropping icicles and sinking ice floes, then El Tortugón',
-      enemies: [['ecAlpaca', 1], ['ecIceCube', 3]], boss: 'ec_tortoise', arena: 'vents', arenaW: 26, roof: false,
-      hint: 'Stomp the lever to pop a vent under El Tortugón: flipped on his back, his belly is open!',
-      postcard: 'The Equator monument is back where it belongs! The Baron flew to Brazil. Samba time! ♥ C',
-      script: [['ice', { n: 12 }], 'floes', ['enemies', { n: 2 }], 'cp', ['ice', { n: 14 }], ['pillars', { n: 3 }], ['blocks', { content: 'power' }], 'arena'] }
-  ]
+  // the levels (v2 format) are in 29_tour_ec_levels.js
+  levels: []
 });
 })();
 
 /* ---- 29_tour_ec_levels.js ---- */
 /* ============================================================
-   Ecuador: levels in the v2 format (LEVEL_OVERHAUL.md §7.5.2).
-   Loads after 29_tour_ec.js and amends the registered country with
-   Tour.amend: new stamps, country looks for library objects, and
-   the levels rewritten so far (2-2 "Canopy of Baños"). The country
-   file itself stays as it is, so the art branch can keep working on
-   it; when Ecuador is rewritten this moves into 29_tour_ec.js.
+   ECUADOR AND THE GALÁPAGOS: the levels in the v2 format
+   (LEVEL_OVERHAUL.md §2, world 2). Loads after 29_tour_ec.js and
+   amends the registered country: new themes, stamps, country looks
+   for library objects, pieces, the Souvenir Stand and the seven levels.
+   2-1 Hemisphere Hop      FLIP     the yellow line flips gravity; walk the ceiling over the spikes
+   2-2 Canopy of Baños     SWING    vine to vine, the swing at the end of the world, a rainbow in the mist
+   2-3 Booby Dash          RACE     race a blue-footed booby; iguanas sneeze salt into stepping stones
+   2-4 Cacao Works         FACTORY  belts, roasting presses, chocolate vats; the hard hat breaks the foil
+   2-5 Cotopaxi Crater     LAIR     the cable car up the volcano, then El Tortugón's crater bowl
+   2-6 Galápagos Snorkel   DIVE     (secret) penguins, the surge, puffers; Bottle Mail #1
+   2-7 Devil's Cauldron    TIDE     (secret) the plunge pool rises and falls; a secret flight to Morocco
    ============================================================ */
 (() => {
 const C = Tour.countries.ec;
 if (!C) return;
-// 2-2's dusk relight of the Amazon canopy (a Blender variant comes later; this is the procedural look)
+const K = TourKit, INK = '#22202a', WOVEN = ['#e8323a', '#ffd23a', '#2a8ad8', '#5ab84a', '#ff7a2a'];
+
+/* ---------------- themes (procedural until their Blender scenes exist) ---------------- */
 if (THEMES.ec_amazon && !THEMES.ec_amazon_dusk) {
   THEMES.ec_amazon_dusk = Object.assign({}, THEMES.ec_amazon, {
     name: 'Canopy of Baños', particles: 'fireflies',
@@ -27811,6 +28012,307 @@ if (THEMES.ec_amazon && !THEMES.ec_amazon_dusk) {
     fog: '#ff9a7a', darkness: 0.18
   });
 }
+// 2-3's lava coast: black lava rock, a hot blue sea, a sun-bleached sky
+if (THEMES.ec_galapagos && !THEMES.ec_islas) {
+  THEMES.ec_islas = Object.assign({}, THEMES.ec_equator || THEMES.ec_galapagos, {
+    name: 'Booby Dash', particles: 'sparkle', underwater: false,
+    sky: ['#3ab8f0', '#9ae4ff', '#fff4d8'], horizonGlow: '#fff0c0',
+    celestial: { type: 'sun', x: 0.7, y: 0.16, r: 34, color: '#fffbe8', glow: '#ffe08a' }, stars: 0, cloudsDyn: true,
+    layers: [{ kind: 'ecIslands', color: '#5a5a66', base: 330, f: 0.05 }, { kind: 'ecSea', color: '#2a8ad8', base: 370, f: 0.15 }],
+    fog: '#bfefff', darkness: 0,
+    ground: { style: 'basalt', cap: '#3a3a44', capHi: '#7a7a88', dirt: '#2a2a32', dirt2: '#16161c', rock: '#4a4a56' },
+    hard: { c1: '#4a4a56', c2: '#22222a' }, semi: { style: 'log', c1: '#8a7a6a', c2: '#5a4a3a' }, liquid: 'lava', decor: ['ecCactusI', 'ecRockPool']
+  });
+}
+// 2-4's cacao works: brick walls, copper pipes, warm light
+if (!THEMES.ec_fabrica && THEMES.ec_equator) {
+  THEMES.ec_fabrica = Object.assign({}, THEMES.ec_equator, {
+    name: 'Cacao Works', particles: 'dust',
+    sky: ['#3a2418', '#6a3a24', '#a8643a'], horizonGlow: '#ffb070', celestial: { type: 'none' }, stars: 0, cloudsDyn: false,
+    layers: [{ kind: 'ecFactoryWall', color: '#7a4a32', base: 420, f: 0.12 }],
+    fog: '#8a5a3a', darkness: 0.12,
+    ground: { style: 'basalt', cap: '#8a6a52', capHi: '#c8a07a', dirt: '#5a3a28', dirt2: '#3a2418', rock: '#6a4a36' },
+    hard: { c1: '#9a6a4a', c2: '#5a3a28' }, semi: { style: 'wood', c1: '#8a6a52', c2: '#5a3a28' }, liquid: 'choc', decor: ['ecSack', 'ecPipe']
+  });
+}
+// 2-7's waterfall gorge: deep green walls, mist, a white torrent
+if (!THEMES.ec_pailon && THEMES.ec_amazon) {
+  THEMES.ec_pailon = Object.assign({}, THEMES.ec_amazon, {
+    name: "Devil's Cauldron", particles: 'mist',
+    sky: ['#cfeff0', '#7ab8a8', '#2a5a4a'], horizonGlow: '#e8fff8', celestial: { type: 'none' }, stars: 0, darkness: 0.08,
+    layers: [{ kind: 'ecGorge', color: '#2a5a3a', base: 0, f: 0.06 }, { kind: 'ecCanopy', color: '#1e3a2a', base: 380, f: 0.25 }],
+    fog: '#d8fff0', liquid: 'canal'
+  });
+}
+if (typeof LIQUIDS !== 'undefined' && !LIQUIDS.choc) LIQUIDS.choc = ['#a8643a', '#6a3418', '#3a1a0a', 'rgba(255,200,150,0.2)', null, 'rgba(255,230,200,0.5)'];
+Object.assign(BGPaint, {
+  // dark volcanic islands on the horizon
+  ecIslands(ctx, L, rng, H) {
+    for (let x = 0; x < BG_W; x += 180 + rng() * 120) { const w = 120 + rng() * 140, h = 30 + rng() * 60; ctx.fillStyle = shade(L.color, (rng() - 0.5) * 0.2); ctx.beginPath(); ctx.moveTo(x, L.base); ctx.quadraticCurveTo(x + w * 0.4, L.base - h, x + w * 0.55, L.base - h * 0.9); ctx.quadraticCurveTo(x + w * 0.8, L.base - h * 0.4, x + w, L.base); ctx.fill(); }
+  },
+  // the open sea with glints
+  ecSea(ctx, L, rng, H) {
+    ctx.fillStyle = vgrad(ctx, L.base, H, L.color, shade(L.color, -0.35)); ctx.fillRect(0, L.base, BG_W, H - L.base);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; for (let i = 0; i < 50; i++) ctx.fillRect(rng() * BG_W, L.base + 4 + rng() * 60, 6 + rng() * 14, 1.5);
+  },
+  // the cacao works' back wall: brick, big copper pipes, roasting drums and a sign
+  ecFactoryWall(ctx, L, rng, H) {
+    ctx.fillStyle = vgrad(ctx, 0, H, shade(L.color, -0.2), shade(L.color, -0.55)); ctx.fillRect(0, 0, BG_W, H);
+    for (let y = 0; y < H; y += 16) for (let x = (y / 16) % 2 ? -16 : 0; x < BG_W; x += 32) { ctx.fillStyle = rgba(shade(L.color, (rng() - 0.5) * 0.25), 0.5); ctx.fillRect(x + 1, y + 1, 30, 14); }
+    for (let x = 40; x < BG_W; x += 256) {
+      ctx.fillStyle = '#c87a3a'; ctx.fillRect(x, 0, 18, L.base - 90); ctx.fillRect(x, L.base - 108, 120, 18); ctx.fillStyle = 'rgba(255,220,170,0.35)'; ctx.fillRect(x + 3, 0, 4, L.base - 90);
+      ctx.fillStyle = '#5a3a2a'; rr(ctx, x + 130, L.base - 170, 90, 90, 12); ctx.fill(); ctx.fillStyle = '#8a5a3a'; ctx.beginPath(); ctx.arc(x + 175, L.base - 125, 30, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a2418'; ctx.beginPath(); ctx.arc(x + 175, L.base - 125, 22, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffd23a'; ctx.font = `bold 14px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('CACAO', x + 175, L.base - 185);
+    }
+  },
+  // the gorge: tall mossy rock walls either side of a white torrent far away
+  ecGorge(ctx, L, rng, H) {
+    ctx.fillStyle = vgrad(ctx, 0, H, shade(L.color, 0.2), shade(L.color, -0.4)); ctx.fillRect(0, 0, BG_W, H);
+    for (let x = 0; x < BG_W; x += 60 + rng() * 60) { ctx.fillStyle = rgba(shade(L.color, (rng() - 0.5) * 0.3), 0.7); ctx.fillRect(x, 0, 30 + rng() * 40, H); }
+    for (let x = 100; x < BG_W; x += 340) { const g = ctx.createLinearGradient(x, 0, x + 50, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(240,255,255,0.75)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(x, 0, 50, H); }
+  }
+});
+
+/* ---------------- decor ---------------- */
+Object.assign(Decor, {
+  ecCactusI(ctx, x, y) { ctx.fillStyle = '#5a8a4a'; rr(ctx, x - 5, y - 40, 10, 40, 5); ctx.fill(); rr(ctx, x - 14, y - 30, 7, 16, 3.5); ctx.fill(); rr(ctx, x + 7, y - 26, 7, 14, 3.5); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(x, y - 41, 3, 0, TAU); ctx.fill(); },
+  ecRockPool(ctx, x, y, t) { ctx.fillStyle = '#2a2a32'; ctx.beginPath(); ctx.ellipse(x, y - 3, 18, 5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#3ab8d8'; ctx.beginPath(); ctx.ellipse(x, y - 3, 13, 3, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(x - 6 + Math.sin(t * 2) * 3, y - 4, 5, 1); },
+  ecSack(ctx, x, y) { ctx.fillStyle = '#c8a070'; ctx.beginPath(); ctx.moveTo(x - 12, y); ctx.quadraticCurveTo(x - 14, y - 18, x - 6, y - 24); ctx.lineTo(x + 6, y - 24); ctx.quadraticCurveTo(x + 14, y - 18, x + 12, y); ctx.fill(); ctx.fillStyle = '#6a3418'; ctx.font = `bold 6px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.fillText('CACAO', x, y - 9); },
+  ecPipe(ctx, x, y) { ctx.fillStyle = '#c87a3a'; ctx.fillRect(x - 4, y - 60, 8, 60); ctx.fillRect(x - 8, y - 64, 16, 6); ctx.fillStyle = 'rgba(255,230,190,0.4)'; ctx.fillRect(x - 3, y - 58, 2, 56); },
+  // the equator monument (a civic monument: a tall stone obelisk with a globe), far behind the start
+  ecMonument(ctx, x, y) {
+    ctx.fillStyle = '#d8c8a8'; ctx.beginPath(); ctx.moveTo(x - 30, y); ctx.lineTo(x - 18, y - 150); ctx.lineTo(x + 18, y - 150); ctx.lineTo(x + 30, y); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#c8a040'; ctx.beginPath(); ctx.arc(x, y - 172, 22, 0, TAU); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#8a6a20'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x, y - 172, 22, 8, 0, 0, TAU); ctx.moveTo(x, y - 194); ctx.lineTo(x, y - 150); ctx.stroke();
+    ctx.fillStyle = '#e8323a'; ctx.fillRect(x - 60, y - 6, 120, 3); ctx.fillStyle = '#ffd23a'; ctx.fillRect(x - 60, y - 3, 120, 3);
+  },
+  // a chocolate bar sign over the factory exit
+  ecExitSign(ctx, x, y, t) {
+    ctx.fillStyle = '#5a2a14'; rr(ctx, x - 50, y - 150, 100, 34, 6); ctx.fill(); ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2; ctx.stroke();
+    for (let k = 0; k < 4; k++) { ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.moveTo(x - 50 + k * 25, y - 150); ctx.lineTo(x - 50 + k * 25, y - 116); ctx.stroke(); }
+    ctx.fillStyle = '#ffd23a'; ctx.font = `bold 12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('SALIDA', x, y - 128);
+  },
+  // the hangar on the airstrip over the gorge (2-7's hidden flight)
+  ecHangar(ctx, x, y, t) {
+    ctx.fillStyle = '#8a9aa8'; ctx.beginPath(); ctx.moveTo(x - 90, y); ctx.lineTo(x - 90, y - 70); ctx.quadraticCurveTo(x, y - 130, x + 90, y - 70); ctx.lineTo(x + 90, y); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#3a4a5a'; ctx.fillRect(x - 50, y - 64, 100, 64);
+    // the little plane waiting outside
+    ctx.save(); ctx.translate(x + 40, y - 14);
+    ctx.fillStyle = '#fff4e0'; ctx.beginPath(); ctx.ellipse(0, 0, 34, 9, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e8323a'; ctx.fillRect(-6, -4, 12, 30); ctx.fillRect(-30, -12, 8, 12);
+    ctx.fillStyle = '#5a5a6a'; ctx.save(); ctx.translate(34, 0); ctx.rotate(t * 20); ctx.fillRect(-1.5, -14, 3, 28); ctx.restore();
+    ctx.restore();
+    ctx.fillStyle = '#ffd23a'; ctx.font = `bold 9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('VUELOS', x, y - 78);
+  }
+});
+
+/* ---------------- entities ---------------- */
+// a roasting press: it slams down on its rhythm (a hiss and a shake 0.5 s before), then lifts; under it while it slams
+// hurts. Between slams its plate is a platform. { period, phase, drop (tiles) }
+class EcPress extends Ent {
+  constructor(g, s) { super(g, s, 3 * TS, TS); this.x = s.x - 1.5 * TS; this.top = s.y - (s.drop || 4) * TS - TS; this.bottom = s.y - TS; this.y = this.top; this.period = s.period || 2.4; this.ph = s.phase || 0; this.isPlatform = true; this.dx = 0; this.dy = 0; }
+  update(dt) {
+    this.t += dt; const u = ((this.t + this.ph) % this.period) / this.period, oy = this.y;
+    // up, the tell (0.5 s shake), a fast slam, a pause on the floor, a slow lift
+    const tellU = 1 - 0.5 / this.period;
+    this.warn = u > tellU - 0.25 && u < tellU;
+    if (u < 0.2) this.y = this.top; else if (u < tellU - 0.25) this.y = this.top; else if (u < tellU) this.y = this.top + Math.sin(this.t * 60) * 1.5; else this.y = lerp(this.top, this.bottom, Math.min(1, (u - tellU) / 0.06));
+    if (u >= 0 && u < 0.2) this.y = lerp(this.bottom, this.top, u / 0.2);
+    this.dy = this.y - oy;
+    if (this.warn && !this.told && this.g.onScreen(this)) { this.told = true; K.sfx('hiss', 'select', { vol: 0.35, pitch: 0.6 }); }
+    if (!this.warn) this.told = false;
+    const p = this.g.player, slamming = this.dy > 2;
+    if (slamming && p && !p.dead && overlap(p, { x: this.x + 4, y: this.y + TS, w: this.w - 8, h: this.bottom - this.y })) p.hurt(this);
+    if (Math.abs(this.y - this.bottom) < 1 && oy < this.bottom - 1 && this.g.onScreen(this)) { this.g.shake(2); this.g.burst(this.cx, this.bottom + TS, 8, '#c8a07a', 'dust'); K.sfx('stomp', 'stomp', { vol: 0.4, pitch: 0.6 }); }
+  }
+  draw(ctx) {
+    const x = this.x, y = this.y, w = this.w;
+    ctx.fillStyle = '#5a5a66'; ctx.fillRect(this.cx - 5, this.top - 4 * TS, 10, y - this.top + 4 * TS);
+    ctx.fillStyle = this.warn ? '#ff8a3a' : '#8a5a3a'; rr(ctx, x, y, w, TS, 5); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#ffd23a'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.moveTo(x + 6 + k * 18, y + TS); ctx.lineTo(x + 14 + k * 18, y + TS); ctx.lineTo(x + 10 + k * 18, y + TS - 6); ctx.fill(); }
+    if (this.warn) for (let k = 0; k < 3; k++) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(x + 10 + k * 36, y - 6 - ((this.t * 40 + k * 7) % 14), 4, 0, TAU); ctx.fill(); }
+  }
+}
+// a reverse lever: THROW (or a hit) flips the direction of every belt between x0 and x1
+class EcBeltLever extends Ent {
+  constructor(g, s) { super(g, s, 22, 40); this.y = s.y - 40; this.x0 = s.x0; this.x1 = s.x1; this.rows = s.rows; this.k = 0; this.cool = 0; this.lever = true; }
+  update(dt) { this.t += dt; if (this.cool > 0) this.cool -= dt; this.k = approach(this.k, this.on ? 1 : 0, dt * 6); }
+  touchPlayer(p) { if (this.cool > 0 || p.dead) return; if (Input.actionPressed || Input.upPressed) this.flip(); else if (!this.told) { this.told = true; this.g.parts.text(this.cx, this.y - 10, 'THROW: REVERSE THE BELTS', '#ffd84a'); } }
+  hit(kind) { if (kind === 'plane' || kind === 'taco' || kind === 'prop') { this.flip(); return true; } return false; }
+  flip() {
+    this.on = !this.on; this.cool = 0.4; K.sfx('lever', 'select', { vol: 0.7 }); const A = this.g.area;
+    for (const y of this.rows) for (let x = this.x0; x <= this.x1; x++) { const t = A.tiles[y * A.W + x]; if (t === T.CONV_L) this.g.setTile(x, y, T.CONV_R); else if (t === T.CONV_R) this.g.setTile(x, y, T.CONV_L); }
+    this.g.burst(this.cx, this.y, 8, '#ffd84a', 'spark');
+  }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h;
+    ctx.fillStyle = '#5a5a66'; rr(ctx, x - 9, y - 14, 18, 14, 3); ctx.fill();
+    ctx.save(); ctx.translate(x, y - 12); ctx.rotate(-0.8 + this.k * 1.6); ctx.fillStyle = '#c8902a'; rr(ctx, -2, -26, 4, 26, 2); ctx.fill(); ctx.fillStyle = '#e8323a'; ctx.beginPath(); ctx.arc(0, -27, 5, 0, TAU); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#ffd23a'; ctx.font = `bold 8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(this.on ? '◀◀' : '▶▶', x, y - 46);
+  }
+}
+Object.assign(ENTITY_TYPES, { ecPress: EcPress, ecBeltLever: EcBeltLever });
+
+/* ---------------- pieces ---------------- */
+const P = {
+  // a sign post with a tip: { text, n }
+  tip(st, o) { const x = st.x, n = o.n || 3; st.floor(x, x + n - 1); st.sign(x + Math.floor(n / 2), o.text || ''); return x + n; },
+  // 2-1: a high terrace right after a flip band, only reachable by dropping off the ceiling; a cracked wall on it
+  //      hides the chocolate shop: { to, back }
+  ceilingDrop(st, o) {
+    const B = st.B, x = st.x, y = o.y || 5;
+    st.floor(x, x + 10);
+    B.fill(x - (o.reach || 6), y, x + 8, y, T.GROUND); B.fill(x + 9, y - 3, x + 9, y, T.HARD); B.fill(x + 9, y - 2, x + 9, y - 1, T.FAKE);
+    B.spawn('tourDraft', x + 9, y - 1, { look: 'fake' });
+    B.spawn('portal', x + 10, y - 1, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
+    B.fill(x + 10, y, x + 11, y, T.GROUND);
+    if (o.back) B.anchor(o.back, x + 4, y - 1);
+    if (o.item) st.block(x + 2, y - 4, o.item);
+    st.coins(x + 4, x + 7, y - 2);
+    return x + 12;
+  },
+  // 2-1: a flip band over a pit: flip in mid air, cross on the ceiling, drop back down at the far side
+  flipGap(st, o) {
+    const B = st.B, x = st.x, w = o.w || 12;
+    st.floor(x, x + 2);
+    st.pit(x + 3, x + w + 2);
+    B.zone(x + 2, 0, w + 2, B.H, 0, 0, 0, 'flip');
+    B.spawn('flipLine', x + 2, B.H - 1, { w: w + 2, h: B.H, look: null });
+    if (o.gold) st.gold(x + 3 + Math.floor(w / 2), 6, o.gold);
+    st.coins(x + 4, x + w, 3);
+    st.floor(x + w + 3, x + w + 6);
+    return x + w + 7;
+  },
+  // a high block (L, S...) on a terrace: { item }
+  highBlock(st, o) { const x = st.x; st.floor(x, x + 6); st.B.fill(x + 1, st.gy - 3, x + 5, st.gy - 1, T.HARD); st.block(x + 3, st.gy - 8, o.item || 'lsd'); st.coins(x + 1, x + 5, st.gy - 5); return x + 7; },
+  // 2-3: a lava-rock stretch with a bubbling pool; press DOWN in the pool to slip into the lava tube: { to, back }
+  bubblePool(st, o) {
+    const B = st.B, x = st.x; st.floor(x, x + 8);
+    for (let q = 2; q <= 5; q++) B.set(x + q, st.gy, T.WATER);
+    B.decorAt('ecPoolRim', x + 4, st.gy, 0);
+    B.spawn('mxBubbleCrack', x + 4, st.gy, {});
+    B.spawn('portal', x + 4, st.gy, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
+    if (o.back) B.anchor(o.back, x + 7, st.gy - 1);
+    return x + 9;
+  },
+  // 2-3: an upper route of lava arches (the fast way): { n, gold }
+  archRoute(st, o) {
+    const B = st.B, x = st.x, n = o.n || 3; st.floor(x, x + n * 6 + 1);
+    for (let k = 0; k < n; k++) { const ax = x + 1 + k * 6, ay = st.gy - 3 - (k % 2) * 2; for (let q = 0; q < 4; q++) B.set(ax + q, ay, T.SEMI); B.prop('ecLavaArch', ax, ay, 4, st.gy - ay, 'none', {}); st.coins(ax, ax + 3, ay - 2); }
+    if (o.gold) st.gold(x + 3, st.gy - 7, o.gold);
+    if (o.item) st.block(x + 9, st.gy - 9, o.item);
+    return x + n * 6 + 2;
+  },
+  // 2-3: the sea-lion beach: tide pools to hop, sea lions belly-sliding across
+  beach(st, o) {
+    const B = st.B, x = st.x, n = o.n || 3; st.floor(x, x + n * 6 + 1);
+    for (let k = 0; k < n; k++) { const px = x + 2 + k * 6; for (let q = 0; q < 2; q++) B.set(px + q, st.gy, T.WATER); B.decorAt('ecRockPool', px + 1, st.gy, k); }
+    st.enemy('ecSeaLionLand', x + n * 6 - 2, st.gy);
+    st.enemy('ecCrab', x + 4, st.gy);
+    st.coins(x + 1, x + n * 6, st.gy - 3);
+    return x + n * 6 + 2;
+  },
+  // a finish: a stamp-like goal with its own look: { look, exit }
+  finish(st, o) {
+    const B = st.B, x = st.x; st.floor(x, x + 12);
+    if (o.look) B.decorAt(o.look, x + 6, st.gy, 0);
+    B.fill(x + 3, st.gy - 1, x + 9, st.gy - 1, T.SEMI);
+    B.spawn('gate', x + 8, st.gy - 2, { exit: o.exit || 'main' });
+    return x + 13;
+  },
+  // 2-4: a long belt run with a roasting press (and a reverse lever before it): { n, dir, presses, lever }
+  pressLine(st, o) {
+    const B = st.B, x = st.x, n = o.n || 14, dir = o.dir || 1;
+    st.floor(x, x + n + 3);
+    for (let q = 2; q <= n + 1; q++) B.set(x + q, st.gy, dir > 0 ? T.CONV_R : T.CONV_L);
+    const ps = o.presses || 1;
+    for (let k = 0; k < ps; k++) B.spawn('ecPress', x + 4 + Math.floor((k + 0.5) * (n - 4) / ps), st.gy - 1, { period: o.period || 2.6, phase: k * 1.1, drop: 4 });
+    if (o.lever) B.spawn('ecBeltLever', x + 1, st.gy - 1, { x0: x + 2, x1: x + n + 1, rows: [st.gy] });
+    st.coins(x + 3, x + n, st.gy - 2);
+    return x + n + 4;
+  },
+  // 2-4: a chocolate vat: a pit of hot chocolate with belts over it: { n, belts }
+  vat(st, o) {
+    const B = st.B, x = st.x, n = o.n || 8;
+    st.floor(x, x + 1); st.pit(x + 2, x + n + 1);
+    B.fill(x + 2, st.gy + 1, x + n + 1, st.H - 1, T.LAVA);
+    const by = st.gy - 3;
+    for (let q = 0; q < n; q++) B.set(x + 2 + q, by, q % 6 < 4 ? ((o.dir || 1) > 0 ? T.CONV_R : T.CONV_L) : T.EMPTY);
+    for (let q = 0; q < n; q += 6) B.set(x + 2 + q, by, T.HARD);
+    st.coins(x + 3, x + n, by - 2);
+    st.floor(x + n + 2, x + n + 4);
+    return x + n + 5;
+  },
+  // 2-4: the catwalk overhead (row 8): one-way planks with goodies: { n }
+  catwalk8(st, o) { const x = st.x, n = o.n || 12, y = o.y || 8; st.floor(x, x + n); for (let q = 0; q < n; q++) st.B.set(x + q, y, T.SEMI); st.coins(x + 1, x + n - 2, y - 2); if (o.gold) st.gold(x + Math.floor(n / 2), y - 3, o.gold); if (o.item) st.block(x + 3, y - 4, o.item, o.hidden ? T.HIDDEN : null); st.spawn('spring', x, st.gy - 1, {}); st.B.springs.push([x, st.gy - 1]); for (let q = 0; q < n; q += 4) st.B.decorAt('ecPipe', x + q + 1, st.gy, q); return x + n + 1; },
+  // 2-4: the foil crate stack (the hard hat breaks it), a vent behind it up to the wrapping room: { to, back }
+  foilStack(st, o) {
+    const B = st.B, x = st.x;
+    const nx = Tour.pieces.breakwall(st, { needs: 'hat', h: 4, skin: 'ecFoil' });
+    st.x = nx; st.floor(nx, nx + 5);
+    B.decorAt('ecVentGrate', nx + 2, st.gy, 0);
+    B.spawn('portal', nx + 2, st.gy - 1, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
+    if (o.back) B.anchor(o.back, nx + 4, st.gy - 1);
+    return nx + 6;
+  },
+  // 2-7: a hanging bridge (planks) over the plunge pool: { n, dippers }
+  hangBridge(st, o) {
+    const B = st.B, x = st.x, n = o.n || 10, y = st.gy - (o.dy || 4);
+    st.floor(x, x + 1); st.pit(x + 2, x + n + 1);
+    for (let q = 0; q < n; q++) B.set(x + 2 + q, y, T.SEMI);
+    B.prop('ecRopeBridge', x + 2, y, n, 1, 'none', {});
+    if (o.dippers) st.spawn('ecDipper', x + 2 + Math.floor(n / 2), y + 1, {});
+    st.coins(x + 3, x + n, y - 2);
+    if (o.gold) st.gold(x + 2 + Math.floor(n / 2), y - 3, o.gold);
+    // a rope hanging off the far end of the bridge up the cliff (a way to the hidden airstrip)
+    if (o.rope) { B.decorAt('ecRope', x + n + 1, y, 0); B.spawn('portal', x + n + 1, y - 1, { kind: 'door', look: 'tourDoorHidden', targetRef: o.rope, secretDoor: true }); if (o.back) B.anchor(o.back, x + n, y - 1); }
+    st.floor(x + n + 2, x + n + 4);
+    return x + n + 5;
+  },
+  // ride: an item block hanging over the line: { item, dy }
+  airBlock(st, o) { const x = st.x, d = st.deck || st.gy; st.block(x + 1, d - (o.dy || 4), o.item || 'power'); st.coins(x, x + 2, d - (o.dy || 4) - 2); return x + 4; },
+  // 2-7: a mist column (an updraft from the spray): { h }
+  mist(st, o) { return Tour.pieces.fan(st, { w: 2, h: o.h || 8, force: o.force || 30, skin: 'ecMist' }); },
+  // a sunken crate with Bottle Mail inside (swim): { n }
+  sunkenBottle(st, o) { const x = st.x, F = st.floorY; st.rock(x, F - 2, x + 5, F - 1); st.B.decorAt('ecCrate', x + 3, F - 2, 0); st.spawn('bottle', x + 3, F - 4, { n: o.n || 1 }); return x + 7; },
+  // swim: a fins stand on the sea bed with a tip
+  finsStand(st, o) { const x = st.x; st.B.fill(x, st.floorY, x + 4, st.floorY, T.GROUND); Tour.pieces.gearStand(st, { item: 'fins', here: true }); const s = st.B.spawns[st.B.spawns.length - 1]; s.x = (x + 2) * TS + TS / 2; s.y = st.floorY * TS; st.B.vkeys[st.B.vkeys.length - 1].tiles = [[x + 2, st.floorY - 1], [x + 2, st.floorY - 2]]; if (o.sign) st.B.spawn('sign', x + 4, st.floorY - 1, { text: o.sign }); return x + 6; },
+  // swim: an underwater door to a dry grotto: { to }
+  grottoDoor(st, o) { const x = st.x, F = st.floorY; st.rock(x, F - 3, x + 6, F - 1); st.B.decorAt('ecGrottoMouth', x + 3, F - 3, 0); st.B.spawn('portal', x + 3, F - 4, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null }); if (o.back) st.B.anchor(o.back, x + 3, F - 5); return x + 8; },
+  // swim: the way out: up into a sunny cove with the gate
+  coveExit(st, o) {
+    const x = st.x, B = st.B, F = st.floorY, w = 16;
+    B.fill(x, 0, x + w, 1, T.EMPTY); for (let xx = x; xx <= x + w; xx++) { B.setHide(xx, 0, 0); B.setHide(xx, 1, 0); }
+    B.fill(x + 6, 6, x + 12, 6, T.GROUND);
+    B.spawn('gate', x + 9, 5, { exit: o.exit || 'main' });
+    st.coins(x + 2, x + 5, 9);
+    B.fill(x + w + 1, 0, x + w + 2, B.H - 1, T.GROUND);
+    return x + w + 1;
+  },
+  // ride: a mountain hut on the cable line (a door up on the catwalk): { to, back }
+  hutDoor(st, o) {
+    const x = st.x, B = st.B, cy = st.deck - 4, w = 7;
+    for (let q = 0; q < w; q++) { B.set(x + q, cy, T.SEMI); B.setHide(x + q, cy, 1); }
+    B.prop('ecCatwalk', x, cy, w, 1, 'none', {});
+    B.decorAt('ecHut', x + 4, cy, 0);
+    B.spawn('portal', x + 4, cy - 1, { kind: 'door', look: 'tourDoor', targetRef: o.to || null });
+    if (o.back) B.anchor(o.back, x + 2, cy - 1);
+    st.coins(x, x + w - 1, cy - 2);
+    return x + w + 3;
+  }
+};
+for (const k in P) Tour.pieces['ec.' + k] = P[k];
+Object.assign(Decor, {
+  ecPoolRim(ctx, x, y, t) { ctx.fillStyle = '#2a2a32'; ctx.beginPath(); ctx.ellipse(x, y + 2, 72, 9, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#3ab8d8'; ctx.beginPath(); ctx.ellipse(x, y + 4, 62, 6, 0, 0, TAU); ctx.fill(); },
+  ecLavaArch(ctx, x, y, t, th, d) { const w = d.w, h = d.h, x0 = x - w / 2; ctx.fillStyle = '#3a3a44'; ctx.beginPath(); ctx.moveTo(x0 - 6, y); ctx.lineTo(x0 - 6, y - h); ctx.lineTo(x0 + w + 6, y - h); ctx.lineTo(x0 + w + 6, y); ctx.lineTo(x0 + w - 8, y); ctx.quadraticCurveTo(x, y - h + 26, x0 + 8, y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(x0 - 4, y - h + 2, w + 8, 3); },
+  ecVentGrate(ctx, x, y, t) { ctx.fillStyle = '#3a3a44'; rr(ctx, x - 22, y - 46, 44, 46, 4); ctx.fill(); ctx.strokeStyle = '#8a8a9a'; ctx.lineWidth = 2; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.moveTo(x - 18, y - 40 + k * 9); ctx.lineTo(x + 18, y - 40 + k * 9); ctx.stroke(); } for (let q = 0; q < 3; q++) { const u = (t * 0.7 + q / 3) % 1; ctx.fillStyle = `rgba(200,150,110,${0.5 * (1 - u)})`; ctx.beginPath(); ctx.arc(x + Math.sin(q * 2 + t) * 8, y - 50 - u * 40, 6 + u * 8, 0, TAU); ctx.fill(); } },
+  ecRopeBridge(ctx, x, y, t, th, d) { const w = d.w, x0 = x - w / 2, top = y - d.h; ctx.strokeStyle = '#a07a44'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0 - 10, top - 30); ctx.quadraticCurveTo(x, top - 10, x0 + w + 10, top - 30); ctx.stroke(); for (let k = 0; k <= w / 16; k++) { const xx = x0 + k * 16; ctx.beginPath(); ctx.moveTo(xx, top); ctx.lineTo(xx, top - 22 + Math.sin((xx - x0) / w * Math.PI) * 12); ctx.stroke(); } },
+  ecCrate(ctx, x, y) { ctx.fillStyle = '#8a6a3a'; ctx.fillRect(x - 22, y - 28, 44, 28); ctx.strokeStyle = '#4a3418'; ctx.lineWidth = 2; ctx.strokeRect(x - 22, y - 28, 44, 28); ctx.beginPath(); ctx.moveTo(x - 22, y - 28); ctx.lineTo(x + 22, y); ctx.stroke(); },
+  ecGrottoMouth(ctx, x, y, t) { ctx.fillStyle = '#0a1a24'; ctx.beginPath(); ctx.ellipse(x, y, 34, 22, 0, Math.PI, TAU); ctx.fill(); for (let q = 0; q < 4; q++) { const u = (t * 0.6 + q / 4) % 1; ctx.fillStyle = 'rgba(230,252,255,0.8)'; ctx.beginPath(); ctx.arc(x - 12 + q * 8, y - 10 - u * 60, 2.5, 0, TAU); ctx.fill(); } },
+  ecRope(ctx, x, y, t) { ctx.strokeStyle = '#c8a070'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y - 260); ctx.quadraticCurveTo(x + Math.sin(t) * 6, y - 130, x, y); ctx.stroke(); for (let k = 0; k < 12; k++) { ctx.fillStyle = '#a07a44'; ctx.fillRect(x - 4, y - 250 + k * 20, 8, 3); } },
+  ecHut(ctx, x, y) { ctx.fillStyle = '#8a5a3a'; ctx.fillRect(x - 40, y - 60, 80, 60); ctx.fillStyle = '#c84a2a'; ctx.beginPath(); ctx.moveTo(x - 48, y - 58); ctx.lineTo(x, y - 90); ctx.lineTo(x + 48, y - 58); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x - 20, y - 74); ctx.lineTo(x, y - 86); ctx.lineTo(x + 20, y - 74); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.fillRect(x - 30, y - 44, 12, 12); }
+});
+
+/* ---------------- country looks for library objects ---------------- */
 const leafy = (ctx, x0, y0, w, h, t, part) => {
   for (let k = 0; k < 7; k++) {
     const x = x0 + 3 + k * (w - 6) / 6, sway = Math.sin(t * 1.4 + k) * 2.5 * (1 + part * 3) * (k < 3.5 ? -1 : 1);
@@ -27819,52 +28321,7 @@ const leafy = (ctx, x0, y0, w, h, t, part) => {
     for (let q = 0; q < 7; q++) { const yy = y0 + 6 + q * (h - 10) / 6, xx = x + sway * (q / 7); ctx.fillStyle = q % 2 ? '#6ac850' : '#3e9440'; ctx.beginPath(); ctx.ellipse(xx + (q % 2 ? 3.5 : -3.5), yy, 4.2, 2, q % 2 ? 0.7 : -0.7, 0, TAU); ctx.fill(); }
   }
 };
-Tour.amend('ec', {
-  stamps: {
-    treehouse: {
-      floor: 10,
-      rows: [
-        '##############################',
-        '#............................#',
-        '#....o.o.o.o.o.o.............#',
-        '#............................#',
-        '#............................#',
-        '#.................*..........#',
-        '#...............-----........#',
-        '#.......?....................#',
-        '#............................#',
-        '#.@.D...........n.......n....#',
-        '##############################',
-        '##############################'
-      ],
-      legend: { n: ['decor', 'ecNest'] },
-      items: ['oneup'],
-      doors: [{ to: 'canopy@treeBack', look: 'ecRopeLadder' }],
-      gold: { '*': 'hidden' }
-    },
-    cascada: {
-      floor: 12,
-      rows: [
-        '########################',
-        '#......................#',
-        '#..r......r......r.....#',
-        '#......................#',
-        '#...o.o.o.o.o.o.o......#',
-        '#......................#',
-        '#......................#',
-        '#......................#',
-        '#......................#',
-        '#......................#',
-        '#......................#',
-        '#.@.D............g.....#',
-        '########################',
-        '########################'
-      ],
-      legend: { r: ['decor', 'ecMistRainbow'] },
-      doors: [{ to: 'canopy@fallsBack', look: 'ecWaterCurtain' }]
-    }
-  },
-  skins: {
+const skins = {
     // a curtain of leaves with a rope ladder half hidden in it (2-2's way up to the treehouse)
     ecLeafLadder(ctx, e, t) {
       const x0 = e.x, y0 = e.y, w = e.w, h = e.h;
@@ -27898,48 +28355,205 @@ Tour.amend('ec', {
       ctx.strokeStyle = '#c8a070'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-14, 120); ctx.moveTo(14, 0); ctx.lineTo(14, 120); ctx.stroke();
       TourObj.plank(ctx, -24, 118, 48, 9);
       ctx.restore();
-    }
-  },
-  levels: [{
-    n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_dusk',
-    gimmick: 'No ground: swing vine to vine, then ride the swing at the end of the world',
-    hint: 'Jump into a vine to grab it, jump again to let go at the top of the swing',
-    postcard: 'Brady, the frogs here are see-through. I checked. Twice. ♥ C',
-    enemies: [['ecFrog', 3], ['ecCondor', 1]],
-    mapCell: [1, 0], mapFrom: 0,
-    exits: {
-      main: { to: '2-3' },
-      secret: { to: '2-7', hint: 'A rainbow hangs in the mist of the last waterfall...' }
     },
-    areas: [
-      { id: 'canopy', gen: 'islands', W: 210, H: 24, bottomKill: true,
-        script: [
-          // ① vines between giant trees
-          ['itemBlock', { item: 'power', y: 4 }],
-          ['vines', { n: 3 }],
-          ['branches', {}],
-          ['secretDoor', { to: 'treehouse@in', look: 'ecLeafLadder', back: 'treeBack' }],
-          ['postcard', { kind: 'must', dy: -4 }],
-          'cp',
-          // ② the glow; lily pads sink on the river below
-          ['gearStand', { item: 'wand' }],
-          ['glow', {}],
-          ['lilies', { n: 4 }],
-          ['enemies', { kind: 'ecFrog', n: 2 }],
-          ['ring', { len: 3 }], ['ring', { len: 3 }],
-          // ③ the swing at the end of the world, then vines across the falls
-          ['catapult', { to: [16, -2], skin: 'ecTreeSwing' }],
-          ['postcard', { kind: 'risky', dy: -7 }],
-          ['vines', { n: 4 }],
-          ['itemBlock', { item: 'oneup', y: 6, hidden: true }],
-          ['secretDoor', { to: 'cascada@in', look: 'curtain', back: 'fallsBack' }],
-          ['end', { exit: 'main' }]
-        ] },
-      { id: 'treehouse', gen: 'room', role: 'sub', theme: 'ec_amazon', stamp: 'treehouse' },
-      { id: 'cascada', gen: 'room', role: 'secret', theme: 'ec_amazon', stamp: 'cascada' }
-    ]
-  }]
+    // a stack of crates wrapped in gold foil (the hard hat's wall)
+    ecFoil(ctx, e, t) {
+      const x = e.cx, y = e.y + e.h, h = (e.s.h || 4) * TS;
+      if (e.broken) return;
+      for (let k = 0; k < h / 26; k++) { const yy = y - 26 - k * 26; const g = ctx.createLinearGradient(x - 18, 0, x + 18, 0); g.addColorStop(0, '#c8902a'); g.addColorStop(0.5, '#fff0a0'); g.addColorStop(1, '#c8902a'); ctx.fillStyle = g; rr(ctx, x - 18, yy, 36, 24, 3); ctx.fill(); ctx.strokeStyle = '#8a5a14'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = '#5a2a14'; ctx.fillRect(x - 18, yy + 10, 36, 4); }
+    },
+    // a mist column from the falls (a fan's look)
+    ecMist(ctx, e, t) {
+      const x = e.cx, y = e.y + e.h;
+      for (let q = 0; q < 8; q++) { const u = (t * 0.5 + q / 8) % 1; ctx.fillStyle = `rgba(240,255,255,${0.45 * (1 - u)})`; ctx.beginPath(); ctx.arc(x + Math.sin(q * 2 + t) * 14, y - u * 220, 10 + u * 18, 0, TAU); ctx.fill(); }
+    }
+};
+
+Object.assign(Decor, {
+  // the arch at the end of 2-1: a painted sign, HEMISFERIO SUR
+  ecHemiArch(ctx, x, y, t) {
+    ctx.fillStyle = '#d8c8a8'; for (const px of [x - 60, x + 48]) { ctx.fillRect(px, y - 120, 12, 120); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(px, y - 120, 12, 120); }
+    ctx.fillStyle = '#e8323a'; rr(ctx, x - 70, y - 146, 140, 28, 6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffd23a'; ctx.font = `bold 12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('HEMISFERIO SUR', x, y - 128);
+  },
+  // flags at the start and finish of the race
+  ecRaceFlags(ctx, x, y, t) {
+    ctx.fillStyle = '#4a4a56'; ctx.fillRect(x - 40, y - 110, 5, 110); ctx.fillRect(x + 36, y - 110, 5, 110);
+    ctx.fillStyle = '#ffffff'; rr(ctx, x - 44, y - 124, 88, 22, 4); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    for (let k = 0; k < 11; k++) for (let r = 0; r < 2; r++) if ((k + r) % 2) { ctx.fillStyle = '#1a1a22'; ctx.fillRect(x - 44 + k * 8, y - 124 + r * 11, 8, 11); }
+    for (let k = 0; k < 6; k++) { ctx.fillStyle = WOVEN[k % 5]; ctx.beginPath(); ctx.moveTo(x - 34 + k * 13, y - 100); ctx.lineTo(x - 22 + k * 13, y - 100); ctx.lineTo(x - 28 + k * 13 + Math.sin(t * 3 + k) * 2, y - 88); ctx.fill(); }
+  },
+  // a giant kapok trunk and a plank platform: the start of the canopy
+  ecBigTrunk(ctx, x, y) {
+    ctx.fillStyle = '#5a3a24'; ctx.beginPath(); ctx.moveTo(x - 40, y + 300); ctx.lineTo(x - 26, y - 120); ctx.lineTo(x + 26, y - 120); ctx.lineTo(x + 40, y + 300); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 2; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x + k * 9, y - 110); ctx.lineTo(x + k * 12, y + 300); ctx.stroke(); }
+    ctx.fillStyle = '#2a6a2a'; for (const [dx, dy, r] of [[-30, -130, 40], [20, -150, 46], [60, -120, 34], [-70, -110, 30]]) { ctx.beginPath(); ctx.arc(x + dx, y + dy, r, 0, TAU); ctx.fill(); }
+  }
 });
+
+/* ---------------- stamps ---------------- */
+const stamps = {
+  // 2-1's start: the plaza at the middle of the world, the monument far behind
+  mitadPlaza: { floor: 7, rows: ['..............', '..............', '..............', '..............', '..............', '..............', '..@.....m.....', '##############'], legend: { m: ['decor', 'ecMonument'] } },
+  // 2-1's chocolate shop behind the cracked wall on the high terrace
+  chocolateria: {
+    floor: 10,
+    rows: [
+      '############################',
+      '#..........................#',
+      '#..o.o.o.o.o...............#',
+      '#................*.........#',
+      '#..............-----.......#',
+      '#.......?..................#',
+      '#....-----.........-----...#',
+      '#..........................#',
+      '#..k......k.......k........#',
+      '#.@D.......................#',
+      '############################',
+      '############################'
+    ],
+    legend: { k: ['decor', 'ecSack'] }, items: ['oneup'], doors: [{ to: 'mitad@shopBack' }], gold: { '*': 'hidden' }
+  },
+  // 2-2's start: a plank platform round a giant trunk
+  copa: { floor: 4, rows: ['............', '............', '.....t......', '..@.........', '############'], legend: { t: ['decor', 'ecBigTrunk'] } },
+  treehouse: {
+    floor: 10,
+    rows: [
+      '##############################',
+      '#............................#',
+      '#....o.o.o.o.o.o.............#',
+      '#............................#',
+      '#............................#',
+      '#.................*..........#',
+      '#...............-----........#',
+      '#.......?....................#',
+      '#............................#',
+      '#.@.D...........n.......n....#',
+      '##############################',
+      '##############################'
+    ],
+    legend: { n: ['decor', 'ecNest'] }, items: ['oneup'], doors: [{ to: 'canopy@treeBack', look: 'ecRopeLadder' }], gold: { '*': 'hidden' }
+  },
+  cascada: {
+    floor: 12,
+    rows: [
+      '########################',
+      '#......................#',
+      '#..r......r......r.....#',
+      '#......................#',
+      '#...o.o.o.o.o.o.o......#',
+      '#......................#',
+      '#......................#',
+      '#......................#',
+      '#......................#',
+      '#......................#',
+      '#......................#',
+      '#.@.D............g.....#',
+      '########################',
+      '########################'
+    ],
+    legend: { r: ['decor', 'ecMistRainbow'] }, doors: [{ to: 'canopy@fallsBack', look: 'ecWaterCurtain' }]
+  },
+  // 2-3's starting line on the lava coast
+  salida: { floor: 6, rows: ['............', '............', '............', '............', '..@...f.....', '............', '############'], legend: { f: ['decor', 'ecRaceFlags'] } },
+  // 2-4's loading dock: sacks of beans, a pipe, the door in
+  muelle: { floor: 6, rows: ['............', '............', '............', '..........p.', '.....k......', '..@......k..', '############'], legend: { k: ['decor', 'ecSack'], p: ['decor', 'ecPipe'] } },
+  // 2-4's wrapping room behind the foil: the way out to the Souvenir Stand (a secret gate)
+  envoltura: {
+    floor: 10,
+    rows: [
+      '############################',
+      '#..........................#',
+      '#..o.o.o.o.................#',
+      '#..............*...........#',
+      '#............-----.........#',
+      '#..........................#',
+      '#....----..................#',
+      '#..........................#',
+      '#..k................k......#',
+      '#.@D.................g.....#',
+      '############################',
+      '############################'
+    ],
+    legend: { k: ['decor', 'ecSack'] }, doors: [{ to: 'fabrica@foilBack' }], gold: { '*': 'hidden' }
+  },
+  // 2-5's mountain hut on the cable line
+  refugio: {
+    floor: 10,
+    rows: [
+      '##########################',
+      '#........................#',
+      '#..o.o.o.o...............#',
+      '#...............*........#',
+      '#.............-----......#',
+      '#......?.................#',
+      '#...-----................#',
+      '#........................#',
+      '#..a..........a..........#',
+      '#.@D.....................#',
+      '##########################',
+      '##########################'
+    ],
+    legend: { a: ['decor', 'ecAgave'] }, items: ['oneup'], doors: [{ to: 'teleferico@hutBack' }], gold: { '*': 'hidden' }
+  },
+  // 2-6's grotto: a dry cave with a mushroom, a 1UP and P2
+  grotto: {
+    floor: 10,
+    rows: [
+      '##########################',
+      '#........................#',
+      '#..o.o.o.o.o.............#',
+      '#.............*..........#',
+      '#...........-----........#',
+      '#......?..............?..#',
+      '#....-----...............#',
+      '#........................#',
+      '#........................#',
+      '#.@D.....................#',
+      '##########################',
+      '##########################'
+    ],
+    items: ['power', 'oneup'], doors: [{ to: 'mar@grottoBack' }], gold: { '*': 'hidden' }
+  },
+  // 2-7's plateau over the gorge: an old airstrip, the hangar, the plane (a secret flight to Morocco)
+  pista: {
+    floor: 10,
+    rows: [
+      '########################################',
+      '#......................................#',
+      '#......................................#',
+      '#..o.o.o.o.o...........................#',
+      '#.....?................................#',
+      '#..............*.......................#',
+      '#............-----.....................#',
+      '#......................................#',
+      '#..........................a...........#',
+      '#.@D.......................g...........#',
+      '########################################',
+      '########################################'
+    ],
+    legend: { a: ['decor', 'ecHangar'] }, items: ['oneup'], doors: [{ to: 'pailon@ropeBack' }], gold: { '*': 'hidden' }
+  },
+  // La Tienda del Cacao: the booby keeps the stand ($ is the shop)
+  stand: {
+    floor: 9,
+    rows: [
+      '############################',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#.@...k....$...q.....k..G..#',
+      '############################',
+      '############################'
+    ],
+    legend: { k: ['decor', 'ecSack'], q: ['decor', 'ecKeeperBooby'] }
+  }
+};
+
 // decor the stamps use: a bird's nest of twigs with blue eggs, a rainbow in the mist
 Object.assign(Decor, {
   ecNest(ctx, x, y, t) {
@@ -27952,6 +28566,226 @@ Object.assign(Decor, {
     ['#ff4f6a', '#ffd84a', '#5ae07a', '#38c8ff', '#8a5aff'].forEach((c, k) => { ctx.strokeStyle = c; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(x, y + 30, 40 - k * 3, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); });
     ctx.restore();
   }
+});
+
+/* ---------------- the levels ---------------- */
+const L1 = { n: 1, name: 'Hemisphere Hop', arch: 'flip', theme: 'ec_equator',
+  gimmick: 'Cross the yellow equator line and gravity flips: walk the ceiling over the spikes, flip in mid air over the gaps',
+  hint: 'Walk over the yellow line: you fall UP onto the ceiling. Cross the next line to drop back down',
+  postcard: 'Brady! On the equator line I walked on the ceiling. My hair did too. ♥ C',
+  enemies: [['ecBanana', 3], ['ecCacao', 2], ['ecHummingbird', 1]],
+  mapCell: [0, 0], mapFrom: -1,
+  exits: { main: { to: '2-2' } },
+  areas: [
+    { id: 'mitad', gen: 'strip', W: 200, H: 22, ceil: 1,
+      script: [
+        ['startStamp', { id: 'mitadPlaza' }],
+        'booby',
+        ['itemBlock', { item: 'power' }],
+        ['tip', { text: 'THE YELLOW LINE FLIPS GRAVITY! WALK THE CEILING OVER THE SPIKES. CROSS THE NEXT LINE TO DROP BACK DOWN' }],
+        // ① the first line: the ceiling over a spike floor
+        ['flipline', { w: 14, spikes: true }],
+        ['postcard', { kind: 'must', dx: -9, dy: -10 }],
+        ['bananas', { n: 3 }],
+        // ② banana-leaf platforms from both sides; a terrace you only reach by dropping off the ceiling
+        ['flipline', { w: 16, spikes: true }],
+        ['ceilingDrop', { to: 'chocolateria@in', back: 'shopBack', y: 6, item: 'power' }],
+        ['enemies', { kind: 'ecBanana', n: 2, len: 10 }],
+        'cp',
+        // ③ mid-air flips over gaps; hummingbirds dart
+        ['flipGap', { w: 12, gold: 'risky' }],
+        ['enemies', { kind: 'ecHummingbird', n: 1, len: 8 }],
+        'cacao',
+        ['flipGap', { w: 10 }],
+        ['highBlock', { item: 'lsd' }],
+        ['flipline', { w: 10 }],
+        ['finish', { look: 'ecHemiArch' }]
+      ] },
+    { id: 'chocolateria', gen: 'room', role: 'secret', stamp: 'chocolateria' }
+  ] };
+
+const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_dusk',
+  gimmick: 'No ground: swing vine to vine, then ride the swing at the end of the world',
+  hint: 'Jump into a vine to grab it, jump again to let go at the top of the swing',
+  postcard: 'Brady, the frogs here are see-through. I checked. Twice. ♥ C',
+  enemies: [['ecFrog', 3], ['ecGlassFrog', 2], ['ecCondor', 1]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '2-3' }, secret: { to: '2-7', hint: 'A rainbow hangs in the mist of the last waterfall...' } },
+  areas: [
+    { id: 'canopy', gen: 'islands', W: 210, H: 24, bottomKill: true,
+      script: [
+        ['startStamp', { id: 'copa' }],
+        // ① vines between giant trees
+        ['itemBlock', { item: 'power', y: 4 }],
+        ['vines', { n: 3 }],
+        ['branches', {}],
+        ['secretDoor', { to: 'treehouse@in', look: 'ecLeafLadder', back: 'treeBack' }],
+        ['postcard', { kind: 'must', dy: -4 }],
+        'cp',
+        // ② the glow: glass frogs only show in it; lily pads sink on the river below
+        ['gearStand', { item: 'wand' }],
+        ['tip', { text: 'GLASS FROGS ARE SEE-THROUGH: THEY SHOW IN THE GLOW OF THE MUSHROOMS. THE BUBBLE WAND MAKES BUBBLE STEPS' }],
+        ['glow', {}],
+        ['lilies', { n: 4 }],
+        ['enemies', { kind: 'ecGlassFrog', n: 2 }],
+        ['ring', { len: 3 }], ['ring', { len: 3 }],
+        // ③ the swing at the end of the world, then vines across the falls
+        ['catapult', { to: [16, -2], skin: 'ecTreeSwing' }],
+        ['postcard', { kind: 'risky', dy: -7 }],
+        ['vines', { n: 4 }],
+        ['itemBlock', { item: 'oneup', y: 6, hidden: true }],
+        ['secretDoor', { to: 'cascada@in', look: 'curtain', back: 'fallsBack' }],
+        ['finish', {}]
+      ] },
+    { id: 'treehouse', gen: 'room', role: 'sub', theme: 'ec_amazon', stamp: 'treehouse' },
+    { id: 'cascada', gen: 'room', role: 'secret', theme: 'ec_amazon', stamp: 'cascada' }
+  ] };
+
+const L3 = { n: 3, name: 'Booby Dash', arch: 'race', theme: 'ec_islas',
+  gimmick: 'Race Pata Azul the blue-footed booby over the lava coast; iguanas sneeze salt into stepping stones',
+  hint: 'Beat the booby to the flags! The salt the iguanas sneeze sets into stepping stones: the fast way up',
+  postcard: 'Pata Azul says she wants a rematch. Her feet are SO blue. ♥ C',
+  enemies: [['ecIguanaSalt', 2], ['ecCrab', 2], ['ecSeaLionLand', 1]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '2-4' }, secret: { to: '2-6', hint: 'A pool bubbles in a lava tube...' } },
+  areas: [
+    { id: 'islas', gen: 'strip', W: 190, H: 20,
+      script: [
+        ['startStamp', { id: 'salida' }],
+        'booby',
+        ['rival', { name: 'PATA AZUL', type: 'ecBooby', speed: 5.4 }],
+        // ① over the lava rock
+        ['flat', { n: 6 }], 'gap',
+        ['enemies', { kind: 'ecCrab', n: 1, len: 8 }],
+        ['archRoute', { n: 3, gold: 'must', item: 'power' }],
+        // ② the salt-sneezing iguanas: their salt makes the fast upper route
+        ['tip', { text: 'MARINE IGUANAS SNEEZE SALT. IT SETS INTO STEPPING STONES FOR A FEW SECONDS!' }],
+        ['enemies', { kind: 'ecIguanaSalt', n: 2, len: 12 }],
+        ['archRoute', { n: 2, item: 'star' }],
+        ['bubblePool', { to: 'tubo@in', back: 'tubeBack' }],
+        'cp',
+        // ③ the sea-lion beach, a sprint over the arches
+        ['beach', { n: 3 }],
+        ['enemies', { kind: 'ecIguanaSalt', n: 1, len: 8 }],
+        ['archRoute', { n: 3, gold: 'risky' }],
+        ['finish', { look: 'ecRaceFlags' }]
+      ] },
+    { id: 'tubo', gen: 'swim', role: 'secret', H: 14, width: 80, ending: false, theme: 'ec_galapagos',
+      script: [['arches', {}], ['postcard', { kind: 'hidden', dx: -5, dy: -8 }], ['airBlock', { item: 'oneup', dy: 5 }], ['coveExit', { exit: 'secret' }]] }
+  ] };
+
+const L4 = { n: 4, name: 'Cacao Works', arch: 'factory', theme: 'ec_fabrica',
+  gimmick: 'Ride the belts through a chocolate factory: roasting presses stamp, the vats bubble, a lever turns the belts round',
+  hint: 'Presses hiss before they slam: wait for the hiss, then run under',
+  postcard: 'I licked a chocolate press. It was hot. Worth it. ♥ C',
+  enemies: [['ecCacao', 2], ['ecHummingbird', 1], ['ecIceCube', 2]],
+  mapCell: [2, 1], mapFrom: [2, 5],
+  exits: { main: { to: '2-5' }, secret: { to: 'house:ec-cacao', hint: 'A stack of foil crates hides a vent...' } },
+  areas: [
+    { id: 'fabrica', gen: 'strip', W: 200, H: 20,
+      script: [
+        ['startStamp', { id: 'muelle' }],
+        ['itemBlock', { item: 'power' }],
+        ['tip', { text: 'A HARD HAT! IT BREAKS FOIL WALLS AND SOAKS UP ONE HIT. TAP THROW TO SHOULDER-DASH' }],
+        ['gearStand', { item: 'hat' }],
+        // ① belts carry pods and Brady
+        ['belt', { n: 10 }],
+        ['pressLine', { n: 12, presses: 1 }],
+        ['catwalk8', { n: 12, gold: 'must', item: 'sundial', hidden: true }],
+        // ② roasting presses in rhythm, chocolate vats
+        ['vat', { n: 10 }],
+        ['pressLine', { n: 16, presses: 2 }],
+        ['foilStack', { to: 'envoltura@in', back: 'foilBack' }],
+        'cp',
+        // ③ the reverse lever over the vats; the cooling tunnel
+        ['pressLine', { n: 14, presses: 2, dir: -1, lever: true }],
+        ['postcard', { kind: 'risky', dx: -8, dy: -2 }],
+        ['vat', { n: 12, dir: 1 }],
+        ['iceRun', { n: 12 }],
+        ['enemies', { kind: 'ecIceCube', n: 2, len: 10 }],
+        ['finish', { look: 'ecExitSign' }]
+      ] },
+    { id: 'envoltura', gen: 'room', role: 'secret', theme: 'ec_fabrica', stamp: 'envoltura' }
+  ] };
+
+const L5 = { n: 5, name: 'Cotopaxi Crater', arch: 'lair', theme: 'ec_andes', boss: 'ec_tortoise',
+  gimmick: 'Ride the cable car up the volcano, then face El Tortugón in the crater bowl',
+  hint: 'Stomp the lever to pop a vent under El Tortugón: flipped on his back, his belly is open!',
+  postcard: 'The Equator monument is back where it belongs! The Baron flew to Brazil. Samba time! ♥ C',
+  enemies: [['ecCondor', 1], ['ecAlpaca', 1]],
+  mapCell: [1, 2], mapFrom: 3,
+  exits: { main: { to: 'country:next' } },
+  areas: [
+    { id: 'teleferico', gen: 'ride', len: 120, H: 16, deck: 10, vehicle: 'ecGondola', vehicleW: 6, below: 'none', scroll: 2.4, endDoor: 'crater@in',
+      script: [['airBlock', { item: 'power' }], 'tower', ['catwalk', { gold: true }], 'condors', ['hutDoor', { to: 'refugio@in', back: 'hutBack' }], 'cp', 'tower', ['airBlock', { item: 'sig', dy: 3 }], ['ridge', { w: 2 }], 'condors', 'tower'] },
+    { id: 'refugio', gen: 'room', role: 'secret', theme: 'ec_andes', stamp: 'refugio' },
+    { id: 'crater', gen: 'arena', role: 'arena', layout: 'vents', arenaW: 30, H: 18, roof: false, theme: 'ec_cotopaxi' }
+  ] };
+
+const L6 = { n: 6, name: 'Galápagos Snorkel', arch: 'dive', secret: true, theme: 'ec_galapagos',
+  gimmick: 'Snorkel a sunlit sea: zipping penguins, the tidal surge, puffers that puff up (bounce on their tops)',
+  hint: 'Puffers swell when you get close: their tops are bouncy',
+  postcard: 'A message in a bottle! It says "keep looking". Bossy bottle. ♥ C',
+  enemies: [['ecSeaLion', 1], ['ecPuffer', 2], ['ecPenguin', 1]],
+  mapCell: [0, 1], mapFrom: 2,
+  exits: { main: { to: 'node:2-4' } },
+  areas: [
+    { id: 'mar', gen: 'swim', H: 18, width: 360, ending: false,
+      script: [
+        'surface',
+        ['finsStand', { sign: 'FLIPPER FINS! SWIM FASTER, TAP THROW TO DASH THROUGH THE SURGE' }],
+        ['arches', { gold: true }],
+        'puffers',
+        ['penguins', { w: 12 }],
+        ['grottoDoor', { to: 'grotto@in', back: 'grottoBack' }],
+        'surge',
+        ['postcard', { kind: 'risky', dx: -5, dy: -9 }],
+        ['sunkenBottle', { n: 1 }],
+        'cp',
+        'puffers', 'surge',
+        ['penguins', { w: 10, dir: -1 }],
+        'arches',
+        ['coveExit', {}]
+      ] },
+    { id: 'grotto', gen: 'room', role: 'secret', theme: 'ec_galapagos', stamp: 'grotto' }
+  ] };
+
+const L7 = { n: 7, name: "Devil's Cauldron", arch: 'tide', secret: true, theme: 'ec_pailon',
+  gimmick: 'A waterfall gorge: the plunge pool rises and falls; swim up with the high water to the bridges',
+  hint: 'Wait for the high water and swim up to the bridges you cannot jump to',
+  postcard: "The waterfall roars like the Baron's blimp engine. Louder, actually. ♥ C",
+  enemies: [['ecFrog', 2], ['ecHummingbird', 1], ['ecDipper', 1]],
+  mapCell: [0, 2], mapFrom: 1,
+  exits: { main: { to: null }, secret: { to: 'flight:ma', hint: 'A rope at the end of the last bridge leads up the cliff...' } },
+  areas: [
+    { id: 'pailon', gen: 'strip', W: 160, H: 22, GY: 16, tide: { low: 20, high: 12, period: 12, hold: 3 },
+      script: [
+        ['tip', { text: 'THE POOL RISES AND FALLS. FLIPPER FINS HELP YOU SWIM UP WITH THE HIGH WATER' }],
+        ['gearStand', { item: 'fins' }],
+        ['itemBlock', { item: 'power' }],
+        // ① the falls surge
+        'gap',
+        ['hangBridge', { n: 8 }],
+        // ② hanging bridges and mist columns
+        ['mist', { h: 8 }],
+        ['hangBridge', { n: 10, dippers: true, gold: 'must' }],
+        ['enemies', { kind: 'ecFrog', n: 1, len: 8 }],
+        'cp',
+        // ③ bridges only the high water reaches
+        ['hangBridge', { n: 10, dy: 5, gold: 'high' }],
+        ['postcard', { kind: 'risky', dx: -6, dy: 3 }],
+        ['mist', { h: 9 }],
+        ['hangBridge', { n: 8, dy: 5, rope: 'pista@in', back: 'ropeBack' }],
+        ['finish', {}]
+      ] },
+    { id: 'pista', gen: 'room', role: 'secret', theme: 'ec_andes', stamp: 'pista' }
+  ] };
+
+Tour.amend('ec', {
+  stamps, skins,
+  map: { fort: 'crater', start: [0, 0] },
+  houses: [{ id: 'ec-cacao', kind: 'stand', name: 'La Tienda del Cacao', keeper: 'booby', stock: ['wand', 'hat', 'fins', 'kazoo', 'sundial', 'oneup'], mapCell: [2, 2], mapFrom: 3 }],
+  levels: [L1, L2, L3, L4, L5, L6, L7]
 });
 })();
 
@@ -37339,12 +38173,10 @@ Tour.amend('ma', {
 
 /* ---- 29_tour_mx.js ---- */
 /* ============================================================
-   MEXICO (world 1) — reference country for the world tour.
-   1-1 Mercado Mayhem      run    bouncy market awnings, rolling watermelons, fountain jets
-   1-2 Xochimilco Float    ride   ride a painted trajinera: posts to hop, axolotls, herons
-   1-3 Cenote Dive         swim   a flooded limestone cave: roots, currents, light shafts
-   1-4 Volcán Escape       climb  climb out of a volcano while the lava rises
-   1-5 Hacienda Fiesta     castle swinging piñatas, candy cannons; boss El Gran Piñatón
+   MEXICO (world 1) — reference country for the world tour: art,
+   enemies, set pieces, the boss and music. The six levels (v2
+   format) are in 29_tour_mx_levels.js; the atlases are wired in
+   29_tour_mx_sprites.js.
    ============================================================ */
 (() => {
 const COL = { a: '#ff3d8b', b: '#18c2c2', c: '#ffb81a' };
@@ -37688,6 +38520,8 @@ const pepperArt = (ctx, e, x, y, m) => {
 };
 const eloteArt = (ctx, e, x, y, m, t) => {
   const sq = m === 'flat' ? 0.35 : 1;
+  // the stomp that pops it: kernels fly off in every direction
+  if (m === 'burst') { for (let k = 0; k < 10; k++) { const a = k / 10 * TAU + 0.3; ctx.fillStyle = k % 2 ? '#fff8e0' : '#ffd84a'; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 14, y - 14 + Math.sin(a) * 14, 3.2, 0, TAU); ctx.fill(); } }
   ctx.save(); ctx.translate(x, y);
   if (m !== 'flat' && m !== 'ko') K.feet(ctx, 0, 0, e.t, '#3a6a2a', 4, 6, m === 'stun');
   ctx.translate(0, -6);
@@ -37695,6 +38529,16 @@ const eloteArt = (ctx, e, x, y, m, t) => {
   ctx.fillStyle = '#ffd84a'; rr(ctx, -6, -24 * sq, 12, 24 * sq, 6); ctx.fill();
   ctx.fillStyle = '#f0b81a'; for (let r = 0; r < 6; r++) for (let k = 0; k < 3; k++) ctx.fillRect(-5 + k * 4, (-22 + r * 3.6) * sq, 2.6, 2.4 * sq);
   if (m !== 'flat' && m !== 'ko') K.eyes(ctx, 0, -16, e.dir, 2.6, 2.1, false);
+  ctx.restore();
+};
+// popcorn: what an elote pops into; puffy kernels with a little face, they hop twice and fade
+const popcornArt = (ctx, e, x, y, m, t) => {
+  const sq = m === 'flat' ? 0.4 : 1;
+  ctx.save(); ctx.translate(x, y);
+  ctx.fillStyle = '#fff6dc';
+  for (const [dx, dy, r] of [[-4, -5, 4.6], [4, -5, 4.6], [0, -10, 4.8], [0, -3, 4.4], [-5, -9, 3.4], [5, -9, 3.4]]) { ctx.beginPath(); ctx.arc(dx, dy * sq, r, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#f2b830'; ctx.beginPath(); ctx.arc(1, -2 * sq, 2.4, 0, TAU); ctx.fill();
+  if (m !== 'flat' && m !== 'ko') K.eyes(ctx, 0, -8, e.dir || 1, 2.3, 1.5, false);
   ctx.restore();
 };
 const burroArt = (ctx, e, x, y, m) => {
@@ -37729,6 +38573,8 @@ const xoloArt = (ctx, e, x, y, m, t) => {
   ctx.restore();
   if (m !== 'wave') { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 46 + Math.sin(t * 5) * 2); }
 };
+// Xolo minding La Tiendita (the Souvenir Stand): wagging behind the counter
+decor.mxKeeperXolo = (ctx, x, y, t) => { ctx.save(); ctx.translate(x, y - 26); xoloArt(ctx, { t, dir: 1 }, 0, 0, 'wave', t); ctx.restore(); };
 const axolotlArt = (ctx, e, x, y, m) => {
   ctx.save(); ctx.translate(x, y); ctx.rotate(m === 'up' ? -0.4 : 0.6);
   ctx.fillStyle = '#ffaacc'; ctx.beginPath(); ctx.ellipse(0, 0, 13, 7, 0, 0, TAU); ctx.fill();
@@ -37814,9 +38660,107 @@ function tacoShape(ctx, x, y, a) {
   ctx.strokeStyle = '#c8902a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 2, 10, Math.PI, TAU); ctx.stroke();
   ctx.restore();
 }
+// an axolotl walking on land (the air pocket in the cenote): pink, frilly gills, a smile
+const axolotlWalkArt = (ctx, e, x, y, m) => {
+  const sq = m === 'flat' ? 0.45 : 1;
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, sq);
+  ctx.fillStyle = '#ffaacc'; for (const lx of [-8, -3, 4, 9]) ctx.fillRect(lx - 1.5, -4, 3, 4 + Math.max(0, Math.sin(e.t * 10 + lx)) * 1.5);
+  ctx.beginPath(); ctx.ellipse(0, -8, 12, 6, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-10, -8); ctx.quadraticCurveTo(-20, -14 + Math.sin(e.t * 6) * 2, -21, -6); ctx.quadraticCurveTo(-15, -4, -10, -5); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(10, -11, 7, 6, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ff5a9a'; for (const s2 of [-1, 1]) for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(8 + k * 2.2, -11 + s2 * (6 + k * 1.4), 1.6, 3.8, s2 * (0.6 + k * 0.3), 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(13, -13, 1.4, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#c84a7a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(14, -10, 2, 0.2, 1.6); ctx.stroke();
+  ctx.restore();
+};
+// a pale, eyeless cave fish: it only notices Brady when he swims fast
+const blindFishArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  if (m === 'tell') ctx.translate(Math.sin(e.t * 50) * 1.5, 0);
+  ctx.fillStyle = '#f2e8ee'; ctx.beginPath(); ctx.ellipse(0, 0, 15, 8, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-22, -8 + Math.sin(e.t * 9) * 2); ctx.lineTo(-22, 8 + Math.sin(e.t * 9) * 2); ctx.fill();
+  ctx.fillStyle = '#e8c8d8'; ctx.beginPath(); ctx.moveTo(-4, -7); ctx.lineTo(4, -13); ctx.lineTo(6, -7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,140,170,0.45)'; for (let k = 0; k < 3; k++) ctx.fillRect(-6 + k * 5, -5, 2, 10);
+  // no eyes: a little pink pit where they'd be, and whiskers that twitch
+  ctx.fillStyle = '#e8a8c0'; ctx.beginPath(); ctx.arc(8, -2, 1.8, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#c8a0b8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(13, 2); ctx.lineTo(19, 5 + Math.sin(e.t * 8) * 2); ctx.moveTo(13, 2); ctx.lineTo(20, 1); ctx.stroke();
+  if (m === 'charge') { ctx.fillStyle = '#7a2a4a'; ctx.beginPath(); ctx.ellipse(13, 2, 2.5, 3, 0, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// a swallow: a little dark bird with a forked tail and a cream throat
+const swallowArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  const f = Math.sin(e.t * 18 + (e.k || 0));
+  ctx.fillStyle = '#2a3a6a'; ctx.beginPath(); ctx.ellipse(0, 0, 9, 4.5, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-15, -4); ctx.lineTo(-11, 0); ctx.lineTo(-15, 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#3a4a8a'; ctx.beginPath(); ctx.moveTo(-2, -1); ctx.quadraticCurveTo(-6, -10 - f * 6, 4, -6 - f * 8); ctx.lineTo(3, -1); ctx.fill();
+  ctx.fillStyle = '#f4e4c8'; ctx.beginPath(); ctx.ellipse(4, 2, 4, 2.5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#c84a2a'; ctx.beginPath(); ctx.arc(7, -1, 1.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(6, -2, 1.3, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(6.4, -2, 0.7, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+// the headline enemy: an axolotl that leaps out of the canal. Stomp it and it shrinks to a harmless baby that regrows
+// in 3 s (it flashes in the last second); stomp the baby to finish it. Tacos, puffs and planes beat it at once.
+const AxoLeap = TourLeaper.make({ w: 22, h: 14, jumpV: 21, every: 1.8, art: axolotlArt, splash: '#7ae0d0' });
+class MxAxolotl extends AxoLeap {
+  update(dt) {
+    if (this.tiny && !this.knocked) { this.tinyT += dt; if (this.tinyT > 3.4) { this.tiny = false; this.g.burst(this.cx, this.cy, 8, '#ffaacc', 'spark'); K.sfx('pop', 'jump', { vol: 0.4, pitch: 0.8 }); } }
+    super.update(dt);
+  }
+  hit(kind, src) {
+    if (this.dead || this.state === 'wait') return false;
+    if (kind === 'stomp' || kind === 'spin') {
+      if (this.tiny) { this.knockOff(1); return true; }
+      this.tiny = true; this.tinyT = 0; Sound.play('stomp', { pitch: 1.4 }); this.g.burst(this.cx, this.cy, 8, '#ffffff', 'spark');
+      this.g.parts.text(this.cx, this.y - 6, 'TINY!', '#ffaacc'); return 'bounce';
+    }
+    this.knockOff(1); return true;
+  }
+  touchPlayer(p) { if (!this.tiny) super.touchPlayer(p); }
+  draw(ctx) {
+    if (!this.tiny || this.knocked) return super.draw(ctx);
+    if (this.state === 'wait') return;
+    ctx.save(); ctx.translate(this.cx, this.cy); ctx.scale(0.55, 0.55); ctx.translate(-this.cx, -this.cy);
+    if (this.tinyT > 2.4 && Math.floor(this.t * 12) % 2) ctx.globalAlpha = 0.45;
+    super.draw(ctx); ctx.restore();
+  }
+}
+MxAxolotl.cfg = AxoLeap.cfg;
+// swimmers: a regrower that patrols its stretch of water and turns at walls
+TourBehave.mxSwimRegrow = Object.assign({}, TourBehave.regrower, {
+  think(e, dt) {
+    if (e.hitWall) e.dir = -e.dir;
+    if (e.cx < e.hx0 - 4 * TS) e.dir = 1; else if (e.cx > e.hx0 + 4 * TS) e.dir = -1;
+    e.vy = Math.sin(e.t * 1.6) * 0.5 * TS;
+    TourBehave.regrower.think(e, dt);
+    e.vx = e.dir * e.speed * (e.bst === 'tiny' ? 0.5 : 1);
+  }
+});
+// the blind fish: drifts; only fast swimming (a dash, or swimming with the Fins) wakes it: a quiver (0.6 s), then a
+// straight charge at where Brady was, then it drifts dazed (1 s), when a bump or a stomp beats it
+TourBehave.mxBlindCharge = {
+  think(e, dt) {
+    const p = TB.p(e), st = e.bst || 'drift';
+    if (!e.bst) TB.go(e, 'drift');
+    if (st === 'drift') {
+      e.mode = 'swim'; if (e.hitWall) e.dir = -e.dir; if (Math.abs(e.cx - e.hx0) > 3 * TS) e.dir = -sign(e.cx - e.hx0) || e.dir;
+      e.vx = e.dir * e.speed * 0.6; e.vy = Math.sin(e.t * 1.3) * 0.4 * TS;
+      const H = p && p.hands, fast = p && ((H && H.dashT > 0) || Math.hypot(p.vx, p.vy) > (H && H.id === 'fins' ? 3.5 : 5) * TS);
+      if (p && fast && e.cool <= 0 && TB.dist(e, p) < 5) { TB.go(e, 'tell'); e.aim = { x: p.cx, y: p.cy }; TB.face(e, p); TB.tell(e, 'growl', 'select'); }
+    } else if (st === 'tell') { e.vx = 0; e.vy = 0; e.mode = 'tell'; if (e.bt > 0.6) { TB.go(e, 'charge'); const dx = e.aim.x - e.cx, dy = e.aim.y - e.cy, d = Math.hypot(dx, dy) || 1; e.vx = dx / d * 7 * TS; e.vy = dy / d * 7 * TS; } }
+    else if (st === 'charge') { e.mode = 'charge'; if (e.bt > 0.7 || e.hitWall) { TB.go(e, 'dazed'); e.vx = 0; e.vy = 0; } }
+    else if (st === 'dazed') { e.mode = 'stun'; e.vx = 0; e.vy = 0.3 * TS; if (e.bt > 1.0) { TB.go(e, 'drift'); e.cool = 1.5; } }
+  },
+  hit(e, kind) { if (kind === 'stomp' || kind === 'bump') return e.bst === 'dazed' ? undefined : (kind === 'stomp' ? 'bounce' : false); return undefined; },
+  draw(e, ctx, d) { d(); if (e.bst === 'tell') TB.tellMark(ctx, e, '#ffaacc'); if (e.bst === 'dazed') TourKit.dizzy(ctx, e.cx, e.y - 4, e.t); }
+};
+// a flock of swallows: harmless to touch, they only nudge Brady a tile sideways
+TourBehave.mxFlock = Object.assign({}, TourBehave.swarm, { touch(e, p) { p.pushX = (p.pushX || 0) + e.dir * 4 * TS; return true; } });
 const enemies = {
   mxPepper: { cls: TourEnemy.make({ w: 16, h: 24, speed: 1.1, behavior: 'hop', hopV: 9.5, hopEvery: 1.1, art: pepperArt, burst: '#5ad04a' }), place: 'walk' },
-  mxElote: { cls: TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'walk', art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') }), place: 'walk' },
+  // the elote pops: stomp it and it bursts into three popcorn puffs (stomp them for coins, or let them fade)
+  mxElote: { cls: TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'splitter', n: 3, child: 'mxPopcorn', childLife: 3, art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') }), place: 'walk' },
+  mxPopcorn: { cls: TourEnemy.make({ w: 14, h: 14, inkPad: 5, speed: 1.5, behavior: 'hop', hopV: 7.5, hopEvery: 0.55, art: popcornArt, burst: '#fff6dc' }), place: 'walk' },
   mxBurro: { cls: TourEnemy.make({ w: 30, h: 30, speed: 1.0, behavior: 'walk', hp: 2, art: burroArt, onDefeat: e => { for (let k = 0; k < 6; k++) e.g.spawn(new PickPop(e.g, e.cx + (k - 2.5) * 6, e.y)); e.g.addPick(); e.g.burst(e.cx, e.cy, 24, '#ff9ac8', 'confetti'); } }), place: 'walk' },
   mxChihuahua: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 1.5, behavior: 'charge', range: 7, chargeSpeed: 7, windup: 0.35, art: (ctx, e, x, y, m) => {
     ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.4 : 1);
@@ -37830,7 +38774,11 @@ const enemies = {
     ctx.restore();
     if (m === 'notice') { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('YIP!', x, y - 30); }
   }, onNotice: e => K.sfx('bump', null, { pitch: 2.2, vol: 0.4 }) }), place: 'walk' },
-  mxAxolotl: { cls: TourLeaper.make({ w: 22, h: 14, jumpV: 21, every: 1.8, art: axolotlArt, splash: '#7ae0d0' }), place: 'here' },
+  mxAxolotl: { cls: MxAxolotl, place: 'here' },
+  mxAxolotlWalk: { cls: TourEnemy.make({ w: 24, h: 16, inkPad: 6, speed: 0.8, behavior: 'regrower', regrowT: 3, art: axolotlWalkArt, burst: '#ffaacc' }), place: 'walk' },
+  mxAxolotlSwim: { cls: TourSwimmer.make({ w: 26, h: 14, speed: 1.0, behavior: 'mxSwimRegrow', regrowT: 3, art: axolotlArt }), place: 'swim' },
+  mxBlindFish: { cls: TourSwimmer.make({ w: 30, h: 16, speed: 1.2, behavior: 'mxBlindCharge', art: blindFishArt }), place: 'swim' },
+  mxSwallow: { cls: TourFlyer.make({ w: 20, h: 12, speed: 1.6, behavior: 'mxFlock', n: 6, harmless: true, art: swallowArt }), place: 'fly' },
   mxHeron: { cls: TourFlyer.make({ w: 28, h: 16, range: 3, speed: 0.8, swoop: true, art: heronArt }), place: 'fly' },
   mxFish: { cls: TourSwimmer.make({ w: 28, h: 14, speed: 1.5, range: 4, art: fishArt }), place: 'swim' },
   mxBat: { cls: TourFlyer.make({ w: 26, h: 16, range: 2.5, speed: 1.4, swoop: true, art: batArt }), place: 'fly' },
@@ -38071,6 +39019,7 @@ const P = {
   // a snack boat moored alongside: Xolo hands over tacos
   vendor(st, o) {
     const x = st.x, B = st.B, vy = st.deck - 3;
+    if (Decor.mxVendorHull) B.decorAt('mxVendorHull', x + 3, st.deck, 0);
     for (let q = 0; q < 6; q++) B.set(x + q, vy, T.SEMI);
     B.prop('mxStall', x, vy - 3, 6, 3, 'none', {});
     st.spawn('mxXolo', x + 3, vy - 1, {});
@@ -38192,10 +39141,10 @@ const P = {
   // the boss patio: a pulley rail across the ceiling (the piñata hangs from it), three market stalls with
   // bouncy awnings to reach him when the rope shortens, lamps, pots and flowers
   arena_fiesta(st, o) {
-    const B = st.B, { x0, w, GY } = o;
-    for (const sx of [x0 + 1, x0 + Math.floor(w / 2) - 3, x0 + w - 6]) {
-      const ay = GY - 3;
-      B.prop('mxStall', sx, ay, 5, 3, 'none', {});
+    const B = st.B, { x0, w, GY } = o, tall = st.H >= 20;
+    // three market stalls; in the tall patio their awnings step up (3, 6 and 9 tiles) to reach him when the rope shortens
+    for (const [sx, ay] of [[x0 + 1, GY - 3], [x0 + Math.floor(w / 2) - 3, GY - (tall ? 6 : 3)], [x0 + w - 6, GY - (tall ? 9 : 3)]]) {
+      B.prop('mxStall', sx, ay, 5, GY - ay, 'none', {});
       for (let q = 0; q < 5; q++) { B.set(sx + q, ay, T.SEMI); B.setHide(sx + q, ay, 1); B.setSurf(sx + q, ay, SURF.BOUNCE); }
     }
     B.spawn('mxRail', x0 + 1, 1, { x0: x0 + 1, x1: x0 + w - 1 });
@@ -38527,12 +39476,12 @@ const stamps = {
       '#........?......-------......#.........#',
       '#............................F.........#',
       '#............................F.........#',
-      '#.@..D....k.......k..........F....g....#',
+      '#.@..D....k.......k.........dF....g....#',
       '########################################',
       '########################################',
       '########################################'
     ],
-    legend: { k: ['decor', 'mxChiliSack'], l: ['decor', 'mxCellarLamp'] },
+    legend: { k: ['decor', 'mxChiliSack'], l: ['decor', 'mxCellarLamp'], d: ['spawn', 'tourDraft', { look: 'fake' }] },
     items: ['power'],
     doors: [{ to: 'mercado@bodegaBack', look: 'mxCellarStairs' }],
     gold: { '*': 'hidden' }
@@ -38611,7 +39560,7 @@ const skins = {
   }
 };
 
-/* ---------------- the five levels ---------------- */
+/* ---------------- the country (its levels: 29_tour_mx_levels.js) ---------------- */
 Tour.country({
   id: 'mx',
   arrival: 'Brady! The Baron shrank the Palace of Fine Arts down to the size of a piñata. Follow the confetti! ♥ C', colors: COL, tagline: 'Tacos, piñatas and a volcano with a temper',
@@ -38637,73 +39586,889 @@ Tour.country({
     ctx.fillStyle = '#18c2c2'; ctx.beginPath(); ctx.arc(10, -7, 1.2, 0, TAU); ctx.fill();
     ctx.restore();
   } },
-  levels: [
-    // 1-1 in the v2 format (LEVEL_OVERHAUL.md §7.5.1): three lanes, a cellar shop behind a trapdoor, a secret exit
-    { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
-      gimmick: 'Three lanes at once: rooftops, street and cellar canal. Awnings bounce you up, trapdoors drop you down',
-      hint: 'Hold jump on an awning to bounce up to the rooftops',
-      postcard: 'Brady! The market has three floors and the melons use all of them. ♥ C',
-      enemies: [['mxPepper', 3], ['mxElote', 2], ['mxChihuahua', 1]],
-      mapCell: [0, 0], mapFrom: -1,
-      exits: {
-        main: { to: '1-2' },
-        secret: { to: 'house:mx-tienda', hint: 'Chili dust puffs out from under a crate in the market...' }
-      },
-      areas: [
-        { id: 'mercado', gen: 'layered', W: 214, H: 30, lanes: { roof: 12, street: 21, cellar: 27 }, camera: 'lanes',
-          script: [
-            // ① awnings link street and roof
-            ['xolo', { lane: 'street' }],
-            ['itemBlock', { lane: 'street', item: 'power', y: 4 }],
-            ['stalls', { lane: 'street', n: 2 }],
-            ['rooftops', { lane: 'roof', n: 2 }],
-            ['flat', { lane: 'cellar', n: 30 }],
-            ['sync'],
-            // ② melons on the street, gaps and papel-picado ropes on the roof; a gap in the street drops to the canal
-            ['melons', { lane: 'street' }],
-            ['banner', { lane: 'roof', len: 4, look: 'mxPapelPicado' }],
-            ['gap', { lane: 'roof', n: 3 }],
-            ['gearStand', { lane: 'roof', item: 'plane' }],
-            ['postcard', { lane: 'roof', kind: 'must', dy: -3 }],
-            ['gap', { lane: 'street', n: 3 }],
-            ['trapdoor', { lane: 'street', to: 'bodega@in', crate: true, back: 'bodegaBack', look: 'mxTrapdoor' }],
-            ['flat', { lane: 'cellar', n: 6 }],
-            ['spring', { lane: 'cellar', gold: false }],
-            ['enemies', { lane: 'cellar', n: 2 }],
-            ['sync'],
-            'cp',
-            // ③ the plaza joins all three lanes
-            ['stamp', { id: 'plaza', lane: 'street' }],
-            ['pinatas', { lane: 'street' }],
-            ['fountain', { lane: 'street' }],
-            ['rooftops', { lane: 'roof', n: 1 }],
-            ['sync'],
-            ['end', { lane: 'street', exit: 'main' }]
-          ] },
-        { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega' }
-      ] },
-    { name: 'Xochimilco Float', style: 'ride', theme: 'mx_canal', gimmick: 'Ride a painted trajinera: hop the posts, dodge axolotls and herons',
-      enemies: [['mxHeron', 1]], vehicle: 'mxTrajinera', vehicleW: 9, below: 'liquid', scroll: 2.6, len: 175,
-      hint: 'Jump the mooring posts or you\'ll fall in the canal',
-      postcard: 'The Baron\'s blimp smells like churros. I followed it along the canals. ♥ C',
-      script: [['arch', {}], 'posts', 'axolotls', ['chinampa', { gold: true }], 'posts', 'herons', ['bridge', { gold: true }], 'axolotls', 'vendor', 'posts', ['chinampa', {}], ['arch', { gold: true }], 'posts', 'herons', 'bridge', 'axolotls', 'posts'] },
-    { name: 'Cenote Dive', style: 'swim', theme: 'mx_cenote', gimmick: 'Swim a flooded limestone cave: hanging roots, currents and light shafts',
-      enemies: [['mxFish', 1]], H: 18, width: 220,
-      hint: 'Tap jump to swim. Currents carry you along',
-      postcard: 'Underwater, the cenote glows like a jewel. The Baron dropped a souvenir map here! ♥ C',
-      script: ['shaft', ['roots', { n: 4 }], ['current', { w: 12, dir: 1 }], 'lightwell', 'slalom', ['roots', { n: 3 }], ['current', { w: 10, dir: 1 }], 'slalom'] },
-    { name: 'Volcán Escape', style: 'climb', theme: 'mx_volcan', gimmick: 'Climb out of a volcano while the lava rises; ride the steam vents',
-      enemies: [['mxArmadillo', 1]], W: 24, H: 100, risingLava: { delay: 5, speed: 0.42 },
-      hint: 'Up, up, up! The lava is rising',
-      postcard: 'The Baron tried to bottle the volcano. It did not agree. ♥ C',
-      script: [['vledges', { n: 4 }], 'vvent', ['vledges', { n: 3, crumble: true, enemy: 'mxArmadillo' }], 'vroll', 'vblobs', ['vledges', { n: 3, flip: true }], ['vvent', { h: 10, gold: true }], ['vledges', { n: 4, crumble: true }], 'vblobs', ['vledges', { n: 3 }]] },
-    { name: 'Hacienda Fiesta', style: 'castle', theme: 'mx_hacienda', gimmick: 'Swinging piñatas, candy cannons, then El Gran Piñatón on his pulley rope',
-      enemies: [['mxSalsa', 2], ['mxBurro', 2], ['mxPepper', 1]], boss: 'mx_pinata', arena: 'fiesta', arenaW: 26,
-      hint: 'Break the piñata from BELOW: headbutt him when he swings low. Bounce off the awnings when he rises!',
-      postcard: 'You did it! The Palace of Fine Arts popped back to full size. Next stop: Ecuador! ♥ C',
-      script: [['swingers', { n: 3 }], 'cannons', ['enemies', { n: 2 }], 'cp', 'balcony', ['swingers', { n: 4 }], 'cannons', 'arena'] }
-  ]
+  // the levels (v2 format) are in 29_tour_mx_levels.js
+  levels: []
 });
+})();
+
+/* ---- 29_tour_mx_levels.js ---- */
+/* ============================================================
+   MEXICO: the levels in the v2 format (LEVEL_OVERHAUL.md §2, world 1).
+   Mexico is the first country Brady plays, so it teaches every new
+   idea once, gently: the secret room, the hidden exit, the Souvenir
+   Stand, a new power-up per level and the headline enemy.
+   1-1 Mercado Mayhem      PARADE  three stacked lanes of a market; the bodega under the street
+   1-2 Xochimilco Forks    RAIL    a trajinera on branching canals; the lock gate lifts the boat
+   1-3 Cenote of Light     DIVE    sunbeams make light-only stones appear; the air pocket
+   1-4 Volcán Escape       TOWER   six different bands up a crater while the lava rises
+   1-5 Fiesta de la Hacienda LAIR  the patio, the pantry, El Gran Piñatón's tall arena
+   1-6 Pit of Swallows     FALL    (secret) freefall through swallow flocks to an underground river
+   Art, enemies, pieces and the boss live in 29_tour_mx.js; the atlases in 29_tour_mx_sprites.js.
+   ============================================================ */
+(() => {
+const C = Tour.countries.mx;
+if (!C) return;
+const COL = C.colors, K = TourKit;
+const PAPEL = ['#ff3d8b', '#ffb81a', '#18c2c2', '#8a4aff', '#5ad04a', '#ff6a3a'];
+const INK = '#2a1a22';
+
+/* ---------------- decor for the new set pieces ---------------- */
+Object.assign(Decor, {
+  // the market's entrance arch: two painted pillars, a cut-paper banner reading MERCADO, a little lamp each side
+  mxMercadoArch(ctx, x, y, t) {
+    const w = 150, h = 170, x0 = x - w / 2;
+    ctx.save(); ctx.lineJoin = 'round';
+    for (const px of [x0, x0 + w - 22]) {
+      ctx.fillStyle = '#e8b878'; ctx.fillRect(px, y - h, 22, h); ctx.fillStyle = '#c8884a'; ctx.fillRect(px + 16, y - h, 6, h);
+      for (let k = 0; k < 5; k++) { ctx.fillStyle = PAPEL[k % 6]; ctx.fillRect(px + 3, y - h + 18 + k * 28, 16, 6); }
+      ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(px, y - h, 22, h);
+    }
+    // the arch beam with its sign
+    ctx.fillStyle = '#ff3d8b'; rr(ctx, x0 - 8, y - h - 26, w + 16, 34, 8); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#ffd84a'; ctx.font = `bold 20px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('MERCADO', x, y - h - 8);
+    // papel picado hanging under the beam
+    for (let k = 0; k < 8; k++) { const fx = x0 + 22 + k * 13.5, sw = Math.sin(t * 2.5 + k) * 1.5; ctx.fillStyle = PAPEL[(k + 2) % 6]; ctx.beginPath(); ctx.moveTo(fx, y - h + 8); ctx.lineTo(fx + 11, y - h + 8); ctx.lineTo(fx + 11 + sw, y - h + 24); ctx.lineTo(fx + 5.5 + sw, y - h + 20); ctx.lineTo(fx + sw, y - h + 24); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+  },
+  // a tall mooring post striped like a barber's pole of the canal (its collision is the hidden tiles under it)
+  mxTallPost(ctx, x, y, t, th, d) {
+    const h = d.h, x0 = x - 7;
+    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x0, y - h, 14, h + 70);
+    for (let k = 0; k < h / 12; k++) { ctx.fillStyle = PAPEL[k % 6]; ctx.fillRect(x0, y - h + 4 + k * 12, 14, 4); }
+    ctx.fillStyle = '#8a6a4a'; ctx.fillRect(x0 - 2, y - h - 4, 18, 6); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(x0, y - h, 14, h + 70);
+  },
+  // the taco boat under the vendor's stall
+  mxVendorHull(ctx, x, y, t) {
+    const yy = y + Math.sin(t * 1.8) * 1.5, w = 6 * TS + 16, x0 = x - w / 2;
+    ctx.fillStyle = '#18a8a8'; ctx.beginPath(); ctx.moveTo(x0, yy - 2.2 * TS); ctx.lineTo(x0 + w, yy - 2.2 * TS); ctx.lineTo(x0 + w - 14, yy + 18); ctx.lineTo(x0 + 14, yy + 18); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd84a'; ctx.fillRect(x0 + 6, yy - 2.2 * TS + 10, w - 12, 5); ctx.fillStyle = '#ff3d8b'; ctx.fillRect(x0 + 10, yy - 2.2 * TS + 22, w - 20, 5);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, yy - 2.2 * TS); ctx.lineTo(x0 + w, yy - 2.2 * TS); ctx.lineTo(x0 + w - 14, yy + 18); ctx.lineTo(x0 + 14, yy + 18); ctx.closePath(); ctx.stroke();
+    ctx.fillStyle = '#fff4d8'; ctx.font = `bold 9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('TACOS', x, yy - 2.2 * TS + 40);
+  },
+  // the bright mirror of an air pocket's surface seen from below, with bubbles collecting under it
+  mxAirShine(ctx, x, y, t) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(x, y - 40, 4, x, y - 40, 70); g.addColorStop(0, 'rgba(230,255,250,0.55)'); g.addColorStop(1, 'rgba(230,255,250,0)');
+    ctx.fillStyle = g; ctx.fillRect(x - 70, y - 110, 140, 110);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(x - 60, y - 68 + Math.sin(t * 2) * 1.5, 120, 3);
+    ctx.restore();
+    for (let q = 0; q < 5; q++) { const u = (t * 0.6 + q / 5) % 1; ctx.fillStyle = 'rgba(232,252,255,0.8)'; ctx.beginPath(); ctx.arc(x - 30 + q * 15, y - u * 60, 2.5, 0, TAU); ctx.fill(); }
+  },
+  // a short string of papel picado hanging under a ceiling
+  mxPapelHang(ctx, x, y, t) { for (let k = 0; k < 4; k++) { const fx = x - 30 + k * 15, sw = Math.sin(t * 2 + k + x) * 1.5; ctx.fillStyle = PAPEL[(k + Math.floor(x / 64)) % 6]; ctx.beginPath(); ctx.moveTo(fx, y - 60); ctx.lineTo(fx + 13, y - 60); ctx.lineTo(fx + 13 + sw, y - 42); ctx.lineTo(fx + 6.5 + sw, y - 46); ctx.lineTo(fx + sw, y - 42); ctx.closePath(); ctx.fill(); } ctx.strokeStyle = 'rgba(60,40,60,0.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 34, y - 60); ctx.lineTo(x + 32, y - 60); ctx.stroke(); },
+  // a swallow's mud nest stuck to the ceiling
+  mxMudNest(ctx, x, y, t) { ctx.fillStyle = '#8a6a4a'; ctx.beginPath(); ctx.arc(x, y - 30, 14, 0, Math.PI); ctx.fill(); ctx.fillStyle = '#6a4a2a'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(x - 10 + k * 5, y - 26 + (k % 2) * 3, 3, 0, TAU); ctx.fill(); } ctx.fillStyle = '#1a1210'; ctx.beginPath(); ctx.arc(x, y - 24, 4, 0, TAU); ctx.fill(); },
+  // the hacienda's gate: thick adobe posts, an iron-studded double door swung open, bougainvillea over the lintel
+  mxHaciendaGate(ctx, x, y, t) {
+    ctx.save();
+    for (const px of [x - 70, x + 46]) { ctx.fillStyle = '#e8c89a'; ctx.fillRect(px, y - 150, 24, 150); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(px, y - 150, 24, 150); }
+    ctx.fillStyle = '#d8b88a'; ctx.fillRect(x - 78, y - 168, 156, 22); ctx.strokeRect(x - 78, y - 168, 156, 22);
+    for (let k = 0; k < 16; k++) { ctx.fillStyle = ['#ff3d8b', '#ff6ab0', '#c82a6a'][k % 3]; ctx.beginPath(); ctx.arc(x - 74 + k * 10, y - 170 + Math.sin(k * 2) * 4, 6, 0, TAU); ctx.fill(); }
+    for (const [dx, dir] of [[-46, -1], [46, 1]]) { ctx.fillStyle = '#7a4a24'; ctx.save(); ctx.translate(x + dx, y); ctx.scale(dir * 0.35, 1); ctx.fillRect(0, -140, 60, 140); ctx.restore(); }
+    ctx.fillStyle = '#ffd84a'; ctx.font = `bold 12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('HACIENDA', x, y - 153);
+    ctx.restore();
+  },
+  // a glassy obsidian cluster
+  mxObsidian(ctx, x, y, t) {
+    for (const [dx, h, w] of [[-10, 34, 9], [0, 46, 11], [11, 28, 8]]) { ctx.fillStyle = '#1a1424'; ctx.beginPath(); ctx.moveTo(x + dx - w, y); ctx.lineTo(x + dx - w * 0.3, y - h); ctx.lineTo(x + dx + w * 0.4, y - h + 6); ctx.lineTo(x + dx + w, y); ctx.fill(); ctx.strokeStyle = 'rgba(180,140,255,0.6)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x + dx - w * 0.3, y - h); ctx.lineTo(x + dx - w * 0.1, y - 4); ctx.stroke(); }
+  },
+  // a string of papel picado across the pit, with gaps to fall through
+  mxPapelLine(ctx, x, y, t, th, d) {
+    const x0 = x - d.w / 2, x1 = x + d.w / 2, yy = y - 24;
+    ctx.strokeStyle = 'rgba(60,40,60,0.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x1, yy); ctx.stroke();
+    for (let fx = x0 + 34; fx < x1 - 20; fx += 15) {
+      const tx = Math.floor(fx / TS); if ((d.holes || []).some(([a, b]) => tx >= a && tx <= b)) continue;
+      const k = Math.floor(fx / 15), sw = Math.sin(t * 3 + k) * 1.5;
+      ctx.fillStyle = PAPEL[k % 6]; ctx.beginPath(); ctx.moveTo(fx, yy); ctx.lineTo(fx + 13, yy); ctx.lineTo(fx + 13 + sw, yy + 18); ctx.lineTo(fx + 6.5 + sw, yy + 14); ctx.lineTo(fx + sw, yy + 18); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(fx + 6.5, yy + 7, 2, 0, TAU); ctx.fill();
+    }
+  },
+  // a flower whose updraft brakes your fall
+  mxUpFlower(ctx, x, y, t) {
+    for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + t; ctx.fillStyle = k % 2 ? '#ff6ab0' : '#ffd84a'; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * 9, y - 12 + Math.sin(a) * 4, 7, 4, a, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#ff9a2a'; ctx.beginPath(); ctx.arc(x, y - 12, 5, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(255,240,200,0.6)'; for (let q = 0; q < 5; q++) { const u = (t * 0.8 + q / 5) % 1; ctx.beginPath(); ctx.arc(x - 30 + q * 15, y - 20 - u * 150, 2, 0, TAU); ctx.fill(); }
+  },
+  // the hole in the pit wall with a swallow darting in and out (the tell for the nest room)
+  mxNestHole(ctx, x, y, t, th, d) {
+    const dir = d.seed ? -1 : 1, hx = x + dir * 10;
+    ctx.fillStyle = '#1a1210'; ctx.beginPath(); ctx.ellipse(hx, y - 34, 16, 26, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8a6a4a'; for (let k = 0; k < 7; k++) { ctx.beginPath(); ctx.arc(hx - 14 + k * 4.5, y - 8 + Math.sin(k) * 2, 4, 0, TAU); ctx.fill(); }
+    const u = (t * 0.45) % 1, bx = hx + dir * (130 * (1 - u)), by = y - 34 - Math.sin(u * Math.PI) * 50;
+    if (u < 0.95) { ctx.save(); ctx.translate(bx, by); ctx.scale(-dir, 1); ctx.fillStyle = '#2a3a6a'; ctx.beginPath(); ctx.ellipse(0, 0, 8, 4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-13, -4); ctx.lineTo(-10, 0); ctx.lineTo(-13, 4); ctx.fill(); const f = Math.sin(t * 20); ctx.beginPath(); ctx.moveTo(-1, -1); ctx.lineTo(2, -9 - f * 4); ctx.lineTo(4, -1); ctx.fill(); ctx.fillStyle = '#f4e4c8'; ctx.beginPath(); ctx.arc(4, 1.5, 2.5, 0, TAU); ctx.fill(); ctx.restore(); }
+  },
+  // a cut-paper flag planted on the crater rim
+  mxRimFlag(ctx, x, y, t) {
+    ctx.fillStyle = '#4a3a3a'; ctx.fillRect(x - 2, y - 70, 4, 70);
+    for (let k = 0; k < 4; k++) { const sw = Math.sin(t * 3 + k) * 3; ctx.fillStyle = PAPEL[k]; ctx.beginPath(); ctx.moveTo(x + 2, y - 70 + k * 9); ctx.lineTo(x + 30 + sw, y - 68 + k * 9); ctx.lineTo(x + 2, y - 62 + k * 9); ctx.fill(); }
+  },
+  // a little flower raft floating in the canal (under a checkpoint flag)
+  mxRaftFlag(ctx, x, y, t) {
+    const yy = y + 16 + Math.sin(t * 2) * 1.5;
+    ctx.fillStyle = '#5a8a3a'; rr(ctx, x - 26, yy, 52, 9, 4); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.stroke();
+    for (let k = 0; k < 7; k++) { ctx.fillStyle = PAPEL[k % 6]; ctx.beginPath(); ctx.arc(x - 21 + k * 7, yy - 1, 3, 0, TAU); ctx.fill(); }
+  },
+  // the landing stage at either end of the canals: a flower arch over the dock
+  mxDockArch(ctx, x, y, t, th, d) {
+    const w = 110, x0 = x - w / 2 + (d.seed ? 0 : 30);
+    ctx.save();
+    ctx.fillStyle = '#7a5a3a'; ctx.fillRect(x0, y - 120, 6, 120); ctx.fillRect(x0 + w - 6, y - 120, 6, 120);
+    for (let k = 0; k <= 18; k++) { const a = Math.PI + k / 18 * Math.PI, fx = x0 + w / 2 + Math.cos(a) * w / 2, fy = y - 120 + Math.sin(a) * 26; ctx.fillStyle = PAPEL[k % 6]; ctx.beginPath(); ctx.arc(fx, fy, 6, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#fff4d8'; rr(ctx, x0 + 14, y - 136, w - 28, 18, 6); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#ff3d8b'; ctx.font = `bold 10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(d.seed ? '¡ADIÓS!' : 'XOCHIMILCO', x0 + w / 2, y - 127);
+    ctx.restore();
+  },
+  // the cellar canal under the street: brick vaults, a lantern, jars and a strip of dark water behind the walkway
+  mxVault(ctx, x, y, t, th, d) {
+    const w = 8 * TS, h = 4 * TS + 6, x0 = x - w / 2, seed = d.seed || 0;
+    ctx.save();
+    const g = ctx.createLinearGradient(0, y - h, 0, y); g.addColorStop(0, '#3a2016'); g.addColorStop(1, '#5a3420');
+    ctx.fillStyle = g; ctx.fillRect(x0, y - h, w + 1, h);
+    // brick courses
+    for (let r = 0; r < 8; r++) for (let k = -1; k < 9; k++) { const bx = x0 + k * 32 + (r % 2) * 16, by = y - h + r * 16; ctx.fillStyle = (k + r + seed) % 3 ? 'rgba(140,80,50,0.35)' : 'rgba(110,60,40,0.35)'; ctx.fillRect(Math.max(x0, bx + 1), by + 1, Math.min(30, x0 + w - bx - 1), 14); }
+    // the vault arch with a dark niche and shelves of jars
+    const ax = x0 + w / 2;
+    ctx.fillStyle = '#1e100c'; ctx.beginPath(); ctx.moveTo(ax - 70, y); ctx.lineTo(ax - 70, y - h + 50); ctx.arc(ax, y - h + 50, 70, Math.PI, TAU); ctx.lineTo(ax + 70, y); ctx.fill();
+    ctx.strokeStyle = '#a8704a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(ax, y - h + 50, 73, Math.PI, TAU); ctx.stroke();
+    ctx.fillStyle = '#6a3e1c'; ctx.fillRect(ax - 60, y - 58, 120, 5);
+    for (let k = 0; k < 6; k++) { const jx = ax - 50 + k * 20, jh = 14 + ((k * 7 + seed) % 10), col = ['#c84a2a', '#e8a83a', '#5a8a3a', '#d86a8a', '#e8d8a8'][(k + seed) % 5]; ctx.fillStyle = 'rgba(232,244,255,0.3)'; rr(ctx, jx - 7, y - 58 - jh, 14, jh, 4); ctx.fill(); ctx.fillStyle = col; rr(ctx, jx - 6, y - 58 - jh * 0.7, 12, jh * 0.7 - 1, 3); ctx.fill(); }
+    // canal water behind the walkway: a dark strip with moving glints
+    ctx.fillStyle = '#123a44'; ctx.fillRect(x0, y - 14, w + 1, 14);
+    ctx.fillStyle = 'rgba(120,220,230,0.45)'; for (let k = 0; k < 5; k++) { const gx = x0 + ((k * 53 + t * 20 + seed * 9) % w); ctx.fillRect(gx, y - 9 + (k % 2) * 4, 12, 1.5); }
+    // a lantern on the pier between the vaults (lit decor)
+    if (seed % 2 === 0) { const lx = x0 + 10; ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(lx, y - h); ctx.lineTo(lx, y - h + 26); ctx.stroke(); ctx.fillStyle = `rgba(255,${200 + Math.sin(t * 6 + seed) * 20},110,0.95)`; rr(ctx, lx - 6, y - h + 26, 12, 14, 3); ctx.fill(); }
+    ctx.restore();
+  },
+  // the fiesta stage at the end of the market: a tiled dais under a sun banner and papel picado
+  mxStage(ctx, x, y, t) {
+    const w = 18 * TS, x0 = x - w / 2 - TS / 2, top = y - 2 * TS;
+    ctx.save();
+    // the dais: a skirt of painted tiles under the plank top, with posts
+    ctx.fillStyle = '#7a3a2a'; ctx.fillRect(x0, top + 6, w, 2 * TS - 6);
+    for (let k = 0; k < 18; k++) { const tx = x0 + k * TS; ctx.fillStyle = k % 2 ? '#f4f0e0' : '#2a7ad8'; ctx.fillRect(tx + 4, top + 14, TS - 8, TS - 8); ctx.fillStyle = k % 2 ? '#2a7ad8' : '#ffd84a'; ctx.beginPath(); ctx.arc(tx + TS / 2, top + 14 + (TS - 8) / 2, 5, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#4a2416'; for (const px of [x0, x0 + w - 8]) ctx.fillRect(px, top + 6, 8, 2 * TS - 6);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(x0, top + 6, w, 2 * TS - 6);
+    // poles and three strings of papel picado over the dais
+    ctx.fillStyle = '#6a4a2a'; for (const px of [x0 + 4, x0 + w - 8]) ctx.fillRect(px, top - 150, 5, 150);
+    for (let s = 0; s < 3; s++) { const yy = top - 140 + s * 26, a = x0 + 6, b = x0 + w - 6; ctx.strokeStyle = 'rgba(60,40,60,0.7)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(a, yy); ctx.quadraticCurveTo(x, yy + 22, b, yy); ctx.stroke();
+      for (let k = 0; k < 18; k++) { const fx = a + 6 + k * (b - a - 12) / 17, fy = yy + Math.sin((fx - a) / (b - a) * Math.PI) * 11, sw = Math.sin(t * 2 + k + s) * 1.4; ctx.fillStyle = PAPEL[(k + s * 2) % 6]; ctx.beginPath(); ctx.moveTo(fx - 6, fy); ctx.lineTo(fx + 6, fy); ctx.lineTo(fx + 6 + sw, fy + 13); ctx.lineTo(fx + sw, fy + 10); ctx.lineTo(fx - 6 + sw, fy + 13); ctx.closePath(); ctx.fill(); } }
+    ctx.translate(-w * 0.28, top - 70);
+    // the sun banner
+    ctx.translate(x, 0); ctx.rotate(Math.sin(t * 0.8) * 0.03);
+    ctx.fillStyle = '#ffd84a'; for (let k = 0; k < 12; k++) { const a = k / 12 * TAU + t * 0.3; ctx.beginPath(); ctx.moveTo(Math.cos(a - 0.12) * 18, Math.sin(a - 0.12) * 18); ctx.lineTo(Math.cos(a) * 30, Math.sin(a) * 30); ctx.lineTo(Math.cos(a + 0.12) * 18, Math.sin(a + 0.12) * 18); ctx.fill(); }
+    ctx.fillStyle = '#ffb81a'; ctx.beginPath(); ctx.arc(0, 0, 19, 0, TAU); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    K.eyes(ctx, 0, -3, 0, 6, 3, false); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, 4, 7, 0.2, Math.PI - 0.2); ctx.stroke();
+    ctx.restore();
+  }
+});
+TOUR_DECOR_LIGHTS.mxVault = [130, '#ffc070', -100];
+
+/* ---------------- entities ---------------- */
+// a sunbeam slanting down into the cenote. It lights a column (light-only stones shimmer into view inside it); with a
+// period it comes and goes as clouds pass over the mouth of the cenote (a 1 s warning flicker before it fades)
+class MxSunbeam extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 3) * TS, (s.h || 14) * TS); this.x = s.x - this.w / 2; this.y = s.y - this.h; this.period = s.period || 0; this.ph = s.phase || 0; this.k = 1; this.back = true; }
+  update(dt) {
+    this.t += dt;
+    if (this.period) { const u = ((this.t + this.ph) % this.period) / this.period; this.k = u < 0.55 ? 1 : u < 0.62 ? 1 - (u - 0.55) / 0.07 : u < 0.9 ? 0 : (u - 0.9) / 0.1; this.warn = u > 0.47 && u < 0.55; }
+  }
+  get lights() { if (this.k < 0.05) return null; const out = []; for (let y = this.y + 2 * TS; y < this.y + this.h; y += 3 * TS) out.push({ x: this.cx + (y - this.y) * 0.18, y, r: 120 * this.k, c: 'rgba(220,255,240,', a: 0.35 }); return out; }
+  draw(ctx) {
+    const k = this.k * (this.warn ? 0.6 + 0.4 * Math.sin(this.t * 30) : 1); if (k < 0.02) return;
+    const x = this.cx, y0 = this.y, h = this.h, w = this.w;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createLinearGradient(0, y0, 0, y0 + h); g.addColorStop(0, `rgba(230,255,240,${0.42 * k})`); g.addColorStop(1, 'rgba(200,255,240,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - w * 0.35, y0); ctx.lineTo(x + w * 0.35, y0); ctx.lineTo(x + w * 0.35 + h * 0.18 + w * 0.3, y0 + h); ctx.lineTo(x - w * 0.35 + h * 0.18 - w * 0.3, y0 + h); ctx.closePath(); ctx.fill();
+    // motes drifting in the light
+    ctx.fillStyle = `rgba(255,255,230,${0.7 * k})`; for (let q = 0; q < 8; q++) { const u = ((this.t * 0.08 + q / 8) % 1), mx = x + Math.sin(q * 2.3 + this.t * 0.7) * w * 0.3 + u * h * 0.18, my = y0 + u * h; ctx.beginPath(); ctx.arc(mx, my, 1.6, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+}
+// a crack in the cenote floor: bubbles rise from it (the tell of the hidden way down)
+class MxBubbleCrack extends Ent {
+  constructor(g, s) { super(g, s, 2 * TS, 8); this.x = s.x - TS; this.y = s.y - 8; this.back = true; }
+  update(dt) { this.t += dt; if (Math.random() < dt * 6 && this.g.onScreen(this, 80)) this.g.burst(this.cx + (Math.random() - 0.5) * 30, this.y, 1, '#e8fcff', 'bubble'); }
+  draw(ctx) {
+    const x = this.cx, y = this.y + 8;
+    ctx.strokeStyle = '#1a2a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 22, y - 2); ctx.lineTo(x - 8, y - 5); ctx.lineTo(x - 2, y - 1); ctx.lineTo(x + 9, y - 6); ctx.lineTo(x + 22, y - 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(232,252,255,0.8)'; for (let q = 0; q < 6; q++) { const u = (this.t * 0.5 + q / 6) % 1; ctx.beginPath(); ctx.arc(x + Math.sin(q * 3 + this.t * 2) * 10, y - 6 - u * 90, 2 + q % 3, 0, TAU); ctx.fill(); }
+  }
+}
+Object.assign(ENTITY_TYPES, { mxSunbeam: MxSunbeam, mxBubbleCrack: MxBubbleCrack });
+
+/* ---------------- pieces ---------------- */
+const P = {
+  // a sign post with a tip (Mexico teaches every new idea once): { text, n }
+  tip(st, o) { const x = st.x, n = o.n || 3; st.floor(x, x + n - 1); st.sign(x + Math.floor(n / 2), o.text || ''); return x + n; },
+  // the cellar lane's backdrop: brick vaults and the dark canal behind the walkway, from x0 to the cursor
+  cellarDress(st, o) {
+    const B = st.B, y = st.gy, x1 = o.to || st.x;
+    for (let x = o.from || 0; x < x1; x += 8) B.decor.push({ kind: 'mxVault', x: (x + 4) * TS, y: y * TS, w: 8 * TS, h: 4 * TS, seed: (x / 8) | 0 });
+    return st.x;
+  }
+};
+Object.assign(P, {
+  // rail: an item block hanging over the channel: { item, dy (rows over the deck, 4) }
+  boatBlock(st, o) { const x = st.x; st.block(x + 1, (st.deck || st.gy) - (o.dy || 4), o.item || 'power', o.hidden ? T.HIDDEN : null); st.coins(x, x + 2, (st.deck || st.gy) - (o.dy || 4) - 2); return x + 3; },
+  // rail: a tall mooring post (three tiles) to hop onto, a postcard or coins on top: { h, gold }
+  highPost(st, o) {
+    const x = st.x, B = st.B, d = st.deck || st.gy, h = o.h || 3;
+    B.fill(x, d - h, x, d - 1, T.HARD); for (let y = d - h; y < d; y++) B.setHide(x, y, 1);
+    B.prop('mxTallPost', x, d - h, 1, h, 'none', {});
+    if (o.gold) st.gold(x, d - h - 2, o.gold === true ? 'must' : o.gold); else st.coins(x, x, d - h - 2);
+    return x + 6;
+  },
+  // rail: a willow over the water hides a door (walk the boat under it and press UP): { to }
+  willowDoor(st, o) {
+    const x = st.x, d = st.deck || st.gy;
+    st.B.spawn('tourCurtain', x + 2, d - 1, { look: 'willow', skin: 'mxWillow', h: 4 });
+    st.B.spawn('portal', x + 2, d - 1, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
+    return x + 6;
+  },
+  // checkpoints: on the canals a flag on a flower raft (the boat pulls up wherever Brady respawns); elsewhere the usual
+  cp(st, o) {
+    if (st.mode !== 'rail') return Tour.pieces.cp(st, o);
+    const x = st.x, d = st.deck || st.gy;
+    st.B.decorAt('mxRaftFlag', x + 2, d, 0); st.spawn('checkpoint', x + 2, d - 1);
+    return x + 5;
+  },
+  // rail: the start dock (a sign) and the far landing's flower arch; the landing gets an anchor for doors
+  embarcadero(st, o) {
+    const B = st.B, d = st.deck || st.gy, L = st.len;
+    if (o.sign) B.spawn('sign', 3, d - 1, { text: o.sign });
+    B.decorAt('mxDockArch', 1, d, 0);
+    B.decorAt('mxDockArch', L + 17, d, 1);
+    B.anchor('landing', L + 3, d - 1);
+    return st.x;
+  }
+});
+Object.assign(P, {
+  // swim: a sunbeam column at the cursor: { period (s, clouds pass), phase, w, open (opens the rock above) }
+  sunbeam(st, o) {
+    const x = st.x + (o.dx || 2), B = st.B;
+    if (o.open !== false) for (let xx = x - 1; xx <= x + 1; xx++) for (let y = 0; y < 2; y++) B.set(xx, y, T.EMPTY);
+    B.spawn('mxSunbeam', x, st.floorY - 1, { w: o.w || 3, h: st.floorY, period: o.period || 0, phase: o.phase || 0 });
+    return st.x + (o.n || 5);
+  },
+  // swim: a fins stand on the cave floor at the entrance, with its tip
+  finsStand(st, o) {
+    const x = st.x; st.B.fill(x, st.floorY, x + 4, st.floorY, T.GROUND);
+    Tour.pieces.gearStand(st, { item: 'fins', here: true, x: x + 1 }); st.B.spawns[st.B.spawns.length - 1].x = (x + 2) * TS + TS / 2;
+    st.B.vkeys[st.B.vkeys.length - 1].tiles = [[x + 2, st.floorY - 1], [x + 2, st.floorY - 2]];
+    if (o.sign) st.B.spawn('sign', x + 4, st.floorY - 1, { text: o.sign });
+    return x + 6;
+  },
+  // swim: light-only stones in a sunbeam: an arch of shelves (always solid, visible only in light): { n }
+  lightStones(st, o) {
+    const x = st.x, B = st.B, F = st.floorY;
+    B.spawn('mxSunbeam', x + 6, F - 1, { w: 4, h: F, period: o.period || 0, phase: o.phase || 0 });
+    for (let xx = x + 5; xx <= x + 7; xx++) for (let y = 0; y < 2; y++) B.set(xx, y, T.EMPTY);
+    // a ring of shimmering stone: a little room with one way in at the top-left, coins and a block inside
+    const x0 = x + 3, x1 = x + 10, y0 = 5, y1 = 11;
+    for (let xx = x0; xx <= x1; xx++) for (const yy of [y0, y1]) { B.set(xx, yy, T.HARD); B.setHide(xx, yy, 3); }
+    for (let yy = y0; yy <= y1; yy++) for (const xx of [x0, x1]) { B.set(xx, yy, T.HARD); B.setHide(xx, yy, 3); }
+    for (let xx = x0 + 1; xx <= x0 + 2; xx++) { B.set(xx, y0, T.EMPTY); B.setHide(xx, y0, 0); }
+    st.coins(x0 + 2, x1 - 2, y1 - 2); st.block(x0 + 4, y0 + 3, o.item || 'pick');
+    return x + 13;
+  },
+  // swim: a niche up in the ceiling rock between roots, with a block: { item }
+  rootNiche(st, o) {
+    const x = st.x, B = st.B;
+    B.fill(x, 2, x + 6, 4, T.GROUND); B.fill(x + 2, 2, x + 4, 4, T.EMPTY);
+    st.block(x + 3, 2, o.item || 'oneup');
+    for (const rx of [x + 1, x + 5]) { B.fill(rx, 5, rx, 7, T.HARD); B.decorAt('mxRoot', rx, 8, 0); }
+    st.coins(x + 2, x + 4, 6);
+    return x + 7;
+  },
+  // swim: a pocket of air up in the ceiling with a way into the dry grotto: { to }
+  airPocket(st, o) {
+    const x = st.x, B = st.B;
+    B.fill(x, 2, x + 7, 3, T.GROUND); B.fill(x + 2, 1, x + 5, 3, T.EMPTY); B.fill(x + 2, 0, x + 5, 0, T.GROUND);
+    B.decorAt('mxAirShine', x + 4, 4, 0);
+    B.spawn('portal', x + 4, 3, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null });
+    st.coins(x + 2, x + 5, 6);
+    if (o.sign) B.spawn('sign', x + 7, st.floorY - 1, { text: o.sign });
+    return x + 9;
+  },
+  // swim: a crack in the floor behind roots; bubbles rise from it; press DOWN on it to slip through: { to }
+  floorCrack(st, o) {
+    const x = st.x, B = st.B, F = st.floorY;
+    B.spawn('mxBubbleCrack', x + 3, F - 1, {});
+    B.spawn('portal', x + 3, F - 1, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
+    return x + 6;
+  },
+  // swim: the way out of the cenote: a sunlit chamber, the gate on a ledge under the mouth: { exit }
+  cenoteExit(st, o) {
+    const x = st.x, B = st.B, F = st.floorY, w = 18;
+    B.fill(x, 0, x + w, 1, T.GROUND); B.fill(x + 6, 0, x + 12, 1, T.EMPTY);
+    B.spawn('mxSunbeam', x + 9, F - 1, { w: 6, h: F });
+    B.fill(x + 7, 7, x + 13, 7, T.GROUND);
+    B.spawn('gate', x + 10, 6, { exit: o.exit || 'main' });
+    st.coins(x + 2, x + 5, 10); st.arc(x + 7, x + 13, 5, 2);
+    B.fill(x + w + 1, 0, x + w + 2, B.H - 1, T.GROUND);
+    st.x = x + w + 1; return x + w + 1;
+  }
+});
+Object.assign(P, {
+  // climb: a cracked painted tile in the crater wall is a way into the obsidian vault: { to }
+  vaultDoor(st, o) {
+    const B = st.B, y = st.y;
+    B.fill(1, y - 4, 1, y - 1, T.HARD);
+    B.spawn('tourDraft', 2, y - 1, { look: 'painted' });
+    B.spawn('portal', 2, y - 1, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
+    B.anchor(o.back || 'vaultBack', 4, y - 1);
+  },
+  // climb: a little ledge on the crater wall with a postcard: { kind, left }
+  sideGold(st, o) {
+    const B = st.B, W = st.W, y = st.y - 4, x0 = o.left ? 1 : W - 5;
+    B.fill(x0, y, x0 + 3, y, T.GROUND); st.gold(x0 + 2, y - 2, o.kind || 'must');
+  },
+  // climb: the final double chimney: two vents side by side, a hop across in the middle, lava on your heels
+  vdouble(st, o) {
+    const B = st.B, W = st.W, h = o.h || 14, y0 = st.y, y1 = y0 - h, mid = st.mid;
+    const L = [3, 5], R = [W - 6, W - 4];
+    for (const [a, b] of [L, R]) { B.zone(a, y1 - 6, b - a + 1, h + 6, 0, -110 * TS, 7.2 * TS, 'steam', { pull: 3 }); B.spawn('vent', a + 1, y0 - 1, { w: b - a + 1, look: 'steam' }); }
+    // the wall between them with a shelf half way: ride the left chimney up, hop over to the right one
+    B.fill(mid - 1, y1 + 3, mid, y0 - 1, T.HARD);
+    B.fill(7, y0 - 7, mid - 2, y0 - 7, T.GROUND); B.fill(mid + 1, y0 - 5, W - 8, y0 - 5, T.GROUND);
+    for (let y = y1 + 1; y < y0 - 1; y += 2) { B.pickAt(4, y); B.pickAt(W - 5, y); }
+    st.top(y1 - 3, [[3, 5], [W - 6, W - 4]]);
+  },
+  // climb: the crater rim at the top: a wide ledge, the gate, a postcard on a lip out over the lava
+  craterRim(st, o) {
+    const B = st.B, W = st.W, y = st.y - 4;
+    B.fill(1, y, W - 2, y + 1, T.GROUND); B.fill(st.mid - 2, y, st.mid + 1, y + 1, T.EMPTY); for (let x = st.mid - 2; x <= st.mid + 1; x++) B.set(x, y, T.SEMI);
+    B.spawn('gate', W - 5, y - 1, { exit: 'main' });
+    B.fill(3, y - 5, 6, y - 5, T.SEMI); st.gold(4, y - 7, 'risky');
+    B.decorAt('mxRimFlag', 8, y, 0);
+    st.y = y - 1;
+  }
+});
+Object.assign(P, {
+  // shaft: the Paper Plane stand on the lip at the top, with its tip
+  lipStand(st, o) {
+    const B = st.B; Tour.pieces.gearStand(st, { item: 'plane', here: true }); const s = B.spawns[B.spawns.length - 1]; s.x = 7 * TS + TS / 2; s.y = 6 * TS;
+    B.vkeys[B.vkeys.length - 1].tiles = [[7, 5], [7, 4]];
+    if (o.sign) B.spawn('sign', 4, 5, { text: o.sign });
+  },
+  // shaft: a flock of swallows wheeling across the shaft (harmless; they nudge you sideways): { n }
+  swallows(st, o) { const y = st.down(o.gap || 5); st.spawn('mxSwallow', st.rng.int(5, st.W - 6), y, { range: 4 }); st.down(4); },
+  // shaft: a string of papel picado across the shaft; fall through the gaps, touching the flags slows you
+  papelLine(st, o) {
+    const B = st.B, W = st.W, y = st.down(o.gap || 6), gaps = o.gaps || [[st.rng.int(3, 7), 0], [st.rng.int(12, W - 6), 0]];
+    const holes = gaps.map(([a]) => [a, a + 2]);
+    B.decor.push({ kind: 'mxPapelLine', x: W * TS / 2, y: y * TS, w: W * TS, holes, seed: y });
+    let x = 1;
+    while (x < W - 1) { const hole = holes.find(([a, b]) => x >= a && x <= b); if (hole) { x = hole[1] + 1; continue; } let x2 = x; while (x2 + 1 < W - 1 && !holes.some(([a]) => x2 + 1 === a)) x2++; B.zone(x, y - 1, x2 - x + 1, 2, 0, -60 * TS, 1.5 * TS, 'drag', {}); x = x2 + 1; }
+    for (const [a, b] of holes) st.coins(a, b, y + 1);
+    st.down(3);
+  },
+  // shaft: a ledge on the side wall with an item block over it: { item, left }
+  blockLedge(st, o) { const B = st.B, W = st.W, y = st.down(o.gap || 6), x0 = o.left ? 1 : W - 7; B.fill(x0, y, x0 + 5, y, T.GROUND); st.block(x0 + 3, y - 4, o.item || 'power'); if (o.gold) st.gold(o.left ? x0 + 1 : x0 + 5, y - 2, o.gold); st.down(3); },
+  // shaft: a gap in the wall where a swallow keeps flying in: the nest room behind it: { to, left }
+  nestHole(st, o) {
+    const B = st.B, W = st.W, y = st.down(o.gap || 6), left = o.left !== false, x0 = left ? 1 : W - 6;
+    B.fill(x0, y, x0 + 4, y, T.GROUND);
+    const wx = left ? 0 : W - 1; B.set(wx, y - 1, T.EMPTY); B.set(wx, y - 2, T.EMPTY);
+    B.decorAt('mxNestHole', wx, y, left ? 0 : 1);
+    B.spawn('portal', left ? 1 : W - 2, y - 1, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
+    B.anchor(o.back || 'nestBack', left ? 3 : W - 4, y - 1);
+    st.down(3);
+  },
+  // shaft: two spike shelves close together, their gaps offset; a postcard in the narrow slot between them
+  spikePair(st, o) {
+    const B = st.B, W = st.W;
+    const sh = (y, hx) => { for (let x = 1; x <= W - 2; x++) { if (x >= hx && x <= hx + 3) continue; B.set(x, y, T.GROUND); B.set(x, y - 1, T.SPIKES); } };
+    const y1 = st.down(o.gap || 7), h1 = o.h1 != null ? o.h1 : st.mid; sh(y1, h1);
+    if (o.updraft !== false) { B.zone(h1, y1 - 7, 4, 6, 0, -70 * TS, 2 * TS, 'updraft', { pull: 1 }); B.decorAt('mxUpFlower', h1 + 2, y1 - 1, 0); }
+    const y2 = st.down(5), h2 = o.h2 != null ? o.h2 : h1 + 4; sh(y2, h2);
+    // a safe patch of the lower shelf right under the first gap: land, then walk to the second gap
+    for (let x = h1; x <= h1 + 3; x++) B.set(x, y2 - 1, T.EMPTY);
+    st.gold(Math.round((h1 + h2) / 2) + 1, y2 - 3, 'risky');
+    st.coins(h1, h1 + 3, y1 + 2);
+    st.down(3);
+  }
+});
+for (const k in P) Tour.pieces['mx.' + k] = P[k];
+
+/* ---------------- country looks for library objects ---------------- */
+const skins = {
+  // 1-2: the canals instead of rails: the low channel's water, raised channels on stone arches with a lock at each end
+  mxCanal(ctx, e, t) {
+    const g = e.g, d = e.decks, A = g.area, x0 = Math.max(0, Math.floor(g.camX / TS) - 3), x1 = Math.min(A.W, Math.ceil((g.camX + Game.viewW) / TS) + 3);
+    const Hp = A.H * TS, wl = d.lower * TS + 20, wu = d.upper * TS + 20;
+    ctx.save();
+    // the raised channels first: a stone aqueduct on piers, a lock at each end where the water steps up
+    const stone = (x, y, w, h) => { ctx.fillStyle = '#c8b498'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = 'rgba(90,70,50,0.45)'; ctx.lineWidth = 1; for (let yy = y + 10; yy < y + h; yy += 10) { ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + w, yy); ctx.stroke(); } ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); };
+    for (const f of e.forks) {
+      if (f.x1 + 2 < x0 || f.x0 - 2 > x1) continue;
+      const a0 = (f.x0 + 3) * TS, a1 = (f.x1 - 2) * TS;
+      // piers down into the low water, little arches between them
+      for (let x = f.x0 + 5; x <= f.x1 - 4; x += 5) stone(x * TS - 7, wu + 18, 14, wl - wu - 10);
+      // papel picado strung between the piers
+      for (let x = f.x0 + 5; x < f.x1 - 4; x += 5) {
+        const ax = x * TS + 7, bx = (x + 5) * TS - 7, ay = wu + 24;
+        ctx.strokeStyle = 'rgba(60,40,60,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo((ax + bx) / 2, ay + 26, bx, ay); ctx.stroke();
+        for (let k = 1; k < 8; k++) { const u = k / 8, fx = ax + (bx - ax) * u, fy = ay + Math.sin(u * Math.PI) * 13, sw = Math.sin(t * 2.4 + k + x) * 1.3; ctx.fillStyle = PAPEL[(k + x) % 6]; ctx.beginPath(); ctx.moveTo(fx - 5, fy); ctx.lineTo(fx + 5, fy); ctx.lineTo(fx + 5 + sw, fy + 11); ctx.lineTo(fx + sw, fy + 8); ctx.lineTo(fx - 5 + sw, fy + 11); ctx.closePath(); ctx.fill(); }
+      }
+      // the trough: water on top, a flower rim
+      stone(a0, wu + 4, a1 - a0, 16);
+      ctx.fillStyle = 'rgba(70,190,175,0.95)'; ctx.fillRect(a0 + 2, wu - 1, a1 - a0 - 4, 7);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; for (let x = f.x0 + 3; x < f.x1 - 2; x++) ctx.fillRect(x * TS + ((t * 20 + x * 11) % 24), wu + 1, 7, 1.5);
+      for (let x = f.x0 + 3; x < f.x1 - 2; x += 2) { ctx.fillStyle = PAPEL[(x * 7) % 6]; ctx.beginPath(); ctx.arc(x * TS + 8, wu + 12, 2.6, 0, TAU); ctx.fill(); }
+      // the locks: a stone chamber, the water half way, a timber gate with cross braces and a wheel on top
+      for (const lx of [f.x0, f.x1 - 3]) {
+        const X = lx * TS, Wd = 3 * TS;
+        stone(X - 8, wu - 18, 12, wl - wu + 26); stone(X + Wd - 4, wu - 18, 12, wl - wu + 26);
+        ctx.fillStyle = 'rgba(70,190,175,0.8)'; ctx.fillRect(X + 4, (wu + wl) / 2 + 6, Wd - 8, wl - (wu + wl) / 2 - 6);
+        const gx = lx === f.x0 ? X + 4 : X + Wd - 12;
+        ctx.fillStyle = '#7a5230'; ctx.fillRect(gx, wu - 6, 8, wl - wu + 2); ctx.strokeStyle = '#4a2e18'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(gx, wu); ctx.lineTo(gx + 8, wl - 10); ctx.moveTo(gx + 8, wu); ctx.lineTo(gx, wl - 10); ctx.stroke();
+        ctx.strokeStyle = '#3a3a48'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(gx + 4, wu - 14, 7, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(gx - 3, wu - 14); ctx.lineTo(gx + 11, wu - 14); ctx.moveTo(gx + 4, wu - 21); ctx.lineTo(gx + 4, wu - 7); ctx.stroke();
+      }
+    }
+    // the low channel: teal water from the waterline down, ripples drifting with the current
+    const gr = ctx.createLinearGradient(0, wl, 0, Hp); gr.addColorStop(0, 'rgba(62,180,166,0.94)'); gr.addColorStop(1, 'rgba(18,84,92,0.98)');
+    ctx.fillStyle = gr; ctx.fillRect(x0 * TS, wl, (x1 - x0) * TS, Hp - wl);
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1.5;
+    for (let x = x0; x < x1; x++) { const k = (x * 37) % 4, ox = (t * 24 + x * 13) % 32; ctx.beginPath(); ctx.moveTo(x * TS + ox, wl + 5 + k * 4); ctx.lineTo(x * TS + ox + 9, wl + 5 + k * 4); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(x0 * TS, wl, (x1 - x0) * TS, 2);
+    ctx.restore();
+  },
+  // the lock's lever post: a painted pole with a flower sign; its arrow shows the channel it picks
+  mxLockLever(ctx, e, t) {
+    const x = e.cx, y = e.y + e.h, k = e.k;
+    ctx.save();
+    ctx.fillStyle = '#ff3d8b'; rr(ctx, x - 4, y - 50, 8, 50, 3); ctx.fill(); ctx.fillStyle = '#ffd84a'; for (let q = 0; q < 4; q++) ctx.fillRect(x - 4, y - 44 + q * 11, 8, 4);
+    ctx.fillStyle = '#fff4d8'; rr(ctx, x - 16, y - 70, 32, 20, 6); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+    for (let q = 0; q < 5; q++) { ctx.fillStyle = PAPEL[q]; ctx.beginPath(); ctx.arc(x - 12 + q * 6, y - 73, 3, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = e.up ? '#2a9a5a' : '#2a6ad8'; ctx.beginPath(); if (e.up) { ctx.moveTo(x - 7, y - 54); ctx.lineTo(x + 7, y - 54); ctx.lineTo(x, y - 66); } else { ctx.moveTo(x - 7, y - 66); ctx.lineTo(x + 7, y - 66); ctx.lineTo(x, y - 54); } ctx.fill();
+    ctx.save(); ctx.translate(x, y - 26); ctx.rotate(-0.9 + k * 1.8); ctx.fillStyle = '#c8902a'; rr(ctx, -2, -20, 4, 20, 2); ctx.fill(); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(0, -21, 4.5, 0, TAU); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
+    ctx.restore();
+  },
+  // a weeping willow over the water hiding a channel; pink petals drift from it (the tell)
+  mxWillow(ctx, e, t) {
+    const x0 = e.x - 10, y0 = e.y - 40, w = e.w + 20, h = e.h + 40, part = e.part || 0;
+    ctx.save(); ctx.globalAlpha = 1 - part * 0.6;
+    for (let k = 0; k < 12; k++) {
+      const x = x0 + 3 + k * (w - 6) / 11, sway = Math.sin(t * 1.4 + k) * 3 * (1 + part * 3) * (k < 6 ? -1 : 1);
+      ctx.strokeStyle = k % 2 ? '#3f8a3a' : '#5aa84a'; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(x, y0); ctx.quadraticCurveTo(x + sway * 0.5, y0 + h * 0.5, x + sway, y0 + h - 6); ctx.stroke();
+      for (let q = 0; q < 7; q++) { const yy = y0 + 8 + q * (h - 16) / 6, xx = x + sway * (q / 7); ctx.fillStyle = q % 2 ? '#86d06a' : '#4e9d43'; ctx.beginPath(); ctx.ellipse(xx + (q % 2 ? 3 : -3), yy, 3.6, 1.9, q % 2 ? 0.6 : -0.6, 0, TAU); ctx.fill(); }
+    }
+    ctx.restore();
+    // petals drifting down out of it
+    for (let k = 0; k < 6; k++) { const ph = (t * 0.35 + k / 6) % 1, px = x0 + (k * 23) % w + Math.sin(t * 2 + k) * 8, py = y0 + 10 + ph * (h + 30); ctx.globalAlpha = 1 - ph; ctx.fillStyle = k % 2 ? '#ff8ac8' : '#ffc0e0'; ctx.beginPath(); ctx.ellipse(px, py, 3, 1.6, t * 3 + k, 0, TAU); ctx.fill(); }
+    ctx.globalAlpha = 1;
+  }
+};
+
+/* ---------------- stamps ---------------- */
+const stamps = {
+  // 1-1's start: the market entrance under the MERCADO arch (with the old hidden 1UP over the entrance)
+  entrada: {
+    floor: 7,
+    rows: [
+      '..............',
+      '..............',
+      '..............',
+      '.......h......',
+      '..............',
+      '..............',
+      '...@.....a....',
+      '##############'
+    ],
+    legend: { a: ['decor', 'mxMercadoArch'] }, hidden: ['oneup']
+  },
+  // 1-2's secret: the boathouse behind the willows (P2 on the rafters), a back door to the far landing
+  embarcadero: {
+    floor: 11,
+    rows: [
+      '##################################',
+      '#................................#',
+      '#..o.o.o.o.....*.......o.o.o.o...#',
+      '#.............---................#',
+      '#........................?.......#',
+      '#....---.................----....#',
+      '#................................#',
+      '#..........r.........r...........#',
+      '#.......------...------..........#',
+      '#................................#',
+      '#.@.......................D......#',
+      '##################################',
+      '##################################'
+    ],
+    legend: { r: ['decor', 'mxFlowers'] },
+    items: ['oneup'],
+    doors: [{ to: 'canal@landing', look: 'tourDoor' }],
+    gold: { '*': 'hidden' }
+  },
+  // 1-3's air pocket: a dry grotto. A sunbeam through a crack shows light-only stones up to the ledge with the mushroom
+  // and the postcard; bubble columns from the pool lift you; a little axolotl walks the shore
+  gruta: {
+    floor: 11,
+    rows: [
+      '##################################',
+      '#######..........#################',
+      '#................................#',
+      '#..o.o.o...........*.............#',
+      '#...............-----.....?......#',
+      '#.........ll.............---.....#',
+      '#.....ll.........................#',
+      '#............................ll..#',
+      '#..........u.....................#',
+      '#.......a............e...........#',
+      '#.@D.......................WWWW..#',
+      '###########################WWWW###',
+      '##################################',
+      '##################################'
+    ],
+    legend: { l: ['tile', 'HARD', { hide: 3 }], u: ['piece', 'bubbler', { look: 'mxBubbles' }], a: ['spawn', 'mxSunbeam', { w: 9, h: 10 }], e: ['enemy', 'mxAxolotlWalk'] },
+    items: ['power'],
+    doors: [{ to: 'cenote@pocketBack' }],
+    gold: { '*': 'hidden' }
+  },
+  // 1-4's obsidian vault behind the painted tile: glassy black rock, a 1UP, P2 up on the shelf
+  boveda: {
+    floor: 10,
+    rows: [
+      '##########################',
+      '#........................#',
+      '#...o.o.o.o.o............#',
+      '#.................*......#',
+      '#...............-----....#',
+      '#.......?................#',
+      '#............------......#',
+      '#........................#',
+      '#..k................k....#',
+      '#.@D.....................#',
+      '##########################',
+      '##########################'
+    ],
+    legend: { k: ['decor', 'mxObsidian'] },
+    items: ['oneup'],
+    doors: [{ to: 'crater@vaultBack' }],
+    gold: { '*': 'hidden' }
+  },
+  // 1-5's start: the hacienda's gate, a lantern each side
+  porton: {
+    floor: 9,
+    rows: [
+      '............',
+      '............',
+      '............',
+      '............',
+      '............',
+      '............',
+      '............',
+      '............',
+      '..@.....p...',
+      '############'
+    ],
+    legend: { p: ['decor', 'mxHaciendaGate'] }
+  },
+  // 1-5's pantry behind the cupboard: jars, chili sacks, a 1UP on the top shelf, P2
+  despensa: {
+    floor: 10,
+    rows: [
+      '##############################',
+      '#............................#',
+      '#..o.o.o.o...................#',
+      '#..............*.............#',
+      '#............-----...........#',
+      '#.....?......................#',
+      '#...-----..........------....#',
+      '#............................#',
+      '#..k.......j.........k.......#',
+      '#.@D.........................#',
+      '##############################',
+      '##############################'
+    ],
+    legend: { k: ['decor', 'mxChiliSack'], j: ['decor', 'mxPots'] },
+    items: ['oneup'],
+    doors: [{ to: 'patio@pantryBack' }],
+    gold: { '*': 'hidden' }
+  },
+  // 1-6's swallow nest in the pit wall: mud nests, an LSD tab, P2
+  nido: {
+    floor: 9,
+    rows: [
+      '############################',
+      '#..........................#',
+      '#..n.....n.....n...........#',
+      '#..........*...............#',
+      '#........-----.....?.......#',
+      '#..........................#',
+      '#..o.o.o.o.o...............#',
+      '#..........................#',
+      '#.@D.......................#',
+      '############################',
+      '############################'
+    ],
+    legend: { n: ['decor', 'mxMudNest'] },
+    items: ['lsd'],
+    doors: [{ to: 'sotano@nestBack' }],
+    gold: { '*': 'hidden' }
+  },
+  // La Tiendita, the Souvenir Stand Xolo keeps (1-1's hidden exit): papel picado, jars, the counter ($ is the shop)
+  stand: {
+    floor: 9,
+    rows: [
+      '############################',
+      '#..........................#',
+      '#..p.....p.....p.....p.....#',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#..........................#',
+      '#.@...j....$...x.....j..G..#',
+      '############################',
+      '############################'
+    ],
+    legend: { p: ['decor', 'mxPapelHang'], j: ['decor', 'mxPots'], x: ['decor', 'mxKeeperXolo'] }
+  },
+  // 1-1's finale: the fiesta stage at the end of the market, the gate on the dais
+  escenario: {
+    floor: 7,
+    rows: [
+      '..........................',
+      '..........................',
+      '..........o.o.o.o.........',
+      '..........................',
+      '.................G........',
+      '......------------------..',
+      '...............z..........',
+      '##########################'
+    ],
+    legend: { z: ['decor', 'mxStage'] }
+  }
+};
+
+/* ---------------- the levels ---------------- */
+const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
+  gimmick: 'Three lanes at once: rooftops, street and the cellar canal. Awnings bounce you up, trapdoors drop you down',
+  hint: 'Hold jump on an awning to bounce up to the rooftops',
+  postcard: 'Brady! The market has three floors and the melons use all of them. ♥ C',
+  enemies: [['mxPepper', 3], ['mxElote', 2], ['mxChihuahua', 1]],
+  mapCell: [0, 0], mapFrom: -1,
+  exits: {
+    main: { to: '1-2' },
+    secret: { to: 'house:mx-tienda', hint: 'Chili dust puffs out from under a crate in the market...' }
+  },
+  areas: [
+    { id: 'mercado', gen: 'layered', W: 214, H: 30, lanes: { roof: 12, street: 21, cellar: 27 }, camera: 'lanes',
+      script: [
+        ['startStamp', { id: 'entrada', lane: 'street' }],
+        // ① Xolo's taco, a mushroom, awnings that bounce up to the roofs
+        ['xolo', { lane: 'street' }],
+        ['itemBlock', { lane: 'street', item: 'power', y: 4 }],
+        ['tip', { lane: 'street', text: 'AWNINGS ARE BOUNCY! HOLD JUMP ON ONE TO REACH THE ROOFTOPS' }],
+        ['stalls', { lane: 'street', n: 2 }],
+        ['rooftops', { lane: 'roof', n: 2 }],
+        ['flat', { lane: 'cellar', n: 30 }],
+        ['sync'],
+        // ② melons down the street; gaps and papel-picado ropes on the roofs; the corn that pops
+        ['melons', { lane: 'street' }],
+        ['enemies', { lane: 'street', kind: 'mxElote', n: 1, len: 8 }],
+        ['step', { lane: 'street', h: -3 }],
+        ['banner', { lane: 'roof', len: 4, look: 'mxPapelPicado' }],
+        ['gap', { lane: 'roof', n: 3 }],
+        ['tip', { lane: 'roof', text: 'A PAPER PLANE! HOLD JUMP WHILE FALLING TO GLIDE. THROW IT AT THINGS FAR AWAY' }],
+        ['gearStand', { lane: 'roof', item: 'plane' }],
+        ['postcard', { lane: 'roof', kind: 'must', dy: -3 }],
+        ['gap', { lane: 'street', n: 3 }],
+        ['trapdoor', { lane: 'street', to: 'bodega@in', crate: true, back: 'bodegaBack', look: 'mxTrapdoor' }],
+        ['flat', { lane: 'cellar', n: 6 }],
+        ['spring', { lane: 'cellar', gold: false }],
+        ['enemies', { lane: 'cellar', n: 2 }],
+        ['sync'],
+        'cp',
+        // ③ the plaza joins all three lanes
+        ['stamp', { id: 'plaza', lane: 'street' }],
+        ['pinatas', { lane: 'street' }],
+        ['fountain', { lane: 'street' }],
+        ['rooftops', { lane: 'roof', n: 1 }],
+        ['flat', { lane: 'cellar', n: 10 }],
+        ['sync'],
+        ['stamp', { id: 'escenario', lane: 'street' }],
+        ['sync'],
+        ['cellarDress', { lane: 'cellar' }]
+      ] },
+    { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega' }
+  ] };
+
+const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
+  gimmick: 'Ride a trajinera through branching canals: a lever picks the channel, the lock lifts the boat',
+  hint: 'Touch a lever post and tap THROW to pick the high channel',
+  postcard: 'The axolotls here keep shrinking and growing back. Like my patience with the Baron. ♥ C',
+  enemies: [['mxHeron', 1]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '1-3' } },
+  areas: [
+    { id: 'canal', gen: 'rail', len: 230, H: 18, decks: { upper: 7, lower: 13 }, vehicle: 'mxTrajinera', vehicleW: 9, track: 'mxCanal', below: 'liquid', scroll: 2.5,
+      script: [
+        ['embarcadero', { sign: 'AXOLOTLS SHRINK WHEN STOMPED. STOMP THEM AGAIN BEFORE THEY GROW BACK!' }],
+        // ① posts and flower arches while the boat drifts; the taco boat; the first axolotl
+        ['boatBlock', { item: 'power' }],
+        'posts', 'vendor', ['arch', {}], ['axolotls', { n: 1 }], 'posts',
+        // ② the first lock: the lever picks the garden channel (lifted) or the market channel
+        ['fork', { len: 46, skin: 'mxLockLever', gold: false,
+          upper: [['chinampa', {}], ['highPost', { gold: 'must' }], ['boatBlock', { item: 'power', dy: 6 }], ['bridge', { enemy: false }], 'herons'],
+          lower: [['bridge', { enemy: false }], 'posts', ['chinampa', {}], 'posts'] }],
+        'cp',
+        // ③ the double fork with axolotls on both channels; a willow hides the third channel
+        ['fork', { len: 32, skin: 'mxLockLever', gold: false, upper: [['axolotls', { n: 2 }], ['arch', { gold: true }]], lower: [['axolotls', { n: 2 }], ['willowDoor', { to: 'embarcadero@in' }]] }],
+        ['fork', { len: 30, skin: 'mxLockLever', gold: false, upper: [['axolotls', { n: 1 }], 'herons'], lower: [['axolotls', { n: 2 }], ['chinampa', { gold: 'risky' }]] }],
+        ['arch', {}], ['boatBlock', { item: 'lsd', dy: 8 }]
+      ] },
+    { id: 'embarcadero', gen: 'room', role: 'secret', theme: 'mx_canal', stamp: 'embarcadero' }
+  ] };
+
+const L3 = { n: 3, name: 'Cenote of Light', arch: 'dive', theme: 'mx_cenote',
+  gimmick: 'Swim a flooded cenote. Stones that are only there in the sunbeams, an air pocket, currents',
+  hint: 'Grab the Flipper Fins: swim faster, tap THROW to dash',
+  postcard: 'Brady, the cenote stones only show up in the sunlight. Shy rocks! ♥ C',
+  enemies: [['mxFish', 2], ['mxBlindFish', 1]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: {
+    main: { to: '1-4' },
+    secret: { to: '1-6', hint: 'Bubbles rise from a crack behind the roots...' }
+  },
+  areas: [
+    { id: 'cenote', gen: 'swim', H: 18, width: 360, ending: false,
+      script: [
+        // ① the entrance beam, the fins, hanging roots and the lightwell
+        ['sunbeam', { dx: -5, n: 0 }],
+        ['finsStand', { sign: 'FLIPPER FINS! SWIM FAST, TAP THROW TO DASH. A BLIND FISH ONLY HEARS YOU WHEN YOU HURRY' }],
+        ['roots', { n: 3 }],
+        'lightwell',
+        ['rootNiche', { item: 'pick' }],
+        ['airPocket', { to: 'gruta@in' }],
+        ['anchor', { name: 'pocketBack' }],
+        // ② light reveals: shimmering stones only inside the sunbeams
+        ['lightStones', { item: 'oneup' }],
+        ['enemies', { kind: 'mxAxolotlSwim', n: 1, len: 6 }],
+        'slalom',
+        ['roots', { n: 3, fish: false }],
+        ['floorCrack', { to: 'grieta@in' }],
+        ['lightStones', { item: 'pick', period: 7 }],
+        'cp',
+        // ③ currents push you through beams that come and go
+        ['current', { w: 12, dir: 1 }],
+        ['sunbeam', { period: 6 }],
+        ['enemies', { kind: 'mxBlindFish', n: 1, len: 6 }],
+        ['current', { w: 14, dir: -1 }],
+        ['postcard', { kind: 'risky', dx: -8, dy: -8 }],
+        ['sunbeam', { period: 6, phase: 3 }],
+        'shaft',
+        ['current', { w: 10, dir: 1 }],
+        ['cenoteExit', {}]
+      ] },
+    { id: 'gruta', gen: 'room', role: 'sub', stamp: 'gruta' },
+    { id: 'grieta', gen: 'swim', role: 'secret', H: 16, width: 60, ending: false, theme: 'mx_cenote',
+      script: [['roots', { n: 2, fish: false }], ['sunbeam', {}], ['postcard', { kind: 'high', dx: -2, dy: -6 }], ['cenoteExit', { exit: 'secret' }]] }
+  ] };
+
+const L4 = { n: 4, name: 'Volcán Escape', arch: 'tower', theme: 'mx_volcan',
+  gimmick: 'Climb out of the crater: steam vents, crumbling obsidian, rolling armadillos; the lava wakes up behind you',
+  hint: 'Ride the steam up the chimneys. Keep climbing: the lava is rising!',
+  postcard: 'The Baron tried to bottle the volcano. It did not agree. ♥ C',
+  enemies: [['mxArmadillo', 1], ['mxBat', 1]],
+  mapCell: [2, 1], mapFrom: 2,
+  exits: { main: { to: '1-5' } },
+  areas: [
+    { id: 'crater', gen: 'climb', variant: 'interior', W: 26, H: 132, risingLava: { delay: 8, speed: 0.55 }, summit: false,
+      script: [
+        // ① vents carry you up the chimneys (the lava waits 8 s)
+        ['blockBand', { item: 'power', left: true }],
+        ['vledges', { n: 3 }],
+        'vvent',
+        ['vaultDoor', { to: 'boveda@in' }],
+        // ② the lava rises; obsidian ledges crumble
+        ['vledges', { n: 4, crumble: true }],
+        ['blockBand', { item: 'star' }],
+        ['vledges', { n: 3, flip: true, enemy: 'mxBat' }],
+        // ③ armadillos, lava blobs, the double chimney
+        'vroll',
+        ['sideGold', { kind: 'must' }],
+        'vblobs',
+        ['vledges', { n: 3, crumble: true, enemy: 'mxArmadillo' }],
+        ['vvent', { h: 10 }],
+        'vdouble',
+        ['craterRim', {}]
+      ] },
+    { id: 'boveda', gen: 'room', role: 'secret', theme: 'mx_volcan', dark: true, stamp: 'boveda' }
+  ] };
+
+const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata',
+  gimmick: 'Swinging piñatas, candy cannons, the balcony; then El Gran Piñatón on his pulley rope in the tall patio',
+  hint: 'Break the piñata from BELOW: headbutt him when he swings low. Bounce off the awnings when he rises!',
+  postcard: 'You did it! The Palace of Fine Arts popped back to full size. Next stop: Ecuador! ♥ C',
+  enemies: [['mxSalsa', 2], ['mxBurro', 2], ['mxPepper', 1]],
+  mapCell: [1, 2], mapFrom: [3, 5],
+  exits: { main: { to: 'country:next' } },
+  areas: [
+    { id: 'patio', gen: 'strip', W: 72, H: 18, theme: 'mx_hacienda_in',
+      script: [
+        ['startStamp', { id: 'porton' }],
+        ['itemBlock', { item: 'power' }],
+        // the lead-in teaches what the fight needs: swinging piñatas, things from below, bouncing high
+        ['swingers', { n: 3 }],
+        ['cannons', {}],
+        ['postcard', { kind: 'risky', dx: -8, dy: -7 }],
+        'balcony',
+        ['secretDoor', { to: 'despensa@in', look: 'fake', back: 'pantryBack' }],
+        ['enemies', { n: 1, kind: 'mxBurro' }],
+        'sig',
+        ['itemBlock', { item: 'power' }],
+        ['door', { to: 'fiesta@in', perch: 0, look: 'tourDoor' }]
+      ] },
+    { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa' },
+    { id: 'fiesta', gen: 'arena', role: 'arena', layout: 'fiesta', arenaW: 24, H: 22 }
+  ] };
+
+// 1-6's pit: limestone walls lit from far above, swallows' nests, roots (procedural until its Blender scene exists)
+if (!THEMES.mx_sotano && THEMES.mx_cenote) THEMES.mx_sotano = Object.assign({}, THEMES.mx_cenote, {
+  name: 'Pit of Swallows', music: 'tour_mx_deep', particles: 'dust', underwater: false, rays: '#fff8d8',
+  sky: ['#fff6d8', '#d8c098', '#6a5038'], horizonGlow: '#fff4c0', darkness: 0.05, fog: '#e8d8b0',
+  layers: [{ kind: 'mxCenote', color: '#b8a070', base: 0, f: 0.08 }]
+});
+const L6 = { n: 6, name: 'Pit of Swallows', arch: 'fall', secret: true, theme: 'mx_sotano',
+  gimmick: 'Freefall down a giant pit: swallow flocks, strings of papel picado, flowers whose updrafts brake you',
+  hint: 'Hold jump to glide with the Paper Plane. Fall through the gaps in the flags',
+  postcard: 'A secret pit full of swallows! They swoop like little paper planes. ♥ C',
+  enemies: [['mxSwallow', 1], ['mxBat', 1]],
+  mapCell: [1, 1], mapFrom: 2,
+  exits: { main: { to: 'node:1-5' } },
+  areas: [
+    { id: 'sotano', gen: 'shaft', W: 22, H: 182,
+      script: [
+        ['lipStand', { sign: 'A PAPER PLANE! HOLD JUMP WHILE FALLING TO GLIDE DOWN THE PIT' }],
+        // ① swallows and coin rings
+        ['ledges', { n: 2 }],
+        ['swallows', {}],
+        ['ledges', { n: 1, flip: true }],
+        ['ringFall', { n: 1, goldKind: 'high' }],
+        ['blockLedge', { item: 'power', gold: 'must' }],
+        ['swallows', {}],
+        ['ledges', { n: 1 }],
+        // ② papel picado lines: fall through the gaps
+        ['papelLine', {}],
+        ['nestHole', { to: 'nido@in' }],
+        ['papelLine', {}],
+        ['shelf', { cp: true }],
+        ['swallows', {}],
+        ['ledges', { n: 1, flip: true }],
+        ['papelLine', {}],
+        // ③ flower updrafts brake you over the spike shelves
+        ['spikePair', {}],
+        ['ledges', { n: 1, enemy: 'mxBat' }],
+        ['spikePair', { h1: 5, h2: 9 }]
+      ] },
+    { id: 'nido', gen: 'room', role: 'secret', stamp: 'nido' }
+  ] };
+
+Tour.amend('mx', { stamps, skins, levels: [L1, L2, L3, L4, L5, L6] });
 })();
 
 /* ---- 29_tour_mx_sprites.js ---- */
