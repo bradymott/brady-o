@@ -44,6 +44,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     window.P = () => window.BRADY.Game.scene.player;
     window.S = () => window.BRADY.Game.scene;
     window.ctor = type => window.BRADY_TYPES[type];
+    // a v2 boss level keeps its arena in its own area (role 'arena'): walk through the door that leads there
+    window.toArena = () => { const g = window.S(); if (g.entities.some(e => e.boss)) return; const ai = g.level.areas.findIndex(a => a.role === 'arena'); const door = ai < 0 ? null : g.entities.find(e => e.s && e.s.target && e.s.target.area === ai); if (door) { g.enterPortal(door); window.sim(2); } };
     window.clearEnemies = () => { const g = window.S(); for (const e of g.entities) if (e.enemy && !e.boss) e.remove = true; sim(0.02); };
     // drop an entity right in front of Brady, on his floor
     window.near = (type, dx, props) => { const g = S(), p = P(); const C = ctor(type); const e = new C(g, Object.assign({ x: p.cx + (dx || 60), y: p.y + p.h, dir: -1 }, props || {})); g.spawn(e); return e; };
@@ -103,7 +105,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   const life = await page.evaluate(() => { start('1-1'); const B = window.BRADY, l0 = B.Save.data.lives; P().collect('oneup'); return { l0, l1: B.Save.data.lives }; });
   check('the water bottle gives an extra life', life.l1 === life.l0 + 1, life);
 
-  // 4. Signature power-ups: Mexico's taco toss and France's mime gloves
+  // 4. Signature power-ups: Mexico's taco toss and France's meringue piping bag
   const taco = await page.evaluate(() => {
     start('1-1'); clearEnemies(); const p = P(), g = S(); p.collect('sig:taco');
     const e = near('mxElote', 110); sim(0.02);
@@ -112,8 +114,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   });
   check('Taco Toss: tacos (and salsa) stun enemies', taco.sig === 'taco' && taco.stunned, taco);
   await shot('07-power-taco.png');
-  const mime = await page.evaluate(() => {
-    start('7-1'); clearEnemies(); const p = P(), g = S(), A = g.area; p.collect('sig:mime'); sim(0.2);
+  const piping = await page.evaluate(() => {
+    start('7-1'); clearEnemies(); const p = P(), g = S(), A = g.area; p.collect('sig:piping'); sim(0.2);
     const tx = Math.floor((p.x + p.w + 6) / 32), ty = Math.floor((p.y + p.h - 2) / 32);
     sim(0.05, { actionPressed: true });
     const wall = A.tiles[ty * A.W + tx] === 5;
@@ -121,9 +123,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     sim(7); const gone = A.tiles[ty * A.W + tx] === 0;
     return { sig: p.sig && p.sig.id, wall, blocked, gone };
   });
-  check('Mime Gloves draw an invisible wall that blocks, then fades', mime.sig === 'mime' && mime.wall && mime.blocked && mime.gone, mime);
-  await page.evaluate(() => { start('7-1'); clearEnemies(); P().collect('sig:mime'); sim(0.2); sim(0.05, { actionPressed: true }); sim(0.3); });
-  await shot('08-power-mime.png');
+  check('the Meringue Piping Bag pipes a wall that blocks, then crumbles', piping.sig === 'piping' && piping.wall && piping.blocked && piping.gone, piping);
+  await page.evaluate(() => { start('7-1'); clearEnemies(); P().collect('sig:piping'); sim(0.2); sim(0.05, { actionPressed: true }); sim(0.3); });
+  await shot('08-power-piping.png');
   // Ecuador's booby boots: higher jumps, and a big landing knocks out enemies nearby
   const boots = await page.evaluate(() => {
     const jumpH = () => { const p = P(), y0 = p.y; let top = y0; sim(0.05, { jump: true, jumpPressed: true }); for (let k = 0; k < 120; k++) { sim(1 / 120, { jump: true }); top = Math.min(top, p.y); } sim(1); return y0 - top; };
