@@ -3,7 +3,8 @@
 #                         (a module may set FRAMES = {(kind, pose): (n, fps)} to override CYCLES below, e.g. a
 #                          one-frame item block, or a 4-step 'puff' sequence the game picks frames from)
 #   JOB=bg:<module>       (mx_mercado, mx_canal, ...)                                        -> layer strips + ground + tiles
-#   LOOK=toon OUT=<dir> NAME=<atlas name> SCALE=3 (characters) / 2 (backgrounds)
+#   LOOK=toon2 (characters; toon for backgrounds) OUT=<dir> NAME=<atlas name> SCALE=3 (characters) / 2 (backgrounds)
+#   KEY=x,y,z (key light direction), EYES=1.15 (eye scale; toon2 default)
 #   /Applications/Blender.app/Contents/MacOS/Blender -b -P tools/blender/sprites/render_country.py
 # Then: pack_atlas.py -- <dir1>/spec.json <dir2>/spec.json ... assets/sprites/world/<name>
 import bpy, os, sys, json, math, importlib
@@ -24,7 +25,10 @@ def frame_box(size_m, origin):
 
 def render_enemies(mod, look, out, name, scale):
     LK.setup_render('BLENDER_EEVEE', samples=int(os.environ.get('SAMPLES', '24')))
-    LK.lights(look, key_dir=(0.35, -0.75, 0.9))
+    # toon2 (the characters' look): a more raking key light so the cel bands show the form (KEY=x,y,z overrides)
+    key = tuple(float(v) for v in os.environ['KEY'].split(',')) if os.environ.get('KEY') else ((0.62, -0.55, 0.72) if look == 'toon2' else (0.35, -0.75, 0.9))
+    LK.lights(look, key_dir=key, strength=float(os.environ['KEY_E']) if os.environ.get('KEY_E') else (3.0 if look == 'toon2' else None))
+    eyes = float(os.environ.get('EYES', '1.15' if look == 'toon2' else '1'))
     px_m = LK.PPM * scale
     spec = {'name': name, 'scale': scale, 'frames': [], 'anims': {}}
     kinds = os.environ.get('KINDS', '').split(',') if os.environ.get('KINDS') else mod.KINDS
@@ -44,6 +48,7 @@ def render_enemies(mod, look, out, name, scale):
                 t = k / n if n > 1 else 0.0
                 if hasattr(mod, 'clear'): mod.clear()          # every frame starts from an empty stage
                 root = mod.build(kind, pose, t)
+                if eyes != 1: LK.enlarge_eyes(LK.all_meshes(root), eyes)
                 LK.apply_look(look, LK.all_meshes(root), outline_px=float(os.environ.get('OUTLINE', '0.9')))
                 fid = f'{kind}_{pose}_{k:03d}'
                 p = LK.render(os.path.join(out, fid + '.png'))

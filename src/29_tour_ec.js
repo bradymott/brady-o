@@ -407,6 +407,9 @@ const iceCubeArt = (ctx, e, x, y, m) => {
   ctx.restore();
 };
 const salt = (ctx, s) => { ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fillRect(s.cx - 3, s.cy - 3, 6, 6); ctx.fillStyle = 'rgba(200,230,255,0.9)'; ctx.fillRect(s.cx - 1, s.cy - 1, 2, 2); };
+/* the rebuilt cast's pre-rendered art (tools/blender/sprites/ec_extras.py -> the 'ec_x' atlas): cfg.atlas makes a level that
+   spawns them load it; their sprite names are 30_tour_sprites.js's defaults ('glassFrog', 'crab', ...) */
+const EC_X = 'ec_x';
 const enemies = {
   ecBanana: { cls: TourEnemy.make({ w: 16, h: 32, speed: 1.0, behavior: 'walk', art: bananaArt, burst: '#ffe04a' }), place: 'walk' },
   ecCacao: { cls: TourEnemy.make({ w: 24, h: 18, speed: 0.8, behavior: 'roll', range: 9, rollSpeed: 6.4, art: cacaoArt, burst: '#e8902a' }), place: 'walk' },
@@ -417,12 +420,12 @@ const enemies = {
   ecCondor: { cls: TourFlyer.make({ w: 34, h: 16, range: 4, speed: 0.6, swoop: true, art: condorArt, burst: '#1a1a22' }), place: 'fly' },
   ecFrog: { cls: TourEnemy.make({ w: 18, h: 16, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.4, art: frogArt, glow: 'rgba(120,255,200,', burst: '#2ae88a' }), place: 'walk' },
   // the headline enemy: a marine iguana that sneezes salt; the puff sets into a stepping stone (the fast upper route)
-  ecIguanaSalt: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.5, behavior: 'saltSneezer', every: 3, platT: 5, art: iguanaArt, burst: '#3a3a44' }), place: 'walk' },
-  ecGlassFrog: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 0, behavior: 'camouflage', revealEvery: 2.4, art: glassFrogArt, burst: '#96f0aa' }), place: 'walk' },
-  ecHummingbird: { cls: TourFlyer.make({ w: 22, h: 12, speed: 1, behavior: 'hoverDart', range: 7, art: hummingArt, burst: '#2ac88a' }), place: 'fly' },
-  ecCrab: { cls: TourEnemy.make({ w: 24, h: 14, inkPad: 6, speed: 2.6, behavior: 'walk', art: crabArt, burst: '#ff5a2a' }), place: 'walk' },
-  ecDipper: { cls: TourEnemy.make({ w: 20, h: 18, inkPad: 6, speed: 0.6, behavior: 'ceilingDrop', tell: 0.5, stuckT: 1.6, art: dipperArt, burst: '#5a3a2a' }), place: 'here' },
-  ecSeaLionLand: { cls: TourEnemy.make({ w: 36, h: 16, speed: 0.6, behavior: 'charge', range: 7, chargeSpeed: 7.5, windup: 0.5, art: seaLionArt, burst: '#8a7a6a' }), place: 'walk' },
+  ecIguanaSalt: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.5, behavior: 'saltSneezer', every: 3, platT: 5, art: iguanaArt, burst: '#3a3a44', atlas: EC_X }), place: 'walk' },
+  ecGlassFrog: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 0, behavior: 'camouflage', revealEvery: 2.4, art: glassFrogArt, burst: '#96f0aa', atlas: EC_X }), place: 'walk' },
+  ecHummingbird: { cls: TourFlyer.make({ w: 22, h: 12, speed: 1, behavior: 'hoverDart', range: 7, art: hummingArt, burst: '#2ac88a', atlas: EC_X }), place: 'fly' },
+  ecCrab: { cls: TourEnemy.make({ w: 24, h: 14, inkPad: 6, speed: 2.6, behavior: 'walk', art: crabArt, burst: '#ff5a2a', atlas: EC_X }), place: 'walk' },
+  ecDipper: { cls: TourEnemy.make({ w: 20, h: 18, inkPad: 6, speed: 0.6, behavior: 'ceilingDrop', tell: 0.5, stuckT: 1.6, art: dipperArt, burst: '#5a3a2a', atlas: EC_X }), place: 'here' },
+  ecSeaLionLand: { cls: TourEnemy.make({ w: 36, h: 16, speed: 0.6, behavior: 'charge', range: 7, chargeSpeed: 7.5, windup: 0.5, art: seaLionArt, burst: '#8a7a6a', atlas: EC_X }), place: 'walk' },
   ecIguana: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.4, behavior: 'throw', every: 2.2, range: 7, pace: true, art: iguanaArt, burst: '#3a3a44', shoot: (e) => {
     for (let k = -1; k <= 1; k++) tourFire(e.g, e.cx + e.dir * 16, e.y + 4, { kind: 'salt', vx: e.dir * (2.4 + k * 0.6) * TS, vy: (-2.6 + k) * TS, grav: PHYS.gDown * 0.12, w: 8, h: 8, life: 2.2, col: '#ffffff', art: salt });
     K.say(e.g, e, 'ACHOO!', '#ffffff'); Sound.play('throw', { pitch: 2, vol: 0.3 });
@@ -483,7 +486,13 @@ class EcSurge extends Ent {
 }
 // the pre-rendered booby (sprite 'booby': idle = its foot dance, wave once it has lent the boots) turns to face
 // Brady and keeps the procedural art's '!' until the boots are handed over
-class EcBooby extends TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: 'BLUE BOOTS! BOUNCY!', art: boobyArt }) {
+// PATA AZUL, 2-3's racing booby: the race rival (TourRival) draws through this cfg's art with 'chase' / 'idle'; it runs
+// from the ec_x atlas (pataAzul: a racing bib and a sweatband), the procedural booby stays the fallback
+const boobyRaceArt = (ctx, e, x, y, m, t) => {
+  if (typeof TourRival !== 'undefined' && e instanceof TourRival && typeof Atlas !== 'undefined' && Atlas.animate(ctx, EC_X, m === 'chase' ? 'pataAzul/run' : 'pataAzul/idle', t || 0, x, y, e.dir || 1, { scale: ART_SCALE.enemy })) return;
+  boobyArt(ctx, e, x, y, m, t);
+};
+class EcBooby extends TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: 'BLUE BOOTS! BOUNCY!', art: boobyRaceArt }) {
   drawArt(ctx) {
     const p = this.g.player, spr = this.sprite;
     if (spr && p) this.dir = p.cx < this.cx ? -1 : 1;
@@ -493,7 +502,11 @@ class EcBooby extends TourFriend.make({ w: 26, h: 44, give: 'sig:boots', line: '
 }
 const entities = { ecBooby: EcBooby, ecIcicle: EcIcicle, ecSurge: EcSurge };
 // the booby minding La Tienda del Cacao (the Souvenir Stand), behind the counter
-decor.ecKeeperBooby = (ctx, x, y, t) => { ctx.save(); ctx.translate(0, -20); boobyArt(ctx, { t, dir: -1, given: true }, x, y, 'idle', t); ctx.restore(); };
+decor.ecKeeperBooby = (ctx, x, y, t) => {
+  // the pre-rendered booby from the 'ec' atlas (its foot dance, facing the door), else the procedural one
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'ec', 'booby/idle', t, x, y - 20, -1, { scale: ART_SCALE.enemy })) return;
+  ctx.save(); ctx.translate(0, -20); boobyArt(ctx, { t, dir: -1, given: true }, x, y, 'idle', t); ctx.restore();
+};
 
 /* ---------------- the signature power-up: BOOBY BOOTS ---------------- */
 // bright blue boots (like a blue-footed booby's feet): super-bouncy jumps; a big landing sends out a shockwave

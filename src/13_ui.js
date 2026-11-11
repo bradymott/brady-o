@@ -601,7 +601,7 @@ class SettingsScene {
     const W = Game.cssW, H = Game.cssH, st = Save.data.settings;
     const pw = Math.min(460, W - 40), px = (W - pw) / 2;
     const motionRow = typeof TourKit !== 'undefined';   // Super Brady-O World: a reduced-motion switch
-    const rowH = Math.min(50, (H - 140) / (motionRow ? 8 : 7));
+    const rowH = Math.min(50, (H - 140) / ((motionRow ? 8 : 7) + (typeof Play !== 'undefined' && Play.zoomNear ? 1 : 0)));
     let y = Math.max(70, insets.t + 64);
     const row = (label, value, fn) => { const b = { x: px, y, w: pw, h: rowH - 8, label: `${label}:  ${value}`, size: 13, fn }; y += rowH; return b; };
     const pct = v => Math.round(v * 100) + '%';
@@ -614,6 +614,7 @@ class SettingsScene {
       row('CONTROLS', st.lefty ? 'JUMP ON LEFT' : 'JUMP ON RIGHT', () => { st.lefty = !st.lefty; Game.resize(); this.build(); }),
       row('SCREEN SHAKE', st.shake ? 'ON' : 'OFF', () => { st.shake = !st.shake; this.build(); }),
       row('QUALITY', st.hq ? 'ULTRA' : 'HIGH', () => { st.hq = !st.hq; Game.resize(); this.build(); }),
+      ...(typeof Play !== 'undefined' && Play.zoomNear ? [row('ZOOM', Play.zoomNear() ? 'NEAR (BIGGER)' : 'FAR (SEE MORE)', () => { st.zoom = Play.zoomNear() ? 'far' : 'near'; this.build(); })] : []),
       ...(motionRow ? [row('MOTION EFFECTS', TourKit.reduceMotion() ? 'REDUCED' : 'FULL', () => { st.reduceMotion = !TourKit.reduceMotion(); this.build(); })] : []),
       row('RESET PROGRESS', this.confirmReset ? 'TAP AGAIN TO ERASE' : 'ERASE ALL', () => { if (this.confirmReset) { const look = Save.data.look; Save.reset(); Save.data.look = look; Save.save(); this.confirmReset = false; Sound.play('powerdown'); } else this.confirmReset = true; this.build(); })
     ];
@@ -643,8 +644,17 @@ function buildPauseUI(play) {
     { x, y, w: bw, h: bh + 4, label: 'RESUME', primary: true, fn: () => play.closePause() },
     { x, y: y += 58, w: bw, h: bh, label: 'RESTART LEVEL', fn: () => { play.paused = false; Sound.resume(); Game.setScene(new Play(play.level, {})); } },
     { x, y: y += 54, w: bw, h: bh, label: play.level && play.level.tour ? 'WORLD MAP' : play.set === 'world' ? 'CITY MAP' : 'WORLD MAP', fn: () => { play.paused = false; Sound.resume(); Save.save(); goToMap(play.set, play.level.world, play.id); } },
-    { x, y: y += 54, w: bw / 2 - 5, h: bh, label: st.music > 0 ? 'MUSIC ON' : 'MUSIC OFF', size: 12, fn: () => { st.music = st.music > 0 ? 0 : 0.6; Sound.setMusicVolume(st.music); Save.save(); play.pauseUI = buildPauseUI(play); } },
-    { x: x + bw / 2 + 5, y, w: bw / 2 - 5, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 12, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } }
+    ...(play.level && play.level.tour && typeof TourKit !== 'undefined' ? [
+      // the world tour: a third switch for the trip effects (the same setting as MOTION EFFECTS in Settings)
+      { x, y: y += 54, w: bw / 3 - 4, h: bh, label: st.music > 0 ? 'MUSIC ON' : 'MUSIC OFF', size: 10, fn: () => { st.music = st.music > 0 ? 0 : 0.6; Sound.setMusicVolume(st.music); Save.save(); play.pauseUI = buildPauseUI(play); } },
+      { x: x + bw / 3 + 2, y, w: bw / 3 - 4, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 10, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } },
+      { x: x + bw * 2 / 3 + 4, y, w: bw / 3 - 4, h: bh, label: TourKit.reduceMotion() ? 'FX CALM' : 'FX FULL', size: 10, fn: () => { st.reduceMotion = !TourKit.reduceMotion(); Save.save(); play.pauseUI = buildPauseUI(play); } }
+    ] : [
+      { x, y: y += 54, w: bw / 2 - 5, h: bh, label: st.music > 0 ? 'MUSIC ON' : 'MUSIC OFF', size: 12, fn: () => { st.music = st.music > 0 ? 0 : 0.6; Sound.setMusicVolume(st.music); Save.save(); play.pauseUI = buildPauseUI(play); } },
+      { x: x + bw / 2 + 5, y, w: bw / 2 - 5, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 12, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } }
+    ]),
+    // camera zoom (Play.viewRows): Near shows everything 20 % larger, Far shows more of the level
+    ...(play.viewRows ? [{ x, y: y += 54, w: bw, h: bh, label: Play.zoomNear() ? 'ZOOM: NEAR' : 'ZOOM: FAR', size: 12, fn: () => { st.zoom = Play.zoomNear() ? 'far' : 'near'; Save.save(); Game.setRows(play.viewRows()); play.pauseUI = buildPauseUI(play); } }] : [])
   ];
   list.focus = 0;
   return list;
@@ -653,7 +663,7 @@ function drawPauseUI(ctx, play) {
   const W = Game.cssW, H = Game.cssH;
   ctx.save();
   ctx.fillStyle = 'rgba(6,4,14,0.6)'; ctx.fillRect(0, 0, W, H);
-  UI.panel(ctx, W / 2 - Math.min(150, W * 0.4), H / 2 - 160, Math.min(300, W * 0.8), 330);
+  UI.panel(ctx, W / 2 - Math.min(150, W * 0.4), H / 2 - 160, Math.min(300, W * 0.8), play.pauseUI && play.pauseUI.length > 5 ? 336 : 330);
   UI.title(ctx, 'PAUSED', W / 2, H / 2 - 130, 24);
   ctx.textAlign = 'center'; ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.fillText(`${play.level.worldName} · ${play.level.name}`, W / 2, H / 2 - 110);

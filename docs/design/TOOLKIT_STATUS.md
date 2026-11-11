@@ -131,7 +131,15 @@ Rules of thumb:
 All 30 (`splitter … hoverDart`) in `src/28_tour_i_behave.js` (`TourBehave`): **tested**. `tools/sbw_toolkit_shots.js behave` makes a lab critter per behaviour and scripts each one through its tell, attack and weak moment (the state sequence is checked), with a screenshot each. Walkers, flyers (`grabber`, `hoverDart`, `swarm`) and swimmers wrap `TourEnemy`, `TourFlyer`, `TourSwimmer`. `onPhase` is called by `setPhase`; `lightFrozen` reads the lights list.
 
 ### Power-ups (§7.4.5)
-Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial globe` (`src/28_tour_dg_gear.js`, `TourGear`), the FORM / HANDS / BUFFS slots, the hit order (star → hat absorbs → HANDS drops for 2 s → FORM) and the Backpack swap: **tested** (`sbw_toolkit_test.js gear`, `sbw_toolkit_shots.js gear`). Gear stands are vkeys `gear:<id>`.
+Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial globe` (`src/28_tour_dg_gear.js`, `TourGear`), the FORM / HANDS / BUFFS slots, the hit order (star → hat absorbs → HANDS drops for 2 s → FEET drops → FORM) and the Backpack swap: **tested** (`sbw_toolkit_test.js gear`, `sbw_toolkit_shots.js gear`). Gear stands are vkeys `gear:<id>`.
+
+| Item | Status | Notes |
+|---|---|---|
+| power picker (`src/28_tour_dh_picker.js`, `TourPicker`): the action button's power, the chip by the action button, Q / E / C and 1-5, the HUD slots | tested | `tools/sbw_powers_test.js picker`; replaces the fixed THROW priority and drives the Backpack swap (§5.2) |
+| no mid-air effect without a jump power (the headbang spin is gone); jump buffer and coyote time kept | tested | `sbw_powers_test.js air` |
+| jump powers `socks` `cake` `beans` (FEET slot, `src/28_tour_di_jumps.js`, `TourJump`) | tested | `sbw_powers_test.js jumps`; item blocks and gear stands hand them out; §5.4 |
+| budget rule 8 (jump powers: max 2 per level, none in a boss or CARRY area) | tested | `sbw_toolkit_test.js budget` |
+| trip moments (`TripFX` in `src/15_postfx.js`): joint, LSD, mushroom; reduced effects; pause-menu FX switch | tested | `sbw_powers_test.js trips`; §5.5 |
 
 ### Area systems (§7.4.6)
 | Key | Status | Notes |

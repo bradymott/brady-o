@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ec_amazon_dusk", {"scale":2.0,"image":"ec_amazon_dusk.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1560}},"anims":{},"strips":{"L0":{"w":2048,"h":714,"top":0.0,"x":0,"y":845},"L1":{"w":2048,"h":844,"top":0.0,"x":0,"y":0}}});

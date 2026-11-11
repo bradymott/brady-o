@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("br_lencois", {"scale":2.0,"image":"br_lencois.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":815}},"anims":{},"strips":{"L0":{"w":2048,"h":389,"top":211.0,"x":0,"y":425},"L1":{"w":2048,"h":424,"top":232.0,"x":0,"y":0}}});

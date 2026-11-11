@@ -32,11 +32,14 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       const steps = Math.round(sec * 120);
       for (let k = 0; k < steps; k++) {
         if (inp) { Object.assign(I, inp); if (inp.jumpPressed && k > 0) I.jumpPressed = false; if (inp.actionPressed && k > 0) I.actionPressed = false; }
-        G.scene.update(1 / 120);
+        window.__simOn = true; try { G.scene.update(1 / 120); } finally { window.__simOn = false; }
         if (k === 0) { I.jumpPressed = false; I.actionPressed = false; I.upPressed = false; I.downPressed = false; I.pausePressed = false; I.taps.length = 0; I.uiKey = null; }
       }
       if (inp) for (const key in inp) I[key] = false;
     };
+    // Determinism: a level only advances inside sim(). The page's own animation loop keeps drawing (for the
+    // screenshots) but no longer updates the fight with real frame times, which made checks depend on machine load.
+    { const PU = window.BRADY.Play.prototype, upd = PU.update; PU.update = function (dt) { if (window.__simOn) return upd.call(this, dt); }; }
     window.T = window.BRADY_TOUR;
     window.start = (id, opts) => { const B = window.BRADY; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 5; B.Game.setScene(new B.Play(B.getLevel(w, i), opts || {})); window.sim(2); if (!(opts && opts.lead)) window.toArena(); };
     // v2 boss levels: a lead-in area, then the arena area (role 'arena'); start() goes straight through its door

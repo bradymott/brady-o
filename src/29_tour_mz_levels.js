@@ -189,6 +189,7 @@ const decor = {
   mzLantern(ctx, x, y, t) { ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y - 90); ctx.lineTo(x, y - 34); ctx.stroke(); ctx.fillStyle = `rgba(255,${200 + Math.sin(t * 6) * 20},110,0.95)`; rr(ctx, x - 6, y - 32, 12, 15, 3); ctx.fill(); },
   // a hornbill keeper behind the Banca's counter
   mzKeeperHornbill(ctx, x, y, t) {
+    if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'mz_x', 'hornbill/idle', t, x + 18, y + 2, -1, { scale: ART_SCALE.enemy })) return;
     ctx.save(); ctx.translate(x + 18, y + 2);
     ctx.fillStyle = '#2a2a34'; ctx.beginPath(); ctx.ellipse(0, -16, 14, 18, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = '#f4ecd8'; ctx.beginPath(); ctx.ellipse(2, -10, 8, 11, 0, 0, TAU); ctx.fill();
@@ -283,11 +284,11 @@ const fruitBatArt = (ctx, e, x, y, m) => {
 };
 const enemies = {
   mzGhostCrab: { cls: TourEnemy.make(GHOST), place: 'walk' },
-  mzDungBeetle: { cls: TourEnemy.make({ w: 26, h: 20, speed: 0.9, behavior: 'pusher', maxScale: 2, ballKind: 'dung', art: beetleArt, burst: '#1a9a4a' }), place: 'walk' },
-  mzPangolin: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.9, behavior: 'curlShield', curlT: 1.5, art: pangolinArt, burst: '#9a7a4a' }), place: 'walk' },
-  mzChameleon: { cls: TourEnemy.make({ w: 24, h: 20, speed: 0, behavior: 'tongue', len: 3, art: chameleonArt, burst: '#4aa04a', init(e) { e.seed = Math.random() * 360; } }), place: 'walk' },
-  mzMoleRat: { cls: TourEnemy.make({ w: 26, h: 22, speed: 1.2, behavior: 'burrower', art: moleRatArt, burst: '#c8907a' }), place: 'walk' },
-  mzFruitBat: { cls: TourFlyer.make({ w: 26, h: 14, range: 3, speed: 1.3, swoop: true, art: fruitBatArt, burst: '#8a5a3a' }), place: 'fly' }
+  mzDungBeetle: { cls: TourEnemy.make({ w: 26, h: 20, speed: 0.9, behavior: 'pusher', maxScale: 2, ballKind: 'dung', art: beetleArt, burst: '#1a9a4a', atlas: 'mz_x' }), place: 'walk' },
+  mzPangolin: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.9, behavior: 'curlShield', curlT: 1.5, art: pangolinArt, burst: '#9a7a4a', atlas: 'mz_x' }), place: 'walk' },
+  mzChameleon: { cls: TourEnemy.make({ w: 24, h: 20, speed: 0, behavior: 'tongue', len: 3, art: chameleonArt, burst: '#4aa04a', atlas: 'mz_x', init(e) { e.seed = Math.random() * 360; } }), place: 'walk' },
+  mzMoleRat: { cls: TourEnemy.make({ w: 26, h: 22, speed: 1.2, behavior: 'burrower', art: moleRatArt, burst: '#c8907a', atlas: 'mz_x' }), place: 'walk' },
+  mzFruitBat: { cls: TourFlyer.make({ w: 26, h: 14, range: 3, speed: 1.3, swoop: true, art: fruitBatArt, burst: '#8a5a3a', atlas: 'mz_x' }), place: 'fly' }
 };
 for (const k in enemies) { ENTITY_TYPES[k] = enemies[k].cls; Tour.enemyInfo[k] = { place: enemies[k].place, country: 'mz' }; }
 
@@ -319,6 +320,11 @@ class MzKeyShutter extends ENTITY_TYPES.shutter {
 // 4-1: the rival, an ostrich in a racing number
 TOUR_SKINS.mzOstrichRival = (ctx, e, t) => {
   const x = e.cx, y = e.y + e.h, run = e.state === 'run', b = run ? Math.abs(Math.sin(t * 16)) * 3 : 0, l = run ? Math.sin(t * 16) * 8 : 0;
+  // the pre-rendered AVESTRUZ (mz_x): running, puffing when it has won or waits, else ready at the line
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'mz_x', run ? 'ostrich/run' : e.state === 'won' ? 'ostrich_tired_000' : 'ostrich/idle', t, x, y, e.dir || 1, { scale: ART_SCALE.enemy })) {
+    if (e.state === 'count' && e.ct > 0) TourObj.label(ctx, String(Math.ceil(e.ct)), x, e.y - 50, 24, '#ffd84a');
+    return;
+  }
   Ink.around(ctx, e.x - 20, e.y - 44, e.w + 40, e.h + 46, c => {
     c.strokeStyle = '#e8b0a0'; c.lineWidth = 3; for (const s of [-1, 1]) { c.beginPath(); c.moveTo(x + s * 3, y - 18 - b); c.lineTo(x + s * 2 + s * l, y - 8); c.lineTo(x + s * 4 + s * l * 0.5, y); c.stroke(); }
     c.fillStyle = '#2a2a2a'; c.beginPath(); c.ellipse(x - 2, y - 24 - b, 15, 11, -0.15, 0, TAU); c.fill();
@@ -763,7 +769,7 @@ Tour.pieces['mz.arena_tidepool'] = (st, o) => {
 };
 
 /* ================= houses and the country panel ================= */
-const houses = [{ id: 'mz-gorongosa', mapLabel: 'Banca', kind: 'stand', name: 'Banca da Gorongosa', keeper: 'hornbill', theme: 'mz_savanna', stock: ['hat', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:piri'], mapCell: [0, 1], mapFrom: 0 }];
+const houses = [{ id: 'mz-gorongosa', mapLabel: 'Banca', kind: 'stand', name: 'Banca da Gorongosa', keeper: 'hornbill', theme: 'mz_savanna', roomTheme: 'mz_cupim', stock: ['hat', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:piri'], mapCell: [0, 1], mapFrom: 0 }];
 const map = { fort: 'seafort', start: [0, 0] };
 
 /* ================= the levels ================= */
@@ -920,6 +926,7 @@ const levels = [
       { id: 'muralha', gen: 'strip', mode: 'castle', W: 84, H: 18, script: [
         ['opening', { decor: [['mzRampartPalm', 3]] }],
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         ['rampart', { gold: true }],
         'sig',
         ['potTrough'],
@@ -956,5 +963,7 @@ const levels = [
     ] }
 ];
 
+Decor.mzKeeperHornbill.atlas = 'mz_x';   // the Banca's keeper (29_tour_mx.js extraAtlases hook)
+TOUR_SKINS.mzOstrichRival.atlas = 'mz_x';
 Tour.amend('mz', { stamps, skins, houses, map, levels });
 })();

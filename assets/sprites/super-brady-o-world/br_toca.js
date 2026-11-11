@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("br_toca", {"scale":2.0,"image":"br_toca.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":889}},"anims":{},"strips":{"L0":{"w":2048,"h":888,"top":0.0,"x":0,"y":0},"L1":{"w":2048,"h":187,"top":350.5,"x":0,"y":1082},"L2":{"w":2048,"h":122,"top":383.0,"x":0,"y":1270}}});

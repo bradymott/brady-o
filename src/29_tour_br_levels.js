@@ -275,12 +275,14 @@ ENTITY_TYPES.brPiranha.cfg.sprite = ENTITY_TYPES.brPiranha.cfg.sprite || 'piranh
 const enemies = {
   brPandeiro: { cls: TourEnemy.make(PANDEIRO), place: 'walk' },
   brBrigadeiro: { cls: TourEnemy.make(BRIGADEIRO), place: 'walk' },
-  brParrot: { cls: TourFlyer.make({ w: 28, h: 16, range: 4, speed: 1.0, swoop: true, art: parrotArt, burst: '#e8302a' }), place: 'fly' },
-  brSloth: { cls: TourEnemy.make({ w: 26, h: 26, speed: 0.5, behavior: 'ceilingDrop', tell: 0.6, stuckT: 2.5, climbSpeed: 0.6, art: slothArt, burst: '#9a8060' }), place: 'here' },
-  brSwift: { cls: TourFlyer.make({ w: 26, h: 12, range: 7, speed: 1.0, behavior: 'hoverDart', art: swiftArt, burst: '#3a3a48' }), place: 'here' },
-  brPiranha: { cls: TourSwimmer.make({ w: 22, h: 16, speed: 1.2, behavior: 'swarm', n: 4, range: 4, art: piranhaSchoolArt, burst: '#e8422a' }), place: 'swim' },
+  brParrot: { cls: TourFlyer.make({ w: 28, h: 16, range: 4, speed: 1.0, swoop: true, art: parrotArt, burst: '#e8302a', atlas: 'br_x' }), place: 'fly' },
+  brSloth: { cls: TourEnemy.make({ w: 26, h: 26, speed: 0.5, behavior: 'ceilingDrop', tell: 0.6, stuckT: 2.5, climbSpeed: 0.6, art: slothArt, burst: '#9a8060', atlas: 'br_x' }), place: 'here' },
+  brSwift: { cls: TourFlyer.make({ w: 26, h: 12, range: 7, speed: 1.0, behavior: 'hoverDart', art: swiftArt, burst: '#3a3a48', atlas: 'br_x' }), place: 'here' },
+  brPiranha: { cls: TourSwimmer.make({ w: 22, h: 16, speed: 1.2, behavior: 'swarm', n: 4, range: 4, atlas: 'br_x', burst: '#e8422a',
+    // the school's followers always draw through cfg.art, so the art reaches for the atlas itself
+    art: (ctx, e, x, y, m) => { if (!(typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'br_x', m === 'ko' ? 'piranha_ko_000' : 'piranha/swim', e.t || 0, x, y, e.dir || -1))) piranhaSchoolArt(ctx, e, x, y, m); } }), place: 'swim' },
   brPiranhaLeap: { cls: ENTITY_TYPES.brPiranha, place: 'here' },
-  brKite: { cls: TourFlyer.make({ w: 22, h: 30, range: 3, speed: 0.7, swoop: true, art: kiteArt, burst: '#ffd23a', init(e) { e.seedK = Math.floor(Math.random() * 6); } }), place: 'fly' }
+  brKite: { cls: TourFlyer.make({ w: 22, h: 30, range: 3, speed: 0.7, swoop: true, art: kiteArt, burst: '#ffd23a', atlas: 'br_x', init(e) { e.seedK = Math.floor(Math.random() * 6); } }), place: 'fly' }
 };
 for (const k in enemies) { ENTITY_TYPES[k] = enemies[k].cls; Tour.enemyInfo[k] = { place: enemies[k].place, country: 'br' }; }
 // swifts start hidden behind the falls' curtain: a dark shape until Brady is close
@@ -426,6 +428,8 @@ const skins = {
   // Quati: a coati in a bandit mask with a satchel of stamps
   brQuati(ctx, e, t) {
     const x = e.cx, y = e.y + e.h, d = e.dir || 1, b = e.hop ? Math.sin(t * 20) * 2 : 0;
+    // the pre-rendered Quati (br_x): leaping off with the satchel, grabbing, caught (just after a catch), taunting
+    if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'br_x', e.hop ? 'quati/run' : e.state === 'snatch' ? 'quati_grab_000' : e.cool > 0.5 ? 'quati_caught_000' : 'quati/idle', t, x, y, d, { scale: ART_SCALE.enemy })) return;
     Ink.around(ctx, e.x - 14, e.y - 18, e.w + 28, e.h + 20, c => {
       c.save(); c.translate(x, y + b); ENTITY_TYPES.brCoati.cfg.art(c, { dir: d, t, loot: 0 }, 0, 0, e.hop ? 'flee' : 'walk'); c.restore();
       c.fillStyle = '#1a1020'; c.fillRect(x + d * 6, y - 15 + b, d * 9, 3);
@@ -629,6 +633,7 @@ const stamps = {
 };
 // the keeper of the Banca do Quati: a coati in a straw hat leaning on the counter
 Decor.brKeeperQuati = (ctx, x, y, t) => {
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'br_x', 'quatiKeeper/idle', t, x + 20, y + 30, -1, { scale: 1.4 })) return;
   ctx.save(); ctx.translate(x + 20, y + 30); ctx.scale(1.4, 1.4); ENTITY_TYPES.brCoati.cfg.art(ctx, { dir: -1, t, loot: 0 }, 0, 0, 'walk'); ctx.restore();
   ctx.fillStyle = '#e8c870'; ctx.beginPath(); ctx.ellipse(x + 8, y + 2, 16, 4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(x + 8, y - 2, 8, 6, 0, Math.PI, TAU); ctx.fill(); ctx.fillStyle = '#ff3d8b'; ctx.fillRect(x, y - 3, 16, 2);
 };
@@ -1102,7 +1107,7 @@ Object.assign(TOUR_BEAT_ART, {
 });
 
 /* ================= houses and the country panel ================= */
-const houses = [{ id: 'br-quati', mapLabel: 'Banca', kind: 'stand', name: 'Banca do Quati', keeper: 'coati', theme: 'br_pantanal', stock: ['kazoo', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:ball'], mapCell: [0, 1], mapFrom: 1 }];
+const houses = [{ id: 'br-quati', mapLabel: 'Banca', kind: 'stand', name: 'Banca do Quati', keeper: 'coati', theme: 'br_pantanal', roomTheme: 'br_toca', stock: ['kazoo', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:ball'], mapCell: [0, 1], mapFrom: 1 }];
 const map = { fort: 'stadium', start: [0, 0] };
 
 /* ================= the levels ================= */
@@ -1120,6 +1125,7 @@ const levels = [
       { id: 'avenida', gen: 'strip', W: 230, H: 18, bpm: 124, script: [
         ['opening', { decor: [['brBunting', 6], ['brSurdos', 1]] }],
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
         ['standSign', { item: 'kazoo', text: 'KAZOO! THROW = HONK. BELL GATES OPEN TO A HONK' }],
         // ① the beat
         ['drums', { n: 3 }],
@@ -1227,6 +1233,7 @@ const levels = [
         ['opening', { decor: [['brDuneGrass', 2], ['brShell', 5]] }],
         ['standSign', { item: 'fins', text: 'FLIPPER FINS: THE LAGOONS FILL EVERY 14 SECONDS' }],
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
         // ① the water climbs: walk the bed or swim over
         ['lagoon', { w: 10, bed: 6 }],
         ['dune', { w: 10, h: 3 }],
@@ -1310,5 +1317,7 @@ const levels = [
     ] }
 ];
 
+Decor.brKeeperQuati.atlas = 'br_x';   // a level that places this decor (the Banca) loads br_x (29_tour_mx.js extraAtlases hook)
+skins.brQuati.atlas = 'br_x';         // ... and one whose spawns use this look (3-2's thief)
 Tour.amend('br', { stamps, skins, houses, map, levels });
 })();

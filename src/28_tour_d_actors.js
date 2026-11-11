@@ -45,11 +45,27 @@ const TourSprite = {
      drawn (an atlas can be in yet lack this kind or mode) */
   inked(ctx, e, mode, fallback) {
     if (this.pick(e, mode, fallback)) e.drawArt(ctx);
-    else Ink.ent(ctx, e, c => e.drawArt(c), { scale: this.scale(e), extra: e.cfg.inkPad || 0 });  // cfg.inkPad: extra slack for art that reaches far out
+    else Ink.ent(ctx, e, c => e.drawArt(c), { scale: this.scale(e), extra: e.cfg.inkPad || 0, rim: Ink.keyline });  // cfg.inkPad: extra slack for art that reaches far out
+  },
+  /* Life: a little squash and stretch on top of the clips, so a standing enemy breathes, a walker bobs, and an
+     enemy about to charge, curl or throw winds up (squats and trembles) before it acts. Returns [sx, sy, dx]. */
+  squash(e, mode) {
+    if (typeof TourKit !== 'undefined' && TourKit.reduceMotion && TourKit.reduceMotion()) return null;
+    const t = (e.t || 0) + (e.seed || 0) * 0.37;
+    switch (mode) {
+      case 'idle': case 'wave': { const k = Math.sin(t * 3.2) * 0.035; return [1 - k * 0.6, 1 + k, 0]; }
+      case 'walk': { const k = Math.abs(Math.sin(t * 7.5)) * 0.05 - 0.025; return [1 - k * 0.6, 1 + k, 0]; }
+      case 'notice': case 'curl': return [1.1, 0.88, Math.sin(t * 70) * 0.7];
+      case 'throw': { const k = e.st > 0.2 ? 0.1 : -0.06; return [1 - k * 0.5, 1 + k, 0]; }
+      case 'hop': return e.vy < 0 ? [0.9, 1.12, 0] : [1.04, 0.97, 0];
+      case 'charge': return [1.06, 0.95, 0];
+      default: return null;
+    }
   },
   draw(ctx, e, x, y, mode, fallback) {
     const id = this.pick(e, mode, fallback); if (!id) return false;
     const a = this.of(e), o = { scale: this.scale(e) };
+    const q = this.squash(e, mode); if (q) { o.sx = q[0]; o.sy = q[1]; x += q[2]; }
     return id.indexOf('/') >= 0 ? Atlas.animate(ctx, a, id, e.t, x, y, e.dir || 1, o) : Atlas.draw(ctx, a, id, x, y, e.dir || 1, o);
   },
   // procedural art, scaled about its origin point

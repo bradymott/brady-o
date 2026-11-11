@@ -49,6 +49,14 @@ if (!THEMES.ec_fabrica && THEMES.ec_equator) {
     hard: { c1: '#9a6a4a', c2: '#5a3a28' }, semi: { style: 'wood', c1: '#8a6a52', c2: '#5a3a28' }, liquid: 'choc', decor: ['ecSack', 'ecPipe']
   });
 }
+// interior rooms without a theme of their own (2-1's chocolatería, La Tienda del Cacao) would get the level theme's
+// '_cave' look (03_themes.js caveVariant); they are cacao rooms, so they borrow the cacao works' pre-rendered wall
+// (tools/blender/sprites/ec_fabrica.py) and floor instead
+if (!THEMES.ec_equator_cave && THEMES.ec_fabrica && typeof Atlas !== 'undefined') {
+  const F = THEMES.ec_fabrica, th = THEMES.ec_equator_cave = Object.assign({}, F, { name: 'La Chocolatería', darkness: 0.06 });
+  th.layers = F.layers.map((L, i) => ({ kind: 'image', atlas: 'ec_fabrica', id: 'L' + i, f: L.f, base: L.base, dyn: L.dyn, color: L.color, fallback: L, shift: L.base > 340 ? -Math.min(60, L.base - 335) : 0 }));
+  Atlas.applyTiles(th, 'ec_fabrica', { ground: 'ground' });
+}
 // 2-7's waterfall gorge: deep green walls, mist, a white torrent
 if (!THEMES.ec_pailon && THEMES.ec_amazon) {
   THEMES.ec_pailon = Object.assign({}, THEMES.ec_amazon, {
@@ -631,6 +639,7 @@ const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_du
         ['startStamp', { id: 'copa' }],
         // ① vines between giant trees
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
         ['vines', { n: 3 }],
         ['branches', {}],
         ['secretDoor', { to: 'treehouse@in', look: 'ecLeafLadder', back: 'treeBack' }],
@@ -700,6 +709,7 @@ const L4 = { n: 4, name: 'Cacao Works', arch: 'factory', theme: 'ec_fabrica',
       script: [
         ['startStamp', { id: 'muelle' }],
         ['itemBlock', { item: 'power' }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         ['tip', { text: 'A HARD HAT! IT BREAKS FOIL WALLS AND SOAKS UP ONE HIT. TAP THROW TO SHOULDER-DASH' }],
         ['gearStand', { item: 'hat' }],
         // ① belts carry pods and Brady
