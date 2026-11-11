@@ -811,6 +811,11 @@ class Play {
     }
     const hide = A.hide, lsd = p.fx && p.fx.lsd > 0;
     const beatAt = this.beatMap(A);
+    // light-only tiles (hide 3) are always solid but show only inside light: lamps, beams, glowing things; Brady's own
+    // glow counts in a lamp area or under a headlamp (LEVEL_OVERHAUL §1 LAMP, §2 1-3)
+    if (A.hasLight3 == null) A.hasLight3 = !!hide && hide.indexOf(3) >= 0;
+    const lit3 = !fg && A.hasLight3 ? this.collectLights(camX, camY).filter((L, k) => k > 0 || A.lamp || (p.hands && p.hands.id === 'hat')) : null;
+    const litAt = (x, y) => { let k = 0; const cx = x * TS + TS / 2, cy = y * TS + TS / 2; for (const L of lit3) { const d = Math.hypot(L.x - cx, L.y - cy); k = Math.max(k, clamp((L.r * 0.9 - d) / (L.r * 0.35), 0, 1)); } return k; };
     for (let y = y1; y >= y0; y--) {
       for (let x = x0; x <= x1; x++) {
         const id = A.tiles[y * A.W + x];
@@ -819,7 +824,9 @@ class Play {
         // dug earth: below the surface of a dig area, empty tiles (and coins and water in caverns) show the dark wall of the tunnel
         if ((id === T.EMPTY || id === T.PICK || id === T.WATER) && !fg && A.dig && y > A.surface) { const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S); ctx.fillStyle = A.tunnelCol || '#2a1a12'; ctx.fillRect(dx, dy, Math.ceil(TS * S) + 1, Math.ceil(TS * S) + 1); if ((x * 7 + y * 3) % 5 === 0) { ctx.fillStyle = 'rgba(255,220,170,0.06)'; ctx.beginPath(); ctx.arc(dx + 10 * S, dy + 14 * S, 5 * S, 0, TAU); ctx.fill(); } if (id === T.EMPTY) continue; }
         if (id === T.EMPTY) continue;
-        if (hv === 1 || hv === 3) continue;
+        let shimmer = 0;
+        if (hv === 1) continue;
+        if (hv === 3) { if (!lit3) continue; shimmer = litAt(x, y); if (shimmer < 0.04) continue; ctx.globalAlpha = shimmer * (0.8 + 0.2 * Math.sin(t * 4 + x * 1.3 + y)); }
         if (hv === 2) { if (!fg && lsd) this.drawTripTile(ctx, x, y, camX, camY, S); continue; }
         if (fg !== (id === T.FAKE || id === T.WATER)) continue;
         const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S);
@@ -861,6 +868,7 @@ class Play {
           }
         }
         if (img) ctx.drawImage(img, dx - pad + ox * S, dy - pad + oy * S, dw + pad * 2, dh + pad * 2);
+        if (shimmer) { ctx.fillStyle = `rgba(220,255,250,${0.25 * shimmer})`; ctx.fillRect(dx, dy, dw, dh); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(dx + ((t * 30 + x * 9) % TS) * S, dy, 2 * S, 2 * S); ctx.globalAlpha = 1; }
         if (id === T.FAKE || id === T.HIDDEN) ctx.globalAlpha = 1;
       }
     }
@@ -978,10 +986,14 @@ class Play {
     const toHex = c => { const m = /rgba?\((\d+),(\d+),(\d+)/.exec(c || ''); return m ? rgbToHex(+m[1], +m[2], +m[3]) : '#ffd8a0'; };
     for (const e of this.entities) {
       if (e.remove) continue;
-      const L = e.light; if (!L) continue;
-      const x = L.x !== undefined ? L.x : e.cx, y = L.y !== undefined ? L.y : e.cy;
-      if (x < camX - 200 || x > camX + VW + 200 || y < camY - 200 || y > camY + VH + 200) continue;
-      lights.push({ x, y, r: L.r, col: L.col || toHex(L.c), a: 0.5 });
+      // an entity gives one light (light) or several (lights: a sunbeam is a column of them)
+      const Ls = e.lights || (e.light ? [e.light] : null); if (!Ls) continue;
+      for (const L of Ls) {
+        if (!L || !(L.r > 0)) continue;
+        const x = L.x !== undefined ? L.x : e.cx, y = L.y !== undefined ? L.y : e.cy;
+        if (x < camX - 200 || x > camX + VW + 200 || y < camY - 200 || y > camY + VH + 200) continue;
+        lights.push({ x, y, r: L.r, col: L.col || toHex(L.c), a: L.a || 0.5 });
+      }
     }
     const DL = { lamp: [130, '#ffe0a0', -66], torch: [120, '#ffa040', -40], brazier: [120, '#ffa040', -28], crystal: [70, th.accent, -12], crystalred: [70, '#ff3a3a', -12],
       ledtree: [95, null, -52], firebarrel: [125, '#ff8a2a', -24], candles: [60, '#ffc070', -14], campsignN: [64, '#ff4fd8', -42], disco: [90, '#ffffff', -34],
