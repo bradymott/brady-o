@@ -300,12 +300,26 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const aq = viaDoor('8-4');
     const aqOpen = TP.countryUnlocked(T.Tour.countries.aq) && TP.isUnlocked('13-1');
     const w0 = viaDoor('5-2'); const lockedOut = w0.s1 === 'play' && !TP.countryUnlocked(T.Tour.countries.w22);
+    // the shut door is remembered: World 22's ghost pin shows on the map, and tapping it says what the door wants
+    const gm = new M({}); B.Game.setScene(gm); gm.card = null; const ws = T.Tour.stops.w22;
+    B.Input.taps.push({ x: gm.sx(ws.lon), y: gm.sy(ws.lat) }); gm.update(1 / 60);
+    const ghost = { door: !!(d.tour.doors || {}).w22, pins: gm.ghostPins().map(s => s.id).join(), toast: gm.toastMsg };
     for (const w of [1, 2, 3, 4, 5, 6, 7, 8]) d.gold[w + '-1'] = [true, true, true];
     const w1 = viaDoor('5-2'); const w22Open = TP.countryUnlocked(T.Tour.countries.w22) && TP.isUnlocked('22-1');
     const map = new M({ from: '5-2' }); B.Game.setScene(map); const flying = !!map.flight; for (let k = 0; k < 900 && map.flight; k++) map.update(1 / 120);
-    return { hiddenAtFirst, aq, aqOpen, lockedOut, w1, w22Open, flying, sel: map.sel, gold: TP.totals().gold };
+    return { hiddenAtFirst, aq, aqOpen, lockedOut, ghost, w1, w22Open, flying, sel: map.sel, gold: TP.totals().gold, ghostAfter: map.ghostPins().length };
   });
   check('secret lands stay hidden until found; a cracked wall in 8-4 opens Antarctica; door 22 in 5-2 opens World 22 only with 22 postcards', secrets.hiddenAtFirst && secrets.aqOpen && secrets.lockedOut && secrets.w22Open && secrets.flying && secrets.sel === 'w22', secrets);
+  check('the shut door in 5-2 leaves a "22?" ghost pin on the world map; tapping it tells how many postcards it wants; it goes once World 22 opens', secrets.ghost.door && secrets.ghost.pins === 'w22' && /WANTS 22 POSTCARDS/.test(secrets.ghost.toast) && secrets.ghostAfter === 0, secrets.ghost);
+  await page.evaluate(() => {
+    const B = window.BRADY, d = B.Save.data, keep = JSON.stringify(d.tour), keepGold = JSON.stringify(d.gold), keepUn = JSON.stringify(d.unlocked);
+    d.tour = Object.assign(JSON.parse(keep), { lands: {}, doors: { w22: true }, pending: [], at: 'ma' }); d.gold = {};
+    for (const id in d.unlocked) if (/^22-/.test(id)) delete d.unlocked[id];
+    const m = new T.TourMapScene({}); B.Game.setScene(m); m.card = null; const ws = T.Tour.stops.w22; m.cam.lon = ws.lon + 12; m.cam.lat = ws.lat; m.update(1 / 60); m.draw(B.Game.ctx);
+    window.__ghostRestore = () => { d.tour = JSON.parse(keep); d.gold = JSON.parse(keepGold); d.unlocked = JSON.parse(keepUn); };
+  });
+  await shot('12c-map-ghost22.png');
+  await page.evaluate(() => window.__ghostRestore());
   await page.evaluate(() => { const s = S(); s.card = null; s.update(1 / 60); s.draw(window.BRADY.Game.ctx); });
   await shot('12b-map-world22.png');
   // the whole route flows: each boss flies Brady on to the next built country
@@ -313,8 +327,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const B = window.BRADY, d = B.Save.data, out = [];
     d.tour = { at: 'mx', seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {};
     for (const C of T.Tour.mainCountries()) {
-      for (let i = 1; i <= C.levels.length; i++) { d.done[C.world + '-' + i] = true; T.TourProgress.complete(C.world + '-' + i, false); }
-      const N = T.Tour.nextCountry(C); const M = new T.TourMapScene({ from: C.world + '-' + C.levels.length }); B.Game.setScene(M);
+      for (let i = 1; i <= C.mainCount; i++) { d.done[C.world + '-' + i] = true; T.TourProgress.complete(C.world + '-' + i, false); }
+      const N = T.Tour.nextCountry(C); const M = new T.TourMapScene({ from: C.world + '-' + C.mainCount }); B.Game.setScene(M);
       out.push(C.id + '>' + (N ? (M.flight || M.sel === N.id ? N.id : 'STUCK') : 'end'));
     }
     d.tour = { at: null, seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {}; d.gold = {};

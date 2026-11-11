@@ -520,6 +520,9 @@ function tourMirror(main, rooms) {
     touchPlayer(p) {
       if (this.s.need && typeof TourProgress !== 'undefined' && TourProgress.totals().gold < this.s.need) {
         if (!(this.toldT > this.t)) { this.toldT = this.t + 3; this.g.toast(`THIS DOOR WANTS ${this.s.need} POSTCARDS (YOU HAVE ${TourProgress.totals().gold})`); Sound.play('bump'); }
+        // remember the door: the world map shows the land's ghost pin from now on (§3.7)
+        const L = this.g.level, ex = L && L.exits && L.exits[this.exitKey], to = (ex && ex.to) || (this.s.secretWorld ? 'land:' + this.s.secretWorld : '');
+        if (/^land:/.test(to)) { const D = TourProgress.data().doors; if (!D[to.slice(5)]) { D[to.slice(5)] = true; Save.save(); } }
         return;
       }
       super.touchPlayer(p);
