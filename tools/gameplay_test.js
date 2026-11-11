@@ -56,13 +56,16 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     window.near = (type, dx, props) => { const g = S(), p = P(); const C = ctor(type); const e = new C(g, Object.assign({ x: p.cx + (dx || 60), y: p.y + p.h, dir: -1 }, props || {})); g.spawn(e); return e; };
   });
 
-  // 1. Title -> card -> intro story -> world map
-  const card = await page.evaluate(() => { const s = window.BRADY.Game.scene; return { app: window.BRADY.APP, n: s.cards.length, c: { x: s.cards[0].x + s.cards[0].w / 2, y: s.cards[0].y + s.cards[0].h / 2 } }; });
-  check('the world app title has one Super Brady-O World card', card.app === 'world' && card.n === 1, card.app);
+  // 1. Title -> TAP TO PLAY (the plane takes off) -> intro story -> world map
+  await page.waitForTimeout(1200);   // the logo drops in
+  const card = await page.evaluate(() => { const s = window.BRADY.Game.scene; return { app: window.BRADY.APP, name: s.constructor.name, label: s.ctaLabel, c: s.cta && { x: s.cta.x + s.cta.w / 2, y: s.cta.y + s.cta.h / 2 } }; });
+  check('the world app title is the title show, with TAP TO PLAY for a new player', card.app === 'world' && card.name === 'TitleScene' && card.label === 'TAP TO PLAY' && !!card.c, card);
   await shot('01-title.png');
-  await page.mouse.click(card.c.x, card.c.y); await page.waitForTimeout(500);
+  await page.mouse.click(card.c.x, card.c.y);
+  await page.waitForFunction(() => { const s = window.BRADY.Game.scene; return s.constructor.name === 'StoryScene' || (s.inner && s.inner.constructor.name === 'StoryScene'); }, null, { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(600);
   const story = await page.evaluate(() => window.BRADY.Game.scene.constructor.name);
-  check('the card opens the intro story', story === 'StoryScene', story);
+  check('tapping play flies off into the intro story', story === 'StoryScene', story);
   await page.mouse.click(437, 150); await page.waitForTimeout(700);
   await shot('02-story.png');
   for (let k = 0; k < 8; k++) { const n = await page.evaluate(() => window.BRADY.Game.scene.constructor.name); if (n !== 'StoryScene') break; await page.mouse.click(437, 150); await page.waitForTimeout(700); }

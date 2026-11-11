@@ -34,8 +34,10 @@ const APPS = {
   },
   world: {
     dir: 'super-brady-o-world', name: 'Super Brady-O World', short: 'Super Brady-O',
-    desc: 'Super Brady-O travels the world: a 2D platformer across twelve countries.',
-    color: '#0b1630', saveKey: 'super-brady-o-world-save-v2',
+    desc: 'Brady flies around the world after Baron Bric-a-Brac, who bottles every landmark he can find: a 2D platformer across twelve countries.',
+    // the title's sky blue: the launch screen and the browser bars match the title show
+    color: '#2c9cf0', saveKey: 'super-brady-o-world-save-v2',
+    icons: ['icon-32.png'],   // a small favicon (tools/make_icon.js renders it for this app)
     // the world tour replaced the Black Rock City lands, their level designs, themes and city map
     files: f => !isBurns(f) && !isKart(f) && !['08c_designs.js', '20b_world_themes.js', '24_sloth.js', '26_worlddata.js', '27_brcmap.js', '27_brcmap_land.js'].includes(f)
   },
@@ -240,10 +242,10 @@ for (const [id, A] of Object.entries(APPS)) {
   fs.mkdirSync(dir, { recursive: true });
   // per-app icons from dist/icons/<id>/ (tools/make_icon.js); fall back to the shared ones
   const iconSrc = f => [path.join(dist, 'icons', id, f), path.join(dist, 'icons', f)].find(p => fs.existsSync(p));
-  const icons = ICONS.filter(f => iconSrc(f));
+  const icons = ICONS.concat(A.icons || []).filter(f => iconSrc(f));
   for (const f of icons) fs.copyFileSync(iconSrc(f), path.join(dir, f));
   const html = pageHtml({ title: A.name, appleTitle: A.short, desc: A.desc, color: A.color, code,
-    extra: `<link rel="manifest" href="manifest.webmanifest">\n${icons.includes('icon-180.png') ? '<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">' : ''}\n${icons.includes('icon-192.png') ? '<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">' : ''}\n${swReg}` });
+    extra: `<link rel="manifest" href="manifest.webmanifest">\n${icons.includes('icon-180.png') ? '<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">' : ''}\n${icons.includes('icon-192.png') ? '<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">' : ''}${icons.includes('icon-32.png') ? '\n<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">' : ''}\n${swReg}` });
   fs.writeFileSync(path.join(dir, 'index.html'), html);
   fs.writeFileSync(path.join(dir, 'manifest.webmanifest'), JSON.stringify(manifestFor(A.name, A.short, A.desc, A.color, icons), null, 2));
   const v = crypto.createHash('sha1').update(html).digest('hex').slice(0, 10);
