@@ -1252,7 +1252,7 @@ Tour.country({
   star: { name: 'GOLDEN FAN', draw(ctx, x, y, t) { ctx.save(); ctx.translate(x, y + 6); for (let k = 0; k < 7; k++) { ctx.fillStyle = k % 2 ? '#ffd24a' : '#ffe890'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 13, -Math.PI + k * Math.PI / 7, -Math.PI + (k + 1) * Math.PI / 7); ctx.closePath(); ctx.fill(); } ctx.restore(); } },
   skins: esSkins,
   map: { fort: 'lonja', start: [0, 0] },
-  houses: [{ id: 'es-pintxos', kind: 'stand', name: 'La Tiendita de Pintxos', keeper: 'stork', stock: ['pads', 'wand', 'plane', 'oneup', 'sundial', 'magnet'], mapCell: [2, 2], mapFrom: 1 }],
+  houses: [{ id: 'es-pintxos', mapLabel: 'Tiendita', kind: 'stand', name: 'La Tiendita de Pintxos', keeper: 'stork', stock: ['pads', 'wand', 'plane', 'oneup', 'sundial', 'magnet'], mapCell: [0, 2], mapFrom: 1 }],
   // the levels are registered by 29_tour_es_levels.js (Tour.amend)
   levels: []
 });

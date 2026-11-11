@@ -726,7 +726,7 @@ const stamps = {
 /* ---------------- the levels ---------------- */
 const levels = [
   // 7-1 HUB (errand): the plaza and its three rounds
-  { n: 1, name: 'Paris Morning Rounds', arch: 'hub', theme: 'fr_place',
+  { n: 1, name: 'Paris Morning Rounds', mapLabel: 'Paris', arch: 'hub', theme: 'fr_place',
     gimmick: 'Three errands from the plaza: bread from the bakery, a letter over the rooftops, a crêpe from the café',
     hint: 'Each door leads to an errand. Bring all three deliveries back to the post office',
     postcard: 'Bonjour from Paris! Three errands before breakfast: the baker, the roofer and the crêpe café. ♥ C',
@@ -763,7 +763,7 @@ const levels = [
       { id: 'quai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'quai' }
     ] },
   // 7-2 THIEF: the magpie and the stamps, across Provence
-  { n: 2, name: 'Lavender Magpie', arch: 'thief', theme: 'fr_provence',
+  { n: 2, name: 'Lavender Magpie', mapLabel: 'Lavender', arch: 'thief', theme: 'fr_provence',
     gimmick: 'A magpie snatches the passport stamps: chase it through lavender rows, sunflowers and a sleepy farmyard',
     hint: 'Stomp the magpie when you catch up: three catches win the stamps back. Walk softly past sleeping boars',
     postcard: 'Provence smells like a giant bar of lavender soap. A magpie stole my passport stamps! ♥ C',
@@ -795,7 +795,7 @@ const levels = [
       { id: 'mas', gen: 'room', role: 'secret', stamp: 'mas' }
     ] },
   // 7-3 TIDE: the bay of the abbey island (background only), the tide in and out, the bore at the end
-  { n: 3, name: 'Mont-Saint-Michel Tides', arch: 'tide', theme: 'fr_baie',
+  { n: 3, name: 'Mont-Saint-Michel Tides', mapLabel: 'The Bay', arch: 'tide', theme: 'fr_baie',
     gimmick: 'The tide fills and empties the bay: walk the sand at low tide, swim over the sea walls at high tide, then outrun the tidal bore',
     hint: 'Wait for the tide: high water floats you over the sea walls. Quicksand slows you down',
     postcard: 'The tide here comes in as fast as a galloping horse. I watched from the causeway, dry feet. ♥ C',
@@ -841,7 +841,7 @@ const levels = [
       { id: 'banc', gen: 'room', role: 'secret', theme: 'fr_baie', stamp: 'banc' }
     ] },
   // 7-4 DIG: Périgord truffles, under the oaks
-  { n: 4, name: 'Truffle Hunt', arch: 'dig', theme: 'fr_perigord',
+  { n: 4, name: 'Truffle Hunt', mapLabel: 'Truffles', arch: 'dig', theme: 'fr_perigord',
     gimmick: 'A truffle pig sniffs out where to dig: stomp down through the soil, dodge the moles, find the underground river',
     hint: 'Hold DOWN and press JUMP on soil to dig. The Hard Hat dashes sideways through it',
     postcard: 'A pig with a better nose than any chef found a truffle the size of my fist. ♥ C',
@@ -869,7 +869,7 @@ const levels = [
       { id: 'grotte', gen: 'room', role: 'secret', stamp: 'grotte' }
     ] },
   // 7-5 LAIR: the château of mirrors and Le Grand Soufflé's ballroom
-  { n: 5, name: 'Château des Glaces', arch: 'lair', theme: 'fr_chateau', boss: 'fr_souffle',
+  { n: 5, name: 'Château des Glaces', mapLabel: 'Château', arch: 'lair', theme: 'fr_chateau', boss: 'fr_souffle',
     gimmick: 'Mirror doors and falling chandeliers lead to the ballroom, where Le Grand Soufflé waits by the great oven',
     hint: 'In the ballroom: jump into each wall mirror from its balcony to aim it at the oven, then lure him into the light',
     postcard: 'The iron tower is back to full size! The Baron flew north, muttering about tulips. ♥ C',
@@ -896,7 +896,7 @@ const levels = [
       { id: 'ballroom', gen: 'arena', role: 'arena', layout: 'ballroom', arenaW: 26, H: 18 }
     ] },
   // 7-6 SCROLL (secret): the Seine quays, the bouquinistes' boxes in time with the music
-  { n: 6, name: 'Seine Chase', arch: 'scroll', secret: true, theme: 'fr_seine',
+  { n: 6, name: 'Seine Chase', mapLabel: 'Seine', arch: 'scroll', secret: true, theme: 'fr_seine',
     gimmick: 'The quay scrolls on: book-box lids snap in time, barges drift through the gaps, pigeons swoop under the bridges',
     hint: 'The green book boxes snap shut on the beat: time your hops',
     postcard: 'Found a secret staircase to the river! The booksellers wave at everyone. ♥ C',
@@ -925,12 +925,12 @@ const levels = [
       { id: 'seineQuai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'seineQuai' }
     ] },
   // 7-7 SKY (secret): balloons over France; one trade-wind balloon flies east (the secret flight to Vietnam)
-  { n: 7, name: 'Montgolfière Skies', arch: 'sky', secret: true, theme: 'fr_ciel',
+  { n: 7, name: 'Montgolfière Skies', mapLabel: 'Balloons', arch: 'sky', secret: true, theme: 'fr_ciel',
     gimmick: 'Hot-air balloons rise while you stand in the basket and sink when you leave; burners roar; a trade wind blows east',
     hint: 'Stand in a basket to rise. A burner\'s hot air lifts you too',
     postcard: 'Up in a balloon basket the whole country looks like a patchwork quilt. ♥ C',
     enemies: [['frPigeon', 2], ['frMacaron', 2]],
-    mapCell: [0, 2], mapFrom: 2,
+    mapCell: [1, 1], mapFrom: 2,
     exits: { main: { to: null }, secret: { to: 'flight:vn', hint: 'One balloon\'s streamers all point east, into the trade wind...' } },
     areas: [
       { id: 'ciel', gen: 'islands', W: 220, H: 30,
@@ -971,7 +971,7 @@ const levels = [
 Tour.amend('fr', {
   stamps, skins,
   map: { fort: 'chateau', start: [0, 0] },
-  houses: [{ id: 'fr-brocante', kind: 'stand', name: 'La Brocante', keeper: 'hedgehog', stock: ['plane', 'hat', 'magnet', 'globe', 'oneup', 'sundial'], mapCell: [2, 2], mapFrom: 3 }],
+  houses: [{ id: 'fr-brocante', mapLabel: 'Brocante', kind: 'stand', name: 'La Brocante', keeper: 'hedgehog', stock: ['plane', 'hat', 'magnet', 'globe', 'oneup', 'sundial'], mapCell: [2, 2], mapFrom: 3 }],
   levels
 });
 for (const k in P) Tour.pieces['fr.' + k] = P[k];

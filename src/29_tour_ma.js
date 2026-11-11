@@ -1626,7 +1626,7 @@ Tour.country({
   star: { name: 'GOLDEN LANTERN', draw(ctx, x, y, t) { ctx.save(); ctx.translate(x, y); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.moveTo(-6, -8); ctx.lineTo(6, -8); ctx.lineTo(8, 2); ctx.lineTo(0, 10); ctx.lineTo(-8, 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff4c0'; ctx.fillRect(-2, -4, 4, 6); ctx.restore(); } },
   skins: maSkins, bosses: [owlBoss],
   map: { fort: 'riad', start: [0, 0] },
-  houses: [{ id: 'ma-bazar', kind: 'stand', name: 'Bazar Bleu', keeper: 'fennec', stock: ['kazoo', 'plane', 'oneup', 'sundial', 'magnet', 'wand'], mapCell: [2, 2], mapFrom: 2 }],
+  houses: [{ id: 'ma-bazar', mapLabel: 'Bazar', kind: 'stand', name: 'Bazar Bleu', keeper: 'fennec', stock: ['kazoo', 'plane', 'oneup', 'sundial', 'magnet', 'wand'], mapCell: [2, 2], mapFrom: 2 }],
   // the levels are registered by 29_tour_ma_levels.js (Tour.amend)
   levels: []
 });

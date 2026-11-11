@@ -1094,14 +1094,14 @@ Object.assign(TOUR_BEAT_ART, {
 });
 
 /* ================= houses and the country panel ================= */
-const houses = [{ id: 'br-quati', kind: 'stand', name: 'Banca do Quati', keeper: 'coati', theme: 'br_pantanal', stock: ['kazoo', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:ball'], mapCell: [0, 2], mapFrom: 1 }];
+const houses = [{ id: 'br-quati', mapLabel: 'Banca', kind: 'stand', name: 'Banca do Quati', keeper: 'coati', theme: 'br_pantanal', stock: ['kazoo', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:ball'], mapCell: [0, 1], mapFrom: 1 }];
 const map = { fort: 'stadium', start: [0, 0] };
 
 /* ================= the levels ================= */
 const levels = [
   // 3-1 BEAT: the Sambadrome at sunrise. ① surdos pop up on the beat ② floats step per bar, cannons on beat 4
   // ③ the off-beat light floor with a float and cannons together. The barracão hides behind the grandstand panel.
-  { n: 1, name: 'Samba Sunrise', arch: 'beat', theme: 'br_samba_dawn', bpm: 124,
+  { n: 1, name: 'Samba Sunrise', mapLabel: 'Samba', arch: 'beat', theme: 'br_samba_dawn', bpm: 124,
     gimmick: 'The avenue moves to 124 bpm: surdo drums pop up on the beat, floats step once a bar, cannons fire on beat four',
     hint: 'Count to four with the music: drums pop up on the beat, the floats move on ONE, the cannons fire on FOUR',
     postcard: 'The parade ran all night. At sunrise the drums are still going. So am I. ♥ C',
@@ -1138,7 +1138,7 @@ const levels = [
     ] },
 
   // 3-2 THIEF: Quati snatches Chinka's stamps and runs through the Pantanal
-  { n: 2, name: 'Coati Caper', arch: 'thief', theme: 'br_pantanal',
+  { n: 2, name: 'Coati Caper', mapLabel: 'Coati', arch: 'thief', theme: 'br_pantanal',
     gimmick: 'Quati the coati grabs the passport stamps: chase him on capybaras and caimans, catch him three times',
     hint: 'Stomp Quati (or kick the football at him) while he waits: three catches open the ranger gate',
     postcard: 'A coati stole my stamps. A different coati stole my sandwich. They work as a team. ♥ C',
@@ -1177,7 +1177,7 @@ const levels = [
     ] },
 
   // 3-3 TOWER (b) facade: three falls push you down; catwalks, logs, a sloth; rainbow bridges and swifts up top
-  { n: 3, name: 'Iguaçu Falls', arch: 'tower', theme: 'br_falls',
+  { n: 3, name: 'Iguaçu Falls', mapLabel: 'Iguaçu', arch: 'tower', theme: 'br_falls',
     gimmick: 'Climb the face of the falls: three cascades push you down, logs tumble, rainbows bridge the mist',
     hint: 'Waterfalls push you down: climb beside them, not in them. Rainbows in the mist are solid!',
     postcard: 'Iguaçu is so loud I can\'t hear myself think. A rainbow held me up. True story. ♥ C',
@@ -1207,7 +1207,7 @@ const levels = [
     ] },
 
   // 3-4 TIDE: rain squalls fill the lagoons every 14 s; walk the beds at low water, swim over the dunes at high
-  { n: 4, name: 'Lençóis Lagoons', arch: 'tide', theme: 'br_lencois',
+  { n: 4, name: 'Lençóis Lagoons', mapLabel: 'Lençóis', arch: 'tide', theme: 'br_lencois',
     gimmick: 'White dunes and rain lagoons: the water rises and falls every 14 seconds',
     hint: 'Low water: walk the lagoon beds. High water: swim over the dunes. Fins swim faster!',
     postcard: 'Sand like sugar and lagoons like glass. A crab pinched me. It was worth it. ♥ C',
@@ -1243,7 +1243,7 @@ const levels = [
     ] },
 
   // 3-5 LAIR: the players' tunnel teaches the ball (kick it into targets to roll up shutters), then the pitch
-  { n: 5, name: 'Estádio do Tucanão', arch: 'lair', theme: 'br_barracao',
+  { n: 5, name: 'Estádio do Tucanão', mapLabel: 'Estádio', arch: 'lair', theme: 'br_barracao',
     gimmick: 'The players\' tunnel: kick footballs into targets to open the shutters, then O Tucanão\'s pitch',
     hint: 'Only a football reaches O Tucanão: run into a ball to kick it, stomp a ball to volley it up!',
     postcard: 'Sugarloaf is back by the bay, full size! The Baron sailed for Africa. Next stop: Mozambique! ♥ C',
@@ -1267,7 +1267,7 @@ const levels = [
     ] },
 
   // 3-6 GLIDE (secret): launch from a granite peak, ride thermals over Copacabana, re-launch off the volleyball net
-  { n: 6, name: 'Rio Hang-Glide', arch: 'glide', secret: true, theme: 'br_rio_sky',
+  { n: 6, name: 'Rio Hang-Glide', mapLabel: 'Hang-Glide', arch: 'glide', secret: true, theme: 'br_rio_sky',
     gimmick: 'Hang-glide over Rio: thermals lift you, gulls and kites drift, every landing has a fresh glider',
     hint: 'Hold jump while falling to glide. Thermals (the shimmering columns) lift you up',
     postcard: 'Sugarloaf from above! I waved at a cable car. A gull waved back. Probably. ♥ C',

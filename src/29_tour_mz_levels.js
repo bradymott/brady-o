@@ -743,13 +743,13 @@ Tour.pieces['mz.arena_tidepool'] = (st, o) => {
 };
 
 /* ================= houses and the country panel ================= */
-const houses = [{ id: 'mz-gorongosa', kind: 'stand', name: 'Banca da Gorongosa', keeper: 'hornbill', theme: 'mz_savanna', stock: ['hat', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:piri'], mapCell: [0, 2], mapFrom: 0 }];
+const houses = [{ id: 'mz-gorongosa', mapLabel: 'Banca', kind: 'stand', name: 'Banca da Gorongosa', keeper: 'hornbill', theme: 'mz_savanna', stock: ['hat', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:piri'], mapCell: [0, 1], mapFrom: 0 }];
 const map = { fort: 'seafort', start: [0, 0] };
 
 /* ================= the levels ================= */
 const levels = [
   // 4-1 RACE: the ostrich runs the course; elephant jets lift you onto the acacia route; dung beetles; thorn hedges
-  { n: 1, name: 'Ostrich Dash', arch: 'race', theme: 'mz_savanna',
+  { n: 1, name: 'Ostrich Dash', mapLabel: 'Ostriches', arch: 'race', theme: 'mz_savanna',
     gimmick: 'Race an ostrich across Gorongosa: elephants spray you onto the acacia route, dung beetles roll, thorns burn',
     hint: 'Ride an elephant\'s water jet up to the acacias: the high route is faster. Piri-piri burns thorn hedges',
     postcard: 'The ostrich won. The ostrich always wins. It has done this before. ♥ C',
@@ -785,7 +785,7 @@ const levels = [
     ] },
 
   // 4-2 DOOM: the stampede's dust cloud chases you over the dunes
-  { n: 2, name: 'Dune Stampede', arch: 'doom', theme: 'mz_dunes',
+  { n: 2, name: 'Dune Stampede', mapLabel: 'Stampede', arch: 'doom', theme: 'mz_dunes',
     gimmick: 'A stampede of wildebeest kicks up a dust storm behind you: keep running over the dunes',
     hint: 'Don\'t stop! The dust cloud costs a hit if it catches you. Bounce off the dhow sails',
     postcard: 'Something stampeded. Possibly wildebeest. Possibly the Baron\'s luggage. I ran. ♥ C',
@@ -820,7 +820,7 @@ const levels = [
     ] },
 
   // 4-3 SKY: baobab crowns at sunset; weaver nests bounce you; honey and bees; evening gusts and fruit bats
-  { n: 3, name: 'Baobab Skyline', arch: 'sky', theme: 'mz_copas',
+  { n: 3, name: 'Baobab Skyline', mapLabel: 'Baobabs', arch: 'sky', theme: 'mz_copas',
     gimmick: 'Hop the crowns of giant baobabs at sunset: weaver nests bounce, honey sticks, gusts carry you',
     hint: 'Nests bounce you high. Honey slows your jump. The evening gusts push you over the wide gaps',
     postcard: 'The baobabs are upside-down trees, they say. I stood on one. It felt right-side up. ♥ C',
@@ -856,7 +856,7 @@ const levels = [
     ] },
 
   // 4-4 CARRY (dark): carry the hatchling to the sea; the lighthouse beam freezes the ghost crabs; relight it
-  { n: 4, name: 'Hatchling Night', arch: 'carry', theme: 'mz_beach',
+  { n: 4, name: 'Hatchling Night', mapLabel: 'Hatchlings', arch: 'carry', theme: 'mz_beach',
     gimmick: 'Carry a lost turtle hatchling to the sea at night. Ghost crabs freeze in the lighthouse beam',
     hint: 'THROW sets the hatchling down on a stone. Crabs only move in the dark: stay in the beam',
     postcard: 'The little turtle made it to the sea. I may have cried. The crabs were rude about it. ♥ C',
@@ -889,7 +889,7 @@ const levels = [
     ] },
 
   // 4-5 LAIR: the ramparts and the cistern teach the shells and the fire, then O Eremita's tide pool
-  { n: 5, name: 'Ilha Fortress', arch: 'lair', theme: 'mz_fort',
+  { n: 5, name: 'Ilha Fortress', mapLabel: 'Ilha', arch: 'lair', theme: 'mz_fort',
     gimmick: 'Coconut cannons on the ramparts, the flooded cistern, then O Eremita the hermit crab',
     hint: 'Breathe piri-piri fire on O Eremita\'s borrowed shell until he jumps out, then stomp him. Kick empty shells into the sea!',
     postcard: 'The great baobab is back on its hill! The Baron flew north, to Morocco. ♥ C',
@@ -912,12 +912,12 @@ const levels = [
     ] },
 
   // 4-6 DIG (secret): dig through the dune into the buried dhow's hull
-  { n: 6, name: 'Buried Dhow', arch: 'dig', secret: true, theme: 'mz_areia',
+  { n: 6, name: 'Buried Dhow', mapLabel: 'Dhow', arch: 'dig', secret: true, theme: 'mz_areia',
     gimmick: 'Dig down through the dune into a buried dhow: chambers of cashews, mole-rats, cave-ins',
     hint: 'Stomp (down + jump) on sand to dig. The hard hat\'s dash digs sideways and breaks rock',
     postcard: 'A whole boat under the sand, full of cashews. The mole-rats had eaten half. ♥ C',
     enemies: [['mzMoleRat', 2], ['mzGhostCrab', 1], ['mzCashew', 1]],
-    mapCell: [0, 1], mapFrom: 1,
+    mapCell: [1, 1], mapFrom: 1,
     exits: { main: { to: 'node:4-4' } },
     areas: [
       { id: 'areia', gen: 'dig', W: 120, H: 40, script: [
