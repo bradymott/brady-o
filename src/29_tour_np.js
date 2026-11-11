@@ -1,16 +1,14 @@
 /* ============================================================
-   NEPAL (world 12, the grand finale)
-   12-1 Suspension Bridges    run    a yak pen lends Brady a shaggy yak to ride; long suspension bridges sag under
-                                     every step (some planks are missing); momo dumplings hop, monal pheasants swoop
-   12-2 Yak Caravan Pass      run    ride the yak up the stone stairways of the pass, CHARGE through packed snow walls,
-                                     marmots pelt you with pebbles, snowballs roll down the icy stretches
-   12-3 Blizzard Night        night  white-out gusts blow Brady back: shelter behind the boulders between gusts,
-                                     cross the crevasses in the lulls, a snowball-throwing yeti
-   12-4 Khumbu Icefall        climb  climb the icefall: ladder bridges over the crevasses, icicles that drop when you
-                                     pass beneath, seracs that crumble underfoot
-   12-5 Baron's Fortress      castle shrink-ray security cameras sweep the halls, wind-up souvenir goons, crates to
-                                     smash; then Baron Bric-a-Brac on the summit: he throws the stolen landmarks and
-                                     Brady kicks them back (airship, bric-a-brac mech, then on foot in the gales)
+   NEPAL (world 12, the grand finale): the country's look, cast,
+   objects, the Tin Yak and Baron Bric-a-Brac. The levels (v2 format)
+   are in 29_tour_np_levels.js:
+   12-1 Suspension Bridges   SKY    ridge to ridge over open sky; red planks swing down in the gusts
+   12-2 Yak Caravan Pass     ROLL   snowballs grow as you push them and smash snow walls; yetis breathe frost
+   12-3 Blizzard Night       SNEAK  yetis on watch with lanterns; hide behind rocks, in the box, in the white-outs
+   12-4 Khumbu Icefall       RISE   the icefall gives way below: ladders, icicles, seracs, faster in the serac field
+   12-5 Baron's Fortress     LAIR   cameras, a jar to kick through crates, the archive; the Baron on the summit
+   12-6 Crevasse Drop        FALL   (secret) down the blue-ice crevasse; ice bridges burst under a long fall
+   12-7 Baron's Supply Depot FORT   (secret) crate belts and lifts, then the Tin Yak
    Mountains, monasteries, stupas and prayer flags are scenery only, painted with respect, never the joke.
    ============================================================ */
 (() => {
@@ -443,7 +441,7 @@ class NpBlizzard extends Ent {
     // sheltered: a rock right in front of Brady (upwind) takes the wind
     const A = g.area, ty0 = Math.floor(p.y / TS), ty1 = Math.floor((p.y + p.h - 2) / TS), tx = Math.floor(p.cx / TS); let sh = false;
     for (let x = tx + 1; x <= tx + 3 && !sh; x++) for (let y = ty0; y <= ty1; y++) if (SOLID[tileAt(A, x, y)]) { sh = true; break; }
-    this.shelter = sh;
+    this.shelter = sh; g.npWhiteout = this.state === 'gust' && this.gust > 0.5;
     if (!sh && this.gust > 0.3 && !p.dead) g.windForce = -4.6 * TS * this.gust;
     g.dustLevel = 0;
   }
@@ -753,8 +751,9 @@ class NpRoof extends Ent {
   update(dt) { this.t += dt; for (const id in this.freed) this.freed[id].t += dt; }
   draw(ctx) {
     const t = this.t, fy = this.floorY, mid = this.x0 + this.w / 2;
-    for (const px of [this.x0 + 12, this.x1 - 12]) { ctx.fillStyle = '#5a4030'; ctx.fillRect(px - 2, fy - 8 * TS, 4, 2 * TS); }
-    flagLine(ctx, this.x0 + 12, fy - 7.8 * TS, mid, fy - 7.2 * TS, 1); flagLine(ctx, mid, fy - 7.2 * TS, this.x1 - 12, fy - 7.8 * TS, 1);
+    // prayer flags far off on the ridge behind the summit: faint scenery, well above the fight
+    ctx.save(); ctx.globalAlpha = 0.45; for (const px of [this.x0 + 12, this.x1 - 12]) { ctx.fillStyle = '#5a4030'; ctx.fillRect(px - 1, fy - 9.6 * TS, 2, 1.2 * TS); }
+    flagLine(ctx, this.x0 + 12, fy - 9.5 * TS, mid, fy - 9.1 * TS, 0.6); flagLine(ctx, mid, fy - 9.1 * TS, this.x1 - 12, fy - 9.5 * TS, 0.6); ctx.restore();
     const sy = fy - 6 * TS; ctx.fillStyle = '#5a3a7a'; ctx.fillRect(this.x0 + 2 * TS, sy, this.w - 4 * TS, 6); ctx.fillStyle = '#ffd84a'; ctx.fillRect(this.x0 + 2 * TS, sy, this.w - 4 * TS, 1.5);
     for (let k = 0; k < LANDMARKS.length; k++) jarArt(ctx, this.slotX(k), sy, LANDMARKS[k].id, t, 0.6, !!this.freed[LANDMARKS[k].id]);
     for (const id in this.freed) {
@@ -1046,6 +1045,248 @@ const boss = {
 };
 Object.assign(entities, { npRoof: NpRoof, npLandmark: NpLandmark, npChinka: NpChinka, npGale: NpGale });
 
+/* ---------------- the overhaul (LEVEL_OVERHAUL.md §2, §4.3, §4.4): new looks, the new cast, the Tin Yak ---------------- */
+// the new theme keys match their Fiesta Toon atlases (30_tour_sprites.js swaps the layers in by name); these painters
+// are the procedural fallback in the same layer order
+Object.assign(painters, {
+  // the crevasse walls: deep layered blue ice in bands, darker toward the depths, icicle fringes, a few glints
+  npCrevasse(ctx, L, rng, H) {
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#8ac8f0'); g.addColorStop(0.5, '#3a7ab8'); g.addColorStop(1, '#14305a');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, BG_W, H);
+    for (let y = 20; y < H; y += 34 + rng() * 20) { ctx.fillStyle = `rgba(200,235,255,${0.12 + rng() * 0.1})`; ctx.beginPath(); ctx.moveTo(0, y); for (let x = 0; x <= BG_W; x += 40) ctx.lineTo(x, y + Math.sin(x / 120 + y) * 6); ctx.lineTo(BG_W, y + 8); ctx.lineTo(0, y + 8); ctx.fill();
+      for (let x = rng() * 60; x < BG_W; x += 50 + rng() * 80) { ctx.fillStyle = 'rgba(220,245,255,0.35)'; ctx.beginPath(); ctx.moveTo(x - 4, y + 6); ctx.lineTo(x + 4, y + 6); ctx.lineTo(x, y + 18 + rng() * 14); ctx.fill(); } }
+    for (let i = 0; i < 40; i++) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(rng() * BG_W, rng() * H, 2, 2); }
+  },
+  // nearer slabs of ice jutting from the walls (no snow edges: never a ledge)
+  npIceSlabs(ctx, L, rng, H) {
+    for (let i = 0; i < 14; i++) { const x = rng() * BG_W, y = rng() * H, w = 60 + rng() * 80, h = 20 + rng() * 30; ctx.fillStyle = `rgba(150,200,240,${0.25 + rng() * 0.15})`; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y + h * 0.3); ctx.lineTo(x + w * 0.8, y + h); ctx.lineTo(x + w * 0.1, y + h * 0.8); ctx.closePath(); ctx.fill(); }
+  },
+  // the Baron's supply depot: slate-violet wall panels, his banners, shelves of stencilled supply crates
+  npDepotWall(ctx, L, rng, H) {
+    ctx.fillStyle = '#3a3a5a'; ctx.fillRect(0, 0, BG_W, H);
+    for (let x = 0; x < BG_W; x += 96) { ctx.fillStyle = '#44446a'; ctx.fillRect(x + 4, 0, 88, H); ctx.fillStyle = '#2a2a44'; ctx.fillRect(x, 0, 4, H); }
+    for (let k = 0; k < 4; k++) { const x = 150 + k * 520; ctx.fillStyle = '#7a2ac8'; ctx.fillRect(x, 40, 70, 120); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(x + 35, 90, 18, 0, TAU); ctx.fill(); ctx.fillStyle = '#7a2ac8'; ctx.beginPath(); ctx.arc(x + 35, 90, 9, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(x, 160); ctx.lineTo(x + 35, 140); ctx.lineTo(x + 70, 160); ctx.fill(); }
+    for (const sy of [220, 300]) { ctx.fillStyle = '#5a4a3a'; ctx.fillRect(0, sy, BG_W, 6); for (let x = 10; x < BG_W; x += 60 + rng() * 30) { ctx.fillStyle = rng() < 0.5 ? '#a8804a' : '#8a6a3a'; ctx.fillRect(x, sy - 30, 36, 30); ctx.fillStyle = '#ffd84a'; ctx.fillRect(x + 6, sy - 18, 24, 3); } }
+  }
+});
+const crevasseIce = { style: 'npCrevasseIce', cap: '#d8f4ff', capHi: '#ffffff', dirt: '#3a78b0', dirt2: '#1e4a80', rock: '#7ab8e0',
+  paint(ctx, rng) { ctx.fillStyle = 'rgba(255,255,255,0.12)'; for (let k = 0; k < 3; k++) ctx.fillRect(rng() * TS, rng() * TS, 6 + rng() * 8, 2); },
+  paintCap(ctx, x0, x1) { ctx.fillStyle = '#e8f8ff'; ctx.fillRect(x0, 0, x1 - x0, 5); ctx.fillStyle = 'rgba(120,190,240,0.6)'; ctx.fillRect(x0, 5, x1 - x0, 2); } };
+const depotFloor = { style: 'npDepotFloor', cap: '#9aa0b0', capHi: '#c8ccd8', dirt: '#4a4a5a', dirt2: '#2a2a3a', rock: '#6a6a7a',
+  paint(ctx, rng) { ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0, 0, TS, 1.5); ctx.fillStyle = '#7a7e8a'; for (const [x, y] of [[4, 4], [TS - 5, 4], [4, TS - 5], [TS - 5, TS - 5]]) { ctx.beginPath(); ctx.arc(x, y, 1.6, 0, TAU); ctx.fill(); } },
+  paintCap(ctx, x0, x1) { ctx.fillStyle = '#b8bcc8'; ctx.fillRect(x0, 0, x1 - x0, 5); ctx.fillStyle = '#ffd84a'; for (let x = x0; x < x1; x += 14) ctx.fillRect(x, 1, 7, 2); } };
+Object.assign(themes, {
+  // 12-6: down the blue-ice crevasse
+  np_khadal: Object.assign({}, base, {
+    name: 'Crevasse Drop', music: 'tour_np_ice', particles: 'snow',
+    sky: ['#8ac8f0', '#3a7ab8', '#14305a'], horizonGlow: '#a8e0ff', celestial: { type: 'none' }, stars: 0,
+    layers: [{ kind: 'npCrevasse', color: '#3a7ab8', base: 0, f: 0.04 }, { kind: 'npIceSlabs', color: '#8ac0e8', base: 0, f: 0.12 }],
+    fog: '#a8d8f8', ground: crevasseIce, hard: { c1: '#a8d8f4', c2: '#3a78b0' }, semi: { style: 'plank', c1: '#c8e8f8', c2: '#7ab0d8' }, decor: ['npSnowTuft']
+  }),
+  // 12-7: the Baron's supply depot (the fortress kit, colder and more workaday)
+  np_depot: Object.assign({}, base, {
+    name: "Baron's Supply Depot", music: 'tour_np_fort', particles: 'motes',
+    sky: ['#1a1a34', '#2a2a4a', '#3a3a5a'], horizonGlow: '#ffd84a', celestial: { type: 'none' }, stars: 0,
+    layers: [{ kind: 'npDepotWall', color: '#3a3a5a', base: 0, f: 0.06 }],
+    fog: '#8a8ab8', ground: depotFloor, hard: { c1: '#a8804a', c2: '#6a4a24' }, semi: { style: 'plank', c1: '#c8a070', c2: '#8a6a44' },
+    brick: { style: 'brick', c1: '#5a5a7a', c2: '#3a3a5a', mortar: '#ffd84a' }, decor: ['npCrateStack']
+  })
+});
+
+/* the yeti (headline power: frost breath): big, friendly-silly, a red scarf. Its cheeks turn blue (the tell), it breathes
+   a cone of frost (floors ice over, Brady freezes for a moment, no damage), then it pants: stomp it then */
+const NP_X = 'np_x';
+const yetiArt2 = (ctx, e, x, y, m, t) => {
+  const base = { tell: 'walk', breathe: 'throw', pant: 'walk', sleep: 'walk', wake: 'walk', awake: 'walk' }[m] || m;
+  yetiArt(ctx, e, x, y, base, t);
+  if (m === 'flat' || m === 'ko') return;
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, 1);
+  // the red scarf with a fringe
+  ctx.fillStyle = '#d8322a'; rr(ctx, -12, -26, 28, 6, 3); ctx.fill(); ctx.fillRect(10, -22, 5, 12); ctx.fillStyle = '#ffd23a'; for (let k = 0; k < 3; k++) ctx.fillRect(10 + k * 2, -10, 1, 3);
+  if (m === 'tell') { ctx.fillStyle = 'rgba(120,200,255,0.8)'; for (const ex of [1, 13]) { ctx.beginPath(); ctx.arc(ex, -35, 4, 0, TAU); ctx.fill(); } }
+  if (m === 'breathe') { ctx.fillStyle = '#3a4a6a'; ctx.beginPath(); ctx.ellipse(8, -34, 4, 4.5, 0, 0, TAU); ctx.fill(); }
+  if (m === 'pant') { ctx.fillStyle = '#ff7a8a'; rr(ctx, 6, -34, 5, 7, 2.5); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; for (let k = 0; k < 3; k++) { const ph = (t * 2 + k / 3) % 1; ctx.beginPath(); ctx.arc(14 + ph * 10, -36 - ph * 8, 2 + ph * 3, 0, TAU); ctx.fill(); } }
+  if (m === 'sleep') { ctx.fillStyle = '#f4f8ff'; ctx.fillRect(1, -44, 14, 6); ctx.strokeStyle = '#3a4a6a'; ctx.lineWidth = 1.4; for (const ex of [4, 11]) { ctx.beginPath(); ctx.arc(ex, -42, 2.4, 0.2, Math.PI - 0.2); ctx.stroke(); } }
+  ctx.restore();
+};
+// the Himalayan marmot sentinel: asleep in the sun, or on watch; when it spots Brady it inhales and whistles, and
+// every sleeping yeti nearby wakes up
+const marmotArt2 = (ctx, e, x, y, m, t) => {
+  if (m === 'sleep') {
+    ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, 1);
+    ctx.fillStyle = '#b8864a'; ctx.beginPath(); ctx.ellipse(0, -8, 14, 8, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#e8c890'; ctx.beginPath(); ctx.ellipse(3, -6, 7, 4, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#b8864a'; ctx.beginPath(); ctx.arc(10, -10, 6, 0, TAU); ctx.fill(); ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(11, -11, 2, 0.2, Math.PI - 0.2); ctx.stroke();
+    ctx.restore(); return;
+  }
+  marmotArt(ctx, e, x, y, m === 'call' ? 'throw' : 'walk', t);
+  if (m === 'flat' || m === 'ko') return;
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, 1);
+  if (m === 'tell') { ctx.fillStyle = '#d8a86a'; for (const ex of [0, 10]) { ctx.beginPath(); ctx.arc(ex, -22, 3.5, 0, TAU); ctx.fill(); } }
+  if (m === 'call') { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(12, -24, 6 + k * 5 + (t * 20 % 5), -0.6, 0.6); ctx.stroke(); } }
+  ctx.restore();
+};
+// the ice-cave bat (12-6): violet fur, a pale lilac belly, frosty blue wings
+const batArt = (ctx, e, x, y, m, t) => {
+  const f = m === 'swoop' ? -0.6 : Math.sin(t * 14 + (e.seed || 0));
+  ctx.save(); ctx.translate(x, y - 8); ctx.scale(e.dir || 1, 1);
+  ctx.fillStyle = '#5a8ad0'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 5, -2); ctx.quadraticCurveTo(s * 16, -12 - f * 8, s * 22, -2 - f * 6); ctx.lineTo(s * 18, 2); ctx.lineTo(s * 14, -1); ctx.lineTo(s * 10, 3); ctx.closePath(); ctx.fill(); }
+  ctx.fillStyle = '#8a62c0'; ctx.beginPath(); ctx.ellipse(0, 0, 7, 8, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#c8b0e8'; ctx.beginPath(); ctx.ellipse(1, 2, 4, 5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#8a62c0'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 2, -6); ctx.lineTo(s * 6, -14); ctx.lineTo(s * 6, -5); ctx.fill(); } ctx.fillStyle = '#ff9ab8'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 3, -7); ctx.lineTo(s * 5.5, -12); ctx.lineTo(s * 5.5, -6); ctx.fill(); }
+  if (m !== 'ko') K.eyes(ctx, 1, -3, 1, 2.2, 1.6, m === 'swoop'); ctx.fillStyle = '#ffffff'; ctx.fillRect(-2, 3, 1.5, 2); ctx.fillRect(1.5, 3, 1.5, 2);
+  ctx.restore();
+};
+Object.assign(enemies, {
+  npYeti: { cls: TourEnemy.make({ w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'frostBreath', cone: 3, art: yetiArt2, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'OOF! *FLUFF*', '#e8f0ff') }), place: 'walk' },
+  npYetiSleep: { cls: TourEnemy.make({ w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'sleeper', base: 'frostBreath', hear: 4, cone: 3, sprite: 'yeti', art: yetiArt2, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'HUH?! *FLUFF*', '#e8f0ff') }), place: 'walk' },
+  npMarmot: { cls: TourEnemy.make({ w: 22, h: 30, speed: 0, behavior: 'sleeper', base: 'alarmCaller', hear: 3, cone: 5, wake: 12, art: marmotArt2, burst: '#b8864a' }), place: 'walk' },
+  npMarmotWatch: { cls: TourEnemy.make({ w: 22, h: 30, speed: 0, behavior: 'alarmCaller', cone: 5, wake: 12, sprite: 'marmot', art: marmotArt2, burst: '#b8864a' }), place: 'walk' },
+  npBat: { cls: TourFlyer.make({ w: 28, h: 18, range: 2.5, speed: 1.3, swoop: true, atlas: NP_X, art: batArt, burst: '#8a62c0' }), place: 'fly' }
+});
+for (const [m, list] of [['call', ['call', 'whistle', 'throw', 'idle']], ['sleep', ['sleep', 'idle', 'walk']], ['awake', ['walk']], ['wake', ['wake', 'tell', 'walk']], ['breathe', ['breathe', 'throw', 'walk']], ['pant', ['pant', 'idle', 'walk']], ['tell', ['tell', 'notice', 'idle', 'walk']]]) if (!TourSprite.FALLBACK.walk[m]) TourSprite.FALLBACK.walk[m] = list;
+
+/* ---------------- the Tin Yak (12-7 mini-boss, §4.4) ---------------- */
+// the depot's crate walls: stacks of the Baron's crates the Tin Yak rams; in phase 2 they ride the conveyor and shift
+class NpCrateWall extends Ent {
+  constructor(g, s) {
+    super(g, s, 2 * TS, (s.h || 3) * TS); this.crateWall = true; this.h0 = s.h || 3; this.tx = Math.floor(s.x / TS); this.ty1 = Math.floor((s.y - 1) / TS); this.ty0 = this.ty1 - this.h0 + 1;
+    this.alt = s.alt != null ? s.alt : this.tx; this.home = this.tx; this.dents = 0; this.shake = 0; this.k = 0;
+    this.place(this.tx);
+  }
+  place(tx) { const A = this.g.area; for (let y = this.ty0; y <= this.ty1; y++) for (let x = tx; x < tx + 2; x++) { A.tiles[y * A.W + x] = T.HARD; A.hide[y * A.W + x] = 1; } this.tx = tx; this.x = tx * TS; this.y = this.ty0 * TS; }
+  clear() { const A = this.g.area; for (let y = this.ty0; y <= this.ty1; y++) for (let x = this.tx; x < this.tx + 2; x++) { A.tiles[y * A.W + x] = T.EMPTY; A.hide[y * A.W + x] = 0; } }
+  // a ride along the conveyor to its other spot (never onto Brady)
+  shift() {
+    const to = this.tx === this.home ? this.alt : this.home, p = this.g.player;
+    if (to === this.tx) return false;
+    if (p && overlap(p, { x: to * TS - 4, y: this.y, w: 2 * TS + 8, h: this.h })) return false;
+    this.clear(); this.place(to); this.g.burst(this.cx, this.y + this.h, 8, '#c8a070', 'dust'); K.sfx('clank', 'bump', { vol: 0.4, pitch: 0.7 }); return true;
+  }
+  rammed() { this.shake = 0.5; this.dents++; this.g.burst(this.cx, this.cy, 14, '#c8a070', 'debris'); }
+  update(dt) { this.t += dt; if (this.shake > 0) this.shake -= dt; }
+  draw(ctx) {
+    const sx = this.shake > 0 ? Math.sin(this.t * 60) * 3 : 0;
+    // a dark frame and a hazard-striped skid under the stack, so it stands clear of the crates on the shelves behind
+    ctx.fillStyle = '#2a1a10'; rr(ctx, this.x - 3 + sx, this.y - 3, this.w + 6, this.h + 6, 4); ctx.fill();
+    ctx.fillStyle = '#ffd84a'; ctx.fillRect(this.x - 3 + sx, this.y + this.h - 6, this.w + 6, 6); ctx.fillStyle = '#2a1a10'; for (let q = 0; q < this.w + 6; q += 10) { ctx.beginPath(); ctx.moveTo(this.x - 3 + sx + q, this.y + this.h); ctx.lineTo(this.x + 2 + sx + q, this.y + this.h - 6); ctx.lineTo(this.x + 6 + sx + q, this.y + this.h - 6); ctx.lineTo(this.x + 1 + sx + q, this.y + this.h); ctx.fill(); }
+    for (let r = 0; r < this.h0; r++) for (let c = 0; c < 2; c++) {
+      const x = this.x + c * TS + sx, y = this.y + r * TS;
+      ctx.fillStyle = (r + c) % 2 ? '#a8804a' : '#b88e54'; ctx.fillRect(x + 1, y + 1, TS - 2, TS - 2);
+      ctx.strokeStyle = '#6a4a24'; ctx.lineWidth = 1.5; ctx.strokeRect(x + 3, y + 3, TS - 6, TS - 6); ctx.beginPath(); ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + TS - 4, y + TS - 4); ctx.stroke();
+      ctx.fillStyle = '#7a2ac8'; ctx.fillRect(x + 8, y + 12, 16, 6); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(x + 16, y + 15, 2.5, 0, TAU); ctx.fill();
+    }
+  }
+}
+// the conveyor under a crate wall's two spots (drawn: rollers and arrows)
+class NpWallBelt extends Ent {
+  constructor(g, s) { super(g, s, (s.n || 6) * TS, 10); this.x = s.x - TS / 2; this.y = s.y - 6; this.back = true; this.friendly = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) { const on = this.g.boss && (this.g.boss.phase || 1) >= 2; ctx.fillStyle = '#3a3a4a'; rr(ctx, this.x, this.y, this.w, 8, 3); ctx.fill(); ctx.fillStyle = on ? '#ffd84a' : '#6a6a7a'; for (let q = 0; q < this.w; q += 12) { const ph = on ? (this.t * 30) % 12 : 0; ctx.fillRect(this.x + ((q + ph) % this.w), this.y + 2, 6, 3); } }
+}
+const tinYakArt = (ctx, b, t) => {
+  const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose || 'walk', dents = (b.maxHp - b.hp) | 0;
+  const run = P === 'charge' ? Math.sin(t * 30) * 3 : P === 'walk' ? Math.sin(t * 10) * 2 : 0, paw = P === 'paw' ? Math.sin(t * 24) * 4 : 0;
+  ctx.save(); ctx.translate(x, y); ctx.scale(d, 1);
+  if (P === 'rattle') ctx.rotate(Math.sin(t * 40) * 0.05);
+  K.shadow(ctx, 0, 0, 30);
+  // four stubby legs ending in little wheels
+  for (const [lx, ph] of [[-20, 0], [-8, 1], [10, 0], [22, 1]]) { const k = ph ? run : -run; ctx.fillStyle = '#7a7e8a'; ctx.fillRect(lx - 4, -16 + (lx === 22 ? -paw : 0), 8, 12 + (lx === 22 ? paw : 0)); ctx.fillStyle = '#3a3a48'; ctx.beginPath(); ctx.arc(lx + k * 0.3, -4, 5, 0, TAU); ctx.fill(); ctx.fillStyle = '#c8ccd8'; ctx.beginPath(); ctx.arc(lx + k * 0.3, -4, 2, 0, TAU); ctx.fill(); }
+  // the tin body: riveted plates, a shaggy fringe of steel wool, a chimney on the back
+  const g = ctx.createLinearGradient(0, -48, 0, -14); g.addColorStop(0, '#d8dce8'); g.addColorStop(1, '#8a8e9c');
+  ctx.fillStyle = g; rr(ctx, -30, -46, 52, 32, 10); ctx.fill();
+  ctx.fillStyle = '#6a6e7a'; for (let q = -26; q < 20; q += 9) { ctx.beginPath(); ctx.arc(q, -42, 1.6, 0, TAU); ctx.arc(q, -18, 1.6, 0, TAU); ctx.fill(); }
+  ctx.strokeStyle = '#5a5e6a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-4, -46); ctx.lineTo(-4, -14); ctx.stroke();
+  ctx.fillStyle = '#9aa0ac'; for (let q = -28; q < 20; q += 5) { ctx.beginPath(); ctx.moveTo(q, -16); ctx.lineTo(q + 2.5, -8 - (q % 2) * 2); ctx.lineTo(q + 5, -16); ctx.fill(); }
+  ctx.fillStyle = '#4a4a58'; ctx.fillRect(-22, -58, 8, 14); ctx.fillStyle = '#7a2ac8'; ctx.fillRect(-24, -60, 12, 4);
+  // dents from every crate it has rammed
+  ctx.fillStyle = 'rgba(60,60,80,0.45)'; for (let k = 0; k < dents + (P === 'stuck' ? 1 : 0); k++) { ctx.beginPath(); ctx.ellipse(12 - k * 14, -32 + (k % 2) * 8, 6, 4, 0.4, 0, TAU); ctx.fill(); }
+  // the head: a riveted box, curled pipe horns, two headlamp eyes, a grille mouth
+  ctx.save(); ctx.translate(26, -34 + (P === 'paw' ? 4 : 0)); if (P === 'charge') ctx.rotate(0.15);
+  ctx.fillStyle = '#b8bcc8'; rr(ctx, -6, -14, 22, 24, 6); ctx.fill();
+  ctx.strokeStyle = '#d8b86a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(2, -16, 8, Math.PI * 0.9, Math.PI * 1.7); ctx.stroke(); ctx.beginPath(); ctx.arc(12, -16, 8, Math.PI * 1.3, Math.PI * 2.1); ctx.stroke(); ctx.lineCap = 'butt';
+  const lamp = P === 'stuck' || P === 'rattle' ? '#5a5a6a' : P === 'paw' ? '#ff5a3a' : '#ffe08a';
+  ctx.fillStyle = lamp; ctx.beginPath(); ctx.arc(4, -4, 4, 0, TAU); ctx.arc(12, -4, 4, 0, TAU); ctx.fill();
+  if (P === 'stuck') { ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 1.4; for (const ex of [4, 12]) { ctx.beginPath(); ctx.moveTo(ex - 3, -7); ctx.lineTo(ex + 3, -1); ctx.moveTo(ex + 3, -7); ctx.lineTo(ex - 3, -1); ctx.stroke(); } }
+  ctx.fillStyle = '#4a4a58'; for (let q = 0; q < 3; q++) ctx.fillRect(3 + q * 4, 3, 2, 5);
+  ctx.restore();
+  // steam from the chimney: a puff now and then, a jet while it paws (the tell)
+  const n = P === 'paw' ? 5 : 2;
+  for (let k = 0; k < n; k++) { const ph = (t * (P === 'paw' ? 2.4 : 0.8) + k / n) % 1; ctx.fillStyle = `rgba(240,240,250,${0.7 * (1 - ph)})`; ctx.beginPath(); ctx.arc(-18 - ph * 10, -62 - ph * 30, 4 + ph * 8, 0, TAU); ctx.fill(); }
+  ctx.restore();
+  if (P === 'stuck') TourKit.dizzy(ctx, x, b.y - 6, t);
+  if (P === 'paw' && b.state === 'fight') { ctx.fillStyle = '#ffffff'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('CLANK CLANK', x, b.y - 14 - Math.sin(t * 20) * 2); }
+};
+const tinYakBoss = {
+  id: 'np_tinyak', name: 'The Tin Yak', hp: 3, dims: [64, 52], music: 'tour_np_boss', country: 'np',
+  brain: {
+    guardText: 'TONK!',
+    phases: [2],
+    walls(b) { return b.g.entities.filter(e => e.crateWall && !e.remove); },
+    wake(b) { b.g.toast('DODGE ITS CHARGE: LET IT RAM THE CRATES, THEN STOMP IT'); K.say(b.g, b, 'MOO-CHUNK!', '#e8e8f0'); b.charges = 0; },
+    hit(b, kind, src) {
+      if (kind === 'stomp' || kind === 'spin') { if (b.act === 'stuck') { b.damage(1, { text: 'DENT!', col: '#ffd84a' }); return true; } return 'bounce'; }
+      return false;
+    },
+    touch(b, p) { if (b.act === 'rattle') { p.x += (p.cx < b.cx ? -1 : 1) * 2; return true; } return false; },
+    hurt(b) { b.go('reel'); K.say(b.g, b, pick(['CLONK!', 'MY RIVETS!', 'MOO... CHUNK?']), '#e8e8f0'); },
+    phase(b, n) { this.hurt(b); b.g.bannerText = 'THE CRATES ARE MOVING!'; b.g.bannerT = 1.8; },
+    lastHit(b) { b.go('rattle'); b.vx = 0; b.g.shake(6); return true; },
+    update(b, dt) {
+      const g = b.g, p = g.player, ph = b.phase || 1;
+      b.guard = 'bounce';
+      if (b.act === 'walk') {
+        b.face(); b.walk(1.0); b.pose = 'walk'; b.fall(dt);
+        if (b.at > (ph >= 2 ? 0.9 : 1.4)) { b.go('paw'); b.charges = 0; }
+      } else if (b.act === 'paw') {
+        // the tell: it paws the floor and steam jets from the chimney for 0.8 s
+        b.vx = 0; b.pose = 'paw'; b.fall(dt);
+        if (b.first) { if (!b.charges) b.face(); K.sfx('steam', 'fly', { vol: 0.4, pitch: 0.7 }); }
+        if (b.at > (b.charges > 0 ? 0.45 : 0.8)) b.go('charge');
+      } else if (b.act === 'charge') {
+        b.pose = 'charge'; b.vx = b.dir * 9 * TS; b.fall(dt);
+        if (b.first) K.sfx('charge', 'jump', { vol: 0.5, pitch: 0.5 });
+        if (Math.random() < 0.5) g.burst(b.cx - b.dir * 30, b.floorY - 4, 1, '#c8c8d8', 'dust');
+        // a crate wall ahead: it rams it and gets stuck, dented
+        const box = { x: b.dir > 0 ? b.x + b.w : b.x - 10, y: b.y, w: 10, h: b.h };
+        const w = this.walls(b).find(e => overlap(box, e));
+        if (w) { w.rammed(); g.shake(6); K.sfx('crash', 'break', { vol: 0.7, pitch: 0.8 }); b.vx = 0; b.go('stuck'); return; }
+        if (b.at > 0.25 && (b.hitWall || b.x <= b.arenaX0 + 1 || b.x >= b.arenaX1 - b.w - 1)) {
+          g.shake(3); b.vx = 0; b.charges++;
+          // phase 2: it charges twice in a row
+          if (ph >= 2 && b.charges < 2) { b.dir = -b.dir; b.go('paw'); } else b.go('bonk');
+        }
+      } else if (b.act === 'stuck') {
+        // dented and stuck in the crates for 1.5 s: the moment to stomp
+        b.vx = 0; b.pose = 'stuck'; b.vuln = true; b.guard = 'hurt'; b.fall(dt);
+        if (b.first) K.say(g, b, pick(['STUCK!', 'MOO-CRUNCH', '*RATTLE*']), '#ffd84a');
+        if (b.at > 1.5) { b.dir = -b.dir; b.go('walk'); }
+      } else if (b.act === 'bonk') {
+        b.vx = 0; b.pose = 'walk'; b.fall(dt); if (b.at > 0.6) b.go('walk');
+      } else if (b.act === 'reel') {
+        b.vx = -b.dir * 2 * TS * Math.max(0, 1 - b.at * 2); b.pose = 'stuck'; b.fall(dt);
+        if (b.at > 0.8) { if (ph >= 2) for (const w of this.walls(b)) w.shift(); b.go('walk'); }
+      } else if (b.act === 'rattle') {
+        // the finish: it rattles to a stop, a bolt or two pings off, and a little chime plays
+        b.vx = 0; b.pose = 'rattle'; b.fall(dt);
+        if (Math.random() < 0.3) g.burst(b.cx, b.y + 20, 2, '#c8ccd8', 'debris');
+        if (b.at > 1.6 && !b.chimed) { b.chimed = true; K.sfx('chime', 'oneup', { vol: 0.6, pitch: 1.6 }); g.parts.text(b.cx, b.y - 20, '*DING*', '#ffe08a'); }
+        if (b.at > 2.4) b.die();
+      } else b.go('walk');
+      // phase 2: the crate walls ride the conveyor between charges
+      if (ph >= 2) { b.shiftT = (b.shiftT || 0) + dt; if (b.shiftT > 3.2 && b.act === 'walk') { b.shiftT = 0; for (const w of this.walls(b)) w.shift(); } }
+    },
+    draw(b, ctx, t) { tinYakArt(ctx, b, t); }
+  }
+};
+Object.assign(entities, { npCrateWall: NpCrateWall, npWallBelt: NpWallBelt });
+Object.assign(P, {
+  // the Tin Yak's arena in the depot: two crate walls on conveyors, a gantry ledge over each end
+  arena_tinyak(st, o) {
+    const B = st.B, { x0, w, GY } = o;
+    for (const [cx, alt] of [[x0 + 6, x0 + 9], [x0 + w - 8, x0 + w - 11]]) { st.spawn('npCrateWall', cx, GY - 1, { h: 3, alt }); st.spawn('npWallBelt', Math.min(cx, alt), GY - 1, { n: Math.abs(cx - alt) + 2 }); }
+    for (let q = 0; q < 4; q++) { B.set(x0 + 1 + q, GY - 5, T.SEMI); B.set(x0 + w - 5 + q, GY - 5, T.SEMI); B.set(x0 + Math.floor(w / 2) - 2 + q, GY - 6, T.SEMI); }
+    B.decorAt('npCrateStack', x0 + 3, GY, 0); B.decorAt('npCrateStack', x0 + w - 4, GY, 1);
+  }
+});
 /* ---------------- music: bamboo flute, a bowed string, plucked lute, madal hand drums ---------------- */
 const tracks = {
   tour_np: {
@@ -1108,7 +1349,7 @@ const COIN = { name: 'GOLDEN MOHAR', draw(ctx, x, y) {
 } };
 Tour.country({
   id: 'np', colors: COL, tagline: 'Suspension bridges, a yak named Hrumph and the roof of the world',
-  themes, painters, dyn, decor, decorLights, enemies, entities, pieces: P, boss, power, tracks,
+  themes, painters, dyn, decor, decorLights, enemies, entities, pieces: P, boss, bosses: [tinYakBoss], power, tracks,
   music: { level: 'tour_np', boss: 'tour_np_boss' },
   landmark: 'the snow globes of the whole world',
   arrival: 'Namaste, Brady! The Baron\'s fortress is up in the mountains, full of every landmark he stole. A yak has offered to carry you. I said yes for you. ♥ C',
