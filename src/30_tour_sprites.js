@@ -67,10 +67,17 @@ Atlas.paintTile = function (ctx, name, id, col, row, dx, dy, w, h) {
   return true;
 };
 const BLEED = 1;
+/* th.groundTint (optional, e.g. 'rgba(255,248,232,0.3)'): washed over the atlas floor tiles (only where they have
+   pixels), for a floor whose render reads too heavy for its level (7-1's cobbles under the pale square) */
+const tinted = (th, fn) => function () {
+  const r = fn.apply(this, arguments), ctx = arguments[0];
+  if (th.groundTint) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = th.groundTint; ctx.fillRect(-4, -4, TS + 8, TS + 8); ctx.restore(); }
+  return r;
+};
 const seamless = th => {
   const G = th.ground;
   if (!G || G.seamless || typeof G.paint !== 'function' || typeof G.paintCap !== 'function') return;
-  const paint = G.paint, cap = G.paintCap;
+  const paint = tinted(th, G.paint), cap = tinted(th, G.paintCap);
   th.ground = Object.assign({}, G, {
     seamless: true,
     paint(ctx, rng, s) {

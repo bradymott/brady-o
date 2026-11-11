@@ -317,7 +317,7 @@ const ownLayers = (atlas, list) => list.map(([id, f, fb, shift]) => ({ kind: 'im
 Object.assign(themes, {
   // the Paris square (7-1): its own strips (fr_place: the tower far off, a ring of pale houses, the square's trees,
   // carousel and fountain on a terrace) and chunky cobbles; the boulevard painters are the fallback
-  fr_place: Object.assign({}, themes.fr_morning, { name: 'Place du Marché', sky: ['#6aa8e8', '#c8e0ff', '#ffe8e0'],
+  fr_place: Object.assign({}, themes.fr_morning, { name: 'Place du Marché', sky: ['#6aa8e8', '#c8e0ff', '#ffe8e0'], groundTint: 'rgba(250,240,222,0.34)',
     layers: ownLayers('fr_place', [
       ['L0', 0.03, { kind: 'frTower', color: '#9aa8c0', base: 330, h: 240, at: 760, dyn: 'frPigeons' }, 0],
       ['L1', 0.1, { kind: 'frFacades', color: '#f0e4cc', base: 350, roof: '#7a8aa0' }, 0],
@@ -1162,7 +1162,7 @@ const P = {
     B.decorAt('frChandelier', mid - 6, GY - 8, 0); B.decorAt('frChandelier', mid + 6, GY - 8, 1);
     B.decorAt('frBench', x0 + 8, GY, 0); B.decorAt('frBench', x0 + w - 9, GY, 1); B.decorAt('frFlowers', mid - 3, GY, 0); B.decorAt('frFlowers', mid + 3, GY, 1);
     B.decorAt('frFlowers', x0 + 3, GY - 3, 2); B.decorAt('frFlowers', x0 + w - 4, GY - 3, 3);
-    st.spawn('frOven', mid, GY - 8, {});
+    st.spawn('frOven', mid, GY - 6, {});   // low enough to stay clear of the boss bar on a phone
     st.spawn('frMirror', x0 + 2, GY - 8, { side: 'left' }); st.spawn('frMirror', x0 + w - 3, GY - 8, { side: 'right' });
   }
 };
