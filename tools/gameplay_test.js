@@ -34,6 +34,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     };
     window.T = window.BRADY_TOUR;
     window.start = (id, opts) => { const B = window.BRADY; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 5; B.Game.setScene(new B.Play(B.getLevel(w, i), opts || {})); window.sim(2); };
+    // a boss level: v2 lairs keep the boss in the area with role 'arena' (after a lead-in), legacy castles in their only area
+    window.startBoss = (id) => { window.start(id); const g = window.BRADY.Game.scene; if (g.entities.some(e => e.boss)) return; const k = g.level.areas.findIndex(a => a.role === 'arena'); if (k >= 0) { const an = g.level.areas[k].anchors.in; g.loadArea(k, an.x, an.y); window.sim(0.5); } };
     window.P = () => window.BRADY.Game.scene.player;
     window.S = () => window.BRADY.Game.scene;
     window.ctor = type => window.BRADY_TYPES[type];
@@ -236,7 +238,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   // 8. Castle bosses: Mexico's piñata, then France's soufflé; beating Mexico flies Brady to the next country
   for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'DJINN', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl'], ['9-5', 'KERA', 'id'], ['10-5', 'PHIN', 'vn'], ['11-5', 'KAPPA', 'jp'], ['13-4', 'BIG TUSK', 'aq'], ['22-4', 'OTHER BRADY', 'w22']]) {
     const boss = await page.evaluate(([id]) => {
-      start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
+      startBoss(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
       p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.vy = 0; p.invuln = 99; sim(2.5);
       const woke = b.state !== 'sleep', nm = b.name;
       const doorRow = Math.floor(b.floorY / 32) - 1, before = g.area.tiles[doorRow * g.area.W + b.doorX];
@@ -249,7 +251,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       return { woke, nm, removed: b.remove, before, after, state: g.state };
     }, [id]);
     check(`${name} wakes up, can be beaten and opens the way out (${id})`, boss.woke && new RegExp(name).test(boss.nm) && boss.removed && boss.before === 5 && boss.after === 0 && boss.state === 'results', boss);
-    await page.evaluate(([id]) => { start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 160; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); }, [id]);
+    await page.evaluate(([id]) => { startBoss(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 160; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); }, [id]);
     await shot('10-boss-' + tag + '.png');
   }
   // the boss fights themselves (mechanics, phases, weak moments) are checked per country by tools/boss_test.js
@@ -281,8 +283,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   });
   check('Baron Bric-a-Brac fights in three phases; beating him leads home, to the ending and the credits', fin.phases === '1,2,3' && fin.beaten && fin.results === 'results' && fin.ending === 'TourEndingScene' && fin.credits === 'CreditsScene', fin);
   // the route on the map: Mexico to Nepal in order, and the postcard count across all lands
-  const order = await page.evaluate(() => ({ route: T.Tour.mainCountries().map(C => C.id).join(','), secret: T.Tour.worldList().filter(w => T.Tour.byWorld[w].secret).join(','), levels: T.Tour.allLevelIds().length }));
-  check('the map route runs Mexico to Nepal with both secret lands, 68 levels in all', order.route === 'mx,ec,br,mz,ma,es,fr,nl,id,vn,jp,np' && order.secret === '13,22' && order.levels === 68, order);
+  // main levels stay 68; secret levels (x-6, x-7, 13-5, 22-5) come on top as countries are rewritten (LEVEL_OVERHAUL.md §0)
+  const order = await page.evaluate(() => ({ route: T.Tour.mainCountries().map(C => C.id).join(','), secret: T.Tour.worldList().filter(w => T.Tour.byWorld[w].secret).join(','), levels: T.Tour.allLevelIds().length, main: T.Tour.worldList().reduce((n, w) => n + T.Tour.byWorld[w].mainCount, 0) }));
+  check('the map route runs Mexico to Nepal with both secret lands, 68 main levels in all', order.route === 'mx,ec,br,mz,ma,es,fr,nl,id,vn,jp,np' && order.secret === '13,22' && order.main === 68 && order.levels >= 68, order);
   // the secret lands: hidden on the map until found; Antarctica behind a cracked wall in 8-4, World 22 behind door 22 in 5-2 (22 postcards)
   const secrets = await page.evaluate(() => {
     const B = window.BRADY, d = B.Save.data, TP = T.TourProgress, M = T.TourMapScene;
@@ -311,8 +314,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const B = window.BRADY, d = B.Save.data, out = [];
     d.tour = { at: 'mx', seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {};
     for (const C of T.Tour.mainCountries()) {
-      for (let i = 1; i <= C.levels.length; i++) { d.done[C.world + '-' + i] = true; T.TourProgress.complete(C.world + '-' + i, false); }
-      const N = T.Tour.nextCountry(C); const M = new T.TourMapScene({ from: C.world + '-' + C.levels.length }); B.Game.setScene(M);
+      for (let i = 1; i <= C.mainCount; i++) { d.done[C.world + '-' + i] = true; T.TourProgress.complete(C.world + '-' + i, false); }
+      const N = T.Tour.nextCountry(C); const M = new T.TourMapScene({ from: C.world + '-' + C.mainCount }); B.Game.setScene(M);
       out.push(C.id + '>' + (N ? (M.flight || M.sel === N.id ? N.id : 'STUCK') : 'end'));
     }
     d.tour = { at: null, seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {}; d.gold = {};
