@@ -1034,11 +1034,15 @@ class BurnsManBoss {
   }
   draw(R) {
     const S = BURNS_SPRITES.R, h = this.head(), glow = this.headGlow;
-    R.bbs.bb(h[0], h[1], h[2], 9 * this.scale * glow, 9 * this.scale * glow, S.glow, [1, 0.55, 0.85], 0.55, true);
-    const fw = this.ch.bonePoint(BURNS_BONES.HEAD, 0, 1.9, 1.2);
-    R.bbs.bb(fw[0], fw[1], fw[2], 1.7 * this.scale, 1.7 * this.scale, S.heart, this.st === 'stunned' || this.st === 'hurt' ? [1, 0.25, 0.25] : [1, 0.35, 0.75], 0.95, true);
-    const heart = this.ch.bonePoint(BURNS_BONES.CHEST, 0, 2.5, 0.4);
-    R.bbs.bb(heart[0], heart[1], heart[2], 6 * this.scale, 6 * this.scale, S.glow, [1, 0.3, 0.6], 0.5 + Math.sin(this.t * 6) * 0.2, true);
+    // while he burns (geo.rainBurn, set by the Burn) his pink glows go out with the neon
+    const bn = this.model.geo.rainBurn, lit = bn && performance.now() - bn.t < 400 ? 1 - bn.k : 1;
+    if (lit > 0.02) {
+      R.bbs.bb(h[0], h[1], h[2], 9 * this.scale * glow, 9 * this.scale * glow, S.glow, [1, 0.55, 0.85], 0.55 * lit, true);
+      const fw = this.ch.bonePoint(BURNS_BONES.HEAD, 0, 1.9, 1.2);
+      R.bbs.bb(fw[0], fw[1], fw[2], 1.7 * this.scale, 1.7 * this.scale, S.heart, this.st === 'stunned' || this.st === 'hurt' ? [1, 0.25, 0.25] : [1, 0.35, 0.75], 0.95 * lit, true);
+      const heart = this.ch.bonePoint(BURNS_BONES.CHEST, 0, 2.5, 0.4);
+      R.bbs.bb(heart[0], heart[1], heart[2], 6 * this.scale, 6 * this.scale, S.glow, [1, 0.3, 0.6], (0.5 + Math.sin(this.t * 6) * 0.2) * lit, true);
+    }
     if (this.st === 'flash' && this.flashK > 0) R.bbs.bb(h[0], h[1], h[2], 30 * this.flashK * this.scale, 30 * this.flashK * this.scale, S.glow, [1, 0.9, 1], 0.6 * this.flashK, true);
     if (this.beam) {
       const n = 44, c = Math.sin(this.beam.ang), s = Math.cos(this.beam.ang), y = this.y + this.beam.h * 0.7;
