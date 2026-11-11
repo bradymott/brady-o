@@ -294,7 +294,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const hiddenAtFirst = st('aq') === 'hidden' && st('w22') === 'hidden';
     const viaDoor = (id, room) => {
       start(id); clearEnemies(); const g = S(), p = P(); p.invuln = 99;
-      const door = g.entities.find(e => e.constructor.name === 'Portal' && e.s.target && e.s.target.area >= 1); g.enterPortal(door); sim(1.5);
+      // the door into the area that holds the level's secret gate (a level may have several doors and rooms)
+      const secretArea = k => (g.level.areas[k].spawns || []).some(s => s.type === 'gate' && (s.secret || s.exit === 'secret'));
+      const door = g.entities.find(e => e.constructor.name === 'Portal' && e.s.target && e.s.target.area >= 1 && secretArea(e.s.target.area)); g.enterPortal(door); sim(1.5);
       const gate = g.entities.find(e => e.constructor.name === 'Gate' && e.secret); if (!gate) return { noGate: true };
       const q = P(); q.invuln = 99; q.x = gate.cx - 50; q.y = gate.y + gate.h - q.h - 4; q.vy = 0; sim(0.8, { right: true }); const s1 = g.state; sim(8); return { s1, s2: g.state };
     };
