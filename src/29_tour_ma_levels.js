@@ -412,6 +412,7 @@ Tour.amend('ma', {
         { id: 'medina', gen: 'strip', W: 200, H: 22, phase: { night: 'ma_azul_night' }, script: [
           // ① day: blue stairs, laundry lines, napping cats
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
           ['blueHouse', { w: 8, h: 5, gold: 'must' }],
           ['enemies', { kind: 'maCat', n: 1 }],
           ['lines', { n: 6 }],
