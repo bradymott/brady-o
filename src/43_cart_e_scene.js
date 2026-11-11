@@ -6,6 +6,8 @@
    and the test API (window.BRADY_CART.debug).
    ============================================================ */
 const CART_HUD = { pad: 12 };
+const CART_HEAD_COL = [1, 0.9, 0.74];   // headlight pools
+const CART_ZONE_COL = [1, 0.84, 0.25], CART_CAPTURE_COL = [0.4, 1, 0.5];   // objective light walls
 Object.assign(CartRaceScene.prototype, {
   /* ---------- touch layout (the engine's Input, our own buttons) ---------- */
   layoutControls() {
@@ -175,20 +177,44 @@ Object.assign(CartRaceScene.prototype, {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.drawHUD(ctx, fdt);
   },
-  carModel(k, d2) { return d2 > 30 * 30 && k.Mlo ? k.Mlo : k.M; },
+  // kart detail (triangle budget): the ~30k showroom model only for the player's car and the one rival nearest the
+  // camera inside 16 m (kept to 19 m once picked, so it doesn't flicker between two cars); every other kart draws its
+  // ~7k race model. A bunched pack used to put 7–8 showroom models on screen (230k triangles).
+  pickHi() {
+    let best = null, bs = 1e9, pack = 0;
+    for (const k of this.karts) {
+      if (k.player) { k._hi = k._d2 < 30 * 30; continue; }
+      if (k._in && k._d2 < 30 * 30) pack++;
+      const was = k._hi; k._hi = false;
+      if (!k._in || k._d2 > (was ? 19 * 19 : 16 * 16)) continue;
+      const sc = was ? k._d2 * 0.7 : k._d2;   // the current pick wins near-ties
+      if (sc < bs) { bs = sc; best = k; }
+    }
+    if (best && pack < 4) best._hi = true;   // in a bunched pack (the start, a scrum round a zone) every rival is small: none gets it
+  },
+  carModel(k) { return k._hi || !k.Mlo ? k.M : k.Mlo; },
   renderScene(R, env) {
     const W = this.W, cam = this.cam, P = R.planes, Q = BurnsGL.Q, A = BURNS_ATLAS.T;
     const wantShadow = !!(Q && Q.shadows && env.keyDir[1] > 0.06);
     const vis = this._vis || (this._vis = []); vis.length = 0;
     for (const k of this.karts) { const d2 = (k.x - cam.x) * (k.x - cam.x) + (k.z - cam.z) * (k.z - cam.z); k._d2 = d2; k._in = BurnsM.sphereVisible(P, k.x, k.y + 1.8, k.z, 4.5); if (k._in || (wantShadow && d2 < 60 * 60)) vis.push(k); }
-    const heroes = this.heroes.filter(h => { const d2 = (h.ch.x - cam.x) * (h.ch.x - cam.x) + (h.ch.z - cam.z) * (h.ch.z - cam.z); h._d2 = d2; h._in = d2 < 90 * 90 && BurnsM.sphereVisible(P, h.ch.x, h.ch.y + 1, h.ch.z, 2); return h._in || (wantShadow && d2 < 40 * 40); });
-    const crowds = this.E.crowds.filter(G => { const d = Math.hypot(G.cx - cam.x, G.cz - cam.z); G._d = d; return d < 160 + G.rad && BurnsM.sphereVisible(P, G.cx, 1.5, G.cz, G.rad + 2); });
+    this.pickHi();
+    const heroes = this._heroV || (this._heroV = []), crowds = this._crowdV || (this._crowdV = []); heroes.length = 0; crowds.length = 0;
+    for (const h of this.heroes) { const d2 = (h.ch.x - cam.x) * (h.ch.x - cam.x) + (h.ch.z - cam.z) * (h.ch.z - cam.z); h._d2 = d2; h._in = d2 < 90 * 90 && BurnsM.sphereVisible(P, h.ch.x, h.ch.y + 1, h.ch.z, 2); if (h._in || (wantShadow && d2 < 40 * 40)) heroes.push(h); }
+    // crowds: drawn to 115 m past their edge
+    let nearG = null;
+    for (const G of this.E.crowds) { const d = Math.hypot(G.cx - cam.x, G.cz - cam.z); G._d = d; G._near = false; if (d < 115 + G.rad && BurnsM.sphereVisible(P, G.cx, 1.5, G.cz, G.rad + 2)) { crowds.push(G); if (d < 45 && (!nearG || d < nearG._d)) nearG = G; } }
+    if (nearG) nearG._near = true;   // only the closest group gets the full-detail spectators (~47k triangles a group)
+    // instanced props (barriers, lamps, roadside art: 43_cart_ca_decor.js): culled and given a detail level per copy
+    const inst = W.inst, statD = env.fogD > 0.011 ? 160 : 290;
+    if (inst) inst.update(R, statD, wantShadow ? ((Q && Q.shadowDist) || 60) + 12 : 0);
     // ---- sun shadows: the same draws, depth only (counted separately: begin() resets the renderer's counter) ----
     const d0 = R.stats.draws; this.shadowDraws = 0;
     if (wantShadow && R.shadowBegin(env)) {
       R.statics(W.chunks, env, W, A, 0);
+      if (inst) inst.drawShadow(R);
       R.skinBegin(env, W, A);
-      for (const k of vis) { if (!R.shadowNear(k.x, k.y, k.z, 5)) continue; const M = this.carModel(k, k._d2); R.skin(M.geo, k.bones, M.nb, null, 0, 0); BurnsSkinActor.drawDriver(R, k, k.ch, k.drv.id) || R.skin(k.dModel.lod || k.dModel.geo, k.dBones, k.ch.nb, null, 0, 0); }
+      for (const k of vis) { if (!R.shadowNear(k.x, k.y, k.z, 5)) continue; const M = k.Mlo || k.M; R.skin(M.geo, k.bones, M.nb, null, 0, 0); BurnsSkinActor.drawDriver(R, k, k.ch, k.drv.id) || R.skin(k.dModel.lod || k.dModel.geo, k.dBones, k.ch.nb, null, 0, 0); }
       for (const h of heroes) if (h._d2 < 40 * 40) R.skin(h.model.lod || h.model.geo, h.ch.bones, h.ch.nb, null, 0, 0);
       for (const G of this.props.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0);
       for (const G of crowds) if (R.shadowNear(G.cx, 1, G.cz, G.rad)) R.skin(G.far ? G.far.geo : G.geo, G.bones, G.objs.length, null, 0, 0);
@@ -200,17 +226,18 @@ Object.assign(CartRaceScene.prototype, {
     R.begin(env);
     R.sky(env);
     R.ground(W.ground, env, W);
-    R.statics(W.chunks, env, W, A, env.fogD > 0.011 ? 160 : 290);
+    R.statics(W.chunks, env, W, A, statD);
+    if (inst) inst.draw(R, env, W);
     R.skinBegin(env, W, A);
     for (const k of vis) {
       if (!k._in) continue;
-      const M = this.carModel(k, k._d2), dark = k.out ? [0.05, 0.04, 0.06, 0.55] : k.invT > 0 && Math.floor(this.time * 16) % 2 === 0 ? [1, 1, 1, 0.25] : null;
+      const M = this.carModel(k), dark = k.out ? [0.05, 0.04, 0.06, 0.55] : k.invT > 0 && Math.floor(this.time * 16) % 2 === 0 ? [1, 1, 1, 0.25] : null;
       R.skin(M.geo, k.bones, M.nb, dark, 0, 0.3);
-      const dm = k.dModel, D = k._d2 > 40 * 40 && dm.far ? dm.far : k._d2 > 13 * 13 && dm.lod ? dm.lod : dm.geo;
+      const dm = k.dModel, D = k._d2 > 40 * 40 && dm.far ? dm.far : (k._d2 > 13 * 13 || !k._hi) && dm.lod ? dm.lod : dm.geo;   // full-detail drivers ride the full-detail cars
       BurnsSkinActor.drawDriver(R, k, k.ch, k.drv.id) || R.skin(D, k.dBones, k.ch.nb, null, k.ch.face, 0.45);
     }
     for (const h of heroes) if (h._in) R.skin(h._d2 > 40 * 40 && h.model.far ? h.model.far : h._d2 > 10 * 10 && h.model.lod ? h.model.lod : h.model.geo, h.ch.bones, h.ch.nb, null, h.ch.face, 0.4);
-    for (const G of crowds) R.skin(G._d > 50 && G.far ? G.far.geo : G.geo, G.bones, G.objs.length, null, 3, 0.3);
+    for (const G of crowds) R.skin(!G._near && G.far ? G.far.geo : G.geo, G.bones, G.objs.length, null, 3, 0.3);
     for (const G of this.props.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.5);
     cartItemsRender(this, R);   // rubber ducks, bombs, sky missiles (43_cart_da_items.js)
     if (this.man) R.skin(this.man.model.geo, this.man.ch.bones, this.man.ch.nb, null, 3, 0.3);
@@ -227,6 +254,8 @@ Object.assign(CartRaceScene.prototype, {
       if (k.out) continue;
       const big = k.M.lights.find(L => L.big);
       if (big && night > 0.2) { const p = cartLocalToWorld(k, big.x, big.y, big.z, CART_TMP.p || (CART_TMP.p = [0, 0, 0])); add(p[0], p[1], p[2], 7 + big.s, big.cc, 0.9 * night, 1); }
+      // headlights: a warm pool on the road ahead (the player's always wins a slot)
+      if (night > 0.2) { const f = k.M.len * 0.5 + 6; add(k.x + Math.sin(k.yaw) * f, k.y + 1.3, k.z + Math.cos(k.yaw) * f, 10, CART_HEAD_COL, 0.85 * night, k.player ? 3 : 0.7); }
       if (k.boostT > 0) add(k.x, k.y + 1, k.z, 6, [1, 0.6, 0.25], 0.8, 1.2);
       cartOctoLight(k, add, this.time, night);   // Calamari Inferno's live fire lights the car
       if (k.wpn.fireT > 0.3) { const D = k.wpn.def; add(k.x, k.y + 2.5, k.z, 12, burnsRGBf(D.col), 1.4, 2); }
@@ -235,7 +264,12 @@ Object.assign(CartRaceScene.prototype, {
     for (const f of this.W.fires) add(f.x, (f.y || 0) + 1.2, f.z, 7, [1, 0.55, 0.2], 1.1, 1);
     if (this.rules.lights) this.rules.lights(this, add);
     cartItemsLights(this, add);
-    if (this.man && this.man.burn > 0.05) add(this.man.ch.x, 10, this.man.ch.z, 45, [1, 0.5, 0.18], 1.5 * this.man.burn, 3);
+    if (this.man) {
+      const M = this.man, sc = M.ch.scale || 1;
+      if (M.burn > 0.05) add(M.ch.x, M.ch.y + 4.6 * sc, M.ch.z, 45 * sc, [1, 0.5, 0.18], 1.5 * M.burn, 3);
+      // the neon figure washes his stage in its own slowly cycling colour at night
+      if (night > 0.3) add(M.ch.x, M.ch.y + 5 * sc, M.ch.z, 24 * sc, BurnsManModel.hue(4, this.time, this._manC || (this._manC = [0, 0, 0])), 0.9 * night, 1.5);
+    }
     cand.sort((a, b) => b[0] - a[0]);
     for (let i = 0; i < cand.length && out.length < max; i++) out.push(cand[i][1]);
     this.R.setLights(out);
@@ -267,7 +301,7 @@ Object.assign(CartRaceScene.prototype, {
           const p = cartLocalToWorld(k, L.x, L.y, L.z, this._lp || (this._lp = [0, 0, 0]));
           const fl = L.led ? 0.6 + 0.4 * Math.sin(t * 6 + L.x * 3 + L.z) : 1;
           R.bbs.bb(p[0], p[1], p[2], L.s * (L.big ? 1.4 : 1), L.s * (L.big ? 1.4 : 1), S.glow, L.cc, (L.big ? 0.55 : 0.8) * night * fl, true);
-          if (L.head && k._d2 < 80 * 80) R.flat.flat(k.x + Math.sin(k.yaw) * (k.M.len * 0.5 + 4.5), gy + 0.05, k.z + Math.cos(k.yaw) * (k.M.len * 0.5 + 4.5), 3.4, 8.5, k.yaw + Math.PI, S.beam, [1, 0.92, 0.75], 0.18 * night, true);
+          if (L.head && k._d2 < 90 * 90) R.flat.flat(k.x + Math.sin(k.yaw) * (k.M.len * 0.5 + 5.5), gy + 0.05, k.z + Math.cos(k.yaw) * (k.M.len * 0.5 + 5.5), 4.2, 11, k.yaw + Math.PI, S.beam, [1, 0.92, 0.75], 0.3 * night, true);
         }
       }
       if (k.shieldT > 0) R.bbs.bb(k.x, k.y + 1.8, k.z, 6.5, 6.5, S.bubble, [1, 0.75, 1], 0.55 + Math.sin(t * 8) * 0.1, false);
@@ -289,8 +323,8 @@ Object.assign(CartRaceScene.prototype, {
     // objective markers: the hill zone, capture ring, flag beacon, orb glows
     if (this.isBattle) {
       const E = this.E, O = this.obj;
-      if (this.objective === 'hill') { const z = E.zones[O.zone], gy = H.height(z.x, z.z) + 0.1, pulse = 0.75 + 0.25 * Math.sin(t * 4); R.flat.flat(z.x, gy, z.z, z.r * 2.2, z.r * 2.2, t * 0.4, S.ring, [1, 0.85, 0.2], 0.9 * pulse, true); R.flat.flat(z.x, gy, z.z, z.r * 2, z.r * 2, 0, S.glow, [1, 0.8, 0.2], 0.25, true); R.bbs.streak(z.x, gy + 12, z.z, 0, 1, 0, 26, 2.2, S.streak, [1, 0.85, 0.3], 0.45); }
-      if (this.objective === 'flag') { const c = E.captures[O.capture], gy = H.height(c.x, c.z) + 0.1; R.flat.flat(c.x, gy, c.z, c.r * 2.2, c.r * 2.2, -t * 0.6, S.ring, [0.4, 1, 0.5], 0.9, true); R.bbs.streak(c.x, gy + 14, c.z, 0, 1, 0, 30, 2.5, S.streak, [0.4, 1, 0.5], 0.4); const F = O.flag; R.bbs.streak(F.x, F.y + 9, F.z, 0, 1, 0, 18, 1.4, S.streak, [1, 0.3, 0.85], 0.5); }
+      if (this.objective === 'hill') { const z = E.zones[O.zone], gy = H.height(z.x, z.z) + 0.1, pulse = 0.75 + 0.25 * Math.sin(t * 4); R.flat.flat(z.x, gy, z.z, z.r * 2.2, z.r * 2.2, t * 0.4, S.ring, [1, 0.85, 0.2], 0.9 * pulse, true); R.flat.flat(z.x, gy, z.z, z.r * 2, z.r * 2, 0, S.glow, [1, 0.8, 0.2], 0.25, true); R.bbs.streak(z.x, gy + 12, z.z, 0, 1, 0, 26, 2.2, S.streak, [1, 0.85, 0.3], 0.45); this.zoneWall(R, S, z.x, z.z, z.r, CART_ZONE_COL, pulse, t * 0.35); }
+      if (this.objective === 'flag') { const c = E.captures[O.capture], gy = H.height(c.x, c.z) + 0.1; R.flat.flat(c.x, gy, c.z, c.r * 2.2, c.r * 2.2, -t * 0.6, S.ring, [0.4, 1, 0.5], 0.9, true); R.bbs.streak(c.x, gy + 14, c.z, 0, 1, 0, 30, 2.5, S.streak, [0.4, 1, 0.5], 0.4); this.zoneWall(R, S, c.x, c.z, c.r, CART_CAPTURE_COL, O.flag.holder === this.player ? 1 : 0.6, -t * 0.5); const F = O.flag; R.bbs.streak(F.x, F.y + 9, F.z, 0, 1, 0, 18, 1.4, S.streak, [1, 0.3, 0.85], 0.5); }
       if (this.objective === 'glow') for (const o of this.props.orbs) if (o.alive) R.bbs.bb(o.gx, o.y || o.gy, o.gz, 2.6, 2.6, S.glow, [0.5, 1, 0.9], 0.7, true);
     }
     for (const g of this.props.gifts) if (g.alive && (g.gx - cam.x) * (g.gx - cam.x) + (g.gz - cam.z) * (g.gz - cam.z) < 90 * 90) R.bbs.bb(g.x, g.y, g.z, 2.4, 2.4, S.glow, [1, 0.8, 1], 0.25 + 0.25 * night, true);
@@ -303,13 +337,33 @@ Object.assign(CartRaceScene.prototype, {
       if (h.type === 'slime') { const a = clamp((h.life - h.t) / 1.5, 0, 1); R.flat.flat(h.x, h.y + 0.05, h.z, h.r * 2, h.r * 2.4, h.yaw, S.glow, [0.45, 1, 0.3], 0.55 * a, true); }
     }
     // the Man burns
-    if (this.man) { const M = this.man; if (M.burn > 0.05 && Math.random() < 0.9) for (let i = 0; i < 3; i++) this.fx.fire(M.ch.x + (Math.random() - 0.5) * 4, 5.5 + Math.random() * 9 * M.burn, M.ch.z + (Math.random() - 0.5) * 3, 2.4 * M.burn); R.bbs.bb(M.ch.x, 12, M.ch.z, 30, 30, S.glow, [1, 0.5, 0.2], 0.25 * M.burn, true); }
+    if (this.man) { const M = this.man, sc = M.ch.scale || 1; if (M.burn > 0.05 && Math.random() < 0.9) for (let i = 0; i < 3; i++) this.fx.fire(M.ch.x + (Math.random() - 0.5) * 4 * sc, M.ch.y + 0.1 + Math.random() * 9 * M.burn * sc, M.ch.z + (Math.random() - 0.5) * 3 * sc, 2.4 * M.burn * sc); R.bbs.bb(M.ch.x, M.ch.y + 6.6 * sc, M.ch.z, 30 * sc, 30 * sc, S.glow, [1, 0.5, 0.2], 0.25 * M.burn, true); }
+    // sky beams at night: searchlights sweeping slow figure-eights, laser fans flicking over the sound camps
+    if (this.E.beams && night > 0.3) for (const b of this.E.beams) {
+      const dx = b.x - cam.x, dz = b.z - cam.z; if (dx * dx + dz * dz > 420 * 420) continue;
+      const a = t * b.sp + b.ph;
+      if (b.kind === 'search') {
+        let ux = Math.sin(a) * 0.45, uy = 1, uz = Math.cos(a * 0.77) * 0.45; const l = Math.hypot(ux, uy, uz); ux /= l; uy /= l; uz /= l;
+        R.bbs.streak(b.x + ux * b.len * 0.5, b.y + uy * b.len * 0.5, b.z + uz * b.len * 0.5, ux, uy, uz, b.len, b.w, S.streak, b.c, b.a * night);
+        R.bbs.bb(b.x, b.y + 0.6, b.z, 3.2, 3.2, S.glow, b.c, 0.7 * night, true);
+      } else {
+        const on = Math.sin(a * 2.3) > -0.35; if (!on) continue;   // the fans blink in phrases
+        for (let i = 0; i < 4; i++) { const yaw = a + (i - 1.5) * 0.22, ux = Math.sin(yaw), uz = Math.cos(yaw), uy = 0.16 + 0.05 * Math.sin(a * 3 + i); R.bbs.streak(b.x + ux * b.len * 0.5, b.y + 3 + uy * b.len * 0.5, b.z + uz * b.len * 0.5, ux, uy, uz, b.len, b.w, S.streak, b.c, b.a * night); }
+        R.bbs.bb(b.x, b.y + 3, b.z, 2.4, 2.4, S.glow, b.c, 0.9 * night, true);
+      }
+    }
     // fireworks on the burn night track
     if (this.E.fireworks && this.state !== 'load') { this.fwT = (this.fwT || 1) - 1 / 60; if (this.fwT <= 0) { this.fwT = 0.8 + Math.random() * 1.5; const a = Math.random() * TAU, r = 60 + Math.random() * 140, cx = (this.man ? this.man.ch.x : 0) + Math.cos(a) * r, cz = (this.man ? this.man.ch.z : 0) + Math.sin(a) * r; this.fx.firework(cx, 55 + Math.random() * 35, cz, BURNS_NEON[Math.floor(Math.random() * 7)]); } }
     // dust in the air (heavier in a storm)
     const dust = (this.E.storm ? 0.4 + this.stormK * 2 : 0.3);
     if (Math.random() < dust) { const a = Math.random() * TAU, d = 4 + Math.random() * 26; this.fx.add(cam.tx + Math.cos(a) * d, cam.ty - 0.6 + Math.random() * 3, cam.tz + Math.sin(a) * d, 1.2 + Math.random() + (this.E.storm ? Math.sin(this.windA) * this.stormK * 8 : 0), 0.05, 0.4 + (this.E.storm ? Math.cos(this.windA) * this.stormK * 8 : 0), 3, 1.5, 3.5, env.fogCol.map(c => Math.min(1, c * 1.5 + 0.15)), this.E.storm ? 0.22 : 0.12, 'puff', 0, Math.random() * 6, 0.1); }
     this.fx.draw(R);
+  },
+  // a ring of light posts round an objective zone (each one sits on the ground under it, so a zone on a slope or a
+  // mound still reads as a clear circle from the chase camera)
+  zoneWall(R, S, x, z, r, col, k, rot) {
+    const H = this.terrain, n = 22;
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + rot, px = x + Math.sin(a) * r, pz = z + Math.cos(a) * r, py = H.height(px, pz); R.bbs.streak(px, py + 1.3, pz, 0, 1, 0, 2.6, 0.55, S.streak, col, 0.6 * k); if (i % 2 === 0) R.bbs.bb(px, py + 0.25, pz, 1.1, 1.1, S.glow, col, 0.55 * k, true); }
   },
   drawShot(R, s, S, t) {
     const k = s.owner;
@@ -404,8 +458,7 @@ Object.assign(CartRaceScene.prototype, {
     // ---- countdown ----
     if (this.state === 'count') { const n = 3 - Math.floor(this.stateT); if (n >= 1) { const u = this.stateT % 1; BurnsUI.text(ctx, String(n), W / 2, H * 0.38, 70 * (1.3 - u * 0.3), ['#ff5a5a', '#ffd84a', '#7aff8a'][3 - n], { glow: '#000' }); } BurnsUI.text(ctx, 'TAP HOP JUST BEFORE GO FOR A ROCKET START', W / 2, H * 0.38 + 54, 11, 'rgba(255,255,255,0.8)', { ui: true }); }
     // ---- banners ----
-    let by = portrait ? H * 0.2 : H * 0.24;
-    if (!this.paused) for (const m of this.msgs) { const u = 1 - m.t / m.max, a = Math.min(1, m.t * 3, u * 8), s = 1 + Math.max(0, 0.25 - u) * 1.2, fs = (m.small ? Math.min(16, W * 0.04) : Math.min(26, W * 0.058)) * s; ctx.save(); ctx.globalAlpha = a; BurnsUI.text(ctx, m.text, W / 2, by, fs, m.col, { glow: m.small ? null : m.col }); if (m.sub) BurnsUI.text(ctx, m.sub, W / 2, by + fs * 0.6 + 8, 11, '#ffffff', { ui: true }); ctx.restore(); by += fs + (m.sub ? 20 : 8); }
+    if (!this.paused && this.msgs.length) this.drawBanners(ctx, W, H, top, portrait);
     if (!this.paused) cartItemsHud(this, ctx, W, H);   // incoming missiles, foam / love / frosting on screen, ride meters
     // ---- controls ----
     if (racing && !this.paused) this.drawControls(ctx);
@@ -415,6 +468,29 @@ Object.assign(CartRaceScene.prototype, {
     if (this.state === 'results' || this.state === 'trophy') this.drawResults(ctx);
     if (this.paused) this.drawPause(ctx);
     if (window.__cartDebug) BurnsUI.text(ctx, `${this.stats.fps.toFixed(0)}fps · ${this.stats.draws} draws · ${(this.stats.tris / 1000).toFixed(0)}k tris · ${this.stats.cpu.toFixed(1)}ms · q${this.q.toFixed(2)} · ${BurnsGL.tier}`, W / 2, H - 12, 11, '#9affc8', { ui: true });
+  },
+  // pop-up messages: ONE headline at a time (the newest, unless an older one matters more: a win, a moving zone, a ring
+  // burning) high in the view, and at most two compact toasts on dark pills under it. They used to stack down the
+  // middle of the screen, over the cars.
+  drawBanners(ctx, W, H, top, portrait) {
+    const ms = this.msgs; let head = null;
+    for (let i = ms.length - 1; i >= 0; i--) { const m = ms[i]; if (m.small) continue; if (!head) head = m; else if (m.max >= head.max + 0.5 && m.t > 0.35) head = m; }
+    let by = this.isBattle && !this.isRace ? top + 92 : portrait ? H * 0.2 : Math.max(top + 70, H * 0.21);
+    if (head) {
+      const u = 1 - head.t / head.max, a = Math.min(1, head.t * 3, u * 8), sc = 1 + Math.max(0, 0.2 - u) * 1.2, fs = Math.min(26, W * 0.056) * sc;
+      ctx.save(); ctx.globalAlpha = a; BurnsUI.text(ctx, head.text, W / 2, by, fs, head.col, { glow: head.col });
+      if (head.sub) BurnsUI.text(ctx, head.sub, W / 2, by + fs * 0.5 + 11, 12, '#ffffff', { ui: true });
+      ctx.restore(); by += fs * 0.5 + (head.sub ? 34 : 18);
+    }
+    let n = 0;
+    for (let i = ms.length - 1; i >= 0 && n < 2; i--) {
+      const m = ms[i]; if (m === head) continue;
+      const u = 1 - m.t / m.max, a = Math.min(1, m.t * 4, u * 10) * (n ? 0.75 : 1), fs = 12, txt = m.sub && !m.small ? m.text + '  ·  ' + m.sub : m.text;
+      ctx.save(); ctx.font = `600 ${fs}px ${FONT_UI}`; const tw = Math.min(W - 40, ctx.measureText(txt).width + 26);
+      ctx.globalAlpha = a; BurnsUI.pill(ctx, W / 2 - tw / 2, by - 11, tw, 22, 'rgba(12,6,26,0.62)', rgba(m.col, 0.55));
+      BurnsUI.text(ctx, txt, W / 2, by + 0.5, fs, m.col, { ui: true, stroke: false }); ctx.restore();
+      by += 27; n++;
+    }
   },
   drawControls(ctx) {
     const L = Input.layout, k = this.player; if (!L) return;
@@ -550,17 +626,19 @@ Object.assign(CartRaceScene.prototype, {
     this.pauseBtns = [
       { x, y: y0, w: bw, h: 44, label: 'RESUME', primary: true, fn: () => this.closePause() },
       { x, y: y0 + 52, w: bw, h: 40, label: 'RESTART', fn: () => this.restart() },
-      { x, y: y0 + 100, w: bw, h: 36, size: 12, label: 'AUTO-GAS: ' + (this.autoGas ? 'ON' : 'OFF'), fn: () => { this.autoGas = !this.autoGas; sv.autoGas = this.autoGas; Save.save(); this.buildPause(); } },
+      { x, y: y0 + 100, w: bw / 2 - 4, h: 36, size: 11, label: 'AUTO-GAS ' + (this.autoGas ? 'ON' : 'OFF'), fn: () => { this.autoGas = !this.autoGas; sv.autoGas = this.autoGas; Save.save(); this.buildPause(); } },
+      { x: x + bw / 2 + 4, y: y0 + 100, w: bw / 2 - 4, h: 36, size: 11, label: 'POWER-UPS', fn: () => { Sound.play('select'); this.guide = new CartGuide(() => { this.guide = null; this.buildPause(); }, true); } },   // the guide (43_cart_f_menu.js)
       { x, y: y0 + 144, w: bw / 2 - 4, h: 36, size: 11, label: cartVolLabel('MUSIC', Save.data.settings.music), fn: () => { cartCycleVol('music'); this.buildPause(); } },
       { x: x + bw / 2 + 4, y: y0 + 144, w: bw / 2 - 4, h: 36, size: 11, label: cartVolLabel('SFX', Save.data.settings.sfx), fn: () => { cartCycleVol('sfx'); Sound.play('select'); this.buildPause(); } },
       { x, y: y0 + 188, w: bw, h: 40, label: 'QUIT TO MENU', fn: () => this.leave() }
     ];
     this.pauseBtns.focus = 0;
   },
-  updatePause() { const h = BurnsUIKit.hitButtons(this.pauseBtns); if (h) h.fn(); else if (Input.pausePressed || Input.uiKey === 'pause') this.closePause(); },
+  updatePause() { if (this.guide) { this.guide.update(); return; } const h = BurnsUIKit.hitButtons(this.pauseBtns); if (h) h.fn(); else if (Input.pausePressed || Input.uiKey === 'pause') this.closePause(); },
   drawPause(ctx) {
     const W = Game.cssW, H = Game.cssH;
     ctx.fillStyle = 'rgba(8,4,18,0.62)'; ctx.fillRect(0, 0, W, H);
+    if (this.guide) { this.guide.draw(ctx); return; }
     BurnsUIKit.title(ctx, 'PAUSED', W / 2, H / 2 - 130, 30);
     BurnsUIKit.drawButtons(ctx, this.pauseBtns || []);
   }

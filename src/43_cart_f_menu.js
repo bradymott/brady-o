@@ -24,6 +24,159 @@ if (typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.ser
   // ask for the update now rather than whenever the browser gets round to it
   navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
 }
+// shared text options and rows for the menus' draw loops (made once, not every frame)
+const CART_TXT_L = { align: 'left', stroke: false }, CART_TXT_L0 = { align: 'left' }, CART_TXT_UL = { align: 'left', ui: true, stroke: false }, CART_TXT_UR = { align: 'right', ui: true };
+const CART_TXT_C = { stroke: false }, CART_TXT_U = { ui: true }, CART_TXT_UC = { ui: true, stroke: false }, CART_TXT_URS = { align: 'right', ui: true, stroke: false };
+const CART_STAT_ROWS = [['SPEED', 'speed', '#ff4fd8'], ['ACCEL', 'accel', '#ffd84a'], ['HANDLING', 'handling', '#38f2ff'], ['WEIGHT', 'weight', '#ff8a3a']];
+// car card: the special's box height, and the card height the compact layout needs (2 tagline rows, weapon box, special
+// box, stats as a 2-column grid); 34 px more lets the stats stand in four rows
+const CART_SPECIAL_BOX = 42, CART_CARD_MIN = 260;
+// text is measured once and cached; measure again once the web fonts have arrived
+function cartFontsReady() { return typeof document === 'undefined' || !document.fonts || document.fonts.status === 'loaded'; }
+// the largest font size (max down to min, in half pixels) at which a line fits a width; leaves ctx.font set to it
+function cartFitFont(ctx, text, weight, family, max, min, width) {
+  let s = max;
+  for (; s > min; s -= 0.5) { ctx.font = weight + s + 'px ' + family; if (ctx.measureText(text).width <= width) return s; }
+  ctx.font = weight + min + 'px ' + family; return min;
+}
+/* ---------------- the POWER-UPS guide's lines: what it does, then a tip (0) or how to dodge it (1) ----------------
+   Short on purpose (one line each on a phone). The first line also describes a car's special on the car card. */
+const CART_GUIDE_TEXT = {
+  glow: ['A bundle of glow sticks: a big burst of speed.', 0, 'Save it for a straight, or to pass a rival.'],
+  water: ['Shakes off any effect, with a small boost.', 0, 'Drink it when foam, frosting or a dazzle hits.'],
+  tumble: ['Drop it behind you. It rolls with the wind.', 1, 'Steer round it, or HOP right over it.'],
+  devil: ['A whirlwind that hunts down the cars ahead.', 1, 'A DISCO SHIELD stops it. Keep one ready.'],
+  potty: ['Parachutes a porta-potty onto the road ahead.', 1, 'Watch it fall and steer around it.'],
+  foam: ['A foam blast buries every car close to you.', 1, 'Keep your distance. HOP over the foam pool.'],
+  shield: ['A mirror-ball bubble: blocks the next hit.', 0, 'It lasts 10 seconds. Pop it when danger is near.'],
+  whistle: ['"SLOW DOWN!" Every car ahead of you brakes.', 1, 'Only a DISCO SHIELD keeps you rolling.'],
+  skymail: ['Three missiles fall on the cars ahead.', 1, 'When the red target locks on, swerve hard!'],
+  bombs: ['A line of bombs rains down on the road ahead.', 1, 'Steer away from the growing shadows, or HOP.'],
+  ducks: ['Rubber ducks rain down and litter the road.', 1, 'Weave between them: every bump slows you.'],
+  // the cars' specials
+  throb: ['Lovestruck rivals slow down and drift to you.', 1, 'Stay out of range of the beating heart.'],
+  decoys: ['Decoy fish circle you, dazzle and eat shots.', 1, 'Don\'t touch the fish. Wait until they pop.'],
+  toss: ['Two arms fling the closest rivals behind you.', 1, 'Hang back, or keep a DISCO SHIELD up.'],
+  glide: ['Fly over the pack for 5 s, scorching below.', 1, 'Get out from under the dragon.'],
+  surf: ['A foam surge that bowls rivals aside.', 1, 'Move aside, and HOP the foamy trail.'],
+  warp: ['Teleport 45 m ahead, leave a laser trap.', 1, 'Steer around the green trap, or HOP it.'],
+  frosting: ['A river of sticky frosting floods the road.', 1, 'HOP over it! Drive in and you get stuck.'],
+  wave: ['A huge wave rolls up the course, wiping out cars.', 1, 'Only a DISCO SHIELD or a big jump saves you.'],
+  shell: ['Giant untouchable hops, slime on every landing.', 1, 'Steer clear of the slime splashes.'],
+  hover: ['Float for 5 s and zap every car below.', 1, 'Don\'t drive underneath the jellyfish.'],
+  dive: ['Swim under the sand, then burst out and launch.', 1, 'Keep away from the fin.'],
+  breach: ['Fly over the pack, then belly-flop with a splash.', 1, 'Watch where the whale lands and get clear.'],
+  // the arenas' powers
+  kickflip: ['Pops a huge flipping air, untouchable for a second.', 0, 'Land it clean for points and a boost.'],
+  wax: ['10 s of double grind points, and grinds build speed.', 0, 'Find a rail and grind for as long as you can.'],
+  board: ['Hurls a homing skateboard at the car ahead.', 1, 'Swerve as it comes. A DISCO SHIELD blocks it.'],
+  moonlaser: ['An instant beam: the first car in line spins.', 1, 'Don\'t stay lined up in front of a rival.'],
+  jetpack: ['2.5 s of thrust: up into the sky, full speed.', 0, 'Fire it to fly over trouble.'],
+  gravwell: ['A well behind you drags cars in, then pops.', 1, 'Steer hard away from the swirl.'],
+  harpoon: ['A line fires ahead and reels a rival in to spin.', 1, 'Don\'t drive straight in front of a rival.'],
+  ink: ['A black cloud behind you: rivals inside are lost.', 1, 'Drive around the cloud, not through it.'],
+  torpedo: ['A fast homing torpedo flips the car it hits.', 1, 'A DISCO SHIELD blocks it.'],
+  tires: ['10 s of giant tyres: you flatten anything you touch.', 1, 'Get out of the way of monster tyres!'],
+  mudblast: ['Sprays mud ahead: rivals blinded and slowed.', 1, 'Stay out of the cone in front of a rival.'],
+  towrope: ['Hooks the car ahead and yanks it behind you.', 1, 'Don\'t lead a rival by a short gap.'],
+  ghost: ['3 s as a spirit: fast, and straight through walls.', 0, 'Aim it at a wall for a short cut.'],
+  lantern: ['A lantern bursts into a ring of fire ahead.', 1, 'Steer clear of the fire ring.'],
+  incense: ['A purple cloud: rivals inside steer backwards.', 1, 'Drive around the purple cloud.']
+};
+// a guide entry for any item, falling back to the item's own description for one without lines here
+function cartGuideText(id) {
+  if (CART_GUIDE_TEXT[id]) return CART_GUIDE_TEXT[id];
+  const I = CART_ITEMS[id], c = cartGuideText.fb || (cartGuideText.fb = {});
+  return c[id] || (c[id] = [I ? I.desc : id, -1, '']);
+}
+/* ---------------- POWER-UPS: a paged guide to every gift-box item ----------------
+   Three tabs (gift boxes · car specials · arena powers), rows of icon + name + what it does + a tip or how to dodge it,
+   paged with ◀ ▶ (or a swipe, or the arrow keys). Used by the home menu and the race's pause menu (solid: hide the race
+   HUD behind it); onBack closes it.
+   It lays itself out again when the screen size changes. Rows are measured and fitted once per layout. */
+class CartGuide {
+  constructor(onBack, solid) {
+    this.onBack = onBack; this.scrim = solid ? 'rgba(8,4,18,0.95)' : 'rgba(8,4,18,0.86)'; this.tab = 0; this.page = 0; this.W = 0; this.H = 0;
+    Input.lastSwipe = null;
+    const sv = cartSave(), luma = col => { const n = parseInt(col.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }, lit = col => luma(col) < 0.5 ? shade(col, 0.45) : col;
+    const row = (id, tag, tagCol) => { const I = CART_ITEMS[id], T = cartGuideText(id), col = lit(I.col); return { id, name: I.name, col, bg: rgba(col, 0.1), what: T[0], kind: T[1], tip: T[2], tag, tagCol: tagCol ? lit(tagCol) : '#ffffff' }; };
+    this.tabs = [
+      { label: 'GIFT BOXES', intro: 'Drive through a gift box to grab one. Tap ITEM to use it.', rows: CART_ITEM_IDS.filter(id => CART_ITEMS[id] && !CART_ITEMS[id].car && !CART_ITEMS[id].arena).map(id => row(id, '', '')) },
+      { label: 'CAR SPECIALS', intro: 'Every car has its own special. Only that car finds it in gift boxes.', rows: CART_CARS.filter(c => CART_SPECIALS[c.id]).map(c => row(CART_SPECIALS[c.id].id, c.name, luma(c.col) < 0.6 ? c.col2 : c.col)) },
+      { label: 'ARENA POWERS', intro: 'Found in their own arena. Win all its objectives to get them in races.', rows: [] }
+    ];
+    for (const A of CART_ARENAS) for (const p of A.powers || []) if (CART_ITEMS[p]) this.tabs[2].rows.push(row(p, A.name + (sv.mastered[A.id] ? ' ✓' : ''), A.col));
+    this.build();
+  }
+  build() {
+    const W = this.W = Game.cssW, H = this.H = Game.cssH, P = H > W; this.fonts = cartFontsReady();
+    const safeT = Math.max(12, insets.t + 6), safeB = Math.max(14, insets.b + 8), safeL = Math.max(14, insets.l + 8), safeR = Math.max(14, insets.r + 8);
+    this.titleY = P ? Math.max(76, insets.t + 70) : Math.max(28, insets.t + 26);
+    const tw = Math.min(150, (W - safeL - safeR - 16) / 3), ty = P ? this.titleY + 26 : this.titleY + 20, th = 34, tx = W / 2 - (tw * 3 + 16) / 2;
+    this.back = { x: safeL, y: safeT, w: 92, h: 38, label: '◀ BACK', fn: () => { Sound.play('back'); this.onBack(); } };
+    this.tabBtns = this.tabs.map((t, i) => ({ x: tx + i * (tw + 8), y: ty, w: tw, h: th, size: Math.min(12, tw * 0.09), label: t.label, primary: i === this.tab, fn: () => this.setTab(i) }));
+    this.introY = ty + th + 15;
+    // the list: two columns where there is room (landscape), else one; as many rows as fit above the page buttons
+    const top = this.introY + 15, by = H - safeB - 38, bottom = by - 6, lw = W - safeL - safeR, cols = !P && lw >= 600 ? 2 : 1, gap = 5, rh = 51;
+    this.cols = cols; this.rh = rh; this.colW = (lw - (cols - 1) * 12) / cols; this.lx = safeL; this.top = top;
+    this.perCol = Math.max(1, Math.floor((bottom - top + gap) / (rh + gap))); this.per = this.perCol * cols; this.gap = gap;
+    this.prev = { x: W / 2 - 112, y: by, w: 56, h: 38, label: '◀', fn: () => this.turnPage(-1) };
+    this.next = { x: W / 2 + 56, y: by, w: 56, h: 38, label: '▶', fn: () => this.turnPage(1) };
+    this.pageY = by + 19;
+    this.btnsAll = [this.back].concat(this.tabBtns, [this.prev, this.next]); this.btnsOne = [this.back].concat(this.tabBtns);
+    // fit every row's lines to the column once (text starts after the icon, the name shares its line with the tag)
+    const ctx = Game.ctx, tx0 = 54, tw0 = this.colW - tx0 - 10;
+    ctx.save();
+    for (const t of this.tabs) for (const r of t.rows) {
+      ctx.font = `600 9px ${FONT_UI}`; r.tagW = r.tag ? ctx.measureText(r.tag).width + 10 : 0;
+      r.nameFs = cartFitFont(ctx, r.name, '', FONT_DISPLAY, 14, 10, tw0 - r.tagW);
+      r.whatFs = cartFitFont(ctx, r.what, '600 ', FONT_UI, 11, 8.5, tw0);
+      r.pre = r.kind === 1 ? 'DODGE: ' : r.kind === 0 ? 'TIP: ' : ''; r.preCol = r.kind === 1 ? '#ffb04a' : '#7aff8a';
+      ctx.font = `600 10px ${FONT_UI}`; r.preW = r.pre ? ctx.measureText(r.pre).width + 3 : 0;
+      r.tipFs = r.tip ? cartFitFont(ctx, r.tip, '600 ', FONT_UI, 10, 8, tw0 - r.preW) : 10;
+    }
+    ctx.restore();
+    this.setPage(Math.min(this.page, this.pages() - 1));
+  }
+  pages() { return Math.max(1, Math.ceil(this.tabs[this.tab].rows.length / this.per)); }
+  setTab(i) { if (i === this.tab) return; Sound.play('select', { vol: 0.5 }); this.tab = i; this.tabBtns.forEach((b, k) => { b.primary = k === i; }); this.setPage(0); }
+  turnPage(d) { const n = this.pages(), p = Math.max(0, Math.min(n - 1, this.page + d)); if (p !== this.page) { Sound.play('select', { vol: 0.5 }); this.setPage(p); } }
+  setPage(p) { const n = this.pages(), f = this.btns && this.btns.focus; this.page = p; this.pageLbl = 'PAGE ' + (p + 1) + ' / ' + n; this.prev.disabled = p <= 0; this.next.disabled = p >= n - 1; this.btns = n > 1 ? this.btnsAll : this.btnsOne; this.btns.focus = f || 0; }
+  stale() { return Game.cssW !== this.W || Game.cssH !== this.H || cartFontsReady() !== this.fonts; }
+  update() {
+    if (this.stale()) this.build();
+    const k = Input.uiKey;
+    if (k === 'pause') { Input.uiKey = null; this.back.fn(); return; }
+    if (k === 'left' || k === 'right') { Input.uiKey = null; this.turnPage(k === 'left' ? -1 : 1); return; }
+    if (k === 'up' || k === 'down') { Input.uiKey = null; this.setTab((this.tab + (k === 'up' ? 2 : 1)) % 3); return; }
+    if (k === 'enter') Input.uiKey = null;
+    const hit = BurnsUIKit.hitButtons(this.btns);
+    if (hit) { hit.fn(); return; }
+    const s = Input.lastSwipe;
+    if (s) { Input.lastSwipe = null; if (Math.abs(s.dx) > 50 && Math.abs(s.dx) > Math.abs(s.dy)) this.turnPage(s.dx < 0 ? 1 : -1); }
+  }
+  draw(ctx) {
+    if (this.stale()) this.build();
+    const W = this.W, H = this.H, T = this.tabs[this.tab], n = T.rows.length, i0 = this.page * this.per;
+    ctx.fillStyle = this.scrim; ctx.fillRect(0, 0, W, H);
+    BurnsUI.text(ctx, 'POWER-UPS', W / 2, this.titleY, Math.min(24, W * 0.055), '#ffffff', CART_GUIDE_GLOW);
+    BurnsUIKit.drawButtons(ctx, this.btns);
+    BurnsUI.text(ctx, T.intro, W / 2, this.introY, Math.min(11, W * 0.028), '#ffd84a', CART_TXT_U);
+    for (let i = i0; i < n && i < i0 + this.per; i++) {
+      const r = T.rows[i], j = i - i0, col = Math.floor(j / this.perCol), x = this.lx + col * (this.colW + 12), y = this.top + (j % this.perCol) * (this.rh + this.gap), w = this.colW, h = this.rh;
+      ctx.fillStyle = r.bg; burnsRR(ctx, x, y, w, h, 10); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = 'rgba(10,6,24,0.6)'; ctx.beginPath(); ctx.arc(x + 27, y + h / 2, 19, 0, TAU); ctx.fill();
+      cartItemIcon(ctx, r.id, x + 27, y + h / 2, 30, 1);
+      BurnsUI.text(ctx, r.name, x + 54, y + 12, r.nameFs, r.col, CART_TXT_L0);
+      if (r.tag) BurnsUI.text(ctx, r.tag, x + w - 10, y + 12, 9, r.tagCol, CART_TXT_URS);
+      BurnsUI.text(ctx, r.what, x + 54, y + 27.5, r.whatFs, 'rgba(255,255,255,0.92)', CART_TXT_UL);
+      if (r.pre) BurnsUI.text(ctx, r.pre, x + 54, y + 41.5, 10, r.preCol, CART_TXT_UL);
+      if (r.tip) BurnsUI.text(ctx, r.tip, x + 54 + r.preW, y + 41.5, r.tipFs, 'rgba(255,255,255,0.78)', CART_TXT_UL);
+    }
+    if (this.pages() > 1) BurnsUI.text(ctx, this.pageLbl, W / 2, this.pageY, 11, '#ffffff', CART_TXT_U);
+  }
+}
+const CART_GUIDE_GLOW = { glow: '#ff4fd8' };
 class KartMenuScene {
   constructor(o) {
     o = o || {};
@@ -101,10 +254,15 @@ class KartMenuScene {
         { x: x + bw / 2 + 4, y: y0 + 198, w: bw / 2 - 4, h: 34, size: 10, label: cartVolLabel('SFX', Save.data.settings.sfx), fn: () => { cartCycleVol('sfx'); Sound.play('select'); this.build(); } }
       ];
       // in the standalone Art Cart app this menu IS home: nothing to go back to
-      if (typeof BRADY_APP === 'undefined' || BRADY_APP !== 'kart') this.btns.push(back);
+      const home = typeof BRADY_APP !== 'undefined' && BRADY_APP === 'kart';
+      if (!home) this.btns.push(back);
+      // the power-ups guide: top left (beside BACK when there is one), out of the way of the logo and the mode buttons
+      this.btns.push(this.guideBtn = { x: home ? safeL : safeL + back.w + 8, y: safeT, w: 146, h: 38, size: 12, label: 'POWER-UPS', fn: () => this.openGuide() });
       // the car: left of the buttons in landscape; between the logo and the buttons in portrait
       if (P) setRect(safeL, H * 0.16 + insets.t + Math.min(46, W * 0.11) * 0.85 + 34, W - safeR, y0 - 10);
-      else setRect(safeL, safeT + 30, x - 24, H - safeB);
+      else setRect(safeL, safeT + 46, x - 24, H - safeB);
+    } else if (this.state === 'guide') {
+      if (!this.guide) this.openGuide(true); else this.guide.build();
     } else if (this.state === 'driver') {
       const top = P ? H * 0.42 : safeT + 52, cols = P ? 5 : 7, gx = P ? safeL : W * 0.36, gw = P ? W - safeL - safeR : W - gx - safeR, rows = Math.ceil(CART_DRIVERS.length / cols);
       const cw = (gw - (cols - 1) * 6) / cols, ch = Math.min(cw * 1.2, (H - top - safeB - 60 - (rows - 1) * 6) / rows);
@@ -115,7 +273,8 @@ class KartMenuScene {
       else setRect(safeL, safeT + 44, gx - 12, H - Math.max(92, insets.b + 86));
     } else if (this.state === 'car') {
       // the info card: right column in landscape; the lower part of the screen in portrait (the car gets everything above it)
-      const pw = P ? W - 28 : Math.min(330, W * 0.4), px = P ? 14 : W - safeR - pw, py = P ? H * (H < 740 ? 0.52 : 0.55) : Math.max(60, insets.t + 54);
+      // (portrait: on short screens the card rises until the whole compact layout fits, see drawCar)
+      const pw = P ? W - 28 : Math.min(330, W * 0.4), px = P ? 14 : W - safeR - pw, py = P ? Math.min(H * (H < 740 ? 0.52 : 0.55), H - Math.max(70, insets.b + 66) - CART_CARD_MIN) : Math.max(50, insets.t + 46);
       this.cardRect = { x: px, y: py, w: pw, h: H - py - Math.max(70, insets.b + 66) };
       const aw = 52, ah = 52;
       let ax0, ax1, ay;
@@ -160,6 +319,13 @@ class KartMenuScene {
     this.btns.focus = 0;
   }
   pick(mode) { Sound.play('select'); this.mode = mode; this.state = 'driver'; this.build(); }
+  // the POWER-UPS guide (CartGuide below), over the turning showroom; its BACK returns home
+  openGuide(quiet) {
+    if (!quiet) Sound.play('select');
+    const sv = cartSave(); if (!sv.guideSeen) { sv.guideSeen = true; Save.save(); }
+    this.guide = new CartGuide(() => { this.guide = null; this.state = 'mode'; this.build(); });
+    this.state = 'guide'; this.build();
+  }
   back() {
     Sound.play('back');
     const prev = { driver: 'mode', car: 'driver', cup: 'car', track: 'car', arena: 'car', objective: 'arena' }[this.state];
@@ -194,6 +360,7 @@ class KartMenuScene {
   update(dt) {
     this.t += dt;
     this.turn(dt);
+    if (this.state === 'guide' && this.guide) { this.guide.update(); return; }
     const key = Input.uiKey, n = this.cards.length;
     if (key === 'pause') { Input.uiKey = null; this.back(); return; }
     if (this.state === 'car' && (key === 'left' || key === 'right')) { Input.uiKey = null; this.stepCar(key === 'left' ? -1 : 1); return; }
@@ -409,7 +576,24 @@ class KartMenuScene {
     else if (this.state === 'track') this.drawTracks(ctx);
     else if (this.state === 'arena') this.drawArenas(ctx);
     else if (this.state === 'objective') this.drawObjectives(ctx);
+    else if (this.state === 'guide' && this.guide) this.guide.draw(ctx);
     BurnsUIKit.drawButtons(ctx, this.btns);
+    if (this.state === 'mode' && this.guideBtn) this.drawGuideBtn(ctx, this.guideBtn);
+  }
+  // the POWER-UPS button's gift box, and a NEW tag until the guide has been opened once
+  drawGuideBtn(ctx, b) {
+    const x = b.x + 20, y = b.y + b.h / 2 + 1;
+    ctx.save(); ctx.lineJoin = 'round';
+    ctx.fillStyle = '#ff4fd8'; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.4;
+    ctx.fillRect(x - 8, y - 4, 16, 11); ctx.strokeRect(x - 8, y - 4, 16, 11);
+    ctx.fillStyle = '#ffd84a'; ctx.fillRect(x - 9.5, y - 8, 19, 5); ctx.fillRect(x - 1.5, y - 8, 3, 15);
+    ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x - 4, y - 10, 3.6, 2.4, -0.4, 0, TAU); ctx.ellipse(x + 4, y - 10, 3.6, 2.4, 0.4, 0, TAU); ctx.stroke();
+    ctx.restore();
+    if (!cartSave().guideSeen) {
+      const a = 0.75 + 0.25 * Math.sin(this.t * 5), nx = b.x + b.w - 8, ny = b.y + 2;
+      ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#ffd84a'; burnsRR(ctx, nx - 16, ny - 7, 32, 14, 7); ctx.fill(); ctx.restore();
+      BurnsUI.text(ctx, 'NEW', nx, ny + 0.5, 9, '#2a0a30', CART_TXT_C);
+    }
   }
   backdrop(ctx, W, H) {
     const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1e0836'); g.addColorStop(0.5, '#8a2a7a'); g.addColorStop(0.75, '#ff8a5a'); g.addColorStop(1, '#ffc27a');
@@ -440,7 +624,9 @@ class KartMenuScene {
     BurnsUI.text(ctx, 'Battle-race wild art cars across the playa', lx, ly + s * 0.85, 12, 'rgba(255,255,255,0.92)', { ui: true });
     BurnsUI.text(ctx, CART_CARS.length + ' art cars · ' + CART_DRIVERS.length + ' drivers · ' + CART_TRACK_ORDER.length + ' tracks · ' + CART_ARENAS.length + ' arenas', lx, ly + s * 0.85 + 18, 11, '#ffd84a', { ui: true });
     const sv = cartSave(), tro = CART_CUPS.map(c => sv.trophies[c.id] ? c.name + ' ' + ['', 'GOLD', 'SILVER', 'BRONZE'][sv.trophies[c.id]] : null).filter(Boolean).join('  ·  ');
-    if (tro) BurnsUI.text(ctx, tro, lx, this.btns[3].y + 54, 11, '#ffd84a', { ui: true });
+    // under the last row of settings buttons (it used to sit on top of MUSIC / SFX)
+    const lb = this.btns[6];
+    if (tro) BurnsUI.text(ctx, tro, lx, Math.min(lb.y + lb.h + 14, H - Math.max(10, insets.b + 2) - 6), 11, '#ffd84a', { ui: true });
   }
   drawCard(ctx, c, on, col) {
     ctx.save();
@@ -466,36 +652,70 @@ class KartMenuScene {
     BurnsUI.text(ctx, d.name, x, y, 20, d.col, { glow: d.col });
     BurnsUI.text(ctx, '"' + d.line + '"', x, y + 22, 12, '#ffffff', { ui: true });
   }
-  drawStatBars(ctx, car, x, y, w) {
-    [['SPEED', 'speed', '#ff4fd8'], ['ACCEL', 'accel', '#ffd84a'], ['HANDLING', 'handling', '#38f2ff'], ['WEIGHT', 'weight', '#ff8a3a']].forEach(([lab, key, col], i) => {
-      const yy = y + i * 17;
-      BurnsUI.text(ctx, lab, x, yy, 10, 'rgba(255,255,255,0.8)', { align: 'left', stroke: false });
-      for (let k = 0; k < 5; k++) { const bx = x + 72 + k * (w - 72) / 5; ctx.fillStyle = k < car.stats[key] ? col : 'rgba(255,255,255,0.14)'; burnsRR(ctx, bx, yy - 5, (w - 72) / 5 - 4, 10, 4); ctx.fill(); }
-    });
+  // the four stat bars: one per row, or two per row (grid) where the card is short (landscape phones)
+  drawStatBars(ctx, car, x, y, w, grid) {
+    const cw = grid ? (w - 16) / 2 : w, lw = grid ? 60 : 72, fs = grid ? 9 : 10, bw = (cw - lw) / 5;
+    for (let i = 0; i < 4; i++) {
+      const S = CART_STAT_ROWS[i], xx = grid ? x + (i & 1) * (cw + 16) : x, yy = grid ? y + (i >> 1) * 17 : y + i * 17;
+      BurnsUI.text(ctx, S[0], xx, yy, fs, 'rgba(255,255,255,0.85)', CART_TXT_L);
+      for (let k = 0; k < 5; k++) { ctx.fillStyle = k < car.stats[S[1]] ? S[2] : 'rgba(255,255,255,0.14)'; burnsRR(ctx, xx + lw + k * bw, yy - 5, bw - (grid ? 3 : 4), 10, 4); ctx.fill(); }
+    }
+  }
+  // the car card's text, wrapped and fitted once per car and card width (not every frame)
+  cardText(ctx, car, pw) {
+    const c = this._cardTx || (this._cardTx = {});
+    if (c.id === car.id && c.pw === pw && c.fonts === cartFontsReady()) return c;
+    const wp = CART_WEAPONS[car.weapon], sp = CART_SPECIALS[car.id], cn = parseInt(car.col.slice(1), 16), luma = (0.299 * (cn >> 16) + 0.587 * ((cn >> 8) & 255) + 0.114 * (cn & 255)) / 255;
+    c.id = car.id; c.pw = pw; c.fonts = cartFontsReady();
+    // dark paint jobs (the pyramid, the galleon, the whale) read better in their bright trim colour
+    c.nameCol = luma < 0.6 ? car.col2 : car.col;
+    ctx.save();
+    c.nameFs = cartFitFont(ctx, car.name, '', FONT_DISPLAY, Math.min(22, pw * 0.07), 15, pw - 32);
+    ctx.font = `600 11px ${FONT_UI}`; c.tag = BurnsUI.wrap(ctx, car.tag, pw - 32);
+    c.nod = 'Inspired by ' + car.nod; c.nodFs = cartFitFont(ctx, c.nod, '600 ', FONT_UI, 10, 8.5, pw - 32);
+    c.wTitle = 'WEAPON: ' + wp.name; c.wTitleFs = cartFitFont(ctx, c.wTitle, '', FONT_DISPLAY, 13, 10, pw - 82); c.wBox = rgba(wp.col, 0.18);
+    c.reload = 'RELOAD ' + wp.reload + 's';
+    ctx.font = `600 10px ${FONT_UI}`; c.wDesc = BurnsUI.wrap(ctx, wp.desc, pw - 86);
+    c.sp = sp || null;
+    if (sp) {
+      c.sTitle = 'SPECIAL: ' + sp.name; c.sTitleFs = cartFitFont(ctx, c.sTitle, '', FONT_DISPLAY, 13, 10, pw - 82); c.sBox = rgba(sp.col, 0.15); c.sEdge = rgba(sp.col, 0.5);
+      c.sLine = cartGuideText(sp.id)[0]; c.sLineFs = cartFitFont(ctx, c.sLine, '600 ', FONT_UI, 10, 8.5, pw - 82);
+    }
+    ctx.restore();
+    return c;
   }
   drawCar(ctx) {
     const W = Game.cssW, H = Game.cssH, P = this.portrait, car = CART_CARS[this.carSel], wp = CART_WEAPONS[car.weapon];
     this.title(ctx, 'CHOOSE YOUR ART CAR');
     const sr = this.stageRect, scx = sr.x + sr.w / 2;
     BurnsUI.text(ctx, (this.carSel + 1) + ' / ' + CART_CARS.length, P ? W / 2 : scx, P ? Math.max(100, insets.t + 96) : Math.max(52, insets.t + 50), 11, 'rgba(255,255,255,0.75)', { ui: true });
-    const cr = this.cardRect, pw = cr.w, px = cr.x, py = cr.y, ph = cr.h;
-    this.drawCard(ctx, { x: px, y: py, w: pw, h: ph }, true, car.col);
+    const cr = this.cardRect, pw = cr.w, px = cr.x, py = cr.y, ph = cr.h, c = this.cardText(ctx, car, pw);
+    this.drawCard(ctx, cr, true, car.col);
     let y = py + 26;
-    // dark paint jobs (the pyramid, the galleon, the whale) read better in their bright trim colour
-    const cn = parseInt(car.col.slice(1), 16), luma = (0.299 * (cn >> 16) + 0.587 * ((cn >> 8) & 255) + 0.114 * (cn & 255)) / 255;
-    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.6 ? car.col2 : car.col, { align: 'left', glow: car.light });
-    y += 20; ctx.font = `600 11px ${FONT_UI}`;
-    for (const ln of BurnsUI.wrap(ctx, car.tag, pw - 32)) { BurnsUI.text(ctx, ln, px + 16, y, 11, 'rgba(255,255,255,0.9)', { align: 'left', ui: true, stroke: false }); y += 14; }
-    BurnsUI.text(ctx, 'Inspired by ' + car.nod, px + 16, y, 10, 'rgba(255,255,255,0.55)', { align: 'left', ui: true, stroke: false }); y += 20;
-    // the signature weapon
-    ctx.fillStyle = rgba(wp.col, 0.18); burnsRR(ctx, px + 10, y - 10, pw - 20, 74, 10); ctx.fill();
+    BurnsUI.text(ctx, car.name, px + 16, y, c.nameFs, c.nameCol, { align: 'left', glow: car.light });
+    y += 20;
+    for (let i = 0; i < c.tag.length; i++) { BurnsUI.text(ctx, c.tag[i], px + 16, y, 11, 'rgba(255,255,255,0.9)', CART_TXT_UL); y += 14; }
+    BurnsUI.text(ctx, c.nod, px + 16, y, c.nodFs, 'rgba(255,255,255,0.66)', CART_TXT_UL); y += 20;
+    // the signature weapon (RELOAD sits in the box's bottom corner: long weapon names own the top line)
+    ctx.fillStyle = c.wBox; burnsRR(ctx, px + 10, y - 10, pw - 20, 74, 10); ctx.fill();
     cartWeaponIcon(ctx, car.weapon, px + 38, y + 24, 28, 1, this.t);
-    BurnsUI.text(ctx, 'WEAPON: ' + wp.name, px + 66, y + 4, 13, wp.col, { align: 'left' });
-    BurnsUI.text(ctx, 'RELOAD ' + wp.reload + 's', px + pw - 18, y + 56, 10, '#ffffff', { align: 'right', ui: true });   // bottom corner: long weapon names own the top line
-    ctx.font = `600 10px ${FONT_UI}`; let yy = y + 20;
-    for (const ln of BurnsUI.wrap(ctx, wp.desc, pw - 86)) { BurnsUI.text(ctx, ln, px + 66, yy, 10, 'rgba(255,255,255,0.88)', { align: 'left', ui: true, stroke: false }); yy += 13; }
-    y += 84;
-    if (y + 60 < py + ph) this.drawStatBars(ctx, car, px + 16, y, P ? pw - 32 : Math.min(pw - 32, 260));
+    BurnsUI.text(ctx, c.wTitle, px + 66, y + 4, c.wTitleFs, wp.col, CART_TXT_L0);
+    BurnsUI.text(ctx, c.reload, px + pw - 18, y + 56, 10, '#ffffff', CART_TXT_UR);
+    for (let i = 0, yy = y + 20; i < c.wDesc.length; i++, yy += 13) BurnsUI.text(ctx, c.wDesc[i], px + 66, yy, 10, 'rgba(255,255,255,0.88)', CART_TXT_UL);
+    y += 82;
+    // the car's own gift-box special (only this car can roll it): icon, name, one line
+    if (c.sp) {
+      ctx.fillStyle = c.sBox; burnsRR(ctx, px + 10, y - 10, pw - 20, CART_SPECIAL_BOX, 10); ctx.fill();
+      ctx.strokeStyle = c.sEdge; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = 'rgba(10,6,24,0.55)'; ctx.beginPath(); ctx.arc(px + 38, y + 11, 17, 0, TAU); ctx.fill();
+      cartItemIcon(ctx, c.sp.id, px + 38, y + 11, 26, 1);
+      BurnsUI.text(ctx, c.sTitle, px + 66, y + 3, c.sTitleFs, c.sp.col, CART_TXT_L0);
+      BurnsUI.text(ctx, c.sLine, px + 66, y + 20, c.sLineFs, 'rgba(255,255,255,0.9)', CART_TXT_UL);
+      y += CART_SPECIAL_BOX + 10;
+    }
+    // stats: four rows when the card has room for them, else a two-column grid
+    const rows4 = ph >= CART_CARD_MIN + 34;
+    if (y + (rows4 ? 56 : 22) < py + ph) this.drawStatBars(ctx, car, px + 16, y, P ? pw - 32 : Math.min(pw - 32, rows4 ? 260 : pw - 32), !rows4);
     const d = CART_DRIVERS[this.drvSel];
     // portrait: between the arrows, at the plinth's front edge; landscape: under the stage
     BurnsUI.text(ctx, 'DRIVER: ' + d.name, P ? W / 2 : scx, P ? this.btns[0].y + this.btns[0].h / 2 : H - Math.max(24, insets.b + 20), 12, d.col, {});

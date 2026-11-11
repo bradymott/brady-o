@@ -373,6 +373,9 @@ const CartWorlds = {
     const def = { id, bounds, ground: { base: groundCol || '#c9a27e', crack: crack === undefined ? 0.26 : crack, mottle: 0.35, res: 0.5 } };
     const W = new BurnsWorld(def, null);
     W.chunkSize = 64;
+    // api.sign hands its options to the sign prop (board at o.y) AND to the placement (lifted by o.y), so every sign
+    // floated at twice its height on stilts: Art Cart's signs stand on the ground with the board at o.y
+    W.api.sign = (text, x, z, o) => { o = o || {}; return W.place(m => BurnsProps.sign.call(BurnsProps, m, Object.assign({ text }, o)), x, 0, z, o.yaw || 0, o.scale || 1, o); };
     return { world: W, api: W.api, terrain: new CartTerrain(), gifts: [], boosts: [], crowds: [], heroes: [], spots: [], zones: [], orbSpots: [], flagSpots: [], capture: null, walls: null, fires: [], art: [], lamps: [] };
   },
   finish(E) {
@@ -408,47 +411,34 @@ const CartWorlds = {
       // grid boxes
       for (let k = 0; k < 8; k++) { const g = T.at(T.L - 12 - k * 7.5, {}), d = (k % 2 ? 1 : -1) * g.hw * 0.42; const q = P(g.x + g.nx * d, g.z + g.nz * d); ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 0.3 * S; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(Math.atan2(g.tz, g.tx)); ctx.strokeRect(-2.6 * S, -1.5 * S, 5.2 * S, 3 * S); ctx.restore(); }
     });
-    // barriers along both walls: posts + a rounded rail; LED strips glow at night; tyre stacks on tight bends
-    const step = 7;
-    for (let s = 0; s < T.L; s += step) {
-      const g = T.at(s, {}), tight = Math.abs(g.k) > 0.012;
-      for (const side of [1, -1]) {
-        const off = side > 0 ? g.wr : -g.wl, x = g.x + g.nx * off, z = g.z + g.nz * off;
-        const col = tight ? (Math.floor(s / step) % 2 ? '#e8e8f0' : '#ff3a4a') : D.theme === 'neon' || night ? BURNS_NEON[Math.floor(s / step) % 7] : '#ff8a2a';
-        CartScene.mesh(api, x, z, g.yaw, m => {
-          if (tight) { for (let k = 0; k < 3; k++) { m.color(k % 2 ? '#1a1a1e' : '#26262c').shine(1); m.push(); m.tf(0, 0.18 + k * 0.32, 0); m.torus(0, 0, 0, 0.5, 0.16, { seg: 10, tseg: 5 }); m.pop(); } m.color(col, night ? 0.6 : 0).shine(2); m.torus(0, 0.98, 0, 0.5, 0.06, { seg: 10, tseg: 4 }); }
-          else { m.color('#2a2a32').shine(2); m.limb(0, 0, 0, 0, 1.0, 0, 0.07, 0.07, { seg: 6 }); m.color(col, night ? 0.9 : 0.15).shine(2); m.limb(0, 0.85, -step / 2, 0, 0.85, step / 2, 0.08, 0.08, { seg: 6 }); m.color('#f4f4f4', 0).limb(0, 0.45, -step / 2, 0, 0.45, step / 2, 0.06, 0.06, { seg: 5 }); }
-          m.emissive(0).shine(0);
-        }, { noAO: true });
-        if (night && Math.floor(s / step) % 3 === 0) api.glow(x, 0.95, z, 0.9, col);
-      }
-    }
-    // lamp posts at night; flags by day
-    for (let s = 3; s < T.L; s += 38) { const g = T.at(s, {}), side = Math.floor(s / 38) % 2 ? 1 : -1, off = side > 0 ? g.wr + 2.5 : -g.wl - 2.5; const x = g.x + g.nx * off, z = g.z + g.nz * off; if (night || D.tod === 'sunset' || D.tod === 'dawn') CartScene.lamp(api, x, z, BURNS_NEON[Math.floor(s / 38) % 7], night || D.tod === 'sunset'); else CartScene.mesh(api, x, z, 0, m => { m.color('#c8ccd8').shine(3); m.limb(0, 0, 0, 0, 5, 0, 0.06, 0.05, { seg: 6 }); m.shine(0); m.color(BURNS_NEON[Math.floor(s / 38) % 7]); m.box(0.6, 4.4, 0, 1.2, 0.8, 0.04); }, { noAO: true }); }
+    // barriers (padded LED rails, tyre walls on the tight bends) and lamp posts / flags: instanced with distance detail
+    // (43_cart_ca_decor.js), so a long sight line no longer draws every post at full detail
+    CartDecor.protos(E); CartDecor.barriers(E, T, D); CartDecor.lamps(E, T, D);
     // start/finish arch + grandstand + crowd + hero cast
-    { const g = T.at(0, {}); CartScene.prop(api, 'gateArch', { x: g.x, z: g.z, yaw: g.yaw, w: (g.wl + g.wr) + 2, h: 8, text: 'ART CART', hi: true });
+    { const g = T.at(0, {}); CartDecor.gantry(E, T, D);
       for (const side of [1, -1]) { const off = side > 0 ? g.wr + 6 : -g.wl - 6, x = g.x + g.nx * off + g.tx * 4, z = g.z + g.nz * off + g.tz * 4; E.spots.push(...CartScene.bleachers(api, x, z, g.yaw + (side > 0 ? Math.PI / 2 : -Math.PI / 2), 22, 4, rng)); if (night) api.light(x, z, 16, '#ffb0e0', 0.5); }
       const heroes = ['greeter_f', 'burney', 'firespinner', 'annoyingdj', 'furry', 'sparklepony', 'burnermom', 'greeter_m'];
       heroes.forEach((type, i) => { const side = i % 2 ? 1 : -1, off = side > 0 ? g.wr + 2.4 : -g.wl - 2.4, along = -10 + Math.floor(i / 2) * 7; E.heroes.push({ type, x: g.x + g.nx * off + g.tx * along, z: g.z + g.nz * off + g.tz * along, yaw: Math.atan2(-g.nx * side, -g.nz * side), anim: type === 'firespinner' ? 'firespin' : type === 'annoyingdj' ? 'dj' : type === 'burney' ? 'photo' : i % 3 === 0 ? 'cheer' : 'wave' }); });
     }
     // camps along the outside, crowds at corners
-    let nameIx = Math.floor(rng() * 10);
+    let nameIx = Math.floor(rng() * 10); const taken = [];   // spots already used (camps, art): the roadside dressing keeps clear of them
     for (let s = 40; s < T.L - 30; s += D.theme === 'art' ? 70 : D.theme === 'storm' ? 60 : 44) {
       const g = T.at(s, {}), side = g.k > 0 ? -1 : 1, off = side > 0 ? g.wr + 15 : -g.wl - 15;
       const x = g.x + g.nx * off, z = g.z + g.nz * off, yaw = Math.atan2(-g.nx * side, -g.nz * side);
-      if (this.clear(T, x, z, 9)) CartScene.camp(api, x, z, yaw, rng, night || D.tod === 'sunset', nameIx++);
+      if (this.clear(T, x, z, 9)) { CartScene.camp(api, x, z, yaw, rng, night || D.tod === 'sunset', nameIx++); taken.push([x, z, 12]); }
       if (Math.abs(g.k) > 0.008 && rng() < 0.75) { const n = 10 + Math.floor(rng() * 8), w0 = side > 0 ? g.wr : -g.wl; for (let k = 0; k < n; k++) { const a = rng() - 0.5, dd = w0 + side * (2.6 + rng() * 4), cx = g.x + g.nx * dd + g.tx * a * 16, cz = g.z + g.nz * dd + g.tz * a * 16; if (this.clear(T, cx, cz, 1.5)) E.spots.push({ x: cx, z: cz, yaw: yaw + (rng() - 0.5) * 0.6 }); } }
     }
     // joke signs
     for (let k = 0; k < 6; k++) { const s = T.L * (0.1 + k * 0.15), g = T.at(s, {}), side = k % 2 ? 1 : -1, off = side > 0 ? g.wr + 3.5 : -g.wl - 3.5; api.sign(CART_JOKE_SIGNS[(k + nameIx) % CART_JOKE_SIGNS.length], g.x + g.nx * off, g.z + g.nz * off, { yaw: g.yaw + Math.PI, h: 1.0, y: 1.6, post: true, maxW: 2.6, style: { bg: '#ffe24a', fg: '#1a1a1a', border: '#1a1a1a' }, glow: night ? '#ffe24a' : null }); }
     // infield art pieces
     for (const [kind, ax, az] of D.art) {
-      if (kind === 'man') { if (!this.clear(T, ax * 1.25, az * 1.25, 17)) continue; E.man = { x: ax * 1.25, z: az * 1.25 }; CartScene.mesh(api, E.man.x, E.man.z, 0, m => { m.color('#6a4a32').shine(1); m.lathe([[16, 0], [14, 2.2], [9, 2.4], [8.5, 5.2], [0, 5.4]], { seg: 8, uv: BURNS_ATLAS.pattern('wood') }); m.shine(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 15, y0: 0, y1: 5.3 }] }; }, { hi: true }); E.art.push({ x: E.man.x, z: E.man.z, r: 15.5 }); api.light(E.man.x, E.man.z, 40, '#ff8a3a', 0.8); continue; }
+      if (kind === 'man') { if (!this.clear(T, ax * 1.25, az * 1.25, 17)) continue; E.man = { x: ax * 1.25, z: az * 1.25 }; Object.assign(E.man, CartDecor.manStage(E, E.man.x, E.man.z)); E.art.push({ x: E.man.x, z: E.man.z, r: 15.5 }); taken.push([E.man.x, E.man.z, 26]); continue; }
       const kx = kind === 'gate' ? T.at(T.L * 0.5).x : ax * 1.2, kz = kind === 'gate' ? T.at(T.L * 0.5).z : az * 1.2;
       const yaw = kind === 'gate' ? T.at(T.L * 0.5).yaw : rng() * TAU;
       if (kind !== 'gate' && !this.clear(T, kx, kz, kind === 'temple' ? 14 : kind === 'ribs' ? 12 : 7)) continue;
       const r = CartScene.art(api, kind, kx, kz, yaw, night || D.tod === 'dawn', kind === 'temple' ? 1 : 1.2);
       if (r.r) E.art.push(r);
+      taken.push([kx, kz, kind === 'gate' ? 16 : kind === 'ribs' ? 14 : Math.max(8, (r.r || 4) + 4)]);
     }
     // gift boxes (rows across the road), boost pads, ramps
     for (const f of D.gifts) { const g = A(f); for (let k = -2; k <= 2; k++) E.gifts.push({ x: g.x + g.nx * k * g.hw * 0.33, z: g.z + g.nz * k * g.hw * 0.33 }); }
@@ -456,6 +446,14 @@ const CartWorlds = {
     for (const [f, d, h] of D.ramps) { const g = A(f); E.terrain.add(CartFeat.ramp(g.x + g.nx * d * g.hw, g.z + g.nz * d * g.hw, g.yaw, 6, 7, h * 2.2, { col: '#7a5a3a', stripe: night ? '#ff4fd8' : '#ffe24a' })); }
     if (D.theme === 'gate') this.gateRoad(E, T, rng);
     if (D.theme === 'storm') { for (let k = 0; k < 6; k++) { const g = A(0.08 + k * 0.16), side = k % 2 ? 1 : -1; E.terrain.add(CartFeat.mound(g.x + g.nx * side * (g.hw + 30), g.z + g.nz * side * (g.hw + 30), 18, 4.5, { col: '#d8b48a' })); } }
+    // dressing: kerbs on the bends, pennant lines over the straights, roadside art and small camps in the bare stretches,
+    // and at night the sky beams (searchlights over the deep playa, laser fans over the sound camps)
+    CartDecor.kerbs(E, T); CartDecor.pennants(E, T, D);
+    { const g = T.at(0, {}); taken.push([g.x, g.z, 30]); }   // keep the grandstands clear
+    CartDecor.roadside(E, T, D, rng, taken); CartDecor.skyline(E, T, rng);
+    if (night && D.theme === 'art') CartDecor.beams(E, T, rng, 6, 'search');
+    if (night && D.theme === 'neon') { CartDecor.beams(E, T, rng, 6, 'search'); CartDecor.beams(E, T, rng, 8, 'laser'); }
+    if (night && D.theme === 'burn') CartDecor.beams(E, T, rng, 6, 'laser');
     // grid
     E.spawn = []; for (let k = 0; k < 8; k++) { const g = T.at(T.L - 12 - k * 7.5, {}), d = (k % 2 ? 1 : -1) * g.hw * 0.42; E.spawn.push({ x: g.x + g.nx * d, z: g.z + g.nz * d, yaw: g.yaw }); }
     return this.finish(E);
@@ -573,7 +571,8 @@ const CartWorlds = {
     }
     // hay bales lining the course, tyre stacks, flags, start gate, crowds
     for (let s = 0; s < TR.L; s += 9) { const g = TR.at(s, {}); for (const side of [1, -1]) { const off = side > 0 ? g.wr : -g.wl, x = g.x + g.nx * off, z = g.z + g.nz * off; if (E.terrain.height(x, z) > 0.3) continue; CartScene.mesh(api, x, z, g.yaw, m => { m.color('#d8b860'); m.roundBox(0, 0.42, 0, 0.9, 0.84, 2.0, 0.12, { uv: BURNS_ATLAS.pattern('canvas') }); m.color('#b8983a'); m.roundBox(0, 0.42, 0.55, 0.92, 0.86, 0.06, 0.02); m.roundBox(0, 0.42, -0.55, 0.92, 0.86, 0.06, 0.02); }, { noAO: true }); } }
-    for (let s = 20; s < TR.L; s += 50) { const g = TR.at(s, {}), side = Math.floor(s / 50) % 2 ? 1 : -1, off = side > 0 ? g.wr + 3 : -g.wl - 3; CartScene.mesh(api, g.x + g.nx * off, g.z + g.nz * off, 0, m => { m.color('#c8ccd8').shine(3); m.limb(0, 0, 0, 0, 5.5, 0, 0.06, 0.05, { seg: 6 }); m.shine(0); m.color(BURNS_NEON[Math.floor(s / 50) % 7]); m.box(0.7, 5.0, 0, 1.4, 0.9, 0.04); }, { noAO: true }); }
+    CartDecor.protos(E);   // course flags (instanced, waving banners)
+    for (let s = 20; s < TR.L; s += 50) { const g = TR.at(s, {}), side = Math.floor(s / 50) % 2 ? 1 : -1, off = side > 0 ? g.wr + 3 : -g.wl - 3; CartDecor.put(E, 'flag', g.x + g.nx * off, g.z + g.nz * off, g.yaw, CART_DECOR_PAL.day[Math.floor(s / 50) % 7], { y: 0 }); }
     { const g = TR.at(0, {}); CartScene.prop(api, 'gateArch', { x: g.x, z: g.z, yaw: g.yaw, w: (g.wl + g.wr) + 2, h: 7, text: 'WHOOP-DE-DOO', hi: true }); }
     for (const [x, z, yaw] of [[0, -112, 0], [-140, 30, Math.PI / 2], [140, 40, -Math.PI / 2], [0, 115, Math.PI]]) E.spots.push(...CartScene.bleachers(api, x, z, yaw, 22, 4, rng));
     E.heroes.push({ type: 'dpw', x: -20, z: -100, yaw: 0, anim: 'cheer' }, { type: 'badideaguy', x: 20, z: -100, yaw: 0, anim: 'dare' }, { type: 'ranger', x: 130, z: 0, yaw: -Math.PI / 2, anim: 'wave' });
@@ -604,6 +603,10 @@ const CartWorlds = {
     const poly = []; for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; poly.push([Math.sin(a) * 108, Math.cos(a) * 108]); }
     this.perimeter(E, poly, 'fence');
     let ni = 3; for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + 0.2; CartScene.camp(api, Math.sin(a) * 122, Math.cos(a) * 122, a + Math.PI, rng, true, ni++); }
+    // the art park's outer ring: a glowing installation between every two camps, just outside the fence (instanced)
+    CartDecor.protos(E);
+    const ring = ['tree', 'mush', 'helix', 'ring', 'bloom', 'totem', 'mush', 'tree', 'ring'];
+    for (let i = 0; i < 9; i++) { const a = (i + 0.5) / 9 * TAU + 0.2; CartDecor.put(E, ring[i], Math.sin(a) * 117, Math.cos(a) * 117, a + Math.PI, BURNS_NEON[(i * 3) % 7], { scale: 0.9, noCol: true }); }
     for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.8, x = Math.sin(a) * 101, z = Math.cos(a) * 101; for (let k = 0; k < 14; k++) E.spots.push({ x: x + (rng() - 0.5) * 16, z: z + (rng() - 0.5) * 6, yaw: a + Math.PI + (rng() - 0.5) * 0.5 }); }
     E.heroes.push({ type: 'firespinner', x: 0, z: -40, yaw: 0, anim: 'firespin' }, { type: 'lamplighter', x: 40, z: 10, yaw: -1, anim: 'lantern' }, { type: 'deathguild', x: -40, z: 0, yaw: 1, anim: 'cheer' }, { type: 'fencebot_a', x: 90, z: 30, yaw: -1.5, anim: 'robot' }, { type: 'fencebot_b', x: 92, z: 34, yaw: -1.5, anim: 'robot' });
     E.zones = [{ x: 0, z: 0, r: 9, name: 'THE BIG HAND' }, { x: -62, z: -48, r: 8, name: 'THE LOTUS' }, { x: 66, z: -44, r: 8, name: 'THE SPINNER' }, { x: 58, z: 62, r: 8, name: 'THE OBELISK' }];
