@@ -240,8 +240,9 @@ const BurnsNav = {
     g.navLabel = { x, y, w: tw, rot: sa };
   },
   /* ---------- the map page (pause menu) ----------
-     def.cityMap = { bounds: {x0, x1, z0, z1}, draw(g, ctx, P, sc, t), labels(g) -> [{x, z, text, col, pri, mark}] }
-     The page draws the world's map, its labels (higher pri first, skipped where they'd overlap), the targets
+     def.cityMap = { bounds: {x0, x1, z0, z1}, draw(g, ctx, P, sc, t), labels(g) -> [{x, z, text, col, pri, mark, size, gap}],
+                     keep(g, P, sc) -> [[x0, y0, x1, y1]] (optional keep-outs) }
+     The page draws the world's map, its labels (higher pri first, moved or skipped where they'd overlap), the targets
      (pulsing rings) and Brady (an arrow showing where he faces). ZOOM shows the area around him. */
   openMap(g) { g.pauseTab = 'citymap'; this.refresh(g); g.buildPause(); burnsSfx('map_open'); },
   mapRect() {
@@ -288,26 +289,44 @@ const BurnsNav = {
     const gr = ctx.createRadialGradient(M.x + M.w / 2, M.y + M.h / 2, 10, M.x + M.w / 2, M.y + M.h / 2, M.w * 0.75); gr.addColorStop(0, '#5a3a32'); gr.addColorStop(1, '#2a1a22');
     ctx.fillStyle = gr; ctx.fillRect(M.x, M.y, M.w, M.h);
     try { C.draw(g, ctx, P, V.sc, t); } catch (e) { if (!this._mErr) { this._mErr = true; console.error('burns map', e); } }
-    // labels, most important first, never on top of each other
-    const placed = [], fits = r => r[0] >= M.x + 2 && r[2] <= M.x + M.w - 2 && r[1] >= M.y + 2 && r[3] <= M.y + M.h - 2 && !placed.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]);
+    // labels, most important first, never on top of each other, the markers, the targets or Brady. The objective's
+    // own labels go first and always show (the main one is forced in if nothing fits); the rest try eight spots round
+    // their point and hide when none is free. def.cityMap.keep(g, P, sc) may add keep-out rects (e.g. a big glyph).
+    const placed = [], marks = [], pad = 2;   // placed: labels and hard keep-outs; marks: the little markers (soft)
+    const hit = (A, r) => A.some(q => r[0] < q[2] + pad && r[2] > q[0] - pad && r[1] < q[3] + pad && r[3] > q[1] - pad);
+    const free = (r, soft) => r[0] >= M.x + 2 && r[2] <= M.x + M.w - 2 && r[1] >= M.y + 2 && r[3] <= M.y + M.h - 2 && !hit(placed, r) && (soft || !hit(marks, r));
     const T = g.navTargets || [];
     const Lb = (C.labels ? C.labels(g) : []).slice();
-    T.forEach((q, i) => Lb.push({ x: q.x, z: q.z, text: q.label || 'GO HERE', col: q.col || BURNS_NAV.hex, pri: 100 - i, target: true }));
+    T.forEach((q, i) => Lb.push({ x: q.x, z: q.z, text: q.label || 'GO HERE', col: q.col || BURNS_NAV.hex, pri: 100 - i, target: true, main: i === 0 }));
     Lb.sort((a, b) => (b.pri || 0) - (a.pri || 0));
-    // Brady's own spot is taken first
-    const bq = P(p.x, p.z); placed.push([bq[0] - 9, bq[1] - 9, bq[0] + 9, bq[1] + 9]);
-    const fs = M.w < 300 ? 8.5 : 9.5;
+    // keep-outs: Brady, the target dots, every marker, the world's own
+    const bq = P(p.x, p.z); placed.push([bq[0] - 10, bq[1] - 11, bq[0] + 10, bq[1] + 10]);
+    for (const q of T) { const s = P(q.x, q.z); placed.push([s[0] - 6, s[1] - 6, s[0] + 6, s[1] + 6]); }
     for (const L of Lb) {
+      if (!L.mark) continue;
       const q = P(L.x, L.z);
-      if (L.mark) { ctx.fillStyle = L.col || '#ffffff'; ctx.beginPath(); if (L.mark === 'diamond') { ctx.moveTo(q[0], q[1] - 4); ctx.lineTo(q[0] + 4, q[1]); ctx.lineTo(q[0], q[1] + 4); ctx.lineTo(q[0] - 4, q[1]); } else if (L.mark === 'square') ctx.rect(q[0] - 2.5, q[1] - 2.5, 5, 5); else ctx.arc(q[0], q[1], 2.8, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = L.col || '#ffffff'; ctx.beginPath(); if (L.mark === 'diamond') { ctx.moveTo(q[0], q[1] - 4); ctx.lineTo(q[0] + 4, q[1]); ctx.lineTo(q[0], q[1] + 4); ctx.lineTo(q[0] - 4, q[1]); } else if (L.mark === 'square') ctx.rect(q[0] - 2.5, q[1] - 2.5, 5, 5); else ctx.arc(q[0], q[1], 2.8, 0, TAU); ctx.fill();
+      marks.push([q[0] - 3, q[1] - 3, q[0] + 3, q[1] + 3]);
+    }
+    if (C.keep) { try { for (const r of C.keep(g, P, V.sc) || []) placed.push(r); } catch (e) { /* a bad keep-out never breaks the map */ } }
+    const fs = M.w < 300 ? 8.5 : 9.5, shown = [];
+    for (const L of Lb) {
       if (!L.text) continue;
+      const q = P(L.x, L.z);
       if (!L.target && T.some(tq => { const s = P(tq.x, tq.z); return Math.hypot(s[0] - q[0], s[1] - q[1]) < 8; })) continue;   // the target's own label says it
-      ctx.font = `600 ${fs}px ${FONT_UI}`; const w = ctx.measureText(L.text).width + 4, h = fs + 3;
+      const size = L.size || fs;
+      ctx.font = `600 ${size}px ${FONT_UI}`; const w = ctx.measureText(L.text).width + 4, h = size + 3, m = L.gap !== undefined ? L.gap : L.target ? 9 : L.mark ? 5.5 : 0, ax = w / 2 + m + 1, ay = h / 2 + m;
+      const spots = [[0, -ay], [0, ay], [ax, 0], [-ax, 0], [ax - 4, -ay], [-ax + 4, -ay], [ax - 4, ay], [-ax + 4, ay]];
+      if (L.target) spots.push([0, -ay - h - 2], [0, ay + h + 2], [ax + 10, 0], [-ax - 10, 0]);
       let r = null;
-      for (const [dx, dy] of [[0, -9], [0, 10], [w / 2 + 6, 0], [-w / 2 - 6, 0]]) { const c = [q[0] + dx - w / 2, q[1] + dy - h / 2, q[0] + dx + w / 2, q[1] + dy + h / 2]; if (fits(c)) { r = c; break; } }
+      const tryAll = soft => { for (const [dx, dy] of spots) { const c = [q[0] + dx - w / 2, q[1] + dy - h / 2, q[0] + dx + w / 2, q[1] + dy + h / 2]; if (free(c, soft)) return c; } return null; };
+      r = tryAll(false);
+      if (!r && L.main) r = tryAll(true);   // the objective may cover a marker, never Brady or another label
+      if (!r && L.main) { const cx = clamp(q[0], M.x + w / 2 + 3, M.x + M.w - w / 2 - 3), cy = clamp(q[1] - ay, M.y + h / 2 + 3, M.y + M.h - h / 2 - 3); r = [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2]; }
       if (!r) continue;
-      placed.push(r);
-      BurnsUI.text(ctx, L.text, (r[0] + r[2]) / 2, (r[1] + r[3]) / 2, fs, L.col || '#ffffff', { ui: true, sw: 3 });
+      placed.push(r); shown.push({ text: L.text, target: !!L.target, r: r.map(v => +v.toFixed(1)) });
+      if (L.target) { ctx.fillStyle = 'rgba(8,20,30,0.55)'; burnsRR(ctx, r[0] - 1, r[1] - 0.5, r[2] - r[0] + 2, r[3] - r[1] + 1, 4); ctx.fill(); }
+      BurnsUI.text(ctx, L.text, (r[0] + r[2]) / 2, (r[1] + r[3]) / 2, size, L.col || '#ffffff', { ui: true, sw: 3 });
     }
     // the targets: pulsing rings
     const tg = [];
@@ -325,7 +344,7 @@ const BurnsNav = {
     ctx.restore();
     ctx.restore();
     ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; burnsRR(ctx, M.x, M.y, M.w, M.h, 12); ctx.stroke();
-    g._cityMap = { M, sc: V.sc, brady: { x: bq[0], y: bq[1], rot, yaw }, targets: tg };
+    g._cityMap = { M, sc: V.sc, brady: { x: bq[0], y: bq[1], rot, yaw }, targets: tg, labels: shown };
     // the side panel (landscape) or the strip under the map (portrait): what to do, how far
     const px = M.portrait ? 18 : M.x + M.w + 20, pw = M.portrait ? W - 36 : Math.min(260, W - px - 16);
     let y = M.portrait ? M.y + M.h + 22 : M.y + 12;
