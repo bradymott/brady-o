@@ -60,6 +60,25 @@ Object.assign(Decor, {
     ctx.restore();
     for (let q = 0; q < 5; q++) { const u = (t * 0.6 + q / 5) % 1; ctx.fillStyle = 'rgba(232,252,255,0.8)'; ctx.beginPath(); ctx.arc(x - 30 + q * 15, y - u * 60, 2.5, 0, TAU); ctx.fill(); }
   },
+  // the hacienda's gate: thick adobe posts, an iron-studded double door swung open, bougainvillea over the lintel
+  mxHaciendaGate(ctx, x, y, t) {
+    ctx.save();
+    for (const px of [x - 70, x + 46]) { ctx.fillStyle = '#e8c89a'; ctx.fillRect(px, y - 150, 24, 150); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(px, y - 150, 24, 150); }
+    ctx.fillStyle = '#d8b88a'; ctx.fillRect(x - 78, y - 168, 156, 22); ctx.strokeRect(x - 78, y - 168, 156, 22);
+    for (let k = 0; k < 16; k++) { ctx.fillStyle = ['#ff3d8b', '#ff6ab0', '#c82a6a'][k % 3]; ctx.beginPath(); ctx.arc(x - 74 + k * 10, y - 170 + Math.sin(k * 2) * 4, 6, 0, TAU); ctx.fill(); }
+    for (const [dx, dir] of [[-46, -1], [46, 1]]) { ctx.fillStyle = '#7a4a24'; ctx.save(); ctx.translate(x + dx, y); ctx.scale(dir * 0.35, 1); ctx.fillRect(0, -140, 60, 140); ctx.restore(); }
+    ctx.fillStyle = '#ffd84a'; ctx.font = `bold 12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('HACIENDA', x, y - 153);
+    ctx.restore();
+  },
+  // a glassy obsidian cluster
+  mxObsidian(ctx, x, y, t) {
+    for (const [dx, h, w] of [[-10, 34, 9], [0, 46, 11], [11, 28, 8]]) { ctx.fillStyle = '#1a1424'; ctx.beginPath(); ctx.moveTo(x + dx - w, y); ctx.lineTo(x + dx - w * 0.3, y - h); ctx.lineTo(x + dx + w * 0.4, y - h + 6); ctx.lineTo(x + dx + w, y); ctx.fill(); ctx.strokeStyle = 'rgba(180,140,255,0.6)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x + dx - w * 0.3, y - h); ctx.lineTo(x + dx - w * 0.1, y - 4); ctx.stroke(); }
+  },
+  // a cut-paper flag planted on the crater rim
+  mxRimFlag(ctx, x, y, t) {
+    ctx.fillStyle = '#4a3a3a'; ctx.fillRect(x - 2, y - 70, 4, 70);
+    for (let k = 0; k < 4; k++) { const sw = Math.sin(t * 3 + k) * 3; ctx.fillStyle = PAPEL[k]; ctx.beginPath(); ctx.moveTo(x + 2, y - 70 + k * 9); ctx.lineTo(x + 30 + sw, y - 68 + k * 9); ctx.lineTo(x + 2, y - 62 + k * 9); ctx.fill(); }
+  },
   // a little flower raft floating in the canal (under a checkpoint flag)
   mxRaftFlag(ctx, x, y, t) {
     const yy = y + 16 + Math.sin(t * 2) * 1.5;
@@ -267,6 +286,41 @@ Object.assign(P, {
     st.x = x + w + 1; return x + w + 1;
   }
 });
+Object.assign(P, {
+  // climb: a cracked painted tile in the crater wall is a way into the obsidian vault: { to }
+  vaultDoor(st, o) {
+    const B = st.B, y = st.y;
+    B.fill(1, y - 4, 1, y - 1, T.HARD);
+    B.spawn('tourDraft', 2, y - 1, { look: 'painted' });
+    B.spawn('portal', 2, y - 1, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
+    B.anchor(o.back || 'vaultBack', 4, y - 1);
+  },
+  // climb: a little ledge on the crater wall with a postcard: { kind, left }
+  sideGold(st, o) {
+    const B = st.B, W = st.W, y = st.y - 4, x0 = o.left ? 1 : W - 5;
+    B.fill(x0, y, x0 + 3, y, T.GROUND); st.gold(x0 + 2, y - 2, o.kind || 'must');
+  },
+  // climb: the final double chimney: two vents side by side, a hop across in the middle, lava on your heels
+  vdouble(st, o) {
+    const B = st.B, W = st.W, h = o.h || 14, y0 = st.y, y1 = y0 - h, mid = st.mid;
+    const L = [3, 5], R = [W - 6, W - 4];
+    for (const [a, b] of [L, R]) { B.zone(a, y1 - 6, b - a + 1, h + 6, 0, -110 * TS, 7.2 * TS, 'steam', { pull: 3 }); B.spawn('vent', a + 1, y0 - 1, { w: b - a + 1, look: 'steam' }); }
+    // the wall between them with a shelf half way: ride the left chimney up, hop over to the right one
+    B.fill(mid - 1, y1 + 3, mid, y0 - 1, T.HARD);
+    B.fill(7, y0 - 7, mid - 2, y0 - 7, T.GROUND); B.fill(mid + 1, y0 - 5, W - 8, y0 - 5, T.GROUND);
+    for (let y = y1 + 1; y < y0 - 1; y += 2) { B.pickAt(4, y); B.pickAt(W - 5, y); }
+    st.top(y1 - 3, [[3, 5], [W - 6, W - 4]]);
+  },
+  // climb: the crater rim at the top: a wide ledge, the gate, a postcard on a lip out over the lava
+  craterRim(st, o) {
+    const B = st.B, W = st.W, y = st.y - 4;
+    B.fill(1, y, W - 2, y + 1, T.GROUND); B.fill(st.mid - 2, y, st.mid + 1, y + 1, T.EMPTY); for (let x = st.mid - 2; x <= st.mid + 1; x++) B.set(x, y, T.SEMI);
+    B.spawn('gate', W - 5, y - 1, { exit: 'main' });
+    B.fill(3, y - 5, 6, y - 5, T.SEMI); st.gold(4, y - 7, 'risky');
+    B.decorAt('mxRimFlag', 8, y, 0);
+    st.y = y - 1;
+  }
+});
 for (const k in P) Tour.pieces['mx.' + k] = P[k];
 
 /* ---------------- country looks for library objects ---------------- */
@@ -403,6 +457,67 @@ const stamps = {
     legend: { l: ['tile', 'HARD', { hide: 3 }], u: ['piece', 'bubbler', { look: 'mxBubbles' }], a: ['spawn', 'mxSunbeam', { w: 9, h: 10 }], e: ['enemy', 'mxAxolotlWalk'] },
     items: ['power'],
     doors: [{ to: 'cenote@pocketBack' }],
+    gold: { '*': 'hidden' }
+  },
+  // 1-4's obsidian vault behind the painted tile: glassy black rock, a 1UP, P2 up on the shelf
+  boveda: {
+    floor: 10,
+    rows: [
+      '##########################',
+      '#........................#',
+      '#...o.o.o.o.o............#',
+      '#.................*......#',
+      '#...............-----....#',
+      '#.......?................#',
+      '#............------......#',
+      '#........................#',
+      '#..k................k....#',
+      '#.@D.....................#',
+      '##########################',
+      '##########################'
+    ],
+    legend: { k: ['decor', 'mxObsidian'] },
+    items: ['oneup'],
+    doors: [{ to: 'crater@vaultBack' }],
+    gold: { '*': 'hidden' }
+  },
+  // 1-5's start: the hacienda's gate, a lantern each side
+  porton: {
+    floor: 9,
+    rows: [
+      '............',
+      '............',
+      '............',
+      '............',
+      '............',
+      '............',
+      '............',
+      '............',
+      '..@.....p...',
+      '############'
+    ],
+    legend: { p: ['decor', 'mxHaciendaGate'] }
+  },
+  // 1-5's pantry behind the cupboard: jars, chili sacks, a 1UP on the top shelf, P2
+  despensa: {
+    floor: 10,
+    rows: [
+      '##############################',
+      '#............................#',
+      '#..o.o.o.o...................#',
+      '#..............*.............#',
+      '#............-----...........#',
+      '#.....?......................#',
+      '#...-----..........------....#',
+      '#............................#',
+      '#..k.......j.........k.......#',
+      '#.@D.........................#',
+      '##############################',
+      '##############################'
+    ],
+    legend: { k: ['decor', 'mxChiliSack'], j: ['decor', 'mxPots'] },
+    items: ['oneup'],
+    doors: [{ to: 'patio@pantryBack' }],
     gold: { '*': 'hidden' }
   },
   // 1-1's finale: the fiesta stage at the end of the market, the gate on the dais
@@ -547,5 +662,63 @@ const L3 = { n: 3, name: 'Cenote of Light', arch: 'dive', theme: 'mx_cenote',
       script: [['roots', { n: 2, fish: false }], ['sunbeam', {}], ['postcard', { kind: 'high', dx: -2, dy: -6 }], ['cenoteExit', { exit: 'secret' }]] }
   ] };
 
-Tour.amend('mx', { stamps, skins, levels: [L1, L2, L3] });
+const L4 = { n: 4, name: 'Volcán Escape', arch: 'tower', theme: 'mx_volcan',
+  gimmick: 'Climb out of the crater: steam vents, crumbling obsidian, rolling armadillos; the lava wakes up behind you',
+  hint: 'Ride the steam up the chimneys. Keep climbing: the lava is rising!',
+  postcard: 'The Baron tried to bottle the volcano. It did not agree. ♥ C',
+  enemies: [['mxArmadillo', 1], ['mxBat', 1]],
+  mapCell: [2, 1], mapFrom: 2,
+  exits: { main: { to: '1-5' } },
+  areas: [
+    { id: 'crater', gen: 'climb', variant: 'interior', W: 26, H: 132, risingLava: { delay: 8, speed: 0.55 }, summit: false,
+      script: [
+        // ① vents carry you up the chimneys (the lava waits 8 s)
+        ['blockBand', { item: 'power', left: true }],
+        ['vledges', { n: 3 }],
+        'vvent',
+        ['vaultDoor', { to: 'boveda@in' }],
+        // ② the lava rises; obsidian ledges crumble
+        ['vledges', { n: 4, crumble: true }],
+        ['blockBand', { item: 'star' }],
+        ['vledges', { n: 3, flip: true, enemy: 'mxBat' }],
+        // ③ armadillos, lava blobs, the double chimney
+        'vroll',
+        ['sideGold', { kind: 'must' }],
+        'vblobs',
+        ['vledges', { n: 3, crumble: true, enemy: 'mxArmadillo' }],
+        ['vvent', { h: 10 }],
+        'vdouble',
+        ['craterRim', {}]
+      ] },
+    { id: 'boveda', gen: 'room', role: 'secret', theme: 'mx_volcan', dark: true, stamp: 'boveda' }
+  ] };
+
+const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata',
+  gimmick: 'Swinging piñatas, candy cannons, the balcony; then El Gran Piñatón on his pulley rope in the tall patio',
+  hint: 'Break the piñata from BELOW: headbutt him when he swings low. Bounce off the awnings when he rises!',
+  postcard: 'You did it! The Palace of Fine Arts popped back to full size. Next stop: Ecuador! ♥ C',
+  enemies: [['mxSalsa', 2], ['mxBurro', 2], ['mxPepper', 1]],
+  mapCell: [1, 2], mapFrom: [3, 5],
+  exits: { main: { to: 'country:next' } },
+  areas: [
+    { id: 'patio', gen: 'strip', W: 72, H: 18, theme: 'mx_hacienda_in',
+      script: [
+        ['startStamp', { id: 'porton' }],
+        ['itemBlock', { item: 'power' }],
+        // the lead-in teaches what the fight needs: swinging piñatas, things from below, bouncing high
+        ['swingers', { n: 3 }],
+        ['cannons', {}],
+        ['postcard', { kind: 'risky', dx: -8, dy: -7 }],
+        'balcony',
+        ['secretDoor', { to: 'despensa@in', look: 'fake', back: 'pantryBack' }],
+        ['enemies', { n: 1, kind: 'mxBurro' }],
+        'sig',
+        ['itemBlock', { item: 'power' }],
+        ['door', { to: 'fiesta@in', perch: 0, look: 'tourDoor' }]
+      ] },
+    { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa' },
+    { id: 'fiesta', gen: 'arena', role: 'arena', layout: 'fiesta', arenaW: 24, H: 22 }
+  ] };
+
+Tour.amend('mx', { stamps, skins, levels: [L1, L2, L3, L4, L5] });
 })();

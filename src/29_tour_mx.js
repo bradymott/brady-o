@@ -967,10 +967,10 @@ const P = {
   // the boss patio: a pulley rail across the ceiling (the piñata hangs from it), three market stalls with
   // bouncy awnings to reach him when the rope shortens, lamps, pots and flowers
   arena_fiesta(st, o) {
-    const B = st.B, { x0, w, GY } = o;
-    for (const sx of [x0 + 1, x0 + Math.floor(w / 2) - 3, x0 + w - 6]) {
-      const ay = GY - 3;
-      B.prop('mxStall', sx, ay, 5, 3, 'none', {});
+    const B = st.B, { x0, w, GY } = o, tall = st.H >= 20;
+    // three market stalls; in the tall patio their awnings step up (3, 6 and 9 tiles) to reach him when the rope shortens
+    for (const [sx, ay] of [[x0 + 1, GY - 3], [x0 + Math.floor(w / 2) - 3, GY - (tall ? 6 : 3)], [x0 + w - 6, GY - (tall ? 9 : 3)]]) {
+      B.prop('mxStall', sx, ay, 5, GY - ay, 'none', {});
       for (let q = 0; q < 5; q++) { B.set(sx + q, ay, T.SEMI); B.setHide(sx + q, ay, 1); B.setSurf(sx + q, ay, SURF.BOUNCE); }
     }
     B.spawn('mxRail', x0 + 1, 1, { x0: x0 + 1, x1: x0 + w - 1 });
