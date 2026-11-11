@@ -37,6 +37,7 @@ const Game = {
     this.forceTouchUI = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
     Input.usingTouch = this.forceTouchUI;
     this.resize();
+    if (typeof QualityTier !== 'undefined') { QualityTier.init(); PerfHud.sync(); }
     window.addEventListener('resize', () => this.resize());
     if (window.visualViewport) window.visualViewport.addEventListener('resize', () => this.resize());
     window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 250));
@@ -129,7 +130,9 @@ const Game = {
     // measured on the real frame time: a phone crawling at 2-5 fps (frames over 0.2 s) counts as slow too
     if (raw > 0.026 && raw < 1) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 0.5);
     const floorDpr = (window.devicePixelRatio || 1) >= 2 ? 1.5 : 1;
-    if (this.slowT > 2.5 && this.quality >= 1) {
+    // Super Brady-O World has graphics tiers (src/14_quality.js) that do this in finer steps, with hysteresis
+    if (typeof QualityTier !== 'undefined' && QualityTier.frame(raw)) { /* handled */ }
+    else if (this.slowT > 2.5 && this.quality >= 1) {
       this.quality = 0; this.slowT = 0;
     } else if (this.slowT > 2.5 && (this.lowered || 0) < 2 && this.dpr > floorDpr) {
       this.lowered = (this.lowered || 0) + 1; this.slowT = 0;
@@ -138,6 +141,9 @@ const Game = {
     }
     this.acc += dt;
     Input.pollGamepad();
+    // debug timing hook (tools/sbw_perf_test.js, the on-screen FPS readout): null when off, so it costs nothing
+    const pf = this.perf;
+    if (pf) pf.t0 = performance.now();
     let steps = 0;
     try {
       while (this.acc >= STEP && steps < 30) {
@@ -146,13 +152,17 @@ const Game = {
         if (steps === 1) Input.endFrame();
       }
     } catch (e) { this.reportError(e); this.acc = 0; }
+    if (pf) pf.t1 = performance.now();
     try {
       const ctx = this.ctx;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.fillStyle = '#07040e'; ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      // a scene that paints every pixel itself (coversCanvas) skips the clear: one full-screen fill less per frame
+      if (!(this.scene.coversCanvas && this.scene.coversCanvas())) { ctx.fillStyle = '#07040e'; ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); }
       this.scene.draw(ctx);
       if (this.gameRect.h < this.cssH - 2 && typeof Play !== 'undefined' && this.scene instanceof Play) this.drawPortraitPad(ctx);
+      if (typeof PerfHud !== 'undefined' && PerfHud.on) PerfHud.draw(ctx);
     } catch (e) { this.reportError(e); }
+    if (pf) { pf.t2 = performance.now(); pf.frame(raw, steps); }
     this.frames++;
   },
 
@@ -253,7 +263,7 @@ window.__iconKart = (x, N, maskable) => {
   }
 };
 window.BRADY = {};
-['LookScene', 'SettingsScene', 'CreditsScene', 'Game', 'Save', 'getLevel', 'Validator', 'WORLDS', 'WORLD_ORDER', 'CLASSIC_WORLDS', 'WORLD3_REGIONS', 'WorldGame', 'Input', 'Sound', 'THEMES', 'Atlas', 'Ink', 'TileArt', 'BG', 'ENTITY_TYPES', 'Play', 'MapScene', 'TitleScene', 'StoryScene', 'EndingScene', 'GameOverScene', 'goToMap', 'startGame', 'appHomeScene']
+['LookScene', 'SettingsScene', 'CreditsScene', 'Game', 'Save', 'getLevel', 'Validator', 'TS', 'T', 'SOLID', 'Decor', 'PostFX', 'WorldFx', 'TripFX', 'Particles', 'Weather', 'Player', 'Gate', 'Boss', 'QualityTier', 'PerfHud', 'WORLDS', 'WORLD_ORDER', 'CLASSIC_WORLDS', 'WORLD3_REGIONS', 'WorldGame', 'Input', 'Sound', 'THEMES', 'Atlas', 'Ink', 'TileArt', 'BG', 'ENTITY_TYPES', 'Play', 'MapScene', 'TitleScene', 'StoryScene', 'EndingScene', 'GameOverScene', 'goToMap', 'startGame', 'appHomeScene']
   .forEach(k => { try { const v = eval(k); if (v !== undefined) window.BRADY[k] = v; } catch (e) { /* not in this app */ } });
 window.BRADY.APP = APP;
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
