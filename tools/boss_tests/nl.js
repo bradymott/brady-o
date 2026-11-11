@@ -3,7 +3,17 @@
 module.exports = async ({ page, check, shot }) => {
   const r = await page.evaluate(() => {
     const out = {}, TSZ = 32;
-    start('8-5'); clearEnemies();
+    start('8-5');
+    // Determinism: between page.evaluate calls (the waits and the screenshots) the page's own animation loop keeps
+    // updating the scene with real frame times, so how far the drawbridge and the King's volleys move before the next
+    // check depended on machine load (the flaky "bridge up / volley lands" and "buried" checks). From here on the
+    // scene only advances inside sim(); the real loop still draws it for the screenshots.
+    { const g0 = S(), upd = g0.update, sim0 = window.sim; window.__nlSim = false;
+      g0.update = function (dt) { if (window.__nlSim) return upd.call(this, dt); };
+      window.sim = (sec, inp) => { window.__nlSim = true; try { sim0(sec, inp); } finally { window.__nlSim = false; } }; }
+    // the weigh house hall is its own area (v2 LAIR): go through the door from the cheese market
+    { const g0 = S(), ai = g0.level.areas.findIndex(a => a.role === 'arena'), door = g0.entities.find(e => e.s && e.s.target && e.s.target.area === ai); if (door) { g0.enterPortal(door); sim(2); } }
+    clearEnemies();
     const g = S(), p = P(), b = boss(); window.__nlBoss = b;
     out.hatches = g.entities.filter(e => e.constructor.name === 'NlHatch').length;
     enterArena(); p.invuln = 99;
@@ -64,10 +74,12 @@ module.exports = async ({ page, check, shot }) => {
     // a kicked wheel while the bridge is up passes under him; when it comes down, the volley lands
     for (const w of wheels()) w.remove = true; sim(0.02);
     const hp = b.hp;
-    const volley = () => { const w = spawnAt('nlGouda', b.cx - 6 * 32, b.floorY); w.fling(9 * 32, -2 * 32, p); let n = 0; while (!w.remove && n++ < 300) sim(1 / 120); };
+    const volley = () => { const w = spawnAt('nlGouda', b.cx - 6 * 32, b.floorY); w.fling(9 * 32, -2 * 32, p); let n = 0; while (!w.remove && b.act !== 'buried' && n++ < 300) sim(1 / 120); };
     let n = 0; while (b.plat.y > b.floorY - 60 && n++ < 1200) sim(1 / 120); volley(); out.missedUp = b.hp === hp;
     n = 0; while (b.plat.y < b.floorY - 12 && n++ < 1200) sim(1 / 120); volley(); out.hitDown = b.hp === hp - 1;
     sim(3); n = 0; while (b.plat.y < b.floorY - 12 && n++ < 1200) sim(1 / 120); if (b.act !== 'walk') { n = 0; while (b.act !== 'walk' && n++ < 1200) sim(1 / 120); n = 0; while (b.plat.y < b.floorY - 12 && n++ < 1200) sim(1 / 120); }
+    // the pile is counted 1.2 s into the burial (the volley stops at the hit, so this no longer depends on how long
+    // the wheel rolled on after it, or on frames run outside sim)
     volley(); out.buried = b.act === 'buried' && b.hp <= 0.01; sim(1.2);
     out.pile = wheels().length;
     return out;
@@ -81,6 +93,7 @@ module.exports = async ({ page, check, shot }) => {
     sim(6);
     const out = { removed: !!b.remove, door: g.area.tiles[row * g.area.W + doorX] === 0 };
     p.x = (doorX + 8) * 32; p.y = b.floorY - p.h; p.vy = 0; sim(2.5); out.state = g.state;
+    delete g.update;   // hand the scene back to the real loop
     return out;
   });
   check('the Cheese King is gone, the door opens and the level can be finished', r4.removed && r4.door && /clear|tally|results/.test(r4.state), r4);

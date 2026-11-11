@@ -47,11 +47,37 @@ for (const id in Tour.countries) {
    2-4's reef). Each atlas-cut body and cap tile therefore paints 1 px past every side that has a neighbouring tile
    (the overlap lands in the tile cache's padding), but never past an open edge, which keeps its outline and its
    rounded corners. Applies to every theme whose floor comes from an atlas, Mexico's included. */
+/* Dark grid lines. A floor strip ('ground': 8 tiles x 3 rows) is rendered as one block, so its outer texel columns
+   (left of tile column 0, right of column 7) and its bottom texel rows carry the block's ink outline. A tile cut from
+   an outer column then brings a 1-2 texel dark line into the middle of a floor (3-2, 4-4: dark verticals between tile
+   pairs). Floor tiles therefore sample 2 texels in from the strip's outer edges (left, right, bottom; the cap's top
+   line is wanted), stretched back to the full tile: invisible at 63/64, and the line is gone. */
+const INSET = 2;
+const paintTile0 = Atlas.paintTile;
+Atlas.paintTile = function (ctx, name, id, col, row, dx, dy, w, h) {
+  if (id !== 'ground') return paintTile0.apply(this, arguments);
+  const a = this.atlases[name]; if (!a || !a.ready) return false;
+  const f = a.meta.frames[id]; if (!f) return false;
+  const k = a.scale, tw = (w || TS) * k, th = (h || TS) * k;
+  let sx = f.x + col * tw, sy = f.y + row * th, sw = tw, sh = th;
+  if (col === 0) { sx += INSET; sw -= INSET; }
+  if ((col + 1) * tw >= f.w) sw -= INSET;
+  if ((row + 1) * th >= f.h) sh -= INSET;
+  ctx.drawImage(a.img, sx, sy, sw, sh, dx || 0, dy || 0, w || TS, h || TS);
+  return true;
+};
 const BLEED = 1;
+/* th.groundTint (optional, e.g. 'rgba(255,248,232,0.3)'): washed over the atlas floor tiles (only where they have
+   pixels), for a floor whose render reads too heavy for its level (7-1's cobbles under the pale square) */
+const tinted = (th, fn) => function () {
+  const r = fn.apply(this, arguments), ctx = arguments[0];
+  if (th.groundTint) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = th.groundTint; ctx.fillRect(-4, -4, TS + 8, TS + 8); ctx.restore(); }
+  return r;
+};
 const seamless = th => {
   const G = th.ground;
   if (!G || G.seamless || typeof G.paint !== 'function' || typeof G.paintCap !== 'function') return;
-  const paint = G.paint, cap = G.paintCap;
+  const paint = tinted(th, G.paint), cap = tinted(th, G.paintCap);
   th.ground = Object.assign({}, G, {
     seamless: true,
     paint(ctx, rng, s) {
@@ -73,4 +99,47 @@ const seamless = th => {
   });
 };
 for (const key in THEMES) { const th = THEMES[key]; if (th && th.atlas && INDEX.has(th.atlas)) seamless(th); }
+
+/* Inked props. The overhauled countries build their set pieces as procedural props (B.prop: a salt shaker, a
+   baobab crown, a goal, a fountain...), drawn by Decor[kind] without the Fiesta Toon line, so they sat flat beside
+   the sprite art. A static prop (its painter never reads the time) is drawn once through Ink into a cached bitmap at
+   the screen's scale and then blitted; an animated one keeps drawing live, uninked (steam, mist, jets). Only props
+   (d.prop) of the countries listed get it, and only kinds whose painter is static. */
+const INKED_CC = ['br', 'mz', 'ma', 'es', 'fr', 'nl'];
+const InkCache = {
+  map: new Map(), max: 48,
+  draw(ctx, key, x0, y0, w, h, fn) {
+    const m = ctx.getTransform ? ctx.getTransform() : null, S = m ? Math.hypot(m.a, m.b) : 0;
+    if (!Ink.on || !m || !(S > 0) || m.b || m.c || w * S > 1800 || h * S > 1800) { Ink.around(ctx, x0, y0, w, h, fn, { pad: 6 }); return; }
+    const k = key + '@' + S.toFixed(3);
+    let e = this.map.get(k);
+    if (!e) {
+      const pad = 8, cw = Math.ceil((w + pad * 2) * S), ch = Math.ceil((h + pad * 2) * S);
+      const c = makeCanvas(cw, ch), cx = c.getContext('2d');
+      cx.setTransform(S, 0, 0, S, -(x0 - pad) * S, -(y0 - pad) * S);
+      Ink.around(cx, x0, y0, w, h, fn, { pad: 6 });
+      e = { c, ox: x0 - pad, oy: y0 - pad };
+      this.map.set(k, e);
+      if (this.map.size > this.max) this.map.delete(this.map.keys().next().value);
+    }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(e.c, Math.round(m.e + e.ox * S), Math.round(m.f + e.oy * S));
+    ctx.restore();
+  }
+};
+if (typeof Decor !== 'undefined') {
+  const animated = fn => { const src = String(fn), body = src.slice(src.indexOf('{')); return /[^.\w'"]t\s*[*+\-),;]/.test(body) || /\(\s*t\s*\*/.test(body); };
+  for (const k in Decor) {
+    const fn = Decor[k];
+    if (typeof fn !== 'function' || k === 'draw' || !INKED_CC.some(cc => k.startsWith(cc) && /^[A-Z]/.test(k.slice(cc.length))) || animated(fn) || fn.inkWrapped || /Ink\./.test(String(fn))) continue;   // painters that ink themselves stay as they are
+    const w = function (ctx, x, y, t, th, d) {
+      if (!d || !d.prop || !d.w || !d.h) return fn.call(this, ctx, x, y, t, th, d);
+      // the box: the prop's tiles plus slack for art that spills over them
+      const sx = Math.max(24, d.w * 0.35), sy = Math.max(24, d.h * 0.5);
+      InkCache.draw(ctx, k + ':' + d.w + 'x' + d.h + ':' + (d.seed || 0) + ':' + (th && th.name || ''), x - d.w / 2 - sx, y - d.h - sy, d.w + sx * 2, d.h + sy + 16, c => fn.call(Decor, c, x, y, t, th, d));
+    };
+    w.inkWrapped = true; Decor[k] = w;
+  }
+}
+try { window.BRADY_INKCACHE = InkCache; } catch (e) { /* not in a browser */ }
 })();

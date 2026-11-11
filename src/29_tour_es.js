@@ -1,10 +1,13 @@
 /* ============================================================
-   SPAIN (world 6)
-   6-1 La Tomatina          run    tomato trucks lob tomatoes, slippery pulp streets, crate stacks, balconies
-   6-2 The Aquarium         swim   glass tunnels, pulsing jellyfish, pump currents and big tanks
-   6-3 City of Arts by Night night white ribbed arches, reflecting pools, light-up floor tiles on the beat, a lifting "eyelid" deck
-   6-4 The Giant Falla      climb  climb a giant papier-mâché sculpture: rocket launchers, firecracker strings, giant fruit
-   6-5 The Silk Exchange    castle twisted columns, swinging silk banners, rising and falling scales; boss Paellasaurus
+   SPAIN (world 6, the whole country): art, cast, objects, Paellasaurus.
+   The levels (v2 format, LEVEL_OVERHAUL.md §2) are in 29_tour_es_levels.js:
+   6-1 La Tomatina           HOLD   three plazas of the tomato fight in Buñol; storks snatch
+   6-2 Pintxos Bar           MINI   tiny Brady on a giant San Sebastián bar counter
+   6-3 City of Arts by Night BEAT   Valencia's white ribs, beat-floor lights, the eyelid deck
+   6-4 Teide Updrafts        GLIDE  paper-plane glides over the Canary Islands' volcano
+   6-5 La Lonja              LAIR   a Fallas street, then Paellasaurus in the Silk Exchange
+   6-6 Oceanogràfic          DIVE   (secret) the aquarium's glass tunnels; Bottle Mail #4
+   6-7 Molinos de La Mancha  SWITCH (secret) the wind lever turns the windmills' sails
    ============================================================ */
 (() => {
 const COL = { a: '#ffd23a', b: '#ff8a1a', c: '#c8222a' };
@@ -537,6 +540,10 @@ const P = {
     for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
     for (let q = 0; q < 3; q++) B.set(mid - 1 + q, GY - 7, T.SEMI);
     B.fill(x0 + 1, GY - 2, x0 + 1, GY - 1, T.PILLAR); B.fill(x0 + w - 2, GY - 2, x0 + w - 2, GY - 1, T.PILLAR);
+    // the hall's twisted columns rise behind the floor; tomato-crate shelves high on both walls
+    for (const cx of [x0 + 8, x0 + w - 9]) B.prop('esTwist', cx, GY - 12, 1, 12, 'none', {});
+    for (let q = 0; q < 3; q++) { B.set(x0 + 1 + q, GY - 8, T.SEMI); B.set(x0 + w - 4 + q, GY - 8, T.SEMI); }
+    B.decorAt('esCrates', x0 + 2, GY - 8, 0); B.decorAt('esCrates', x0 + w - 3, GY - 8, 1);
     B.decorAt('esLamp', x0 + 4, GY - 4, 0); B.decorAt('esLamp', x0 + w - 5, GY - 4, 0);
     B.decorAt('esPots', x0 + 9, GY, 0); B.decorAt('esPots', x0 + w - 10, GY, 1); B.decorAt('esCrates', mid, GY - 7, 0);
     st.spawn('esCrate', x0 + 4, GY - 1, { slot: 0 }); st.spawn('esCrate', mid, GY - 1, { slot: 1 }); st.spawn('esCrate', x0 + w - 5, GY - 1, { slot: 2 });
@@ -709,6 +716,484 @@ const boss = {
   }
 };
 
+/* ============================================================
+   The level overhaul (LEVEL_OVERHAUL.md §2 Spain): new themes for the
+   whole country, the es_x cast, objects, country looks and set pieces
+   used by 29_tour_es_levels.js.
+   ============================================================ */
+/* ---------------- new themes: San Sebastián's pintxos bar, Teide, La Mancha ---------------- */
+Object.assign(painters, {
+  // the bar's back wall at giant scale: blue-and-white tiles, shelves of jars, a chalkboard
+  esBarWall(ctx, L, rng, H) {
+    ctx.fillStyle = '#f4f0e6'; ctx.fillRect(0, 0, BG_W, H);
+    for (let y = 0; y < L.base; y += 40) for (let x = (y / 40) % 2 ? 20 : 0; x < BG_W; x += 40) { ctx.fillStyle = '#7a9ed4'; ctx.fillRect(x + 4, y + 4, 32, 32); ctx.fillStyle = '#f4f0e6'; ctx.beginPath(); ctx.arc(x + 20, y + 20, 9, 0, TAU); ctx.fill(); }
+    for (let k = 0; k < 3; k++) { const y = L.base - 230 + k * 70; ctx.fillStyle = '#7a4a2a'; ctx.fillRect(0, y, BG_W, 10);
+      for (let x = 20 + rng() * 30; x < BG_W; x += 50 + rng() * 40) { const h = 30 + rng() * 26, c = ['#3a7a4a', '#3a6aa0', '#c88a2a', '#e8e0c8'][Math.floor(rng() * 4)]; ctx.fillStyle = c; rr(ctx, x, y - h, 18, h, 5); ctx.fill(); ctx.fillRect(x + 6, y - h - 8, 6, 8); ctx.fillStyle = '#f4ecd8'; ctx.fillRect(x + 3, y - h * 0.6, 12, 9); } }
+    for (let x = 200; x < BG_W; x += 520) { ctx.fillStyle = '#7a4a2a'; ctx.fillRect(x - 6, L.base - 340, 172, 92); ctx.fillStyle = '#2e3a34'; ctx.fillRect(x, L.base - 334, 160, 80); ctx.strokeStyle = '#e8f0e8'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(x + 14, L.base - 310 + k * 20); for (let q = 0; q < 8; q++) ctx.lineTo(x + 14 + q * 16, L.base - 310 + k * 20 + Math.sin(q * 2 + k) * 4); ctx.stroke(); } }
+  },
+  // the far end of the counter: plates of pintxos on toothpicks, a bowl of olives, a fat pepper pot
+  esCounter(ctx, L, rng, H) {
+    ctx.fillStyle = '#5a3420'; ctx.fillRect(0, L.base, BG_W, H - L.base); ctx.fillStyle = '#e8e2d4'; ctx.fillRect(0, L.base - 8, BG_W, 10);
+    for (let x = 30; x < BG_W; x += 120 + rng() * 60) {
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x, L.base - 8, 44, 8, 0, 0, TAU); ctx.fill();
+      for (let k = 0; k < 3; k++) { const px = x - 28 + k * 28; ctx.fillStyle = '#e8b870'; rr(ctx, px - 11, L.base - 26, 22, 14, 4); ctx.fill(); ctx.fillStyle = ['#d83a2a', '#7a8a98', '#ffc030'][k]; ctx.beginPath(); ctx.ellipse(px, L.base - 28, 9, 5, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#e8d8a8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, L.base - 46); ctx.lineTo(px, L.base - 20); ctx.stroke(); }
+    }
+  },
+  // the volcano over the island: an ochre and rust cone with a cloud collar, the sea at its foot
+  esVolcano(ctx, L, rng, H) {
+    ctx.fillStyle = '#3a8ad0'; ctx.fillRect(0, L.base - 20, BG_W, H);
+    for (const cx of [BG_W * 0.3, BG_W * 0.8]) { ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(cx - 420, L.base); ctx.lineTo(cx - 40, L.base - 250); ctx.lineTo(cx + 40, L.base - 250); ctx.lineTo(cx + 420, L.base); ctx.closePath(); ctx.fill(); ctx.fillStyle = shade(L.color, -0.15); ctx.beginPath(); ctx.moveTo(cx - 40, L.base - 250); ctx.lineTo(cx - 18, L.base - 290); ctx.lineTo(cx + 18, L.base - 290); ctx.lineTo(cx + 40, L.base - 250); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ffffff'; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(cx - 150 + k * 60, L.base - 150 + Math.sin(k) * 8, 32, 0, TAU); ctx.fill(); } }
+  },
+  // the lava field: black and rust mounds, dragon trees with umbrella crowns
+  esLavaField(ctx, L, rng, H) {
+    ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(0, H); for (let x = 0; x <= BG_W; x += 20) ctx.lineTo(x, L.base - 20 - 18 * Math.abs(Math.sin(x * 0.011)) - rng() * 8); ctx.lineTo(BG_W, H); ctx.fill();
+    for (let x = 60; x < BG_W; x += 180 + rng() * 120) { ctx.strokeStyle = '#8a8a6a'; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(x, L.base - 20); ctx.lineTo(x, L.base - 70); ctx.moveTo(x, L.base - 60); ctx.lineTo(x - 22, L.base - 92); ctx.moveTo(x, L.base - 60); ctx.lineTo(x + 22, L.base - 92); ctx.stroke(); ctx.fillStyle = '#4a8a4a'; ctx.beginPath(); ctx.ellipse(x, L.base - 98, 46, 14, 0, Math.PI, TAU); ctx.fill(); }
+  },
+  // the golden plains of La Mancha, a blue ridge far off, little mills on the crest
+  esPlains(ctx, L, rng, H) {
+    ctx.fillStyle = '#8a9ac8'; ctx.beginPath(); ctx.moveTo(0, L.base - 30); for (let x = 0; x <= BG_W; x += 40) ctx.lineTo(x, L.base - 50 - 20 * Math.sin(x * 0.006)); ctx.lineTo(BG_W, H); ctx.lineTo(0, H); ctx.fill();
+    for (let r = 0; r < 3; r++) { ctx.fillStyle = ['#e8c070', '#d8a85a', '#c8964a'][r]; ctx.fillRect(0, L.base - 30 + r * 22, BG_W, H); }
+    for (let x = 80; x < BG_W; x += 260) { ctx.fillStyle = '#f4ecdc'; ctx.fillRect(x, L.base - 52, 8, 16); ctx.strokeStyle = '#5a4a3a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 6, L.base - 58); ctx.lineTo(x + 14, L.base - 46); ctx.moveTo(x + 14, L.base - 58); ctx.lineTo(x - 6, L.base - 46); ctx.stroke(); }
+  },
+  // a ridge of white windmills with conical caps and lattice sails, olive trees on the slope
+  esMills(ctx, L, rng, H) {
+    ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(0, H); for (let x = 0; x <= BG_W; x += 30) ctx.lineTo(x, L.base - 40 - 30 * Math.sin(x * 0.004)); ctx.lineTo(BG_W, H); ctx.fill();
+    for (let x = 120; x < BG_W; x += 300) { const y = L.base - 40 - 30 * Math.sin(x * 0.004); ctx.fillStyle = '#fbf8f0'; ctx.fillRect(x - 14, y - 70, 28, 70); ctx.fillStyle = '#3a3a44'; ctx.beginPath(); ctx.moveTo(x - 17, y - 70); ctx.lineTo(x, y - 92); ctx.lineTo(x + 17, y - 70); ctx.fill(); ctx.strokeStyle = '#8a6a4a'; ctx.lineWidth = 3; for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + 0.4; ctx.beginPath(); ctx.moveTo(x, y - 76); ctx.lineTo(x + Math.cos(a) * 46, y - 76 + Math.sin(a) * 46); ctx.stroke(); } }
+    for (let x = 40; x < BG_W; x += 90 + rng() * 60) { const y = L.base - 30 - 30 * Math.sin(x * 0.004); ctx.fillStyle = '#6a8a4a'; ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU); ctx.fill(); }
+  }
+});
+// the slippery olive-oil spill (6-2): golden, with bubbles and a shine
+function oilSpill(ctx, topOpen) {
+  const g = ctx.createLinearGradient(0, 0, 0, TS); g.addColorStop(0, '#e8c040'); g.addColorStop(1, '#a8801a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, TS, TS);
+  ctx.fillStyle = 'rgba(255,250,200,0.6)'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(6 + i * 10, 12 + (i % 2) * 8, 2, 0, TAU); ctx.fill(); }
+  if (topOpen) { ctx.fillStyle = '#fff0a0'; ctx.fillRect(0, 0, TS, 3); }
+}
+Object.assign(themes, {
+  // 6-2: San Sebastián's giant pintxos bar (MINI: the world is drawn huge)
+  es_pintxos: Object.assign({}, base, {
+    name: 'Pintxos Bar', music: 'tour_es', particles: 'motes', rays: '#fff4d8',
+    sky: ['#e8c89a', '#f4dcb4', '#fff0d8'], horizonGlow: '#fff0d8', celestial: { type: 'none' }, stars: 0,
+    layers: [{ kind: 'esBarWall', color: '#f4f0e6', base: 280, f: 0.05 }, { kind: 'esCounter', color: '#5a3420', base: 360, f: 0.2 }],
+    ground: { style: 'marble', cap: '#f0ece4', capHi: '#ffffff', dirt: '#6a3a22', dirt2: '#4a2414', rock: '#7a4a2a' },
+    hard: { c1: '#e8b870', c2: '#c8904a' }, semi: { style: 'plank', c1: '#e8d8a8', c2: '#b8a070' },
+    fog: '#fff0d8', iceStyle: oilSpill, decor: ['esOliveBowl', 'esPots']
+  }),
+  // 6-4: the Canary Islands' great volcano
+  es_teide: Object.assign({}, base, {
+    name: 'Teide Updrafts', music: 'tour_es', particles: 'motes', rays: '#ffffff',
+    sky: ['#2a7ae0', '#8ac8ff', '#f0f8ff'], horizonGlow: '#ffffff', celestial: { type: 'sun', x: 0.75, y: 0.14, r: 36, color: '#fffbe8', glow: '#ffffff' }, stars: 0, cloudsDyn: true,
+    layers: [{ kind: 'esVolcano', color: '#b8784a', base: 300, f: 0.03 }, { kind: 'esLavaField', color: '#3a3238', base: 360, f: 0.15 }],
+    ground: { style: 'basalt', cap: '#4a4048', capHi: '#8a8088', dirt: '#3a3238', dirt2: '#2a2228', rock: '#8a4a32' },
+    hard: { c1: '#5a4a4a', c2: '#3a3238' }, semi: { style: 'plank', c1: '#8a8a6a', c2: '#5a5a42' },
+    fog: '#f0f8ff', liquid: 'lava', decor: []
+  }),
+  // 6-7: the windmill plain of La Mancha
+  es_mancha: Object.assign({}, base, {
+    name: 'Molinos de La Mancha', music: 'tour_es', particles: 'leaves', rays: '#fff2d8',
+    sky: ['#3a7ad8', '#a8d4ff', '#fff2d8'], horizonGlow: '#fff2d8', celestial: { type: 'sun', x: 0.25, y: 0.16, r: 36, color: '#fffbe0', glow: '#ffe0a0' }, stars: 0, cloudsDyn: true,
+    layers: [{ kind: 'esPlains', color: '#e8c070', base: 300, f: 0.04 }, { kind: 'esMills', color: '#c8905a', base: 350, f: 0.2 }],
+    ground: { style: 'grass', cap: '#c8a050', capHi: '#e8c878', dirt: '#a8603a', dirt2: '#8a4a2a', rock: '#d8c8a8' },
+    hard: { c1: '#fbf8f0', c2: '#d8d2c4' }, semi: { style: 'plank', c1: '#8a6a4a', c2: '#5a4a32' },
+    fog: '#fff2d8', decor: ['esOlive', 'esWall']
+  })
+});
+Object.assign(decor, {
+  esOliveBowl(ctx, x, y) { ctx.fillStyle = '#f4f0e6'; ctx.beginPath(); ctx.ellipse(x, y - 6, 16, 7, 0, 0, Math.PI); ctx.fill(); ctx.fillRect(x - 16, y - 8, 32, 3); ctx.fillStyle = '#6a9a3a'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.ellipse(x - 10 + k * 5, y - 10 - (k % 2) * 3, 3.5, 2.6, 0.3, 0, TAU); ctx.fill(); } },
+  esOlive(ctx, x, y) { ctx.fillStyle = '#6a5a42'; ctx.fillRect(x - 2, y - 18, 4, 18); ctx.fillStyle = '#6a8a4a'; ctx.beginPath(); ctx.arc(x, y - 24, 12, 0, TAU); ctx.fill(); ctx.fillStyle = '#5a7a40'; ctx.beginPath(); ctx.arc(x + 6, y - 20, 8, 0, TAU); ctx.fill(); },
+  esWall(ctx, x, y) { ctx.fillStyle = '#c8b090'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(x - 12 + k * 8, y - 5 - (k % 2) * 3, 5, 4, 0, 0, TAU); ctx.fill(); } },
+  // a giant toothpick lying across a gap (6-2): drawn on its SEMI row
+  esToothpick(ctx, x, y, t, th, d) { ctx.fillStyle = '#e8d8a8'; ctx.beginPath(); ctx.moveTo(x - d.w / 2 - 10, y - 4); ctx.lineTo(x + d.w / 2 + 10, y - 6); ctx.lineTo(x + d.w / 2 + 10, y + 2); ctx.lineTo(x - d.w / 2 - 10, y + 4); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#c8b080'; ctx.fillRect(x - d.w / 2, y, d.w, 2); ctx.fillStyle = '#6a9a3a'; ctx.beginPath(); ctx.ellipse(x - d.w / 2 + 4, y - 10, 9, 7, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.arc(x - d.w / 2 + 8, y - 11, 3, 0, TAU); ctx.fill(); },
+  // a slice of bread as a platform (body): crust and crumb, a topping on top
+  esBread(ctx, x, y, t, th, d) { const w = d.w, h = d.h, x0 = x - w / 2; ctx.fillStyle = '#c8803a'; rr(ctx, x0, y - h, w, h, 10); ctx.fill(); ctx.fillStyle = '#f4dca0'; rr(ctx, x0 + 5, y - h + 5, w - 10, h - 8, 7); ctx.fill(); ctx.fillStyle = 'rgba(200,150,80,0.5)'; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(x0 + 12 + (k * 23) % (w - 20), y - h + 14 + (k * 17) % Math.max(8, h - 20), 2, 0, TAU); ctx.fill(); } const tc = ['#d83a2a', '#7a8a98', '#ffc030', '#3a8a3a'][(d.seed || 0) % 4]; ctx.fillStyle = tc; ctx.beginPath(); ctx.ellipse(x, y - h + 2, w * 0.35, 7, 0, Math.PI, TAU); ctx.fill(); },
+  // a giant salt shaker (body): glass with salt inside, a steel cap with holes
+  esShaker(ctx, x, y, t, th, d) {
+    const w = d.w, h = d.h, x0 = x - w / 2, top = y - h, capH = 30;
+    Ink.around(ctx, x0 - 6, top - 6, w + 12, h + 8, c => {
+      // the glass: a cool blue tint with a darker rim so it reads against the pale bar wall
+      c.fillStyle = '#b8d8ec'; rr(c, x0, top + capH - 6, w, h - capH + 6, 14); c.fill();
+      // the salt inside, a heap with grains on top
+      c.fillStyle = '#fbfbf6'; c.beginPath(); c.moveTo(x0 + 6, y - 6); c.lineTo(x0 + 6, y - h * 0.5); c.quadraticCurveTo(x, y - h * 0.6, x0 + w - 6, y - h * 0.5); c.lineTo(x0 + w - 6, y - 6); c.closePath(); c.fill();
+      c.fillStyle = '#c8ccd4'; for (let k = 0; k < 18; k++) { c.fillRect(x0 + 10 + (k * 37) % (w - 20), y - h * 0.48 + (k * 23) % Math.max(10, h * 0.42), 2, 2); }
+      // a red and white label band
+      c.fillStyle = '#e8322a'; c.fillRect(x0, y - h * 0.36, w, 16); c.fillStyle = '#ffffff'; c.font = `bold 10px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.fillText('SAL', x, y - h * 0.36 + 12);
+      // glass shine
+      c.fillStyle = 'rgba(255,255,255,0.75)'; c.fillRect(x0 + 8, top + capH + 4, 5, h - capH - 40); c.fillRect(x0 + 16, top + capH + 4, 2, h - capH - 60);
+      c.strokeStyle = '#5a88a8'; c.lineWidth = 2; rr(c, x0, top + capH - 6, w, h - capH + 6, 14); c.stroke();
+      // the steel cap with its holes
+      const g = c.createLinearGradient(x0, 0, x0 + w, 0); g.addColorStop(0, '#8a94a4'); g.addColorStop(0.35, '#e8eef4'); g.addColorStop(1, '#7a8494');
+      c.fillStyle = g; rr(c, x0 - 3, top, w + 6, capH, 12); c.fill();
+      c.fillStyle = '#6a7484'; c.fillRect(x0 - 3, top + capH - 7, w + 6, 4);
+      c.fillStyle = '#2a3040'; for (let k = 0; k < 5; k++) { c.beginPath(); c.arc(x0 + 12 + k * (w - 24) / 4, top + 9, 2.6, 0, TAU); c.fill(); }
+    }, { pad: 6 });
+  },
+  // a basalt perch over the lava (6-4): hexagonal columns, a lighter worn top, ember cracks
+  esBasaltPerch(ctx, x, y, t, th, d) {
+    const w = d.w, h = d.h, x0 = x - w / 2;
+    Ink.around(ctx, x0 - 4, y - h - 4, w + 8, h + 10, c => {
+      const n = Math.max(2, Math.round(w / 16)), cw = w / n;
+      for (let k = 0; k < n; k++) {
+        const cx0 = x0 + k * cw, dh = (k % 2) * 3;
+        c.fillStyle = k % 2 ? '#3e3a44' : '#4a4652'; c.fillRect(cx0, y - h + dh, cw, h - dh + 6);
+        c.fillStyle = '#7a7684'; c.beginPath(); c.moveTo(cx0, y - h + dh + 3); c.lineTo(cx0 + cw * 0.25, y - h + dh); c.lineTo(cx0 + cw * 0.75, y - h + dh); c.lineTo(cx0 + cw, y - h + dh + 3); c.lineTo(cx0 + cw * 0.75, y - h + dh + 6); c.lineTo(cx0 + cw * 0.25, y - h + dh + 6); c.closePath(); c.fill();
+        c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(cx0 + cw - 2, y - h + dh + 6, 2, h);
+      }
+      const glow = 0.6 + 0.4 * Math.sin(t * 3 + x * 0.01);
+      c.strokeStyle = `rgba(255,120,40,${glow})`; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x0 + w * 0.3, y + 4); c.lineTo(x0 + w * 0.35, y - h * 0.4); c.lineTo(x0 + w * 0.45, y - h * 0.55); c.moveTo(x0 + w * 0.7, y + 4); c.lineTo(x0 + w * 0.66, y - h * 0.3); c.stroke();
+    }, { pad: 5 });
+  },
+  // the cheese wedge (body) with its mouse hole (6-2's crawlway)
+  esCheese(ctx, x, y, t, th, d) { const w = d.w, h = d.h, x0 = x - w / 2; ctx.fillStyle = '#f4c84a'; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0, y - h * 0.55); ctx.lineTo(x0 + w, y - h); ctx.lineTo(x0 + w, y); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#d8a82a'; for (let k = 0; k < 7; k++) { ctx.beginPath(); ctx.arc(x0 + 20 + (k * 37) % (w - 30), y - 20 - (k * 23) % Math.max(10, h * 0.45), 5 + (k % 3) * 3, 0, TAU); ctx.fill(); } ctx.fillStyle = '#e8b830'; ctx.fillRect(x0, y - h * 0.55, 6, h * 0.55); ctx.fillStyle = '#2a1a10'; ctx.beginPath(); ctx.arc(x0 + 18, y, 14, Math.PI, TAU); ctx.fill(); },
+  // a dragon tree on an island (6-4): a thick trunk forking into an umbrella crown
+  esDrago(ctx, x, y, t, th, d) { const h = d.h; ctx.strokeStyle = '#8a8a6a'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h * 0.55); ctx.moveTo(x, y - h * 0.5); ctx.lineTo(x - d.w * 0.35, y - h * 0.9); ctx.moveTo(x, y - h * 0.5); ctx.lineTo(x + d.w * 0.35, y - h * 0.9); ctx.moveTo(x, y - h * 0.55); ctx.lineTo(x, y - h * 0.95); ctx.stroke(); ctx.lineCap = 'butt'; ctx.fillStyle = '#4a8a4a'; ctx.beginPath(); ctx.ellipse(x, y - h, d.w / 2 + 6, 14, 0, Math.PI, TAU); ctx.fill(); ctx.fillStyle = '#3a7a40'; for (let k = 0; k < 7; k++) { ctx.beginPath(); ctx.moveTo(x - d.w / 2 + k * d.w / 6, y - h); ctx.lineTo(x - d.w / 2 + k * d.w / 6 + 4, y - h - 14); ctx.lineTo(x - d.w / 2 + k * d.w / 6 + 8, y - h); ctx.fill(); } },
+  // a fumarole vent: a crack of yellow sulphur, steam rising (the updraft is the zone above)
+  esFumarole(ctx, x, y, t, th, d) { ctx.fillStyle = '#e8d84a'; ctx.beginPath(); ctx.ellipse(x, y - 3, 22, 5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#5a4a3a'; ctx.beginPath(); ctx.ellipse(x, y - 3, 12, 3, 0, 0, TAU); ctx.fill(); for (let k = 0; k < 8; k++) { const ph = (t * 0.9 + k / 8) % 1; ctx.fillStyle = `rgba(255,255,240,${0.45 * (1 - ph)})`; ctx.beginPath(); ctx.arc(x + Math.sin(k * 2 + t * 2) * 10, y - 10 - ph * (d.h || 200), 8 + ph * 14, 0, TAU); ctx.fill(); } },
+  // a twisted stone column of the Silk Exchange (behind the arena floor)
+  esTwist(ctx, x, y, t, th, d) { const h = d.h; ctx.fillStyle = '#c8b898'; ctx.fillRect(x - 10, y - h, 20, h); ctx.strokeStyle = '#a89878'; ctx.lineWidth = 3; for (let yy = y - h + 6; yy < y; yy += 18) { ctx.beginPath(); ctx.moveTo(x - 10, yy); ctx.quadraticCurveTo(x, yy + 9, x + 10, yy + 18); ctx.stroke(); } ctx.fillStyle = '#e0d4b8'; ctx.fillRect(x - 14, y - h, 28, 8); },
+  // the falla workshop's door: a papier-mâché head over the doorway
+  esWorkshop(ctx, x, y) { ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(x, y - 70, 18, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x - 6, y - 72, 5, 0, TAU); ctx.arc(x + 6, y - 72, 5, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(x - 5, y - 71, 2, 0, TAU); ctx.arc(x + 7, y - 71, 2, 0, TAU); ctx.fill(); ctx.fillStyle = '#ff5a8a'; ctx.beginPath(); ctx.arc(x, y - 62, 4, 0, Math.PI); ctx.fill(); }
+});
+
+/* ---------------- the es_x cast (LEVEL_OVERHAUL.md §4.3): procedural fallbacks with the ink line ---------------- */
+const ES_X = 'es_x';
+const esStorkArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  const flap = m === 'rest' || m === 'carry' ? Math.sin((t || 0) * 16) * 0.3 : Math.sin((t || 0) * 9) * 0.6;
+  ctx.fillStyle = '#2a2a34'; for (const s of [-1, 1]) { ctx.save(); ctx.rotate(s * 0.2 - flap * s); ctx.beginPath(); ctx.ellipse(-6, s * -10, 15, 6, s * 0.3, 0, TAU); ctx.fill(); ctx.restore(); }
+  ctx.fillStyle = '#fbfbf6'; ctx.beginPath(); ctx.ellipse(0, 0, 14, 8, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#fbfbf6'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(10, -3); ctx.quadraticCurveTo(16, -8, 16, -14); ctx.stroke();
+  ctx.fillStyle = '#fbfbf6'; ctx.beginPath(); ctx.arc(17, -15, 5, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#e8502a'; ctx.beginPath(); ctx.moveTo(21, -16); ctx.lineTo(33, m === 'swoop' ? -9 : -14); ctx.lineTo(21, -13); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#e8603a'; ctx.lineWidth = 2; for (const s of [0, 4]) { ctx.beginPath(); ctx.moveTo(-6 + s, 6); ctx.lineTo(-8 + s, m === 'tell' || m === 'carry' ? 20 : 13); ctx.stroke(); }
+  if (m !== 'ko') K.eyes(ctx, 18, -16, 1, 0, 1.8, m === 'swoop' || m === 'tell');
+  ctx.restore();
+};
+const pulpoArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  ctx.fillStyle = '#c8945a'; ctx.beginPath(); ctx.ellipse(0, -3, 16, 4, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#a8743a'; ctx.fillRect(-16, -3, 32, 3);
+  ctx.strokeStyle = '#e86a7a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; for (let k = 0; k < 5; k++) { const a = (k - 2) * 0.5; ctx.beginPath(); ctx.moveTo(Math.sin(a) * 6, -8); ctx.quadraticCurveTo(Math.sin(a) * 14, -4 + Math.sin((t || 0) * 4 + k) * 2, Math.sin(a) * 18, -6); ctx.stroke(); } ctx.lineCap = 'butt';
+  const puff = m === 'tell' ? 1.15 : 1;
+  ctx.fillStyle = '#e86a7a'; ctx.beginPath(); ctx.ellipse(0, -16, 11 * puff, 10 * puff, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#b83a3a'; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(-6 + (k * 5) % 12, -21 + (k * 3) % 8, 1.2, 0, TAU); ctx.fill(); }
+  if (m !== 'ko' && m !== 'flat') K.eyes(ctx, 2, -17, 1, 3.4, 2.3, m === 'tell');
+  ctx.restore();
+};
+const oliveArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y - 9); if (m === 'roll' || m === 'curl') ctx.rotate((e.t || 0) * 12 * (e.dir || 1));
+  ctx.fillStyle = '#6a9a3a'; ctx.beginPath(); ctx.ellipse(0, 0, 9, 10, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.ellipse(0, -8, 3.5, 2.5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(200,240,140,0.6)'; ctx.beginPath(); ctx.ellipse(-3, -3, 2.5, 4, -0.3, 0, TAU); ctx.fill();
+  if (m !== 'roll' && m !== 'curl' && m !== 'ko' && m !== 'flat') K.eyes(ctx, (e.dir || 1) * 2, 0, e.dir || 1, 2.8, 2, false);
+  ctx.restore();
+};
+const gambaArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  ctx.fillStyle = '#ff5a4a'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-11, 4); ctx.lineTo(-1, 3); ctx.fill();
+  for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? '#ff8a7a' : '#ff6a5a'; ctx.beginPath(); ctx.ellipse(-2 + k * 2, -4 - k * 4, 6 - k * 0.6, 3.5, -0.4 - k * 0.2, 0, TAU); ctx.fill(); }
+  ctx.strokeStyle = '#c84a3a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(6, -20); ctx.quadraticCurveTo(14, -28, 18, -22); ctx.moveTo(6, -20); ctx.quadraticCurveTo(12, -32, 20, -30); ctx.stroke();
+  if (m !== 'ko' && m !== 'flat') K.eyes(ctx, 7, -19, 1, 2, 1.6, false);
+  ctx.restore();
+};
+const lizardArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  ctx.fillStyle = '#4a4a44'; ctx.beginPath(); ctx.ellipse(-2, -6, 13, 5, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#4a4a44'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-14, -5); ctx.quadraticCurveTo(-24, -4 + Math.sin((t || 0) * 6) * 2, -30, -2); ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.ellipse(12, -8, 6, 4, 0.1, 0, TAU); ctx.fill(); ctx.fillStyle = '#4aa8d8'; ctx.beginPath(); ctx.ellipse(11, -6, 3, 2, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#4a4a44'; for (const lx of [-8, 4]) ctx.fillRect(lx, -3, 3, 3);
+  ctx.fillStyle = m === 'tell' ? '#ffd23a' : '#fbfbf2'; ctx.beginPath(); ctx.arc(14, -10, 1.8, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+const kestrelArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  const flap = Math.sin((t || 0) * 14) * 0.7;
+  ctx.fillStyle = '#a85a2a'; for (const s of [-1, 1]) { ctx.save(); ctx.rotate(s * flap); ctx.beginPath(); ctx.ellipse(-2, s * -9, 11, 4, s * 0.4, 0, TAU); ctx.fill(); ctx.restore(); }
+  ctx.fillStyle = '#c87a3a'; ctx.beginPath(); ctx.ellipse(0, 0, 10, 6, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#8a8a9a'; ctx.beginPath(); ctx.arc(9, -3, 5, 0, TAU); ctx.fill(); ctx.fillStyle = '#e8b81a'; ctx.beginPath(); ctx.moveTo(13, -3); ctx.lineTo(17, -1); ctx.lineTo(13, 0); ctx.fill();
+  ctx.fillStyle = '#5a3a1a'; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-17, -2); ctx.lineTo(-17, 4); ctx.fill();
+  if (m !== 'ko') K.eyes(ctx, 10, -4, 1, 0, 1.6, m === 'swoop');
+  ctx.restore();
+};
+const lynxArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  const low = m === 'crouch' || m === 'tell', by = low ? -8 : -13;
+  ctx.fillStyle = '#d8a868'; ctx.beginPath(); ctx.ellipse(-2, by, 15, low ? 6 : 8, 0, 0, TAU); ctx.fill();
+  if (!low) for (const lx of [-11, -5, 5, 10]) ctx.fillRect(lx - 2, by + 4, 4, -by - 4);
+  ctx.fillStyle = '#5a3a1a'; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(-10 + k * 4, by - 2 + (k % 2) * 3, 1.5, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#d8a868'; ctx.beginPath(); ctx.arc(13, by - 6, 7, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(8, by - 10); ctx.lineTo(9, by - 19); ctx.lineTo(13, by - 12); ctx.fill(); ctx.beginPath(); ctx.moveTo(14, by - 12); ctx.lineTo(18, by - 19); ctx.lineTo(18, by - 9); ctx.fill();
+  ctx.fillStyle = '#1a1020'; ctx.fillRect(8.5, by - 22, 1.2, 4); ctx.fillRect(17.5, by - 22, 1.2, 4);
+  ctx.fillStyle = '#f4e8d0'; ctx.beginPath(); ctx.moveTo(7, by - 4); ctx.lineTo(4, by + 2); ctx.lineTo(10, by - 1); ctx.fill(); ctx.beginPath(); ctx.moveTo(19, by - 4); ctx.lineTo(22, by + 2); ctx.lineTo(16, by - 1); ctx.fill();
+  ctx.fillStyle = m === 'tell' ? '#ffe84a' : '#c8d84a'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(13 + s * 2.8, by - 7, 1.5, 2, 0, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+const sheepArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  ctx.fillStyle = '#2a2a2a'; for (const lx of [-9, -3, 4, 9]) ctx.fillRect(lx - 1.5, -8, 3, 8);
+  ctx.fillStyle = '#f4f0e6'; for (const [dx, dy, r] of [[-9, -14, 7], [-2, -17, 8], [6, -14, 7], [-5, -10, 7], [3, -10, 7]]) { ctx.beginPath(); ctx.arc(dx, dy, r, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#2a2a2a'; ctx.beginPath(); ctx.ellipse(13, -15, 5, 6, 0.2, 0, TAU); ctx.fill();
+  if (m !== 'ko' && m !== 'flat') K.eyes(ctx, 14, -16, 1, 2, 1.4, false);
+  ctx.restore();
+};
+Object.assign(enemies, {
+  // the headline power: the white stork grabs Brady and sets him down a few tiles back (never over a pit)
+  esStork: { cls: TourFlyer.make({ w: 34, h: 24, speed: 0.8, behavior: 'grabber', carry: 4, tell: 0.5, atlas: ES_X, art: esStorkArt, burst: '#fbfbf6' }), place: 'fly' },
+  esPulpo: { cls: TourEnemy.make({ w: 28, h: 24, speed: 0.4, behavior: 'inkBlot', range: 4, atlas: ES_X, art: pulpoArt, burst: '#e86a7a' }), place: 'walk' },
+  esOlive: { cls: TourEnemy.make({ w: 18, h: 18, speed: 0.9, behavior: 'roll', range: 8, rollSpeed: 6, atlas: ES_X, art: oliveArt, burst: '#6a9a3a' }), place: 'walk' },
+  esGamba: { cls: TourEnemy.make({ w: 20, h: 20, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, atlas: ES_X, art: gambaArt, burst: '#ff6a5a' }), place: 'walk' },
+  esLizard: { cls: TourEnemy.make({ w: 26, h: 14, speed: 0.6, behavior: 'pouncer', range: 6, tell: 1.0, atlas: ES_X, art: lizardArt, burst: '#4a4a44' }), place: 'walk' },
+  esKestrel: { cls: TourFlyer.make({ w: 28, h: 18, speed: 1.2, range: 4, swoop: true, atlas: ES_X, art: kestrelArt, burst: '#c87a3a' }), place: 'fly' },
+  esLynx: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.8, behavior: 'pouncer', range: 6, tell: 1.0, atlas: ES_X, art: lynxArt, burst: '#d8a868' }), place: 'walk' },
+  esSheep: { cls: TourEnemy.make({ w: 28, h: 24, speed: 0.6, behavior: 'walk', atlas: ES_X, art: sheepArt, burst: '#f4f0e6' }), place: 'walk' }
+});
+for (const [m, list] of [['land', ['land', 'stun', 'walk']], ['tell', ['tell', 'crouch', 'walk']], ['squirt', ['squirt', 'tell', 'idle', 'walk']], ['eat', ['eat', 'walk']]]) if (!TourSprite.FALLBACK.walk[m]) TourSprite.FALLBACK.walk[m] = list;
+for (const [m, list] of [['tell', ['swoop', 'fly']], ['carry', ['carry', 'swoop', 'fly']], ['drop', ['fly']], ['rest', ['rest', 'fly']], ['return', ['fly']], ['patrol', ['fly']]]) if (!TourSprite.FALLBACK.fly[m]) TourSprite.FALLBACK.fly[m] = list;
+
+/* ---------------- level objects ---------------- */
+// 6-7: the windmills' sails turn while the wind blows and stop dead when it drops (a toggle group, kind 'wind')
+class EsWindmill extends Ent {
+  constructor(g, s) { super(g, s, 10, 10); this.hub = s.hub; this.gi = s.g || 0; this.k = 1; this.always = true; this.friendly = true; }
+  update(dt) {
+    this.t += dt; const on = !this.g.toggleBit(this.gi); this.k = approach(this.k, on ? 1 : 0, dt * 1.5);
+    for (const p of this.g.entities) if (p.isPlatform && p.orbit && p.s && p.s.hub === this.hub) p.t -= dt * (1 - this.k);
+  }
+  draw(ctx) {}
+}
+// 6-7: a wind-held board (a sail cloth stretched in the gust): solid while the wind blows, it flaps down when it stops
+class EsWindBoard extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 3) * TS, 12); this.x = s.x - TS / 2; this.y = s.y - TS; this.gi = s.g || 0; this.calm = !!s.calm; this.k = this.calm ? 0 : 1; this.back = true; }
+  update(dt) { this.t += dt; const wind = !this.g.toggleBit(this.gi); this.k = approach(this.k, wind !== this.calm ? 1 : 0, dt * 3); }
+  draw(ctx) {
+    const x = this.x, y = this.y + 4, w = this.w, k = this.k;
+    if (k < 0.05) { ctx.save(); ctx.globalAlpha = 0.3; ctx.strokeStyle = '#fff4d8'; ctx.setLineDash([3, 4]); ctx.strokeRect(x + 2, y, w - 4, 8); ctx.restore(); return; }
+    ctx.save(); ctx.globalAlpha = 0.4 + 0.6 * k;
+    ctx.fillStyle = '#f4ecdc'; ctx.beginPath(); ctx.moveTo(x, y); for (let q = 0; q <= w; q += 8) ctx.lineTo(x + q, y - 3 * k * Math.sin(this.t * 9 + q * 0.2)); ctx.lineTo(x + w, y + 10); ctx.lineTo(x, y + 10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#8a6a4a'; ctx.lineWidth = 2; ctx.strokeRect(x, y - 2, w, 12); for (let q = 1; q < w / 32; q++) { ctx.beginPath(); ctx.moveTo(x + q * 32, y - 2); ctx.lineTo(x + q * 32, y + 10); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+Object.assign(entities, { esWindmill: EsWindmill, esWindBoard: EsWindBoard });
+
+/* ---------------- country looks for library objects ---------------- */
+const esSkins = {
+  // the old flour mill's door (6-1's secret), half hidden behind tomato crates
+  esMillDoor(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#d8c8a8'; rr(ctx, x - 20, y - 60, 40, 60, 6); ctx.fill(); ctx.fillStyle = '#6a4a2a'; rr(ctx, x - 15, y - 52, 30, 52, 4); ctx.fill(); ctx.strokeStyle = '#4a3020'; ctx.lineWidth = 2; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(x - 15 + k * 10, y - 52); ctx.lineTo(x - 15 + k * 10, y); ctx.stroke(); } ctx.fillStyle = '#f4f0e6'; ctx.font = `bold 8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('MOLINO', x, y - 62); },
+  // a door in a tiled wall (rooms back to the street)
+  esTileDoor(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#f4f0e6'; rr(ctx, x - 20, y - 58, 40, 58, 18); ctx.fill(); ctx.fillStyle = '#2a5a9a'; rr(ctx, x - 15, y - 52, 30, 52, 14); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(x + 8, y - 26, 2.5, 0, TAU); ctx.fill(); },
+  // the cheese wedge's mouse-hole door and the way back out of the cheese cellar
+  esMouseHole(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#f4c84a'; rr(ctx, x - 20, y - 48, 40, 48, 18); ctx.fill(); ctx.fillStyle = '#2a1a10'; ctx.beginPath(); ctx.arc(x, y, 15, Math.PI, TAU); ctx.fill(); },
+  // the garden arches of the Umbracle with a gap of hanging plants (6-3's secret, a curtain)
+  esArchCurtain(ctx, e, t) {
+    const x0 = e.x, y0 = e.y, w = e.w, h = e.h, part = e.part || 0;
+    ctx.save(); ctx.globalAlpha = 1 - part * 0.6;
+    ctx.strokeStyle = 'rgba(240,248,255,0.9)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x0, y0 + h); ctx.lineTo(x0, y0 + 10); ctx.quadraticCurveTo(x0 + w / 2, y0 - 20, x0 + w, y0 + 10); ctx.lineTo(x0 + w, y0 + h); ctx.stroke();
+    for (let k = 0; k < 8; k++) { const xx = x0 + 6 + k * (w - 12) / 7, sw = Math.sin(t * 1.3 + k) * 2 * (1 + part * 3) * (k < 4 ? -1 : 1); ctx.strokeStyle = k % 2 ? '#2f8a54' : '#45a86a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xx, y0 + 4); ctx.quadraticCurveTo(xx + sw * 0.5, y0 + h * 0.5, xx + sw, y0 + h - 4); ctx.stroke(); ctx.fillStyle = '#7ad890'; for (let q = 0; q < 6; q++) { ctx.beginPath(); ctx.ellipse(xx + sw * q / 6 + (q % 2 ? 3 : -3), y0 + 10 + q * (h - 14) / 6, 3.5, 1.8, q % 2 ? 0.6 : -0.6, 0, TAU); ctx.fill(); } }
+    ctx.restore();
+  },
+  // a lava tube's mouth under the last landing pad (6-4)
+  esLavaTube(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#3a3238'; rr(ctx, x - 22, y - 52, 44, 52, 20); ctx.fill(); ctx.fillStyle = '#120c10'; rr(ctx, x - 15, y - 44, 30, 44, 15); ctx.fill(); ctx.fillStyle = `rgba(255,${120 + Math.sin(t * 3) * 40},40,0.5)`; ctx.fillRect(x - 12, y - 6, 24, 4); },
+  // a windmill's door (6-7: inside the last mill is the flour loft)
+  esMillHouse(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#fbf8f0'; rr(ctx, x - 20, y - 58, 40, 58, 4); ctx.fill(); ctx.fillStyle = '#5a4a3a'; rr(ctx, x - 13, y - 48, 26, 48, 12); ctx.fill(); ctx.fillStyle = '#3a3a44'; ctx.fillRect(x - 22, y - 62, 44, 6); },
+  // the falla workshop's door (6-5)
+  esWorkshopDoor(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#ff8aa8'; rr(ctx, x - 20, y - 58, 40, 58, 6); ctx.fill(); ctx.fillStyle = '#3a2a3a'; rr(ctx, x - 15, y - 52, 30, 52, 4); ctx.fill(); ctx.fillStyle = '#ffd23a'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(x - 16 + k * 8, y - 60, 3, 0, TAU); ctx.fill(); } },
+  // the Silk Exchange's great door into the hall
+  esHallDoor(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#c8b898'; rr(ctx, x - 22, y - 64, 44, 64, 20); ctx.fill(); ctx.fillStyle = '#5a3a22'; rr(ctx, x - 16, y - 56, 32, 56, 16); ctx.fill(); ctx.strokeStyle = '#c8a03a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 56); ctx.lineTo(x, y); ctx.stroke(); },
+  // a glass porthole door in the aquarium (6-6)
+  esPorthole(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#5a6a7a'; ctx.beginPath(); ctx.arc(x, y - 26, 24, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(160,230,255,0.6)'; ctx.beginPath(); ctx.arc(x, y - 26, 17, 0, TAU); ctx.fill(); ctx.fillStyle = '#c8d0d8'; for (let k = 0; k < 8; k++) { ctx.beginPath(); ctx.arc(x + Math.cos(k * Math.PI / 4) * 21, y - 26 + Math.sin(k * Math.PI / 4) * 21, 2, 0, TAU); ctx.fill(); } },
+  // the wind switch (6-7): a big wooden brake lever on a post with a weathervane
+  esWindLever(ctx, e, t) {
+    const x = e.cx, y = e.y + e.h, on = !(e.g && e.g.toggleBit && e.g.toggleBit(e.gi));
+    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x - 3, y - 54, 6, 54); ctx.fillRect(x - 12, y - 6, 24, 6);
+    ctx.save(); ctx.translate(x, y - 58); ctx.rotate(on ? Math.sin(t * 6) * 0.3 : 0); ctx.fillStyle = '#c8a03a'; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(10, -4); ctx.lineTo(10, 4); ctx.closePath(); ctx.fill(); ctx.fillRect(10, -7, 4, 14); ctx.restore();
+    ctx.save(); ctx.translate(x, y - 24); ctx.rotate(on ? -0.6 : 0.6); ctx.fillStyle = '#8a6a4a'; ctx.fillRect(-2, -18, 4, 18); ctx.fillStyle = on ? '#7ae07a' : '#e85a3a'; ctx.beginPath(); ctx.arc(0, -20, 5, 0, TAU); ctx.fill(); ctx.restore();
+    TourObj.label(ctx, on ? 'WIND ON' : 'WIND OFF', x, y - 76, 10, on ? '#c8ffc8' : '#ffc8c8');
+  },
+  // a windmill's sail arm (the wheel's seats): a lattice blade
+  esSailSeat(ctx, p, t) { ctx.fillStyle = '#c8b090'; ctx.fillRect(p.x, p.y, p.w, 9); ctx.strokeStyle = '#8a6a4a'; ctx.lineWidth = 1.5; ctx.strokeRect(p.x, p.y, p.w, 9); for (let q = 1; q < 4; q++) { ctx.beginPath(); ctx.moveTo(p.x + q * p.w / 4, p.y); ctx.lineTo(p.x + q * p.w / 4, p.y + 9); ctx.stroke(); } },
+  // the windmill's tower and cap behind the turning sails
+  esSails(ctx, e, t) {
+    const cx = e.cxp, cy = e.cyp, plats = e.g.entities.filter(q => q.isPlatform && q.orbit && q.s.hub === e.s.hub);
+    if (plats[0]) { e.cxp = plats[0].hx + plats[0].w / 2; e.cyp = plats[0].hy + 4; }
+    ctx.fillStyle = '#fbf8f0'; ctx.beginPath(); ctx.moveTo(cx - 34, cy + e.r + 2 * TS); ctx.lineTo(cx - 24, cy + 10); ctx.lineTo(cx + 24, cy + 10); ctx.lineTo(cx + 34, cy + e.r + 2 * TS); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#3a3a44'; ctx.beginPath(); ctx.moveTo(cx - 28, cy + 12); ctx.lineTo(cx, cy - 22); ctx.lineTo(cx + 28, cy + 12); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 5; for (const p of plats) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p.x + p.w / 2, p.y + 4); ctx.stroke(); }
+    ctx.fillStyle = '#c8902a'; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, TAU); ctx.fill();
+  }
+};
+// es_x enemies in the tomato-crate bonus blocks? no: the boss crates stay as they are
+PlatformArt.esSailsSeat = esSkins.esSailSeat;
+
+/* ---------------- set pieces for the overhaul levels ---------------- */
+Object.assign(P, {
+  /* 6-1 HOLD: the three plazas of Buñol */
+  // a plaza that shuts and plays three waves; { k: 1 the truck lobs tomatoes, 2 a floor of pulp and loose crates,
+  // 3 balconies overhead and storks in the waves }, { gold } a postcard on top of the truck
+  plaza(st, o) {
+    const B = st.B, x = st.x, w = 26, k = o.k || 1, gy = st.gy;
+    const waves = o.waves || ({ 1: [['esTomato', 'esTomato', 'esOrange'], ['esTomato', 'esOrange', 'esTomato', 'esHorchata'], ['esTomato', 'esTomato', 'esOrange', 'esHorchata', 'esTomato']],
+      2: [['esOrange', 'esTomato', 'esOrange'], ['esHorchata', 'esTomato', 'esOrange', 'esTomato'], ['esOrange', 'esOrange', 'esTomato', 'esHorchata', 'esTomato']],
+      3: [['esTomato', 'esStork', 'esTomato'], ['esOrange', 'esTomato', 'esStork', 'esHorchata'], ['esStork', 'esTomato', 'esOrange', 'esStork', 'esTomato']] })[k];
+    const end = Tour.pieces.hold(st, { w, waves, dur: o.dur || 18 });
+    if (k === 1) { st.spawn('esTruck', x + 4, gy - 1, { period: 2.2 }); if (o.gold) st.gold(x + 5, gy - 4, o.gold === true ? 'risky' : o.gold); }
+    if (k === 2) { for (let q = 4; q < w - 4; q++) B.set(x + q, gy, T.ICE); st.spawn('crate', x + 8, gy - 1, {}); st.spawn('crate', x + 17, gy - 1, {}); }
+    if (k === 3) {
+      for (const [bx, by] of [[x + 3, gy - 4], [x + 11, gy - 6], [x + 19, gy - 4]]) { for (let q = 0; q < 4; q++) B.set(bx + q, by, T.SEMI); B.prop('esBalcony', bx, by, 4, 0.01, 'none', {}); }
+      st.block(x + 13, gy - 10, 'star');
+      st.spawn('esTruck', x + w - 6, gy - 1, { period: 1.8 });
+      if (o.gold) st.gold(x + w - 5, gy - 4, o.gold === true ? 'risky' : o.gold);
+    }
+    st.decor('esPots', x + 1); st.decor('esPots', x + w - 2);
+    return end;
+  },
+  // the old flour mill's door behind two tomato crates: push them aside (they're heavy) and go in
+  millDoor(st, o) {
+    const B = st.B, x = st.x; st.floor(x, x + 10);
+    const s = B.spawn('portal', x + 6, st.gy - 1, { kind: 'door', look: 'esMillDoor', targetRef: o.to || null });
+    st.spawn('crate', x + 6, st.gy - 1, {}); const c2 = st.spawn('crate', x + 6, st.gy - 1, {}); c2.x += 30;
+    st.decor('esCrates', x + 2);
+    if (o.back) B.anchor(o.back, x + 9, st.gy - 1);
+    return x + 11;
+  },
+
+  /* 6-2 MINI: the giant pintxos bar */
+  // toothpicks laid across gaps in the counter (one-way bridges), an olive skewered on each
+  toothpicks(st, o) {
+    let x = st.x; const B = st.B, n = o.n || 2; st.floor(x, x + 1); x += 2;
+    for (let k = 0; k < n; k++) { const w = o.w || 5; st.pit(x, x + w - 1); for (let q = 0; q < w; q++) { B.set(x + q, st.gy, T.SEMI); B.setHide(x + q, st.gy, 1); } B.prop('esToothpick', x, st.gy, w, 0.01, 'none', {}); st.coins(x, x + w - 1, st.gy - 2); x += w; st.floor(x, x + 1); x += 2; }
+    if (o.enemy) st.enemy(o.enemy, x - 1, st.gy);
+    return x;
+  },
+  // slices of bread on the counter, each higher than the last (solid bodies with a topping)
+  breads(st, o) {
+    const B = st.B, x = st.x, n = o.n || 3; st.floor(x, x + n * 5 + 2);
+    for (let k = 0; k < n; k++) { const h = 2 + (k % 2) + (k === n - 1 ? 1 : 0); B.prop('esBread', x + 1 + k * 5, st.gy - h, 4, h, 'body', { seed: k + (o.seed || 0) }); st.coins(x + 1 + k * 5, x + 4 + k * 5, st.gy - h - 2); }
+    if (o.enemy) st.enemy(o.enemy, x + n * 5 + 1, st.gy);
+    return x + n * 5 + 3;
+  },
+  // a puddle of olive oil (slippery) with olives rolling down it
+  oilSpill(st, o) { const x = st.x, n = o.n || 10, B = st.B; st.floor(x, x + n + 1); for (let q = 1; q <= n; q++) B.set(x + q, st.gy, T.ICE); st.enemy('esOlive', x + n, st.gy); if (o.olives > 1) st.enemy('esOlive', x + n - 3, st.gy); st.coins(x + 2, x + n - 1, st.gy - 2); return x + n + 2; },
+  // the salt shaker: a tall glass body to climb by its cap and two spoons leaning on it; P1 on the cap
+  shaker(st, o) {
+    const B = st.B, x = st.x; st.floor(x, x + 14);
+    B.prop('esShaker', x + 6, st.gy - 9, 4, 9, 'body', {});
+    for (const [sx, sy, w] of [[x + 1, st.gy - 3, 3], [x + 3, st.gy - 6, 3], [x + 10, st.gy - 4, 3]]) { for (let q = 0; q < w; q++) B.set(sx + q, sy, T.SEMI); }
+    B.prop('esToothpick', x + 1, st.gy - 3, 3, 0.01, 'none', {}); B.prop('esToothpick', x + 3, st.gy - 6, 3, 0.01, 'none', {}); B.prop('esToothpick', x + 10, st.gy - 4, 3, 0.01, 'none', {});
+    st.coins(x + 6, x + 9, st.gy - 11);
+    if (o.gold) st.gold(x + 8, st.gy - 12, o.gold === true ? 'must' : o.gold);
+    return x + 15;
+  },
+  // the cheese wedge: a mouse hole at its foot is a crawlway (Crawl Pads) to a little pocket with the door to the cellar
+  cheese(st, o) {
+    const B = st.B, x = st.x, w = 12, h = 4; st.floor(x, x + w + 2);
+    B.prop('esCheese', x + 1, st.gy - h, w, h, 'body', {});
+    // the tunnel: a lintel roof one row above the floor, from the mouth to a pocket in the middle
+    for (let q = x + 1; q <= x + 7; q++) { B.set(q, st.gy - 1, T.EMPTY); B.setHide(q, st.gy - 1, 0); B.set(q, st.gy - 2, T.LINTEL); B.setHide(q, st.gy - 2, 1); }
+    for (let q = x + 8; q <= x + 10; q++) for (let y = st.gy - 3; y < st.gy; y++) { B.set(q, y, T.EMPTY); B.setHide(q, y, 0); }
+    const s = B.spawn('portal', x + 9, st.gy - 1, { kind: 'door', look: 'esMouseHole', targetRef: o.to || null });
+    if (o.back) B.anchor(o.back, x + 9, st.gy - 1);
+    st.coins(x + 2, x + 6, st.gy - 1);
+    return x + w + 3;
+  },
+
+  /* 6-4 GLIDE: Teide */
+  // a fumarole: steam rising from a sulphur crack lifts Brady (and his glider) high
+  fumarole(st, o) {
+    const B = st.B, x = st.x, h = o.h || 12, w = 2; st.floor(x, x + w + 3);
+    B.zone(x + 2, st.gy - h, w, h, 0, -(o.force || 95) * TS, 6.5 * TS, 'updraft', { pull: 3 });
+    B.prop('esFumarole', x + 2, st.gy - 1, w, 1, 'none', { h: h * TS });
+    st.coins(x + 2, x + 3, st.gy - h + 1);
+    return x + w + 4;
+  },
+  // a dragon tree on its island: the umbrella crown is a one-way platform up high
+  drago(st, o) {
+    const B = st.B, x = st.x, w = 8, h = o.h || 6; st.floor(x, x + w + 1);
+    for (let q = 1; q < w; q++) B.set(x + q, st.gy - h, T.SEMI);
+    B.prop('esDrago', x + 1, st.gy - h, w - 1, h, 'none', {});
+    st.coins(x + 2, x + w - 2, st.gy - h - 2);
+    if (o.enemy) st.enemy(o.enemy, x + w - 1, st.gy);
+    if (o.gold) st.gold(x + 4, st.gy - h - 3, o.gold === true ? 'high' : o.gold);
+    return x + w + 2;
+  },
+  // a chain of coin rings down a long drop: little basalt perches every few tiles (a hop each without the plane;
+  // with it, one long glide through every ring); P1 in the middle ring
+  ringChain(st, o) {
+    const B = st.B, x = st.x, n = o.n || 4, span = n * 6 + 2, gy0 = st.gy;
+    st.floor(x, x + 2); st.pit(x + 3, x + span);
+    for (let k = 0; k < n; k++) {
+      const px = x + 7 + k * 6, py = gy0 + k + 1;
+      if (k < n - 1) B.prop('esBasaltPerch', px, py, 2, 1, 'body', {});
+      // the coins: one clean arc per hop, from the last perch (or the ledge) over to the next one, so the chain reads
+      // as a path down the slope (the glide line with the plane)
+      const ax0 = k === 0 ? x + 3 : x + 1 + k * 6 + 2, ax1 = x + 6 + k * 6, base = k === 0 ? gy0 - 2 : gy0 + k - 1;
+      B.picksArc(ax0, ax1, base, 2);
+      const cx = x + 5 + k * 6, cy = base - 2;
+      if (o.gold && k === Math.floor(n / 2)) st.gold(cx, cy - 1, o.gold === true ? 'must' : o.gold);
+    }
+    st.gy = Math.min(st.gyMax || gy0 + n, gy0 + n);
+    st.floor(x + span + 1, x + span + 4);
+    return x + span + 5;
+  },
+  // the lava field far below (decor and danger): the bottom rows glow
+  lavaBelow(st, o) { const B = st.B, x = st.x, w = o.w || 30; for (let q = x; q < x + w; q++) for (let y = B.H - 2; y < B.H; y++) if (B.get(q, y) === T.EMPTY) B.set(q, y, T.LAVA); return x; },
+
+  /* 6-5 LAIR: a Fallas street */
+  // papier-mâché fruit ledges (giant ninots' fruit, solid) along the street
+  ninots(st, o) {
+    const B = st.B, x = st.x, n = o.n || 3; st.floor(x, x + n * 5 + 2);
+    for (let k = 0; k < n; k++) { const h = 2 + k; B.prop('esNinot', x + 1 + k * 5, st.gy - h, 3, h, 'body', { seed: k }); st.coins(x + 1 + k * 5, x + 3 + k * 5, st.gy - h - 2); }
+    if (o.gold) st.gold(x + 1 + (n - 1) * 5 + 1, st.gy - n - 4, o.gold === true ? 'must' : o.gold);
+    return x + n * 5 + 3;
+  },
+  // a rocket launcher: stand on it and it fires you up to a balcony with a postcard
+  rocketPad(st, o) {
+    const B = st.B, x = st.x; st.floor(x, x + 10);
+    st.spawn('spring', x + 2, st.gy - 1, { skin: 'esRocket' }); B.springs.push([x + 2, st.gy - 1]);
+    const ly = Math.max(2, st.gy - 9); for (let q = x + 4; q <= x + 9; q++) B.set(q, ly, T.SEMI);
+    st.coins(x + 5, x + 8, ly - 2);
+    if (o.gold) st.gold(x + 7, ly - 3, o.gold === true ? 'risky' : o.gold);
+    return x + 11;
+  },
+  // a string of firecrackers along the street: it pops in a wave (cross between pops)
+  ninotDecor(st, o) { st.B.prop('esNinot', st.x, st.gy - 2, 2, 2, 'none', { seed: st.x }); return st.x; },
+  crackerRow(st, o) { const x = st.x, n = o.n || 6; st.floor(x, x + n + 3); st.spawn('esCrackers', x + 2, st.gy - 1, { len: n, phase: o.phase || 0 }); st.coins(x + 2, x + n + 1, st.gy - 4); return x + n + 4; },
+
+  /* 6-7 SWITCH: the windmills of La Mancha */
+  // the wind switch: a brake lever on a post; it flips toggle group g (0 = the wind blows)
+  windSwitch(st, o) {
+    const B = st.B, x = st.x, g = o.g || 0; st.floor(x, x + 3);
+    B.toggle(g, [], [], { kind: 'wind' }); B.switchAt(g, x + 1, st.gy - 1); B.switchAt(g, x + 2, st.gy - 1);
+    B.spawn('toggleSwitch', x + 1, st.gy - 1, { g, kind: 'wind', look: 'esWindLever' });
+    return x + 4;
+  },
+  // a windmill: its four sails are platforms turning on the wind (they stop when it drops)
+  windmill(st, o) {
+    const B = st.B, x = st.x, g = o.g || 0, r = o.r || 4;
+    const end = Tour.pieces.wheel(st, { r, arms: 4, speed: o.speed || 0.5, skin: 'esSails' });
+    const hub = 'wheel' + x; B.spawn('esWindmill', x + 3 + r, st.gy - r - 2, { hub, g });
+    if (o.gold) st.gold(x + 3 + r, st.gy - 2 * r - 4, o.gold === true ? 'high' : o.gold);
+    return end;
+  },
+  // a gap bridged by sail-cloth boards that only stay up in the wind (A rects of toggle group g)
+  windBoards(st, o) {
+    const B = st.B, x = st.x, g = o.g || 0, n = o.n || 7, y = st.gy - (o.y || 0); st.floor(x, x + 1);
+    st.pit(x + 2, x + 1 + n);
+    const r = [x + 2, y, x + 1 + n, y, T.SEMI];
+    B.toggle(g, [r], [], { kind: 'wind' }); for (let q = x + 2; q <= x + 1 + n; q++) { B.set(q, y, T.SEMI); B.setHide(q, y, 1); }
+    B.spawn('esWindBoard', x + 2, y, { w: n, g });
+    st.coins(x + 3, x + n, y - 2);
+    st.floor(x + 2 + n, x + 4 + n);
+    return x + 5 + n;
+  },
+  // steps that only stand still when the wind is off: loose sacks that blow away in the gust (B rects)
+  calmSteps(st, o) {
+    const B = st.B, x = st.x, g = o.g || 0, n = o.n || 3; st.floor(x, x + n * 3 + 2);
+    for (let k = 0; k < n; k++) { const sx = x + 1 + k * 3, sy = st.gy - 3 - k * 2; const r = [sx, sy, sx + 1, sy, T.SEMI]; B.toggle(g, [], [r], { kind: 'wind' }); B.set(sx, sy, T.EMPTY); B.set(sx + 1, sy, T.EMPTY); B.spawn('esWindBoard', sx, sy, { w: 2, g, calm: true }); }
+    const top = st.gy - 3 - (n - 1) * 2 - 1; B.fill(x + n * 3, top, x + n * 3 + 2, st.gy - 1, T.HARD);
+    st.coins(x + n * 3, x + n * 3 + 2, top - 2);
+    if (o.gold) st.gold(x + n * 3 + 1, top - 3, o.gold === true ? 'risky' : o.gold);
+    return x + n * 3 + 3;
+  }
+});
+
 /* ---------------- music: pasodoble brass, flamenco guitar and palmas ---------------- */
 const tracks = {
   tour_es: {
@@ -754,7 +1239,7 @@ const tracks = {
 
 /* ---------------- the five levels ---------------- */
 Tour.country({
-  id: 'es', colors: COL, tagline: 'Tomatoes, oranges, fallas and the city of the future',
+  id: 'es', colors: COL, tagline: 'Tomatoes, pintxos, fallas, volcanoes and windmills',
   themes, painters, decor, decorLights, beatArt, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_es', boss: 'tour_es_boss' },
   landmark: 'the silk exchange',
@@ -765,32 +1250,10 @@ Tour.country({
     ctx.fillStyle = '#2a8a3a'; ctx.beginPath(); ctx.ellipse(x + 3, y - 8, 4, 2, 0.4, 0, TAU); ctx.fill();
   } },
   star: { name: 'GOLDEN FAN', draw(ctx, x, y, t) { ctx.save(); ctx.translate(x, y + 6); for (let k = 0; k < 7; k++) { ctx.fillStyle = k % 2 ? '#ffd24a' : '#ffe890'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 13, -Math.PI + k * Math.PI / 7, -Math.PI + (k + 1) * Math.PI / 7); ctx.closePath(); ctx.fill(); } ctx.restore(); } },
-  levels: [
-    { name: 'La Tomatina', style: 'run', theme: 'es_tomatina', gimmick: 'Tomato trucks lob tomatoes over pulp-slick streets: slide carefully, climb crate stacks and balconies',
-      enemies: [['esTomato', 3], ['esOrange', 2], ['esHorchata', 2]],
-      hint: 'Splat tomatoes in front of enemies: they slide right off!',
-      postcard: 'I am red from head to toe. It is the best day of my life. ♥ C',
-      script: [['flat', { n: 5 }], 'sig', 'truck', ['crates', { gold: true }], 'balconies', 'pulp', 'cp', ['truck', { period: 1.3 }], 'crates', 'bonus', 'pulp', 'balconies', 'end'] },
-    { name: 'The Aquarium', style: 'swim', theme: 'es_aquarium', gimmick: 'Swim through glass tunnels past sharks and pulsing jellyfish, ride the pump currents',
-      enemies: [['esJelly', 2], ['esShark', 1]], H: 18, width: 230,
-      hint: 'Jellyfish bob up and down: slip past between pulses',
-      postcard: 'A beluga smiled at me through the glass. I smiled back for an hour. ♥ C',
-      script: [['tunnel', {}], 'jellies', ['pumps', {}], 'alcove', ['tunnel', { w: 14 }], ['jellies', { n: 4 }], ['pumps', { dir: -1 }], 'tunnel', 'jellies'] },
-    { name: 'City of Arts by Night', style: 'night', theme: 'es_arts', gimmick: 'White ribs arch over reflecting pools, floor lights switch with the beat, and a lifting deck carries you up',
-      enemies: [['esBat', 2], ['esHorchata', 2]], dark: true, bpm: 112,
-      hint: 'The floor lights switch on the beat: wait for yours',
-      postcard: 'The buildings look like whale bones and spaceships. The bats live here too. ♥ C',
-      script: [['flat', { n: 5 }], 'ribs', ['lights', { n: 4 }], ['eyelid', { gold: true }], 'bats', 'drop', 'cp', ['ribs', { n: 4 }], 'lights', 'eyelid', 'bats', 'drop', 'end'] },
-    { name: 'The Giant Falla', style: 'climb', theme: 'es_fallas', gimmick: 'Climb a giant papier-mâché sculpture: rocket launchers fire you upward, firecracker strings pop in waves',
-      enemies: [['esPetardo', 2]], W: 24, H: 96,
-      hint: 'Firecrackers flash before they pop: move along!',
-      postcard: 'They BURN these giant sculptures at the end of the festival. On purpose! ♥ C',
-      script: [['falla', { petardo: true }], ['rockets', { gold: true }], 'crackers', ['falla', { n: 3 }], ['rockets', { left: true }], 'crackers', ['falla', { n: 4, petardo: true }]] },
-    { name: 'The Silk Exchange', style: 'castle', theme: 'es_lonja', gimmick: 'Twisted columns, swinging silk banners and merchants\' scales that rise and fall, then Paellasaurus',
-      enemies: [['esHorchata', 2], ['esTomato', 2]], boss: 'es_paella', arena: 'lonja', arenaW: 26, roof: false,
-      hint: 'Paellasaurus is too hot to stomp. Kick three tomatoes into the pan to put the fire out, then crack the crust!',
-      postcard: 'The Silk Exchange is back! The Baron pedalled off to France. Allez! ♥ C',
-      script: [['flat', { n: 4 }], 'columns', ['banners', {}], 'scales', 'cp', 'sig', ['banners', { n: 3 }], 'columns', ['enemies', { n: 2 }], ['blocks', { content: 'power' }], 'arena'] }
-  ]
+  skins: esSkins,
+  map: { fort: 'lonja', start: [0, 0] },
+  houses: [{ id: 'es-pintxos', mapLabel: 'Tiendita', kind: 'stand', name: 'La Tiendita de Pintxos', keeper: 'stork', stock: ['pads', 'wand', 'plane', 'oneup', 'sundial', 'magnet'], mapCell: [0, 2], mapFrom: 1 }],
+  // the levels are registered by 29_tour_es_levels.js (Tour.amend)
+  levels: []
 });
 })();

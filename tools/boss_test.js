@@ -32,22 +32,39 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       const steps = Math.round(sec * 120);
       for (let k = 0; k < steps; k++) {
         if (inp) { Object.assign(I, inp); if (inp.jumpPressed && k > 0) I.jumpPressed = false; if (inp.actionPressed && k > 0) I.actionPressed = false; }
-        G.scene.update(1 / 120);
+        window.__simOn = true; try { G.scene.update(1 / 120); } finally { window.__simOn = false; }
         if (k === 0) { I.jumpPressed = false; I.actionPressed = false; I.upPressed = false; I.downPressed = false; I.pausePressed = false; I.taps.length = 0; I.uiKey = null; }
       }
       if (inp) for (const key in inp) I[key] = false;
     };
+    // Determinism: a level only advances inside sim(). The page's own animation loop keeps drawing (for the
+    // screenshots) but no longer updates the fight with real frame times, which made checks depend on machine load.
+    { const PU = window.BRADY.Play.prototype, upd = PU.update; PU.update = function (dt) { if (window.__simOn) return upd.call(this, dt); }; }
     window.T = window.BRADY_TOUR;
-    window.start = (id, opts) => { const B = window.BRADY; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 5; B.Game.setScene(new B.Play(B.getLevel(w, i), opts || {})); window.sim(2); };
+    window.start = (id, opts) => { const B = window.BRADY; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 5; B.Game.setScene(new B.Play(B.getLevel(w, i), opts || {})); window.sim(2); if (!(opts && opts.lead)) window.toArena(); };
+    // v2 boss levels: a lead-in area, then the arena area (role 'arena'); start() goes straight through its door
+    window.toArena = () => {
+      const g = window.S(), L = g.level, k = (L.areas || []).findIndex(a => a.role === 'arena');
+      if (k <= 0 || g.area.idx === k) return;
+      const an = (L.areas[k].anchors || {}).in; if (!an) return;
+      g.state = 'play'; g.player.state = 'play'; g.enterPortal({ kind: 'door', target: { area: k, x: an.x, y: an.y } }); window.sim(3);
+    };
     window.P = () => window.BRADY.Game.scene.player;
     window.S = () => window.BRADY.Game.scene;
     window.ctor = type => window.BRADY_TYPES[type];
     window.clearEnemies = () => { const g = window.S(); for (const e of g.entities) if (e.enemy && !e.boss) e.remove = true; sim(0.02); };
     window.near = (type, dx, props) => { const g = S(), p = P(); const C = ctor(type); const e = new C(g, Object.assign({ x: p.cx + (dx || 60), y: p.y + p.h, dir: -1 }, props || {})); g.spawn(e); return e; };
     window.spawnAt = (type, x, y, props) => { const g = S(); const C = ctor(type); const e = new C(g, Object.assign({ x, y, dir: -1 }, props || {})); g.spawn(e); return e; };
-    window.boss = () => S().entities.find(e => e.boss && !e.remove);
+    // the boss of the current area; in a v2 boss level (a lead-in, then an arena area) Brady is first taken to the arena
+    window.boss = () => {
+      const g = S(); let b = g.entities.find(e => e.boss && !e.remove); if (b) return b;
+      const k = g.level.areas.findIndex(a => a.role === 'arena' || a.spawns.some(s => s.type === 'boss'));
+      if (k < 0 || g.area === g.level.areas[k]) return b;
+      const a = g.level.areas[k], an = (a.anchors && (a.anchors.in || a.anchors.start)) || { x: 3 * 32 + 16, y: (a.H - 4) * 32 };
+      const inv = g.player.invuln || 0; g.loadArea(k, an.x, an.y, g.player.power || 0); g.player.invuln = Math.max(g.player.invuln || 0, inv); return g.entities.find(e => e.boss && !e.remove);
+    };
     // Brady walks into the arena; the boss wakes and its intro plays out
-    window.enterArena = (dx) => { const p = P(), b = boss(); p.x = b.arenaX0 + (dx || 64); p.y = b.floorY - p.h - 4; p.vy = 0; sim(2.6); return b; };
+    window.enterArena = (dx) => { const b = boss(), p = P(); p.x = b.arenaX0 + (dx || 64); p.y = b.floorY - p.h - 4; p.vy = 0; sim(2.6); return b; };
   });
   const dir = path.join(__dirname, 'boss_tests');
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.js')).sort().filter(f => !want.length || want.includes(f.replace('.js', '')));

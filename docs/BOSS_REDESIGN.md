@@ -85,12 +85,25 @@ so he jumps out, hot and vulnerable. With no shells left he is exposed for the f
 Phases: 1 pincer lunges from the shell; 2 he throws coconuts from the baobab above and tide pools flood the floor
 edges (water); 3 shell-less: fast scuttling, claw sweeps, a sulking sprint. Finish: he grabs a tiny thimble and runs off.
 
-### Morocco 5-5: The Djinn of the Teapot (`29_tour_ma.js`)
-Mechanic: **put him back in the pot.** The teapot (a `TourProp`, heavy) sits on the floor. When the Djinn finishes an
-attack he must return to the pot to refill; if Brady has **kicked the pot across the room**, the Djinn chases it, and
-the moment he dives in Brady **stomps the lid** (a lid prop or the pot itself while he is inside) to trap him: damage.
-Phases: 1 flying teacups; 2 sandstorm (wind zone, `B.zone`) and mirages: two fake pots (props that break); 3 he grows,
-the carpet (signature) appears so Brady can fly, and the pot flies too. Finish: the lid slams, the pot rattles, steam.
+### Morocco 5-5: Berrad the Magnificent (`29_tour_ma.js`)
+An original object character (redesigned Nov 2026: the earlier blue genie was too close to a film character, and
+"djinn" carries religious meaning). Berrad ("teapot" in Moroccan Arabic) is a grand, pompous brass teapot with a curly
+spout for a nose, a crown-like finial on his lid and a zellige band round his middle; he floats on his own steam.
+Mechanic: **run him out of steam, then stomp his lid.** His charcoal brazier (a heavy clay kanoun on brass wheels, a
+`TourProp`) sits on the floor. Every attack (a volley of tea glasses, a scalding pour from his spout, a spinning-top
+dash) costs steam; then he must settle into the brazier's ring to come back to the boil. If Brady has **kicked the
+brazier across the room**, Berrad chases it; while he sits in its ring only his lid shows: **stomp the lid** for
+damage. Phases: 1 tea glasses; 2 sandstorm (wind zone, `B.zone`) and two mirage braziers (props that pop); 3 he swells,
+the brazier rides off on a little flying rug and the carpet (signature) appears so Brady can follow. Finish: the lid
+clamps shut, the brazier rattles and he whistles like a kettle, grumbling. Lines: "TEA? I INSIST. I AM MAGNIFICENT!",
+"RUNNING OUT OF STEAM...", "MY LID! MIND MY LID!".
+
+### Morocco 5-4 (mini-boss, FORT): The Brass Owl (`29_tour_ma.js`)
+The Baron's clockwork sentry on the kasbah tower, 3 hp. Three tagine lids hang on roof hooks, each with a chain on the
+wall. Every 4 s its head turns right round (CLANK, 0.6 s tell); a soft cone shows where it is looking. Pull a chain
+while it looks away and that lid drops on it (`hazard` hit). Pull while it watches and it screeches, hops clear and
+blows three brass feathers. Phase 2: it flies a lap under the roof and lands under a different lid each time. Stomping
+it just clanks. Finish: its head spins faster and faster and it falls apart into a heap of teaspoons.
 
 ### Spain 6-5: Paellasaurus (`29_tour_es.js`)
 Mechanic: **tomato artillery.** He is a boiling paella pan on legs; stomps burn (`'bounce'`, TOO HOT). Tomato crates

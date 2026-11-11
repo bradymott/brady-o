@@ -34,9 +34,23 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     };
     window.T = window.BRADY_TOUR;
     window.start = (id, opts) => { const B = window.BRADY; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 5; B.Game.setScene(new B.Play(B.getLevel(w, i), opts || {})); window.sim(2); };
+    // v2 boss levels: a lead-in area, then the arena area (role 'arena'): go straight through its door
+    window.toArena = () => {
+      const g = window.S(), L = g.level, k = (L.areas || []).findIndex(a => a.role === 'arena');
+      if (k <= 0 || g.area.idx === k) return;
+      const an = (L.areas[k].anchors || {}).in; if (!an) return;
+      g.state = 'play'; g.player.state = 'play'; g.enterPortal({ kind: 'door', target: { area: k, x: an.x, y: an.y } }); window.sim(3);
+    };
     window.P = () => window.BRADY.Game.scene.player;
     window.S = () => window.BRADY.Game.scene;
     window.ctor = type => window.BRADY_TYPES[type];
+    // a v2 boss level keeps its boss in an arena area: take Brady there (legacy castles have it in the first area)
+    window.arenaBoss = () => {
+      const g = S(); let b = g.entities.find(e => e.boss); if (b) return b;
+      const k = g.level.areas.findIndex(a => a.role === 'arena' || a.spawns.some(s => s.type === 'boss')); if (k < 0) return null;
+      const a = g.level.areas[k], an = (a.anchors && (a.anchors.in || a.anchors.start)) || { x: 3 * 32 + 16, y: (a.H - 4) * 32 };
+      const inv = g.player.invuln || 0; g.loadArea(k, an.x, an.y, g.player.power || 0); g.player.invuln = Math.max(g.player.invuln || 0, inv); return g.entities.find(e => e.boss);
+    };
     window.clearEnemies = () => { const g = window.S(); for (const e of g.entities) if (e.enemy && !e.boss) e.remove = true; sim(0.02); };
     // drop an entity right in front of Brady, on his floor
     window.near = (type, dx, props) => { const g = S(), p = P(); const C = ctor(type); const e = new C(g, Object.assign({ x: p.cx + (dx || 60), y: p.y + p.h, dir: -1 }, props || {})); g.spawn(e); return e; };
@@ -96,7 +110,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   const life = await page.evaluate(() => { start('1-1'); const B = window.BRADY, l0 = B.Save.data.lives; P().collect('oneup'); return { l0, l1: B.Save.data.lives }; });
   check('the water bottle gives an extra life', life.l1 === life.l0 + 1, life);
 
-  // 4. Signature power-ups: Mexico's taco toss and France's mime gloves
+  // 4. Signature power-ups: Mexico's taco toss and France's meringue piping bag
   const taco = await page.evaluate(() => {
     start('1-1'); clearEnemies(); const p = P(), g = S(); p.collect('sig:taco');
     const e = near('mxElote', 110); sim(0.02);
@@ -105,8 +119,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   });
   check('Taco Toss: tacos (and salsa) stun enemies', taco.sig === 'taco' && taco.stunned, taco);
   await shot('07-power-taco.png');
-  const mime = await page.evaluate(() => {
-    start('7-1'); clearEnemies(); const p = P(), g = S(), A = g.area; p.collect('sig:mime'); sim(0.2);
+  const piping = await page.evaluate(() => {
+    start('7-1'); clearEnemies(); const p = P(), g = S(), A = g.area; p.collect('sig:piping'); sim(0.2);
     const tx = Math.floor((p.x + p.w + 6) / 32), ty = Math.floor((p.y + p.h - 2) / 32);
     sim(0.05, { actionPressed: true });
     const wall = A.tiles[ty * A.W + tx] === 5;
@@ -114,9 +128,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     sim(7); const gone = A.tiles[ty * A.W + tx] === 0;
     return { sig: p.sig && p.sig.id, wall, blocked, gone };
   });
-  check('Mime Gloves draw an invisible wall that blocks, then fades', mime.sig === 'mime' && mime.wall && mime.blocked && mime.gone, mime);
-  await page.evaluate(() => { start('7-1'); clearEnemies(); P().collect('sig:mime'); sim(0.2); sim(0.05, { actionPressed: true }); sim(0.3); });
-  await shot('08-power-mime.png');
+  check('the Meringue Piping Bag pipes a wall that blocks, then crumbles', piping.sig === 'piping' && piping.wall && piping.blocked && piping.gone, piping);
+  await page.evaluate(() => { start('7-1'); clearEnemies(); P().collect('sig:piping'); sim(0.2); sim(0.05, { actionPressed: true }); sim(0.3); });
+  await shot('08-power-piping.png');
   // Ecuador's booby boots: higher jumps, and a big landing knocks out enemies nearby
   const boots = await page.evaluate(() => {
     const jumpH = () => { const p = P(), y0 = p.y; let top = y0; sim(0.05, { jump: true, jumpPressed: true }); for (let k = 0; k < 120; k++) { sim(1 / 120, { jump: true }); top = Math.min(top, p.y); } sim(1); return y0 - top; };
@@ -195,7 +209,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   const dream = await page.evaluate(() => {
     start('22-1'); clearEnemies(); const g = S(), p = P(); const echo = g.entities.find(e => e.constructor.name === 'W22Echo');
     p.x = echo.home.x + 40; p.y = echo.home.y + echo.h - p.h; p.vy = 0; sim(0.3); const early = echo.on; sim(1.6, { right: true }); const later = echo.on;
-    const B = window.BRADY, L = B.getLevel(22, 2), A = L.areas[0], gate = A.spawns.find(s => s.type === 'gate' && !s.secret);
+    const B = window.BRADY, C22 = T.Tour.countries.w22, mi = C22.levels.findIndex(S => S.mirror || (S.areas || []).some(a => a.mirror)) + 1, L = B.getLevel(22, mi || 2), A = L.areas[0], gate = A.spawns.find(s => s.type === 'gate' && !s.secret);
     return { early, later, mirrored: !!A.mirrored, startRight: L.start.x > A.W * 16, goalLeft: gate.x < A.W * 16 };
   });
   check('World 22: your echo appears behind you, and Mirror Lake runs right to left', !dream.early && dream.later && dream.mirrored && dream.startRight && dream.goalLeft, dream);
@@ -234,9 +248,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('every tour level loads, simulates and renders', all.n >= 10 && all.bad.length === 0, all);
 
   // 8. Castle bosses: Mexico's piñata, then France's soufflé; beating Mexico flies Brady to the next country
-  for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'DJINN', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl'], ['9-5', 'KERA', 'id'], ['10-5', 'PHIN', 'vn'], ['11-5', 'KAPPA', 'jp'], ['13-4', 'BIG TUSK', 'aq'], ['22-4', 'OTHER BRADY', 'w22']]) {
+  for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'BERRAD', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl'], ['9-5', 'KERA', 'id'], ['10-5', 'PHIN', 'vn'], ['11-5', 'KAPPA', 'jp'], ['13-4', 'BIG TUSK', 'aq'], ['22-4', 'OTHER BRADY', 'w22']]) {
     const boss = await page.evaluate(([id]) => {
-      start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
+      start(id); clearEnemies(); const b = arenaBoss(), g = S(), p = P();
       p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.vy = 0; p.invuln = 99; sim(2.5);
       const woke = b.state !== 'sleep', nm = b.name;
       const doorRow = Math.floor(b.floorY / 32) - 1, before = g.area.tiles[doorRow * g.area.W + b.doorX];
@@ -249,14 +263,14 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       return { woke, nm, removed: b.remove, before, after, state: g.state };
     }, [id]);
     check(`${name} wakes up, can be beaten and opens the way out (${id})`, boss.woke && new RegExp(name).test(boss.nm) && boss.removed && boss.before === 5 && boss.after === 0 && boss.state === 'results', boss);
-    await page.evaluate(([id]) => { start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 160; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); }, [id]);
+    await page.evaluate(([id]) => { start(id); clearEnemies(); const b = arenaBoss(), g = S(), p = P(); p.x = b.arenaX0 + 160; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); }, [id]);
     await shot('10-boss-' + tag + '.png');
   }
   // the boss fights themselves (mechanics, phases, weak moments) are checked per country by tools/boss_test.js
   // Bali, Vietnam, Japan and Nepal: each signature item works in its own country
   const sigs4 = await page.evaluate(() => {
     const out = {};
-    for (const [id, sig] of [['9-2', 'surf'], ['10-1', 'noodle'], ['11-1', 'nunchuck'], ['12-2', 'yak']]) {
+    for (const [id, sig] of [['9-1', 'surf'], ['10-1', 'noodle'], ['11-1', 'nunchuck'], ['12-2', 'yak']]) {
       start(id); clearEnemies(); const x0 = P().x; P().collect('sig:' + sig); sim(0.2);
       for (let k = 0; k < 10; k++) sim(0.25, { right: true, actionPressed: k % 2 === 0 });
       const p = P(); out[sig] = { has: !!(p.sig && p.sig.id === sig), moved: Math.round(p.x - x0), alive: !p.dead };
@@ -266,7 +280,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('surfboard, noodle lasso, nunchucks and yak ride all work in their countries', Object.values(sigs4).every(s => s.has && s.alive && s.moved > 60), sigs4);
   // the finale: Baron Bric-a-Brac's three phases in Nepal, then home together, the ending and the credits
   const fin = await page.evaluate(() => {
-    start('12-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
+    start('12-5'); clearEnemies(); const b = arenaBoss(), g = S(), p = P();
     p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 999; sim(3);
     const phases = new Set();
     for (let k = 0; k < 80 && !b.remove && b.state !== 'dying'; k++) { b.hurtT = 0; b.state = 'fight'; phases.add(b.phase); b.damage(1); sim(0.25); }
@@ -281,8 +295,10 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   });
   check('Baron Bric-a-Brac fights in three phases; beating him leads home, to the ending and the credits', fin.phases === '1,2,3' && fin.beaten && fin.results === 'results' && fin.ending === 'TourEndingScene' && fin.credits === 'CreditsScene', fin);
   // the route on the map: Mexico to Nepal in order, and the postcard count across all lands
-  const order = await page.evaluate(() => ({ route: T.Tour.mainCountries().map(C => C.id).join(','), secret: T.Tour.worldList().filter(w => T.Tour.byWorld[w].secret).join(','), levels: T.Tour.allLevelIds().length }));
-  check('the map route runs Mexico to Nepal with both secret lands, 68 levels in all', order.route === 'mx,ec,br,mz,ma,es,fr,nl,id,vn,jp,np' && order.secret === '13,22' && order.levels === 68, order);
+  // level totals come from the game data: 68 main levels (5 per country, 4 in each secret land) plus however many
+  // secret levels the countries have so far
+  const order = await page.evaluate(() => { const Ws = T.Tour.worldList(), C = w => T.Tour.byWorld[w]; return { route: T.Tour.mainCountries().map(C => C.id).join(','), secret: Ws.filter(w => C(w).secret).join(','), levels: T.Tour.allLevelIds().length, listed: Ws.reduce((n, w) => n + C(w).levels.length, 0), main: Ws.reduce((n, w) => n + C(w).mainCount, 0), mainOk: Ws.every(w => C(w).mainCount === (C(w).secret ? 4 : 5)) }; });
+  check(`the map route runs Mexico to Nepal with both secret lands, 68 main levels (${order.levels} in all)`, order.route === 'mx,ec,br,mz,ma,es,fr,nl,id,vn,jp,np' && order.secret === '13,22' && order.main === 68 && order.mainOk && order.levels === order.listed, order);
   // the secret lands: hidden on the map until found; Antarctica behind a cracked wall in 8-4, World 22 behind door 22 in 5-2 (22 postcards)
   const secrets = await page.evaluate(() => {
     const B = window.BRADY, d = B.Save.data, TP = T.TourProgress, M = T.TourMapScene;
@@ -291,19 +307,35 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const hiddenAtFirst = st('aq') === 'hidden' && st('w22') === 'hidden';
     const viaDoor = (id, room) => {
       start(id); clearEnemies(); const g = S(), p = P(); p.invuln = 99;
-      const door = g.entities.find(e => e.constructor.name === 'Portal' && e.s.target && e.s.target.area >= 1); g.enterPortal(door); sim(1.5);
+      // the door into the area that holds the level's secret gate (the bonus room in 8-4, the oasis camp in 5-2)
+      const sa = g.level.areas.findIndex(a => a.spawns.some(s => s.type === 'gate' && (s.secret || (s.exit && s.exit !== 'main'))));
+      const door = g.entities.find(e => e.constructor.name === 'Portal' && e.s.target && e.s.target.area === sa); if (!door) return { noDoor: sa }; g.enterPortal(door); sim(1.5);
       const gate = g.entities.find(e => e.constructor.name === 'Gate' && e.secret); if (!gate) return { noGate: true };
       const q = P(); q.invuln = 99; q.x = gate.cx - 50; q.y = gate.y + gate.h - q.h - 4; q.vy = 0; sim(0.8, { right: true }); const s1 = g.state; sim(8); return { s1, s2: g.state };
     };
     const aq = viaDoor('8-4');
     const aqOpen = TP.countryUnlocked(T.Tour.countries.aq) && TP.isUnlocked('13-1');
     const w0 = viaDoor('5-2'); const lockedOut = w0.s1 === 'play' && !TP.countryUnlocked(T.Tour.countries.w22);
+    // the shut door is remembered: World 22's ghost pin shows on the map, and tapping it says what the door wants
+    const gm = new M({}); B.Game.setScene(gm); gm.card = null; const ws = T.Tour.stops.w22;
+    B.Input.taps.push({ x: gm.sx(ws.lon), y: gm.sy(ws.lat) }); gm.update(1 / 60);
+    const ghost = { door: !!(d.tour.doors || {}).w22, pins: gm.ghostPins().map(s => s.id).join(), toast: gm.toastMsg };
     for (const w of [1, 2, 3, 4, 5, 6, 7, 8]) d.gold[w + '-1'] = [true, true, true];
     const w1 = viaDoor('5-2'); const w22Open = TP.countryUnlocked(T.Tour.countries.w22) && TP.isUnlocked('22-1');
     const map = new M({ from: '5-2' }); B.Game.setScene(map); const flying = !!map.flight; for (let k = 0; k < 900 && map.flight; k++) map.update(1 / 120);
-    return { hiddenAtFirst, aq, aqOpen, lockedOut, w1, w22Open, flying, sel: map.sel, gold: TP.totals().gold };
+    return { hiddenAtFirst, aq, aqOpen, lockedOut, ghost, w1, w22Open, flying, sel: map.sel, gold: TP.totals().gold, ghostAfter: map.ghostPins().length };
   });
   check('secret lands stay hidden until found; a cracked wall in 8-4 opens Antarctica; door 22 in 5-2 opens World 22 only with 22 postcards', secrets.hiddenAtFirst && secrets.aqOpen && secrets.lockedOut && secrets.w22Open && secrets.flying && secrets.sel === 'w22', secrets);
+  check('the shut door in 5-2 leaves a "22?" ghost pin on the world map; tapping it tells how many postcards it wants; it goes once World 22 opens', secrets.ghost.door && secrets.ghost.pins === 'w22' && /WANTS 22 POSTCARDS/.test(secrets.ghost.toast) && secrets.ghostAfter === 0, secrets.ghost);
+  await page.evaluate(() => {
+    const B = window.BRADY, d = B.Save.data, keep = JSON.stringify(d.tour), keepGold = JSON.stringify(d.gold), keepUn = JSON.stringify(d.unlocked);
+    d.tour = Object.assign(JSON.parse(keep), { lands: {}, doors: { w22: true }, pending: [], at: 'ma' }); d.gold = {};
+    for (const id in d.unlocked) if (/^22-/.test(id)) delete d.unlocked[id];
+    const m = new T.TourMapScene({}); B.Game.setScene(m); m.card = null; const ws = T.Tour.stops.w22; m.cam.lon = ws.lon + 12; m.cam.lat = ws.lat; m.update(1 / 60); m.draw(B.Game.ctx);
+    window.__ghostRestore = () => { d.tour = JSON.parse(keep); d.gold = JSON.parse(keepGold); d.unlocked = JSON.parse(keepUn); };
+  });
+  await shot('12c-map-ghost22.png');
+  await page.evaluate(() => window.__ghostRestore());
   await page.evaluate(() => { const s = S(); s.card = null; s.update(1 / 60); s.draw(window.BRADY.Game.ctx); });
   await shot('12b-map-world22.png');
   // the whole route flows: each boss flies Brady on to the next built country
@@ -311,8 +343,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const B = window.BRADY, d = B.Save.data, out = [];
     d.tour = { at: 'mx', seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {};
     for (const C of T.Tour.mainCountries()) {
-      for (let i = 1; i <= C.levels.length; i++) { d.done[C.world + '-' + i] = true; T.TourProgress.complete(C.world + '-' + i, false); }
-      const N = T.Tour.nextCountry(C); const M = new T.TourMapScene({ from: C.world + '-' + C.levels.length }); B.Game.setScene(M);
+      for (let i = 1; i <= C.mainCount; i++) { d.done[C.world + '-' + i] = true; T.TourProgress.complete(C.world + '-' + i, false); }
+      const N = T.Tour.nextCountry(C); const M = new T.TourMapScene({ from: C.world + '-' + C.mainCount }); B.Game.setScene(M);
       out.push(C.id + '>' + (N ? (M.flight || M.sel === N.id ? N.id : 'STUCK') : 'end'));
     }
     d.tour = { at: null, seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {}; d.gold = {};

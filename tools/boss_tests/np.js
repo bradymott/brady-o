@@ -1,4 +1,4 @@
-// Nepal 12-5: Baron Bric-a-Brac, the finale. Mechanic: the stolen landmarks. He throws them; Brady kicks them back.
+// Nepal 12-5: Baron Bric-a-Brac, the finale (and 12-7's Tin Yak at the end). Mechanic: the stolen landmarks. He throws them; Brady kicks them back.
 module.exports = async ({ page, check, shot }) => {
   const ev = (fn, ...a) => page.evaluate(fn, ...a);
   // Brady stays unhurtable while the test waits around (a thrown landmark would flatten an idle small Brady)
@@ -79,4 +79,35 @@ module.exports = async ({ page, check, shot }) => {
   r = await ev(() => { const g = S(); try { g.goNext(null); } catch (e) { return { err: String(e) }; } return { ending: window.BRADY.Game.scene instanceof T.TourEndingScene }; });
   check('np: after the finale, the tour ending scene plays', r.ending === true, r);
   check('np: Brady never died during the test', !(await died()), await died());
+
+  // ---- 12-7 FORT: the Tin Yak (mini-boss, 3 hp, 2 phases): dodge its charge so it rams a crate wall, stomp it while stuck ----
+  await ev(() => { start('12-7'); enterArena(); }); await safe(); await watch();
+  r = await ev(() => { const b = boss(), g = S(); return { state: b.state, hp: b.hp, name: b.name, walls: g.entities.filter(e => e.crateWall && !e.remove).length, mid: b.mid }; });
+  check('np: the Tin Yak wakes in the depot bay between two crate walls', r.state === 'fight' && r.hp === 3 && /TIN YAK/.test(r.name) && r.walls === 2 && r.mid, r);
+  r = await ev(() => { const b = boss(), p = P(); b.go('walk'); sim(0.05); const hp0 = b.hp; p.x = b.cx - p.w / 2; p.y = b.y - p.h - 30; p.vy = 0; sim(0.5); return { hp0, hp: b.hp }; });
+  check('np: a stomp on the Tin Yak while it walks just bounces off', r.hp === r.hp0, r);
+  // Brady waits beyond the left crate wall: the yak paws (the tell), charges at him and rams the wall
+  const ram = () => ev(() => {
+    const b = boss(), g = S(), p = P(), w = g.entities.filter(e => e.crateWall && !e.remove).sort((a, c) => a.x - c.x)[0];
+    p.x = b.arenaX0 + 8; p.y = b.floorY - p.h; p.vy = 0; p.vx = 0;
+    b.x = w.x + w.w + 4 * 32; b.y = b.floorY - b.h; b.vx = 0; b.go('paw');
+    const acts = []; for (let k = 0; k < 80 && b.act !== 'stuck'; k++) { sim(0.05); p.x = b.arenaX0 + 8; acts.push(b.act); }
+    return { seq: [...new Set(acts)], stuck: b.act === 'stuck', vuln: b.vuln, dents: w.dents, wx: w.tx };
+  });
+  r = await ram();
+  check('np: the Tin Yak paws the floor (the tell), charges and gets stuck in a crate wall', r.seq.includes('paw') && r.seq.includes('charge') && r.stuck && r.vuln && r.dents >= 1, r);
+  await snap('np_tinyak_stuck.png');
+  r = await ev(() => { const b = boss(), p = P(), g = S(); const hp0 = b.hp; p.x = b.cx - p.w / 2; p.y = b.y - p.h - 30; p.vy = 0; let n = 0; while (b.hp === hp0 && n++ < 60) sim(0.02);
+    const walls0 = g.entities.filter(e => e.crateWall).map(w => w.tx); p.x = b.arenaX0 + 8; p.y = b.floorY - p.h; sim(1.2); const walls1 = g.entities.filter(e => e.crateWall).map(w => w.tx);
+    return { hp0, hp: b.hp, phase: b.phase, moved: walls0.join() !== walls1.join(), walls0, walls1 }; });
+  check('np: stomped while stuck, it takes a dent; phase 2 sends the crate walls along the conveyor', r.hp === r.hp0 - 1 && r.phase === 2 && r.moved, r);
+  // phase 2: a charge that meets the bare wall turns straight into a second charge
+  r = await ev(() => { const b = boss(), g = S(), p = P(); const ws = g.entities.filter(e => e.crateWall); for (const w of ws) { w.clear(); w.place(b.arenaX1 / 32 - 3); } p.x = b.arenaX0 + 8; p.y = b.floorY - 5 * 32 - p.h; p.vy = 0;
+    b.x = b.arenaX0 + 6 * 32; b.y = b.floorY - b.h; b.dir = -1; b.go('charge'); const acts = []; for (let k = 0; k < 60; k++) { sim(0.05); acts.push(b.act); } return { acts: acts.filter((a, i) => a !== acts[i - 1]) }; });
+  check('np: in phase 2 the Tin Yak charges twice in a row', r.acts.indexOf('paw') > 0 && r.acts.indexOf('charge', r.acts.indexOf('paw')) > 0, r);
+  // the finish: it rattles to a stop, a chime, and the bay door opens
+  r = await ev(() => { const b = boss(), g = S(), p = P(); p.x = b.arenaX0 + 8; p.y = b.floorY - p.h; sim(1); b.hurtT = 0; b.damage(1); sim(1.2); b.hurtT = 0; b.state = 'fight'; b.damage(1); const act = b.act; sim(5);
+    const row = Math.floor(b.floorY / 32) - 1; return { act, removed: !!b.remove, door: g.area.tiles[row * g.area.W + b.doorX], lock: !!g.bossLock }; });
+  check('np: beaten, the Tin Yak rattles to a stop and the bay door opens', r.act === 'rattle' && r.removed && r.door === 0 && !r.lock, r);
+  check('np: Brady never died in the depot', !(await died()), await died());
 };

@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ec_pailon", {"scale":2.0,"image":"ec_pailon.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1279}},"anims":{},"strips":{"L0":{"w":2048,"h":888,"top":0.0,"x":0,"y":0},"L1":{"w":2048,"h":389,"top":248.5,"x":0,"y":889}}});

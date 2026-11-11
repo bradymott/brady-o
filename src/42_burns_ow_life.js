@@ -335,7 +335,7 @@ BurnsWorlds.get(BURNS_OW.ID).mapDraw = function (g, ctx, M, t) {
   ctx.strokeStyle = 'rgba(255,140,60,0.7)'; ctx.lineWidth = 2; ctx.beginPath();
   for (let k = 0; k <= 5; k++) { const a = k * TAU / 5, q = P(Math.sin(a) * O.FENCE, -Math.cos(a) * O.FENCE); k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); } ctx.stroke();
   // the city: the Esplanade and the lettered streets, radial streets every half hour
-  const cx = P(0, 0), arcA = h => h * Math.PI / 6 - Math.PI / 2 + Math.PI;   // clock hour -> canvas angle (6:00 down)
+  const cx = P(0, 0), arcA = h => h * Math.PI / 6 - Math.PI / 2;   // clock hour -> canvas angle (6:00 down: O.dir(h) on a +z-down map)
   O.RINGS.forEach((r, i) => { ctx.strokeStyle = i ? 'rgba(255,220,180,0.4)' : 'rgba(255,230,190,0.85)'; ctx.lineWidth = i ? 1.2 : 2.4; ctx.beginPath(); ctx.arc(cx[0], cx[1], r * sc, arcA(O.H0), arcA(O.H1)); ctx.stroke(); });
   for (let h = O.H0; h <= O.H1 + 1e-6; h += 0.5) { const a = O.at(h, O.ESP), b = O.at(h, O.OUTER), qa = P(a[0], a[1]), qb = P(b[0], b[1]); ctx.strokeStyle = h % 1 ? 'rgba(255,220,180,0.25)' : 'rgba(255,220,180,0.45)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(qa[0], qa[1]); ctx.lineTo(qb[0], qb[1]); ctx.stroke(); }
   // camps glow along the Esplanade, the streamed blocks as soft dots

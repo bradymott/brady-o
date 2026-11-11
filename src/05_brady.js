@@ -112,6 +112,31 @@ function bradyPose(anim, small) {
       P.thF = 0.2; P.shF = 0.05; P.thB = -0.1; P.shB = -0.2; P.head = 0.12; P.mouth = 'smile';
       break;
     }
+    // jump powers (28_tour_di_jumps.js): a tucked somersault, the ground pound's ball and slam, the fart squat
+    case 'flip': {
+      P.crouch = 0.55; P.thF = 2.3; P.shF = -0.9; P.thB = 2.0; P.shB = -1.1;
+      P.uaF = 1.9; P.faF = 0.5; P.uaB = 1.6; P.faB = 0.3; P.lean = 0.35; P.mouth = 'grin';
+      break;
+    }
+    case 'tuck': {
+      P.crouch = 0.6; P.thF = 2.5; P.shF = -0.6; P.thB = 2.3; P.shB = -0.8;
+      P.uaF = 1.5; P.faF = 0.2; P.uaB = 1.3; P.faB = 0.1; P.lean = 0.45; P.head = 0.25; P.mouth = 'o';
+      break;
+    }
+    case 'pound': {
+      const w = Math.sin(t * 40) * 0.05;
+      P.thF = 0.08; P.shF = 0; P.thB = -0.08; P.shB = 0;
+      P.uaF = 2.75 + w; P.faF = 2.95; P.uaB = -2.75 - w; P.faB = -2.95; P.mouth = 'o'; P.head = -0.1;
+      break;
+    }
+    case 'squat': {
+      // squatting in mid-air, arms out for balance; a puff bounces him a little (anim.phase = time since the last puff)
+      const k = Math.max(0, 1 - (anim.phase || 0) * 5);
+      P.crouch = 0.9; P.thF = 1.45; P.shF = -0.05 - k * 0.2; P.thB = 1.25; P.shB = -0.2 - k * 0.2;
+      P.uaF = 1.2 + k * 0.5; P.faF = 1.9 + k * 0.4; P.uaB = -1.1 - k * 0.6; P.faB = -0.5; P.lean = 0.28 + k * 0.12;
+      P.head = -0.12 + k * 0.1; P.mouth = k > 0.3 ? 'o' : 'grin'; P.bob = -k * 1.5;
+      break;
+    }
     case 'enter': {
       P.uaF = 0.1; P.faF = 0.2; P.uaB = -0.1; P.faB = -0.2;
       break;
@@ -122,6 +147,12 @@ function bradyPose(anim, small) {
   return P;
 }
 
+// Brady's boxers for the fart float: white with little red hearts, a pink waistband
+const BOXERS = { base: '#fbf4ee', shade: '#e2d8d2', band: '#ff6fa8', heart: '#e8344f' };
+function boxerHearts(ctx, pts, small) {
+  const s = small ? 0.7 : 1; ctx.fillStyle = BOXERS.heart;
+  for (const [x, y] of pts) { ctx.beginPath(); ctx.moveTo(x, y + 1.3 * s); ctx.bezierCurveTo(x - 2.2 * s, y - 0.2 * s, x - 1 * s, y - 1.9 * s, x, y - 0.6 * s); ctx.bezierCurveTo(x + 1 * s, y - 1.9 * s, x + 2.2 * s, y - 0.2 * s, x, y + 1.3 * s); ctx.fill(); }
+}
 function limbEnd(x, y, a, l) { return [x + Math.sin(a) * l, y + Math.cos(a) * l]; }
 function capsule(ctx, x0, y0, x1, y1, w, col) {
   ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round';
@@ -374,12 +405,30 @@ function drawBrady(ctx, o) {
   const [hbx, hby] = drawArm(shX - 2.5, shY + 2, P.uaB, P.faB, true);
 
   // ---- legs with black sneakers
+  const pd = o.pants || 0;   // trousers down (0..1): the fart float squat shows bare legs and the boxers
   const legFoot = (th, sh, col, front) => {
     const hx = hipX + (front ? 2 : -2), hy = hipY;
     const [kx, ky] = limbEnd(hx, hy, th, D.thigh);
     const [ax, ay] = limbEnd(kx, ky, sh, D.shin);
-    outlinedCapsule(ctx, hx, hy, kx, ky, D.legW, col);
-    outlinedCapsule(ctx, kx, ky, ax, ay, D.legW - 0.6, col);
+    if (pd > 0) {
+      const sk = front ? skin.base : skin.sh;
+      outlinedCapsule(ctx, hx, hy, kx, ky, D.legW - 0.4, sk);
+      // the boxers' leg: halfway down the thigh, with the heart print
+      const bx1 = lerp(hx, kx, 0.55), by1 = lerp(hy, ky, 0.55);
+      outlinedCapsule(ctx, hx, hy, bx1, by1, D.legW + (o.small ? 1.2 : 2.2), front ? BOXERS.base : BOXERS.shade);
+      boxerHearts(ctx, [[lerp(hx, bx1, 0.35), lerp(hy, by1, 0.35)], [lerp(hx, bx1, 0.85), lerp(hy, by1, 0.85) + 0.6]], o.small);
+      // the trousers, bunched: their top slides from the hip down to the knee as they drop
+      const tk = 0.15 + 0.85 * pd, tx0 = lerp(hx, kx, tk), ty0 = lerp(hy, ky, tk);
+      if (tk < 0.98) outlinedCapsule(ctx, tx0, ty0, kx, ky, D.legW + 0.6, col);
+      outlinedCapsule(ctx, kx, ky, ax, ay, D.legW + 0.4, col);
+      // the crumpled waistband ring
+      ctx.fillStyle = shade(col, 0.45); ctx.strokeStyle = CLOTH.outline; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.ellipse(tx0, ty0, D.legW * 0.78, D.legW * 0.34, th + Math.PI / 2, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.moveTo(lerp(kx, ax, 0.3) - 2, lerp(ky, ay, 0.3)); ctx.lineTo(lerp(kx, ax, 0.3) + 2, lerp(ky, ay, 0.3) + 1); ctx.stroke();
+    } else {
+      outlinedCapsule(ctx, hx, hy, kx, ky, D.legW, col);
+      outlinedCapsule(ctx, kx, ky, ax, ay, D.legW - 0.6, col);
+    }
     if (neon && front) capsule(ctx, hx + 1.5, hy, kx + 1.5, ky, 0.9, rgba(trim, 0.9));
     ctx.save(); ctx.translate(ax, ay); ctx.rotate(-sh * 0.35);
     const bw = o.small ? 7.5 : 10, bh = o.small ? 4 : 5.2;
@@ -406,8 +455,13 @@ function drawBrady(ctx, o) {
   ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 0.8;
   ctx.beginPath(); ctx.ellipse(tw * 0.18, -th - 1.2, tw * 0.22, o.small ? 1.4 : 2.2, 0, 0, Math.PI); ctx.stroke();
   if (!o.small) { ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(-tw * 0.1, -th * 0.55); ctx.quadraticCurveTo(tw * 0.1, -th * 0.4, tw * 0.3, -th * 0.6); ctx.stroke(); }
-  // waistband of black trousers
-  ctx.fillStyle = '#060608'; ctx.fillRect(-tw / 2, -1.2, tw, 2.4);
+  // waistband of black trousers (or, with the trousers down, the boxers' seat and their pink elastic)
+  if (pd > 0) {
+    ctx.fillStyle = CLOTH.outline; rr(ctx, -tw / 2 - 1.5, -2.2, tw + 3, (o.small ? 5 : 7) + 1.5, 2.5); ctx.fill();
+    ctx.fillStyle = BOXERS.base; rr(ctx, -tw / 2 - 0.8, -1.6, tw + 1.6, o.small ? 5 : 7, 2.2); ctx.fill();
+    boxerHearts(ctx, [[-tw * 0.25, 2.2], [tw * 0.2, 3.4]], o.small);
+    ctx.fillStyle = BOXERS.band; ctx.fillRect(-tw / 2 - 0.8, -1.8, tw + 1.6, 1.9);
+  } else { ctx.fillStyle = '#060608'; ctx.fillRect(-tw / 2, -1.2, tw, 2.4); }
   if (neon) {
     ctx.save(); ctx.shadowColor = trim; ctx.shadowBlur = 5; ctx.strokeStyle = trim; ctx.lineWidth = 1.1;
     ctx.beginPath(); ctx.ellipse(tw * 0.18, -th - 1.2, tw * 0.22, o.small ? 1.4 : 2.2, 0, 0, Math.PI); ctx.moveTo(-tw / 2 + 1, -1.8); ctx.lineTo(tw / 2 - 1, -1.8); ctx.stroke(); ctx.restore();

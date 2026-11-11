@@ -1,10 +1,13 @@
 /* ============================================================
-   FRANCE (world 7) — second reference country.
-   7-1 Boulangerie Boulevard  run    café umbrellas, a bakery conveyor, croissants rolling downhill
-   7-2 Seine Chase            auto   chase the Baron along the quay: book-box lids snap open and shut
-   7-3 Rooftops by Moonlight  night  zinc rooftops: chimney smoke lifts you over the alleys, cats prowl
-   7-4 The Iron Tower         climb  climb the lattice tower: lifts, girders and gusts of wind
-   7-5 Hall of Mirrors        castle mirror doors, falling chandeliers; boss Le Grand Soufflé
+   FRANCE (world 7): the whole country. This file holds the look
+   (themes, painters, decor), the cast, the objects, the signature
+   item (the meringue piping bag), the boss and the music. The
+   levels (v2 format, LEVEL_OVERHAUL.md §2) are in 29_tour_fr_levels.js:
+   7-1 Paris Morning Rounds  HUB     7-5 Château des Glaces   LAIR
+   7-2 Lavender Magpie       THIEF   7-6 Seine Chase          SCROLL (secret)
+   7-3 Mont-Saint-Michel     TIDE    7-7 Montgolfière Skies   SKY (secret)
+   7-4 Truffle Hunt          DIG
+   The iron tower is only ever daylight or an unlit silhouette.
    ============================================================ */
 (() => {
 const COL = { a: '#3a6ad8', b: '#ff8aa8', c: '#ffd86a' };
@@ -111,6 +114,16 @@ const painters = {
   }
 };
 const dyn = {
+  // far sails on the bay's horizon (7-3), drifting slowly: small, pale, no ink, so they never read as platforms
+  frSails(ctx, L, camX, oy, S, W, t) {
+    const hy = L.horizon || 236;
+    for (let i = 0; i < 6; i++) {
+      const x = ((i * 173 + t * (3 + i % 3) - camX * L.f) % BG_W + BG_W) % BG_W * S, y = oy + (hy - (i % 2) * 3) * S, k = (0.7 + (i % 3) * 0.15) * S;
+      ctx.fillStyle = 'rgba(70,80,100,0.75)'; ctx.beginPath(); ctx.moveTo(x - 9 * k, y - 2 * k); ctx.lineTo(x + 9 * k, y - 2 * k); ctx.lineTo(x + 6 * k, y + 1 * k); ctx.lineTo(x - 6 * k, y + 1 * k); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.moveTo(x, y - 20 * k); ctx.lineTo(x, y - 3 * k); ctx.lineTo(x + 9 * k, y - 3 * k); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = ['rgba(232,66,58,0.9)', 'rgba(42,106,184,0.9)', 'rgba(255,210,58,0.9)'][i % 3]; ctx.beginPath(); ctx.moveTo(x - 1, y - 17 * k); ctx.lineTo(x - 1, y - 3 * k); ctx.lineTo(x - 7 * k, y - 3 * k); ctx.closePath(); ctx.fill();
+    }
+  },
   // pigeons crossing the sky
   frPigeons(ctx, L, camX, oy, S, W, t) {
     for (let i = 0; i < 4; i++) {
@@ -196,7 +209,8 @@ const themes = {
     fog: '#e8f0ff', liquid: 'sea', decor: ['frLamp', 'frBench', 'frLamp']
   }),
   fr_night: Object.assign({}, base, {
-    name: 'Rooftops by Moonlight', music: 'tour_fr_night', particles: 'fireflies', ground: zinc,
+    // no fireflies or sparkles: the tower on this skyline stays a plain unlit silhouette
+    name: 'Rooftops by Moonlight', music: 'tour_fr_night', particles: 'none', ground: zinc,
     sky: ['#0a0e2a', '#1a2050', '#3a3a6a'], horizonGlow: '#8a7ac8',
     celestial: { type: 'moon', x: 0.72, y: 0.2, r: 30, color: '#fff8e0', glow: '#c8d0ff' }, stars: 1,
     layers: [
@@ -223,6 +237,145 @@ const themes = {
     semi: { style: 'plank', c1: '#c8962a', c2: '#8a6418' }
   })
 };
+
+/* ---------------- the rest of the country (overhaul themes) ---------------- */
+// Provence: lavender rows running to the hills, sunflowers, a stone farmhouse (mas) and cypresses
+Object.assign(painters, {
+  // a flat haze over the layers behind it (pushes far art back so nothing reads as a platform)
+  frVeil(ctx, L, rng, H) { ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H); },
+  frHillsSoft(ctx, L, rng, H) {
+    ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(0, H);
+    for (let x = 0; x <= BG_W; x += 10) ctx.lineTo(x, L.base - (L.amp || 40) * (0.5 + 0.5 * Math.sin(x / BG_W * TAU * 2 + (L.ph || 0)) * Math.cos(x / BG_W * TAU * 3)));
+    ctx.lineTo(BG_W, H); ctx.closePath(); ctx.fill();
+  },
+  frLavender(ctx, L, rng, H) {
+    // the field: purple rows converging toward the horizon, green earth between
+    ctx.fillStyle = '#7a9a4a'; ctx.fillRect(0, L.base, BG_W, H - L.base);
+    for (let r = 0; r < 9; r++) {
+      const y0 = L.base + r * r * 1.6 + r * 3, hh = 2 + r * 1.4;
+      ctx.fillStyle = r % 2 ? '#8a6ac8' : '#9a7ad8';
+      for (let x = (r % 2) * 6; x < BG_W; x += 12 + r) { ctx.beginPath(); ctx.ellipse(x, y0, 5 + r * 0.8, hh, 0, 0, TAU); ctx.fill(); }
+    }
+    // a stone mas with a terracotta roof and blue shutters, cypresses beside it
+    for (const mx of [180, 690]) wrapDraw(mx, 120, xx => {
+      ctx.fillStyle = '#e8d8b8'; ctx.fillRect(xx, L.base - 40, 90, 40); ctx.fillStyle = '#c86a3a'; ctx.beginPath(); ctx.moveTo(xx - 6, L.base - 40); ctx.lineTo(xx + 45, L.base - 60); ctx.lineTo(xx + 96, L.base - 40); ctx.fill();
+      ctx.fillStyle = '#5a8ac8'; for (let k = 0; k < 3; k++) ctx.fillRect(xx + 12 + k * 26, L.base - 30, 9, 12);
+      for (const cx of [xx + 104, xx + 116]) { ctx.fillStyle = '#2a5a2a'; ctx.beginPath(); ctx.ellipse(cx, L.base - 30, 5, 30, 0, 0, TAU); ctx.fill(); }
+    });
+  },
+  frSunflowers(ctx, L, rng, H) {
+    for (let x = 6; x < BG_W; x += 14 + rng() * 10) wrapDraw(x, 20, xx => {
+      const h = 30 + rng() * 26, y = L.base - h;
+      ctx.strokeStyle = '#4a8a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xx, L.base + 20); ctx.lineTo(xx, y); ctx.stroke();
+      ctx.fillStyle = '#ffc828'; for (let k = 0; k < 8; k++) { const a = k * TAU / 8; ctx.beginPath(); ctx.ellipse(xx + Math.cos(a) * 6, y + Math.sin(a) * 6, 4, 2, a, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = '#6a3a1a'; ctx.beginPath(); ctx.arc(xx, y, 4, 0, TAU); ctx.fill();
+    });
+    ctx.fillStyle = '#5a8a2a'; ctx.fillRect(0, L.base + 18, BG_W, H);
+  },
+  // the bay: wet sand flats with a sheen, distant water, the abbey island as a plain far silhouette (background only)
+  frBay(ctx, L, rng, H) {
+    ctx.fillStyle = vgrad(ctx, L.base - 4, H, '#b8c8d0', '#d8c8a0'); ctx.fillRect(0, L.base - 4, BG_W, H - L.base + 4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1; for (let i = 0; i < 40; i++) { const x = rng() * BG_W, y = L.base + 6 + rng() * 60; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 20, y - 2, x + 40, y); ctx.stroke(); }
+    wrapDraw((L.at || 560) - 80, 160, xx => {
+      const x = xx + 80, b = L.base;
+      ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(x - 80, b); ctx.quadraticCurveTo(x - 60, b - 28, x - 30, b - 44); ctx.lineTo(x - 10, b - 70); ctx.lineTo(x - 4, b - 96); ctx.lineTo(x, b - 120); ctx.lineTo(x + 4, b - 96); ctx.lineTo(x + 10, b - 70); ctx.lineTo(x + 30, b - 44); ctx.quadraticCurveTo(x + 60, b - 28, x + 80, b); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = shade(L.color, 0.12); for (let k = 0; k < 5; k++) ctx.fillRect(x - 40 + k * 16, b - 30 - (k % 2) * 8, 10, 4);
+    });
+  },
+  // Périgord: oak and walnut woods over pale limestone cliffs with cave mouths
+  frCliffs(ctx, L, rng, H) {
+    let x = 0;
+    while (x < BG_W) {
+      const w = 80 + rng() * 80, top = L.base - 40 - rng() * 40;
+      wrapDraw(x, w, xx => {
+        ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(xx, H); ctx.lineTo(xx, top + 10); ctx.quadraticCurveTo(xx + w * 0.5, top - 6, xx + w, top + 10); ctx.lineTo(xx + w, H); ctx.fill();
+        ctx.fillStyle = shade(L.color, -0.18); for (let k = 0; k < 3; k++) ctx.fillRect(xx + 6, top + 26 + k * 18, w - 12, 2);
+        ctx.fillStyle = '#3a2a24'; ctx.beginPath(); ctx.ellipse(xx + w * 0.4, top + 44, 10, 8, 0, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = '#4a7a3a'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(xx + k * w / 4, top + 6 - (k % 2) * 6, 14, 0, TAU); ctx.fill(); }
+      });
+      x += w;
+    }
+  },
+  frOaks(ctx, L, rng, H) {
+    for (let x = 10; x < BG_W; x += 50 + rng() * 40) wrapDraw(x, 60, xx => {
+      ctx.fillStyle = '#5a4030'; ctx.fillRect(xx - 4, L.base - 54, 8, 60);
+      ctx.fillStyle = L.color; for (const [dx, dy, r] of [[0, -70, 26], [-20, -58, 18], [20, -58, 18], [-8, -86, 16], [12, -84, 15]]) { ctx.beginPath(); ctx.arc(xx + dx, L.base + dy, r, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = shade(L.color, 0.14); ctx.beginPath(); ctx.arc(xx - 8, L.base - 76, 9, 0, TAU); ctx.fill();
+    });
+  }
+});
+// the overhaul's theme keys: each has its own Fiesta Toon atlas (strips and floor); the painters above are the
+// fallback while it loads. The rooftops by day and the quay still borrow the boulevard's and the Seine's.
+const atlasLayers = (atlas, layers, shifts) => layers.map((L, i) => ({ kind: 'image', atlas, id: 'L' + i, f: L.f, base: L.base, dyn: L.dyn, color: L.color, fallback: L, shift: (shifts && shifts[i]) || (L.base > 340 ? -Math.min(60, L.base - 335) : 0) }));
+const earth = {
+  style: 'grass', cap: '#6aa83a', capHi: '#a8d870', dirt: '#a87a4a', dirt2: '#7a5430', rock: '#9a7a5a'
+};
+const chalk = { style: 'stone', cap: '#d8ccb0', capHi: '#f4ecd8', dirt: '#c8b890', dirt2: '#a89870', rock: '#b8a888' };
+const sand = { style: 'playa', cap: '#e8d8a8', capHi: '#fff4d0', dirt: '#c8b080', dirt2: '#a89060', rock: '#b8a070' };
+// a theme's own Fiesta Toon strips: [atlas strip id, parallax f, procedural fallback layer, shift?]
+// for a ground line ('base') of about 315 the art sits on the floor at the usual phone camera (the floor is drawn near
+// y 304 of the 448 px view), so a lower base is lifted to it (shift); list entries may give their own shift
+const ownLayers = (atlas, list) => list.map(([id, f, fb, shift]) => ({ kind: 'image', atlas, id, f, base: fb.base, dyn: fb.dyn, color: fb.color, fallback: fb, shift: shift != null ? shift : -Math.max(0, Math.min(75, fb.base - 315)) }));
+Object.assign(themes, {
+  // the Paris square (7-1): its own strips (fr_place: the tower far off, a ring of pale houses, the square's trees,
+  // carousel and fountain on a terrace) and chunky cobbles; the boulevard painters are the fallback
+  fr_place: Object.assign({}, themes.fr_morning, { name: 'Place du Marché', sky: ['#6aa8e8', '#c8e0ff', '#ffe8e0'], groundTint: 'rgba(250,240,222,0.34)',
+    layers: ownLayers('fr_place', [
+      ['L0', 0.03, { kind: 'frTower', color: '#9aa8c0', base: 330, h: 240, at: 760, dyn: 'frPigeons' }, 0],
+      ['L1', 0.1, { kind: 'frFacades', color: '#f0e4cc', base: 350, roof: '#7a8aa0' }, 0],
+      ['L2', 0.3, { kind: 'frTrees', color: '#5a9a4a', base: 385 }, 0]
+    ]) }),
+  fr_provence: Object.assign({}, base, {
+    rays: '#fff4c8', name: 'Provence', music: 'tour_fr', particles: 'petals', ground: earth,
+    sky: ['#3a8ae8', '#9ad0ff', '#fff4e0'], horizonGlow: '#ffe8b0',
+    celestial: { type: 'sun', x: 0.78, y: 0.16, r: 36, color: '#fffbe0', glow: '#ffe090' }, stars: 0, cloudsDyn: true,
+    layers: ownLayers('fr_provence', [
+      ['L0', 0.03, { kind: 'frHillsSoft', color: '#9a8ac8', base: 300, amp: 34 }],
+      ['L1', 0.1, { kind: 'frLavender', color: '#8a6ac8', base: 340 }, -60],
+      ['L2', 0.25, { kind: 'frSunflowers', color: '#e8b830', base: 375 }, -92]
+    ]),
+    fog: '#fff0d8', hard: { c1: '#d8c8a0', c2: '#a89870' }, brick: { style: 'stone', c1: '#e8d8b8', c2: '#c8b090', mortar: '#a89070' },
+    semi: { style: 'plank', c1: '#a8805a', c2: '#6a4a2a' }, decor: ['frLavenderBush', 'frHive', 'frLavenderBush', 'frCypress']
+  }),
+  fr_baie: Object.assign({}, base, {
+    rays: '#fff8e8', name: 'The Bay', music: 'tour_fr', particles: 'none', ground: sand, liquid: 'sea',
+    sky: ['#5a9ad8', '#b8dcf4', '#fff4e4'], horizonGlow: '#fff4e0',
+    celestial: { type: 'sun', x: 0.25, y: 0.2, r: 32, color: '#fffbe8', glow: '#ffe8c0' }, stars: 0, cloudsDyn: true,
+    layers: ownLayers('fr_baie', [
+      ['L0', 0.02, { kind: 'frBay', color: '#a8b4c8', base: 290, at: 620 }, -40],
+      ['L1', 0.08, { kind: 'frHillsSoft', color: '#d8c8a0', base: 335, amp: 10, dyn: 'frSails', horizon: 236 }, -96]
+    ]),
+    fog: '#f0f4f8', hard: { c1: '#b8a888', c2: '#8a7a60' }, semi: { style: 'plank', c1: '#8a6a4a', c2: '#5a4430' }, decor: ['frShell', 'frTidePool', 'frBuoy', 'frShell', 'frBucket', 'frTidePool']
+  }),
+  fr_perigord: Object.assign({}, base, {
+    rays: '#fff0c8', name: 'Périgord', music: 'tour_fr', particles: 'leaves', ground: chalk,
+    sky: ['#6a9ad0', '#c4dcec', '#f4ecd8'], horizonGlow: '#fff0d0',
+    celestial: { type: 'sun', x: 0.3, y: 0.14, r: 30, color: '#fffbe8', glow: '#ffe8b0' }, stars: 0, cloudsDyn: true,
+    layers: ownLayers('fr_perigord', [
+      ['L0', 0.04, { kind: 'frOaks', color: '#4a7a3a', base: 300 }],
+      ['L1', 0.1, { kind: 'frCliffs', color: '#6a4a32', base: 330 }, 0]
+    ]),
+    fog: '#f0ecd8', hard: { c1: '#a89878', c2: '#7a6a50' }, semi: { style: 'plank', c1: '#7a5a3a', c2: '#4a3420' }, decor: ['frWalnut', 'frMushroomRing']
+  }),
+  // the sky over France (7-7): its own strips (far fields and the city with the tower as a plain daylight silhouette,
+  // cumulus banks with far balloons) and a cloud floor
+  fr_ciel: Object.assign({}, themes.fr_tower, {
+    name: 'Montgolfière Skies', particles: 'none', sky: ['#3a8ae8', '#a8d8ff', '#fff4e8'],
+    layers: ownLayers('fr_ciel', [
+      ['L0', 0.02, { kind: 'frTower', color: '#a8b8d0', base: 330, h: 200, at: 520 }, 0],
+      ['L1', 0.1, { kind: 'clouds', color: '#ffffff', base: 260 }, 0]
+    ]).concat([{ kind: 'frVeil', color: 'rgba(216,236,255,0.32)', base: 0, f: 0.1 }])   // a sky haze over the far balloons so the real ones pop
+  }),
+  // the rooftops by day (7-1): the morning boulevard's strips, zinc roofs underfoot
+  fr_toits: Object.assign({}, themes.fr_morning, { name: 'Les Toits', ground: zinc, hard: { c1: '#8a98a8', c2: '#5a6474' }, layers: atlasLayers('fr_morning', themes.fr_morning.layers), atlas: 'fr_morning', atlasBorrow: 'fr_morning' }),
+  // the quay: the Seine strips, a little greyer (the secret room under the bridge in 7-1)
+  fr_quai: Object.assign({}, themes.fr_seine, { name: 'Quai', layers: atlasLayers('fr_seine', themes.fr_seine.layers), atlasBorrow: 'fr_seine' })
+});
+// a borrowed atlas also lends its floor (the procedural tiles draw until it is in)
+if (typeof Atlas !== 'undefined') for (const k of ['fr_quai']) {
+  const th = themes[k], G = th.ground || {};
+  Atlas.applyTiles(th, th.atlasBorrow, { ground: 'ground', groundFallback: G.paint ? (c, r, s) => G.paint(c, r, s) : null, capFallback: G.paintCap ? (c, a, b, r, l, rt) => G.paintCap(c, a, b, r, l, rt) : null });
+}
 
 /* ---------------- decor ---------------- */
 const decor = {
@@ -308,20 +461,151 @@ const croissantArt = (ctx, e, x, y, m) => {
   if (!rolling && m !== 'flat' && m !== 'ko') { K.eyes(ctx, 2, -4, 1, 2.6, 2, false); ctx.strokeStyle = '#7a4a1a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(3, 0, 2, 0.2, Math.PI - 0.2); ctx.stroke(); }
   ctx.restore();
 };
-const mimeArt = (ctx, e, x, y, m, t) => {
-  // a street mime: white face paint, striped shirt, white gloves (and a stack of crêpes)
-  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.35 : 1);
-  K.feet(ctx, 0, 0, e.t, '#1a1a24', 4, 10, m !== 'walk');
-  ctx.fillStyle = '#1a1a24'; rr(ctx, -6, -18, 12, 9, 2); ctx.fill();
-  for (let k = 0; k < 5; k++) { ctx.fillStyle = k % 2 ? '#ffffff' : '#1a1a24'; ctx.fillRect(-7, -32 + k * 3, 14, 3); }
-  ctx.fillStyle = '#f8f8f8'; ctx.beginPath(); ctx.arc(0, -38, 7, 0, TAU); ctx.fill();
-  ctx.fillStyle = '#1a1a24'; ctx.fillRect(-3.5, -40, 2, 2.5); ctx.fillRect(2, -40, 2, 2.5);
-  ctx.strokeStyle = '#d8283a'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(0, -35, 2.4, 0.2, Math.PI - 0.2); ctx.stroke();
-  ctx.fillStyle = '#1a1a24'; ctx.beginPath(); ctx.ellipse(0, -45, 7, 2.2, 0, 0, TAU); ctx.fill();
-  // the gloves: an invisible box when idle, a throw when throwing
-  ctx.fillStyle = '#ffffff';
-  if (m === 'throw') { ctx.beginPath(); ctx.arc(10, -34, 3, 0, TAU); ctx.fill(); }
-  else { const k = Math.sin(t * 3) * 1.5; ctx.beginPath(); ctx.arc(9, -36 + k, 3, 0, TAU); ctx.arc(9, -26 - k, 3, 0, TAU); ctx.fill(); }
+// the crêpe pan (frPoele, a walking cast-iron pan; it replaces the old street performer): a crêpe sits in it until
+// it flings it out like a boomerang
+const poeleArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.35 : 1);
+  const still = m === 'idle' || m === 'stun' || m === 'ko';
+  K.feet(ctx, 0, 0, e.t, '#2a2a32', 5, 6, still);
+  ctx.translate(0, -7);
+  // the handle sticks out behind
+  ctx.fillStyle = '#6a4422'; rr(ctx, -26, -9, 14, 5, 2); ctx.fill(); ctx.fillStyle = '#9a6a3a'; rr(ctx, -25, -8.5, 10, 3, 1.5); ctx.fill();
+  // the pan seen at three quarters: iron rim and a dark face
+  ctx.fillStyle = '#2e2e38'; ctx.beginPath(); ctx.ellipse(0, -6, 14, 9, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#4a4a58'; ctx.beginPath(); ctx.ellipse(0, -8, 12, 6, 0, 0, TAU); ctx.fill();
+  if (m !== 'throw') { ctx.fillStyle = '#f2cc7a'; ctx.beginPath(); ctx.ellipse(0, -8.5, 10, 4.6, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#c8843a'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(-5 + k * 3.4, -9 + (k % 2) * 1.6, 1, 0, TAU); ctx.fill(); } }
+  // the face on the pan's belly
+  if (m !== 'flat' && m !== 'ko') { K.eyes(ctx, 2, -3, 1, 3, 1.8, m === 'throw' || m === 'tell'); ctx.fillStyle = '#ff8a9a'; ctx.beginPath(); ctx.arc(-6, 0, 1.6, 0, TAU); ctx.arc(9, 0, 1.6, 0, TAU); ctx.fill(); ctx.strokeStyle = '#e8586a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(2, 1, 2, 0.2, Math.PI - 0.2); ctx.stroke(); }
+  ctx.restore();
+};
+// a flying crêpe (the boomerang): a wide golden disc, spinning flat, lacy brown spots; its top is a platform
+const flyingCrepeArt = (c, s, t) => {
+  c.save(); c.translate(s.cx, s.y + 6); const k = 0.85 + 0.15 * Math.sin(t * 16);
+  c.fillStyle = '#e8b860'; c.beginPath(); c.ellipse(0, 1, s.w / 2, 6, 0, 0, TAU); c.fill();
+  c.fillStyle = '#f6d48a'; c.beginPath(); c.ellipse(0, -1, s.w / 2 - 2, 5 * k, 0, 0, TAU); c.fill();
+  c.fillStyle = '#c8843a'; for (let q = 0; q < 7; q++) { c.beginPath(); c.ellipse(-s.w / 2 + 10 + q * (s.w - 20) / 6, -1 + Math.sin(q * 2.1 + t * 10) * 1.5, 2.2, 1.2, 0, 0, TAU); c.fill(); }
+  c.restore();
+};
+// the rooster: a big red comb, a proud chest, a tail of green and copper feathers
+const coqArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  const crow = m === 'notice' || m === 'tell' || m === 'call', bob = m === 'walk' ? Math.abs(Math.sin(e.t * 9)) * 1.5 : 0;
+  ctx.strokeStyle = '#e8a020'; ctx.lineWidth = 2; for (const lx of [-3, 4]) { ctx.beginPath(); ctx.moveTo(lx, -9); ctx.lineTo(lx, 0); ctx.lineTo(lx + 3, 0); ctx.stroke(); }
+  ctx.translate(0, -bob);
+  for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? '#2a7a5a' : '#b8682a'; ctx.beginPath(); ctx.ellipse(-12 - k, -20 + k * 2, 4, 11, -0.7 + k * 0.25, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#c8562a'; ctx.beginPath(); ctx.ellipse(0, -14, 11, 9, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#f4e8d0'; ctx.beginPath(); ctx.ellipse(3, -12, 6, 6, 0, 0, TAU); ctx.fill();
+  const hy = crow ? -30 : -27, hx = crow ? 9 : 7;
+  ctx.fillStyle = '#d8783a'; ctx.beginPath(); ctx.arc(hx, hy, 6, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#e8282a'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(hx - 3 + k * 3, hy - 6 - (k === 1 ? 2 : 0), 3, 0, TAU); ctx.fill(); }
+  ctx.beginPath(); ctx.ellipse(hx + 3, hy + 6, 2, 3, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ffc828'; ctx.beginPath(); ctx.moveTo(hx + 5, hy - 1); ctx.lineTo(hx + (crow ? 13 : 10), hy + (crow ? -2 : 1)); ctx.lineTo(hx + 5, hy + 2); ctx.fill();
+  if (crow) { ctx.beginPath(); ctx.moveTo(hx + 5, hy + 2); ctx.lineTo(hx + 12, hy + 5); ctx.lineTo(hx + 5, hy + 4); ctx.fill(); }
+  if (m !== 'flat' && m !== 'ko') { ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(hx + 2, hy - 1, 1.3, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// the wild boar: a bristly brown wedge, pale snout disc, curled tusks; asleep it lies low with its eyes shut
+const boarArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  const asleep = m === 'sleep' || m === 'idle', run = m === 'charge' ? Math.sin(e.t * 26) * 2 : 0;
+  if (!asleep) { ctx.fillStyle = '#4a2e1e'; for (const lx of [-9, -4, 5, 10]) ctx.fillRect(lx - 1.5, -7 + (lx > 0 ? run : -run) * 0.5, 3, 7); }
+  ctx.translate(0, asleep ? 3 : 0);
+  ctx.fillStyle = '#6a4430'; ctx.beginPath(); ctx.moveTo(-15, -6); ctx.quadraticCurveTo(-14, -22, 0, -22); ctx.quadraticCurveTo(12, -21, 15, -11); ctx.lineTo(15, -5); ctx.quadraticCurveTo(0, -2, -15, -6); ctx.fill();
+  ctx.strokeStyle = '#3a2416'; ctx.lineWidth = 1.4; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.moveTo(-10 + k * 4, -21); ctx.lineTo(-11 + k * 4, -25); ctx.stroke(); }
+  ctx.fillStyle = '#d8a890'; ctx.beginPath(); ctx.ellipse(16, -9, 3.6, 4.4, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#6a3a2a'; ctx.beginPath(); ctx.arc(16.5, -10, 0.8, 0, TAU); ctx.arc(16.5, -7.5, 0.8, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#fff4e0'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(14, -5, 3, Math.PI * 0.9, Math.PI * 1.8); ctx.stroke();
+  ctx.fillStyle = '#5a3424'; ctx.beginPath(); ctx.moveTo(5, -20); ctx.lineTo(8, -27); ctx.lineTo(10, -19); ctx.fill();
+  if (asleep) { ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(9, -14, 2, 0.2, Math.PI - 0.2); ctx.stroke(); }
+  else if (m !== 'flat' && m !== 'ko') { ctx.fillStyle = m === 'charge' || m === 'notice' ? '#ff4a3a' : '#1a1020'; ctx.beginPath(); ctx.arc(9, -15, 1.6, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// the snail: a striped spiral shell; curled up it is just the shell
+const snailArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  const curl = m === 'curl' || m === 'ball';
+  if (!curl) { ctx.fillStyle = '#c8b88a'; ctx.beginPath(); ctx.moveTo(-12, 0); ctx.quadraticCurveTo(0, -4, 12, -2); ctx.quadraticCurveTo(16, -8, 13, -12); ctx.lineTo(11, -4); ctx.lineTo(-12, 0); ctx.fill(); ctx.strokeStyle = '#a8986a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(13, -12); ctx.lineTo(15, -18); ctx.moveTo(12, -11); ctx.lineTo(11, -17); ctx.stroke(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(15, -18, 1.3, 0, TAU); ctx.arc(11, -17, 1.3, 0, TAU); ctx.fill(); }
+  const sx = curl ? 0 : -2, sy = curl ? -9 : -11, r = curl ? 9 : 9.5;
+  ctx.fillStyle = '#b8783a'; ctx.beginPath(); ctx.arc(sx, sy, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#f0d8a0'; ctx.lineWidth = 2; ctx.beginPath(); for (let a = 0; a < TAU * 2.2; a += 0.2) { const rr2 = r * (1 - a / (TAU * 2.6)); const px = sx + Math.cos(a + (curl ? e.t * 6 : 0)) * rr2 * 0.85, py = sy + Math.sin(a + (curl ? e.t * 6 : 0)) * rr2 * 0.85; a === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py); } ctx.stroke();
+  ctx.restore();
+};
+// the mole: velvet grey-brown, tiny round spectacles, a pink star nose, big pink digging paws
+const moleArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  const up = m === 'pop' ? -3 : 0;
+  ctx.fillStyle = '#5a4a48'; ctx.beginPath(); ctx.ellipse(0, -10 + up, 11, 11, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#6e5c58'; ctx.beginPath(); ctx.ellipse(-2, -14 + up, 6, 4, -0.3, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ff9ab0'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 9, -5 + up + (m === 'pop' ? -6 : 0), 5, 3.4, s * 0.6, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#ff7a9a'; ctx.beginPath(); TourKit.star(ctx, 9, -12 + up, 3.4, 1.6, 6); ctx.fill();
+  if (m !== 'flat' && m !== 'ko') { ctx.strokeStyle = '#c8a040'; ctx.lineWidth = 1.2; for (const ex of [1, 6]) { ctx.beginPath(); ctx.arc(ex, -15 + up, 2.6, 0, TAU); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(3.6, -15 + up); ctx.lineTo(3.4, -15 + up); ctx.stroke(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(1.4, -15 + up, 0.9, 0, TAU); ctx.arc(6.4, -15 + up, 0.9, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// the magpie: black and white, a long glossy blue-green tail (the stamp thief of 7-2)
+const magpieArt = (ctx, e, x, y, m, t) => {
+  // the stamp thief of 7-2 calls this directly (it has no cfg of its own): draw the fr atlas's magpie when it is in
+  if (!e.cfg && typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'fr', m === 'flee' ? 'magpie/fly' : m === 'grab' ? 'magpie/swoop' : 'magpie/fly', (e.t || t) * (m === 'flee' ? 1.6 : 0.8), x, y - 12, e.dir || 1, { scale: 1.3 })) {
+    if (m === 'grab') { ctx.fillStyle = '#ff6a8a'; ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.2; rr(ctx, x + (e.dir || 1) * 14 - 3.5, y - 16, 7, 8, 1.5); ctx.fill(); ctx.stroke(); }
+    return;
+  }
+  ctx.save(); ctx.translate(x, y - 12); ctx.scale(e.dir || 1, 1);
+  const f = Math.sin((e.t || t) * (m === 'flee' ? 22 : 8));
+  ctx.fillStyle = '#1e5a6a'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-24, 6 + f); ctx.lineTo(-22, 1 + f); ctx.lineTo(-6, -3); ctx.fill();
+  ctx.fillStyle = '#18181e'; ctx.beginPath(); ctx.ellipse(0, -2, 10, 7, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(1, 1, 7, 4.5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#2a4a8a'; ctx.beginPath(); ctx.moveTo(-4, -4); ctx.lineTo(-14, -12 - f * 6); ctx.lineTo(4, -5); ctx.fill();
+  ctx.fillStyle = '#18181e'; ctx.beginPath(); ctx.arc(9, -6, 5, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#2a2a30'; ctx.beginPath(); ctx.moveTo(13, -7); ctx.lineTo(19, -5.5); ctx.lineTo(13, -4); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(10.5, -7, 1.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(11, -7, 0.8, 0, TAU); ctx.fill();
+  if (m === 'grab') { ctx.fillStyle = '#ff6a8a'; rr(ctx, 14, -2, 7, 8, 1.5); ctx.fill(); }
+  ctx.restore();
+};
+// the oyster: a rough grey shell; open, a pearl shows; it snaps shut with a clack
+const oysterArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y);
+  const open = e.openK != null ? e.openK : 0.5;
+  ctx.fillStyle = '#8a8a90'; ctx.beginPath(); ctx.ellipse(0, -5, 15, 6, 0, 0, Math.PI); ctx.fill();
+  ctx.fillStyle = '#c8c0c8'; ctx.beginPath(); ctx.ellipse(0, -5, 13, 3.5, 0, 0, TAU); ctx.fill();
+  if (open > 0.2 && m !== 'flat') { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(2, -7, 3, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,220,240,0.8)'; ctx.beginPath(); ctx.arc(1, -8, 1, 0, TAU); ctx.fill(); }
+  ctx.save(); ctx.translate(-13, -5); ctx.rotate(-open * 1.1);
+  ctx.fillStyle = '#9a9aa2'; ctx.beginPath(); ctx.ellipse(13, 0, 15, 5.5, 0, Math.PI, TAU); ctx.fill();
+  ctx.strokeStyle = '#6a6a74'; ctx.lineWidth = 1; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(13, 2, 5 + k * 3, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
+  if (open > 0.3 && m !== 'flat' && m !== 'ko') { ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(10, -2, 1.2, 0, TAU); ctx.arc(16, -2, 1.2, 0, TAU); ctx.fill(); }
+  ctx.restore();
+  ctx.restore();
+};
+// the crab: a red shore crab that scuttles sideways, claws up
+const crabArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); if (m === 'flat') ctx.scale(1.2, 0.4);
+  const sc = Math.sin(e.t * 18) * 1.5;
+  ctx.strokeStyle = '#a82a1a'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++) for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 6, -6); ctx.lineTo(s * (11 + k * 2), -4 + k * 2 + (k % 2 ? sc : -sc)); ctx.lineTo(s * (12 + k * 2), 0); ctx.stroke(); }
+  ctx.fillStyle = '#d83a2a'; ctx.beginPath(); ctx.ellipse(0, -8, 10, 6.5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ff6a4a'; ctx.beginPath(); ctx.ellipse(-2, -10, 5, 2.4, 0, 0, TAU); ctx.fill();
+  for (const s of [-1, 1]) { ctx.fillStyle = '#d83a2a'; ctx.beginPath(); ctx.ellipse(s * 12, -16 - (m === 'walk' ? Math.abs(sc) : 0), 4.4, 3.4, s * 0.5, 0, TAU); ctx.fill(); ctx.strokeStyle = '#a82a1a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(s * 12, -15); ctx.lineTo(s * 15, -19); ctx.stroke(); }
+  if (m !== 'flat' && m !== 'ko') { ctx.strokeStyle = '#a82a1a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-3, -13); ctx.lineTo(-3, -17); ctx.moveTo(3, -13); ctx.lineTo(3, -17); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-3, -18, 2, 0, TAU); ctx.arc(3, -18, 2, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(-3 + (e.dir || 1) * 0.6, -18, 1, 0, TAU); ctx.arc(3 + (e.dir || 1) * 0.6, -18, 1, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// the gull: white with grey wings, a yellow beak with a red spot
+const gullArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1); const f = Math.sin(e.t * (m === 'swoop' ? 9 : 5));
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(0, 0, 11, 5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#a8b0bc'; ctx.beginPath(); ctx.moveTo(-4, -2); ctx.quadraticCurveTo(-10, -12 - f * 6, -22, -6 - f * 8); ctx.lineTo(0, 0); ctx.fill(); ctx.beginPath(); ctx.moveTo(2, -2); ctx.quadraticCurveTo(10, -12 - f * 6, 20, -6 - f * 8); ctx.lineTo(4, 0); ctx.fill();
+  ctx.fillStyle = '#2a2a30'; ctx.beginPath(); ctx.moveTo(-20, -6 - f * 8); ctx.lineTo(-23, -5 - f * 8); ctx.lineTo(-19, -4 - f * 8); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(10, -3, 4, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffc81a'; ctx.beginPath(); ctx.moveTo(13, -3); ctx.lineTo(19, -1); ctx.lineTo(13, 0); ctx.fill(); ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.arc(16, -1, 0.9, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(11, -4, 1, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+// a hopping macaron: two pastel shells and a cream filling, little feet
+const macaronEnemyArt = (ctx, e, x, y, m) => {
+  const c = MAC[(e.seed || 0) % MAC.length];
+  ctx.save(); ctx.translate(x, y); if (m === 'flat') ctx.scale(1.3, 0.4);
+  const sq = m === 'hop' ? 1.1 : 1;
+  if (m !== 'flat' && m !== 'ko') K.feet(ctx, 0, 0, e.t, '#7a5a4a', 4, 4, m === 'hop');
+  ctx.translate(0, -4);
+  ctx.fillStyle = shade(c, -0.12); ctx.beginPath(); ctx.ellipse(0, -4, 11, 5 * sq, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#fff4e0'; ctx.fillRect(-10, -10, 20, 3);
+  ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(0, -13, 11, 6 * sq, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.ellipse(-4, -15, 4, 1.6, -0.2, 0, TAU); ctx.fill();
+  if (m !== 'flat' && m !== 'ko') K.eyes(ctx, 2, -13, e.dir || 1, 3, 1.5, true);
   ctx.restore();
 };
 const pigeonArt = (ctx, e, x, y, m) => {
@@ -377,14 +661,52 @@ const accordionArt = (ctx, e, x, y, m, t) => {
   K.eyes(ctx, -8.5, -20, 1, 1.8, 1.6, true);
   ctx.restore();
 };
+// behaviour modes with no clip of their own draw the nearest clip of the atlas art (and the procedural art sees the
+// same mapped mode): map = { behaviourMode: clipMode }
+function modal(cls, map) {
+  const M = class extends cls {
+    paint(ctx, x, y, mode) { return super.paint(ctx, x, y, map[mode] || mode); }
+    get artMode() { const m = super.artMode; return map[m] || m; }
+  };
+  return M;
+}
+// the boar's brain: the sleeper's until it wakes, then a snort (0.5 s) and a head-down charge
+function boarThink(e, dt) {
+  if (e.bst !== 'awake') { e.bt = (e.bt || 0) + dt; e.noWalk = false; TourBehave.sleeper.think(e, dt); if (e.bst === 'awake') { e.state = 'walk'; e.cool = 0.3; } return; }
+  const p = e.g.player;
+  if (e.state === 'walk') {
+    e.mode = 'walk'; if (!e.vx) e.vx = e.dir * e.speed;
+    if (e.cool <= 0 && p && !p.dead && Math.abs(p.cy - e.cy) < 2 * TS && Math.abs(p.cx - e.cx) < 7 * TS) { e.state = 'notice'; e.st = 0.5; e.vx = 0; e.dir = sign(p.cx - e.cx) || e.dir; K.say(e.g, e, 'SNORT!', '#ffd8a0'); K.sfx('snort', 'bump', { vol: 0.5, pitch: 0.6 }); }
+  } else if (e.state === 'notice') { e.mode = 'notice'; e.vx = 0; e.st -= dt; if (e.st <= 0) { e.state = 'charge'; e.st = 1.3; } }
+  else { e.mode = 'charge'; e.vx = e.dir * 6 * TS; e.st -= dt; if (Math.random() < 0.3) e.g.burst(e.cx - e.dir * 12, e.y + e.h, 1, '#c8a878', 'dust'); if (e.st <= 0 || e.hitWall) { e.state = 'walk'; e.cool = 2; e.vx = e.dir * e.speed; } }
+}
+// the overhaul cast drawn from the fr_x atlas (oyster, crab, gull, macaron; the truffle pig in 29_tour_fr_levels.js),
+// the procedural art until it is in
+const FR_X = 'fr_x';
+class FrOyster extends TourEnemy.make({ w: 30, h: 14, speed: 0, behavior: 'still', art: oysterArt, burst: '#c8c0c8', inkPad: 6, atlas: FR_X, sprite: 'oyster' }) {
+  constructor(g, s) { super(g, s); this.ph = (s.phase != null ? s.phase : Math.random() * 1.8); this.openK = 1; this.shut = false; this.snap = 0; }
+  think(dt) {
+    this.vx = 0; this.mode = 'idle'; this.ph += dt;
+    const k = this.ph % 1.8, was = this.shut;
+    this.shut = k >= 1.2; this.openK = this.shut ? approach(this.openK, 0, dt * 12) : approach(this.openK, 1, dt * 3);
+    this.trem = !this.shut && k > 0.85;   // the tell: the shell trembles before it snaps
+    if (this.shut && !was) { this.snap = 0.15; if (this.g.onScreen(this, 60)) K.sfx('clack', 'bump', { vol: 0.4, pitch: 1.6 }); }
+    if (this.snap > 0) this.snap -= dt;
+  }
+  touchPlayer(p) { if (this.dead || this.stunT > 0) return; if (this.snap > 0) p.hurt(this); }
+  hit(kind, src) { if ((kind === 'stomp' || kind === 'spin') && this.shut) return 'bounce'; return super.hit(kind, src); }
+  // a wet dark patch under the shell so the grey oyster reads on pale sand (it sits low in its pool)
+  draw(ctx) { if (!this.dead && !this.knocked) { ctx.fillStyle = 'rgba(60,44,30,0.4)'; ctx.beginPath(); ctx.ellipse(this.cx, this.y + this.h - 1, 19, 4.5, 0, 0, TAU); ctx.fill(); } super.draw(ctx); }
+  // the atlas has the open shell (idle) and the shut one
+  get artMode() { const m = super.artMode; return m === 'idle' && this.openK < 0.5 ? 'shut' : m; }
+  paint(ctx, x, y, mode) { if (this.trem) x += Math.sin(this.t * 60) * 1.2; return super.paint(ctx, x, y, mode === 'idle' && this.openK < 0.5 ? 'shut' : mode); }
+}
 const enemies = {
   frBaguette: { cls: TourEnemy.make({ w: 14, h: 38, speed: 1.0, behavior: 'walk', art: baguetteArt, burst: '#f0b860', onDefeat: e => e.g.burst(e.cx, e.cy, 12, '#f0c070', 'debris') }), place: 'walk' },
   frCroissant: { cls: TourEnemy.make({ w: 24, h: 18, speed: 0.9, behavior: 'roll', range: 8, rollSpeed: 6.2, rollT: 2.6, art: croissantArt, burst: '#e8a84a' }), place: 'walk' },
-  frMime: { cls: TourEnemy.make({ w: 16, h: 46, speed: 0.6, behavior: 'throw', every: 2.3, range: 12, art: mimeArt, onDefeat: e => K.say(e.g, e, '. . .', '#ffffff'), shoot: (e, p) => {
-    // a crêpe thrown like a frisbee: it flies flat and true (and Brady can stomp it)
-    tourFire(e.g, e.cx + e.dir * 10, e.y + 14, { kind: 'crepe', vx: e.dir * 4.8 * TS, w: 22, h: 8, life: 4, stompable: true, col: '#f2d090', art: (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.scale(1, 0.35 + 0.1 * Math.sin(t * 20)); ctx.fillStyle = '#f2d090'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(160,100,40,0.5)'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(Math.cos(k * 1.3) * 6, Math.sin(k * 1.3) * 6, 1.6, 0, TAU); ctx.fill(); } ctx.restore(); } });
-    TourKit.sfx('throw', null, { pitch: 1.4, vol: 0.4 });
-  } }), place: 'walk' },
+  // the crêpe pan: winds up (spin, 0.5 s), flings a crêpe that curves out 5 tiles and back; the crêpe's top is a ride
+  frPoele: { cls: modal(TourEnemy.make({ w: 26, h: 24, speed: 0.5, behavior: 'boomerang', out: 5, every: 2.4, art: poeleArt, projectileArt: flyingCrepeArt, burst: '#4a4a58',
+    onDefeat: e => K.say(e.g, e, 'CLANG!', '#d8d8e8') }), { idle: 'idle', tell: 'throw', throw: 'throw' }), place: 'walk' },
   frPigeon: { cls: TourFlyer.make({ w: 24, h: 16, range: 3, speed: 1.1, swoop: true, art: pigeonArt }), place: 'fly' },
   frPoodle: { cls: TourEnemy.make({ w: 24, h: 22, speed: 1.3, behavior: 'charge', range: 7, chargeSpeed: 6.5, art: poodleArt, onNotice: e => K.say(e.g, e, 'WOOF', '#ffffff') }), place: 'walk' },
   frCat: { cls: TourEnemy.make({ w: 24, h: 16, speed: 1.2, behavior: 'charge', range: 6, chargeSpeed: 7.5, windup: 0.5, chargeT: 1, art: catArt, onNotice: e => K.say(e.g, e, 'MRRROW', '#c8ff6a') }), place: 'walk' },
@@ -393,7 +715,22 @@ const enemies = {
     // a wheezy musical note that bobs through the air
     tourFire(e.g, e.cx + e.dir * 12, e.y + 8, { kind: 'note', vx: e.dir * 3 * TS, w: 12, h: 14, life: 4.5, col: '#ffffff', art: (ctx, s, t) => { const yy = s.cy + Math.sin(t * 6 + s.x * 0.05) * 6; ctx.fillStyle = '#1a1a2a'; ctx.beginPath(); ctx.ellipse(s.cx - 2, yy + 4, 4, 3, -0.4, 0, TAU); ctx.fill(); ctx.fillRect(s.cx + 1, yy - 8, 1.6, 12); ctx.beginPath(); ctx.moveTo(s.cx + 2.6, yy - 8); ctx.quadraticCurveTo(s.cx + 8, yy - 6, s.cx + 6, yy - 1); ctx.lineWidth = 1.6; ctx.strokeStyle = '#1a1a2a'; ctx.stroke(); } });
     TourKit.sfx('select2', null, { pitch: 0.6, vol: 0.4 });
-  } }), place: 'walk' }
+  } }), place: 'walk' },
+  // the rooster: Brady in its cone, it inhales (0.5 s) and crows: every sleeping boar nearby wakes up facing him
+  frCoq: { cls: modal(TourEnemy.make({ w: 22, h: 30, speed: 0, behavior: 'alarmCaller', cone: 5, wake: 12, art: coqArt, burst: '#c8562a' }), { idle: 'walk', tell: 'notice', call: 'notice' }), place: 'walk' },
+  // the wild boar: asleep (stomp it for double coins) until a noise or the rooster; awake it snorts and charges
+  frBoar: { cls: modal(TourEnemy.make({ w: 30, h: 22, speed: 0.9, behavior: 'sleeper', hear: 4, art: boarArt, burst: '#6a4430', think: boarThink }), { sleep: 'idle', wake: 'notice', awake: 'walk' }), place: 'walk' },
+  // the snail: curls into its shell when Brady is in the air above it (stomps bounce); stomp it as it uncurls
+  frSnail: { cls: modal(TourEnemy.make({ w: 24, h: 18, speed: 0.45, behavior: 'curlShield', curlT: 1.5, art: snailArt, burst: '#b8783a' }), { ball: 'curl', uncurl: 'stun' }), place: 'walk' },
+  // the mole: a moving soil bump under Brady's feet; it pops up (tell 0.7 s), then sits stunned a moment
+  frMole: { cls: modal(TourEnemy.make({ w: 24, h: 22, speed: 1.2, behavior: 'burrower', art: moleArt, burst: '#5a4a48' }), { pop: 'walk', exposed: 'stun', dig: 'idle' }), place: 'walk' },
+  // the magpie: the stamp thief of 7-2 (TourThief draws it); as a plain enemy it is an item thief
+  frMagpie: { cls: modal(TourEnemy.make({ w: 26, h: 20, speed: 1.4, behavior: 'itemThief', flee: 8, art: magpieArt, burst: '#18181e' }), { walk: 'fly', idle: 'fly', flee: 'fly', grab: 'swoop', notice: 'swoop' }), place: 'walk' },
+  // the oyster: open 1.2 s (stomp it now), then it snaps shut (hurts if Brady is in it) and stays shut 0.6 s
+  frOyster: { cls: FrOyster, place: 'walk' },
+  frCrab: { cls: TourEnemy.make({ w: 26, h: 16, speed: 1.6, behavior: 'walk', edgeTurn: true, art: crabArt, burst: '#d83a2a', atlas: FR_X, sprite: 'crab' }), place: 'walk' },
+  frGull: { cls: TourFlyer.make({ w: 30, h: 14, range: 4, speed: 0.9, swoop: true, art: gullArt, burst: '#ffffff', atlas: FR_X, sprite: 'gull' }), place: 'fly' },
+  frMacaron: { cls: TourEnemy.make({ w: 22, h: 20, speed: 1.1, behavior: 'hop', hopV: 9, hopEvery: 1.1, art: macaronEnemyArt, burst: '#ff9ab8', atlas: FR_X, sprite: 'macaron' }), place: 'walk' }
 };
 // a chandelier that drops when Brady passes underneath, then winches back up
 class FrChandelier extends Ent {
@@ -538,48 +875,49 @@ class FrDecoy extends Ent {
 }
 const entities = { frChandelier: FrChandelier, frLampPost: FrLampPost, frMirror: FrMirror, frOven: FrOven, frDecoy: FrDecoy };
 
-/* ---------------- the signature power-up: MIME GLOVES ---------------- */
-// Tap THROW: on the ground, draw an invisible wall in front of Brady (it blocks crêpes and enemies);
-// in mid-air, draw an invisible step under his feet. Up to three at once; each fades after a while.
-class MimeBlock extends Ent {
-  constructor(g, cells, life) { super(g, null, TS, TS); this.cells = cells; this.life = life || 6; this.x = cells[0][0] * TS; this.y = Math.min(...cells.map(c => c[1])) * TS; this.h = cells.length * TS; this.mime = true; }
+/* ---------------- the signature power-up: THE MERINGUE PIPING BAG ---------------- */
+// Tap THROW: on the ground, pipe a meringue wall in front of Brady (it blocks crêpes and enemies);
+// in mid-air, pipe a meringue step under his feet. Up to three at once; each crumbles after a while.
+class MeringueBlock extends Ent {
+  constructor(g, cells, life) { super(g, null, TS, TS); this.cells = cells; this.life = life || 6; this.life0 = this.life; this.x = cells[0][0] * TS; this.y = Math.min(...cells.map(c => c[1])) * TS; this.h = cells.length * TS; this.meringue = true; this.grow = 0; }
   update(dt) {
-    this.t += dt; this.life -= dt;
+    this.t += dt; this.life -= dt; this.grow = Math.min(1, this.grow + dt * 6);
     if (this.life <= 0) this.vanish();
   }
   vanish() {
     if (this.remove) return;
     const A = this.g.area;
     for (const [x, y] of this.cells) { const i = y * A.W + x; if (A.tiles[i] === T.HARD && A.hide[i] === 3) { A.tiles[i] = T.EMPTY; A.hide[i] = 0; } }
-    this.remove = true; this.g.burst(this.cx, this.cy, 10, '#ffffff', 'spark');
+    this.remove = true; this.g.burst(this.cx, this.cy, 12, '#fff8ec', 'debris');
   }
   draw(ctx) {
-    const a = Math.min(1, this.life * 1.5) * (0.55 + 0.25 * Math.sin(this.t * 6));
-    ctx.save(); ctx.globalAlpha = a;
+    // a swirl of piped meringue per cell: a ridged dome with a curled peak, toasted at the edges; it cracks as it ages
+    const k = this.grow, crack = this.life < 1.5 ? 1 - this.life / 1.5 : 0;
     for (const [x, y] of this.cells) {
-      ctx.fillStyle = 'rgba(220,235,255,0.18)'; ctx.fillRect(x * TS + 2, y * TS + 2, TS - 4, TS - 4);
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]); ctx.lineDashOffset = -this.t * 20; ctx.strokeRect(x * TS + 2, y * TS + 2, TS - 4, TS - 4); ctx.setLineDash([]);
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x * TS + 6, y * TS + 8); ctx.lineTo(x * TS + 12, y * TS + 4); ctx.stroke();
+      const cx = x * TS + TS / 2, by = y * TS + TS;
+      ctx.save(); ctx.translate(cx, by); ctx.scale(k, k); if (crack) ctx.translate(Math.sin(this.t * 40) * crack, 0);
+      ctx.fillStyle = '#e8c8a0'; ctx.beginPath(); ctx.ellipse(0, -2, 15, 4, 0, 0, TAU); ctx.fill();
+      for (let r = 0; r < 3; r++) { ctx.fillStyle = r % 2 ? '#fff4e4' : '#fffaf2'; ctx.beginPath(); ctx.ellipse(0, -6 - r * 8, 15 - r * 4, 6, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#e8d0b0'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(0, -6 - r * 8, 15 - r * 4, 6, 0, 0.2, Math.PI - 0.2); ctx.stroke(); }
+      ctx.fillStyle = '#fffaf2'; ctx.beginPath(); ctx.moveTo(-4, -26); ctx.quadraticCurveTo(0, -34, 5, -31); ctx.quadraticCurveTo(2, -28, 3, -25); ctx.fill();
+      ctx.fillStyle = 'rgba(200,140,70,0.35)'; ctx.beginPath(); ctx.arc(4, -30, 2, 0, TAU); ctx.fill();
+      if (crack) { ctx.strokeStyle = 'rgba(160,120,80,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-8, -6); ctx.lineTo(-2, -12); ctx.lineTo(-6, -18); ctx.moveTo(6, -4); ctx.lineTo(3, -14); ctx.stroke(); }
+      ctx.restore();
     }
-    ctx.restore();
   }
 }
-function glovesIcon(ctx, x, y, t) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t * 2) * 0.1);
-  for (const s of [-1, 1]) {
-    ctx.save(); ctx.translate(s * 6, 0); ctx.scale(s, 1);
-    ctx.fillStyle = '#ffffff'; rr(ctx, -5, -4, 10, 11, 4); ctx.fill();
-    for (let k = 0; k < 3; k++) rr(ctx, -4.5 + k * 3.2, -11, 2.8, 8, 1.4), ctx.fill();
-    rr(ctx, 4, -4, 4, 3, 1.5); ctx.fill();
-    ctx.strokeStyle = '#c8c8d8'; ctx.lineWidth = 0.8; rr(ctx, -5, -4, 10, 11, 4); ctx.stroke();
-    ctx.fillStyle = '#1a1a24'; ctx.fillRect(-5, 5, 10, 2);
-    ctx.restore();
-  }
+// the piping bag: a striped cone of cloth with a star nozzle, a meringue curl coming out
+function pipingIcon(ctx, x, y, t) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-0.5 + Math.sin(t * 2) * 0.08);
+  ctx.fillStyle = '#f4ecdc'; ctx.beginPath(); ctx.moveTo(-6, -11); ctx.lineTo(6, -11); ctx.lineTo(1.5, 6); ctx.lineTo(-1.5, 6); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#3a6ad8'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(-5 + k * 1.2, -8 + k * 5); ctx.lineTo(5 - k * 1.2, -8 + k * 5); ctx.lineTo(4.6 - k * 1.2, -6 + k * 5); ctx.lineTo(-4.6 + k * 1.2, -6 + k * 5); ctx.fill(); }
+  ctx.fillStyle = '#c8c8d8'; ctx.beginPath(); ctx.moveTo(-2, 6); ctx.lineTo(2, 6); ctx.lineTo(0, 10); ctx.fill();
+  ctx.fillStyle = '#e8d0a0'; rr(ctx, -7, -14, 14, 4, 2); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 12, 2.6, 0, TAU); ctx.arc(2.5, 13.5, 1.8, 0, TAU); ctx.fill();
   ctx.restore();
 }
 const power = {
-  id: 'mime', name: 'MIME GLOVES', country: 'fr', hint: 'TAP THROW: WALL AHEAD / STEP IN MID-AIR', time: 0, cooldown: 0.28,
-  icon: glovesIcon,
+  id: 'piping', name: 'MERINGUE PIPING BAG', country: 'fr', hint: 'TAP THROW: PIPE A WALL AHEAD / A STEP IN MID-AIR', time: 0, cooldown: 0.28,
+  icon: pipingIcon,
   action(p, g) {
     const A = g.area;
     const free = (x, y) => x >= 0 && y >= 0 && x < A.W && y < A.H && A.tiles[y * A.W + x] === T.EMPTY && !overlap({ x: x * TS, y: y * TS, w: TS, h: TS }, p);
@@ -594,19 +932,19 @@ const power = {
       for (const y of [fy, fy - 1]) if (free(tx, y)) cells.push([tx, y]);
     }
     if (!cells.length) { TourKit.sfx('bump', null, { vol: 0.3 }); return false; }
-    const mine = g.entities.filter(e => e instanceof MimeBlock && !e.remove);
+    const mine = g.entities.filter(e => e instanceof MeringueBlock && !e.remove);
     if (mine.length >= 3) mine[0].vanish();
     for (const [x, y] of cells) { A.tiles[y * A.W + x] = T.HARD; A.hide[y * A.W + x] = 3; }
-    g.spawn(new MimeBlock(g, cells, 6));
+    g.spawn(new MeringueBlock(g, cells, 6));
     if (!p.onGround) { p.vy = Math.min(p.vy, 0); }
     TourKit.sfx('select2', 'pick', { pitch: 1.6, vol: 0.5 });
-    g.parts.text(p.cx + p.facing * 20, p.y - 8, '*SQUEAK*', '#ffffff');
+    g.parts.text(p.cx + p.facing * 20, p.y - 8, '*SQUISH*', '#ffffff');
     return true;
   },
   drawOn(p, ctx, t) {
-    // white gloves on Brady's hands
+    // the piping bag in Brady's hand
     const hx = p.cx + p.facing * (p.small ? 8 : 11), hy = p.y + (p.small ? 16 : 30);
-    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(hx, hy, 3.4, 0, TAU); ctx.fill(); ctx.strokeStyle = '#c8c8d8'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.save(); ctx.translate(hx, hy); ctx.scale(0.7, 0.7); pipingIcon(ctx, 0, 0, t); ctx.restore();
   }
 };
 
@@ -645,11 +983,11 @@ const P = {
     st.coins(x + 16, x + 23, top - 3);
     st.gy = top; return x + 25;
   },
-  // a facade with balconies: mimes throw crêpes from up high
+  // a facade with balconies: crêpe pans fling crêpes from up high
   balconies(st, o) {
     const x = st.x, B = st.B; st.floor(x, x + 18);
-    for (let k = 0; k < 3; k++) { const bx = x + 2 + k * 6, by = st.gy - 3 - k * 2; for (let q = 0; q < 4; q++) B.set(bx + q, by, T.SEMI); st.coins(bx, bx + 3, by - 2); if (k === 1) st.enemy('frMime', bx + 2, by); }
-    st.enemy('frMime', x + 16, st.gy);
+    for (let k = 0; k < 3; k++) { const bx = x + 2 + k * 6, by = st.gy - 3 - k * 2; for (let q = 0; q < 4; q++) B.set(bx + q, by, T.SEMI); st.coins(bx, bx + 3, by - 2); if (k === 1) st.enemy('frPoele', bx + 2, by); }
+    st.enemy('frPoele', x + 16, st.gy);
     st.gold(x + 15, st.gy - 9, 'risky');
     return x + 19;
   },
@@ -815,16 +1153,19 @@ const P = {
     st.coins(x + 5, x + 12, st.gy - 7);
     return x + 15;
   },
-  // the boss arena: the hall of mirrors. The great oven high on the back wall, a gilded mirror on each side wall
-  // (hit them from below), chandeliers, benches and flowers, ledges to dodge the crêpes from
+  // the boss arena: the ballroom (LEVEL_OVERHAUL §2, 7-5), reshaped for the oven-and-mirrors fight. The great oven
+  // high in the back wall, top centre; a gilded mirror panel high on each side wall, too high to reach from the floor:
+  // a balcony under each one (jump into the mirror from the balcony); two low café ledges to dodge crêpes from;
+  // chandeliers, benches and flowers
   arena_ballroom(st, o) {
     const B = st.B, { x0, w, GY } = o, mid = x0 + Math.floor(w / 2);
-    for (let q = 0; q < 3; q++) { B.set(x0 + 7 + q, GY - 4, T.SEMI); B.set(x0 + w - 10 + q, GY - 4, T.SEMI); }
-    B.decorAt('frChandelier', mid - 5, GY - 7, 0); B.decorAt('frChandelier', mid + 5, GY - 7, 1);
-    B.decorAt('frBench', x0 + 5, GY, 0); B.decorAt('frBench', x0 + w - 6, GY, 1); B.decorAt('frFlowers', mid - 6, GY, 0); B.decorAt('frFlowers', mid + 6, GY, 1);
-    B.decorAt('frFlowers', x0 + 8, GY - 4, 2); B.decorAt('frFlowers', x0 + w - 9, GY - 4, 3);
-    st.spawn('frOven', mid, GY - 7, {});
-    st.spawn('frMirror', x0 + 3, GY - 4, { side: 'left' }); st.spawn('frMirror', x0 + w - 4, GY - 4, { side: 'right' });
+    for (let q = 1; q <= 5; q++) { B.set(x0 + q, GY - 3, T.SEMI); B.set(x0 + w - 1 - q, GY - 3, T.SEMI); }
+    for (let q = 0; q < 3; q++) { B.set(mid - 7 + q, GY - 5, T.SEMI); B.set(mid + 5 + q, GY - 5, T.SEMI); }
+    B.decorAt('frChandelier', mid - 6, GY - 8, 0); B.decorAt('frChandelier', mid + 6, GY - 8, 1);
+    B.decorAt('frBench', x0 + 8, GY, 0); B.decorAt('frBench', x0 + w - 9, GY, 1); B.decorAt('frFlowers', mid - 3, GY, 0); B.decorAt('frFlowers', mid + 3, GY, 1);
+    B.decorAt('frFlowers', x0 + 3, GY - 3, 2); B.decorAt('frFlowers', x0 + w - 4, GY - 3, 3);
+    st.spawn('frOven', mid, GY - 6, {});   // low enough to stay clear of the boss bar on a phone
+    st.spawn('frMirror', x0 + 2, GY - 8, { side: 'left' }); st.spawn('frMirror', x0 + w - 3, GY - 8, { side: 'right' });
   }
 };
 Object.assign(decor, {
@@ -840,7 +1181,7 @@ const platforms = {
 // slams down to send cream waves along the floor, lobs macarons. THE OVEN AND THE MIRRORS: Brady hits the two
 // mirror panels on the walls from below so they aim at the great oven's window; the oven charges and flashes,
 // and whatever stands in the column of light is baked. The soufflé follows Brady, so lure it into the light and
-// step out before the flash. Phase 2: it hides behind the mime's invisible walls. Phase 3: it splits into
+// step out before the flash. Phase 2: it hides behind meringue walls it pipes itself. Phase 3: it splits into
 // three; only the real one shows in the mirrors.
 const crepeArt = (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.scale(1, 0.35 + 0.1 * Math.sin(t * 20)); ctx.fillStyle = '#f2d090'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, TAU); ctx.fill(); ctx.fillStyle = '#b8783a'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(Math.cos(k * 1.3) * 6, Math.sin(k * 1.3) * 6, 1.6, 0, TAU); ctx.fill(); } ctx.restore(); };
 const macaronArt = (ctx, s, t) => { ctx.fillStyle = s.col; ctx.beginPath(); ctx.ellipse(s.cx, s.cy - 3, 7, 3.5, 0, 0, TAU); ctx.ellipse(s.cx, s.cy + 3, 7, 3.5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff4e0'; ctx.fillRect(s.cx - 6, s.cy - 1, 12, 2); };
@@ -861,7 +1202,7 @@ const boss = {
       return undefined;
     },
     decoy(b, side) { const g = b.g, x = clamp(b.cx + side * 4 * TS, b.arenaX0 + 60, b.arenaX1 - 60); g.spawn(new FrDecoy(g, { x, y: b.y + b.h, phase: Math.random() * TAU })); g.burst(x, b.cy, 20, '#fff4d0', 'confetti'); g.parts.text(x, b.y - 10, 'ANOTHER ME!', '#ffffff'); K.sfx('portal', null, { vol: 0.4, pitch: 1.4 }); },
-    // a mime wall between him and Brady (two blocks high, five seconds)
+    // a meringue wall between him and Brady (two blocks high, five seconds)
     wall(b) {
       const g = b.g, p = g.player, A = g.area; if (!p || p.dead) return;
       const dir = p.cx < b.cx ? -1 : 1, tx = Math.floor((b.cx + dir * 2.5 * TS) / TS), fy = Math.floor((b.floorY - 2) / TS);
@@ -869,7 +1210,7 @@ const boss = {
       const cells = []; for (const y of [fy, fy - 1]) if (free(tx, y)) cells.push([tx, y]);
       if (!cells.length) return;
       for (const [x, y] of cells) { A.tiles[y * A.W + x] = T.HARD; A.hide[y * A.W + x] = 3; }
-      g.spawn(new MimeBlock(g, cells, 5)); say(g, b, pick(['A WALL! INVISIBLE!', 'MIME MAGIC!', 'TRÈS CHIC, NON?']), '#ffffff'); K.sfx('select2', 'pick', { pitch: 1.6, vol: 0.5 });
+      g.spawn(new MeringueBlock(g, cells, 5)); say(g, b, pick(['A WALL OF MERINGUE!', 'PIPED TO PERFECTION!', 'TRÈS CHIC, NON?']), '#ffffff'); K.sfx('select2', 'pick', { pitch: 1.6, vol: 0.5 });
     },
     update(b, dt) {
       const g = b.g, p = g.player, ph = b.phase || 1, ov = this.oven(b), hy = this.hoverY(b);
@@ -928,7 +1269,7 @@ const boss = {
     hurt(b) { const g = b.g; b.go('collapse'); say(g, b, pick(['MON DIEU!', 'MY BEAUTIFUL CRUST!', 'SACRÉ SOUFFLÉ!']), '#ffd84a'); g.burst(b.cx, b.y, 24, '#fff4d0', 'confetti'); g.shake(5); Sound.play('splat', { pitch: 0.5 }); },
     phase(b, n) {
       const g = b.g; this.hurt(b);
-      if (n === 2) { g.bannerText = 'MIME WALLS GO UP!'; g.bannerT = 2.4; say(g, b, 'A MIME TAUGHT ME THIS!', '#ffffff'); }
+      if (n === 2) { g.bannerText = 'MERINGUE WALLS GO UP!'; g.bannerT = 2.4; say(g, b, 'I PIPE MY OWN WALLS!', '#ffffff'); }
       else if (n === 3) { b.decoyT = 3.5; this.decoy(b, -1); this.decoy(b, 1); g.bannerText = 'THREE SOUFFLÉS! ONLY ONE IS REAL'; g.bannerT = 2.6; say(g, b, 'WHICH ONE IS ME? HA!', '#ffd84a'); g.toast('THE MIRRORS SHOW THE REAL ONE'); }
     },
     lastHit(b) { const g = b.g; b.go('deflate'); b.vuln = false; b.sighed = false; for (const e of g.entities) if (e instanceof FrDecoy) e.pop('POP!'); g.bannerText = 'LE GRAND DÉFLATION!'; g.bannerT = 2.6; K.sfx('whistle', 'powerdown', { vol: 0.7, pitch: 0.5 }); g.shake(6); return true; },
@@ -984,9 +1325,9 @@ const tracks = {
   }
 };
 
-/* ---------------- the five levels ---------------- */
+/* ---------------- the country ---------------- */
 Tour.country({
-  id: 'fr', colors: COL, tagline: 'Croissants, mimes and a tower made of iron lace',
+  id: 'fr', colors: COL, tagline: 'Croissants, crêpe pans and a tower made of iron lace',
   themes, painters, dyn, decor, decorLights, beatArt, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_fr', boss: 'tour_fr_boss' },
   landmark: 'the iron tower',
@@ -1005,32 +1346,7 @@ Tour.country({
     for (let k = 0; k < 5; k++) { const a = -Math.PI * 0.85 + k * Math.PI * 0.425; ctx.fillStyle = k % 2 ? '#ffe070' : '#f0b830'; ctx.beginPath(); ctx.ellipse(Math.cos(a) * 9, Math.sin(a) * 5, 5.5, 4.5, a, 0, TAU); ctx.fill(); }
     ctx.restore();
   } },
-  levels: [
-    { name: 'Boulangerie Boulevard', style: 'run', theme: 'fr_morning', gimmick: 'Café umbrellas, a bakery conveyor and croissants rolling downhill',
-      enemies: [['frBaguette', 3], ['frPoodle', 1], ['frCroissant', 2]],
-      hint: 'Mime gloves: tap THROW to draw an invisible wall (or a step in mid-air)',
-      postcard: 'The Baron is in love with the iron tower. He keeps saying "it would look PERFECT on my shelf." Ugh. ♥ C',
-      script: ['sig', 'cafe', 'gap', 'bakery', 'croissants', 'cp', 'balconies', ['blocks', { content: 'power' }], 'kiosk', ['enemies', { n: 2 }], 'bonus', ['cafe', { n: 2 }], 'end'] },
-    { name: 'Seine Chase', style: 'auto', theme: 'fr_seine', gimmick: 'Chase the blimp along the quay: book-box lids snap open and shut, barges drift by',
-      enemies: [['frPigeon', 1], ['frBaguette', 1]], scroll: 2.5, bpm: 100,
-      hint: 'The green book boxes snap shut on the beat: time your hops',
-      postcard: 'I can see you from up here! Run, Brady! (Mind the pigeons.) ♥ C',
-      script: [['flat', { n: 6 }], 'bookboxes', 'bridge', 'barge', ['bookboxes', { n: 4 }], ['steps', { up: true }], ['bridge', { gold: true }], 'cp', 'barge', ['bookboxes', { n: 3 }], ['steps', {}], ['enemies', { n: 2, len: 10 }], 'barge', ['bridge', { gold: true }], 'end'] },
-    { name: 'Rooftops by Moonlight', style: 'night', theme: 'fr_night', gimmick: 'Zinc rooftops at night: chimney smoke lifts you over the alleys; cats prowl',
-      enemies: [['frCat', 2], ['frKeychain', 1]], dark: true,
-      hint: 'Jump into chimney smoke and let it carry you up',
-      postcard: 'The Baron snores. Loudly. I borrowed his map: his next stop is the tower! ♥ C',
-      script: ['lamp', ['roofs', { n: 2 }], ['chimney', { gold: true }], 'lamp', ['roofs', { n: 3, cat: true }], 'clothesline', 'cp', 'lamp', ['chimney', { cat: true }], ['roofs', { n: 2 }], 'oneup', 'clothesline', 'lamp', ['chimney', {}], 'end'] },
-    { name: 'The Iron Tower', style: 'climb', theme: 'fr_tower', gimmick: 'Climb the lattice tower: elevators, girders and gusts of wind at the top',
-      enemies: [['frKeychain', 1], ['frPigeon', 1]], W: 24, H: 104,
-      hint: 'Ride the elevators. Up top, the wind pushes you around',
-      postcard: 'From the top you can see the whole city. And a soufflé chef sneaking into the palace... ♥ C',
-      script: [['girders', { n: 4 }], 'elevator', ['girders', { n: 3, enemy: 'frKeychain', flip: true }], 'windy', ['elevator', { h: 9, gold: true }], ['girders', { n: 4 }], ['windy', { dir: -1 }], ['girders', { n: 3, flip: true }], 'elevator', ['girders', { n: 2 }]] },
-    { name: 'Hall of Mirrors', style: 'castle', theme: 'fr_chateau', gimmick: 'Mirror doors, falling chandeliers and Le Grand Soufflé',
-      enemies: [['frAccordion', 2], ['frBaguette', 2], ['frMime', 1]], boss: 'fr_souffle', arena: 'ballroom', arenaW: 26,
-      hint: 'Mirrors are doors: press UP in front of one. In the ballroom, hit the wall mirrors from below to aim the oven!',
-      postcard: 'The iron tower is back to full size! The Baron flew east, grumbling. Next stop: Amsterdam! ♥ C',
-      script: [['mirrors', {}], 'chandeliers', ['enemies', { n: 2 }], 'gallery', 'cp', ['mirrors', { fake: true }], ['chandeliers', { n: 4 }], 'arena'] }
-  ]
+  // the levels are added by 29_tour_fr_levels.js (Tour.amend)
+  levels: []
 });
 })();

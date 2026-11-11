@@ -1,10 +1,8 @@
 /* ============================================================
-   MEXICO (world 1) — reference country for the world tour.
-   1-1 Mercado Mayhem      run    bouncy market awnings, rolling watermelons, fountain jets
-   1-2 Xochimilco Float    ride   ride a painted trajinera: posts to hop, axolotls, herons
-   1-3 Cenote Dive         swim   a flooded limestone cave: roots, currents, light shafts
-   1-4 Volcán Escape       climb  climb out of a volcano while the lava rises
-   1-5 Hacienda Fiesta     castle swinging piñatas, candy cannons; boss El Gran Piñatón
+   MEXICO (world 1) — reference country for the world tour: art,
+   enemies, set pieces, the boss and music. The six levels (v2
+   format) are in 29_tour_mx_levels.js; the atlases are wired in
+   29_tour_mx_sprites.js.
    ============================================================ */
 (() => {
 const COL = { a: '#ff3d8b', b: '#18c2c2', c: '#ffb81a' };
@@ -348,6 +346,8 @@ const pepperArt = (ctx, e, x, y, m) => {
 };
 const eloteArt = (ctx, e, x, y, m, t) => {
   const sq = m === 'flat' ? 0.35 : 1;
+  // the stomp that pops it: kernels fly off in every direction
+  if (m === 'burst') { for (let k = 0; k < 10; k++) { const a = k / 10 * TAU + 0.3; ctx.fillStyle = k % 2 ? '#fff8e0' : '#ffd84a'; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 14, y - 14 + Math.sin(a) * 14, 3.2, 0, TAU); ctx.fill(); } }
   ctx.save(); ctx.translate(x, y);
   if (m !== 'flat' && m !== 'ko') K.feet(ctx, 0, 0, e.t, '#3a6a2a', 4, 6, m === 'stun');
   ctx.translate(0, -6);
@@ -355,6 +355,16 @@ const eloteArt = (ctx, e, x, y, m, t) => {
   ctx.fillStyle = '#ffd84a'; rr(ctx, -6, -24 * sq, 12, 24 * sq, 6); ctx.fill();
   ctx.fillStyle = '#f0b81a'; for (let r = 0; r < 6; r++) for (let k = 0; k < 3; k++) ctx.fillRect(-5 + k * 4, (-22 + r * 3.6) * sq, 2.6, 2.4 * sq);
   if (m !== 'flat' && m !== 'ko') K.eyes(ctx, 0, -16, e.dir, 2.6, 2.1, false);
+  ctx.restore();
+};
+// popcorn: what an elote pops into; puffy kernels with a little face, they hop twice and fade
+const popcornArt = (ctx, e, x, y, m, t) => {
+  const sq = m === 'flat' ? 0.4 : 1;
+  ctx.save(); ctx.translate(x, y);
+  ctx.fillStyle = '#fff6dc';
+  for (const [dx, dy, r] of [[-4, -5, 4.6], [4, -5, 4.6], [0, -10, 4.8], [0, -3, 4.4], [-5, -9, 3.4], [5, -9, 3.4]]) { ctx.beginPath(); ctx.arc(dx, dy * sq, r, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#f2b830'; ctx.beginPath(); ctx.arc(1, -2 * sq, 2.4, 0, TAU); ctx.fill();
+  if (m !== 'flat' && m !== 'ko') K.eyes(ctx, 0, -8, e.dir || 1, 2.3, 1.5, false);
   ctx.restore();
 };
 const burroArt = (ctx, e, x, y, m) => {
@@ -388,6 +398,12 @@ const xoloArt = (ctx, e, x, y, m, t) => {
   if (m !== 'wave') { ctx.save(); ctx.translate(22, -20); ctx.scale(0.55, 0.55); tacoShape(ctx, 0, 0, 0); ctx.restore(); }
   ctx.restore();
   if (m !== 'wave') { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 46 + Math.sin(t * 5) * 2); }
+};
+// Xolo minding La Tiendita (the Souvenir Stand): wagging behind the counter
+decor.mxKeeperXolo = (ctx, x, y, t) => {
+  // the pre-rendered Xolo from the 'mx' atlas (waving, facing the door), else the procedural one
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'mx', 'xolo/wave', t, x, y - 26, -1, { scale: ART_SCALE.enemy })) return;
+  ctx.save(); ctx.translate(x, y - 26); xoloArt(ctx, { t, dir: 1 }, 0, 0, 'wave', t); ctx.restore();
 };
 const axolotlArt = (ctx, e, x, y, m) => {
   ctx.save(); ctx.translate(x, y); ctx.rotate(m === 'up' ? -0.4 : 0.6);
@@ -474,9 +490,163 @@ function tacoShape(ctx, x, y, a) {
   ctx.strokeStyle = '#c8902a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 2, 10, Math.PI, TAU); ctx.stroke();
   ctx.restore();
 }
+// an axolotl walking on land (the air pocket in the cenote): pink, frilly gills, a smile
+const axolotlWalkArt = (ctx, e, x, y, m) => {
+  const sq = m === 'flat' ? 0.45 : 1;
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, sq);
+  ctx.fillStyle = '#ffaacc'; for (const lx of [-8, -3, 4, 9]) ctx.fillRect(lx - 1.5, -4, 3, 4 + Math.max(0, Math.sin(e.t * 10 + lx)) * 1.5);
+  ctx.beginPath(); ctx.ellipse(0, -8, 12, 6, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-10, -8); ctx.quadraticCurveTo(-20, -14 + Math.sin(e.t * 6) * 2, -21, -6); ctx.quadraticCurveTo(-15, -4, -10, -5); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(10, -11, 7, 6, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ff5a9a'; for (const s2 of [-1, 1]) for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(8 + k * 2.2, -11 + s2 * (6 + k * 1.4), 1.6, 3.8, s2 * (0.6 + k * 0.3), 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(13, -13, 1.4, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#c84a7a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(14, -10, 2, 0.2, 1.6); ctx.stroke();
+  ctx.restore();
+};
+// a pale, eyeless cave fish: it only notices Brady when he swims fast
+const blindFishArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  if (m === 'tell') ctx.translate(Math.sin(e.t * 50) * 1.5, 0);
+  ctx.fillStyle = '#f2e8ee'; ctx.beginPath(); ctx.ellipse(0, 0, 15, 8, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-22, -8 + Math.sin(e.t * 9) * 2); ctx.lineTo(-22, 8 + Math.sin(e.t * 9) * 2); ctx.fill();
+  ctx.fillStyle = '#e8c8d8'; ctx.beginPath(); ctx.moveTo(-4, -7); ctx.lineTo(4, -13); ctx.lineTo(6, -7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,140,170,0.45)'; for (let k = 0; k < 3; k++) ctx.fillRect(-6 + k * 5, -5, 2, 10);
+  // no eyes: a little pink pit where they'd be, and whiskers that twitch
+  ctx.fillStyle = '#e8a8c0'; ctx.beginPath(); ctx.arc(8, -2, 1.8, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#c8a0b8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(13, 2); ctx.lineTo(19, 5 + Math.sin(e.t * 8) * 2); ctx.moveTo(13, 2); ctx.lineTo(20, 1); ctx.stroke();
+  if (m === 'charge') { ctx.fillStyle = '#7a2a4a'; ctx.beginPath(); ctx.ellipse(13, 2, 2.5, 3, 0, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+// a swallow: a little dark bird with a forked tail and a cream throat
+const swallowArt = (ctx, e, x, y, m) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  const f = Math.sin(e.t * 18 + (e.k || 0));
+  ctx.fillStyle = '#2a3a6a'; ctx.beginPath(); ctx.ellipse(0, 0, 9, 4.5, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-15, -4); ctx.lineTo(-11, 0); ctx.lineTo(-15, 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#3a4a8a'; ctx.beginPath(); ctx.moveTo(-2, -1); ctx.quadraticCurveTo(-6, -10 - f * 6, 4, -6 - f * 8); ctx.lineTo(3, -1); ctx.fill();
+  ctx.fillStyle = '#f4e4c8'; ctx.beginPath(); ctx.ellipse(4, 2, 4, 2.5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#c84a2a'; ctx.beginPath(); ctx.arc(7, -1, 1.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(6, -2, 1.3, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(6.4, -2, 0.7, 0, TAU); ctx.fill();
+  ctx.restore();
+};
+// the headline enemy: an axolotl that leaps out of the canal. Stomp it and it shrinks to a harmless baby that regrows
+// in 3 s (it flashes in the last second); stomp the baby to finish it. Tacos, puffs and planes beat it at once.
+const AxoLeap = TourLeaper.make({ w: 22, h: 14, jumpV: 21, every: 1.8, art: axolotlArt, splash: '#7ae0d0' });
+class MxAxolotl extends AxoLeap {
+  update(dt) {
+    if (this.tiny && !this.knocked) { this.tinyT += dt; if (this.tinyT > 3.4) { this.tiny = false; this.g.burst(this.cx, this.cy, 8, '#ffaacc', 'spark'); K.sfx('pop', 'jump', { vol: 0.4, pitch: 0.8 }); } }
+    super.update(dt);
+  }
+  hit(kind, src) {
+    if (this.dead || this.state === 'wait') return false;
+    if (kind === 'stomp' || kind === 'spin') {
+      if (this.tiny) { this.knockOff(1); return true; }
+      this.tiny = true; this.tinyT = 0; Sound.play('stomp', { pitch: 1.4 }); this.g.burst(this.cx, this.cy, 8, '#ffffff', 'spark');
+      this.g.parts.text(this.cx, this.y - 6, 'TINY!', '#ffaacc'); return 'bounce';
+    }
+    this.knockOff(1); return true;
+  }
+  touchPlayer(p) { if (!this.tiny) super.touchPlayer(p); }
+  draw(ctx) {
+    if (!this.tiny || this.knocked) return super.draw(ctx);
+    if (this.state === 'wait') return;
+    ctx.save(); ctx.translate(this.cx, this.cy); ctx.scale(0.55, 0.55); ctx.translate(-this.cx, -this.cy);
+    if (this.tinyT > 2.4 && Math.floor(this.t * 12) % 2) ctx.globalAlpha = 0.45;
+    super.draw(ctx); ctx.restore();
+  }
+}
+MxAxolotl.cfg = AxoLeap.cfg;
+// swimmers: a regrower that patrols its stretch of water and turns at walls
+TourBehave.mxSwimRegrow = Object.assign({}, TourBehave.regrower, {
+  think(e, dt) {
+    if (e.hitWall) e.dir = -e.dir;
+    if (e.cx < e.hx0 - 4 * TS) e.dir = 1; else if (e.cx > e.hx0 + 4 * TS) e.dir = -1;
+    e.vy = Math.sin(e.t * 1.6) * 0.5 * TS;
+    TourBehave.regrower.think(e, dt);
+    e.vx = e.dir * e.speed * (e.bst === 'tiny' ? 0.5 : 1);
+  }
+});
+// the blind fish: drifts; only fast swimming (a dash, or swimming with the Fins) wakes it: a quiver (0.6 s), then a
+// straight charge at where Brady was, then it drifts dazed (1 s), when a bump or a stomp beats it
+TourBehave.mxBlindCharge = {
+  think(e, dt) {
+    const p = TB.p(e), st = e.bst || 'drift';
+    if (!e.bst) TB.go(e, 'drift');
+    if (st === 'drift') {
+      e.mode = 'swim'; if (e.hitWall) e.dir = -e.dir; if (Math.abs(e.cx - e.hx0) > 3 * TS) e.dir = -sign(e.cx - e.hx0) || e.dir;
+      e.vx = e.dir * e.speed * 0.6; e.vy = Math.sin(e.t * 1.3) * 0.4 * TS;
+      const H = p && p.hands, fast = p && ((H && H.dashT > 0) || Math.hypot(p.vx, p.vy) > (H && H.id === 'fins' ? 3.5 : 5) * TS);
+      if (p && fast && e.cool <= 0 && TB.dist(e, p) < 5) { TB.go(e, 'tell'); e.aim = { x: p.cx, y: p.cy }; TB.face(e, p); TB.tell(e, 'growl', 'select'); }
+    } else if (st === 'tell') { e.vx = 0; e.vy = 0; e.mode = 'tell'; if (e.bt > 0.6) { TB.go(e, 'charge'); const dx = e.aim.x - e.cx, dy = e.aim.y - e.cy, d = Math.hypot(dx, dy) || 1; e.vx = dx / d * 7 * TS; e.vy = dy / d * 7 * TS; } }
+    else if (st === 'charge') { e.mode = 'charge'; if (e.bt > 0.7 || e.hitWall) { TB.go(e, 'dazed'); e.vx = 0; e.vy = 0; } }
+    else if (st === 'dazed') { e.mode = 'stun'; e.vx = 0; e.vy = 0.3 * TS; if (e.bt > 1.0) { TB.go(e, 'drift'); e.cool = 1.5; } }
+  },
+  hit(e, kind) { if (kind === 'stomp' || kind === 'bump') return e.bst === 'dazed' ? undefined : (kind === 'stomp' ? 'bounce' : false); return undefined; },
+  draw(e, ctx, d) { d(); if (e.bst === 'tell') TB.tellMark(ctx, e, '#ffaacc'); if (e.bst === 'dazed') TourKit.dizzy(ctx, e.cx, e.y - 4, e.t); }
+};
+// a flock of swallows: harmless to touch, they only nudge Brady a tile sideways
+TourBehave.mxFlock = Object.assign({}, TourBehave.swarm, { touch(e, p) { p.pushX = (p.pushX || 0) + e.dir * 4 * TS; return true; } });
+/* ---------------- the rebuilt cast's pre-rendered art (tools/blender/sprites/mx_extras.py -> the 'mx_x' atlas) ----------------
+   cfg.atlas = 'mx_x' makes a level that spawns them load the atlas; every one keeps its procedural art as the fallback. */
+const MX_X = 'mx_x';
+// the elote keeps the 'mx' art; its burst pose (shown while it pops) is in mx_x, which a level with elotes loads because
+// their popcorn draws from it (see the extraAtlases hook below)
+const EloteBase = TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'splitter', n: 3, child: 'mxPopcorn', childLife: 3, art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') });
+class MxElote extends EloteBase {
+  drawArt(ctx) {
+    if (this.dead && !this.knocked && this.mode === 'burst' && typeof Atlas !== 'undefined' && Atlas.draw(ctx, MX_X, 'elote_burst_000', this.cx, this.y + this.h, this.dir || 1, { scale: TourSprite.scale(this) })) return;
+    super.drawArt(ctx);
+  }
+}
+MxElote.cfg = EloteBase.cfg;
+// more art that brings its own atlas into a level's atlas set (Play.extraAtlases only follows spawn types):
+//   enemies an enemy spawns (cfg.child: the elote's popcorn), decor drawn from an atlas (Decor[kind].atlas: a shop
+//   keeper), and skins (TOUR_SKINS[look].atlas) used by a spawn's look (a race rival, a thief)
+if (typeof Play !== 'undefined' && !Play.prototype.extraAtlasesChild) {
+  const ex = Play.prototype.extraAtlases;
+  Play.prototype.extraAtlasesChild = true;
+  Play.prototype.extraAtlases = function () {
+    const n = new Set(ex.call(this));
+    for (const a of (this.level && this.level.areas) || []) {
+      for (const sp of a.spawns || []) {
+        const C = ENTITY_TYPES[sp.type], ch = C && C.cfg && C.cfg.child && ENTITY_TYPES[C.cfg.child];
+        if (ch && ch.cfg && ch.cfg.atlas) n.add(ch.cfg.atlas);
+        const sk = sp.look && typeof TOUR_SKINS !== 'undefined' && TOUR_SKINS[sp.look];
+        if (sk && sk.atlas) n.add(sk.atlas);
+      }
+      for (const d of a.decor || []) { const D = typeof Decor !== 'undefined' && Decor[d.kind]; if (D && D.atlas) n.add(D.atlas); }
+    }
+    return [...n];
+  };
+}
+// the swimming axolotl: its tiny (regrowing) self has its own frames
+const AxoSwimBase = TourSwimmer.make({ w: 26, h: 14, speed: 1.0, behavior: 'mxSwimRegrow', regrowT: 3, art: axolotlArt, atlas: MX_X, sprite: 'axoswim' });
+class MxAxoSwim extends AxoSwimBase {
+  drawArt(ctx) { if (this.tiny && !this.knocked && TourSprite.draw(ctx, this, this.cx, this.cy, 'tiny', { tiny: ['tiny', 'swim'] })) return; super.drawArt(ctx); }
+}
+MxAxoSwim.cfg = AxoSwimBase.cfg;
+// the blind fish shows its states: the quiver (tell), the gaping charge, the daze
+const BLIND_FB = { swim: ['swim'], tell: ['tell', 'swim'], charge: ['charge', 'swim'], stun: ['stun', 'swim'], ko: ['ko', 'swim'] };
+const BlindBase = TourSwimmer.make({ w: 30, h: 16, speed: 1.2, behavior: 'mxBlindCharge', art: blindFishArt, atlas: MX_X, sprite: 'blindfish' });
+class MxBlindFish extends BlindBase {
+  drawArt(ctx) {
+    const m = this.knocked ? 'ko' : BLIND_FB[this.mode] ? this.mode : 'swim';
+    ctx.save(); if (m === 'tell') ctx.translate(Math.sin(this.t * 50) * 1.5, 0);
+    if (!(this.sprite && TourSprite.draw(ctx, this, this.cx, this.cy, m, BLIND_FB))) TourSprite.art(ctx, this, this.cx, this.cy, m);
+    ctx.restore();
+  }
+}
+MxBlindFish.cfg = BlindBase.cfg;
+// swallows fly in a flock whose followers always draw through cfg.art, so the art itself reaches for the atlas
+const swallowSprite = (ctx, e, x, y, m) => {
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, MX_X, m === 'ko' ? 'swallow_ko_000' : 'swallow/fly', (e.t || 0) + (e.k || 0) * 0.13, x, y, e.dir || 1)) return;
+  swallowArt(ctx, e, x, y, m);
+};
 const enemies = {
   mxPepper: { cls: TourEnemy.make({ w: 16, h: 24, speed: 1.1, behavior: 'hop', hopV: 9.5, hopEvery: 1.1, art: pepperArt, burst: '#5ad04a' }), place: 'walk' },
-  mxElote: { cls: TourEnemy.make({ w: 18, h: 30, speed: 0.9, behavior: 'walk', art: eloteArt, burst: '#ffd84a', onDefeat: e => e.g.burst(e.cx, e.cy, 14, '#fff8e0', 'confetti') }), place: 'walk' },
+  // the elote pops: stomp it and it bursts into three popcorn puffs (stomp them for coins, or let them fade)
+  mxElote: { cls: MxElote, place: 'walk' },
+  mxPopcorn: { cls: TourEnemy.make({ w: 14, h: 14, inkPad: 5, speed: 1.5, behavior: 'hop', hopV: 7.5, hopEvery: 0.55, art: popcornArt, burst: '#fff6dc', atlas: MX_X, sprite: 'popcorn' }), place: 'walk' },
   mxBurro: { cls: TourEnemy.make({ w: 30, h: 30, speed: 1.0, behavior: 'walk', hp: 2, art: burroArt, onDefeat: e => { for (let k = 0; k < 6; k++) e.g.spawn(new PickPop(e.g, e.cx + (k - 2.5) * 6, e.y)); e.g.addPick(); e.g.burst(e.cx, e.cy, 24, '#ff9ac8', 'confetti'); } }), place: 'walk' },
   mxChihuahua: { cls: TourEnemy.make({ w: 22, h: 16, inkPad: 6, speed: 1.5, behavior: 'charge', range: 7, chargeSpeed: 7, windup: 0.35, art: (ctx, e, x, y, m) => {
     ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.4 : 1);
@@ -490,7 +660,11 @@ const enemies = {
     ctx.restore();
     if (m === 'notice') { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('YIP!', x, y - 30); }
   }, onNotice: e => K.sfx('bump', null, { pitch: 2.2, vol: 0.4 }) }), place: 'walk' },
-  mxAxolotl: { cls: TourLeaper.make({ w: 22, h: 14, jumpV: 21, every: 1.8, art: axolotlArt, splash: '#7ae0d0' }), place: 'here' },
+  mxAxolotl: { cls: MxAxolotl, place: 'here' },
+  mxAxolotlWalk: { cls: TourEnemy.make({ w: 24, h: 16, inkPad: 6, speed: 0.8, behavior: 'regrower', regrowT: 3, art: axolotlWalkArt, burst: '#ffaacc', atlas: MX_X, sprite: 'axowalk' }), place: 'walk' },
+  mxAxolotlSwim: { cls: MxAxoSwim, place: 'swim' },
+  mxBlindFish: { cls: MxBlindFish, place: 'swim' },
+  mxSwallow: { cls: TourFlyer.make({ w: 20, h: 12, speed: 1.6, behavior: 'mxFlock', n: 6, harmless: true, art: swallowSprite, atlas: MX_X }), place: 'fly' },
   mxHeron: { cls: TourFlyer.make({ w: 28, h: 16, range: 3, speed: 0.8, swoop: true, art: heronArt }), place: 'fly' },
   mxFish: { cls: TourSwimmer.make({ w: 28, h: 14, speed: 1.5, range: 4, art: fishArt }), place: 'swim' },
   mxBat: { cls: TourFlyer.make({ w: 26, h: 16, range: 2.5, speed: 1.4, swoop: true, art: batArt }), place: 'fly' },
@@ -731,6 +905,7 @@ const P = {
   // a snack boat moored alongside: Xolo hands over tacos
   vendor(st, o) {
     const x = st.x, B = st.B, vy = st.deck - 3;
+    if (Decor.mxVendorHull) B.decorAt('mxVendorHull', x + 3, st.deck, 0);
     for (let q = 0; q < 6; q++) B.set(x + q, vy, T.SEMI);
     B.prop('mxStall', x, vy - 3, 6, 3, 'none', {});
     st.spawn('mxXolo', x + 3, vy - 1, {});
@@ -852,10 +1027,10 @@ const P = {
   // the boss patio: a pulley rail across the ceiling (the piñata hangs from it), three market stalls with
   // bouncy awnings to reach him when the rope shortens, lamps, pots and flowers
   arena_fiesta(st, o) {
-    const B = st.B, { x0, w, GY } = o;
-    for (const sx of [x0 + 1, x0 + Math.floor(w / 2) - 3, x0 + w - 6]) {
-      const ay = GY - 3;
-      B.prop('mxStall', sx, ay, 5, 3, 'none', {});
+    const B = st.B, { x0, w, GY } = o, tall = st.H >= 20;
+    // three market stalls; in the tall patio their awnings step up (3, 6 and 9 tiles) to reach him when the rope shortens
+    for (const [sx, ay] of [[x0 + 1, GY - 3], [x0 + Math.floor(w / 2) - 3, GY - (tall ? 6 : 3)], [x0 + w - 6, GY - (tall ? 9 : 3)]]) {
+      B.prop('mxStall', sx, ay, 5, GY - ay, 'none', {});
       for (let q = 0; q < 5; q++) { B.set(sx + q, ay, T.SEMI); B.setHide(sx + q, ay, 1); B.setSurf(sx + q, ay, SURF.BOUNCE); }
     }
     B.spawn('mxRail', x0 + 1, 1, { x0: x0 + 1, x1: x0 + w - 1 });
@@ -1187,12 +1362,12 @@ const stamps = {
       '#........?......-------......#.........#',
       '#............................F.........#',
       '#............................F.........#',
-      '#.@..D....k.......k..........F....g....#',
+      '#.@..D....k.......k.........dF....g....#',
       '########################################',
       '########################################',
       '########################################'
     ],
-    legend: { k: ['decor', 'mxChiliSack'], l: ['decor', 'mxCellarLamp'] },
+    legend: { k: ['decor', 'mxChiliSack'], l: ['decor', 'mxCellarLamp'], d: ['spawn', 'tourDraft', { look: 'fake' }] },
     items: ['power'],
     doors: [{ to: 'mercado@bodegaBack', look: 'mxCellarStairs' }],
     gold: { '*': 'hidden' }
@@ -1271,7 +1446,7 @@ const skins = {
   }
 };
 
-/* ---------------- the five levels ---------------- */
+/* ---------------- the country (its levels: 29_tour_mx_levels.js) ---------------- */
 Tour.country({
   id: 'mx',
   arrival: 'Brady! The Baron shrank the Palace of Fine Arts down to the size of a piñata. Follow the confetti! ♥ C', colors: COL, tagline: 'Tacos, piñatas and a volcano with a temper',
@@ -1297,71 +1472,7 @@ Tour.country({
     ctx.fillStyle = '#18c2c2'; ctx.beginPath(); ctx.arc(10, -7, 1.2, 0, TAU); ctx.fill();
     ctx.restore();
   } },
-  levels: [
-    // 1-1 in the v2 format (LEVEL_OVERHAUL.md §7.5.1): three lanes, a cellar shop behind a trapdoor, a secret exit
-    { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
-      gimmick: 'Three lanes at once: rooftops, street and cellar canal. Awnings bounce you up, trapdoors drop you down',
-      hint: 'Hold jump on an awning to bounce up to the rooftops',
-      postcard: 'Brady! The market has three floors and the melons use all of them. ♥ C',
-      enemies: [['mxPepper', 3], ['mxElote', 2], ['mxChihuahua', 1]],
-      mapCell: [0, 0], mapFrom: -1,
-      exits: {
-        main: { to: '1-2' },
-        secret: { to: 'house:mx-tienda', hint: 'Chili dust puffs out from under a crate in the market...' }
-      },
-      areas: [
-        { id: 'mercado', gen: 'layered', W: 214, H: 30, lanes: { roof: 12, street: 21, cellar: 27 }, camera: 'lanes',
-          script: [
-            // ① awnings link street and roof
-            ['xolo', { lane: 'street' }],
-            ['itemBlock', { lane: 'street', item: 'power', y: 4 }],
-            ['stalls', { lane: 'street', n: 2 }],
-            ['rooftops', { lane: 'roof', n: 2 }],
-            ['flat', { lane: 'cellar', n: 30 }],
-            ['sync'],
-            // ② melons on the street, gaps and papel-picado ropes on the roof; a gap in the street drops to the canal
-            ['melons', { lane: 'street' }],
-            ['banner', { lane: 'roof', len: 4, look: 'mxPapelPicado' }],
-            ['gap', { lane: 'roof', n: 3 }],
-            ['gearStand', { lane: 'roof', item: 'plane' }],
-            ['postcard', { lane: 'roof', kind: 'must', dy: -3 }],
-            ['gap', { lane: 'street', n: 3 }],
-            ['trapdoor', { lane: 'street', to: 'bodega@in', crate: true, back: 'bodegaBack', look: 'mxTrapdoor' }],
-            ['flat', { lane: 'cellar', n: 6 }],
-            ['spring', { lane: 'cellar', gold: false }],
-            ['enemies', { lane: 'cellar', n: 2 }],
-            ['sync'],
-            'cp',
-            // ③ the plaza joins all three lanes
-            ['stamp', { id: 'plaza', lane: 'street' }],
-            ['pinatas', { lane: 'street' }],
-            ['fountain', { lane: 'street' }],
-            ['rooftops', { lane: 'roof', n: 1 }],
-            ['sync'],
-            ['end', { lane: 'street', exit: 'main' }]
-          ] },
-        { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega' }
-      ] },
-    { name: 'Xochimilco Float', style: 'ride', theme: 'mx_canal', gimmick: 'Ride a painted trajinera: hop the posts, dodge axolotls and herons',
-      enemies: [['mxHeron', 1]], vehicle: 'mxTrajinera', vehicleW: 9, below: 'liquid', scroll: 2.6, len: 175,
-      hint: 'Jump the mooring posts or you\'ll fall in the canal',
-      postcard: 'The Baron\'s blimp smells like churros. I followed it along the canals. ♥ C',
-      script: [['arch', {}], 'posts', 'axolotls', ['chinampa', { gold: true }], 'posts', 'herons', ['bridge', { gold: true }], 'axolotls', 'vendor', 'posts', ['chinampa', {}], ['arch', { gold: true }], 'posts', 'herons', 'bridge', 'axolotls', 'posts'] },
-    { name: 'Cenote Dive', style: 'swim', theme: 'mx_cenote', gimmick: 'Swim a flooded limestone cave: hanging roots, currents and light shafts',
-      enemies: [['mxFish', 1]], H: 18, width: 220,
-      hint: 'Tap jump to swim. Currents carry you along',
-      postcard: 'Underwater, the cenote glows like a jewel. The Baron dropped a souvenir map here! ♥ C',
-      script: ['shaft', ['roots', { n: 4 }], ['current', { w: 12, dir: 1 }], 'lightwell', 'slalom', ['roots', { n: 3 }], ['current', { w: 10, dir: 1 }], 'slalom'] },
-    { name: 'Volcán Escape', style: 'climb', theme: 'mx_volcan', gimmick: 'Climb out of a volcano while the lava rises; ride the steam vents',
-      enemies: [['mxArmadillo', 1]], W: 24, H: 100, risingLava: { delay: 5, speed: 0.42 },
-      hint: 'Up, up, up! The lava is rising',
-      postcard: 'The Baron tried to bottle the volcano. It did not agree. ♥ C',
-      script: [['vledges', { n: 4 }], 'vvent', ['vledges', { n: 3, crumble: true, enemy: 'mxArmadillo' }], 'vroll', 'vblobs', ['vledges', { n: 3, flip: true }], ['vvent', { h: 10, gold: true }], ['vledges', { n: 4, crumble: true }], 'vblobs', ['vledges', { n: 3 }]] },
-    { name: 'Hacienda Fiesta', style: 'castle', theme: 'mx_hacienda', gimmick: 'Swinging piñatas, candy cannons, then El Gran Piñatón on his pulley rope',
-      enemies: [['mxSalsa', 2], ['mxBurro', 2], ['mxPepper', 1]], boss: 'mx_pinata', arena: 'fiesta', arenaW: 26,
-      hint: 'Break the piñata from BELOW: headbutt him when he swings low. Bounce off the awnings when he rises!',
-      postcard: 'You did it! The Palace of Fine Arts popped back to full size. Next stop: Ecuador! ♥ C',
-      script: [['swingers', { n: 3 }], 'cannons', ['enemies', { n: 2 }], 'cp', 'balcony', ['swingers', { n: 4 }], 'cannons', 'arena'] }
-  ]
+  // the levels (v2 format) are in 29_tour_mx_levels.js
+  levels: []
 });
 })();

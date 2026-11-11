@@ -100,6 +100,8 @@ class Weather {
   }
 }
 
+// atlases a theme's background strips come from besides its own (a theme can borrow another atlas's layer for depth)
+function themeLayerAtlases(th) { return th && th.layers ? th.layers.filter(L => L.kind === 'image' && L.atlas && L.atlas !== th.atlas).map(L => L.atlas) : []; }
 class Play {
   constructor(level, opts) {
     opts = opts || {};
@@ -167,7 +169,7 @@ class Play {
     this.entities = this.area.entities;
     this.themeKey = this.area.theme;
     // pre-rendered art for this theme and country (draws procedurally until it arrives)
-    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey]; Atlas.need([th && th.atlas, this.countryAtlas()]); }
+    if (typeof Atlas !== 'undefined') { const th = THEMES[this.themeKey]; Atlas.need([th && th.atlas, this.countryAtlas()].concat(this.extraAtlases(), themeLayerAtlases(th))); }
     this.lavaY = this.area.lavaY;
     const keepPower = this.player ? this.player.power : (power || 0);
     this.player = new Player(this, x, y, keepPower);
@@ -177,7 +179,17 @@ class Play {
   }
   countryAtlas() { const C = this.level && this.level.country && typeof Tour !== 'undefined' ? Tour.countries[this.level.country] : null; return C ? C.atlas || (C.sprites ? C.id : null) : null; }
   // every atlas this level can draw from: the country's, and each area's theme
-  atlasNames() { const n = [this.countryAtlas()]; for (const a of this.level.areas || []) { const th = THEMES[a.theme]; if (th && th.atlas) n.push(th.atlas); } return n; }
+  atlasNames() { const n = [this.countryAtlas()]; for (const a of this.level.areas || []) { const th = THEMES[a.theme]; if (th && th.atlas) n.push(th.atlas); n.push(...themeLayerAtlases(th)); } return n.concat(this.extraAtlases()); }
+  /* atlases beyond the country's and the area themes': a PHASE area's night theme, and enemies drawn from their own
+     atlas (cfg.atlas, e.g. the overhaul casts in '<cc>_x'), spawned directly or by a hold arena's waves / a watcher */
+  extraAtlases() {
+    const n = new Set(), type = t => { const C = t && ENTITY_TYPES[t]; if (C && C.cfg && C.cfg.atlas) n.add(C.cfg.atlas); };
+    for (const a of this.level.areas || []) {
+      const ph = a.phase && THEMES[a.phase.night]; if (ph && ph.atlas) n.add(ph.atlas);
+      for (const s of a.spawns || []) { type(s.type); type(s.spawn); type(s.art); if (Array.isArray(s.waves)) for (const w of s.waves) for (const t of [].concat(w)) type(t); }
+    }
+    return [...n];
+  }
   refreshPlatforms() { this.platforms = this.entities.filter(e => (e.isPlatform || e.solidTop) && !e.dead && !(e instanceof Spring)); }
 
   /* ---------- helpers used by entities ---------- */
@@ -239,7 +251,7 @@ class Play {
   worldScale() { return this.player && this.player.fx && this.player.fx.khole > 0 ? 0.4 : 1; }
   toast(msg) { this.toastText = msg; this.toastT = 2.6; }
   drawToast(ctx) {
-    if (!(this.toastT > 0)) return;
+    if (!(this.toastT > 0)) { this.toastBottom = 0; return; }
     const W = Game.cssW, a = Math.min(1, this.toastT * 2, (2.6 - this.toastT) * 6);
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     // long messages shrink a little, then wrap onto more lines (power-up hints in portrait)
@@ -250,7 +262,8 @@ class Play {
     if (ctx.measureText(text).width <= maxW) lines.push(text);
     else { let cur = ''; for (const word of text.split(' ')) { const t = cur ? cur + ' ' + word : word; if (cur && ctx.measureText(t).width > maxW) { lines.push(cur); cur = word; } else cur = t; } if (cur) lines.push(cur); }
     const lh = size + 6, tw = Math.max.apply(null, lines.map(l => ctx.measureText(l).width));
-    const w = Math.min(W - 24, tw + 30), h = Math.max(30, lines.length * lh + 12), y = Game.gameRect.y + Math.max(64, insets.t + 58) + (W < 600 ? 54 : 0);
+    const w = Math.min(W - 24, tw + 30), h = Math.max(30, lines.length * lh + 12), y = Math.max(Game.gameRect.y + Math.max(64, insets.t + 58) + (W < 600 ? 54 : 0), (this.hudBottom || 0) + 23);
+    this.toastBottom = y - 15 + h;   // the banner keeps clear of it
     ctx.fillStyle = 'rgba(14,8,26,0.78)'; rr(ctx, W / 2 - w / 2, y - 15, w, h, 15); ctx.fill();
     ctx.strokeStyle = 'rgba(255,216,74,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
     ctx.fillStyle = '#ffd84a'; lines.forEach((l, i) => ctx.fillText(l, W / 2, y - 15 + h / 2 + (i - (lines.length - 1) / 2) * lh + 1));
@@ -471,6 +484,8 @@ class Play {
   update(dt) {
     // hit-stop: a few frames of slow time after a solid boss hit, so it lands
     if (this.hitStop > 0) { this.hitStop -= dt; dt *= 0.25; }
+    // trip moments (15_postfx.js TripFX): their timers run in real time; the joint eases the world into a short slow-mo
+    if (this.level.tour && !this.paused && typeof TripFX !== 'undefined') { TripFX.tick(this, dt); dt *= TripFX.timeScale(this); }
     // fades
     if (this.fade.a !== this.fade.target) {
       this.fade.a = approach(this.fade.a, this.fade.target, dt * this.fade.speed);
@@ -721,6 +736,8 @@ class Play {
       const th = THEMES[this.themeKey];
       ctx.fillStyle = rgba(th.fog || th.sky[1], 0.16);
       ctx.fillRect(0, 0, VW * S, VH * S);
+      // trip moments: the strong part (fractals, the green haze) sits behind the tiles and characters
+      TripFX.back(ctx, this, Math.round(VW * S), Math.round(VH * S));
     }
     // world transform
     const wt = () => ctx.setTransform(S, 0, 0, S, gx - camX * S, gy - camY * S);
@@ -760,7 +777,7 @@ class Play {
     if (darkness > 0) this.drawLighting(ctx, camX, camY, S, darkness);
     PostFX.apply(ctx, this, Math.round(VW * S), Math.round(VH * S), gx, gy);
     WorldFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
-    if (this.level.tour && this.dizzy > 0) TourFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
+    if (this.level.tour) TripFX.post(ctx, this, Math.round(VW * S), Math.round(VH * S));
     if (this.player && this.player.buffs && this.player.buffs.sundial > 0) { const W = Math.round(VW * S), H = Math.round(VH * S), k = Math.min(1, this.player.buffs.sundial, 0.9 + (TourKit.reduceMotion() ? 0 : 0.1 * Math.sin(this.t * 4))); const gg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.65); gg.addColorStop(0, 'rgba(120,80,30,0)'); gg.addColorStop(1, `rgba(120,80,30,${0.45 * k})`); ctx.fillStyle = gg; ctx.fillRect(0, 0, W, H); }
     ctx.drawImage(Game.vignette, 0, 0); // vignette
     if (this.flash > 0 && !th.storm) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, this.flash * 0.7)})`; ctx.fillRect(0, 0, VW * S, VH * S); }
@@ -799,15 +816,22 @@ class Play {
     }
     const hide = A.hide, lsd = p.fx && p.fx.lsd > 0;
     const beatAt = this.beatMap(A);
+    // light-only tiles (hide 3) are always solid but show only inside light: lamps, beams, glowing things; Brady's own
+    // glow counts in a lamp area or under a headlamp (LEVEL_OVERHAUL §1 LAMP, §2 1-3)
+    if (A.hasLight3 == null) A.hasLight3 = !!hide && hide.indexOf(3) >= 0;
+    const lit3 = !fg && A.hasLight3 ? this.collectLights(camX, camY).filter((L, k) => k > 0 || A.lamp || (p.hands && p.hands.id === 'hat')) : null;
+    const litAt = (x, y) => { let k = 0; const cx = x * TS + TS / 2, cy = y * TS + TS / 2; for (const L of lit3) { const d = Math.hypot(L.x - cx, L.y - cy); k = Math.max(k, clamp((L.r * 0.9 - d) / (L.r * 0.35), 0, 1)); } return k; };
     for (let y = y1; y >= y0; y--) {
       for (let x = x0; x <= x1; x++) {
         const id = A.tiles[y * A.W + x];
         const hv = hide ? hide[y * A.W + x] : 0;
         if (!fg && beatAt && beatAt[y * A.W + x]) { this.drawBeatPad(ctx, beatAt[y * A.W + x], x, y, camX, camY, S); continue; }
-        // dug earth: below the surface of a dig area, empty tiles show the dark wall of the tunnel
-        if (id === T.EMPTY && !fg && A.dig && y > A.surface) { const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S); ctx.fillStyle = A.tunnelCol || '#2a1a12'; ctx.fillRect(dx, dy, Math.ceil(TS * S) + 1, Math.ceil(TS * S) + 1); if ((x * 7 + y * 3) % 5 === 0) { ctx.fillStyle = 'rgba(255,220,170,0.06)'; ctx.beginPath(); ctx.arc(dx + 10 * S, dy + 14 * S, 5 * S, 0, TAU); ctx.fill(); } continue; }
+        // dug earth: below the surface of a dig area, empty tiles (and coins and water in caverns) show the dark wall of the tunnel
+        if ((id === T.EMPTY || id === T.PICK || id === T.WATER) && !fg && A.dig && y > A.surface) { const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S); ctx.fillStyle = A.tunnelCol || '#2a1a12'; ctx.fillRect(dx, dy, Math.ceil(TS * S) + 1, Math.ceil(TS * S) + 1); if ((x * 7 + y * 3) % 5 === 0) { ctx.fillStyle = 'rgba(255,220,170,0.06)'; ctx.beginPath(); ctx.arc(dx + 10 * S, dy + 14 * S, 5 * S, 0, TAU); ctx.fill(); } if (id === T.EMPTY) continue; }
         if (id === T.EMPTY) continue;
-        if (hv === 1 || hv === 3) continue;
+        let shimmer = 0;
+        if (hv === 1) continue;
+        if (hv === 3) { if (!lit3) continue; shimmer = litAt(x, y); if (shimmer < 0.04) continue; ctx.globalAlpha = shimmer * (0.8 + 0.2 * Math.sin(t * 4 + x * 1.3 + y)); }
         if (hv === 2) { if (!fg && lsd) this.drawTripTile(ctx, x, y, camX, camY, S); continue; }
         if (fg !== (id === T.FAKE || id === T.WATER)) continue;
         const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S);
@@ -832,7 +856,7 @@ class Play {
           case T.CRUMBLE: img = atlas.crumble; ox = crumbleOf(x, y); break;
           case T.PILLAR: { const part = ['L', 'R', 'S'][v & 3] || 'S'; img = atlas.pillar[part + (v & 4 ? 't' : 'b')]; break; }
           case T.GLITCH: img = atlas.glitch[Math.floor(t * 12 + x) % 3]; break;
-          case T.SOIL: img = atlas.soil ? atlas.soil[y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]] ? 0 : 1] : null; break;
+          case T.SOIL: { const bur = y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]], nv = bur && atlas.soilV ? atlas.soilV.length : 0; img = atlas.soil ? (nv ? atlas.soilV[((Math.imul(x ^ 0x5bd1e995, 374761393) ^ Math.imul(y + 0x27d4eb2d, 668265263)) >>> 13) % nv] : atlas.soil[bur ? 0 : 1]) : null; break; }
           case T.LINTEL: img = atlas.lintel || null; break;
           case T.PICK: {
             ctx.setTransform(S, 0, 0, S, Game.gameRect.x * Game.dpr + dx, Game.gameRect.y * Game.dpr + dy);
@@ -849,6 +873,7 @@ class Play {
           }
         }
         if (img) ctx.drawImage(img, dx - pad + ox * S, dy - pad + oy * S, dw + pad * 2, dh + pad * 2);
+        if (shimmer) { ctx.fillStyle = `rgba(220,255,250,${0.25 * shimmer})`; ctx.fillRect(dx, dy, dw, dh); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(dx + ((t * 30 + x * 9) % TS) * S, dy, 2 * S, 2 * S); ctx.globalAlpha = 1; }
         if (id === T.FAKE || id === T.HIDDEN) ctx.globalAlpha = 1;
       }
     }
@@ -966,10 +991,14 @@ class Play {
     const toHex = c => { const m = /rgba?\((\d+),(\d+),(\d+)/.exec(c || ''); return m ? rgbToHex(+m[1], +m[2], +m[3]) : '#ffd8a0'; };
     for (const e of this.entities) {
       if (e.remove) continue;
-      const L = e.light; if (!L) continue;
-      const x = L.x !== undefined ? L.x : e.cx, y = L.y !== undefined ? L.y : e.cy;
-      if (x < camX - 200 || x > camX + VW + 200 || y < camY - 200 || y > camY + VH + 200) continue;
-      lights.push({ x, y, r: L.r, col: L.col || toHex(L.c), a: 0.5 });
+      // an entity gives one light (light) or several (lights: a sunbeam is a column of them)
+      const Ls = e.lights || (e.light ? [e.light] : null); if (!Ls) continue;
+      for (const L of Ls) {
+        if (!L || !(L.r > 0)) continue;
+        const x = L.x !== undefined ? L.x : e.cx, y = L.y !== undefined ? L.y : e.cy;
+        if (x < camX - 200 || x > camX + VW + 200 || y < camY - 200 || y > camY + VH + 200) continue;
+        lights.push({ x, y, r: L.r, col: L.col || toHex(L.c), a: L.a || 0.5 });
+      }
     }
     const DL = { lamp: [130, '#ffe0a0', -66], torch: [120, '#ffa040', -40], brazier: [120, '#ffa040', -28], crystal: [70, th.accent, -12], crystalred: [70, '#ff3a3a', -12],
       ledtree: [95, null, -52], firebarrel: [125, '#ff8a2a', -24], candles: [60, '#ffc070', -14], campsignN: [64, '#ff4fd8', -42], disco: [90, '#ffffff', -34],
@@ -1052,24 +1081,36 @@ class Play {
     const tour = !!this.level.tour, pl = this.player;
     let tourIx = 0;
     if (tour) {
-      // HANDS: the gear or the country's signature item (with a timer ring if it runs out, dots for the globe's shakes)
+      // the power picker's slots (28_tour_dh_picker.js): the ACTIVE power (what THROW does: a pink action dot says so)
+      // and, when Brady holds more, the NEXT one (tap either, or press Q / E / C, to switch)
+      const TP = typeof TourPicker !== 'undefined' ? TourPicker : null;
+      const list = TP ? TP.list(pl) : [], act = TP ? TP.active(pl) : null;
       const sp = pl.sig ? TourPowers.get(pl.sig.id) : null, gr = pl.hands && typeof TourGear !== 'undefined' ? TourGear.get(pl.hands.id) : null;
-      const held = gr || sp;
-      ctx.fillStyle = held ? 'rgba(40,20,60,0.75)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
-      ctx.strokeStyle = held ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
-      if (held) {
-        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); if (held.icon) held.icon(ctx, 0, 0, this.t); ctx.restore();
-        if (sp && sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
-        if (gr && gr.uses) for (let k = 0; k < gr.uses; k++) { ctx.fillStyle = k < pl.hands.uses ? '#e8f6ff' : 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.arc(px0 + 5 + k * 6, hy + 28, 1.8, 0, TAU); ctx.fill(); }
-        if (gr && pl.hands.thrown) { ctx.fillStyle = 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill(); }
+      const actHands = act && act !== 'lsd' && act !== 'joint';
+      ctx.fillStyle = act ? 'rgba(40,20,60,0.78)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
+      ctx.strokeStyle = act ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
+      if (act) {
+        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); TP.icon(ctx, act, 0, 0, this.t, this); ctx.restore();
+        if (actHands && sp && sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
+        if (actHands && gr && gr.uses) for (let k = 0; k < gr.uses; k++) { ctx.fillStyle = k < pl.hands.uses ? '#e8f6ff' : 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.arc(px0 + 5 + k * 6, hy + 28, 1.8, 0, TAU); ctx.fill(); }
+        if (!TP.ready(pl, act) && (act !== 'gear:fins' && act !== 'gear:pads')) { ctx.fillStyle = 'rgba(10,8,18,0.5)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill(); }
+        // the action dot: the same pink as the action button
+        ctx.fillStyle = '#ff4b7d'; ctx.beginPath(); ctx.arc(px0 + 31, hy + 1, 4.2, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px0 + 31, hy + 1, 1.5, 0, TAU); ctx.fill();
       } else { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); TourKit.star(ctx, px0 + 17, hy + 14, 7, 3, 5); ctx.fill(); }
-      // the Backpack: tap it to swap with HANDS
+      // the second slot: the next power in the cycle (or, with nothing else held, an empty Backpack)
       const bx = px0 + 40;
-      this.packRect = { x: bx, y: hy - 2, w: 30, h: 32 };
-      ctx.fillStyle = pl.pack ? 'rgba(60,34,20,0.8)' : 'rgba(10,8,18,0.45)'; rr(ctx, bx, hy, 30, 28, 9); ctx.fill();
-      ctx.fillStyle = pl.pack ? '#8a5a34' : 'rgba(255,255,255,0.12)'; rr(ctx, bx + 6, hy - 3, 18, 6, 3); ctx.fill();
-      ctx.strokeStyle = pl.pack ? 'rgba(255,216,74,0.7)' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2; rr(ctx, bx, hy, 30, 28, 9); ctx.stroke();
-      if (pl.pack && typeof TourGear !== 'undefined') { ctx.save(); ctx.translate(bx + 15, hy + 14); ctx.scale(0.58, 0.58); TourGear.icon(ctx, pl.pack, 0, 0, this.t, this); ctx.restore(); }
+      this.packRect = { x: px0, y: hy - 2, w: 70, h: 32 };
+      const nxt = list.length >= 2 ? list[(Math.max(0, list.indexOf(act)) + 1) % list.length] : null;
+      ctx.fillStyle = nxt ? 'rgba(30,20,44,0.7)' : 'rgba(10,8,18,0.45)'; rr(ctx, bx, hy, 30, 28, 9); ctx.fill();
+      ctx.strokeStyle = nxt ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2; rr(ctx, bx, hy, 30, 28, 9); ctx.stroke();
+      if (nxt) {
+        ctx.save(); ctx.globalAlpha = 0.75; ctx.translate(bx + 15, hy + 14); ctx.scale(0.5, 0.5); TP.icon(ctx, nxt, 0, 0, this.t, this); ctx.restore();
+        // a little cycle arrow and the count
+        ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(bx + 24, hy + 5, 3.4, -2.6, 1.6); ctx.stroke();
+        ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.moveTo(bx + 24 + 3.4 * Math.cos(1.6) - 2, hy + 5 + 3.4 * Math.sin(1.6) - 1); ctx.lineTo(bx + 24 + 3.4 * Math.cos(1.6) + 2.4, hy + 5 + 3.4 * Math.sin(1.6) + 0.4); ctx.lineTo(bx + 24 + 3.4 * Math.cos(1.6) - 0.8, hy + 5 + 3.4 * Math.sin(1.6) + 2.6); ctx.closePath(); ctx.fill();
+        if (list.length > 2) { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(list.length + '', bx + 6, hy + 23); ctx.textAlign = 'left'; }
+      } else if (pl.pack && typeof TourGear !== 'undefined') { ctx.save(); ctx.translate(bx + 15, hy + 14); ctx.scale(0.58, 0.58); TourGear.icon(ctx, pl.pack, 0, 0, this.t, this); ctx.restore(); }
       else { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = `6px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('BAG', bx + 15, hy + 15); ctx.textAlign = 'left'; }
       tourIx = 36;
     } else {
@@ -1083,6 +1124,7 @@ class Play {
     const icon = (fn) => { fn(ix, hy + 14); ix += 26; };
     if (this.player.kandi > 0) icon((x, y) => { for (let i = 0; i < 3; i++) { ctx.strokeStyle = GLOW_COLS[i]; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y - 3 + i * 3, 9, 4, 0, 0, TAU); ctx.stroke(); } });
     for (const k of this.keys) icon((x, y) => { ctx.save(); ctx.translate(x, y + 2); ctx.scale(0.6, 0.6); GimmickArt.keyShape(ctx, 0, 0, k === 'secret'); ctx.restore(); });
+    if (tour && pl.jumpPow && typeof JumpHud !== 'undefined') { ix += 4; icon((x, y) => JumpHud.hudIcon(ctx, x, y, this)); ix += 4; }
     const fxList = tour ? [['star', pl.star, 10, '#ffffff'], ['lsd', pl.lsdT, 10, '#a0f0ff']].concat(pl.buffs && typeof TourGear !== 'undefined' ? Object.keys(pl.buffs).filter(k => pl.buffs[k] > 0).map(k => ['gear:' + k, pl.buffs[k], (TourGear.get(k) || {}).time || 10, (TourGear.get(k) || {}).glow || '#ffffff']) : []) : [['star', this.player.star, 10, '#ffffff'], ['bufo', this.player.fly, 12, '#c08aff'], ['joint', this.player.floaty, 9, '#e8e8f0']];
     if (!tour) for (const k in this.player.fx) fxList.push([k, this.player.fx[k], BAG_KINDS[k].time, BAG_KINDS[k].col]);
     for (const [k, v, max, col] of fxList) if (v > 0) icon((x, y) => {
@@ -1117,7 +1159,8 @@ class Play {
       const g = ctx.createLinearGradient(bx, 0, bx + bw, 0); g.addColorStop(0, '#ff4fd8'); g.addColorStop(1, '#ffd84a');
       ctx.fillStyle = g; rr(ctx, bx, by + 6, Math.max(0, bw * b.hp / b.maxHp), 8, 4); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(b.name, W / 2, by + 1);
-    }
+      this.hudBottom = by + 18;   // the toast and the banner stack below the boss bar
+    } else this.hudBottom = 0;
     // pause button
     if (Input.layout) {
       const pb = Input.layout.pause;
@@ -1143,7 +1186,7 @@ class Play {
     };
     const bob = Math.sin(this.t * 4) * 3;
     tag(L.stickHome.x, L.stickHome.y - L.stickHome.r - 22 + bob, '◀ SLIDE TO MOVE ▶');
-    tag(L.jump.x, L.jump.y - L.jump.r - 20 + bob, this.t < 8 ? 'JUMP' : 'TAP AGAIN IN AIR: HEADBANG');
+    tag(L.jump.x, L.jump.y - L.jump.r - 20 + bob, this.t < 8 ? 'JUMP' : 'HOLD FOR A HIGHER JUMP');
     tag(L.action.x, L.action.y - L.action.r - 20 + bob, 'RUN · THROW');
     ctx.restore();
   }
@@ -1167,9 +1210,21 @@ class Play {
   drawBanner(ctx) {
     const W = Game.cssW, H = Game.cssH, a = Math.min(1, this.bannerT * 2);
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `${Math.min(34, W * 0.06)}px ${FONT_DISPLAY}`;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(this.bannerText, W / 2 + 2, H * 0.3 + 2);
-    ctx.fillStyle = '#ffd84a'; ctx.fillText(this.bannerText, W / 2, H * 0.3);
+    // a long banner shrinks, then breaks onto two lines, to fit the screen; it sits below the boss bar and any toast
+    const text = String(this.bannerText), maxW = W - 40;
+    let size = Math.min(34, W * 0.06); ctx.font = `${size}px ${FONT_DISPLAY}`;
+    while (size > 18 && ctx.measureText(text).width > maxW) { size--; ctx.font = `${size}px ${FONT_DISPLAY}`; }
+    let lines = [text];
+    if (ctx.measureText(text).width > maxW) {
+      const words = text.split(' '); let best = null;
+      for (let i = 1; i < words.length; i++) { const l = [words.slice(0, i).join(' '), words.slice(i).join(' ')], m = Math.max(ctx.measureText(l[0]).width, ctx.measureText(l[1]).width); if (!best || m < best.m) best = { l, m }; }
+      if (best) { lines = best.l; while (size > 14 && best.m > maxW) { size--; ctx.font = `${size}px ${FONT_DISPLAY}`; best.m = Math.max(ctx.measureText(lines[0]).width, ctx.measureText(lines[1]).width); } }
+    }
+    const lh = size * 1.15, top = Math.max(H * 0.3 - (lines.length - 1) * lh / 2, Math.max(this.toastBottom || 0, this.hudBottom || 0) + 10 + size / 2);
+    lines.forEach((l, i) => {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(l, W / 2 + 2, top + i * lh + 2);
+      ctx.fillStyle = '#ffd84a'; ctx.fillText(l, W / 2, top + i * lh);
+    });
     ctx.restore();
   }
   drawResults(ctx) {
@@ -1265,11 +1320,6 @@ const PlayerFx = {
     if (p.dead) return;
     if (typeof TourPlayerFx !== 'undefined' && p.g.level && p.g.level.tour) TourPlayerFx.over(ctx, p, t);
     const cx = p.cx;
-    if (p.spin && !p.onGround) {
-      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;
-      for (let i = 0; i < 3; i++) { const a = t * 20 + i * 2.1; ctx.beginPath(); ctx.arc(cx, p.y + p.h * 0.4, p.w * 0.95, a, a + 0.9); ctx.stroke(); }
-      ctx.restore();
-    }
     if (p.fx.powder > 0 && Math.random() < 0.5) p.g.burst(p.cx - p.facing * 8, p.y + p.h * Math.random(), 1, '#ffffff', 'spark');
     if (p.fx.molly > 0 && Math.random() < 0.08) p.g.parts.text(cx + (Math.random() - 0.5) * 30, p.y, '♥', '#ff7ab8');
     if (p.stunT > 0) { ctx.fillStyle = '#ffd84a'; for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 12, p.y - 4 + Math.sin(a) * 4, 2.4, 0, TAU); ctx.fill(); } }

@@ -1,4 +1,6 @@
 // Antarctica 13-4: Big Tusk. Mechanic: icicles bumped down from the ice ceiling, and ice blocks kicked into his slide.
+// Then 13-3's mini-boss, the Snow-Plough Bot: it shoves snow walls across the hangar; after three shoves it overheats
+// and a stomp on it counts.
 module.exports = async ({ page, check, shot }) => {
   const ev = (fn, ...a) => page.evaluate(fn, ...a);
   const SAFE = 999.07;
@@ -88,4 +90,34 @@ module.exports = async ({ page, check, shot }) => {
   r = await ev(() => { const b = boss(), doorX = b.doorX; sim(4); const g = S(); let open = true; for (let y = 3; y < g.area.H - 4; y++) if (g.area.tiles[y * g.area.W + doorX] !== 0) open = false; return { gone: !boss(), open, lock: !!g.bossLock }; });
   check('aq: Big Tusk is gone and the door opens', r.gone && r.open && !r.lock, r);
   check('aq: Brady never died during the test', !(await died()), await died());
+
+  // ---------------- 13-3: the Snow-Plough Bot (FORT mini-boss) ----------------
+  await ev(() => { start('13-3'); enterArena(); }); await safe();
+  await ev(() => { const p = P(); window.__hurts = 0; const h = p.hurt.bind(p); p.hurt = function (src) { if (src && src.aqWall) { window.__hurts++; return; } return h(src); }; });
+  r = await ev(() => { const b = boss(); return { state: b.state, hp: b.hp, mid: b.mid, name: b.name, act: b.act }; });
+  check('aq plough: the Snow-Plough Bot wakes in the hangar (a mini-boss, 3 hits)', r.state === 'fight' && r.hp === 3 && r.mid && /PLOUGH/.test(r.name), r);
+  r = await ev(() => { const b = boss(), p = P(); b.go('back'); b.vx = 0; sim(0.05); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 2; p.vy = 6 * 32; p.prevBottom = p.y + p.h; sim(0.1); return { hp: b.hp }; });
+  check('aq plough: a stomp while it runs cool bounces off', r.hp === 3, r);
+  r = await ev(() => {
+    const b = boss(), g = S(), p = P(); const mid = (b.arenaX0 + b.arenaX1) / 2;
+    p.x = b.arenaX0 + 3 * 32; p.y = b.floorY - p.h; p.vy = 0;
+    b.go('rev'); let k = 0; while (b.act !== 'plough' && k++ < 300) sim(1 / 60);
+    sim(0.05); const walls = g.entities.filter(e => e.aqWall && !e.remove); const w = walls[0]; const x0 = w ? w.cx : 0; sim(0.6);
+    return { act: b.act, n: walls.length, toward: w ? Math.sign(w.cx - x0) === Math.sign(mid - b.cx) : false, rows: w ? +w.rows.toFixed(2) : 0 };
+  });
+  check('aq plough: after the rev tell it shoves a growing snow wall across the floor', r.n === 1 && r.toward && r.rows > 1, r);
+  r = await ev(() => { const g = S(), p = P(); const w = g.entities.find(e => e.aqWall && !e.remove); p.invuln = 0; p.x = w.cx - p.w / 2; p.y = w.floorY - p.h; p.vy = 0; sim(0.05); p.invuln = 999.07; for (const e of g.entities) if (e.aqWall) e.remove = true; sim(0.05); return { hurts: window.__hurts }; });
+  check('aq plough: the snow wall hurts Brady if he does not jump it', r.hurts >= 1, r);
+  r = await ev(() => { const b = boss(), p = P(); p.x = b.arenaX0 + 3 * 32; p.y = b.floorY - p.h; let k = 0; while (b.act !== 'hot' && k++ < 40) { for (const e of S().entities) if (e.aqWall) e.remove = true; sim(0.25); } return { act: b.act, vuln: b.vuln, pushes: b.pushes }; });
+  check('aq plough: after three shoves it overheats (the weak moment)', r.act === 'hot' && r.vuln, r);
+  await snap('aq_plough_hot.png');
+  r = await ev(() => { const b = boss(), p = P(); p.x = b.cx - 30 - p.w / 2; p.y = b.y - p.h - 2; p.vy = 6 * 32; p.prevBottom = p.y + p.h; sim(0.1); return { hp: b.hp, phase: b.phase }; });
+  check('aq plough: a stomp on the overheated bot hurts it, and phase 2 begins', r.hp === 2 && r.phase === 2, r);
+  r = await ev(() => { const b = boss(), g = S(), p = P(); p.x = b.arenaX0 + 3 * 32; p.y = b.floorY - p.h; let k = 0; while (b.act !== 'plough' && k++ < 120) sim(0.05); let most = 0, dirs = new Set(); for (let q = 0; q < 40; q++) { sim(0.05); const ws = g.entities.filter(e => e.aqWall && !e.remove); most = Math.max(most, ws.length); for (const w of ws) dirs.add(w.dir); } return { act: b.act, most, dirs: [...dirs] }; });
+  check('aq plough: in phase 2 a second wall comes from the far chute the other way', r.most >= 2 && r.dirs.length === 2, r);
+  await snap('aq_plough_walls.png');
+  r = await ev(() => { const b = boss(), p = P(); for (let h = 0; h < 2; h++) { let k = 0; while (b.act !== 'hot' && k++ < 200) { for (const e of S().entities) if (e.aqWall) e.remove = true; sim(0.1); } p.x = b.cx - 30 - p.w / 2; p.y = b.y - p.h - 2; p.vy = 6 * 32; p.prevBottom = p.y + p.h; sim(0.1); sim(1.4); } return { act: b.act, hp: b.hp }; });
+  check('aq plough: the last stomp melts it into a puddle', r.hp <= 0 && (r.act === 'melt' || !boss()), r);
+  r = await ev(() => { const b = boss(); const doorX = b ? b.doorX : null; sim(5); const g = S(); let open = true; if (doorX != null) for (let y = 3; y < g.area.H - 4; y++) if (g.area.tiles[y * g.area.W + doorX] !== 0) open = false; return { gone: !boss(), open, lock: !!g.bossLock }; });
+  check('aq plough: the bot is gone and the hangar door opens', r.gone && r.open && !r.lock, r);
 };

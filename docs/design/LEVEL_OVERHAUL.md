@@ -151,7 +151,7 @@ Key for the columns:
 | **5-2 Sahara Caravan** · SCROLL | `sahara auto 209x18` → `bonus room (s, kept)` | ① ride camel humps on the scroll; ② the sandstorm wind pushes; ③ mirage platforms flicker (2 s on, 1 s off) over quicksand. | Kept: caravan, storm, oasis, sig, skyrugs, secret. Enemies: maScarab, maFennec, maCobra. | Sig carpet, M | The kept bonus room with the FAKE far wall → the **World 22 door** (22 postcards). P1 oasis palm; P2 bonus room; P3 mirage chain. | main → 5-3; secret → **World 22** |
 | **5-3 Chefchaouen Blue** · PHASE | `medina strip 200x22` → `riad room 30x14 (s)` | ① by day: blue stairs, laundry-line platforms, napping cats; ② strike the sun-moon lantern: night brings lantern platforms, the laundry is gone, snails come out and cats wake; ③ flip between day and night mid-air to cross. | Kept: grills, juice (as the night market). New: sun-moon lantern (phase switch), laundry line. Enemies: maSnail (slime trail), maCat (sleeps by day, pounces at night), maTeapot. | M, L (night-only block), Kazoo | A door painted the same blue as the wall; at night a lantern hangs over it → riad → secret gate. P1 roof terrace; P2 riad; P3 night-only ledge. | main → 5-4; secret → Souvenir Stand *Bazar Bleu* |
 | **5-4 Kasbah of the Brass Owl** · FORT | `kasbah strip 80x20` → `tower room 26x14` → `owl arena 24x16` → `pigeon loft (s)` | ① kasbah walls and an argan tree full of goats; ② the tower room: chain levers drop tagine lids; ③ mini-boss **Brass Owl** (the Baron's automaton): it turns its head 180° to spot you; when it looks away, pull the chain to drop a lid on it (3 hits; phase 2 it flies a lap and drops feathers). | Kept: kasbah, argan. Enemies: maGoat, maFennec. | M, S | FAKE wall on the roof → pigeon loft. P1 argan top; P2 loft; P3 tower window ledge. | main → 5-5 |
-| **5-5 Riad of Fountains** · LAIR | `zellige strip 70x18` → `hammam-free courtyard room (s)` → `riad arena 26x20` | Lead-in: fountain jets lift you between galleries. Arena for the Djinn: a square courtyard 26 x 20, a gallery ring of platforms at 6 rows up, a central fountain basin, the heavy teapot on the floor. | Kept: fountain, screens, arena_riad (reshaped). Enemies: maTagine, maTeapot. | M, Sig carpet (phase 3) | A carved screen opens → small courtyard. P1 gallery; P2 courtyard; P3 fountain top. | main → Spain |
+| **5-5 Riad of Fountains** · LAIR | `zellige strip 70x18` → `hammam-free courtyard room (s)` → `riad arena 26x20` | Lead-in: fountain jets lift you between galleries. Arena for Berrad the Magnificent (a grand brass teapot): a square courtyard 26 x 20, a gallery ring of platforms at 6 rows up, a central fountain basin, his heavy charcoal brazier on the floor. | Kept: fountain, screens, arena_riad (reshaped). Enemies: maTagine, maTeapot. | M, Sig carpet (phase 3) | A carved screen opens → small courtyard. P1 gallery; P2 courtyard; P3 fountain top. | main → Spain |
 | **5-6 Carpet Skies** · SKY (secret) | `cielo islands 220x30` → `tent room 24x12 (s)` | ① flying carpets as moving islands over the Atlas; ② wind gusts; ③ moths nibbling the carpets you stand on. Minarets appear only as distant silhouettes. | New: carpet islands. Enemies: maMoth, maStork (perched, swoops). | Sig carpet, L, M | A tent on a high island → room. P1 carpet chain; P2 tent; P3 gust gap. | main → done, draws shortcut **5-6 → 5-4** |
 
 ### World 6: Spain
@@ -740,16 +740,21 @@ Ids are used as item-block contents (`st.block(tx, ty, 'fins')`), gear-stand ite
 | **FORM** (`p.power`) | 0 small, 1 big (magic mushroom), 2 joint (smoke puffs) | Unchanged. |
 | **HANDS** (`p.hands = { id, uses }`) | one item: any gear above **or** the country's signature item (`p.sig` becomes a HANDS item) | Picking up a new HANDS item while holding one sends the old one to the **Backpack** (the existing `p.pack`). If the Backpack is full, the old item drops as a floating pickup for 4 s. Tapping the HUD Backpack swaps HANDS ↔ Backpack (the existing `usePack`, extended to swap). Signature items that last the whole level (`time: 0`) behave as gear. |
 | **BUFFS** (`p.buffs = { star, lsd, sundial, magnet }`) | timers that run at the same time | The star and LSD keep their rules. The sundial and magnet stack with everything. |
+| **FEET** (`p.jumpPow = { id, gas }`) | one jump power: `socks`, `cake` or `beans` (§5.4) | A new one replaces the old. Kept through doors for the level run. |
 
 **When Brady is hit (in order):**
 1. A star blocks the hit.
 2. Otherwise a Hard Hat in HANDS absorbs it and is lost.
 3. Otherwise the HANDS item drops (it floats in place for 2 s and can be re-grabbed; the Snow Globe keeps its remaining shakes).
-4. Otherwise FORM drops (2→1→0→death).
+4. Otherwise the FEET jump power drops (it floats for 2 s, re-grabbable).
+5. Otherwise FORM drops (2→1→0→death).
 
 The Backpack is never lost to a hit.
 
-**THROW / Action priority:** LSD rainbow lasers (while flying), then the HANDS action, then joint smoke puffs.
+**THROW / Action: the power picker** (`src/28_tour_dh_picker.js`, `TourPicker`). The action button no longer follows a fixed priority. Brady's action powers are one list, in the order he got them: the HANDS item, the Backpack item, the joint's smoke puffs (FORM 2) and, while he flies, the LSD lasers. The newest pickup becomes the active power; when a power ends (the LSD wears off) the previous pick comes back. The pick lasts the level run (doors included).
+- Touch: a small chip above the action button, shown only with two or more powers; a tap cycles forward, a swipe picks the direction; a carousel slide and a name label show the pick; the first time, a "TAP TO SWITCH POWERS" hint.
+- Keyboard: Q / E / C cycle, 1–5 pick directly. The HUD's first slot shows the active power (with a pink dot: the action button's colour), the second the next one; tapping them cycles too. The action button itself wears the active power's icon (dimmed when it can't fire right now).
+- Picking the Backpack item swaps it into HANDS (the old Backpack swap, now driven by the picker; nothing is lost). Picking smoke or lasers leaves the HANDS item and its passive effects (glide, swim speed, headlamp) in place. Buffs, FORM size and the star are passive and never in the list.
 
 **Interactions:**
 - LSD flight disables plane gliding (it isn't needed) but keeps the plane.
@@ -777,6 +782,27 @@ Per level, counted over all areas:
 5. **One premium item** (L, S, sundial, 1UP or magnet) **sits in a secret or risky spot**.
 6. **Boss levels:** two opportunities in the lead-in before the arena door, plus whatever the boss brief supplies inside the arena.
 7. **Secret levels** may break rule 2 (up to 7 blocks): they're the reward.
+8. **Jump powers** (`socks`, `cake`, `beans`) are bonuses: at most **2 per level**, **never in a boss area** (the arena or the boss's own area; put them in the lead-in) and **never in a CARRY area**. They count as ordinary opportunities (and toward rule 2's cap), never as premium items. The validator's search never uses them, so every exit and postcard is reachable without one.
+
+### 5.4 Jump powers (the FEET slot; `src/28_tour_di_jumps.js`)
+Pressing jump again in mid-air uses the jump power Brady holds. Without one, a second press does nothing visible (it stays in the jump buffer; coyote time is unchanged). The old headbang spin is gone.
+
+| id | Name | Mechanic | Look |
+|---|---|---|---|
+| `socks` | **Spring Socks** | A second jump at 14.2 t/s (about 2.7 tiles; the first is about 4.2), once per airtime, reset on landing. | A tucked somersault, a dust ring underfoot; striped socks on coil springs. |
+| `cake` | **Pound Cake** | He tucks (hovers 0.17 s), then slams down at 21 t/s. Landing: every ordinary enemy within 3.5 tiles (and 2 rows up or down) is stunned 2.5 s (harmless, stompable, walk-through); bricks, crumble and soil under his boots break and he keeps falling; ?-blocks pop; hit-pause 0.07 s and a gentle shake. Landing on an enemy is a normal stomp. | A spinning tuck, arms-up slam, shockwave ring and dust; a golden loaf with icing and a "1 LB" tag. |
+| `beans` | **Magic Beans** (fart float) | Each mid-air tap: a squat with the trousers at his knees (heart-print boxers), a green puff fires downward (about 2.5 tiles, knocks out ordinary enemies, a normal `disc` hit on a boss) and he pops up 7.4 t/s; lighter gravity and a capped fall while squatting. The gas meter holds 6 puffs and refills on the ground; an empty tap fizzles. No lift near the top of the view. Landing snaps the trousers back up. | A tin of beans with a green cloud; HUD and jump-button meter in six segments. |
+
+Rules: one at a time; found in item blocks and gear stands (`['itemBlock', { item: 'cake' }]`, `['gearStand', { item: 'socks' }]`); a toast on pickup and, the first time ever, a one-line tip over the jump button; a small badge on the jump button (and an icon in the HUD row) shows it. Off while carrying (CARRY). In a locked boss arena Brady can't leave its bounds with one. Hit kinds: puffs use `disc`, the slam's direct contact is `stomp`, the shockwave calls `stun(2.5)`.
+
+Placed so far (one placement line each, the level otherwise unchanged): Mexico 1-1 Spring Socks with a tip sign (the gentle introduction), 1-4 Magic Beans (a chimney band); Ecuador 2-2 Pound Cake, 2-4 Spring Socks; Brazil 3-1 Pound Cake, 3-4 Magic Beans; Mozambique 4-5 Spring Socks (the lead-in); Morocco 5-3 Magic Beans; Spain 6-1 Pound Cake, 6-3 Spring Socks; France 7-3 Spring Socks, 7-4 Pound Cake; the Netherlands 8-2 Magic Beans.
+
+### 5.5 Trip moments (`src/15_postfx.js`, `TripFX`)
+- **Joint pickup** (about 1.35 s): a green wash, smoke wisps drifting across, a short slow-mo (world time × 0.58 at the peak), a mellow `chill` cue; then it clears.
+- **LSD tab** (the flight): cel-banded Julia-set kaleidoscopes bloom behind the tiles, the colours shift (a hue wash), and the world breathes around Brady (a scale of up to 4.5 %, never below 1); strong for the first 2.5 s, then a subtle 30 % while he flies, then a fade.
+- **Magic mushroom** (the dizzy 4 s): the same family in purples and pinks, a gentler breath, soft glowing sparkles.
+- Readability: the strong layer is behind the tiles and characters, only a faint tint covers them; no white flashes; the HUD and controls are drawn after. Reduced effects (Settings → MOTION EFFECTS, or FX CALM in the pause menu): no breath, no slow-mo, a still, fainter fractal. `Game.quality` 0 (the adaptive switch): no breath and no fractal (a gradient wash instead).
+- Budget: the fractal is cached at 224 × 126 (40 frames, a few rows per frame, once per session), coloured each frame through a 256-entry palette and scaled up; the smoke layer is composed at quarter resolution.
 
 ---
 

@@ -643,8 +643,15 @@ function buildPauseUI(play) {
     { x, y, w: bw, h: bh + 4, label: 'RESUME', primary: true, fn: () => play.closePause() },
     { x, y: y += 58, w: bw, h: bh, label: 'RESTART LEVEL', fn: () => { play.paused = false; Sound.resume(); Game.setScene(new Play(play.level, {})); } },
     { x, y: y += 54, w: bw, h: bh, label: play.level && play.level.tour ? 'WORLD MAP' : play.set === 'world' ? 'CITY MAP' : 'WORLD MAP', fn: () => { play.paused = false; Sound.resume(); Save.save(); goToMap(play.set, play.level.world, play.id); } },
-    { x, y: y += 54, w: bw / 2 - 5, h: bh, label: st.music > 0 ? 'MUSIC ON' : 'MUSIC OFF', size: 12, fn: () => { st.music = st.music > 0 ? 0 : 0.6; Sound.setMusicVolume(st.music); Save.save(); play.pauseUI = buildPauseUI(play); } },
-    { x: x + bw / 2 + 5, y, w: bw / 2 - 5, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 12, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } }
+    ...(play.level && play.level.tour && typeof TourKit !== 'undefined' ? [
+      // the world tour: a third switch for the trip effects (the same setting as MOTION EFFECTS in Settings)
+      { x, y: y += 54, w: bw / 3 - 4, h: bh, label: st.music > 0 ? 'MUSIC ON' : 'MUSIC OFF', size: 10, fn: () => { st.music = st.music > 0 ? 0 : 0.6; Sound.setMusicVolume(st.music); Save.save(); play.pauseUI = buildPauseUI(play); } },
+      { x: x + bw / 3 + 2, y, w: bw / 3 - 4, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 10, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } },
+      { x: x + bw * 2 / 3 + 4, y, w: bw / 3 - 4, h: bh, label: TourKit.reduceMotion() ? 'FX CALM' : 'FX FULL', size: 10, fn: () => { st.reduceMotion = !TourKit.reduceMotion(); Save.save(); play.pauseUI = buildPauseUI(play); } }
+    ] : [
+      { x, y: y += 54, w: bw / 2 - 5, h: bh, label: st.music > 0 ? 'MUSIC ON' : 'MUSIC OFF', size: 12, fn: () => { st.music = st.music > 0 ? 0 : 0.6; Sound.setMusicVolume(st.music); Save.save(); play.pauseUI = buildPauseUI(play); } },
+      { x: x + bw / 2 + 5, y, w: bw / 2 - 5, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 12, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } }
+    ])
   ];
   list.focus = 0;
   return list;
