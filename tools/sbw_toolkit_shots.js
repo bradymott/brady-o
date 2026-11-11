@@ -54,8 +54,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     window.freeze = () => { const g = S(); if (g.player) g.player.invuln = 0; g._upd = g.update; g.update = function () {}; };
   });
   const pin = () => page.evaluate(() => { const G = window.BRADY.Game; G.slowT = -1e9; G.lowered = 0; G.dprCap = null; G.quality = 1; G.resize(); });
-  const shot = async name => { if (checksOnly) return; await pin(); await page.waitForTimeout(250); await page.screenshot({ path: path.join(out, name) }); };
-  const run = async (name, fn) => { if (want.length && !want.some(w => name.startsWith(w))) return; try { await fn(); } catch (e) { check(name + ' runs', false, String(e.message).slice(0, 300)); } };
+  const shot = async name => { await pin(); if (checksOnly) return; await page.waitForTimeout(250); await page.screenshot({ path: path.join(out, name) }); };
+  // the view size is pinned before every run too: the adaptive quality must not change the view (and so the active window) mid-suite
+  const run = async (name, fn) => { if (want.length && !want.some(w => name.startsWith(w))) return; try { await pin(); await fn(); } catch (e) { check(name + ' runs', false, String(e.message).slice(0, 300)); } };
 
   // every generator fixture: start, and a later view
   const gens = await page.evaluate(() => Object.keys(window.SBW_LAB.gens));
