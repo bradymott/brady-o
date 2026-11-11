@@ -327,6 +327,7 @@ const levels = [
       { id: 'veiling', gen: 'strip', W: 200, H: 20,
         script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
           ['trolleys', { n: 2 }],
           ['enemies', { kind: 'nlBulb', n: 1, len: 8 }],
           ['gearStand', { item: 'sundial' }],
