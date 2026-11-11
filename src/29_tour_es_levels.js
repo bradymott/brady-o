@@ -176,6 +176,7 @@ Tour.amend('es', {
           // ① plaza one: tomato waves, a truck lobbing more
           ['plaza', { k: 1 }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           'cp',
           // ② plaza two: a floor of pulp and loose crates
           ['plaza', { k: 2 }],
@@ -232,6 +233,7 @@ Tour.amend('es', {
       areas: [
         { id: 'ciutat', gen: 'strip', W: 215, H: 18, dark: true, script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           ['gearStand', { item: 'kazoo' }],
           // ① the beat floor
           'ribs',
