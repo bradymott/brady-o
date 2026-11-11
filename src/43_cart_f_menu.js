@@ -314,7 +314,12 @@ class KartMenuScene {
     Ls[0].x = Math.sin(back + 0.95) * 5.2; Ls[0].y = 3.6; Ls[0].z = Math.cos(back + 0.95) * 5.2; Ls[0].r = 10.5; Ls[0].i = 1.25;
     Ls[1].x = Math.sin(back - 0.85) * 5.2; Ls[1].y = 2.8; Ls[1].z = Math.cos(back - 0.85) * 5.2; Ls[1].r = 10; Ls[1].i = 1.0;
     Ls[2].x = Math.sin(az + 1.0) * 7; Ls[2].y = 2.4; Ls[2].z = Math.cos(az + 1.0) * 7; Ls[2].r = 13; Ls[2].i = 0.3;
-    R.setLights(Ls);
+    // Calamari Inferno's live fire throws a flickering warm light on the car (a fourth light, only for that car)
+    if (!showStand && M.extra && M.extra.flames) {
+      const Lf = this.fireLs || (this.fireLs = Ls.concat([{ x: 0, y: 0, z: 0, r: 6, c: [1, 0.5, 0.16], i: 1 }])), f = this.pst.fire;
+      Lf[3].y = SH + 2.2; Lf[3].r = 6 + 4 * f; Lf[3].i = (0.9 + 1.4 * f) * (0.82 + 0.1 * Math.sin(this.time * 17.3) + 0.08 * Math.sin(this.time * 29.9));
+      R.setLights(Lf);
+    } else R.setLights(Ls);
     if (R.shadowBegin(env, { dist: 26 })) { R.statics(World.chunks, env, null, BURNS_ATLAS.T, 0); R.skinBegin(env, null, BURNS_ATLAS.T); this.drawSubject(R, showStand, 0, 0); R.shadowEnd(); }
     R.begin(env); R.sky(env);
     R.statics(World.chunks, env, null, BURNS_ATLAS.T, 400);
@@ -341,6 +346,7 @@ class KartMenuScene {
         R.bbs.bb(p[0], p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.4 : 0.7, true);
         R.bbs.bb(p[0], 2 * SH - p[1], p[2], L.s, L.s, S.glow, L.cc, L.big ? 0.12 : 0.22, true);
       }
+      cartOctoFlames(R, M, car.bones, this.pst, 0, 0, 0, 0.75, SH);   // Calamari Inferno's live fire, and its reflection in the glass
       // a soft contact shadow and a pool of the car's light colour on the glass
       R.flat.flat(0, SH + 0.012, 0, M.w * 1.35, M.len * 1.12, car.yaw, S.shadow, this.black, 0.6, false);
       R.flat.flat(0, SH + 0.014, 0, M.w + 2.4, M.len + 2.4, car.yaw, S.glow, this.ledCol, 0.16, true);
