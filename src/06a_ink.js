@@ -91,7 +91,11 @@ const Ink = {
     // (a pass nested inside another's colour pass is not fingerprinted, and the outer one is not reusable)
     if (this.fpOn) this.fpOk = false;
     const fp = hd && !keyed && this.statics && !this.fpOn;
-    if (fp) { this.hashCtx(s0); this.fpStart(); }
+    if (fp) {
+      this.hashCtx(s0); this.fpStart();
+      // the look the picture is made with is part of it (a graphics tier change re-inks)
+      this.fpMix(this.form && o.form !== false ? 1 : 2); this.fpMix(o.rim && this.rims ? 3 : 4); this.fpVal(o.color || ''); this.fpVal(o.rim || ''); this.fpVal(o.width || 0);
+    }
     s0.save(); try { fn(s0); } finally { s0.restore(); if (fp) this.fpEnd(); }
     if (fitSample) this.measureReach(fitRec, s0, bw, bh, bx, by, m, x, y, w, h);
     let keep = false;

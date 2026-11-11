@@ -35,9 +35,11 @@ the JavaScript.
    is painted to a scratch canvas, turned into a silhouette and stamped around itself: about 40 canvas operations a
    frame each. The three scratch canvases were shared and grew to the largest thing ever inked: a boss (Mexico 1-5)
    or a big Brazil / Mozambique / Spain / France / Netherlands / Morocco prop baked into the prop cache grew them to
-   about 1000 x 1100 px, and from then on every inked sprite, Brady too, paid for the whole surface (Safari copies and
-   clears a full canvas surface when it is drawn from and then drawn into): Brady's line went from 4 ms to about 9 ms
-   per frame on the Mac. That is the Brazil lag (World 3's props grew them in 3-2) and part of the boss lag.
+   about 1000 x 1100 px, and from then on every inked sprite, Brady too, worked on a sub-rectangle of a big surface,
+   which is Safari's slow path (measured: drawing a canvas whole is about twice as fast as drawing part of a bigger
+   one, and 'source-in' / 'destination-in' clear the whole surface): Brady's line went from 4 ms to about 9 ms per
+   frame on the Mac. That is the Brazil lag (World 3's props grew them in 3-2) and part of the boss lag. The
+   scratch canvases are now exactly the size of the work and drawn whole.
 2. **Everything inked was re-inked every frame**, static or not: levers, crates, signs, gates, cold shells, the
    postcards, the kick target...
 3. **Bosses inked a box far bigger than their art** (max(60, width) px of slack all round).
@@ -48,13 +50,13 @@ the JavaScript.
 ## What changed
 | Change | Where | Look |
 |---|---|---|
-| Scratch canvases per 64 px size bucket, least recently used dropped past a 4 MP budget | `06a_ink.js` `Ink.canvas` | identical |
+| Scratch canvases of exactly the size of the work, drawn whole; least recently used dropped past a 4 MP budget | `06a_ink.js` `Ink.canvas` | identical |
 | Held ink pictures: the colour pass's drawing commands are fingerprinted; unchanged since the last frame -> inked once, then blitted until they change (`Ink.statics`); `opts.key` for callers that know their state; Medium/Low re-ink animated owners at 30 Hz (`Ink.every`) | `06a_ink.js` | identical (a still camera is pixel-identical; a moving one may place a held picture up to half a device pixel off) |
 | The postcards / gold records drawn from cached inked frames (17 sway angles / 12 spin widths) | `10_entities.js` `Gold.draw`, `Ink.cached` | the sway is quantized to under a degree |
 | Boss ink box = measured reach of each boss's art + 16 px (`BOSS_INK_REACH`) | `10d_bosses.js` | identical |
 | Brady's ink box fitted to his measured reach in ordinary play | `11_player.js` | identical |
 | The 16 % veil baked into the backdrop (every colour pre-mixed, every cached canvas tinted once, additive sky light at 84 %) | `03_themes.js` `BG.get`, `12_play.js` | identical within 8-bit rounding |
-| Parallax layers trimmed to their painted rows | `03_themes.js` `bgUsedRows` | identical |
+| Image parallax layers start at their strip's first row (the empty sky rows above were blended every frame); a still camera reuses the finished backdrop (30 Hz refresh when the sky has moving light) | `03_themes.js` `BG.get`, `BG.draw` | identical (sky light animates at 30 Hz while the camera is still) |
 | No full-screen clear under a Play scene that covers the canvas | `99_main.js`, `12_play.js` `coversCanvas` | identical |
 | Bloom: the two glows screened together at 1/6 size, one full-screen pass; sampled every 2nd frame | `15_postfx.js` | identical math; the glow can lag one frame |
 | HUD painted into its own canvas at 30 Hz | `12_play.js` `drawHUD` | pulses at 30 Hz |
