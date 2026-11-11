@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("fr_provence", {"scale":2.0,"image":"fr_provence.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":753}},"anims":{},"strips":{"L0":{"w":2048,"h":331,"top":191.5,"x":0,"y":421},"L1":{"w":2048,"h":420,"top":215.5,"x":0,"y":0},"L2":{"w":2048,"h":162,"top":295.0,"x":0,"y":946}}});

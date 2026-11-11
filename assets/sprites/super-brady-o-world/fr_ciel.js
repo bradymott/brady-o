@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("fr_ciel", {"scale":2.0,"image":"fr_ciel.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":914}},"anims":{},"strips":{"L0":{"w":2048,"h":400,"top":204.0,"x":0,"y":513},"L1":{"w":2048,"h":512,"top":37.5,"x":0,"y":0}}});

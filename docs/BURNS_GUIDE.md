@@ -521,7 +521,7 @@ BURNS_ATLAS.addPattern('w9Rags', (ctx, rng) => { /* paint a tileable 128x128 dec
 Brady is `BurnsRig.bradySpec(costume)`: it follows `Save.data.look` (bun or down, shades/clear/none, tattoos, stubble, hair and skin colours) plus the costume. Chinka is `BurnsRig.chinkaSpec()`.
 
 ### 6.6 Animation names
-`idle, walk, run, jump, flip, fall, land, spin, pound, hurt, dance{style,bpm}, bike, drive{steer}, sit, sleep, victory, cheer, talk, wave, shuffle, yell, hug, charge, bell, phone, photo, clipboard, throw, climb, float, fly, captive, knocked`, plus the cast's idle flavours `firespin{tool,rate}, dare, think, radio, lantern, dj{bpm}, dazed, welcome, robot`. Hair and buns are springy: they bounce on landings and swing when characters turn.
+`idle, walk, run, jump, flip, fall, land, spin, pound, hurt, dance{style,bpm}, bike, drive{steer}, sit, sleep, victory, cheer, talk, wave, shuffle, yell, hug, charge, bell, phone, photo, clipboard, throw, climb, float, fly, captive, knocked`, plus the cast's idle flavours `firespin{tool,rate}, dare, think, radio, lantern, dj{bpm}, dazed, welcome, robot`. Hair and buns are springy: they bounce on landings and swing when characters turn. `walk` is a planted-foot cycle (`burnsTravelPose`: the stance foot retreats by exactly the ground covered, arms swing opposite the legs) and `run` is the classic run pose; both advance with the distance travelled (`BURNS_GAIT`: a cycle is 1.45 / 3.6 leg-heights), falling back to the clock when the character is blocked or standing (dialogue portraits, crowds).
 - Play one with `a.ch.play('name', params)`.
 - `BURNS_ANIMS[name] = (P, t, k) => {...}` adds a new one. `P.r` holds per-bone `[rx, ry, rz]` and `P.y, pitch, roll, yaw, sq, face` are root offsets. Bones are listed in `BURNS_BONES`.
 - Limb conventions: forward swing is negative `rx`, a knee bend is positive `rx` on the shin, and raising the left arm sideways (+X) is positive `rz`.
@@ -569,7 +569,7 @@ Stage 2 of the glTF plan (`docs/ART_CART_GLTF_PILOT.md` §1): real texture maps 
 ### 6.11 Skinned characters in play (`BurnsSkinActor`)
 §6.9 draws a skinned glTF character on its own; this puts them **into the games** (`src/40_burns_be_skinactor.js`). Brady (the player, the dialogue portrait, Art Cart's driver) and Chinka (every actor of type `chinka`, the Man's captive, Art Cart's driver and portrait) keep driving their procedural `BurnsChar` exactly as before; at draw time a bridge reads that `BurnsChar`'s placement, animation name and clock, plays the matching clip on a `BurnsSkinnedChar` and draws it with `R.skinW` instead. Nothing in play depends on a model file being there.
 - **Files.** At app start (Burning Man, Art Cart, the combined build; the 2D app has no engine) `BurnsSkinActor.preload()` reads `models/index.json` and fetches `models/brady.glb(.gz)` and `models/chinka.glb(.gz)`; a missing file falls back to `models/mannequin.glb(.gz)` (the §6.9 stand-in, one asset shared by both kinds; Chinka's stand-in is tinted pink so the two read apart); no file at all keeps that character procedural. The real assets ship the clip set `idle, walk, run, jump, land, hurt, knocked, dance, wave, talk, hug, sit, sleep, cheer, drive, fire, sulk, captive, photo`. `BurnsSkinActor.ready` / `stats()` (`debug.skinActor()`) report what loaded; `window.__burnsNoSkinActor = true` switches the swap off (comparisons, budgets).
-- **Mapping** (engine animation → clip): `idle→idle, walk→walk, run/charge→run, jump/fall→jump, land→land, hurt/yell→hurt, knocked→knocked, dance/shuffle→dance, wave→wave, talk/phone→talk, hug→hug, sit→sit, sleep→sleep, cheer→cheer, captive→captive, photo→photo, drive/cartDrive→drive, cartFire→fire, cartHit→hurt, cartCheer→cheer, cartSulk→sulk` (`BURNS_SKINACTOR.MAP`). `jump, land, knocked, fire` play once and hold their last frame (so a fall keeps the end of the jump); everything else loops; walk and run take the `BurnsChar`'s `k.rate` as clip speed. When an asset lacks a clip the bridge walks `BURNS_SKINACTOR.FALLBACK` (`run→walk`, `knocked→hurt`, `captive→hurt`, `fire/sulk→drive`, `drive→sit`, `hug/cheer→wave`, … every chain ends at `idle`), which is how the three-clip mannequin stands in for everything.
+- **Mapping** (engine animation → clip): `idle→idle, walk→walk, run/charge→run, jump/fall→jump, land→land, hurt/yell→hurt, knocked→knocked, dance/shuffle→dance, wave→wave, talk/phone→talk, hug→hug, sit→sit, sleep→sleep, cheer→cheer, captive→captive, photo→photo, drive/cartDrive→drive, cartFire→fire, cartHit→hurt, cartCheer→cheer, cartSulk→sulk` (`BURNS_SKINACTOR.MAP`). `jump, land, knocked, fire` play once and hold their last frame (so a fall keeps the end of the jump); everything else loops; walk and run follow the `BurnsChar`'s stride phase (`_stridePhase`: the ground actually covered, or the clock at `k.rate` when the character isn't moving), so the feet don't skate and never freeze. When an asset lacks a clip the bridge walks `BURNS_SKINACTOR.FALLBACK` (`run→walk`, `knocked→hurt`, `captive→hurt`, `fire/sulk→drive`, `drive→sit`, `hug/cheer→wave`, … every chain ends at `idle`), which is how the three-clip mannequin stands in for everything.
 - **Fallback rules.** Anything not in the table (`bike, climb, flip, spin, pound, float, fly, throw, victory, hang/zip, robot, lantern, bell, clipboard, the DJ and world-specific anims`), a `BurnsChar` with a custom `poseFn` (pilot seats, zip lines), an asset that isn't loaded, or the switch above → the hook returns `false` and the caller draws the procedural model as it always did, in that frame only: Brady on the bike, mid-flip or climbing is the rounded Brady, and back to the skinned one when the state maps again (with no crossfade, the previous clip being stale). Actors beyond 45 m keep the procedural LOD (a few hundred triangles against about 8k skinned; `BURNS_SKINACTOR.LOD_D2`). First person, the invincibility blink and `hidden` players draw nothing, as before; costumes only matter for hiding: the skinned Brady ignores the LOOK screen's costume (the file is the costume).
 - **Hooks** (each a one-liner of the form `BurnsSkinActor.x(...) || <the old R.skin draw>`, in both the shadow pass and the main pass): `draw(g, R, kind, ch, tint, rim)` for one `BurnsChar` at its own placement (the player and the Man's captive in `40_burns_i_play.js`, the dialogue portrait's `who === 'brady'`/`who.type` path, Art Cart's standing driver and portraits in `43_cart_f_menu.js`); `drawActor(g, R, a)` for a play-scene actor (type `chinka` only, with the 45 m rule); `drawDriver(R, car, ch, idOrType)` for an Art Cart driver (`43_cart_e_scene.js` race, `43_cart_f_menu.js` showroom): `cartPoseDriver` has already placed the `BurnsChar` at the seat (car-local, `seatYaw`, `driverScale`), so the bridge takes that same placement and puts the palette under the car's body bone (`car.bones[0..11]`), exactly as the rigid driver's bones are. The bridge is cached on the `BurnsChar` (`ch._skinActor`); its time step is the `BurnsChar`'s own clock (`animT`), so slow motion, freezes and `debug.sim` fast-forwards stay in step and the second pass of a frame costs nothing. Chinka's bridge emits rising white-gold glints through the play scene's `g.fx` (two a frame within 25 m of the camera; none in Art Cart, which has no `fx`).
 - **Art Cart's files.** `tools/build.js` copies `assets/models/<app>/*.glb` per app, so Art Cart's own site ships only its cars: there the hooks stay dormant until `brady.glb`/`chinka.glb` (or the mannequin) are also placed in `assets/models/art-cart/` (the combined `dist/models` lists everything, so the combined build has them). `tools/skinactor_test.js` copies the files into the scratch site's `art-cart/models` for its run only. Art Cart's driver-portrait atlas is rendered once on the first visit to the driver screen; if that happens before the assets arrive it keeps the procedural portraits for that session.
@@ -596,6 +596,7 @@ Define missions in `def.missions`. Each mission is `{id, name, short, desc, hint
 | `vehicle` | For `ride`: `'bike'` or `'car'`. |
 | `companion` | For `escort`: the actor id that must reach `target`. |
 | `marker` | `{x, z}` for the minimap and What Where When. |
+| `guide` | Where the **guide arrow** points while this mission is active (§10.1): a point `{x, z, label}`, `[x, z]`, an actor id, an array of those, or `(g, m) => …` returning one of them (`null` = nothing to go to, `undefined` = the engine's default). At runtime you can also set `m.data.guide`. Only needed when the default (target, nearest pickup or enemy, `marker`) points at the wrong place. |
 | `secret` | Hidden as `???` until started. |
 | `silent` | No start banner. |
 | `failOnFaint` | Fails if Brady faints. Timed missions always do. |
@@ -674,6 +675,7 @@ Any world can have side quests; the home world (17) is built around them. A side
 
 ### 8.2 Vehicles
 - **Yellow bike** (World 3 unlocks it with `g.giveItem('bike')`). The BIKE button or the B key summons it and EXIT dismounts.
+- **E-bike** (key item `ebike`, earned in the city after World 8, §19.7): in **open worlds** (`def.open`) the BIKE button summons it instead of the yellow bike (settings **CITY BIKE** switches back). 18 m/s, accel 10; a dark frame, a battery with light strips, glowing rims, a hub motor and a headlight (`BurnsEBikeModel`, `41_burns_nav.js`, same five bones as the yellow bike: one draw call, its lights are sprites). Story worlds keep the yellow bike, so their races and `ride` missions stay tuned. Numbers: `BURNS_NAV.ebike`.
   - On the bike: fast (12.5 m/s), small hops on JUMP, bell on ACTION. Friendly NPCs step aside, and the `bell` event fires.
   - Riding into enemies knocks them over.
   - `ride` missions with `vehicle: 'bike'` work out of the box.
@@ -845,6 +847,28 @@ Read it with `g.camMode`, set it with `g.setCamMode(mode)`, and check `g.firstPe
 
 ---
 
+### 10.1 Getting around: guide arrow, map page, RUN, camera behind Brady (`41_burns_nav.js`)
+
+**Speeds (m/s):** walk (stick part-way) 2–4, jog (stick fully pushed, the old top speed) 7.6, **RUN 10.6**, yellow bike 12.5, **e-bike 18**.
+
+**The guide arrow.** A pause-menu toggle (**GUIDE ARROW**, also in SETTINGS; saved as `settings.guide`, off by default). When it's on, a glowing arrow lies on the ground just in front of Brady pointing at the current objective, with its name and distance under it; a pin and the distance float over the spot when it's on screen, and the spot itself gets a ring and a thin beam of light. It hides when there's nothing to go to, and shrinks to a ring when Brady is there. It costs no draw calls (sprites).
+- **What it points at.** `def.guide(g)` if your world has one (or `BurnsNav.guides[worldId] = fn` from another file), returning the targets best first: a point `{x, z, y, label, col}`, `[x, z]`, an actor or actor id, or an array of them. Return `null` for "nothing to go to", `undefined` for the default.
+- **The default** (`BurnsNav.defaultTargets`): a Burn Token lying on the ground nearby; then the tracked mission, the other active main missions, and active side quests. For each mission: its `guide` field (§7) or `m.data.guide`, a `talk` target, the actor carrying its `?` (`m.data.marker`), the nearest untaken pickup for `collect`/`find`, the nearest enemy (with `tag`) for `defeat`, the companion if an `escort` buddy is far behind, `target`, `marker`, and last the giver. With nothing active, it shows the nearest `'!'` giver of a main mission.
+- **Read it:** `g.navGuide` (`{x, z, label, dist, yaw}`; null when off or nothing), `g.navTargets` (all highlighted spots), `g.navArrow` (where the ground arrow is). Targets refresh four times a second; the bearing updates every step.
+- **Wiring a world:** give a `custom` mission a `guide` when its `marker` is only where it started (a fetch, a chase, a "go back to X"). Set `m.data.guide` as the steps change.
+
+**The map page.** A world with `def.cityMap` gets a full-screen map in the pause menu (its MAP button): the world's own drawing, labels placed most important first without overlapping, the guide's targets as pulsing rings, and Brady as an arrow pointing the way he faces. Buttons: **ZOOM IN** (around Brady) / **WHOLE CITY**, **GUIDE ARROW**, **FAST TRAVEL** (the hub travel map).
+```js
+def.cityMap = { title: 'Black Rock City', bounds: { x0, x1, z0, z1 }, legend: '…',
+  draw(g, ctx, P, sc, t) { /* P(x, z) -> [px, py]; sc = px per metre */ },
+  labels(g) { return [{ x, z, text, col, pri, mark: 'dot' | 'diamond' | 'square' }]; } };
+```
+`g._cityMap` holds what was drawn (`brady: {x, y, rot}`, `targets`) for tests. +x is right and +z is down (6:00 at the bottom).
+
+**RUN.** A round **RUN** button left of BIKE (touch): tap it and Brady runs (x1.4, `BURNS_NAV.runMul`) until he stops for a moment, mounts a vehicle or a cutscene starts; it lights up while on. **Shift** runs while held (it stays ACTION in menus and other apps). `g.running` is true while he runs; the player's `runK` multiplies his speed.
+
+**Camera behind Brady.** Setting **CAMERA BEHIND BRADY** (`settings.follow`, off by default): the camera turns to sit behind the way Brady faces (or his vehicle) on its own, so CAM is never needed. It turns faster the more he heads away from the camera (running sideways makes a wide, slow turn, not a spin; running at the camera holds it), settles behind him half a second after he stops, waits a second after you orbit by hand, and holds still in dialogue. Cutscene cameras, boss framing, CAM recentering and first person (where his body already follows the look) come first.
+
 ## 11. Cutscenes
 
 `g.cutscene([...steps], done)` runs steps in order with letterbox bars. The player can **SKIP** at any time. Skipping runs the remaining `do` steps, so put state changes in `do` steps and story stays consistent.
@@ -853,7 +877,7 @@ Read it with `g.camMode`, set it with `g.setCamMode(mode)`, and check `g.firstPe
 |---|---|
 | `{ cam: {x,y,z, tx,ty,tz, fov} }` | Cut the camera. |
 | `{ cam: {from, to, dur, ease, hold} }` | Move the camera between two cameras. |
-| `{ say: [who, lines] }` | Dialogue; waits for taps. |
+| `{ say: [who, lines], frame }` | Dialogue; waits for taps. When the cutscene has no camera of its own, the camera eases to a 3/4 front shot of the speaker's face above the dialogue box (never in first-person view). `frame: false` keeps the gameplay camera; `frame: true` frames even over an authored camera. Per cutscene: `g.cutscene(steps, done, { framing: true \| false })`; per world: `def.dialogFraming`. An authored camera (and its fov) is never changed otherwise. |
 | `{ wait: secs }` | Pause. |
 | `{ do: g => … }` | Instant code. It still runs when the scene is skipped; add `noSkip: true` to skip it on SKIP. |
 | `{ until: g => bool }` | Advance when true. Called every step, so animate things here. |
@@ -865,7 +889,7 @@ Read it with `g.camMode`, set it with `g.setCamMode(mode)`, and check `g.firstPe
 | `{ orbit: {x, y, z \| actor, r \| r0+r1, h \| h0+h1, a0, a1, ty, dur, fov, ease, hold} }` | Circle a point or an actor (`'brady'` or an id), optionally pushing in (`r0`→`r1`) and rising (`h0`→`h1`). Angles are yaw in radians. |
 | `{ track: {actor, dist, h, side, ty, fov, dur, k} }` | Follow an actor from behind (`side` swings around them), smoothed. Good for walks and chases. |
 | `{ slowmo: 0.3, dur }` | Slow the world (not the camera) for `dur` seconds, or until `{ slowmo: 1 }`. |
-| `{ dof: {focus, aperture} \| false \| 'auto' }` | Depth of field. Cutscenes focus on the camera's target automatically; set a focus distance in metres, or turn it off. |
+| `{ dof: {focus, aperture} \| false \| 'auto' }` | Depth of field. Cutscenes focus on the camera's target automatically; set a focus distance in metres, or turn it off. The medium tier (phones) renders no depth of field at all (`BURNS_GFX.tiers.medium.dof: false`), high and ultra do. |
 | `{ title: true \| {day, name, sub}, hold, wait: false }` | The title card: the day of the week, then "World N · Name". Waits `hold` seconds (3.4) unless `wait: false`. |
 | `{ swell: 'track' }` | Switch music and lift it for a few seconds: the big story moments. |
 | `{ shake: 0.6 }`, `{ flash: '#ffffff' }` | Camera shake and a screen flash. |
@@ -889,6 +913,11 @@ g.cutscene([
 ---
 
 ## 12. Bosses and the Man
+
+**The model** (`BurnsManModel`, `src/40_burns_e_props.js`): the classic lattice Man, one model for every Man in both games (the city landmark, all the bosses, the title screen, Art Cart's driver, portrait and Burn Night landmark). Open timber trusses with crossed bracing on the shared 16-bone rig (legs apart: the knee and ankle offsets splay outward), a faceted lantern head, neon tubes along the front edges of every limb and a heart in the chest. About 5.7k triangles, one draw call.
+- **Rainbow neon.** The tubes are white emissive vertices (`'#ffffff', 1`), the lantern core is white at 0.75 and the heart is red; `geo.rainbow = { bone, at }` (the heart) tells `R.skin()` to set `uRain` for that one draw, and the skinned fragment shader colours them: a rainbow whose hue travels outward from the heart (one full cycle in about 14 s at any point), a soft bright band passing every ~4 s and a slow breath, so nothing flashes (all well under 3 Hz); the heart beats about once a second. By day (`uExp.z`, the renderer's night factor) the tubes are unlit grey glass and the heart is red paint. No mesh rebuilds, no extra draw calls.
+- **Hurt cue.** `BurnsManBoss` sets `geo.rainHurt`: the neon turns red when he's hit and throbs red while he's stunned (on top of the heart sprite above his head).
+- **Light.** `BurnsManModel.light(g, x, y, z, scale)` queues one point light in the current neon colour at night (the city and World 10 call it from `env`); like every point light it only wins a slot when the camera is near.
 
 ### 12.1 `BurnsManBoss`: the reusable Man controller
 ```js
@@ -953,7 +982,7 @@ World 10 should pass `next` to roll into the ending; `StoryScene` and `CreditsSc
 ```
 { v, unlocked:{1:true,…}, tokens:{'w:missionId':true}, photos:{'w:id':true}, items:{ticket,map,www,bike,costumes,artcar},
   costume:'none', costumesOwned, glow (lifetime), glowWorld:{w:best}, worldDone:{w:true}, missions:{'w:id':'done'},
-  flags:{'w:key':value}, seenIntro, lastWorld, checkpoint:{w:cpId}, settings:{camSens, invertY, autoCam, cam, gfx},
+  flags:{'w:key':value}, seenIntro, lastWorld, checkpoint:{w:cpId}, settings:{camSens, invertY, autoCam, cam, gfx, guide, follow, ride},
   pack:{itemId:count} }
 ```
 - `BurnsSave.get()` returns the data (and creates or migrates it).
@@ -1020,7 +1049,8 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
    window.__burnsDebug = true; // fps / draws / position overlay
    ```
    Example: talk to an NPC with `D.teleport(a.x + 1.5, a.z); D.sim(1/120, {actionPressed: true})`, then close dialogue with `while (D.scene().dialog.open) D.scene().dialog.next()`.
-4. Checklist:
+4. Navigation (guide arrow, map page, RUN, follow camera, e-bike, saved settings): `node tools/burns_nav_test.js` (exits 1 on failure).
+5. Checklist:
    - Zero page errors (`page.on('pageerror')` and `window.__bradyErrors`).
    - Every token mission can be completed.
    - Three photos are reachable.
@@ -1030,7 +1060,7 @@ Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, se
    - Pause, quit to title and back all work.
    - Saves survive a reload.
    - Draw count is about 120 or less (`D.state().draws`).
-5. Reference tests (World 1, written for the engine) are in `/tmp/claude-0/-home-user-brady-o/55338a3e-dd1f-51fb-b998-1b26dc729d6a/scratchpad/burns/`, if that folder is still there. Copy their patterns:
+6. Reference tests (World 1, written for the engine) are in `/tmp/claude-0/-home-user-brady-o/55338a3e-dd1f-51fb-b998-1b26dc729d6a/scratchpad/burns/`, if that folder is still there. Copy their patterns:
    - `play1.js`: scripted mission run-through.
    - `ui_test.js`: real touch via CDP `Input.dispatchTouchEvent`, both orientations, pause/quit, no-WebGL and context loss.
    - `gallery.js`: costumes, cast, bike, art car and power-ups.
@@ -1150,7 +1180,7 @@ World 500 turns the 17 story worlds into places (`BURNS_OW.PLACES`), each with a
 
 - **Story order:** the next unfinished world's place has a tall beacon of light and a HUD arrow with its distance. Finished places stay open, and later ones answer "Not yet."
 - **Time of day:** the city follows the story day (the next place's sky) and shows the day card when the day changes.
-- **The pause menu:** its **MAP** is the hub map in fast-travel mode (`TRAVEL HERE`, and HOME warps to the tipi). The map is the real city: `def.mapDraw(g, ctx, M, t)` draws the fence, the arc of streets, the camps, the Man, the Temple and a YOU marker, and `def.mapProject(g, worldId, M)` puts each place's pin where its door is (`M` is the map rectangle). On this map the pins are smaller, and only the chosen one and the open ones show their day.
+- **The pause menu:** its **MAP** opens the city map page (§10.1, `def.cityMap` in `42_burns_ow_nav.js`), whose **FAST TRAVEL** button is the hub map in fast-travel mode (`TRAVEL HERE`, and HOME warps to the tipi). The map is the real city: `def.mapDraw(g, ctx, M, t)` draws the fence, the arc of streets, the camps, the Man, the Temple and a YOU marker, and `def.mapProject(g, worldId, M)` puts each place's pin where its door is (`M` is the map rectangle). On this map the pins are smaller, and only the chosen one and the open ones show their day.
 
 ### 19.3 Regions and saves
 - **Regions:** `tiles.region(x, z)` names where Brady is, for example `'4:30 & Carousel'`, `'Center Camp'`, `'Deep Playa'` or `'Outside the Fence'`. Entering a new region sets `g.region`, saves the flag `region:<name>`, sends the mission event `region` (so `{ type: 'reach', region: 'The Temple' }` completes there) and shows a toast.
@@ -1188,6 +1218,11 @@ World 500 turns the 17 story worlds into places (`BURNS_OW.PLACES`), each with a
 - **Landmarks:** the theme camps use their own `lod: 'auto'` (a silhouette beyond about 150 m), and big art and the Man are built once.
 - **Measured views:** busy street level at night 102–126 draws and 280–400k triangles on high (medium: 102–115 draws); the Thunderdome bout about 110 draws, the race about 60. Tile builds yield a street front at a time: in the software renderer the 95th-percentile step is about 5 ms and the worst about 8 ms. A finished tile's people join three per frame.
 - **Fog and lights:** the world thins its fog (`def.env`) so the city reads across the playa, and thins it more for high cameras. `def.glowDist` (520 m here; 170 by default) lets the camps' lights show from afar at night.
+
+### 19.7 Getting around the city (`42_burns_ow_nav.js`)
+- **The guide in the city** (`def.guide`): a Burn Token on the ground, the tracked quest and other active quests (city quests have their own spots: Melty, the nearest photo spot, the next race gate or the art car, Auntie Thunder; quests from other worlds without a spot use the address in their `hint`, via `BurnsOW.hintSpot`), then the next story place. While the guide arrow is on, it replaces the city's yellow story arrow.
+- **The map page** labels the Man, the Temple, Center Camp, HOME (Root Society), the next story place and the finished ones, the theme camps and the big art, with the clock times round the city.
+- **The e-bike:** after World 8 (Hell Station) **Volta** at Hell Station's door offers **Juice Box**: carry the flat battery to the **Solar Juice Bar** on the 3:00 plaza and press **CHARGE**. The reward is the `ebike` key item. Change the world, the giver's place or the charger in `BURNS_OW_EBIKE`.
 
 ### 19.6 Your world's quests in the city (`BurnsOW.addQuests`)
 Any world can put quest givers, targets and mechanics in Black Rock City. The quests then run in world 500 like the city's own: in its SIDE QUESTS list, with the `!` markers, the tracker and rewards. Call `BurnsOW.addQuests` when your file loads (every `42_burns_w*` file loads after the city files):

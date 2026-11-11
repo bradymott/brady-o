@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("aq_station", {"scale":2.0,"image":"aq_station.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1151}},"anims":{},"strips":{"L0":{"w":2048,"h":501,"top":135.0,"x":0,"y":649},"L1":{"w":2048,"h":648,"top":120.0,"x":0,"y":0}}});

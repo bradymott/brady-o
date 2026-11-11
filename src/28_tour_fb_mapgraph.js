@@ -375,6 +375,8 @@ const TourPanel = {
         if (fx && fx.t < 1.2) { ctx.save(); ctx.strokeStyle = 'rgba(220,240,255,0.9)'; ctx.lineWidth = 1.5; for (const sh of fx.shards) { const d = sh.v * fx.t, sx = x + 16 + Math.cos(sh.a) * d, sy = y - 2 + Math.sin(sh.a) * d + 40 * fx.t * fx.t; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 4, sy - 3); ctx.lineTo(sx + 2, sy + 3); ctx.closePath(); ctx.stroke(); } ctx.fillStyle = '#fff8d0'; for (let q = 0; q < 5; q++) { ctx.beginPath(); TourKit.star(ctx, x + 16 + Math.sin(q * 2.1 + t * 3) * 14, y - 4 + Math.cos(q * 1.7 + t * 3) * 10, 4, 1.5, 3); ctx.fill(); } ctx.restore(); }
         if (freed || (fx && fx.t > 0.8)) TourPanelFx.postmark(ctx, x - 22, y + 30, C.colors ? C.colors.a : '#ff4f8a');
       }
+      // a secret land whose door was found but is still shut: its ghost pin flickers ("22?")
+      for (const s of this.ghostPins()) TourPanelFx.ghostPin(ctx, this.sx(s.lon), this.sy(s.lat), t, s.world === 22 ? '22?' : String(s.world) + '?');
       // the Postcard Lighthouse (all five bottles)
       if (Object.keys(T.bottles || {}).filter(n => T.bottles[n]).length >= 5) TourPanelFx.lighthouse(ctx, this.sx(LIGHTHOUSE.lon), this.sy(LIGHTHOUSE.lat), t, !!T.lighthouse);
     } else {
@@ -394,6 +396,11 @@ const TourPanel = {
       }
       ctx.restore();
     }
+  };
+  // secret lands shown as ghost pins: the door is found (tour.doors) and the land is still shut
+  P.ghostPins = function () {
+    const D = TourProgress.data().doors || {};
+    return TOUR_ROUTE.filter(s => s.secret && D[s.id] && Tour.countries[s.id] && !TourProgress.countryUnlocked(Tour.countries[s.id]));
   };
   // the country whose level has a flight exit to `to`
   P.flightFrom = function (to) {
@@ -418,6 +425,11 @@ const TourPanel = {
     const T = TourProgress.data();
     if (!this.reveal && !this.card && Object.keys(T.bottles || {}).filter(n => T.bottles[n]).length >= 5) {
       for (const tp of Input.taps) { if (Math.hypot(tp.x - this.sx(LIGHTHOUSE.lon), tp.y - this.sy(LIGHTHOUSE.lat)) < 26) { if (!T.lighthouse) { T.lighthouse = true; Save.save(); this.toast('THE BEAM IS LIT: ? FLAGS MARK HIDDEN EXITS'); Sound.play('checkpoint'); } else this.toast('THE POSTCARD LIGHTHOUSE'); Input.taps.length = 0; break; } }
+    }
+    // a ghost pin is tapped: what the door wants
+    if (!this.reveal && !this.card) for (const s of this.ghostPins()) {
+      const tp = Input.taps.find(q => Math.hypot(q.x - this.sx(s.lon), q.y - this.sy(s.lat)) < 26);
+      if (tp) { const D = TourProgress.landDoor(s.id), need = (D && D.need) || 22; this.toast(`THIS DOOR WANTS ${need} POSTCARDS (YOU HAVE ${TourProgress.totals().gold})`); Sound.play('bump', { vol: 0.5 }); Input.taps.length = 0; break; }
     }
     return up2.call(this, dt);
   };
@@ -459,6 +471,15 @@ const TourPanelFx = {
     ctx.fillStyle = lit ? '#ffe070' : '#8a8aa0'; ctx.fillRect(-3.5, -24, 7, 6); ctx.strokeRect(-3.5, -24, 7, 6);
     ctx.fillStyle = '#ff5a5a'; ctx.beginPath(); ctx.moveTo(-5, -24); ctx.lineTo(0, -29); ctx.lineTo(5, -24); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = 'rgba(10,10,30,0.7)'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center'; rr(ctx, -30, 4, 60, 12, 5); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText('LIGHTHOUSE', 0, 13);
+    ctx.restore();
+  },
+  // a secret land's ghost pin: a flickering outline at 30 % alpha with a question
+  ghostPin(ctx, x, y, t, label) {
+    const a = 0.3 * (0.75 + 0.25 * Math.sin(t * 7) * Math.sin(t * 2.3)) + (Math.sin(t * 13) > 0.97 ? 0.15 : 0), r = TourMap.pinR;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.fillStyle = '#b8a8ff'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    ctx.setLineDash([3, 3]); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#ffffff'; ctx.font = `${Math.round(r * 0.85)}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y + 1);
     ctx.restore();
   },
   crack(ctx, x, y, k) { ctx.save(); ctx.strokeStyle = 'rgba(230,250,255,0.95)'; ctx.lineWidth = 2; for (let q = 0; q < 5; q++) { const a = q / 5 * TAU + 0.4; ctx.beginPath(); ctx.moveTo(x, y); let px = x, py = y; for (let s = 1; s <= 4 * k; s++) { px += Math.cos(a + (s % 2 ? 0.4 : -0.4)) * 7; py += Math.sin(a + (s % 2 ? 0.4 : -0.4)) * 7; ctx.lineTo(px, py); } ctx.stroke(); } ctx.restore(); },
