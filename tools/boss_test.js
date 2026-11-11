@@ -38,7 +38,14 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       if (inp) for (const key in inp) I[key] = false;
     };
     window.T = window.BRADY_TOUR;
-    window.start = (id, opts) => { const B = window.BRADY; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 5; B.Game.setScene(new B.Play(B.getLevel(w, i), opts || {})); window.sim(2); };
+    window.start = (id, opts) => { const B = window.BRADY; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 5; B.Game.setScene(new B.Play(B.getLevel(w, i), opts || {})); window.sim(2); if (!(opts && opts.lead)) window.toArena(); };
+    // v2 boss levels: a lead-in area, then the arena area (role 'arena'); start() goes straight through its door
+    window.toArena = () => {
+      const g = window.S(), L = g.level, k = (L.areas || []).findIndex(a => a.role === 'arena');
+      if (k <= 0 || g.area.idx === k) return;
+      const an = (L.areas[k].anchors || {}).in; if (!an) return;
+      g.state = 'play'; g.player.state = 'play'; g.enterPortal({ kind: 'door', target: { area: k, x: an.x, y: an.y } }); window.sim(3);
+    };
     window.P = () => window.BRADY.Game.scene.player;
     window.S = () => window.BRADY.Game.scene;
     window.ctor = type => window.BRADY_TYPES[type];
