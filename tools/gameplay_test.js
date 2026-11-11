@@ -71,12 +71,14 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   await page.waitForTimeout(500);
   await shot('03-map-postcard.png');
   await page.mouse.click(437, 200); await page.waitForTimeout(600);
+  // the walkable overworld: Brady lands on the airstrip and walks to 1-1 by himself
+  await page.waitForFunction(() => { const s = S(); return s.ow && s.ow.walker.at === '1-1' && s.ow.idle(); }, null, { timeout: 15000 }).catch(() => {});
   await shot('04-map.png');
-  const stamp = await page.evaluate(() => { const s = S(); return s.stamps && s.stamps[0] ? { x: s.stamps[0].x + 30, y: s.stamps[0].y + 12, locked2: !T.TourProgress.isUnlocked('1-2') } : null; });
-  check('only the first level is open at the start', stamp && stamp.locked2, stamp);
+  const stamp = await page.evaluate(() => { const s = S(), p = s.ow && s.ow.nodeScreen('1-1'); return p ? { x: p.x, y: p.y, at: s.ow.walker.at, locked2: !T.TourProgress.isUnlocked('1-2') } : null; });
+  check('only the first level is open at the start; Brady walks from the airstrip to it', stamp && stamp.locked2 && stamp.at === '1-1', stamp);
   await page.mouse.click(stamp.x, stamp.y); await page.waitForTimeout(1500);
   const lvl = await page.evaluate(() => { const s = S(); return { name: s.constructor.name, id: s.id, tour: !!(s.level && s.level.tour) }; });
-  check('tapping a level stamp starts it', lvl.name === 'Play' && lvl.id === '1-1' && lvl.tour, lvl);
+  check('tapping the stop Brady stands on starts that level', lvl.name === 'Play' && lvl.id === '1-1' && lvl.tour, lvl);
 
   // 2. Moving and jumping
   const mv = await page.evaluate(() => { start('1-1'); clearEnemies(); const p = P(), x0 = p.x; sim(0.8, { right: true }); const x1 = p.x; sim(0.05, { jump: true, jumpPressed: true }); sim(0.2, { jump: true }); const air = !p.onGround; sim(1.5); return { dx: x1 - x0, air, ground: p.onGround }; });
@@ -317,12 +319,13 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const aqOpen = TP.countryUnlocked(T.Tour.countries.aq) && TP.isUnlocked('13-1');
     const w0 = viaDoor('5-2'); const lockedOut = w0.s1 === 'play' && !TP.countryUnlocked(T.Tour.countries.w22);
     // the shut door is remembered: World 22's ghost pin shows on the map, and tapping it says what the door wants
-    const gm = new M({}); B.Game.setScene(gm); gm.card = null; const ws = T.Tour.stops.w22;
+    const gm = new M({}); B.Game.setScene(gm); gm.card = null; gm.openRoute({}); const ws = T.Tour.stops.w22; gm.rRevealQ = []; gm.cam.lon = ws.lon + 12; gm.cam.lat = ws.lat;
     B.Input.taps.push({ x: gm.sx(ws.lon), y: gm.sy(ws.lat) }); gm.update(1 / 60);
     const ghost = { door: !!(d.tour.doors || {}).w22, pins: gm.ghostPins().map(s => s.id).join(), toast: gm.toastMsg };
     for (const w of [1, 2, 3, 4, 5, 6, 7, 8]) d.gold[w + '-1'] = [true, true, true];
     const w1 = viaDoor('5-2'); const w22Open = TP.countryUnlocked(T.Tour.countries.w22) && TP.isUnlocked('22-1');
-    const map = new M({ from: '5-2' }); B.Game.setScene(map); const flying = !!map.flight; for (let k = 0; k < 900 && map.flight; k++) map.update(1 / 120);
+    // the new land is revealed on the route map, then the plane flies there
+    const map = new M({ from: '5-2' }); B.Game.setScene(map); map.card = null; let flying = false; for (let k = 0; k < 3000 && !(map.mode === 'land' && map.sel === 'w22'); k++) { map.update(1 / 120); if (map.flight) flying = true; if (map.card) map.card = null; }
     return { hiddenAtFirst, aq, aqOpen, lockedOut, ghost, w1, w22Open, flying, sel: map.sel, gold: TP.totals().gold, ghostAfter: map.ghostPins().length };
   });
   check('secret lands stay hidden until found; a cracked wall in 8-4 opens Antarctica; door 22 in 5-2 opens World 22 only with 22 postcards', secrets.hiddenAtFirst && secrets.aqOpen && secrets.lockedOut && secrets.w22Open && secrets.flying && secrets.sel === 'w22', secrets);
@@ -331,35 +334,43 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const B = window.BRADY, d = B.Save.data, keep = JSON.stringify(d.tour), keepGold = JSON.stringify(d.gold), keepUn = JSON.stringify(d.unlocked);
     d.tour = Object.assign(JSON.parse(keep), { lands: {}, doors: { w22: true }, pending: [], at: 'ma' }); d.gold = {};
     for (const id in d.unlocked) if (/^22-/.test(id)) delete d.unlocked[id];
-    const m = new T.TourMapScene({}); B.Game.setScene(m); m.card = null; const ws = T.Tour.stops.w22; m.cam.lon = ws.lon + 12; m.cam.lat = ws.lat; m.update(1 / 60); m.draw(B.Game.ctx);
+    const m = new T.TourMapScene({}); B.Game.setScene(m); m.card = null; m.openRoute({}); m.rRevealQ = []; const ws = T.Tour.stops.w22; m.cam.lon = ws.lon + 12; m.cam.lat = ws.lat; m.update(1 / 60); m.cam.lon = ws.lon + 12; m.cam.lat = ws.lat; m.draw(B.Game.ctx); m.update = function () {};
     window.__ghostRestore = () => { d.tour = JSON.parse(keep); d.gold = JSON.parse(keepGold); d.unlocked = JSON.parse(keepUn); };
   });
   await shot('12c-map-ghost22.png');
   await page.evaluate(() => window.__ghostRestore());
   await page.evaluate(() => { const s = S(); s.card = null; s.update(1 / 60); s.draw(window.BRADY.Game.ctx); });
   await shot('12b-map-world22.png');
-  // the whole route flows: each boss flies Brady on to the next built country
+  // the whole route flows: each boss opens its land's port; boarding there offers the next built country
   const route = await page.evaluate(() => {
     const B = window.BRADY, d = B.Save.data, out = [];
     d.tour = { at: 'mx', seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {};
     for (const C of T.Tour.mainCountries()) {
       for (let i = 1; i <= C.mainCount; i++) { d.done[C.world + '-' + i] = true; T.TourProgress.complete(C.world + '-' + i, false); }
-      const N = T.Tour.nextCountry(C); const M = new T.TourMapScene({ from: C.world + '-' + C.mainCount }); B.Game.setScene(M);
-      out.push(C.id + '>' + (N ? (M.flight || M.sel === N.id ? N.id : 'STUCK') : 'end'));
+      const N = T.Tour.nextCountry(C); const M = new T.TourMapScene({ from: C.world + '-' + C.mainCount }); B.Game.setScene(M); M.card = null;
+      for (let k = 0; k < 1200 && !(M.mode === 'land' && M.ow.idle()); k++) M.update(1 / 60);
+      const at = M.ow.walker.at; M.ow.enter(true);
+      out.push(C.id + '>' + (N ? (at === 'port' && M.mode === 'route' && M.dest === N.id ? N.id : 'STUCK') : (at === 'port' ? 'end' : 'STUCK')));
     }
     d.tour = { at: null, seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {}; d.gold = {};
     return out;
   });
-  check('the route flows country to country, each boss flying Brady on', route.every(r => !/STUCK/.test(r)) && route[route.length - 1] === 'np>end', route);
+  check('the route flows country to country: each boss opens the port, Brady walks there and boards for the next land', route.every(r => !/STUCK/.test(r)) && route[route.length - 1] === 'np>end', route);
   const fly = await page.evaluate(() => {
     const B = window.BRADY, d = B.Save.data; for (let i = 1; i <= 5; i++) d.done['1-' + i] = true; T.TourProgress.complete('1-5', false);
-    const M = new T.TourMapScene({ from: '1-5' }); B.Game.setScene(M); const flying = !!M.flight; for (let k = 0; k < 600 && M.flight; k++) M.update(1 / 120);
+    const M = new T.TourMapScene({ from: '1-5' }); B.Game.setScene(M); M.card = null;
+    for (let k = 0; k < 1200 && !(M.mode === 'land' && M.ow.idle()); k++) M.update(1 / 60);
+    M.ow.enter(true); M.go(); const flying = !!M.flight;
+    for (let k = 0; k < 70; k++) M.update(1 / 60);
+    window.__flyScene = M;
     const next = T.Tour.nextCountry(T.Tour.countries.mx);
-    return { flying, sel: M.sel, next: next.id, unlocked: T.TourProgress.isUnlocked(next.world + '-1') };
+    return { flying, next: next.id, unlocked: T.TourProgress.isUnlocked(next.world + '-1') };
   });
-  check('beating Mexico\'s boss flies Brady on to the next country on the route', fly.flying && fly.sel === fly.next && fly.next === 'ec' && fly.unlocked, fly);
-  await page.evaluate(() => { const s = S(); s.card = null; s.update(1 / 60); s.draw(window.BRADY.Game.ctx); });
+  await page.evaluate(() => { const s = S(); s.draw(window.BRADY.Game.ctx); s._u = s.update; s.update = function () {}; });
   await shot('12-map-flight.png');
+  const landed = await page.evaluate(() => { const M = S(); M.update = M._u; for (let k = 0; k < 600 && M.flight; k++) M.update(1 / 60); return { sel: M.sel, mode: M.mode, at: M.ow && M.ow.walker.at }; });
+  check('beating Mexico\'s boss: from the port Brady flies on to the next country and lands on its airstrip', fly.flying && landed.sel === fly.next && fly.next === 'ec' && fly.unlocked && landed.mode === 'land' && landed.at === 'start', Object.assign({}, fly, landed));
+  await page.evaluate(() => { const s = S(); s.card = null; s.update(1 / 60); s.draw(window.BRADY.Game.ctx); });
 
   // 9. Pause, credits and the ending
   const pause = await page.evaluate(() => { start('7-2'); const g = S(); g.openPause(); const labels = g.pauseUI.map(b => b.label); g.closePause(); return labels; });

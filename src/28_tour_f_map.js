@@ -1,8 +1,7 @@
 /* ============================================================
-   World tour: the overworld. A stylized world map across the
-   continents; every stop on the route is a pin. Brady flies his
-   little prop plane from country to country. Tap a pin to see that
-   country's five levels, tap a level to play.
+   World tour: the maps. The world route map (pins on a stylized
+   globe, the plane, the Baron's airship) and the scene that
+   switches between it and each land's walkable overworld.
    ============================================================ */
 // simplified coastlines as [lon, lat] rings (hand-made, stylized)
 const TOUR_LAND = [
@@ -64,7 +63,6 @@ const TOUR_WATER = [
 ];
 
 const TourMap = {
-  // little emblem in each pin (countries can draw their own with def.emblem)
   pinR: 11,
   paths: null,
   build() {
@@ -72,7 +70,7 @@ const TourMap = {
     const mk = ring => { const p = new Path2D(); for (let i = 0; i < ring.length; i += 2) { if (i) p.lineTo(ring[i], -ring[i + 1]); else p.moveTo(ring[i], -ring[i + 1]); } p.closePath(); return p; };
     this.paths = { land: TOUR_LAND.map(mk), water: TOUR_WATER.map(mk) };
   },
-  // the tour route between consecutive main stops, then the secret lands
+  // the tour route between consecutive main stops
   legs() {
     const main = TOUR_ROUTE.filter(s => !s.secret), out = [];
     for (let i = 0; i + 1 < main.length; i++) out.push([main[i], main[i + 1]]);
@@ -84,101 +82,244 @@ const TourMap = {
     if (s.secret && !TourProgress.countryUnlocked(C)) return 'hidden';
     if (!TourProgress.countryUnlocked(C)) return 'locked';
     return TourProgress.countryDone(C) ? 'done' : 'open';
-  }
+  },
+  // the lands Brady can fly to, in route order (secret lands once found)
+  destinations() { return TOUR_ROUTE.filter(s => { const st = this.stopState(s); return st === 'open' || st === 'done'; }); },
+  // a reveal that plays on the world route map (the others play in their land's overworld)
+  routeKind(r) { return r.kind === 'land' || r.kind === 'flight' || (r.kind === 'house' && !r.cc); }
 };
 
+// M opens the route map from the overworld (Input has no key for it)
+// M opens the route map; Enter is latched here too (a quick tap can come and go between two updates)
+const TourMapKeys = { m: false, enter: false };
+try { window.addEventListener('keydown', e => { if (e.repeat) return; if (e.code === 'KeyM') TourMapKeys.m = true; if (e.code === 'Enter' || e.code === 'NumpadEnter') TourMapKeys.enter = true; }); } catch (e) { /* not in a browser */ }
+
+/* ============================================================
+   The map scene. Two modes:
+   - 'land': the walkable overworld of one land (28_tour_fd_overworld.js): Brady walks the trails between level
+     stops with the joystick or the arrow keys, a tap walks him to a stop, jump / Enter goes in.
+   - 'route': the world route map: pins on the globe, the Baron's airship, the lighthouse, secret flights. Pick a
+     land (left / right or a tap) and fly there; landing puts Brady on that land's airstrip.
+   Opened after a level with { from: id }: Brady stands on that level's stop, the reveal queue plays, then he walks
+   on to whatever the exit opened.
+   ============================================================ */
 class TourMapScene {
   constructor(opts) {
     opts = opts || {};
     this.t = 0; this.toastT = 0; this.toastMsg = '';
-    Input.setMode('ui');
     TourMap.build();
-    const T = TourProgress.data();
-    const mains = Tour.mainCountries();
-    // where Brady is: the last country played, or the first stop
-    let at = T.at && Tour.countries[T.at] ? T.at : (mains[0] ? mains[0].id : 'mx');
+    const T = TourProgress.data(), mains = Tour.mainCountries();
+    // where Brady is: the land of the level he just left, the last land, or the first stop
+    let fromC = null, fromKey = null;
+    const from = opts.from ? String(opts.from) : null;
+    if (from && from.indexOf('house:') === 0) { const h = Tour.house(from.slice(6)); if (h) { fromC = h.C; fromKey = from; } }
+    else if (from) { fromC = Tour.countryOf(from); if (fromC && Tour.specOf(from)) fromKey = from; else fromC = null; }
+    const at = fromC ? fromC.id : (T.at && Tour.countries[T.at] ? T.at : (mains[0] ? mains[0].id : 'mx'));
     this.sel = at;
-    this.plane = { lon: Tour.stops[at].lon, lat: Tour.stops[at].lat, ang: 0 };
-    this.flight = null;
-    // a castle was just cleared: fly on to the next country
-    const fromC = opts.from ? Tour.countryOf(opts.from) : null;
-    if (fromC) {
-      const i = +opts.from.split('-')[1];
-      const N = Tour.nextCountry(fromC);
-      if (i === fromC.mainCount && N && TourProgress.countryUnlocked(N) && !T.seen[N.id]) this.flyTo(N.id, true);
-      // an exit to a secret land or a secret flight: fly there
-      const L = fromC.levels[i - 1], E = (Save.data.exits || {})[opts.from] || {};
-      if (L) for (const key in E) {
-        const ex = L.exits[key], tg = ex && E[key] ? Tour.target(ex.to, fromC) : null;
-        if (tg && (tg.kind === 'land' || tg.kind === 'flight') && Tour.countries[tg.id] && TourProgress.countryUnlocked(Tour.countries[tg.id]) && !T.seen[tg.id]) this.flyTo(tg.id, true);
+    const s0 = Tour.stops[at];
+    this.plane = { lon: s0.lon, lat: s0.lat, ang: 0 };
+    this.flight = null; this.rRevealQ = null; this.rReveal = null;
+    this.cam = { lon: s0.lon, lat: s0.lat, z: 5 };
+    // the exit Brady just took (consumed once): where to walk, or which land to fly to
+    const LE = T.lastExit; T.lastExit = null;
+    const fresh = LE && fromKey && LE.id === fromKey ? LE : null;
+    let auto = null; this.flyAfter = null;
+    if (fresh && fromC) {
+      if (fresh.id.indexOf('house:') === 0) auto = null;
+      else {
+        const L = Tour.specOf(fresh.id), ex = L && L.exits[fresh.key], tg = ex ? Tour.target(ex.to, fromC) : null;
+        if (tg && (tg.kind === 'level' || tg.kind === 'node') && Tour.countryOf(tg.id) === fromC) auto = tg.id;
+        else if (tg && tg.kind === 'house' && tg.cc === fromC.id) auto = 'house:' + tg.id;
+        else if (tg && tg.kind === 'country') auto = 'port';
+        else if (tg && (tg.kind === 'land' || tg.kind === 'flight') && Tour.countries[tg.id] && TourProgress.countryUnlocked(Tour.countries[tg.id]) && !T.seen[tg.id]) this.flyAfter = tg.id;
       }
     }
-    T.seen[at] = true;
-    this.cam = { lon: this.plane.lon, lat: this.plane.lat, z: 5 };
-    this.drag = null;
-    Sound.music((Tour.countries[this.sel] && Tour.countries[this.sel].music.map) || ((Sound.trackNames || []).indexOf('tour_map') >= 0 ? 'tour_map' : 'map'));
+    const arrive = !T.seen[at];
+    T.seen[at] = true; T.at = at;
+    this.music();
+    this.mode = 'land';
+    this.ow = new TourOverworld(this, Tour.countries[at] || mains[0], { at: fromKey, auto, arrive });
     // the very first visit: Chinka's first postcard
     const C0 = Tour.countries[this.sel];
-    if (C0 && !T.cards) { T.cards = {}; }
-    if (C0 && !this.flight && !T.cards[C0.id]) { T.cards[C0.id] = true; this.card = tourArrivalCard(C0); Save.save(); }
+    if (!T.cards) T.cards = {};
+    if (C0 && !T.cards[C0.id]) { T.cards[C0.id] = true; this.card = tourArrivalCard(C0); Save.save(); }
+    if (opts.route) this.openRoute({ dest: this.sel });
     this.build();
   }
+  music() { const C = Tour.countries[this.sel]; Sound.music((C && C.music.map) || ((Sound.trackNames || []).indexOf('tour_map') >= 0 ? 'tour_map' : 'map')); }
+  // back from the settings screen
+  resume() { this.build(); return this; }
   resize() { this.build(); }
+  get reveal() { return this.mode === 'land' ? (this.ow && this.ow.reveal) || null : this.rReveal; }
+  get walker() { return this.ow ? this.ow.walker : null; }
   build() {
-    const W = Game.cssW, H = Game.cssH, portrait = H > W * 1.05;
-    const side = Math.max(12, insets.l + 6, insets.r + 6), top = Math.max(10, insets.t + 4), bot = Math.max(10, insets.b + 6);
-    this.portrait = portrait;
-    if (portrait) {
-      this.mapR = { x: 0, y: 0, w: W, h: Math.round(H * 0.5) };
-      this.panelR = { x: side, y: this.mapR.h + 8, w: W - side * 2, h: H - this.mapR.h - 8 - bot };
-    } else {
-      const pw = Math.min(360, Math.round(W * 0.42));
-      this.mapR = { x: 0, y: 0, w: W - pw - side, h: H };
-      this.panelR = { x: W - pw - side + 6, y: top + 44, w: pw - 6, h: H - top - 44 - bot };
-    }
-    this.cam && (this.cam.z = portrait ? 4.2 : clamp(this.mapR.w / 100, 4, 6.5));
-    this.backBtn = { x: side, y: top, w: 84, h: 34, label: '◀ MENU', size: 11, fn: () => { Sound.play('back'); Game.setScene(new TitleScene()); } };
-    this.layoutPanel();
+    const W = Game.cssW, H = Game.cssH;
+    const side = Math.max(12, insets.l + 6), top = Math.max(10, insets.t + 4);
+    this.portrait = H > W * 1.05;
+    this.mapR = { x: 0, y: 0, w: W, h: H };
+    this.baseZ = this.cam.z = this.portrait ? clamp(W / 90, 3.4, 4.6) : clamp(Math.min(W / 120, H / 62), 3.6, 6.5);
+    this.backBtn = { x: side, y: top, w: 84, h: 34, label: '◀ MENU', size: 11, fn: () => { Sound.play('back'); this.leave(new TitleScene()); } };
+    if (this.ow) this.ow.layoutView();
+    this.layoutRoute();
   }
-  layoutPanel() {
-    const C = Tour.countries[this.sel], R = this.panelR;
-    this.stamps = [];
-    if (!C) return;
-    const n = C.levels.length, gap = 6;
-    const headH = 66, rowH = Math.min(46, (R.h - headH - 46 - gap * n) / n);
-    for (let i = 0; i < n; i++) this.stamps.push({ i: i + 1, x: R.x + 10, y: R.y + headH + i * (rowH + gap), w: R.w - 20, h: rowH });
+  // every way out of the map scene: touch controls back to normal first
+  leave(scene) { Input.hud = null; Input.camDrag = false; Game.setScene(scene); }
+  toast(m) { this.toastMsg = m; this.toastT = 2.2; }
+  prevName(id) { const C = Tour.countries[id], P = C && Tour.prevCountry(C); return P ? P.name.toUpperCase() : 'THE LAST COUNTRY'; }
+  // legacy entry point: play level i of the current land
+  play(i) {
+    const C = Tour.countries[this.sel]; if (!C) return;
+    const id = C.world + '-' + i;
+    if (!TourProgress.isUnlocked(id)) { Sound.play('bump', { vol: 0.5 }); this.toast('LOCKED: FINISH THE LEVEL BEFORE IT'); return; }
+    this.startLevel(id);
   }
-  // screen position of a lon/lat point
+  startLevel(id) {
+    const C = Tour.countryOf(id); if (!C) return;
+    Sound.play('select'); const T = TourProgress.data(); T.at = C.id; (T.panelAt = T.panelAt || {})[C.id] = id; Save.save();
+    const [w, i] = id.split('-').map(Number);
+    this.leave(new Play(getLevel(w, i), {}));
+  }
+  startHouse(hid) {
+    const lvl = Tour.houseLevel(hid); if (!lvl) return;
+    const h = Tour.house(hid); Sound.play('select'); const T = TourProgress.data(); T.at = h.C.id; (T.panelAt = T.panelAt || {})[h.C.id] = 'house:' + hid; Save.save();
+    this.leave(new Play(lvl, {}));
+  }
+
+  /* ---------- the world route map ---------- */
+  openRoute(o) {
+    o = o || {};
+    this.mode = 'route'; Input.setMode('ui'); Input.hud = null; Input.camDrag = false;
+    const list = TourMap.destinations();
+    this.dest = o.dest && list.some(s => s.id === o.dest) ? o.dest : this.sel;
+    const st = Tour.stops[this.sel]; this.plane.lon = st.lon; this.plane.lat = st.lat;
+    const d = Tour.stops[this.dest]; this.cam.lon = (st.lon + d.lon) / 2; this.cam.lat = clamp((st.lat + d.lat) / 2, -40, 55);
+    this.rRevealQ = null; this.routeBeat = 0;
+    // boarding: the world map opens zoomed in on the land and pulls back
+    this.zoomT = o.zoom && !TourKit.reduceMotion() ? 0 : null;
+    if (this.zoomT === 0) { this.cam.lon = st.lon; this.cam.lat = st.lat; }
+    Sound.play('map_open', { vol: 0.6 });
+    this.layoutRoute();
+  }
+  // back to walking the current land
+  closeRoute() {
+    this.mode = 'land'; this.flight = null; this.rReveal = null;
+    if (!this.ow || this.ow.C.id !== this.sel) this.ow = new TourOverworld(this, Tour.countries[this.sel], { at: 'start' });
+    this.ow.layoutView(); this.music();
+  }
+  layoutRoute() {
+    const W = Game.cssW, H = Game.cssH, bot = Math.max(10, insets.b + 6), side = Math.max(12, insets.l + 6, insets.r + 6);
+    const cw = Math.min(W - side * 2, 460), ch = 64, x = (W - cw) / 2, y = H - bot - ch;
+    this.destCard = { x, y, w: cw, h: ch };
+    const bh = 44;
+    this.routeBtns = {
+      prev: { x: x + 6, y: y + (ch - bh) / 2, w: 44, h: bh },
+      next: { x: x + cw - 50 - 112, y: y + (ch - bh) / 2, w: 44, h: bh },
+      fly: { x: x + cw - 112, y: y + (ch - bh) / 2, w: 106, h: bh },
+      back: { x: W - side - 96, y: Math.max(10, insets.t + 4), w: 96, h: 34 }
+    };
+  }
   sx(lon) { return this.mapR.x + this.mapR.w / 2 + (lon - this.cam.lon) * this.cam.z; }
   sy(lat) { return this.mapR.y + this.mapR.h / 2 - (lat - this.cam.lat) * this.cam.z; }
   flyTo(id, auto) {
     const s = Tour.stops[id]; if (!s) return;
+    if (this.mode !== 'route') this.openRoute({ dest: id });
     const from = { lon: this.plane.lon, lat: this.plane.lat };
     const dist = Math.hypot(s.lon - from.lon, s.lat - from.lat);
-    if (dist < 0.5) { this.sel = id; this.layoutPanel(); return; }
-    this.flight = { from, to: { lon: s.lon, lat: s.lat }, k: 0, dur: clamp(dist / 28, 1.2, 3.2), id, auto };
+    this.dest = id;
+    if (dist < 0.5) { this.land(id); return; }
+    this.flight = { from, to: { lon: s.lon, lat: s.lat }, k: 0, dur: clamp(dist / 28, 1.4, 3.4), id, auto };
     TourKit.sfx('plane', 'fly', { vol: 0.6 });
   }
-  select(id) {
+  // the plane touches down: walk this land from its airstrip
+  land(id) {
+    const T = TourProgress.data(), C = Tour.countries[id];
+    this.flight = null; if (!C) return;
+    const first = !T.seen[id];
+    if (first) { T.seen[id] = true; this.toast('WELCOME TO ' + C.name.toUpperCase() + '!'); Sound.play('checkpoint'); }
+    T.at = id; this.sel = id;
+    if (!(T.cards = T.cards || {})[id]) { T.cards[id] = true; this.card = tourArrivalCard(C); }
+    (T.panelAt = T.panelAt || {})[id] = 'start';
+    Save.save();
+    this.mode = 'land'; this.rReveal = null;
+    this.ow = new TourOverworld(this, C, { at: 'start', arrive: first, landing: true });
+    this.ow.layoutView(); this.music();
+  }
+  // select a land on the route map (a second tap on the same pin flies)
+  pick(id, fromTap) {
     const s = Tour.stops[id], st = TourMap.stopState(s);
-    if (st === 'hidden') return;
-    Sound.play('select');
-    if (st === 'soon') { this.toast(s.name.toUpperCase() + ': COMING SOON'); this.sel = id; this.layoutPanel(); return; }
-    if (st === 'locked') { this.toast('FINISH ' + this.prevName(id) + ' FIRST'); this.sel = id; this.layoutPanel(); return; }
-    if (this.sel !== id || Math.hypot(this.plane.lon - s.lon, this.plane.lat - s.lat) > 0.5) this.flyTo(id);
-    this.sel = id; this.layoutPanel();
+    if (st === 'hidden') return false;
+    if (st === 'soon') { this.toast(s.name.toUpperCase() + ': COMING SOON'); Sound.play('bump', { vol: 0.4 }); return true; }
+    if (st === 'locked') { this.toast('FINISH ' + this.prevName(id) + ' FIRST'); Sound.play('bump', { vol: 0.4 }); return true; }
+    if (fromTap && this.dest === id) { this.go(); return true; }
+    this.dest = id; Sound.play('select', { vol: 0.5 }); return true;
   }
-  prevName(id) { const C = Tour.countries[id], P = C && Tour.prevCountry(C); return P ? P.name.toUpperCase() : 'THE LAST COUNTRY'; }
-  toast(m) { this.toastMsg = m; this.toastT = 2.2; }
-  play(i) {
-    const C = Tour.countries[this.sel]; if (!C || this.flight) return;
-    const id = C.world + '-' + i;
-    if (!TourProgress.isUnlocked(id)) { Sound.play('bump', { vol: 0.5 }); this.toast('LOCKED: FINISH THE LEVEL BEFORE IT'); return; }
-    Sound.play('select'); TourProgress.data().at = C.id; Save.save();
-    Game.setScene(new Play(getLevel(C.world, i), {}));
+  go() { if (this.flight || this.rReveal) return; if (this.dest === this.sel && Math.hypot(this.plane.lon - Tour.stops[this.sel].lon, this.plane.lat - Tour.stops[this.sel].lat) < 0.5) { Sound.play('select'); this.closeRoute(); return; } this.flyTo(this.dest); }
+  cycle(d) {
+    const list = TourMap.destinations(); if (!list.length) return;
+    const i = Math.max(0, list.findIndex(s => s.id === this.dest));
+    this.dest = list[(i + d + list.length) % list.length].id; Sound.play('select', { vol: 0.4 });
   }
+
+  /* ---------- route-map reveals: a new land, a secret flight, the lighthouse ---------- */
+  startRouteReveals() {
+    const T = TourProgress.data();
+    this.rRevealQ = T.pending.filter(r => TourMap.routeKind(r));
+    this.nextRouteReveal();
+  }
+  nextRouteReveal() {
+    const r = this.rRevealQ && this.rRevealQ.shift();
+    if (!r) { this.rReveal = null; return; }
+    const calm = TourKit.reduceMotion();
+    const banner = r.kind === 'land' ? 'NEW LAND!' : r.kind === 'flight' ? 'SECRET FLIGHT!' : 'POSTCARD LIGHTHOUSE!';
+    this.rReveal = { r, t: 0, k: 0, dur: calm ? 0.3 : 2.4, calm, banner, sparks: [] };
+    const where = r.kind === 'land' ? Tour.stops[r.id] : r.kind === 'flight' ? Tour.stops[r.to] : { lon: TOUR_LIGHTHOUSE.lon, lat: TOUR_LIGHTHOUSE.lat };
+    if (where) this.rReveal.focus = { lon: where.lon, lat: where.lat };
+    TourKit.sfx('newland', 'checkpoint');
+  }
+  updateRouteReveal(dt) {
+    const R = this.rReveal; if (!R) return;
+    R.t += dt; R.k = R.calm ? R.t / R.dur : R.t;
+    if (R.t >= R.dur) { TourProgress.revealDone(R.r); Save.save(); this.nextRouteReveal(); }
+  }
+
   update(dt) {
     this.t += dt; if (this.toastT > 0) this.toastT -= dt;
+    this.updateWorldFx(dt);
+    if (this.mode === 'land') return this.updateLand(dt);
+    return this.updateRoute(dt);
+  }
+  updateLand(dt) {
+    const ow = this.ow;
+    if (Input.mode !== 'game' && !ow.menu) Input.setMode('game');
+    Input.camDrag = !ow.menu; this.setHud();
+    const inp = ow.readInput();
+    // Chinka's postcard: any tap or key puts it away
+    if (this.card) { ow.update(dt, null); if (inp.taps.length || inp.enter || inp.back) { this.card = null; Sound.play('cardFlip'); } TourMapKeys.m = false; return; }
+    if (TourMapKeys.m && ow.idle()) { TourMapKeys.m = false; this.openRoute({ dest: this.sel }); return; }
+    TourMapKeys.m = false;
+    ow.update(dt, inp);
+    // once the land's own reveals are done: the world map's reveals (a new land, a secret flight, the lighthouse)
+    if (ow.idle() && !this.routeChecked) {
+      this.routeChecked = true;
+      if (TourProgress.data().pending.some(r => TourMap.routeKind(r)) || this.flyAfter) { this.openRoute({ dest: this.flyAfter || this.sel }); this.startRouteReveals(); this.routeReturn = !this.flyAfter; }
+    }
+  }
+  // the world and menu buttons sit next to the pause spot of the touch layout
+  setHud() {
+    const L = Input.layout; if (!L) { Input.hud = null; return; }
+    const p = L.pause, dx = L.lefty ? 50 : -50;
+    this.hudBtns = { menu: { x: p.x, y: p.y, r: 20 }, world: { x: p.x + dx, y: p.y, r: 20 } };
+    Input.hud = this.ow && this.ow.menu ? null : [{ id: 'world', x: p.x + dx, y: p.y, r: 20 }];
+  }
+  updateRoute(dt) {
+    const T = TourProgress.data();
+    if (this.rRevealQ == null && !this.flight) this.startRouteReveals();
+    if (this.rReveal) { this.updateRouteReveal(dt); if (Input.taps.length && this.rReveal && this.rReveal.t > 0.2) this.rReveal.t = Math.max(this.rReveal.t, this.rReveal.dur - 0.15); Input.taps.length = 0; Input.uiKey = null; }
+    else if (this.rRevealQ && !this.rRevealQ.length && !this.flight && this.routeBeat >= 0) {
+      // the reveals are over: fly to a land the exit opened, or go back to walking
+      if (this.flyAfter) { const id = this.flyAfter; this.flyAfter = null; this.flyTo(id, true); }
+      else if (this.routeReturn) { this.routeBeat += dt; if (this.routeBeat > 0.5) { this.routeReturn = false; this.closeRoute(); return; } }
+    }
     // the flight
     if (this.flight) {
       const f = this.flight; f.k = Math.min(1, f.k + dt / f.dur);
@@ -187,63 +328,74 @@ class TourMapScene {
       const nl = q(f.from.lon, mid.lon, f.to.lon, e), nt = q(f.from.lat, mid.lat, f.to.lat, e);
       this.plane.ang = Math.atan2(-(nt - this.plane.lat), nl - this.plane.lon || 0.0001);
       this.plane.lon = nl; this.plane.lat = nt;
-      if (f.k >= 1) {
-        this.flight = null; this.sel = f.id; this.layoutPanel();
-        const T = TourProgress.data(), C = Tour.countries[f.id];
-        if (C && !T.seen[f.id]) { T.seen[f.id] = true; T.at = f.id; this.toast('WELCOME TO ' + C.name.toUpperCase() + '!'); Sound.play('checkpoint'); }
-        if (C && !(T.cards = T.cards || {})[f.id]) { T.cards[f.id] = true; this.card = tourArrivalCard(C); }
-        Save.save();
-      }
+      // touch down: the map dives into the land's pin, then the land opens with the plane landing on its strip
+      if (f.k >= 1) { if (TourKit.reduceMotion()) { this.land(f.id); return; } f.touch = (f.touch || 0) + dt; if (f.touch >= 0.6) { this.land(f.id); return; } }
     }
-    // the camera follows the plane while flying, otherwise the selected stop
-    const tgt = this.flight ? this.plane : Tour.stops[this.sel];
-    this.cam.lon = lerp(this.cam.lon, tgt.lon + (this.portrait ? 0 : 6), 1 - Math.exp(-dt * 3));
-    this.cam.lat = lerp(this.cam.lat, clamp(tgt.lat, -40, 55), 1 - Math.exp(-dt * 3));
-    // drag the map around with a finger
-    const touches = Input.touches ? [...Input.touches.values()] : [];
-    if (touches.length === 1 && !this.flight) {
-      const tc = touches[0];
-      if (tc.x >= this.mapR.x && tc.x <= this.mapR.x + this.mapR.w && tc.y >= this.mapR.y && tc.y <= this.mapR.y + this.mapR.h) {
-        if (this.drag) { this.cam.lon -= (tc.x - this.drag.x) / this.cam.z; this.cam.lat += (tc.y - this.drag.y) / this.cam.z; this.dragged = (this.dragged || 0) + Math.abs(tc.x - this.drag.x) + Math.abs(tc.y - this.drag.y); }
-        this.drag = { x: tc.x, y: tc.y };
-      }
-    } else { this.drag = null; this.dragged = 0; }
-    // Chinka's postcard: any tap puts it away
-    if (this.card) { if (Input.taps.length || Input.uiKey === 'enter' || Input.jumpPressed) { this.card = null; Sound.play('cardFlip'); } return; }
-    // taps
-    for (const tp of Input.taps) {
-      const b = this.backBtn; if (tp.x >= b.x && tp.x <= b.x + b.w && tp.y >= b.y && tp.y <= b.y + b.h) { b.fn(); return; }
-      for (const s of this.stamps) if (tp.x >= s.x && tp.x <= s.x + s.w && tp.y >= s.y && tp.y <= s.y + s.h) { this.play(s.i); return; }
-      let best = null, bd = 26;
-      for (const s of TOUR_ROUTE) { const d = Math.hypot(tp.x - this.sx(s.lon), tp.y - this.sy(s.lat)); if (d < bd && TourMap.stopState(s) !== 'hidden') { bd = d; best = s; } }
-      if (best) { this.select(best.id); return; }
-    }
-    // keyboard / controller: left/right through the stops, up/down through the levels, enter to play
-    const k = Input.uiKey;
-    if (k === 'left' || k === 'right') {
-      const list = TOUR_ROUTE.filter(s => TourMap.stopState(s) !== 'hidden'), i = list.findIndex(s => s.id === this.sel);
-      const n = list[(i + (k === 'right' ? 1 : list.length - 1)) % list.length]; if (n) this.select(n.id);
-    }
-    if (k === 'up' || k === 'down') { const n = this.stamps.length; if (n) { this.focus = ((this.focus || 0) + (k === 'down' ? 1 : n - 1)) % n; Sound.play('select', { vol: 0.4 }); } }
-    if (k === 'enter' && this.stamps.length) this.play(this.stamps[Math.min(this.focus || 0, this.stamps.length - 1)].i);
-    if (k === 'back' || Input.pausePressed) this.backBtn.fn();
+    if (!(this.flight && this.flight.touch != null)) this.routeInput();
+    if (this.mode === 'route') this.routeCam(dt);
   }
+  // the camera follows the plane while flying, a reveal, or the leg to the chosen land
+  routeCam(dt) {
+    const f = this.flight;
+    if (f && f.touch != null) { this.cam.z = this.baseZ * (1 + 3 * easeInOut(clamp(f.touch / 0.6, 0, 1))); this.cam.lon = lerp(this.cam.lon, f.to.lon, 0.25); this.cam.lat = lerp(this.cam.lat, f.to.lat, 0.25); return; }
+    if (this.zoomT != null) { this.zoomT += dt; const k = clamp(this.zoomT / 0.8, 0, 1); this.cam.z = this.baseZ * (1 + 3 * (1 - easeOut(k))); if (k >= 1) { this.zoomT = null; this.cam.z = this.baseZ; } }
+    const R = this.rReveal, ds = Tour.stops[this.dest] || Tour.stops[this.sel];
+    const tgt = this.flight ? this.plane : R && R.focus ? R.focus : { lon: (ds.lon + this.plane.lon) / 2, lat: (ds.lat + this.plane.lat) / 2 };
+    this.cam.lon = lerp(this.cam.lon, tgt.lon, 1 - Math.exp(-dt * 3));
+    this.cam.lat = lerp(this.cam.lat, clamp(tgt.lat, -40, 55), 1 - Math.exp(-dt * 3));
+  }
+  routeInput() {
+    if (this.card) { if (Input.taps.length || Input.uiKey === 'enter' || Input.jumpPressed) { this.card = null; Sound.play('cardFlip'); } return; }
+    if (this.flight || this.rReveal || this.zoomT != null) return;
+    // the lighthouse and the ghost pins answer taps first
+    if (this.routeTapExtras()) return;
+    const B = this.routeBtns, hit = (b, tp) => tp.x >= b.x - 4 && tp.x <= b.x + b.w + 4 && tp.y >= b.y - 4 && tp.y <= b.y + b.h + 4;
+    for (const tp of Input.taps) {
+      if (hit(this.backBtn, tp)) { this.backBtn.fn(); return; }
+      if (hit(B.back, tp)) { Sound.play('back'); this.closeRoute(); return; }
+      if (hit(B.prev, tp)) { this.cycle(-1); return; }
+      if (hit(B.next, tp)) { this.cycle(1); return; }
+      if (hit(B.fly, tp)) { this.go(); return; }
+      let best = null, bd = 28;
+      for (const s of TOUR_ROUTE) { const d = Math.hypot(tp.x - this.sx(s.lon), tp.y - this.sy(s.lat)); if (d < bd && TourMap.stopState(s) !== 'hidden') { bd = d; best = s; } }
+      if (best) { this.pick(best.id, true); return; }
+    }
+    const k = Input.uiKey;
+    if (k === 'left' || k === 'up') this.cycle(-1);
+    if (k === 'right' || k === 'down') this.cycle(1);
+    if (k === 'enter' || Input.jumpPressed || TourMapKeys.enter) { TourMapKeys.enter = false; this.go(); return; }
+    if (k === 'back' || Input.pausePressed || TourMapKeys.m) { TourMapKeys.m = false; Sound.play('back'); this.closeRoute(); }
+  }
+
   draw(ctx) {
+    if (this.mode === 'land') { this.ow.draw(ctx); this.drawOverlays(ctx); return; }
+    this.drawRoute(ctx);
+    this.drawOverlays(ctx);
+  }
+  drawOverlays(ctx) {
+    const W = Game.cssW, H = Game.cssH;
+    ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
+    if (this.card) this.drawCard(ctx);
+    if (this.toastT > 0) {
+      ctx.save(); ctx.globalAlpha = Math.min(1, this.toastT * 2); ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const tw = Math.min(W - 24, ctx.measureText(this.toastMsg).width + 30), cx = W / 2, cy = this.mode === 'land' && this.ow ? this.ow.toastY() : H * 0.22;
+      ctx.fillStyle = 'rgba(10,8,24,0.82)'; rr(ctx, cx - tw / 2, cy - 15, tw, 30, 15); ctx.fill();
+      ctx.fillStyle = '#ffd84a'; ctx.fillText(this.toastMsg, cx, cy + 1, tw - 20); ctx.restore();
+    }
+  }
+  drawRoute(ctx) {
     const W = Game.cssW, H = Game.cssH, R = this.mapR, z = this.cam.z, t = this.t;
     ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
     ctx.save();
-    // the ocean
-    const og = ctx.createLinearGradient(0, 0, 0, H); og.addColorStop(0, '#1d6fc4'); og.addColorStop(1, '#0c3d86');
+    // a globe-like ocean: lighter in the middle, the grid bowing out toward the edges
+    const og = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.1, W / 2, H / 2, Math.hypot(W, H) * 0.6); og.addColorStop(0, '#2a88dc'); og.addColorStop(0.6, '#1660b4'); og.addColorStop(1, '#0a2e70');
     ctx.fillStyle = og; ctx.fillRect(0, 0, W, H);
     ctx.save(); ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
-    // latitude/longitude lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
-    for (let lon = -180; lon <= 180; lon += 30) { const x = this.sx(lon); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let lat = -60; lat <= 80; lat += 30) { const y = this.sy(lat); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-    // little waves
+    ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1;
+    for (let lon = -180; lon <= 180; lon += 30) { const x = this.sx(lon), b = (x - W / 2) * 0.08; ctx.beginPath(); ctx.moveTo(x, 0); ctx.quadraticCurveTo(x + b, H / 2, x, H); ctx.stroke(); }
+    for (let lat = -60; lat <= 80; lat += 30) { const y = this.sy(lat), b = (y - H / 2) * 0.1; ctx.beginPath(); ctx.moveTo(0, y); ctx.quadraticCurveTo(W / 2, y + b, W, y); ctx.stroke(); }
     ctx.strokeStyle = 'rgba(255,255,255,0.12)';
     for (let i = 0; i < 26; i++) { const lon = ((i * 47) % 360) - 180, lat = ((i * 29) % 120) - 50; const x = this.sx(lon) + Math.sin(t + i) * 3, y = this.sy(lat); ctx.beginPath(); ctx.arc(x, y, 5, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); ctx.beginPath(); ctx.arc(x + 10, y, 5, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
-    // land (with a soft shadow and a sandy rim)
     if (TourMap.paths) {
       ctx.save();
       ctx.translate(this.sx(0), this.sy(0)); ctx.scale(z, z);
@@ -255,36 +407,54 @@ class TourMapScene {
       ctx.fillStyle = '#2a7ad0'; for (const p of TourMap.paths.water) ctx.fill(p);
       ctx.restore();
     }
-    // the route: dotted lines between the stops
     for (const [a, b] of TourMap.legs()) {
       const sa = TourMap.stopState(a), sb = TourMap.stopState(b), flown = (sa === 'done' || sa === 'open') && (sb === 'done' || sb === 'open');
       this.arc(ctx, a, b, flown ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)', flown ? 0 : t * 12);
     }
-    // stops
+    this.drawWorldFx(ctx, 'under');
+    // the leg to the chosen land
+    if (!this.flight && this.dest && this.dest !== this.sel) this.arc(ctx, Tour.stops[this.sel], Tour.stops[this.dest], 'rgba(255,216,74,0.95)', t * 30);
     for (const s of TOUR_ROUTE) this.drawStop(ctx, s);
-    // the plane
     this.drawPlane(ctx, this.sx(this.plane.lon), this.sy(this.plane.lat), this.flight ? this.plane.ang : Math.sin(t * 2) * 0.1);
+    this.drawWorldFx(ctx, 'over');
+    // the globe's rim: the edges darken
+    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.hypot(W, H) * 0.62); vg.addColorStop(0, 'rgba(4,10,40,0)'); vg.addColorStop(1, 'rgba(4,10,40,0.5)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    const f = this.flight; if (f && f.touch != null) { ctx.fillStyle = `rgba(255,252,240,${clamp(f.touch / 0.6, 0, 1) * 0.9})`; ctx.fillRect(0, 0, W, H); }
     ctx.restore();
-    // compass + title
-    this.drawCompass(ctx, R.x + R.w - 40, R.y + R.h - 44);
+    // title, totals, buttons, the destination card
     UI.drawButton(ctx, this.backBtn, false);
     ctx.save(); ctx.font = `14px ${FONT_DISPLAY}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 6;
-    const tot = TourProgress.totals();
-    ctx.fillText('WORLD TOUR', this.backBtn.x + this.backBtn.w + 12, this.backBtn.y + 12);
+    const tot = TourProgress.totals(), tx = this.backBtn.x + this.backBtn.w + 12;
+    ctx.fillText('WORLD TOUR', tx, this.backBtn.y + 12);
     ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.fillText(`${tot.done}/${tot.total} levels  ·  ${tot.gold}/${tot.goldTotal} postcards`, this.backBtn.x + this.backBtn.w + 12, this.backBtn.y + 28);
+    ctx.fillText(`${tot.done}/${tot.total} levels  ·  ${tot.gold}/${tot.goldTotal} postcards`, tx, this.backBtn.y + 28);
     const W22 = Tour.countries.w22;
-    if (W22 && !TourProgress.countryUnlocked(W22)) { ctx.font = `italic 11px ${FONT_UI}`; ctx.fillStyle = `rgba(255,236,170,${0.85 + 0.15 * Math.sin(this.t * 1.5)})`; ctx.fillText('Legend speaks of a World 22…', this.backBtn.x + this.backBtn.w + 12, this.backBtn.y + 43); }
+    if (W22 && !TourProgress.countryUnlocked(W22)) { ctx.font = `italic 11px ${FONT_UI}`; ctx.fillStyle = `rgba(255,236,170,${0.85 + 0.15 * Math.sin(this.t * 1.5)})`; ctx.fillText('Legend speaks of a World 22…', tx, this.backBtn.y + 43); }
     ctx.restore();
-    this.drawPanel(ctx);
-    if (this.card) this.drawCard(ctx);
-    if (this.toastT > 0) {
-      ctx.save(); ctx.globalAlpha = Math.min(1, this.toastT * 2); ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const tw = ctx.measureText(this.toastMsg).width + 30, cx = R.x + R.w / 2, cy = R.y + R.h - 30;
-      ctx.fillStyle = 'rgba(10,8,24,0.8)'; rr(ctx, cx - tw / 2, cy - 15, tw, 30, 15); ctx.fill();
-      ctx.fillStyle = '#ffd84a'; ctx.fillText(this.toastMsg, cx, cy + 1); ctx.restore();
-    }
+    if (!this.flight) this.drawDestCard(ctx);
+    const RV = this.rReveal; if (RV && RV.banner && RV.t > 0.3) TourPanelFx.banner(ctx, RV.banner, W / 2, H * 0.32, clamp((RV.t - 0.3) / 0.25, 0, 1), RV.dur - RV.t);
+    ctx.restore();
+  }
+  drawDestCard(ctx) {
+    const R = this.destCard, B = this.routeBtns, s = Tour.stops[this.dest] || Tour.stops[this.sel], C = Tour.countries[s.id];
+    const cols = C ? C.colors : { a: '#8a8aa8', b: '#5a5a78', c: '#c8c8d8' };
+    ctx.save();
+    UI.drawButton(ctx, Object.assign({ label: '◀ ' + ((Tour.stops[this.sel] || {}).name || '').toUpperCase().slice(0, 10), size: 10 }, B.back), false);
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14; ctx.fillStyle = 'rgba(16,12,32,0.92)'; rr(ctx, R.x, R.y, R.w, R.h, 16); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = rgba(cols.a, 0.8); ctx.lineWidth = 1.5; rr(ctx, R.x, R.y, R.w, R.h, 16); ctx.stroke();
+    const arrow = (b, d) => { ctx.fillStyle = 'rgba(255,255,255,0.1)'; rr(ctx, b.x, b.y, b.w, b.h, 12); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); const cx = b.x + b.w / 2, cy = b.y + b.h / 2; ctx.moveTo(cx + d * 7, cy); ctx.lineTo(cx - d * 5, cy - 8); ctx.lineTo(cx - d * 5, cy + 8); ctx.closePath(); ctx.fill(); };
+    arrow(B.prev, -1); arrow(B.next, 1);
+    const here = this.dest === this.sel;
+    UI.drawButton(ctx, Object.assign({ label: here ? 'WALK ▶' : 'FLY ✈', primary: true, size: 13 }, B.fly), !Input.usingTouch);
+    const tx = B.prev.x + B.prev.w + 10, tw = B.next.x - tx - 8;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.font = `${Math.min(16, tw / 8)}px ${FONT_DISPLAY}`;
+    ctx.fillText(TourLandscape.fit(ctx, s.name.toUpperCase(), tw), tx, R.y + 22);
+    ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    let sub = C ? (C.tagline || s.sub || '') : (s.sub || '');
+    if (C) { let d = 0, n = 0, g = 0; for (const id of Tour.levelIds(C)) { const L = Tour.specOf(id); if (L.secret && !TourProgress.isRevealed(id)) continue; n++; if (Save.data.done[id]) d++; g += TourProgress.goldCount(id); } sub = `${d}/${n} levels · ${g} postcards` + (here ? ' · you are here' : ''); }
+    ctx.fillText(TourLandscape.fit(ctx, sub, tw), tx, R.y + 44);
     ctx.restore();
   }
   // a postcard from Chinka, laid over the map
@@ -294,11 +464,10 @@ class TourMapScene {
     const cw = Math.min(W - 40, 460), ch = Math.min(H - 60, 230), x = (W - cw) / 2, y = (H - ch) / 2;
     ctx.translate(W / 2, H / 2); ctx.rotate(-0.02 + Math.sin(this.t * 1.5) * 0.008); ctx.translate(-W / 2, -H / 2);
     ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 24; ctx.fillStyle = '#fffaf0'; rr(ctx, x, y, cw, ch, 6); ctx.fill(); ctx.shadowBlur = 0;
-    // the picture side: a sunset band in the country's colors
     const g = ctx.createLinearGradient(0, y, 0, y + ch); g.addColorStop(0, cols.b); g.addColorStop(1, cols.c);
     ctx.fillStyle = g; ctx.fillRect(x + 12, y + 12, cw * 0.36, ch - 24);
     ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = `${Math.min(18, cw / 18)}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText((C.name || '').toUpperCase(), x + 12 + cw * 0.18, y + ch * 0.5);
+    ctx.fillText((C.name || '').toUpperCase(), x + 12 + cw * 0.18, y + ch * 0.5, cw * 0.34);
     ctx.fillStyle = cols.a; ctx.fillRect(x + cw - 52, y + 14, 38, 44);
     ctx.strokeStyle = '#ffffff'; ctx.setLineDash([2, 2]); ctx.strokeRect(x + cw - 49, y + 17, 32, 38); ctx.setLineDash([]);
     ctx.strokeStyle = 'rgba(60,40,80,0.25)'; ctx.lineWidth = 1; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.moveTo(x + cw * 0.42, y + 76 + k * 26); ctx.lineTo(x + cw - 18, y + 76 + k * 26); ctx.stroke(); }
@@ -316,7 +485,7 @@ class TourMapScene {
   }
   drawStop(ctx, s) {
     const st = TourMap.stopState(s); if (st === 'hidden') return;
-    const x = this.sx(s.lon), y = this.sy(s.lat), C = Tour.countries[s.id], sel = this.sel === s.id, r = TourMap.pinR * (sel ? 1.25 : 1);
+    const x = this.sx(s.lon), y = this.sy(s.lat), C = Tour.countries[s.id], sel = this.dest === s.id, r = TourMap.pinR * (sel ? 1.25 : 1);
     const cols = C ? C.colors : { a: '#8a8aa8', b: '#5a5a78', c: '#c8c8d8' };
     ctx.save();
     if (sel) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(this.t * 4); ctx.fillStyle = cols.c; ctx.beginPath(); ctx.arc(x, y, r + 8, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
@@ -327,10 +496,9 @@ class TourMapScene {
     if (C && C.emblem && (st === 'open' || st === 'done')) C.emblem(ctx, x, y, r * 0.7, this.t);
     else { ctx.fillStyle = st === 'done' ? '#ffd84a' : '#ffffff'; ctx.font = `${Math.round(r)}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(st === 'soon' ? '…' : st === 'locked' ? '🔒' : s.world === 22 ? '22' : String(s.world), x, y + 1); }
     if (st === 'done') { ctx.fillStyle = '#ffd84a'; ctx.beginPath(); TourKit.star(ctx, x + r * 0.8, y - r * 0.8, 5, 2.2, 5); ctx.fill(); }
-    // name tag
     ctx.font = `${sel ? 11 : 9}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     const label = s.name.toUpperCase(), tw = ctx.measureText(label).width + 10;
-    const ly = s.label === 'up' ? y - r - (sel ? 19 : 16) : y + r + 3;   // crowded pins put their tag above
+    const ly = s.label === 'up' ? y - r - (sel ? 19 : 16) : y + r + 3;
     ctx.fillStyle = 'rgba(10,10,30,0.7)'; rr(ctx, x - tw / 2, ly, tw, sel ? 16 : 13, 6); ctx.fill();
     ctx.fillStyle = st === 'soon' ? 'rgba(255,255,255,0.55)' : '#ffffff'; ctx.fillText(label, x, ly + 2);
     ctx.restore();
@@ -339,77 +507,122 @@ class TourMapScene {
     ctx.save(); ctx.translate(x, y - 16); ctx.rotate(ang);
     const flip = Math.cos(ang) < 0; if (flip) ctx.scale(1, -1);
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(2, 18, 14, 3, 0, 0, TAU); ctx.fill();
-    // body, wings, tail and a spinning propeller
     ctx.fillStyle = '#fff4e0'; ctx.beginPath(); ctx.ellipse(0, 0, 15, 5, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = '#ff4f8a'; ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(3, -13); ctx.lineTo(7, -13); ctx.lineTo(5, 0); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(3, 12); ctx.lineTo(7, 12); ctx.lineTo(5, 0); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-16, -8); ctx.lineTo(-12, -8); ctx.lineTo(-8, 0); ctx.fill();
     ctx.fillStyle = '#38c8ff'; ctx.beginPath(); ctx.ellipse(6, -2, 4, 2.6, 0, 0, TAU); ctx.fill();
-    // Brady's man bun poking out of the cockpit
-    ctx.fillStyle = HAIR_COLORS[Save.data.look.hair || 0].base; ctx.beginPath(); ctx.arc(4, -6, 2.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = HAIR_COLORS[(Save.data && Save.data.look && Save.data.look.hair) || 0].base; ctx.beginPath(); ctx.arc(4, -6, 2.6, 0, TAU); ctx.fill();
     ctx.fillStyle = '#ffd84a'; ctx.fillRect(14, -1.5, 3, 3);
     ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.5; const pr = Math.sin(this.t * 40) * 6; ctx.beginPath(); ctx.moveTo(17, -pr); ctx.lineTo(17, pr); ctx.stroke();
     ctx.restore();
   }
-  drawCompass(ctx, x, y) {
-    ctx.save(); ctx.translate(x, y); ctx.globalAlpha = 0.85;
-    ctx.fillStyle = 'rgba(10,20,50,0.5)'; ctx.beginPath(); ctx.arc(0, 0, 22, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(5, 0); ctx.lineTo(0, 4); ctx.lineTo(-5, 0); ctx.fill();
-    ctx.fillStyle = '#ff4f8a'; ctx.beginPath(); ctx.moveTo(0, 18); ctx.lineTo(5, 0); ctx.lineTo(0, -4); ctx.lineTo(-5, 0); ctx.fill();
-    ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.fillText('N', 0, -22); ctx.restore();
+
+  /* ---------- world-map extras: contrail, the Baron's jars, the airship, flight arcs, bottles, the lighthouse ---------- */
+  updateWorldFx(dt) {
+    const T = TourProgress.data();
+    this.trail = (this.trail || []).filter(p => (p.age += dt) < 2);
+    if (this.flight) this.trail.push({ lon: this.plane.lon, lat: this.plane.lat, age: 0 });
+    const next = Tour.mainCountries().find(C => TourProgress.countryUnlocked(C) && !TourProgress.bossDone(C));
+    const st = next ? Tour.stops[next.id] : null;
+    if (st) {
+      if (!this.airship) this.airship = { lon: st.lon + 7, lat: st.lat + 9, to: null };
+      const a = this.airship, tgt = { lon: st.lon + 7, lat: st.lat + 9 };
+      if (Math.hypot(a.lon - tgt.lon, a.lat - tgt.lat) > 0.3) { a.k = (a.k || 0) + dt / 1.5; const e = easeInOut(clamp(a.k, 0, 1)); a.from = a.from || { lon: a.lon, lat: a.lat }; a.lon = lerp(a.from.lon, tgt.lon, e); a.lat = lerp(a.from.lat, tgt.lat, e); if (a.k >= 1) { a.from = null; a.k = 0; } }
+    } else this.airship = null;
+    // jars shatter on the first look at the route map after the boss falls
+    T.jars = T.jars || {};
+    this.jarFx = this.jarFx || {};
+    if (this.mode === 'route') {
+      for (const C of Tour.mainCountries()) if (TourProgress.bossDone(C) && !T.jars[C.id] && !this.jarFx[C.id] && !this.flight) { this.jarFx[C.id] = { t: 0, shards: Array.from({ length: 6 }, (_, q) => ({ a: q / 6 * TAU + 0.3, v: 30 + q * 7 })) }; }
+      for (const id in this.jarFx) { const f = this.jarFx[id]; f.t += dt; if (f.t > 1.2 && !T.jars[id]) { T.jars[id] = true; Save.save(); } }
+    }
+    this.cloudT = (this.cloudT || 0) + dt;
   }
-  drawPanel(ctx) {
-    const R = this.panelR, s = Tour.stops[this.sel], C = Tour.countries[this.sel], st = TourMap.stopState(s);
-    UI.panel(ctx, R.x, R.y, R.w, R.h);
-    ctx.save(); ctx.textBaseline = 'middle';
-    const cols = C ? C.colors : { a: '#8a8aa8', b: '#5a5a78', c: '#c8c8d8' };
-    // header
-    ctx.fillStyle = cols.a; rr(ctx, R.x + 10, R.y + 10, 6, 46, 3); ctx.fill();
-    ctx.font = `${Math.min(20, R.w / 12)}px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left';
-    ctx.fillText(s.name.toUpperCase(), R.x + 24, R.y + 24);
-    ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    const sub = C ? (C.tagline || s.sub || '') : (s.sub || '');
-    ctx.fillText(sub, R.x + 24, R.y + 44, R.w - 34);
-    if (!C) {
-      ctx.font = `13px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.textAlign = 'center';
-      tourWrapText(ctx, 'Brady\'s plane is still being fueled for this stop. Coming soon!', R.x + R.w / 2, R.y + R.h / 2, R.w - 40, 18);
-      ctx.restore(); return;
+  drawWorldFx(ctx, layer) {
+    const T = TourProgress.data(), t = this.t, z = this.cam.z; T.jars = T.jars || {};
+    if (layer === 'under') {
+      const R = this.rReveal;
+      for (const to in T.flights || {}) {
+        const L = this.flightFrom(to); if (!L) continue;
+        const a = Tour.stops[L], b = Tour.stops[to]; if (!a || !b) continue;
+        if (R && R.r.kind === 'flight' && R.r.to === to && !R.calm) {
+          // a new secret flight draws itself
+          const k = clamp(R.t / 1.0, 0, 1), x0 = this.sx(a.lon), y0 = this.sy(a.lat), x1 = this.sx(b.lon), y1 = this.sy(b.lat), mx = (x0 + x1) / 2, my = (y0 + y1) / 2 - Math.hypot(x1 - x0, y1 - y0) * 0.25;
+          ctx.save(); ctx.strokeStyle = 'rgba(255,216,74,0.95)'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 6]); ctx.beginPath(); ctx.moveTo(x0, y0);
+          for (let q = 1; q <= 24 * k; q++) { const u = q / 24, v = 1 - u; ctx.lineTo(v * v * x0 + 2 * v * u * mx + u * u * x1, v * v * y0 + 2 * v * u * my + u * u * y1); }
+          ctx.stroke(); ctx.restore(); continue;
+        }
+        this.arc(ctx, a, b, 'rgba(255,216,74,0.95)', t * 10);
+        const mx = (this.sx(a.lon) + this.sx(b.lon)) / 2, my = (this.sy(a.lat) + this.sy(b.lat)) / 2 - Math.hypot(this.sx(b.lon) - this.sx(a.lon), this.sy(b.lat) - this.sy(a.lat)) * 0.125;
+        ctx.save(); ctx.translate(mx, my); ctx.scale(0.5, 0.5); this.drawPlane(ctx, 0, 16, 0); ctx.restore();
+      }
+      for (const n in T.bottles || {}) {
+        if (!T.bottles[n]) continue; const s = Tour.stops[TOUR_BOTTLE_FROM[n]]; if (!s) continue;
+        ctx.save(); ctx.strokeStyle = 'rgba(140,220,255,0.85)'; ctx.lineWidth = 2; ctx.setLineDash([3, 5]); ctx.lineDashOffset = -t * 8;
+        const x0 = this.sx(s.lon), y0 = this.sy(s.lat), x1 = this.sx(TOUR_LIGHTHOUSE.lon), y1 = this.sy(TOUR_LIGHTHOUSE.lat);
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2 + Math.sin(+n) * 30, (y0 + y1) / 2 + 20, x1, y1); ctx.stroke(); ctx.restore();
+      }
+      if (this.trail && this.trail.length > 1) { ctx.save(); ctx.lineCap = 'round'; for (let q = 1; q < this.trail.length; q++) { const p0 = this.trail[q - 1], p1 = this.trail[q]; ctx.strokeStyle = `rgba(255,255,255,${0.6 * (1 - p1.age / 2)})`; ctx.lineWidth = 2.5; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(this.sx(p0.lon), this.sy(p0.lat) - 16); ctx.lineTo(this.sx(p1.lon), this.sy(p1.lat) - 16); ctx.stroke(); } ctx.restore(); }
+      for (const C of Tour.mainCountries()) {
+        const s = Tour.stops[C.id], st = TourMap.stopState(s); if (st !== 'open' && st !== 'done') continue;
+        const look = TourLandscape.look(C.id), x = this.sx(s.lon), y = this.sy(s.lat) - TourMap.pinR - 2;
+        const freed = !!T.jars[C.id], fx = this.jarFx && this.jarFx[C.id], k = fx ? clamp(fx.t / 1.2, 0, 1) : freed ? 1 : 0;
+        const size = 22 * (0.4 + 0.6 * easeInOut(k));
+        TourLandscape.landmark(ctx, look[6], x + 16, y + 6, size, '#2f4752', look[5]);
+        if (k < 1 && !fx) TourPanelFx.jar(ctx, x + 16, y + 6, 12);
+        if (fx && fx.t < 1.2) { ctx.save(); ctx.strokeStyle = 'rgba(220,240,255,0.9)'; ctx.lineWidth = 1.5; for (const sh of fx.shards) { const d = sh.v * fx.t, sx = x + 16 + Math.cos(sh.a) * d, sy = y - 2 + Math.sin(sh.a) * d + 40 * fx.t * fx.t; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 4, sy - 3); ctx.lineTo(sx + 2, sy + 3); ctx.closePath(); ctx.stroke(); } ctx.fillStyle = '#fff8d0'; for (let q = 0; q < 5; q++) { ctx.beginPath(); TourKit.star(ctx, x + 16 + Math.sin(q * 2.1 + t * 3) * 14, y - 4 + Math.cos(q * 1.7 + t * 3) * 10, 4, 1.5, 3); ctx.fill(); } ctx.restore(); }
+        if (freed || (fx && fx.t > 0.8)) TourPanelFx.postmark(ctx, x - 22, y + 30, C.colors ? C.colors.a : '#ff4f8a');
+      }
+      for (const s of this.ghostPins()) TourPanelFx.ghostPin(ctx, this.sx(s.lon), this.sy(s.lat), t, s.world === 22 ? '22?' : String(s.world) + '?');
+      if (this.lighthouseShown()) {
+        const lr = R && R.r.kind === 'house' && !R.r.cc, sc = lr && !R.calm ? TourPanelFx.backOut(clamp(R.t / 0.45, 0, 1)) : 1;
+        const x = this.sx(TOUR_LIGHTHOUSE.lon), y = this.sy(TOUR_LIGHTHOUSE.lat);
+        ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); TourPanelFx.lighthouse(ctx, 0, 0, t, !!T.lighthouse); ctx.restore();
+      }
+    } else {
+      if (this.airship) TourPanelFx.airship(ctx, this.sx(this.airship.lon), this.sy(this.airship.lat) + Math.sin(t * 1.4) * 3, t);
+      const R = this.rReveal; if (R && R.r.kind === 'land') { const s = Tour.stops[R.r.id]; if (s) TourPanelFx.crack(ctx, this.sx(s.lon), this.sy(s.lat), clamp(R.t / 1.0, 0, 1)); }
+      ctx.save();
+      for (const [par, a, n] of [[0.3, 0.1, 5], [0.6, 0.14, 4]]) {
+        ctx.fillStyle = `rgba(10,30,70,${a})`;
+        for (let q = 0; q < n; q++) {
+          const wx = ((q * 97 + this.cloudT * 6 * par) % 360) - 180, wy = ((q * 53) % 110) - 45;
+          const x = this.mapR.x + this.mapR.w / 2 + (wx - this.cam.lon * par) * z * 0.9, y = this.mapR.y + this.mapR.h / 2 - (wy - this.cam.lat * par) * z * 0.9;
+          for (const [dx, dy, rr2] of [[0, 0, 26], [22, 4, 20], [-20, 6, 18], [8, -10, 18]]) { ctx.beginPath(); ctx.ellipse(x + dx * z / 5, y + dy * z / 5, rr2 * z / 5, rr2 * z / 8, 0, 0, TAU); ctx.fill(); }
+        }
+      }
+      ctx.restore();
     }
-    if (st === 'locked') {
-      ctx.font = `13px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.textAlign = 'center';
-      tourWrapText(ctx, 'Beat the boss in ' + (Tour.prevCountry(C) ? Tour.prevCountry(C).name : 'the last country') + ' to fly here.', R.x + R.w / 2, R.y + R.h / 2, R.w - 40, 18);
-      ctx.restore(); return;
+  }
+  lighthouseShown() { const T = TourProgress.data(); return Object.keys(T.bottles || {}).filter(n => T.bottles[n]).length >= 5; }
+  // the lighthouse lights its beam; a ghost pin says what its door wants
+  routeTapExtras() {
+    const T = TourProgress.data();
+    if (this.lighthouseShown()) for (const tp of Input.taps) {
+      if (Math.hypot(tp.x - this.sx(TOUR_LIGHTHOUSE.lon), tp.y - this.sy(TOUR_LIGHTHOUSE.lat)) < 26) {
+        if (!T.lighthouse) { T.lighthouse = true; Save.save(); this.toast('THE BEAM IS LIT: ? FLAGS MARK HIDDEN EXITS'); Sound.play('checkpoint'); } else this.toast('THE POSTCARD LIGHTHOUSE');
+        Input.taps.length = 0; return true;
+      }
     }
-    const styleName = { run: 'RUN', night: 'NIGHT', auto: 'CHASE', ride: 'RIDE', swim: 'SWIM', climb: 'CLIMB', castle: 'BOSS', puzzle: 'PUZZLE' };
-    this.stamps.forEach((b, k) => {
-      const id = C.world + '-' + b.i, L = C.levels[b.i - 1], open = TourProgress.isUnlocked(id), done = !!Save.data.done[id];
-      const foc = this.focus === k && !Input.usingTouch;
-      ctx.fillStyle = open ? (done ? 'rgba(60,40,90,0.85)' : 'rgba(40,30,70,0.85)') : 'rgba(20,16,30,0.7)'; rr(ctx, b.x, b.y, b.w, b.h, 10); ctx.fill();
-      ctx.strokeStyle = foc ? '#ffd84a' : open ? rgba(cols.a, 0.8) : 'rgba(255,255,255,0.12)'; ctx.lineWidth = foc ? 2.5 : 1.2; rr(ctx, b.x, b.y, b.w, b.h, 10); ctx.stroke();
-      // the stamp circle with the level number
-      const cx = b.x + b.h / 2 + 2, cy = b.y + b.h / 2, rr2 = b.h / 2 - 6;
-      ctx.fillStyle = open ? cols.a : '#4a4a5a'; ctx.beginPath(); ctx.arc(cx, cy, rr2, 0, TAU); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.arc(cx, cy, rr2 - 3, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = '#ffffff'; ctx.font = `${Math.round(rr2)}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(open ? String(b.i) : '🔒', cx, cy + 1);
-      ctx.textAlign = 'left'; ctx.font = `${Math.min(13, b.h * 0.32)}px ${FONT_DISPLAY}`; ctx.fillStyle = open ? '#ffffff' : 'rgba(255,255,255,0.45)';
-      ctx.fillText(L.name.toUpperCase(), cx + rr2 + 10, cy - b.h * 0.16, b.w - b.h - 70);
-      ctx.font = `${Math.min(10, b.h * 0.24)}px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.fillText(styleName[L.style] || 'RUN', cx + rr2 + 10, cy + b.h * 0.2);
-      // postcards
-      const g = Save.data.gold[id] || [];
-      for (let q = 0; q < 3; q++) { const px = b.x + b.w - 50 + q * 15, py = cy; ctx.fillStyle = g[q] ? '#fff4d8' : 'rgba(255,255,255,0.15)'; rr(ctx, px - 6, py - 4.5, 12, 9, 1.5); ctx.fill(); if (g[q]) { ctx.fillStyle = cols.a; ctx.fillRect(px + 2, py - 3, 3, 3); } }
-      if (done) { ctx.fillStyle = '#5aff8a'; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'right'; ctx.fillText('✓', b.x + b.w - 6, b.y + 10); }
-    });
-    // the country's souvenir (signature power-up)
-    if (C.power) {
-      const y = R.y + R.h - 26;
-      ctx.save(); ctx.translate(R.x + 26, y); ctx.scale(0.8, 0.8); if (C.power.icon) C.power.icon(ctx, 0, 0, this.t); ctx.restore();
-      ctx.textAlign = 'left'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffd84a'; ctx.fillText('SOUVENIR: ' + C.power.name, R.x + 44, y - 5);
-      ctx.font = `10px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.fillText(C.power.hint || '', R.x + 44, y + 9, R.w - 54);
+    for (const s of this.ghostPins()) {
+      const tp = Input.taps.find(q => Math.hypot(q.x - this.sx(s.lon), q.y - this.sy(s.lat)) < 26);
+      if (tp) { const D = TourProgress.landDoor(s.id), need = (D && D.need) || 22; this.toast(`THIS DOOR WANTS ${need} POSTCARDS (YOU HAVE ${TourProgress.totals().gold})`); Sound.play('bump', { vol: 0.5 }); Input.taps.length = 0; return true; }
     }
-    ctx.restore();
+    return false;
+  }
+  // secret lands shown as ghost pins: the door is found (tour.doors) and the land is still shut
+  ghostPins() {
+    const D = TourProgress.data().doors || {};
+    return TOUR_ROUTE.filter(s => s.secret && D[s.id] && Tour.countries[s.id] && !TourProgress.countryUnlocked(Tour.countries[s.id]));
+  }
+  // the country whose level has a flight exit to `to`
+  flightFrom(to) {
+    for (const cc in Tour.countries) { const C = Tour.countries[cc]; for (const L of C.levels) for (const k in L.exits || {}) { const tg = L.exits[k] && L.exits[k].to; if (tg === 'flight:' + to) return cc; } }
+    return null;
   }
 }
+const TOUR_BOTTLE_FROM = { 1: 'ec', 2: 'br', 3: 'mz', 4: 'es', 5: 'id' }, TOUR_LIGHTHOUSE = { lon: -30, lat: 5 };
 // draw text wrapped to a width, centered on x (returns the height used)
 function tourWrapText(ctx, text, x, y, maxW, lineH) {
   const words = String(text).split(' '); const lines = []; let line = '';
