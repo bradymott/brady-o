@@ -1,17 +1,13 @@
 /* ============================================================
-   JAPAN (world 11)
-   11-1 Bamboo Grove          run    a Shiba hands over nunchucks; bending bamboo: hop on a tall stalk, it bows under
-                                     you and carries you forward, jump as it springs back for a huge vault;
-                                     bamboo shoots pop out of the ground, rice-ball hoppers, charging beetles
-   11-2 Bullet Train          ride   ride the roof of a bullet train past Mt. Fuji: duck the signal gantries,
-                                     crouch through the tunnels (low lamps!), swat the crows and the runaway umbrellas
-   11-3 Sushi Carousel        run    a giant conveyor-belt sushi bar: ride the plate wheel, dodge the chopsticks
-                                     (or knock them away), float on the steam of giant tea cups, soy-sauce pools
-   11-4 Neon Batting Cages    night  pitching machines fire baseballs: knock them back into the target to open the
-                                     shutters; ride the crane-game claw across the gap; lucky-cat toys throw coins
-   11-5 Kappa Castle          castle nightingale floors chirp and wake the spinning-top traps, revolving wall
-                                     panels, a koi moat; boss the Great Kappa (bow to him: he bows back and spills
-                                     the water from the dish on his head)
+   JAPAN (world 11): the country's look, cast, objects and boss.
+   The levels (v2 format) are in 29_tour_jp_levels.js:
+   11-1 Sushi Carousel      FACTORY  belts of plates, chopsticks, tea steam, the soy-bottle tanuki
+   11-2 Bullet Train        RIDE     the train roof past the volcano; a station siding to 11-7
+   11-3 Night of Things     PHASE    the wind chime turns the bamboo grove to night
+   11-4 Neon Tower          TOWER    up the outside of a tower: gondolas, blinking neon, air-con draughts
+   11-5 Kappa Garden        LAIR     the heron, the revolving wall, the Great Kappa (bow to him)
+   11-6 Capsule Toy Machine MINI     (secret) inside a capsule-toy machine
+   11-7 Fuji Thermals       GLIDE    (secret) paper cranes and petal thermals over the lake
    Food, toys, animals and folklore creatures are the jokes; people, shrines and temples never are.
    ============================================================ */
 (() => {
@@ -294,7 +290,7 @@ const themes = {
     name: 'Sushi Carousel', music: 'tour_jp_sushi', particles: 'none',
     sky: ['#5a3a24', '#7a5236', '#9a6a44'], horizonGlow: '#ffd8a0', celestial: { type: 'none' }, stars: 0,
     layers: [{ kind: 'jpSushiBar', color: '#c89a62', base: 336, f: 0.08, dyn: 'jpBelt' }],
-    fog: '#ffe8c8', liquid: 'jp_soy', ground: counter, semi: shelfSemi, hard: { c1: '#e8c050', c2: '#b88a20' },
+    fog: '#ffe8c8', liquid: 'jp_soy', ground: counter, semi: shelfSemi, hard: { c1: '#c8843a', c2: '#9a5a24' },
     brick: { style: 'brick', c1: '#f4ead8', c2: '#c8b8a0', mortar: '#7a6a58' }, decor: ['jpTeapot', 'jpPlates', 'jpSoyBottle']
   }),
   jp_neon: Object.assign({}, base, {
@@ -1375,6 +1371,243 @@ const boss = {
     }
   }
 };
+
+/* ---------------- the overhaul (LEVEL_OVERHAUL.md §2, §4.3): new looks and the new cast ---------------- */
+// the new theme keys match their Fiesta Toon atlases (30_tour_sprites.js swaps the layers in by name); these painters
+// are the procedural fallback and keep the same layer order
+Object.assign(painters, {
+  // a lake under the volcano: calm water, the mountain's pale reflection, wooded islets with round pines, reeds
+  jpLake(ctx, L, rng, H) {
+    const b = L.base, g = ctx.createLinearGradient(0, b - 30, 0, H); g.addColorStop(0, shade(L.color, 0.18)); g.addColorStop(1, shade(L.color, -0.2));
+    ctx.fillStyle = g; ctx.fillRect(0, b - 30, BG_W, H - b + 30);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; const cx = L.at || BG_W / 2; ctx.beginPath(); ctx.moveTo(cx - 200, b - 28); ctx.lineTo(cx - 30, b + 90); ctx.lineTo(cx + 30, b + 90); ctx.lineTo(cx + 200, b - 28); ctx.fill();
+    for (let i = 0; i < 26; i++) { const x = rng() * BG_W, y = b - 20 + rng() * (H - b); ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x, y, 16 + rng() * 30, 1.5); }
+    for (let i = 0; i < 4; i++) {
+      const x = 120 + i * (BG_W / 4) + rng() * 120, y = b - 26, w = 70 + rng() * 60;
+      ctx.fillStyle = shade(L.color, -0.45); ctx.beginPath(); ctx.ellipse(x, y, w, 10, 0, Math.PI, TAU); ctx.fill();
+      for (let k = 0; k < 5; k++) { ctx.fillStyle = shade('#3a6a3a', -0.1 + (k % 2) * 0.1); ctx.beginPath(); ctx.arc(x - w * 0.6 + k * w * 0.3, y - 12 - (k % 2) * 6, 12 + (k % 3) * 3, 0, TAU); ctx.fill(); }
+    }
+    ctx.strokeStyle = shade('#6a8a4a', -0.1); ctx.lineWidth = 1.5; for (let i = 0; i < 60; i++) { const x = rng() * BG_W; ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x + (rng() - 0.5) * 6, H - 14 - rng() * 16); ctx.stroke(); }
+  },
+  // the city far below at dusk: a band of low blocks with lit windows, a bay with a far bridge, hills beyond
+  jpDuskCity(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = shade(L.color, 0.12); ctx.beginPath(); ctx.moveTo(0, b - 40); for (let x = 0; x <= BG_W; x += 20) ctx.lineTo(x, b - 46 - Math.sin(x / 130) * 16); ctx.lineTo(BG_W, H); ctx.lineTo(0, H); ctx.fill();
+    ctx.fillStyle = 'rgba(120,150,220,0.55)'; ctx.fillRect(0, b - 22, BG_W, 10);
+    ctx.strokeStyle = 'rgba(255,220,180,0.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(520, b - 22); ctx.quadraticCurveTo(640, b - 44, 760, b - 22); ctx.stroke();
+    for (let x = 0; x < BG_W; x += 12 + rng() * 10) { const h = 14 + rng() * 40; ctx.fillStyle = shade(L.color, -0.15 + rng() * 0.1); ctx.fillRect(x, b - 12 - h, 10 + rng() * 8, h + 40); ctx.fillStyle = 'rgba(255,214,140,0.8)'; for (let k = 0; k < 4; k++) if (rng() < 0.5) ctx.fillRect(x + 2 + (k % 2) * 4, b - 8 - h + Math.floor(k / 2) * 8, 2, 2); }
+    ctx.fillStyle = shade(L.color, -0.25); ctx.fillRect(0, b + 20, BG_W, H - b);
+  },
+  // neighbouring towers rising past the view: glass walls, a few lit windows, red aircraft lights, picture billboards
+  jpTowers(ctx, L, rng, H) {
+    for (let i = 0; i < 9; i++) {
+      const x = i * (BG_W / 9) + rng() * 60, w = 70 + rng() * 60, top = L.base - 180 - rng() * 160;
+      const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, shade(L.color, 0.1)); g.addColorStop(1, shade(L.color, -0.15));
+      ctx.fillStyle = g; ctx.fillRect(x, top, w, H - top);
+      ctx.fillStyle = 'rgba(160,190,255,0.12)'; for (let y = top + 8; y < H; y += 14) ctx.fillRect(x + 4, y, w - 8, 6);
+      ctx.fillStyle = 'rgba(255,220,150,0.75)'; for (let k = 0; k < 10; k++) ctx.fillRect(x + 6 + rng() * (w - 14), top + 12 + rng() * (H - top - 20), 6, 4);
+      ctx.fillStyle = '#ff4a4a'; ctx.beginPath(); ctx.arc(x + w / 2, top - 4, 2.5, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a3a4a'; ctx.fillRect(x + w / 2 - 1, top - 4, 2, 4);
+      if (i % 3 === 1) { const bx = x + 8, by = top + 30, bw = w - 16; ctx.fillStyle = NEON[i % NEON.length]; rr(ctx, bx, by, bw, 26, 4); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 13, 7, 0, TAU); ctx.fill(); }
+    }
+  },
+  // inside the toy machine: the clear dome from within, a pastel arcade glow beyond, highlight streaks, the ribbed rim
+  jpDome(ctx, L, rng, H) {
+    const g = ctx.createRadialGradient(BG_W / 2, H * 0.4, 40, BG_W / 2, H * 0.4, BG_W * 0.6); g.addColorStop(0, '#fff0fa'); g.addColorStop(0.5, '#ffd0ec'); g.addColorStop(1, '#c8b0f0');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, BG_W, H);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 18; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(200 + k * 520, H * 0.8, 380, Math.PI * 1.2, Math.PI * 1.45); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; for (let x = 0; x < BG_W; x += 22) ctx.fillRect(x, 18, 10, 26);
+    ctx.fillStyle = 'rgba(160,120,220,0.35)'; ctx.fillRect(0, 44, BG_W, 8);
+  },
+  // a heap of big two-tone capsules piled behind the play area, a chrome crank gear on the wall
+  jpCapsuleHeap(ctx, L, rng, H) {
+    const cols = ['#ff7aa8', '#7ad8ff', '#ffd84a', '#9aff8a', '#c8a0ff', '#ffaa6a'];
+    for (let i = 0; i < 70; i++) {
+      const x = rng() * BG_W, y = L.base - 20 + rng() * 70 - Math.sin(x / 300) * 30, r = 18 + rng() * 16, a = rng() * TAU, c = cols[Math.floor(rng() * cols.length)];
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+      ctx.fillStyle = shade(c, -0.08); ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(0, 0, r, Math.PI, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(-r, -1, r * 2, 2); ctx.restore();
+    }
+    ctx.fillStyle = shade('#c8c8d8', 0); const gx = 1500, gy = L.base - 120; for (let k = 0; k < 10; k++) { const a = k * TAU / 10; ctx.save(); ctx.translate(gx, gy); ctx.rotate(a); ctx.fillRect(-8, -52, 16, 14); ctx.restore(); } ctx.beginPath(); ctx.arc(gx, gy, 42, 0, TAU); ctx.fill(); ctx.fillStyle = '#9a9aac'; ctx.beginPath(); ctx.arc(gx, gy, 12, 0, TAU); ctx.fill();
+  }
+});
+const nightMoss = Object.assign({}, mossEarth, { style: 'jpMossNight', cap: '#2e5a4a', capHi: '#5a8a7a', dirt: '#2a2430', dirt2: '#1a1620', rock: '#4a4a5a',
+  paintCap(ctx, x0, x1) { ctx.fillStyle = '#2a5244'; ctx.fillRect(x0, 0, x1 - x0, 6); ctx.fillStyle = '#6a9a8a'; for (let x = x0; x < x1; x += 4) ctx.fillRect(x, 0, 2, 1.5 + ((x * 7) % 3)); } });
+const lakeshore = Object.assign({}, mossEarth, { style: 'jpShore', cap: '#6aa84a', capHi: '#a8d878', dirt: '#8a8478', dirt2: '#6a665e', rock: '#a8a49a',
+  paint(ctx, rng) { for (let k = 0; k < 5; k++) { ctx.fillStyle = ['#9a968c', '#7a766e', '#b4b0a6'][k % 3]; ctx.beginPath(); ctx.ellipse(rng() * TS, rng() * TS, 4 + rng() * 3, 3 + rng() * 2, rng(), 0, TAU); ctx.fill(); } } });
+const steelDeck = { style: 'jpSteelDeck', cap: '#8a8e9a', capHi: '#c8ccd8', dirt: '#5a5e6a', dirt2: '#3a3e4a', rock: '#6a6e7a',
+  paint(ctx, rng) { ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(0, 0, TS, 1.5); ctx.fillRect(0, 0, 1.5, TS); ctx.fillStyle = '#9a9eaa'; for (const [x, y] of [[4, 4], [TS - 5, 4], [4, TS - 5], [TS - 5, TS - 5]]) { ctx.beginPath(); ctx.arc(x, y, 1.6, 0, TAU); ctx.fill(); } },
+  paintCap(ctx, x0, x1) { ctx.fillStyle = '#2a2a30'; ctx.fillRect(x0, 0, x1 - x0, 6); ctx.fillStyle = '#ffd23a'; for (let x = x0; x < x1; x += 12) { ctx.beginPath(); ctx.moveTo(x, 6); ctx.lineTo(x + 6, 0); ctx.lineTo(x + 12, 0); ctx.lineTo(x + 6, 6); ctx.fill(); } } };
+const plasticFloor = { style: 'jpPlastic', cap: '#ffffff', capHi: '#ffffff', dirt: '#ffb8d8', dirt2: '#e890c0', rock: '#c8a8f0',
+  paint(ctx, rng) { ctx.fillStyle = 'rgba(255,255,255,0.35)'; rr(ctx, 3, 3, TS - 6, TS - 6, 8); ctx.fill(); },
+  paintCap(ctx, x0, x1) { ctx.fillStyle = '#ffffff'; rr(ctx, x0, 0, x1 - x0, 7, 3); ctx.fill(); ctx.fillStyle = 'rgba(200,160,230,0.6)'; ctx.fillRect(x0, 6, x1 - x0, 2); } };
+Object.assign(themes, {
+  // 11-3: the grove after the wind chime rings: moonlit teal culms, pale leaves, violet hills, a dark mossy floor
+  jp_bamboo_night: Object.assign({}, base, {
+    name: 'Night of Things', music: 'tour_jp', particles: 'fireflies',
+    sky: ['#0a1430', '#16264a', '#2a3a5a'], horizonGlow: '#5a6ab8',
+    celestial: { type: 'moon', x: 0.74, y: 0.13, r: 22, color: '#f4f4ff', glow: '#a8b8e8' }, stars: 0.5,
+    layers: [
+      { kind: 'jpHills', color: '#2a2a50', base: 300, f: 0.02, blur: true },
+      { kind: 'jpBamboo', color: '#2a5a5a', base: 270, floor: 330, f: 0.06, blur: true, dim: -0.1, n: 46, w: 7, cols: ['#2a5a5a', '#2e6a62', '#24504e', '#3a7a6a'] },
+      { kind: 'jpBamboo', color: '#3a7a6a', base: 270, floor: 350, f: 0.16, n: 26, w: 11, cols: ['#3a7a6a', '#4a8a72', '#2e6a5a', '#5a9a7a'] }
+    ],
+    fog: '#2a3a5a', liquid: 'jp_pond', ground: nightMoss, decor: ['jpStoneLantern', 'jpFern', 'jpFern']
+  }),
+  // 11-7: the sky over the lake under the volcano
+  jp_fuji: Object.assign({}, base, {
+    name: 'Fuji Thermals', music: 'tour_jp', particles: 'petals',
+    sky: ['#4a8ad8', '#a8d4f4', '#fff4f0'], horizonGlow: '#ffe8f0',
+    celestial: { type: 'sun', x: 0.2, y: 0.14, r: 26, color: '#fffff4', glow: '#ffe8e0' }, stars: 0, cloudsDyn: true,
+    layers: [
+      { kind: 'jpFuji', color: '#6a7ab8', base: 300, f: 0.02, at: 900, w: 640, hh: 220 },
+      { kind: 'jpLake', color: '#5a9ad0', base: 340, f: 0.08, at: 900 }
+    ],
+    fog: '#f0f4ff', liquid: 'jp_pond', ground: lakeshore, semi: bambooSemi, decor: ['jpPine', 'jpFern']
+  }),
+  // 11-4: the outside of a tower at dusk
+  jp_tower: Object.assign({}, base, {
+    name: 'Neon Tower', music: 'tour_jp_neon', particles: 'none',
+    sky: ['#1a1a4a', '#5a3a7a', '#ff9a6a'], horizonGlow: '#ffb08a',
+    celestial: { type: 'moon', x: 0.8, y: 0.12, r: 16, color: '#fff4e8', glow: '#ffc8a8' }, stars: 0.2,
+    layers: [
+      { kind: 'jpDuskCity', color: '#4a3a6a', base: 330, f: 0.03 },
+      { kind: 'jpTowers', color: '#2a2a4a', base: 360, f: 0.12 }
+    ],
+    fog: '#5a3a6a', ground: steelDeck, semi: catwalk, hard: { c1: '#6a6e7a', c2: '#3a3e4a' },
+    brick: { style: 'brick', c1: '#4a3a5a', c2: '#2a2038', mortar: '#ff3a8a' }, decor: ['jpVending', 'jpCones']
+  }),
+  // 11-6: inside a giant capsule-toy machine
+  jp_gacha: Object.assign({}, base, {
+    name: 'Capsule Toy Machine', music: 'tour_jp_sushi', particles: 'none',
+    sky: ['#ffd0ec', '#ffe4f4', '#fff4fa'], horizonGlow: '#ffffff', celestial: { type: 'none' }, stars: 0,
+    layers: [
+      { kind: 'jpDome', color: '#ffd0ec', base: 0, f: 0.04 },
+      { kind: 'jpCapsuleHeap', color: '#ff9ac8', base: 356, f: 0.15 }
+    ],
+    fog: '#fff0fa', ground: plasticFloor, semi: { style: 'plank', c1: '#ffffff', c2: '#e0c8f0' }, hard: { c1: '#c8c8d8', c2: '#9a9aac' },
+    brick: { style: 'brick', c1: '#ffe0f0', c2: '#e8b0d8', mortar: '#a878c8' }, decor: ['jpCapsuleMachine']
+  })
+});
+
+/* the tanuki (headline power: mimic): a round raccoon-dog of our own with a leaf on its head. It hides as scenery of
+   the level it is in (a soy-sauce bottle in 11-1, a stone garden lantern in 11-3, a straw sandal in 11-6), never as an
+   item, block, coin or postcard; the tell is drawn into every disguise: the leaf on top twitches, a tail tip peeks out */
+const JP_X = 'jp_x';
+const tanukiArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); const sq = m === 'flat' ? 0.4 : 1; ctx.scale(e.dir, sq);
+  const hop = m === 'chase' || m === 'hop' ? Math.abs(Math.sin(t * 9)) * 2 : 0;
+  // bushy striped tail
+  ctx.fillStyle = '#9a7a5e'; ctx.beginPath(); ctx.ellipse(-13, -10 - hop, 7, 9, -0.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#2e2420'; ctx.beginPath(); ctx.ellipse(-17, -16 - hop, 4, 4, -0.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#7a5e46'; ctx.fillRect(-16, -11 - hop, 6, 2);
+  // black stockings
+  ctx.fillStyle = '#2e2420'; for (const lx of [-6, 5]) rr(ctx, lx - 3, -6, 6, 6, 2), ctx.fill();
+  // round body and cream belly
+  ctx.fillStyle = '#9a7a5e'; ctx.beginPath(); ctx.ellipse(0, -13 - hop, 12, 11, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#f2e2c4'; ctx.beginPath(); ctx.ellipse(3, -11 - hop, 7, 7, 0, 0, TAU); ctx.fill();
+  // head: ears, dark eye mask, cream muzzle
+  const hy = -24 - hop;
+  ctx.fillStyle = '#5a4434'; for (const ex of [-5, 5]) { ctx.beginPath(); ctx.arc(ex + 2, hy - 7, 3.2, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#9a7a5e'; ctx.beginPath(); ctx.ellipse(2, hy, 9, 8, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#3a2a22'; ctx.beginPath(); ctx.ellipse(3, hy - 1, 8, 3.6, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#f2e2c4'; ctx.beginPath(); ctx.ellipse(7, hy + 3, 4.5, 3.2, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#1a1214'; ctx.beginPath(); ctx.arc(10.5, hy + 2, 1.6, 0, TAU); ctx.fill();
+  if (m === 'ko' || m === 'flat') { ctx.strokeStyle = '#fbfbf2'; ctx.lineWidth = 1.2; for (const ex of [1, 7]) { ctx.beginPath(); ctx.moveTo(ex - 1.5, hy - 2.5); ctx.lineTo(ex + 1.5, hy + 0.5); ctx.moveTo(ex + 1.5, hy - 2.5); ctx.lineTo(ex - 1.5, hy + 0.5); ctx.stroke(); } }
+  else { ctx.fillStyle = '#fbfbf2'; for (const ex of [1, 7]) { ctx.beginPath(); ctx.arc(ex, hy - 1, 2, 0, TAU); ctx.fill(); } ctx.fillStyle = '#1a1020'; for (const ex of [1.6, 7.6]) { ctx.beginPath(); ctx.arc(ex, hy - 1, 1, 0, TAU); ctx.fill(); } }
+  if (m === 'reveal' || m === 'chase') { ctx.fillStyle = '#6a1424'; ctx.beginPath(); ctx.arc(7, hy + 4.5, 2, 0, Math.PI); ctx.fill(); }
+  // the leaf on its head
+  ctx.save(); ctx.translate(0, hy - 8); ctx.rotate(-0.3 + Math.sin(t * 6) * 0.1); ctx.fillStyle = '#4aa83a'; ctx.beginPath(); ctx.ellipse(0, -5, 3.2, 6, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#2e7a2a'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(0, -10); ctx.stroke(); ctx.restore();
+  if (m === 'reveal') { ctx.fillStyle = 'rgba(255,255,255,0.75)'; for (let k = 0; k < 6; k++) { const a = k * TAU / 6 + t * 3; ctx.beginPath(); ctx.arc(Math.cos(a) * 16, -14 + Math.sin(a) * 12, 4, 0, TAU); ctx.fill(); } }
+  ctx.restore();
+};
+// the three disguises (procedural fallback): each with the leaf and the tail tip drawn in
+const tanukiDisguise = {
+  soy(ctx, x, y, t) {
+    ctx.fillStyle = 'rgba(200,225,235,0.85)'; ctx.beginPath(); ctx.moveTo(x - 7, y); ctx.lineTo(x - 7, y - 14); ctx.quadraticCurveTo(x - 7, y - 21, x - 3, y - 23); ctx.lineTo(x + 3, y - 23); ctx.quadraticCurveTo(x + 7, y - 21, x + 7, y - 14); ctx.lineTo(x + 7, y); ctx.fill();
+    ctx.fillStyle = '#4a2414'; ctx.fillRect(x - 6, y - 13, 12, 12); ctx.fillStyle = '#f4ecd8'; ctx.fillRect(x - 5, y - 11, 10, 5);
+    ctx.fillStyle = '#d8322a'; rr(ctx, x - 4, y - 29, 8, 7, 2); ctx.fill();
+  },
+  lantern(ctx, x, y, t) {
+    ctx.fillStyle = '#8a867c'; rr(ctx, x - 10, y - 5, 20, 5, 2); ctx.fill(); ctx.fillRect(x - 3, y - 16, 6, 11);
+    ctx.fillStyle = '#a8a49a'; rr(ctx, x - 8, y - 27, 16, 11, 2); ctx.fill(); ctx.fillStyle = '#3a3630'; ctx.fillRect(x - 4, y - 24, 8, 5);
+    ctx.fillStyle = '#8a867c'; ctx.beginPath(); ctx.moveTo(x - 13, y - 27); ctx.quadraticCurveTo(x, y - 37, x + 13, y - 27); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(122,154,90,0.7)'; ctx.beginPath(); ctx.ellipse(x - 5, y - 28, 5, 2, 0, 0, TAU); ctx.fill();
+  },
+  sandal(ctx, x, y, t) {
+    ctx.fillStyle = '#d8b866'; ctx.beginPath(); ctx.ellipse(x, y - 4, 15, 5, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#b8964a'; ctx.lineWidth = 1; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x - 12, y - 4 + k * 1.6); ctx.lineTo(x + 12, y - 4 + k * 1.6); ctx.stroke(); }
+    ctx.strokeStyle = '#c8322a'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x - 7, y - 5); ctx.quadraticCurveTo(x, y - 13, x + 7, y - 5); ctx.stroke();
+  }
+};
+const tanukiTell = (ctx, e, x, y, top) => {
+  const tw = (e.t % 1.5) < 0.22 ? Math.sin(e.t * 60) * 0.5 : 0;
+  ctx.save(); ctx.translate(x + 1, top); ctx.rotate(-0.4 + tw); ctx.fillStyle = '#4aa83a'; ctx.beginPath(); ctx.ellipse(0, -5, 3, 6, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#2e7a2a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -10); ctx.stroke(); ctx.restore();
+  const wag = Math.sin(e.t * 2.2) * 2;
+  ctx.fillStyle = '#9a7a5e'; ctx.beginPath(); ctx.ellipse(x + 12 + wag, y - 3, 5, 3.4, 0.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#2e2420'; ctx.beginPath(); ctx.ellipse(x + 16 + wag, y - 4.5, 2.4, 2.2, 0.4, 0, TAU); ctx.fill();
+};
+const TanukiBase = TourEnemy.make({ w: 24, h: 26, speed: 1.4, behavior: 'mimic', range: 2.2, chaseT: 4, atlas: JP_X, art: tanukiArt, burst: '#9a7a5e' });
+class JpTanuki extends TanukiBase {
+  constructor(g, s) { super(g, s); this.look = s.disguise || 'soy'; }
+  // in disguise: the sprite's own disguise pose (the leaf and tail are drawn into it), or the procedural one + the tell
+  draw(ctx) {
+    if (this.bst !== 'disguise' || this.dead || this.knocked) { super.draw(ctx); return; }
+    const x = this.cx, y = this.y + this.h, id = this.cfg.sprite + '/' + this.look, a = TourSprite.of(this);
+    if (a && (Atlas.anim(a, id) || Atlas.frame(a, this.cfg.sprite + '_' + this.look + '_000'))) { const tw = (this.t % 1.5) < 0.22 ? this.t * 4 : 0; if (Atlas.anim(a, id)) Atlas.animate(ctx, a, id, tw, x, y, this.dir || 1, { scale: TourSprite.scale(this) }); else Atlas.draw(ctx, a, this.cfg.sprite + '_' + this.look + '_000', x, y, this.dir || 1, { scale: TourSprite.scale(this) }); return; }
+    const top = { soy: y - 29, lantern: y - 36, sandal: y - 10 }[this.look] || y - 26;
+    Ink.around(ctx, this.x - 14, this.y - 20, this.w + 34, this.h + 22, c => { tanukiDisguise[this.look](c, x, y, this.t); tanukiTell(c, this, x, y, top); }, { pad: 6 });
+  }
+}
+JpTanuki.cfg = TanukiBase.cfg;
+// the chōchin spirit: a paper lantern of our own (one big eye, a torn-paper grin, a long tongue) that blinks closer
+const chochinArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y - 2 + Math.sin(t * 2.4) * 2); ctx.rotate(Math.sin(t * 1.7) * 0.08); ctx.scale(m === 'fade' ? 0.7 : 1, m === 'flat' ? 0.4 : 1);
+  ctx.fillStyle = 'rgba(255,224,160,0.25)'; ctx.beginPath(); ctx.ellipse(0, -15, 17, 19, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#2a1a14'; rr(ctx, -6, -32, 12, 4, 1); ctx.fill(); rr(ctx, -6, -2, 12, 3, 1); ctx.fill();
+  ctx.fillStyle = '#fff4e0'; ctx.beginPath(); ctx.ellipse(0, -15, 12, 14, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#d8c8a8'; ctx.lineWidth = 1; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.ellipse(0, -15 + k * 5, 12 - Math.abs(k) * 1.6, 1.4, 0, 0, TAU); ctx.stroke(); }
+  ctx.fillStyle = '#d8322a'; ctx.fillRect(-10, -26, 20, 2.5); ctx.fillRect(-10, -6, 20, 2.5);
+  if (m === 'ko' || m === 'flat') { ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-3, -19); ctx.lineTo(3, -14); ctx.moveTo(3, -19); ctx.lineTo(-3, -14); ctx.stroke(); }
+  else { ctx.fillStyle = '#fbfbf2'; ctx.beginPath(); ctx.ellipse(1, -17, 5, 5.5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(2 * e.dir, -16.5, 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(2.8 * e.dir, -17.5, 0.9, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#7a1424'; ctx.beginPath(); ctx.moveTo(-6, -9); for (let k = 0; k <= 6; k++) ctx.lineTo(-6 + k * 2, -9 + (k % 2 ? 2 : 0)); ctx.lineTo(6, -7); ctx.quadraticCurveTo(0, -4, -6, -7); ctx.fill();
+  ctx.fillStyle = '#ff6a8a'; ctx.beginPath(); ctx.moveTo(-1, -7); ctx.quadraticCurveTo(1 + Math.sin(t * 5) * 2, 2, -2 + Math.sin(t * 5) * 3, 6); ctx.quadraticCurveTo(3, 2, 3, -7); ctx.fill();
+  ctx.restore();
+};
+// the day enemy (rice ball) naps at night; the hopping umbrella only comes out after dark (in a level with a night)
+const OnigiriBase = TourEnemy.make({ w: 26, h: 24, speed: 1.0, behavior: 'hop', hopV: 9.5, hopEvery: 1.4, art: onigiriArt, burst: '#ffffff' });
+class JpOnigiri extends OnigiriBase {
+  get napping() { const A = this.g.area; return !!(A && A.phase && A.night); }
+  think(dt) { if (this.napping) { this.vx = 0; this.mode = 'sleep'; return; } super.think(dt); }
+  touchPlayer(p) { if (this.napping) return; super.touchPlayer(p); }
+  drawArt(ctx) { super.drawArt(ctx); if (this.napping && !this.dead && !this.knocked) { ctx.fillStyle = '#e8f0ff'; ctx.font = `bold ${9 + (this.t * 2 % 1) * 4}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.globalAlpha = 0.8; ctx.fillText('z', this.cx + 10, this.y - 4 - (this.t * 12 % 10)); ctx.globalAlpha = 1; } }
+}
+JpOnigiri.cfg = OnigiriBase.cfg;
+const UmbrellaBase = enemies.jpUmbrella.cls;
+const umbrellaArt0 = UmbrellaBase.cfg.art;
+UmbrellaBase.cfg.art = (ctx, e, x, y, m, t) => {
+  if (m !== 'folded') return umbrellaArt0(ctx, e, x, y, m, t);
+  // folded by day: a closed red umbrella leaning on its handle, its eye shut
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-0.12);
+  ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(0, -1); ctx.stroke();
+  ctx.fillStyle = '#c8322a'; ctx.beginPath(); ctx.moveTo(0, -42); ctx.quadraticCurveTo(-6, -24, -4, -6); ctx.lineTo(4, -6); ctx.quadraticCurveTo(6, -24, 0, -42); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(-5, -14, 10, 2.5);
+  ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(1, -28, 2.2, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.restore();
+};
+class JpUmbrella extends UmbrellaBase {
+  get folded() { const A = this.g.area; return !!(A && A.phase && !A.night); }
+  think(dt) { if (this.folded) { this.vx = 0; this.mode = 'folded'; return; } super.think(dt); }
+  touchPlayer(p) { if (this.folded) return; super.touchPlayer(p); }
+  hit(kind, src) { if (this.folded && (kind === 'stomp' || kind === 'spin')) return 'bounce'; return super.hit(kind, src); }
+}
+JpUmbrella.cfg = UmbrellaBase.cfg;
+Object.assign(enemies, {
+  jpTanuki: { cls: JpTanuki, place: 'walk' },
+  jpChochin: { cls: TourEnemy.make({ w: 24, h: 30, speed: 0, behavior: 'blinker', jump: [3, 5], floats: true, atlas: JP_X, art: chochinArt, burst: '#fff4e0', glow: 'rgba(255,224,160,' }), place: 'fly' },
+  jpOnigiri: { cls: JpOnigiri, place: 'walk' },
+  jpUmbrella: { cls: JpUmbrella, place: 'walk' }
+});
+// modes the behaviours use that the atlases have under another name
+for (const [m, list] of [['chase', ['chase', 'walk']], ['reveal', ['reveal', 'hop', 'walk']], ['visible', ['visible', 'idle']], ['disguise', ['disguise', 'walk']]]) if (!TourSprite.FALLBACK.walk[m]) TourSprite.FALLBACK.walk[m] = list;
 
 /* ---------------- music: shamisen and koto, a breathy bamboo flute, taiko ---------------- */
 const tracks = {

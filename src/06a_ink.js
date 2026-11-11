@@ -7,11 +7,12 @@
    top: existing art needs no changes.
    ============================================================ */
 /* how much larger than their hitboxes characters are drawn (the physics never changes): Brady and enemies */
-const ART_SCALE = { brady: 1.24, enemy: 1.24 };
+const ART_SCALE = { brady: 1.24, enemy: 1.3 };
 const Ink = {
   on: true,
   color: '#1c1426',
   width: 1.3,            // logical px (about 4 device px on an iPhone)
+  keyline: 'rgba(255,247,230,0.62)',   // the light line outside the ink that enemies and hazards get (opts.rim)
   pool: [],
   canvas(i, w, h) {
     let c = this.pool[i];
@@ -49,14 +50,18 @@ const Ink = {
     s1.globalCompositeOperation = 'destination-in'; s1.drawImage(c1, 0, 0, bw, bh, 0, 0, bw, bh); s1.drawImage(c1, 0, 0, bw, bh, 0, 0, bw, bh);
     s1.globalCompositeOperation = 'source-in'; s1.fillStyle = o.color || this.color; s1.fillRect(0, 0, bw, bh);
     s1.globalCompositeOperation = 'source-over';
+    // 2b. form: flat code-drawn art gets volume from its own silhouette (opts.form === false skips it): a soft
+    // light-to-shade ramp down the shape, a bright rim where the light (upper left) meets the edge and a shade band
+    // along the lower right edge. All of it stays inside the silhouette, on the scratch canvases already in use.
+    if (o.form !== false && this.form) this.shade(c0, s0, c1, bw, bh, m.d * y + m.f - by, m.d * (y + h) + m.f - by, S);
     // 3. stamp the ink around, then the colour on top
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-    // A quiet light keyline keeps the black hero readable in caves and at night.
-    // Reuse the silhouette canvas; no extra per-frame surfaces or pixel readbacks.
+    // A quiet light keyline keeps the black hero (and, with opts.rim, enemies and hazards) readable in caves, at
+    // night and on busy backgrounds. Reuse the silhouette canvas; no extra per-frame surfaces or pixel readbacks.
     if (o.rim) {
       s1.globalCompositeOperation = 'source-in'; s1.fillStyle = o.rim; s1.fillRect(0, 0, bw, bh);
       s1.globalCompositeOperation = 'source-over';
-      const rimR = r + 0.8 * S;
+      const rimR = r + (o.rimWidth || 0.8) * S;
       for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; ctx.drawImage(c1, 0, 0, bw, bh, bx + Math.cos(a) * rimR, by + Math.sin(a) * rimR, bw, bh); }
       s1.globalCompositeOperation = 'source-in'; s1.fillStyle = o.color || this.color; s1.fillRect(0, 0, bw, bh);
       s1.globalCompositeOperation = 'source-over';
@@ -66,6 +71,30 @@ const Ink = {
     if (r > 2.5) for (let k = 0; k < 8; k++) { const a = (k + 0.5) / 8 * TAU; ctx.drawImage(c1, 0, 0, bw, bh, bx + Math.cos(a) * r * 0.55, by + Math.sin(a) * r * 0.55, bw, bh); }
     ctx.drawImage(c0, 0, 0, bw, bh, bx, by, bw, bh);
     ctx.restore();
+  },
+  /* The form pass (see around, step 2b). c0/s0: the colour pass, c1: its silhouette, all bw x bh device px; ty0..ty1:
+     the art's box top and bottom in the scratch canvas. Light from the upper left, like the Blender sprites. */
+  form: true,
+  formLight: 'rgba(255,250,236,1)', formShade: 'rgba(36,16,58,1)',
+  shade(c0, s0, c1, bw, bh, ty0, ty1, S) {
+    const c2 = this.canvas(2, bw, bh), s2 = c2.getContext('2d');
+    const d = Math.max(1, 1.1 * S);
+    const crescent = (dx, dy, col) => {
+      s2.setTransform(1, 0, 0, 1, 0, 0); s2.globalAlpha = 1; s2.globalCompositeOperation = 'source-over'; s2.clearRect(0, 0, bw, bh);
+      s2.drawImage(c1, 0, 0, bw, bh, 0, 0, bw, bh);
+      s2.globalCompositeOperation = 'destination-out'; s2.drawImage(c1, 0, 0, bw, bh, dx, dy, bw, bh);
+      s2.globalCompositeOperation = 'source-in'; s2.fillStyle = col; s2.fillRect(0, 0, bw, bh);
+      s2.globalCompositeOperation = 'source-over';
+    };
+    s0.setTransform(1, 0, 0, 1, 0, 0); s0.globalCompositeOperation = 'source-atop';
+    // the ramp: lit at the top, a cool shade toward the feet
+    const g = s0.createLinearGradient(0, ty0, 0, ty1);
+    g.addColorStop(0, 'rgba(255,250,236,0.10)'); g.addColorStop(0.45, 'rgba(255,250,236,0)'); g.addColorStop(1, 'rgba(36,16,58,0.24)');
+    s0.globalAlpha = 1; s0.fillStyle = g; s0.fillRect(0, 0, bw, bh);
+    // shade band along the lower right edge, then the bright rim along the upper left edge
+    crescent(-d * 1.3, -d * 1.6, this.formShade); s0.globalAlpha = 0.26; s0.drawImage(c2, 0, 0, bw, bh, 0, 0, bw, bh);
+    crescent(d * 0.8, d, this.formLight); s0.globalAlpha = 0.5; s0.drawImage(c2, 0, 0, bw, bh, 0, 0, bw, bh);
+    s0.globalAlpha = 1; s0.globalCompositeOperation = 'source-over';
   },
   /* around an entity (x, y, w, h), with slack for art that spills past the hitbox. opts.scale: how much larger than
      the hitbox the art is drawn (default ART_SCALE.enemy); the slack grows with it so tails, hats and raised arms

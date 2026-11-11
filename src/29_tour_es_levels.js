@@ -161,7 +161,7 @@ Tour.amend('es', {
   stamps,
   levels: [
     /* 6-1 HOLD: three plazas of the tomato fight in Buñol */
-    { n: 1, name: 'La Tomatina', arch: 'hold', theme: 'es_tomatina',
+    { n: 1, name: 'La Tomatina', mapLabel: 'Tomatina', arch: 'hold', theme: 'es_tomatina',
       gimmick: 'Three plazas shut tight around the tomato fight: hold out through the waves while the trucks lob and the storks swoop',
       hint: 'A plaza opens again after its third wave. Storks only carry you back a bit: wriggle free!',
       postcard: 'I am red from head to toe. It is the best day of my life. ♥ C',
@@ -176,6 +176,7 @@ Tour.amend('es', {
           // ① plaza one: tomato waves, a truck lobbing more
           ['plaza', { k: 1 }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           'cp',
           // ② plaza two: a floor of pulp and loose crates
           ['plaza', { k: 2 }],
@@ -189,7 +190,7 @@ Tour.amend('es', {
       ] },
 
     /* 6-2 MINI: tiny Brady on a giant pintxos bar in San Sebastián */
-    { n: 2, name: 'Pintxos Bar', arch: 'mini', theme: 'es_pintxos',
+    { n: 2, name: 'Pintxos Bar', mapLabel: 'Pintxos', arch: 'mini', theme: 'es_pintxos',
       gimmick: 'Brady is pocket-sized on a giant bar counter: toothpick bridges, bread-slice steps, an olive-oil slick, a salt shaker to climb',
       hint: 'Crawl Pads: hold DOWN and walk to crawl through low holes',
       postcard: 'Everything here is on a toothpick. Even me, nearly. ♥ C',
@@ -222,7 +223,7 @@ Tour.amend('es', {
       ] },
 
     /* 6-3 BEAT: Valencia's City of Arts by night */
-    { n: 3, name: 'City of Arts by Night', arch: 'beat', theme: 'es_arts', bpm: 112,
+    { n: 3, name: 'City of Arts by Night', mapLabel: 'Arts', arch: 'beat', theme: 'es_arts', bpm: 112,
       gimmick: 'Floor lights switch on the beat, the white ribs\' crowns are steps, the eyelid deck lifts on the bar',
       hint: 'The floor lights switch on the beat: wait for yours. The kazoo stuns bats',
       postcard: 'The buildings look like whale bones and spaceships. The bats live here too. ♥ C',
@@ -232,6 +233,7 @@ Tour.amend('es', {
       areas: [
         { id: 'ciutat', gen: 'strip', W: 215, H: 18, dark: true, script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           ['gearStand', { item: 'kazoo' }],
           // ① the beat floor
           'ribs',
@@ -255,7 +257,7 @@ Tour.amend('es', {
       ] },
 
     /* 6-4 GLIDE: down the slopes of Teide on the Canary Islands */
-    { n: 4, name: 'Teide Updrafts', arch: 'glide', theme: 'es_teide',
+    { n: 4, name: 'Teide Updrafts', mapLabel: 'Teide', arch: 'glide', theme: 'es_teide',
       gimmick: 'Take a paper plane off the volcano: glide through the ring chains, ride the fumaroles\' steam, land on dragon-tree crowns',
       hint: 'Hold jump while falling to glide with the paper plane; steam lifts you',
       postcard: 'A volcano in the sea, Brady! The lizards here are as big as cats. ♥ C',
@@ -290,7 +292,7 @@ Tour.amend('es', {
       ] },
 
     /* 6-5 LAIR: a Fallas street, then Paellasaurus in the Silk Exchange */
-    { n: 5, name: 'La Lonja', arch: 'lair', theme: 'es_fallas', boss: 'es_paella',
+    { n: 5, name: 'La Lonja', mapLabel: 'La Lonja', arch: 'lair', theme: 'es_fallas', boss: 'es_paella',
       gimmick: 'A Fallas street of giant papier-mâché fruit, rockets and firecrackers, then Paellasaurus in the Silk Exchange',
       hint: 'Paellasaurus is too hot to stomp. Kick three tomatoes into the pan to put the fire out, then crack the crust!',
       postcard: 'The Silk Exchange is back! The Baron pedalled off to France. Allez! ♥ C',
@@ -313,12 +315,12 @@ Tour.amend('es', {
       ] },
 
     /* 6-6 DIVE (secret): the Oceanogràfic's glass tunnels */
-    { n: 6, name: 'Oceanogràfic', arch: 'dive', secret: true, theme: 'es_aquarium',
+    { n: 6, name: 'Oceanogràfic', mapLabel: 'Aquarium', arch: 'dive', secret: true, theme: 'es_aquarium',
       gimmick: 'Swim the aquarium\'s glass tunnels past sharks; jellies pulse in columns and pump jets push you along',
       hint: 'Fins make you faster. Jellyfish bob up and down: slip past between pulses',
       postcard: 'A beluga smiled at me through the glass. I smiled back for an hour. ♥ C',
       enemies: [['esJelly', 2], ['esShark', 1]],
-      mapCell: [0, 1], mapFrom: 2,
+      mapCell: [1, 1], mapFrom: 2,
       exits: { main: { to: 'node:6-4' } },
       areas: [
         { id: 'aquari', gen: 'swim', width: 200, H: 18, script: [
@@ -341,12 +343,12 @@ Tour.amend('es', {
       ] },
 
     /* 6-7 SWITCH (secret): the windmills of La Mancha */
-    { n: 7, name: 'Molinos de La Mancha', arch: 'switch', secret: true, theme: 'es_mancha',
+    { n: 7, name: 'Molinos de La Mancha', mapLabel: 'Molinos', arch: 'switch', secret: true, theme: 'es_mancha',
       gimmick: 'The wind lever: with the wind on, the sails turn and cloth boards hold in the gust; with it off, the sails stop and the calm steps settle',
       hint: 'Pull the wind lever (UP) to start or stop the wind. A paper plane can hit it from afar',
       postcard: 'Windmills as far as I can see. One of them waved at me. Probably. ♥ C',
       enemies: [['esSheep', 2], ['esLynx', 1], ['esStork', 1]],
-      mapCell: [0, 2], mapFrom: 0,
+      mapCell: [0, 1], mapFrom: 0,
       exits: { main: {} },
       areas: [
         { id: 'mancha', gen: 'strip', W: 190, H: 20, script: [

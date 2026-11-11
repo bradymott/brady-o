@@ -70,25 +70,29 @@ T_.mz_copas = Object.assign({}, THEMES.mz_baobab, {
     strip('mz_savanna', 'L0', 0.015, -46, { kind: 'mountains', color: '#c8907a', base: 280, amp: 60 }),
     { kind: 'mzSunsetHaze', color: '#ffb0a0', base: 300, f: 0.02 },
     strip('mz_baobab', 'L0', 0.05, 0, { kind: 'mzSavanna', color: '#c89a4a', base: 340 }),
+    strip('mz_baobab_near', 'L1', 0.22, 0, { kind: 'mzSavanna', color: '#b8883a', base: 365 }),
     { kind: 'mzNearBoughs', color: '#3a2418', base: 380, f: 0.45 }
   ],
   semi: { style: 'log', c1: '#9a7a5a', c2: '#6a4a2e' }
 });
 T_.mz_copas.atlas = 'mz_baobab';
-// the night beach and the fort get the depth their single strips lack (borrowed strips + painted layers)
+// the night beach, the fort and the baobab get the depth their single strips lack: a far layer (painted or borrowed)
+// behind, and their own near strip in front (mz_beach_near, mz_fort_near, mz_baobab_near)
 THEMES.mz_beach.layers = [
   { kind: 'mzHeadland', color: '#0a1830', base: 300, f: 0.02 },
   strip('mz_beach', 'L0', 0.06, 0, THEMES.mz_beach.layers[0]),
-  { kind: 'mzNightGrass', color: '#06101e', base: 400, f: 0.4 }
+  strip('mz_beach_near', 'L1', 0.2, 0, { kind: 'mzNightGrass', color: '#0a1a30', base: 360 })
 ];
 THEMES.mz_fort.layers = [
   strip('mz_dunes', 'L0', 0.02, -40, { kind: 'mzFarIsle', color: '#5a9a6a', base: 300 }),
   { kind: 'mzFarIsle', color: '#4a8a5a', base: 316, f: 0.035 },
-  strip('mz_fort', 'L0', 0.08, 0, THEMES.mz_fort.layers[0])
+  strip('mz_fort', 'L0', 0.08, 0, THEMES.mz_fort.layers[0]),
+  strip('mz_fort_near', 'L1', 0.22, 0, { kind: 'mzFarIsle', color: '#b8a888', base: 365 })
 ];
 THEMES.mz_baobab.layers = [
   strip('mz_savanna', 'L0', 0.015, -46, { kind: 'mountains', color: '#c8907a', base: 280, amp: 60 }),
-  strip('mz_baobab', 'L0', 0.05, 0, THEMES.mz_baobab.layers[0])
+  strip('mz_baobab', 'L0', 0.05, 0, THEMES.mz_baobab.layers[0]),
+  strip('mz_baobab_near', 'L1', 0.22, 0, { kind: 'mzSavanna', color: '#b8883a', base: 365 })
 ];
 // 4-6: under the dunes (the surface is the beach dunes)
 T_.mz_areia = Object.assign({}, THEMES.mz_dunes, {
@@ -98,6 +102,26 @@ T_.mz_areia = Object.assign({}, THEMES.mz_dunes, {
   fog: '#e8c890'
 });
 T_.mz_areia.atlas = 'mz_dunes';
+// the dune's packed sand to dig through: wind strata that run on across tiles, and every few tiles something the
+// sand has kept (a cowrie, a fish skeleton, pebbles and a root), muted so nothing reads as a pickup
+T_.mz_areia.soil = {
+  variants: 14,
+  paint(ctx, top, v) {
+    const base = '#c8945a';
+    ctx.fillStyle = base; ctx.fillRect(0, 0, TS, TS);
+    for (const [y0, c] of [[7, 'rgba(110,70,30,0.28)'], [19, 'rgba(255,225,170,0.22)'], [27, 'rgba(110,70,30,0.2)']]) {
+      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(0, y0); for (let x = 0; x <= TS; x += 4) ctx.lineTo(x, y0 + Math.sin(x * TAU / TS + y0) * 1.4); ctx.lineTo(TS, y0 + 3); ctx.lineTo(0, y0 + 3); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255,240,200,0.4)'; for (const [x, y] of [[5, 13], [22, 4], [27, 23], [12, 29]]) ctx.fillRect(x, y, 1.6, 1.4);
+    ctx.strokeStyle = '#3a2414'; ctx.lineWidth = 1.2;
+    ctx.globalAlpha = 0.7; ctx.strokeStyle = '#5a3a1e';
+    if (v === 1) { ctx.fillStyle = '#ead6b0'; ctx.beginPath(); ctx.ellipse(16, 15, 6, 4.2, 0.3, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(11, 15.5); ctx.lineTo(21, 14.5); ctx.stroke(); }
+    else if (v === 2) { ctx.strokeStyle = '#e4d0a8'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(7, 16); ctx.lineTo(24, 16); for (let k = 0; k < 4; k++) { ctx.moveTo(10 + k * 3.5, 12); ctx.lineTo(10 + k * 3.5, 20); } ctx.moveTo(24, 16); ctx.lineTo(27, 12); ctx.moveTo(24, 16); ctx.lineTo(27, 20); ctx.stroke(); ctx.fillStyle = '#e4d0a8'; ctx.beginPath(); ctx.arc(6, 16, 2.6, 0, TAU); ctx.fill(); }
+    else if (v === 3) { for (const [x, y, r, c] of [[9, 11, 3, '#9a8a78'], [20, 20, 2.4, '#b8a890'], [14, 25, 1.8, '#7a6a5a']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.strokeStyle = 'rgba(90,60,30,0.7)'; ctx.beginPath(); ctx.moveTo(26, 0); ctx.quadraticCurveTo(22, 10, 27, 18); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    if (top) { ctx.fillStyle = '#e8c088'; ctx.beginPath(); ctx.moveTo(0, 5); for (let x = 0; x <= TS; x += 4) ctx.lineTo(x, 2 + ((x * 7) % 5) * 0.6); ctx.lineTo(TS, 5); ctx.closePath(); ctx.fill(); }
+  }
+};
 // interiors
 const room = (b, over) => Object.assign({}, THEMES[caveVariant(b)], over);
 T_.mz_cupim = room('mz_savanna', { name: 'Inside the Termite Mound', ground: Object.assign({}, THEMES.mz_savanna.ground, { cap: '#c8703a', capHi: '#e8905a' }), sky: ['#2a120a', '#5a2a14', '#8a4a24'] });
@@ -165,6 +189,7 @@ const decor = {
   mzLantern(ctx, x, y, t) { ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y - 90); ctx.lineTo(x, y - 34); ctx.stroke(); ctx.fillStyle = `rgba(255,${200 + Math.sin(t * 6) * 20},110,0.95)`; rr(ctx, x - 6, y - 32, 12, 15, 3); ctx.fill(); },
   // a hornbill keeper behind the Banca's counter
   mzKeeperHornbill(ctx, x, y, t) {
+    if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'mz_x', 'hornbill/idle', t, x + 18, y + 2, -1, { scale: ART_SCALE.enemy })) return;
     ctx.save(); ctx.translate(x + 18, y + 2);
     ctx.fillStyle = '#2a2a34'; ctx.beginPath(); ctx.ellipse(0, -16, 14, 18, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = '#f4ecd8'; ctx.beginPath(); ctx.ellipse(2, -10, 8, 11, 0, 0, TAU); ctx.fill();
@@ -259,11 +284,11 @@ const fruitBatArt = (ctx, e, x, y, m) => {
 };
 const enemies = {
   mzGhostCrab: { cls: TourEnemy.make(GHOST), place: 'walk' },
-  mzDungBeetle: { cls: TourEnemy.make({ w: 26, h: 20, speed: 0.9, behavior: 'pusher', maxScale: 2, ballKind: 'dung', art: beetleArt, burst: '#1a9a4a' }), place: 'walk' },
-  mzPangolin: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.9, behavior: 'curlShield', curlT: 1.5, art: pangolinArt, burst: '#9a7a4a' }), place: 'walk' },
-  mzChameleon: { cls: TourEnemy.make({ w: 24, h: 20, speed: 0, behavior: 'tongue', len: 3, art: chameleonArt, burst: '#4aa04a', init(e) { e.seed = Math.random() * 360; } }), place: 'walk' },
-  mzMoleRat: { cls: TourEnemy.make({ w: 26, h: 22, speed: 1.2, behavior: 'burrower', art: moleRatArt, burst: '#c8907a' }), place: 'walk' },
-  mzFruitBat: { cls: TourFlyer.make({ w: 26, h: 14, range: 3, speed: 1.3, swoop: true, art: fruitBatArt, burst: '#8a5a3a' }), place: 'fly' }
+  mzDungBeetle: { cls: TourEnemy.make({ w: 26, h: 20, speed: 0.9, behavior: 'pusher', maxScale: 2, ballKind: 'dung', art: beetleArt, burst: '#1a9a4a', atlas: 'mz_x' }), place: 'walk' },
+  mzPangolin: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.9, behavior: 'curlShield', curlT: 1.5, art: pangolinArt, burst: '#9a7a4a', atlas: 'mz_x' }), place: 'walk' },
+  mzChameleon: { cls: TourEnemy.make({ w: 24, h: 20, speed: 0, behavior: 'tongue', len: 3, art: chameleonArt, burst: '#4aa04a', atlas: 'mz_x', init(e) { e.seed = Math.random() * 360; } }), place: 'walk' },
+  mzMoleRat: { cls: TourEnemy.make({ w: 26, h: 22, speed: 1.2, behavior: 'burrower', art: moleRatArt, burst: '#c8907a', atlas: 'mz_x' }), place: 'walk' },
+  mzFruitBat: { cls: TourFlyer.make({ w: 26, h: 14, range: 3, speed: 1.3, swoop: true, art: fruitBatArt, burst: '#8a5a3a', atlas: 'mz_x' }), place: 'fly' }
 };
 for (const k in enemies) { ENTITY_TYPES[k] = enemies[k].cls; Tour.enemyInfo[k] = { place: enemies[k].place, country: 'mz' }; }
 
@@ -295,6 +320,11 @@ class MzKeyShutter extends ENTITY_TYPES.shutter {
 // 4-1: the rival, an ostrich in a racing number
 TOUR_SKINS.mzOstrichRival = (ctx, e, t) => {
   const x = e.cx, y = e.y + e.h, run = e.state === 'run', b = run ? Math.abs(Math.sin(t * 16)) * 3 : 0, l = run ? Math.sin(t * 16) * 8 : 0;
+  // the pre-rendered AVESTRUZ (mz_x): running, puffing when it has won or waits, else ready at the line
+  if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'mz_x', run ? 'ostrich/run' : e.state === 'won' ? 'ostrich_tired_000' : 'ostrich/idle', t, x, y, e.dir || 1, { scale: ART_SCALE.enemy })) {
+    if (e.state === 'count' && e.ct > 0) TourObj.label(ctx, String(Math.ceil(e.ct)), x, e.y - 50, 24, '#ffd84a');
+    return;
+  }
   Ink.around(ctx, e.x - 20, e.y - 44, e.w + 40, e.h + 46, c => {
     c.strokeStyle = '#e8b0a0'; c.lineWidth = 3; for (const s of [-1, 1]) { c.beginPath(); c.moveTo(x + s * 3, y - 18 - b); c.lineTo(x + s * 2 + s * l, y - 8); c.lineTo(x + s * 4 + s * l * 0.5, y); c.stroke(); }
     c.fillStyle = '#2a2a2a'; c.beginPath(); c.ellipse(x - 2, y - 24 - b, 15, 11, -0.15, 0, TAU); c.fill();
@@ -739,13 +769,13 @@ Tour.pieces['mz.arena_tidepool'] = (st, o) => {
 };
 
 /* ================= houses and the country panel ================= */
-const houses = [{ id: 'mz-gorongosa', kind: 'stand', name: 'Banca da Gorongosa', keeper: 'hornbill', theme: 'mz_savanna', stock: ['hat', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:piri'], mapCell: [0, 2], mapFrom: 0 }];
+const houses = [{ id: 'mz-gorongosa', mapLabel: 'Banca', kind: 'stand', name: 'Banca da Gorongosa', keeper: 'hornbill', theme: 'mz_savanna', roomTheme: 'mz_cupim', stock: ['hat', 'plane', 'fins', 'magnet', 'oneup', 'sundial', 'sig:piri'], mapCell: [0, 1], mapFrom: 0 }];
 const map = { fort: 'seafort', start: [0, 0] };
 
 /* ================= the levels ================= */
 const levels = [
   // 4-1 RACE: the ostrich runs the course; elephant jets lift you onto the acacia route; dung beetles; thorn hedges
-  { n: 1, name: 'Ostrich Dash', arch: 'race', theme: 'mz_savanna',
+  { n: 1, name: 'Ostrich Dash', mapLabel: 'Ostriches', arch: 'race', theme: 'mz_savanna',
     gimmick: 'Race an ostrich across Gorongosa: elephants spray you onto the acacia route, dung beetles roll, thorns burn',
     hint: 'Ride an elephant\'s water jet up to the acacias: the high route is faster. Piri-piri burns thorn hedges',
     postcard: 'The ostrich won. The ostrich always wins. It has done this before. ♥ C',
@@ -781,7 +811,7 @@ const levels = [
     ] },
 
   // 4-2 DOOM: the stampede's dust cloud chases you over the dunes
-  { n: 2, name: 'Dune Stampede', arch: 'doom', theme: 'mz_dunes',
+  { n: 2, name: 'Dune Stampede', mapLabel: 'Stampede', arch: 'doom', theme: 'mz_dunes',
     gimmick: 'A stampede of wildebeest kicks up a dust storm behind you: keep running over the dunes',
     hint: 'Don\'t stop! The dust cloud costs a hit if it catches you. Bounce off the dhow sails',
     postcard: 'Something stampeded. Possibly wildebeest. Possibly the Baron\'s luggage. I ran. ♥ C',
@@ -816,7 +846,7 @@ const levels = [
     ] },
 
   // 4-3 SKY: baobab crowns at sunset; weaver nests bounce you; honey and bees; evening gusts and fruit bats
-  { n: 3, name: 'Baobab Skyline', arch: 'sky', theme: 'mz_copas',
+  { n: 3, name: 'Baobab Skyline', mapLabel: 'Baobabs', arch: 'sky', theme: 'mz_copas',
     gimmick: 'Hop the crowns of giant baobabs at sunset: weaver nests bounce, honey sticks, gusts carry you',
     hint: 'Nests bounce you high. Honey slows your jump. The evening gusts push you over the wide gaps',
     postcard: 'The baobabs are upside-down trees, they say. I stood on one. It felt right-side up. ♥ C',
@@ -852,7 +882,7 @@ const levels = [
     ] },
 
   // 4-4 CARRY (dark): carry the hatchling to the sea; the lighthouse beam freezes the ghost crabs; relight it
-  { n: 4, name: 'Hatchling Night', arch: 'carry', theme: 'mz_beach',
+  { n: 4, name: 'Hatchling Night', mapLabel: 'Hatchlings', arch: 'carry', theme: 'mz_beach',
     gimmick: 'Carry a lost turtle hatchling to the sea at night. Ghost crabs freeze in the lighthouse beam',
     hint: 'THROW sets the hatchling down on a stone. Crabs only move in the dark: stay in the beam',
     postcard: 'The little turtle made it to the sea. I may have cried. The crabs were rude about it. ♥ C',
@@ -885,7 +915,7 @@ const levels = [
     ] },
 
   // 4-5 LAIR: the ramparts and the cistern teach the shells and the fire, then O Eremita's tide pool
-  { n: 5, name: 'Ilha Fortress', arch: 'lair', theme: 'mz_fort',
+  { n: 5, name: 'Ilha Fortress', mapLabel: 'Ilha', arch: 'lair', theme: 'mz_fort',
     gimmick: 'Coconut cannons on the ramparts, the flooded cistern, then O Eremita the hermit crab',
     hint: 'Breathe piri-piri fire on O Eremita\'s borrowed shell until he jumps out, then stomp him. Kick empty shells into the sea!',
     postcard: 'The great baobab is back on its hill! The Baron flew north, to Morocco. ♥ C',
@@ -896,6 +926,7 @@ const levels = [
       { id: 'muralha', gen: 'strip', mode: 'castle', W: 84, H: 18, script: [
         ['opening', { decor: [['mzRampartPalm', 3]] }],
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         ['rampart', { gold: true }],
         'sig',
         ['potTrough'],
@@ -908,12 +939,12 @@ const levels = [
     ] },
 
   // 4-6 DIG (secret): dig through the dune into the buried dhow's hull
-  { n: 6, name: 'Buried Dhow', arch: 'dig', secret: true, theme: 'mz_areia',
+  { n: 6, name: 'Buried Dhow', mapLabel: 'Dhow', arch: 'dig', secret: true, theme: 'mz_areia',
     gimmick: 'Dig down through the dune into a buried dhow: chambers of cashews, mole-rats, cave-ins',
     hint: 'Stomp (down + jump) on sand to dig. The hard hat\'s dash digs sideways and breaks rock',
     postcard: 'A whole boat under the sand, full of cashews. The mole-rats had eaten half. ♥ C',
     enemies: [['mzMoleRat', 2], ['mzGhostCrab', 1], ['mzCashew', 1]],
-    mapCell: [0, 1], mapFrom: 1,
+    mapCell: [1, 1], mapFrom: 1,
     exits: { main: { to: 'node:4-4' } },
     areas: [
       { id: 'areia', gen: 'dig', W: 120, H: 40, script: [
@@ -932,5 +963,7 @@ const levels = [
     ] }
 ];
 
+Decor.mzKeeperHornbill.atlas = 'mz_x';   // the Banca's keeper (29_tour_mx.js extraAtlases hook)
+TOUR_SKINS.mzOstrichRival.atlas = 'mz_x';
 Tour.amend('mz', { stamps, skins, houses, map, levels });
 })();

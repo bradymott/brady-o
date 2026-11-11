@@ -21,6 +21,7 @@ function appHomeScene() {
 const Game = {
   quality: 1, // 1 = full post-processing; drops to 0 on slow devices
   canvas: null, ctx: null, scene: null, S: 2, dpr: 1, viewW: 900, viewH: VIEW_ROWS * TS,
+  rows: VIEW_ROWS,   // tile rows the game view shows; a level scene asks for fewer on a phone (the Near zoom, Play.viewRows)
   cssW: 900, cssH: 450, gameRect: { x: 0, y: 0, w: 900, h: 450 }, vignette: null, forceTouchUI: false,
   acc: 0, last: 0, frames: 0, errors: 0,
 
@@ -84,8 +85,8 @@ const Game = {
       gr = { x: 0, y: Math.round(Math.max(0, insets.t)), w: cssW, h: gh };
     } else gr = { x: 0, y: 0, w: cssW, h: cssH };
     this.gameRect = gr;
-    this.S = (gr.h * dpr) / (VIEW_ROWS * TS);
-    this.viewH = VIEW_ROWS * TS;
+    this.S = (gr.h * dpr) / (this.rows * TS);
+    this.viewH = this.rows * TS;
     this.viewW = (gr.w * dpr) / this.S;
     // vignette
     // vignette pre-rendered at the game view's exact pixel size (no per-frame scaling)
@@ -104,9 +105,13 @@ const Game = {
     if (isPlay && this.scene.state === 'results') this.scene.buildResultsUI();
   },
 
+  /* setRows(n): show n tile rows (the camera zoom); a change re-lays out the view */
+  setRows(n) { n = n || VIEW_ROWS; if (Math.abs(n - this.rows) < 1e-3) return; this.rows = n; if (this.canvas) this.resize(); },
   setScene(s) {
     // in the Burning Man and Art Cart apps, "back to the title" means that app's own home screen
     if ((APP === 'burningman' || APP === 'kart') && typeof TitleScene !== 'undefined' && s instanceof TitleScene) s = appHomeScene();
+    // scenes without a zoom of their own (menus, maps, story) use the standard view
+    if (!(s && s.viewRows)) this.setRows(VIEW_ROWS);
     this.scene = s;
     Input.taps.length = 0;
   },
@@ -118,16 +123,18 @@ const Game = {
     const raw = dt;
     if (dt > 0.25) dt = 0.25;
     if (dt < 0) dt = 0;
-    // adaptive resolution: if frames are consistently slow, render fewer pixels. Measured on the real frame time: a
-    // phone crawling at 2-5 fps (frames over 0.2 s) must count as slow too, not only gaps over 1 s (a tab switch)
+    // adaptive speed: if frames are consistently slow, first drop the expensive post effects, then render fewer
+    // pixels, but never below 1.5 device px per point on a hi-dpi screen: at 1x a phone's 3x display magnifies every
+    // pixel three times and the characters' ink lines go soft (the sprites' minimum sharpness)
+    // measured on the real frame time: a phone crawling at 2-5 fps (frames over 0.2 s) counts as slow too
     if (raw > 0.026 && raw < 1) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 0.5);
-    if (this.slowT > 2.5 && (this.lowered || 0) < 2 && this.dpr > 1) {
-      this.lowered = (this.lowered || 0) + 1; this.slowT = 0;
-      this.dprCap = Math.max(1, this.dpr - 0.5);
-      this.resize();
-    } else if (this.slowT > 2.5 && this.quality >= 1) {
-      // already at the lowest resolution step: drop the expensive post effects instead
+    const floorDpr = (window.devicePixelRatio || 1) >= 2 ? 1.5 : 1;
+    if (this.slowT > 2.5 && this.quality >= 1) {
       this.quality = 0; this.slowT = 0;
+    } else if (this.slowT > 2.5 && (this.lowered || 0) < 2 && this.dpr > floorDpr) {
+      this.lowered = (this.lowered || 0) + 1; this.slowT = 0;
+      this.dprCap = Math.max(floorDpr, this.dpr - 0.5);
+      this.resize();
     }
     this.acc += dt;
     Input.pollGamepad();

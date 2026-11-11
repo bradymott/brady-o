@@ -834,8 +834,11 @@ const BG = {
     return res;
   },
 
-  draw(ctx, themeKey, camX, camY, camYRef, viewW, viewH, S, time, flash) {
+  /* lift: logical px the parallax layers are raised by (a zoomed-in game view shows fewer rows: its floor sits
+     higher on the screen, and the backdrop's ground line follows it) */
+  draw(ctx, themeKey, camX, camY, camYRef, viewW, viewH, S, time, flash, lift) {
     const th = THEMES[themeKey];
+    lift = lift || 0;
     const bg = this.get(themeKey, S);
     const W = viewW * S, H = viewH * S;
     // sky
@@ -883,7 +886,7 @@ const BG = {
       const L = bg.layers[i];
       const lw = BG_W * S, lh = L.h * S;
       let ox = -((camX * L.f * S) % lw); if (ox > 0) ox -= lw;
-      const oy = (L.top - dy * L.f * 0.6) * S;
+      const oy = (L.top - dy * L.f * 0.6 - lift) * S;
       const cw = L.canvas.width, iy = Math.round(oy);
       for (let x = Math.round(ox); x < W; x += cw) ctx.drawImage(L.canvas, x, iy);
       if (L.fillBelow && oy + lh < H) { ctx.fillStyle = L.color; ctx.fillRect(0, oy + lh - 1, W, H - oy - lh + 1); }

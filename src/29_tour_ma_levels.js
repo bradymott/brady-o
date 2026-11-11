@@ -331,7 +331,7 @@ Tour.amend('ma', {
   stamps,
   levels: [
     /* 5-1 MAZE: a 3 x 3 souk of rug doors; saffron yellow is the way */
-    { n: 1, name: 'Souk Labyrinth', arch: 'maze', theme: 'ma_souk',
+    { n: 1, name: 'Souk Labyrinth', mapLabel: 'Souk', arch: 'maze', theme: 'ma_souk',
       gimmick: 'A maze of rug doors: follow the saffron-yellow ones. Rug moths nibble the rugs you stand on',
       hint: 'Saffron-yellow doors lead on; the other colours are dead ends with treats',
       postcard: 'The souk is a maze, Brady. I followed the saffron and found the rooftops! ♥ C',
@@ -359,7 +359,7 @@ Tour.amend('ma', {
       ] },
 
     /* 5-2 SCROLL: the caravan rolls on; door 22 hides at the back of the oasis camp */
-    { n: 2, name: 'Sahara Caravan', arch: 'scroll', theme: 'ma_sahara',
+    { n: 2, name: 'Sahara Caravan', mapLabel: 'Sahara', arch: 'scroll', theme: 'ma_sahara',
       gimmick: 'The dunes roll by: ride the camels over quicksand, walk in the sandstorm\'s lulls, cross the flickering mirages',
       hint: 'Mirage slabs shimmer just before they vanish',
       postcard: 'Camels are VERY tall. The one I rode hummed the whole way. ♥ C',
@@ -398,7 +398,7 @@ Tour.amend('ma', {
       ] },
 
     /* 5-3 PHASE: the sun-moon lantern turns the blue medina from day to night and back */
-    { n: 3, name: 'Chefchaouen Blue', arch: 'phase', theme: 'ma_azul',
+    { n: 3, name: 'Chefchaouen Blue', mapLabel: 'Blue City', arch: 'phase', theme: 'ma_azul',
       gimmick: 'Strike the sun-moon lantern: by day laundry lines and napping cats, by night lantern strings, prowling cats and snails',
       hint: 'Press UP at a sun-moon lantern to flip day and night (you can do it in mid-air)',
       postcard: 'Everything here is blue, even the stairs. At night the cats run the town. ♥ C',
@@ -412,6 +412,7 @@ Tour.amend('ma', {
         { id: 'medina', gen: 'strip', W: 200, H: 22, phase: { night: 'ma_azul_night' }, script: [
           // ① day: blue stairs, laundry lines, napping cats
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
           ['blueHouse', { w: 8, h: 5, gold: 'must' }],
           ['enemies', { kind: 'maCat', n: 1 }],
           ['lines', { n: 6 }],
@@ -440,7 +441,7 @@ Tour.amend('ma', {
       ] },
 
     /* 5-4 FORT: kasbah walls, the tower room's chain and lids, the Brass Owl */
-    { n: 4, name: 'Kasbah of the Brass Owl', arch: 'fort', theme: 'ma_atlas', boss: 'ma_owl', mid: true,
+    { n: 4, name: 'Kasbah of the Brass Owl', mapLabel: 'Kasbah', arch: 'fort', theme: 'ma_atlas', boss: 'ma_owl', mid: true,
       gimmick: 'Kasbah walls and a tree full of goats, a tower of chains and tagine lids, then the Baron\'s clockwork owl',
       hint: 'Pull a chain while the Brass Owl looks the other way: the lid drops on it',
       postcard: 'A brass owl guarded the kasbah. It fell apart into teaspoons! We kept one. ♥ C',
@@ -466,7 +467,7 @@ Tour.amend('ma', {
       ] },
 
     /* 5-5 LAIR: fountain galleries, then Berrad the Magnificent in the riad courtyard */
-    { n: 5, name: 'Riad of Fountains', arch: 'lair', theme: 'ma_riad', boss: 'ma_berrad',
+    { n: 5, name: 'Riad of Fountains', mapLabel: 'Riad', arch: 'lair', theme: 'ma_riad', boss: 'ma_berrad',
       gimmick: 'Fountain jets lift Brady to the galleries; then Berrad the Magnificent, a grand brass teapot, and his brazier',
       hint: 'Kick Berrad\'s brazier across the riad. When he sinks into it to reboil, stomp his lid!',
       postcard: 'The kasbah is unrolled and back on its hill! The Baron went to Spain. ¡Olé! ♥ C',
@@ -489,7 +490,7 @@ Tour.amend('ma', {
       ] },
 
     /* 5-6 SKY (secret): flying rugs over the High Atlas */
-    { n: 6, name: 'Carpet Skies', arch: 'sky', secret: true, theme: 'ma_cielo',
+    { n: 6, name: 'Carpet Skies', mapLabel: 'Carpets', arch: 'sky', secret: true, theme: 'ma_cielo',
       gimmick: 'No ground at all: hop flying rugs over the High Atlas, ride out the gusts, and mind the moths on the carpets',
       hint: 'Gusts come and go: cross in the lulls',
       postcard: 'Above the clouds on a flying rug! The storks waved. Well, flapped. ♥ C',

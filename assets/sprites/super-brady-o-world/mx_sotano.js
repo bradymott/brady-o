@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("mx_sotano", {"scale":2.0,"image":"mx_sotano.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":882}},"anims":{},"strips":{"L0":{"w":2048,"h":881,"top":3.5,"x":0,"y":0}}});

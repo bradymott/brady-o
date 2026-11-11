@@ -56,15 +56,53 @@ class FrParcel extends Ent {
 }
 // the plaza's post office: one hatch per delivery (a lock that opens for its parcel), painted with what it wants
 class FrHatch extends ENTITY_TYPES.lock {
-  constructor(g, s) { super(g, s); this.icon = s.icon || 'bread'; }
+  constructor(g, s) { super(g, s); this.icon = s.icon || 'bread'; this.back = true; }
+  // the first hatch draws the post office behind all three: a pale stone front up to the roof with a zinc cornice band,
+  // tall arched openings in the gaps between the hatch walls, and the yellow LA POSTE band
+  facade(ctx) {
+    const hs = this.g.entities.filter(e => e instanceof FrHatch && !e.remove); if (!hs.length || hs[0] !== this) return;
+    const x0 = Math.min(...hs.map(e => e.x + 6)) - TS * 0.6, x1 = Math.max(...hs.map(e => e.x + 6)) + TS * 1.6, fl = this.y + this.h;
+    const top = Math.max(0, this.g.camY - 40);
+    ctx.fillStyle = '#f4e8cc'; ctx.fillRect(x0, top, x1 - x0, fl - top);
+    ctx.fillStyle = '#e4d4b0'; for (let yy = fl - 18; yy > top; yy -= 18) ctx.fillRect(x0, yy, x1 - x0, 1.5);
+    // arched openings between the walls (the way through), warm inside
+    for (let k = 0; k < hs.length - 1; k++) {
+      const gx = hs[k].x + 6 + TS + 3, gw = hs[k + 1].x + 6 - gx - 3, ay = fl - 4.2 * TS;
+      if (gw <= 4) continue;
+      ctx.fillStyle = '#7a5a3a'; ctx.beginPath(); ctx.moveTo(gx, fl); ctx.lineTo(gx, ay + gw / 2); ctx.arc(gx + gw / 2, ay + gw / 2, gw / 2, Math.PI, 0); ctx.lineTo(gx + gw, fl); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,220,150,0.35)'; ctx.fillRect(gx + 3, fl - 2.6 * TS, gw - 6, 2.4 * TS);
+    }
+    ctx.strokeStyle = '#2a2430'; ctx.lineWidth = 2; ctx.strokeRect(x0, top - 2, x1 - x0, fl - top + 2);
+  }
+  // the last hatch draws the bands that run across the whole front, over the pilasters
+  bands(ctx) {
+    const hs = this.g.entities.filter(e => e instanceof FrHatch && !e.remove); if (!hs.length || hs[hs.length - 1] !== this) return;
+    const x0 = Math.min(...hs.map(e => e.x + 6)) - TS * 0.6, x1 = Math.max(...hs.map(e => e.x + 6)) + TS * 1.6, fl = this.y + this.h, top = Math.max(0, this.g.camY - 40);
+    const by = fl - 6.2 * TS;
+    if (by > top) Ink.around(ctx, x0, by - 2, x1 - x0, 24, c => { c.fillStyle = '#ffd23a'; c.fillRect(x0, by, x1 - x0, 20); c.fillStyle = '#2a4a8a'; c.font = `bold 13px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.fillText('LA POSTE', (x0 + x1) / 2, by + 15); }, { pad: 3 });
+    const cy = fl - 9 * TS;
+    if (cy > top) { ctx.fillStyle = '#8a98ae'; ctx.fillRect(x0 - 6, cy, x1 - x0 + 12, 10); ctx.fillStyle = '#6a7890'; ctx.fillRect(x0 - 6, cy + 10, x1 - x0 + 12, 3); ctx.strokeStyle = '#2a2430'; ctx.lineWidth = 1.5; ctx.strokeRect(x0 - 6, cy, x1 - x0 + 12, 13); }
+  }
   draw(ctx) {
+    this.facade(ctx);
     const x = this.x + 6, y = this.y, w = TS, h = this.h, k = this.open ? clamp(1 - (this.openT || 0) / 0.6, 0, 1) : 0;
+    // the wall above the hatch, up to the roof: a slice of the post office's front (cream stone courses, a blue enamel
+    // plaque with a yellow envelope, a little lamp), so the three hatches read as one building, not three pillars
+    const top = Math.max(0, this.g.camY - 40), wy1 = y - 6;
+    if (wy1 > top) Ink.around(ctx, x - 4, top, w + 8, wy1 - top + 4, c => {
+      c.fillStyle = '#e8d8b4'; c.fillRect(x - 2, top, w + 4, wy1 - top);
+      c.fillStyle = '#d8c8a4'; for (let yy = wy1 - 16; yy > top; yy -= 16) c.fillRect(x - 2, yy, w + 4, 2);
+      c.fillStyle = '#c8b48c'; c.fillRect(x - 2, top, 3, wy1 - top); c.fillRect(x + w - 1, top, 3, wy1 - top);
+      const py = wy1 - 44;
+      if (py > top + 10) { c.fillStyle = '#2a4a8a'; rr(c, x + 3, py, w - 6, 22, 4); c.fill(); c.fillStyle = '#ffd23a'; c.fillRect(x + 8, py + 6, w - 16, 10); c.strokeStyle = '#2a4a8a'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x + 8, py + 6); c.lineTo(x + w / 2, py + 12); c.lineTo(x + w - 8, py + 6); c.stroke(); }
+    }, { pad: 4 });
     ctx.fillStyle = '#2a4a8a'; rr(ctx, x - 3, y - 6, w + 6, h + 6, 4); ctx.fill();
     const hh = h * (1 - k);
     for (let yy = 0; yy < hh; yy += 7) { ctx.fillStyle = yy % 14 ? '#c8ccd8' : '#a8b0c0'; ctx.fillRect(x + 1, y + yy, w - 2, Math.min(7, hh - yy)); }
     if (k < 0.5) { ctx.fillStyle = '#fff8ec'; ctx.beginPath(); ctx.arc(x + w / 2, y + h * 0.42, 12, 0, TAU); ctx.fill(); ctx.save(); ctx.translate(x + w / 2, y + h * 0.42); ctx.scale(0.6, 0.6); PARCEL[this.icon](ctx, 0, 0, this.t); ctx.restore(); }
     const done = this.g.keys.has(this.id);
     ctx.fillStyle = done ? '#7ae07a' : '#ffd84a'; ctx.beginPath(); ctx.arc(x + w / 2, y - 12, 4, 0, TAU); ctx.fill();
+    this.bands(ctx);
   }
 }
 // the truffle pig (7-4): a friend on the surface who trots to the next dig spot, snuffles and points down
@@ -80,6 +118,12 @@ class FrTrufflePig extends Ent {
   }
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, d = this.dir, bob = Math.abs(this.cx - (this.spots[this.k] || this.cx)) > 6 ? Math.abs(Math.sin(this.t * 14)) * 2 : 0;
+    // the fr_x atlas pig (sniffing as it trots, waving while it waits for Brady, pointing at the dig spot)
+    const clip = this.sniff > 0.3 ? 'trufflePig_point_000' : this.sniff > 0 || bob ? 'trufflePig/idle' : 'trufflePig/wave';
+    if (typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'fr_x', clip, this.t, x, y - bob, d, { scale: 1.15 })) {
+      if (this.sniff > 0.3) { ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 8)})`; ctx.font = `14px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▼', x + d * 22, y - 34 + Math.sin(this.t * 8) * 3); }
+      return;
+    }
     Ink.around(ctx, this.x - 10, this.y - 30, this.w + 20, this.h + 34, c => {
       c.save(); c.translate(x, y - bob); c.scale(d, 1);
       c.fillStyle = '#e8a0a8'; for (const lx of [-9, -4, 5, 10]) c.fillRect(lx - 1.5, -7, 3, 7);
@@ -95,6 +139,7 @@ class FrTrufflePig extends Ent {
     if (this.sniff > 0.3) { ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 8)})`; ctx.font = `14px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▼', x + d * 22, y - 30 + Math.sin(this.t * 8) * 3); }
   }
 }
+FrTrufflePig.cfg = { atlas: 'fr_x' };   // so a level with the pig preloads its atlas (Play.extraAtlases)
 Object.assign(ENTITY_TYPES, { frParcel: FrParcel, frHatch: FrHatch, frTrufflePig: FrTrufflePig });
 
 /* ---------------- pieces ---------------- */
@@ -112,6 +157,7 @@ const P = {
     for (let y = y1 - h + 1; y <= y1; y++) { B.set(x, y, T.HARD); tiles.push([x, y]); }
     B.locks.push({ id: o.id, tiles });
     B.fill(x, 0, x, y1 - h, T.HARD);
+    for (let y = 0; y <= y1 - h; y++) B.setHide(x, y, 1);   // the hatch draws this wall as the post office's front
     B.spawn('frHatch', x, y1, { id: o.id, h, icon: o.icon });
     return x;
   }
@@ -484,6 +530,35 @@ Object.assign(Decor, {
   },
   frWeed(ctx, x, y, t) { ctx.strokeStyle = '#3a6a3a'; ctx.lineWidth = 2; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(x - 6 + k * 4, y); ctx.quadraticCurveTo(x - 8 + k * 4 + Math.sin(t + k) * 3, y - 14, x - 4 + k * 4, y - 24); ctx.stroke(); } },
   frShell(ctx, x, y) { ctx.fillStyle = '#f4d8c8'; ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.quadraticCurveTo(x, y - 12, x + 6, y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#d8a890'; ctx.lineWidth = 1; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + k * 2.6, y); ctx.stroke(); } },
+  // 7-3's beach life (ink line, flat toon colours): a rock pool with a starfish and weed, a striped mooring buoy
+  // lying on the sand, a child's bucket and spade
+  frTidePool(ctx, x, y, t) {
+    Ink.around(ctx, x - 26, y - 14, 52, 16, c => {
+      c.fillStyle = '#a89878'; c.beginPath(); c.ellipse(x - 18, y - 3, 8, 6, -0.2, 0, TAU); c.ellipse(x + 19, y - 4, 7, 7, 0.3, 0, TAU); c.fill();
+      c.fillStyle = '#6ab8d8'; c.beginPath(); c.ellipse(x, y - 1, 16, 4, 0, 0, TAU); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.7)'; c.fillRect(x - 9 + Math.sin(t * 2) * 2, y - 3, 8, 1.2);
+      c.fillStyle = '#ff7a4a'; c.beginPath(); TourKit.star(c, x + 6, y - 2, 5, 2.2, 5); c.fill();
+      c.strokeStyle = '#3a8a4a'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 20, y - 6); c.quadraticCurveTo(x - 22 + Math.sin(t) * 2, y - 12, x - 18, y - 16); c.stroke();
+    }, { pad: 4 });
+  },
+  frBuoy(ctx, x, y, t) {
+    // a long orange float lying on its side on the sand, tied to a little stake (never a round red ball)
+    Ink.around(ctx, x - 22, y - 16, 44, 18, c => {
+      c.fillStyle = '#ff8a1a'; rr(c, x - 16, y - 11, 26, 10, 5); c.fill();
+      c.fillStyle = '#fff4e8'; c.fillRect(x - 6, y - 11, 5, 10);
+      c.fillStyle = '#c86010'; c.fillRect(x - 16, y - 4, 26, 2);
+      c.strokeStyle = '#8a7a62'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x + 10, y - 6); c.quadraticCurveTo(x + 15, y - 2, x + 18, y - 9); c.stroke();
+      c.fillStyle = '#6a5040'; c.fillRect(x + 17, y - 14, 3, 14);
+    }, { pad: 4 });
+  },
+  frBucket(ctx, x, y) {
+    Ink.around(ctx, x - 14, y - 22, 28, 24, c => {
+      c.fillStyle = '#2a8ad8'; c.beginPath(); c.moveTo(x - 9, y - 14); c.lineTo(x + 7, y - 14); c.lineTo(x + 5, y); c.lineTo(x - 7, y); c.closePath(); c.fill();
+      c.fillStyle = '#7ac8ff'; c.fillRect(x - 9, y - 14, 16, 2.5);
+      c.strokeStyle = '#ffd23a'; c.lineWidth = 1.6; c.beginPath(); c.arc(x - 1, y - 14, 7, Math.PI, TAU); c.stroke();
+      c.fillStyle = '#ffd23a'; c.save(); c.translate(x + 10, y - 2); c.rotate(0.5); c.fillRect(-1, -16, 2, 12); rr(c, -3.5, -5, 7, 7, 2); c.fill(); c.restore();
+    }, { pad: 4 });
+  },
   frPost(ctx, x, y) { ctx.fillStyle = '#6a5040'; rr(ctx, x - 4, y - 30, 8, 30, 3); ctx.fill(); ctx.fillStyle = '#4a3a2a'; ctx.fillRect(x - 4, y - 12, 8, 3); ctx.fillStyle = '#3a6a3a'; ctx.fillRect(x - 4, y - 4, 8, 4); },
   frStreamer(ctx, x, y, t) { ctx.fillStyle = '#8a6a44'; ctx.fillRect(x - 1, y - 40, 2, 40); for (let k = 0; k < 3; k++) { ctx.fillStyle = ['#c8283a', '#fff4e8', '#2a5ad8'][k]; ctx.beginPath(); ctx.moveTo(x, y - 40 + k * 5); ctx.quadraticCurveTo(x + 14, y - 42 + k * 5 + Math.sin(t * 6 + k) * 3, x + 28, y - 38 + k * 5 + Math.sin(t * 6 + k + 1) * 4); ctx.lineTo(x, y - 36 + k * 5); ctx.fill(); } },
   frWalnut(ctx, x, y, t) { ctx.fillStyle = '#5a4030'; ctx.fillRect(x - 3, y - 30, 6, 30); ctx.fillStyle = '#5a8a3a'; ctx.beginPath(); ctx.arc(x, y - 40, 16, 0, TAU); ctx.arc(x - 12, y - 32, 10, 0, TAU); ctx.arc(x + 12, y - 32, 10, 0, TAU); ctx.fill(); },
@@ -690,7 +765,7 @@ const stamps = {
 /* ---------------- the levels ---------------- */
 const levels = [
   // 7-1 HUB (errand): the plaza and its three rounds
-  { n: 1, name: 'Paris Morning Rounds', arch: 'hub', theme: 'fr_place',
+  { n: 1, name: 'Paris Morning Rounds', mapLabel: 'Paris', arch: 'hub', theme: 'fr_place',
     gimmick: 'Three errands from the plaza: bread from the bakery, a letter over the rooftops, a crêpe from the café',
     hint: 'Each door leads to an errand. Bring all three deliveries back to the post office',
     postcard: 'Bonjour from Paris! Three errands before breakfast: the baker, the roofer and the crêpe café. ♥ C',
@@ -727,7 +802,7 @@ const levels = [
       { id: 'quai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'quai' }
     ] },
   // 7-2 THIEF: the magpie and the stamps, across Provence
-  { n: 2, name: 'Lavender Magpie', arch: 'thief', theme: 'fr_provence',
+  { n: 2, name: 'Lavender Magpie', mapLabel: 'Lavender', arch: 'thief', theme: 'fr_provence',
     gimmick: 'A magpie snatches the passport stamps: chase it through lavender rows, sunflowers and a sleepy farmyard',
     hint: 'Stomp the magpie when you catch up: three catches win the stamps back. Walk softly past sleeping boars',
     postcard: 'Provence smells like a giant bar of lavender soap. A magpie stole my passport stamps! ♥ C',
@@ -759,7 +834,7 @@ const levels = [
       { id: 'mas', gen: 'room', role: 'secret', stamp: 'mas' }
     ] },
   // 7-3 TIDE: the bay of the abbey island (background only), the tide in and out, the bore at the end
-  { n: 3, name: 'Mont-Saint-Michel Tides', arch: 'tide', theme: 'fr_baie',
+  { n: 3, name: 'Mont-Saint-Michel Tides', mapLabel: 'The Bay', arch: 'tide', theme: 'fr_baie',
     gimmick: 'The tide fills and empties the bay: walk the sand at low tide, swim over the sea walls at high tide, then outrun the tidal bore',
     hint: 'Wait for the tide: high water floats you over the sea walls. Quicksand slows you down',
     postcard: 'The tide here comes in as fast as a galloping horse. I watched from the causeway, dry feet. ♥ C',
@@ -770,6 +845,7 @@ const levels = [
       { id: 'baie', gen: 'strip', W: 210, H: 22, tide: { low: 20, high: 9, period: 16, hold: 4 },
         script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           ['pool', { w: 4 }],
           ['enemies', { kind: 'frCrab', n: 2, len: 10 }],
           ['quicksand', { n: 6 }],
@@ -805,7 +881,7 @@ const levels = [
       { id: 'banc', gen: 'room', role: 'secret', theme: 'fr_baie', stamp: 'banc' }
     ] },
   // 7-4 DIG: Périgord truffles, under the oaks
-  { n: 4, name: 'Truffle Hunt', arch: 'dig', theme: 'fr_perigord',
+  { n: 4, name: 'Truffle Hunt', mapLabel: 'Truffles', arch: 'dig', theme: 'fr_perigord',
     gimmick: 'A truffle pig sniffs out where to dig: stomp down through the soil, dodge the moles, find the underground river',
     hint: 'Hold DOWN and press JUMP on soil to dig. The Hard Hat dashes sideways through it',
     postcard: 'A pig with a better nose than any chef found a truffle the size of my fist. ♥ C',
@@ -816,6 +892,7 @@ const levels = [
       { id: 'perigord', gen: 'dig', W: 140, H: 40, surface: 8,
         script: [
           ['gearStand', { item: 'hat' }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           ['trufflePig', { spots: [28, 52, 84] }],
           ['oak', { gold: 'must' }],
           ['pocket', { item: 'power' }],
@@ -833,7 +910,7 @@ const levels = [
       { id: 'grotte', gen: 'room', role: 'secret', stamp: 'grotte' }
     ] },
   // 7-5 LAIR: the château of mirrors and Le Grand Soufflé's ballroom
-  { n: 5, name: 'Château des Glaces', arch: 'lair', theme: 'fr_chateau', boss: 'fr_souffle',
+  { n: 5, name: 'Château des Glaces', mapLabel: 'Château', arch: 'lair', theme: 'fr_chateau', boss: 'fr_souffle',
     gimmick: 'Mirror doors and falling chandeliers lead to the ballroom, where Le Grand Soufflé waits by the great oven',
     hint: 'In the ballroom: jump into each wall mirror from its balcony to aim it at the oven, then lure him into the light',
     postcard: 'The iron tower is back to full size! The Baron flew north, muttering about tulips. ♥ C',
@@ -860,7 +937,7 @@ const levels = [
       { id: 'ballroom', gen: 'arena', role: 'arena', layout: 'ballroom', arenaW: 26, H: 18 }
     ] },
   // 7-6 SCROLL (secret): the Seine quays, the bouquinistes' boxes in time with the music
-  { n: 6, name: 'Seine Chase', arch: 'scroll', secret: true, theme: 'fr_seine',
+  { n: 6, name: 'Seine Chase', mapLabel: 'Seine', arch: 'scroll', secret: true, theme: 'fr_seine',
     gimmick: 'The quay scrolls on: book-box lids snap in time, barges drift through the gaps, pigeons swoop under the bridges',
     hint: 'The green book boxes snap shut on the beat: time your hops',
     postcard: 'Found a secret staircase to the river! The booksellers wave at everyone. ♥ C',
@@ -889,12 +966,12 @@ const levels = [
       { id: 'seineQuai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'seineQuai' }
     ] },
   // 7-7 SKY (secret): balloons over France; one trade-wind balloon flies east (the secret flight to Vietnam)
-  { n: 7, name: 'Montgolfière Skies', arch: 'sky', secret: true, theme: 'fr_ciel',
+  { n: 7, name: 'Montgolfière Skies', mapLabel: 'Balloons', arch: 'sky', secret: true, theme: 'fr_ciel',
     gimmick: 'Hot-air balloons rise while you stand in the basket and sink when you leave; burners roar; a trade wind blows east',
     hint: 'Stand in a basket to rise. A burner\'s hot air lifts you too',
     postcard: 'Up in a balloon basket the whole country looks like a patchwork quilt. ♥ C',
     enemies: [['frPigeon', 2], ['frMacaron', 2]],
-    mapCell: [0, 2], mapFrom: 2,
+    mapCell: [1, 1], mapFrom: 2,
     exits: { main: { to: null }, secret: { to: 'flight:vn', hint: 'One balloon\'s streamers all point east, into the trade wind...' } },
     areas: [
       { id: 'ciel', gen: 'islands', W: 220, H: 30,
@@ -935,7 +1012,7 @@ const levels = [
 Tour.amend('fr', {
   stamps, skins,
   map: { fort: 'chateau', start: [0, 0] },
-  houses: [{ id: 'fr-brocante', kind: 'stand', name: 'La Brocante', keeper: 'hedgehog', stock: ['plane', 'hat', 'magnet', 'globe', 'oneup', 'sundial'], mapCell: [2, 2], mapFrom: 3 }],
+  houses: [{ id: 'fr-brocante', mapLabel: 'Brocante', kind: 'stand', name: 'La Brocante', keeper: 'hedgehog', stock: ['plane', 'hat', 'magnet', 'globe', 'oneup', 'sundial'], mapCell: [2, 2], mapFrom: 3 }],
   levels
 });
 for (const k in P) Tour.pieces['fr.' + k] = P[k];

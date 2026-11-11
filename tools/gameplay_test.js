@@ -209,7 +209,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   const dream = await page.evaluate(() => {
     start('22-1'); clearEnemies(); const g = S(), p = P(); const echo = g.entities.find(e => e.constructor.name === 'W22Echo');
     p.x = echo.home.x + 40; p.y = echo.home.y + echo.h - p.h; p.vy = 0; sim(0.3); const early = echo.on; sim(1.6, { right: true }); const later = echo.on;
-    const B = window.BRADY, L = B.getLevel(22, 2), A = L.areas[0], gate = A.spawns.find(s => s.type === 'gate' && !s.secret);
+    const B = window.BRADY, C22 = T.Tour.countries.w22, mi = C22.levels.findIndex(S => S.mirror || (S.areas || []).some(a => a.mirror)) + 1, L = B.getLevel(22, mi || 2), A = L.areas[0], gate = A.spawns.find(s => s.type === 'gate' && !s.secret);
     return { early, later, mirrored: !!A.mirrored, startRight: L.start.x > A.W * 16, goalLeft: gate.x < A.W * 16 };
   });
   check('World 22: your echo appears behind you, and Mirror Lake runs right to left', !dream.early && dream.later && dream.mirrored && dream.startRight && dream.goalLeft, dream);
@@ -279,7 +279,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   // Bali, Vietnam, Japan and Nepal: each signature item works in its own country
   const sigs4 = await page.evaluate(() => {
     const out = {};
-    for (const [id, sig] of [['9-2', 'surf'], ['10-1', 'noodle'], ['11-1', 'nunchuck'], ['12-2', 'yak']]) {
+    for (const [id, sig] of [['9-1', 'surf'], ['10-1', 'noodle'], ['11-1', 'nunchuck'], ['12-2', 'yak']]) {
       start(id); clearEnemies(); const x0 = P().x; P().collect('sig:' + sig); sim(0.2);
       for (let k = 0; k < 10; k++) sim(0.25, { right: true, actionPressed: k % 2 === 0 });
       const p = P(); out[sig] = { has: !!(p.sig && p.sig.id === sig), moved: Math.round(p.x - x0), alive: !p.dead };

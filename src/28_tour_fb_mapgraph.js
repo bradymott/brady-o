@@ -13,7 +13,7 @@ TourLandscape.ARCH_LABEL = {
   parade: 'PARADE', rail: 'RAIL', dive: 'DIVE', tower: 'TOWER', freefall: 'FREEFALL', fall: 'FREEFALL', flip: 'FLIP', swing: 'SWING',
   race: 'RACE', factory: 'FACTORY', tide: 'TIDE', beat: 'BEAT', thief: 'THIEF', glide: 'GLIDE', doom: 'DOOM', sky: 'SKY', carry: 'CARRY',
   dig: 'DIG', maze: 'MAZE', scroll: 'SCROLL', phase: 'PHASE', fort: 'FORT', hold: 'HOLD', mini: 'MINI', switch: 'SWITCH', hub: 'HUB',
-  ride: 'RIDE', roll: 'ROLL', lamp: 'LAMP', sneak: 'SNEAK', lair: 'BOSS', castle: 'BOSS', arena: 'BOSS', boss: 'BOSS', house: 'SOUVENIRS'
+  ride: 'RIDE', rise: 'RISE', roll: 'ROLL', lamp: 'LAMP', sneak: 'SNEAK', lair: 'BOSS', castle: 'BOSS', arena: 'BOSS', boss: 'BOSS', house: 'SOUVENIRS'
 };
 TourLandscape.label = function (L) { return (L.arch && this.ARCH_LABEL[L.arch]) || this.STYLE[L.style] || 'RUN'; };
 
@@ -212,7 +212,8 @@ const TourPanel = {
         if (T.lighthouse && done) { const E = TourProgress.exitsFound(id); if (E.found < E.total) TourPanelFx.flag(ctx, x - r - 4, y - r, t); }
       }
       ctx.font = `${lh - 1.5}px ${FONT_UI}`; ctx.textAlign = 'center';
-      const lines = TourLandscape.wrap(ctx, isHouse ? (S.H.name || 'Souvenir Stand') : L.name, labelW - 8, K.compact ? 1 : 2);
+      // on a small screen (one line per stop) a level or house may give a short map label (mapLabel) instead of its cut name
+      const lines = TourLandscape.wrap(ctx, isHouse ? ((K.compact && S.H.mapLabel) || S.H.name || 'Souvenir Stand') : ((K.compact && L.mapLabel) || L.name), labelW - 8, K.compact ? 1 : 2);
       let pw = 0; for (const l of lines) pw = Math.max(pw, ctx.measureText(l).width);
       const ly = y + r + 4, type = K.compact ? '' : isHouse ? 'SOUVENIRS' : TourLandscape.label(L);
       if (type) { ctx.font = `bold 10px ${FONT_UI}`; pw = Math.max(pw, ctx.measureText(type).width); }

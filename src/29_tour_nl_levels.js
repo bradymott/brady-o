@@ -285,7 +285,7 @@ const stamps = {
 /* ---------------- the levels ---------------- */
 const levels = [
   // 8-1 SWITCH: the polder's water level
-  { n: 1, name: 'Polder Pumps', arch: 'switch', theme: 'nl_polder',
+  { n: 1, name: 'Polder Pumps', mapLabel: 'Polder', arch: 'switch', theme: 'nl_polder',
     gimmick: 'A valve wheel fills and empties the polder canals: swim across at high water, walk the canal bed at low water',
     hint: 'Turn a valve (THROW) to flood or drain the canals. Every canal bed has a valve, so you can always get out',
     postcard: 'Half of this country is below the sea, and the pumps keep it dry. Very clever pumps. ♥ C',
@@ -316,7 +316,7 @@ const levels = [
       { id: 'gemaal', gen: 'room', role: 'secret', stamp: 'gemaal' }
     ] },
   // 8-2 FACTORY: the flower auction
-  { n: 2, name: 'Flower Auction', arch: 'factory', theme: 'nl_veiling',
+  { n: 2, name: 'Flower Auction', mapLabel: 'Auction', arch: 'factory', theme: 'nl_veiling',
     gimmick: 'Trolleys of tulips ride the belts, the auction clock\'s hand sweeps the floor, crate stacks to climb',
     hint: 'Duck the clock hand or jump it. The Pocket Sundial slows everything down',
     postcard: 'A flower auction with a clock that counts DOWN. Whoever presses first buys the tulips. ♥ C',
@@ -327,6 +327,7 @@ const levels = [
       { id: 'veiling', gen: 'strip', W: 200, H: 20,
         script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
           ['trolleys', { n: 2 }],
           ['enemies', { kind: 'nlBulb', n: 1, len: 8 }],
           ['gearStand', { item: 'sundial' }],
@@ -347,7 +348,7 @@ const levels = [
       { id: 'koelcel', gen: 'room', role: 'secret', stamp: 'koelcel' }
     ] },
   // 8-3 RACE: the bike lane, against a gull on a cargo bike
-  { n: 3, name: 'Bike Lane Rush', arch: 'race', theme: 'nl_rush',
+  { n: 3, name: 'Bike Lane Rush', mapLabel: 'Bike Lane', arch: 'race', theme: 'nl_rush',
     gimmick: 'Race a herring gull on a cargo bike down the bike lane: drawbridges rise and fall, ride the tram roofs',
     hint: 'Beat the gull to the finish for a prize. Wait for the drawbridges to come down',
     postcard: 'A gull on a cargo bike rang its bell at me and then stole my chips. Classic gull. ♥ C',
@@ -378,7 +379,7 @@ const levels = [
       { id: 'brug', gen: 'room', role: 'secret', stamp: 'brug' }
     ] },
   // 8-4 LAMP: the frozen canals at night; the skate hut's thin back wall hides the way to Antarctica
-  { n: 4, name: 'Frozen Canals', arch: 'lamp', theme: 'nl_frozen',
+  { n: 4, name: 'Frozen Canals', mapLabel: 'Ice Canals', arch: 'lamp', theme: 'nl_frozen',
     gimmick: 'Skate the frozen canals by lantern light: thin ice cracks, the light fades, the hot-chocolate stalls relight it',
     hint: 'Your light fades: touch a stall\'s lantern to relight it. Thin ice cracks, keep moving!',
     postcard: 'The canals froze! Everyone is skating and drinking hot chocolate. Me too. ♥ C',
@@ -408,7 +409,7 @@ const levels = [
       { id: 'hut', gen: 'room', role: 'secret', stamp: 'hut' }
     ] },
   // 8-5 LAIR: the cheese market and the weigh house
-  { n: 5, name: 'The Weigh House', arch: 'lair', theme: 'nl_waag', boss: 'nl_cheese',
+  { n: 5, name: 'The Weigh House', mapLabel: 'The Waag', arch: 'lair', theme: 'nl_waag', boss: 'nl_cheese',
     gimmick: 'Cheese sledges on the market ramps, the weighing scales, the cheese chute, then the Cheese King\'s hall',
     hint: 'Run into the Cheese King\'s wheels to kick them back at him! (The bike bell stops a rolling wheel.)',
     postcard: 'The windmill is unfolded and turning again! The Baron fled to Bali. Bring sunscreen. ♥ C',
@@ -434,12 +435,12 @@ const levels = [
       { id: 'waag', gen: 'arena', role: 'arena', layout: 'waag', arenaW: 30, H: 18, roof: false }
     ] },
   // 8-6 SWING (secret): windmill sails and tulip blooms; the wind turns round
-  { n: 6, name: 'Windmill Row', arch: 'swing', secret: true, theme: 'nl_molens',
+  { n: 6, name: 'Windmill Row', mapLabel: 'Windmills', arch: 'swing', secret: true, theme: 'nl_molens',
     gimmick: 'Ride the windmill sails round, bounce on the tulip blooms; then the wind turns and every sail spins the other way',
     hint: 'Hop onto a sail at the top of its turn. The windsock shows which way the wind blows',
     postcard: 'A whole row of windmills, all turning together. Then the wind changed. They did not mind. ♥ C',
     enemies: [['nlBee', 2], ['nlGull', 1]],
-    mapCell: [0, 1], mapFrom: 1,
+    mapCell: [1, 1], mapFrom: 1,
     exits: { main: { to: 'node:8-4' } },
     areas: [
       { id: 'molens', gen: 'islands', W: 200, H: 24,
@@ -467,7 +468,7 @@ for (const k in P) Tour.pieces['nl.' + k] = P[k];
 Tour.amend('nl', {
   stamps, skins,
   map: { fort: 'waag', start: [0, 0] },
-  houses: [{ id: 'nl-winkel', kind: 'stand', name: 'De Winkel', keeper: 'goose', stock: ['fins', 'kazoo', 'magnet', 'sundial', 'oneup', 'wand'], mapCell: [1, 1], mapFrom: 0 }],
+  houses: [{ id: 'nl-winkel', mapLabel: 'Winkel', kind: 'stand', name: 'De Winkel', keeper: 'goose', stock: ['fins', 'kazoo', 'magnet', 'sundial', 'oneup', 'wand'], mapCell: [0, 1], mapFrom: 0 }],
   levels
 });
 })();
