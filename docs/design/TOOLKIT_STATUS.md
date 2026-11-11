@@ -88,7 +88,7 @@ Rules of thumb:
 | gen | Status | Notes |
 |---|---|---|
 | `strip` | tested | v2 options: `W`, `H`, `GY`, `mode: 'run'/'auto'/'castle'`, `ceil`, `bottomKill`, `carry`, `chase` |
-| `layered` | tested | lanes on their own cursors; `sync`; upper lanes are 2-row slabs; **launchers open the lane above** (a hole over every bouncy surface, spring and updraft; `autoOpen: false` to opt out); camera `lanes` |
+| `layered` | tested | lanes on their own cursors; `sync`; upper lanes are 2-row slabs (`laneTile: { roof: 'HARD' }` gives a lane's slab its own tile); **launchers open the lane above** (a hole over every bouncy surface, spring and updraft; `autoOpen: false` to opt out); camera `lanes` |
 | `islands` | tested | sky strip; `bottomKill`; camera `free` (55 %) |
 | `shaft` | tested | `st.y` grows down, `st.shelf(y, holes)`, `st.down(n)`; pieces `ledges`, `shelf`, `ringFall`, `spikeShelf`, `updraft`; `fallCap` 11 t/s, `airSteer` 1.4; camera `shaft` (35 %); river and gate at the bottom |
 | `room` | tested | a stamp; rooms smaller than the screen are padded with rock (min 28 x 14) |
@@ -105,6 +105,7 @@ Rules of thumb:
 | existing `flat gap step stairs blocks floating mover lift fallers spring pillars spikes enemies cp sig lsd oneup star bonus secret arena` | tested | unchanged |
 | `end { exit }` | tested | |
 | `stamp { id, at }` | tested | floor row on the ground |
+| `startStamp { id }` (extra) | tested | the first step of a strip-like area: the stamp replaces the generic 12-tile start pad (its decor and the level-1 hidden block go); its `@` is the start; fixture `gens.startStamp` |
 | `door { to, look, perch, back }` | tested | |
 | `secretDoor { to, look: 'fake'/'curtain'/'painted', back }` | implemented | fake wall with crack + dust tell; waterfall/willow curtain |
 | `trapdoor { to, crate, back, look }` | tested | stomp the crate, press down on the hatch |

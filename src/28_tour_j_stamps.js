@@ -109,4 +109,19 @@ Tour.pieces.stamp = function (st, o) {
   TourStamp.place(st, S, x0, y0, { first: false });
   return x0 + P.W;
 };
+/* the 'startStamp' piece: the first step of a strip-like area (strip, islands, layered) swaps the generic 12-tile start
+   pad for a stamp, so every level opens on its own scenery: { id }. The stamp's floor row sits on the ground; its '@'
+   is where Brady starts (in the level's first area); the cursor carries on after it. */
+Tour.pieces.startStamp = function (st, o) {
+  const S = TourStamp.get(o.id, st.ctx.C && st.ctx.C.id);
+  if (!S) { if (st.ctx.problems) st.ctx.problems.push(`unknown stamp '${o.id}'`); return st.x; }
+  const B = st.B, P = TourStamp.parse(S), W = P.W, band = B.band, inBand = y => !band || (y >= band.y0 && y <= band.y1 + 1);
+  for (let x = 0; x < W; x++) B.clearCol(x, 0, B.H - 1);
+  // what the generic pad left there: its dressing and the level-1 hidden block
+  B.decor = B.decor.filter(d => !(d.x < W * TS && inBand(Math.round(d.y / TS))));
+  for (const k of Object.keys(B.contents)) { const [x, y] = k.split(',').map(Number); if (x < W && inBand(y)) delete B.contents[k]; }
+  if (o.under !== false) st.floor(0, W - 1);
+  TourStamp.place(st, S, 0, st.gy - P.floor, { first: !st.ctx.areaIndex });
+  return Math.max(st.x, W);
+};
 try { Object.assign(window.BRADY_TOUR, { TourStamp, TourPanel, TourPanelFx, TourLandscape }); } catch (e) { /* not in a browser */ }

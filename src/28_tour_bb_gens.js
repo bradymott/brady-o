@@ -222,7 +222,9 @@ TourGens.layered = (ctx, A) => {
   const lx = {}, lgy = {};
   for (const n of names) { lx[n] = 12; lgy[n] = lanes[n]; }
   st.lanes = lanes; st.lx = lx; st.laneY = lgy; st.lane = main;
-  const slab = (x0, x1, gy) => { gy = gy == null ? st.gy : gy; const bd = band[st.lane]; for (let x = x0; x <= x1; x++) for (let y = gy; y <= bd.y1; y++) B.set(x, y, T.GROUND); };
+  // laneTile: { roof: 'HARD' } gives a lane's slab its own tile (rooftops in adobe over a cobbled street)
+  const slabTile = n => (A.laneTile && T[A.laneTile[n]]) || T.GROUND;
+  const slab = (x0, x1, gy) => { gy = gy == null ? st.gy : gy; const bd = band[st.lane], tt = slabTile(st.lane); for (let x = x0; x <= x1; x++) for (let y = gy; y <= bd.y1; y++) B.set(x, y, tt); };
   st.floor = (x0, x1, gy) => slab(x0, x1, gy);
   const use = n => { st.lane = n; st.x = lx[n]; st.gy = lgy[n]; B.band = band[n]; st.sky = n !== names[names.length - 1]; st.gyMin = band[n].y0 + 3; st.gyMax = band[n].y1 - (st.sky ? 1 : 2); };
   const keep = () => { lx[st.lane] = st.x; lgy[st.lane] = st.gy; };
@@ -257,7 +259,7 @@ TourGens.layered = (ctx, A) => {
   if (A.autoOpen !== false) {
     const wells = new Set();
     const laneAbove = y => { let best = null; for (const n of names) if (lanes[n] < y - 1 && (best == null || lanes[n] > lanes[best])) best = n; return best; };
-    const open = (x, y) => { const up = laneAbove(y); if (!up) return; for (const yy of [lanes[up], lanes[up] + 1]) if (SOLID[B.get(x, yy)] && B.get(x, yy) !== T.HARD) { B.set(x, yy, T.EMPTY); wells.add(x + ',' + yy); } };
+    const open = (x, y) => { const up = laneAbove(y); if (!up) return; for (const yy of [lanes[up], lanes[up] + 1]) { const t = B.get(x, yy); if (SOLID[t] && (t !== T.HARD || t === slabTile(up))) { B.set(x, yy, T.EMPTY); wells.add(x + ',' + yy); } } };
     for (let y = 0; y < H; y++) for (let x = 0; x < endX; x++) if (B.surf[y * B.W + x] === SURF.BOUNCE) open(x, y);
     for (const sp of B.springs) for (let dx = -1; dx <= 1; dx++) open(sp[0] + dx, sp[1]);
     for (const z of B.zones) if (z.fy < 0) for (let x = Math.floor(z.x / TS); x < Math.ceil((z.x + z.w) / TS); x++) open(x, Math.floor((z.y + z.h) / TS));
