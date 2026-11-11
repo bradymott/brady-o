@@ -1,6 +1,7 @@
 /* ============================================================
    Player — Brady
    ============================================================ */
+const GROW_T = 0.36;   // the grow / shrink after a power change (s)
 class Player {
   constructor(g, x, y, power) {
     this.g = g;
@@ -46,7 +47,7 @@ class Player {
       }
       const ha = hairAnchor(this.cx, this.y + this.h, this.facing, n === 0, null);
       this.hair = makeHair(n === 0 ? BRADY_DIM.small.hairN : BRADY_DIM.big.hairN, ha.x, ha.y);
-      if (!quiet) { this.growT = 0.6; this.growFrom = was; }
+      if (!quiet) { this.growT = GROW_T; this.growFrom = was; if (this.g.burst) this.g.burst(this.cx, this.y + this.h * 0.4, 10, '#fff2c0', 'spark'); }
     }
     if (!quiet) Sound.play(n > was ? 'powerup' : 'powerdown');
   }
@@ -235,7 +236,7 @@ class Player {
       if (this.deathT > 2.4) g.onPlayerDead();
       return;
     }
-    if (this.growT > 0) { this.growT -= dt; this.updateHair(dt); return; }
+    if (this.growT > 0) this.growT = Math.max(0, this.growT - dt);   // the grow plays while he keeps moving (no freeze)
     if (this.state === 'portal') { this.portalT += dt; this.updateHair(dt); return; }
     if (this.state === 'clear') { this.updateClear(dt); return; }
 
@@ -519,6 +520,16 @@ class Player {
     stepHair(this.hair, ha.x, ha.y, this.facing, D.hairL, dt, wind);
   }
 
+  /* the grow (or shrink) after a power change: the new form, scaled from the old height to its own with an ease and a
+     little sideways squash, about his feet. Monotonic in height, never a strobe between the two forms. */
+  growScale() {
+    if (!(this.growT > 0)) return { sx: 1, sy: 1 };
+    const k = 1 - this.growT / GROW_T, e = 1 - Math.pow(1 - k, 3);
+    const from = this.growFrom === 0 ? PLAYER_DIM.small.h : PLAYER_DIM.big.h, to = this.small ? PLAYER_DIM.small.h : PLAYER_DIM.big.h;
+    const r = from / to;
+    return { sx: (1 + (Math.sqrt(r) - 1) * (1 - e)) * (1 + 0.07 * Math.sin(k * Math.PI)), sy: r + (1 - r) * e };
+  }
+
   draw(ctx, t) {
     if (this.state === 'portal') {
       const k = clamp(this.portalT / 0.4, 0, 1);
@@ -527,8 +538,7 @@ class Player {
       ctx.restore(); return;
     }
     if (this.invuln > 0 && !this.dead && Math.floor(this.invuln * 16) % 2 === 0) return;
-    let small = this.small;
-    if (this.growT > 0) small = Math.floor(this.growT * 14) % 2 === 0 ? (this.growFrom === 0) : (this.power === 0);
+    const small = this.small, gs = this.growScale();
     const o = { x: this.cx, y: this.y + this.h, facing: this.facing, small, power: this.power, anim: this.anim, hair: this.hair, look: Save.data.look, star: this.star > 0, time: t, fly: this.fly > 0 || this.lsdT > 0, floaty: this.floaty > 0 || (this.power === 2 && this.g.level && this.g.level.tour && !this.inWater) };
     if (this.lsdT > 0 && this.lsdT < 2 && Math.floor(this.lsdT * 10) % 2 === 0) o.alpha = 0.45;
     if (this.g.level && this.g.level.tour) { o.trip = this.lsdT > 0; o.held = 'joint'; }
@@ -555,7 +565,7 @@ class Player {
     if (small !== this.small) o.hair = null;
     PlayerFx.under(ctx, this, t);
     // drawn a little larger than the hitbox (ART_SCALE) so he reads on a phone; the physics box is unchanged
-    Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16', rim: '#e7e3d7' });
+    Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady * gs.sx, ART_SCALE.brady * gs.sy); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16', rim: '#e7e3d7' });
     PlayerFx.over(ctx, this, t);
   }
   get light() { return { r: this.g.area.water ? 150 : 170, c: 'rgba(255,240,220,' }; }
