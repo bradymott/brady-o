@@ -253,9 +253,11 @@ const Validator = {
        by depth for shafts); 4 the archetype's gear from a gear stand before the twist beat (the first half of the main
        area), and any gear a lock or crawlway needs from a stand in the same level; 5 one premium item (L, S, sundial,
        1UP, magnet) in a secret or risky spot (another area, a hidden block, or next to a hidden / risky postcard);
-     6 boss levels: two opportunities in the lead-in before the arena. */
+     6 boss levels: two opportunities in the lead-in before the arena; 8 jump powers: at most 2, none in a boss
+     area or a CARRY area. */
   ARCH_GEAR: { dive: 'fins', tide: 'fins', dig: 'hat', lamp: 'hat', sneak: 'box', glide: 'plane', fall: 'plane', beat: 'kazoo' },
   PREMIUM: { lsd: true, star: true, sundial: true, oneup: true, magnet: true },
+  JUMP: { socks: true, cake: true, beans: true },
   budget(level) {
     const errors = [], warnings = [];
     if (!level.v2) return { ok: true, errors, warnings, skipped: true };
@@ -323,6 +325,17 @@ const Validator = {
       }
       if (lead < 2) errors.push(`only ${lead} power-up opportunities in the boss lead-in (needs 2, rule 6)`);
     }
+    // rule 8: the jump powers (spring socks, pound cake, magic beans) are bonuses: at most two per level, never inside a
+    // boss arena (or a boss's area), never in a CARRY area (they would skip the carry's lower jumps); the search above
+    // never uses them, so every exit and postcard is already reachable without one
+    let jumps = 0;
+    level.areas.forEach(a => {
+      const here = items(a).filter(k => this.JUMP[a.contents[k]]).length + a.spawns.filter(s => s.type === 'gearStand' && this.JUMP[s.item]).length;
+      jumps += here;
+      if (here && (arena(a) || a.spawns.some(s => s.type === 'boss'))) errors.push(`a jump power inside a boss area '${a.aid || a.idx}' (rule 8): put it in the lead-in`);
+      if (here && a.carry) errors.push(`a jump power in the CARRY area '${a.aid || a.idx}' (rule 8)`);
+    });
+    if (jumps > 2) errors.push(`${jumps} jump powers in one level (max 2, rule 8)`);
     return { ok: !errors.length, errors, warnings };
   },
 

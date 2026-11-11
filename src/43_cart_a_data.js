@@ -118,20 +118,45 @@ const CART_ITEMS = {
   glow: { name: 'GLOW RUSH', desc: 'A bundle of glow sticks: big speed boost.', col: '#4affd2' },
   water: { name: 'WATER BOTTLE', desc: 'Shake off any effect, get a vibe back and a small boost.', col: '#5ac8ff' },
   tumble: { name: 'TUMBLEWEED', desc: 'Drop it behind you. It rolls with the wind.', col: '#c8995a' },
-  devil: { name: 'DUST DEVIL', desc: 'A whirlwind that zigzags up the course spinning cars.', col: '#e8d2a8' },
+  devil: { name: 'DUST DEVIL', desc: 'A whirlwind that races up the course, hunts the cars ahead and whirls them into the air.', col: '#e8c890' },
   potty: { name: 'PORTA-POTTY', desc: 'Parachutes a porta-potty onto the course ahead.', col: '#5a9aff' },
-  foam: { name: 'FOAM PARTY', desc: 'Foams everyone close by. Slippery and slow.', col: '#f4f8ff' },
+  foam: { name: 'FOAM PARTY', desc: 'A foam cannon erupts around you: every car close by gets buried in foam, slow and slippery, and a foam pool is left behind.', col: '#f4f8ff' },
   shield: { name: 'DISCO SHIELD', desc: 'A mirror-ball bubble that blocks the next hit.', col: '#ff9af0' },
-  whistle: { name: 'RANGER WHISTLE', desc: '"SLOW DOWN!" Every car ahead of you brakes.', col: '#ffd84a' }
+  whistle: { name: 'RANGER WHISTLE', desc: '"SLOW DOWN!" Every car ahead of you brakes.', col: '#ffd84a' },
+  // sky drops (effects in 43_cart_da_items.js)
+  skymail: { name: 'SKY MAIL', desc: 'Three missiles drop out of the sky onto the cars ahead. Swerve when the red target locks!', col: '#ff5a3a' },
+  bombs: { name: 'BOMBS AWAY', desc: 'A line of bombs rains down on the road ahead. Watch the shadows grow; the craters burn for a while.', col: '#ffb02a' },
+  ducks: { name: 'DUCK DOWNPOUR', desc: 'It rains rubber ducks! Dozens litter the track ahead: bump one and it squeaks, scatters and slows you down.', col: '#ffe24a' }
 };
+// the gift-box pool shown spinning in the roulette (car signatures and arena powers join it at roll time)
 const CART_ITEM_IDS = Object.keys(CART_ITEMS);
-// odds by race position bucket: 1st, 2nd–3rd, 4th–5th, 6th–8th (battle uses the middle row)
+// odds by race position bucket: 1st, 2nd–3rd, 4th–5th, 6th–8th (battle uses the middle row). The sky drops are
+// the big attacks: almost never for the leader, common at the back.
 const CART_ITEM_ODDS = [
-  { tumble: 4, devil: 1, potty: 1, foam: 2, shield: 3, water: 1, glow: 1, whistle: 0 },
-  { tumble: 3, devil: 3, potty: 2, foam: 2, shield: 2, water: 1, glow: 2, whistle: 1 },
-  { tumble: 1, devil: 3, potty: 3, foam: 2, shield: 1, water: 2, glow: 3, whistle: 2 },
-  { tumble: 0, devil: 2, potty: 2, foam: 1, shield: 1, water: 2, glow: 5, whistle: 4 }
+  { tumble: 4, devil: 1, potty: 1, foam: 2, shield: 3, water: 1, glow: 1, whistle: 0, skymail: 0, bombs: 0, ducks: 1 },
+  { tumble: 3, devil: 2, potty: 2, foam: 2, shield: 2, water: 1, glow: 2, whistle: 1, skymail: 1, bombs: 1, ducks: 2 },
+  { tumble: 1, devil: 2, potty: 2, foam: 2, shield: 1, water: 2, glow: 3, whistle: 1, skymail: 2, bombs: 2, ducks: 2 },
+  { tumble: 0, devil: 2, potty: 1, foam: 1, shield: 1, water: 2, glow: 4, whistle: 2, skymail: 3, bombs: 2, ducks: 2 }
 ];
+/* ---------------- signature specials: one per car, rolled only by that car (effects in 43_cart_da_items.js) ----------------
+   Not only attacks and boosts: three of them fly (dragon, whale, jelly), the snail bounces, the shark swims under the
+   sand, the pyramid teleports, the fish is a shield, the octopus throws. Odds by the same buckets as CART_ITEM_ODDS. */
+const CART_SPECIALS = {
+  heart: { id: 'throb', name: 'HEART THROB', desc: 'Three giant heartbeats. Every rival in range is lovestruck: slow, dreamy and drifting toward you.', col: '#ff4f8a' },
+  fish: { id: 'decoys', name: 'MIRROR SCHOOL', desc: 'Three mirror-ball decoy fish circle your car. They dazzle anyone who touches them and swallow incoming shots.', col: '#bfe0ff' },
+  octo: { id: 'toss', name: 'TENTACLE TOSS', desc: 'Two copper arms grab the closest rivals ahead and fling them over your car to land behind you.', col: '#ff9a4a' },
+  dragon: { id: 'glide', name: 'DRAGON FLIGHT', desc: 'Wings out! Fly over the pack for five seconds and scorch anyone below.', col: '#7aff5a' },
+  duck: { id: 'surf', name: 'BUBBLE BATH SURF', desc: 'Surf a wave of bath foam: a speed surge that bowls rivals aside and leaves a foamy trail.', col: '#9af0ff' },
+  pyramid: { id: 'warp', name: 'PRISM WARP', desc: 'Lift into a beam of light and reappear 45 m up the road. A laser trap stays where you left.', col: '#3aff8a' },
+  cupcake: { id: 'frosting', name: 'FROSTING FLOOD', desc: 'Pipes a river of sticky frosting across the road ahead. Drive in and you are stuck. Hop it!', col: '#ff8ac8' },
+  galleon: { id: 'wave', name: 'ROGUE WAVE', desc: 'A huge wave rolls up the course ahead and wipes out every car it catches. Surf behind it.', col: '#4ab0ff' },
+  snail: { id: 'shell', name: 'SHELL BOUNCE', desc: 'Into the shell! Bounce up the road in giant hops, untouchable, splashing slime on every landing.', col: '#b07aff' },
+  jelly: { id: 'hover', name: 'STORM HOVER', desc: 'Float above the road for five seconds and rain lightning on every car that passes below.', col: '#5af2ff' },
+  shark: { id: 'dive', name: 'SAND DIVE', desc: 'Dive under the playa: only the fin shows and nothing can touch you. Burst out and launch anyone nearby.', col: '#38c8ff' },
+  whale: { id: 'breach', name: 'SKY BREACH', desc: 'The blowhole fires the whole bus into the sky. Swim over the pack, then belly-flop with a tidal splash.', col: '#4ab0ff' }
+};
+for (const car in CART_SPECIALS) { const P = CART_SPECIALS[car]; CART_ITEMS[P.id] = { name: P.name, desc: P.desc, col: P.col, car }; }
+const CART_SPECIAL_ODDS = [0.05, 0.11, 0.15, 0.19];   // chance a gift box holds the car's own special, by bucket
 
 /* ---------------- Grand Prix ---------------- */
 const CART_POINTS = [15, 12, 10, 8, 6, 4, 2, 1];
@@ -203,12 +228,15 @@ function cartOrdinal(n) { return n + (n === 1 ? 'ST' : n === 2 ? 'ND' : n === 3 
 const cartWrap = a => a - TAU * Math.floor((a + Math.PI) / TAU);
 // a small seeded shuffle
 function cartShuffle(arr, rng) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr; }
-function cartRollItem(rank, n, rng, arenaId) {
+function cartRollItem(rank, n, rng, arenaId, carId) {
+  const b = n <= 1 ? 1 : rank <= 1 ? 0 : rank <= 3 ? 1 : rank <= 5 ? 2 : 3, O = CART_ITEM_ODDS[b];
+  // the car's own signature special (rarer for the leader)
+  const SP = carId && CART_SPECIALS[carId];
+  if (SP && rng() < CART_SPECIAL_ODDS[b]) return SP.id;
   // in an arena with its own powers, almost half the boxes hold one; in races, mastered arena powers join the pool
   const A = arenaId ? cartArena(arenaId) : null;
   if (A && A.powers && A.powers.length && rng() < 0.45) return A.powers[Math.floor(rng() * A.powers.length)];
   if (!arenaId) { const M = cartMasteredItems(); if (M.length && rng() < 0.22) return M[Math.floor(rng() * M.length)]; }
-  const b = n <= 1 ? 1 : rank <= 1 ? 0 : rank <= 3 ? 1 : rank <= 5 ? 2 : 3, O = CART_ITEM_ODDS[b];
   let tot = 0; for (const k in O) tot += O[k];
   let r = rng() * tot; for (const k in O) { r -= O[k]; if (r <= 0) return k; }
   return 'glow';

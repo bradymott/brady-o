@@ -1,13 +1,14 @@
 /* ============================================================
-   BALI, INDONESIA (world 9)
-   9-1 Kuta Surf Break         auto   a gecko lends a surfboard: ride the rolling swells, launch off the crests, hop the reefs
-   9-2 Kite Festival           run    ride giant fish kites drifting on the wind over flooded rice terraces; duck parades
-   9-3 Batur Sunrise Trek      night  climb the volcano before dawn: lava bombs land on glowing rings, hot rocks, civets
-                                      in the dark; the sky turns to sunrise as Brady climbs
-   9-4 Manta Point Night Dive  swim   a black reef that glows: plankton lights up as Brady swims, anglerfish dangle fake
-                                      coins, morays lurk, a manta's slipstream sweeps him along
-   9-5 Monkey Forest Ruins     castle macaques snatch coins, stinky durians, gamelan-gong doors; boss Boss Kera, the selfie macaque
-   Temples, offerings and ceremonies appear only as respectful background; the gags are food, animals and objects.
+   INDONESIA: BALI AND BEYOND (world 9). This file holds the look,
+   the cast, the objects, the signature item (the surfboard), the
+   boss and the music. The levels (v2 format, LEVEL_OVERHAUL.md §2)
+   are in 29_tour_id_levels.js:
+   9-1 Kuta Surf        RIDE    9-5 Monkey Forest       LAIR (Boss Kera in the durian grove)
+   9-2 Kite Festival    GLIDE   9-6 Orangutan Canopy    SWING (secret)
+   9-3 Batur Eruption   DOOM    9-7 Blue Fire Rails     RAIL (secret)
+   9-4 Manta Night Dive LAMP (in the water)
+   Temples, offerings and ceremonies never appear in play; the gags are food, animals and objects. The monkey forest
+   is a generic overgrown garden wall, not a temple.
    ============================================================ */
 (() => {
 const COL = { a: '#ff5a8a', b: '#14b4ac', c: '#ffc23a' };
@@ -180,6 +181,40 @@ const painters = {
       ctx.fillStyle = shade(L.color, 0.18); for (let y = 20; y < len; y += 22) { ctx.beginPath(); ctx.ellipse(x + Math.sin(y * 0.05 + x) * 5 + 5, y, 6, 2.5, 0.5, 0, TAU); ctx.fill(); }
     }
     ctx.fillStyle = L.color; for (let x = -20; x < BG_W + 20; x += 24 + rng() * 20) { ctx.beginPath(); ctx.arc(x, -6, 26 + rng() * 14, 0, Math.PI); ctx.fill(); }
+  },
+  // the Borneo canopy (9-6 fallback): tall pale trunks with buttress roots, bird's-nest ferns, lianas looping between
+  idTrunks(ctx, L, rng, H) {
+    const b = L.base;
+    for (let x = 30; x < BG_W; x += 120 + rng() * 90) {
+      const w = 22 + rng() * 14;
+      wrapDraw(x - 40, 80 + w, xx => {
+        const px = xx + 40;
+        ctx.fillStyle = shade(L.color, rng() * 0.1); ctx.fillRect(px - w / 2, 0, w, H);
+        ctx.beginPath(); ctx.moveTo(px - w / 2, b - 40); ctx.quadraticCurveTo(px - w / 2 - 6, b - 8, px - w / 2 - 34, H); ctx.lineTo(px + w / 2 + 34, H); ctx.quadraticCurveTo(px + w / 2 + 6, b - 8, px + w / 2, b - 40); ctx.fill();
+        ctx.fillStyle = 'rgba(60,110,50,0.75)'; ctx.beginPath(); ctx.ellipse(px + w / 2, b - 150 - rng() * 60, 18, 8, -0.3, 0, TAU); ctx.fill();
+      });
+    }
+    ctx.strokeStyle = rgba(shade(L.color, -0.35), 0.6); ctx.lineWidth = 2;
+    for (let x = 0; x < BG_W; x += 160 + rng() * 80) { ctx.beginPath(); ctx.moveTo(x, 40); ctx.quadraticCurveTo(x + 60, 140 + rng() * 60, x + 140, 30); ctx.stroke(); }
+  },
+  // the sulfur mine's crater walls at night (9-7 fallback): steep slate-blue cliffs streaked with sulfur yellow
+  idIjenWalls(ctx, L, rng, H) {
+    const b = L.base;
+    ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(0, H);
+    for (let x = 0; x <= BG_W; x += 12) ctx.lineTo(x, b - 120 - 50 * Math.sin(x * 0.006 + 1) - 20 * Math.sin(x * 0.027));
+    ctx.lineTo(BG_W, H); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(230,210,80,0.35)'; ctx.lineWidth = 3;
+    for (let i = 0; i < 18; i++) { const x = rng() * BG_W; ctx.beginPath(); ctx.moveTo(x, b - 110); ctx.lineTo(x + (rng() - 0.5) * 20, b + 20); ctx.stroke(); }
+    ctx.fillStyle = '#3ac8c0'; ctx.fillRect(0, b + 10, BG_W, 8);
+  },
+  // the mine itself (9-7 fallback): heaps of yellow sulfur blocks and clay pipes
+  idSulfurHeaps(ctx, L, rng, H) {
+    const b = L.base;
+    for (let x = 0; x < BG_W; x += 70 + rng() * 60) {
+      const w = 50 + rng() * 40, h = 20 + rng() * 30;
+      wrapDraw(x, w, xx => { ctx.fillStyle = '#c8b030'; ctx.beginPath(); ctx.moveTo(xx, b + 4); ctx.lineTo(xx + w * 0.3, b - h); ctx.lineTo(xx + w * 0.7, b - h + 6); ctx.lineTo(xx + w, b + 4); ctx.fill(); ctx.fillStyle = '#e8d84a'; ctx.fillRect(xx + w * 0.3, b - h, w * 0.3, 4); });
+    }
+    ctx.fillStyle = L.color; ctx.fillRect(0, b, BG_W, H - b);
   }
 };
 const dyn = {
@@ -337,7 +372,7 @@ const themes = {
     hard: reefRock, decor: ['idCoral', 'idAnemone', 'idCoral']
   }),
   id_ruins: Object.assign({}, base, {
-    name: 'Monkey Forest Ruins', music: 'tour_id', particles: 'leaves',
+    name: 'Monkey Forest', music: 'tour_id', particles: 'leaves',
     sky: ['#2a6a52', '#8acaa8', '#eaf8e0'], horizonGlow: '#e8ffd0', rays: '#fff4c0',
     celestial: { type: 'none' }, stars: 0,
     layers: [
@@ -347,6 +382,33 @@ const themes = {
     ],
     fog: '#d0f0d0', ground: mossStone, semi: { style: 'mossy', c1: '#7a6a4a', c2: '#4a3a24' },
     decor: ['idFern', 'idMossRock', 'idBanana', 'idFern']
+  }),
+  // 9-6: the Borneo rainforest canopy (atlas id_rimba: L0 far forest, L1 giant trunks, L2 the canopy edge)
+  id_rimba: Object.assign({}, base, {
+    name: 'Orangutan Canopy', music: 'tour_id', particles: 'leaves',
+    sky: ['#3a8a6a', '#a8dcc0', '#f0fff0'], horizonGlow: '#f0fff0', rays: '#fffbe0',
+    celestial: { type: 'none' }, stars: 0,
+    layers: [
+      { kind: 'idJungle', color: '#5e9272', base: 260, f: 0.04, blur: true },
+      { kind: 'idTrunks', color: '#b8b098', base: 330, f: 0.12 },
+      { kind: 'idVines', color: '#224e2a', base: 0, f: 0.22 }
+    ],
+    fog: '#e0f8e8', ground: { style: 'grass', cap: '#5a9a3a', capHi: '#9ad86a', dirt: '#4e3a28', dirt2: '#2e2218', rock: '#6a5a44' },
+    semi: { style: 'mossy', c1: '#7a5a3a', c2: '#4a3420' },
+    decor: ['idFern', 'idBanana', 'idFern', 'idMossRock']
+  }),
+  // 9-7: the blue-fire sulfur mine in the crater at night (atlas id_ijen: L0 crater walls, L1 the mine)
+  id_ijen: Object.assign({}, base, {
+    name: 'Blue Fire Rails', music: 'tour_id_dawn', particles: 'embers',
+    sky: ['#060c24', '#0e1e44', '#1c2c5a'], horizonGlow: '#2a4a8a', celestial: { type: 'none' }, stars: 60,
+    layers: [
+      { kind: 'idIjenWalls', color: '#2a3454', base: 280, f: 0.04 },
+      { kind: 'idSulfurHeaps', color: '#3a3a44', base: 340, f: 0.14 }
+    ],
+    fog: '#1a2a5a', darkness: 0.35,
+    ground: { style: 'earth', cap: '#e8d040', capHi: '#fff07a', dirt: '#5a5a62', dirt2: '#3a3a44', rock: '#6a6a74' },
+    hard: { c1: '#5a5a66', c2: '#2a2a34' }, semi: { style: 'plank', c1: '#7a5a3a', c2: '#4a3020' },
+    decor: ['idSulfurPile', 'idLavaRock', 'idSulfurPile']
   })
 };
 
@@ -625,7 +687,89 @@ const lionfishArt = (ctx, e, x, y, m) => {
   ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(7, -2, 1.6, 0, TAU); ctx.fill();
   ctx.restore();
 };
+/* ---- the overhaul cast (LEVEL_OVERHAUL.md §4.3): drawn from the 'id_x' atlas (tools/blender/sprites/id_extras.py),
+   with procedural fallbacks that carry the ink line ---- */
+const ID_X = 'id_x';
+// a behaviour's state names mapped onto the atlas poses
+function modal(cls, map) {
+  const M = class extends cls {
+    paint(ctx, x, y, mode) { return super.paint(ctx, x, y, map[mode] || mode); }
+    get artMode() { const m = super.artMode; return map[m] || m; }
+  };
+  M.cfg = cls.cfg; return M;
+}
+// the long-tailed macaque in a pair of stolen sunglasses (itemThief): arms out to grab, then it runs off laughing
+const macaqueArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.45 : 1);
+  const run = m === 'flee' || m === 'leave' ? Math.sin((t || 0) * 26) : m === 'walk' ? Math.sin((t || 0) * 12) * 0.6 : 0;
+  ctx.strokeStyle = '#7a6a58'; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-8, -10); ctx.bezierCurveTo(-24, -8, -28, -30 + Math.sin((t || 0) * 3) * 4, -18, -34); ctx.stroke();
+  for (const s of [-1, 1]) { ctx.strokeStyle = '#7a6a58'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(s * 4, -8); ctx.lineTo(s * 5 + run * 4 * s, 0); ctx.stroke(); }
+  ctx.fillStyle = '#9a8a76'; ctx.beginPath(); ctx.ellipse(0, -14, 10, 9, -0.2, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#cdbda4'; ctx.beginPath(); ctx.ellipse(3, -12, 6, 6, 0, 0, TAU); ctx.fill();
+  const reach = m === 'grab' ? 1 : 0;
+  ctx.strokeStyle = '#7a6a58'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(4, -18); ctx.lineTo(8 + reach * 10, -14 - reach * 8 + run * 3); ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.fillStyle = '#9a8a76'; ctx.beginPath(); ctx.arc(6, -27, 8.5, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#f2b4a2'; ctx.beginPath(); ctx.ellipse(9, -26, 5.5, 5, 0, 0, TAU); ctx.fill();
+  if (m === 'ko' || m === 'stun') { ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.4; for (const ex of [7, 12]) { ctx.beginPath(); ctx.moveTo(ex - 2, -30); ctx.lineTo(ex + 2, -26); ctx.moveTo(ex + 2, -30); ctx.lineTo(ex - 2, -26); ctx.stroke(); } }
+  else { ctx.fillStyle = '#16121e'; rr(ctx, 3, -31, 13, 5, 2); ctx.fill(); ctx.fillStyle = 'rgba(140,210,255,0.8)'; ctx.fillRect(5, -30, 3, 1.4); ctx.fillRect(11, -30, 3, 1.4); }
+  ctx.strokeStyle = '#3a1a1a'; ctx.lineWidth = 1.2; ctx.beginPath(); if (m === 'flee' || m === 'leave' || m === 'grab') ctx.arc(10, -23, 2.5, 0.1, Math.PI - 0.1); else { ctx.moveTo(8, -22); ctx.lineTo(12, -22); } ctx.stroke();
+  ctx.restore();
+};
+// the tokay gecko (wallCrawl): blue with orange spots, belly to the surface; the behaviour turns it onto walls and ceilings
+const tokayArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.45 : 1);
+  const w = Math.sin((t || 0) * 14) * (m === 'stun' || m === 'ko' ? 0 : 1);
+  ctx.strokeStyle = '#5a7ab8'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-8, -5); ctx.quadraticCurveTo(-18, -4 + w * 2, -22, -2); ctx.stroke();
+  ctx.lineWidth = 2.5; for (const [lx, s] of [[-5, 1], [6, -1]]) { ctx.beginPath(); ctx.moveTo(lx, -4); ctx.lineTo(lx + s * w * 3 - 3, 0); ctx.moveTo(lx, -4); ctx.lineTo(lx - s * w * 3 + 3, 0); ctx.stroke(); } ctx.lineCap = 'butt';
+  ctx.fillStyle = '#6a8ad0'; ctx.beginPath(); ctx.ellipse(0, -6, 10, 5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ff8a3a'; for (const [dx, dy] of [[-5, -7], [0, -5], [4, -8], [-2, -9]]) { ctx.beginPath(); ctx.arc(dx, dy, 1.5, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#6a8ad0'; ctx.beginPath(); ctx.ellipse(11, -7, 5.5, 4.5, 0, 0, TAU); ctx.fill();
+  if (m !== 'ko') { ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(13, -9, 2.2, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.fillRect(12.6, -10.6, 0.9, 3.2); }
+  ctx.restore();
+};
+// the rafflesia (inhaleBlast): a giant red five-petal flower with cream warts and a deep well in the middle
+const rafflesiaArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); if (m === 'flat') ctx.scale(1.2, 0.45);
+  const open = m === 'inhale' ? 1.15 : m === 'blast' ? 0.9 : 1;
+  for (let k = 0; k < 5; k++) {
+    const a = -Math.PI / 2 + (k - 2) * 0.62;
+    ctx.save(); ctx.translate(0, -8); ctx.rotate(a + Math.PI / 2); ctx.scale(open, 1);
+    ctx.fillStyle = '#c8302a'; ctx.beginPath(); ctx.ellipse(0, -12, 9, 12, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#f4e0c0'; for (const [dx, dy] of [[-3, -14], [3, -10], [0, -18], [-4, -8]]) { ctx.beginPath(); ctx.arc(dx, dy, 1.6, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+  ctx.fillStyle = '#5a1a1a'; ctx.beginPath(); ctx.ellipse(0, -10, 8 * open, 5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#e8d8b0'; ctx.beginPath(); ctx.ellipse(0, -12, 8 * open, 2, 0, Math.PI, TAU); ctx.fill();
+  if (m !== 'ko' && m !== 'flat') K.eyes(ctx, 0, -22, e.dir || 1, 3.2, 2, m === 'inhale');
+  ctx.restore();
+};
+// the rhinoceros hornbill (hoverDart flyer): black, a white tail band, a big yellow beak and an orange casque
+const hornbillArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  const flap = m === 'swoop' ? -0.6 : Math.sin((t || 0) * 10) * 0.7;
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-26, -4); ctx.lineTo(-26, 6); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#1a1a22'; ctx.fillRect(-26, -1, 5, 4);
+  ctx.fillStyle = '#1a1a22'; ctx.save(); ctx.rotate(flap * 0.6); ctx.beginPath(); ctx.ellipse(-2, -8, 15, 6, -0.5, 0, TAU); ctx.fill(); ctx.restore();
+  ctx.beginPath(); ctx.ellipse(0, 0, 13, 8, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#f4f0e6'; ctx.beginPath(); ctx.ellipse(2, 4, 8, 3.5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#1a1a22'; ctx.beginPath(); ctx.arc(12, -4, 6, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(15, -6); ctx.quadraticCurveTo(28, -6, 32, m === 'swoop' ? 2 : 0); ctx.quadraticCurveTo(24, -1, 15, -1); ctx.fill();
+  ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.moveTo(15, -8); ctx.quadraticCurveTo(24, -14, 28, -8); ctx.lineTo(16, -6); ctx.fill();
+  if (m !== 'ko') { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(13, -5, 2, 0, TAU); ctx.fill(); ctx.fillStyle = '#c82a2a'; ctx.beginPath(); ctx.arc(13.4, -5, 1, 0, TAU); ctx.fill(); }
+  ctx.restore();
+};
+const IdMacaque = modal(TourEnemy.make({ w: 22, h: 28, speed: 1.3, behavior: 'itemThief', flee: 8, atlas: ID_X, sprite: 'macaque', art: macaqueArt, burst: '#9a8a76' }), { leave: 'flee', approach: 'walk' });
+const IdTokay = modal(TourEnemy.make({ w: 26, h: 12, speed: 1.4, behavior: 'wallCrawl', atlas: ID_X, sprite: 'gecko', art: tokayArt, burst: '#6a8ad0', edgeTurn: true }), { climb: 'crawl', ceil: 'crawl', drop: 'crawl', walk: 'crawl' });
+const IdRafflesia = modal(TourEnemy.make({ w: 34, h: 24, speed: 0, behavior: 'inhaleBlast', range: 5, atlas: ID_X, sprite: 'rafflesia', art: rafflesiaArt, burst: '#c8302a' }), { tell: 'inhale', gasp: 'stun', walk: 'idle' });
+const IdHornbill = modal(TourFlyer.make({ w: 34, h: 18, speed: 1.0, range: 7, behavior: 'hoverDart', atlas: ID_X, sprite: 'hornbill', art: hornbillArt, burst: '#1a1a22' }), { hover: 'fly', aim: 'fly', dart: 'swoop', recover: 'stun', return: 'fly' });
 const enemies = {
+  // the macaque that snatches Brady's power-up (the headline power): dodge the grab, hit it while it runs to get it back
+  idMacaque: { cls: IdMacaque, place: 'walk' },
+  // the tokay gecko that runs up walls and over ceilings and drops on Brady (bump the ceiling under it)
+  idTokay: { cls: IdTokay, place: 'walk' },
+  // the rafflesia: puffs its cheeks, sucks Brady in, blasts a stink cloud, then gasps (stomp it then)
+  idRafflesia: { cls: IdRafflesia, place: 'walk' },
+  // the hornbill: hovers, glints, darts straight at Brady, then sits low to recover (stomp it then)
+  idHornbill: { cls: IdHornbill, place: 'fly' },
   idFlyfish: { cls: TourLeaper.make({ w: 22, h: 12, jumpV: 14.5, drift: 2.6, every: 1.6, art: flyfishArt, splash: '#bff4ff', stompable: true }), place: 'here' },
   idUrchin: { cls: TourEnemy.make({ w: 22, h: 18, speed: 0, behavior: 'still', spiky: true, art: urchinArt, burst: '#4a2a6a' }), place: 'walk' },
   idDuck: { cls: IdDuck, place: 'walk' },
@@ -953,10 +1097,11 @@ class IdBomb extends Ent {
 }
 // a patch of volcanic rock that heats up red-hot and cools again: don't stand on it while it glows
 class IdHotRocks extends Ent {
-  constructor(g, s) { super(g, s, (s.n || 4) * TS, 8); this.x = s.x - TS / 2; this.y = s.y; this.ty = Math.round(s.y / TS); this.period = s.period || 4.6; this.ph = s.phase || 0; this.burnK = 0; }
-  get heat() { const k = ((this.t + this.ph) % this.period) / this.period; return k < 0.5 ? 0 : k < 0.72 ? (k - 0.5) / 0.22 : 1; }
+  constructor(g, s) { super(g, s, (s.n || 4) * TS, 8); this.x = s.x - TS / 2; this.y = s.y; this.ty = Math.round(s.y / TS); this.period = s.period || 4.6; this.ph = s.phase || 0; this.burnK = 0; this.hotRock = true; this.coolT = 0; }
+  // the Snow Globe's snowfall cools them for a while (coolT, set by the snow)
+  get heat() { if (this.coolT > 0) return 0; const k = ((this.t + this.ph) % this.period) / this.period; return k < 0.5 ? 0 : k < 0.72 ? (k - 0.5) / 0.22 : 1; }
   update(dt) {
-    this.t += dt; const p = this.g.player;
+    this.t += dt; const p = this.g.player; if (this.coolT > 0) { this.coolT -= dt; if (Math.random() < 0.1) this.g.burst(this.x + Math.random() * this.w, this.y, 1, '#ffffff', 'dust'); }
     if (this.heat >= 1 && p && !p.dead && p.onGround && p.groundTy === this.ty && p.cx > this.x && p.cx < this.x + this.w) { p.hurt(this); if (this.burnK <= 0) { K.say(this.g, p, 'HOT HOT HOT!', '#ffb03a'); this.burnK = 1; } }
     if (this.burnK > 0) this.burnK -= dt;
     if (this.heat >= 1 && Math.random() < 0.2) this.g.burst(this.x + Math.random() * this.w, this.y, 1, '#ffd0a0', 'dust');
@@ -1056,7 +1201,11 @@ class IdManta extends Ent {
 // a cloud of bioluminescent plankton: it blooms bright when Brady swims through it
 class IdPlankton extends Ent {
   constructor(g, s) { super(g, s, 3 * TS, 3 * TS); this.y = s.y - 2 * TS; this.glow = 0; }
-  update(dt) { this.t += dt; const p = this.g.player; const near = p && Math.hypot(p.cx - this.cx, p.cy - this.cy) < 2.4 * TS; this.glow = approach(this.glow, near ? 1 : 0, dt * (near ? 3 : 0.6)); if (near && Math.random() < 0.4) this.g.burst(p.cx, p.cy, 1, '#7af0ff', 'spark'); }
+  update(dt) {
+    this.t += dt; const g = this.g, p = g.player; const near = p && Math.hypot(p.cx - this.cx, p.cy - this.cy) < 2.4 * TS; this.glow = approach(this.glow, near ? 1 : 0, dt * (near ? 3 : 0.6)); if (near && Math.random() < 0.4) g.burst(p.cx, p.cy, 1, '#7af0ff', 'spark');
+    // in a LAMP area the glowing cloud restores Brady's fading light (as a lantern post does)
+    if (near && g.area && g.area.lamp && g.t - (g.lampLit || 0) > 1) { g.lampLit = g.t; TourKit.sfx('relight', 'checkpoint', { vol: 0.5, pitch: 1.4 }); g.burst(this.cx, this.cy, 14, '#7af0ff', 'spark'); }
+  }
   draw(ctx) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let k = 0; k < 26; k++) { const a = k * 2.4 + this.t * 0.3, r = 10 + (k * 13) % 38, x = this.cx + Math.cos(a) * r, y = this.cy + Math.sin(a * 1.3) * r * 0.7, b = 0.25 + 0.75 * this.glow; ctx.fillStyle = `rgba(${k % 3 ? '90,240,255' : '160,255,170'},${b * (0.4 + 0.4 * Math.sin(this.t * 3 + k))})`; ctx.beginPath(); ctx.arc(x, y, 1.2 + this.glow * 1.4, 0, TAU); ctx.fill(); }
@@ -1217,10 +1366,10 @@ class IdGongDoor extends Ent {
   }
 }
 /* ---------------- the boss arena: the durian grove ---------------- */
-// Three durian trees grow in the ruined temple garden. Their branches are one-way platforms: land on one and the
+// Three durian trees grow in the overgrown garden by the old wall. Their branches are one-way platforms: land on one and the
 // whole tree shakes, and a ripe durian drops out of the crown straight down the trunk. Boss Kera loves perching at
 // the trunk right under the crown... A fallen durian is a spiky ball Brady can kick into him as well.
-const GROVE = { trunks: [4, 13, 21], low: 2, high: 4, crown: 7.4 };
+const GROVE = { trunks: [4, 13, 21], low: 3, high: 6, crown: 9.4 };
 const durianPropArt = (ctx, e, x, y, t) => durianShape(ctx, x, y - e.h / 2, 0, 1);
 const IdDurianProp = TourProp.make({
   w: 22, h: 20, durian: true, kick: 6.5, bounce: 0.45, friction: 5, roll: true, hurts: true, hp: 1, life: 16, semis: false, burst: '#c8d84a', art: durianPropArt,
@@ -1420,13 +1569,13 @@ const P = {
   // black lava-rock reefs poke out of the surf: hop them (sea urchins sit on some)
   reef(st, o) { const x = st.x, n = 9, S = SEA(st), top = S - (o.tall ? 3 : 2); seaCols(st, x, x + n - 1); st.B.fill(x + 4, top, x + 5, st.H - 1, T.HARD); st.coins(x + 3, x + 6, top - 2); if (o.urchin) st.enemy('idUrchin', x + 4, top); return x + n; },
   // an old wooden pier over the water
-  pier(st, o) { const x = st.x, n = 13, S = SEA(st), py = S - 3; seaCols(st, x, x + n - 1); st.B.prop('idPier', x + 2, py, 9, S - py, 'top', {}); st.coins(x + 3, x + 9, py - 2); if (o.gold) st.gold(x + 6, py - 4, 'high'); if (o.jelly) st.spawn('idJelly', x + 6, S - 1, {}); return x + n; },
+  pier(st, o) { const x = st.x, n = 13, S = SEA(st), py = S - 3; seaCols(st, x, x + n - 1); st.B.prop('idPier', x + 2, py, 9, S - py, 'top', {}); st.coins(x + 3, x + 9, py - 2); if (o.gold) st.gold(x + 6, py - 4, o.gold === true ? 'high' : o.gold); if (o.jelly) st.spawn('idJelly', x + 6, S - 1, {}); return x + n; },
   // buoys bobbing on the swells
-  buoys(st, o) { const x = st.x, n = 13, S = SEA(st); seaCols(st, x, x + n - 1); for (let k = 0; k < 3; k++) { st.spawn('idFloat', x + 2 + k * 4, S - 1, { look: 'buoy', top: 14 }); st.coins(x + 2 + k * 4, x + 2 + k * 4, S - 4 - k); } if (o.gold) st.gold(x + 10, S - 6, 'risky'); return x + n; },
+  buoys(st, o) { const x = st.x, n = 13, S = SEA(st); seaCols(st, x, x + n - 1); for (let k = 0; k < 3; k++) { st.spawn('idFloat', x + 2 + k * 4, S - 1, { look: 'buoy', top: 14 }); st.coins(x + 2 + k * 4, x + 2 + k * 4, S - 4 - k); } if (o.gold) st.gold(x + 10, S - 6, o.gold === true ? 'risky' : o.gold); return x + n; },
   // an outrigger canoe at anchor: a raft that rides the waves
-  jukung(st, o) { const x = st.x, n = 14, S = SEA(st); seaCols(st, x, x + n - 1); st.spawn('idFloat', x + 5, S - 1, { look: 'jukung', pw: 4, top: 8 }); st.arc(x + 3, x + 11, S - 4, 3); if (o.gold) st.gold(x + 7, S - 6, 'high'); return x + n; },
+  jukung(st, o) { const x = st.x, n = 14, S = SEA(st); seaCols(st, x, x + n - 1); st.spawn('idFloat', x + 5, S - 1, { look: 'jukung', pw: 4, top: 8 }); st.arc(x + 3, x + 11, S - 4, 3); if (o.gold) st.gold(x + 7, S - 6, o.gold === true ? 'high' : o.gold); return x + n; },
   // a big set rolls in: ride up its face and launch off the crest for the high coins
-  lip(st, o) { const x = st.x, n = 16, S = SEA(st); seaCols(st, x, x + n - 1); if (st.rig) st.rig.bigs.push(x + 4); st.arc(x + 4, x + 12, S - 6, 3); if (o.gold) st.gold(x + 9, S - 6, 'risky'); st.spawn('idFlyfish', x + 13, S, { delay: 1 }); return x + n; },
+  lip(st, o) { const x = st.x, n = 16, S = SEA(st); seaCols(st, x, x + n - 1); if (st.rig) st.rig.bigs.push(x + 4); st.arc(x + 4, x + 12, S - 6, 3); if (o.gold) st.gold(x + 9, S - 6, o.gold === true ? 'risky' : o.gold); st.spawn('idFlyfish', x + 13, S, { delay: 1 }); return x + n; },
   sandbar(st, o) { const x = st.x, n = o.n || 7; st.floor(x, x + n - 1); st.decor('idPalmS', x + 2); st.coins(x + 1, x + n - 2, st.gy - 2); return x + n; },
   // in the surf the checkpoint is a sandbar with a board rack (lose the board, grab another)
   cp(st, o) {
@@ -1462,7 +1611,7 @@ const P = {
       for (let a = 0; a < 40; a++) { const [ox, oy] = IdKite.path(a / 40 * TAU, ax, ay), gx = Math.round(L + 1.5 + ox - 1), gy = Math.round(st.gy + oy); for (let q = 0; q < 3; q++) st.B.ghosts.push([gx + q, gy]); }
       st.coins(L + 1, L + 3, st.gy - 4);
     }
-    if (o.gold) st.gold(x + span - 3, st.gy - 6, 'risky');
+    if (o.gold) st.gold(x + span - 3, st.gy - 6, o.gold === true ? 'risky' : o.gold);
     x += span; st.floor(x, x + 2);
     return x + 3;
   },
@@ -1484,7 +1633,7 @@ const P = {
     st.floor(x, x + 2); return x + 3;
   },
   // the crater lobs lava bombs: each one's landing spot glows first
-  bombs(st, o) { const x = st.x, n = o.len || 16; st.floor(x, x + n - 1); st.spawn('idBombs', x, st.gy - 1, { x0: x + 1, x1: x + n - 2, every: o.every || 1.8 }); for (let k = 0; k < 2; k++) st.semi(x + 3 + k * 7, x + 5 + k * 7, st.gy - 3 - k); st.coins(x + 2, x + n - 3, st.gy - 2); st.decor('idLavaRock', x + n - 2); if (o.gold) st.gold(x + 11, st.gy - 7, 'risky'); return x + n; },
+  bombs(st, o) { const x = st.x, n = o.len || 16; st.floor(x, x + n - 1); st.spawn('idBombs', x, st.gy - 1, { x0: x + 1, x1: x + n - 2, every: o.every || 1.8 }); for (let k = 0; k < 2; k++) st.semi(x + 3 + k * 7, x + 5 + k * 7, st.gy - 3 - k); st.coins(x + 2, x + n - 3, st.gy - 2); st.decor('idLavaRock', x + n - 2); if (o.gold) st.gold(x + 11, st.gy - 7, o.gold === true ? 'risky' : o.gold); return x + n; },
   // rocks that heat up red-hot and cool again: cross while they are dark
   hotrocks(st, o) { const x = st.x, n = (o.n || 6) + 3; st.floor(x, x + n + 3); st.spawn('idHotRocks', x + 2, st.gy - 1, { n: o.n || 6, period: 4.6, phase: o.phase || 0 }); st.coins(x + 2, x + n - 2, st.gy - 3); st.decor('idTorch', x + n + 2); return x + n + 4; },
   // a fissure glowing with lava far below: hop the basalt columns
@@ -1493,7 +1642,7 @@ const P = {
     for (let k = 0; k < 3; k++) { st.pit(x, x + 1); B.fill(x, B.H - 2, x + 1, B.H - 1, T.LAVA); const h = 1 + ((k + 1) % 3); B.fill(x + 2, st.gy - h, x + 3, B.H - 1, T.HARD); st.coins(x + 2, x + 3, st.gy - h - 2); x += 4; }
     st.pit(x, x + 1); B.fill(x, B.H - 2, x + 1, B.H - 1, T.LAVA); x += 2;
     st.floor(x, x + 2);
-    if (o.gold) st.gold(x - 7, st.gy - 7, 'risky');
+    if (o.gold) st.gold(x - 7, st.gy - 7, o.gold === true ? 'risky' : o.gold);
     st.enemy('idBat', x - 6, st.gy);
     return x + 3;
   },
@@ -1517,7 +1666,7 @@ const P = {
   // anglerfish dangle fake coins in the dark
   anglers(st, o) { const x = st.x, F = st.floorY, n = o.n || 2; st.rock(x + 1, F - 2, x + 3 + n * 5, F - 1); for (let k = 0; k < n; k++) st.spawn('idAngler', x + 3 + k * 5, k % 2 ? 5 : 10, { dir: k % 2 ? 1 : -1 }); st.coins(x + 2, x + 3 + n * 5, 7 + (n % 2)); return x + 5 + n * 5; },
   // a manta glides through: swim in its slipstream to zoom along
-  manta(st, o) { const x = st.x, F = st.floorY, w = o.w || 16, zid = 'm' + x, my = 8; st.B.zone(x, my - 1, 6, 3, 0, 0, 0, 'manta', { mid: zid }); st.spawn('idManta', x, my, { x0: x, x1: x + w, zid, speed: 2.2 }); st.coins(x + 2, x + w - 2, my - 3); st.rock(x, F - 1, x + w, F - 1); st.B.decorAt('idCoral', x + 3, F - 1, 2); if (o.gold) st.gold(x + w - 3, 3, 'high'); return x + w; },
+  manta(st, o) { const x = st.x, F = st.floorY, w = o.w || 16, zid = 'm' + x, my = 8; st.B.zone(x, my - 1, 6, 3, 0, 0, 0, 'manta', { mid: zid }); st.spawn('idManta', x, my, { x0: x, x1: x + w, zid, speed: 2.2 }); st.coins(x + 2, x + w - 2, my - 3); st.rock(x, F - 1, x + w, F - 1); st.B.decorAt('idCoral', x + 3, F - 1, 2); if (o.gold) st.gold(x + w - 3, 3, o.gold === true ? 'high' : o.gold); return x + w; },
   // a shaft through the reef: morays lunge across it from holes in the walls
   morays(st, o) {
     const x = st.x, F = st.floorY;
@@ -1533,7 +1682,7 @@ const P = {
     const x = st.x, F = st.floorY, B = st.B;
     B.fill(x + 1, F - 4, x + 12, F - 1, T.HARD); st.water(x + 1, F - 3, x + 12, F - 2);
     B.decorAt('idMast', x + 6, F - 4, 0); st.coins(x + 3, x + 10, F - 6);
-    if (o.gold) st.gold(x + 7, F - 2, 'hidden');
+    if (o.gold) st.gold(x + 7, F - 2, o.gold === true ? 'hidden' : o.gold);
     st.spawn('idLionfish', x + 9, F - 7, {});
     return x + 13;
   },
@@ -1544,11 +1693,11 @@ const P = {
   // macaques perch on branches; pass underneath and one drops down to snatch coins
   monkeys(st, o) {
     const x = st.x, n = o.n || 1, w = 9 + n * 5; st.floor(x, x + w - 1);
-    for (let k = 0; k < n; k++) { const mx = x + 4 + k * 5, by = st.gy - 5; st.semi(mx - 1, mx + 1, by); st.spawn('idMonkey', mx, by - 1, {}); st.B.fill(mx + 3, st.gy - 1, mx + 3, st.gy - 1, T.HARD); if (o.gold && k === n - 1) st.gold(mx, by - 3, 'risky'); }
+    for (let k = 0; k < n; k++) { const mx = x + 4 + k * 5, by = st.gy - 5; st.semi(mx - 1, mx + 1, by); st.spawn('idMonkey', mx, by - 1, {}); st.B.fill(mx + 3, st.gy - 1, mx + 3, st.gy - 1, T.HARD); if (o.gold && k === n - 1) st.gold(mx, by - 3, o.gold === true ? 'risky' : o.gold); }
     st.coins(x + 1, x + w - 2, st.gy - 2); st.decor('idBanana', x + w - 2);
     return x + w;
   },
-  durians(st, o) { const x = st.x, n = 14; st.floor(x, x + n - 1); st.spawn('idDurianTree', x + 6, st.gy - 1, { every: 3.2 }); st.semi(x + 10, x + 12, st.gy - 3); st.coins(x + 10, x + 12, st.gy - 5); if (o.gold) st.gold(x + 11, st.gy - 7, 'risky'); st.enemy('idSate', x + 12, st.gy); return x + n; },
+  durians(st, o) { const x = st.x, n = 14; st.floor(x, x + n - 1); st.spawn('idDurianTree', x + 6, st.gy - 1, { every: 3.2 }); st.semi(x + 10, x + 12, st.gy - 3); st.coins(x + 10, x + 12, st.gy - 5); if (o.gold) st.gold(x + 11, st.gy - 7, o.gold === true ? 'risky' : o.gold); st.enemy('idSate', x + 12, st.gy); return x + n; },
   // a carved stone door that opens to a sequence of gamelan gongs
   gongs(st, o) {
     const x = st.x, n = o.n || 3, id = 'door' + x, w = 7 + n * 3;
@@ -1579,7 +1728,7 @@ const P = {
     st.block(x + n + 2, st.gy - n - 4, o.content || 'power'); st.enemy('idSate', x + n + 3, st.gy - n); st.coins(x + n + 1, x + n + 4, st.gy - n - 2); st.gold(x + n + 4, st.gy - n - 5, 'hidden');
     return x + n * 2 + 7;
   },
-  // the boss arena: a ruined temple garden (the banyan stays in the background) with three durian trees in front of it
+  // the boss arena: an overgrown garden under the old mossy wall (the banyan stays behind) with three durian trees
   arena_grove(st, o) {
     const B = st.B, { x0, w, GY } = o;
     B.prop('idBanyan', x0 + Math.floor(w / 2) - 7, GY - 13, 14, 12, 'none', {});
@@ -1818,7 +1967,7 @@ const tracks = {
   }
 };
 
-/* ---------------- the five levels ---------------- */
+/* ---------------- the country ---------------- */
 const COIN = { name: 'GOLDEN FRANGIPANI', draw(ctx, x, y) {
   const g = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, 9); g.addColorStop(0, '#fff6c0'); g.addColorStop(0.6, '#ffd24a'); g.addColorStop(1, '#c8901a');
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();
@@ -1841,38 +1990,7 @@ Tour.country({
     ctx.fillStyle = '#ff7a2a'; ctx.beginPath(); ctx.arc(-1.6, -11, 1, 0, TAU); ctx.arc(1.6, -11, 1, 0, TAU); ctx.fill();
     ctx.restore();
   } },
-  levels: [
-    { name: 'Kuta Surf Break', style: 'auto', theme: 'id_surf', surf: true, GY: 13, H: 17, scroll: 2.5,
-      gimmick: 'A gecko lends a surfboard: ride the rolling swells, launch off the crests for big air, hop the lava-rock reefs',
-      enemies: [['idUrchin', 1]],
-      hint: 'Surf the sea! Jump off a wave crest for big air. THROW sprays water',
-      postcard: 'Brady! Bali smells like frangipani and sunscreen. The Baron\'s blimp went inland. Catch a wave and follow! ♥ C',
-      script: ['gecko', ['surf', { n: 9, tight: true }], ['reef', { tight: true }], ['surf', { n: 8, jelly: 1, tight: true }], ['pier', { tight: true, gold: true }], ['surf', { n: 8, fish: 1, tight: true }], ['buoys', { tight: true, gold: true }],
-        'sandbar', 'cp', ['reef', { urchin: true }], ['surf', { n: 10, fish: 2, jelly: 1, tight: true }], ['lip', { tight: true, gold: true }], ['jukung', { tight: true }], ['surf', { n: 8, jelly: 2, tight: true }], ['reef', { tall: true, tight: true }], ['lip', { tight: true }], ['surf', { n: 6, tight: true }], 'end'] },
-    { name: 'Kite Festival', style: 'run', theme: 'id_kites', gyMin: 6,
-      gimmick: 'Giant fish and bird kites swoop back and forth over the ravines between the rice terraces: ride them like a relay; wade the flooded paddies; duck parades',
-      enemies: [['idDuck', 1], ['idSate', 2], ['idDragonfly', 1]],
-      hint: 'Step onto a kite when it dips to the ledge, then hop to the next one where they meet',
-      postcard: 'The whole sky is full of kites! One of them looks like the Baron\'s blimp... no, it\'s a fish. ♥ C',
-      script: ['flat', ['ducks', { n: 3 }], ['terrace', { n: 3 }], 'kites', 'scarecrows', ['terrace', { n: 2, down: true }], 'paddy', 'cp', ['kites', { n: 3, gold: true }], 'hut', ['ducks', { n: 4 }], 'bonus', ['terrace', { n: 2 }], ['kites', { n: 2, look: 1 }], 'end'] },
-    { name: 'Batur Sunrise Trek', style: 'night', theme: 'id_batur', dark: true, GY: 18, H: 22, gyMin: 9, gyMax: 19,
-      gimmick: 'Climb the volcano in the dark: lava bombs land on glowing rings, rocks heat up red-hot, civets prowl; the sky turns to sunrise as you climb',
-      enemies: [['idCivet', 2], ['idBat', 1]],
-      hint: 'A glowing ring means a lava bomb is about to land. Don\'t stand on red-hot rocks!',
-      postcard: 'We climbed in the dark to watch the sunrise. The Baron climbed too... in his blimp. Cheater. ♥ C',
-      script: ['dawn', ['trail', { n: 3 }], 'bombs', 'hotrocks', ['trail', { n: 2 }], 'fissure', 'lookout', 'cp', 'civets', ['trail', { n: 3 }], ['bombs', { len: 18, gold: true, every: 1.5 }], ['hotrocks', { n: 7, phase: 2 }], ['fissure', { gold: true }], 'oneup', ['trail', { n: 2 }], 'end'] },
-    { name: 'Manta Point Night Dive', style: 'swim', theme: 'id_dive', dark: true, H: 18, width: 260,
-      gimmick: 'A night dive on a black reef that glows: plankton lights up as you swim, anglerfish dangle fake coins, morays lunge from holes, a manta\'s slipstream sweeps you along',
-      enemies: [['idLionfish', 1]],
-      hint: 'Tap jump to swim. That coin in the dark might be a fish\'s lure!',
-      postcard: 'Night diving! A manta ray swam right over me like a big friendly blanket. ♥ C',
-      script: ['biolum', 'reefgate', 'anglers', ['manta', { w: 18 }], 'morays', 'plankton', 'cp', ['wreck', { gold: true }], ['anglers', { n: 3 }], 'jellies', ['manta', { w: 16, gold: true }], 'morays', ['reefgate', { gold: true }], 'plankton'] },
-    { name: 'Monkey Forest Ruins', style: 'castle', theme: 'id_ruins', boss: 'id_kera', arena: 'grove', arenaW: 26, roof: false,
-      gimmick: 'Overgrown palace ruins: macaques snatch coins, durians burst into stink clouds, gamelan gongs open the stone doors, then Boss Kera in the durian grove',
-      enemies: [['idSate', 3], ['idDragonfly', 1]],
-      hint: 'Boss Kera laughs at stomps. Land on a branch of the tree he perches in: a durian drops on his head!',
-      postcard: 'The rice terraces are back! The Baron flew north to Vietnam. I smell pho. ♥ C',
-      script: [['monkeys', { n: 1 }], ['durians', { gold: true }], ['gongs', { n: 3 }], 'roots', 'cp', ['monkeys', { n: 2, gold: true }], 'ruinstairs', ['enemies', { n: 2 }], ['gongs', { n: 4 }], 'durians', 'arena'] }
-  ]
+  // the levels are added by 29_tour_id_levels.js (Tour.amend)
+  levels: []
 });
 })();

@@ -176,6 +176,26 @@ class Play {
     this.weather = new Weather(THEMES[this.themeKey].particles);
     this.boss = this.entities.find(e => e.boss && !e.remove) || null;
     this.refreshPlatforms();
+    Game.setRows(this.viewRows());
+  }
+  /* ---------- camera zoom ----------
+     Near (the phone default): 10 tile rows instead of 12, so Brady, the enemies, the items and the hazards are all
+     20 % larger on a small screen. Climbing, falling and flying areas keep 11 rows of look-ahead; a boss arena is
+     framed whole (as many rows as its width needs, up to the standard 12). Far: the standard 12 rows.
+     Settings: Save.data.settings.zoom = 'near' | 'far' (unset: Near on touch screens and short windows). */
+  static zoomNear() { const z = Save.data.settings.zoom; return z ? z === 'near' : (Game.forceTouchUI || Game.cssH < 520); }
+  viewRows() {
+    if (!Play.zoomNear()) return VIEW_ROWS;
+    const A = this.area;
+    let rows = A && (A.tower || A.sky || A.autoscrollY || A.camera === 'shaft' || A.camera === 'free') ? 11 : 10;
+    const b = this.boss && !this.boss.remove ? this.boss : null;
+    if (b) {
+      if (b.tall) return VIEW_ROWS;
+      const gr = Game.gameRect, aspect = gr.w / Math.max(1, gr.h);
+      const w = (b.arenaX1 && b.arenaX0 != null ? b.arenaX1 - b.arenaX0 : 26 * TS) + TS;
+      rows = Math.max(rows, Math.min(VIEW_ROWS, w / (aspect * TS)));
+    }
+    return rows;
   }
   countryAtlas() { const C = this.level && this.level.country && typeof Tour !== 'undefined' ? Tour.countries[this.level.country] : null; return C ? C.atlas || (C.sprites ? C.id : null) : null; }
   // every atlas this level can draw from: the country's, and each area's theme
@@ -251,7 +271,7 @@ class Play {
   worldScale() { return this.player && this.player.fx && this.player.fx.khole > 0 ? 0.4 : 1; }
   toast(msg) { this.toastText = msg; this.toastT = 2.6; }
   drawToast(ctx) {
-    if (!(this.toastT > 0)) return;
+    if (!(this.toastT > 0)) { this.toastBottom = 0; return; }
     const W = Game.cssW, a = Math.min(1, this.toastT * 2, (2.6 - this.toastT) * 6);
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     // long messages shrink a little, then wrap onto more lines (power-up hints in portrait)
@@ -262,7 +282,8 @@ class Play {
     if (ctx.measureText(text).width <= maxW) lines.push(text);
     else { let cur = ''; for (const word of text.split(' ')) { const t = cur ? cur + ' ' + word : word; if (cur && ctx.measureText(t).width > maxW) { lines.push(cur); cur = word; } else cur = t; } if (cur) lines.push(cur); }
     const lh = size + 6, tw = Math.max.apply(null, lines.map(l => ctx.measureText(l).width));
-    const w = Math.min(W - 24, tw + 30), h = Math.max(30, lines.length * lh + 12), y = Game.gameRect.y + Math.max(64, insets.t + 58) + (W < 600 ? 54 : 0);
+    const w = Math.min(W - 24, tw + 30), h = Math.max(30, lines.length * lh + 12), y = Math.max(Game.gameRect.y + Math.max(64, insets.t + 58) + (W < 600 ? 54 : 0), (this.hudBottom || 0) + 23);
+    this.toastBottom = y - 15 + h;   // the banner keeps clear of it
     ctx.fillStyle = 'rgba(14,8,26,0.78)'; rr(ctx, W / 2 - w / 2, y - 15, w, h, 15); ctx.fill();
     ctx.strokeStyle = 'rgba(255,216,74,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
     ctx.fillStyle = '#ffd84a'; lines.forEach((l, i) => ctx.fillText(l, W / 2, y - 15 + h / 2 + (i - (lines.length - 1) / 2) * lh + 1));
@@ -402,6 +423,7 @@ class Play {
     const p = this.player, walkTo = Math.min(b.arenaX0 + 3.5 * TS, b.x - 2.5 * TS);
     if (p && walkTo > p.x + 4) { this.entryWalk = { x: walkTo, t: 1.3 }; }
     this.mus(this.bossTrack(b));
+    Game.setRows(this.viewRows());
     // seal the arena entrance
     const tx = Math.floor(b.arenaX0 / TS) - 1;
     for (let y = 3; y < this.area.H; y++) if (tileAt(this.area, tx, y) === T.EMPTY && y < Math.floor((b.y + b.h) / TS)) this.setTile(tx, y, T.HARD);
@@ -412,6 +434,7 @@ class Play {
     for (let y = 0; y < this.area.H; y++) if (tileAt(this.area, b.doorX, y) === T.HARD) { this.setTile(b.doorX, y, T.EMPTY); this.burst(b.doorX * TS + 16, y * TS + 16, 4, '#c8c8d0', 'debris'); }
     Sound.play('secret');
     this.bossLock = null; this.boss = null;
+    Game.setRows(this.viewRows());
     this.bannerText = b.style === 'man' ? 'THE MAN BURNS!' : b.mid ? 'FORT CLEARED!' : 'CAMP BOSS DOWN!'; this.bannerT = 2.5;
     if (b.style === 'man') { for (let i = 0; i < 6; i++) setTimeout(() => { if (Game.scene === this) { this.burst(b.cx + (Math.random() - 0.5) * 300, b.floorY - 200 - Math.random() * 150, 40, '#fff', 'firework'); sfx('firework_burst', 'pick', { pitch: 0.6 }); } }, i * 380); }
     this.mus(this.area.music);
@@ -453,8 +476,10 @@ class Play {
     if (A.autoscroll && this.state === 'play') {
       this.camX = Math.min(maxX, this.camX + A.autoscroll * TS * dt * this.worldScale());
     } else {
-      this.look = lerp(this.look || 0, p.facing * Game.viewW * 0.08 * clamp(Math.abs(p.vx) / PHYS.walk, 0, 1), 1 - Math.exp(-dt * 2.5));
-      let tx = p.cx - Game.viewW * 0.42 + this.look;
+      // look-ahead in the run direction; a zoomed-in view (fewer rows) leans further so Brady sees as far ahead
+      const near = Game.rows < VIEW_ROWS, lead = near ? 0.13 : 0.08;
+      this.look = lerp(this.look || 0, p.facing * Game.viewW * lead * clamp(Math.abs(p.vx) / PHYS.walk, 0, near ? 1.25 : 1), 1 - Math.exp(-dt * 2.5));
+      let tx = p.cx - Game.viewW * (near ? 0.4 : 0.42) + this.look;
       if (this.bossLock) {
         const w = this.bossLock.x1 - this.bossLock.x0;
         tx = w < Game.viewW ? (this.bossLock.x0 + this.bossLock.x1) / 2 - Game.viewW / 2 : clamp(tx, this.bossLock.x0 - TS, this.bossLock.x1 - Game.viewW + TS);
@@ -483,6 +508,8 @@ class Play {
   update(dt) {
     // hit-stop: a few frames of slow time after a solid boss hit, so it lands
     if (this.hitStop > 0) { this.hitStop -= dt; dt *= 0.25; }
+    // trip moments (15_postfx.js TripFX): their timers run in real time; the joint eases the world into a short slow-mo
+    if (this.level.tour && !this.paused && typeof TripFX !== 'undefined') { TripFX.tick(this, dt); dt *= TripFX.timeScale(this); }
     // fades
     if (this.fade.a !== this.fade.target) {
       this.fade.a = approach(this.fade.a, this.fade.target, dt * this.fade.speed);
@@ -571,8 +598,11 @@ class Play {
     if (Input.packTapped) { Input.packTapped = false; if (this.state === 'play' && p.state === 'play') { if (!p.usePack()) Sound.play('bump', { vol: 0.3 }); } }
     Save.data.pack = p.pack || null;
     // entities (a K-hole slows everything but Brady)
-    const cx0 = this.camX - 4 * TS, cx1 = this.camX + Game.viewW + 5 * TS;
-    const cy0 = this.camY - 8 * TS, cy1 = this.camY + Game.viewH + 8 * TS;
+    // the active window is the standard (Far) view's, whatever the zoom: a closer camera never freezes an enemy,
+    // an icicle or a boss prop that the level was designed to have running
+    const zx = Math.max(0, Game.viewW * (VIEW_ROWS / Game.rows - 1)) / 2, zy = Math.max(0, (VIEW_ROWS - Game.rows) * TS) / 2;
+    const cx0 = this.camX - 4 * TS - zx, cx1 = this.camX + Game.viewW + 5 * TS + zx;
+    const cy0 = this.camY - 8 * TS - zy, cy1 = this.camY + Game.viewH + 8 * TS + zy;
     const edt = dt * ws;
     for (let i = 0; i < this.entities.length; i++) {
       const e = this.entities[i];
@@ -726,13 +756,16 @@ class Play {
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     ctx.beginPath(); ctx.rect(0, 0, VW * S, VH * S); ctx.clip();
-    BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash);
+    // a zoomed-in view keeps the backdrop framed as at the standard zoom: its ground line rises with the floor
+    BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash, (VIEW_ROWS * TS - VH) * 0.68);
     // Atmospheric separation belongs behind solids, collectibles and characters.
     // Keep each country's own sky/fog colour rather than flattening every world to grey.
     if (this.level.tour) {
       const th = THEMES[this.themeKey];
       ctx.fillStyle = rgba(th.fog || th.sky[1], 0.16);
       ctx.fillRect(0, 0, VW * S, VH * S);
+      // trip moments: the strong part (fractals, the green haze) sits behind the tiles and characters
+      TripFX.back(ctx, this, Math.round(VW * S), Math.round(VH * S));
     }
     // world transform
     const wt = () => ctx.setTransform(S, 0, 0, S, gx - camX * S, gy - camY * S);
@@ -753,6 +786,10 @@ class Play {
       else if (e.friendly) layers[3].push(e);
       else layers[2].push(e);
     }
+    // underwater: the blue wash and caustics go over the scenery but under the characters, so enemies stay crisp
+    if (A.water) { ctx.setTransform(1, 0, 0, 1, gx, gy); this.drawUnderwater(ctx, VW * S, VH * S); wt(); }
+    // contact shadows ground every actor (and lift the ones in the air off the floor)
+    this.drawShadows(ctx, layers[1].concat(layers[2], layers[3]));
     for (const L of layers.slice(0, 3)) for (const e of L) e.draw(ctx, this.t);
     this.player.draw(ctx, this.t);
     for (const e of layers[3]) e.draw(ctx, this.t);
@@ -765,14 +802,13 @@ class Play {
     this.weather.draw(ctx, this.t);
     for (const e of layers[0]) if (e instanceof Sign) e.drawBubble(ctx);
     ctx.setTransform(1, 0, 0, 1, gx, gy);
-    if (A.water) this.drawUnderwater(ctx, VW * S, VH * S);
     let darkness = A.dark ? Math.max(th.darkness || 0, 0.62) : (th.darkness || 0);
     if (A.strobe) darkness = Math.max(0.2, darkness - (Math.sin(this.strobeT * 20) > 0.6 && Math.sin(this.strobeT * 1.3) > 0 ? 0.5 : 0));
     if (A.sunrise) darkness *= 1 - clamp(this.player.cx / (A.W * TS), 0, 1);
     if (darkness > 0) this.drawLighting(ctx, camX, camY, S, darkness);
     PostFX.apply(ctx, this, Math.round(VW * S), Math.round(VH * S), gx, gy);
     WorldFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
-    if (this.level.tour && this.dizzy > 0) TourFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
+    if (this.level.tour) TripFX.post(ctx, this, Math.round(VW * S), Math.round(VH * S));
     if (this.player && this.player.buffs && this.player.buffs.sundial > 0) { const W = Math.round(VW * S), H = Math.round(VH * S), k = Math.min(1, this.player.buffs.sundial, 0.9 + (TourKit.reduceMotion() ? 0 : 0.1 * Math.sin(this.t * 4))); const gg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.65); gg.addColorStop(0, 'rgba(120,80,30,0)'); gg.addColorStop(1, `rgba(120,80,30,${0.45 * k})`); ctx.fillStyle = gg; ctx.fillRect(0, 0, W, H); }
     ctx.drawImage(Game.vignette, 0, 0); // vignette
     if (this.flash > 0 && !th.storm) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, this.flash * 0.7)})`; ctx.fillRect(0, 0, VW * S, VH * S); }
@@ -851,10 +887,12 @@ class Play {
           case T.CRUMBLE: img = atlas.crumble; ox = crumbleOf(x, y); break;
           case T.PILLAR: { const part = ['L', 'R', 'S'][v & 3] || 'S'; img = atlas.pillar[part + (v & 4 ? 't' : 'b')]; break; }
           case T.GLITCH: img = atlas.glitch[Math.floor(t * 12 + x) % 3]; break;
-          case T.SOIL: img = atlas.soil ? atlas.soil[y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]] ? 0 : 1] : null; break;
+          case T.SOIL: { const bur = y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]], nv = bur && atlas.soilV ? atlas.soilV.length : 0; img = atlas.soil ? (nv ? atlas.soilV[((Math.imul(x ^ 0x5bd1e995, 374761393) ^ Math.imul(y + 0x27d4eb2d, 668265263)) >>> 13) % nv] : atlas.soil[bur ? 0 : 1]) : null; break; }
           case T.LINTEL: img = atlas.lintel || null; break;
           case T.PICK: {
-            ctx.setTransform(S, 0, 0, S, Game.gameRect.x * Game.dpr + dx, Game.gameRect.y * Game.dpr + dy);
+            // coins are drawn 15 % larger than their tile slot so they read as pickups on a phone
+            const ck = 1.15, co = TS / 2 * S * (1 - ck);
+            ctx.setTransform(S * ck, 0, 0, S * ck, Game.gameRect.x * Game.dpr + dx + co, Game.gameRect.y * Game.dpr + dy + co);
             Sprites.pickFast(ctx, TS / 2, TS / 2 + Math.sin(t * 3 + x * 0.7) * 1.5, t, Math.cos(t * 3 + x * 0.5), (x * 3 + y) % 5);
             ctx.setTransform(1, 0, 0, 1, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr);
             continue;
@@ -872,6 +910,26 @@ class Play {
         if (id === T.FAKE || id === T.HIDDEN) ctx.globalAlpha = 1;
       }
     }
+  }
+  /* A soft contact shadow under each actor on (or above) a floor tile: an ellipse on the floor that shrinks and fades
+     the higher the actor is; nothing over a pit. Enemies, friends, items, bosses and Brady; world transform. */
+  drawShadows(ctx, list) {
+    const A = this.area, p = this.player;
+    ctx.save(); ctx.fillStyle = 'rgb(24,12,40)';
+    const one = (e, scale) => {
+      if (!e || e.remove || e.knocked || (e.dead && !e.flatT) || e.noShadow) return;
+      const fx = e.x + e.w / 2, fy = e.y + e.h, tx = Math.floor(fx / TS);
+      if (tx < 0 || tx >= A.W) return;
+      let gy = -1;
+      for (let ty = Math.max(0, Math.floor((fy - 2) / TS)), n = 0; ty < A.H && n < 7; ty++, n++) { const t = A.tiles[ty * A.W + tx]; if (SOLID[t] || t === T.SEMI) { if (ty * TS >= fy - 6) { gy = ty * TS; break; } } }
+      if (gy < 0) return;
+      const h = gy - fy, k = clamp(1 - h / (6 * TS), 0, 1); if (k <= 0.05) return;
+      const rx = Math.min(30, e.w * 0.5 * (scale || 1)) * (0.55 + 0.45 * k), ry = Math.max(1.6, rx * 0.2);
+      ctx.globalAlpha = 0.3 * k; ctx.beginPath(); ctx.ellipse(fx, gy + 0.5, rx, ry, 0, 0, TAU); ctx.fill();
+    };
+    for (const e of list) { if (e.enemy || e.friendly || e.item || e.boss || e.cfg) one(e, e.boss ? 0.8 : 1.2); }
+    if (p && !p.dead) one(p, 1.3);
+    ctx.restore();
   }
   drawLavaTile(ctx, x, y, dx, dy, dw, dh) {
     const A = this.area, S = Game.S, t = this.t;
@@ -1076,24 +1134,36 @@ class Play {
     const tour = !!this.level.tour, pl = this.player;
     let tourIx = 0;
     if (tour) {
-      // HANDS: the gear or the country's signature item (with a timer ring if it runs out, dots for the globe's shakes)
+      // the power picker's slots (28_tour_dh_picker.js): the ACTIVE power (what THROW does: a pink action dot says so)
+      // and, when Brady holds more, the NEXT one (tap either, or press Q / E / C, to switch)
+      const TP = typeof TourPicker !== 'undefined' ? TourPicker : null;
+      const list = TP ? TP.list(pl) : [], act = TP ? TP.active(pl) : null;
       const sp = pl.sig ? TourPowers.get(pl.sig.id) : null, gr = pl.hands && typeof TourGear !== 'undefined' ? TourGear.get(pl.hands.id) : null;
-      const held = gr || sp;
-      ctx.fillStyle = held ? 'rgba(40,20,60,0.75)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
-      ctx.strokeStyle = held ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
-      if (held) {
-        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); if (held.icon) held.icon(ctx, 0, 0, this.t); ctx.restore();
-        if (sp && sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
-        if (gr && gr.uses) for (let k = 0; k < gr.uses; k++) { ctx.fillStyle = k < pl.hands.uses ? '#e8f6ff' : 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.arc(px0 + 5 + k * 6, hy + 28, 1.8, 0, TAU); ctx.fill(); }
-        if (gr && pl.hands.thrown) { ctx.fillStyle = 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill(); }
+      const actHands = act && act !== 'lsd' && act !== 'joint';
+      ctx.fillStyle = act ? 'rgba(40,20,60,0.78)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
+      ctx.strokeStyle = act ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
+      if (act) {
+        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); TP.icon(ctx, act, 0, 0, this.t, this); ctx.restore();
+        if (actHands && sp && sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
+        if (actHands && gr && gr.uses) for (let k = 0; k < gr.uses; k++) { ctx.fillStyle = k < pl.hands.uses ? '#e8f6ff' : 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.arc(px0 + 5 + k * 6, hy + 28, 1.8, 0, TAU); ctx.fill(); }
+        if (!TP.ready(pl, act) && (act !== 'gear:fins' && act !== 'gear:pads')) { ctx.fillStyle = 'rgba(10,8,18,0.5)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill(); }
+        // the action dot: the same pink as the action button
+        ctx.fillStyle = '#ff4b7d'; ctx.beginPath(); ctx.arc(px0 + 31, hy + 1, 4.2, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px0 + 31, hy + 1, 1.5, 0, TAU); ctx.fill();
       } else { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); TourKit.star(ctx, px0 + 17, hy + 14, 7, 3, 5); ctx.fill(); }
-      // the Backpack: tap it to swap with HANDS
+      // the second slot: the next power in the cycle (or, with nothing else held, an empty Backpack)
       const bx = px0 + 40;
-      this.packRect = { x: bx, y: hy - 2, w: 30, h: 32 };
-      ctx.fillStyle = pl.pack ? 'rgba(60,34,20,0.8)' : 'rgba(10,8,18,0.45)'; rr(ctx, bx, hy, 30, 28, 9); ctx.fill();
-      ctx.fillStyle = pl.pack ? '#8a5a34' : 'rgba(255,255,255,0.12)'; rr(ctx, bx + 6, hy - 3, 18, 6, 3); ctx.fill();
-      ctx.strokeStyle = pl.pack ? 'rgba(255,216,74,0.7)' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2; rr(ctx, bx, hy, 30, 28, 9); ctx.stroke();
-      if (pl.pack && typeof TourGear !== 'undefined') { ctx.save(); ctx.translate(bx + 15, hy + 14); ctx.scale(0.58, 0.58); TourGear.icon(ctx, pl.pack, 0, 0, this.t, this); ctx.restore(); }
+      this.packRect = { x: px0, y: hy - 2, w: 70, h: 32 };
+      const nxt = list.length >= 2 ? list[(Math.max(0, list.indexOf(act)) + 1) % list.length] : null;
+      ctx.fillStyle = nxt ? 'rgba(30,20,44,0.7)' : 'rgba(10,8,18,0.45)'; rr(ctx, bx, hy, 30, 28, 9); ctx.fill();
+      ctx.strokeStyle = nxt ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2; rr(ctx, bx, hy, 30, 28, 9); ctx.stroke();
+      if (nxt) {
+        ctx.save(); ctx.globalAlpha = 0.75; ctx.translate(bx + 15, hy + 14); ctx.scale(0.5, 0.5); TP.icon(ctx, nxt, 0, 0, this.t, this); ctx.restore();
+        // a little cycle arrow and the count
+        ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(bx + 24, hy + 5, 3.4, -2.6, 1.6); ctx.stroke();
+        ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.moveTo(bx + 24 + 3.4 * Math.cos(1.6) - 2, hy + 5 + 3.4 * Math.sin(1.6) - 1); ctx.lineTo(bx + 24 + 3.4 * Math.cos(1.6) + 2.4, hy + 5 + 3.4 * Math.sin(1.6) + 0.4); ctx.lineTo(bx + 24 + 3.4 * Math.cos(1.6) - 0.8, hy + 5 + 3.4 * Math.sin(1.6) + 2.6); ctx.closePath(); ctx.fill();
+        if (list.length > 2) { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(list.length + '', bx + 6, hy + 23); ctx.textAlign = 'left'; }
+      } else if (pl.pack && typeof TourGear !== 'undefined') { ctx.save(); ctx.translate(bx + 15, hy + 14); ctx.scale(0.58, 0.58); TourGear.icon(ctx, pl.pack, 0, 0, this.t, this); ctx.restore(); }
       else { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = `6px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('BAG', bx + 15, hy + 15); ctx.textAlign = 'left'; }
       tourIx = 36;
     } else {
@@ -1107,6 +1177,7 @@ class Play {
     const icon = (fn) => { fn(ix, hy + 14); ix += 26; };
     if (this.player.kandi > 0) icon((x, y) => { for (let i = 0; i < 3; i++) { ctx.strokeStyle = GLOW_COLS[i]; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y - 3 + i * 3, 9, 4, 0, 0, TAU); ctx.stroke(); } });
     for (const k of this.keys) icon((x, y) => { ctx.save(); ctx.translate(x, y + 2); ctx.scale(0.6, 0.6); GimmickArt.keyShape(ctx, 0, 0, k === 'secret'); ctx.restore(); });
+    if (tour && pl.jumpPow && typeof JumpHud !== 'undefined') { ix += 4; icon((x, y) => JumpHud.hudIcon(ctx, x, y, this)); ix += 4; }
     const fxList = tour ? [['star', pl.star, 10, '#ffffff'], ['lsd', pl.lsdT, 10, '#a0f0ff']].concat(pl.buffs && typeof TourGear !== 'undefined' ? Object.keys(pl.buffs).filter(k => pl.buffs[k] > 0).map(k => ['gear:' + k, pl.buffs[k], (TourGear.get(k) || {}).time || 10, (TourGear.get(k) || {}).glow || '#ffffff']) : []) : [['star', this.player.star, 10, '#ffffff'], ['bufo', this.player.fly, 12, '#c08aff'], ['joint', this.player.floaty, 9, '#e8e8f0']];
     if (!tour) for (const k in this.player.fx) fxList.push([k, this.player.fx[k], BAG_KINDS[k].time, BAG_KINDS[k].col]);
     for (const [k, v, max, col] of fxList) if (v > 0) icon((x, y) => {
@@ -1141,7 +1212,8 @@ class Play {
       const g = ctx.createLinearGradient(bx, 0, bx + bw, 0); g.addColorStop(0, '#ff4fd8'); g.addColorStop(1, '#ffd84a');
       ctx.fillStyle = g; rr(ctx, bx, by + 6, Math.max(0, bw * b.hp / b.maxHp), 8, 4); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(b.name, W / 2, by + 1);
-    }
+      this.hudBottom = by + 18;   // the toast and the banner stack below the boss bar
+    } else this.hudBottom = 0;
     // pause button
     if (Input.layout) {
       const pb = Input.layout.pause;
@@ -1167,7 +1239,7 @@ class Play {
     };
     const bob = Math.sin(this.t * 4) * 3;
     tag(L.stickHome.x, L.stickHome.y - L.stickHome.r - 22 + bob, '◀ SLIDE TO MOVE ▶');
-    tag(L.jump.x, L.jump.y - L.jump.r - 20 + bob, this.t < 8 ? 'JUMP' : 'TAP AGAIN IN AIR: HEADBANG');
+    tag(L.jump.x, L.jump.y - L.jump.r - 20 + bob, this.t < 8 ? 'JUMP' : 'HOLD FOR A HIGHER JUMP');
     tag(L.action.x, L.action.y - L.action.r - 20 + bob, 'RUN · THROW');
     ctx.restore();
   }
@@ -1191,9 +1263,21 @@ class Play {
   drawBanner(ctx) {
     const W = Game.cssW, H = Game.cssH, a = Math.min(1, this.bannerT * 2);
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `${Math.min(34, W * 0.06)}px ${FONT_DISPLAY}`;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(this.bannerText, W / 2 + 2, H * 0.3 + 2);
-    ctx.fillStyle = '#ffd84a'; ctx.fillText(this.bannerText, W / 2, H * 0.3);
+    // a long banner shrinks, then breaks onto two lines, to fit the screen; it sits below the boss bar and any toast
+    const text = String(this.bannerText), maxW = W - 40;
+    let size = Math.min(34, W * 0.06); ctx.font = `${size}px ${FONT_DISPLAY}`;
+    while (size > 18 && ctx.measureText(text).width > maxW) { size--; ctx.font = `${size}px ${FONT_DISPLAY}`; }
+    let lines = [text];
+    if (ctx.measureText(text).width > maxW) {
+      const words = text.split(' '); let best = null;
+      for (let i = 1; i < words.length; i++) { const l = [words.slice(0, i).join(' '), words.slice(i).join(' ')], m = Math.max(ctx.measureText(l[0]).width, ctx.measureText(l[1]).width); if (!best || m < best.m) best = { l, m }; }
+      if (best) { lines = best.l; while (size > 14 && best.m > maxW) { size--; ctx.font = `${size}px ${FONT_DISPLAY}`; best.m = Math.max(ctx.measureText(lines[0]).width, ctx.measureText(lines[1]).width); } }
+    }
+    const lh = size * 1.15, top = Math.max(H * 0.3 - (lines.length - 1) * lh / 2, Math.max(this.toastBottom || 0, this.hudBottom || 0) + 10 + size / 2);
+    lines.forEach((l, i) => {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillText(l, W / 2 + 2, top + i * lh + 2);
+      ctx.fillStyle = '#ffd84a'; ctx.fillText(l, W / 2, top + i * lh);
+    });
     ctx.restore();
   }
   drawResults(ctx) {
@@ -1289,11 +1373,6 @@ const PlayerFx = {
     if (p.dead) return;
     if (typeof TourPlayerFx !== 'undefined' && p.g.level && p.g.level.tour) TourPlayerFx.over(ctx, p, t);
     const cx = p.cx;
-    if (p.spin && !p.onGround) {
-      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;
-      for (let i = 0; i < 3; i++) { const a = t * 20 + i * 2.1; ctx.beginPath(); ctx.arc(cx, p.y + p.h * 0.4, p.w * 0.95, a, a + 0.9); ctx.stroke(); }
-      ctx.restore();
-    }
     if (p.fx.powder > 0 && Math.random() < 0.5) p.g.burst(p.cx - p.facing * 8, p.y + p.h * Math.random(), 1, '#ffffff', 'spark');
     if (p.fx.molly > 0 && Math.random() < 0.08) p.g.parts.text(cx + (Math.random() - 0.5) * 30, p.y, '♥', '#ff7ab8');
     if (p.stunT > 0) { ctx.fillStyle = '#ffd84a'; for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 12, p.y - 4 + Math.sin(a) * 4, 2.4, 0, TAU); ctx.fill(); } }

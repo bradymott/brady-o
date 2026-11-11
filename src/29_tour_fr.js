@@ -114,6 +114,16 @@ const painters = {
   }
 };
 const dyn = {
+  // far sails on the bay's horizon (7-3), drifting slowly: small, pale, no ink, so they never read as platforms
+  frSails(ctx, L, camX, oy, S, W, t) {
+    const hy = L.horizon || 236;
+    for (let i = 0; i < 6; i++) {
+      const x = ((i * 173 + t * (3 + i % 3) - camX * L.f) % BG_W + BG_W) % BG_W * S, y = oy + (hy - (i % 2) * 3) * S, k = (0.7 + (i % 3) * 0.15) * S;
+      ctx.fillStyle = 'rgba(70,80,100,0.75)'; ctx.beginPath(); ctx.moveTo(x - 9 * k, y - 2 * k); ctx.lineTo(x + 9 * k, y - 2 * k); ctx.lineTo(x + 6 * k, y + 1 * k); ctx.lineTo(x - 6 * k, y + 1 * k); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.moveTo(x, y - 20 * k); ctx.lineTo(x, y - 3 * k); ctx.lineTo(x + 9 * k, y - 3 * k); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = ['rgba(232,66,58,0.9)', 'rgba(42,106,184,0.9)', 'rgba(255,210,58,0.9)'][i % 3]; ctx.beginPath(); ctx.moveTo(x - 1, y - 17 * k); ctx.lineTo(x - 1, y - 3 * k); ctx.lineTo(x - 7 * k, y - 3 * k); ctx.closePath(); ctx.fill();
+    }
+  },
   // pigeons crossing the sky
   frPigeons(ctx, L, camX, oy, S, W, t) {
     for (let i = 0; i < 4; i++) {
@@ -231,6 +241,8 @@ const themes = {
 /* ---------------- the rest of the country (overhaul themes) ---------------- */
 // Provence: lavender rows running to the hills, sunflowers, a stone farmhouse (mas) and cypresses
 Object.assign(painters, {
+  // a flat haze over the layers behind it (pushes far art back so nothing reads as a platform)
+  frVeil(ctx, L, rng, H) { ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H); },
   frHillsSoft(ctx, L, rng, H) {
     ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(0, H);
     for (let x = 0; x <= BG_W; x += 10) ctx.lineTo(x, L.base - (L.amp || 40) * (0.5 + 0.5 * Math.sin(x / BG_W * TAU * 2 + (L.ph || 0)) * Math.cos(x / BG_W * TAU * 3)));
@@ -292,55 +304,67 @@ Object.assign(painters, {
     });
   }
 });
-// the overhaul's theme keys. Where an existing Fiesta Toon atlas fits, the theme borrows it (its image strips and
-// floor); where none fits (Provence, the bay, Périgord) the painters above draw it until its art exists.
+// the overhaul's theme keys: each has its own Fiesta Toon atlas (strips and floor); the painters above are the
+// fallback while it loads. The rooftops by day and the quay still borrow the boulevard's and the Seine's.
 const atlasLayers = (atlas, layers, shifts) => layers.map((L, i) => ({ kind: 'image', atlas, id: 'L' + i, f: L.f, base: L.base, dyn: L.dyn, color: L.color, fallback: L, shift: (shifts && shifts[i]) || (L.base > 340 ? -Math.min(60, L.base - 335) : 0) }));
 const earth = {
   style: 'grass', cap: '#6aa83a', capHi: '#a8d870', dirt: '#a87a4a', dirt2: '#7a5430', rock: '#9a7a5a'
 };
 const chalk = { style: 'stone', cap: '#d8ccb0', capHi: '#f4ecd8', dirt: '#c8b890', dirt2: '#a89870', rock: '#b8a888' };
 const sand = { style: 'playa', cap: '#e8d8a8', capHi: '#fff4d0', dirt: '#c8b080', dirt2: '#a89060', rock: '#b8a070' };
+// a theme's own Fiesta Toon strips: [atlas strip id, parallax f, procedural fallback layer, shift?]
+// for a ground line ('base') of about 315 the art sits on the floor at the usual phone camera (the floor is drawn near
+// y 304 of the 448 px view), so a lower base is lifted to it (shift); list entries may give their own shift
+const ownLayers = (atlas, list) => list.map(([id, f, fb, shift]) => ({ kind: 'image', atlas, id, f, base: fb.base, dyn: fb.dyn, color: fb.color, fallback: fb, shift: shift != null ? shift : -Math.max(0, Math.min(75, fb.base - 315)) }));
 Object.assign(themes, {
-  // the Paris plaza: the morning boulevard's strips and cobbles
-  fr_place: Object.assign({}, themes.fr_morning, { name: 'Place du Marché', layers: atlasLayers('fr_morning', themes.fr_morning.layers), atlas: 'fr_morning', atlasBorrow: 'fr_morning' }),
+  // the Paris square (7-1): its own strips (fr_place: the tower far off, a ring of pale houses, the square's trees,
+  // carousel and fountain on a terrace) and chunky cobbles; the boulevard painters are the fallback
+  fr_place: Object.assign({}, themes.fr_morning, { name: 'Place du Marché', sky: ['#6aa8e8', '#c8e0ff', '#ffe8e0'], groundTint: 'rgba(250,240,222,0.34)',
+    layers: ownLayers('fr_place', [
+      ['L0', 0.03, { kind: 'frTower', color: '#9aa8c0', base: 330, h: 240, at: 760, dyn: 'frPigeons' }, 0],
+      ['L1', 0.1, { kind: 'frFacades', color: '#f0e4cc', base: 350, roof: '#7a8aa0' }, 0],
+      ['L2', 0.3, { kind: 'frTrees', color: '#5a9a4a', base: 385 }, 0]
+    ]) }),
   fr_provence: Object.assign({}, base, {
     rays: '#fff4c8', name: 'Provence', music: 'tour_fr', particles: 'petals', ground: earth,
-    sky: ['#4a98e8', '#a8d8ff', '#fff4d8'], horizonGlow: '#ffe8b0',
+    sky: ['#3a8ae8', '#9ad0ff', '#fff4e0'], horizonGlow: '#ffe8b0',
     celestial: { type: 'sun', x: 0.78, y: 0.16, r: 36, color: '#fffbe0', glow: '#ffe090' }, stars: 0, cloudsDyn: true,
-    layers: [
-      { kind: 'frHillsSoft', color: '#a8b8d8', base: 300, amp: 34, f: 0.03 },
-      { kind: 'frHillsSoft', color: '#8aa868', base: 330, amp: 24, ph: 2, f: 0.08 },
-      { kind: 'frLavender', color: '#8a6ac8', base: 345, f: 0.16 },
-      { kind: 'frSunflowers', color: '#ffc828', base: 392, f: 0.42 }
-    ],
+    layers: ownLayers('fr_provence', [
+      ['L0', 0.03, { kind: 'frHillsSoft', color: '#9a8ac8', base: 300, amp: 34 }],
+      ['L1', 0.1, { kind: 'frLavender', color: '#8a6ac8', base: 340 }, -60],
+      ['L2', 0.25, { kind: 'frSunflowers', color: '#e8b830', base: 375 }, -92]
+    ]),
     fog: '#fff0d8', hard: { c1: '#d8c8a0', c2: '#a89870' }, brick: { style: 'stone', c1: '#e8d8b8', c2: '#c8b090', mortar: '#a89070' },
     semi: { style: 'plank', c1: '#a8805a', c2: '#6a4a2a' }, decor: ['frLavenderBush', 'frHive', 'frLavenderBush', 'frCypress']
   }),
   fr_baie: Object.assign({}, base, {
     rays: '#fff8e8', name: 'The Bay', music: 'tour_fr', particles: 'none', ground: sand, liquid: 'sea',
-    sky: ['#6aa0d8', '#c0dcf0', '#f4f0e0'], horizonGlow: '#fff4e0',
+    sky: ['#5a9ad8', '#b8dcf4', '#fff4e4'], horizonGlow: '#fff4e0',
     celestial: { type: 'sun', x: 0.25, y: 0.2, r: 32, color: '#fffbe8', glow: '#ffe8c0' }, stars: 0, cloudsDyn: true,
-    layers: [
-      { kind: 'frBay', color: '#8a96aa', base: 318, f: 0.04, at: 620 },
-      { kind: 'frHillsSoft', color: '#b8b090', base: 372, amp: 10, f: 0.2 }
-    ],
-    fog: '#f0f4f8', hard: { c1: '#b8a888', c2: '#8a7a60' }, semi: { style: 'plank', c1: '#8a6a4a', c2: '#5a4430' }, decor: ['frShell', 'frPost', 'frShell']
+    layers: ownLayers('fr_baie', [
+      ['L0', 0.02, { kind: 'frBay', color: '#a8b4c8', base: 290, at: 620 }, -40],
+      ['L1', 0.08, { kind: 'frHillsSoft', color: '#d8c8a0', base: 335, amp: 10, dyn: 'frSails', horizon: 236 }, -96]
+    ]),
+    fog: '#f0f4f8', hard: { c1: '#b8a888', c2: '#8a7a60' }, semi: { style: 'plank', c1: '#8a6a4a', c2: '#5a4430' }, decor: ['frShell', 'frTidePool', 'frBuoy', 'frShell', 'frBucket', 'frTidePool']
   }),
   fr_perigord: Object.assign({}, base, {
     rays: '#fff0c8', name: 'Périgord', music: 'tour_fr', particles: 'leaves', ground: chalk,
-    sky: ['#5a98d8', '#b0d8f0', '#f8f0d8'], horizonGlow: '#fff0d0',
+    sky: ['#6a9ad0', '#c4dcec', '#f4ecd8'], horizonGlow: '#fff0d0',
     celestial: { type: 'sun', x: 0.3, y: 0.14, r: 30, color: '#fffbe8', glow: '#ffe8b0' }, stars: 0, cloudsDyn: true,
-    layers: [
-      { kind: 'frCliffs', color: '#d8ccb0', base: 300, f: 0.05 },
-      { kind: 'frOaks', color: '#4a7a3a', base: 330, f: 0.18 }
-    ],
+    layers: ownLayers('fr_perigord', [
+      ['L0', 0.04, { kind: 'frOaks', color: '#4a7a3a', base: 300 }],
+      ['L1', 0.1, { kind: 'frCliffs', color: '#6a4a32', base: 330 }, 0]
+    ]),
     fog: '#f0ecd8', hard: { c1: '#a89878', c2: '#7a6a50' }, semi: { style: 'plank', c1: '#7a5a3a', c2: '#4a3420' }, decor: ['frWalnut', 'frMushroomRing']
   }),
-  // the sky over France: the tower atlas (clouds, the city far below), the iron tower a daylight silhouette far off
+  // the sky over France (7-7): its own strips (far fields and the city with the tower as a plain daylight silhouette,
+  // cumulus banks with far balloons) and a cloud floor
   fr_ciel: Object.assign({}, themes.fr_tower, {
-    name: 'Montgolfière Skies', particles: 'none', ground: Object.assign({}, themes.fr_tower.ground),
-    layers: [{ kind: 'frTower', color: '#9aa8c8', base: 380, h: 200, f: 0.02, blur: true, at: 520 }].concat(atlasLayers('fr_tower', themes.fr_tower.layers, [40, 0])),
-    atlasBorrow: 'fr_tower'
+    name: 'Montgolfière Skies', particles: 'none', sky: ['#3a8ae8', '#a8d8ff', '#fff4e8'],
+    layers: ownLayers('fr_ciel', [
+      ['L0', 0.02, { kind: 'frTower', color: '#a8b8d0', base: 330, h: 200, at: 520 }, 0],
+      ['L1', 0.1, { kind: 'clouds', color: '#ffffff', base: 260 }, 0]
+    ]).concat([{ kind: 'frVeil', color: 'rgba(216,236,255,0.32)', base: 0, f: 0.1 }])   // a sky haze over the far balloons so the real ones pop
   }),
   // the rooftops by day (7-1): the morning boulevard's strips, zinc roofs underfoot
   fr_toits: Object.assign({}, themes.fr_morning, { name: 'Les Toits', ground: zinc, hard: { c1: '#8a98a8', c2: '#5a6474' }, layers: atlasLayers('fr_morning', themes.fr_morning.layers), atlas: 'fr_morning', atlasBorrow: 'fr_morning' }),
@@ -348,7 +372,7 @@ Object.assign(themes, {
   fr_quai: Object.assign({}, themes.fr_seine, { name: 'Quai', layers: atlasLayers('fr_seine', themes.fr_seine.layers), atlasBorrow: 'fr_seine' })
 });
 // a borrowed atlas also lends its floor (the procedural tiles draw until it is in)
-if (typeof Atlas !== 'undefined') for (const k of ['fr_place', 'fr_ciel', 'fr_quai']) {
+if (typeof Atlas !== 'undefined') for (const k of ['fr_quai']) {
   const th = themes[k], G = th.ground || {};
   Atlas.applyTiles(th, th.atlasBorrow, { ground: 'ground', groundFallback: G.paint ? (c, r, s) => G.paint(c, r, s) : null, capFallback: G.paintCap ? (c, a, b, r, l, rt) => G.paintCap(c, a, b, r, l, rt) : null });
 }
@@ -518,6 +542,11 @@ const moleArt = (ctx, e, x, y, m, t) => {
 };
 // the magpie: black and white, a long glossy blue-green tail (the stamp thief of 7-2)
 const magpieArt = (ctx, e, x, y, m, t) => {
+  // the stamp thief of 7-2 calls this directly (it has no cfg of its own): draw the fr atlas's magpie when it is in
+  if (!e.cfg && typeof Atlas !== 'undefined' && Atlas.animate(ctx, 'fr', m === 'flee' ? 'magpie/fly' : m === 'grab' ? 'magpie/swoop' : 'magpie/fly', (e.t || t) * (m === 'flee' ? 1.6 : 0.8), x, y - 12, e.dir || 1, { scale: 1.3 })) {
+    if (m === 'grab') { ctx.fillStyle = '#ff6a8a'; ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 1.2; rr(ctx, x + (e.dir || 1) * 14 - 3.5, y - 16, 7, 8, 1.5); ctx.fill(); ctx.stroke(); }
+    return;
+  }
   ctx.save(); ctx.translate(x, y - 12); ctx.scale(e.dir || 1, 1);
   const f = Math.sin((e.t || t) * (m === 'flee' ? 22 : 8));
   ctx.fillStyle = '#1e5a6a'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-24, 6 + f); ctx.lineTo(-22, 1 + f); ctx.lineTo(-6, -3); ctx.fill();
@@ -651,7 +680,10 @@ function boarThink(e, dt) {
   } else if (e.state === 'notice') { e.mode = 'notice'; e.vx = 0; e.st -= dt; if (e.st <= 0) { e.state = 'charge'; e.st = 1.3; } }
   else { e.mode = 'charge'; e.vx = e.dir * 6 * TS; e.st -= dt; if (Math.random() < 0.3) e.g.burst(e.cx - e.dir * 12, e.y + e.h, 1, '#c8a878', 'dust'); if (e.st <= 0 || e.hitWall) { e.state = 'walk'; e.cool = 2; e.vx = e.dir * e.speed; } }
 }
-class FrOyster extends TourEnemy.make({ w: 30, h: 14, speed: 0, behavior: 'still', art: oysterArt, burst: '#c8c0c8', inkPad: 6 }) {
+// the overhaul cast drawn from the fr_x atlas (oyster, crab, gull, macaron; the truffle pig in 29_tour_fr_levels.js),
+// the procedural art until it is in
+const FR_X = 'fr_x';
+class FrOyster extends TourEnemy.make({ w: 30, h: 14, speed: 0, behavior: 'still', art: oysterArt, burst: '#c8c0c8', inkPad: 6, atlas: FR_X, sprite: 'oyster' }) {
   constructor(g, s) { super(g, s); this.ph = (s.phase != null ? s.phase : Math.random() * 1.8); this.openK = 1; this.shut = false; this.snap = 0; }
   think(dt) {
     this.vx = 0; this.mode = 'idle'; this.ph += dt;
@@ -663,7 +695,11 @@ class FrOyster extends TourEnemy.make({ w: 30, h: 14, speed: 0, behavior: 'still
   }
   touchPlayer(p) { if (this.dead || this.stunT > 0) return; if (this.snap > 0) p.hurt(this); }
   hit(kind, src) { if ((kind === 'stomp' || kind === 'spin') && this.shut) return 'bounce'; return super.hit(kind, src); }
-  paint(ctx, x, y, mode) { if (this.trem) x += Math.sin(this.t * 60) * 1.2; return super.paint(ctx, x, y, mode); }
+  // a wet dark patch under the shell so the grey oyster reads on pale sand (it sits low in its pool)
+  draw(ctx) { if (!this.dead && !this.knocked) { ctx.fillStyle = 'rgba(60,44,30,0.4)'; ctx.beginPath(); ctx.ellipse(this.cx, this.y + this.h - 1, 19, 4.5, 0, 0, TAU); ctx.fill(); } super.draw(ctx); }
+  // the atlas has the open shell (idle) and the shut one
+  get artMode() { const m = super.artMode; return m === 'idle' && this.openK < 0.5 ? 'shut' : m; }
+  paint(ctx, x, y, mode) { if (this.trem) x += Math.sin(this.t * 60) * 1.2; return super.paint(ctx, x, y, mode === 'idle' && this.openK < 0.5 ? 'shut' : mode); }
 }
 const enemies = {
   frBaguette: { cls: TourEnemy.make({ w: 14, h: 38, speed: 1.0, behavior: 'walk', art: baguetteArt, burst: '#f0b860', onDefeat: e => e.g.burst(e.cx, e.cy, 12, '#f0c070', 'debris') }), place: 'walk' },
@@ -689,12 +725,12 @@ const enemies = {
   // the mole: a moving soil bump under Brady's feet; it pops up (tell 0.7 s), then sits stunned a moment
   frMole: { cls: modal(TourEnemy.make({ w: 24, h: 22, speed: 1.2, behavior: 'burrower', art: moleArt, burst: '#5a4a48' }), { pop: 'walk', exposed: 'stun', dig: 'idle' }), place: 'walk' },
   // the magpie: the stamp thief of 7-2 (TourThief draws it); as a plain enemy it is an item thief
-  frMagpie: { cls: TourEnemy.make({ w: 26, h: 20, speed: 1.4, behavior: 'itemThief', flee: 8, art: magpieArt, burst: '#18181e' }), place: 'walk' },
+  frMagpie: { cls: modal(TourEnemy.make({ w: 26, h: 20, speed: 1.4, behavior: 'itemThief', flee: 8, art: magpieArt, burst: '#18181e' }), { walk: 'fly', idle: 'fly', flee: 'fly', grab: 'swoop', notice: 'swoop' }), place: 'walk' },
   // the oyster: open 1.2 s (stomp it now), then it snaps shut (hurts if Brady is in it) and stays shut 0.6 s
   frOyster: { cls: FrOyster, place: 'walk' },
-  frCrab: { cls: TourEnemy.make({ w: 26, h: 16, speed: 1.6, behavior: 'walk', edgeTurn: true, art: crabArt, burst: '#d83a2a' }), place: 'walk' },
-  frGull: { cls: TourFlyer.make({ w: 30, h: 14, range: 4, speed: 0.9, swoop: true, art: gullArt, burst: '#ffffff' }), place: 'fly' },
-  frMacaron: { cls: TourEnemy.make({ w: 22, h: 20, speed: 1.1, behavior: 'hop', hopV: 9, hopEvery: 1.1, art: macaronEnemyArt, burst: '#ff9ab8' }), place: 'walk' }
+  frCrab: { cls: TourEnemy.make({ w: 26, h: 16, speed: 1.6, behavior: 'walk', edgeTurn: true, art: crabArt, burst: '#d83a2a', atlas: FR_X, sprite: 'crab' }), place: 'walk' },
+  frGull: { cls: TourFlyer.make({ w: 30, h: 14, range: 4, speed: 0.9, swoop: true, art: gullArt, burst: '#ffffff', atlas: FR_X, sprite: 'gull' }), place: 'fly' },
+  frMacaron: { cls: TourEnemy.make({ w: 22, h: 20, speed: 1.1, behavior: 'hop', hopV: 9, hopEvery: 1.1, art: macaronEnemyArt, burst: '#ff9ab8', atlas: FR_X, sprite: 'macaron' }), place: 'walk' }
 };
 // a chandelier that drops when Brady passes underneath, then winches back up
 class FrChandelier extends Ent {
@@ -1128,7 +1164,7 @@ const P = {
     B.decorAt('frChandelier', mid - 6, GY - 8, 0); B.decorAt('frChandelier', mid + 6, GY - 8, 1);
     B.decorAt('frBench', x0 + 8, GY, 0); B.decorAt('frBench', x0 + w - 9, GY, 1); B.decorAt('frFlowers', mid - 3, GY, 0); B.decorAt('frFlowers', mid + 3, GY, 1);
     B.decorAt('frFlowers', x0 + 3, GY - 3, 2); B.decorAt('frFlowers', x0 + w - 4, GY - 3, 3);
-    st.spawn('frOven', mid, GY - 8, {});
+    st.spawn('frOven', mid, GY - 6, {});   // low enough to stay clear of the boss bar on a phone
     st.spawn('frMirror', x0 + 2, GY - 8, { side: 'left' }); st.spawn('frMirror', x0 + w - 3, GY - 8, { side: 'right' });
   }
 };

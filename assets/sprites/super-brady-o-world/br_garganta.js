@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("br_garganta", {"scale":2.0,"image":"br_garganta.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1122}},"anims":{},"strips":{"L0":{"w":2048,"h":888,"top":0.0,"x":0,"y":0},"L1":{"w":2048,"h":232,"top":328.0,"x":0,"y":889},"L2":{"w":2048,"h":112,"top":388.0,"x":0,"y":1315}}});

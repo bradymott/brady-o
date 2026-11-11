@@ -288,38 +288,42 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       await shot(`sys-${n}.png`);
     }
   });
-  // the map graph (W13): the reveal queue, the house stop, Brady walking the trails, a house visit, world-map extras
+  // the map graph in the walkable overworld: the reveal queue, the house stop, Brady walking the trails, a house
+  // visit, world-map extras on the route map
   await run('mapgraph', async () => {
     const fresh = () => page.evaluate(() => { const B = window.BRADY; B.Save.data.done = {}; B.Save.data.unlocked = { '1-1': true }; B.Save.data.exits = {}; B.Save.data.secretExits = {}; B.Save.data.gold = {}; B.Save.data.tour = { at: 'mx', seen: { mx: true }, cards: { mx: true } }; window.BRADY_TOUR.TourProgress.data(); });
-    const tapAt = (x, y) => page.evaluate(([x, y]) => { window.BRADY.Input.taps.push({ x, y }); }, [x, y]);
     await fresh();
     const r1 = await page.evaluate(() => {
       const TT = window.BRADY_TOUR, B = window.BRADY;
       B.Save.data.done['1-1'] = true; const rev = TT.TourProgress.complete('1-1', true, 'secret').reveals;
-      const m = new TT.TourMapScene({ from: '1-1' }); B.Game.setScene(m); sim(0.5);
-      return { rev: rev.map(x => x.kind), reveal: m.reveal && m.reveal.r.kind, panel: !!TT.TourPanel };
+      const m = new TT.TourMapScene({ from: '1-1' }); B.Game.setScene(m); sim(0.9);
+      return { rev: rev.map(x => x.kind), reveal: m.reveal && m.reveal.r.kind, panel: !!TT.TourPanel, mode: m.mode };
     });
     await page.evaluate(() => { const m = S(); m._u = m.update; m.update = function () {}; });
     await shot('map-reveal-trail.png');
-    await page.evaluate(() => { const m = S(); m.update = m._u; sim(1.0); m.update = function () {}; });
+    await page.evaluate(() => { const m = S(); m.update = m._u; for (let k = 0; k < 240 && !(m.reveal && m.reveal.r.kind === 'house' && m.reveal.t > 0.6); k++) sim(1 / 60); m.update = function () {}; });
     await shot('map-reveal-house.png');
     const r2 = await page.evaluate(() => {
-      const m = S(); m.update = m._u; sim(3); const T = window.BRADY_TOUR.TourProgress.data();
-      const house = m.stamps.find(b => b.S.kind === 'house');
-      return { pending: T.pending.length, revealed: !!T.revealed['house:mx-tienda'], path: Object.keys(T.paths), house: !!house, reveal: !!m.reveal, hx: house && house.cx, hy: house && house.cy, at: m.walker && m.walker.k, hk: house && house.k };
+      const m = S(); m.update = m._u; sim(3); for (let k = 0; k < 40 && !m.ow.idle(); k++) sim(0.25); const T = window.BRADY_TOUR.TourProgress.data();
+      const house = m.ow.by['house:mx-tienda'];
+      return { pending: T.pending.length, revealed: !!T.revealed['house:mx-tienda'], path: Object.keys(T.paths), house: !!(house && house.visible), reveal: !!m.reveal, at: m.ow.walker.at };
     });
-    check('map: clearing 1-1 by its secret exit queues a gold trail and the Souvenir Stand', r1.rev.join() === 'path,house' && r1.reveal === 'path', r1);
-    check('map: the reveal plays, then is written to the save (paths, revealed) and the stand stays on the panel', r2.pending === 0 && r2.revealed && r2.path.some(k => k === 'mx:0>' + r2.hk) && r2.house && !r2.reveal, r2);
-    // Brady walks to the stand, a second tap goes in
-    await tapAt(r2.hx, r2.hy);
-    const r3 = await page.evaluate(() => { sim(0.05); const m = S(), w = m.walker; const walking = !!w.path; sim(2.5); return { walking, at: w.k }; });
-    await page.evaluate(() => { const m = S(); m.walker.path = [m.stamps.find(b => b.S.kind === 'house').k]; m.walker.k = 0; const a = m.stopAt[0]; m.walker.x = a.cx; m.walker.y = a.cy; sim(0.12); m._u = m.update; m.update = function () {}; });
+    check('map: clearing 1-1 by its secret exit queues a gold trail and the Souvenir Stand, played in the overworld', r1.rev.join() === 'path,house' && r1.reveal === 'path' && r1.mode === 'land', r1);
+    check('map: the reveal plays, is written to the save (paths, revealed), the stand stays on the map and Brady walks to it', r2.pending === 0 && r2.revealed && r2.path.some(k => k === 'mx:0>6') && r2.house && !r2.reveal && r2.at === 'house:mx-tienda', r2);
+    // the joystick walks Brady down the trail to 1-1 and back up to the stand; a tap on the stop he stands on goes in
+    const tapNode = key => page.evaluate(k => { const ow = S().ow, p = ow.nodeScreen(k); ow.testTaps = [{ x: p.x, y: p.y }]; sim(0.02); }, key);
+    await page.evaluate(() => { sim(0.05, { down: true }); sim(3); });
+    const r3a = await page.evaluate(() => S().ow.walker.at);
+    const r3 = await page.evaluate(() => { sim(0.05, { up: true }); const w = S().ow.walker; const walking = !!w.seg; sim(0.5); return { walking, from: window.r3a }; });
+    r3.at11 = r3a;
+    await page.evaluate(() => { const m = S(); m._u = m.update; m.update = function () {}; });
     await shot('map-walker.png');
-    await page.evaluate(() => { const m = S(); m.update = m._u; sim(2.5); });
-    check('map: tapping the stand walks Brady there along the trail', r3.walking && r3.at === r2.hk, r3);
-    await tapAt(r2.hx, r2.hy);
-    const r4 = await page.evaluate(() => { sim(0.1); const g = S(); const shop = g.entities && g.entities.find(e => e.constructor.name === 'TourShop'); return { scene: g.constructor.name, house: g.level && g.level.house, shop: !!shop, items: shop ? shop.items.map(i => i.kind + ':' + i.price) : null }; });
-    check('map: the second tap opens the Souvenir Stand room with its counter', r4.scene === 'Play' && r4.house === 'mx-tienda' && r4.shop, r4);
+    await page.evaluate(() => { const m = S(); m.update = m._u; sim(3); });
+    const r3b = await page.evaluate(() => S().ow.walker.at);
+    check('map: the joystick walks Brady along the trail to 1-1 and back up to the stand', r3.at11 === '1-1' && r3.walking && r3b === 'house:mx-tienda', Object.assign(r3, { at: r3b }));
+    await tapNode('house:mx-tienda');
+    const r4 = await page.evaluate(() => { sim(0.8); const g = S(); const shop = g.entities && g.entities.find(e => e.constructor.name === 'TourShop'); return { scene: g.constructor.name, house: g.level && g.level.house, shop: !!shop, items: shop ? shop.items.map(i => i.kind + ':' + i.price) : null }; });
+    check('map: a tap on the stop he stands on opens the Souvenir Stand room with its counter', r4.scene === 'Play' && r4.house === 'mx-tienda' && r4.shop, r4);
     await page.evaluate(() => { const g = S(); g.player.invuln = 0; const sh = g.entities.find(e => e.constructor.name === 'TourShop'); g.player.x = sh.cx - 40; sim(0.3); freeze(); });
     await shot('map-house-room.png');
     const r5 = await page.evaluate(() => { const g = S(); g.update = g._upd; const gate = g.entities.find(e => e.constructor.name === 'Gate'); g.player.x = gate.cx - 10; g.player.y = gate.y + gate.h - g.player.h; sim(0.5); for (let k = 0; k < 40 && g.state !== 'results'; k++) sim(0.25, { jumpPressed: true }); const T = window.BRADY_TOUR.TourProgress.data(); return { state: g.state, visits: T.houses['mx-tienda'] || 0, done: Object.keys(window.BRADY.Save.data.done) }; });
@@ -333,8 +337,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       const TT = window.BRADY_TOUR, B = window.BRADY, MX = TT.Tour.countries.mx;
       for (let i = 1; i <= MX.mainCount; i++) { B.Save.data.done['1-' + i] = true; TT.TourProgress.complete('1-' + i, false, 'main'); }
       const T = TT.TourProgress.data(); T.pending = []; for (let n = 1; n <= 5; n++) T.bottles[n] = true; T.flights.ma = true; T.cards.ec = true; MX.levels[1].exits.fly = { to: 'flight:ma' }; T.seen.ec = true; T.at = 'ec';
-      const m = new TT.TourMapScene({}); B.Game.setScene(m); sim(0.6);
-      const fx = m.jarFx && m.jarFx.mx; return { jar: !!fx, airship: !!m.airship, from: m.flightFrom('ma') };
+      const m = new TT.TourMapScene({}); B.Game.setScene(m); m.card = null; m.openRoute({}); sim(0.6);
+      const fx = m.jarFx && m.jarFx.mx; return { jar: !!fx, airship: !!m.airship, from: m.flightFrom('ma'), mode: m.mode };
     });
     await page.evaluate(() => { const m = S(); m.cam.lon = -45; m.cam.lat = 15; m.cam.z = 3.2; m._u = m.update; m.update = function () {}; });
     await shot('map-world.png');
@@ -345,7 +349,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     });
     check('world map: the boss fell, so the Baron\'s jar over Mexico shatters and the airship moves on', r7.jar && r7.airship && r8.jars, Object.assign({}, r7, r8));
     check('world map: five bottles show the lighthouse; a tap lights its beam', r8.lighthouse === true, r8);
-    check('world map: the secret flight arc starts at the country whose level has the flight exit', r7.from === 'mx', r7);
+    check('world map: the secret flight arc starts at a country whose level has the flight exit (Ecuador 2-7, or the test exit in Mexico)', r7.from === 'ec' || r7.from === 'mx', r7);
     await page.evaluate(() => { const m = S(); m.cam.lon = -40; m.cam.lat = 10; m.cam.z = 3.2; sim(0.3); m.update = function () {}; });
     await shot('map-world-lit.png');
     await page.evaluate(() => { delete window.BRADY_TOUR.Tour.countries.mx.levels[1].exits.fly; });

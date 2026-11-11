@@ -207,39 +207,6 @@ class RainbowLaser extends Ent {
   get light() { return { r: 50, c: 'rgba(255,255,255,' }; }
 }
 
-/* ---------- screen effects (device px, game view) ---------- */
-const TourFx = {
-  // magic mushroom: hue cycling, a gentle wobble and kaleidoscope sparkles for a few seconds
-  apply(ctx, play, W, H) {
-    const dz = play.dizzy || 0;
-    if (dz <= 0) return;
-    const k = Math.min(1, dz, 1.2);
-    const calm = TourKit.reduceMotion();
-    ctx.save();
-    if (!calm && Game.quality >= 1) {
-      // wobble: redraw the frame slightly rotated and scaled (cheap, one pass)
-      const tmp = PostFX.ensure('tourWob', W, H), tx = tmp.getContext('2d');
-      tx.globalCompositeOperation = 'copy'; tx.drawImage(ctx.canvas, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr, W, H, 0, 0, W, H);
-      const a = Math.sin(play.t * 2.2) * 0.022 * k, s = 1 + 0.03 * k + Math.sin(play.t * 3.1) * 0.01 * k;
-      ctx.translate(W / 2, H / 2); ctx.rotate(a); ctx.scale(s, s); ctx.translate(-W / 2, -H / 2);
-      ctx.drawImage(tmp, 0, 0);
-      ctx.setTransform(1, 0, 0, 1, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr);
-    }
-    // hue cycling wash
-    const hue = calm ? 300 : (play.t * 120) % 360;
-    ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = 0.28 * k;
-    const g = ctx.createLinearGradient(0, 0, W, H);
-    for (let i = 0; i <= 4; i++) g.addColorStop(i / 4, `hsl(${(hue + i * 72) % 360},100%,60%)`);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    // kaleidoscope sparkles
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.8 * k;
-    const n = calm ? 8 : 26, cx = W / 2, cy = H / 2;
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * TAU + (calm ? 0 : play.t * 0.8), r = (0.25 + ((i * 37) % 10) / 14) * Math.min(W, H) * 0.6;
-      const px = cx + Math.cos(a) * r, py = cy + Math.sin(a) * r * 0.7, sz = (3 + (i % 3) * 2) * Game.S * (0.6 + 0.4 * Math.sin(play.t * 5 + i));
-      ctx.fillStyle = `hsl(${(hue + i * 40) % 360},100%,70%)`;
-      ctx.beginPath(); TourKit.star(ctx, px, py, sz, sz * 0.35, 4); ctx.fill();
-    }
-    ctx.restore();
-  }
-};
+/* ---------- screen effects ---------- */
+// the magic mushroom's dizzy colours now belong to the trip family in 15_postfx.js (TripFX); kept for old callers
+const TourFx = { apply(ctx, play, W, H) { TripFX.post(ctx, play, W, H); } };

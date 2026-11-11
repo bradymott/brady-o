@@ -44,10 +44,27 @@ const Atlas = {
       if (this.atlases[name] !== a) return;                                   // dropped while loading
       delete this.pending[name];
       if (this.keepSet && !this.keepSet.has(name)) { this.drop(name); return; } // the level moved on meanwhile
+      if (meta.halo) this.makeHalo(a);
       a.ready = true; this.arrived(name);
     };
     a.img.onerror = () => { if (this.atlases[name] !== a) return; delete this.pending[name]; delete this.atlases[name]; this.failed[name] = true; };
     a.img.src = this.base + (meta.image || name + '.png');
+  },
+  /* The light keyline of the toon2 characters (pack_atlas.py HALO=1; docs/ART_READABILITY.md): once per atlas, a
+     half-size copy of every frame's silhouette, grown by meta.halo.r texels and filled with the keyline colour. draw()
+     blits a frame's halo under the frame: one extra drawImage per sprite, no per-frame offscreen work, and a quarter
+     of the atlas's decoded pixels. Frames keep a clear margin around them in the sheet, so halos never overlap. */
+  haloColor: 'rgba(255,248,232,1)', haloAlpha: 0.6,
+  makeHalo(a) {
+    try {
+      const img = a.img, W = Math.ceil(img.naturalWidth / 2), H = Math.ceil(img.naturalHeight / 2);
+      const src = makeCanvas(W, H), sx = src.getContext('2d'); sx.drawImage(img, 0, 0, W, H);
+      const c = makeCanvas(W, H), x = c.getContext('2d'), r = Math.max(0.75, (a.meta.halo.r || 2.5) / 2);
+      for (let k = 0; k < 12; k++) { const t = k / 12 * Math.PI * 2; x.drawImage(src, Math.cos(t) * r, Math.sin(t) * r); }
+      x.drawImage(src, 0, 0);
+      x.globalCompositeOperation = 'source-in'; x.fillStyle = this.haloColor; x.fillRect(0, 0, W, H);
+      a.halo = c;
+    } catch (e) { a.halo = null; }
   },
   /* keep(names): the atlases the current level uses; every other one is dropped now (and any still loading is
      dropped when it lands). Call it when a level starts, before need(). */
@@ -61,12 +78,12 @@ const Atlas = {
   drop(name) {
     const a = this.atlases[name]; if (!a) return;
     delete this.atlases[name]; delete this.pending[name];
-    a.ready = false; a.img.onload = a.img.onerror = null;
+    a.ready = false; a.img.onload = a.img.onerror = null; if (a.halo) { a.halo.width = a.halo.height = 0; a.halo = null; }
     try { a.img.removeAttribute('src'); } catch (e) { /* not a DOM image */ }
     a.img = null;
   },
   /* memory held by decoded atlas images, in MB (for tests and the debug overlay) */
-  decodedMB() { let b = 0; for (const n in this.atlases) { const a = this.atlases[n]; if (a.ready && a.img) b += (a.img.naturalWidth || 0) * (a.img.naturalHeight || 0) * 4; } return Math.round(b / 1e5) / 10; },
+  decodedMB() { let b = 0; for (const n in this.atlases) { const a = this.atlases[n]; if (a.ready && a.img) b += (a.img.naturalWidth || 0) * (a.img.naturalHeight || 0) * 4; if (a.halo) b += a.halo.width * a.halo.height * 4; } return Math.round(b / 1e5) / 10; },
   flushCaches() {
     if (typeof TileArt !== 'undefined') TileArt.cache = {};
     if (typeof BG !== 'undefined') BG.cache = {};
@@ -81,7 +98,7 @@ const Atlas = {
   anim(name, id) { const a = this.atlases[name]; return a && a.ready ? a.meta.anims[id] || null : null; },
   strip(name, id) { const a = this.atlases[name]; return a && a.ready ? a.meta.strips[id] || null : null; },
   /* draw(ctx, name, id, x, y, facing, o): the frame with its origin at (x, y) in world units; facing -1 mirrors it.
-     o: { scale (extra), alpha, rot }. Returns false when the frame is missing, so callers can fall back. */
+     o: { scale (extra), alpha, rot, sx, sy (squash and stretch about the origin) }. Returns false when the frame is missing, so callers can fall back. */
   draw(ctx, name, id, x, y, facing, o) {
     const a = this.atlases[name]; if (!a || !a.ready) return false;
     const f = a.meta.frames[id]; if (!f) return false;
@@ -90,7 +107,13 @@ const Atlas = {
     ctx.translate(x, y);
     if (o && o.rot) ctx.rotate(o.rot);
     if (facing < 0) ctx.scale(-1, 1);
+    if (o && (o.sx || o.sy)) ctx.scale(o.sx || 1, o.sy || 1);   // squash and stretch about the origin (feet or centre)
     if (o && o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
+    if (a.halo && !(o && o.halo === false)) {
+      const ga = ctx.globalAlpha; ctx.globalAlpha = ga * this.haloAlpha;
+      ctx.drawImage(a.halo, f.x / 2, f.y / 2, f.w / 2, f.h / 2, -f.ox * k, -f.oy * k, f.w * k, f.h * k);
+      ctx.globalAlpha = ga;
+    }
     ctx.drawImage(a.img, f.x, f.y, f.w, f.h, -f.ox * k, -f.oy * k, f.w * k, f.h * k);
     ctx.restore();
     return true;

@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("mx_bodega", {"scale":2.0,"image":"mx_bodega.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":1040,"y":889},"vaulta_idle_000":{"w":519,"h":275,"ox":259.5,"oy":272.51,"x":0,"y":889},"vaultb_idle_000":{"w":519,"h":275,"ox":259.5,"oy":272.51,"x":520,"y":889}},"anims":{},"strips":{"L0":{"w":2048,"h":888,"top":0.0,"x":0,"y":0}}});

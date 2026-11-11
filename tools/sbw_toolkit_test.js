@@ -157,6 +157,8 @@ section('budget', () => {
   G.Validator.STRICT5 = true;
   check('budget rule 5: premium items all in plain sight fail (an error with STRICT5, a warning until release)', has(B('lab', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'lsd' }], ['flat', { n: 40 }]]), /plain sight/));
   G.Validator.STRICT5 = false;
+  check('budget rule 8: a jump power or two pass, three fail', B('lab', [['itemBlock', { item: 'socks' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 20 }], ['gearStand', { item: 'beans' }], ['flat', { n: 30 }]]).ok && has(B('lab', [['itemBlock', { item: 'socks' }], ['itemBlock', { item: 'cake' }], ['itemBlock', { item: 'beans' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 40 }]]), /max 2, rule 8/));
+  check('budget rule 8: a jump power in a CARRY area fails', has(B('lab', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'cake' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 40 }]], { areas: [{ id: 'run', gen: 'strip', W: 120, carry: { jumpMul: 0.9 }, script: [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'cake' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 40 }], ['end', { exit: 'main' }]] }] }), /CARRY area/));
   const six = [1, 2, 3, 4, 5, 6].map(() => ['itemBlock', { item: 'power' }]).concat([['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 30 }]]);
   check('budget rule 2: seven blocks in a main level fail', has(B('lab', six), /item blocks in the main area/));
   check('budget rule 7: a secret level may hold up to seven', B('lab', six, { secret: true }).ok, B('lab', six, { secret: true }).errors);
