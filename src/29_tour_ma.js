@@ -222,6 +222,13 @@ const decor = {
   // a rug draped over a rope between two poles (its top is a bouncy one-way platform)
   maRug(ctx, x, y, t, th, d) {
     const w = d.w, x0 = x - w / 2, top = y - d.h, c = RUG[d.seed % 3];
+    // a rug moth (platEater) ate some of its top tiles: leave a gap through the rug there until they regrow
+    const A = !d.cut && Game.scene && Game.scene.area, eaten = A && A.eaten && A.eaten.size ? A.eaten : null;
+    if (eaten) {
+      const row = Math.round(top / TS), c0 = Math.round(x0 / TS), n = Math.round(w / TS), gaps = [];
+      for (let q = 0; q < n; q++) if (eaten.has(row * A.W + c0 + q)) gaps.push(q);
+      if (gaps.length) { ctx.save(); ctx.beginPath(); let from = x0 - 10; for (const q of gaps) { ctx.rect(from, top - 12, x0 + q * TS - from, d.h + 60); from = x0 + (q + 1) * TS; } ctx.rect(from, top - 12, x0 + w + 10 - from, d.h + 60); ctx.clip(); decor.maRug(ctx, x, y, t, th, Object.assign({}, d, { cut: true })); ctx.restore(); return; }
+    }
     ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x0 - 4, top - 6, 4, d.h + 6); ctx.fillRect(x0 + w, top - 6, 4, d.h + 6);
     ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x0, top); ctx.quadraticCurveTo(x, top + 8 + Math.sin(t * 2 + d.seed) * 2, x0 + w, top); ctx.lineTo(x0 + w - 6, top + 40); ctx.lineTo(x0 + 6, top + 40); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = RUG[3]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0 + 10, top + 20); ctx.lineTo(x0 + w - 10, top + 20); ctx.stroke();
@@ -695,7 +702,7 @@ const P = {
     for (let q = 0; q < w; q++) { B.set(x + q, y, T.SEMI); B.setHide(x + q, y, 1); }
     B.prop('maRug', x, y, w, 2, 'none', { seed: x });
     st.coins(x + 1, x + w - 2, y - 2);
-    if (o.moth) st.enemy('maMoth', x + w - 2, y + 1);
+    if (o.moth) st.enemy('maMoth', x + w - 2, y);   // y is the rug row (st.enemy stands a walker on the row it is given)
     if (o.gold) st.gold(x + Math.floor(w / 2), y - 3, o.gold === true ? 'risky' : o.gold);
     return x + w + (o.gap || 3);
   },
