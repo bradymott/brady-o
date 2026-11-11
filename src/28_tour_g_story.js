@@ -227,7 +227,7 @@ function tourCreditsLines() {
     ['Chinka is home. The world is back to size. The Baron is a snow globe.', 's'], ['', ''],
     ['STARRING', 'k'], ['Brady  ·  long hair, man bun, many passport stamps', 'v'], ['Chinka  ·  fearless, fast, excellent postcards', 'v'], ['', ''],
     ['AND INTRODUCING', 'k'], ['Baron Bric-a-Brac  ·  collector of other people\'s landmarks', 'v'], ['', ''],
-    ['LOCALS WHO GOT IN THE WAY', 'k'], ['Jumping jalapeños and walking corn', 'v'], ['Piñata burros full of candy', 'v'], ['Marching baguettes and rolling croissants', 'v'], ['Mimes with surprisingly good aim (crêpes)', 'v'], ['', ''],
+    ['LOCALS WHO GOT IN THE WAY', 'k'], ['Jumping jalapeños and walking corn', 'v'], ['Piñata burros full of candy', 'v'], ['Marching baguettes and rolling croissants', 'v'], ['Crêpe pans with surprisingly good aim', 'v'], ['', ''],
     ['THE BARON\'S GOONS', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
     ['YOUR STATS', 'k'], [`Postcards from Chinka: ${tot.gold} / ${tot.goldTotal}`, 'v'], [`Levels cleared: ${tot.done} / ${tot.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Baron got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
     [tot.gold >= tot.goldTotal ? 'Every postcard found. Chinka framed them all.' : 'Some postcards are still out there, somewhere in the world...', 's'],
