@@ -270,7 +270,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   // Bali, Vietnam, Japan and Nepal: each signature item works in its own country
   const sigs4 = await page.evaluate(() => {
     const out = {};
-    for (const [id, sig] of [['9-2', 'surf'], ['10-1', 'noodle'], ['11-1', 'nunchuck'], ['12-2', 'yak']]) {
+    for (const [id, sig] of [['9-1', 'surf'], ['10-1', 'noodle'], ['11-1', 'nunchuck'], ['12-2', 'yak']]) {
       start(id); clearEnemies(); const x0 = P().x; P().collect('sig:' + sig); sim(0.2);
       for (let k = 0; k < 10; k++) sim(0.25, { right: true, actionPressed: k % 2 === 0 });
       const p = P(); out[sig] = { has: !!(p.sig && p.sig.id === sig), moved: Math.round(p.x - x0), alive: !p.dead };
