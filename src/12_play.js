@@ -484,6 +484,8 @@ class Play {
   update(dt) {
     // hit-stop: a few frames of slow time after a solid boss hit, so it lands
     if (this.hitStop > 0) { this.hitStop -= dt; dt *= 0.25; }
+    // trip moments (15_postfx.js TripFX): their timers run in real time; the joint eases the world into a short slow-mo
+    if (this.level.tour && !this.paused && typeof TripFX !== 'undefined') { TripFX.tick(this, dt); dt *= TripFX.timeScale(this); }
     // fades
     if (this.fade.a !== this.fade.target) {
       this.fade.a = approach(this.fade.a, this.fade.target, dt * this.fade.speed);
@@ -734,6 +736,8 @@ class Play {
       const th = THEMES[this.themeKey];
       ctx.fillStyle = rgba(th.fog || th.sky[1], 0.16);
       ctx.fillRect(0, 0, VW * S, VH * S);
+      // trip moments: the strong part (fractals, the green haze) sits behind the tiles and characters
+      TripFX.back(ctx, this, Math.round(VW * S), Math.round(VH * S));
     }
     // world transform
     const wt = () => ctx.setTransform(S, 0, 0, S, gx - camX * S, gy - camY * S);
@@ -773,7 +777,7 @@ class Play {
     if (darkness > 0) this.drawLighting(ctx, camX, camY, S, darkness);
     PostFX.apply(ctx, this, Math.round(VW * S), Math.round(VH * S), gx, gy);
     WorldFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
-    if (this.level.tour && this.dizzy > 0) TourFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
+    if (this.level.tour) TripFX.post(ctx, this, Math.round(VW * S), Math.round(VH * S));
     if (this.player && this.player.buffs && this.player.buffs.sundial > 0) { const W = Math.round(VW * S), H = Math.round(VH * S), k = Math.min(1, this.player.buffs.sundial, 0.9 + (TourKit.reduceMotion() ? 0 : 0.1 * Math.sin(this.t * 4))); const gg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.65); gg.addColorStop(0, 'rgba(120,80,30,0)'); gg.addColorStop(1, `rgba(120,80,30,${0.45 * k})`); ctx.fillStyle = gg; ctx.fillRect(0, 0, W, H); }
     ctx.drawImage(Game.vignette, 0, 0); // vignette
     if (this.flash > 0 && !th.storm) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, this.flash * 0.7)})`; ctx.fillRect(0, 0, VW * S, VH * S); }
@@ -1077,24 +1081,36 @@ class Play {
     const tour = !!this.level.tour, pl = this.player;
     let tourIx = 0;
     if (tour) {
-      // HANDS: the gear or the country's signature item (with a timer ring if it runs out, dots for the globe's shakes)
+      // the power picker's slots (28_tour_dh_picker.js): the ACTIVE power (what THROW does: a pink action dot says so)
+      // and, when Brady holds more, the NEXT one (tap either, or press Q / E / C, to switch)
+      const TP = typeof TourPicker !== 'undefined' ? TourPicker : null;
+      const list = TP ? TP.list(pl) : [], act = TP ? TP.active(pl) : null;
       const sp = pl.sig ? TourPowers.get(pl.sig.id) : null, gr = pl.hands && typeof TourGear !== 'undefined' ? TourGear.get(pl.hands.id) : null;
-      const held = gr || sp;
-      ctx.fillStyle = held ? 'rgba(40,20,60,0.75)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
-      ctx.strokeStyle = held ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
-      if (held) {
-        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); if (held.icon) held.icon(ctx, 0, 0, this.t); ctx.restore();
-        if (sp && sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
-        if (gr && gr.uses) for (let k = 0; k < gr.uses; k++) { ctx.fillStyle = k < pl.hands.uses ? '#e8f6ff' : 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.arc(px0 + 5 + k * 6, hy + 28, 1.8, 0, TAU); ctx.fill(); }
-        if (gr && pl.hands.thrown) { ctx.fillStyle = 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill(); }
+      const actHands = act && act !== 'lsd' && act !== 'joint';
+      ctx.fillStyle = act ? 'rgba(40,20,60,0.78)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
+      ctx.strokeStyle = act ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
+      if (act) {
+        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); TP.icon(ctx, act, 0, 0, this.t, this); ctx.restore();
+        if (actHands && sp && sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
+        if (actHands && gr && gr.uses) for (let k = 0; k < gr.uses; k++) { ctx.fillStyle = k < pl.hands.uses ? '#e8f6ff' : 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.arc(px0 + 5 + k * 6, hy + 28, 1.8, 0, TAU); ctx.fill(); }
+        if (!TP.ready(pl, act) && (act !== 'gear:fins' && act !== 'gear:pads')) { ctx.fillStyle = 'rgba(10,8,18,0.5)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill(); }
+        // the action dot: the same pink as the action button
+        ctx.fillStyle = '#ff4b7d'; ctx.beginPath(); ctx.arc(px0 + 31, hy + 1, 4.2, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px0 + 31, hy + 1, 1.5, 0, TAU); ctx.fill();
       } else { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); TourKit.star(ctx, px0 + 17, hy + 14, 7, 3, 5); ctx.fill(); }
-      // the Backpack: tap it to swap with HANDS
+      // the second slot: the next power in the cycle (or, with nothing else held, an empty Backpack)
       const bx = px0 + 40;
-      this.packRect = { x: bx, y: hy - 2, w: 30, h: 32 };
-      ctx.fillStyle = pl.pack ? 'rgba(60,34,20,0.8)' : 'rgba(10,8,18,0.45)'; rr(ctx, bx, hy, 30, 28, 9); ctx.fill();
-      ctx.fillStyle = pl.pack ? '#8a5a34' : 'rgba(255,255,255,0.12)'; rr(ctx, bx + 6, hy - 3, 18, 6, 3); ctx.fill();
-      ctx.strokeStyle = pl.pack ? 'rgba(255,216,74,0.7)' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2; rr(ctx, bx, hy, 30, 28, 9); ctx.stroke();
-      if (pl.pack && typeof TourGear !== 'undefined') { ctx.save(); ctx.translate(bx + 15, hy + 14); ctx.scale(0.58, 0.58); TourGear.icon(ctx, pl.pack, 0, 0, this.t, this); ctx.restore(); }
+      this.packRect = { x: px0, y: hy - 2, w: 70, h: 32 };
+      const nxt = list.length >= 2 ? list[(Math.max(0, list.indexOf(act)) + 1) % list.length] : null;
+      ctx.fillStyle = nxt ? 'rgba(30,20,44,0.7)' : 'rgba(10,8,18,0.45)'; rr(ctx, bx, hy, 30, 28, 9); ctx.fill();
+      ctx.strokeStyle = nxt ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2; rr(ctx, bx, hy, 30, 28, 9); ctx.stroke();
+      if (nxt) {
+        ctx.save(); ctx.globalAlpha = 0.75; ctx.translate(bx + 15, hy + 14); ctx.scale(0.5, 0.5); TP.icon(ctx, nxt, 0, 0, this.t, this); ctx.restore();
+        // a little cycle arrow and the count
+        ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(bx + 24, hy + 5, 3.4, -2.6, 1.6); ctx.stroke();
+        ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.moveTo(bx + 24 + 3.4 * Math.cos(1.6) - 2, hy + 5 + 3.4 * Math.sin(1.6) - 1); ctx.lineTo(bx + 24 + 3.4 * Math.cos(1.6) + 2.4, hy + 5 + 3.4 * Math.sin(1.6) + 0.4); ctx.lineTo(bx + 24 + 3.4 * Math.cos(1.6) - 0.8, hy + 5 + 3.4 * Math.sin(1.6) + 2.6); ctx.closePath(); ctx.fill();
+        if (list.length > 2) { ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText(list.length + '', bx + 6, hy + 23); ctx.textAlign = 'left'; }
+      } else if (pl.pack && typeof TourGear !== 'undefined') { ctx.save(); ctx.translate(bx + 15, hy + 14); ctx.scale(0.58, 0.58); TourGear.icon(ctx, pl.pack, 0, 0, this.t, this); ctx.restore(); }
       else { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = `6px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('BAG', bx + 15, hy + 15); ctx.textAlign = 'left'; }
       tourIx = 36;
     } else {
@@ -1108,6 +1124,7 @@ class Play {
     const icon = (fn) => { fn(ix, hy + 14); ix += 26; };
     if (this.player.kandi > 0) icon((x, y) => { for (let i = 0; i < 3; i++) { ctx.strokeStyle = GLOW_COLS[i]; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y - 3 + i * 3, 9, 4, 0, 0, TAU); ctx.stroke(); } });
     for (const k of this.keys) icon((x, y) => { ctx.save(); ctx.translate(x, y + 2); ctx.scale(0.6, 0.6); GimmickArt.keyShape(ctx, 0, 0, k === 'secret'); ctx.restore(); });
+    if (tour && pl.jumpPow && typeof JumpHud !== 'undefined') { ix += 4; icon((x, y) => JumpHud.hudIcon(ctx, x, y, this)); ix += 4; }
     const fxList = tour ? [['star', pl.star, 10, '#ffffff'], ['lsd', pl.lsdT, 10, '#a0f0ff']].concat(pl.buffs && typeof TourGear !== 'undefined' ? Object.keys(pl.buffs).filter(k => pl.buffs[k] > 0).map(k => ['gear:' + k, pl.buffs[k], (TourGear.get(k) || {}).time || 10, (TourGear.get(k) || {}).glow || '#ffffff']) : []) : [['star', this.player.star, 10, '#ffffff'], ['bufo', this.player.fly, 12, '#c08aff'], ['joint', this.player.floaty, 9, '#e8e8f0']];
     if (!tour) for (const k in this.player.fx) fxList.push([k, this.player.fx[k], BAG_KINDS[k].time, BAG_KINDS[k].col]);
     for (const [k, v, max, col] of fxList) if (v > 0) icon((x, y) => {
@@ -1169,7 +1186,7 @@ class Play {
     };
     const bob = Math.sin(this.t * 4) * 3;
     tag(L.stickHome.x, L.stickHome.y - L.stickHome.r - 22 + bob, '◀ SLIDE TO MOVE ▶');
-    tag(L.jump.x, L.jump.y - L.jump.r - 20 + bob, this.t < 8 ? 'JUMP' : 'TAP AGAIN IN AIR: HEADBANG');
+    tag(L.jump.x, L.jump.y - L.jump.r - 20 + bob, this.t < 8 ? 'JUMP' : 'HOLD FOR A HIGHER JUMP');
     tag(L.action.x, L.action.y - L.action.r - 20 + bob, 'RUN · THROW');
     ctx.restore();
   }
@@ -1303,11 +1320,6 @@ const PlayerFx = {
     if (p.dead) return;
     if (typeof TourPlayerFx !== 'undefined' && p.g.level && p.g.level.tour) TourPlayerFx.over(ctx, p, t);
     const cx = p.cx;
-    if (p.spin && !p.onGround) {
-      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;
-      for (let i = 0; i < 3; i++) { const a = t * 20 + i * 2.1; ctx.beginPath(); ctx.arc(cx, p.y + p.h * 0.4, p.w * 0.95, a, a + 0.9); ctx.stroke(); }
-      ctx.restore();
-    }
     if (p.fx.powder > 0 && Math.random() < 0.5) p.g.burst(p.cx - p.facing * 8, p.y + p.h * Math.random(), 1, '#ffffff', 'spark');
     if (p.fx.molly > 0 && Math.random() < 0.08) p.g.parts.text(cx + (Math.random() - 0.5) * 30, p.y, '♥', '#ff7ab8');
     if (p.stunT > 0) { ctx.fillStyle = '#ffd84a'; for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 12, p.y - 4 + Math.sin(a) * 4, 2.4, 0, TAU); ctx.fill(); } }

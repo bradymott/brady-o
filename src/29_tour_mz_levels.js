@@ -926,6 +926,7 @@ const levels = [
       { id: 'muralha', gen: 'strip', mode: 'castle', W: 84, H: 18, script: [
         ['opening', { decor: [['mzRampartPalm', 3]] }],
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         ['rampart', { gold: true }],
         'sig',
         ['potTrough'],

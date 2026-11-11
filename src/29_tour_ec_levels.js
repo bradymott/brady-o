@@ -639,6 +639,7 @@ const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_du
         ['startStamp', { id: 'copa' }],
         // ① vines between giant trees
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
         ['vines', { n: 3 }],
         ['branches', {}],
         ['secretDoor', { to: 'treehouse@in', look: 'ecLeafLadder', back: 'treeBack' }],
@@ -708,6 +709,7 @@ const L4 = { n: 4, name: 'Cacao Works', arch: 'factory', theme: 'ec_fabrica',
       script: [
         ['startStamp', { id: 'muelle' }],
         ['itemBlock', { item: 'power' }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         ['tip', { text: 'A HARD HAT! IT BREAKS FOIL WALLS AND SOAKS UP ONE HIT. TAP THROW TO SHOULDER-DASH' }],
         ['gearStand', { item: 'hat' }],
         // ① belts carry pods and Brady

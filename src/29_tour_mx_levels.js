@@ -700,6 +700,8 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         // ③ the plaza joins all three lanes
         ['stamp', { id: 'plaza', lane: 'street' }],
         ['pinatas', { lane: 'street' }],
+        ['itemBlock', { lane: 'street', item: 'socks', y: 4 }],   // the first jump power, with its tip sign
+        ['tip', { lane: 'street', text: 'SPRING SOCKS! TAP JUMP AGAIN IN THE AIR FOR A SECOND JUMP' }],
         ['fountain', { lane: 'street' }],
         ['rooftops', { lane: 'roof', n: 1 }],
         ['flat', { lane: 'cellar', n: 10 }],
@@ -802,6 +804,7 @@ const L4 = { n: 4, name: 'Volcán Escape', arch: 'tower', theme: 'mx_volcan',
         ['vledges', { n: 4, crumble: true }],
         ['blockBand', { item: 'star' }],
         ['vledges', { n: 3, flip: true, enemy: 'mxBat' }],
+        ['blockBand', { item: 'beans', left: true }],   // a jump power (bonus): fart-float up the chimney
         // ③ armadillos, lava blobs, the double chimney
         'vroll',
         ['sideGold', { kind: 'must' }],

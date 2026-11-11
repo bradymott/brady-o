@@ -845,6 +845,7 @@ const levels = [
       { id: 'baie', gen: 'strip', W: 210, H: 22, tide: { low: 20, high: 9, period: 16, hold: 4 },
         script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           ['pool', { w: 4 }],
           ['enemies', { kind: 'frCrab', n: 2, len: 10 }],
           ['quicksand', { n: 6 }],
@@ -891,6 +892,7 @@ const levels = [
       { id: 'perigord', gen: 'dig', W: 140, H: 40, surface: 8,
         script: [
           ['gearStand', { item: 'hat' }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           ['trufflePig', { spots: [28, 52, 84] }],
           ['oak', { gold: 'must' }],
           ['pocket', { item: 'power' }],
