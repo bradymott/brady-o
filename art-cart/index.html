@@ -13,8 +13,8 @@
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#1a0626">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+
+
 <script>
 // offline support: cache the game after the first visit (needs https, skipped elsewhere)
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
@@ -41,7 +41,7 @@ noscript p { position: fixed; inset: 0; display: grid; place-items: center; font
 <script>
 (function(){
 const BRADY_APP = "kart";
-const BRADY_SPRITES = ["br","br_barracao","br_beach","br_falls","br_pantanal","br_samba","ec","ec_amazon","ec_andes","ec_cotopaxi","ec_equator","ec_galapagos","es","es_aquarium","es_arts","es_fallas","es_lonja","es_mancha","es_pintxos","es_teide","es_tomatina","es_x","fr","fr_chateau","fr_morning","fr_night","fr_seine","fr_tower","id","id_batur","id_dive","id_ijen","id_kites","id_rimba","id_ruins","id_surf","id_x","jp","jp_bamboo","jp_bamboo_night","jp_castle","jp_fuji","jp_gacha","jp_neon","jp_rail","jp_sushi","jp_tower","jp_x","ma","ma_atlas","ma_azul","ma_azul_night","ma_cielo","ma_night","ma_riad","ma_sahara","ma_souk","ma_x","mx","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_volcan","mz","mz_baobab","mz_beach","mz_dunes","mz_fort","mz_savanna","nl","nl_canals","nl_frozen","nl_rush","nl_tulips","nl_waag","np","np_blizzard","np_depot","np_fortress","np_hills","np_icefall","np_khadal","np_pass","np_x","vn","vn_bay","vn_cave","vn_citadel","vn_mekong","vn_river","vn_street","vn_x"];
+const BRADY_SPRITES = ["aq","aq_aurora","aq_sea","aq_shelf","aq_station","aq_storm","aq_x","br","br_barracao","br_beach","br_falls","br_pantanal","br_samba","ec","ec_amazon","ec_andes","ec_cotopaxi","ec_equator","ec_galapagos","es","es_aquarium","es_arts","es_fallas","es_lonja","es_mancha","es_pintxos","es_teide","es_tomatina","es_x","fr","fr_baie","fr_chateau","fr_ciel","fr_morning","fr_night","fr_perigord","fr_place","fr_provence","fr_seine","fr_tower","fr_x","id","id_batur","id_dive","id_ijen","id_kites","id_rimba","id_ruins","id_surf","id_x","jp","jp_bamboo","jp_bamboo_night","jp_castle","jp_fuji","jp_gacha","jp_neon","jp_rail","jp_sushi","jp_tower","jp_x","ma","ma_atlas","ma_azul","ma_azul_night","ma_cielo","ma_night","ma_riad","ma_sahara","ma_souk","ma_x","mx","mx_canal","mx_cenote","mx_hacienda","mx_mercado","mx_volcan","mz","mz_baobab","mz_baobab_near","mz_beach","mz_beach_near","mz_dunes","mz_fort","mz_fort_near","mz_savanna","nl","nl_canals","nl_frozen","nl_polder","nl_rush","nl_tulips","nl_veiling","nl_waag","nl_x","np","np_blizzard","np_depot","np_fortress","np_hills","np_icefall","np_khadal","np_pass","np_x","vn","vn_bay","vn_cave","vn_citadel","vn_mekong","vn_river","vn_street","vn_x","w22","w22_corridor","w22_desk","w22_dusk","w22_lake","w22_white","w22_x"];
 /* ---- 00_core.js ---- */
 'use strict';
 /* ============================================================
@@ -3196,7 +3196,7 @@ const BurnsSave = {
       lastWorld: 1,
       checkpoint: {},            // worldId -> checkpoint id (resume point)
       pack: {},                  // Brady's backpack: itemId -> count (ground scores, quest items)
-      settings: { camSens: 1, invertY: false, autoCam: true, cam: 'normal', gfx: 'auto' }
+      settings: { camSens: 1, invertY: false, autoCam: true, cam: 'normal', gfx: 'auto', guide: false, follow: false, ride: 'ebike' }   // guide arrow, camera behind Brady, city bike (41_burns_nav.js)
     };
   },
   get() {
@@ -3347,7 +3347,8 @@ const BURNS_KEY_ITEMS = {
   www: { name: 'WHAT WHERE WHEN', desc: 'Lists missions and events on the map.', col: '#ff9ad8' },
   bike: { name: 'YELLOW BIKE', desc: 'Summon it with the BIKE button.', col: '#ffe24a' },
   costumes: { name: 'COSTUME TRUNK', desc: 'Change costumes from the hub.', col: '#ff4fd8' },
-  artcar: { name: 'ART CAR KEYS', desc: 'You can drive art cars.', col: '#ff7a2a' }
+  artcar: { name: 'ART CAR KEYS', desc: 'You can drive art cars.', col: '#ff7a2a' },
+  ebike: { name: 'E-BIKE', desc: 'Summon it with the BIKE button in the city. Zoom.', col: '#38f2ff' }
 };
 const BURNS_HYDRATION_MAX = 6;
 // camera modes (HUD VIEW button, V key, settings): normal third person, over-the-shoulder, first person, far
@@ -3535,7 +3536,7 @@ const BURNS_GFX = {
   tiers: {
     ultra: { shadows: 2048, pcf: 9, ssao: true, bloom: 5, rays: true, dof: true, heat: true, msaa: 4, npl: 16, bump: true, scale: 1.0, shadowDist: 80, env: true },
     high: { shadows: 2048, pcf: 4, ssao: true, bloom: 5, rays: true, dof: true, heat: true, msaa: 4, npl: 16, bump: true, scale: 1.0, shadowDist: 70, env: true },
-    medium: { shadows: 1024, pcf: 4, ssao: false, bloom: 4, rays: true, dof: true, heat: true, msaa: 4, npl: 12, bump: true, scale: 0.92, shadowDist: 55, env: true },
+    medium: { shadows: 1024, pcf: 4, ssao: false, bloom: 4, rays: true, dof: false, heat: true, msaa: 4, npl: 12, bump: true, scale: 0.92, shadowDist: 55, env: true },
     low: { shadows: 0, pcf: 0, ssao: false, bloom: 3, rays: false, dof: false, heat: false, msaa: 0, npl: 8, bump: false, scale: 0.8, shadowDist: 0, env: false }
   },
   names: ['auto', 'ultra', 'high', 'medium', 'low'],
@@ -3817,6 +3818,7 @@ void main(){
 varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
 uniform sampler2D uTex;
 uniform vec4 uTint; uniform vec3 uRimC; uniform float uRim;
+uniform vec4 uRain; uniform vec2 uRainK;   // the Man's neon: heart position (world), 1/scale (0 = off); x hurt 0..1
 ${BURNS_GLSL_LIGHT}
 void main(){
   vec4 t = texture2D(uTex, vT);
@@ -3829,12 +3831,33 @@ void main(){
   float skin0 = smoothstep(0.06, 0.22, srgb.r - srgb.b) * step(srgb.b, srgb.g) * step(srgb.g, srgb.r);
   float cd = length(vW - uCam);
   float fold = sin(vL.y * 44.0 + sin(vL.x * 21.0 + vL.z * 17.0) * 1.7) * 0.55 + sin(vL.y * 109.0 + vL.x * 37.0) * 0.16;
-  float weave = sin(vL.x * 560.0 + vL.z * 210.0) * sin(vL.y * 600.0) * 0.07 * (1.0 - smoothstep(1.2, 4.0, cd));
+  // the weave fades out once a period shrinks toward a pixel (it otherwise shimmers on a phone screen)
+  vec2 weaveUV = vec2(vL.x * 560.0 + vL.z * 210.0, vL.y * 600.0);
+  float weaveAA = 1.0 - smoothstep(0.8, 2.5, max(length(dFdx(weaveUV)), length(dFdy(weaveUV))));
+  float weave = sin(weaveUV.x) * sin(weaveUV.y) * 0.07 * weaveAA * (1.0 - smoothstep(1.2, 4.0, cd));
   vec3 nc = bBump(n, vW, (fold + weave) * (1.0 - smoothstep(14.0, 30.0, cd)), 0.0018);
   float cloth = (1.0 - step(0.02, t.a)) * (1.0 - step(0.15, vG)) * (1.0 - skin0) * (1.0 - step(0.5, vC.a));
   n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));
 #endif
   float e = vC.a;
+  if (uRain.w > 0.0 && e > 0.5) {
+    // white tubes: a rainbow travelling out from the heart in slow waves (a point changes colour over seconds; the
+    // brightest band passes about every 4 s, so nothing flashes); the red heart beats about once a second.
+    // By day (uExp.z ~ 0) they are unlit glass and red paint. Hurt turns the neon red.
+    float nt = smoothstep(0.15, 0.6, uExp.z), d = length(vW - uRain.xyz) * uRain.w;
+    if (vC.g > 0.9 && vC.b > 0.9) {
+      vec3 hue = 0.18 + 0.82 * (0.5 + 0.5 * cos(6.2832 * (fract(d * 0.11 - uTime * 0.07) + vec3(0.0, 0.3333, 0.6667))));
+      float wave = 0.62 + 0.38 * smoothstep(-0.3, 0.9, sin(d * 0.8 - uTime * 1.5)), breathe = 0.88 + 0.12 * sin(uTime * 0.6);
+      vec3 nc = mix(hue * wave * breathe, vec3(1.0, 0.1, 0.12) * (0.75 + 0.25 * wave), uRainK.x);
+      float tube = step(0.95, e);
+      alb = mix(mix(bLin(vec3(0.86, 0.74, 0.6)), bLin(vec3(0.5, 0.53, 0.58)), tube), bLin(nc) * mix(0.5, 1.0, tube), nt);
+      e = nt;
+    } else if (vC.r > 0.9 && vC.g < 0.4) {
+      float beat = pow(max(0.0, sin(uTime * 5.65)), 8.0);
+      alb = bLin(vec3(1.0, 0.13 + 0.12 * beat, 0.3)) * (1.0 + nt * (0.45 * beat + 0.4 * uRainK.x));
+      e = mix(0.12, 1.0, nt);
+    }
+  }
   float sh = mix(bShadow(vW, n), 1.0, step(0.6, e));
   vec3 c = mix(bShade(alb, n, vW, vG, 0.4, sh), alb * uEmB, e);
   // warm light bleeding through skin-like albedo at the terminator (cheap subsurface)
@@ -3968,7 +3991,14 @@ void main(){
   vec4 d4 = texture2D(uDet, vW.xz * uDetK.x * 2.7 + wv.yx * 1.3 + 0.21);
   float far = clamp((dist - 28.0) / 80.0, 0.0, 1.0);
   float crust = smoothstep(0.26, 0.62, m2.g * 0.65 + m1.g * 0.35);   // 0 = drifted smooth dust, 1 = cracked crust
-  float ck = mix(d1.r * fade, d3.r * 0.55, far) * mix(0.25, 1.0, crust) + d4.r * 0.35 * fade * crust;
+  // Filter fine crust by its screen footprint. Grazing views on a phone otherwise
+  // turn the high-frequency cracks into a crawling grid even with MSAA enabled.
+  float crustAA = fade;
+#ifdef BUMP
+  vec2 footprint = fwidth(vW.xz * uDetK.x);
+  crustAA *= 1.0 - smoothstep(0.015, 0.065, max(footprint.x, footprint.y));
+#endif
+  float ck = mix(d1.r * crustAA, d3.r * 0.55, far) * mix(0.25, 1.0, crust) + d4.r * 0.35 * crustAA * crust;
   alb *= 1.0 - ck * uDetK.y;
   alb *= 1.0 + (d2.g - 0.5) * uDetK.w;
   alb *= mix(0.9, 1.07, m2.g) * mix(0.96, 1.03, m1.g);
@@ -3980,7 +4010,7 @@ void main(){
   alb = bLin(alb);
 #ifdef BUMP
   float hgt = mix(d1.a, d3.a, far) * mix(0.35, 1.0, crust) + d4.a * 0.3 * crust + (g1.b - 0.5) * 0.15 * near;
-  n = bBump(n, vW, hgt, mix(0.012, 0.045, far) * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y));
+  n = bBump(n, vW, hgt, mix(0.012 * crustAA, 0.025, far) * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y));
 #endif
   float sh = bShadow(vW, n);
   vec3 c = bShade(alb, n, vW, 0.05, 0.0, sh);
@@ -4782,6 +4812,7 @@ class BurnsRenderer {
     gl.uniform3fv(u.uRimC, this.lin.rim);
     this.faceV0 = BURNS_ATLAS.faceV0; this.faceV1 = BURNS_ATLAS.faceV1; this.faceRowV = BURNS_ATLAS.faceRowV;
     this._lastTint = null;
+    if (u.uRain) { gl.uniform4f(u.uRain, 0, 0, 0, 0); this._rain = false; }
   }
   // geo: skinned geometry; bones: Float32Array (n*12); tint [r,g,b,a]; face row 0..3
   skin(geo, bones, n, tint, face, rim) {
@@ -4801,6 +4832,13 @@ class BurnsRenderer {
     if (tint) gl.uniform4f(u.uTint, tint[0], tint[1], tint[2], tint[3]); else gl.uniform4f(u.uTint, 0, 0, 0, 0);
     gl.uniform3f(u.uFace, this.faceV0, this.faceV1, (face || 0) * this.faceRowV);
     gl.uniform1f(u.uRim, (rim === undefined ? 0.35 : rim) * 0.6);
+    // the Man's rainbow neon: anchor (his heart) and scale come from his own bone palette
+    if (u.uRain && (geo.rainbow || this._rain)) {
+      const rb = geo.rainbow;
+      if (rb) { const o = rb.bone * 12, a = rb.at, sc = Math.hypot(bones[o], bones[o + 4], bones[o + 8]) || 1; gl.uniform4f(u.uRain, bones[o] * a[0] + bones[o + 1] * a[1] + bones[o + 2] * a[2] + bones[o + 3], bones[o + 4] * a[0] + bones[o + 5] * a[1] + bones[o + 6] * a[2] + bones[o + 7], bones[o + 8] * a[0] + bones[o + 9] * a[1] + bones[o + 10] * a[2] + bones[o + 11], 1 / sc); gl.uniform2f(u.uRainK, geo.rainHurt || 0, 0); }
+      else gl.uniform4f(u.uRain, 0, 0, 0, 0);
+      this._rain = !!rb;
+    }
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vbo); BurnsGL.layoutMesh();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.ibo);
     gl.drawElements(gl.TRIANGLES, geo.count, gl.UNSIGNED_SHORT, 0);
@@ -6424,6 +6462,8 @@ class BurnsSkinActor {
     S.x = this._x = ch.x; S.y = this._y = ch.y; S.z = this._z = ch.z; S.yaw = this._yaw = ch.yaw; S.scale = this._sc = sc;
     S.tint = ch.tint || this.tint; S.face = ch.face || 0;
     if (dt > 0) S.update(dt);
+    // walk/run: the clip follows the BurnsChar's stride phase (ground covered; the clock when it isn't moving)
+    if ((clip === 'walk' || clip === 'run') && ch._stridePhase !== undefined && S.anim) S.animT = ch._stridePhase * S.anim.duration;
     if (dt > 0 || moved || !S.computed) S.compute();
     this.active = true;
     return true;
@@ -7681,7 +7721,7 @@ const BurnsRig = {
       kind: 'brady', face: look.beard === false ? 'bradyClean' : 'brady', skin: skin.base, skinSh: skin.sh,
       hair: { style: look.style === 'down' ? 'down' : 'bun', col: hair.base, hi: hair.hi },
       glasses: look.glasses || 'shades', tattoos: look.tattoos !== false,
-      top: { kind: 'tee', col: '#17161d' }, bottom: { kind: 'jeans', col: '#14141c' }, shoes: { kind: 'sneakers', col: '#0d0d11', sole: '#3a3a46' },
+      top: { kind: 'tee', col: '#17161d' }, bottom: { kind: 'pants', col: '#18181c' }, shoes: { kind: 'sneakers', col: '#0d0d11', sole: '#3a3a46' },
       costume: costume || 'none', body: { h: 1, w: 1.04 }
     };
   },
@@ -8242,6 +8282,35 @@ const BURNS_ANIMS = (() => {
 })();
 
 /* ---------------- character instance ---------------- */
+// Planted-foot walk (phase 0..1, left heel strike at 0): a stance foot retreats by exactly the root travel, the
+// swing foot lifts clear; arms swing opposite the legs (left arm back at the left heel strike). No allocations.
+function burnsTravelPose(P, phase, body) {
+  const B = BURNS_BONES, off = body.off, l1 = Math.abs(off[B.SHIN_L][1]), l2 = Math.abs(off[B.FOOT_L][1]);
+  const h = (l1 + l2) / 0.8, contact = 0.6, span = 1.45 * h * contact, L = l1 + l2 - 0.015 * h;
+  let hip = L;
+  for (let i = 0; i < 2; i++) {
+    const u = (phase + i * 0.5) % 1;
+    if (u < contact) { const z = span * (0.5 - u / contact); hip = Math.min(hip, Math.sqrt(Math.max(0.01, L * L - z * z))); }
+  }
+  P.y = hip - (l1 + l2);
+  for (let i = 0; i < 2; i++) {
+    const u = (phase + i * 0.5) % 1, sw = (u - contact) / (1 - contact);
+    const fz = u < contact ? span * (0.5 - u / contact) : -span * 0.5 * Math.cos(Math.PI * sw);
+    const fy = u < contact ? 0 : 0.1 * h * Math.sin(Math.PI * sw);
+    const y = hip - fy, d = Math.min(l1 + l2 - 0.001, Math.max(Math.abs(l1 - l2) + 0.001, Math.hypot(y, fz)));
+    const thigh = Math.atan2(fz, y) + Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+    const knee = Math.PI - Math.acos(clamp((l1 * l1 + l2 * l2 - d * d) / (2 * l1 * l2), -1, 1));
+    P.r[(i ? B.THIGH_R : B.THIGH_L) * 3] = -thigh; P.r[(i ? B.SHIN_R : B.SHIN_L) * 3] = knee; P.r[(i ? B.FOOT_R : B.FOOT_L) * 3] = thigh - knee;
+  }
+  const s = Math.sin(phase * TAU), c = Math.cos(phase * TAU);
+  P.r[B.UARM_L * 3] = c * 0.42; P.r[B.UARM_R * 3] = -c * 0.42; P.r[B.UARM_L * 3 + 2] = 0.1; P.r[B.UARM_R * 3 + 2] = -0.1;
+  P.r[B.FARM_L * 3] = -0.3 - 0.12 * Math.max(0, -c); P.r[B.FARM_R * 3] = -0.3 - 0.12 * Math.max(0, c);
+  // the hips turn with the leading leg, the chest counter-rotates, the hair bobs with the step
+  P.r[B.HIPS * 3 + 1] = c * 0.06; P.r[B.CHEST * 3] = 0.035; P.r[B.CHEST * 3 + 1] = -c * 0.07; P.r[B.HEAD * 3] = -0.025; P.r[B.HEAD * 3 + 1] = c * 0.04;
+  P.r[B.HAIR * 3] = 0.1 + Math.abs(s) * 0.08;
+}
+const BURNS_GAIT = { walk: { cycle: 1.45, cps: 7.5 / TAU }, run: { cycle: 3.6, cps: 11 / TAU }, k1: { rate: 1 } };
+
 class BurnsChar {
   constructor(model) {
     this.model = model; this.nb = model.nb;
@@ -8270,7 +8339,18 @@ class BurnsChar {
     if (this.blend < 1) this.blend = Math.min(1, this.blend + dt / this.blendDur);
     const P = burnsPoseClear(this.tmp);
     const fn = this.poseFn || BURNS_ANIMS[this.anim] || BURNS_ANIMS.idle;
-    fn(P, this.animT, this.k);
+    const G = !this.poseFn && !this.model.man && this.model.body && this.model.body.off && BURNS_GAIT[this.anim];
+    if (G) {
+      // walk/run cadence follows the ground actually covered (no skating); when the character isn't moving
+      // (blocked, a dialogue portrait, a teleport, a shared crowd pose) it falls back to the clock
+      const travel = Number.isFinite(this._strideX) ? Math.hypot(this.x - this._strideX, this.z - this._strideZ) : 0;
+      const off = this.model.body.off, h = (Math.abs(off[BURNS_BONES.SHIN_L][1]) + Math.abs(off[BURNS_BONES.FOOT_L][1])) / 0.8;
+      const sc = Math.max(0.1, this.scale), byClock = dt * G.cps * (this.k && this.k.rate || 1), byGround = travel / sc / (G.cycle * h);
+      this._stridePhase = ((this._stridePhase || 0) + (byGround > byClock * 0.3 && travel < 5 * sc ? byGround : byClock)) % 1;
+      if (this.anim === 'walk') burnsTravelPose(P, this._stridePhase, this.model.body);
+      else fn(P, this._stridePhase * TAU / 11, BURNS_GAIT.k1);
+    } else fn(P, this.animT, this.k);
+    this._strideX = this.x; this._strideZ = this.z;
     const out = this.P;
     if (this.blend < 1) {
       const w = easeInOut(this.blend), f = this.from;
@@ -9865,7 +9945,20 @@ const BurnsProps = {
     // a little parked bicycle (frame + wheels), y = ground under the wheels
     m.push(); m.tf(x, y, z, yaw);
     m.color('#1a1a1a');
-    for (const wz of [-0.5, 0.5]) { m.push(); m.tf(0, 0.34, wz, 0, 0, Math.PI / 2); m.cyl(0, -0.025, 0, 0.34, 0.34, 0.05, 8, { caps: true }); m.pop(); }
+    for (const wz of [-0.5, 0.5]) {
+      m.push(); m.tf(0, 0.34, wz, 0, 0, Math.PI / 2);
+      if (m.lo) m.cyl(0, -0.025, 0, 0.34, 0.34, 0.05, 8, { caps: true });
+      else {
+        // near LOD: an open rim (double-sided ring) and two crossing spokes, so the wheel reads as a bicycle wheel
+        for (let k = 0; k < 10; k++) {
+          const a0 = k / 10 * TAU, a1 = (k + 1) / 10 * TAU, o0 = [Math.sin(a0) * 0.34, 0, Math.cos(a0) * 0.34], o1 = [Math.sin(a1) * 0.34, 0, Math.cos(a1) * 0.34];
+          const i0 = [o0[0] * 0.86, 0, o0[2] * 0.86], i1 = [o1[0] * 0.86, 0, o1[2] * 0.86];
+          m.poly([o0, o1, i1, i0]); m.poly([i0, i1, o1, o0]);
+        }
+        m.color('#9a9a96'); m.beam(-0.3, 0, 0, 0.3, 0, 0, 0.014); m.beam(0, 0, -0.3, 0, 0, 0.3, 0.014); m.color('#1a1a1a');
+      }
+      m.pop();
+    }
     m.color(col || '#ff4fd8');
     m.beam(0, 0.36, -0.5, 0, 0.72, 0.02, 0.05); m.beam(0, 0.36, -0.5, 0, 0.62, 0.35, 0.05); m.beam(0, 0.72, 0.02, 0, 0.62, 0.35, 0.05); m.beam(0, 0.62, 0.35, 0, 0.36, 0.5, 0.045);
     m.color('#2a2a2a'); m.box(0, 0.78, 0.02, 0.1, 0.04, 0.2); m.beam(-0.25, 0.86, 0.4, 0.25, 0.86, 0.4, 0.035);
@@ -10378,85 +10471,96 @@ const BurnsProps = {
 };
 
 /* ---------------- the Man (boss model; original design) ----------------
-   A tall wooden lattice figure with raised arms, a glowing diamond head,
-   a neon outline and a glowing heart (he is very much in love).
-   Built on the shared 16-bone layout so BurnsChar can drive it. Height ~13m. */
+   The classic lattice "stick man" that stands at the centre of the city: a tall, slender figure of open timber truss
+   work (legs apart, a narrow waist under broad shoulders, long arms, a faceted lantern head), outlined in neon tubes,
+   with a glowing heart in his chest (he is very much in love). Built on the shared 16-bone layout so BurnsChar drives
+   it (city landmark, the bosses, Art Cart's driver and landmark all use this one model). Height ~13m.
+   Night neon: the tubes are white emissive vertices and the heart is red; the skinned shader turns them into a
+   rainbow that travels outward from the heart in slow waves, with a gentle heartbeat (geo.rainbow, R.skin, uRain).
+   By day the tubes are unlit glass and the heart is painted red. */
 const BurnsManModel = {
   cache: null,
   body() {
     return {
       h: 1, w: 1,
       off: [
-        [0, 5.6, 0], [0, 0.3, 0], [0, 4.3, 0],
-        [1.9, 3.9, 0], [0, -2.6, 0], [-1.9, 3.9, 0], [0, -2.6, 0],
-        [0.95, -0.2, 0], [0, -2.8, 0], [0, -2.5, 0], [-0.95, -0.2, 0], [0, -2.8, 0], [0, -2.5, 0],
+        [0, 5.8, 0], [0, 0.35, 0], [0, 4.0, 0],
+        [1.75, 3.75, 0], [0, -2.6, 0], [-1.75, 3.75, 0], [0, -2.6, 0],
+        [0.6, -0.25, 0], [0.55, -2.85, 0], [0.45, -2.6, 0], [-0.6, -0.25, 0], [-0.55, -2.85, 0], [-0.45, -2.6, 0],
         [0, -2.4, 0], [0, 2.4, 0], [0, 0, -0.9]
       ],
       headY: 11.4, height: 13
     };
   },
+  // the hue of the neon at figure distance d (metres from the heart, unscaled) and time t: the same palette as the
+  // shader, for the coloured light the Man casts on his base at night
+  hue(d, t, out) {
+    const h = ((d * 0.11 - t * 0.07) % 1 + 1) % 1; out = out || [0, 0, 0];
+    for (let k = 0; k < 3; k++) out[k] = 0.18 + 0.82 * (0.5 + 0.5 * Math.cos(TAU * (h + k / 3)));
+    return out;
+  },
+  // queue his coloured glow on the base (night only; one light, it only wins when the camera is close)
+  light(g, x, y, z, scale) {
+    const R = g.R, night = R ? R.night || 0 : 0; if (night < 0.3 || !g.plights) return;
+    const c = this._lc || (this._lc = [0, 0, 0]); this.hue(4, g.time || 0, c);
+    g.plights.push({ x, y: y + 3.5 * scale, z, r: 16 * scale, c, i: 0.9 * night });
+  },
   build(o) {
     if (this.cache && !o) return this.cache;
     o = o || {};
     const m = new BurnsMesh(16384), B = BURNS_BONES;
-    const wood = o.wood || '#c89a6a', dark = o.dark || '#8a5a3a', neon = o.neon || '#38f2ff', heart = o.heart || '#ff4fa8';
-    // rounded wooden members: rails are soft-ended timbers, braces and rings are thinner dowels
-    const rail = (a, b, r) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r * 0.92, { seg: 8 });
-    const dowel = (a, b, r) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r, { seg: 6, ends: false });
-    // lattice limb: 4 rails + zig-zag braces + rings between y0..y1 (local Y), widths w0 (top) w1 (bottom)
-    const lattice = (y0, y1, w0, w1, d, n) => {
-      const corners = (y, w) => [[w / 2, y, d / 2], [-w / 2, y, d / 2], [-w / 2, y, -d / 2], [w / 2, y, -d / 2]];
-      const A = corners(y0, w0), Bc = corners(y1, w1);
+    const wood = o.wood || '#c99a64', dark = o.dark || '#8a5c38', heart = '#ff2050';
+    const rod = (a, b, r, seg) => m.limb(a[0], a[1], a[2], b[0], b[1], b[2], r, r, { seg, ends: false });
+    const neon = (a, b) => { m.color('#ffffff', 1); rod(a, b, 0.085, 5); m.emissive(0); };
+    // an open truss between two centre points: 4 timber rails, crossed diagonals on every face of every bay and a
+    // ring of ties per bay; the two front corners carry the neon outline. w/d: width/depth at a (0) and b (1)
+    const truss = (a, b, w0, w1, d0, d1, bays, lit) => {
+      const C = (t, k) => { const w = lerp(w0, w1, t) / 2, d = lerp(d0, d1, t) / 2, sx = k === 0 || k === 3 ? 1 : -1, sz = k < 2 ? 1 : -1; return [lerp(a[0], b[0], t) + sx * w, lerp(a[1], b[1], t), lerp(a[2], b[2], t) + sz * d]; };
       m.color(wood).shine(1);
-      for (let k = 0; k < 4; k++) rail(A[k], Bc[k], 0.12);
+      for (let k = 0; k < 4; k++) rod(C(0, k), C(1, k), 0.13, 6);
       m.color(dark).shine(0);
-      for (let i = 0; i < n; i++) {
-        const t0 = i / n, t1 = (i + 1) / n;
-        const P = (t, k) => { const a = A[k], b = Bc[k]; return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; };
-        for (let k = 0; k < 4; k++) dowel(P(i % 2 ? t0 : t1, k), P(i % 2 ? t1 : t0, (k + 1) % 4), 0.075);
-        for (let k = 0; k < 4; k++) dowel(P(t0, k), P(t0, (k + 1) % 4), 0.065);
+      for (let i = 0; i < bays; i++) {
+        const t0 = i / bays, t1 = (i + 1) / bays;
+        for (let k = 0; k < 4; k++) { const k2 = (k + 1) % 4; rod(C(t0, k), C(t1, k2), 0.055, 4); rod(C(t1, k), C(t0, k2), 0.055, 4); rod(C(t1, k), C(t1, k2), 0.055, 4); }
       }
+      for (let k = 0; k < 4; k++) rod(C(0, k), C(0, (k + 1) % 4), 0.055, 4);
+      if (lit !== false) for (const k of [0, 1]) { const p = C(0, k), q = C(1, k), dz = 0.1; neon([p[0], p[1], p[2] + dz], [q[0], q[1], q[2] + dz]); }
     };
-    const neonRail = (x0, y0, z0, x1, y1, z1) => { m.color(neon, 1); m.limb(x0, y0, z0, x1, y1, z1, 0.065, 0.065, { seg: 6 }); m.emissive(0); };
-    // hips
-    m.setBone(B.HIPS); lattice(-0.3, 0.4, 2.6, 2.6, 1.2, 1);
-    m.color(dark); m.roundBox(0, 0.05, 0, 2.8, 0.28, 1.3, 0.12);
-    // torso (wider at the shoulders)
-    m.setBone(B.CHEST); lattice(0, 4.3, 3.2, 2.2, 1.3, 4);
-    m.color(wood).shine(1); m.limb(-2.05, 4.1, 0, 2.05, 4.1, 0, 0.2, 0.2, { seg: 10 }); m.shine(0); // shoulder beam
-    neonRail(1.1, 0, 0.66, 2.0, 4.2, 0.66); neonRail(-1.1, 0, 0.66, -2.0, 4.2, 0.66);
-    // the glowing heart in the chest (puffy: two layers)
-    m.color(heart, 1); m.push(); m.tf(0, 2.5, 0.2);
-    const hp = []; for (let i = 0; i < 24; i++) { const t = i / 24 * TAU; const x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); hp.push([x * 0.045, y * 0.045]); }
-    m.extrude(hp.slice().reverse(), 0.5, { convex: false });
-    m.color('#ffb0d8', 1); m.push(); m.tf(0, 0, 0.26, 0, 0, 0, 0.7, 0.7, 1); m.extrude(hp.slice().reverse(), 0.06, { convex: false }); m.pop();
+    // hips: a short truss across the tops of the legs
+    m.setBone(B.HIPS); truss([0, -0.35, 0], [0, 0.45, 0], 2.3, 2.3, 1.0, 1.0, 1, false);
+    m.color('#ffffff', 1); rod([-1.15, -0.35, 0.6], [1.15, -0.35, 0.6], 0.085, 5); m.emissive(0);
+    // torso: narrow at the waist, broad at the shoulders, with a shoulder beam and the heart inside
+    m.setBone(B.CHEST); truss([0, 0, 0], [0, 3.85, 0], 1.35, 3.3, 0.95, 1.15, 5);
+    m.color(wood).shine(1); rod([-2.0, 3.85, 0], [2.0, 3.85, 0], 0.17, 6); m.shine(0);
+    neon([-1.75, 3.98, 0.68], [1.75, 3.98, 0.68]);
+    m.color(heart, 1); m.push(); m.tf(0, 2.35, 0.1);
+    const hp = []; for (let i = 0; i < 24; i++) { const t = i / 24 * TAU; const x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); hp.push([x * 0.05, y * 0.05]); }
+    m.extrude(hp.slice().reverse(), 0.45, { convex: false });
     m.pop(); m.emissive(0);
-    // head: a smooth glowing spindle with neon meridians and a halo ring
-    m.setBone(B.HEAD);
-    m.color(wood).shine(1); m.limb(0, -0.1, 0, 0, 0.62, 0, 0.3, 0.26, { seg: 10 }); m.shine(0);
-    const hy = 1.9, hh = 1.35, hw = 1.0;
-    m.color(o.headCol || '#ffd0f0', 0.85);
-    m.push(); m.tf(0, hy, 0); m.lathe([[0, -hh], [hw * 0.42, -hh * 0.55], [hw * 0.82, -hh * 0.18], [hw, 0], [hw * 0.82, hh * 0.2], [hw * 0.42, hh * 0.6], [0, hh]], { seg: 16, sz: 0.75 }); m.pop();
-    m.emissive(0);
-    m.color(neon, 1);
-    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + Math.PI / 4, sx = Math.sin(a), sz = Math.cos(a) * 0.75; const prof = [[0, -hh], [0.42, -hh * 0.55], [0.82, -hh * 0.18], [1, 0], [0.82, hh * 0.2], [0.42, hh * 0.6], [0, hh]]; for (let i = 0; i < prof.length - 1; i++) { const p0 = prof[i], p1 = prof[i + 1]; m.limb(sx * p0[0] * hw * 1.03, hy + p0[1], sz * p0[0] * hw * 1.03, sx * p1[0] * hw * 1.03, hy + p1[1], sz * p1[0] * hw * 1.03, 0.05, 0.05, { seg: 5 }); } }
-    m.push(); m.tf(0, hy, 0, 0, 0, 0, 1, 1, 0.75); m.torus(0, 0, 0, hw * 1.04, 0.06, { seg: 24, tseg: 5 }); m.pop();
-    m.emissive(0);
-    // arms (raised in the default pose via animation)
-    for (const side of [1, -1]) {
-      m.setBone(side > 0 ? B.UARM_L : B.UARM_R); lattice(0.2, -2.6, 0.75, 0.65, 0.75, 3); neonRail(side * 0.42, 0.1, 0.4, side * 0.36, -2.6, 0.38);
-      m.color(wood).shine(1); m.ball(0, 0.1, 0, 0.42, { seg: 12, rings: 8 }); m.shine(0);
-      m.setBone(side > 0 ? B.FARM_L : B.FARM_R); lattice(0, -2.4, 0.62, 0.5, 0.6, 3); neonRail(side * 0.34, 0, 0.32, side * 0.28, -2.4, 0.3);
-      m.color(wood).shine(1); m.ball(0, 0, 0, 0.36, { seg: 12, rings: 8 });
-      m.roundBox(0, -2.75, 0, 0.8, 0.7, 0.5, 0.2); // hand
-      for (let f = 0; f < 3; f++) { m.color(dark); m.limb((f - 1) * 0.25, -3.0, 0, (f - 1) * 0.27, -3.45, 0, 0.09, 0.07, { seg: 6 }); }
-      m.shine(0);
-      m.setBone(side > 0 ? B.THIGH_L : B.THIGH_R); lattice(0, -2.8, 1.0, 0.85, 0.9, 3); neonRail(side * 0.53, 0, 0.47, side * 0.46, -2.8, 0.44);
-      m.setBone(side > 0 ? B.SHIN_L : B.SHIN_R); lattice(0, -2.5, 0.85, 0.75, 0.8, 3); neonRail(side * 0.45, 0, 0.42, side * 0.4, -2.5, 0.4);
-      m.color(wood).shine(1); m.ball(0, 0, 0, 0.45, { seg: 12, rings: 8 }); m.shine(0);
-      m.setBone(side > 0 ? B.FOOT_L : B.FOOT_R); m.color(dark); m.roundBox(0, -0.25, 0.35, 1.2, 0.5, 2.0, 0.22); m.color(neon, 1); m.push(); m.tf(0, -0.02, 0.35, 0, 0, 0, 0.6, 1, 1); m.torus(0, 0, 0, 1.0, 0.04, { seg: 18, tseg: 4 }); m.pop(); m.emissive(0);
+    // neck and the faceted lantern head: six timber ribs over a pale core, neon on every rib and both rings
+    m.setBone(B.HEAD); truss([0, -0.1, 0], [0, 0.7, 0], 0.5, 0.45, 0.5, 0.45, 1, false);
+    const hy = 1.9, prof = [[0, -1.25], [0.95, -0.15], [0.78, 0.6], [0, 1.4]];
+    m.color('#fffaf0', 0.75); m.push(); m.tf(0, hy, 0); m.lathe(prof.map(p => [p[0] * 0.9, p[1] * 0.92]), { seg: 6 }); m.pop(); m.emissive(0);
+    for (let k = 0; k < 6; k++) {
+      const a = k / 6 * TAU + Math.PI / 6, s = Math.sin(a), c = Math.cos(a), P = prof.map(p => [s * p[0], hy + p[1], c * p[0]]);
+      for (let i = 0; i < 3; i++) { m.color(wood).shine(1); rod(P[i], P[i + 1], 0.07, 4); neon([P[i][0] * 1.04, P[i][1], P[i][2] * 1.04], [P[i + 1][0] * 1.04, P[i + 1][1], P[i + 1][2] * 1.04]); }
+      const a2 = a + TAU / 6, s2 = Math.sin(a2), c2 = Math.cos(a2);
+      for (const i of [1, 2]) neon([s * prof[i][0] * 1.04, hy + prof[i][1], c * prof[i][0] * 1.04], [s2 * prof[i][0] * 1.04, hy + prof[i][1], c2 * prof[i][0] * 1.04]);
     }
-    const model = { geo: m.geo(), nb: BURNS_NB, body: this.body(), headY: 11.4, height: 13, man: true };
+    m.shine(0);
+    // arms (they hang at his sides by default; the bosses raise them), hands, legs and feet
+    for (const side of [1, -1]) {
+      m.setBone(side > 0 ? B.UARM_L : B.UARM_R); truss([0, 0.2, 0], [0, -2.6, 0], 0.62, 0.55, 0.6, 0.52, 3);
+      m.setBone(side > 0 ? B.FARM_L : B.FARM_R); truss([0, 0, 0], [0, -2.4, 0], 0.55, 0.45, 0.52, 0.44, 3);
+      truss([0, -2.4, 0], [0, -3.3, 0], 0.5, 0.62, 0.36, 0.3, 1);
+      const off = this.body().off, sh = off[side > 0 ? B.SHIN_L : B.SHIN_R], ft = off[side > 0 ? B.FOOT_L : B.FOOT_R];
+      m.setBone(side > 0 ? B.THIGH_L : B.THIGH_R); truss([0, 0.15, 0], sh, 1.0, 0.82, 0.85, 0.75, 4);
+      m.setBone(side > 0 ? B.SHIN_L : B.SHIN_R); truss([0, 0, 0], ft, 0.82, 0.66, 0.75, 0.62, 4);
+      m.setBone(side > 0 ? B.FOOT_L : B.FOOT_R); m.color(dark); m.roundBox(0, -0.18, 0.2, 0.95, 0.36, 1.35, 0.08);
+      m.color('#ffffff', 1); m.push(); m.tf(0, -0.02, 0.2); for (const [a, b] of [[[-0.5, 0, 0.7], [0.5, 0, 0.7]], [[0.5, 0, 0.7], [0.5, 0, -0.7]], [[0.5, 0, -0.7], [-0.5, 0, -0.7]], [[-0.5, 0, -0.7], [-0.5, 0, 0.7]]]) rod(a, b, 0.07, 4); m.pop(); m.emissive(0);
+    }
+    const geo = m.geo(); geo.rainbow = { bone: B.CHEST, at: [0, 2.35, 0.1] };
+    const model = { geo, nb: BURNS_NB, body: this.body(), headY: 11.4, height: 13, man: true };
     if (!o || !Object.keys(o).length) this.cache = model;
     return model;
   }
@@ -12240,6 +12344,8 @@ class BurnsManBoss {
     const ch = this.ch; ch.x = this.x; ch.y = this.y; ch.z = this.z; ch.yaw = this.yaw; ch.scale = this.scale;
     ch.update(dt); ch.compute();
     this.headGlow = BurnsM.damp(this.headGlow, this.st === 'flash' ? 1 + this.flashK * 2 : this.st === 'stunned' ? 0.3 : 1, 5, dt);
+    // the neon telegraphs it too: red when he's hit, a slow red throb while he's stunned (his head is open to a bonk)
+    const geo = this.model.geo; if (geo.rainbow) geo.rainHurt = BurnsM.damp(geo.rainHurt || 0, this.defeated ? 0 : this.st === 'hurt' ? 1 : this.st === 'stunned' ? 0.55 + 0.25 * Math.sin(this.t * 3) : 0, 6, dt);
     if (this.chinka) {
       const hp = this.hand(1);
       const c = this.chinka; c.x = hp[0]; c.y = hp[1] - 0.9; c.z = hp[2]; c.yaw = this.yaw; c.update(dt); c.compute();
@@ -12343,7 +12449,7 @@ class BurnsPlayer {
     if (!this.ch) this.ch = new BurnsChar(this.model); else this.ch.setModel(this.model);
     this.ch.rim = 0.5;
   }
-  get speedMul() { return (this.power === 'powder' && this.powerT > 0 ? 1.55 : 1) * (this.giant > 0 ? 1.2 : 1) * (this.mudSink > 0 ? 0.45 : 1); }
+  get speedMul() { return (this.power === 'powder' && this.powerT > 0 ? 1.55 : 1) * (this.giant > 0 ? 1.2 : 1) * (this.mudSink > 0 ? 0.45 : 1) * (this.runK || 1); }   // runK: the RUN button / Shift (41_burns_nav.js)
   teleport(x, y, z, yaw) { this.x = x; this.y = y; this.z = z; this.vx = this.vy = this.vz = 0; if (yaw !== undefined) this.yaw = yaw; this.grounded = true; this.platform = null; }
   /* ---------- damage ---------- */
   hurt(n, fx, fz, kb, big) {
@@ -13194,6 +13300,7 @@ class BurnsPlayScene {
     L.split = lefty ? W * 0.55 : W * 0.45;
     // pack: the backpack pill under the HUD counters (its position is refreshed by the HUD each frame)
     this.hudBtns = { cam: { id: 'cam', x: cx, y: cy, r: r * 0.55 }, view: { id: 'view', x: cx, y: cy - r * 1.32, r: r * 0.5 }, bike: { id: 'bike', x: bx, y: by, r: r * 0.58 }, pack: (this.hudBtns && this.hudBtns.pack) || { id: 'pack', x: safeL + 50, y: 160, r: 17 } };
+    if (typeof BurnsNav !== 'undefined') BurnsNav.layout(this, r, lefty);   // the RUN button
     this.syncHudButtons();
   }
   // the backpack shows once ground scores exist in the story, or as soon as it holds anything
@@ -13204,6 +13311,7 @@ class BurnsPlayScene {
     if (this.hudBtns.view && !this.cine) list.push(this.hudBtns.view);
     if (this.player && ((this.bike && !this.cine) || this.player.vehicle)) list.push(this.hudBtns.bike);
     if (this.player && !this.cine && this.hudBtns.pack && this.packVisible()) list.push(this.hudBtns.pack);
+    if (typeof BurnsNav !== 'undefined') BurnsNav.hudList(this, list);
     Input.hud = this.state === 'play' && !this.paused ? list : null;
     Input.camDrag = this.state === 'play' && !this.paused;
   }
@@ -13611,6 +13719,7 @@ class BurnsPlayScene {
       p.x = o.x + dx * c + dz * s; p.z = o.z - dx * s + dz * c; p.y += o.y - o.py; p.yaw += dyaw;
       if (Math.abs(dyaw) > 1e-6 && !this.manualCam) this.camYaw += dyaw;
     }
+    if (typeof BurnsNav !== 'undefined') BurnsNav.step(this, dt);   // run, e-bike swap, guide target (41_burns_nav.js)
     p.update(dt);
     p.inp.jumpPressed = false; p.inp.actionPressed = false;
     // actors (far ones idle cheaply)
@@ -13651,7 +13760,7 @@ class BurnsPlayScene {
   updateCamera(fdt) {
     const p = this.player, cam = this.cam, sv = BurnsSave.get().settings, W = this.world;
     const portrait = Game.cssH > Game.cssW;
-    if (this.cine && this.cine.cam) { Object.assign(cam, this.cine.cam); cam.shift = portrait ? 0.06 : 0; cam.roll = 0; if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt); return; }
+    if (this.cine && this.cine.cam) { Object.assign(cam, this.cine.cam); cam.shift = portrait ? 0.06 : 0; cam.roll = 0; this.dialogFrame(cam, fdt); if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt); return; }
     // manual orbit (touch drag / mouse / keys / right stick)
     const sens = (sv.camSens || 1) * 0.0085;
     let dyaw = -Input.camDX * sens, dpitch = Input.camDY * sens * 0.7 * (sv.invertY ? -1 : 1);
@@ -13671,6 +13780,7 @@ class BurnsPlayScene {
     // ease behind the player while running (unless the player recently orbited)
     if (boss) { /* boss framing owns the yaw */ }
     else if (this.camRecenter > 0) { this.camRecenter -= fdt; this.camYaw = BurnsM.dampAngle(this.camYaw, p.yaw, 10, fdt); this.camPitch = BurnsM.damp(this.camPitch, 0.3, 8, fdt); }
+    else if (typeof BurnsNav !== 'undefined' && BurnsNav.followCam(this, fdt)) { /* setting: the camera stays behind Brady */ }
     else if (sv.autoCam !== false && this.time - this.lastManual > 1.2 && (hsp > 2 || veh)) {
       const behind = veh ? veh.yaw : Math.atan2(p.vx, p.vz);
       const fwd = Math.cos(BurnsM.wrap(behind - this.camYaw));
@@ -13737,8 +13847,60 @@ class BurnsPlayScene {
       if (!p.vehicle && !p.locked) p.yaw = yaw;   // the body faces where you look
     }
     cam.near = 0.15; cam.far = 1500;
+    this.dialogFrame(cam, fdt);
     // def.cameraFx(g, cam, dt): a world's own camera effects (wobble, roll, fov breathing) on the finished camera
     if (this.def.cameraFx) this.def.cameraFx(this, cam, fdt);
+  }
+  /* Dialogue framing: while a cutscene line is spoken and the cutscene has no camera of its own, ease to a 3/4 front
+     shot of the speaker, composed in the screen area above the dialogue box. Never in first-person view, never over
+     an authored camera. Force it with { say: [...], frame: true | false } on the step, or cutscene(steps, done,
+     { framing: true | false }), or def.dialogFraming for a whole world. */
+  dialogFrame(cam, fdt) {
+    const C = this.cine, D = this.dialog, st = C && C.cur;
+    const f = st && st.frame !== undefined ? st.frame : C && C.opts.framing !== undefined ? C.opts.framing : this.def.dialogFraming;
+    const want = !!(C && D.open && D.cur && f !== false && (f === true || !C.cam) && this.camMode !== 'first' && !this.player.dead);
+    let shot = want && this.dialogShot(D.cur);
+    this.dlgK = BurnsM.damp(this.dlgK || 0, shot ? 1 : 0, 3.2, fdt);
+    if (!shot) { if (this.dlgK < 0.002) { this.dlgK = 0; this.dlgCam = null; return; } shot = this.dlgCam; if (!shot) return; }
+    const F = this.dlgCam || (this.dlgCam = Object.assign({}, cam));
+    for (const k of ['x', 'y', 'z', 'tx', 'ty', 'tz', 'fov', 'shift']) { F[k] = BurnsM.damp(F[k] === undefined ? cam[k] || 0 : F[k], shot[k], 4, fdt); cam[k] = lerp(cam[k] || 0, F[k], easeInOut(this.dlgK)); }
+    cam.roll = 0;
+  }
+  // the framed shot for one dialogue line (chosen once per line: a clear 3/4 front view of the speaker's face)
+  dialogShot(line) {
+    if (this._dlgLine === line) return this._dlgShot;
+    this._dlgLine = line; this._dlgShot = null;
+    const who = line.who, man = (this.bosses || []).find(b => !b.hidden && !b.defeated);
+    let a = typeof who === 'string' ? (who === 'brady' ? this.player : who === 'man' ? man || this.boss : this.actor(who)) : who;
+    if (a && !Number.isFinite(a.x) && /chinka/i.test(a.name || '') && man && man.chinka && man.showChinka) a = man.chinka;
+    if (!a || !Number.isFinite(a.x) || !Number.isFinite(a.z) || a.hidden) return null;
+    const sc = a.scale || (a.ch && a.ch.scale) || 1, h = Math.min(30, ((a.model || (a.ch && a.ch.model) || {}).height || 1.8) * sc);
+    const ay = a.y || 0, yaw = a.yaw || 0, portrait = Game.cssH > Game.cssW, asp = Game.cssW / Game.cssH;
+    // thighs-up framing (hats included) in the free area above the dialogue box
+    const r = BurnsUI.dialogRect(this), top = this.cine && this.cine.letter ? Game.cssH * 0.1 : 8;
+    const safe = clamp((r.y - top) / Game.cssH, 0.35, 0.8), span = h * 0.8;
+    const fov = portrait ? 0.95 : 0.62, tn = Math.tan(fov / 2);
+    const dist = Math.max(1.6 * Math.sqrt(sc), (span / 2) / (tn * safe) * 1.2, (h * 0.38) / (tn * asp));
+    const tx = a.x, ty = ay + h - span * 0.44, tz = a.z, W = this.world;
+    const others = this.actors.concat([this.player]);
+    let best = null;
+    for (const off of [0.5, -0.5, 0.85, -0.85, 0.2, -0.2, 1.25, -1.25]) {
+      const ang = yaw + off, ex = tx + Math.sin(ang) * dist, ez = tz + Math.cos(ang) * dist;
+      const ey = Math.max(ty + dist * 0.08 + 0.05, W.height(ex, ez) + 0.5);
+      let score = W.raycast(tx, ty + h * 0.15, tz, ex, ey, ez, true) * 30 - Math.abs(off) * 2;
+      const vx = ex - tx, vy = ey - ty, vz = ez - tz, den = vx * vx + vy * vy + vz * vz;
+      for (const n of others) {
+        if (n === a || n.hidden || !Number.isFinite(n.x)) continue;
+        const nx = n.x - tx, nz = n.z - tz, u = (nx * vx + nz * vz) / den;
+        if (u < 0.08 || u > 1.05) continue;
+        const nh = ((n.model || (n.ch && n.ch.model) || {}).height || 1.8) * (n.scale || 1), py = ty + u * vy - (n.y || 0);
+        if (Math.hypot(nx - u * vx, nz - u * vz) < 0.5 && py > -0.2 && py < nh + 0.1) score -= 40;
+      }
+      if (!best || score > best.score) best = { score, x: ex, y: ey, z: ez };
+    }
+    const c = (top + r.y) / 2;
+    this._dlgShot = { x: best.x, y: best.y, z: best.z, tx, ty, tz, fov, shift: clamp(1 - 2 * c / Game.cssH, 0, 0.48), boxY: r.y };
+    return this._dlgShot;
   }
   // a modal minigame owns the screen (DJ set, rhythm round, or any world that sets g.modal): no random chatter
   modalOn() { return !!(this.modal || this.bw567rhythm || (typeof BurnsDJ !== 'undefined' && BurnsDJ.isOpen && BurnsDJ.isOpen(this))); }
@@ -14033,6 +14195,7 @@ class BurnsPlayScene {
     for (const b of this.bosses) if (b.draw && !b.hidden) b.draw(R);
     this.proj.draw(R);
     if (this.def.drawSprites) this.def.drawSprites(this, R);
+    if (typeof BurnsNav !== 'undefined') BurnsNav.drawSprites(this, R);   // the guide arrow (sprites: no extra draw calls)
     this.fx.draw(R);
   }
   drawPortrait(R, env) {
@@ -14336,6 +14499,7 @@ const BurnsUI = {
     if (L) { const pb = L.pause; ctx.save(); ctx.fillStyle = 'rgba(10,6,24,0.55)'; ctx.beginPath(); ctx.arc(pb.x, pb.y, pb.r, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.fillRect(pb.x - 6, pb.y - 7, 4, 14); ctx.fillRect(pb.x + 2, pb.y - 7, 4, 14); ctx.restore(); }
     if (L) rects.push([L.pause.x - L.pause.r - 4, L.pause.y - L.pause.r - 4, W, L.pause.y + L.pause.r + 4]);
     // minimap (with the Playa Map)
+    if (typeof BurnsNav !== 'undefined') BurnsNav.drawHUD(ctx, g, S);   // the guide arrow's label
     if (sv.items.map && g.world.minimap) { const mx = L ? L.pause.x - (W > H ? 70 : 62) : W - 80, my = (L ? L.pause.y : 30) + (W > H ? 82 : 76), mr = W > H ? 56 : 50; rects.push([mx - mr - 4, my - mr - 4, mx + mr + 4, my + mr + 4]); this.drawMinimap(ctx, g, mx, my, mr); }
   },
   drawMinimap(ctx, g, cx, cy, r) {
@@ -14472,6 +14636,7 @@ const BurnsUI = {
       btn(H.cam, Input.hudHeld.cam, 'CAM', '#3a6aff');
       if (H.view && Input.hud && Input.hud.indexOf(H.view) >= 0) btn(H.view, Input.hudHeld.view, 'VIEW', '#22a890', ({ normal: '3RD', close: 'CLOSE', first: '1ST', far: 'FAR' })[g.camMode || 'normal']);
       if (Input.hud && Input.hud.indexOf(H.bike) >= 0) btn(H.bike, Input.hudHeld.bike, veh ? 'EXIT' : 'BIKE', '#ffc21a');
+      if (typeof BurnsNav !== 'undefined') BurnsNav.drawControls(ctx, g, btn);   // RUN
     }
     ctx.restore();
   },
@@ -14516,10 +14681,11 @@ const BurnsUI = {
     const bw = Math.min(260, W * 0.62), x = (W - bw) / 2;
     const list = [];
     if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') return this.buildMenu(g);
+    if (g.pauseTab === 'citymap' && typeof BurnsNav !== 'undefined') return BurnsNav.buildMap(g);
     if (g.pauseTab === 'missions') {
       list.push({ x: Math.max(14, insets.l + 8), y: Math.max(12, insets.t + 6), w: 92, h: 38, label: '◀ BACK', fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
     } else if (g.pauseTab === 'settings') {
-      const two = H < 620, cw2 = two ? Math.min(250, (W - 60) / 2) : bw, x0 = two ? (W - cw2 * 2 - 12) / 2 : x, y0 = Math.max(insets.t + 62, H * 0.2);
+      const two = H < 620, cw2 = two ? Math.min(250, (W - 60) / 2) : bw, x0 = two ? (W - cw2 * 2 - 12) / 2 : x, y0 = two ? Math.max(insets.t + 56, 58) : Math.max(insets.t + 62, H * 0.2);
       const row = (label, val, fn, i) => ({ x: two ? x0 + (i % 2) * (cw2 + 12) : x0, y: y0 + (two ? Math.floor(i / 2) : i) * 46, w: cw2, h: 38, label: `${label}: ${val}`, size: 12, fn: () => { fn(); BurnsSave.save(); Save.save(); g.buildPause(); } });
       const pct = v => Math.round(v * 100) + '%', cyc = (v, a) => a[(a.indexOf(v) + 1) % a.length];
       list.push(row('MUSIC', pct(st.music), () => { st.music = cyc(Math.round(st.music * 4) / 4, [0, 0.25, 0.5, 0.75, 1]); Sound.setMusicVolume(st.music); }, 0));
@@ -14530,16 +14696,18 @@ const BurnsUI = {
       list.push(row('SCREEN SHAKE', st.shake !== false ? 'ON' : 'OFF', () => { st.shake = st.shake === false; }, 5));
       list.push(row('CAMERA', BURNS_CAM_LABELS[g.camMode || 'normal'], () => { const i = BURNS_CAM_MODES.indexOf(g.camMode || 'normal'); g.setCamMode(BURNS_CAM_MODES[(i + 1) % BURNS_CAM_MODES.length], true); }, 6));
       list.push(row('GRAPHICS', String(bs.gfx || 'auto').toUpperCase() + (BurnsGL.gl2 ? '' : ' (BASIC)'), () => { const N = BURNS_GFX.names; bs.gfx = N[(N.indexOf(bs.gfx || 'auto') + 1) % N.length]; BurnsGL.configure(bs.gfx); }, 7));
-      const rows = two ? 4 : 8;
+      if (typeof BurnsNav !== 'undefined') BurnsNav.settingsRows(g, (label, val, fn) => list.push(row(label, val, fn, list.length)));   // guide arrow, camera behind Brady, city bike
+      const rows = two ? Math.ceil(list.length / 2) : list.length;
       list.push({ x: W / 2 - bw / 2, y: y0 + rows * 46 + 6, w: bw, h: 40, label: '◀ BACK', primary: true, fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
     } else {
       const items = [['RESUME', () => g.closePause(), true]];
       items.push([BurnsSave.hasItem('www') ? 'WHAT WHERE WHEN' : 'MISSIONS', () => { g.pauseTab = 'missions'; g.buildPause(); burnsSfx('map_open'); }]);
+      if (typeof BurnsNav !== 'undefined') items.push(['GUIDE ARROW: ' + (BurnsNav.on('guide') ? 'ON' : 'OFF'), () => { BurnsNav.toggle('guide'); g.buildPause(); }]);
       if (g.missions.side().length) items.push(['SIDE QUESTS', () => { g.boardTab = g.boardTab || 'available'; g.pauseTab = 'board'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]);
       if (g.packVisible()) { const n = BurnsPack.total(); items.push([n ? `BACKPACK (${n})` : 'BACKPACK', () => { g.pauseTab = 'pack'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]); }
       // an entered place (open world) is left back into the city; the open world itself has a fast-travel map
       if (g.parentScene) items.push(['LEAVE' + (g.placeName ? ' ' + String(g.placeName).toUpperCase() : ''), () => { g.paused = false; BurnsOpen.leave(g, 'leave'); }]);
-      else if (g.def.open) items.push(['MAP', () => { g.paused = false; g.openTravelMap(); }]);
+      else if (g.def.open) items.push(['MAP', () => { if (g.def.cityMap && typeof BurnsNav !== 'undefined') BurnsNav.openMap(g); else { g.paused = false; g.openTravelMap(); } }]);
       else items.push(['WORLD SELECT', () => { g.paused = false; g.quit(true); }]);
       items.push(['SETTINGS', () => { g.pauseTab = 'settings'; g.buildPause(); }]);
       items.push(['QUIT TO TITLE', () => { g.paused = false; g.quit(false); }]);
@@ -14562,6 +14730,7 @@ const BurnsUI = {
     const W = Game.cssW, H = Game.cssH;
     ctx.fillStyle = 'rgba(6,3,14,0.72)'; ctx.fillRect(0, 0, W, H);
     if (g.pauseTab === 'missions') { this.drawMissions(ctx, g); BurnsUIKit.drawButtons(ctx, g.pauseUI); return; }
+    if (g.pauseTab === 'citymap' && typeof BurnsNav !== 'undefined') { BurnsNav.drawMap(ctx, g); BurnsUIKit.drawButtons(ctx, g.pauseUI); return; }
     if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') { this.drawMenu(ctx, g); return; }
     const title = g.pauseTab === 'settings' ? 'SETTINGS' : 'PAUSED';
     if (g.pauseTab !== 'settings') {
@@ -15037,7 +15206,7 @@ class BurnsCrowds {
   }
   bank(look, anim, phase) {
     const k = look + '#' + anim + '#' + phase; let b = this.banks[k];
-    if (!b) { const ch = new BurnsChar(this.looks[look]); ch.play(anim, null, true); ch.animT = phase; ch.update(0); ch.compute(); b = this.banks[k] = { ch, key: k }; }
+    if (!b) { const ch = new BurnsChar(this.looks[look]); ch.play(anim, null, true); ch.animT = phase; ch._stridePhase = phase % 1; ch.update(0); ch.compute(); b = this.banks[k] = { ch, key: k }; }
     return b;
   }
   add(x, z, o) {
