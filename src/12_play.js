@@ -100,6 +100,22 @@ class Weather {
   }
 }
 
+/* the safety net: an entity whose update, draw or touch throws is taken out of the level (logged once per kind of
+   fault, counted in window.__sbwErrors so tests still see it) instead of stopping the whole frame every frame, which
+   on a phone looks like the game froze */
+function entityFault(e, err, where) {
+  e.remove = true; e.dead = true;
+  try {
+    // a boss that breaks would leave its arena sealed: count it as beaten so the level can still be finished
+    if (e.boss && e.g && e.g.boss === e && e.g.bossDefeated) e.g.bossDefeated(e);
+  } catch (e2) { /* the boss's own code is what failed */ }
+  try {
+    window.__sbwErrors = (window.__sbwErrors || 0) + 1;
+    const key = (e && e.constructor ? e.constructor.name : '?') + ' ' + where + ': ' + String(err && err.message || err);
+    const seen = entityFault.seen || (entityFault.seen = {});
+    if (!seen[key]) { seen[key] = 1; console.error('entity removed after an error in ' + key, err); (window.__bradyErrors = window.__bradyErrors || []).push(key + ' ' + String(err && err.stack || '')); }
+  } catch (e2) { /* never throw from here */ }
+}
 // atlases a theme's background strips come from besides its own (a theme can borrow another atlas's layer for depth)
 function themeLayerAtlases(th) { return th && th.layers ? th.layers.filter(L => L.kind === 'image' && L.atlas && L.atlas !== th.atlas).map(L => L.atlas) : []; }
 class Play {
@@ -417,6 +433,14 @@ class Play {
     this.mus(this.area.music);
     this.shake(10);
   }
+  /* the safety net for a transition (a door, a respawn) that throws half way: without it the screen stays black with
+     Brady stuck in the 'portal' or 'dead' state forever. Log it, then get the game moving again. */
+  fadeFault(err) {
+    if (typeof Game !== 'undefined' && Game.reportError) Game.reportError(err); else console.error(err);
+    if (this.state === 'dead') { try { Game.setScene(new Play(this.level, {})); return; } catch (e2) { goToMap(this.set, this.level.world, this.id); return; } }
+    if (this.player && this.player.state === 'portal') this.player.state = 'play';
+    this.fadeTo(0, null);
+  }
   fadeTo(target, cb, speed) { this.fade.target = target; this.fade.cb = cb; this.fade.speed = speed || 2.4; }
 
   /* ---------- camera ---------- */
@@ -486,7 +510,7 @@ class Play {
     // fades
     if (this.fade.a !== this.fade.target) {
       this.fade.a = approach(this.fade.a, this.fade.target, dt * this.fade.speed);
-      if (this.fade.a === this.fade.target && this.fade.cb) { const cb = this.fade.cb; this.fade.cb = null; cb(); return; }
+      if (this.fade.a === this.fade.target && this.fade.cb) { const cb = this.fade.cb; this.fade.cb = null; try { cb(); } catch (err) { this.fadeFault(err); } return; }
     }
     if (this.paused) {
       const hit = UI.hitButtons(this.pauseUI);
@@ -578,7 +602,7 @@ class Play {
       const e = this.entities[i];
       if (e.remove) continue;
       const always = e.isPlatform || e.boss || e instanceof Bolt || e.friendly || e instanceof Laser || e instanceof Subwoofer || e instanceof Geyser || e instanceof Pancake || e instanceof Horn || e instanceof FlashTrap;
-      if (always || (e.x + e.w > cx0 && e.x < cx1 && e.y + e.h > cy0 && e.y < cy1)) e.update(e.item || e.friendly || e instanceof Gold || e instanceof PickPop ? dt : edt);
+      if (always || (e.x + e.w > cx0 && e.x < cx1 && e.y + e.h > cy0 && e.y < cy1)) { try { e.update(e.item || e.friendly || e instanceof Gold || e instanceof PickPop ? dt : edt); } catch (err) { entityFault(e, err, 'update'); } }
     }
     this.refreshPlatforms();
     // player
@@ -604,6 +628,7 @@ class Play {
   collide(p) {
     for (const e of this.entities) {
       if (e.remove || e.friendly || e.friendT) continue;
+      try {   // the safety net: a throwing entity is removed, the frame goes on
       if (e instanceof EmberChain) { if (Math.abs(e.ox - p.cx) < e.len * 14 + 30 && Math.abs(e.oy - p.cy) < e.len * 14 + 40) e.touchPlayer(p); continue; }
       if (e.customCollide) { if (e.collidePlayer(p) !== 'body') { if (p.dead || p.state !== 'play') return; continue; } }
       if (!overlap(p, e)) continue;
@@ -623,6 +648,7 @@ class Play {
         e.touchPlayer(p);
       } else if (!e.dead || e.boss) e.touchPlayer(p);
       if (p.dead || p.state !== 'play') return;
+      } catch (err) { entityFault(e, err, 'touch'); }
     }
   }
   updateBeats(A) {
@@ -753,9 +779,9 @@ class Play {
       else if (e.friendly) layers[3].push(e);
       else layers[2].push(e);
     }
-    for (const L of layers.slice(0, 3)) for (const e of L) e.draw(ctx, this.t);
+    for (const L of layers.slice(0, 3)) for (const e of L) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
     this.player.draw(ctx, this.t);
-    for (const e of layers[3]) e.draw(ctx, this.t);
+    for (const e of layers[3]) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
     // foreground: water pools, fake walls
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     this.drawTiles(ctx, camX, camY, true);

@@ -43,7 +43,12 @@ const Game = {
       if (document.hidden) {
         if (typeof Play !== 'undefined' && this.scene instanceof Play && !this.scene.paused && (this.scene.state === 'play' || this.scene.state === 'intro')) this.scene.openPause();
         Sound.suspend(); Save.save();
-      } else { if (!(typeof Play !== 'undefined' && this.scene instanceof Play && this.scene.paused)) Sound.resume(); this.last = performance.now(); }
+      } else {
+        if (!(typeof Play !== 'undefined' && this.scene instanceof Play && this.scene.paused)) Sound.resume();
+        this.last = performance.now();
+        // iOS may drop a background page's canvas memory: re-size (re-allocate) the canvas when the app comes back
+        try { this.resize(); } catch (e) { this.reportError(e); }
+      }
     });
     window.addEventListener('pagehide', () => Save.save());
     this.setScene(appHomeScene());
@@ -110,10 +115,12 @@ const Game = {
     requestAnimationFrame(t => this.frame(t));
     let dt = (now - this.last) / 1000;
     this.last = now;
+    const raw = dt;
     if (dt > 0.25) dt = 0.25;
     if (dt < 0) dt = 0;
-    // adaptive resolution: if frames are consistently slow, render fewer pixels
-    if (dt > 0.026 && dt < 0.2) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 0.5);
+    // adaptive resolution: if frames are consistently slow, render fewer pixels. Measured on the real frame time: a
+    // phone crawling at 2-5 fps (frames over 0.2 s) must count as slow too, not only gaps over 1 s (a tab switch)
+    if (raw > 0.026 && raw < 1) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 0.5);
     if (this.slowT > 2.5 && (this.lowered || 0) < 2 && this.dpr > 1) {
       this.lowered = (this.lowered || 0) + 1; this.slowT = 0;
       this.dprCap = Math.max(1, this.dpr - 0.5);
@@ -155,10 +162,13 @@ const Game = {
   },
 
   reportError(e) {
+    // the loop keeps running (the next frame is already requested); the error is logged a few times and counted
+    // (Game.errors, window.__sbwErrors) so tests can assert there were none
     this.errors++;
+    window.__sbwErrors = (window.__sbwErrors || 0) + 1;
     if (this.errors < 5) console.error(e);
     window.__bradyErrors = (window.__bradyErrors || []);
-    window.__bradyErrors.push(String(e && e.stack || e));
+    if (window.__bradyErrors.length < 50) window.__bradyErrors.push(String(e && e.stack || e));   // bounded: an error every frame must not eat the phone's memory
   }
 };
 
