@@ -758,6 +758,7 @@ const levels = [
     areas: [
       { id: 'shelf', gen: 'strip', W: 200, H: 20, script: [
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
         'penguin',
         // ① belly-slide bowling on the terrace, and the first conga line
         ['conga', { len: 16, n: 3, text: 'PENGUINS SLIDE IN CONGA LINES. STOMP THE ONE IN THE SCARF AND THE REST SCATTER' }],
@@ -801,6 +802,7 @@ const levels = [
     areas: [
       { id: 'aurora', gen: 'strip', W: 200, H: 22, script: [
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         ['flat', { n: 4 }],
         // ① the aurora turns gravity over (spikes below: the sky is the way)
         ['aurora', { w: 14, text: 'WALK INTO THE AURORA: UP BECOMES DOWN. RUN ALONG THE SKY', gold: [7, 3, 'must'] }],
