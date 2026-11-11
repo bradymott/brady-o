@@ -51,7 +51,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       const k = g.level.areas.findIndex(a => a.role === 'arena' || a.spawns.some(s => s.type === 'boss'));
       if (k < 0 || g.area === g.level.areas[k]) return b;
       const a = g.level.areas[k], an = (a.anchors && (a.anchors.in || a.anchors.start)) || { x: 3 * 32 + 16, y: (a.H - 4) * 32 };
-      g.loadArea(k, an.x, an.y, g.player.power || 0); return g.entities.find(e => e.boss && !e.remove);
+      const inv = g.player.invuln || 0; g.loadArea(k, an.x, an.y, g.player.power || 0); g.player.invuln = Math.max(g.player.invuln || 0, inv); return g.entities.find(e => e.boss && !e.remove);
     };
     // Brady walks into the arena; the boss wakes and its intro plays out
     window.enterArena = (dx) => { const b = boss(), p = P(); p.x = b.arenaX0 + (dx || 64); p.y = b.floorY - p.h - 4; p.vy = 0; sim(2.6); return b; };
