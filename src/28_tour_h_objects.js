@@ -505,7 +505,7 @@ Object.assign(ENTITY_TYPES, { catapult: TourCatapult, ring: TourRing, zipLine: T
 /* ---- 13. breakwall: a wall of the country's material, broken by the right ability ---- */
 class TourBreakWall extends Ent {
   constructor(g, s) {
-    super(g, s, TS, (s.h || 3) * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.needs = s.needs || 'hat'; this.skinName = s.skin; this.breakWall = true; this.id = s.id;
+    super(g, s, TS, (s.h || 3) * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.needs = s.needs || 'hat'; this.skinName = s.skin; this.breakWall = true; this.id = s.id; this.glass = this.needs === 'kazoo';   // the kazoo's honk only rings bells and glass
     this.tiles = []; for (let i = 0; i < (s.h || 3); i++) this.tiles.push([Math.floor(s.x / TS), Math.floor(s.y / TS) - 1 - i]);
   }
   update(dt) {
