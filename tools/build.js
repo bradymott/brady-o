@@ -168,7 +168,8 @@ const copyModels = (appDir, outDir, shared) => {
       let bytes = fs.readFileSync(inFile);
       if (fs.existsSync(gltfpack)) {
         const tmp = path.join(packCache, 'tmp-' + f);
-        try { execSync(`"${gltfpack}" -kn -ke -i "${inFile}" -o "${tmp}"`, { stdio: 'ignore' }); bytes = fs.readFileSync(tmp); fs.unlinkSync(tmp); }
+        // (textured skinned heroes get their names kept and finer UVs: tools/hero_glb.js; every other file packs as before)
+        try { bytes = require('./hero_glb').packGLB(gltfpack, inFile, tmp, execSync); }
         catch (e) { console.warn('gltfpack failed for ' + f + ', shipping it raw'); }
       }
       fs.writeFileSync(cached, zlib.gzipSync(bytes, { level: 9 }));
