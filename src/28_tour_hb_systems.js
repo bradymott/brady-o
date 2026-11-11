@@ -224,6 +224,12 @@ ENTITY_TYPES.pedestal = TourPedestal;
   Player.prototype.hurt = function (src) { if (this.carrying && this.invuln <= 0 && this.star <= 0) this.dropCarry('DROPPED IT!'); return hurt.call(this, src); };
   const dr = TourPlayerFx.over;
   TourPlayerFx.over = function (ctx, p, t) { dr.call(this, ctx, p, t); if (p.carrying && !p.dead) TourCarryArt.draw(ctx, p.carrying.item, p.cx, p.y - 2 + Math.sin(t * 6) * 1, t); };
+  // a door to another area makes a new Player: whatever he carried goes home to its pedestal instead of vanishing
+  const la = Play.prototype.loadArea;
+  Play.prototype.loadArea = function (idx, x, y, power) { const p = this.player; if (p && p.carrying && p.dropCarry) p.dropCarry('SET DOWN'); return la.call(this, idx, x, y, power); };
+  // and a door asks him to set it down first (on a pedestal, with THROW) rather than taking it through
+  const ep = Play.prototype.enterPortal;
+  Play.prototype.enterPortal = function (portal) { const p = this.player; if (p && p.carrying && portal && portal.target && portal.target.area !== this.area.idx) { if (!(this.carryToldT > this.t)) { this.carryToldT = this.t + 3; this.toast && this.toast('SET IT DOWN ON A STONE FIRST (THROW)'); } return; } return ep.call(this, portal); };
 }
 
 /* ---------- 9. wheel: platforms on rotating arms ---------- */

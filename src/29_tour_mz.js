@@ -1,10 +1,9 @@
 /* ============================================================
-   MOZAMBIQUE (world 4)
-   4-1 Gorongosa Savanna    run    elephants spray water jets that lift Brady into the baobabs; termite mounds; burnable thorn hedges
-   4-2 Dune Stampede        auto   the herd thunders behind: race over the dunes, bounce on dhow sails, crumbling sand bridges
-   4-3 The Great Baobab     climb  zigzag branches, bouncy weaver nests, sticky honeycomb, fruit-throwing monkeys
-   4-4 Turtle Beach         night  ride slow sea turtles over glowing tide pools; ghost crabs; the lighthouse sweeps the dark
-   4-5 Ilha Fortress        castle coconut cannons, flooded cisterns, thorn barricades; boss O Eremita, a giant hermit crab
+   MOZAMBIQUE (world 4): art, enemies, set pieces, the boss O Eremita,
+   music and the piri-piri chili. The six levels (v2 format: 4-1 Ostrich
+   Dash, 4-2 Dune Stampede, 4-3 Baobab Skyline, 4-4 Hatchling Night,
+   4-5 Ilha Fortress, 4-6 Buried Dhow) and the pieces only they use are
+   in 29_tour_mz_levels.js.
    ============================================================ */
 (() => {
 const COL = { a: '#ffd23a', b: '#1a9a5a', c: '#e8423a' };
@@ -835,32 +834,7 @@ Tour.country({
     ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(x - 2, y - 6, 3, 2);
   } },
   star: { name: 'GOLDEN BAOBAB', draw(ctx, x, y, t) { ctx.save(); ctx.translate(x, y); ctx.scale(Math.cos(t * 3) > 0 ? 1 : -1, 1); baobab(ctx, 0, 10, 24, '#ffd24a'); ctx.restore(); } },
-  levels: [
-    { name: 'Gorongosa Savanna', style: 'run', theme: 'mz_savanna', gimmick: 'Elephants spray water jets that lift Brady into the baobab crowns; termite mounds; thorn hedges that piri-piri burns away',
-      enemies: [['mzWarthog', 2], ['mzCashew', 3], ['mzWeaver', 1]],
-      hint: 'Ride the elephant\'s water jet up into the baobab!',
-      postcard: 'An elephant gave me a shower. On purpose. I think we\'re friends now. ♥ C',
-      script: [['flat', { n: 5 }], ['elephant', { gold: true }], 'mounds', 'sig', ['thorns', {}], 'herd', 'cp', ['elephant', { phase: 1.5 }], 'gap', ['thorns', { h: 2 }], 'mounds', 'bonus', 'herd', 'end'] },
-    { name: 'Dune Stampede', style: 'auto', theme: 'mz_dunes', gimmick: 'The herd thunders behind you: race over the dunes, bounce on dhow sails and cross crumbling sand bridges',
-      enemies: [['mzGhostCrab', 2], ['mzMango', 2]], scroll: 2.8, gyMin: 9,
-      hint: 'Keep running! The stampede won\'t stop',
-      postcard: 'I saw the herd from the Baron\'s blimp. You were running SO fast. ♥ C',
-      script: ['stampede', ['flat', { n: 6 }], 'dunes', ['dhow', { gold: true }], 'crabs', 'dunes', 'gap', ['dhow', {}], 'cp', 'dunes', ['crabs', { n: 3 }], 'dhow', 'dunes', 'end'] },
-    { name: 'The Great Baobab', style: 'climb', theme: 'mz_baobab', gimmick: 'Climb a giant baobab: zigzag branches, bouncy weaver nests, a hollow trunk, sticky honeycomb and fruit-throwing monkeys',
-      enemies: [['mzMonkey', 2]], W: 24, H: 96,
-      hint: 'Honey is sticky: you jump lower on it',
-      postcard: 'The view from the baobab! I can see the Baron\'s blimp... and a lot of monkeys. ♥ C',
-      script: [['branches', { monkey: true }], ['hollow', { gold: true }], 'honey', ['branches', { n: 3 }], ['hollow', { h: 9 }], 'honey', ['branches', { n: 4, monkey: true }]] },
-    { name: 'Turtle Beach', style: 'night', theme: 'mz_beach', gimmick: 'A dark beach lit by glowing plankton and a sweeping lighthouse: ride slow sea turtles over tide pools, dodge ghost crabs',
-      enemies: [['mzGhostCrab', 3]], dark: true,
-      hint: 'Sea turtles are slow but steady boats',
-      postcard: 'Baby turtles were racing to the sea tonight. Everyone made it. I cried a little. ♥ C',
-      script: [['flat', { n: 6 }], ['turtles', { gold: true }], 'lighthouse', 'rocks', ['crabs', { n: 2 }], 'cp', ['turtles', { span: 12 }], 'rocks', 'lighthouse', 'oneup', ['turtles', {}], 'end'] },
-    { name: 'Ilha Fortress', style: 'castle', theme: 'mz_fort', gimmick: 'Coconut cannons on the ramparts, flooded cisterns and thorn barricades, then O Eremita the hermit crab',
-      enemies: [['mzPrawn', 3], ['mzCashew', 1]], boss: 'mz_hermit', arena: 'tidepool', arenaW: 26, roof: false,
-      hint: 'Heat O Eremita\'s shell with piri-piri fire until he jumps out, then stomp him. Kick empty shells into the sea!',
-      postcard: 'The baobab is back, full size, and the birds moved right back in. The Baron flew north to Morocco! ♥ C',
-      script: [['flat', { n: 4 }], ['rampart', { gold: true }], 'cistern', ['thorns', { h: 3 }], 'cp', ['rampart', {}], ['cistern', { n: 4 }], 'sig', ['enemies', { n: 2 }], ['blocks', { content: 'power' }], 'arena'] }
-  ]
+  // the six levels (v2 format) are in 29_tour_mz_levels.js
+  levels: []
 });
 })();
