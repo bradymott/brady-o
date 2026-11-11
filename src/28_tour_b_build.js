@@ -185,6 +185,10 @@ function tourSwim(ctx) {
   const script = (S.script || []).slice();
   if (!script.includes('cp')) script.splice(Math.floor(script.length / 2), 0, 'cp');
   for (const step of script) { st.x = st.run(step); st.x += 2; }
+  if (ctx.v2 && S.ending === false) {
+    // v2: the script built its own way out; close the cave behind it
+    B.fill(st.x, 0, st.x + 1, H - 1, T.GROUND); B.trim(st.x + 2);
+  } else {
   // the exit: a ledge with the goal at the end of the cave
   const x = st.x + 2;
   st.water(x, 2, x + 18, FLOOR - 1);
@@ -193,6 +197,7 @@ function tourSwim(ctx) {
   B.gold(x + 4, 6, 'high');
   B.fill(x + 19, 0, x + 20, H - 1, T.GROUND);
   B.trim(x + 21);
+  }
   if (!ctx.deferGold) pickGold(ctx, B);
   const area = B.build(TourBuild.areaProps(ctx, { water: true }));
   return { area, B, st, start: { area: 0, x: 4 * TS + TS / 2, y: 5 * TS }, time: S.time || 300 };
@@ -215,7 +220,13 @@ function tourClimb(ctx) {
   st.top = (y, holes) => { for (let x = 2; x <= W - 3; x++) if (!(holes && holes.some(([a, b]) => x >= a && x <= b))) { if (B.get(x, y) === T.EMPTY) B.set(x, y, T.SEMI); } st.y = y; st.tops.push(y); };
   st.mid = Math.floor(W / 2);
   const script = (S.script || []).slice();
-  for (const step of script) { st.run(step); if (st.y < 16) break; }
+  for (const step of script) { st.run(step); if (st.y < (ctx.v2 && S.summit === false ? 3 : 16)) break; }
+  if (ctx.v2 && S.summit === false) {
+    // v2: the script built its own summit (and the gate)
+    if (!ctx.deferGold) pickGold(ctx, B);
+    const area = B.build(TourBuild.areaProps(ctx, { tower: true, risingLava: S.risingLava || null }));
+    return { area, B, st, start: { area: 0, x: 4 * TS + TS / 2, y: (H - 2) * TS }, time: S.time || 300 };
+  }
   // the summit: a wide ledge with the goal
   const top = Math.max(6, st.y - 3);
   B.fill(1, top, W - 2, top, T.GROUND); B.fill(1, top + 1, W - 2, top + 1, T.GROUND);
