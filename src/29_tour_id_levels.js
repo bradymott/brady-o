@@ -523,7 +523,7 @@ const stamps = {
       [21, 7, '?'], [26, 10, 'g'], [23, 10, 'n']
     ]),
     legend: { r: ['decor', 'idRiceSacks'], n: ['spawn', 'sign', { text: 'THE BARN\'S BACK DOOR OPENS ONTO A FAR-OFF RAINFOREST... A SECRET LEVEL!' }] },
-    items: ['power'],
+    items: ['oneup'],
     doors: [{ to: 'sawah@lumbungBack', look: 'idBarnDoor' }],
     gold: { '*': 'hidden' }
   },
@@ -562,7 +562,7 @@ const stamps = {
       [22, 7, '?'], [25, 10, 'u']
     ]),
     legend: { u: ['decor', 'idBanana'] },
-    items: ['power'],
+    items: ['oneup'],
     doors: [{ to: 'hutan@akarBack', look: 'idGroveDoor' }],
     gold: { '*': 'hidden' }
   },
@@ -588,7 +588,7 @@ const stamps = {
       [19, 7, '?'], [23, 10, 'z'], [26, 10, 'E']
     ]),
     legend: { m: ['decor', 'idMineCart'], z: ['decor', 'idSulfurPile'], E: ['spawn', 'sign', { text: 'THE DEPOT\'S BACK DOOR (UP AT THE DOOR) LEADS OUT TO THE END OF THE LINE' }] },
-    items: ['hat'],
+    items: ['oneup'],
     doors: [{ to: 'ijen@depotBack', look: 'idDepotDoor' }],
     gold: { '*': 'hidden' }
   },
@@ -731,7 +731,7 @@ const levels = [
           'plankton',
           // ② anglerfish dangle fake coins; the sunken outrigger
           ['anglers', { n: 2 }],
-          ['niche', { item: 'hat' }],
+          ['gearStand', { item: 'hat' }],
           ['wreckDoor', { to: 'kapal@in', back: 'kapalBack' }],
           'plankton',
           'morays',
