@@ -115,12 +115,12 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const m = mapFrom('1-1'); settle(); const ow = m.ow;
     const tap = key => { const s = ow.nodeScreen(key); ow.testTaps = [{ x: s.x, y: s.y }]; sim(0.02); };
     tap('1-2'); const walking = !!ow.walker.seg; settle(); const at1 = ow.walker.at;
-    tap('1-4'); sim(1); const at2 = ow.walker.at;
+    ow.tapNode(ow.by['1-4']); sim(1); const at2 = ow.walker.at, locked = /LOCKED/.test(S().toastMsg);
     const s2 = ow.nodeScreen('1-2'), dbg = [JSON.stringify(s2), JSON.stringify(ow.cardR), ow.walker.at, !!ow.walker.seg, ow.iris.close, JSON.stringify(ow.cam)];
     tap('1-2'); dbg.push(ow.iris.close, ow.iris.t, S().toastMsg); sim(1); const g = S();
-    return { walking, at1, at2, scene: g.constructor.name, id: g.id, dbg };
+    return { walking, at1, at2, locked, scene: g.constructor.name, id: g.id, dbg };
   });
-  check('a tap on a stop walks there; a locked stop stays out of reach; a tap on his own stop goes in', r7.walking && r7.at1 === '1-2' && r7.at2 === '1-2' && r7.scene === 'Play' && r7.id === '1-2', r7);
+  check('a tap on a stop walks there; a locked stop stays out of reach; a tap on his own stop goes in', r7.walking && r7.at1 === '1-2' && r7.at2 === '1-2' && r7.locked && r7.scene === 'Play' && r7.id === '1-2', r7);
 
   // 8. Hidden secret level, Bottle Mail: Ecuador's 2-6 and its bottle cove
   const r8 = await page.evaluate(() => {
