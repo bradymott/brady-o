@@ -247,27 +247,78 @@ const Validator = {
   exitX(a) { const g = a.spawns.find(s => s.type === 'gate'); return g ? g.x / TS : a.W; },
 
   /* the power-up budget of §5.3 (counted over all areas; 'opportunity' = item block, hidden block with an item, gear
-     stand, friend who gives something, shop) */
+     stand, friend who gives something, shop). Rules:
+     1 at least 2 opportunities; 2 at most 5 item blocks in the main area (7 in a secret level: rule 7);
+     3 the first opportunity within the first 25 % of the main area (by x from the start side, by height for climbs,
+       by depth for shafts); 4 the archetype's gear from a gear stand before the twist beat (the first half of the main
+       area), and any gear a lock or crawlway needs from a stand in the same level; 5 one premium item (L, S, sundial,
+       1UP, magnet) in a secret or risky spot (another area, a hidden block, or next to a hidden / risky postcard);
+     6 boss levels: two opportunities in the lead-in before the arena. */
+  ARCH_GEAR: { dive: 'fins', tide: 'fins', dig: 'hat', lamp: 'hat', sneak: 'box', glide: 'plane', fall: 'plane', beat: 'kazoo' },
+  PREMIUM: { lsd: true, star: true, sundial: true, oneup: true, magnet: true },
   budget(level) {
     const errors = [], warnings = [];
     if (!level.v2) return { ok: true, errors, warnings, skipped: true };
     const S = level.design || {}, main = level.areas[0];
     const items = a => Object.keys(a.contents || {}).filter(k => a.contents[k] && a.contents[k] !== 'pick' && a.contents[k] !== 'picks');
-    const opp = a => items(a).length + a.spawns.filter(s => s.type === 'gearStand' || s.type === 'souvenirShop' || (s.type && /Xolo|Friend|friend/.test(s.type)) || s.give).length;
+    const giver = s => s.type === 'gearStand' || s.type === 'souvenirShop' || (s.type && /Xolo|Friend|friend/.test(s.type)) || s.give;
+    const opp = a => items(a).length + a.spawns.filter(giver).length;
     let total = 0; for (const a of level.areas) total += opp(a);
     if (total < 2) errors.push(`only ${total} power-up opportunities (needs 2)`);
     const mainBlocks = items(main).length;
     const cap = S.secret ? 7 : 5;
     if (mainBlocks > cap) errors.push(`${mainBlocks} item blocks in the main area (max ${cap})`);
-    // the first opportunity within the first 25 % of the main area (by x; by height for climbs, by depth for shafts)
+    // how far into the main area a tile is, from where Brady starts (0 = the start, 1 = the far end)
+    const vertical = main.tower || main.gen === 'climb' || main.gen === 'rise', shaft = main.gen === 'shaft';
+    const along = (x, y) => vertical ? (main.H - y) / main.H : shaft ? y / main.H : (main.mirrored ? (main.W - 1 - x) / main.W : x / main.W);
     const pos = [];
     for (const k of items(main)) { const [x, y] = k.split(',').map(Number); pos.push([x, y]); }
-    for (const s of main.spawns) if (s.type === 'gearStand' || s.give || /Xolo|Friend/.test(s.type || '')) pos.push([Math.floor(s.x / TS), Math.floor(s.y / TS)]);
+    for (const s of main.spawns) if (giver(s)) pos.push([Math.floor(s.x / TS), Math.floor(s.y / TS)]);
     if (pos.length) {
-      const vertical = main.tower || main.gen === 'climb' || main.gen === 'rise', shaft = main.gen === 'shaft';
-      const f = vertical ? Math.min(...pos.map(p => (main.H - p[1]) / main.H)) : shaft ? Math.min(...pos.map(p => p[1] / main.H)) : Math.min(...pos.map(p => p[0] / main.W));
+      const f = Math.min(...pos.map(p => along(p[0], p[1])));
       if (f > 0.25) errors.push(`the first power-up opportunity is ${Math.round(f * 100)} % into the main area (max 25 %)`);
     } else if (total) warnings.push('no power-up opportunity in the main area');
+    // rule 4: the archetype's gear from a stand, before the twist; gear a lock or crawlway needs comes from a stand
+    const stands = [];
+    level.areas.forEach((a, ai) => { for (const s of a.spawns) if (s.type === 'gearStand') stands.push({ ai, item: s.item || 'plane', f: ai === 0 ? along(Math.floor(s.x / TS), Math.floor((s.y - 1) / TS)) : 0 }); });
+    const arch = S.arch, flood = main.gen === 'rise' && main.risingWater;
+    const need = flood ? 'fins' : this.ARCH_GEAR[arch];
+    if (need) {
+      const st = stands.filter(s => s.item === need);
+      if (!st.length) errors.push(`${(arch || '').toUpperCase()} needs a ${need} gear stand (rule 4)`);
+      else if (Math.min(...st.map(s => s.f)) > 0.5) errors.push(`the ${need} gear stand is ${Math.round(Math.min(...st.map(s => s.f)) * 100)} % in: put it before the twist (first half, rule 4)`);
+    }
+    const needed = new Set();
+    for (const a of level.areas) {
+      for (const L of a.locks || []) if (/^gear:/.test(L.id)) needed.add(L.id.slice(5));
+      if (a.tiles && a.tiles.indexOf(T.LINTEL) >= 0) needed.add('pads');
+    }
+    for (const g of needed) if (!stands.some(s => s.item === g)) errors.push(`a lock or crawlway needs ${g}: add a ${g} gear stand to this level (rule 4)`);
+    // rule 5: one premium item in a secret or risky spot
+    const premium = [];
+    level.areas.forEach((a, ai) => {
+      for (const k of items(a)) if (this.PREMIUM[a.contents[k]]) { const [x, y] = k.split(',').map(Number); premium.push({ ai, x, y, hidden: a.tiles[y * a.W + x] === T.HIDDEN }); }
+      for (const s of a.spawns) if (s.type === 'gearStand' && this.PREMIUM[s.item]) premium.push({ ai, x: Math.floor(s.x / TS), y: Math.floor((s.y - 1) / TS) });
+    });
+    const tucked = p => {
+      const a = level.areas[p.ai];
+      if (p.ai > 0 && a.role !== 'arena' && a.gen !== 'arena') return true;
+      if (p.hidden) return true;
+      return a.spawns.some(s => s.type === 'gold' && (s.kind === 'risky' || s.kind === 'hidden') && Math.abs(s.x / TS - p.x) <= 5 && Math.abs(s.y / TS - p.y) <= 6);
+    };
+    if (!premium.length) errors.push('no premium item (L, S, sundial, 1UP or magnet) in a secret or risky spot (rule 5)');
+    else if (!premium.some(tucked)) errors.push('the premium items are all in plain sight: put one in a secret or risky spot (rule 5)');
+    // rule 6: a boss level hands out two opportunities on the way to the arena
+    const arena = a => a.role === 'arena' || a.gen === 'arena';
+    if (S.arch === 'lair' || S.kind === 'castle') {
+      let lead = 0;
+      for (const a of level.areas) {
+        if (arena(a) || a.role === 'secret') continue;
+        const boss = a.spawns.find(s => s.type === 'boss'), x0 = boss && boss.arenaX0 != null ? boss.arenaX0 : Infinity;
+        lead += items(a).filter(k => +k.split(',')[0] < x0).length + a.spawns.filter(s => giver(s) && s.x / TS < x0).length;
+      }
+      if (lead < 2) errors.push(`only ${lead} power-up opportunities in the boss lead-in (needs 2, rule 6)`);
+    }
     return { ok: !errors.length, errors, warnings };
   },
 

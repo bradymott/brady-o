@@ -138,6 +138,28 @@ section('gens', () => {
   }
 });
 
+section('budget', () => {
+  // the §5.3 placement budget on small strips (Validator.budget only; no search)
+  const B = (arch, script, extra) => { const lvl = build(Object.assign({ name: 'Budget', arch, theme: 'mx_mercado', enemies: [['mxPepper', 1]], exits: { main: { to: null } }, areas: [{ id: 'run', gen: 'strip', W: 120, script: script.concat([['end', { exit: 'main' }]]) }] }, extra || {})); return G.Validator.budget(lvl); };
+  const has = (r, re) => r.errors.some(e => re.test(e));
+  const ok1 = B('lab', [['itemBlock', { item: 'power' }], ['flat', { n: 20 }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 40 }]]);
+  check('budget: an early block and a hidden 1UP pass rules 1-6', ok1.ok, ok1.errors);
+  check('budget rule 1: one opportunity is not enough', has(B('lab', [['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 40 }]]), /needs 2/));
+  check('budget rule 3: the first opportunity late in the area fails', has(B('lab', [['flat', { n: 60 }], ['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }]]), /% into the main area/));
+  check('budget rule 4: DIVE without a fins stand fails', has(B('dive', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 40 }]]), /fins gear stand/));
+  check('budget rule 4: DIVE with a fins stand up front passes', B('dive', [['gearStand', { item: 'fins' }], ['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 60 }]]).ok);
+  check('budget rule 4: a fins stand after the twist fails', has(B('dive', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 70 }], ['gearStand', { item: 'fins' }], ['flat', { n: 10 }]]), /before the twist/));
+  check('budget rule 4: a hat wall without a hat stand fails', has(B('lab', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['breakwall', { needs: 'hat' }], ['flat', { n: 40 }]]), /needs hat/));
+  check('budget rule 5: premium items all in plain sight fail', has(B('lab', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'lsd' }], ['flat', { n: 40 }]]), /plain sight/));
+  const six = [1, 2, 3, 4, 5, 6].map(() => ['itemBlock', { item: 'power' }]).concat([['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 30 }]]);
+  check('budget rule 2: seven blocks in a main level fail', has(B('lab', six), /item blocks in the main area/));
+  check('budget rule 7: a secret level may hold up to seven', B('lab', six, { secret: true }).ok, B('lab', six, { secret: true }).errors);
+  const lair = G.Validator.budget(build({ name: 'Lair', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata', exits: { main: { to: null } }, areas: [
+    { id: 'patio', gen: 'strip', W: 60, script: [['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 20 }], ['door', { to: 'fiesta@in', perch: 0 }]] },
+    { id: 'fiesta', gen: 'arena', role: 'arena', layout: 'fiesta', arenaW: 24 }] }, 93));
+  check('budget rule 6: a boss lead-in with one opportunity fails', lair.errors.some(e => /boss lead-in/.test(e)), lair.errors);
+});
+
 section('gear', () => {
   const ids = Object.keys(G.TourGear ? G.TourGear.list : {});
   for (const [name, spec] of Object.entries(fixtures.gear)) {
