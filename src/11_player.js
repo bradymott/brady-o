@@ -328,12 +328,10 @@ class Player {
     // a balloon doesn't stay on the ground: lift off unless Brady holds down
     if (floating && this.onGround && !inp.down) { this.vy = -3 * TS; this.onGround = false; }
     const gScale = tripping ? 0 : this.glideT > 0 ? 0.18 : floating ? 0.12 : (flying && inp.jump && !this.onGround) ? 0.25 : 1;
-    // headbang spin: tap jump again in mid-air
-    const nearGround = () => { const fy = Math.floor((this.y + this.h + 22) / TS); for (const tx of [Math.floor((this.x + 2) / TS), Math.floor((this.x + this.w - 2) / TS)]) { const t = tileAt(A, tx, fy); if (SOLID[t] || t === T.SEMI) return true; } return this.vy > 0 && g.platforms.some(pl => !pl.dead && this.x + this.w > pl.x && this.x < pl.x + pl.w && pl.y - (this.y + this.h) < 24 && pl.y > this.y); };
-    if (inp.jumpPressed && !this.onGround && !this.spin && !this.mounted && !this.inWater && !(this.fly > 0) && !(this.floaty > 0) && !tripping && !(this.glideT > 0) && this.coyote <= 0 && !(this.vy > 0 && nearGround())) {
-      this.spin = true; this.spinVis = 0.3; inp = Object.assign({}, inp, { jumpPressed: false });
-      if (this.vy > -2.4 * TS) this.vy = -2.4 * TS;
-      sfx('spin', 'headbang', { vol: 0.6 }); g.burst(this.cx, this.y + 8, 6, '#ffffff', 'spark');
+    // a second jump press in mid-air does nothing visible by default (it stays in the jump buffer, so a press just
+    // before landing still jumps); a held jump power (28_tour_di_jumps.js) acts on it instead
+    if (this.airJump && inp.jumpPressed && !this.onGround && this.coyote <= 0 && !this.mounted && !this.inWater && !(this.fly > 0) && !(this.floaty > 0) && !tripping && !(this.glideT > 0) && !this.hang && !this.grabbedBy) {
+      if (this.airJump(inp)) inp = Object.assign({}, inp, { jumpPressed: false });
     }
     const gifts = Save.data.gifts || {};
     const sigP = this.sig ? TourPowers.get(this.sig.id) : null;
@@ -354,19 +352,7 @@ class Player {
     if (ev.jump && rideWas && !rideWas.carrier) this.carryVx = this.rideVx * 0.85;
     if (ev.jump && rideWas && rideWas.carrier) this.carryVx = this.rideVx;
     if (ev.bounce) { Sound.play('spring', { vol: 0.45, pitch: 1.3 }); g.burst(this.cx, this.y + this.h, 4, '#ffffff', 'dust'); }
-    // a spin landing breaks bricks and pops blocks under Brady's boots
-    if (this.spin && ev.landed) {
-      let broke = false;
-      const ty = Math.floor((this.y + this.h + 2) / TS);
-      for (const tx of [Math.floor((this.x + 3) / TS), Math.floor((this.x + this.w - 3) / TS)]) {
-        const t = tileAt(A, tx, ty);
-        if (t === T.BRICK) { g.bumpBlock(tx, ty, true, this); broke = true; }
-        else if (t === T.QBLOCK || t === T.QBRICK) { g.bumpBlock(tx, ty, true, this); }
-      }
-      if (broke) { this.onGround = false; this.vy = 3 * TS; g.shake(3); }
-      else { this.spin = false; }
-    }
-    if (this.onGround || this.inWater || this.fly > 0 || this.floaty > 0 || this.hang) this.spin = false;
+    this.spin = false;
     // bufo flight: hold jump to climb, let go to glide
     if (this.fly > 0 && !this.inWater) {
       if (inp.jump && !this.onGround) this.vy = approach(this.vy, -7.5 * TS, 70 * TS * dt);
@@ -410,16 +396,18 @@ class Player {
     }
     let acted = false;
     if (g.level && g.level.tour && inp.actionPressed && !this.crouch) {
-      if (this.lsdT > 0 && this.shotT <= 0) {
+      // the power picker (28_tour_dh_picker.js) says which power the action button uses: the LSD lasers, the item in
+      // Brady's hands (gear or the country's signature item) or the joint's smoke puffs
+      const use = this.actionUse ? this.actionUse() : (this.lsdT > 0 ? 'lsd' : (gearG && gearG.action) || (this.sig && sigP && sigP.action) ? 'hands' : this.power === 2 ? 'joint' : null);
+      if (use === 'lsd' && this.lsdT > 0 && this.shotT <= 0) {
         this.shotT = 0.16; acted = true;
         g.spawn(new RainbowLaser(g, this.cx + this.facing * 14, this.y + (this.small ? 12 : 20), this.facing, (inp.up ? -4 : inp.down ? 4 : 0) * TS));
         Sound.play('laser', { pitch: 1.5, vol: 0.4 }); this.throwT = 0.12;
-      } else if (gearG && gearG.action && this.shotT <= 0) {
+      } else if (use === 'hands' && gearG && gearG.action && this.shotT <= 0) {
         if (gearG.action(this, g)) { acted = true; this.shotT = gearG.cooldown || 0.3; this.throwT = 0.18; }
-      } else if (this.sig && sigP && sigP.action && this.shotT <= 0) {
+      } else if (use === 'hands' && this.sig && sigP && sigP.action && this.shotT <= 0) {
         if (sigP.action(this, g)) { acted = true; this.shotT = sigP.cooldown || 0.3; this.throwT = 0.18; }
-      }
-      if (!acted && this.power === 2 && this.puffs < 3 && this.shotT <= 0) {
+      } else if (use === 'joint' && this.power === 2 && this.puffs < 3 && this.shotT <= 0) {
         this.puffs++; this.shotT = 0.22; acted = true;
         const pf = new SmokePuff(g, this.cx + this.facing * 14, this.y + (this.small ? 10 : 16), this.facing);
         pf.onRemove = () => { this.puffs--; };
@@ -484,7 +472,6 @@ class Player {
     let st;
     if (this.hang) st = 'hang';
     else if (this.mounted) st = 'ride';
-    else if (this.spin && !this.onGround) st = 'headbang';
     else if (this.floaty > 0 && !this.onGround) st = 'float';
     else if ((this.fly > 0 || this.lsdT > 0) && !this.onGround) st = 'fly';
     else if (this.glideT > 0 && !this.onGround) st = 'float';
@@ -564,7 +551,6 @@ class Player {
     }
     if (this.dead) o.rot = 0;
     if (small !== this.small) o.hair = null;
-    if (this.spin && !this.onGround) o.rot = Math.sin(this.anim.t * 26) * 0.25;
     PlayerFx.under(ctx, this, t);
     // drawn a little larger than the hitbox (ART_SCALE) so he reads on a phone; the physics box is unchanged
     Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16', rim: '#e7e3d7' });

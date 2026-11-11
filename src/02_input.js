@@ -23,6 +23,9 @@ const Input = {
   camDX: 0, camDY: 0,
   hud: null,             // game mode: extra round buttons [{id, x, y, r}] checked before jump/action
   hudPressed: {}, hudHeld: {},
+  actionArt: null,       // optional (ctx, button) -> true: draws the action button's icon (the 2D world tour's active power)
+  jumpArt: null,         // optional (ctx, button): drawn over the jump button (a held jump power's badge)
+  overlay: null,         // optional (ctx, layout): drawn after the touch controls (the power picker chip)
 
   init(canvas) {
     this.canvas = canvas;
@@ -304,7 +307,7 @@ const Input = {
     ctx.beginPath(); ctx.arc(kx, ky, L.r * 0.5, 0, TAU); ctx.fill();
 
     // buttons
-    const btn = (b, held, label, col) => {
+    const btn = (b, held, label, col, art) => {
       ctx.save();
       ctx.translate(b.x, b.y);
       const s = held ? 0.92 : 1;
@@ -315,15 +318,21 @@ const Input = {
       ctx.fillStyle = gg;
       ctx.beginPath(); ctx.arc(0, 0, b.r, 0, TAU); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.font = `${Math.round(b.r * 0.62)}px ${FONT_DISPLAY}`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(label, 0, 2);
+      let drawn = false;
+      if (art) { try { drawn = !!art(ctx, b, held); } catch (e) { drawn = false; } }
+      if (!drawn) {
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.font = `${Math.round(b.r * 0.62)}px ${FONT_DISPLAY}`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(label, 0, 2);
+      }
       ctx.restore();
     };
     ctx.globalAlpha = alpha;
     btn(L.jump, this.jump, '▲', '#c04bff');
-    btn(L.action, this.action, '◉', '#ff4b7d');
+    btn(L.action, this.action, '◉', '#ff4b7d', this.actionArt);
+    if (this.jumpArt) { try { this.jumpArt(ctx, L.jump); } catch (e) { /* ignore */ } }
+    if (this.overlay) { try { this.overlay(ctx, L); } catch (e) { /* ignore */ } }
     ctx.restore();
   }
 };
