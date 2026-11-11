@@ -238,6 +238,15 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('the passport stamp ends the level and opens the next one', clear.st1 === 'clear' && clear.st2 === 'results' && clear.done && clear.next, clear);
   await shot('09-results.png');
 
+  // 6b. Mexico 1-2 (RAIL): Brady starts standing in the boat and it carries him with no input (he used to start on the
+  //     dock beside it; the boat left without him and the scrolling screen pushed him into the canal every time)
+  const boat = await page.evaluate(() => {
+    start('1-2'); const g = S(), p = P(), cart = g.entities.find(e => e.carrier);
+    const onStart = p.ride === cart; sim(6);
+    return { onStart, ride: p.ride === cart, alive: !p.dead && g.state === 'play', x: Math.round(p.x / 32) };
+  });
+  check('1-2: Brady starts in the trajinera and rides it hands-off', boat.ride && boat.alive && boat.x > 15, boat);
+
   // 7. Every level loads, runs and draws
   const all = await page.evaluate(() => {
     const B = window.BRADY, bad = [];
