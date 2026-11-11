@@ -128,7 +128,7 @@ Object.assign(themes, {
   nl_polder: Object.assign({}, themes.nl_canals, { name: 'The Polder', particles: 'leaves', sky: ['#5a9ae8', '#b4dcf8', '#f4f4ec'],
     layers: ownLayers('nl_polder', [['L0', 0.06, { kind: 'nlPolder', color: '#5a9a4a', base: 300 }], ['L1', 0.12, { kind: 'nlCanal', color: '#4a7a7a', base: 330 }, -24]]) }),
   nl_veiling: Object.assign({}, themes.nl_canals, { name: 'The Flower Auction', particles: 'petals', liquid: undefined, sky: ['#c8d4dc', '#dce4e8', '#eef2f0'],
-    horizonGlow: '#ffffff', celestial: { type: 'none' }, cloudsDyn: false, rays: null, fog: '#eef2f0',
+    horizonGlow: '#ffffff', celestial: { type: 'none' }, cloudsDyn: false, rays: null, fog: '#eef2f0', decor: ['nlTulips', 'nlFlowerBox', 'nlTulips', 'nlClogsPair'],
     layers: ownLayers('nl_veiling', [['L0', 0.08, { kind: 'nlHall', color: '#a8b4bc', base: 360 }, -84]]) }),
   nl_molens: borrow('nl_tulips', { name: 'Windmill Row', particles: 'petals' }, [TULIP_LIFT], FIELD_FILL)
 });

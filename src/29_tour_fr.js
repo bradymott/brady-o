@@ -241,6 +241,8 @@ const themes = {
 /* ---------------- the rest of the country (overhaul themes) ---------------- */
 // Provence: lavender rows running to the hills, sunflowers, a stone farmhouse (mas) and cypresses
 Object.assign(painters, {
+  // a flat haze over the layers behind it (pushes far art back so nothing reads as a platform)
+  frVeil(ctx, L, rng, H) { ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H); },
   frHillsSoft(ctx, L, rng, H) {
     ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(0, H);
     for (let x = 0; x <= BG_W; x += 10) ctx.lineTo(x, L.base - (L.amp || 40) * (0.5 + 0.5 * Math.sin(x / BG_W * TAU * 2 + (L.ph || 0)) * Math.cos(x / BG_W * TAU * 3)));
@@ -362,7 +364,7 @@ Object.assign(themes, {
     layers: ownLayers('fr_ciel', [
       ['L0', 0.02, { kind: 'frTower', color: '#a8b8d0', base: 330, h: 200, at: 520 }, 0],
       ['L1', 0.1, { kind: 'clouds', color: '#ffffff', base: 260 }, 0]
-    ])
+    ]).concat([{ kind: 'frVeil', color: 'rgba(216,236,255,0.32)', base: 0, f: 0.1 }])   // a sky haze over the far balloons so the real ones pop
   }),
   // the rooftops by day (7-1): the morning boulevard's strips, zinc roofs underfoot
   fr_toits: Object.assign({}, themes.fr_morning, { name: 'Les Toits', ground: zinc, hard: { c1: '#8a98a8', c2: '#5a6474' }, layers: atlasLayers('fr_morning', themes.fr_morning.layers), atlas: 'fr_morning', atlasBorrow: 'fr_morning' }),

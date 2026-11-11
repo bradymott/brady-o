@@ -542,13 +542,13 @@ Object.assign(Decor, {
     }, { pad: 4 });
   },
   frBuoy(ctx, x, y, t) {
-    Ink.around(ctx, x - 14, y - 26, 30, 28, c => {
-      c.save(); c.translate(x, y - 9); c.rotate(-0.35 + Math.sin(t * 0.8) * 0.03);
-      c.fillStyle = '#e8423a'; rr(c, -9, -9, 18, 18, 8); c.fill();
-      c.fillStyle = '#fff4e8'; c.fillRect(-9, -2.5, 18, 5);
-      c.fillStyle = '#3a3a48'; c.fillRect(-2, -16, 4, 8); c.fillStyle = '#ffd23a'; c.beginPath(); c.arc(0, -17, 2.5, 0, TAU); c.fill();
-      c.restore();
-      c.strokeStyle = '#8a7a62'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x + 6, y - 2); c.quadraticCurveTo(x + 12, y + 1, x + 15, y - 1); c.stroke();
+    // a long orange float lying on its side on the sand, tied to a little stake (never a round red ball)
+    Ink.around(ctx, x - 22, y - 16, 44, 18, c => {
+      c.fillStyle = '#ff8a1a'; rr(c, x - 16, y - 11, 26, 10, 5); c.fill();
+      c.fillStyle = '#fff4e8'; c.fillRect(x - 6, y - 11, 5, 10);
+      c.fillStyle = '#c86010'; c.fillRect(x - 16, y - 4, 26, 2);
+      c.strokeStyle = '#8a7a62'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x + 10, y - 6); c.quadraticCurveTo(x + 15, y - 2, x + 18, y - 9); c.stroke();
+      c.fillStyle = '#6a5040'; c.fillRect(x + 17, y - 14, 3, 14);
     }, { pad: 4 });
   },
   frBucket(ctx, x, y) {
