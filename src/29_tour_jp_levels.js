@@ -786,7 +786,7 @@ const stamps = {
       [25, 10, 'g']
     ]),
     legend: { k: ['decor', 'jpCapsuleMachine'] },
-    items: ['power'],
+    items: ['star'],
     doors: [{ to: 'biru@arcadeBack', look: 'jpBackDoor' }],
     gold: { '*': 'hidden' }
   },
@@ -928,7 +928,6 @@ const levels = [
           'shoots',
           ['step', { h: 2 }],
           'grove',
-          ['enemies', { kind: 'jpOnigiri', n: 1, len: 8 }],
           ['phaseCross', { n: 7 }],
           // ② the wind chime: night falls; the things wake
           ['gearStand', { item: 'kazoo' }],
@@ -945,7 +944,6 @@ const levels = [
           ['phaseCross', { n: 9, dayY: 1, night: true, nightY: 4, gold: 'risky' }],
           ['step', { h: 2 }],
           ['nightThings', { len: 12, onigiri: true }],
-          ['poles', { n: 3 }],
           ['step', { h: -2 }],
           ['lanternTanuki', { two: true }],
           ['chime', {}],
