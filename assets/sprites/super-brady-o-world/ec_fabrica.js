@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("ec_fabrica", {"scale":2.0,"image":"ec_fabrica.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":889}},"anims":{},"strips":{"L0":{"w":2048,"h":888,"top":0.0,"x":0,"y":0}}});

@@ -679,8 +679,32 @@ def build_L1(rng):
     B.done()
 
 def build_L2(rng):
-    andean_ridges(TH, 'L2', rng, {'hill': 'equator_hill', 'hill2': 'equator_hill2', 'field_a': 'equator_field_a', 'field_b': 'equator_field_b',
-                                  'field_c': 'equator_field_c', 'field_d': 'equator_field_d'}, hmax=2.5)
+    """Green Andean ridges behind the plateau with their patchwork of fields PAINTED on the faces: flat colour bands
+    that follow the skyline's contours, no ink of their own (the old tilted, outlined field slabs read as walkable
+    debris under the level; same fix as ec_andes.py's valley). Two rows, the back one higher and darker."""
+    L = 'L2'
+    rows = [  # (y, skyline min/max, hill role, field roles)
+        (4.2, (1.2, 2.6), 'equator_hill2', ['equator_field_d', 'equator_hill2', 'equator_field_b', 'equator_hill2']),
+        (1.8, (0.3, 1.6), 'equator_hill', ['equator_field_a', 'equator_field_b', 'equator_field_c', 'equator_field_d', 'equator_hill']),
+    ]
+    for r, (y, (z0, z1), hill, fields) in enumerate(rows):
+        zf = periodic_fn(rng, z0, z1, 3)
+        ridge_slab(TH, L, f'L2_ridge{r}', zf, hill, y=y, depth=1.0, zb=-3.0)
+        B = Builder(f'L2_fields{r}', L, TH)
+        x, edges = 0.0, []
+        while x < P - 0.8:
+            edges.append(x); x += rng.uniform(1.8, 3.6)
+        edges.append(P)
+        for i, (xa, xb) in enumerate(zip(edges, edges[1:])):
+            depths = [0.14, rng.uniform(0.5, 0.8), rng.uniform(1.1, 1.6), 2.6]
+            for j, (da, db) in enumerate(zip(depths, depths[1:])):
+                role = fields[(i * 3 + j * 2 + rng.randint(0, 1)) % len(fields)]
+                n = 6
+                xs = [xa + 0.04 + (xb - xa - 0.08) * q / n for q in range(n + 1)]
+                bot = [(xx, zf(xx) - db) for xx in xs]
+                top = [(xx, zf(xx) - da) for xx in reversed(xs)]
+                B.slab(role, bot + top, 0.03, at=(0, y - 0.05, 0))
+        ob = B.done(period=None); ob['outline'] = 0.0
 
 def leaf_pts(Lf, W, c):
     """A banana leaf outline: a pointed blade along +Z (length Lf, half-width W) whose spine bends sideways by c."""
