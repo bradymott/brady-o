@@ -974,10 +974,14 @@ class Play {
     const toHex = c => { const m = /rgba?\((\d+),(\d+),(\d+)/.exec(c || ''); return m ? rgbToHex(+m[1], +m[2], +m[3]) : '#ffd8a0'; };
     for (const e of this.entities) {
       if (e.remove) continue;
-      const L = e.light; if (!L) continue;
-      const x = L.x !== undefined ? L.x : e.cx, y = L.y !== undefined ? L.y : e.cy;
-      if (x < camX - 200 || x > camX + VW + 200 || y < camY - 200 || y > camY + VH + 200) continue;
-      lights.push({ x, y, r: L.r, col: L.col || toHex(L.c), a: 0.5 });
+      // an entity gives one light (light) or several (lights: a sunbeam is a column of them)
+      const Ls = e.lights || (e.light ? [e.light] : null); if (!Ls) continue;
+      for (const L of Ls) {
+        if (!L || !(L.r > 0)) continue;
+        const x = L.x !== undefined ? L.x : e.cx, y = L.y !== undefined ? L.y : e.cy;
+        if (x < camX - 200 || x > camX + VW + 200 || y < camY - 200 || y > camY + VH + 200) continue;
+        lights.push({ x, y, r: L.r, col: L.col || toHex(L.c), a: L.a || 0.5 });
+      }
     }
     const DL = { lamp: [130, '#ffe0a0', -66], torch: [120, '#ffa040', -40], brazier: [120, '#ffa040', -28], crystal: [70, th.accent, -12], crystalred: [70, '#ff3a3a', -12],
       ledtree: [95, null, -52], firebarrel: [125, '#ff8a2a', -24], candles: [60, '#ffc070', -14], campsignN: [64, '#ff4fd8', -42], disco: [90, '#ffffff', -34],
