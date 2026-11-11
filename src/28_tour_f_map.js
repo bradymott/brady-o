@@ -157,7 +157,7 @@ class TourMapScene {
     const side = Math.max(12, insets.l + 6), top = Math.max(10, insets.t + 4);
     this.portrait = H > W * 1.05;
     this.mapR = { x: 0, y: 0, w: W, h: H };
-    this.cam.z = this.portrait ? clamp(W / 90, 3.4, 4.6) : clamp(Math.min(W / 120, H / 62), 3.6, 6.5);
+    this.baseZ = this.cam.z = this.portrait ? clamp(W / 90, 3.4, 4.6) : clamp(Math.min(W / 120, H / 62), 3.6, 6.5);
     this.backBtn = { x: side, y: top, w: 84, h: 34, label: '◀ MENU', size: 11, fn: () => { Sound.play('back'); this.leave(new TitleScene()); } };
     if (this.ow) this.ow.layoutView();
     this.layoutRoute();
@@ -194,6 +194,9 @@ class TourMapScene {
     const st = Tour.stops[this.sel]; this.plane.lon = st.lon; this.plane.lat = st.lat;
     const d = Tour.stops[this.dest]; this.cam.lon = (st.lon + d.lon) / 2; this.cam.lat = clamp((st.lat + d.lat) / 2, -40, 55);
     this.rRevealQ = null; this.routeBeat = 0;
+    // boarding: the world map opens zoomed in on the land and pulls back
+    this.zoomT = o.zoom && !TourKit.reduceMotion() ? 0 : null;
+    if (this.zoomT === 0) { this.cam.lon = st.lon; this.cam.lat = st.lat; }
     Sound.play('map_open', { vol: 0.6 });
     this.layoutRoute();
   }
@@ -325,13 +328,17 @@ class TourMapScene {
       const nl = q(f.from.lon, mid.lon, f.to.lon, e), nt = q(f.from.lat, mid.lat, f.to.lat, e);
       this.plane.ang = Math.atan2(-(nt - this.plane.lat), nl - this.plane.lon || 0.0001);
       this.plane.lon = nl; this.plane.lat = nt;
-      if (f.k >= 1) { this.land(f.id); return; }
+      // touch down: the map dives into the land's pin, then the land opens with the plane landing on its strip
+      if (f.k >= 1) { if (TourKit.reduceMotion()) { this.land(f.id); return; } f.touch = (f.touch || 0) + dt; if (f.touch >= 0.6) { this.land(f.id); return; } }
     }
-    this.routeInput();
+    if (!(this.flight && this.flight.touch != null)) this.routeInput();
     if (this.mode === 'route') this.routeCam(dt);
   }
   // the camera follows the plane while flying, a reveal, or the leg to the chosen land
   routeCam(dt) {
+    const f = this.flight;
+    if (f && f.touch != null) { this.cam.z = this.baseZ * (1 + 3 * easeInOut(clamp(f.touch / 0.6, 0, 1))); this.cam.lon = lerp(this.cam.lon, f.to.lon, 0.25); this.cam.lat = lerp(this.cam.lat, f.to.lat, 0.25); return; }
+    if (this.zoomT != null) { this.zoomT += dt; const k = clamp(this.zoomT / 0.8, 0, 1); this.cam.z = this.baseZ * (1 + 3 * (1 - easeOut(k))); if (k >= 1) { this.zoomT = null; this.cam.z = this.baseZ; } }
     const R = this.rReveal, ds = Tour.stops[this.dest] || Tour.stops[this.sel];
     const tgt = this.flight ? this.plane : R && R.focus ? R.focus : { lon: (ds.lon + this.plane.lon) / 2, lat: (ds.lat + this.plane.lat) / 2 };
     this.cam.lon = lerp(this.cam.lon, tgt.lon, 1 - Math.exp(-dt * 3));
@@ -339,7 +346,7 @@ class TourMapScene {
   }
   routeInput() {
     if (this.card) { if (Input.taps.length || Input.uiKey === 'enter' || Input.jumpPressed) { this.card = null; Sound.play('cardFlip'); } return; }
-    if (this.flight || this.rReveal) return;
+    if (this.flight || this.rReveal || this.zoomT != null) return;
     // the lighthouse and the ghost pins answer taps first
     if (this.routeTapExtras()) return;
     const B = this.routeBtns, hit = (b, tp) => tp.x >= b.x - 4 && tp.x <= b.x + b.w + 4 && tp.y >= b.y - 4 && tp.y <= b.y + b.h + 4;
@@ -380,12 +387,13 @@ class TourMapScene {
     const W = Game.cssW, H = Game.cssH, R = this.mapR, z = this.cam.z, t = this.t;
     ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
     ctx.save();
-    const og = ctx.createLinearGradient(0, 0, 0, H); og.addColorStop(0, '#1d6fc4'); og.addColorStop(1, '#0c3d86');
+    // a globe-like ocean: lighter in the middle, the grid bowing out toward the edges
+    const og = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.1, W / 2, H / 2, Math.hypot(W, H) * 0.6); og.addColorStop(0, '#2a88dc'); og.addColorStop(0.6, '#1660b4'); og.addColorStop(1, '#0a2e70');
     ctx.fillStyle = og; ctx.fillRect(0, 0, W, H);
     ctx.save(); ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
-    for (let lon = -180; lon <= 180; lon += 30) { const x = this.sx(lon); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let lat = -60; lat <= 80; lat += 30) { const y = this.sy(lat); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1;
+    for (let lon = -180; lon <= 180; lon += 30) { const x = this.sx(lon), b = (x - W / 2) * 0.08; ctx.beginPath(); ctx.moveTo(x, 0); ctx.quadraticCurveTo(x + b, H / 2, x, H); ctx.stroke(); }
+    for (let lat = -60; lat <= 80; lat += 30) { const y = this.sy(lat), b = (y - H / 2) * 0.1; ctx.beginPath(); ctx.moveTo(0, y); ctx.quadraticCurveTo(W / 2, y + b, W, y); ctx.stroke(); }
     ctx.strokeStyle = 'rgba(255,255,255,0.12)';
     for (let i = 0; i < 26; i++) { const lon = ((i * 47) % 360) - 180, lat = ((i * 29) % 120) - 50; const x = this.sx(lon) + Math.sin(t + i) * 3, y = this.sy(lat); ctx.beginPath(); ctx.arc(x, y, 5, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); ctx.beginPath(); ctx.arc(x + 10, y, 5, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
     if (TourMap.paths) {
@@ -409,6 +417,10 @@ class TourMapScene {
     for (const s of TOUR_ROUTE) this.drawStop(ctx, s);
     this.drawPlane(ctx, this.sx(this.plane.lon), this.sy(this.plane.lat), this.flight ? this.plane.ang : Math.sin(t * 2) * 0.1);
     this.drawWorldFx(ctx, 'over');
+    // the globe's rim: the edges darken
+    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.hypot(W, H) * 0.62); vg.addColorStop(0, 'rgba(4,10,40,0)'); vg.addColorStop(1, 'rgba(4,10,40,0.5)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    const f = this.flight; if (f && f.touch != null) { ctx.fillStyle = `rgba(255,252,240,${clamp(f.touch / 0.6, 0, 1) * 0.9})`; ctx.fillRect(0, 0, W, H); }
     ctx.restore();
     // title, totals, buttons, the destination card
     UI.drawButton(ctx, this.backBtn, false);

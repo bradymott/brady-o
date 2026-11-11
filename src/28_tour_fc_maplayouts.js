@@ -20,10 +20,11 @@ const TOUR_OW_MAPS = {
   // Mexico: the market town by the west coast, the canals, the cenote in the jungle, the volcano, the desert
   // with its cactus, the hacienda on the hill
   mx: {
+    labels: { '1-3': 'Cenote', '1-4': 'Volcán', '1-5': 'Hacienda', '1-6': 'Swallow Pit' },
     w: 1600, h: 960,
     land: [[[70, 640], [120, 450], [250, 330], [390, 170], [620, 95], [900, 80], [1160, 105], [1360, 170], [1500, 290], [1545, 470], [1525, 640], [1560, 790], [1460, 895], [1180, 915], [880, 890], [600, 920], [330, 905], [130, 860], [60, 760]]],
     nodes: { start: [165, 770], '1-1': [380, 745], '1-2': [780, 790], '1-3': [1180, 760], '1-4': [1300, 470, 'w'], '1-5': [800, 255], '1-6': [800, 525], 'house:mx-tienda': [350, 480], port: [1170, 205] },
-    paths: { 'start>1-1': [[270, 790]], '1-1>1-2': [[570, 820]], '1-2>1-3': [[985, 745]], '1-3>1-4': [[1270, 640]], '1-4>1-5': [[1080, 330]], '1-3>1-6': [[990, 630]], '1-6>1-5': [[770, 390]], '1-1>house:mx-tienda': [[310, 620]], '1-5>port': [[990, 205]] },
+    paths: { 'start>1-1': [[270, 790]], '1-1>1-2': [[570, 820]], '1-2>1-3': [[985, 745]], '1-3>1-4': [[1270, 640]], '1-4>1-5': [[1080, 330]], '1-3>1-6': [[1060, 610], [900, 590]], '1-6>1-5': [[770, 390]], '1-1>house:mx-tienda': [[310, 620]], '1-5>port': [[990, 205]] },
     feat: [
       ['patch', '#dcc685', [[170, 420], [300, 300], [520, 210], [640, 300], [560, 400], [420, 430], [260, 470]]],
       ['lake', [[470, 560], [560, 535], [630, 575], [610, 640], [525, 655], [455, 610]]],
@@ -38,11 +39,12 @@ const TOUR_OW_MAPS = {
     ],
     flora: ['cactus', 'agave', 'round', 'bush'], density: 52,
     scenes: { '1-1': 'market', '1-2': ['canals', { river: 1 }], '1-3': 'cenote', '1-4': 'volcano', '1-5': 'hacienda', '1-6': 'pit', 'house:mx-tienda': 'keeper', start: 'airstrip' },
-    live: [['sail', [[60, 960], [40, 300], [300, 30], [1300, 40], [1580, 400], [1590, 940]], 14]]
+    live: [['sail', [[60, 960], [40, 300], [300, 30], [1300, 40], [1580, 400], [1590, 940]], 14], ['flutter', 1060, 660, '#ff8a1a'], ['flutter', 300, 640, '#ffb81a'], ['spout', 1560, 160]]
   },
   // Ecuador: the equator line on the coast, the Amazon canopy, the Andes with the crater, and the Galápagos
   // islands joined by long bridges
   ec: {
+    labels: { '2-7': 'Cauldron', 'house:ec-cacao': 'Cacao Shop', '2-2': 'Canopy' },
     w: 1600, h: 960,
     land: [[[60, 560], [110, 400], [240, 260], [420, 130], [680, 70], [960, 70], [1210, 120], [1330, 230], [1290, 380], [1150, 520], [1010, 600], [930, 700], [880, 860], [620, 905], [360, 890], [140, 810]],
       [[1020, 760], [1110, 705], [1250, 720], [1320, 800], [1260, 890], [1100, 905], [1010, 850]],
@@ -57,7 +59,9 @@ const TOUR_OW_MAPS = {
       ['sprite', 'rock', 1290, 760, 12], ['sprite', 'rock', 1380, 560, 10],
       ['landmark', 850, 420, 62]
     ],
-    flora: ['round', 'palm', 'bush'], density: 30
+    flora: ['round', 'palm', 'bush'], density: 34,
+    scenes: { '2-1': 'marker', '2-2': 'canopy', '2-3': 'boobies', '2-4': 'factory', '2-5': 'crater', '2-6': 'reef', '2-7': ['waterfall', { h: 52 }] },
+    live: [['sail', [[960, 640], [1340, 470], [1590, 760], [1380, 940], [960, 940]], 12]]
   },
   // Brazil: the samba town, the Pantanal wetlands, the Iguaçu river and falls, the white Lençóis dunes, the
   // stadium, and the Sugarloaf-style peak on its own island in the bay
@@ -75,7 +79,9 @@ const TOUR_OW_MAPS = {
       ['trees', ['round', 'palm'], 560, 430, 140, 16], ['range', 'hill', [[300, 450, 48], [220, 360, 40]], {}],
       ['town', 360, 830, 6, 50], ['landmark', 1425, 190, 62]
     ],
-    flora: ['palm', 'round', 'bush'], density: 30
+    flora: ['palm', 'round', 'bush'], density: 34,
+    scenes: { '3-1': 'samba', '3-2': ['wetland', { critter: 'coati' }], '3-3': ['waterfall', { wide: true, h: 38, rainbow: true }], '3-4': 'lagoons', '3-5': 'stadium', '3-6': 'glider' },
+    live: [['sail', [[1260, 60], [1580, 80], [1590, 300], [1300, 300]], 10]]
   },
   // Mozambique: the savanna and the Gorongosa park, the dunes, the baobabs, the turtle beach, and the island
   // fortress reached over a long bridge
@@ -92,7 +98,9 @@ const TOUR_OW_MAPS = {
       ['lake', [[470, 360], [540, 345], [575, 385], [520, 410], [465, 395]]],
       ['landmark', 600, 320, 60]
     ],
-    flora: ['acacia', 'bush', 'baobab'], density: 22
+    flora: ['acacia', 'bush', 'baobab'], density: 26,
+    scenes: { '4-1': 'herd', '4-2': 'dustdunes', '4-3': 'baobabs', '4-4': 'turtlebeach', '4-5': 'seawall', '4-6': 'dhow' },
+    live: [['sail', [[1100, 40], [1590, 200], [1590, 900], [1300, 950]], 12, '#c8a878', '#fff4e0']]
   },
   // Morocco: the souk town, the Sahara, the blue town in the hills, the kasbah, the Atlas peaks, the riad garden
   ma: {
@@ -106,7 +114,9 @@ const TOUR_OW_MAPS = {
       ['trees', 'palm', 900, 760, 60, 5], ['town', 1240, 800, 7, 60, 'blue'], ['town', 310, 790, 6, 55, 'flat'],
       ['mesa', 1060, 560, 30], ['landmark', 640, 170, 58]
     ],
-    flora: ['palm', 'olive', 'bush'], density: 22
+    flora: ['palm', 'olive', 'bush'], density: 28,
+    scenes: { '5-1': 'souk', '5-2': 'caravan', '5-3': ['village', { wall: '#7ab4e8', walls: ['#7ab4e8', '#5a9ad8', '#a8d0f0'], roof: '#5a8ac8', flat: true, n: 7, ground: '#c8d8e8' }], '5-4': ['grove', { trees: ['palm', 'palm', 'olive'], ground: '#d8b078' }], '5-5': 'riad', '5-6': 'carpets' },
+    live: [['sail', [[40, 300], [60, 900], [400, 960], [20, 500]], 10]]
   },
   // Spain: the tomato town, the windmill plateau, the pintxos bar, the city of arts by the sea, the volcano
   // island over a bridge, the old market hall
@@ -123,7 +133,9 @@ const TOUR_OW_MAPS = {
       ['town', 1270, 820, 6, 50, 'flat'], ['town', 320, 790, 5, 45],
       ['landmark', 940, 410, 56]
     ],
-    flora: ['olive', 'orange', 'cypress'], density: 26
+    flora: ['olive', 'orange', 'cypress'], density: 30,
+    scenes: { '6-1': 'tomatina', '6-2': 'pintxos', '6-3': 'arts', '6-4': ['grove', { trees: ['pine', 'pine', 'rock'], ground: '#9a8a7a' }], '6-5': ['grove', { trees: ['orange', 'orange', 'olive'], ground: '#e8d0a0' }], '6-6': 'aquarium', '6-7': ['windmills', { ground: '#d9c48a' }] },
+    live: [['sail', [[1450, 600], [1590, 640], [1560, 940], [1300, 950]], 10]]
   },
   // France: Paris on the river with the iron tower (daylight), the lavender fields, the abbey islet in the bay
   // (drawn as a plain rock town), the truffle woods, the château, balloons
@@ -131,15 +143,17 @@ const TOUR_OW_MAPS = {
     w: 1600, h: 960,
     land: [[[70, 560], [110, 380], [230, 270], [420, 200], [600, 120], [860, 90], [1120, 110], [1340, 180], [1500, 300], [1550, 480], [1510, 640], [1380, 700], [1250, 700], [1120, 760], [1040, 880], [800, 910], [520, 920], [280, 900], [100, 800]],
       [[1255, 800], [1330, 768], [1405, 800], [1395, 862], [1300, 885], [1245, 850]]],
-    nodes: { start: [170, 700], '7-1': [370, 720], '7-2': [780, 790], '7-3': [1325, 822], '7-4': [1290, 470], '7-5': [790, 255], '7-6': [370, 440], '7-7': [800, 520], 'house:fr-brocante': [1180, 255], port: [1040, 150, 'n'] },
-    paths: { 'start>7-1': [[260, 730]], '7-1>7-2': [[580, 790]], '7-2>7-3': [[1000, 800], [1180, 805]], '7-3>7-4': [[1400, 720], [1330, 590]], '7-4>7-5': [[1040, 330]], '7-1>7-6': [[330, 580]], '7-3>7-7': [[1060, 660]], '7-4>house:fr-brocante': [[1260, 350]], '7-5>port': [[920, 175]] },
+    nodes: { start: [170, 700], '7-1': [370, 720], '7-2': [780, 790], '7-3': [1325, 822], '7-4': [1290, 470], '7-5': [790, 255], '7-6': [420, 410, 'e'], '7-7': [800, 520], 'house:fr-brocante': [1180, 255], port: [1040, 150, 'n'] },
+    paths: { 'start>7-1': [[260, 730]], '7-1>7-2': [[580, 790]], '7-2>7-3': [[1000, 800], [1180, 805]], '7-3>7-4': [[1400, 720], [1330, 590]], '7-4>7-5': [[1040, 330]], '7-1>7-6': [[350, 560]], '7-3>7-7': [[1060, 660]], '7-4>house:fr-brocante': [[1260, 350]], '7-5>port': [[920, 175]] },
     feat: [
       ['river', [[200, 300], [300, 400], [430, 470], [520, 530], [570, 640], [600, 770], [640, 930]], 16],
       ['fields', '#7a8a5a', [[640, 600], [770, 590], [910, 630], [930, 710], [700, 710]], ['#9a6ad8', '#a682e0'], 0.3],
       ['trees', 'round', 1320, 360, 110, 10], ['trees', 'poplar', 620, 330, 90, 8], ['trees', 'cypress', 980, 700, 60, 4],
       ['town', 470, 800, 6, 45], ['landmark', 225, 530, 60]
     ],
-    flora: ['round', 'poplar', 'cypress'], density: 28
+    flora: ['round', 'poplar', 'cypress'], density: 32,
+    scenes: { '7-1': 'paris', '7-2': 'lavender', '7-3': 'islet', '7-4': 'truffle', '7-5': 'garden', '7-6': ['barges', { river: 0 }], '7-7': 'balloons' },
+    live: [['sail', [[1100, 940], [1590, 900], [1590, 720], [1250, 950]], 10]]
   },
   // the Netherlands: polders and canals, tulip stripes, windmills, the frozen canals, the old weigh house town
   nl: {
@@ -157,10 +171,13 @@ const TOUR_OW_MAPS = {
       ['sprite', 'windmill', 220, 650, 18], ['sprite', 'windmill', 520, 640, 18], ['sprite', 'windmill', 980, 420, 18], ['sprite', 'windmill', 1420, 700, 18],
       ['town', 620, 250, 8, 70], ['landmark', 1390, 260, 56]
     ],
-    flora: ['willow', 'round', 'poplar'], density: 20
+    flora: ['willow', 'round', 'poplar'], density: 26,
+    scenes: { '8-1': ['windmills', { n: 2, ground: '#86cc6a', wall: '#7a5a4a', roof: '#3a3a4a' }], '8-2': 'greenhouse', '8-3': 'bikes', '8-4': 'skating', '8-5': 'canalhouses', '8-6': ['windmills', { n: 3, ground: '#9ad07a' }] },
+    live: [['sail', [[60, 700], [80, 940], [500, 960], [200, 900]], 9]]
   },
   // Bali: the surf beach, the kite fields, the volcano, the manta jetty, the rice terraces, the monkey forest
   id: {
+    labels: { '9-3': 'Batur', '9-2': 'Kites' },
     w: 1600, h: 960,
     land: [[[90, 600], [160, 420], [330, 300], [560, 220], [820, 180], [1060, 190], [1280, 240], [1450, 340], [1530, 520], [1470, 700], [1300, 820], [1060, 880], [800, 900], [520, 900], [280, 860], [120, 760]]],
     nodes: { start: [180, 680], '9-1': [380, 770], 'bottle:5': [270, 815], '9-2': [780, 800], '9-3': [1180, 700], '9-4': [1380, 470, 'w'], '9-5': [800, 285], '9-6': [380, 440], '9-7': [800, 545], 'house:id-warung': [1170, 290], port: [1000, 215, 'n'] },
@@ -170,11 +187,14 @@ const TOUR_OW_MAPS = {
       ['trees', ['palm', 'round'], 260, 500, 120, 14], ['trees', 'round', 660, 330, 100, 10], ['trees', 'palm', 520, 820, 80, 6],
       ['landmark', 610, 580, 64]
     ],
-    flora: ['palm', 'round', 'bush'], density: 30
+    flora: ['palm', 'round', 'bush'], density: 34,
+    scenes: { '9-1': 'surf', '9-2': 'kites', '9-3': 'volcano', '9-4': 'manta', '9-5': ['grove', { trees: ['round', 'palm', 'round'], critters: ['monkey', 'monkey'] }], '9-6': 'canopy', '9-7': 'bluefire' },
+    live: [['sail', [[60, 780], [300, 950], [900, 950], [400, 900]], 10]]
   },
   // Vietnam: train street, the bay of limestone towers, the lantern town, the cave mountains, the delta
   // market, the citadel
   vn: {
+    labels: { '10-6': 'Mekong Market' },
     w: 1600, h: 960,
     land: [[[80, 700], [100, 560], [200, 450], [330, 380], [420, 260], [560, 170], [800, 130], [1040, 140], [1250, 190], [1400, 300], [1450, 450], [1420, 600], [1500, 720], [1450, 860], [1200, 900], [920, 880], [620, 900], [340, 880], [160, 820]]],
     nodes: { start: [180, 760], '10-1': [380, 740], '10-2': [780, 700], '10-3': [1190, 760], '10-4': [1290, 470], '10-5': [790, 260], '10-6': [1010, 520], 'house:vn-chonho': [430, 470], port: [1150, 195] },
@@ -188,11 +208,14 @@ const TOUR_OW_MAPS = {
       ['trees', 'bamboo', 600, 330, 90, 7], ['town', 1300, 820, 6, 50], ['town', 640, 250, 5, 50],
       ['landmark', 1420, 250, 54]
     ],
-    flora: ['palm', 'bamboo', 'round'], density: 26
+    flora: ['palm', 'bamboo', 'round'], density: 30,
+    scenes: { '10-1': 'trainstreet', '10-2': 'junks', '10-3': ['village', { wall: '#e8c870', walls: ['#e8c870', '#e8a060', '#c8d870'], roof: '#a84a3a', n: 6, lanterns: true, ground: '#d8c8a0' }], '10-4': 'cave', '10-5': 'moat', '10-6': ['floatmarket', { river: 0 }] },
+    live: [['sail', [[1450, 900], [1590, 940], [1590, 640], [1520, 900]], 9, '#7a4a30', '#c8402a']]
   },
   // Japan: the sushi harbour, the bullet train line, the snowy cone, the bamboo night woods, the neon towers,
   // the kappa garden pond
   jp: {
+    labels: { '11-6': 'Capsule Toys', '11-1': 'Sushi' },
     w: 1600, h: 960,
     land: [[[80, 720], [140, 560], [300, 470], [420, 330], [600, 230], [820, 160], [1060, 120], [1300, 150], [1480, 240], [1530, 400], [1450, 560], [1350, 700], [1200, 820], [960, 890], [680, 900], [420, 890], [200, 840]]],
     nodes: { start: [180, 760], '11-1': [380, 760], '11-2': [780, 790], '11-3': [1180, 700], '11-4': [1310, 470], '11-5': [800, 285], '11-6': [1290, 245, 'w'], '11-7': [380, 480], 'house:jp-omise': [820, 525], port: [610, 300, 'n'] },
@@ -201,14 +224,16 @@ const TOUR_OW_MAPS = {
       ['volcano', 545, 440, 70, { lava: false, col: '#7a86a8' }],
       ['trees', 'bamboo', 1150, 600, 110, 10], ['trees', 'cherry', 680, 660, 120, 10], ['trees', 'bonsai', 420, 620, 80, 5],
       ['lake', [[880, 300], [960, 290], [990, 340], [930, 362], [870, 342]]],
-      ['town', 1400, 520, 6, 50, 'flat'], ['town', 400, 850, 5, 40],
-      ['landmark', 980, 470, 58]
+      ['town', 1400, 520, 6, 50, 'flat'], ['town', 400, 850, 5, 40]
     ],
-    flora: ['bonsai', 'cherry', 'round'], density: 26
+    flora: ['bonsai', 'cherry', 'round'], density: 30,
+    scenes: { '11-1': 'sushi', '11-2': 'bullettrain', '11-3': 'bamboonight', '11-4': 'neon', '11-5': 'kappapond', '11-6': 'gacha', '11-7': 'glider' },
+    live: [['sail', [[60, 760], [120, 940], [700, 950], [300, 900]], 10]]
   },
   // Nepal: highlands above a sea of clouds; rope bridges over the rivers, the yak pass, the icefall, the
   // supply depot, the Baron's fortress under the snow peaks
   np: {
+    labels: { '12-1': 'Rope Bridges', '12-5': 'Fortress', '12-7': 'Supply Depot', '12-4': 'Icefall' },
     w: 1600, h: 960,
     pal: { sea: '#dbe6f2', deep: '#aebfda', cliff: '#7a6a66', beach: '#c9c0a8' },
     land: [[[60, 620], [110, 430], [260, 300], [460, 220], [700, 180], [960, 170], [1220, 190], [1430, 280], [1540, 450], [1520, 650], [1440, 820], [1200, 900], [900, 880], [620, 910], [340, 890], [130, 820]]],
@@ -220,10 +245,12 @@ const TOUR_OW_MAPS = {
       ['river', [[460, 560], [480, 680], [520, 800], [560, 900]], 16], ['river', [[1050, 520], [1060, 640], [1080, 760], [1100, 900]], 14],
       ['landmark', 1430, 690, 60]
     ],
-    flora: ['pine', 'snowpine', 'rock'], density: 30
+    flora: ['pine', 'snowpine', 'rock'], density: 34,
+    scenes: { '12-1': 'gorge', '12-2': ['herd', { animal: 'yak' }], '12-3': 'camp', '12-4': 'seracs', '12-6': 'crevasse', '12-7': 'depot' }
   },
   // Antarctica: the ice shelf, penguins, the station, icebergs in a dark sea
   aq: {
+    labels: { '13-4': 'Big Tusk' },
     w: 1500, h: 820,
     pal: { sea: '#2f6496', deep: '#173a64', land: '#e6f2f8', light: '#ffffff', path: '#bcd6ea', beach: '#cfe6f2', cliff: '#86b2d0', wall: '#ffd23a', roof: '#e8423a' },
     land: [[[60, 560], [120, 380], [300, 250], [560, 180], [860, 160], [1140, 190], [1360, 290], [1450, 460], [1400, 640], [1240, 740], [960, 770], [640, 780], [340, 760], [130, 690]]],
@@ -234,10 +261,12 @@ const TOUR_OW_MAPS = {
       ['range', 'mtn', [[560, 300, 44], [1290, 560, 40], [200, 470, 34]], { col: '#c6dcec', snow: true }],
       ['trees', 'penguin', 580, 520, 80, 7], ['landmark', 940, 260, 56]
     ],
-    flora: ['rock', 'penguin'], density: 12
+    flora: ['rock', 'penguin'], density: 14,
+    scenes: { '13-1': 'bowling', '13-2': 'aurora', '13-3': 'station', '13-4': 'walrus', '13-5': 'colony' }
   },
   // World 22: pastel islands in a violet sea, clocks and crystals, the mirror lake
   w22: {
+    labels: { '22-1': 'Clocks', '22-2': 'Corridor', '22-5': "Writer's Desk" },
     w: 1500, h: 820,
     pal: { sea: '#5c4ca0', deep: '#2e2460', cliff: '#5a5a8a', path: '#fff0c8' },
     land: [[[80, 560], [140, 400], [320, 300], [560, 260], [820, 240], [1080, 260], [1320, 330], [1430, 480], [1380, 640], [1180, 720], [900, 760], [600, 760], [320, 740], [130, 680]]],
@@ -248,6 +277,7 @@ const TOUR_OW_MAPS = {
       ['fields', '#c8b8e8', [[480, 600], [640, 560], [700, 700], [520, 720]], ['#d8ccf0', '#b8a8d8'], 0.78, 'bands'],
       ['trees', 'clock', 560, 330, 80, 4], ['trees', 'crystal', 1000, 680, 80, 5], ['landmark', 600, 520, 56]
     ],
-    flora: ['crystal', 'clock'], density: 14
+    flora: ['crystal', 'clock'], density: 16,
+    scenes: { '22-1': 'clocks', '22-2': 'doors', '22-3': 'mirror', '22-4': 'bigdoor', '22-5': 'desk' }
   }
 };

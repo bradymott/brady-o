@@ -176,17 +176,17 @@ Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial glob
 | `isUnlocked`, `isRevealed`, `exitsFound`, `countryUnlocked`, `bossDone`, `totals` | tested |
 | `complete(id, secret, key)` (legacy entry point, now a wrapper) | tested |
 
-### Map (§3.6, §3.7) — `src/28_tour_fb_mapgraph.js`
+### Map (§3.6, §3.7) — the walkable overworld (`src/28_tour_f*.js`)
 | Item | Status | Notes |
 |---|---|---|
-| panel grid over levels + houses, `mapFrom` arrays, visibility from `tour.revealed` | tested | `sbw_toolkit_shots.js mapgraph`; `sbw_graphics_test.js` layouts still pass |
-| trails solid (walked / opened) / dotted / gold from or to a secret | implemented | |
-| secret-level ring + star, house awning + coin, fort roof motif per `map.fort`, exit pips after the first clear, `TourLandscape.ARCH_LABEL` | implemented (ARCH_LABEL tested) | |
-| reveal queue: trail grows 1 s with a sparkle, stop pops 0.45 s with 12 sparks, banner 1.6 s; written on finish; reduced motion = 0.3 s steps | tested | a tap speeds a step up |
-| Brady on the panel: BFS over visible trails at 160 px/s, dust puffs, a tap mid-walk jumps there, a second tap opens the stop | tested | |
-| houses: `Tour.houseLevel(id)` builds the stand room (country stamp `stand` or the default) with the `shop` counter; leaving counts a visit (`tour.houses`), no level progress | tested | |
-| world map: contrail, landmarks in the Baron's jar (shatter + grow + postmark once the boss falls, `tour.jars`), the airship over the next country, secret-flight arcs, bottle currents, the Postcard Lighthouse (tap lights it: `?` flags on stops with hidden exits), cloud shadows, ice cracks for a new land | tested (jar, lighthouse, flight arc) / implemented | |
-| World 22 ghost pin ("22?") | tested | touching a shut land door sets `tour.doors[cc]`; the map flickers a ghost pin at 30 % alpha until the land opens; a tap says `THIS DOOR WANTS n POSTCARDS (YOU HAVE m)` (`TourProgress.landDoor(cc)`); `gameplay_test` + shot `12c-map-ghost22.png` |
+| a full-screen walkable overworld per land (`28_tour_fd_overworld.js`): Brady walks the open trails with the joystick / arrows, a tap walks him to a stop, jump / Enter / a tap on his stop goes in; the info card (name, type, postcards, exits, best time) | tested | `tools/sbw_overworld_test.js` |
+| graph (`TourGraph` in `28_tour_fb_mapgraph.js`): levels + houses from `mapFrom`, the airstrip (`start`), the port (opens when the boss falls), Bottle Mail coves (`bottle:<n>`), trails from `tour.paths`; a trail is open when its exit was taken, a closed main trail shows the Baron's roadblock (it bursts once when the trail opens, `tour.ow.open`), a closed secret trail is hidden | tested | |
+| layouts (`28_tour_fc_maplayouts.js`, `TOUR_OW_MAPS[cc]`): coasts, stop positions, trail bends, scenery, label overrides; any stop not listed falls back to its `mapCell` | tested | layouts checked at 844x390, 390x844, 568x320 |
+| painting (`28_tour_fe_owpaint.js`): the static map is painted once into an offscreen canvas and blitted; scenes per stop (`28_tour_ff_owscenes.js`) dim until cleared, pennants once cleared, night levels under a night-sky dome | implemented | |
+| reveal queue in the overworld: trail grows, stop pops, banner; route-map reveals (new land, secret flight, lighthouse) play on the world route map | tested | |
+| returning after a level: Brady stands on its stop, then walks to what the exit opened (`tour.lastExit`, consumed once); results offer MAP (tour levels no longer jump straight to the next level) | tested | |
+| world route map: boarding at the airstrip / port takes off, the map pulls back, left / right picks an open land, the plane flies, touches down and lands on the next land's airstrip; world button and M open it from anywhere | tested | |
+| world map extras: contrail, the Baron's jars, airship, secret-flight arcs, bottle currents, the Postcard Lighthouse, the "22?" ghost pin | tested | |
 
 ## Levels in the v2 format
 | Country | Levels | Where |

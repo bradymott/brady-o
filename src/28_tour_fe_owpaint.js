@@ -45,6 +45,7 @@ const TourOWPaint = {
     c.strokeStyle = rgba(shade(L.land, -0.25), 0.55); c.lineWidth = 1.4;
     for (let i = 0; i < Math.round(G.w * G.h / 2600); i++) { const x = R2() * G.w, y = R2() * G.h; if (!this.dry(G, x, y)) continue; c.beginPath(); c.moveTo(x - 3, y); c.lineTo(x - 1.5, y - 4); c.moveTo(x, y); c.lineTo(x + 0.5, y - 5); c.moveTo(x + 3, y); c.lineTo(x + 2, y - 3.5); c.stroke(); }
     c.restore();
+    if (typeof TourOWScenes !== 'undefined' && TourOWScenes.groundPaint[G.cc]) { c.save(); TourOWScenes.groundPaint[G.cc].call(TourOWScenes, c, ow); c.restore(); }
     // water inside the land: rivers, then lakes
     for (const f of M.feat || []) if (f[0] === 'river') this.river(c, ow, OWGeo.spline(TourOW.pairs(f[1]), false, 6), f[2] || 14);
     for (const f of M.feat || []) if (f[0] === 'lake') this.lake(c, ow, OWGeo.spline(TourOW.pairs(f[1]), true, 6));
@@ -157,6 +158,14 @@ const TourOWPaint = {
       if (!clear(x, y, s)) continue;
       out.push({ k: flora[Math.floor(R() * flora.length)], x, y, r: s, o: { v: R() } }); made++;
     }
+    // empty stretches of land become little woods (M.forest kinds, else the flora)
+    const fk = M.forest || flora, step = 95;
+    for (let gy = step / 2; gy < G.h; gy += step) for (let gx = step / 2; gx < G.w; gx += step) {
+      const x = gx + (R() - 0.5) * 30, y = gy + (R() - 0.5) * 30;
+      if (!this.dry(G, x, y) || out.some(s => Math.hypot(s.x - x, s.y - y) < 62)) continue;
+      if (nodes.some(p => Math.hypot(p.x - x, p.y - y) < 110)) continue;
+      for (let i = 0; i < 9; i++) { const a = R() * TAU, d = Math.sqrt(R()) * 40, tx = x + Math.cos(a) * d, ty = y + Math.sin(a) * d * 0.7, sz = 10 + R() * 6; if (clear(tx, ty, sz)) out.push({ k: fk[Math.floor(R() * fk.length)], x: tx, y: ty, r: sz, o: { v: R() } }); }
+    }
     return out;
   },
   sprite(c, ow, s) {
@@ -254,11 +263,11 @@ const TourOWPaint = {
     for (const ring of G.land) { ctx.save(); ctx.translate(0, 13 + Math.sin(t * 1.3) * 1.5); OWGeo.path(ctx, ring, true); ctx.stroke(); ctx.restore(); }
     ctx.setLineDash([]); ctx.restore();
     // sea glints
-    const R = this.rng(G.cc + 'glint');
+    if (!G.glints) { const R = this.rng(G.cc + 'glint'); G.glints = []; for (let i = 0; i < 40; i++) { const x = R() * G.w, y = R() * G.h, ph = R() * TAU; if (!G.land.some(r => OWGeo.inPoly(x, y + 18, r))) G.glints.push([x, y, ph]); } }
     ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-    for (let i = 0; i < 40; i++) {
-      const x = R() * G.w, y = R() * G.h, ph = R() * TAU; if (x < vr.x0 - 20 || x > vr.x1 + 20 || y < vr.y0 - 20 || y > vr.y1 + 20) continue;
-      const a = Math.max(0, Math.sin(t * 1.6 + ph)); if (a < 0.05 || G.land.some(r => OWGeo.inPoly(x, y + 18, r))) continue;
+    for (const [x, y, ph] of G.glints) {
+      if (x < vr.x0 - 20 || x > vr.x1 + 20 || y < vr.y0 - 20 || y > vr.y1 + 20) continue;
+      const a = Math.max(0, Math.sin(t * 1.6 + ph)); if (a < 0.05) continue;
       ctx.globalAlpha = a * 0.8; ctx.beginPath(); ctx.moveTo(x - 5 * a, y); ctx.lineTo(x + 5 * a, y); ctx.stroke();
     }
     ctx.globalAlpha = 1;
@@ -340,7 +349,7 @@ const TourOWPaint = {
         c.fillStyle = '#fff'; c.fillRect(-21, -24.5 + f * 0.5, 3, 4.5);
       }
       // the parked plane (on the airstrip while Brady walks the land; on the port once it opens)
-      if (!port || open) { c.save(); c.translate(port ? -8 : 6, -6); c.scale(0.62, 0.62); ow.scene.drawPlane(c, 0, 16, 0); c.restore(); }
+      if ((!port || open) && !(ow.air && ow.air.node === n.key)) { c.save(); c.translate(port ? -8 : 6, -6); c.scale(0.62, 0.62); ow.scene.drawPlane(c, 0, 16, 0); c.restore(); }
       return;
     }
     if (n.kind === 'bottle') {
@@ -399,21 +408,30 @@ const TourOWPaint = {
     if (open) this.postcards(c, n, ow, -28);
     if (done) this.pips(c, Object.assign({}, n));
   },
-  // the Baron's roadblock: striped posts and a plank with his B
+  // the Baron's roadblock, themed per land (crates, a fallen log, boulders, ice blocks, paper lanterns...), with his B sign
   roadblock(c, ow, x, y, ang, port) {
-    const ink = this.INK, t = ow.t;
+    const ink = this.INK, t = ow.t, kind = { mx: 'crates', es: 'crates', fr: 'crates', ec: 'log', br: 'log', id: 'log', vn: 'log', ma: 'rocks', mz: 'rocks', np: 'rocks', aq: 'ice', nl: 'barrier', jp: 'barrier', w22: 'barrier' }[ow.cc] || 'barrier';
     c.save(); c.translate(x, y);
-    c.fillStyle = 'rgba(20,14,30,0.3)'; c.beginPath(); c.ellipse(0, 4, 17, 4.5, 0, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(20,14,30,0.3)'; c.beginPath(); c.ellipse(0, 4, 18, 4.5, 0, 0, TAU); c.fill();
     c.strokeStyle = ink; c.lineWidth = 1.8; c.lineJoin = 'round';
-    for (const s of [-1, 1]) { c.fillStyle = '#8a5a3a'; c.fillRect(s * 12 - 2, -16, 4, 19); c.strokeRect(s * 12 - 2, -16, 4, 19); }
-    c.save(); c.rotate(Math.sin(t * 2) * 0.02);
-    c.fillStyle = '#ffd23a'; c.fillRect(-16, -13, 32, 7); c.strokeRect(-16, -13, 32, 7);
-    c.fillStyle = '#6a4a8a'; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(-14 + i * 8, -13); c.lineTo(-10 + i * 8, -13); c.lineTo(-14 + i * 8 + 1, -6); c.lineTo(-18 + i * 8 + 1, -6); c.closePath(); c.fill(); }
-    c.strokeRect(-16, -13, 32, 7);
-    c.restore();
-    // the Baron's sign
-    c.fillStyle = '#6a4a8a'; c.beginPath(); c.arc(0, -19, 6, 0, TAU); c.fill(); c.stroke();
-    c.fillStyle = '#ffe8a8'; c.font = `7px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(port ? '✈' : 'B', 0, -18.5);
-    c.restore();
+    const box = (bx, by, w, h, col) => { c.fillStyle = col; c.fillRect(bx, by, w, h); c.strokeRect(bx, by, w, h); c.beginPath(); c.moveTo(bx, by); c.lineTo(bx + w, by + h); c.stroke(); };
+    if (kind === 'crates') { box(-16, -10, 13, 12, '#c08850'); box(-2, -12, 14, 14, '#b07a46'); box(-9, -22, 12, 11, '#c89060'); }
+    else if (kind === 'log') { c.fillStyle = '#8a5a3a'; c.beginPath(); c.moveTo(-18, -2); c.lineTo(14, -9); c.lineTo(16, -1); c.lineTo(-16, 6); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#d8a870'; c.beginPath(); c.ellipse(15, -5, 3, 4.2, -0.2, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#5a9a4a'; c.beginPath(); c.arc(-6, -5, 3, 0, TAU); c.arc(2, -8, 2.5, 0, TAU); c.fill(); }
+    else if (kind === 'rocks') { for (const [bx, by, r, col] of [[-9, 0, 9, '#9a8a7a'], [8, 1, 8, '#8a7a6a'], [0, -10, 7, '#aa9a8a']]) { c.fillStyle = col; c.beginPath(); c.moveTo(bx - r, by + 2); c.lineTo(bx - r * 0.6, by - r * 0.7); c.lineTo(bx + r * 0.3, by - r); c.lineTo(bx + r, by - r * 0.2); c.lineTo(bx + r * 0.8, by + 2); c.closePath(); c.fill(); c.stroke(); } }
+    else if (kind === 'ice') { for (const [bx, by, w, h] of [[-16, -10, 13, 12], [-2, -14, 14, 16], [-9, -22, 11, 9]]) { c.fillStyle = '#d8f0fa'; c.fillRect(bx, by, w, h); c.strokeRect(bx, by, w, h); c.fillStyle = 'rgba(255,255,255,0.8)'; c.fillRect(bx + 2, by + 2, 3, h - 4); } }
+    else {
+      for (const s of [-1, 1]) { c.fillStyle = '#8a5a3a'; c.fillRect(s * 12 - 2, -16, 4, 19); c.strokeRect(s * 12 - 2, -16, 4, 19); }
+      c.save(); c.rotate(Math.sin(t * 2) * 0.02);
+      c.fillStyle = '#ffd23a'; c.fillRect(-16, -13, 32, 7); c.strokeRect(-16, -13, 32, 7);
+      c.fillStyle = '#6a4a8a'; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(-14 + i * 8, -13); c.lineTo(-10 + i * 8, -13); c.lineTo(-14 + i * 8 + 1, -6); c.lineTo(-18 + i * 8 + 1, -6); c.closePath(); c.fill(); }
+      c.strokeRect(-16, -13, 32, 7); c.restore();
+    }
+    // the Baron's sign on a stick
+    c.beginPath(); c.moveTo(14, 2); c.lineTo(14, -22); c.stroke();
+    c.save(); c.translate(14, -26); c.rotate(Math.sin(t * 2.2 + x) * 0.06);
+    c.fillStyle = '#6a4a8a'; c.beginPath(); c.arc(0, 0, 6.5, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = '#ffe8a8'; c.font = `7px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(port ? '✈' : 'B', 0, 0.5);
+    c.restore(); c.restore();
   }
 };
+TourMapScene.Paint = TourOWPaint;

@@ -76,13 +76,15 @@ const TourOW = {
   },
   // label text of a stop
   label(C, n) {
+    const M = (typeof TOUR_OW_MAPS !== 'undefined' && TOUR_OW_MAPS[C.id]) || {};
+    if (M.labels && M.labels[n.key]) return M.labels[n.key];
     if (n.kind === 'start') return 'AIRSTRIP';
     if (n.kind === 'port') return n.boss || 'FLY ON';
     if (n.kind === 'bottle') return 'BOTTLE MAIL';
     if (n.kind === 'house') return n.H.mapLabel || n.H.name || 'Souvenirs';
     const L = n.L; if (L.mapLabel) return L.mapLabel;
     const w = L.name.split(' ').filter(x => !/^(of|the|de|la|des|du|do|da|el|los|las|by|and)$/i.test(x));
-    let s = w[0] || L.name; if (s.length < 7 && w[1]) s += ' ' + w[1];
+    let s = w[0] || L.name; if ((s.length < 7 || /'s$/.test(s)) && w[1]) s += ' ' + w[1];
     return s;
   },
   // node positions and coasts for a land (computed once per land; trails are added as they are asked for)
@@ -173,7 +175,7 @@ class TourOverworld {
     this.G = TourOW.geo(C); this.look = TourOW.look(C);
     TourOverworld.hookTaps(); if (TourMapKeys.taps) TourMapKeys.taps.length = 0;
     this.prevEnter = false; this.prevDir = null; this.sinceArrive = 1; this.bumpT = 0;
-    this.sparks = []; this.dust = []; this.menu = null; this.iris = { t: 0, dur: TourKit.reduceMotion() ? 0.01 : 0.45, open: true };
+    this.sparks = []; this.dust = []; this.menu = null; this.iris = { t: 0, dur: TourKit.reduceMotion() ? 0.01 : 0.45, open: true, col: o.landing ? '#fffcf0' : '#07040e' };
     this.refresh();
     // where Brady stands
     const T = TourProgress.data(); T.panelAt = T.panelAt || {};
@@ -189,6 +191,8 @@ class TourOverworld {
     // what plays first: the reveal queue, roadblocks clearing, then the walk to whatever opened
     this.autoTarget = o.auto || (o.arrive && at === 'start' ? TourGraph.key(C, 0) : null);
     this.revealQ = null; this.reveal = null; this.clears = null;
+    // the plane touches down on the airstrip (after a flight) before Brady hops out
+    this.air = o.landing && !TourKit.reduceMotion() ? { kind: 'land', node: 'start', t: 0, dur: 1.5 } : null;
     this.cam = { x: p.x, y: p.y };
     this.layoutView();
     this.cam.x = this.camTarget().x; this.cam.y = this.camTarget().y; this.clampCam();
@@ -201,7 +205,7 @@ class TourOverworld {
     if (sig !== this.sig) { this.sig = sig; this.dirty = true; }
   }
   reachable(a, b) { return !!TourGraph.route(this.edges, a, b); }
-  idle() { const w = this.walker; return !this.reveal && !(this.revealQ && this.revealQ.length) && !this.clears && !w.seg && !w.queue.length && !this.iris.close && this.revealQ !== null && !this.autoTarget; }
+  idle() { const w = this.walker; return !this.reveal && !(this.revealQ && this.revealQ.length) && !this.clears && !w.seg && !w.queue.length && !this.iris.close && this.revealQ !== null && !this.autoTarget && !this.air; }
 
   /* ---------- view ---------- */
   layoutView() {
@@ -224,6 +228,7 @@ class TourOverworld {
   }
   toastY() { return this.view.y + Math.max(70, insets.t + 64); }
   camTarget() {
+    if (this.air) { const q = this.airPos(); return { x: q.x, y: q.y - q.h * 0.5 }; }
     if (this.reveal && this.reveal.focus) return this.reveal.focus;
     if (this.clears && this.clears.focus) return this.clears.focus;
     const w = this.walker; return { x: w.x + w.facing * (w.seg ? 30 : 0), y: w.y - 10 };
@@ -284,6 +289,11 @@ class TourOverworld {
     // the camera
     const tg = this.camTarget(), k = 1 - Math.exp(-dt * (this.reveal || this.clears ? 3.2 : 5));
     this.cam.x = lerp(this.cam.x, tg.x, k); this.cam.y = lerp(this.cam.y, tg.y, k); this.clampCam();
+    if (this.air) {
+      const A = this.air; A.t += dt;
+      if (A.t >= A.dur) { this.air = null; if (A.kind === 'off') { if (A.cb) A.cb(); return; } const w2 = this.walker; w2.hop = 0.3; for (let q = 0; q < 4; q++) this.dust.push({ x: w2.x + (q - 1.5) * 7, y: w2.y + 2, age: 0, s: 1 }); Sound.play('land', { vol: 0.4 }); }
+      return;
+    }
     if (!inp) return;   // a postcard is up
     if (this.menu) return this.updateMenu(inp);
     if (inp.back) { this.openMenu(); return; }
@@ -381,14 +391,32 @@ class TourOverworld {
   enter(now) {
     const w = this.walker, n = this.by[w.at]; if (!n || w.seg || this.iris.close) return;
     const S = this.scene;
-    if (n.kind === 'start') { Sound.play('select'); S.openRoute({ dest: S.sel }); return; }
-    if (n.kind === 'port') { if (!n.enter) { this.bump('THE PORT OPENS WHEN THE BOSS FALLS'); return; } Sound.play('select'); const N = Tour.nextCountry(this.C); S.openRoute({ dest: N && TourProgress.countryUnlocked(N) ? N.id : S.sel }); return; }
+    const board = dest => { if (now || TourKit.reduceMotion()) { S.openRoute({ dest }); return; } Sound.play('select'); TourKit.sfx('plane', 'fly', { vol: 0.6 }); this.air = { kind: 'off', node: n.key, t: 0, dur: 1.25, cb: () => S.openRoute({ dest, zoom: true }) }; };
+    if (n.kind === 'start') { board(S.sel); return; }
+    if (n.kind === 'port') { if (!n.enter) { this.bump('THE PORT OPENS WHEN THE BOSS FALLS'); return; } const N = Tour.nextCountry(this.C); board(N && TourProgress.countryUnlocked(N) ? N.id : S.sel); return; }
     if (n.kind === 'bottle') { Sound.play('cardFlip'); S.toast('BOTTLE MAIL ' + n.n + '/5: ' + (typeof TOUR_BOTTLE_NOTES !== 'undefined' ? TOUR_BOTTLE_NOTES[(n.n - 1) % 5] : '')); return; }
     if (n.kind === 'level' && !n.enter) { this.bump('LOCKED'); return; }
     const go = () => { if (n.kind === 'house') S.startHouse(n.id.slice(6)); else S.startLevel(n.id); };
     if (now || TourKit.reduceMotion()) { go(); return; }
     Sound.play('portal', { vol: 0.5 });
     w.hop = 0.3; this.iris = { t: 0, dur: 0.5, close: true, cb: go };
+  }
+
+  /* ---------- the plane taking off from (or landing on) a strip ---------- */
+  airPos() {
+    const A = this.air, p = this.G.pos[A.node], ang = -0.12, ca = Math.cos(ang), sa = Math.sin(ang);
+    const k = clamp(A.t / A.dur, 0, 1), roll = A.kind === 'off' ? clamp(k / 0.4, 0, 1) : clamp((k - 0.62) / 0.38, 0, 1);
+    const air = A.kind === 'off' ? clamp((k - 0.35) / 0.65, 0, 1) : 1 - clamp(k / 0.62, 0, 1);
+    // along the strip, then up and away (or the same in reverse)
+    const along = A.kind === 'off' ? -22 + easeInOut(roll) * 40 : 30 - easeOut(roll) * 24;
+    const out = air * air * 420, up = air * 150 + air * air * 60;
+    return { x: p.x + ca * (along + out), y: p.y - 6 + sa * (along + out), h: up, s: 0.62 + air * 0.55, air };
+  }
+  drawAir(ctx) {
+    if (!this.air) return;
+    const q = this.airPos();
+    ctx.fillStyle = `rgba(20,14,30,${0.3 * (1 - q.air * 0.6)})`; ctx.beginPath(); ctx.ellipse(q.x + q.h * 0.2, q.y + 10, 12 * q.s / 0.62 * (1 - q.air * 0.4), 3.2, 0, 0, TAU); ctx.fill();
+    ctx.save(); ctx.translate(q.x, q.y - q.h); ctx.scale(q.s, q.s); this.scene.drawPlane(ctx, 0, 16, -0.12 - (this.air.kind === 'off' ? q.air * 0.25 : -q.air * 0.15)); ctx.restore();
   }
 
   /* ---------- the reveal queue (§3.6): a trail draws itself, a stop pops, a banner ---------- */
@@ -495,8 +523,10 @@ class TourOverworld {
     for (const e of this.edges) if (e.visible && (!e.open || e.fresh)) this.drawBlock(ctx, e);
     const order = this.nodes.filter(n => this.G.pos[n.key]).sort((a, b) => this.G.pos[a.key].y - this.G.pos[b.key].y);
     for (const n of order) this.drawNode(ctx, n);
-    this.drawWalker(ctx);
+    const A = this.air, hide = A && (A.kind === 'off' ? A.t > 0.22 : A.t < A.dur - 0.2);
+    if (!hide) this.drawWalker(ctx);
     for (const n of order) this.drawLabel(ctx, n);
+    this.drawAir(ctx);
     for (const s of this.sparks) { ctx.globalAlpha = clamp(1 - s.age / 0.9, 0, 1); ctx.fillStyle = s.c; ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.age * 8); ctx.fillRect(-3, -2, 6, 4); ctx.restore(); }
     ctx.globalAlpha = 1;
     TourOWPaint.over(ctx, this, vr);
@@ -509,7 +539,7 @@ class TourOverworld {
     const I = this.iris;
     if (I.t < I.dur) {
       const s = this.toScreen(this.walker.x, this.walker.y - 14), k = I.close ? 1 - I.t / I.dur : I.t / I.dur, R2 = Math.hypot(W, H) * easeInOut(clamp(k, 0, 1));
-      ctx.save(); ctx.fillStyle = '#07040e'; ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.arc(s.x, s.y, Math.max(0.1, R2), 0, TAU, true); ctx.fill('evenodd'); ctx.restore();
+      ctx.save(); ctx.fillStyle = I.col || '#07040e'; ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.arc(s.x, s.y, Math.max(0.1, R2), 0, TAU, true); ctx.fill('evenodd'); ctx.restore();
     }
   }
   // trails being drawn right now: a reveal growing, a roadblock clearing, the trail into a stop that is popping
@@ -571,7 +601,7 @@ class TourOverworld {
     ctx.fillStyle = 'rgba(20,14,30,0.3)'; ctx.beginPath(); ctx.ellipse(w.x, w.y - lift + 1, 9 - hop * 0.3, 3, 0, 0, TAU); ctx.fill();
     const o = { x, y, facing: w.facing, small: true, power: 0, look: Save.data.look, time: this.t, scale: 0.86,
       anim: walking ? { state: 'run', t: this.t, phase: w.t * 13, speed: 0.85 } : hop > 0 ? { state: 'jump', t: this.t, phase: 0 } : { state: 'idle', t: this.t, phase: 0 } };
-    Ink.around(ctx, x - 12, y - 32, 24, 32, c => drawBrady(c, o), { pad: 14, width: 1.1, color: '#120e16', rim: '#f3efe2' });
+    Ink.around(ctx, x - 12, y - 32, 24, 32, c => drawBrady(c, o), { pad: 14, width: 0.95, color: '#120e16' });
     // the stop he stands on: a soft bobbing marker over his head
     if (!walking && !this.reveal && !this.clears && node && node.enter && (node.kind === 'level' || node.kind === 'house' || node.kind === 'port')) {
       const by = y - 40 + Math.sin(this.t * 4) * 2.5;
@@ -609,7 +639,7 @@ class TourOverworld {
       btn(B.menu, () => { ctx.fillRect(-5, -6, 3.5, 12); ctx.fillRect(1.5, -6, 3.5, 12); });
       btn(B.world, () => { ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.ellipse(0, 0, 3.6, 8, 0, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke(); });
     }
-    if (!this.reveal && !this.clears) this.drawCard(ctx);
+    if (!this.reveal && !this.clears && !this.air) this.drawCard(ctx);
     ctx.restore();
     if (!this.menu) Input.drawControls(ctx, 0.9);
     if (this.menu) {
@@ -623,7 +653,7 @@ class TourOverworld {
     const w = this.walker, key = w.seg ? (w.queue.length ? w.queue[w.queue.length - 1] : w.seg.to) : w.at, n = this.by[key]; if (!n) return;
     const R = this.cardR, C = this.C, cols = C.colors, touch = Input.usingTouch || Game.forceTouchUI;
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 12; ctx.fillStyle = 'rgba(18,12,34,0.9)'; rr(ctx, R.x, R.y, R.w, R.h, 14); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; rr(ctx, R.x, R.y + 3, R.w, R.h, 14); ctx.fill(); ctx.fillStyle = 'rgba(18,12,34,0.9)'; rr(ctx, R.x, R.y, R.w, R.h, 14); ctx.fill();
     ctx.strokeStyle = rgba(cols.a, 0.75); ctx.lineWidth = 1.4; rr(ctx, R.x, R.y, R.w, R.h, 14); ctx.stroke();
     // the badge
     const bx = R.x + 28, by = R.y + R.h / 2, br = 17;
