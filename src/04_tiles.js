@@ -33,6 +33,20 @@ const TileArt = {
     return c;
   },
 
+  /* Hazard tiles read on any floor or backdrop (docs/ART_READABILITY.md): the painted tile gets the Fiesta Toon ink
+     line plus a light keyline outside it, stamped once when the tile cache is built (no per-frame cost). */
+  hazard(src, S) {
+    try {
+      const W = src.width, H = src.height, sil = makeCanvas(W, H), sx = sil.getContext('2d');
+      sx.drawImage(src, 0, 0); sx.globalCompositeOperation = 'source-in';
+      const c = makeCanvas(W, H), x = c.getContext('2d');
+      const ring = (col, r, n) => { sx.fillStyle = col; sx.fillRect(0, 0, W, H); for (let k = 0; k < n; k++) { const a = k / n * TAU; x.drawImage(sil, Math.cos(a) * r, Math.sin(a) * r); } };
+      x.globalAlpha = 0.75; ring('#fff6e0', (Ink.width + 0.9) * S, 12);
+      x.globalAlpha = 1; ring(Ink.color, Ink.width * S, 12);
+      x.drawImage(src, 0, 0);
+      return c;
+    } catch (e) { return src; }
+  },
   build(themeKey, S) {
     const th = THEMES[themeKey];
     const A = { S, ground: [], ice: [], pillar: {}, semi: {}, qblock: [], conv: { l: [], r: [] }, glitch: [] };
@@ -43,8 +57,8 @@ const TileArt = {
     A.used = this.tile(S, ctx => (th.usedArt || paintUsed)(ctx, th));
     A.hard = this.tile(S, ctx => paintHard(ctx, th.hard));
     ['L', 'M', 'R', 'S'].forEach(p => A.semi[p] = this.tile(S, ctx => paintSemi(ctx, th.semi, p)));
-    A.spikes = this.tile(S, ctx => paintSpikes(ctx, false, th.spikes));
-    A.spikesCeil = this.tile(S, ctx => paintSpikes(ctx, true, th.spikes));
+    A.spikes = this.hazard(this.tile(S, ctx => paintSpikes(ctx, false, th.spikes)), S);
+    A.spikesCeil = this.hazard(this.tile(S, ctx => paintSpikes(ctx, true, th.spikes)), S);
     for (let f = 0; f < 4; f++) { A.conv.l[f] = this.tile(S, ctx => paintConveyor(ctx, -1, f)); A.conv.r[f] = this.tile(S, ctx => paintConveyor(ctx, 1, f)); }
     A.crumble = this.tile(S, ctx => paintCrumble(ctx, th));
     ['L', 'R', 'S'].forEach(p => { A.pillar[p + 't'] = this.tile(S, ctx => paintPillar(ctx, th.pillar, p, true)); A.pillar[p + 'b'] = this.tile(S, ctx => paintPillar(ctx, th.pillar, p, false)); });

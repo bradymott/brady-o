@@ -2,6 +2,11 @@
 # of the candidate looks, sets up the orthographic side camera, the lights and the transparent EEVEE render.
 #
 #   toon  : flat cel shading (hard 3-band ramp), crisp dark outlines (inverted hull), clean saturated colour
+#   toon2 : the characters' Fiesta Toon (Nov 2026 readability pass, docs/ART_READABILITY.md): still flat cel bands and
+#           dark ink, but with form for a phone screen: a 4-band ramp (deep shadow, shadow, mid, light) under a more
+#           raking key light, a crisp rim light along the upper silhouette, a hard specular glint, more saturated
+#           key colours and bright unlit eye whites. The silhouette ink, the light keyline and the top-to-toe value
+#           ramp are added in 2D by pack_atlas.py (HALO=1), so the outer contour is heavier than the interior lines.
 #   paint : soft painterly shading (smooth ramp, brush-stroke texture, warm rim light), no hard ink, canvas grain in post
 #   ink   : printed-poster look: 2-band fill, variable-width Freestyle ink lines, paper grain + a hint of misregistration in post
 #
@@ -12,7 +17,7 @@ from mathutils import Vector
 
 PPM = 28.1          # logical px per metre
 TEX = 3             # render texels per logical px (an iPhone draws ~3 device px per logical px)
-LOOKS = ('toon', 'paint', 'ink')
+LOOKS = ('toon', 'toon2', 'paint', 'ink')
 
 def srgb_lin(hexcol):
     h = hexcol.lstrip('#'); r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
@@ -67,6 +72,8 @@ def style_material(mat, look, keep=None):
         links.new(ramp.outputs[0], mul.inputs[6]); links.new(col.outputs[0], mul.inputs[7])
         em = nodes.new('ShaderNodeEmission'); em.inputs[1].default_value = 1.0
         links.new(mul.outputs[2], em.inputs[0]); links.new(em.outputs[0], out.inputs[0])
+    elif look == 'toon2':
+        _toon2(mat, nodes, links, out, col, base, rough)
     elif look == 'paint':
         # soft ramp with a warm light / cool shadow, a brush-stroke noise breaking up the fill, a warm rim
         d = nodes.new('ShaderNodeBsdfDiffuse'); s2r = nodes.new('ShaderNodeShaderToRGB')
@@ -107,6 +114,85 @@ def style_material(mat, look, keep=None):
         raise ValueError(look)
     mat.blend_method = 'OPAQUE' if hasattr(mat, 'blend_method') else None
 
+import colorsys
+def _lin_srgb(c): return c * 12.92 if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
+def _srgb_lin1(c): return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+def punch(base, sat=1.22, deep=0.0):
+    """A key colour with more punch: saturation up (sRGB HSV), very pale tints pulled a little toward their hue."""
+    r, g, b = (_lin_srgb(max(0.0, min(1.0, c))) for c in base)
+    h, l, sv = colorsys.rgb_to_hls(r, g, b)
+    if sv > 0.04: sv = min(1.0, sv * sat + 0.03)
+    if l > 0.82 and sv > 0.1: l = 0.82 + (l - 0.82) * 0.6          # pale pastel fills: a touch deeper so the light band reads
+    r, g, b = colorsys.hls_to_rgb(h, l - deep, sv)
+    return tuple(_srgb_lin1(max(0.0, min(1.0, c))) for c in (r, g, b))
+
+TOON2 = {
+    # band colours multiply the base colour: deep shadow, shadow, mid, light (cool purple shade, warm light)
+    'ramp': [(0.0, (0.46, 0.40, 0.64)), (0.17, (0.66, 0.60, 0.80)), (0.40, (0.92, 0.90, 0.97)), (0.70, (1.12, 1.09, 1.02))],
+    'rim': 0.6, 'rim_col': (1.0, 0.97, 0.88), 'rim_facing': 0.74, 'rim_dir': (0.62, 0.0, 0.78), 'rim_up': 0.45,
+    'spec': 0.55, 'spec_rough': 0.22,
+}
+
+def _toon2(mat, nodes, links, out, col, base, rough):
+    name = mat.name.lower()
+    eye_white = 'eye_white' in name or name.endswith('_sclera')
+    if eye_white:
+        # eye whites: flat, bright and unlit, so faces read at 24 px
+        col.outputs[0].default_value = (0.95, 0.95, 0.93, 1)
+        em = nodes.new('ShaderNodeEmission'); em.inputs[1].default_value = 1.0
+        links.new(col.outputs[0], em.inputs[0]); links.new(em.outputs[0], out.inputs[0]); return
+    pupil = 'pupil' in name
+    col.outputs[0].default_value = (*(punch(base) if not pupil else base), 1)
+    T = TOON2
+    d = nodes.new('ShaderNodeBsdfDiffuse'); s2r = nodes.new('ShaderNodeShaderToRGB'); links.new(d.outputs[0], s2r.inputs[0])
+    ramp = _ramp(nodes, [(p, (*c, 1)) for p, c in T['ramp']], 'CONSTANT'); links.new(s2r.outputs[0], ramp.inputs[0])
+    mul = nodes.new('ShaderNodeMix'); mul.data_type = 'RGBA'; mul.blend_type = 'MULTIPLY'; mul.inputs[0].default_value = 1.0
+    links.new(ramp.outputs[0], mul.inputs[6]); links.new(col.outputs[0], mul.inputs[7])
+    cur = mul.outputs[2]
+    # rim light: a hard band where the surface turns away from the camera on its upper side
+    lw = nodes.new('ShaderNodeLayerWeight'); lw.inputs['Blend'].default_value = 0.5
+    gt = nodes.new('ShaderNodeMath'); gt.operation = 'GREATER_THAN'; gt.inputs[1].default_value = T['rim_facing']
+    links.new(lw.outputs['Facing'], gt.inputs[0])
+    geo = nodes.new('ShaderNodeNewGeometry'); dot = nodes.new('ShaderNodeVectorMath'); dot.operation = 'DOT_PRODUCT'
+    links.new(geo.outputs['Normal'], dot.inputs[0]); dot.inputs[1].default_value = T['rim_dir']
+    up = nodes.new('ShaderNodeMath'); up.operation = 'GREATER_THAN'; up.inputs[1].default_value = T['rim_up']; links.new(dot.outputs['Value'], up.inputs[0])
+    both = nodes.new('ShaderNodeMath'); both.operation = 'MULTIPLY'; links.new(gt.outputs[0], both.inputs[0]); links.new(up.outputs[0], both.inputs[1])
+    k = nodes.new('ShaderNodeMath'); k.operation = 'MULTIPLY'; k.inputs[1].default_value = T['rim'] * (0.5 if pupil else 1.0); links.new(both.outputs[0], k.inputs[0])
+    rim = nodes.new('ShaderNodeMix'); rim.data_type = 'RGBA'; rim.blend_type = 'MIX'
+    links.new(k.outputs[0], rim.inputs[0]); links.new(cur, rim.inputs[6]); rim.inputs[7].default_value = (*T['rim_col'], 1)
+    cur = rim.outputs[2]
+    # specular glint: a hard-edged highlight from a glossy lobe
+    sk = T['spec'] * (1.4 if pupil else max(0.25, 1.0 - rough))
+    if sk > 0.05:
+        gl = nodes.new('ShaderNodeBsdfGlossy'); gl.inputs['Roughness'].default_value = T['spec_rough']
+        s2 = nodes.new('ShaderNodeShaderToRGB'); links.new(gl.outputs[0], s2.inputs[0])
+        sr = _ramp(nodes, [(0.0, (0, 0, 0, 1)), (0.55, (1, 1, 1, 1))], 'CONSTANT'); links.new(s2.outputs[0], sr.inputs[0])
+        bw = nodes.new('ShaderNodeRGBToBW'); links.new(sr.outputs[0], bw.inputs[0])
+        sm = nodes.new('ShaderNodeMath'); sm.operation = 'MULTIPLY'; sm.inputs[1].default_value = sk; links.new(bw.outputs[0], sm.inputs[0])
+        add = nodes.new('ShaderNodeMix'); add.data_type = 'RGBA'; add.blend_type = 'MIX'
+        links.new(sm.outputs[0], add.inputs[0]); links.new(cur, add.inputs[6]); add.inputs[7].default_value = (1, 1, 0.97, 1)
+        cur = add.outputs[2]
+    em = nodes.new('ShaderNodeEmission'); em.inputs[1].default_value = 1.0
+    links.new(cur, em.inputs[0]); links.new(em.outputs[0], out.inputs[0])
+
+def enlarge_eyes(objects, k=1.15):
+    """Bigger eyes: every eye white named eye_<side> (with its pupil, lid, lash and brow) grows by k about its own
+    centre, so the face reads at phone size. Objects that don't follow the naming are left alone."""
+    if k == 1: return
+    from mathutils import Matrix
+    by = {o.name.split('.')[0]: o for o in objects if o.type == 'MESH'}
+    for side in ('l', 'r'):
+        eye = by.get('eye_' + side)
+        if not eye: continue
+        dg = bpy.context.evaluated_depsgraph_get()
+        ws = [eye.matrix_world @ v.co for v in eye.data.vertices]
+        if not ws: continue
+        c = sum(ws, Vector()) / len(ws)
+        M = Matrix.Translation(c) @ Matrix.Scale(k, 4) @ Matrix.Translation(-c)
+        for nm in ('eye_', 'pupil_', 'lid_', 'lash_', 'brow_', 'shine_', 'glint_', 'iris_'):
+            o = by.get(nm + side)
+            if o: o.matrix_world = M @ o.matrix_world
+
 def outline_material(color='#2a1f2e'):
     m = bpy.data.materials.get('__outline')
     if m: return m
@@ -138,7 +224,7 @@ def apply_look(look, objects, outline_px=0.8):
         for m in o.data.materials:
             if m and not m.name.startswith('__'): mats.add(m)
     for m in mats: style_material(m, look)
-    if look == 'toon':
+    if look in ('toon', 'toon2'):
         for o in objects: add_outline(o, outline_px / PPM)
     elif look == 'ink':
         setup_freestyle(objects, outline_px)
@@ -210,12 +296,25 @@ def lights(look, key_dir=(-0.55, -0.6, 1.0), strength=None):
         # a sun shines along its local -Z: point -Z at -d (light travels from d toward the origin)
         o.rotation_euler = (Vector(d).normalized()).to_track_quat('Z', 'Y').to_euler()
         return o
-    e = strength or {'toon': 3.0, 'paint': 2.6, 'ink': 3.0}[look]
-    sun('__light_key', key_dir, e, (1.0, 0.96, 0.9))
+    e = strength or {'toon': 3.0, 'toon2': 3.0, 'paint': 2.6, 'ink': 3.0}[look]
+    key = sun('__light_key', key_dir, e, (1.0, 0.96, 0.9))
+    if look == 'toon2':
+        # The inverted-hull outline is a closed shell around every part, and it casts shadows: with shadows on, the
+        # whole character sits in its own outline's shadow and only the flat world fill lights it (why the first
+        # Fiesta Toon sprites had no light side). toon2 lights without shadows (pure N.L cel bands) and turns the
+        # world fill down so the key light shapes the form.
+        key.data.use_shadow = False
+        w = bpy.context.scene.world
+        if w and w.node_tree:
+            bg = next((n for n in w.node_tree.nodes if n.type == 'BACKGROUND'), None)
+            if bg: bg.inputs[1].default_value = float(os.environ.get('AMBIENT', '0.35'))
+        fill = sun('__light_fill', (-0.8, -0.4, 0.2), float(os.environ.get('FILL_E', '0.5')), (0.75, 0.8, 1.0), 20)
+        fill.data.use_shadow = False; fill.data.specular_factor = 0.0
+        return e
     if look == 'paint':
         sun('__light_fill', (0.8, -0.5, 0.3), 0.7, (0.75, 0.82, 1.0), 20)
         sun('__light_rim', (0.3, 0.9, 0.5), 1.6, (1.0, 0.8, 0.55), 4)
-    elif look == 'toon':
+    elif look in ('toon', 'toon2'):
         sun('__light_fill', (0.8, -0.5, 0.3), 0.35, (0.8, 0.85, 1.0), 20)
     return e
 
