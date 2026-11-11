@@ -19,7 +19,7 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match('./index.html')));
     return;
   }
-  if (//sprites//.test(req.url)) {
+  if (req.url.includes('/sprites/')) {
     // sprite atlases: cached the first time a level asks for them (they are big, and most are never needed at once)
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })));
     return;
