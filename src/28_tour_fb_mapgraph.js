@@ -13,7 +13,7 @@ TourLandscape.ARCH_LABEL = {
   parade: 'PARADE', rail: 'RAIL', dive: 'DIVE', tower: 'TOWER', freefall: 'FREEFALL', fall: 'FREEFALL', flip: 'FLIP', swing: 'SWING',
   race: 'RACE', factory: 'FACTORY', tide: 'TIDE', beat: 'BEAT', thief: 'THIEF', glide: 'GLIDE', doom: 'DOOM', sky: 'SKY', carry: 'CARRY',
   dig: 'DIG', maze: 'MAZE', scroll: 'SCROLL', phase: 'PHASE', fort: 'FORT', hold: 'HOLD', mini: 'MINI', switch: 'SWITCH', hub: 'HUB',
-  ride: 'RIDE', roll: 'ROLL', lamp: 'LAMP', sneak: 'SNEAK', lair: 'BOSS', castle: 'BOSS', arena: 'BOSS', boss: 'BOSS', house: 'SOUVENIRS'
+  ride: 'RIDE', rise: 'RISE', roll: 'ROLL', lamp: 'LAMP', sneak: 'SNEAK', lair: 'BOSS', castle: 'BOSS', arena: 'BOSS', boss: 'BOSS', house: 'SOUVENIRS'
 };
 TourLandscape.label = function (L) { return (L.arch && this.ARCH_LABEL[L.arch]) || this.STYLE[L.style] || 'RUN'; };
 
