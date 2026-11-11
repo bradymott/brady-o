@@ -102,6 +102,26 @@ T_.mz_areia = Object.assign({}, THEMES.mz_dunes, {
   fog: '#e8c890'
 });
 T_.mz_areia.atlas = 'mz_dunes';
+// the dune's packed sand to dig through: wind strata that run on across tiles, and every few tiles something the
+// sand has kept (a cowrie, a fish skeleton, pebbles and a root), muted so nothing reads as a pickup
+T_.mz_areia.soil = {
+  variants: 14,
+  paint(ctx, top, v) {
+    const base = '#c8945a';
+    ctx.fillStyle = base; ctx.fillRect(0, 0, TS, TS);
+    for (const [y0, c] of [[7, 'rgba(110,70,30,0.28)'], [19, 'rgba(255,225,170,0.22)'], [27, 'rgba(110,70,30,0.2)']]) {
+      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(0, y0); for (let x = 0; x <= TS; x += 4) ctx.lineTo(x, y0 + Math.sin(x * TAU / TS + y0) * 1.4); ctx.lineTo(TS, y0 + 3); ctx.lineTo(0, y0 + 3); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255,240,200,0.4)'; for (const [x, y] of [[5, 13], [22, 4], [27, 23], [12, 29]]) ctx.fillRect(x, y, 1.6, 1.4);
+    ctx.strokeStyle = '#3a2414'; ctx.lineWidth = 1.2;
+    ctx.globalAlpha = 0.7; ctx.strokeStyle = '#5a3a1e';
+    if (v === 1) { ctx.fillStyle = '#ead6b0'; ctx.beginPath(); ctx.ellipse(16, 15, 6, 4.2, 0.3, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(11, 15.5); ctx.lineTo(21, 14.5); ctx.stroke(); }
+    else if (v === 2) { ctx.strokeStyle = '#e4d0a8'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(7, 16); ctx.lineTo(24, 16); for (let k = 0; k < 4; k++) { ctx.moveTo(10 + k * 3.5, 12); ctx.lineTo(10 + k * 3.5, 20); } ctx.moveTo(24, 16); ctx.lineTo(27, 12); ctx.moveTo(24, 16); ctx.lineTo(27, 20); ctx.stroke(); ctx.fillStyle = '#e4d0a8'; ctx.beginPath(); ctx.arc(6, 16, 2.6, 0, TAU); ctx.fill(); }
+    else if (v === 3) { for (const [x, y, r, c] of [[9, 11, 3, '#9a8a78'], [20, 20, 2.4, '#b8a890'], [14, 25, 1.8, '#7a6a5a']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.strokeStyle = 'rgba(90,60,30,0.7)'; ctx.beginPath(); ctx.moveTo(26, 0); ctx.quadraticCurveTo(22, 10, 27, 18); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    if (top) { ctx.fillStyle = '#e8c088'; ctx.beginPath(); ctx.moveTo(0, 5); for (let x = 0; x <= TS; x += 4) ctx.lineTo(x, 2 + ((x * 7) % 5) * 0.6); ctx.lineTo(TS, 5); ctx.closePath(); ctx.fill(); }
+  }
+};
 // interiors
 const room = (b, over) => Object.assign({}, THEMES[caveVariant(b)], over);
 T_.mz_cupim = room('mz_savanna', { name: 'Inside the Termite Mound', ground: Object.assign({}, THEMES.mz_savanna.ground, { cap: '#c8703a', capHi: '#e8905a' }), sky: ['#2a120a', '#5a2a14', '#8a4a24'] });
