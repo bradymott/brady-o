@@ -100,9 +100,11 @@ function scanLevel(G, id, reachAll) {
     }
   });
   // the reach search (slow) runs where it matters: an item that did not pop straight up, one lost soon after (it must be
-  // catchable on its way), and a floating item in a one-tile slot under a ceiling (big Brady may not fit beside it)
+  // catchable on its way), a floating item in a one-tile slot under a ceiling (big Brady may not fit beside it)
   const slot = row => { const A = lvl.areas[row.ai], t = row.ty < 2 ? -1 : A.tiles[(row.ty - 2) * A.W + row.tx]; return row.ty < 2 || G.run('SOLID')[t] === 1; };
-  const need = rows.filter(row => reachAll || slot(row) || row.runs.some(r => !r.none && (!r.up || r.lava || (r.goneAt != null && r.goneAt < 1.5))));
+  // ... and a block up high (nothing to stand on in the four rows under it): what floats over it may be out of reach
+  const high = row => { const A = lvl.areas[row.ai], S = G.run('SOLID'); for (let y = row.ty + 1; y <= row.ty + 4; y++) { const t = y < A.H ? A.tiles[y * A.W + row.tx] : 0; if (S[t] || t === T.SEMI) return false; } return true; };
+  const need = rows.filter(row => reachAll || slot(row) || high(row) || row.runs.some(r => !r.none && (!r.up || r.lava || (r.goneAt != null && r.goneAt < 1.5))));
   let ms = 0;
   if (need.length) {
     const probes = [];
