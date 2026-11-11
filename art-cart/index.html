@@ -17974,10 +17974,14 @@ function cartWedge(m, f, cx, cz) {
 }
 
 /* ---------------- skies (engine palettes, tuned for racing: long sight lines) ---------------- */
+// a low sun straight ahead must not white out the road. The sky shader's wide glow round the sun scales with sunCol, so the
+// sun colour is dimmed and sunHDR raised to keep the disc itself bright; no god rays, no sun-ward scattering, little bloom,
+// thin capped haze, less air dust, a touch more contrast. The sun keeps its place in the sky.
+const CART_LOW_SUN = { rays: 0, scatter: 0, sunHDR: 5, bloom: 0.3, haze: 0.22, fogD: 0.0032, fogMax: 0.45, dust: 0.15, grade: [1.12, 0.3, 0.32] };
 const CART_SKIES = {
   day: () => Object.assign({}, BURNS_PALETTES.day, { fogD: 0.0042, clouds: 0.5 }),
-  sunset: () => Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.0052, sun: [205, 7], key: '#ffd2a8', keyK: 1.0, sky: '#a8a0c4', hor: '#ff9a62', fog: '#d89a7c', clouds: 0.55, mid: '#c87a8a', midK: 0.3 }),
-  dawn: () => Object.assign({}, BURNS_PALETTES.dawn, { fogD: 0.0055 }),
+  sunset: () => Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.0052, sun: [205, 7], key: '#ffd2a8', keyK: 1.0, sky: '#a8a0c4', hor: '#ff9a62', fog: '#d89a7c', clouds: 0.55, mid: '#c87a8a', midK: 0.3 }, CART_LOW_SUN, { sunCol: '#5e4028', fog: '#b07a68' }),
+  dawn: () => Object.assign({}, BURNS_PALETTES.dawn, { fogD: 0.0055 }, CART_LOW_SUN, { sunCol: '#5e4a34', fog: '#b88a90' }),
   night: () => Object.assign({}, BURNS_PALETTES.night, { fogD: 0.0075, emB: 1.7, cityK: 0.7, keyK: 0.55, sky: '#5a5a92' }),
   dust: () => Object.assign({}, BURNS_PALETTES.day, { fog: '#d8bc94', fogD: 0.0125, haze: 0.85, fogMax: 0.94, clouds: 0.2, sky: '#d8c8b0', key: '#ffe8c8', keyK: 0.75, dust: 1.2 })
 };
@@ -25420,7 +25424,12 @@ const Game = {
       if (document.hidden) {
         if (typeof Play !== 'undefined' && this.scene instanceof Play && !this.scene.paused && (this.scene.state === 'play' || this.scene.state === 'intro')) this.scene.openPause();
         Sound.suspend(); Save.save();
-      } else { if (!(typeof Play !== 'undefined' && this.scene instanceof Play && this.scene.paused)) Sound.resume(); this.last = performance.now(); }
+      } else {
+        if (!(typeof Play !== 'undefined' && this.scene instanceof Play && this.scene.paused)) Sound.resume();
+        this.last = performance.now();
+        // iOS may drop a background page's canvas memory: re-size (re-allocate) the canvas when the app comes back
+        try { this.resize(); } catch (e) { this.reportError(e); }
+      }
     });
     window.addEventListener('pagehide', () => Save.save());
     this.setScene(appHomeScene());
@@ -25491,12 +25500,14 @@ const Game = {
     requestAnimationFrame(t => this.frame(t));
     let dt = (now - this.last) / 1000;
     this.last = now;
+    const raw = dt;
     if (dt > 0.25) dt = 0.25;
     if (dt < 0) dt = 0;
     // adaptive speed: if frames are consistently slow, first drop the expensive post effects, then render fewer
     // pixels, but never below 1.5 device px per point on a hi-dpi screen: at 1x a phone's 3x display magnifies every
     // pixel three times and the characters' ink lines go soft (the sprites' minimum sharpness)
-    if (dt > 0.026 && dt < 0.2) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 0.5);
+    // measured on the real frame time: a phone crawling at 2-5 fps (frames over 0.2 s) counts as slow too
+    if (raw > 0.026 && raw < 1) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 0.5);
     const floorDpr = (window.devicePixelRatio || 1) >= 2 ? 1.5 : 1;
     if (this.slowT > 2.5 && this.quality >= 1) {
       this.quality = 0; this.slowT = 0;
@@ -25538,10 +25549,13 @@ const Game = {
   },
 
   reportError(e) {
+    // the loop keeps running (the next frame is already requested); the error is logged a few times and counted
+    // (Game.errors, window.__sbwErrors) so tests can assert there were none
     this.errors++;
+    window.__sbwErrors = (window.__sbwErrors || 0) + 1;
     if (this.errors < 5) console.error(e);
     window.__bradyErrors = (window.__bradyErrors || []);
-    window.__bradyErrors.push(String(e && e.stack || e));
+    if (window.__bradyErrors.length < 50) window.__bradyErrors.push(String(e && e.stack || e));   // bounded: an error every frame must not eat the phone's memory
   }
 };
 
