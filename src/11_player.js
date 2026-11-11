@@ -172,11 +172,13 @@ class Player {
         break;
       case 'joint': // power 2: blow smoke puffs
         this.setPower(2); g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 14, '#e8e8f0', 'dust');
-        Sound.play('float', { vol: 0.6 });
+        Sound.play('float', { vol: 0.6 }); sfx('chill', null, { vol: 0.7 });
+        g.tripJoint = 1.35;   // the green, smoky moment (TripFX)
+        for (let k = 0; k < 3; k++) g.burst(this.cx + (k - 1) * 10, this.y + 6, 6, k === 1 ? '#d8f4d0' : '#b8e8b0', 'dust');
         g.toast('PUFF PUFF! TAP THROW TO BLOW SMOKE');
         break;
       case 'lsd': // timed free flight with a rainbow trail and rainbow lasers
-        this.lsdT = 10; this.glideT = 0; this.fly = 0; this.floaty = 0; this.trail.length = 0; this.vy = Math.min(this.vy, -3 * TS);
+        this.lsdT = 10; this.glideT = 0; g.lsdK = Math.max(g.lsdK || 0, 0.2); this.fly = 0; this.floaty = 0; this.trail.length = 0; this.vy = Math.min(this.vy, -3 * TS);
         TourKit.sfx('lsd', 'mushroom'); g.addScore(1000, this.cx, this.y); g.burst(this.cx, this.cy, 30, '#ffffff', 'confetti');
         g.toast('LSD TAB! FLY ANYWHERE  ·  THROW = RAINBOW LASERS');
         break;

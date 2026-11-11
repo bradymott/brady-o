@@ -927,6 +927,35 @@ const Sound = (() => {
       noise(t + 0.18, 0.3, 0.45 * v, o, { ft: 'lowpass', f: 1600, f1: 200 });
       noise(t + 0.18, 0.05, 0.25 * v, o, { ft: 'highpass', f: 2500 });
     },
+    chill: (t, p, v, o) => {        // the joint moment: a slow exhale and a warm, lazy chord (~1.4 s)
+      noise(t, 1.1, 0.16 * v, o, { ft: 'lowpass', f: 1400 * p, f1: 300, q: 0.7, a: 0.25, hold: 0.25 });
+      const k = K(p);
+      [50, 57, 62, 65].forEach((m, i) => voice('ep', t + 0.08 + i * 0.07, m + k, 1.1, 0.05 * v, o));
+      tone(t + 0.1, 'sine', 220 * p, 180 * p, 1.2, 0.06 * v, o, { vib: 18, vr: 3, a: 0.3, hold: 0.4 });
+    },
+    // jump powers (28_tour_di_jumps.js)
+    boing: (t, p, v, o) => {        // spring socks: a springy boing and a little whoosh
+      tone(t, 'triangle', 220 * p, 880 * p, 0.22, 0.22 * v, o, { vib: 90, vr: 18, st: 0.2 });
+      tone(t, 'sine', 440 * p, 1320 * p, 0.14, 0.08 * v, o, { st: 0.12 });
+      noise(t, 0.18, 0.12 * v, o, { ft: 'bandpass', f: 800, f1: 2600, q: 1.5 });
+    },
+    poundTuck: (t, p, v, o) => noise(t, 0.16, 0.3 * v, o, { ft: 'bandpass', f: 1800 * p, f1: 600 * p, q: 2 }),
+    poundDrop: (t, p, v, o) => tone(t, 'sawtooth', 900 * p, 160 * p, 0.25, 0.06 * v, o, LP(1600)),
+    poundLand: (t, p, v, o) => {    // a deep cartoon THUD with a rattle
+      tone(t, 'sine', 120 * p, 38, 0.45, 0.7 * v, o);
+      noise(t, 0.35, 0.5 * v, o, { ft: 'lowpass', f: 1200, f1: 120 });
+      noise(t + 0.04, 0.25, 0.18 * v, o, { ft: 'bandpass', f: 2400, q: 3, lfo: [32, 900] });
+    },
+    fart: (t, p, v, o) => {         // a comic trumpet-ish raspberry, slightly different every time
+      tone(t, 'sawtooth', 95 * p, 70 * p, 0.32, 0.22 * v, o, Object.assign(LP(700), { vib: 260, vr: 34, hold: 0.5 }));
+      noise(t, 0.3, 0.32 * v, o, { ft: 'bandpass', f: 260 * p, q: 2.5, lfo: [30, 120], hold: 0.4 });
+      tone(t + 0.22, 'square', 140 * p, 220 * p, 0.08, 0.05 * v, o, LP(900));
+    },
+    fartEmpty: (t, p, v, o) => noise(t, 0.12, 0.2 * v, o, { ft: 'bandpass', f: 500 * p, q: 3 }),
+    pantsSnap: (t, p, v, o) => {    // the elastic snaps back
+      tone(t, 'square', 1400 * p, 300 * p, 0.06, 0.12 * v, o, LP(4000));
+      noise(t, 0.04, 0.3 * v, o, { ft: 'highpass', f: 3000 });
+    },
     spin: (t, p, v, o) => {         // headbang spin attack: swirling whoosh + two power-chord chugs
       noise(t, 0.38, 0.32 * v, o, { ft: 'bandpass', f: 900 * p, q: 2, lfo: [9, 700], a: 0.02, hold: 0.5 });
       voice('dist', t + 0.02, 40 + K(p), 0.16, 0.18 * v, o);
