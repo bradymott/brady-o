@@ -189,6 +189,33 @@ async function soakLevel(page, id, log) {
   report.phases.push({ auto: { cleared, maxEnts, maxParts } });
   await healthy('autopilot'); await checkErrors('autopilot');
 
+  // ---------- 1b. powers: a jump power (socks / cake / beans), gear, the joint and the LSD tab (their trips), the
+  //     power picker chip tapped and cycled from the keyboard, jumps in mid-air, THROW ----------
+  if (!await start()) return report;
+  const pw = await page.evaluate(n => {
+    const B = window.BRADY, g = B.Game.scene, p = g.player, feet = ['socks', 'cake', 'beans'][n % 3], got = [];
+    for (const k of ['gear:' + feet, 'gear:fins', 'mushroom', 'joint', 'lsd']) { try { p.collect(k); got.push(k); } catch (e) { got.push(k + ' threw ' + e.message); } }
+    return { feet, got, picker: typeof TourPicker !== 'undefined' ? TourPicker.list(p) : null };
+  }, n);
+  report.powers = pw;
+  const tP = Date.now();
+  while (Date.now() - tP < (LONG ? 12000 : 6000)) {
+    const s = await st();
+    if (s.scene !== 'Play') { if (s.scene === 'GameOverScene') { if (!await start()) return report; } else break; }
+    const r = Math.random();
+    if (r < 0.35) { await page.evaluate(() => window.__in.set({ right: true, jump: true })); await sleep(120); await page.evaluate(() => window.__in.set({ right: true })); await sleep(120); await page.evaluate(() => window.__in.set({ right: true, jump: true })); await sleep(150); }
+    else if (r < 0.55) await page.evaluate(() => window.__in.press('action'));
+    else if (r < 0.7) await page.evaluate(() => { const c = typeof TourPicker !== 'undefined' && TourPicker.chip && TourPicker.chip(); if (c) window.__in.tap(c.x, c.y); });
+    else if (r < 0.8) await page.keyboard.press(Math.random() < 0.5 ? 'KeyE' : 'Digit' + (1 + Math.floor(Math.random() * 3)));
+    else if (r < 0.85) { await page.evaluate(() => window.__in.pause()); await sleep(300); await page.evaluate(() => window.__in.resume()); }
+    else await page.evaluate(() => window.__in.set({ right: Math.random() < 0.7, left: Math.random() < 0.2, up: Math.random() < 0.2 }));
+    await sleep(150);
+  }
+  await page.evaluate(() => window.__in.release());
+  { const r = await waitFor(x => x.scene !== 'Play' || x.paused || ((x.ps === 'play' || x.ps === 'dying' || x.ps === 'clear') && x.fade === 0) || x.state !== 'play', 6000); if (!r.ok) fail(id, 'stuck after the powers phase', r.s); else if (r.s.paused) await page.evaluate(() => window.__in.resume()); }
+  await shot('1b-powers');
+  await healthy('powers'); await checkErrors('powers (' + pw.feet + ', fins, joint, LSD, picker)');
+
   // ---------- 2. every interactive thing in every area, on purpose ----------
   if (!await start()) return report;
   const nAreas = (await st()).areas;
