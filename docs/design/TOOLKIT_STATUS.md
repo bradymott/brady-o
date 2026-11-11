@@ -7,7 +7,9 @@ Branch `sbw/level-toolkit`. This file says which parts of the §7.4 interface co
 - **implemented**: the code exists and loads; no fixture or screenshot yet. Use it, but check your level carefully.
 - **not yet**: missing. Ask for it in `docs/handoff/REQUESTS.md`.
 
-**Tests** (all must pass before a push): `node tools/validate_levels.js --rules`, `node tools/sbw_toolkit_test.js`, `node tools/save_test.js`, `node tools/sbw_snapshot.js` (legacy levels build byte-identical), `BRADY_DIST=… node tools/sbw_toolkit_shots.js <dir>` (fixtures in the browser), plus the existing `gameplay_test`, `boss_test`, `apps_test`, `sbw_graphics_test`, `sbw_atlas_test`.
+**Shared test totals** derive from the game data (68 main levels from each country's `mainCount`; the full count from the level lists), so secret levels land without editing tests.
+
+**Tests** (all must pass before a push): `node tools/validate_levels.js --rules`, `node tools/sbw_toolkit_test.js` (sections: spec stamps graph guide progress validator gens budget gear objects systems), `node tools/save_test.js`, `node tools/sbw_snapshot.js` (legacy levels build byte-identical), `BRADY_DIST=… node tools/sbw_toolkit_shots.js <dir>` (fixtures in the browser), plus the existing `gameplay_test`, `boss_test`, `apps_test`, `sbw_graphics_test`, `sbw_atlas_test`.
 `node tools/dump_level.js lab:gens.layered 0 120` prints any fixture as ASCII with the validator's reachable spots.
 
 ## How to write a level in the new format
@@ -144,7 +146,7 @@ Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial glob
 | flip (zones of kind `flip`, the `flipline` piece) | tested | `playerPhysicsFlip` runs the physics in a mirrored copy of the area; the validator stands on ceilings inside the band (node flag `f`) |
 | `lamp { decay, r0, r1 }` | tested | the area is dark; Brady's light shrinks; `lantern { kind: 'relight' }` posts relight it |
 | `phase { night, day, start }` | tested | the `lantern { kind: 'phase' }` piece: a toggle group of day-only / night-only blocks + the theme swap |
-| `mirror` (v2 areas) | not yet | works for legacy levels |
+| `mirror` (v2 areas) | tested | the area is flipped in place right after its gen (tiles, items, spawns, decor, zones, ghosts, springs, locks, vkeys, edges, toggles, anchors, postcard spots), so doors and the validator see it right to left; fixture `gens.mirror`. Not flipped: boss arenas and rail forks |
 
 ### Validator v2 (§6.1)
 | Primitive | Status |
@@ -159,7 +161,7 @@ Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial glob
 | carry physics | tested (carryDelivered, carryHeavy) |
 | pace (chase, rising lava/water, camera autoscroll) | tested (paceOk, paceFail) |
 | coverage: every exit, 3 postcards, every area | tested |
-| budget (§5.3 rules 1-3) | implemented (v2 levels only; rule 4-7 not yet) |
+| budget (§5.3 rules 1-7) | tested (`sbw_toolkit_test.js budget`; v2 levels only). Rule 4: the archetype's gear (`Validator.ARCH_GEAR`: dive/tide/rise-flood fins, dig/lamp hat, sneak box, glide/fall plane, beat kazoo) from a gear stand in the first half of the main area, and a stand for any gear a lock (`gear:*`) or crawlway needs. Rule 5: one premium item (lsd, star, sundial, oneup, magnet) in another area, a hidden block, or within 5 tiles of a `hidden`/`risky` postcard. Rule 6: two opportunities in a boss level's non-arena, non-secret areas (before `arenaX0` when the arena is inline). Rule 3 measures from the start side of a mirrored area |
 | archetype rules (§0) in `--rules` | implemented |
 | flip standing | tested (`LAB.systems.flip`, plus the "no flip band" negative) |
 | result `{ ok, exits, gold, areasReached, pace, budget, nodes, ms }` | tested |
@@ -182,7 +184,7 @@ Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial glob
 | Brady on the panel: BFS over visible trails at 160 px/s, dust puffs, a tap mid-walk jumps there, a second tap opens the stop | tested | |
 | houses: `Tour.houseLevel(id)` builds the stand room (country stamp `stand` or the default) with the `shop` counter; leaving counts a visit (`tour.houses`), no level progress | tested | |
 | world map: contrail, landmarks in the Baron's jar (shatter + grow + postmark once the boss falls, `tour.jars`), the airship over the next country, secret-flight arcs, bottle currents, the Postcard Lighthouse (tap lights it: `?` flags on stops with hidden exits), cloud shadows, ice cracks for a new land | tested (jar, lighthouse, flight arc) / implemented | |
-| World 22 ghost pin ("22?") | not yet | needs a save flag for the 5-2 door |
+| World 22 ghost pin ("22?") | tested | touching a shut land door sets `tour.doors[cc]`; the map flickers a ghost pin at 30 % alpha until the land opens; a tap says `THIS DOOR WANTS n POSTCARDS (YOU HAVE m)` (`TourProgress.landDoor(cc)`); `gameplay_test` + shot `12c-map-ghost22.png` |
 
 ## Levels in the v2 format
 | Level | Where | Status |
