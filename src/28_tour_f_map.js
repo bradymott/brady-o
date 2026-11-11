@@ -105,9 +105,13 @@ class TourMapScene {
     if (fromC) {
       const i = +opts.from.split('-')[1];
       const N = Tour.nextCountry(fromC);
-      if (i === fromC.levels.length && N && TourProgress.countryUnlocked(N) && !T.seen[N.id]) this.flyTo(N.id, true);
-      const L = fromC.levels[i - 1];
-      if (L && L.secret && Save.data.secretExits[opts.from] && Tour.countries[L.secret.to] && !T.seen[L.secret.to]) this.flyTo(L.secret.to, true);
+      if (i === fromC.mainCount && N && TourProgress.countryUnlocked(N) && !T.seen[N.id]) this.flyTo(N.id, true);
+      // an exit to a secret land or a secret flight: fly there
+      const L = fromC.levels[i - 1], E = (Save.data.exits || {})[opts.from] || {};
+      if (L) for (const key in E) {
+        const ex = L.exits[key], tg = ex && E[key] ? Tour.target(ex.to, fromC) : null;
+        if (tg && (tg.kind === 'land' || tg.kind === 'flight') && Tour.countries[tg.id] && TourProgress.countryUnlocked(Tour.countries[tg.id]) && !T.seen[tg.id]) this.flyTo(tg.id, true);
+      }
     }
     T.seen[at] = true;
     this.cam = { lon: this.plane.lon, lat: this.plane.lat, z: 5 };

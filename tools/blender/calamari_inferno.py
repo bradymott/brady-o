@@ -58,13 +58,15 @@ def build(B):
     M_paint = paint('oxblood', '#5a1a10', coat=1.0, rough=0.2, metal=0.35); M_sill = paint('wagon_black', '#140d0a', coat=1.0, rough=0.22, metal=0.2)
     M_eye = glow('eye_glow', '#ff9a2a', strength=2.4, rough=0.2); M_pupil = mat('pupil', '#1a0a04', rough=0.15, coat=1.0)
     M_gauge = glow('gauge_glow', '#ffe6a0', strength=1.2, rough=0.2); M_suck = paint('sucker', '#e8a27a', coat=1.0, rough=0.25, metal=0.1)
-    M_fl_out, M_fl_mid, M_fl_core = led('#ffd8a0', 4.5), led('#ffb02a', 4.5), led('#fff4c8', 4.5)   # the outer tongue's colour is its vertex gradient
+    # the flame layers (each also coloured by a vertex gradient): a softer-glowing orange-red outer plume so its colour
+    # survives the bloom, a bright gold middle, a white-hot core
+    M_fire_out, M_fire_mid, M_fire_core = glow('fire_outer', '#ff6a14', strength=2.2, rough=0.4, coat=0.0), glow('fire_mid', '#ffb43a', strength=3.0, rough=0.4, coat=0.0), led('#fff6e0', 4.5)
     def rivet(name, p, r=0.045, parent=None, m=M_br):
         if lo: return
         B.obj(name, bm_ico(r, 0, p), m, parent=parent)
 
     # ---- the wagon: lofted rounded hull, oxblood over a black sill, brass shoulder trim, wheel arches with brass flares ----
-    cs = B.pick(6, 2)
+    cs = B.pick(6, 3)
     rings = [hull_ring(2.55, 1.86, 0.36, 0.16, cs, yc=0.74), hull_ring(2.46, 2.2, 0.54, 0.22, cs), hull_ring(2.3, 2.4, 0.64, 0.24, cs)]
     if not lo: rings += [hull_ring(0.0, 2.42, 0.66, 0.24, cs)]
     rings += [hull_ring(-2.3, 2.4, 0.64, 0.24, cs), hull_ring(-2.46, 2.2, 0.54, 0.22, cs), hull_ring(-2.55, 1.86, 0.36, 0.16, cs, yc=0.74)]
@@ -72,14 +74,14 @@ def build(B):
     B.vcol(shell, lambda x, y, z: (lambda k: (1.0 * k, 0.86 * k + 0.1, 0.8 * k + 0.12))(0.78 + 0.22 * sstep((y - 0.5) / 0.5)))   # glossier, warmer at the shoulder
     for i, (x, z) in enumerate([(1.1, 1.7), (-1.1, 1.7), (1.1, -1.7), (-1.1, -1.7)]):
         B.cut([shell], bm_cyl(0.64, 0.64, 0.9, L['arch'], AX, (math.copysign(1.32, x), 0.5, z)), 'arch_%d' % i)
-        B.obj('flare_%d' % i, bm_torus(0.655, 0.038, B.pick(18, 12), B.pick(4, 3), AX, (math.copysign(1.215, x), 0.5, z), sweep=(math.pi / 2, 3 * math.pi / 2)), M_br)
+        B.obj('flare_%d' % i, bm_torus(0.655, 0.038, B.pick(18, 8), B.pick(4, 3), AX, (math.copysign(1.215, x), 0.5, z), sweep=(math.pi / 2, 3 * math.pi / 2)), M_br)
     for s in (1, -1):
         B.obj('shoulder_%d' % (s > 0), bm_tube(catmull([(s * 0.96, 1.0, 2.5), (s * 1.19, 1.04, 1.95), (s * 1.21, 1.04, -1.95), (s * 0.96, 1.0, -2.5)], B.pick(12, 4)), 0.024, B.pick(8, 4)), M_br)
         B.strip((s * 1.19, 0.44, 2.15), (s * 1.19, 0.44, -2.15), LIGHT, th=0.04)
         B.light(s * 1.05, 0.25, 0.0, 2.4, LIGHT, led=1)
     B.strip((-0.9, 0.44, 2.54), (0.9, 0.44, 2.54), LIGHT, th=0.035); B.strip((-0.9, 0.44, -2.54), (0.9, 0.44, -2.54), LIGHT, th=0.035)
     # brass deck plate with rivet rows
-    B.obj('deck', bm_box(2.2, 0.06, 4.6, (0, 1.05, -0.05)), M_br2, bevel=0.025, bevel_angle=False, segments=2)
+    B.obj('deck', bm_softbox(2.2, 0.08, 4.6, B.pick(28, 14), B.pick(6, 4), (0, 1.05, -0.05), p=6.0), M_br2)
     if not lo:
         for s in (1, -1):
             for k in range(6): rivet('deck_rv_%d_%d' % (s > 0, k), (s * 1.02, 1.085, -2.2 + k * 0.84), 0.035)
@@ -95,12 +97,12 @@ def build(B):
     # ---- the boiler drum under the head: iron, brass bands, rivets, a pressure gauge, valve wheels ----
     B.obj('boiler', bm_cyl(0.95, 0.95, 0.62, L['cyl'], AY, (0, 1.2, 0.55)), M_fe, bevel=0.05)
     for k, y in enumerate((0.96, 1.44)):
-        B.obj('boiler_band_%d' % k, bm_torus(0.95, 0.045, B.pick(22, 12), 4, AY, (0, y, 0.55)), M_br)
+        B.obj('boiler_band_%d' % k, bm_torus(0.95, 0.045, B.pick(22, 10), B.pick(4, 3), AY, (0, y, 0.55)), M_br)
     if not lo:
         for k in range(12):
             a = k / 12 * TAU; rivet('boiler_rv_%d' % k, (math.sin(a) * 0.96, 1.2, 0.55 + math.cos(a) * 0.96))
     B.obj('neck', bm_cyl(0.82, 0.78, 0.4, L['cyl_s'], AY, (0, 1.65, 0.55)), M_cu2)
-    B.obj('collar', bm_torus(1.04, 0.09, B.pick(28, 12), B.pick(6, 5), AY, (0, 1.55, 0.55)), M_br)
+    B.obj('collar', bm_torus(1.04, 0.09, B.pick(28, 10), B.pick(6, 4), AY, (0, 1.55, 0.55)), M_br)
     gp = (0, 1.2, 1.5)
     B.obj('gauge_rim', bm_torus(0.2, 0.03, B.pick(20, 10), B.pick(5, 4), AZ, gp), chrome())
     B.obj('gauge_face', bm_cyl(0.19, 0.19, 0.05, B.pick(20, 10), AZ, gp), M_gauge)
@@ -132,13 +134,13 @@ def build(B):
     B.obj('mantle_skirt', bm_ellipsoid(1.05, 0.45, 1.05, B.pick(24, 12), B.pick(6, 4), (0, -0.5, 0.05), phi0=math.pi / 2), M_cu3, parent=H)
     B.obj('skirt_rim', bm_torus(1.05, 0.05, B.pick(28, 12), B.pick(5, 4), AY, (0, -0.5, 0.05)), M_br, parent=H)
     for k, ph in enumerate((0.82, 1.28)):
-        B.obj('mantle_band_%d' % k, bm_torus(hr[0] * math.sin(ph) + 0.005, 0.035, B.pick(24, 14), 4, AY, (0, hc[1] + hr[1] * math.cos(ph), hc[2]), sy=hr[2] / hr[0]), M_br, parent=H)
+        B.obj('mantle_band_%d' % k, bm_torus(hr[0] * math.sin(ph) + 0.005, 0.035, B.pick(24, 12), B.pick(4, 3), AY, (0, hc[1] + hr[1] * math.cos(ph), hc[2]), sy=hr[2] / hr[0]), M_br, parent=H)
     for s in ((1, -1) if not lo else ()):
         x = s * 0.5; q = math.sqrt(1 - (x / hr[0]) ** 2)
         B.obj('mantle_seam_%d' % (s > 0), bm_torus(hr[1] * q, 0.03, 14, 4, AX, (x, hc[1], hc[2]), sweep=(math.pi / 2 + 0.15, 3 * math.pi / 2 - 0.55), sy=hr[2] / hr[1]), M_br, parent=H)
     if not lo:
         for r in range(2):
-            n = 14; ph = 0.62 + r * 0.5
+            n = 11; ph = 0.62 + r * 0.5
             for i in range(n):
                 a = (i + 0.5 * (r % 2)) / n * TAU
                 rivet('mantle_rv_%d_%d' % (r, i), ell_pt(hc, hr, a, ph, 1.012), parent=H)
@@ -147,7 +149,7 @@ def build(B):
         p = (s * 0.6, 0.05, 0.95); n = ell_n(hc, hr, p); nn = tuple(n); P = Vector(p)
         def off(k): return tuple(P + n * k)
         if not lo: B.obj('eye_flange_%d' % (s > 0), bm_cyl(0.37, 0.37, 0.06, 18, aim(nn), off(-0.02)), M_br2, parent=H)
-        B.obj('eye_rim_%d' % (s > 0), bm_torus(0.3, 0.07, B.pick(18, 10), 5, aim(nn), off(0.03)), M_br, parent=H)
+        B.obj('eye_rim_%d' % (s > 0), bm_torus(0.3, 0.07, B.pick(18, 10), B.pick(5, 4), aim(nn), off(0.03)), M_br, parent=H)
         B.obj('eye_lens_%d' % (s > 0), bm_cyl(0.27, 0.25, 0.12, B.pick(22, 10), aim(nn), off(0.02)), M_eye, parent=H)
         B.obj('eye_pupil_%d' % (s > 0), bm_ellipsoid(0.1, 0.05, 0.14, B.pick(12, 8), B.pick(6, 4), tuple(P + n * 0.1 + Vector((s * 0.03, 0, 0))), M=aim(nn)), M_pupil, parent=H)
         u = Vector((0, 1, 0)).cross(n); u.normalize(); v = n.cross(u)
@@ -158,7 +160,7 @@ def build(B):
                 rivet('eye_bolt_%d_%d' % (s > 0, k), tuple(P + (u * math.cos(a) + v * math.sin(a)) * 0.36), 0.035, parent=H)
         # the brow: a brass arc over the porthole, tilted down toward the nose (a fierce look)
         brow = [tuple(P + n * 0.1 + u * (math.cos(t) * 0.42) + v * (math.sin(t) * 0.42 + 0.06 - 0.12 * s * math.cos(t) * 0.0) + v * (0.06 * s * math.cos(t))) for t in (math.pi * (0.18 + 0.64 * k / 8) for k in range(9))]
-        B.obj('brow_%d' % (s > 0), bm_tube(brow, [0.03, 0.045, 0.055, 0.06, 0.06, 0.06, 0.055, 0.045, 0.03], B.pick(8, 5)), M_br, parent=H)
+        B.obj('brow_%d' % (s > 0), bm_tube(brow, [0.03, 0.045, 0.055, 0.06, 0.06, 0.06, 0.055, 0.045, 0.03], B.pick(8, 4)), M_br, parent=H)
     # a brass hatch with a valve wheel on the crown
     hp = (0, 1.56, 0.45); hn = ell_n(hc, hr, hp); HP = Vector(hp)
     B.obj('hatch', bm_cyl(0.3, 0.28, 0.08, B.pick(20, 10), aim(tuple(hn)), tuple(HP + hn * 0.02)), M_br2, parent=H)
@@ -182,7 +184,7 @@ def build(B):
     B.light(0, HEAD[1] + 0.05, 1.5, 2.4, '#ff9a2a', big=1)
 
     # ---- eight arms (part_arm0..7), all authored along +Z; the pose yaws each into place ----
-    seg = B.pick(10, 6); n_path = B.pick(18, 9)
+    seg = B.pick(10, 6); n_path = B.pick(16, 9)
     us = [i / (n_path - 1) for i in range(n_path)]
     path = [tuple(arm_at(u)[0]) for u in us]
     radii = [arm_r(u) for u in us]
@@ -192,41 +194,59 @@ def build(B):
         J = (math.sin(a) * ARM_R0[0], 1.55, 0.55 + math.cos(a) * ARM_R0[1])
         A = B.part('arm%d' % i, J)
         # a brass socket on the body where the arm emerges
-        B.obj('socket_%d' % i, bm_cyl(0.31, 0.28, 0.16, B.pick(10, 8), aim((math.sin(a), 0, math.cos(a))), (math.sin(a) * 0.97, 1.55, 0.55 + math.cos(a) * 1.02)), M_br)
+        B.obj('socket_%d' % i, bm_cyl(0.31, 0.28, 0.16, B.pick(10, 6), aim((math.sin(a), 0, math.cos(a))), (math.sin(a) * 0.97, 1.55, 0.55 + math.cos(a) * 1.02)), M_br)
         # the tapered copper arm: a smooth swept tube, a little flattened underneath, warm copper fading darker to the tip
         arm = B.obj('arm%d_tube' % i, bm_tube(path, radii, seg, section_fn=lambda u: (1.0, 0.88)), M_cu, parent=A)
         B.vcol(arm, lambda x, y, z: (lambda t: (1.0 - 0.12 * t, 0.97 - 0.22 * t, 0.92 - 0.3 * t))(sstep((z - 0.3) / 1.4)))
         # brass rings and, on the showroom car, cream sucker pads down the underside
         for k, u in enumerate(B.pick((0.3, 0.6), ())):
             C, T = arm_at(u)
-            B.obj('arm%d_ring%d' % (i, k), bm_torus(arm_r(u) + 0.008, 0.032, B.pick(14, 8), 4, aim(tuple(T)), tuple(C)), M_br, parent=A)
+            B.obj('arm%d_ring%d' % (i, k), bm_torus(arm_r(u) + 0.008, 0.032, B.pick(14, 8), 3, aim(tuple(T)), tuple(C)), M_br, parent=A)
         if not lo:
             for k, u in enumerate((0.36, 0.48, 0.6, 0.71, 0.81)):
                 C, T = arm_at(u); D = Vector((0, -1, 0)); D = (D - T * D.dot(T)).normalized(); r = arm_r(u)
                 rs = 0.075 - 0.007 * k
-                B.obj('arm%d_suck%d' % (i, k), bm_closed_lathe([(0, 0.0), (rs, 0.0), (rs * 1.05, 0.03), (rs * 0.6, 0.04), (0.0, 0.02)], 8, aim(tuple(D)), tuple(C + D * (r * 0.84))), M_suck, parent=A)
+                B.obj('arm%d_suck%d' % (i, k), bm_closed_lathe([(0, 0.0), (rs, 0.0), (rs * 1.05, 0.03), (rs * 0.6, 0.04), (0.0, 0.02)], 7, aim(tuple(D)), tuple(C + D * (r * 0.84))), M_suck, parent=A)
         # the torch at the tip: a flared brass nozzle and three nested flame tongues (white core, gold, orange)
         C, T = arm_at(1.0)
         B.obj('arm%d_nozzle' % i, bm_closed_lathe([(0, -0.06), (0.075, -0.06), (0.08, 0.04), (0.12, 0.12), (0.095, 0.12), (0.0, 0.08)] if not lo else [(0, -0.06), (0.08, -0.06), (0.12, 0.12), (0.0, 0.1)], B.pick(12, 6), aim(tuple(T)), tuple(C)), M_br, parent=A)
-        fs = B.pick(8, 6)
-        for k, (m, rr, ln) in enumerate(((M_fl_out, 0.14, 0.58), (M_fl_mid, 0.09, 0.4), (M_fl_core, 0.05, 0.24))):
-            if lo and k == 1: continue
-            prof = [(0, 0), (rr * 0.75, 0.04), (rr, 0.14 * ln / 0.48 + 0.04), (rr * 0.75, ln * 0.5), (rr * 0.32, ln * 0.82), (0, ln)]
-            if lo: prof = [(0, 0), (rr, ln * 0.3), (rr * 0.45, ln * 0.7), (0, ln)]
-            fl = B.obj('arm%d_flame%d' % (i, k), bm_closed_lathe(prof, fs, aim(tuple(T)), tuple(C + T * 0.1)), m, parent=A)
-            if k == 0:   # gold at the root of the tongue, deep orange-red at its tip
-                B.vcol(fl, lambda x, y, z, C=C, T=T: (lambda h: (1.0, 1.0 - 0.72 * h, 0.85 - 0.8 * h))(sstep(((Vector((x, y, z)) - C).dot(T) - 0.08) / 0.5)))
+        # the fire: a roaring plume of layered tongues (outer red-tipped orange, a gold middle, a white-hot core) twisting
+        # as they rise, and two side tongues licking outward (the arm's flicker in the game spreads and lifts them)
+        X = Vector((1, 0, 0)); Tn = Vector(T); base = C + Tn * 0.08
+        def plume(name, at, d, Ln, Rn, seg, rows, lobes, twist, cols, M_fire, amp=0.32):
+            d = Vector(d).normalized(); prof = [(0, -0.02)]
+            for k in range(1, rows):
+                h = k / rows; r = Rn * (math.sin(math.pi * min(1.0, h * 1.25) ** 0.75) if h < 0.8 else 0.0) * (1 - 0.65 * h ** 1.4)
+                prof.append((max(r, 0.004), h * Ln))
+            prof.append((0, Ln))
+            rm = lambda th, t: max(0.15, 1 + (amp * t + 0.06) * math.sin(lobes * th + twist * t))
+            fl = B.obj(name, bm_closed_lathe(prof, seg, aim(tuple(d)), tuple(at), rmod=rm), M_fire, parent=A)
+            c0, c1, c2 = cols
+            def col(x, y, z, at=Vector(at), d=d, Ln=Ln):
+                h = max(0.0, min(1.0, (Vector((x, y, z)) - at).dot(d) / Ln))
+                c = [c0[q] + (c1[q] - c0[q]) * sstep(h / 0.55) for q in range(3)]
+                return tuple(c[q] + (c2[q] - c[q]) * sstep((h - 0.45) / 0.55) for q in range(3))
+            B.vcol(fl, col); keep_soft(B, fl)
+            return fl
+        HOT, GOLD, ORANGE, RED = (1.0, 0.97, 0.85), (1.0, 0.85, 0.5), (1.0, 0.6, 0.35), (0.85, 0.2, 0.12)
+        plume('arm%d_flame0' % i, base, Tn, B.pick(1.35, 1.15), 0.31, B.pick(10, 6), B.pick(9, 4), 3, 5.5, (GOLD, ORANGE, RED), M_fire_out, 0.8)
+        plume('arm%d_flame1' % i, base + Tn * 0.02, Tn, B.pick(0.95, 0.8), 0.26, B.pick(8, 5), B.pick(5, 3), 3, -4.0, (HOT, GOLD, ORANGE), M_fire_mid, 0.4)
+        if not lo:
+            plume('arm%d_flame2' % i, base + Tn * 0.03, Tn, 0.6, 0.16, 6, 3, 2, 3.0, (HOT, HOT, GOLD), M_fire_core)
+            for sd in (1, -1):
+                plume('arm%d_tongue%d' % (i, sd > 0), base + X * (sd * 0.12), Tn + X * (sd * 0.5), 0.6, 0.11, 6, 3, 2, 4.0, (GOLD, ORANGE, RED), M_fire_out, 0.5)
         # the game light at the flame (it flickers at night)
         wp = (J[0] + math.sin(a) * (fp.z), J[1] + fp.y + 0.2, J[2] + math.cos(a) * (fp.z))
         B.light(wp[0], wp[1], wp[2], 0.8, LIGHT, led=1)
 
     # ---- wheels, seat, size info ----
     B.wheels_pro(1.1, 1.7, -1.7, r=0.5, w=0.42, rim=COL2, tyre='#1a1410', cap=LIGHT, stripe=LIGHT)
-    B.seat(0, 1.6, -1.75, col='#5a2a14', accent=LIGHT)
+    B.seat_round(0, 1.6, -1.75, col='#5a2a14', accent=LIGHT)
     top = HEAD[1] + hc[1] + hr[1]
     B.info(5.4, 3.6, round(top, 2), muzzle=(0, 1.6, 1.3), wheelR=0.5,
            extra={'arms': 8, 'armZ': 0.55, 'chimney': [0, round(HEAD[1] + c1[1] + 0.1, 2), round(HEAD[2] + c1[2], 2)], 'sight': [round(top - 0.3, 2), round(HEAD[2] + hc[2], 2)]})
     B.body['rigV'] = 2
 
+LEVEL_OV = {'hi': {'cyl': 24, 'bevel': 3, 'ico': 1}, 'lo': {'ico': 1}}
 if __name__ == '__main__':
-    run('calamari_inferno', build, report=True, views=['side', 'high'], level_overrides={'hi': {'cyl': 24, 'bevel': 3, 'ico': 1}, 'lo': {'ico': 1}})
+    run('calamari_inferno', build, report=True, views=['side', 'high'], level_overrides=LEVEL_OV)

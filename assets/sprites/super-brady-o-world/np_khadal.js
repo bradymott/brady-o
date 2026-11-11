@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("np_khadal", {"scale":2.0,"image":"np_khadal.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1366}},"anims":{},"strips":{"L0":{"w":2048,"h":888,"top":0.0,"x":0,"y":0},"L1":{"w":2048,"h":476,"top":168.0,"x":0,"y":889}}});

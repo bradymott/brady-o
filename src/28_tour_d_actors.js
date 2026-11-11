@@ -84,7 +84,8 @@ class TourEnemy extends Walker {
     if (this.stunT > 0) { this.stunT -= dt; this.vx = 0; this.mode = 'stun'; this.walk(dt); return; }
     if (this.cool > 0) this.cool -= dt;
     this.think(dt);
-    if (this.behavior !== 'fly') this.walk(dt);
+    // behaviours (28_tour_i_behave.js) that hang, burrow or fly set noWalk: no gravity, no ground move this frame
+    if (this.behavior !== 'fly' && !this.noWalk) this.walk(dt);
   }
   think(dt) {
     const c = this.cfg, p = this.g.player;

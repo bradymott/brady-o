@@ -23,6 +23,7 @@ FLOOR = 1.18            # the mouth roof (the upper lip line): the snout's under
 BREAK = 0.0             # section angle (rad, 0 = the left flank) of the colour break between back and belly
 DORSAL_AT = (0.0, 2.3, -0.85)   # the dorsal fin's joint (root centre)
 TAIL_AT = (0.0, 1.6, -2.6)
+JAW_MAX = 0.3           # rad: the widest gape (firing); CART_GLB_PARTS['shark:2'].jaw clamps to it
 
 # ---------------- small helpers ----------------
 def eng(v): return (v.x, v.z, -v.y)
@@ -169,14 +170,15 @@ def build(B):
     # ---- chassis: a rounded gunmetal tub (lofted sections, soft nose and tail), arches, chrome flares, underglow ----
     cs = B.pick(5, 2)
     # the nose is lower than the rest, so the chomping jaw has room to drop open above it
-    rings = [chassis_ring(2.42, 1.7, 0.22, 0.09, cs, 0.52), chassis_ring(2.34, 2.02, 0.3, 0.13, cs, 0.53), chassis_ring(2.18, 2.2, 0.32, 0.14, cs, 0.54),
+    # (the nose deck dips a little further toward the snout so the lower jaw clears it at full gape)
+    rings = [chassis_ring(2.42, 1.7, 0.18, 0.08, cs, 0.5), chassis_ring(2.34, 2.02, 0.24, 0.11, cs, 0.5), chassis_ring(2.18, 2.2, 0.26, 0.12, cs, 0.51),
              chassis_ring(1.15, 2.2, 0.32, 0.14, cs, 0.54), chassis_ring(0.55, 2.2, 0.42, 0.17, cs, 0.62)]
     if not lo: rings += [chassis_ring(-0.6, 2.2, 0.42, 0.17, cs, 0.62)]
     rings += [chassis_ring(-2.18, 2.2, 0.42, 0.17, cs, 0.62), chassis_ring(-2.34, 2.02, 0.38, 0.15, cs, 0.62), chassis_ring(-2.42, 1.7, 0.26, 0.11, cs, 0.62)]
     tub = B.obj('chassis', bm_loft(rings[::-1], closed_u=True, caps=True), M_chassis)
     for i, (x, z) in enumerate([(1.0, 1.75), (-1.0, 1.75), (1.0, -1.75), (-1.0, -1.75)]):
         B.cut([tub], bm_cyl(0.6, 0.6, 0.9, L['arch'], AX, (x * 1.1, 0.46, z)), 'arch_%d' % i)
-        B.obj('flare_%d' % i, bm_torus(0.615, 0.032, L['torus'], B.pick(4, 3), AX, (math.copysign(1.105, x), 0.46, z), sweep=(math.pi / 2, 3 * math.pi / 2)), cr)
+        B.obj('flare_%d' % i, bm_torus(0.615, 0.032, B.pick(18, L['torus']), B.pick(4, 3), AX, (math.copysign(1.105, x), 0.46, z), sweep=(math.pi / 2, 3 * math.pi / 2)), cr)
     B.obj('chassis_under', bm_box(1.7, 0.08, 4.2, (0, 0.41, 0)), M_under)
     for s in (1, -1):
         B.leds((s * 1.115, 0.66, 1.0), (s * 1.115, 0.66, -1.0), B.pick(7, 4), [LIGHT, '#ffffff'], 0.045, 3, prefix='side%d' % (s > 0))
@@ -194,11 +196,11 @@ def build(B):
     for s in (1, -1):
         hx = s * 0.68
         B.obj('head_cup_%d' % (s > 0), bm_closed_lathe([(0, -0.05), (0.12, -0.04), (0.13, 0.0), (0.0, 0.01)], L['cyl_s'], AZ, (hx, 0.56, 2.4)), dcr)
-        B.obj('head_bezel_%d' % (s > 0), bm_torus(0.125, 0.022, L['torus'], B.pick(4, 3), AZ, (hx, 0.56, 2.415)), cr)
+        B.obj('head_bezel_%d' % (s > 0), bm_torus(0.125, 0.022, B.pick(20, L['torus']), B.pick(4, 3), AZ, (hx, 0.56, 2.415)), cr)
         B.obj('head_lens_%d' % (s > 0), bm_ellipsoid(0.105, 0.03, 0.105, L['cyl_s'], B.pick(5, 2), (hx, 0.56, 2.41), phi1=math.pi / 2, M=AZ), led('#fff0d8'))
         B.light(hx, 0.56, 2.52, 1.3, '#fff2c8', head=1)
-        B.obj('tail_ring_%d' % (s > 0), bm_rrect_tube(0.4, 0.12, 0.05, 0.014, B.pick(4, 1), 4, at=(s * 0.66, 0.66, -2.415), axis=AZn), cr)
-        B.obj('tail_%d' % (s > 0), bm_box(0.36, 0.09, 0.04, (s * 0.66, 0.66, -2.41)), led('#ff1a2a'))
+        B.obj('tail_ring_%d' % (s > 0), bm_rrect_tube(0.42, 0.13, 0.055, 0.014, B.pick(4, 1), 3, at=(s * 0.66, 0.66, -2.415), axis=AZn), cr)
+        B.obj('tail_%d' % (s > 0), bm_capsule(0.048, 0.36, B.pick(10, 5), B.pick(2, 1), (s * 0.66, 0.66, -2.415), AX), led('#ff1a2a'))
         B.light(s * 0.66, 0.66, -2.52, 0.9, '#ff2a3a', tail=1)
 
     # ---- the hull: back / belly / mouth roof on one sculpted surface, painted with the spine gradient ----
@@ -209,7 +211,7 @@ def build(B):
         th = side_th(s, BREAK)
         pts = [on_body(th, z, 0.0) for z in [-2.45 + 4.75 * k / 24 for k in range(25)] if raw_pt(th, v_of_z(z))[1] > floor_y(z) + 0.03]
         if lo: pts = pts[::3]
-        B.obj('bead_%d' % (s > 0), bm_tube(pts, 0.016, B.pick(6, 4)), cr)
+        B.obj('bead_%d' % (s > 0), bm_tube(pts, 0.016, B.pick(5, 3)), cr)
         if not lo:
             for k, z in enumerate((-2.0, -1.3, -0.6, 0.1, 0.8, 1.5)):
                 B.obj('rivet_%d_%d' % (s > 0, k), bm_ico(0.022, 1, on_body(th, z, 0.012)), cr)
@@ -217,7 +219,7 @@ def build(B):
     for k, (z0, z1) in enumerate(((2.5, 0.78), (-1.95, -2.5))):
         zs = [z0 + (z1 - z0) * j / 16 for j in range(17)]
         if lo: zs = zs[::2]
-        B.obj('spine_led_%d' % k, bm_tube([on_body(math.pi / 2, z, 0.012) for z in zs], 0.024, B.pick(6, 4)), led_c)
+        B.obj('spine_led_%d' % k, bm_tube([on_body(math.pi / 2, z, 0.012) for z in zs], 0.024, B.pick(6, 3)), led_c)
         if not lo:
             for s in (1, -1):
                 B.obj('pin_%d_%d' % (k, s > 0), bm_tube([on_body(math.pi / 2 + s * 0.11, z, 0.004) for z in zs], 0.012, 4), M_belly)
@@ -240,9 +242,9 @@ def build(B):
                 arc.append(on_body(side_th(s, a), z0 + bul, -0.006))
                 lip.append(on_body(side_th(s, a), z0 + bul - 0.045, 0.006))
                 rim.append(on_body(side_th(s, a * 1.1), z0 + bul * 1.1 + 0.035, 0.003))
-            B.obj('gill_%d_%d' % (s > 0, i), bm_tube(arc, 0.028, B.pick(6, 4)), M_slit)
+            B.obj('gill_%d_%d' % (s > 0, i), bm_tube(arc, 0.028, B.pick(6, 3)), M_slit)
             B.obj('gill_lip_%d_%d' % (s > 0, i), bm_tube(lip, 0.014, B.pick(5, 3)), cr)
-            if not lo: B.obj('gill_rim_%d_%d' % (s > 0, i), bm_tube(rim, 0.011, 4), M_gill)
+            if not lo: B.obj('gill_rim_%d_%d' % (s > 0, i), bm_tube(rim, 0.011, 3), M_gill)
     # jaw axle across the throat with hex bolts
     B.obj('axle', bm_cyl(0.06, 0.06, 1.3, L['cyl_s'], AX, (0, 1.12, 1.25)), dcr)
     for s in (1, -1): B.obj('axle_bolt_%d' % (s > 0), bm_cyl(0.085, 0.085, 0.07, 6, AX, (s * 0.68, 1.12, 1.25)), cr, flat=True)
@@ -256,7 +258,7 @@ def build(B):
         B.obj('lid_%d' % (s > 0), bm_ellipsoid(rx, ry, rz, B.pick(20, 10), B.pick(7, 4), lid_at, M=Ml, phi1=ph), M_lid)
         if not lo:   # dark chrome liner around the lid's brim
             brim = [eng(Matrix.Translation(E(*lid_at)) @ Ml @ Vector((rx * math.sin(ph) * math.cos(a), rz * math.sin(ph) * math.sin(a), ry * math.cos(ph)))) for a in [TAU * k / 16 for k in range(17)]]
-            B.obj('liner_%d' % (s > 0), bm_tube(brim, 0.016, 5, caps=False), dcr)
+            B.obj('liner_%d' % (s > 0), bm_tube(brim, 0.016, 4, caps=False), dcr)
     B.obj('upper_lip', bm_tube(lip_curve(B.pick(29, 13), y=FLOOR + 0.012), 0.032, seg_t), cr)
     nt = B.pick(11, 5)
     for i, p in enumerate(lip_curve(nt, z_back=1.85, inset=0.07, y=FLOOR + 0.02)):
@@ -270,8 +272,8 @@ def build(B):
     # ---- the lower jaw (part `jaw`, hinged at the back; the pose fn pitches the front down) ----
     J = B.part('jaw', (0, 1.12, 1.25))
     JC, JRX, JRZ = 0.66, 0.68, 0.72     # the jaw's centre z and radii (local)
-    js = B.obj('jaw_shell', bm_ellipsoid(JRX, 0.2, JRZ, B.pick(32, 14), B.pick(8, 4), (0, -0.05, JC), phi0=math.pi / 2), M_belly, parent=J)
-    B.vcol(js, lambda x, y, z: (0.9 + 0.1 * sstep((y + 0.25) / 0.2),) * 2 + (0.95 + 0.05 * sstep((y + 0.25) / 0.2),))
+    js = B.obj('jaw_shell', bm_ellipsoid(JRX, 0.14, JRZ, B.pick(32, 14), B.pick(8, 4), (0, -0.05, JC), phi0=math.pi / 2), M_belly, parent=J)
+    B.vcol(js, lambda x, y, z: (0.9 + 0.1 * sstep((y + 0.19) / 0.14),) * 2 + (0.95 + 0.05 * sstep((y + 0.19) / 0.14),))
     B.obj('jaw_top', bm_ellipsoid(JRX - 0.02, 0.015, JRZ - 0.02, B.pick(32, 14), 4, (0, -0.045, JC)), M_mouth_d, parent=J)
     B.obj('tongue', bm_ellipsoid(0.46, 0.075, 0.6, B.pick(20, 10), B.pick(5, 3), (0, -0.03, JC - 0.04), phi1=math.pi / 2), M_mouth, parent=J)
     if not lo: B.obj('tongue_groove', bm_tube([(0, 0.046 - 0.012 * (k / 6) ** 2, 0.2 + 0.85 * k / 6) for k in range(7)], 0.01, 4), M_mouth_d, parent=J)
@@ -284,7 +286,7 @@ def build(B):
         B.obj('tooth_l_%d' % i, cone(0.056 * sz, 0.18 * sz, ((JRX - 0.07) * math.sin(a), 0.0, JC + (JRZ - 0.07) * math.cos(a)), (0, 1, 0.05), B.pick(8, 5)), M_tooth, parent=J)
     if not lo:   # chrome rub strips along the jaw's flanks
         for s in (1, -1):
-            B.obj('jaw_strip_%d' % (s > 0), bm_tube([(s * (JRX * 0.97 * math.sqrt(max(0.0, 1 - ((zz - JC) / JRZ) ** 2)) + 0.004), -0.1, zz) for zz in (0.2, 0.4, 0.6, 0.8, 1.0)], 0.012, 4), cr, parent=J)
+            B.obj('jaw_strip_%d' % (s > 0), bm_tube([(s * (JRX * 0.97 * math.sqrt(max(0.0, 1 - ((zz - JC) / JRZ) ** 2)) + 0.004), -0.075, zz) for zz in (0.2, 0.4, 0.6, 0.8, 1.0)], 0.012, 4), cr, parent=J)
 
     # ---- dorsal fin (part `dorsal`): a raked, falcate airfoil, thick at the root so it reads as a fin from behind;
     #      chrome leading edge, glowing trailing edge and tip. Its root is buried in the back so it can flex. ----
@@ -338,15 +340,15 @@ def build(B):
     # ---- chrome side pipes: headers out of the belly flank, straight pipes between the wheels, flared tips ----
     for s in (1, -1):
         run_ = catmull([(s * 0.72, 1.08, 1.0), (s * 0.95, 1.02, 0.85), (s * 1.16, 0.96, 0.62), (s * 1.22, 0.95, 0.4), (s * 1.22, 0.95, -0.5), (s * 1.22, 0.95, -1.1)], B.pick(14, 7))
-        B.obj('pipe_%d' % (s > 0), bm_tube(run_, 0.065, B.pick(12, 7)), cr)
+        B.obj('pipe_%d' % (s > 0), bm_tube(run_, 0.065, B.pick(10, 7)), cr)
         B.obj('pipe_tip_%d' % (s > 0), bm_cyl(0.065, 0.095, 0.16, B.pick(14, 8), AZn, (s * 1.22, 0.95, -1.2)), cr)
         B.obj('pipe_hole_%d' % (s > 0), bm_cyl(0.075, 0.075, 0.02, B.pick(14, 8), AZn, (s * 1.22, 0.95, -1.27)), led('#2a8cff', 2.0))
         for z in (0.1, -0.8): B.obj('pipe_bkt_%d_%d' % (s > 0, z > 0), bm_rod((s * 1.1, 0.83, z), (s * 1.2, 0.93, z), 0.02, B.pick(6, 5)), dcr)
         if not lo:
-            for k in range(3): B.obj('pipe_ring_%d_%d' % (s > 0, k), bm_torus(0.072, 0.01, 12, 4, AZ, (s * 1.22, 0.95, -0.2 - k * 0.3)), dcr)
+            for k in range(3): B.obj('pipe_ring_%d_%d' % (s > 0, k), bm_torus(0.072, 0.01, 10, 3, AZ, (s * 1.22, 0.95, -0.2 - k * 0.3)), dcr)
 
     # ---- the rider's perch: seat on the back, chrome grab bar in front of it, the steering stalk, footpegs ----
-    B.seat(0, 2.55, 0.3, col='#16304e', accent=LIGHT, wheelY=2.92, wheelZ=0.95)
+    B.seat_pro(0, 2.55, 0.3, col='#16304e', accent=LIGHT, wheelY=2.92, wheelZ=0.95, piping='#e8f4ff')
     B.obj('grab_bar', bm_tube(catmull([(0.42, 2.42, 0.7), (0.42, 2.66, 0.78), (0.3, 2.74, 0.8), (-0.3, 2.74, 0.8), (-0.42, 2.66, 0.78), (-0.42, 2.42, 0.7)], B.pick(14, 6)), 0.03, B.pick(8, 5)), cr)
     B.obj('stalk', bm_rod((0, 2.3, 0.95), (0, 2.88, 1.02), 0.04, L['rod']), cr)
     if not lo:

@@ -54,9 +54,10 @@ const stampsOk=(m,tag)=>{
     assert(!(x.x<y.x+y.w&&x.x+x.w>y.x&&x.y<y.y+y.h&&x.y+x.h>y.y),`${tag}: stops ${x.i} and ${y.i} overlap`);}
 };
 {
-  const C=Tour.countries.mx,orig=C.levels,base=orig.map(L=>Object.assign({},L));
+  const C=Tour.countries.mx,orig=C.levels,origHouses=C.houses,base=orig.map(L=>Object.assign({},L));C.houses=[];   // level-only layouts (houses are covered by sbw_toolkit_shots mapgraph)
   const branchy=base.concat([Object.assign({},base[0],{name:'Secret Cenote',mapCell:[0,2],mapFrom:1}),Object.assign({},base[1],{name:'Hidden Grotto',mapCell:[2,2],mapFrom:3,mapHidden:true})]);
-  const nine=base.concat(base.slice(0,4).map((L,k)=>Object.assign({},L,{name:'Extra '+(k+1)})));
+  const plain=L=>{const o=Object.assign({},L);delete o.mapCell;delete o.mapFrom;return o;};
+  const nine=base.map(plain).concat(base.slice(0,4).map((L,k)=>Object.assign(plain(L),{name:'Extra '+(k+1)})));
   let cases=0;
   for(const [W,H] of [[874,402],[390,844],[667,375],[568,320],[320,568]]){
     B.Game.cssW=W;B.Game.cssH=H;
@@ -67,12 +68,12 @@ const stampsOk=(m,tag)=>{
       const m=Object.create(TourMapScene.prototype);Object.assign(m,{sel:'mx',cam:{z:4},plane:{lon:0,lat:0},t:1,focus:0});m.build();m.drawPanel(ctx);
       const want=tag==='branches'?6:levels.length;
       assert.equal(m.stamps.length,want,`${tag} ${W}x${H}: ${want} stops shown`);
-      if(tag.startsWith('branches')){const s6=m.stamps.find(b=>b.i===6);assert(s6&&s6.from===1,'secret stop 6 branches from stop 2');}
-      if(tag==='branches+hidden open'){const s7=m.stamps.find(b=>b.i===7);assert(s7&&s7.from===3,'hidden stop 7 appears, branching from stop 4');}
+      if(tag.startsWith('branches')){const s6=m.stamps.find(b=>b.i===6);assert(s6&&[].concat(s6.from).includes(1),'secret stop 6 branches from stop 2');}
+      if(tag==='branches+hidden open'){const s7=m.stamps.find(b=>b.i===7);assert(s7&&[].concat(s7.from).includes(3),'hidden stop 7 appears, branching from stop 4');}
       stampsOk(m,`${tag} ${W}x${H}`);cases++;
     }
   }
-  C.levels=orig;
+  C.levels=orig;C.houses=origHouses;
   console.log(`PASS ${cases} more-than-five-stop layouts (branches, hidden stop, nine stops)`);
 }
 // Render dispatch: atlas art has its outline baked in, so only the procedural fallback goes through Ink, decided

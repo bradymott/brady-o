@@ -8,7 +8,12 @@
 #   import runpy; runpy.run_path('/abs/path/tools/blender/jelly_jolt.py', run_name='__main__')
 # Writes assets/models/art-cart/jelly_jolt.glb (showroom, <= 30k tris) and jelly_jolt_lo.glb (race, <= 7k).
 #
-# Rig (rigV 2, posed by CART_GLB_PARTS['jelly:2'] in src/43_cart_bb_glb.js):
+# Touch-up pass (rigV 3): the driver now sits in the middle of the pod UNDER the bell, which floats higher and is tilted
+# up at the front (a parasol) so the driver is seen from the front, the sides and behind; the four tentacles hang
+# around the driver like a curtain, the oral frills ring the rim instead of hanging in the middle, the Tesla coil moved
+# to the nose and the field struts behind the seat. The joints moved, so the game poses this file with
+# CART_GLB_PARTS['jelly:3'] / CART_JELLY3 (the rigV 2 file on a phone's cache keeps 'jelly:2').
+# Rig (rigV 3, posed by CART_GLB_PARTS['jelly:3'] in src/43_cart_bb_glb.js):
 #   part_bell                 dome, inner glow, ribs, rim, oral arms, crown and spire; joint BELL_AT (the rim centre):
 #                             it pulses (a quick contraction, a slow relax)
 #   part_zap                  the static bolts around the core and the rim, joint at the core: they flicker on and off
@@ -21,11 +26,23 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cartkit import *
 
 COL, COL2, LIGHT, RIB = '#c86aff', '#5af2ff', '#5af2ff', '#ff9af0'   # CART_CARS.jelly palette + the rib pink
-BELL_AT = (0, 2.1, 0.45)                                            # lowered 0.25 m from the procedural car (chase camera)
-BELL_PROFILE = [(1.55, 0), (1.6, 0.18), (1.45, 0.75), (1.05, 1.25), (0.55, 1.52), (0, 1.6)]
-CORE_Y = 0.72                                                       # the core's height in the bell
-TENT_R, TENT_Y = 1.22, 2.2                                          # tentacle roots: radius around the bell axis, height
-TENT_A = [math.radians(a) for a in (40, 140, 220, 320)]             # around the bell (0 = forward); none over the seat
+BELL_AT = (0, 2.5, 0.05)                                            # the rim centre: high enough for the driver to sit under it
+BELL_TILT = math.radians(10)                                        # the bell is tipped up at the front (a parasol over the driver)
+BK = 0.88                                                           # the bell's size against the rigV 2 bell
+BELL_PROFILE = [(1.55, 0), (1.6, 0.18), (1.45, 0.75), (1.05, 1.25), (0.55, 1.52), (0, 1.6)]   # authored at the rigV 2 size, then scaled by BK
+MB = Matrix.Rotation(-BELL_TILT, 4, 'X') @ Matrix.Diagonal((BK, BK, BK, 1))   # bell-local authoring -> the tilted, scaled bell
+MBI = MB.inverted()
+def bell_pt(p):
+    """A bell-local authored point (engine coords about BELL_AT) after the tilt and scale, still relative to BELL_AT."""
+    v = MB @ E(*p); return (v.x, v.z, -v.y)
+def bell_unpt(q):
+    """Back from the tilted, scaled bell (relative to BELL_AT) to the authored bell-local point."""
+    v = MBI @ E(*q); return (v.x, v.z, -v.y)
+SEAT = (0, 1.12, -0.4)                                              # the driver's hips: mid-deck, under the bell
+def bell_abs(p): q = bell_pt(p); return (BELL_AT[0] + q[0], BELL_AT[1] + q[1], BELL_AT[2] + q[2])
+CORE_Y = 0.72                                                       # the core's height in the bell (authored)
+TENT_R, TENT_DY = 1.22, 0.1                                         # tentacle roots: radius around the bell axis, height over the rim
+TENT_A = [math.radians(a) for a in (65, 140, 220, 295)]             # around the bell (0 = forward); clear of the driver's face
 SEG1, SEG2 = 0.56, 0.5                                              # upper and lower tentacle segment lengths
 POD_W, POD_H, POD_Y, POD_R = 2.14, 0.44, 0.6, 0.17                  # the pod: width, height, centre height, corner radius
 
@@ -93,7 +110,7 @@ def build(B):
     M_bolt = led('#c8fbff', 4.0)
 
     # ================= the pod (body bone): a lofted rounded hull, two-tone, chrome flares, bumpers, under-glow =================
-    cs = B.pick(5, 2)
+    cs = B.pick(5, 3)
     rings = [pod_ring(2.2, 1.6, 0.26, 0.12, cs), pod_ring(2.14, 1.92, 0.36, 0.15, cs), pod_ring(2.0, POD_W, POD_H, POD_R, cs)]
     if not lo: rings += [pod_ring(0.0, POD_W + 0.04, POD_H, POD_R, cs)]
     rings += [pod_ring(-2.0, POD_W, POD_H, POD_R, cs), pod_ring(-2.14, 1.92, 0.36, 0.15, cs), pod_ring(-2.2, 1.6, 0.26, 0.12, cs)]
@@ -102,12 +119,12 @@ def build(B):
     for i, (x, z) in enumerate([(0.95, 1.55), (-0.95, 1.55), (0.95, -1.55), (-0.95, -1.55)]):
         B.cut([pod], bm_cyl(0.55, 0.55, 0.8, L['arch'], AX, (x * 1.12, 0.42, z)), 'arch_%d' % i)
         B.obj('flare_%d' % i, bm_torus(0.565, 0.032, B.pick(20, 10), B.pick(4, 3), AX, (math.copysign(POD_W / 2 + 0.01, x), 0.42, z), sweep=(math.pi / 2, 3 * math.pi / 2)), chrome())
-    B.obj('deck', bm_box(1.86, 0.025, 3.7, (0, POD_Y + POD_H / 2 + 0.005, 0)), M_deck)
+    B.obj('deck', bm_softbox(1.86, 0.03, 3.7, B.pick(24, 12), B.pick(4, 3), (0, POD_Y + POD_H / 2 + 0.005, 0), p=8.0), M_deck)
     for s in (1, -1):
         B.obj('shoulder_%d' % (s > 0), bm_tube(catmull([(s * 0.9, 0.835, 2.1), (s * 1.06, 0.84, 1.4), (s * 1.06, 0.84, -1.4), (s * 0.9, 0.835, -2.1)], B.pick(12, 4)), 0.02, B.pick(6, 4)), chrome())
         B.strip((s * 0.9, 0.36, 1.8), (s * 0.9, 0.36, -1.8), COL2, th=0.045)
         B.light(s * 0.9, 0.25, 0.0, 2.2, COL2, led=1)
-        n = B.pick(8, 4)
+        n = B.pick(8, 3)
         for i in range(n):
             t = i / (n - 1); c = [COL2, RIB][i % 2]; p = (s * (POD_W / 2 + 0.012), POD_Y + 0.02, 0.95 + (-0.95 - 0.95) * t)
             B.obj('row%d_%d' % (s > 0, i), bm_ico(0.05, 1, p), led(c))
@@ -116,111 +133,120 @@ def build(B):
     for zs, zc in ((1, 2.32), (-1, -2.32)):
         path = catmull([(1.1, 0.48, zc - zs * 0.5), (1.0, 0.48, zc - zs * 0.12), (0.6, 0.48, zc), (-0.6, 0.48, zc), (-1.0, 0.48, zc - zs * 0.12), (-1.1, 0.48, zc - zs * 0.5)], B.pick(14, 7))
         B.obj('bumper_%d' % (zs > 0), bm_tube(path, 0.055, B.pick(8, 6)), chrome())
-    # headlights in chrome bezels on the nose; tail lamps in chrome rings
+    # headlights in chrome bezels on the nose; tail lamps (soft pills) in chrome rings
     for s in (1, -1):
         hx = s * 0.62
         B.obj('head_bezel_%d' % (s > 0), bm_torus(0.12, 0.022, B.pick(14, 6), 3, AZ, (hx, 0.68, 2.2)), chrome())
-        B.obj('head_lens_%d' % (s > 0), bm_ellipsoid(0.1, 0.03, 0.1, B.pick(12, 6), B.pick(3, 2), (hx, 0.68, 2.195), phi1=math.pi / 2, M=AZ), led('#fff0d8'))
+        B.obj('head_lens_%d' % (s > 0), bm_ellipsoid(0.1, 0.03, 0.1, B.pick(12, 8), B.pick(3, 2), (hx, 0.68, 2.195), phi1=math.pi / 2, M=AZ), led('#fff0d8'))
         B.light(hx, 0.68, 2.3, 1.3, '#fff2c8', head=1)
         B.obj('tail_ring_%d' % (s > 0), bm_rrect_tube(0.32, 0.11, 0.05, 0.013, B.pick(2, 1), B.pick(4, 3), at=(s * 0.62, 0.66, -2.205), axis=AZn), chrome())
-        B.obj('tail_%d' % (s > 0), bm_box(0.28, 0.07, 0.04, (s * 0.62, 0.66, -2.2)), led('#ff1a2a'))
+        B.obj('tail_%d' % (s > 0), bm_softbox(0.28, 0.075, 0.05, B.pick(12, 8), B.pick(6, 4), (s * 0.62, 0.66, -2.2)), led('#ff1a2a'))
         B.light(s * 0.62, 0.66, -2.32, 0.9, '#ff2a3a', tail=1)
-    # the two chrome struts that hold the bell's field, with cyan emitters on top
+    # the two chrome struts that hold the bell's field (behind the seat now), with cyan emitters on top
     for s in (1, -1):
-        B.obj('strut_foot_%d' % (s > 0), bm_closed_lathe([(0, 0.0), (0.17, 0.0), (0.16, 0.05), (0.1, 0.1), (0.0, 0.1)], L['cyl_s'], AY, (s * 0.6, 0.83, 0.55)), dark_chrome())
-        B.obj('strut_%d' % (s > 0), bm_rod((s * 0.6, 0.86, 0.55), (s * 0.47, 1.78, 0.47), 0.055, L['cyl_s'], r1=0.045), chrome())
-        if not lo: B.obj('strut_band_%d' % (s > 0), bm_torus(0.058, 0.016, 12, 4, AY, (s * 0.555, 1.2, 0.52)), led_c)
-        B.obj('strut_cup_%d' % (s > 0), bm_closed_lathe([(0, -0.04), (0.05, -0.04), (0.11, 0.06), (0.09, 0.07), (0.0, 0.02)], L['cyl_s'], AY, (s * 0.47, 1.8, 0.47)), dark_chrome())
-        B.obj('strut_emit_%d' % (s > 0), bm_uv(0.08, B.pick(14, 8), B.pick(7, 4), (s * 0.47, 1.88, 0.47)), led_c)
-        B.light(s * 0.47, 1.9, 0.47, 0.6, COL2, led=1)
-    # Tesla coil base: dark chrome drum, copper core with chrome windings, a crackling ball
-    B.obj('coil_drum', bm_closed_lathe([(0, 0.0), (0.36, 0.0), (0.37, 0.04), (0.32, 0.16), (0.0, 0.16)], L['cyl'], AY, (0, 0.83, 0.5)), dark_chrome())
-    B.obj('coil_ring', bm_torus(0.33, 0.02, B.pick(24, 10), 3, AY, (0, 0.99, 0.5)), led_c)
-    B.obj('coil_core', bm_cyl(0.15, 0.13, 0.42, L['cyl_s'], AY, (0, 1.2, 0.5)), M_coil)
-    for k in range(B.pick(5, 2)):
-        B.obj('coil_wind_%d' % k, bm_torus(0.155, 0.014, 12, 3, AY, (0, 1.04 + k * 0.08, 0.5)), chrome())
-    B.obj('coil_ball', bm_uv(0.11, B.pick(14, 8), B.pick(7, 4), (0, 1.5, 0.5)), led_c)
-    B.light(0, 1.52, 0.5, 0.7, COL2, led=1)
+        f0, f1 = (s * 0.66, 0.83, -1.25), (s * 0.58, 1.86, -1.12)
+        B.obj('strut_foot_%d' % (s > 0), bm_closed_lathe([(0, 0.0), (0.17, 0.0), (0.16, 0.05), (0.1, 0.1), (0.0, 0.1)], L['cyl_s'], AY, f0), dark_chrome())
+        B.obj('strut_%d' % (s > 0), bm_rod((f0[0], 0.86, f0[2]), (f1[0], f1[1] - 0.08, f1[2]), 0.055, L['cyl_s'], r1=0.045), chrome())
+        if not lo: B.obj('strut_band_%d' % (s > 0), bm_torus(0.058, 0.016, 12, 4, AY, ((f0[0] + f1[0]) / 2, 1.25, (f0[2] + f1[2]) / 2)), led_c)
+        B.obj('strut_cup_%d' % (s > 0), bm_closed_lathe([(0, -0.04), (0.05, -0.04), (0.11, 0.06), (0.09, 0.07), (0.0, 0.02)], L['cyl_s'], AY, (f1[0], f1[1] - 0.06, f1[2])), dark_chrome())
+        B.obj('strut_emit_%d' % (s > 0), bm_uv(0.08, B.pick(14, 8), B.pick(7, 4), (f1[0], f1[1] + 0.02, f1[2])), led_c)
+        B.light(f1[0], f1[1] + 0.04, f1[2], 0.6, COL2, led=1)
+    # Tesla coil on the nose: dark chrome drum, copper core with chrome windings, a crackling ball
+    CZ, ck = 1.5, 0.8
+    B.obj('coil_drum', bm_closed_lathe([(0, 0.0), (0.36 * ck, 0.0), (0.37 * ck, 0.04), (0.32 * ck, 0.16 * ck), (0.0, 0.16 * ck)], L['cyl'], AY, (0, 0.83, CZ)), dark_chrome())
+    B.obj('coil_ring', bm_torus(0.33 * ck, 0.02, B.pick(24, 10), 3, AY, (0, 0.83 + 0.16 * ck, CZ)), led_c)
+    B.obj('coil_core', bm_cyl(0.15 * ck, 0.13 * ck, 0.42 * ck, L['cyl_s'], AY, (0, 0.83 + 0.37 * ck, CZ)), M_coil)
+    for k in range(B.pick(5, 1)):
+        B.obj('coil_wind_%d' % k, bm_torus(0.155 * ck, 0.014, 12, 3, AY, (0, 0.83 + (0.21 + k * 0.08) * ck, CZ)), chrome())
+    B.obj('coil_ball', bm_uv(0.11, B.pick(14, 8), B.pick(7, 4), (0, 0.83 + 0.67 * ck, CZ)), led_c)
+    B.light(0, 0.85 + 0.67 * ck, CZ, 0.7, COL2, led=1)
 
-    # ================= the bell (part `bell`, pulses) =================
+    # ================= the bell (part `bell`, pulses): authored at the rigV 2 size, then scaled by BK and tilted =================
     P = B.part('bell', BELL_AT)
-    rows = B.pick(16, 6); seg = B.pick(56, 20)
+    def bobj(name, bm, m, **kw):
+        xf(bm, MB); return B.obj(name, bm, m, parent=P, **kw)
+    rows = B.pick(16, 6); seg = B.pick(52, 20)
     prof_out = resample(BELL_PROFILE, rows)
     def rmod_out(th, t):
         h = prof_out[min(rows, int(round(t * rows)))][1]
         return 1 + scallop(h) * math.sin(th * 10)
-    d = B.obj('bell_dome', bm_lathe(prof_out, seg, rmod=rmod_out, caps=False), M_bell, parent=P); B.vcol(d, candy)
+    candy_t = lambda x, y, z: candy(*bell_unpt((x, y, z)))
+    d = bobj('bell_dome', bm_lathe(prof_out, seg, rmod=rmod_out, caps=False), M_bell); B.vcol(d, candy_t)
     prof_in = resample([(1.55, 0), (1.56, 0.18), (1.4, 0.72), (1.0, 1.2), (0.5, 1.44), (0, 1.5)], B.pick(9, 4))
     nin = len(prof_in) - 1
     def rmod_in(th, t):
         h = prof_in[min(nin, int(round(t * nin)))][1]
         return 1 + scallop(h) * math.sin(th * 10)
-    di = B.obj('bell_inner', bm_lathe(prof_in, B.pick(40, 16), rmod=rmod_in, caps=False, flip=True), M_bell_in, parent=P); B.vcol(di, lambda x, y, z: tuple(c * (0.75 + 0.25 * sstep(1 - y / 1.4)) for c in (1, 0.92, 1)))
+    di = bobj('bell_inner', bm_lathe(prof_in, B.pick(40, 16), rmod=rmod_in, caps=False, flip=True), M_bell_in)
+    B.vcol(di, lambda x, y, z: tuple(c * (0.75 + 0.25 * sstep(1 - bell_unpt((x, y, z))[1] / 1.4)) for c in (1, 0.92, 1)))
     tseg = B.pick(8, 4); ring_prof = [(1.58 + 0.07 * math.cos(TAU * j / tseg), 0.1 + 0.07 * math.sin(TAU * j / tseg)) for j in range(tseg + 1)]
-    B.obj('bell_ring', bm_lathe(ring_prof, seg, rmod=lambda th, t: 1 + scallop(0.1) * math.sin(th * 10), caps=False), led_c, parent=P)
+    bobj('bell_ring', bm_lathe(ring_prof, seg, rmod=lambda th, t: 1 + scallop(0.1) * math.sin(th * 10), caps=False), led_c)
     rib_pts = [dome(t) for t in [i / 400 for i in range(401)]]
     rib_pts = [(r + 0.03 * nr, h + 0.03 * nh) for r, h, nr, nh in rib_pts if 0.24 <= h <= 1.5]
     step = max(1, len(rib_pts) // B.pick(12, 6)); rib_pts = rib_pts[::step] + [rib_pts[-1]]
     for i in range(8):
         a = i / 8 * TAU; sa, ca = math.sin(a), math.cos(a)
         pts = [(sa * r, h, ca * r) for r, h in rib_pts]; n = len(pts)
-        B.obj('rib_%d' % i, bm_tube(pts, [0.055 - 0.025 * k / (n - 1) for k in range(n)], B.pick(6, 4)), M_rib, parent=P)
-        if not lo: B.obj('rib_bulb_%d' % i, bm_uv(0.07, 10, 6, (sa * 1.6, 0.25, ca * 1.6)), led_p, parent=P)
-    # marquee dots between the ribs near the rim (the bell's "lit from inside" freckles), showroom only
-    if not lo:
+        bobj('rib_%d' % i, bm_tube(pts, [0.055 - 0.025 * k / (n - 1) for k in range(n)], B.pick(6, 4)), M_rib)
+        if not lo: bobj('rib_bulb_%d' % i, bm_uv(0.07, 10, 6, (sa * 1.6, 0.25, ca * 1.6)), led_p)
+    if not lo:   # marquee dots between the ribs near the rim (the bell's "lit from inside" freckles)
         for i in range(16):
             a = (i + 0.5) / 16 * TAU; r, h, nr, nh = dome(0.3 + 0.12 * (i % 2))
-            B.obj('dot_%d' % i, bm_ico(0.035, 1, (math.sin(a) * (r + 0.02), h + 0.02, math.cos(a) * (r + 0.02))), led_w, parent=P)
-    # the glowing core (seen from below and through the rim) and a curtain of ruffled oral arms
-    B.obj('core', bm_uv(0.36, B.pick(18, 10), B.pick(10, 6), (0, CORE_Y, 0)), M_core, parent=P)
-    na = B.pick(6, 4)
-    for i in range(na):
-        a = (i + 0.5) / na * TAU
-        def arm(u, v, a=a):
-            th = a + (v - 0.5) * 0.7; rr = 0.18 + 0.22 * u
-            y = 0.5 - 0.62 * u
-            ruffle = 0.06 * math.sin(v * TAU * 2 + u * 5) * u
+            bobj('dot_%d' % i, bm_ico(0.035, 1, (math.sin(a) * (r + 0.02), h + 0.02, math.cos(a) * (r + 0.02))), led_w)
+    # the glowing core high in the bell, and ruffled oral frills hanging just inside the rim (round the sides and back,
+    # none in front of the driver's face)
+    bobj('core', bm_uv(0.36, B.pick(18, 10), B.pick(10, 6), (0, CORE_Y, 0)), M_core)
+    for i, ad in enumerate((75, 125, 180, 235, 285) if not lo else (110, 250)):
+        a = math.radians(ad)
+        def arm(u, v, a=a):   # a ruffled ribbon, tapering to a soft point
+            th = a + (v - 0.5) * 0.42 * (1 - 0.75 * u ** 1.2); rr = 1.3 - 0.16 * u
+            y = 0.3 - 0.5 * u - 0.06 * math.sin(math.pi * v) * u
+            ruffle = 0.08 * math.sin(v * TAU * 1.5 + u * 7) * (0.3 + u)
             return (math.sin(th) * (rr + ruffle), y, math.cos(th) * (rr + ruffle))
-        B.obj('oral_%d' % i, bm_surf(B.pick(6, 3), B.pick(6, 3), arm), M_frill, parent=P)
-        B.obj('oral_b_%d' % i, bm_surf(B.pick(6, 3), B.pick(6, 3), arm, flip=True), M_frill, parent=P)
-    B.obj('crown', bm_lathe([(0.46, 1.44), (0.44, 1.52), (0.3, 1.62), (0.0, 1.68)], L['cyl'], caps=False), chrome(), parent=P)
-    B.obj('crown_ring', bm_torus(0.46, 0.022, B.pick(28, 12), 3, AY, (0, 1.46, 0)), led_c, parent=P)
-    B.obj('spire', bm_rod((0, 1.62, 0), (0, 1.9, 0), 0.04, L['cyl_s'], r1=0.025), chrome(), parent=P)
-    for k, (y, r) in enumerate(((1.7, 0.14), (1.78, 0.11), (1.85, 0.08))):
-        B.obj('spire_disc_%d' % k, bm_closed_lathe([(0, -0.012), (r, -0.006), (r, 0.006), (0, 0.012)], L['cyl_s'], AY, (0, y, 0)), chrome(), parent=P)
-    B.obj('spire_ball', bm_uv(0.11, B.pick(14, 8), B.pick(7, 4), (0, 1.97, 0)), led_c, parent=P)
-    B.light(0, BELL_AT[1] + 0.8, BELL_AT[2], 4.0, LIGHT, big=1)
+        bobj('oral_%d' % i, bm_surf(B.pick(6, 3), B.pick(7, 3), arm), M_frill)
+        bobj('oral_b_%d' % i, bm_surf(B.pick(6, 3), B.pick(7, 3), arm, flip=True), M_frill)
+    bobj('crown', bm_lathe([(0.46, 1.44), (0.44, 1.52), (0.3, 1.62), (0.0, 1.68)], L['cyl'], caps=False), chrome())
+    bobj('crown_ring', bm_torus(0.46, 0.022, B.pick(28, 12), 3, AY, (0, 1.46, 0)), led_c)
+    bobj('spire', bm_rod((0, 1.62, 0), (0, 1.86, 0), 0.04, L['cyl_s'], r1=0.025), chrome())
+    for k, (y, r) in enumerate(((1.68, 0.13), (1.75, 0.1), (1.81, 0.07)) if not lo else ((1.7, 0.12), (1.79, 0.08))):
+        bobj('spire_disc_%d' % k, bm_closed_lathe([(0, -0.012), (r, -0.006), (r, 0.006), (0, 0.012)], L['cyl_s'], AY, (0, y, 0)), chrome())
+    bobj('spire_ball', bm_uv(0.1, B.pick(14, 8), B.pick(7, 4), (0, 1.92, 0)), led_c)
+    B.light(*bell_abs((0, 0.8, 0)), 4.0, LIGHT, big=1)
 
     # ================= static (part `zap`, joint at the core): bolts from the core out under the rim, sparks on the rim =================
-    Z = B.part('zap', (BELL_AT[0], BELL_AT[1] + CORE_Y, BELL_AT[2]))
+    ZJ = bell_abs((0, CORE_Y, 0))
+    Z = B.part('zap', ZJ)
+    def zobj(name, bm, m, **kw):
+        xf(bm, MB); return B.obj(name, bm, m, parent=Z, **kw)
     nb = B.pick(7, 4)
     for i in range(nb):
-        a = (i + 0.3 * frac(i)) / nb * TAU; out = Vector((math.sin(a) * 1.55, -0.62 - 0.25 * frac(i + 5, 0.47), math.cos(a) * 1.55))
+        a = (i + 0.3 * frac(i)) / nb * TAU; out = Vector((math.sin(a) * 1.55, -0.5 - 0.22 * frac(i + 5, 0.47), math.cos(a) * 1.55))
         pts = bolt((0, 0, 0), tuple(out), B.pick(6, 3), 0.12, i)
-        B.obj('zap_bolt_%d' % i, bm_tube(pts, 0.022, B.pick(4, 3)), M_bolt, parent=Z, smooth=False)
+        zobj('zap_bolt_%d' % i, bm_tube(pts, 0.022, B.pick(4, 3)), M_bolt, smooth=False)
         if not lo:   # a fork near the tip
-            q = Vector(pts[-2]); fk = bolt(tuple(q), (math.sin(a + 0.6) * 0.3, -0.2, math.cos(a + 0.6) * 0.3), 3, 0.05, i + 20)
-            B.obj('zap_fork_%d' % i, bm_tube(fk, 0.014, 3), M_bolt, parent=Z, smooth=False)
+            q = Vector(pts[-2]); fk = bolt(tuple(q), (math.sin(a + 0.6) * 0.3, -0.12, math.cos(a + 0.6) * 0.3), 3, 0.05, i + 20)
+            zobj('zap_fork_%d' % i, bm_tube(fk, 0.014, 3), M_bolt, smooth=False)
     for i in range(B.pick(10, 5)):   # crackles leaping off the rim, outside the bell (the chase camera sees these)
         a = TAU * frac(i + 3, 0.71); p = Vector((math.sin(a) * 1.66, -CORE_Y + 0.12 + 0.2 * frac(i, 0.37), math.cos(a) * 1.66))
         pts = bolt(tuple(p), (math.sin(a) * 0.35, 0.12 * (frac(i, 0.83) - 0.5), math.cos(a) * 0.35), B.pick(4, 2), 0.07, i + 40)
-        B.obj('zap_rim_%d' % i, bm_tube(pts, 0.016, 3), M_bolt, parent=Z, smooth=False)
+        zobj('zap_rim_%d' % i, bm_tube(pts, 0.016, 3), M_bolt, smooth=False)
 
-    # ================= four tentacles in two segments (parts tent<i>a / tent<i>b) =================
+    # ================= four tentacles in two segments (parts tent<i>a / tent<i>b), hanging round the driver =================
     ts = B.pick(9, 5); tr = B.pick(5, 3)
     def seg_tube(name, y0, y1, r0, r1, wav, parent, m):
         pts = [(math.sin(k / tr * math.pi) * wav, y0 + (y1 - y0) * k / tr, 0.0) for k in range(tr + 1)]
         return B.obj(name, bm_tube(pts, [r0 + (r1 - r0) * k / tr for k in range(tr + 1)], ts), m, parent=parent)
+    joints = []
     for i, a in enumerate(TENT_A):
-        root = (math.sin(a) * TENT_R, TENT_Y, BELL_AT[2] + math.cos(a) * TENT_R)
+        root = bell_abs((math.sin(a) * TENT_R, TENT_DY, math.cos(a) * TENT_R))
         knee = (root[0], root[1] - SEG1, root[2])
+        joints.append(root)
         TA = B.part('tent%da' % i, root); TB = B.part('tent%db' % i, knee)
-        seg_tube('tent%da_tube' % i, 0.05, -SEG1 - 0.03, 0.085, 0.06, 0.06, TA, M_tv)
+        seg_tube('tent%da_tube' % i, 0.08, -SEG1 - 0.03, 0.085, 0.06, 0.06, TA, M_tv)
         B.obj('tent%da_bead' % i, bm_uv(0.075, B.pick(12, 6), B.pick(6, 4), (0, -SEG1, 0)), led_c, parent=TA)
         if not lo:
             for k in range(3): B.obj('tent%da_ring_%d' % (i, k), bm_torus(0.08 - k * 0.006, 0.013, 12, 3, AY, (0.04 * math.sin((k + 1) / 4 * math.pi), -0.14 * (k + 1), 0)), led_p, parent=TA)
         seg_tube('tent%db_tube' % i, 0.0, -SEG2 + 0.05, 0.06, 0.025, -0.05, TB, M_tp)
-        # a frilly tip (two-sided) and the cyan tip bulb
         frill = [(0.025, -SEG2 + 0.08), (0.05, -SEG2 + 0.02), (0.09, -SEG2 - 0.03), (0.12, -SEG2 - 0.06)]
         fseg = B.pick(14, 6); fmod = lambda th, t: 1 + 0.3 * t * math.sin(th * 6)
         B.obj('tent%db_frill' % i, bm_lathe(frill, fseg, rmod=fmod, caps=False), M_frill, parent=TB)
@@ -228,15 +254,15 @@ def build(B):
         B.obj('tent%db_tip' % i, bm_uv(0.06, B.pick(12, 6), B.pick(6, 4), (0, -SEG2 - 0.06, 0)), led_c, parent=TB)
         B.light(knee[0], knee[1] - SEG2, knee[2], 0.55, COL2, led=1)
 
-    # ================= wheels, seat (behind the bell), size info =================
+    # ================= wheels, the seat (in the middle of the deck, under the bell), size info =================
     B.wheels_pro(0.95, 1.55, -1.55, r=0.42, w=0.36, rim=COL2, tyre='#14121a', cap=COL2, stripe=RIB)
-    # the seat rides high on a chrome-trimmed plinth at the back, so the driver's head clears the bell's rim
-    B.obj('plinth', bm_box(0.62, 0.3, 0.56, (0, 0.98, -1.79)), M_pod, bevel=B.pick(0.05, None), bevel_angle=False, segments=B.pick(2, 1))
-    B.obj('plinth_trim', bm_rrect_tube(0.64, 0.58, 0.06, 0.016, B.pick(2, 1), 4, at=(0, 1.13, -1.79)), chrome())
-    B.seat(0, 1.5, -1.74, col='#3a1a5a', accent=COL2, wheelZ=-1.14)
-    top = BELL_AT[1] + 1.62
-    B.info(4.6, 3.3, BELL_AT[1] + 2.08, muzzle=(0, BELL_AT[1] + 0.3, BELL_AT[2]), wheelR=0.42, extra={'sight': [round(top, 2), BELL_AT[2]]})
-    B.body['rigV'] = 2
+    B.seat_round(0, SEAT[1], SEAT[2], col='#3a1a5a', accent=COL2)
+    crown, tip_ = bell_abs((0, 1.68, 0)), bell_abs((0, 2.02, 0))
+    B.info(4.6, 3.3, round(tip_[1], 2), muzzle=(0, BELL_AT[1] + 0.3, BELL_AT[2] + 0.4), wheelR=0.42, extra={'sight': [round(crown[1], 2), round(crown[2], 2)]})
+    B.body['rigV'] = 3
+    if not lo:
+        print('JELLY_RIG3 bell %s zap %s tent %s front_rim %s back_rim %s crown %s' % (BELL_AT, tuple(round(c, 4) for c in ZJ), [tuple(round(c, 4) for c in j) for j in joints],
+              tuple(round(c, 3) for c in bell_abs((0, 0, 1.6))), tuple(round(c, 3) for c in bell_abs((0, 0, -1.6))), tuple(round(c, 3) for c in crown)))
 
 LEVEL_OV = {'hi': dict(ico=1, bevel=3), 'lo': dict(ico=1)}
 if __name__ == '__main__':

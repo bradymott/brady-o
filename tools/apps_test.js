@@ -8,7 +8,7 @@ const site = path.resolve(process.argv[2] || path.join(dist, 'site'));
 const shots = path.resolve(process.argv[3] || path.join(__dirname, '..', 'shots'));
 const EXPECT = {
   'burning-man': { app: 'burningman', title: 'Brady Goes to Burning Man', key: 'bgtbm-save-v1' },
-  'super-brady-o-world': { app: 'world', title: 'Super Brady-O World', key: 'super-brady-o-world-save-v1' },
+  'super-brady-o-world': { app: 'world', title: 'Super Brady-O World', key: 'super-brady-o-world-save-v2' },
   'art-cart': { app: 'kart', title: 'Art Cart', key: 'art-cart-save-v1' }
 };
 (async () => {

@@ -154,6 +154,11 @@ class Play {
     }
     this.loadingEntities = null;
     a.lavaY = a.H * TS + 40;
+    // a moving water line: tide (rows low <-> high), a valve (toggle), a rising flood
+    if (src.risingWater) a.waterTop = a.H * TS + 40;
+    else if (src.tide) a.waterTop = src.tide.low * TS;
+    else if (src.waterLine != null) a.waterTop = src.waterLine * TS;
+    if (src.autoscrollY) a.scrollY = null;
     return a;
   }
   loadArea(idx, x, y, power) {
@@ -323,6 +328,7 @@ class Play {
     this.player.state = 'clear'; this.player.clearGate = gate; this.player.clearT = 0;
     this.player.star = 0; this.player.invuln = 0;
     this.mus('clear');
+    this.exitKey = gate.exitKey || (gate.secret ? 'secret' : 'main');
     this.secretClear = gate.secret ? (gate.secretWorld || 'world') : null;
     this.secretFoundNow = !!gate.secret;
     this.recordProgress();
@@ -332,19 +338,22 @@ class Play {
     const d = Save.data, id = this.id;
     d.done[id] = true;
     if (this.secretClear) d.secretExits[id] = true;
-    this.opened = (this.level.tour && typeof TourProgress !== 'undefined' ? TourProgress : WorldGame).complete(id, !!this.secretClear);
+    this.opened = this.level.tour && typeof TourProgress !== 'undefined' ? TourProgress.complete(id, !!this.secretClear, this.exitKey) : WorldGame.complete(id, !!this.secretClear);
     if (FINALE_LEVELS[id]) d.beatGame = true;
     const elapsed = this.level.time - this.timeLeft;
     if (!d.best[id] || elapsed < d.best[id]) d.best[id] = Math.round(elapsed * 10) / 10;
     d.lastWorld = this.level.world;
     Save.save();
   }
+  // the level after this one: where the exit Brady took leads, if that is a level in the same country
   nextLevelId() {
     if (!this.level.tour) return null;
-    const C = Tour.countryOf(this.id), i = this.level.index;
-    if (!C || i >= C.levels.length) return null;
-    const nid = C.world + '-' + (i + 1);
-    return TourProgress.isUnlocked(nid) ? nid : null;
+    const C = Tour.countryOf(this.id), L = C && C.levels[this.level.index - 1];
+    if (!C || !L) return null;
+    const ex = L.exits && L.exits[this.exitKey || 'main'];
+    const tg = ex ? Tour.target(ex.to, C) : null;
+    if (!tg || tg.kind !== 'level' || Tour.countryOf(tg.id) !== C) return null;
+    return TourProgress.isUnlocked(tg.id) ? tg.id : null;
   }
   enterPortal(p) {
     if (this.state !== 'play' || this.player.state !== 'play') return;
@@ -363,7 +372,7 @@ class Play {
     }
     this.fadeTo(1, () => {
       const power = this.player.power, pack = this.player.pack, kandi = this.player.kandi, fx = this.player.fx;
-      this.sigCarry = this.player.sig;
+      this.sigCarry = this.player.sig; this.handsCarry = this.player.hands; this.buffsCarry = this.player.buffs;
       this.loadArea(tg.area, tg.x, tg.y, power);
       this.player.power = power; this.player.pack = pack; this.player.kandi = kandi; this.player.fx = fx;
       this.camX = clamp(this.player.cx - Game.viewW * 0.4, 0, Math.max(0, this.area.W * TS - Game.viewW));
@@ -401,6 +410,22 @@ class Play {
   /* ---------- camera ---------- */
   camTargetY(snap) {
     const A = this.area, p = this.player;
+    // v2 camera modes (§7.4.6): lanes, shaft, room, free; a climbing autoscroll
+    const vmax = Math.max(0, A.H * TS - Game.viewH);
+    if (A.autoscrollY && A.scrollY != null) return clamp(Math.min(A.scrollY, p.y + p.h - Game.viewH * 0.2), 0, vmax);
+    if (A.camera === 'lanes' && A.lanes) {
+      // the floor of the lane Brady is in, at 68 % of the view (small hops never move the camera)
+      const names = Object.keys(A.lanes).sort((a, b) => A.lanes[a] - A.lanes[b]), fy = (p.y + p.h) / TS;
+      let lane = A.lanes[names[names.length - 1]];
+      for (const n of names) if (fy <= A.lanes[n] + 1.5) { lane = A.lanes[n]; break; }
+      return clamp(lane * TS - Game.viewH * 0.68, 0, vmax);
+    }
+    if (A.camera === 'shaft') return clamp(p.y + p.h - Game.viewH * 0.35, 0, vmax);
+    if (A.camera === 'free' || A.sky) return clamp(p.y + p.h - Game.viewH * 0.55, 0, vmax);
+    if (A.camera === 'room' && A.cell) {
+      const ch = A.cell[1] * TS, y0 = Math.floor((p.y + p.h - 1) / ch) * ch;
+      return ch <= Game.viewH ? clamp(y0 + ch / 2 - Game.viewH / 2, 0, vmax) : clamp(p.y + p.h - Game.viewH * 0.6, y0, y0 + ch - Game.viewH);
+    }
     const maxY = Math.max(0, A.H * TS - Game.viewH - (A.tower || A.water ? 0 : TS));
     // a tall boss (the Man on his saucer, then giant) gets a lower horizon so his head stays on screen
     let ty = p.y + p.h - Game.viewH * (A.tower ? 0.55 : (this.bossLock && this.boss && this.boss.tall) ? 0.84 : 0.68);
@@ -425,6 +450,8 @@ class Play {
         const b = this.boss;
         if (b && b.focusX && w >= Game.viewW) tx = clamp(Math.max(tx, Math.min(b.focusX - Game.viewW, p.cx - 1.5 * TS)), this.bossLock.x0 - TS, this.bossLock.x1 - Game.viewW + TS);
       }
+      // a maze cell: the camera stays inside the room Brady is in
+      if (A.camera === 'room' && A.cell) { const cw = A.cell[0] * TS, x0 = Math.floor(p.cx / cw) * cw; tx = cw <= Game.viewW ? x0 + cw / 2 - Game.viewW / 2 : clamp(tx, x0, x0 + cw - Game.viewW); }
       tx = clamp(tx, 0, maxX);
       this.camX += (tx - this.camX) * (1 - Math.exp(-dt * 9));
       if (Math.abs(tx - this.camX) > Game.viewW) this.camX = tx;
@@ -507,6 +534,26 @@ class Play {
       const minLava = p.y + p.h + Game.viewH * 0.9;
       if (this.lavaY > minLava) this.lavaY = minLava;
       A.lavaY = this.lavaY;
+    }
+    // v2 area systems: rising water, the tide, the camera climbing on its own (§7.4.6)
+    if (A.risingWater && this.state === 'play') {
+      if (this.t > (A.risingWater.delay || 0)) A.waterTop -= (A.risingWater.speed || 0.6) * TS * dt * ws;
+      A.waterTop = Math.min(A.waterTop, p.y + p.h + Game.viewH * 0.9);
+    }
+    if (A.tide && this.state === 'play') {
+      const td = A.tide, per = td.period || 12, hold = td.hold != null ? td.hold : per * 0.25, k = (this.t % per) / per;
+      // low, rise, high (hold), fall: a smooth cycle
+      const mv = (per - 2 * hold) / 2 / per, h1 = hold / per;
+      const f = k < h1 ? 0 : k < h1 + mv ? (k - h1) / mv : k < 2 * h1 + mv ? 1 : 1 - (k - 2 * h1 - mv) / mv;
+      const target = (td.low + (td.high - td.low) * easeInOut(clamp(f, 0, 1))) * TS;
+      A.waterTop = target;
+    }
+    if (A.autoscrollY && this.state === 'play') {
+      const as = A.autoscrollY;
+      if (A.scrollY == null) A.scrollY = this.camY;
+      if (this.t > (as.delay || 0)) A.scrollY = Math.max(0, A.scrollY - (as.speed || 1) * TS * dt * ws);
+      // the bottom edge of the screen kills
+      if (p.y > A.scrollY + Game.viewH + 8 && p.state === 'play') p.die('pit');
     }
     // the pack: tap the slot in the HUD (or press C / Q) to use the spare power-up
     if (Input.packTapped) { Input.packTapped = false; if (this.state === 'play' && p.state === 'play') { if (!p.usePack()) Sound.play('bump', { vol: 0.3 }); } }
@@ -689,7 +736,7 @@ class Play {
     const layers = [[], [], [], []];
     for (const e of this.entities) {
       if (e.remove || !vis(e)) continue;
-      if (e.isPlatform || e instanceof Gate || e instanceof Checkpoint || e instanceof Sign || e instanceof Portal || e instanceof Spring) layers[0].push(e);
+      if (e.isPlatform || e.back || e instanceof Gate || e instanceof Checkpoint || e instanceof Sign || e instanceof Portal || e instanceof Spring) layers[0].push(e);
       else if (e.item || e instanceof Gold || e instanceof PickPop) layers[1].push(e);
       else if (e.friendly) layers[3].push(e);
       else layers[2].push(e);
@@ -701,6 +748,7 @@ class Play {
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     this.drawTiles(ctx, camX, camY, true);
     wt();
+    if (A.waterTop != null && A.waterTop < A.H * TS) this.drawWaterLine(ctx, camX, VW);
     this.parts.draw(ctx);
     this.weather.draw(ctx, this.t);
     for (const e of layers[0]) if (e instanceof Sign) e.drawBubble(ctx);
@@ -713,6 +761,7 @@ class Play {
     PostFX.apply(ctx, this, Math.round(VW * S), Math.round(VH * S), gx, gy);
     WorldFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
     if (this.level.tour && this.dizzy > 0) TourFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
+    if (this.player && this.player.buffs && this.player.buffs.sundial > 0) { const W = Math.round(VW * S), H = Math.round(VH * S), k = Math.min(1, this.player.buffs.sundial, 0.9 + (TourKit.reduceMotion() ? 0 : 0.1 * Math.sin(this.t * 4))); const gg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.65); gg.addColorStop(0, 'rgba(120,80,30,0)'); gg.addColorStop(1, `rgba(120,80,30,${0.45 * k})`); ctx.fillStyle = gg; ctx.fillRect(0, 0, W, H); }
     ctx.drawImage(Game.vignette, 0, 0); // vignette
     if (this.flash > 0 && !th.storm) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, this.flash * 0.7)})`; ctx.fillRect(0, 0, VW * S, VH * S); }
     ctx.restore();
@@ -755,6 +804,8 @@ class Play {
         const id = A.tiles[y * A.W + x];
         const hv = hide ? hide[y * A.W + x] : 0;
         if (!fg && beatAt && beatAt[y * A.W + x]) { this.drawBeatPad(ctx, beatAt[y * A.W + x], x, y, camX, camY, S); continue; }
+        // dug earth: below the surface of a dig area, empty tiles show the dark wall of the tunnel
+        if (id === T.EMPTY && !fg && A.dig && y > A.surface) { const dx = Math.round((x * TS - camX) * S), dy = Math.round((y * TS - camY) * S); ctx.fillStyle = A.tunnelCol || '#2a1a12'; ctx.fillRect(dx, dy, Math.ceil(TS * S) + 1, Math.ceil(TS * S) + 1); if ((x * 7 + y * 3) % 5 === 0) { ctx.fillStyle = 'rgba(255,220,170,0.06)'; ctx.beginPath(); ctx.arc(dx + 10 * S, dy + 14 * S, 5 * S, 0, TAU); ctx.fill(); } continue; }
         if (id === T.EMPTY) continue;
         if (hv === 1 || hv === 3) continue;
         if (hv === 2) { if (!fg && lsd) this.drawTripTile(ctx, x, y, camX, camY, S); continue; }
@@ -781,6 +832,8 @@ class Play {
           case T.CRUMBLE: img = atlas.crumble; ox = crumbleOf(x, y); break;
           case T.PILLAR: { const part = ['L', 'R', 'S'][v & 3] || 'S'; img = atlas.pillar[part + (v & 4 ? 't' : 'b')]; break; }
           case T.GLITCH: img = atlas.glitch[Math.floor(t * 12 + x) % 3]; break;
+          case T.SOIL: img = atlas.soil ? atlas.soil[y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]] ? 0 : 1] : null; break;
+          case T.LINTEL: img = atlas.lintel || null; break;
           case T.PICK: {
             ctx.setTransform(S, 0, 0, S, Game.gameRect.x * Game.dpr + dx, Game.gameRect.y * Game.dpr + dy);
             Sprites.pickFast(ctx, TS / 2, TS / 2 + Math.sin(t * 3 + x * 0.7) * 1.5, t, Math.cos(t * 3 + x * 0.5), (x * 3 + y) % 5);
@@ -873,6 +926,25 @@ class Play {
     for (let x = camX - 10; x <= camX + VW + 10; x += 16) ctx.lineTo(x, y + Math.sin(t * 3 + x * 0.05) * 4 + Math.sin(t * 1.7 + x * 0.013) * 3);
     ctx.lineTo(camX + VW + 10, y + 400); ctx.closePath(); ctx.fill();
     ctx.fillRect(camX - 10, y + 400, VW + 20, Game.viewH + 400);
+  }
+  // the body of water under a moving water line (tide, valve, rising flood): drawn over the scene, see-through
+  drawWaterLine(ctx, camX, VW) {
+    const A = this.area, y = A.waterTop, t = this.t;
+    if (y > this.camY + Game.viewH + 20) return;
+    const L = LIQUIDS[A.waterLook || 'sea'] || LIQUIDS.sea;
+    ctx.save();
+    const g = ctx.createLinearGradient(0, y, 0, y + 260); g.addColorStop(0, rgba(L[0], 0.42)); g.addColorStop(0.3, rgba(L[1], 0.46)); g.addColorStop(1, rgba(L[2], 0.6));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(camX - 10, y + 2000);
+    for (let x = camX - 10; x <= camX + VW + 10; x += 12) ctx.lineTo(x, y + Math.sin(t * 2.2 + x * 0.045) * 3 + Math.sin(t * 1.3 + x * 0.012) * 2);
+    ctx.lineTo(camX + VW + 10, y + 2000); ctx.closePath(); ctx.fill();
+    // the bright surface line and drifting glints
+    ctx.strokeStyle = 'rgba(235,252,255,0.85)'; ctx.lineWidth = 2; ctx.beginPath();
+    for (let x = camX - 10; x <= camX + VW + 10; x += 12) { const yy = y + Math.sin(t * 2.2 + x * 0.045) * 3 + Math.sin(t * 1.3 + x * 0.012) * 2; x === camX - 10 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy); }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    for (let k = 0; k < 9; k++) { const gx = camX + ((k * 137 + t * 30) % (VW + 40)) - 20, gy = y + 10 + ((k * 53) % 90); ctx.fillRect(gx, gy, 6, 1.5); }
+    ctx.restore();
   }
   drawUnderwater(ctx, W, H) {
     const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -978,16 +1050,28 @@ class Play {
     // the pack (tap to use), kandi bracelets, keys and running effects
     const px0 = gx + 84;
     const tour = !!this.level.tour, pl = this.player;
+    let tourIx = 0;
     if (tour) {
-      // the country's signature item (with a timer ring if it runs out)
-      this.packRect = null;
-      const sp = pl.sig ? TourPowers.get(pl.sig.id) : null;
-      ctx.fillStyle = sp ? 'rgba(40,20,60,0.75)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
-      ctx.strokeStyle = sp ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
-      if (sp) {
-        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); if (sp.icon) sp.icon(ctx, 0, 0, this.t); ctx.restore();
-        if (sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
+      // HANDS: the gear or the country's signature item (with a timer ring if it runs out, dots for the globe's shakes)
+      const sp = pl.sig ? TourPowers.get(pl.sig.id) : null, gr = pl.hands && typeof TourGear !== 'undefined' ? TourGear.get(pl.hands.id) : null;
+      const held = gr || sp;
+      ctx.fillStyle = held ? 'rgba(40,20,60,0.75)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
+      ctx.strokeStyle = held ? `rgba(255,216,74,${0.6 + 0.4 * Math.sin(this.t * 4)})` : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.4; ctx.stroke();
+      if (held) {
+        ctx.save(); ctx.translate(px0 + 17, hy + 14); ctx.scale(0.72, 0.72); if (held.icon) held.icon(ctx, 0, 0, this.t); ctx.restore();
+        if (sp && sp.time) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px0 + 17, hy + 14, 15, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(pl.sig.t / sp.time, 0, 1)); ctx.stroke(); }
+        if (gr && gr.uses) for (let k = 0; k < gr.uses; k++) { ctx.fillStyle = k < pl.hands.uses ? '#e8f6ff' : 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.arc(px0 + 5 + k * 6, hy + 28, 1.8, 0, TAU); ctx.fill(); }
+        if (gr && pl.hands.thrown) { ctx.fillStyle = 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill(); }
       } else { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); TourKit.star(ctx, px0 + 17, hy + 14, 7, 3, 5); ctx.fill(); }
+      // the Backpack: tap it to swap with HANDS
+      const bx = px0 + 40;
+      this.packRect = { x: bx, y: hy - 2, w: 30, h: 32 };
+      ctx.fillStyle = pl.pack ? 'rgba(60,34,20,0.8)' : 'rgba(10,8,18,0.45)'; rr(ctx, bx, hy, 30, 28, 9); ctx.fill();
+      ctx.fillStyle = pl.pack ? '#8a5a34' : 'rgba(255,255,255,0.12)'; rr(ctx, bx + 6, hy - 3, 18, 6, 3); ctx.fill();
+      ctx.strokeStyle = pl.pack ? 'rgba(255,216,74,0.7)' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2; rr(ctx, bx, hy, 30, 28, 9); ctx.stroke();
+      if (pl.pack && typeof TourGear !== 'undefined') { ctx.save(); ctx.translate(bx + 15, hy + 14); ctx.scale(0.58, 0.58); TourGear.icon(ctx, pl.pack, 0, 0, this.t, this); ctx.restore(); }
+      else { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = `6px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('BAG', bx + 15, hy + 15); ctx.textAlign = 'left'; }
+      tourIx = 36;
     } else {
     this.packRect = { x: px0, y: hy - 2, w: 34, h: 32 };
     ctx.fillStyle = this.player.pack ? 'rgba(40,20,60,0.75)' : 'rgba(10,8,18,0.55)'; rr(ctx, px0, hy - 2, 34, 32, 8); ctx.fill();
@@ -995,22 +1079,22 @@ class Play {
     if (this.player.pack) { ctx.save(); ctx.translate(px0 + 17, hy + 16); ctx.scale(0.62, 0.62); Sprites.itemIcon(ctx, 0, 0, this.t, this.player.pack); ctx.restore(); }
     else { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('PACK', px0 + 17, hy + 15); ctx.textAlign = 'left'; }
     }
-    let ix = px0 + 42;
+    let ix = px0 + 42 + tourIx;
     const icon = (fn) => { fn(ix, hy + 14); ix += 26; };
     if (this.player.kandi > 0) icon((x, y) => { for (let i = 0; i < 3; i++) { ctx.strokeStyle = GLOW_COLS[i]; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(x, y - 3 + i * 3, 9, 4, 0, 0, TAU); ctx.stroke(); } });
     for (const k of this.keys) icon((x, y) => { ctx.save(); ctx.translate(x, y + 2); ctx.scale(0.6, 0.6); GimmickArt.keyShape(ctx, 0, 0, k === 'secret'); ctx.restore(); });
-    const fxList = tour ? [['star', pl.star, 10, '#ffffff'], ['lsd', pl.lsdT, 10, '#a0f0ff']] : [['star', this.player.star, 10, '#ffffff'], ['bufo', this.player.fly, 12, '#c08aff'], ['joint', this.player.floaty, 9, '#e8e8f0']];
+    const fxList = tour ? [['star', pl.star, 10, '#ffffff'], ['lsd', pl.lsdT, 10, '#a0f0ff']].concat(pl.buffs && typeof TourGear !== 'undefined' ? Object.keys(pl.buffs).filter(k => pl.buffs[k] > 0).map(k => ['gear:' + k, pl.buffs[k], (TourGear.get(k) || {}).time || 10, (TourGear.get(k) || {}).glow || '#ffffff']) : []) : [['star', this.player.star, 10, '#ffffff'], ['bufo', this.player.fly, 12, '#c08aff'], ['joint', this.player.floaty, 9, '#e8e8f0']];
     if (!tour) for (const k in this.player.fx) fxList.push([k, this.player.fx[k], BAG_KINDS[k].time, BAG_KINDS[k].col]);
     for (const [k, v, max, col] of fxList) if (v > 0) icon((x, y) => {
       ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 10, 0, TAU); ctx.stroke();
       ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 10, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(v / max, 0, 1)); ctx.stroke();
-      ctx.save(); ctx.translate(x, y); ctx.scale(0.42, 0.42); Sprites.itemIcon(ctx, 0, 0, this.t, k === 'star' && !tour ? 'eclipse' : k); ctx.restore();
+      ctx.save(); ctx.translate(x, y); ctx.scale(0.42, 0.42); if (k.startsWith('gear:')) { ctx.scale(1.3, 1.3); TourGear.icon(ctx, k, 0, 0, this.t, this); } else Sprites.itemIcon(ctx, 0, 0, this.t, k === 'star' && !tour ? 'eclipse' : k); ctx.restore();
     });
     // right side: world & time
     const narrow = W < 600;
     const rx = narrow ? left + 244 + 132 > W - right - 44 ? W - right : W - right - 48 : W - right - (Input.layout && !Input.layout.lefty ? 48 : 0);
     const ry = narrow ? hy + 42 : hy;
-    const wl = (WORLDS[this.level.world].label || this.level.world) + '-' + this.level.index;
+    const wl = this.level.house ? 'SHOP' : (WORLDS[this.level.world].label || this.level.world) + '-' + this.level.index;
     ctx.textAlign = 'right';
     if (narrow && ix > rx - 140) { /* keep the right pill below the icon row */ }
     const hy0 = hy;
@@ -1070,7 +1154,7 @@ class Play {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const Wd = WORLDS[this.level.world];
     const kindTag = { haunt: '  ·  HAUNTED HOUSE', fort: '  ·  FORTRESS', castle: '  ·  CASTLE', gift: '  ·  GIFT CAMP' }[this.level.kind] || '';
-    const wl = (Wd.secret ? 'SECRET LAND ' + Wd.label : 'LAND ' + Wd.label) + ' - ' + this.level.index + kindTag;
+    const wl = this.level.house ? 'SOUVENIR STAND' : (Wd.secret ? 'SECRET LAND ' + Wd.label : 'LAND ' + Wd.label) + ' - ' + this.level.index + kindTag;
     ctx.font = `13px ${FONT_DISPLAY}`; ctx.fillStyle = THEMES[this.level.areas[0].theme].accent;
     ctx.fillText(wl.toUpperCase() + '  ·  ' + this.level.worldName.toUpperCase(), W / 2, H / 2 - 36);
     ctx.font = `${Math.min(40, W * 0.07)}px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffffff';

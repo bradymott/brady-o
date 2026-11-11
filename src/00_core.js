@@ -11,11 +11,12 @@ const GAME_VERSION = '1.0.0';
 const T = {
   EMPTY: 0, GROUND: 1, BRICK: 2, QBLOCK: 3, USED: 4, HARD: 5, HIDDEN: 6, SEMI: 7,
   SPIKES: 8, LAVA: 9, WATER: 10, ICE: 11, CONV_L: 12, CONV_R: 13, PICK: 14,
-  FAKE: 15, CRUMBLE: 16, PILLAR: 17, SPIKES_CEIL: 18, QBRICK: 19, GLITCH: 20
+  FAKE: 15, CRUMBLE: 16, PILLAR: 17, SPIKES_CEIL: 18, QBRICK: 19, GLITCH: 20,
+  SOIL: 21, LINTEL: 22   // diggable earth; the low beam over a crawlway (Super Brady-O World)
 };
 const SOLID = new Uint8Array(32);
 [T.GROUND, T.BRICK, T.QBLOCK, T.USED, T.HARD, T.ICE, T.CONV_L, T.CONV_R, T.CRUMBLE,
- T.PILLAR, T.SPIKES, T.SPIKES_CEIL, T.QBRICK, T.GLITCH].forEach(t => SOLID[t] = 1);
+ T.PILLAR, T.SPIKES, T.SPIKES_CEIL, T.QBRICK, T.GLITCH, T.SOIL, T.LINTEL].forEach(t => SOLID[t] = 1);
 const GROUNDLIKE = new Uint8Array(32);
 [T.GROUND, T.FAKE].forEach(t => GROUNDLIKE[t] = 1);
 
@@ -91,7 +92,9 @@ const FONT_UI = '"Rubik", "Avenir Next", "Helvetica Neue", system-ui, sans-serif
 // ---- Save data -------------------------------------------------
 const Save = {
   // each standalone app keeps its own save; the combined test build keeps the original key
-  key: ({ burningman: 'bgtbm-save-v1', world: 'super-brady-o-world-save-v1', kart: 'art-cart-save-v1' })[typeof BRADY_APP !== 'undefined' ? BRADY_APP : ''] || 'brady-o-save-v1',
+  key: ({ burningman: 'bgtbm-save-v1', world: 'super-brady-o-world-save-v2', kart: 'art-cart-save-v1' })[typeof BRADY_APP !== 'undefined' ? BRADY_APP : ''] || 'brady-o-save-v1',
+  // an older save of the same app: when the current key is missing, only its settings and look are copied over (once)
+  legacyKey: ({ world: 'super-brady-o-world-save-v1' })[typeof BRADY_APP !== 'undefined' ? BRADY_APP : ''] || null,
   data: null,
   defaults() {
     return {
@@ -100,6 +103,7 @@ const Save = {
       done: {},          // levelId -> true
       gold: {},          // levelId -> [bool,bool,bool]
       secretExits: {},   // levelId -> true
+      exits: {},         // levelId -> { main: true, secret: true } (exits taken)
       worldsSeen: { 1: true },
       lives: 5,
       score: 0,
@@ -116,6 +120,12 @@ const Save = {
     let d = null;
     try { const raw = localStorage.getItem(this.key); if (raw) d = JSON.parse(raw); } catch (e) { d = null; }
     const def = this.defaults();
+    let migrated = false;
+    if ((!d || typeof d !== 'object') && this.legacyKey) {
+      // a new save format: progress starts over, settings and Brady's look carry over (the old save stays as it was)
+      let old = null; try { const raw = localStorage.getItem(this.legacyKey); if (raw) old = JSON.parse(raw); } catch (e) { old = null; }
+      if (old && typeof old === 'object') { d = def; if (old.settings) d.settings = Object.assign({}, def.settings, old.settings); if (old.look) d.look = Object.assign({}, old.look); migrated = true; }
+    }
     if (!d || typeof d !== 'object') d = def;
     for (const k in def) if (d[k] === undefined) d[k] = def[k];
     for (const k in def.settings) if (d.settings[k] === undefined) d.settings[k] = def.settings[k];
@@ -129,6 +139,7 @@ const Save = {
       d.v = 3;
     }
     this.data = d;
+    if (migrated) this.save();
     return d;
   },
   save() {

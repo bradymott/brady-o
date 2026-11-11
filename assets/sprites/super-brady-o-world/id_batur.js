@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("id_batur", {"scale":2.0,"image":"id_batur.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1555}},"anims":{},"strips":{"L0":{"w":2048,"h":543,"top":172.5,"x":0,"y":0},"L1":{"w":2048,"h":493,"top":89.0,"x":0,"y":1061},"L2":{"w":2048,"h":516,"top":185.5,"x":0,"y":544}}});

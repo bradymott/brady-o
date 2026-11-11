@@ -49,6 +49,9 @@ const TileArt = {
     A.crumble = this.tile(S, ctx => paintCrumble(ctx, th));
     ['L', 'R', 'S'].forEach(p => { A.pillar[p + 't'] = this.tile(S, ctx => paintPillar(ctx, th.pillar, p, true)); A.pillar[p + 'b'] = this.tile(S, ctx => paintPillar(ctx, th.pillar, p, false)); });
     for (let f = 0; f < 3; f++) A.glitch[f] = this.tile(S, ctx => paintGlitch(ctx, f));
+    // diggable soil (open top / buried) and the low beam over a crawlway (themes can paint their own: soil.paint, lintel.paint)
+    A.soil = [0, 1].map(top => this.tile(S, ctx => paintSoil(ctx, th, !!top)));
+    A.lintel = this.tile(S, ctx => paintLintel(ctx, th));
     return A;
   }
 };
@@ -591,6 +594,46 @@ function paintCrumble(ctx, th) {
   ctx.moveTo(12, 12); ctx.lineTo(24, 9); ctx.lineTo(31, 14); ctx.moveTo(8, 20); ctx.lineTo(1, 22);
   ctx.moveTo(24, 9); ctx.lineTo(22, 22); ctx.lineTo(28, 31); ctx.stroke();
   ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(3, 2, TS - 6, 1.2);
+}
+
+// soil: loose, darker earth than the theme's ground, with pebbles, a root and a worm hole; the open top crumbles
+function paintSoil(ctx, th, topOpen) {
+  const S0 = th.soil || {};
+  if (typeof S0.paint === 'function') { S0.paint(ctx, topOpen); return; }
+  const G = th.ground || {}, base = S0.c1 || mix(G.dirt || '#6a4a30', '#5a3a22', 0.35), dark = S0.c2 || shade(base, -0.35);
+  const rng = mulberry32(topOpen ? 77 : 31);
+  // flat base (tiles join seamlessly), soft clods of lighter and darker earth
+  ctx.fillStyle = base; ctx.fillRect(0, 0, TS, TS);
+  // soft clods
+  for (let i = 0; i < 7; i++) { ctx.fillStyle = rgba(i % 2 ? shade(base, 0.22) : shade(base, -0.2), 0.55); ctx.beginPath(); ctx.ellipse(3 + rng() * 26, 4 + rng() * 26, 3 + rng() * 3, 2 + rng() * 2, rng() * 3, 0, TAU); ctx.fill(); }
+  // pebbles with a highlight
+  for (let i = 0; i < 3; i++) { const x = 5 + rng() * 22, y = 8 + rng() * 20, r = 1.6 + rng() * 1.6; ctx.fillStyle = S0.pebble || '#b8a890'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(x - r * 0.5, y - r * 0.6, r * 0.6, r * 0.5); }
+  // a thin root and a worm-hole
+  ctx.strokeStyle = rgba(S0.root || '#d8b890', 0.6); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(rng() * 10, 0); ctx.quadraticCurveTo(10 + rng() * 8, 12, 6 + rng() * 20, 20 + rng() * 10); ctx.stroke();
+  ctx.fillStyle = 'rgba(20,10,5,0.55)'; ctx.beginPath(); ctx.ellipse(20 + rng() * 6, 22, 2.2, 1.5, 0, 0, TAU); ctx.fill();
+  // the dotted dig line that tells it apart from rock
+  if (topOpen) { ctx.strokeStyle = 'rgba(255,235,200,0.16)'; ctx.setLineDash([2, 3]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(2, TS - 2); ctx.lineTo(TS - 2, TS - 2); ctx.stroke(); ctx.setLineDash([]); }
+  if (topOpen) {
+    // a crumbly lip with tufts
+    ctx.fillStyle = shade(base, 0.3); ctx.beginPath(); ctx.moveTo(0, 5); for (let x = 0; x <= TS; x += 4) ctx.lineTo(x, 2 + ((x * 7) % 5) * 0.6); ctx.lineTo(TS, 5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = G.cap || '#5aa04a'; for (let i = 0; i < 3; i++) { const x = 4 + i * 11 + rng() * 4; ctx.beginPath(); ctx.moveTo(x, 3); ctx.lineTo(x + 1.5, -2); ctx.lineTo(x + 3, 3); ctx.closePath(); ctx.fill(); }
+  }
+}
+// lintel: a heavy carved beam (wood with iron straps by default) that leaves a one-tile crawl space under it
+function paintLintel(ctx, th) {
+  const L0 = th.lintel || {};
+  if (typeof L0.paint === 'function') { L0.paint(ctx); return; }
+  const c1 = L0.c1 || '#9a6236', c2 = L0.c2 || '#5e3417';
+  const g = ctx.createLinearGradient(0, 0, 0, TS); g.addColorStop(0, shade(c1, 0.25)); g.addColorStop(0.45, c1); g.addColorStop(1, c2);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, TS, TS);
+  ctx.strokeStyle = rgba(shade(c2, -0.3), 0.6); ctx.lineWidth = 1;
+  for (const y of [9, 17, 25]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.bezierCurveTo(10, y - 1.5, 20, y + 1.5, TS, y); ctx.stroke(); }
+  // iron straps with rivets
+  ctx.fillStyle = L0.strap || '#4a4654'; ctx.fillRect(3, 0, 5, TS); ctx.fillRect(TS - 8, 0, 5, TS);
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; for (const x of [5.5, TS - 5.5]) for (const y of [6, 16, 26]) { ctx.beginPath(); ctx.arc(x, y, 1.2, 0, TAU); ctx.fill(); }
+  // the underside: a dark notch and hanging dust, so the gap below reads as a crawl space
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, TS - 4, TS, 4);
+  ctx.fillStyle = 'rgba(255,240,200,0.18)'; ctx.fillRect(0, 1, TS, 1.5);
 }
 
 function paintPillar(ctx, P, part, isTop) {

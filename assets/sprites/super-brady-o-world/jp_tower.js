@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("jp_tower", {"scale":2.0,"image":"jp_tower.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":1196}},"anims":{},"strips":{"L0":{"w":2048,"h":333,"top":249.0,"x":0,"y":862},"L1":{"w":2048,"h":861,"top":13.5,"x":0,"y":0}}});
