@@ -197,10 +197,16 @@ async function soakLevel(page, id, log) {
     // into the area through a door transition (the real enterPortal + fade + loadArea + atlas path)
     if ((await st()).area !== ai) {
       const ok = await page.evaluate(ai => {
-        const g = window.BRADY.Game.scene, a = g.level.areas[ai], an = a.anchors && (a.anchors.in || a.anchors.start || a.anchors.landing || Object.values(a.anchors)[0]);
-        const sp = an || (a.spawns.find(s => s.type === 'checkpoint')) || { x: 3 * 32 + 16, y: (a.H - 3) * 32 };
-        g.player.state = 'play'; g.state = 'play'; g.enterPortal({ kind: 'door', target: { area: ai, x: sp.x, y: sp.y } }); return true;
+        // enter where the level's own doors lead (else an anchor or a checkpoint); an area with no known way in is skipped
+        const g = window.BRADY.Game.scene, a = g.level.areas[ai];
+        let sp = null;
+        for (const b of g.level.areas) for (const s of b.spawns) if (!sp && s.target && s.target.area === ai) sp = s.target;
+        if (!sp) sp = a.anchors && (a.anchors.in || a.anchors.start || a.anchors.landing || Object.values(a.anchors)[0]);
+        if (!sp) sp = a.spawns.find(s => s.type === 'checkpoint');
+        if (!sp || g.player.dead || g.state !== 'play') return false;
+        g.enterPortal({ kind: 'door', target: { area: ai, x: sp.x, y: sp.y } }); return true;
       }, ai);
+      if (!ok) continue;
       const r = await waitFor(s => s.area === ai && s.fade === 0 && s.ps === 'play', 5000);
       if (!r.ok) { fail(id, 'area change to area ' + ai + ' never completed', r.s); if (!await start()) return report; continue; }
     }
@@ -411,8 +417,8 @@ async function soakLevel(page, id, log) {
     while (queue.length) {
       const id = queue.shift();
       if (used++ >= 6) { await page.context().close(); page = await mk(); used = 1; }
-      const nf = failures.length;
-      try { const rep = await soakLevel(page, id); console.log((failures.length > nf ? 'BAD  ' : 'ok   ') + id + '  ' + Math.round((rep.ms || 0) / 1000) + ' s  ' + JSON.stringify(rep.phases[0] || {})); }
+      const mine = () => failures.filter(f => f.id === id).length;
+      try { const rep = await soakLevel(page, id); console.log((mine() ? 'BAD  ' : 'ok   ') + id + '  ' + Math.round((rep.ms || 0) / 1000) + ' s  ' + JSON.stringify(rep.phases[0] || {})); }
       catch (e) { fail(id, 'harness error', String(e && e.stack || e).slice(0, 400)); try { await page.context().close(); } catch (e2) { /* gone */ } page = await mk(); used = 0; }
       const pe = page.__errs.splice(0).filter(m => !/favicon|ERR_FILE_NOT_FOUND|404/.test(m));
       if (pe.length) fail(id, 'page / console errors', pe.slice(0, 5));
