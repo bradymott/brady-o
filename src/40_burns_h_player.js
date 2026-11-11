@@ -40,7 +40,7 @@ class BurnsPlayer {
     if (!this.ch) this.ch = new BurnsChar(this.model); else this.ch.setModel(this.model);
     this.ch.rim = 0.5;
   }
-  get speedMul() { return (this.power === 'powder' && this.powerT > 0 ? 1.55 : 1) * (this.giant > 0 ? 1.2 : 1) * (this.mudSink > 0 ? 0.45 : 1); }
+  get speedMul() { return (this.power === 'powder' && this.powerT > 0 ? 1.55 : 1) * (this.giant > 0 ? 1.2 : 1) * (this.mudSink > 0 ? 0.45 : 1) * (this.runK || 1); }   // runK: the RUN button / Shift (41_burns_nav.js)
   teleport(x, y, z, yaw) { this.x = x; this.y = y; this.z = z; this.vx = this.vy = this.vz = 0; if (yaw !== undefined) this.yaw = yaw; this.grounded = true; this.platform = null; }
   /* ---------- damage ---------- */
   hurt(n, fx, fz, kb, big) {
