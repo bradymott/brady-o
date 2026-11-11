@@ -453,6 +453,15 @@ async function soakLevel(page, id, log) {
     await page.context().close();
   };
   await Promise.all(Array.from({ length: Math.min(JOBS, ids.length) }, worker));
+  // a stopped loop or a slow frame while three browsers share the machine can be the machine: those levels are run
+  // again alone, and only a repeat counts
+  const timing = f => /main loop stopped|a frame took/.test(f.what);
+  const retry = [...new Set(failures.map(f => f.id))].filter(id => failures.filter(f => f.id === id).every(timing));
+  if (retry.length && JOBS > 1) {
+    console.log('\nre-running alone (timing only): ' + retry.join(' '));
+    for (const id of retry) for (let i = failures.length - 1; i >= 0; i--) if (failures[i].id === id) failures.splice(i, 1);
+    queue.push(...retry); await worker();
+  }
   await browser.close(); srv.close();
   console.log(`\n${ids.length} levels in ${Math.round((Date.now() - t0) / 1000)} s: ${failures.length ? failures.length + ' FAILURES' : 'all clean'}`);
   process.exit(failures.length ? 1 : 0);
