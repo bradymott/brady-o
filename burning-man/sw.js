@@ -1,5 +1,5 @@
 // service worker: makes the game load instantly and work offline
-const CACHE = 'app-burningman-ad0aac6de8';
+const CACHE = 'app-burningman-a628f2389b';
 const SHELL = ["./","./index.html","./manifest.webmanifest","./models/brady.glb.gz","./models/bus.glb.gz","./models/chinka.glb.gz","./models/dome.glb.gz","./models/mannequin.glb.gz","./models/pbr_crate.glb.gz","./models/potty.glb.gz","./models/rv.glb.gz","./models/shade.glb.gz","./models/tipi.glb.gz","./models/index.json"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
