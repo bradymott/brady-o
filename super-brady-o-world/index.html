@@ -12182,6 +12182,22 @@ class Weather {
   }
 }
 
+/* the safety net: an entity whose update, draw or touch throws is taken out of the level (logged once per kind of
+   fault, counted in window.__sbwErrors so tests still see it) instead of stopping the whole frame every frame, which
+   on a phone looks like the game froze */
+function entityFault(e, err, where) {
+  e.remove = true; e.dead = true;
+  try {
+    // a boss that breaks would leave its arena sealed: count it as beaten so the level can still be finished
+    if (e.boss && e.g && e.g.boss === e && e.g.bossDefeated) e.g.bossDefeated(e);
+  } catch (e2) { /* the boss's own code is what failed */ }
+  try {
+    window.__sbwErrors = (window.__sbwErrors || 0) + 1;
+    const key = (e && e.constructor ? e.constructor.name : '?') + ' ' + where + ': ' + String(err && err.message || err);
+    const seen = entityFault.seen || (entityFault.seen = {});
+    if (!seen[key]) { seen[key] = 1; console.error('entity removed after an error in ' + key, err); (window.__bradyErrors = window.__bradyErrors || []).push(key + ' ' + String(err && err.stack || '')); }
+  } catch (e2) { /* never throw from here */ }
+}
 // atlases a theme's background strips come from besides its own (a theme can borrow another atlas's layer for depth)
 function themeLayerAtlases(th) { return th && th.layers ? th.layers.filter(L => L.kind === 'image' && L.atlas && L.atlas !== th.atlas).map(L => L.atlas) : []; }
 class Play {
@@ -12522,6 +12538,14 @@ class Play {
     this.mus(this.area.music);
     this.shake(10);
   }
+  /* the safety net for a transition (a door, a respawn) that throws half way: without it the screen stays black with
+     Brady stuck in the 'portal' or 'dead' state forever. Log it, then get the game moving again. */
+  fadeFault(err) {
+    if (typeof Game !== 'undefined' && Game.reportError) Game.reportError(err); else console.error(err);
+    if (this.state === 'dead') { try { Game.setScene(new Play(this.level, {})); return; } catch (e2) { goToMap(this.set, this.level.world, this.id); return; } }
+    if (this.player && this.player.state === 'portal') this.player.state = 'play';
+    this.fadeTo(0, null);
+  }
   fadeTo(target, cb, speed) { this.fade.target = target; this.fade.cb = cb; this.fade.speed = speed || 2.4; }
 
   /* ---------- camera ---------- */
@@ -12595,7 +12619,7 @@ class Play {
     // fades
     if (this.fade.a !== this.fade.target) {
       this.fade.a = approach(this.fade.a, this.fade.target, dt * this.fade.speed);
-      if (this.fade.a === this.fade.target && this.fade.cb) { const cb = this.fade.cb; this.fade.cb = null; cb(); return; }
+      if (this.fade.a === this.fade.target && this.fade.cb) { const cb = this.fade.cb; this.fade.cb = null; try { cb(); } catch (err) { this.fadeFault(err); } return; }
     }
     if (this.paused) {
       const hit = UI.hitButtons(this.pauseUI);
@@ -12690,7 +12714,7 @@ class Play {
       const e = this.entities[i];
       if (e.remove) continue;
       const always = e.isPlatform || e.boss || e instanceof Bolt || e.friendly || e instanceof Laser || e instanceof Subwoofer || e instanceof Geyser || e instanceof Pancake || e instanceof Horn || e instanceof FlashTrap;
-      if (always || (e.x + e.w > cx0 && e.x < cx1 && e.y + e.h > cy0 && e.y < cy1)) e.update(e.item || e.friendly || e instanceof Gold || e instanceof PickPop ? dt : edt);
+      if (always || (e.x + e.w > cx0 && e.x < cx1 && e.y + e.h > cy0 && e.y < cy1)) { try { e.update(e.item || e.friendly || e instanceof Gold || e instanceof PickPop ? dt : edt); } catch (err) { entityFault(e, err, 'update'); } }
     }
     this.refreshPlatforms();
     // player
@@ -12716,6 +12740,7 @@ class Play {
   collide(p) {
     for (const e of this.entities) {
       if (e.remove || e.friendly || e.friendT) continue;
+      try {   // the safety net: a throwing entity is removed, the frame goes on
       if (e instanceof EmberChain) { if (Math.abs(e.ox - p.cx) < e.len * 14 + 30 && Math.abs(e.oy - p.cy) < e.len * 14 + 40) e.touchPlayer(p); continue; }
       if (e.customCollide) { if (e.collidePlayer(p) !== 'body') { if (p.dead || p.state !== 'play') return; continue; } }
       if (!overlap(p, e)) continue;
@@ -12735,6 +12760,7 @@ class Play {
         e.touchPlayer(p);
       } else if (!e.dead || e.boss) e.touchPlayer(p);
       if (p.dead || p.state !== 'play') return;
+      } catch (err) { entityFault(e, err, 'touch'); }
     }
   }
   updateBeats(A) {
@@ -12872,9 +12898,9 @@ class Play {
     if (A.water) { ctx.setTransform(1, 0, 0, 1, gx, gy); this.drawUnderwater(ctx, VW * S, VH * S); wt(); }
     // contact shadows ground every actor (and lift the ones in the air off the floor)
     this.drawShadows(ctx, layers[1].concat(layers[2], layers[3]));
-    for (const L of layers.slice(0, 3)) for (const e of L) e.draw(ctx, this.t);
+    for (const L of layers.slice(0, 3)) for (const e of L) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
     this.player.draw(ctx, this.t);
-    for (const e of layers[3]) e.draw(ctx, this.t);
+    for (const e of layers[3]) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
     // foreground: water pools, fake walls
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     this.drawTiles(ctx, camX, camY, true);
@@ -19215,7 +19241,9 @@ TourGens.rail = (ctx, A) => {
   B.fill(len, decks.lower, len + 21, H - 1, T.GROUND);
   B.spawn('gate', len + 13, decks.lower - 1, { exit: 'main' });
   B.gold(len + 5, decks.lower - 5, 'high');
-  B.anchor('start', 2, decks.lower - 1);
+  // Brady starts standing in the middle of the cart, not on the dock beside it: on the dock (the same height as the deck)
+  // he stood on the tiles, the cart left without him and the scrolling screen pushed him into the water every time
+  B.anchor('start', 1 + Math.ceil(vw / 2), decks.lower - 1);
   B.trim(len + 22);
   const area = B.build(TourBuild.areaProps(ctx, { autoscroll: speed, carrier: true, rail: { decks, forks: st.forks } }));
   return { area, anchors: Object.assign({ in: B.anchors.start }, B.anchors), B, time: A.time || 400 };
@@ -26936,13 +26964,13 @@ TourBehave.platEater = {
     e.eatT = (e.eatT || 0) + dt;
     if (e.onGround && e.eatT > TB.par(e, 'every', 1.2)) {
       const tx = Math.floor((e.cx - e.dir * (e.w / 2 + 4)) / TS), ty = Math.floor((e.y + e.h + 2) / TS), A = e.g.area;
-      if (tileAt(A, tx, ty) === T.SEMI) { e.eatT = 0; e.g.setTile(tx, ty, T.EMPTY); e.g.spawn(new TourRegrow(e.g, tx, ty, TB.par(e, 'regrow', 6))); TB.tell(e, 'munch', 'pick'); e.g.burst(tx * TS + 16, ty * TS + 4, 6, '#c8a070', 'debris'); e.mode = 'eat'; }
+      if (tileAt(A, tx, ty) === T.SEMI) { e.eatT = 0; e.g.setTile(tx, ty, T.EMPTY); (A.eaten || (A.eaten = new Set())).add(ty * A.W + tx); e.g.spawn(new TourRegrow(e.g, tx, ty, TB.par(e, 'regrow', 6))); TB.tell(e, 'munch', 'pick'); e.g.burst(tx * TS + 16, ty * TS + 4, 6, '#c8a070', 'debris'); e.mode = 'eat'; }
     }
   }
 };
 class TourRegrow extends Ent {
   constructor(g, tx, ty, t) { super(g, null, TS, TS); this.x = tx * TS; this.y = ty * TS; this.tx = tx; this.ty = ty; this.life = t; this.back = true; }
-  update(dt) { this.t += dt; this.life -= dt; if (this.life <= 0 && !overlap(this.g.player, { x: this.x, y: this.y - 2, w: TS, h: 6 })) { this.g.setTile(this.tx, this.ty, T.SEMI); this.remove = true; this.g.burst(this.cx, this.y + 4, 6, '#7ad85a', 'spark'); } }
+  update(dt) { this.t += dt; this.life -= dt; if (this.life <= 0 && !overlap(this.g.player, { x: this.x, y: this.y - 2, w: TS, h: 6 })) { this.g.setTile(this.tx, this.ty, T.SEMI); const A = this.g.area; if (A.eaten) A.eaten.delete(this.ty * A.W + this.tx); this.remove = true; this.g.burst(this.cx, this.y + 4, 6, '#7ad85a', 'spark'); } }
   draw(ctx) { const k = clamp(1 - this.life / 1.5, 0, 1); if (k <= 0) { ctx.fillStyle = 'rgba(120,90,60,0.35)'; ctx.fillRect(this.x + 4, this.y, TS - 8, 2); return; } ctx.fillStyle = '#5ab84a'; for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.ellipse(this.x + 8 + q * 8, this.y + 4 - k * 4, 2 + k * 2, 4 * k + 1, (q - 1) * 0.5, 0, TAU); ctx.fill(); } }
 }
 /* 22. alarmCaller: Brady in its cone: it inhales (tell), then calls: every sleeper nearby wakes up facing him */
@@ -28659,6 +28687,7 @@ const levels = [
     areas: [
       { id: 'shelf', gen: 'strip', W: 200, H: 20, script: [
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
         'penguin',
         // ① belly-slide bowling on the terrace, and the first conga line
         ['conga', { len: 16, n: 3, text: 'PENGUINS SLIDE IN CONGA LINES. STOMP THE ONE IN THE SCARF AND THE REST SCATTER' }],
@@ -28702,6 +28731,7 @@ const levels = [
     areas: [
       { id: 'aurora', gen: 'strip', W: 200, H: 22, script: [
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         ['flat', { n: 4 }],
         // ① the aurora turns gravity over (spikes below: the sky is the way)
         ['aurora', { w: 14, text: 'WALK INTO THE AURORA: UP BECOMES DOWN. RUN ALONG THE SKY', gold: [7, 3, 'must'] }],
@@ -39659,6 +39689,7 @@ const levels = [
         script: [
           ['gearStand', { item: 'plane' }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           // ① kites over the terraces
           ['terraceIsle', { n: 3 }],
           ['glideGap', { w: 12, drop: 3 }],
@@ -39790,6 +39821,7 @@ const levels = [
         script: [
           ['gearStand', { item: 'wand' }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           // ① lianas between the giant trees
           ['lianas', { n: 3 }],
           'rafflesiaIsle',
@@ -42420,6 +42452,7 @@ const levels = [
         script: [
           'shiba',
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           // ① the belts on their counters, the plate wheel over the soy
           ['kaiten', { n: 8, h: 2, first: true }],
           ['kaiten', { n: 9, h: -1, gap: 3, enemy: 'jpTamago' }],
@@ -42485,6 +42518,7 @@ const levels = [
       { id: 'chikurin', gen: 'strip', W: 220, H: 20, phase: { night: 'jp_bamboo_night' },
         script: [
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
           // ① by day: bending bamboo, bursting shoots, a lazy rice ball
           ['vault', { n: 2, first: true }],
           ['step', { h: 2 }],
@@ -42862,6 +42896,13 @@ const decor = {
   // a rug draped over a rope between two poles (its top is a bouncy one-way platform)
   maRug(ctx, x, y, t, th, d) {
     const w = d.w, x0 = x - w / 2, top = y - d.h, c = RUG[d.seed % 3];
+    // a rug moth (platEater) ate some of its top tiles: leave a gap through the rug there until they regrow
+    const A = !d.cut && Game.scene && Game.scene.area, eaten = A && A.eaten && A.eaten.size ? A.eaten : null;
+    if (eaten) {
+      const row = Math.round(top / TS), c0 = Math.round(x0 / TS), n = Math.round(w / TS), gaps = [];
+      for (let q = 0; q < n; q++) if (eaten.has(row * A.W + c0 + q)) gaps.push(q);
+      if (gaps.length) { ctx.save(); ctx.beginPath(); let from = x0 - 10; for (const q of gaps) { ctx.rect(from, top - 12, x0 + q * TS - from, d.h + 60); from = x0 + (q + 1) * TS; } ctx.rect(from, top - 12, x0 + w + 10 - from, d.h + 60); ctx.clip(); decor.maRug(ctx, x, y, t, th, Object.assign({}, d, { cut: true })); ctx.restore(); return; }
+    }
     ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x0 - 4, top - 6, 4, d.h + 6); ctx.fillRect(x0 + w, top - 6, 4, d.h + 6);
     ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x0, top); ctx.quadraticCurveTo(x, top + 8 + Math.sin(t * 2 + d.seed) * 2, x0 + w, top); ctx.lineTo(x0 + w - 6, top + 40); ctx.lineTo(x0 + 6, top + 40); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = RUG[3]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0 + 10, top + 20); ctx.lineTo(x0 + w - 10, top + 20); ctx.stroke();
@@ -43335,7 +43376,7 @@ const P = {
     for (let q = 0; q < w; q++) { B.set(x + q, y, T.SEMI); B.setHide(x + q, y, 1); }
     B.prop('maRug', x, y, w, 2, 'none', { seed: x });
     st.coins(x + 1, x + w - 2, y - 2);
-    if (o.moth) st.enemy('maMoth', x + w - 2, y + 1);
+    if (o.moth) st.enemy('maMoth', x + w - 2, y);   // y is the rug row (st.enemy stands a walker on the row it is given)
     if (o.gold) st.gold(x + Math.floor(w / 2), y - 3, o.gold === true ? 'risky' : o.gold);
     return x + w + (o.gap || 3);
   },
@@ -52355,6 +52396,7 @@ const levels = [
         script: [
           ['pen', { first: true }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           // ① the swaying bridges
           'terrace',
           ['skyBridge', { n: 10 }],
@@ -52389,6 +52431,7 @@ const levels = [
         script: [
           ['pen', { first: true }],
           ['itemBlock', { item: 'power', y: 4 }],
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           // ① a snowball that grows as you push it
           ['snowBank', { gold: 'must' }],
           ['snowball', { sign: true }],
@@ -54525,6 +54568,7 @@ const levels = [
         script: [
           'pho',
           ['gearStand', { item: 'hat' }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
           // ① the lantern shops
           ['lanternShop', {}],
           ['oldstreet', {}],
@@ -54609,6 +54653,7 @@ const levels = [
       { id: 'vuon', gen: 'strip', role: 'sub', W: 70, H: 18,
         enemies: [['vnToad', 2]],
         script: [
+          ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
           ['orchard', { gold: 'must' }],
           ['sampans', { span: 8 }],
           ['orchard', {}],
@@ -55833,6 +55878,7 @@ const levels = [
     areas: [
       { id: 'station', gen: 'strip', W: 156, H: 18, phase: { night: 'w22_2222' }, script: [
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
         // ① clock faces drift round
         ['clocks', {}],
         ['postcard', { kind: 'must', dx: -9, dy: -8 }],
@@ -55899,6 +55945,7 @@ const levels = [
     areas: [
       { id: 'lake', gen: 'strip', W: 164, H: 18, GY: 9, gyMin: 6, gyMax: 11, mirror: true, script: [
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
         // ① stepping stones
         ['stones', { n: 4, gold: 'must' }],
         ['stairs', { n: 3 }],
@@ -56179,7 +56226,12 @@ const Game = {
       if (document.hidden) {
         if (typeof Play !== 'undefined' && this.scene instanceof Play && !this.scene.paused && (this.scene.state === 'play' || this.scene.state === 'intro')) this.scene.openPause();
         Sound.suspend(); Save.save();
-      } else { if (!(typeof Play !== 'undefined' && this.scene instanceof Play && this.scene.paused)) Sound.resume(); this.last = performance.now(); }
+      } else {
+        if (!(typeof Play !== 'undefined' && this.scene instanceof Play && this.scene.paused)) Sound.resume();
+        this.last = performance.now();
+        // iOS may drop a background page's canvas memory: re-size (re-allocate) the canvas when the app comes back
+        try { this.resize(); } catch (e) { this.reportError(e); }
+      }
     });
     window.addEventListener('pagehide', () => Save.save());
     this.setScene(appHomeScene());
@@ -56250,12 +56302,14 @@ const Game = {
     requestAnimationFrame(t => this.frame(t));
     let dt = (now - this.last) / 1000;
     this.last = now;
+    const raw = dt;
     if (dt > 0.25) dt = 0.25;
     if (dt < 0) dt = 0;
     // adaptive speed: if frames are consistently slow, first drop the expensive post effects, then render fewer
     // pixels, but never below 1.5 device px per point on a hi-dpi screen: at 1x a phone's 3x display magnifies every
     // pixel three times and the characters' ink lines go soft (the sprites' minimum sharpness)
-    if (dt > 0.026 && dt < 0.2) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 0.5);
+    // measured on the real frame time: a phone crawling at 2-5 fps (frames over 0.2 s) counts as slow too
+    if (raw > 0.026 && raw < 1) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 0.5);
     const floorDpr = (window.devicePixelRatio || 1) >= 2 ? 1.5 : 1;
     if (this.slowT > 2.5 && this.quality >= 1) {
       this.quality = 0; this.slowT = 0;
@@ -56297,10 +56351,13 @@ const Game = {
   },
 
   reportError(e) {
+    // the loop keeps running (the next frame is already requested); the error is logged a few times and counted
+    // (Game.errors, window.__sbwErrors) so tests can assert there were none
     this.errors++;
+    window.__sbwErrors = (window.__sbwErrors || 0) + 1;
     if (this.errors < 5) console.error(e);
     window.__bradyErrors = (window.__bradyErrors || []);
-    window.__bradyErrors.push(String(e && e.stack || e));
+    if (window.__bradyErrors.length < 50) window.__bradyErrors.push(String(e && e.stack || e));   // bounded: an error every frame must not eat the phone's memory
   }
 };
 

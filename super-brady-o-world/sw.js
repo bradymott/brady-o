@@ -1,5 +1,5 @@
 // service worker: makes the game load instantly and work offline
-const CACHE = 'app-world-f788dcee25';
+const CACHE = 'app-world-b9dfb91df6';
 const SHELL = ["./","./index.html","./manifest.webmanifest"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
