@@ -176,6 +176,26 @@ class Play {
     this.weather = new Weather(THEMES[this.themeKey].particles);
     this.boss = this.entities.find(e => e.boss && !e.remove) || null;
     this.refreshPlatforms();
+    Game.setRows(this.viewRows());
+  }
+  /* ---------- camera zoom ----------
+     Near (the phone default): 10 tile rows instead of 12, so Brady, the enemies, the items and the hazards are all
+     20 % larger on a small screen. Climbing, falling and flying areas keep 11 rows of look-ahead; a boss arena is
+     framed whole (as many rows as its width needs, up to the standard 12). Far: the standard 12 rows.
+     Settings: Save.data.settings.zoom = 'near' | 'far' (unset: Near on touch screens and short windows). */
+  static zoomNear() { const z = Save.data.settings.zoom; return z ? z === 'near' : (Game.forceTouchUI || Game.cssH < 520); }
+  viewRows() {
+    if (!Play.zoomNear()) return VIEW_ROWS;
+    const A = this.area;
+    let rows = A && (A.tower || A.sky || A.autoscrollY || A.camera === 'shaft' || A.camera === 'free') ? 11 : 10;
+    const b = this.boss && !this.boss.remove ? this.boss : null;
+    if (b) {
+      if (b.tall) return VIEW_ROWS;
+      const gr = Game.gameRect, aspect = gr.w / Math.max(1, gr.h);
+      const w = (b.arenaX1 && b.arenaX0 != null ? b.arenaX1 - b.arenaX0 : 26 * TS) + TS;
+      rows = Math.max(rows, Math.min(VIEW_ROWS, w / (aspect * TS)));
+    }
+    return rows;
   }
   countryAtlas() { const C = this.level && this.level.country && typeof Tour !== 'undefined' ? Tour.countries[this.level.country] : null; return C ? C.atlas || (C.sprites ? C.id : null) : null; }
   // every atlas this level can draw from: the country's, and each area's theme
@@ -403,6 +423,7 @@ class Play {
     const p = this.player, walkTo = Math.min(b.arenaX0 + 3.5 * TS, b.x - 2.5 * TS);
     if (p && walkTo > p.x + 4) { this.entryWalk = { x: walkTo, t: 1.3 }; }
     this.mus(this.bossTrack(b));
+    Game.setRows(this.viewRows());
     // seal the arena entrance
     const tx = Math.floor(b.arenaX0 / TS) - 1;
     for (let y = 3; y < this.area.H; y++) if (tileAt(this.area, tx, y) === T.EMPTY && y < Math.floor((b.y + b.h) / TS)) this.setTile(tx, y, T.HARD);
@@ -413,6 +434,7 @@ class Play {
     for (let y = 0; y < this.area.H; y++) if (tileAt(this.area, b.doorX, y) === T.HARD) { this.setTile(b.doorX, y, T.EMPTY); this.burst(b.doorX * TS + 16, y * TS + 16, 4, '#c8c8d0', 'debris'); }
     Sound.play('secret');
     this.bossLock = null; this.boss = null;
+    Game.setRows(this.viewRows());
     this.bannerText = b.style === 'man' ? 'THE MAN BURNS!' : b.mid ? 'FORT CLEARED!' : 'CAMP BOSS DOWN!'; this.bannerT = 2.5;
     if (b.style === 'man') { for (let i = 0; i < 6; i++) setTimeout(() => { if (Game.scene === this) { this.burst(b.cx + (Math.random() - 0.5) * 300, b.floorY - 200 - Math.random() * 150, 40, '#fff', 'firework'); sfx('firework_burst', 'pick', { pitch: 0.6 }); } }, i * 380); }
     this.mus(this.area.music);
@@ -454,8 +476,10 @@ class Play {
     if (A.autoscroll && this.state === 'play') {
       this.camX = Math.min(maxX, this.camX + A.autoscroll * TS * dt * this.worldScale());
     } else {
-      this.look = lerp(this.look || 0, p.facing * Game.viewW * 0.08 * clamp(Math.abs(p.vx) / PHYS.walk, 0, 1), 1 - Math.exp(-dt * 2.5));
-      let tx = p.cx - Game.viewW * 0.42 + this.look;
+      // look-ahead in the run direction; a zoomed-in view (fewer rows) leans further so Brady sees as far ahead
+      const near = Game.rows < VIEW_ROWS, lead = near ? 0.13 : 0.08;
+      this.look = lerp(this.look || 0, p.facing * Game.viewW * lead * clamp(Math.abs(p.vx) / PHYS.walk, 0, near ? 1.25 : 1), 1 - Math.exp(-dt * 2.5));
+      let tx = p.cx - Game.viewW * (near ? 0.4 : 0.42) + this.look;
       if (this.bossLock) {
         const w = this.bossLock.x1 - this.bossLock.x0;
         tx = w < Game.viewW ? (this.bossLock.x0 + this.bossLock.x1) / 2 - Game.viewW / 2 : clamp(tx, this.bossLock.x0 - TS, this.bossLock.x1 - Game.viewW + TS);
@@ -574,8 +598,11 @@ class Play {
     if (Input.packTapped) { Input.packTapped = false; if (this.state === 'play' && p.state === 'play') { if (!p.usePack()) Sound.play('bump', { vol: 0.3 }); } }
     Save.data.pack = p.pack || null;
     // entities (a K-hole slows everything but Brady)
-    const cx0 = this.camX - 4 * TS, cx1 = this.camX + Game.viewW + 5 * TS;
-    const cy0 = this.camY - 8 * TS, cy1 = this.camY + Game.viewH + 8 * TS;
+    // the active window is the standard (Far) view's, whatever the zoom: a closer camera never freezes an enemy,
+    // an icicle or a boss prop that the level was designed to have running
+    const zx = Math.max(0, Game.viewW * (VIEW_ROWS / Game.rows - 1)) / 2, zy = Math.max(0, (VIEW_ROWS - Game.rows) * TS) / 2;
+    const cx0 = this.camX - 4 * TS - zx, cx1 = this.camX + Game.viewW + 5 * TS + zx;
+    const cy0 = this.camY - 8 * TS - zy, cy1 = this.camY + Game.viewH + 8 * TS + zy;
     const edt = dt * ws;
     for (let i = 0; i < this.entities.length; i++) {
       const e = this.entities[i];
@@ -729,7 +756,8 @@ class Play {
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     ctx.beginPath(); ctx.rect(0, 0, VW * S, VH * S); ctx.clip();
-    BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash);
+    // a zoomed-in view keeps the backdrop framed as at the standard zoom: its ground line rises with the floor
+    BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash, (VIEW_ROWS * TS - VH) * 0.68);
     // Atmospheric separation belongs behind solids, collectibles and characters.
     // Keep each country's own sky/fog colour rather than flattening every world to grey.
     if (this.level.tour) {
@@ -758,6 +786,10 @@ class Play {
       else if (e.friendly) layers[3].push(e);
       else layers[2].push(e);
     }
+    // underwater: the blue wash and caustics go over the scenery but under the characters, so enemies stay crisp
+    if (A.water) { ctx.setTransform(1, 0, 0, 1, gx, gy); this.drawUnderwater(ctx, VW * S, VH * S); wt(); }
+    // contact shadows ground every actor (and lift the ones in the air off the floor)
+    this.drawShadows(ctx, layers[1].concat(layers[2], layers[3]));
     for (const L of layers.slice(0, 3)) for (const e of L) e.draw(ctx, this.t);
     this.player.draw(ctx, this.t);
     for (const e of layers[3]) e.draw(ctx, this.t);
@@ -770,7 +802,6 @@ class Play {
     this.weather.draw(ctx, this.t);
     for (const e of layers[0]) if (e instanceof Sign) e.drawBubble(ctx);
     ctx.setTransform(1, 0, 0, 1, gx, gy);
-    if (A.water) this.drawUnderwater(ctx, VW * S, VH * S);
     let darkness = A.dark ? Math.max(th.darkness || 0, 0.62) : (th.darkness || 0);
     if (A.strobe) darkness = Math.max(0.2, darkness - (Math.sin(this.strobeT * 20) > 0.6 && Math.sin(this.strobeT * 1.3) > 0 ? 0.5 : 0));
     if (A.sunrise) darkness *= 1 - clamp(this.player.cx / (A.W * TS), 0, 1);
@@ -859,7 +890,9 @@ class Play {
           case T.SOIL: { const bur = y === 0 || SOLID[A.tiles[(y - 1) * A.W + x]], nv = bur && atlas.soilV ? atlas.soilV.length : 0; img = atlas.soil ? (nv ? atlas.soilV[((Math.imul(x ^ 0x5bd1e995, 374761393) ^ Math.imul(y + 0x27d4eb2d, 668265263)) >>> 13) % nv] : atlas.soil[bur ? 0 : 1]) : null; break; }
           case T.LINTEL: img = atlas.lintel || null; break;
           case T.PICK: {
-            ctx.setTransform(S, 0, 0, S, Game.gameRect.x * Game.dpr + dx, Game.gameRect.y * Game.dpr + dy);
+            // coins are drawn 15 % larger than their tile slot so they read as pickups on a phone
+            const ck = 1.15, co = TS / 2 * S * (1 - ck);
+            ctx.setTransform(S * ck, 0, 0, S * ck, Game.gameRect.x * Game.dpr + dx + co, Game.gameRect.y * Game.dpr + dy + co);
             Sprites.pickFast(ctx, TS / 2, TS / 2 + Math.sin(t * 3 + x * 0.7) * 1.5, t, Math.cos(t * 3 + x * 0.5), (x * 3 + y) % 5);
             ctx.setTransform(1, 0, 0, 1, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr);
             continue;
@@ -877,6 +910,26 @@ class Play {
         if (id === T.FAKE || id === T.HIDDEN) ctx.globalAlpha = 1;
       }
     }
+  }
+  /* A soft contact shadow under each actor on (or above) a floor tile: an ellipse on the floor that shrinks and fades
+     the higher the actor is; nothing over a pit. Enemies, friends, items, bosses and Brady; world transform. */
+  drawShadows(ctx, list) {
+    const A = this.area, p = this.player;
+    ctx.save(); ctx.fillStyle = 'rgb(24,12,40)';
+    const one = (e, scale) => {
+      if (!e || e.remove || e.knocked || (e.dead && !e.flatT) || e.noShadow) return;
+      const fx = e.x + e.w / 2, fy = e.y + e.h, tx = Math.floor(fx / TS);
+      if (tx < 0 || tx >= A.W) return;
+      let gy = -1;
+      for (let ty = Math.max(0, Math.floor((fy - 2) / TS)), n = 0; ty < A.H && n < 7; ty++, n++) { const t = A.tiles[ty * A.W + tx]; if (SOLID[t] || t === T.SEMI) { if (ty * TS >= fy - 6) { gy = ty * TS; break; } } }
+      if (gy < 0) return;
+      const h = gy - fy, k = clamp(1 - h / (6 * TS), 0, 1); if (k <= 0.05) return;
+      const rx = Math.min(30, e.w * 0.5 * (scale || 1)) * (0.55 + 0.45 * k), ry = Math.max(1.6, rx * 0.2);
+      ctx.globalAlpha = 0.3 * k; ctx.beginPath(); ctx.ellipse(fx, gy + 0.5, rx, ry, 0, 0, TAU); ctx.fill();
+    };
+    for (const e of list) { if (e.enemy || e.friendly || e.item || e.boss || e.cfg) one(e, e.boss ? 0.8 : 1.2); }
+    if (p && !p.dead) one(p, 1.3);
+    ctx.restore();
   }
   drawLavaTile(ctx, x, y, dx, dy, dw, dh) {
     const A = this.area, S = Game.S, t = this.t;
