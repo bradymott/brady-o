@@ -62,8 +62,10 @@ section('graph', () => {
   const broken = build(Object.assign({}, fixtures.levels.twoRooms, { areas: [fixtures.levels.twoRooms.areas[0], Object.assign({}, fixtures.levels.twoRooms.areas[1], { id: 'elsewhere' })] }));
   check('a door to a missing area is reported', broken.problems.some(p => /no area 'back'/.test(p)), broken.problems);
   // legacy specs: one area plus bonus rooms, built exactly as before (tools/sbw_snapshot.js checks the bytes)
-  const l84 = G.getLevel(8, 4);
-  check('a legacy level is one main area plus its bonus room, roles set', l84.areas[0].role === 'main' && l84.areas[1].role === 'secret' && !l84.v2);
+  // (any legacy level with a bonus room: the countries are moving to the v2 format one by one)
+  const legIds = Tour.allLevelIds().filter(id => { const L = Tour.specOf(id); return !L.v2 && JSON.stringify(L.script || []).indexOf('"secret"') >= 0; });
+  const l84 = legIds.length ? G.getLevel(...legIds[0].split('-').map(Number)) : null;
+  check('a legacy level is one main area plus its bonus room, roles set', !l84 || (l84.areas[0].role === 'main' && l84.areas[1].role === 'secret' && !l84.v2), legIds[0] || 'none left');
 });
 
 section('guide', () => {
