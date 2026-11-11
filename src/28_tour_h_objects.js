@@ -221,6 +221,7 @@ class TourRailTrack extends Ent {
   constructor(g, s) { super(g, s, (s.len || 100) * TS, 8); this.x = 0; this.y = (s.decks.upper - 1) * TS; this.h = (g.area ? 0 : 0) + 12 * TS; this.len = s.len; this.forks = s.forks || []; this.decks = s.decks; this.skinName = s.skin; this.back = true; }
   update(dt) { this.t += dt; }
   draw(ctx) {
+    if (TourObj.skin(ctx, this, this.skinName)) return;   // a country's own track (canals, ropes...)
     const g = this.g, x0 = Math.max(0, Math.floor(g.camX / TS) - 2), x1 = Math.min(this.len, Math.ceil((g.camX + Game.viewW) / TS) + 2), d = this.decks;
     const lay = (tx, row) => {
       const x = tx * TS, y = row * TS;
