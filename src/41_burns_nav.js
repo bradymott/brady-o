@@ -1,7 +1,8 @@
 /* ============================================================
    BRADY GOES TO BURNING MAN — getting around: the guide arrow, the pause-menu map page, RUN,
    the "camera behind Brady" setting and the e-bike (docs/BURNS_GUIDE.md §10.1).
-   - Guide arrow (pause menu GUIDE ARROW, saved as settings.guide): a glowing arrow on the ground in front of Brady
+   - Guide arrow (pause menu GUIDE ARROW, saved as settings.guide): a glowing arrow on the ground in front of Brady (kept in
+     view: beside him when the target is dead ahead or behind the camera)
      pointing at the current objective, its name and distance, and a ring + beam at the spot. Where it points:
      def.guide(g) if the world has one (BurnsNav.guides[worldId] works too), else the engine's reading of the
      missions (BurnsNav.defaultTargets). Sprites only: no extra draw calls.
@@ -141,9 +142,11 @@ const BurnsNav = {
     } else g.navGuide = null;
   },
   /* ---------- the RUN button ---------- */
+  // in the right-hand cluster, never in the left thumb's joystick half: beside BIKE (landscape) or above it (portrait,
+  // where the cluster is narrow and beside BIKE is the joystick's side); >= 10 px from every other control
   layout(g, r, lefty) {
-    const H = g.hudBtns, b = H.bike;
-    H.run = { id: 'run', x: b.x + (lefty ? 1 : -1) * r * 1.35, y: b.y + r * 0.3, r: r * 0.55 };
+    const H = g.hudBtns, b = H.bike, portrait = Game.cssH > Game.cssW;
+    H.run = portrait ? { id: 'run', x: b.x, y: b.y - r * 1.5, r: r * 0.55 } : { id: 'run', x: b.x + (lefty ? 1 : -1) * r * 1.4, y: b.y + r * 0.3, r: r * 0.55 };
   },
   hudList(g, list) { const p = g.player; if (g.hudBtns.run && p && !p.vehicle && !g.cine) list.push(g.hudBtns.run); },
   drawControls(ctx, g, btn) {
@@ -198,8 +201,17 @@ const BurnsNav = {
     const G = g.navGuide; if (!G || g.cine || g.state !== 'play') return;
     const col = G.col ? burnsRGBf(G.col) : BURNS_NAV.col, pul = 0.78 + 0.22 * Math.sin(t * 5);
     if (G.dist > BURNS_NAV.arrive) {
-      const veh = p.vehicle, ahead = veh ? (veh.kind === 'car' ? 7.5 : 3.8) : g.camMode === 'first' ? 3 : 2.5, len = veh ? (veh.kind === 'car' ? 3.6 : 2.4) : 1.9;
-      const ax = p.x + Math.sin(G.yaw) * ahead, az = p.z + Math.cos(G.yaw) * ahead;
+      const veh = p.vehicle, first = g.firstPerson(), ahead = veh ? (veh.kind === 'car' ? 7.5 : 3.8) : first ? 3 : 3.0, len = veh ? (veh.kind === 'car' ? 3.6 : 2.4) : 1.9;
+      // where it sits: on the bearing, but kept in front of the camera (a target behind you puts the arrow beside
+      // Brady, pointing back at you, instead of under the bottom of the screen) and, when the target is dead ahead,
+      // nudged off to the side so his body doesn't hide it. It always points along the true bearing.
+      const vy = first ? p.yaw : g.camYaw, rel = BurnsM.wrap(G.yaw - vy), ar = Math.abs(rel);
+      if (ar > 0.5 && ar < 2.6 || !g._navSide) g._navSide = rel < 0 ? -1 : 1;   // which side when it's dead ahead or behind (sticky: no flip-flop)
+      let pr = clamp(rel, -1.6, 1.6), dist = ahead;
+      if (!first && Math.abs(pr) < 0.5) pr = g._navSide * (0.5 - (0.5 - Math.abs(pr)) * 0.2);   // ~1.4 m off his line at 3 m
+      if (!first && ar > 1.6) pr = g._navSide * 1.6;
+      if (!first) dist = ahead * (1 - 0.38 * clamp((ar - 0.6) / 1.4, 0, 1));                    // closer in as it swings round beside him
+      const py = vy + pr, ax = p.x + Math.sin(py) * dist, az = p.z + Math.cos(py) * dist;
       const gy = g.world.surface(ax, az, p.y + 1.2, 0.2, BURNS_SURF).y;
       // a dark edge, the arrow itself (opaque enough for the bright playa by day) and a glow on top (night)
       const ay = G.yaw + Math.PI;   // the 'arrow' sprite's tip is at its far end in v: turn it to lead along the bearing
