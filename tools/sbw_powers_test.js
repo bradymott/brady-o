@@ -125,6 +125,79 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     check('jump buffering kept: a press just before landing jumps on touchdown', buf.air && buf.jumped, buf);
   });
 
+  /* ---------- jump powers ---------- */
+  await section('jumps', async () => {
+    const r = await page.evaluate(() => {
+      const out = {}, T = window.BRADY_TOUR;
+      const J = { jumpPressed: true, jump: true };
+      const up = (p, sec) => { sim(1 / 120, J); sim(sec || 0.25, { jump: true }); };
+      // spring socks: a second, lower jump once per airtime; reset on landing
+      { lab('gear.stands'); const g = S(), p = P(); p.collect('gear:socks'); sim(0.5);
+        const y0 = p.y; up(p, 0.2); const vyA = p.vy; sim(1 / 120, J); const vyB = p.vy; sim(0.05, { jump: true }); const flip = p.anim.state;
+        sim(0.05); sim(1 / 120, J); const vyC = p.vy; let top = p.y; for (let k = 0; k < 240 && !p.onGround; k++) { sim(1 / 120); top = Math.min(top, p.y); }
+        const landed = p.onGround; up(p, 0.2); sim(1 / 120, J); const again = p.vy;
+        out.socks = { vyA: Math.round(vyA), vyB: Math.round(vyB), vyC: Math.round(vyC), flip, rise: Math.round((y0 - top) / 32 * 10) / 10, landed, again: Math.round(again), slot: p.jumpPow && p.jumpPow.id, hands: p.hands }; }
+      // pound cake: tuck, slam, land: enemies within 3.5 tiles stunned ~2.5 s, harmless, stompable; far ones not; a brick under him breaks
+      { lab('gear.stands'); const g = S(), p = P(); p.collect('gear:cake'); sim(0.5); p.invuln = 0;
+        const near = foe(g, p, 80), far = foe(g, p, 230, 'mxPepper'); sim(0.05);
+        up(p, 0.25); sim(1 / 120, J); const tuck = p.pound && p.pound.phase; sim(0.1); const tuckState = p.anim.state, hover = Math.abs(p.vy) < 1;
+        sim(0.12); const slam = p.pound && p.pound.phase, slamVy = Math.round(p.vy / 32);
+        let k = 0; while (!p.onGround && k++ < 200) sim(1 / 120);
+        const stunNear = +(near.stunT || 0).toFixed(2), stunFar = +(far.stunT || 0).toFixed(2), wave = g.entities.some(e => e.constructor.name === 'PoundWave');
+        // harmless while stunned: touching it doesn't hurt
+        p.invuln = 0; const pw = p.power; near.touchPlayer(p); const harmless = p.power === pw && !p.dead && !(p.invuln > 0);
+        sim(1.4); const stillStunned = near.stunT > 0; sim(1.4); const recovered = !(near.stunT > 0);
+        // a brick floor under his boots breaks and he keeps falling
+        const A = g.area, tx = Math.floor(p.cx / 32), ty = Math.floor((p.y + p.h + 2) / 32); const before = A.tiles[ty * A.W + tx];
+        A.tiles[ty * A.W + tx] = 2; A.tiles[ty * A.W + tx + 1] = 2; A.tiles[ty * A.W + tx - 1] = 2; A.tiles[(ty + 1) * A.W + tx] = 0; A.tiles[(ty + 1) * A.W + tx + 1] = 0; A.tiles[(ty + 1) * A.W + tx - 1] = 0;
+        up(p, 0.25); sim(1 / 120, J); k = 0; while (!(p.pound == null && p.onGround) && k++ < 400) sim(1 / 120);
+        out.cake = { tuck, tuckState, hover, slam, slamVy, stunNear, stunFar, wave, harmless, stillStunned, recovered, brick: A.tiles[ty * A.W + tx], brickWas: 2, floorWas: before, fellThrough: p.y + p.h > ty * 32 + 8 }; }
+      // stunned enemies can be stomped
+      { lab('gear.stands'); const g = S(), p = P(); p.collect('gear:cake'); sim(0.5); const e = foe(g, p, 70); sim(0.05); up(p, 0.25); sim(1 / 120, J); let k = 0; while (!p.onGround && k++ < 200) sim(1 / 120);
+        p.x = e.cx - p.w / 2; p.y = e.y - p.h - 40; p.vy = 300; sim(0.3); out.stomp = { dead: !!(e.dead || e.remove) }; }
+      // magic beans: each tap a puff (down) and a lift; 6 puffs a meter, then it fizzles; the meter refills on the ground;
+      // the trousers come down while floating and snap back up on landing; a puff knocks out an enemy below
+      { lab('gear.stands'); const g = S(), p = P(); p.collect('gear:beans'); sim(0.5); const jp = p.jumpPow, y0 = p.y;
+        up(p, 0.45); const gas = [], sp0 = g.spawn.bind(g); let puffs = 0, lifts = 0, top = p.y; g.spawn = e => { if (e.constructor.name === 'GasPuff') puffs++; return sp0(e); };
+        for (let i = 0; i < 7; i++) { const vy = p.vy; sim(1 / 120, J); if (p.vy < vy - 60) lifts++; gas.push(+jp.gas.toFixed(2)); sim(0.22); top = Math.min(top, p.y); }
+        g.spawn = sp0; const puffs0 = 0;
+        const pantsAir = +jp.pants.toFixed(2), squat = p.anim.state;
+        let k = 0; while (!p.onGround && k++ < 600) sim(1 / 120); sim(0.3); const pantsLand = jp.pants, snapped = jp.snapT !== undefined;
+        sim(1.2); const refill = +jp.gas.toFixed(2);
+        out.beans = { gas, lifts, puffs: puffs - puffs0, rise: Math.round((y0 - top) / 32 * 10) / 10, pantsAir, squat, pantsLand, refill };
+        // a puff on an enemy below
+        const e = foe(g, p, 0); e.y = p.y + p.h - e.h; p.y -= 2.4 * 32; p.vy = 0; p.onGround = false; sim(1 / 120); p.coyote = 0; jp.down = true; sim(1 / 120, J); sim(0.5);
+        out.beans.kill = !!(e.dead || e.remove || e.knocked); }
+      // no jump power: nothing; while carrying: nothing; a hit drops the jump power before FORM
+      { lab('gear.stands'); const g = S(), p = P(); p.collect('gear:socks'); sim(0.5); p.carrying = { item: 'egg', from: null, fallY: p.y };
+        up(p, 0.2); const vy = p.vy; sim(1 / 120, J); out.carry = { vy0: Math.round(vy), vy1: Math.round(p.vy) }; p.carrying = null;
+        sim(1); p.setPower(1, true); p.invuln = 0; p.hurt({ x: p.x + 30, w: 10 }); out.hit = { slot: p.jumpPow, power: p.power, dropped: g.entities.some(e => e.dropped && e.kind === 'gear:socks') };
+        sim(0.1); const it = g.entities.find(e => e.dropped && e.kind === 'gear:socks'); if (it) { p.invuln = 0; it.touchPlayer(p); } out.hit.regrab = p.jumpPow && p.jumpPow.id; }
+      // one at a time: a new one replaces the old; gear stands and item blocks hand them out
+      { lab('gear.stands'); const g = S(), p = P(); p.collect('gear:socks'); p.collect('gear:beans'); out.replace = p.jumpPow.id;
+        out.names = ['socks', 'cake', 'beans'].map(id => T.TourPowers.name('gear:' + id)); out.block = T.TourPowers.blockItem('cake', g); }
+      return out;
+    });
+    const so = r.socks;
+    check('spring socks: a second mid-air jump, a bit lower than the first, with the flip pose', so.vyB < -400 && so.vyB > -500 && so.flip === 'flip', so);
+    check('spring socks: once per airtime, and again after landing', so.vyC > so.vyB + 100 && so.landed && so.again < -400, so);
+    check('spring socks sit in the jump slot, not in HANDS', so.slot === 'socks' && !so.hands, so);
+    const c = r.cake;
+    check('pound cake: tucks (hovering a beat), then slams straight down', c.tuck === 'tuck' && c.tuckState === 'tuck' && c.hover && c.slam === 'slam' && c.slamVy >= 19, c);
+    check('pound cake: the landing shockwave stuns enemies within 3.5 tiles for ~2.5 s, not the far ones', c.stunNear > 2.2 && c.stunNear <= 2.5 && c.stunFar === 0 && c.wave, c);
+    check('pound cake: stunned enemies are harmless and wake up after ~2.5 s', c.harmless && c.stillStunned && c.recovered, c);
+    check('pound cake: a brick under his boots breaks and he falls through', c.brick === 0 && c.fellThrough, c);
+    check('pound cake: a stunned enemy can be stomped', r.stomp.dead, r.stomp);
+    const b = r.beans;
+    check('magic beans: each tap a puff and a lift; six puffs per meter, the seventh fizzles', b.lifts === 6 && b.puffs === 6 && b.gas[5] === 0 && b.gas[6] === 0, b);
+    check('magic beans: hovering is limited (the meter caps the climb)', b.rise > 3 && b.rise < 11, b);
+    check('magic beans: trousers down in the squat, back up after landing; the meter refills on the ground', b.pantsAir > 0.9 && b.squat === 'squat' && b.pantsLand === 0 && b.refill === 1, b);
+    check('magic beans: a green puff knocks out an ordinary enemy below', b.kill, b);
+    check('no jump power while carrying something (CARRY levels stay fair)', Math.abs(r.carry.vy1 - r.carry.vy0) < 60, r.carry);
+    check('a hit drops the jump power (before FORM); it floats and can be grabbed back', r.hit.slot === null && r.hit.power === 1 && r.hit.dropped && r.hit.regrab === 'socks', r.hit);
+    check('one jump power at a time; names; item blocks hand them out', r.replace === 'beans' && r.names.join() === 'SPRING SOCKS,POUND CAKE,MAGIC BEANS' && r.block === 'gear:cake', r);
+  });
+
   /* ---------- trip moments ---------- */
   await section('trips', async () => {
     const r = await page.evaluate(() => {
