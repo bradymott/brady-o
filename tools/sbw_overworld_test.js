@@ -98,7 +98,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     return { hidden, rv1, rv2, revealed: !!T.revealed['house:mx-tienda'], path: !!T.paths['mx:0>6'], pending: T.pending.length, at: m.ow.walker.at };
   });
   check('a secret exit reveals its hidden trail and stop in the overworld (trail, then the stand), then Brady walks there', r5.hidden && r5.rv1 === 'path' && r5.rv2 === 'house' && r5.revealed && r5.path && r5.pending === 0 && r5.at === 'house:mx-tienda', r5);
-  if (shots) { await page.evaluate(() => { clear('1-3', 'secret'); window.BRADY.Save.data.done['1-2'] = true; const m = mapFrom('1-3'); for (let k = 0; k < 70; k++) m.update(1 / 60); }); await page.screenshot({ path: path.join(shots, 'ow-05-reveal.png') }); await page.evaluate(() => settle()); }
+  if (shots) { await page.evaluate(() => { window.__keep = JSON.stringify(window.BRADY.Save.data); clear('1-3', 'secret'); window.BRADY.Save.data.done['1-2'] = true; const m = mapFrom('1-3'); for (let k = 0; k < 70; k++) m.update(1 / 60); }); await page.screenshot({ path: path.join(shots, 'ow-05-reveal.png') }); await page.evaluate(() => { settle(); const B = window.BRADY; B.Save.data = JSON.parse(window.__keep); }); }
 
   // 6. Houses are places: go into the stand from its stop
   const r6 = await page.evaluate(() => {
