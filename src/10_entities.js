@@ -379,9 +379,9 @@ const ItemSpace = {
   // one step of the pop; true on the step it ends
   emergeStep(e, dt) {
     e.emerge -= dt;
-    const k = 1 - Math.max(0, e.emerge) / 0.5;
-    if (e.path) { e.x = lerp(e.path.x0, e.path.x1, k); e.y = lerp(e.path.y0, e.path.y1, k); }
-    else e.y = e.baseY - k * TS;
+    const k = 1 - Math.max(0, e.emerge) / 0.5, q = 1 - (1 - k) * (1 - k);   // eased: quick out of the box, settling
+    if (e.path) { e.x = lerp(e.path.x0, e.path.x1, q); e.y = lerp(e.path.y0, e.path.y1, q); }
+    else e.y = e.baseY - q * (e.speedX ? e.h : TS);   // a walker ends standing on the box, a floater a tile up
     return e.emerge <= 0;
   },
   // the clip while it pops: only the part outside the block shows

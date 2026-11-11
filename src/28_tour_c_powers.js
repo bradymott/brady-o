@@ -71,32 +71,36 @@ const TourItemArt = {
     gr.addColorStop(0, rgba(col, 0.45)); gr.addColorStop(1, rgba(col, 0));
     ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.restore();
   },
-  // a tall, wavy cap with swirling rainbow stripes on a cream stem (no spots, no face)
+  // a chunky toon mushroom (the Fiesta Toon cast: flat cel colours, one shade step, a highlight; Ink.ent adds the dark
+  // outline and the cream keyline): a tall wavy cap in three bold bands on a cream stem (no spots, no face), a soft
+  // contact shadow, and a small waddle as it walks
   mushroom(ctx, x, y, t) {
-    this.glow(ctx, x, y - 14, t, '#c8a0ff');
-    // stem
-    const sg = ctx.createLinearGradient(x - 5, 0, x + 5, 0); sg.addColorStop(0, '#e8dcc0'); sg.addColorStop(0.5, '#fff8ea'); sg.addColorStop(1, '#d8c8a8');
-    ctx.fillStyle = sg; ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.quadraticCurveTo(x - 6, y - 8, x - 3.5, y - 13); ctx.lineTo(x + 3.5, y - 13); ctx.quadraticCurveTo(x + 6, y - 8, x + 4, y); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(120,90,60,0.35)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x - 1, y - 2); ctx.quadraticCurveTo(x - 2, y - 7, x, y - 12); ctx.stroke();
-    // the cap: tall and wavy-edged
-    const w = 11, top = y - 30;
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(x - w, y - 13);
-    for (let k = 0; k <= 6; k++) { const xx = x - w + k * (w * 2 / 6); ctx.lineTo(xx, y - 13 + (k % 2 ? 2.2 : -0.6) + Math.sin(t * 3 + k) * 0.5); }
-    ctx.quadraticCurveTo(x + w + 1, y - 22, x + 2, top);
-    ctx.quadraticCurveTo(x - 1, top - 2, x - 3, top + 1);
-    ctx.quadraticCurveTo(x - w - 2, y - 21, x - w, y - 13);
-    ctx.closePath();
-    ctx.clip();
-    // swirling rainbow stripes
-    const cols = ['#ff4f6a', '#ff9a3a', '#ffe14a', '#5ae07a', '#38c8ff', '#8a5aff'];
-    ctx.translate(x, y - 21); ctx.rotate(-0.5 + Math.sin(t * 1.5) * 0.08);
-    for (let k = -8; k < 8; k++) { ctx.fillStyle = cols[((k % 6) + 6) % 6]; ctx.beginPath(); const s = k * 4 + (t * 6) % 24; ctx.moveTo(s - 30, -20); ctx.quadraticCurveTo(s - 8, 0, s - 30, 20); ctx.lineTo(s - 26, 20); ctx.quadraticCurveTo(s - 4, 0, s - 26, -20); ctx.closePath(); ctx.fill(); }
+    const bob = Math.sin(t * 9) * 0.8, sq = 1 + Math.sin(t * 9) * 0.035;
+    ctx.fillStyle = 'rgba(30,14,40,0.22)'; ctx.beginPath(); ctx.ellipse(x, y - 0.5, 10, 2.6, 0, 0, TAU); ctx.fill();
+    ctx.save(); ctx.translate(x, y); ctx.scale(1 / sq, sq); ctx.translate(-x, -y);
+    // stem: cream, a flat shade down its right side
+    const stem = () => { ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.quadraticCurveTo(x - 6.5, y - 7, x - 4, y - 13); ctx.lineTo(x + 4, y - 13); ctx.quadraticCurveTo(x + 6.5, y - 7, x + 5, y); ctx.closePath(); };
+    stem(); ctx.fillStyle = '#fff4de'; ctx.fill();
+    ctx.save(); stem(); ctx.clip(); ctx.fillStyle = '#e6c9a0'; ctx.fillRect(x + 1.5, y - 14, 6, 14); ctx.restore();
+    ctx.strokeStyle = '#2a1630'; ctx.lineWidth = 1.4; stem(); ctx.stroke();
+    // cap: a wavy dome, three flat bands, a shade under the rim, a highlight
+    const cy = y - 12 + bob, w = 12.5, top = cy - 17;
+    const cap = () => {
+      ctx.beginPath(); ctx.moveTo(x - w, cy);
+      for (let k = 1; k <= 6; k++) ctx.quadraticCurveTo(x - w + (k - 0.5) * (w * 2 / 6), cy + 3.2, x - w + k * (w * 2 / 6), cy);
+      ctx.bezierCurveTo(x + w + 2, cy - 9, x + 6, top, x + 1, top);
+      ctx.bezierCurveTo(x - 4, top, x - w - 2, cy - 9, x - w, cy);
+      ctx.closePath();
+    };
+    cap(); ctx.fillStyle = '#ff4f9a'; ctx.fill();
+    ctx.save(); cap(); ctx.clip();
+    ctx.fillStyle = '#ffb23a'; ctx.beginPath(); ctx.ellipse(x - 1, cy - 8, 15, 4.2, -0.35, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8a5cff'; ctx.beginPath(); ctx.ellipse(x + 2, top + 2, 7, 4.5, -0.35, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(60,10,70,0.28)'; ctx.fillRect(x - w - 3, cy - 3, w * 2 + 6, 8);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(x - 5, cy - 11, 2, 3.4, -0.5, 0, TAU); ctx.fill();
     ctx.restore();
-    // a soft highlight on the cap
-    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(x - 4, y - 24, 2.2, 4.5, -0.4, 0, TAU); ctx.fill();
-    // little sparkles
-    for (let k = 0; k < 3; k++) { const a = t * 2 + k * 2.1; ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(t * 6 + k)})`; ctx.fillRect(x + Math.cos(a) * 15, y - 20 + Math.sin(a) * 9, 1.6, 1.6); }
+    ctx.strokeStyle = '#2a1630'; ctx.lineWidth = 1.6; cap(); ctx.stroke();
+    ctx.restore();
   },
   // a hand-rolled cartoon joint: paper cone, twisted end, glowing tip and a lazy curl of smoke
   joint(ctx, x, y, t) {
