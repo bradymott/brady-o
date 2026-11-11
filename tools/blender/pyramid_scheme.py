@@ -54,6 +54,87 @@ def pyramidion(B, name, at, r, h, m, parent=None, bevel=0.02):
 def rect_ring(hx, hz, y, z0=0.0):
     return [(hx, y, z0 + hz), (-hx, y, z0 + hz), (-hx, y, z0 - hz), (hx, y, z0 - hz)]
 
+def almond(n, w, h, k=0.45):
+    """n points (x, y) round an almond (a pointed-cornered eye outline), w half wide, h half tall, CCW from the outer corner."""
+    out = []
+    for i in range(n):
+        a = TAU * i / n; s = math.sin(a)
+        out.append((w * math.cos(a), h * s * ((1 - k) + k * abs(s))))
+    return out
+
+def circle(n, r):
+    return [(r * math.cos(TAU * i / n), r * math.sin(TAU * i / n)) for i in range(n)]
+
+def bm_dome(outline, prof, top, back=-0.01, at=(0, 0, 0), M=None):
+    """A closed dome over a 2D outline [(x, y), …] facing +Z: a back pole at z = back, rings (scale, z) from `prof`, and a
+    front pole at z = top. `at`/`M` (rot()) place it: build an eye part at the origin, then stand it on any face."""
+    rings = [[(0.0, 0.0, back)]] + [[(x * s, y * s, z) for x, y in outline] for s, z in prof] + [[(0.0, 0.0, top)]]
+    return bm_loft(rings, closed_u=True, caps=False, at=at, M=M)
+
+def rtri_pts(hw, y0, y1, r, n):
+    """A rounded triangle (apex up) in the XY plane: base half-width hw at y0, apex at y1, corner radius r, n points per corner."""
+    P = [(-hw, y0), (hw, y0), (0.0, y1)]; out = []
+    for i in range(3):
+        p, a, b = Vector((*P[i], 0)), Vector((*P[i - 1], 0)), Vector((*P[(i + 1) % 3], 0))
+        da, db = (a - p).normalized(), (b - p).normalized()
+        half = math.acos(max(-1.0, min(1.0, da.dot(db)))) / 2; d = r / math.tan(half)
+        c = p + (da + db).normalized() * (r / math.sin(half))
+        t0, t1 = p + da * d, p + db * d
+        a0 = math.atan2(t0.y - c.y, t0.x - c.x); a1 = math.atan2(t1.y - c.y, t1.x - c.x)
+        while a1 < a0: a1 += TAU
+        if a1 - a0 > math.pi: a1 -= TAU
+        for k in range(n):
+            aa = a0 + (a1 - a0) * k / max(1, n - 1)
+            out.append((c.x + r * math.cos(aa), c.y + r * math.sin(aa)))
+    return out
+
+def all_seeing_eye(B, name, at, W, H, M=None, parent=None, lids=True, lite=False, fine=True, ring=True):
+    """The all-seeing eye, built facing +Z at the origin and placed by `at` / `M` (rot()): an almond white (softly lit so it
+    reads at night), a jade iris with a dark limbal rim and fine radial streaks (vertex colour) ringed by a laser-green LED
+    ring, a glossy black pupil, two catch-lights, and gold upper and lower lids with a flick at the outer corner.
+    lite=True: the small capstone eyes (no ring, one catch-light); fine=False: race-level tessellation for a small badge.
+    W, H: the almond's half width and height."""
+    lo = B.lo or not fine; hi = not B.lo
+    n = (32 if not lo else 12 if not B.lo or W > 0.15 else 8) if not lite else B.pick(14, 8)
+    ri = H * 0.86; mloc = Matrix.Translation(E(*at)) @ (M or Matrix.Identity(4)); minv = mloc.inverted()
+    d = W * 0.2   # dome height
+    def local(x, y, z):   # a parent-space engine point -> the eye's own engine frame (x, y, z forward)
+        p = minv @ E(x, y, z); return p.x, p.z, -p.y
+    sprof = [(1.0, 0.0), (0.82, d * 0.6)] if lo or lite else [(1.0, 0.0), (0.9, d * 0.45), (0.7, d * 0.78), (0.4, d * 0.95)]
+    scl = B.obj(name + '_white', bm_dome(almond(n, W, H), sprof, d, at=at, M=M), glow('eye_sclera', '#fbf6ff', strength=0.6, rough=0.25), parent=parent)
+    def scl_col(x, y, z):
+        q = max(0.0, min(1.0, local(x, y, z)[2] / d)); return (0.74 + 0.26 * q, 0.72 + 0.28 * q, 0.84 + 0.16 * q)
+    B.vcol(scl, scl_col)
+    ni = (24 if not lo else 10 if not B.lo or W > 0.15 else 8) if not lite else B.pick(12, 8)
+    iz = d * 0.92   # the iris stands proud of the white
+    iprof = [(1.0, iz), (0.62, iz + d * 0.28)] if lo or lite else [(1.0, iz), (0.85, iz + d * 0.18), (0.62, iz + d * 0.3), (0.38, iz + d * 0.36)]
+    iris = B.obj(name + '_iris', bm_dome(circle(ni, ri), iprof, iz + d * 0.4, back=0.0, at=at, M=M), glow('eye_iris', '#18d184', strength=1.1, rough=0.12), parent=parent)
+    def iris_col(x, y, z):
+        ex, ey, ez = local(x, y, z); rr = math.hypot(ex, ey) / ri; th = math.atan2(ey, ex)
+        k = (1.0 - 0.55 * sstep((rr - 0.55) / 0.45)) * (0.88 + 0.12 * math.cos(th * 14))
+        return (k * 0.85, k, k * (0.9 + 0.1 * min(rr, 1.0)))
+    B.vcol(iris, iris_col)
+    pr = ri * 0.46
+    pprof = [(1.0, iz + d * 0.33)] if lo or lite else [(1.0, iz + d * 0.33), (0.6, iz + d * 0.43)]
+    B.obj(name + '_pupil', bm_dome(circle(16 if not lo else 8, pr), pprof, iz + d * 0.47, back=iz, at=at, M=M), paint('eye_pupil', '#06050a', coat=1.0, rough=0.08, metal=0.0), parent=parent)
+    if ring and not lite:
+        bm = bm_torus(ri * 1.02, H * 0.06, 28 if not lo else 10, 6 if not lo else 3, AZ, (0, 0, iz + d * 0.02)); xf(bm, mloc)
+        B.obj(name + '_ring', bm, led(LIGHT, 3.5), parent=parent)
+    if hi:
+        for k, (hx, hy, hr) in enumerate(((-0.42, 0.42, 1.0), (0.3, -0.3, 0.5))):
+            if lite and k: continue
+            bm = bm_ico(H * 0.16 * hr, 1); xf(bm, mloc @ Matrix.Translation(E(hx * ri, hy * ri, iz + d * 0.5)))
+            B.obj(name + '_hl%d' % k, bm, led('#ffffff', 3.0), parent=parent)
+    if lids:
+        N = 22 if not lo else 7; M_g = metal('gold', COL2, 0.14)
+        up = [(W * 1.34, H * 0.46, d * 0.12)] + [(W * 1.06 * math.cos(a), H * 1.14 * math.sin(a) * (0.55 + 0.45 * math.sin(a)), d * 0.2) for a in (math.pi * k / 8 for k in range(9))]
+        upc = catmull(up, N)
+        ru = [0.004 if i == 0 else H * (0.08 + 0.12 * math.sin(math.pi * min(1.0, max(0.0, (i - 0.5) / (N - 1.5))))) for i in range(N)]
+        B.obj(name + '_lid_up', bm_tube(upc, ru, 8 if not lo else 3, at=at, M=M), M_g, parent=parent)
+        lw = catmull([(W * 1.03 * math.cos(a), -H * 1.08 * math.sin(a) * (0.55 + 0.45 * math.sin(a)), d * 0.16) for a in (math.pi * k / 8 for k in range(9))], 16 if not lo else 6)
+        rl = [H * (0.05 + 0.07 * math.sin(math.pi * i / (len(lw) - 1))) for i in range(len(lw))]
+        B.obj(name + '_lid_lo', bm_tube(lw, rl, 8 if not lo else 3, at=at, M=M), M_g, parent=parent)
+
 def build(B):
     L = B.L; lo = B.lo
     B.export_try = VCOL_EXPORT   # the tiers and the hull carry vertex-colour gradients
@@ -91,7 +172,7 @@ def build(B):
     B.obj('grille_frame', bm_rrect_tube(1.1, 0.34, 0.08, 0.026, B.pick(4, 1), B.pick(8, 4), at=(0, 0.8, 2.655), axis=AZ), cr)
     for k, y in enumerate((0.72, 0.8, 0.88)):
         B.obj('grille_bar_%d' % k, bm_rod((-0.52, y, 2.665), (0.52, y, 2.665), 0.016, L['rod']), cr)
-    B.obj('sun_ring', bm_torus(0.13, 0.028, L['torus'], B.pick(6, 4), AZ, (0, 1.08, 2.66)), M_gold)
+    B.obj('sun_ring', bm_torus(0.13, 0.028, L['torus'], B.pick(6, 3), AZ, (0, 1.08, 2.66)), M_gold)
     B.obj('sun_disc', bm_ellipsoid(0.11, 0.04, 0.11, L['cyl_s'], B.pick(5, 3), (0, 1.08, 2.655), phi1=math.pi / 2, M=AZ), ledg)
     for s in (1, -1):   # the sun's wings: three tapering gold feathers each side
         for k, (dy, L1, a) in enumerate(((0.04, 0.42, 0.08), (-0.02, 0.38, 0.02), (-0.08, 0.32, -0.05))):
@@ -100,11 +181,27 @@ def build(B):
             B.obj('wing_%d_%d' % (s > 0, k), bm_tube(catmull([p0, ((p0[0] + p1[0]) / 2, p0[1] + a * 0.7 + 0.02, 2.665), p1], B.pick(8, 3)), [0.024] + [0.02] * B.pick(6, 1) + [0.006], B.pick(6, 4)), M_gold)
         hx = s * 0.86
         B.obj('head_cup_%d' % (s > 0), bm_closed_lathe([(0, -0.06), (0.15, -0.05), (0.16, 0.0), (0.0, 0.01)], L['cyl_s'], AZ, (hx, 0.98, 2.6)), dch)
-        B.obj('head_bezel_%d' % (s > 0), bm_rrect_tube(0.36, 0.36, 0.1, 0.026, B.pick(4, 1), B.pick(6, 4), at=(hx, 0.98, 2.62), axis=AZ), M_gold)
+        B.obj('head_bezel_%d' % (s > 0), bm_rrect_tube(0.36, 0.36, 0.1, 0.026, B.pick(4, 1), B.pick(6, 3), at=(hx, 0.98, 2.62), axis=AZ), M_gold)
         B.obj('head_lens_%d' % (s > 0), bm_ellipsoid(0.13, 0.035, 0.13, L['cyl_s'], B.pick(5, 2), (hx, 0.98, 2.61), phi1=math.pi / 2, M=AZ), led('#fff0d8'))
         B.light(hx, 0.98, 2.72, 1.3, '#fff2c8', head=1)
-        B.obj('tail_ring_%d' % (s > 0), bm_rrect_tube(0.42, 0.14, 0.06, 0.016, B.pick(4, 1), 4, at=(s * 0.8, 1.0, -2.585), axis=AZn), M_gold)
-        B.obj('tail_%d' % (s > 0), bm_box(0.38, 0.1, 0.04, (s * 0.8, 1.0, -2.58)), led('#ff1a2a'), bevel=0.015, bevel_angle=False, segments=1)
+        B.obj('tail_ring_%d' % (s > 0), bm_rrect_tube(0.44, 0.17, 0.07, 0.018, B.pick(4, 1), B.pick(4, 3), at=(s * 0.8, 1.0, -2.6), axis=AZn), M_gold)
+        if lo: B.obj('tail_%d' % (s > 0), bm_box(0.4, 0.13, 0.04, (s * 0.8, 1.0, -2.58)), led('#ff1a2a'), bevel=0.015, bevel_angle=False, segments=1)
+        else:   # a dark housing with three stacked red light bars and an amber turn lamp at the outer end
+            B.obj('tail_%d' % (s > 0), bm_box(0.42, 0.15, 0.04, (s * 0.8, 1.0, -2.58)), dch, bevel=0.02, bevel_angle=False, segments=2)
+            for j, yy in enumerate((0.955, 1.0, 1.045)):
+                B.obj('tail_bar_%d_%d' % (s > 0, j), bm_capsule(0.017, 0.3 - 0.03 * abs(j - 1), 8, 2, (s * 0.77, yy, -2.603), AX), led('#ff1a2a', 5.0))
+            B.obj('tail_turn_%d' % (s > 0), bm_closed_lathe([(0, -0.01), (0.032, -0.005), (0.026, 0.015), (0, 0.02)], 10, AZn, (s * 0.975, 1.0, -2.6)), led('#ffa21a', 4.0))
+            B.obj('reverse_%d' % (s > 0), bm_closed_lathe([(0, -0.01), (0.05, -0.005), (0.042, 0.018), (0, 0.024)], 12, AZn, (s * 0.42, 0.74, -2.6)), led('#fff4e0', 2.0))
+            B.obj('reverse_bezel_%d' % (s > 0), bm_torus(0.052, 0.01, 12, 4, AZn, (s * 0.42, 0.74, -2.602)), M_gold)
+    # the tail panel: a gold-rimmed eye-in-a-pyramid badge of our own between the tail lights, a seam round the panel
+    # and a laser-green pin line under it; the gold-and-green badge reads from the chase camera
+    TB = (0.0, 0.94, -2.612)
+    B.obj('badge_rim', bm_tube([(x, TB[1] + y, TB[2]) for x, y in rtri_pts(0.2, -0.13, 0.2, 0.03, B.pick(4, 2))], 0.018, B.pick(6, 4), closed=True), M_gold)
+    all_seeing_eye(B, 'badge_eye', (0.0, TB[1] - 0.005, TB[2] + 0.004), 0.09, 0.046, M=rot(yaw=math.pi), lids=not lo, fine=False, ring=not lo)
+    if not lo:
+        B.obj('badge_back', bm_profile(rtri_pts(0.19, -0.12, 0.19, 0.025, 4), 0.012, at=(0, TB[1], TB[2] + 0.008)), paint('plaque', '#2e2540', coat=1.0, rough=0.2, metal=0.25))
+        B.obj('tail_seam', bm_rrect_tube(1.86, 0.42, 0.12, 0.009, 4, 4, at=(0, 0.9, -2.603), axis=AZn), dch)
+        B.strip((-0.55, 0.735, -2.606), (0.55, 0.735, -2.606), LIGHT, th=0.016, name='tail_pin')
         B.light(s * 0.8, 1.0, -2.7, 0.9, '#ff2a3a', tail=1)
     for zs, zc in ((1, 2.76), (-1, -2.74)):
         path = catmull([(1.2, 0.58, zc - zs * 0.42), (1.08, 0.58, zc - zs * 0.1), (0.7, 0.58, zc), (-0.7, 0.58, zc), (-1.08, 0.58, zc - zs * 0.1), (-1.2, 0.58, zc - zs * 0.42)], B.pick(16, 7))
@@ -138,41 +235,56 @@ def build(B):
         # LED rows along both flanks and the back (tier 1 also carries game lights)
         n = B.pick(6, 3) if i < 3 else B.pick(3, 2); yb = (y0 + y1) / 2 - 0.03
         for s in (1, -1):
-            if lo and i % 2: continue
+            if lo and i in (1, 2, 3): continue   # the race level keeps the base tier's flank LEDs
             B.leds((s * (hw + b * 0.6 + 0.02), yb, PZ + hd - 0.2), (s * (hw + b * 0.6 + 0.02), yb, PZ - hd + 0.2), n, LIGHT, 0.042, 2 if i == 1 else 0, prefix='tled%d_%d' % (i, s > 0))
         if not lo or i == 0:
             B.leds((-hw + 0.2, yb, PZ - hd - b * 0.6 - 0.02), (hw - 0.2, yb, PZ - hd - b * 0.6 - 0.02), B.pick(5, 3) if i < 3 else 2, LIGHT, 0.042, 0, prefix='bled%d' % i)
-    # the chrome eye on the second tier's front face: almond outline, dark iris, glowing pupil, gold brow, tear and curl
-    ez = PZ + TIERS[1][1] / 2 + 0.05; ey = (TIERS[1][2] + TIERS[1][3]) / 2 + 0.03
-    almond = [(math.cos(a) * 0.3, ey + math.sin(a) * 0.12 * (1 - 0.25 * math.cos(a)), ez) for a in (TAU * k / B.pick(28, 12) for k in range(B.pick(28, 12)))]
-    B.obj('eye_outline', bm_tube(almond, 0.02, B.pick(6, 4), closed=True), cr)
-    B.obj('eye_white', bm_ellipsoid(0.27, 0.1, 0.03, B.pick(20, 10), B.pick(4, 2), (0, ey, ez - 0.01)), mat('eye_enamel', '#f4f0fa', rough=0.55, emit='#c8ffe0', strength=0.4))
-    B.obj('eye_iris', bm_ellipsoid(0.095, 0.095, 0.03, L['cyl_s'], B.pick(5, 3), (0, ey, ez + 0.005), phi1=math.pi / 2, M=AZ), paint('iris_black', '#0a0810', coat=1.0, rough=0.15, metal=0.0))
-    B.obj('eye_pupil', bm_ellipsoid(0.055, 0.055, 0.015, L['cyl_s'], B.pick(4, 2), (0, ey, ez + 0.035), phi1=math.pi / 2, M=AZ), ledg)
-    B.obj('eye_brow', bm_tube([(math.cos(a) * 0.34, ey + 0.05 + math.sin(a) * 0.09, ez) for a in (math.pi * (0.12 + 0.76 * k / 10) for k in range(11))], 0.018, B.pick(6, 4)), M_gold)
+    # the all-seeing eye: a gold-rimmed triangular plaque standing on the base tier's front ledge, a sunburst of gold rays
+    # (showroom) round a big almond eye with a jade iris in a laser-green ring
+    PZB, PY0, PY1, PHW = 1.885, 1.695, 2.62, 0.66
+    plq = B.obj('eye_plaque', bm_profile(rtri_pts(PHW, PY0, PY1, 0.07, B.pick(5, 2)), 0.05, at=(0, 0, PZB)), paint('plaque', '#2e2540', coat=1.0, rough=0.2, metal=0.25),
+                bevel=B.pick(0.015, None), bevel_angle=False, segments=2)
+    B.vcol(plq, lambda x, y, z: (lambda q: (0.55 + 0.45 * q, 0.55 + 0.45 * q, 0.65 + 0.35 * q))(sstep((y - PY0) / (PY1 - PY0))))
+    rim = [(x, y, PZB + 0.028) for x, y in rtri_pts(PHW + 0.012, PY0 - 0.012, PY1 + 0.02, 0.08, B.pick(5, 2))]
+    B.obj('eye_plaque_rim', bm_tube(rim, 0.03, B.pick(8, 3), closed=True), M_gold)
+    EC = (0.0, 2.0, PZB + 0.025)
     if not lo:
-        B.obj('eye_tear', bm_tube(catmull([(0.1, ey - 0.11, ez), (0.14, ey - 0.2, ez), (0.2, ey - 0.24, ez)], 6), [0.016, 0.014, 0.013, 0.012, 0.01, 0.006], 5), M_gold)
-        B.obj('eye_curl', bm_tube(catmull([(-0.3, ey - 0.01, ez), (-0.42, ey - 0.06, ez), (-0.46, ey - 0.13, ez), (-0.4, ey - 0.15, ez)], 8), 0.013, 5), M_gold)
+        tri = [(-PHW, PY0), (PHW, PY0), (0.0, PY1)]
+        def hit(u):
+            best = 9.0
+            for i in range(3):
+                (x1, y1), (x2, y2) = tri[i], tri[(i + 1) % 3]; ex, ey = x2 - x1, y2 - y1
+                den = u[0] * ey - u[1] * ex
+                if abs(den) < 1e-9: continue
+                t = ((x1 - EC[0]) * ey - (y1 - EC[1]) * ex) / den; v = ((x1 - EC[0]) * u[1] - (y1 - EC[1]) * u[0]) / den
+                if t > 0 and -0.001 <= v <= 1.001: best = min(best, t)
+            return best
+        for k in range(15):
+            a = math.radians(-12 + 204 * k / 14); u = (math.cos(a), math.sin(a)); t1 = hit(u) - 0.075
+            t0 = 0.4 if abs(u[1]) < 0.5 else 0.25
+            if t1 - t0 < 0.05: continue
+            B.obj('eye_ray_%d' % k, bm_tube([(EC[0] + u[0] * t, EC[1] + u[1] * t, PZB + 0.03) for t in (t0, (t0 + t1) / 2, t1)], [0.016, 0.011, 0.004], 5), M_gold)
+    all_seeing_eye(B, 'eye', EC, 0.27, 0.135)
 
     # ---- the capstone (part_cap): a gold pyramidion with a glowing crystal; four laser emitters on its corners ----
     C = B.part('cap', CAP_J)
     B.obj('cap_plinth', bm_box(CAP_B * 2 + 0.12, 0.06, CAP_B * 2 + 0.12, (0, 0.03, 0)), M_gold2, parent=C, bevel=0.02, bevel_angle=False, segments=B.pick(2, 1))
     pyramidion(B, 'cap_gold', (0, 0.06, 0), CAP_B * math.sqrt(2), CAP_H, M_gold, parent=C, bevel=B.pick(0.025, 0.015))
     B.obj('cap_crystal', bm_lathe([(0, -0.08), (0.07, 0.0), (0.05, 0.08), (0.0, 0.14)], B.pick(8, 6), at=(0, 0.06 + CAP_H - 0.02, 0)), M_crystal, parent=C, smooth=False)
-    if not lo:   # a glowing eye on each face of the capstone
+    if not lo:   # a small all-seeing eye on each face of the capstone: as it turns, one always looks back at the pack
         for k in range(4):
             a = k * math.pi / 2; nx, nz = math.sin(a), math.cos(a)
-            dn = 0.06 + CAP_H * 0.35; rr = CAP_B * 0.65 + 0.012
-            B.obj('cap_eye_%d' % k, bm_ellipsoid(0.07, 0.035, 0.012, 10, 3, (nx * rr, dn, nz * rr), M=rot(yaw=a) @ rot(pitch=-0.68)), ledg, parent=C)
+            dn = 0.06 + CAP_H * 0.33; rr = CAP_B * (1 - (dn - 0.06) / CAP_H) + 0.006
+            all_seeing_eye(B, 'cap_eye_%d' % k, (nx * rr, dn, nz * rr), 0.1, 0.05, M=rot(yaw=a) @ rot(pitch=-0.757), parent=C, lids=False, lite=True)
     B.light(0, CAP_J[1] + 0.5, PZ, 3.2, LIGHT, big=1)
     for k in range(4):
         a = TAU * (k + 0.5) / 4; ex, ez2 = math.sin(a) * EMIT_R, math.cos(a) * EMIT_R
         Em = B.part('emit%d' % k, (ex, CAP_J[1] + 0.15, PZ + ez2))
         A = aim((math.sin(a), 0.35, math.cos(a)))
-        B.obj('emit_yoke_%d' % k, bm_torus(0.065, 0.014, B.pick(12, 6), 4, aim((math.cos(a), 0, -math.sin(a))), (0, 0, 0), sweep=(math.pi, TAU)), M_gold, parent=Em)
+        B.obj('emit_yoke_%d' % k, bm_torus(0.065, 0.014, B.pick(12, 6), B.pick(4, 3), aim((math.cos(a), 0, -math.sin(a))), (0, 0, 0), sweep=(math.pi, TAU)), M_gold, parent=Em)
         B.obj('emit_body_%d' % k, bm_closed_lathe([(0, -0.09), (0.045, -0.09), (0.055, -0.04), (0.05, 0.08), (0.06, 0.1), (0.0, 0.1)], B.pick(12, 6), A, (0, 0, 0)), cr, parent=Em)
         d = Vector((math.sin(a), 0.35, math.cos(a))).normalized() * 0.11
-        B.obj('emit_lens_%d' % k, bm_uv(0.035, B.pick(10, 6), B.pick(6, 4), tuple(d)), ledg, parent=Em)
+        B.obj('emit_lens_%d' % k, bm_uv(0.035, B.pick(10, 6), B.pick(6, 3), tuple(d)), ledg, parent=Em)
 
     # ---- speaker towers at the back corners, two cones each facing the crowd behind (part_subs pumps them) ----
     Sb = B.part('subs', SUBS_J)
@@ -196,7 +308,7 @@ def build(B):
 
     # ---- wheels, the seat between the towers, a low glass wind deflector, size info ----
     B.wheels_pro(1.12, 1.75, -1.75, r=0.5, w=0.42, rim=COL2, tyre='#141218', cap=LIGHT, stripe=LIGHT)
-    B.seat(0, 1.62, -1.75, col=COL, accent=LIGHT, wheelZ=-1.2)
+    B.seat_pro(0, 1.62, -1.75, col=COL, accent=LIGHT, wheelZ=-1.2, piping=COL2)
     top = CAP_J[1] + 0.06 + CAP_H - 0.02 + 0.14
     B.info(5.4, 2.6, round(top, 2), muzzle=(0, CAP_J[1] + 0.3, PZ), wheelR=0.5, extra={'sight': [round(top + 0.02, 2), PZ]})
     B.body['rigV'] = 2
