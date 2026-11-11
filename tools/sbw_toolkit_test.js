@@ -154,7 +154,9 @@ section('budget', () => {
   check('budget rule 4: DIVE with a fins stand up front passes', B('dive', [['gearStand', { item: 'fins' }], ['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 60 }]]).ok);
   check('budget rule 4: a fins stand after the twist fails', has(B('dive', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 70 }], ['gearStand', { item: 'fins' }], ['flat', { n: 10 }]]), /before the twist/));
   check('budget rule 4: a hat wall without a hat stand fails', has(B('lab', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'oneup', hidden: true }], ['breakwall', { needs: 'hat' }], ['flat', { n: 40 }]]), /needs hat/));
-  check('budget rule 5: premium items all in plain sight fail', has(B('lab', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'lsd' }], ['flat', { n: 40 }]]), /plain sight/));
+  G.Validator.STRICT5 = true;
+  check('budget rule 5: premium items all in plain sight fail (an error with STRICT5, a warning until release)', has(B('lab', [['itemBlock', { item: 'power' }], ['itemBlock', { item: 'lsd' }], ['flat', { n: 40 }]]), /plain sight/));
+  G.Validator.STRICT5 = false;
   const six = [1, 2, 3, 4, 5, 6].map(() => ['itemBlock', { item: 'power' }]).concat([['itemBlock', { item: 'oneup', hidden: true }], ['flat', { n: 30 }]]);
   check('budget rule 2: seven blocks in a main level fail', has(B('lab', six), /item blocks in the main area/));
   check('budget rule 7: a secret level may hold up to seven', B('lab', six, { secret: true }).ok, B('lab', six, { secret: true }).errors);

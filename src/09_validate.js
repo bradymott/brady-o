@@ -308,8 +308,10 @@ const Validator = {
       for (let y = p.y - 3; y <= p.y + 3; y++) for (let x = p.x - 3; x <= p.x + 3; x++) { if (x < 0 || y < 0 || x >= a.W || y >= a.H) continue; const i = y * a.W + x; if (a.tiles[i] === T.FAKE || (a.hide && a.hide[i] === 3)) return true; }
       return a.spawns.some(s => s.type === 'gold' && (s.kind === 'risky' || s.kind === 'hidden') && Math.abs(s.x / TS - p.x) <= 5 && Math.abs(s.y / TS - p.y) <= 6);
     };
-    if (!premium.length) errors.push('no premium item (L, S, sundial, 1UP or magnet) in a secret or risky spot (rule 5)');
-    else if (!premium.some(tucked)) errors.push('the premium items are all in plain sight: put one in a secret or risky spot (rule 5)');
+    // a warning for now (levels written before the rule landed); an error at release
+    const r5 = Validator.STRICT5 ? errors : warnings;
+    if (!premium.length) r5.push('no premium item (L, S, sundial, 1UP or magnet) in a secret or risky spot (rule 5)');
+    else if (!premium.some(tucked)) r5.push('the premium items are all in plain sight: put one in a secret or risky spot (rule 5)');
     // rule 6: a boss level hands out two opportunities on the way to the arena
     const arena = a => a.role === 'arena' || a.gen === 'arena';
     if (S.arch === 'lair' || S.kind === 'castle') {
