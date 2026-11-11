@@ -476,6 +476,7 @@ BURNS_W10.env = function (g, env) {
   }
   if (S.burnK > 0) { env.emB += S.burnK * 0.3; env.fogCol = env.fogCol.map((c, i) => lerp(c, [0.45, 0.2, 0.1][i], S.burnK * 0.35)); env.haze = Math.min(1, env.haze + S.burnK * 0.2); }
   if (S.phase === 2 && S.man && S.man.st === 'flash') env.emB += S.man.flashK * 0.6;
+  if (!(S.burnK > 0) && S.man && !S.man.hidden && !S.man.defeated) BurnsManModel.light(g, S.man.x, S.man.y, S.man.z, S.man.scale);   // his neon on the deck
 };
 BURNS_W10.drawSprites = function (g, R) {
   const W = BURNS_W10, S = W.state, SP = BURNS_SPRITES.R, t = g.time, p = g.player;
