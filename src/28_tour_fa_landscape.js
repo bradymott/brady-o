@@ -1,13 +1,10 @@
-/* Country dioramas for the tour map's country panel: a little island with a winding trail, the level stops, a
-   regional landmark and the boss fort. All coordinates are CSS pixels; the stamps stay the panel's input targets,
-   and progression, saves and flight logic are untouched.
+/* Country looks for the maps: each land's palette (sky, water, far hills, land, light land, path, landmark), the
+   landmark miniatures, the level-type labels and small text helpers.
 
-   Stop layout is data-driven: the island is a grid of cells and every level sits in its own cell, so stops never
-   overlap however many there are. By default the levels snake through the grid (bottom row left to right, the next
-   row right to left, ...). A level can pin its cell with `mapCell: [col, row]` (row 0 = the bottom row) and say
-   which stop its trail comes from with `mapFrom: <0-based level index>`: that is how secret levels and branching
-   paths go in. `mapHidden: true` keeps a stop (and its trail) off the map until it is unlocked; its cell stays
-   reserved so nothing moves when it appears. A free cell gets the landmark.
+   The stop grid: every stop of a land (levels, then houses) has a cell `mapCell: [col, row]` (row 0 = the bottom
+   row; by default the levels snake through a 3-column grid) and says which stop its trail comes from with
+   `mapFrom: <index> | [index, ...]`. The overworld (28_tour_fd_overworld.js) places stops from its hand-tuned layout
+   table (28_tour_fc_maplayouts.js) and falls back to these cells for any stop the table does not list.
 
    Landmarks are original, non-sacred miniatures (sacred sites stay in level backgrounds, never as map icons). */
 const TourLandscape = {
@@ -194,95 +191,3 @@ const TourLandscape = {
     ctx.restore();
   }
 };
-
-(() => {
-  const oldPanel = TourMapScene.prototype.drawPanel;
-  TourMapScene.prototype.layoutPanel = function () {
-    const C = Tour.countries[this.sel], R = this.panelR; this.stamps = []; this.terrainR = null; this.landmarkAt = null;
-    if (!C) return;
-    const head = 56, foot = C.power ? 44 : 12;
-    const A = { x: R.x + 8, y: R.y + head, w: R.w - 16, h: Math.max(90, R.h - head - foot) };
-    this.terrainR = A;
-    const G = TourLandscape.grid(C.levels), cw = A.w / G.cols, ch = A.h / G.rows;
-    // the stop's parts, top to bottom: postcard marks, circle, name (1-2 lines), level type. Compact cells: 1 line, no type.
-    const compact = ch < 62, r = Math.max(9, Math.min(14, ch * 0.15)), lh = cw > 100 ? 13 : 12;
-    const blockH = 7 + 2 * r + 4 + (compact ? lh + 2 : 2 * lh + 12);
-    this.stopLook = { r, lh, compact, cw, ch };
-    const used = {};
-    this.stampAt = {};
-    C.levels.forEach((L, k) => {
-      const [col, row] = G.cells[k]; used[col + ',' + row] = true;
-      if (L.mapHidden && !TourProgress.isUnlocked(C.world + '-' + (k + 1))) return;
-      const x = A.x + col * cw, y = A.y + (G.rows - 1 - row) * ch;
-      const slack = Math.max(0, ch - 4 - blockH), jit = (col % 2 ? -1 : 1) * Math.min(slack / 2, ch * 0.1);
-      const top = y + 2 + slack / 2 + jit;
-      const st = { i: k + 1, x: x + 2, y: y + 2, w: cw - 4, h: ch - 4, cx: x + cw / 2, cy: top + 7 + r, top, from: G.from[k] };
-      this.stamps.push(st); this.stampAt[k] = st;
-    });
-    // the landmark: in a free cell (top row first), otherwise small in the hills at the back
-    let free = null;
-    for (let row = G.rows - 1; row >= 0 && !free; row--) for (let col = 0; col < G.cols; col++) if (!used[col + ',' + row]) { free = [col, row]; break; }
-    if (free) { const s = Math.min(cw * 0.62, ch * 0.72, 72); this.landmarkAt = { x: A.x + (free[0] + 0.5) * cw, y: A.y + (G.rows - 1 - free[1]) * ch + ch * 0.5 + s * 0.5, size: s }; }
-    else this.landmarkAt = { x: A.x + A.w * 0.9, y: A.y + A.h * 0.3, size: Math.min(26, A.h * 0.16) };
-  };
-  TourMapScene.prototype.drawPanel = function (ctx) {
-    const C = Tour.countries[this.sel], R = this.panelR, s = Tour.stops[this.sel];
-    if (!C || TourMap.stopState(s) === 'locked' || !this.terrainR) { oldPanel.call(this, ctx); return; }
-    const c = TourLandscape.look(this.sel), A = this.terrainR, K = this.stopLook;
-    ctx.save();
-    ctx.fillStyle = '#152c3c'; rr(ctx, R.x, R.y, R.w, R.h, 19); ctx.fill(); ctx.strokeStyle = 'rgba(255,244,214,0.35)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = c[5]; ctx.font = `${Math.min(20, R.w / 12)}px ${FONT_DISPLAY}`; ctx.fillText(s.name.toUpperCase(), R.x + 16, R.y + 21, R.w - 32);
-    ctx.fillStyle = '#c9dde0'; ctx.font = `11px ${FONT_UI}`; ctx.fillText(TourLandscape.fit(ctx, C.tagline || s.sub || 'Choose your next adventure', R.w - 32), R.x + 16, R.y + 41);
-    TourLandscape.scenery(ctx, A, this.sel, this.t, this.landmarkAt);
-    // the trail: done stretches solid, future ones dotted
-    ctx.lineCap = 'round';
-    this.stamps.forEach(b => {
-      const a = this.stampAt[b.from]; if (!a) return;
-      const open = TourProgress.isUnlocked(C.world + '-' + b.i);
-      const trail = () => { ctx.beginPath(); ctx.moveTo(a.cx, a.cy); const my = (a.cy + b.cy) / 2; if (Math.abs(a.cy - b.cy) < 4) ctx.bezierCurveTo((a.cx * 2 + b.cx) / 3, a.cy + 10, (a.cx + b.cx * 2) / 3, b.cy - 10, b.cx, b.cy); else ctx.bezierCurveTo(a.cx + (a.cx > A.x + A.w / 2 ? 26 : -26), my, b.cx + (b.cx > A.x + A.w / 2 ? 26 : -26), my, b.cx, b.cy); };
-      ctx.strokeStyle = 'rgba(45,67,63,0.35)'; ctx.lineWidth = 10; trail(); ctx.stroke();
-      ctx.strokeStyle = open ? c[5] : 'rgba(255,244,215,0.7)'; ctx.lineWidth = 6; ctx.setLineDash(open ? [] : [2, 7]); trail(); ctx.stroke(); ctx.setLineDash([]);
-    });
-    const active = this.stamps.find(b => TourProgress.isUnlocked(C.world + '-' + b.i) && !Save.data.done[C.world + '-' + b.i]);
-    const r = K.r, lh = K.lh, labelW = Math.max(40, K.cw - 8);
-    this.stamps.forEach((b, k) => {
-      const id = C.world + '-' + b.i, L = C.levels[b.i - 1], open = TourProgress.isUnlocked(id), done = !!Save.data.done[id], boss = L.style === 'castle', foc = this.focus === k && !Input.usingTouch;
-      const x = b.cx, y = b.cy;
-      // postcards found (three marks above the stop)
-      const gold = Save.data.gold[id] || [];
-      for (let q = 0; q < 3; q++) { ctx.fillStyle = gold[q] ? '#ffdc71' : 'rgba(35,69,69,0.35)'; rr(ctx, x - 9.5 + q * 7, b.top, 5, 4, 1); ctx.fill(); }
-      ctx.fillStyle = 'rgba(30,55,54,0.25)'; ctx.beginPath(); ctx.ellipse(x, y + r + 2, r + 3, 3, 0, 0, TAU); ctx.fill();
-      if (active === b || foc) { ctx.strokeStyle = foc ? '#ffd84a' : '#fff7d8'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(x, y, r + 4.5, 0, TAU); ctx.stroke(); }
-      ctx.fillStyle = done ? '#f5c75e' : open ? '#fff7df' : '#6d8483'; ctx.strokeStyle = '#30474f'; ctx.lineWidth = 2;
-      if (boss) {   // the boss fort: battlements and a door
-        rr(ctx, x - r, y - r * 0.8, r * 2, r * 1.8, 3); ctx.fill(); ctx.stroke();
-        for (let q = -1; q <= 1; q++) { ctx.fillRect(x + q * r * 0.7 - 2.5, y - r * 0.8 - 4, 5, 5); ctx.strokeRect(x + q * r * 0.7 - 2.5, y - r * 0.8 - 4, 5, 5); }
-        if (open) { ctx.fillStyle = '#30474f'; rr(ctx, x - 3.5, y + r * 0.1, 7, r * 0.9, 3); ctx.fill(); }
-        else TourLandscape.lock(ctx, x, y - r * 0.15, r * 1.1, '#2b3e45');
-      } else {
-        ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke();
-        if (!open) TourLandscape.lock(ctx, x, y - r * 0.12, r * 1.15, '#2b3e45');
-        else { ctx.fillStyle = '#30474f'; ctx.textAlign = 'center'; ctx.font = `${Math.round(r * 1.05)}px ${FONT_DISPLAY}`; ctx.fillText(done ? '✓' : String(b.i), x, y + 1); }
-      }
-      // the name on a pill, one or two lines, then the level type
-      ctx.font = `${lh - 1.5}px ${FONT_UI}`; ctx.textAlign = 'center';
-      const lines = TourLandscape.wrap(ctx, L.name, labelW - 8, K.compact ? 1 : 2);
-      let pw = 0; for (const l of lines) pw = Math.max(pw, ctx.measureText(l).width);
-      const ly = y + r + 4, type = K.compact ? '' : TourLandscape.STYLE[L.style] || 'RUN';
-      if (type) { ctx.font = `bold 10px ${FONT_UI}`; pw = Math.max(pw, ctx.measureText(type).width); }
-      ctx.fillStyle = open ? 'rgba(18,52,62,0.93)' : 'rgba(52,78,82,0.9)'; rr(ctx, x - pw / 2 - 5, ly, pw + 10, lines.length * lh + (type ? 12 : 2), 5); ctx.fill();
-      ctx.font = `${lh - 1.5}px ${FONT_UI}`; ctx.fillStyle = open ? '#fff5d9' : '#cfdcd7';
-      lines.forEach((l, i) => ctx.fillText(l, x, ly + 1 + lh * (i + 0.5)));
-      if (type) { ctx.font = `bold 10px ${FONT_UI}`; ctx.fillStyle = boss ? '#ffb27a' : open ? '#8fd6c4' : '#a9bdb8'; ctx.fillText(type, x, ly + lines.length * lh + 6.5); }
-      if (active === b) { ctx.fillStyle = '#fff4d4'; ctx.strokeStyle = '#30474f'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x + r + 3, y - r - 6); ctx.lineTo(x + r + 11, y - r - 6); ctx.lineTo(x + r + 7, y - r); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-    });
-    // the country's souvenir (signature power-up)
-    if (C.power) {
-      const y = R.y + R.h - 24;
-      ctx.save(); ctx.translate(R.x + 24, y); ctx.scale(0.75, 0.75); if (C.power.icon) C.power.icon(ctx, 0, 0, this.t); ctx.restore();
-      ctx.textAlign = 'left'; ctx.font = `10px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffd84a'; ctx.fillText(TourLandscape.fit(ctx, 'SOUVENIR: ' + C.power.name.toUpperCase(), R.w - 54), R.x + 44, y - 6);
-      ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = '#c3d6da'; ctx.fillText(TourLandscape.fit(ctx, C.power.hint || '', R.w - 54), R.x + 44, y + 9);
-    }
-    ctx.restore();
-  };
-})();
