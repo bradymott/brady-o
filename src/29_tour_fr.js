@@ -794,6 +794,7 @@ class FrMirror extends Ent {
   draw(ctx) {
     const x = this.cx, y = this.y, w = this.w, h = this.h, g = this.g, b = g.boss, toward = this.side === 'left' ? 1 : -1;
     const tilt = (this.aimed ? -0.55 : 0) * toward + (this.wob > 0 ? Math.sin(this.t * 40) * 0.08 : 0);
+    // the frame tilted by up to 0.63 rad reaches 44 px from its centre (22 past the box's sides): 30 px of slack
     Ink.ent(ctx, this, c => {
       c.save(); c.translate(x, y + h / 2); c.rotate(tilt);
       c.fillStyle = '#c8962a'; rr(c, -w / 2 - 4, -h / 2 - 4, w + 8, h + 8, 10); c.fill();
@@ -804,7 +805,7 @@ class FrMirror extends Ent {
       if (b && !b.remove && b.state === 'fight' && (b.phase || 1) >= 3) { c.save(); c.beginPath(); rr(c, -w / 2, -h / 2, w, h, 7); c.clip(); const rx = clamp((b.cx - x) * 0.06, -12, 12); c.scale(0.3, 0.3); souffleArt(c, rx / 0.3, h / 2 / 0.3 - 6, this.t, { puff: 0.5, dir: 1, hat: true }); c.restore(); }
       c.fillStyle = '#e8c870'; for (const [fx, fy] of [[-w / 2 - 2, -h / 2 - 2], [w / 2 + 2, -h / 2 - 2], [-w / 2 - 2, h / 2 + 2], [w / 2 + 2, h / 2 + 2]]) { c.beginPath(); c.arc(fx, fy, 4, 0, TAU); c.fill(); }
       c.restore();
-    });
+    }, { pad: 30 });
     // the timer ring and the "hit me" arrow
     if (this.aimed) { ctx.strokeStyle = '#ffe8a0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y - 14, 8, -Math.PI / 2, -Math.PI / 2 + TAU * (this.aimT / 9)); ctx.stroke(); }
     else { ctx.fillStyle = `rgba(255,232,160,${0.5 + 0.5 * Math.sin(this.t * 6)})`; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▲', x, y + h + 16 + Math.sin(this.t * 6) * 3); }
@@ -871,7 +872,8 @@ class FrDecoy extends Ent {
   pop(text) { if (this.remove) return; this.remove = true; this.g.burst(this.cx, this.cy, 24, '#fff4d0', 'confetti'); this.g.parts.text(this.cx, this.y - 10, text || 'POP! A FAKE!', '#ffffff'); K.sfx('splat', null, { vol: 0.5, pitch: 1.4 }); }
   hit(kind, src) { if (this.remove) return false; if (kind === 'stomp' || kind === 'spin' || kind === 'disc' || kind === 'star' || kind === 'laser') { this.pop(); return true; } return false; }
   touchPlayer(p) { if (!this.remove) p.hurt(this); }
-  draw(ctx) { Ink.ent(ctx, this, c => souffleArt(c, this.cx, this.y + this.h, this.t, { puff: 0.5 + Math.sin(this.t * 2 + this.ph) * 0.2, dir: this.dir, face: 'angry' })); }
+  // the soufflé's art reaches 4 px past its box at the sides and 48 above (BOSS_INK_REACH.fr_souffle): ink just that
+  draw(ctx) { Ink.around(ctx, this.x - 20, this.y - 64, this.w + 40, this.h + 80, c => souffleArt(c, this.cx, this.y + this.h, this.t, { puff: 0.5 + Math.sin(this.t * 2 + this.ph) * 0.2, dir: this.dir, face: 'angry' }), { pad: 0, owner: this }); }
 }
 const entities = { frChandelier: FrChandelier, frLampPost: FrLampPost, frMirror: FrMirror, frOven: FrOven, frDecoy: FrDecoy };
 

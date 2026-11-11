@@ -601,7 +601,7 @@ class TourOverworld {
     ctx.fillStyle = 'rgba(20,14,30,0.3)'; ctx.beginPath(); ctx.ellipse(w.x, w.y - lift + 1, 9 - hop * 0.3, 3, 0, 0, TAU); ctx.fill();
     const o = { x, y, facing: w.facing, small: true, power: 0, look: Save.data.look, time: this.t, scale: 0.86,
       anim: walking ? { state: 'run', t: this.t, phase: w.t * 13, speed: 0.85 } : hop > 0 ? { state: 'jump', t: this.t, phase: 0 } : { state: 'idle', t: this.t, phase: 0 } };
-    Ink.around(ctx, x - 12, y - 32, 24, 32, c => drawBrady(c, o), { pad: 14, width: 0.95, color: '#120e16' });
+    Ink.around(ctx, x - 12, y - 32, 24, 32, c => drawBrady(c, o), { pad: 14, width: 0.95, color: '#120e16', hero: true });
     // the stop he stands on: a soft bobbing marker over his head
     if (!walking && !this.reveal && !this.clears && node && node.enter && (node.kind === 'level' || node.kind === 'house' || node.kind === 'port')) {
       const by = y - 40 + Math.sin(this.t * 4) * 2.5;

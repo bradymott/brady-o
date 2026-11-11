@@ -312,7 +312,8 @@ class EsCrate extends Ent {
   draw(ctx) {
     // the light-up floor tile under a hopping crate (phase 2)
     if (this.hop) { const k = Math.max(0, this.lit), c = ['#5ad8ff', '#ff5aa8', '#ffd23a'][this.slot % 3]; ctx.fillStyle = k > 0 ? c : 'rgba(255,255,255,0.18)'; ctx.fillRect(this.x - 6, this.y + this.h - 3, this.w + 12, 5); if (k > 0) { ctx.fillStyle = `rgba(255,255,255,${0.5 * k})`; ctx.fillRect(this.x - 4, this.y + this.h - 2, this.w + 8, 2); } }
-    Ink.ent(ctx, this, c => this.drawArt(c));
+    // at rest (no wobble, no squash) the crate's picture does not change: inked once and reused
+    Ink.ent(ctx, this, c => this.drawArt(c), { key: !this.wob && !this.squash ? 'rest' : null });
   }
   drawArt(ctx) {
     const x = this.cx, y = this.y + this.h, w = Math.sin(this.t * 40) * this.wob * 2;

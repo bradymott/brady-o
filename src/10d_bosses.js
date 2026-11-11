@@ -29,9 +29,7 @@ const BossFx = {
     if (!m) return false;
     const S = m.a, pad = Math.max(80, b.w);
     const w = Math.ceil((b.w + pad * 2) * S), h = Math.ceil((b.h + pad * 2) * S);
-    if (!this.scratch) this.scratch = makeCanvas(w, h);
-    const c = this.scratch;
-    if (c.width < w || c.height < h) { c.width = Math.max(c.width, w); c.height = Math.max(c.height, h); }
+    const c = Ink.canvas(5, w, h);   // a size-bucketed scratch (one that only grows slows every later frame on iOS)
     const sc = c.getContext('2d');
     sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, w, h);
     sc.setTransform(S, 0, 0, S, -(b.x - pad) * S, -(b.y - pad) * S);
@@ -155,8 +153,10 @@ class Boss extends Ent {
     ctx.save();
     if (this.state === 'dying') ctx.globalAlpha = Math.max(0, this.timer / 1.6);
     const art = c => { if (this.brain.draw) this.brain.draw(this, c, this.t); else BossArt.draw(c, this, this.t); };
-    const paint = c => Ink.around(c, this.x, this.y, this.w, this.h, art, { pad: Math.max(60, this.w), width: 1.8 });
     const flashing = this.hurtT > 0 && this.state === 'fight' && Math.floor(this.hurtT * 24) % 2 === 0;
+    // the ink's scratch area: what this boss's art actually reaches (BOSS_INK_REACH), never more than the old slack
+    const P = Math.max(60, this.w), R = BOSS_INK_REACH[this.style], l = R ? Math.min(P, R[0] + 16) : P, r = R ? Math.min(P, R[1] + 16) : P, t = R ? Math.min(P, R[2] + 16) : P, bo = R ? Math.min(P, R[3] + 16) : P;
+    const paint = c => Ink.around(c, this.x - l, this.y - t, this.w + l + r, this.h + t + bo, art, { pad: 0, width: 1.8, owner: flashing || this.state === 'dying' ? null : this });
     if (flashing && !BossFx.tinted(ctx, this, paint, this.flashCol || '#ffffff', 0.85)) paint(ctx);
     else paint(ctx);
     // hit rings: a quick shockwave from each hit, the clear sign that it counted
@@ -168,6 +168,16 @@ class Boss extends Ent {
   }
   get light() { return { r: 150, c: 'rgba(220,180,255,' }; }
 }
+/* PERFORMANCE: how far each boss's art reaches past its hitbox (left, right, top, bottom; logical px), measured over a
+   simulated 40 s fight per boss, both phases (tools/sbw_perf_test.js history: docs/PERFORMANCE.md). Boss.draw inks
+   that area plus 16 px instead of the old max(60, width) all round: the ink pass is the costliest thing a boss draws
+   (about 40 operations over its whole scratch area every frame), and most bosses used under half of that area. */
+const BOSS_INK_REACH = {
+  mx_pinata: [23, 22, 17, 27], ec_tortoise: [21, 15, 29, 15], br_toucan: [37, 36, 26, 43], mz_hermit: [27, 10, 8, 5],
+  ma_owl: [148, 147, 36, 4], ma_berrad: [77, 47, 104, 27], es_paella: [26, 25, 28, 36], fr_souffle: [4, 3, 48, 0],
+  nl_cheese: [100, 99, 428, 39], id_kera: [43, 57, 28, 68], vn_phin: [40, 51, 61, 40], jp_kappa: [43, 42, 26, 14],
+  np_baron: [176, 497, 55, 72], np_tinyak: [19, 18, 45, 6], aq_plough: [1, 0, 39, 0], aq_walrus: [35, 34, 8, 13], w22_other: [13, 5, 59, 3]
+};
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const groundWave = (b, kind, sp, col) => { for (const d of [-1, 1]) b.shoot({ x: b.cx + d * (b.w / 2 + 8), y: b.floorY - 14, kind, vx: d * sp * TS, w: 20, h: 26, ground: true, life: 3, col }); };
 

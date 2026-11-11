@@ -770,8 +770,17 @@ function drawGearShape(ctx, x, y, r, color, teeth, rot) {
 /* ---------- Background renderer (cached per theme + scale) ---------- */
 const BG = {
   cache: {},
-  get(themeKey, scale) {
-    const k = themeKey + '@' + scale.toFixed(2);
+  /* veil (optional): a colour laid over the whole backdrop at 16 % (the world tour's atmospheric veil). For a backdrop
+     made only of cached pictures, gradients and fills, the veil is baked in: every colour is pre-mixed with it (exactly
+     the same picture: mixing each source colour toward the veil colour equals veiling the result) and every cached
+     canvas is tinted once, so the full-screen veil fill each frame goes away. Backdrops with additive or animated sky
+     effects keep the live veil (BG.draw returns false). */
+  // additive sky effects (rays, aurora, spotlights, the corona, the trip sky) stay exact with their alpha scaled by
+  // 0.84 (veiling a sum = the veiled base plus 84 % of the light); the animated layer painters (BGDyn) do not bake
+  bakeable(th) { return !th.layers.some(L => L.dyn); },
+  get(themeKey, scale, veil) {
+    const th0 = THEMES[themeKey], bake = !!(veil && this.bakeable(th0));
+    const k = themeKey + '@' + scale.toFixed(2) + (bake ? '|' + veil : '');
     if (this.cache[k]) return this.cache[k];
     // keep cache small (memory on phones)
     const keys = Object.keys(this.cache);
@@ -783,17 +792,32 @@ const BG = {
     const layers = th.layers.map((L, i) => {
       const top = L.kind === 'image' ? 0 : Math.max(0, (L.base || 0) - 280);
       const h = H + 60 - top;
-      const c = makeCanvas(BG_W * bs, h * bs);
+      // PERFORMANCE: a pre-rendered strip only covers its own band; the empty rows above it were blended every frame
+      // (a third to a half of the screen per layer). The canvas starts `cut` logical px lower; the layer keeps its
+      // origin, so it lands where it did. (Painted strips and the fill below the layer are unchanged.)
+      const st = L.kind === 'image' && typeof Atlas !== 'undefined' && Atlas.strip ? Atlas.strip(L.atlas, L.id) : null;
+      // (a whole number of device pixels, so the strip lands on exactly the same pixels as before)
+      const cut = st ? clamp(Math.floor(((st.top || 0) + (L.shift || 0) - 2) * bs), 0, (h - 8) * bs) / bs : 0;
+      const c = makeCanvas(BG_W * bs, Math.ceil(h * bs) - cut * bs);
       const ctx = c.getContext('2d');
       const spec = Object.assign({}, L);
       // far layers are painted small and scaled up: a soft depth-of-field blur
       const ps = L.blur ? bs * 0.3 : bs;
-      const pc = L.blur ? makeCanvas(BG_W * ps, h * ps) : c;
+      const pc = L.blur ? makeCanvas(BG_W * ps, (h - cut) * ps) : c;
       const px = pc.getContext('2d');
-      px.scale(ps, ps); px.translate(0, -top);
+      px.scale(ps, ps); px.translate(0, -top - cut);
       try { BGPaint[L.kind].call(BGPaint, px, spec, mulberry32(hashStr(themeKey + i)), H + 60); } catch (e) { console.warn('bg paint', L.kind, e); }
       if (L.blur) { ctx.imageSmoothingEnabled = true; ctx.drawImage(pc, 0, 0, c.width, c.height); }
-      return { canvas: c, top, h, f: L.f, color: L.color, spec: Object.assign({ top }, L), dyn: L.dyn, fillBelow: ['stalactites', 'curtains', 'floaters', 'chains', 'grid', 'islands', 'tripwaves', 'poles', 'manfar_x'].indexOf(L.kind) < 0 };
+      // ... and a procedural layer's empty rows can be trimmed off too (BG.trimPainted: off, it costs 30-100 ms per
+      // backdrop at an area's start on a Mac for well under a millisecond a frame)
+      let cv = c, cut2 = cut;
+      const rows = this.trimPainted && L.kind !== 'image' ? bgUsedRows(c) : null;
+      if (rows && (rows[0] > 8 || rows[1] < c.height - 9)) {
+        const r0 = Math.max(0, rows[0] - 2), r1 = Math.min(c.height - 1, rows[1] + 2);
+        cv = makeCanvas(c.width, r1 - r0 + 1); cv.getContext('2d').drawImage(c, 0, -r0);
+        c.width = c.height = 1; cut2 = cut + r0 / bs;
+      }
+      return { canvas: cv, top, cut: cut2, h, f: L.f, color: L.color, spec: Object.assign({ top }, L), dyn: L.dyn, fillBelow: ['stalactites', 'curtains', 'floaters', 'chains', 'grid', 'islands', 'tripwaves', 'poles', 'manfar_x'].indexOf(L.kind) < 0 };
     });
     // celestial sprite
     let cel = null;
@@ -829,21 +853,57 @@ const BG = {
     if (th.cloudsDyn) for (let i = 0; i < 4; i++) clouds.push(makeCloudSprite(bs, rng, th));
     const twinkles = [];
     for (let i = 0; i < 24; i++) twinkles.push({ x: rng() * BG_W, y: rng() * H * 0.6, p: rng() * TAU, s: 1 + rng() * 2 });
-    const res = { layers, cel, stars, twinkles, clouds, bs, theme: th };
+    const res = { layers, cel, stars, twinkles, clouds, bs, theme: th, baked: bake,
+      dynamic: !!(th.stars || th.aurora || th.rays || th.spotlights || th.storm || th.cloudsDyn || th.trippy || (th.celestial && th.celestial.type === 'eclipse') || th.layers.some(L => L.dyn)) };
+    if (bake) {
+      const V = 0.16, hex = c => typeof c === 'string' && /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(c), tint = c => mix(c, veil, V);
+      const wash = cv => { const x = cv.getContext('2d'); x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = rgba(veil, V); x.fillRect(0, 0, cv.width, cv.height); x.restore(); };
+      // only plain hex colours can be pre-mixed; anything else keeps the live veil
+      if (hex(veil) && th.sky.every(hex) && hex(th.horizonGlow) && (!th.fog || hex(th.fog)) && layers.every(L => !L.color || hex(L.color))) {
+        res.sky = th.sky.map(tint); res.glow = tint(th.horizonGlow); res.fog = th.fog ? tint(th.fog) : th.fog;
+        for (const L of layers) { wash(L.canvas); if (L.color) L.colorV = tint(L.color); }
+        if (cel) wash(cel);
+        if (stars) wash(stars);
+        for (const cl of clouds) wash(cl.c);
+        res.white = tint('#ffffff'); res.black = tint('#000000'); res.storm = tint('#dcdcff');
+      } else res.baked = false;
+    }
     this.cache[k] = res;
     return res;
   },
 
   /* lift: logical px the parallax layers are raised by (a zoomed-in game view shows fewer rows: its floor sits
      higher on the screen, and the backdrop's ground line follows it) */
-  draw(ctx, themeKey, camX, camY, camYRef, viewW, viewH, S, time, flash, lift) {
+  /* PERFORMANCE: while the camera stands still (a boss arena, Brady waiting) the finished backdrop is kept in one
+     canvas and blitted (one opaque copy instead of 5-8 screens of blending); a backdrop with moving sky light (rays,
+     clouds, twinkles, aurora...) refreshes that copy at 30 Hz. Any camera move draws it live as before. */
+  frameCache: { key: null, same: 0, ok: false, c: null }, trimPainted: false,
+  draw(ctx, themeKey, camX, camY, camYRef, viewW, viewH, S, time, flash, lift, veil) {
+    const fc = this.frameCache, W = Math.round(viewW * S), H = Math.round(viewH * S);
+    const key = themeKey + '|' + camX + '|' + camY + '|' + camYRef + '|' + W + '|' + H + '|' + S + '|' + (lift || 0) + '|' + (veil || '') + '|' + (flash || 0) + '|' + (typeof QualityTier !== 'undefined' ? QualityTier.level : 0);
+    if (key === fc.key) fc.same++; else { fc.key = key; fc.same = 0; fc.ok = false; }
+    if (fc.same >= 1 && W * H <= 4.2e6) {
+      const bg = this.get(themeKey, S, veil);
+      if (fc.bg !== bg) { fc.bg = bg; fc.ok = false; }   // the backdrop was rebuilt (an atlas arrived): repaint
+      if (!(fc.ok && (!bg.dynamic || fc.same % 2 === 1))) {
+        if (!fc.c || fc.c.width !== W || fc.c.height !== H) { if (!fc.c) fc.c = makeCanvas(W, H); else { fc.c.width = W; fc.c.height = H; } }
+        const x = fc.c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+        this.paint(x, themeKey, camX, camY, camYRef, viewW, viewH, S, time, flash, lift, veil);
+        fc.ok = true;
+      }
+      ctx.drawImage(fc.c, 0, 0);
+      return bg.baked;
+    }
+    return this.paint(ctx, themeKey, camX, camY, camYRef, viewW, viewH, S, time, flash, lift, veil);
+  },
+  paint(ctx, themeKey, camX, camY, camYRef, viewW, viewH, S, time, flash, lift, veil) {
     const th = THEMES[themeKey];
     lift = lift || 0;
-    const bg = this.get(themeKey, S);
-    const W = viewW * S, H = viewH * S;
+    const bg = this.get(themeKey, S, veil);
+    const W = viewW * S, H = viewH * S, sky = bg.sky || th.sky;
     // sky
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, th.sky[0]); g.addColorStop(0.55, th.sky[1]); g.addColorStop(1, th.sky[2]);
+    g.addColorStop(0, sky[0]); g.addColorStop(0.55, sky[1]); g.addColorStop(1, sky[2]);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     const dy = (camY - camYRef);
     // stars
@@ -851,7 +911,7 @@ const BG = {
       const sw = bg.stars.width, off = -Math.round((camX * 0.02 * S) % sw);
       const y0 = Math.round(-dy * 0.02 * S);
       for (let x = off; x < W; x += sw) ctx.drawImage(bg.stars, x, y0);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = bg.white || '#ffffff';
       for (const t of bg.twinkles) {
         const a = 0.5 + 0.5 * Math.sin(time * t.s + t.p);
         let x = (t.x - camX * 0.02) % BG_W; if (x < 0) x += BG_W;
@@ -863,48 +923,72 @@ const BG = {
       }
       ctx.globalAlpha = 1;
     }
+    // a baked veil: additive light at 84 % (see bakeable)
+    const va = bg.sky ? 0.84 : 1;
+    ctx.globalAlpha = va;
     // aurora
     if (th.aurora) drawAurora(ctx, W, H, S, time);
+    ctx.globalAlpha = 1;
     // celestial
     if (bg.cel) {
       const c = th.celestial;
       const cx = c.x * W - camX * 0.01 * S, cy = c.y * H - dy * 0.03 * S;
       ctx.drawImage(bg.cel, Math.round(cx - bg.cel.width / 2), Math.round(cy - bg.cel.height / 2));
-      if (c.type === 'eclipse') drawCorona(ctx, cx, cy, c.r * S, time);
+      if (c.type === 'eclipse') { ctx.globalAlpha = va; drawCorona(ctx, cx, cy, c.r * S, time); ctx.globalAlpha = 1; }
     }
     // horizon glow
     const hg = ctx.createLinearGradient(0, H * 0.45, 0, H);
-    hg.addColorStop(0, rgba(th.horizonGlow, 0)); hg.addColorStop(1, rgba(th.horizonGlow, 0.22));
+    hg.addColorStop(0, rgba(bg.glow || th.horizonGlow, 0)); hg.addColorStop(1, rgba(bg.glow || th.horizonGlow, 0.22));
     ctx.fillStyle = hg; ctx.fillRect(0, H * 0.45, W, H * 0.55);
-    if (th.rays) drawRays(ctx, W, H, S, time, th.rays, camX);
+    ctx.globalAlpha = va;
+    if (th.rays && !(typeof QualityTier !== 'undefined' && QualityTier.noFog)) drawRays(ctx, W, H, S, time, th.rays, camX);
     if (th.spotlights) drawSpotlights(ctx, W, H, S, time);
-    if (th.storm && flash > 0) { ctx.fillStyle = `rgba(220,220,255,${flash * 0.5})`; ctx.fillRect(0, 0, W, H); }
+    ctx.globalAlpha = 1;
+    if (th.storm && flash > 0) { ctx.fillStyle = rgba(bg.storm || '#dcdcff', flash * 0.5); ctx.fillRect(0, 0, W, H); }
     if (th.cloudsDyn) drawSkyClouds(ctx, bg, camX, dy, S, W, H, time, th);
-    if (th.trippy) drawTripSky(ctx, W, H, S, time);
+    if (th.trippy) { ctx.globalAlpha = va; drawTripSky(ctx, W, H, S, time); ctx.globalAlpha = 1; }
     // parallax layers
-    for (let i = 0; i < bg.layers.length; i++) {
+    // graphics tiers: the LOW tier leaves out the farthest layer (QualityTier.skipFar)
+    for (let i = typeof QualityTier !== 'undefined' && bg.layers.length >= 3 ? QualityTier.skipFar : 0; i < bg.layers.length; i++) {
       const L = bg.layers[i];
       const lw = BG_W * S, lh = L.h * S;
       let ox = -((camX * L.f * S) % lw); if (ox > 0) ox -= lw;
       const oy = (L.top - dy * L.f * 0.6 - lift) * S;
-      const cw = L.canvas.width, iy = Math.round(oy);
+      const cw = L.canvas.width, iy = Math.round(oy) + Math.round(L.cut * S);
       for (let x = Math.round(ox); x < W; x += cw) ctx.drawImage(L.canvas, x, iy);
-      if (L.fillBelow && oy + lh < H) { ctx.fillStyle = L.color; ctx.fillRect(0, oy + lh - 1, W, H - oy - lh + 1); }
+      if (L.fillBelow && oy + lh < H) { ctx.fillStyle = L.colorV || L.color; ctx.fillRect(0, oy + lh - 1, W, H - oy - lh + 1); }
       if (L.dyn && typeof BGDyn !== 'undefined') BGDyn.draw(ctx, L.dyn, L.spec, camX, oy, S, W, time, th);
       // atmospheric fog between layers
-      if (i < bg.layers.length - 1) {
+      if (i < bg.layers.length - 1 && !(typeof QualityTier !== 'undefined' && QualityTier.noFog)) {
         const fg = ctx.createLinearGradient(0, H * 0.35, 0, H);
-        fg.addColorStop(0, rgba(th.fog, 0)); fg.addColorStop(1, rgba(th.fog, 0.1));
+        fg.addColorStop(0, rgba(bg.fog || th.fog, 0)); fg.addColorStop(1, rgba(bg.fog || th.fog, 0.1));
         ctx.fillStyle = fg; ctx.fillRect(0, H * 0.35, W, H * 0.65);
       }
     }
     if (th.scanlines) {
-      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillStyle = rgba(bg.black || '#000000', 0.18);
       for (let y = 0; y < H; y += 4 * S) ctx.fillRect(0, y, W, S);
     }
+    return bg.baked;
   }
 };
 
+/* the first and last rows of a canvas with any paint at all: the canvas is folded in half sideways again and again
+   with additive blending (any alpha above zero survives), then one 1-pixel column is read back */
+function bgUsedRows(c) {
+  try {
+    let src = c, w = c.width; const h = c.height;
+    while (w > 1) {
+      const nw = Math.ceil(w / 2), t = makeCanvas(nw, h), x = t.getContext('2d');
+      x.globalCompositeOperation = 'lighter'; x.drawImage(src, 0, 0, nw, h, 0, 0, nw, h); if (w > nw) x.drawImage(src, nw, 0, w - nw, h, 0, 0, w - nw, h);
+      if (src !== c) src.width = src.height = 1;
+      src = t; w = nw;
+    }
+    const d = src.getContext('2d').getImageData(0, 0, 1, h).data; if (src !== c) src.width = src.height = 1;
+    let r0 = -1, r1 = -1; for (let y = 0; y < h; y++) if (d[y * 4 + 3] > 0) { if (r0 < 0) r0 = y; r1 = y; }
+    return r0 < 0 ? null : [r0, r1];
+  } catch (e) { return null; }
+}
 function makeCelestial(c, bs) {
   const R = c.r, pad = R * 2.6, size = (R + pad) * 2;
   const cv = makeCanvas(size * bs, size * bs);

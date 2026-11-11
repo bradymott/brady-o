@@ -5,6 +5,7 @@ class Particles {
   constructor() { this.list = []; }
   add(p) { if (this.list.length > 450) this.list.shift(); this.list.push(p); }
   burst(x, y, n, col, type) {
+    if (QualityTier.partK < 1 && n > 2) n = Math.ceil(n * QualityTier.partK);   // graphics tiers: fewer bits
     for (let i = 0; i < n; i++) {
       const a = Math.random() * TAU, s = Math.random();
       const p = { x, y, vx: Math.cos(a) * s * 140, vy: Math.sin(a) * s * 140, life: 0.5 + Math.random() * 0.4, max: 0, col, type, size: 2 + Math.random() * 2.5, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 12, g: 0 };
@@ -20,18 +21,23 @@ class Particles {
   }
   text(x, y, str, col) { this.add({ x, y, vx: 0, vy: -50, life: 0.9, max: 0.9, type: 'text', str, col: col || '#ffffff', g: 0 }); }
   update(dt) {
-    const L = this.list;
-    for (let i = L.length - 1; i >= 0; i--) {
+    // the living ones are compacted in place (one pass, no splice per dead particle)
+    const L = this.list; let j = 0;
+    for (let i = 0; i < L.length; i++) {
       const p = L[i];
       p.life -= dt;
-      if (p.life <= 0) { L.splice(i, 1); continue; }
+      if (p.life <= 0) continue;
       p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
       if (p.type === 'dust') { p.vx *= 0.92; p.size += dt * 6; }
       if (p.type === 'bubble') p.x += Math.sin(p.life * 10) * 0.4;
       if (p.rot !== undefined) p.rot += p.vr * dt;
+      L[j++] = p;
     }
+    L.length = j;
   }
   draw(ctx) {
+    // spinning bits (confetti, debris) are placed with one setTransform each instead of save/translate/rotate/restore
+    const m = ctx.getTransform(), plain = !m.b && !m.c, S = m.a;
     for (const p of this.list) {
       const k = p.life / p.max;
       if (p.type === 'text') {
@@ -43,7 +49,10 @@ class Particles {
       }
       ctx.globalAlpha = k;
       if (p.type === 'dust') { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill(); }
-      else if (p.type === 'debris' || p.type === 'confetti') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.type === 'confetti' ? p.size * 0.5 : p.size); ctx.restore(); }
+      else if (p.type === 'debris' || p.type === 'confetti') {
+        if (plain) { const c = Math.cos(p.rot) * S, sn = Math.sin(p.rot) * S; ctx.setTransform(c, sn, -sn, c, m.e + S * p.x, m.f + m.d * p.y); ctx.fillStyle = p.col; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.type === 'confetti' ? p.size * 0.5 : p.size); ctx.setTransform(m); }
+        else { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.type === 'confetti' ? p.size * 0.5 : p.size); ctx.restore(); }
+      }
       else if (p.type === 'bubble') { ctx.strokeStyle = 'rgba(220,250,255,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.stroke(); }
       else { ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.5 + k * 0.5), 0, TAU); ctx.fill(); }
     }
@@ -79,8 +88,12 @@ class Weather {
     }
   }
   draw(ctx, t) {
-    const k = this.kind;
-    for (const p of this.list) {
+    const k = this.kind, L = this.list, n = QualityTier.weatherK < 1 ? Math.ceil(L.length * QualityTier.weatherK) : L.length;
+    const m = ctx.getTransform(), plain = !m.b && !m.c, S = m.a;
+    const spin = (x, y, a) => { if (plain) { const c = Math.cos(a) * S, sn = Math.sin(a) * S; ctx.setTransform(c, sn, -sn, c, m.e + S * x, m.f + m.d * y); return false; } ctx.save(); ctx.translate(x, y); ctx.rotate(a); return true; };
+    const unspin = saved => { if (saved) ctx.restore(); else ctx.setTransform(m); };
+    for (let i = 0; i < n; i++) {
+      const p = L[i];
       if (k === 'snow') { ctx.fillStyle = `rgba(255,255,255,${p.a})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, TAU); ctx.fill(); }
       else if (k === 'rain' || k === 'neonrain') { ctx.strokeStyle = k === 'rain' ? 'rgba(200,210,255,0.35)' : (p.s > 13 ? 'rgba(255,90,220,0.35)' : 'rgba(80,240,255,0.3)'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.s * 0.15, p.y + p.s); ctx.stroke(); }
       else if (k === 'fireflies' || k === 'motes') {
@@ -89,11 +102,11 @@ class Weather {
         ctx.fillStyle = `rgba(${c},${a * 0.25})`; ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, TAU); ctx.fill();
         ctx.fillStyle = `rgba(${c},${a})`; ctx.beginPath(); ctx.arc(p.x, p.y, 1.4, 0, TAU); ctx.fill();
       }
-      else if (k === 'leaves' || k === 'petals') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.ph * 2); ctx.fillStyle = k === 'leaves' ? (p.s > 4 ? '#c8a03a' : '#7ab04a') : '#ffc0d8'; ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.5, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+      else if (k === 'leaves' || k === 'petals') { const sv = spin(p.x, p.y, p.ph * 2); ctx.fillStyle = k === 'leaves' ? (p.s > 4 ? '#c8a03a' : '#7ab04a') : '#ffc0d8'; ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.5, 0, 0, TAU); ctx.fill(); unspin(sv); }
       else if (k === 'sand') { ctx.fillStyle = 'rgba(255,220,160,0.5)'; ctx.fillRect(p.x, p.y, 3, 1); }
       else if (k === 'bubbles') { ctx.strokeStyle = 'rgba(200,240,255,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p.x, p.y, p.s + 1, 0, TAU); ctx.stroke(); }
       else if (k === 'embers' || k === 'sparks') { ctx.fillStyle = k === 'embers' ? `rgba(255,${120 + Math.floor(p.a * 100)},40,${p.a})` : `rgba(255,220,120,${p.a})`; ctx.fillRect(p.x, p.y, 2, 2); }
-      else if (k === 'confetti') { ctx.fillStyle = p.col; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.ph * 3); ctx.fillRect(-2, -1, 4, 2); ctx.restore(); }
+      else if (k === 'confetti') { ctx.fillStyle = p.col; const sv = spin(p.x, p.y, p.ph * 3); ctx.fillRect(-2, -1, 4, 2); unspin(sv); }
       else if (k === 'glitch') { if (Math.sin(p.ph * 7) > 0.3) { ctx.fillStyle = Math.sin(p.ph) > 0 ? 'rgba(255,0,212,0.35)' : 'rgba(0,255,154,0.35)'; ctx.fillRect(p.x, p.y, 12 + p.s * 10, 3); } }
       else if (k === 'dust') { ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, TAU); ctx.fill(); }
     }
@@ -141,6 +154,7 @@ class Play {
     this.sigCarry = opts.sig || null; this.dizzy = 0;
     // atlas memory: keep only what this level draws (its country's and its areas' themes); drop the rest
     if (typeof Atlas !== 'undefined') Atlas.keep(this.atlasNames());
+    Ink.flushHeld();   // the last level's held ink pictures
     // Hydration Station's gift: Brady always starts big (one more health step)
     this.loadArea(start.area, start.x, start.y, Math.max(opts.power || 0, gifts.hydration ? 1 : 0));
     this.camX = clamp(this.player.cx - Game.viewW * 0.4, 0, Math.max(0, this.area.W * TS - Game.viewW));
@@ -773,6 +787,8 @@ class Play {
   closePause() { this.paused = false; Sound.resume(); Input.setMode('game'); Sound.play('select'); }
 
   /* ---------- rendering ---------- */
+  // the backdrop's sky fills the whole game view; in landscape that is the whole canvas (src/99_main.js skips its clear)
+  coversCanvas() { const r = Game.gameRect; return r.x === 0 && r.y === 0 && r.w === Game.cssW && r.h === Game.cssH; }
   draw(ctx) {
     const S = Game.S, VW = Game.viewW, VH = Game.viewH;
     const A = this.area;
@@ -783,13 +799,13 @@ class Play {
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     ctx.beginPath(); ctx.rect(0, 0, VW * S, VH * S); ctx.clip();
     // a zoomed-in view keeps the backdrop framed as at the standard zoom: its ground line rises with the floor
-    BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash, (VIEW_ROWS * TS - VH) * 0.68);
     // Atmospheric separation belongs behind solids, collectibles and characters.
     // Keep each country's own sky/fog colour rather than flattening every world to grey.
+    // (a 16 % veil in that colour: baked into the backdrop when it can be, BG.get, else one fill over it)
+    const th0 = THEMES[this.themeKey], veil = this.level.tour ? th0.fog || th0.sky[1] : null;
+    const baked = BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash, (VIEW_ROWS * TS - VH) * 0.68, veil);
     if (this.level.tour) {
-      const th = THEMES[this.themeKey];
-      ctx.fillStyle = rgba(th.fog || th.sky[1], 0.16);
-      ctx.fillRect(0, 0, VW * S, VH * S);
+      if (!baked) { ctx.fillStyle = rgba(veil, 0.16); ctx.fillRect(0, 0, VW * S, VH * S); }
       // trip moments: the strong part (fractals, the green haze) sits behind the tiles and characters
       TripFX.back(ctx, this, Math.round(VW * S), Math.round(VH * S));
     }
@@ -803,10 +819,11 @@ class Play {
     wt();
     if (A.risingLava) this.drawRisingLava(ctx, camX, VW);
     // entities: platforms/props first, then items, enemies, player, projectiles
-    const vis = e => e.x + e.w > camX - 60 && e.x < camX + VW + 60 && e.y + e.h > camY - 160 && e.y < camY + VH + 60;
-    const layers = [[], [], [], []];
+    // (the four draw lists are reused from frame to frame: no per-frame garbage)
+    const layers = this.drawLists || (this.drawLists = [[], [], [], []]);
+    for (const L of layers) L.length = 0;
     for (const e of this.entities) {
-      if (e.remove || !vis(e)) continue;
+      if (e.remove || !(e.x + e.w > camX - 60 && e.x < camX + VW + 60 && e.y + e.h > camY - 160 && e.y < camY + VH + 60)) continue;
       if (e.isPlatform || e.back || e instanceof Gate || e instanceof Checkpoint || e instanceof Sign || e instanceof Portal || e instanceof Spring) layers[0].push(e);
       else if (e.item || e instanceof Gold || e instanceof PickPop) layers[1].push(e);
       else if (e.friendly) layers[3].push(e);
@@ -815,8 +832,8 @@ class Play {
     // underwater: the blue wash and caustics go over the scenery but under the characters, so enemies stay crisp
     if (A.water) { ctx.setTransform(1, 0, 0, 1, gx, gy); this.drawUnderwater(ctx, VW * S, VH * S); wt(); }
     // contact shadows ground every actor (and lift the ones in the air off the floor)
-    this.drawShadows(ctx, layers[1].concat(layers[2], layers[3]));
-    for (const L of layers.slice(0, 3)) for (const e of L) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
+    this.drawShadows(ctx, layers[1], layers[2], layers[3]);
+    for (let li = 0; li < 3; li++) for (const e of layers[li]) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
     this.player.draw(ctx, this.t);
     for (const e of layers[3]) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
     // foreground: water pools, fake walls
@@ -836,7 +853,7 @@ class Play {
     WorldFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
     if (this.level.tour) TripFX.post(ctx, this, Math.round(VW * S), Math.round(VH * S));
     if (this.player && this.player.buffs && this.player.buffs.sundial > 0) { const W = Math.round(VW * S), H = Math.round(VH * S), k = Math.min(1, this.player.buffs.sundial, 0.9 + (TourKit.reduceMotion() ? 0 : 0.1 * Math.sin(this.t * 4))); const gg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.65); gg.addColorStop(0, 'rgba(120,80,30,0)'); gg.addColorStop(1, `rgba(120,80,30,${0.45 * k})`); ctx.fillStyle = gg; ctx.fillRect(0, 0, W, H); }
-    ctx.drawImage(Game.vignette, 0, 0); // vignette
+    if (QualityTier.vignette) ctx.drawImage(Game.vignette, 0, 0); // vignette
     if (this.flash > 0 && !th.storm) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, this.flash * 0.7)})`; ctx.fillRect(0, 0, VW * S, VH * S); }
     ctx.restore();
     // screen-space UI
@@ -939,7 +956,7 @@ class Play {
   }
   /* A soft contact shadow under each actor on (or above) a floor tile: an ellipse on the floor that shrinks and fades
      the higher the actor is; nothing over a pit. Enemies, friends, items, bosses and Brady; world transform. */
-  drawShadows(ctx, list) {
+  drawShadows(ctx, ...lists) {
     const A = this.area, p = this.player;
     ctx.save(); ctx.fillStyle = 'rgb(24,12,40)';
     const one = (e, scale) => {
@@ -953,7 +970,7 @@ class Play {
       const rx = Math.min(30, e.w * 0.5 * (scale || 1)) * (0.55 + 0.45 * k), ry = Math.max(1.6, rx * 0.2);
       ctx.globalAlpha = 0.3 * k; ctx.beginPath(); ctx.ellipse(fx, gy + 0.5, rx, ry, 0, 0, TAU); ctx.fill();
     };
-    for (const e of list) { if (e.enemy || e.friendly || e.item || e.boss || e.cfg) one(e, e.boss ? 0.8 : 1.2); }
+    for (const list of lists) for (const e of list) { if (e.enemy || e.friendly || e.item || e.boss || e.cfg) one(e, e.boss ? 0.8 : 1.2); }
     if (p && !p.dead) one(p, 1.3);
     ctx.restore();
   }
@@ -1128,7 +1145,21 @@ class Play {
     ctx.restore();
   }
 
+  /* The HUD is painted into its own canvas every second frame (its pulses and the timer read the same at 30 Hz) and
+     blitted on the others: dozens of small vector shapes, a mini Brady and text glyphs every frame cost about a
+     millisecond of Safari's drawing time on a Mac. A change of size repaints it at once. */
   drawHUD(ctx) {
+    const k = Game.dpr, cw = Math.ceil(Game.cssW * k), ch = Math.ceil(Math.min(Game.cssH, 170) * k);
+    let c = this.hudC;
+    if (!c || c.width !== cw || c.height !== ch) { c = this.hudC = makeCanvas(cw, ch); this.hudN = 0; }
+    if ((this.hudN = (this.hudN || 0) + 1) % 2 === 1) {
+      const x = c.getContext('2d');
+      x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, cw, ch); x.setTransform(k, 0, 0, k, 0, 0);
+      this.paintHUD(x);
+    }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(c, 0, 0); ctx.restore();
+  }
+  paintHUD(ctx) {
     const W = Game.cssW, top = Math.max(8, insets.t + 4), left = Math.max(12, insets.l + 6), right = Math.max(12, insets.r + 6);
     const gr = Game.gameRect;
     ctx.save();

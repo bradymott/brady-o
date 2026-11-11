@@ -555,7 +555,13 @@ class Player {
     if (small !== this.small) o.hair = null;
     PlayerFx.under(ctx, this, t);
     // drawn a little larger than the hitbox (ART_SCALE) so he reads on a phone; the physics box is unchanged
-    Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16', rim: '#e7e3d7' });
+    // PERFORMANCE: the scratch area of his ink pass is fitted to what he can reach in ordinary play (measured over
+    // every pose, power and size: arms 19 px past the box's sides, the bun and a balloon 28 px above it, 7 px below),
+    // a third fewer pixels than the old 34 px slack all round; flying, the star, a ride, a spin and death keep the
+    // old generous box
+    const plain = !o.fly && !o.star && o.rot == null && !this.mounted && !this.dead && !(o.floaty && this.crouch) && !(o.look && o.look.style === 'down');
+    if (plain) Ink.around(ctx, this.x - 26, this.y - 42, this.w + 52, this.h + 50, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 5, width: 1.0, color: '#120e16', rim: '#e7e3d7', hero: true });
+    else Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16', rim: '#e7e3d7', hero: true });
     PlayerFx.over(ctx, this, t);
   }
   get light() { return { r: this.g.area.water ? 150 : 170, c: 'rgba(255,240,220,' }; }

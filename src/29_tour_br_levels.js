@@ -356,7 +356,7 @@ class BrKickTarget extends Ent {
       const cx = x + w / 2, cy = y + h / 2 + 2, r = this.done ? 0 : 13;
       if (r) for (let k = 3; k > 0; k--) { c.fillStyle = k % 2 ? '#ff3d3d' : '#ffffff'; c.beginPath(); c.arc(cx, cy, r * k / 3, 0, TAU); c.fill(); }
       else { c.fillStyle = '#1aa85a'; c.font = `bold 12px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.fillText('✓', cx, cy + 4); }
-    }, { pad: 6 });
+    }, { pad: 6, owner: this, key: this.done ? 'done' : 'ready' });
     if (!this.done) { const k = 0.5 + 0.5 * Math.sin(this.t * 4); ctx.fillStyle = `rgba(255,216,74,${0.4 + 0.5 * k})`; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('KICK!', this.cx, this.y - 6); }
   }
 }

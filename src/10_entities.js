@@ -366,7 +366,22 @@ class Gold extends Ent {
   constructor(g, s) { super(g, s, 28, 28); this.y = s.y - 16 - 14; this.idx = s.idx; this.had = g.goldHad(this.idx); }
   update(dt) { this.t += dt; }
   touchPlayer(p) { this.remove = true; p.collect('gold', this); }
-  draw(ctx) { Ink.ent(ctx, this, c => Sprites.goldRecord(c, this.cx, this.cy + Math.sin(this.t * 2) * 3, this.t, this.had)); }
+  /* PERFORMANCE: the record's spin and twinkle are drawn from cached inked frames (12 spin widths x 4 twinkle levels),
+     one blit per frame instead of a full ink pass (about a millisecond each on a phone) */
+  draw(ctx) {
+    const had = this.had ? 1 : 0;
+    ctx.save(); ctx.translate(this.cx, this.cy + Math.sin(this.t * 2) * 3);
+    if (typeof TourArt !== 'undefined' && this.g.level && this.g.level.tour) {
+      // the world tour's postcard: its sway quantized to 17 angles (under a degree apart)
+      const r = Math.round(Math.sin(this.t * 1.6) * 8) / 8, t = Math.asin(r) / 1.6, col = TourArt.colors();
+      Ink.cached(ctx, 'card:' + had + ':' + r + ':' + col.a + col.b + col.c, -14, -14, 28, 28, c => Sprites.goldRecord(c, 0, 0, t, this.had), { pad: 18 });
+    } else {
+      const s = Math.max(0.15, Math.round(Math.abs(Math.cos(this.t * 2.5)) * 12) / 12), tw = (this.t * 1.3) % 1;
+      const a = tw < 0.3 ? Math.round(Math.sin(tw / 0.3 * Math.PI) * 3) / 3 : 0;
+      Ink.cached(ctx, 'gold:' + had + ':' + s + ':' + a, -14, -14, 28, 28, c => Sprites.goldRecord(c, 0, 0, 0, this.had, { s, a }), { pad: 18 });
+    }
+    ctx.restore();
+  }
   get light() { return { r: 60, c: 'rgba(255,220,100,' }; }
 }
 

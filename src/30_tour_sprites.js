@@ -117,7 +117,7 @@ const InkCache = {
       const pad = 8, cw = Math.ceil((w + pad * 2) * S), ch = Math.ceil((h + pad * 2) * S);
       const c = makeCanvas(cw, ch), cx = c.getContext('2d');
       cx.setTransform(S, 0, 0, S, -(x0 - pad) * S, -(y0 - pad) * S);
-      Ink.around(cx, x0, y0, w, h, fn, { pad: 6 });
+      Ink.around(cx, x0, y0, w, h, fn, { pad: 6, noHold: true });
       e = { c, ox: x0 - pad, oy: y0 - pad };
       this.map.set(k, e);
       if (this.map.size > this.max) this.map.delete(this.map.keys().next().value);
