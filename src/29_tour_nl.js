@@ -1,10 +1,11 @@
 /* ============================================================
-   AMSTERDAM (world 8)
-   8-1 Canal Ring           run    hoisting hooks swing out from the gables, bobbing houseboats, arched bridges full of bikes
-   8-2 Tulips & Windmills   run    ride the windmill sails round, bounce on tulip beds, gusts across the polder
-   8-3 Bike Lane Rush       auto   drawbridges rise and fall, hop on passing trams, canal hops at speed
-   8-4 Frozen Canals        night  skate the frozen canals by lantern light: thin ice cracks, snowmen throw snowballs
-   8-5 The Weigh House      castle cheese wheels roll down the chutes, weighing scales, cheese sledges; boss the Cheese King
+   THE NETHERLANDS (world 8). This file holds the look, the cast,
+   the objects, the signature item (the Dutch bike), the boss and
+   the music. The levels (v2 format, LEVEL_OVERHAUL.md §2) are in
+   29_tour_nl_levels.js:
+   8-1 Polder Pumps     SWITCH   8-4 Frozen Canals  LAMP (hidden exit to Antarctica)
+   8-2 Flower Auction   FACTORY  8-5 The Weigh House LAIR
+   8-3 Bike Lane Rush   RACE     8-6 Windmill Row   SWING (secret)
    ============================================================ */
 (() => {
 const COL = { a: '#ff7a1a', b: '#2a5ad8', c: '#e8322a' };
@@ -109,6 +110,24 @@ const themes = {
     fog: '#ffd8a0', hard: { c1: '#ffc83a', c2: '#c8901a' }, semi: { style: 'plank', c1: '#a87a4a', c2: '#6a4a2a' }
   })
 };
+// the overhaul's theme keys borrow the closest Fiesta Toon atlas until their own art exists: the polder (8-1) the
+// canal ring's strips, the flower auction (8-2) and the windmill row (8-6) the tulip fields. The tulip strip's fields
+// sit low in the picture, under the floor line at the usual camera, so it is lifted (shift) for these levels.
+const atlasLayers = (atlas, layers, shifts) => layers.map((L, i) => ({ kind: 'image', atlas, id: 'L' + i, f: L.f, base: L.base, dyn: L.dyn, color: L.color, fallback: L, shift: shifts && shifts[i] != null ? shifts[i] : (L.base > 340 ? -Math.min(60, L.base - 335) : 0) }));
+const borrow = (from, over, shifts, under) => { const th = Object.assign({}, themes[from], over); th.layers = (under || []).concat(atlasLayers(from, themes[from].layers, shifts)); th.atlasBorrow = from; return th; };
+// a plain field colour behind a lifted strip, so tall areas never show the sky under its bottom edge
+painters.nlFieldFill = (ctx, L, rng, H) => { ctx.fillStyle = L.color; ctx.fillRect(0, L.base, BG_W, H - L.base); };
+const FIELD_FILL = [{ kind: 'nlFieldFill', color: '#3a8a3a', base: 250, f: 0.06 }];
+const TULIP_LIFT = -110;
+Object.assign(themes, {
+  nl_polder: borrow('nl_canals', { name: 'The Polder', particles: 'leaves' }),
+  nl_veiling: borrow('nl_tulips', { name: 'The Flower Auction', particles: 'petals' }, [TULIP_LIFT], FIELD_FILL),
+  nl_molens: borrow('nl_tulips', { name: 'Windmill Row', particles: 'petals' }, [TULIP_LIFT], FIELD_FILL)
+});
+if (typeof Atlas !== 'undefined') for (const k of ['nl_polder', 'nl_veiling', 'nl_molens']) {
+  const th = themes[k], G = th.ground || {};
+  Atlas.applyTiles(th, th.atlasBorrow, { ground: 'ground', groundFallback: G.paint ? (c, r, sd) => G.paint(c, r, sd) : null, capFallback: G.paintCap ? (c, a, b2, r, l, rt) => G.paintCap(c, a, b2, r, l, rt) : null });
+}
 if (typeof LIQUIDS !== 'undefined' && !LIQUIDS.icewater) LIQUIDS.icewater = ['#dff8ff', '#7ac8f0', '#2a6aa8', 'rgba(240,255,255,0.3)', null, 'rgba(255,255,255,0.75)'];
 
 /* ---------------- decor ---------------- */
@@ -198,11 +217,66 @@ const stroopArt = (ctx, e, x, y, m) => {
   ctx.restore();
 };
 const snowball = (ctx, s) => { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(s.cx, s.cy, 5, 0, TAU); ctx.fill(); };
+function modal(cls, map) {
+  return class extends cls {
+    paint(ctx, x, y, mode) { return super.paint(ctx, x, y, map[mode] || mode); }
+    get artMode() { const m = super.artMode; return map[m] || m; }
+  };
+}
+// the tulip bulb: papery skin, a sprout; popped up it flowers into a red tulip
+const bulbArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); if (m === 'flat') ctx.scale(1.3, 0.4);
+  const bloom = m === 'idle' || m === 'pop';
+  if (m !== 'flat' && m !== 'ko') K.feet(ctx, 0, 0, e.t, '#8a6a3a', 4, 4, m !== 'walk');
+  ctx.fillStyle = '#c89a6a'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(12, -20, 11, -9); ctx.quadraticCurveTo(10, -2, 0, -2); ctx.quadraticCurveTo(-10, -2, -11, -9); ctx.quadraticCurveTo(-12, -20, 0, -24); ctx.fill();
+  ctx.strokeStyle = '#a87a4a'; ctx.lineWidth = 1; for (const k of [-5, 0, 5]) { ctx.beginPath(); ctx.moveTo(k * 0.6, -22); ctx.quadraticCurveTo(k * 1.6, -12, k, -3); ctx.stroke(); }
+  ctx.strokeStyle = '#e8d8b8'; ctx.lineWidth = 1.2; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(k * 2, -2); ctx.lineTo(k * 3, 2); ctx.stroke(); }
+  ctx.strokeStyle = '#3a9a4a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(0, -23); ctx.lineTo(0, bloom ? -36 : -30); ctx.stroke();
+  ctx.fillStyle = '#3a9a4a'; ctx.beginPath(); ctx.ellipse(-4, -28, 5, 2, -0.6, 0, TAU); ctx.fill();
+  if (bloom) { ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.moveTo(-7, -36); ctx.lineTo(-7, -45); ctx.lineTo(-2, -41); ctx.lineTo(0, -47); ctx.lineTo(2, -41); ctx.lineTo(7, -45); ctx.lineTo(7, -36); ctx.quadraticCurveTo(0, -31, -7, -36); ctx.fill(); }
+  if (m !== 'flat' && m !== 'ko') K.eyes(ctx, 2, -12, e.dir || 1, 3, 1.6, m === 'pop');
+  ctx.restore();
+};
+// the gull on a cargo bike (8-3's racing rival): a box bike with a crate of herring in front
+const cargoGullArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, 1);
+  const sp = (t || 0) * 12;
+  ctx.strokeStyle = '#1a1a22'; ctx.lineWidth = 2; for (const wx of [-16, 16]) { ctx.beginPath(); ctx.arc(wx, -8, 8, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(wx + Math.cos(sp) * 8, -8 + Math.sin(sp) * 8); ctx.lineTo(wx - Math.cos(sp) * 8, -8 - Math.sin(sp) * 8); ctx.stroke(); }
+  ctx.fillStyle = '#2a5ad8'; rr(ctx, 4, -26, 22, 14, 2); ctx.fill(); ctx.fillStyle = '#a8b8c8'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(10 + k * 6, -27, 4, 2, 0.3, 0, TAU); ctx.fill(); }
+  ctx.strokeStyle = '#ff7a1a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-16, -8); ctx.lineTo(-6, -22); ctx.lineTo(6, -12); ctx.moveTo(-6, -22); ctx.lineTo(-10, -26); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(-8, -34, 9, 7, 0.2, 0, TAU); ctx.fill(); ctx.fillStyle = '#b8c0c8'; ctx.beginPath(); ctx.ellipse(-12, -33, 6, 4, 0.4, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-2, -42, 5, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffc81a'; ctx.beginPath(); ctx.moveTo(2, -42); ctx.lineTo(9, -40); ctx.lineTo(2, -39); ctx.fill(); ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.arc(6, -40, 0.9, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(-1, -43, 1, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#e8322a'; ctx.beginPath(); ctx.moveTo(-6, -46); ctx.lineTo(4, -46); ctx.lineTo(-1, -52); ctx.fill();
+  ctx.restore();
+};
+class NlClog extends TourEnemy.make({ w: 28, h: 18, speed: 1.4, behavior: 'hop', hopV: 6, hopEvery: 0.7, art: clogArt, burst: '#ffd23a' }) {
+  constructor(g, s) { super(g, s); this.rushT = 0; }
+  update(dt) {
+    if (this.partner === undefined) { this.partner = this.g.entities.find(e => e !== this && e instanceof NlClog && !e.partner && !e.remove && Math.abs(e.cx - this.cx) < 3 * TS) || null; if (this.partner) { this.partner.partner = this; this.cool = this.partner.cool; } }
+    if (this.rushT > 0) { this.rushT -= dt; this.speed = 2.8; if (this.rushT <= 0) this.speed = 1.4; }
+    return super.update(dt);
+  }
+  stomp(p) { const r = super.stomp(p); const q = this.partner; if (q && !q.dead && !q.remove) { q.rushT = 3; this.g.parts.text(q.cx, q.y - 12, 'CLOP CLOP!', '#ffd23a'); } return r; }
+}
+class NlGull extends TourFlyer.make({ w: 30, h: 14, range: 4, speed: 0.8, swoop: true, art: gullArt, burst: '#ffffff' }) {
+  touchPlayer(p) {
+    if (this.dead || this.stunT > 0) return;
+    if (this.loot == null && this.state === 'swoop') { const n = Math.min(5, this.g.picks); this.g.picks -= n; Save.data.picks = this.g.picks; this.loot = n; this.g.parts.text(this.cx, this.y - 10, n ? '-' + n + ' HA HA!' : 'HA HA!', '#ffffff'); K.sfx('laugh', 'select', { vol: 0.4 }); this.state = 'drift'; this.cool = 3; this.hy -= 2 * TS; }
+  }
+  hit(kind, src) { if (this.loot) { for (let k = 0; k < this.loot; k++) this.g.addPick(this.cx, this.cy); this.loot = 0; } return super.hit(kind, src); }
+}
 const enemies = {
   nlHerring: { cls: TourEnemy.make({ w: 28, h: 16, speed: 1.0, behavior: 'hop', hopV: 11, hopEvery: 1.2, art: herringArt, burst: '#a8b8c8' }), place: 'walk' },
   nlCheese: { cls: TourEnemy.make({ w: 24, h: 24, speed: 0.7, behavior: 'roll', range: 9, rollSpeed: 6.5, art: cheeseArt, burst: '#ffc83a' }), place: 'walk' },
-  nlClog: { cls: TourEnemy.make({ w: 28, h: 18, speed: 1.4, behavior: 'walk', art: clogArt, burst: '#ffd23a' }), place: 'walk' },
-  nlGull: { cls: TourFlyer.make({ w: 30, h: 14, range: 4, speed: 0.8, swoop: true, art: gullArt, burst: '#ffffff' }), place: 'fly' },
+  // clogs come in pairs and hop in step; stomp one and its partner hurries (double speed for 3 s)
+  nlClog: { cls: NlClog, place: 'walk' },
+  // the herring gull: swoops at Brady and snatches five coins instead of hurting him; hit it to get them back
+  nlGull: { cls: NlGull, place: 'fly' },
+  // the tulip bulb: a moving soil bump under Brady; it pops up as a tulip bloom (tell 0.7 s), then sits stunned
+  nlBulb: { cls: modal(TourEnemy.make({ w: 24, h: 24, speed: 1.5, behavior: 'burrower', art: bulbArt, burst: '#c89a6a' }), { pop: 'idle', exposed: 'stun', dig: 'walk' }), place: 'walk' },
+  // the gull on a cargo bike: 8-3's rival (art only; TourRival draws it)
+  nlCargoGull: { cls: TourEnemy.make({ w: 34, h: 30, speed: 0, behavior: 'still', art: cargoGullArt }), place: 'walk' },
   nlBee: { cls: TourFlyer.make({ w: 18, h: 14, range: 2, speed: 2.2, swoop: true, art: beeArt, burst: '#ffd23a' }), place: 'fly' },
   nlSnowman: { cls: TourEnemy.make({ w: 22, h: 40, speed: 0.3, behavior: 'throw', every: 2.2, range: 9, pace: true, hp: 2, art: snowmanArt, burst: '#ffffff', shoot: e => {
     tourFire(e.g, e.cx + e.dir * 12, e.y + 8, { kind: 'snowball', vx: e.dir * 4 * TS, vy: -5 * TS, grav: PHYS.gDown * 0.4, w: 10, h: 10, life: 3, col: '#ffffff', stompable: true, art: snowball }); K.say(e.g, e, 'BRRR!', '#cfefff');
@@ -645,7 +719,7 @@ const tracks = {
   }
 };
 
-/* ---------------- the five levels ---------------- */
+/* ---------------- the country ---------------- */
 Tour.country({
   id: 'nl', colors: COL, tagline: 'Canals, bikes, tulips and windmills',
   themes, painters, decor, decorLights, platforms, enemies, entities, pieces: P, boss, power, tracks,
@@ -658,33 +732,7 @@ Tour.country({
     ctx.fillStyle = 'rgba(255,240,200,0.4)'; ctx.fillRect(x - 4, y - 5, 3, 2);
   } },
   star: { name: 'GOLDEN CLOG', draw(ctx, x, y, t) { ctx.save(); ctx.translate(x, y + 4); ctx.scale(Math.cos(t * 3) > 0 ? 1 : -1, 1); ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.moveTo(-12, 0); ctx.quadraticCurveTo(-12, -10, -4, -10); ctx.lineTo(6, -7); ctx.quadraticCurveTo(14, -4, 12, 2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#c8901a'; ctx.beginPath(); ctx.ellipse(-5, -8, 5, 2.5, 0, 0, TAU); ctx.fill(); ctx.restore(); } },
-  levels: [
-    { name: 'Canal Ring', style: 'run', theme: 'nl_canals', gimmick: 'Hoisting hooks swing out from the gables over the canals, houseboats bob, bridges are crowded with bikes',
-      enemies: [['nlHerring', 3], ['nlClog', 3], ['nlCheese', 1]],
-      hint: 'Ring the bike bell to stun everything nearby',
-      postcard: 'Amsterdam has more bikes than people. One rang its bell at me. Rude but fair. ♥ C',
-      script: [['flat', { n: 5 }], 'sig', 'hooks', ['houseboats', { gold: true }], 'bridge', 'racks', 'cp', ['hooks', { n: 3 }], 'bridge', 'bonus', ['houseboats', { n: 3 }], 'racks', 'end'] },
-    { name: 'Tulips & Windmills', style: 'run', theme: 'nl_tulips', gimmick: 'Ride a windmill\'s sails round and round, bounce on tulip beds, lean into the polder gusts',
-      enemies: [['nlBee', 2], ['nlClog', 2], ['nlCheese', 2]],
-      hint: 'Tulips are bouncy. The windmill sails go round: hop on!',
-      postcard: 'A sea of tulips in every colour. The windmills wave hello all day long. ♥ C',
-      script: [['flat', { n: 5 }], ['windmill', { gold: true }], 'tulips', 'gusts', 'dyke', 'cp', ['tulips', { n: 4 }], 'windmill', 'gusts', 'lsd', ['dyke', {}], 'end'] },
-    { name: 'Bike Lane Rush', style: 'auto', theme: 'nl_rush', gimmick: 'Pedal the busy bike lane at speed: drawbridges rise and fall, hop on passing trams, jump the canals',
-      enemies: [['nlGull', 2], ['nlStroop', 2]], scroll: 3.2,
-      hint: 'Wait for the drawbridge to come down... but not for too long!',
-      postcard: 'The Baron\'s blimp got stuck behind a tram. Even villains have to wait. ♥ C',
-      script: [['flat', { n: 6 }], 'sig', 'hop', 'drawbridge', ['tram', { gold: true }], 'hop', ['drawbridge', { fast: true }], 'cp', 'tram', 'hop', 'drawbridge', 'racks', 'hop', 'end'] },
-    { name: 'Frozen Canals', style: 'night', theme: 'nl_frozen', gimmick: 'Skate the frozen canals by lantern light: thin ice cracks underfoot, snowmen throw snowballs',
-      enemies: [['nlSnowman', 2], ['nlHerring', 1]], dark: true,
-      secret: { to: 'aq', sign: 'An icy wind howls through the crack... a secret way to the far south!' },
-      hint: 'Thin ice cracks: keep skating! (And some walls are thinner than they look.)',
-      postcard: 'The canals froze! Everyone is skating and drinking hot chocolate. Me too. ♥ C',
-      script: [['skate', { n: 12 }], 'thin', ['stall', { gold: true }], ['skate', { snowman: true }], 'bridge', 'cp', 'thin', 'secret', ['skate', { n: 16, snowman: true }], 'stall', 'oneup', 'thin', 'end'] },
-    { name: 'The Weigh House', style: 'castle', theme: 'nl_waag', gimmick: 'Cheese wheels roll out of the chutes, weighing scales rise and fall, cheese sledges slide; then the Cheese King',
-      enemies: [['nlCheese', 2], ['nlClog', 2]], boss: 'nl_cheese', arena: 'waag', arenaW: 26, roof: false,
-      hint: 'Run into the Cheese King\'s wheels to kick them back at him! (The bike bell stops a rolling wheel.)',
-      postcard: 'The windmill is unfolded and turning again! The Baron fled to Bali. Bring sunscreen. ♥ C',
-      script: [['flat', { n: 4 }], ['chute', { gold: true }], 'scales', 'sledges', 'cp', 'sig', ['chute', { period: 2.1 }], 'scales', ['enemies', { n: 2 }], ['blocks', { content: 'power' }], 'arena'] }
-  ]
+  // the levels are added by 29_tour_nl_levels.js (Tour.amend)
+  levels: []
 });
 })();

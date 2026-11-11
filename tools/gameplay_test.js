@@ -34,6 +34,13 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     };
     window.T = window.BRADY_TOUR;
     window.start = (id, opts) => { const B = window.BRADY; const [w, i] = id.split('-').map(Number); B.Save.data.lives = 5; B.Game.setScene(new B.Play(B.getLevel(w, i), opts || {})); window.sim(2); };
+    // v2 boss levels: a lead-in area, then the arena area (role 'arena'): go straight through its door
+    window.toArena = () => {
+      const g = window.S(), L = g.level, k = (L.areas || []).findIndex(a => a.role === 'arena');
+      if (k <= 0 || g.area.idx === k) return;
+      const an = (L.areas[k].anchors || {}).in; if (!an) return;
+      g.state = 'play'; g.player.state = 'play'; g.enterPortal({ kind: 'door', target: { area: k, x: an.x, y: an.y } }); window.sim(3);
+    };
     window.P = () => window.BRADY.Game.scene.player;
     window.S = () => window.BRADY.Game.scene;
     window.ctor = type => window.BRADY_TYPES[type];
@@ -103,7 +110,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   const life = await page.evaluate(() => { start('1-1'); const B = window.BRADY, l0 = B.Save.data.lives; P().collect('oneup'); return { l0, l1: B.Save.data.lives }; });
   check('the water bottle gives an extra life', life.l1 === life.l0 + 1, life);
 
-  // 4. Signature power-ups: Mexico's taco toss and France's mime gloves
+  // 4. Signature power-ups: Mexico's taco toss and France's meringue piping bag
   const taco = await page.evaluate(() => {
     start('1-1'); clearEnemies(); const p = P(), g = S(); p.collect('sig:taco');
     const e = near('mxElote', 110); sim(0.02);
@@ -112,8 +119,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   });
   check('Taco Toss: tacos (and salsa) stun enemies', taco.sig === 'taco' && taco.stunned, taco);
   await shot('07-power-taco.png');
-  const mime = await page.evaluate(() => {
-    start('7-1'); clearEnemies(); const p = P(), g = S(), A = g.area; p.collect('sig:mime'); sim(0.2);
+  const piping = await page.evaluate(() => {
+    start('7-1'); clearEnemies(); const p = P(), g = S(), A = g.area; p.collect('sig:piping'); sim(0.2);
     const tx = Math.floor((p.x + p.w + 6) / 32), ty = Math.floor((p.y + p.h - 2) / 32);
     sim(0.05, { actionPressed: true });
     const wall = A.tiles[ty * A.W + tx] === 5;
@@ -121,9 +128,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     sim(7); const gone = A.tiles[ty * A.W + tx] === 0;
     return { sig: p.sig && p.sig.id, wall, blocked, gone };
   });
-  check('Mime Gloves draw an invisible wall that blocks, then fades', mime.sig === 'mime' && mime.wall && mime.blocked && mime.gone, mime);
-  await page.evaluate(() => { start('7-1'); clearEnemies(); P().collect('sig:mime'); sim(0.2); sim(0.05, { actionPressed: true }); sim(0.3); });
-  await shot('08-power-mime.png');
+  check('the Meringue Piping Bag pipes a wall that blocks, then crumbles', piping.sig === 'piping' && piping.wall && piping.blocked && piping.gone, piping);
+  await page.evaluate(() => { start('7-1'); clearEnemies(); P().collect('sig:piping'); sim(0.2); sim(0.05, { actionPressed: true }); sim(0.3); });
+  await shot('08-power-piping.png');
   // Ecuador's booby boots: higher jumps, and a big landing knocks out enemies nearby
   const boots = await page.evaluate(() => {
     const jumpH = () => { const p = P(), y0 = p.y; let top = y0; sim(0.05, { jump: true, jumpPressed: true }); for (let k = 0; k < 120; k++) { sim(1 / 120, { jump: true }); top = Math.min(top, p.y); } sim(1); return y0 - top; };
@@ -241,7 +248,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('every tour level loads, simulates and renders', all.n >= 10 && all.bad.length === 0, all);
 
   // 8. Castle bosses: Mexico's piñata, then France's soufflé; beating Mexico flies Brady to the next country
-  for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'DJINN', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl'], ['9-5', 'KERA', 'id'], ['10-5', 'PHIN', 'vn'], ['11-5', 'KAPPA', 'jp'], ['13-4', 'BIG TUSK', 'aq'], ['22-4', 'OTHER BRADY', 'w22']]) {
+  for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'BERRAD', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl'], ['9-5', 'KERA', 'id'], ['10-5', 'PHIN', 'vn'], ['11-5', 'KAPPA', 'jp'], ['13-4', 'BIG TUSK', 'aq'], ['22-4', 'OTHER BRADY', 'w22']]) {
     const boss = await page.evaluate(([id]) => {
       start(id); clearEnemies(); const b = arenaBoss(), g = S(), p = P();
       p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.vy = 0; p.invuln = 99; sim(2.5);
@@ -300,7 +307,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const hiddenAtFirst = st('aq') === 'hidden' && st('w22') === 'hidden';
     const viaDoor = (id, room) => {
       start(id); clearEnemies(); const g = S(), p = P(); p.invuln = 99;
-      const door = g.entities.find(e => e.constructor.name === 'Portal' && e.s.target && e.s.target.area >= 1); g.enterPortal(door); sim(1.5);
+      // the door into the area that holds the level's secret gate (the bonus room in 8-4, the oasis camp in 5-2)
+      const sa = g.level.areas.findIndex(a => a.spawns.some(s => s.type === 'gate' && (s.secret || (s.exit && s.exit !== 'main'))));
+      const door = g.entities.find(e => e.constructor.name === 'Portal' && e.s.target && e.s.target.area === sa); if (!door) return { noDoor: sa }; g.enterPortal(door); sim(1.5);
       const gate = g.entities.find(e => e.constructor.name === 'Gate' && e.secret); if (!gate) return { noGate: true };
       const q = P(); q.invuln = 99; q.x = gate.cx - 50; q.y = gate.y + gate.h - q.h - 4; q.vy = 0; sim(0.8, { right: true }); const s1 = g.state; sim(8); return { s1, s2: g.state };
     };
