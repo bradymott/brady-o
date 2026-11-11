@@ -37,6 +37,13 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     window.P = () => window.BRADY.Game.scene.player;
     window.S = () => window.BRADY.Game.scene;
     window.ctor = type => window.BRADY_TYPES[type];
+    // a v2 boss level keeps its boss in an arena area: take Brady there (legacy castles have it in the first area)
+    window.arenaBoss = () => {
+      const g = S(); let b = g.entities.find(e => e.boss); if (b) return b;
+      const k = g.level.areas.findIndex(a => a.role === 'arena' || a.spawns.some(s => s.type === 'boss')); if (k < 0) return null;
+      const a = g.level.areas[k], an = (a.anchors && (a.anchors.in || a.anchors.start)) || { x: 3 * 32 + 16, y: (a.H - 4) * 32 };
+      g.loadArea(k, an.x, an.y, g.player.power || 0); return g.entities.find(e => e.boss);
+    };
     window.clearEnemies = () => { const g = window.S(); for (const e of g.entities) if (e.enemy && !e.boss) e.remove = true; sim(0.02); };
     // drop an entity right in front of Brady, on his floor
     window.near = (type, dx, props) => { const g = S(), p = P(); const C = ctor(type); const e = new C(g, Object.assign({ x: p.cx + (dx || 60), y: p.y + p.h, dir: -1 }, props || {})); g.spawn(e); return e; };
@@ -236,7 +243,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   // 8. Castle bosses: Mexico's piñata, then France's soufflé; beating Mexico flies Brady to the next country
   for (const [id, name, tag] of [['1-5', 'PIÑATÓN', 'mx'], ['2-5', 'TORTUG', 'ec'], ['3-5', 'TUCAN', 'br'], ['4-5', 'EREMITA', 'mz'], ['5-5', 'DJINN', 'ma'], ['6-5', 'PAELLASAURUS', 'es'], ['7-5', 'SOUFFLÉ', 'fr'], ['8-5', 'CHEESE KING', 'nl'], ['9-5', 'KERA', 'id'], ['10-5', 'PHIN', 'vn'], ['11-5', 'KAPPA', 'jp'], ['13-4', 'BIG TUSK', 'aq'], ['22-4', 'OTHER BRADY', 'w22']]) {
     const boss = await page.evaluate(([id]) => {
-      start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
+      start(id); clearEnemies(); const b = arenaBoss(), g = S(), p = P();
       p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.vy = 0; p.invuln = 99; sim(2.5);
       const woke = b.state !== 'sleep', nm = b.name;
       const doorRow = Math.floor(b.floorY / 32) - 1, before = g.area.tiles[doorRow * g.area.W + b.doorX];
@@ -249,7 +256,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       return { woke, nm, removed: b.remove, before, after, state: g.state };
     }, [id]);
     check(`${name} wakes up, can be beaten and opens the way out (${id})`, boss.woke && new RegExp(name).test(boss.nm) && boss.removed && boss.before === 5 && boss.after === 0 && boss.state === 'results', boss);
-    await page.evaluate(([id]) => { start(id); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss); p.x = b.arenaX0 + 160; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); }, [id]);
+    await page.evaluate(([id]) => { start(id); clearEnemies(); const b = arenaBoss(), g = S(), p = P(); p.x = b.arenaX0 + 160; p.y = b.floorY - p.h - 4; p.invuln = 99; sim(3.5); }, [id]);
     await shot('10-boss-' + tag + '.png');
   }
   // the boss fights themselves (mechanics, phases, weak moments) are checked per country by tools/boss_test.js
@@ -266,7 +273,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('surfboard, noodle lasso, nunchucks and yak ride all work in their countries', Object.values(sigs4).every(s => s.has && s.alive && s.moved > 60), sigs4);
   // the finale: Baron Bric-a-Brac's three phases in Nepal, then home together, the ending and the credits
   const fin = await page.evaluate(() => {
-    start('12-5'); clearEnemies(); const g = S(), p = P(); const b = g.entities.find(e => e.boss);
+    start('12-5'); clearEnemies(); const b = arenaBoss(), g = S(), p = P();
     p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 999; sim(3);
     const phases = new Set();
     for (let k = 0; k < 80 && !b.remove && b.state !== 'dying'; k++) { b.hurtT = 0; b.state = 'fight'; phases.add(b.phase); b.damage(1); sim(0.25); }
