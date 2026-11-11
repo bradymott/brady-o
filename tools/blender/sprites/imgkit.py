@@ -106,3 +106,44 @@ if __name__ == '__main__':
             bpy.context.scene.render.image_settings.file_format = 'JPEG'; bpy.context.scene.render.image_settings.quality = q
             bpy.context.scene.render.image_settings.color_mode = 'RGB'
             img.save_render(dst, scene=bpy.context.scene); bpy.data.images.remove(img); print('WROTE', dst)
+
+def _dilate(m, r):
+    """Anti-aliased dilation of an alpha mask by r texels (a disc; partial coverage at the rim)."""
+    out = m.copy(); R = int(math.ceil(r))
+    H, W = m.shape
+    for dy in range(-R, R + 1):
+        for dx in range(-R, R + 1):
+            d = math.hypot(dx, dy)
+            w = min(1.0, max(0.0, r + 0.5 - d))
+            if w <= 0 or (dx == 0 and dy == 0): continue
+            sh = np.zeros_like(m)
+            ys0, ys1 = max(0, dy), min(H, H + dy); xs0, xs1 = max(0, dx), min(W, W + dx)
+            sh[ys0:ys1, xs0:xs1] = m[ys0 - dy:ys1 - dy, xs0 - dx:xs1 - dx]
+            np.maximum(out, sh * w, out=out)
+    return out
+
+def toon_post(a, ink=1.5, halo=2.5, ink_col=(0.11, 0.08, 0.15), halo_col=(1.0, 0.97, 0.9), halo_a=0.62, ramp=(1.04, 0.9)):
+    """The 2D half of the toon2 character look, on one straight-alpha frame (float h x w x 4, top row first):
+    a top-to-toe value ramp over the figure, a heavier ink line around the whole silhouette (ink texels outside the
+    rendered outline, so the outer contour is thicker than the interior lines) and a soft light keyline outside that
+    (halo texels), which keeps a dark character readable on a dark or busy background. Returns a padded copy."""
+    P = int(math.ceil(ink + halo)) + 2
+    a = np.pad(a, ((P, P), (P, P), (0, 0)))
+    m = a[..., 3]
+    rows = np.where((m > 0.05).any(axis=1))[0]
+    if len(rows) and ramp:
+        y0, y1 = rows[0], rows[-1] + 1
+        f = np.ones(a.shape[0], np.float32)
+        f[y0:y1] = np.linspace(ramp[0], ramp[1], y1 - y0)
+        f[y1:] = ramp[1]
+        a[..., :3] = np.clip(a[..., :3] * f[:, None, None], 0, 1)
+    mi = _dilate(m, ink) if ink > 0 else m
+    mh = _dilate(m, ink + halo) * halo_a if halo > 0 else np.zeros_like(m)
+    # under layer: ink over halo (straight alpha)
+    ua = mi + mh * (1 - mi)
+    uc = (np.array(ink_col, np.float32)[None, None] * mi[..., None] + np.array(halo_col, np.float32)[None, None] * (mh * (1 - mi))[..., None]) / np.maximum(ua, 1e-6)[..., None]
+    # the frame over it
+    sa = m[..., None]
+    oa = sa + ua[..., None] * (1 - sa)
+    oc = (a[..., :3] * sa + uc * ua[..., None] * (1 - sa)) / np.maximum(oa, 1e-6)
+    return np.concatenate([oc, oa], axis=2).astype(np.float32)

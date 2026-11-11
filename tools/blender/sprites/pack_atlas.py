@@ -45,9 +45,21 @@ def main():
     maxw = spec.get('max', 2048)
     fmt = os.environ.get('ATLAS_FORMAT', 'webp')
     images = {}; items = []; meta = {'scale': spec.get('scale', 3), 'image': os.path.basename(out) + '.' + fmt, 'frames': {}, 'anims': spec.get('anims', {}), 'strips': {}}
+    # HALO=1 (the toon2 character look): every character frame gets the 2D finish of imgkit.toon_post (top-to-toe
+    # value ramp, heavier silhouette ink) and keeps a clear margin of HALO_M texels: the game draws the light keyline
+    # into it from a half-size silhouette copy it makes once per atlas (03a_atlas.js, meta.halo). A baked
+    # semi-transparent keyline costs about +50 % WebP; the runtime one costs one extra blit per sprite and a quarter
+    # of the atlas's decoded memory. HALO_A > 0 bakes the keyline instead. Item blocks and floors stay as rendered.
+    post = os.environ.get('HALO') == '1'
+    PK = dict(ink=float(os.environ.get('HALO_INK', '1.5')), halo=float(os.environ.get('HALO_W', '2.5')), halo_a=float(os.environ.get('HALO_A', '0')))
+    margin = int(os.environ.get('HALO_M', '4'))
+    if post and PK['halo_a'] <= 0: PK['halo'] = 0; meta['halo'] = {'margin': margin, 'r': float(os.environ.get('HALO_W', '2.5'))}
     for f in spec.get('frames', []):
-        a = IK.load(f['file']); x0 = y0 = 0
-        if not f.get('notrim'): a, x0, y0 = trim(a)
+        a = IK.load(f['file']); x0 = y0 = 0; pad = 0; tp = 1
+        if post and not f.get('notrim') and not f['id'].startswith(('qblock_', 'used_')):
+            a = IK.toon_post(a, **PK); pad = int(math.ceil(PK['ink'] + PK['halo'])) + 2 + margin; tp = margin + 1
+            a = np.pad(a, ((margin, margin), (margin, margin), (0, 0))); x0 = y0 = -pad
+        if not f.get('notrim'): a, tx, ty = trim(a, tp); x0 += tx; y0 += ty
         images[f['id']] = a; items.append((f['id'], a.shape[1], a.shape[0]))
         meta['frames'][f['id']] = {'w': a.shape[1], 'h': a.shape[0], 'ox': round(f['ox'] - x0, 2), 'oy': round(f['oy'] - y0, 2)}
     for s in spec.get('strips', []):
