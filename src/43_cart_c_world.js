@@ -204,10 +204,14 @@ function cartWedge(m, f, cx, cz) {
 }
 
 /* ---------------- skies (engine palettes, tuned for racing: long sight lines) ---------------- */
+// a low sun straight ahead must not white out the road. The sky shader's wide glow round the sun scales with sunCol, so the
+// sun colour is dimmed and sunHDR raised to keep the disc itself bright; no god rays, no sun-ward scattering, little bloom,
+// thin capped haze, less air dust, a touch more contrast. The sun keeps its place in the sky.
+const CART_LOW_SUN = { rays: 0, scatter: 0, sunHDR: 5, bloom: 0.3, haze: 0.22, fogD: 0.0032, fogMax: 0.45, dust: 0.15, grade: [1.12, 0.3, 0.32] };
 const CART_SKIES = {
   day: () => Object.assign({}, BURNS_PALETTES.day, { fogD: 0.0042, clouds: 0.5 }),
-  sunset: () => Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.0052, sun: [205, 7], key: '#ffd2a8', keyK: 1.0, sky: '#a8a0c4', hor: '#ff9a62', fog: '#d89a7c', clouds: 0.55, mid: '#c87a8a', midK: 0.3 }),
-  dawn: () => Object.assign({}, BURNS_PALETTES.dawn, { fogD: 0.0055 }),
+  sunset: () => Object.assign({}, BURNS_PALETTES.dusk, { fogD: 0.0052, sun: [205, 7], key: '#ffd2a8', keyK: 1.0, sky: '#a8a0c4', hor: '#ff9a62', fog: '#d89a7c', clouds: 0.55, mid: '#c87a8a', midK: 0.3 }, CART_LOW_SUN, { sunCol: '#5e4028', fog: '#b07a68' }),
+  dawn: () => Object.assign({}, BURNS_PALETTES.dawn, { fogD: 0.0055 }, CART_LOW_SUN, { sunCol: '#5e4a34', fog: '#b88a90' }),
   night: () => Object.assign({}, BURNS_PALETTES.night, { fogD: 0.0075, emB: 1.7, cityK: 0.7, keyK: 0.55, sky: '#5a5a92' }),
   dust: () => Object.assign({}, BURNS_PALETTES.day, { fog: '#d8bc94', fogD: 0.0125, haze: 0.85, fogMax: 0.94, clouds: 0.2, sky: '#d8c8b0', key: '#ffe8c8', keyK: 0.75, dust: 1.2 })
 };
