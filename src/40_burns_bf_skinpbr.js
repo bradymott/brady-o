@@ -521,7 +521,7 @@ void main(){
   vec3 rf = reflect(-v, n);
   vec2 ab = hEnvBRDF(rS, nv);
   c += hEnvLook(rf, rS) * (F0 * ab.x + ab.y) * ao * (1.0 - 0.6 * isHair);
-  c += uRimC * pow(1.0 - nv, 2.5) * uRim;
+  c += uRimC * pow(1.0 - nv, 2.5) * uRim * (1.0 - 0.85 * isHair);   // cards are seen edge-on all the time: no rim on hair
   c += em * uEmB;
   c = mix(c, bLin(uTint.rgb), uTint.a);
   if (uTrip > 0.0) c = bTrip(c, vW);
