@@ -114,7 +114,8 @@ const themes = {
 // canal ring's strips, the flower auction (8-2) and the windmill row (8-6) the tulip fields. The tulip strip's fields
 // sit low in the picture, under the floor line at the usual camera, so it is lifted (shift) for these levels.
 const atlasLayers = (atlas, layers, shifts) => layers.map((L, i) => ({ kind: 'image', atlas, id: 'L' + i, f: L.f, base: L.base, dyn: L.dyn, color: L.color, fallback: L, shift: shifts && shifts[i] != null ? shifts[i] : (L.base > 340 ? -Math.min(60, L.base - 335) : 0) }));
-const ownLayers = (atlas, list) => list.map(([id, f, fb]) => ({ kind: 'image', atlas, id, f, base: fb.base, dyn: fb.dyn, color: fb.color, fallback: fb, shift: 0 }));
+// [strip id, f, fallback, shift]: the canal (base 330) is lifted onto the floor line of the usual phone camera
+const ownLayers = (atlas, list) => list.map(([id, f, fb, shift]) => ({ kind: 'image', atlas, id, f, base: fb.base, dyn: fb.dyn, color: fb.color, fallback: fb, shift: shift || 0 }));
 const borrow = (from, over, shifts, under) => { const th = Object.assign({}, themes[from], over); th.layers = (under || []).concat(atlasLayers(from, themes[from].layers, shifts)); th.atlasBorrow = from; return th; };
 // a plain field colour behind a lifted strip, so tall areas never show the sky under its bottom edge
 painters.nlFieldFill = (ctx, L, rng, H) => { ctx.fillStyle = L.color; ctx.fillRect(0, L.base, BG_W, H - L.base); };
@@ -125,10 +126,10 @@ Object.assign(themes, {
   // windmills and the brick pumping station, then the canal; nl_veiling: the whole hall with its auction clock and
   // flower trolleys); the painters are the fallback while they load
   nl_polder: Object.assign({}, themes.nl_canals, { name: 'The Polder', particles: 'leaves', sky: ['#5a9ae8', '#b4dcf8', '#f4f4ec'],
-    layers: ownLayers('nl_polder', [['L0', 0.06, { kind: 'nlPolder', color: '#5a9a4a', base: 300 }], ['L1', 0.12, { kind: 'nlCanal', color: '#4a7a7a', base: 330 }]]) }),
+    layers: ownLayers('nl_polder', [['L0', 0.06, { kind: 'nlPolder', color: '#5a9a4a', base: 300 }], ['L1', 0.12, { kind: 'nlCanal', color: '#4a7a7a', base: 330 }, -24]]) }),
   nl_veiling: Object.assign({}, themes.nl_canals, { name: 'The Flower Auction', particles: 'petals', liquid: undefined, sky: ['#c8d4dc', '#dce4e8', '#eef2f0'],
     horizonGlow: '#ffffff', celestial: { type: 'none' }, cloudsDyn: false, rays: null, fog: '#eef2f0',
-    layers: ownLayers('nl_veiling', [['L0', 0.08, { kind: 'nlHall', color: '#a8b4bc', base: 360 }]]) }),
+    layers: ownLayers('nl_veiling', [['L0', 0.08, { kind: 'nlHall', color: '#a8b4bc', base: 360 }, -84]]) }),
   nl_molens: borrow('nl_tulips', { name: 'Windmill Row', particles: 'petals' }, [TULIP_LIFT], FIELD_FILL)
 });
 if (typeof Atlas !== 'undefined') for (const k of ['nl_molens']) {

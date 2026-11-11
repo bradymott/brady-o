@@ -491,6 +491,35 @@ Object.assign(Decor, {
   },
   frWeed(ctx, x, y, t) { ctx.strokeStyle = '#3a6a3a'; ctx.lineWidth = 2; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(x - 6 + k * 4, y); ctx.quadraticCurveTo(x - 8 + k * 4 + Math.sin(t + k) * 3, y - 14, x - 4 + k * 4, y - 24); ctx.stroke(); } },
   frShell(ctx, x, y) { ctx.fillStyle = '#f4d8c8'; ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.quadraticCurveTo(x, y - 12, x + 6, y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#d8a890'; ctx.lineWidth = 1; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + k * 2.6, y); ctx.stroke(); } },
+  // 7-3's beach life (ink line, flat toon colours): a rock pool with a starfish and weed, a striped mooring buoy
+  // lying on the sand, a child's bucket and spade
+  frTidePool(ctx, x, y, t) {
+    Ink.around(ctx, x - 26, y - 14, 52, 16, c => {
+      c.fillStyle = '#a89878'; c.beginPath(); c.ellipse(x - 18, y - 3, 8, 6, -0.2, 0, TAU); c.ellipse(x + 19, y - 4, 7, 7, 0.3, 0, TAU); c.fill();
+      c.fillStyle = '#6ab8d8'; c.beginPath(); c.ellipse(x, y - 1, 16, 4, 0, 0, TAU); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.7)'; c.fillRect(x - 9 + Math.sin(t * 2) * 2, y - 3, 8, 1.2);
+      c.fillStyle = '#ff7a4a'; c.beginPath(); TourKit.star(c, x + 6, y - 2, 5, 2.2, 5); c.fill();
+      c.strokeStyle = '#3a8a4a'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 20, y - 6); c.quadraticCurveTo(x - 22 + Math.sin(t) * 2, y - 12, x - 18, y - 16); c.stroke();
+    }, { pad: 4 });
+  },
+  frBuoy(ctx, x, y, t) {
+    Ink.around(ctx, x - 14, y - 26, 30, 28, c => {
+      c.save(); c.translate(x, y - 9); c.rotate(-0.35 + Math.sin(t * 0.8) * 0.03);
+      c.fillStyle = '#e8423a'; rr(c, -9, -9, 18, 18, 8); c.fill();
+      c.fillStyle = '#fff4e8'; c.fillRect(-9, -2.5, 18, 5);
+      c.fillStyle = '#3a3a48'; c.fillRect(-2, -16, 4, 8); c.fillStyle = '#ffd23a'; c.beginPath(); c.arc(0, -17, 2.5, 0, TAU); c.fill();
+      c.restore();
+      c.strokeStyle = '#8a7a62'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x + 6, y - 2); c.quadraticCurveTo(x + 12, y + 1, x + 15, y - 1); c.stroke();
+    }, { pad: 4 });
+  },
+  frBucket(ctx, x, y) {
+    Ink.around(ctx, x - 14, y - 22, 28, 24, c => {
+      c.fillStyle = '#2a8ad8'; c.beginPath(); c.moveTo(x - 9, y - 14); c.lineTo(x + 7, y - 14); c.lineTo(x + 5, y); c.lineTo(x - 7, y); c.closePath(); c.fill();
+      c.fillStyle = '#7ac8ff'; c.fillRect(x - 9, y - 14, 16, 2.5);
+      c.strokeStyle = '#ffd23a'; c.lineWidth = 1.6; c.beginPath(); c.arc(x - 1, y - 14, 7, Math.PI, TAU); c.stroke();
+      c.fillStyle = '#ffd23a'; c.save(); c.translate(x + 10, y - 2); c.rotate(0.5); c.fillRect(-1, -16, 2, 12); rr(c, -3.5, -5, 7, 7, 2); c.fill(); c.restore();
+    }, { pad: 4 });
+  },
   frPost(ctx, x, y) { ctx.fillStyle = '#6a5040'; rr(ctx, x - 4, y - 30, 8, 30, 3); ctx.fill(); ctx.fillStyle = '#4a3a2a'; ctx.fillRect(x - 4, y - 12, 8, 3); ctx.fillStyle = '#3a6a3a'; ctx.fillRect(x - 4, y - 4, 8, 4); },
   frStreamer(ctx, x, y, t) { ctx.fillStyle = '#8a6a44'; ctx.fillRect(x - 1, y - 40, 2, 40); for (let k = 0; k < 3; k++) { ctx.fillStyle = ['#c8283a', '#fff4e8', '#2a5ad8'][k]; ctx.beginPath(); ctx.moveTo(x, y - 40 + k * 5); ctx.quadraticCurveTo(x + 14, y - 42 + k * 5 + Math.sin(t * 6 + k) * 3, x + 28, y - 38 + k * 5 + Math.sin(t * 6 + k + 1) * 4); ctx.lineTo(x, y - 36 + k * 5); ctx.fill(); } },
   frWalnut(ctx, x, y, t) { ctx.fillStyle = '#5a4030'; ctx.fillRect(x - 3, y - 30, 6, 30); ctx.fillStyle = '#5a8a3a'; ctx.beginPath(); ctx.arc(x, y - 40, 16, 0, TAU); ctx.arc(x - 12, y - 32, 10, 0, TAU); ctx.arc(x + 12, y - 32, 10, 0, TAU); ctx.fill(); },

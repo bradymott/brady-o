@@ -114,6 +114,16 @@ const painters = {
   }
 };
 const dyn = {
+  // far sails on the bay's horizon (7-3), drifting slowly: small, pale, no ink, so they never read as platforms
+  frSails(ctx, L, camX, oy, S, W, t) {
+    const hy = L.horizon || 236;
+    for (let i = 0; i < 6; i++) {
+      const x = ((i * 173 + t * (3 + i % 3) - camX * L.f) % BG_W + BG_W) % BG_W * S, y = oy + (hy - (i % 2) * 3) * S, k = (0.7 + (i % 3) * 0.15) * S;
+      ctx.fillStyle = 'rgba(70,80,100,0.75)'; ctx.beginPath(); ctx.moveTo(x - 9 * k, y - 2 * k); ctx.lineTo(x + 9 * k, y - 2 * k); ctx.lineTo(x + 6 * k, y + 1 * k); ctx.lineTo(x - 6 * k, y + 1 * k); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.moveTo(x, y - 20 * k); ctx.lineTo(x, y - 3 * k); ctx.lineTo(x + 9 * k, y - 3 * k); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = ['rgba(232,66,58,0.9)', 'rgba(42,106,184,0.9)', 'rgba(255,210,58,0.9)'][i % 3]; ctx.beginPath(); ctx.moveTo(x - 1, y - 17 * k); ctx.lineTo(x - 1, y - 3 * k); ctx.lineTo(x - 7 * k, y - 3 * k); ctx.closePath(); ctx.fill();
+    }
+  },
   // pigeons crossing the sky
   frPigeons(ctx, L, camX, oy, S, W, t) {
     for (let i = 0; i < 4; i++) {
@@ -300,17 +310,18 @@ const earth = {
 };
 const chalk = { style: 'stone', cap: '#d8ccb0', capHi: '#f4ecd8', dirt: '#c8b890', dirt2: '#a89870', rock: '#b8a888' };
 const sand = { style: 'playa', cap: '#e8d8a8', capHi: '#fff4d0', dirt: '#c8b080', dirt2: '#a89060', rock: '#b8a070' };
-// a theme's own Fiesta Toon strips: [atlas strip id, parallax f, procedural fallback layer]; the strips were rendered
-// for their bases, so no lift (shift 0)
-const ownLayers = (atlas, list) => list.map(([id, f, fb]) => ({ kind: 'image', atlas, id, f, base: fb.base, dyn: fb.dyn, color: fb.color, fallback: fb, shift: 0 }));
+// a theme's own Fiesta Toon strips: [atlas strip id, parallax f, procedural fallback layer, shift?]
+// for a ground line ('base') of about 315 the art sits on the floor at the usual phone camera (the floor is drawn near
+// y 304 of the 448 px view), so a lower base is lifted to it (shift); list entries may give their own shift
+const ownLayers = (atlas, list) => list.map(([id, f, fb, shift]) => ({ kind: 'image', atlas, id, f, base: fb.base, dyn: fb.dyn, color: fb.color, fallback: fb, shift: shift != null ? shift : -Math.max(0, Math.min(75, fb.base - 315)) }));
 Object.assign(themes, {
   // the Paris square (7-1): its own strips (fr_place: the tower far off, a ring of pale houses, the square's trees,
   // carousel and fountain on a terrace) and chunky cobbles; the boulevard painters are the fallback
   fr_place: Object.assign({}, themes.fr_morning, { name: 'Place du Marché', sky: ['#6aa8e8', '#c8e0ff', '#ffe8e0'],
     layers: ownLayers('fr_place', [
-      ['L0', 0.03, { kind: 'frTower', color: '#9aa8c0', base: 330, h: 240, at: 760, dyn: 'frPigeons' }],
-      ['L1', 0.1, { kind: 'frFacades', color: '#f0e4cc', base: 350, roof: '#7a8aa0' }],
-      ['L2', 0.3, { kind: 'frTrees', color: '#5a9a4a', base: 385 }]
+      ['L0', 0.03, { kind: 'frTower', color: '#9aa8c0', base: 330, h: 240, at: 760, dyn: 'frPigeons' }, 0],
+      ['L1', 0.1, { kind: 'frFacades', color: '#f0e4cc', base: 350, roof: '#7a8aa0' }, 0],
+      ['L2', 0.3, { kind: 'frTrees', color: '#5a9a4a', base: 385 }, 0]
     ]) }),
   fr_provence: Object.assign({}, base, {
     rays: '#fff4c8', name: 'Provence', music: 'tour_fr', particles: 'petals', ground: earth,
@@ -318,8 +329,8 @@ Object.assign(themes, {
     celestial: { type: 'sun', x: 0.78, y: 0.16, r: 36, color: '#fffbe0', glow: '#ffe090' }, stars: 0, cloudsDyn: true,
     layers: ownLayers('fr_provence', [
       ['L0', 0.03, { kind: 'frHillsSoft', color: '#9a8ac8', base: 300, amp: 34 }],
-      ['L1', 0.1, { kind: 'frLavender', color: '#8a6ac8', base: 340 }],
-      ['L2', 0.25, { kind: 'frSunflowers', color: '#e8b830', base: 375 }]
+      ['L1', 0.1, { kind: 'frLavender', color: '#8a6ac8', base: 340 }, -60],
+      ['L2', 0.25, { kind: 'frSunflowers', color: '#e8b830', base: 375 }, -92]
     ]),
     fog: '#fff0d8', hard: { c1: '#d8c8a0', c2: '#a89870' }, brick: { style: 'stone', c1: '#e8d8b8', c2: '#c8b090', mortar: '#a89070' },
     semi: { style: 'plank', c1: '#a8805a', c2: '#6a4a2a' }, decor: ['frLavenderBush', 'frHive', 'frLavenderBush', 'frCypress']
@@ -329,10 +340,10 @@ Object.assign(themes, {
     sky: ['#5a9ad8', '#b8dcf4', '#fff4e4'], horizonGlow: '#fff4e0',
     celestial: { type: 'sun', x: 0.25, y: 0.2, r: 32, color: '#fffbe8', glow: '#ffe8c0' }, stars: 0, cloudsDyn: true,
     layers: ownLayers('fr_baie', [
-      ['L0', 0.02, { kind: 'frBay', color: '#a8b4c8', base: 290, at: 620 }],
-      ['L1', 0.08, { kind: 'frHillsSoft', color: '#d8c8a0', base: 335, amp: 10 }]
+      ['L0', 0.02, { kind: 'frBay', color: '#a8b4c8', base: 290, at: 620 }, -40],
+      ['L1', 0.08, { kind: 'frHillsSoft', color: '#d8c8a0', base: 335, amp: 10, dyn: 'frSails', horizon: 236 }, -96]
     ]),
-    fog: '#f0f4f8', hard: { c1: '#b8a888', c2: '#8a7a60' }, semi: { style: 'plank', c1: '#8a6a4a', c2: '#5a4430' }, decor: ['frShell', 'frPost', 'frShell']
+    fog: '#f0f4f8', hard: { c1: '#b8a888', c2: '#8a7a60' }, semi: { style: 'plank', c1: '#8a6a4a', c2: '#5a4430' }, decor: ['frShell', 'frTidePool', 'frBuoy', 'frShell', 'frBucket', 'frTidePool']
   }),
   fr_perigord: Object.assign({}, base, {
     rays: '#fff0c8', name: 'Périgord', music: 'tour_fr', particles: 'leaves', ground: chalk,
@@ -340,7 +351,7 @@ Object.assign(themes, {
     celestial: { type: 'sun', x: 0.3, y: 0.14, r: 30, color: '#fffbe8', glow: '#ffe8b0' }, stars: 0, cloudsDyn: true,
     layers: ownLayers('fr_perigord', [
       ['L0', 0.04, { kind: 'frOaks', color: '#4a7a3a', base: 300 }],
-      ['L1', 0.1, { kind: 'frCliffs', color: '#6a4a32', base: 330 }]
+      ['L1', 0.1, { kind: 'frCliffs', color: '#6a4a32', base: 330 }, 0]
     ]),
     fog: '#f0ecd8', hard: { c1: '#a89878', c2: '#7a6a50' }, semi: { style: 'plank', c1: '#7a5a3a', c2: '#4a3420' }, decor: ['frWalnut', 'frMushroomRing']
   }),
@@ -349,8 +360,8 @@ Object.assign(themes, {
   fr_ciel: Object.assign({}, themes.fr_tower, {
     name: 'Montgolfière Skies', particles: 'none', sky: ['#3a8ae8', '#a8d8ff', '#fff4e8'],
     layers: ownLayers('fr_ciel', [
-      ['L0', 0.02, { kind: 'frTower', color: '#a8b8d0', base: 330, h: 200, at: 520 }],
-      ['L1', 0.1, { kind: 'clouds', color: '#ffffff', base: 260 }]
+      ['L0', 0.02, { kind: 'frTower', color: '#a8b8d0', base: 330, h: 200, at: 520 }, 0],
+      ['L1', 0.1, { kind: 'clouds', color: '#ffffff', base: 260 }, 0]
     ])
   }),
   // the rooftops by day (7-1): the morning boulevard's strips, zinc roofs underfoot
@@ -682,6 +693,8 @@ class FrOyster extends TourEnemy.make({ w: 30, h: 14, speed: 0, behavior: 'still
   }
   touchPlayer(p) { if (this.dead || this.stunT > 0) return; if (this.snap > 0) p.hurt(this); }
   hit(kind, src) { if ((kind === 'stomp' || kind === 'spin') && this.shut) return 'bounce'; return super.hit(kind, src); }
+  // a wet dark patch under the shell so the grey oyster reads on pale sand (it sits low in its pool)
+  draw(ctx) { if (!this.dead && !this.knocked) { ctx.fillStyle = 'rgba(60,44,30,0.4)'; ctx.beginPath(); ctx.ellipse(this.cx, this.y + this.h - 1, 19, 4.5, 0, 0, TAU); ctx.fill(); } super.draw(ctx); }
   // the atlas has the open shell (idle) and the shut one
   get artMode() { const m = super.artMode; return m === 'idle' && this.openK < 0.5 ? 'shut' : m; }
   paint(ctx, x, y, mode) { if (this.trem) x += Math.sin(this.t * 60) * 1.2; return super.paint(ctx, x, y, mode === 'idle' && this.openK < 0.5 ? 'shut' : mode); }
