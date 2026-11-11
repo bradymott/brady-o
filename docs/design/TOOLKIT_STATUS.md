@@ -93,8 +93,8 @@ Rules of thumb:
 | `shaft` | tested | `st.y` grows down, `st.shelf(y, holes)`, `st.down(n)`; pieces `ledges`, `shelf`, `ringFall`, `spikeShelf`, `updraft`; `fallCap` 11 t/s, `airSteer` 1.4; camera `shaft` (35 %); river and gate at the bottom |
 | `room` | tested | a stamp; rooms smaller than the screen are padded with rock (min 28 x 14) |
 | `maze` | tested | `cells`, `cell`, `script` (rows of cell stamps), `links` door / drop / oneway; camera `room` |
-| `rail` | tested | `decks`, `fork` piece, `railSwitch` lever posts, `railCart`, drawn track with trestles; both decks are validator ghosts |
-| `ride`, `swim`, `climb` | tested (legacy levels) | climb `variant` is stored; variant pieces: `waterfall` (facade), `gondola` (exterior); `zigzag` and `blockBand` are generic climb bands |
+| `rail` | tested | `decks`, `fork` piece, `railSwitch` lever posts, `railCart`, drawn track with trestles (the area's `track` skin replaces it: Mexico 1-2's canals); both decks are validator ghosts; a checkpoint needs no ground (the cart pulls up wherever Brady respawns) |
+| `ride`, `swim`, `climb` | tested (legacy levels; Mexico 1-3/1-4, Ecuador 2-5/2-6) | v2 options: swim `ending: false` and climb `summit: false` skip the generic exit ledge / summit so the script ends on its own set piece; ride `endDoor: 'area@anchor'` ends a boss lead-in at a door into the arena (anchor `landing` on the end dock) | climb `variant` is stored; variant pieces: `waterfall` (facade), `gondola` (exterior); `zigzag` and `blockBand` are generic climb bands |
 | `rise` | tested | `rise: { speed, delay }` (camera climbs, bottom edge kills) or `risingWater: { speed, delay }` (Brady swims in it) |
 | `dig` | tested | soil below `surface`; `cavern`, `rockBand`, `pocket`, `exit` pieces; dug tunnels draw a dark wall |
 | `arena` | tested | runs the country's `arena_<layout>` after an entry with anchor `in` |
@@ -146,6 +146,7 @@ Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial glob
 | `chase { speed, ramp, period, look: 'dust'/'lava'/'wave', lethal }` | tested | the `TourDoom` front (pace in the validator) |
 | flip (zones of kind `flip`, the `flipline` piece) | tested | `playerPhysicsFlip` runs the physics in a mirrored copy of the area; the validator stands on ceilings inside the band (node flag `f`) |
 | `lamp { decay, r0, r1 }` | tested | the area is dark; Brady's light shrinks; `lantern { kind: 'relight' }` posts relight it |
+| light-only tiles in the game | tested (Mexico 1-3) | hide-3 tiles are solid always and drawn (shimmering) only inside a light: entity lights (`light` or a `lights` array, e.g. a sunbeam column), decor lights; Brady's own glow counts in a `lamp` area or under the Hard Hat |
 | `phase { night, day, start }` | tested | the `lantern { kind: 'phase' }` piece: a toggle group of day-only / night-only blocks + the theme swap |
 | `mirror` (v2 areas) | tested | the area is flipped in place right after its gen (tiles, items, spawns, decor, zones, ghosts, springs, locks, vkeys, edges, toggles, anchors, postcard spots), so doors and the validator see it right to left; fixture `gens.mirror`. Not flipped: boss arenas and rail forks |
 
@@ -188,11 +189,13 @@ Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial glob
 | World 22 ghost pin ("22?") | tested | touching a shut land door sets `tour.doors[cc]`; the map flickers a ghost pin at 30 % alpha until the land opens; a tap says `THIS DOOR WANTS n POSTCARDS (YOU HAVE m)` (`TourProgress.landDoor(cc)`); `gameplay_test` + shot `12c-map-ghost22.png` |
 
 ## Levels in the v2 format
-| Level | Where | Status |
+| Country | Levels | Where |
 |---|---|---|
-| 1-1 Mercado Mayhem (PARADE: `mercado` layered → `bodega` room (secret) → `tienda` gate) | `src/29_tour_mx.js` | validates (main + secret exits, 3 postcards, both areas); runs in the game (`sbw_toolkit_shots.js levels`) |
-| 2-2 Canopy of Baños (islands → treehouse and cascada rooms) | `src/29_tour_ec_levels.js` | validates; runs in the game |
-| the other 66 | unchanged legacy specs | build byte-identical (`sbw_snapshot.js`); all finishable (`validate_levels.js`) |
+| Mexico | 1-1 PARADE, 1-2 RAIL, 1-3 DIVE, 1-4 TOWER, 1-5 LAIR, 1-6 FALL (secret); La Tiendita | `src/29_tour_mx_levels.js` (art, enemies, boss in `29_tour_mx.js`) |
+| Ecuador | 2-1 FLIP, 2-2 SWING, 2-3 RACE, 2-4 FACTORY, 2-5 LAIR, 2-6 DIVE (secret), 2-7 TIDE (secret); La Tienda del Cacao | `src/29_tour_ec_levels.js` (art, enemies, boss in `29_tour_ec.js`) |
+| the others | as their country agents land them; legacy specs build byte-identical until then (`sbw_snapshot.js`) | |
+
+Test helpers for v2 boss levels: `boss_test.js` `boss()` / `enterArena()` and `gameplay_test.js` `arenaBoss()` load the area with `role: 'arena'` (or the boss spawn) first, keeping Brady's invulnerability.
 
 ## Spec deviations (decided while building; the spec text was updated where it matters)
 - `src/28_tour_b2_gens.js` would load **before** `28_tour_b_build.js` (files load in name order and `2` sorts before `_`), so the generators live in `src/28_tour_bb_gens.js`.
