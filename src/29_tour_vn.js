@@ -1,15 +1,12 @@
 /* ============================================================
-   VIETNAM (world 10)
-   10-1 Train Street          run    a pho cart lends a noodle lasso; the train rumbles down the street (get up on a doorstep!),
-                                     wind-up toy scooters, lasso the tangled wires to swing over the rooftop gaps
-   10-2 Ha Long Bay           run    limestone karsts rising from emerald water: lasso the cliff-side trees and swing from
-                                     karst to karst; bobbing fishing rafts, leaping squid, punchy mantis shrimp
-   10-3 Hoi An Lantern River  night  lantern light on the river: lasso a moored boat to pull it over, then ride it back across;
-                                     swing on the lantern strings; mosquitoes and toads
-   10-4 Phong Nha Cave        climb  climb a giant cave toward its skylight: lasso the stalactites and reel yourself up;
-                                     glowing cave fungi, bats, blind cave crabs
-   10-5 Hue Citadel           castle the Baron's coffee works in the citadel: hot coffee pits, melting ice-cube rafts,
-                                     coffee-bean cannons; boss Ong Phin, the Grand Coffee Filter
+   VIETNAM (world 10). This file holds the look, the cast, the
+   objects, the signature item (the noodle lasso), the boss and the
+   music. The levels (v2 format, LEVEL_OVERHAUL.md §2) are in
+   29_tour_vn_levels.js:
+   10-1 Train Street    DOOM (periodic: the train)   10-4 Son Doong Flood  RISE (flood)
+   10-2 Ha Long Junk    RIDE                         10-5 Hue Citadel      LAIR (Ong Phin)
+   10-3 Hoi An Lanterns LAMP                         10-6 Mekong Floating Market HUB (errand, secret)
+   The water puppets are animals only (the dragon became a carp).
    Food gags (pho, banh bao, spring rolls, drip coffee) are the jokes; people, temples and shrines are never the joke.
    ============================================================ */
 (() => {
@@ -20,6 +17,7 @@ const NOODLE = '#f6e6ba';
 const wrapDraw = (x, w, fn) => { fn(x); if (x + w > BG_W) fn(x - BG_W); if (x < 0) fn(x + BG_W); };
 LIQUIDS.vn_bay = ['#5ae0b8', '#1a9a8a', '#0a4a52', 'rgba(220,255,240,0.28)', null, 'rgba(240,255,250,0.7)'];
 LIQUIDS.vn_river = ['#3a5a7a', '#1a2e48', '#0a1424', 'rgba(255,200,120,0.25)', '#ff9a3a', 'rgba(255,220,160,0.5)'];
+LIQUIDS.vn_mekong = ['#9ab868', '#5a7a3a', '#2a3a1a', 'rgba(255,250,220,0.25)', null, 'rgba(255,255,230,0.6)'];
 LIQUIDS.vn_coffee = ['#a8683a', '#5a2e14', '#2a1408', 'rgba(255,220,180,0.22)', null, 'rgba(255,240,220,0.55)'];
 // a silk lantern (round-bellied, tasselled)
 function lantern(ctx, x, y, r, col, t, glow) {
@@ -99,12 +97,19 @@ const painters = {
         ctx.strokeStyle = 'rgba(30,15,10,0.5)'; ctx.lineWidth = 1; for (let k = 0; k < w; k += 6) { ctx.beginPath(); ctx.moveTo(xx + k, top - 14); ctx.lineTo(xx + k - 4, top + 3); ctx.stroke(); }
         for (let k = 0; k < Math.floor(w / 26); k++) { const wx = xx + 8 + k * 26; ctx.fillStyle = L.night ? '#ffcf7a' : '#6a4a2a'; ctx.fillRect(wx, top + 16, 14, 18); ctx.fillStyle = '#3a2418'; ctx.fillRect(wx + 6, top + 16, 2, 18); }
         ctx.fillStyle = '#4a2a1a'; ctx.fillRect(xx + 4, L.base - 30, w - 10, 3);
-        for (let k = 0; k < Math.floor(w / 18); k++) lantern(ctx, xx + 10 + k * 18, L.base - 22, 5, LANT[(k + Math.floor(xx)) % LANT.length], 0, !!L.night);
+        for (let k = 0; k < Math.floor(w / 18); k++) lantern(ctx, xx + 10 + k * 18, L.base - 22, 5, LANT[((k + Math.floor(xx)) % LANT.length + LANT.length) % LANT.length], 0, !!L.night);
       });
       x += w + 4;
     }
   },
   // the river at night: dark water mirroring the lanterns
+  // the Mekong's far bank (10-6 fallback): a low green bank of palms and stilt houses standing in the water
+  vnFarBank(ctx, L, rng, H) {
+    const b = L.base; ctx.fillStyle = L.color; ctx.fillRect(0, b - 14, BG_W, H - b + 14);
+    for (let x = 6; x < BG_W; x += 26 + rng() * 34) wrapDraw(x - 20, 40, xx => { const px = xx + 20, h = 30 + rng() * 26; ctx.strokeStyle = shade(L.color, -0.3); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, b - 12); ctx.quadraticCurveTo(px + 4, b - h * 0.6, px + 6, b - h); ctx.stroke(); ctx.fillStyle = shade(L.color, -0.15); for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + (k - 2) * 0.6; ctx.beginPath(); ctx.ellipse(px + 6 + Math.cos(a) * 9, b - h + Math.sin(a) * 4, 10, 3, a, 0, TAU); ctx.fill(); } });
+    for (let x = 40; x < BG_W; x += 150 + rng() * 90) wrapDraw(x, 50, xx => { ctx.fillStyle = '#8a6a4a'; for (let k = 0; k < 4; k++) ctx.fillRect(xx + 4 + k * 13, b - 20, 3, 22); ctx.fillStyle = '#c8b090'; ctx.fillRect(xx, b - 38, 50, 18); ctx.fillStyle = '#a8a8b0'; ctx.beginPath(); ctx.moveTo(xx - 6, b - 38); ctx.lineTo(xx + 25, b - 52); ctx.lineTo(xx + 56, b - 38); ctx.fill(); });
+    ctx.fillStyle = 'rgba(255,250,230,0.35)'; ctx.fillRect(0, b - 4, BG_W, 6);
+  },
   vnRiverBg(ctx, L, rng, H) {
     ctx.fillStyle = vgrad(ctx, L.base, H, L.color, shade(L.color, -0.5)); ctx.fillRect(0, L.base, BG_W, H - L.base);
     for (let i = 0; i < 60; i++) { const x = rng() * BG_W, y = L.base + 4 + rng() * 50; ctx.fillStyle = rgba(LANT[i % LANT.length], 0.18 + rng() * 0.2); ctx.fillRect(x, y, 2 + rng() * 3, 6 + rng() * 14); }
@@ -226,6 +231,18 @@ const base = {
   pillar: { c1: '#c8322a', c2: '#7a1a12', cap: '#ffd23a', style: 'column' }, accent: COL.a, qblockArt: lanternBlock, usedArt: lanternUsed, tint: {}, bloom: 0.17
 };
 const themes = {
+  // 10-6: the Mekong floating market (atlas vn_mekong: L0 the far bank, L1 the market on the river)
+  vn_mekong: Object.assign({}, base, {
+    name: 'Mekong Floating Market', music: 'tour_vn', particles: 'petals',
+    sky: ['#4a9ad8', '#b8e0e8', '#fff6dc'], horizonGlow: '#fff6dc',
+    celestial: { type: 'sun', x: 0.75, y: 0.15, r: 32, color: '#fffbe8', glow: '#ffe8b0' }, stars: 0, cloudsDyn: true,
+    layers: [
+      { kind: 'vnFarBank', color: '#4a8a4a', base: 290, f: 0.04 },
+      { kind: 'vnBay', color: '#7a9a5a', base: 322, f: 0.12 }
+    ],
+    fog: '#fff6dc', liquid: 'vn_mekong', ground: { style: 'wood', cap: '#a8784a', capHi: '#d8a870', dirt: '#7a5232', dirt2: '#4a3020', rock: '#8a6a4a' },
+    semi: bambooRaft, decor: ['vnFruitPile', 'vnPlants', 'vnFruitPile']
+  }),
   vn_street: Object.assign({}, base, {
     name: 'Train Street', music: 'tour_vn', particles: 'dust',
     sky: ['#5aa0d8', '#bfe0f0', '#fff4dc'], horizonGlow: '#ffe8c0',
@@ -456,7 +473,57 @@ class VnShrimp extends TourEnemy {
 }
 // a static cfg so 30_tour_sprites.js names its pre-rendered art ('shrimp/walk', ...); shrimpArt stays the fallback
 VnShrimp.cfg = SHRIMP;
+/* ---- the overhaul cast (LEVEL_OVERHAUL.md §4.3): drawn from the 'vn_x' atlas (tools/blender/sprites/vn_extras.py),
+   with procedural fallbacks that carry the ink line ---- */
+const VN_X = 'vn_x';
+function modal(cls, map) {
+  const M = class extends cls {
+    paint(ctx, x, y, mode) { return super.paint(ctx, x, y, map[mode] || mode); }
+    get artMode() { const m = super.artMode; return map[m] || m; }
+  };
+  M.cfg = cls.cfg; return M;
+}
+// the flying conical hat (non la): an object with little wings, nobody under it
+function hatShape(ctx, x, y, s, spin, t) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  const flap = Math.sin((t || 0) * 18) * 0.5;
+  ctx.fillStyle = '#ffffff'; for (const d of [-1, 1]) { ctx.save(); ctx.translate(d * 12, -4); ctx.rotate(d * (0.4 + flap)); ctx.beginPath(); ctx.ellipse(d * 8, -2, 9, 4, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+  const sq = spin ? Math.abs(Math.cos((t || 0) * 14)) * 0.5 + 0.5 : 1;
+  ctx.fillStyle = '#e8c878'; ctx.beginPath(); ctx.moveTo(-17 * sq, 2); ctx.lineTo(0, -14); ctx.lineTo(17 * sq, 2); ctx.quadraticCurveTo(0, 6, -17 * sq, 2); ctx.fill();
+  ctx.strokeStyle = '#b8984a'; ctx.lineWidth = 1; for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-17 * sq * k / 4, 2 - 16 * (1 - k / 4) + 2); ctx.lineTo(17 * sq * k / 4, 2 - 16 * (1 - k / 4) + 2); ctx.stroke(); }
+  ctx.strokeStyle = '#c8322a'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-8, 2); ctx.quadraticCurveTo(0, 10, 8, 2); ctx.stroke();
+  ctx.restore();
+}
+const nonArt = (ctx, e, x, y, m, t) => hatShape(ctx, x, y, 1, m === 'spin', t);
+const nonProjectileArt = (ctx, s, t) => { if (typeof Atlas !== 'undefined' && Atlas.has(VN_X) && Atlas.animate(ctx, VN_X, 'non/spin', t, s.cx, s.y + 6, 1, { scale: ART_SCALE.enemy })) return; hatShape(ctx, s.cx, s.y + 6, 1.1, true, t); };
+// the silkworm on its thread (ceilingDrop): plump and cream, a little leaf in its mouth
+const silkwormArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); if (m === 'flat') ctx.scale(1.3, 0.4);
+  for (let k = 0; k < 5; k++) { ctx.fillStyle = k % 2 ? '#f4ecd0' : '#e8dcb8'; ctx.beginPath(); ctx.ellipse(0, -4 - k * 5 + Math.sin((t || 0) * 6 + k) * 0.8, 7 - Math.abs(k - 2) * 0.8, 4, 0, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#5ab84a'; ctx.beginPath(); ctx.ellipse(5, -26, 4, 2, 0.5, 0, TAU); ctx.fill();
+  if (m !== 'ko') K.eyes(ctx, 0, -24, e.dir || 1, 2.5, 1.5, m === 'drop');
+  ctx.restore();
+};
+// the phin on legs (trailLayer coffee): a little aluminium drip filter, dripping a hot coffee trail
+const phinArt = (ctx, e, x, y, m, t) => {
+  ctx.save(); ctx.translate(x, y); ctx.scale(e.dir || 1, m === 'flat' ? 0.4 : 1);
+  if (m !== 'flat' && m !== 'ko') K.feet(ctx, 0, 0, e.t || 0, '#8a8a96', 4, 3, false);
+  ctx.fillStyle = '#c8c8d4'; ctx.beginPath(); ctx.moveTo(-9, -22); ctx.lineTo(9, -22); ctx.lineTo(7, -6); ctx.lineTo(-7, -6); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#a8a8b4'; ctx.fillRect(-13, -8, 26, 3); ctx.fillStyle = '#e8e8f0'; rr(ctx, -10, -27, 20, 5, 2); ctx.fill();
+  ctx.fillStyle = '#5a2e14'; ctx.beginPath(); ctx.arc(0, -3 + ((t || 0) * 30 % 6), 1.6, 0, TAU); ctx.fill();
+  if (m !== 'ko') K.eyes(ctx, 2, -15, 1, 3, 1.8, false);
+  ctx.restore();
+};
+const VnNon = modal(TourFlyer.make({ w: 34, h: 18, speed: 0, range: 0, behavior: 'boomerang', out: 5, every: 2.4, hatProjectile: true, projectileArt: nonProjectileArt, atlas: VN_X, sprite: 'non', art: nonArt, burst: '#e8c878' }), { idle: 'perch', tell: 'spin', throw: 'fly' });
+const VnSilkworm = modal(TourEnemy.make({ w: 16, h: 26, speed: 0.6, behavior: 'ceilingDrop', tell: 0.4, stuckT: 1.5, atlas: VN_X, sprite: 'silkworm', art: silkwormArt, burst: '#f4ecd0' }), { tell: 'hang', climb: 'hang', stuck: 'stun', walk: 'stun' });
+const VnPhinDrip = TourEnemy.make({ w: 22, h: 28, speed: 0.9, behavior: 'trailLayer', trail: 'coffee', trailT: 3, atlas: VN_X, sprite: 'phinDrip', art: phinArt, burst: '#5a2e14' });
 const enemies = {
+  // the flying conical hat (the headline power): it flies out from its perch and boomerangs back; ride its brim
+  vnNon: { cls: VnNon, place: 'fly' },
+  // the silkworm: hangs on its thread, shakes, drops, sits stuck (stomp it then), climbs back up
+  vnSilkworm: { cls: VnSilkworm, place: 'here' },
+  // the walking drip filter: leaves a hot coffee trail that stings for 3 s
+  vnPhinDrip: { cls: VnPhinDrip, place: 'walk' },
   vnScooter: { cls: TourEnemy.make({ w: 36, h: 30, inkPad: 6, speed: 1.4, behavior: 'charge', range: 8, chargeSpeed: 8.2, windup: 0.6, chargeT: 1.5, art: scooterArt, burst: '#e8323a', onNotice: e => { K.say(e.g, e, 'BEEP BEEP!', '#ffd23a'); TourKit.sfx('bike_bell', 'select2', { vol: 0.4, pitch: 1.3 }); } }), place: 'walk' },
   vnBao: { cls: TourEnemy.make({ w: 26, h: 24, speed: 1.0, behavior: 'hop', hopV: 9, hopEvery: 1.3, art: baoArt, burst: '#ffffff' }), place: 'walk' },
   vnRoll: { cls: TourEnemy.make({ w: 26, h: 16, speed: 0.8, behavior: 'roll', range: 8, rollSpeed: 6.4, rollT: 2.4, art: rollArt, burst: '#f0b050' }), place: 'walk' },
@@ -1331,7 +1398,7 @@ const tracks = {
   }
 };
 
-/* ---------------- the five levels ---------------- */
+/* ---------------- the country ---------------- */
 const COIN = { name: 'GOLDEN XU', draw(ctx, x, y) {
   const g = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, 9); g.addColorStop(0, '#fff6c0'); g.addColorStop(0.6, '#ffd24a'); g.addColorStop(1, '#c8901a');
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();
@@ -1353,37 +1420,7 @@ Tour.country({
     ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.ellipse(0, 2, 10, 3, 0, 0, TAU); ctx.fill();
     ctx.restore();
   } },
-  levels: [
-    { name: 'Train Street', style: 'run', theme: 'vn_street', gyMin: 6,
-      gimmick: 'A pho cart lends a noodle lasso: the train rumbles down the street (get up on a doorstep!), wind-up toy scooters zoom, swing over the rooftop gaps on the tangled wires',
-      enemies: [['vnScooter', 2], ['vnBao', 2], ['vnRoll', 1]],
-      hint: 'When the bell rings, get up on a doorstep! THROW near a wire knot to swing',
-      postcard: 'Brady! A train runs right down this street, between the cafes. Everyone just moves their stools. Amazing. ♥ C',
-      script: ['pho', 'stools', ['trainstreet', { len: 22, n: 1 }], 'rooftops', 'cp', ['enemies', { n: 2 }], ['trainstreet', { len: 29, n: 2, gold: true, period: 6.5 }], ['rooftops', { n: 3, gold: true }], 'stools', 'bonus', 'end'] },
-    { name: 'Ha Long Bay', style: 'run', theme: 'vn_bay', gyMin: 9, gyMax: 15,
-      gimmick: 'Limestone karsts rising from emerald water: lasso the cliff-side trees and swing from karst to karst; bobbing fishing rafts, leaping squid, mantis shrimp that punch',
-      enemies: [['vnShrimp', 1], ['vnCormorant', 1]],
-      hint: 'THROW at the trees on the cliffs to swing across the water. Tap JUMP to let go',
-      postcard: 'Thousands of stone islands, and the Baron\'s blimp hiding behind every one. Swing, Brady, swing! ♥ C',
-      script: ['pho', 'karsts', 'swing', 'rafts', ['karsts', { n: 4, seed: 2 }], 'cp', 'cave', ['swing', { gold: true, gap: 8 }], 'doubleswing', ['rafts', { n: 3, gold: true }], ['karsts', { n: 2, seed: 4 }], 'swing', 'end'] },
-    { name: 'Hoi An Lantern River', style: 'night', theme: 'vn_river', dark: true,
-      gimmick: 'A lantern-lit river at night: lasso a moored sampan to pull it over, then ride it back across; swing on the lantern strings; mosquitoes and toads',
-      enemies: [['vnToad', 2], ['vnMosquito', 2], ['vnGoi', 1]],
-      hint: 'Lasso the moored boat: it comes to you, then carries you home across the river',
-      postcard: 'The whole river is floating lanterns tonight. I made a wish. It was about you. (And noodles.) ♥ C',
-      script: ['pho', 'oldstreet', 'ferry', 'lanterns', ['oldstreet', { toads: true }], 'cp', ['ferry', { gold: true }], 'bridgearch', ['lanterns', { n: 2, gold: true }], 'oneup', 'ferry', 'end'] },
-    { name: 'Phong Nha Cave', style: 'climb', theme: 'vn_cave', dark: true, W: 24, H: 104,
-      gimmick: 'Climb a giant cave toward its skylight: lasso the stalactites and reel yourself up the sheer shafts; glowing fungi, bats, blind cave crabs',
-      enemies: [['vnBat', 1], ['vnCaveCrab', 1]],
-      hint: 'In a shaft, lasso the stalactite and hold UP to reel in',
-      postcard: 'There\'s a whole jungle growing inside this cave. And a river. And, somewhere, a Baron. ♥ C',
-      script: ['cstart', ['cledges', { n: 4 }], 'reel', ['cledges', { n: 3, flip: true, bat: true }], 'ccp', 'chamber', ['reel', { gold: true, flip: true }], ['cledges', { n: 4 }], 'reel', ['cledges', { n: 3, bat: true }]] },
-    { name: 'Hue Citadel', style: 'castle', theme: 'vn_citadel', boss: 'vn_phin', arena: 'kettle', arenaW: 26, roof: false,
-      gimmick: 'The Baron\'s coffee works in the citadel: hot-coffee pits crossed on melting ice cubes, bean-spitting roasters, then Ong Phin under the great kettle',
-      enemies: [['vnBean', 3], ['vnRoll', 1]],
-      hint: 'Ong Phin is too hot to stomp. Jump on a foot pedal: the kettle swings across the courtyard and steams him!',
-      postcard: 'The bridge is back in Hoi An! The Baron flew off toward Japan. He left his coffee. ♥ C',
-      script: [['coffeepit', { n: 2 }], 'roasters', ['enemies', { n: 2 }], 'palacehall', 'cp', ['coffeepit', { n: 3 }], ['roasters', { gold: true }], 'pavilion', 'arena'] }
-  ]
+  // the levels are added by 29_tour_vn_levels.js (Tour.amend)
+  levels: []
 });
 })();
