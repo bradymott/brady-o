@@ -9,7 +9,7 @@ Branch `sbw/level-toolkit`. This file says which parts of the §7.4 interface co
 
 **Shared test totals** derive from the game data (68 main levels from each country's `mainCount`; the full count from the level lists), so secret levels land without editing tests.
 
-**Tests** (all must pass before a push): `node tools/validate_levels.js --rules`, `node tools/sbw_toolkit_test.js` (sections: spec stamps graph guide progress validator gens budget gear objects systems), `node tools/save_test.js`, `node tools/sbw_snapshot.js` (legacy levels build byte-identical), `BRADY_DIST=… node tools/sbw_toolkit_shots.js <dir>` (fixtures in the browser), plus the existing `gameplay_test`, `boss_test`, `apps_test`, `sbw_graphics_test`, `sbw_atlas_test`.
+**Tests** (all must pass before a push): `node tools/validate_levels.js --rules`, `node tools/sbw_toolkit_test.js` (sections: spec stamps graph guide progress validator gens budget gear objects systems), `node tools/save_test.js`, `node tools/sbw_snapshot.js` (legacy levels build byte-identical), `BRADY_DIST=… node tools/sbw_toolkit_shots.js <dir> --checks` (fixtures and shipped objects in the browser; without `--checks` it also takes the screenshots). Lab checks that place Brady by hand must keep him and the object inside the zoomed view: enemies only think inside the standard view's active window, and the rail area holds Brady inside the view, plus the existing `gameplay_test`, `boss_test`, `apps_test`, `sbw_graphics_test`, `sbw_atlas_test`.
 `node tools/dump_level.js lab:gens.layered 0 120` prints any fixture as ASCII with the validator's reachable spots.
 
 ## How to write a level in the new format

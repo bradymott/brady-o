@@ -1,11 +1,14 @@
 // Screenshots of the level toolkit's fixture levels (tools/fixtures/sbw_lab_levels.js) in the real game, plus a few
 // scripted in-game checks of the new systems (trapdoor, rail switch, digging, water lines, cameras).
-// usage: BRADY_DIST=<dist> node tools/sbw_toolkit_shots.js <shotsDir> [name ...]
+// usage: BRADY_DIST=<dist> node tools/sbw_toolkit_shots.js <shotsDir> [--checks] [name ...]
+//   --checks: run every check but skip the screenshots (the quick form for the regular test suite)
+// Exits 1 if any check fails (part of the regular suite: docs/handoff/SUPER_BRADY_O_WORLD.md).
 // Full resolution is pinned before every capture (the adaptive quality would otherwise drop it on a busy machine).
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs');
 const out = path.resolve(process.argv[2] || path.join(__dirname, '..', 'shots', 'lab'));
-const want = process.argv.slice(3);
+const flags = process.argv.slice(3).filter(a => a.startsWith('--')), want = process.argv.slice(3).filter(a => !a.startsWith('--'));
+const checksOnly = flags.includes('--checks');
 fs.mkdirSync(out, { recursive: true });
 const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const appPage = path.join(dist, 'site', 'super-brady-o-world', 'index.html');
@@ -51,7 +54,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     window.freeze = () => { const g = S(); if (g.player) g.player.invuln = 0; g._upd = g.update; g.update = function () {}; };
   });
   const pin = () => page.evaluate(() => { const G = window.BRADY.Game; G.slowT = -1e9; G.lowered = 0; G.dprCap = null; G.quality = 1; G.resize(); });
-  const shot = async name => { await pin(); await page.waitForTimeout(250); await page.screenshot({ path: path.join(out, name) }); };
+  const shot = async name => { if (checksOnly) return; await pin(); await page.waitForTimeout(250); await page.screenshot({ path: path.join(out, name) }); };
   const run = async (name, fn) => { if (want.length && !want.some(w => name.startsWith(w))) return; try { await fn(); } catch (e) { check(name + ' runs', false, String(e.message).slice(0, 300)); } };
 
   // every generator fixture: start, and a later view
@@ -81,7 +84,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   await run('rail', async () => {
     const r = await page.evaluate(() => {
       lab('gens.rail'); const g = S(), p = P(); const sw = g.entities.find(e => e.constructor.name === 'TourRailSwitch'); const cart = g.entities.find(e => e.constructor.name === 'TourRailCart');
-      const before = !!g.railState[0]; p.x = sw.cx - p.w / 2; p.y = sw.y + sw.h - p.h; sim(0.05, { actionPressed: true }); const after = !!g.railState[0];
+      const before = !!g.railState[0];
+      // the rail area autoscrolls and holds Brady inside the view: bring the view to the post first (the zoomed view no longer reaches it from the start)
+      g.camX = Math.max(0, sw.cx - window.BRADY.Game.viewW / 2); p.x = sw.cx - p.w / 2; p.y = sw.y + sw.h - p.h; sim(0.05, { actionPressed: true }); const after = !!g.railState[0];
       const f = cart.forks[0]; cart.x = (f.x0 + 10) * 32; sim(0.1); const yUp = cart.y; return { before, after, deckRow: Math.round(yUp / 32), upper: f.upper };
     });
     check('rail: the lever post flips the fork and the cart rides the upper deck', !r.before && r.after && r.deckRow === r.upper, r);
@@ -388,7 +393,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       const at = (p, tx) => { p.x = tx * 32 + 16 - p.w / 2; p.y = 10 * 32 + 32 - p.h; p.vx = 0; p.vy = 0; };
       { const [g, p] = hall(); const e = put(g, 'lab_splitter', 20, 10); at(p, 20); p.y -= 90; sim(0.6); out.splitter = { kids: g.entities.filter(o => o.s && o.s.child).length }; }
       { const [g, p] = hall(); const e = put(g, 'lab_regrower', 20, 10); e.vx = 0; at(p, 20); p.y -= 90; for (let k = 0; k < 40 && !e.tiny; k++) sim(0.02); at(p, 5); out.regrower = watch(e, 4.5); }
-      { const [g, p] = hall(); const e = put(g, 'lab_camouflage', 30, 10); at(p, 5); out.camouflage = watch(e, 5); }
+      // enemies only think inside the standard view's active window: keep each critter within ~20 tiles of Brady
+      { const [g, p] = hall(); const e = put(g, 'lab_camouflage', 22, 10); at(p, 5); out.camouflage = watch(e, 5); }
       { const [g, p] = hall(); const e = put(g, 'lab_burrower', 26, 10); at(p, 24); out.burrower = watch(e, 6); }
       { const [g, p] = hall(); const e = put(g, 'lab_trailLayer', 20, 10); at(p, 5); sim(3); out.trailLayer = { trails: (g.area.trails || []).length }; }
       { const [g, p] = hall(); const e = put(g, 'lab_saltSneezer', 25, 10); at(p, 5); out.saltSneezer = watch(e, 4.5); out.saltPlat = g.entities.some(o => o.constructor.name === 'TourSaltPlat'); }
@@ -405,7 +411,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       { const [g, p] = hall(); const e = put(g, 'lab_stacker', 26, 10); e.cool = 0; at(p, 21); out.stacker = watch(e, 3.5); }
       { const [g, p] = hall(); const e = put(g, 'lab_boomerang', 26, 10); at(p, 20); let shot = false; out.boomerang = watch(e, 4, () => { if (g.entities.some(o => o.constructor.name === 'TourBoomerang')) shot = true; }); out.boomShot = shot; }
       { const [g, p] = hall(); const e = put(g, 'lab_swarm', 26, 10); at(p, 5); sim(1); out.swarm = { followers: g.entities.filter(o => o.constructor.name === 'TourSwarmling').length }; }
-      { const [g, p] = hall(); const e = put(g, 'lab_platEater', 30, 3); at(p, 5); sim(4); out.platEater = { eaten: g.entities.filter(o => o.constructor.name === 'TourRegrow').length }; }
+      { const [g, p] = hall(); const e = put(g, 'lab_platEater', 30, 3); at(p, 12); sim(4); out.platEater = { eaten: g.entities.filter(o => o.constructor.name === 'TourRegrow').length }; }
       { const [g, p] = hall(); const a = put(g, 'lab_alarmCaller', 25, 10, { dir: -1 }); const sl = put(g, 'lab_sleeper2', 35, 10); a.cool = 0; at(p, 22); out.alarm = watch(a, 3); out.woke = sl.bst; }
       { const [g, p] = hall(); const e = put(g, 'lab_frostBreath', 24, 10); e.cool = 0; at(p, 21); let frozen = false; out.frostBreath = watch(e, 3.5, () => { if (p.frozenT > 0) frozen = true; }); out.frozen = frozen; }
       { const [g, p] = hall(); const e = put(g, 'lab_lightFrozen', 36, 10); at(p, 5); sim(0.5); const far = e.bst; at(p, Math.floor(e.cx / 32) - 2); sim(0.3); out.lightFrozen = { far, near: e.bst }; }
@@ -478,6 +484,42 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       return out;
     });
     check('Mexico 1-1 and Ecuador 2-2 run in the v2 format', r['1-1'].v2 && r['2-2'].v2 && r['1-1'].areas === 2 && r['2-2'].areas === 3 && !r['1-1'].dead && !r['2-2'].dead, r);
+  });
+  // the shipped objects in their real levels: Mexico 1-2's lock lever, Morocco's rug moths
+  await run('shipped', async () => {
+    const r = await page.evaluate(() => {
+      const B = window.BRADY, out = {};
+      const go = (w, i) => { B.Save.data.lives = 9; const g = new B.Play(B.getLevel(w, i), {}); B.Game.setScene(g); sim(2); g.player.invuln = 999; return g; };
+      // 1-2: ride the trajinera (Brady keeps to the middle of the boat), tap THROW at the first lever post: the boat takes the upper channel
+      for (const flip of [true, false]) {
+        const g = go(1, 2), p = g.player, sw = g.entities.find(e => e.constructor.name === 'TourRailSwitch'), cart = g.entities.find(e => e.constructor.name === 'TourRailCart'), f = cart.forks[0];
+        let pressed = false;
+        for (let k = 0; k < 120 * 60 && g.state === 'play' && cart.x / 32 < f.x0 + 12; k++) {
+          let inp = null; const cx = cart.x + cart.w * 0.45;
+          if (!pressed && p.x < sw.x + sw.w && p.x + p.w > sw.x && p.y < sw.y + sw.h && p.y + p.h > sw.y) { pressed = true; if (flip) inp = { actionPressed: true }; }
+          else if (p.cx < cx - 24) inp = { right: true }; else if (p.cx > cx + 24) inp = { left: true };
+          sim(1 / 120, inp);
+        }
+        out[flip ? 'lever' : 'noLever'] = { reached: pressed, up: !!g.railState[0], deck: Math.round(cart.y / 32), upper: f.upper, lower: f.lower, onBoat: Math.abs(p.y + p.h - cart.y) < 6, dead: p.dead };
+      }
+      // 5-6 and 5-1: every rug moth stands on its rug, eats a tile, and the tile grows back
+      out.moths = [];
+      for (const [w, i] of [[5, 6], [5, 1]]) {
+        const n = go(w, i).entities.filter(e => e.behavior === 'platEater').length;
+        for (let m = 0; m < n; m++) {
+          const g = go(w, i), p = g.player, A = g.area, e = g.entities.filter(e => e.behavior === 'platEater')[m];
+          const tx = Math.floor(e.cx / 32), ty = Math.floor((e.y + e.h) / 32), hx = (tx - 7) * 32, hy = (ty - 4) * 32;
+          const before = A.tiles.slice(), hold = sec => { for (let k = 0; k < sec * 120; k++) { p.x = hx; p.y = hy; p.vy = 0; sim(1 / 120); } };
+          hold(4.5); const eaten = []; for (let k = 0; k < A.tiles.length; k++) if (before[k] === 7 && A.tiles[k] === 0) eaten.push(k);
+          hold(9); const back = eaten.filter(k => A.tiles[k] === 7).length;
+          out.moths.push({ lv: w + '-' + i, at: [tx, ty], onRug: before[ty * A.W + tx] === 7, eaten: eaten.length, back });
+        }
+      }
+      return out;
+    });
+    check('1-2: the lock lever sends the trajinera up the garden channel', r.lever.reached && r.lever.up && r.lever.deck === r.lever.upper && r.lever.onBoat && !r.lever.dead, r.lever);
+    check('1-2: without the lever the trajinera keeps to the market channel', r.noLever.reached && !r.noLever.up && r.noLever.deck === r.noLever.lower && r.noLever.onBoat && !r.noLever.dead, r.noLever);
+    check('5-1 / 5-6: every rug moth stands on its rug, eats it, and the rug grows back', r.moths.length >= 4 && r.moths.every(m => m.onRug && m.eaten >= 1 && m.back === m.eaten), r.moths);
   });
   check('no page errors', errors.length === 0, errors.slice(0, 5));
   console.log(failures ? `${failures} LAB CHECK(S) FAILED` : 'ALL LAB CHECKS PASSED');

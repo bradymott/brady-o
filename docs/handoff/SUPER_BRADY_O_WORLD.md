@@ -68,6 +68,7 @@ Read its notes: `git show origin/codex/super-brady-o-graphics-pass:docs/GRAPHICS
   - `node tools/boss_test.js`
   - `node tools/apps_test.js`
   - `node tools/sbw_graphics_test.js` (country map layouts, enemy ink dispatch) and `node tools/sbw_atlas_test.js` (atlas memory)
+  - `BRADY_DIST=<dist> node tools/sbw_toolkit_shots.js <dir> --checks`: the in-browser checks of the level toolkit (objects, systems, the 30 enemy behaviours, the world map, Mexico 1-2's lock lever, Morocco's rug moths) in about 15 s; exits 1 on any failing check. Without `--checks` it also saves the lab screenshots to `<dir>` (about 3 minutes).
 
 ## First message (Brady pastes this)
 ```
