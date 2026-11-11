@@ -860,7 +860,7 @@ class Play {
     const pad = TPAD * S;
     const t = this.t;
     const qf = Math.floor(t * 6) % 4, cf = Math.floor(t * 10) % 4;
-    const bumpOf = (x, y) => { for (const b of A.bumps) if (b.tx === x && b.ty === y) return Math.sin((1 - b.t / 0.18) * Math.PI) * 8; return 0; };
+    const bumpOf = (x, y) => { for (const b of A.bumps) if (b.tx === x && b.ty === y) return Math.sin((1 - b.t / 0.18) * Math.PI) * (b.amp || 8); return 0; };
     const crumbleOf = (x, y) => { for (const c of A.crumbles) if (c.tx === x && c.ty === y && c.state === 'shake') return Math.sin(t * 80) * 1.5; return 0; };
     const p = this.player;
     // fake walls fade when Brady is inside them

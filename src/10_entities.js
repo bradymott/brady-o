@@ -356,12 +356,15 @@ const ItemSpace = {
     if (up && !lost && !slot) return;
     const bx = tx * TS + (TS - e.w) / 2;
     let path = null;
-    if (this.open(A, tx, ty + 1)) path = { x0: bx, y0: (ty + 1) * TS - e.h, x1: bx, y1: (ty + 1) * TS + 4, clip: { x: bx - 10, y: (ty + 1) * TS, w: e.w + 20, h: TS * 2 } };
+    // down when there is room for Brady under it; a side (toward Brady first) before a one-row gap under it
+    const down = this.open(A, tx, ty + 1) ? { x0: bx, y0: (ty + 1) * TS - e.h, x1: bx, y1: (ty + 1) * TS + 4, clip: { x: bx - 10, y: (ty + 1) * TS, w: e.w + 20, h: TS * 2 } } : null;
+    if (down && (lost || this.open(A, tx, ty + 2))) path = down;
     else if (!lost) for (const d of [toward, -toward]) {
       if (!this.open(A, tx + d, ty) || (slot && !this.open(A, tx + d, ty - 1))) continue;
       path = { x0: bx, y0: ty * TS + 4, x1: bx + d * TS, y1: ty * TS + 4, dir: d, clip: d > 0 ? { x: (tx + 1) * TS, y: ty * TS - 10, w: TS * 2, h: TS + 20 } : { x: tx * TS - TS * 2, y: ty * TS - 10, w: TS * 2, h: TS + 20 } };
       break;
     }
+    if (!path && down) path = down;
     if (!path && up) return;
     if (!path) { const s = this.nearest(A, tx * TS, ty * TS, TS, TS); if (s) path = { x0: bx, y0: ty * TS + 4, x1: s.x, y1: s.y, clip: null }; }
     if (!path) return;
