@@ -1,0 +1,1 @@
+window.BRADY_ATLAS.register("w22_dusk", {"scale":2.0,"image":"w22_dusk.webp","frames":{"ground":{"w":512,"h":192,"ox":0,"oy":0,"x":0,"y":785}},"anims":{},"strips":{"L0":{"w":2048,"h":333,"top":0.0,"x":0,"y":451},"L1":{"w":2048,"h":450,"top":219.0,"x":0,"y":0}}});

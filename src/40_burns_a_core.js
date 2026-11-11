@@ -198,7 +198,7 @@ const BurnsSave = {
       lastWorld: 1,
       checkpoint: {},            // worldId -> checkpoint id (resume point)
       pack: {},                  // Brady's backpack: itemId -> count (ground scores, quest items)
-      settings: { camSens: 1, invertY: false, autoCam: true, cam: 'normal', gfx: 'auto' }
+      settings: { camSens: 1, invertY: false, autoCam: true, cam: 'normal', gfx: 'auto', guide: false, follow: false, ride: 'ebike' }   // guide arrow, camera behind Brady, city bike (41_burns_nav.js)
     };
   },
   get() {
@@ -349,7 +349,8 @@ const BURNS_KEY_ITEMS = {
   www: { name: 'WHAT WHERE WHEN', desc: 'Lists missions and events on the map.', col: '#ff9ad8' },
   bike: { name: 'YELLOW BIKE', desc: 'Summon it with the BIKE button.', col: '#ffe24a' },
   costumes: { name: 'COSTUME TRUNK', desc: 'Change costumes from the hub.', col: '#ff4fd8' },
-  artcar: { name: 'ART CAR KEYS', desc: 'You can drive art cars.', col: '#ff7a2a' }
+  artcar: { name: 'ART CAR KEYS', desc: 'You can drive art cars.', col: '#ff7a2a' },
+  ebike: { name: 'E-BIKE', desc: 'Summon it with the BIKE button in the city. Zoom.', col: '#38f2ff' }
 };
 const BURNS_HYDRATION_MAX = 6;
 // camera modes (HUD VIEW button, V key, settings): normal third person, over-the-shoulder, first person, far

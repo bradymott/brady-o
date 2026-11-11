@@ -234,11 +234,12 @@ for (const s of TOUR_ROUTE) Tour.stops[s.id] = s;
 //   revealed: { '1-6': true, 'house:mx-tienda': true }  secret stops already shown on their panel
 //   paths:    { 'mx:2>5': true }                         secret trails already drawn (by panel stop index)
 //   pending:  [reveal, ...]                              reveals the map has not played yet (§3.6)
+//   doors:    { w22: true }                              a land's door found but still shut (the World 22 ghost pin)
 const TourProgress = {
   data() {
     const d = Save.data; if (!d.tour) d.tour = { at: null, seen: {}, freed: {}, lands: {} };
     const T = d.tour;
-    for (const k of ['seen', 'freed', 'lands', 'revealed', 'paths', 'flights', 'bottles', 'houses']) if (!T[k] || typeof T[k] !== 'object') T[k] = {};
+    for (const k of ['seen', 'freed', 'lands', 'revealed', 'paths', 'flights', 'bottles', 'houses', 'doors']) if (!T[k] || typeof T[k] !== 'object') T[k] = {};
     if (!Array.isArray(T.pending)) T.pending = [];
     if (T.lighthouse == null) T.lighthouse = false;
     if (!d.exits) d.exits = {};
@@ -365,6 +366,11 @@ const TourProgress = {
     if (tg && tg.kind === 'land') out.secretLand = tg.id;
     if (tg && tg.kind === 'flight') out.flight = tg.id;
     return out;
+  },
+  // the door to a secret land: { id (level), need (postcards) } from the exit that targets land:<cc>
+  landDoor(cc) {
+    for (const w of Tour.worldList()) { const C = Tour.byWorld[w]; for (let k = 0; k < C.levels.length; k++) for (const key in C.levels[k].exits) { const ex = C.levels[k].exits[key]; if (ex && ex.to === 'land:' + cc) return { id: C.world + '-' + (k + 1), key, need: ex.need || 0 }; } }
+    return null;
   },
   goldCount(id) { const g = Save.data.gold[id]; return g ? g.filter(Boolean).length : 0; },
   countryGold(C) { let n = 0; for (const id of Tour.levelIds(C)) n += this.goldCount(id); return n; },

@@ -11,15 +11,17 @@ module.exports = async ({ page, check, shot }) => {
     // only this arena's shells (the castle builder lays out a second, unused arena further on)
     window.shells = () => S().entities.filter(e => e.kindName && e.prop && !e.remove && e.cx < B1.arenaX1);
     // Brady stands beside the boss, facing him, and breathes fire n times
+    // 4-5 is a v2 lair: the ramparts first, then the tide pool (the area with role 'arena')
+    window.startArena = (id) => { start(id); const g = S(); const k = g.level.areas.findIndex(a => a.role === 'arena'); if (k >= 0 && g.area !== g.rt[k]) { const an = g.level.areas[k].anchors.in; g.loadArea(k, an.x, an.y); sim(0.5); } };
     window.breathe = (b, p, n) => { for (let k = 0; k < n; k++) { const side = b.cx < (b.arenaX0 + b.arenaX1) / 2 ? 1 : -1; p.x = b.cx + side * 70 - p.w / 2; p.y = b.floorY - p.h; p.vy = 0; p.facing = -side; sim(0.1, { actionPressed: true }); sim(0.3); } };
   });
   // (a) wake: he runs for the nearest shell (the bottle) and climbs in; the arena has three shells and the sea
   const a = await page.evaluate(() => {
-    start('4-5'); clearEnemies(); const p = P(); p.invuln = 99; const b = (window.B1 = enterArena(64));
+    startArena('4-5'); clearEnemies(); const p = P(); p.invuln = 99; const b = (window.B1 = enterArena(64));
     const n = shells().length; const basket = S().entities.some(e => e.constructor.name === 'MzChiliBasket');
     const got = waitFor(() => !!b.shell, 4);
     const g = S(), x0 = Math.round(b.arenaX0 / 32), GY = Math.round(b.floorY / 32);
-    const sea = g.area.tiles[GY * g.area.W + x0 + 1] === 10 && g.area.tiles[GY * g.area.W + x0 + 24] === 10;
+    const x1 = Math.round(b.arenaX1 / 32); const sea = g.area.tiles[GY * g.area.W + x0 + 1] === 10 && g.area.tiles[GY * g.area.W + x1 - 2] === 10;
     return { state: b.state, n, basket, got, kind: b.shell && b.shell.kind, sea, name: b.name };
   });
   check('O Eremita wakes, scuttles into the nearest borrowed shell (the bottle); three shells, the sea on both sides', a.state === 'fight' && a.n === 3 && a.basket && a.got && a.kind === 'bottle' && a.sea && /EREMITA/.test(a.name), a);

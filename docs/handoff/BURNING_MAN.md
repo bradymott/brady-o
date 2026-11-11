@@ -15,6 +15,7 @@ He doesn't want "stick figures". He wants believable people, vehicles and camps,
   - Hell Station, the Deep Playa Showdown, the Temple, the Workshops, the Skydive
   - the Man Pavilion and the Burn, and the secret Exodus
 - **The city itself:** 10 theme camps (`41_burns_camps`), 8 big art pieces (`41_burns_bigart`), DJ decks (`41_burns_dj`), 8 city missions, Root Society's 12 city side quests, Thunderdome bouts, an art-car race, three camera modes and story cinematics.
+- **Getting around** (`41_burns_nav`, `42_burns_ow_nav`, guide §10.1 and §19.7): a GUIDE ARROW toggle in the pause menu, the pause-menu city map, a RUN button (and Shift), the CAMERA BEHIND BRADY setting, and the e-bike (earned after World 8). Test: `tools/burns_nav_test.js`.
 
 **Guides:**
 - Engine API: `docs/BURNS_GUIDE.md`. It is the authority; keep it current.
