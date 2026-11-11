@@ -13,8 +13,8 @@
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#1a0626">
 <link rel="manifest" href="manifest.webmanifest">
-
-
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script>
 // offline support: cache the game after the first visit (needs https, skipped elsewhere)
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
@@ -18143,6 +18143,9 @@ const CartWorlds = {
     const def = { id, bounds, ground: { base: groundCol || '#c9a27e', crack: crack === undefined ? 0.26 : crack, mottle: 0.35, res: 0.5 } };
     const W = new BurnsWorld(def, null);
     W.chunkSize = 64;
+    // api.sign hands its options to the sign prop (board at o.y) AND to the placement (lifted by o.y), so every sign
+    // floated at twice its height on stilts: Art Cart's signs stand on the ground with the board at o.y
+    W.api.sign = (text, x, z, o) => { o = o || {}; return W.place(m => BurnsProps.sign.call(BurnsProps, m, Object.assign({ text }, o)), x, 0, z, o.yaw || 0, o.scale || 1, o); };
     return { world: W, api: W.api, terrain: new CartTerrain(), gifts: [], boosts: [], crowds: [], heroes: [], spots: [], zones: [], orbSpots: [], flagSpots: [], capture: null, walls: null, fires: [], art: [], lamps: [] };
   },
   finish(E) {
@@ -18178,47 +18181,34 @@ const CartWorlds = {
       // grid boxes
       for (let k = 0; k < 8; k++) { const g = T.at(T.L - 12 - k * 7.5, {}), d = (k % 2 ? 1 : -1) * g.hw * 0.42; const q = P(g.x + g.nx * d, g.z + g.nz * d); ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 0.3 * S; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(Math.atan2(g.tz, g.tx)); ctx.strokeRect(-2.6 * S, -1.5 * S, 5.2 * S, 3 * S); ctx.restore(); }
     });
-    // barriers along both walls: posts + a rounded rail; LED strips glow at night; tyre stacks on tight bends
-    const step = 7;
-    for (let s = 0; s < T.L; s += step) {
-      const g = T.at(s, {}), tight = Math.abs(g.k) > 0.012;
-      for (const side of [1, -1]) {
-        const off = side > 0 ? g.wr : -g.wl, x = g.x + g.nx * off, z = g.z + g.nz * off;
-        const col = tight ? (Math.floor(s / step) % 2 ? '#e8e8f0' : '#ff3a4a') : D.theme === 'neon' || night ? BURNS_NEON[Math.floor(s / step) % 7] : '#ff8a2a';
-        CartScene.mesh(api, x, z, g.yaw, m => {
-          if (tight) { for (let k = 0; k < 3; k++) { m.color(k % 2 ? '#1a1a1e' : '#26262c').shine(1); m.push(); m.tf(0, 0.18 + k * 0.32, 0); m.torus(0, 0, 0, 0.5, 0.16, { seg: 10, tseg: 5 }); m.pop(); } m.color(col, night ? 0.6 : 0).shine(2); m.torus(0, 0.98, 0, 0.5, 0.06, { seg: 10, tseg: 4 }); }
-          else { m.color('#2a2a32').shine(2); m.limb(0, 0, 0, 0, 1.0, 0, 0.07, 0.07, { seg: 6 }); m.color(col, night ? 0.9 : 0.15).shine(2); m.limb(0, 0.85, -step / 2, 0, 0.85, step / 2, 0.08, 0.08, { seg: 6 }); m.color('#f4f4f4', 0).limb(0, 0.45, -step / 2, 0, 0.45, step / 2, 0.06, 0.06, { seg: 5 }); }
-          m.emissive(0).shine(0);
-        }, { noAO: true });
-        if (night && Math.floor(s / step) % 3 === 0) api.glow(x, 0.95, z, 0.9, col);
-      }
-    }
-    // lamp posts at night; flags by day
-    for (let s = 3; s < T.L; s += 38) { const g = T.at(s, {}), side = Math.floor(s / 38) % 2 ? 1 : -1, off = side > 0 ? g.wr + 2.5 : -g.wl - 2.5; const x = g.x + g.nx * off, z = g.z + g.nz * off; if (night || D.tod === 'sunset' || D.tod === 'dawn') CartScene.lamp(api, x, z, BURNS_NEON[Math.floor(s / 38) % 7], night || D.tod === 'sunset'); else CartScene.mesh(api, x, z, 0, m => { m.color('#c8ccd8').shine(3); m.limb(0, 0, 0, 0, 5, 0, 0.06, 0.05, { seg: 6 }); m.shine(0); m.color(BURNS_NEON[Math.floor(s / 38) % 7]); m.box(0.6, 4.4, 0, 1.2, 0.8, 0.04); }, { noAO: true }); }
+    // barriers (padded LED rails, tyre walls on the tight bends) and lamp posts / flags: instanced with distance detail
+    // (43_cart_ca_decor.js), so a long sight line no longer draws every post at full detail
+    CartDecor.protos(E); CartDecor.barriers(E, T, D); CartDecor.lamps(E, T, D);
     // start/finish arch + grandstand + crowd + hero cast
-    { const g = T.at(0, {}); CartScene.prop(api, 'gateArch', { x: g.x, z: g.z, yaw: g.yaw, w: (g.wl + g.wr) + 2, h: 8, text: 'ART CART', hi: true });
+    { const g = T.at(0, {}); CartDecor.gantry(E, T, D);
       for (const side of [1, -1]) { const off = side > 0 ? g.wr + 6 : -g.wl - 6, x = g.x + g.nx * off + g.tx * 4, z = g.z + g.nz * off + g.tz * 4; E.spots.push(...CartScene.bleachers(api, x, z, g.yaw + (side > 0 ? Math.PI / 2 : -Math.PI / 2), 22, 4, rng)); if (night) api.light(x, z, 16, '#ffb0e0', 0.5); }
       const heroes = ['greeter_f', 'burney', 'firespinner', 'annoyingdj', 'furry', 'sparklepony', 'burnermom', 'greeter_m'];
       heroes.forEach((type, i) => { const side = i % 2 ? 1 : -1, off = side > 0 ? g.wr + 2.4 : -g.wl - 2.4, along = -10 + Math.floor(i / 2) * 7; E.heroes.push({ type, x: g.x + g.nx * off + g.tx * along, z: g.z + g.nz * off + g.tz * along, yaw: Math.atan2(-g.nx * side, -g.nz * side), anim: type === 'firespinner' ? 'firespin' : type === 'annoyingdj' ? 'dj' : type === 'burney' ? 'photo' : i % 3 === 0 ? 'cheer' : 'wave' }); });
     }
     // camps along the outside, crowds at corners
-    let nameIx = Math.floor(rng() * 10);
+    let nameIx = Math.floor(rng() * 10); const taken = [];   // spots already used (camps, art): the roadside dressing keeps clear of them
     for (let s = 40; s < T.L - 30; s += D.theme === 'art' ? 70 : D.theme === 'storm' ? 60 : 44) {
       const g = T.at(s, {}), side = g.k > 0 ? -1 : 1, off = side > 0 ? g.wr + 15 : -g.wl - 15;
       const x = g.x + g.nx * off, z = g.z + g.nz * off, yaw = Math.atan2(-g.nx * side, -g.nz * side);
-      if (this.clear(T, x, z, 9)) CartScene.camp(api, x, z, yaw, rng, night || D.tod === 'sunset', nameIx++);
+      if (this.clear(T, x, z, 9)) { CartScene.camp(api, x, z, yaw, rng, night || D.tod === 'sunset', nameIx++); taken.push([x, z, 12]); }
       if (Math.abs(g.k) > 0.008 && rng() < 0.75) { const n = 10 + Math.floor(rng() * 8), w0 = side > 0 ? g.wr : -g.wl; for (let k = 0; k < n; k++) { const a = rng() - 0.5, dd = w0 + side * (2.6 + rng() * 4), cx = g.x + g.nx * dd + g.tx * a * 16, cz = g.z + g.nz * dd + g.tz * a * 16; if (this.clear(T, cx, cz, 1.5)) E.spots.push({ x: cx, z: cz, yaw: yaw + (rng() - 0.5) * 0.6 }); } }
     }
     // joke signs
     for (let k = 0; k < 6; k++) { const s = T.L * (0.1 + k * 0.15), g = T.at(s, {}), side = k % 2 ? 1 : -1, off = side > 0 ? g.wr + 3.5 : -g.wl - 3.5; api.sign(CART_JOKE_SIGNS[(k + nameIx) % CART_JOKE_SIGNS.length], g.x + g.nx * off, g.z + g.nz * off, { yaw: g.yaw + Math.PI, h: 1.0, y: 1.6, post: true, maxW: 2.6, style: { bg: '#ffe24a', fg: '#1a1a1a', border: '#1a1a1a' }, glow: night ? '#ffe24a' : null }); }
     // infield art pieces
     for (const [kind, ax, az] of D.art) {
-      if (kind === 'man') { if (!this.clear(T, ax * 1.25, az * 1.25, 17)) continue; E.man = { x: ax * 1.25, z: az * 1.25 }; CartScene.mesh(api, E.man.x, E.man.z, 0, m => { m.color('#6a4a32').shine(1); m.lathe([[16, 0], [14, 2.2], [9, 2.4], [8.5, 5.2], [0, 5.4]], { seg: 8, uv: BURNS_ATLAS.pattern('wood') }); m.shine(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 15, y0: 0, y1: 5.3 }] }; }, { hi: true }); E.art.push({ x: E.man.x, z: E.man.z, r: 15.5 }); api.light(E.man.x, E.man.z, 40, '#ff8a3a', 0.8); continue; }
+      if (kind === 'man') { if (!this.clear(T, ax * 1.25, az * 1.25, 17)) continue; E.man = { x: ax * 1.25, z: az * 1.25 }; Object.assign(E.man, CartDecor.manStage(E, E.man.x, E.man.z)); E.art.push({ x: E.man.x, z: E.man.z, r: 15.5 }); taken.push([E.man.x, E.man.z, 26]); continue; }
       const kx = kind === 'gate' ? T.at(T.L * 0.5).x : ax * 1.2, kz = kind === 'gate' ? T.at(T.L * 0.5).z : az * 1.2;
       const yaw = kind === 'gate' ? T.at(T.L * 0.5).yaw : rng() * TAU;
       if (kind !== 'gate' && !this.clear(T, kx, kz, kind === 'temple' ? 14 : kind === 'ribs' ? 12 : 7)) continue;
       const r = CartScene.art(api, kind, kx, kz, yaw, night || D.tod === 'dawn', kind === 'temple' ? 1 : 1.2);
       if (r.r) E.art.push(r);
+      taken.push([kx, kz, kind === 'gate' ? 16 : kind === 'ribs' ? 14 : Math.max(8, (r.r || 4) + 4)]);
     }
     // gift boxes (rows across the road), boost pads, ramps
     for (const f of D.gifts) { const g = A(f); for (let k = -2; k <= 2; k++) E.gifts.push({ x: g.x + g.nx * k * g.hw * 0.33, z: g.z + g.nz * k * g.hw * 0.33 }); }
@@ -18226,6 +18216,14 @@ const CartWorlds = {
     for (const [f, d, h] of D.ramps) { const g = A(f); E.terrain.add(CartFeat.ramp(g.x + g.nx * d * g.hw, g.z + g.nz * d * g.hw, g.yaw, 6, 7, h * 2.2, { col: '#7a5a3a', stripe: night ? '#ff4fd8' : '#ffe24a' })); }
     if (D.theme === 'gate') this.gateRoad(E, T, rng);
     if (D.theme === 'storm') { for (let k = 0; k < 6; k++) { const g = A(0.08 + k * 0.16), side = k % 2 ? 1 : -1; E.terrain.add(CartFeat.mound(g.x + g.nx * side * (g.hw + 30), g.z + g.nz * side * (g.hw + 30), 18, 4.5, { col: '#d8b48a' })); } }
+    // dressing: kerbs on the bends, pennant lines over the straights, roadside art and small camps in the bare stretches,
+    // and at night the sky beams (searchlights over the deep playa, laser fans over the sound camps)
+    CartDecor.kerbs(E, T); CartDecor.pennants(E, T, D);
+    { const g = T.at(0, {}); taken.push([g.x, g.z, 30]); }   // keep the grandstands clear
+    CartDecor.roadside(E, T, D, rng, taken); CartDecor.skyline(E, T, rng);
+    if (night && D.theme === 'art') CartDecor.beams(E, T, rng, 6, 'search');
+    if (night && D.theme === 'neon') { CartDecor.beams(E, T, rng, 6, 'search'); CartDecor.beams(E, T, rng, 8, 'laser'); }
+    if (night && D.theme === 'burn') CartDecor.beams(E, T, rng, 6, 'laser');
     // grid
     E.spawn = []; for (let k = 0; k < 8; k++) { const g = T.at(T.L - 12 - k * 7.5, {}), d = (k % 2 ? 1 : -1) * g.hw * 0.42; E.spawn.push({ x: g.x + g.nx * d, z: g.z + g.nz * d, yaw: g.yaw }); }
     return this.finish(E);
@@ -18343,7 +18341,8 @@ const CartWorlds = {
     }
     // hay bales lining the course, tyre stacks, flags, start gate, crowds
     for (let s = 0; s < TR.L; s += 9) { const g = TR.at(s, {}); for (const side of [1, -1]) { const off = side > 0 ? g.wr : -g.wl, x = g.x + g.nx * off, z = g.z + g.nz * off; if (E.terrain.height(x, z) > 0.3) continue; CartScene.mesh(api, x, z, g.yaw, m => { m.color('#d8b860'); m.roundBox(0, 0.42, 0, 0.9, 0.84, 2.0, 0.12, { uv: BURNS_ATLAS.pattern('canvas') }); m.color('#b8983a'); m.roundBox(0, 0.42, 0.55, 0.92, 0.86, 0.06, 0.02); m.roundBox(0, 0.42, -0.55, 0.92, 0.86, 0.06, 0.02); }, { noAO: true }); } }
-    for (let s = 20; s < TR.L; s += 50) { const g = TR.at(s, {}), side = Math.floor(s / 50) % 2 ? 1 : -1, off = side > 0 ? g.wr + 3 : -g.wl - 3; CartScene.mesh(api, g.x + g.nx * off, g.z + g.nz * off, 0, m => { m.color('#c8ccd8').shine(3); m.limb(0, 0, 0, 0, 5.5, 0, 0.06, 0.05, { seg: 6 }); m.shine(0); m.color(BURNS_NEON[Math.floor(s / 50) % 7]); m.box(0.7, 5.0, 0, 1.4, 0.9, 0.04); }, { noAO: true }); }
+    CartDecor.protos(E);   // course flags (instanced, waving banners)
+    for (let s = 20; s < TR.L; s += 50) { const g = TR.at(s, {}), side = Math.floor(s / 50) % 2 ? 1 : -1, off = side > 0 ? g.wr + 3 : -g.wl - 3; CartDecor.put(E, 'flag', g.x + g.nx * off, g.z + g.nz * off, g.yaw, CART_DECOR_PAL.day[Math.floor(s / 50) % 7], { y: 0 }); }
     { const g = TR.at(0, {}); CartScene.prop(api, 'gateArch', { x: g.x, z: g.z, yaw: g.yaw, w: (g.wl + g.wr) + 2, h: 7, text: 'WHOOP-DE-DOO', hi: true }); }
     for (const [x, z, yaw] of [[0, -112, 0], [-140, 30, Math.PI / 2], [140, 40, -Math.PI / 2], [0, 115, Math.PI]]) E.spots.push(...CartScene.bleachers(api, x, z, yaw, 22, 4, rng));
     E.heroes.push({ type: 'dpw', x: -20, z: -100, yaw: 0, anim: 'cheer' }, { type: 'badideaguy', x: 20, z: -100, yaw: 0, anim: 'dare' }, { type: 'ranger', x: 130, z: 0, yaw: -Math.PI / 2, anim: 'wave' });
@@ -18374,6 +18373,10 @@ const CartWorlds = {
     const poly = []; for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; poly.push([Math.sin(a) * 108, Math.cos(a) * 108]); }
     this.perimeter(E, poly, 'fence');
     let ni = 3; for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + 0.2; CartScene.camp(api, Math.sin(a) * 122, Math.cos(a) * 122, a + Math.PI, rng, true, ni++); }
+    // the art park's outer ring: a glowing installation between every two camps, just outside the fence (instanced)
+    CartDecor.protos(E);
+    const ring = ['tree', 'mush', 'helix', 'ring', 'bloom', 'totem', 'mush', 'tree', 'ring'];
+    for (let i = 0; i < 9; i++) { const a = (i + 0.5) / 9 * TAU + 0.2; CartDecor.put(E, ring[i], Math.sin(a) * 117, Math.cos(a) * 117, a + Math.PI, BURNS_NEON[(i * 3) % 7], { scale: 0.9, noCol: true }); }
     for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.8, x = Math.sin(a) * 101, z = Math.cos(a) * 101; for (let k = 0; k < 14; k++) E.spots.push({ x: x + (rng() - 0.5) * 16, z: z + (rng() - 0.5) * 6, yaw: a + Math.PI + (rng() - 0.5) * 0.5 }); }
     E.heroes.push({ type: 'firespinner', x: 0, z: -40, yaw: 0, anim: 'firespin' }, { type: 'lamplighter', x: 40, z: 10, yaw: -1, anim: 'lantern' }, { type: 'deathguild', x: -40, z: 0, yaw: 1, anim: 'cheer' }, { type: 'fencebot_a', x: 90, z: 30, yaw: -1.5, anim: 'robot' }, { type: 'fencebot_b', x: 92, z: 34, yaw: -1.5, anim: 'robot' });
     E.zones = [{ x: 0, z: 0, r: 9, name: 'THE BIG HAND' }, { x: -62, z: -48, r: 8, name: 'THE LOTUS' }, { x: 66, z: -44, r: 8, name: 'THE SPINNER' }, { x: 58, z: 62, r: 8, name: 'THE OBELISK' }];
@@ -18383,6 +18386,405 @@ const CartWorlds = {
     for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + 0.3, r = 45 + (i % 2) * 22; E.gifts.push({ x: Math.sin(a) * r, z: Math.cos(a) * r }); }
     E.spawn = []; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; E.spawn.push({ x: Math.sin(a) * 80, z: Math.cos(a) * 80, yaw: a + Math.PI }); }
     return this.finish(E);
+  }
+};
+
+/* ---- 43_cart_ca_decor.js ---- */
+/* ============================================================
+   ART CART — track dressing (cosmetic only). The start/finish gantry, the
+   barriers and lamp posts as INSTANCED props with distance detail (one draw
+   per kind and level, cheap far copies), roadside art installations and
+   small camps that fill the bare playa, overhead pennant lines, painted
+   kerbs on the bends, and the night kit: coloured light pools along the
+   road edges, uplit art, searchlights and laser fans (E.beams, drawn in
+   43_cart_e_scene.js) and the Man's stage on Burn Night.
+   Nothing here touches the road: every piece sits outside the walls
+   (CartWorlds.clear), so lap lengths, the racing line and the physics are
+   unchanged and saved best times stay valid.
+   All designs are original (generic festival structures, our own decor).
+   ============================================================ */
+
+/* ---------------- palettes by time of day ---------------- */
+const CART_DECOR_PAL = {
+  day: ['#ff5a3a', '#ffb02a', '#2ab0e8', '#ff4fa8', '#7ad84a', '#9a6bff', '#ffe24a'],
+  sunset: ['#ff6a4a', '#ffb84a', '#ff4fa8', '#c86aff', '#4ac8e8', '#ffe07a'],
+  dawn: ['#ff8a7a', '#ffc88a', '#c8a0ff', '#7ad8e8', '#ffe0a0', '#ff9ad8'],
+  dust: ['#e86a3a', '#e8a03a', '#3a8ac8', '#c84a8a', '#6aa83a'],
+  night: BURNS_NEON
+};
+// a copy's tint: the colour (times k), softened toward white by `soft` (so cream walls stay cream under a coloured roof)
+const cartTintOf = (c, k, soft) => { const v = burnsRGBf(c); k = k || 1; soft = soft || 0; return [(v[0] * (1 - soft) + soft) * k, (v[1] * (1 - soft) + soft) * k, (v[2] * (1 - soft) + soft) * k]; };
+
+/* ---------------- instanced kinds: build(m, o) is local (y up, +z = facing the road), far(m) the cheap copy ----------
+   Everything that should take the copy's colour is built near-white (the tint multiplies the vertex colour, and the
+   emissive glow with it). glows: local [x, y, z, size] glow billboards at night; pool: light pool radius under it. */
+const CART_DECOR_KINDS = {
+  // a barrier segment 7 m long (local z): two posts, a padded rounded rail (tinted), a kick plate, an LED strip on top
+  rail: { r: 4.2, near: 30, mid: 110, farD: 330,
+    build(m, o) {
+      m.color('#34343e').shine(2); for (const z of [-2.6, 2.6]) m.limb(0, 0, z, 0, 1.0, z, 0.075, 0.065, { seg: m.lo ? 5 : 8 });
+      m.color('#f2f2f6').shine(1); m.roundBox(0, 0.76, 0, 0.26, 0.34, 7.04, 0.11);
+      m.color('#2a2a32').shine(1); m.roundBox(0, 0.3, 0, 0.14, 0.18, 7.04, 0.05);
+      m.color('#ffffff', o.night ? 1 : 0.18).shine(0); m.box(0, 0.945, 0, 0.09, 0.03, 7.0); m.emissive(0);
+    },
+    far(m, o) { m.color('#f2f2f6'); m.box(0, 0.76, 0, 0.24, 0.34, 7.04); m.color('#ffffff', o.night ? 1 : 0.18); m.box(0, 0.945, 0, 0.09, 0.03, 7.0); m.emissive(0); } },
+  // tyre wall on the tight bends: three stacked tyres and a tinted top band
+  // a 7 m tyre wall on the tight bends: five stacks of tyres, the top ones painted (tinted red / white along the bend)
+  tyres: { r: 4, near: 30, mid: 110, farD: 300,
+    build(m, o) {
+      for (let i = 0; i < 5; i++) {
+        const z = -2.8 + i * 1.4;
+        for (let k = 0; k < 2; k++) { m.color(k ? '#ffffff' : '#202024', k && o.night ? 0.35 : 0).shine(1); m.torus(0, 0.17 + k * 0.33, z, 0.52, 0.17, { seg: m.lo ? 8 : 12, tseg: m.lo ? 4 : 6 }); }
+        m.color('#18181c').shine(0); m.disc(0, 0.68, z, 0.36, m.lo ? 8 : 12);
+      }
+      m.emissive(0).shine(0);
+    },
+    far(m) { m.color('#202024'); m.box(0, 0.17, 0, 1.3, 0.34, 7.0); m.color('#ffffff'); m.box(0, 0.5, 0, 1.3, 0.32, 7.0); } },
+  // a curved-arm lamp post: the arm reaches toward the road (+z), a tinted bulb under a rounded hood
+  lamp: { r: 3, near: 32, mid: 120, farD: 330, glows: [[0, 5.0, 1.55, 1.5]], pool: 9,
+    build(m, o) {
+      m.color('#3a3644').shine(2); m.roundCyl(0, 0, 0, 0.32, 0.4, 0.1); m.limb(0, 0.3, 0, 0, 5.2, 0, 0.11, 0.07, { seg: m.lo ? 6 : 9 });
+      m.limb(0, 5.2, 0, 0, 5.75, 0.6, 0.07, 0.06, { seg: 6 }); m.limb(0, 5.75, 0.6, 0, 5.55, 1.55, 0.06, 0.05, { seg: 6 });
+      m.color('#2a2630'); m.ellipsoid(0, 5.3, 1.55, 0.42, 0.2, 0.42, { phi1: Math.PI * 0.55, seg: m.lo ? 8 : 12, rings: 4 });
+      m.color('#ffffff', o.night || o.dusk ? 1 : 0.35); m.ball(0, 5.12, 1.55, 0.2, { seg: 8, rings: 6 }); m.emissive(0).shine(0);
+    },
+    far(m, o) { m.color('#3a3644'); m.box(0, 2.7, 0, 0.14, 5.4, 0.14); m.color('#ffffff', o.night || o.dusk ? 1 : 0.35); m.box(0, 5.1, 1.5, 0.35, 0.3, 0.35); m.emissive(0); } },
+  // a festival flag on a tall pole (day): a waving tinted banner, a white hem and a gold finial
+  flag: { r: 2, near: 32, mid: 120, farD: 300,
+    build(m) {
+      m.color('#d8dce6').shine(3); m.limb(0, 0, 0, 0, 6.4, 0, 0.06, 0.045, { seg: 7 }); m.color('#ffd84a').shine(3); m.ball(0, 6.5, 0, 0.12, { seg: 8, rings: 5 }); m.shine(0);
+      const wave = (u, v, out, side) => { const x = 0.08 + u * 1.7; out[0] = x; out[1] = 6.1 - v * 2.3 - u * 0.25; out[2] = Math.sin(u * 3.4 + v * 0.6) * 0.22 * u + side * 0.012; };
+      m.color('#ffffff'); m.surf(m.lo ? 5 : 9, 2, (u, v, out) => wave(u, v, out, 1), { out: [0.9, 5, -2] }); m.surf(m.lo ? 5 : 9, 2, (u, v, out) => wave(u, v, out, -1), { out: [0.9, 5, 2] });
+    },
+    far(m) { m.color('#d8dce6'); m.box(0, 3.2, 0, 0.1, 6.4, 0.1); m.color('#ffffff'); m.box(0.9, 5.0, 0, 1.7, 2.3, 0.05); } },
+  // GLOW SHROOMS: three giant mushrooms with spotted caps (the caps glow at night)
+  mush: { r: 6, near: 36, mid: 130, farD: 330, glows: [[0, 5.6, 0, 3.2], [3.2, 3.6, 1.2, 2.2], [-2.6, 2.8, -1.4, 1.8]], pool: 11,
+    build(m, o) {
+      const one = (x, z, h, r, tilt) => {
+        m.push(); m.tf(x, 0, z, 0, tilt, 0);
+        m.color('#f4ece0').shine(1); m.lathe([[r * 0.34, 0], [r * 0.24, h * 0.35], [r * 0.2, h * 0.8], [r * 0.26, h]], { seg: m.lo ? 8 : 12 });
+        m.color('#ffffff', o.night ? 0.55 : 0.08).shine(2); m.ellipsoid(0, h, 0, r, r * 0.55, r, { phi1: Math.PI * 0.5, seg: m.lo ? 10 : 16, rings: m.lo ? 4 : 7 });
+        m.color('#fff4e8', o.night ? 0.25 : 0).shine(0); m.ellipsoid(0, h + 0.01, 0, r * 0.97, 0.18, r * 0.97, { phi0: Math.PI * 0.5, phi1: Math.PI, seg: m.lo ? 10 : 16, rings: 2 });
+        m.color('#fff8f0', o.night ? 0.9 : 0.1); for (let i = 0; i < (m.lo ? 4 : 7); i++) { const a = i * 2.4, rr = r * (0.35 + (i % 3) * 0.17); m.ball(Math.sin(a) * rr, h + r * 0.55 * Math.sqrt(Math.max(0.05, 1 - (rr / r) * (rr / r))) - 0.02, Math.cos(a) * rr, r * 0.1, { seg: 6, rings: 4 }); }
+        m.emissive(0).shine(0); m.pop();
+      };
+      one(0, 0, 4.6, 2.6, 0); one(3.2, 1.2, 2.8, 1.6, 0.12); one(-2.6, -1.4, 2.2, 1.3, -0.15);
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 2.6, y0: 0, y1: 6 }] };
+    },
+    far(m) { m.color('#ffffff'); m.ellipsoid(0, 4.6, 0, 2.6, 1.4, 2.6, { seg: 6, rings: 3, phi1: Math.PI / 2 }); m.color('#f4ece0'); m.cyl(0, 0, 0, 0.7, 0.5, 4.6, 5, {}); } },
+  // LANTERN TREE: a sculpted metal tree with paper lanterns hanging from its branches
+  tree: { r: 6, soft: 0.15, near: 36, mid: 130, farD: 330, glows: [[0, 7.6, 0, 3.6], [2.6, 5.4, 0.8, 1.6], [-2.4, 5.8, -0.6, 1.6], [0.6, 6.0, 2.4, 1.6], [-0.4, 5.4, -2.6, 1.6]], pool: 12,
+    build(m, o) {
+      m.color('#4a3a32').shine(2); m.limb(0, 0, 0, 0.2, 4.2, 0, 0.42, 0.26, { seg: m.lo ? 7 : 10 });
+      const tips = [];
+      for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.3, L = 3.2 + (i % 2) * 0.8, tx = Math.sin(a) * L, tz = Math.cos(a) * L, ty = 6.2 + (i % 3) * 0.6; m.limb(0.2, 4.0, 0, tx * 0.55, ty - 0.6, tz * 0.55, 0.2, 0.13, { seg: 6 }); m.limb(tx * 0.55, ty - 0.6, tz * 0.55, tx, ty, tz, 0.13, 0.06, { seg: 6 }); tips.push([tx, ty, tz]); }
+      m.limb(0.2, 4.0, 0, 0, 8.4, 0.1, 0.22, 0.08, { seg: 6 }); tips.push([0, 8.4, 0.1]);
+      for (const [x, y, z] of tips) { m.color('#2a2228'); m.limb(x, y, z, x, y - 0.9, z, 0.015, 0.015, { seg: 3, ends: false }); m.color('#ffffff', o.night ? 1 : 0.2).shine(1); m.ellipsoid(x, y - 1.25, z, 0.32, 0.42, 0.32, { seg: m.lo ? 7 : 10, rings: m.lo ? 5 : 7 }); m.emissive(0).shine(0); }
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.6, y0: 0, y1: 5 }] };
+    },
+    far(m) { m.color('#4a3a32'); m.cyl(0, 0, 0, 0.4, 0.2, 5, 5, {}); m.color('#ffffff'); m.ellipsoid(0, 6.4, 0, 3.4, 1.6, 3.4, { seg: 6, rings: 3 }); } },
+  // PORTAL: a standing double ring of light on a rounded plinth (you look through it)
+  ring: { r: 5, near: 36, mid: 130, farD: 330, glows: [[0, 8.2, 0, 2.6], [-3.4, 4.6, 0, 1.8], [3.4, 4.6, 0, 1.8]], pool: 10,
+    build(m, o) {
+      m.color('#2e2c38').shine(2); m.roundBox(0, 0.4, 0, 3.6, 0.8, 1.6, 0.3);
+      m.push(); m.tf(0, 4.7, 0, 0, Math.PI / 2, 0); m.color('#ffffff', o.night ? 1 : 0.25).shine(2); m.torus(0, 0, 0, 3.6, 0.22, { seg: m.lo ? 20 : 36, tseg: m.lo ? 5 : 8 }); m.color('#ffffff', o.night ? 0.7 : 0.15); m.torus(0, 0, 0, 2.9, 0.1, { seg: m.lo ? 18 : 30, tseg: 4 }); m.pop(); m.emissive(0);
+      m.color('#3a3846').shine(3); for (const s of [1, -1]) m.limb(s * 1.3, 0.8, 0, s * 2.2, 2.0, 0, 0.12, 0.1, { seg: 6 }); m.shine(0);
+      return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.8, hz: 0.8, y0: 0, y1: 0.8 }] };
+    },
+    far(m, o) { m.push(); m.tf(0, 4.7, 0, 0, Math.PI / 2, 0); m.color('#ffffff', o.night ? 1 : 0.25); m.torus(0, 0, 0, 3.6, 0.25, { seg: 12, tseg: 3 }); m.pop(); m.emissive(0); } },
+  // SHADE SAILS: three tensioned triangles on raked poles (bright by day, string lights under them)
+  sails: { r: 7, near: 36, mid: 130, farD: 330, glows: [[0, 3.4, 0, 2.4]], pool: 10,
+    build(m, o) {
+      const P = [[-5, 0, -2.5, 4.6], [5, 0, -3, 5.4], [0.5, 0, 4.2, 3.8], [-4.2, 0, 3.4, 5.8]];
+      m.color('#d8dae2').shine(3); for (const [x, , z, h] of P) m.limb(x * 1.06, 0, z * 1.06, x, h, z, 0.09, 0.07, { seg: 6 }); m.shine(0);
+      const sail = (a, b, c, dip, col, lift) => { m.color(col); for (const side of [1, -1]) m.surf(m.lo ? 4 : 7, m.lo ? 4 : 7, (u, v, out) => { const w0 = (1 - u) * (1 - v), w1 = u * (1 - v), w2 = v; const s = Math.sin(Math.PI * Math.min(1, (w0 + 0.02) * 2)) * Math.sin(Math.PI * Math.min(1, (w1 + 0.02) * 2)) * Math.sin(Math.PI * Math.min(1, (w2 + 0.02) * 2)); out[0] = a[0] * w0 + b[0] * w1 + c[0] * w2; out[1] = a[1] * w0 + b[1] * w1 + c[1] * w2 - dip * s + side * 0.02 + lift; out[2] = a[2] * w0 + b[2] * w1 + c[2] * w2; }, { out: [0, side > 0 ? -50 : 50, 0] }); };
+      const top = P.map(([x, , z, h]) => [x, h, z]);
+      sail(top[0], top[1], top[2], 0.7, '#ffffff', 0); sail(top[0], top[2], top[3], 0.6, '#ffe8c8', 0.15);
+      if (o.night) { for (let i = 0; i < 9; i++) { const t = i / 8, x = lerp(-4.6, 4.6, t), y = 3.2 - Math.sin(t * Math.PI) * 0.5; m.color(BURNS_NEON[i % 7], 1); m.ball(x, y, 0, 0.09, { seg: 5, rings: 3 }); } m.emissive(0); }
+      return { cols: P.map(([x, , z]) => ({ t: 'cyl', x, z, r: 0.12, y0: 0, y1: 5, camPass: true })) };
+    },
+    far(m) { m.color('#ffffff'); m.poly([[-5, 4.6, -2.5], [5, 5.4, -3], [0.5, 3.8, 4.2]]); m.poly([[0.5, 3.8, 4.2], [5, 5.4, -3], [-5, 4.6, -2.5]]); } },
+  // TOTEM: a stack of round painted forms with glowing eyes (our own whimsical faces, no real iconography)
+  totem: { r: 2.5, soft: 0.3, near: 36, mid: 130, farD: 330, glows: [[0.42, 5.3, 1.05, 0.8], [-0.42, 5.3, 1.05, 0.8], [0, 8.6, 0, 1.8]], pool: 8,
+    build(m, o) {
+      m.color('#3a3240').shine(1); m.roundCyl(0, 0, 0, 1.5, 0.5, 0.15);
+      m.color('#ffffff').shine(2); m.roundCyl(0, 0.5, 0, 1.15, 1.9, 0.35); m.color('#2a2230'); m.torus(0, 1.45, 0, 1.17, 0.08, { seg: 14, tseg: 4 });
+      m.color('#ffe0b8').shine(2); m.ball(0, 3.4, 0, 1.15, { seg: m.lo ? 10 : 16, rings: m.lo ? 7 : 11 });
+      m.color('#ffffff').shine(2); m.lathe([[1.05, 4.4], [1.2, 4.7], [1.0, 6.2], [0.6, 6.6], [0.62, 6.6]], { seg: m.lo ? 10 : 16 });
+      m.color('#1a1420'); for (const s of [1, -1]) m.ellipsoid(s * 0.42, 5.3, 0.95, 0.26, 0.3, 0.12, { seg: 8, rings: 5 });
+      m.color('#ffffff', o.night ? 1 : 0.45); for (const s of [1, -1]) m.ball(s * 0.42, 5.3, 1.05, 0.12, { seg: 6, rings: 4 }); m.emissive(0);
+      m.color('#ffd84a').shine(3); m.lathe([[0.6, 6.6], [0.15, 8.1], [0, 8.2]], { seg: m.lo ? 8 : 12 }); m.color('#ffffff', o.night ? 1 : 0.3); m.ball(0, 8.6, 0, 0.32, { seg: 8, rings: 6 }); m.emissive(0).shine(0);
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 1.3, y0: 0, y1: 8 }] };
+    },
+    far(m) { m.color('#ffffff'); m.cyl(0, 0, 0, 1.3, 0.8, 6.6, 6, {}); m.color('#ffd84a'); m.cyl(0, 6.6, 0, 0.6, 0.05, 1.8, 5, {}); } },
+  // BLOOMS: three giant steel flowers with tinted petals that glow at night
+  bloom: { r: 5, near: 36, mid: 130, farD: 330, glows: [[0, 6.4, 0, 2.6], [2.6, 4.4, 1.4, 1.8], [-2.4, 3.6, -1.2, 1.6]], pool: 10,
+    build(m, o) {
+      const one = (x, z, h, r, lean) => {
+        m.color('#5a8a5a').shine(2); m.limb(x, 0, z, x + lean, h, z, 0.12, 0.09, { seg: 6 });
+        m.push(); m.tf(x + lean, h, z, 0, -0.35, 0);
+        m.color('#ffffff', o.night ? 0.45 : 0).shine(2); for (let i = 0; i < (m.lo ? 6 : 8); i++) { const a = i / (m.lo ? 6 : 8) * TAU; m.push(); m.tf(0, 0, 0, a, 0, 0); m.ellipsoid(0, 0.05, r * 0.62, r * 0.28, 0.08, r * 0.55, { seg: m.lo ? 6 : 8, rings: 4 }); m.pop(); }
+        m.color('#ffd84a', o.night ? 0.9 : 0.15); m.ellipsoid(0, 0.12, 0, r * 0.3, r * 0.16, r * 0.3, { seg: 10, rings: 5 }); m.emissive(0).shine(0); m.pop();
+      };
+      one(0, 0, 6.2, 2.4, 0.3); one(2.6, 1.4, 4.2, 1.6, 0.2); one(-2.4, -1.2, 3.4, 1.4, -0.3);
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.4, y0: 0, y1: 6 }] };
+    },
+    far(m) { m.color('#5a8a5a'); m.box(0, 3.1, 0, 0.2, 6.2, 0.2); m.color('#ffffff'); m.cyl(0.3, 6.1, 0, 2.2, 2.2, 0.15, 8, {}); } },
+  // HELIX: a tall twisting ribbon of light (two strands, rungs of glowing balls)
+  helix: { r: 3, near: 36, mid: 130, farD: 330, glows: [[0, 12.4, 0, 2.6], [0, 6, 0, 2.2]], pool: 9,
+    build(m, o) {
+      m.color('#2e2c38').shine(2); m.roundCyl(0, 0, 0, 1.4, 0.6, 0.18);
+      const n = m.lo ? 28 : 46, H = 11.5;
+      for (const ph of [0, Math.PI]) { m.color(ph ? '#ffffff' : '#e8e8f0', o.night ? 0.9 : 0.15).shine(2); m.surf(n, m.lo ? 3 : 5, (u, v, out) => { const a = u * TAU * 2.2 + ph, y = 0.6 + u * H, rr = 1.1 + 0.13 * Math.cos(v * TAU); out[0] = Math.sin(a) * rr; out[1] = y + 0.13 * Math.sin(v * TAU); out[2] = Math.cos(a) * rr; }, { wrapV: true, out: true }); }
+      m.color('#ffffff', o.night ? 1 : 0.3); for (let i = 1; i < 12; i++) { const u = i / 12, a = u * TAU * 2.2, y = 0.6 + u * H; m.ball(0, y, 0, 0.18, { seg: 6, rings: 4 }); m.limb(Math.sin(a) * 1.1, y, Math.cos(a) * 1.1, -Math.sin(a) * 1.1, y, -Math.cos(a) * 1.1, 0.035, 0.035, { seg: 4, ends: false }); }
+      m.emissive(0).shine(0);
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 1.4, y0: 0, y1: 12 }] };
+    },
+    far(m, o) { m.color('#ffffff', o.night ? 0.8 : 0.15); m.cyl(0, 0, 0, 1.2, 1.2, 12, 6, {}); m.emissive(0); } },
+  // YURT CAMP: a round felt yurt with a tinted roof band, a little shade and a couch (filler for the long bare stretches)
+  yurt: { r: 8, soft: 0.55, near: 36, mid: 130, farD: 330, glows: [[0, 3.7, 0, 1.6], [4.6, 2.3, 2.4, 1.2]], pool: 10,
+    build(m, o) {
+      m.color('#efe6d6').shine(0); m.lathe([[3.2, 0], [3.2, 2.2], [3.25, 2.25]], { seg: m.lo ? 12 : 20, uv: BURNS_ATLAS.pattern('canvas') });
+      m.color('#ffffff'); m.lathe([[3.45, 2.2], [1.2, 3.35], [0.5, 3.6], [0, 3.62]], { seg: m.lo ? 12 : 20 });
+      m.color('#2a2230'); m.roundBox(0, 0.95, 3.2, 1.1, 1.9, 0.2, 0.08);
+      m.color('#ffd84a', o.night ? 0.9 : 0.1); m.torus(0, 3.55, 0, 0.55, 0.06, { seg: 10, tseg: 3 }); m.emissive(0);
+      m.color('#6a6a72').shine(2); for (const [x, z] of [[3.4, 0.6], [6.0, 0.6], [3.4, 4.2], [6.0, 4.2]]) m.limb(x, 0, z, x, 2.4, z, 0.05, 0.05, { seg: 5 }); m.shine(0);
+      m.color('#ffffff'); m.roundBox(4.7, 2.45, 2.4, 2.9, 0.08, 3.9, 0.03, { uv: BURNS_ATLAS.pattern('canvas'), uvFace: 'none' });
+      m.color('#8a3a5a').shine(1); m.roundBox(4.7, 0.35, 2.6, 1.9, 0.5, 0.8, 0.15); m.roundBox(4.7, 0.75, 2.25, 1.9, 0.6, 0.18, 0.08); m.shine(0);
+      if (o.night) { for (let i = 0; i < 8; i++) { const t = i / 7; m.color(BURNS_NEON[i % 7], 1); m.ball(3.4 + t * 2.6, 2.32 - Math.sin(t * Math.PI) * 0.25, 4.25, 0.07, { seg: 5, rings: 3 }); } m.emissive(0); }
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 3.3, y0: 0, y1: 3.4 }] };
+    },
+    far(m) { m.color('#efe6d6'); m.cyl(0, 0, 0, 3.2, 3.2, 2.2, 8, {}); m.color('#ffffff'); m.cyl(0, 2.2, 0, 3.45, 0.4, 1.4, 8, {}); } }
+};
+
+// SOUND STAGE: a little open-air stage facing the road: deck, truss arch, speaker stacks, an LED wall, a DJ booth
+CART_DECOR_KINDS.stage = { r: 8, near: 36, mid: 130, farD: 330, glows: [[0, 4.6, -1.6, 3.4], [-4.6, 3.0, 0.6, 1.4], [4.6, 3.0, 0.6, 1.4]], pool: 13,
+  build(m, o) {
+    m.color('#2a2832').shine(1); m.roundBox(0, 0.5, 0, 11, 1.0, 6, 0.2);
+    m.color('#cfd2da').shine(3); for (const sx of [-1, 1]) { m.limb(sx * 5.3, 1, -2.6, sx * 5.3, 6.4, -2.6, 0.12, 0.12, { seg: 6 }); m.limb(sx * 5.3, 1, 2.2, sx * 5.3, 6.4, 2.2, 0.12, 0.12, { seg: 6 }); m.limb(sx * 5.3, 6.4, -2.6, sx * 5.3, 6.4, 2.2, 0.1, 0.1, { seg: 6 }); }
+    for (const z of [-2.6, 2.2]) { const N = 8; for (let i = 0; i < N; i++) { const a0 = i / N, a1 = (i + 1) / N, y0 = 6.4 + Math.sin(a0 * Math.PI) * 1.2, y1 = 6.4 + Math.sin(a1 * Math.PI) * 1.2; m.limb(-5.3 + a0 * 10.6, y0, z, -5.3 + a1 * 10.6, y1, z, 0.1, 0.1, { seg: 6 }); } }
+    m.shine(0);
+    // LED wall: tiles in two brightnesses of the copy's colour
+    for (let i = 0; i < 8; i++) for (let j = 0; j < 4; j++) { m.color((i + j) % 2 ? '#ffffff' : '#a8a8b8', o.night ? 1 : 0.35); m.box(-3.5 + i, 1.6 + j * 0.95, -2.75, 0.94, 0.9, 0.1); }
+    m.emissive(0);
+    // speaker stacks with glowing cone rings
+    for (const sx of [-1, 1]) for (let k = 0; k < 2; k++) { const y = 1.55 + k * 1.15; m.color('#18161c').shine(1); m.roundBox(sx * 4.6, y, 0.4, 1.4, 1.1, 1.1, 0.12); m.color('#ffffff', o.night ? 0.9 : 0.2); m.push(); m.tf(sx * 4.6, y, 0.97, 0, Math.PI / 2, 0); m.torus(0, 0, 0, 0.36, 0.05, { seg: 12, tseg: 3 }); m.pop(); m.emissive(0); }
+    // DJ booth
+    m.color('#3a3644').shine(2); m.roundBox(0, 1.55, 0.4, 2.6, 1.1, 1.0, 0.15); m.color('#ffffff', o.night ? 1 : 0.3); m.box(0, 1.8, 0.92, 2.2, 0.08, 0.02); m.emissive(0).shine(0);
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: 5.5, hz: 3, y0: 0, y1: 1 }] };
+  },
+  far(m, o) { m.color('#2a2832'); m.box(0, 0.5, 0, 11, 1, 6); m.color('#ffffff', o.night ? 1 : 0.35); m.box(0, 3.1, -2.75, 8, 3.8, 0.1); m.emissive(0); m.color('#cfd2da'); m.box(0, 6.8, -0.2, 10.6, 0.3, 4.8); } };
+
+// the far city: a distant block of camps on the horizon (domes, RVs, a tower, shade frames), one cheap level drawn
+// only past 150 m, so the playa doesn't end in a bare line. At night its windows and the tower top glow.
+CART_DECOR_KINDS.skyline = { r: 22, single: true, minD: 150, near: 760, noCap: true, shadow: false,
+  build(m, o) {
+    const e = o.night ? 1 : 0, rng = mulberry32(7);
+    for (let i = 0; i < 9; i++) {
+      const x = (rng() - 0.5) * 38, z = (rng() - 0.5) * 16, k = rng();
+      if (k < 0.35) { m.color('#ffffff'); m.ellipsoid(x, 0, z, 4 + rng() * 3, 3 + rng() * 2.5, 4 + rng() * 3, { seg: 7, rings: 3, phi1: Math.PI / 2 }); }
+      else if (k < 0.7) { const w = 7 + rng() * 5; m.color('#e8e4ec'); m.box(x, 1.5, z, w, 3, 2.6); if (e) { m.color('#ffd890', e); m.box(x, 1.8, z + 1.32, w * 0.7, 0.5, 0.02); m.emissive(0); } }
+      else { m.color('#d8d0e0'); for (const sx of [-1, 1]) m.box(x + sx * 3, 1.8, z, 0.2, 3.6, 0.2); m.box(x, 3.7, z, 6.6, 0.15, 4.5); }
+    }
+    m.color('#c8c0d0'); m.box(4, 7, 0, 0.5, 14, 0.5); m.color('#ffffff', o.night ? 1 : 0.3); m.box(4, 14.4, 0, 1.2, 0.8, 1.2); m.emissive(0);
+    if (e) for (let i = 0; i < 14; i++) { m.color(BURNS_NEON[i % 7], 1); m.box((rng() - 0.5) * 40, 0.6 + rng() * 3.5, (rng() - 0.5) * 16, 0.35, 0.35, 0.35); }
+    m.emissive(0);
+  } };
+
+const CartDecor = {
+  // register the instanced kinds for this world (once; every copy shares its kind's geometry, one draw per detail level)
+  protos(E) {
+    if (E.decorP) return;
+    E.decorP = true;
+    const o = { night: E.night, dusk: E.tod === 'sunset' || E.tod === 'dawn' };
+    for (const id in CART_DECOR_KINDS) {
+      const K = CART_DECOR_KINDS[id];
+      E.api.instanceProto('cd_' + id, m => K.build(m, o), { r: K.r, near: K.near, mid: K.mid, farD: K.farD, far: K.far ? m => K.far(m, o) : null, lo: !K.single, minD: K.minD, noCap: K.noCap, shadow: K.shadow, noAO: id === 'rail' || id === 'tyres' || id === 'skyline' });
+    }
+  },
+  // place one instanced copy; its night glows and light pool go in the world (glows: local points turned to world)
+  put(E, id, x, z, yaw, col, o) {
+    o = o || {};
+    const K = CART_DECOR_KINDS[id], s = o.scale || 1, y = o.y !== undefined ? o.y : E.terrain.height(x, z);
+    E.api.instance('cd_' + id, x, z, { y, yaw, scale: s, tint: cartTintOf(col, o.k, K.soft), noCol: o.noCol });
+    if (!o.noLights && (E.night || (o.dusk && K.glows))) {
+      const c = Math.cos(yaw), sn = Math.sin(yaw);
+      for (const g of K.glows || []) E.api.glow(x + (g[0] * c + g[2] * sn) * s, y + g[1] * s, z + (-g[0] * sn + g[2] * c) * s, g[3] * s, col);
+      if (K.pool && E.night) E.api.light(x, z, K.pool * s, col, 0.5);
+    }
+  },
+
+  /* ---------- the barriers (instanced; replaces the old static posts + rails) ---------- */
+  barriers(E, T, D) {
+    const step = 7, night = E.night, pal = CART_DECOR_PAL[E.tod] || CART_DECOR_PAL.day;
+    for (let s = 0; s < T.L; s += step) {
+      const g = T.at(s, {}), tight = Math.abs(g.k) > 0.012, i = Math.floor(s / step);
+      for (const side of [1, -1]) {
+        const off = side > 0 ? g.wr : -g.wl, x = g.x + g.nx * off, z = g.z + g.nz * off;
+        // colour: neon by night (a slow rainbow along the lap), the theme's warm pair by day, red / white on the bends
+        const col = tight ? (i % 2 ? '#f0f0f6' : '#ff3a4a') : night || D.theme === 'neon' ? BURNS_NEON[Math.floor(i / 2) % 7] : i % 4 < 2 ? pal[0] : pal[1];
+        this.put(E, tight ? 'tyres' : 'rail', x, z, g.yaw, col, { y: 0, noLights: true, k: tight || night ? 1 : 0.95 });
+        if (night) {
+          if (i % 3 === 0) E.api.glow(x, 0.98, z, 0.9, col);
+          // coloured light spills onto the road edge (and the shoulder) from the LED rail: the edges always read
+          if (i % 2 === 0) E.api.light(x - g.nx * side * 1.2, z - g.nz * side * 1.2, 5.5, col, 0.34);
+        }
+      }
+    }
+  },
+  // lamp posts (dusk/dawn/night) or festival flags (day), alternating sides every 38 m
+  lamps(E, T, D) {
+    const lit = E.night || D.tod === 'sunset' || D.tod === 'dawn', pal = CART_DECOR_PAL[E.tod] || CART_DECOR_PAL.day;
+    for (let s = 3; s < T.L; s += 38) {
+      const g = T.at(s, {}), k = Math.floor(s / 38), side = k % 2 ? 1 : -1, off = side > 0 ? g.wr + 2.5 : -g.wl - 2.5, x = g.x + g.nx * off, z = g.z + g.nz * off;
+      if (lit) {
+        const col = BURNS_NEON[k % 7], yaw = Math.atan2(-g.nx * side, -g.nz * side);   // the arm reaches over the barrier toward the road
+        this.put(E, 'lamp', x, z, yaw, col, { y: 0, dusk: true });
+        if (!E.night) E.api.light(x - g.nx * side * 1.5, z - g.nz * side * 1.5, 7, col, 0.3);
+      } else this.put(E, 'flag', x, z, g.yaw, pal[k % pal.length], { y: 0 });   // the banner spreads across the view
+    }
+  },
+  // overhead pennant lines strung across the road on the straights (8 m up: the chase camera passes well under)
+  pennants(E, T, D) {
+    const pal = CART_DECOR_PAL[E.tod] || CART_DECOR_PAL.day;
+    for (let s = 70, n = 0; s < T.L - 40; s += 115) {
+      const g = T.at(s, {}); if (Math.abs(g.k) > 0.006) continue;
+      const a = [g.x + g.nx * (g.wr + 1.6), g.z + g.nz * (g.wr + 1.6)], b = [g.x - g.nx * (g.wl + 1.6), g.z - g.nz * (g.wl + 1.6)], w = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      const col = pal[n++ % pal.length];
+      CartScene.mesh(E.api, g.x, g.z, g.yaw, m => {   // local x runs across the road
+        m.color('#d8dce6').shine(3); for (const sx of [-1, 1]) { m.limb(sx * w / 2, 0, 0, sx * w / 2, 9.0, 0, 0.09, 0.07, { seg: 7 }); m.color('#ffd84a'); m.ball(sx * w / 2, 9.15, 0, 0.16, { seg: 8, rings: 5 }); m.color('#d8dce6'); } m.shine(0);
+        m.color('#2a2a30'); m.limb(-w / 2, 8.7, 0, w / 2, 8.7, 0, 0.02, 0.02, { seg: 3, ends: false });
+        const N = Math.round(w / 0.9);
+        for (let i = 0; i < N; i++) {
+          const t0 = i / N, t1 = (i + 0.7) / N, sag = t => 8.7 - Math.sin(t * Math.PI) * 0.8;
+          const ax = -w / 2 + t0 * w, bx = -w / 2 + t1 * w, ay = sag(t0), by = sag(t1);
+          m.color(i % 3 === 0 ? col : pal[(i + n) % pal.length], E.night ? 0.6 : 0);
+          m.poly([[ax, ay, 0], [bx, by, 0], [(ax + bx) / 2, (ay + by) / 2 - 0.55, 0]]); m.poly([[bx, by, 0], [ax, ay, 0], [(ax + bx) / 2, (ay + by) / 2 - 0.55, 0]]);
+        }
+        m.emissive(0);
+        return { cols: [{ t: 'cyl', x: -w / 2, z: 0, r: 0.12, y0: 0, y1: 9, camPass: true }, { t: 'cyl', x: w / 2, z: 0, r: 0.12, y0: 0, y1: 9, camPass: true }] };
+      }, { noAO: true });
+    }
+  },
+  // painted kerbs on the bends (red / white blocks just inside the edge line)
+  kerbs(E, T) {
+    E.api.paint((ctx, P, S) => {
+      ctx.lineCap = 'butt';
+      for (let i = 0; i < T.N; i += 2) {
+        const k = T.K[i]; if (Math.abs(k) < 0.011) continue;
+        const j = (i + 2) % T.N, side = k > 0 ? 1 : -1;   // the inside of the bend (right of travel when k > 0)
+        for (const sd of [side, -side]) {
+          if (sd !== side && Math.abs(k) < 0.02) continue;   // the outside kerb only on the sharp ones
+          const o0 = sd * (T.HW[i] - 0.65), o1 = sd * (T.HW[j] - 0.65);
+          const p = P(T.X[i] + T.NX[i] * o0, T.Z[i] + T.NZ[i] * o0), q = P(T.X[j] + T.NX[j] * o1, T.Z[j] + T.NZ[j] * o1);
+          ctx.strokeStyle = (i >> 1) % 2 ? 'rgba(240,236,232,0.7)' : 'rgba(214,52,58,0.72)'; ctx.lineWidth = 1.1 * S;
+          ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+        }
+      }
+    });
+  },
+  /* ---------- roadside art and camps: fill the bare stretches (outside the walls, never on the road) ---------- */
+  roadside(E, T, D, rng, taken) {
+    const night = E.night, pal = night ? BURNS_NEON : (CART_DECOR_PAL[E.tod] || CART_DECOR_PAL.day);
+    const kinds = { art: ['mush', 'ring', 'tree', 'helix', 'bloom', 'totem', 'sails'], neon: ['stage', 'ring', 'helix', 'stage', 'tree', 'mush', 'totem'], burn: ['totem', 'tree', 'stage', 'ring', 'mush', 'helix', 'bloom'],
+      camps: ['sails', 'yurt', 'stage', 'bloom', 'totem', 'tree', 'yurt', 'mush'], gate: ['yurt', 'sails', 'totem', 'bloom', 'yurt'], temple: ['bloom', 'tree', 'sails', 'totem', 'yurt'], storm: ['yurt', 'totem', 'sails', 'yurt'] }[D.theme] || ['sails', 'yurt', 'bloom', 'totem', 'mush'];
+    const list = cartShuffle(kinds.slice(), rng);
+    const free = (x, z, r) => { if (!CartWorlds.clear(T, x, z, r)) return false; for (const q of taken) if ((q[0] - x) * (q[0] - x) + (q[1] - z) * (q[1] - z) < (q[2] + r) * (q[2] + r)) return false; return true; };
+    let n = 0;
+    for (let s = 20, k = 0; s < T.L - 20; s += D.theme === 'storm' ? 40 : 26, k++) {
+      const g = T.at(s, {}), side = k % 2 ? 1 : -1;
+      const kind = list[n % list.length], K = CART_DECOR_KINDS[kind], sc = 0.95 + rng() * 0.4, dist = 4 + K.r * sc + rng() * 9;
+      const off = side > 0 ? g.wr + dist : -g.wl - dist, x = g.x + g.nx * off, z = g.z + g.nz * off;
+      if (!free(x, z, K.r * sc + 1)) continue;
+      const yaw = Math.atan2(-g.nx * side, -g.nz * side) + (rng() - 0.5) * 0.6;   // facing the road
+      this.put(E, kind, x, z, yaw, pal[(n * 3 + k) % pal.length], { scale: sc, dusk: D.tod === 'sunset' || D.tod === 'dawn' });
+      taken.push([x, z, K.r * sc]); n++;
+    }
+    return n;
+  },
+
+  // the far city: a ring of distant camp blocks 230–330 m out round the course (muted tints; the fog does the rest)
+  skyline(E, T, rng) {
+    const b = T.bounds, cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2, R0 = Math.hypot(b.x1 - b.x0, b.z1 - b.z0) / 2 + 230, tints = ['#d8d0c8', '#c8c4d8', '#e0d0c0', '#c8d0d8', '#d8c8d0'];
+    const n = Math.round(TAU * R0 / 46);
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + rng() * 0.05, r = R0 + rng() * 100, x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r; E.api.instance('cd_skyline', x, z, { y: 0, yaw: a + Math.PI + (rng() - 0.5) * 0.5, scale: 0.8 + rng() * 0.6, tint: cartTintOf(tints[i % tints.length], E.night ? 0.7 : 1), noCol: true }); }
+  },
+
+  /* ---------- the start / finish gantry: rounded LED pylons, a truss arch, a checkered banner and start lights ---------- */
+  gantry(E, T, D) {
+    const g = T.at(0, {}), W = g.wl + g.wr + 3.2, H = 8.6, night = E.night, api = E.api;
+    CartScene.mesh(api, g.x, g.z, g.yaw, m => {   // local x runs across the road
+      const lights = [];
+      for (const sx of [-1, 1]) {
+        const x = sx * W / 2;
+        m.color('#2a2834').shine(2); m.roundBox(x, 0.45, 0, 2.2, 0.9, 2.2, 0.25);
+        m.push(); m.tf(x, 0.8, 0); m.lathe([[0.95, 0], [0.82, 3.5], [0.72, H - 0.8], [0.9, H - 0.6], [0.9, H + 0.25], [0.6, H + 0.6], [0, H + 0.7]], { seg: 16 }); m.pop();
+        for (let i = 0; i < 6; i++) { const y = 1.6 + i * 1.2, c = BURNS_NEON[(i + (sx > 0 ? 3 : 0)) % 7]; m.color(c, night ? 1 : 0.55); m.torus(x, y, 0, 0.86 - i * 0.02, 0.06, { seg: 16, tseg: 4 }); lights.push({ x, y, z: 0.9, s: night ? 0.7 : 0, c }); }
+        m.emissive(0);
+      }
+      // the truss: two arched chords and diagonal struts
+      m.color('#d8dce6').shine(3);
+      const arc = (t, lift) => [-W / 2 + t * W, H + lift + Math.sin(t * Math.PI) * 1.4, 0];
+      const N = 14;
+      for (let i = 0; i < N; i++) {
+        const a = arc(i / N, 0.2), b = arc((i + 1) / N, 0.2), c = arc(i / N, -0.9), d = arc((i + 1) / N, -0.9);
+        for (const zz of [-0.45, 0.45]) { m.limb(a[0], a[1], zz, b[0], b[1], zz, 0.08, 0.08, { seg: 6 }); m.limb(c[0], c[1], zz, d[0], d[1], zz, 0.07, 0.07, { seg: 6 }); m.limb(a[0], a[1], zz, d[0], d[1], zz, 0.04, 0.04, { seg: 4 }); }
+        m.limb(a[0], a[1], -0.45, a[0], a[1], 0.45, 0.04, 0.04, { seg: 4 });
+      }
+      m.shine(0);
+      // checkered banner hanging under the truss (both faces)
+      const cw = 0.7, nC = Math.floor((W - 3) / cw);
+      for (let i = 0; i < nC; i++) for (let r = 0; r < 2; r++) { const t = (i + 0.5) / nC, x = -W / 2 + 1.5 + t * (W - 3), y = H - 1.6 + Math.sin((x / W + 0.5) * Math.PI) * 1.4 - r * cw; m.color((i + r) % 2 ? '#141418' : '#f4f4f4'); m.box(x, y, 0, cw, cw, 0.06); }
+      // start lights: five round lamps on a pod above the banner centre
+      m.color('#1a1820').shine(2); m.roundBox(0, H + 2.45, 0, 4.4, 0.9, 0.7, 0.3);
+      for (let i = 0; i < 5; i++) { const x = -1.6 + i * 0.8, c = i < 4 ? '#ff3a3a' : '#5aff7a'; m.color(c, 1); m.ball(x, H + 2.45, 0.3, 0.24, { seg: 10, rings: 7 }); m.ball(x, H + 2.45, -0.3, 0.24, { seg: 10, rings: 7 }); lights.push({ x, y: H + 2.45, z: 0.4, s: 0.7, c }); }
+      m.emissive(0).shine(0);
+      // string lights along the lower chord
+      for (let i = 0; i <= 20; i++) { const t = i / 20, p = arc(t, -1.05); m.color(BURNS_NEON[i % 7], 1); m.ball(p[0], p[1], 0.5, 0.09, { seg: 6, rings: 4 }); m.ball(p[0], p[1], -0.5, 0.09, { seg: 6, rings: 4 }); if (night && i % 2 === 0) lights.push({ x: p[0], y: p[1], z: 0.5, s: 0.5, c: BURNS_NEON[i % 7] }); }
+      m.emissive(0);
+      lights.push({ x: 0, y: 0, z: 0, s: 0, c: '#ffd0a0', pool: night ? 14 : 0 });
+      return { cols: [{ t: 'cyl', x: -W / 2, z: 0, r: 1.1, y0: 0, y1: H }, { t: 'cyl', x: W / 2, z: 0, r: 1.1, y0: 0, y1: H }], lights: lights.filter(L => L.s > 0 || L.pool) };
+    }, { hi: true });
+    // the name board in the middle of the arch (a sign each way)
+    api.sign('ART CART', g.x, g.z, { yaw: g.yaw + Math.PI, h: 1.9, y: H + 0.1, post: false, maxW: 9, style: { bg: '#1a0a24', fg: '#ffffff', border: '#ff4fd8' }, glow: night ? '#ff4fd8' : null });
+  },
+
+  /* ---------- the Man's stage on Burn Night: a tiered wooden base with LED rings, uplights, fire barrels ---------- */
+  manStage(E, x, z) {
+    const api = E.api, top = 6.8;
+    CartScene.mesh(api, x, z, 0, m => {
+      const wd = BURNS_ATLAS.pattern('wood');
+      m.color('#6a4a32').shine(1); m.lathe([[16, 0], [15.4, 2.1], [10.8, 2.3], [10.2, 4.7], [7.2, 4.9], [6.8, top - 0.1], [0, top]], { seg: 8, uv: wd });
+      m.shine(0);
+      // LED rings round each tier and glowing doorways on the lowest one
+      m.color('#ff8a3a', 1); m.torus(0, 2.12, 0, 15.25, 0.12, { seg: 40, tseg: 4 }); m.color('#38f2ff', 1); m.torus(0, 4.72, 0, 10.05, 0.1, { seg: 32, tseg: 4 }); m.color('#ff4fd8', 1); m.torus(0, top - 0.05, 0, 6.85, 0.1, { seg: 24, tseg: 4 });
+      m.color('#ffc070', 0.9); for (let i = 0; i < 8; i++) { const a = (i + 0.5) / 8 * TAU; m.push(); m.tf(Math.sin(a) * 15.75, 0, Math.cos(a) * 15.75, a); m.roundBox(0, 0.9, 0, 1.6, 1.8, 0.1, 0.06); m.pop(); }
+      m.emissive(0);
+      // eight uplight cans round the base, aimed at the figure
+      const lights = [];
+      for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = 17.4; m.color('#2a2830').shine(2); m.push(); m.tf(Math.sin(a) * r, 0, Math.cos(a) * r, a + Math.PI, -0.5); m.roundCyl(0, 0, 0, 0.32, 0.5, 0.08); m.color('#fff4e0', 1); m.disc(0, 0.51, 0, 0.26, 10); m.pop(); m.emissive(0).shine(0); lights.push({ x: Math.sin(a) * r, y: 0.8, z: Math.cos(a) * r, s: 1.6, c: i % 2 ? '#ffb070' : '#ff7ac8' }); }
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 15, y0: 0, y1: top - 0.1 }], lights };
+    }, { hi: true });
+    // pools: warm around the base, coloured spill from the uplights, the doorways
+    api.light(x, z, 30, '#ff9a4a', 0.75); api.light(x, z, 46, '#ff5a8a', 0.25);
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; api.light(x + Math.sin(a) * 18, z + Math.cos(a) * 18, 7, i % 2 ? '#ffb070' : '#ff7ac8', 0.5); }
+    // fire barrels on a ring
+    for (let i = 0; i < 6; i++) { const a = (i + 0.5) / 6 * TAU, bx = x + Math.sin(a) * 21, bz = z + Math.cos(a) * 21; CartScene.prop(api, 'barrel', { x: bx, z: bz }); api.fire(bx, 0.95, bz, 0.35, { hazard: false }); }
+    // searchlights sweeping the sky behind him
+    E.beams = E.beams || [];
+    for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.4; E.beams.push({ kind: 'search', x: x + Math.sin(a) * 24, y: 1, z: z + Math.cos(a) * 24, c: [1, 0.85, 0.6], ph: i * 1.7, sp: 0.35 + i * 0.07, len: 150, w: 7, a: 0.2 }); }
+    return { y: top, scale: 1.65 };
+  },
+  // searchlights / laser fans for a night track's sound camps (drawn by the scene as additive streaks)
+  beams(E, T, rng, n, kind) {
+    E.beams = E.beams || [];
+    for (let i = 0; i < n; i++) {
+      const g = T.at(T.L * (i + 0.3) / n, {}), side = i % 2 ? 1 : -1, off = side > 0 ? g.wr + 40 + rng() * 30 : -g.wl - 40 - rng() * 30, x = g.x + g.nx * off, z = g.z + g.nz * off;
+      if (!CartWorlds.clear(T, x, z, 12)) continue;
+      const c = burnsRGBf(BURNS_NEON[i % 7]);
+      E.beams.push({ kind: kind || 'search', x, y: 1, z, c, ph: rng() * 6, sp: 0.4 + rng() * 0.4, len: kind === 'laser' ? 70 : 140, w: kind === 'laser' ? 0.5 : 6, a: kind === 'laser' ? 0.55 : 0.18 });
+      E.api.light(x, z, 10, BURNS_NEON[i % 7], 0.5);
+    }
   }
 };
 
@@ -18549,7 +18951,7 @@ class CartRaceScene {
       ch.x = h.x; ch.z = h.z; ch.y = this.terrain.height(h.x, h.z); ch.yaw = h.yaw; ch.play(h.anim, h.anim === 'dance' ? { style: i % 6 } : h.anim === 'firespin' ? { tool: 'poi' } : {}, true); ch.animT = i * 0.7;
       return { ch, model, h, fire: h.type === 'firespinner' };
     });
-    if (E.man) { const model = BurnsManModel.build(), ch = new BurnsChar(model); ch.x = E.man.x; ch.z = E.man.z; ch.y = 5.4; ch.yaw = 0; ch.scale = 1; ch.play('idle', {}, true); this.man = { ch, model, burn: 0 }; }
+    if (E.man) { const model = BurnsManModel.build(), ch = new BurnsChar(model); ch.x = E.man.x; ch.z = E.man.z; ch.y = E.man.y || 5.4; ch.yaw = 0; ch.scale = E.man.scale || 1; ch.play('idle', {}, true); this.man = { ch, model, burn: 0 }; }
     // objective setup
     this.obj = { t: 0, time: this.isBattle ? CART_OBJECTIVES[this.objective].time : 0, zone: 0, zoneT: 25, capture: 0, flag: null, ended: false };
     if (this.objective === 'flag') { const s = E.flagSpots[0]; this.obj.flag = { x: s.x, z: s.z, y: this.terrain.height(s.x, s.z), holder: null, t: 0, cool: 0 }; }
@@ -19399,7 +19801,7 @@ class CartRaceScene {
     // free this course's GPU buffers (car and driver models stay cached for the next race)
     const W = this.W; if (!W || !BurnsGL.gl || this.released) return; this.released = true;
     try {
-      for (const c of W.chunks) BurnsGL.freeGeo(c); for (const g of W.ground.geos) BurnsGL.freeGeo(g);
+      for (const c of W.chunks) BurnsGL.freeGeo(c); for (const g of W.ground.geos) BurnsGL.freeGeo(g); if (W.inst) W.inst.release();
       BurnsGL.freeTex(W.ground.paintT); BurnsGL.freeTex(W.lightmap.T);
       for (const G of this.E.crowds) { BurnsGL.freeGeo(G.geo); if (G.far) BurnsGL.freeGeo(G.far.geo); } for (const G of (this.props && this.props.groups) || []) BurnsGL.freeGeo(G.geo);
     } catch (e) { /* ignore */ }
@@ -20597,6 +20999,8 @@ if (typeof window !== 'undefined') setTimeout(() => {
    and the test API (window.BRADY_CART.debug).
    ============================================================ */
 const CART_HUD = { pad: 12 };
+const CART_HEAD_COL = [1, 0.9, 0.74];   // headlight pools
+const CART_ZONE_COL = [1, 0.84, 0.25], CART_CAPTURE_COL = [0.4, 1, 0.5];   // objective light walls
 Object.assign(CartRaceScene.prototype, {
   /* ---------- touch layout (the engine's Input, our own buttons) ---------- */
   layoutControls() {
@@ -20766,20 +21170,44 @@ Object.assign(CartRaceScene.prototype, {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.drawHUD(ctx, fdt);
   },
-  carModel(k, d2) { return d2 > 30 * 30 && k.Mlo ? k.Mlo : k.M; },
+  // kart detail (triangle budget): the ~30k showroom model only for the player's car and the one rival nearest the
+  // camera inside 16 m (kept to 19 m once picked, so it doesn't flicker between two cars); every other kart draws its
+  // ~7k race model. A bunched pack used to put 7–8 showroom models on screen (230k triangles).
+  pickHi() {
+    let best = null, bs = 1e9, pack = 0;
+    for (const k of this.karts) {
+      if (k.player) { k._hi = k._d2 < 30 * 30; continue; }
+      if (k._in && k._d2 < 30 * 30) pack++;
+      const was = k._hi; k._hi = false;
+      if (!k._in || k._d2 > (was ? 19 * 19 : 16 * 16)) continue;
+      const sc = was ? k._d2 * 0.7 : k._d2;   // the current pick wins near-ties
+      if (sc < bs) { bs = sc; best = k; }
+    }
+    if (best && pack < 4) best._hi = true;   // in a bunched pack (the start, a scrum round a zone) every rival is small: none gets it
+  },
+  carModel(k) { return k._hi || !k.Mlo ? k.M : k.Mlo; },
   renderScene(R, env) {
     const W = this.W, cam = this.cam, P = R.planes, Q = BurnsGL.Q, A = BURNS_ATLAS.T;
     const wantShadow = !!(Q && Q.shadows && env.keyDir[1] > 0.06);
     const vis = this._vis || (this._vis = []); vis.length = 0;
     for (const k of this.karts) { const d2 = (k.x - cam.x) * (k.x - cam.x) + (k.z - cam.z) * (k.z - cam.z); k._d2 = d2; k._in = BurnsM.sphereVisible(P, k.x, k.y + 1.8, k.z, 4.5); if (k._in || (wantShadow && d2 < 60 * 60)) vis.push(k); }
-    const heroes = this.heroes.filter(h => { const d2 = (h.ch.x - cam.x) * (h.ch.x - cam.x) + (h.ch.z - cam.z) * (h.ch.z - cam.z); h._d2 = d2; h._in = d2 < 90 * 90 && BurnsM.sphereVisible(P, h.ch.x, h.ch.y + 1, h.ch.z, 2); return h._in || (wantShadow && d2 < 40 * 40); });
-    const crowds = this.E.crowds.filter(G => { const d = Math.hypot(G.cx - cam.x, G.cz - cam.z); G._d = d; return d < 160 + G.rad && BurnsM.sphereVisible(P, G.cx, 1.5, G.cz, G.rad + 2); });
+    this.pickHi();
+    const heroes = this._heroV || (this._heroV = []), crowds = this._crowdV || (this._crowdV = []); heroes.length = 0; crowds.length = 0;
+    for (const h of this.heroes) { const d2 = (h.ch.x - cam.x) * (h.ch.x - cam.x) + (h.ch.z - cam.z) * (h.ch.z - cam.z); h._d2 = d2; h._in = d2 < 90 * 90 && BurnsM.sphereVisible(P, h.ch.x, h.ch.y + 1, h.ch.z, 2); if (h._in || (wantShadow && d2 < 40 * 40)) heroes.push(h); }
+    // crowds: drawn to 115 m past their edge
+    let nearG = null;
+    for (const G of this.E.crowds) { const d = Math.hypot(G.cx - cam.x, G.cz - cam.z); G._d = d; G._near = false; if (d < 115 + G.rad && BurnsM.sphereVisible(P, G.cx, 1.5, G.cz, G.rad + 2)) { crowds.push(G); if (d < 45 && (!nearG || d < nearG._d)) nearG = G; } }
+    if (nearG) nearG._near = true;   // only the closest group gets the full-detail spectators (~47k triangles a group)
+    // instanced props (barriers, lamps, roadside art: 43_cart_ca_decor.js): culled and given a detail level per copy
+    const inst = W.inst, statD = env.fogD > 0.011 ? 160 : 290;
+    if (inst) inst.update(R, statD, wantShadow ? ((Q && Q.shadowDist) || 60) + 12 : 0);
     // ---- sun shadows: the same draws, depth only (counted separately: begin() resets the renderer's counter) ----
     const d0 = R.stats.draws; this.shadowDraws = 0;
     if (wantShadow && R.shadowBegin(env)) {
       R.statics(W.chunks, env, W, A, 0);
+      if (inst) inst.drawShadow(R);
       R.skinBegin(env, W, A);
-      for (const k of vis) { if (!R.shadowNear(k.x, k.y, k.z, 5)) continue; const M = this.carModel(k, k._d2); R.skin(M.geo, k.bones, M.nb, null, 0, 0); BurnsSkinActor.drawDriver(R, k, k.ch, k.drv.id) || R.skin(k.dModel.lod || k.dModel.geo, k.dBones, k.ch.nb, null, 0, 0); }
+      for (const k of vis) { if (!R.shadowNear(k.x, k.y, k.z, 5)) continue; const M = k.Mlo || k.M; R.skin(M.geo, k.bones, M.nb, null, 0, 0); BurnsSkinActor.drawDriver(R, k, k.ch, k.drv.id) || R.skin(k.dModel.lod || k.dModel.geo, k.dBones, k.ch.nb, null, 0, 0); }
       for (const h of heroes) if (h._d2 < 40 * 40) R.skin(h.model.lod || h.model.geo, h.ch.bones, h.ch.nb, null, 0, 0);
       for (const G of this.props.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0);
       for (const G of crowds) if (R.shadowNear(G.cx, 1, G.cz, G.rad)) R.skin(G.far ? G.far.geo : G.geo, G.bones, G.objs.length, null, 0, 0);
@@ -20791,17 +21219,18 @@ Object.assign(CartRaceScene.prototype, {
     R.begin(env);
     R.sky(env);
     R.ground(W.ground, env, W);
-    R.statics(W.chunks, env, W, A, env.fogD > 0.011 ? 160 : 290);
+    R.statics(W.chunks, env, W, A, statD);
+    if (inst) inst.draw(R, env, W);
     R.skinBegin(env, W, A);
     for (const k of vis) {
       if (!k._in) continue;
-      const M = this.carModel(k, k._d2), dark = k.out ? [0.05, 0.04, 0.06, 0.55] : k.invT > 0 && Math.floor(this.time * 16) % 2 === 0 ? [1, 1, 1, 0.25] : null;
+      const M = this.carModel(k), dark = k.out ? [0.05, 0.04, 0.06, 0.55] : k.invT > 0 && Math.floor(this.time * 16) % 2 === 0 ? [1, 1, 1, 0.25] : null;
       R.skin(M.geo, k.bones, M.nb, dark, 0, 0.3);
-      const dm = k.dModel, D = k._d2 > 40 * 40 && dm.far ? dm.far : k._d2 > 13 * 13 && dm.lod ? dm.lod : dm.geo;
+      const dm = k.dModel, D = k._d2 > 40 * 40 && dm.far ? dm.far : (k._d2 > 13 * 13 || !k._hi) && dm.lod ? dm.lod : dm.geo;   // full-detail drivers ride the full-detail cars
       BurnsSkinActor.drawDriver(R, k, k.ch, k.drv.id) || R.skin(D, k.dBones, k.ch.nb, null, k.ch.face, 0.45);
     }
     for (const h of heroes) if (h._in) R.skin(h._d2 > 40 * 40 && h.model.far ? h.model.far : h._d2 > 10 * 10 && h.model.lod ? h.model.lod : h.model.geo, h.ch.bones, h.ch.nb, null, h.ch.face, 0.4);
-    for (const G of crowds) R.skin(G._d > 50 && G.far ? G.far.geo : G.geo, G.bones, G.objs.length, null, 3, 0.3);
+    for (const G of crowds) R.skin(!G._near && G.far ? G.far.geo : G.geo, G.bones, G.objs.length, null, 3, 0.3);
     for (const G of this.props.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.5);
     cartItemsRender(this, R);   // rubber ducks, bombs, sky missiles (43_cart_da_items.js)
     if (this.man) R.skin(this.man.model.geo, this.man.ch.bones, this.man.ch.nb, null, 3, 0.3);
@@ -20818,6 +21247,8 @@ Object.assign(CartRaceScene.prototype, {
       if (k.out) continue;
       const big = k.M.lights.find(L => L.big);
       if (big && night > 0.2) { const p = cartLocalToWorld(k, big.x, big.y, big.z, CART_TMP.p || (CART_TMP.p = [0, 0, 0])); add(p[0], p[1], p[2], 7 + big.s, big.cc, 0.9 * night, 1); }
+      // headlights: a warm pool on the road ahead (the player's always wins a slot)
+      if (night > 0.2) { const f = k.M.len * 0.5 + 6; add(k.x + Math.sin(k.yaw) * f, k.y + 1.3, k.z + Math.cos(k.yaw) * f, 10, CART_HEAD_COL, 0.85 * night, k.player ? 3 : 0.7); }
       if (k.boostT > 0) add(k.x, k.y + 1, k.z, 6, [1, 0.6, 0.25], 0.8, 1.2);
       cartOctoLight(k, add, this.time, night);   // Calamari Inferno's live fire lights the car
       if (k.wpn.fireT > 0.3) { const D = k.wpn.def; add(k.x, k.y + 2.5, k.z, 12, burnsRGBf(D.col), 1.4, 2); }
@@ -20826,7 +21257,12 @@ Object.assign(CartRaceScene.prototype, {
     for (const f of this.W.fires) add(f.x, (f.y || 0) + 1.2, f.z, 7, [1, 0.55, 0.2], 1.1, 1);
     if (this.rules.lights) this.rules.lights(this, add);
     cartItemsLights(this, add);
-    if (this.man && this.man.burn > 0.05) add(this.man.ch.x, 10, this.man.ch.z, 45, [1, 0.5, 0.18], 1.5 * this.man.burn, 3);
+    if (this.man) {
+      const M = this.man, sc = M.ch.scale || 1;
+      if (M.burn > 0.05) add(M.ch.x, M.ch.y + 4.6 * sc, M.ch.z, 45 * sc, [1, 0.5, 0.18], 1.5 * M.burn, 3);
+      // the neon figure washes his stage in its own slowly cycling colour at night
+      if (night > 0.3) add(M.ch.x, M.ch.y + 5 * sc, M.ch.z, 24 * sc, BurnsManModel.hue(4, this.time, this._manC || (this._manC = [0, 0, 0])), 0.9 * night, 1.5);
+    }
     cand.sort((a, b) => b[0] - a[0]);
     for (let i = 0; i < cand.length && out.length < max; i++) out.push(cand[i][1]);
     this.R.setLights(out);
@@ -20858,7 +21294,7 @@ Object.assign(CartRaceScene.prototype, {
           const p = cartLocalToWorld(k, L.x, L.y, L.z, this._lp || (this._lp = [0, 0, 0]));
           const fl = L.led ? 0.6 + 0.4 * Math.sin(t * 6 + L.x * 3 + L.z) : 1;
           R.bbs.bb(p[0], p[1], p[2], L.s * (L.big ? 1.4 : 1), L.s * (L.big ? 1.4 : 1), S.glow, L.cc, (L.big ? 0.55 : 0.8) * night * fl, true);
-          if (L.head && k._d2 < 80 * 80) R.flat.flat(k.x + Math.sin(k.yaw) * (k.M.len * 0.5 + 4.5), gy + 0.05, k.z + Math.cos(k.yaw) * (k.M.len * 0.5 + 4.5), 3.4, 8.5, k.yaw + Math.PI, S.beam, [1, 0.92, 0.75], 0.18 * night, true);
+          if (L.head && k._d2 < 90 * 90) R.flat.flat(k.x + Math.sin(k.yaw) * (k.M.len * 0.5 + 5.5), gy + 0.05, k.z + Math.cos(k.yaw) * (k.M.len * 0.5 + 5.5), 4.2, 11, k.yaw + Math.PI, S.beam, [1, 0.92, 0.75], 0.3 * night, true);
         }
       }
       if (k.shieldT > 0) R.bbs.bb(k.x, k.y + 1.8, k.z, 6.5, 6.5, S.bubble, [1, 0.75, 1], 0.55 + Math.sin(t * 8) * 0.1, false);
@@ -20880,8 +21316,8 @@ Object.assign(CartRaceScene.prototype, {
     // objective markers: the hill zone, capture ring, flag beacon, orb glows
     if (this.isBattle) {
       const E = this.E, O = this.obj;
-      if (this.objective === 'hill') { const z = E.zones[O.zone], gy = H.height(z.x, z.z) + 0.1, pulse = 0.75 + 0.25 * Math.sin(t * 4); R.flat.flat(z.x, gy, z.z, z.r * 2.2, z.r * 2.2, t * 0.4, S.ring, [1, 0.85, 0.2], 0.9 * pulse, true); R.flat.flat(z.x, gy, z.z, z.r * 2, z.r * 2, 0, S.glow, [1, 0.8, 0.2], 0.25, true); R.bbs.streak(z.x, gy + 12, z.z, 0, 1, 0, 26, 2.2, S.streak, [1, 0.85, 0.3], 0.45); }
-      if (this.objective === 'flag') { const c = E.captures[O.capture], gy = H.height(c.x, c.z) + 0.1; R.flat.flat(c.x, gy, c.z, c.r * 2.2, c.r * 2.2, -t * 0.6, S.ring, [0.4, 1, 0.5], 0.9, true); R.bbs.streak(c.x, gy + 14, c.z, 0, 1, 0, 30, 2.5, S.streak, [0.4, 1, 0.5], 0.4); const F = O.flag; R.bbs.streak(F.x, F.y + 9, F.z, 0, 1, 0, 18, 1.4, S.streak, [1, 0.3, 0.85], 0.5); }
+      if (this.objective === 'hill') { const z = E.zones[O.zone], gy = H.height(z.x, z.z) + 0.1, pulse = 0.75 + 0.25 * Math.sin(t * 4); R.flat.flat(z.x, gy, z.z, z.r * 2.2, z.r * 2.2, t * 0.4, S.ring, [1, 0.85, 0.2], 0.9 * pulse, true); R.flat.flat(z.x, gy, z.z, z.r * 2, z.r * 2, 0, S.glow, [1, 0.8, 0.2], 0.25, true); R.bbs.streak(z.x, gy + 12, z.z, 0, 1, 0, 26, 2.2, S.streak, [1, 0.85, 0.3], 0.45); this.zoneWall(R, S, z.x, z.z, z.r, CART_ZONE_COL, pulse, t * 0.35); }
+      if (this.objective === 'flag') { const c = E.captures[O.capture], gy = H.height(c.x, c.z) + 0.1; R.flat.flat(c.x, gy, c.z, c.r * 2.2, c.r * 2.2, -t * 0.6, S.ring, [0.4, 1, 0.5], 0.9, true); R.bbs.streak(c.x, gy + 14, c.z, 0, 1, 0, 30, 2.5, S.streak, [0.4, 1, 0.5], 0.4); this.zoneWall(R, S, c.x, c.z, c.r, CART_CAPTURE_COL, O.flag.holder === this.player ? 1 : 0.6, -t * 0.5); const F = O.flag; R.bbs.streak(F.x, F.y + 9, F.z, 0, 1, 0, 18, 1.4, S.streak, [1, 0.3, 0.85], 0.5); }
       if (this.objective === 'glow') for (const o of this.props.orbs) if (o.alive) R.bbs.bb(o.gx, o.y || o.gy, o.gz, 2.6, 2.6, S.glow, [0.5, 1, 0.9], 0.7, true);
     }
     for (const g of this.props.gifts) if (g.alive && (g.gx - cam.x) * (g.gx - cam.x) + (g.gz - cam.z) * (g.gz - cam.z) < 90 * 90) R.bbs.bb(g.x, g.y, g.z, 2.4, 2.4, S.glow, [1, 0.8, 1], 0.25 + 0.25 * night, true);
@@ -20894,13 +21330,33 @@ Object.assign(CartRaceScene.prototype, {
       if (h.type === 'slime') { const a = clamp((h.life - h.t) / 1.5, 0, 1); R.flat.flat(h.x, h.y + 0.05, h.z, h.r * 2, h.r * 2.4, h.yaw, S.glow, [0.45, 1, 0.3], 0.55 * a, true); }
     }
     // the Man burns
-    if (this.man) { const M = this.man; if (M.burn > 0.05 && Math.random() < 0.9) for (let i = 0; i < 3; i++) this.fx.fire(M.ch.x + (Math.random() - 0.5) * 4, 5.5 + Math.random() * 9 * M.burn, M.ch.z + (Math.random() - 0.5) * 3, 2.4 * M.burn); R.bbs.bb(M.ch.x, 12, M.ch.z, 30, 30, S.glow, [1, 0.5, 0.2], 0.25 * M.burn, true); }
+    if (this.man) { const M = this.man, sc = M.ch.scale || 1; if (M.burn > 0.05 && Math.random() < 0.9) for (let i = 0; i < 3; i++) this.fx.fire(M.ch.x + (Math.random() - 0.5) * 4 * sc, M.ch.y + 0.1 + Math.random() * 9 * M.burn * sc, M.ch.z + (Math.random() - 0.5) * 3 * sc, 2.4 * M.burn * sc); R.bbs.bb(M.ch.x, M.ch.y + 6.6 * sc, M.ch.z, 30 * sc, 30 * sc, S.glow, [1, 0.5, 0.2], 0.25 * M.burn, true); }
+    // sky beams at night: searchlights sweeping slow figure-eights, laser fans flicking over the sound camps
+    if (this.E.beams && night > 0.3) for (const b of this.E.beams) {
+      const dx = b.x - cam.x, dz = b.z - cam.z; if (dx * dx + dz * dz > 420 * 420) continue;
+      const a = t * b.sp + b.ph;
+      if (b.kind === 'search') {
+        let ux = Math.sin(a) * 0.45, uy = 1, uz = Math.cos(a * 0.77) * 0.45; const l = Math.hypot(ux, uy, uz); ux /= l; uy /= l; uz /= l;
+        R.bbs.streak(b.x + ux * b.len * 0.5, b.y + uy * b.len * 0.5, b.z + uz * b.len * 0.5, ux, uy, uz, b.len, b.w, S.streak, b.c, b.a * night);
+        R.bbs.bb(b.x, b.y + 0.6, b.z, 3.2, 3.2, S.glow, b.c, 0.7 * night, true);
+      } else {
+        const on = Math.sin(a * 2.3) > -0.35; if (!on) continue;   // the fans blink in phrases
+        for (let i = 0; i < 4; i++) { const yaw = a + (i - 1.5) * 0.22, ux = Math.sin(yaw), uz = Math.cos(yaw), uy = 0.16 + 0.05 * Math.sin(a * 3 + i); R.bbs.streak(b.x + ux * b.len * 0.5, b.y + 3 + uy * b.len * 0.5, b.z + uz * b.len * 0.5, ux, uy, uz, b.len, b.w, S.streak, b.c, b.a * night); }
+        R.bbs.bb(b.x, b.y + 3, b.z, 2.4, 2.4, S.glow, b.c, 0.9 * night, true);
+      }
+    }
     // fireworks on the burn night track
     if (this.E.fireworks && this.state !== 'load') { this.fwT = (this.fwT || 1) - 1 / 60; if (this.fwT <= 0) { this.fwT = 0.8 + Math.random() * 1.5; const a = Math.random() * TAU, r = 60 + Math.random() * 140, cx = (this.man ? this.man.ch.x : 0) + Math.cos(a) * r, cz = (this.man ? this.man.ch.z : 0) + Math.sin(a) * r; this.fx.firework(cx, 55 + Math.random() * 35, cz, BURNS_NEON[Math.floor(Math.random() * 7)]); } }
     // dust in the air (heavier in a storm)
     const dust = (this.E.storm ? 0.4 + this.stormK * 2 : 0.3);
     if (Math.random() < dust) { const a = Math.random() * TAU, d = 4 + Math.random() * 26; this.fx.add(cam.tx + Math.cos(a) * d, cam.ty - 0.6 + Math.random() * 3, cam.tz + Math.sin(a) * d, 1.2 + Math.random() + (this.E.storm ? Math.sin(this.windA) * this.stormK * 8 : 0), 0.05, 0.4 + (this.E.storm ? Math.cos(this.windA) * this.stormK * 8 : 0), 3, 1.5, 3.5, env.fogCol.map(c => Math.min(1, c * 1.5 + 0.15)), this.E.storm ? 0.22 : 0.12, 'puff', 0, Math.random() * 6, 0.1); }
     this.fx.draw(R);
+  },
+  // a ring of light posts round an objective zone (each one sits on the ground under it, so a zone on a slope or a
+  // mound still reads as a clear circle from the chase camera)
+  zoneWall(R, S, x, z, r, col, k, rot) {
+    const H = this.terrain, n = 22;
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + rot, px = x + Math.sin(a) * r, pz = z + Math.cos(a) * r, py = H.height(px, pz); R.bbs.streak(px, py + 1.3, pz, 0, 1, 0, 2.6, 0.55, S.streak, col, 0.6 * k); if (i % 2 === 0) R.bbs.bb(px, py + 0.25, pz, 1.1, 1.1, S.glow, col, 0.55 * k, true); }
   },
   drawShot(R, s, S, t) {
     const k = s.owner;
@@ -20995,8 +21451,7 @@ Object.assign(CartRaceScene.prototype, {
     // ---- countdown ----
     if (this.state === 'count') { const n = 3 - Math.floor(this.stateT); if (n >= 1) { const u = this.stateT % 1; BurnsUI.text(ctx, String(n), W / 2, H * 0.38, 70 * (1.3 - u * 0.3), ['#ff5a5a', '#ffd84a', '#7aff8a'][3 - n], { glow: '#000' }); } BurnsUI.text(ctx, 'TAP HOP JUST BEFORE GO FOR A ROCKET START', W / 2, H * 0.38 + 54, 11, 'rgba(255,255,255,0.8)', { ui: true }); }
     // ---- banners ----
-    let by = portrait ? H * 0.2 : H * 0.24;
-    if (!this.paused) for (const m of this.msgs) { const u = 1 - m.t / m.max, a = Math.min(1, m.t * 3, u * 8), s = 1 + Math.max(0, 0.25 - u) * 1.2, fs = (m.small ? Math.min(16, W * 0.04) : Math.min(26, W * 0.058)) * s; ctx.save(); ctx.globalAlpha = a; BurnsUI.text(ctx, m.text, W / 2, by, fs, m.col, { glow: m.small ? null : m.col }); if (m.sub) BurnsUI.text(ctx, m.sub, W / 2, by + fs * 0.6 + 8, 11, '#ffffff', { ui: true }); ctx.restore(); by += fs + (m.sub ? 20 : 8); }
+    if (!this.paused && this.msgs.length) this.drawBanners(ctx, W, H, top, portrait);
     if (!this.paused) cartItemsHud(this, ctx, W, H);   // incoming missiles, foam / love / frosting on screen, ride meters
     // ---- controls ----
     if (racing && !this.paused) this.drawControls(ctx);
@@ -21006,6 +21461,29 @@ Object.assign(CartRaceScene.prototype, {
     if (this.state === 'results' || this.state === 'trophy') this.drawResults(ctx);
     if (this.paused) this.drawPause(ctx);
     if (window.__cartDebug) BurnsUI.text(ctx, `${this.stats.fps.toFixed(0)}fps · ${this.stats.draws} draws · ${(this.stats.tris / 1000).toFixed(0)}k tris · ${this.stats.cpu.toFixed(1)}ms · q${this.q.toFixed(2)} · ${BurnsGL.tier}`, W / 2, H - 12, 11, '#9affc8', { ui: true });
+  },
+  // pop-up messages: ONE headline at a time (the newest, unless an older one matters more: a win, a moving zone, a ring
+  // burning) high in the view, and at most two compact toasts on dark pills under it. They used to stack down the
+  // middle of the screen, over the cars.
+  drawBanners(ctx, W, H, top, portrait) {
+    const ms = this.msgs; let head = null;
+    for (let i = ms.length - 1; i >= 0; i--) { const m = ms[i]; if (m.small) continue; if (!head) head = m; else if (m.max >= head.max + 0.5 && m.t > 0.35) head = m; }
+    let by = this.isBattle && !this.isRace ? top + 92 : portrait ? H * 0.2 : Math.max(top + 70, H * 0.21);
+    if (head) {
+      const u = 1 - head.t / head.max, a = Math.min(1, head.t * 3, u * 8), sc = 1 + Math.max(0, 0.2 - u) * 1.2, fs = Math.min(26, W * 0.056) * sc;
+      ctx.save(); ctx.globalAlpha = a; BurnsUI.text(ctx, head.text, W / 2, by, fs, head.col, { glow: head.col });
+      if (head.sub) BurnsUI.text(ctx, head.sub, W / 2, by + fs * 0.5 + 11, 12, '#ffffff', { ui: true });
+      ctx.restore(); by += fs * 0.5 + (head.sub ? 34 : 18);
+    }
+    let n = 0;
+    for (let i = ms.length - 1; i >= 0 && n < 2; i--) {
+      const m = ms[i]; if (m === head) continue;
+      const u = 1 - m.t / m.max, a = Math.min(1, m.t * 4, u * 10) * (n ? 0.75 : 1), fs = 12, txt = m.sub && !m.small ? m.text + '  ·  ' + m.sub : m.text;
+      ctx.save(); ctx.font = `600 ${fs}px ${FONT_UI}`; const tw = Math.min(W - 40, ctx.measureText(txt).width + 26);
+      ctx.globalAlpha = a; BurnsUI.pill(ctx, W / 2 - tw / 2, by - 11, tw, 22, 'rgba(12,6,26,0.62)', rgba(m.col, 0.55));
+      BurnsUI.text(ctx, txt, W / 2, by + 0.5, fs, m.col, { ui: true, stroke: false }); ctx.restore();
+      by += 27; n++;
+    }
   },
   drawControls(ctx) {
     const L = Input.layout, k = this.player; if (!L) return;
@@ -21141,17 +21619,19 @@ Object.assign(CartRaceScene.prototype, {
     this.pauseBtns = [
       { x, y: y0, w: bw, h: 44, label: 'RESUME', primary: true, fn: () => this.closePause() },
       { x, y: y0 + 52, w: bw, h: 40, label: 'RESTART', fn: () => this.restart() },
-      { x, y: y0 + 100, w: bw, h: 36, size: 12, label: 'AUTO-GAS: ' + (this.autoGas ? 'ON' : 'OFF'), fn: () => { this.autoGas = !this.autoGas; sv.autoGas = this.autoGas; Save.save(); this.buildPause(); } },
+      { x, y: y0 + 100, w: bw / 2 - 4, h: 36, size: 11, label: 'AUTO-GAS ' + (this.autoGas ? 'ON' : 'OFF'), fn: () => { this.autoGas = !this.autoGas; sv.autoGas = this.autoGas; Save.save(); this.buildPause(); } },
+      { x: x + bw / 2 + 4, y: y0 + 100, w: bw / 2 - 4, h: 36, size: 11, label: 'POWER-UPS', fn: () => { Sound.play('select'); this.guide = new CartGuide(() => { this.guide = null; this.buildPause(); }, true); } },   // the guide (43_cart_f_menu.js)
       { x, y: y0 + 144, w: bw / 2 - 4, h: 36, size: 11, label: cartVolLabel('MUSIC', Save.data.settings.music), fn: () => { cartCycleVol('music'); this.buildPause(); } },
       { x: x + bw / 2 + 4, y: y0 + 144, w: bw / 2 - 4, h: 36, size: 11, label: cartVolLabel('SFX', Save.data.settings.sfx), fn: () => { cartCycleVol('sfx'); Sound.play('select'); this.buildPause(); } },
       { x, y: y0 + 188, w: bw, h: 40, label: 'QUIT TO MENU', fn: () => this.leave() }
     ];
     this.pauseBtns.focus = 0;
   },
-  updatePause() { const h = BurnsUIKit.hitButtons(this.pauseBtns); if (h) h.fn(); else if (Input.pausePressed || Input.uiKey === 'pause') this.closePause(); },
+  updatePause() { if (this.guide) { this.guide.update(); return; } const h = BurnsUIKit.hitButtons(this.pauseBtns); if (h) h.fn(); else if (Input.pausePressed || Input.uiKey === 'pause') this.closePause(); },
   drawPause(ctx) {
     const W = Game.cssW, H = Game.cssH;
     ctx.fillStyle = 'rgba(8,4,18,0.62)'; ctx.fillRect(0, 0, W, H);
+    if (this.guide) { this.guide.draw(ctx); return; }
     BurnsUIKit.title(ctx, 'PAUSED', W / 2, H / 2 - 130, 30);
     BurnsUIKit.drawButtons(ctx, this.pauseBtns || []);
   }
@@ -21283,6 +21763,159 @@ if (typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.ser
   // ask for the update now rather than whenever the browser gets round to it
   navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
 }
+// shared text options and rows for the menus' draw loops (made once, not every frame)
+const CART_TXT_L = { align: 'left', stroke: false }, CART_TXT_L0 = { align: 'left' }, CART_TXT_UL = { align: 'left', ui: true, stroke: false }, CART_TXT_UR = { align: 'right', ui: true };
+const CART_TXT_C = { stroke: false }, CART_TXT_U = { ui: true }, CART_TXT_UC = { ui: true, stroke: false }, CART_TXT_URS = { align: 'right', ui: true, stroke: false };
+const CART_STAT_ROWS = [['SPEED', 'speed', '#ff4fd8'], ['ACCEL', 'accel', '#ffd84a'], ['HANDLING', 'handling', '#38f2ff'], ['WEIGHT', 'weight', '#ff8a3a']];
+// car card: the special's box height, and the card height the compact layout needs (2 tagline rows, weapon box, special
+// box, stats as a 2-column grid); 34 px more lets the stats stand in four rows
+const CART_SPECIAL_BOX = 42, CART_CARD_MIN = 260;
+// text is measured once and cached; measure again once the web fonts have arrived
+function cartFontsReady() { return typeof document === 'undefined' || !document.fonts || document.fonts.status === 'loaded'; }
+// the largest font size (max down to min, in half pixels) at which a line fits a width; leaves ctx.font set to it
+function cartFitFont(ctx, text, weight, family, max, min, width) {
+  let s = max;
+  for (; s > min; s -= 0.5) { ctx.font = weight + s + 'px ' + family; if (ctx.measureText(text).width <= width) return s; }
+  ctx.font = weight + min + 'px ' + family; return min;
+}
+/* ---------------- the POWER-UPS guide's lines: what it does, then a tip (0) or how to dodge it (1) ----------------
+   Short on purpose (one line each on a phone). The first line also describes a car's special on the car card. */
+const CART_GUIDE_TEXT = {
+  glow: ['A bundle of glow sticks: a big burst of speed.', 0, 'Save it for a straight, or to pass a rival.'],
+  water: ['Shakes off any effect, with a small boost.', 0, 'Drink it when foam, frosting or a dazzle hits.'],
+  tumble: ['Drop it behind you. It rolls with the wind.', 1, 'Steer round it, or HOP right over it.'],
+  devil: ['A whirlwind that hunts down the cars ahead.', 1, 'A DISCO SHIELD stops it. Keep one ready.'],
+  potty: ['Parachutes a porta-potty onto the road ahead.', 1, 'Watch it fall and steer around it.'],
+  foam: ['A foam blast buries every car close to you.', 1, 'Keep your distance. HOP over the foam pool.'],
+  shield: ['A mirror-ball bubble: blocks the next hit.', 0, 'It lasts 10 seconds. Pop it when danger is near.'],
+  whistle: ['"SLOW DOWN!" Every car ahead of you brakes.', 1, 'Only a DISCO SHIELD keeps you rolling.'],
+  skymail: ['Three missiles fall on the cars ahead.', 1, 'When the red target locks on, swerve hard!'],
+  bombs: ['A line of bombs rains down on the road ahead.', 1, 'Steer away from the growing shadows, or HOP.'],
+  ducks: ['Rubber ducks rain down and litter the road.', 1, 'Weave between them: every bump slows you.'],
+  // the cars' specials
+  throb: ['Lovestruck rivals slow down and drift to you.', 1, 'Stay out of range of the beating heart.'],
+  decoys: ['Decoy fish circle you, dazzle and eat shots.', 1, 'Don\'t touch the fish. Wait until they pop.'],
+  toss: ['Two arms fling the closest rivals behind you.', 1, 'Hang back, or keep a DISCO SHIELD up.'],
+  glide: ['Fly over the pack for 5 s, scorching below.', 1, 'Get out from under the dragon.'],
+  surf: ['A foam surge that bowls rivals aside.', 1, 'Move aside, and HOP the foamy trail.'],
+  warp: ['Teleport 45 m ahead, leave a laser trap.', 1, 'Steer around the green trap, or HOP it.'],
+  frosting: ['A river of sticky frosting floods the road.', 1, 'HOP over it! Drive in and you get stuck.'],
+  wave: ['A huge wave rolls up the course, wiping out cars.', 1, 'Only a DISCO SHIELD or a big jump saves you.'],
+  shell: ['Giant untouchable hops, slime on every landing.', 1, 'Steer clear of the slime splashes.'],
+  hover: ['Float for 5 s and zap every car below.', 1, 'Don\'t drive underneath the jellyfish.'],
+  dive: ['Swim under the sand, then burst out and launch.', 1, 'Keep away from the fin.'],
+  breach: ['Fly over the pack, then belly-flop with a splash.', 1, 'Watch where the whale lands and get clear.'],
+  // the arenas' powers
+  kickflip: ['Pops a huge flipping air, untouchable for a second.', 0, 'Land it clean for points and a boost.'],
+  wax: ['10 s of double grind points, and grinds build speed.', 0, 'Find a rail and grind for as long as you can.'],
+  board: ['Hurls a homing skateboard at the car ahead.', 1, 'Swerve as it comes. A DISCO SHIELD blocks it.'],
+  moonlaser: ['An instant beam: the first car in line spins.', 1, 'Don\'t stay lined up in front of a rival.'],
+  jetpack: ['2.5 s of thrust: up into the sky, full speed.', 0, 'Fire it to fly over trouble.'],
+  gravwell: ['A well behind you drags cars in, then pops.', 1, 'Steer hard away from the swirl.'],
+  harpoon: ['A line fires ahead and reels a rival in to spin.', 1, 'Don\'t drive straight in front of a rival.'],
+  ink: ['A black cloud behind you: rivals inside are lost.', 1, 'Drive around the cloud, not through it.'],
+  torpedo: ['A fast homing torpedo flips the car it hits.', 1, 'A DISCO SHIELD blocks it.'],
+  tires: ['10 s of giant tyres: you flatten anything you touch.', 1, 'Get out of the way of monster tyres!'],
+  mudblast: ['Sprays mud ahead: rivals blinded and slowed.', 1, 'Stay out of the cone in front of a rival.'],
+  towrope: ['Hooks the car ahead and yanks it behind you.', 1, 'Don\'t lead a rival by a short gap.'],
+  ghost: ['3 s as a spirit: fast, and straight through walls.', 0, 'Aim it at a wall for a short cut.'],
+  lantern: ['A lantern bursts into a ring of fire ahead.', 1, 'Steer clear of the fire ring.'],
+  incense: ['A purple cloud: rivals inside steer backwards.', 1, 'Drive around the purple cloud.']
+};
+// a guide entry for any item, falling back to the item's own description for one without lines here
+function cartGuideText(id) {
+  if (CART_GUIDE_TEXT[id]) return CART_GUIDE_TEXT[id];
+  const I = CART_ITEMS[id], c = cartGuideText.fb || (cartGuideText.fb = {});
+  return c[id] || (c[id] = [I ? I.desc : id, -1, '']);
+}
+/* ---------------- POWER-UPS: a paged guide to every gift-box item ----------------
+   Three tabs (gift boxes · car specials · arena powers), rows of icon + name + what it does + a tip or how to dodge it,
+   paged with ◀ ▶ (or a swipe, or the arrow keys). Used by the home menu and the race's pause menu (solid: hide the race
+   HUD behind it); onBack closes it.
+   It lays itself out again when the screen size changes. Rows are measured and fitted once per layout. */
+class CartGuide {
+  constructor(onBack, solid) {
+    this.onBack = onBack; this.scrim = solid ? 'rgba(8,4,18,0.95)' : 'rgba(8,4,18,0.86)'; this.tab = 0; this.page = 0; this.W = 0; this.H = 0;
+    Input.lastSwipe = null;
+    const sv = cartSave(), luma = col => { const n = parseInt(col.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }, lit = col => luma(col) < 0.5 ? shade(col, 0.45) : col;
+    const row = (id, tag, tagCol) => { const I = CART_ITEMS[id], T = cartGuideText(id), col = lit(I.col); return { id, name: I.name, col, bg: rgba(col, 0.1), what: T[0], kind: T[1], tip: T[2], tag, tagCol: tagCol ? lit(tagCol) : '#ffffff' }; };
+    this.tabs = [
+      { label: 'GIFT BOXES', intro: 'Drive through a gift box to grab one. Tap ITEM to use it.', rows: CART_ITEM_IDS.filter(id => CART_ITEMS[id] && !CART_ITEMS[id].car && !CART_ITEMS[id].arena).map(id => row(id, '', '')) },
+      { label: 'CAR SPECIALS', intro: 'Every car has its own special. Only that car finds it in gift boxes.', rows: CART_CARS.filter(c => CART_SPECIALS[c.id]).map(c => row(CART_SPECIALS[c.id].id, c.name, luma(c.col) < 0.6 ? c.col2 : c.col)) },
+      { label: 'ARENA POWERS', intro: 'Found in their own arena. Win all its objectives to get them in races.', rows: [] }
+    ];
+    for (const A of CART_ARENAS) for (const p of A.powers || []) if (CART_ITEMS[p]) this.tabs[2].rows.push(row(p, A.name + (sv.mastered[A.id] ? ' ✓' : ''), A.col));
+    this.build();
+  }
+  build() {
+    const W = this.W = Game.cssW, H = this.H = Game.cssH, P = H > W; this.fonts = cartFontsReady();
+    const safeT = Math.max(12, insets.t + 6), safeB = Math.max(14, insets.b + 8), safeL = Math.max(14, insets.l + 8), safeR = Math.max(14, insets.r + 8);
+    this.titleY = P ? Math.max(76, insets.t + 70) : Math.max(28, insets.t + 26);
+    const tw = Math.min(150, (W - safeL - safeR - 16) / 3), ty = P ? this.titleY + 26 : this.titleY + 20, th = 34, tx = W / 2 - (tw * 3 + 16) / 2;
+    this.back = { x: safeL, y: safeT, w: 92, h: 38, label: '◀ BACK', fn: () => { Sound.play('back'); this.onBack(); } };
+    this.tabBtns = this.tabs.map((t, i) => ({ x: tx + i * (tw + 8), y: ty, w: tw, h: th, size: Math.min(12, tw * 0.09), label: t.label, primary: i === this.tab, fn: () => this.setTab(i) }));
+    this.introY = ty + th + 15;
+    // the list: two columns where there is room (landscape), else one; as many rows as fit above the page buttons
+    const top = this.introY + 15, by = H - safeB - 38, bottom = by - 6, lw = W - safeL - safeR, cols = !P && lw >= 600 ? 2 : 1, gap = 5, rh = 51;
+    this.cols = cols; this.rh = rh; this.colW = (lw - (cols - 1) * 12) / cols; this.lx = safeL; this.top = top;
+    this.perCol = Math.max(1, Math.floor((bottom - top + gap) / (rh + gap))); this.per = this.perCol * cols; this.gap = gap;
+    this.prev = { x: W / 2 - 112, y: by, w: 56, h: 38, label: '◀', fn: () => this.turnPage(-1) };
+    this.next = { x: W / 2 + 56, y: by, w: 56, h: 38, label: '▶', fn: () => this.turnPage(1) };
+    this.pageY = by + 19;
+    this.btnsAll = [this.back].concat(this.tabBtns, [this.prev, this.next]); this.btnsOne = [this.back].concat(this.tabBtns);
+    // fit every row's lines to the column once (text starts after the icon, the name shares its line with the tag)
+    const ctx = Game.ctx, tx0 = 54, tw0 = this.colW - tx0 - 10;
+    ctx.save();
+    for (const t of this.tabs) for (const r of t.rows) {
+      ctx.font = `600 9px ${FONT_UI}`; r.tagW = r.tag ? ctx.measureText(r.tag).width + 10 : 0;
+      r.nameFs = cartFitFont(ctx, r.name, '', FONT_DISPLAY, 14, 10, tw0 - r.tagW);
+      r.whatFs = cartFitFont(ctx, r.what, '600 ', FONT_UI, 11, 8.5, tw0);
+      r.pre = r.kind === 1 ? 'DODGE: ' : r.kind === 0 ? 'TIP: ' : ''; r.preCol = r.kind === 1 ? '#ffb04a' : '#7aff8a';
+      ctx.font = `600 10px ${FONT_UI}`; r.preW = r.pre ? ctx.measureText(r.pre).width + 3 : 0;
+      r.tipFs = r.tip ? cartFitFont(ctx, r.tip, '600 ', FONT_UI, 10, 8, tw0 - r.preW) : 10;
+    }
+    ctx.restore();
+    this.setPage(Math.min(this.page, this.pages() - 1));
+  }
+  pages() { return Math.max(1, Math.ceil(this.tabs[this.tab].rows.length / this.per)); }
+  setTab(i) { if (i === this.tab) return; Sound.play('select', { vol: 0.5 }); this.tab = i; this.tabBtns.forEach((b, k) => { b.primary = k === i; }); this.setPage(0); }
+  turnPage(d) { const n = this.pages(), p = Math.max(0, Math.min(n - 1, this.page + d)); if (p !== this.page) { Sound.play('select', { vol: 0.5 }); this.setPage(p); } }
+  setPage(p) { const n = this.pages(), f = this.btns && this.btns.focus; this.page = p; this.pageLbl = 'PAGE ' + (p + 1) + ' / ' + n; this.prev.disabled = p <= 0; this.next.disabled = p >= n - 1; this.btns = n > 1 ? this.btnsAll : this.btnsOne; this.btns.focus = f || 0; }
+  stale() { return Game.cssW !== this.W || Game.cssH !== this.H || cartFontsReady() !== this.fonts; }
+  update() {
+    if (this.stale()) this.build();
+    const k = Input.uiKey;
+    if (k === 'pause') { Input.uiKey = null; this.back.fn(); return; }
+    if (k === 'left' || k === 'right') { Input.uiKey = null; this.turnPage(k === 'left' ? -1 : 1); return; }
+    if (k === 'up' || k === 'down') { Input.uiKey = null; this.setTab((this.tab + (k === 'up' ? 2 : 1)) % 3); return; }
+    if (k === 'enter') Input.uiKey = null;
+    const hit = BurnsUIKit.hitButtons(this.btns);
+    if (hit) { hit.fn(); return; }
+    const s = Input.lastSwipe;
+    if (s) { Input.lastSwipe = null; if (Math.abs(s.dx) > 50 && Math.abs(s.dx) > Math.abs(s.dy)) this.turnPage(s.dx < 0 ? 1 : -1); }
+  }
+  draw(ctx) {
+    if (this.stale()) this.build();
+    const W = this.W, H = this.H, T = this.tabs[this.tab], n = T.rows.length, i0 = this.page * this.per;
+    ctx.fillStyle = this.scrim; ctx.fillRect(0, 0, W, H);
+    BurnsUI.text(ctx, 'POWER-UPS', W / 2, this.titleY, Math.min(24, W * 0.055), '#ffffff', CART_GUIDE_GLOW);
+    BurnsUIKit.drawButtons(ctx, this.btns);
+    BurnsUI.text(ctx, T.intro, W / 2, this.introY, Math.min(11, W * 0.028), '#ffd84a', CART_TXT_U);
+    for (let i = i0; i < n && i < i0 + this.per; i++) {
+      const r = T.rows[i], j = i - i0, col = Math.floor(j / this.perCol), x = this.lx + col * (this.colW + 12), y = this.top + (j % this.perCol) * (this.rh + this.gap), w = this.colW, h = this.rh;
+      ctx.fillStyle = r.bg; burnsRR(ctx, x, y, w, h, 10); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = 'rgba(10,6,24,0.6)'; ctx.beginPath(); ctx.arc(x + 27, y + h / 2, 19, 0, TAU); ctx.fill();
+      cartItemIcon(ctx, r.id, x + 27, y + h / 2, 30, 1);
+      BurnsUI.text(ctx, r.name, x + 54, y + 12, r.nameFs, r.col, CART_TXT_L0);
+      if (r.tag) BurnsUI.text(ctx, r.tag, x + w - 10, y + 12, 9, r.tagCol, CART_TXT_URS);
+      BurnsUI.text(ctx, r.what, x + 54, y + 27.5, r.whatFs, 'rgba(255,255,255,0.92)', CART_TXT_UL);
+      if (r.pre) BurnsUI.text(ctx, r.pre, x + 54, y + 41.5, 10, r.preCol, CART_TXT_UL);
+      if (r.tip) BurnsUI.text(ctx, r.tip, x + 54 + r.preW, y + 41.5, r.tipFs, 'rgba(255,255,255,0.78)', CART_TXT_UL);
+    }
+    if (this.pages() > 1) BurnsUI.text(ctx, this.pageLbl, W / 2, this.pageY, 11, '#ffffff', CART_TXT_U);
+  }
+}
+const CART_GUIDE_GLOW = { glow: '#ff4fd8' };
 class KartMenuScene {
   constructor(o) {
     o = o || {};
@@ -21360,10 +21993,15 @@ class KartMenuScene {
         { x: x + bw / 2 + 4, y: y0 + 198, w: bw / 2 - 4, h: 34, size: 10, label: cartVolLabel('SFX', Save.data.settings.sfx), fn: () => { cartCycleVol('sfx'); Sound.play('select'); this.build(); } }
       ];
       // in the standalone Art Cart app this menu IS home: nothing to go back to
-      if (typeof BRADY_APP === 'undefined' || BRADY_APP !== 'kart') this.btns.push(back);
+      const home = typeof BRADY_APP !== 'undefined' && BRADY_APP === 'kart';
+      if (!home) this.btns.push(back);
+      // the power-ups guide: top left (beside BACK when there is one), out of the way of the logo and the mode buttons
+      this.btns.push(this.guideBtn = { x: home ? safeL : safeL + back.w + 8, y: safeT, w: 146, h: 38, size: 12, label: 'POWER-UPS', fn: () => this.openGuide() });
       // the car: left of the buttons in landscape; between the logo and the buttons in portrait
       if (P) setRect(safeL, H * 0.16 + insets.t + Math.min(46, W * 0.11) * 0.85 + 34, W - safeR, y0 - 10);
-      else setRect(safeL, safeT + 30, x - 24, H - safeB);
+      else setRect(safeL, safeT + 46, x - 24, H - safeB);
+    } else if (this.state === 'guide') {
+      if (!this.guide) this.openGuide(true); else this.guide.build();
     } else if (this.state === 'driver') {
       const top = P ? H * 0.42 : safeT + 52, cols = P ? 5 : 7, gx = P ? safeL : W * 0.36, gw = P ? W - safeL - safeR : W - gx - safeR, rows = Math.ceil(CART_DRIVERS.length / cols);
       const cw = (gw - (cols - 1) * 6) / cols, ch = Math.min(cw * 1.2, (H - top - safeB - 60 - (rows - 1) * 6) / rows);
@@ -21374,7 +22012,8 @@ class KartMenuScene {
       else setRect(safeL, safeT + 44, gx - 12, H - Math.max(92, insets.b + 86));
     } else if (this.state === 'car') {
       // the info card: right column in landscape; the lower part of the screen in portrait (the car gets everything above it)
-      const pw = P ? W - 28 : Math.min(330, W * 0.4), px = P ? 14 : W - safeR - pw, py = P ? H * (H < 740 ? 0.52 : 0.55) : Math.max(60, insets.t + 54);
+      // (portrait: on short screens the card rises until the whole compact layout fits, see drawCar)
+      const pw = P ? W - 28 : Math.min(330, W * 0.4), px = P ? 14 : W - safeR - pw, py = P ? Math.min(H * (H < 740 ? 0.52 : 0.55), H - Math.max(70, insets.b + 66) - CART_CARD_MIN) : Math.max(50, insets.t + 46);
       this.cardRect = { x: px, y: py, w: pw, h: H - py - Math.max(70, insets.b + 66) };
       const aw = 52, ah = 52;
       let ax0, ax1, ay;
@@ -21419,6 +22058,13 @@ class KartMenuScene {
     this.btns.focus = 0;
   }
   pick(mode) { Sound.play('select'); this.mode = mode; this.state = 'driver'; this.build(); }
+  // the POWER-UPS guide (CartGuide below), over the turning showroom; its BACK returns home
+  openGuide(quiet) {
+    if (!quiet) Sound.play('select');
+    const sv = cartSave(); if (!sv.guideSeen) { sv.guideSeen = true; Save.save(); }
+    this.guide = new CartGuide(() => { this.guide = null; this.state = 'mode'; this.build(); });
+    this.state = 'guide'; this.build();
+  }
   back() {
     Sound.play('back');
     const prev = { driver: 'mode', car: 'driver', cup: 'car', track: 'car', arena: 'car', objective: 'arena' }[this.state];
@@ -21453,6 +22099,7 @@ class KartMenuScene {
   update(dt) {
     this.t += dt;
     this.turn(dt);
+    if (this.state === 'guide' && this.guide) { this.guide.update(); return; }
     const key = Input.uiKey, n = this.cards.length;
     if (key === 'pause') { Input.uiKey = null; this.back(); return; }
     if (this.state === 'car' && (key === 'left' || key === 'right')) { Input.uiKey = null; this.stepCar(key === 'left' ? -1 : 1); return; }
@@ -21668,7 +22315,24 @@ class KartMenuScene {
     else if (this.state === 'track') this.drawTracks(ctx);
     else if (this.state === 'arena') this.drawArenas(ctx);
     else if (this.state === 'objective') this.drawObjectives(ctx);
+    else if (this.state === 'guide' && this.guide) this.guide.draw(ctx);
     BurnsUIKit.drawButtons(ctx, this.btns);
+    if (this.state === 'mode' && this.guideBtn) this.drawGuideBtn(ctx, this.guideBtn);
+  }
+  // the POWER-UPS button's gift box, and a NEW tag until the guide has been opened once
+  drawGuideBtn(ctx, b) {
+    const x = b.x + 20, y = b.y + b.h / 2 + 1;
+    ctx.save(); ctx.lineJoin = 'round';
+    ctx.fillStyle = '#ff4fd8'; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.4;
+    ctx.fillRect(x - 8, y - 4, 16, 11); ctx.strokeRect(x - 8, y - 4, 16, 11);
+    ctx.fillStyle = '#ffd84a'; ctx.fillRect(x - 9.5, y - 8, 19, 5); ctx.fillRect(x - 1.5, y - 8, 3, 15);
+    ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x - 4, y - 10, 3.6, 2.4, -0.4, 0, TAU); ctx.ellipse(x + 4, y - 10, 3.6, 2.4, 0.4, 0, TAU); ctx.stroke();
+    ctx.restore();
+    if (!cartSave().guideSeen) {
+      const a = 0.75 + 0.25 * Math.sin(this.t * 5), nx = b.x + b.w - 8, ny = b.y + 2;
+      ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#ffd84a'; burnsRR(ctx, nx - 16, ny - 7, 32, 14, 7); ctx.fill(); ctx.restore();
+      BurnsUI.text(ctx, 'NEW', nx, ny + 0.5, 9, '#2a0a30', CART_TXT_C);
+    }
   }
   backdrop(ctx, W, H) {
     const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1e0836'); g.addColorStop(0.5, '#8a2a7a'); g.addColorStop(0.75, '#ff8a5a'); g.addColorStop(1, '#ffc27a');
@@ -21699,7 +22363,9 @@ class KartMenuScene {
     BurnsUI.text(ctx, 'Battle-race wild art cars across the playa', lx, ly + s * 0.85, 12, 'rgba(255,255,255,0.92)', { ui: true });
     BurnsUI.text(ctx, CART_CARS.length + ' art cars · ' + CART_DRIVERS.length + ' drivers · ' + CART_TRACK_ORDER.length + ' tracks · ' + CART_ARENAS.length + ' arenas', lx, ly + s * 0.85 + 18, 11, '#ffd84a', { ui: true });
     const sv = cartSave(), tro = CART_CUPS.map(c => sv.trophies[c.id] ? c.name + ' ' + ['', 'GOLD', 'SILVER', 'BRONZE'][sv.trophies[c.id]] : null).filter(Boolean).join('  ·  ');
-    if (tro) BurnsUI.text(ctx, tro, lx, this.btns[3].y + 54, 11, '#ffd84a', { ui: true });
+    // under the last row of settings buttons (it used to sit on top of MUSIC / SFX)
+    const lb = this.btns[6];
+    if (tro) BurnsUI.text(ctx, tro, lx, Math.min(lb.y + lb.h + 14, H - Math.max(10, insets.b + 2) - 6), 11, '#ffd84a', { ui: true });
   }
   drawCard(ctx, c, on, col) {
     ctx.save();
@@ -21725,36 +22391,70 @@ class KartMenuScene {
     BurnsUI.text(ctx, d.name, x, y, 20, d.col, { glow: d.col });
     BurnsUI.text(ctx, '"' + d.line + '"', x, y + 22, 12, '#ffffff', { ui: true });
   }
-  drawStatBars(ctx, car, x, y, w) {
-    [['SPEED', 'speed', '#ff4fd8'], ['ACCEL', 'accel', '#ffd84a'], ['HANDLING', 'handling', '#38f2ff'], ['WEIGHT', 'weight', '#ff8a3a']].forEach(([lab, key, col], i) => {
-      const yy = y + i * 17;
-      BurnsUI.text(ctx, lab, x, yy, 10, 'rgba(255,255,255,0.8)', { align: 'left', stroke: false });
-      for (let k = 0; k < 5; k++) { const bx = x + 72 + k * (w - 72) / 5; ctx.fillStyle = k < car.stats[key] ? col : 'rgba(255,255,255,0.14)'; burnsRR(ctx, bx, yy - 5, (w - 72) / 5 - 4, 10, 4); ctx.fill(); }
-    });
+  // the four stat bars: one per row, or two per row (grid) where the card is short (landscape phones)
+  drawStatBars(ctx, car, x, y, w, grid) {
+    const cw = grid ? (w - 16) / 2 : w, lw = grid ? 60 : 72, fs = grid ? 9 : 10, bw = (cw - lw) / 5;
+    for (let i = 0; i < 4; i++) {
+      const S = CART_STAT_ROWS[i], xx = grid ? x + (i & 1) * (cw + 16) : x, yy = grid ? y + (i >> 1) * 17 : y + i * 17;
+      BurnsUI.text(ctx, S[0], xx, yy, fs, 'rgba(255,255,255,0.85)', CART_TXT_L);
+      for (let k = 0; k < 5; k++) { ctx.fillStyle = k < car.stats[S[1]] ? S[2] : 'rgba(255,255,255,0.14)'; burnsRR(ctx, xx + lw + k * bw, yy - 5, bw - (grid ? 3 : 4), 10, 4); ctx.fill(); }
+    }
+  }
+  // the car card's text, wrapped and fitted once per car and card width (not every frame)
+  cardText(ctx, car, pw) {
+    const c = this._cardTx || (this._cardTx = {});
+    if (c.id === car.id && c.pw === pw && c.fonts === cartFontsReady()) return c;
+    const wp = CART_WEAPONS[car.weapon], sp = CART_SPECIALS[car.id], cn = parseInt(car.col.slice(1), 16), luma = (0.299 * (cn >> 16) + 0.587 * ((cn >> 8) & 255) + 0.114 * (cn & 255)) / 255;
+    c.id = car.id; c.pw = pw; c.fonts = cartFontsReady();
+    // dark paint jobs (the pyramid, the galleon, the whale) read better in their bright trim colour
+    c.nameCol = luma < 0.6 ? car.col2 : car.col;
+    ctx.save();
+    c.nameFs = cartFitFont(ctx, car.name, '', FONT_DISPLAY, Math.min(22, pw * 0.07), 15, pw - 32);
+    ctx.font = `600 11px ${FONT_UI}`; c.tag = BurnsUI.wrap(ctx, car.tag, pw - 32);
+    c.nod = 'Inspired by ' + car.nod; c.nodFs = cartFitFont(ctx, c.nod, '600 ', FONT_UI, 10, 8.5, pw - 32);
+    c.wTitle = 'WEAPON: ' + wp.name; c.wTitleFs = cartFitFont(ctx, c.wTitle, '', FONT_DISPLAY, 13, 10, pw - 82); c.wBox = rgba(wp.col, 0.18);
+    c.reload = 'RELOAD ' + wp.reload + 's';
+    ctx.font = `600 10px ${FONT_UI}`; c.wDesc = BurnsUI.wrap(ctx, wp.desc, pw - 86);
+    c.sp = sp || null;
+    if (sp) {
+      c.sTitle = 'SPECIAL: ' + sp.name; c.sTitleFs = cartFitFont(ctx, c.sTitle, '', FONT_DISPLAY, 13, 10, pw - 82); c.sBox = rgba(sp.col, 0.15); c.sEdge = rgba(sp.col, 0.5);
+      c.sLine = cartGuideText(sp.id)[0]; c.sLineFs = cartFitFont(ctx, c.sLine, '600 ', FONT_UI, 10, 8.5, pw - 82);
+    }
+    ctx.restore();
+    return c;
   }
   drawCar(ctx) {
     const W = Game.cssW, H = Game.cssH, P = this.portrait, car = CART_CARS[this.carSel], wp = CART_WEAPONS[car.weapon];
     this.title(ctx, 'CHOOSE YOUR ART CAR');
     const sr = this.stageRect, scx = sr.x + sr.w / 2;
     BurnsUI.text(ctx, (this.carSel + 1) + ' / ' + CART_CARS.length, P ? W / 2 : scx, P ? Math.max(100, insets.t + 96) : Math.max(52, insets.t + 50), 11, 'rgba(255,255,255,0.75)', { ui: true });
-    const cr = this.cardRect, pw = cr.w, px = cr.x, py = cr.y, ph = cr.h;
-    this.drawCard(ctx, { x: px, y: py, w: pw, h: ph }, true, car.col);
+    const cr = this.cardRect, pw = cr.w, px = cr.x, py = cr.y, ph = cr.h, c = this.cardText(ctx, car, pw);
+    this.drawCard(ctx, cr, true, car.col);
     let y = py + 26;
-    // dark paint jobs (the pyramid, the galleon, the whale) read better in their bright trim colour
-    const cn = parseInt(car.col.slice(1), 16), luma = (0.299 * (cn >> 16) + 0.587 * ((cn >> 8) & 255) + 0.114 * (cn & 255)) / 255;
-    BurnsUI.text(ctx, car.name, px + 16, y, Math.min(22, pw * 0.07), luma < 0.6 ? car.col2 : car.col, { align: 'left', glow: car.light });
-    y += 20; ctx.font = `600 11px ${FONT_UI}`;
-    for (const ln of BurnsUI.wrap(ctx, car.tag, pw - 32)) { BurnsUI.text(ctx, ln, px + 16, y, 11, 'rgba(255,255,255,0.9)', { align: 'left', ui: true, stroke: false }); y += 14; }
-    BurnsUI.text(ctx, 'Inspired by ' + car.nod, px + 16, y, 10, 'rgba(255,255,255,0.55)', { align: 'left', ui: true, stroke: false }); y += 20;
-    // the signature weapon
-    ctx.fillStyle = rgba(wp.col, 0.18); burnsRR(ctx, px + 10, y - 10, pw - 20, 74, 10); ctx.fill();
+    BurnsUI.text(ctx, car.name, px + 16, y, c.nameFs, c.nameCol, { align: 'left', glow: car.light });
+    y += 20;
+    for (let i = 0; i < c.tag.length; i++) { BurnsUI.text(ctx, c.tag[i], px + 16, y, 11, 'rgba(255,255,255,0.9)', CART_TXT_UL); y += 14; }
+    BurnsUI.text(ctx, c.nod, px + 16, y, c.nodFs, 'rgba(255,255,255,0.66)', CART_TXT_UL); y += 20;
+    // the signature weapon (RELOAD sits in the box's bottom corner: long weapon names own the top line)
+    ctx.fillStyle = c.wBox; burnsRR(ctx, px + 10, y - 10, pw - 20, 74, 10); ctx.fill();
     cartWeaponIcon(ctx, car.weapon, px + 38, y + 24, 28, 1, this.t);
-    BurnsUI.text(ctx, 'WEAPON: ' + wp.name, px + 66, y + 4, 13, wp.col, { align: 'left' });
-    BurnsUI.text(ctx, 'RELOAD ' + wp.reload + 's', px + pw - 18, y + 56, 10, '#ffffff', { align: 'right', ui: true });   // bottom corner: long weapon names own the top line
-    ctx.font = `600 10px ${FONT_UI}`; let yy = y + 20;
-    for (const ln of BurnsUI.wrap(ctx, wp.desc, pw - 86)) { BurnsUI.text(ctx, ln, px + 66, yy, 10, 'rgba(255,255,255,0.88)', { align: 'left', ui: true, stroke: false }); yy += 13; }
-    y += 84;
-    if (y + 60 < py + ph) this.drawStatBars(ctx, car, px + 16, y, P ? pw - 32 : Math.min(pw - 32, 260));
+    BurnsUI.text(ctx, c.wTitle, px + 66, y + 4, c.wTitleFs, wp.col, CART_TXT_L0);
+    BurnsUI.text(ctx, c.reload, px + pw - 18, y + 56, 10, '#ffffff', CART_TXT_UR);
+    for (let i = 0, yy = y + 20; i < c.wDesc.length; i++, yy += 13) BurnsUI.text(ctx, c.wDesc[i], px + 66, yy, 10, 'rgba(255,255,255,0.88)', CART_TXT_UL);
+    y += 82;
+    // the car's own gift-box special (only this car can roll it): icon, name, one line
+    if (c.sp) {
+      ctx.fillStyle = c.sBox; burnsRR(ctx, px + 10, y - 10, pw - 20, CART_SPECIAL_BOX, 10); ctx.fill();
+      ctx.strokeStyle = c.sEdge; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = 'rgba(10,6,24,0.55)'; ctx.beginPath(); ctx.arc(px + 38, y + 11, 17, 0, TAU); ctx.fill();
+      cartItemIcon(ctx, c.sp.id, px + 38, y + 11, 26, 1);
+      BurnsUI.text(ctx, c.sTitle, px + 66, y + 3, c.sTitleFs, c.sp.col, CART_TXT_L0);
+      BurnsUI.text(ctx, c.sLine, px + 66, y + 20, c.sLineFs, 'rgba(255,255,255,0.9)', CART_TXT_UL);
+      y += CART_SPECIAL_BOX + 10;
+    }
+    // stats: four rows when the card has room for them, else a two-column grid
+    const rows4 = ph >= CART_CARD_MIN + 34;
+    if (y + (rows4 ? 56 : 22) < py + ph) this.drawStatBars(ctx, car, px + 16, y, P ? pw - 32 : Math.min(pw - 32, rows4 ? 260 : pw - 32), !rows4);
     const d = CART_DRIVERS[this.drvSel];
     // portrait: between the arrows, at the plinth's front edge; landscape: under the stage
     BurnsUI.text(ctx, 'DRIVER: ' + d.name, P ? W / 2 : scx, P ? this.btns[0].y + this.btns[0].h / 2 : H - Math.max(24, insets.b + 20), 12, d.col, {});
@@ -23955,7 +24655,7 @@ const CartSkFeat = {
 };
 CartWorlds.arena_skate = function (A, night) {
   const E = this.base(2001, [-125, -125, 125, 125], '#9a948a', 0.05);
-  Object.assign(E, { id: 'skate', arena: A, sky: Object.assign(CART_SKIES.sunset(), { fogD: 0.0042, hor: '#ff9a6a', sky: '#9a94c8' }), tod: A.tod, music: 'kart2', night: night || A.tod === 'sunset', R: 115 });
+  Object.assign(E, { id: 'skate', arena: A, sky: Object.assign(CART_SKIES.sunset(), { fogD: 0.0042, hor: '#ff9a6a', sky: '#9a94c8', haze: 0.35, fogMax: 0.7 }), tod: A.tod, music: 'kart2', night: night || A.tod === 'sunset', R: 115 });
   const api = E.api, T = E.terrain, rng = mulberry32(9), nite = E.night;
   E.rails = []; E.skFeats = [];
   const feat = (id, x, z, yaw, back, fwd, worth) => { const dx = Math.sin(yaw), dz = Math.cos(yaw); E.skFeats.push({ id, x, z, dx, dz, ax: x - dx * back, az: z - dz * back, ex: x + dx * fwd, ez: z + dz * fwd, len: fwd, worth: worth || 1 }); };
