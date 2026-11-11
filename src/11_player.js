@@ -218,7 +218,7 @@ class Player {
   magnetPull(dt) {
     const g = this.g, A = g.area, r = 5, cx = Math.floor(this.cx / TS), cy = Math.floor(this.cy / TS);
     for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) if (tileAt(A, x, y) === T.PICK && (x - cx) ** 2 + (y - cy) ** 2 <= r * r) { g.setTile(x, y, T.EMPTY); g.spawn(new GearCoin(g, x * TS + TS / 2, y * TS + TS / 2)); }
-    for (const e of g.entities) if (e instanceof TourItem && !e.dropped && e.emerge <= 0 && Math.hypot(e.cx - this.cx, e.cy - this.cy) < r * TS) { const d = Math.hypot(this.cx - e.cx, this.cy - e.cy) || 1; e.x += (this.cx - e.cx) / d * 12 * TS * dt; e.y += (this.cy - e.cy) / d * 12 * TS * dt; if (e.hoverY != null) e.hoverY = e.y; }
+    for (const e of g.entities) if (e instanceof TourItem && !e.dropped && e.emerge <= 0 && Math.hypot(e.cx - this.cx, e.cy - this.cy) < r * TS) { const d = Math.hypot(this.cx - e.cx, this.cy - e.cy) || 1, b = e.speedX ? 0 : 4, nx = e.x + (this.cx - e.cx) / d * 12 * TS * dt, ny = e.y + (this.cy - e.cy) / d * 12 * TS * dt; if (ItemSpace.free(A, nx, e.y - b, e.w, e.h + 2 * b)) e.x = nx; if (ItemSpace.free(A, e.x, ny - b, e.w, e.h + 2 * b)) e.y = ny; if (e.hoverY != null) e.hoverY = e.y; }   // never through a wall
   }
   stun(t) { if (this.star > 0 || this.fx.molly > 0) return; this.stunT = Math.max(this.stunT, t); this.vx *= 0.3; this.g.parts.text(this.cx, this.y - 10, 'DAZED', '#ffffff'); }
   slowDown(t) { if (this.star > 0 || this.fx.molly > 0) return; this.slowT = Math.max(this.slowT, t); }

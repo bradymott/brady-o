@@ -34,9 +34,11 @@ class TourItem extends Ent {
   }
   update(dt) {
     this.t += dt;
-    if (this.emerge > 0) { this.emerge -= dt; this.y = this.baseY - (1 - Math.max(0, this.emerge) / 0.5) * TS; if (this.emerge <= 0) { this.vx = this.speedX ? (this.g.player && this.g.player.cx > this.cx ? -1 : 1) * this.speedX : 0; this.hoverY = this.y; } return; }
-    // the joint, the LSD tab and souvenirs hover where they came out
-    if (!this.speedX) { this.y = this.hoverY + Math.sin(this.t * 2.2) * 4; if (this.kind === 'lsd') this.x += Math.sin(this.t * 1.3) * 0.15; return; }
+    // the pop (ItemSpace picks the open side when the block has a solid over it)
+    if (this.emerge > 0) { if (ItemSpace.emergeStep(this, dt)) { this.vx = this.speedX ? ItemSpace.walkDir(this, this.g) * this.speedX : 0; this.hoverY = this.y; ItemSpace.keepFree(this, !this.speedX); } return; }
+    // the joint, the LSD tab and souvenirs hover where they came out (never inside a solid, bob included)
+    if (!this.speedX) { if (this.kind === 'lsd') this.x += Math.sin(this.t * 1.3) * 0.15; ItemSpace.keepFree(this, true); this.y = this.hoverY + Math.sin(this.t * 2.2) * 4; return; }
+    ItemSpace.keepFree(this, false);
     this.vy += PHYS.gDown * 0.8 * dt; if (this.vy > 14 * TS) this.vy = 14 * TS;
     const vx = this.vx;
     moveBody(this, this.g.area, dt, { semis: true, platforms: this.g.platforms });
@@ -50,7 +52,7 @@ class TourItem extends Ent {
   drawArt(ctx) {
     const x = this.cx, y = this.y + this.h;
     ctx.save();
-    if (this.emerge > 0) { ctx.beginPath(); ctx.rect(this.x - 10, this.baseY - TS * 2, this.w + 20, TS * 2); ctx.clip(); }
+    if (this.emerge > 0) ItemSpace.clip(ctx, this);
     TourItemArt.draw(ctx, this.kind, x, y, this.t, this.g);
     ctx.restore();
   }

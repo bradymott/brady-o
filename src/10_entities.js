@@ -310,6 +310,99 @@ class FallingPlatform extends Ent {
   }
 }
 
+/* ---------------- item space: a pickup is never left inside a solid ----------------
+   A bumped item block pops its item into the first open side: up (the classic pop), else down out of the bottom
+   toward Brady, else sideways (toward Brady first), else into the nearest open cell. After that, every frame, an item
+   that finds a solid over it (a crumble or a rug growing back, a toggle group, a shutter, the area edge, a hit dropping
+   it under a low ceiling, a magnet pull) is nudged to the nearest open cell. A floating item's whole bob (4 px up and
+   down) counts. tools/sbw_items_test.js checks every item block of the game. */
+const ItemSpace = {
+  // a cell an item may pop into or rest in: inside the area, not solid, not a one-way panel (it would look buried),
+  // not a hidden block, not lava
+  open(A, tx, ty) {
+    if (tx < 0 || ty < 0 || tx >= A.W || ty >= A.H) return false;
+    const t = A.tiles[ty * A.W + tx];
+    return !SOLID[t] && t !== T.SEMI && t !== T.HIDDEN && t !== T.LAVA;
+  },
+  // the box free of solids (1 px of slack: a walker slipping off a corner overlaps it by a fraction of a pixel)
+  free(A, x, y, w, h) { return regionFree(A, x + 1, y + 1, w - 2, h - 2) && y > -2 && x >= 0 && x + w <= A.W * TS; },
+  // where an item sits in cell (tx, ty): centred, 4 px under the cell top, so a floating item's bob stays in the cell
+  spot(tx, ty, w) { return { x: tx * TS + (TS - w) / 2, y: ty * TS + 4 }; },
+  // the nearest open cell to a box (rings of cells outward, the closest centre in the first ring that has one)
+  nearest(A, x, y, w, h, R) {
+    R = R || 8;
+    const cx = x + w / 2, cy = y + h / 2, tx0 = Math.floor(cx / TS), ty0 = Math.floor(cy / TS);
+    for (let r = 0; r <= R; r++) {
+      let best = null, bd = 1e18;
+      for (let ty = ty0 - r; ty <= ty0 + r; ty++) for (let tx = tx0 - r; tx <= tx0 + r; tx++) {
+        if (Math.max(Math.abs(tx - tx0), Math.abs(ty - ty0)) !== r || !this.open(A, tx, ty)) continue;
+        const d = ((tx + 0.5) * TS - cx) ** 2 + ((ty + 0.5) * TS - cy) ** 2;
+        if (d < bd) { bd = d; best = this.spot(tx, ty, w); }
+      }
+      if (best) return best;
+    }
+    return null;
+  },
+  // a block at (tx, ty) was bumped: choose the side the item comes out of (e was made at the classic spot)
+  fromBlock(e, g, tx, ty) {
+    const A = g.area, p = g.player, toward = p && p.cx < tx * TS + TS / 2 ? -1 : 1;
+    // open above: the classic pop, untouched. Two exceptions, when another side is open:
+    //  - a walker on a lone block over lava or a pit (a ride level) would only walk off the edge and drop past Brady:
+    //    it comes out of the bottom, onto Brady
+    //  - a floating item under a low ceiling (a one-tile slot over the block, where big Brady never fits beside it)
+    //    floats out of the bottom, or out of a side with headroom
+    const up = this.open(A, tx, ty - 1);
+    const lost = up && e.speedX && this.lostOff(A, tx, ty), slot = up && !e.speedX && ty >= 2 && !!SOLID[tileAt(A, tx, ty - 2)];
+    if (up && !lost && !slot) return;
+    const bx = tx * TS + (TS - e.w) / 2;
+    let path = null;
+    if (this.open(A, tx, ty + 1)) path = { x0: bx, y0: (ty + 1) * TS - e.h, x1: bx, y1: (ty + 1) * TS + 4, clip: { x: bx - 10, y: (ty + 1) * TS, w: e.w + 20, h: TS * 2 } };
+    else if (!lost) for (const d of [toward, -toward]) {
+      if (!this.open(A, tx + d, ty) || (slot && !this.open(A, tx + d, ty - 1))) continue;
+      path = { x0: bx, y0: ty * TS + 4, x1: bx + d * TS, y1: ty * TS + 4, dir: d, clip: d > 0 ? { x: (tx + 1) * TS, y: ty * TS - 10, w: TS * 2, h: TS + 20 } : { x: tx * TS - TS * 2, y: ty * TS - 10, w: TS * 2, h: TS + 20 } };
+      break;
+    }
+    if (!path && up) return;
+    if (!path) { const s = this.nearest(A, tx * TS, ty * TS, TS, TS); if (s) path = { x0: bx, y0: ty * TS + 4, x1: s.x, y1: s.y, clip: null }; }
+    if (!path) return;
+    e.path = path; e.x = path.x0; e.y = path.y0; e.baseY = path.y0;
+  },
+  // a walker on top of block (tx, ty) has nothing to walk on beside it, and both edges drop into lava or out of the area
+  lostOff(A, tx, ty) {
+    for (const d of [-1, 1]) {
+      const t = tileAt(A, tx + d, ty);
+      if (SOLID[t] || t === T.SEMI) return false;
+      for (let y = ty; ; y++) { if (y >= A.H) break; const u = tileAt(A, tx + d, y); if (u === T.LAVA) break; if (SOLID[u] || u === T.SEMI) return false; }
+    }
+    return true;
+  },
+  // one step of the pop; true on the step it ends
+  emergeStep(e, dt) {
+    e.emerge -= dt;
+    const k = 1 - Math.max(0, e.emerge) / 0.5;
+    if (e.path) { e.x = lerp(e.path.x0, e.path.x1, k); e.y = lerp(e.path.y0, e.path.y1, k); }
+    else e.y = e.baseY - k * TS;
+    return e.emerge <= 0;
+  },
+  // the clip while it pops: only the part outside the block shows
+  clip(ctx, e) {
+    const c = e.path ? e.path.clip : { x: e.x - 10, y: e.baseY - TS * 2, w: e.w + 20, h: TS * 2 };
+    if (!c) return;
+    ctx.beginPath(); ctx.rect(c.x, c.y, c.w, c.h); ctx.clip();
+  },
+  // after the pop, a walker heads away from Brady (or on along a sideways pop)
+  walkDir(e, g) { return e.path && e.path.dir ? e.path.dir : (g.player && g.player.cx > e.cx ? -1 : 1); },
+  // nudge an item that overlaps a solid to the nearest open cell; a floating item keeps its whole bob clear
+  keepFree(e, floating) {
+    const A = e.g.area; if (!A) return false;
+    const hy = floating && e.hoverY != null ? e.hoverY : e.y;
+    if (floating ? this.free(A, e.x, hy - 4, e.w, e.h + 8) : this.free(A, e.x, e.y, e.w, e.h)) return false;
+    const s = this.nearest(A, e.x, hy, e.w, e.h); if (!s) return false;
+    e.x = s.x; e.y = s.y; if (floating) e.hoverY = s.y; else if (e.vy < 0) e.vy = 0;
+    return true;
+  }
+};
+
 /* ---------------- items ---------------- */
 class Item extends Ent {
   constructor(g, x, y, kind) {
@@ -322,8 +415,9 @@ class Item extends Ent {
   }
   update(dt) {
     this.t += dt;
-    if (this.emerge > 0) { this.emerge -= dt; this.y = this.baseY - (1 - Math.max(0, this.emerge) / 0.5) * TS; if (this.emerge <= 0) { this.vx = this.speedX ? (this.g.player && this.g.player.cx > this.cx ? -1 : 1) * this.speedX : 0; } return; }
-    if (this.kind === 'vinyl' || this.kind === 'joint') { if (this.kind === 'joint') this.y = this.baseY - TS + Math.sin(this.t * 2) * 4; return; }
+    if (this.emerge > 0) { if (ItemSpace.emergeStep(this, dt)) { this.vx = this.speedX ? ItemSpace.walkDir(this, this.g) * this.speedX : 0; this.hoverY = this.y; ItemSpace.keepFree(this, this.kind === 'vinyl' || this.kind === 'joint'); } return; }
+    if (this.kind === 'vinyl' || this.kind === 'joint') { ItemSpace.keepFree(this, true); if (this.kind === 'joint') this.y = this.hoverY + Math.sin(this.t * 2) * 4; return; }
+    ItemSpace.keepFree(this, false);
     this.vy += PHYS.gDown * 0.8 * dt; if (this.vy > 14 * TS) this.vy = 14 * TS;
     const vx = this.vx;
     moveBody(this, this.g.area, dt, { semis: true, platforms: this.g.platforms });
@@ -343,7 +437,7 @@ class Item extends Ent {
   drawArt(ctx) {
     const x = this.cx, y = this.y + this.h;
     ctx.save();
-    if (this.emerge > 0) { ctx.beginPath(); ctx.rect(this.x - 10, this.baseY - TS * 2, this.w + 20, TS * 2); ctx.clip(); }
+    if (this.emerge > 0) ItemSpace.clip(ctx, this);
     if (this.kind === 'coffee') Sprites.coffee(ctx, x, y, this.t);
     else if (this.kind === 'vinyl') Sprites.bottle(ctx, x, y + Math.sin(this.t * 3) * 1.5, this.t);
     else if (this.kind === 'bufo') Sprites.bufo(ctx, x, y, this.t, !this.onGround);

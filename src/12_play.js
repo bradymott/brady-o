@@ -337,11 +337,11 @@ class Play {
       bump();
       if (it === 'pick') { this.spawn(new PickPop(this, tx * TS + TS / 2, ty * TS - 8)); this.addPick(); return; }
       let kind = it;
-      if (this.level.tour) { this.spawn(new TourItem(this, tx * TS + TS / 2, ty * TS, TourPowers.blockItem(it, this))); Sound.play('appear'); if (t === T.HIDDEN) { this.egg('hidden-block'); Sound.play('secret', { vol: 0.5 }); } return; }
+      if (this.level.tour) { const ti = new TourItem(this, tx * TS + TS / 2, ty * TS, TourPowers.blockItem(it, this)); ItemSpace.fromBlock(ti, this, tx, ty); this.spawn(ti); Sound.play('appear'); if (t === T.HIDDEN) { this.egg('hidden-block'); Sound.play('secret', { vol: 0.5 }); } return; }
       if (it === 'power') kind = (this.player && this.player.power > 0) ? 'vinyl' : 'coffee';
       if (it === 'oneup') kind = 'cassette';
       if (typeof it === 'string' && it.startsWith('bag:')) kind = it.slice(4);
-      this.spawn(new Item(this, tx * TS + TS / 2, ty * TS, kind));
+      const item = new Item(this, tx * TS + TS / 2, ty * TS, kind); ItemSpace.fromBlock(item, this, tx, ty); this.spawn(item);
       Sound.play('appear');
       if (t === T.HIDDEN) { this.egg('hidden-block'); Sound.play('secret', { vol: 0.5 }); }
       return;
