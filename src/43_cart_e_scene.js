@@ -212,6 +212,7 @@ Object.assign(CartRaceScene.prototype, {
     for (const h of heroes) if (h._in) R.skin(h._d2 > 40 * 40 && h.model.far ? h.model.far : h._d2 > 10 * 10 && h.model.lod ? h.model.lod : h.model.geo, h.ch.bones, h.ch.nb, null, h.ch.face, 0.4);
     for (const G of crowds) R.skin(G._d > 50 && G.far ? G.far.geo : G.geo, G.bones, G.objs.length, null, 3, 0.3);
     for (const G of this.props.groups) R.skin(G.geo, G.bones, G.objs.length, null, 0, 0.5);
+    cartItemsRender(this, R);   // rubber ducks, bombs, sky missiles (43_cart_da_items.js)
     if (this.man) R.skin(this.man.model.geo, this.man.ch.bones, this.man.ch.nb, null, 3, 0.3);
     this.pushSprites(R, env);
     R.sprites(env, BURNS_SPRITES.T);
@@ -227,11 +228,13 @@ Object.assign(CartRaceScene.prototype, {
       const big = k.M.lights.find(L => L.big);
       if (big && night > 0.2) { const p = cartLocalToWorld(k, big.x, big.y, big.z, CART_TMP.p || (CART_TMP.p = [0, 0, 0])); add(p[0], p[1], p[2], 7 + big.s, big.cc, 0.9 * night, 1); }
       if (k.boostT > 0) add(k.x, k.y + 1, k.z, 6, [1, 0.6, 0.25], 0.8, 1.2);
+      cartOctoLight(k, add, this.time, night);   // Calamari Inferno's live fire lights the car
       if (k.wpn.fireT > 0.3) { const D = k.wpn.def; add(k.x, k.y + 2.5, k.z, 12, burnsRGBf(D.col), 1.4, 2); }
     }
     for (const s of this.shots) { if (s.type === 'ball') add(s.x, s.y, s.z, 6, s.kind === 'fire' ? [1, 0.5, 0.15] : s.kind === 'bubble' ? [0.6, 0.9, 1] : [1, 0.8, 0.5], 0.9, 1.5); if (s.type === 'geyser' && s.fired) add(s.x, 3, s.z, 10, [0.4, 0.7, 1], 1.2, 2); }
     for (const f of this.W.fires) add(f.x, (f.y || 0) + 1.2, f.z, 7, [1, 0.55, 0.2], 1.1, 1);
     if (this.rules.lights) this.rules.lights(this, add);
+    cartItemsLights(this, add);
     if (this.man && this.man.burn > 0.05) add(this.man.ch.x, 10, this.man.ch.z, 45, [1, 0.5, 0.18], 1.5 * this.man.burn, 3);
     cand.sort((a, b) => b[0] - a[0]);
     for (let i = 0; i < cand.length && out.length < max; i++) out.push(cand[i][1]);
@@ -269,6 +272,7 @@ Object.assign(CartRaceScene.prototype, {
       }
       if (k.shieldT > 0) R.bbs.bb(k.x, k.y + 1.8, k.z, 6.5, 6.5, S.bubble, [1, 0.75, 1], 0.55 + Math.sin(t * 8) * 0.1, false);
       if (k.bubbleT > 0) R.bbs.bb(k.x, k.y + 1.8, k.z, 7.5, 7.5, S.bubble, [0.75, 0.95, 1], 0.7, false);
+      cartOctoFlames(R, k.M, k.bones, k.st, k._d2, k.vx || 0, k.vz || 0, night);   // Calamari Inferno's live fire (rigV 3)
       if (k.flag) R.bbs.bb(k.x, k.y + k.M.h + 2.6, k.z, 3, 3, S.glow, [1, 0.3, 0.85], 0.7, true);
       if (this.objective === 'vibe' && this.state === 'race') for (let v = 0; v < k.vibes; v++) R.bbs.bb(k.x + (v - (k.vibes - 1) / 2) * 0.9, k.y + k.M.h + 0.9, k.z, 0.8, 0.8, S.heart, [1, 0.3, 0.6], 0.95, true);
       if (k.dazzleT > 0) R.bbs.bb(k.x, k.y + k.M.h + 0.6, k.z, 1.3, 1.3, S.star, [1, 1, 1], 0.5 + Math.sin(t * 14) * 0.25, true, t * 3);
@@ -294,9 +298,9 @@ Object.assign(CartRaceScene.prototype, {
     // weapon effects (arena powers draw their own shots)
     for (const s of this.shots) { const F = s.fx && CART_ITEM_FX[s.fx]; if (F && F.draw) F.draw(this, R, s, S, t); else this.drawShot(R, s, S, t); }
     if (this.rules.draw) this.rules.draw(this, R, S, t);
+    cartItemsSprites(this, R, S, t);   // item effects and how hit cars look (foamed, lovestruck, frosted…)
     for (const h of this.hazards) {
       if (h.type === 'slime') { const a = clamp((h.life - h.t) / 1.5, 0, 1); R.flat.flat(h.x, h.y + 0.05, h.z, h.r * 2, h.r * 2.4, h.yaw, S.glow, [0.45, 1, 0.3], 0.55 * a, true); }
-      if (h.type === 'foam') R.flat.flat(h.x, H.height(h.x, h.z) + 0.1, h.z, h.r * 2, h.r * 2, t, S.puff, [1, 1, 1], 0.5, false);
     }
     // the Man burns
     if (this.man) { const M = this.man; if (M.burn > 0.05 && Math.random() < 0.9) for (let i = 0; i < 3; i++) this.fx.fire(M.ch.x + (Math.random() - 0.5) * 4, 5.5 + Math.random() * 9 * M.burn, M.ch.z + (Math.random() - 0.5) * 3, 2.4 * M.burn); R.bbs.bb(M.ch.x, 12, M.ch.z, 30, 30, S.glow, [1, 0.5, 0.2], 0.25 * M.burn, true); }
@@ -402,6 +406,7 @@ Object.assign(CartRaceScene.prototype, {
     // ---- banners ----
     let by = portrait ? H * 0.2 : H * 0.24;
     if (!this.paused) for (const m of this.msgs) { const u = 1 - m.t / m.max, a = Math.min(1, m.t * 3, u * 8), s = 1 + Math.max(0, 0.25 - u) * 1.2, fs = (m.small ? Math.min(16, W * 0.04) : Math.min(26, W * 0.058)) * s; ctx.save(); ctx.globalAlpha = a; BurnsUI.text(ctx, m.text, W / 2, by, fs, m.col, { glow: m.small ? null : m.col }); if (m.sub) BurnsUI.text(ctx, m.sub, W / 2, by + fs * 0.6 + 8, 11, '#ffffff', { ui: true }); ctx.restore(); by += fs + (m.sub ? 20 : 8); }
+    if (!this.paused) cartItemsHud(this, ctx, W, H);   // incoming missiles, foam / love / frosting on screen, ride meters
     // ---- controls ----
     if (racing && !this.paused) this.drawControls(ctx);
     // pause button

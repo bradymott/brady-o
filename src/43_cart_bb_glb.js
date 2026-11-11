@@ -53,6 +53,10 @@ const CART_GLB_PARTS = {
   // arms (authored along +Z, yawed into place here) curl and uncurl, wave, and rear up with their torches when firing
   'octo:2': Object.assign({ head: (o, s) => { o.y = Math.sin(s.t * 2.2) * 0.05; o.pitch = -0.05 + Math.sin(s.t * 1.1) * 0.05; o.yaw = s.steer * 0.15 + Math.sin(s.t * 0.6) * 0.1; o.roll = Math.sin(s.t * 1.4) * 0.03; } },
     ...[0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ ['arm' + i]: (o, s) => cartOctoArm(o, s, i) }))),
+  // Calamari Inferno flame pass (rigV 3): the same motions; the mesh flames are gone (a glowing burner is left at each
+  // tip) and the game draws live fire there (cartOctoFlames), so the arms no longer need the flame-flicker squash
+  'octo:3': Object.assign({ head: (o, s) => { o.y = Math.sin(s.t * 2.2) * 0.05; o.pitch = -0.05 + Math.sin(s.t * 1.1) * 0.05; o.yaw = s.steer * 0.15 + Math.sin(s.t * 0.6) * 0.1; o.roll = Math.sin(s.t * 1.4) * 0.03; } },
+    ...[0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ ['arm' + i]: (o, s) => cartOctoArm(o, s, i, true) }))),
   dragon: {
     neck: (o, s) => { o.pitch = -0.1 + Math.sin(s.t * 2.4) * 0.06 - s.fire * 0.45; o.yaw = s.steer * 0.3 + Math.sin(s.t * 0.7) * 0.08; },
     wingL: (o, st) => { const k = 0.35 + 0.6 * Math.max(st.boost, st.air); o.roll = 1 * (0.25 + Math.sin(st.t * (3 + 9 * k)) * 0.45 * k); },
@@ -222,7 +226,7 @@ function cartFishSwim(s) {
 // one Calamari Inferno arm: yawed to its place round the body, a slow wave (pitch) and sideways sweep (roll), a curl that
 // bunches the arm up (taller, shorter: the curled tip tightens) and lets it stretch out again, a tremble that jiggles the
 // torch flame at its tip (harder while firing), and every arm rears up when the car fires
-function cartOctoArm(o, s, i) {
+function cartOctoArm(o, s, i, live) {
   const a = (i + 0.5) / 8 * TAU, ph = i * 0.8, w = Math.sin(s.t * 2.4 + ph), c = Math.sin(s.t * 1.6 + ph * 1.3);
   o.yaw = a + Math.sin(s.t * 1.9 + ph) * 0.1;
   o.pitch = -0.05 + w * 0.14 - s.fire * 0.4 + Math.sin(s.t * 19 + i * 2.1) * 0.008 * (1 + 2 * s.fire);
@@ -230,7 +234,98 @@ function cartOctoArm(o, s, i) {
   // the torch flicker: a fast irregular breath across the arm (sx) and along it (sy); the side tongues of the rebuilt
   // flames sit off the arm's plane, so they lick outward and back while the arm itself barely changes
   const f = Math.sin(s.t * 17 + i * 1.3) * 0.6 + Math.sin(s.t * 29.7 + i * 2.9) * 0.4, g = Math.sin(s.t * 23.3 + i * 0.7);
-  o.sx = 1 + (0.08 + 0.06 * s.fire) * f; o.sy = 1 + 0.12 * c + 0.025 * g; o.sz = 1 - 0.07 * c;
+  o.sx = live ? 1 : 1 + (0.08 + 0.06 * s.fire) * f; o.sy = 1 + 0.12 * c + (live ? 0 : 0.025 * g); o.sz = 1 - 0.07 * c;
+}
+// ---- Calamari Inferno's live fire (rigV 3: body extra.flames = [root x, y, z, nozzle dir x, y, z], part-local) ----
+// Each arm's burner carries a flame drawn every frame as camera-facing sprites in the shared sprite batch (no extra draw
+// calls, no triangles in the car): a soft halo, licking tongues that are born at the nozzle, stretch, break off and rise
+// as they cool from gold to red, a flickering white-hot core, and embers that drift up and are left behind. Tongues lean
+// back with the car's speed and flare up and outward while the Tentacle Torch fires. Cost scales with distance (d2).
+const CART_FLAME = { p: [0, 0, 0], halo: [1, 0.42, 0.1], light: [1, 0.5, 0.16], mir: null, B: null };
+function cartFlameHash(n) { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); }
+// one sprite along a world direction (dx, dy, dz) projected into the view: the texture's top (the flame's tip) points
+// along it; occ > 0 also dims what is behind (keeps the fire saturated over a bright daytime background)
+function cartFlameQuad(R, x, y, z, dx, dy, dz, len, w, reg, r, g, b, a, occ) {
+  const F = CART_FLAME, B = F.B;
+  for (let m = 0; m < (F.mir === null ? 1 : 2); m++) {
+    let yy = y, ddy = dy, aa = a;
+    if (m) { yy = 2 * F.mir - y; ddy = -dy; aa = a * 0.22; }
+    let px = dx * B.rx + ddy * B.ry + dz * B.rz, py = dx * B.ux + ddy * B.uy + dz * B.uz;
+    const l = Math.hypot(px, py); if (l < 1e-5) { px = 0; py = 1; } else { px /= l; py /= l; }
+    R.bbs.quad(x, yy, z, -py * w / 2, px * w / 2, px * len / 2, py * len / 2, reg, r * aa, g * aa, b * aa, aa * occ);
+  }
+}
+// M: the car model, bones: its posed bones, st: its animation state (t, fire), d2: squared distance to the camera,
+// vx / vz: its velocity (m/s), night 0..1, mirror: y of a mirror plane (the showroom's glass) or null
+function cartOctoFlames(R, M, bones, st, d2, vx, vz, night, mirror) {
+  const X = M.extra && M.extra.flames; if (!X || !bones || d2 > 140 * 140 || !R.bbs.B) return;
+  const S = BURNS_SPRITES.R, F = CART_FLAME, P0 = CART_BONES.P0, t = st.t, f = st.fire || 0;
+  const lod = d2 < 30 * 30 ? 2 : d2 < 75 * 75 ? 1 : 0, nT = lod === 2 ? 4 : lod === 1 ? 2 : 1;
+  F.B = R.bbs.B; F.mir = mirror === undefined ? null : mirror;
+  const occ = 0.62 * (1 - night), glowK = 0.55 + 0.5 * night;
+  const L = 1.3 * (1 + 1.4 * f), W = 0.9 * (1 + 0.5 * f);
+  // the car's centre (bone 0's origin) for the outward flare, and the wind (the flames trail back with speed)
+  const cx = bones[3], cz = bones[11];
+  for (let i = 0; i < 8; i++) {
+    const o = (P0 + i) * 12, p = F.p;
+    BurnsM.a34Pt(bones, o, X[0], X[1], X[2], p);
+    const bx = p[0], by = p[1], bz = p[2];
+    // the axis: up, a little along the nozzle, out from the car when firing
+    let ndx = bones[o] * X[3] + bones[o + 1] * X[4] + bones[o + 2] * X[5], ndz = bones[o + 8] * X[3] + bones[o + 9] * X[4] + bones[o + 10] * X[5];
+    let ox = bx - cx, oz = bz - cz; const ol = Math.hypot(ox, oz) || 1; ox /= ol; oz /= ol;
+    let ax = ndx * 0.25 + ox * 1.1 * f, ay = 1, az = ndz * 0.25 + oz * 1.1 * f;
+    const al = Math.hypot(ax, ay, az); ax /= al; ay /= al; az /= al;
+    const seed = i * 7.13, fl = 0.86 + 0.09 * Math.sin(t * 17.3 + seed) + 0.05 * Math.sin(t * 31.1 + seed * 2);
+    // the halo: warm light spilling round the burner
+    R.bbs.bb(bx + ax * L * 0.3, by + ay * L * 0.3, bz + az * L * 0.3, L * 1.7 * fl, L * 1.7 * fl, S.glow, F.halo, (0.26 + 0.2 * f) * glowK * fl, true);
+    if (F.mir !== null) R.bbs.bb(bx + ax * L * 0.3, 2 * F.mir - by - ay * L * 0.3, bz + az * L * 0.3, L * 1.7, L * 1.7, S.glow, F.halo, 0.07 * fl, true);
+    // the body: the flame's steady mass, rooted in the nozzle, breathing and swaying
+    {
+      const bl = L * 0.78 * (0.85 + 0.12 * Math.sin(t * 13 + seed) + 0.08 * Math.sin(t * 21.7 + seed * 3)), bw = W * (0.92 + 0.1 * Math.sin(t * 15.3 + seed * 2));
+      const dx = ax + Math.sin(t * 6.1 + seed) * 0.16 - vx * 0.018, dz = az + Math.cos(t * 5.3 + seed) * 0.16 - vz * 0.018, dl = Math.hypot(dx, ay, dz), k = bl * 0.4 / dl;
+      cartFlameQuad(R, bx + dx * k, by + ay * k, bz + dz * k, dx, ay, dz, bl, bw, S.flame, 1, 0.66, 0.24, 0.85 * fl, occ);
+    }
+    // the tongues: each is born at the nozzle, stretches, pinches off and rises, cooling gold -> orange -> red
+    const rate = (2.3 + 0.4 * cartFlameHash(seed)) * (1 + 0.7 * f);
+    for (let j = 0; j < nT; j++) {
+      const sj = seed + j * 3.71, u = t * rate * (1 + 0.13 * j) + j / nT + cartFlameHash(sj), n = Math.floor(u), ph = u - n;
+      const r1 = cartFlameHash(n * 1.7 + sj), r2 = cartFlameHash(n * 3.1 + sj + 5), age = ph / rate;
+      // a lean of its own (new every lick) and a sway that grows as it rises
+      const sw = 0.55 * ph + 0.12;
+      const lx = (r1 - 0.5) * 0.7 * sw + Math.sin(t * 5.3 + sj) * 0.2 * ph, lz = (r2 - 0.5) * 0.7 * sw + Math.cos(t * 4.1 + sj) * 0.2 * ph;
+      const len = L * (0.55 + 0.6 * Math.sin(Math.PI * Math.min(1, ph * 1.2))) * (0.8 + 0.4 * r1) * (lod === 2 ? 1 : 1.15);
+      const rise = L * 0.85 * Math.pow(ph, 1.4);
+      const w = W * (1.05 - 0.6 * ph) * (0.8 + 0.4 * r2) * (lod === 2 ? 1 : 1.3);
+      const dx = ax + lx - vx * 0.018, dy = ay, dz = az + lz - vz * 0.018, dl = Math.hypot(dx, dy, dz);
+      const k = rise + len * 0.42;
+      const x = bx + dx / dl * k - vx * age * 0.1, y = by + dy / dl * k, z = bz + dz / dl * k - vz * age * 0.1;
+      const a = Math.min(1, ph * 7) * Math.pow(1 - ph, 0.8) * fl * (1 + 0.3 * f);
+      const cool = Math.min(1, ph * 1.3);
+      cartFlameQuad(R, x, y, z, dx, dy, dz, len, w, S.flame, 1, 0.82 - 0.5 * cool, 0.38 - 0.3 * cool, a, occ);
+    }
+    // the core: a short white-hot cone at the nozzle, flickering fast (two crossed sprites out of step)
+    if (lod) for (let c = 0; c < (lod === 2 ? 2 : 1); c++) {
+      const q = c ? 1.7 : 0, cl = L * 0.5 * (0.9 + 0.18 * Math.sin(t * 23 + seed + q) + 0.12 * Math.sin(t * 37.7 + seed * 2 + q)) * (1 - 0.35 * f);
+      const cdx = ax + Math.sin(t * 11 + seed + q) * 0.12 - vx * 0.02, cdz = az + Math.cos(t * 9 + seed + q) * 0.12 - vz * 0.02;
+      cartFlameQuad(R, bx + cdx * cl * 0.38, by + ay * cl * 0.38, bz + cdz * cl * 0.38, cdx, ay, cdz, cl, W * 0.55, S.flame, 1, 0.92, 0.7, 0.9 * fl, occ * 0.5);
+    }
+    // embers: specks that spit out of the flame, drift up and swirl, and are left behind as the car drives on
+    if (lod === 2) for (let e = 0; e < 3 + (f > 0.1 ? 2 : 0); e++) {
+      const se = seed + e * 5.3, E = 1.1, u = t / E + e / 3 + cartFlameHash(se), n = Math.floor(u), ph = u - n, age = ph * E;
+      const r1 = cartFlameHash(n * 2.3 + se), r2 = cartFlameHash(n * 4.7 + se + 1);
+      const x = bx + ax * L * 0.6 + ((r1 - 0.5) * 1.2 + Math.sin(t * 3.1 + se) * 0.25) * ph + ox * f * 2 * ph - vx * age * 0.85;
+      const y = by + ay * L * 0.6 + (0.4 + 1.6 * r2) * ph * (1 + f);
+      const z = bz + az * L * 0.6 + ((r2 - 0.5) * 1.2 + Math.cos(t * 2.7 + se) * 0.25) * ph + oz * f * 2 * ph - vz * age * 0.85;
+      const tw = 0.6 + 0.4 * Math.sin(t * 19 + se * 3), a = (1 - ph) * Math.min(1, ph * 8) * tw, sz = 0.11 * (1 - 0.5 * ph);
+      cartFlameQuad(R, x, y, z, 0, 1, 0, sz, sz, S.core, 1, 0.62 - 0.3 * ph, 0.22 - 0.15 * ph, a, 0);
+    }
+  }
+}
+// the warm flickering light the fire throws on the car and the road (race scenes: through the scene's light picker)
+function cartOctoLight(k, add, t, night) {
+  if (!k.M.extra || !k.M.extra.flames) return;
+  const f = k.st.fire || 0, fl = 0.8 + 0.12 * Math.sin(t * 17.3 + k.x) + 0.08 * Math.sin(t * 29.9);
+  add(k.x, k.y + 2.2, k.z, 6.5 + 5 * f, CART_FLAME.light, (0.45 + 0.65 * night + 1.2 * f) * fl, 1.1);
 }
 // Sir Scorchalot's joints (tools/blender/sir_scorchalot.py NECK_J, its printed JAW_J, TAIL_J, TIP_J) and the neck's sway
 const CART_DRAGON_J = { neck: [0, 2.0, 1.6], jaw: [0, 2.9196, 2.7229], tail: [0, 1.45, -2.25], tailTip: [0, 1.25, -3.45] };

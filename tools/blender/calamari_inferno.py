@@ -4,12 +4,13 @@
 #   import runpy; runpy.run_path('/abs/path/tools/blender/calamari_inferno.py', run_name='__main__')
 # Writes assets/models/art-cart/calamari_inferno.glb (showroom, <= 30k tris) and calamari_inferno_lo.glb (race, <= 7k).
 #
-# Rig (rigV 2, posed by CART_GLB_PARTS['octo:2'] in src/43_cart_bb_glb.js):
+# Rig (rigV 3, posed by CART_GLB_PARTS['octo:3'] in src/43_cart_bb_glb.js; rigV 2 had sculpted mesh flames):
 #   part_head          the copper mantle (porthole eyes, brows, hatch, chimney), joint HEAD: it bobs and looks around
 #   part_arm0..arm7    the eight arms, each authored pointing along +Z from its root joint (the pose yaws it to
 #                      (i + 0.5) / 8 of a turn, as the procedural car does); each curls (pitch + a squash that tightens
-#                      the curl), waves sideways (roll) and lifts when firing. The flame at the tip rides on its arm.
-# body extras: rigV = 2, extra.sight = the mantle's top (the chase camera rises just enough to see over it), chimney.
+#                      the curl), waves sideways (roll) and lifts when firing. The burner at the tip rides on its arm;
+#                      body extra.flames = [FLAME_AT, FLAME_DIR] tells the game where to draw the live fire.
+# body extras: rigV = 3, extra.sight = the mantle's top (the chase camera rises just enough to see over it), chimney.
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cartkit import *
@@ -48,6 +49,9 @@ def flame_tip():
     """Where the flame sits (part-local) and which way it points: off the end of the curled tip."""
     p, t = arm_at(1.0); return p + t * 0.12, t
 
+_C, _T = arm_at(1.0)
+FLAME_AT, FLAME_DIR = tuple(_C + _T * 0.1), tuple(_T)   # the flame's root (part-local, every arm) and its nozzle direction
+
 def build(B):
     L = B.L; lo = B.lo
     B.export_try = VCOL_EXPORT
@@ -58,9 +62,8 @@ def build(B):
     M_paint = paint('oxblood', '#5a1a10', coat=1.0, rough=0.2, metal=0.35); M_sill = paint('wagon_black', '#140d0a', coat=1.0, rough=0.22, metal=0.2)
     M_eye = glow('eye_glow', '#ff9a2a', strength=2.4, rough=0.2); M_pupil = mat('pupil', '#1a0a04', rough=0.15, coat=1.0)
     M_gauge = glow('gauge_glow', '#ffe6a0', strength=1.2, rough=0.2); M_suck = paint('sucker', '#e8a27a', coat=1.0, rough=0.25, metal=0.1)
-    # the flame layers (each also coloured by a vertex gradient): a softer-glowing orange-red outer plume so its colour
-    # survives the bloom, a bright gold middle, a white-hot core
-    M_fire_out, M_fire_mid, M_fire_core = glow('fire_outer', '#ff6a14', strength=2.2, rough=0.4, coat=0.0), glow('fire_mid', '#ffb43a', strength=3.0, rough=0.4, coat=0.0), led('#fff6e0', 4.5)
+    # the burner glows: a white-hot ember core in each nozzle and an orange heat ring at its lip
+    M_core, M_heat = led('#fff2c8', 5.0), glow('heat_ring', '#ff7a1a', strength=3.0, rough=0.4, coat=0.0)
     def rivet(name, p, r=0.045, parent=None, m=M_br):
         if lo: return
         B.obj(name, bm_ico(r, 0, p), m, parent=parent)
@@ -210,42 +213,19 @@ def build(B):
         # the torch at the tip: a flared brass nozzle and three nested flame tongues (white core, gold, orange)
         C, T = arm_at(1.0)
         B.obj('arm%d_nozzle' % i, bm_closed_lathe([(0, -0.06), (0.075, -0.06), (0.08, 0.04), (0.12, 0.12), (0.095, 0.12), (0.0, 0.08)] if not lo else [(0, -0.06), (0.08, -0.06), (0.12, 0.12), (0.0, 0.1)], B.pick(12, 6), aim(tuple(T)), tuple(C)), M_br, parent=A)
-        # the fire: a roaring plume of layered tongues (outer red-tipped orange, a gold middle, a white-hot core) twisting
-        # as they rise, and two side tongues licking outward (the arm's flicker in the game spreads and lifts them)
-        X = Vector((1, 0, 0)); Tn = Vector(T); base = C + Tn * 0.08
-        def plume(name, at, d, Ln, Rn, seg, rows, lobes, twist, cols, M_fire, amp=0.32):
-            d = Vector(d).normalized(); prof = [(0, -0.02)]
-            for k in range(1, rows):
-                h = k / rows; r = Rn * (math.sin(math.pi * min(1.0, h * 1.25) ** 0.75) if h < 0.8 else 0.0) * (1 - 0.65 * h ** 1.4)
-                prof.append((max(r, 0.004), h * Ln))
-            prof.append((0, Ln))
-            rm = lambda th, t: max(0.15, 1 + (amp * t + 0.06) * math.sin(lobes * th + twist * t))
-            fl = B.obj(name, bm_closed_lathe(prof, seg, aim(tuple(d)), tuple(at), rmod=rm), M_fire, parent=A)
-            c0, c1, c2 = cols
-            def col(x, y, z, at=Vector(at), d=d, Ln=Ln):
-                h = max(0.0, min(1.0, (Vector((x, y, z)) - at).dot(d) / Ln))
-                c = [c0[q] + (c1[q] - c0[q]) * sstep(h / 0.55) for q in range(3)]
-                return tuple(c[q] + (c2[q] - c[q]) * sstep((h - 0.45) / 0.55) for q in range(3))
-            B.vcol(fl, col); keep_soft(B, fl)
-            return fl
-        HOT, GOLD, ORANGE, RED = (1.0, 0.97, 0.85), (1.0, 0.85, 0.5), (1.0, 0.6, 0.35), (0.85, 0.2, 0.12)
-        plume('arm%d_flame0' % i, base, Tn, B.pick(1.35, 1.15), 0.31, B.pick(10, 6), B.pick(9, 4), 3, 5.5, (GOLD, ORANGE, RED), M_fire_out, 0.8)
-        plume('arm%d_flame1' % i, base + Tn * 0.02, Tn, B.pick(0.95, 0.8), 0.26, B.pick(8, 5), B.pick(5, 3), 3, -4.0, (HOT, GOLD, ORANGE), M_fire_mid, 0.4)
-        if not lo:
-            plume('arm%d_flame2' % i, base + Tn * 0.03, Tn, 0.6, 0.16, 6, 3, 2, 3.0, (HOT, HOT, GOLD), M_fire_core)
-            for sd in (1, -1):
-                plume('arm%d_tongue%d' % (i, sd > 0), base + X * (sd * 0.12), Tn + X * (sd * 0.5), 0.6, 0.11, 6, 3, 2, 4.0, (GOLD, ORANGE, RED), M_fire_out, 0.5)
-        # the game light at the flame (it flickers at night)
-        wp = (J[0] + math.sin(a) * (fp.z), J[1] + fp.y + 0.2, J[2] + math.cos(a) * (fp.z))
-        B.light(wp[0], wp[1], wp[2], 0.8, LIGHT, led=1)
+        # the burner (rigV 3): the nozzle's bore holds a white-hot ember core and a glowing heat ring at its lip; the fire
+        # itself is drawn live by the game (cartOctoFlames in src/43_cart_bb_glb.js: licking additive tongues, a hot core,
+        # rising embers and a flickering light, anchored here at FLAME_AT and leaning up along the nozzle)
+        B.obj('arm%d_core' % i, bm_ellipsoid(0.07, 0.07, 0.07, B.pick(10, 6), B.pick(5, 3), tuple(C + T * 0.1)), M_core, parent=A)
+        if not lo: B.obj('arm%d_heat' % i, bm_torus(0.1, 0.022, 12, 3, aim(tuple(T)), tuple(C + T * 0.115)), M_heat, parent=A)
 
     # ---- wheels, seat, size info ----
     B.wheels_pro(1.1, 1.7, -1.7, r=0.5, w=0.42, rim=COL2, tyre='#1a1410', cap=LIGHT, stripe=LIGHT)
     B.seat_round(0, 1.6, -1.75, col='#5a2a14', accent=LIGHT)
     top = HEAD[1] + hc[1] + hr[1]
     B.info(5.4, 3.6, round(top, 2), muzzle=(0, 1.6, 1.3), wheelR=0.5,
-           extra={'arms': 8, 'armZ': 0.55, 'chimney': [0, round(HEAD[1] + c1[1] + 0.1, 2), round(HEAD[2] + c1[2], 2)], 'sight': [round(top - 0.3, 2), round(HEAD[2] + hc[2], 2)]})
-    B.body['rigV'] = 2
+           extra={'arms': 8, 'armZ': 0.55, 'flames': [round(v, 3) for v in (*FLAME_AT, *FLAME_DIR)], 'chimney': [0, round(HEAD[1] + c1[1] + 0.1, 2), round(HEAD[2] + c1[2], 2)], 'sight': [round(top - 0.3, 2), round(HEAD[2] + hc[2], 2)]})
+    B.body['rigV'] = 3
 
 LEVEL_OV = {'hi': {'cyl': 24, 'bevel': 3, 'ico': 1}, 'lo': {'ico': 1}}
 if __name__ == '__main__':
