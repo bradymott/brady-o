@@ -26,7 +26,11 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   await page.goto('file://' + appPage);
   await page.waitForTimeout(1500);
   const shot = n => page.screenshot({ path: path.join(shots, n), timeout: 60000 });
+  // Determinism: Math.random is a seeded generator, reset to the same seed before every boss file (BOSS_SEED=<n> to
+  // try another sequence), so a fight plays out the same way on every run and machine
+  const SEED = +(process.env.BOSS_SEED || 1) >>> 0;
   await page.evaluate(() => {
+    window.__seed = n => { let a = (n >>> 0) || 1; Math.random = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
     window.sim = (sec, inp) => {
       const B = window.BRADY, G = B.Game, I = B.Input;
       const steps = Math.round(sec * 120);
@@ -70,6 +74,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.js')).sort().filter(f => !want.length || want.includes(f.replace('.js', '')));
   for (const f of files) {
     console.log('== ' + f);
+    await page.evaluate(n => window.__seed(n), SEED);
     try { await require(path.join(dir, f))({ page, check, shot, errors }); }
     catch (e) { check(f + ' runs', false, String(e.message || e).slice(0, 300)); }
   }

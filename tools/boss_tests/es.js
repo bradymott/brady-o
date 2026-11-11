@@ -55,7 +55,19 @@ module.exports = async ({ page, check, shot }) => {
   const r3 = await page.evaluate(() => {
     const out = {}, g = S(), p = P(), b = boss();
     // the last two hits through the mechanic again: three tomatoes, then the stomp
-    const three = () => { b.go('walk'); let n = 0; while (b.act !== 'cold' && n++ < 1200) { if (n % 60 === 1) { const t = spawnAt('esTomatoProp', b.cx + (p.cx < b.cx ? -1 : 1) * 120, b.floorY - 10); t.fling((b.cx - t.cx) * 4, -2 * 32, p); } sim(1 / 120); } return b.act === 'cold'; };
+    // A tomato every half second from the open side of the hall, never while it skates or charges (aimed at where it is
+    // now, those miss a moving pan), with Brady parked on the floor out of the way first: left hovering over the pan
+    // after a stomp, he could chain-bounce off these test tomatoes, sail over the arena wall, and then the next ones
+    // spawned outside the wall (seed 42 of BOSS_SEED did exactly that: a flaky test, not a stuck fight)
+    const three = () => {
+      p.x = b.cx < (b.arenaX0 + b.arenaX1) / 2 ? b.arenaX1 - 3 * 32 : b.arenaX0 + 2 * 32; p.y = b.floorY - p.h; p.vx = 0; p.vy = 0;
+      b.go('walk'); let n = 0, cool = 0;
+      while (b.act !== 'cold' && n++ < 1200) {
+        if (--cool <= 0 && b.act !== 'skate' && b.act !== 'charge') { cool = 60; const side = b.cx < (b.arenaX0 + b.arenaX1) / 2 ? 1 : -1; const t = spawnAt('esTomatoProp', b.cx + side * 120, b.floorY - 10); t.fling((b.cx - t.cx) * 4, -2 * 32, p); }
+        sim(1 / 120);
+      }
+      return b.act === 'cold';
+    };
     out.cold3 = three(); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 30; p.vy = 0; sim(0.5); out.hp3 = b.hp;
     sim(2); out.cold4 = three(); p.x = b.cx - p.w / 2; p.y = b.y - p.h - 30; p.vy = 0; sim(0.5); out.hp4 = b.hp; out.clatter = b.act === 'clatter';
     return out;
