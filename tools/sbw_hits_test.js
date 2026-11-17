@@ -182,6 +182,22 @@ const hitFrom = p => ({ x: p.x + p.w + 4, y: p.y, w: 20, h: 20 });
   check('carry: after a hit took the plane, the next level gets the beans and big, not the plane', c && !c.hands && c.jump && c.jump.id === 'beans' && c.power === 1, c);
 }
 
+/* ---------- the swap loop (the football freeze) ---------- */
+{
+  // gear in hands, the Backpack full, a signature item touched: the old hands item drops on Brady; taking it straight
+  // back (the same collision pass) dropped the other one on him, and so on forever: memory filled and the page died
+  for (const setup of [{ power: 2, hands: 'gear:plane', jump: 'beans' }, { power: 1, hands: 'gear:kazoo' }, { power: 0, hands: 'gear:hat', jump: 'socks' }]) {
+    const g = start('3-5'), p = g.player; load(p, setup); p.pack = 'gear:wand'; p.invuln = 99;
+    const it = new (G.run('TourItem'))(g, p.cx, p.y + p.h, 'sig:ball'); it.emerge = 1; g.spawn(it);
+    const n0 = g.entities.length; let n1 = 0, ok = true;
+    try { for (let k = 0; k < 120; k++) { g.update(1 / 120); n1 = Math.max(n1, g.entities.length); if (n1 > n0 + 20) { ok = false; break; } } } catch (e) { ok = false; console.error(e); }
+    const drop = g.entities.find(e => e.item && e.dropped);
+    check(`swap loop (${setup.hands}, Backpack full, ${setup.jump || 'no jump power'}, form ${setup.power}): taking the FOOTBALL ends in one frame, the old item drops once`, ok && p.handsKind() === 'sig:ball' && p.pack === 'gear:wand' && drop && drop.kind === setup.hands, { hands: p.handsKind(), pack: p.pack, drop: drop && drop.kind, ents: [n0, n1] });
+    // stepping clear of the drop and back takes it again (a normal swap, one drop)
+    if (drop) { p.x = drop.cx + 4 * 32; g.update(1 / 120); p.x = drop.cx - p.w / 2; p.y = drop.y + drop.h - p.h; const m0 = g.entities.length; for (let k = 0; k < 30; k++) g.update(1 / 120); check(`swap loop (${setup.hands}): stepping clear and back takes the dropped item again, one swap`, p.handsKind() === setup.hands && g.entities.length <= m0 + 2, { hands: p.handsKind(), ents: [m0, g.entities.length] }); }
+  }
+}
+
 /* ---------- Ecuador: El Tortugón in the real loop ---------- */
 {
   const g = start('2-5'), B = G.run('__bossLevels')().find(b => b.id === '2-5'), b = G.run('__toBoss')(g, B.area), p = g.player;
