@@ -31608,6 +31608,1681 @@ ENTITY_TYPES.mazeShutter = TourMazeShutter;
 if (typeof TourLandscape !== 'undefined' && TourLandscape.ARCH_LABEL) Object.assign(TourLandscape.ARCH_LABEL, { vault: 'KEYS', gong: 'GONG', loop: 'LOOP', walls: 'WALLS' });
 try { Object.assign(window.BRADY_TOUR, { TourMaze }); } catch (e) { /* not in a browser */ }
 
+/* ---- 28_tour_r_rooms.js ---- */
+/* ============================================================
+   World tour: the secret-room kit (docs/design/SECRET_ROOMS.md).
+   A secret room's spec picks a kind and its options:
+     { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa', room: 'fetch', fetch: { title, ... } }
+   The kind (src/28_tour_ra_kinds.js) builds a new room stamp from scratch, keeping what the old room carried for
+   the level: its door back, its postcard spot, its secret gate (and fake wall), Bottle Mail, signs, its decor and
+   its prize boxes (which become the room's reward). The checker sees everything as open tiles plus locks and
+   virtual keys (a cage that a won game opens is a lock whose key is a spot in the room), so every room is proven
+   finishable and escapable by tools/validate_levels.js; the games themselves run here, on TourHooks.
+   Runtime: A.roomKit (built, shared) and A.roomState (per visit, on the runtime area).
+   ============================================================ */
+const TourRooms = {
+  kinds: {},
+  // stamp letters free for a room's own legend (the global legend's letters are never used)
+  LETTERS: 'adefijklmnpqrtuwxzAEJKMNOPRUVXYZ0123456789!$%&+=:;,~_()[]{}<>',
+  def(name, K) {
+    this.kinds[name] = K;
+    TourHooks.room(name, { spec: (A, ctx) => this.spec(name, A, ctx), build: (ctx, A, built) => this.build(name, ctx, A, built), timed: !!K.timed });
+    if (TourHooks.ROOM_TYPES.indexOf(name) < 0) TourHooks.ROOM_TYPES.push(name);
+    return K;
+  },
+  /* what an old room carried that the level relies on */
+  keep(S, A) {
+    const rows = (S && S.rows) || [], legend = (S && S.legend) || {}, txt = rows.join('');
+    const items = [], hidden = [];
+    let qi = 0, hi = 0;
+    for (const ch of txt) { if (ch === '?') items.push((S.items || [])[qi++] || 'pick'); else if (ch === 'h') hidden.push((S.hidden || [])[hi++] || 'pick'); }
+    const decor = [], extras = [];
+    for (const ch in legend) {
+      if (txt.indexOf(ch) < 0) continue;
+      const e = legend[ch];
+      if (e[0] === 'decor') decor.push(e[1]); else extras.push(e);
+    }
+    return {
+      door: txt.indexOf('D') >= 0 ? ((S.doors || [])[0] || null) : null,
+      gold: txt.indexOf('*') >= 0 ? ((S.gold && S.gold['*']) || 'hidden') : null,
+      gate: txt.indexOf('g') >= 0, fake: txt.indexOf('F') >= 0,
+      prize: items.concat(hidden), decor, extras, theme: A.theme || null
+    };
+  },
+  // a deterministic random stream per room (the validator and the game must build the same room)
+  rng(ctx, A) { return mulberry32(hashStr('room:' + ctx.id + ':' + A.id)); },
+  spec(name, A, ctx) {
+    const K = this.kinds[name];
+    const S = TourStamp.get(A.stamp, ctx.C.id);
+    if (!S) { ctx.problems.push(`area ${A.id}: room kind ${name} needs the room's old stamp '${A.stamp}'`); return A; }
+    const keep = this.keep(S, A), o = Object.assign({}, K.defaults || {}, A[name] || {});
+    const grid = K.make(o, keep, ctx, A, this.rng(ctx, A));
+    const out = grid.finish(keep);
+    const A2 = Object.assign({}, A, grid.area || {}, { gen: 'room', stamp: out.stamp, __room: { name, o, grid, keep } });
+    return A2;
+  },
+  build(name, ctx, A, built) {
+    const R = A.__room; if (!R) return;
+    const B = built.B, area = built.area, aid = A.id, K = this.kinds[name];
+    // the cage: the lock with this room's id draws and opens as a cage
+    for (const s of B.spawns) if (s.type === 'lock' && s.id === 'room:' + aid) { s.type = 'roomCage'; s.need = R.o.need || K.need || null; }
+    for (const gh of R.grid.ghosts) B.ghosts.push(gh);
+    for (const z of R.grid.zones) B.zone(...z);
+    const kit = { kind: name, aid, title: R.o.title || K.title || 'SECRET ROOM', rule: R.o.rule || K.rule || '', o: R.o, d: ctx.d, data: R.grid.data, keep: { gate: R.keep.gate, prize: R.keep.prize } };
+    area.roomKit = kit;
+    // what the checker must reach in this room (tools/validate_levels.js): the prize boxes from below, the room's
+    // tokens, lamps and switches; the boxes' bump spots are added from the built tiles
+    const needs = (R.grid.needs || []).slice();
+    for (const key in area.contents) {
+      const [x, y] = key.split(',').map(Number), t = area.tiles[y * area.W + x];
+      if (t === T.QBLOCK || t === T.HIDDEN || t === T.QBRICK) needs.push({ what: 'box ' + area.contents[key] + ' at ' + x + ',' + y, x: x * TS + 4, y: (y + 1) * TS, w: TS - 8, h: TS });
+    }
+    area.roomNeeds = needs;
+    if (K.build) K.build(ctx, A, built, R.o, R.grid);
+  },
+  /* ---------- the checker side (tools/validate_levels.js) ----------
+     every room's needs are probes in one search per level: returns a list of failures */
+  check(level, Validator) {
+    const probes = [];
+    level.areas.forEach((a, ai) => { for (const n of a.roomNeeds || []) probes.push(Object.assign({ ai, hit: false }, n, { x: n.x, y: n.y, w: n.w, h: n.h })); });
+    if (!probes.length) return [];
+    Validator.run(level, { probes, untilProbes: () => probes.every(q => q.hit), rules: 'all' });
+    return probes.filter(q => !q.hit).map(q => `ROOM ${level.areas[q.ai].aid}: ${q.what} UNREACHABLE`);
+  },
+
+  /* ---------- run time ---------- */
+  state(play, A) { return A.roomState || (A.roomState = { won: false, visits: 0 }); },
+  enter(play, A) {
+    const K = this.kinds[A.roomKit.kind], R = this.state(play, A), kit = A.roomKit;
+    R.visits++; R.t = 0; R.inT = 0;
+    play.bannerText = kit.title; play.bannerT = R.visits > 1 ? 1.2 : 2;
+    if (kit.rule && !R.won) play.toast(kit.rule);
+    if (K.enter) K.enter(play, A, R, kit);
+  },
+  update(play, dt) {
+    const A = play.area, kit = A.roomKit; if (!kit) return;
+    const K = this.kinds[kit.kind], R = this.state(play, A);
+    R.t += dt;
+    if (play.state !== 'play') return;
+    if (K.update) K.update(play, dt, A, R, kit);
+  },
+  draw(play, ctx) {
+    const A = play.area, kit = A && A.roomKit; if (!kit) return;
+    const K = this.kinds[kit.kind], R = this.state(play, A);
+    if (K.draw) K.draw(play, ctx, A, R, kit);
+  },
+  // the room is won: its cage opens, a fanfare, an optional coin shower
+  win(play, A, R, opts) {
+    if (R.won) return;
+    opts = opts || {};
+    R.won = true; R.wonT = R.t;
+    play.keys.add('room:' + A.roomKit.aid);
+    const p = play.player;
+    Sound.play('secret', { vol: 0.8 }); Sound.play('oneup', { vol: 0.5 });
+    play.burst(p.cx, p.y - 10, 30, '#ffd84a', 'confetti');
+    if (opts.text !== false) { play.bannerText = opts.text || 'YOU DID IT!'; play.bannerT = 1.6; }
+    if (opts.coins) this.coinShower(play, A, opts.coins);
+    this.unbar(play, A, R);
+  },
+  // coins rain from the ceiling over Brady (picked up where they land, like any coin)
+  coinShower(play, A, n) {
+    const p = play.player, tx0 = Math.floor(p.cx / TS);
+    let placed = 0;
+    for (let k = 0; k < 40 && placed < n; k++) {
+      const tx = clamp(tx0 + ((k % 2) ? 1 : -1) * Math.ceil(k / 2), 1, A.W - 2);
+      for (let ty = A.H - 2; ty > 1; ty--) {
+        if (tileAt(A, tx, ty) === T.EMPTY && SOLID[tileAt(A, tx, ty + 1)]) { play.setTile(tx, ty, T.PICK); play.burst(tx * TS + TS / 2, ty * TS, 4, '#ffd84a', 'spark'); placed++; break; }
+      }
+    }
+  },
+  // the room's way(s) out: bar them for a fight (the target is put back on unbar, on a win or a timeout)
+  bar(play, A, R) {
+    if (R.bars) return;
+    R.bars = [];
+    for (const e of play.entities) if (e instanceof Portal && e.target && e.target.area !== A.idx) { R.bars.push({ e, target: e.target }); e.target = null; e.barred = true; }
+    if (R.bars.length) Sound.play('break', { vol: 0.6 });
+  },
+  unbar(play, A, R) {
+    if (!R.bars) return;
+    for (const b of R.bars) { b.e.target = b.target; b.e.barred = false; }
+    R.bars = null;
+  },
+  // big text in the middle-top of the view, in world coordinates (afterEntities runs in the world transform)
+  // the top of the room's HUD in world units: under the game's toast while one shows (they never overlap)
+  hudY(play, dy) {
+    const k = Game.gameRect && Game.gameRect.h ? Game.gameRect.h / Game.viewH : 1;
+    const below = play.toastT > 0 && play.toastBottom ? (play.toastBottom - (Game.gameRect.y || 0)) / k + 8 : 0;
+    return play.camY + Math.max(dy || 0, below);
+  },
+  hudText(play, ctx, str, col, size, dy) {
+    const x = play.camX + Game.viewW / 2, y = this.hudY(play, 0) + (dy || 34);
+    ctx.save(); ctx.font = `${size || 16}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(str).width + 22, h = (size || 16) + 12;
+    ctx.fillStyle = 'rgba(14,8,26,0.72)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,216,74,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = col || '#ffd84a'; ctx.fillText(str, x, y + 1);
+    ctx.restore();
+  },
+  // a round clock face with a sweeping hand and the seconds left
+  clock(play, ctx, left, total, col) {
+    const x = play.camX + Game.viewW / 2, y = this.hudY(play, 0) + 36, r = 17, k = clamp(left / total, 0, 1);
+    ctx.save();
+    ctx.fillStyle = 'rgba(14,8,26,0.78)'; ctx.beginPath(); ctx.arc(x, y, r + 4, 0, TAU); ctx.fill();
+    ctx.fillStyle = left < 4 && Math.floor(left * 4) % 2 ? '#ff6a5a' : (col || '#ffd84a');
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + TAU * k); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+    ctx.font = `13px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#1c1426'; ctx.fillText(String(Math.ceil(left)), x + 1, y + 2); ctx.fillStyle = '#ffffff'; ctx.fillText(String(Math.ceil(left)), x, y + 1);
+    ctx.restore();
+  },
+  // a counter pill under the clock: "3 / 8" with an icon painter
+  counter(play, ctx, n, of, icon, dx) {
+    const x = play.camX + Game.viewW / 2 + (dx || 0), y = this.hudY(play, 0) + 72;
+    ctx.save(); ctx.font = `13px ${FONT_DISPLAY}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const str = n + ' / ' + of, w = ctx.measureText(str).width + 40;
+    ctx.fillStyle = 'rgba(14,8,26,0.72)'; rr(ctx, x - w / 2, y - 12, w, 24, 12); ctx.fill();
+    if (icon) { ctx.save(); ctx.translate(x - w / 2 + 14, y); ctx.scale(0.5, 0.5); icon(ctx, 0, 0, play.t); ctx.restore(); }
+    ctx.fillStyle = n >= of ? '#7aff9a' : '#ffffff'; ctx.fillText(str, x - w / 2 + 28, y + 1);
+    ctx.restore();
+  },
+  // spawn an entity at run time into the room (enemies of an ambush, a joke prop)
+  add(play, type, tx, ty, props) {
+    const C = ENTITY_TYPES[type];
+    if (!C) return null;
+    const s = Object.assign({ type, x: tx * TS + TS / 2, y: (ty + 1) * TS, dir: -1 }, props || {});
+    let e = null;
+    try { e = new C(play, s); } catch (err) { console.warn('room spawn failed', type, err); return null; }
+    play.entities.push(e); play.refreshPlatforms();
+    return e;
+  }
+};
+
+/* ---------- a room drawn as rows of letters ----------
+   new RoomGrid(W, H, floor): solid all round, open inside above `floor` (the ground's top row).
+   Letters are the stamp's: the global legend ('#', '-', '^', 'o', '?', 'D', '@', 'g', ...) plus legend entries the
+   grid gives letters to (grid.L(entry)). Prize boxes and doors are written with their contents and targets
+   (box(), door()); finish() orders items[] and doors[] the way TourStamp.place reads them. */
+class RoomGrid {
+  constructor(W, H, floor) {
+    this.W = W; this.H = H; this.F = floor;
+    this.g = []; for (let y = 0; y < H; y++) this.g.push(new Array(W).fill('#'));
+    this.fill(1, 1, W - 2, floor - 1, '.');
+    this.legend = {}; this.byEntry = {}; this.next = 0;
+    this.boxes = {}; this.doorsAt = {}; this.ghosts = []; this.zones = []; this.needs = []; this.data = {}; this.area = {};
+    this.goldKind = 'hidden';
+  }
+  inb(x, y) { return x >= 0 && y >= 0 && x < this.W && y < this.H; }
+  put(x, y, ch) { if (this.inb(x, y)) this.g[y][x] = ch; return this; }
+  get(x, y) { return this.inb(x, y) ? this.g[y][x] : '#'; }
+  fill(x0, y0, x1, y1, ch) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) this.put(x, y, ch); return this; }
+  hline(x0, x1, y, ch) { return this.fill(x0, y, x1, y, ch); }
+  vline(x, y0, y1, ch) { return this.fill(x, y0, x, y1, ch); }
+  text(x, y, str) { for (let k = 0; k < str.length; k++) if (str[k] !== ' ') this.put(x + k, y, str[k]); return this; }
+  // a letter for a legend entry (the same entry always gets the same letter)
+  L(entry) {
+    const key = JSON.stringify(entry);
+    if (this.byEntry[key]) return this.byEntry[key];
+    const ch = TourRooms.LETTERS[this.next++];
+    if (!ch) throw new Error('RoomGrid: out of legend letters');
+    this.legend[ch] = entry; this.byEntry[key] = ch; return ch;
+  }
+  spawn(x, y, type, props) { return this.put(x, y, this.L(['spawn', type, props || {}])); }
+  enemy(x, y, type, props) { return this.put(x, y, this.L(['enemy', type, props || {}])); }
+  decor(x, y, kind) { return this.put(x, y, this.L(['decor', kind])); }
+  box(x, y, it) { this.put(x, y, '?'); this.boxes[x + ',' + y] = it || 'pick'; return this; }
+  door(x, y, D) { this.put(x, y, 'D'); this.doorsAt[x + ',' + y] = D || {}; return this; }
+  anchor(x, y, name) { return this.put(x, y, this.L(['anchor', name])); }
+  coins(x0, x1, y) { for (let x = x0; x <= x1; x++) if (this.get(x, y) === '.') this.put(x, y, 'o'); return this; }
+  coinsArc(x0, x1, yb, h) { const n = x1 - x0; for (let x = x0; x <= x1; x++) { const k = n ? (x - x0) / n : 0.5, y = Math.round(yb - Math.sin(k * Math.PI) * h); if (this.get(x, y) === '.') this.put(x, y, 'o'); } return this; }
+  need(what, tx, ty, w, h) { this.needs.push({ what, x: tx * TS, y: ty * TS, w: (w || 1) * TS, h: (h || 1) * TS }); return this; }
+  // a moving platform: its left tile at column x, its top on row y + 1, travelling ax / ay tiles; its whole path is
+  // one-way floor for the checker (as the toolkit's mover and lift pieces do)
+  mover(x, y, pw, ax, ay, speed) {
+    this.spawn(x, y, 'mplat', { pw, ax: ax * TS, ay: ay * TS, speed: speed || 2 });
+    for (let i = Math.min(0, ax); i <= Math.max(0, ax); i++) for (let j = 0; j < pw; j++) for (let k = Math.min(0, ay); k <= Math.max(0, ay); k++) this.ghosts.push([x + i + j, y + 1 + k]);
+    return this;
+  }
+
+  /* ---------- the pieces every room shares ---------- */
+  // the way in and out on the left: '@' where Brady arrives, the door next to it; the old room's signs, bottles and
+  // drafts on the floor after it. Returns the first free column.
+  west(keep, y) {
+    y = y == null ? this.F - 1 : y;
+    this.put(2, y, '@');
+    let x = 4;
+    if (keep.door) { this.door(3, y, keep.door); x = 5; }
+    for (const e of keep.extras) {
+      if (e[0] === 'spawn' && e[1] === 'tourDraft') continue;   // a draft belongs with a fake wall (gateWing)
+      if (e[0] === 'spawn' && e[1] === 'gate') continue;        // a gate with a need (5-2): gateWing
+      this.put(x, y, this.L(e)); x += e[0] === 'piece' ? 3 : 2;
+    }
+    return x;
+  }
+  // the old room's secret gate: on the floor at column x (five rows of air over it), behind a fake wall when it had
+  // one (the fake wall, its dust draft and a roof over the pocket); a gate with a need (5-2's door 22) beside it
+  gateWing(keep, x, y) {
+    y = y == null ? this.F - 1 : y;
+    const needGate = keep.extras.find(e => e[0] === 'spawn' && e[1] === 'gate');
+    if (!keep.gate && !needGate) return x;
+    const x1 = x + (keep.gate && needGate ? 2 : 0);
+    this.fill(x - 1, y - 3, x1 + 1, y, '.');
+    if (keep.gate) this.put(x, y, 'g');
+    if (needGate) this.put(x1, y, this.L(needGate));
+    if (keep.fake) {
+      const fx = x - 2;
+      this.vline(fx, y - 3, y, 'F');
+      this.hline(fx, x1 + 2, y - 4, '#');
+      const draft = keep.extras.find(e => e[0] === 'spawn' && e[1] === 'tourDraft');
+      if (draft) this.put(fx - 1, y, this.L(draft));
+    }
+    return x1 + 2;
+  }
+  // the prize cage: a nook (w wide, h tall) closed by the cage on its left at column x, ceiling over it; the boxes
+  // sit in its top row; returns the nook's first column. `key`: the vkey spot(s) the checker must reach to "win"
+  cage(aid, x, y, items, opts) {
+    opts = opts || {};
+    const w = Math.max(3, opts.w || items.length + 2), h = opts.h || 5, top = y - h + 1;
+    this.fill(x, top - 1, x + w, top - 1, '#');                 // ceiling
+    this.fill(x + 1, top, x + w, y, '.');
+    if (x + w + 1 < this.W - 1) this.vline(x + w + 1, top - 1, y, '#');
+    this.put(x, top - 1, '#');
+    const lock = ['lock', 'room:' + aid]; if (opts.needsAll) lock.push({ needsAll: opts.needsAll });
+    this.vline(x, top, y, this.L(lock));
+    const bx = x + 1 + Math.max(0, Math.floor((w - items.length) / 2));
+    items.forEach((it, k) => this.box(bx + k, top + 1, it));
+    this.data.cage = { x, top, y, w };
+    return x + 1;
+  }
+  // the checker's "the room was won": a vkey the search must stand on
+  winSpot(aid, x, y) {
+    // the nearest open cell on that row with something to stand on under it
+    for (let d = 0; d < this.W; d++) for (const xx of [x - d, x + d]) if (this.get(xx, y) === '.' && SOLIDISH(this.get(xx, y + 1))) { this.put(xx, y, this.L(['vkey', 'room:' + aid])); this.need('the win spot', xx, y); return this; }
+    return this;
+  }
+  // decor along a row on the ground, spaced out, skipping occupied cells
+  dress(keep, xs, y) {
+    const kinds = (keep.decor || []).concat(this.extraDecor || []);
+    if (!kinds.length) return;
+    xs.forEach((x, k) => { if (this.get(x, y) === '.' && SOLIDISH(this.get(x, y + 1))) this.decor(x, y, kinds[k % kinds.length]); });
+  }
+  finish(keep) {
+    const rows = this.g.map(r => r.join(''));
+    const items = [], hidden = [], doors = [];
+    let card = false;
+    for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) {
+      const ch = this.g[y][x];
+      if (ch === '?') items.push(this.boxes[x + ',' + y] || 'pick');
+      else if (ch === 'D') doors.push(this.doorsAt[x + ',' + y] || {});
+      else if (ch === '*') card = true;
+    }
+    // no postcard spot where the old room had none (the level's postcard pick must not change)
+    if (card && keep && !keep.gold) for (let y = 0; y < rows.length; y++) rows[y] = rows[y].replace(/\*/g, 'o');
+    const stamp = { floor: this.F, rows, legend: this.legend, items, hidden, doors };
+    if (card && (!keep || keep.gold)) stamp.gold = { '*': (keep && keep.gold) || this.goldKind };
+    return { stamp };
+  }
+}
+// a stamp cell Brady can stand on (for dressing)
+function SOLIDISH(ch) { return ch === '#' || ch === 'H' || ch === 'B' || ch === '-' || ch === 'I'; }
+
+/* ---------- the prize cage: a lock that opens itself when the room is won ---------- */
+class TourRoomCage extends ENTITY_TYPES.lock {
+  constructor(g, s) { super(g, s); this.need = s.need; this.lookName = 'roomCage'; this.rise = 0; }
+  update(dt) {
+    this.t += dt;
+    if (this.msgT > 0) this.msgT -= dt;
+    if (!this.open && this.g.keys && this.g.keys.has(this.id)) {
+      this.open = true; this.openT = 1;
+      for (const [x, y] of this.tiles) this.g.setTile(x, y, T.EMPTY);
+      Sound.play('door', { vol: 0.7 }); this.g.burst(this.cx, this.cy, 22, '#ffd84a', 'confetti');
+    }
+    if (this.open) { this.rise = Math.min(1, this.rise + dt * 1.6); if (this.openT > 0) this.openT -= dt; }
+  }
+  touchPlayer(p) {
+    if (this.open) return;
+    if (this.msgT <= 0) { this.msgT = 2; this.g.parts.text(this.cx, this.y - 10, this.need || 'WIN THE ROOM FIRST!', '#ffd84a'); Sound.play('bump', { vol: 0.4 }); }
+  }
+  draw(ctx) {
+    if (this.rise >= 1) return;
+    const x = this.x + 4, w = this.w - 8, y = this.y - this.rise * this.h, h = this.h, t = this.g.t;
+    Ink.around(ctx, x - 4, y - 6, w + 8, h + 8, c => {
+      c.fillStyle = '#7a5a2a'; c.fillRect(x - 2, y - 4, w + 4, 6);
+      c.fillStyle = '#e8b84a'; for (let k = 0; k < 4; k++) c.fillRect(x + 2 + k * (w - 6) / 3, y, 3, h);
+      c.fillStyle = '#c8962a'; c.fillRect(x - 2, y + h * 0.45, w + 4, 4);
+      // the padlock with a star: what opens it is the room's game
+      const ly = y + h * 0.45 + 2;
+      c.fillStyle = '#ffd84a'; rr(c, x + w / 2 - 8, ly - 2, 16, 13, 3); c.fill();
+      c.strokeStyle = '#ffd84a'; c.lineWidth = 2.5; c.beginPath(); c.arc(x + w / 2, ly - 2, 5, Math.PI, 0); c.stroke();
+      c.fillStyle = '#c0392b'; TourRoomArt.star(c, x + w / 2, ly + 4.5, 4 + Math.sin(t * 4) * 0.6);
+    }, { pad: 6 });
+  }
+}
+ENTITY_TYPES.roomCage = TourRoomCage;
+
+/* small drawing helpers shared by the kinds */
+const TourRoomArt = {
+  star(c, x, y, r) { c.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr2 = k % 2 ? r * 0.45 : r; c.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2); } c.closePath(); c.fill(); },
+  outline(c, w) { c.strokeStyle = '#1c1426'; c.lineWidth = w || 2; c.stroke(); },
+  // the four lamp / mural symbols: colour AND shape, so the order reads without colour vision
+  SYMS: [{ col: '#ff5a4a', shape: 'circle' }, { col: '#ffd23a', shape: 'tri' }, { col: '#4aa8ff', shape: 'square' }, { col: '#5ad86a', shape: 'diamond' }],
+  sym(c, k, x, y, r) {
+    const S = this.SYMS[k % 4]; c.fillStyle = S.col; c.beginPath();
+    if (S.shape === 'circle') c.arc(x, y, r, 0, TAU);
+    else if (S.shape === 'tri') { c.moveTo(x, y - r); c.lineTo(x + r, y + r * 0.8); c.lineTo(x - r, y + r * 0.8); c.closePath(); }
+    else if (S.shape === 'square') c.rect(x - r * 0.85, y - r * 0.85, r * 1.7, r * 1.7);
+    else { c.moveTo(x, y - r); c.lineTo(x + r, y); c.lineTo(x, y + r); c.lineTo(x - r, y); c.closePath(); }
+    c.fill(); this.outline(c, 1.5);
+  }
+};
+
+/* ---------- the hooks ---------- */
+TourHooks.on('areaLoaded', (play, A) => { if (A && A.roomKit) TourRooms.enter(play, A); });
+TourHooks.on('playUpdate', (play, dt) => { if (play.area && play.area.roomKit) TourRooms.update(play, dt); });
+TourHooks.on('afterEntities', (play, ctx) => { if (play.area && play.area.roomKit) TourRooms.draw(play, ctx); });
+try { Object.assign(window.BRADY_TOUR, { TourRooms }); } catch (e) { /* not in a browser */ }
+
+/* ---- 28_tour_ra_kinds.js ---- */
+/* ============================================================
+   World tour: secret-room kinds, part 1 (docs/design/SECRET_ROOMS.md §2): the rooms with a game in them.
+   ambush (Monster Closet), bigone (The Big One), rush (Rush), fetch (Recipe Kitchen), lamps (Light the Lamps),
+   whack (Whack-a-Critter), shell (Shell Game), prank (Prank Room), closing (Closing Time).
+   Each one: make(o, keep, ctx, A, rng) -> a RoomGrid; enter / update / draw at run time (TourRooms).
+   A won game opens the room's prize cage (a lock with the room's id; the checker opens it with a key spot, so
+   the prize is proven reachable as if the game were won).
+   ============================================================ */
+const TourRoomKit = {
+  Y: 10,   // the row things stand on in a 14-row room (floor 11)
+  // a plain room W wide, the way in on the left
+  room(W, H, F) { return new RoomGrid(W, H || 14, F || 11); },
+  // the prize: the old room's boxes, or the option's, or a coin box
+  prize(o, keep) { const p = o.prize ? [].concat(o.prize) : keep.prize.slice(); return p.length ? p : ['picks']; },
+  // the right end: the cage against the right wall, the gate wing left of it; returns the last free column
+  east(g, keep, A, o, opts) {
+    opts = opts || {};
+    const y = g.F - 1;
+    let x = g.W - 2;
+    if (opts.cage !== false) {
+      const items = this.prize(o, keep), w = Math.max(3, items.length + 2), cx = g.W - 2 - w;
+      g.cage(A.id, cx, y, items, { w, needsAll: opts.needsAll });
+      x = cx - 1;
+    }
+    const needGate = keep.extras.some(e => e[0] === 'spawn' && e[1] === 'gate');
+    if (keep.gate || needGate) { const gx = x - 2 - (keep.gate && needGate ? 2 : 0); g.gateWing(keep, gx, y); x = gx - (keep.fake ? 4 : 2); }
+    return x;
+  },
+  // how wide the east end is (so the kinds can size their rooms)
+  eastW(keep, o, cage) {
+    const needGate = keep.extras.some(e => e[0] === 'spawn' && e[1] === 'gate');
+    return (cage === false ? 1 : Math.max(3, this.prize(o, keep).length + 2) + 2) + (keep.gate || needGate ? (keep.gate && needGate ? 6 : 4) + (keep.fake ? 2 : 0) : 0);
+  },
+  // the level's critters that walk and can be stomped (an option's list first)
+  critters(play, kit) {
+    const ok = t => { const C = ENTITY_TYPES[t]; return C && C.prototype instanceof TourEnemy && !(C.cfg && (C.cfg.spiky || C.cfg.fiery)) && (!Tour.enemyInfo[t] || Tour.enemyInfo[t].place === 'walk'); };
+    // plain fighters for a closet: walkers, hoppers, chargers, throwers (not burrowers, sleepers, thieves...)
+    const plain = t => ok(t) && ['walk', 'hop', 'charge', 'throw'].indexOf((ENTITY_TYPES[t].cfg && ENTITY_TYPES[t].cfg.behavior) || 'walk') >= 0;
+    let L = [].concat(kit.o.critters || []).filter(ok);
+    if (!L.length) L = ((play.level.design && play.level.design.enemies) || []).map(e => Array.isArray(e) ? e[0] : e).filter(plain);
+    if (!L.length) { const cc = play.level.country; L = Object.keys(Tour.enemyInfo).filter(t => Tour.enemyInfo[t].country === cc && plain(t)); }
+    return L.length ? L : Object.keys(Tour.enemyInfo).filter(ok).slice(0, 3);
+  },
+  // bars over the barred doors
+  drawBars(play, ctx, R) {
+    if (!R.bars) return;
+    for (const b of R.bars) {
+      const e = b.e, x = e.cx, y = e.y + e.h;
+      Ink.around(ctx, x - 22, y - 60, 44, 62, c => {
+        c.fillStyle = '#8a5a2a'; c.save(); c.translate(x, y - 28);
+        for (const a of [-0.5, 0.5]) { c.save(); c.rotate(a); c.fillRect(-24, -5, 48, 10); c.restore(); }
+        c.restore();
+        c.fillStyle = '#6a6a78'; for (let k = -1; k <= 1; k++) c.fillRect(x + k * 12 - 2, y - 56, 4, 56);
+      }, { pad: 6 });
+    }
+  },
+  sec(play) { return 'room'; },
+  // Brady is clear of the door he came in by (the games wait for that)
+  inside(play, A, R) { const p = play.player, a = A.anchors && (A.anchors.in || A.anchors.start); return !a || Math.abs(p.cx - a.x) > 2.5 * TS || R.t > 3; },
+  raspberry(play, txt) { Sound.play('powerdown', { vol: 0.6 }); play.bannerText = txt || 'PFFFT!'; play.bannerT = 1.4; }
+};
+
+/* ================= ambush: the Monster Closet ================= */
+TourRooms.def('ambush', {
+  title: 'MONSTER CLOSET!', rule: 'THE DOOR IS BARRED: STOMP EVERY CRITTER', need: 'STOMP THEM ALL FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, W = 30 + K.eastW(keep, o);
+    const g = K.room(W), Y = K.Y;
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o);
+    const v = o.variant != null ? o.variant : Math.floor(rng() * 3), mid = Math.floor((x0 + x1) / 2);
+    if (v === 0) { g.hline(mid - 7, mid - 4, 7, '-'); g.hline(mid + 4, mid + 7, 7, '-'); g.hline(mid - 1, mid + 1, 4, '-'); g.put(mid, 3, '*'); }
+    else if (v === 1) { g.fill(mid - 1, 9, mid + 1, 10, '#'); g.hline(mid - 7, mid - 4, 6, '-'); g.hline(mid + 4, mid + 7, 6, '-'); g.put(mid + 6, 3, '*'); g.coins(mid - 1, mid + 1, 8); }
+    else { g.hline(x0 + 1, mid - 3, 7, '-'); g.hline(mid + 3, x1 - 1, 7, '-'); g.hline(mid - 1, mid + 1, 4, '-'); g.put(mid, 3, '*'); }
+    g.coins(mid - 6, mid - 4, 6 - (v === 1 ? 1 : 0)); g.coins(mid + 4, mid + 6, 6 - (v === 1 ? 1 : 0));
+    g.winSpot(A.id, mid, Y);
+    g.dress(keep, [x0 + 1, mid - 5, mid + 5], Y);
+    // the ceiling hatches the critters drop from
+    g.data.drops = [x0 + 3, mid - 3, mid + 3, x1 - 2].map(x => Math.max(2, x));
+    g.data.waves = o.waves || [2, 3];
+    return g;
+  },
+  enter(play, A, R, kit) {
+    if (R.won) return;
+    for (const e of R.mobs || []) e.remove = true;
+    R.mobs = []; R.wave = 0; R.phase = 'wait'; R.waitT = 0; R.fightT = 0; R.dropT = 0;
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    const D = kit.data, p = play.player;
+    if (R.phase === 'wait') { if (TourRoomKit.inside(play, A, R)) { R.waitT += dt; if (R.waitT > 0.6) { TourRooms.bar(play, A, R); R.phase = 'drop'; R.dropT = 0.4; } } return; }
+    if (R.phase === 'gone') return;
+    R.fightT += dt;
+    if (R.phase === 'drop') {
+      R.dropT -= dt;
+      if (R.dropT <= 0) {
+        const types = TourRoomKit.critters(play, kit), n = D.waves[R.wave] + (kit.d > 0.6 && R.wave > 0 ? 1 : 0);
+        const cols = D.drops.slice().sort((a, b) => Math.abs(b * TS - p.cx) - Math.abs(a * TS - p.cx));
+        for (let k = 0; k < n; k++) {
+          const tx = cols[k % cols.length] + (k >= cols.length ? 1 : 0);
+          const e = TourRooms.add(play, types[(R.wave + k) % types.length], tx, 1, { dir: tx * TS < p.cx ? 1 : -1 });
+          if (e) { e.roomMob = true; R.mobs.push(e); play.burst(tx * TS + TS / 2, TS + 8, 8, '#e8d8b0', 'dust'); }
+        }
+        R.hatchT = 0.8; R.wave++; R.phase = 'fight';
+        Sound.play('kick', { vol: 0.5 });
+      }
+      return;
+    }
+    if (R.hatchT > 0) R.hatchT -= dt;
+    const alive = R.mobs.filter(e => !e.dead && !e.remove && !e.friendT);
+    if (!alive.length) {
+      if (R.wave < D.waves.length) { R.phase = 'drop'; R.dropT = 0.9; play.bannerText = 'HERE COME MORE!'; play.bannerT = 1; }
+      else TourRooms.win(play, A, R, { text: 'CLOSET CLEARED!', coins: 6 });
+      return;
+    }
+    // never a soft-lock: after 45 s the critters get bored and leave, and the door opens (come back to try again)
+    if (R.fightT > 45) {
+      for (const e of alive) { e.remove = true; play.burst(e.cx, e.cy, 10, '#ffffff', 'dust'); }
+      TourRooms.unbar(play, A, R); R.phase = 'gone'; TourRoomKit.raspberry(play, 'THEY GOT BORED AND LEFT...');
+    }
+  },
+  draw(play, ctx, A, R, kit) {
+    TourRoomKit.drawBars(play, ctx, R);
+    // the ceiling hatches: open while critters drop
+    const open = R.hatchT > 0 || R.phase === 'drop';
+    for (const tx of kit.data.drops) {
+      const x = tx * TS + TS / 2, y = TS;
+      Ink.around(ctx, x - 18, y - 4, 36, 14, c => { c.fillStyle = open ? '#1c1426' : '#7a5a3a'; c.fillRect(x - 15, y, 30, open ? 10 : 6); if (!open) { c.fillStyle = '#5a3a24'; c.fillRect(x - 1, y, 2, 6); } }, { pad: 4 });
+    }
+    if (R.phase === 'fight' && !R.won) {
+      const n = R.mobs.filter(e => !e.dead && !e.remove).length;
+      TourRooms.hudText(play, ctx, 'CRITTERS LEFT: ' + n + (R.wave < kit.data.waves.length ? '  (MORE COMING)' : ''), '#ffd84a', 13);
+    }
+  }
+});
+
+/* ================= bigone: The Big One (a mini-boss cameo) ================= */
+const TourBigOne = {
+  cache: {},
+  // a giant one of a walking critter: three stomps (a hit makes it hop and hurry), drawn scaled from its feet
+  of(type) {
+    if (this.cache[type]) return this.cache[type];
+    const Base = ENTITY_TYPES[type];
+    const C = class extends Base {
+      constructor(g, s) {
+        super(g, s);
+        const k = this.k = s.k || 1.9;
+        this.w0 = this.w; this.h0 = this.h;
+        this.x -= this.w0 * (k - 1) / 2; this.y -= this.h0 * (k - 1); this.w = this.w0 * k; this.h = this.h0 * k;
+        this.hp = s.hp || 3; this.hpMax = this.hp; this.hurtT = 0; this.hopT = 1.6; this.bigOne = true; this.baseSpeed = this.speed;
+      }
+      update(dt) {
+        if (this.hurtT > 0) this.hurtT -= dt;
+        super.update(dt);
+        if (this.dead || this.knocked) return;
+        const p = this.g.player;
+        this.hopT -= dt;
+        if (this.hopT <= 0 && this.onGround) { this.hopT = 2.4 - (this.hpMax - this.hp) * 0.5; this.vy = -(8 + (this.hpMax - this.hp) * 1.5) * TS; this.onGround = false; if (p) { this.dir = sign(p.cx - this.cx) || this.dir; this.vx = this.dir * Math.abs(this.vx || this.speed); } }
+      }
+      hit(kind, src) {
+        if (this.dead) return false;
+        if (this.hurtT > 0) return kind === 'stomp' || kind === 'spin' ? 'bounce' : false;
+        if (this.hp > 1 && kind !== 'bump') {
+          this.hp--; this.hurtT = 0.9; this.speed = this.baseSpeed * (1 + 0.45 * (this.hpMax - this.hp)); this.vx = sign(this.vx || this.dir) * this.speed;
+          Sound.play('stomp', { pitch: 0.7 }); this.g.shake(4); this.g.burst(this.cx, this.y, 14, '#ffffff', 'spark');
+          this.hopT = 0.5; this.stunT = 0;
+          return kind === 'stomp' || kind === 'spin' ? 'bounce' : true;
+        }
+        if (kind === 'bump') return false;
+        this.hp = 1;
+        const r = super.hit(kind === 'love' || kind === 'hug' || kind === 'taco' ? 'stomp' : kind, src);
+        if (r) { this.g.shake(6); this.g.burst(this.cx, this.cy, 30, '#ffd84a', 'confetti'); }
+        return r;
+      }
+      draw(ctx) {
+        const k = this.k, fx = this.x + this.w / 2, fy = this.y + this.h, s = [this.x, this.y, this.w, this.h];
+        this.w = this.w0; this.h = this.h0; this.x = fx - this.w0 / 2; this.y = fy - this.h0;
+        ctx.save(); ctx.translate(fx, fy); ctx.scale(k, k); ctx.translate(-fx, -fy);
+        if (this.hurtT > 0 && Math.floor(this.hurtT * 14) % 2) ctx.globalAlpha = 0.45;
+        try { super.draw(ctx); } finally { ctx.restore(); [this.x, this.y, this.w, this.h] = s; }
+        // its hearts
+        if (!this.dead) for (let i = 0; i < this.hpMax; i++) { ctx.fillStyle = i < this.hp ? '#ff4a6a' : 'rgba(40,30,50,0.6)'; const hx = this.cx - (this.hpMax - 1) * 9 + i * 18, hy = this.y - 14; ctx.beginPath(); ctx.arc(hx - 3, hy, 4, 0, TAU); ctx.arc(hx + 3, hy, 4, 0, TAU); ctx.moveTo(hx - 7, hy + 1); ctx.lineTo(hx, hy + 9); ctx.lineTo(hx + 7, hy + 1); ctx.fill(); }
+      }
+    };
+    this.cache[type] = C;
+    return C;
+  }
+};
+TourRooms.def('bigone', {
+  title: 'THE BIG ONE!', rule: 'A GIANT CRITTER: STOMP IT THREE TIMES', need: 'BEAT THE BIG ONE FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, W = 30 + K.eastW(keep, o);
+    const g = K.room(W), Y = K.Y;
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o), mid = Math.floor((x0 + x1) / 2);
+    // two perches to jump off onto its head, a high shelf for the postcard
+    g.hline(mid - 7, mid - 4, 7, '-'); g.hline(mid + 4, mid + 7, 7, '-');
+    g.hline(mid - 1, mid + 1, 4, '-'); g.put(mid, 3, '*');
+    g.coins(mid - 7, mid - 4, 6); g.coins(mid + 4, mid + 7, 6);
+    g.winSpot(A.id, mid, Y);
+    g.dress(keep, [x0, mid - 4, mid + 4], Y);
+    g.data.drop = mid + 3;
+    return g;
+  },
+  enter(play, A, R, kit) {
+    if (R.won) return;
+    if (R.boss) R.boss.remove = true;
+    R.boss = null; R.phase = 'wait'; R.waitT = 0; R.fightT = 0;
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won || R.phase === 'gone') return;
+    if (R.phase === 'wait') {
+      if (!TourRoomKit.inside(play, A, R)) return;
+      R.waitT += dt;
+      if (R.waitT > 0.5) {
+        TourRooms.bar(play, A, R);
+        const types = TourRoomKit.critters(play, kit), type = kit.o.critter && ENTITY_TYPES[kit.o.critter] ? kit.o.critter : types[0];
+        ENTITY_TYPES['roomBig:' + type] = TourBigOne.of(type);
+        const e = TourRooms.add(play, 'roomBig:' + type, kit.data.drop, 1, { dir: -1, k: kit.o.scale || 1.9, hp: kit.o.hp || 3 });
+        R.boss = e; R.phase = 'fight';
+        play.shake(5); Sound.play('thunder', { vol: 0.4 }); play.bannerText = kit.o.name || 'THE BIG ONE!'; play.bannerT = 1.4;
+      }
+      return;
+    }
+    R.fightT += dt;
+    const b = R.boss;
+    if (!b || b.dead || b.remove) { TourRooms.win(play, A, R, { text: (kit.o.name || 'THE BIG ONE') + ' IS DOWN!', coins: 8 }); return; }
+    if (R.fightT > 60) { b.remove = true; play.burst(b.cx, b.cy, 20, '#ffffff', 'dust'); TourRooms.unbar(play, A, R); R.phase = 'gone'; TourRoomKit.raspberry(play, 'IT WANDERED OFF FOR A NAP...'); }
+  },
+  draw(play, ctx, A, R) { TourRoomKit.drawBars(play, ctx, R); }
+});
+
+/* ================= rush: grab every token before the clock runs out ================= */
+TourRooms.def('rush', {
+  title: 'RUSH!', rule: 'GRAB THEM ALL BEFORE THE CLOCK RUNS OUT', need: 'GRAB THEM ALL IN TIME!', timed: true,
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, look = o.look || 'tokChili', n = o.n || 6;
+    const W = 34 + K.eastW(keep, o);
+    const g = K.room(W), Y = K.Y;
+    const x0 = g.west(keep);
+    const ids = []; for (let k = 0; k < n; k++) ids.push('tok:' + A.id + ':' + k);
+    const x1 = K.east(g, keep, A, o, { needsAll: ids });
+    const v = o.variant != null ? o.variant : Math.floor(rng() * 2);
+    // a course of shelves and two small spike pits; the tokens on its corners
+    const spots = [];
+    const span = x1 - x0;
+    const at = f => x0 + Math.round(span * f);
+    g.hline(at(0.12), at(0.12) + 3, 7, '-'); spots.push([at(0.12) + 1, 6]);
+    g.fill(at(0.3), 10, at(0.3) + 1, 10, '^'); spots.push([at(0.3) + 1, 7]);
+    g.hline(at(0.36), at(0.36) + 3, 4, v ? '#' : '-'); spots.push([at(0.36) + 2, 3]);
+    g.fill(at(0.52), 9, at(0.52) + 2, 10, '#'); spots.push([at(0.52) + 1, 8]);
+    g.hline(at(0.62), at(0.62) + 3, 6, '-'); spots.push([at(0.62) + 3, 5]);
+    g.fill(at(0.75), 10, at(0.75) + 1, 10, '^'); spots.push([at(0.85), Y]);
+    g.hline(at(0.78), at(0.78) + 3, 3, '-'); spots.push([at(0.78) + 1, 2]);
+    g.put(at(0.62) + 1, 3, '*');
+    g.coins(at(0.12), at(0.12) + 3, 5);
+    spots.slice(0, n).forEach((s, k) => { g.spawn(s[0], s[1], 'key', { id: ids[k], look }); g.need('token ' + k, s[0], s[1]); });
+    g.data.tokens = spots.slice(0, n).map((s, k) => ({ id: ids[k], tx: s[0], ty: s[1], look }));
+    g.data.t = o.t || 16;
+    g.dress(keep, [x0, at(0.45), at(0.7)], Y);
+    return g;
+  },
+  enter(play, A, R, kit) { if (!R.won) this.reset(play, A, R, kit); },
+  reset(play, A, R, kit) {
+    for (const tk of kit.data.tokens) {
+      play.keys.delete(tk.id);
+      if (!play.entities.some(e => e instanceof ENTITY_TYPES.key && e.id === tk.id && !e.remove)) TourRooms.add(play, 'key', tk.tx, tk.ty, { id: tk.id, look: tk.look });
+    }
+    R.phase = 'ready'; R.left = kit.data.t + (kit.d < 0.3 ? 3 : 0); R.restT = 0;
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    if (R.phase === 'ready') { if (TourRoomKit.inside(play, A, R) || play.player.vx) { R.phase = 'run'; Sound.play('whistle', { vol: 0.5 }); } return; }
+    if (R.phase === 'rest') { R.restT -= dt; if (R.restT <= 0) { this.reset(play, A, R, kit); R.phase = 'run'; play.bannerText = 'AGAIN!'; play.bannerT = 1; } return; }
+    const got = kit.data.tokens.filter(tk => play.keys.has(tk.id)).length;
+    if (got >= kit.data.tokens.length) { TourRooms.win(play, A, R, { text: 'ALL OF THEM!', coins: 10 }); return; }
+    R.left -= dt;
+    if (R.left <= 0) {
+      R.phase = 'rest'; R.restT = 2.2; TourRoomKit.raspberry(play, 'TIME! ' + got + ' OF ' + kit.data.tokens.length);
+      for (const e of play.entities) if (e instanceof ENTITY_TYPES.key && kit.data.tokens.some(tk => tk.id === e.id)) { e.remove = true; play.burst(e.cx, e.cy, 6, '#ffffff', 'dust'); }
+    }
+  },
+  draw(play, ctx, A, R, kit) {
+    if (R.won) return;
+    const L = TourMaze.KEYS[kit.data.tokens[0].look];
+    if (R.phase === 'run' || R.phase === 'ready') TourRooms.clock(play, ctx, R.phase === 'ready' ? kit.data.t : Math.max(0, R.left), kit.data.t);
+    TourRooms.counter(play, ctx, kit.data.tokens.filter(tk => play.keys.has(tk.id)).length, kit.data.tokens.length, L && L.icon ? (c, x, y, t) => L.icon(c, x, y, t) : null);
+  }
+});
+
+/* ================= fetch: the Recipe Kitchen ================= */
+TourRooms.def('fetch', {
+  title: 'RECIPE KITCHEN!', rule: 'FIND THE THREE INGREDIENTS AND BRING THEM TO THE POT', need: 'THE POT NEEDS ALL THREE!',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, looks = o.ingredients || ['tokChili', 'tokCacao', 'tokTomato'];
+    const W = 34 + K.eastW(keep, o);
+    const g = K.room(W), Y = K.Y;
+    const x0 = g.west(keep);
+    const ids = looks.map((l, k) => 'ing:' + A.id + ':' + k), pot = 'room:' + A.id + ':pot';
+    const x1 = K.east(g, keep, A, o, { needsAll: ids.concat([pot]) });
+    const mid = Math.floor((x0 + x1) / 2), v = o.variant != null ? o.variant : Math.floor(rng() * 2);
+    // the pot in the middle of the floor; the cupboards round it: one up the shelves, one over a spike strip, one on
+    // the high hook (a spring up to it)
+    g.put(mid, Y, g.L(['spawn', 'roomPot', { look: o.pot || null, dish: o.dish || 'DINNER IS SERVED!' }]));
+    g.put(mid + 1, Y, g.L(['vkey', pot])); g.need('the pot', mid + 1, Y);
+    const spots = [];
+    g.hline(x0 + 1, x0 + 4, 7, '-'); g.hline(x0 + 4, x0 + 7, 4, '-'); spots.push(v ? [x0 + 6, 3] : [x0 + 2, 6]);
+    g.fill(mid + 4, 10, mid + 6, 10, '^'); g.hline(mid + 3, mid + 7, 6, '-'); spots.push([mid + 5, 5]);
+    g.put(x1 - 2, Y, 's'); g.hline(x1 - 4, x1 - 1, 3, '-'); spots.push([x1 - 3, 2]);
+    if (v) { g.hline(x0 + 1, x0 + 4, 7, '-'); g.coins(x0 + 1, x0 + 4, 6); } else g.coins(x0 + 4, x0 + 7, 3);
+    g.put(mid, 2, '*'); g.hline(mid - 1, mid + 1, 3, '-');
+    spots.forEach((s, k) => { g.spawn(s[0], s[1], 'key', { id: ids[k], look: looks[k] }); g.need('ingredient ' + looks[k], s[0], s[1]); });
+    g.data.ings = ids.map((id, k) => ({ id, look: looks[k] }));
+    g.dress(keep, [x0 + 1, mid - 3, mid + 8], Y);
+    return g;
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    const pot = play.entities.find(e => e instanceof TourRoomPot);
+    if (!pot || !overlap(play.player, pot)) { R.toldT = Math.max(0, (R.toldT || 0) - dt); return; }
+    const have = kit.data.ings.filter(i => play.keys.has(i.id)).length;
+    if (have >= kit.data.ings.length) { pot.cook(); TourRooms.win(play, A, R, { text: pot.dish, coins: 6 }); }
+    else if (!(R.toldT > 0)) { R.toldT = 2.5; play.parts.text(pot.cx, pot.y - 10, 'STILL NEED ' + (kit.data.ings.length - have) + '!', '#ffd84a'); Sound.play('bump', { vol: 0.4 }); }
+  },
+  draw(play, ctx, A, R, kit) {
+    if (R.won) return;
+    // the recipe card: the three ingredients, ticked once found
+    const n = kit.data.ings.length, x = play.camX + Game.viewW / 2, y = TourRooms.hudY(play, 0) + 40;
+    ctx.save(); ctx.fillStyle = 'rgba(255,248,232,0.92)'; rr(ctx, x - n * 22 - 8, y - 20, n * 44 + 16, 40, 8); ctx.fill(); ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 1.5; ctx.stroke();
+    kit.data.ings.forEach((i, k) => {
+      const L = TourMaze.KEYS[i.look], cx = x - (n - 1) * 22 + k * 44, got = play.keys.has(i.id);
+      ctx.save(); ctx.globalAlpha = got ? 1 : 0.4; ctx.translate(cx, y); ctx.scale(0.6, 0.6); if (L) L.icon(ctx, 0, 0, play.t); ctx.restore();
+      if (got) { ctx.strokeStyle = '#2a9a4a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 8, y + 4); ctx.lineTo(cx - 2, y + 11); ctx.lineTo(cx + 10, y - 6); ctx.stroke(); }
+    });
+    ctx.restore();
+  }
+});
+// the cook's pot: steams, bubbles over when the dish is done
+class TourRoomPot extends Ent {
+  constructor(g, s) { super(g, s, 2 * TS, 40); this.x = s.x - TS / 2; this.dish = s.dish || 'DINNER IS SERVED!'; this.done = 0; this.back = true; }
+  update(dt) { this.t += dt; if (this.done > 0) this.done = Math.min(3, this.done + dt); }
+  cook() { if (!this.done) { this.done = 0.01; Sound.play('splash', { vol: 0.6 }); this.g.burst(this.cx, this.y, 26, '#fff4d0', 'spark'); } }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, t = this.t;
+    Ink.around(ctx, x - 34, y - 64, 68, 66, c => {
+      c.fillStyle = '#3a3440'; c.fillRect(x - 20, y - 4, 6, 4); c.fillRect(x + 14, y - 4, 6, 4);
+      c.fillStyle = '#c86a3a'; c.beginPath(); c.ellipse(x, y - 18, 26, 16, 0, 0, TAU); c.fill();
+      c.fillStyle = '#e8904a'; c.fillRect(x - 28, y - 34, 56, 7);
+      c.fillStyle = this.done ? '#8a3a2a' : '#5a3a2a'; c.beginPath(); c.ellipse(x, y - 33, 24, 5, 0, 0, TAU); c.fill();
+    }, { pad: 6 });
+    // steam (more once it is cooking)
+    ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    for (let k = 0; k < (this.done ? 6 : 3); k++) { const ph = (t * 0.8 + k * 0.37) % 1; ctx.globalAlpha = 0.6 * (1 - ph); ctx.beginPath(); ctx.arc(x - 10 + k * 7 + Math.sin(t * 2 + k) * 4, y - 40 - ph * 30, 4 + ph * 5, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.roomPot = TourRoomPot;
+
+/* ================= lamps: light them in the order the picture shows ================= */
+TourRooms.def('lamps', {
+  title: 'LIGHT THE LAMPS!', rule: 'LIGHT THEM IN THE ORDER THE PICTURE SHOWS', need: 'LIGHT THE LAMPS IN ORDER!',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, n = o.n || 4, W = 34 + K.eastW(keep, o);
+    const g = K.room(W), Y = K.Y;
+    g.area = { dark: true };
+    const x0 = g.west(keep);
+    const ids = []; for (let k = 0; k < n; k++) ids.push('lamp:' + A.id + ':' + k);
+    const x1 = K.east(g, keep, A, o, { needsAll: ids });
+    const span = x1 - x0, at = f => x0 + Math.round(span * f);
+    // the lamps stand on the floor, a shelf, a high ledge and the floor again
+    const spots = [[at(0.15), Y], [at(0.38), 6], [at(0.62), 3], [at(0.88), Y]];
+    g.hline(at(0.38) - 2, at(0.38) + 2, 7, '-'); g.hline(at(0.62) - 2, at(0.62) + 2, 4, '#');
+    g.hline(at(0.5) - 1, at(0.5) + 1, 8, '-');
+    g.coins(at(0.38) - 2, at(0.38) + 2, 5); g.put(at(0.62) + 2, 1, '*');
+    // the order: a shuffle of the lamps that is never simply left to right
+    let ord = [0, 1, 2, 3].slice(0, n);
+    for (let tries = 0; tries < 8; tries++) { ord.sort(() => rng() - 0.5); if (ord.some((v, k) => v !== k)) break; }
+    spots.slice(0, n).forEach((s, k) => { g.put(s[0], s[1], g.L(['spawn', 'roomLamp', { k, ord: ord.indexOf(k), sym: (k + (o.sym || 0)) % 4 }])); g.vline(s[0] + 1, s[1], s[1], g.L(['vkey', ids[k]])); g.need('lamp ' + k, s[0], s[1]); });
+    g.data.order = ord.map(k => (k + (o.sym || 0)) % 4);
+    g.data.mural = [x0 + 3, 6];   // at eye level by the door, clear of the toast and the HUD
+    g.dress(keep, [x0, at(0.27), at(0.75)], Y);
+    return g;
+  },
+  enter(play, A, R, kit) { if (!R.won) { R.next = 0; for (const e of play.entities) if (e instanceof TourRoomLamp) e.lit = false; } },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    for (const e of play.entities) {
+      if (!(e instanceof TourRoomLamp) || e.lit || !overlap(play.player, e)) continue;
+      if (e.ord === R.next) { e.lit = true; R.next++; Sound.play('checkpoint', { vol: 0.6 }); play.burst(e.cx, e.y + 10, 14, '#ffd890', 'spark'); if (R.next >= kit.data.order.length) { A.dark = false; TourRooms.win(play, A, R, { text: 'LET THERE BE LIGHT!', coins: 6 }); } }
+      else { for (const L of play.entities) if (L instanceof TourRoomLamp) L.lit = false; R.next = 0; e.puffT = 1; TourRoomKit.raspberry(play, 'PFFT! WRONG ORDER'); }
+    }
+  },
+  draw(play, ctx, A, R, kit) {
+    // the picture on the wall: the lamps' symbols in order, the lit ones ticked
+    const [mx, my] = kit.data.mural, n = kit.data.order.length, x = mx * TS + TS / 2, y = my * TS + TS / 2;
+    Ink.around(ctx, x - n * 18 - 10, y - 20, n * 36 + 20, 40, c => {
+      c.fillStyle = '#e8d8b0'; rr(c, x - n * 18 - 6, y - 16, n * 36 + 12, 32, 5); c.fill();
+      c.strokeStyle = '#7a5a3a'; c.lineWidth = 3; c.stroke();
+      kit.data.order.forEach((sym, k) => {
+        const cx = x - (n - 1) * 18 + k * 36;
+        TourRoomArt.sym(c, sym, cx, y, 9);
+        if (k < n - 1) { c.fillStyle = '#7a5a3a'; c.beginPath(); c.moveTo(cx + 13, y - 4); c.lineTo(cx + 19, y); c.lineTo(cx + 13, y + 4); c.fill(); }
+      });
+    }, { pad: 6 });
+    kit.data.order.forEach((sym, k) => { if (k < (R.next || 0) || R.won) { const cx = x - (n - 1) * 18 + k * 36; ctx.fillStyle = 'rgba(255,240,150,0.5)'; ctx.beginPath(); ctx.arc(cx, y, 13, 0, TAU); ctx.fill(); } });
+  }
+});
+class TourRoomLamp extends Ent {
+  constructor(g, s) { super(g, s, 24, 64); this.k = s.k; this.ord = s.ord; this.sym = s.sym; this.lit = false; this.glow = 0; this.puffT = 0; }
+  update(dt) { this.t += dt; this.glow = approach(this.glow, this.lit ? 1 : 0, dt * 3); if (this.puffT > 0) this.puffT -= dt; }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, k = this.glow;
+    Ink.around(ctx, x - 14, y - 66, 28, 68, c => {
+      c.fillStyle = '#4a3a30'; c.fillRect(x - 2, y - 44, 4, 44); c.fillRect(x - 9, y - 4, 18, 4);
+      c.fillStyle = k > 0.1 ? `rgba(255,${200 + 40 * Math.sin(this.t * 6)},110,${0.5 + 0.5 * k})` : '#3a3040';
+      rr(c, x - 10, y - 62, 20, 20, 5); c.fill(); c.strokeStyle = '#1c1426'; c.lineWidth = 1.5; c.stroke();
+      TourRoomArt.sym(c, this.sym, x, y - 52, 6);
+    }, { pad: 6 });
+    if (this.puffT > 0) { ctx.save(); ctx.globalAlpha = this.puffT; ctx.fillStyle = '#9a9aa8'; ctx.beginPath(); ctx.arc(x, y - 72 - (1 - this.puffT) * 16, 8 + (1 - this.puffT) * 8, 0, TAU); ctx.fill(); ctx.restore(); }
+  }
+  get light() { return { r: 26 + this.glow * 200, c: 'rgba(255,214,140,', y: this.y + 10 }; }
+}
+ENTITY_TYPES.roomLamp = TourRoomLamp;
+
+/* ================= whack: critters pop out of the floor ================= */
+TourRooms.def('whack', {
+  title: 'WHACK-A-CRITTER!', rule: 'STOMP THE CRITTERS AS THEY POP UP', need: 'WIN THE GAME FIRST!', timed: true,
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, n = o.holes || 6, W = 32 + K.eastW(keep, o);
+    const g = K.room(W), Y = K.Y;
+    const x0 = g.west(keep) + 1, x1 = K.east(g, keep, A, o);
+    const span = x1 - x0 - 2;
+    const holes = []; for (let k = 0; k < n; k++) holes.push(x0 + 1 + Math.round(span * (k + 0.5) / n));
+    holes.forEach((hx, k) => g.put(hx, Y, g.L(['spawn', 'roomHole', { k, look: o.critter || 'mole' }])));
+    // a scoreboard shelf over the middle, the postcard on it
+    const mid = Math.floor((x0 + x1) / 2);
+    g.hline(mid - 2, mid + 2, 5, '-'); g.put(mid, 4, '*'); g.coins(mid - 2, mid + 2, 3);
+    g.winSpot(A.id, mid, Y);
+    g.data.need = o.need || 8; g.data.t = o.t || 22; g.data.look = o.critter || 'mole';
+    g.dress(keep, [x0 - 1, x1 - 1], Y);
+    return g;
+  },
+  enter(play, A, R, kit) { if (!R.won) { R.phase = 'ready'; R.score = 0; R.left = kit.data.t; R.popT = 0.8; } },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    const holes = play.entities.filter(e => e instanceof TourRoomHole), p = play.player;
+    if (R.phase === 'ready') { if (TourRoomKit.inside(play, A, R)) { R.phase = 'play'; Sound.play('whistle', { vol: 0.5 }); } return; }
+    if (R.phase === 'rest') { R.restT -= dt; if (R.restT <= 0) { R.phase = 'play'; R.score = 0; R.left = kit.data.t; play.bannerText = 'AGAIN!'; play.bannerT = 1; } return; }
+    R.left -= dt; R.popT -= dt;
+    const quick = 1 - kit.d * 0.35;
+    if (R.popT <= 0) {
+      const free = holes.filter(h => h.up <= 0 && Math.abs(h.cx - p.cx) > TS * 0.8);
+      if (free.length) { const h = free[Math.floor(Math.random() * free.length)]; h.pop(1.25 * quick); }
+      R.popT = (0.55 + Math.random() * 0.4) * quick;
+    }
+    // a stomp: Brady coming down onto a critter that is up
+    for (const h of holes) {
+      if (h.up <= 0 || h.hitT > 0) continue;
+      const box = { x: h.x + 4, y: h.y + h.h - 30 * h.rise, w: h.w - 8, h: 30 * h.rise };
+      if (h.rise > 0.4 && p.vy > 0 && overlap(p, box) && p.y + p.h < box.y + 16) {
+        h.bonk(); R.score++; p.vy = -PHYS.stompV; Sound.play('stomp', { pitch: 1 + R.score * 0.05 }); play.parts.text(h.cx, h.y - 10, R.score + '!', '#ffd84a');
+      }
+    }
+    if (R.score >= kit.data.need) { for (const h of holes) h.up = 0; TourRooms.win(play, A, R, { text: 'GOT ' + R.score + '!', coins: 8 }); return; }
+    if (R.left <= 0) { R.phase = 'rest'; R.restT = 2.5; for (const h of holes) h.up = 0; TourRoomKit.raspberry(play, 'TIME! ' + R.score + ' OF ' + kit.data.need); }
+  },
+  draw(play, ctx, A, R, kit) {
+    if (R.won) return;
+    if (R.phase !== 'ready') TourRooms.clock(play, ctx, R.phase === 'rest' ? 0 : R.left, kit.data.t);
+    TourRooms.counter(play, ctx, R.score || 0, kit.data.need, (c, x, y, t) => TourRoomCritters.draw(c, kit.data.look, x, y + 10, 1, t));
+  }
+});
+class TourRoomHole extends Ent {
+  constructor(g, s) { super(g, s, 30, 34); this.look = s.look || 'mole'; this.up = 0; this.rise = 0; this.hitT = 0; this.back = true; }
+  pop(t) { this.up = t; this.hitT = 0; }
+  bonk() { this.hitT = 0.4; this.up = Math.min(this.up, 0.4); this.g.burst(this.cx, this.y + 10, 8, '#ffffff', 'spark'); }
+  update(dt) {
+    this.t += dt;
+    if (this.up > 0) this.up -= dt;
+    if (this.hitT > 0) this.hitT -= dt;
+    this.rise = approach(this.rise, this.up > 0.15 && this.hitT <= 0 ? 1 : 0, dt * 9);
+  }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h;
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.ellipse(x, y - 3, 15, 5, 0, 0, TAU); ctx.fill();
+    if (this.rise > 0.02 || this.hitT > 0) {
+      ctx.save(); ctx.beginPath(); ctx.rect(x - 20, y - 60, 40, 57); ctx.clip();
+      TourRoomCritters.draw(ctx, this.look, x, y - 3 + (1 - this.rise) * 30, this.hitT > 0 ? 0.6 : 1, this.t, this.hitT > 0);
+      ctx.restore();
+    }
+    ctx.fillStyle = '#5a4030'; ctx.beginPath(); ctx.ellipse(x, y - 2, 16, 4, 0, 0, Math.PI); ctx.fill();
+  }
+}
+ENTITY_TYPES.roomHole = TourRoomHole;
+
+/* ================= shell: three cups, one prize ================= */
+TourRooms.def('shell', {
+  title: 'SHELL GAME!', rule: 'WATCH THE PRIZE, THEN STOMP THE CUP IT IS UNDER', need: 'FIND THE RIGHT CUP FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, W = 32 + K.eastW(keep, o);
+    const g = K.room(W), Y = K.Y;
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o), mid = Math.floor((x0 + x1) / 2);
+    // the dealer's table: a long one-way top Brady stands on to stomp the cups
+    g.hline(mid - 6, mid + 6, 8, '-');
+    g.fill(mid - 6, 9, mid - 6, 10, '|'); g.fill(mid + 6, 9, mid + 6, 10, '|');
+    g.put(mid, 7, g.L(['spawn', 'roomDealer', { look: o.dealer || null }]));
+    g.winSpot(A.id, mid - 3, 7);
+    g.hline(x0 + 1, x0 + 3, 5, '-'); g.put(x0 + 2, 4, '*'); g.coins(x1 - 4, x1 - 2, 6); g.hline(x1 - 4, x1 - 2, 7, '-');
+    g.data.slots = [mid - 4, mid, mid + 4]; g.data.row = 7; g.data.cup = o.cup || 'cup'; g.data.joke = o.joke || ['sock', 'chicken'];
+    g.data.swaps = o.swaps || 6;
+    g.dress(keep, [x0, x1 - 6], Y);
+    return g;
+  },
+  enter(play, A, R, kit) {
+    if (R.won) return;
+    if (!R.cups) R.cups = kit.data.slots.map((s, k) => ({ k, x: s * TS + TS / 2, from: k, to: k, lift: 0 }));
+    R.phase = 'idle'; R.prize = 1; R.pt = 0; R.swapsLeft = 0;
+    R.cups.forEach((c, k) => { c.slot = k; c.x = kit.data.slots[k] * TS + TS / 2; c.lift = 0; });
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) { R.cups.forEach(c => { c.lift = approach(c.lift, c.k === R.prizeCup ? 1 : 0, dt * 3); }); return; }
+    const D = kit.data, p = play.player, rowY = (D.row + 1) * TS, slotX = k => D.slots[k] * TS + TS / 2;
+    R.pt += dt;
+    const onTable = p.y + p.h > rowY - 3 * TS && p.y + p.h <= rowY + TS && p.cx > slotX(0) - 3 * TS && p.cx < slotX(2) + 3 * TS;
+    if (R.phase === 'idle') {
+      R.cups.forEach(c => { c.lift = approach(c.lift, 0, dt * 3); });
+      if (onTable || TourRoomKit.inside(play, A, R) && R.t > 1.5) { R.phase = 'show'; R.pt = 0; R.prizeCup = R.cups.find(c => c.slot === 1).k; }
+      return;
+    }
+    if (R.phase === 'show') {
+      const c = R.cups.find(c => c.k === R.prizeCup);
+      c.lift = R.pt < 1.4 ? approach(c.lift, 1, dt * 4) : approach(c.lift, 0, dt * 4);
+      if (R.pt > 1.9) { R.phase = 'shuffle'; R.pt = 0; R.swapsLeft = D.swaps + Math.round(kit.d * 4) + (R.tries || 0); R.swap = null; }
+      return;
+    }
+    if (R.phase === 'shuffle') {
+      const dur = Math.max(0.28, 0.5 - kit.d * 0.15);
+      if (!R.swap) { const a = Math.floor(Math.random() * 3); let b = Math.floor(Math.random() * 2); if (b >= a) b++; R.swap = { a, b, t: 0 }; Sound.play('select', { vol: 0.3 }); }
+      R.swap.t += dt;
+      const k = clamp(R.swap.t / dur, 0, 1), e = easeInOut(k);
+      const ca = R.cups.find(c => c.slot === R.swap.a), cb = R.cups.find(c => c.slot === R.swap.b);
+      ca.x = lerp(slotX(R.swap.a), slotX(R.swap.b), e); cb.x = lerp(slotX(R.swap.b), slotX(R.swap.a), e);
+      ca.hop = Math.sin(k * Math.PI) * 10; cb.hop = -Math.sin(k * Math.PI) * 4;
+      if (k >= 1) { ca.slot = R.swap.b; cb.slot = R.swap.a; ca.hop = cb.hop = 0; R.swap = null; if (--R.swapsLeft <= 0) { R.phase = 'pick'; R.pt = 0; play.toast('WHICH ONE? STOMP IT!'); } }
+      return;
+    }
+    if (R.phase === 'pick') {
+      if (p.vy > 0) for (const c of R.cups) {
+        const box = { x: c.x - 16, y: rowY - 34, w: 32, h: 34 };
+        if (overlap(p, box) && p.y + p.h < box.y + 18) {
+          p.vy = -PHYS.stompV; R.chosen = c.k; R.phase = 'reveal'; R.pt = 0; Sound.play('stomp');
+          if (c.k === R.prizeCup) { TourRooms.win(play, A, R, { text: 'RIGHT CUP!', coins: 6 }); }
+          else { R.tries = (R.tries || 0) + 1; R.joke = D.joke[(R.tries - 1) % D.joke.length]; TourRoomKit.raspberry(play, 'NOPE!'); }
+          break;
+        }
+      }
+      return;
+    }
+    if (R.phase === 'reveal') {
+      R.cups.forEach(c => { c.lift = approach(c.lift, c.k === R.chosen || (R.pt > 1.2 && c.k === R.prizeCup) ? 1 : 0, dt * 4); });
+      if (R.pt > 2.6) { R.phase = 'idle'; R.pt = 0; R.joke = null; }
+    }
+  },
+  draw(play, ctx, A, R, kit) {
+    if (!R.cups) return;
+    const D = kit.data, rowY = (D.row + 1) * TS, t = play.t;
+    for (const c of R.cups) {
+      const x = c.x, base = rowY - (c.hop || 0), lift = c.lift * 30;
+      // what is under it
+      if (c.lift > 0.05) {
+        if (c.k === R.prizeCup) { ctx.save(); TourItemArt.glow(ctx, x, base - 12, t, '#fff2a0'); ctx.restore(); TourRoomArt.star(ctx, x, base - 12, 9); ctx.fillStyle = '#ffd84a'; TourRoomArt.star(ctx, x, base - 12, 7); }
+        else if (c.k === R.chosen && R.joke) TourRoomCritters.joke(ctx, R.joke, x, base, t);
+      }
+      TourRoomCritters.cup(ctx, D.cup, x, base - lift, t, R.phase === 'pick');
+    }
+  }
+});
+// the dealer behind the table: a land's critter, drawn from its own art, friendly and still
+class TourRoomDealer extends Ent {
+  constructor(g, s) { super(g, s, 30, 40); this.back = true; this.look = s.look; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, t = this.t;
+    if (this.look && TourRoomCritters.dealers[this.look]) { TourRoomCritters.dealers[this.look](ctx, x, y, t); return; }
+    TourRoomCritters.draw(ctx, this.look && TourRoomCritters.LOOKS[this.look] ? this.look : 'dealer', x, y + 2, 1.3, t);
+  }
+}
+ENTITY_TYPES.roomDealer = TourRoomDealer;
+
+/* ================= prank: a too-good-to-be-true chest ================= */
+TourRooms.def('prank', {
+  title: 'TREASURE ROOM!', rule: 'A GIANT TREASURE CHEST! TOTALLY REAL. GO ON, OPEN IT', need: 'OPEN THE BIG CHEST FIRST!',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, W = 30 + K.eastW(keep, o);
+    const g = K.room(W), Y = K.Y;
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o), mid = Math.floor((x0 + x1) / 2);
+    // the chest on a dais under a spotlight, velvet ropes, a high shelf with the postcard
+    g.hline(mid - 3, mid + 3, 10, '#');
+    g.put(mid, 9, g.L(['spawn', 'roomChest', { gag: o.gag || 'glove', label: o.label || 'TREASURE' }]));
+    g.winSpot(A.id, mid - 2, 9);
+    g.hline(x0 + 2, x0 + 5, 6, '-'); g.put(x0 + 3, 4, '*'); g.coins(x0 + 2, x0 + 5, 5);
+    g.dress(keep, [x0, mid - 6, mid + 6], Y);
+    g.data.gag = o.gag || 'glove'; g.data.line = o.line || "OK, OK. HERE'S THE REAL ONE.";
+    return g;
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    const ch = play.entities.find(e => e instanceof TourRoomChest);
+    if (ch && ch.sprung && ch.sprungT > 1.6) TourRooms.win(play, A, R, { text: kit.data.line, coins: 5 });
+  }
+});
+class TourRoomChest extends Ent {
+  constructor(g, s) { super(g, s, 2 * TS, 44); this.x = s.x - TS; this.gag = s.gag || 'glove'; this.label = s.label || 'TREASURE'; this.sprung = false; this.sprungT = 0; this.back = true; }
+  update(dt) { this.t += dt; if (this.sprung) this.sprungT += dt; }
+  touchPlayer(p) {
+    if (this.sprung || p.state !== 'play') return;
+    this.sprung = true; this.sprungT = 0;
+    const g = this.g;
+    TourRoomCritters.gagStart(g, this, p);
+  }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, t = this.t, open = this.sprung ? Math.min(1, this.sprungT * 5) : 0;
+    // a spotlight
+    if (!this.sprung) { ctx.save(); ctx.fillStyle = 'rgba(255,240,180,0.12)'; ctx.beginPath(); ctx.moveTo(x - 14, y - 300); ctx.lineTo(x + 14, y - 300); ctx.lineTo(x + 50, y); ctx.lineTo(x - 50, y); ctx.fill(); ctx.restore(); }
+    Ink.around(ctx, x - 36, y - 70, 72, 72, c => {
+      c.fillStyle = '#8a4a1a'; rr(c, x - 30, y - 30, 60, 30, 4); c.fill();
+      c.fillStyle = '#ffd84a'; c.fillRect(x - 30, y - 24, 60, 4); c.fillRect(x - 4, y - 30, 8, 30);
+      c.save(); c.translate(x - 30, y - 30); c.rotate(-open * 1.2);
+      c.fillStyle = '#a85a22'; rr(c, 0, -16, 60, 16, 6); c.fill(); c.fillStyle = '#ffd84a'; c.fillRect(26, -16, 8, 16);
+      c.restore();
+    }, { pad: 6 });
+    if (!this.sprung) { for (let k = 0; k < 3; k++) { const a = t * 2 + k * 2.1; ctx.fillStyle = '#fff8c0'; TourRoomArt.star(ctx, x + Math.cos(a) * 34, y - 40 + Math.sin(a * 1.3) * 10, 4); } }
+    if (!this.sprung) { ctx.save(); ctx.font = `9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd84a'; ctx.fillText(this.label, x, y - 50); ctx.restore(); }
+    if (this.sprung) TourRoomCritters.gagDraw(ctx, this, x, y - 30, this.sprungT, t);
+  }
+}
+ENTITY_TYPES.roomChest = TourRoomChest;
+
+/* ================= closing: grab what you can before the shutters come down ================= */
+TourRooms.def('closing', {
+  title: 'CLOSING TIME!', rule: 'GRAB WHAT YOU CAN: THE SHUTTERS COME DOWN, TOP SHELF FIRST', timed: true,
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, W = 32 + K.eastW(keep, o, false);
+    const g = K.room(W), Y = K.Y;
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o, { cage: false });
+    // the counter by the door (the keeper dozes behind it), then three tiers of shelves
+    const c0 = x0 + 1;
+    g.put(c0 + 1, Y, g.L(['spawn', 'roomKeeper', { look: o.keeper || null }]));
+    const s0 = c0 + 5, s1 = x1 - 1;
+    // tiers: the floor under the shelves, the low shelf (row 8), the high shelf (row 5) with the boxes and the postcard
+    g.hline(s0, s1, 8, '-'); g.hline(s0 + 2, s1, 5, '-');
+    const items = TourRoomKit.prize(o, keep);
+    g.coins(s0, s1 - 1, 7); g.coins(s0 + 2, s1 - 2, 4); g.coins(s0 + 1, s1 - 2, Y);
+    items.forEach((it, k) => g.box(s0 + 4 + k * 3, 2, it));
+    g.put(s1 - 2, 1, '*');
+    g.data.tiers = [{ y0: 9, y1: 10, x0: s0, x1: s1 }, { y0: 6, y1: 8, x0: s0, x1: s1 }, { y0: 1, y1: 5, x0: s0 + 2, x1: s1 }];
+    g.data.t = o.t || 14; g.data.word = o.word || 'CLOSED!';
+    g.dress(keep, [s0 - 1], Y);
+    return g;
+  },
+  enter(play, A, R, kit) {
+    // shelves closed on the last visit open again (what Brady took stays taken)
+    for (const c of R.shut || []) { if (c.t === 'pick') play.setTile(c.x, c.y, T.PICK); else if (c.t === 'box') { play.setTile(c.x, c.y, T.QBLOCK); A.contents[c.x + ',' + c.y] = c.it; } else if (c.t === 'gold' && c.e) c.e.y = c.y0; }
+    R.shut = []; R.closed = 0; R.phase = 'ready'; R.left = kit.data.t; R.sweepT = 0;
+  },
+  update(play, dt, A, R, kit) {
+    const D = kit.data;
+    if (R.phase === 'ready') { if (TourRoomKit.inside(play, A, R) || R.t > 1.2) R.phase = 'run'; return; }
+    if (R.phase === 'run') {
+      R.left -= dt;
+      // top tier at half time, the middle at three quarters, the bottom at the end
+      const want = R.left <= 0 ? 3 : R.left <= D.t * 0.25 ? 2 : R.left <= D.t * 0.5 ? 1 : 0;
+      while (R.closed < want) this.shutTier(play, A, R, D.tiers[2 - R.closed]);
+      if (R.left <= 0) { R.phase = 'sweep'; R.sweepT = 0; play.bannerText = D.word; play.bannerT = 1.5; Sound.play('bell', { vol: 0.6 }); }
+      return;
+    }
+    if (R.phase === 'sweep') {
+      R.sweepT += dt;
+      // the keeper sweeps Brady out of the door (never a hit)
+      const door = play.entities.find(e => e instanceof Portal && e.target && e.target.area !== A.idx);
+      if (R.sweepT > 1.2 && door) { R.phase = 'out'; play.enterPortal(door); }
+      else if (R.sweepT > 1.2) R.phase = 'out';
+    }
+  },
+  shutTier(play, A, R, tier) {
+    R.closed++;
+    Sound.play('crumble', { vol: 0.5 });
+    for (let y = tier.y0; y <= tier.y1; y++) for (let x = tier.x0; x <= tier.x1; x++) {
+      const t = tileAt(A, x, y);
+      if (t === T.PICK) { play.setTile(x, y, T.EMPTY); R.shut.push({ t: 'pick', x, y }); }
+      else if (t === T.QBLOCK) { const it = A.contents[x + ',' + y]; play.setTile(x, y, T.USED); delete A.contents[x + ',' + y]; R.shut.push({ t: 'box', x, y, it }); }
+    }
+    for (const e of play.entities) if (e instanceof Gold && !e.remove && e.y >= tier.y0 * TS - TS && e.y < (tier.y1 + 1) * TS) { R.shut.push({ t: 'gold', e, y0: e.y }); e.y = -9999; }
+    tier.at = play.t;
+  },
+  draw(play, ctx, A, R, kit) {
+    const D = kit.data;
+    for (let k = 0; k < 3; k++) {
+      const tier = D.tiers[2 - k];
+      if (k >= R.closed) continue;
+      const x = tier.x0 * TS, w = (tier.x1 - tier.x0 + 1) * TS, y0 = tier.y0 * TS - 4, h = (tier.y1 - tier.y0 + 1) * TS + 4;
+      const drop = clamp((play.t - (tier.at || 0)) / 0.5, 0, 1) * h;
+      ctx.save(); ctx.fillStyle = '#8a8a96'; ctx.fillRect(x, y0, w, drop);
+      ctx.fillStyle = '#a8a8b4'; for (let yy = y0 + 4; yy < y0 + drop; yy += 8) ctx.fillRect(x, yy, w, 3);
+      ctx.fillStyle = '#4a4a56'; ctx.fillRect(x, y0 + drop - 4, w, 4);
+      ctx.restore();
+    }
+    if (R.phase === 'run' || R.phase === 'ready') TourRooms.clock(play, ctx, Math.max(0, R.phase === 'ready' ? D.t : R.left), D.t);
+  }
+});
+// the keeper behind the counter: asleep (z's) until closing time, then awake with a broom
+class TourRoomKeeper extends Ent {
+  constructor(g, s) { super(g, s, 3 * TS, 48); this.x = s.x - TS / 2 - TS; this.back = true; this.look = s.look; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, t = this.t, A = this.g.area, R = A.roomState || {}, awake = R.phase === 'sweep' || R.phase === 'out';
+    Ink.around(ctx, x - 50, y - 70, 100, 72, c => {
+      // the counter
+      c.fillStyle = '#9a6a3a'; c.fillRect(x - 46, y - 30, 92, 30); c.fillStyle = '#c8945a'; c.fillRect(x - 48, y - 34, 96, 6);
+      // the keeper's head over it
+      TourRoomCritters.draw(c, this.look || 'keeper', x - 6, y - 32, 1.2, t, false, !awake);
+      if (awake) { c.strokeStyle = '#7a5a2a'; c.lineWidth = 3; c.beginPath(); c.moveTo(x + 18, y - 70); c.lineTo(x + 30 + Math.sin(t * 12) * 8, y - 30); c.stroke(); c.fillStyle = '#e8c860'; c.fillRect(x + 22 + Math.sin(t * 12) * 8, y - 34, 18, 8); }
+    }, { pad: 6 });
+    if (!awake) { ctx.save(); ctx.font = `12px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffffff'; for (let k = 0; k < 3; k++) { const ph = (t * 0.6 + k / 3) % 1; ctx.globalAlpha = 1 - ph; ctx.fillText('z', x + 8 + ph * 14, y - 66 - ph * 22); } ctx.restore(); }
+    else { ctx.save(); ctx.font = `11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd84a'; ctx.fillText((A.roomKit && A.roomKit.data.word) || 'CLOSED!', x, y - 80); ctx.restore(); }
+  }
+}
+ENTITY_TYPES.roomKeeper = TourRoomKeeper;
+
+/* tokens' own pickup: a quiet one (a sparkle and the count), not the key's toast */
+{
+  const K = ENTITY_TYPES.key, touch0 = K.prototype.touchPlayer;
+  K.prototype.touchPlayer = function (p) {
+    if (!(this.s && this.s.look && /^tok/.test(this.s.look)) || this.remove) return touch0.call(this, p);
+    this.remove = true; this.g.keys.add(this.id);
+    Sound.play('pick', { pitch: 1.4 }); this.g.burst(this.cx, this.cy, 12, '#ffd84a', 'confetti');
+  };
+}
+
+/* ---- 28_tour_rb_kinds.js ---- */
+/* ============================================================
+   World tour: secret-room kinds, part 2 (docs/design/SECRET_ROOMS.md §2): the rooms that are a place to get
+   through. gauntlet (Gauntlet), climb (Chimney Climb), grotto (Flooded Grotto), lantern (Lantern Walk), doors
+   (Door Maze), pick (Pick One), wormhole (Wormhole), bouncy (Bouncy Castle), floaty (Low Gravity).
+   The prize sits where the challenge ends; the checker proves it (validate_levels' room needs).
+   ============================================================ */
+
+/* ================= gauntlet: a run of obstacle beats, the prize at the end ================= */
+const TOUR_GAUNTLET_BEATS = {
+  // a spike pit with a crumbling bridge over it
+  crumble(g, x, Y) { g.fill(x + 1, Y, x + 6, Y, '^'); g.hline(x, x + 7, 7, 'C'); g.coins(x + 1, x + 6, 6); return x + 9; },
+  // a moving platform over a spiked trench
+  mover(g, x, Y) { g.fill(x + 2, Y + 1, x + 9, Y + 2, '.'); g.hline(x + 2, x + 9, Y + 2, '^'); g.mover(x + 2, Y, 3, 5, 0, 1.8); g.coins(x + 4, x + 7, 7); return x + 11; },
+  // a low passage under ceiling spikes (no jumping!)
+  ceiling(g, x, Y) { g.fill(x, 1, x + 7, 7, '#'); g.hline(x, x + 7, 8, 'v'); g.coins(x + 1, x + 6, Y); return x + 9; },
+  // a high wall and the spring that clears it
+  wall(g, x, Y) { g.put(x + 1, Y, 's'); g.fill(x + 3, 4, x + 4, Y, '#'); g.coins(x + 3, x + 4, 2); return x + 7; },
+  // a conveyor that pushes back, a spike block at its far end to hop
+  conveyor(g, x, Y) { g.hline(x, x + 7, Y + 1, '<'); g.put(x + 8, Y, '^'); g.coins(x + 2, x + 6, 7); return x + 10; },
+  // falling platforms over a spiked trench
+  fallers(g, x, Y) {
+    g.fill(x + 1, Y + 1, x + 10, Y + 2, '.'); g.hline(x + 1, x + 10, Y + 2, '^');
+    for (const k of [0, 3, 6]) { g.spawn(x + 3 + k, Y, 'fplat', { pw: 2 }); g.ghosts.push([x + 2 + k, Y + 1], [x + 3 + k, Y + 1]); }
+    g.coins(x + 2, x + 9, 7); return x + 12;
+  },
+  // steps of spikes and one-way perches
+  steps(g, x, Y) { g.fill(x, Y, x + 8, Y, '^'); g.hline(x + 1, x + 2, 8, '-'); g.hline(x + 4, x + 5, 6, '-'); g.hline(x + 7, x + 8, 8, '-'); g.coins(x + 4, x + 5, 4); return x + 10; },
+  // a stretch with the level's critters on it
+  critters(g, x, Y, o, ctx) { const pool = ((ctx.spec && ctx.spec.enemies) || []).map(e => Array.isArray(e) ? e[0] : e).filter(t => !Tour.enemyInfo[t] || Tour.enemyInfo[t].place === 'walk'); if (pool[0]) { g.enemy(x + 3, Y, pool[0]); g.enemy(x + 7, Y, pool[1] || pool[0]); } g.hline(x + 4, x + 6, 7, '-'); g.coins(x + 4, x + 6, 6); return x + 10; }
+};
+const TOUR_GAUNTLET_W = { crumble: 9, mover: 11, ceiling: 9, wall: 7, conveyor: 10, fallers: 12, steps: 10, critters: 10 };
+TourRooms.def('gauntlet', {
+  title: 'GAUNTLET!', rule: 'RUN IT TO THE END: THE PRIZE WAITS AT THE FINISH',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, beats = o.beats || ['crumble', 'ceiling', 'mover'];
+    const W = 8 + beats.reduce((s, b) => s + TOUR_GAUNTLET_W[b], 0) + 12 + K.eastW(keep, o, false);
+    const g = K.room(W), Y = K.Y;
+    let x = Math.max(g.west(keep), 6);
+    const starts = [];
+    for (const b of beats) { starts.push(x); x = TOUR_GAUNTLET_BEATS[b](g, x, Y, o, ctx); }
+    // the finish: a flag, the prize boxes over a podium, the way straight back out
+    const fx = x + 1;
+    g.put(fx, Y, g.L(['spawn', 'roomFlag', {}]));
+    const items = K.prize(o, keep);
+    g.hline(fx + 1, fx + 2, 8, '-');
+    items.forEach((it, k) => g.box(fx + 4 + k * 2, 6, it));
+    if (keep.door) { g.door(fx + 5 + items.length * 2, Y, keep.door); g.need('the door at the finish', fx + 5 + items.length * 2, Y); }
+    g.need('the finish', fx, Y);
+    // the postcard over the podium's perch
+    g.put(fx + 2, 4, '*');
+    K.east(g, keep, A, o, { cage: false });
+    g.data.finish = fx;
+    return g;
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    if (play.player.cx > kit.data.finish * TS && play.player.onGround) TourRooms.win(play, A, R, { text: 'MADE IT!', coins: 4 });
+  }
+});
+// the finish flag (a checkered pennant on a pole)
+class TourRoomFlag extends Ent {
+  constructor(g, s) { super(g, s, 20, 90); this.back = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, t = this.t;
+    Ink.around(ctx, x - 6, y - 92, 40, 94, c => {
+      c.fillStyle = '#e8e0d0'; c.fillRect(x - 2, y - 90, 4, 90);
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) { c.fillStyle = (i + j) % 2 ? '#1c1426' : '#ffffff'; const wv = Math.sin(t * 6 + i * 0.8) * 2; c.fillRect(x + 2 + i * 7, y - 88 + j * 7 + wv, 7, 7); }
+    }, { pad: 4 });
+  }
+}
+ENTITY_TYPES.roomFlag = TourRoomFlag;
+
+/* ================= climb: a tall shaft to the prize at the top ================= */
+TourRooms.def('climb', {
+  title: 'CHIMNEY CLIMB!', rule: 'UP, UP, UP: THE PRIZE IS AT THE TOP',
+  make(o, keep, ctx, A, rng) {
+    const H = o.H || 36, F = H - 3, W = 22;
+    const g = new RoomGrid(W, H, F), Y = F - 1;
+    const x0 = g.west(keep);
+    const style = o.style || ['plain', 'crumble', 'spikes'][Math.floor(rng() * 3)];
+    // the top room: a floor with a one-way hatch in it, the prize boxes, the gate (if the old room had one)
+    const top = 6;
+    g.hline(1, W - 2, top, '#'); g.hline(8, 12, top, '-');
+    const items = TourRoomKit.prize(o, keep);
+    items.forEach((it, k) => g.box(3 + k * 2, top - 3, it));
+    g.need('the top', 10, top - 1);
+    const needGate = keep.extras.some(e => e[0] === 'spawn' && e[1] === 'gate');
+    if (keep.gate || needGate) { const k2 = Object.assign({}, keep, { fake: false }); g.gateWing(k2, W - 5, top - 1); }
+    g.coins(14, 16, 3);
+    // the ledges, side to side, three rows apart
+    let left = true, n = 0;
+    for (let y = F - 3; y > top + 1; y -= 3, n++) {
+      const a = left ? 1 : 11, b = left ? 10 : W - 2;
+      const ch = style === 'crumble' && n % 3 === 2 ? 'C' : '-';
+      g.hline(a, b, y, ch);
+      if (style === 'spikes' && n % 2 === 1) g.put(left ? 1 : W - 2, y - 1, '^');
+      if (n % 2 === 0) g.coins(left ? 2 : 13, left ? 5 : 16, y - 2);
+      left = !left;
+    }
+    // a spring on the floor for a big first leap; the postcard out on a ledge end
+    g.put(W - 4, Y, 's');
+    g.put(left ? 3 : W - 4, Math.floor(H / 2) - 2, '*');
+    g.dress(keep, [x0 + 1, W - 7], Y);
+    return g;
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    if (play.player.y + play.player.h <= 6 * TS + 2 && play.player.onGround) TourRooms.win(play, A, R, { text: 'TOP OF THE CHIMNEY!', coins: 6 });
+  }
+});
+
+/* ================= grotto: a flooded room ================= */
+TourRooms.def('grotto', {
+  title: 'FLOODED GROTTO!', rule: 'HOLD YOUR BREATH... JUST KIDDING. SWIM TO THE BACK',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, half = o.half != null ? o.half : rng() < 0.5;
+    const W = 34 + K.eastW(keep, o, false);
+    const g = K.room(W), Y = K.Y;
+    if (half) g.area = { waterLine: 5 }; else g.area = { water: true };
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o, { cage: false });
+    // rock fingers from the floor and the roof make a winding channel; spikes on two of the floor stretches
+    const span = x1 - x0, at = f => x0 + Math.round(span * f);
+    g.fill(at(0.2), 6, at(0.2) + 1, 10, '#'); g.fill(at(0.4), 1, at(0.4) + 1, 6, '#'); g.fill(at(0.62), 5, at(0.62) + 1, 10, '#');
+    g.hline(at(0.28), at(0.36), 10, '^'); g.hline(at(0.7), at(0.78), 10, '^');
+    g.coins(at(0.24), at(0.38), 3); g.coins(at(0.44), at(0.58), 8); g.coins(at(0.66), at(0.8), 3);
+    // the prize in the back pocket, on a ledge
+    const items = K.prize(o, keep);
+    g.hline(at(0.84), x1, 7, '#');
+    items.forEach((it, k) => g.box(at(0.86) + k * 2, half ? 3 : 4, it));
+    g.put(at(0.48), half ? 2 : 2, '*');
+    const swim = ((ctx.spec && ctx.spec.enemies) || []).map(e => Array.isArray(e) ? e[0] : e).filter(t => Tour.enemyInfo[t] && Tour.enemyInfo[t].place === 'swim');
+    if (swim.length && !half) { g.enemy(at(0.5), 8, swim[0]); if (swim[1]) g.enemy(at(0.75), 4, swim[1]); }
+    g.dress(keep, [x0 + 1, at(0.5)], Y);
+    g.need('the back pocket', at(0.88), 6);
+    return g;
+  }
+});
+
+/* ================= lantern: Brady's light fades; stones show only in the light ================= */
+TourRooms.def('lantern', {
+  title: 'LANTERN WALK!', rule: 'YOUR LIGHT FADES: STAND BY A LANTERN TO RELIGHT IT. THE STEPPING STONES SHOW ONLY IN THE LIGHT',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, W = 40 + K.eastW(keep, o, false);
+    const g = K.room(W), Y = K.Y;
+    g.area = { lamp: { decay: o.decay || 9, r0: 170, r1: 46 } };
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o, { cage: false });
+    const stone = g.L(['tile', 'GROUND', { hide: 3 }]);
+    // a spike floor from the start ledge to the far side, a lantern island halfway
+    const a = x0 + 2, b = x1 - 6, mid = Math.floor((a + b) / 2);
+    g.hline(a, b, Y, '^');
+    g.fill(mid - 1, 8, mid + 2, Y, '#'); g.put(mid, 7, g.L(['spawn', 'lampPost', { look: o.post || null }]));
+    g.put(x0, Y, g.L(['spawn', 'lampPost', { look: o.post || null }]));
+    const path = (from, to, y0, dy) => { let y = y0; for (let x = from; x <= to; x += 3) { g.put(x, y, stone); g.put(x + 1, y, stone); y += dy; dy = -dy; } };
+    path(a + 1, mid - 3, 8, -1);
+    path(mid + 4, b - 1, 8, 1);
+    // a high branch to the postcard
+    g.put(mid - 5, 4, stone); g.put(mid - 4, 4, stone); g.put(mid - 4, 2, '*');
+    g.coins(mid - 1, mid + 2, 5);
+    const items = K.prize(o, keep);
+    g.fill(b + 1, Y, x1, Y, '.');
+    items.forEach((it, k) => g.box(b + 2 + k * 2, 6, it));
+    g.need('the far side', b + 2, Y);
+    return g;
+  },
+  enter(play, A) { play.lampLit = play.t; }
+});
+
+/* ================= doors: closets and lofts joined by doors ================= */
+TourRooms.def('doors', {
+  title: 'DOOR MAZE!', rule: 'WHICH DOOR GOES WHERE? THE PRIZE IS IN ONE OF THESE CUPBOARDS',
+  make(o, keep, ctx, A, rng) {
+    const W = 38;
+    const g = new RoomGrid(W, 14, 11), aid = A.id;
+    // two storeys (rows 1-4 and 7-10) of four closets each
+    g.fill(1, 5, W - 2, 6, '#');
+    for (const wx of [9, 18, 27]) g.vline(wx, 1, 10, '#');
+    const cl = []; for (const [y, sy] of [[10, 0], [4, 1]]) for (const [a, b] of [[1, 8], [10, 17], [19, 26], [28, W - 2]]) cl.push({ a, b, y, up: sy, doors: [] });
+    // roles: 0 the entrance (lower left), then a chain to the prize and dead ends off it
+    const order = [1, 2, 3, 4, 5, 6, 7]; for (let k = order.length - 1; k > 0; k--) { const j = Math.floor(rng() * (k + 1)); [order[k], order[j]] = [order[j], order[k]]; }
+    const [c1, c2, c3, prize, coins, card, joke] = order.map(k => cl[k]);
+    const links = [[cl[0], c1], [c1, c2], [c2, c3], [c3, prize], [cl[0], coins], [c1, card], [c2, joke]];
+    g.put(2, 10, '@'); if (keep.door) g.door(3, 10, keep.door);
+    cl[0].slots = [5, 7];
+    const look = o.look || 'tourDoor';
+    let n = 0;
+    const slot = c => { const L = c.slots || (c.slots = [c.a + 1, c.a + 3, c.a + 5]); return L.length ? L.shift() : null; };
+    for (const [p, q] of links) {
+      const xp = slot(p), xq = slot(q); if (xp == null || xq == null) continue;
+      const ip = n++, iq = n++;
+      g.door(xp, p.y, { to: aid + '@d' + iq, look }); g.anchor(xp + 1, p.y, 'd' + ip);
+      g.door(xq, q.y, { to: aid + '@d' + ip, look }); g.anchor(xq + 1, q.y, 'd' + iq);
+    }
+    // what is in them
+    const items = TourRoomKit.prize(o, keep), free = c => { for (let x = c.b; x >= c.a; x--) if (g.get(x, c.y) === '.') return x; return c.b; };
+    items.forEach((it, k) => g.box(free(prize) - k * 2, prize.y - 2, it));
+    g.need('the prize cupboard', free(prize), prize.y);
+    g.coins(coins.a + 1, coins.b - 1, coins.y - 2);
+    g.put(free(card), card.y - 2, '*');
+    g.put(free(joke), joke.y, g.L(['spawn', 'sign', { text: o.joke || 'BROOM CUPBOARD. NOTHING TO SEE HERE. (ONE COIN, MAYBE.)' }])); g.put(joke.a + 2, joke.y - 1, 'o');
+    // the gate (if the old room had one) in the coin closet, the dressing round the entrance
+    const needGate = keep.extras.some(e => e[0] === 'spawn' && e[1] === 'gate');
+    if (keep.gate || needGate) { const gx = free(coins); if (keep.gate) g.put(gx, coins.y, 'g'); if (needGate) g.put(gx - 2, coins.y, g.L(keep.extras.find(e => e[0] === 'spawn' && e[1] === 'gate'))); }
+    // the old room's signs, bottles and drafts: in the coin closet too
+    // (in a closet of the lower storey: a bottle's piece lays floor under itself, which would fill a lower closet)
+    for (const e of keep.extras) {
+      if (e[0] === 'spawn' && (e[1] === 'gate' || e[1] === 'tourDraft')) continue;
+      let done = false;
+      for (const c of cl.slice(1, 4)) { for (let x = c.a; x + 2 <= c.b && !done; x++) if ([0, 1, 2].every(d => g.get(x + d, c.y) === '.' && g.get(x + d, c.y - 1) === '.')) { g.put(x, c.y, g.L(e)); g.put(x + 1, c.y, '.'); done = true; } if (done) break; }
+    }
+    g.dress(keep, [7, 8], 10);
+    g.data.prize = [prize.a, prize.b, prize.y];
+    return g;
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    const [a, b, y] = kit.data.prize, p = play.player, tx = Math.floor(p.cx / TS), ty = Math.floor((p.y + p.h - 1) / TS);
+    if (tx >= a && tx <= b && ty === y && p.state === 'play') TourRooms.win(play, A, R, { text: 'FOUND IT!', coins: 3 });
+  }
+});
+
+/* ================= pick: three boxes, take one ================= */
+TourRooms.def('pick', {
+  title: 'PICK ONE!', rule: 'THREE BOXES, THREE PRIZES. YOU ONLY GET ONE',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, W = 30 + K.eastW(keep, o, false);
+    const g = K.room(W), Y = K.Y;
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o, { cage: false }), mid = Math.floor((x0 + x1) / 2);
+    const main0 = K.prize(o, keep)[0], main = main0 === 'pick' || main0 === 'picks' ? 'oneup' : main0;
+    const pool = (o.choices || ['power', 'star', 'oneup', 'magnet', 'sundial']).filter(it => it !== main);
+    const choices = [main, pool[0], pool[1]];
+    for (let k = 2; k > 0; k--) { const j = Math.floor(rng() * (k + 1)); [choices[k], choices[j]] = [choices[j], choices[k]]; }
+    const xs = [mid - 5, mid, mid + 5];
+    xs.forEach((x, k) => { g.fill(x, 9, x + 1, Y, '#'); g.box(x, 5, choices[k]); g.put(x + 1, 5, '.'); });
+    g.data.boxes = xs.map((x, k) => ({ x, y: 5, it: choices[k] }));
+    // the old room's other boxes (5-2 had one, 2-6 two): on a shelf by the door
+    K.prize(o, keep).slice(1).filter(it => it !== 'picks').forEach((it, k) => { g.box(x0 + 1 + k * 2, 6, it); });
+    g.put(mid, 1, '*'); g.coins(mid - 7, mid - 6, 8); g.coins(mid + 7, mid + 8, 8);
+    g.dress(keep, [x0, x1 - 1], Y);
+    return g;
+  },
+  update(play, dt, A, R, kit) {
+    if (R.won) return;
+    const B = kit.data.boxes, taken = B.find(b => tileAt(A, b.x, b.y) === T.USED);
+    if (!taken) return;
+    for (const b of B) if (b !== taken && tileAt(A, b.x, b.y) === T.QBLOCK) { play.setTile(b.x, b.y, T.USED); delete A.contents[b.x + ',' + b.y]; play.burst(b.x * TS + TS / 2, b.y * TS + TS / 2, 16, '#ffffff', 'dust'); }
+    R.won = true; R.choice = taken.it; Sound.play('select');
+  },
+  draw(play, ctx, A, R, kit) {
+    // a picture of what is in each box, over it
+    for (const b of kit.data.boxes) {
+      if (tileAt(A, b.x, b.y) !== T.QBLOCK) continue;
+      const x = b.x * TS + TS / 2, y = b.y * TS - 18 + Math.sin(play.t * 2 + b.x) * 2;
+      ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(x, y - 6, 15, 0, TAU); ctx.fill(); ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.translate(x, y + 5); ctx.scale(0.62, 0.62);
+      const kind = b.it === 'power' ? 'mushroom' : b.it === 'eclipse' ? 'star' : b.it;
+      try { TourItemArt.draw(ctx, kind, 0, 0, play.t, play); } catch (e) { /* an item without art */ }
+      ctx.restore();
+    }
+  }
+});
+
+/* ================= wormhole: a floaty room with a Wormhole that shoots Brady ahead ================= */
+TourRooms.def('wormhole', {
+  title: 'WORMHOLE!', rule: 'HOP IN THE WORMHOLE (UP) AND IT SHOOTS YOU FAR AHEAD',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, W = 30 + K.eastW(keep, o, false);
+    const g = K.room(W), Y = K.Y;
+    g.area = { gravity: 0.6 };
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o, { cage: false }), mid = Math.floor((x0 + x1) / 2);
+    // a ring of coins round the middle, the Wormhole on a plinth at the far end, the prize up on two perches
+    for (let k = 0; k < 12; k++) { const a = k / 12 * TAU, x = Math.round(mid + Math.cos(a) * 4), y = Math.round(6 + Math.sin(a) * 3); if (g.get(x, y) === '.') g.put(x, y, 'o'); }
+    g.fill(x1 - 3, 9, x1, Y, '#');
+    if (o.to) { g.door(x1 - 1, 8, { to: o.to, look: 'roomWormhole' }); g.need('the wormhole', x1 - 1, 8); }
+    const items = K.prize(o, keep);
+    g.hline(x0 + 2, x0 + 4, 4, '-'); items.forEach((it, k) => g.box(x0 + 3 + k * 2, 1, it));
+    g.hline(mid - 1, mid + 1, 2, '-'); g.put(mid, 1, '*');
+    g.dress(keep, [x0, mid + 6], Y);
+    return g;
+  },
+  update(play, dt, A, R, kit) {
+    // going through the Wormhole: a WHOOSH on the far side (TourRooms' areaLoaded hook shows it)
+    const w = play.entities.find(e => e instanceof Portal && e.s && e.s.look === 'roomWormhole');
+    if (w && overlap(play.player, w) && (Input.upPressed || Input.up)) play.roomWarpT = 1;
+  }
+});
+TourHooks.on('areaLoaded', play => { if (play.roomWarpT > 0) { play.roomWarpT = 0; play.bannerText = 'WHOOSH!'; play.bannerT = 1.4; Sound.play('portal'); const p = play.player; play.burst(p.cx, p.cy, 30, '#b89aff', 'confetti'); } });
+
+/* ================= bouncy: an inflatable room ================= */
+TourRooms.def('bouncy', {
+  title: 'BOUNCY CASTLE!', rule: 'THE FLOOR BOUNCES! ONLY THE TOWERS ARE FIRM. THE PRIZE IS ON THE TALLEST',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, W = 32 + K.eastW(keep, o, false);
+    const g = K.room(W), Y = K.Y;
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o, { cage: false });
+    const a = x0 + 1, b = x1 - 1;
+    g.hline(a, b, Y + 1, 'b');
+    // the towers: [offset, height]
+    const span = b - a, gap = 2, tw = [3, 5, 7, 5, 3];
+    const tops = tw.map((h, k) => { const x = a + 1 + k * (3 + gap); g.fill(x, Y - h + 1, x + 2, Y, '#'); return [x, Y - h + 1]; });
+    // the prize over the tallest, coins in arcs over the trampoline, a spring for the checker's sake
+    const [tx, ty] = tops[2];
+    const items = K.prize(o, keep); items.forEach((it, k) => g.box(tx + 1 + k, ty - 3, it));
+    for (let k = 0; k < 4; k++) g.coinsArc(tops[k][0] + 3, tops[k + 1][0] - 1, Math.min(tops[k][1], tops[k + 1][1]) - 2, 1);
+    g.put(tops[4][0] + 1, tops[4][1] - 3, '*');
+    g.put(tops[4][0] + 4, Y, 's');
+    g.need('the tallest tower', tx, ty - 1);
+    g.data.towers = tops; g.data.span = [a, b]; g.data.skin = o.skin || ['#ff6a8a', '#ffd84a', '#5ac8ff'];
+    return g;
+  },
+  draw(play, ctx, A, R, kit) {
+    // the inflatable: fat striped cushions over the towers' tops, a soft lip along the floor
+    const D = kit.data, cols = D.skin, t = play.t;
+    D.towers.forEach(([x, y], k) => {
+      const px = x * TS, py = y * TS, w = 3 * TS, h = (11 - y) * TS, col = cols[k % cols.length], wob = Math.sin(t * 3 + k) * 1.5;
+      ctx.save();
+      // a fat inflatable column: soft sides, light stripes, a puffy cap with a pennant
+      ctx.fillStyle = col; rr(ctx, px - 3, py + 4, w + 6, h - 4, 10); ctx.fill(); ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.28)'; for (let j = 0; j < 3; j++) rr(ctx, px + 8 + j * 28, py + 12, 9, h - 20, 4), ctx.fill();
+      ctx.fillStyle = cols[(k + 1) % cols.length]; rr(ctx, px - 6, py - 6 + wob, w + 12, 16, 8); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; rr(ctx, px + 2, py - 3 + wob, w - 4, 4, 2); ctx.fill();
+      ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + w / 2, py - 6 + wob); ctx.lineTo(px + w / 2, py - 30); ctx.stroke();
+      ctx.fillStyle = cols[(k + 2) % cols.length]; ctx.beginPath(); ctx.moveTo(px + w / 2, py - 30); ctx.lineTo(px + w / 2 + 16 + Math.sin(t * 5 + k) * 3, py - 25); ctx.lineTo(px + w / 2, py - 20); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    });
+    const [a, b] = D.span, yy = (10 + 1) * TS;
+    ctx.save();
+    for (let x = a; x <= b; x++) { ctx.fillStyle = cols[x % cols.length]; const s = Math.sin(t * 5 + x * 0.7) * 2; rr(ctx, x * TS, yy - 3 + s, TS, 10, 5); ctx.fill(); }
+    ctx.restore();
+  }
+});
+
+/* ================= floaty: someone left the gravity off ================= */
+TourRooms.def('floaty', {
+  title: 'LOW GRAVITY!', rule: 'SOMEBODY LEFT THE GRAVITY OFF. BIG FLOATY JUMPS!',
+  make(o, keep, ctx, A, rng) {
+    const K = TourRoomKit, W = 32 + K.eastW(keep, o, false);
+    const g = K.room(W), Y = K.Y;
+    g.area = { gravity: o.gravity || 0.45 };
+    const x0 = g.west(keep), x1 = K.east(g, keep, A, o, { cage: false }), mid = Math.floor((x0 + x1) / 2);
+    // a constellation of coins (a star), rafters up top with the prize, a few floating perches
+    const pts = [];
+    for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 1.6 : 3.6; pts.push([Math.round(mid + Math.cos(a) * r * 1.4), Math.round(6 + Math.sin(a) * r)]); }
+    for (let k = 0; k < pts.length; k++) { const [ax, ay] = pts[k], [bx, by] = pts[(k + 1) % pts.length]; const n = Math.max(Math.abs(bx - ax), Math.abs(by - ay)); for (let j = 0; j < n; j += 2) { const x = Math.round(ax + (bx - ax) * j / n), y = Math.round(ay + (by - ay) * j / n); if (g.get(x, y) === '.') g.put(x, y, 'o'); } }
+    g.hline(x0 + 1, x0 + 4, 7, '-'); g.hline(x1 - 4, x1 - 1, 6, '-');
+    g.hline(x1 - 7, x1 - 1, 4, '-');
+    const items = K.prize(o, keep); items.forEach((it, k) => g.box(x1 - 6 + k * 2, 1, it));
+    g.put(x0 + 2, 2, '*');
+    g.dress(keep, [x0, mid + 4], Y);
+    g.need('the rafters', x1 - 4, 1);
+    return g;
+  },
+  draw(play, ctx) {
+    // drifting motes, so the room reads as floaty even standing still
+    ctx.save(); ctx.fillStyle = 'rgba(232,240,255,0.7)';
+    for (let k = 0; k < 18; k++) { const ph = (play.t * 0.08 + k * 0.137) % 1, x = play.camX + ((k * 97) % 100) / 100 * Game.viewW + Math.sin(play.t + k) * 8, y = play.camY + Game.viewH * (1 - ph); ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.8; ctx.beginPath(); ctx.arc(x, y, 1.5 + (k % 3), 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+});
+
+/* ---- 28_tour_rc_art.js ---- */
+/* ============================================================
+   World tour: the secret rooms' code-drawn art (docs/design/SECRET_ROOMS.md): the tokens and ingredients
+   (keys with a look, TourMaze.KEYS), the pop-up critters, the shell-game cups and the jokes under them, the
+   prank chest's gags, the shop keepers' heads and the Wormhole. Flat fills with the dark ink line, like the rest
+   of the Fiesta Toon look.
+   ============================================================ */
+const TourRoomCritters = {
+  INK: '#1c1426',
+  // pop-up and keeper heads: body colour, belly, ears, snout, extras
+  LOOKS: {
+    mole: { body: '#7a5a48', belly: '#c8a088', ear: 'none', nose: '#ff8aa8', claws: true },
+    axolotl: { body: '#ff9ac0', belly: '#ffd0e0', ear: 'gills', gill: '#ff5a8a', smile: true },
+    tomato: { body: '#e8402a', belly: '#ff6a4a', ear: 'leaf', leaf: '#3a9a3a' },
+    rat: { body: '#9a8a80', belly: '#d8c8c0', ear: 'round', nose: '#ff8aa8', whiskers: true },
+    crab: { body: '#e86a3a', belly: '#ffb08a', ear: 'stalks', claws: true },
+    frog: { body: '#5ac85a', belly: '#c8f0a8', ear: 'none', bulge: true, smile: true },
+    skua: { body: '#8a6a50', belly: '#d8c0a0', ear: 'none', beak: '#3a3a3a' },
+    penguin: { body: '#2a2a3a', belly: '#ffffff', ear: 'none', beak: '#ffa83a' },
+    seal: { body: '#8a9aa8', belly: '#c8d4e0', ear: 'none', nose: '#2a2a3a', whiskers: true },
+    herring: { body: '#a8c0d8', belly: '#e8f0f8', ear: 'fin', smile: true },
+    gopher: { body: '#c8904a', belly: '#f0d0a0', ear: 'round', nose: '#5a3a2a', teeth: true },
+    keeper: { body: '#c8a070', belly: '#f0dcc0', ear: 'pointy', nose: '#2a1a1a' },
+    xolo: { body: '#5a4a52', belly: '#7a6a72', ear: 'pointy', nose: '#1a1a1a' },
+    coati: { body: '#a8683a', belly: '#e8c090', ear: 'round', nose: '#2a1a1a', mask: true },
+    stork: { body: '#f4f4f0', belly: '#ffffff', ear: 'none', beak: '#ff6a3a' },
+    yak: { body: '#4a3a30', belly: '#7a6250', ear: 'horns', nose: '#2a1a1a' },
+    tanuki: { body: '#8a6a4a', belly: '#e8d0a8', ear: 'round', nose: '#2a1a1a', mask: true },
+    owl: { body: '#a8885a', belly: '#e8d8b0', ear: 'tufts', beak: '#e8a83a' },
+    dealer: { body: '#e8b84a', belly: '#fff0c0', ear: 'pointy', nose: '#2a1a1a', bow: true }
+  },
+  draw(c, look, x, y, s, t, hit, asleep) {
+    const L = this.LOOKS[look] || this.LOOKS.mole, k = s || 1, I = this.INK;
+    c.save(); c.translate(x, y); c.scale(k, k);
+    const bob = Math.sin((t || 0) * 6) * 1;
+    // ears behind the head
+    c.lineWidth = 1.5; c.strokeStyle = I;
+    if (L.ear === 'round') for (const sx of [-1, 1]) { c.fillStyle = L.body; c.beginPath(); c.arc(sx * 9, -24 + bob, 5, 0, TAU); c.fill(); c.stroke(); }
+    if (L.ear === 'pointy') for (const sx of [-1, 1]) { c.fillStyle = L.body; c.beginPath(); c.moveTo(sx * 4, -24 + bob); c.lineTo(sx * 13, -33 + bob); c.lineTo(sx * 12, -18 + bob); c.closePath(); c.fill(); c.stroke(); }
+    if (L.ear === 'tufts') for (const sx of [-1, 1]) { c.fillStyle = L.body; c.beginPath(); c.moveTo(sx * 5, -26 + bob); c.lineTo(sx * 11, -34 + bob); c.lineTo(sx * 12, -22 + bob); c.closePath(); c.fill(); c.stroke(); }
+    if (L.ear === 'horns') for (const sx of [-1, 1]) { c.fillStyle = '#e8e0c8'; c.beginPath(); c.moveTo(sx * 8, -24 + bob); c.quadraticCurveTo(sx * 20, -26 + bob, sx * 16, -36 + bob); c.lineTo(sx * 12, -26 + bob); c.closePath(); c.fill(); c.stroke(); }
+    if (L.ear === 'gills') for (const sx of [-1, 1]) for (let j = 0; j < 3; j++) { c.fillStyle = L.gill; c.beginPath(); c.ellipse(sx * (12 + j * 2), -24 + j * 5 + bob, 6, 2.5, sx * (0.6 - j * 0.4), 0, TAU); c.fill(); c.stroke(); }
+    if (L.ear === 'stalks') for (const sx of [-1, 1]) { c.strokeStyle = I; c.lineWidth = 2; c.beginPath(); c.moveTo(sx * 5, -20 + bob); c.lineTo(sx * 7, -32 + bob); c.stroke(); c.fillStyle = '#fff'; c.beginPath(); c.arc(sx * 7, -33 + bob, 3.5, 0, TAU); c.fill(); c.lineWidth = 1.5; c.stroke(); c.fillStyle = I; c.beginPath(); c.arc(sx * 7, -33 + bob, 1.6, 0, TAU); c.fill(); }
+    if (L.ear === 'fin') { c.fillStyle = L.body; c.beginPath(); c.moveTo(-4, -28 + bob); c.lineTo(6, -38 + bob); c.lineTo(8, -26 + bob); c.closePath(); c.fill(); c.stroke(); }
+    // the head
+    c.fillStyle = L.body; c.beginPath(); c.ellipse(0, -14 + bob, 14, 15, 0, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = L.belly; c.beginPath(); c.ellipse(0, -8 + bob, 9, 8, 0, 0, TAU); c.fill();
+    if (L.ear === 'leaf') { c.fillStyle = L.leaf; for (let j = -2; j <= 2; j++) { c.beginPath(); c.ellipse(j * 4, -29 + bob, 3, 6, j * 0.5, 0, TAU); c.fill(); } }
+    if (L.mask) { c.fillStyle = 'rgba(30,20,20,0.75)'; c.beginPath(); c.ellipse(-6, -17 + bob, 6, 4, 0.2, 0, TAU); c.ellipse(6, -17 + bob, 6, 4, -0.2, 0, TAU); c.fill(); }
+    // eyes: x x when bonked, closed when asleep
+    for (const sx of [-1, 1]) {
+      const ex = sx * 5.5, ey = -17 + bob;
+      if (hit) { c.strokeStyle = I; c.lineWidth = 1.8; c.beginPath(); c.moveTo(ex - 2.5, ey - 2.5); c.lineTo(ex + 2.5, ey + 2.5); c.moveTo(ex + 2.5, ey - 2.5); c.lineTo(ex - 2.5, ey + 2.5); c.stroke(); }
+      else if (asleep) { c.strokeStyle = I; c.lineWidth = 1.6; c.beginPath(); c.arc(ex, ey, 2.6, 0.2, Math.PI - 0.2); c.stroke(); }
+      else { c.fillStyle = '#fff'; c.beginPath(); c.arc(ex, ey, 3.6, 0, TAU); c.fill(); c.fillStyle = I; c.beginPath(); c.arc(ex + sx * 0.6, ey + 0.4, 1.9, 0, TAU); c.fill(); }
+    }
+    if (L.bulge) { c.fillStyle = L.body; for (const sx of [-1, 1]) { c.beginPath(); c.arc(sx * 6, -25 + bob, 4, Math.PI, 0); c.fill(); } }
+    if (L.beak) { c.fillStyle = L.beak; c.beginPath(); c.moveTo(-4, -11 + bob); c.lineTo(4, -11 + bob); c.lineTo(0, -5 + bob); c.closePath(); c.fill(); c.strokeStyle = I; c.lineWidth = 1.2; c.stroke(); }
+    if (L.nose) { c.fillStyle = L.nose; c.beginPath(); c.ellipse(0, -11 + bob, 3, 2.2, 0, 0, TAU); c.fill(); }
+    if (L.smile || L.teeth) { c.strokeStyle = I; c.lineWidth = 1.4; c.beginPath(); c.arc(0, -9 + bob, 4, 0.3, Math.PI - 0.3); c.stroke(); }
+    if (L.teeth) { c.fillStyle = '#fff'; c.fillRect(-2, -7 + bob, 4, 3); }
+    if (L.whiskers) { c.strokeStyle = I; c.lineWidth = 0.8; for (const sx of [-1, 1]) for (const dy of [-1, 1.5]) { c.beginPath(); c.moveTo(sx * 4, -10 + bob); c.lineTo(sx * 14, -11 + dy * 2 + bob); c.stroke(); } }
+    if (L.claws) for (const sx of [-1, 1]) { c.fillStyle = L.belly; c.beginPath(); c.ellipse(sx * 13, -2 + bob, 5, 3.5, 0, 0, TAU); c.fill(); c.strokeStyle = I; c.lineWidth = 1.2; c.stroke(); }
+    if (L.bow) { c.fillStyle = '#c0392b'; c.beginPath(); c.moveTo(0, 0); c.lineTo(-7, -4); c.lineTo(-7, 4); c.closePath(); c.moveTo(0, 0); c.lineTo(7, -4); c.lineTo(7, 4); c.closePath(); c.fill(); }
+    c.restore();
+  },
+  dealers: {},
+
+  /* ---------- the shell game ---------- */
+  CUPS: {
+    cup: { body: '#f4ece0', band: '#4a8ad8', w: 30, h: 28 },
+    pot: { body: '#c8703a', band: '#f4d04a', w: 32, h: 30 },
+    coconut: { body: '#7a4a2a', band: '#5a3418', w: 30, h: 26, round: true },
+    mug: { body: '#a8b0b8', band: '#5a6068', w: 28, h: 30 },
+    bowl: { body: '#e85a4a', band: '#1c1426', w: 34, h: 22, round: true },
+    tin: { body: '#c8c8d0', band: '#e84a4a', w: 28, h: 30 },
+    basket: { body: '#d8a85a', band: '#8a5a2a', w: 32, h: 26 }
+  },
+  cup(c, look, x, y, t, glow) {
+    const C = this.CUPS[look] || this.CUPS.cup, w = C.w, h = C.h;
+    if (glow) { c.save(); c.globalAlpha = 0.25 + 0.15 * Math.sin(t * 6); c.fillStyle = '#fff4a0'; c.beginPath(); c.ellipse(x, y - h / 2, w * 0.75, h * 0.8, 0, 0, TAU); c.fill(); c.restore(); }
+    Ink.around(c, x - w / 2 - 4, y - h - 6, w + 8, h + 8, g => {
+      g.fillStyle = C.body; g.beginPath();
+      if (C.round) g.ellipse(x, y, w / 2, h, 0, Math.PI, 0); else { g.moveTo(x - w / 2, y); g.lineTo(x - w / 2 + 4, y - h); g.lineTo(x + w / 2 - 4, y - h); g.lineTo(x + w / 2, y); g.closePath(); }
+      g.fill();
+      g.fillStyle = C.band; g.fillRect(x - w / 2 + 2, y - h * 0.45, w - 4, 5);
+      g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(x - w / 2 + 6, y - h + 4, 3, h - 10);
+    }, { pad: 6 });
+  },
+  joke(c, what, x, y, t) {
+    const I = this.INK;
+    c.save(); c.translate(x, y); c.lineWidth = 1.5; c.strokeStyle = I;
+    if (what === 'sock') { c.fillStyle = '#e8e0c8'; c.beginPath(); c.moveTo(-4, -22); c.lineTo(4, -22); c.lineTo(4, -8); c.lineTo(10, -4); c.lineTo(8, 0); c.lineTo(-4, -2); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#c0392b'; c.fillRect(-4, -22, 8, 4); c.fillStyle = '#8a9a50'; c.globalAlpha = 0.6; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(-2 + k * 5, -28 - Math.sin(t * 3 + k) * 3, 2, 0, TAU); c.fill(); } }
+    else if (what === 'chicken') { c.fillStyle = '#ffd84a'; c.beginPath(); c.ellipse(0, -8, 12, 5, 0, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.ellipse(-12, -12, 4, 4, 0, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#e84a3a'; c.beginPath(); c.arc(-12, -17, 2.5, 0, TAU); c.fill(); }
+    else if (what === 'fish') { c.fillStyle = '#9ab0c0'; c.beginPath(); c.ellipse(0, -8, 11, 5, 0, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.moveTo(10, -8); c.lineTo(16, -13); c.lineTo(16, -3); c.closePath(); c.fill(); c.stroke(); c.strokeStyle = I; c.beginPath(); c.moveTo(-7, -10); c.lineTo(-5, -8); c.moveTo(-5, -10); c.lineTo(-7, -8); c.stroke(); }
+    else if (what === 'boot') { c.fillStyle = '#6a4a2a'; c.beginPath(); c.moveTo(-6, -22); c.lineTo(4, -22); c.lineTo(4, -6); c.lineTo(12, -4); c.lineTo(12, 0); c.lineTo(-6, 0); c.closePath(); c.fill(); c.stroke(); }
+    else if (what === 'banana') { c.strokeStyle = '#e8c83a'; c.lineWidth = 6; c.beginPath(); c.arc(0, -16, 10, 0.3, Math.PI - 0.3); c.stroke(); }
+    else { c.fillStyle = '#c8c0b0'; c.beginPath(); c.arc(0, -8, 7, 0, TAU); c.fill(); c.stroke(); c.font = `10px ${FONT_DISPLAY}`; c.fillStyle = I; c.textAlign = 'center'; c.fillText('?', 0, -4); }
+    c.restore();
+  },
+
+  /* ---------- the prank chest's gags ---------- */
+  gagStart(g, ch, p) {
+    const gag = ch.gag;
+    if (gag === 'glove') { p.vx = -sign(ch.cx - p.cx || 1) * -7 * TS; p.vx = (p.cx < ch.cx ? -1 : 1) * 7 * TS; p.vy = -7 * TS; p.onGround = false; Sound.play('kick'); g.shake(4); g.parts.text(ch.cx, ch.y - 30, 'BOING!', '#ffffff'); }
+    else if (gag === 'cushion') { Sound.play('splat', { pitch: 0.45 }); g.parts.text(ch.cx, ch.y - 30, 'PFFFRRT!', '#c8e870'); }
+    else if (gag === 'chicken') { Sound.play('bump', { pitch: 2.2 }); g.parts.text(ch.cx, ch.y - 30, 'SQUEAK!', '#ffd84a'); }
+    else if (gag === 'jack') { Sound.play('spring'); g.parts.text(ch.cx, ch.y - 40, 'BOO!', '#ff6a8a'); }
+    else if (gag === 'snakes') { Sound.play('spring'); g.parts.text(ch.cx, ch.y - 30, 'SPROING!', '#7aff9a'); g.burst(ch.cx, ch.y - 10, 12, '#5ac85a', 'confetti'); }
+    else if (gag === 'pie') { Sound.play('splat'); g.roomPieT = 1.6; g.parts.text(ch.cx, ch.y - 30, 'SPLAT!', '#ffffff'); }
+    else { Sound.play('pick', { pitch: 0.6 }); g.burst(ch.cx, ch.y - 10, 40, '#ffd84a', 'confetti'); g.parts.text(ch.cx, ch.y - 30, 'HA!', '#ffd84a'); }
+  },
+  gagDraw(c, ch, x, y, k, t) {
+    const I = this.INK, gag = ch.gag, out = Math.min(1, k * 4), wob = Math.sin(k * 18) * Math.max(0, 1 - k) * 6;
+    c.save(); c.lineWidth = 1.5; c.strokeStyle = I;
+    if (gag === 'glove' || gag === 'jack' || gag === 'snakes') {
+      // the spring
+      c.strokeStyle = '#a8a8b0'; c.lineWidth = 3; c.beginPath(); for (let j = 0; j <= 8; j++) c.lineTo(x + (j % 2 ? 6 : -6) + wob * (j / 8), y - j * out * 4); c.stroke();
+      const hy = y - 32 * out;
+      c.lineWidth = 1.5; c.strokeStyle = I;
+      if (gag === 'glove') { c.fillStyle = '#e83a3a'; c.beginPath(); c.ellipse(x + wob, hy - 8, 12, 10, 0, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.fillRect(x - 8 + wob, hy, 16, 5); }
+      else if (gag === 'jack') { c.fillStyle = '#fff4e0'; c.beginPath(); c.arc(x + wob, hy - 10, 11, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#e83a3a'; c.beginPath(); c.arc(x + wob, hy - 9, 3, 0, TAU); c.fill(); c.fillStyle = I; c.beginPath(); c.arc(x - 4 + wob, hy - 13, 1.6, 0, TAU); c.arc(x + 4 + wob, hy - 13, 1.6, 0, TAU); c.fill(); c.fillStyle = '#5a4ad8'; c.beginPath(); c.moveTo(x - 10 + wob, hy - 18); c.lineTo(x + wob, hy - 32); c.lineTo(x + 10 + wob, hy - 18); c.fill(); c.stroke(); }
+      else { for (let j = 0; j < 3; j++) { const a = -Math.PI / 2 + (j - 1) * 0.6; c.strokeStyle = ['#5ac85a', '#ffd84a', '#ff6a8a'][j]; c.lineWidth = 6; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + Math.cos(a) * 30 * out, y + Math.sin(a) * 50 * out, x + Math.cos(a) * 26 * out + wob, y + Math.sin(a) * 70 * out); c.stroke(); } }
+    } else if (gag === 'cushion') {
+      c.fillStyle = '#ff6a8a'; c.beginPath(); c.ellipse(x, y - 4, 16, 6 * (1 - out * 0.6), 0, 0, TAU); c.fill(); c.stroke();
+      c.globalAlpha = Math.max(0, 1 - k * 0.5); c.fillStyle = '#b8d870'; for (let j = 0; j < 5; j++) { c.beginPath(); c.arc(x - 16 + j * 8, y - 16 - k * 30 - j % 2 * 6, 6 + k * 6, 0, TAU); c.fill(); }
+    } else if (gag === 'chicken') {
+      c.translate(x, y - 20 * out); c.rotate(Math.sin(k * 10) * 0.4); this.joke(c, 'chicken', 0, 0, t);
+    } else if (gag === 'pie') {
+      c.fillStyle = '#f4e8c8'; c.beginPath(); c.ellipse(x, y - 30 * out, 14, 6, 0, 0, TAU); c.fill(); c.stroke();
+    } else { c.fillStyle = '#5a4a6a'; c.fillRect(x - 6, y - 14, 12, 14); }
+    c.restore();
+  }
+};
+// the cream pie on the screen (the prank's 'pie' gag): a splat over the view for a moment
+TourHooks.on('afterEntities', (play, ctx) => {
+  if (!(play.roomPieT > 0)) return;
+  play.roomPieT -= 1 / 60;
+  const a = clamp(play.roomPieT, 0, 1), x = play.camX + Game.viewW / 2, y = play.camY + Game.viewH / 2;
+  ctx.save(); ctx.globalAlpha = a * 0.85; ctx.fillStyle = '#fff8ec';
+  for (let k = 0; k < 9; k++) { const r = 40 + (k * 37) % 50, aa = k * 0.7; ctx.beginPath(); ctx.arc(x + Math.cos(aa) * 60, y + Math.sin(aa) * 30 + (1 - a) * 40, r, 0, TAU); ctx.fill(); }
+  ctx.restore();
+});
+
+/* ---------- tokens and ingredients: keys with a look (TourMaze.KEYS draws them; 28_tour_ra_kinds.js picks them up quietly) ---------- */
+{
+  const I = '#1c1426';
+  const ol = (c, w) => { c.strokeStyle = I; c.lineWidth = w || 1.5; c.stroke(); };
+  const looks = {
+    tokChili: ['CHILI', '#e83a2a', (c, x, y) => { c.fillStyle = '#e83a2a'; c.beginPath(); c.moveTo(x - 9, y - 4); c.quadraticCurveTo(x + 6, y - 6, x + 9, y + 9); c.quadraticCurveTo(x - 2, y + 4, x - 9, y + 2); c.closePath(); c.fill(); ol(c); c.fillStyle = '#3a9a3a'; c.fillRect(x - 12, y - 4, 4, 5); }],
+    tokCacao: ['CACAO POD', '#c8782a', (c, x, y) => { c.fillStyle = '#d8882a'; c.beginPath(); c.ellipse(x, y, 7, 11, 0.3, 0, TAU); c.fill(); ol(c); c.strokeStyle = '#8a4a1a'; c.lineWidth = 1; for (const d of [-3, 0, 3]) { c.beginPath(); c.moveTo(x + d, y - 9); c.lineTo(x + d + 2, y + 9); c.stroke(); } }],
+    tokTomato: ['TOMATO', '#e8402a', (c, x, y) => { c.fillStyle = '#e8402a'; c.beginPath(); c.arc(x, y + 1, 9, 0, TAU); c.fill(); ol(c); c.fillStyle = '#3a9a3a'; for (let k = 0; k < 5; k++) { c.beginPath(); c.ellipse(x + Math.cos(k * 1.26) * 3, y - 7 + Math.sin(k * 1.26) * 2, 3, 1.5, k * 1.26, 0, TAU); c.fill(); } }],
+    tokBall: ['FOOTBALL', '#ffffff', (c, x, y) => { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x, y, 9, 0, TAU); c.fill(); ol(c); c.fillStyle = I; c.beginPath(); for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k * TAU / 5; c.lineTo(x + Math.cos(a) * 3.5, y + Math.sin(a) * 3.5); } c.fill(); }],
+    tokCashew: ['CASHEW', '#e8c890', (c, x, y) => { c.strokeStyle = '#e8c890'; c.lineWidth = 7; c.lineCap = 'round'; c.beginPath(); c.arc(x, y - 2, 6, 0.4, Math.PI + 0.8); c.stroke(); c.lineCap = 'butt'; }],
+    tokMint: ['MINT', '#3ab85a', (c, x, y) => { c.fillStyle = '#3ab85a'; for (const [dx, dy, a] of [[-4, 2, -0.6], [4, 2, 0.6], [0, -5, 0]]) { c.beginPath(); c.ellipse(x + dx, y + dy, 4, 7, a, 0, TAU); c.fill(); ol(c, 1.2); } c.fillStyle = '#2a7a3a'; c.fillRect(x - 1, y + 2, 2, 9); }],
+    tokSugar: ['SUGAR', '#ffffff', (c, x, y) => { c.fillStyle = '#ffffff'; c.beginPath(); c.rect(x - 7, y - 7, 14, 14); c.fill(); ol(c); c.fillStyle = '#e8e8f0'; c.fillRect(x - 7, y - 7, 14, 4); }],
+    tokTeapot: ['TEAPOT', '#d8c070', (c, x, y) => { c.fillStyle = '#d8c070'; c.beginPath(); c.ellipse(x, y + 2, 9, 7, 0, 0, TAU); c.fill(); ol(c); c.beginPath(); c.moveTo(x + 8, y); c.lineTo(x + 14, y - 5); c.lineWidth = 3; c.strokeStyle = '#d8c070'; c.stroke(); c.fillStyle = '#d8c070'; c.beginPath(); c.moveTo(x - 5, y - 4); c.lineTo(x, y - 12); c.lineTo(x + 5, y - 4); c.fill(); ol(c, 1.2); }],
+    tokCroissant: ['CROISSANT', '#e8a84a', (c, x, y) => { c.fillStyle = '#e8a84a'; c.beginPath(); c.moveTo(x - 12, y + 4); c.quadraticCurveTo(x, y - 14, x + 12, y + 4); c.quadraticCurveTo(x, y - 2, x - 12, y + 4); c.fill(); ol(c); c.strokeStyle = '#a8681a'; c.lineWidth = 1; for (const d of [-5, 0, 5]) { c.beginPath(); c.moveTo(x + d, y - 6); c.lineTo(x + d * 1.2, y + 1); c.stroke(); } }],
+    tokEggplant: ['AUBERGINE', '#6a3a8a', (c, x, y) => { c.fillStyle = '#6a3a8a'; c.beginPath(); c.ellipse(x, y + 2, 7, 10, 0.4, 0, TAU); c.fill(); ol(c); c.fillStyle = '#3a9a3a'; c.beginPath(); c.ellipse(x - 4, y - 8, 5, 3, 0.4, 0, TAU); c.fill(); }],
+    tokZucchini: ['COURGETTE', '#3a8a3a', (c, x, y) => { c.fillStyle = '#4a9a3a'; c.beginPath(); c.ellipse(x, y, 5, 12, 0.8, 0, TAU); c.fill(); ol(c); c.fillStyle = '#e8d84a'; c.beginPath(); c.arc(x + 8, y - 7, 3, 0, TAU); c.fill(); }],
+    tokTulip: ['TULIP', '#ff4a6a', (c, x, y) => { c.fillStyle = '#3a9a3a'; c.fillRect(x - 1, y, 2, 11); c.fillStyle = '#ff4a6a'; c.beginPath(); c.moveTo(x - 7, y - 8); c.lineTo(x - 3, y - 3); c.lineTo(x, y - 9); c.lineTo(x + 3, y - 3); c.lineTo(x + 7, y - 8); c.lineTo(x + 6, y + 2); c.lineTo(x - 6, y + 2); c.closePath(); c.fill(); ol(c); }],
+    tokCheese: ['CHEESE', '#ffd23a', (c, x, y) => { c.fillStyle = '#ffd23a'; c.beginPath(); c.moveTo(x - 10, y + 6); c.lineTo(x + 10, y + 6); c.lineTo(x + 10, y - 2); c.lineTo(x - 10, y - 8); c.closePath(); c.fill(); ol(c); c.fillStyle = '#e8b82a'; c.beginPath(); c.arc(x - 2, y + 2, 2, 0, TAU); c.arc(x + 5, y, 1.5, 0, TAU); c.fill(); }],
+    tokFlower: ['FRANGIPANI', '#ffffff', (c, x, y) => { for (let k = 0; k < 5; k++) { const a = k * TAU / 5; c.fillStyle = '#fff8e8'; c.beginPath(); c.ellipse(x + Math.cos(a) * 5, y + Math.sin(a) * 5, 5, 3, a, 0, TAU); c.fill(); ol(c, 1); } c.fillStyle = '#ffd23a'; c.beginPath(); c.arc(x, y, 3, 0, TAU); c.fill(); }],
+    tokMango: ['MANGO', '#ffb82a', (c, x, y) => { c.fillStyle = '#ffb82a'; c.beginPath(); c.ellipse(x, y, 8, 10, 0.5, 0, TAU); c.fill(); ol(c); c.fillStyle = '#e8602a'; c.beginPath(); c.ellipse(x + 3, y + 3, 4, 5, 0.5, 0, TAU); c.fill(); c.fillStyle = '#3a9a3a'; c.beginPath(); c.ellipse(x - 4, y - 10, 4, 2, -0.4, 0, TAU); c.fill(); }],
+    tokRice: ['RICE BALL', '#ffffff', (c, x, y) => { c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(x, y - 10); c.lineTo(x + 10, y + 7); c.lineTo(x - 10, y + 7); c.closePath(); c.fill(); ol(c); c.fillStyle = '#1a2a1a'; c.fillRect(x - 6, y + 1, 12, 6); }],
+    tokMomo: ['MOMO', '#f4ecd8', (c, x, y) => { c.fillStyle = '#f4ecd8'; c.beginPath(); c.arc(x, y + 2, 9, Math.PI, 0); c.lineTo(x + 9, y + 6); c.lineTo(x - 9, y + 6); c.closePath(); c.fill(); ol(c); c.strokeStyle = '#c8b898'; c.lineWidth = 1; for (const d of [-4, 0, 4]) { c.beginPath(); c.moveTo(x, y - 6); c.lineTo(x + d, y + 2); c.stroke(); } }],
+    tokEgg: ['EGG', '#f8f4ec', (c, x, y) => { c.fillStyle = '#f8f4ec'; c.beginPath(); c.ellipse(x, y, 7, 10, 0, 0, TAU); c.fill(); ol(c); c.fillStyle = 'rgba(160,190,220,0.6)'; c.beginPath(); c.arc(x - 2, y - 3, 1.5, 0, TAU); c.arc(x + 3, y + 2, 1.2, 0, TAU); c.fill(); }],
+    tokGear: ['CLOCK GEAR', '#d8b84a', (c, x, y) => { c.fillStyle = '#d8b84a'; c.beginPath(); for (let k = 0; k < 16; k++) { const a = k * TAU / 16, r = k % 2 ? 7 : 10; c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } c.closePath(); c.fill(); ol(c); c.fillStyle = I; c.beginPath(); c.arc(x, y, 3, 0, TAU); c.fill(); }],
+    tokTea: ['TEA LEAVES', '#4a8a3a', (c, x, y) => { c.fillStyle = '#4a8a3a'; for (const [dx, a] of [[-4, -0.5], [4, 0.5]]) { c.beginPath(); c.ellipse(x + dx, y, 4, 9, a, 0, TAU); c.fill(); ol(c, 1.2); } }],
+    tokMilk: ['MILK', '#ffffff', (c, x, y) => { c.fillStyle = '#ffffff'; c.beginPath(); c.rect(x - 6, y - 6, 12, 16); c.fill(); ol(c); c.fillStyle = '#4a8ad8'; c.fillRect(x - 6, y, 12, 4); c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(x - 6, y - 6); c.lineTo(x, y - 12); c.lineTo(x + 6, y - 6); c.fill(); ol(c, 1.2); }],
+    tokGinger: ['GINGER', '#d8b070', (c, x, y) => { c.fillStyle = '#d8b070'; c.beginPath(); c.ellipse(x - 3, y + 2, 7, 4, 0.2, 0, TAU); c.ellipse(x + 5, y - 3, 3, 6, 0.6, 0, TAU); c.fill(); ol(c); }],
+    tokFish: ['FISH', '#7ab0d8', (c, x, y) => { c.fillStyle = '#7ab0d8'; c.beginPath(); c.ellipse(x - 2, y, 9, 5, 0, 0, TAU); c.fill(); ol(c); c.beginPath(); c.moveTo(x + 6, y); c.lineTo(x + 12, y - 5); c.lineTo(x + 12, y + 5); c.closePath(); c.fill(); ol(c); c.fillStyle = I; c.beginPath(); c.arc(x - 6, y - 1, 1.3, 0, TAU); c.fill(); }],
+    tokCoconut: ['COCONUT', '#7a4a2a', (c, x, y) => { c.fillStyle = '#7a4a2a'; c.beginPath(); c.arc(x, y, 9, 0, TAU); c.fill(); ol(c); c.fillStyle = I; for (const [dx, dy] of [[-3, -2], [3, -2], [0, 3]]) { c.beginPath(); c.arc(x + dx, y + dy, 1.4, 0, TAU); c.fill(); } }],
+    tokStroop: ['STROOPWAFEL', '#c8883a', (c, x, y) => { c.fillStyle = '#d89a4a'; c.beginPath(); c.arc(x, y, 10, 0, TAU); c.fill(); ol(c); c.strokeStyle = '#a8682a'; c.lineWidth = 1; for (let k = -6; k <= 6; k += 4) { c.beginPath(); c.moveTo(x + k, y - 9); c.lineTo(x + k, y + 9); c.moveTo(x - 9, y + k); c.lineTo(x + 9, y + k); c.stroke(); } }],
+    tokLantern: ['LANTERN', '#e8402a', (c, x, y) => { c.fillStyle = '#e8402a'; c.beginPath(); c.ellipse(x, y, 8, 10, 0, 0, TAU); c.fill(); ol(c); c.fillStyle = '#ffd23a'; c.fillRect(x - 5, y - 12, 10, 3); c.fillRect(x - 5, y + 9, 10, 3); }],
+    tokPeach: ['PEACH', '#ffa88a', (c, x, y) => { c.fillStyle = '#ffa88a'; c.beginPath(); c.arc(x, y + 1, 9, 0, TAU); c.fill(); ol(c); c.strokeStyle = '#e8786a'; c.lineWidth = 1; c.beginPath(); c.moveTo(x, y - 7); c.quadraticCurveTo(x + 3, y, x, y + 8); c.stroke(); c.fillStyle = '#3a9a3a'; c.beginPath(); c.ellipse(x + 4, y - 9, 4, 2, -0.4, 0, TAU); c.fill(); }],
+    tokSnowflake: ['SNOWFLAKE', '#c8e8ff', (c, x, y) => { c.strokeStyle = '#e8f4ff'; c.lineWidth = 3; for (let k = 0; k < 3; k++) { const a = k * Math.PI / 3; c.beginPath(); c.moveTo(x - Math.cos(a) * 10, y - Math.sin(a) * 10); c.lineTo(x + Math.cos(a) * 10, y + Math.sin(a) * 10); c.stroke(); } c.strokeStyle = '#6a9ac8'; c.lineWidth = 1; for (let k = 0; k < 3; k++) { const a = k * Math.PI / 3; c.beginPath(); c.moveTo(x - Math.cos(a) * 10, y - Math.sin(a) * 10); c.lineTo(x + Math.cos(a) * 10, y + Math.sin(a) * 10); c.stroke(); } }]
+  };
+  const map = {};
+  for (const k in looks) { const [name, col, icon] = looks[k]; map[k] = { name, col, toast: name + '!', icon: (c, x, y, t) => icon(c, x, y, t) }; }
+  TourMaze.addKeys(map);
+}
+
+/* ---------- the Wormhole: a swirl in a ring of stars (DoorArt look 'roomWormhole') ---------- */
+{
+  const draw0 = DoorArt.draw;
+  DoorArt.draw = function (ctx, x, y, look, t, near) {
+    if (look !== 'roomWormhole') return draw0.call(this, ctx, x, y, look, t, near);
+    const cy = y - 28;
+    ctx.save();
+    for (let k = 5; k >= 0; k--) {
+      const r = 8 + k * 5, a = t * (2.4 - k * 0.25) + k;
+      ctx.fillStyle = ['#1c1030', '#3a1a6a', '#6a2aa8', '#a84ad8', '#e87aff', '#ffd8ff'][5 - k];
+      ctx.beginPath(); ctx.ellipse(x, cy, r, r * 1.15, a, 0, TAU); ctx.fill();
+    }
+    ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2;
+    for (let k = 0; k < 3; k++) { const a = t * 3 + k * 2.1; ctx.beginPath(); ctx.arc(x, cy, 30, a, a + 1.2); ctx.stroke(); }
+    ctx.fillStyle = '#fff8c0';
+    for (let k = 0; k < 6; k++) { const a = -t * 1.5 + k * TAU / 6; TourRoomArt.star(ctx, x + Math.cos(a) * 34, cy + Math.sin(a) * 38, 3.5); }
+    ctx.restore();
+  };
+}
+
 /* ---- 29_tour_aq.js ---- */
 /* ============================================================
    ANTARCTICA (secret land, world 13): found through a cracked ice wall in Amsterdam's Frozen Canals (8-4)
@@ -33000,7 +34675,8 @@ const levels = [
         ['conga', { len: 13, n: 5 }],
         ['flagGate', {}]
       ] },
-      { id: 'igloo', gen: 'room', role: 'secret', theme: 'aq_igloo', stamp: 'igloo' }
+      { id: 'igloo', gen: 'room', role: 'secret', theme: 'aq_igloo', stamp: 'igloo', room: 'whack',
+        whack: { title: 'BOP-A-SKUA', rule: 'THE EGG-THIEVING SKUAS POP OUT OF THE ICE HOLES! STOMP EIGHT TO KEEP THE EGGS SAFE', critter: 'skua', need: 8, t: 22 } }
     ] },
 
   // 13-2 FLIP: aurora bands turn gravity over; icebergs hang from the sky; mid-air swaps
@@ -33037,7 +34713,8 @@ const levels = [
         ['conga', { len: 10, n: 4 }],
         ['flagGate', {}]
       ] },
-      { id: 'berg', gen: 'room', role: 'secret', theme: 'aq_berg', stamp: 'berg' }
+      { id: 'berg', gen: 'room', role: 'secret', theme: 'aq_berg', stamp: 'berg', room: 'climb',
+        climb: { title: 'INSIDE THE ICEBERG', rule: 'A CHIMNEY UP THE MIDDLE OF THE ICEBERG. SOME LEDGES ARE THIN ICE', style: 'crumble' } }
     ] },
 
   // 13-3 FORT: the station, the module, the Snow-Plough Bot; the lab door to the Station Store
@@ -33062,7 +34739,8 @@ const levels = [
       ] },
       { id: 'module', gen: 'room', role: 'sub', theme: 'aq_module', stamp: 'module' },
       { id: 'plough', gen: 'arena', role: 'arena', layout: 'plough', arenaW: 24, H: 16, theme: 'aq_station', roof: true },
-      { id: 'lab', gen: 'room', role: 'secret', theme: 'aq_lab', stamp: 'lab' }
+      { id: 'lab', gen: 'room', role: 'secret', theme: 'aq_lab', stamp: 'lab', room: 'closing',
+        closing: { title: 'THE STATION SHOP: CLOSING TIME', rule: 'THE STATION SHOP IS CLOSING FOR THE NIGHT: GRAB WHAT YOU CAN, TOP SHELF FIRST', keeper: 'penguin', word: 'CLOSED!' } }
     ] },
 
   // 13-4 LAIR: the crevasse teaches the kicked ice blocks and the dropped icicles, then Big Tusk on the floe
@@ -33086,7 +34764,8 @@ const levels = [
         ['kickRun', { len: 14, enemy: 'aqSnowball' }],
         ['door', { to: 'glacier', perch: 0, look: 'aqFloeGate' }]
       ] },
-      { id: 'cave', gen: 'room', role: 'secret', theme: 'aq_icecave', stamp: 'cave' },
+      { id: 'cave', gen: 'room', role: 'secret', theme: 'aq_icecave', stamp: 'cave', room: 'bigone',
+        bigone: { title: 'THE BIG ROVER', rule: 'A GIANT ROBOT ROVER IS LOOSE IN THE ICE CAVE. STOMP IT THREE TIMES', critter: 'aqRover', name: 'THE BIG ROVER' } },
       { id: 'glacier', gen: 'arena', role: 'arena', layout: 'glacier', arenaW: 26, H: 18, roof: false }
     ] },
 
@@ -33122,7 +34801,8 @@ const levels = [
         ['skuas', { n: 1, len: 10 }],
         ['eggFinale', {}]
       ] },
-      { id: 'rookery', gen: 'room', role: 'secret', theme: 'aq_rookery', stamp: 'rookery' }
+      { id: 'rookery', gen: 'room', role: 'secret', theme: 'aq_rookery', stamp: 'rookery', room: 'rush',
+        rush: { title: 'THE LOST EGGS', rule: 'SIX PENGUIN EGGS ROLLED AWAY IN THE BLIZZARD! GRAB THEM ALL BEFORE THEY FREEZE', look: 'tokEgg', n: 6, t: 17 } }
     ] }
 ];
 
@@ -35206,7 +36886,8 @@ const levels = [
         ['enemies', { kind: 'brBrigadeiro', n: 1, len: 10 }],
         ['sambaFinale']
       ] },
-      { id: 'barracao', gen: 'room', role: 'secret', theme: 'br_workshop', stamp: 'barracao' }
+      { id: 'barracao', gen: 'room', role: 'secret', theme: 'br_workshop', stamp: 'barracao', room: 'bouncy',
+        bouncy: { title: 'THE CARNIVAL FLOAT BOUNCE', rule: 'A HALF-BUILT CARNIVAL FLOAT, FULLY INFLATED. THE FLOOR BOUNCES: THE PRIZE IS ON THE TALLEST TOWER', skin: ['#ff4ab8', '#ffd23a', '#3ad8a8'] } }
     ] },
 
   // 3-2 THIEF: Quati snatches Chinka's stamps and runs through the Pantanal
@@ -35246,7 +36927,8 @@ const levels = [
         ['enemies', { kind: 'brCrab', n: 2, len: 10 }],
         ['stampFinale']
       ] },
-      { id: 'toca', gen: 'room', role: 'secret', theme: 'br_toca', stamp: 'toca' }
+      { id: 'toca', gen: 'room', role: 'secret', theme: 'br_toca', stamp: 'toca', room: 'ambush',
+        ambush: { title: 'THE COATI GANG\'S BURROW', rule: 'THE COATIS WANT THEIR STASH BACK! THE DOOR IS JAMMED: STOMP THEM ALL', critters: ['brCoati', 'brCrab'] } }
     ] },
 
   // 3-3 TOWER (b) facade: three falls push you down; catwalks, logs, a sloth; rainbow bridges and swifts up top
@@ -35276,7 +36958,8 @@ const levels = [
         ['climbCard', { kind: 'risky', x: 4, dy: -2 }],
         ['overlook']
       ] },
-      { id: 'garganta', gen: 'room', role: 'secret', theme: 'br_garganta', stamp: 'garganta' }
+      { id: 'garganta', gen: 'room', role: 'secret', theme: 'br_garganta', stamp: 'garganta', room: 'climb',
+        climb: { title: 'INSIDE THE DEVIL\'S THROAT', rule: 'A CHIMNEY OF WET ROCK BEHIND THE FALLS. CLIMB TO THE TOP', style: 'crumble' } }
     ] },
 
   // 3-4 TIDE: rain squalls fill the lagoons every 14 s; walk the beds at low water, swim over the dunes at high
@@ -35313,7 +36996,8 @@ const levels = [
         ['dune', { w: 10, h: 4 }],
         ['duneFinale']
       ] },
-      { id: 'jangada', gen: 'room', role: 'secret', theme: 'br_jangada', stamp: 'jangada' }
+      { id: 'jangada', gen: 'room', role: 'secret', theme: 'br_jangada', stamp: 'jangada', room: 'grotto',
+        grotto: { title: 'THE SUNKEN RAFT', rule: 'THE LAGOON FLOODED THE RAFT SHED. SWIM TO THE BACK', half: false } }
     ] },
 
   // 3-5 LAIR: the players' tunnel teaches the ball (kick it into targets to roll up shutters), then the pitch
@@ -35336,7 +37020,8 @@ const levels = [
         ['enemies', { kind: 'brBrigadeiro', n: 1, len: 10 }],
         ['door', { to: 'estadio@in', perch: 0, look: 'brTunnelExit' }]
       ] },
-      { id: 'vestiario', gen: 'room', role: 'secret', theme: 'br_vestiario', stamp: 'vestiario' },
+      { id: 'vestiario', gen: 'room', role: 'secret', theme: 'br_vestiario', stamp: 'vestiario', room: 'rush',
+        rush: { title: 'KIT BEFORE KICK-OFF!', rule: 'THE MATCH STARTS SOON! GRAB ALL SIX BALLS BEFORE THE WHISTLE', look: 'tokBall', n: 6, t: 16 } },
       { id: 'estadio', gen: 'arena', role: 'arena', layout: 'estadio', arenaW: 34, roof: false, theme: 'br_estadio' }
     ] },
 
@@ -35372,7 +37057,8 @@ const levels = [
         ['isle', { gy: 10, w: 5, enemy: 'brSwift', tight: true }],
         ['beachFinale', { gap: 6, gy: 13, tight: true }]
       ] },
-      { id: 'quiosque', gen: 'room', role: 'secret', theme: 'br_quiosque', stamp: 'quiosque' }
+      { id: 'quiosque', gen: 'room', role: 'secret', theme: 'br_quiosque', stamp: 'quiosque', room: 'prank',
+        prank: { title: 'FREE COCONUT WATER!', rule: 'A GIANT COCONUT CHEST: FREE COCONUT WATER FOR EVERYONE! GO ON, OPEN IT', gag: 'snakes', label: 'FREE COCONUTS', line: 'OK, OK. THE REAL PRIZE IS IN THE CAGE.' } }
     ] }
 ];
 
@@ -37115,11 +38801,14 @@ const L1 = { n: 1, name: 'Hemisphere Hop', arch: 'flip', theme: 'ec_equator',
         ['flipGap', { w: 12, gold: 'risky' }],
         ['enemies', { kind: 'ecHummingbird', n: 1, len: 8 }],
         'cacao',
+        ['anchor', { name: 'wormOut', tight: true }],   // where the chocolate shop's Wormhole drops Brady (tight: no breather, the level is unchanged)
         ['flipGap', { w: 10 }],
         ['flipline', { w: 10 }],
         ['finish', { look: 'ecHemiArch' }]
       ] },
-    { id: 'chocolateria', gen: 'room', role: 'secret', stamp: 'chocolateria' }
+    // a Wormhole in the back of the chocolate shop shoots Brady on past the last flip gaps (docs/design/SECRET_ROOMS.md)
+    { id: 'chocolateria', gen: 'room', role: 'secret', stamp: 'chocolateria', room: 'wormhole',
+      wormhole: { title: 'THE CHOCOLATE WORMHOLE', rule: 'A WORMHOLE IN THE COCOA SACKS! HOP IN (UP) AND IT SHOOTS YOU FAR AHEAD', to: 'mitad@wormOut' } }
   ] };
 
 const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_dusk',
@@ -37158,7 +38847,8 @@ const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_du
         ['finish', {}]
       ] },
     { id: 'treehouse', gen: 'room', role: 'sub', theme: 'ec_amazon', stamp: 'treehouse' },
-    { id: 'cascada', gen: 'room', role: 'secret', theme: 'ec_amazon', stamp: 'cascada' }
+    { id: 'cascada', gen: 'room', role: 'secret', theme: 'ec_amazon', stamp: 'cascada', room: 'grotto',
+      grotto: { title: 'BEHIND THE WATERFALL', rule: 'THE CAVE BEHIND THE FALLS IS HALF FLOODED: SWIM UNDER, CLIMB OUT AT THE BACK', half: true } }
   ] };
 
 const L3 = { n: 3, name: 'Booby Dash', arch: 'race', theme: 'ec_islas',
@@ -37226,7 +38916,8 @@ const L4 = { n: 4, name: 'Cacao Works', arch: 'factory', theme: 'ec_fabrica',
         ['enemies', { kind: 'ecIceCube', n: 2, len: 10 }],
         ['finish', { look: 'ecExitSign' }]
       ] },
-    { id: 'envoltura', gen: 'room', role: 'secret', theme: 'ec_fabrica', stamp: 'envoltura' }
+    { id: 'envoltura', gen: 'room', role: 'secret', theme: 'ec_fabrica', stamp: 'envoltura', room: 'gauntlet',
+      gauntlet: { title: 'THE FOIL-WRAPPING LINE', rule: 'RIDE THE WRAPPING LINE TO THE END WITHOUT GETTING WRAPPED', beats: ['conveyor', 'crumble', 'wall'] } }
   ] };
 
 const L5 = { n: 5, name: 'Cotopaxi Crater', arch: 'lair', theme: 'ec_andes', boss: 'ec_tortoise',
@@ -37239,7 +38930,8 @@ const L5 = { n: 5, name: 'Cotopaxi Crater', arch: 'lair', theme: 'ec_andes', bos
   areas: [
     { id: 'teleferico', gen: 'ride', len: 120, H: 16, deck: 10, vehicle: 'ecGondola', vehicleW: 6, below: 'none', scroll: 2.4, endDoor: 'crater@in',
       script: [['airBlock', { item: 'power' }], 'tower', ['catwalk', { gold: true }], 'condors', ['hutDoor', { to: 'refugio@in', back: 'hutBack' }], 'cp', 'tower', ['airBlock', { item: 'sig', dy: 3 }], ['ridge', { w: 2 }], 'condors', 'tower'] },
-    { id: 'refugio', gen: 'room', role: 'secret', theme: 'ec_andes', stamp: 'refugio' },
+    { id: 'refugio', gen: 'room', role: 'secret', theme: 'ec_andes', stamp: 'refugio', room: 'bigone',
+      bigone: { title: 'THE BIG ALPACA', rule: 'THE HUT\'S GRUMPY GIANT ALPACA SPITS! STOMP IT THREE TIMES', critter: 'ecAlpaca', name: 'THE BIG ALPACA' } },
     { id: 'crater', gen: 'arena', role: 'arena', layout: 'vents', arenaW: 30, H: 18, roof: false, theme: 'ec_cotopaxi' }
   ] };
 
@@ -37268,7 +38960,8 @@ const L6 = { n: 6, name: 'Galápagos Snorkel', arch: 'dive', secret: true, theme
         'arches',
         ['coveExit', {}]
       ] },
-    { id: 'grotto', gen: 'room', role: 'secret', theme: 'ec_galapagos', stamp: 'grotto' }
+    { id: 'grotto', gen: 'room', role: 'secret', theme: 'ec_galapagos', stamp: 'grotto', room: 'pick',
+      pick: { title: 'THE TORTOISE\'S BARGAIN', rule: 'AN OLD TORTOISE KEEPS THREE BOXES. TAKE ONE. ONLY ONE. HE IS WATCHING' } }
   ] };
 
 const L7 = { n: 7, name: "Devil's Cauldron", arch: 'tide', secret: true, theme: 'ec_pailon',
@@ -37299,7 +38992,8 @@ const L7 = { n: 7, name: "Devil's Cauldron", arch: 'tide', secret: true, theme: 
         ['hangBridge', { n: 8, dy: 5, rope: 'pista@in', back: 'ropeBack' }],
         ['finish', {}]
       ] },
-    { id: 'pista', gen: 'room', role: 'secret', theme: 'ec_andes', stamp: 'pista' }
+    { id: 'pista', gen: 'room', role: 'secret', theme: 'ec_andes', stamp: 'pista', room: 'closing',
+      closing: { title: 'AIRSTRIP KIOSK: LAST CALL!', rule: 'THE KIOSK BY THE AIRSTRIP IS CLOSING: GRAB WHAT YOU CAN, TOP SHELF FIRST', keeper: 'keeper', word: '¡CERRADO!' } }
   ] };
 
 Tour.amend('ec', {
@@ -38894,7 +40588,8 @@ Tour.amend('es', {
           ['plaza', { k: 3, gold: 'risky' }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'molino', gen: 'room', role: 'secret', stamp: 'molino' }
+        { id: 'molino', gen: 'room', role: 'secret', stamp: 'molino', room: 'whack',
+          whack: { title: 'WHACK-A-TOMATO', rule: 'TOMATOES POP OUT OF THE OLD MILL FLOOR! SQUASH EIGHT BEFORE TIME IS UP', critter: 'tomato', need: 8, t: 22 } }
       ] },
 
     /* 6-2 MINI: tiny Brady on a giant pintxos bar in San Sebastián */
@@ -38908,7 +40603,8 @@ Tour.amend('es', {
       areas: [
         { id: 'barra', gen: 'room', theme: 'es_pintxos', stamp: 'barra' },
         { id: 'pared', gen: 'room', role: 'sub', theme: 'es_pared', stamp: 'pared' },
-        { id: 'queso', gen: 'room', role: 'secret', theme: 'es_pintxos', stamp: 'queso' }
+        { id: 'queso', gen: 'room', role: 'secret', theme: 'es_pintxos', stamp: 'queso', room: 'rush',
+          rush: { title: 'THE CHEESE CELLAR DASH', rule: 'THE MICE ARE COMING FOR THE CHEESE! GRAB ALL SIX WEDGES FIRST', look: 'tokCheese', n: 6, t: 17 } }
       ] },
 
     /* 6-3 BEAT: Valencia's City of Arts by night */
@@ -38942,7 +40638,8 @@ Tour.amend('es', {
           'drop',
           ['end', { exit: 'main' }]
         ] },
-        { id: 'umbracle', gen: 'room', role: 'secret', theme: 'es_arts', stamp: 'umbracle' }
+        { id: 'umbracle', gen: 'room', role: 'secret', theme: 'es_arts', stamp: 'umbracle', room: 'lantern',
+          lantern: { title: 'THE NIGHT GARDEN', rule: 'A GARDEN WALK AT NIGHT: YOUR LIGHT FADES, THE LAMPS RELIGHT IT. THE STEPPING STONES SHOW ONLY IN THE LIGHT' } }
       ] },
 
     /* 6-4 GLIDE: down the slopes of Teide on the Canary Islands */
@@ -38977,7 +40674,8 @@ Tour.amend('es', {
           ['door', { to: 'cueva@in', look: 'esLavaTube', back: 'cuevaBack', perch: 0 }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'cueva', gen: 'room', role: 'secret', stamp: 'cueva' }
+        { id: 'cueva', gen: 'room', role: 'secret', stamp: 'cueva', room: 'gauntlet',
+          gauntlet: { title: 'THE LAVA TUBE', rule: 'AN OLD LAVA TUBE UNDER TEIDE. RUN IT TO THE END WITHOUT TOUCHING THE SPIKY ROCK', beats: ['steps', 'mover', 'crumble'] } }
       ] },
 
     /* 6-5 LAIR: a Fallas street, then Paellasaurus in the Silk Exchange */
@@ -38999,7 +40697,8 @@ Tour.amend('es', {
           ['itemBlock', { item: 'sig', y: 4 }],
           ['door', { to: 'arena@in', perch: 0, look: 'esHallDoor' }]
         ] },
-        { id: 'taller', gen: 'room', role: 'secret', theme: 'es_fallas', stamp: 'taller' },
+        { id: 'taller', gen: 'room', role: 'secret', theme: 'es_fallas', stamp: 'taller', room: 'prank',
+          prank: { title: 'THE FINISHED NINOT', rule: 'A GIANT CHEST MARKED \'FINISHED NINOT: DO NOT OPEN\'. YOU KNOW YOU WANT TO', gag: 'jack', label: 'DO NOT OPEN', line: 'HA! THE REAL PRIZE IS IN THE CAGE.' } },
         { id: 'arena', gen: 'arena', role: 'arena', layout: 'lonja', arenaW: 28, theme: 'es_lonja', roof: false }
       ] },
 
@@ -39028,7 +40727,8 @@ Tour.amend('es', {
           'jellies',
           ['itemBlock', { item: 'oneup', y: 4 }]
         ] },
-        { id: 'alcove', gen: 'room', role: 'secret', theme: 'es_aquarium', water: true, stamp: 'alcove' }
+        { id: 'alcove', gen: 'room', role: 'secret', theme: 'es_aquarium', water: true, stamp: 'alcove', room: 'grotto',
+          grotto: { title: 'THE AQUARIUM\'S BACK TANK', rule: 'BEHIND THE GLASS: THE TANK THE VISITORS NEVER SEE. SWIM TO THE BACK', half: false } }
       ] },
 
     /* 6-7 SWITCH (secret): the windmills of La Mancha */
@@ -39063,7 +40763,8 @@ Tour.amend('es', {
           ['door', { to: 'harinero@in', look: 'esMillHouse', back: 'harBack', perch: 0 }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'harinero', gen: 'room', role: 'secret', theme: 'es_mancha', stamp: 'harinero' }
+        { id: 'harinero', gen: 'room', role: 'secret', theme: 'es_mancha', stamp: 'harinero', room: 'bigone',
+          bigone: { title: 'THE BIG SHEEP', rule: 'THE FLOUR STORE\'S GIANT SHEEP IS NOT AMUSED. STOMP IT THREE TIMES', critter: 'esSheep', name: 'THE BIG SHEEP' } }
       ] }
   ]
 });
@@ -41227,7 +42928,8 @@ const levels = [
           ['door', { to: 'place@roofBack', perch: 0, look: 'frShopDoor' }]
         ] },
       { id: 'cafe', gen: 'room', role: 'sub', theme: 'fr_place', stamp: 'cafe' },
-      { id: 'quai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'quai' }
+      { id: 'quai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'quai', room: 'doors',
+        doors: { title: 'THE BOOKSTALL CUPBOARDS', rule: 'THE BOOKSELLERS\' GREEN BOXES ARE ALL DOORS. WHICH ONE GOES WHERE?', joke: 'A CUPBOARD OF UNSOLD POETRY. NOTHING ELSE.' } }
     ] },
   // 7-2 THIEF: the magpie and the stamps, across Provence
   { n: 2, name: 'Lavender Magpie', mapLabel: 'Lavender', arch: 'thief', theme: 'fr_provence',
@@ -41260,7 +42962,8 @@ const levels = [
           ['thiefStop', { n: 3, lock: true }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'mas', gen: 'room', role: 'secret', stamp: 'mas' }
+      { id: 'mas', gen: 'room', role: 'secret', stamp: 'mas', room: 'fetch',
+        fetch: { title: 'RATATOUILLE!', rule: 'THE FARMHOUSE COOK NEEDS A TOMATO, AN AUBERGINE AND A COURGETTE. BRING THEM TO THE POT', ingredients: ['tokTomato', 'tokEggplant', 'tokZucchini'], dish: 'RATATOUILLE! MAGNIFIQUE!' } }
     ] },
   // 7-3 TIDE: the bay of the abbey island (background only), the tide in and out, the bore at the end
   { n: 3, name: 'Mont-Saint-Michel Tides', mapLabel: 'The Bay', arch: 'tide', theme: 'fr_baie',
@@ -41306,8 +43009,10 @@ const levels = [
           ['enemies', { kind: 'frGull', n: 1, len: 8 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'bateau', gen: 'room', role: 'secret', stamp: 'bateau' },
-      { id: 'banc', gen: 'room', role: 'secret', theme: 'fr_baie', stamp: 'banc' }
+      { id: 'bateau', gen: 'room', role: 'secret', stamp: 'bateau', room: 'shell',
+        shell: { title: 'THE OYSTER SHELL GAME', rule: 'THE OLD BOATMAN HIDES A PRIZE UNDER ONE OF THREE BOWLS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'bowl', dealer: 'crab', joke: ['fish', 'sock'] } },
+      { id: 'banc', gen: 'room', role: 'secret', theme: 'fr_baie', stamp: 'banc', room: 'floaty',
+        floaty: { title: 'THE CLOUD BANK', rule: 'INSIDE A CLOUD THE GRAVITY IS ALL FLUFF. BIG FLOATY JUMPS!', gravity: 0.4 } }
     ] },
   // 7-4 DIG: Périgord truffles, under the oaks
   { n: 4, name: 'Truffle Hunt', mapLabel: 'Truffles', arch: 'dig', theme: 'fr_perigord',
@@ -41336,7 +43041,8 @@ const levels = [
           ['caveIn', { w: 12, dy: 2, enemy: 'frBoar' }],
           'exit'
         ] },
-      { id: 'grotte', gen: 'room', role: 'secret', stamp: 'grotte' }
+      { id: 'grotte', gen: 'room', role: 'secret', stamp: 'grotte', room: 'lamps',
+        lamps: { title: 'THE PAINTED CAVE', rule: 'LIGHT THE CAVE\'S LAMPS IN THE ORDER THE PAINTING SHOWS', sym: 2 } }
     ] },
   // 7-5 LAIR: the château of mirrors and Le Grand Soufflé's ballroom
   { n: 5, name: 'Château des Glaces', mapLabel: 'Château', arch: 'lair', theme: 'fr_chateau', boss: 'fr_souffle',
@@ -41362,7 +43068,8 @@ const levels = [
           ['enemies', { kind: 'frAccordion', n: 1, len: 8 }],
           ['door', { to: 'ballroom', perch: 0, look: 'frBallroomDoor' }]
         ] },
-      { id: 'boudoir', gen: 'room', role: 'secret', stamp: 'boudoir' },
+      { id: 'boudoir', gen: 'room', role: 'secret', stamp: 'boudoir', room: 'bouncy',
+        bouncy: { title: 'THE BOUNCY CANOPY BED', rule: 'THE QUEEN\'S BED IS ONE BIG MATTRESS. ONLY THE BEDPOSTS ARE FIRM. THE PRIZE IS ON THE TALLEST', skin: ['#e8a8d8', '#fff0c8', '#a8c8ff'] } },
       { id: 'ballroom', gen: 'arena', role: 'arena', layout: 'ballroom', arenaW: 26, H: 18 }
     ] },
   // 7-6 SCROLL (secret): the Seine quays, the bouquinistes' boxes in time with the music
@@ -41392,7 +43099,8 @@ const levels = [
           ['bridge', { gold: true }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'seineQuai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'seineQuai' }
+      { id: 'seineQuai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'seineQuai', room: 'rush',
+        rush: { title: 'CROISSANT RUSH', rule: 'THE BAKERY BOAT DROPPED ITS CROISSANTS! GRAB ALL SIX BEFORE THE PIGEONS DO', look: 'tokCroissant', n: 6, t: 16 } }
     ] },
   // 7-7 SKY (secret): balloons over France; one trade-wind balloon flies east (the secret flight to Vietnam)
   { n: 7, name: 'Montgolfière Skies', mapLabel: 'Balloons', arch: 'sky', secret: true, theme: 'fr_ciel',
@@ -41422,11 +43130,13 @@ const levels = [
           ['burner', { h: 9 }],
           ['postcard', { kind: 'risky', dy: -9, dx: -4 }],
           ['enemies', { kind: 'frMacaron', n: 1, len: 8 }],
+          ['anchor', { name: 'wormOut', tight: true }],   // where the balloon basket's Wormhole drops Brady (tight: no breather)
           ['balloonHop', { rise: 5, drift: 3 }],
           ['postcard', { kind: 'must', dy: -4 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'nacelle', gen: 'room', role: 'secret', stamp: 'nacelle' },
+      { id: 'nacelle', gen: 'room', role: 'secret', stamp: 'nacelle', room: 'wormhole',
+        wormhole: { title: 'THE BALLOON WORMHOLE', rule: 'THERE IS A WORMHOLE IN THIS BALLOON BASKET! HOP IN (UP) AND IT SHOOTS YOU FAR AHEAD', to: 'ciel@wormOut' } },
       { id: 'alize', gen: 'islands', role: 'secret', W: 60, H: 24,
         script: [
           ['flat', { n: 5 }],
@@ -44085,7 +45795,8 @@ const levels = [
           ['surf', { n: 6, jelly: 1, tight: true }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'gua', gen: 'room', role: 'secret', stamp: 'gua' }
+      { id: 'gua', gen: 'room', role: 'secret', stamp: 'gua', room: 'lantern',
+        lantern: { title: 'THE SEA CAVE', rule: 'THE SEA CAVE UNDER THE PIER IS PITCH DARK. YOUR LIGHT FADES: RELIGHT IT AT THE LAMPS. THE ROCKS SHOW ONLY IN THE LIGHT' } }
     ] },
   // 9-2 GLIDE: the kite festival over the rice terraces
   { n: 2, name: 'Kite Festival', arch: 'glide', theme: 'id_kites',
@@ -44123,7 +45834,8 @@ const levels = [
           ['terraceIsle', { n: 2 }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'lumbung', gen: 'room', role: 'secret', stamp: 'lumbung' }
+      { id: 'lumbung', gen: 'room', role: 'secret', stamp: 'lumbung', room: 'whack',
+        whack: { title: 'WHACK-A-RAT', rule: 'RATS IN THE RICE BARN! STOMP EIGHT OF THEM AS THEY POP UP', critter: 'rat', need: 8, t: 22 } }
     ] },
   // 9-3 DOOM: Batur erupts at dawn; the lava flow chases Brady down the mountain
   { n: 3, name: 'Batur Eruption', arch: 'doom', theme: 'id_batur',
@@ -44160,7 +45872,8 @@ const levels = [
           ['bombs', { len: 14, every: 1.3 }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'tambang', gen: 'room', role: 'secret', stamp: 'tambang' }
+      { id: 'tambang', gen: 'room', role: 'secret', stamp: 'tambang', room: 'gauntlet',
+        gauntlet: { title: 'THE SULFUR MINE', rule: 'THE OLD SULFUR MINE: RUN IT TO THE END. THE PLANKS DON\'T LAST', beats: ['fallers', 'steps', 'ceiling'] } }
     ] },
   // 9-4 LAMP (in the water): the night dive at Manta Point
   { n: 4, name: 'Manta Night Dive', arch: 'lamp', theme: 'id_dive',
@@ -44195,7 +45908,8 @@ const levels = [
           ['manta', { w: 16 }],
           'jellies'
         ] },
-      { id: 'kapal', gen: 'room', role: 'secret', stamp: 'kapal' }
+      { id: 'kapal', gen: 'room', role: 'secret', stamp: 'kapal', room: 'grotto',
+        grotto: { title: 'THE SUNKEN WRECK', rule: 'THE WRECK\'S HOLD IS FULL OF WATER. SWIM TO THE CAPTAIN\'S CABIN AT THE BACK', half: false } }
     ] },
   // 9-5 LAIR: the monkey forest, then Boss Kera in the durian grove
   { n: 5, name: 'Monkey Forest', arch: 'lair', theme: 'id_ruins', boss: 'id_kera',
@@ -44218,7 +45932,8 @@ const levels = [
           ['postcard', { kind: 'risky', dx: -12, dy: -5 }],
           ['groveGate', { to: 'grove' }]
         ] },
-      { id: 'akar', gen: 'room', role: 'secret', stamp: 'akar' },
+      { id: 'akar', gen: 'room', role: 'secret', stamp: 'akar', room: 'ambush',
+        ambush: { title: 'THE CIVETS\' ROOT CELLAR', rule: 'THE CIVETS GUARD THEIR ROOT CELLAR AND THE DOOR HAS JAMMED: STOMP THEM ALL', critters: ['idCivet', 'idDuck'] } },
       { id: 'grove', gen: 'arena', role: 'arena', layout: 'grove', arenaW: 26, H: 22, roof: false }
     ] },
   // 9-6 SWING (secret): the Borneo canopy with the orangutans
@@ -44251,7 +45966,8 @@ const levels = [
           ['lianas', { n: 2, hornbill: true }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'nest', gen: 'room', role: 'secret', stamp: 'nest' }
+      { id: 'nest', gen: 'room', role: 'secret', stamp: 'nest', room: 'bouncy',
+        bouncy: { title: 'THE ORANGUTAN\'S SPRINGY NEST', rule: 'AN ORANGUTAN\'S GIANT NEST, ALL SPRINGY BRANCHES. ONLY THE TRUNKS ARE FIRM. THE PRIZE IS ON THE TALLEST', skin: ['#8ac84a', '#e8a84a', '#5aa86a'] } }
     ] },
   // 9-7 RAIL (secret): the blue-fire sulfur mine in the crater at night
   { n: 7, name: 'Blue Fire Rails', arch: 'rail', secret: true, theme: 'id_ijen', dark: true,
@@ -44277,7 +45993,8 @@ const levels = [
           ['fork', { len: 36, upper: [['flames', { n: 2, gap: 8 }]], lower: [['sulfurCask', {}], ['flames', { n: 2 }]] }],
           ['flames', { n: 2, period: 2.4 }]
         ] },
-      { id: 'depot', gen: 'room', role: 'secret', stamp: 'depot' }
+      { id: 'depot', gen: 'room', role: 'secret', stamp: 'depot', room: 'doors',
+        doors: { title: 'THE MINE DEPOT', rule: 'THE DEPOT\'S LOCKERS AND STORE ROOMS: WHICH DOOR GOES WHERE?', joke: 'A LOCKER FULL OF MINERS\' SOCKS. PHEW.' } }
     ] }
 ];
 
@@ -47024,7 +48741,8 @@ const levels = [
           { from: [1, 1], to: [0, 1], kind: 'oneway', at: [22, 11], toAt: [4, 11], look: 'jpHatch_roof' },
           { from: [0, 1], to: [0, 0], kind: 'oneway', at: [22, 11], toAt: [7, 11], look: 'jpHatch_plate' }
         ] },
-      { id: 'reizoko', gen: 'room', role: 'secret', theme: 'jp_fridge', stamp: 'reizoko' }
+      { id: 'reizoko', gen: 'room', role: 'secret', theme: 'jp_fridge', stamp: 'reizoko', room: 'closing',
+        closing: { title: 'THE FRIDGE LIGHT GOES OUT', rule: 'INSIDE THE GIANT FRIDGE: GRAB WHAT YOU CAN BEFORE THE DOOR SHUTS AND THE LIGHT GOES OUT', keeper: 'tanuki', word: 'LIGHTS OUT!' } }
     ] },
   // 11-2 RIDE: on the roof of the bullet train; a station's siding is the way to Fuji
   { n: 2, name: 'Bullet Train', arch: 'ride', theme: 'jp_rail',
@@ -47055,7 +48773,8 @@ const levels = [
           ['tunnel', { n: 14 }],
           ['fujiview', { item: 'star' }]
         ] },
-      { id: 'sokusen', gen: 'room', role: 'secret', theme: 'jp_rail', stamp: 'sokusen' }
+      { id: 'sokusen', gen: 'room', role: 'secret', theme: 'jp_rail', stamp: 'sokusen', room: 'gauntlet',
+        gauntlet: { title: 'THE OLD SIDING', rule: 'AN OLD SIDING NOBODY USES. RUN IT TO THE BUFFERS', beats: ['crumble', 'wall', 'steps'] } }
     ] },
   // 11-3 PHASE: the bamboo grove by day and by night
   { n: 3, name: 'Night of Things', arch: 'phase', theme: 'jp_bamboo',
@@ -47098,7 +48817,8 @@ const levels = [
           ['kpond', {}],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'chashitsu', gen: 'room', role: 'secret', theme: 'jp_castle', stamp: 'chashitsu' }
+      { id: 'chashitsu', gen: 'room', role: 'secret', theme: 'jp_castle', stamp: 'chashitsu', room: 'lamps',
+        lamps: { title: 'THE TEA HOUSE LANTERNS', rule: 'THE TEA HOUSE IS DARK. LIGHT ITS LANTERNS IN THE ORDER THE SCROLL SHOWS', sym: 2 } }
     ] },
   // 11-4 TOWER (c) exterior: up the outside of a neon tower at dusk
   { n: 4, name: 'Neon Tower', arch: 'tower', theme: 'jp_tower',
@@ -47122,7 +48842,8 @@ const levels = [
           ['neonBand', { n: 3, flip: true, enemy: 'jpCrow' }],
           ['clawBand', { rise: 10 }]
         ] },
-      { id: 'gachaRoom', gen: 'room', role: 'secret', theme: 'jp_neon', stamp: 'gachaRoom' }
+      { id: 'gachaRoom', gen: 'room', role: 'secret', theme: 'jp_neon', stamp: 'gachaRoom', room: 'pick',
+        pick: { title: 'THE PRIZE MACHINE', rule: 'A PRIZE MACHINE WITH THREE CAPSULES IN THE WINDOW. YOU GET ONE TURN' } }
     ] },
   // 11-5 LAIR: the castle garden and the Great Kappa's pond
   { n: 5, name: 'Kappa Garden', arch: 'lair', theme: 'jp_castle', boss: 'jp_kappa',
@@ -47146,7 +48867,8 @@ const levels = [
           'gardenP1',
           ['door', { to: 'pond', perch: 0, look: 'jpGardenGate' }]
         ] },
-      { id: 'kura', gen: 'room', role: 'secret', stamp: 'kura' },
+      { id: 'kura', gen: 'room', role: 'secret', stamp: 'kura', room: 'doors',
+        doors: { title: 'THE STOREHOUSE DOORS', rule: 'THE CASTLE STOREHOUSE: SLIDING DOORS EVERYWHERE. WHICH ONE GOES WHERE?', joke: 'A CUPBOARD OF ONE HUNDRED IDENTICAL TEACUPS.' } },
       { id: 'pond', gen: 'arena', role: 'arena', layout: 'pond', arenaW: 26, H: 18, roof: false }
     ] },
   // 11-6 MINI (secret): inside a capsule-toy machine
@@ -47175,7 +48897,8 @@ const levels = [
           ['enemies', { kind: 'jpCapsule', n: 1, len: 8 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'capsuleRoom', gen: 'room', role: 'secret', theme: 'jp_gacha', stamp: 'capsuleRoom' }
+      { id: 'capsuleRoom', gen: 'room', role: 'secret', theme: 'jp_gacha', stamp: 'capsuleRoom', room: 'bouncy',
+        bouncy: { title: 'INSIDE A CAPSULE TOY', rule: 'INSIDE A GIANT CAPSULE TOY: ALL SQUISHY. ONLY THE TOWERS ARE FIRM. THE PRIZE IS ON THE TALLEST', skin: ['#ff7ab0', '#7ad8ff', '#ffe07a'] } }
     ] },
   // 11-7 GLIDE (secret): over the lake under the volcano
   { n: 7, name: 'Fuji Thermals', arch: 'glide', secret: true, theme: 'jp_fuji',
@@ -47209,7 +48932,8 @@ const levels = [
           ['craneChain', { n: 2 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'hutRoom', gen: 'room', role: 'secret', theme: 'jp_fuji', stamp: 'hutRoom' }
+      { id: 'hutRoom', gen: 'room', role: 'secret', theme: 'jp_fuji', stamp: 'hutRoom', room: 'floaty',
+        floaty: { title: 'THIN AIR ON FUJI', rule: 'SO HIGH UP THE AIR IS THIN AND YOU ARE LIGHT AS A FEATHER. BIG FLOATY JUMPS!', gravity: 0.5 } }
     ] }
 ];
 
@@ -49403,7 +51127,8 @@ Tour.amend('ma', {
           ['enemies', { n: 2 }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'camp', gen: 'room', role: 'secret', theme: 'ma_tent', stamp: 'oasisCamp' }
+        { id: 'camp', gen: 'room', role: 'secret', theme: 'ma_tent', stamp: 'oasisCamp', room: 'pick',
+          pick: { title: 'THE CARAVAN BARGAIN', rule: 'A CAMEL TRADER LAYS OUT THREE BOXES ON HIS RUG. YOU MAY TAKE ONE. ONE!' } }
       ] },
 
     /* 5-3 PHASE: the sun-moon lantern turns the blue medina from day to night and back */
@@ -49446,7 +51171,8 @@ Tour.amend('ma', {
           ['enemies', { kind: 'maTeapot', n: 1 }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'riad', gen: 'room', role: 'secret', theme: 'ma_riad', stamp: 'blueRiad' }
+        { id: 'riad', gen: 'room', role: 'secret', theme: 'ma_riad', stamp: 'blueRiad', room: 'lamps',
+          lamps: { title: 'THE RIAD\'S LANTERNS', rule: 'THE BLUE RIAD IS DARK. LIGHT ITS LANTERNS IN THE ORDER THE TILE PICTURE SHOWS', sym: 1 } }
       ] },
 
     /* 5-4 FORT: kasbah walls, the tower room's chain and lids, the Brass Owl */
@@ -49472,7 +51198,8 @@ Tour.amend('ma', {
         ] },
         { id: 'tower', gen: 'room', role: 'sub', theme: 'ma_atlas', stamp: 'owlTower' },
         { id: 'owl', gen: 'arena', role: 'arena', layout: 'owl', arenaW: 24, H: 16, theme: 'ma_atlas' },
-        { id: 'loft', gen: 'room', role: 'secret', stamp: 'pigeonLoft' }
+        { id: 'loft', gen: 'room', role: 'secret', stamp: 'pigeonLoft', room: 'ambush',
+          ambush: { title: 'THE GOAT LOFT', rule: 'THE KASBAH GOATS AND FENNECS DON\'T LIKE VISITORS. THE DOOR IS STUCK: STOMP THEM ALL', critters: ['maGoat', 'maFennec'] } }
       ] },
 
     /* 5-5 LAIR: fountain galleries, then Berrad the Magnificent in the riad courtyard */
@@ -49494,7 +51221,8 @@ Tour.amend('ma', {
           ['itemBlock', { item: 'sig', y: 4 }],
           ['door', { to: 'arena@in', perch: 0, look: 'maRiadDoor' }]
         ] },
-        { id: 'court', gen: 'room', role: 'secret', theme: 'ma_riad', stamp: 'smallCourt' },
+        { id: 'court', gen: 'room', role: 'secret', theme: 'ma_riad', stamp: 'smallCourt', room: 'fetch',
+          fetch: { title: 'MINT TEA FOR THE OWL', rule: 'THE OLD OWL WANTS HIS MINT TEA: FIND THE MINT, THE SUGAR AND THE TEAPOT, THEN TO THE POT', ingredients: ['tokMint', 'tokSugar', 'tokTeapot'], dish: 'MINT TEA! THE OWL IS ALMOST SMILING.' } },
         { id: 'arena', gen: 'arena', role: 'arena', layout: 'riad', arenaW: 26, H: 20, roof: false }
       ] },
 
@@ -49531,7 +51259,8 @@ Tour.amend('ma', {
           ['flyingRugs', { n: 2, span: 10 }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'tent', gen: 'room', role: 'secret', theme: 'ma_tent', stamp: 'skyTent' }
+        { id: 'tent', gen: 'room', role: 'secret', theme: 'ma_tent', stamp: 'skyTent', room: 'floaty',
+          floaty: { title: 'THE FLYING CARPET TENT', rule: 'A TENT FULL OF FLYING CARPETS: EVERYTHING FLOATS IN HERE. BIG FLOATY JUMPS!' } }
       ] }
   ]
 });
@@ -51734,7 +53463,8 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['sync'],
         ['cellarDress', { lane: 'cellar' }]
       ] },
-    { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega' }
+    { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega', room: 'lamps',
+      lamps: { title: 'THE CHILI CELLAR', rule: 'THE MARKET CELLAR IS PITCH DARK. LIGHT ITS LAMPS IN THE ORDER THE PAINTED TILE SHOWS', sym: 0 } }
   ] };
 
 const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
@@ -51761,7 +53491,8 @@ const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
         ['fork', { len: 30, skin: 'mxLockLever', gold: false, upper: [['axolotls', { n: 1 }], 'herons'], lower: [['axolotls', { n: 2 }], ['chinampa', { gold: 'risky' }]] }],
         ['arch', {}], ['boatBlock', { item: 'lsd', dy: 8 }]
       ] },
-    { id: 'embarcadero', gen: 'room', role: 'secret', theme: 'mx_canal', stamp: 'embarcadero' }
+    { id: 'embarcadero', gen: 'room', role: 'secret', theme: 'mx_canal', stamp: 'embarcadero', room: 'whack',
+      whack: { title: 'WHACK-AN-AXOLOTL', rule: 'AXOLOTLS POP UP THROUGH THE OLD LANDING\'S FLOOR! BOOP EIGHT OF THEM BEFORE TIME IS UP', critter: 'axolotl', need: 8, t: 22 } }
   ] };
 
 const L3 = { n: 3, name: 'Cenote of Light', arch: 'dive', theme: 'mx_cenote',
@@ -51838,7 +53569,8 @@ const L4 = { n: 4, name: 'Volcán Escape', arch: 'tower', theme: 'mx_volcan',
         'vdouble',
         ['craterRim', {}]
       ] },
-    { id: 'boveda', gen: 'room', role: 'secret', theme: 'mx_volcan', dark: true, stamp: 'boveda' }
+    { id: 'boveda', gen: 'room', role: 'secret', theme: 'mx_volcan', dark: true, stamp: 'boveda', room: 'climb',
+      climb: { title: 'THE OBSIDIAN CHIMNEY', rule: 'AN OLD LAVA CHIMNEY, LONG COLD. CLIMB TO THE TOP: SOME LEDGES ARE BRITTLE', style: 'crumble' } }
   ] };
 
 const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata',
@@ -51864,7 +53596,8 @@ const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacie
         ['itemBlock', { item: 'power' }],
         ['door', { to: 'fiesta@in', perch: 0, look: 'tourDoor' }]
       ] },
-    { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa' },
+    { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa', room: 'fetch',
+      fetch: { title: 'THE HEN\'S MOLE', rule: 'THE HACIENDA HEN NEEDS A CHILI, A CACAO POD AND A TOMATO FOR HER MOLE. BRING THEM TO THE POT', ingredients: ['tokChili', 'tokCacao', 'tokTomato'], dish: 'MOLE! THE HEN IS DELIGHTED.' } },
     { id: 'fiesta', gen: 'arena', role: 'arena', layout: 'fiesta', arenaW: 24, H: 22 }
   ] };
 
@@ -51906,7 +53639,8 @@ const L6 = { n: 6, name: 'Pit of Swallows', arch: 'fall', secret: true, theme: '
         ['ledges', { n: 1, enemy: 'mxBat' }],
         ['spikePair', { h1: 5, h2: 9 }]
       ] },
-    { id: 'nido', gen: 'room', role: 'secret', stamp: 'nido' }
+    { id: 'nido', gen: 'room', role: 'secret', stamp: 'nido', room: 'floaty',
+      floaty: { title: 'THE SWALLOWS\' UPDRAFT', rule: 'WARM AIR RISES OUT OF THE PIT: IN HERE YOU FLOAT LIKE A SWALLOW. BIG FLOATY JUMPS!', gravity: 0.45 } }
   ] };
 
 /* ---------------- pre-rendered scenes (tools/blender/sprites/mx_bodega.py, mx_sotano.py): Mexico wires its own atlases
@@ -53657,7 +55391,8 @@ const levels = [
         ['beetleRun', { n: 12 }],
         ['savannaFinale']
       ] },
-      { id: 'cupim', gen: 'room', role: 'secret', theme: 'mz_cupim', stamp: 'cupim' }
+      { id: 'cupim', gen: 'room', role: 'secret', theme: 'mz_cupim', stamp: 'cupim', room: 'doors',
+        doors: { title: 'THE TERMITE TUNNELS', rule: 'A TERMITE MOUND FULL OF LITTLE DOORS. WHICH ONE GOES WHERE?', joke: 'TERMITE BROOM CUPBOARD. THE TERMITES ATE THE BROOM.' } }
     ] },
 
   // 4-2 DOOM: the stampede's dust cloud chases you over the dunes
@@ -53692,7 +55427,8 @@ const levels = [
         ['softBridge', { n: 5 }],
         ['ridgeFinale']
       ] },
-      { id: 'porao', gen: 'room', role: 'secret', theme: 'mz_porao', stamp: 'porao' }
+      { id: 'porao', gen: 'room', role: 'secret', theme: 'mz_porao', stamp: 'porao', room: 'gauntlet',
+        gauntlet: { title: 'THE CASHEW HOLD', rule: 'RUN THE SHIP\'S HOLD TO THE FAR END: THE CASHEW CRATES ARE A BIT LOOSE', beats: ['fallers', 'ceiling', 'steps'] } }
     ] },
 
   // 4-3 SKY: baobab crowns at sunset; weaver nests bounce you; honey and bees; evening gusts and fruit bats
@@ -53728,7 +55464,8 @@ const levels = [
         ['gust', { w: 9, fx: 1, tight: true }],
         ['crownFinale', { gap: 9, gy: 11, tight: true }]
       ] },
-      { id: 'oco', gen: 'room', role: 'secret', theme: 'mz_oco', stamp: 'oco' }
+      { id: 'oco', gen: 'room', role: 'secret', theme: 'mz_oco', stamp: 'oco', room: 'lantern',
+        lantern: { title: 'THE HOLLOW BAOBAB', rule: 'INSIDE THE BAOBAB IT IS PITCH DARK. YOUR LIGHT FADES: RELIGHT IT AT THE LANTERNS. THE STEPS SHOW ONLY IN THE LIGHT' } }
     ] },
 
   // 4-4 CARRY (dark): carry the hatchling to the sea; the lighthouse beam freezes the ghost crabs; relight it
@@ -53761,7 +55498,8 @@ const levels = [
         ['seaFinale']
       ] },
       { id: 'farol', gen: 'room', role: 'sub', theme: 'mz_farol', stamp: 'farol' },
-      { id: 'gruta', gen: 'room', role: 'secret', theme: 'mz_gruta', stamp: 'gruta' }
+      { id: 'gruta', gen: 'room', role: 'secret', theme: 'mz_gruta', stamp: 'gruta', room: 'whack',
+        whack: { title: 'WHACK-A-GHOST-CRAB', rule: 'GHOST CRABS POP OUT OF THE SAND! STOMP EIGHT OF THEM BEFORE TIME IS UP', critter: 'crab', need: 8, t: 22 } }
     ] },
 
   // 4-5 LAIR: the ramparts and the cistern teach the shells and the fire, then O Eremita's tide pool
@@ -53784,7 +55522,8 @@ const levels = [
         ['rampart', {}],
         ['door', { to: 'arena@in', perch: 0, look: 'mzFortGate' }]
       ] },
-      { id: 'cisterna', gen: 'room', role: 'secret', theme: 'mz_cisterna', stamp: 'cisterna' },
+      { id: 'cisterna', gen: 'room', role: 'secret', theme: 'mz_cisterna', stamp: 'cisterna', room: 'grotto',
+        grotto: { title: 'THE OLD CISTERN', rule: 'THE FORT\'S OLD CISTERN IS STILL FULL. SWIM DOWN TO THE BACK', half: true } },
       { id: 'arena', gen: 'arena', role: 'arena', layout: 'tidepool', arenaW: 30, theme: 'mz_fort' }
     ] },
 
@@ -53809,7 +55548,8 @@ const levels = [
         ['hullChamber', { w: 10, h: 4, dy: 4, enemy: 'mzGhostCrab' }],
         ['exit', {}]
       ] },
-      { id: 'cabine', gen: 'room', role: 'secret', theme: 'mz_cabine', stamp: 'cabine' }
+      { id: 'cabine', gen: 'room', role: 'secret', theme: 'mz_cabine', stamp: 'cabine', room: 'shell',
+        shell: { title: 'THE CAPTAIN\'S TIN MUGS', rule: 'THE OLD CAPTAIN HIDES A STAR UNDER ONE OF HIS TIN MUGS. WATCH IT, THEN STOMP THE RIGHT ONE', cup: 'tin', dealer: 'seal', joke: ['fish', 'boot'] } }
     ] }
 ];
 
@@ -55033,7 +56773,8 @@ const levels = [
           ['canal', { w: 6 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'gemaal', gen: 'room', role: 'secret', stamp: 'gemaal' }
+      { id: 'gemaal', gen: 'room', role: 'secret', stamp: 'gemaal', room: 'grotto',
+        grotto: { title: 'THE FLOODED PUMP HOUSE', rule: 'THE OLD PUMP HOUSE LEAKS. SWIM UNDER THE PIPES, CLIMB OUT AT THE BACK', half: true } }
     ] },
   // 8-2 FACTORY: the flower auction
   { n: 2, name: 'Flower Auction', mapLabel: 'Auction', arch: 'vault', theme: 'nl_veiling',
@@ -55046,7 +56787,8 @@ const levels = [
     areas: [
       { id: 'veiling', gen: 'maze', cells: [3, 2], cell: [26, 14],
         script: [[veiling.gallery, veiling.clock, veiling.dock], [veiling.coldroom, veiling.belts, veiling.chiller]] },
-      { id: 'koelcel', gen: 'room', role: 'secret', stamp: 'koelcel' }
+      { id: 'koelcel', gen: 'room', role: 'secret', stamp: 'koelcel', room: 'pick',
+        pick: { title: 'THE FLORIST\'S CHOICE', rule: 'THREE BOXES IN THE COLD ROOM, EACH WITH A PRIZE. TAKE ONE. THE OTHERS WILT' } }
     ] },
   // 8-3 RACE: the bike lane, against a gull on a cargo bike
   { n: 3, name: 'Bike Lane Rush', mapLabel: 'Bike Lane', arch: 'race', theme: 'nl_rush',
@@ -55078,7 +56820,8 @@ const levels = [
           ['racks', { n: 1 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'brug', gen: 'room', role: 'secret', stamp: 'brug' }
+      { id: 'brug', gen: 'room', role: 'secret', stamp: 'brug', room: 'gauntlet',
+        gauntlet: { title: 'THE BIKE BRIDGE', rule: 'THE BIKE LANE UNDER THE BRIDGE: RIDE IT OUT TO THE END', beats: ['mover', 'conveyor', 'fallers'] } }
     ] },
   // 8-4 LAMP: the frozen canals at night; the skate hut's thin back wall hides the way to Antarctica
   { n: 4, name: 'Frozen Canals', mapLabel: 'Ice Canals', arch: 'lamp', theme: 'nl_frozen',
@@ -55108,7 +56851,8 @@ const levels = [
           ['rink', { n: 8 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'hut', gen: 'room', role: 'secret', stamp: 'hut' }
+      { id: 'hut', gen: 'room', role: 'secret', stamp: 'hut', room: 'closing',
+        closing: { title: 'THE KOEK STALL: CLOSING TIME', rule: 'THE SKATERS\' SNACK STALL IS CLOSING: GRAB WHAT YOU CAN, TOP SHELF FIRST', keeper: 'herring', word: 'GESLOTEN!' } }
     ] },
   // 8-5 LAIR: the cheese market and the weigh house
   { n: 5, name: 'The Weigh House', mapLabel: 'The Waag', arch: 'lair', theme: 'nl_waag', boss: 'nl_cheese',
@@ -55133,7 +56877,8 @@ const levels = [
           ['postcard', { kind: 'risky', dy: -6 }],
           ['door', { to: 'waag', perch: 0, look: 'nlStairsUp' }]
         ] },
-      { id: 'kelder', gen: 'room', role: 'secret', stamp: 'kelder' },
+      { id: 'kelder', gen: 'room', role: 'secret', stamp: 'kelder', room: 'ambush',
+        ambush: { title: 'THE CHEESE CELLAR', rule: 'THE CHEESES HAVE COME ALIVE AND THE CELLAR DOOR IS STUCK: STOMP THEM ALL', critters: ['nlClog', 'nlHerring'] } },
       { id: 'waag', gen: 'arena', role: 'arena', layout: 'waag', arenaW: 30, H: 18, roof: false }
     ] },
   // 8-6 SWING (secret): windmill sails and tulip blooms; the wind turns round
@@ -55163,7 +56908,8 @@ const levels = [
           ['millDoor', { to: 'molen@in', back: 'molenBack' }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'molen', gen: 'room', role: 'secret', stamp: 'molen' }
+      { id: 'molen', gen: 'room', role: 'secret', stamp: 'molen', room: 'climb',
+        climb: { title: 'INSIDE THE WINDMILL', rule: 'UP THE WINDMILL\'S INSIDES TO THE CAP: THE PRIZE IS AT THE TOP', style: 'spikes' } }
     ] }
 ];
 
@@ -57241,7 +58987,8 @@ const levels = [
           ['skyBridge', { n: 8 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'chiya', gen: 'room', role: 'secret', theme: 'np_hills', stamp: 'chiya' }
+      { id: 'chiya', gen: 'room', role: 'secret', theme: 'np_hills', stamp: 'chiya', room: 'fetch',
+        fetch: { title: 'A CUP OF CHIYA', rule: 'THE TEA HOUSE NEEDS TEA LEAVES, MILK AND GINGER FOR ITS CHIYA. BRING THEM TO THE POT', ingredients: ['tokTea', 'tokMilk', 'tokGinger'], dish: 'CHIYA! WARM HANDS ALL ROUND.' } }
     ] },
   // 12-2 ROLL: the yak caravan pass, snowballs and snow walls
   { n: 2, name: 'Yak Caravan Pass', arch: 'roll', theme: 'np_pass',
@@ -57281,7 +59028,8 @@ const levels = [
           ['sentinel', { two: true }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'khadal', gen: 'room', role: 'secret', theme: 'np_khadal', stamp: 'khadal' }
+      { id: 'khadal', gen: 'room', role: 'secret', theme: 'np_khadal', stamp: 'khadal', room: 'bigone',
+        bigone: { title: 'THE BIG YETI', rule: 'A GIANT YETI LIVES IN THIS ICE CAVE. ITS BREATH IS FREEZING. STOMP IT THREE TIMES', critter: 'npYeti', name: 'THE BIG YETI' } }
     ] },
   // 12-3 SNEAK: the blizzard night, yetis on watch
   { n: 3, name: 'Blizzard Night', arch: 'sneak', theme: 'np_blizzard',
@@ -57316,7 +59064,8 @@ const levels = [
           ['shelter', { n: 2 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'depotShed', gen: 'room', role: 'secret', theme: 'np_depot', stamp: 'depotShed' }
+      { id: 'depotShed', gen: 'room', role: 'secret', theme: 'np_depot', stamp: 'depotShed', room: 'rush',
+        rush: { title: 'MOMO DASH', rule: 'THE SLED DOGS KNOCKED OVER THE MOMO TRAY! GRAB ALL SIX BEFORE THEY GET COLD', look: 'tokMomo', n: 6, t: 16 } }
     ] },
   // 12-4 RISE: up the Khumbu icefall while the floor falls away beneath
   { n: 4, name: 'Khumbu Icefall', arch: 'rise', theme: 'np_icefall',
@@ -57345,7 +59094,8 @@ const levels = [
           'icicles',
           ['iledges', { n: 3 }]
         ] },
-      { id: 'tent', gen: 'room', role: 'secret', theme: 'np_icefall', stamp: 'tent' }
+      { id: 'tent', gen: 'room', role: 'secret', theme: 'np_icefall', stamp: 'tent', room: 'prank',
+        prank: { title: 'THE YETI\'S TREASURE', rule: 'A CHEST MARKED \'GENUINE YETI GOLD\'. NOTHING SUSPICIOUS ABOUT THAT', gag: 'cushion', label: 'YETI GOLD', line: 'THE YETI GIGGLES. THE REAL PRIZE IS IN THE CAGE.' } }
     ] },
   // 12-5 LAIR: Piwi's playhouse and the summit (the finale)
   { n: 5, name: "Piwi's Playhouse", arch: 'lair', theme: 'np_fortress', boss: 'np_baron',
@@ -57370,7 +59120,8 @@ const levels = [
           'belts',
           ['door', { to: 'summit', perch: 0, look: 'npSummitStairs' }]
         ] },
-      { id: 'archive', gen: 'room', role: 'secret', stamp: 'archive' },
+      { id: 'archive', gen: 'room', role: 'secret', stamp: 'archive', room: 'doors',
+        doors: { title: 'THE FILING CABINETS', rule: 'THE FORTRESS ARCHIVE: EVERY CABINET IS A DOOR. WHICH ONE GOES WHERE?', joke: 'FORM 22B: PERMISSION TO OPEN THIS CUPBOARD. DENIED.' } },
       { id: 'summit', gen: 'arena', role: 'arena', layout: 'summit', arenaW: 30, H: 20, roof: false, theme: 'np_pass' }
     ] },
   // 12-6 FALL (secret): down the blue-ice crevasse
@@ -57398,7 +59149,8 @@ const levels = [
           ['iceBridge', {}],
           ['ledges', { n: 2 }]
         ] },
-      { id: 'blueCave', gen: 'room', role: 'secret', theme: 'np_khadal', stamp: 'blueCave' }
+      { id: 'blueCave', gen: 'room', role: 'secret', theme: 'np_khadal', stamp: 'blueCave', room: 'lantern',
+        lantern: { title: 'THE BLUE ICE CAVE', rule: 'DEEP IN THE CREVASSE IT IS DARK. YOUR LIGHT FADES: RELIGHT IT AT THE LANTERNS. THE ICE STEPS SHOW ONLY IN THE LIGHT' } }
     ] },
   // 12-7 FORT (secret): Piwi's prop depot and the Tin Yak
   { n: 7, name: "Piwi's Prop Depot", arch: 'fort', secret: true, theme: 'np_depot', boss: 'np_tinyak', mid: true,
@@ -57421,7 +59173,8 @@ const levels = [
           ['crateLift', { rise: 6 }],
           ['door', { to: 'crateHall@in', perch: 0, look: 'npDepotDoor' }]
         ] },
-      { id: 'hatch', gen: 'room', role: 'secret', theme: 'np_depot', stamp: 'hatch' },
+      { id: 'hatch', gen: 'room', role: 'secret', theme: 'np_depot', stamp: 'hatch', room: 'ambush',
+        ambush: { title: 'THE TIN BOT STORE', rule: 'THE TIN BOTS WOKE UP AND LOCKED THE HATCH: STOMP THEM ALL', critters: ['npTinBot'] } },
       { id: 'crateHall', gen: 'room', role: 'sub', theme: 'np_depot', stamp: 'crateHall' },
       { id: 'tinyak', gen: 'arena', role: 'arena', layout: 'tinyak', arenaW: 26, H: 16, roof: false, theme: 'np_depot' }
     ] }
@@ -59439,7 +61192,8 @@ const levels = [
           ['stoolTower', {}],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'caphe', gen: 'room', role: 'secret', stamp: 'caphe' }
+      { id: 'caphe', gen: 'room', role: 'secret', stamp: 'caphe', room: 'shell',
+        shell: { title: 'THREE COFFEES', rule: 'THE CAFE OWNER HIDES A PRIZE UNDER ONE OF THREE COFFEE CUPS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'cup', dealer: 'frog', joke: ['sock', 'fish'] } }
     ] },
   // 10-2 RIDE: Ha Long Bay on a junk
   { n: 2, name: 'Ha Long Junk', arch: 'ride', theme: 'vn_bay',
@@ -59469,7 +61223,8 @@ const levels = [
           ['rocks', { n: 2 }],
           ['karstLedge', { shrimp: true }]
         ] },
-      { id: 'hang', gen: 'room', role: 'secret', theme: 'vn_cave', stamp: 'hang' }
+      { id: 'hang', gen: 'room', role: 'secret', theme: 'vn_cave', stamp: 'hang', room: 'lantern',
+        lantern: { title: 'THE GLOW-WORM CAVE', rule: 'A CAVE BEHIND THE BAY. YOUR LIGHT FADES: RELIGHT IT AT THE LANTERNS. THE ROCKS SHOW ONLY IN THE LIGHT' } }
     ] },
   // 10-3 LAMP: Hoi An by lantern light
   { n: 3, name: 'Hoi An Lanterns', arch: 'gong', theme: 'vn_river',
@@ -59481,7 +61236,8 @@ const levels = [
     exits: { main: { to: '10-4' }, secret: { to: '10-6', hint: 'A lantern workshop has a back door to the river...' } },
     areas: [
       { id: 'phoco', gen: 'room', theme: 'vn_river', stamp: 'market' },
-      { id: 'xuong', gen: 'room', role: 'secret', stamp: 'xuong' }
+      { id: 'xuong', gen: 'room', role: 'secret', stamp: 'xuong', room: 'lamps',
+        lamps: { title: 'THE LANTERN WORKSHOP', rule: 'THE LANTERN MAKER\'S WORKSHOP IS DARK. LIGHT HER LANTERNS IN THE ORDER HER SKETCH SHOWS', sym: 3 } }
     ] },
   // 10-4 RISE (flood): the cave floods while Brady climbs to the skylight
   { n: 4, name: 'Son Doong Flood', arch: 'rise', theme: 'vn_cave',
@@ -59507,7 +61263,8 @@ const levels = [
           ['reel', {}],
           ['cledges', { n: 2, bat: true }]
         ] },
-      { id: 'rung', gen: 'room', role: 'secret', stamp: 'rung' }
+      { id: 'rung', gen: 'room', role: 'secret', stamp: 'rung', room: 'climb',
+        climb: { title: 'THE CAVE JUNGLE CLIMB', rule: 'A JUNGLE GROWING UP A CAVE SHAFT. CLIMB IT: THE PRIZE IS IN THE SKYLIGHT', style: 'plain' } }
     ] },
   // 10-5 LAIR: the citadel's coffee works, then Ong Phin in the courtyard
   { n: 5, name: 'Hue Citadel', arch: 'lair', theme: 'vn_citadel', boss: 'vn_phin',
@@ -59529,7 +61286,8 @@ const levels = [
           ['coffeepit', { n: 3 }],
           ['door', { to: 'kettle', perch: 0, look: 'vnHallDoor' }]
         ] },
-      { id: 'kho', gen: 'room', role: 'secret', stamp: 'kho' },
+      { id: 'kho', gen: 'room', role: 'secret', stamp: 'kho', room: 'bigone',
+        bigone: { title: 'THE BIG COFFEE BEAN', rule: 'A GIANT, VERY STRONG COFFEE BEAN GUARDS THE STORE. STOMP IT THREE TIMES', critter: 'vnBean', name: 'THE BIG COFFEE BEAN' } },
       { id: 'kettle', gen: 'arena', role: 'arena', layout: 'kettle', arenaW: 26, H: 18, roof: false }
     ] },
   // 10-6 HUB (errand, secret): the Mekong floating market
@@ -59564,7 +61322,8 @@ const levels = [
           ['door', { to: 'cho@kenhBack', perch: 0, look: 'vnMarketDoor' }]
         ] },
       { id: 'lokeo', gen: 'room', role: 'sub', stamp: 'lokeo' },
-      { id: 'thuyen', gen: 'room', role: 'secret', stamp: 'thuyen' }
+      { id: 'thuyen', gen: 'room', role: 'secret', stamp: 'thuyen', room: 'rush',
+        rush: { title: 'FLOATING MARKET RUSH', rule: 'A FRUIT BOAT TIPPED OVER! GRAB ALL SIX MANGOES BEFORE THEY FLOAT AWAY', look: 'tokMango', n: 6, t: 16 } }
     ] }
 ];
 
@@ -60791,13 +62550,15 @@ const levels = [
         // ③ your echo trails you while you swap
         ['echoRun', { n: 30, mixed: true, text: 'YOUR ECHO WALKS WHERE YOU WALKED, A MOMENT LATER. KEEP MOVING' }],
         ['bank', { h: -2 }],
+        ['anchor', { name: 'wormOut', tight: true }],   // where the clock room's Wormhole drops Brady (tight: no breather)
         ['gearStand', { item: 'sundial' }],
         ['strike', {}],
         ['slabs', { n: 9, day: [[0, 3, 3]], night: [[5, 2, 3]] }],
         ['enemies', { kind: 'w22Alarm', n: 2, len: 10 }],
         ['platformGate', {}]
       ] },
-      { id: 'clock', gen: 'room', role: 'secret', theme: 'w22_clockroom', stamp: 'clock' }
+      { id: 'clock', gen: 'room', role: 'secret', theme: 'w22_clockroom', stamp: 'clock', room: 'wormhole',
+        wormhole: { title: 'THE CLOCKWORK WORMHOLE', rule: 'BEHIND THE BIG CLOCK, A WORMHOLE TICKS. HOP IN (UP) AND IT SHOOTS YOU FAR AHEAD', to: 'station@wormOut' } }
     ] },
 
   // 22-2 MAZE: the endless corridor
@@ -60823,7 +62584,8 @@ const levels = [
           { from: [1, 2], to: [0, 2], kind: 'door', at: [2, 11], toAt: [22, 11], look: 'w22DoorPlain' },
           { from: [2, 2], to: [1, 2], kind: 'door', at: [3, 11], toAt: [23, 11], look: 'w22DoorPlain' }
         ] },
-      { id: 'beyond', gen: 'room', role: 'secret', theme: 'w22_clockroom', stamp: 'beyond' }
+      { id: 'beyond', gen: 'room', role: 'secret', theme: 'w22_clockroom', stamp: 'beyond', room: 'doors',
+        doors: { title: 'BEYOND DOOR 22', rule: 'BEHIND DOOR 22... MORE DOORS. WHICH ONE GOES WHERE?', joke: 'DOOR 23. IT IS A BROOM CUPBOARD.' } }
     ] },
 
   // 22-3 FLIP: Mirror Lake, played right to left; the reflection walks upside down under the walkway
@@ -60852,7 +62614,8 @@ const levels = [
         ['stones', { n: 5 }],
         ['gate', { exit: 'main' }]
       ] },
-      { id: 'under', gen: 'room', role: 'secret', theme: 'w22_under', stamp: 'under' }
+      { id: 'under', gen: 'room', role: 'secret', theme: 'w22_under', stamp: 'under', room: 'floaty',
+        floaty: { title: 'UNDER THE MIRROR LAKE', rule: 'UNDER THE LAKE, UP IS A LITTLE BIT DOWN. BIG FLOATY JUMPS!', gravity: 0.45 } }
     ] },
 
   // 22-4 LAIR: the hall to the 22nd door, then the Other Brady
@@ -60876,7 +62639,8 @@ const levels = [
         ['doorsRow', { from: 19, n: 3 }],
         ['door', { to: 'arena', perch: 0, look: 'w22Door22' }]
       ] },
-      { id: 'behind', gen: 'room', role: 'secret', theme: 'w22_behind', stamp: 'behind' },
+      { id: 'behind', gen: 'room', role: 'secret', theme: 'w22_behind', stamp: 'behind', room: 'shell',
+        shell: { title: 'THE MIRROR\'S SHELL GAME', rule: 'YOUR REFLECTION HIDES A PRIZE UNDER ONE OF THREE MUGS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'mug', dealer: 'owl', joke: ['sock', 'chicken'] } },
       { id: 'arena', gen: 'arena', role: 'arena', layout: 'door', arenaW: 26, H: 18, roof: false }
     ] },
 
@@ -60913,7 +62677,8 @@ const levels = [
         ['pencil', { n: 8 }],
         ['gate', { exit: 'main' }]
       ] },
-      { id: 'drawer', gen: 'room', role: 'secret', theme: 'w22_drawer', stamp: 'drawer' }
+      { id: 'drawer', gen: 'room', role: 'secret', theme: 'w22_drawer', stamp: 'drawer', room: 'prank',
+        prank: { title: 'THE DRAWER OF SURPRISES', rule: 'A BIG BOX IN THE BACK OF THE DRAWER, LABELLED \'DO NOT OPEN\'. GO ON', gag: 'jack', label: 'DO NOT OPEN', line: 'SURPRISE! THE REAL PRIZE IS IN THE CAGE.' } }
     ] }
 ];
 
