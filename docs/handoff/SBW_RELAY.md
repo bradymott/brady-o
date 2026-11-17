@@ -1,6 +1,6 @@
-# Super Brady-O World: relay to the next agent (11 Nov 2026)
+# Super Brady-O World: relay to the next agent (17 Nov 2026)
 
-You are taking over the Super Brady-O World work from a long session that ran out of room. Everything you need is in this file and the files it points to. A copy of this note is on Brady's Desktop as `BRADY-O-RELAY.md`.
+You are taking over the Super Brady-O World (SBW) work. Everything you need is here and in the files this points to.
 
 ## How Brady starts you
 In a terminal: `cd ~/brady-o`, then `claude`, then paste:
@@ -8,71 +8,48 @@ In a terminal: `cd ~/brady-o`, then `claude`, then paste:
 > Read docs/handoff/SBW_RELAY.md and continue the Super Brady-O World work from where it stopped. Use Opus agents for the heavy lifting.
 
 ## Who you are working for
-- Brady (GitHub `bradymott`) owns the game, plays on an iPhone and is not a programmer. Talk plainly, show screenshots, not code.
-- Graphics, polish and silly PG-13 humour are his priorities. He liked the secret areas and the overall direction ("very creative and fun").
-- **He has approved the whole plan: do not wait for sign-off.** Merge, push and deploy as work passes its tests; he plays it and asks for edits afterwards. Pushes and gh-pages deploys are pre-authorised.
-- He asked for the main session to organise and **Opus agents to do the heavy lifting**, each in its own git worktree and branch (`sbw/...`), several in parallel. Give each agent a full brief (it knows nothing else), tell it which files other agents are editing, and have it report test results and screenshot paths. Look at the screenshots yourself before merging.
+- Brady (GitHub `bradymott`) owns the game, plays on an iPhone 17 and is not a programmer. Talk plainly, show screenshots, not code.
+- **He has approved the whole plan: do not wait for sign-off.** Merge, push and deploy as work passes its tests. Pushes and gh-pages deploys are pre-authorised.
+- The main session organises; **Opus agents do the heavy lifting**, each in its own git worktree and `sbw/...` branch, with a full brief (it knows nothing else), told which files other agents are editing. Look at their screenshots yourself before merging.
 
 ## Read first
 1. `docs/handoff/README.md`: rules, ownership, deploy.
 2. `docs/handoff/SBW_RESUME.md`: what shipped and the test list.
-3. `docs/handoff/SBW_COUNTRY_BRIEF.md`, `docs/design/LEVEL_OVERHAUL.md`, `docs/design/TOOLKIT_STATUS.md`: the level format and design.
-4. `docs/ART_READABILITY.md`, `docs/SPRITE_BRIEF.md`: the sprite look and the Blender route.
+3. `docs/design/SECRETS_WARPS_SWITCHES.md` (Brady's decisions at the top), `docs/design/SECRETS_CONTRACTS.md`, `docs/design/PUPO.md`, `docs/design/STORY_PIWI.md` (on `sbw/story-piwi` / `sbw/story-b` until merged), `docs/design/LEVEL_OVERHAUL.md`, `docs/design/TOOLKIT_STATUS.md`, `docs/PERFORMANCE.md`.
 
-## State of `main` (deployed)
-Live at https://bradymott.github.io/brady-o/super-brady-o-world/. All 14 lands rebuilt (88 levels), all in Fiesta Toon, walkable overworld map, power picker, joint/acid/mushroom trips, three jump powers, readability pass, freeze safety net. Last full suite on `main`: all passing (88 levels finishable, gameplay 52/52, bosses 172/172).
+## State of `main` (918ba7a, deployed 17 Nov)
+Live at https://bradymott.github.io/brady-o/super-brady-o-world/. On top of the 11 Nov state it has: items fix, performance tiers, new title and icon, toon-style mushroom/acid trips, Morocco door maze with no fake doors plus four more maze levels (6-2, 8-2, 10-3, 11-1), a different map per land, one Brady look (LOOK picker removed, no stubble), kazoo "HONK" fix, Magic Beans in level 1 or 2 of every land, star/acid pickups moved off level ends, secrets hooks (`TourHooks`/`TourNeeds`/`TourSeams`, `src/28_tour_a2_hooks.js`), long-session fixes (`src/16_session.js`: canvases freed between scenes, no trail tiles left after a death), silent browser tests (`tools/sbw_silent.js`; `BRADY_SOUND=1` to hear them). Last full suite: all passing, 88 levels finishable, gameplay 52/52, bosses 172/172.
 
-## Four branches are finished or nearly finished but NOT merged or deployed
-All four are pushed to origin. They were checkpointed mid-verification when Brady had to close his computer. **Your first job is to finish verifying them, merge them into `main` in the order below, and deploy.** Run suites on a quiet machine, one branch at a time.
+## Brady's decisions since 11 Nov (settled; use the names exactly)
+- Villain is **Piwi Squirmin'**, a Pee-wee-Herman-esque ventriloquist dummy (an original character, a nod not a lookalike), not the Baron. He has stolen Brady-O's wife **Chinka-O** (ballerina, pink tutu, Latina/Ecuadorian, black hair; draw her warmly, never a helpless prize) and takes her round the world; Brady-O chases.
+- **Pupo**, Chinka-O's pet sloth, is Brady-O's sidekick and rideable steed: found in Nap Boxes, stretch arms (poke belly buttons, swing, zip, climb, fetch), special Pupo levels (one or two per land), and **PUPO POWER!**. Must stay an original mount.
+- Secrets: warps are **Wormholes**, big buttons are **Brady Buttons**; three bonus lands approved; warps may jump two lands ahead.
+- **Every secret room must be different** (enemies, obstacles, prizes, Pupo...), not the same box + coins + postcard.
+- **Powers carry from a cleared level into the next level**; the level-clear banner says **"YOU DID IT!"**, not "WELCOME HOME!".
+- More maze levels; the more creative the levels the better; no repeated level types; reset all save progress when levels change.
 
-### 1. `sbw/items-fix` (tip afd2d2d): Brady's bug reports. Merge first.
-Done on the branch:
-- Power-ups no longer get stuck in a ceiling above a gift box: the item comes out of an open side (`ItemSpace` in `src/10_entities.js`). 13 boxes were affected; new test `tools/sbw_items_test.js`.
-- Mushroom effect restored to the old look Brady preferred: the level itself goes multicoloured and wobbly (`TripFX.shroom` in `src/15_postfx.js`). Grow transition no longer strobes; the mushroom item is redrawn in toon style.
-- Gift boxes open from any side (`src/28_tour_dj_boxes.js`): land on top, hit with anything thrown, Pound Cake, or kick with the action button.
-- Updrafts: holding down cancels the lift, and a lift that pins Brady to a ceiling lets go (`src/07_physics.js`).
+## Branches in progress (agents were running when this was written)
+Check each branch's tip and whether it is already in `main` (`git branch -r --merged origin/main`). If an agent's session is gone, start a new Opus agent on the branch with a full brief.
+- `sbw/story-b`: story phase B, replacing the Baron with Piwi everywhere (strings, title blimp, boss intros, ending, reunion in the Nepal finale), built on `sbw/story-piwi` (character art `src/05b`–`05e`).
+- `sbw/pupo` (tip 8b160b9 had riding, arms and Pupo Power working in a lab level): now merging main, fixing a failing heap-growth check, validator rules (PU-4), and putting Pupo into Mexico (Nap Box + tutorial in 1-1, one Mexico Pupo level). Other 13 lands wait for Brady's reaction.
+- `sbw/carry-powers`: powers carry between levels + "YOU DID IT!".
+- `sbw/secret-rooms`: every secret room a different kind; inventory and catalogue in `docs/design/SECRET_ROOMS.md`; Mexico last (Pupo agent is editing `src/29_tour_mx_levels.js`).
+- `sbw/music-pilot` (985c183): untouched. Merge only after Brady has listened (`brady-o-music-preview/after/listen_ab.html` on his Desktop). To do: run `sbw_audio_test`, fix canal/cenote/volcano songs never playing.
+- Merge order suggestion: carry-powers → story-b → pupo → secret-rooms, full suite on each merged result.
 
-Still to do: on the tip, run `sbw_soak_test` (rerun failing levels alone), `save_test`, `sbw_snapshot`, `levels_br_mz_test`, `levels_aq_w22_test`, `sbw_toolkit_shots <dir> --checks`, `sbw_items_test`. Everything else passed.
+## Not started
+Secrets WP-2…WP-6 (save v3/maps, backstage + Wormholes, Brady Buttons, bonus lands); Pupo in the other 13 lands (with a save reset); bosses still code-drawn.
 
-### 2. `sbw/perf` (tip d611d94): smoothness. Merge second.
-Brady reported lag in the Mexico boss level and in Brazil. Found: the ink-outline scratch canvases only ever grew, so after a boss or a big Brazil prop every outlined sprite drew from a huge canvas; everything was re-outlined every frame; bosses outlined a box far bigger than their art; heavy backdrop overdraw. Fixed, with the look unchanged at High (before/after screenshots differ on under 0.1% of pixels). Paired Mac measurements: levels cost 0.5–0.85x of before, bosses 0.25–0.65x (Mexico boss 0.65–0.84x). Adds graphics tiers (AUTO / HIGH / MEDIUM / LOW, `src/14_quality.js`), an FPS COUNTER setting, `tools/sbw_perf_test.js`, `docs/PERFORMANCE.md`, `docs/perf/`.
+## Open questions for Brady (defaults proceed if he doesn't answer)
+- Is the lag gone on his iPhone? Nothing has ever been measured on a real phone. Ask for FPS COUNTER readings (Settings) after three or four levels, in the Mexico boss and Brazil 3-1/3-5.
+- Does he like the new music direction?
+- Defaults in force: reunion in the Nepal finale; Pupo sits out boss fights; Pupo Power charges in about 30 s; sleepy-then-nap hit rule; mazes replaced existing levels.
+- Known loose end: the full soak test has hung once each on 8-1 and 22-5 (passes on every retry; cause unknown; a 4-minute watchdog now fails the level instead of hanging).
 
-Still to do:
-- It conflicts with `sbw/items-fix` in `src/15_postfx.js` and `src/12_play.js`. The items agent's exact lines: `15_postfx.js` mushroom envelope, `k = L.lsd`, `const lsd = true`, mushroom removed from the breath amp, the old mushroom block replaced by one call, new methods `shroomK`/`shroom`; `12_play.js` `ItemSpace.fromBlock` in `bumpBlock` and `bumpOf` using `b.amp || 8`. Keep both sides. Make the restored mushroom effect respect the tiers (no wobble at Medium and below is acceptable).
-- Run the full suite on the merged result.
-- `node tools/sbw_perf_test.js --short --write-baseline`, commit `tools/perf_baseline.json`, then check `--short` passes. The guard fails with "no baseline" until then.
-- Boss fights at High are still about 1.1–1.4x the cost of Mexico 1-1 (which Brady found smooth); at Medium most are at or under it. AUTO should handle this, but it is unproven on a phone.
-- Not started: the overworld's one-off repaint after a reveal (about 80–100 ms on the Mac).
-
-### 3. `sbw/title-icon` (tip fca679a): new title screen and icon. Merge third.
-New animated title (`src/28_tour_gt_title.js`): chunky logo with a globe for the O, Brady jogging on a spinning toon globe with landmarks, the Baron's blimp, TAP TO PLAY / CONTINUE, a plane take-off into the map. New icon: Brady's grinning face with man bun and shades on a globe and sunburst (candidate "head", chosen from three). Previews are on Brady's Desktop in `brady-o-title-icon-preview/`.
-
-Still to do: run `sbw_soak_test`, `save_test`, `sbw_snapshot`, `levels_br_mz_test`, `levels_aq_w22_test`, `sbw_toolkit_shots --checks`; re-run `apps_test` and confirm all three apps pass (only two PASS lines were recorded); shoot the take-off in portrait and 568x320 (`tools/title_icon/`). After deploying, tell Brady to remove and re-add the home-screen icon to see the new one. The home-screen label was left unchanged.
-
-### 4. `sbw/music-pilot` (tip 985c183): new music for the title, the map and Mexico. Merge last, after Brady has listened.
-Brady asked for catchier, more pleasing music and was told this is a pilot he will hear before any rollout. A main motif (scale degrees 5 6 | 1 3 2 1 6 | 5) ties the title, map and Mexico together; loops are 50–77 s; new instruments and mix, used only by songs marked `v2: 1`. Listening page on his Desktop: `brady-o-music-preview/after/listen_ab.html`. Recipe for the other lands: `docs/MUSIC.md` (on the branch).
-
-Still to do:
-- Ask Brady whether he likes the direction before rolling out to the other 13 lands (about half a day to a day of agent time per land, plus the results/ending/credits cues).
-- Run `tools/sbw_audio_test.js` (about 15 min) and the suites not reached. Two old songs (`star`, `tour_id_boss`) differ from the pre-pilot engine by just over the 1e-5 tolerance; confirm it is reverb noise and loosen to 1e-4 if so.
-- The canal, cenote and volcano songs never play: tour levels use `spec.music || country.music.level` (`src/28_tour_b_build.js:38`), so a theme's `music:` is ignored. Add `music:` to the specs of 1-2, 1-3, 1-4 and 1-6 in `src/29_tour_mx_levels.js`, or make the builder honour the theme's music.
-- A click at the start of notes is fixed for v2 songs only. The same click exists in Burning Man and Art Cart; fixing it there changes their sound, so ask Brady.
-
-## Then ask Brady (he has not answered these)
-- Is it smooth on his phone? Have him turn on FPS COUNTER in Settings and read it in the Mexico boss arena, Brazil 3-1 and 3-5, on AUTO and on HIGH.
-- Are the sprites readable enough now? If not: grow enemies relative to tiles (hitboxes too, then re-validate) and recolour enemies that match their backdrop.
-- Does he like the new music direction, the title screen and the icon pick?
-- Names invented by agents: Spring Socks, Pound Cake, Magic Beans; Berrad the Magnificent (Morocco's boss).
-- Does he want his save reset now that every land is rebuilt? (It was not reset a second time.)
-
-## After that: the remaining polish list
-See "Open items" in `docs/handoff/SBW_RESUME.md`: bosses and mini-bosses are still code-drawn, many objects and room interiors too; some art re-renders are wanted; Bali, Antarctica and World 22 overworld maps are sparse; nothing has ever been verified on a real iPhone by an agent.
-
-## How to work safely (learned the hard way)
-- **Tests, one at a time, on a quiet machine.** Several agents running suites at once push the Mac's load past 40 and cause timing failures. The soak test in particular: rerun any failing level alone before believing it.
-- Full suite before every merge: `validate_levels --rules`, `gameplay_test <shots>`, `boss_test --shots <dir>`, `apps_test "" <dir>`, `sbw_graphics_test`, `sbw_atlas_test`, `sbw_toolkit_test`, `sbw_powers_test`, `sbw_overworld_test`, `sbw_soak_test`, `save_test`, `sbw_snapshot`, `levels_br_mz_test`, `levels_aq_w22_test`, `sbw_toolkit_shots <outdir> --checks` (the first argument is the output folder), plus `sbw_items_test`, `sbw_perf_test --short` and `sbw_audio_test` once their branches land. Build privately with `BRADY_DIST=<folder>`.
-- **Look at screenshots, not only pass counts.** Pin full resolution before capturing (see `tools/sbw_toolkit_shots.js`).
-- **Deploy:** build from tested `main`, then on the `gh-pages` branch (use a worktree) replace only the `super-brady-o-world/` folder with `dist/site/super-brady-o-world`, commit, push. The Art Cart agent also pushes to `main`: fetch and merge before pushing.
-- **Blender:** a private GUI instance per job through `tools/blender/sprites/gui/bl.sh` / `build_country.sh <cc> <workdir> [parts]`. Never `blender -b` (it crashes on this Mac) and never the shared Blender MCP window.
-- **Rules that must hold:** original content only (nothing resembling Nintendo); the player is always the code-drawn Brady (black tee and trousers, man bun, square shades, blackwork 3/4 sleeves); never caricature people; temples, shrines, monasteries, minarets and churches only as plain distant silhouettes; no Christ the Redeemer; the iron tower in daylight or unlit; never edit `src/40`–`src/43`.
-- The scratchpad under `/private/tmp` from the old session may be gone. Everything that matters is in git; recreate worktrees from the branches.
+## How to work safely
+- **Browser tests one at a time across all agents.** Shared lock: `mkdir <scratchpad>/test.lock` before, `rmdir` after. With four agents the queue is the bottleneck; fewer agents finish sooner.
+- Full suite before every merge: the list in `docs/handoff/SBW_RESUME.md` (includes `sbw_mazes_test`, `sbw_contract_test`, `sbw_session_test`, full soak). Build privately with `BRADY_DIST=<folder>` (copy `icons/` and `icon.b64` from `dist/` into it). Worktrees need a `node_modules` symlink to the main checkout's.
+- **Look at screenshots, not only pass counts.**
+- **Deploy:** build from tested `main`; `node --check` every built `sw.js`; confirm `dist/site/super-brady-o-world/icon-180.png` matches `dist/icons/world/`; `apps_test`; then in a gh-pages worktree `rsync -a --delete dist/site/super-brady-o-world/ super-brady-o-world/`, commit, `git push origin HEAD:gh-pages`. Only that folder is replaced. The Art Cart agent also pushes to `main`: fetch and merge first.
+- **Rules that must hold:** original content only (nothing resembling Nintendo or other games); the player is always the code-drawn Brady (black tee and trousers, man bun, square shades, no stubble, blackwork sleeves); never caricature people; sacred buildings only as plain distant silhouettes; no Christ the Redeemer; iron tower in daylight or unlit; PG-13; never edit `src/40`–`src/43`; shared files additive only; no `blender -b`, no shared Blender MCP window.
+- The scratchpad under `/private/tmp` may be gone. Everything that matters is in git; recreate worktrees from the branches.
