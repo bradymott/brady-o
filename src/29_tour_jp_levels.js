@@ -843,41 +843,178 @@ const stamps = {
 };
 
 /* ---------------- the levels ---------------- */
+/* ---------- 11-1: the sushi loop ----------
+   The restaurant is a loop of rooms joined by the belt's one-way flap hatches: the counter -> the kitchen -> the cold
+   store -> the roof sign -> back to the counter. Brady can't go back through a hatch (he comes out of a chute in the
+   ceiling of the next room), so he goes round, and what he switches on one lap opens the way on the next: the roof
+   sign's lever opens the kitchen's staff door (up to the pantry hatch), and the pantry's lever opens the noren at the
+   counter, the way out. Each hatch has a sign of the room it goes to; each shut door says which lever opens it. */
+const ROOM_ICONS = {
+  plate: (c, x, y) => { c.fillStyle = '#f4f0e8'; c.beginPath(); c.ellipse(x, y + 3, 10, 4, 0, 0, TAU); c.fill(); c.fillStyle = '#ff8a6a'; rr(c, x - 6, y - 4, 12, 6, 3); c.fill(); c.fillStyle = '#ffffff'; c.fillRect(x - 6, y + 0, 12, 3); },
+  pot: (c, x, y) => { c.fillStyle = '#5a5a6a'; rr(c, x - 9, y - 3, 18, 10, 3); c.fill(); c.fillRect(x - 11, y - 3, 22, 3); c.fillStyle = 'rgba(255,255,255,0.7)'; for (const sx of [-4, 2]) { c.beginPath(); c.arc(x + sx, y - 8, 2.5, 0, TAU); c.fill(); } },
+  snow: (c, x, y) => { c.strokeStyle = '#3a8ad8'; c.lineWidth = 2; for (let k = 0; k < 3; k++) { const a = k * Math.PI / 3; c.beginPath(); c.moveTo(x - Math.cos(a) * 8, y - Math.sin(a) * 8); c.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); c.stroke(); } },
+  roof: (c, x, y) => { c.fillStyle = '#2a2a3a'; c.fillRect(x - 10, y - 7, 20, 13); c.fillStyle = '#ff3a8a'; c.font = `bold 8px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.fillText('★', x, y + 3); },
+  rice: (c, x, y) => { c.fillStyle = '#e8dcc0'; rr(c, x - 8, y - 8, 16, 15, 4); c.fill(); c.fillStyle = '#c8302a'; c.fillRect(x - 5, y - 3, 10, 5); }
+};
+// a stainless flap hatch the belt runs into, one way, with a sign of where it goes
+const hatchSkin = icon => (ctx, e, t) => {
+  const x = e.cx, y = e.y + e.h, fl = Math.sin(t * 3) * 0.5 + 0.5;
+  ctx.fillStyle = '#3a3a44'; rr(ctx, x - 18, y - 52, 36, 52, 4); ctx.fill();
+  ctx.fillStyle = '#c8ccd4'; rr(ctx, x - 15, y - 48, 30, 46, 3); ctx.fill();
+  ctx.fillStyle = '#a8acb8'; ctx.fillRect(x - 15, y - 26 - fl * 2, 30, 3);
+  ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.moveTo(x - 6, y - 16); ctx.lineTo(x + 6, y - 10); ctx.lineTo(x - 6, y - 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#2a2a3a'; ctx.font = `bold 6px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('ONE WAY', x, y - 32);
+  const py = y - 70; ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x - 7, py - 10); ctx.lineTo(x - 5, y - 52); ctx.moveTo(x + 7, py - 10); ctx.lineTo(x + 5, y - 52); ctx.stroke();
+  ctx.fillStyle = '#f4f0e8'; rr(ctx, x - 13, py - 10, 26, 21, 4); ctx.fill(); ctx.strokeStyle = '#2a1820'; ctx.lineWidth = 2; rr(ctx, x - 13, py - 10, 26, 21, 4); ctx.stroke();
+  ROOM_ICONS[icon](ctx, x, py);
+};
+const loopSkins = {
+  // a two-way door: a noren curtain of indigo cloth with a white wave
+  jpNoren(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#5e3417'; ctx.fillRect(x - 20, y - 58, 40, 5); ctx.fillStyle = '#2a1a14'; rr(ctx, x - 16, y - 52, 32, 52, 3); ctx.fill(); for (let k = 0; k < 3; k++) { const sw = Math.sin(t * 2 + k) * 1.5; ctx.fillStyle = '#2a3a8a'; ctx.fillRect(x - 18 + k * 12 + sw, y - 53, 11, 30); ctx.strokeStyle = '#f4f0e8'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x - 12 + k * 12 + sw, y - 34, 4, Math.PI, TAU); ctx.stroke(); } }
+};
+for (const ic in ROOM_ICONS) loopSkins['jpHatch_' + ic] = hatchSkin(ic);
+// where the belt drops Brady into a room: a chute from the ceiling, plates sliding down it (not a door: there's no way back up)
+if (typeof Decor !== 'undefined') Decor.jpChute = (ctx, x, y, t) => {
+  const top = y - 6 * TS, bot = y - 1.6 * TS;
+  ctx.fillStyle = '#a8acb8'; ctx.beginPath(); ctx.moveTo(x - 20, top); ctx.lineTo(x + 6, top); ctx.lineTo(x + 22, bot); ctx.lineTo(x - 4, bot); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 2; ctx.stroke();
+  for (let k = 0; k < 3; k++) { const f = ((t * 0.5 + k / 3) % 1), px = x - 7 + f * 16, py = top + 10 + f * (bot - top - 16); ctx.fillStyle = '#f4f0e8'; ctx.beginPath(); ctx.ellipse(px, py, 7, 3, 0.5, 0, TAU); ctx.fill(); ctx.fillStyle = SUSHI[k % SUSHI.length][0]; ctx.fillRect(px - 4, py - 4, 8, 3); }
+  ctx.fillStyle = '#ff8a2a'; ctx.font = `bold 7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('IN ▼', x + 9, bot + 10);
+};
+// stamp pieces: a lever that opens a lock for good, and the lock (a shutter in the wall)
+const leverPiece = (st, o) => { st.B.spawn('lever', st.x, st.gy - 1, { opens: o.opens }); st.B.vkey(o.opens, [[st.x, st.gy - 1]]); return st.x; };
+const shutterPiece = (st, o) => { tourShutterLock(st.B, st.x, st.gy - (o.h || 3), st.gy - 1, o.opens, o.look || null); return st.x; };
+const LOOP = {
+  w: ['decor', 'jpChute'], a: ['enemy', 'jpTamago'], t: ['enemy', 'jpTako'], x: ['enemy', 'jpWasabi'], m: ['enemy', 'jpCrow'],
+  k: ['decor', 'jpFridgeFood']
+};
+const loopCell = (rows, extra) => { const e = Object.assign({}, extra || {}), legend = Object.assign({}, LOOP, e.legend || {}); delete e.legend; return Object.assign({ floor: 12, rows, legend }, e); };
+const sushiLoop = {
+  // the counter: the start, the belt to the kitchen hatch, the noren (the way out) shut until the pantry lever is pulled
+  counter: loopCell([
+    '##########################',
+    '#..#.....................#',
+    '#..#.....................#',
+    '#..#.......o.o.o.o.......#',
+    '#..#.....................#',
+    '#..#......-------........#',
+    '#..#.....................#',
+    '#..#.....................#',
+    '#..#....?...?............#',
+    '#........................#',
+    '#........................#',
+    '#G.V.@w...i...a..........#',
+    '#########>>>>>>>>>>>>>####',
+    '##########################'
+  ], { items: ['power', 'cake'], legend: { V: ['piece', shutterPiece, { opens: 'noren' }], i: ['spawn', 'sign', { text: 'THE NOREN (THE WAY OUT) IS SHUT TILL CLOSING. THE SWITCH IS IN THE PANTRY. THE BELT ONLY GOES ROUND ONE WAY...' }] } }),
+  // the kitchen: the hatch on to the cold store; the staff door (opened from the roof) and the stairs up to the pantry hatch
+  kitchen: loopCell([
+    '##########################',
+    '#.............#..........#',
+    '#.............#..........#',
+    '#...o.o.o.....#....*.....#',
+    '#.............#..........#',
+    '#.............#..........#',
+    '#.....-----...#..--------#',
+    '#.............#..........#',
+    '#.............#..........#',
+    '#.............#....---...#',
+    '#........................#',
+    '#..w........i.V..........#',
+    '#####>>>>>>>##############',
+    '##########################'
+  ], { gold: { '*': 'must' }, legend: { V: ['piece', shutterPiece, { opens: 'staff' }], i: ['spawn', 'sign', { text: 'STAFF ONLY. OPENED BY THE LEVER UP ON THE ROOF SIGN.' }] } }),
+  // the pantry (lap two): the lever that opens the noren; the hatch on to the cold store
+  pantry: loopCell([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#......o.o.o.o...........#',
+    '#........................#',
+    '#.....-------............#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#..w.......J.....t.......#',
+    '##########################',
+    '##########################'
+  ], { legend: { J: ['piece', leverPiece, { opens: 'noren' }] } }),
+  // the cold store: ice on the floor, the fridge (secret), a door to the tea station, the hatch up to the roof sign
+  cold: loopCell([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#....o.o.o.o.............#',
+    '#........................#',
+    '#...------...............#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#..w....D9....7D....x....#',
+    '#####IIIIIIIIIII##########',
+    '##########################'
+  ], { legend: { 9: ['anchor', 'fridgeBack'], 7: ['anchor', 'teaBack'] }, doors: [{ to: 'reizoko@in', look: 'jpFridgeDoor' }, { to: 'kaiten@teaIn', look: 'jpNoren' }] }),
+  // the roof sign: the lever that opens the kitchen's staff door; a hidden 1UP; crows; the hatch back down to the counter
+  roof: loopCell([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#.........*..............#',
+    '#........................#',
+    '#.......-----............#',
+    '#........................#',
+    '#........................#',
+    '#...h........----........#',
+    '#........................#',
+    '#........................#',
+    '#..w.......J......m......#',
+    '##########################',
+    '##########################'
+  ], { hidden: ['oneup'], gold: { '*': 'risky' }, legend: { J: ['piece', leverPiece, { opens: 'staff' }] } }),
+  // the tea station off the cold store: a star for the roof's crows
+  tea: loopCell([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#.........o.o.o..........#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#.........?..............#',
+    '#........................#',
+    '#........................#',
+    '#...D6.......k.......k...#',
+    '##########################',
+    '##########################'
+  ], { items: ['star'], legend: { 6: ['anchor', 'teaIn'] }, doors: [{ to: 'kaiten@teaBack', look: 'jpNoren' }] })
+};
+Object.assign(skins, loopSkins);
+
 const levels = [
   // 11-1 FACTORY: the sushi carousel
-  { n: 1, name: 'Sushi Carousel', arch: 'factory', theme: 'jp_sushi',
-    gimmick: 'A giant conveyor-belt sushi bar: ride the plates along the belts, dodge the chopsticks, float on tea steam, and mind the soy bottle with a leaf on its cap',
-    hint: 'Belts carry you; some turn round when their arrows blink. A soy bottle with a leaf is a tanuki!',
-    postcard: 'Brady! The sushi goes round and round on little plates. One soy bottle winked at me. ♥ C',
-    enemies: [['jpTamago', 2], ['jpTako', 2], ['jpWasabi', 1], ['jpTanuki', 1]],
+  { n: 1, name: 'Sushi Carousel', arch: 'loop', theme: 'jp_sushi',
+    gimmick: 'The sushi belt runs one way round the whole restaurant, through flap hatches you can\'t come back through. Go round, pull a lever, go round again',
+    hint: 'Each hatch shows the room it leads to. A shut door says which lever opens it: you will be back this way on the next lap',
+    postcard: 'Brady! The sushi goes round and round on little plates. So did we. ♥ C',
+    enemies: [['jpTamago', 2], ['jpTako', 2], ['jpWasabi', 1], ['jpCrow', 1]],
     mapCell: [0, 0], mapFrom: -1,
     exits: { main: { to: '11-2' } },
     areas: [
-      { id: 'kaiten', gen: 'strip', W: 210, H: 20,
-        script: [
-          'shiba',
-          ['itemBlock', { item: 'power', y: 4 }],
-          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
-          // ① the belts on their counters, the plate wheel over the soy
-          ['kaiten', { n: 8, h: 2, first: true }],
-          ['kaiten', { n: 9, h: -1, gap: 3, enemy: 'jpTamago' }],
-          'counter',
-          ['plateWheel', { up: true }],
-          ['kaiten', { n: 10, h: 3, gap: 2, enemy: 'jpTako' }],
-          'cp',
-          ['gearStand', { item: 'beans' }],   // Magic Beans (fart float), early in the land (Brady's request); a stand, as 11-1 has its 5 item blocks
-          // ② chopsticks from above, tea steam, the cold fridge
-          ['shelfRun', {}],
-          ['teacup', { first: true }],
-          ['fridge', { to: 'reizoko@in', back: 'fridgeBack' }],
-          ['kaiten', { n: 9, dir: -1, h: -2, gap: 3 }],
-          // ③ the soy-bottle tanuki and the belts that turn round
-          ['soyTanuki', { sign: true, two: true }],
-          ['reverseBelt', { n: 9, first: true }],
-          ['itemBlock', { item: 'oneup', y: 4, hidden: true }],
-          ['reverseBelt', { n: 10, period: 2.6, phase: 1 }],
-          ['enemies', { kind: 'jpWasabi', n: 2, len: 8 }],
-          ['gate', { exit: 'main' }]
+      { id: 'kaiten', gen: 'maze', cells: [3, 2], cell: [26, 14],
+        script: [[sushiLoop.counter, sushiLoop.kitchen, sushiLoop.pantry], [sushiLoop.roof, sushiLoop.cold, sushiLoop.tea]],
+        // the belt's flap hatches: one way only (Brady drops out of a chute in the next room's ceiling)
+        links: [
+          { from: [0, 0], to: [1, 0], kind: 'oneway', at: [22, 11], toAt: [4, 11], look: 'jpHatch_pot' },
+          { from: [1, 0], to: [1, 1], kind: 'oneway', at: [9, 11], toAt: [4, 11], look: 'jpHatch_snow' },
+          { from: [1, 0], to: [2, 0], kind: 'oneway', at: [21, 5], toAt: [4, 11], look: 'jpHatch_rice' },
+          { from: [2, 0], to: [1, 1], kind: 'oneway', at: [22, 11], toAt: [4, 11], look: 'jpHatch_snow' },
+          { from: [1, 1], to: [0, 1], kind: 'oneway', at: [22, 11], toAt: [4, 11], look: 'jpHatch_roof' },
+          { from: [0, 1], to: [0, 0], kind: 'oneway', at: [22, 11], toAt: [7, 11], look: 'jpHatch_plate' }
         ] },
       { id: 'reizoko', gen: 'room', role: 'secret', theme: 'jp_fridge', stamp: 'reizoko' }
     ] },
