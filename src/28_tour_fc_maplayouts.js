@@ -249,21 +249,32 @@ const TOUR_OW_MAPS = {
     scenes: { '8-1': ['windmills', { n: 2, ground: '#86cc6a', wall: '#7a5a4a', roof: '#3a3a4a' }], '8-2': 'greenhouse', '8-3': 'bikes', '8-4': 'skating', '8-5': 'canalhouses', '8-6': ['windmills', { n: 3, ground: '#9ad07a' }] },
     live: [['mill', 120, 760, 18], ['mill', 500, 670, 18], ['mill', 1180, 800, 18], ['mill', 1460, 560, 18], ['mill', 160, 300, 16], ['walk', 'bike', [[1100, 885], [1300, 885], [1500, 870]], 22], ['bob', 'duck', 470, 465], ['bob', 'duck', 1110, 255], ['sail', [[300, 40], [1500, 30], [1550, 70], [200, 70]], 14]]
   },
-  // Bali: the surf beach, the kite fields, the volcano, the manta jetty, the rice terraces, the monkey forest
+  // Bali: the walk goes once round the island's volcano, clockwise, whose slopes are stepped rice terraces: from
+  // the south coast to the surf beach, the kite fields in the west, the lava side in the north, the manta coast,
+  // the monkey forest in the east; the secret trails climb the terraces inward; outriggers sail the reef
   id: {
     labels: { '9-3': 'Batur', '9-2': 'Kites' },
-    w: 1600, h: 960,
-    land: [[[90, 600], [160, 420], [330, 300], [560, 220], [820, 180], [1060, 190], [1280, 240], [1450, 340], [1530, 520], [1470, 700], [1300, 820], [1060, 880], [800, 900], [520, 900], [280, 860], [120, 760]]],
-    nodes: { start: [180, 680], '9-1': [380, 770], 'bottle:5': [270, 815], '9-2': [780, 800], '9-3': [1180, 700], '9-4': [1380, 470, 'w'], '9-5': [800, 285], '9-6': [380, 440], '9-7': [800, 545], 'house:id-warung': [1170, 290], port: [1000, 215, 'n'] },
-    paths: { 'start>9-1': [[260, 740]], '9-1>9-2': [[580, 820]], '9-2>9-3': [[990, 780]], '9-3>9-4': [[1320, 600]], '9-4>9-5': [[1150, 420], [950, 330]], '9-2>9-6': [[560, 620]], '9-3>9-7': [[1000, 620]], '9-4>house:id-warung': [[1320, 330]], '9-5>port': [[900, 200]] },
+    w: 1500, h: 1000,
+    pal: { land: '#5aa070', light: '#9cc878', path: '#ecd2a2', beach: '#f4e0b0' },
+    sea: 'reef', trail: 'stones', tufts: 'flowers', flowerCols: ['#ff8a3a', '#ffd23a', '#ff5a8a'],
+    land: [[[110, 520], [170, 330], [330, 180], [560, 100], [820, 80], [1080, 110], [1300, 200], [1430, 360], [1450, 560], [1360, 760], [1180, 880], [900, 930], [600, 940], [330, 900], [150, 760]],
+      [[1290, 870], [1360, 840], [1440, 870], [1430, 930], [1340, 950], [1280, 915]]],
+    nodes: { start: [720, 870], '9-1': [400, 800], 'bottle:5': [270, 830], '9-2': [230, 480], '9-6': [460, 560], '9-3': [500, 200], '9-7': [760, 330], '9-4': [1010, 170], 'house:id-warung': [1250, 260], '9-5': [1280, 540], port: [1120, 800] },
+    paths: { 'start>9-1': [[560, 870]], '9-1>bottle:5': [[330, 840]], '9-1>9-2': [[260, 650]], '9-2>9-6': [[340, 540]], '9-2>9-3': [[300, 290]], '9-3>9-7': [[640, 250]], '9-3>9-4': [[760, 150]], '9-4>house:id-warung': [[1140, 200]], '9-4>9-5': [[1230, 360]], '9-5>port': [[1260, 700]] },
     feat: [
-      ['volcano', 1085, 520, 64], ['paddies', '#9ccf6b', [[470, 520], [640, 470], [700, 600], [600, 700], [470, 660]]],
-      ['trees', ['palm', 'round'], 260, 500, 120, 14], ['trees', 'round', 660, 330, 100, 10], ['trees', 'palm', 520, 820, 80, 6],
-      ['landmark', 610, 580, 64]
+      ['terraces', '#8ac86a', [[460, 560], [560, 360], [740, 300], [930, 340], [1000, 500], [920, 690], [720, 740], [540, 700]], 8],
+      ['volcano', 740, 500, 78, { col: '#7a6a6a' }],
+      ['trees', ['round', 'palm', 'round'], 780, 120, 120, 12], ['trees', 'palm', 560, 900, 100, 9], ['trees', 'palm', 1000, 900, 80, 7], ['trees', 'banana', 1150, 450, 110, 9],
+      ['trees', 'round', 1380, 520, 60, 5], ['trees', 'palm', 220, 560, 60, 5],
+      ['sprite', 'stilt', 300, 330, 16, { col: '#c8955a', roof: '#8a6a3a' }], ['sprite', 'stilt', 1100, 760, 15, { col: '#c8955a', roof: '#8a6a3a' }], ['sprite', 'stilt', 360, 600, 14, { col: '#d8a868', roof: '#8a6a3a' }],
+      ['sprite', 'surfboard', 600, 900, 12, { col: '#ff5a6a' }], ['sprite', 'surfboard', 630, 905, 12, { col: '#38c8ff' }], ['sprite', 'umbrella', 690, 900, 13, { col: '#ffd23a' }],
+      ['town', 1340, 640, 5, 40], ['town', 200, 640, 4, 30],
+      ['sprite', 'rock', 1220, 960, 10, { sea: true }],
+      ['landmark', 1400, 905, 40]
     ],
-    flora: ['palm', 'round', 'bush'], density: 34,
+    flora: ['palm', 'round', 'banana', 'bush'], density: 44,
     scenes: { '9-1': 'surf', '9-2': 'kites', '9-3': 'volcano', '9-4': 'manta', '9-5': ['grove', { trees: ['round', 'palm', 'round'], critters: ['monkey', 'monkey'] }], '9-6': 'canopy', '9-7': 'bluefire' },
-    live: [['sail', [[60, 780], [300, 950], [900, 950], [400, 900]], 10]]
+    live: [['kite', 170, 560, '#ff4f8a'], ['kite', 300, 400, '#ffd23a'], ['kite', 250, 620, '#38c8ff'], ['walk', 'monkey', [[1250, 640], [1320, 620], [1380, 600]], 8], ['sail', [[60, 780], [300, 980], [900, 990], [400, 940]], 10, '#f4ede0', '#ff8a3a'], ['sail', [[1450, 120], [1490, 600], [1470, 300]], 8, '#f4ede0', '#38a8e8'], ['fish', 1460, 720, '#ffd23a'], ['walk', 'gecko', [[880, 820], [920, 800]], 5]]
   },
   // Vietnam: train street, the bay of limestone towers, the lantern town, the cave mountains, the delta
   // market, the citadel
