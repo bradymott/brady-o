@@ -231,6 +231,24 @@ C.section(want, 'hooks', () => {
   C.check('through TourHooks.levelClear: Pupo packs into his box at the clear', !q.pupoRide && g.entities.some(e => e.pupoFree && e.mode === 'pack'));
 });
 
+C.section(want, 'tutorial', () => {
+  // the labels: HOP ON over a sitting Pupo until the first mount; POKE over the first enemy the marker sits on
+  const g = G.lab('ride'); const T = G.run('Save.data.tips'), PT = G.run('PupoTutor');
+  delete T.pupoHop; delete T.pupoPoke; delete T.pupoOff;
+  G.step(g, 0.3); G.step(g, 1.2, { right: true }); G.step(g, 0.05, { actionPressed: true }); G.step(g, 1.4);
+  const hop = g.pupoLabel && g.pupoLabel.key;
+  G.step(g, 0.8, { left: true }); G.step(g, 1.0, { right: true });
+  C.check('HOP ON shows over the sitting Pupo, and is done once Brady gets on', hop === 'pupoHop' && G.run('Save.data.tips.pupoHop') === true && g.player.pupoRide, { hop });
+  const p = g.player; put(g, 40, 9 * TS); G.step(g, 0.3);
+  const E = G.run('ENTITY_TYPES.mxElote'), e = new E(g, { type: 'mxElote', x: p.cx + 3 * TS, y: p.y + p.h, dir: -1 }); e.vx = 0; e.speed = 0; g.spawn(e); G.step(g, 0.2);
+  const poke = g.pupoLabel && g.pupoLabel.key; G.step(g, 1 / 120, { actionPressed: true }); G.step(g, 0.3);
+  C.check('POKE shows over the first enemy in reach, and is done after the first poke', poke === 'pupoPoke' && G.run('Save.data.tips.pupoPoke') === true, { poke });
+  G.step(g, 0.5, { down: true }); const off = g.pupoLabel && g.pupoLabel.key;
+  C.check('holding Down on Pupo: HOP OFF', off === 'pupoOff', { off });
+  // every label is short enough for a portrait phone
+  C.check('every label fits a portrait phone (at most 18 characters)', Object.values(PT.TEXT).every(t => t.length <= 18), PT.TEXT);
+});
+
 C.section(want, 'none', () => {
   // a level without a Nap Box: nothing of Pupo shows or changes
   const g = G.lab('power'); const A = g.area; A.tiles[9 * A.W + 7] = T.EMPTY; delete A.contents['7,9'];

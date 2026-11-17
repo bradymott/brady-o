@@ -660,7 +660,7 @@ const stamps = {
 };
 
 /* ---------------- the levels ---------------- */
-const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
+const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado', pupo: 'helper',   // Pupo's tutorial (PUPO.md §6): he is optional here
   gimmick: 'Three lanes at once: rooftops, street and the cellar canal. Awnings bounce you up, trapdoors drop you down',
   hint: 'Hold jump on an awning to bounce up to the rooftops',
   postcard: 'Brady! The market has three floors and the melons use all of them. ♥ C',
@@ -684,6 +684,11 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['sync'],
         // ② Magic Beans first (Brady wants the fart float early): float up to the roofs; then melons down the street,
         // gaps and papel-picado ropes on the roofs; the corn that pops
+        // Pupo (PUPO.md §6): a Nap Box snores between two stalls; two chihuahuas to poke; a piñata box too high for Brady
+        ['napBox', { lane: 'street' }],
+        ['flat', { lane: 'street', n: 4 }],
+        ['enemies', { lane: 'street', kind: 'mxChihuahua', n: 2, len: 10 }],
+        ['pupoFetch', { lane: 'street', h: 6, item: 'oneup' }],
         ['gearStand', { lane: 'street', item: 'beans' }],   // the first jump power of the game, out in the open on a stand
         ['tip', { lane: 'street', text: 'MAGIC BEANS! TAP JUMP AGAIN AND AGAIN IN THE AIR TO FART-FLOAT UP TO THE ROOFS' }],
         ['melons', { lane: 'street' }],
@@ -694,6 +699,8 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['tip', { lane: 'roof', text: 'A PAPER PLANE! HOLD JUMP WHILE FALLING TO GLIDE. THROW IT AT THINGS FAR AWAY' }],
         ['gearStand', { lane: 'roof', item: 'plane' }],
         ['postcard', { lane: 'roof', kind: 'must', dy: -3 }],
+        // a Pupo bonus: papel-picado hooks across a roof gap too wide to jump, candy coins along the swing
+        ['pupoGap', { lane: 'roof', w: 9, hooks: 2, coins: true }],
         ['gap', { lane: 'street', n: 3 }],
         ['trapdoor', { lane: 'street', to: 'bodega@in', crate: true, back: 'bodegaBack', look: 'mxTrapdoor' }],
         ['flat', { lane: 'cellar', n: 6 }],
@@ -712,6 +719,8 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['sync'],
         ['stamp', { id: 'escenario', lane: 'street' }],
         ['sync'],
+        // a Pupo bonus at the cellar's end: a ticklish burro asleep across a pocket of coins
+        ['pupoTickle', { lane: 'cellar', lock: 'tickle:mx11', belly: [-0.6, -1], pocket: 5 }],
         ['cellarDress', { lane: 'cellar' }]
       ] },
     { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega' }
@@ -821,7 +830,7 @@ const L4 = { n: 4, name: 'Volcán Escape', arch: 'tower', theme: 'mx_volcan',
     { id: 'boveda', gen: 'room', role: 'secret', theme: 'mx_volcan', dark: true, stamp: 'boveda' }
   ] };
 
-const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata',
+const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata', pupo: 'level',   // Mexico's Pupo level (lead-in)
   gimmick: 'Swinging piñatas, candy cannons, the balcony; then El Gran Piñatón on his pulley rope in the tall patio',
   hint: 'Break the piñata from BELOW: headbutt him when he swings low. Bounce off the awnings when he rises!',
   postcard: 'You did it! The Palace of Fine Arts popped back to full size. Next stop: Ecuador! ♥ C',
@@ -833,15 +842,20 @@ const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacie
       script: [
         ['startStamp', { id: 'porton' }],
         ['itemBlock', { item: 'power' }],
+        // Pupo's level (PUPO.md §4): his Nap Box by the gate; the patio's cactus garden is too wide to jump, only his arms
+        // swing across it on the piñata hooks; the hacienda wall only he can climb. He waits at the arena door
+        ['napBox', {}],
         // the lead-in teaches what the fight needs: swinging piñatas, things from below, bouncing high
         ['swingers', { n: 3 }],
         ['cannons', {}],
         ['postcard', { kind: 'risky', dx: -8, dy: -7 }],
         'balcony',
         ['secretDoor', { to: 'despensa@in', look: 'fake', back: 'pantryBack' }],
+        ['pupoGap', { w: 12, hooks: 3, under: 'spikes', coins: true }],
         ['enemies', { n: 1, kind: 'mxBurro' }],
         'sig',
         ['itemBlock', { item: 'power' }],
+        ['pupoClimb', { h: 7 }],
         ['door', { to: 'fiesta@in', perch: 0, look: 'tourDoor' }]
       ] },
     { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa' },

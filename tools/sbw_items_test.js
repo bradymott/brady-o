@@ -94,7 +94,7 @@ function scanLevel(G, id, reachAll) {
   const rows = [];
   lvl.areas.forEach((A, ai) => {
     for (const key in A.contents) {
-      const c = A.contents[key]; if (c === 'pick' || c === 'picks') continue;
+      const c = A.contents[key]; if (c === 'pick' || c === 'picks' || c === 'pupo') continue;   // a Nap Box: Pupo comes out, not an item (sbw_pupo_test checks it)
       const [tx, ty] = key.split(',').map(Number);
       if (!blockTiles.has(A.tiles[ty * A.W + tx])) continue;
       const row = { id, ai, aid: A.aid, tx, ty, c, above: ty === 0 ? 'TOP' : tname(A.tiles[(ty - 1) * A.W + tx]), runs: [], under: { ai, x: tx * TS + 3, y: (ty + 1) * TS, w: TS - 6, h: 8 },

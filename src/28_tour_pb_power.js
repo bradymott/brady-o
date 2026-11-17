@@ -375,7 +375,7 @@ const PupoButton = {
     // the first time ever: a label over it
     const tips = Save.data.tips || {};
     if (full && !tips.pupoReady) { tips.pupoReady = true; Save.data.tips = tips; play.pupoReadyT = 4; }
-    if (play.pupoReadyT > 0 && typeof TourPicker !== 'undefined') TourPicker.label(ctx, 'PUPO POWER READY!', b.x, b.y - b.r - 16 + Math.sin(t * 4) * 2, clamp(Math.min(play.pupoReadyT, 4 - play.pupoReadyT) * 2, 0, 1), true);
+    if (play.pupoReadyT > 0 && typeof TourPicker !== 'undefined') TourPicker.label(ctx, 'TAP PUPO!', b.x, b.y - b.r - 16 + Math.sin(t * 4) * 2, clamp(Math.min(play.pupoReadyT, 4 - play.pupoReadyT) * 2, 0, 1), true);
   },
   // keyboard / gamepad players: the same ring around a 12 px Pupo face, with the key letter, bottom left of the game view
   hudIcon(ctx, play) {
@@ -388,6 +388,8 @@ const PupoButton = {
     Pupo.head(ctx, x, y + 1, 1.0, play.t, full ? 'spiral' : 'calm', play.t * 0.6 * TAU);
     ctx.fillStyle = full ? '#ffd84a' : 'rgba(255,255,255,0.7)'; ctx.font = `9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('F', x + 19, y + 11);
     ctx.restore();
+    if (full && !(Save.data.tips || {}).pupoReady) { (Save.data.tips = Save.data.tips || {}).pupoReady = true; play.pupoReadyT = 4; }
+    if (play.pupoReadyT > 0 && typeof TourPicker !== 'undefined') TourPicker.label(ctx, 'PRESS F: PUPO POWER!', x + 60, y - 26, clamp(Math.min(play.pupoReadyT, 4 - play.pupoReadyT) * 2, 0, 1), true);
   }
 };
 window.addEventListener('keydown', e => { if (Input.mode === 'game' && (e.code === 'KeyF' || e.code === 'KeyL')) PupoPower.key = true; });

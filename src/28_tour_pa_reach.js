@@ -76,6 +76,9 @@ const PupoReach = {
     this.rvx = vx; this.rvy = vy;
   },
   ax: 1, ay: 0, neutral: true, rvx: 0, rvy: 0,
+  // the builder: the bottom row a piece may dig to (a layered gen's lane band, or the area), and a hole in the floor there
+  bottom(st) { return st.lanes && st.B.band ? st.B.band.y1 : st.B.H - 1; },
+  hole(st, x) { const bot = this.bottom(st); for (let y = st.gy; y <= bot; y++) st.B.set(x, y, T.EMPTY); },
   // the mammals of every land (only mammals have belly buttons; the rest get a nose boop); an enemy cfg's belly: true adds more
   MAMMALS: new Set(['aqSeal', 'aqOrca', 'brSloth', 'brCoati', 'brJaguar', 'ecAlpaca', 'ecSeaLion', 'ecSeaLionLand', 'frPoodle', 'frCat', 'frBoar', 'frMole', 'esBat', 'esLynx', 'esSheep',
     'mxBurro', 'mxChihuahua', 'mxBat', 'mxArmadillo', 'jpTanuki', 'mzWarthog', 'mzMonkey', 'mzPangolin', 'mzMoleRat', 'mzFruitBat', 'idMacaque', 'idCivet', 'idBat',
@@ -645,14 +648,17 @@ Object.assign(Tour.pieces, {
   // a gap w wide with n grab points spaced at most 4 tiles; hooks hang 4 rows over the ground, posts stand on pillars
   pupoGap(st, o) {
     const B = st.B, w = o.w || 8, n = o.hooks || Math.ceil(w / 4), x0 = st.x + 1, x1 = x0 + w - 1, kind = o.kind || 'hook';
-    st.floor(st.x, st.x); for (let x = x0; x <= x1; x++) B.clearCol(x, st.gy, B.H - 1);
-    if (o.under === 'water') for (let x = x0; x <= x1; x++) for (let y = st.gy + 1; y < B.H; y++) B.set(x, y, T.WATER);
-    if (o.under === 'spikes') for (let x = x0; x <= x1; x++) { B.set(x, B.H - 2, T.SPIKES); B.set(x, B.H - 1, T.GROUND); }
+    st.floor(st.x, st.x); const bot = PupoReach.bottom(st);
+    for (let x = x0; x <= x1; x++) PupoReach.hole(st, x);
+    if (o.under === 'water') for (let x = x0; x <= x1; x++) for (let y = st.gy + 1; y <= bot; y++) B.set(x, y, T.WATER);
+    if (o.under === 'spikes' && !st.lanes) for (let x = x0; x <= x1; x++) { B.set(x, bot - 1, T.SPIKES); B.set(x, bot, T.GROUND); }
     for (let i = 1; i <= n; i++) {
       const gx = x0 + Math.round(i * w / (n + 1)) - 1;
       if (kind === 'post') { B.set(gx, st.gy, T.HARD); for (let y = st.gy + 1; y < B.H; y++) B.set(gx, y, T.HARD); B.spawn('pupoGrab', gx, st.gy - 1, { kind: 'post', look: o.look || null }); }
       else B.spawn('pupoGrab', gx, st.gy - 5, { kind: 'hook', look: o.look || null });
     }
+    // candy coins along the swing (o.coins)
+    if (o.coins) for (let x = x0 + 1; x < x1; x++) st.B.set(x, st.gy - 2 - Math.round(Math.sin((x - x0) / (x1 - x0) * Math.PI) * 2), T.PICK);
     st.floor(x1 + 1, x1 + 3);
     return x1 + 4;
   },
@@ -669,7 +675,8 @@ Object.assign(Tour.pieces, {
   pupoBars(st, o) {
     const B = st.B, w = o.w || 6, x0 = st.x + 1;
     st.floor(st.x, st.x);
-    for (let x = x0; x < x0 + w; x++) { B.clearCol(x, st.gy, B.H - 1); if (o.under !== 'pit') { B.set(x, B.H - 2, T.SPIKES); B.set(x, B.H - 1, T.GROUND); } }
+    const bot = PupoReach.bottom(st);
+    for (let x = x0; x < x0 + w; x++) { PupoReach.hole(st, x); if (o.under !== 'pit' && !st.lanes) { B.set(x, bot - 1, T.SPIKES); B.set(x, bot, T.GROUND); } }
     B.spawn('pupoBar', x0, st.gy - 5, { w, look: o.look || null });
     st.floor(x0 + w, x0 + w + 2);
     return x0 + w + 3;
@@ -682,10 +689,12 @@ Object.assign(Tour.pieces, {
   },
   // the sleeping blocker on lock tiles (3 high)
   pupoTickle(st, o) {
-    const x = st.x + 2; st.floor(st.x, st.x + 4);
+    const x = st.x + 2, pk = o.pocket || 0; st.floor(st.x, st.x + 4 + pk);
     st.B.lock(x, st.gy - 3, st.gy - 1, o.lock || 'tickle', 'door');
     st.B.spawn('pupoTickle', x, st.gy - 1, { lock: o.lock || 'tickle', belly: o.belly || [-1, -1], look: o.look || null });
-    return st.x + 5;
+    // o.pocket: a walled-off pocket of coins behind it (a bonus: the way on never passes a tickle gate unless the level says so)
+    if (pk) { for (let k = 0; k < pk; k++) st.B.set(x + 2 + k, st.gy - 1, T.PICK); for (let y = st.gy - 4; y < st.gy; y++) st.B.set(x + 3 + pk, y, T.HARD); for (let k = 0; k <= pk + 2; k++) st.B.set(x + 1 + k, st.gy - 4, T.HARD); }
+    return st.x + 5 + pk;
   },
   // a target high up (h rows), or behind a grille
   pupoFetch(st, o) {

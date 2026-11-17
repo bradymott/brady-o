@@ -48,4 +48,13 @@ C.section(want, 'same', () => {
   }
 });
 
+C.section(want, 'mexico', () => {
+  // 1-1 (the tutorial): Pupo is a helper there; everything is reachable without him
+  const l1 = G.getLevel(1, 1), r1 = PV.run(l1, { earlyExit: false }), c1 = PV.checks(l1, r1);
+  C.check('1-1 has its Nap Box and is a helper level: exits, postcards and areas all reachable without Pupo', PV.boxes(l1).length >= 1 && l1.design.pupo === 'helper' && r1.pupo.without.main && !c1.errors.length && r1.ok, { errors: c1.errors, ok: r1.ok });
+  // 1-5: Mexico's Pupo level: its lead-in needs him; with him the arena and the boss are reached
+  const l5 = G.getLevel(1, 5), r5 = PV.run(l5, { earlyExit: false }), c5 = PV.checks(l5, r5);
+  C.check('1-5 is the Pupo level: without Pupo the exit is out of reach, with him the level is finishable', l5.design.pupo === 'level' && !r5.pupo.without.main && r5.exits.main && r5.ok && !c5.errors.length, { without: r5.pupo.without.main, with: r5.exits, errors: c5.errors });
+});
+
 C.done();
