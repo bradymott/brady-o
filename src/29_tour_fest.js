@@ -325,12 +325,135 @@ class FestBed extends Ent {
   }
 }
 const pieces = {
+  arena_stage: (st, o) => arenaPieces.arena_stage(st, o),
   // bouncy tiles with their look (airbeds, trampolines): { w: 3, look }; the row of the stamp letter
   bouncy(st, o) { const w = o.w || 3, y = st.gy - 1; for (let k = 0; k < w; k++) { st.B.set(st.x + k, y, T.GROUND); st.B.setSurf(st.x + k, y, SURF.BOUNCE); } st.B.spawn('festBed', st.x, y, { w: w * TS, look: o.look || 'airbed' }).x = st.x * TS + w * TS / 2; return st.x; },
   // dance-floor tiles that pulse with the beat: { w: 4, grp: 0 | 1 } on the row of the stamp letter
   beatFloor(st, o) { const w = o.w || 4; st.B.beat(st.x, st.x + w - 1, st.gy - 1, o.grp || 0, 'festDisco'); return st.x; },
   // a padlocked barrier panel (Piwi's): opens with its tent peg; h rows tall, standing on the row under the letter
   pegLock: TourMaze.lock('mazeShutter', { need: 'PIWI\'S PADLOCK: FIND ITS TENT PEG' })
+};
+
+/* ---------------- the boss: THE SOUND LIMITER ----------------
+   Piwi's noise-complaint robot: a giant volume knob on long legs. It SHUSHES (hush waves roll along the stage: jump
+   them), HOPS at Brady and, now and then, stops to LISTEN for any noise: its dial lights up, and that is the moment to
+   stomp the dial on its head. Stomps at any other time bounce off. Phase 2 shushes three waves; phase 3 adds FEEDBACK
+   (music notes arc out of its speaker grille). The last stomp turns it up to eleven and it blows its own fuse. */
+const K = TourKit;
+const LIMITER_TICKS = [-2.4, -1.92, -1.44, -0.96, -0.48, 0, 0.48, 0.96, 1.44, 1.92, 2.4];
+const hushArt = (ctx, s, t) => {
+  const x = s.x + s.w / 2, y = s.y + s.h / 2, d = s.vx > 0 ? 1 : -1;
+  ctx.save(); ctx.strokeStyle = '#bfe8ff'; ctx.lineWidth = 3;
+  for (let k = 0; k < 3; k++) { ctx.globalAlpha = 0.9 - k * 0.25; ctx.beginPath(); ctx.arc(x - d * k * 7, y, 9 + k * 4, d > 0 ? -1 : Math.PI - 1, d > 0 ? 1 : Math.PI + 1); ctx.stroke(); }
+  ctx.globalAlpha = 1; ctx.fillStyle = '#ffffff'; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.fillText('SHH', x, y - 12);
+  ctx.restore();
+};
+const noteArt = (ctx, s, t) => {
+  const x = s.x + s.w / 2, y = s.y + s.h / 2;
+  ctx.save(); ctx.fillStyle = '#ff5fa0'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.ellipse(x - 3, y + 5, 6, 4.5, -0.4, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x + 2, y + 4); ctx.lineTo(x + 2, y - 10); ctx.lineTo(x + 9, y - 6); ctx.stroke();
+  ctx.restore();
+};
+const limiterSays = ['SHHHH!', 'KEEP IT DOWN!', 'NOISE COMPLAINT!', 'VOLUME: ZERO.'];
+const boss = {
+  id: 'fest_limiter', name: 'The Sound Limiter', hp: 6, dims: [76, 104], music: 'tour_br_boss', country: 'fest',
+  brain: {
+    phases: [4, 2],
+    noDisc(b) { return false; },
+    wake(b) { b.phase = 1; K.say(b.g, b, 'THIS FESTIVAL IS TOO LOUD.', '#bfe8ff'); },
+    hit(b, kind, src) {
+      if (b.act === 'exit') return false;
+      if (kind === 'stomp' || kind === 'spin') { if (b.vuln) { b.damage(1, { text: 'CLICK!', col: '#ffd84a' }); return true; } return 'bounce'; }
+      return undefined;
+    },
+    touch(b, p) { return b.act === 'exit'; },
+    phase(b, n) {
+      const g = b.g;
+      if (n === 2) { b.hurtT = 1.4; K.say(g, b, 'TURNING YOU DOWN!', '#bfe8ff'); g.bannerText = 'VOLUME: LOWER'; g.bannerT = 2; b.go('shush'); }
+      if (n === 3) { b.hurtT = 1.6; K.say(g, b, 'FEEDBACK!!', '#ff9ad0'); g.bannerText = 'FEEDBACK!'; g.bannerT = 2; b.go('feedback'); }
+    },
+    lastHit(b) { if (b.act !== 'exit') { b.vuln = false; b.go('exit'); } return true; },
+    update(b, dt) {
+      const g = b.g, p = g.player, first = b.first, ph = b.phase || 1;
+      b.guard = 'bounce';
+      if (b.act === 'walk') {
+        b.face(); b.walk(0.9); b.pose = 'walk';
+        if (b.at > 1.5) { b.cycle++; const seq = ph >= 3 ? ['shush', 'listen', 'hop', 'feedback', 'listen'] : ['shush', 'hop', 'listen', 'shush', 'listen']; b.go(seq[b.cycle % seq.length]); }
+      } else if (b.act === 'shush') {
+        b.vx = 0; b.pose = 'shush';
+        if (first) { b.face(); b.shots = 0; K.say(g, b, limiterSays[b.cycle % limiterSays.length], '#bfe8ff'); }
+        const n = ph >= 2 ? 3 : 2;
+        if (b.shots < n && b.at > 0.45 + b.shots * 0.45) {
+          b.shots++; Sound.play('wind', { vol: 0.4, pitch: 1.4 });
+          for (const d of [-1, 1]) tourFire(g, b.cx + d * 40, b.floorY - 16, { vx: d * 6.5 * TS, vy: 0, w: 22, h: 20, life: 3, thru: true, col: '#bfe8ff', art: hushArt });
+        }
+        if (b.at > 0.6 + n * 0.45) b.go('walk');
+      } else if (b.act === 'hop') {
+        if (first) { b.face(); b.vx = 0; b.hopped = false; }
+        b.pose = b.hopped ? 'air' : 'crouch';
+        if (!b.hopped && b.at > 0.4) { b.hopped = true; b.vy = -13 * TS; const dx = p ? clamp(p.cx - b.cx, -5 * TS, 5 * TS) : 0; b.vx = dx / 0.9; }
+        if (b.hopped && b.onGround && b.at > 0.6) { b.vx = 0; g.shake(6); g.burst(b.cx, b.floorY, 14, '#c8b07a', 'dust'); Sound.play('stomp', { pitch: 0.6 }); b.go('walk'); }
+      } else if (b.act === 'listen') {
+        b.vx = 0; b.pose = 'listen';
+        if (first) { b.face(); K.say(g, b, 'IS SOMEONE... HUMMING?', '#ffe28a'); }
+        b.vuln = b.at > 0.25 && b.at < (ph >= 3 ? 1.5 : 2.1);
+        if (b.at > (ph >= 3 ? 1.7 : 2.3)) b.go('walk');
+      } else if (b.act === 'feedback') {
+        b.vx = 0; b.pose = 'shush';
+        if (first) { b.face(); b.shots = 0; Sound.play('laser', { vol: 0.3, pitch: 0.6 }); }
+        if (b.shots < 3 && b.at > 0.3 + b.shots * 0.35) { b.shots++; tourFire(g, b.cx, b.y + 30, { vx: b.dir * (2.5 + b.shots) * TS, vy: -9 * TS, grav: PHYS.gDown * 0.45, w: 18, h: 20, life: 3, thru: true, col: '#ff5fa0', art: noteArt }); }
+        if (b.at > 1.6) b.go('walk');
+      } else if (b.act === 'reel') {
+        b.pose = 'reel'; b.vx = -b.dir * 3 * TS * Math.max(0, 1 - b.at); if (b.at > 1) b.go('walk');
+      } else if (b.act === 'exit') {
+        b.vx = 0; b.pose = 'exit';
+        if (first) { K.say(g, b, 'IT GOES UP TO... ELEVEN?!', '#ffe28a'); Sound.play('bossDie'); }
+        if (Math.random() < 0.3) g.burst(b.cx + (Math.random() - 0.5) * 60, b.y + 20, 3, '#ffd84a', 'spark');
+        if (b.at > 3.2) b.die();
+      } else b.go('walk');
+      b.fall(dt);
+    },
+    hurt(b) { K.say(b.g, b, ['MY LEVELS!', 'TOO LOUD!', 'MUTE! MUTE!'][Math.floor(b.t * 7) % 3], '#bfe8ff'); b.go('reel'); },
+    draw(b, ctx, t) {
+      const x = b.cx, y = b.y + b.h, d = b.dir, P = b.pose, glow = b.vuln || P === 'exit';
+      ctx.save(); ctx.translate(x, y); ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+      const crouch = P === 'crouch' ? 10 : 0, wob = P === 'walk' ? Math.sin(t * 9) * 5 : 0;
+      // the legs and the sneakers
+      ctx.beginPath(); ctx.moveTo(-14, -44 + crouch); ctx.lineTo(-18 + wob, -6); ctx.moveTo(14, -44 + crouch); ctx.lineTo(18 - wob, -6); ctx.stroke();
+      ctx.fillStyle = '#ff5fa0'; rr(ctx, -30 + wob, -9, 20, 9, 4); ctx.fill(); ctx.stroke(); rr(ctx, 10 - wob, -9, 20, 9, 4); ctx.fill(); ctx.stroke();
+      // the knob body: a cylinder seen from the front, ridged
+      const by = -44 + crouch, top = by - 58;
+      ctx.fillStyle = '#5a606a'; rr(ctx, -34, top, 68, 58, 10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#7a808a'; for (let k = -30; k < 30; k += 8) ctx.fillRect(k, top + 4, 3, 50);
+      // the speaker-grille face and the LED eyes
+      ctx.fillStyle = '#26222c'; rr(ctx, -22, top + 26, 44, 22, 6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#4a4650'; for (let gy = top + 31; gy < top + 46; gy += 5) for (let gx = -17; gx < 18; gx += 5) ctx.fillRect(gx, gy, 2, 2);
+      ctx.fillStyle = P === 'reel' ? '#ff5a5a' : '#3affa0'; ctx.fillRect(-16, top + 12, 9, 6); ctx.fillRect(7, top + 12, 9, 6);
+      if (P === 'shush') { ctx.fillStyle = '#e8d0b0'; rr(ctx, -4, top + 24, 8, 24, 3); ctx.fill(); ctx.stroke(); }
+      // the dial on top: its scale 0-10, the pointer; it lights up while it listens (the weak spot)
+      const dy = top - 6;
+      if (glow) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 12); ctx.fillStyle = '#ffe28a'; ctx.beginPath(); ctx.ellipse(0, dy, 46, 18, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+      ctx.fillStyle = glow ? '#ffd84a' : '#c8ccd4'; ctx.beginPath(); ctx.ellipse(0, dy, 30, 10, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+      for (const a of LIMITER_TICKS) { ctx.beginPath(); ctx.moveTo(Math.sin(a) * 24, dy - Math.cos(a) * 8); ctx.lineTo(Math.sin(a) * 30, dy - Math.cos(a) * 10); ctx.stroke(); }
+      const lvl = P === 'exit' ? 2.6 + Math.sin(t * 20) * 0.1 : -2.4 + (b.hp / b.maxHp) * 1.2;
+      ctx.strokeStyle = '#d0203a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, dy); ctx.lineTo(Math.sin(lvl) * 22, dy - Math.cos(lvl) * 7); ctx.stroke();
+      // listening: a hand cupped to its side, a "?"
+      if (P === 'listen') { ctx.fillStyle = '#e8d0b0'; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(-d * 40, top + 18, 9, 12, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffe28a'; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.fillText('?', -d * 46, top - 8); }
+      if (P === 'reel') K.dizzy(ctx, 0, top - 24, t);
+      ctx.restore();
+    }
+  }
+};
+// the main stage arena: the crowd risers on both sides, speaker stacks, llamas in the front row
+const arenaPieces = {
+  arena_stage(st, o) {
+    const B = st.B, { x0, w, GY } = o;
+    for (let q = 0; q < 4; q++) { B.set(x0 + 2 + q, GY - 4, T.SEMI); B.set(x0 + w - 6 + q, GY - 4, T.SEMI); }
+    B.decorAt('festLlama', x0 + 3, GY - 4, 1); B.decorAt('festLlama', x0 + w - 4, GY - 4, 2);
+    B.decorAt('festFlag', x0 + 1, GY, 3); B.decorAt('festFlag', x0 + w - 2, GY, 4);
+  }
 };
 
 /* ---------------- the route map: a little tent in the pin ---------------- */
@@ -359,7 +482,7 @@ Object.assign(TourOWPaint.art, {
 TourLandscape.looks.fest = ['#cfeaf6', '#4aa8c8', '#9ab8a0', '#7ab85a', '#c8e08a', '#f2dca8', 'mill'];
 Tour.country({
   id: 'fest', secret: true, bonus: true, colors: COL, tagline: 'A bonus land: the festival Piwi tried to cancel',
-  themes, painters, dyn, decor, enemies, pieces, beatArt, entities: { festBed: FestBed },
+  themes, painters, dyn, decor, enemies, pieces, beatArt, entities: { festBed: FestBed }, boss,
   music: { level: 'tour_br', boss: 'tour_br_boss', map: null },
   landmark: 'the Ferris wheel', emblem,
   arrival: 'Brady! You un-banned dancing and now there is a whole festival. The llamas are in the front row. ♥ C',

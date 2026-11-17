@@ -270,7 +270,8 @@ const BOSS_SAFE = {
   ma_berrad: ['dive', 'inside', 'trapped'],                   // 29_tour_ma.js: inside his pot
   mz_hermit: ['inshell', 'shell', 'hide', 'idle', 'walk'],    // 29_tour_mz.js: passive while in a shell (not lunging)
   vn_phin: ['scald', 'wobble', 'stunned', 'empty'],           // 29_tour_vn.js
-  nl_cheese: ['buried'], np_baron: ['finale'], np_tinyak: ['rattle'], aq_walrus: ['exit'], aq_plough: ['melt'], w22_other: ['crack', 'frozen']
+  nl_cheese: ['buried'], np_baron: ['finale'], np_tinyak: ['rattle'], aq_walrus: ['exit'], aq_plough: ['melt'], w22_other: ['crack', 'frozen'],
+  fest_limiter: ['exit']                                       // 29_tour_fest.js: blowing its own fuse
 };
 const ENEMY_SAFE_TOKENS = ['wait', 'sleep', 'under', 'hide', 'stunned', 'stun', 'friendly', 'friendT', 'harmless', 'perch', 'disguise', 'fade', 'gone', 'dead', 'snatch', 'flee', 'grab'];
 const ENEMY_SAFE_TYPES = {

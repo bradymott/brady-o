@@ -440,7 +440,35 @@ const L3 = { n: 3, name: 'The Silent Disco', mapLabel: 'Silent Disco', arch: 'bo
       links: [{ from: [1, 0], to: [1, 1], at: [25, 11], toAt: [4, 11], look: 'festFlap' }, { from: [2, 1], to: [2, 0], at: [22, 3], toAt: [4, 11], look: 'festFlap' }] }
   ] };
 
-Tour.amend('fest', { stamps, levels: [L1, L2, L3] });
+/* ---------------- 23-4 The Sound Limiter (the boss) ---------------- */
+// A short walk past the stalls to the main stage, then Piwi's noise-complaint robot. Stomp its dial while it
+// listens; jump the hush waves.
+const L4 = { n: 4, name: 'The Sound Limiter', mapLabel: 'Main Stage', arch: 'lair', theme: 'fest_field', boss: 'fest_limiter',
+  gimmick: 'Piwi\'s noise-complaint robot, a giant volume knob on legs, turns the festival down. Jump its hush waves; stomp its dial while it listens',
+  hint: 'Stomps bounce off... except while it stops to LISTEN: its dial lights up. Stomp it then!',
+  postcard: 'You turned the festival back UP. The llamas are crowd-surfing. ♥ C',
+  enemies: [['festBin', 2], ['festDuck', 1]],
+  mapCell: [2, 1], mapFrom: 2,
+  areas: [
+    { id: 'stalls', gen: 'strip', W: 64, H: 18, theme: 'fest_field',
+      script: [
+        ['itemBlock', { item: 'power' }],
+        ['flat', { n: 6 }],
+        ['enemies', { n: 1, kind: 'festBin' }],
+        ['postcard', { kind: 'must', dy: -5 }],
+        'gap',
+        ['flat', { n: 4 }],
+        ['enemies', { n: 1, kind: 'festDuck' }],
+        ['itemBlock', { item: 'power' }],
+        ['postcard', { kind: 'high', dy: -7, dx: -2 }],
+        ['flat', { n: 4 }],
+        ['postcard', { kind: 'risky', dy: -4 }],
+        ['door', { to: 'stage@in', perch: 0, look: 'festFlap' }]
+      ] },
+    { id: 'stage', gen: 'arena', role: 'arena', layout: 'stage', arenaW: 24, H: 18 }
+  ] };
+
+Tour.amend('fest', { stamps, levels: [L1, L2, L3, L4] });
 
 /* ---------------- the land's map: a festival site in a field ---------------- */
 // the route: in at the car-park airstrip, round the campsite, along the mud, up to the stage (a loop of a walk
