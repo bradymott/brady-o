@@ -42,10 +42,13 @@ C.section(want, 'geometry', () => {
   const tg3 = PR.scan(p, g, g.pupo, { left: true });
   C.check('nothing in the cone: no target (the press is a boop into the air)', !tg3.kind, tg3.kind);
   // the release
-  PR.release(0, 3, 2.5 * TS, false); const r1 = [PR.rvx / TS, PR.rvy / TS];
-  PR.release(0, 10, 2.5 * TS, false); const r2 = Math.hypot(PR.rvx, PR.rvy) / TS;
-  PR.release(0, 10, 2.5 * TS, true); const r3 = Math.hypot(PR.rvx, PR.rvy) / TS;
-  C.check('the swing release: speed along the swing x1.15 plus 3 t/s up, capped at 14 (10 drowsy)', near(r1[0], 3 * 2.5 * 1.15, 1e-6) && near(r1[1], -3, 1e-6) && near(r2, 14, 1e-6) && near(r3, 10, 1e-6), { r1, r2, r3 });
+  PR.release(0, 3, 2.5 * TS, false, 1); const r1 = [PR.rvx / TS, PR.rvy / TS];
+  PR.release(0, 10, 2.5 * TS, false, 1); const r2 = Math.hypot(PR.rvx, PR.rvy) / TS;
+  PR.release(0, 10, 2.5 * TS, true, 1); const r3 = Math.hypot(PR.rvx, PR.rvy) / TS;
+  PR.release(0, 0, 2.5 * TS, false, -1); const r4 = [PR.rvx / TS, PR.rvy / TS];
+  PR.release(-0.5, 1, 2.5 * TS, false, 1); const r5 = [PR.rvx / TS, PR.rvy / TS];
+  C.check('the swing release: along the swing x1.15, at least 13 t/s up, capped at 16 (12 drowsy)', near(r1[0], 3 * 2.5 * 1.15, 1e-6) && near(r1[1], -13, 1e-6) && near(r2, 16, 1e-6) && near(r3, 12, 1e-6), { r1, r2, r3 });
+  C.check('...never limp: a dead hang hops 6 t/s the chosen way and 13 up; a big swing throws at least 0.6 x its full speed', near(r4[0], -6, 1e-6) && near(r4[1], -13, 1e-6) && r5[0] >= 0.6 * Math.sqrt((1 * 2.5 * 1.15) ** 2 + 2 * 40 * 2.5 * (1 - Math.cos(0.5))) * 1.15 - 1e-6, { r4, r5 });
 });
 
 C.section(want, 'poke', () => {
@@ -109,11 +112,76 @@ C.section(want, 'swing', () => {
     if (s.e.hx < 19 * TS && s.om > 0 && s.th > 0.3) { G.step(g, 1 / 120, { right: true, actionPressed: true }); continue; }
     if (s.e.hx > 19 * TS && s.om > 0 && s.th > 0.15 && s.th < 0.6) { const v = Math.abs(s.om * s.L); G.step(g, 1 / 120, { jumpPressed: true, right: true }); let0 = { v: v / TS, vx: p.vx / TS, vy: p.vy / TS }; } }
   G.step(g, 0.4, { right: true }); G.step(g, 0.8);
-  C.check('Jump lets go with the swing\'s speed (x1.15, +3 t/s up) and he flies on across the pit', let0 && g.pupo.mode !== 'swing' && p.vx >= 0 && p.cx > 21 * TS && p.onGround && p.pupoRide, { let0, x: p.cx / TS, ground: p.onGround });
+  C.check('Jump lets go along the swing (x1.15, +4 t/s up, never limp) and he flies on across the pit', let0 && g.pupo.mode !== 'swing' && p.vx >= 0 && p.cx > 21 * TS && p.onGround && p.pupoRide, { let0, x: p.cx / TS, ground: p.onGround });
   // a nap in mid-air near a hook: he dangles asleep from it
   const g2 = ride(14); const p2 = g2.player; p2.y = 9.5 * TS; p2.vy = 0; p2.onGround = false; g2.pupo.drowsyT = 3; g2.pupo.shieldT = 0; p2.hurt({ x: p2.x, w: 10 });
   const f = g2.pupo.free;
   C.check('a nap in mid-air: he dangles asleep from the nearest hook within 5 tiles', f && f.hangAt && f.mode === 'sleep', f && f.hangAt);
+});
+
+C.section(want, 'release', () => {
+  // the let-go rule, at a dead hang and on the back-swing: never limp (>= 6 t/s along, >= 13 t/s up)
+  { const g = ride(8), p = g.player; G.step(g, 1 / 120, { up: true, right: true, actionPressed: true }); G.step(g, 0.3); for (let i = 0; i < 120; i++) G.step(g, 1 / 120); const s = g.pupo.sw;
+    s.om = 0; s.th = 0; G.step(g, 1 / 120, { jumpPressed: true, jump: true });
+    C.check(`a dead hang, Jump: a real hop off (vx ${(p.vx / TS).toFixed(1)}, vy ${(p.vy / TS).toFixed(1)} t/s)`, !g.pupo.mode && Math.abs(p.vx) >= 5.9 * TS && p.vy <= -12.4 * TS, [p.vx / TS, p.vy / TS]); }
+  { const g = ride(8), p = g.player; G.step(g, 1 / 120, { up: true, right: true, actionPressed: true }); G.step(g, 0.3); const s = g.pupo.sw; s.th = -0.4; s.om = -1.2; p.facing = 1;
+    G.step(g, 1 / 120, { jumpPressed: true, jump: true, right: true });
+    C.check(`the back-swing with the stick forward: launched forward anyway (vx ${(p.vx / TS).toFixed(1)}, vy ${(p.vy / TS).toFixed(1)})`, !g.pupo.mode && p.vx >= 5.9 * TS && p.vy <= -12.4 * TS, [p.vx / TS, p.vy / TS]); }
+  // Down lets go gently; a Jump within 0.15 s still launches
+  { const g = ride(8), p = g.player; G.step(g, 1 / 120, { up: true, right: true, actionPressed: true }); G.step(g, 0.5); G.step(g, 1 / 120, { down: true, downPressed: true });
+    C.check('Down lets go: a gentle drop (no hop up)', !g.pupo.mode && p.vy >= 0, { mode: g.pupo.mode, vy: p.vy / TS });
+    G.step(g, 0.05); G.step(g, 1 / 120, { jumpPressed: true, jump: true });
+    C.check('...and Jump just after (0.05 s) still launches (coyote)', p.vy <= -10 * TS, p.vy / TS); }
+  // the pump builds a visible arc: 2 s of stick (with the swing) from a dead hang
+  { const g = ride(8); G.step(g, 1 / 120, { up: true, right: true, actionPressed: true }); G.step(g, 0.3); const s = g.pupo.sw; s.om = 0; s.th = 0; let amp = 0;
+    for (let i = 0; i < 240; i++) { G.step(g, 1 / 120, { right: s.om >= 0, left: s.om < 0 }); amp = Math.max(amp, Math.abs(s.th)); }
+    C.check(`pumping (stick with the swing) builds an arc: ${amp.toFixed(2)} rad in 2 s (> 0.5)`, amp > 0.5, amp); }
+  // the real pits, every release timing, with each jump power carried in: always across, never a jump power
+  const play = (w, i) => G.run('(l => { Save.data.lives = 9; Save.data.tips = { box: true, picker: true }; const g = new Play(l, {}); Game.scene = g; g.state = "play"; g.fade.a = 0; g.fade.target = 0; g.timeLeft = 999; return g; })')(G.getLevel(w, i));
+  const cross = (w, n, pow, timing) => {
+    const g = play(w, n); G.step(g, 0.2); const p = g.player, A = g.area, SOLID = G.run('SOLID');
+    for (const e of g.entities) if (e.enemy) e.remove = true;   // the swing alone (a burro waits past 1-5's pit)
+    const hooks = g.entities.filter(e => e.pupoGrabPt && e.kind === 'hook').sort((a, b) => a.hx - b.hx), grp = [hooks[0]];
+    for (let i = 1; i < hooks.length && hooks[i].hx - grp[grp.length - 1].hx < 8 * TS; i++) grp.push(hooks[i]);
+    const h0 = grp[0], last = grp[grp.length - 1]; let tx = Math.floor((h0.hx - 4 * TS) / TS), ty = Math.floor(h0.hy / TS); while (ty < A.H && !SOLID[A.tiles[ty * A.W + tx]]) ty++;
+    const floorY = ty * TS; R0.mount(p, true, { x: tx * TS + TS / 2, y: floorY }); G.step(g, 0.1); put(g, tx, floorY); G.step(g, 0.3);
+    if (pow) p.jumpPow = { id: pow, gas: 1, used: false, pants: 0 };
+    p.facing = 1; G.step(g, 1 / 120, { up: true, right: true, actionPressed: true });
+    let cur = null, tS = 0, prev = 0, peak = false, rel = 0, jp = false;
+    for (let i = 0; i < 120 * 12; i++) {
+      const R = g.pupo, s = R.sw, inp = { right: timing !== 'dead' };
+      if (R.mode === 'swing') {
+        if (s.e !== cur) { cur = s.e; tS = 0; peak = false; prev = s.om; }
+        tS += 1 / 120; let go = false;
+        if (timing === 'early') go = tS > 0.15;
+        else if (timing === 'peak') go = (s.om > 0 && s.om < 0.6 && s.th > 0.2) || (tS > 1.5 && s.om > 0 && s.th > 0);
+        else if (timing === 'late') { if (prev > 0 && s.om <= 0) peak = true; go = peak && s.om < -0.5; }
+        else if (timing === 'back') go = s.om < -1 && s.th < 0;
+        else if (tS > 1) { s.om = 0; s.th = 0; go = true; inp.right = true; }   // a dead hang (no stick until now), Jump with the stick toward the far side
+        prev = s.om; if (go) { inp.jumpPressed = true; inp.jump = true; rel++; }
+      } else if (!p.onGround) { const tg = PR.scan(p, g, R, { right: true }); if (((tg.kind === 'hook' && tg.e !== cur) || tg.kind === 'ledge') && !R.mode) inp.actionPressed = true; }
+      else if (rel) break;
+      G.step(g, 1 / 120, inp); if (p.pound || p.flipT > 0 || (p.jumpPow && p.jumpPow.down)) jp = true;
+    }
+    return { ok: p.onGround && p.cx > last.hx && p.pupoRide && !(g.pupo.drowsyT > 0) && Math.abs(p.y + p.h - floorY) < 3 * TS, jp, x: p.cx / TS };
+  };
+  for (const [w, n, name] of [[1, 5, "1-5's cactus pit"], [1, 1, "1-1's roof"]]) {
+    const bad = [], fired = [];
+    for (const pow of [null, 'cake', 'socks', 'beans']) for (const timing of ['early', 'peak', 'late', 'back', 'dead']) { const r = cross(w, n, pow, timing); if (!r.ok) bad.push(`${pow}/${timing}@${r.x.toFixed(1)}`); if (r.jp) fired.push(`${pow}/${timing}`); }
+    C.check(`${name}: across from every release timing (early, peak, late, back-swing, dead hang) with each jump power carried in`, !bad.length, bad);
+    C.check(`${name}: no jump power fires on the swing or after the let-go`, !fired.length, fired);
+  }
+  // jump powers stay off in every riding state, and come back on foot
+  { const g = ride(40), p = g.player; p.jumpPow = { id: 'cake', gas: 1, used: false, pants: 0 }; let jp = false;
+    const chk = () => { if (p.pound || p.flipT > 0) jp = true; };
+    G.step(g, 1 / 120, { jumpPressed: true, jump: true }); for (let i = 0; i < 40; i++) { G.step(g, 1 / 120, { jump: true, jumpPressed: i === 20, down: i > 25 }); chk(); }
+    G.step(g, 0.6); G.step(g, 0.4, { down: true }); G.step(g, 1 / 120, { jumpPressed: true }); chk();
+    C.check('riding with Pound Cake: Jump in mid-air and Down do nothing of the power (no pound)', !jp && p.pupoRide);
+    for (const id of ['socks', 'beans']) { p.jumpPow = { id, gas: 1, used: false, pants: 0 }; G.step(g, 0.3); G.step(g, 1 / 120, { jumpPressed: true, jump: true }); for (let i = 0; i < 40; i++) { G.step(g, 1 / 120, { jump: true, jumpPressed: i === 20 }); chk(); if (p.jumpPow.down) jp = true; } }
+    C.check('riding with Spring Socks / Magic Beans: no second jump, no float', !jp && p.pupoRide);
+    p.jumpPow = { id: 'cake', gas: 1, used: false, pants: 0 }; G.step(g, 0.5); R0.dismount(p, 'hop'); G.step(g, 0.6);
+    G.step(g, 1 / 120, { jumpPressed: true, jump: true }); let back = false; for (let i = 0; i < 40; i++) { G.step(g, 1 / 120, { jump: true, jumpPressed: i === 18 }); if (p.pound) back = true; }
+    C.check('hopped off: the jump power works again on foot (a pound)', back && !p.pupoRide); }
 });
 
 C.section(want, 'zip', () => {
@@ -130,8 +198,15 @@ C.section(want, 'zip', () => {
 
 C.section(want, 'climb', () => {
   let g = ride(44), p = g.player;
-  G.step(g, 1.0, { right: true });
-  C.check('walking into a climb strip: he grips it on his own', g.pupo.mode === 'climb', g.pupo.mode);
+  const TIPS = G.run('Save.data.tips'); delete TIPS.pupoGrip; delete TIPS.pupoClimb;
+  G.step(g, 1.0, { right: true }); G.step(g, 0.5, { right: true, up: true });
+  const lab1 = g.pupoLabel && g.pupoLabel.key;
+  C.check('walking into a climb strip (even holding Up) does nothing: no grip without Action', !g.pupo.mode && p.onGround, g.pupo.mode);
+  C.check('...the marker shows it as a grab (the grab paw)', g.pupo.tg.kind === 'strip' && PR.verbOf(g.pupo.tg.kind) === 'grab', g.pupo.tg.kind);
+  G.step(g, 1 / 120, { right: true, actionPressed: true }); G.step(g, 0.5);
+  C.check('Action at the strip: the arm grabs it and he starts climbing', g.pupo.mode === 'climb', g.pupo.mode);
+  const lab2 = g.pupoLabel && g.pupoLabel.key;
+  C.check('the tutorial: GRAB over the strip before, HOLD UP once he holds it', lab1 === 'pupoGrip' && lab2 === 'pupoClimb' && TIPS.pupoGrip === true, { lab1, lab2 });
   const y0 = p.y; G.step(g, 0.5, { up: true }); const up = (y0 - p.y) / 0.5 / TS;
   G.step(g, 0.4, { up: true }); G.step(g, 1.2); const camK = (p.y + p.h * 0.5 - g.camY) / G.run('Game.viewH');
   C.check(`climbing, the camera keeps Brady at 60 % of the view's height (${camK.toFixed(2)})`, g.pupo.mode === 'climb' && near(camK, 0.6, 0.06), camK);
@@ -139,18 +214,26 @@ C.section(want, 'climb', () => {
   G.step(g, 2.0, { up: true });
   C.check('at the top he pulls up onto the wall top and stands there', !g.pupo.mode && p.onGround && near(p.y + p.h, 7 * TS, 2) && p.cx > 48 * TS, { feet: (p.y + p.h) / TS, x: p.cx / TS });
   // leap off
-  g = ride(44); p = g.player; G.step(g, 1.0, { right: true }); G.step(g, 0.4, { up: true });
+  g = ride(44); p = g.player; G.step(g, 1.0, { right: true }); G.step(g, 1 / 120, { actionPressed: true }); G.step(g, 0.5); G.step(g, 0.4, { up: true });
   G.step(g, 1 / 120, { jumpPressed: true }); const lv = [p.vx / TS, p.vy / TS];
   C.check('Jump leaps off away from the strip (6.5 t/s away, 13 t/s up)', !g.pupo.mode && near(lv[0], -6.5, 0.3) && lv[1] < -11, lv);
+  // jumping past the strip without pressing: he falls back down
+  g = ride(44); p = g.player; G.step(g, 1.0, { right: true }); let gripped = false;
+  G.step(g, 0.05, { jump: true, jumpPressed: true }); for (let i = 0; i < 180; i++) { G.step(g, 1 / 120, { right: true, jump: true }); if (g.pupo.mode) gripped = true; }
+  C.check('jumping up the strip without Action: no grip, he falls back to the floor', !gripped && p.onGround && near(p.y + p.h, FLOOR, 2), { gripped, feet: (p.y + p.h) / TS });
   // Brady alone does not climb
   const g2 = G.lab('reach'); put(g2, 44, FLOOR); G.step(g2, 0.3); G.step(g2, 1.0, { right: true }); G.step(g2, 0.6, { up: true });
   C.check('Brady alone slides off: the strip is not climbable without Pupo', !g2.player.pupoRide && g2.player.onGround && near(g2.player.y + g2.player.h, FLOOR, 2));
 });
 
 C.section(want, 'hang', () => {
-  const g = ride(58), p = g.player;
-  G.step(g, 0.05, { right: true, jump: true, jumpPressed: true }); G.step(g, 0.6, { right: true, jump: true });
-  C.check('jumping into a bar: his head touches it and he hangs upside down from it', g.pupo.mode === 'hang', g.pupo.mode);
+  let g = ride(58), p = g.player, hung = false;
+  G.step(g, 0.05, { right: true, jump: true, jumpPressed: true }); for (let i = 0; i < 72; i++) { G.step(g, 1 / 120, { right: true, jump: true }); if (g.pupo.mode) hung = true; }
+  C.check('jumping into a bar without Action: he does not hang, he falls', !hung && !g.pupo.mode, g.pupo.mode);
+  g = ride(58); p = g.player;
+  G.step(g, 0.05, { right: true, jump: true, jumpPressed: true }); G.step(g, 0.25, { right: true, jump: true });
+  G.step(g, 1 / 120, { actionPressed: true }); G.step(g, 0.6);
+  C.check('jumping toward a bar and pressing Action: the arm grabs it and he hangs upside down from it', g.pupo.mode === 'hang', g.pupo.mode);
   const x0 = p.cx; G.step(g, 1.0, { right: true }); const sh = (p.cx - x0) / TS;
   C.check(`Left / Right shimmies at ${sh.toFixed(2)} t/s (2.6), over the spikes`, near(sh, 2.6, 0.2) && p.pupoRide && !(g.pupo.drowsyT > 0), sh);
   G.step(g, 3.8, { right: true });
@@ -159,13 +242,37 @@ C.section(want, 'hang', () => {
 });
 
 C.section(want, 'ledge', () => {
-  const g = ride(120), p = g.player, A = g.area;
-  for (let y = 10; y <= 13; y++) for (let x = 124; x <= 127; x++) A.tiles[y * A.W + x] = T.HARD;   // a ledge 4 tiles up
-  put(g, 122, FLOOR); G.step(g, 0.3);
-  // just short: a jump up and toward it, falling past the lip
+  const block = A => { for (let y = 10; y <= 13; y++) for (let x = 124; x <= 127; x++) A.tiles[y * A.W + x] = T.HARD; };   // a ledge 4 tiles up
+  // a jump that falls short, stick held toward the lip, no Action: he falls back down
+  let g = ride(120), p = g.player; block(g.area); put(g, 122, FLOOR); G.step(g, 0.3);
   p.vy = -12.5 * TS; p.onGround = false; let caught = false;
-  for (let i = 0; i < 120; i++) { G.step(g, 1 / 120, { right: true, jump: true }); if (g.pupo.mode === 'ledge') caught = true; }
-  C.check('the ledge catch: near the top of a jump, stick toward a lip within reach: he hauls himself up', caught && p.onGround && near(p.y + p.h, 10 * TS, 2), { caught, feet: (p.y + p.h) / TS });
+  for (let i = 0; i < 120; i++) { G.step(g, 1 / 120, { right: true, jump: true }); if (g.pupo.mode) caught = true; }
+  C.check('falling past a lip with the stick toward it and no Action: no catch, he lands on the floor below', !caught && p.onGround && near(p.y + p.h, FLOOR, 2), { caught, feet: (p.y + p.h) / TS });
+  // the same jump, Action at the top: the arm grabs the lip and he pulls himself up
+  g = ride(120); p = g.player; block(g.area); put(g, 122, FLOOR); G.step(g, 0.3);
+  p.vy = -12.5 * TS; p.onGround = false; caught = false;
+  for (let i = 0; i < 160; i++) { G.step(g, 1 / 120, { right: true, jump: true, actionPressed: i === 40 }); if (g.pupo.mode === 'ledge') caught = true; }
+  C.check('the same jump with Action: the arm grabs the lip and he hauls himself up onto it', caught && p.onGround && near(p.y + p.h, 10 * TS, 2), { caught, feet: (p.y + p.h) / TS, tg: g.pupo.tg.kind });
+  // walking off the top: he falls like Brady (no automatic catch on the way down)
+  G.step(g, 0.2); caught = false; let fell = false;
+  for (let i = 0; i < 240; i++) { G.step(g, 1 / 120, { right: true }); if (g.pupo.mode) caught = true; if (!p.onGround && p.vy > 0) fell = true; }
+  C.check('walking off a ledge while riding: he falls to the floor below, nothing grabs', fell && !caught && p.onGround && near(p.y + p.h, FLOOR, 2), { caught, fell, feet: (p.y + p.h) / TS });
+  // the buffer: Action pressed a moment before the lip comes into reach (a running jump at a 5-tile wall) still catches it
+  g = ride(119); p = g.player; for (let y = 9; y <= 13; y++) for (let x = 124; x <= 127; x++) g.area.tiles[y * g.area.W + x] = T.HARD;
+  put(g, 119, FLOOR); G.step(g, 0.3); G.step(g, 1 / 120, { right: true, jump: true, jumpPressed: true });
+  caught = false; let early = null;
+  for (let i = 0; i < 100; i++) {
+    const inReach = PR.scan(p, g, g.pupo, { right: true }).kind === 'ledge';
+    const press = early == null && i >= 8 && !inReach;
+    if (press) early = i;
+    G.step(g, 1 / 120, { right: true, jump: true, actionPressed: press }); if (g.pupo.mode === 'ledge') caught = true;
+  }
+  C.check('pressing Action a little early (0.2 s before the lip is in reach) still catches it', early != null && caught && p.onGround && near(p.y + p.h, 9 * TS, 2), { early, caught, feet: (p.y + p.h) / TS });
+  // without the buffer's window: pressed far too early, nothing
+  g = ride(119); p = g.player; for (let y = 9; y <= 13; y++) for (let x = 124; x <= 127; x++) g.area.tiles[y * g.area.W + x] = T.HARD;
+  put(g, 117, FLOOR); G.step(g, 0.3); G.step(g, 1 / 120, { right: true, jump: true, jumpPressed: true }); caught = false;
+  for (let i = 0; i < 200; i++) { G.step(g, 1 / 120, { right: true, jump: true, actionPressed: i === 1 }); if (g.pupo.mode) caught = true; }
+  C.check('...but a press long before (out of reach the whole buffer) is just a boop: he lands on the floor', !caught && near(p.y + p.h, FLOOR, 2), { caught, feet: (p.y + p.h) / TS });
 });
 
 C.section(want, 'pull', () => {

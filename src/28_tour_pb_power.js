@@ -264,7 +264,7 @@ const PupoPowerFx = {
     ctx.stroke();
   },
   fringe(ctx, x, y, f, w) {
-    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2.6; ctx.beginPath();
+    ctx.lineCap = 'round'; ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2.6; ctx.beginPath();
     for (let k = -3; k <= 3; k++) { const yy = y + k * w / 7; ctx.moveTo(x, yy); ctx.lineTo(x + f * 5, yy); }
     ctx.stroke(); ctx.strokeStyle = '#fff0d0'; ctx.lineWidth = 1.2; ctx.stroke();
   },
