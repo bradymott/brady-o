@@ -292,9 +292,10 @@ async function soakLevel(page, id, log) {
       const p = g.player; p.x = cart.x + cart.w / 2 - p.w / 2; p.y = cart.y - p.h - 1; p.vx = p.vy = 0;
       g.camX = Math.max(0, cart.x - 120);
       return { stopX: cart.stopX, x: cart.x, speed: cart.speed };
-    }, { way, full: RIDE_FULL });
+    }, { way, full: RIDE_FULL && !way });   // --long: the first ride goes the whole way, the second starts near the end
     if (!ride || ride.skip) break;
     const secs = (ride.stopX - ride.x) / ride.speed + 6;
+    if (page.__dogExtend) page.__dogExtend(secs * 1000);   // a long boat ride (10-2: ~100 s) is not a hang: the watchdog waits for it
     const t0 = Date.now(); let r;
     while (Date.now() - t0 < secs * 1000) {
       await sleep(400);
@@ -448,10 +449,13 @@ async function soakLevel(page, id, log) {
       const mine = () => failures.filter(f => f.id === id).length;
       // a watchdog: a level that has not finished after 4 minutes (normally about a minute) is a failure, not a hung
       // run; it says whether the page itself still answers (a frozen game) or not (a stalled browser)
-      let dogT = null; const dog = new Promise((_, rej) => { dogT = setTimeout(async () => {
+      // (a full boat or cart ride adds its own length: page.__dogExtend, called by the ride phase)
+      let dogT = null, dogAt = Date.now() + 240000; const dog = new Promise((_, rej) => { const fire = async () => {
+        if (Date.now() < dogAt - 50) { dogT = setTimeout(fire, dogAt - Date.now()); return; }
         const alive = await Promise.race([page.evaluate(() => { const g = window.BRADY.Game.scene; return { scene: g && g.constructor.name, t: g && g.t, frames: window.__soak && window.__soak.frames }; }).then(v => ({ answered: v }), e => ({ error: String(e).slice(0, 120) })), sleep(5000).then(() => ({ answered: false }))]);
-        rej(new Error('watchdog: the level did not finish in 4 minutes; page ' + JSON.stringify(alive)));
-      }, 240000); });
+        rej(new Error('watchdog: the level did not finish in its time (4 minutes plus any long ride); page ' + JSON.stringify(alive)));
+      }; dogT = setTimeout(fire, 240000); });
+      page.__dogExtend = ms => { dogAt += ms; };
       try { const rep = await Promise.race([soakLevel(page, id), dog]).finally(() => clearTimeout(dogT)); console.log((mine() ? 'BAD  ' : 'ok   ') + id + '  ' + Math.round((rep.ms || 0) / 1000) + ' s  ' + JSON.stringify(rep.phases[0] || {})); }
       catch (e) { fail(id, 'harness error', String(e && e.stack || e).slice(0, 400)); try { await page.context().close(); } catch (e2) { /* gone */ } page = await mk(); used = 0; }
       const pe = page.__errs.splice(0).filter(m => !/favicon|ERR_FILE_NOT_FOUND|404/.test(m));
