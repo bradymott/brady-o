@@ -88,7 +88,7 @@ The rule is **unhurried on the ground, fast in the air and on walls.**
 | Jump | 4.2 tiles high | **the same** (`jumpBoost 1.0`) | So no gap a level asks Brady to clear by height is closed to Pupo. |
 | Swim | 4.4 t/s | **7.0 t/s** (`swimMul 1.6`) | Brady rides him like a raft. Pupo, flatly: "...finally... fast." |
 | Climb (§2.5) | none | **3.2 t/s up, 4.5 down** | Hand over hand, quick and rhythmic. |
-| Swing release (§2.3) | none | **up to 14 t/s** | Faster than Brady can ever run. Swinging is where Pupo is thrilling. |
+| Swing release (§2.3) | none | **up to 16 t/s** | Faster than Brady can ever run. Swinging is where Pupo is thrilling. |
 | Hang shimmy (§2.6) | none | 2.6 t/s | |
 | Flop (hold Down) | crouch (big only) | Pupo flattens on his belly. The box is 28 x 30, he crawls at 2.8 t/s and fits 1-tile-high gaps. | Sloths drag themselves along the ground. |
 
@@ -114,7 +114,7 @@ star (ignores the hit) → Pupo shield after Pupo Power (ignores it) → Pupo �
 1. **First hit:** Pupo takes it ("...ow.").
    - Brady stays on, with a 1.5 s grace (no flicker; see §7.9).
    - Pupo goes **drowsy** for 8 s: droopy lids and a slow "z".
-   - While drowsy: reach 3.5 tiles, poke cooldown 0.5 s, climb 2.2 t/s, swing release capped at 10 t/s, meter charge halved.
+   - While drowsy: reach 3.5 tiles, poke cooldown 0.5 s, climb 2.2 t/s, swing release capped at 12 t/s, meter charge halved.
    - The Pupo Power meter loses 25 %.
 2. **8 s without another hit:** he perks up ("...better.").
 3. **A hit while drowsy:** Pupo **falls asleep on the spot**.
@@ -137,7 +137,7 @@ A sleeping Pupo is ignored by enemies and hazards. He is never removed, and he n
 |---|---|
 | Mushroom (big) | Brady grows on Pupo's back. The riding box doesn't change. It is still lost to a hit only after Pupo is lost. |
 | Joint (smoke puffs), HANDS gear, the land's signature item, the Backpack swap | **Paused.** The Action button belongs to Pupo, and the power-picker chip hides. Passive effects keep working: Hard Hat, magnet, sundial. Hop off to use them. |
-| Jump powers (Spring Socks, Pound Cake, Magic Beans) | **Off** (the badge on the jump button greys out). A mid-air press does nothing, so there is no hover, double jump or pound on Pupo. |
+| Jump powers (Spring Socks, Pound Cake, Magic Beans) | **Off** in every riding state (ground, air, swing, climb, hang, zip, flop): the badge on the jump button and the HUD icon grey out, a mid-air press or Down does nothing, a pound or float in progress stops on mounting. They work again as soon as he is off. (Enforced in `PupoRide`: `airJump` and `jumpAfter` are no-ops while `p.pupoRide`; `di_jumps` only reads `pupoRide` to grey its badge.) |
 | Star | Brady and Pupo glitter, and anything they touch is defeated, as with Brady alone. Star music plays. |
 | LSD tab | Brady floats up off Pupo ("...have fun... up there."). Pupo sits where he was, and Brady remounts after the flight. |
 | Mushroom trip, joint trip, acid trip (screen effects) | Unchanged, with one rule: **TripFX never recolours Pupo**, exactly as it never recolours characters. |
@@ -205,7 +205,7 @@ Only the stick direction and one button. There is no precise aiming.
 | Hang from a bar | **Action** with the bar in reach (grab paw): he is pulled up under it and hangs. Left/Right to shimmy; Down or Jump to drop. Jumping into a bar without pressing does nothing. |
 | Ledge grab | **Action** with the lip in reach (§1.3) |
 | Chain to the next hook while swinging | **Action** again, while the marker sits on the next hook |
-| Let go of a swing | **Jump** |
+| Let go of a swing | **Jump** (a launch, never limp); **Down** lets go gently |
 
 ### 2.2 The poke
 | Number | Value |
@@ -233,8 +233,14 @@ A **grab point** is a `pupoGrab` spawn with `kind: 'hook'` or `kind: 'post'`.
 **Hook.** Overhead things to hang from: a papel-picado knot, a ham hook, a rattan cane.
 1. Action fires the arm (≤ 0.17 s). On contact Pupo hangs from it and swings.
 2. The arm reels in to **2.5 tiles** at 12 t/s. Pupo's speed at the grab carries into the swing.
-3. The swing is a pendulum with `g = 40 t/s²`. The stick pumps (±0.6 rad/s² toward the stick), **Up** reels in to 1.5 tiles, and **Down** lets out to 5.
-4. **Jump releases** him with his speed along the swing x1.15, plus 3 t/s upward, capped at 14 t/s (10 when drowsy).
+3. The swing is a pendulum with `g = 40 t/s²` and a light damping (x0.99 per 1/60 s). The stick pumps (±3.0 rad/s² toward the stick; held with the swing it builds about 0.6 rad of arc in 2 s and 1.1 rad in 4 s, from a dead hang). **Up** reels in to 1.5 tiles. **Down** lets go on purpose: a gentle drop with the swing's own speed, no hop (Nov 17: it used to let the rope out to 5 tiles).
+4. **Jump releases** him (Nov 17, after Brady found it limp): along the swing's tangent x1.15, plus 4 t/s up, and never limp:
+   - toward `dir` (the stick; else the way he is swinging; else the way he faces) he goes at least 6 t/s, and at least 0.6 x the swing's full speed (its speed at the bottom, x1.15), so a big swing throws far from any point of it, the back-swing and a dead hang included
+   - up at least 13 t/s
+   - capped at 16 t/s (12 when drowsy)
+   - the arm is home at once, so Action can catch the next hook (or a ledge) in mid-air
+   - coyote: a Jump up to 0.15 s after a Down drop (or the hook going away) still launches, from the swing as it was
+   Regression: `sbw_pupo_reach_test.js release` crosses 1-5's cactus pit and 1-1's roof gap from early, peak, late, back-swing and dead-hang releases, with each jump power carried in.
 5. **Action at another hook** in the marker passes from hand to hand, keeping the swing speed. Chains of hooks are the "monkey bars" of Pupo levels.
 
 **Post.** An anchor on the far side of a gap: a mooring post, a beam end, a sloth cousin's outstretched hand.
@@ -685,9 +691,9 @@ Save.data.tips.pupoHop / pupoPoke / pupoReach / pupoGrab / pupoClimb / pupoPower
 ```
 DIM 28x58 · FLOP_H 30 · SPEED_MUL 0.77 · SWIM_MUL 1.6 · JUMP_BOOST 1.0 · FLOP_SPEED 2.8 t/s
 REACH 5 t · POKE 4 t · CONE ±40° (neutral ±50°) · ARM_OUT 30 t/s · ARM_BACK 22 t/s · POKE_HOLD 0.10 s · POKE_COOL 0.20 s
-SHOULDER (cx + facing*6, y + 14) · HOOK_LEN 2.5 t (1.5..5) · SWING_G 40 t/s² · PUMP 0.6 rad/s² · RELEASE x1.15 +3 t/s up, max 14 t/s
+SHOULDER (cx + facing*6, y + 14) · HOOK_LEN 2.5 t (1.5 min) · SWING_G 40 t/s² · PUMP 3.0 rad/s² · DAMP 0.99 · RELEASE x1.15 +4 t/s up, min 6 t/s along / 0.6 x full speed, min 13 t/s up, max 16 t/s · COYOTE 0.15 s
 ZIP 16 t/s · PULLUP 0.3 s · CLIMB_UP 3.2 t/s · CLIMB_DOWN 4.5 t/s · LEAP (6.5, -13) t/s · SHIMMY 2.6 t/s
-LEDGE ahead 2 t, up 2 t, down 0.5 t · DROWSY 8 s (reach 3.5, cool 0.5, climb 2.2, release 10) · METER 30 s, +0.10/poke, -0.25/hit
+LEDGE grab (Action) 3.5 t, 2.5 t above the feet on the ground · GRAB_BUFFER 0.25 s · DROWSY 8 s (reach 3.5, cool 0.5, climb 2.2, release 12) · METER 30 s, +0.10/poke, -0.25/hit
 POWER 2.6 s freeze, 16 targets, view+1 t, shield 1.5 s
 ```
 
