@@ -6575,26 +6575,39 @@ const Showtrunk = {
    shaggy tan fur, a cream face mask with the dark eye stripes, a
    pale belly with his own little pupo, three long claws a hand.
    His arms are drawn by Pupo.arm() at ANY length (a furry tube with
-   tufts and rings along it and a hand on the end, pointing finger
-   optional), so the stretch-arm mechanics and PUPO POWER! can be
-   built on it. Code-drawn, feet-centre origin, facing +x; in the
-   game it goes through Ink.around like Brady. Not referenced yet.
-     Pupo.draw(ctx, { x, y, scale, facing, t, pose, rider, reach, angle })
-       pose: idle | walk | ride | poke | stretch | happy | sad | power
-       walk / ride are on all fours; ride calls rider(ctx, saddleX, saddleY) to draw Brady-O on his back
-       (draw Brady with anim.state 'ride', his hips on the saddle point); stretch: reach (art units, default 90)
-       and angle (radians from straight ahead, + is up)
+   its own ink outline, a sag, darker stripe bands every 13 units so
+   a long stretch reads as a stretched arm and not as a pole, tufts,
+   and a hand on the end, pointing finger optional), so the stretch
+   arms and PUPO POWER! are built on it. Code-drawn, feet-centre
+   origin, facing +x; in the game the body goes through Ink.around
+   like Brady (the long arms do NOT: they carry their own outline).
+     Pupo.draw(ctx, o)   o: { x, y, scale, facing, t, pose, mood, rider, reach, angle, armsOff, phase, flat }
+       pose: idle (= sit) | walk | ride | swim | flop | sleep | hang | climb | yawn | rear | poke | stretch | happy | sad | power
+       walk / ride / swim are on all fours; ride calls rider(ctx, saddleX, saddleY) to draw Brady-O on his back
+       (draw Brady with anim.state 'ride', his feet origin 25 units below the saddle point); hang (upside down from a
+       bar, origin = the bar) calls rider(ctx, x, y) with the point under his back where Brady-O hangs on; climb calls
+       rider(ctx, x, y) with the point on his back where Brady-O clings.
+       mood: calm | blink | happy | puzzled | sad | drowsy | sleep | yawn | spiral (o.spiral = the spiral's angle)
+       armsOff: no front arm (the stretch-arm renderer draws it), phase: the walk / climb cycle (default t)
+     Pupo.anchors(pose, t, out)   fills out.seat / shoulderF / shoulderB / belly / mouth / eyeL / eyeR / head ({ x, y })
+                                  and out.eyeR_r, out.headS (art units, facing +x, feet origin); allocates nothing
      Pupo.saddle(t)                    the saddle point { x, y } for the walk cycle at time t
-     Pupo.arm(ctx, x0, y0, x1, y1, o) one arm, shoulder to hand; o { w, col, point, t, ink }
-     Pupo.head(ctx, x, y, s, t, mood) mood: calm | blink | happy | puzzled | sad | spiral
+     Pupo.arm(ctx, x0, y0, x1, y1, o) one arm, shoulder to hand; o { w, col, point, t, sag, handScale, bands }
+     Pupo.hand(ctx, x, y, ang, s, point) a hand pointing along ang; point: the index claw straight out
+     Pupo.spiralEye(ctx, x, y, r, ang, bands) a flat rainbow spiral disc in an ink ring (PUPO POWER!)
+     Pupo.head(ctx, x, y, s, t, mood, spiral)
+   Nothing here allocates per call except the generic shapes' own canvas paths.
    ============================================================ */
 const PUPO = {
   fur: '#b48c62', furSh: '#86643f', furDk: '#6e5032', furHi: '#d4b088', belly: '#e6cfaa', mask: '#f2e2c6', stripe: '#3e2c20',
   nose: '#2a1c16', claw: '#f4ead8', blush: 'rgba(255,120,130,0.55)', tear: '#7ad0ff', ink: '#1c1426',
-  rainbow: ['#ff4f5a', '#ff9a2e', '#ffd23a', '#5ac85a', '#2aa6e8', '#8a5af0'],
+  rainbow: ['#e8413a', '#ff9a2a', '#ffd84a', '#4ac46a', '#3a8ae8', '#9a5ae8'],
   carpet: '#c8323e', carpetSh: '#8a1e2a', carpetGold: '#ffc83a', carpetBlue: '#1e5aa8', fringe: '#fff0d0',
-  bow: '#ff4f93'
+  bow: '#ff4f93', butterflies: ['#ff7ad8', '#ffd23a', '#7ae0ff', '#9aff6a', '#ff9a2e']
 };
+// the eyes on the head, in head units: [x, y, stripe direction]
+const PUPO_EYES = [-1.8, -1, -1, 3.6, 1, 1];
+const PUPO_FUR_STROKES = [-22, -32, -14, -40, 8, -42, -28, -24];
 const Pupo = {
   C: PUPO,
   // a shaggy blob: an ellipse with a fringe of soft points
@@ -6602,184 +6615,306 @@ const Pupo = {
     ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot);
     ctx.fillStyle = col; ctx.beginPath();
     const N = n || 18;
-    for (let i = 0; i <= N; i++) { const a = i / N * TAU, k = i % 2 ? 1.0 : 1.09; const px = Math.cos(a) * rx * k, py = Math.sin(a) * ry * k; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+    for (let i = 0; i <= N; i++) { const a = i / N * TAU, k = i % 2 ? 1.0 : 1.09; const px = Math.cos(a) * rx * k, py = Math.sin(a) * ry * k; if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
     ctx.closePath(); ctx.fill(); ctx.restore();
+  },
+  claw(ctx, dy, len, curl) {
+    const C = PUPO;
+    ctx.beginPath(); ctx.moveTo(3.4, dy);
+    if (curl) ctx.quadraticCurveTo(3.4 + len * 0.8, dy, 3.4 + len * 0.55, dy + len * 0.6);
+    else ctx.quadraticCurveTo(3.4 + len * 0.6, dy - 0.3, 3.4 + len, dy + 0.4);
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2.8; ctx.stroke(); ctx.strokeStyle = C.claw; ctx.lineWidth = 1.5; ctx.stroke();
   },
   // a hand at the end of an arm, pointing along `ang`; point: the index claw sticks straight out
   hand(ctx, x, y, ang, s, point) {
     const C = PUPO; ctx.save(); ctx.translate(x, y); ctx.rotate(ang); if (s && s !== 1) ctx.scale(s, s);
+    ctx.lineCap = 'round';
     ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(0.5, 0, 5.4, 4.6, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = C.furSh; ctx.beginPath(); ctx.ellipse(0.5, 0, 4.4, 3.7, 0, 0, TAU); ctx.fill();
-    const claw = (dy, len, curl) => {
-      ctx.beginPath(); ctx.moveTo(3.4, dy);
-      if (curl) ctx.quadraticCurveTo(3.4 + len * 0.8, dy, 3.4 + len * 0.55, dy + len * 0.6);
-      else ctx.quadraticCurveTo(3.4 + len * 0.6, dy - 0.3, 3.4 + len, dy + 0.4);
-      ctx.strokeStyle = C.ink; ctx.lineWidth = 2.8; ctx.stroke(); ctx.strokeStyle = C.claw; ctx.lineWidth = 1.5; ctx.stroke();
-    };
     // pointing: the index claw straight out along the top edge, the other two curled tight under it (never the
     // middle one alone: that would read as a rude gesture)
-    if (point) { claw(-2.4, 9, false); claw(0.4, 3.6, true); claw(2.6, 3.4, true); }
-    else { claw(-2.2, 6, true); claw(0, 6.6, true); claw(2.2, 6, true); }
+    if (point) { this.claw(ctx, -2.4, 9, false); this.claw(ctx, 0.4, 3.6, true); this.claw(ctx, 2.6, 3.4, true); }
+    else { this.claw(ctx, -2.2, 6, true); this.claw(ctx, 0, 6.6, true); this.claw(ctx, 2.2, 6, true); }
     ctx.restore();
   },
-  // one arm at any length: a furry tube, tufts on its upper edge, a ring every 9 units (so a long stretch reads as
-  // stretched, not as a pole), and the hand
+  /* one arm at any length: a furry tube on a gentle curve (o.sag: how far the middle bows sideways, art units), with
+     its own hand-made ink outline (stroked 3 units wider in ink, then the fur), darker stripe bands every 13 units on
+     long arms (a stretched slinky, not a pole), a few tufts on the upper edge, and the hand. Allocates nothing. */
   arm(ctx, x0, y0, x1, y1, o) {
-    o = o || {}; const C = PUPO, w = o.w || 7, col = o.col || C.fur, t = o.t || 0;
-    const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
-    outlinedCapsule(ctx, x0, y0, x1, y1, w, col);
-    // tufts along the side facing up
+    const C = PUPO, w = (o && o.w) || 7, col = (o && o.col) || C.fur, t = (o && o.t) || 0, sag = (o && o.sag) || 0;
+    const dx = x1 - x0, dy = y1 - y0, L = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+    const qx = (x0 + x1) / 2 + nx * sag, qy = (y0 + y1) / 2 + ny * sag;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(qx, qy, x1, y1);
+    ctx.strokeStyle = C.ink; ctx.lineWidth = w + 3; ctx.stroke();
+    ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+    // the light side of the tube: a thin highlight along the upper edge
     const side = ny < 0 ? 1 : -1;
-    ctx.fillStyle = col; ctx.strokeStyle = C.ink; ctx.lineWidth = 0.9;
-    for (let d = 7; d < L - 6; d += 7) {
-      const bx = x0 + ux * d + nx * side * w * 0.45, by = y0 + uy * d + ny * side * w * 0.45;
-      ctx.beginPath(); ctx.moveTo(bx - ux * 2.6, by - uy * 2.6); ctx.lineTo(bx + nx * side * 2.6 + ux * 0.8 + Math.sin(t * 2 + d) * 0.4, by + ny * side * 2.6 + uy * 0.8); ctx.lineTo(bx + ux * 2.6, by + uy * 2.6); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (L > 14) {
+      ctx.beginPath(); ctx.moveTo(x0 + nx * side * w * 0.28, y0 + ny * side * w * 0.28); ctx.quadraticCurveTo(qx + nx * side * w * 0.28, qy + ny * side * w * 0.28, x1 + nx * side * w * 0.28 - ux * 4, y1 + ny * side * w * 0.28 - uy * 4);
+      ctx.strokeStyle = C.furHi; ctx.lineWidth = Math.max(1, w * 0.2); ctx.stroke();
     }
-    if (L > 30) {
-      ctx.strokeStyle = shade(col, -0.28); ctx.lineWidth = 1;
-      for (let d = 12; d < L - 8; d += 9) { const cx = x0 + ux * d, cy = y0 + uy * d; ctx.beginPath(); ctx.moveTo(cx + nx * w * 0.42, cy + ny * w * 0.42); ctx.quadraticCurveTo(cx + ux * 1.6, cy + uy * 1.6, cx - nx * w * 0.42, cy - ny * w * 0.42); ctx.stroke(); }
+    // stripe bands and tufts, placed along the curve
+    const bands = !(o && o.bands === false) && L > 30;
+    ctx.lineCap = 'butt';
+    for (let d = 10; d < L - 8; d += 6.5) {
+      const u = d / L, a = 1 - u, px = a * a * x0 + 2 * a * u * qx + u * u * x1, py = a * a * y0 + 2 * a * u * qy + u * u * y1;
+      let tx = 2 * a * (qx - x0) + 2 * u * (x1 - qx), ty = 2 * a * (qy - y0) + 2 * u * (y1 - qy); const tl = Math.sqrt(tx * tx + ty * ty) || 1; tx /= tl; ty /= tl;
+      const mx = -ty * side, my = tx * side, k = Math.round(d / 6.5);
+      if (bands && k % 2 === 0) {
+        // a band across the arm: dark fur with an ink seam on each side
+        ctx.beginPath(); ctx.moveTo(px + mx * w * 0.5, py + my * w * 0.5); ctx.lineTo(px - mx * w * 0.5, py - my * w * 0.5);
+        ctx.strokeStyle = C.furSh; ctx.lineWidth = 3.2; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px + tx * 1.8 + mx * w * 0.5, py + ty * 1.8 + my * w * 0.5); ctx.lineTo(px + tx * 1.8 - mx * w * 0.5, py + ty * 1.8 - my * w * 0.5);
+        ctx.strokeStyle = C.furDk; ctx.lineWidth = 0.7; ctx.stroke();
+      } else if (k % 2 === 1 || !bands) {
+        // a tuft on the upper edge
+        const bx = px + mx * w * 0.45, by = py + my * w * 0.45, wig = Math.sin(t * 2 + d) * 0.4;
+        ctx.beginPath(); ctx.moveTo(bx - tx * 2.6, by - ty * 2.6); ctx.lineTo(bx + mx * 2.8 + tx * 0.8 + wig, by + my * 2.8 + ty * 0.8); ctx.lineTo(bx + tx * 2.6, by + ty * 2.6); ctx.closePath();
+        ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = C.ink; ctx.lineWidth = 0.9; ctx.stroke();
+      }
     }
-    Pupo.hand(ctx, x1, y1, Math.atan2(dy, dx), o.handScale || 1, o.point);
+    ctx.lineCap = 'round';
+    // the hand points along the end of the curve
+    Pupo.hand(ctx, x1, y1, Math.atan2(y1 - qy, x1 - qx), (o && o.handScale) || 1, o && o.point);
   },
-  head(ctx, x, y, s, t, mood) {
+  // a flat rainbow spiral in an ink ring: `bands` hard-edged bands (6 / 4 / 3) swirling about the centre, turned by ang
+  spiralEye(ctx, x, y, r, ang, bands) {
+    const C = PUPO, n = bands || 6, step = TAU / n, twist = 2.6;
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(x, y, r + Math.max(1, r * 0.18), 0, TAU); ctx.fill();
+    for (let i = 0; i < n; i++) {
+      const a0 = ang + i * step;
+      ctx.beginPath(); ctx.moveTo(x, y);
+      for (let k = 1; k <= 5; k++) { const rr0 = r * k / 5, a = a0 + twist * k / 5; ctx.lineTo(x + Math.cos(a) * rr0, y + Math.sin(a) * rr0); }
+      for (let k = 0; k <= 3; k++) { const a = a0 + twist + step * k / 3; ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); }
+      for (let k = 4; k >= 1; k--) { const rr0 = r * k / 5, a = a0 + step + twist * k / 5; ctx.lineTo(x + Math.cos(a) * rr0, y + Math.sin(a) * rr0); }
+      ctx.closePath(); ctx.fillStyle = C.rainbow[(i * 6 / n) | 0]; ctx.fill();
+    }
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(x, y, Math.max(0.6, r * 0.16), 0, TAU); ctx.fill();
+  },
+  head(ctx, x, y, s, t, mood, spiral) {
     const C = PUPO; ctx.save(); ctx.translate(x, y); if (s && s !== 1) ctx.scale(s, s);
     Pupo.shag(ctx, 0, 0, 7.6, 6.8, C.fur, 18);
     ctx.fillStyle = C.mask; ctx.beginPath(); ctx.ellipse(1.2, 0.8, 5.8, 4.8, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = C.furHi; ctx.beginPath(); ctx.ellipse(0.4, -4.6, 4.4, 1.7, 0, 0, TAU); ctx.fill();
-    const eyes = [[-1.8, -1], [3.6, 1]];
+    const E = PUPO_EYES;
     if (mood === 'spiral') {
-      // PUPO POWER eyes: flat, hard-edged rainbow rings with an ink spiral over them
-      for (const [ex] of eyes) {
-        for (let i = 0; i < 6; i++) { ctx.fillStyle = C.rainbow[(i + Math.floor(t * 8)) % 6]; ctx.beginPath(); ctx.arc(ex, 0, 2.9 - i * 0.45, 0, TAU); ctx.fill(); }
-        ctx.strokeStyle = C.ink; ctx.lineWidth = 0.55; ctx.beginPath();
-        for (let a = 0; a < 12; a += 0.35) { const r = a * 0.24, px = ex + Math.cos(a + t * 9) * r, py = Math.sin(a + t * 9) * r; a ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
-        ctx.stroke(); ctx.lineWidth = 0.8; ctx.beginPath(); ctx.arc(ex, 0, 2.95, 0, TAU); ctx.stroke();
-      }
+      // PUPO POWER eyes: big flat spirals that turn (a rotation, never a colour flash)
+      for (let i = 0; i < 6; i += 3) Pupo.spiralEye(ctx, E[i], E[i + 1] * 0.5, 3.1, spiral || 0, 6);
     } else {
       // the dark stripes that run back from his eyes (the sloth's built-in smile)
       ctx.fillStyle = C.stripe;
-      for (const [ex, dir] of eyes) { ctx.beginPath(); ctx.ellipse(ex + dir * 1.0, mood === 'sad' ? 0.8 : 0.2, 2.6, 1.3, dir * (mood === 'sad' ? 0.35 : -0.35), 0, TAU); ctx.fill(); }
-      const blink = mood === 'blink' || ((mood === 'calm' || !mood) && (t % 5) < 0.35);
+      for (let i = 0; i < 6; i += 3) { const ex = E[i], dir = E[i + 2]; ctx.beginPath(); ctx.ellipse(ex + dir * 1.0, mood === 'sad' ? 0.8 : 0.2, 2.6, 1.3, dir * (mood === 'sad' ? 0.35 : -0.35), 0, TAU); ctx.fill(); }
+      const shut = mood === 'blink' || mood === 'sleep' || ((mood === 'calm' || !mood) && (t % 5) < 0.35);
       ctx.strokeStyle = C.ink; ctx.fillStyle = C.ink;
-      for (const [ex] of eyes) {
-        if (mood === 'happy' || blink) { ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(ex, mood === 'happy' ? 0.6 : 0, 1.1, Math.PI * 1.1, Math.PI * 1.9, mood === 'happy'); ctx.stroke(); }
-        else { ctx.beginPath(); ctx.arc(ex, mood === 'sad' ? 0.4 : 0, 1.05, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex - 0.35, -0.35, 0.38, 0, TAU); ctx.fill(); ctx.fillStyle = C.ink; }
+      for (let i = 0; i < 6; i += 3) {
+        const ex = E[i];
+        if (mood === 'happy' || shut) { ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(ex, mood === 'happy' ? 0.6 : 0, 1.1, Math.PI * 1.1, Math.PI * 1.9, mood === 'happy'); ctx.stroke(); }
+        else if (mood === 'drowsy' || mood === 'yawn') {
+          // heavy lids: the lower half of the eye under a flat lid line
+          ctx.beginPath(); ctx.arc(ex, 0.2, 1.05, 0, Math.PI); ctx.fill();
+          ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(ex - 1.4, 0.15); ctx.lineTo(ex + 1.4, 0.15); ctx.stroke();
+        } else { ctx.beginPath(); ctx.arc(ex, mood === 'sad' ? 0.4 : 0, 1.05, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex - 0.35, -0.35, 0.38, 0, TAU); ctx.fill(); ctx.fillStyle = C.ink; }
       }
       if (mood === 'sad') { ctx.fillStyle = C.tear; ctx.beginPath(); ctx.ellipse(4.4, 2.4 + (t % 2) * 1.5, 0.7, 1.0, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = C.ink; ctx.lineWidth = 0.4; ctx.stroke(); }
       if (mood === 'puzzled') { ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-3.2, -2.6); ctx.lineTo(-0.6, -2.0); ctx.moveTo(2.4, -2.2); ctx.lineTo(5.0, -2.8); ctx.stroke(); }
     }
     ctx.fillStyle = C.nose; ctx.beginPath(); ctx.ellipse(1.0, 2.2, 1.3, 0.9, 0, 0, TAU); ctx.fill();
-    ctx.strokeStyle = C.ink; ctx.lineWidth = 0.8; ctx.beginPath();
-    if (mood === 'puzzled') { ctx.moveTo(-0.4, 4.1); ctx.lineTo(2.4, 3.9); }
-    else if (mood === 'sad') ctx.arc(1.0, 4.6, 1.4, Math.PI + 0.4, TAU - 0.4);
-    else if (mood === 'spiral') { ctx.moveTo(-1, 3.4); ctx.lineTo(3, 3.4); }
-    else ctx.arc(1.0, 2.6, mood === 'happy' ? 2.0 : 1.5, 0.25, Math.PI - 0.25);
-    ctx.stroke();
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 0.8;
+    if (mood === 'yawn' || mood === 'spiral') {
+      // the open mouth (a yawn, or the carpet tongue coming out)
+      ctx.fillStyle = '#5a1a26'; ctx.beginPath(); ctx.ellipse(1.2, 4.0, 1.9, mood === 'yawn' ? 1.7 : 1.3, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath();
+      if (mood === 'puzzled') { ctx.moveTo(-0.4, 4.1); ctx.lineTo(2.4, 3.9); }
+      else if (mood === 'sad') ctx.arc(1.0, 4.6, 1.4, Math.PI + 0.4, TAU - 0.4);
+      else if (mood === 'sleep' || mood === 'drowsy') { ctx.moveTo(0, 3.6); ctx.lineTo(2.2, 3.6); }
+      else ctx.arc(1.0, 2.6, mood === 'happy' ? 2.0 : 1.5, 0.25, Math.PI - 0.25);
+      ctx.stroke();
+    }
     ctx.fillStyle = C.blush; ctx.beginPath(); ctx.arc(-3.6, 2.6, 1.1, 0, TAU); ctx.arc(5.6, 2.4, 1.0, 0, TAU); ctx.fill();
     ctx.restore();
   },
-  // where Brady-O sits on the walk cycle
+  // where Brady-O sits on the walk cycle (allocates: preview use only; the game reads Pupo.anchors)
   saddle(t) { return { x: -4, y: -47 + Math.sin(t * 6) * 0.8 }; },
-  // the long patterned carpet tongue of PUPO POWER, unrolling from (x, y) along +x for len units (flat, hard edges)
+  /* the named points of a pose (art units, facing +x, feet origin), written into `out` (made once by the caller with
+     Pupo.newAnchors()); used to seat Brady-O, start the stretch arms at the shoulders, put PUPO POWER!'s spirals on the
+     eyes, the tongue at the mouth and the butterflies at the belly button */
+  newAnchors() { const p = () => ({ x: 0, y: 0 }); return { seat: p(), shoulderF: p(), shoulderB: p(), belly: p(), mouth: p(), eyeL: p(), eyeR: p(), head: p(), eyeR_r: 3, headS: 1.75 }; },
+  setPt(q, x, y) { q.x = x; q.y = y; },
+  anchors(pose, t, out, o) {
+    const S = 1.75, set = Pupo.setPt;
+    let hx, hy, bob;
+    if (pose === 'walk' || pose === 'ride' || pose === 'swim' || pose === 'flop' || pose === 'sleep') {
+      const flat = pose === 'flop' || pose === 'sleep' ? 0.62 : 1;
+      bob = pose === 'sleep' ? 0 : Math.sin(t * 6) * 0.8;
+      set(out.seat, -4, (-47 + bob) * flat); set(out.shoulderF, 22, (-28 + bob) * flat); set(out.shoulderB, 17, (-27 + bob) * flat);
+      set(out.belly, 2, (-17 + bob) * flat);
+      hx = 30; hy = pose === 'sleep' ? -16 : (-34 + bob) * flat;
+    } else if (pose === 'hang') {
+      bob = Math.sin(t * 1.6) * 0.8;
+      set(out.seat, -4, 42 + bob); set(out.shoulderF, 22, 26 + bob); set(out.shoulderB, 17, 26 + bob); set(out.belly, 2, 18 + bob);
+      hx = 30; hy = 38 + bob;
+    } else if (pose === 'climb') {
+      const ph = (o && o.phase != null) ? o.phase : t;
+      bob = Math.sin(ph * TAU) * 1.2;
+      set(out.seat, -24, -46 + bob); set(out.shoulderF, 9, -40 + bob); set(out.shoulderB, 5, -38 + bob); set(out.belly, 6, -18 + bob);
+      hx = 8; hy = -52 + bob;
+    } else {
+      bob = pose === 'rear' || pose === 'power' ? 0 : Math.sin(t * 1.6) * 0.6;
+      const up = pose === 'rear' || pose === 'power' ? -6 : 0;
+      set(out.seat, -4, -50 + up); set(out.shoulderF, 12, -37 + bob + up); set(out.shoulderB, -11, -37 + bob + up); set(out.belly, 4, -17 + bob + up);
+      hx = 6; hy = -51 + bob + up;
+    }
+    set(out.head, hx, hy);
+    set(out.eyeL, hx + PUPO_EYES[0] * S, hy + PUPO_EYES[1] * 0.5 * S); set(out.eyeR, hx + PUPO_EYES[3] * S, hy + PUPO_EYES[4] * 0.5 * S);
+    set(out.mouth, hx + 1.2 * S, hy + 4.0 * S); out.eyeR_r = 3.1 * S; out.headS = S;
+    return out;
+  },
+  // the long patterned carpet tongue (preview art; the game's PUPO POWER! draws its own cached rug strip)
   carpet(ctx, x, y, len, t) {
     const C = PUPO; ctx.save(); ctx.translate(x, y); ctx.rotate(0.18);
-    const w = 9, wav = (u) => Math.sin(u * 0.12 - t * 6) * 2.2 * Math.min(1, u / 20);
-    const edge = (sgn) => { for (let u = 0; u <= len; u += 4) ctx.lineTo(u, wav(u) + sgn * w / 2); };
-    ctx.beginPath(); ctx.moveTo(0, -w / 2); edge(-1); for (let u = len; u >= 0; u -= 4) ctx.lineTo(u, wav(u) + w / 2); ctx.closePath();
+    const w = 9;
+    ctx.beginPath(); ctx.moveTo(0, -w / 2);
+    for (let u = 0; u <= len; u += 4) ctx.lineTo(u, Math.sin(u * 0.12 - t * 6) * 2.2 * Math.min(1, u / 20) - w / 2);
+    for (let u = len; u >= 0; u -= 4) ctx.lineTo(u, Math.sin(u * 0.12 - t * 6) * 2.2 * Math.min(1, u / 20) + w / 2);
+    ctx.closePath();
     ctx.fillStyle = C.carpet; ctx.fill(); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2; ctx.stroke();
-    // a border band and a row of diamonds
     for (let u = 6; u < len - 4; u += 10) {
-      const y0 = wav(u);
+      const y0 = Math.sin(u * 0.12 - t * 6) * 2.2 * Math.min(1, u / 20);
       ctx.fillStyle = C.carpetGold; ctx.beginPath(); ctx.moveTo(u - 3.4, y0); ctx.lineTo(u, y0 - 3); ctx.lineTo(u + 3.4, y0); ctx.lineTo(u, y0 + 3); ctx.closePath(); ctx.fill();
       ctx.fillStyle = C.carpetBlue; ctx.beginPath(); ctx.moveTo(u - 1.4, y0); ctx.lineTo(u, y0 - 1.3); ctx.lineTo(u + 1.4, y0); ctx.lineTo(u, y0 + 1.3); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = C.carpetSh; ctx.fillRect(u + 4, y0 - w / 2 + 0.8, 2, 1.2); ctx.fillRect(u + 4, y0 + w / 2 - 2, 2, 1.2);
     }
-    // the fringe at the end
-    ctx.strokeStyle = C.fringe; ctx.lineWidth = 1.1;
-    for (let k = -3; k <= 3; k++) { const yy = wav(len) + k * 1.3; ctx.beginPath(); ctx.moveTo(len, yy); ctx.lineTo(len + 4, yy + Math.sin(t * 10 + k) * 0.8); ctx.stroke(); }
     ctx.restore();
   },
+  // a butterfly: two pairs of flat wings (a horizontal squash for the flap), ink outlines, an ink body
   butterfly(ctx, x, y, s, t, col) {
-    const C = PUPO, f = Math.abs(Math.sin(t * 14)); ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    const C = PUPO, f = Math.abs(Math.sin(t * 14)), k = 0.35 + f * 0.65; ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
     ctx.fillStyle = col; ctx.strokeStyle = C.ink; ctx.lineWidth = 0.9;
-    for (const sg of [-1, 1]) {
-      ctx.beginPath(); ctx.ellipse(sg * 3.2 * (0.35 + f * 0.65), -2, 3.2 * (0.35 + f * 0.65), 3.4, sg * 0.4, 0, TAU); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(sg * 2.4 * (0.35 + f * 0.65), 2.4, 2.4 * (0.35 + f * 0.65), 2.2, -sg * 0.4, 0, TAU); ctx.fill(); ctx.stroke();
+    for (let sg = -1; sg <= 1; sg += 2) {
+      ctx.beginPath(); ctx.ellipse(sg * 3.2 * k, -2, 3.2 * k, 3.4, sg * 0.4, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(sg * 2.4 * k, 2.4, 2.4 * k, 2.2, -sg * 0.4, 0, TAU); ctx.fill(); ctx.stroke();
     }
     ctx.fillStyle = C.ink; ctx.fillRect(-0.7, -4, 1.4, 8);
     ctx.restore();
   },
+
+  /* ---------- the body poses ---------- */
+  // one leg on all fours: a front leg is a short arm on its knuckles, a back leg a capsule and a paw
+  leg(ctx, hx, hy, footX, ph, k, front, near, bob, lift0, t, swing) {
+    const C = PUPO, s = Math.sin(ph + k), lift = Math.max(0, Math.cos(ph + k)) * lift0;
+    const fx = footX + s * swing, fy = -lift;
+    const col = near ? C.fur : C.furSh;
+    if (front) Pupo.arm(ctx, hx, hy + bob, fx, fy - 2, { w: 9, col, t, bands: false });
+    else { outlinedCapsule(ctx, hx, hy + bob, fx, fy - 3, 10, col); Pupo.hand(ctx, fx, fy - 2, 0.15, 0.9, false); }
+  },
+  // on all fours (walk, ride, swim, flop, sleep); upside (hang) draws it flipped under a bar with the head upright
+  allFours(ctx, o, pose, t) {
+    const C = PUPO, ph = (o.phase != null ? o.phase : t) * (pose === 'swim' ? 5 : 3);
+    const still = pose === 'sleep' || pose === 'hang' || o.still;
+    const bob = still ? 0 : Math.sin(t * 6) * 0.8;
+    const lift0 = pose === 'flop' || still ? 0 : pose === 'swim' ? 6 : 4, swing = pose === 'flop' ? 2 : still ? 0 : 6;
+    const legPh = still ? 0 : ph;
+    if (pose === 'flop' || pose === 'sleep') { ctx.save(); ctx.scale(1.12, 0.62); }
+    const armsOff = !!o.armsOff;
+    if (!armsOff) this.leg(ctx, 17, -27, 25, legPh, Math.PI, true, false, bob, lift0, t, swing);
+    this.leg(ctx, -20, -24, -20, legPh, 0, false, false, bob, lift0, t, swing);
+    Pupo.shag(ctx, -3, -29 + bob, 30, 17, C.fur, 26);
+    ctx.fillStyle = C.furHi; ctx.beginPath(); ctx.ellipse(-6, -38 + bob, 18, 5, -0.05, 0, TAU); ctx.fill();
+    ctx.fillStyle = C.belly; ctx.beginPath(); ctx.ellipse(0, -19 + bob, 18, 6, 0, 0, TAU); ctx.fill();
+    // his own pupo, low on the belly
+    ctx.strokeStyle = C.furSh; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(2, -17 + bob, 1.4, 0.4, Math.PI * 1.8); ctx.stroke();
+    ctx.strokeStyle = C.furDk; ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i += 2) { const sx = PUPO_FUR_STROKES[i], sy = PUPO_FUR_STROKES[i + 1]; ctx.beginPath(); ctx.moveTo(sx, sy + bob); ctx.quadraticCurveTo(sx + 3, sy + 3 + bob, sx + 1, sy + 6 + bob); ctx.stroke(); }
+    if ((pose === 'ride' || pose === 'swim') && o.rider) { ctx.save(); o.rider(ctx, -4, -47 + bob); ctx.restore(); }
+    this.leg(ctx, -14, -22, -12, legPh, Math.PI, false, true, bob, lift0, t, swing);
+    if (!armsOff) this.leg(ctx, 22, -28, 31, legPh, 0, true, true, bob, lift0, t, swing);
+    if (pose === 'flop' || pose === 'sleep') ctx.restore();
+    // the head, on a short neck, swinging slowly (resting on the paws when asleep)
+    const mood = o.mood || (pose === 'sleep' ? 'sleep' : 'calm');
+    if (pose === 'hang') {
+      ctx.save(); ctx.scale(1, -1); ctx.translate(30, 36 + bob); ctx.rotate(-0.25); Pupo.head(ctx, 0, 0, 1.75, t, mood, o.spiral); ctx.restore();
+    } else {
+      ctx.save(); ctx.translate(30, pose === 'sleep' ? -16 : (-34 + bob) * (pose === 'flop' ? 0.62 : 1)); ctx.rotate(pose === 'sleep' ? 0.15 : Math.sin(t * 1.5) * 0.05);
+      Pupo.head(ctx, 0, 0, 1.75, t, mood, o.spiral);
+      ctx.restore();
+    }
+  },
+  // SITTING UP: a big pear of fur on short legs
+  sitBody(ctx, bob) {
+    const C = PUPO;
+    Pupo.shag(ctx, 0, -25 + bob, 19, 25, C.fur, 24);
+    ctx.fillStyle = C.belly; ctx.beginPath(); ctx.ellipse(3, -20 + bob, 11, 14, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = C.furHi; ctx.beginPath(); ctx.ellipse(-6, -38 + bob, 7, 9, 0.3, 0, TAU); ctx.fill();
+    // his own pupo
+    ctx.strokeStyle = C.furSh; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(4, -17 + bob, 1.6, 0.4, Math.PI * 1.8); ctx.stroke();
+  },
+  sitLegs(ctx) {
+    const C = PUPO;
+    outlinedCapsule(ctx, -8, -8, -13, -2, 9, C.furSh); outlinedCapsule(ctx, 8, -8, 13, -2, 9, C.fur);
+    Pupo.hand(ctx, -13, -2, Math.PI, 0.9, false); Pupo.hand(ctx, 13, -2, 0, 0.9, false);
+  },
+  // CLIMBING: upright against a pole in front of him (facing +x), arms reaching up hand over hand, Brady-O on his back
+  climb(ctx, o, t) {
+    const C = PUPO, ph = o.phase != null ? o.phase : t, k = Math.sin(ph * TAU), bob = k * 1.2;
+    // the far arm and the far leg grip the pole
+    if (!o.armsOff) Pupo.arm(ctx, 5, -38 + bob, 16, -60 - Math.max(0, -k) * 8, { w: 7, col: C.furSh, t, bands: false });
+    outlinedCapsule(ctx, -2, -10, 12, -4 + k * 3, 9, C.furSh); Pupo.hand(ctx, 13, -4 + k * 3, -0.3, 0.9, false);
+    // Brady-O clings on behind him (drawn first, so Pupo's body is in front and the two never blur together)
+    if (o.rider) { ctx.save(); o.rider(ctx, -24, -46 + bob); ctx.restore(); }
+    ctx.save(); ctx.translate(0, bob); ctx.rotate(-0.08); this.sitBody(ctx, 0); ctx.restore();
+    outlinedCapsule(ctx, 4, -10, 14, -12 - k * 3, 9, C.fur); Pupo.hand(ctx, 15, -12 - k * 3, -0.3, 0.9, false);
+    ctx.save(); ctx.translate(8, -52 + bob); ctx.rotate(-0.12); Pupo.head(ctx, 0, 0, 1.75, t, o.mood || 'calm', o.spiral); ctx.restore();
+    if (!o.armsOff) Pupo.arm(ctx, 9, -40 + bob, 18, -62 - Math.max(0, k) * 8, { w: 7.5, col: C.fur, t, bands: false });
+  },
   draw(ctx, o) {
-    const C = PUPO, t = o.t || 0, pose = o.pose || 'idle', f = o.facing || 1;
+    const C = PUPO, t = o.t || 0, f = o.facing || 1;
+    let pose = o.pose || 'idle';
     ctx.save(); ctx.translate(o.x, o.y); if (o.scale) ctx.scale(o.scale, o.scale); ctx.scale(f, 1);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    if (pose === 'walk' || pose === 'ride') {
-      // ON ALL FOURS: a slow, rolling sloth walk; the long front arms knuckle along on their claws
-      const ph = t * 3, bob = Math.sin(t * 6) * 0.8;
-      const leg = (hx, hy, footX, k, front, near) => {
-        const s = Math.sin(ph + k), lift = Math.max(0, Math.cos(ph + k)) * 4;
-        const fx = footX + s * 6, fy = -lift;
-        const col = near ? C.fur : C.furSh;
-        if (front) Pupo.arm(ctx, hx, hy + bob, fx, fy - 2, { w: 9, col, t });
-        else { outlinedCapsule(ctx, hx, hy + bob, fx, fy - 3, 10, col); Pupo.hand(ctx, fx, fy - 2, 0.15, 0.9, false); }
-      };
-      leg(17, -27, 25, Math.PI, true, false); leg(-20, -24, -20, 0, false, false);
-      Pupo.shag(ctx, -3, -29 + bob, 30, 17, C.fur, 26);
-      ctx.fillStyle = C.furHi; ctx.beginPath(); ctx.ellipse(-6, -38 + bob, 18, 5, -0.05, 0, TAU); ctx.fill();
-      ctx.fillStyle = C.belly; ctx.beginPath(); ctx.ellipse(0, -19 + bob, 18, 6, 0, 0, TAU); ctx.fill();
-      ctx.strokeStyle = C.furDk; ctx.lineWidth = 1; for (const [sx, sy] of [[-22, -32], [-14, -40], [8, -42], [-28, -24]]) { ctx.beginPath(); ctx.moveTo(sx, sy + bob); ctx.quadraticCurveTo(sx + 3, sy + 3 + bob, sx + 1, sy + 6 + bob); ctx.stroke(); }
-      if (pose === 'ride' && o.rider) { const sd = Pupo.saddle(t); ctx.save(); o.rider(ctx, sd.x, sd.y); ctx.restore(); }
-      leg(-14, -22, -12, Math.PI, false, true); leg(22, -28, 31, 0, true, true);
-      // the head, on a short neck, swinging slowly
-      ctx.save(); ctx.translate(30, -34 + bob); ctx.rotate(Math.sin(t * 1.5) * 0.05);
-      Pupo.head(ctx, 0, 0, 1.75, t, 'calm');
-      ctx.restore();
+    if (pose === 'walk' || pose === 'ride' || pose === 'swim' || pose === 'flop' || pose === 'sleep') { this.allFours(ctx, o, pose, t); ctx.restore(); return; }
+    if (pose === 'hang') {
+      // upside down under a bar (the origin): hands and feet up on the bar, back hanging down, Brady-O under his back
+      ctx.save(); ctx.scale(1, -1); this.allFours(ctx, o, 'hang', t); ctx.restore();
+      if (o.rider) { ctx.save(); o.rider(ctx, -4, 42); ctx.restore(); }
       ctx.restore(); return;
     }
-    // SITTING UP: a big pear of fur on short legs
-    const sitBody = (bob) => {
-      Pupo.shag(ctx, 0, -25 + bob, 19, 25, C.fur, 24);
-      ctx.fillStyle = C.belly; ctx.beginPath(); ctx.ellipse(3, -20 + bob, 11, 14, 0, 0, TAU); ctx.fill();
-      ctx.fillStyle = C.furHi; ctx.beginPath(); ctx.ellipse(-6, -38 + bob, 7, 9, 0.3, 0, TAU); ctx.fill();
-      // his own pupo
-      ctx.strokeStyle = C.furSh; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(4, -17 + bob, 1.6, 0.4, Math.PI * 1.8); ctx.stroke();
-    };
-    const legs = () => {
-      outlinedCapsule(ctx, -8, -8, -13, -2, 9, C.furSh); outlinedCapsule(ctx, 8, -8, 13, -2, 9, C.fur);
-      Pupo.hand(ctx, -13, -2, Math.PI, 0.9, false); Pupo.hand(ctx, 13, -2, 0, 0.9, false);
-    };
-    let bob = Math.sin(t * 1.6) * 0.6, mood = 'calm', headX = 6, headY = -51, headTilt = 0;
-    const shB = [-11, -37], shF = [12, -37];
+    if (pose === 'climb') { this.climb(ctx, o, t); ctx.restore(); return; }
+    let bob = Math.sin(t * 1.6) * 0.6, mood = o.mood || 'calm', headX = 6, headY = -51, headTilt = 0;
+    const shBx = -11, shBy = -37, shFx = 12, shFy = -37;
     if (pose === 'power') {
-      // PUPO POWER! (a key pose): a ring of arms, every finger out; rainbow spiral eyes; the carpet tongue; butterflies
+      // PUPO POWER! (a preview key pose; the game composes the show itself): arms every which way, spiral eyes
       const n = 10;
       for (let i = 0; i < n; i++) {
         const a = -Math.PI * 0.95 + i / (n - 1) * Math.PI * 1.9 + Math.sin(t * 5 + i) * 0.05, len = 34 + (i % 2) * 8;
         const sx = Math.cos(a) * 12, sy = -28 + Math.sin(a) * 14;
-        Pupo.arm(ctx, sx, sy, sx + Math.cos(a) * len, sy + Math.sin(a) * len, { w: 6.5, col: i % 2 ? C.fur : C.furSh, point: true, t });
+        Pupo.arm(ctx, sx, sy, sx + Math.cos(a) * len, sy + Math.sin(a) * len, { w: 6.5, col: i % 2 ? C.fur : C.furSh, point: true, t, sag: (i % 3 - 1) * 4 });
       }
-      legs(); sitBody(0);
-      Pupo.head(ctx, 6, -51, 1.75, t, 'spiral');
+      this.sitLegs(ctx); this.sitBody(ctx, 0);
+      Pupo.head(ctx, 6, -51, 1.75, t, 'spiral', t * 0.6 * TAU);
       Pupo.carpet(ctx, 8, -45, 70, t);
-      const bc = ['#ff7ad8', '#ffd23a', '#7ae0ff', '#9aff6a', '#ff9a2e'];
-      for (let i = 0; i < 6; i++) { const k = (t * 0.6 + i / 6) % 1, a = -1.2 + i * 0.5; Pupo.butterfly(ctx, 4 + Math.cos(a) * k * 46, -17 - Math.sin(a + 1.2) * k * 30 - k * 10, 0.7 + k * 0.5, t + i, bc[i % 5]); }
+      for (let i = 0; i < 6; i++) { const k = (t * 0.6 + i / 6) % 1, a = -1.2 + i * 0.5; Pupo.butterfly(ctx, 4 + Math.cos(a) * k * 46, -17 - Math.sin(a + 1.2) * k * 30 - k * 10, 0.7 + k * 0.5, t + i, C.butterflies[i % 5]); }
       ctx.restore(); return;
     }
-    let armB = null, armF = null;
+    let abx = -18, aby = -8, afx = 18, afy = -9, afPoint = false, armB = false, armF = false, yawn = 0;
+    if (pose === 'rear') { bob = 0; ctx.translate(0, -2); ctx.scale(1, 1.06); }
     if (pose === 'poke') {
       // the slow poke: 2.6 s out, *boop*, a contented hold, back again (6 s round)
       const c = t % 6, k = c < 2.6 ? easeInOut(c / 2.6) : c < 4.6 ? 1 : 1 - easeInOut((c - 4.6) / 1.4);
-      armF = { x: lerp(18, 34, k), y: lerp(-14, -24, k), point: true };
-      if (c > 2.6 && c < 3.4) { ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.2; const r = 2 + (c - 2.6) * 10; ctx.beginPath(); ctx.arc(armF.x + 9, armF.y + 1, r, 0, TAU); ctx.stroke(); }
-      mood = c > 2.6 && c < 4.6 ? 'happy' : 'calm';
+      afx = lerp(18, 34, k); afy = lerp(-14, -24, k); afPoint = true; armF = true;
+      if (c > 2.6 && c < 3.4) { ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.2; const r = 2 + (c - 2.6) * 10; ctx.beginPath(); ctx.arc(afx + 9, afy + 1, r, 0, TAU); ctx.stroke(); }
+      mood = o.mood || (c > 2.6 && c < 4.6 ? 'happy' : 'calm');
     } else if (pose === 'stretch') {
       // one arm out to any length: the stretch-arm base pose
       const L = o.reach || 90, a = -(o.angle == null ? 0.25 : o.angle);
-      armF = { x: shF[0] + Math.cos(a) * L, y: shF[1] + Math.sin(a) * L, point: true };
-      mood = 'calm'; headTilt = 0.08;
+      afx = shFx + Math.cos(a) * L; afy = shFy + Math.sin(a) * L; afPoint = true; armF = true; headTilt = 0.08;
+    } else if (pose === 'yawn') {
+      // the wake-up yawn: both arms stretch out sideways to o.reach (art units), mouth wide open
+      const L = o.reach || 40; yawn = 1;
+      abx = shBx - L; aby = shBy - 8; afx = shFx + L; afy = shFy - 8; armB = true; armF = true; mood = o.mood || 'yawn'; headTilt = -0.2;
     } else if (pose === 'happy') {
       mood = 'happy'; bob = -Math.abs(Math.sin(t * 2.2)) * 2;
-      armF = { x: 26 + Math.sin(t * 1.5) * 3, y: -60 + Math.sin(t * 1.5) * 3 }; armB = { x: -26, y: -58 };
+      afx = 26 + Math.sin(t * 1.5) * 3; afy = -60 + Math.sin(t * 1.5) * 3; abx = -26; aby = -58; armB = true; armF = true;
       for (let i = 0; i < 2; i++) {
         const k = (t * 0.5 + i / 2) % 1, hx = -6 + i * 18, hy = -72 - k * 16, hs = Math.min(1, (1 - k) * 3);
         ctx.save(); ctx.translate(hx, hy); ctx.scale(hs, hs); ctx.fillStyle = '#ff7aa8'; ctx.strokeStyle = C.ink; ctx.lineWidth = 0.8;
@@ -6788,22 +6923,20 @@ const Pupo = {
     } else if (pose === 'sad') {
       // left behind: slumped, head down, hugging Chinka-O's pink hair bow
       mood = 'sad'; headX = 9; headY = -45; headTilt = 0.35; bob = 2;
-      armF = { x: 6, y: -28 }; armB = { x: 0, y: -30 };
+      afx = 6; afy = -28; abx = 0; aby = -30; armB = true; armF = true;
     }
     // the back arm, the body, the front arm, the head
-    legs();
-    const ab = armB || { x: -18, y: -8 };
-    Pupo.arm(ctx, shB[0], shB[1] + bob, ab.x, ab.y + bob, { w: 7, col: C.furSh, t });
-    sitBody(bob);
+    this.sitLegs(ctx);
+    if (!(o.armsOff && pose === 'yawn')) Pupo.arm(ctx, shBx, shBy + bob, abx, aby + (armB ? bob : 0), { w: 7, col: C.furSh, t, bands: false });
+    this.sitBody(ctx, bob);
     if (pose === 'sad') {
       ctx.save(); ctx.translate(4, -30 + bob); ctx.rotate(-0.3); ctx.fillStyle = C.bow; ctx.strokeStyle = C.ink; ctx.lineWidth = 0.9;
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-6, -3.6); ctx.lineTo(-5.6, 3.6); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(6, -3.6); ctx.lineTo(5.6, 3.6); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
     }
-    ctx.save(); ctx.translate(headX, headY + bob); ctx.rotate(headTilt); Pupo.head(ctx, 0, 0, 1.75, t, mood); ctx.restore();
-    const af = armF || { x: 18, y: -9 };
-    Pupo.arm(ctx, shF[0], shF[1] + bob, af.x, af.y + (armF && pose !== 'stretch' ? bob : 0), { w: 7.5, col: C.fur, point: !!af.point, t });
+    ctx.save(); ctx.translate(headX, headY + bob); ctx.rotate(headTilt); Pupo.head(ctx, 0, 0, 1.75, t, mood, o.spiral); ctx.restore();
+    if (!o.armsOff) Pupo.arm(ctx, shFx, shFy + bob, afx, afy + (armF && pose !== 'stretch' ? bob : 0), { w: 7.5, col: C.fur, point: afPoint, t, bands: pose === 'stretch' || yawn > 0 });
     ctx.restore();
   }
 };
@@ -31608,6 +31741,2221 @@ ENTITY_TYPES.mazeShutter = TourMazeShutter;
 if (typeof TourLandscape !== 'undefined' && TourLandscape.ARCH_LABEL) Object.assign(TourLandscape.ARCH_LABEL, { vault: 'KEYS', gong: 'GONG', loop: 'LOOP', walls: 'WALLS' });
 try { Object.assign(window.BRADY_TOUR, { TourMaze }); } catch (e) { /* not in a browser */ }
 
+/* ---- 28_tour_p_pupo.js ---- */
+/* ============================================================
+   World tour: Pupo, Brady-O's rideable sloth (docs/design/PUPO.md,
+   PU-1 "mount core").
+   - the Nap Box: a QBLOCK whose contents are 'pupo', with a 'napBox'
+     entity drawn over the tile (a brown travel carton, breathing,
+     snoring); it opens every way a gift box does; a used one refills
+     ("...I was... in here... the whole time.")
+   - pupoFree: Pupo when Brady is not on him (sitting, asleep, waking,
+     parked at a door, packing up at the level clear)
+   - riding: a 28 x 58 box, 0.77x ground speed (the same run-after-
+     0.42 s rule), 1.6x swimming, the same jump, a flop (hold Down) to
+     crawl through 1-tile gaps; Down + Jump or holding Down 1 s hops off
+   - hits: drowsy (8 s), then a nap on the spot; Brady pops off unhurt
+     and wakes him by walking into him (a poke in *his* pupo)
+   - the ride survives doors, areas and respawns; areas Pupo cannot go
+     into (rails, rides, scrolls, carry, flip bands, boss arenas, glide)
+     park him at the door; nothing is carried into the next level
+   - the map: once met, Pupo rides piggyback on Brady on the overworld
+   Everything is a wrapper of an existing method, the way the jump
+   powers are (28_tour_di_jumps.js); this file loads after them, so its
+   wrappers are outermost. Brady's old Slothy mount (this.mounted) is
+   never used: its dismount() is not in this app's build.
+   The stretch arms (28_tour_pa_reach.js) and PUPO POWER! (pb_power)
+   plug into PupoRide.modes / afters / overs / napSpots.
+   ============================================================ */
+const PupoRide = {
+  // constants (PUPO.md §7.5), in px and px/s; shared with the validator module (PU-4)
+  K: {
+    W: 28, H: 58, FLOP_H: 30, SPEED_MUL: 0.77, SWIM_MUL: 1.6, JUMP_BOOST: 1.0, FLOP_SPEED: 2.8 * TS,
+    DROWSY: 8, GRACE: 1.5, NAP_POP: 9 * TS, NAP_INV: 2, WAKE: 0.6, MOUNT_T: 0.25, HOLD_HOP: 1.0,
+    METER_T: 30, METER_POKE: 0.10, METER_HIT: 0.25, METER_START: 0.5
+  },
+  simRide: false,           // PupoVal (28_tour_pc_pupoval.js): the validator's simulated bodies ride Pupo
+  ART: 0.8,                 // Pupo's art units -> world px (his back is about 1.1 tiles high)
+  modes: {},                // R.mode -> { update(p, dt, inp, g, R), pose(p, R, o) }: climbing, hanging, swinging... (PU-2, PU-3)
+  afters: [],               // after Brady's step while riding: (p, dt, inp, g, R, inMode)
+  overs: [],                // drawn after the ride, in world space: (ctx, p, g, R, t)
+  unders: [],               // drawn before the ride (behind Pupo and Brady), in world space: (ctx, p, g, R, t)
+  napSpots: [],             // where a Pupo who falls asleep in mid-air ends up: (g, p) -> { x, y, hang } or null
+  says: { ow: '...OW.', better: '...BETTER.', pupo: '...PUPO.', wake: '...PUPO?', wait: "...I'LL... WAIT... HERE.", box: '...I WAS... IN HERE... THE WHOLE TIME.', nap: '...ZZZ.', first: '...I HAD... A GOOD NAP.' },
+
+  /* ---------- the run state (on the Play scene; the checkpoint carries met and the meter over a respawn) ---------- */
+  st(g) {
+    let R = g.pupo;
+    if (!R) {
+      R = g.pupo = { met: false, where: 'none', meter: 0, drowsyT: 0, shieldT: 0, powerShield: 0, mode: '', free: null, freeArea: -1, parkArea: -1,
+        lastBox: { area: -1, tx: 0, ty: 0 }, lastGround: { area: -1, x: 0, y: 0 }, holdT: 0, mountT: 0, walkPh: 0, boxScan: 0, showT: 0, sayT: 0,
+        draw: { x: 0, y: 0, scale: 1, facing: 1, t: 0, pose: 'ride', mood: 'calm', rider: null, armsOff: false, phase: null, spiral: 0, still: false },
+        bo: { x: 0, y: 0, facing: 1, small: false, power: 0, anim: null, hair: null, look: null, star: false, time: 0, fly: false, floaty: false, trip: false, held: null },
+        an: Pupo.newAnchors() };
+    }
+    return R;
+  },
+  riding(g) { const p = g && g.player; return !!(p && p.pupoRide); },
+  // where Pupo may go (§1.7): an area spec's pupoOk wins; otherwise not on rails, rides, scrolls, carry, flip bands,
+  // autoscroll, glide levels or boss arenas
+  allowed(level, idx) {
+    if (!level || !level.areas) return false;
+    const A = level.areas[idx]; if (!A) return false;
+    const D = level.design && level.design.areas && level.design.areas[idx];
+    if (D && D.pupoOk != null) return !!D.pupoOk;
+    if (A._pupoOk != null) return A._pupoOk;
+    let ok = !(A.gen === 'rail' || A.gen === 'ride' || A.autoscroll || A.autoscrollY || A.carry || A.hasFlip || (A.zones || []).some(z => z.kind === 'flip'));
+    if (ok && level.arch && ['scroll', 'glide', 'rail', 'ride', 'carry'].indexOf(level.arch) >= 0) ok = false;
+    if (ok && (A.spawns || []).some(s => s.type === 'boss' || /boss/i.test(s.type))) ok = false;
+    A._pupoOk = ok;
+    return ok;
+  },
+  sfx(name, fb, o) { if (typeof TourKit !== 'undefined') TourKit.sfx(name, fb, o); else Sound.play(fb, o); },
+  say(g, x, y, key) { g.parts.text(x, y, this.says[key] || key, '#fff2c0'); },
+  tip(g, key, text) {
+    const tips = Save.data.tips || (Save.data.tips = {});
+    if (tips[key]) return; tips[key] = true; g.toast(text); Save.save();
+  },
+
+  /* ---------- the riding box ---------- */
+  // resize Brady's body about its feet and centre; false if that would put him inside a wall
+  setBox(p, w, h, force) {
+    const A = p.g.area, bottom = p.y + p.h, cx = p.cx;
+    if (!force && !regionFree(A, cx - w / 2, bottom - h, w, h)) return false;
+    p.w = w; p.h = h; p.x = cx - w / 2; p.y = bottom - h; return true;
+  },
+  setFlop(p, on) {
+    if (on) { p.pupoFlop = true; this.setBox(p, this.K.W, this.K.FLOP_H, true); p.runT = 0; return true; }
+    if (!this.setBox(p, this.K.W, this.K.H)) return false;
+    p.pupoFlop = false; return true;
+  },
+  mount(p, quiet, at) {
+    const g = p.g, R = this.st(g), K = this.K;
+    if (at) { const bottom = at.y; p.x = at.x - p.w / 2; p.y = bottom - p.h; }
+    p.crouch = false; p.pupoRide = true; p.pupoFlop = false; p.mounted = false; p.hang = false;
+    if (!this.setBox(p, K.W, K.H)) { if (!this.setBox(p, K.W, K.FLOP_H)) this.setBox(p, K.W, K.FLOP_H, true); p.pupoFlop = true; }
+    R.where = 'ride'; R.mode = ''; R.free = null; R.freeArea = -1; R.parkArea = -1; R.holdT = 0; R.mountT = quiet ? 0 : K.MOUNT_T;
+    if (!R.met) {
+      R.met = true; R.meter = Math.max(R.meter, K.METER_START);
+      if (!quiet) this.say(g, p.cx, p.y - 16, Save.data.tour && Save.data.tour.pupo ? 'pupo' : 'first');
+      const T2 = Save.data.tour || (Save.data.tour = {}); if (!T2.pupo) { T2.pupo = { met: true }; Save.save(); }
+    }
+    if (!quiet) { this.sfx('pupoMount', 'sloth', { vol: 0.5 }); g.burst(p.cx, p.y + p.h - 6, 6, '#e8d8b8', 'dust'); }
+  },
+  // Brady off Pupo: how = 'hop' (he hops off, Pupo sits), 'nap' (Pupo falls asleep), 'park' (at a door), 'gone' (no Pupo left here)
+  dismount(p, how, spot) {
+    const g = p.g, R = this.st(g), K = this.K;
+    const fx = p.cx, fy = p.y + p.h, wasMode = R.mode;
+    p.pupoRide = false; p.pupoFlop = false; R.mode = ''; R.mountT = 0; R.holdT = 0;
+    if (wasMode && this.modes[wasMode] && this.modes[wasMode].exit) this.modes[wasMode].exit(p, g, R);
+    // Brady's own box again (he keeps his form, HANDS and FEET items)
+    const d = p.power === 0 ? PLAYER_DIM.small : PLAYER_DIM.big;
+    p.w = d.w; p.h = d.h; p.x = fx - d.w / 2; p.y = fy - d.h; p.crouch = false;
+    if (p.power > 0 && !regionFree(g.area, p.x, p.y, p.w, p.h)) { p.crouch = true; p.h = PLAYER_DIM.crouch.h; p.y = fy - p.h; }
+    if (how === 'gone') { R.where = 'box'; return null; }
+    const e = new PupoFree(g, { x: spot ? spot.x : fx, y: spot ? spot.y : fy, facing: p.facing, mode: how === 'nap' ? 'sleep' : 'sit', hang: spot && spot.hang ? spot : null });
+    g.spawn(e); R.free = e; R.freeArea = g.area.idx; R.where = how === 'park' ? 'parked' : 'free';
+    if (how === 'park') R.parkArea = g.area.idx;
+    if (how === 'hop') { p.vy = -9 * TS; p.vx = p.facing * 2.2 * TS; p.onGround = false; p.jumping = false; Sound.play('jump', { pitch: 0.9 }); this.tip(g, 'pupoOff', 'WALK INTO PUPO TO HOP BACK ON'); }
+    return e;
+  },
+
+  /* ---------- hits (§1.4): drowsy, then a nap ---------- */
+  hitPupo(p, src) {
+    const g = p.g, R = this.st(g), K = this.K;
+    if (R.drowsyT > 0) { this.nap(p, src); return; }
+    R.drowsyT = K.DROWSY; R.shieldT = K.GRACE; R.powerShield = 0; R.meter = Math.max(0, R.meter - K.METER_HIT);
+    this.say(g, p.cx, p.y - 14, 'ow'); this.sfx('pupoOw', 'bump', { pitch: 0.6, vol: 0.7 }); g.shake(3);
+    g.burst(p.cx, p.y + p.h * 0.5, 8, '#e8d8b8', 'dust');
+    if (src && src.x !== undefined) p.vx = (p.cx < (src.x + (src.w || 0) / 2) ? -1 : 1) * 3 * TS;
+    if (!R.mode) p.vy = Math.min(p.vy, -5 * TS);
+  },
+  nap(p, src) {
+    const g = p.g, R = this.st(g), K = this.K, A = g.area;
+    // where he sleeps: on the ground where he is; in mid-air on a grab point, bar or ledge (PU-2); else he drops
+    let spot = null;
+    if (!p.onGround && !p.inWater) for (const f of this.napSpots) { spot = f(g, p); if (spot) break; }
+    const fx = p.cx, fy = p.y + p.h;
+    const e = this.dismount(p, 'nap', spot);
+    p.vy = -K.NAP_POP; p.onGround = false; p.jumping = false; p.invuln = K.NAP_INV;
+    R.drowsyT = 0; R.shieldT = 0;
+    this.say(g, fx, fy - 70, 'nap'); this.sfx('pupoSnore', 'sloth', { pitch: 0.6, vol: 0.5 }); g.shake(3);
+    // over a pit or lava with nothing to land on: he is back asleep in the last Nap Box Brady passed
+    if (e && !spot && !e.onGround && !this.floorBelow(A, fx, fy)) this.poofToBox(g, e);
+    return e;
+  },
+  // is there something solid (not lava) to land on under x, below y?
+  floorBelow(A, x, y) {
+    const tx = Math.floor(x / TS);
+    for (let ty = Math.max(0, Math.floor(y / TS)); ty < A.H; ty++) {
+      const t = tileAt(A, tx, ty);
+      if (t === T.LAVA) return false;
+      if (SOLID[t] || t === T.SEMI) return true;
+    }
+    return false;
+  },
+  // he vanishes in a puff of z's and is asleep in a Nap Box again (closed), or, if there is none, by the last ground
+  poofToBox(g, e) {
+    const R = this.st(g), L = R.lastBox;
+    if (e) { this.zPuff(g, e.cx, e.y + 10); e.remove = true; }
+    R.free = null; R.freeArea = -1;
+    if (L.area >= 0 && g.rt[L.area]) {
+      const A = g.rt[L.area]; A.tiles[L.ty * A.W + L.tx] = T.QBLOCK;
+      for (const n of A.entities) if (n instanceof NapBox && n.tx === L.tx && n.ty === L.ty) n.close();
+      R.where = 'box'; return;
+    }
+    const G = R.lastGround;
+    if (G.area >= 0 && g.rt[G.area]) {
+      const f = new PupoFree(g, { x: G.x, y: G.y, facing: 1, mode: 'sleep' });
+      if (G.area === g.area.idx) g.spawn(f); else g.rt[G.area].entities.push(f);
+      R.free = f; R.freeArea = G.area; R.where = 'free';
+    } else R.where = 'box';
+  },
+  zPuff(g, x, y) { g.burst(x, y, 10, '#e8e4ff', 'dust'); for (let k = 0; k < 3; k++) g.parts.text(x + (k - 1) * 10, y - k * 6, 'Z', '#e8e4ff'); },
+
+  /* ---------- the Nap Box ---------- */
+  openBox(g, tx, ty, why) {
+    const A = g.area, R = this.st(g);
+    g.setTile(tx, ty, T.USED); A.bumps.push({ tx, ty, t: 0.18 });
+    let nb = null; for (const e of g.entities) if (e instanceof NapBox && e.tx === tx && e.ty === ty) { nb = e; break; }
+    if (nb) nb.open();
+    R.lastBox.area = A.idx; R.lastBox.tx = tx; R.lastBox.ty = ty;
+    this.sfx('pupoBox', 'appear', { pitch: 0.8 });
+    this.emerge(g, tx, ty, false);
+  },
+  // bumping a used box while Pupo is not with Brady: he was in here the whole time
+  refill(g, tx, ty) {
+    const R = this.st(g), A = g.area;
+    A.bumps.push({ tx, ty, t: 0.18, amp: 4 });
+    if (R.where === 'ride') { Sound.play('bump', { vol: 0.5 }); return; }
+    if (R.free && !R.free.remove) {
+      const f = R.free;
+      // already sitting or asleep right here: just a rattle
+      if (R.freeArea === A.idx && Math.abs(f.cx - (tx * TS + TS / 2)) < 3 * TS && Math.abs(f.y + f.h - (ty + 1) * TS) < 4 * TS) { Sound.play('bump', { vol: 0.5 }); return; }
+      if (R.freeArea === A.idx) this.zPuff(g, f.cx, f.y + 8);
+      f.remove = true;
+    }
+    R.free = null; R.freeArea = -1; R.parkArea = -1;
+    R.lastBox.area = A.idx; R.lastBox.tx = tx; R.lastBox.ty = ty;
+    this.sfx('pupoBox', 'appear', { pitch: 0.7 });
+    this.emerge(g, tx, ty, true);
+  },
+  // Pupo unfolds out of the box at (tx, ty) and sits beside it (on the side Brady is on, if there is room)
+  emerge(g, tx, ty, again) {
+    const A = g.area, R = this.st(g), p = g.player, side = p && p.cx < tx * TS + TS / 2 ? -1 : 1;
+    let x = null, y = null;
+    const fits = (cx, by) => regionFree(A, cx - 14, by - 40, 28, 40);
+    // a box on the floor or in the air: drop beside it; under a ceiling: the other side; else on top
+    for (const s of [side, -side]) { const cx = (tx + s) * TS + TS / 2, by = (ty + 1) * TS; if (fits(cx, by)) { x = cx; y = by; break; } }
+    if (x == null && fits(tx * TS + TS / 2, ty * TS)) { x = tx * TS + TS / 2; y = ty * TS; }
+    if (x == null) { x = tx * TS + TS / 2; y = (ty + 1) * TS; }
+    const e = new PupoFree(g, { x, y, facing: -side, mode: 'unfold', box: { tx, ty } });
+    g.spawn(e); R.free = e; R.freeArea = A.idx; R.where = 'free';
+    if (again) this.say(g, x, y - 50, 'box');
+    this.tip(g, 'pupoHop', 'PUPO! WALK INTO HIM TO HOP ON');
+  },
+
+  /* ---------- the step while riding ---------- */
+  sin: { left: false, right: false, up: false, down: false, jump: false, action: false, jumpPressed: false, actionPressed: false, upPressed: false, downPressed: false },
+  EMPTY: { left: false, right: false, up: false, down: false, jump: false, action: false, jumpPressed: false, actionPressed: false },
+  tick(p, R, dt) {
+    const K = this.K;
+    if (R.mountT > 0) R.mountT = Math.max(0, R.mountT - dt);
+    if (R.shieldT > 0) { R.shieldT -= dt; if (R.shieldT <= 0) { R.shieldT = 0; R.powerShield = 0; } }
+    if (R.drowsyT > 0) { R.drowsyT -= dt; if (R.drowsyT <= 0) { R.drowsyT = 0; this.say(p.g, p.cx, p.y - 14, 'better'); } }
+    if (!(R.showT > 0)) R.meter = Math.min(1, R.meter + dt / K.METER_T * (R.drowsyT > 0 ? 0.5 : 1));
+  },
+  update(p, dt, inp, up0) {
+    const g = p.g, R = this.st(g), K = this.K;
+    if (p.state !== 'play' || p.dead) return up0.call(p, dt, inp);
+    inp = inp || this.EMPTY;
+    this.tick(p, R, dt);
+    // a grabber cannot carry Brady off Pupo: the grab counts as one hit on Pupo
+    if (p.grabbedBy) {
+      const gb = p.grabbedBy; p.grabbedBy = null; p.grabMash = 0; if (gb.release) gb.release(true);
+      if (!(R.shieldT > 0) && !(p.invuln > 0) && !(p.star > 0)) this.hitPupo(p, gb);
+      if (!p.pupoRide) return up0.call(p, dt, inp);
+    }
+    // a mode of his own (climbing, hanging, swinging, zipping, pulling, PUPO POWER!): it moves the body itself
+    const M = R.mode && this.modes[R.mode];
+    if (M) {
+      p.inp = inp; p.anim.t += dt; if (p.invuln > 0) p.invuln -= dt; if (p.hurtFlash > 0) p.hurtFlash -= dt;
+      if (p.star > 0) { p.star -= dt; if (p.star <= 0) { p.star = 0; g.resumeMusic(); } }
+      M.update(p, dt, inp, g, R);
+      if (p.pupoRide) this.after(p, dt, inp, g, R, true);
+      p.updateAnim(dt, inp); p.updateHair(dt);
+      return;
+    }
+    // what reaches Brady's own step: no action (it belongs to Pupo), no crouch, no dig; down only to swim down and to
+    // drop through a one-way floor with jump (both of them)
+    const S = this.sin;
+    S.left = !!inp.left; S.right = !!inp.right; S.up = !!inp.up; S.jump = !!inp.jump; S.jumpPressed = !!inp.jumpPressed;
+    S.upPressed = !!inp.upPressed; S.downPressed = false; S.action = false; S.actionPressed = false; S.down = !!(inp.down && p.inWater);
+    const ground = p.onGround && !p.inWater;
+    if (inp.down && inp.jumpPressed && ground) {
+      if (p.groundTile === T.SEMI) { if (p.pupoFlop) this.setFlop(p, false); S.down = true; }
+      else { this.dismount(p, 'hop'); return up0.call(p, dt, this.EMPTY); }
+    }
+    // flop: hold Down on the ground to crawl (1-tile gaps); standing up again needs the headroom
+    const wantFlop = !!inp.down && ground && !S.down;
+    if (wantFlop && !p.pupoFlop) this.setFlop(p, true);
+    else if (!wantFlop && p.pupoFlop && !this.setFlop(p, false)) S.jumpPressed = false;
+    // hold Down for a second, standing still: hop off (anywhere with room to stand)
+    if (inp.down && ground && !inp.left && !inp.right && Math.abs(p.vx) < 10) {
+      R.holdT += dt;
+      if (R.holdT >= K.HOLD_HOP && regionFree(g.area, p.cx - 11, p.y + p.h - PLAYER_DIM.big.h, 22, PLAYER_DIM.big.h)) { this.dismount(p, 'hop'); return up0.call(p, dt, this.EMPTY); }
+    } else R.holdT = 0;
+    if (R.holdT > 0.35 && R.holdT - dt <= 0.35) this.tip(g, 'pupoOff', 'HOLD ▼ (OR ▼ + JUMP): HOP OFF PUPO');
+    const r = up0.call(p, dt, S);
+    if (p.pupoRide && p.state === 'play' && !p.dead) this.after(p, dt, inp, g, R, false);
+    return r;
+  },
+  after(p, dt, inp, g, R, inMode) {
+    const A = g.area;
+    if (!inMode && p.onGround && !p.inWater) { const G = R.lastGround; G.area = A.idx; G.x = p.cx; G.y = p.y + p.h; }
+    R.walkPh += dt * (0.4 + Math.abs(p.vx) / TS * 0.16) * (p.inWater ? 1.4 : 1);
+    // the last Nap Box Brady passed (4 times a second)
+    if ((R.boxScan -= dt) <= 0) {
+      R.boxScan = 0.25;
+      for (const e of g.entities) if (e instanceof NapBox && Math.abs(e.x + 16 - p.cx) < 2.5 * TS && Math.abs(e.y - p.y) < 5 * TS) { const L = R.lastBox; L.area = A.idx; L.tx = e.tx; L.ty = e.ty; }
+    }
+    for (let i = 0; i < this.afters.length; i++) this.afters[i](p, dt, inp, g, R, inMode);
+  },
+
+  /* ---------- drawing the ride ---------- */
+  pose(p, R) {
+    if (R.mode && this.modes[R.mode] && this.modes[R.mode].pose) return this.modes[R.mode].pose(p, R, R.draw);
+    const o = R.draw;
+    o.pose = p.inWater ? 'swim' : p.pupoFlop ? 'flop' : 'ride';
+    o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.phase = R.walkPh; o.still = p.onGround && Math.abs(p.vx) < 8;
+    return o;
+  },
+  drawRide(p, ctx, t) {
+    const g = p.g, R = this.st(g), o = this.pose(p, R);
+    o.t = t; o.scale = this.ART * (o.big || 1); o.facing = p.facing; o.mood = R.showT > 0 ? 'spiral' : R.drowsyT > 0 ? 'drowsy' : (o.moodX || 'calm');
+    o.rider = this.riderFn; this.cur = p;
+    // Brady's flicker when hurt (Pupo's own grace and shield never flicker)
+    const flick = p.invuln > 0 && Math.floor(p.invuln * 16) % 2 === 0;
+    let a0 = 1;
+    if (p.state === 'portal') { a0 = 1 - clamp(p.portalT / 0.4, 0, 1); ctx.save(); ctx.globalAlpha = a0; }
+    if (flick) o.rider = null;
+    PlayerFx.under(ctx, p, t);
+    for (let i = 0; i < this.unders.length; i++) this.unders[i](ctx, p, g, R, t);
+    const bx = o.boxX != null ? o.boxX : o.x - 56, by = o.boxY != null ? o.boxY : o.y - 100, bw = o.boxW || 112, bh = o.boxH || 106;
+    Ink.around(ctx, bx, by, bw, bh, this.inkFn, this.INK);
+    o.boxX = o.boxY = null; o.boxW = o.boxH = 0; o.moodX = null;
+    PlayerFx.over(ctx, p, t);
+    for (let i = 0; i < this.overs.length; i++) this.overs[i](ctx, p, g, R, t);
+    this.drawStatus(ctx, p, R, t);
+    if (p.state === 'portal') ctx.restore();
+  },
+  INK: { pad: 6, width: 1.0, color: '#120e16', rim: '#e7e3d7', hero: true },   // Brady's own ink look (made once: nothing is allocated per frame)
+  paintRide(c) { const p = this.cur, R = p.g.pupo; Pupo.draw(c, R.draw); },
+  // Brady on Pupo's back: drawn inside Pupo's art space (scaled by ART, mirrored by facing), his hips on the seat
+  paintRider(c, sx, sy) {
+    const p = this.cur, R = p.g.pupo, o = R.bo, k = ART_SCALE.brady / this.ART, gs = p.growT > 0 ? p.growScale() : this.GS1;
+    o.facing = 1; o.small = p.small; o.power = p.power; o.anim = p.anim; o.look = Save.data.look; o.star = p.star > 0; o.time = R.draw.t;
+    o.trip = p.lsdT > 0; o.held = p.g.level && p.g.level.tour ? 'joint' : null; o.floaty = false; o.fly = false;
+    const D = p.small ? BRADY_DIM.small : BRADY_DIM.big, hang = p.anim.state === 'hang';
+    // the swing up onto his back (0.25 s)
+    const up = R.mountT > 0 ? R.mountT / this.K.MOUNT_T : 0;
+    c.translate(sx - up * 10, sy + up * 30); c.scale(k * gs.sx, k * gs.sy);
+    // hanging on: his raised hands on the grip point; seated: his hips on it
+    o.x = 0; o.y = hang ? (D.shoulder + D.upper + D.fore - 2) : D.hip - 4;
+    drawBrady(c, o);
+  },
+  // the status over the ride: drowsy z's, the post-power shield stars
+  drawStatus(ctx, p, R, t) {
+    if (R.drowsyT > 0) {
+      const k = (t * 0.6) % 1, x = p.cx + p.facing * 22 + k * 8, y = p.y - 6 - k * 16;
+      this.zGlyph(ctx, x, y, 4 + k * 2);
+    }
+    if (R.powerShield > 0 && R.shieldT > 0) {
+      for (let i = 0; i < 3; i++) {
+        const a = t * TAU + i * TAU / 3, x = p.cx + Math.cos(a) * 26, y = p.y + p.h * 0.45 + Math.sin(a) * 12;
+        ctx.fillStyle = '#1c1426'; ctx.beginPath(); TourKit.star(ctx, x, y, 5.2, 2.4, 5); ctx.fill();
+        ctx.fillStyle = '#ffd84a'; ctx.beginPath(); TourKit.star(ctx, x, y, 3.6, 1.5, 5); ctx.fill();
+      }
+    }
+  },
+  // a hard-edged "z": an ink stroke under a cream stroke
+  zGlyph(ctx, x, y, s) {
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let k = 0; k < 2; k++) {
+      ctx.strokeStyle = k ? '#f4ecdc' : '#1c1426'; ctx.lineWidth = k ? 1.5 : 3.2;
+      ctx.beginPath(); ctx.moveTo(x - s, y - s); ctx.lineTo(x + s, y - s); ctx.lineTo(x - s, y + s); ctx.lineTo(x + s, y + s); ctx.stroke();
+    }
+  },
+
+  /* ---------- area loads, respawns, doors ---------- */
+  areaLoaded(g) {
+    const R = this.st(g), p = g.player; if (!p || !g.level || !g.level.tour) return;
+    const A = g.area, ok = this.allowed(g.level, A.idx);
+    // a respawn: Pupo sits beside Brady at the checkpoint if he was met in this level run
+    if (!R.inited) {
+      R.inited = true;
+      const cp = g.checkpoint;
+      if (cp && cp.pupo) {
+        R.met = true; R.meter = cp.meter != null ? cp.meter : R.meter;
+        if (ok) { const f = new PupoFree(g, { x: p.cx + 34, y: p.y + p.h, facing: -1, mode: 'sit' }); g.spawn(f); R.free = f; R.freeArea = A.idx; R.where = 'free'; }
+        else R.where = 'box';
+      }
+      return;
+    }
+    if (R.where === 'ride') {
+      if (ok) this.mount(p, true);
+      else { R.where = 'box'; this.say(g, p.cx, p.y - 30, 'wait'); }
+    } else if (R.where === 'parked' && R.parkArea === A.idx && R.free && !R.free.remove) {
+      // back through the door he waited at: Brady remounts
+      R.free.remove = true; this.mount(p, true);
+    }
+  },
+  enterPortal(g, portal) {
+    const p = g.player, R = this.st(g);
+    if (!p || !p.pupoRide || g.state !== 'play' || p.state !== 'play') return;
+    const tg = portal.target;
+    if (!tg || tg.area === g.area.idx || this.allowed(g.level, tg.area)) return;
+    // Pupo will not go in: he hops off on the near side and sits by the door
+    const side = p.cx < portal.cx ? -1 : 1, x = portal.cx + side * 34;
+    const e = this.dismount(p, 'park', { x: regionFree(g.area, x - 14, portal.y + portal.h - 40, 28, 40) ? x : p.cx, y: portal.y + portal.h });
+    if (e) e.armed = true;
+    this.say(g, p.cx, p.y - 30, 'wait');
+  },
+  setCheckpoint(g) { const R = g.pupo; if (R && R.met && g.checkpoint) { g.checkpoint.pupo = true; g.checkpoint.meter = R.meter; } },
+  levelClear(g) {
+    const p = g.player, R = g.pupo; if (!p || !R) return;
+    if (p.pupoRide) {
+      const fx = p.cx, fy = p.y + p.h;
+      this.dismount(p, 'gone');
+      const e = new PupoFree(g, { x: fx - p.facing * 30, y: fy, facing: p.facing, mode: 'pack' }); g.spawn(e);
+    } else if (R.free && !R.free.remove && R.freeArea === g.area.idx) R.free.setMode('pack');
+  },
+  landedOn(p) {
+    const g = p.g, A = g.area, ty = Math.floor((p.y + p.h + 1) / TS);
+    for (let tx = Math.floor((p.x + 2) / TS); tx <= Math.floor((p.x + p.w - 2) / TS); tx++) if (tileAt(A, tx, ty) === T.USED && A.contents[tx + ',' + ty] === 'pupo') { this.refill(g, tx, ty); return; }
+  },
+  died(p) { if (p.pupoRide) { this.zPuff(p.g, p.cx, p.y + p.h - 20); this.dismount(p, 'gone'); } }
+};
+PupoRide.GS1 = { sx: 1, sy: 1 };
+PupoRide.inkFn = c => PupoRide.paintRide(c);
+PupoRide.riderFn = (c, sx, sy) => PupoRide.paintRider(c, sx, sy);
+
+/* ---------- the Nap Box: a brown carton drawn over its QBLOCK tile ---------- */
+const NAPBOX_TAG = { es: 'FRÁGIL — PEREZOSO DORMIDO', ec: 'FRÁGIL — PEREZOSO DORMIDO', mx: 'FRÁGIL — PEREZOSO DORMIDO', br: 'FRÁGIL — PREGUIÇA A DORMIR', mz: 'FRÁGIL — PREGUIÇA A DORMIR', fr: 'FRAGILE — PARESSEUX ENDORMI', ma: 'FRAGILE — PARESSEUX ENDORMI', nl: 'BREEKBAAR — LUIAARD SLAAPT' };
+class NapBox extends Ent {
+  constructor(g, s) {
+    super(g, s, TS, TS);
+    this.tx = Math.floor(s.x / TS); this.ty = Math.floor(s.y / TS) - 1; this.x = this.tx * TS; this.y = this.ty * TS;
+    this.back = true; this.isNapBox = true; this.k = 0; this.zT = 1 + (this.tx % 3) * 0.6;
+    this.state = tileAt(g.area || { W: 0, H: 0, tiles: [] }, this.tx, this.ty) === T.USED ? 'open' : 'closed';
+    this.cc = (g.level && g.level.country) || 'mx';
+  }
+  open() { this.state = 'open'; this.k = 0; }
+  close() { this.state = 'closed'; this.k = 0; }
+  update(dt) {
+    this.t += dt; if (this.k < 1) this.k = Math.min(1, this.k + dt / 0.3);
+    // the tile is the truth (a refill closes it again, a pound or a shot opens it through bumpBlock)
+    const A = this.g.area, t = A && A.tiles ? tileAt(A, this.tx, this.ty) : T.USED;
+    if (this.state === 'closed' && t === T.USED) this.open();
+  }
+  bumpY() { const A = this.g.area; if (!A || !A.bumps) return 0; for (let i = 0; i < A.bumps.length; i++) { const b = A.bumps[i]; if (b.tx === this.tx && b.ty === this.ty) return -Math.sin(b.t / 0.18 * Math.PI) * (b.amp || 8); } return 0; }
+  draw(ctx) {
+    const by = this.bumpY(), closed = this.state === 'closed', breath = closed ? Math.round((Math.sin(this.t * TAU / 2.5) * 0.5 + 0.5) * 4) / 4 : 0;
+    this.drawB = by; this.drawBreath = breath;
+    Ink.around(ctx, this.x - 6, this.y - 12 + by, TS + 12, TS + 14, NapBox.inkFn(this), { pad: 6, owner: this, key: (closed ? 'c' : 'o' + Math.round(this.k * 4)) + breath + ':' + Math.round(by), rim: Ink.keyline });
+    // the snore: a hard-edged z floats out of an air hole every 2 s
+    if (closed) {
+      const k = ((this.t + this.zT) % 2) / 2;
+      if (k < 0.8) PupoRide.zGlyph(ctx, this.x + 22 + k * 10, this.y + 8 + by - k * 26, 2.6 + k * 2.4);
+    }
+  }
+  static inkFn(nb) { NapBox.cur = nb; return NapBox.paintFn; }
+  paint(c) {
+    const x = this.x + TS / 2, y = this.y + TS + this.drawB, closed = this.state === 'closed';
+    const s = 1 + this.drawBreath * 0.04, w = 34, h = 30;
+    c.save(); c.translate(x, y); c.scale(s, s);
+    // the carton
+    c.fillStyle = '#b8864e'; c.fillRect(-w / 2, -h, w, h);
+    c.fillStyle = '#a0723e'; c.fillRect(-w / 2, -h, 5, h); c.fillRect(w / 2 - 4, -h, 4, h);
+    c.fillStyle = '#c99a62'; c.fillRect(-w / 2 + 5, -h, w - 9, 3);
+    // stencilled THIS WAY UP arrows
+    c.fillStyle = '#5a3a1c';
+    for (let i = -1; i <= 1; i += 2) { const ax = i * 9; c.beginPath(); c.moveTo(ax, -21); c.lineTo(ax + 3, -17); c.lineTo(ax + 1, -17); c.lineTo(ax + 1, -13); c.lineTo(ax - 1, -13); c.lineTo(ax - 1, -17); c.lineTo(ax - 3, -17); c.closePath(); c.fill(); }
+    // a row of punched air holes
+    c.fillStyle = '#2a1a10'; for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(-9 + i * 6, -8, 1.4, 0, TAU); c.fill(); }
+    // a postage stamp sticker with the land's little icon (never a flag)
+    c.fillStyle = '#fff4dc'; c.fillRect(4, -16, 9, 9); c.fillStyle = PUPO_STAMP[this.cc] || '#e83a3a'; c.beginPath(); c.arc(8.5, -11.5, 2.6, 0, TAU); c.fill();
+    if (closed) {
+      // packing tape crossed over the lid, three cream claw tips under the flap
+      c.fillStyle = '#e8d49a'; c.fillRect(-2.5, -h - 2, 5, 12); c.fillRect(-w / 2, -h + 1, w, 3.5);
+      c.fillStyle = '#9a6a36'; c.fillRect(-w / 2 - 1, -h - 2, w + 2, 3);
+      c.fillStyle = '#f4ead8'; for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(-12 + i * 3.2, -h + 1); c.lineTo(-10.6 + i * 3.2, -h + 5); c.lineTo(-9.4 + i * 3.2, -h + 1); c.closePath(); c.fill(); }
+    } else {
+      // open: the flaps up, the empty dark inside
+      const k = easeInOut(this.k);
+      c.fillStyle = '#3a2414'; c.fillRect(-w / 2 + 2, -h - 1, w - 4, 4);
+      c.fillStyle = '#c99a62';
+      c.save(); c.translate(-w / 2, -h); c.rotate(-0.4 - k * 1.6); c.fillRect(0, -2, 14, 4); c.restore();
+      c.save(); c.translate(w / 2, -h); c.rotate(0.4 + k * 1.6 + Math.PI); c.fillRect(0, -2, 14, 4); c.restore();
+    }
+    // the hand-lettered tag on a string: FRAGILE in big letters, the rest small (the land's language)
+    const tag = NapBox.tagLines(this.cc);
+    c.save(); c.translate(-w / 2 - 3, -9); c.rotate(-0.12);
+    c.fillStyle = '#f2e6c8'; c.fillRect(-9, -6, 21, 13); c.strokeStyle = '#6a4a2a'; c.lineWidth = 0.6; c.strokeRect(-9, -6, 21, 13);
+    c.fillStyle = '#5a1e14'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `bold 5.2px ${FONT_UI}`; c.fillText(tag[0], 1.5, -2.2, 19);
+    c.font = `3.1px ${FONT_UI}`; c.fillText(tag[1], 1.5, 3.2, 19);
+    c.restore();
+    c.restore();
+  }
+  get light() { return { r: 40, c: 'rgba(255,230,180,' }; }
+}
+NapBox.paintFn = c => NapBox.cur.paint(c);
+NapBox.tags = {};
+NapBox.tagLines = cc => NapBox.tags[cc] || (NapBox.tags[cc] = (NAPBOX_TAG[cc] || 'FRAGILE \u2014 SLOTH ASLEEP').split(' \u2014 '));
+const PUPO_STAMP = { mx: '#e83a3a', ec: '#8a4a2a', br: '#3ab84a', mz: '#c8a03a', ma: '#3a6ae8', es: '#e8a83a', fr: '#9a6ae8', nl: '#ff8a2a', id: '#3ac8a8', vn: '#e8d83a', jp: '#ff7ab8', np: '#e8e8f0', aq: '#7ad0ff', w22: '#ffd84a' };
+
+/* ---------- Pupo off the ride: sitting, asleep (on the ground or dangling), waking, waiting, packing up ---------- */
+class PupoFree extends Ent {
+  constructor(g, s) {
+    super(g, s, 28, 40);
+    this.x = s.x - 14; this.y = s.y - 40; this.facing = s.facing || 1; this.friendly = true; this.pupoFree = true;
+    this.hangAt = s.hang || null; this.box = s.box || null; this.mt = 0; this.mode = 'sit';
+    // Brady standing in him when he appears (a hop off, a nap) must walk off before he can get back on
+    const p = g.player; this.armed = !(p && overlap(p, this));
+    this.setMode(s.mode || 'sit');
+  }
+  setMode(m) { this.mode = m; this.mt = 0; if (m === 'pack') this.armed = false; }
+  update(dt) {
+    this.t += dt; this.mt += dt;
+    const g = this.g, A = g.area, p = g.player, R = PupoRide.st(g);
+    if (this.hangAt) { this.vy = 0; this.x = this.hangAt.x - 14; this.y = this.hangAt.y + 2; }
+    else {
+      this.vy = Math.min(this.vy + PHYS.gDown * dt, PHYS.maxFall); this.vx = 0;
+      moveBody(this, A, dt, { semis: true, platforms: g.platforms });
+      if (this.ride) { this.x += this.ride.dx || 0; this.y += this.ride.dy || 0; }
+      // fell into lava or out of the area: asleep in the last Nap Box again
+      if (this.y > A.H * TS + 20 || lavaContact(this, A)) { PupoRide.poofToBox(g, this); return; }
+    }
+    if (this.mode === 'unfold' && this.mt >= 1.2) { this.setMode('sit'); PupoRide.say(g, this.cx, this.y - 6, 'pupo'); }
+    if (this.mode === 'unfold' && this.mt > 0.35 && this.mt < 0.95) this.yawnPoke();
+    if (this.mode === 'pack' && this.mt > 1.6) { this.remove = true; PupoRide.zPuff(g, this.cx, this.y + 20); return; }
+    if (this.mode === 'wake' && this.mt >= PupoRide.K.WAKE) {
+      // awake: Brady (still beside him) is back on, and Pupo is no longer drowsy
+      if (p && !p.dead && p.state === 'play' && !p.pupoRide && Math.abs(p.cx - this.cx) < 2.5 * TS && Math.abs(p.y + p.h - (this.y + this.h)) < 3 * TS) { this.remove = true; R.drowsyT = 0; PupoRide.mount(p, false, { x: this.cx, y: this.y + this.h }); return; }
+      this.setMode('sit');
+    }
+    if (!p || p.dead || p.state !== 'play' || p.pupoRide) return;
+    const touch = overlap(p, this);
+    if (!touch && this.mode !== 'pack') this.armed = true;
+    if (!touch || !this.armed) return;
+    if (this.mode === 'sit') { this.remove = true; PupoRide.mount(p, false, { x: this.cx, y: this.y + this.h }); }
+    else if (this.mode === 'sleep') {
+      // Brady pokes Pupo's pupo; he wakes in 0.6 s and Brady is back on, no longer drowsy
+      this.setMode('wake'); this.armed = false; p.throwT = 0.25;
+      PupoRide.say(g, this.cx, this.y - 6, 'wake'); PupoRide.sfx('pupoBoop', 'pick', { pitch: 0.5, vol: 0.6 });
+      g.burst(this.cx + this.facing * 4, this.y + 26, 6, '#ffffff', 'spark');
+    }
+  }
+  // the yawn: both arms stretch 4 tiles out to the sides; an enemy in the way is poked (the first lesson)
+  yawnPoke() {
+    const g = this.g, y = this.y + 6, L = 4 * TS;
+    for (const e of g.entities) {
+      if (!e.enemy || e.dead || e.remove || e.boss || e.friendly) continue;
+      if (e.y > y + 4 || e.y + e.h < y - 4 || Math.abs(e.cx - this.cx) > L + e.w / 2) continue;
+      if (e.hit('poke', { x: this.cx, vx: sign(e.cx - this.cx) })) { g.addScore(200, e.cx, e.y); g.parts.text(e.cx, e.y - 8, 'BOOP!', '#ffffff'); }
+    }
+  }
+  pose(o) {
+    const m = this.mode, mt = this.mt;
+    o.armsOff = false; o.still = false; o.reach = 0; o.mood = 'calm'; o.phase = null;
+    if (this.hangAt) { o.pose = 'hang'; o.mood = this.mode === 'wake' ? 'blink' : 'sleep'; o.y = this.hangAt.y; return; }
+    if (m === 'sleep') { o.pose = 'sleep'; o.mood = 'sleep'; return; }
+    if (m === 'wake') { o.pose = 'idle'; o.mood = mt < 0.3 ? 'blink' : 'happy'; return; }
+    if (m === 'unfold') {
+      if (mt < 0.35) { o.pose = 'sleep'; o.mood = 'sleep'; return; }
+      if (mt < 0.95) { o.pose = 'yawn'; o.mood = 'yawn'; o.armsOff = true; return; }
+      o.pose = 'idle'; o.mood = 'drowsy'; return;
+    }
+    if (m === 'pack') { o.pose = mt < 1.1 ? 'happy' : 'idle'; o.mood = 'happy'; return; }
+    o.pose = 'idle'; o.mood = (this.t % 7) < 2.5 ? 'drowsy' : 'calm';
+  }
+  draw(ctx) {
+    const g = this.g, R = PupoRide.st(g), o = PupoFree.o;
+    o.x = this.cx; o.y = this.y + this.h; o.t = this.t; o.scale = PupoRide.ART; o.facing = this.facing; o.rider = null; o.spiral = 0;
+    this.pose(o);
+    // a sleeping or sitting Pupo is a held picture (re-inked only on the slow breathing frames)
+    const anim = o.pose === 'yawn' || this.mode === 'wake' || this.mode === 'pack' || this.mode === 'unfold';
+    if (!anim) { o.t = o.pose === 'sleep' || o.pose === 'hang' ? Math.round((this.t % 2.4) / 0.6) * 0.6 : o.t; }
+    PupoFree.cur = o;
+    const key = anim ? null : o.pose + ':' + o.mood + ':' + Math.round(o.t * 10) + ':' + this.facing;
+    if (key) Ink.around(ctx, this.cx - 44, o.y - 62, 88, 66, PupoFree.inkFn, { pad: 6, owner: this, key, rim: Ink.keyline });
+    else Ink.around(ctx, this.cx - 44, o.y - 62, 88, 66, PupoFree.inkFn, { pad: 6, rim: Ink.keyline });
+    if (o.pose === 'yawn') {
+      // the yawn's long arms: outside the ink pass, with their own outline
+      const k = clamp((this.mt - 0.35) / 0.25, 0, 1) * clamp((0.95 - this.mt) / 0.15, 0, 1), L = 4 * TS * k, S = PupoRide.ART, f = this.facing;
+      const an = Pupo.anchors('idle', this.t, PupoFree.an);
+      const sy = o.y + an.shoulderF.y * S;
+      Pupo.arm(ctx, this.cx + f * an.shoulderF.x * S, sy, this.cx + f * (an.shoulderF.x * S + L), sy - 6, { w: 6, t: this.t, point: false, sag: -3 });
+      Pupo.arm(ctx, this.cx + f * an.shoulderB.x * S, sy, this.cx + f * (an.shoulderB.x * S - L), sy - 6, { w: 5.5, col: PUPO.furSh, t: this.t, point: false, sag: 3 });
+    }
+    if (this.mode === 'sleep' || (this.mode === 'unfold' && this.mt < 0.35)) { const k = (this.t * 0.5) % 1; PupoRide.zGlyph(ctx, this.cx + this.facing * 16 + k * 8, (this.hangAt ? this.hangAt.y + 30 : this.y + 6) - k * 18, 3 + k * 2.5); }
+    if (this.mode === 'pack' && this.mt > 1.1) {
+      // his own travel carton rises around him and shuts
+      const k = clamp((this.mt - 1.1) / 0.4, 0, 1), h = 34 * k;
+      ctx.fillStyle = '#1c1426'; ctx.fillRect(this.cx - 19, o.y - h - 1, 38, h + 1);
+      ctx.fillStyle = '#b8864e'; ctx.fillRect(this.cx - 17, o.y - h + 1, 34, h - 1);
+      if (k >= 1) { ctx.fillStyle = '#e8d49a'; ctx.fillRect(this.cx - 2.5, o.y - 35, 5, 34); }
+    }
+  }
+}
+PupoFree.o = { x: 0, y: 0, scale: 1, facing: 1, t: 0, pose: 'idle', mood: 'calm', rider: null, armsOff: false, phase: null, spiral: 0, still: false, reach: 0 };
+PupoFree.an = Pupo.newAnchors();
+PupoFree.inkFn = c => Pupo.draw(c, PupoFree.cur);
+Object.assign(ENTITY_TYPES, { napBox: NapBox, pupoFree: PupoFree });
+
+/* ---------- the builder piece: a Nap Box y rows above the floor (a QBLOCK holding 'pupo', plus its carton) ---------- */
+Tour.pieces.napBox = function (st, o) {
+  const tx = st.x, ty = st.gy - 1 - (o.y || 0);
+  st.B.set(tx, ty, T.QBLOCK); st.B.item(tx, ty, 'pupo'); st.B.spawn('napBox', tx, ty, {});
+  return st.x + 1;
+};
+
+/* ---------- the wrappers (outermost: this file loads after every other Player / Play wrapper) ---------- */
+{
+  const P = Player.prototype, G = Play.prototype;
+  const up0 = P.update;
+  P.update = function (dt, inp) {
+    if (this.pupoRide) return PupoRide.update(this, dt, inp, up0);
+    // landing on a used Nap Box while Pupo is not with Brady refills it too (as a bump from below does)
+    const was = this.onGround, vy0 = this.vy, r = up0.call(this, dt, inp);
+    if (this.onGround && !was && vy0 > 3 * TS && this.state === 'play' && !this.dead && this.g.pupo && this.g.level && this.g.level.tour) PupoRide.landedOn(this);
+    return r;
+  };
+  // the hit order while riding (§1.4): star, the Pupo shield, then Pupo; Hard Hat, HANDS, FEET and FORM only without him
+  const hurt0 = P.hurt;
+  P.hurt = function (src) {
+    if (!this.pupoRide || this.dead || this.state !== 'play') return hurt0.call(this, src);
+    if (this.star > 0 || (this.fx && this.fx.molly > 0)) return hurt0.call(this, src);
+    const R = PupoRide.st(this.g);
+    if (this.invuln > 0 || R.shieldT > 0 || R.showT > 0) return;
+    if (this.grabbedBy) { const gb = this.grabbedBy; this.grabbedBy = null; if (gb.release) gb.release(true); }
+    PupoRide.hitPupo(this, src);
+  };
+  // the mushroom still grows Brady on Pupo's back; the box stays the riding box
+  const sp0 = P.setPower;
+  P.setPower = function (n, quiet) {
+    const r = sp0.call(this, n, quiet);
+    if (this.pupoRide) { this.crouch = false; PupoRide.setBox(this, PupoRide.K.W, this.pupoFlop ? PupoRide.K.FLOP_H : PupoRide.K.H, true); }
+    return r;
+  };
+  // no jump powers on Pupo (no hover, double jump or pound)
+  const aj0 = P.airJump;
+  if (aj0) P.airJump = function (inp) { if (this.pupoRide) return false; return aj0.call(this, inp); };
+  // Brady sits (or hangs on) while riding; no idle air guitar on Pupo's back
+  const ua0 = P.updateAnim;
+  P.updateAnim = function (dt, inp) {
+    if (this.pupoRide) this.idleT = 0;
+    ua0.call(this, dt, inp);
+    if (this.pupoRide && this.state === 'play') { const R = this.g.pupo; this.anim.state = R && (R.mode === 'hang' || R.mode === 'climb') ? 'hang' : this.throwT > 0 ? 'throw' : 'ride'; if (this.anim.state === 'throw') this.anim.base = 'ride'; }
+  };
+  const dr0 = P.draw;
+  P.draw = function (ctx, t) { if (!this.pupoRide) return dr0.call(this, ctx, t); PupoRide.drawRide(this, ctx, t); };
+  const die0 = P.die;
+  P.die = function (reason) { if (!this.dead) PupoRide.died(this); return die0.call(this, reason); };
+  // the run state rides on the checkpoint (Play is rebuilt on a respawn)
+  const sc0 = G.setCheckpoint;
+  G.setCheckpoint = function (x, y) { const r = sc0.call(this, x, y); PupoRide.setCheckpoint(this); return r; };
+  // contents 'pupo': open the Nap Box (or refill a used one) instead of spawning an item
+  const bb0 = G.bumpBlock;
+  G.bumpBlock = function (tx, ty, big, src) {
+    const A = this.area;
+    if (A && A.contents && A.contents[tx + ',' + ty] === 'pupo' && this.level && this.level.tour) {
+      const t = tileAt(A, tx, ty);
+      if (t === T.QBLOCK || t === T.HIDDEN || t === T.QBRICK) { PupoRide.openBox(this, tx, ty); return; }
+      if (t === T.USED) { PupoRide.refill(this, tx, ty); return; }
+    }
+    return bb0.call(this, tx, ty, big, src);
+  };
+  const ep0 = G.enterPortal;
+  G.enterPortal = function (portal) { if (this.level && this.level.tour) PupoRide.enterPortal(this, portal); return ep0.call(this, portal); };
+  // TourHooks (secrets WP-1) where it exists; otherwise wrap loadArea and levelClear
+  const hooks = typeof TourHooks !== 'undefined' && TourHooks && typeof TourHooks.on === 'function';
+  if (hooks) TourHooks.on('areaLoaded', play => { if (play.level && play.level.tour) PupoRide.areaLoaded(play); });
+  else { const la0 = G.loadArea; G.loadArea = function (idx, x, y, power) { const r = la0.call(this, idx, x, y, power); if (this.level && this.level.tour) PupoRide.areaLoaded(this); return r; }; }
+  if (hooks) TourHooks.on('levelClear', play => { PupoRide.levelClear(play); });
+  else { const lc0 = G.levelClear; G.levelClear = function (gate) { const ok = this.state === 'play'; const r = lc0.call(this, gate); if (ok && this.state === 'clear') PupoRide.levelClear(this); return r; }; }
+  // the speeds on Pupo (§1.3): the game and the validator's simulated bodies share this one rule (body.pupoRide)
+  const ppf0 = playerPhysicsFlip;
+  playerPhysicsFlip = function (p, inp, area, dt, platforms, opts) {
+    // the level checker's simulated bodies ride too while PupoVal searches as Pupo (they are plain objects without a game)
+    if (!(p.pupoRide || (PupoRide.simRide && !p.g)) || !opts) return ppf0(p, inp, area, dt, platforms, opts);
+    const s0 = opts.speedMul, w0 = opts.swimMul, K = PupoRide.K;
+    opts.speedMul = (s0 == null ? 1 : s0) * (p.pupoFlop ? K.FLOP_SPEED / PHYS.walk : K.SPEED_MUL);
+    opts.swimMul = (w0 == null ? 1 : w0) * K.SWIM_MUL;
+    if (p.pupoFlop) p.runT = 0;
+    try { return ppf0(p, inp, area, dt, platforms, opts); } finally { opts.speedMul = s0; opts.swimMul = w0; }
+  };
+  // the power picker's chip hides while riding: the action button belongs to Pupo
+  if (typeof TourPicker !== 'undefined') {
+    const vis0 = TourPicker.visible;
+    TourPicker.visible = function (play) { if (play && play.player && play.player.pupoRide) return false; return vis0.call(this, play); };
+  }
+  // the map: once met, Pupo rides piggyback on Brady (cosmetic; drawn behind him)
+  if (typeof TourOverworld !== 'undefined' && TourOverworld.prototype.drawWalker) {
+    const dw0 = TourOverworld.prototype.drawWalker;
+    TourOverworld.prototype.drawWalker = function (ctx) {
+      const T2 = Save.data.tour, w = this.walker;
+      if (T2 && T2.pupo && T2.pupo.met && w) {
+        const o = PupoFree.o, walking = !!w.seg, hop = w.hop > 0 ? Math.sin((1 - w.hop / 0.3) * Math.PI) * 9 : 0;
+        const node = !walking && this.by && this.by[w.at], lift = node ? (node.boss ? 2 : node.kind === 'level' ? 7 : 4) : 0;
+        o.x = w.x - (w.facing || 1) * 7; o.y = w.y - lift - hop - 9 + (walking ? Math.abs(Math.sin(this.t * 13)) * -1.5 : 0); o.t = this.t; o.scale = 0.36; o.facing = w.facing || 1;
+        o.pose = 'idle'; o.mood = 'happy'; o.rider = null; o.armsOff = false; o.spiral = 0; o.reach = 0;
+        PupoFree.cur = o; Ink.around(ctx, o.x - 18, o.y - 26, 36, 28, PupoFree.inkFn, { pad: 8, width: 0.95, color: '#120e16', hero: true });
+      }
+      return dw0.call(this, ctx);
+    };
+  }
+}
+try { window.BRADY_PUPO = Object.assign(window.BRADY_PUPO || {}, { PupoRide, PupoFree, NapBox, Pupo }); } catch (e) { /* not in a browser */ }
+
+/* ---- 28_tour_pa_reach.js ---- */
+/* ============================================================
+   World tour: Pupo's stretch arms and his level objects
+   (docs/design/PUPO.md §2, PU-2).
+   One button (Action) and the stick: Pupo aims where the stick points
+   (8 ways), or the way he faces when it is still, and auto-targets
+   the best thing in a cone, in reach and in line of sight. A cream
+   paw marker always sits on what Action will do, and the Action
+   button shows the verb: poke (a pointing claw), grab (an open paw),
+   pull (a fist), fetch (a cupped paw).
+   - poke: enemies (belly button for mammals, a nose boop for the
+     rest), gift and Nap Boxes, levers, switches, tickle spots; into
+     the air it is a "boop" that still opens a box it touches
+   - grab: a hook (he swings: Jump lets go, Action passes to the next
+     hook) or a post across a gap (he zips over and pulls up on top)
+   - pull: a pull handle (a toggle group flips, or a lock opens)
+   - fetch: pickups, keys, postcards, coins, a key on a moving path
+   Automatic: he grips climb strips (Up / Down, Jump leaps off), hangs
+   from bars (Left / Right shimmy, Down or Jump drops) and catches
+   ledge lips in mid-air (an assist the validator ignores).
+   The arms are drawn straight to the frame (never through Ink.around),
+   with Pupo.arm's own outline. The target search runs at 15 Hz and on
+   every press, keeps its best in fields and allocates nothing.
+   PupoReach's geometry (shoulder, line of sight with grilles, cone,
+   score, the swing release) is shared with the validator (PU-4).
+   ============================================================ */
+const PupoReach = {
+  K: {
+    REACH: 5 * TS, POKE: 4 * TS, REACH_D: 3.5 * TS, CONE: 40 * Math.PI / 180, CONE_N: 50 * Math.PI / 180, NEAR: 2 * TS,
+    OUT: 30 * TS, BACK: 22 * TS, HOLD: 0.10, COOL: 0.20, COOL_D: 0.50, GRAB_T: 0.17, TUG: 0.5,
+    HOOK_LEN: 2.5 * TS, HOOK_MIN: 1.5 * TS, HOOK_MAX: 5 * TS, SWING_G: 40 * TS, PUMP: 0.6, REEL: 12 * TS, REEL_STICK: 4 * TS,
+    RELEASE_K: 1.15, RELEASE_UP: 3 * TS, RELEASE_MAX: 14 * TS, RELEASE_MAX_D: 10 * TS,
+    ZIP: 16 * TS, PULLUP: 0.3, CLIMB_UP: 3.2 * TS, CLIMB_DOWN: 4.5 * TS, CLIMB_D: 2.2 * TS, LEAP_X: 6.5 * TS, LEAP_Y: -13 * TS,
+    SHIMMY: 2.6 * TS, HANG_DROP: 38, LEDGE_AHEAD: 2 * TS, LEDGE_UP: 2 * TS, LEDGE_DOWN: 0.5 * TS, SCAN: 1 / 15
+  },
+  /* ---------- geometry (shared with the validator) ---------- */
+  // the shoulder the arms start from: (cx + facing * 6, y + 14) of the riding box
+  shoulderX(p) { return p.x + p.w / 2 + (p.facing || 1) * 6; },
+  shoulderY(p) { return p.y + 14; },
+  // a grille rectangle (tiles) covers tile (tx, ty)?
+  inGrille(grilles, tx, ty) {
+    if (!grilles) return false;
+    for (let i = 0; i < grilles.length; i++) { const r = grilles[i]; if (tx >= r.x0 && tx <= r.x1 && ty >= r.y0 && ty <= r.y1) return true; }
+    return false;
+  },
+  // line of sight: a tile walk from (x0, y0) to (x1, y1); solid tiles block it, except inside a grille (arms pass through)
+  los(A, x0, y0, x1, y1, grilles) {
+    let tx = Math.floor(x0 / TS), ty = Math.floor(y0 / TS); const ex = Math.floor(x1 / TS), ey = Math.floor(y1 / TS);
+    const dx = x1 - x0, dy = y1 - y0, sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1;
+    const tdx = dx !== 0 ? Math.abs(TS / dx) : Infinity, tdy = dy !== 0 ? Math.abs(TS / dy) : Infinity;
+    let tmx = dx !== 0 ? ((dx > 0 ? (tx + 1) * TS - x0 : x0 - tx * TS) / Math.abs(dx)) : Infinity;
+    let tmy = dy !== 0 ? ((dy > 0 ? (ty + 1) * TS - y0 : y0 - ty * TS) / Math.abs(dy)) : Infinity;
+    for (let n = 0; n < 64; n++) {
+      if (tx === ex && ty === ey) return true;
+      if (tmx < tmy) { tmx += tdx; tx += sx; } else { tmy += tdy; ty += sy; }
+      if (tx === ex && ty === ey) return true;   // the target's own tile never blocks (a box, a post top)
+      const t = tileAt(A, tx, ty);
+      if (SOLID[t] && !this.inGrille(grilles, tx, ty)) return false;
+    }
+    return true;
+  },
+  // the aim: the stick snapped to 8 ways, or the facing (neutral) -> this.ax, this.ay, this.neutral
+  aim(inp, facing) {
+    const dx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0), dy = (inp.down ? 1 : 0) - (inp.up ? 1 : 0);
+    if (!dx && !dy) { this.ax = facing || 1; this.ay = 0; this.neutral = true; }
+    else { const l = Math.sqrt(dx * dx + dy * dy); this.ax = dx / l; this.ay = dy / l; this.neutral = false; }
+  },
+  // the angle between the aim and (dx, dy)
+  angle(dx, dy) { const l = Math.sqrt(dx * dx + dy * dy) || 1; const c = (dx * this.ax + dy * this.ay) / l; return Math.acos(clamp(c, -1, 1)); },
+  score(d, reach, ang, cone, enemy) { return d / reach + 0.5 * ang / cone - (enemy ? 0.2 : 0); },
+  // the swing release (§2.3): the speed along the swing x1.15, plus 3 t/s up, capped -> this.rvx, this.rvy
+  release(th, om, L, drowsy) {
+    const K = this.K, v = om * L * K.RELEASE_K;
+    let vx = Math.cos(th) * v, vy = -Math.sin(th) * v - K.RELEASE_UP;
+    const m = Math.sqrt(vx * vx + vy * vy), cap = drowsy ? K.RELEASE_MAX_D : K.RELEASE_MAX;
+    if (m > cap) { vx *= cap / m; vy *= cap / m; }
+    this.rvx = vx; this.rvy = vy;
+  },
+  ax: 1, ay: 0, neutral: true, rvx: 0, rvy: 0,
+  // the builder: the bottom row a piece may dig to (a layered gen's lane band, or the area), and a hole in the floor there
+  bottom(st) { return st.lanes && st.B.band ? st.B.band.y1 : st.B.H - 1; },
+  hole(st, x) { const bot = this.bottom(st); for (let y = st.gy; y <= bot; y++) st.B.set(x, y, T.EMPTY); },
+  // the mammals of every land (only mammals have belly buttons; the rest get a nose boop); an enemy cfg's belly: true adds more
+  MAMMALS: new Set(['aqSeal', 'aqOrca', 'brSloth', 'brCoati', 'brJaguar', 'ecAlpaca', 'ecSeaLion', 'ecSeaLionLand', 'frPoodle', 'frCat', 'frBoar', 'frMole', 'esBat', 'esLynx', 'esSheep',
+    'mxBurro', 'mxChihuahua', 'mxBat', 'mxArmadillo', 'jpTanuki', 'mzWarthog', 'mzMonkey', 'mzPangolin', 'mzMoleRat', 'mzFruitBat', 'idMacaque', 'idCivet', 'idBat',
+    'npMarmot', 'npMarmotWatch', 'npYeti', 'npYetiSleep', 'npBat', 'vnBat', 'maFennec', 'maGoat', 'maCat']),
+
+  /* ---------- the target search (15 Hz and on every press; the best one is kept in R.tg) ---------- */
+  verbOf(kind) { return kind === 'hook' || kind === 'post' ? 'grab' : kind === 'handle' ? 'pull' : kind === 'item' || kind === 'gold' || kind === 'key' || kind === 'coin' || kind === 'snatch' ? 'fetch' : 'poke'; },
+  classify(e, p) {
+    if (e.remove || e === p) return null;
+    if (e.pupoGrabPt) return e.kind;
+    if (e.pupoHandle) return e.used ? null : 'handle';
+    if (e.pupoTickle) return e.awake ? null : 'tickle';
+    if (e.pupoSnatch) return e.taken ? null : 'snatch';
+    if (e.enemy && !e.dead && !e.boss && !e.friendT && !e.friendly) return 'enemy';
+    if (e.item && !(e.emerge > 0.25) && !e.dropped) return 'item';
+    if (typeof Gold !== 'undefined' && e instanceof Gold) return 'gold';
+    if (typeof Key !== 'undefined' && e instanceof Key) return 'key';
+    if (e.lever && !e.pulled) return 'lever';
+    if ((typeof TourToggleSwitch !== 'undefined' && e instanceof TourToggleSwitch) || (typeof TourRailSwitch !== 'undefined' && e instanceof TourRailSwitch)) return e.cool > 0 ? null : 'switch';
+    return null;
+  },
+  // the point an arm goes to on a thing
+  pointOf(e, kind) {
+    if (kind === 'hook' || kind === 'post') { this.px = e.hx; this.py = e.hy; return; }
+    if (kind === 'tickle') { this.px = e.bx; this.py = e.by; return; }
+    if (kind === 'handle') { this.px = e.hx; this.py = e.hy; return; }
+    if (kind === 'enemy') { this.px = e.x + e.w / 2; this.py = e.y + e.h * 0.55; return; }
+    if (kind === 'lever' || kind === 'switch') { this.px = e.x + e.w / 2; this.py = e.y + 8; return; }
+    this.px = e.x + e.w / 2; this.py = e.y + e.h / 2;
+  },
+  px: 0, py: 0,
+  reachOf(kind, drowsy) { const K = this.K; return Math.min(kind === 'enemy' || kind === 'tickle' ? K.POKE : K.REACH, drowsy ? K.REACH_D : 1e9); },
+  scan(p, g, R, inp) {
+    const K = this.K, A = g.area, tg = R.tg, drowsy = R.drowsyT > 0;
+    this.aim(inp, p.facing);
+    const cone = this.neutral ? K.CONE_N : K.CONE, sx = this.shoulderX(p), sy = this.shoulderY(p), grilles = A.pupoGrilles;
+    tg.kind = null; tg.e = null; tg.tx = -1; tg.ty = -1;
+    let best = 1e9, urgentD = 1e9;
+    const ents = g.entities;
+    for (let i = 0; i < ents.length; i++) {
+      const e = ents[i], kind = this.classify(e, p); if (!kind) continue;
+      this.pointOf(e, kind);
+      const dx = this.px - sx, dy = this.py - sy, d = Math.sqrt(dx * dx + dy * dy), reach = this.reachOf(kind, drowsy);
+      if (d > reach) continue;
+      // a post is used when it is level with the shoulder or below it (1 tile above to 2 below)
+      if (kind === 'post' && (dy < -TS || dy > 2 * TS)) continue;
+      const enemy = kind === 'enemy';
+      // safety first: a hostile enemy within 2 tiles (body to body) wins, whatever the aim
+      if (enemy && Math.hypot(e.x + e.w / 2 - p.cx, e.y + e.h / 2 - p.cy) < K.NEAR) { if (d < urgentD && this.los(A, sx, sy, this.px, this.py, grilles)) { urgentD = d; best = -1; this.keep(tg, kind, e, this.px, this.py); } continue; }
+      if (urgentD < 1e9) continue;
+      const ang = this.angle(dx, dy); if (ang > cone) continue;
+      const s = this.score(d, reach, ang, cone, enemy);
+      if (s >= best || !this.los(A, sx, sy, this.px, this.py, grilles)) continue;
+      best = s; this.keep(tg, kind, e, this.px, this.py);
+    }
+    if (urgentD < 1e9) return tg;
+    // tiles: gift boxes and Nap Boxes (poke), coins (fetch; they only win when nothing else is there)
+    const r = Math.ceil(K.REACH / TS), cx = Math.floor(sx / TS), cy = Math.floor(sy / TS);
+    for (let ty = cy - r; ty <= cy + r; ty++) for (let tx = cx - r; tx <= cx + r; tx++) {
+      const t = tileAt(A, tx, ty), box = t === T.QBLOCK || t === T.QBRICK, coin = t === T.PICK;
+      if (!box && !coin) continue;
+      const qx = tx * TS + TS / 2, qy = ty * TS + TS / 2, dx = qx - sx, dy = qy - sy, d = Math.sqrt(dx * dx + dy * dy), reach = drowsy ? K.REACH_D : K.REACH;
+      if (d > reach) continue;
+      const ang = this.angle(dx, dy); if (ang > cone) continue;
+      const s = this.score(d, reach, ang, cone, false) + (coin ? 0.4 : 0);
+      if (s >= best || !this.los(A, sx, sy, qx, qy, grilles)) continue;
+      best = s; this.keep(tg, coin ? 'coin' : 'box', null, qx, qy); tg.tx = tx; tg.ty = ty;
+    }
+    return tg;
+  },
+  keep(tg, kind, e, x, y) { tg.kind = kind; tg.e = e; tg.x = x; tg.y = y; tg.tx = -1; tg.ty = -1; },
+
+  /* ---------- the arm ---------- */
+  arm(R) {
+    if (!R.arm) R.arm = { phase: 0, kind: null, e: null, tx: -1, ty: -1, x: 0, y: 0, len: 0, dist: 0, ux: 1, uy: 0, hold: 0, cool: 0, carry: null, carryKind: null, coin: false, t: 0, boop: 0, bx: 0, by: 0, belly: false };
+    if (!R.tg) R.tg = { kind: null, e: null, x: 0, y: 0, tx: -1, ty: -1 };
+    return R.arm;
+  },
+  // Action: fire at the target the marker shows (searched again now), or a boop into the air
+  fire(p, g, R, inp) {
+    const K = this.K, a = this.arm(R);
+    if (a.phase !== 0 || a.cool > 0) return false;
+    const tg = this.scan(p, g, R, inp), sx = this.shoulderX(p), sy = this.shoulderY(p);
+    a.kind = tg.kind; a.e = tg.e; a.tx = tg.tx; a.ty = tg.ty; a.carry = null; a.coin = false; a.t = 0;
+    if (tg.kind) { a.x = tg.x; a.y = tg.y; }
+    else { a.kind = 'air'; a.x = sx + this.ax * K.POKE * (R.drowsyT > 0 ? 0.875 : 1); a.y = sy + this.ay * K.POKE * (R.drowsyT > 0 ? 0.875 : 1); }
+    const dx = a.x - sx, dy = a.y - sy; a.dist = Math.sqrt(dx * dx + dy * dy) || 1; a.ux = dx / a.dist; a.uy = dy / a.dist;
+    if (a.ux > 0.2) p.facing = 1; else if (a.ux < -0.2) p.facing = -1;
+    a.phase = 1; a.len = 0; a.hold = 0;
+    PupoRide.sfx('pupoStretch', 'fly', { pitch: 1.6, vol: 0.35 });
+    return true;
+  },
+  // follow a moving target while the arm is out
+  track(a) {
+    const e = a.e; if (!e || e.remove || (e.dead && a.kind === 'enemy')) return;
+    if (a.kind === 'enemy' || a.kind === 'item' || a.kind === 'gold' || a.kind === 'key' || a.kind === 'snatch' || a.kind === 'hook') { this.pointOf(e, a.kind); a.x = this.px; a.y = this.py; }
+  },
+  // the arm's tip in the world: from the shoulder along the arm
+  tip(p, a) { const sx = this.shoulderX(p), sy = this.shoulderY(p); const dx = a.x - sx, dy = a.y - sy, d = Math.sqrt(dx * dx + dy * dy) || 1; a.dist = d; a.ux = dx / d; a.uy = dy / d; const L = Math.min(a.len, d); this.px = sx + a.ux * L; this.py = sy + a.uy * L; },
+  stepArm(p, dt, g, R) {
+    const K = this.K, a = this.arm(R);
+    if (a.cool > 0) a.cool -= dt;
+    if (a.boop > 0) a.boop -= dt;
+    if (a.phase === 0) return;
+    a.t += dt;
+    if (a.phase === 1) {
+      this.track(a);
+      const grab = a.kind === 'hook' || a.kind === 'post' || a.kind === 'handle';
+      a.len += (grab ? Math.max(K.OUT, a.dist / K.GRAB_T) : K.OUT) * dt;
+      this.tip(p, a);
+      if (a.len >= a.dist) { a.len = a.dist; this.contact(p, g, R, a); }
+    } else if (a.phase === 2) {
+      a.hold -= dt; this.track(a); this.tip(p, a);
+      if (a.hold <= 0) a.phase = 3;
+    } else if (a.phase === 3) {
+      // back, carrying what it fetched
+      a.len -= K.BACK * dt; if (a.len > a.dist) a.len = a.dist;
+      const sx = this.shoulderX(p), sy = this.shoulderY(p);
+      a.x = sx + a.ux * Math.max(0, a.len); a.y = sy + a.uy * Math.max(0, a.len);
+      if (a.carry && !a.carry.remove) { const c = a.carry; c.x = a.x - c.w / 2; c.y = a.y - c.h / 2; if (c.hoverY != null) c.hoverY = c.y; if (c.vx) c.vx = 0; if (c.vy) c.vy = 0; if (c.hy != null) c.hy = c.y; }
+      if (a.len <= 0) this.arrive(p, g, R, a);
+    }
+    // phase 4: attached (a hook, a post, a handle): the mode moves the body
+  },
+  arrive(p, g, R, a) {
+    // the fetched thing arrives: collected exactly as if Brady had touched it
+    const c = a.carry;
+    if (c && !c.remove) {
+      if (a.carryKind === 'snatch') c.give(p);
+      else if (c.touchPlayer) { if (c.emerge > 0) c.emerge = 0; c.touchPlayer(p); }
+    }
+    if (a.coin) g.addPick(p.cx, p.y + 10);
+    a.carry = null; a.coin = false; a.phase = 0; a.len = 0; a.kind = null; a.e = null; a.cool = R.drowsyT > 0 ? this.K.COOL_D : this.K.COOL;
+  },
+  back(a, hold) { a.phase = hold ? 2 : 3; a.hold = hold || 0; },
+  contact(p, g, R, a) {
+    const K = this.K, e = a.e, A = g.area;
+    switch (a.kind) {
+      case 'enemy': {
+        if (e && !e.dead && !e.remove) {
+          const type = e.s && e.s.type, belly = !!(e.cfg && e.cfg.belly) || PupoReach.MAMMALS.has(type);
+          a.belly = belly; a.boop = 0.35; a.bx = a.x; a.by = a.y;
+          let ok;
+          if (type === 'brSloth' && e.befriend) { ok = e.befriend(); g.parts.text(e.cx, e.y - 10, '...COUSIN.', '#fff2c0'); }
+          else ok = e.hit('poke', { x: p.cx, vx: a.ux > 0 ? 1 : -1, pupo: true });
+          if (ok === true || (ok && ok !== 'bounce')) {
+            if (type !== 'brSloth') { g.parts.text(e.cx, e.y - 8, belly ? 'BOOP!' : 'BOOP.', '#ffffff'); PupoRide.addMeter(g, PupoRide.K.METER_POKE); }
+            PupoRide.sfx('pupoBoop', 'pick', { pitch: belly ? 0.6 : 0.9, vol: 0.6 });
+            if (!belly && type !== 'brSloth' && Math.random() < 0.25) PupoRide.say(g, p.cx, p.y - 18, '...NO... PUPO?');
+          } else { g.parts.text(e.cx, e.y - 8, 'BOOP', '#ffffff'); PupoRide.sfx('pupoBoop', 'bump', { pitch: 1.4, vol: 0.4 }); }
+        }
+        this.back(a, K.HOLD); break;
+      }
+      case 'box': BoxOpen.open(g, a.tx, a.ty, p, 'poke'); this.back(a, K.HOLD); break;
+      case 'lever': if (e && e.pull) e.pull(); this.back(a, K.HOLD); break;
+      case 'switch': if (e) { if (e.flip) e.flip(); else if (e.cool <= 0) { e.cool = 0.5; g.flipToggle(e.gi); } } this.back(a, K.HOLD); break;
+      case 'tickle': if (e) e.tickle(p, a.x, a.y); this.back(a, K.HOLD); break;
+      case 'air': {
+        // a boop into the air: it still opens a box (or a used Nap Box) it touches
+        const tx = Math.floor(a.x / TS), ty = Math.floor(a.y / TS), t = tileAt(A, tx, ty);
+        if (t === T.QBLOCK || t === T.QBRICK) BoxOpen.open(g, tx, ty, p, 'poke');
+        else if (t === T.USED && A.contents[tx + ',' + ty] === 'pupo') g.bumpBlock(tx, ty, false, p);
+        g.parts.text(a.x, a.y - 6, 'BOOP', '#ffffff');
+        this.back(a, K.HOLD); break;
+      }
+      case 'item': case 'gold': case 'key': case 'snatch':
+        if (e && !e.remove) { a.carry = e; a.carryKind = a.kind; if (a.kind === 'snatch') e.taken = true; }
+        this.back(a, 0.05); break;
+      case 'coin': if (tileAt(A, a.tx, a.ty) === T.PICK) { g.setTile(a.tx, a.ty, T.EMPTY); a.coin = true; } this.back(a, 0.05); break;
+      case 'hook': a.phase = 4; PupoRide.enter(g, p, 'swing', e); break;
+      case 'post': a.phase = 4; PupoRide.enter(g, p, 'zip', e); break;
+      case 'handle': a.phase = 4; PupoRide.enter(g, p, 'pull', e); break;
+      default: this.back(a, 0);
+    }
+  },
+  // the arm lets go (a mode ends): it snaps back from where it was
+  letGo(p, R) { const a = this.arm(R); if (a.phase === 4 || a.phase === 1 || a.phase === 2) { a.phase = 3; a.kind = null; a.e = null; } },
+
+  /* ---------- the modes: swing, zip, pull, climb, hang, ledge ---------- */
+  place(p, cx, bottom) { p.x = cx - p.w / 2; p.y = bottom - p.h; },
+  swing: {
+    enter(p, g, R, e) {
+      const K = PupoReach.K, s = R.sw || (R.sw = { e: null, px: 0, py: 0, th: 0, om: 0, L: 0, target: 0 });
+      s.e = e; s.px = e.hx; s.py = e.hy;
+      const bx = p.x + p.w / 2, by = p.y + p.h / 2, dx = bx - s.px, dy = by - s.py, L = Math.sqrt(dx * dx + dy * dy) || 1;
+      s.th = Math.atan2(dx, dy); s.L = L; s.target = K.HOOK_LEN;
+      // his speed at the grab carries into the swing
+      s.om = (p.vx * Math.cos(s.th) - p.vy * Math.sin(s.th)) / L;
+      p.onGround = false; p.vx = 0; p.vy = 0;
+      PupoRide.sfx('pupoGrab', 'pick', { pitch: 0.7, vol: 0.5 }); PupoRide.tip(g, 'pupoGrab', 'JUMP TO LET GO  ·  ◉ AT THE NEXT HOOK');
+    },
+    update(p, dt, inp, g, R) {
+      const K = PupoReach.K, s = R.sw, A = g.area, e = s.e;
+      if (!e || e.remove) { PupoRide.leave(g, p); return; }
+      s.px = e.hx; s.py = e.hy;
+      // reel to 2.5 tiles, Up reels in to 1.5, Down lets out to 5
+      if (inp.up) s.target = Math.max(K.HOOK_MIN, s.target - K.REEL_STICK * dt); else if (inp.down) s.target = Math.min(K.HOOK_MAX, s.target + K.REEL_STICK * dt);
+      const L0 = s.L; s.L = approach(s.L, s.target, K.REEL * dt);
+      if (s.L !== L0) s.om *= L0 / s.L;
+      const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+      s.om += (-(K.SWING_G / s.L) * Math.sin(s.th) + dir * K.PUMP) * dt;
+      s.om *= Math.pow(0.985, dt * 60);
+      const th1 = s.th + s.om * dt, cx = s.px + Math.sin(th1) * s.L, cy = s.py + Math.cos(th1) * s.L;
+      if (regionFree(A, cx - p.w / 2, cy - p.h / 2, p.w, p.h)) { s.th = th1; p.x = cx - p.w / 2; p.y = cy - p.h / 2; }
+      else { s.om *= -0.3; }
+      if (dir) p.facing = dir; else if (Math.abs(s.om) > 0.4) p.facing = s.om > 0 ? 1 : -1;
+      p.vx = Math.cos(s.th) * s.om * s.L; p.vy = -Math.sin(s.th) * s.om * s.L;
+      // Action at another hook: hand over hand, keeping the swing
+      if (inp.actionPressed) {
+        const tg = PupoReach.scan(p, g, R, inp);
+        if (tg.kind === 'hook' && tg.e !== e) {
+          const ne = tg.e, bx = p.x + p.w / 2, by = p.y + p.h / 2, vx = p.vx, vy = p.vy, dx = bx - ne.hx, dy = by - ne.hy, L = Math.sqrt(dx * dx + dy * dy) || 1;
+          s.e = ne; s.px = ne.hx; s.py = ne.hy; s.th = Math.atan2(dx, dy); s.L = L; s.om = (vx * Math.cos(s.th) - vy * Math.sin(s.th)) / L;
+          const a = PupoReach.arm(R); a.e = ne; a.x = ne.hx; a.y = ne.hy; a.len = L; a.kind = 'hook';
+          PupoRide.sfx('pupoGrab', 'pick', { pitch: 0.8, vol: 0.5 });
+        }
+      }
+      // Jump lets go: the speed along the swing x1.15, plus 3 t/s up (capped)
+      if (inp.jumpPressed) {
+        PupoReach.release(s.th, s.om, s.L, R.drowsyT > 0);
+        PupoRide.leave(g, p);
+        p.vx = PupoReach.rvx; p.vy = PupoReach.rvy; p.airMax = Math.abs(p.vx); p.jumping = false; p.onGround = false; p.coyote = 0;
+        Sound.play('jump', { pitch: 0.9 });
+      }
+      const a = PupoReach.arm(R); if (a.phase === 4) { a.x = s.px; a.y = s.py; a.len = Math.hypot(a.x - PupoReach.shoulderX(p), a.y - PupoReach.shoulderY(p)); }
+    },
+    pose(p, R, o) { const s = R.sw; o.pose = 'ride'; o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.rot = -s.th * 0.6; o.rotX = PupoReach.shoulderX(p); o.rotY = PupoReach.shoulderY(p); o.armsOff = true; o.still = true; return o; }
+  },
+  zip: {
+    enter(p, g, R, e) {
+      const z = R.zp || (R.zp = { e: null, x: 0, y: 0, t: 0, up: 0, fx: 0, fy: 0 });
+      z.e = e; z.x = e.hx; z.y = e.standY; z.t = 0; z.up = 0; p.vx = 0; p.vy = 0; p.onGround = false;
+      PupoRide.sfx('pupoZip', 'zip', { pitch: 1.2, vol: 0.5 });
+    },
+    update(p, dt, inp, g, R) {
+      const K = PupoReach.K, z = R.zp, A = g.area;
+      if (z.up > 0) {
+        // the pull-up onto the top (0.3 s)
+        z.up += dt; const k = Math.min(1, z.up / K.PULLUP);
+        PupoReach.place(p, lerp(z.fx, z.x, k), lerp(z.fy, z.y, k));
+        if (k >= 1) { PupoRide.leave(g, p); p.onGround = true; p.vy = 0; p.vx = 0; }
+        return;
+      }
+      // along the arm at 16 t/s toward the post
+      const cx = p.x + p.w / 2, by = p.y + p.h, dx = z.x - cx, dy = (z.y - 2) - by, d = Math.sqrt(dx * dx + dy * dy);
+      if (d < K.ZIP * dt + 8) { z.up = 1e-6; z.fx = cx; z.fy = by; return; }
+      const nx = cx + dx / d * K.ZIP * dt, ny = by + dy / d * K.ZIP * dt;
+      if (!regionFree(A, nx - p.w / 2, ny - p.h, p.w, p.h) && !regionFree(A, nx - p.w / 2, ny - p.h - 8, p.w, p.h)) { PupoRide.leave(g, p); p.vy = 0; return; }
+      PupoReach.place(p, nx, regionFree(A, nx - p.w / 2, ny - p.h, p.w, p.h) ? ny : ny - 8);
+      p.facing = dx > 0 ? 1 : -1; p.vx = dx / d * K.ZIP; p.vy = dy / d * K.ZIP;
+      const a = PupoReach.arm(R); a.x = z.x; a.y = z.e.hy; a.len = Math.hypot(a.x - PupoReach.shoulderX(p), a.y - PupoReach.shoulderY(p));
+    },
+    pose(p, R, o) { o.pose = 'ride'; o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.rot = p.facing * -0.18; o.rotX = p.cx; o.rotY = p.y + p.h; o.armsOff = true; o.still = true; return o; }
+  },
+  pull: {
+    enter(p, g, R, e) { const u = R.pl || (R.pl = { e: null, t: 0 }); u.e = e; u.t = 0; p.vx = 0; },
+    update(p, dt, inp, g, R) {
+      const K = PupoReach.K, u = R.pl;
+      u.t += dt;
+      // he leans back and tugs for 0.5 s; then the handle's effect plays and the arm snaps back
+      if (!p.onGround) { p.vy = Math.min(p.vy + PHYS.gDown * dt, PHYS.maxFall); moveBody(p, g.area, dt, { semis: true, platforms: g.platforms }); }
+      if (u.t >= K.TUG) { if (u.e) u.e.pull(g, p); PupoRide.leave(g, p); }
+    },
+    pose(p, R, o) { const k = Math.min(1, R.pl.t / 0.2); o.pose = 'ride'; o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.rot = -p.facing * 0.16 * k; o.rotX = p.cx - p.facing * 14; o.rotY = p.y + p.h; o.armsOff = true; o.still = true; return o; }
+  },
+  climb: {
+    enter(p, g, R, e) {
+      const c = R.cl || (R.cl = { e: null, up: 0, fx: 0, fy: 0, tx: 0, ty: 0, ph: 0 });
+      c.e = e; c.up = 0; c.ph = 0; p.vx = 0; p.vy = 0; p.onGround = false; p.facing = e.side || p.facing;
+      PupoReach.place(p, e.cx, p.y + p.h);
+      PupoRide.sfx('pupoGrip', 'pick', { pitch: 0.5, vol: 0.4 }); PupoRide.tip(g, 'pupoClimb', 'HOLD UP TO CLIMB  ·  JUMP TO LEAP OFF');
+    },
+    update(p, dt, inp, g, R) {
+      const K = PupoReach.K, c = R.cl, e = c.e, A = g.area, drowsy = R.drowsyT > 0;
+      if (!e || e.remove) { PupoRide.leave(g, p); return; }
+      if (c.up > 0) {
+        c.up += dt; const k = Math.min(1, c.up / K.PULLUP);
+        PupoReach.place(p, lerp(c.fx, c.tx, k), lerp(c.fy, c.ty, k) - Math.sin(k * Math.PI) * 10);
+        if (k >= 1) { PupoRide.leave(g, p); p.onGround = true; p.vy = 0; e.cool = 0.4; }
+        return;
+      }
+      // the climb pauses for a poke
+      const a = PupoReach.arm(R), busy = a.phase !== 0;
+      let vy = 0;
+      if (!busy) { if (inp.up) vy = -(drowsy ? K.CLIMB_D : K.CLIMB_UP); else if (inp.down) vy = K.CLIMB_DOWN; }
+      if (vy) c.ph += dt * Math.abs(vy) / TS * 0.55;
+      const bottom = p.y + p.h, top = e.top;
+      let ny = bottom + vy * dt;
+      // at the top: pull up onto a standable tile beside the strip (0.3 s)
+      if (ny - p.h * 0.0 <= top + 2 && vy < 0) {
+        for (let s = -1; s <= 1; s += 2) {
+          const side = s === -1 ? (e.side || 1) : -(e.side || 1), tx = e.tx + side, ty = Math.floor(top / TS);
+          if (SOLID[tileAt(A, tx, ty)] && regionFree(A, tx * TS + TS / 2 - p.w / 2, top - p.h, p.w, p.h)) { c.up = 1e-6; c.fx = p.cx; c.fy = bottom; c.tx = tx * TS + TS / 2; c.ty = top; p.facing = side; return; }
+        }
+        ny = top + 2;
+      }
+      // at the bottom: standing again
+      if (vy > 0 && !regionFree(A, p.x, ny - p.h, p.w, p.h)) { PupoRide.leave(g, p); p.vy = 0; return; }
+      if (ny > e.bottom + 2) { PupoRide.leave(g, p); return; }
+      if (regionFree(A, p.x, ny - p.h, p.w, p.h)) p.y = ny - p.h;
+      p.vx = 0; p.vy = vy;
+      // Jump leaps off, away from the strip
+      if (inp.jumpPressed && !busy) { const away = -(e.side || p.facing); PupoRide.leave(g, p); e.cool = 0.35; p.vx = away * K.LEAP_X; p.vy = K.LEAP_Y; p.airMax = K.LEAP_X; p.facing = away; p.jumping = false; Sound.play('jump', { pitch: 0.9 }); }
+    },
+    pose(p, R, o) { const c = R.cl; o.pose = 'climb'; o.x = p.cx; o.y = p.y + p.h; o.phase = c.ph; o.armsOff = PupoReach.arm(R).phase !== 0; return o; }
+  },
+  hang: {
+    enter(p, g, R, e) {
+      const h = R.hg || (R.hg = { e: null });
+      h.e = e; p.vx = 0; p.vy = 0; p.onGround = false;
+      p.y = e.y + PupoReach.K.HANG_DROP;
+      PupoRide.sfx('pupoGrip', 'pick', { pitch: 0.6, vol: 0.4 });
+    },
+    update(p, dt, inp, g, R) {
+      const K = PupoReach.K, h = R.hg, e = h.e, A = g.area;
+      if (!e || e.remove) { PupoRide.leave(g, p); return; }
+      const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+      if (dir) p.facing = dir;
+      let nx = p.cx + dir * K.SHIMMY * dt; nx = clamp(nx, e.x0, e.x1);
+      if (regionFree(A, nx - p.w / 2, p.y, p.w, p.h)) p.x = nx - p.w / 2;
+      p.y = e.y + K.HANG_DROP; p.vx = dir * K.SHIMMY; p.vy = 0; h.ph = (h.ph || 0) + Math.abs(dir) * dt;
+      if (inp.jumpPressed || (inp.down && !inp.left && !inp.right)) { PupoRide.leave(g, p); e.cool = 0.4; p.vy = 0; }
+    },
+    pose(p, R, o) { const e = R.hg.e; o.pose = 'hang'; o.x = p.cx - p.facing * 4; o.y = e.y; o.still = true; o.boxX = p.cx - 56; o.boxY = e.y - 12; o.boxW = 112; o.boxH = p.y + p.h - e.y + 30; return o; }
+  },
+  ledge: {
+    enter(p, g, R) { },
+    update(p, dt, inp, g, R) {
+      const K = PupoReach.K, l = R.lg; l.t += dt; const k = Math.min(1, l.t / K.PULLUP);
+      PupoReach.place(p, lerp(l.fx, l.tx, k), lerp(l.fy, l.ty, k) - Math.sin(k * Math.PI) * 6);
+      if (k >= 1) { PupoRide.leave(g, p); p.onGround = true; p.vy = 0; p.vx = 0; }
+    },
+    pose(p, R, o) { o.pose = 'ride'; o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.rot = -p.facing * 0.25 * (1 - Math.min(1, R.lg.t / 0.3)); o.rotX = p.cx; o.rotY = p.y + p.h; o.still = true; return o; }
+  },
+
+  /* ---------- after Brady's step while riding: the arm, the marker search, the automatic grips ---------- */
+  after(p, dt, inp, g, R, inMode) {
+    const a = this.arm(R);
+    if (R.showT > 0) return;
+    // Action: stretch (not while swinging, zipping, pulling or pulling up)
+    const busy = R.mode === 'swing' || R.mode === 'zip' || R.mode === 'pull' || R.mode === 'ledge' || (R.mode === 'climb' && R.cl && R.cl.up > 0);
+    if (inp.actionPressed && !busy) this.fire(p, g, R, inp);
+    this.stepArm(p, dt, g, R);
+    // the marker's search, 15 times a second
+    if ((R.scanT = (R.scanT || 0) - dt) <= 0) { R.scanT = this.K.SCAN; this.scan(p, g, R, inp); }
+    if (inMode) return;
+    this.autoGrip(p, inp, g, R);
+  },
+  autoGrip(p, inp, g, R) {
+    const K = this.K, A = g.area, objs = A.pupoObjs;
+    const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+    if (objs) for (let i = 0; i < objs.length; i++) {
+      const e = objs[i]; if (e.remove || e.cool > 0) continue;
+      // climb strips: grip on touch while moving toward one, or in mid-air
+      if (e.pupoClimb) {
+        if (Math.abs(p.cx - e.cx) > 12 || p.y + p.h < e.top + 4 || p.y > e.bottom) continue;
+        if (!p.onGround || (dir && dir === (e.side || dir)) || inp.up) { PupoRide.enter(g, p, 'climb', e); return; }
+      }
+      // bars: grip when his head touches one on the way up
+      if (e.pupoBar) {
+        if (p.vy < 0 && p.cx >= e.x0 && p.cx <= e.x1 && p.y <= e.y + 8 && p.y >= e.y - 14) { PupoRide.enter(g, p, 'hang', e); return; }
+      }
+    }
+    // the ledge catch (an assist): falling or near the top of a jump, stick toward the ledge
+    if (!p.onGround && !p.inWater && dir && p.vy > -2 * TS) {
+      const lead = dir > 0 ? p.x + p.w : p.x, head = p.y;
+      const t0 = Math.floor((head - K.LEDGE_UP) / TS), t1 = Math.floor((head + K.LEDGE_DOWN) / TS);
+      for (let k = 0; k <= 2; k++) {
+        const tx = Math.floor((lead + dir * (k * TS + 1)) / TS);
+        if (Math.abs(tx * TS + TS / 2 - lead) > K.LEDGE_AHEAD + TS / 2) continue;
+        for (let ty = t1; ty >= t0; ty--) {
+          const t = tileAt(A, tx, ty), above = tileAt(A, tx, ty - 1);
+          if (!(SOLID[t] || t === T.SEMI) || SOLID[above]) continue;
+          const lipY = ty * TS, cx = dir > 0 ? tx * TS + p.w / 2 + 2 : (tx + 1) * TS - p.w / 2 - 2;
+          if (lipY > p.y + p.h - 6) continue;   // a floor he will just land on
+          if (!regionFree(A, cx - p.w / 2, lipY - p.h, p.w, p.h)) continue;
+          // nothing solid in between: a clear line to the air just off the lip's corner
+          if (!this.los(A, this.shoulderX(p), this.shoulderY(p), dir > 0 ? tx * TS - 2 : (tx + 1) * TS + 2, lipY - 2, null)) continue;
+          const l = R.lg || (R.lg = { t: 0, fx: 0, fy: 0, tx: 0, ty: 0 });
+          l.t = 0; l.fx = p.cx; l.fy = p.y + p.h; l.tx = cx; l.ty = lipY;
+          PupoRide.enter(g, p, 'ledge', null); return;
+        }
+      }
+    }
+  },
+  // a nap in mid-air: he dangles asleep from the nearest hook or bar within 5 tiles
+  napSpot(g, p) {
+    const objs = g.area.pupoObjs; if (!objs) return null;
+    let best = null, bd = 5 * TS, bx = 0, by = 0;
+    for (const e of objs) {
+      let x, y;
+      if (e.pupoGrabPt && e.kind === 'hook') { x = e.hx; y = e.hy; }
+      else if (e.pupoBar) { x = clamp(p.cx, e.x0, e.x1); y = e.y; }
+      else continue;
+      const d = Math.hypot(x - p.cx, y - p.y); if (d < bd) { bd = d; best = e; bx = x; by = y; }
+    }
+    return best ? { x: bx, y: by, hang: true } : null;
+  }
+};
+
+/* ---------- the level objects ---------- */
+// a brass ring: where a hand goes, the same in every land (so "grabbable" reads at once)
+function pupoRing(ctx, x, y, r) {
+  ctx.lineWidth = 4.6; ctx.strokeStyle = '#1c1426'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+  ctx.lineWidth = 2.6; ctx.strokeStyle = '#e8b040'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+  ctx.lineWidth = 1; ctx.strokeStyle = '#fff0b0'; ctx.beginPath(); ctx.arc(x, y, r, -2.6, -1.4); ctx.stroke();
+}
+// an outlined stroke: ink 3 px wider, then the colour
+function pupoLine(ctx, x0, y0, x1, y1, w, col) {
+  ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+  ctx.strokeStyle = '#1c1426'; ctx.lineWidth = w + 3; ctx.stroke(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+}
+/* a grab point: a hook (overhead: swing) or a post (on top of a solid: zip over and stand); { kind, look, orbit: { r, period, phase } } */
+class PupoGrab extends Ent {
+  constructor(g, s) {
+    super(g, s, 20, 20); this.kind = s.kind === 'post' ? 'post' : 'hook'; this.look = s.look; this.pupoGrabPt = true; this.back = true; this.friendly = true;
+    this.ax = s.x; this.ay = s.y - TS / 2; this.orbit = s.orbit || null; this.hx = this.ax; this.hy = this.ay;
+    if (this.kind === 'post') { this.hy = s.y - 8; this.standY = s.y; }
+    this.place();
+  }
+  place() {
+    if (this.orbit) { const o = this.orbit, a = (o.phase || 0) + this.g.t * TAU / (o.period || 6); this.hx = this.ax + Math.cos(a) * (o.r || 2) * TS; this.hy = this.ay + Math.sin(a) * (o.r || 2) * TS; }
+    this.x = this.hx - 10; this.y = this.hy - 10;
+  }
+  update(dt) { this.t += dt; if (this.orbit) this.place(); }
+  draw(ctx) {
+    if (TourObj.skin(ctx, this, this.look)) return;
+    if (this.kind === 'post') {
+      // a stubby mooring post on the ledge, a brass ring on top
+      const x = this.hx, y = this.standY;
+      ctx.fillStyle = '#1c1426'; rr(ctx, x - 7.5, y - 13.5, 15, 15, 3); ctx.fill();
+      ctx.fillStyle = '#8a5a2e'; rr(ctx, x - 6, y - 12, 12, 12, 2); ctx.fill(); ctx.fillStyle = '#a8743e'; ctx.fillRect(x - 6, y - 12, 12, 3);
+      pupoRing(ctx, x, y - 16, 5);
+      return;
+    }
+    // a hook: a cord from above (or the orbit's hub and arm), a knot, the brass ring
+    if (this.orbit) { pupoLine(ctx, this.ax, this.ay, this.hx, this.hy - 6, 3, '#6a4a2a'); ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(this.ax, this.ay, 5.5, 0, TAU); ctx.fill(); ctx.fillStyle = '#c8902a'; ctx.beginPath(); ctx.arc(this.ax, this.ay, 4, 0, TAU); ctx.fill(); }
+    else pupoLine(ctx, this.hx, this.hy - 30, this.hx, this.hy - 7, 2, '#e8dcc0');
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(this.hx, this.hy - 7, 3.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#d84a3a'; ctx.beginPath(); ctx.arc(this.hx, this.hy - 7, 2.4, 0, TAU); ctx.fill();
+    pupoRing(ctx, this.hx, this.hy, 5.5);
+  }
+}
+/* a climb strip: a column 1 tile wide and h tall (the spawn is its bottom cell); side: where the wall is (+1 right, -1 left) */
+class PupoClimb extends Ent {
+  constructor(g, s) {
+    const h = s.h || 4; super(g, s, TS, h * TS); this.tx = Math.floor(s.x / TS); this.x = this.tx * TS; this.bottom = s.y; this.y = s.y - h * TS; this.top = this.y;
+    this.side = s.side || 0; this.look = s.look; this.pupoClimb = true; this.back = true; this.friendly = true; this.cool = 0;
+  }
+  get cx() { return this.x + TS / 2; }
+  update(dt) { this.t += dt; if (this.cool > 0) this.cool -= dt; }
+  draw(ctx) {
+    if (TourObj.skin(ctx, this, this.look)) return;
+    // a ribbon-wrapped rope / trunk with horizontal grip lines (slick for Brady alone)
+    const x = this.cx + this.side * 6, w = 10;
+    ctx.fillStyle = '#1c1426'; ctx.fillRect(x - w / 2 - 1.5, this.top - 2, w + 3, this.bottom - this.top + 2);
+    ctx.fillStyle = '#7a9a3a'; ctx.fillRect(x - w / 2, this.top, w, this.bottom - this.top);
+    ctx.fillStyle = '#a8c858'; ctx.fillRect(x - w / 2, this.top, 3, this.bottom - this.top);
+    ctx.strokeStyle = '#f4ecd0'; ctx.lineWidth = 1.6;
+    for (let y = this.top + 6; y < this.bottom - 2; y += 8) { ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.lineTo(x + w / 2, y - 2); ctx.stroke(); }
+  }
+}
+/* a bar: a horizontal run w tiles wide at the spawn cell's middle (Pupo hangs upside down under it) */
+class PupoBar extends Ent {
+  constructor(g, s) {
+    const w = s.w || 3; super(g, s, w * TS, 10); this.x = Math.floor(s.x / TS) * TS; this.y = s.y - TS / 2 - 5;
+    this.x0 = this.x + 6; this.x1 = this.x + w * TS - 6; this.look = s.look; this.pupoBar = true; this.back = true; this.friendly = true; this.cool = 0;
+    this.y = s.y - TS / 2;
+  }
+  update(dt) { this.t += dt; if (this.cool > 0) this.cool -= dt; }
+  draw(ctx) {
+    if (TourObj.skin(ctx, this, this.look)) return;
+    pupoLine(ctx, this.x + 2, this.y, this.x + this.w - 2, this.y, 4, '#9a6a3a');
+    ctx.strokeStyle = '#f4ecd0'; ctx.lineWidth = 1.4;
+    for (let x = this.x + 8; x < this.x + this.w - 4; x += 10) { ctx.beginPath(); ctx.moveTo(x, this.y - 2); ctx.lineTo(x - 2, this.y + 2); ctx.stroke(); }
+  }
+}
+/* a pull handle: a cord with a ring out of Brady's reach; pulling flips toggle group g or opens lock id (once: stays pulled) */
+class PupoHandle extends Ent {
+  constructor(g, s) {
+    super(g, s, 20, 20); this.hx = s.x; this.hy = s.y - TS / 2 + 6; this.x = this.hx - 10; this.y = this.hy - 10;
+    this.g0 = s.g; this.lock = s.lock; this.once = !!s.once || s.lock != null; this.look = s.look; this.pupoHandle = true; this.back = true; this.friendly = true; this.used = false; this.k = 0;
+  }
+  update(dt) { this.t += dt; this.k = approach(this.k, 0, dt * 3); }
+  pull(g, p) {
+    if (this.used) return;
+    if (this.g0 != null) g.flipToggle(this.g0);
+    if (this.lock) TourLock.open(g, this.lock);
+    if (this.once) this.used = true;
+    this.k = 1; TourKit.sfx('lever', 'select', { vol: 0.8 }); g.burst(this.hx, this.hy, 8, '#ffd84a', 'spark');
+  }
+  draw(ctx) {
+    if (TourObj.skin(ctx, this, this.look)) return;
+    const y = this.hy + this.k * 10;
+    pupoLine(ctx, this.hx, this.hy - 34, this.hx, y - 6, 2, '#c8a070');
+    ctx.fillStyle = '#1c1426'; rr(ctx, this.hx - 5, y - 7, 10, 7, 2); ctx.fill(); ctx.fillStyle = '#d8823a'; rr(ctx, this.hx - 3.6, y - 5.6, 7.2, 4.2, 1.5); ctx.fill();
+    pupoRing(ctx, this.hx, y + 2, 4.5);
+  }
+}
+/* a tickle gate: a big, harmless, sleeping animal on lock tiles; one belly-button spot (belly: [dx, dy] tiles from the spawn) */
+class PupoTickle extends Ent {
+  constructor(g, s) {
+    super(g, s, 2 * TS, 3 * TS); this.lockId = s.lock; this.look = s.look; this.pupoTickle = true; this.friendly = true; this.awake = false; this.k = 0; this.giggle = 0; this.no = 0;
+    const b = s.belly || [0, -1]; this.bx = s.x + b[0] * TS; this.by = s.y - TS / 2 + b[1] * TS;
+  }
+  hideLock() { if (this.hid) return; for (const e of this.g.entities) if (e instanceof Lock && e.id === this.lockId) { e.draw = PupoTickle.noDraw; this.hid = true; } }
+  update(dt) {
+    this.t += dt; this.hideLock();
+    if (this.giggle > 0) { this.giggle -= dt; if (this.giggle <= 0) { this.awake = true; TourLock.open(this.g, this.lockId); } }
+    if (this.awake) this.k = Math.min(1, this.k + dt / 1.2);
+    if (this.no > 0) this.no -= dt;
+    if (this.k >= 1) this.remove = true;
+    // Brady alone bounces off it
+    const p = this.g.player; if (p && !p.pupoRide && !this.awake && overlap(p, this) && !(this.zT > 0)) { this.zT = 1.2; this.g.parts.text(this.cx, this.y - 6, 'ZZZ', '#e8e4ff'); }
+    if (this.zT > 0) this.zT -= dt;
+  }
+  tickle(p, x, y) {
+    if (this.awake || this.giggle > 0) return;
+    if (Math.hypot(x - this.bx, y - this.by) < 14) { this.giggle = 0.6; this.g.parts.text(this.bx, this.by - 10, 'HEE HEE...', '#ffffff'); PupoRide.sfx('pupoGiggle', 'pick', { pitch: 0.5, vol: 0.6 }); }
+    else if (!(this.no > 0)) { this.no = 1.2; PupoRide.say(this.g, p.cx, p.y - 18, '...NOT... THERE.'); }
+  }
+  draw(ctx) {
+    this.hideLock();
+    if (TourObj.skin(ctx, this, this.look)) return;
+    const k = easeInOut(this.k), x = this.cx + k * 3 * TS, y = this.y + this.h, wob = this.giggle > 0 ? Math.sin(this.t * 40) * 2 : 0, br = Math.sin(this.t * 1.6) * 1.5;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(k * 2.5);
+    // a big round sleeping animal (fur, a pale belly, closed eyes), the belly button marked by a tiny swirl
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.ellipse(wob, -this.h / 2, this.w / 2 + 4, this.h / 2 + 2 + br, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c8b8e0'; ctx.beginPath(); ctx.ellipse(wob, -this.h / 2, this.w / 2 + 2, this.h / 2 + br, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#f2ecf8'; ctx.beginPath(); ctx.ellipse(wob - 4, -this.h / 2 + 8, this.w / 2 - 8, this.h / 2 - 12, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(wob - 8, -this.h + 18, 3, 0.2, Math.PI - 0.2); ctx.moveTo(wob + 6, -this.h + 18); ctx.arc(wob + 3, -this.h + 18, 3, 0.2, Math.PI - 0.2); ctx.stroke();
+    ctx.restore();
+    if (!this.awake) { ctx.strokeStyle = '#8a6aa8'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(this.bx, this.by, 2.2, 0, 5); ctx.stroke(); const z = (this.t * 0.5) % 1; PupoRide.zGlyph(ctx, this.cx + 14 + z * 6, this.y + 6 - z * 18, 3 + z * 3); }
+  }
+}
+PupoTickle.noDraw = function () {};
+/* a grille: w x h solid tiles (from the spawn cell to the right and up) that arms pass through and bodies don't */
+class PupoGrille extends Ent {
+  constructor(g, s) {
+    const w = s.w || 1, h = s.h || 1; super(g, s, w * TS, h * TS); this.tx = Math.floor(s.x / TS); this.ty1 = Math.floor(s.y / TS) - 1; this.ty0 = this.ty1 - h + 1;
+    this.x = this.tx * TS; this.y = this.ty0 * TS; this.rect = { x0: this.tx, y0: this.ty0, x1: this.tx + w - 1, y1: this.ty1 }; this.pupoGrille = true; this.back = true; this.friendly = true;
+  }
+  draw(ctx) {
+    ctx.fillStyle = '#2a2230'; ctx.fillRect(this.x, this.y, this.w, this.h);
+    ctx.fillStyle = '#1c1426'; ctx.fillRect(this.x, this.y, this.w, 4); ctx.fillRect(this.x, this.y + this.h - 4, this.w, 4);
+    for (let x = this.x + 5; x < this.x + this.w; x += 8) { ctx.fillStyle = '#1c1426'; ctx.fillRect(x - 2, this.y, 5, this.h); ctx.fillStyle = '#a8603a'; ctx.fillRect(x - 1, this.y, 3, this.h); }
+  }
+}
+/* a snatch key: a key travelling along a path (tile offsets from the spawn), round and round every `period` s */
+class PupoSnatch extends Ent {
+  constructor(g, s) {
+    super(g, s, 24, 24); this.keyId = s.key || 'snatch'; this.path = s.path || [[0, 0], [-4, 0]]; this.period = s.period || 6; this.ox = s.x; this.oy = s.y - TS / 2; this.pupoSnatch = true; this.friendly = true; this.taken = false;
+    if (g.keys && g.keys.has(this.keyId)) this.remove = true;
+    this.place();
+  }
+  place() {
+    const P = this.path, n = P.length, u = ((this.g.t / this.period) % 1) * n, i = Math.floor(u), f = u - i, a = P[i % n], b = P[(i + 1) % n];
+    this.x = this.ox + lerp(a[0], b[0], f) * TS - 12; this.y = this.oy + lerp(a[1], b[1], f) * TS - 12;
+  }
+  update(dt) { this.t += dt; if (!this.taken) this.place(); }
+  give(p) { this.remove = true; this.g.keys.add(this.keyId); sfx('key', 'oneup'); this.g.burst(this.cx, this.cy, 16, '#ffd84a', 'confetti'); this.g.toast('KEY! FIND THE LOCKED DOOR'); }
+  draw(ctx) { GimmickArt.key(ctx, this, this.g.t); }
+}
+Object.assign(ENTITY_TYPES, { pupoGrab: PupoGrab, pupoClimb: PupoClimb, pupoBar: PupoBar, pupoHandle: PupoHandle, pupoTickle: PupoTickle, pupoGrille: PupoGrille, pupoSnatch: PupoSnatch });
+
+/* ---------- the builder pieces (st.x = the next free column, st.gy = the ground row) ---------- */
+Object.assign(Tour.pieces, {
+  // a gap w wide with n grab points spaced at most 4 tiles; hooks hang 4 rows over the ground, posts stand on pillars
+  pupoGap(st, o) {
+    const B = st.B, w = o.w || 8, n = o.hooks || Math.ceil(w / 4), x0 = st.x + 1, x1 = x0 + w - 1, kind = o.kind || 'hook';
+    st.floor(st.x, st.x); const bot = PupoReach.bottom(st);
+    for (let x = x0; x <= x1; x++) PupoReach.hole(st, x);
+    if (o.under === 'water') for (let x = x0; x <= x1; x++) for (let y = st.gy + 1; y <= bot; y++) B.set(x, y, T.WATER);
+    if (o.under === 'spikes' && !st.lanes) for (let x = x0; x <= x1; x++) { B.set(x, bot - 1, T.SPIKES); B.set(x, bot, T.GROUND); }
+    for (let i = 1; i <= n; i++) {
+      const gx = x0 + Math.round(i * w / (n + 1)) - 1;
+      if (kind === 'post') { B.set(gx, st.gy, T.HARD); for (let y = st.gy + 1; y < B.H; y++) B.set(gx, y, T.HARD); B.spawn('pupoGrab', gx, st.gy - 1, { kind: 'post', look: o.look || null }); }
+      else B.spawn('pupoGrab', gx, st.gy - 5, { kind: 'hook', look: o.look || null });
+    }
+    // candy coins along the swing (o.coins)
+    if (o.coins) for (let x = x0 + 1; x < x1; x++) st.B.set(x, st.gy - 2 - Math.round(Math.sin((x - x0) / (x1 - x0) * Math.PI) * 2), T.PICK);
+    st.floor(x1 + 1, x1 + 3);
+    return x1 + 4;
+  },
+  // a wall h tall with a climb strip on its near face and a ledge on top
+  pupoClimb(st, o) {
+    const B = st.B, h = o.h || 6, x = st.x;
+    st.floor(x, x + 5);
+    B.fill(x + 2, st.gy - h, x + 4, st.gy - 1, T.HARD);
+    B.spawn('pupoClimb', x + 1, st.gy - 1, { h, side: 1, look: o.look || null });
+    st.gy -= h; st.floor(x + 2, x + 6); st.gy += h;
+    return x + 5;
+  },
+  // a bar w long over a hazard (spikes by default)
+  pupoBars(st, o) {
+    const B = st.B, w = o.w || 6, x0 = st.x + 1;
+    st.floor(st.x, st.x);
+    const bot = PupoReach.bottom(st);
+    for (let x = x0; x < x0 + w; x++) { PupoReach.hole(st, x); if (o.under !== 'pit' && !st.lanes) { B.set(x, bot - 1, T.SPIKES); B.set(x, bot, T.GROUND); } }
+    B.spawn('pupoBar', x0, st.gy - 5, { w, look: o.look || null });
+    st.floor(x0 + w, x0 + w + 2);
+    return x0 + w + 3;
+  },
+  // a handle out of Brady's reach (dx, dy tiles from the start) and the toggle group or lock it drives
+  pupoPull(st, o) {
+    const x = st.x; st.floor(x, x + 4);
+    st.B.spawn('pupoHandle', x + (o.dx || 2), st.gy - 1 - (o.dy || 5), { g: o.g, lock: o.lock, once: !!o.once, look: o.look || null });
+    return x + 5;
+  },
+  // the sleeping blocker on lock tiles (3 high)
+  pupoTickle(st, o) {
+    const x = st.x + 2, pk = o.pocket || 0; st.floor(st.x, st.x + 4 + pk);
+    st.B.lock(x, st.gy - 3, st.gy - 1, o.lock || 'tickle', 'door');
+    st.B.spawn('pupoTickle', x, st.gy - 1, { lock: o.lock || 'tickle', belly: o.belly || [-1, -1], look: o.look || null });
+    // o.pocket: a walled-off pocket of coins behind it (a bonus: the way on never passes a tickle gate unless the level says so)
+    if (pk) { for (let k = 0; k < pk; k++) st.B.set(x + 2 + k, st.gy - 1, T.PICK); for (let y = st.gy - 4; y < st.gy; y++) st.B.set(x + 3 + pk, y, T.HARD); for (let k = 0; k <= pk + 2; k++) st.B.set(x + 1 + k, st.gy - 4, T.HARD); }
+    return st.x + 5 + pk;
+  },
+  // a target high up (h rows), or behind a grille
+  pupoFetch(st, o) {
+    const B = st.B, x = st.x + 2, y = st.gy - 1 - (o.h || 6); st.floor(st.x, st.x + 4);
+    if (o.grille) { B.fill(x - 1, y - 1, x + 1, y + 1, T.HARD); B.set(x, y, T.EMPTY); B.set(x - 1, y, T.HARD); B.spawn('pupoGrille', x - 1, y, { w: 1, h: 1 }); }
+    if (o.key) B.spawn('key', x, y, { id: o.key }); else if (o.gold) B.gold(x, y, o.gold); else { B.set(x, y, T.QBLOCK); B.item(x, y, o.item || 'oneup'); }
+    return st.x + 5;
+  },
+  // grille tiles: arms pass through, bodies don't (w x h from this cell to the right and up)
+  pupoGrille(st, o) {
+    const B = st.B, tx = st.x, ty = st.gy - 1, w = o.w || 1, h = o.h || 1;
+    for (let y = ty - h + 1; y <= ty; y++) for (let x = tx; x < tx + w; x++) B.set(x, y, T.HARD);
+    B.spawn('pupoGrille', tx, ty, { w, h });
+    return tx + w;
+  },
+  pupoSnatch(st, o) { st.B.spawn('pupoSnatch', st.x, st.gy - 1 - (o.h || 6), { key: o.key, path: o.path, period: o.period }); return st.x + 1; }
+});
+
+/* ---------- wiring into the ride (28_tour_p_pupo.js) ---------- */
+Object.assign(PupoRide, {
+  addMeter(g, k) { const R = this.st(g); R.meter = Math.min(1, R.meter + k * (R.drowsyT > 0 ? 0.5 : 1)); },
+  enter(g, p, mode, e) { const R = this.st(g); R.mode = mode; const M = this.modes[mode]; if (M && M.enter) M.enter(p, g, R, e); },
+  leave(g, p) { const R = this.st(g), M = this.modes[R.mode]; R.mode = ''; if (M && M.exit) M.exit(p, g, R); PupoReach.letGo(p, R); }
+});
+for (const m of ['swing', 'zip', 'pull', 'climb', 'hang', 'ledge']) {
+  PupoReach[m].exit = (p, g, R) => { PupoReach.letGo(p, R); };
+  PupoRide.modes[m] = PupoReach[m];
+}
+PupoRide.afters.push((p, dt, inp, g, R, inMode) => PupoReach.after(p, dt, inp, g, R, inMode));
+PupoRide.napSpots.push((g, p) => PupoReach.napSpot(g, p));
+// the area's Pupo objects and grilles, cached once per area (a reused array each)
+PupoRide.cacheObjs = function (g) {
+  const A = g.area; if (!A) return;
+  const objs = A.pupoObjs || (A.pupoObjs = []); objs.length = 0;
+  let gr = null;
+  for (const e of A.entities) {
+    if (e.pupoClimb || e.pupoBar || e.pupoGrabPt) objs.push(e);
+    if (e.pupoGrille) { gr = gr || A.pupoGrilles || (A.pupoGrilles = []); if (gr.indexOf(e.rect) < 0) gr.push(e.rect); }
+  }
+};
+{
+  const al0 = PupoRide.areaLoaded;
+  PupoRide.areaLoaded = function (g) { this.cacheObjs(g); return al0.call(this, g); };
+  // a mode's own draw origin and box (climbing, hanging, swinging...), and the arm drawn after the ride
+  // the arm goes in front of the ride, except while swinging: then it is drawn behind Pupo and Brady (it would cross Brady's face)
+  PupoRide.unders.push((ctx, p, g, R, t) => { if (R.mode === 'swing') PupoArms.draw(ctx, p, g, R, t); });
+  PupoRide.overs.push((ctx, p, g, R, t) => { if (R.mode !== 'swing') PupoArms.draw(ctx, p, g, R, t); });
+  // the camera: while swinging it leads in the swing's direction (0.13 of the view); while climbing Brady sits at 60 % of
+  // the view's height, to show more above (TourHooks.camera, at the end of Play.updateCamera)
+  TourHooks.on('camera', (play, dt) => {
+    const p = play.player, R = play.pupo; if (!p || !p.pupoRide || !R || !R.mode || !play.area) return;
+    const A = play.area, k = 1 - Math.exp(-dt * 5);
+    if (R.mode === 'swing') {
+      const lead = clamp(p.vx / (10 * TS), -1, 1) * Game.viewW * 0.13, tx = clamp(p.cx - Game.viewW * 0.42 + lead, 0, Math.max(0, A.W * TS - Game.viewW));
+      play.camX += (tx - play.camX) * k;
+    } else if (R.mode === 'climb') {
+      const ty = clamp(p.y + p.h * 0.5 - Game.viewH * 0.6, 0, Math.max(0, A.H * TS - Game.viewH));
+      play.camY += (ty - play.camY) * k;
+    }
+  });
+  PupoRide.overs.push((ctx, p, g, R, t) => PupoArms.marker(ctx, p, g, R, t));
+}
+
+/* ---------- drawing: the stretch arm (straight to the frame, its own outline), the paw marker, the button's verb ---------- */
+const PupoArms = {
+  an: Pupo.newAnchors(),
+  // the shoulder in the world for the current pose (Pupo's anchors, scaled and mirrored; the swing's rotation applied)
+  shoulder(p, R) {
+    const o = R.draw, S = PupoRide.ART, f = o.facing || 1, an = Pupo.anchors(o.pose === 'ride' || o.pose === 'swim' ? 'walk' : o.pose, o.t, this.an, o);
+    let x = o.x + f * an.shoulderF.x * S, y = o.y + an.shoulderF.y * S * (o.pose === 'flop' ? 1 : 1);
+    if (o.rot) { const c = Math.cos(o.rot), s = Math.sin(o.rot), dx = x - o.rotX, dy = y - o.rotY; x = o.rotX + dx * c - dy * s; y = o.rotY + dx * s + dy * c; }
+    this.sx = x; this.sy = y;
+  },
+  sx: 0, sy: 0,
+  draw(ctx, p, g, R, t) {
+    const a = R.arm; if (!a || a.phase === 0 || a.len <= 1) return;
+    this.shoulder(p, R);
+    // the hand: the tip of the arm from the riding shoulder (the game's reach geometry), drawn from the art's shoulder
+    PupoReach.tip(p, a);
+    const hx = PupoReach.px, hy = PupoReach.py, sag = Math.min(14, a.len * 0.06) * (a.phase === 3 ? -1 : 1) * (a.ux >= 0 ? 1 : -1);
+    Pupo.arm(ctx, this.sx, this.sy, hx, hy, { w: 6, col: PUPO.fur, t, point: a.kind !== 'hook' && a.kind !== 'post' && a.kind !== 'handle' && !a.carry, sag, handScale: 1.1 });
+    // the belly-button boop: a white ink ring grows at the fingertip
+    if (a.boop > 0) { const k = 1 - a.boop / 0.35, r = 2 + k * 10; ctx.lineWidth = 3.4; ctx.strokeStyle = '#1c1426'; ctx.beginPath(); ctx.arc(a.bx, a.by, r, 0, TAU); ctx.stroke(); ctx.lineWidth = 1.8; ctx.strokeStyle = '#ffffff'; ctx.stroke(); }
+  },
+  // the paw marker: a small cream paw with an ink outline over the chosen target, bobbing 2 px at 1 Hz (25 % larger in portrait)
+  marker(ctx, p, g, R, t) {
+    const tg = R.tg, a = R.arm; if (!tg || !tg.kind || R.showT > 0 || (a && a.phase !== 0)) return;
+    const s = (Game.cssH > Game.cssW ? 1.25 : 1), x = tg.x, y = tg.y - 16 * s + Math.sin(t * TAU) * 2;
+    this.paw(ctx, x, y, s * 0.9, PupoReach.verbOf(tg.kind));
+  },
+  // a paw icon for a verb: poke (pointing claw), grab (open paw), pull (fist), fetch (cupped paw)
+  paw(ctx, x, y, s, verb) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(0, 0, 7.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#f4ead8'; ctx.beginPath(); ctx.arc(0, 0, 5.8, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 1.6;
+    if (verb === 'poke') { ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(0, -10); ctx.stroke(); ctx.strokeStyle = '#f4ead8'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(0, -9.4); ctx.stroke(); }
+    else if (verb === 'grab') { for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(i * 3, -3); ctx.lineTo(i * 4.2, -8.5); ctx.stroke(); } }
+    else if (verb === 'pull') { ctx.beginPath(); ctx.moveTo(-3.5, -2); ctx.lineTo(3.5, -2); ctx.moveTo(-3.5, 1); ctx.lineTo(3.5, 1); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.arc(0, -1, 3.6, 0.2, Math.PI - 0.2); ctx.stroke(); }
+    ctx.restore();
+  },
+  // the action button shows what Action will do while riding
+  actionArt(ctx, b) {
+    const play = Game.scene; if (!(play instanceof Play) || !play.player || !play.player.pupoRide) return false;
+    const R = play.pupo, tg = R && R.tg, verb = tg && tg.kind ? PupoReach.verbOf(tg.kind) : 'poke';
+    ctx.save(); const s = b.r / 16; ctx.globalAlpha *= tg && tg.kind ? 1 : 0.7; this.paw(ctx, 0, 3, s, verb); ctx.restore();
+    return true;
+  }
+};
+{
+  const aa0 = Input.actionArt;
+  Input.actionArt = (ctx, b, held) => { if (PupoArms.actionArt(ctx, b)) return true; return aa0 ? aa0(ctx, b, held) : false; };
+  // the swing / zip / pull / ledge poses rotate the ride about a point: applied around the inked body
+  const pr0 = PupoRide.paintRide;
+  PupoRide.paintRide = function (c) {
+    const p = this.cur, o = p.g.pupo.draw;
+    if (o.rot) { c.save(); c.translate(o.rotX, o.rotY); c.rotate(o.rot); c.translate(-o.rotX, -o.rotY); pr0.call(this, c); c.restore(); }
+    else pr0.call(this, c);
+  };
+  const ps0 = PupoRide.pose;
+  PupoRide.pose = function (p, R) {
+    const o = R.draw; o.rot = 0; o.armsOff = false; o.big = 0;
+    const r = ps0.call(this, p, R);
+    const a = R.arm; if (a && a.phase !== 0) r.armsOff = true;
+    return r;
+  };
+}
+try { window.BRADY_PUPO = Object.assign(window.BRADY_PUPO || {}, { PupoReach, PupoArms, PupoGrab, PupoClimb, PupoBar, PupoHandle, PupoTickle, PupoGrille, PupoSnatch }); } catch (e) { /* not in a browser */ }
+
+/* ---- 28_tour_pb_power.js ---- */
+/* ============================================================
+   World tour: PUPO POWER! (docs/design/PUPO.md §3, PU-3)
+   The meter fills over 30 s of riding (pokes add to it). Pressed
+   with the meter full (the round Pupo button where the power-picker
+   chip sits, or F / L on a keyboard), it plays a 2.6 s show with the
+   world frozen: Pupo rears up and grows a startled tangle of extra
+   arms, each with one pointing claw; his eyes become turning rainbow
+   spirals; his tongue unrolls like a patterned carpet; "PUPO POWER!"
+   slams in, big, bold and yellow; every arm boops an enemy's belly
+   button (everyone gets a pupo for this); butterflies erupt from his
+   own; the enemies pop into confetti and drop a coin. Then a 1.5 s
+   shield (three little stars). Up to 16 non-boss enemies on screen;
+   past 16 they are stunned; projectiles turn into butterflies.
+   Fiesta Toon: hard edges and ink outlines; no glows, blurs, washes
+   or full-screen flashes; nothing full-screen changes faster than
+   about 3 times a second (the letterbox slides once each way, the text
+   slams once); gameplay is identical at every tier, the look is
+   cheaper at MEDIUM / LOW and calmer with FX CALM.
+   PupoPowerFx is built once (pools of arms, butterflies, targets and
+   boops; the text and the rug strip drawn once into cached canvases);
+   its update and draw allocate nothing (tools/sbw_pupo_power_test.js
+   measures it).
+   ============================================================ */
+const PupoPower = {
+  K: { SHOW: 2.6, SHIELD: 1.5, MAX: 16, STUN_OVER: 3, STUN_NO: 6, VIEW_PAD: TS },
+  key: false,
+  // the look tier: 0 HIGH, 1 MEDIUM (QualityTier.level >= 2), 2 LOW (>= 5); calm: the FX CALM setting (reduced motion)
+  tier() { const L = typeof QualityTier !== 'undefined' ? QualityTier.level : 0; return L >= 5 ? 2 : L >= 2 ? 1 : 0; },
+  calm() { return typeof TourKit !== 'undefined' && TourKit.reduceMotion(); },
+  can(g) { const p = g && g.player; return !!(p && p.pupoRide && p.state === 'play' && !p.dead && g.state === 'play' && g.pupo && !(g.pupo.showT > 0)); },
+  press(g) {
+    if (!this.can(g)) return false;
+    const R = g.pupo;
+    if (R.meter < 1) { R.ringShake = 0.35; Sound.play('bump', { vol: 0.35, pitch: 0.7 }); return false; }
+    this.start(g); return true;
+  },
+  start(g) {
+    const R = g.pupo, p = g.player, F = PupoPowerFx;
+    R.meter = 0; R.showT = 1e-6; R.ringShake = 0;
+    PupoReach.letGo(p, R); if (R.arm) { R.arm.phase = 0; R.arm.len = 0; }
+    F.begin(g, p);
+    const tips = Save.data.tips || (Save.data.tips = {}); if (!tips.pupoPower) { tips.pupoPower = true; Save.save(); }
+    this.vol = Save.data.settings && Save.data.settings.music != null ? Save.data.settings.music : 0.6;
+    Sound.setMusicVolume(this.vol * 0.3);
+    PupoRide.sfx('pupoPower', 'disco', { vol: 0.8 });
+  },
+  vol: 0.6,
+  // the frozen world: only the show, the camera and the particles run
+  step(g, dt) {
+    const R = g.pupo, F = PupoPowerFx, K = this.K;
+    const t0 = R.showT; R.showT += dt; const t = R.showT;
+    if (g.shakeAmt > 0) g.shakeAmt = Math.max(0, g.shakeAmt - dt * 30);
+    if (g.toastT > 0) g.toastT -= dt;
+    F.update(g, t0, t, dt);
+    g.player.anim.t += dt;
+    g.updateCamera(dt); g.parts.update(dt);
+    if (t >= K.SHOW) this.end(g);
+  },
+  end(g) {
+    const R = g.pupo, p = g.player;
+    R.showT = 0; R.shieldT = this.K.SHIELD; R.powerShield = 1;
+    PupoPowerFx.finish(g);
+    Sound.setMusicVolume(this.vol);
+    PupoRide.say(g, p.cx, p.y - 18, 'pupo');
+  }
+};
+
+/* ---------- the show: pools built once ---------- */
+const PupoPowerFx = {
+  N_ARMS: 16, N_BF: 32, BIG: 1.3, TIERS: [{ arms: 12, bands: 6, rug: 0, bf: 24, bob: true, box: true, shake: 3 }, { arms: 8, bands: 4, rug: 1, bf: 12, bob: false, box: true, shake: 3 }, { arms: 4, bands: 3, rug: 2, bf: 6, bob: false, box: false, shake: 0 }],
+  COLS: ['#e8413a', '#ff9a2a', '#ffd84a', '#4ac46a', '#3a8ae8', '#9a5ae8'],
+  init() {
+    if (this.arms) return;
+    this.targets = []; this.tx = new Float32Array(16); this.ty = new Float32Array(16); this.hitDone = false; this.n = 0;
+    this.arms = []; for (let i = 0; i < this.N_ARMS; i++) this.arms.push({ on: false, ox: 0, oy: 0, sa: 0, ang: 0, tx: 0, ty: 0, born: 0, shoot: 0, tgt: -1, len: 0, col: i % 2 ? '#b48c62' : '#86643f', sag: 0, w: 5 });
+    this.bfs = []; for (let i = 0; i < this.N_BF; i++) this.bfs.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, t0: 0, col: this.COLS[i % 6], s: 1, ph: i * 0.37 });
+    this.boops = []; for (let i = 0; i < 16; i++) this.boops.push({ on: false, x: 0, y: 0, t0: 0 });
+    this.an = Pupo.newAnchors();
+    this.cand = []; this.candD = new Float32Array(64);
+  },
+  /* the targets: every non-boss enemy overlapping the view grown by 1 tile, nearest first, at most 16 (the rest stunned 3 s) */
+  begin(g, p) {
+    this.init();
+    const K = PupoPower.K, cx = p.cx, cy = p.cy, x0 = g.camX - K.VIEW_PAD, y0 = g.camY - K.VIEW_PAD, x1 = g.camX + Game.viewW + K.VIEW_PAD, y1 = g.camY + Game.viewH + K.VIEW_PAD;
+    const C = this.cand, D = this.candD; C.length = 0;
+    for (const e of g.entities) {
+      if (e.remove || e.dead || e.boss || !e.enemy || e.friendT || e.friendly || this.isShot(e)) continue;
+      if (e.x + e.w < x0 || e.x > x1 || e.y + e.h < y0 || e.y > y1) continue;
+      const d = (e.x + e.w / 2 - cx) * (e.x + e.w / 2 - cx) + (e.y + e.h / 2 - cy) * (e.y + e.h / 2 - cy);
+      // insertion into the sorted candidate list (no sort, no closures)
+      let i = C.length; if (i >= 64) continue; C.push(e);
+      while (i > 0 && D[i - 1] > d) { C[i] = C[i - 1]; D[i] = D[i - 1]; i--; }
+      C[i] = e; D[i] = d;
+    }
+    const T = this.targets; T.length = 0;
+    for (let i = 0; i < C.length; i++) { if (i < K.MAX) T.push(C[i]); else if (C[i].stun) C[i].stun(K.STUN_OVER); else C[i].stunT = K.STUN_OVER; }
+    C.length = 0;
+    this.n = T.length; this.hitDone = false; this.tier = PupoPower.tier(); this.calm = PupoPower.calm(); this.tongue = 0; this.ground = p.onGround || !!(g.pupo.mode === 'climb');
+    for (let i = 0; i < this.n; i++) { const e = T[i]; this.tx[i] = e.x + e.w / 2; this.ty[i] = e.y + e.h * 0.55; }
+    // the arms: one per target up to the tier's count (at least 5, so it is always a startled tangle)
+    const tr = this.TIERS[this.tier], nA = Math.min(tr.arms, Math.max(5, this.n));
+    for (let i = 0; i < this.N_ARMS; i++) {
+      const a = this.arms[i]; a.on = i < nA; if (!a.on) continue;
+      // every which way: the angle to its target, or a jumble of directions (never a symmetric fan)
+      a.tgt = i < this.n ? i : -1;
+      a.ang = a.tgt >= 0 ? Math.atan2(this.ty[i] - (p.y + p.h * 0.4), this.tx[i] - p.cx) : -Math.PI / 2 + ((i * 2.399) % TAU) - 1.2;
+      // it sprouts from his back and sides (around the upper body), the stub sticks out its own way, never a fan
+      const oa = -0.15 - ((i * 0.618) % 1) * 2.85; a.ox = Math.cos(oa) * 13; a.oy = -30 + Math.sin(oa) * 15;
+      a.sa = oa + (((i * 0.383) % 1) - 0.5) * 1.4;
+      a.born = 0.30 + i * 0.035; a.shoot = 1.00 + (i % tr.arms) * 0.03; a.len = 0; a.sag = ((i * 7) % 5 - 2) * 3; a.w = 4.5 + (i % 3) * 0.6;
+      a.tx = a.tgt >= 0 ? this.tx[i] : p.cx + Math.cos(a.ang) * 2.2 * TS; a.ty = a.tgt >= 0 ? this.ty[i] : p.y + p.h * 0.4 + Math.sin(a.ang) * 2.2 * TS;
+    }
+    for (const b of this.bfs) b.on = false;
+    for (const b of this.boops) b.on = false;
+    // projectiles on screen turn into butterflies
+    let k = 24;
+    for (const e of g.entities) {
+      if (e.remove || !this.isShot(e)) continue;
+      if (e.x + e.w < x0 || e.x > x1 || e.y + e.h < y0 || e.y > y1) continue;
+      e.remove = true; if (k < this.N_BF) { const b = this.bfs[k++]; b.on = true; b.x = e.x + e.w / 2; b.y = e.y + e.h / 2; b.vx = 0; b.vy = -2 * TS; b.t0 = 0; b.s = 1; }
+    }
+    // friends giggle and are not harmed
+    for (const e of g.entities) if (e.friendT && !e.remove && e.x + e.w > x0 && e.x < x1 && e.y + e.h > y0 && e.y < y1) g.parts.text(e.cx, e.y - 8, 'HEE HEE', '#ffffff');
+  },
+  isShot(e) { return (typeof Shot !== 'undefined' && e instanceof Shot) || (typeof BassBall !== 'undefined' && e instanceof BassBall); },
+  // the belly button in the world (the art's anchor, scaled and mirrored)
+  bellyX: 0, bellyY: 0, mouthX: 0, mouthY: 0,
+  anchorsNow(g, p, t) {
+    const o = g.pupo.draw, S = PupoRide.ART * this.BIG, f = p.facing, an = Pupo.anchors('rear', t, this.an); this.sc = this.BIG;
+    this.bellyX = o.x + f * an.belly.x * S; this.bellyY = o.y + an.belly.y * S;
+    this.mouthX = o.x + f * an.mouth.x * S; this.mouthY = o.y + an.mouth.y * S;
+    this.eyeLX = o.x + f * an.eyeL.x * S; this.eyeLY = o.y + an.eyeL.y * S; this.eyeRX = o.x + f * an.eyeR.x * S; this.eyeRY = o.y + an.eyeR.y * S; this.eyeR = an.eyeR_r * S;
+  },
+  update(g, t0, t, dt) {
+    const tr = this.TIERS[this.tier], p = g.player;
+    this.anchorsNow(g, p, t);
+    // the butterflies: three bursts of a third each at 1.20, 1.35 and 1.50 s, from his belly button
+    const nb = this.calm ? 6 : tr.bf, per = Math.ceil(nb / 3);
+    for (let k = 0; k < 3; k++) {
+      const at = 1.20 + k * 0.15;
+      if (t0 < at && t >= at) for (let i = k * per; i < Math.min(nb, (k + 1) * per); i++) {
+        const b = this.bfs[i], a = -Math.PI / 2 + ((i * 1.7) % 2.4) - 1.2, sp = (this.calm ? 1.5 : 3 + (i * 0.37) % 3) * TS;
+        b.on = true; b.x = this.bellyX; b.y = this.bellyY; b.vx = Math.cos(a) * sp * (p.facing || 1) * 0.8; b.vy = Math.sin(a) * sp - (this.calm ? 0.5 * TS : 0); b.t0 = at; b.s = 1;
+      }
+    }
+    for (let i = 0; i < this.N_BF; i++) {
+      const b = this.bfs[i]; if (!b.on) continue;
+      b.x += (b.vx + Math.sin((t + b.ph) * 3) * 0.6 * TS) * dt; b.y += b.vy * dt;
+      b.s = clamp((2.4 - t) / 0.5, 0, 1);
+      if (t > 2.4) b.on = false;
+    }
+    // the boops land: a belly-button dot on every target and a white ink ring growing in it
+    for (let i = 0; i < this.n; i++) {
+      const tAt = this.boopAt(i, tr);
+      if (t0 < tAt && t >= tAt) { const B = this.boops[i]; B.on = true; this.targets[i].pupoBoop = tAt; B.x = this.tx[i]; B.y = this.ty[i]; B.t0 = tAt; if (i % 4 === 0) { this.sfxO.pitch = 0.55 + i * 0.03; PupoRide.sfx('pupoBoop', 'pick', this.sfxO); } }
+    }
+    // the pop at 1.60: the hits are applied here
+    if (!this.hitDone && t >= 1.60) { this.hitDone = true; this.pop(g, tr); }
+  },
+  // when target i is booped: rounds of the tier's arm count, 0.03 s apart, 0.12 s to arrive; later rounds at 1.25 s
+  boopAt(i, tr) { const r = Math.floor(i / tr.arms), j = i % tr.arms; return (r === 0 ? 1.00 : 1.25) + j * 0.03 + 0.12; },
+  pop(g, tr) {
+    const K = PupoPower.K, src = g.player; let chain = 0;
+    for (let i = 0; i < this.n; i++) {
+      const e = this.targets[i]; if (!e || e.remove || e.dead) continue;
+      const x = e.x + e.w / 2, y = e.y + e.h / 2;
+      const r = e.hit('pupoPower', src);
+      if (r === true || (r && r !== 'bounce')) {
+        // 200 x the chain (no extra lives: the chain table's 1-UPs are for stomps)
+        chain++; g.addScore(200 * chain, x, y); g.burst(x, y, 14, '#ffd84a', 'confetti');
+        if (typeof GearCoin !== 'undefined') g.spawn(new GearCoin(g, x, y - 6));
+      } else if (e.stun) e.stun(K.STUN_NO); else e.stunT = K.STUN_NO;
+    }
+    if (tr.shake && !this.calm) g.shake(tr.shake);
+    Sound.play('kick', { vol: 0.5, pitch: 0.8 });
+  },
+  finish(g) { const T = this.targets; if (T) { for (let i = 0; i < T.length; i++) T[i].pupoBoop = 0; T.length = 0; } this.n = 0; for (const a of this.arms || []) a.on = false; for (const b of this.bfs || []) b.on = false; for (const b of this.boops || []) b.on = false; },
+
+  /* ---------- drawing in the world (after the inked body): the arms, the eyes, the carpet tongue, boops, butterflies ---------- */
+  draw(ctx, p, g, R, t) {
+    if (!(R.showT > 0)) return;
+    const st = R.showT, tr = this.TIERS[this.tier], f = p.facing || 1, calm = this.calm, bx = p.cx, by = p.y + p.h;
+    this.anchorsNow(g, p, t);
+    // the tongue, behind the arms
+    this.drawTongue(ctx, p, st, tr, f);
+    // the arms: sprout 0.30-0.70 (a stub toward the target), shoot to it 1.00-1.40, snap back 1.80-2.30 with one overshoot
+    const wav = calm ? 0 : Math.sin(st * TAU * 3);
+    for (let i = 0; i < this.N_ARMS; i++) {
+      const a = this.arms[i]; if (!a.on || st < a.born) continue;
+      const sc = this.sc, ox = bx + a.ox * f * sc, oy = by + a.oy * sc;
+      // the target this arm is on now (a second round takes targets 13-16 after the first boop)
+      let ti = a.tgt; if (ti >= 0 && this.n > tr.arms && st > 1.25 && i + tr.arms < this.n) ti = i + tr.arms;
+      const txx = ti >= 0 ? this.tx[ti] : a.tx, tyy = ti >= 0 ? this.ty[ti] : a.ty;
+      // the stub: 1.3 tiles out its own way (wiggling), then the tip travels to the target, then snaps back to the stub
+      const sprout = Math.min(1, (st - a.born) / 0.12), stub = 1.3 * TS * easeInOut(sprout);
+      const sx2 = ox + Math.cos(a.sa) * f * stub, sy2 = oy + Math.sin(a.sa) * stub;
+      let k = 0;
+      if (st >= a.shoot && st < 1.80) k = Math.min(1, (st - a.shoot) / 0.12);
+      if (st >= 1.25 && ti !== a.tgt && ti >= 0 && st < 1.80) k = Math.min(1, (st - 1.25 - (i % tr.arms) * 0.03) / 0.12);
+      if (st >= 1.80) {
+        // back like a tape measure: to the stub, past it once, and in
+        const q = clamp((st - 1.80) / 0.5, 0, 1); k = q < 0.5 ? 1 - q / 0.5 : 0;
+        if (q >= 0.5) { const r = (q - 0.5) / 0.5, L = stub * (1 - r) + Math.sin(r * Math.PI) * 6; if (L < 2) continue; this.armTip(ctx, a, ox, oy, ox + Math.cos(a.sa) * f * L, oy + Math.sin(a.sa) * L, t, wav, i, 0); continue; }
+      }
+      if (stub < 2) continue;
+      const hx = sx2 + (txx - sx2) * k, hy = sy2 + (tyy - sy2) * k, D = Math.hypot(hx - ox, hy - oy);
+      // a long arm bows into an arc (alternately up and down), so the tangle reads as noodles, not poles
+      this.armTip(ctx, a, ox, oy, hx, hy, t, wav, i, D * 0.16 * (i % 2 ? 1 : -1));
+    }
+    // the spiral eyes: 0.55-1.00 they spin up, back to his eyes with a slow blink after 1.80
+    if (st > 0.55 && st < 2.30) {
+      const k = Math.min(1, (st - 0.55) / 0.2) * (st > 2.0 ? Math.max(0, 1 - (st - 2.0) / 0.3) : 1), r = Math.max(4.5, this.eyeR * 1.35) * k, ang = calm ? 0.6 : st * 0.6 * TAU;
+      if (r > 1) { Pupo.spiralEye(ctx, this.eyeLX, this.eyeLY, r, ang, tr.bands); Pupo.spiralEye(ctx, this.eyeRX, this.eyeRY, r, ang + 1, tr.bands); }
+    }
+    // the boops: a belly-button dot and a white ink ring growing 0 -> 14 px over 0.2 s
+    for (let i = 0; i < this.n; i++) {
+      const B = this.boops[i]; if (!B.on || st > 1.62) continue;
+      const k = clamp((st - B.t0) / 0.2, 0, 1), r = 14 * k;
+      ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(B.x, B.y, 2.6, 0, TAU); ctx.fill();
+      if (r > 0.5) { ctx.lineWidth = 3.4; ctx.strokeStyle = '#1c1426'; ctx.beginPath(); ctx.arc(B.x, B.y, r, 0, TAU); ctx.stroke(); ctx.lineWidth = 1.8; ctx.strokeStyle = '#ffffff'; ctx.stroke(); }
+    }
+    // the butterflies (flat wings, ink outlines, a 6 Hz flap; they shrink away, never fade)
+    for (let i = 0; i < this.N_BF; i++) { const b = this.bfs[i]; if (!b.on || b.s <= 0.02) continue; Pupo.butterfly(ctx, b.x, b.y, 1.05 * b.s, (calm ? st * 0.5 : st * 1.346) + b.ph, b.col); }
+  },
+  armO: { w: 5, col: '#b48c62', t: 0, point: true, sag: 0, handScale: 1 },
+  armTip(ctx, a, x0, y0, x1, y1, t, wav, i, bow) {
+    const O = this.armO; O.w = a.w * this.sc; O.col = a.col; O.t = t; O.point = true; O.sag = bow + a.sag + wav * 4 * (i % 2 ? 1 : -1); O.handScale = 0.95 * this.sc;
+    Pupo.arm(ctx, x0, y0, x1, y1, O);
+  },
+  sc: 1, sfxO: { pitch: 1, vol: 0.4 },
+  // the carpet tongue: 6 tiles at 10 t/s from 0.70 s; along the floor in front of him, or straight down in mid-air; it rolls
+  // back up from 1.80 to 2.30; drawn in slices of the cached rug strip, with an ink edge and a rolled cylinder at the front
+  drawTongue(ctx, p, st, tr, f) {
+    if (st < 0.70 || st > 2.30) return;
+    const full = 6 * TS, Lr = st < 1.80 ? Math.min(full, (st - 0.70) * 10 * TS) : full * (1 - clamp((st - 1.80) / 0.5, 0, 1));
+    if (Lr < 2) return;
+    const rug = this.rugCanvas(tr.rug), w = 16, mx = this.mouthX, my = this.mouthY;
+    if (this.ground) {
+      // down from the mouth to the floor, then forward along it
+      const fy = p.y + p.h - w / 2 - 1, drop = Math.max(4, fy - my), l1 = Math.min(Lr, drop), l2 = Lr - l1;
+      this.rugSeg(ctx, rug, mx, my, Math.PI / 2, l1, w, 0, full);
+      if (l2 > 0) this.rugSeg(ctx, rug, mx, fy, f > 0 ? 0 : Math.PI, l2, w, l1, full);
+      const ex = mx + f * l2, ey = l2 > 0 ? fy : my + l1;
+      if (Lr < full - 1) this.roll(ctx, ex, ey, w, st); else if (l2 > 0) this.fringe(ctx, ex, ey, f, w);
+    } else {
+      this.rugSeg(ctx, rug, mx, my, Math.PI / 2, Lr, w, 0, full);
+      if (Lr < full - 1) this.roll(ctx, mx, my + Lr, w, st);
+    }
+  },
+  // one straight piece of rug: from (x, y) along angle a for len px, showing the strip from u0 (px along the full rug)
+  rugSeg(ctx, rug, x, y, a, len, w, u0, full) {
+    const sw = rug.width, sx = u0 / full * sw, sl = Math.max(1, len / full * sw);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+    ctx.fillStyle = '#1c1426'; ctx.fillRect(-1.5, -w / 2 - 1.5, len + 3, w + 3);
+    ctx.drawImage(rug, sx, 0, Math.min(sl, sw - sx), rug.height, 0, -w / 2, len, w);
+    ctx.restore();
+  },
+  roll(ctx, x, y, w, st) {
+    const r = w * 0.62;
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(x, y, r + 1.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c8323e'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#ffe9b8'; ctx.lineWidth = 1.4; ctx.beginPath();
+    for (let k = 0; k <= 14; k++) { const a = k * 0.55 + st * 9, rr0 = r * (0.15 + k / 16); if (k) ctx.lineTo(x + Math.cos(a) * rr0, y + Math.sin(a) * rr0); else ctx.moveTo(x + Math.cos(a) * rr0, y + Math.sin(a) * rr0); }
+    ctx.stroke();
+  },
+  fringe(ctx, x, y, f, w) {
+    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2.6; ctx.beginPath();
+    for (let k = -3; k <= 3; k++) { const yy = y + k * w / 7; ctx.moveTo(x, yy); ctx.lineTo(x + f * 5, yy); }
+    ctx.stroke(); ctx.strokeStyle = '#fff0d0'; ctx.lineWidth = 1.2; ctx.stroke();
+  },
+  /* the rug strip, drawn once per look (256 x 48): HIGH a deep red field, a cream border band with a zigzag and three navy-and-gold
+     medallions; MEDIUM the border and two medallions; LOW two plain stripes */
+  rugs: [null, null, null],
+  rugCanvas(k) {
+    if (this.rugs[k]) return this.rugs[k];
+    const c = makeCanvas(256, 48), x = c.getContext('2d');
+    x.fillStyle = '#b8283a'; x.fillRect(0, 0, 256, 48);
+    if (k === 2) { x.fillStyle = '#f2e2c0'; x.fillRect(0, 8, 256, 6); x.fillRect(0, 34, 256, 6); }
+    else {
+      x.fillStyle = '#f2e2c0'; x.fillRect(0, 3, 256, 9); x.fillRect(0, 36, 256, 9);
+      if (k === 0) { x.strokeStyle = '#8a1e2a'; x.lineWidth = 2; for (const y0 of [3, 36]) { x.beginPath(); for (let u = 0; u <= 256; u += 8) x.lineTo(u, y0 + ((u / 8) % 2 ? 1.5 : 7.5)); x.stroke(); } }
+      const meds = k === 0 ? 3 : 2;
+      for (let i = 0; i < meds; i++) {
+        const cx = 256 * (i + 0.5) / meds, cy = 24;
+        x.fillStyle = '#1e3a8a'; x.beginPath(); x.moveTo(cx - 22, cy); x.lineTo(cx, cy - 10); x.lineTo(cx + 22, cy); x.lineTo(cx, cy + 10); x.closePath(); x.fill();
+        x.fillStyle = '#ffc83a'; x.beginPath(); x.moveTo(cx - 13, cy); x.lineTo(cx, cy - 6); x.lineTo(cx + 13, cy); x.lineTo(cx, cy + 6); x.closePath(); x.fill();
+        x.fillStyle = '#1e3a8a'; x.beginPath(); x.arc(cx, cy, 2.6, 0, TAU); x.fill();
+      }
+    }
+    this.rugs[k] = c; return c;
+  },
+
+  /* ---------- the screen: the letterbox and "PUPO POWER!" (CSS px; drawn under the HUD) ---------- */
+  screen(ctx, play) {
+    const R = play.pupo; if (!R || !(R.showT > 0)) return;
+    const st = R.showT, tr = this.TIERS[this.tier], calm = this.calm, gr = Game.gameRect, W = gr.w, H = gr.h;
+    // two solid ink bars slide in from the top and bottom (8 % of the view each) and out at the end
+    if (tr.box) {
+      const bh = H * 0.08, k = calm ? (st < 2.3 ? 1 : 0) : st < 0.15 ? st / 0.15 : st > 2.3 ? Math.max(0, 1 - (st - 2.3) / 0.15) : 1;
+      ctx.fillStyle = '#1c1426'; ctx.fillRect(gr.x, gr.y - bh + bh * k, W, bh); ctx.fillRect(gr.x, gr.y + H - bh * k, W, bh);
+    }
+    if (st < 1.0) return;
+    const txt = this.textCanvas(W), cw = txt.width / Game.dpr, ch = txt.height / Game.dpr;
+    let s = 1, y = gr.y + H * 0.30;
+    if (calm) s = 0.6 + 0.4 * Math.min(1, (st - 1.0) / 0.3);
+    else { const k = (st - 1.0) / 0.18; s = k >= 1 ? 1 : k < 0.65 ? 1.6 - 0.7 * (k / 0.65) : 0.9 + 0.1 * ((k - 0.65) / 0.35); }
+    if (st > 2.3) y += (st - 2.3) / 0.3 * (H * 0.75);
+    const x = gr.x + W / 2;
+    if (tr.bob && !calm && st > 1.18 && st < 2.3) {
+      // each letter bobs 2 px at 2 Hz, a quarter turn apart
+      const d = Game.dpr, x0 = x - cw / 2;
+      for (let i = 0; i < this.nL; i++) { const sx = this.lx[i], sw = this.lw[i]; if (sw <= 0) continue; ctx.drawImage(txt, sx * d, 0, sw * d, txt.height, x0 + sx, y - ch / 2 + Math.sin(st * TAU * 2 + i * 0.8) * 2, sw, ch); }
+    } else ctx.drawImage(txt, x - cw * s / 2, y - ch * s / 2, cw * s, ch * s);
+  },
+  // "PUPO POWER!" drawn once into a canvas at 80 % of the view's width (rebuilt only when the resolution changes); the letters'
+  // positions are kept so the letter bob draws slices of the same canvas
+  textW: 0, textDpr: 0, text: null, lx: new Float32Array(12), lw: new Float32Array(12), nL: 0,
+  textCanvas(W) {
+    const dpr = Game.dpr, tw = Math.round(W * 0.8);
+    if (this.text && this.textW === tw && this.textDpr === dpr) return this.text;
+    const str = 'PUPO POWER!', pad = 12, x = makeCanvas(4, 4).getContext('2d');
+    x.font = `100px ${FONT_DISPLAY}`; const w100 = Math.max(1, x.measureText(str).width), size = Math.max(12, Math.floor(100 * (tw - 2 * pad) / w100));
+    x.font = `${size}px ${FONT_DISPLAY}`;
+    const tw2 = x.measureText(str).width, ch = Math.round(size * 1.25) + pad * 2, cw = Math.ceil(tw2) + pad * 2;
+    const c = makeCanvas(Math.ceil(cw * dpr), Math.ceil(ch * dpr)), y = c.getContext('2d');
+    y.setTransform(dpr, 0, 0, dpr, 0, 0); y.font = `${size}px ${FONT_DISPLAY}`; y.textBaseline = 'middle'; y.lineJoin = 'round';
+    const lw = Math.max(4, size * 0.09), dr = Math.max(3, size * 0.06);
+    // a solid darker drop down-right, a black outline, the yellow face
+    y.lineWidth = lw * 2; y.strokeStyle = '#1c1426'; y.strokeText(str, pad + dr, ch / 2 + dr); y.fillStyle = '#c27a00'; y.fillText(str, pad + dr, ch / 2 + dr);
+    y.strokeText(str, pad, ch / 2); y.fillStyle = '#ffd84a'; y.fillText(str, pad, ch / 2);
+    // where each letter sits (for the bob)
+    let acc = 0; this.nL = str.length;
+    for (let i = 0; i < str.length; i++) { const adv = x.measureText(str.slice(0, i + 1)).width; this.lx[i] = i === 0 ? 0 : pad + acc; this.lw[i] = (i === 0 ? pad : 0) + adv - acc + (i === str.length - 1 ? pad : 0); acc = adv; }
+    this.text = c; this.textW = tw; this.textDpr = dpr;
+    return c;
+  }
+};
+
+/* ---------- the button (touch), the keys, the HUD meter (keyboard) ---------- */
+const PupoButton = {
+  hud: [{ id: 'pupo', x: 0, y: 0, r: 30 }],
+  // where the power-picker chip would be (it is hidden while riding), a little larger
+  place() {
+    const c = typeof TourPicker !== 'undefined' ? TourPicker.chip() : null, L = Input.layout; if (!c || !L) return null;
+    const b = this.hud[0]; b.x = c.x; b.y = c.y; b.r = clamp(L.r * 0.62, 22, 34);
+    if (L.portrait) b.y = Math.max(Game.gameRect.y + Game.gameRect.h + b.r + 6, b.y);
+    return b;
+  },
+  // re-asserted every frame while riding; cleared (only if it is ours) otherwise
+  sync(play) {
+    const show = play && play.player && play.player.pupoRide && play.state === 'play' && !play.paused;
+    if (show) { if (this.place()) Input.hud = this.hud; }
+    else if (Input.hud === this.hud) Input.hud = null;
+  },
+  ring(ctx, x, y, r, k, shake) {
+    const n = 10; ctx.lineCap = 'butt';
+    for (let i = 0; i < n; i++) {
+      const a0 = -Math.PI / 2 + i * TAU / n + 0.07, a1 = a0 + TAU / n - 0.14, f = clamp(k * n - i, 0, 1);
+      ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(x + shake, y, r, a0, a1); ctx.stroke();
+      if (f > 0) { ctx.strokeStyle = f >= 1 ? '#ffd84a' : '#8a7a3a'; ctx.lineWidth = 3.2; ctx.beginPath(); ctx.arc(x + shake, y, r, a0, a0 + (a1 - a0) * f); ctx.stroke(); }
+    }
+  },
+  draw(ctx) {
+    const play = Game.scene; if (!(play instanceof Play) || !play.player || !play.player.pupoRide || !play.pupo || play.state !== 'play' || play.paused) return;
+    const b = this.place(); if (!b) return;
+    const R = play.pupo, full = R.meter >= 1, t = play.t, shake = R.ringShake > 0 ? Math.sin(R.ringShake * 60) * 3 : 0;
+    const s = full && !(R.showT > 0) ? 1 + 0.03 * (1 + Math.sin(t * TAU * 1.2)) : Input.hudHeld.pupo ? 0.92 : 1;
+    ctx.save(); ctx.translate(b.x, b.y); ctx.scale(s, s);
+    ctx.fillStyle = full ? 'rgba(60,34,10,0.85)' : 'rgba(14,10,26,0.62)'; ctx.beginPath(); ctx.arc(0, 0, b.r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1.6; ctx.stroke();
+    this.ring(ctx, 0, 0, b.r - 4, R.meter, shake);
+    // Pupo's face (spiral eyes when it is full)
+    Pupo.head(ctx, 0, 1, b.r / 12.5, t, full ? 'spiral' : 'calm', t * 0.6 * TAU);
+    ctx.restore();
+    // the first time ever: a label over it
+    const tips = Save.data.tips || {};
+    if (full && !tips.pupoReady) { tips.pupoReady = true; Save.data.tips = tips; play.pupoReadyT = 4; }
+    if (play.pupoReadyT > 0 && typeof TourPicker !== 'undefined') TourPicker.label(ctx, 'TAP PUPO!', b.x, b.y - b.r - 16 + Math.sin(t * 4) * 2, clamp(Math.min(play.pupoReadyT, 4 - play.pupoReadyT) * 2, 0, 1), true);
+  },
+  // keyboard / gamepad players: the same ring around a 12 px Pupo face, with the key letter, bottom left of the game view
+  hudIcon(ctx, play) {
+    if (Input.usingTouch || Game.forceTouchUI) return;
+    const p = play.player; if (!p || !p.pupoRide || !play.pupo) return;
+    const R = play.pupo, gr = Game.gameRect, x = gr.x + Math.max(26, insets.l + 20), y = gr.y + gr.h - 28, full = R.meter >= 1, shake = R.ringShake > 0 ? Math.sin(R.ringShake * 60) * 2 : 0;
+    ctx.save();
+    ctx.fillStyle = 'rgba(10,8,18,0.6)'; ctx.beginPath(); ctx.arc(x, y, 16, 0, TAU); ctx.fill();
+    this.ring(ctx, x, y, 14, R.meter, shake);
+    Pupo.head(ctx, x, y + 1, 1.0, play.t, full ? 'spiral' : 'calm', play.t * 0.6 * TAU);
+    ctx.fillStyle = full ? '#ffd84a' : 'rgba(255,255,255,0.7)'; ctx.font = `9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('F', x + 19, y + 11);
+    ctx.restore();
+    if (full && !(Save.data.tips || {}).pupoReady) { (Save.data.tips = Save.data.tips || {}).pupoReady = true; play.pupoReadyT = 4; }
+    if (play.pupoReadyT > 0 && typeof TourPicker !== 'undefined') TourPicker.label(ctx, 'PRESS F: PUPO POWER!', x + 60, y - 26, clamp(Math.min(play.pupoReadyT, 4 - play.pupoReadyT) * 2, 0, 1), true);
+  }
+};
+window.addEventListener('keydown', e => { if (Input.mode === 'game' && (e.code === 'KeyF' || e.code === 'KeyL')) PupoPower.key = true; });
+
+/* ---------- wiring ---------- */
+{
+  const G = Play.prototype;
+  // the frozen world during the show; the button, the keys and the ring's shake otherwise
+  const u0 = G.update;
+  G.update = function (dt) {
+    const R = this.pupo;
+    if (R && R.showT > 0 && !this.paused && this.level && this.level.tour) {
+      if (this.fade.a !== this.fade.target) this.fade.a = approach(this.fade.a, this.fade.target, dt * this.fade.speed);
+      PupoPower.step(this, dt); PupoPower.key = false; return;
+    }
+    if (this.level && this.level.tour && !this.paused) {
+      PupoButton.sync(this);
+      if (R) { if (R.ringShake > 0) R.ringShake -= dt; if (this.pupoReadyT > 0) this.pupoReadyT -= dt; }
+      if ((Input.hudPressed.pupo || PupoPower.key) && this.player && this.player.pupoRide) { Input.hudPressed.pupo = false; PupoPower.key = false; PupoPower.press(this); if (R && R.showT > 0) return; }
+    }
+    PupoPower.key = false;
+    return u0.call(this, dt);
+  };
+  // the screen part of the show goes under the HUD; the keyboard meter over it
+  const dh0 = G.drawHUD;
+  G.drawHUD = function (ctx) { PupoPowerFx.screen(ctx, this); const r = dh0.call(this, ctx); if (this.level && this.level.tour) PupoButton.hudIcon(ctx, this); return r; };
+  // the button is drawn with the touch controls (Input.hud buttons are hit-tested, never drawn by Input)
+  const ov0 = Input.overlay;
+  Input.overlay = (ctx, L) => { if (ov0) ov0(ctx, L); PupoButton.draw(ctx); };
+  // the show's pose: Pupo rears up on his hind legs, Brady clings to his scruff, legs flying
+  PupoRide.modes.power = {
+    update(p, dt, inp, g, R) {},
+    pose(p, R, o) { const k = Math.min(1, R.showT / 0.3); o.pose = 'rear'; o.big = 1 + (PupoPowerFx.BIG - 1) * k; o.x = p.cx - p.facing * 4; o.y = p.y + p.h; o.armsOff = true; o.still = true; o.rider = null; o.boxX = o.x - 70; o.boxW = 140; o.boxY = o.y - 140; o.boxH = 146; o.moodX = 'spiral'; return o; }
+  };
+  const ps0 = PupoRide.pose;
+  PupoRide.pose = function (p, R) {
+    if (R.showT > 0) { const o = R.draw; o.rot = 0; o.spiral = R.showT * 0.6 * TAU; return PupoRide.modes.power.pose(p, R, o); }
+    return ps0.call(this, p, R);
+  };
+  const pr0 = PupoRide.paintRide;
+  PupoRide.paintRide = function (c) {
+    const p = this.cur, R = p.g.pupo;
+    if (R.showT > 0) {
+      // Brady first, behind the head, his hands in Pupo's scruff (drawn in Pupo's art space)
+      const o = R.draw, bg = o.big || 1; c.save(); c.translate(o.x, o.y); c.scale(this.ART * (o.facing || 1), this.ART);
+      const a = p.anim, st = a.state; a.state = 'hang'; this.paintRider(c, -10 * bg, -66 * bg); a.state = st; c.restore();
+      Pupo.draw(c, o); return;
+    }
+    return pr0.call(this, c);
+  };
+  // a booped target squashes and giggles (a quick wobble about its feet) until the pop (TourHooks.entityDraw)
+  TourHooks.on('entityDraw', (play, ctx, e) => {
+    const R = play.pupo; if (!e.pupoBoop || !R || !(R.showT > 0)) return false;
+    const k = Math.sin((R.showT - e.pupoBoop) * TAU * 5) * 0.14 * Math.max(0, 1 - (R.showT - e.pupoBoop) / 0.6), fx = e.x + e.w / 2, fy = e.y + e.h;
+    ctx.translate(fx, fy); ctx.scale(1 + k, 1 - k); ctx.translate(-fx, -fy); e.draw(ctx, play.t); return true;
+  });
+  // a level that is left frees the show's cached title canvas (src/16_session.js's Play.onSceneExit, when present); it is
+  // drawn again at the next show. The three rug strips (256 x 48) stay: they are made once per look.
+  if (Play.prototype.onSceneExit) { const ox = Play.prototype.onSceneExit; Play.prototype.onSceneExit = function () { const c = PupoPowerFx.text; if (c) { c.width = 1; c.height = 1; PupoPowerFx.text = null; } return ox.apply(this, arguments); }; }
+  // the show's world part, after the inked body; the post-power shield stars are drawn by PupoRide.drawStatus
+  PupoRide.overs.push((ctx, p, g, R, t) => PupoPowerFx.draw(ctx, p, g, R, t));
+  // a hit during the show is impossible (the world is frozen); the shield after it is PupoRide's R.shieldT / powerShield
+}
+try { window.BRADY_PUPO = Object.assign(window.BRADY_PUPO || {}, { PupoPower, PupoPowerFx, PupoButton }); } catch (e) { /* not in a browser */ }
+
+/* ---- 28_tour_pc_pupoval.js ---- */
+/* ============================================================
+   World tour: the level checker learns Pupo (docs/design/PUPO.md
+   §7.6, PU-4), without changing the validator's own search.
+   PupoVal.run(level, opts) = the ordinary search without Pupo, then,
+   from every Nap Box that search reaches, a second search riding
+   Pupo: his box (28 x 58), his speeds (the same physics wrapper as
+   the game: PupoRide.simRide makes the simulated bodies ride), and
+   his objects as the validator's own primitives on a copy of the
+   level (the way the ring piece is modelled):
+   - climb strips: one ghost one-way floor per row along the strip
+   - bars: a row of ghost floors 3 tiles under the bar
+   - hooks: ghosts along a 2.5-tile swing, and reach edges to the
+     lowest one from every standing spot within reach and in sight
+   - posts: reach edges to the post's top
+   - pull handles: their lock as a virtual key (or the toggle's
+     switch cells) at every standing spot within reach and in sight
+   - tickle gates: their lock as a virtual key within poke reach
+   - keys, snatch keys and postcards: reached from within reach
+   Line of sight is PupoReach.los (grilles let arms through). The
+   ledge catch, the flop and hopping off midway are ignored, so the
+   checker may miss a Pupo route but never claims one that isn't
+   there. The merged result reports exits, postcards and areas
+   reached either way; res.pupo says what Pupo was needed for.
+   Nap Box contents ('pupo') are not power-ups: Validator.budget
+   leaves them out (wrapped here).
+   ============================================================ */
+const PupoVal = {
+  DIM: { w: 28, h: 58 },
+  OBJ: { pupoGrab: 1, pupoClimb: 1, pupoBar: 1, pupoHandle: 1, pupoTickle: 1, pupoGrille: 1, pupoSnatch: 1, napBox: 1 },
+  // the Nap Boxes of a level: { ai, tx, ty }
+  boxes(level) {
+    const out = [];
+    level.areas.forEach((a, ai) => { for (const k in a.contents || {}) if (a.contents[k] === 'pupo') { const [x, y] = k.split(',').map(Number); out.push({ ai, tx: x, ty: y }); } });
+    return out;
+  },
+  has(level) { return this.boxes(level).length > 0; },
+  // a standing node beside a box (where Pupo sits after he unfolds): feet on the first floor at or below the box row
+  spotOf(level, b) {
+    const A = level.areas[b.ai];
+    for (const dx of [-1, 1, 0]) {
+      const x = b.tx + dx;
+      for (let y = dx ? b.ty : b.ty; y < A.H; y++) {
+        if (dx === 0 && y === b.ty) continue;
+        const t = tileAt(A, x, y), up = tileAt(A, x, y - 1), up2 = tileAt(A, x, y - 2);
+        if ((SOLID[t] || t === T.SEMI) && !SOLID[up] && !SOLID[up2]) return { area: b.ai, x: x * TS + TS / 2, y: y * TS };
+        if (SOLID[t]) break;
+      }
+    }
+    return null;
+  },
+  // standing nodes of an area (on the area as built) within r px of (x, y), with the riding shoulder in sight of it
+  reachCells(A, grilles, x, y, r, post) {
+    const out = [], R = Math.ceil(r / TS) + 2, cx = Math.floor(x / TS), cy = Math.floor(y / TS);
+    for (let ty = cy - R; ty <= cy + R + 3; ty++) for (let tx = cx - R; tx <= cx + R; tx++) {
+      const t = tileAt(A, tx, ty); if (!(SOLID[t] || t === T.SEMI) || t === T.SPIKES) continue;
+      if (SOLID[tileAt(A, tx, ty - 1)] || SOLID[tileAt(A, tx, ty - 2)]) continue;
+      const sx = tx * TS + TS / 2, sy = ty * TS - 44, dx = x - sx, dy = y - sy;
+      if (dx * dx + dy * dy > r * r) continue;
+      if (post && (dy < -TS || dy > 2 * TS)) continue;
+      if (!PupoReach.los(A, sx, sy, x, y, grilles)) continue;
+      out.push([tx, ty]);
+    }
+    return out;
+  },
+  // the level as the riding search sees it (copied areas; the level itself is never changed)
+  derive(level) {
+    const K = PupoReach.K;
+    const areas = level.areas.map((a, ai) => {
+      const c = Object.assign({}, a, { ghosts: (a.ghosts || []).slice(), edges: (a.edges || []).slice(), vkeys: (a.vkeys || []).slice(), spawns: a.spawns.slice(), toggles: Object.assign({}, a.toggles || {}) });
+      const gr = []; for (const s of a.spawns) if (s.type === 'pupoGrille') { const tx = Math.floor(s.x / TS), ty1 = Math.floor(s.y / TS) - 1; gr.push({ x0: tx, y0: ty1 - (s.h || 1) + 1, x1: tx + (s.w || 1) - 1, y1: ty1 }); }
+      const ghost = (x, y) => { if (x >= 0 && y >= 0 && x < a.W && y < a.H && a.tiles[y * a.W + x] === T.EMPTY) c.ghosts.push([x, y]); };
+      const vkey = (id, cells) => { if (cells.length) c.vkeys.push({ id, tiles: cells.map(q => [q[0], q[1] - 1]), mode: 'any' }); };
+      for (const s of a.spawns) {
+        if (s.type === 'pupoClimb') { const tx = Math.floor(s.x / TS), bot = Math.floor(s.y / TS) - 1, h = s.h || 4; for (let r = bot - h + 1; r <= bot; r++) ghost(tx, r); }
+        else if (s.type === 'pupoBar') { const tx = Math.floor(s.x / TS), by = Math.floor(s.y / TS) - 1; for (let x = tx; x < tx + (s.w || 3); x++) ghost(x, by + 3); }
+        else if (s.type === 'pupoGrab' && s.kind !== 'post') {
+          const px = s.x, py = s.y - TS / 2;
+          let low = null;
+          for (const ang of [-0.9, -0.45, 0, 0.45, 0.9]) { const gx = Math.floor((px + Math.sin(ang) * K.HOOK_LEN) / TS), gy = Math.round((py + Math.cos(ang) * K.HOOK_LEN + 29) / TS); ghost(gx, gy); if (ang === 0) low = [gx, gy]; }
+          for (const q of this.reachCells(a, gr, px, py, K.REACH)) if (q[0] !== low[0] || q[1] !== low[1]) c.edges.push({ from: [q[0], q[1] - 1], to: low, area: ai });
+        } else if (s.type === 'pupoGrab') {
+          const to = [Math.floor(s.x / TS), Math.floor(s.y / TS)];
+          for (const q of this.reachCells(a, gr, s.x, s.y - 8, K.REACH, true)) c.edges.push({ from: [q[0], q[1] - 1], to, area: ai });
+        } else if (s.type === 'pupoHandle') {
+          const cells = this.reachCells(a, gr, s.x, s.y - TS / 2 + 6, K.REACH);
+          if (s.lock) vkey(s.lock, cells);
+          if (s.g != null && c.toggles[s.g]) c.toggles[s.g] = Object.assign({}, c.toggles[s.g], { switches: (c.toggles[s.g].switches || []).concat(cells.map(q => [q[0], q[1] - 1])) });
+        } else if (s.type === 'pupoTickle') {
+          const b = s.belly || [0, -1];
+          vkey(s.lock, this.reachCells(a, gr, s.x + b[0] * TS, s.y - TS / 2 + b[1] * TS, K.POKE));
+        } else if (s.type === 'key') vkey(s.id, this.reachCells(a, gr, s.x, s.y - 15, K.REACH));
+        else if (s.type === 'pupoSnatch') { const seen = {}, cells = []; for (const p of s.path || [[0, 0]]) for (const q of this.reachCells(a, gr, s.x + p[0] * TS, s.y - TS / 2 + p[1] * TS, K.REACH)) if (!seen[q]) { seen[q] = 1; cells.push(q); } vkey(s.key, cells); }
+        else if (s.type === 'gold') for (const q of this.reachCells(a, gr, s.x, s.y - 30, K.REACH)) c.spawns.push({ type: 'gold', idx: s.idx, x: q[0] * TS + TS / 2, y: q[1] * TS - 4, fetch: true });
+      }
+      return c;
+    });
+    return Object.assign({}, level, { areas });
+  },
+  // the ordinary search, then a riding search from every Nap Box it reached (opts.noPupo: Nap Boxes ignored)
+  run(level, opts) {
+    opts = opts || {};
+    const boxes = this.boxes(level);
+    if (opts.noPupo || !boxes.length) { const r = Validator.run(level, opts); r.pupo = { boxes: boxes.length, reached: 0, needed: false }; return r; }
+    const probes = boxes.map(b => ({ ai: b.ai, x: (b.tx - 1) * TS, y: (b.ty - 1) * TS, w: 3 * TS, h: 3 * TS, hit: false }));
+    const o0 = Object.assign({}, opts, { probes: (opts.probes || []).concat(probes), earlyExit: false });
+    const r = Validator.run(level, o0);
+    const without = { main: !!r.exits.main, gold: r.gold.slice(), exits: Object.assign({}, r.exits) };
+    let reached = 0;
+    const D = this.derive(level);
+    for (let i = 0; i < boxes.length; i++) {
+      if (!probes[i].hit) continue;
+      const st = this.spotOf(level, boxes[i]); if (!st) continue;
+      reached++;
+      PupoRide.simRide = true;
+      let rp;
+      try { rp = Validator.run(D, Object.assign({}, opts, { dim: this.DIM, start: st, earlyExit: false, probes: null })); }
+      finally { PupoRide.simRide = false; }
+      for (const k in rp.exits) if (rp.exits[k]) r.exits[k] = true;
+      rp.gold.forEach((g, k) => { if (g) r.gold[k] = true; });
+      rp.areasReached.forEach((ok, k) => { if (ok) r.areasReached[k] = true; });
+      for (const k in rp.buttons || {}) if (rp.buttons[k]) r.buttons[k] = true;
+      r.nodes += rp.nodes; r.sims += rp.sims;
+      if (rp.guardHit) r.guardHit = true;
+    }
+    r.goal = !!r.exits.main;
+    if (level.v2) r.ok = r.exitKeys.every(k => r.exits[k]) && r.gold.every(Boolean) && r.areasReached.every(Boolean) && r.pace.ok && r.buttonRules.every(n => r.buttons[n]);
+    else r.ok = r.goal;
+    r.pupo = { boxes: boxes.length, reached, without, needed: r.goal && !without.main, goldNeeded: r.gold.map((g, k) => g && !without.gold[k]) };
+    return r;
+  },
+  /* the checks for tools/validate_levels.js: returns { errors: [], warnings: [] } for a built level and its merged result */
+  checks(level, r) {
+    const errors = [], warnings = [], spec = level.design || {}, kind = spec.pupo || null, P = r.pupo || {};
+    // Pupo objects only where Pupo may go
+    level.areas.forEach((a, ai) => { if (!PupoRide.allowed(level, ai)) for (const s of a.spawns) if (this.OBJ[s.type] && s.type !== 'pupoGrille') errors.push(`PUPO OBJECT ${s.type} IN A NOPUPO AREA ${a.aid || ai}`); });
+    if (!P.boxes) { if (kind) errors.push(`PUPO ${kind.toUpperCase()} WITHOUT A NAP BOX`); return { errors, warnings }; }
+    if (kind !== 'level') {
+      // helper and ordinary levels: everything without Pupo (the bonus only may need him)
+      if (P.without && !P.without.main) errors.push('HELPER NEEDS PUPO main exit');
+      if (P.goldNeeded && P.goldNeeded.some(Boolean)) errors.push('HELPER NEEDS PUPO postcard ' + P.goldNeeded.map((g, k) => g ? k + 1 : '').filter(Boolean).join(','));
+    } else if (P.without && P.without.main) warnings.push(`PUPO LEVEL ${level.id}: THE EXIT DOES NOT NEED PUPO`);
+    if (P.goldNeeded && P.goldNeeded.filter(Boolean).length > 1) errors.push('MORE THAN ONE POSTCARD BEHIND A PUPO OBSTACLE');
+    // from every checkpoint, starting without Pupo, the main exit is still reachable (a Nap Box sits on the near side)
+    if (kind === 'level' || P.needed) {
+      let n = 0;
+      level.areas.forEach((a, ai) => { for (const s of a.spawns) if (s.type === 'checkpoint') {
+        n++; const rc = this.run(level, { start: { area: ai, x: s.x, y: s.y } });
+        if (!rc.exits.main) errors.push(`CP ${n} STRANDS BRADY WITHOUT PUPO`);
+      } });
+    }
+    return { errors, warnings };
+  }
+};
+// Nap Boxes are not power-ups: the budget rules count item blocks without them
+{
+  const b0 = Validator.budget;
+  Validator.budget = function (level) {
+    const saved = [];
+    for (const a of level.areas) for (const k in a.contents || {}) if (a.contents[k] === 'pupo') { saved.push([a, k]); delete a.contents[k]; }
+    try { return b0.call(this, level); } finally { for (const [a, k] of saved) a.contents[k] = 'pupo'; }
+  };
+}
+try { window.BRADY_PUPO = Object.assign(window.BRADY_PUPO || {}, { PupoVal }); } catch (e) { /* not in a browser */ }
+
+/* ---- 28_tour_pd_tutor.js ---- */
+/* ============================================================
+   World tour: Pupo's tutorial labels (docs/design/PUPO.md §6).
+   No text walls: at most six one-line labels, each shown once ever
+   (Save.data.tips.pupo*), next to what they are about, through the
+   power picker's label (it keeps to the screen, landscape or
+   portrait). Everything else is taught by the level and the paw
+   marker.
+     HOP ON ▼          over a sitting Pupo, until Brady first gets on
+     ◉ POKE            over the first enemy the marker sits on, until a poke
+     ▲ STICK + ◉       when something is in reach only with the stick up
+     JUMP TO LET GO    the first swing
+     HOLD ▲            the first climb
+     ▼ + JUMP: HOP OFF holding Down on Pupo for a moment
+   (TAP PUPO! over the Pupo Power button is drawn with the button.)
+   ============================================================ */
+const PupoTutor = {
+  // key -> text; a label shows while its condition holds, at most 6 s, and once ever
+  TEXT: { pupoHop: 'HOP ON ▼', pupoPoke: '◉ POKE', pupoReach: '▲ STICK + ◉', pupoGrab: 'JUMP TO LET GO', pupoClimb: 'HOLD ▲', pupoOff: '▼ + JUMP: HOP OFF' },
+  MAX: 6,
+  tips() { return Save.data.tips || (Save.data.tips = {}); },
+  done(key) { const T = this.tips(); if (!T[key]) { T[key] = true; Save.save(); } },
+  // what to show this frame (one label at a time): sets play.pupoLabel = { key, x, y } in world px, or null
+  pick(g) {
+    const p = g.player, R = g.pupo, T = this.tips(); if (!p || !R || g.state !== 'play') return null;
+    const L = g.pupoLabel || (g.pupoLabel = { key: null, x: 0, y: 0, t: 0 });
+    L.key = null;
+    if (!p.pupoRide) {
+      const f = R.free;
+      if (!T.pupoHop && f && !f.remove && f.mode === 'sit' && R.freeArea === g.area.idx && g.onScreen(f, 0)) { L.key = 'pupoHop'; L.x = f.cx; L.y = f.y - 22; }
+      return L.key ? L : null;
+    }
+    T.pupoHop || this.done('pupoHop');
+    if (!T.pupoGrab && R.mode === 'swing') { L.key = 'pupoGrab'; L.x = p.cx; L.y = p.y - 26; return L; }
+    if (!T.pupoClimb && R.mode === 'climb') { L.key = 'pupoClimb'; L.x = p.cx; L.y = p.y - 26; return L; }
+    if (!T.pupoOff && R.holdT > 0.35) { L.key = 'pupoOff'; L.x = p.cx; L.y = p.y - 26; return L; }
+    const tg = R.tg;
+    if (!T.pupoPoke && tg && tg.kind === 'enemy') { L.key = 'pupoPoke'; L.x = tg.x; L.y = tg.y - 34; return L; }
+    if (!T.pupoReach && (!tg || !tg.kind) && !R.mode && this.upOnly(g, p, R)) { L.key = 'pupoReach'; L.x = this.ux; L.y = this.uy - 34; return L; }
+    return null;
+  },
+  // something in reach with the stick up that the neutral aim does not find (checked 4 times a second)
+  utg: { kind: null, e: null, x: 0, y: 0, tx: -1, ty: -1 }, ux: 0, uy: 0, uT: 0, uHit: false,
+  UP: { up: true },
+  upOnly(g, p, R) {
+    if ((this.uT -= 1 / 60) > 0) return this.uHit;
+    this.uT = 0.25;
+    const keep = R.tg; R.tg = this.utg;
+    try { const t = PupoReach.scan(p, g, R, this.UP); this.uHit = !!t.kind && t.kind !== 'enemy' && t.y < p.y; this.ux = t.x; this.uy = t.y; }
+    finally { R.tg = keep; }
+    return this.uHit;
+  },
+  step(g, dt) {
+    const L = this.pick(g);
+    if (!L) { if (g.pupoLabel) g.pupoLabel.t = 0; return; }
+    if (g.pupoLabelKey !== L.key) { g.pupoLabelKey = L.key; L.t = 0; }
+    L.t += dt;
+    if (L.t > this.MAX) this.done(L.key);
+  },
+  // drawn with the HUD, in CSS px
+  draw(ctx, g) {
+    const L = g.pupoLabel; if (!L || !L.key || typeof TourPicker === 'undefined' || this.tips()[L.key]) return;
+    const gr = Game.gameRect, k = Game.S / Game.dpr, x = gr.x + (L.x - g.camX) * k, y = gr.y + (L.y - g.camY) * k;
+    if (x < gr.x - 40 || x > gr.x + gr.w + 40 || y < gr.y || y > gr.y + gr.h) return;
+    const a = clamp(Math.min(L.t * 4, (this.MAX - L.t) * 2), 0, 1);
+    TourPicker.label(ctx, this.TEXT[L.key], x, clamp(y + Math.sin(g.t * 4) * 2, gr.y + 14, gr.y + gr.h - 14), a, true);
+  }
+};
+{
+  // the lessons are done when the move is made
+  PupoRide.tip = function (g, key) { if (key === 'pupoGrab' || key === 'pupoClimb') { /* shown while swinging / climbing, done after */ } };
+  const m0 = PupoRide.mount;
+  PupoRide.mount = function (p, quiet, at) { const r = m0.call(this, p, quiet, at); if (!quiet) PupoTutor.done('pupoHop'); return r; };
+  const f0 = PupoReach.fire;
+  PupoReach.fire = function (p, g, R, inp) { const ok = f0.call(this, p, g, R, inp); if (ok && R.arm) { if (R.arm.kind === 'enemy') PupoTutor.done('pupoPoke'); else if (R.arm.kind !== 'air' && PupoReach.ay < -0.5) PupoTutor.done('pupoReach'); } return ok; };
+  const l0 = PupoRide.leave;
+  PupoRide.leave = function (g, p) { const m = this.st(g).mode; const r = l0.call(this, g, p); if (m === 'swing') PupoTutor.done('pupoGrab'); if (m === 'climb') PupoTutor.done('pupoClimb'); return r; };
+  const d0 = PupoRide.dismount;
+  PupoRide.dismount = function (p, how, spot) { if (how === 'hop') PupoTutor.done('pupoOff'); return d0.call(this, p, how, spot); };
+  // the labels run with the tour's Play (not during PUPO POWER!, which freezes the world)
+  TourHooks.on('playUpdate', (play, dt) => { if (play.level && play.level.tour && play.pupo && !(play.pupo.showT > 0)) PupoTutor.step(play, dt); });
+  const dh0 = Play.prototype.drawHUD;
+  Play.prototype.drawHUD = function (ctx) { const r = dh0.call(this, ctx); if (this.level && this.level.tour && this.pupo && !this.paused && !(this.pupo.showT > 0)) PupoTutor.draw(ctx, this); return r; };
+}
+try { window.BRADY_PUPO = Object.assign(window.BRADY_PUPO || {}, { PupoTutor }); } catch (e) { /* not in a browser */ }
+
 /* ---- 28_tour_r_rooms.js ---- */
 /* ============================================================
    World tour: the secret-room kit (docs/design/SECRET_ROOMS.md).
@@ -53409,7 +55757,7 @@ const stamps = {
 };
 
 /* ---------------- the levels ---------------- */
-const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
+const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado', pupo: 'helper',   // Pupo's tutorial (PUPO.md §6): he is optional here
   gimmick: 'Three lanes at once: rooftops, street and the cellar canal. Awnings bounce you up, trapdoors drop you down',
   hint: 'Hold jump on an awning to bounce up to the rooftops',
   postcard: 'Brady! The market has three floors and the melons use all of them. ♥ C',
@@ -53433,6 +55781,11 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['sync'],
         // ② Magic Beans first (Brady wants the fart float early): float up to the roofs; then melons down the street,
         // gaps and papel-picado ropes on the roofs; the corn that pops
+        // Pupo (PUPO.md §6): a Nap Box snores between two stalls; two chihuahuas to poke; a piñata box too high for Brady
+        ['napBox', { lane: 'street' }],
+        ['flat', { lane: 'street', n: 4 }],
+        ['enemies', { lane: 'street', kind: 'mxChihuahua', n: 2, len: 10 }],
+        ['pupoFetch', { lane: 'street', h: 6, item: 'oneup' }],
         ['gearStand', { lane: 'street', item: 'beans' }],   // the first jump power of the game, out in the open on a stand
         ['tip', { lane: 'street', text: 'MAGIC BEANS! TAP JUMP AGAIN AND AGAIN IN THE AIR TO FART-FLOAT UP TO THE ROOFS' }],
         ['melons', { lane: 'street' }],
@@ -53443,6 +55796,8 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['tip', { lane: 'roof', text: 'A PAPER PLANE! HOLD JUMP WHILE FALLING TO GLIDE. THROW IT AT THINGS FAR AWAY' }],
         ['gearStand', { lane: 'roof', item: 'plane' }],
         ['postcard', { lane: 'roof', kind: 'must', dy: -3 }],
+        // a Pupo bonus: papel-picado hooks across a roof gap too wide to jump, candy coins along the swing
+        ['pupoGap', { lane: 'roof', w: 9, hooks: 2, coins: true }],
         ['gap', { lane: 'street', n: 3 }],
         ['trapdoor', { lane: 'street', to: 'bodega@in', crate: true, back: 'bodegaBack', look: 'mxTrapdoor' }],
         ['flat', { lane: 'cellar', n: 6 }],
@@ -53461,6 +55816,8 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['sync'],
         ['stamp', { id: 'escenario', lane: 'street' }],
         ['sync'],
+        // a Pupo bonus at the cellar's end: a ticklish burro asleep across a pocket of coins
+        ['pupoTickle', { lane: 'cellar', lock: 'tickle:mx11', belly: [-0.6, -1], pocket: 5 }],
         ['cellarDress', { lane: 'cellar' }]
       ] },
     { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega', room: 'lamps',
@@ -53573,7 +55930,7 @@ const L4 = { n: 4, name: 'Volcán Escape', arch: 'tower', theme: 'mx_volcan',
       climb: { title: 'THE OBSIDIAN CHIMNEY', rule: 'AN OLD LAVA CHIMNEY, LONG COLD. CLIMB TO THE TOP: SOME LEDGES ARE BRITTLE', style: 'crumble' } }
   ] };
 
-const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata',
+const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata', pupo: 'level',   // Mexico's Pupo level (lead-in)
   gimmick: 'Swinging piñatas, candy cannons, the balcony; then El Gran Piñatón on his pulley rope in the tall patio',
   hint: 'Break the piñata from BELOW: headbutt him when he swings low. Bounce off the awnings when he rises!',
   postcard: 'You did it! The Palace of Fine Arts popped back to full size. Next stop: Ecuador! ♥ C',
@@ -53585,15 +55942,20 @@ const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacie
       script: [
         ['startStamp', { id: 'porton' }],
         ['itemBlock', { item: 'power' }],
+        // Pupo's level (PUPO.md §4): his Nap Box by the gate; the patio's cactus garden is too wide to jump, only his arms
+        // swing across it on the piñata hooks; the hacienda wall only he can climb. He waits at the arena door
+        ['napBox', {}],
         // the lead-in teaches what the fight needs: swinging piñatas, things from below, bouncing high
         ['swingers', { n: 3 }],
         ['cannons', {}],
         ['postcard', { kind: 'risky', dx: -8, dy: -7 }],
         'balcony',
         ['secretDoor', { to: 'despensa@in', look: 'fake', back: 'pantryBack' }],
+        ['pupoGap', { w: 12, hooks: 3, under: 'spikes', coins: true }],
         ['enemies', { n: 1, kind: 'mxBurro' }],
         'sig',
         ['itemBlock', { item: 'power' }],
+        ['pupoClimb', { h: 7 }],
         ['door', { to: 'fiesta@in', perch: 0, look: 'tourDoor' }]
       ] },
     { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa', room: 'fetch',
