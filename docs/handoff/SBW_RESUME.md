@@ -41,7 +41,7 @@ Brady: a hit sometimes cost nothing (the Ecuador tortoise). Causes found: a powe
 4. **Art re-renders wanted:** `es_pintxos` ghost shapes, `es_teide` cloud collar at play height, `np_pass` monastery behind the finale (safer removed), ground strips without the block outline, strips drawn too low for the phone camera (`fr_provence`, `fr_baie`, `nl_veiling`), a vertical `jp_tower`.
 5. **Overworld:** Bali, Antarctica and World 22 maps are sparser than Mexico's.
 6. **Feel:** in portrait the view is narrower than the 1-2 boat; holding right on ride levels walks Brady off the boat; validator rule 5 (premium item tucked away) is a warning, not an error; the level checker does not simulate gliding or swimming.
-7. **Save:** not reset again after the last six lands were rebuilt. Bump the key if Brady wants a clean slate.
+7. **Save:** reset to v3 (`super-brady-o-world-save-v3`) on 17 Nov with the secrets work (Brady: "wipe my save i dont care"); settings and look carried over from v2.
 8. Names invented by an agent, pending Brady's say: Spring Socks, Pound Cake, Magic Beans; Berrad the Magnificent (Morocco's boss, replacing the genie).
 
 ## Practical notes

@@ -243,7 +243,7 @@ fresh();
   const O2 = boot({ store: { [H.Save.key]: JSON.stringify(old2) }, load: true });
   ok = true; try { m = O2.run('__start')('1-1'); O2.run('__go')(m); O2.run('__clear')(m); } catch (e) { ok = false; console.error(e); }
   check('save: a save with no tour block at all: a clear creates the carry', ok && O2.Save.data.tour && O2.Save.data.tour.carry && O2.Save.data.tour.carry.from === '1-1');
-  check('save: the save key is unchanged (super-brady-o-world-save-v2)', H.Save.key === 'super-brady-o-world-save-v2', H.Save.key);
+  check('save: the save key is the v3 key (super-brady-o-world-save-v3)', H.Save.key === 'super-brady-o-world-save-v3', H.Save.key);
 }
 
 /* ---------- audit: what a free flight can skip ---------- */

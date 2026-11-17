@@ -92,6 +92,13 @@ function secretChecks(G, lvl, r, flags, warns) {
       if (!Validator.escape(lvl, s.target.area, [k], { rules })) { flags.push(`SEAM ${TSe.key(a, s)} HAS NO WAY BACK`); fail = true; }
     }
   });
+  // backstage areas (role 'backstage'): from EVERY spot Brady can reach in one, a Wormhole or a way out of the area is
+  // still reachable without dying (no trap, no prize up a climb with no way back down)
+  lvl.areas.forEach((a, k) => {
+    if (a.role !== 'backstage') return;
+    const traps = backstageTraps(G, lvl, k);
+    if (traps.length) { flags.push(`BACKSTAGE ${a.aid} TRAP AT ${traps.slice(0, 4).join(' ')}${traps.length > 4 ? ' (+' + (traps.length - 4) + ')' : ''}`); fail = true; }
+  });
   // new room types: Brady can always leave the way he came (no soft-locks, §2)
   lvl.areas.forEach((a, k) => {
     if (!a.roomType || a.roomType === 'pantry' || checked.has(k)) return;
@@ -110,6 +117,34 @@ function secretChecks(G, lvl, r, flags, warns) {
   // per-area pace (Hourglass Well and friends): named, so a miss says where
   for (const pa of (r.pace && r.pace.areas) || []) if (!pa.ok) flags.push(`PACE ${pa.aid} ${pa.margin != null ? 'margin ' + pa.margin : pa.why}`);
   return fail;
+}
+/* every standing spot reachable in backstage area k from its way in, from which neither a level exit (its Wormhole)
+   nor another area can be reached: [ 'x,y', ... ]. The area is searched on its own: a copy of the level whose areas
+   are [area k, area k], every seam, door and edge that leaves area k retargeted to the second copy (= "got out"). */
+function backstageTraps(G, lvl, k) {
+  const { Validator, TS } = G, a = lvl.areas[k];
+  let st = a.anchors && (a.anchors.in || a.anchors.start);
+  if (!st) for (const b of lvl.areas) for (const s of b.seams || []) if (!st && s.target && s.target.area === k) st = s.target;
+  if (!st) return ['(no way in)'];
+  const out = { area: 1, x: st.x, y: st.y };
+  const re = t => !t ? t : t.area !== k ? out : { area: 0, x: t.x, y: t.y };
+  const A = Object.assign({}, a, {
+    seams: a.seams ? a.seams.map(s => Object.assign({}, s, { target: re(s.target) })) : undefined,
+    spawns: a.spawns.map(s => s.target ? Object.assign({}, s, { target: re(s.target) }) : s),
+    edges: (a.edges || []).map(e => Object.assign({}, e, { area: e.area != null && e.area !== k ? 1 : 0 }))
+  });
+  const L = Object.assign({}, lvl, { areas: [A, A], start: { area: 0, x: st.x, y: st.y } });
+  const escaped = res => res.areasReached[1] || Object.keys(res.exits).some(x => res.exits[x]);
+  const r0 = Validator.run(L, { rules: 'all', trace: true, earlyExit: false, until: () => false });
+  const spots = new Set();
+  for (const [ai, tx, ty, mask, f] of r0.trace || []) if (ai === 0 && !f && !mask) spots.add(tx + ',' + ty);
+  const traps = [];
+  for (const key of spots) {
+    const [tx, ty] = key.split(',').map(Number);
+    const r = Validator.run(L, { start: { area: 0, x: tx * TS + TS / 2, y: ty * TS }, rules: 'all', earlyExit: false, until: escaped });
+    if (!escaped(r)) traps.push(key);
+  }
+  return traps;
 }
 // from room k's way in, the search reaches one of the level's exits
 function roomExit(G, lvl, k) {

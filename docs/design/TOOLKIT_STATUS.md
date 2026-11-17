@@ -79,7 +79,7 @@ Rules of thumb:
 ### Spec format (§7.2) and save (§3.5)
 | Item | Status | Notes |
 |---|---|---|
-| Save v2 key `super-brady-o-world-save-v2`, `exits`, tour `revealed/paths/flights/bottles/lighthouse/houses/pending` | tested | `tools/save_test.js`; settings and look copied once from v1; v1 untouched |
+| Save v3 key `super-brady-o-world-save-v3` (17 Nov 2026, the secrets reset; v2 before), `exits`, tour `revealed/paths/flights/bottles/lighthouse/houses/pending` | tested | `tools/save_test.js`; settings and look copied once from v1; v1 untouched |
 | level `n`, `arch`, `secret: true`, `exits { main, secret, … }`, `areas`, `mapCell`, `mapFrom` | tested | `n` mismatches and main-after-secret go to `Tour.problems` (reported by `--rules`) |
 | legacy `style`/`script` levels | tested | build byte-identical (`tools/sbw_snapshot.js`); legacy `secret: { to }` becomes `exits.secret = { to: 'land:<to>' }` |
 | `C.mainCount`, `Tour.isBoss`, `isFinale`, WORLDS `kinds`/`mainCount` | tested | |
