@@ -33,6 +33,7 @@ const ROUTES = [
     { wait: 0.4 },
     { run: 1, until: 'x >= 220', max: 12 },
     { check: 'ride && x >= 220', name: 'through the cooling tunnel door on Pupo' },
+    { check: 'said("SHINY")', name: 'Pupo, taking the golden pod: "...shiny."' },
     { shot: 'ec24-pod-after' }
   ] },
   { name: '2-2 the cacao larder', level: '2-2', start: { box: 0 }, boxShot: 'ec22', safe: true, steps: [
@@ -43,6 +44,7 @@ const ROUTES = [
     { wait: 0.6 },
     { run: 1, until: 'coins >= 6', max: 6 },
     { check: 'coins >= 6', name: 'the larder\'s chocolate coins collected' },
+    { check: 'said("SNACK")', name: 'Pupo, tugging the chocolate bar: "...snack... time."' },
     { shot: 'ec22-larder-after' }
   ] },
   // ---- Brazil ----
@@ -52,6 +54,7 @@ const ROUTES = [
     { shot: 'br32-bridge-before' },
     { swing: 1, until: '(ground && x >= 210) || dead', max: 14, shotAt: { mode: 'swing', name: 'br32-bridge-during' } },
     { check: 'ride && ground && x >= 210 && !dead', name: 'across the piranha river on the cousins\' hands, still riding' },
+    { check: 'said("COUSIN")', name: 'the cousins say hello' },
     { shot: 'br32-bridge-after' }
   ] },
   { name: '3-3 the cecropia coin column', level: '3-3', start: { box: 0 }, boxShot: 'br33', safe: true, steps: [

@@ -339,7 +339,7 @@ P.goldenPod = (st, o) => {
   // (the low run hangs half a row under the spawn row, nearer the floor and in view; the return run is out of reach)
   const path = []; for (let q = 0; q < n; q++) path.push([q, 0.5]); path.push([n - 1, -1.5], [0, -1.5]);
   B.spawn('ecPodBelt', x + 1, gy - 6, { n, period: per, key });
-  B.spawn('pupoSnatch', x + 1, gy - 6, { key, path, period: per, look: 'ecGoldenPod', opens: true, name: 'THE GOLDEN POD! THE COOLING TUNNEL OPENS', hot: 'STUCK ON ITS HOOK! PUPO CAN TUG IT FREE' });
+  B.spawn('pupoSnatch', x + 1, gy - 6, { key, path, period: per, look: 'ecGoldenPod', opens: true, name: 'THE GOLDEN POD! THE COOLING TUNNEL OPENS', say: '...SHINY.', hot: 'STUCK ON ITS HOOK! PUPO CAN TUG IT FREE' });
   st.coins(x + 3, x + n - 2, gy - 2);
   // the cooling tunnel's door
   const dx = x + n + 4;
@@ -357,7 +357,7 @@ P.cacaoLarder = (st, o) => {
   for (let xx = x + 7; xx <= x + 9; xx++) for (let y = gy - 2; y <= gy - 1; y++) { B.set(xx, y, T.PICK); B.setHide(xx, y, 0); }
   tourShutterLock(B, x + 6, gy - 2, gy - 1, id, 'ecBarkDoor');
   B.prop('ecCacaoTree', x + 6, gy - 3, 5, 3, 'none', { handleX: x + 3 });
-  B.spawn('pupoHandle', x + 3, gy - 5, { lock: id, once: true, look: 'ecChocBar' });
+  B.spawn('pupoHandle', x + 3, gy - 5, { lock: id, once: true, look: 'ecChocBar', say: '...SNACK... TIME.' });
   return x + 12;
 };
 for (const k in P) Tour.pieces['ec.' + k] = P[k];

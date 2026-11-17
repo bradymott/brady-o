@@ -7,8 +7,10 @@
      own look (TOUR_SKINS[look] is drawn instead of the plain key);
      opens: when Pupo's arm brings it in, the lock or shutter with the
      key's id opens at once (TourLock.open) and the toast says `name`;
-     hot: Brady alone touching it gets that line (a hint that only
-     Pupo's arm can take it) instead of nothing
+     say: Pupo's own slow line as he takes it; hot: Brady alone touching
+     it gets that line (a hint that only Pupo's arm can take it) instead
+     of nothing
+   - pupoHandle { say }: Pupo's line as he tugs it
    - PupoG1.near(g, x, y, r): Pupo is ridden and in one of the given
      modes within r px of (x, y) (for the critters that react to him:
      the sloth cousins of 3-2, the fruit bats of 4-3)
@@ -35,6 +37,7 @@ if (typeof PupoSnatch !== 'undefined') {
     give0.call(this, p);
     if (o.opens) TourLock.open(g, this.keyId);
     if (o.name) g.toast(o.name);
+    if (o.say && p) PupoRide.say(g, p.cx, p.y - 18, o.say);
   };
   S.update = function (dt) {
     upd0.call(this, dt);
@@ -43,6 +46,10 @@ if (typeof PupoSnatch !== 'undefined') {
     const p = this.g.player;
     if (p && !p.dead && !p.pupoRide && overlap(p, this)) { this.hotT = 2.5; this.g.parts.text(this.cx, this.y - 10, o.hot, '#ffd84a'); Sound.play('bump', { vol: 0.35, pitch: 1.4 }); }
   };
+}
+if (typeof PupoHandle !== 'undefined') {
+  const pull0 = PupoHandle.prototype.pull;
+  PupoHandle.prototype.pull = function (g, p) { const was = this.used; pull0.call(this, g, p); if (!was && this.s && this.s.say && p) PupoRide.say(g, p.cx, p.y - 18, this.s.say); };
 }
 if (typeof PupoRide !== 'undefined') PupoRide.afters.push((p, dt, inp, g, R, inMode) => {
   if (!inMode || !p.pupoRide) return;

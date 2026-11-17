@@ -863,6 +863,8 @@ Each group owns only its lands' `src/29_tour_<cc>_levels.js` (the Pupo level, th
 | P2-G4 | jp, np, aq, w22 | 11-3, 12-3, 13-3, 22-1 | 11-4 | L (3-4 days) |
 | P2-M (optional) | the map | the map follower and the Pupo-level badge (the `owDraw` hook, in `p_pupo.js`; coordinate any layout key with the map agent) | none | S |
 
+**Status, 17 Nov 2026:** P2-G1 (Ecuador, Brazil, Mozambique) is built on `sbw/pupo-g1`: 2-4 The Golden Pod and 2-2's cacao larder (a chocolate-bar pull handle opens a hollow of coins: branch posts can't be kept from Brady, he jumps post to post), 3-2 The Sloth Bridge and 3-3's cecropia coin column, 4-3 The Upside-Down Commute (the gust over the gap blows back, so neither a jump nor the Paper Plane crosses it) and 4-6's mast to the crow's nest. Helpers on top of the engine: `src/28_tour_pe_g1.js`; route scripts: `tools/pupo_routes.js` (`tools/sbw_pupo_routes_test.js`, `tools/sbw_pupo_shots.js`).
+
 **Every group must pass, per level:**
 - `validate_levels <ids>`, with all Pupo checks
 - `sbw_pupo_shots --checks` with its route scripts
