@@ -966,7 +966,7 @@ const levels = [
         ['exit', {}]
       ] },
       { id: 'cabine', gen: 'room', role: 'secret', theme: 'mz_cabine', stamp: 'cabine', room: 'shell',
-        shell: { title: 'THE CAPTAIN\'S TIN MUGS', rule: 'THE OLD CAPTAIN HIDES A STAR UNDER ONE OF HIS TIN MUGS. WATCH IT, THEN STOMP THE RIGHT ONE', cup: 'tin', joke: ['fish', 'boot'] } }
+        shell: { title: 'THE CAPTAIN\'S TIN MUGS', rule: 'THE OLD CAPTAIN HIDES A STAR UNDER ONE OF HIS TIN MUGS. WATCH IT, THEN STOMP THE RIGHT ONE', cup: 'tin', dealer: 'seal', joke: ['fish', 'boot'] } }
     ] }
 ];
 

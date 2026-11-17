@@ -64,7 +64,7 @@ const appPage = path.join(dist, 'site', 'super-brady-o-world', 'index.html');
         doors: () => { at(6, 10); sim(0.3); },
         pick: () => { at(mid - 2, 10); sim(0.3); },
         wormhole: () => { at(A.W - 8, 10); sim(0.4); },
-        bouncy: () => { at(Math.floor(A.W * 0.4), 9); sim(0.25); },
+        bouncy: () => { const [tx, ty] = kit.data.towers[1]; at(tx + 1, ty - 1); sim(0.25); },
         floaty: () => { at(mid, 10); sim(0.2); sim(0.35, { jump: true, jumpPressed: true }); }
       };
       try { (S[kit.kind] || (() => sim(0.5)))(); } catch (e) { return { err: String(e && e.stack || e) }; }

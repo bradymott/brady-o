@@ -580,7 +580,7 @@ class TourRoomDealer extends Ent {
   draw(ctx) {
     const x = this.cx, y = this.y + this.h, t = this.t;
     if (this.look && TourRoomCritters.dealers[this.look]) { TourRoomCritters.dealers[this.look](ctx, x, y, t); return; }
-    TourRoomCritters.draw(ctx, 'dealer', x, y + 2, 1.3, t);
+    TourRoomCritters.draw(ctx, this.look && TourRoomCritters.LOOKS[this.look] ? this.look : 'dealer', x, y + 2, 1.3, t);
   }
 }
 ENTITY_TYPES.roomDealer = TourRoomDealer;

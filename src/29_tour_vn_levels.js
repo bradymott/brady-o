@@ -567,7 +567,7 @@ const levels = [
           ['end', { exit: 'main' }]
         ] },
       { id: 'caphe', gen: 'room', role: 'secret', stamp: 'caphe', room: 'shell',
-        shell: { title: 'THREE COFFEES', rule: 'THE CAFE OWNER HIDES A PRIZE UNDER ONE OF THREE COFFEE CUPS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'cup', joke: ['sock', 'fish'] } }
+        shell: { title: 'THREE COFFEES', rule: 'THE CAFE OWNER HIDES A PRIZE UNDER ONE OF THREE COFFEE CUPS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'cup', dealer: 'frog', joke: ['sock', 'fish'] } }
     ] },
   // 10-2 RIDE: Ha Long Bay on a junk
   { n: 2, name: 'Ha Long Junk', arch: 'ride', theme: 'vn_bay',

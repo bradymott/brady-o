@@ -653,7 +653,7 @@ const levels = [
         ['door', { to: 'arena', perch: 0, look: 'w22Door22' }]
       ] },
       { id: 'behind', gen: 'room', role: 'secret', theme: 'w22_behind', stamp: 'behind', room: 'shell',
-        shell: { title: 'THE MIRROR\'S SHELL GAME', rule: 'YOUR REFLECTION HIDES A PRIZE UNDER ONE OF THREE MUGS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'mug', joke: ['sock', 'chicken'] } },
+        shell: { title: 'THE MIRROR\'S SHELL GAME', rule: 'YOUR REFLECTION HIDES A PRIZE UNDER ONE OF THREE MUGS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'mug', dealer: 'owl', joke: ['sock', 'chicken'] } },
       { id: 'arena', gen: 'arena', role: 'arena', layout: 'door', arenaW: 26, H: 18, roof: false }
     ] },
 

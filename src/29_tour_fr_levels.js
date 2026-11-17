@@ -881,7 +881,7 @@ const levels = [
           ['gate', { exit: 'main' }]
         ] },
       { id: 'bateau', gen: 'room', role: 'secret', stamp: 'bateau', room: 'shell',
-        shell: { title: 'THE OYSTER SHELL GAME', rule: 'THE OLD BOATMAN HIDES A PRIZE UNDER ONE OF THREE BOWLS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'bowl', joke: ['fish', 'sock'] } },
+        shell: { title: 'THE OYSTER SHELL GAME', rule: 'THE OLD BOATMAN HIDES A PRIZE UNDER ONE OF THREE BOWLS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'bowl', dealer: 'crab', joke: ['fish', 'sock'] } },
       { id: 'banc', gen: 'room', role: 'secret', theme: 'fr_baie', stamp: 'banc', room: 'floaty',
         floaty: { title: 'THE CLOUD BANK', rule: 'INSIDE A CLOUD THE GRAVITY IS ALL FLUFF. BIG FLOATY JUMPS!', gravity: 0.4 } }
     ] },
