@@ -145,10 +145,23 @@ with a death, a level cleared out to the map, the overworld and the title.
 - Small: joystick taps during levels queued for the map all session; the power picker chip could stay "held" after a
   pause.
 
-## The Brazil football "freeze" (Brady, 17 Nov): not reproduced; one open lead
-Brady saw the game freeze picking up the FOOTBALL in 3-5's tunnel, just before the boss door, holding the joint and Magic Beans. Dropped at his request ("maybe it was just my phone"). Tried, none froze, threw or grew:
-- Chromium, a fresh page: the joint + beans carried in (also with a plane in hands, with 8 s of LSD); the FOOTBALL block bumped and taken, THROW, fart floats, a hit while holding it, the boss door, the boss and its ball cannon. Also a 100 s random-input fuzz of the tunnel (balls, kick targets, the block, the door) in three loadouts, and the same steps headless in 7 loadouts.
-- WebKit, an iPhone-landscape page over http, as a session: 3-1 to 3-4 played and cleared twice with mushroom / LSD / joint trips and the beans (all carried on), then 3-5 and the football as above. No crash, reload, stall or error; held canvases 14-23 MP and decoded atlases 14-27 MB throughout.
-- The soak's long-mode hangs blamed at the time: 10-2 was the harness (a full ~100 s boat ride, done twice, ran past the 4-minute watchdog; fixed in `tools/sbw_soak_test.js`). 12-1 is real but older than the carry, story and trip changes (918ba7a fails too).
+## The Brazil football freeze (Brady, 17 Nov): found and fixed
+Brady: "every time i touch that ball everything freezes and the music starts repeating a tiny sound over and over".
+**Cause** (older than the carry, story and trip work): taking a signature item (the FOOTBALL) with gear in hands and
+the Backpack full dropped the old item on top of Brady, the same collision pass took it straight back, which dropped the
+other one on him, and so on forever inside one frame: the entity list grew until the page ran out of memory (on an
+iPhone: a freeze; the "tiny sound" is the audio already scheduled and the music echo playing on with the game stopped).
+**Fix** (`28_tour_dg_gear.js`): a dropped item can't be taken back until Brady has stepped clear of it once. Reproduced
+and verified in WebKit on the live build; regression test in `tools/sbw_hits_test.js`. The same loop is the
+`V8 javascript OOM` behind the soak's intermittent 12-1 crash (its powers phase collects gear next to Nepal's yak) and
+a boss-walk probe crash in Berrad's fight (the flying carpet). The 10-2 long-soak "hang" was the harness (a ~100 s boat
+ride, twice, past the 4-minute watchdog; fixed in `tools/sbw_soak_test.js`).
 
-**Open lead (12-1):** `sbw_soak_test --long --levels 12-1 --engine chromium` crashes the page about 3 runs in 5 with `V8 javascript OOM (Ineffective mark-compacts near heap limit)` (seen with `DEBUG=pw:browser` and Chromium's `--enable-logging=stderr`). It happens in phase 1b (powers: Pound Cake, flippers, mushroom, joint and LSD collected at once, then THROW, the picker cycled, jumps, pause) and grows from a 13 MB JS heap to the limit within about 90 s; WebKit shows the same run as "page not answering". The same powers phase run headless (update only, 190 s) keeps a flat 22 MB heap, and the session counters (canvases, ink, atlases) stay flat in the browser, so suspect something on the draw side that allocates JS objects every frame without bound while those powers are active. On an iPhone a WebKit content process killed for memory looks like a freeze or a blank reload, so this may be what Brady saw.
+**Audio afterwards** ("when i restart the app it still has a glitchy sound"): `tools/sbw_audio_test.js` (WebKit and
+Chromium, silent) enters 3-5 with his kind of save (joint, beans, gear, a full Backpack, a carried star / LSD / trip
+colours) again and again, through RESTART LEVEL, an interruption (hidden, then shown), a 3 s main-thread stall and a
+page reload: one music loop at a time, nothing piling up, the music back after RESUME and after the stall. A carried
+star does replay its 6 s and its jingle at every re-entry of that level (the stored carry is what he entered with; it
+is only replaced by the next clear). Nothing in the save grows with play. If the crackle persists after a restart, the
+likely cause is iOS's own audio session after the system killed the page for memory; force-quitting the home-screen app
+starts a fresh one. Not reproducible here.
