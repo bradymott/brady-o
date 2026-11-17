@@ -216,7 +216,11 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
         // draw a frame with every trip on (no errors), and check the breath copy only happens at full motion
         g.tripJoint = 0.8; g.lsdK = 1; g.dizzy = 2; B.PostFX = window.BRADY_POWERS.PostFX; window.BRADY_POWERS.PostFX.tripWarp = null;
         B.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); g.draw(B.Game.ctx); o.breath = !!window.BRADY_POWERS.PostFX.tripWarp;
-        o.frames = T.frames.length;
+        // nothing is allocated per frame: 90 more trip frames at changing times add no canvases or glow sprites, and the
+        // cached colour strings stay bounded (whole degrees: at most 5 x 360)
+        const PF = window.BRADY_POWERS.PostFX, keys0 = Object.keys(PF).length, glow0 = Object.keys(PF.glowCache).length;
+        for (let i = 0; i < 90; i++) { g.t += 0.37; B.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); g.draw(B.Game.ctx); }
+        o.alloc = { canvases: Object.keys(PF).length - keys0, glow: Object.keys(PF.glowCache).length - glow0, cols: T.cols ? T.cols.reduce((a, c) => a + c.filter(Boolean).length, 0) : 0 };
         return o;
       };
       out.full = run(false); out.calm = run(true); st.reduceMotion = false;
@@ -227,8 +231,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     check('joint pickup: the world eases into slow-mo (and out)', f.slowmo < 0.7 && f.worldDt < 0.95, { slowmo: f.slowmo, worldDt: f.worldDt });
     check('LSD: strong at first, a subtle level while flying, gone after the flight', f.lsdPeak > 0.9 && f.lsdLow > 0.2 && f.lsdLow < 0.4 && f.flying && f.lsdEnd === 0, f);
     check('mushroom: the trip starts and ends', f.shroom > 0.9 && f.shroomEnd === 0, f);
-    check('fractal frames cached (built a few rows at a time)', f.frames > 0, f.frames);
-    check('full effects: the world breathes (a warped copy of the view)', f.breath, f);
+    check('trips allocate nothing per frame (no new canvases or glow sprites over 90 frames, colour strings bounded)', f.alloc.canvases === 0 && f.alloc.glow === 0 && f.alloc.cols <= 1800 && c.alloc.canvases === 0 && c.alloc.glow === 0, { full: f.alloc, calm: c.alloc });
+    check('full effects: the joint makes the world breathe (a warped copy of the view)', f.breath, f);
     check('reduced effects: no slow-mo, no breath, the trips still start and end', c.slowmo === 1 && c.worldDt > 0.98 && !c.breath && c.jointMid > 0.9 && c.jointEnd === 0 && c.lsdEnd === 0, c);
     // the pause menu offers the switch in tour levels
     const pause = await page.evaluate(() => { const g = S(); g.openPause(); const labels = g.pauseUI.map(b => b.label); const fx = g.pauseUI.find(b => /^FX /.test(b.label)); const before = fx.label; fx.fn(); const after = g.pauseUI.find(b => /^FX /.test(b.label)).label; fx.fn(); g.closePause(); return { labels, before, after }; });
