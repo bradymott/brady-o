@@ -52,7 +52,7 @@ const appPage = path.join(dist, 'site', 'super-brady-o-world', 'index.html');
         bigone: () => { at(mid - 5, 10); sim(2.2); },
         rush: () => { at(mid - 6, 10); sim(4); },
         fetch: () => { const k0 = g.entities.find(e => e.s && /^ing:/.test(e.id || '')); if (k0) k0.touchPlayer(p); at(mid - 3, 10); sim(0.5); },
-        lamps: () => { const L = g.entities.filter(e => e.constructor.name === 'TourRoomLamp').sort((a, b) => a.ord - b.ord); for (const e of L.slice(0, 2)) { at(Math.floor(e.cx / 32), Math.floor((e.y + e.h - 1) / 32)); sim(0.3); } at(mid - 2, 10); sim(0.3); },
+        lamps: () => { const L = g.entities.filter(e => e.constructor.name === 'TourRoomLamp').sort((a, b) => a.ord - b.ord); for (const e of L.slice(0, 2)) { at(Math.floor(e.cx / 32), Math.floor((e.y + e.h - 1) / 32)); sim(0.3); } at(kit.data.mural[0] + 4, 10); sim(0.3); },
         whack: () => { at(mid, 10); sim(4.5); },
         shell: () => { at(kit.data.slots[1] - 2, kit.data.row); for (let k = 0; k < 2000 && R.phase !== 'shuffle'; k++) sim(1 / 120); sim(0.2); },
         prank: () => { const ch = g.entities.find(e => e.constructor.name === 'TourRoomChest'); at(Math.floor(ch.cx / 32) - 3, 10); sim(0.2); ch.touchPlayer(p); sim(0.35); },
@@ -68,10 +68,10 @@ const appPage = path.join(dist, 'site', 'super-brady-o-world', 'index.html');
         floaty: () => { at(mid, 10); sim(0.2); sim(0.35, { jump: true, jumpPressed: true }); }
       };
       try { (S[kit.kind] || (() => sim(0.5)))(); } catch (e) { return { err: String(e && e.stack || e) }; }
-      g.update = function () {};
+      p.invuln = 0; g.update = function () {};   // (invulnerable Brady blinks: he would be missing from some pictures)
       g.camX = Math.max(0, Math.min(A.W * 32 - G.viewW, p.cx - G.viewW * 0.42)); g.camY = g.camTargetY(true);
       if (kit.kind === 'climb' || kit.kind === 'lamps') g.bannerT = 0;
-      return { title: kit.title, W: A.W, H: A.H };
+      return { title: kit.title, W: A.W, H: A.H, brady: [Math.round(p.cx / 32), Math.round((p.y + p.h) / 32), p.state, g.area.idx === r.k] };
     }, r);
     await pin(); await page.waitForTimeout(300);
     const file = `room-${r.kind}-${r.id}-${r.aid}${portrait ? '-portrait' : ''}.png`;
