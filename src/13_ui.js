@@ -569,7 +569,9 @@ class SettingsScene {
     UI.title(ctx, 'SETTINGS', W / 2, Math.max(34, insets.t + 30), 28);
     UI.drawButtons(ctx, this.btns);
     ctx.save(); ctx.textAlign = 'center'; ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.fillText('Sound off? Check the silent switch on your iPhone.  ·  Keyboard & Bluetooth controllers work too.', W / 2, H - Math.max(14, insets.b + 8));
+    const tip = ['Sound off? Check the silent switch on your iPhone.', 'Keyboard & Bluetooth controllers work too.'], ty = H - Math.max(14, insets.b + 8);
+    if (ctx.measureText(tip.join('  ·  ')).width < W - 24) ctx.fillText(tip.join('  ·  '), W / 2, ty);   // one line, or two on a narrow (portrait) screen
+    else { ctx.fillText(tip[0], W / 2, ty - 15); ctx.fillText(tip[1], W / 2, ty); }
     ctx.restore();
   }
 }
