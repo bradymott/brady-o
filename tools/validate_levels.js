@@ -15,7 +15,9 @@ function checkLevel(G, id) {
   const [w, i] = id.split('-').map(Number);
   let lvl;
   try { lvl = getLevel(w, i); } catch (e) { return { id, line: `${id.padEnd(6)} GENERATION ERROR ${e.stack}`, fail: true }; }
-  const r = Validator.run(lvl, { earlyExit: true });
+  // Pupo (src/28_tour_pc_pupoval.js): a level with a Nap Box is searched without him, then riding him from each box reached
+  const PV = G.run("typeof PupoVal !== 'undefined' ? PupoVal : null"), pupo = PV && PV.has(lvl);
+  const r = pupo ? PV.run(lvl, { earlyExit: true }) : Validator.run(lvl, { earlyExit: true });
   const info = secretsInfo(G, lvl);
   const golds = r.gold.map(g => g ? 'G' : '-').join('');
   const flags = [], warns = [];
@@ -33,6 +35,7 @@ function checkLevel(G, id) {
     for (const pr of lvl.problems || []) warns.push(pr);
     if (r.guardHit) warns.push('search guard hit');
     if (secretChecks(G, lvl, r, flags, warns)) fail = true;
+    if (PV) { const pc = PV.checks(lvl, r); for (const e of pc.errors) { flags.push(e); fail = true; } for (const w of pc.warnings) warns.push(w); }
     // an item block needs an open side for its item to come out of (ItemSpace; tools/sbw_items_test.js follows each one)
     const IS = G.run('ItemSpace'), T = G.T;
     lvl.areas.forEach(A => { for (const k in A.contents || {}) { const [x, y] = k.split(',').map(Number), t = A.tiles[y * A.W + x]; if ((t === T.QBLOCK || t === T.HIDDEN || t === T.QBRICK) && ![[0, -1], [0, 1], [-1, 0], [1, 0]].some(([dx, dy]) => IS.open(A, x + dx, y + dy))) { flags.push(`ITEM BLOCK ${A.aid || ''}(${x},${y}) BOXED IN`); fail = true; } } });
@@ -69,7 +72,8 @@ function secretChecks(G, lvl, r, flags, warns) {
   check(r, '');
   // a level with needs: the "rules on" pass (every rule revoked) must reach every exit, postcard, area and button too
   if (TN.inLevel(lvl)) {
-    const r2 = Validator.run(lvl, { earlyExit: true, rules: 'all' });
+    const PV = G.run("typeof PupoVal !== 'undefined' ? PupoVal : null");
+    const r2 = (PV && PV.has(lvl) ? PV : Validator).run(lvl, { earlyExit: true, rules: 'all' });
     for (const k of r2.exitKeys) if (!r2.exits[k] && !warpKeys.includes(k)) { flags.push(`EXIT ${k.toUpperCase()} UNREACHABLE (rules on)`); fail = true; }
     if (!r2.gold.every(Boolean)) { flags.push('gold ' + r2.gold.map(g => g ? 'G' : '-').join('') + ' (rules on)'); fail = true; }
     r2.areasReached.forEach((ok, k) => { if (!ok) { flags.push(`AREA ${lvl.areas[k].aid} UNREACHED (rules on)`); fail = true; } });
@@ -157,6 +161,10 @@ function rules(G) {
       count[L.arch] = (count[L.arch] || 0) + 1;
       if (k === 0) { if (openers[L.arch]) errors.push(`${id}: opener ${L.arch} already opens ${openers[L.arch]}`); openers[L.arch] = id; }
     });
+    // Pupo (PUPO.md §4): one Pupo level per land, at most two with the helpers
+    const pl = C.levels.filter(L => L.pupo === 'level').length, ph = C.levels.filter(L => L.pupo === 'helper').length;
+    if (pl > 1) warnings.push(`${C.id}: ${pl} Pupo levels (one per land)`);
+    if (pl + ph > 2) warnings.push(`${C.id}: ${pl + ph} Pupo and helper levels (at most two)`);
     if (seq.length === C.levels.length) { const key = seq.join(','); if (seqs[key]) errors.push(`${C.id}: same archetype sequence as ${seqs[key]}`); seqs[key] = C.id; }
     if (C.levels.length > C.mainCount && C.levels.slice(0, C.mainCount).some(L => L.secret)) errors.push(`${C.id}: secret levels must come after the main ones`);
   }

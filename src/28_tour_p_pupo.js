@@ -30,6 +30,7 @@ const PupoRide = {
     DROWSY: 8, GRACE: 1.5, NAP_POP: 9 * TS, NAP_INV: 2, WAKE: 0.6, MOUNT_T: 0.25, HOLD_HOP: 1.0,
     METER_T: 30, METER_POKE: 0.10, METER_HIT: 0.25, METER_START: 0.5
   },
+  simRide: false,           // PupoVal (28_tour_pc_pupoval.js): the validator's simulated bodies ride Pupo
   ART: 0.8,                 // Pupo's art units -> world px (his back is about 1.1 tiles high)
   modes: {},                // R.mode -> { update(p, dt, inp, g, R), pose(p, R, o) }: climbing, hanging, swinging... (PU-2, PU-3)
   afters: [],               // after Brady's step while riding: (p, dt, inp, g, R, inMode)
@@ -643,7 +644,8 @@ Tour.pieces.napBox = function (st, o) {
   // the speeds on Pupo (§1.3): the game and the validator's simulated bodies share this one rule (body.pupoRide)
   const ppf0 = playerPhysicsFlip;
   playerPhysicsFlip = function (p, inp, area, dt, platforms, opts) {
-    if (!p.pupoRide || !opts) return ppf0(p, inp, area, dt, platforms, opts);
+    // the level checker's simulated bodies ride too while PupoVal searches as Pupo (they are plain objects without a game)
+    if (!(p.pupoRide || (PupoRide.simRide && !p.g)) || !opts) return ppf0(p, inp, area, dt, platforms, opts);
     const s0 = opts.speedMul, w0 = opts.swimMul, K = PupoRide.K;
     opts.speedMul = (s0 == null ? 1 : s0) * (p.pupoFlop ? K.FLOP_SPEED / PHYS.walk : K.SPEED_MUL);
     opts.swimMul = (w0 == null ? 1 : w0) * K.SWIM_MUL;
