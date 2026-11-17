@@ -328,6 +328,17 @@ const decor = {
     EyeArt.buckle(ctx, x, y - 23, on ? '#ffb04a' : '#7a7a8a');
     ctx.restore();
   },
+  // a raised spoiler panel standing up off the wing (the letter sits on the wing at its left foot): its hydraulic
+  // struts and a red warning edge, so the block reads as part of the wing
+  eyeSpoiler(ctx, x, y, t) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    const x0 = x + TS / 2, top = y - 5 * TS;
+    ctx.fillStyle = '#e8424a'; ctx.fillRect(x0, top, 4 * TS, 6); ctx.strokeRect(x0, top, 4 * TS, 6);
+    ctx.strokeStyle = '#5a6478'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x0 - 18, y); ctx.lineTo(x0 + 2, y - 2.6 * TS); ctx.stroke();
+    ctx.strokeStyle = '#c8ccd6'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.fillText('SPOILER UP', x0 + 2 * TS, top - 8);
+    ctx.restore();
+  },
   // a stencil on the wing: NO STEP
   eyeNoStep(ctx, x, y) {
     ctx.save(); ctx.fillStyle = '#e8424a'; ctx.fillRect(x - 26, y - 14, 52, 11);

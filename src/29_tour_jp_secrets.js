@@ -52,8 +52,8 @@ const roofRigging = (r, o) => {
   const top = Math.round(gate.y / TS), y = top - 1;            // the rooftop's floor row, the row Brady stands in
   B.spawn('spring', 8, y, {}); B.springs.push([8, y]);
   B.decorAt('jpWarnLamp', 7, top, 0);
-  B.decorAt('jpRoofPlume', 11, top, 1);
-  B.decorAt('bkCrewSign', 5, top, 2);
+  B.decorAt('jpRoofPlume', 4, top, 1);
+  B.decorAt('bkCrewSign', 10, top, 2);
   TourSeams.add(B, { side: 'top', a: 6, b: 10, to: o.to || 'rigging@in' });
   r.anchors.riggingDrop = B.anchor('riggingDrop', 5, y);
 };

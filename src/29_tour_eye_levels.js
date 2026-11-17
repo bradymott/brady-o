@@ -337,7 +337,7 @@ const wingRows = (() => {
   put(G, 80, 15, 'E'); fillG(G, 88, 13, 89, 14, '.'); put(G, 88, 13, 'X'); for (let y = 6; y <= 10; y += 2) put(G, 88, y, 'oo');
   put(G, 95, 8, 'm'); put(G, 92, 12, 'n');
   // a flap to fling you over the raised spoiler wall
-  put(G, 100, 12, 'd'); fillG(G, 108, 8, 111, 12, 'H'); put(G, 108, 6, 'o.o.o');
+  put(G, 100, 12, 'd'); fillG(G, 108, 8, 111, 12, 'H'); put(G, 107, 12, '7'); put(G, 108, 6, 'o.o.o');
   // the outer wing: the gate and the winglet
   put(G, 116, 12, 'n'); put(G, 124, 12, 'G'); put(G, 131, 12, '6');
   return rowsOf(G);
@@ -347,7 +347,7 @@ const WING = {
   p: ['piece', 'box', { item: 'power' }], q: ['piece', 'flap', { len: 5 }], d: ['piece', 'flap', { len: 5 }],
   X: ['piece', 'exhaust', { w: 2, up: 9 }], '5': ['piece', 'gull', { ax: 13, w: 3, speed: 2.0 }], m: ['enemy', 'eyeGoon'],
   t: ['seam', 'bottom', 'gear@in'], Y: ['spawn', 'eyeSlideTell', { w: 3 }], a: ['anchor', 'gearBack'],
-  '6': ['decor', 'eyeWinglet'], f: ['decor', 'eyeFuselage'], E: ['decor', 'eyeEngine'], n: ['decor', 'eyeNoStep']
+  '6': ['decor', 'eyeWinglet'], '7': ['decor', 'eyeSpoiler'], f: ['decor', 'eyeFuselage'], E: ['decor', 'eyeEngine'], n: ['decor', 'eyeNoStep']
 };
 stamps.eyeWing = { floor: 13, rows: wingRows, legend: WING, gold: { '*': 'must', R: 'risky' } };
 // the landing-gear bay under the wing (the backstage under the stage): the escape slide is the crash mat; the old
