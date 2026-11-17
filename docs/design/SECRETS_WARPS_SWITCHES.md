@@ -717,3 +717,18 @@ One Blender agent at a time does the art, per SBW_RELAY.
 - Temples, shrines, mosques and churches appear only as plain distant silhouettes, never as backstage or room settings.
 - Drug items appear only as the existing cartoon pickups.
 - No brand names. "Road case" and "flight case" are generic terms.
+
+---
+
+## 10. WP-1 landed: the contracts (16 Nov 2026)
+
+WP-1 (branch `sbw/secrets-wp1`) built the hooks, the builder fields and the validator rules. **The exact API, with an example for each, is in [`SECRETS_CONTRACTS.md`](SECRETS_CONTRACTS.md); code against that file, not against §5.6 above.** Every contract is checked by `node tools/sbw_contract_test.js`.
+
+The main changes to this plan (the full list is in §10 of that file):
+- `offEdge(play, player, side, seam)` is called once, before the pit line, for all four edges. WP-1 does the seam detection (`TourSeams`), and WP-3 does only the swap.
+- These hooks were added: `playerDie`, `playUpdate`, `camera`, `entityDraw`, `levelClear`, `resultsTitle`, and exit kinds (`TourHooks.exitKind('warp', { title, marksDone })`).
+- Area hazards run on the level clock, so timed rooms re-arm themselves in `areaLoaded`.
+- Seams are not allowed in climbing-camera areas either.
+- Two new checks: `ROOM <aid> HAS NO WAY OUT` and `WARP IN <aid>: NO EXIT`.
+- Code names are neutral, following Brady's naming decisions: exit `via: 'warp'` with keys `warp` / `warp2`, spawn types `warp` and `button`, `level.buttons`.
+- The runtime lock (`10c_gimmicks.js`) is unchanged. WP-4 subclasses it for `needsAll`, `needs` and the X.

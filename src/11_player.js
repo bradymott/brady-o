@@ -81,6 +81,8 @@ class Player {
 
   die(reason) {
     if (this.dead) return;
+    // secrets: a handler may turn this death into something softer (TourHooks.playerDie, 28_tour_a2_hooks.js)
+    if (typeof TourHooks !== 'undefined' && TourHooks.playerDie.length && TourHooks.run('playerDie', this.g, this, reason)) return;
     this.dead = true; this.state = 'dying'; this.deathT = 0;
     this.vy = -12 * TS; this.vx = 0; this.star = 0;
     Sound.stopMusic(); Sound.play('die');
@@ -438,6 +440,8 @@ class Player {
     if (lavaContact(this, A)) { this.die('lava'); return; }
     if (A.risingLava && this.y + this.h > g.lavaY + 6) { this.die('lava'); return; }
     if (spikeContact(this, A)) this.hurt({ x: this.x, w: this.w, spikes: true });
+    // secrets: a seam on this area's edge takes Brady through before the pit line or the wall stops him (TourSeams)
+    if (A.seams && typeof TourHooks !== 'undefined' && TourHooks.offEdgeCheck(g, this, inp)) return;
     if (this.y > A.H * TS + 20) { this.die('pit'); return; }
     // autoscroll: the screen edge pushes Brady along
     if (A.autoscroll) {
