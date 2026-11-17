@@ -138,21 +138,34 @@ const TOUR_OW_MAPS = {
     scenes: { '4-1': 'herd', '4-2': 'dustdunes', '4-3': 'baobabs', '4-4': 'turtlebeach', '4-5': 'seawall', '4-6': 'dhow' },
     live: [['walk', 'ostrich', [[760, 240], [860, 270], [900, 330]], 18], ['walk', 'turtle', [[600, 1170], [640, 1180]], 3], ['sail', [[1000, 560], [1100, 900], [1060, 1340], [1000, 900]], 10, '#c8a878', '#fff4e0'], ['circle', 460, 620, 80, 1.1], ['spout', 1080, 760]]
   },
-  // Morocco: the souk town, the Sahara, the blue town in the hills, the kasbah, the Atlas peaks, the riad garden
+  // Morocco: a V through the desert: down from the walled souk town on the Atlantic coast, deep into the dunes
+  // to the oasis where the caravan rests, then up again past the blue town and the kasbahs to the riad garden;
+  // the flying carpets cut straight across the Atlas between the V's two tips
   ma: {
+    labels: { '5-6': 'Carpets' },
     w: 1600, h: 960,
-    land: [[[60, 520], [140, 360], [300, 250], [520, 180], [760, 140], [1000, 120], [1240, 150], [1420, 230], [1530, 380], [1540, 560], [1480, 740], [1340, 860], [1060, 910], [760, 920], [460, 900], [220, 840], [90, 700]]],
-    nodes: { start: [150, 600], '5-1': [360, 690], '5-2': [790, 790], '5-3': [1200, 700], '5-4': [1250, 440], '5-5': [780, 255], '5-6': [400, 420], 'house:ma-bazar': [1420, 600, 'n'], port: [1100, 200] },
-    paths: { 'start>5-1': [[240, 670]], '5-1>5-2': [[560, 790]], '5-2>5-3': [[1000, 800]], '5-3>5-4': [[1280, 580]], '5-4>5-5': [[1030, 330]], '5-1>5-6': [[350, 550]], '5-6>5-4': [[620, 440], [930, 410]], '5-3>house:ma-bazar': [[1340, 700]], '5-5>port': [[950, 190]] },
+    pal: { land: '#d6a466', light: '#ecc890', path: '#fff2d6', beach: '#f2d8a0', cliff: '#a86a44' },
+    trail: 'sand', tufts: 'sand', meadow: '#e8bf88',
+    land: [[[240, 70], [700, 50], [1150, 60], [1500, 90], [1560, 300], [1540, 560], [1500, 800], [1300, 910], [900, 920], [520, 900], [260, 800], [110, 620], [60, 420], [120, 220]]],
+    nodes: { start: [200, 260], '5-1': [430, 400], '5-6': [820, 230], '5-2': [800, 790], '5-3': [1080, 580], 'house:ma-bazar': [1300, 700], '5-4': [1250, 380], '5-5': [1400, 190], port: [1460, 420] },
+    paths: { 'start>5-1': [[300, 360]], '5-1>5-2': [[560, 580], [680, 720]], '5-2>5-3': [[950, 720]], '5-3>house:ma-bazar': [[1200, 660]], '5-3>5-4': [[1180, 480]], '5-1>5-6': [[600, 290]], '5-6>5-4': [[1050, 270]], '5-4>5-5': [[1320, 270]], '5-5>port': [[1470, 300]] },
     feat: [
-      ['dunes', '#efc77a', [[520, 690], [720, 640], [1000, 680], [1060, 860], [800, 900], [560, 880]]],
-      ['range', 'mtn', [[520, 320, 48], [650, 290, 54], [880, 330, 50], [1010, 290, 46], [1130, 330, 40], [570, 560, 38], [1420, 390, 40]], { snow: true }],
-      ['trees', 'palm', 900, 760, 60, 5], ['town', 1240, 800, 7, 60, 'blue'], ['town', 310, 790, 6, 55, 'flat'],
-      ['mesa', 1060, 560, 30], ['landmark', 640, 170, 58]
+      ['dunes', '#efc77a', [[420, 640], [640, 600], [900, 640], [1000, 760], [960, 900], [600, 900], [400, 800]]],
+      ['dunes', '#f2cf88', [[860, 420], [980, 400], [1020, 480], [920, 520]]],
+      ['lake', [[700, 810], [760, 845], [740, 880], [670, 870], [655, 835]]],
+      ['trees', 'palm', 700, 860, 70, 7], ['trees', 'palm', 870, 800, 40, 3],
+      ['range', 'mtn', [[560, 150, 44], [680, 120, 52], [960, 130, 54], [1100, 160, 44], [700, 330, 34], [1000, 340, 36]], { snow: true, col: '#b08a7a' }],
+      ['wall', [[300, 470], [380, 520], [500, 520], [560, 450], [540, 340], [420, 300], [320, 340]], '#d89a62', true],
+      ['town', 440, 470, 7, 50, 'flat'], ['town', 1090, 500, 6, 45, 'blue'], ['town', 1010, 600, 3, 30, 'blue'],
+      ['sprite', 'kasbah', 1140, 320, 20], ['sprite', 'kasbah', 1350, 470, 18], ['sprite', 'kasbah', 1330, 120, 16],
+      ['sprite', 'tagine', 600, 760, 16], ['sprite', 'tagine', 980, 860, 18], ['sprite', 'tagine', 470, 860, 14], ['sprite', 'tagine', 1200, 840, 16],
+      ['sprite', 'tent', 860, 700, 16, { col: '#e8d0a0', stripe: '#3a6ab8' }], ['sprite', 'tent', 900, 740, 14],
+      ['trees', 'olive', 1350, 600, 90, 7], ['trees', 'palm', 1460, 120, 50, 3], ['trees', 'cactus', 200, 600, 70, 5],
+      ['landmark', 160, 480, 52]
     ],
-    flora: ['palm', 'olive', 'bush'], density: 28,
+    flora: ['palm', 'olive', 'bush', 'agave'], density: 36,
     scenes: { '5-1': 'souk', '5-2': 'caravan', '5-3': ['village', { wall: '#7ab4e8', walls: ['#7ab4e8', '#5a9ad8', '#a8d0f0'], roof: '#5a8ac8', flat: true, n: 7, ground: '#c8d8e8' }], '5-4': ['grove', { trees: ['palm', 'palm', 'olive'], ground: '#d8b078' }], '5-5': 'riad', '5-6': 'carpets' },
-    live: [['sail', [[40, 300], [60, 900], [400, 960], [20, 500]], 10]]
+    live: [['walk', 'camel', [[500, 700], [600, 680], [720, 700]], 9], ['walk', 'camel', [[1000, 820], [1100, 800], [1180, 760]], 7], ['walk', 'fennec', [[880, 470], [940, 450]], 10], ['circle', 820, 400, 80, 1], ['sail', [[40, 300], [60, 900], [400, 950], [20, 500]], 10]]
   },
   // Spain: the tomato town, the windmill plateau, the pintxos bar, the city of arts by the sea, the volcano
   // island over a bridge, the old market hall
