@@ -25,7 +25,7 @@ Pupo, in one line: big, slow, sweet, deadpan. He pokes belly buttons, which he c
 | Carried between levels? | **No.** Pupo stays with Brady for the whole level run: doors, areas, backstage seams and respawns. At the level clear he climbs back into his box. On the overworld map he rides on Brady's back, as a cosmetic touch. |
 | Ground speed | 0.77x Brady: a 4.8 tiles/s amble, or a 7.4 tiles/s stretchy lope when you hold a direction. Jump height is the same as Brady's. In the water he swims 1.6x faster than Brady (real sloths swim far better than they walk). |
 | Stretch arms | One button, the Action button. It aims where the stick points, or forward when the stick is still, and it **auto-targets**. A paw marker always shows what it will do: poke an enemy, grab a hook, zip to a post, pull a handle, or fetch an item. Reach is 5 tiles; the poke reaches 4. |
-| Automatic moves | He grips any climbable surface he touches, hangs from bars, and catches ledge lips in mid-air (the ledge catch is an assist the validator ignores). |
+| Automatic moves | **None** (changed Nov 17 at Brady's request). He falls exactly like Brady when nothing is pressed. Ledges, climb strips and bars are grabbed only with **Action** while in reach, like hooks and posts. |
 | When hit while riding | **Drowsy, then a nap.** On the first hit Pupo takes the blow and goes drowsy for 8 s (slower, shorter reach). A second hit while he is drowsy makes him fall asleep on the spot, and Brady hops off unhurt. You wake Pupo by walking into him: Brady pokes *his* pupo. He never runs away. |
 | Pupo Power | A meter fills over 30 s of riding (pokes add to it). The button sits where the power-picker chip sits. Pressing it plays a 2.6 s show with the world frozen. It pokes up to 16 non-boss enemies on screen. Brady and Pupo can't be hurt during the show or for 1.5 s after. |
 | Boss fights | Pupo waits at the arena door ("...I will... cheer."). Boss fights and their 172 tests are unchanged. |
@@ -70,7 +70,7 @@ The lid pops and Pupo unfolds over 1.2 s. First he yawns. In the yawn **both arm
 ### 1.2 Mounting, dismounting, carrying
 | Situation | What happens |
 |---|---|
-| Hop off | **Down + Jump** on solid ground: Brady hops up and off, and Pupo sits where he is. On a one-way floor, Down + Jump drops *both* through it, as Brady alone does today. To hop off there, **hold Down for 1.0 s** while standing still. That works anywhere. |
+| Hop off | **Down + Jump** on solid ground: Brady hops up and off, and Pupo sits where he is. On a one-way floor, Down + Jump drops *both* through it, as Brady alone does today. To hop off there, **hold Down for 1.0 s** while standing still. (Nov 17: holding Down hops off only on a one-way floor; on solid ground it shows the HOP OFF label instead, because it fired by accident after sinking down an air vent with Down held.) |
 | Get back on | Walk into the sitting Pupo, as when mounting. |
 | Doors, areas, Wormholes in and out of backstage seams | Pupo goes along, still ridden. |
 | Doors into an area where Pupo is not allowed (§1.7) | Pupo hops off on the near side ("...I'll... wait... here.") and sits by the door. Coming back through that door, Brady remounts automatically. |
@@ -88,19 +88,21 @@ The rule is **unhurried on the ground, fast in the air and on walls.**
 | Jump | 4.2 tiles high | **the same** (`jumpBoost 1.0`) | So no gap a level asks Brady to clear by height is closed to Pupo. |
 | Swim | 4.4 t/s | **7.0 t/s** (`swimMul 1.6`) | Brady rides him like a raft. Pupo, flatly: "...finally... fast." |
 | Climb (§2.5) | none | **3.2 t/s up, 4.5 down** | Hand over hand, quick and rhythmic. |
-| Swing release (§2.3) | none | **up to 14 t/s** | Faster than Brady can ever run. Swinging is where Pupo is thrilling. |
+| Swing release (§2.3) | none | **up to 16 t/s** | Faster than Brady can ever run. Swinging is where Pupo is thrilling. |
 | Hang shimmy (§2.6) | none | 2.6 t/s | |
 | Flop (hold Down) | crouch (big only) | Pupo flattens on his belly. The box is 28 x 30, he crawls at 2.8 t/s and fits 1-tile-high gaps. | Sloths drag themselves along the ground. |
 
 - **Riding hitbox:** 28 x 58 px. It fits every 2-tile passage, and the flop fits 1-tile passages.
 - **Brady's size doesn't change the riding box.** Small or big Brady sits on top. The mushroom's grow still plays, but the box stays the riding box.
-- **Ledge catch (automatic).** Pupo grabs a ledge lip and hauls himself up in 0.3 s when all of these hold:
-  - he is in mid-air and falling, or near the top of a jump (`vy > -2 t/s`)
-  - the stick is held toward the ledge
-  - the lip is a standable tile top within 2 tiles ahead of his leading edge, between 2 tiles above and 0.5 tile below his head
-  - nothing solid lies in between
+- **No automatic catches.** Walking or jumping off an edge, he falls like Brady. Nothing grabs on its own.
+- **Ledge grab (Action).** A ledge lip is an Action target (the grab paw) when:
+  - it is the near corner of a standable tile top, with room for him on top, facing him
+  - it is within 3.5 tiles of his shoulder (drowsy: 3.5 too), in front of him or above or below him (a wide 100° cone, so straight up counts), and nothing solid lies in between
+  - on the ground, it is at least 2.5 tiles above his feet (a lower step is a hop, so it isn't marked); in the air, any lip above his feet
+  The arm grabs it, he is pulled along the arm (16 t/s, at least 0.25 s) and stands on top.
+- **The grab buffer.** Pressing Action in mid-air when nothing is in reach (a boop) keeps the press for 0.25 s: if a ledge, strip, bar, hook or post comes into reach in that time, the boop is cut short and he grabs it. Pressing a moment early while falling past an edge still catches it.
 
-  This turns most "just short" jumps into catches, which makes the slower lope forgiving. **It is an assist only: the validator ignores it, so no required jump may depend on it.**
+  **The validator ignores ledge grabs, so no required jump may depend on them.**
 
 ### 1.4 When Pupo is hit: drowsy, then a nap
 Our own rule, forgiving on a phone and in Pupo's character. **The hit order while riding:**
@@ -112,7 +114,7 @@ star (ignores the hit) → Pupo shield after Pupo Power (ignores it) → Pupo �
 1. **First hit:** Pupo takes it ("...ow.").
    - Brady stays on, with a 1.5 s grace (no flicker; see §7.9).
    - Pupo goes **drowsy** for 8 s: droopy lids and a slow "z".
-   - While drowsy: reach 3.5 tiles, poke cooldown 0.5 s, climb 2.2 t/s, swing release capped at 10 t/s, meter charge halved.
+   - While drowsy: reach 3.5 tiles, poke cooldown 0.5 s, climb 2.2 t/s, swing release capped at 12 t/s, meter charge halved.
    - The Pupo Power meter loses 25 %.
 2. **8 s without another hit:** he perks up ("...better.").
 3. **A hit while drowsy:** Pupo **falls asleep on the spot**.
@@ -135,7 +137,7 @@ A sleeping Pupo is ignored by enemies and hazards. He is never removed, and he n
 |---|---|
 | Mushroom (big) | Brady grows on Pupo's back. The riding box doesn't change. It is still lost to a hit only after Pupo is lost. |
 | Joint (smoke puffs), HANDS gear, the land's signature item, the Backpack swap | **Paused.** The Action button belongs to Pupo, and the power-picker chip hides. Passive effects keep working: Hard Hat, magnet, sundial. Hop off to use them. |
-| Jump powers (Spring Socks, Pound Cake, Magic Beans) | **Off** (the badge on the jump button greys out). A mid-air press does nothing, so there is no hover, double jump or pound on Pupo. |
+| Jump powers (Spring Socks, Pound Cake, Magic Beans) | **Off** in every riding state (ground, air, swing, climb, hang, zip, flop): the badge on the jump button and the HUD icon grey out, a mid-air press or Down does nothing, a pound or float in progress stops on mounting. They work again as soon as he is off. (Enforced in `PupoRide`: `airJump` and `jumpAfter` are no-ops while `p.pupoRide`; `di_jumps` only reads `pupoRide` to grey its badge.) |
 | Star | Brady and Pupo glitter, and anything they touch is defeated, as with Brady alone. Star music plays. |
 | LSD tab | Brady floats up off Pupo ("...have fun... up there."). Pupo sits where he was, and Brady remounts after the flight. |
 | Mushroom trip, joint trip, acid trip (screen effects) | Unchanged, with one rule: **TripFX never recolours Pupo**, exactly as it never recolours characters. |
@@ -199,11 +201,11 @@ Only the stick direction and one button. There is no precise aiming.
 | Move | How |
 |---|---|
 | Poke, grab (hook / post), pull, fetch, tickle | **Action** (the auto-target picks which) |
-| Climb a climbable surface | **Automatic** on touch, while moving toward it or in mid-air. Up/Down to move; Jump to leap off. |
-| Hang from a bar | **Automatic** when Pupo's head touches it on the way up. Left/Right to shimmy; Down or Jump to drop. |
-| Ledge catch | **Automatic** (§1.3) |
+| Climb a climbable surface | **Action** with the strip in reach (grab paw): the arm grabs it, he is pulled to it and starts climbing. Up/Down to move; Jump to leap off. Walking into a strip, even holding Up, does nothing. |
+| Hang from a bar | **Action** with the bar in reach (grab paw): he is pulled up under it and hangs. Left/Right to shimmy; Down or Jump to drop. Jumping into a bar without pressing does nothing. |
+| Ledge grab | **Action** with the lip in reach (§1.3) |
 | Chain to the next hook while swinging | **Action** again, while the marker sits on the next hook |
-| Let go of a swing | **Jump** |
+| Let go of a swing | **Jump** (a launch, never limp); **Down** lets go gently |
 
 ### 2.2 The poke
 | Number | Value |
@@ -231,8 +233,14 @@ A **grab point** is a `pupoGrab` spawn with `kind: 'hook'` or `kind: 'post'`.
 **Hook.** Overhead things to hang from: a papel-picado knot, a ham hook, a rattan cane.
 1. Action fires the arm (≤ 0.17 s). On contact Pupo hangs from it and swings.
 2. The arm reels in to **2.5 tiles** at 12 t/s. Pupo's speed at the grab carries into the swing.
-3. The swing is a pendulum with `g = 40 t/s²`. The stick pumps (±0.6 rad/s² toward the stick), **Up** reels in to 1.5 tiles, and **Down** lets out to 5.
-4. **Jump releases** him with his speed along the swing x1.15, plus 3 t/s upward, capped at 14 t/s (10 when drowsy).
+3. The swing is a pendulum with `g = 40 t/s²` and a light damping (x0.99 per 1/60 s). The stick pumps (±3.0 rad/s² toward the stick; held with the swing it builds about 0.6 rad of arc in 2 s and 1.1 rad in 4 s, from a dead hang). **Up** reels in to 1.5 tiles. **Down** lets go on purpose: a gentle drop with the swing's own speed, no hop (Nov 17: it used to let the rope out to 5 tiles).
+4. **Jump releases** him (Nov 17, after Brady found it limp): along the swing's tangent x1.15, plus 4 t/s up, and never limp:
+   - toward `dir` (the stick; else the way he is swinging; else the way he faces) he goes at least 6 t/s, and at least 0.6 x the swing's full speed (its speed at the bottom, x1.15), so a big swing throws far from any point of it, the back-swing and a dead hang included
+   - up at least 13 t/s
+   - capped at 16 t/s (12 when drowsy)
+   - the arm is home at once, so Action can catch the next hook (or a ledge) in mid-air
+   - coyote: a Jump up to 0.15 s after a Down drop (or the hook going away) still launches, from the swing as it was
+   Regression: `sbw_pupo_reach_test.js release` crosses 1-5's cactus pit and 1-1's roof gap from early, peak, late, back-swing and dead-hang releases, with each jump power carried in.
 5. **Action at another hook** in the marker passes from hand to hand, keeping the swing speed. Chains of hooks are the "monkey bars" of Pupo levels.
 
 **Post.** An anchor on the far side of a gap: a mooring post, a beam end, a sloth cousin's outstretched hand.
@@ -270,7 +278,7 @@ The effect is one of:
 - for Brady alone they are **slick**: he slides off, and nothing marks them as standable
 
 **Rules:**
-- Pupo grips on touch.
+- Pupo grips only with **Action** while the strip is in reach (the marker shows the grab paw on its nearest point). Touching it does nothing.
 - Up climbs at 3.2 t/s and Down at 4.5. Arms alternate every 0.3 s, each stretching 0.6 tiles up before pulling.
 - At the top he pulls up onto any standable tile beside the strip in 0.3 s.
 - **Jump leaps off** away from the strip: `vx` 6.5 t/s away, `vy` -13 t/s.
@@ -283,6 +291,7 @@ The effect is one of:
 ### 2.6 Hanging bars
 **Bars** (`pupoBar`, a horizontal run `w` tiles wide): branches, cables, a frozen washing line.
 - Pupo hangs upside down from them, with Brady hanging on to his belly fur. He looks happiest here (eyes closed).
+- Pupo grabs a bar only with **Action** while it is in reach (5 tiles; the grab paw on its nearest point).
 - Left/Right shimmies at 2.6 t/s. Down or Jump drops.
 - Pokes and Pupo Power both work while hanging.
 
@@ -496,7 +505,7 @@ Indonesia, Nepal, Antarctica and World 22 get no helper level. Their Pupo level 
   - Respawns give Pupo back (§1.2).
   - The validator proves each checkpoint can reach the exit starting **without** Pupo (§7.6, check `CP STRANDS`).
 - **With him:**
-  - Pupo never takes anything away: Brady can hop off anywhere (Down + Jump, or hold Down).
+  - Pupo never takes anything away: Brady can hop off anywhere (Down + Jump; on a one-way floor, hold Down).
   - The riding box fits every 2-tile passage, and the flop fits 1-tile passages.
   - `noPupo` areas park him automatically.
   - He is never carried into another level, so "arriving with him" only happens inside a level, where all of the above holds.
@@ -564,13 +573,13 @@ There are no text walls. There are at most six one-line labels, each shown once 
    - The second gap has two knots, so chaining is discovered by doing it.
 6. **Climb (the required obstacle).**
    - The Alebrije Float jams the plaza entrance, with the backup Nap Box at the checkpoint just before it.
-   - Walking into its tail makes Pupo grip it on his own. Label: **"HOLD UP"**.
+   - Walking up to it does nothing on its own: the marker shows the grab paw on it and the label **"◉ GRAB"** appears (gone after the first grab of a ledge, strip or bar). Once he holds it, the label **"HOLD ▲"**.
    - At the top of its neck he pulls up onto the float's back and drops into the plaza.
 7. **Pupo Power.**
    - In the plaza (beat ③) the meter is full. A "stall party" of 6 peppers and elotes marches in from both sides.
    - The Pupo Power button bobs. Label: **"TAP PUPO!"** with an arrow pointing at it.
    - The whole show plays.
-8. **Hop off** (taught later, by need). The first time the player holds Down on Pupo for 1 s, the label reads **"▼ + JUMP: HOP OFF"**.
+8. **Hop off** (taught early: Brady missed it when it only came later). 1.5 s after the first mount, on the ground with no enemy to poke (the POKE label wins while one is in reach), the label **"▼ + JUMP: HOP OFF"** shows over Brady for up to 6 s, or until he hops off. Holding Down also shows it.
 
 The rest of 1-1 plays as it does now, with Pupo or without him. The Loading Dock and Wormhole R1 (secrets WP-6) still lie past the gate, and Pupo can come along.
 
@@ -594,7 +603,7 @@ Pupo's wrappers load last, so they are outermost and run first.
 
 | Wrapped | By | Why |
 |---|---|---|
-| `Player.prototype.update` | p, pa | While riding: build a reused scratch `inp` with `actionPressed`, `down` and the down-with-jump presses cleared, so the inner code never crouches, drops, digs, kicks or fires a picker power. In climb / hang / grab / zip / pull / power modes, run Pupo's own update and **return early**, as `TourRing` does. Otherwise call the inner update, then Pupo's after-step (arms, ledge catch, flop, meter). |
+| `Player.prototype.update` | p, pa | While riding: build a reused scratch `inp` with `actionPressed`, `down` and the down-with-jump presses cleared, so the inner code never crouches, drops, digs, kicks or fires a picker power. In climb / hang / grab / zip / pull / power modes, run Pupo's own update and **return early**, as `TourRing` does. Otherwise call the inner update, then Pupo's after-step (arms, the grab buffer, flop, meter). |
 | global `playerPhysicsFlip` (a function declaration, reassignable as `drawBrady` is in `di_jumps`) | p | When `body.pupoRide` is set: `opts.speedMul *= 0.77`, `opts.swimMul *= 1.6`. **The validator's simulated bodies set `pupoRide` too, so game and validator share one rule.** |
 | `Player.prototype.hurt` | p | The hit order of §1.4 (Pupo before HANDS and FEET; the star and the shield are checked first). |
 | `Player.prototype.setPower` | p | While riding, grow or shrink Brady's art but re-apply the 28 x 58 riding box. |
@@ -682,9 +691,9 @@ Save.data.tips.pupoHop / pupoPoke / pupoReach / pupoGrab / pupoClimb / pupoPower
 ```
 DIM 28x58 · FLOP_H 30 · SPEED_MUL 0.77 · SWIM_MUL 1.6 · JUMP_BOOST 1.0 · FLOP_SPEED 2.8 t/s
 REACH 5 t · POKE 4 t · CONE ±40° (neutral ±50°) · ARM_OUT 30 t/s · ARM_BACK 22 t/s · POKE_HOLD 0.10 s · POKE_COOL 0.20 s
-SHOULDER (cx + facing*6, y + 14) · HOOK_LEN 2.5 t (1.5..5) · SWING_G 40 t/s² · PUMP 0.6 rad/s² · RELEASE x1.15 +3 t/s up, max 14 t/s
+SHOULDER (cx + facing*6, y + 14) · HOOK_LEN 2.5 t (1.5 min) · SWING_G 40 t/s² · PUMP 3.0 rad/s² · DAMP 0.99 · RELEASE x1.15 +4 t/s up, min 6 t/s along / 0.6 x full speed, min 13 t/s up, max 16 t/s · COYOTE 0.15 s
 ZIP 16 t/s · PULLUP 0.3 s · CLIMB_UP 3.2 t/s · CLIMB_DOWN 4.5 t/s · LEAP (6.5, -13) t/s · SHIMMY 2.6 t/s
-LEDGE ahead 2 t, up 2 t, down 0.5 t · DROWSY 8 s (reach 3.5, cool 0.5, climb 2.2, release 10) · METER 30 s, +0.10/poke, -0.25/hit
+LEDGE grab (Action) 3.5 t, 2.5 t above the feet on the ground · GRAB_BUFFER 0.25 s · DROWSY 8 s (reach 3.5, cool 0.5, climb 2.2, release 12) · METER 30 s, +0.10/poke, -0.25/hit
 POWER 2.6 s freeze, 16 targets, view+1 t, shield 1.5 s
 ```
 
@@ -693,7 +702,7 @@ POWER 2.6 s freeze, 16 targets, view+1 t, shield 1.5 s
 - **ghost one-way floors that exist only while `m = 1`**
 - **edges that exist only while `m = 1`**
 
-Under-approximate wherever simulating would be hard (the ledge catch is ignored, and so is current strength in water). The validator may then miss a Pupo route, but it never claims a route that isn't there.
+Under-approximate wherever simulating would be hard (ledge grabs are ignored, and so is current strength in water). The validator may then miss a Pupo route, but it never claims a route that isn't there.
 
 **Changes to `src/09_validate.js`** (by PU-4, after secrets WP-1 has merged):
 1. **`Validator.mods = []`**, a tiny registry: `{ proxy(area, A, st), dims(st), physBody(b, st), expand(api, node), counts(thing, st) }`. With no mod registered the search is byte-identical: `sbw_snapshot` and every `validate_levels` result stay the same.
@@ -749,6 +758,8 @@ This covers what the validator approximates:
 - Pupo Power
 
 ### 7.7 Pupo's art: what PU-1 needs from the story agent
+**Nov 17 redraw (Brady: "rounder, not spiky"):** Pupo is drawn in Brady's language (`src/05_brady.js`): smooth ellipses with a thin soft outline (`rgba(26,18,36,0.62)`, Brady's `CLOTH.outline`) and one cel shade step, a bigger round head (`PUPO_HEAD_S` 2.05), round mitten paws with three small round-capped claws, arms as smooth tubes with soft rounded stripe bands, round claw tips on the Nap Box. No faceted outlines, fur tufts or thorn shapes anywhere.
+
 Pupo must be **steed-sized**. On all fours his back is about 1.1 tiles high and his body about 1.6 tiles long, with Brady seated on top: the pair is about 2 tiles tall. The story file currently draws him about a third of Chinka-O's height, as a pet clinging to her back.
 
 **Requests to `sbw/story-piwi` for `src/05e_pupo.js`:**
@@ -786,7 +797,7 @@ Until the art lands, PU-1 draws a stand-in with the existing `drawSlothy` (`src/
   1. one path (`moveTo`, then one `quadraticCurveTo` for its sag)
   2. stroked in ink at width w + 3
   3. then in fur colour at width w, with round caps
-  4. fur tufts as 3 px strokes every 10 px along the curve, computed in the loop
+  4. soft stripe bands as short round-capped strokes across the tube every 13 units, computed in the loop (no tufts: Brady asked for round, not spiky)
   5. a paw of fixed shapes at the end
 - **Pupo's body** goes through `Ink.around` like other characters, in a box fitted to the steed poses (measure it as `Player.draw` did for Brady). Pass `opts.key = pose + phase` so a still Pupo is a held picture (`Ink.statics`). At Medium and below he is re-inked at 30 Hz (`Ink.every`).
 - **Auto-target search:**

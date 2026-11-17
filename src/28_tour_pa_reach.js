@@ -27,10 +27,10 @@ const PupoReach = {
   K: {
     REACH: 5 * TS, POKE: 4 * TS, REACH_D: 3.5 * TS, CONE: 40 * Math.PI / 180, CONE_N: 50 * Math.PI / 180, NEAR: 2 * TS,
     OUT: 30 * TS, BACK: 22 * TS, HOLD: 0.10, COOL: 0.20, COOL_D: 0.50, GRAB_T: 0.17, TUG: 0.5,
-    HOOK_LEN: 2.5 * TS, HOOK_MIN: 1.5 * TS, HOOK_MAX: 5 * TS, SWING_G: 40 * TS, PUMP: 0.6, REEL: 12 * TS, REEL_STICK: 4 * TS,
-    RELEASE_K: 1.15, RELEASE_UP: 3 * TS, RELEASE_MAX: 14 * TS, RELEASE_MAX_D: 10 * TS,
+    HOOK_LEN: 2.5 * TS, HOOK_MIN: 1.5 * TS, HOOK_MAX: 5 * TS, SWING_G: 40 * TS, PUMP: 3.0, DAMP: 0.99, REEL: 12 * TS, REEL_STICK: 4 * TS,
+    RELEASE_K: 1.15, RELEASE_UP: 4 * TS, RELEASE_MAX: 16 * TS, RELEASE_MAX_D: 12 * TS, RELEASE_MIN_X: 6 * TS, RELEASE_MIN_UP: 13 * TS, RELEASE_COYOTE: 0.15,
     ZIP: 16 * TS, PULLUP: 0.3, CLIMB_UP: 3.2 * TS, CLIMB_DOWN: 4.5 * TS, CLIMB_D: 2.2 * TS, LEAP_X: 6.5 * TS, LEAP_Y: -13 * TS,
-    SHIMMY: 2.6 * TS, HANG_DROP: 38, LEDGE_AHEAD: 2 * TS, LEDGE_UP: 2 * TS, LEDGE_DOWN: 0.5 * TS, SCAN: 1 / 15
+    SHIMMY: 2.6 * TS, HANG_DROP: 38, LEDGE_REACH: 3.5 * TS, CONE_G: 100 * Math.PI / 180, LEDGE_STEP: 2.5 * TS, GRAB_BUFFER: 0.25, SCAN: 1 / 15
   },
   /* ---------- geometry (shared with the validator) ---------- */
   // the shoulder the arms start from: (cx + facing * 6, y + 14) of the riding box
@@ -68,12 +68,41 @@ const PupoReach = {
   angle(dx, dy) { const l = Math.sqrt(dx * dx + dy * dy) || 1; const c = (dx * this.ax + dy * this.ay) / l; return Math.acos(clamp(c, -1, 1)); },
   score(d, reach, ang, cone, enemy) { return d / reach + 0.5 * ang / cone - (enemy ? 0.2 : 0); },
   // the swing release (§2.3): the speed along the swing x1.15, plus 3 t/s up, capped -> this.rvx, this.rvy
-  release(th, om, L, drowsy) {
-    const K = this.K, v = om * L * K.RELEASE_K;
-    let vx = Math.cos(th) * v, vy = -Math.sin(th) * v - K.RELEASE_UP;
+  /* the swing's let-go (Jump): along the swing's tangent (x1.15), plus 4 t/s up, and never limp. Toward dir (the
+     stick, else the way he is swinging, else facing) he goes at least 6 t/s, and at least 0.6 x the swing's full speed
+     (its speed at the bottom, x1.15: a big swing throws far from any point of it); up at least 13 t/s. Capped at
+     16 t/s (drowsy 12). */
+  release(th, om, L, drowsy, dir) {
+    const K = this.K, v = om * L * K.RELEASE_K, vb = Math.sqrt(v * v + 2 * K.SWING_G * L * (1 - Math.cos(th))) * K.RELEASE_K;
+    let vx = Math.cos(th) * v, vy = -Math.sin(th) * v;
+    const fwd = Math.max(vx * dir, 0.6 * vb, K.RELEASE_MIN_X); vx = dir * fwd;
+    vy = Math.min(vy - K.RELEASE_UP, -K.RELEASE_MIN_UP);
     const m = Math.sqrt(vx * vx + vy * vy), cap = drowsy ? K.RELEASE_MAX_D : K.RELEASE_MAX;
-    if (m > cap) { vx *= cap / m; vy *= cap / m; }
+    if (m > cap) { const k = cap / m; vx *= k; vy *= k; }
     this.rvx = vx; this.rvy = vy;
+  },
+  // Jump on a swing: the launch (and the swing's state is kept for a moment, for a Jump pressed just after a drop)
+  launch(p, g, R, dir) {
+    const s = R.sw, d = dir || (Math.abs(s.om * s.L) > TS ? Math.sign(s.om) : p.facing || 1);
+    this.release(s.th, s.om, s.L, R.drowsyT > 0, d);
+    PupoRide.leave(g, p); R.swingCoyote = 0; this.armFree(R);
+    p.vx = this.rvx; p.vy = this.rvy; p.airMax = Math.abs(p.vx); p.jumping = false; p.onGround = false; p.coyote = 0; p.facing = d;
+    Sound.play('jump', { pitch: 0.9 });
+  },
+  // off a swing the arm is home at once, so Action can catch the next hook in mid-air
+  armFree(R) { const a = this.arm(R); a.phase = 0; a.len = 0; a.cool = 0; a.kind = null; a.e = null; },
+  // the coyote launch: from the swing state at the moment he let go
+  launchFrom(p, R, dir) {
+    const s = R.sw, d = dir || (Math.abs(s.om * s.L) > TS ? Math.sign(s.om) : p.facing || 1);
+    this.release(s.th, s.om, s.L, R.drowsyT > 0, d);
+    p.vx = this.rvx; p.vy = this.rvy; p.airMax = Math.abs(p.vx); p.jumping = false; p.facing = d; p.jumpBuf = 0;
+    Sound.play('jump', { pitch: 0.9 });
+  },
+  // Down (or the hook going away): let go with the swing's own speed; a Jump in the next 0.15 s still launches
+  dropSwing(p, g, R, forced) {
+    const s = R.sw, vx = Math.cos(s.th) * s.om * s.L, vy = -Math.sin(s.th) * s.om * s.L;
+    PupoRide.leave(g, p); R.swingCoyote = this.K.RELEASE_COYOTE; this.armFree(R);
+    p.vx = vx; p.vy = Math.max(vy, 0); p.airMax = Math.abs(p.vx); p.jumping = false; p.onGround = false; p.coyote = 0;
   },
   ax: 1, ay: 0, neutral: true, rvx: 0, rvy: 0,
   // the builder: the bottom row a piece may dig to (a layered gen's lane band, or the area), and a hole in the floor there
@@ -85,7 +114,7 @@ const PupoReach = {
     'npMarmot', 'npMarmotWatch', 'npYeti', 'npYetiSleep', 'npBat', 'vnBat', 'maFennec', 'maGoat', 'maCat']),
 
   /* ---------- the target search (15 Hz and on every press; the best one is kept in R.tg) ---------- */
-  verbOf(kind) { return kind === 'hook' || kind === 'post' ? 'grab' : kind === 'handle' ? 'pull' : kind === 'item' || kind === 'gold' || kind === 'key' || kind === 'coin' || kind === 'snatch' ? 'fetch' : 'poke'; },
+  verbOf(kind) { return kind === 'hook' || kind === 'post' || kind === 'strip' || kind === 'bar' || kind === 'ledge' ? 'grab' : kind === 'handle' ? 'pull' : kind === 'item' || kind === 'gold' || kind === 'key' || kind === 'coin' || kind === 'snatch' ? 'fetch' : 'poke'; },
   classify(e, p) {
     if (e.remove || e === p) return null;
     if (e.pupoGrabPt) return e.kind;
@@ -135,6 +164,35 @@ const PupoReach = {
       best = s; this.keep(tg, kind, e, this.px, this.py);
     }
     if (urgentD < 1e9) return tg;
+    // climb strips and bars: grabbed only with Action (the nearest point on them)
+    const objs = A.pupoObjs, reachG = drowsy ? K.REACH_D : K.REACH;
+    if (objs) for (let i = 0; i < objs.length; i++) {
+      const e = objs[i]; if (e.remove || e.cool > 0 || !(e.pupoClimb || e.pupoBar)) continue;
+      if (e.pupoClimb) { this.px = e.cx; this.py = clamp(sy - 1.5 * TS, e.top + 8, e.bottom - 8); }   // a hand-hold above his head (the marker clear of Brady)
+      else { this.px = clamp(sx, e.x0, e.x1); this.py = e.y; }
+      const dx = this.px - sx, dy = this.py - sy, d = Math.sqrt(dx * dx + dy * dy); if (d > reachG) continue;
+      const ang = this.angle(dx, dy); if (ang > K.CONE_G && d > TS) continue;
+      const sc = this.score(d, reachG, Math.min(ang, cone), cone, false);
+      if (sc >= best || !this.los(A, sx, sy, this.px, this.py, grilles)) continue;
+      best = sc; this.keep(tg, e.pupoClimb ? 'strip' : 'bar', e, this.px, this.py);
+    }
+    // ledge lips: the near corner of a standable tile top with room for him on it, higher than a step (any height in
+    // the air), within 3.5 tiles of the shoulder and in sight (Action grabs it and he pulls himself up)
+    if (!R.mode) {
+      const lr = drowsy ? Math.min(K.LEDGE_REACH, K.REACH_D) : K.LEDGE_REACH, feet = p.y + p.h, cx0 = Math.floor(p.cx / TS), cy0 = Math.floor(sy / TS);
+      const rr0 = Math.ceil(lr / TS) + 1;
+      for (let ty = cy0 - rr0; ty <= Math.floor(feet / TS) + 1; ty++) for (let tx = cx0 - rr0; tx <= cx0 + rr0; tx++) {
+        const t = tileAt(A, tx, ty); if (!(SOLID[t] || t === T.SEMI) || t === T.SPIKES || SOLID[tileAt(A, tx, ty - 1)] || SOLID[tileAt(A, tx, ty - 2)]) continue;
+        const lipY = ty * TS; if (lipY > feet - (p.onGround ? K.LEDGE_STEP : 4)) continue;
+        const side = tx * TS + TS / 2 > p.cx ? 1 : -1; if (SOLID[tileAt(A, tx - side, ty)] || tileAt(A, tx - side, ty) === T.SEMI) continue;   // an edge facing him
+        const qx = side > 0 ? tx * TS : (tx + 1) * TS, dx = qx - sx, dy = lipY - sy, d = Math.sqrt(dx * dx + dy * dy); if (d > lr) continue;
+        const ang = this.angle(dx, dy); if (ang > K.CONE_G && d > TS) continue;
+        if (!regionFree(A, tx * TS + TS / 2 - p.w / 2, lipY - p.h, p.w, p.h)) continue;
+        const sc = this.score(d, lr, Math.min(ang, cone), cone, false) + 0.15;
+        if (sc >= best || !this.los(A, sx, sy, qx - side * 2, lipY - 2, grilles)) continue;
+        best = sc; this.keep(tg, 'ledge', null, qx, lipY); tg.tx = tx; tg.ty = ty;
+      }
+    }
     // tiles: gift boxes and Nap Boxes (poke), coins (fetch; they only win when nothing else is there)
     const r = Math.ceil(K.REACH / TS), cx = Math.floor(sx / TS), cy = Math.floor(sy / TS);
     for (let ty = cy - r; ty <= cy + r; ty++) for (let tx = cx - r; tx <= cx + r; tx++) {
@@ -249,6 +307,7 @@ const PupoReach = {
         this.back(a, 0.05); break;
       case 'coin': if (tileAt(A, a.tx, a.ty) === T.PICK) { g.setTile(a.tx, a.ty, T.EMPTY); a.coin = true; } this.back(a, 0.05); break;
       case 'hook': a.phase = 4; PupoRide.enter(g, p, 'swing', e); break;
+      case 'strip': case 'bar': case 'ledge': a.phase = 4; this.reachTo(p, g, R, a.kind, e, a.tx, a.ty); break;
       case 'post': a.phase = 4; PupoRide.enter(g, p, 'zip', e); break;
       case 'handle': a.phase = 4; PupoRide.enter(g, p, 'pull', e); break;
       default: this.back(a, 0);
@@ -262,7 +321,7 @@ const PupoReach = {
   swing: {
     enter(p, g, R, e) {
       const K = PupoReach.K, s = R.sw || (R.sw = { e: null, px: 0, py: 0, th: 0, om: 0, L: 0, target: 0 });
-      s.e = e; s.px = e.hx; s.py = e.hy;
+      s.e = e; s.px = e.hx; s.py = e.hy; s.downHeld = true;
       const bx = p.x + p.w / 2, by = p.y + p.h / 2, dx = bx - s.px, dy = by - s.py, L = Math.sqrt(dx * dx + dy * dy) || 1;
       s.th = Math.atan2(dx, dy); s.L = L; s.target = K.HOOK_LEN;
       // his speed at the grab carries into the swing
@@ -272,15 +331,18 @@ const PupoReach = {
     },
     update(p, dt, inp, g, R) {
       const K = PupoReach.K, s = R.sw, A = g.area, e = s.e;
-      if (!e || e.remove) { PupoRide.leave(g, p); return; }
+      if (!e || e.remove) { PupoReach.dropSwing(p, g, R, true); return; }
       s.px = e.hx; s.py = e.hy;
       // reel to 2.5 tiles, Up reels in to 1.5, Down lets out to 5
-      if (inp.up) s.target = Math.max(K.HOOK_MIN, s.target - K.REEL_STICK * dt); else if (inp.down) s.target = Math.min(K.HOOK_MAX, s.target + K.REEL_STICK * dt);
+      if (inp.up) s.target = Math.max(K.HOOK_MIN, s.target - K.REEL_STICK * dt);
+      // Down lets go on purpose: a gentle drop with the swing's own speed (no hop)
+      if (inp.downPressed || (inp.down && !s.downHeld)) { PupoReach.dropSwing(p, g, R, false); return; }
+      s.downHeld = !!inp.down;
       const L0 = s.L; s.L = approach(s.L, s.target, K.REEL * dt);
       if (s.L !== L0) s.om *= L0 / s.L;
       const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
       s.om += (-(K.SWING_G / s.L) * Math.sin(s.th) + dir * K.PUMP) * dt;
-      s.om *= Math.pow(0.985, dt * 60);
+      s.om *= Math.pow(K.DAMP, dt * 60);
       const th1 = s.th + s.om * dt, cx = s.px + Math.sin(th1) * s.L, cy = s.py + Math.cos(th1) * s.L;
       if (regionFree(A, cx - p.w / 2, cy - p.h / 2, p.w, p.h)) { s.th = th1; p.x = cx - p.w / 2; p.y = cy - p.h / 2; }
       else { s.om *= -0.3; }
@@ -297,12 +359,7 @@ const PupoReach = {
         }
       }
       // Jump lets go: the speed along the swing x1.15, plus 3 t/s up (capped)
-      if (inp.jumpPressed) {
-        PupoReach.release(s.th, s.om, s.L, R.drowsyT > 0);
-        PupoRide.leave(g, p);
-        p.vx = PupoReach.rvx; p.vy = PupoReach.rvy; p.airMax = Math.abs(p.vx); p.jumping = false; p.onGround = false; p.coyote = 0;
-        Sound.play('jump', { pitch: 0.9 });
-      }
+      if (inp.jumpPressed) { PupoReach.launch(p, g, R, dir); return; }
       const a = PupoReach.arm(R); if (a.phase === 4) { a.x = s.px; a.y = s.py; a.len = Math.hypot(a.x - PupoReach.shoulderX(p), a.y - PupoReach.shoulderY(p)); }
     },
     pose(p, R, o) { const s = R.sw; o.pose = 'ride'; o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.rot = -s.th * 0.6; o.rotX = PupoReach.shoulderX(p); o.rotY = PupoReach.shoulderY(p); o.armsOff = true; o.still = true; return o; }
@@ -404,65 +461,61 @@ const PupoReach = {
     },
     pose(p, R, o) { const e = R.hg.e; o.pose = 'hang'; o.x = p.cx - p.facing * 4; o.y = e.y; o.still = true; o.boxX = p.cx - 56; o.boxY = e.y - 12; o.boxW = 112; o.boxH = p.y + p.h - e.y + 30; return o; }
   },
+  // pulled along the arm to what he grabbed (a ledge, a climb strip, a bar), then he stands, climbs or hangs
   ledge: {
     enter(p, g, R) { },
     update(p, dt, inp, g, R) {
-      const K = PupoReach.K, l = R.lg; l.t += dt; const k = Math.min(1, l.t / K.PULLUP);
-      PupoReach.place(p, lerp(l.fx, l.tx, k), lerp(l.fy, l.ty, k) - Math.sin(k * Math.PI) * 6);
-      if (k >= 1) { PupoRide.leave(g, p); p.onGround = true; p.vy = 0; p.vx = 0; }
+      const l = R.lg; l.t += dt; const k = Math.min(1, l.t / l.dur);
+      PupoReach.place(p, lerp(l.fx, l.tx, k), lerp(l.fy, l.ty, k) - (l.kind === 'ledge' ? Math.sin(k * Math.PI) * 6 : 0));
+      p.vx = 0; p.vy = 0; p.onGround = false;
+      if (k < 1) return;
+      PupoRide.leave(g, p);
+      if (l.kind === 'strip' && l.e && !l.e.remove) PupoRide.enter(g, p, 'climb', l.e);
+      else if (l.kind === 'bar' && l.e && !l.e.remove) PupoRide.enter(g, p, 'hang', l.e);
+      else { p.onGround = true; }
     },
-    pose(p, R, o) { o.pose = 'ride'; o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.rot = -p.facing * 0.25 * (1 - Math.min(1, R.lg.t / 0.3)); o.rotX = p.cx; o.rotY = p.y + p.h; o.still = true; return o; }
+    pose(p, R, o) { o.pose = 'ride'; o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.rot = -p.facing * 0.25 * (1 - Math.min(1, R.lg.t / R.lg.dur)); o.rotX = p.cx; o.rotY = p.y + p.h; o.armsOff = true; o.still = true; return o; }
   },
 
   /* ---------- after Brady's step while riding: the arm, the marker search, the automatic grips ---------- */
   after(p, dt, inp, g, R, inMode) {
     const a = this.arm(R);
     if (R.showT > 0) return;
-    // Action: stretch (not while swinging, zipping, pulling or pulling up)
+    if (R.swingCoyote > 0) {
+      R.swingCoyote -= dt;
+      if (inp.jumpPressed && !R.mode && !p.onGround && R.sw) { const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0); R.swingCoyote = 0; this.launchFrom(p, R, dir); }
+    }
+    // Action: stretch (not while swinging, zipping, pulling or being pulled to a grab)
     const busy = R.mode === 'swing' || R.mode === 'zip' || R.mode === 'pull' || R.mode === 'ledge' || (R.mode === 'climb' && R.cl && R.cl.up > 0);
-    if (inp.actionPressed && !busy) this.fire(p, g, R, inp);
+    if (inp.actionPressed && !busy) {
+      // in the air with nothing to grab yet: the press is kept for a moment (falling past an edge, pressing a little early)
+      if (!p.onGround && !R.mode) { const k = this.scan(p, g, R, inp).kind; R.grabBuf = this.grabKind(k) ? 0 : this.K.GRAB_BUFFER; }
+      this.fire(p, g, R, inp);
+    } else if (R.grabBuf > 0) {
+      R.grabBuf -= dt;
+      if (!R.mode && !p.onGround) {
+        const tg = this.scan(p, g, R, inp);
+        // a grab comes into reach while the buffered press is still fresh: the boop is cut short and he grabs it
+        if (this.grabKind(tg.kind) && (a.phase === 0 || a.kind === 'air')) { a.phase = 0; a.len = 0; a.cool = 0; R.grabBuf = 0; this.fire(p, g, R, inp); }
+      } else R.grabBuf = 0;
+    }
     this.stepArm(p, dt, g, R);
     // the marker's search, 15 times a second
     if ((R.scanT = (R.scanT || 0) - dt) <= 0) { R.scanT = this.K.SCAN; this.scan(p, g, R, inp); }
-    if (inMode) return;
-    this.autoGrip(p, inp, g, R);
+    // nothing grabs on its own any more: strips, bars and ledges are grabbed with Action (Brady asked: he should fall
+    // like Brady when nothing is pressed)
   },
-  autoGrip(p, inp, g, R) {
-    const K = this.K, A = g.area, objs = A.pupoObjs;
-    const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
-    if (objs) for (let i = 0; i < objs.length; i++) {
-      const e = objs[i]; if (e.remove || e.cool > 0) continue;
-      // climb strips: grip on touch while moving toward one, or in mid-air
-      if (e.pupoClimb) {
-        if (Math.abs(p.cx - e.cx) > 12 || p.y + p.h < e.top + 4 || p.y > e.bottom) continue;
-        if (!p.onGround || (dir && dir === (e.side || dir)) || inp.up) { PupoRide.enter(g, p, 'climb', e); return; }
-      }
-      // bars: grip when his head touches one on the way up
-      if (e.pupoBar) {
-        if (p.vy < 0 && p.cx >= e.x0 && p.cx <= e.x1 && p.y <= e.y + 8 && p.y >= e.y - 14) { PupoRide.enter(g, p, 'hang', e); return; }
-      }
-    }
-    // the ledge catch (an assist): falling or near the top of a jump, stick toward the ledge
-    if (!p.onGround && !p.inWater && dir && p.vy > -2 * TS) {
-      const lead = dir > 0 ? p.x + p.w : p.x, head = p.y;
-      const t0 = Math.floor((head - K.LEDGE_UP) / TS), t1 = Math.floor((head + K.LEDGE_DOWN) / TS);
-      for (let k = 0; k <= 2; k++) {
-        const tx = Math.floor((lead + dir * (k * TS + 1)) / TS);
-        if (Math.abs(tx * TS + TS / 2 - lead) > K.LEDGE_AHEAD + TS / 2) continue;
-        for (let ty = t1; ty >= t0; ty--) {
-          const t = tileAt(A, tx, ty), above = tileAt(A, tx, ty - 1);
-          if (!(SOLID[t] || t === T.SEMI) || SOLID[above]) continue;
-          const lipY = ty * TS, cx = dir > 0 ? tx * TS + p.w / 2 + 2 : (tx + 1) * TS - p.w / 2 - 2;
-          if (lipY > p.y + p.h - 6) continue;   // a floor he will just land on
-          if (!regionFree(A, cx - p.w / 2, lipY - p.h, p.w, p.h)) continue;
-          // nothing solid in between: a clear line to the air just off the lip's corner
-          if (!this.los(A, this.shoulderX(p), this.shoulderY(p), dir > 0 ? tx * TS - 2 : (tx + 1) * TS + 2, lipY - 2, null)) continue;
-          const l = R.lg || (R.lg = { t: 0, fx: 0, fy: 0, tx: 0, ty: 0 });
-          l.t = 0; l.fx = p.cx; l.fy = p.y + p.h; l.tx = cx; l.ty = lipY;
-          PupoRide.enter(g, p, 'ledge', null); return;
-        }
-      }
-    }
+  grabKind(k) { return k === 'hook' || k === 'post' || k === 'strip' || k === 'bar' || k === 'ledge'; },
+  // pulled along the arm to what he grabbed: 16 t/s, at least 0.25 s
+  reachTo(p, g, R, kind, e, tx, ty) {
+    const K = this.K, l = R.lg || (R.lg = { t: 0, dur: 0.3, fx: 0, fy: 0, tx: 0, ty: 0, kind: null, e: null });
+    l.t = 0; l.kind = kind; l.e = e; l.fx = p.cx; l.fy = p.y + p.h;
+    if (kind === 'strip') { l.tx = e.cx; l.ty = clamp(p.y + p.h, e.top + p.h * 0.6, e.bottom); }
+    else if (kind === 'bar') { l.tx = clamp(p.cx, e.x0, e.x1); l.ty = e.y + K.HANG_DROP + p.h; }
+    else { l.tx = tx * TS + TS / 2; l.ty = ty * TS; }
+    l.dur = Math.max(0.25, Math.hypot(l.tx - l.fx, l.ty - l.fy) / K.ZIP);
+    PupoRide.sfx('pupoGrip', 'pick', { pitch: 0.55, vol: 0.45 });
+    PupoRide.enter(g, p, 'ledge', null);
   },
   // a nap in mid-air: he dangles asleep from the nearest hook or bar within 5 tiles
   napSpot(g, p) {

@@ -126,10 +126,12 @@ C.section(want, 'off', () => {
   const onSemi = p.onGround && p.groundTile === T.SEMI;
   G.step(g, 0.05, { down: true, jump: true, jumpPressed: true }); G.step(g, 0.5);
   C.check('on a one-way floor Down + Jump drops both through it', onSemi && p.pupoRide && p.y + p.h > 6 * TS, { onSemi, ride: p.pupoRide, feet: (p.y + p.h) / TS });
-  // hold Down for a second, standing still
-  g = ridingYard(); p = g.player; put(g, 5, 9 * TS); G.step(g, 0.3);
-  G.step(g, 0.8, { down: true }); const still = p.pupoRide; G.step(g, 0.3, { down: true });
-  C.check('holding Down for 1 s standing still hops off', still && !p.pupoRide && g.pupo.free);
+  // hold Down for a second, standing still: on a one-way floor it hops off; on solid ground it does not (only the label)
+  g = ridingYard(); p = g.player; { const A = g.area, sx2 = [...Array(A.W).keys()].find(x => A.tiles[5 * A.W + x] === T.SEMI); put(g, sx2 + 2, 5 * TS); }
+  G.step(g, 0.4); G.step(g, 0.8, { down: true }); const still = p.pupoRide; G.step(g, 0.3, { down: true });
+  C.check('on a one-way floor, holding Down for 1 s standing still hops off', still && !p.pupoRide && g.pupo.free);
+  g = ridingYard(); p = g.player; put(g, 5, 9 * TS); G.step(g, 0.3); G.step(g, 2.0, { down: true });
+  C.check('on solid ground, holding Down for 2 s does not hop off (it flops; Down + Jump hops off)', p.pupoRide && p.pupoFlop, { ride: p.pupoRide });
 });
 
 C.section(want, 'hits', () => {
@@ -239,11 +241,14 @@ C.section(want, 'tutorial', () => {
   const hop = g.pupoLabel && g.pupoLabel.key;
   G.step(g, 0.8, { left: true }); G.step(g, 1.0, { right: true });
   C.check('HOP ON shows over the sitting Pupo, and is done once Brady gets on', hop === 'pupoHop' && G.run('Save.data.tips.pupoHop') === true && g.player.pupoRide, { hop });
+  { const R = g.pupo, t0 = g.pupoRideT || 0; let early = null; for (let i = 0; i < 400 && !early; i++) { G.step(g, 1 / 120); if (g.pupoLabel && g.pupoLabel.key === 'pupoOff') early = (g.pupoRideT || 0) - t0; }
+    C.check('HOP OFF (▼ + JUMP) shows by itself soon after the first mount, with no enemy about', early != null && G.run('PupoTutor.TEXT.pupoOff') === '▼ + JUMP: HOP OFF', { early, rideT: g.pupoRideT, mode: R.mode }); }
+  delete T.pupoOff;
   const p = g.player; put(g, 40, 9 * TS); G.step(g, 0.3);
   const E = G.run('ENTITY_TYPES.mxElote'), e = new E(g, { type: 'mxElote', x: p.cx + 3 * TS, y: p.y + p.h, dir: -1 }); e.vx = 0; e.speed = 0; g.spawn(e); G.step(g, 0.2);
   const poke = g.pupoLabel && g.pupoLabel.key; G.step(g, 1 / 120, { actionPressed: true }); G.step(g, 0.3);
   C.check('POKE shows over the first enemy in reach, and is done after the first poke', poke === 'pupoPoke' && G.run('Save.data.tips.pupoPoke') === true, { poke });
-  G.step(g, 0.5, { down: true }); const off = g.pupoLabel && g.pupoLabel.key;
+  delete T.pupoOff;   G.step(g, 0.5, { down: true }); const off = g.pupoLabel && g.pupoLabel.key;
   C.check('holding Down on Pupo: HOP OFF', off === 'pupoOff', { off });
   // every label is short enough for a portrait phone
   C.check('every label fits a portrait phone (at most 18 characters)', Object.values(PT.TEXT).every(t => t.length <= 18), PT.TEXT);
@@ -274,6 +279,79 @@ C.section(want, 'draw', () => {
   const f = g.pupo.free; f.setMode('wake'); draw(); f.setMode('unfold'); f.mt = 0.5; draw(); f.setMode('pack'); f.mt = 1.3; draw();
   for (const e of g.entities) if (e.isNapBox) { e.close(); draw(); e.open(); draw(); }
   C.check('riding, drowsy, shielded, flopped, asleep, waking, unfolding, packing and both boxes draw without errors', !err, err);
+});
+
+C.section(want, 'rider', () => {
+  // Brady is drawn in every riding pose and state: the rider callback runs, and lands on or near Pupo's riding box
+  // (a context stub that keeps the transform: drawRide's ink pass draws in world px, so the matrix maps to the world)
+  const mock = () => {
+    let m = [1, 0, 0, 1, 0, 0]; const st = [];
+    const mul = (a, b, c, d, e, f) => { const [A, B, C2, D, E, F] = m; m = [A * a + C2 * b, B * a + D * b, A * c + C2 * d, B * c + D * d, A * e + C2 * f + E, B * e + D * f + F]; };
+    const ctx = { save() { st.push(m.slice()); }, restore() { m = st.pop() || [1, 0, 0, 1, 0, 0]; }, translate(x, y) { mul(1, 0, 0, 1, x, y); }, scale(x, y) { mul(x, 0, 0, y, 0, 0); },
+      rotate(a) { const c = Math.cos(a), s2 = Math.sin(a); mul(c, s2, -s2, c, 0, 0); }, transform(a, b, c, d, e, f) { mul(a, b, c, d, e, f); }, setTransform() { m = [1, 0, 0, 1, 0, 0]; },
+      pt(x, y) { return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]; },
+      createLinearGradient() { return { addColorStop() {} }; }, createRadialGradient() { return { addColorStop() {} }; }, measureText() { return { width: 0 }; }, getImageData() { return { data: [] }; } };
+    return new Proxy(ctx, { get: (o, k) => k in o ? o[k] : () => {}, set: (o, k, v) => { o[k] = v; return true; } });
+  };
+  const PR = G.run('PupoReach'), PRw = G.run('PupoRide');
+  const shot = (g, label) => {
+    const p = g.player, Rr = g.pupo, c = mock(); let at = null;
+    const pr0 = PRw.paintRider; PRw.paintRider = function (c2, sx, sy) { at = c2.pt(sx, sy); };
+    try { const o = PRw.pose(p, Rr); o.t = 0.3; o.scale = PRw.ART * (o.big || 1); o.facing = p.facing; o.mood = Rr.showT > 0 ? 'spiral' : Rr.drowsyT > 0 ? 'drowsy' : 'calm'; o.rider = PRw.riderFn; PRw.cur = p; PRw.paintRide(c); }
+    finally { PRw.paintRider = pr0; }
+    const ok = !!at && at[0] > p.x - 2.5 * TS && at[0] < p.x + p.w + 2.5 * TS && at[1] > p.y - 2.5 * TS && at[1] < p.y + p.h + 1.5 * TS;
+    C.check(`Brady is drawn on Pupo: ${label}`, ok, { at, box: [p.x, p.y, p.w, p.h], mode: Rr.mode, pose: Rr.draw.pose });
+  };
+  let g = ridingYard(), p = g.player; put(g, 25, 9 * TS); G.step(g, 0.3);
+  shot(g, 'standing (ride)');
+  G.step(g, 0.3, { right: true }); shot(g, 'walking');
+  G.step(g, 0.4, { down: true }); C.check('...holding Down flops him', p.pupoFlop, p.pupoFlop); shot(g, 'flopped flat (hold Down)');
+  G.step(g, 0.3);
+  g.pupo.drowsyT = 4; shot(g, 'drowsy'); g.pupo.drowsyT = 0;
+  g.pupo.mountT = 0.2; shot(g, 'mounting (the swing up onto his back)'); g.pupo.mountT = 0;
+  p.collect('mushroom'); G.step(g, 0.6); shot(g, 'big Brady');
+  p.inWater = true; shot(g, 'swimming'); p.inWater = false;
+  // the arm modes, in the reach lab
+  const lab = () => { const g2 = G.lab('reach'); G.step(g2, 0.2); g2.bumpBlock(5, 13, false, g2.player); G.step(g2, 1.3); const f = g2.pupo.free; R.mount(g2.player, true, { x: f.cx, y: f.y + f.h }); f.remove = true; G.step(g2, 0.1); return g2; };
+  const objs = g2 => g2.area.pupoObjs || [];
+  for (const [mode, find] of [['swing', e => e.pupoGrabPt && e.kind === 'hook'], ['zip', e => e.pupoGrabPt && e.kind === 'post'], ['climb', e => e.pupoClimb], ['hang', e => e.pupoBar], ['pull', e => e.pupoHandle]]) {
+    const g2 = lab(), e = g2.entities.find(find) || objs(g2).find(find);
+    if (!e) { C.check(`the lab has a ${mode} object`, false); continue; }
+    const p2 = g2.player; if (mode === 'climb') { p2.x = e.cx - p2.w / 2; p2.y = e.bottom - p2.h; } else if (mode === 'hang') { p2.x = (e.x0 + e.x1) / 2 - p2.w / 2; p2.y = e.y + 40; } else if (e.hx != null) { p2.x = e.hx - 3 * TS; p2.y = e.hy + TS - p2.h; }
+    R.enter(g2, p2, mode, e); G.step(g2, 0.05); shot(g2, mode + ' (' + g2.pupo.mode + ')');
+  }
+  { const g2 = lab(), p2 = g2.player; p2.x = 122 * TS; p2.y = 14 * TS - p2.h; PR.reachTo(p2, g2, g2.pupo, 'ledge', null, 124, 10); G.step(g2, 0.05); shot(g2, 'pulled along the arm to a grab (' + g2.pupo.mode + ')'); }
+  // PUPO POWER! (rearing up; Brady hangs on at the scruff)
+  g = ridingYard(); p = g.player; put(g, 25, 9 * TS); G.step(g, 0.3); g.pupo.meter = 1; G.run('PupoPower').press(g); G.step(g, 0.5);
+  shot(g, 'PUPO POWER! (rearing, showT ' + (g.pupo.showT || 0).toFixed(2) + ')');
+});
+
+C.section(want, 'lifts', () => {
+  // holding Down sinks through a lift while riding, exactly as on foot: 1-1's air jets (Pupo's tutorial level)
+  const l1 = G.getLevel(1, 1), A0 = l1.areas[0], jet = (A0.zones || []).find(z => z.fy < 0);
+  C.check('1-1 has an air jet in its main area', !!jet);
+  if (!jet) return;
+  const play = () => { const g = G.run('(l => { Save.data.lives = 9; Save.data.tips = { box: true, picker: true }; const g = new Play(l, {}); Game.scene = g; g.state = "play"; g.fade.a = 0; g.fade.target = 0; g.timeLeft = 999; return g; })')(G.getLevel(1, 1)); G.step(g, 0.2); return g; };
+  const tx = Math.floor((jet.x + jet.w / 2) / TS); let fy = Math.floor((jet.y + jet.h) / TS) - 1; { const A = l1.areas[0]; while (fy < A.H && !G.run('SOLID')[A.tiles[fy * A.W + tx]]) fy++; }
+  const floorY = fy * TS;
+  for (const riding of [false, true]) {
+    const g = play(), p = g.player; if (riding) { R.mount(p, true, { x: tx * TS + TS / 2, y: floorY }); G.step(g, 0.1); }
+    const at = () => { p.x = tx * TS + TS / 2 - p.w / 2; p.y = jet.y + jet.h * 0.4 - p.h; p.vx = 0; p.vy = 0; p.onGround = false; };
+    at(); G.step(g, 1.0); const y1 = p.y + p.h;
+    at(); G.step(g, 2.5, { down: true }); const y2 = p.y + p.h;
+    C.check(`${riding ? 'riding Pupo' : 'on foot'}: the jet lifts him; holding Down sinks him through it to the floor`, y1 < jet.y + jet.h * 0.4 - TS && near(y2, floorY, 3) && (!riding || p.pupoRide), { y1: y1 / TS, y2: y2 / TS, floor: floorY / TS, ride: p.pupoRide });
+  }
+  // pinned under a ceiling in a lift: it eases off and lets him drop clear, the same on Pupo (28 x 58) as on foot
+  const pinned = riding => { const g = ridingYard(), p = g.player, A = g.area, cx = 25; if (!riding) R.dismount(p, 'gone'); for (let x = cx - 2; x <= cx + 2; x++) A.tiles[3 * A.W + x] = T.HARD;
+    A.zones = [{ x: (cx - 1) * TS, y: 4 * TS, w: 3 * TS, h: 5 * TS, fx: 0, fy: -3840, vmax: 240, kind: 'jet', pull: 3 }];
+    put(g, cx, 9 * TS); G.step(g, 0.2); let top = 0, eased = false; for (let i = 0; i < 360; i++) { G.step(g, 1 / 120); if (p.y <= 4 * TS + 0.5) top++; else if (top && p.y > 4 * TS + 4) eased = true; }
+    G.step(g, 2.0, { down: true }); return { eased, down: near(p.y + p.h, 9 * TS, 2), g, p }; };
+  const pf = pinned(false), pr = pinned(true);
+  C.check('pinned to a ceiling by a lift: it eases off him on Pupo as on foot, and Down takes both down to the floor', pr.eased === pf.eased && pr.eased && pr.down && pf.down && pr.p.pupoRide, { foot: [pf.eased, pf.down], ride: [pr.eased, pr.down] });
+  { const g = pr.g, p = pr.p, cx = 25;
+    // flopped on the ground in a lift with Down held: the lift is cancelled, he stays down (the 28 x 30 box)
+    put(g, cx, 9 * TS); G.step(g, 0.2); G.step(g, 1.0, { down: true });
+    C.check('flopped (Down held) in a lift: he stays on the ground, flat', p.pupoFlop && p.onGround && near(p.y + p.h, 9 * TS, 2), { flop: p.pupoFlop, ground: p.onGround, feet: (p.y + p.h) / TS }); }
 });
 
 C.done();

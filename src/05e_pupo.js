@@ -34,82 +34,80 @@
    ============================================================ */
 const PUPO = {
   fur: '#b48c62', furSh: '#86643f', furDk: '#6e5032', furHi: '#d4b088', belly: '#e6cfaa', mask: '#f2e2c6', stripe: '#3e2c20',
-  nose: '#2a1c16', claw: '#f4ead8', blush: 'rgba(255,120,130,0.55)', tear: '#7ad0ff', ink: '#1c1426',
+  nose: '#2a1c16', claw: '#f4ead8', line: 'rgba(26,18,36,0.62)', blush: 'rgba(255,120,130,0.55)', tear: '#7ad0ff', ink: '#1c1426',
   rainbow: ['#e8413a', '#ff9a2a', '#ffd84a', '#4ac46a', '#3a8ae8', '#9a5ae8'],
   carpet: '#c8323e', carpetSh: '#8a1e2a', carpetGold: '#ffc83a', carpetBlue: '#1e5aa8', fringe: '#fff0d0',
   bow: '#ff4f93', butterflies: ['#ff7ad8', '#ffd23a', '#7ae0ff', '#9aff6a', '#ff9a2e']
 };
 // the eyes on the head, in head units: [x, y, stripe direction]
 const PUPO_EYES = [-1.8, -1, -1, 3.6, 1, 1];
-const PUPO_FUR_STROKES = [-22, -32, -14, -40, 8, -42, -28, -24];
+const PUPO_HEAD_S = 2.05;
+const PUPO_FLOP_TILT = 1.2;   // Brady-O's lean when lying along a flopped Pupo (radians from upright)   // a big round head, as Brady's is
 const Pupo = {
   C: PUPO,
-  // a shaggy blob: an ellipse with a fringe of soft points
-  shag(ctx, x, y, rx, ry, col, n, rot) {
+  // a round fur shape in Brady's drawing language: a thin soft outline (like his clothes), the fur, and one shade step
+  // along the lower back edge (a cel shadow); n is ignored (it was the old shaggy fringe)
+  shag(ctx, x, y, rx, ry, col, n, rot, lw) {
     ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot);
-    ctx.fillStyle = col; ctx.beginPath();
-    const N = n || 18;
-    for (let i = 0; i <= N; i++) { const a = i / N * TAU, k = i % 2 ? 1.0 : 1.09; const px = Math.cos(a) * rx * k, py = Math.sin(a) * ry * k; if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
-    ctx.closePath(); ctx.fill(); ctx.restore();
+    const L = lw || 1.1;
+    ctx.fillStyle = PUPO.line; ctx.beginPath(); ctx.ellipse(0, 0, rx + L, ry + L, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = Pupo.shadeOf(col); ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(-rx * 0.06, -ry * 0.1, rx * 0.93, ry * 0.88, 0, 0, TAU); ctx.fill();
+    ctx.restore();
   },
+  // one shade step darker, made once per colour
+  shades: {},
+  shadeOf(col) { return this.shades[col] || (this.shades[col] = shade(col, -0.16)); },
+  // a small rounded claw tip (a short, round-capped stroke): curled, or one straight out to point
   claw(ctx, dy, len, curl) {
     const C = PUPO;
-    ctx.beginPath(); ctx.moveTo(3.4, dy);
-    if (curl) ctx.quadraticCurveTo(3.4 + len * 0.8, dy, 3.4 + len * 0.55, dy + len * 0.6);
-    else ctx.quadraticCurveTo(3.4 + len * 0.6, dy - 0.3, 3.4 + len, dy + 0.4);
-    ctx.strokeStyle = C.ink; ctx.lineWidth = 2.8; ctx.stroke(); ctx.strokeStyle = C.claw; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(3.2, dy);
+    if (curl) ctx.quadraticCurveTo(3.2 + len * 0.7, dy, 3.2 + len * 0.45, dy + len * 0.5);
+    else ctx.lineTo(3.2 + len, dy);
+    ctx.strokeStyle = C.line; ctx.lineWidth = 2.9; ctx.stroke(); ctx.strokeStyle = C.claw; ctx.lineWidth = 1.9; ctx.stroke();
   },
-  // a hand at the end of an arm, pointing along `ang`; point: the index claw sticks straight out
+  // a round mitten paw at the end of an arm, facing along `ang`; point: one rounded claw straight out to point with
+  // (the other two curled small under it: never the middle one alone)
   hand(ctx, x, y, ang, s, point) {
     const C = PUPO; ctx.save(); ctx.translate(x, y); ctx.rotate(ang); if (s && s !== 1) ctx.scale(s, s);
     ctx.lineCap = 'round';
-    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.ellipse(0.5, 0, 5.4, 4.6, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = C.furSh; ctx.beginPath(); ctx.ellipse(0.5, 0, 4.4, 3.7, 0, 0, TAU); ctx.fill();
-    // pointing: the index claw straight out along the top edge, the other two curled tight under it (never the
-    // middle one alone: that would read as a rude gesture)
-    if (point) { this.claw(ctx, -2.4, 9, false); this.claw(ctx, 0.4, 3.6, true); this.claw(ctx, 2.6, 3.4, true); }
-    else { this.claw(ctx, -2.2, 6, true); this.claw(ctx, 0, 6.6, true); this.claw(ctx, 2.2, 6, true); }
+    if (point) this.claw(ctx, -1.2, 6.4, false);
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(1.0, 0, 5.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = C.furSh; ctx.beginPath(); ctx.arc(1.0, 0, 4.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = C.furHi; ctx.beginPath(); ctx.arc(0.4, -0.7, 3.4, 0, TAU); ctx.fill();
+    // three small round claw tips along the front of the mitten
+    ctx.fillStyle = C.claw; ctx.strokeStyle = C.line; ctx.lineWidth = 0.6;
+    for (let i = point ? 1 : 0; i < 3; i++) { ctx.beginPath(); ctx.arc(4.9, -2.3 + i * 2.3, 1.15, 0, TAU); ctx.fill(); ctx.stroke(); }
     ctx.restore();
   },
-  /* one arm at any length: a furry tube on a gentle curve (o.sag: how far the middle bows sideways, art units), with
-     its own hand-made ink outline (stroked 3 units wider in ink, then the fur), darker stripe bands every 13 units on
-     long arms (a stretched slinky, not a pole), a few tufts on the upper edge, and the hand. Allocates nothing. */
+  /* one arm at any length: a smooth round fur tube on a gentle curve (o.sag: how far the middle bows sideways), with its
+     own outline (stroked 3 units wider in ink, then the fur), soft rounded stripe bands every 13 units on long arms (so a
+     long stretch reads as a stretched arm, not a pole), a highlight along the top, and the mitten paw. Allocates nothing. */
   arm(ctx, x0, y0, x1, y1, o) {
-    const C = PUPO, w = (o && o.w) || 7, col = (o && o.col) || C.fur, t = (o && o.t) || 0, sag = (o && o.sag) || 0;
+    const C = PUPO, w = (o && o.w) || 7, col = (o && o.col) || C.fur, sag = (o && o.sag) || 0;
     const dx = x1 - x0, dy = y1 - y0, L = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
     const qx = (x0 + x1) / 2 + nx * sag, qy = (y0 + y1) / 2 + ny * sag;
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(qx, qy, x1, y1);
     ctx.strokeStyle = C.ink; ctx.lineWidth = w + 3; ctx.stroke();
     ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+    // soft stripe bands: short round-capped strokes across the tube in the shade colour (rounded, never pointed)
+    if (!(o && o.bands === false) && L > 30) {
+      ctx.strokeStyle = Pupo.shadeOf(col); ctx.lineWidth = 3.4;
+      for (let d = 13; d < L - 9; d += 13) {
+        const u = d / L, a = 1 - u, px = a * a * x0 + 2 * a * u * qx + u * u * x1, py = a * a * y0 + 2 * a * u * qy + u * u * y1;
+        let tx = 2 * a * (qx - x0) + 2 * u * (x1 - qx), ty = 2 * a * (qy - y0) + 2 * u * (y1 - qy); const tl = Math.sqrt(tx * tx + ty * ty) || 1; tx /= tl; ty /= tl;
+        const h = w * 0.28;
+        ctx.beginPath(); ctx.moveTo(px - ty * h, py + tx * h); ctx.lineTo(px + ty * h, py - tx * h); ctx.stroke();
+      }
+    }
     // the light side of the tube: a thin highlight along the upper edge
     const side = ny < 0 ? 1 : -1;
     if (L > 14) {
-      ctx.beginPath(); ctx.moveTo(x0 + nx * side * w * 0.28, y0 + ny * side * w * 0.28); ctx.quadraticCurveTo(qx + nx * side * w * 0.28, qy + ny * side * w * 0.28, x1 + nx * side * w * 0.28 - ux * 4, y1 + ny * side * w * 0.28 - uy * 4);
-      ctx.strokeStyle = C.furHi; ctx.lineWidth = Math.max(1, w * 0.2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0 + nx * side * w * 0.26, y0 + ny * side * w * 0.26); ctx.quadraticCurveTo(qx + nx * side * w * 0.26, qy + ny * side * w * 0.26, x1 + nx * side * w * 0.26 - ux * 5, y1 + ny * side * w * 0.26 - uy * 5);
+      ctx.strokeStyle = C.furHi; ctx.lineWidth = Math.max(1, w * 0.22); ctx.stroke();
     }
-    // stripe bands and tufts, placed along the curve
-    const bands = !(o && o.bands === false) && L > 30;
-    ctx.lineCap = 'butt';
-    for (let d = 10; d < L - 8; d += 6.5) {
-      const u = d / L, a = 1 - u, px = a * a * x0 + 2 * a * u * qx + u * u * x1, py = a * a * y0 + 2 * a * u * qy + u * u * y1;
-      let tx = 2 * a * (qx - x0) + 2 * u * (x1 - qx), ty = 2 * a * (qy - y0) + 2 * u * (y1 - qy); const tl = Math.sqrt(tx * tx + ty * ty) || 1; tx /= tl; ty /= tl;
-      const mx = -ty * side, my = tx * side, k = Math.round(d / 6.5);
-      if (bands && k % 2 === 0) {
-        // a band across the arm: dark fur with an ink seam on each side
-        ctx.beginPath(); ctx.moveTo(px + mx * w * 0.5, py + my * w * 0.5); ctx.lineTo(px - mx * w * 0.5, py - my * w * 0.5);
-        ctx.strokeStyle = C.furSh; ctx.lineWidth = 3.2; ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(px + tx * 1.8 + mx * w * 0.5, py + ty * 1.8 + my * w * 0.5); ctx.lineTo(px + tx * 1.8 - mx * w * 0.5, py + ty * 1.8 - my * w * 0.5);
-        ctx.strokeStyle = C.furDk; ctx.lineWidth = 0.7; ctx.stroke();
-      } else if (k % 2 === 1 || !bands) {
-        // a tuft on the upper edge
-        const bx = px + mx * w * 0.45, by = py + my * w * 0.45, wig = Math.sin(t * 2 + d) * 0.4;
-        ctx.beginPath(); ctx.moveTo(bx - tx * 2.6, by - ty * 2.6); ctx.lineTo(bx + mx * 2.8 + tx * 0.8 + wig, by + my * 2.8 + ty * 0.8); ctx.lineTo(bx + tx * 2.6, by + ty * 2.6); ctx.closePath();
-        ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = C.ink; ctx.lineWidth = 0.9; ctx.stroke();
-      }
-    }
-    ctx.lineCap = 'round';
-    // the hand points along the end of the curve
+    // the paw faces along the end of the curve
     Pupo.hand(ctx, x1, y1, Math.atan2(y1 - qy, x1 - qx), (o && o.handScale) || 1, o && o.point);
   },
   // a flat rainbow spiral in an ink ring: `bands` hard-edged bands (6 / 4 / 3) swirling about the centre, turned by ang
@@ -128,7 +126,7 @@ const Pupo = {
   },
   head(ctx, x, y, s, t, mood, spiral) {
     const C = PUPO; ctx.save(); ctx.translate(x, y); if (s && s !== 1) ctx.scale(s, s);
-    Pupo.shag(ctx, 0, 0, 7.6, 6.8, C.fur, 18);
+    Pupo.shag(ctx, 0, 0, 7.5, 7.0, C.fur, 0, 0, 0.5);
     ctx.fillStyle = C.mask; ctx.beginPath(); ctx.ellipse(1.2, 0.8, 5.8, 4.8, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = C.furHi; ctx.beginPath(); ctx.ellipse(0.4, -4.6, 4.4, 1.7, 0, 0, TAU); ctx.fill();
     const E = PUPO_EYES;
@@ -174,10 +172,10 @@ const Pupo = {
   /* the named points of a pose (art units, facing +x, feet origin), written into `out` (made once by the caller with
      Pupo.newAnchors()); used to seat Brady-O, start the stretch arms at the shoulders, put PUPO POWER!'s spirals on the
      eyes, the tongue at the mouth and the butterflies at the belly button */
-  newAnchors() { const p = () => ({ x: 0, y: 0 }); return { seat: p(), shoulderF: p(), shoulderB: p(), belly: p(), mouth: p(), eyeL: p(), eyeR: p(), head: p(), eyeR_r: 3, headS: 1.75 }; },
+  newAnchors() { const p = () => ({ x: 0, y: 0 }); return { seat: p(), shoulderF: p(), shoulderB: p(), belly: p(), mouth: p(), eyeL: p(), eyeR: p(), head: p(), eyeR_r: 3, headS: PUPO_HEAD_S }; },
   setPt(q, x, y) { q.x = x; q.y = y; },
   anchors(pose, t, out, o) {
-    const S = 1.75, set = Pupo.setPt;
+    const S = PUPO_HEAD_S, set = Pupo.setPt;
     let hx, hy, bob;
     if (pose === 'walk' || pose === 'ride' || pose === 'swim' || pose === 'flop' || pose === 'sleep') {
       const flat = pose === 'flop' || pose === 'sleep' ? 0.62 : 1;
@@ -258,19 +256,19 @@ const Pupo = {
     ctx.fillStyle = C.belly; ctx.beginPath(); ctx.ellipse(0, -19 + bob, 18, 6, 0, 0, TAU); ctx.fill();
     // his own pupo, low on the belly
     ctx.strokeStyle = C.furSh; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(2, -17 + bob, 1.4, 0.4, Math.PI * 1.8); ctx.stroke();
-    ctx.strokeStyle = C.furDk; ctx.lineWidth = 1;
-    for (let i = 0; i < 8; i += 2) { const sx = PUPO_FUR_STROKES[i], sy = PUPO_FUR_STROKES[i + 1]; ctx.beginPath(); ctx.moveTo(sx, sy + bob); ctx.quadraticCurveTo(sx + 3, sy + 3 + bob, sx + 1, sy + 6 + bob); ctx.stroke(); }
     if ((pose === 'ride' || pose === 'swim') && o.rider) { ctx.save(); o.rider(ctx, -4, -47 + bob); ctx.restore(); }
     this.leg(ctx, -14, -22, -12, legPh, Math.PI, false, true, bob, lift0, t, swing);
     if (!armsOff) this.leg(ctx, 22, -28, 31, legPh, 0, true, true, bob, lift0, t, swing);
     if (pose === 'flop' || pose === 'sleep') ctx.restore();
+    // flopped flat: Brady-O lies along his back, hugging on (his head over Pupo's neck), drawn unsquashed
+    if (pose === 'flop' && o.rider) { ctx.save(); ctx.translate(-14, -24 + bob * 0.62); ctx.rotate(PUPO_FLOP_TILT); o.rider(ctx, 0, 0); ctx.restore(); }
     // the head, on a short neck, swinging slowly (resting on the paws when asleep)
     const mood = o.mood || (pose === 'sleep' ? 'sleep' : 'calm');
     if (pose === 'hang') {
-      ctx.save(); ctx.scale(1, -1); ctx.translate(30, 36 + bob); ctx.rotate(-0.25); Pupo.head(ctx, 0, 0, 1.75, t, mood, o.spiral); ctx.restore();
+      ctx.save(); ctx.scale(1, -1); ctx.translate(30, 36 + bob); ctx.rotate(-0.25); Pupo.head(ctx, 0, 0, PUPO_HEAD_S, t, mood, o.spiral); ctx.restore();
     } else {
       ctx.save(); ctx.translate(30, pose === 'sleep' ? -16 : (-34 + bob) * (pose === 'flop' ? 0.62 : 1)); ctx.rotate(pose === 'sleep' ? 0.15 : Math.sin(t * 1.5) * 0.05);
-      Pupo.head(ctx, 0, 0, 1.75, t, mood, o.spiral);
+      Pupo.head(ctx, 0, 0, PUPO_HEAD_S, t, mood, o.spiral);
       ctx.restore();
     }
   },
@@ -298,7 +296,7 @@ const Pupo = {
     if (o.rider) { ctx.save(); o.rider(ctx, -24, -46 + bob); ctx.restore(); }
     ctx.save(); ctx.translate(0, bob); ctx.rotate(-0.08); this.sitBody(ctx, 0); ctx.restore();
     outlinedCapsule(ctx, 4, -10, 14, -12 - k * 3, 9, C.fur); Pupo.hand(ctx, 15, -12 - k * 3, -0.3, 0.9, false);
-    ctx.save(); ctx.translate(8, -52 + bob); ctx.rotate(-0.12); Pupo.head(ctx, 0, 0, 1.75, t, o.mood || 'calm', o.spiral); ctx.restore();
+    ctx.save(); ctx.translate(8, -52 + bob); ctx.rotate(-0.12); Pupo.head(ctx, 0, 0, PUPO_HEAD_S, t, o.mood || 'calm', o.spiral); ctx.restore();
     if (!o.armsOff) Pupo.arm(ctx, 9, -40 + bob, 18, -62 - Math.max(0, k) * 8, { w: 7.5, col: C.fur, t, bands: false });
   },
   draw(ctx, o) {
@@ -325,7 +323,7 @@ const Pupo = {
         Pupo.arm(ctx, sx, sy, sx + Math.cos(a) * len, sy + Math.sin(a) * len, { w: 6.5, col: i % 2 ? C.fur : C.furSh, point: true, t, sag: (i % 3 - 1) * 4 });
       }
       this.sitLegs(ctx); this.sitBody(ctx, 0);
-      Pupo.head(ctx, 6, -51, 1.75, t, 'spiral', t * 0.6 * TAU);
+      Pupo.head(ctx, 6, -51, PUPO_HEAD_S, t, 'spiral', t * 0.6 * TAU);
       Pupo.carpet(ctx, 8, -45, 70, t);
       for (let i = 0; i < 6; i++) { const k = (t * 0.6 + i / 6) % 1, a = -1.2 + i * 0.5; Pupo.butterfly(ctx, 4 + Math.cos(a) * k * 46, -17 - Math.sin(a + 1.2) * k * 30 - k * 10, 0.7 + k * 0.5, t + i, C.butterflies[i % 5]); }
       ctx.restore(); return;
@@ -369,7 +367,7 @@ const Pupo = {
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(6, -3.6); ctx.lineTo(5.6, 3.6); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
     }
-    ctx.save(); ctx.translate(headX, headY + bob); ctx.rotate(headTilt); Pupo.head(ctx, 0, 0, 1.75, t, mood, o.spiral); ctx.restore();
+    ctx.save(); ctx.translate(headX, headY + bob); ctx.rotate(headTilt); Pupo.head(ctx, 0, 0, PUPO_HEAD_S, t, mood, o.spiral); ctx.restore();
     if (!o.armsOff) Pupo.arm(ctx, shFx, shFy + bob, afx, afy + (armF && pose !== 'stretch' ? bob : 0), { w: 7.5, col: C.fur, point: afPoint, t, bands: pose === 'stretch' || yawn > 0 });
     ctx.restore();
   }
