@@ -172,7 +172,7 @@ const TOUR_OW_MAPS = {
   es: {
     labels: { '6-6': 'Aquarium', '6-7': 'Molinos' },
     w: 1500, h: 960,
-    pal: { land: '#b4a466', light: '#d8c890', path: '#f3d2a2', cliff: '#9a5a3a', beach: '#ecd2a0' },
+    pal: { land: '#b4a466', light: '#d8c890', path: '#f3d2a2', cliff: '#9a5a3a', beach: '#ecd2a0', wall: '#fffaf0', roof: '#c8603a' },
     bridge: 'stone',
     land: [[[80, 90], [500, 70], [1000, 80], [1350, 110], [1460, 260], [1450, 520], [1400, 760], [1280, 880], [1000, 900], [700, 890], [580, 860], [530, 720], [440, 640], [260, 610], [120, 560], [70, 380]],
       [[220, 700], [330, 662], [460, 700], [500, 800], [420, 880], [280, 890], [200, 820]]],
@@ -186,10 +186,14 @@ const TOUR_OW_MAPS = {
       ['trees', 'orange', 1250, 520, 120, 10], ['trees', 'olive', 640, 660, 110, 8], ['trees', 'cypress', 1000, 640, 80, 5], ['trees', 'olive', 1100, 180, 80, 5],
       ['volcano', 290, 820, 50, { lava: false, col: '#8a6a5a' }],
       ['sprite', 'paella', 1000, 860, 18], ['sprite', 'paella', 620, 410, 14], ['sprite', 'hayroll', 200, 520, 10], ['sprite', 'hayroll', 520, 600, 10],
+      ['fields', '#b0a050', [[1000, 560], [1180, 560], [1220, 660], [1060, 690]], ['#ffd23a', '#f0b82a'], -0.4],
+      ['fields', '#a08a50', [[200, 240], [330, 230], [360, 290], [230, 300]], ['#6a8a4a', '#8a9a5a'], 0.2],
+      ['sprite', 'paella', 1180, 420, 16], ['sprite', 'bigstone', 640, 760, 12], ['sprite', 'hayroll', 760, 380, 10], ['sprite', 'hayroll', 1080, 760, 10],
+      ['town', 300, 300, 4, 34], ['town', 1240, 220, 5, 40, 'flat'], ['town', 560, 600, 4, 34],
       ['town', 1300, 760, 6, 50, 'flat'], ['town', 700, 100, 4, 40], ['town', 940, 760, 4, 40, 'flat'],
       ['landmark', 1330, 380, 54]
     ],
-    flora: ['olive', 'orange', 'cypress', 'bush'], density: 36,
+    flora: ['olive', 'orange', 'cypress', 'bush', 'orange'], density: 52,
     scenes: { '6-1': 'tomatina', '6-2': 'pintxos', '6-3': 'arts', '6-4': ['grove', { trees: ['pine', 'pine', 'rock'], ground: '#9a8a7a' }], '6-5': ['grove', { trees: ['orange', 'orange', 'olive'], ground: '#e8d0a0' }], '6-6': 'aquarium', '6-7': ['windmills', { ground: '#d9c48a' }] },
     live: [['mill', 240, 330, 18], ['mill', 440, 340, 18], ['mill', 220, 440, 16], ['sail', [[1350, 900], [1480, 700], [1480, 940]], 10], ['circle', 380, 330, 70, 1], ['fish', 510, 760, '#8ab0d0']]
   },
