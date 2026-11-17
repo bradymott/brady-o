@@ -99,7 +99,7 @@ clamps shut, the brazier rattles and he whistles like a kettle, grumbling. Lines
 "RUNNING OUT OF STEAM...", "MY LID! MIND MY LID!".
 
 ### Morocco 5-4 (mini-boss, FORT): The Brass Owl (`29_tour_ma.js`)
-The Baron's clockwork sentry on the kasbah tower, 3 hp. Three tagine lids hang on roof hooks, each with a chain on the
+Piwi's clockwork sentry on the kasbah tower, 3 hp. Three tagine lids hang on roof hooks, each with a chain on the
 wall. Every 4 s its head turns right round (CLANK, 0.6 s tell); a soft cone shows where it is looking. Pull a chain
 while it looks away and that lid drops on it (`hazard` hit). Pull while it watches and it screeches, hops clear and
 blows three brass feathers. Phase 2: it flies a lap under the roof and lands under a different lid each time. Stomping
@@ -151,12 +151,12 @@ Mechanic: **the bow.** Folklore: a kappa must return a bow and spills the water 
 refill takes longer. Phases: 1 cucumber throws, shell slides; 2 he summons koi that leap from the pond; 3 the pond
 floods the floor (rising water, he is fast in water). Finish: a final deep bow, he gives Brady a cucumber.
 
-### Nepal 12-5: Baron Bric-a-Brac, the finale (`29_tour_np.js`)
-Mechanic: **the stolen landmarks.** The Baron has the shrunken landmarks of all twelve countries in jars. Each phase he
+### Nepal 12-5: Piwi Squirmin', the finale (`29_tour_np.js`)
+Mechanic: **the stolen landmarks.** Piwi has the shrunken landmarks of all twelve countries in jars. Each phase he
 throws one as a weapon (a mini volcano, a mini windmill, a mini tower...) and Brady must **catch and return it**: a thrown
-landmark that lands becomes a `TourProp`; kicking it back into the Baron (or his airship) hurts him and frees that
-landmark (it pops into the background, growing back). Phases: 1 the Baron on his airship above the Himalayan roof,
-three landmarks; 2 he lands in a bric-a-brac mech built from the stolen things (walking, stomping, laser monocle);
+landmark that lands becomes a `TourProp`; kicking it back into Piwi (or his airship) hurts him and frees that
+landmark (it pops into the background, growing back). Phases: 1 Piwi on his airship above the Himalayan roof,
+three landmarks; 2 he lands in a Showstopper mech built from the stolen things (walking, stomping, spotlight beam);
 3 the mech breaks, he runs and the last landmark must be returned while prayer flags (respectful, decoration only)
 and wind zones buffet the ledge. Finish: every landmark restored, Chinka arrives, the ending scene. This is the hardest
 and most spectacular fight; keep it beatable.

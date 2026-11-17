@@ -5,7 +5,7 @@ Read [README.md](README.md) first: owner, ownership rules, appearance rules, dep
 **Your mission:** a super highly polished, beautiful 2D platformer, "better than the classics" in polish. It keeps **our own original style**: never Nintendo's characters, blocks, pipes, power-up looks or levels. Finish the Fiesta Toon art for every country, and make every level and boss a joy.
 
 ## What exists (on `main`)
-**The game:** a 2D canvas platformer (`src/03`–`src/30`). Super Brady-O flies around the world chasing Baron Bric-a-Brac.
+**The game:** a 2D canvas platformer (`src/03`–`src/30`). Super Brady-O flies around the world chasing Piwi Squirmin'.
 - **12 countries × 5 levels:** Mexico, Ecuador, Brazil, Mozambique, Morocco, Spain, France, Amsterdam, Bali, Vietnam, Japan and Nepal (the finale).
 - **2 secret lands:** Antarctica (behind a cracked wall in 8-4) and World 22 (needs 22 postcards). That's 68 levels in all.
 - **Each country** has its own enemies, music, signature item and boss.

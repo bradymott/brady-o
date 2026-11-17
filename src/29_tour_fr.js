@@ -642,7 +642,7 @@ const catArt = (ctx, e, x, y, m) => {
   ctx.restore();
 };
 const keychainArt = (ctx, e, x, y, m) => {
-  // a walking miniature tower keychain: one of the Baron's souvenir minions
+  // a walking miniature tower keychain: one of Piwi's souvenir stagehands
   ctx.save(); ctx.translate(x, y); ctx.scale(1, m === 'flat' ? 0.4 : 1);
   if (m !== 'flat' && m !== 'ko') K.feet(ctx, 0, 0, e.t, '#8a6a3a', 5, 4, m === 'stun');
   ctx.translate(0, -3);
@@ -1333,7 +1333,7 @@ Tour.country({
   themes, painters, dyn, decor, decorLights, beatArt, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_fr', boss: 'tour_fr_boss' },
   landmark: 'the iron tower',
-  arrival: 'Bonjour, Brady! The Baron wants the iron tower for his shelf. I hid his ladder. Find his soufflé chef! ♥ C',
+  arrival: 'Bonjour, Brady! Piwi wants the iron tower as a backdrop. He took up mime so nobody can heckle him. I heckle in ballet. I also hid his ladder. ♥ C',
   emblem(ctx, x, y, r) { ctx.save(); ctx.translate(x, y + r * 0.9); ctx.scale(r / 14, r / 14); latticeTower(ctx, 0, 0, 22, '#ffffff', false); ctx.restore(); },
   coin: { name: 'MACARON', draw(ctx, x, y) {
     const c = '#ff9ab8';

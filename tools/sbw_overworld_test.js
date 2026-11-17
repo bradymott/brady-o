@@ -56,7 +56,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('a new game opens the walkable overworld of Mexico with Chinka\'s postcard; Brady walks from the airstrip to 1-1', r1.mode === 'land' && r1.sel === 'mx' && r1.card && r1.at0 === 'start' && r1.at === '1-1', r1);
   if (shots) await page.screenshot({ path: path.join(shots, 'ow-01-start.png') });
 
-  // 2. Walking only along open trails: 1-2 is behind the Baron's roadblock
+  // 2. Walking only along open trails: 1-2 is behind Piwi's roadblock
   const r2 = await page.evaluate(() => {
     const ow = OW(), p = ow.G.pos['1-2'], q = ow.G.pos['1-1'];
     const dir = { right: p.x > q.x, left: p.x < q.x };
@@ -68,7 +68,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     sim(0.05, { right: q.x > s.x, left: q.x < s.x }); sim(2.5);
     return { blocked, back, again: ow.walker.at, toast: S().toastMsg };
   });
-  check('the joystick walks Brady only along open trails (the closed trail to 1-2 bumps; the airstrip and back work)', r2.blocked && r2.back === 'start' && r2.again === '1-1' && /BLOCKED|BARON/.test(r2.toast), r2);
+  check('the joystick walks Brady only along open trails (the closed trail to 1-2 bumps; the airstrip and back work)', r2.blocked && r2.back === 'start' && r2.again === '1-1' && /BLOCKED|PIWI/.test(r2.toast), r2);
 
   // 3. Going into a level from its stop (jump), and the tap on a stop
   const r3 = await page.evaluate(() => { sim(0.02, { jumpPressed: true }); sim(0.8); const g = S(); return { scene: g.constructor.name, id: g.id }; });

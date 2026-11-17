@@ -1097,7 +1097,7 @@ const boss = {
   }
 };
 
-/* ---------------- 5-4's mini-boss: THE BRASS OWL (the Baron's clockwork sentry) ---------------- */
+/* ---------------- 5-4's mini-boss: THE BRASS OWL (Piwi's clockwork stage-door guard) ---------------- */
 // It perches under one of three tagine lids hanging from the tower roof. Every four seconds its head turns right
 // round (gears clank first). While it looks away, pull a chain: that lid drops on it. Pull while it watches and it
 // screeches, hops clear and blows a volley of brass feathers. Phase 2: it flies a lap of the room and lands under a
@@ -1624,7 +1624,7 @@ Tour.country({
   themes, painters, dyn, decor, decorLights, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_ma', boss: 'tour_ma_boss' },
   landmark: 'the great kasbah',
-  arrival: 'Brady! The Baron rolled up a whole kasbah like a rug and hid it in the souk. ♥ C',
+  arrival: 'Brady! Piwi rolled up a whole kasbah like a rug for his magic act. I rolled myself up in a rug too. Nearly got out! ♥ C',
   coin: { name: 'DATE', draw(ctx, x, y) {
     ctx.fillStyle = '#8a4a2a'; ctx.beginPath(); ctx.ellipse(x, y, 6, 8.5, 0.2, 0, TAU); ctx.fill();
     ctx.strokeStyle = '#5a2a1a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 2, y - 6); ctx.quadraticCurveTo(x + 2, y, x - 1, y + 6); ctx.stroke();

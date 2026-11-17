@@ -16,7 +16,7 @@ Three separate installable web apps (PWAs). Each has its own folder, icon, title
 | App (folder) | What it is | Main code |
 |---|---|---|
 | **Brady Goes to Burning Man** (`burning-man/`) | The flagship 3D open-world adventure. Brady is a first-timer who becomes a burner in one week, while the Man (the effigy) keeps stealing his wife Chinka. It plays out in a streaming Black Rock City (world 500) with 17 enterable story places, theme camps, big art, side quests, the Saturday burn and a secret Exodus. | `src/40_burns_*` (engine), `41_burns_*` (big art, camps, DJ), `42_burns_*` (worlds and the city) |
-| **Super Brady-O World** (`super-brady-o-world/`) | A 2D platformer around the world: 12 countries plus 2 secret lands, 68 levels, a world map, and the villain Baron Bric-a-Brac. | `src/03–29` (world tour: `28_tour_*`, `29_tour_<cc>.js`) |
+| **Super Brady-O World** (`super-brady-o-world/`) | A 2D platformer around the world: 12 countries plus 2 secret lands, 68 levels, a world map, and the villain Piwi Squirmin'. | `src/03–29` (world tour: `28_tour_*`, `29_tour_<cc>.js`) |
 | **Art Cart** (`art-cart/`) | 3D battle racing: 12 original art cars with weapons, 26 drivers, cups, battle arenas. Runs on the Burns engine. | `src/43_cart_*` |
 
 - **Live:** https://bradymott.github.io/brady-o/ is a launcher page, with the three apps in the subfolders above. It's served from the `gh-pages` branch.

@@ -338,7 +338,7 @@ const TOUR_OW_MAPS = {
   },
   // Nepal: a mountain rising out of a sea of clouds, climbed in switchbacks from the valley airstrip at the
   // bottom: the rope bridges over the glacier river, the yak meadows, the blizzard camp, the icefall, and the
-  // Baron's fortress under the summit; yaks plod, an eagle circles, snow falls up high
+  // Piwi's playhouse under the summit; yaks plod, an eagle circles, snow falls up high
   np: {
     labels: { '12-1': 'Rope Bridges', '12-5': 'Fortress', '12-7': 'Supply Depot', '12-4': 'Icefall' },
     w: 1100, h: 1390,

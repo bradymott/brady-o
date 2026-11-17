@@ -293,7 +293,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     return out;
   });
   check('surfboard, noodle lasso, nunchucks and yak ride all work in their countries', Object.values(sigs4).every(s => s.has && s.alive && s.moved > 60), sigs4);
-  // the finale: Baron Bric-a-Brac's three phases in Nepal, then home together, the ending and the credits
+  // the finale: Piwi Squirmin's three phases in Nepal, then home together, the ending and the credits
   const fin = await page.evaluate(() => {
     start('12-5'); clearEnemies(); const b = arenaBoss(), g = S(), p = P();
     p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 999; sim(3);
@@ -308,7 +308,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const I = window.BRADY.Input; for (let k = 0; k < 40 && window.BRADY.Game.scene === E; k++) { I.jumpPressed = true; E.update(1 / 60); I.jumpPressed = false; }
     return { name: b.name, phases: [...phases].join(','), beaten: !!b.remove, results, ending, credits: window.BRADY.Game.scene.constructor.name };
   });
-  check('Baron Bric-a-Brac fights in three phases; beating him leads home, to the ending and the credits', fin.phases === '1,2,3' && fin.beaten && fin.results === 'results' && fin.ending === 'TourEndingScene' && fin.credits === 'CreditsScene', fin);
+  check('Piwi Squirmin\' fights in three phases; beating him leads home, to the ending and the credits', fin.phases === '1,2,3' && fin.beaten && fin.results === 'results' && fin.ending === 'TourEndingScene' && fin.credits === 'CreditsScene', fin);
   // the route on the map: Mexico to Nepal in order, and the postcard count across all lands
   // level totals come from the game data: 68 main levels (5 per country, 4 in each secret land) plus however many
   // secret levels the countries have so far
@@ -389,7 +389,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   const pause = await page.evaluate(() => { start('7-2'); const g = S(); g.openPause(); const labels = g.pauseUI.map(b => b.label); g.closePause(); return labels; });
   check('pause offers the world map', pause.includes('WORLD MAP'), pause);
   const credits = await page.evaluate(() => { const B = window.BRADY; const c = new B.CreditsScene('world'); B.Game.setScene(c); for (let k = 0; k < 60; k++) c.update(1 / 60); c.draw(B.Game.ctx); return c.lines.map(l => l[0]).join(' | '); });
-  check('the credits tell the world-tour story', /Baron Bric-a-Brac/.test(credits) && /postcards/i.test(credits) && !/playa|Burning|the Man\b/.test(credits), credits.slice(0, 160));
+  check('the credits tell the world-tour story', /Piwi Squirmin/.test(credits) && /postcards/i.test(credits) && !/playa|Burning|the Man\b/.test(credits), credits.slice(0, 160));
   const ending = await page.evaluate(() => { const B = window.BRADY; const e = new T.TourEndingScene(); B.Game.setScene(e); for (let k = 0; k < 30; k++) e.update(1 / 60); e.draw(B.Game.ctx); return e.lines.length; });
   check('the ending scene plays', ending >= 3, ending);
   await shot('13-ending.png');

@@ -1,7 +1,7 @@
 /* ============================================================
    Nepal (world 12, the finale): the levels in the v2 format
    (LEVEL_OVERHAUL.md §2 "World 12", §3.2 graph). Loads after
-   29_tour_np.js (the look, the cast, the Tin Yak, Baron Bric-a-Brac)
+   29_tour_np.js (the look, the cast, the Tin Yak, Piwi Squirmin')
    and adds, with Tour.amend: the stamps, the skins, the overhaul's
    set pieces, the Souvenir Stand Pasal, the map graph and all seven
    levels. Monasteries, stupas and prayer flags stay far-off scenery
@@ -150,7 +150,7 @@ class NpFortBanner extends Ent {
     ctx.fillStyle = '#3a3a48'; ctx.fillRect(x - 3, y - 110, 6, 110); ctx.fillStyle = '#7a2ac8'; ctx.beginPath(); ctx.moveTo(x + 3, y - 108); ctx.lineTo(x + 46, y - 100 + Math.sin(this.g.t * 3) * 3); ctx.lineTo(x + 3, y - 80); ctx.fill(); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(x + 18, y - 96, 6, 0, TAU); ctx.fill();
   }
 }
-// 12-5: the Baron's souvenir jar on the vault floor: kick it (run into it) and it shatters a crate wall (practice for
+// 12-5: Piwi's prop jar on the vault floor: kick it (run into it) and it shatters a crate wall (practice for
 // the fight, where the stolen landmarks get kicked back at him)
 const jarArtLead = (ctx, e, x, y, t) => {
   ctx.fillStyle = 'rgba(210,240,255,0.85)'; ctx.beginPath(); ctx.arc(x, y - 13, 12, 0, TAU); ctx.fill();
@@ -178,7 +178,7 @@ class NpCrateBelt extends Ent {
 Object.assign(ENTITY_TYPES, { npGustWind: NpGustWind, npGustBridge: NpGustBridge, npBallChute: NpBallChute, npBallWall: NpBallWall, npYetiWatch: NpYetiWatch, npRiseRamp: NpRiseRamp, npIceBridge: NpIceBridge, npFortBanner: NpFortBanner, npJar: NpJar, npCrateBelt: NpCrateBelt });
 
 Object.assign(PlatformArt, {
-  // the Baron's crate lift: a pallet on chains
+  // Piwi's crate lift: a pallet on chains
   npCrateLift(ctx, p, t) { const x = p.x, y = p.y, w = p.w; ctx.strokeStyle = '#5a5a6a'; ctx.lineWidth = 2; for (const cx of [x + 5, x + w - 5]) { ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx, y - 900); ctx.stroke(); } ctx.fillStyle = '#8a6a44'; rr(ctx, x, y, w, 12, 2); ctx.fill(); ctx.fillStyle = '#c8a070'; for (let q = x + 2; q < x + w - 2; q += 9) ctx.fillRect(q, y + 2, 6, 3); ctx.fillStyle = '#7a2ac8'; ctx.fillRect(x + w / 2 - 8, y + 6, 16, 4); }
 });
 
@@ -200,7 +200,7 @@ const skins = {
     for (let q = 0; q < 4; q++) { const ph = (t * 0.5 + q / 4) % 1; ctx.fillStyle = `rgba(230,245,255,${0.5 * (1 - ph)})`; ctx.beginPath(); ctx.ellipse(x - 12 + q * 8 + ph * 10, y - 4 - ph * 8, 6 + ph * 8, 3 + ph * 3, 0, 0, TAU); ctx.fill(); }
     ctx.fillStyle = '#e8f8ff'; for (let q = -2; q <= 2; q++) { ctx.beginPath(); ctx.moveTo(x + q * 10 - 3, y - 56 + Math.abs(q) * 4); ctx.lineTo(x + q * 10 + 3, y - 56 + Math.abs(q) * 4); ctx.lineTo(x + q * 10, y - 44 + Math.abs(q) * 4); ctx.fill(); }
   },
-  // 12-3: the Baron's supply shed at the end of a sled track
+  // 12-3: Piwi's prop shed at the end of a sled track
   npShedDoor(ctx, e, t) {
     const x = e.cx, y = e.y + e.h;
     ctx.fillStyle = '#4a4a5a'; ctx.fillRect(x - 44, y - 64, 88, 64); ctx.fillStyle = '#5a5a6a'; for (let q = -44; q < 44; q += 11) ctx.fillRect(x + q, y - 64, 2, 64);
@@ -262,7 +262,7 @@ Object.assign(Decor, {
     ctx.fillStyle = '#e8f0fa'; rr(ctx, x0 - 6, y - h - 8, w + 12, 12, 5); ctx.fill();
     ctx.fillStyle = '#2a2a38'; rr(ctx, x - 12, y - 40, 24, 40, 10); ctx.fill(); ctx.fillStyle = `rgba(255,190,110,${0.5 + 0.2 * Math.sin(t * 5)})`; ctx.fillRect(x - 8, y - 30, 16, 8);
   },
-  // the jar shelves of the Baron's archive and vault
+  // the jar shelves of Piwi's archive and vault
   npJarShelf(ctx, x, y) { ctx.fillStyle = '#5a3a24'; ctx.fillRect(x - 30, y - 4, 60, 4); ctx.fillRect(x - 30, y - 34, 60, 4); for (let k = 0; k < 4; k++) { ctx.fillStyle = 'rgba(210,240,255,0.7)'; ctx.beginPath(); ctx.arc(x - 22 + k * 15, y - 12, 7, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(x - 22 + k * 15, y - 42, 7, 0, TAU); ctx.fill(); } },
   // a tea-house table with a kettle and momo plates (the chiya room)
   npTeaTable(ctx, x, y, t) { ctx.fillStyle = '#7a5a3a'; ctx.fillRect(x - 22, y - 18, 44, 5); ctx.fillRect(x - 18, y - 13, 4, 13); ctx.fillRect(x + 14, y - 13, 4, 13); ctx.fillStyle = '#3a3a48'; rr(ctx, x - 10, y - 30, 14, 12, 4); ctx.fill(); ctx.fillStyle = '#ffffff'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(x + 8 + k * 5, y - 20, 3, Math.PI, TAU); ctx.fill(); } for (let q = 0; q < 2; q++) { const ph = (t * 0.6 + q / 2) % 1; ctx.fillStyle = `rgba(255,255,255,${0.5 * (1 - ph)})`; ctx.beginPath(); ctx.arc(x - 3 + ph * 4, y - 34 - ph * 16, 2 + ph * 3, 0, TAU); ctx.fill(); } }
@@ -370,7 +370,7 @@ const P = {
     if (o.gold) st.gold(x + 5, st.gy - 8, o.gold);
     return x + 11;
   },
-  // a sled track that leads to the Baron's supply shed (the secret)
+  // a sled track that leads to Piwi's prop shed (the secret)
   sledShed(st, o) {
     const x = st.x; st.floor(x, x + 12);
     st.B.prop('npSledTracks', x, st.gy, 8, 0, 'none', {});
@@ -428,7 +428,7 @@ const P = {
     st.spawn('npJar', x + 4, st.gy - 1, {});
     B.vkey('ball', [[x + 4, st.gy - 1], [x + 3, st.gy - 1]]);
     st.x = x + 7; const nx = Tour.pieces.breakwall(st, { needs: 'ball', h: 4, skin: 'npCrateWallSkin' });
-    if (o.sign) st.sign(x + 1, 'A jar of the Baron\'s! Run into it to kick it. Kicked things fly back hard...', st.gy);
+    if (o.sign) st.sign(x + 1, 'One of Piwi\'s prop jars! Run into it to kick it. Kicked things fly back hard...', st.gy);
     return nx;
   },
   // the gallery with P1 (must) and a star
@@ -501,7 +501,7 @@ const P = {
     if (o.enemy) st.enemy(o.enemy, x + n - 2, st.gy);
     return x + n + 2;
   },
-  // the Baron's crate lift up to a gantry; P1 on the gantry
+  // Piwi's crate lift up to a gantry; P1 on the gantry
   crateLift(st, o) {
     const B = st.B, rise = o.rise || 5; let x = st.x;
     st.floor(x, x + 4);
@@ -546,7 +546,7 @@ const stamps = {
     doors: [{ to: 'bhanjyang@lipBack', look: 'npBackDoor' }],
     gold: { '*': 'hidden' }
   },
-  // 12-3 (s): the Baron's supply shed: crates, sleds, the way to his depot (secret gate)
+  // 12-3 (s): Piwi's prop shed: crates, sleds, the way to his depot (secret gate)
   depotShed: {
     floor: 11,
     rows: room(30, 14, 11, [
@@ -573,7 +573,7 @@ const stamps = {
     doors: [{ to: 'icefall@tentBack', look: 'npBackDoor' }],
     gold: { '*': 'hidden' }
   },
-  // 12-5 (s): the jar archive: shelves of the Baron's stolen souvenirs, a 1-up behind the jars
+  // 12-5 (s): the jar archive: shelves of Piwi's shrunken scenery, a 1-up behind the jars
   archive: {
     floor: 11,
     rows: room(30, 14, 11, [
@@ -599,7 +599,7 @@ const stamps = {
     doors: [{ to: 'khadal@caveBack', look: 'npBackDoor' }],
     gold: { '*': 'hidden' }
   },
-  // 12-7 (s): under the crate hatch: a stash of the Baron's coins
+  // 12-7 (s): under the crate hatch: a stash of Piwi's coins
   hatch: {
     floor: 11,
     rows: room(28, 14, 11, [
@@ -722,7 +722,7 @@ const levels = [
     postcard: 'I can\'t see a thing up here, Brady. But I can hear a yeti humming. It\'s a nice tune. ♥ C',
     enemies: [['npYeti', 1], ['npMarmot', 1], ['npSnowball', 2]],
     mapCell: [2, 0], mapFrom: 1,
-    exits: { main: { to: '12-4' }, secret: { to: '12-7', hint: 'A sled track leads off the trail to a shed with the Baron\'s badge...' } },
+    exits: { main: { to: '12-4' }, secret: { to: '12-7', hint: 'A sled track leads off the trail to a shed with Piwi\'s badge...' } },
     areas: [
       { id: 'himpat', gen: 'strip', W: 230, H: 20,
         script: [
@@ -755,7 +755,7 @@ const levels = [
   { n: 4, name: 'Khumbu Icefall', arch: 'rise', theme: 'np_icefall',
     gimmick: 'The icefall gives way below you: climb! Ladders bridge the crevasses, icicles drop, seracs crumble, and in the serac field the ice moves faster',
     hint: 'Keep climbing: the bottom of the screen is the end. Icicles shiver before they drop',
-    postcard: 'The ice up here groans like an old house. The Baron\'s fortress is right at the top. ♥ C',
+    postcard: 'The ice up here groans like an old house. Piwi\'s playhouse is right at the top. ♥ C',
     enemies: [['npChough', 2], ['npSnowball', 1]],
     mapCell: [2, 1], mapFrom: [2, 5],
     exits: { main: { to: '12-5' } },
@@ -781,11 +781,11 @@ const levels = [
       { id: 'tent', gen: 'room', role: 'secret', theme: 'np_icefall', stamp: 'tent', room: 'prank',
         prank: { title: 'THE YETI\'S TREASURE', rule: 'A CHEST MARKED \'GENUINE YETI GOLD\'. NOTHING SUSPICIOUS ABOUT THAT', gag: 'cushion', label: 'YETI GOLD', line: 'THE YETI GIGGLES. THE REAL PRIZE IS IN THE CAGE.' } }
     ] },
-  // 12-5 LAIR: the Baron's fortress and the summit (the finale)
-  { n: 5, name: "Baron's Fortress", arch: 'lair', theme: 'np_fortress', boss: 'np_baron',
-    gimmick: 'The Baron\'s vault: shrink-ray cameras, a jar to kick through a crate wall, the archive of stolen things; then Baron Bric-a-Brac on the summit, throwing the landmarks',
-    hint: 'Stay out of the camera beams! The Baron throws the stolen landmarks: kick them right back at him',
-    postcard: 'WE DID IT, BRADY! Every landmark is back to size and the Baron is a snow globe. Let\'s go home. ♥ C',
+  // 12-5 LAIR: Piwi's playhouse and the summit (the finale)
+  { n: 5, name: "Piwi's Playhouse", arch: 'lair', theme: 'np_fortress', boss: 'np_baron',
+    gimmick: 'Piwi\'s playhouse: Shrink-Spot follow-spots, a prop jar to kick through a crate wall, the archive of shrunken scenery; then Piwi Squirmin\'s Grand Finale on the summit, throwing the landmarks',
+    hint: 'Stay out of the spotlights! Piwi throws the shrunken landmarks: kick them right back at him',
+    postcard: 'WE DID IT, BRADY! Every landmark is back to size and Piwi is pocket-sized. Let\'s go home. ♥ C',
     enemies: [['npTinBot', 2], ['npBobble', 2], ['npGlobe', 1]],
     mapCell: [1, 2], mapFrom: 3,
     exits: { main: { to: 'country:next' } },
@@ -836,11 +836,11 @@ const levels = [
       { id: 'blueCave', gen: 'room', role: 'secret', theme: 'np_khadal', stamp: 'blueCave', room: 'lantern',
         lantern: { title: 'THE BLUE ICE CAVE', rule: 'DEEP IN THE CREVASSE IT IS DARK. YOUR LIGHT FADES: RELIGHT IT AT THE LANTERNS. THE ICE STEPS SHOW ONLY IN THE LIGHT' } }
     ] },
-  // 12-7 FORT (secret): the Baron's supply depot and the Tin Yak
-  { n: 7, name: "Baron's Supply Depot", arch: 'fort', secret: true, theme: 'np_depot', boss: 'np_tinyak', mid: true,
-    gimmick: 'Crate conveyors, the Baron\'s crate lifts, a crate with a hatch; then the Tin Yak, a clockwork yak that charges: let it ram the crate walls',
+  // 12-7 FORT (secret): Piwi's prop depot and the Tin Yak
+  { n: 7, name: "Piwi's Prop Depot", arch: 'fort', secret: true, theme: 'np_depot', boss: 'np_tinyak', mid: true,
+    gimmick: 'Crate conveyors, Piwi\'s crate lifts, a crate with a hatch; then the Tin Yak, a clockwork yak that charges: let it ram the crate walls',
     hint: 'Dodge the Tin Yak\'s charge so it rams the crate walls, then stomp it while it\'s stuck',
-    postcard: 'The Baron keeps ALL his stolen stuff in crates. Labelled. In alphabetical order. ♥ C',
+    postcard: 'Piwi keeps ALL his props in crates. Labelled. In alphabetical order. Mostly under P. ♥ C',
     enemies: [['npTinBot', 3]],
     mapCell: [1, 1], mapFrom: 2,
     exits: { main: { to: null } },

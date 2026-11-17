@@ -413,7 +413,7 @@ Tour.amend('es', {
     { n: 5, name: 'La Lonja', mapLabel: 'La Lonja', arch: 'lair', theme: 'es_fallas', boss: 'es_paella',
       gimmick: 'A Fallas street of giant papier-mâché fruit, rockets and firecrackers, then Paellasaurus in the Silk Exchange',
       hint: 'Paellasaurus is too hot to stomp. Kick three tomatoes into the pan to put the fire out, then crack the crust!',
-      postcard: 'The Silk Exchange is back! The Baron pedalled off to France. Allez! ♥ C',
+      postcard: 'The Silk Exchange is back! Piwi flew off to France in a huff. Allez! ♥ C',
       enemies: [['esHorchata', 2], ['esTomato', 2]],
       mapCell: [1, 2], mapFrom: 3,
       areas: [

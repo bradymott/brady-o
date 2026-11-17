@@ -201,7 +201,7 @@ const souk = {
     '#..j.n.....p.....N..1D.n.#',
     '##########################',
     '##########################'
-  ], { items: ['star'], legend: { 1: ['anchor', 'I1'], N: ['spawn', 'sign', { text: 'NOTE FROM THE KEY-KEEPER: GONE FOR MINT TEA. THE ROOFTOP KEY IS ON THE SHELF. DO NOT TELL THE BARON.' }] },
+  ], { items: ['star'], legend: { 1: ['anchor', 'I1'], N: ['spawn', 'sign', { text: 'NOTE FROM THE KEY-KEEPER: GONE FOR MINT TEA. THE ROOFTOP KEY IS ON THE SHELF. DO NOT TELL THE DUMMY.' }] },
     doors: [to('J2', 'paprika', 'pot')] }),
   // H (1,2) the tagine cooks: paprika up to the dyers, paprika down to the cellar, mint across to the fountain court
   cooks: cell([
@@ -586,7 +586,7 @@ Tour.amend('ma', {
 
     /* 5-4 FORT: kasbah walls, the tower room's chain and lids, the Brass Owl */
     { n: 4, name: 'Kasbah of the Brass Owl', mapLabel: 'Kasbah', arch: 'fort', theme: 'ma_atlas', boss: 'ma_owl', mid: true,
-      gimmick: 'Kasbah walls and a tree full of goats, a tower of chains and tagine lids, then the Baron\'s clockwork owl',
+      gimmick: 'Kasbah walls and a tree full of goats, a tower of chains and tagine lids, then Piwi\'s clockwork owl',
       hint: 'Pull a chain while the Brass Owl looks the other way: the lid drops on it',
       postcard: 'A brass owl guarded the kasbah. It fell apart into teaspoons! We kept one. ♥ C',
       enemies: [['maGoat', 2], ['maFennec', 2]],
@@ -615,7 +615,7 @@ Tour.amend('ma', {
     { n: 5, name: 'Riad of Fountains', mapLabel: 'Riad', arch: 'lair', theme: 'ma_riad', boss: 'ma_berrad',
       gimmick: 'Fountain jets lift Brady to the galleries; then Berrad the Magnificent, a grand brass teapot, and his brazier',
       hint: 'Kick Berrad\'s brazier across the riad. When he sinks into it to reboil, stomp his lid!',
-      postcard: 'The kasbah is unrolled and back on its hill! The Baron went to Spain. ¡Olé! ♥ C',
+      postcard: 'The kasbah is unrolled and back on its hill! Piwi went to Spain. ¡Olé! ♥ C',
       enemies: [['maTagine', 2], ['maTeapot', 1]],
       mapCell: [1, 2], mapFrom: 3,
       areas: [
