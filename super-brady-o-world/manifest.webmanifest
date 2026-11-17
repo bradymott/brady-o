@@ -1,7 +1,7 @@
 {
   "name": "Super Brady-O World",
   "short_name": "Super Brady-O",
-  "description": "Super Brady-O travels the world: a 2D platformer across twelve countries.",
+  "description": "Brady flies around the world after Baron Bric-a-Brac, who bottles every landmark he can find: a 2D platformer across twelve countries.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
@@ -11,11 +11,30 @@
     "standalone"
   ],
   "orientation": "any",
-  "background_color": "#0b1630",
-  "theme_color": "#0b1630",
+  "background_color": "#2c9cf0",
+  "theme_color": "#2c9cf0",
   "categories": [
     "games",
     "entertainment"
   ],
-  "icons": []
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }
