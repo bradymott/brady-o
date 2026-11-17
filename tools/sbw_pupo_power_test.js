@@ -139,12 +139,11 @@ async function alloc() {
   const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
   const appPage = path.join(dist, 'site', 'super-brady-o-world', 'index.html');
   const labSrc = fs.readFileSync(path.join(__dirname, 'fixtures', 'sbw_pupo_lab.js'), 'utf8');
-  const MUTE = `(() => { const BAC = window.BaseAudioContext || window.AudioContext; if (!BAC) return; const d = Object.getOwnPropertyDescriptor(BAC.prototype, 'destination'); if (!d || !d.get) return;
-    Object.defineProperty(BAC.prototype, 'destination', { configurable: true, get() { if (!this.__mute) { const real = d.get.call(this); const g = this.createGain(); g.gain.value = 0; g.connect(real); this.__mute = g; } return this.__mute; } }); })();`;
+  const { silence } = require('./sbw_silent');
   const b = await chromium.launch({ args: ['--js-flags=--expose-gc --min-semi-space-size=64 --max-semi-space-size=64', '--enable-precise-memory-info'] });
   try {
     const ctx = await b.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
-    await ctx.addInitScript(MUTE);
+    await silence(ctx);
     const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.goto('file://' + appPage); await page.waitForTimeout(1500); await page.evaluate(labSrc);
     const r = await page.evaluate(() => {

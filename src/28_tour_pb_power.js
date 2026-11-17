@@ -446,6 +446,9 @@ window.addEventListener('keydown', e => { if (Input.mode === 'game' && (e.code =
     const k = Math.sin((R.showT - e.pupoBoop) * TAU * 5) * 0.14 * Math.max(0, 1 - (R.showT - e.pupoBoop) / 0.6), fx = e.x + e.w / 2, fy = e.y + e.h;
     ctx.translate(fx, fy); ctx.scale(1 + k, 1 - k); ctx.translate(-fx, -fy); e.draw(ctx, play.t); return true;
   });
+  // a level that is left frees the show's cached title canvas (src/16_session.js's Play.onSceneExit, when present); it is
+  // drawn again at the next show. The three rug strips (256 x 48) stay: they are made once per look.
+  if (Play.prototype.onSceneExit) { const ox = Play.prototype.onSceneExit; Play.prototype.onSceneExit = function () { const c = PupoPowerFx.text; if (c) { c.width = 1; c.height = 1; PupoPowerFx.text = null; } return ox.apply(this, arguments); }; }
   // the show's world part, after the inked body; the post-power shield stars are drawn by PupoRide.drawStatus
   PupoRide.overs.push((ctx, p, g, R, t) => PupoPowerFx.draw(ctx, p, g, R, t));
   // a hit during the show is impossible (the world is frozen); the shield after it is PupoRide's R.shieldT / powerShield
