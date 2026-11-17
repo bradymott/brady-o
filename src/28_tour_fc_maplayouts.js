@@ -12,7 +12,17 @@
                           ['sprite', kind, x, y, size], ['landmark', x, y, size]
      flora: [kinds], density   trees scattered over the free land
      pal: { sea, deep, land, light, path, beach, cliff, roof, wall }   colour overrides (else TourLandscape.looks)
+     sea, coast, tufts, trail, bridge   the land's own painters by name (28_tour_fg_owlands.js): sea 'clouds' |
+                          'stars' | 'pack' | 'reef'; coast 'float' | 'ice' | 'dike' | 'rock'; tufts 'sand' | 'snow' |
+                          'flowers' | 'none'; trail 'planks' | 'stones' | 'rail' | 'prints' | 'bricks' | 'sand' |
+                          'cobble' | 'sparkle'; bridge 'stone' | 'rope' | 'ice' | 'steps'
+     meadow (false | colour), beachW, flowerCols, foam (false), foamY, birds (false), woods (false)   small options
+     live: [[kind, ...], ...]   moving bits drawn each frame (TourOWScenes.liveKinds: sail, flutter, spout, mill,
+                          balloon, kite, train, walk, circle, flakes, fish, bob, lanterns, blink, glider, clock, plane, seal)
    }
+   Every land has its own route shape (horseshoe, zigzag, diagonal, descent, V, Z, spiral, rings, loop, S,
+   staircase, switchbacks, crescent, clock face); tools/sbw_overworld_test.js fails if two lands' shapes match.
+   Positions for stops that do not exist yet (a bonus level such as '1-7') are ignored until they do.
    The topology (which stop leads where) always comes from the levels' mapFrom and exits; a stop missing here
    falls back to its mapCell on the layout's grid ([x0, y0 of cell 0,0, dx, dy]).
    ============================================================ */
