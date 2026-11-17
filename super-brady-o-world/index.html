@@ -3819,9 +3819,9 @@ const BG = {
     const th0 = THEMES[themeKey], bake = !!(veil && this.bakeable(th0));
     const k = themeKey + '@' + scale.toFixed(2) + (bake ? '|' + veil : '');
     if (this.cache[k]) return this.cache[k];
-    // keep cache small (memory on phones)
+    // keep cache small (memory on phones); the backdrop dropped is freed at once (BG.release)
     const keys = Object.keys(this.cache);
-    if (keys.length >= 2) delete this.cache[keys[0]];
+    if (keys.length >= 2) { this.release(this.cache[keys[0]]); delete this.cache[keys[0]]; }
     const th = THEMES[themeKey];
     const H = VIEW_ROWS * TS; // 448
     const rng = mulberry32(hashStr(themeKey));
@@ -3844,7 +3844,7 @@ const BG = {
       const px = pc.getContext('2d');
       px.scale(ps, ps); px.translate(0, -top - cut);
       try { BGPaint[L.kind].call(BGPaint, px, spec, mulberry32(hashStr(themeKey + i)), H + 60); } catch (e) { console.warn('bg paint', L.kind, e); }
-      if (L.blur) { ctx.imageSmoothingEnabled = true; ctx.drawImage(pc, 0, 0, c.width, c.height); }
+      if (L.blur) { ctx.imageSmoothingEnabled = true; ctx.drawImage(pc, 0, 0, c.width, c.height); pc.width = pc.height = 1; }   // the small paint is done with
       // ... and a procedural layer's empty rows can be trimmed off too (BG.trimPainted: off, it costs 30-100 ms per
       // backdrop at an area's start on a Mac for well under a millisecond a frame)
       let cv = c, cut2 = cut;
@@ -3907,6 +3907,13 @@ const BG = {
     }
     this.cache[k] = res;
     return res;
+  },
+  // free a backdrop's own pictures (its layers, sun or moon, stars, clouds): a few screens of canvas each
+  release(bg) {
+    if (!bg || typeof releaseCanvases !== 'function') return;
+    for (const L of bg.layers || []) releaseCanvases(L.canvas);
+    releaseCanvases(bg.cel); releaseCanvases(bg.stars);
+    for (const cl of bg.clouds || []) releaseCanvases(cl && cl.c);
   },
 
   /* lift: logical px the parallax layers are raised by (a zoomed-in game view shows fewer rows: its floor sits
@@ -4264,8 +4271,10 @@ const Atlas = {
   /* memory held by decoded atlas images, in MB (for tests and the debug overlay) */
   decodedMB() { let b = 0; for (const n in this.atlases) { const a = this.atlases[n]; if (a.ready && a.img) b += (a.img.naturalWidth || 0) * (a.img.naturalHeight || 0) * 4; if (a.halo) b += a.halo.width * a.halo.height * 4; } return Math.round(b / 1e5) / 10; },
   flushCaches() {
-    if (typeof TileArt !== 'undefined') TileArt.cache = {};
-    if (typeof BG !== 'undefined') BG.cache = {};
+    // the old pictures' surfaces are freed now (releaseCanvases): on iOS a dropped canvas keeps its memory until the
+    // garbage collector gets to it, and a level start rebuilds these once per arriving atlas
+    if (typeof TileArt !== 'undefined') { for (const k in TileArt.cache) releaseCanvases(TileArt.cache[k]); TileArt.cache = {}; }
+    if (typeof BG !== 'undefined') { for (const k in BG.cache) BG.release(BG.cache[k]); BG.cache = {}; }
   },
   arrived(name) {
     // painted caches were built without this art: rebuild them on the next frame
@@ -4348,6 +4357,21 @@ const Atlas = {
 };
 try { window.BRADY_ATLAS = Atlas; } catch (e) { /* not in a browser */ }
 
+/* releaseCanvases(o): shrink every canvas held in o (a canvas, or arrays / plain objects of them, a few levels deep) to
+   1 x 1 px, freeing its surface at once. iOS Safari only frees a dropped canvas's memory when the garbage collector
+   collects the element, and caps the total canvas memory of a page: pictures thrown away level after level (backdrops,
+   tile sets, inked props) pile up until drawing gets slow and new canvases fail. Only for pictures nothing else
+   draws from any more (1 x 1, not 0 x 0: a stray draw from a released canvas stays harmless). */
+function releaseCanvases(o, depth) {
+  depth = depth || 0;
+  if (!o || depth > 4 || typeof o !== 'object') return;
+  if (typeof HTMLCanvasElement !== 'undefined' && o instanceof HTMLCanvasElement) { o.width = 1; o.height = 1; return; }
+  if (typeof HTMLImageElement !== 'undefined' && o instanceof HTMLImageElement) return;
+  if (Array.isArray(o)) { for (const v of o) releaseCanvases(v, depth + 1); return; }
+  if (Object.getPrototypeOf(o) !== Object.prototype) return;   // plain objects only
+  for (const k in o) releaseCanvases(o[k], depth + 1);
+}
+
 /* ---- 04_tiles.js ---- */
 /* ============================================================
    Tile art — themed, autotiled, pre-rendered atlases
@@ -4369,7 +4393,7 @@ const TileArt = {
     const k = themeKey + '@' + S.toFixed(3);
     if (this.cache[k]) return this.cache[k];
     const keys = Object.keys(this.cache);
-    if (keys.length >= 3) delete this.cache[keys[0]];
+    if (keys.length >= 3) { if (typeof releaseCanvases === 'function') releaseCanvases(this.cache[keys[0]]); delete this.cache[keys[0]]; }   // freed now (iOS)
     const a = this.build(themeKey, S);
     this.cache[k] = a;
     return a;
@@ -6908,7 +6932,7 @@ const Ink = {
       this.around(cx, x0, y0, w, h, fn, Object.assign({ noHold: true }, opts));
       e = { c, ox: x0 - pad, oy: y0 - pad };
       this.memo.set(k, e); this.memoPx += cw * ch;
-      for (const [k2, e2] of this.memo) { if (this.memoPx <= this.memoBudget || this.memo.size <= 8) break; this.memo.delete(k2); this.memoPx -= e2.c.width * e2.c.height; }
+      for (const [k2, e2] of this.memo) { if (this.memoPx <= this.memoBudget || this.memo.size <= 8) break; if (k2 === k) continue; this.memo.delete(k2); this.memoPx -= e2.c.width * e2.c.height; e2.c.width = e2.c.height = 1; }   // freed now (iOS)
     }
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(e.c, Math.round(m.e + e.ox * S), Math.round(m.f + e.oy * S));
@@ -15341,6 +15365,108 @@ const TripFX = {
 };
 try { window.BRADY_POWERS = Object.assign(window.BRADY_POWERS || {}, { TripFX, PostFX }); } catch (e) { /* not in a browser */ }
 
+/* ---- 16_session.js ---- */
+/* ============================================================
+   Long sessions: what a level, a death or a map visit leaves
+   behind must not pile up over an evening of play (Brady's
+   "laggy after a couple of levels", "glitchy after a few deaths
+   and levels" on his iPhone).
+   - Play.onSceneExit (called by Game.setScene, src/99_main.js):
+     a level that is left (a death restarts the level with a new
+     Play) frees its HUD and light-map canvases at once instead of
+     leaving them to the garbage collector.
+   - PostFX.glow: the glow sprites are cached per colour string;
+     a caller that asks for ever-new colours (the old mushroom
+     sparkles: a new hsl() hue every frame, 16 new canvases a
+     frame) is capped and the cache freed.
+   - SessionStats.snapshot(): the counts tools/sbw_session_test.js
+     watches over repeated levels, deaths, bosses, trips and maps.
+   ============================================================ */
+if (typeof Play !== 'undefined') {
+  Play.prototype.onSceneExit = function () {
+    for (const k of ['hudC', 'lightCanvas']) { const c = this[k]; if (c) { c.width = 1; c.height = 1; this[k] = null; } }
+    this.drawLists = null;
+  };
+}
+if (typeof PostFX !== 'undefined') {
+  const glow0 = PostFX.glow;
+  let made = 0;
+  PostFX.glow = function (col) {
+    if (!this.glowCache[col] && ++made > 96) {
+      for (const k in this.glowCache) releaseCanvases(this.glowCache[k]);
+      this.glowCache = {}; made = 1;
+    }
+    return glow0.call(this, col);
+  };
+}
+
+const SessionStats = {
+  px(c) { return c && c.width ? c.width * c.height : 0; },
+  // canvases (and their pixels) held by a value: a canvas, arrays and plain objects of them, a few levels deep
+  held(o, out, depth) {
+    out = out || { n: 0, px: 0 }; depth = depth || 0;
+    if (!o || depth > 4 || typeof o !== 'object') return out;
+    if (typeof HTMLCanvasElement !== 'undefined' && o instanceof HTMLCanvasElement) { if (o.width * o.height > 1) { out.n++; out.px += o.width * o.height; } return out; }
+    if (Array.isArray(o)) { for (const v of o) this.held(v, out, depth + 1); return out; }
+    if (o instanceof Map) { for (const v of o.values()) this.held(v, out, depth + 1); return out; }
+    if (Object.getPrototypeOf(o) !== Object.prototype) return out;
+    for (const k in o) if (k !== 'theme' && k !== 'spec') this.held(o[k], out, depth + 1);
+    return out;
+  },
+  snapshot() {
+    const s = {}, g = typeof Game !== 'undefined' ? Game.scene : null;
+    s.scene = g ? g.constructor.name : null;
+    if (typeof Play !== 'undefined' && g instanceof Play) {
+      s.state = g.state; s.level = g.id; s.area = g.area ? g.area.idx : null;
+      s.ents = g.entities.length; s.parts = g.parts.list.length; s.weather = g.weather ? g.weather.list.length : 0;
+      s.rtAreas = g.rt.filter(Boolean).length;
+      s.trails = g.area && g.area.trails ? g.area.trails.length : 0;
+      // surf cells of the CACHED level that are trail values (3 slick, 4 hot): must stay 0 (they leak into later tries)
+      let stuck = 0; for (const a of g.level.areas) if (a.surf) for (let i = 0; i < a.surf.length; i++) if (a.surf[i] === 3 || a.surf[i] === 4) stuck++;
+      s.stuckSurf = stuck;
+      s.dizzy = +(g.dizzy || 0).toFixed(2); s.lsdK = +(g.lsdK || 0).toFixed(2); s.trip = +(g.trip || 0).toFixed(2); s.tripJoint = +(g.tripJoint || 0).toFixed(2);
+      s.hurry = !!g.hurry; s.inkBlots = g.inkBlots ? g.inkBlots.length : 0;
+      const p = g.player; if (p) { s.ps = p.state; s.power = p.power; s.fx = p.fx ? Object.keys(p.fx).filter(k => p.fx[k] > 0).join(',') : ''; }
+    }
+    const add = (name, v) => { const h = this.held(v); s[name + 'N'] = h.n; s[name + 'MP'] = +(h.px / 1e6).toFixed(3); };
+    if (typeof BG !== 'undefined') { s.bgEntries = Object.keys(BG.cache).length; add('bg', Object.values(BG.cache).map(b => [b.layers.map(L => L.canvas), b.cel, b.stars, b.clouds.map(c => c.c)])); add('bgFrame', BG.frameCache && BG.frameCache.c); }
+    if (typeof TileArt !== 'undefined') { s.tileEntries = Object.keys(TileArt.cache).length; add('tiles', TileArt.cache); }
+    if (typeof Ink !== 'undefined') {
+      // (older builds have fewer of these: what exists is counted)
+      if (Ink.scratch && Ink.scratch.size != null) { s.inkScratch = Ink.scratch.size; s.inkScratchMP = +(Ink.scratchPx / 1e6).toFixed(3); }
+      else if (Ink.pool) { const h = this.held(Ink.pool); s.inkScratch = h.n; s.inkScratchMP = +(h.px / 1e6).toFixed(3); }   // (the old grow-only scratch set)
+      if (Ink.heldLru) { s.inkHeld = Ink.heldLru.size; s.inkHeldMP = +(Ink.heldPx / 1e6).toFixed(3); }
+      if (Ink.memo) { s.inkMemo = Ink.memo.size; s.inkMemoMP = +(Ink.memoPx / 1e6).toFixed(3); }
+      if (Ink.boxes) s.inkBoxes = Ink.boxes.size; if (Ink.reach) s.inkReach = Ink.reach.size;
+    }
+    const IC = typeof window !== 'undefined' && window.BRADY_INKCACHE;   // (src/30_tour_sprites.js keeps it in its own scope)
+    if (IC) { s.inkCache = IC.map.size; add('inkCache', [...IC.map.values()].map(e => e.c)); s.inkCacheBakes = IC.bakes || 0; }
+    if (typeof PostFX !== 'undefined') {
+      s.glows = Object.keys(PostFX.glowCache).length;
+      add('postfx', ['tmp', 'bloomA', 'bloomB', 'bloomC', 'tripWarp', 'tripSmall', 'tripSmoke', 'shroomWob'].map(k => PostFX[k]));
+    }
+    if (typeof SpriteCache !== 'undefined') s.spriteCache = Object.keys(SpriteCache.map).length;
+    if (typeof LevelCache !== 'undefined') s.levelCache = Object.keys(LevelCache).length;
+    if (typeof Atlas !== 'undefined') { s.atlases = Object.keys(Atlas.atlases).length; s.atlasMB = Atlas.decodedMB(); s.atlasListeners = Atlas.listeners.length; }
+    if (typeof TourOverworld !== 'undefined') { const o = TourOverworld.owner; add('owCache', [o && o.cache && o.cache.cv, TourOverworld.spare]); }
+    if (typeof TourMapKeys !== 'undefined') s.mapTaps = TourMapKeys.taps ? TourMapKeys.taps.length : 0;
+    if (typeof TripFX !== 'undefined' && TripFX.frames) s.tripFrames = TripFX.frames.length;
+    if (typeof Game !== 'undefined') { add('vignette', Game.vignette); s.canvasMP = +(this.px(Game.canvas) / 1e6).toFixed(3); s.rows = +Game.rows.toFixed(2); s.errors = Math.max(Game.errors || 0, window.__sbwErrors || 0); }
+    if (typeof entityFault !== 'undefined' && entityFault.seen) s.faultKinds = Object.keys(entityFault.seen).length;
+    if (typeof Input !== 'undefined') { s.touches = Input.touches.size; s.uiTaps = Input.taps.length; }
+    if (typeof TourPicker !== 'undefined') s.pickerHeld = TourPicker.touchId != null;
+    return s;
+  },
+  // for the test: a few tiles of an enemy's slime / coffee trail under Brady (src/28_tour_i_behave.js TourTrails)
+  layTrail(g, kind, n) {
+    if (typeof TourTrails === 'undefined' || !g || !g.player) return 0;
+    const p = g.player, ty = Math.floor((p.y + p.h + 2) / TS), tx0 = Math.floor(p.cx / TS);
+    let k = 0; for (let i = -(n || 3); i <= (n || 3); i++) { TourTrails.lay(g, tx0 + i, ty, kind || 'slime', 30); k++; }
+    return g.area.trails ? g.area.trails.length : 0;
+  }
+};
+try { window.BRADY_SESSION = SessionStats; } catch (e) { /* not in a browser */ }
+
 /* ---- 20_burn_themes.js ---- */
 /* ============================================================
    Burning Man themes — palettes, painted backgrounds and
@@ -21728,6 +21854,8 @@ Object.assign(Player.prototype, {
   };
   Input.onUp = function (e, cancel) {
     const t = this.touches.get(e.pointerId);
+    // the chip's finger lifted after a pause / mode change turned its touch into a plain one: the chip still lets go
+    if (TourPicker.touchId === e.pointerId && !(t && t.role === 'pick')) TourPicker.touchId = null;
     if (t && t.role === 'pick') {
       if (e.cancelable) e.preventDefault();
       this.touches.delete(e.pointerId); TourPicker.touchId = null;
@@ -21736,6 +21864,7 @@ Object.assign(Player.prototype, {
     }
     return up0.call(this, e, cancel);
   };
+  const ra = Input.releaseAll; Input.releaseAll = function () { TourPicker.touchId = null; return ra.apply(this, arguments); };
   window.addEventListener('keydown', e => {
     if (Input.mode !== 'game') return;
     if (e.code === 'KeyE') Input.pickCycle = 1;
@@ -24115,6 +24244,10 @@ class TourOverworld {
     this.scene = scene; this.C = C; this.cc = C.id; this.t = 0;
     this.G = TourOW.geo(C); this.look = TourOW.look(C);
     TourOverworld.hookTaps(); if (TourMapKeys.taps) TourMapKeys.taps.length = 0;
+    // the last overworld's painted map canvas is reused (ensureCache); that one repaints into a new canvas if it is
+    // ever drawn again
+    const last = TourOverworld.owner;
+    if (last && last !== this && last.cache) { TourOverworld.spare = last.cache.cv; last.cache = null; TourOverworld.owner = null; }
     this.prevEnter = false; this.prevDir = null; this.sinceArrive = 1; this.bumpT = 0;
     this.sparks = []; this.dust = []; this.menu = null; this.iris = { t: 0, dur: TourKit.reduceMotion() ? 0.01 : 0.45, open: true, col: o.landing ? '#fffcf0' : '#07040e' };
     this.refresh();
@@ -24197,7 +24330,8 @@ class TourOverworld {
     const up = e => {
       const d = downs.get(e.pointerId); downs.delete(e.pointerId); if (!d || e.type !== 'pointerup') return;
       const p = Input.pos(e);
-      if (d.moved < 16 && Math.hypot(p.x - d.x, p.y - d.y) < 16 && performance.now() - d.t < 600 && (d.role === 'stick' || d.role === 'cam')) TourMapKeys.taps.push({ x: p.x, y: p.y });
+      // (only while an overworld is on screen: taps on the joystick during a level used to pile up here all session)
+      if (d.moved < 16 && Math.hypot(p.x - d.x, p.y - d.y) < 16 && performance.now() - d.t < 600 && (d.role === 'stick' || d.role === 'cam') && Game.scene && Game.scene.ow && TourMapKeys.taps.length < 16) TourMapKeys.taps.push({ x: p.x, y: p.y });
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
   }
@@ -24437,8 +24571,14 @@ class TourOverworld {
     const G = this.G, cs = Math.min(Math.max(1, Game.dpr * this.z), 2.2, 4096 / G.w, 4096 / G.h);
     if (this.cache && !this.dirty && Math.abs(this.cache.cs - cs) < 0.01) return;
     const cw = Math.ceil(G.w * cs), ch = Math.ceil(G.h * cs);
+    // Memory: the painted map is up to 4096 px square (tens of MB). Every map visit makes a new overworld; it takes
+    // over the last one's canvas (TourOverworld.spare) and a size change resizes it in place, instead of a new canvas
+    // per visit and per zoom that iOS only frees when the garbage collector gets to it.
     let cv = this.cache && this.cache.cv;
-    if (!cv || cv.width !== cw || cv.height !== ch) cv = makeCanvas(cw, ch);
+    if (!cv && TourOverworld.spare) { cv = TourOverworld.spare; TourOverworld.spare = null; }
+    if (!cv) cv = makeCanvas(cw, ch);
+    else if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+    TourOverworld.owner = this;
     const c = cv.getContext('2d');
     c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cw, ch); c.setTransform(cs, 0, 0, cs, 0, 0);
     const t0 = performance.now();
@@ -26874,7 +27014,7 @@ const SBWT = {
       fx.globalCompositeOperation = 'source-atop';
       fx.fillStyle = st.hi || 'rgba(255,250,236,0.85)'; rr(fx, -m.width / 2 + size * 0.06, -cap + size * 0.06, m.width - size * 0.12, cap * 0.16, cap * 0.08); fx.fill();
       fx.fillStyle = 'rgba(40,10,60,0.16)'; fx.fillRect(-m.width, -cap * 0.14, m.width * 2, cap * 0.14);
-      x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(f, 0, 0);
+      x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(f, 0, 0); f.width = f.height = 1;   // (the face canvas is done with: freed now)
     });
   },
   // the width of SUPER BRADY-O's main line at a font size: BRADY, the hyphen, the globe O, plus the ink
@@ -27178,6 +27318,13 @@ class SBWTitleScene {
     const calm = this.calm;
     this.go = { t: 0, end: calm ? 0.3 : 1.45 };
     if (!calm) this.burst(this.cta.x + this.cta.w / 2, this.cta.y, 20, 240);
+  }
+  // left for another scene (Game.setScene): its sprites (about 7 MP of canvases per visit) are freed now, not left to
+  // the garbage collector; coming back (Settings) rebuilds them on the next draw
+  onSceneExit() {
+    if (typeof releaseCanvases !== 'function') return;
+    for (const k of Object.keys(this)) { const v = this[k]; if (v && typeof v === 'object' && (Array.isArray(v) || Object.getPrototypeOf(v) === Object.prototype || (typeof HTMLCanvasElement !== 'undefined' && v instanceof HTMLCanvasElement))) releaseCanvases(v); }
+    this.bW = null;
   }
   leave() {
     const fresh = !Save.data.seenTourIntro;
@@ -27524,6 +27671,7 @@ class SBWFadeIn {
     ctx.globalAlpha = clamp(1 - this.t / this.dur, 0, 1); ctx.fillStyle = SBWT.CREAM; ctx.fillRect(0, 0, Game.cssW, Game.cssH); ctx.globalAlpha = 1;
   }
   resize() { if (this.inner.resize) this.inner.resize(); }
+  onSceneExit(next) { if (this.inner.onSceneExit && next !== this.inner) this.inner.onSceneExit(next); }
 }
 
 // the world app's title is the show above (the scene keeps the name TitleScene; the combined build keeps its picker)
@@ -29398,6 +29546,10 @@ SURF.SLICK = 3; SURF.HOT = 4;
 const TourTrails = {
   lay(g, tx, ty, kind, t) {
     const A = g.area; if (tx < 0 || ty < 0 || tx >= A.W || ty >= A.H || !SOLID[A.tiles[ty * A.W + tx]]) return;
+    // the runtime area shares its surf array with the cached level (Play.makeRuntimeArea copies tiles and hide, not
+    // surf): copy it before the first trail, or a trail still down when Brady dies stays in the level for every later
+    // try as an invisible slick or hot tile
+    if (!A.surfOwn) { A.surf = A.surf ? new Uint8Array(A.surf) : new Uint8Array(A.W * A.H); A.surfOwn = true; }
     A.trails = A.trails || []; const k = ty * A.W + tx;
     const was = A.trails.find(q => q.k === k);
     if (was) { was.t = t; was.kind = kind; return; }
@@ -59610,21 +59762,29 @@ for (const key in THEMES) { const th = THEMES[key]; if (th && th.atlas && INDEX.
    the screen's scale and then blitted; an animated one keeps drawing live, uninked (steam, mist, jets). Only props
    (d.prop) of the countries listed get it, and only kinds whose painter is static. */
 const INKED_CC = ['br', 'mz', 'ma', 'es', 'fr', 'nl'];
+/* Memory: least recently used pictures dropped past 48 of them or a pixel budget (12 MP, about 48 MB: well over what
+   one screen shows, so nothing in view is re-baked), and freed at once. It used to keep 48 whatever their size (big props at a boss zoom are a megapixel or more each, and every zoom change
+   bakes a new set), dropped without freeing them, which on iOS piles up over a session. */
 const InkCache = {
-  map: new Map(), max: 48,
+  map: new Map(), max: 48, px: 0, budget: 12e6, bakes: 0,
   draw(ctx, key, x0, y0, w, h, fn) {
     const m = ctx.getTransform ? ctx.getTransform() : null, S = m ? Math.hypot(m.a, m.b) : 0;
     if (!Ink.on || !m || !(S > 0) || m.b || m.c || w * S > 1800 || h * S > 1800) { Ink.around(ctx, x0, y0, w, h, fn, { pad: 6 }); return; }
     const k = key + '@' + S.toFixed(3);
     let e = this.map.get(k);
-    if (!e) {
+    if (e) { this.map.delete(k); this.map.set(k, e); }   // most recently used last
+    else {
       const pad = 8, cw = Math.ceil((w + pad * 2) * S), ch = Math.ceil((h + pad * 2) * S);
       const c = makeCanvas(cw, ch), cx = c.getContext('2d');
       cx.setTransform(S, 0, 0, S, -(x0 - pad) * S, -(y0 - pad) * S);
       Ink.around(cx, x0, y0, w, h, fn, { pad: 6, noHold: true });
       e = { c, ox: x0 - pad, oy: y0 - pad };
-      this.map.set(k, e);
-      if (this.map.size > this.max) this.map.delete(this.map.keys().next().value);
+      this.map.set(k, e); this.px += cw * ch; this.bakes++;
+      for (const [k2, e2] of this.map) {
+        if (this.map.size <= this.max && this.px <= this.budget) break;
+        if (k2 === k) continue;
+        this.map.delete(k2); this.px -= e2.c.width * e2.c.height; e2.c.width = e2.c.height = 1;
+      }
     }
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(e.c, Math.round(m.e + e.ox * S), Math.round(m.f + e.oy * S));
@@ -59719,7 +59879,7 @@ const Game = {
     } catch (e) { /* not available */ }
   },
 
-  resize() {
+  resize(why) {
     measureInsets();
     const vv = window.visualViewport;
     const cssW = Math.max(200, Math.round(vv ? vv.width : window.innerWidth));
@@ -59728,7 +59888,10 @@ const Game = {
     const cap = this.dprCap || (hq ? 3 : 2);
     const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, hq ? 3 : 2, cap));
     this.cssW = cssW; this.cssH = cssH; this.dpr = dpr;
-    this.canvas.width = Math.round(cssW * dpr); this.canvas.height = Math.round(cssH * dpr);
+    // a zoom change (setRows: every level start, boss fight and map) keeps the canvas when its size is the same;
+    // anything else re-allocates it (iOS may drop a background page's canvas memory)
+    const cw = Math.round(cssW * dpr), ch = Math.round(cssH * dpr);
+    if (why !== 'rows' || this.canvas.width !== cw || this.canvas.height !== ch) { this.canvas.width = cw; this.canvas.height = ch; }
     this.canvas.style.width = cssW + 'px'; this.canvas.style.height = cssH + 'px';
     const portrait = cssH > cssW * 1.05;
     let gr;
@@ -59743,12 +59906,17 @@ const Game = {
     // vignette
     // vignette pre-rendered at the game view's exact pixel size (no per-frame scaling)
     const vw = Math.round(this.viewW * this.S), vh = Math.round(this.viewH * this.S);
-    const v = makeCanvas(vw, vh), vx = v.getContext('2d');
-    vx.save(); vx.translate(vw / 2, vh / 2); vx.scale(vw / 256, vh / 256);
-    const g = vx.createRadialGradient(0, 0, 60, 0, 0, 182);
-    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.42)');
-    vx.fillStyle = g; vx.fillRect(-128, -128, 256, 256); vx.restore();
-    this.vignette = v;
+    // (the same size: the one already painted is kept, not a new full-screen canvas per resize)
+    const v0 = this.vignette;
+    if (!(v0 && v0.width === Math.max(1, vw) && v0.height === Math.max(1, vh))) {
+      if (v0) { v0.width = 1; v0.height = 1; }
+      const v = makeCanvas(vw, vh), vx = v.getContext('2d');
+      vx.save(); vx.translate(vw / 2, vh / 2); vx.scale(vw / 256, vh / 256);
+      const g = vx.createRadialGradient(0, 0, 60, 0, 0, 182);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.42)');
+      vx.fillStyle = g; vx.fillRect(-128, -128, 256, 256); vx.restore();
+      this.vignette = v;
+    }
     Input.computeLayout(cssW, cssH, gr);
     if (this.scene && this.scene.resize) this.scene.resize();
     // the 2D game's Play scene only exists in the apps that bundle it (the Burning Man app doesn't)
@@ -59758,8 +59926,11 @@ const Game = {
   },
 
   /* setRows(n): show n tile rows (the camera zoom); a change re-lays out the view */
-  setRows(n) { n = n || VIEW_ROWS; if (Math.abs(n - this.rows) < 1e-3) return; this.rows = n; if (this.canvas) this.resize(); },
+  setRows(n) { n = n || VIEW_ROWS; if (Math.abs(n - this.rows) < 1e-3) return; this.rows = n; if (this.canvas) this.resize('rows'); },
   setScene(s) {
+    // the scene left behind frees what it alone held (Play: its HUD and light-map canvases; src/16_session.js)
+    const old = this.scene;
+    if (old && old !== s && old.onSceneExit) { try { old.onSceneExit(s); } catch (e) { this.reportError(e); } }
     // in the Burning Man and Art Cart apps, "back to the title" means that app's own home screen
     if ((APP === 'burningman' || APP === 'kart') && typeof TitleScene !== 'undefined' && s instanceof TitleScene) s = appHomeScene();
     // scenes without a zoom of their own (menus, maps, story) use the standard view
