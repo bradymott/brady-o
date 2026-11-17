@@ -143,3 +143,141 @@ Every kind is a different *activity*, not a different coat of paint. Inside a ki
 
 **Rewards vary by kind and by room**: the room's own prize (a 1-UP, a power-up, a star, a magnet, a sundial, an LSD tab), a coin shower, a choice of power-up (Pick One), a shortcut (Wormhole), and in some rooms the level's secret exit sits in the room as before.
 
+
+## 3. The room kit (how it is built)
+
+**Files.** `src/28_tour_r_rooms.js` (the registry `TourRooms`, the `RoomGrid` stamp writer, the prize cage, the run-time hooks), `src/28_tour_ra_kinds.js` (the kinds with a game: ambush, bigone, rush, fetch, lamps, whack, shell, prank, closing), `src/28_tour_rb_kinds.js` (the kinds that are a place to get through: gauntlet, climb, grotto, lantern, doors, pick, wormhole, bouncy, floaty), `src/28_tour_rc_art.js` (the code-drawn art: tokens and ingredients, pop-up critters, cups, the prank gags, the Wormhole). No engine file was edited; everything goes through `TourHooks` (`room`, `areaLoaded`, `playUpdate`, `afterEntities`) and the existing toolkit (doors, locks, keys, virtual keys, moving platforms, crumbles, springs, bounce floors, `water`, `waterLine`, `lamp`, light-only tiles, `gravity`, `dark`).
+
+**A level picks a kind in one line.** The room's old stamp stays in the level file; the kind builds a new room from it:
+
+```js
+{ id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa', room: 'fetch',
+  fetch: { title: "THE HEN'S MOLE", rule: '...', ingredients: ['tokChili', 'tokCacao', 'tokTomato'], dish: 'MOLE! ...' } }
+```
+
+The kind keeps what the level relies on from the old room: its door back (target and look), its postcard spot (same kind, so the level's postcard pick does not change), its secret gate and fake wall (and dust draft), Bottle Mail, signs, 5-2's door-22 gate, its decor, and its prize boxes. Options per kind are in each `TourRooms.def` (`title`, `rule`, `variant`, `critters`, `critter`, `beats`, `style`, `half`, `look`, `n`, `t`, `need`, `cup`, `joke`, `gag`, `label`, `keeper`, `word`, `ingredients`, `dish`, `sym`, `gravity`, `skin`, `to`).
+
+**A Wormhole** is a door with the look `roomWormhole` whose target is an anchor further along the main area. The anchor is added to the level's script as `['anchor', { name: 'wormOut', tight: true }]`: `tight` stops the strip from adding its breather floor, so the level is otherwise unchanged (checked: every main area of all 88 levels builds tile-for-tile as on `main`).
+
+**The checker.**
+- A won game opens the room's prize cage. For the checker the cage is a lock whose key is a spot in the room (or, for Rush, Recipe Kitchen and Light the Lamps, all the tokens / lamps), so the prize is proven reachable as if the game were won.
+- `tools/validate_levels.js` now also runs every room's own needs as probes (`TourRooms.check`): every prize box from below, every token, lamp, ingredient, the win spot, the gauntlet's finish, the climb's top, the door-maze prize cupboard, the Wormhole. A miss prints `ROOM <aid>: <what> UNREACHABLE` and fails the level.
+- `ROOM <aid> HAS NO WAY OUT` accepts a level exit as a way out (11-2's siding has no door back into the moving train: its gate is the way on).
+- `--rules`: every room in a land must be a different kind (an error).
+
+**Run time.** Timed rooms re-arm on every visit; a fight bars the door only while it is on, and at 45 s (60 s for The Big One) the critters give up and the door opens. Time running out never hurts: the round restarts (Rush, Whack) or the keeper sweeps Brady out (Closing Time). Wrong lamps go out, a wrong cup holds a joke; both can be retried at once.
+
+**Tests.** `node tools/sbw_rooms_test.js` (node only): for every room, Brady comes in by its real entrance, the banner and gimmick arm, a script wins the game, the cage opens, every prize box gives its prize, the door (or the Wormhole, or 11-2's gate) takes him out; fight rooms left alone open by themselves; no two rooms in a land share a kind. `BRADY_DIST=... node tools/sbw_rooms_shots.js <dir> [--all] [--portrait]` takes the pictures.
+
+## 4. Every room's kind (86 rooms, 18 kinds, 4-6 rooms of each)
+
+| Land | Level | Room | Kind | Title | Prize |
+|---|---|---|---|---|---|
+| Mexico | 1-1 Mercado Mayhem | `bodega` | **lamps** | THE CHILI CELLAR | power + secret gate |
+| Mexico | 1-2 Xochimilco Forks | `embarcadero` | **whack** | WHACK-AN-AXOLOTL | oneup |
+| Mexico | 1-3 Cenote of Light | `grieta` | (kept: swim area) |  |  |
+| Mexico | 1-4 Volcán Escape | `boveda` | **climb** | THE OBSIDIAN CHIMNEY | oneup |
+| Mexico | 1-5 Fiesta de la Hacienda | `despensa` | **fetch** | THE HEN'S MOLE | oneup |
+| Mexico | 1-6 Pit of Swallows | `nido` | **floaty** | THE SWALLOWS' UPDRAFT | lsd |
+| Ecuador | 2-1 Hemisphere Hop | `chocolateria` | **wormhole** | THE CHOCOLATE WORMHOLE | oneup |
+| Ecuador | 2-2 Canopy of Baños | `cascada` | **grotto** | BEHIND THE WATERFALL | coin box + secret gate |
+| Ecuador | 2-3 Booby Dash | `tubo` | (kept: swim area) |  |  |
+| Ecuador | 2-4 Cacao Works | `envoltura` | **gauntlet** | THE FOIL-WRAPPING LINE | coin box + secret gate |
+| Ecuador | 2-5 Cotopaxi Crater | `refugio` | **bigone** | THE BIG ALPACA | oneup |
+| Ecuador | 2-6 Galápagos Snorkel | `grotto` | **pick** | THE TORTOISE'S BARGAIN | power, oneup |
+| Ecuador | 2-7 Devil's Cauldron | `pista` | **closing** | AIRSTRIP KIOSK: LAST CALL! | oneup + secret gate |
+| Brazil | 3-1 Samba Sunrise | `barracao` | **bouncy** | THE CARNIVAL FLOAT BOUNCE | oneup |
+| Brazil | 3-2 Coati Caper | `toca` | **ambush** | THE COATI GANG'S BURROW | oneup + secret gate |
+| Brazil | 3-3 Iguaçu Falls | `garganta` | **climb** | INSIDE THE DEVIL'S THROAT | oneup + secret gate |
+| Brazil | 3-4 Lençóis Lagoons | `jangada` | **grotto** | THE SUNKEN RAFT | oneup |
+| Brazil | 3-5 Estádio do Tucanão | `vestiario` | **rush** | KIT BEFORE KICK-OFF! | star |
+| Brazil | 3-6 Rio Hang-Glide | `quiosque` | **prank** | FREE COCONUT WATER! | magnet |
+| Mozambique | 4-1 Ostrich Dash | `cupim` | **doors** | THE TERMITE TUNNELS | oneup + secret gate |
+| Mozambique | 4-2 Dune Stampede | `porao` | **gauntlet** | THE CASHEW HOLD | sundial + secret gate |
+| Mozambique | 4-3 Baobab Skyline | `oco` | **lantern** | THE HOLLOW BAOBAB | lsd |
+| Mozambique | 4-4 Hatchling Night | `gruta` | **whack** | WHACK-A-GHOST-CRAB | coin box |
+| Mozambique | 4-5 Ilha Fortress | `cisterna` | **grotto** | THE OLD CISTERN | oneup |
+| Mozambique | 4-6 Buried Dhow | `cabine` | **shell** | THE CAPTAIN'S TIN MUGS | magnet |
+| Morocco | 5-1 Souk Labyrinth | `shop` | (kept: lantern-shop puzzle) |  |  |
+| Morocco | 5-2 Sahara Caravan | `camp` | **pick** | THE CARAVAN BARGAIN | power |
+| Morocco | 5-3 Chefchaouen Blue | `riad` | **lamps** | THE RIAD'S LANTERNS | oneup + secret gate |
+| Morocco | 5-4 Kasbah of the Brass Owl | `loft` | **ambush** | THE GOAT LOFT | oneup |
+| Morocco | 5-5 Riad of Fountains | `court` | **fetch** | MINT TEA FOR THE OWL | oneup |
+| Morocco | 5-6 Carpet Skies | `tent` | **floaty** | THE FLYING CARPET TENT | oneup |
+| Spain | 6-1 La Tomatina | `molino` | **whack** | WHACK-A-TOMATO | power + secret gate |
+| Spain | 6-2 Pintxos Bar | `queso` | **rush** | THE CHEESE CELLAR DASH | coin box + secret gate |
+| Spain | 6-3 City of Arts by Night | `umbracle` | **lantern** | THE NIGHT GARDEN | oneup + secret gate |
+| Spain | 6-4 Teide Updrafts | `cueva` | **gauntlet** | THE LAVA TUBE | oneup |
+| Spain | 6-5 La Lonja | `taller` | **prank** | THE FINISHED NINOT | oneup |
+| Spain | 6-6 Oceanogràfic | `alcove` | **grotto** | THE AQUARIUM'S BACK TANK | coin box |
+| Spain | 6-7 Molinos de La Mancha | `harinero` | **bigone** | THE BIG SHEEP | oneup |
+| France | 7-1 Paris Morning Rounds | `quai` | **doors** | THE BOOKSTALL CUPBOARDS | coin box + secret gate |
+| France | 7-2 Lavender Magpie | `mas` | **fetch** | RATATOUILLE! | oneup |
+| France | 7-3 Mont-Saint-Michel Tides | `bateau` | **shell** | THE OYSTER SHELL GAME | power |
+| France | 7-3 Mont-Saint-Michel Tides | `banc` | **floaty** | THE CLOUD BANK | coin box + secret gate |
+| France | 7-4 Truffle Hunt | `grotte` | **lamps** | THE PAINTED CAVE | pick + secret gate |
+| France | 7-5 Château des Glaces | `boudoir` | **bouncy** | THE BOUNCY CANOPY BED | oneup |
+| France | 7-6 Seine Chase | `seineQuai` | **rush** | CROISSANT RUSH | oneup |
+| France | 7-7 Montgolfière Skies | `nacelle` | **wormhole** | THE BALLOON WORMHOLE | star |
+| France | 7-7 Montgolfière Skies | `alize` | (kept: islands area) |  |  |
+| Amsterdam | 8-1 Polder Pumps | `gemaal` | **grotto** | THE FLOODED PUMP HOUSE | oneup + secret gate |
+| Amsterdam | 8-2 Flower Auction | `koelcel` | **pick** | THE FLORIST'S CHOICE | coin box + secret gate |
+| Amsterdam | 8-3 Bike Lane Rush | `brug` | **gauntlet** | THE BIKE BRIDGE | star |
+| Amsterdam | 8-4 Frozen Canals | `hut` | **closing** | THE KOEK STALL: CLOSING TIME | oneup + secret gate |
+| Amsterdam | 8-5 The Weigh House | `kelder` | **ambush** | THE CHEESE CELLAR | power |
+| Amsterdam | 8-6 Windmill Row | `molen` | **climb** | INSIDE THE WINDMILL | oneup |
+| Bali | 9-1 Kuta Surf | `gua` | **lantern** | THE SEA CAVE | star |
+| Bali | 9-2 Kite Festival | `lumbung` | **whack** | WHACK-A-RAT | oneup + secret gate |
+| Bali | 9-3 Batur Eruption | `tambang` | **gauntlet** | THE SULFUR MINE | oneup + secret gate |
+| Bali | 9-4 Manta Night Dive | `kapal` | **grotto** | THE SUNKEN WRECK | oneup + secret gate |
+| Bali | 9-5 Monkey Forest | `akar` | **ambush** | THE CIVETS' ROOT CELLAR | oneup |
+| Bali | 9-6 Orangutan Canopy | `nest` | **bouncy** | THE ORANGUTAN'S SPRINGY NEST | oneup |
+| Bali | 9-7 Blue Fire Rails | `depot` | **doors** | THE MINE DEPOT | oneup |
+| Vietnam | 10-1 Train Street | `caphe` | **shell** | THREE COFFEES | oneup |
+| Vietnam | 10-2 Ha Long Junk | `hang` | **lantern** | THE GLOW-WORM CAVE | star + secret gate |
+| Vietnam | 10-3 Hoi An Lanterns | `xuong` | **lamps** | THE LANTERN WORKSHOP | oneup + secret gate |
+| Vietnam | 10-4 Son Doong Flood | `rung` | **climb** | THE CAVE JUNGLE CLIMB | oneup |
+| Vietnam | 10-5 Hue Citadel | `kho` | **bigone** | THE BIG COFFEE BEAN | oneup |
+| Vietnam | 10-6 Mekong Floating Market | `thuyen` | **rush** | FLOATING MARKET RUSH | oneup |
+| Japan | 11-1 Sushi Carousel | `reizoko` | **closing** | THE FRIDGE LIGHT GOES OUT | oneup |
+| Japan | 11-2 Bullet Train | `sokusen` | **gauntlet** | THE OLD SIDING | star + secret gate |
+| Japan | 11-3 Night of Things | `chashitsu` | **lamps** | THE TEA HOUSE LANTERNS | lsd + secret gate |
+| Japan | 11-4 Neon Tower | `gachaRoom` | **pick** | THE PRIZE MACHINE | star + secret gate |
+| Japan | 11-5 Kappa Garden | `kura` | **doors** | THE STOREHOUSE DOORS | oneup |
+| Japan | 11-6 Capsule Toy Machine | `capsuleRoom` | **bouncy** | INSIDE A CAPSULE TOY | oneup |
+| Japan | 11-7 Fuji Thermals | `hutRoom` | **floaty** | THIN AIR ON FUJI | star |
+| Nepal | 12-1 Suspension Bridges | `chiya` | **fetch** | A CUP OF CHIYA | power + secret gate |
+| Nepal | 12-2 Yak Caravan Pass | `khadal` | **bigone** | THE BIG YETI | oneup + secret gate |
+| Nepal | 12-3 Blizzard Night | `depotShed` | **rush** | MOMO DASH | oneup + secret gate |
+| Nepal | 12-4 Khumbu Icefall | `tent` | **prank** | THE YETI'S TREASURE | star |
+| Nepal | 12-5 Piwi's Playhouse | `archive` | **doors** | THE FILING CABINETS | oneup |
+| Nepal | 12-6 Crevasse Drop | `blueCave` | **lantern** | THE BLUE ICE CAVE | oneup |
+| Nepal | 12-7 Piwi's Prop Depot | `hatch` | **ambush** | THE TIN BOT STORE | oneup |
+| Antarctica | 13-1 Ice Shelf Bowling | `igloo` | **whack** | BOP-A-SKUA | oneup + secret gate |
+| Antarctica | 13-2 Upside-Down Pole | `berg` | **climb** | INSIDE THE ICEBERG | star |
+| Antarctica | 13-3 Aurora Station | `lab` | **closing** | THE STATION SHOP: CLOSING TIME | oneup + secret gate |
+| Antarctica | 13-4 The Floe of Big Tusk | `cave` | **bigone** | THE BIG ROVER | oneup |
+| Antarctica | 13-5 Egg Express | `rookery` | **rush** | THE LOST EGGS | oneup |
+| World 22 | 22-1 The Station of Clocks | `clock` | **wormhole** | THE CLOCKWORK WORMHOLE | oneup |
+| World 22 | 22-2 The Endless Corridor | `beyond` | **doors** | BEYOND DOOR 22 | coin box + secret gate |
+| World 22 | 22-3 Mirror Lake | `under` | **floaty** | UNDER THE MIRROR LAKE | oneup |
+| World 22 | 22-4 The 22nd Door | `behind` | **shell** | THE MIRROR'S SHELL GAME | oneup |
+| World 22 | 22-5 The Writer's Desk | `drawer` | **prank** | THE DRAWER OF SURPRISES | oneup |
+
+Kept as they were: Morocco 5-1's lantern-shop puzzle (already a real puzzle, part of the souk maze) and the three secret areas that were already set pieces (1-3 grieta, 2-3 tubo, 7-7 alize).
+
+### Pupo dens (waiting for Pupo)
+Pupo's machinery (`src/28_tour_p_pupo.js`, Nap Boxes) is not on `main` yet, so no room has a Nap Box. When it lands, these rooms convert to Pupo dens (one per land, a Nap Box by the door and a bigger prize behind a Pupo-only obstacle), each replacing the kind shown:
+
+| Land | Room | Now | As a Pupo den |
+|---|---|---|---|
+| Mexico | 1-4 `boveda` | climb | Pupo climbs the obsidian chimney hand over hand to a second prize shelf |
+| Brazil | 3-3 `garganta` | climb | hooks under the falls' overhang |
+| Mozambique | 4-3 `oco` | lantern | Pupo reaches through the baobab's knot-hole grille for the prize |
+| Netherlands | 8-6 `molen` | climb | swing on the windmill's sail hooks |
+| Vietnam | 10-4 `rung` | climb | hanging bars across the skylight |
+| Antarctica | 13-2 `berg` | climb | a tickle gate (a ticklish seal) at the top of the iceberg |
+| Japan | 11-6 `capsuleRoom` | bouncy | Pupo snatches the capsule from the claw rail |
+
+### Rules this work kept
+Original content only (generic fairground, kitchen, closet and cave ideas with this game's own critters and food); humour from food, animals and objects; no people caricatured; PG-13 (the worst joke is a whoopee cushion); Brady himself is untouched; the save key is unchanged; no star or acid pickups were added to any main path (rooms only); no Blender, all new art is code-drawn.
