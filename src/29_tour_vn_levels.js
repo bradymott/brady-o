@@ -566,7 +566,8 @@ const levels = [
           ['stoolTower', {}],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'caphe', gen: 'room', role: 'secret', stamp: 'caphe' }
+      { id: 'caphe', gen: 'room', role: 'secret', stamp: 'caphe', room: 'shell',
+        shell: { title: 'THREE COFFEES', rule: 'THE CAFE OWNER HIDES A PRIZE UNDER ONE OF THREE COFFEE CUPS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'cup', dealer: 'frog', joke: ['sock', 'fish'] } }
     ] },
   // 10-2 RIDE: Ha Long Bay on a junk
   { n: 2, name: 'Ha Long Junk', arch: 'ride', theme: 'vn_bay',
@@ -596,7 +597,8 @@ const levels = [
           ['rocks', { n: 2 }],
           ['karstLedge', { shrimp: true }]
         ] },
-      { id: 'hang', gen: 'room', role: 'secret', theme: 'vn_cave', stamp: 'hang' }
+      { id: 'hang', gen: 'room', role: 'secret', theme: 'vn_cave', stamp: 'hang', room: 'lantern',
+        lantern: { title: 'THE GLOW-WORM CAVE', rule: 'A CAVE BEHIND THE BAY. YOUR LIGHT FADES: RELIGHT IT AT THE LANTERNS. THE ROCKS SHOW ONLY IN THE LIGHT' } }
     ] },
   // 10-3 LAMP: Hoi An by lantern light
   { n: 3, name: 'Hoi An Lanterns', arch: 'gong', theme: 'vn_river',
@@ -608,7 +610,8 @@ const levels = [
     exits: { main: { to: '10-4' }, secret: { to: '10-6', hint: 'A lantern workshop has a back door to the river...' } },
     areas: [
       { id: 'phoco', gen: 'room', theme: 'vn_river', stamp: 'market' },
-      { id: 'xuong', gen: 'room', role: 'secret', stamp: 'xuong' }
+      { id: 'xuong', gen: 'room', role: 'secret', stamp: 'xuong', room: 'lamps',
+        lamps: { title: 'THE LANTERN WORKSHOP', rule: 'THE LANTERN MAKER\'S WORKSHOP IS DARK. LIGHT HER LANTERNS IN THE ORDER HER SKETCH SHOWS', sym: 3 } }
     ] },
   // 10-4 RISE (flood): the cave floods while Brady climbs to the skylight
   { n: 4, name: 'Son Doong Flood', arch: 'rise', theme: 'vn_cave',
@@ -634,7 +637,8 @@ const levels = [
           ['reel', {}],
           ['cledges', { n: 2, bat: true }]
         ] },
-      { id: 'rung', gen: 'room', role: 'secret', stamp: 'rung' }
+      { id: 'rung', gen: 'room', role: 'secret', stamp: 'rung', room: 'climb',
+        climb: { title: 'THE CAVE JUNGLE CLIMB', rule: 'A JUNGLE GROWING UP A CAVE SHAFT. CLIMB IT: THE PRIZE IS IN THE SKYLIGHT', style: 'plain' } }
     ] },
   // 10-5 LAIR: the citadel's coffee works, then Ong Phin in the courtyard
   { n: 5, name: 'Hue Citadel', arch: 'lair', theme: 'vn_citadel', boss: 'vn_phin',
@@ -656,7 +660,8 @@ const levels = [
           ['coffeepit', { n: 3 }],
           ['door', { to: 'kettle', perch: 0, look: 'vnHallDoor' }]
         ] },
-      { id: 'kho', gen: 'room', role: 'secret', stamp: 'kho' },
+      { id: 'kho', gen: 'room', role: 'secret', stamp: 'kho', room: 'bigone',
+        bigone: { title: 'THE BIG COFFEE BEAN', rule: 'A GIANT, VERY STRONG COFFEE BEAN GUARDS THE STORE. STOMP IT THREE TIMES', critter: 'vnBean', name: 'THE BIG COFFEE BEAN' } },
       { id: 'kettle', gen: 'arena', role: 'arena', layout: 'kettle', arenaW: 26, H: 18, roof: false }
     ] },
   // 10-6 HUB (errand, secret): the Mekong floating market
@@ -691,7 +696,8 @@ const levels = [
           ['door', { to: 'cho@kenhBack', perch: 0, look: 'vnMarketDoor' }]
         ] },
       { id: 'lokeo', gen: 'room', role: 'sub', stamp: 'lokeo' },
-      { id: 'thuyen', gen: 'room', role: 'secret', stamp: 'thuyen' }
+      { id: 'thuyen', gen: 'room', role: 'secret', stamp: 'thuyen', room: 'rush',
+        rush: { title: 'FLOATING MARKET RUSH', rule: 'A FRUIT BOAT TIPPED OVER! GRAB ALL SIX MANGOES BEFORE THEY FLOAT AWAY', look: 'tokMango', n: 6, t: 16 } }
     ] }
 ];
 

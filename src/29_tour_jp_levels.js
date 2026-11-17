@@ -1016,7 +1016,8 @@ const levels = [
           { from: [1, 1], to: [0, 1], kind: 'oneway', at: [22, 11], toAt: [4, 11], look: 'jpHatch_roof' },
           { from: [0, 1], to: [0, 0], kind: 'oneway', at: [22, 11], toAt: [7, 11], look: 'jpHatch_plate' }
         ] },
-      { id: 'reizoko', gen: 'room', role: 'secret', theme: 'jp_fridge', stamp: 'reizoko' }
+      { id: 'reizoko', gen: 'room', role: 'secret', theme: 'jp_fridge', stamp: 'reizoko', room: 'closing',
+        closing: { title: 'THE FRIDGE LIGHT GOES OUT', rule: 'INSIDE THE GIANT FRIDGE: GRAB WHAT YOU CAN BEFORE THE DOOR SHUTS AND THE LIGHT GOES OUT', keeper: 'tanuki', word: 'LIGHTS OUT!' } }
     ] },
   // 11-2 RIDE: on the roof of the bullet train; a station's siding is the way to Fuji
   { n: 2, name: 'Bullet Train', arch: 'ride', theme: 'jp_rail',
@@ -1047,7 +1048,8 @@ const levels = [
           ['tunnel', { n: 14 }],
           ['fujiview', { item: 'star' }]
         ] },
-      { id: 'sokusen', gen: 'room', role: 'secret', theme: 'jp_rail', stamp: 'sokusen' }
+      { id: 'sokusen', gen: 'room', role: 'secret', theme: 'jp_rail', stamp: 'sokusen', room: 'gauntlet',
+        gauntlet: { title: 'THE OLD SIDING', rule: 'AN OLD SIDING NOBODY USES. RUN IT TO THE BUFFERS', beats: ['crumble', 'wall', 'steps'] } }
     ] },
   // 11-3 PHASE: the bamboo grove by day and by night
   { n: 3, name: 'Night of Things', arch: 'phase', theme: 'jp_bamboo',
@@ -1090,7 +1092,8 @@ const levels = [
           ['kpond', {}],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'chashitsu', gen: 'room', role: 'secret', theme: 'jp_castle', stamp: 'chashitsu' }
+      { id: 'chashitsu', gen: 'room', role: 'secret', theme: 'jp_castle', stamp: 'chashitsu', room: 'lamps',
+        lamps: { title: 'THE TEA HOUSE LANTERNS', rule: 'THE TEA HOUSE IS DARK. LIGHT ITS LANTERNS IN THE ORDER THE SCROLL SHOWS', sym: 2 } }
     ] },
   // 11-4 TOWER (c) exterior: up the outside of a neon tower at dusk
   { n: 4, name: 'Neon Tower', arch: 'tower', theme: 'jp_tower',
@@ -1114,7 +1117,8 @@ const levels = [
           ['neonBand', { n: 3, flip: true, enemy: 'jpCrow' }],
           ['clawBand', { rise: 10 }]
         ] },
-      { id: 'gachaRoom', gen: 'room', role: 'secret', theme: 'jp_neon', stamp: 'gachaRoom' }
+      { id: 'gachaRoom', gen: 'room', role: 'secret', theme: 'jp_neon', stamp: 'gachaRoom', room: 'pick',
+        pick: { title: 'THE PRIZE MACHINE', rule: 'A PRIZE MACHINE WITH THREE CAPSULES IN THE WINDOW. YOU GET ONE TURN' } }
     ] },
   // 11-5 LAIR: the castle garden and the Great Kappa's pond
   { n: 5, name: 'Kappa Garden', arch: 'lair', theme: 'jp_castle', boss: 'jp_kappa',
@@ -1138,7 +1142,8 @@ const levels = [
           'gardenP1',
           ['door', { to: 'pond', perch: 0, look: 'jpGardenGate' }]
         ] },
-      { id: 'kura', gen: 'room', role: 'secret', stamp: 'kura' },
+      { id: 'kura', gen: 'room', role: 'secret', stamp: 'kura', room: 'doors',
+        doors: { title: 'THE STOREHOUSE DOORS', rule: 'THE CASTLE STOREHOUSE: SLIDING DOORS EVERYWHERE. WHICH ONE GOES WHERE?', joke: 'A CUPBOARD OF ONE HUNDRED IDENTICAL TEACUPS.' } },
       { id: 'pond', gen: 'arena', role: 'arena', layout: 'pond', arenaW: 26, H: 18, roof: false }
     ] },
   // 11-6 MINI (secret): inside a capsule-toy machine
@@ -1167,7 +1172,8 @@ const levels = [
           ['enemies', { kind: 'jpCapsule', n: 1, len: 8 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'capsuleRoom', gen: 'room', role: 'secret', theme: 'jp_gacha', stamp: 'capsuleRoom' }
+      { id: 'capsuleRoom', gen: 'room', role: 'secret', theme: 'jp_gacha', stamp: 'capsuleRoom', room: 'bouncy',
+        bouncy: { title: 'INSIDE A CAPSULE TOY', rule: 'INSIDE A GIANT CAPSULE TOY: ALL SQUISHY. ONLY THE TOWERS ARE FIRM. THE PRIZE IS ON THE TALLEST', skin: ['#ff7ab0', '#7ad8ff', '#ffe07a'] } }
     ] },
   // 11-7 GLIDE (secret): over the lake under the volcano
   { n: 7, name: 'Fuji Thermals', arch: 'glide', secret: true, theme: 'jp_fuji',
@@ -1201,7 +1207,8 @@ const levels = [
           ['craneChain', { n: 2 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'hutRoom', gen: 'room', role: 'secret', theme: 'jp_fuji', stamp: 'hutRoom' }
+      { id: 'hutRoom', gen: 'room', role: 'secret', theme: 'jp_fuji', stamp: 'hutRoom', room: 'floaty',
+        floaty: { title: 'THIN AIR ON FUJI', rule: 'SO HIGH UP THE AIR IS THIN AND YOU ARE LIGHT AS A FEATHER. BIG FLOATY JUMPS!', gravity: 0.5 } }
     ] }
 ];
 

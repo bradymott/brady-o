@@ -319,7 +319,8 @@ Tour.amend('es', {
           ['plaza', { k: 3, gold: 'risky' }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'molino', gen: 'room', role: 'secret', stamp: 'molino' }
+        { id: 'molino', gen: 'room', role: 'secret', stamp: 'molino', room: 'whack',
+          whack: { title: 'WHACK-A-TOMATO', rule: 'TOMATOES POP OUT OF THE OLD MILL FLOOR! SQUASH EIGHT BEFORE TIME IS UP', critter: 'tomato', need: 8, t: 22 } }
       ] },
 
     /* 6-2 MINI: tiny Brady on a giant pintxos bar in San Sebastián */
@@ -333,7 +334,8 @@ Tour.amend('es', {
       areas: [
         { id: 'barra', gen: 'room', theme: 'es_pintxos', stamp: 'barra' },
         { id: 'pared', gen: 'room', role: 'sub', theme: 'es_pared', stamp: 'pared' },
-        { id: 'queso', gen: 'room', role: 'secret', theme: 'es_pintxos', stamp: 'queso' }
+        { id: 'queso', gen: 'room', role: 'secret', theme: 'es_pintxos', stamp: 'queso', room: 'rush',
+          rush: { title: 'THE CHEESE CELLAR DASH', rule: 'THE MICE ARE COMING FOR THE CHEESE! GRAB ALL SIX WEDGES FIRST', look: 'tokCheese', n: 6, t: 17 } }
       ] },
 
     /* 6-3 BEAT: Valencia's City of Arts by night */
@@ -367,7 +369,8 @@ Tour.amend('es', {
           'drop',
           ['end', { exit: 'main' }]
         ] },
-        { id: 'umbracle', gen: 'room', role: 'secret', theme: 'es_arts', stamp: 'umbracle' }
+        { id: 'umbracle', gen: 'room', role: 'secret', theme: 'es_arts', stamp: 'umbracle', room: 'lantern',
+          lantern: { title: 'THE NIGHT GARDEN', rule: 'A GARDEN WALK AT NIGHT: YOUR LIGHT FADES, THE LAMPS RELIGHT IT. THE STEPPING STONES SHOW ONLY IN THE LIGHT' } }
       ] },
 
     /* 6-4 GLIDE: down the slopes of Teide on the Canary Islands */
@@ -402,7 +405,8 @@ Tour.amend('es', {
           ['door', { to: 'cueva@in', look: 'esLavaTube', back: 'cuevaBack', perch: 0 }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'cueva', gen: 'room', role: 'secret', stamp: 'cueva' }
+        { id: 'cueva', gen: 'room', role: 'secret', stamp: 'cueva', room: 'gauntlet',
+          gauntlet: { title: 'THE LAVA TUBE', rule: 'AN OLD LAVA TUBE UNDER TEIDE. RUN IT TO THE END WITHOUT TOUCHING THE SPIKY ROCK', beats: ['steps', 'mover', 'crumble'] } }
       ] },
 
     /* 6-5 LAIR: a Fallas street, then Paellasaurus in the Silk Exchange */
@@ -424,7 +428,8 @@ Tour.amend('es', {
           ['itemBlock', { item: 'sig', y: 4 }],
           ['door', { to: 'arena@in', perch: 0, look: 'esHallDoor' }]
         ] },
-        { id: 'taller', gen: 'room', role: 'secret', theme: 'es_fallas', stamp: 'taller' },
+        { id: 'taller', gen: 'room', role: 'secret', theme: 'es_fallas', stamp: 'taller', room: 'prank',
+          prank: { title: 'THE FINISHED NINOT', rule: 'A GIANT CHEST MARKED \'FINISHED NINOT: DO NOT OPEN\'. YOU KNOW YOU WANT TO', gag: 'jack', label: 'DO NOT OPEN', line: 'HA! THE REAL PRIZE IS IN THE CAGE.' } },
         { id: 'arena', gen: 'arena', role: 'arena', layout: 'lonja', arenaW: 28, theme: 'es_lonja', roof: false }
       ] },
 
@@ -453,7 +458,8 @@ Tour.amend('es', {
           'jellies',
           ['itemBlock', { item: 'oneup', y: 4 }]
         ] },
-        { id: 'alcove', gen: 'room', role: 'secret', theme: 'es_aquarium', water: true, stamp: 'alcove' }
+        { id: 'alcove', gen: 'room', role: 'secret', theme: 'es_aquarium', water: true, stamp: 'alcove', room: 'grotto',
+          grotto: { title: 'THE AQUARIUM\'S BACK TANK', rule: 'BEHIND THE GLASS: THE TANK THE VISITORS NEVER SEE. SWIM TO THE BACK', half: false } }
       ] },
 
     /* 6-7 SWITCH (secret): the windmills of La Mancha */
@@ -488,7 +494,8 @@ Tour.amend('es', {
           ['door', { to: 'harinero@in', look: 'esMillHouse', back: 'harBack', perch: 0 }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'harinero', gen: 'room', role: 'secret', theme: 'es_mancha', stamp: 'harinero' }
+        { id: 'harinero', gen: 'room', role: 'secret', theme: 'es_mancha', stamp: 'harinero', room: 'bigone',
+          bigone: { title: 'THE BIG SHEEP', rule: 'THE FLOUR STORE\'S GIANT SHEEP IS NOT AMUSED. STOMP IT THREE TIMES', critter: 'esSheep', name: 'THE BIG SHEEP' } }
       ] }
   ]
 });

@@ -1148,7 +1148,8 @@ const levels = [
         ['enemies', { kind: 'brBrigadeiro', n: 1, len: 10 }],
         ['sambaFinale']
       ] },
-      { id: 'barracao', gen: 'room', role: 'secret', theme: 'br_workshop', stamp: 'barracao' }
+      { id: 'barracao', gen: 'room', role: 'secret', theme: 'br_workshop', stamp: 'barracao', room: 'bouncy',
+        bouncy: { title: 'THE CARNIVAL FLOAT BOUNCE', rule: 'A HALF-BUILT CARNIVAL FLOAT, FULLY INFLATED. THE FLOOR BOUNCES: THE PRIZE IS ON THE TALLEST TOWER', skin: ['#ff4ab8', '#ffd23a', '#3ad8a8'] } }
     ] },
 
   // 3-2 THIEF: Quati snatches Chinka's stamps and runs through the Pantanal
@@ -1188,7 +1189,8 @@ const levels = [
         ['enemies', { kind: 'brCrab', n: 2, len: 10 }],
         ['stampFinale']
       ] },
-      { id: 'toca', gen: 'room', role: 'secret', theme: 'br_toca', stamp: 'toca' }
+      { id: 'toca', gen: 'room', role: 'secret', theme: 'br_toca', stamp: 'toca', room: 'ambush',
+        ambush: { title: 'THE COATI GANG\'S BURROW', rule: 'THE COATIS WANT THEIR STASH BACK! THE DOOR IS JAMMED: STOMP THEM ALL', critters: ['brCoati', 'brCrab'] } }
     ] },
 
   // 3-3 TOWER (b) facade: three falls push you down; catwalks, logs, a sloth; rainbow bridges and swifts up top
@@ -1218,7 +1220,8 @@ const levels = [
         ['climbCard', { kind: 'risky', x: 4, dy: -2 }],
         ['overlook']
       ] },
-      { id: 'garganta', gen: 'room', role: 'secret', theme: 'br_garganta', stamp: 'garganta' }
+      { id: 'garganta', gen: 'room', role: 'secret', theme: 'br_garganta', stamp: 'garganta', room: 'climb',
+        climb: { title: 'INSIDE THE DEVIL\'S THROAT', rule: 'A CHIMNEY OF WET ROCK BEHIND THE FALLS. CLIMB TO THE TOP', style: 'crumble' } }
     ] },
 
   // 3-4 TIDE: rain squalls fill the lagoons every 14 s; walk the beds at low water, swim over the dunes at high
@@ -1255,7 +1258,8 @@ const levels = [
         ['dune', { w: 10, h: 4 }],
         ['duneFinale']
       ] },
-      { id: 'jangada', gen: 'room', role: 'secret', theme: 'br_jangada', stamp: 'jangada' }
+      { id: 'jangada', gen: 'room', role: 'secret', theme: 'br_jangada', stamp: 'jangada', room: 'grotto',
+        grotto: { title: 'THE SUNKEN RAFT', rule: 'THE LAGOON FLOODED THE RAFT SHED. SWIM TO THE BACK', half: false } }
     ] },
 
   // 3-5 LAIR: the players' tunnel teaches the ball (kick it into targets to roll up shutters), then the pitch
@@ -1278,7 +1282,8 @@ const levels = [
         ['enemies', { kind: 'brBrigadeiro', n: 1, len: 10 }],
         ['door', { to: 'estadio@in', perch: 0, look: 'brTunnelExit' }]
       ] },
-      { id: 'vestiario', gen: 'room', role: 'secret', theme: 'br_vestiario', stamp: 'vestiario' },
+      { id: 'vestiario', gen: 'room', role: 'secret', theme: 'br_vestiario', stamp: 'vestiario', room: 'rush',
+        rush: { title: 'KIT BEFORE KICK-OFF!', rule: 'THE MATCH STARTS SOON! GRAB ALL SIX BALLS BEFORE THE WHISTLE', look: 'tokBall', n: 6, t: 16 } },
       { id: 'estadio', gen: 'arena', role: 'arena', layout: 'estadio', arenaW: 34, roof: false, theme: 'br_estadio' }
     ] },
 
@@ -1314,7 +1319,8 @@ const levels = [
         ['isle', { gy: 10, w: 5, enemy: 'brSwift', tight: true }],
         ['beachFinale', { gap: 6, gy: 13, tight: true }]
       ] },
-      { id: 'quiosque', gen: 'room', role: 'secret', theme: 'br_quiosque', stamp: 'quiosque' }
+      { id: 'quiosque', gen: 'room', role: 'secret', theme: 'br_quiosque', stamp: 'quiosque', room: 'prank',
+        prank: { title: 'FREE COCONUT WATER!', rule: 'A GIANT COCONUT CHEST: FREE COCONUT WATER FOR EVERYONE! GO ON, OPEN IT', gag: 'snakes', label: 'FREE COCONUTS', line: 'OK, OK. THE REAL PRIZE IS IN THE CAGE.' } }
     ] }
 ];
 
