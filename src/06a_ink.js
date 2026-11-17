@@ -263,7 +263,7 @@ const Ink = {
       this.around(cx, x0, y0, w, h, fn, Object.assign({ noHold: true }, opts));
       e = { c, ox: x0 - pad, oy: y0 - pad };
       this.memo.set(k, e); this.memoPx += cw * ch;
-      for (const [k2, e2] of this.memo) { if (this.memoPx <= this.memoBudget || this.memo.size <= 8) break; this.memo.delete(k2); this.memoPx -= e2.c.width * e2.c.height; }
+      for (const [k2, e2] of this.memo) { if (this.memoPx <= this.memoBudget || this.memo.size <= 8) break; if (k2 === k) continue; this.memo.delete(k2); this.memoPx -= e2.c.width * e2.c.height; e2.c.width = e2.c.height = 1; }   // freed now (iOS)
     }
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(e.c, Math.round(m.e + e.ox * S), Math.round(m.f + e.oy * S));

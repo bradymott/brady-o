@@ -174,6 +174,10 @@ class TourOverworld {
     this.scene = scene; this.C = C; this.cc = C.id; this.t = 0;
     this.G = TourOW.geo(C); this.look = TourOW.look(C);
     TourOverworld.hookTaps(); if (TourMapKeys.taps) TourMapKeys.taps.length = 0;
+    // the last overworld's painted map canvas is reused (ensureCache); that one repaints into a new canvas if it is
+    // ever drawn again
+    const last = TourOverworld.owner;
+    if (last && last !== this && last.cache) { TourOverworld.spare = last.cache.cv; last.cache = null; TourOverworld.owner = null; }
     this.prevEnter = false; this.prevDir = null; this.sinceArrive = 1; this.bumpT = 0;
     this.sparks = []; this.dust = []; this.menu = null; this.iris = { t: 0, dur: TourKit.reduceMotion() ? 0.01 : 0.45, open: true, col: o.landing ? '#fffcf0' : '#07040e' };
     this.refresh();
@@ -256,7 +260,8 @@ class TourOverworld {
     const up = e => {
       const d = downs.get(e.pointerId); downs.delete(e.pointerId); if (!d || e.type !== 'pointerup') return;
       const p = Input.pos(e);
-      if (d.moved < 16 && Math.hypot(p.x - d.x, p.y - d.y) < 16 && performance.now() - d.t < 600 && (d.role === 'stick' || d.role === 'cam')) TourMapKeys.taps.push({ x: p.x, y: p.y });
+      // (only while an overworld is on screen: taps on the joystick during a level used to pile up here all session)
+      if (d.moved < 16 && Math.hypot(p.x - d.x, p.y - d.y) < 16 && performance.now() - d.t < 600 && (d.role === 'stick' || d.role === 'cam') && Game.scene && Game.scene.ow && TourMapKeys.taps.length < 16) TourMapKeys.taps.push({ x: p.x, y: p.y });
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
   }
@@ -496,8 +501,14 @@ class TourOverworld {
     const G = this.G, cs = Math.min(Math.max(1, Game.dpr * this.z), 2.2, 4096 / G.w, 4096 / G.h);
     if (this.cache && !this.dirty && Math.abs(this.cache.cs - cs) < 0.01) return;
     const cw = Math.ceil(G.w * cs), ch = Math.ceil(G.h * cs);
+    // Memory: the painted map is up to 4096 px square (tens of MB). Every map visit makes a new overworld; it takes
+    // over the last one's canvas (TourOverworld.spare) and a size change resizes it in place, instead of a new canvas
+    // per visit and per zoom that iOS only frees when the garbage collector gets to it.
     let cv = this.cache && this.cache.cv;
-    if (!cv || cv.width !== cw || cv.height !== ch) cv = makeCanvas(cw, ch);
+    if (!cv && TourOverworld.spare) { cv = TourOverworld.spare; TourOverworld.spare = null; }
+    if (!cv) cv = makeCanvas(cw, ch);
+    else if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+    TourOverworld.owner = this;
     const c = cv.getContext('2d');
     c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cw, ch); c.setTransform(cs, 0, 0, cs, 0, 0);
     const t0 = performance.now();

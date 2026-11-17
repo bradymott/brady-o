@@ -106,21 +106,29 @@ for (const key in THEMES) { const th = THEMES[key]; if (th && th.atlas && INDEX.
    the screen's scale and then blitted; an animated one keeps drawing live, uninked (steam, mist, jets). Only props
    (d.prop) of the countries listed get it, and only kinds whose painter is static. */
 const INKED_CC = ['br', 'mz', 'ma', 'es', 'fr', 'nl'];
+/* Memory: least recently used pictures dropped past 48 of them or a pixel budget (12 MP, about 48 MB: well over what
+   one screen shows, so nothing in view is re-baked), and freed at once. It used to keep 48 whatever their size (big props at a boss zoom are a megapixel or more each, and every zoom change
+   bakes a new set), dropped without freeing them, which on iOS piles up over a session. */
 const InkCache = {
-  map: new Map(), max: 48,
+  map: new Map(), max: 48, px: 0, budget: 12e6, bakes: 0,
   draw(ctx, key, x0, y0, w, h, fn) {
     const m = ctx.getTransform ? ctx.getTransform() : null, S = m ? Math.hypot(m.a, m.b) : 0;
     if (!Ink.on || !m || !(S > 0) || m.b || m.c || w * S > 1800 || h * S > 1800) { Ink.around(ctx, x0, y0, w, h, fn, { pad: 6 }); return; }
     const k = key + '@' + S.toFixed(3);
     let e = this.map.get(k);
-    if (!e) {
+    if (e) { this.map.delete(k); this.map.set(k, e); }   // most recently used last
+    else {
       const pad = 8, cw = Math.ceil((w + pad * 2) * S), ch = Math.ceil((h + pad * 2) * S);
       const c = makeCanvas(cw, ch), cx = c.getContext('2d');
       cx.setTransform(S, 0, 0, S, -(x0 - pad) * S, -(y0 - pad) * S);
       Ink.around(cx, x0, y0, w, h, fn, { pad: 6, noHold: true });
       e = { c, ox: x0 - pad, oy: y0 - pad };
-      this.map.set(k, e);
-      if (this.map.size > this.max) this.map.delete(this.map.keys().next().value);
+      this.map.set(k, e); this.px += cw * ch; this.bakes++;
+      for (const [k2, e2] of this.map) {
+        if (this.map.size <= this.max && this.px <= this.budget) break;
+        if (k2 === k) continue;
+        this.map.delete(k2); this.px -= e2.c.width * e2.c.height; e2.c.width = e2.c.height = 1;
+      }
     }
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(e.c, Math.round(m.e + e.ox * S), Math.round(m.f + e.oy * S));
