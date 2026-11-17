@@ -789,7 +789,8 @@ const levels = [
         ['conga', { len: 13, n: 5 }],
         ['flagGate', {}]
       ] },
-      { id: 'igloo', gen: 'room', role: 'secret', theme: 'aq_igloo', stamp: 'igloo' }
+      { id: 'igloo', gen: 'room', role: 'secret', theme: 'aq_igloo', stamp: 'igloo', room: 'whack',
+        whack: { title: 'BOP-A-SKUA', rule: 'THE EGG-THIEVING SKUAS POP OUT OF THE ICE HOLES! STOMP EIGHT TO KEEP THE EGGS SAFE', critter: 'skua', need: 8, t: 22 } }
     ] },
 
   // 13-2 FLIP: aurora bands turn gravity over; icebergs hang from the sky; mid-air swaps
@@ -826,7 +827,8 @@ const levels = [
         ['conga', { len: 10, n: 4 }],
         ['flagGate', {}]
       ] },
-      { id: 'berg', gen: 'room', role: 'secret', theme: 'aq_berg', stamp: 'berg' }
+      { id: 'berg', gen: 'room', role: 'secret', theme: 'aq_berg', stamp: 'berg', room: 'climb',
+        climb: { title: 'INSIDE THE ICEBERG', rule: 'A CHIMNEY UP THE MIDDLE OF THE ICEBERG. SOME LEDGES ARE THIN ICE', style: 'crumble' } }
     ] },
 
   // 13-3 FORT: the station, the module, the Snow-Plough Bot; the lab door to the Station Store
@@ -851,7 +853,8 @@ const levels = [
       ] },
       { id: 'module', gen: 'room', role: 'sub', theme: 'aq_module', stamp: 'module' },
       { id: 'plough', gen: 'arena', role: 'arena', layout: 'plough', arenaW: 24, H: 16, theme: 'aq_station', roof: true },
-      { id: 'lab', gen: 'room', role: 'secret', theme: 'aq_lab', stamp: 'lab' }
+      { id: 'lab', gen: 'room', role: 'secret', theme: 'aq_lab', stamp: 'lab', room: 'closing',
+        closing: { title: 'THE STATION SHOP: CLOSING TIME', rule: 'THE STATION SHOP IS CLOSING FOR THE NIGHT: GRAB WHAT YOU CAN, TOP SHELF FIRST', keeper: 'penguin', word: 'CLOSED!' } }
     ] },
 
   // 13-4 LAIR: the crevasse teaches the kicked ice blocks and the dropped icicles, then Big Tusk on the floe
@@ -875,7 +878,8 @@ const levels = [
         ['kickRun', { len: 14, enemy: 'aqSnowball' }],
         ['door', { to: 'glacier', perch: 0, look: 'aqFloeGate' }]
       ] },
-      { id: 'cave', gen: 'room', role: 'secret', theme: 'aq_icecave', stamp: 'cave' },
+      { id: 'cave', gen: 'room', role: 'secret', theme: 'aq_icecave', stamp: 'cave', room: 'bigone',
+        bigone: { title: 'THE BIG ROVER', rule: 'A GIANT ROBOT ROVER IS LOOSE IN THE ICE CAVE. STOMP IT THREE TIMES', critter: 'aqRover', name: 'THE BIG ROVER' } },
       { id: 'glacier', gen: 'arena', role: 'arena', layout: 'glacier', arenaW: 26, H: 18, roof: false }
     ] },
 
@@ -911,7 +915,8 @@ const levels = [
         ['skuas', { n: 1, len: 10 }],
         ['eggFinale', {}]
       ] },
-      { id: 'rookery', gen: 'room', role: 'secret', theme: 'aq_rookery', stamp: 'rookery' }
+      { id: 'rookery', gen: 'room', role: 'secret', theme: 'aq_rookery', stamp: 'rookery', room: 'rush',
+        rush: { title: 'THE LOST EGGS', rule: 'SIX PENGUIN EGGS ROLLED AWAY IN THE BLIZZARD! GRAB THEM ALL BEFORE THEY FREEZE', look: 'tokEgg', n: 6, t: 17 } }
     ] }
 ];
 

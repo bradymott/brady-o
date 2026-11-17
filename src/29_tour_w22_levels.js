@@ -563,13 +563,15 @@ const levels = [
         // ③ your echo trails you while you swap
         ['echoRun', { n: 30, mixed: true, text: 'YOUR ECHO WALKS WHERE YOU WALKED, A MOMENT LATER. KEEP MOVING' }],
         ['bank', { h: -2 }],
+        ['anchor', { name: 'wormOut', tight: true }],   // where the clock room's Wormhole drops Brady (tight: no breather)
         ['gearStand', { item: 'sundial' }],
         ['strike', {}],
         ['slabs', { n: 9, day: [[0, 3, 3]], night: [[5, 2, 3]] }],
         ['enemies', { kind: 'w22Alarm', n: 2, len: 10 }],
         ['platformGate', {}]
       ] },
-      { id: 'clock', gen: 'room', role: 'secret', theme: 'w22_clockroom', stamp: 'clock' }
+      { id: 'clock', gen: 'room', role: 'secret', theme: 'w22_clockroom', stamp: 'clock', room: 'wormhole',
+        wormhole: { title: 'THE CLOCKWORK WORMHOLE', rule: 'BEHIND THE BIG CLOCK, A WORMHOLE TICKS. HOP IN (UP) AND IT SHOOTS YOU FAR AHEAD', to: 'station@wormOut' } }
     ] },
 
   // 22-2 MAZE: the endless corridor
@@ -595,7 +597,8 @@ const levels = [
           { from: [1, 2], to: [0, 2], kind: 'door', at: [2, 11], toAt: [22, 11], look: 'w22DoorPlain' },
           { from: [2, 2], to: [1, 2], kind: 'door', at: [3, 11], toAt: [23, 11], look: 'w22DoorPlain' }
         ] },
-      { id: 'beyond', gen: 'room', role: 'secret', theme: 'w22_clockroom', stamp: 'beyond' }
+      { id: 'beyond', gen: 'room', role: 'secret', theme: 'w22_clockroom', stamp: 'beyond', room: 'doors',
+        doors: { title: 'BEYOND DOOR 22', rule: 'BEHIND DOOR 22... MORE DOORS. WHICH ONE GOES WHERE?', joke: 'DOOR 23. IT IS A BROOM CUPBOARD.' } }
     ] },
 
   // 22-3 FLIP: Mirror Lake, played right to left; the reflection walks upside down under the walkway
@@ -624,7 +627,8 @@ const levels = [
         ['stones', { n: 5 }],
         ['gate', { exit: 'main' }]
       ] },
-      { id: 'under', gen: 'room', role: 'secret', theme: 'w22_under', stamp: 'under' }
+      { id: 'under', gen: 'room', role: 'secret', theme: 'w22_under', stamp: 'under', room: 'floaty',
+        floaty: { title: 'UNDER THE MIRROR LAKE', rule: 'UNDER THE LAKE, UP IS A LITTLE BIT DOWN. BIG FLOATY JUMPS!', gravity: 0.45 } }
     ] },
 
   // 22-4 LAIR: the hall to the 22nd door, then the Other Brady
@@ -648,7 +652,8 @@ const levels = [
         ['doorsRow', { from: 19, n: 3 }],
         ['door', { to: 'arena', perch: 0, look: 'w22Door22' }]
       ] },
-      { id: 'behind', gen: 'room', role: 'secret', theme: 'w22_behind', stamp: 'behind' },
+      { id: 'behind', gen: 'room', role: 'secret', theme: 'w22_behind', stamp: 'behind', room: 'shell',
+        shell: { title: 'THE MIRROR\'S SHELL GAME', rule: 'YOUR REFLECTION HIDES A PRIZE UNDER ONE OF THREE MUGS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'mug', dealer: 'owl', joke: ['sock', 'chicken'] } },
       { id: 'arena', gen: 'arena', role: 'arena', layout: 'door', arenaW: 26, H: 18, roof: false }
     ] },
 
@@ -685,7 +690,8 @@ const levels = [
         ['pencil', { n: 8 }],
         ['gate', { exit: 'main' }]
       ] },
-      { id: 'drawer', gen: 'room', role: 'secret', theme: 'w22_drawer', stamp: 'drawer' }
+      { id: 'drawer', gen: 'room', role: 'secret', theme: 'w22_drawer', stamp: 'drawer', room: 'prank',
+        prank: { title: 'THE DRAWER OF SURPRISES', rule: 'A BIG BOX IN THE BACK OF THE DRAWER, LABELLED \'DO NOT OPEN\'. GO ON', gag: 'jack', label: 'DO NOT OPEN', line: 'SURPRISE! THE REAL PRIZE IS IN THE CAGE.' } }
     ] }
 ];
 

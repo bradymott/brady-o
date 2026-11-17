@@ -15,7 +15,9 @@ function checkLevel(G, id) {
   const [w, i] = id.split('-').map(Number);
   let lvl;
   try { lvl = getLevel(w, i); } catch (e) { return { id, line: `${id.padEnd(6)} GENERATION ERROR ${e.stack}`, fail: true }; }
-  const r = Validator.run(lvl, { earlyExit: true });
+  // Pupo (src/28_tour_pc_pupoval.js): a level with a Nap Box is searched without him, then riding him from each box reached
+  const PV = G.run("typeof PupoVal !== 'undefined' ? PupoVal : null"), pupo = PV && PV.has(lvl);
+  const r = pupo ? PV.run(lvl, { earlyExit: true }) : Validator.run(lvl, { earlyExit: true });
   const info = secretsInfo(G, lvl);
   const golds = r.gold.map(g => g ? 'G' : '-').join('');
   const flags = [], warns = [];
@@ -33,6 +35,7 @@ function checkLevel(G, id) {
     for (const pr of lvl.problems || []) warns.push(pr);
     if (r.guardHit) warns.push('search guard hit');
     if (secretChecks(G, lvl, r, flags, warns)) fail = true;
+    if (PV) { const pc = PV.checks(lvl, r); for (const e of pc.errors) { flags.push(e); fail = true; } for (const w of pc.warnings) warns.push(w); }
     // an item block needs an open side for its item to come out of (ItemSpace; tools/sbw_items_test.js follows each one)
     const IS = G.run('ItemSpace'), T = G.T;
     lvl.areas.forEach(A => { for (const k in A.contents || {}) { const [x, y] = k.split(',').map(Number), t = A.tiles[y * A.W + x]; if ((t === T.QBLOCK || t === T.HIDDEN || t === T.QBRICK) && ![[0, -1], [0, 1], [-1, 0], [1, 0]].some(([dx, dy]) => IS.open(A, x + dx, y + dy))) { flags.push(`ITEM BLOCK ${A.aid || ''}(${x},${y}) BOXED IN`); fail = true; } } });
@@ -69,7 +72,8 @@ function secretChecks(G, lvl, r, flags, warns) {
   check(r, '');
   // a level with needs: the "rules on" pass (every rule revoked) must reach every exit, postcard, area and button too
   if (TN.inLevel(lvl)) {
-    const r2 = Validator.run(lvl, { earlyExit: true, rules: 'all' });
+    const PV = G.run("typeof PupoVal !== 'undefined' ? PupoVal : null");
+    const r2 = (PV && PV.has(lvl) ? PV : Validator).run(lvl, { earlyExit: true, rules: 'all' });
     for (const k of r2.exitKeys) if (!r2.exits[k] && !warpKeys.includes(k)) { flags.push(`EXIT ${k.toUpperCase()} UNREACHABLE (rules on)`); fail = true; }
     if (!r2.gold.every(Boolean)) { flags.push('gold ' + r2.gold.map(g => g ? 'G' : '-').join('') + ' (rules on)'); fail = true; }
     r2.areasReached.forEach((ok, k) => { if (!ok) { flags.push(`AREA ${lvl.areas[k].aid} UNREACHED (rules on)`); fail = true; } });
@@ -91,8 +95,13 @@ function secretChecks(G, lvl, r, flags, warns) {
   // new room types: Brady can always leave the way he came (no soft-locks, §2)
   lvl.areas.forEach((a, k) => {
     if (!a.roomType || a.roomType === 'pantry' || checked.has(k)) return;
-    if (!Validator.escape(lvl, k, null, { rules: 'all' })) { flags.push(`ROOM ${a.aid} (${a.roomType}) HAS NO WAY OUT`); fail = true; }
+    // a room whose only way on is a level exit (11-2's siding: its gate) is not a trap either
+    if (!Validator.escape(lvl, k, null, { rules: 'all' }) && !roomExit(G, lvl, k)) { flags.push(`ROOM ${a.aid} (${a.roomType}) HAS NO WAY OUT`); fail = true; }
   });
+  // the secret-room kit (src/28_tour_r_rooms.js, docs/design/SECRET_ROOMS.md): each room's prize, tokens, lamps, win
+  // spot and finish reachable (one search per level with the rooms' probes)
+  const RC = G.run("typeof TourRooms !== 'undefined' ? TourRooms : null");
+  if (RC) for (const e of RC.check(lvl, Validator)) { flags.push(e); fail = true; }
   // warp exits need a label (at most 14 characters, shown on the warp)
   for (const k of warpKeys) { const lb = lvl.exits[k].label; if (!lb || String(lb).length > 14) { flags.push(`WARP ${k.toUpperCase()} LABEL ${lb ? 'TOO LONG' : 'MISSING'}`); fail = true; } }
   for (const k in lvl.exits || {}) if (lvl.exits[k] && lvl.exits[k].needs && !TN.valid(lvl.exits[k].needs)) { flags.push(`EXIT ${k.toUpperCase()} BAD NEEDS ${JSON.stringify(lvl.exits[k].needs)}`); fail = true; }
@@ -101,6 +110,13 @@ function secretChecks(G, lvl, r, flags, warns) {
   // per-area pace (Hourglass Well and friends): named, so a miss says where
   for (const pa of (r.pace && r.pace.areas) || []) if (!pa.ok) flags.push(`PACE ${pa.aid} ${pa.margin != null ? 'margin ' + pa.margin : pa.why}`);
   return fail;
+}
+// from room k's way in, the search reaches one of the level's exits
+function roomExit(G, lvl, k) {
+  const a = lvl.areas[k], st = a.anchors && (a.anchors.in || a.anchors.start);
+  if (!st) return false;
+  const r = G.Validator.run(lvl, { start: { area: k, x: st.x, y: st.y }, rules: 'all', until: res => Object.keys(res.exits).some(x => res.exits[x]) });
+  return Object.keys(r.exits).some(x => r.exits[x]);
 }
 // --rules: the secrets rules over the whole game (the results carry each level's secretsInfo)
 function secretRules(G, results, release) {
@@ -133,6 +149,9 @@ function secretRules(G, results, release) {
     const types = {}; for (const id of ids) for (const t of byId[id].rooms) types[t] = (types[t] || 0) + 1;
     if (Object.keys(types).length < 3) dull.push(`${C.id} (${Object.keys(types).join('/') || 'none'})`);
     for (const t in types) if (t !== 'pantry' && types[t] > 2) later.push(`${C.id}: room type ${t} used ${types[t]} times (max 2, §2.9)`);
+    // the secret-room kit (docs/design/SECRET_ROOMS.md): every room in a land is a different kind
+    const KITS = G.run("typeof TourRooms !== 'undefined' ? TourRooms.kinds : {}");
+    for (const t in types) if (KITS[t] && types[t] > 1) errors.push(`${C.id}: secret-room kind ${t} used ${types[t]} times (each room in a land is a different kind)`);
   }
   if (noWarp.length) later.push(`lands without a warp (§3.5): ${noWarp.join(', ')}`);
   if (dull.length) later.push(`lands with fewer than 3 secret-room types (§2.9): ${dull.join(', ')}`);
@@ -157,6 +176,10 @@ function rules(G) {
       count[L.arch] = (count[L.arch] || 0) + 1;
       if (k === 0) { if (openers[L.arch]) errors.push(`${id}: opener ${L.arch} already opens ${openers[L.arch]}`); openers[L.arch] = id; }
     });
+    // Pupo (PUPO.md §4): one Pupo level per land, at most two with the helpers
+    const pl = C.levels.filter(L => L.pupo === 'level').length, ph = C.levels.filter(L => L.pupo === 'helper').length;
+    if (pl > 1) warnings.push(`${C.id}: ${pl} Pupo levels (one per land)`);
+    if (pl + ph > 2) warnings.push(`${C.id}: ${pl + ph} Pupo and helper levels (at most two)`);
     if (seq.length === C.levels.length) { const key = seq.join(','); if (seqs[key]) errors.push(`${C.id}: same archetype sequence as ${seqs[key]}`); seqs[key] = C.id; }
     if (C.levels.length > C.mainCount && C.levels.slice(0, C.mainCount).some(L => L.secret)) errors.push(`${C.id}: secret levels must come after the main ones`);
   }

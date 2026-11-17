@@ -619,11 +619,14 @@ const L1 = { n: 1, name: 'Hemisphere Hop', arch: 'flip', theme: 'ec_equator',
         ['flipGap', { w: 12, gold: 'risky' }],
         ['enemies', { kind: 'ecHummingbird', n: 1, len: 8 }],
         'cacao',
+        ['anchor', { name: 'wormOut', tight: true }],   // where the chocolate shop's Wormhole drops Brady (tight: no breather, the level is unchanged)
         ['flipGap', { w: 10 }],
         ['flipline', { w: 10 }],
         ['finish', { look: 'ecHemiArch' }]
       ] },
-    { id: 'chocolateria', gen: 'room', role: 'secret', stamp: 'chocolateria' }
+    // a Wormhole in the back of the chocolate shop shoots Brady on past the last flip gaps (docs/design/SECRET_ROOMS.md)
+    { id: 'chocolateria', gen: 'room', role: 'secret', stamp: 'chocolateria', room: 'wormhole',
+      wormhole: { title: 'THE CHOCOLATE WORMHOLE', rule: 'A WORMHOLE IN THE COCOA SACKS! HOP IN (UP) AND IT SHOOTS YOU FAR AHEAD', to: 'mitad@wormOut' } }
   ] };
 
 const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_dusk',
@@ -662,7 +665,8 @@ const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_du
         ['finish', {}]
       ] },
     { id: 'treehouse', gen: 'room', role: 'sub', theme: 'ec_amazon', stamp: 'treehouse' },
-    { id: 'cascada', gen: 'room', role: 'secret', theme: 'ec_amazon', stamp: 'cascada' }
+    { id: 'cascada', gen: 'room', role: 'secret', theme: 'ec_amazon', stamp: 'cascada', room: 'grotto',
+      grotto: { title: 'BEHIND THE WATERFALL', rule: 'THE CAVE BEHIND THE FALLS IS HALF FLOODED: SWIM UNDER, CLIMB OUT AT THE BACK', half: true } }
   ] };
 
 const L3 = { n: 3, name: 'Booby Dash', arch: 'race', theme: 'ec_islas',
@@ -730,7 +734,8 @@ const L4 = { n: 4, name: 'Cacao Works', arch: 'factory', theme: 'ec_fabrica',
         ['enemies', { kind: 'ecIceCube', n: 2, len: 10 }],
         ['finish', { look: 'ecExitSign' }]
       ] },
-    { id: 'envoltura', gen: 'room', role: 'secret', theme: 'ec_fabrica', stamp: 'envoltura' }
+    { id: 'envoltura', gen: 'room', role: 'secret', theme: 'ec_fabrica', stamp: 'envoltura', room: 'gauntlet',
+      gauntlet: { title: 'THE FOIL-WRAPPING LINE', rule: 'RIDE THE WRAPPING LINE TO THE END WITHOUT GETTING WRAPPED', beats: ['conveyor', 'crumble', 'wall'] } }
   ] };
 
 const L5 = { n: 5, name: 'Cotopaxi Crater', arch: 'lair', theme: 'ec_andes', boss: 'ec_tortoise',
@@ -743,7 +748,8 @@ const L5 = { n: 5, name: 'Cotopaxi Crater', arch: 'lair', theme: 'ec_andes', bos
   areas: [
     { id: 'teleferico', gen: 'ride', len: 120, H: 16, deck: 10, vehicle: 'ecGondola', vehicleW: 6, below: 'none', scroll: 2.4, endDoor: 'crater@in',
       script: [['airBlock', { item: 'power' }], 'tower', ['catwalk', { gold: true }], 'condors', ['hutDoor', { to: 'refugio@in', back: 'hutBack' }], 'cp', 'tower', ['airBlock', { item: 'sig', dy: 3 }], ['ridge', { w: 2 }], 'condors', 'tower'] },
-    { id: 'refugio', gen: 'room', role: 'secret', theme: 'ec_andes', stamp: 'refugio' },
+    { id: 'refugio', gen: 'room', role: 'secret', theme: 'ec_andes', stamp: 'refugio', room: 'bigone',
+      bigone: { title: 'THE BIG ALPACA', rule: 'THE HUT\'S GRUMPY GIANT ALPACA SPITS! STOMP IT THREE TIMES', critter: 'ecAlpaca', name: 'THE BIG ALPACA' } },
     { id: 'crater', gen: 'arena', role: 'arena', layout: 'vents', arenaW: 30, H: 18, roof: false, theme: 'ec_cotopaxi' }
   ] };
 
@@ -772,7 +778,8 @@ const L6 = { n: 6, name: 'Galápagos Snorkel', arch: 'dive', secret: true, theme
         'arches',
         ['coveExit', {}]
       ] },
-    { id: 'grotto', gen: 'room', role: 'secret', theme: 'ec_galapagos', stamp: 'grotto' }
+    { id: 'grotto', gen: 'room', role: 'secret', theme: 'ec_galapagos', stamp: 'grotto', room: 'pick',
+      pick: { title: 'THE TORTOISE\'S BARGAIN', rule: 'AN OLD TORTOISE KEEPS THREE BOXES. TAKE ONE. ONLY ONE. HE IS WATCHING' } }
   ] };
 
 const L7 = { n: 7, name: "Devil's Cauldron", arch: 'tide', secret: true, theme: 'ec_pailon',
@@ -803,7 +810,8 @@ const L7 = { n: 7, name: "Devil's Cauldron", arch: 'tide', secret: true, theme: 
         ['hangBridge', { n: 8, dy: 5, rope: 'pista@in', back: 'ropeBack' }],
         ['finish', {}]
       ] },
-    { id: 'pista', gen: 'room', role: 'secret', theme: 'ec_andes', stamp: 'pista' }
+    { id: 'pista', gen: 'room', role: 'secret', theme: 'ec_andes', stamp: 'pista', room: 'closing',
+      closing: { title: 'AIRSTRIP KIOSK: LAST CALL!', rule: 'THE KIOSK BY THE AIRSTRIP IS CLOSING: GRAB WHAT YOU CAN, TOP SHELF FIRST', keeper: 'keeper', word: '¡CERRADO!' } }
   ] };
 
 Tour.amend('ec', {

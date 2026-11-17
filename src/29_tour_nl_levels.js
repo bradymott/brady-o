@@ -457,7 +457,8 @@ const levels = [
           ['canal', { w: 6 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'gemaal', gen: 'room', role: 'secret', stamp: 'gemaal' }
+      { id: 'gemaal', gen: 'room', role: 'secret', stamp: 'gemaal', room: 'grotto',
+        grotto: { title: 'THE FLOODED PUMP HOUSE', rule: 'THE OLD PUMP HOUSE LEAKS. SWIM UNDER THE PIPES, CLIMB OUT AT THE BACK', half: true } }
     ] },
   // 8-2 FACTORY: the flower auction
   { n: 2, name: 'Flower Auction', mapLabel: 'Auction', arch: 'vault', theme: 'nl_veiling',
@@ -470,7 +471,8 @@ const levels = [
     areas: [
       { id: 'veiling', gen: 'maze', cells: [3, 2], cell: [26, 14],
         script: [[veiling.gallery, veiling.clock, veiling.dock], [veiling.coldroom, veiling.belts, veiling.chiller]] },
-      { id: 'koelcel', gen: 'room', role: 'secret', stamp: 'koelcel' }
+      { id: 'koelcel', gen: 'room', role: 'secret', stamp: 'koelcel', room: 'pick',
+        pick: { title: 'THE FLORIST\'S CHOICE', rule: 'THREE BOXES IN THE COLD ROOM, EACH WITH A PRIZE. TAKE ONE. THE OTHERS WILT' } }
     ] },
   // 8-3 RACE: the bike lane, against a gull on a cargo bike
   { n: 3, name: 'Bike Lane Rush', mapLabel: 'Bike Lane', arch: 'race', theme: 'nl_rush',
@@ -502,7 +504,8 @@ const levels = [
           ['racks', { n: 1 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'brug', gen: 'room', role: 'secret', stamp: 'brug' }
+      { id: 'brug', gen: 'room', role: 'secret', stamp: 'brug', room: 'gauntlet',
+        gauntlet: { title: 'THE BIKE BRIDGE', rule: 'THE BIKE LANE UNDER THE BRIDGE: RIDE IT OUT TO THE END', beats: ['mover', 'conveyor', 'fallers'] } }
     ] },
   // 8-4 LAMP: the frozen canals at night; the skate hut's thin back wall hides the way to Antarctica
   { n: 4, name: 'Frozen Canals', mapLabel: 'Ice Canals', arch: 'lamp', theme: 'nl_frozen',
@@ -532,7 +535,8 @@ const levels = [
           ['rink', { n: 8 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'hut', gen: 'room', role: 'secret', stamp: 'hut' }
+      { id: 'hut', gen: 'room', role: 'secret', stamp: 'hut', room: 'closing',
+        closing: { title: 'THE KOEK STALL: CLOSING TIME', rule: 'THE SKATERS\' SNACK STALL IS CLOSING: GRAB WHAT YOU CAN, TOP SHELF FIRST', keeper: 'herring', word: 'GESLOTEN!' } }
     ] },
   // 8-5 LAIR: the cheese market and the weigh house
   { n: 5, name: 'The Weigh House', mapLabel: 'The Waag', arch: 'lair', theme: 'nl_waag', boss: 'nl_cheese',
@@ -557,7 +561,8 @@ const levels = [
           ['postcard', { kind: 'risky', dy: -6 }],
           ['door', { to: 'waag', perch: 0, look: 'nlStairsUp' }]
         ] },
-      { id: 'kelder', gen: 'room', role: 'secret', stamp: 'kelder' },
+      { id: 'kelder', gen: 'room', role: 'secret', stamp: 'kelder', room: 'ambush',
+        ambush: { title: 'THE CHEESE CELLAR', rule: 'THE CHEESES HAVE COME ALIVE AND THE CELLAR DOOR IS STUCK: STOMP THEM ALL', critters: ['nlClog', 'nlHerring'] } },
       { id: 'waag', gen: 'arena', role: 'arena', layout: 'waag', arenaW: 30, H: 18, roof: false }
     ] },
   // 8-6 SWING (secret): windmill sails and tulip blooms; the wind turns round
@@ -587,7 +592,8 @@ const levels = [
           ['millDoor', { to: 'molen@in', back: 'molenBack' }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'molen', gen: 'room', role: 'secret', stamp: 'molen' }
+      { id: 'molen', gen: 'room', role: 'secret', stamp: 'molen', room: 'climb',
+        climb: { title: 'INSIDE THE WINDMILL', rule: 'UP THE WINDMILL\'S INSIDES TO THE CAP: THE PRIZE IS AT THE TOP', style: 'spikes' } }
     ] }
 ];
 

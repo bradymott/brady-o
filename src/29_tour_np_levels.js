@@ -671,7 +671,8 @@ const levels = [
           ['skyBridge', { n: 8 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'chiya', gen: 'room', role: 'secret', theme: 'np_hills', stamp: 'chiya' }
+      { id: 'chiya', gen: 'room', role: 'secret', theme: 'np_hills', stamp: 'chiya', room: 'fetch',
+        fetch: { title: 'A CUP OF CHIYA', rule: 'THE TEA HOUSE NEEDS TEA LEAVES, MILK AND GINGER FOR ITS CHIYA. BRING THEM TO THE POT', ingredients: ['tokTea', 'tokMilk', 'tokGinger'], dish: 'CHIYA! WARM HANDS ALL ROUND.' } }
     ] },
   // 12-2 ROLL: the yak caravan pass, snowballs and snow walls
   { n: 2, name: 'Yak Caravan Pass', arch: 'roll', theme: 'np_pass',
@@ -711,7 +712,8 @@ const levels = [
           ['sentinel', { two: true }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'khadal', gen: 'room', role: 'secret', theme: 'np_khadal', stamp: 'khadal' }
+      { id: 'khadal', gen: 'room', role: 'secret', theme: 'np_khadal', stamp: 'khadal', room: 'bigone',
+        bigone: { title: 'THE BIG YETI', rule: 'A GIANT YETI LIVES IN THIS ICE CAVE. ITS BREATH IS FREEZING. STOMP IT THREE TIMES', critter: 'npYeti', name: 'THE BIG YETI' } }
     ] },
   // 12-3 SNEAK: the blizzard night, yetis on watch
   { n: 3, name: 'Blizzard Night', arch: 'sneak', theme: 'np_blizzard',
@@ -746,7 +748,8 @@ const levels = [
           ['shelter', { n: 2 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'depotShed', gen: 'room', role: 'secret', theme: 'np_depot', stamp: 'depotShed' }
+      { id: 'depotShed', gen: 'room', role: 'secret', theme: 'np_depot', stamp: 'depotShed', room: 'rush',
+        rush: { title: 'MOMO DASH', rule: 'THE SLED DOGS KNOCKED OVER THE MOMO TRAY! GRAB ALL SIX BEFORE THEY GET COLD', look: 'tokMomo', n: 6, t: 16 } }
     ] },
   // 12-4 RISE: up the Khumbu icefall while the floor falls away beneath
   { n: 4, name: 'Khumbu Icefall', arch: 'rise', theme: 'np_icefall',
@@ -775,7 +778,8 @@ const levels = [
           'icicles',
           ['iledges', { n: 3 }]
         ] },
-      { id: 'tent', gen: 'room', role: 'secret', theme: 'np_icefall', stamp: 'tent' }
+      { id: 'tent', gen: 'room', role: 'secret', theme: 'np_icefall', stamp: 'tent', room: 'prank',
+        prank: { title: 'THE YETI\'S TREASURE', rule: 'A CHEST MARKED \'GENUINE YETI GOLD\'. NOTHING SUSPICIOUS ABOUT THAT', gag: 'cushion', label: 'YETI GOLD', line: 'THE YETI GIGGLES. THE REAL PRIZE IS IN THE CAGE.' } }
     ] },
   // 12-5 LAIR: Piwi's playhouse and the summit (the finale)
   { n: 5, name: "Piwi's Playhouse", arch: 'lair', theme: 'np_fortress', boss: 'np_baron',
@@ -800,7 +804,8 @@ const levels = [
           'belts',
           ['door', { to: 'summit', perch: 0, look: 'npSummitStairs' }]
         ] },
-      { id: 'archive', gen: 'room', role: 'secret', stamp: 'archive' },
+      { id: 'archive', gen: 'room', role: 'secret', stamp: 'archive', room: 'doors',
+        doors: { title: 'THE FILING CABINETS', rule: 'THE FORTRESS ARCHIVE: EVERY CABINET IS A DOOR. WHICH ONE GOES WHERE?', joke: 'FORM 22B: PERMISSION TO OPEN THIS CUPBOARD. DENIED.' } },
       { id: 'summit', gen: 'arena', role: 'arena', layout: 'summit', arenaW: 30, H: 20, roof: false, theme: 'np_pass' }
     ] },
   // 12-6 FALL (secret): down the blue-ice crevasse
@@ -828,7 +833,8 @@ const levels = [
           ['iceBridge', {}],
           ['ledges', { n: 2 }]
         ] },
-      { id: 'blueCave', gen: 'room', role: 'secret', theme: 'np_khadal', stamp: 'blueCave' }
+      { id: 'blueCave', gen: 'room', role: 'secret', theme: 'np_khadal', stamp: 'blueCave', room: 'lantern',
+        lantern: { title: 'THE BLUE ICE CAVE', rule: 'DEEP IN THE CREVASSE IT IS DARK. YOUR LIGHT FADES: RELIGHT IT AT THE LANTERNS. THE ICE STEPS SHOW ONLY IN THE LIGHT' } }
     ] },
   // 12-7 FORT (secret): Piwi's prop depot and the Tin Yak
   { n: 7, name: "Piwi's Prop Depot", arch: 'fort', secret: true, theme: 'np_depot', boss: 'np_tinyak', mid: true,
@@ -851,7 +857,8 @@ const levels = [
           ['crateLift', { rise: 6 }],
           ['door', { to: 'crateHall@in', perch: 0, look: 'npDepotDoor' }]
         ] },
-      { id: 'hatch', gen: 'room', role: 'secret', theme: 'np_depot', stamp: 'hatch' },
+      { id: 'hatch', gen: 'room', role: 'secret', theme: 'np_depot', stamp: 'hatch', room: 'ambush',
+        ambush: { title: 'THE TIN BOT STORE', rule: 'THE TIN BOTS WOKE UP AND LOCKED THE HATCH: STOMP THEM ALL', critters: ['npTinBot'] } },
       { id: 'crateHall', gen: 'room', role: 'sub', theme: 'np_depot', stamp: 'crateHall' },
       { id: 'tinyak', gen: 'arena', role: 'arena', layout: 'tinyak', arenaW: 26, H: 16, roof: false, theme: 'np_depot' }
     ] }

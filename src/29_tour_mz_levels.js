@@ -808,7 +808,8 @@ const levels = [
         ['beetleRun', { n: 12 }],
         ['savannaFinale']
       ] },
-      { id: 'cupim', gen: 'room', role: 'secret', theme: 'mz_cupim', stamp: 'cupim' }
+      { id: 'cupim', gen: 'room', role: 'secret', theme: 'mz_cupim', stamp: 'cupim', room: 'doors',
+        doors: { title: 'THE TERMITE TUNNELS', rule: 'A TERMITE MOUND FULL OF LITTLE DOORS. WHICH ONE GOES WHERE?', joke: 'TERMITE BROOM CUPBOARD. THE TERMITES ATE THE BROOM.' } }
     ] },
 
   // 4-2 DOOM: the stampede's dust cloud chases you over the dunes
@@ -843,7 +844,8 @@ const levels = [
         ['softBridge', { n: 5 }],
         ['ridgeFinale']
       ] },
-      { id: 'porao', gen: 'room', role: 'secret', theme: 'mz_porao', stamp: 'porao' }
+      { id: 'porao', gen: 'room', role: 'secret', theme: 'mz_porao', stamp: 'porao', room: 'gauntlet',
+        gauntlet: { title: 'THE CASHEW HOLD', rule: 'RUN THE SHIP\'S HOLD TO THE FAR END: THE CASHEW CRATES ARE A BIT LOOSE', beats: ['fallers', 'ceiling', 'steps'] } }
     ] },
 
   // 4-3 SKY: baobab crowns at sunset; weaver nests bounce you; honey and bees; evening gusts and fruit bats
@@ -879,7 +881,8 @@ const levels = [
         ['gust', { w: 9, fx: 1, tight: true }],
         ['crownFinale', { gap: 9, gy: 11, tight: true }]
       ] },
-      { id: 'oco', gen: 'room', role: 'secret', theme: 'mz_oco', stamp: 'oco' }
+      { id: 'oco', gen: 'room', role: 'secret', theme: 'mz_oco', stamp: 'oco', room: 'lantern',
+        lantern: { title: 'THE HOLLOW BAOBAB', rule: 'INSIDE THE BAOBAB IT IS PITCH DARK. YOUR LIGHT FADES: RELIGHT IT AT THE LANTERNS. THE STEPS SHOW ONLY IN THE LIGHT' } }
     ] },
 
   // 4-4 CARRY (dark): carry the hatchling to the sea; the lighthouse beam freezes the ghost crabs; relight it
@@ -912,7 +915,8 @@ const levels = [
         ['seaFinale']
       ] },
       { id: 'farol', gen: 'room', role: 'sub', theme: 'mz_farol', stamp: 'farol' },
-      { id: 'gruta', gen: 'room', role: 'secret', theme: 'mz_gruta', stamp: 'gruta' }
+      { id: 'gruta', gen: 'room', role: 'secret', theme: 'mz_gruta', stamp: 'gruta', room: 'whack',
+        whack: { title: 'WHACK-A-GHOST-CRAB', rule: 'GHOST CRABS POP OUT OF THE SAND! STOMP EIGHT OF THEM BEFORE TIME IS UP', critter: 'crab', need: 8, t: 22 } }
     ] },
 
   // 4-5 LAIR: the ramparts and the cistern teach the shells and the fire, then O Eremita's tide pool
@@ -935,7 +939,8 @@ const levels = [
         ['rampart', {}],
         ['door', { to: 'arena@in', perch: 0, look: 'mzFortGate' }]
       ] },
-      { id: 'cisterna', gen: 'room', role: 'secret', theme: 'mz_cisterna', stamp: 'cisterna' },
+      { id: 'cisterna', gen: 'room', role: 'secret', theme: 'mz_cisterna', stamp: 'cisterna', room: 'grotto',
+        grotto: { title: 'THE OLD CISTERN', rule: 'THE FORT\'S OLD CISTERN IS STILL FULL. SWIM DOWN TO THE BACK', half: true } },
       { id: 'arena', gen: 'arena', role: 'arena', layout: 'tidepool', arenaW: 30, theme: 'mz_fort' }
     ] },
 
@@ -960,7 +965,8 @@ const levels = [
         ['hullChamber', { w: 10, h: 4, dy: 4, enemy: 'mzGhostCrab' }],
         ['exit', {}]
       ] },
-      { id: 'cabine', gen: 'room', role: 'secret', theme: 'mz_cabine', stamp: 'cabine' }
+      { id: 'cabine', gen: 'room', role: 'secret', theme: 'mz_cabine', stamp: 'cabine', room: 'shell',
+        shell: { title: 'THE CAPTAIN\'S TIN MUGS', rule: 'THE OLD CAPTAIN HIDES A STAR UNDER ONE OF HIS TIN MUGS. WATCH IT, THEN STOMP THE RIGHT ONE', cup: 'tin', dealer: 'seal', joke: ['fish', 'boot'] } }
     ] }
 ];
 
