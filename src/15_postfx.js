@@ -287,7 +287,7 @@ const TripFX = {
      enemy and Brady keeps its own light, shade and saturation (white stays white, ink stays ink) and only the hues
      cycle. Then the finished view is copied once and drawn back in thin horizontal strips that sway on a sine wave
      (each strip stretched a little so no edge shows). Eased in over 0.6 s and out over 1.4 s. Both work on iOS
-     Safari (no ctx.filter). FX CALM: the colours only, softer and slower; Game.quality 0: no wobble. Before the HUD. */
+     Safari (no ctx.filter). FX CALM: the colours only, softer and slower; MEDIUM and below: no wobble; LOW: one colour pass. Before the HUD. */
   shroomK(dz) { const D = 4.2, a = clamp((D - dz) / 0.6, 0, 1), b = clamp(dz / 1.4, 0, 1); return a * a * (3 - 2 * a) * b * b * (3 - 2 * b); },
   shroom(ctx, play, W, H, k, calm) {
     const t = play.t, S = Game.S;
@@ -297,9 +297,12 @@ const TripFX = {
     for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, `hsl(${(base + i * 60) % 360},90%,55%)`);
     ctx.fillStyle = g;
     ctx.globalCompositeOperation = 'hue'; ctx.globalAlpha = (calm ? 0.25 : 0.45) * k; ctx.fillRect(0, 0, W, H);
-    ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = (calm ? 0.1 : 0.2) * k; ctx.fillRect(0, 0, W, H);   // a touch of colour into the pale and grey parts too
+    // graphics tiers (src/14_quality.js): HIGH has all of it; from MEDIUM (any cut, Game.quality 0) the colours only,
+    // no wobble; from LOW (cut 4, with the bloom and vignette) the hue pass alone, one full-screen blend instead of two
+    const QT = typeof QualityTier !== 'undefined' ? QualityTier : null, cut = QT ? QT.level : (Game.quality >= 1 ? 0 : 1);
+    if (cut < 4) { ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = (calm ? 0.1 : 0.2) * k; ctx.fillRect(0, 0, W, H); }   // a touch of colour into the pale and grey parts too
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    if (!calm && Game.quality >= 1) {
+    if (!calm && cut === 0 && Game.quality >= 1) {
       const tmp = PostFX.ensure('shroomWob', W, H), tx = tmp.getContext('2d');
       tx.globalCompositeOperation = 'copy'; tx.drawImage(ctx.canvas, Game.gameRect.x * Game.dpr, Game.gameRect.y * Game.dpr, W, H, 0, 0, W, H);
       const A = 5 * S * k, sh = Math.max(2, Math.round(5 * Game.dpr));
