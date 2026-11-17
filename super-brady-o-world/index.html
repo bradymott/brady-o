@@ -22465,7 +22465,7 @@ Object.assign(Player.prototype, {
   },
   // a floating pickup that waits a moment (a hit, a full backpack)
   dropKind(kind, life) {
-    const g = this.g, it = new TourItem(g, this.cx, this.y + 4, kind); it.emerge = 0; it.speedX = 0; it.hoverY = this.y - 10; it.y = it.hoverY; it.life = life || 2; it.dropped = true;
+    const g = this.g, it = new TourItem(g, this.cx, this.y + 4, kind); it.emerge = 0; it.speedX = 0; it.hoverY = this.y - 10; it.y = it.hoverY; it.life = life || 2; it.dropped = true; it.waitClear = true;
     g.spawn(it);
   },
   takeGear(G, src) {
@@ -22521,7 +22521,14 @@ Object.assign(Player.prototype, {
     return u0.call(this, dt);
   };
   const d0 = TourItem.prototype.draw;
-  TourItem.prototype.draw = function (ctx) { if (this.dropped && this.life < 0.8 && Math.floor(this.t * 12) % 2) return; return d0.call(this, ctx); };
+  TourItem.prototype.draw = function (ctx) { if (this.dropped && this.life < 0.8 && Math.floor(this.t * 12) % 2) return; return d0.call(this, ctx); };  /* a dropped item can't be taken back until Brady has stepped clear of it once. It appears on top of him, and taking it
+     straight back swaps it with the item in his hands, which drops that one (the Backpack is full) right on him too: the
+     collision loop met each new drop in the same frame and swapped forever, filling memory until the page died (the
+     freeze when picking up a signature item, e.g. Brazil's FOOTBALL, with gear in hands and the Backpack full) */
+  const tp0 = TourItem.prototype.touchPlayer;
+  TourItem.prototype.touchPlayer = function (p) { if (this.dropped && this.waitClear) return; return tp0.call(this, p); };
+  const u1 = TourItem.prototype.update;
+  TourItem.prototype.update = function (dt) { if (this.waitClear) { const p = this.g.player; if (!p || !overlap(this, p)) this.waitClear = false; } return u1.call(this, dt); };
 }
 
 /* ---------- shared bits ---------- */
