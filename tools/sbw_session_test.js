@@ -232,7 +232,7 @@ const WATCH = [
   ['page.listeners', 0, 0], ['page.intervals', 0, 1], ['page.timeouts', 0, 6], ['page.canvasesLive', 0.1, 6], ['page.canvasesMP', 0.1, 1.5],
   ['page.heapMB', 0.2, 6], ['page.audioLive', 0.5, 40], ['page.audioNodes', 0.5, 150],
   ['game.bgEntries', 0, 0], ['game.bgMP', 0.05, 0.5], ['game.tileEntries', 0, 0], ['game.tilesMP', 0.05, 0.2],
-  ['game.inkScratch', 0.25, 20], ['game.inkScratchMP', 0.1, 0.5], ['game.inkHeld', 0.25, 20], ['game.inkHeldMP', 0.1, 0.5], ['game.inkMemo', 0.3, 10], ['game.inkMemoMP', 0.3, 0.4],   // (fills slowly toward its 2 MP budget: a sway angle or zoom seen for the first time)
+  ['game.inkScratch', 0.25, 20], ['game.inkScratchMP', 0.1, 0.5], ['game.inkHeld', 0.25, 20], ['game.inkHeldMP', 0.1, 0.5], ['game.inkMemoMP', 0.3, 0.4],   // (the memo's entry count is not watched: it fills slowly toward its fixed 2 MP budget, Ink.memoBudget, as sway angles and zooms are first seen; its pixels are, below)
  
   ['game.inkBoxes', 0.25, 30], ['game.inkReach', 0, 4], ['game.inkCache', 0.1, 4], ['game.inkCacheMP', 0.1, 0.5], ['game.glows', 0, 4], ['game.postfxMP', 0.05, 0.2],
   ['game.owCacheMP', 0.05, 0.5], ['game.vignetteMP', 0, 0.01], ['game.spriteCache', 0, 2], ['game.levelCache', 0, 0], ['game.atlases', 0, 1], ['game.atlasListeners', 0, 0],
@@ -334,6 +334,9 @@ async function main() {
       if (vb > va * (1 + rel * tolK) + abs * tolK) fail(`${name}: ${k} grows ${va} -> ${vb}`, steps[name].map(r => r && get(r.counts, k)));
     }
   }
+  // caches with a fixed pixel budget stay inside it (src/06a_ink.js Ink.memoBudget 2 MP, scratch 4 MP, held 3 MP)
+  for (const name in steps) for (const r of steps[name]) { const g = r && r.counts && r.counts.game; if (!g) continue;
+    if (g.inkMemoMP > 2.5 || g.inkScratchMP > 4.5 || g.inkHeldMP > 3.5) { fail(`${name}: an ink cache is over its pixel budget`, { memo: g.inkMemoMP, scratch: g.inkScratchMP, held: g.inkHeldMP }); break; } }
   // the whole session: the sum of the level steps' costs per repeat
   const sums = []; for (let r = 0; r < R; r++) { let s = 0, n = 0; for (const name in steps) { const c = steps[name][r] && steps[name][r].info && steps[name][r].info.cost; if (c) { s += c.mean; n++; } } sums.push(n ? s / n : null); }
   console.log('  mean step cost per repeat: ' + sums.map(v => v == null ? '-' : v.toFixed(2)).join(' -> ') + ' ms');
