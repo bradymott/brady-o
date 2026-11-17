@@ -34,7 +34,7 @@ Boss.prototype.die = function () {
   die.call(this);
   const g = this.g, p = g && g.player, v = VERDICTS[this.style];
   if (v && p && !p.dead) K.say(g, p, 'PUPO: ' + v.toUpperCase(), '#f0d8b0');
-  if (this.style === 'w22_other' && g) { const px = p ? p.cx : (this.arenaX0 + this.arenaX1) / 2, x = clamp(px + 4 * TS, this.arenaX0 + 3 * TS, this.arenaX1 - 3 * TS); g.spawn(new W22Encore(g, { x, y: this.floorY })); }
+  if (this.style === 'w22_other' && g) { const px = p ? p.cx : (this.arenaX0 + this.arenaX1) / 2, x = clamp(px + 2.5 * TS, this.arenaX0 + 3 * TS, this.arenaX1 - 3 * TS); g.spawn(new W22Encore(g, { x, y: this.floorY })); }
 };
 
 /* World 22: Piwi behind the mirror, with his carved understudy of Brady-O */
