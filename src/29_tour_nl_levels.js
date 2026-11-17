@@ -538,7 +538,7 @@ const levels = [
   { n: 5, name: 'The Weigh House', mapLabel: 'The Waag', arch: 'lair', theme: 'nl_waag', boss: 'nl_cheese',
     gimmick: 'Cheese sledges on the market ramps, the weighing scales, the cheese chute, then the Cheese King\'s hall',
     hint: 'Run into the Cheese King\'s wheels to kick them back at him! (The bike bell stops a rolling wheel.)',
-    postcard: 'The windmill is unfolded and turning again! The Baron fled to Bali. Bring sunscreen. ♥ C',
+    postcard: 'The windmill is unfolded and turning again! Piwi fled to Bali. Bring sunscreen. ♥ C',
     enemies: [['nlCheese', 2], ['nlClog', 2]],
     mapCell: [1, 2], mapFrom: 3,
     exits: { main: { to: 'country:next' } },

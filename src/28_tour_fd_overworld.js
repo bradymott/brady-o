@@ -349,7 +349,7 @@ class TourOverworld {
       if (e.open && !e.fresh) { if (s > bs) { bs = s; best = e; } } else if (s > bb) { bb = s; blocked = e; }
     }
     if (best) { this.walkRoute([best.a === w.at ? best.b : best.a], false); return; }
-    if (blocked) this.bump(blocked.kind === 'port' ? 'THE PORT OPENS WHEN THE BOSS FALLS' : 'THE BARON BLOCKED THIS TRAIL: CLEAR ' + this.levelName(blocked.a === w.at ? blocked.a : blocked.b) + ' FIRST');
+    if (blocked) this.bump(blocked.kind === 'port' ? 'THE PORT OPENS WHEN THE BOSS FALLS' : 'PIWI BLOCKED THIS TRAIL: CLEAR ' + this.levelName(blocked.a === w.at ? blocked.a : blocked.b) + ' FIRST');
   }
   levelName(key) { const n = this.by[key]; return n && n.kind === 'level' ? n.id : 'THIS STOP'; }
   walkRoute(keys, auto) {
@@ -549,7 +549,7 @@ class TourOverworld {
     if (R && R.key) for (const e of this.edges) if (e.open && (e.a === R.key || e.b === R.key) && this.by[e.a === R.key ? e.b : e.a].visible) { const P = TourOW.curve(this.G, e); if (P) TourOWPaint.trail(ctx, this, P, e.gold, [0, P.len]); }
     if (K) for (const e of K.list) { const P = TourOW.curve(this.G, e); if (!P) continue; const k = clamp((K.t - 0.35) / (K.dur - 0.45), 0, 1); if (k > 0) TourOWPaint.trail(ctx, this, P, false, [0, P.len * k]); }
   }
-  // a closed main trail: the Baron's roadblock at its middle (shakes and bursts when the trail opens)
+  // a closed main trail: Piwi's roadblock at its middle (shakes and bursts when the trail opens)
   drawBlock(ctx, e) {
     const K = this.clears, clearing = K && K.list.indexOf(e) >= 0;
     if (clearing && K.burst) return;

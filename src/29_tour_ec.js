@@ -826,7 +826,7 @@ const platforms = {
 };
 
 /* ---------------- the boss: EL TORTUGÓN ---------------- */
-// The Baron's giant grumpy tortoise. His shell is too hard to stomp: FLIP him. Three volcano vents sit in
+// Piwi's "walking stage": a giant grumpy tortoise he hired by the hour. His shell is too hard to stomp: FLIP him. Three volcano vents sit in
 // the arena floor; stomp the lever to pop the next one, and when he walks (or spins) over a popping vent
 // he's launched onto his back, legs waving: now stomp the belly. Phase 2 he tucks in and spins across the
 // floor like a disc while the equator's low-gravity bubbles switch on and off; phase 3 the floor tilts
@@ -1082,7 +1082,7 @@ Tour.country({
   themes, painters, dyn, decor, decorLights, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_ec', boss: 'tour_ec_boss' },
   landmark: 'the Equator monument',
-  arrival: 'Brady! The Baron wants the Equator monument, globe and all. I\'m riding along in his snack crate. ♥ C',
+  arrival: 'Brady! My country! And Piwi wants the Equator monument as scenery for his balancing act. I\'m in his show cage, eating his snacks. Give Pupo a hug from me. Slowly. ♥ C',
   coin: { name: 'CACAO BEAN', draw(ctx, x, y) {
     ctx.fillStyle = '#c8901a'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();
     ctx.fillStyle = '#7a3a1a'; ctx.beginPath(); ctx.ellipse(x, y, 5.5, 7.5, 0.3, 0, TAU); ctx.fill();

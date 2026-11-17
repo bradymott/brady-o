@@ -1,4 +1,4 @@
-# Super Brady-O World: secret rooms, off-level warps and the Baron's Rulebook
+# Super Brady-O World: secret rooms, off-level warps and Piwi's House Rules
 
 > **Brady's decisions, 16 Nov 2026 (these override the text below wherever they differ):**
 > - Backstage theme: yes. Warps may jump up to two lands ahead: yes. The three bonus lands (Festival Fields, Lost & Found, The Red-Eye): yes. A Settings switch for hats and dancing: yes.
@@ -19,7 +19,7 @@ The three systems, by name:
 |---|---|
 | **Secret room types** (§2) | Eight new interiors with their own rules. Today every secret room is the same shelf room. |
 | **Backstage and Road Cases** (§3) | Each level is a stage set. Off its four edges are hidden **Backstage** areas: the **Rigging** above, the **Loading Dock** past the exit, the **Under-Stage** below a pit, and the **Wings** before the start. In them, a stencilled touring **Road Case** ships Brady to another level or land. |
-| **The Baron's Rulebook** (§4) | The Baron has banned fun worldwide. Six hidden **Ban Buzzers** marked DO NOT PRESS are hidden in the game. Slapping one revokes one of his rules. Each revoked rule changes something across the game (hats on every animal, everything dances, maps change, freight routes wake up) and opens extra content: 3 bonus lands and 2 bonus levels, **14 new levels** in all. |
+| **Piwi's House Rules** (§4) | Piwi has banned fun worldwide. Six hidden **Brady Buttons** marked DO NOT PRESS are hidden in the game. Slapping one revokes one of his rules. Each revoked rule changes something across the game (hats on every animal, everything dances, maps change, freight routes wake up) and opens extra content: 3 bonus lands and 2 bonus levels, **14 new levels** in all. |
 
 ---
 
@@ -111,11 +111,11 @@ A big scoreboard counts the hits.
 - New: an inflatable room skin (the `skin` per country) and a soft-ceiling tile look (reuse `SEMI` from below with a cushion skin). Code is very small. Most of the work is art.
 
 ### 2.4 Evidence Locker
-**What it is.** A corner of the Baron's customs office, where his wind-up tin guard-dogs patrol a shelf of confiscated things: piñatas, kites, cheese wheels. Searchlights sweep. Brady sneaks from crate to crate to the "SEIZED" cage and takes the item back. Being seen sounds a klaxon that drops shutters for 6 s and lets two more tin dogs out. It's never death.
+**What it is.** A corner of Piwi's customs office, where his wind-up tin guard-dogs patrol a shelf of confiscated things: piñatas, kites, cheese wheels. Searchlights sweep. Brady sneaks from crate to crate to the "SEIZED" cage and takes the item back. Being seen sounds a klaxon that drops shutters for 6 s and lets two more tin dogs out. It's never death.
 
 **How it plays differently.** Stealth in one screen: read the sweep, wait, move. Combat is pointless here, because the tin dogs are stomp-proof (they curl).
 
-**Reward.** One "confiscated" Backpack item returned, plus P2. It is also the hiding place of one Ban Buzzer (5-1, §4).
+**Reward.** One "confiscated" Backpack item returned, plus P2. It is also the hiding place of one Brady Button (5-1, §4).
 
 **Engine.**
 - Reuse `watcher { kind: 'guard' }`, `hideSpot`, `alarmShutter` and the `curlShield` behaviour, all from SNEAK (`28_tour_hb_systems.js`, `28_tour_i_behave.js`).
@@ -183,7 +183,7 @@ This is a warning while rollout is in progress and an error at release.
 Every land is staged like a touring show, with Brady as the act. Behind each level's visible edges is the **Backstage**:
 - the back of the painted scenery flats (the country's skyline seen from behind, with struts and sandbags)
 - rigging, work lights and gaffer-taped cables
-- the Baron's wind-up **stagehand mice** pushing props around (harmless; they squeak and scatter)
+- Piwi's wind-up **stagehand mice** pushing props around (harmless; they squeak and scatter)
 - stencilled **Road Cases**, flight cases on castors labelled with a destination: `FRAGILE — SHIP TO: ECUADOR`
 
 Brady climbs into an open case and is shipped. The lid slams, a FRAGILE stamp lands on it, and the case rolls off on a dolly into a cargo hold. Then the map shows the case arriving where it was labelled.
@@ -251,10 +251,10 @@ Notes for the table:
 | # | Source level | Zone | Tell (from the main route) | Case label → target |
 |---|---|---|---|---|
 | R1 | 1-1 Mercado Mayhem | Loading Dock, past the fiesta stage | "CREW ONLY →" on the stage flat; a hand-truck of crates rolls off right as Brady reaches the dais; crates stacked over the gate | VOLCÁN → **1-4** (in-land skip) |
-| R2 | 1-4 Volcán Escape | Rigging, above the crater rim | a sandbag on a rope hangs into the top of the view; the last vent's plume shoots off the top | ECUADOR → **2-7** Devil's Cauldron (which holds the Morocco flight). **Ban Buzzer 1** is here too. |
+| R2 | 1-4 Volcán Escape | Rigging, above the crater rim | a sandbag on a rope hangs into the top of the view; the last vent's plume shoots off the top | ECUADOR → **2-7** Devil's Cauldron (which holds the Morocco flight). **Brady Button 1** is here too. |
 | R3 | 2-1 Hemisphere Hop | Wings, left of the start | the yellow equator line runs off-screen left and a booby waddles after it | GALÁPAGOS → **2-6** (in-land secret) |
 | R4 | 2-3 Booby Dash | Loading Dock, past the finish | Pata Azul overshoots the finish and keeps running | BRAZIL → **3-6** Rio Hang-Glide |
-| R5 | 3-1 Samba Sunrise | Rigging | the last confetti cannon fires streamers off the top; a rope ladder dangles | MOZAMBIQUE → **4-6** Buried Dhow. **Ban Buzzer 2** is here. |
+| R5 | 3-1 Samba Sunrise | Rigging | the last confetti cannon fires streamers off the top; a rope ladder dangles | MOZAMBIQUE → **4-6** Buried Dhow. **Brady Button 2** is here. |
 | R6 | 3-4 Lençóis Lagoons | Under-Stage, a lagoon at low tide | one lagoon swirls like a drain and feathers float up out of it | MOROCCO → **5-6** Carpet Skies |
 | R7 | 4-1 Ostrich Dash | Loading Dock | the ostrich overshoots the finish | HATCHLINGS → **4-4** (in-land skip) |
 | R8 | 4-3 Baobab Skyline | Rigging | a weaver nest bounces a hornbill off the top; a kite string tied to a crown runs up | SPAIN → **6-7** Molinos |
@@ -263,18 +263,18 @@ Notes for the table:
 | R11 | 6-4 Teide Updrafts | Rigging | the strongest fumarole plume goes off the top with a kestrel riding it | NETHERLANDS → **8-6** Windmill Row |
 | R12 | 7-4 Truffle Hunt | Under-Stage: **dig through the bottom row** | the truffle pig sniffs at the deepest soil and it sparkles | ANTARCTICA → **13-5** Egg Express (a second way into Antarctica) |
 | R13 | 7-1 Paris Morning Rounds (`toits`) | Rigging | chimney smoke and pigeons rise off the top | BALI → **9-6** Orangutan Canopy |
-| R14 | 8-3 Bike Lane Rush | Under-Stage, a canal gap | a bike-fishing hook dangles into one canal gap; bubbles rise | VIETNAM → **10-6** Mekong Market. **Ban Buzzer 4** is here (the drowned-bike graveyard). |
+| R14 | 8-3 Bike Lane Rush | Under-Stage, a canal gap | a bike-fishing hook dangles into one canal gap; bubbles rise | VIETNAM → **10-6** Mekong Market. **Brady Button 4** is here (the drowned-bike graveyard). |
 | R15 | 9-2 Kite Festival | Rigging | a kite tail runs up off the top | JAPAN → **11-6** Capsule Toy Machine |
 | R16 | 9-4 Manta Night Dive | Under-Stage, a whirlpool in the sea floor (water seam) | glowing plankton spirals down into it | BLUE FIRE → **9-7** (in-land) |
 | R17 | 10-1 Train Street | Loading Dock | the train keeps going off right after the gate | NEPAL → **12-6** Crevasse Drop |
-| R18 | 11-4 Neon Tower | Rigging, above the rooftop | a red aircraft-warning lamp blinks at the top edge; air-con plumes rise off-screen | NEPAL → **12-7** Supply Depot. **Ban Buzzer 5** is here. |
+| R18 | 11-4 Neon Tower | Rigging, above the rooftop | a red aircraft-warning lamp blinks at the top edge; air-con plumes rise off-screen | NEPAL → **12-7** Supply Depot. **Brady Button 5** is here. |
 | R19 | 12-1 Suspension Bridges | Under-Stage, the gorge under one bridge | a snapped bridge cable hangs into the gorge; a yak bell rings from below | ANTARCTICA → **13-2** (the cold way round) |
 | R20 | 13-1 Ice Shelf Bowling | Loading Dock | a conga line of penguins slides off right past the gate | HOME → **1-6** Pit of Swallows |
 | R21 | 22-3 Mirror Lake | Wings (it is played leftwards, so its wings are off the **right** edge) | Brady's reflection walks off the edge without him | THE DESK → **22-5** (in-land) |
 
 Mexico's bonus level 1-7 (§4.4) also has two backstage zones, an Under-Stage (the courtyard well) and the Wings. Neither has a case. They are the worked examples of those zones.
 
-**Dormant Road Cases.** These six are padlocked, with a tag "HELD BY ORDER OF THE BARON — RULE 9", until Rule 9 is revoked (§4).
+**Dormant Road Cases.** These six are padlocked, with a tag "HELD BY ORDER OF PIWI SQUIRMIN' — RULE 9", until Rule 9 is revoked (§4).
 - They all lead **backwards**, to secret levels in earlier lands, so a player who missed a secret can reach it. They never let anyone skip ahead.
 - `needs: 'rule:9'` on the exit and the spawn.
 
@@ -291,17 +291,17 @@ Every land has at least one Road Case. `--rules` checks this (warning during rol
 
 ---
 
-## 4. The big buttons: the Baron's Rulebook and the Ban Buzzers
+## 4. The big buttons: Piwi's House Rules and the Brady Buttons
 
 ### 4.1 Story and name
-The Baron doesn't only shrink landmarks into jars. He is also a dreadful bore who has published **The Baron's Rulebook**, a list of bans for the whole world: NO DANCING, NO HATS ON ANIMALS, NO SHORTCUTS, NO RETURNS, NO LATE FLIGHTS, NO FUN.
+Piwi doesn't only shrink landmarks into jars. He is also a dreadful bore who has published **Piwi's House Rules**, a list of bans for the whole world: NO DANCING, NO HATS ON ANIMALS, NO SHORTCUTS, NO RETURNS, NO LATE FLIGHTS, NO FUN.
 
-Each rule is enforced by a **Ban Buzzer**: a big DO NOT PRESS button the Baron's crew hid somewhere in the world. Slapping one **revokes** its rule. A rubber stamp slams **REVOKED** across the rule card, and the change ripples across every land.
+Each rule is enforced by a **Brady Button**: a big DO NOT PRESS button Piwi's crew hid somewhere in the world. Slapping one **revokes** its rule. A rubber stamp slams **REVOKED** across the rule card, and the change ripples across every land.
 
-Names: **The Baron's Rulebook** (the system and its pause-menu page) and **Ban Buzzer** (the object).
+Names: **Piwi's House Rules** (the system and its pause-menu page) and **Brady Button** (the object).
 
 ### 4.2 Look and how you hit it
-- **Look:** a waist-high mahogany pedestal with a brass bezel. The dome is frosted glass in the Baron's airship purple (`#5a4a6a`, as in `TourPanelFx.airship`) with his gold "B" etched in it. An engraved brass plaque reads `DO NOT PRESS — BY ORDER OF THE BARON — RULE 7`. A pneumatic tube runs from the pedestal up into the scenery.
+- **Look:** a waist-high mahogany pedestal with a brass bezel. The dome is frosted glass in Piwi's Showtrunk purple (`#5a4a6a`, as in `TourPanelFx.airship`) with his gold "B" etched in it. An engraved brass plaque reads `DO NOT PRESS — BY ORDER OF PIWI SQUIRMIN' — RULE 7`. A pneumatic tube runs from the pedestal up into the scenery.
 - **All six look the same.** They differ only by their rule number. There is no colour coding.
 - **How to hit it:** **slap it from the side** with the Action button, or hit it with anything thrown, or with Pound Cake from above. **Jumping on it does nothing** except a deflated "bzzt... not like that" squeak, so it never works like a stomp switch.
 - **When it's hit:**
@@ -315,11 +315,11 @@ Names: **The Baron's Rulebook** (the system and its pause-menu page) and **Ban B
 | Buzzer | Rule | Hidden in | Changes across the whole game | Opens |
 |---|---|---|---|---|
 | **B1** | **RULE 7: NO HATS ON ANIMALS** | 1-4 Volcán Escape, the Rigging (R2's zone) | Every animal enemy and friend in every level, plus the map critters, wears a tiny novelty hat: a paper party cone, a flower crown, a mini top hat, a propeller beanie, a chef's toque or a bobble hat. Each type gets one hat, chosen by a hash of its type name. There is no national or religious headwear. A hatted enemy pops one coin when stomped. | **1-7 Casa de Sorpresas** (Mexico bonus level, §4.4) |
-| **B2** | **RULE 3: NO DANCING** | 3-1 Samba Sunrise, the Rigging (R5's zone) | Every enemy, friend and Souvenir Stand keeper bobs and squashes on the beat of whatever song is playing (cosmetic only: hitboxes and AI don't change). Every land's overworld gets festival bunting along its open trails and dancing critters at cleared stops. The Baron's airship on the route map sulks under a little rain cloud. | **Festival Fields** (bonus land, world 23) |
-| **B3** | **RULE 9: NO SHORTCUTS** | 5-1 Souk Labyrinth, an Evidence Locker in a new dead-end cell | The Baron's freight network wakes up: the six dormant Road Cases D1-D6 unlock. Every land with a cleared boss gets an **express trail** on its map, walkable from its airstrip straight to its port. | the 6 dormant cases (§3.5) |
+| **B2** | **RULE 3: NO DANCING** | 3-1 Samba Sunrise, the Rigging (R5's zone) | Every enemy, friend and Souvenir Stand keeper bobs and squashes on the beat of whatever song is playing (cosmetic only: hitboxes and AI don't change). Every land's overworld gets festival bunting along its open trails and dancing critters at cleared stops. Piwi's Showtrunk on the route map sulks under a little rain cloud. | **Festival Fields** (bonus land, world 23) |
+| **B3** | **RULE 9: NO SHORTCUTS** | 5-1 Souk Labyrinth, an Evidence Locker in a new dead-end cell | Piwi's freight network wakes up: the six dormant Road Cases D1-D6 unlock. Every land with a cleared boss gets an **express trail** on its map, walkable from its airstrip straight to its port. | the 6 dormant cases (§3.5) |
 | **B4** | **RULE 12: NO RETURNS** | 8-3 Bike Lane Rush, the Under-Stage (R14's zone: the drowned-bike graveyard) | A **lost suitcase** with a luggage tag appears at every land's airstrip on its map. Tapping it once per land gives a free random Backpack item. Every Souvenir Stand adds a fourth shelf of "returned" goods. | **Lost & Found** (bonus land, world 24) |
 | **B5** | **RULE 10: NO LATE FLIGHTS** | 11-4 Neon Tower, the Rigging (R18's zone, the rooftop) | The world route map gets night flights: from any cleared land's airstrip you can fly to **any** cleared land, not only along the route. A little red-eye plane with a blinking light circles the globe. | **The Red-Eye** (bonus land, world 25) |
-| **B6** | **RULE 1: NO FUN** | 22-5 The Writer's Desk, the Wings (the margin of the page) | Before B1-B5 are all revoked, this buzzer is under a glass cloche with a sticky note: "NOT YET. — THE BARON". After that it can be slapped. Then the Baron's airship becomes a party blimp on every map, the Postcard Lighthouse beam turns rainbow, and the ending gains a short extra scene of the Baron at a party, sulking, then dancing. | **22-6 The Rulebook** (World 22 bonus level, §4.4) |
+| **B6** | **RULE 1: NO FUN** | 22-5 The Writer's Desk, the Wings (the margin of the page) | Before B1-B5 are all revoked, this buzzer is under a glass cloche with a sticky note: "NOT YET. — PIWI". After that it can be slapped. Then Piwi's Showtrunk becomes a party blimp on every map, the Postcard Lighthouse beam turns rainbow, and the ending gains a short extra scene of Piwi at a party, sulking, then dancing. | **22-6 The Rulebook** (World 22 bonus level, §4.4) |
 
 ### 4.4 The extra content: 14 new levels
 
@@ -331,7 +331,7 @@ Bonus lands use `secret: true` and `bonus: true` on their route stop (§5.4). Th
   - the Closing-Time Shop (Xolo's tiendita after hours)
   - the Topsy Attic
   - the Hourglass Well
-  - the Evidence Locker (the Baron's piñata pound)
+  - the Evidence Locker (Piwi's piñata pound)
   - a piñata-donkey Bouncy Castle in the courtyard
   - a Treasure Map Room whose X lies in the courtyard
   - an Under-Stage below the courtyard well
@@ -343,7 +343,7 @@ Bonus lands use `secret: true` and `bonus: true` on their route stop (§5.4). Th
 - **23-1 Campsite Scramble.** Guy-ropes twang like springs, airbeds bounce, and a runaway gazebo tumbles after you in the wind (a DOOM-style chase).
 - **23-2 The Mud Bath.** After each rain squall the mud rises and falls (TIDE). Wellies stand in for Flipper Fins. Lost flip-flops are stepping stones.
 - **23-3 Silent Disco.** Beat blocks move only while Brady wears the glowing headphones (a pickup). Take them off and the dance floor freezes and goes quiet (BEAT plus a toggle).
-- **23-4 The Sound Limiter** (boss). The Baron's noise-complaint robot, a giant volume knob on legs, turns the music down. Crowd-surf a herd of llamas to reach its dial. The crowd is animals, never people.
+- **23-4 The Sound Limiter** (boss). Piwi's noise-complaint robot, a giant volume knob on legs, turns the music down. Crowd-surf a herd of llamas to reach its dial. The crowd is animals, never people.
 - Drug items here are only the existing cartoon pickups, in a "Chill Tent" side room.
 - **Size: L (5-7 days plus art).**
 
@@ -362,7 +362,7 @@ Bonus lands use `secret: true` and `bonus: true` on their route stop (§5.4). Th
 - **Size: L.**
 
 **World 22 bonus (opened by B6):**
-- **22-6 The Rulebook** (`arch: 'bonus'`). Inside the Baron's Rulebook itself: page-turn platforms, rubber-stamp crushers, footnotes as ledges. The finale is the Rulebook as a mini-boss, a flapping book with stamp arms (3 hp). Brady tears its pages out one rule at a time. Main exit: back to the map.
+- **22-6 The Rulebook** (`arch: 'bonus'`). Inside Piwi's House Rules itself: page-turn platforms, rubber-stamp crushers, footnotes as ledges. The finale is the Rulebook as a mini-boss, a flapping book with stamp arms (3 hp). Brady tears its pages out one rule at a time. Main exit: back to the map.
 - **Size: M (2-3 days).**
 
 **Totals:**
@@ -373,7 +373,7 @@ Bonus lands use `secret: true` and `bonus: true` on their route stop (§5.4). Th
 Honestly, the bonus content is about the size of two and a half of the original lands: roughly 18-24 agent-days plus art.
 
 ### 4.5 The Rulebook page and settings
-- **Pause menu → RULEBOOK.** The Baron's leather notebook. Revoked rules are struck through with a REVOKED stamp and say where the buzzer was. Unfound rules show "RULE ?: ████████". Once the Postcard Lighthouse is lit, an unfound rule also shows the land its buzzer is in.
+- **Pause menu → RULEBOOK.** Piwi's leather notebook. Revoked rules are struck through with a REVOKED stamp and say where the buzzer was. Unfound rules show "RULE ?: ████████". Once the Postcard Lighthouse is lit, an unfound rule also shows the land its buzzer is in.
 - **Settings → REVOKED RULES: SHOW / HIDE** (default SHOW). This turns off the cosmetic effects (hats, dancing, bunting) for anyone who finds them busy. Unlocks never turn off.
 - **Map badges:** once a buzzer is found, the stop that holds it shows a tiny brass dome next to its exit pips. Until then, the Lighthouse flag counts an unfound buzzer as "something undiscovered here".
 
@@ -433,7 +433,7 @@ Area fields:
 | `underStage` | `{ to, n: 3, tell }` | a pit `n` wide whose bottom is a `bottom` seam, with a crash-mat tell; it is the only non-deadly pit |
 | `wings` | `{ to, tell }` | used as the first step: the start pad stays open at x = 0 with a curtain flap, records a `left` seam (`right` in a mirrored area) |
 | `roadCase` | `{ exit: 'case', label }` | the case entity on the floor |
-| `buzzer` | `{ rule: 7 }` | the Ban Buzzer pedestal |
+| `buzzer` | `{ rule: 7 }` | the Brady Button pedestal |
 | `xMark` | `{ id }` | the Treasure Map's X: a soil lock on the floor |
 
 **Stamp legend:** no new global letters (§7, item 9). New custom legend kinds go in a stamp's `legend`:
@@ -577,7 +577,7 @@ Order:
 | **WP-2** | **Progress, save, maps** | `src/28_tour_a_core.js` (`Tour.addStop`, `d0`, `exit()` case and shipment reveals, `exitsFound` with needs); `src/28_tour_fb_mapgraph.js` (edge kinds `case` and `express`, `caseLinks`); `src/28_tour_f_map.js` (shipment reveal playback, the `tour.arrive` hand-off, the hook call); a ≤ 5-line hook in `src/28_tour_fd_overworld.js` (draw, tap, arrival), coordinated with the map agent; new `src/28_tour_fg_owextras.js` (case icons, freight trail and line drawing, the REVOKED card playback, suitcase, bunting, express rail, blimp, buzzer badge); save key in `src/00_core.js:95-97`, `tools/build.js:38`, `tools/apps_test.js:11`; `tools/save_test.js`; derive the land counts in `tools/sbw_toolkit_test.js:20`, `tools/sbw_overworld_test.js:227` and `tools/gameplay_test.js:312` (no hard-coded 14 or `'13,22'`) | WP-1 | new `tools/sbw_secrets_test.js` (node): an in-land case reveal plus a walkable freight trail; a cross-land shipment (target unlocked, its land unlocked, nothing earlier marked done, `arrive` consumed once, the caseLink trail open); `needs`-gated pips; a bonus land hidden from `totals()` until opened; `Tour.addStop`. `save_test` (v3 key, settings and look copied from v2, v2 untouched). `sbw_overworld_test` extended: freight trails and case icons laid out at 844x390, 390x844 and 568x320, no overlaps. `apps_test` | L (3-4 days) |
 | **WP-3** | **Backstage and Road Cases** | new `src/28_tour_k_backstage.js` (seam runtime via `TourHooks.offEdge`, `Play.prototype.seamTo` with the curtain-whip wipe and kept velocity, the pieces `rigging` `loadingDock` `underStage` `wings` `roadCase`, the `roadCase` entity (an Up-press gate subclass with the SHIPPED clear), stagehand mice, procedural backstage themes `bk_rigging` `bk_dock` `bk_under` `bk_wings` with a per-country tint, the backstage music cue); new `tools/fixtures/sbw_backstage_lab.js`; new `tools/sbw_backstage_shots.js` | WP-1 (WP-2 only for the map end of a case; mock it until it lands) | `sbw_backstage_shots.js --checks` in a phone-sized WebKit: Brady leaves through each of the 4 seams and arrives in the right area with velocity kept; the under-stage pit doesn't kill and the level's other pit still does; the return seam works; the case needs Up; screenshots of each zone. Fixtures pass `validate_levels`. `sbw_soak_test` on the fixtures | L (3-4 days) |
 | **WP-4** | **Secret room types** | new `src/28_tour_l_rooms.js` (`roomClock`, `stallGame` plus pop critters, `cookPot`, the bouncy and attic stamp helpers, `rise.soft`, the treasure-map key and lock skins plus `TourHooks.peek`, a procedural skin per type); new `tools/fixtures/sbw_rooms_lab.js`; new `tools/sbw_rooms_shots.js` | WP-1 | `sbw_rooms_shots.js --checks`, one scripted run per type: the closing clock ejects without a hit; a whack win opens the prize and a loss doesn't; the recipe opens only with all 3 ingredients; the hourglass catch is one hit plus a respawn, never a death; the topsy flip works; the treasure map opens the X in another area; the evidence alarm closes and reopens shutters. All 8 fixtures validate. Screenshots of each | L (4-5 days) |
-| **WP-5** | **Ban Buzzers and the Rulebook** | new `src/28_tour_m_rules.js` (`TOUR_RULES`, `TourRules.revoke/isRevoked`, the `banBuzzer` entity with the side-slap only and the cloche for B6, the REVOKED card, the hats and dance `afterEntities` effects, the Rule 12 shop shelf, the Rule 10 route-map "fly anywhere" via a hook, the Rulebook pause page, the `ruleFx` setting) | WP-1, WP-2 (reveal kinds; mock until it lands) | new `tools/sbw_rules_test.js`: revoke each rule and check its reveals and unlocks; with every rule revoked, draw every registered enemy, friend and keeper type once with hats and dance, with zero errors; landing on a buzzer does nothing and a slap revokes; B6 stays shut until 5 rules are revoked; `ruleFx` off hides the cosmetics. A soak run with all rules revoked (`SBW_RULES=all`, which the test sets through `Save.data`) | M-L (3 days) |
+| **WP-5** | **Brady Buttons and the Rulebook** | new `src/28_tour_m_rules.js` (`TOUR_RULES`, `TourRules.revoke/isRevoked`, the `banBuzzer` entity with the side-slap only and the cloche for B6, the REVOKED card, the hats and dance `afterEntities` effects, the Rule 12 shop shelf, the Rule 10 route-map "fly anywhere" via a hook, the Rulebook pause page, the `ruleFx` setting) | WP-1, WP-2 (reveal kinds; mock until it lands) | new `tools/sbw_rules_test.js`: revoke each rule and check its reveals and unlocks; with every rule revoked, draw every registered enemy, friend and keeper type once with hats and dance, with zero errors; landing on a buzzer does nothing and a slap revokes; B6 stays shut until 5 rules are revoked; `ruleFx` off hides the cosmetics. A soak run with all rules revoked (`SBW_RULES=all`, which the test sets through `Save.data`) | M-L (3 days) |
 | **WP-6** | **Mexico, the worked example** | `src/29_tour_mx_levels.js`, `src/29_tour_mx.js` (skins: the hen cook, `mxAxolotlPop`, the piñata bouncy castle, Xolo asleep), Mexico's map additions (`Object.assign(TOUR_OW_MAPS.mx.nodes / paths / scenes, …)` at the end of `29_tour_mx_levels.js`; the map agent is told the keys) | WP-1 to WP-5 | Mexico content, below. `validate_levels 1-1 … 1-7` (rules off and on); `gameplay_test`; `boss_test` (1-5 is unchanged except its pantry room); `sbw_snapshot` baseline updated for 1-1, 1-2, 1-4, 1-5 and the new 1-7 only; `sbw_toolkit_shots --checks`; a panorama plus phone shots of every changed level and every backstage zone, looked at before the merge | L (3-4 days) |
 | WP-7 (optional; can slip to phase 4) | Art pass for the shared pieces | `tools/blender/sprites/bk_*.py`, `assets/sprites/super-brady-o-world/bk_*.js`, the wiring in `src/30_tour_sprites.js` | WP-3, WP-4, WP-5 looks frozen | `sbw_atlas_test`, `sbw_graphics_test`; a private Blender GUI instance via `tools/blender/sprites/gui/bl.sh` | M |
 
@@ -632,7 +632,7 @@ Phase 2 depends on phase 1 being merged. The groups never share a file.
 One Blender agent at a time does the art, per SBW_RELAY.
 
 ### 6.4 Phase 4: art, phone check and release
-- Blender atlases for the backstage zones, Road Case, Ban Buzzer, room-type props and bonus casts.
+- Blender atlases for the backstage zones, Road Case, Brady Button, room-type props and bonus casts.
 - Re-renders where the procedural fallbacks read badly.
 - **Brady checks it on his iPhone.**
 - `Validator.STRICT5` stays as decided. The `--rules` warnings for room variety and cases per land become errors.
@@ -688,7 +688,7 @@ One Blender agent at a time does the art, per SBW_RELAY.
 | 1 | Is it OK that the hidden places off the edges are a "backstage" behind the scenery (ropes, stage lights, road cases), as if every land were a touring show? | Yes, as designed. |
 | 2 | May a hidden road case send you up to two lands ahead, and give a second way into Antarctica? | Yes, at most two lands ahead, and the second Antarctica door stays. |
 | 3 | Are Festival Fields, Lost & Found and an overnight Red-Eye flight the three extra lands you want? | Yes, those three. |
-| 4 | Do you like the names Ban Buzzers, the Baron's Rulebook and Road Cases? | Keep them. |
+| 4 | Do you like the names Brady Buttons, Piwi's House Rules and Road Cases? | Keep them. |
 | 5 | Once unlocked, should hats on animals and dancing enemies stay on for good, or have an on/off switch in Settings? | A switch in Settings, on by default. |
 
 ---
@@ -697,14 +697,14 @@ One Blender agent at a time does the art, per SBW_RELAY.
 
 | Mechanic | Why it isn't a copy of another game's signature |
 |---|---|
-| **Ban Buzzers / the Rulebook** | A satirical list of the villain's bans, revoked one by one. There are no palaces, no colours per switch, and nothing turns blocks solid or outlined blocks into floors. You slap it from the side, and stomping it does nothing. It is permanent, never timed. Its effects are hats, dancing, maps, shops, freight routes and new lands. |
+| **Brady Buttons / the Rulebook** | A satirical list of the villain's bans, revoked one by one. There are no palaces, no colours per switch, and nothing turns blocks solid or outlined blocks into floors. You slap it from the side, and stomping it does nothing. It is permanent, never timed. Its effects are hats, dancing, maps, shops, freight routes and new lands. |
 | **Bonus lands** | Three ordinary travel-humour lands on the existing route map, opened by revoking rules. They are not a star-shaped world, not a hub of warp portals, and not reached through a special star or door. |
 | **Backstage zones** | The off-edge areas are the stage set's backstage, with their own tiles and crew. Hidden space above the ceiling exists in older platformers. Ours is reached by being launched off the top of the screen, never by walking along the top of a visible ceiling row, and it holds one labelled case, never a row of numbered pipes or a "warp zone" sign. The other three edges (past the exit, under a pit, before the start) are ours. |
 | **Road Cases** | You climb into stencilled flight cases with the destination written on them. The map then shows the shipment along freight trails. There are no pipes, cannons or vortex doors. |
 | **Closing-Time Shop** | A shop that closes on you is a fairground-and-shopping gag, not any game's signature room. |
 | **Fairground Stall** | Whack-a-critter and coconut shy are generic fairground games, played with Brady's own moves and local animals. |
 | **Bouncy Castle** | A festival inflatable shaped like a local icon. Bounce surfaces already exist in this game. |
-| **Evidence Locker** | Our own SNEAK toolkit inside the Baron's customs office, with tin guard-dogs. Generic stealth, not a borrowed setting. |
+| **Evidence Locker** | Our own SNEAK toolkit inside Piwi's customs office, with tin guard-dogs. Generic stealth, not a borrowed setting. |
 | **Recipe Kitchen** | An animal cook's three-ingredient errand built on our CARRY system. No borrowed cooking mechanic. |
 | **Topsy Attic** | Our existing FLIP bands in a furnished, upside-down attic. |
 | **Hourglass Well** | Our RISE gen with soft sand that spits you out. A generic rising-hazard climb, not lava and not a borrowed set piece. |

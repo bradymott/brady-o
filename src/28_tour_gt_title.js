@@ -1,8 +1,8 @@
 /* ============================================================
    Super Brady-O World: the title show and the home-screen icon.
    Brady jogs around a little toon globe while landmarks from every
-   land pop up over its rim, the plane loops the sky, the Baron's
-   blimp drifts past with a bottled landmark, postcards flutter.
+   land pop up over its rim, the plane loops the sky, Piwi's
+   Showtrunk drifts past with Chinka-O in its cage, postcards flutter.
    The logo is lettered in canvas (inked letters, a highlight band,
    a chunky extrusion, a spinning globe for the O) and drops in with
    a bounce. Tap: Brady hops into his plane and it takes off into
@@ -83,31 +83,9 @@ const SBWT = {
       x.fillStyle = '#ffd23a'; x.beginPath(); x.arc(47, -12, 2.6, 0, TAU); x.fill(); x.stroke();
     }, { width: 1.4 });
   },
-  // the Baron's blimp with a bottled landmark slung under it (a little windmill in a jar)
+  // Piwi's Showtrunk (05d_showtrunk.js) with Chinka-O in its show cage: painted once, so its rotors freeze mid-spin
   blimp(k) {
-    return this.inked(170, 150, 85, 60, k, x => {
-      const I = this.INK; x.strokeStyle = I; x.lineWidth = 1.8;
-      for (const s of [-1, 1]) { x.fillStyle = '#4a1a8a'; x.beginPath(); x.moveTo(-58, s * 6 - 8); x.lineTo(-78, s * 22 - 8); x.lineTo(-66, s * 2 - 8); x.closePath(); x.fill(); x.stroke(); }
-      x.fillStyle = '#7a3ad8'; x.beginPath(); x.ellipse(0, -8, 66, 34, 0, 0, TAU); x.fill(); x.stroke();
-      x.fillStyle = '#9a5af0'; x.beginPath(); x.ellipse(-8, -20, 46, 14, 0, 0, TAU); x.fill();
-      x.fillStyle = '#ffd23a'; x.beginPath(); x.ellipse(0, -8, 66, 6, 0, 0, TAU); x.fill(); x.stroke();
-      x.fillStyle = '#ffd23a'; x.beginPath(); x.arc(26, -8, 11, 0, TAU); x.fill(); x.stroke();
-      x.fillStyle = '#4a1a8a'; x.font = `bold 13px ${FONT_DISPLAY}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('B', 26, -7);
-      // gondola with the Baron's top hat poking out
-      x.fillStyle = '#5a2a2a'; rr(x, -20, 24, 36, 12, 4); x.fill(); x.stroke();
-      x.fillStyle = '#1a1020'; x.fillRect(-6, 13, 10, 11); x.strokeRect(-6, 13, 10, 11); x.fillStyle = '#ff4f8a'; x.fillRect(-6, 20, 10, 3);
-      x.beginPath(); x.moveTo(-12, 24); x.lineTo(-6, 26); x.moveTo(10, 24); x.lineTo(4, 26); x.stroke();
-      // the jar on two ropes
-      x.lineWidth = 1.2; x.beginPath(); x.moveTo(-14, 36); x.lineTo(-10, 58); x.moveTo(10, 36); x.lineTo(6, 58); x.stroke(); x.lineWidth = 1.8;
-      x.fillStyle = '#c9f2ff'; rr(x, -22, 58, 32, 34, 8); x.fill(); x.stroke();
-      x.fillStyle = '#a8703a'; rr(x, -18, 54, 24, 7, 2); x.fill(); x.stroke();
-      // the bottled windmill
-      x.save(); x.translate(-6, 88); x.scale(0.5, 0.5); x.lineWidth = 2.4;
-      TourOWPaint.P(x, [[-9, 0], [-7, -32], [7, -32], [9, 0]], '#f3e6cc'); TourOWPaint.P(x, [[-9, -32], [0, -42], [9, -32]], '#a8503a');
-      x.translate(0, -32); x.rotate(0.4); for (let i = 0; i < 4; i++) { x.rotate(Math.PI / 2); x.fillStyle = '#fff8ea'; x.fillRect(1, -3, 22, 6); x.strokeRect(1, -3, 22, 6); }
-      x.restore();
-      x.fillStyle = 'rgba(255,255,255,0.7)'; rr(x, -18, 62, 5, 22, 2.5); x.fill();
-    }, { width: 1.5 });
+    return this.inked(190, 240, 95, 128, k, x => Showtrunk.draw(x, { x: 0, y: 0, scale: 1, t: 0.3, piwi: 'gloat', chinka: true }), { width: 1.5 });
   },
   postcard(k, back) {
     return this.inked(64, 46, 32, 23, k, x => {
@@ -522,7 +500,7 @@ class SBWTitleScene {
     else {
       // the credits from the title: no spoilers, and watching them doesn't count as beating the game
       const was = !!Save.data.beatGame, c = new CreditsScene('world');
-      if (!was) { Save.data.beatGame = false; Save.save(); c.lines = c.lines.filter(l => !/Chinka is home|Baron is a snow globe/.test(l[0])); }
+      if (!was) { Save.data.beatGame = false; Save.save(); c.lines = c.lines.filter(l => !/Chinka-O is home|Piwi is pocket-sized/.test(l[0])); }
       Game.setScene(c);
     }
   }
@@ -613,7 +591,7 @@ class SBWTitleScene {
       const x = ((c.x - t * c.sp * (calm ? 0.3 : 1)) % span + span) % span - 130;
       SBWT.blit(ctx, s, x, c.y, c.sc);
     }
-    // the Baron's blimp drifting with a bottled landmark
+    // Piwi's Showtrunk drifting by with Chinka-O in the cage
     {
       const b = this.blimp, span = W + 400, x = ((b.x + t * (calm ? 4 : 11)) % span + span) % span - 200;
       SBWT.blit(ctx, this.blimpS, x, b.y + Math.sin(t * 1.3) * 5, 1, Math.sin(t * 0.9) * 0.03);

@@ -740,7 +740,7 @@ Tour.country({
   themes, painters, decor, decorLights, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_nl', boss: 'tour_nl_boss' },
   landmark: 'the old windmill',
-  arrival: 'Brady! The Baron folded up a whole windmill and took it on a canal cruise. ♥ C',
+  arrival: 'Brady! Piwi folded up a whole windmill and took it on a canal cruise. I borrowed a bike and got two bridges away! ♥ C',
   coin: { name: 'STROOPWAFEL', draw(ctx, x, y) {
     ctx.fillStyle = '#c8823a'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();
     ctx.strokeStyle = '#8a5222'; ctx.lineWidth = 0.8; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x - 7, y + k * 3); ctx.lineTo(x + 7, y + k * 3); ctx.moveTo(x + k * 3, y - 7); ctx.lineTo(x + k * 3, y + 7); ctx.stroke(); }

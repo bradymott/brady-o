@@ -618,7 +618,7 @@ const platforms = {
 };
 
 /* ---------------- the boss: O TUCANÃO ---------------- */
-// The Baron's giant toucan rules the air: the only thing that reaches him is a FOOTBALL. The ball cannon
+// Piwi's flying usher, a giant toucan, rules the air: the only thing that reaches him is a FOOTBALL. The ball cannon
 // keeps the pitch stocked; run into a ball to kick it along the floor (for his low swoops), stomp a ball
 // to volley it straight up at him. A ball in the face knocks him out of the sky to the floor, where he
 // staggers (stomp him for a bonus hit). Phase 2 the carnival drums kick in and he dives on the beat, beak
@@ -900,7 +900,7 @@ Tour.country({
   themes, painters, decor, decorLights, beatArt, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_br', boss: 'tour_br_boss' },
   landmark: 'Sugarloaf Mountain',
-  arrival: 'Brady! The Baron is trying to fit Sugarloaf Mountain into a carnival float. Hurry! ♥ C',
+  arrival: 'Brady! Piwi is squeezing Sugarloaf Mountain onto a carnival float for his Samba Spectacular. I swapped his tap shoes for flip-flops. ♥ C',
   coin: { name: 'PÃO DE QUEIJO', draw(ctx, x, y) {
     ctx.fillStyle = '#e8b85a'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();
     ctx.fillStyle = '#f8d88a'; ctx.beginPath(); ctx.arc(x - 1, y - 1.5, 6.5, 0, TAU); ctx.fill();

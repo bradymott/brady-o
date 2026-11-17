@@ -8,6 +8,11 @@ Design spec, 16 Nov 2026, written from `origin/main` at `ab95358`. Brady's reque
 
 **Phase B (after the other agents' branches merge).** Apply §7, the replacement table, in the order of §8.
 
+> **Status, 17 Nov 2026 (branch `sbw/story-b`):** phase B is applied.
+> - **Done:** all text, credits and ending, the map icon and P flags, the title's Showtrunk, the `TourVillain` adapter, 7 intro panels, the ending with Chinka-O, Pupo and pocket-sized Piwi, the Nepal re-skin (Showtrunk, Showstopper, Piwi on foot, Chinka-O, the Piwi bobble-head, Shrink-Spots, P banners), tests and docs.
+> - **New file `src/29_tour_zz_story.js`:** the "tonight's act" banners, Pupo's verdict lines and the World 22 encore. It loads after every country and changes no fight.
+> - **Not done:** B11 (the Blender re-renders) and the post-credits sting card. The World 22 arrival postcard keeps its old text.
+
 Ground rules this story keeps:
 - Piwi is our own character. He is a wink at the prim, giggly man-child showman type, not a lookalike.
   - No real character's trademark outfit or colour scheme, face, catchphrases, laugh or show material.

@@ -354,7 +354,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       m.cam.lon = -30; m.cam.lat = 5; sim(0.05); const x = m.sx(-30), y = m.sy(5); window.BRADY.Input.taps.push({ x, y }); sim(0.05);
       return { jars: !!T.jars.mx, lighthouse: T.lighthouse };
     });
-    check('world map: the boss fell, so the Baron\'s jar over Mexico shatters and the airship moves on', r7.jar && r7.airship && r8.jars, Object.assign({}, r7, r8));
+    check('world map: the boss fell, so Piwi\'s prop jar over Mexico shatters and the Showtrunk moves on', r7.jar && r7.airship && r8.jars, Object.assign({}, r7, r8));
     check('world map: five bottles show the lighthouse; a tap lights its beam', r8.lighthouse === true, r8);
     check('world map: the secret flight arc starts at a country whose level has the flight exit (Ecuador 2-7, or the test exit in Mexico)', r7.from === 'ec' || r7.from === 'mx', r7);
     await page.evaluate(() => { const m = S(); m.cam.lon = -40; m.cam.lat = 10; m.cam.z = 3.2; sim(0.3); m.update = function () {}; });

@@ -1120,7 +1120,7 @@ const levels = [
   { n: 5, name: 'Kappa Garden', arch: 'lair', theme: 'jp_castle', boss: 'jp_kappa',
     gimmick: 'Nightingale floors chirp underfoot, a polite heron guards a gate, a revolving wall turns twice; then the Great Kappa at his garden pond',
     hint: 'Kappa are VERY polite. When he glares, crouch (hold DOWN) facing him: he bows back and spills his dish. Block his pond with the stones!',
-    postcard: 'The golden fish are back on the castle roof! The Baron took off toward the Himalaya. This is it, Brady. ♥ C',
+    postcard: 'The golden fish are back on the castle roof! Piwi took off toward the Himalaya for his GRAND FINALE. This is it, Brady. ♥ C',
     enemies: [['jpUmbrella', 2], ['jpTop', 2]],
     mapCell: [1, 2], mapFrom: 3,
     exits: { main: { to: 'country:next' } },
