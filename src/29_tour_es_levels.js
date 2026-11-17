@@ -256,6 +256,26 @@ const wallStamp = {
   doors: [hole('barra@b4', true), hole('barra@b3', true), hole('barra@b1', true), hole('barra@b2', true), hole('barra@b5', true)],
   gold: { '%': 'risky' }
 };
+// the inside of the bar's wall (6-2's second map): wooden studs and lath with blobs of plaster, a copper pipe and
+// wires along it, lost corks and a mouse's matchbox bed. Warm and dim, never a cave.
+if (typeof BGPaint !== 'undefined') BGPaint.esLath = function (ctx, L, rng, H) {
+  ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
+  for (let y = 6; y < H; y += 22) { ctx.fillStyle = y % 44 ? '#6a4228' : '#5e3a22'; ctx.fillRect(0, y, BG_W, 14); ctx.fillStyle = 'rgba(240,230,210,0.35)'; for (let x = (y * 7) % 37; x < BG_W; x += 30 + (x * 13) % 40) { ctx.beginPath(); ctx.ellipse(x, y + 16, 7, 4, 0, 0, TAU); ctx.fill(); } }
+  for (let x = 40; x < BG_W; x += 170) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(x, 0, 26, H); ctx.fillStyle = '#6a4228'; ctx.fillRect(x + 20, 0, 6, H); }
+  const py = L.base - 120; ctx.fillStyle = '#c87a3a'; ctx.fillRect(0, py, BG_W, 12); ctx.fillStyle = '#e8a060'; ctx.fillRect(0, py + 2, BG_W, 3);
+  for (let x = 90; x < BG_W; x += 210) { ctx.fillStyle = '#a85a2a'; ctx.fillRect(x, py - 3, 10, 18); }
+  ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 3; ctx.beginPath(); for (let x = 0; x <= BG_W; x += 16) ctx.lineTo(x, py + 40 + Math.sin(x * 0.03) * 10); ctx.stroke();
+  ctx.strokeStyle = '#c8302a'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = 0; x <= BG_W; x += 16) ctx.lineTo(x, py + 50 + Math.sin(x * 0.025 + 1) * 12); ctx.stroke();
+  for (let k = 0; k < 6; k++) { const x = 70 + k * 165 + rng() * 40, y = L.base - 30 - rng() * 200; ctx.fillStyle = '#c8945a'; rr(ctx, x - 6, y - 9, 12, 18, 3); ctx.fill(); }
+  const bx = 600; ctx.fillStyle = '#e8c050'; ctx.fillRect(bx, L.base - 22, 54, 20); ctx.fillStyle = '#c8302a'; ctx.fillRect(bx, L.base - 22, 54, 5); ctx.fillStyle = '#f4f0e8'; ctx.fillRect(bx + 6, L.base - 28, 40, 8); ctx.fillStyle = '#c8302a'; ctx.fillRect(bx + 6, L.base - 28, 14, 8);
+};
+if (THEMES.es_pintxos) THEMES.es_pared = Object.assign({}, THEMES.es_pintxos, {
+  name: 'Inside the Wall', particles: 'dust', rays: null, sky: ['#2a1a12', '#3a2418', '#4a2e1e'], horizonGlow: '#c8945a',
+  layers: [{ kind: 'esLath', color: '#3a2418', base: 360, f: 0.06 }],
+  ground: { style: 'rock', cap: '#8a5a34', capHi: '#b8844a', dirt: '#5e3a22', dirt2: '#4a2e1a', rock: '#6a4228' },
+  hard: { c1: '#c87a3a', c2: '#8a4a22' }, semi: { style: 'plank', c1: '#c8945a', c2: '#8a6a3a' },
+  fog: '#c8945a', darkness: 0.25, decor: []
+});
 // the mouse hole seen from inside the wall: bar light spilling through an arched hole, a chalk arrow, a crumb on the sill
 const wallSkins = {
   esHoleBack(ctx, e, t) {
@@ -312,7 +332,7 @@ Tour.amend('es', {
       exits: { main: { to: '6-3' }, secret: { to: 'house:es-pintxos', hint: 'A mouse hole at the foot of the cheese wedge...' } },
       areas: [
         { id: 'barra', gen: 'room', theme: 'es_pintxos', stamp: 'barra' },
-        { id: 'pared', gen: 'room', role: 'sub', stamp: 'pared' },
+        { id: 'pared', gen: 'room', role: 'sub', theme: 'es_pared', stamp: 'pared' },
         { id: 'queso', gen: 'room', role: 'secret', theme: 'es_pintxos', stamp: 'queso' }
       ] },
 
