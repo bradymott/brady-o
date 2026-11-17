@@ -296,6 +296,7 @@ Object.assign(TourOWPaint.art, {
 
 /* ---------- land-wide moving bits: [kind, ...] in TOUR_OW_MAPS[cc].live (this = TourOWScenes) ---------- */
 const OWL_IN = (vr, x, y, m) => x > vr.x0 - m && x < vr.x1 + m && y > vr.y0 - m && y < vr.y1 + m;
+const OWL_PLAIN = { col: x => x };   // critters on the live layer, in their own colours
 Object.assign(TourOWScenes.liveKinds, {
   // turning windmill sails over a 'windmill' sprite placed with { spin: 1 }: ['mill', x, y, size]
   mill(ctx, ow, l, t, vr) {
@@ -341,7 +342,7 @@ Object.assign(TourOWScenes.liveKinds, {
     const k = (t * sp) % (P.len * 2), back = k > P.len, s = back ? P.len * 2 - k : k, p = OWGeo.at(P, s); if (!OWL_IN(vr, p.x, p.y, 40)) return;
     const f = (p.dx >= 0) !== back ? 1 : -1, bob = Math.abs(Math.sin(t * 7)) * 1.5;
     if (l[1] === 'bike') { this.liveKinds.bikeAt.call(this, ctx, p.x, p.y - bob * 0.3, f, t); return; }
-    this.critter(ctx, l[1], p.x, p.y - bob, { col: x => x }, f);
+    this.critter(ctx, l[1], p.x, p.y - bob, OWL_PLAIN, f);
   },
   bikeAt(ctx, x, y, f, t) {
     ctx.save(); ctx.translate(x, y); ctx.scale(f, 1); ctx.lineWidth = 1.3;
