@@ -1,0 +1,2801 @@
+{
+ "pair": {
+  "dist": "../dist-before",
+  "levels": {},
+  "bosses": {
+   "1-5": {
+    "flush": 18.530655391120508,
+    "cost": {
+     "mean": 20.3953488372093,
+     "p50": 20,
+     "p95": 25,
+     "p99": 32,
+     "max": 44,
+     "n": 473
+    },
+    "upd": 0.20507399577167018,
+    "drw": 20.19027484143763,
+    "gap": {
+     "mean": 21.135306553911207,
+     "p50": 21,
+     "p95": 26,
+     "p99": 33,
+     "max": 45,
+     "n": 473
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 240,
+    "profile": {
+     "frames": 12,
+     "pxBy": [
+      [
+       "ink<other",
+       6942
+      ],
+      [
+       "bg",
+       6661
+      ],
+      [
+       "other",
+       3952
+      ],
+      [
+       "postfx",
+       2752
+      ],
+      [
+       "drawLighting",
+       1831
+      ],
+      [
+       "ink<brady",
+       1736
+      ],
+      [
+       "drawTiles",
+       468
+      ],
+      [
+       "decor",
+       88
+      ],
+      [
+       "brady",
+       12
+      ],
+      [
+       "drawHUD",
+       3
+      ],
+      [
+       "particles",
+       1
+      ],
+      [
+       "ent:MxRail/mxRail",
+       0
+      ]
+     ],
+     "counts": {
+      "drawImage": 186,
+      "drawPx": 17592400,
+      "fillRectPx": 6852554,
+      "fillText": 11,
+      "strokeText": 0,
+      "grad": 24,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 2,
+      "inkPx": 68723,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 25,
+      "save": 73.833
+     },
+     "time": {
+      "update": 0.083,
+      "bg": 0.083,
+      "trip": 0,
+      "decor": 0.333,
+      "drawTiles": 0.167,
+      "drawShadows": 0.083,
+      "ink": 0.5,
+      "brady": 0.25,
+      "particles": 0.25,
+      "weather": 0,
+      "drawLighting": 0.167,
+      "postfx": 0,
+      "worldfx": 0,
+      "drawHUD": 0.333,
+      "drawToast": 0,
+      "controls": 0,
+      "drawTutorial": 0,
+      "draw": 2.333
+     },
+     "drawByClass": [
+      [
+       "MxRail/mxRail",
+       0.083
+      ]
+     ],
+     "updByClass": [
+      [
+       "MxRail",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 22.333333333333332,
+      "weather": 0,
+      "ents": 11.833333333333334,
+      "entsUpd": 10.833333333333334,
+      "entsDrawn": 10.833333333333334
+     },
+     "profCost": {
+      "mean": 19.75,
+      "p50": 19,
+      "p95": 25,
+      "p99": 25,
+      "max": 25,
+      "n": 12
+     }
+    },
+    "bossState": "fight",
+    "hp": 1.5
+   },
+   "3-5": {
+    "flush": 25.405027932960895,
+    "cost": {
+     "mean": 27.310055865921786,
+     "p50": 27,
+     "p95": 34,
+     "p99": 41,
+     "max": 57,
+     "n": 358
+    },
+    "upd": 0.3016759776536313,
+    "drw": 27.008379888268156,
+    "gap": {
+     "mean": 27.854748603351954,
+     "p50": 28,
+     "p95": 35,
+     "p99": 42,
+     "max": 59,
+     "n": 358
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 247,
+    "profile": {
+     "frames": 12,
+     "pxBy": [
+      [
+       "bg",
+       4937
+      ],
+      [
+       "ink<other",
+       2558
+      ],
+      [
+       "other",
+       2222
+      ],
+      [
+       "postfx",
+       1548
+      ],
+      [
+       "ink<brady",
+       964
+      ],
+      [
+       "ink<ent:anon",
+       506
+      ],
+      [
+       "drawTiles",
+       237
+      ],
+      [
+       "decor",
+       96
+      ],
+      [
+       "brady",
+       6
+      ],
+      [
+       "ent:cls",
+       5
+      ],
+      [
+       "drawHUD",
+       2
+      ]
+     ],
+     "counts": {
+      "drawImage": 200,
+      "drawPx": 8791844,
+      "fillRectPx": 4289468,
+      "fillText": 9,
+      "strokeText": 0,
+      "grad": 26,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 4,
+      "inkPx": 44115,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 36,
+      "save": 72
+     },
+     "time": {
+      "update": 0.083,
+      "bg": 0.083,
+      "trip": 0,
+      "decor": 0.083,
+      "drawTiles": 0.333,
+      "drawShadows": 0,
+      "ink": 0.75,
+      "brady": 0.417,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0.083,
+      "worldfx": 0,
+      "drawHUD": 0.25,
+      "drawToast": 0,
+      "controls": 0.167,
+      "drawTutorial": 0,
+      "draw": 2.083
+     },
+     "drawByClass": [
+      [
+       "anon",
+       0.083
+      ],
+      [
+       "cls",
+       0.083
+      ]
+     ],
+     "updByClass": [
+      [
+       "",
+       0.083
+      ],
+      [
+       "cls",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 32.083333333333336,
+      "weather": 0,
+      "ents": 10.416666666666666,
+      "entsUpd": 4,
+      "entsDrawn": 4
+     },
+     "profCost": {
+      "mean": 24.75,
+      "p50": 24,
+      "p95": 28,
+      "p99": 28,
+      "max": 28,
+      "n": 12
+     }
+    },
+    "bossState": "fight",
+    "hp": 1.5
+   },
+   "4-5": {
+    "flush": 63.479729729729726,
+    "cost": {
+     "mean": 66.33108108108108,
+     "p50": 64,
+     "p95": 82,
+     "p99": 116,
+     "max": 127,
+     "n": 148
+    },
+    "upd": 0.5,
+    "drw": 65.83108108108108,
+    "gap": {
+     "mean": 67.27027027027027,
+     "p50": 65,
+     "p95": 83,
+     "p99": 117,
+     "max": 128,
+     "n": 148
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 258,
+    "profile": {
+     "frames": 12,
+     "pxBy": [
+      [
+       "bg",
+       5667
+      ],
+      [
+       "ink<other",
+       4465
+      ],
+      [
+       "other",
+       2222
+      ],
+      [
+       "ink<ent:anon/mzShellBottle",
+       1769
+      ],
+      [
+       "ink<ent:anon/mzShellBucket",
+       1769
+      ],
+      [
+       "ink<ent:anon/mzShellPot",
+       1768
+      ],
+      [
+       "postfx",
+       1548
+      ],
+      [
+       "ink<brady",
+       964
+      ],
+      [
+       "ink<ent:Gold/gold",
+       477
+      ],
+      [
+       "drawTiles",
+       418
+      ],
+      [
+       "decor",
+       248
+      ],
+      [
+       "brady",
+       6
+      ],
+      [
+       "drawHUD",
+       1
+      ],
+      [
+       "ent:MzChiliBasket/mzChiliBasket",
+       1
+      ]
+     ],
+     "counts": {
+      "drawImage": 302,
+      "drawPx": 15510420,
+      "fillRectPx": 5814248,
+      "fillText": 10,
+      "strokeText": 0,
+      "grad": 31,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 7,
+      "inkPx": 101468,
+      "shadowBlur": 1,
+      "filter": 0,
+      "comp": 58,
+      "save": 80
+     },
+     "time": {
+      "update": 0.417,
+      "bg": 0.167,
+      "trip": 0.083,
+      "decor": 0.167,
+      "drawTiles": 0.583,
+      "drawShadows": 0,
+      "ink": 0.917,
+      "brady": 0.25,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0.167,
+      "worldfx": 0,
+      "drawHUD": 0.333,
+      "drawToast": 0,
+      "controls": 0.083,
+      "drawTutorial": 0,
+      "draw": 3
+     },
+     "drawByClass": [
+      [
+       "MzChiliBasket/mzChiliBasket",
+       0.25
+      ],
+      [
+       "anon/mzShellBottle",
+       0.25
+      ],
+      [
+       "Gold/gold",
+       0.167
+      ],
+      [
+       "anon/mzShellPot",
+       0.083
+      ],
+      [
+       "anon/mzShellBucket",
+       0.083
+      ]
+     ],
+     "updByClass": [
+      [
+       "MzChiliBasket",
+       0
+      ],
+      [
+       "",
+       0
+      ],
+      [
+       "Gold",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 7,
+      "weather": 0,
+      "ents": 8,
+      "entsUpd": 7,
+      "entsDrawn": 7
+     },
+     "profCost": {
+      "mean": 67,
+      "p50": 66,
+      "p95": 85,
+      "p99": 85,
+      "max": 85,
+      "n": 12
+     }
+    },
+    "bossState": "fight",
+    "hp": 2
+   },
+   "6-5": {
+    "flush": 77.48780487804878,
+    "cost": {
+     "mean": 80.9430894308943,
+     "p50": 79,
+     "p95": 114,
+     "p99": 126,
+     "max": 150,
+     "n": 123
+    },
+    "upd": 0.6097560975609756,
+    "drw": 80.33333333333333,
+    "gap": {
+     "mean": 81.76422764227642,
+     "p50": 80,
+     "p95": 117,
+     "p99": 128,
+     "max": 152,
+     "n": 123
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 236,
+    "profile": {
+     "frames": 12,
+     "pxBy": [
+      [
+       "ink<other",
+       6951
+      ],
+      [
+       "other",
+       2327
+      ],
+      [
+       "ink<ent:EsCrate/esCrate",
+       2194
+      ],
+      [
+       "bg",
+       1886
+      ],
+      [
+       "postfx",
+       1548
+      ],
+      [
+       "ink<ent:anon",
+       1287
+      ],
+      [
+       "ink<brady",
+       803
+      ],
+      [
+       "drawTiles",
+       460
+      ],
+      [
+       "decor",
+       144
+      ],
+      [
+       "particles",
+       10
+      ],
+      [
+       "brady",
+       5
+      ],
+      [
+       "drawHUD",
+       1
+      ]
+     ],
+     "counts": {
+      "drawImage": 364,
+      "drawPx": 13281205,
+      "fillRectPx": 4336652,
+      "fillText": 24.333,
+      "strokeText": 0,
+      "grad": 28.833,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 9.667,
+      "inkPx": 95299,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 75.333,
+      "save": 235.833
+     },
+     "time": {
+      "update": 1.333,
+      "bg": 0.083,
+      "trip": 0,
+      "decor": 0.083,
+      "drawTiles": 0.417,
+      "drawShadows": 0.083,
+      "ink": 1.917,
+      "brady": 0.583,
+      "particles": 0.667,
+      "weather": 0,
+      "postfx": 0,
+      "worldfx": 0,
+      "drawHUD": 0.833,
+      "drawToast": 0.167,
+      "controls": 0,
+      "drawTutorial": 0,
+      "draw": 4.667
+     },
+     "drawByClass": [
+      [
+       "EsCrate/esCrate",
+       0.917
+      ],
+      [
+       "anon",
+       0.583
+      ]
+     ],
+     "updByClass": [
+      [
+       "",
+       0.167
+      ],
+      [
+       "EsCrate",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 365.9166666666667,
+      "weather": 0,
+      "ents": 27.5,
+      "entsUpd": 8.5,
+      "entsDrawn": 8.5
+     },
+     "profCost": {
+      "mean": 93.75,
+      "p50": 101,
+      "p95": 115,
+      "p99": 115,
+      "max": 115,
+      "n": 12
+     }
+    },
+    "bossState": "fight",
+    "hp": 2
+   },
+   "7-5": {
+    "flush": 51.61878453038674,
+    "cost": {
+     "mean": 54.4585635359116,
+     "p50": 52,
+     "p95": 76,
+     "p99": 87,
+     "max": 122,
+     "n": 181
+    },
+    "upd": 0.4419889502762431,
+    "drw": 54.01657458563536,
+    "gap": {
+     "mean": 55.35911602209945,
+     "p50": 52,
+     "p95": 76,
+     "p99": 88,
+     "max": 123,
+     "n": 181
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 231,
+    "profile": {
+     "frames": 12,
+     "pxBy": [
+      [
+       "ink<ent:FrDecoy",
+       7149
+      ],
+      [
+       "ink<other",
+       4181
+      ],
+      [
+       "ink<ent:FrOven/frOven",
+       3071
+      ],
+      [
+       "ink<ent:FrMirror/frMirror",
+       2506
+      ],
+      [
+       "other",
+       2222
+      ],
+      [
+       "bg",
+       1882
+      ],
+      [
+       "postfx",
+       1548
+      ],
+      [
+       "ink<brady",
+       955
+      ],
+      [
+       "drawTiles",
+       437
+      ],
+      [
+       "brady",
+       6
+      ],
+      [
+       "decor",
+       3
+      ],
+      [
+       "drawHUD",
+       2
+      ]
+     ],
+     "counts": {
+      "drawImage": 302,
+      "drawPx": 18425412,
+      "fillRectPx": 5536716,
+      "fillText": 12,
+      "strokeText": 0,
+      "grad": 39,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 7,
+      "inkPx": 155423,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 58,
+      "save": 67.583
+     },
+     "time": {
+      "update": 0.5,
+      "bg": 0.167,
+      "trip": 0,
+      "decor": 0,
+      "drawTiles": 0.5,
+      "drawShadows": 0.167,
+      "ink": 2,
+      "brady": 0.5,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0,
+      "worldfx": 0,
+      "drawHUD": 0.333,
+      "drawToast": 0,
+      "controls": 0.167,
+      "drawTutorial": 0,
+      "draw": 3.583
+     },
+     "drawByClass": [
+      [
+       "FrMirror/frMirror",
+       0.667
+      ],
+      [
+       "FrDecoy",
+       0.333
+      ],
+      [
+       "FrOven/frOven",
+       0.25
+      ]
+     ],
+     "updByClass": [
+      [
+       "FrOven",
+       0
+      ],
+      [
+       "FrMirror",
+       0
+      ],
+      [
+       "FrDecoy",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 10.5,
+      "weather": 0,
+      "ents": 9.583333333333334,
+      "entsUpd": 8.583333333333334,
+      "entsDrawn": 8.583333333333334
+     },
+     "profCost": {
+      "mean": 69.16666666666667,
+      "p50": 69,
+      "p95": 82,
+      "p99": 82,
+      "max": 82,
+      "n": 12
+     }
+    },
+    "bossState": "fight",
+    "hp": 1.5
+   },
+   "8-5": {
+    "flush": 28.046728971962615,
+    "cost": {
+     "mean": 30.214953271028037,
+     "p50": 29,
+     "p95": 43,
+     "p99": 54,
+     "max": 66,
+     "n": 321
+    },
+    "upd": 0.38006230529595014,
+    "drw": 29.834890965732086,
+    "gap": {
+     "mean": 31.11214953271028,
+     "p50": 30,
+     "p95": 44,
+     "p99": 55,
+     "max": 66,
+     "n": 321
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 232,
+    "profile": {
+     "frames": 12,
+     "pxBy": [
+      [
+       "ink<other",
+       2872
+      ],
+      [
+       "other",
+       2222
+      ],
+      [
+       "bg",
+       1886
+      ],
+      [
+       "postfx",
+       1548
+      ],
+      [
+       "ink<ent:NlHatch/nlHatch",
+       1081
+      ],
+      [
+       "ink<brady",
+       943
+      ],
+      [
+       "drawTiles",
+       429
+      ],
+      [
+       "brady",
+       6
+      ],
+      [
+       "ent:MovingPlatform",
+       6
+      ],
+      [
+       "drawHUD",
+       2
+      ],
+      [
+       "decor",
+       1
+      ]
+     ],
+     "counts": {
+      "drawImage": 220,
+      "drawPx": 7533860,
+      "fillRectPx": 3463304,
+      "fillText": 9,
+      "strokeText": 0,
+      "grad": 22,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 3,
+      "inkPx": 52711,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 29,
+      "save": 57
+     },
+     "time": {
+      "update": 0,
+      "bg": 0.083,
+      "trip": 0,
+      "decor": 0,
+      "drawTiles": 0.333,
+      "drawShadows": 0.25,
+      "ink": 0.833,
+      "brady": 0.667,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0.083,
+      "worldfx": 0,
+      "drawHUD": 0.5,
+      "drawToast": 0,
+      "controls": 0.083,
+      "drawTutorial": 0,
+      "draw": 2.583
+     },
+     "drawByClass": [
+      [
+       "MovingPlatform",
+       0.083
+      ],
+      [
+       "NlHatch/nlHatch",
+       0.083
+      ]
+     ],
+     "updByClass": [
+      [
+       "NlHatch",
+       0
+      ],
+      [
+       "MovingPlatform",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 5.583333333333333,
+      "weather": 0,
+      "ents": 5,
+      "entsUpd": 4,
+      "entsDrawn": 3
+     },
+     "profCost": {
+      "mean": 27.5,
+      "p50": 27,
+      "p95": 36,
+      "p99": 36,
+      "max": 36,
+      "n": 12
+     }
+    },
+    "bossState": "fight",
+    "hp": 1.5
+   },
+   "9-5": {
+    "flush": 26.464071856287426,
+    "cost": {
+     "mean": 29.05688622754491,
+     "p50": 29,
+     "p95": 40,
+     "p99": 57,
+     "max": 69,
+     "n": 334
+    },
+    "upd": 0.4281437125748503,
+    "drw": 28.62874251497006,
+    "gap": {
+     "mean": 29.892215568862277,
+     "p50": 30,
+     "p95": 41,
+     "p99": 58,
+     "max": 70,
+     "n": 334
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 240,
+    "profile": {
+     "frames": 12,
+     "pxBy": [
+      [
+       "bg",
+       4319
+      ],
+      [
+       "ink<other",
+       2490
+      ],
+      [
+       "other",
+       2222
+      ],
+      [
+       "postfx",
+       1548
+      ],
+      [
+       "ink<brady",
+       964
+      ],
+      [
+       "drawTiles",
+       492
+      ],
+      [
+       "brady",
+       6
+      ],
+      [
+       "ent:IdGrove/idGrove",
+       3
+      ],
+      [
+       "drawHUD",
+       1
+      ],
+      [
+       "decor",
+       1
+      ]
+     ],
+     "counts": {
+      "drawImage": 215,
+      "drawPx": 7961369,
+      "fillRectPx": 4085095,
+      "fillText": 9,
+      "strokeText": 0,
+      "grad": 37,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 2,
+      "inkPx": 30468,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 25,
+      "save": 70
+     },
+     "time": {
+      "update": 0.083,
+      "bg": 0.083,
+      "trip": 0,
+      "decor": 0.333,
+      "drawTiles": 0.333,
+      "drawShadows": 0.083,
+      "ink": 0.5,
+      "brady": 0.25,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0.167,
+      "worldfx": 0,
+      "drawHUD": 0.25,
+      "drawToast": 0,
+      "controls": 0.083,
+      "drawTutorial": 0,
+      "draw": 2.5
+     },
+     "drawByClass": [
+      [
+       "IdGrove/idGrove",
+       0.417
+      ]
+     ],
+     "updByClass": [
+      [
+       "IdGrove",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 19.25,
+      "weather": 0,
+      "ents": 3,
+      "entsUpd": 2,
+      "entsDrawn": 2
+     },
+     "profCost": {
+      "mean": 20.666666666666668,
+      "p50": 21,
+      "p95": 23,
+      "p99": 23,
+      "max": 23,
+      "n": 12
+     }
+    },
+    "bossState": "fight",
+    "hp": 2.5
+   },
+   "11-5": {
+    "flush": 40.017391304347825,
+    "cost": {
+     "mean": 42.46086956521739,
+     "p50": 41,
+     "p95": 51,
+     "p99": 83,
+     "max": 91,
+     "n": 230
+    },
+    "upd": 0.30869565217391304,
+    "drw": 42.15217391304348,
+    "gap": {
+     "mean": 43.34782608695652,
+     "p50": 42,
+     "p95": 52,
+     "p99": 84,
+     "max": 92,
+     "n": 230
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 328,
+    "profile": {
+     "frames": 12,
+     "pxBy": [
+      [
+       "bg",
+       3369
+      ],
+      [
+       "ink<other",
+       2962
+      ],
+      [
+       "other",
+       2222
+      ],
+      [
+       "ink<ent:anon/jpStone",
+       1858
+      ],
+      [
+       "postfx",
+       1548
+      ],
+      [
+       "ink<brady",
+       964
+      ],
+      [
+       "drawTiles",
+       424
+      ],
+      [
+       "brady",
+       6
+      ],
+      [
+       "drawHUD",
+       1
+      ],
+      [
+       "decor",
+       1
+      ],
+      [
+       "ent:JpPond/jpPond",
+       0
+      ]
+     ],
+     "counts": {
+      "drawImage": 264,
+      "drawPx": 9308422,
+      "fillRectPx": 4048616,
+      "fillText": 10,
+      "strokeText": 0,
+      "grad": 25,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 5,
+      "inkPx": 63007,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 43,
+      "save": 63
+     },
+     "time": {
+      "update": 0.583,
+      "bg": 0.083,
+      "trip": 0,
+      "decor": 0.167,
+      "drawTiles": 0.417,
+      "drawShadows": 0,
+      "ink": 1.25,
+      "brady": 0.25,
+      "particles": 0.083,
+      "weather": 0,
+      "postfx": 0.083,
+      "worldfx": 0,
+      "drawHUD": 0.583,
+      "drawToast": 0,
+      "controls": 0,
+      "drawTutorial": 0.083,
+      "draw": 3
+     },
+     "drawByClass": [
+      [
+       "anon/jpStone",
+       0.667
+      ],
+      [
+       "JpPond/jpPond",
+       0.167
+      ]
+     ],
+     "updByClass": [
+      [
+       "",
+       0.167
+      ],
+      [
+       "JpPond",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 35.833333333333336,
+      "weather": 0,
+      "ents": 6,
+      "entsUpd": 5,
+      "entsDrawn": 5
+     },
+     "profCost": {
+      "mean": 39.916666666666664,
+      "p50": 40,
+      "p95": 44,
+      "p99": 44,
+      "max": 44,
+      "n": 12
+     }
+    },
+    "bossState": "fight",
+    "hp": 1.5
+   },
+   "12-5": {
+    "flush": 27.528125,
+    "cost": {
+     "mean": 30.515625,
+     "p50": 31,
+     "p95": 40,
+     "p99": 57,
+     "max": 67,
+     "n": 320
+    },
+    "upd": 0.434375,
+    "drw": 30.08125,
+    "gap": {
+     "mean": 31.2625,
+     "p50": 32,
+     "p95": 41,
+     "p99": 58,
+     "max": 68,
+     "n": 320
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 333,
+    "profile": {
+     "frames": 12,
+     "pxBy": [
+      [
+       "ink<other",
+       6886
+      ],
+      [
+       "bg",
+       4559
+      ],
+      [
+       "other",
+       2222
+      ],
+      [
+       "postfx",
+       1548
+      ],
+      [
+       "ink<brady",
+       953
+      ],
+      [
+       "ink<ent:anon",
+       573
+      ],
+      [
+       "drawTiles",
+       429
+      ],
+      [
+       "ent:NpRoof/npRoof",
+       16
+      ],
+      [
+       "brady",
+       6
+      ],
+      [
+       "decor",
+       3
+      ],
+      [
+       "drawHUD",
+       2
+      ],
+      [
+       "ent:NpChinka",
+       0
+      ]
+     ],
+     "counts": {
+      "drawImage": 227.917,
+      "drawPx": 12445675,
+      "fillRectPx": 4751103,
+      "fillText": 10.25,
+      "strokeText": 0,
+      "grad": 28,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 3,
+      "inkPx": 66042,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 29,
+      "save": 113
+     },
+     "time": {
+      "update": 0.417,
+      "bg": 0.167,
+      "trip": 0,
+      "decor": 0.083,
+      "drawTiles": 0.167,
+      "drawShadows": 0.083,
+      "ink": 1.5,
+      "brady": 0.75,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0.25,
+      "worldfx": 0.083,
+      "drawHUD": 0.25,
+      "drawToast": 0,
+      "controls": 0,
+      "drawTutorial": 0,
+      "draw": 3.417
+     },
+     "drawByClass": [
+      [
+       "NpRoof/npRoof",
+       0.583
+      ],
+      [
+       "anon",
+       0.083
+      ],
+      [
+       "NpChinka",
+       0.083
+      ]
+     ],
+     "updByClass": [
+      [
+       "NpRoof",
+       0
+      ],
+      [
+       "NpChinka",
+       0
+      ],
+      [
+       "",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 4.166666666666667,
+      "weather": 0,
+      "ents": 5,
+      "entsUpd": 4,
+      "entsDrawn": 4
+     },
+     "profCost": {
+      "mean": 34.916666666666664,
+      "p50": 36,
+      "p95": 38,
+      "p99": 38,
+      "max": 38,
+      "n": 12
+     }
+    },
+    "bossState": "fight",
+    "hp": 1.75
+   }
+  },
+  "maps": {}
+ },
+ "meta": {
+  "engine": "webkit",
+  "gpu": false,
+  "flush": true,
+  "throttle": 1,
+  "ms": 500,
+  "spots": 24,
+  "canvas": [
+   1688,
+   780
+  ],
+  "dpr": 2,
+  "label": "",
+  "date": "2026-11-11T15:27:24.425Z"
+ },
+ "levels": {},
+ "bosses": {
+  "1-5": {
+   "flush": 14.907637655417407,
+   "cost": {
+    "mean": 16.66785079928952,
+    "p50": 16,
+    "p95": 22,
+    "p99": 25,
+    "max": 29,
+    "n": 563
+   },
+   "upd": 0.2113676731793961,
+   "drw": 16.456483126110125,
+   "gap": {
+    "mean": 17.760213143872114,
+    "p50": 17,
+    "p95": 23,
+    "p99": 28,
+    "max": 29,
+    "n": 563
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 171,
+   "profile": {
+    "frames": 12,
+    "pxBy": [
+     [
+      "bg",
+      5444
+     ],
+     [
+      "ink<other",
+      3510
+     ],
+     [
+      "other",
+      2635
+     ],
+     [
+      "drawLighting",
+      1949
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "ink<brady",
+      1174
+     ],
+     [
+      "drawHUD",
+      576
+     ],
+     [
+      "drawTiles",
+      468
+     ],
+     [
+      "decor",
+      88
+     ],
+     [
+      "brady",
+      12
+     ],
+     [
+      "particles",
+      1
+     ],
+     [
+      "ent:MxRail/mxRail",
+      0
+     ]
+    ],
+    "counts": {
+     "drawImage": 183,
+     "drawPx": 12399217,
+     "fillRectPx": 4887428,
+     "fillText": 7.5,
+     "strokeText": 0,
+     "grad": 19.5,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 2,
+     "inkPx": 192785,
+     "shadowBlur": 0,
+     "filter": 0,
+     "comp": 23.5,
+     "save": 55.667
+    },
+    "time": {
+     "update": 0.25,
+     "bg": 0.25,
+     "trip": 0,
+     "decor": 0.167,
+     "drawTiles": 0.167,
+     "drawShadows": 0,
+     "ink": 0.917,
+     "brady": 0.5,
+     "particles": 0.083,
+     "weather": 0,
+     "drawLighting": 0,
+     "postfx": 0.167,
+     "worldfx": 0,
+     "drawHUD": 0.25,
+     "drawToast": 0,
+     "controls": 0.167,
+     "drawTutorial": 0,
+     "draw": 2.917
+    },
+    "drawByClass": [
+     [
+      "MxRail/mxRail",
+      0.333
+     ]
+    ],
+    "updByClass": [
+     [
+      "MxRail",
+      0
+     ]
+    ],
+    "scene": {
+     "parts": 22.333333333333332,
+     "weather": 0,
+     "ents": 13.666666666666666,
+     "entsUpd": 12.666666666666666,
+     "entsDrawn": 12.666666666666666
+    },
+    "profCost": {
+     "mean": 16.583333333333332,
+     "p50": 16,
+     "p95": 20,
+     "p99": 20,
+     "max": 20,
+     "n": 12
+    }
+   },
+   "bossState": "fight",
+   "hp": 1.5
+  },
+  "3-5": {
+   "flush": 15.752380952380953,
+   "cost": {
+    "mean": 17.561904761904763,
+    "p50": 18,
+    "p95": 25,
+    "p99": 27,
+    "max": 43,
+    "n": 525
+   },
+   "upd": 0.2895238095238095,
+   "drw": 17.272380952380953,
+   "gap": {
+    "mean": 19.066666666666666,
+    "p50": 18,
+    "p95": 25,
+    "p99": 28,
+    "max": 44,
+    "n": 525
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 195,
+   "profile": {
+    "frames": 12,
+    "pxBy": [
+     [
+      "bg",
+      8272
+     ],
+     [
+      "ink<other",
+      4441
+     ],
+     [
+      "other",
+      2633
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "ink<ent:anon",
+      706
+     ],
+     [
+      "drawTiles",
+      577
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "ink<brady",
+      447
+     ],
+     [
+      "decor",
+      87
+     ],
+     [
+      "ent:cls",
+      18
+     ],
+     [
+      "brady",
+      0
+     ]
+    ],
+    "counts": {
+     "drawImage": 210.333,
+     "drawPx": 13512383,
+     "fillRectPx": 5676183,
+     "fillText": 5.5,
+     "strokeText": 0,
+     "grad": 11.5,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 5,
+     "inkPx": 239567,
+     "shadowBlur": 0,
+     "filter": 0,
+     "comp": 25.5,
+     "save": 44.667
+    },
+    "time": {
+     "update": 0.083,
+     "bg": 0.25,
+     "trip": 0,
+     "decor": 0.25,
+     "drawTiles": 0.167,
+     "drawShadows": 0,
+     "ink": 0.75,
+     "brady": 0.583,
+     "particles": 0,
+     "weather": 0.083,
+     "postfx": 0,
+     "worldfx": 0,
+     "drawHUD": 0.167,
+     "drawToast": 0,
+     "controls": 0.083,
+     "drawTutorial": 0,
+     "draw": 2.167
+    },
+    "drawByClass": [
+     [
+      "anon",
+      0.25
+     ],
+     [
+      "cls",
+      0
+     ]
+    ],
+    "updByClass": [
+     [
+      "BrBallCannon",
+      0
+     ],
+     [
+      "Gold",
+      0
+     ],
+     [
+      "",
+      0
+     ],
+     [
+      "cls",
+      0
+     ]
+    ],
+    "scene": {
+     "parts": 7.25,
+     "weather": 0,
+     "ents": 11.083333333333334,
+     "entsUpd": 7.583333333333333,
+     "entsDrawn": 6.083333333333333
+    },
+    "profCost": {
+     "mean": 17.25,
+     "p50": 17,
+     "p95": 21,
+     "p99": 21,
+     "max": 21,
+     "n": 12
+    }
+   },
+   "bossState": "fight",
+   "hp": 1.5
+  },
+  "4-5": {
+   "flush": 21.813267813267814,
+   "cost": {
+    "mean": 23.840294840294842,
+    "p50": 23,
+    "p95": 31,
+    "p99": 41,
+    "max": 49,
+    "n": 407
+   },
+   "upd": 0.3366093366093366,
+   "drw": 23.503685503685503,
+   "gap": {
+    "mean": 24.5995085995086,
+    "p50": 24,
+    "p95": 33,
+    "p99": 42,
+    "max": 51,
+    "n": 407
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 206,
+   "profile": {
+    "frames": 12,
+    "pxBy": [
+     [
+      "bg",
+      8284
+     ],
+     [
+      "ink<other",
+      3410
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "other",
+      1317
+     ],
+     [
+      "ink<brady",
+      991
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "drawTiles",
+      526
+     ],
+     [
+      "decor",
+      490
+     ],
+     [
+      "ink<ent:anon/mzShellPot",
+      130
+     ],
+     [
+      "ink<ent:anon/mzShellBucket",
+      130
+     ],
+     [
+      "ink<ent:anon/mzShellBottle",
+      130
+     ],
+     [
+      "ent:Gold/gold",
+      22
+     ],
+     [
+      "brady",
+      11
+     ],
+     [
+      "ent:MzChiliBasket/mzChiliBasket",
+      2
+     ]
+    ],
+    "counts": {
+     "drawImage": 208,
+     "drawPx": 12367216,
+     "fillRectPx": 5079659,
+     "fillText": 6.5,
+     "strokeText": 0,
+     "grad": 12.5,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 6,
+     "inkPx": 251771,
+     "shadowBlur": 0,
+     "filter": 0,
+     "comp": 25.5,
+     "save": 42
+    },
+    "time": {
+     "update": 0.5,
+     "bg": 0.167,
+     "trip": 0,
+     "decor": 0,
+     "drawTiles": 0.083,
+     "drawShadows": 0.167,
+     "ink": 1.083,
+     "brady": 0.5,
+     "particles": 0,
+     "weather": 0,
+     "postfx": 0,
+     "worldfx": 0,
+     "drawHUD": 0.167,
+     "drawToast": 0,
+     "controls": 0.167,
+     "drawTutorial": 0.083,
+     "draw": 2.5
+    },
+    "drawByClass": [
+     [
+      "MzChiliBasket/mzChiliBasket",
+      0.083
+     ],
+     [
+      "Gold/gold",
+      0
+     ],
+     [
+      "anon/mzShellPot",
+      0
+     ],
+     [
+      "anon/mzShellBucket",
+      0
+     ],
+     [
+      "anon/mzShellBottle",
+      0
+     ]
+    ],
+    "updByClass": [
+     [
+      "MzChiliBasket",
+      0
+     ],
+     [
+      "",
+      0
+     ],
+     [
+      "Gold",
+      0
+     ]
+    ],
+    "scene": {
+     "parts": 6.833333333333333,
+     "weather": 0,
+     "ents": 8,
+     "entsUpd": 7,
+     "entsDrawn": 7
+    },
+    "profCost": {
+     "mean": 25,
+     "p50": 24,
+     "p95": 31,
+     "p99": 31,
+     "max": 31,
+     "n": 12
+    }
+   },
+   "bossState": "fight",
+   "hp": 1.5
+  },
+  "6-5": {
+   "flush": 24.816901408450704,
+   "cost": {
+    "mean": 27.326760563380283,
+    "p50": 26,
+    "p95": 41,
+    "p99": 50,
+    "max": 56,
+    "n": 355
+   },
+   "upd": 0.30704225352112674,
+   "drw": 27.019718309859154,
+   "gap": {
+    "mean": 28.12676056338028,
+    "p50": 27,
+    "p95": 43,
+    "p99": 52,
+    "max": 57,
+    "n": 355
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 185,
+   "profile": {
+    "frames": 12,
+    "pxBy": [
+     [
+      "ink<other",
+      3621
+     ],
+     [
+      "bg",
+      3342
+     ],
+     [
+      "ink<ent:EsCrate/esCrate",
+      1587
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "other",
+      1317
+     ],
+     [
+      "ink<brady",
+      991
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "drawTiles",
+      408
+     ],
+     [
+      "decor",
+      306
+     ],
+     [
+      "ink<ent:anon",
+      112
+     ],
+     [
+      "brady",
+      11
+     ]
+    ],
+    "counts": {
+     "drawImage": 203.333,
+     "drawPx": 11002375,
+     "fillRectPx": 2697625,
+     "fillText": 5.5,
+     "strokeText": 0,
+     "grad": 9.5,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 11,
+     "inkPx": 311016,
+     "shadowBlur": 0,
+     "filter": 0,
+     "comp": 25.5,
+     "save": 37
+    },
+    "time": {
+     "update": 0.25,
+     "bg": 0.167,
+     "trip": 0,
+     "decor": 0.333,
+     "drawTiles": 0.333,
+     "drawShadows": 0,
+     "ink": 1.333,
+     "brady": 0.5,
+     "particles": 0,
+     "weather": 0,
+     "postfx": 0.25,
+     "worldfx": 0,
+     "drawHUD": 0.083,
+     "drawToast": 0,
+     "controls": 0.167,
+     "drawTutorial": 0.25,
+     "draw": 3.25
+    },
+    "drawByClass": [
+     [
+      "EsCrate/esCrate",
+      0.583
+     ],
+     [
+      "anon",
+      0.25
+     ]
+    ],
+    "updByClass": [
+     [
+      "EsCrate",
+      0
+     ],
+     [
+      "",
+      0
+     ]
+    ],
+    "scene": {
+     "parts": 80.83333333333333,
+     "weather": 0,
+     "ents": 29,
+     "entsUpd": 10,
+     "entsDrawn": 10
+    },
+    "profCost": {
+     "mean": 26.916666666666668,
+     "p50": 27,
+     "p95": 35,
+     "p99": 35,
+     "max": 35,
+     "n": 12
+    }
+   },
+   "bossState": "fight",
+   "hp": 1.5
+  },
+  "7-5": {
+   "flush": 25.196581196581196,
+   "cost": {
+    "mean": 27.51851851851852,
+    "p50": 21,
+    "p95": 52,
+    "p99": 57,
+    "max": 93,
+    "n": 351
+   },
+   "upd": 0.32193732193732194,
+   "drw": 27.196581196581196,
+   "gap": {
+    "mean": 28.48148148148148,
+    "p50": 22,
+    "p95": 53,
+    "p99": 58,
+    "max": 93,
+    "n": 351
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 174,
+   "profile": {
+    "frames": 12,
+    "pxBy": [
+     [
+      "ink<ent:FrDecoy",
+      15283
+     ],
+     [
+      "ink<ent:FrMirror/frMirror",
+      4903
+     ],
+     [
+      "bg",
+      3347
+     ],
+     [
+      "ink<other",
+      3082
+     ],
+     [
+      "other",
+      2633
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "ink<brady",
+      1088
+     ],
+     [
+      "drawTiles",
+      797
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "ink<ent:FrOven/frOven",
+      213
+     ],
+     [
+      "brady",
+      11
+     ],
+     [
+      "decor",
+      5
+     ],
+     [
+      "particles",
+      1
+     ]
+    ],
+    "counts": {
+     "drawImage": 327.5,
+     "drawPx": 27347605,
+     "fillRectPx": 6021889,
+     "fillText": 9.5,
+     "strokeText": 0,
+     "grad": 22.5,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 7,
+     "inkPx": 369935,
+     "shadowBlur": 0,
+     "filter": 0,
+     "comp": 45.5,
+     "save": 49.5
+    },
+    "time": {
+     "update": 0.417,
+     "bg": 0.25,
+     "trip": 0,
+     "decor": 0.083,
+     "drawTiles": 0.333,
+     "drawShadows": 0,
+     "ink": 1.917,
+     "brady": 0.5,
+     "particles": 0,
+     "weather": 0,
+     "postfx": 0.25,
+     "worldfx": 0,
+     "drawHUD": 0.333,
+     "drawToast": 0.083,
+     "controls": 0.083,
+     "drawTutorial": 0,
+     "draw": 3.833
+    },
+    "drawByClass": [
+     [
+      "FrMirror/frMirror",
+      0.75
+     ],
+     [
+      "FrDecoy",
+      0.667
+     ],
+     [
+      "FrOven/frOven",
+      0.083
+     ]
+    ],
+    "updByClass": [
+     [
+      "FrOven",
+      0.083
+     ],
+     [
+      "FrMirror",
+      0
+     ],
+     [
+      "FrDecoy",
+      0
+     ]
+    ],
+    "scene": {
+     "parts": 37.333333333333336,
+     "weather": 0,
+     "ents": 9.5,
+     "entsUpd": 8.5,
+     "entsDrawn": 8.5
+    },
+    "profCost": {
+     "mean": 54.5,
+     "p50": 53,
+     "p95": 68,
+     "p99": 68,
+     "max": 68,
+     "n": 12
+    }
+   },
+   "bossState": "fight",
+   "hp": 1.5
+  },
+  "8-5": {
+   "flush": 24.910863509749305,
+   "cost": {
+    "mean": 26.997214484679667,
+    "p50": 28,
+    "p95": 37,
+    "p99": 48,
+    "max": 80,
+    "n": 359
+   },
+   "upd": 0.32590529247910865,
+   "drw": 26.671309192200557,
+   "gap": {
+    "mean": 27.871866295264624,
+    "p50": 28,
+    "p95": 37,
+    "p99": 50,
+    "max": 80,
+    "n": 359
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 245,
+   "profile": {
+    "frames": 12,
+    "pxBy": [
+     [
+      "ink<other",
+      6420
+     ],
+     [
+      "bg",
+      3352
+     ],
+     [
+      "ink<ent:NlGouda",
+      2286
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "other",
+      1317
+     ],
+     [
+      "ink<brady",
+      1088
+     ],
+     [
+      "drawTiles",
+      715
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "ink<ent:NlHatch/nlHatch",
+      33
+     ],
+     [
+      "ent:MovingPlatform",
+      13
+     ],
+     [
+      "brady",
+      11
+     ],
+     [
+      "decor",
+      2
+     ]
+    ],
+    "counts": {
+     "drawImage": 258.75,
+     "drawPx": 14231628,
+     "fillRectPx": 3011739,
+     "fillText": 8,
+     "strokeText": 0,
+     "grad": 16.5,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 5.667,
+     "inkPx": 343226,
+     "shadowBlur": 0,
+     "filter": 0,
+     "comp": 32.5,
+     "save": 46.333
+    },
+    "time": {
+     "update": 0.25,
+     "bg": 0.25,
+     "trip": 0,
+     "decor": 0,
+     "drawTiles": 0.167,
+     "drawShadows": 0.083,
+     "ink": 1.167,
+     "brady": 0.75,
+     "particles": 0.083,
+     "weather": 0,
+     "postfx": 0,
+     "worldfx": 0,
+     "drawHUD": 0.083,
+     "drawToast": 0,
+     "controls": 0.333,
+     "drawTutorial": 0,
+     "draw": 2.75
+    },
+    "drawByClass": [
+     [
+      "NlHatch/nlHatch",
+      0.333
+     ],
+     [
+      "NlGouda",
+      0.25
+     ],
+     [
+      "MovingPlatform",
+      0.083
+     ]
+    ],
+    "updByClass": [
+     [
+      "NlHatch",
+      0
+     ],
+     [
+      "NlGouda",
+      0
+     ],
+     [
+      "MovingPlatform",
+      0
+     ]
+    ],
+    "scene": {
+     "parts": 12,
+     "weather": 0,
+     "ents": 7,
+     "entsUpd": 6,
+     "entsDrawn": 5.666666666666667
+    },
+    "profCost": {
+     "mean": 29.083333333333332,
+     "p50": 29,
+     "p95": 33,
+     "p99": 33,
+     "max": 33,
+     "n": 12
+    }
+   },
+   "bossState": "fight",
+   "hp": 1.5
+  },
+  "9-5": {
+   "flush": 21.92462311557789,
+   "cost": {
+    "mean": 24.472361809045225,
+    "p50": 23,
+    "p95": 38,
+    "p99": 43,
+    "max": 48,
+    "n": 398
+   },
+   "upd": 0.3693467336683417,
+   "drw": 24.103015075376884,
+   "gap": {
+    "mean": 25.14824120603015,
+    "p50": 24,
+    "p95": 38,
+    "p99": 45,
+    "max": 49,
+    "n": 398
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 249,
+   "profile": {
+    "frames": 12,
+    "pxBy": [
+     [
+      "bg",
+      6446
+     ],
+     [
+      "ink<other",
+      4630
+     ],
+     [
+      "other",
+      2633
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "ink<ent:anon",
+      1394
+     ],
+     [
+      "ink<brady",
+      991
+     ],
+     [
+      "drawTiles",
+      876
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "ent:IdTroop",
+      13
+     ],
+     [
+      "brady",
+      11
+     ],
+     [
+      "ent:IdGrove/idGrove",
+      6
+     ],
+     [
+      "decor",
+      2
+     ]
+    ],
+    "counts": {
+     "drawImage": 268,
+     "drawPx": 13261117,
+     "fillRectPx": 5747926,
+     "fillText": 7.167,
+     "strokeText": 0,
+     "grad": 25.5,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 6,
+     "inkPx": 260943,
+     "shadowBlur": 0,
+     "filter": 0,
+     "comp": 33,
+     "save": 48
+    },
+    "time": {
+     "update": 0.5,
+     "bg": 0.25,
+     "trip": 0,
+     "decor": 0,
+     "drawTiles": 0.333,
+     "drawShadows": 0.083,
+     "ink": 1.25,
+     "brady": 0.417,
+     "particles": 0.083,
+     "weather": 0,
+     "postfx": 0.083,
+     "worldfx": 0,
+     "drawHUD": 0.167,
+     "drawToast": 0.083,
+     "controls": 0.083,
+     "drawTutorial": 0,
+     "draw": 3.167
+    },
+    "drawByClass": [
+     [
+      "anon",
+      0.333
+     ],
+     [
+      "IdGrove/idGrove",
+      0.25
+     ],
+     [
+      "IdTroop",
+      0.083
+     ]
+    ],
+    "updByClass": [
+     [
+      "IdTroop",
+      0.083
+     ],
+     [
+      "IdGrove",
+      0
+     ],
+     [
+      "",
+      0
+     ]
+    ],
+    "scene": {
+     "parts": 15,
+     "weather": 0,
+     "ents": 10,
+     "entsUpd": 8,
+     "entsDrawn": 8
+    },
+    "profCost": {
+     "mean": 29.25,
+     "p50": 31,
+     "p95": 38,
+     "p99": 38,
+     "max": 38,
+     "n": 12
+    }
+   },
+   "bossState": "fight",
+   "hp": 2.5
+  },
+  "11-5": {
+   "flush": 16.172815533980582,
+   "cost": {
+    "mean": 18.02135922330097,
+    "p50": 17,
+    "p95": 27,
+    "p99": 34,
+    "max": 44,
+    "n": 515
+   },
+   "upd": 0.2543689320388349,
+   "drw": 17.766990291262136,
+   "gap": {
+    "mean": 19.434951456310678,
+    "p50": 18,
+    "p95": 28,
+    "p99": 35,
+    "max": 45,
+    "n": 515
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 180,
+   "profile": {
+    "frames": 12,
+    "pxBy": [
+     [
+      "bg",
+      5096
+     ],
+     [
+      "ink<other",
+      4600
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "other",
+      1317
+     ],
+     [
+      "ink<brady",
+      1088
+     ],
+     [
+      "drawTiles",
+      756
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "ink<ent:anon/jpStone",
+      137
+     ],
+     [
+      "brady",
+      11
+     ],
+     [
+      "decor",
+      1
+     ],
+     [
+      "ent:JpPond/jpPond",
+      0
+     ]
+    ],
+    "counts": {
+     "drawImage": 212,
+     "drawPx": 11550568,
+     "fillRectPx": 3461393,
+     "fillText": 6.5,
+     "strokeText": 0,
+     "grad": 17.5,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 5,
+     "inkPx": 257576,
+     "shadowBlur": 0,
+     "filter": 0,
+     "comp": 20.5,
+     "save": 44
+    },
+    "time": {
+     "update": 0.167,
+     "bg": 0.167,
+     "trip": 0,
+     "decor": 0,
+     "drawTiles": 0.417,
+     "drawShadows": 0,
+     "ink": 0.917,
+     "brady": 0.583,
+     "particles": 0,
+     "weather": 0,
+     "postfx": 0,
+     "worldfx": 0,
+     "drawHUD": 0.25,
+     "drawToast": 0,
+     "controls": 0.083,
+     "drawTutorial": 0,
+     "draw": 2
+    },
+    "drawByClass": [
+     [
+      "anon/jpStone",
+      0.25
+     ],
+     [
+      "JpPond/jpPond",
+      0
+     ]
+    ],
+    "updByClass": [
+     [
+      "JpPond",
+      0
+     ],
+     [
+      "",
+      0
+     ]
+    ],
+    "scene": {
+     "parts": 11,
+     "weather": 0,
+     "ents": 6,
+     "entsUpd": 5,
+     "entsDrawn": 5
+    },
+    "profCost": {
+     "mean": 16.416666666666668,
+     "p50": 17,
+     "p95": 19,
+     "p99": 19,
+     "max": 19,
+     "n": 12
+    }
+   },
+   "bossState": "fight",
+   "hp": 1.5
+  },
+  "12-5": {
+   "flush": 24.15126050420168,
+   "cost": {
+    "mean": 27.23249299719888,
+    "p50": 26,
+    "p95": 36,
+    "p99": 41,
+    "max": 63,
+    "n": 357
+   },
+   "upd": 0.35294117647058826,
+   "drw": 26.87955182072829,
+   "gap": {
+    "mean": 27.980392156862745,
+    "p50": 27,
+    "p95": 36,
+    "p99": 46,
+    "max": 63,
+    "n": 357
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 184,
+   "profile": {
+    "frames": 12,
+    "pxBy": [
+     [
+      "ink<other",
+      12699
+     ],
+     [
+      "bg",
+      6294
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "other",
+      1317
+     ],
+     [
+      "ink<ent:anon",
+      1141
+     ],
+     [
+      "ink<brady",
+      1088
+     ],
+     [
+      "drawTiles",
+      756
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "ent:NpRoof/npRoof",
+      29
+     ],
+     [
+      "brady",
+      11
+     ],
+     [
+      "decor",
+      5
+     ],
+     [
+      "ent:NpChinka",
+      0
+     ]
+    ],
+    "counts": {
+     "drawImage": 240,
+     "drawPx": 20212536,
+     "fillRectPx": 5133024,
+     "fillText": 5.5,
+     "strokeText": 0,
+     "grad": 21.833,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 3,
+     "inkPx": 474190,
+     "shadowBlur": 0,
+     "filter": 0,
+     "comp": 26.833,
+     "save": 81.333
+    },
+    "time": {
+     "update": 0.583,
+     "bg": 0.167,
+     "trip": 0,
+     "decor": 0,
+     "drawTiles": 0.25,
+     "drawShadows": 0.083,
+     "ink": 1.333,
+     "brady": 0.5,
+     "particles": 0,
+     "weather": 0,
+     "postfx": 0,
+     "worldfx": 0,
+     "drawHUD": 0.417,
+     "drawToast": 0,
+     "controls": 0.083,
+     "drawTutorial": 0,
+     "draw": 3.583
+    },
+    "drawByClass": [
+     [
+      "NpRoof/npRoof",
+      0.667
+     ],
+     [
+      "anon",
+      0.333
+     ],
+     [
+      "NpChinka",
+      0.25
+     ]
+    ],
+    "updByClass": [
+     [
+      "NpRoof",
+      0
+     ],
+     [
+      "",
+      0
+     ],
+     [
+      "NpChinka",
+      0
+     ]
+    ],
+    "scene": {
+     "parts": 8.916666666666666,
+     "weather": 0,
+     "ents": 8,
+     "entsUpd": 5.25,
+     "entsDrawn": 4.333333333333333
+    },
+    "profCost": {
+     "mean": 26,
+     "p50": 26,
+     "p95": 32,
+     "p99": 32,
+     "max": 32,
+     "n": 12
+    }
+   },
+   "bossState": "fight",
+   "hp": 1.75
+  }
+ },
+ "maps": {},
+ "errors": []
+}

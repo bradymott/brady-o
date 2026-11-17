@@ -546,6 +546,8 @@ class MzShell extends TourProp {
     }
   }
   touchPlayer(p) { if (this.held) return; super.touchPlayer(p); }
+  // a cold shell's picture never changes (the ink is drawn once and reused)
+  inkKey() { const b = this.g.boss, heat = this.held && b ? (b.heat || 0) : this.hotT; return heat > 0 ? null : 'cold'; }
   paint(ctx, x, y, t) {
     const b = this.g.boss, heat = this.held && b ? (b.heat || 0) / 3 : (this.hotT > 0 ? Math.min(1, this.hotT / 2.5) : 0);
     shellArt[this.kind](ctx, x, y, t, heat);

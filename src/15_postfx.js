@@ -42,17 +42,30 @@ const PostFX = {
     }
     // --- bloom: blur a darkened, squared copy and add it back with 'screen'
     const bloom = (th.bloom || 0.15) * (Game.quality >= 1 ? 1 : 0.6);
-    if (bloom > 0.02) {
+    const QT = typeof QualityTier !== 'undefined' ? QualityTier : null;
+    if (bloom > 0.02 && (!QT || QT.bloom)) {
       const sw = Math.max(8, Math.round(W / 6)), sh = Math.max(8, Math.round(H / 6));
-      const a = this.ensure('bloomA', sw, sh), b = this.ensure('bloomB', Math.max(4, sw >> 1), Math.max(4, sh >> 1));
-      const ax = a.getContext('2d'), bx = b.getContext('2d');
-      ax.globalCompositeOperation = 'copy'; ax.drawImage(Game.canvas, gx, gy, W, H, 0, 0, sw, sh);
-      ax.globalCompositeOperation = 'multiply'; ax.drawImage(a, 0, 0); ax.drawImage(a, 0, 0); // roughly x^3: keeps only highlights
-      bx.globalCompositeOperation = 'copy'; bx.drawImage(a, 0, 0, b.width, b.height);
+      const fresh = !this.bloomA || this.bloomA.width !== sw || this.bloomA.height !== sh || this.bloomTheme !== play.themeKey || this.bloomK !== bloom;
+      const a = this.ensure('bloomA', sw, sh), b = this.ensure('bloomB', Math.max(4, sw >> 1), Math.max(4, sh >> 1)), c = this.ensure('bloomC', sw, sh);
+      const ax = a.getContext('2d'), bx = b.getContext('2d'), cx = c.getContext('2d');
+      // PERFORMANCE: reading the game canvas back (a copy of the whole frame on iOS) is the costly part; the glow is a
+      // 1/6-size blur, so it is sampled every second frame (every fourth from the MEDIUM tier) and reused between
+      this.bloomN = (this.bloomN || 0) + 1;
+      if (fresh || this.bloomN % (QT ? QT.bloomEvery : 1) === 0) {
+        this.bloomTheme = play.themeKey; this.bloomK = bloom;
+        ax.globalCompositeOperation = 'copy'; ax.drawImage(Game.canvas, gx, gy, W, H, 0, 0, sw, sh);
+        ax.globalCompositeOperation = 'multiply'; ax.drawImage(a, 0, 0); ax.drawImage(a, 0, 0); // roughly x^3: keeps only highlights
+        bx.globalCompositeOperation = 'copy'; bx.drawImage(a, 0, 0, b.width, b.height);
+        // the two glows (the 1/6 copy at alpha k, the softer 1/12 one at 1.6 k) are screened together into one small
+        // canvas first (screen with alpha k is screen with the colour scaled by k, so this is the same sum), and
+        // that goes over the view in ONE full-screen pass instead of two
+        cx.globalCompositeOperation = 'copy'; cx.globalAlpha = 1; cx.fillStyle = '#000'; cx.fillRect(0, 0, sw, sh);
+        cx.globalCompositeOperation = 'source-over'; cx.globalAlpha = Math.min(1, bloom); cx.drawImage(a, 0, 0);
+        cx.globalCompositeOperation = 'screen'; cx.globalAlpha = Math.min(1, bloom * 1.6); cx.drawImage(b, 0, 0, sw, sh);
+        cx.globalCompositeOperation = 'source-over'; cx.globalAlpha = 1;
+      }
       ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-      ctx.globalAlpha = Math.min(1, bloom * 1.6); ctx.drawImage(b, 0, 0, W, H);
-      ctx.globalAlpha = Math.min(1, bloom); ctx.drawImage(a, 0, 0, W, H);
+      ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = 1; ctx.drawImage(c, 0, 0, W, H);
       ctx.restore();
     }
     if (trip > 0.02) {

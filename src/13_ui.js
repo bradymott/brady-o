@@ -601,9 +601,15 @@ class SettingsScene {
     const W = Game.cssW, H = Game.cssH, st = Save.data.settings;
     const pw = Math.min(460, W - 40), px = (W - pw) / 2;
     const motionRow = typeof TourKit !== 'undefined';   // Super Brady-O World: a reduced-motion switch
-    const rowH = Math.min(50, (H - 140) / ((motionRow ? 8 : 7) + (typeof Play !== 'undefined' && Play.zoomNear ? 1 : 0)));
+    const tiers = typeof QualityTier !== 'undefined';   // GRAPHICS and FPS COUNTER rows (src/14_quality.js)
+    const nRows = (motionRow ? 8 : 7) + (typeof Play !== 'undefined' && Play.zoomNear ? 1 : 0) + (tiers ? 2 : 0);
     let y = Math.max(70, insets.t + 64);
-    const row = (label, value, fn) => { const b = { x: px, y, w: pw, h: rowH - 8, label: `${label}:  ${value}`, size: 13, fn }; y += rowH; return b; };
+    // many rows on a short landscape screen: two columns, so every button stays a comfortable size to tap
+    const cols = (H - y - 30) / nRows < 40 && W >= 600 ? 2 : 1, perCol = Math.ceil(nRows / cols);
+    const cw = cols === 2 ? Math.min(330, (W - 60) / 2) : pw, cx0 = cols === 2 ? (W - cw * 2 - 16) / 2 : px;
+    const rowH = Math.min(50, (H - y - 30) / perCol), y0 = y;
+    let k = 0;
+    const row = (label, value, fn) => { const c = Math.floor(k / perCol), b = { x: cx0 + c * (cw + 16), y: y0 + (k % perCol) * rowH, w: cw, h: rowH - 8, label: `${label}:  ${value}`, size: cols === 2 ? 12 : 13, fn }; k++; return b; };
     const pct = v => Math.round(v * 100) + '%';
     const cycle = (v, arr) => arr[(arr.indexOf(v) + 1) % arr.length];
     this.btns = [
@@ -613,8 +619,10 @@ class SettingsScene {
       row('BUTTON SIZE', { 0.85: 'SMALL', 1: 'MEDIUM', 1.2: 'LARGE' }[st.ctrlScale] || 'MEDIUM', () => { st.ctrlScale = cycle(st.ctrlScale, [0.85, 1, 1.2]); Game.resize(); this.build(); }),
       row('CONTROLS', st.lefty ? 'JUMP ON LEFT' : 'JUMP ON RIGHT', () => { st.lefty = !st.lefty; Game.resize(); this.build(); }),
       row('SCREEN SHAKE', st.shake ? 'ON' : 'OFF', () => { st.shake = !st.shake; this.build(); }),
-      row('QUALITY', st.hq ? 'ULTRA' : 'HIGH', () => { st.hq = !st.hq; Game.resize(); this.build(); }),
+      row(tiers ? 'RESOLUTION' : 'QUALITY', st.hq ? (tiers ? 'ULTRA (3X)' : 'ULTRA') : (tiers ? 'STANDARD (2X)' : 'HIGH'), () => { st.hq = !st.hq; Game.resize(); this.build(); }),
       ...(typeof Play !== 'undefined' && Play.zoomNear ? [row('ZOOM', Play.zoomNear() ? 'NEAR (BIGGER)' : 'FAR (SEE MORE)', () => { st.zoom = Play.zoomNear() ? 'far' : 'near'; this.build(); })] : []),
+      ...(tiers ? [row('GRAPHICS', QualityTier.label() + (QualityTier.auto ? ' (NOW ' + QualityTier.name() + ')' : ''), () => { QualityTier.cycle(); this.build(); }),
+        row('FPS COUNTER', st.fps ? 'ON' : 'OFF', () => { st.fps = !st.fps; PerfHud.sync(); this.build(); })] : []),
       ...(motionRow ? [row('MOTION EFFECTS', TourKit.reduceMotion() ? 'REDUCED' : 'FULL', () => { st.reduceMotion = !TourKit.reduceMotion(); this.build(); })] : []),
       row('RESET PROGRESS', this.confirmReset ? 'TAP AGAIN TO ERASE' : 'ERASE ALL', () => { if (this.confirmReset) { const look = Save.data.look; Save.reset(); Save.data.look = look; Save.save(); this.confirmReset = false; Sound.play('powerdown'); } else this.confirmReset = true; this.build(); })
     ];
@@ -654,7 +662,9 @@ function buildPauseUI(play) {
       { x: x + bw / 2 + 5, y, w: bw / 2 - 5, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 12, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } }
     ]),
     // camera zoom (Play.viewRows): Near shows everything 20 % larger, Far shows more of the level
-    ...(play.viewRows ? [{ x, y: y += 54, w: bw, h: bh, label: Play.zoomNear() ? 'ZOOM: NEAR' : 'ZOOM: FAR', size: 12, fn: () => { st.zoom = Play.zoomNear() ? 'far' : 'near'; Save.save(); Game.setRows(play.viewRows()); play.pauseUI = buildPauseUI(play); } }] : [])
+    // ... and the graphics tier (src/14_quality.js) beside it
+    ...(play.viewRows ? [{ x, y: y += 54, w: bw / 2 - 5, h: bh, label: Play.zoomNear() ? 'ZOOM: NEAR' : 'ZOOM: FAR', size: 11, fn: () => { st.zoom = Play.zoomNear() ? 'far' : 'near'; Save.save(); Game.setRows(play.viewRows()); play.pauseUI = buildPauseUI(play); } }] : []),
+    ...(typeof QualityTier !== 'undefined' ? [{ x: play.viewRows ? x + bw / 2 + 5 : x, y: play.viewRows ? y : y += 54, w: play.viewRows ? bw / 2 - 5 : bw, h: bh, label: 'GFX: ' + QualityTier.label(), size: 11, fn: () => { QualityTier.cycle(); play.pauseUI = buildPauseUI(play); } }] : [])
   ];
   list.focus = 0;
   return list;
