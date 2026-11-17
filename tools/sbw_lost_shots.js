@@ -169,7 +169,7 @@ const portrait = async (page, shot, run, level) => {
     await shot('65-portrait-24-3-beam.png');
   });
   await run('p-l4', async () => {
-    await page.evaluate(() => { thaw(); const g = play('24-4'); toArea('depot'); const b = g.entities.find(e => e.boss); const p = P(); p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; sim(3.2); freeze(); });
+    await page.evaluate(() => { thaw(); const g = play('24-4'); toArea('depot'); const b = g.entities.find(e => e.boss); const p = P(); p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; sim(3.2); p.x = b.x - 5 * 32; p.y = b.floorY - p.h; sim(0.5); freeze(); });
     await shot('66-portrait-24-4-sock-hydra.png');
   });
   await run('p-map', async () => {

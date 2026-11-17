@@ -136,7 +136,7 @@ const stamps = {
     items: ['oneup'], doors: [{ to: 'hall@lfBack', look: 'tourDoor' }], gold: { '*': 'hidden' }
   }
 };
-const L1 = { n: 1, name: 'Baggage Carousel', mapLabel: 'Carousels', arch: 'bonus', theme: 'lost_hall',
+const L1 = { n: 1, name: 'Baggage Carousel', mapLabel: 'Carousels', arch: 'factory', theme: 'lost_hall',
   gimmick: 'A baggage hall where the only way between rooms is a carousel flap: stand still in front of one and it swallows you. Find your red suitcase, then get through Customs',
   hint: 'Each flap\'s plate says where it goes. Your suitcase is on Belt 2\'s top rack',
   postcard: 'An island where every lost bag ends up. I found three of your socks already. ♥ C',
