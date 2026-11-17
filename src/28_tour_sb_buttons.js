@@ -49,6 +49,7 @@ const TourRules = {
       }
     }
     Save.save();
+    this.syncFx();
     return out;
   },
   // what a rule opened, in words: 'FESTIVAL FIELDS'
@@ -264,20 +265,25 @@ const TourRuleCut = {
 };
 // the pause menu row (once a button has been found) and the Settings switch (once an effect is on)
 TourHooks.on('pausePages', play => play.level && play.level.tour && TourRules.count() ? { label: 'HOUSE RULES (' + TourRules.count() + ')', fn: () => { play.closePause(); play.rulesPage = TourRuleCut.lines(); Sound.play('select'); } } : null);
-TourHooks.on('settings', () => TourRules.anyFx() ? { label: 'HATS & DANCING', value: Save.data.settings.ruleFx === false ? 'HIDE' : 'SHOW', fn: () => { Save.data.settings.ruleFx = Save.data.settings.ruleFx === false; Save.save(); } } : null);
+TourHooks.on('settings', () => TourRules.anyFx() ? { label: 'HATS & DANCING', value: Save.data.settings.ruleFx === false ? 'HIDE' : 'SHOW', fn: () => { Save.data.settings.ruleFx = Save.data.settings.ruleFx === false; Save.save(); TourRules.syncFx(); } } : null);
 
 /* ---------- the effects: everyone dances (rule 3), animals wear little hats (rule 7) ---------- */
 const TOUR_HATS = ['cone', 'crown', 'tophat', 'beanie', 'toque', 'bobble'];
-TourHooks.on('entityDraw', (play, ctx, e) => {
+// the dance handler is only in the entityDraw list while dancing is on (an entityDraw handler costs a save/restore
+// round every entity every frame), synced when an area loads, a rule is revoked or the Settings switch flips
+const tourDance = (play, ctx, e) => {
   if (!(e.enemy || e.friendly) || e.boss || e.dead || e.isButton || !play.level || !play.level.tour) return false;
-  const dance = TourRules.fxOn('dance');
-  if (!dance) return false;
   // a squash and a sway on a 120 bpm beat, each critter a little out of step (cosmetic: the hitbox is untouched)
   const ph = play.t * 12.566 + e.x * 0.05, k = 1 + 0.07 * Math.sin(ph), fx = e.x + e.w / 2, fy = e.y + e.h;
   ctx.translate(fx, fy); ctx.rotate(Math.sin(ph * 0.5) * 0.06); ctx.scale(1 / k, k); ctx.translate(-fx, -fy);
   e.draw(ctx, play.t);
   return true;
-});
+};
+TourRules.syncFx = function () {
+  const on = this.fxOn('dance'), has = TourHooks.entityDraw.indexOf(tourDance) >= 0;
+  if (on && !has) TourHooks.on('entityDraw', tourDance); else if (!on && has) TourHooks.off('entityDraw', tourDance);
+};
+TourHooks.on('areaLoaded', () => TourRules.syncFx());
 TourHooks.on('afterEntities', (play, ctx, layers) => {
   if (!TourRules.fxOn('hats') || !play.level || !play.level.tour) return;
   const E = play.entities;
