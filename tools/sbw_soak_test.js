@@ -446,7 +446,13 @@ async function soakLevel(page, id, log) {
       const id = queue.shift();
       if (used++ >= 6) { await page.context().close(); page = await mk(); used = 1; }
       const mine = () => failures.filter(f => f.id === id).length;
-      try { const rep = await soakLevel(page, id); console.log((mine() ? 'BAD  ' : 'ok   ') + id + '  ' + Math.round((rep.ms || 0) / 1000) + ' s  ' + JSON.stringify(rep.phases[0] || {})); }
+      // a watchdog: a level that has not finished after 4 minutes (normally about a minute) is a failure, not a hung
+      // run; it says whether the page itself still answers (a frozen game) or not (a stalled browser)
+      let dogT = null; const dog = new Promise((_, rej) => { dogT = setTimeout(async () => {
+        const alive = await Promise.race([page.evaluate(() => { const g = window.BRADY.Game.scene; return { scene: g && g.constructor.name, t: g && g.t, frames: window.__soak && window.__soak.frames }; }).then(v => ({ answered: v }), e => ({ error: String(e).slice(0, 120) })), sleep(5000).then(() => ({ answered: false }))]);
+        rej(new Error('watchdog: the level did not finish in 4 minutes; page ' + JSON.stringify(alive)));
+      }, 240000); });
+      try { const rep = await Promise.race([soakLevel(page, id), dog]).finally(() => clearTimeout(dogT)); console.log((mine() ? 'BAD  ' : 'ok   ') + id + '  ' + Math.round((rep.ms || 0) / 1000) + ' s  ' + JSON.stringify(rep.phases[0] || {})); }
       catch (e) { fail(id, 'harness error', String(e && e.stack || e).slice(0, 400)); try { await page.context().close(); } catch (e2) { /* gone */ } page = await mk(); used = 0; }
       const pe = page.__errs.splice(0).filter(m => !/favicon|ERR_FILE_NOT_FOUND|404/.test(m));
       if (pe.length) fail(id, 'page / console errors', pe.slice(0, 5));
