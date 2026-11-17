@@ -43,7 +43,7 @@ const SBWT = {
     inOut(u) { u = clamp(u, 0, 1); return u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; }
   },
   reduce() { return typeof TourKit !== 'undefined' && TourKit.reduceMotion ? TourKit.reduceMotion() : false; },
-  look() { return (Save.data && Save.data.look) || { hair: 0, skin: 1 }; },
+  look() { return BRADY_LOOK; },   // Brady's one look (src/05_brady.js); there is no LOOK picker any more
 
   /* ---------- Brady, drawn by the game's own function with the in-game ink ---------- */
   brady(k, anim, flip) {
@@ -358,11 +358,12 @@ class SBWTitleScene {
     // the call to action and the small buttons
     const ctaH = Math.max(52, Math.min(66, (portrait ? H : H) * 0.15)), ctaW = Math.min(colW * 0.86, portrait ? 300 : 300, Math.max(220, colW * 0.7));
     const smH = 44, gap = 10;
-    const labels = [['LOOK', 'shirt'], ['SETTINGS', 'gear'], ['CREDITS', 'star']];
+    const labels = [['SETTINGS', 'gear'], ['CREDITS', 'star']];   // (the LOOK button is gone: Brady has one look)
     const smSize = 12.5, smW = labels.map(([l]) => SBWT.width(l, smSize) + smSize * 1.25 + 34);
     const rowW = smW.reduce((a, b) => a + b, 0) + gap * 2;
-    let rowX = portrait ? (W - rowW) / 2 : colX1 - rowW, rowY = H - bot - smH - 4;
-    if (!portrait && rowX < colX0 - 30) { rowX = W - sideR - rowW; }
+    // the row sits centred under the call to action (the middle of the screen in portrait, of the logo column in landscape)
+    let rowX = portrait ? (W - rowW) / 2 : L.cx - rowW / 2, rowY = H - bot - smH - 4;
+    if (!portrait) rowX = Math.max(colX0 - 30, Math.min(rowX, W - sideR - rowW));
     this.small = labels.map(([l, ic], i) => { const x = rowX + smW.slice(0, i).reduce((a, b) => a + b, 0) + gap * i; return { x, y: rowY, w: smW[i], h: smH, label: l, icon: ic }; });
     const logoH = L.f * 2.3;
     const ctaY = portrait ? Math.max(L.gTop + (rowY - L.gTop) * 0.34 - ctaH / 2, L.gTop + 30) : Math.min(L.logoTop + logoH + 10, rowY - ctaH - 44);
@@ -499,14 +500,15 @@ class SBWTitleScene {
       if (!this.calm && tp.x >= bb.x && tp.x <= bb.x + bb.w && tp.y >= bb.y && tp.y <= bb.y + bb.h) { this.tapBrady(); continue; }
       this.play(); return;
     }
-    if (k === 'left' || k === 'up') { this.focus = (this.focus + 3) % 4; Sound.play('select', { vol: 0.4 }); }
-    if (k === 'right' || k === 'down') { this.focus = (this.focus + 1) % 4; Sound.play('select', { vol: 0.4 }); }
+    const nf = 1 + this.small.length;   // the call to action, then the small buttons
+    if (k === 'left' || k === 'up') { this.focus = (this.focus + nf - 1) % nf; Sound.play('select', { vol: 0.4 }); }
+    if (k === 'right' || k === 'down') { this.focus = (this.focus + 1) % nf; Sound.play('select', { vol: 0.4 }); }
     if (k === 'enter' || k === 'jump' || (Input.jumpPressed && !Input.usingTouch)) { if (this.focus === 0) this.play(); else this.openSmall(this.focus - 1); return; }
     const sw = Input.swipes.join('');
     if (sw.endsWith('UUDDLRLR')) {
       Input.swipes.length = 0;
-      Save.data.lives = Math.min(99, Save.data.lives + 30); Save.data.eggs.code = true; Save.data.look.hair = HAIR_COLORS.length - 1; Save.save();
-      Sound.play('oneup'); this.toastShown = '+30 LIVES + NEON VIOLET HAIR. ROCK ON.'; this.toastT = 2.6; this.buildCaches();
+      Save.data.lives = Math.min(99, Save.data.lives + 30); Save.data.eggs.code = true; Save.save();
+      Sound.play('oneup'); this.toastShown = '+30 LIVES. ROCK ON.'; this.toastT = 2.6;
     }
   }
   tapBrady() {
@@ -516,8 +518,7 @@ class SBWTitleScene {
   }
   openSmall(j) {
     Sound.play('select');
-    if (j === 0) Game.setScene(new LookScene());
-    else if (j === 1) Game.setScene(new SettingsScene(this));
+    if (j === 0) Game.setScene(new SettingsScene(this));
     else {
       // the credits from the title: no spoilers, and watching them doesn't count as beating the game
       const was = !!Save.data.beatGame, c = new CreditsScene('world');
@@ -884,7 +885,7 @@ if (typeof BRADY_APP !== 'undefined' && BRADY_APP === 'world') TitleScene = clas
 
 /* ============================================================ the home-screen icon ============================================================
    window.__sbwIcon(ctx, N, maskable, variant): drawn at N x N px; tools/make_icon.js renders it for the world app.
-   'head' (the one shipped): Brady's grinning face front on, man bun, square shades and stubble, with a toon globe
+   'head' (the one shipped): Brady's grinning face front on, man bun, square shades, clean-shaven, with a toon globe
    as his halo on a fiesta sunburst and the little plane zipping past. Two other candidates stay for comparison:
    'face' (the in-game Brady sprite, close up) and 'globehead' (the globe itself wearing his shades and bun).
    maskable: the same art pulled into the middle 80 % (Android's safe zone). */
@@ -914,7 +915,7 @@ window.__sbwIcon = (x, N, maskable, variant) => {
     x.restore();
   };
   if (variant === 'head') {
-    // Brady's face, front on and big: man bun, clean sides, square shades, stubble, a big grin; a toon globe as his halo
+    // Brady's face, front on and big: man bun, clean sides, square shades, no stubble, a big grin; a toon globe as his halo
     const m = maskable ? 0.8 : 1, hx = 256, hy = 256 + 30 * m;
     const T = (px, py) => [hx + px * m, hy + py * m];
     burst('#ff9a2e', '#ffc84a', 18, hx, hy);
@@ -942,11 +943,6 @@ window.__sbwIcon = (x, N, maskable, variant) => {
     x.fillStyle = skin; for (const sx of [-1, 1]) { x.beginPath(); x.ellipse(hx + sx * 118 * m, hy + 6 * m, 22 * m, 30 * m, 0, 0, TAU); x.fill(); x.stroke(); }
     // face
     x.fillStyle = skin; x.beginPath(); x.ellipse(hx, hy, 116 * m, 128 * m, 0, 0, TAU); x.fill(); x.stroke();
-    // stubble: a darker jaw with flecks
-    x.save(); x.beginPath(); x.ellipse(hx, hy, 110 * m, 122 * m, 0, 0, TAU); x.clip();
-    x.fillStyle = 'rgba(90,60,50,0.28)'; x.beginPath(); x.moveTo(...T(-120, 20)); x.quadraticCurveTo(...T(-60, 60), ...T(0, 52)); x.quadraticCurveTo(...T(60, 60), ...T(120, 20)); x.lineTo(...T(120, 140)); x.lineTo(...T(-120, 140)); x.closePath(); x.fill();
-    x.fillStyle = 'rgba(70,46,40,0.32)'; for (let i = 0; i < 90; i++) { const u = (i * 0.618) % 1, v = (i * 0.377) % 1, px = (u - 0.5) * 210, py = 40 + v * 90 - Math.abs(px) * 0.12; x.fillRect(...T(px, py), 2.6 * m, 2.6 * m); }
-    x.restore();
     // hair: pulled back tight over the top, a clean hairline
     x.fillStyle = hair; x.beginPath(); x.moveTo(...T(-116, -6)); x.bezierCurveTo(...T(-122, -110), ...T(-60, -136), ...T(0, -136)); x.bezierCurveTo(...T(60, -136), ...T(122, -110), ...T(116, -6)); x.quadraticCurveTo(...T(106, -60), ...T(72, -82)); x.quadraticCurveTo(...T(0, -104), ...T(-72, -82)); x.quadraticCurveTo(...T(-106, -60), ...T(-116, -6)); x.closePath(); x.fill(); x.stroke();
     x.strokeStyle = hairSh; x.lineWidth = 6 * m; for (const dx of [-64, -22, 22, 64]) { x.beginPath(); x.moveTo(...T(dx * 1.12, -106 + Math.abs(dx) * 0.3)); x.quadraticCurveTo(...T(dx * 0.75, -124), ...T(dx * 0.25, -134)); x.stroke(); }
@@ -990,8 +986,7 @@ window.__sbwIcon = (x, N, maskable, variant) => {
     // the shades
     x.fillStyle = INK; rr(x, cx - 134, gy - 60, 124, 78, 14); x.fill(); rr(x, cx + 10, gy - 60, 124, 78, 14); x.fill(); x.fillRect(cx - 24, gy - 50, 48, 16);
     x.fillStyle = 'rgba(255,255,255,0.4)'; x.beginPath(); x.moveTo(cx - 116, gy - 44); x.lineTo(cx - 92, gy - 44); x.lineTo(cx - 108, gy - 12); x.lineTo(cx - 124, gy - 12); x.fill(); x.beginPath(); x.moveTo(cx + 28, gy - 44); x.lineTo(cx + 52, gy - 44); x.lineTo(cx + 36, gy - 12); x.lineTo(cx + 20, gy - 12); x.fill();
-    // stubble and a big grin
-    x.fillStyle = 'rgba(28,20,38,0.55)'; for (let i = 0; i < 26; i++) { const a = 0.35 + (i / 26) * (Math.PI - 0.7), rr2 = R * (0.62 + (i % 3) * 0.07); x.beginPath(); x.arc(cx + Math.cos(a) * rr2, gy + 30 + Math.sin(a) * rr2 * 0.55, 4, 0, TAU); x.fill(); }
+    // a big grin (no stubble)
     x.fillStyle = '#fff'; x.strokeStyle = INK; x.lineWidth = 10; x.beginPath(); x.moveTo(cx - 70, gy + 40); x.quadraticCurveTo(cx, gy + 118, cx + 70, gy + 40); x.closePath(); x.fill(); x.stroke();
     x.lineWidth = 12; x.beginPath(); x.arc(cx, gy, R, 0, TAU); x.stroke();
     plane(maskable ? 392 : 418, maskable ? 132 : 96, maskable ? 0.95 : 1.2, 0.2);
