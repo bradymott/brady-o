@@ -602,7 +602,8 @@ const stamps = {
     doors: [{ to: 'patio@pantryBack' }],
     gold: { '*': 'hidden' }
   },
-  // 1-6's swallow nest in the pit wall: mud nests, an LSD tab, P2
+  // 1-6's swallow nest in the pit wall: mud nests, an LSD tab, P2 (the LSD box sits a row lower than the panel: one row
+  // higher and the tab hovered at the very top of Brady's jump, out of reach while it was over the box)
   nido: {
     floor: 9,
     rows: [
@@ -610,8 +611,8 @@ const stamps = {
       '#..........................#',
       '#..n.....n.....n...........#',
       '#..........*...............#',
-      '#........-----.....?.......#',
-      '#..........................#',
+      '#........-----.............#',
+      '#..................?.......#',
       '#..o.o.o.o.o...............#',
       '#..........................#',
       '#.@D.......................#',
