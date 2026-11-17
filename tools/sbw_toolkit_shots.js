@@ -5,6 +5,7 @@
 // Exits 1 if any check fails (part of the regular suite: docs/handoff/SUPER_BRADY_O_WORLD.md).
 // Full resolution is pinned before every capture (the adaptive quality would otherwise drop it on a busy machine).
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const out = path.resolve(process.argv[2] || path.join(__dirname, '..', 'shots', 'lab'));
 const flags = process.argv.slice(3).filter(a => a.startsWith('--')), want = process.argv.slice(3).filter(a => !a.startsWith('--'));
@@ -18,7 +19,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await silence(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));

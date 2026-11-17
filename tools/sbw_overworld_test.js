@@ -4,6 +4,7 @@
 // reached by walking, and no two lands with the same layout shape.
 // usage: BRADY_DIST=<dist> node tools/sbw_overworld_test.js [shotsDir]
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const appPage = 'file://' + path.join(dist, 'site', 'super-brady-o-world', 'index.html');
@@ -14,7 +15,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await silence(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));

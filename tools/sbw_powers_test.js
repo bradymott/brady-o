@@ -4,6 +4,7 @@
 // gear (on-use effects such as the kazoo's HONK! go away again).
 // usage: BRADY_DIST=<dist> node tools/sbw_powers_test.js [section ...]
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const appPage = path.join(dist, 'site', 'super-brady-o-world', 'index.html');
@@ -14,7 +15,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true }); await silence(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -288,6 +289,18 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     check('kazoo: a honk shows the HONK! and the sound arcs', r.honked.honk > 0 && r.honked.arcs > r.idle.arcs, { idle: r.idle, honked: r.honked });
     check('kazoo: three seconds later the HONK! and the arcs are gone (back to the idle drawing)', r.after.honk === 0 && r.after.arcs === r.idle.arcs && r.timer === 0, { after: r.after, timer: r.timer });
     check('kazoo: a second honk shows them again and they go again', r.again.honk > 0 && r.againAfter.honk === 0 && r.againAfter.arcs === r.idle.arcs, { again: r.again, againAfter: r.againAfter });
+  });
+
+  /* ---------- the test makes no sound (tools/sbw_silent.js): the game's audio runs, its output gain is exactly 0 ---------- */
+  await section('silent', async () => {
+    if (process.env.BRADY_SOUND === '1') return;
+    const r = await page.evaluate(async () => {
+      const S = window.BRADY.Sound; S.unlock(); S.music('title'); S.play('jump'); await new Promise(f => setTimeout(f, 400));
+      return { report: window.__sbwSilent && window.__sbwSilent.report(), track: S.currentTrack, enabled: S.enabled };
+    });
+    const rep = r.report || {};
+    check('silent: the game\'s sound runs (a context, a track) but every output gain is 0 and nothing bypasses it',
+      rep.contexts >= 1 && rep.gains.length === rep.contexts && rep.gains.every(g => g === 0) && rep.direct === 0 && !!r.track, r);
   });
 
   check('no page errors', errors.length === 0, errors.slice(0, 5));

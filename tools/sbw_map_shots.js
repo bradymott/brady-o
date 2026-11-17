@@ -4,6 +4,7 @@
 // paint time and the size of the painted map canvas at the game's own zoom.
 // usage: BRADY_DIST=<dist> node tools/sbw_map_shots.js <outdir> [--lands mx,ec] [--json file] [--pano] (panoramas only)
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const appPage = 'file://' + path.join(dist, 'site', 'super-brady-o-world', 'index.html');
@@ -14,7 +15,7 @@ const want = (opt('--lands', '') || '').split(',').filter(Boolean);
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await silence(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));

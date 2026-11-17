@@ -13,6 +13,7 @@
 //   short mode (default): the rebuilt (v2) levels, about 20-30 s each; --long: every level, longer autopilot,
 //   full cart rides. BRADY_DIST=<folder> to test a private build. WebKit is used when installed (iPhone Safari).
 const pw = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs'), http = require('http');
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -399,7 +400,7 @@ async function soakLevel(page, id, log) {
   const url = 'http://127.0.0.1:' + srv.address().port + '/super-brady-o-world/index.html';
   const browser = await pw[engine].launch();
   const mk = async () => {
-    const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: engine !== 'firefox', hasTouch: true, serviceWorkers: 'block' });
+    const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: engine !== 'firefox', hasTouch: true, serviceWorkers: 'block' }); await silence(ctx);
     const page = await ctx.newPage();
     page.__errs = [];
     page.on('pageerror', e => page.__errs.push('pageerror: ' + e.message));
