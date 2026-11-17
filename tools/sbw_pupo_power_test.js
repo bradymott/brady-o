@@ -5,7 +5,7 @@
 // and for 1.5 s after), tiers (every tier and FX CALM draws every beat without an error).
 // Browser section 'alloc' (Chromium with --expose-gc, a private build: BRADY_DIST=<dist>): the show's own update and draw
 // allocate nothing (heap delta over 300 frames with the young generation large enough not to be collected), and 300 frames
-// of the whole game during the show leave under 50 KB of heap growth after the first run.
+// of the whole game, 30 shows in a row: the heap after collection plateaus (no lasting growth, within 50 KB).
 // usage: node tools/sbw_pupo_power_test.js [section ...]      (alloc runs only when named or with --browser)
 const path = require('path'), fs = require('fs');
 const { boot, checker } = require('./sbw_pupo_lib');
@@ -175,18 +175,21 @@ async function alloc() {
       const run = () => { let n = 0; for (let k = 0; k < 300; k++) { if (!(R.showT > 0)) { for (const e of g.entities) if (e.enemy && e.knocked) { e.dead = false; e.knocked = false; e.remove = false; } R.meter = 1; PU.PupoPower.start(g); n++; } g.update(1 / 120); g.draw(ctxW); } if (R.showT > 0) { R.showT = 0; PU.PupoPower.end(g); } return n; };
       // the same 300 frames of plain riding (the control: what the game itself keeps, Pupo's show or not)
       const plain = () => { for (let k = 0; k < 300; k++) { g.update(1 / 120); g.draw(ctxW); } };
-      // the engine's own bounded caches (held ink pictures, box owners, particle pools) fill up over the first runs
-      for (let w = 0; w < 5; w++) { run(); settle(); } window.gc(); window.gc(); const h0 = mem();
-      const shows = run(); settle(); window.gc(); window.gc(); const h1 = mem();
-      plain(); settle(); window.gc(); window.gc(); const c0 = mem(); plain(); settle(); window.gc(); window.gc(); const c1 = mem();
+      // the heap after a collection is a sawtooth (V8's code and feedback grow, then are compacted away): one show measured
+      // after a few was 131-187 KB up, but over 30 shows it comes back down. So: 30 shows, the heap after each (collected),
+      // and the plateau test: the lowest of the last 10 is within 50 KB of the lowest of the first 5. Plain riding is the control.
+      const series = n => { const out = []; for (let k = 0; k < n; k++) { run(); settle(); window.gc(); window.gc(); out.push(Math.round(mem() / 1024)); } return out; };
+      const plainSeries = n => { const out = []; for (let k = 0; k < n; k++) { plain(); settle(); window.gc(); window.gc(); out.push(Math.round(mem() / 1024)); } return out; };
+      const kb = series(30), shows = 30, ckb = plainSeries(30);
+      const lo = (a, i, j) => Math.min(...a.slice(i, j)), h0 = lo(kb, 0, 5) * 1024, h1 = lo(kb, 20, 30) * 1024, c0 = lo(ckb, 0, 5) * 1024, c1 = lo(ckb, 20, 30) * 1024;
       // 3. for comparison: young-generation bytes per frame of the whole game, riding and during the show
       window.gc(); const r0 = mem(); for (let k = 0; k < 300; k++) { g.update(1 / 120); g.draw(ctxW); } const ride = mem() - r0;
       R.meter = 1; PU.PupoPower.start(g); window.gc(); const s0 = mem(); for (let k = 0; k < 300; k++) { if (!(R.showT > 0)) { R.meter = 1; PU.PupoPower.start(g); } g.update(1 / 120); g.draw(ctxW); } const show = mem() - s0;
       window.requestAnimationFrame = raf;
-      return { frames, fxBytes, fxLeft, fxPerFrame: Math.round(fxBytes / 300), growth: h1 - h0, control: c1 - c0, shows, ridePerFrame: Math.round(ride / 300), showPerFrame: Math.round(show / 300) };
+      return { frames, fxBytes, fxLeft, fxPerFrame: Math.round(fxBytes / 300), growth: h1 - h0, control: c1 - c0, shows, kb: kb.join(' '), ckb: ckb.join(' '), ridePerFrame: Math.round(ride / 300), showPerFrame: Math.round(show / 300) };
     });
     C.check(`the show's own update and draw leave nothing behind: ${r.fxLeft} bytes after 300 frames and a collection (${r.fxPerFrame} short-lived bytes a frame: boxed numbers)`, r.fxLeft < 4096, r);
-    C.check(`300 frames of the whole game during the show leave ${(r.growth / 1024).toFixed(1)} KB of heap after collection, ${((r.growth - r.control) / 1024).toFixed(1)} KB more than 300 frames of plain riding (${(r.control / 1024).toFixed(1)} KB) (< 50 KB, after the first run)`, r.growth - r.control < 50 * 1024, r);
+    C.check(`30 shows in a row: the heap after collection plateaus (lowest of the last 10 is ${(r.growth / 1024).toFixed(0)} KB from the lowest of the first 5; plain riding ${(r.control / 1024).toFixed(0)} KB) (< 50 KB)`, r.growth < 50 * 1024, { kb: r.kb, plain: r.ckb });
     console.log(`  for comparison, young-generation bytes per frame (whole game): riding ${r.ridePerFrame}, during the show ${r.showPerFrame}`);
     C.check('no page errors', errors.length === 0, errors.slice(0, 3));
   } finally { await b.close(); }
