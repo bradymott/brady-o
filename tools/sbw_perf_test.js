@@ -186,7 +186,7 @@ function pageSetup() {
     if (typeof Decor !== 'undefined') timed(Decor, 'draw', 'decor');
     if (typeof PostFX !== 'undefined') timed(PostFX, 'apply', 'postfx');
     if (typeof WorldFx !== 'undefined') timed(WorldFx, 'apply', 'worldfx');
-    if (typeof TripFX !== 'undefined') { timed(TripFX, 'back', 'trip'); timed(TripFX, 'post', 'trip'); }
+    if (typeof TripFX !== 'undefined') { timed(TripFX, 'back', 'trip'); if (TripFX.mid) timed(TripFX, 'mid', 'trip'); timed(TripFX, 'post', 'trip'); }
     timed(B.Input, 'drawControls', 'controls');
     if (typeof Particles !== 'undefined') timed(Particles.prototype, 'draw', 'particles');
     if (typeof Weather !== 'undefined') timed(Weather.prototype, 'draw', 'weather');

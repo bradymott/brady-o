@@ -816,6 +816,7 @@ class Play {
     for (const d of A.decor) { const hw = (d.w || 0) / 2 + 80; if (d.x > camX - hw && d.x < camX + VW + hw) Decor.draw(ctx, d, this.t, th); }
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     this.drawTiles(ctx, camX, camY, false);
+    if (this.level.tour) TripFX.mid(ctx, this, Math.round(VW * S), Math.round(VH * S));   // trip colours on the level, before the characters
     wt();
     if (A.risingLava) this.drawRisingLava(ctx, camX, VW);
     // entities: platforms/props first, then items, enemies, player, projectiles
