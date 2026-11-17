@@ -269,7 +269,7 @@ async function main() {
   const step = async (rep, name, fn, clean) => {
     const t0 = Date.now(); let info = null;
     try { info = await page.evaluate(fn, o); } catch (e) { info = { error: String(e.message || e).slice(0, 300) }; }
-    const counts = await page.evaluate(() => window.__ses.counts());
+    let counts; try { counts = await page.evaluate(() => window.__ses.counts()); } catch (e) { counts = { page: {}, game: {} }; fail(`repeat ${rep + 1} ${name}: the counts could not be read: ` + String(e.message || e).slice(0, 200)); }
     const r = { info, counts, secs: (Date.now() - t0) / 1000 };
     (steps[name] = steps[name] || [])[rep] = r;
     if (info && info.error) fail(`repeat ${rep + 1} ${name}: ${info.error}`, info);
@@ -311,10 +311,12 @@ async function main() {
       // a load spike on this shared Mac lifts one repeat; growth lifts every repeat after the first: the cost fails when
       // the last repeat is over the tolerance of the best earlier one AND the repeats before it were already rising
       const series = steps[name].map(r => r && r.info && r.info.cost ? r.info.cost.mean : null);
-      const mid = series.slice(first, last).filter(v => v != null), base = mid.length ? Math.min(...mid) : ca.mean;
+      // (a spike: over the tolerance of every earlier repeat; growth: rising from repeat to repeat and 12 % over the earlier median)
+      const mid = series.slice(first, last).filter(v => v != null), base = mid.length ? Math.max(...mid) : ca.mean;
+      const early = series.slice(0, last).filter(v => v != null).sort((x, y) => x - y), f0 = early.length ? early[Math.floor(early.length / 2)] : ca.mean;   // (the median of the earlier repeats: one quiet repeat is not a baseline)
       const rising = series.slice(first).every((v, k, q) => k === 0 || (v != null && q[k - 1] != null && v > q[k - 1] * 1.03));
-      const ratio = cb.mean / base;
-      const bad = (cb.mean > base * TOL + 0.5 && series[last - 1] != null && series[last - 1] > base * 1.05) || (rising && series.length - first >= 3 && cb.mean > base * 1.12 + 0.3);
+      const ratio = cb.mean / f0;
+      const bad = cb.mean > base * TOL + 0.5 || (rising && series.length - first >= 3 && cb.mean > f0 * 1.12 + 0.3);
       console.log(`  ${bad ? 'FAIL' : 'ok  '} ${name.padEnd(13)} cost ${series.map(v => v == null ? '-' : v.toFixed(2)).join(' -> ')} ms (${ratio.toFixed(2)}x)`);
       if (bad) fail(`${name}: frame cost grows over the session`, series);
       if (b.info.rafPerFrame > 1.5) fail(`${name}: ${b.info.rafPerFrame} requestAnimationFrame calls per frame (an extra loop)`);

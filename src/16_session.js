@@ -82,7 +82,7 @@ const SessionStats = {
     if (typeof Atlas !== 'undefined') { s.atlases = Object.keys(Atlas.atlases).length; s.atlasMB = Atlas.decodedMB(); s.atlasListeners = Atlas.listeners.length; }
     if (typeof TourOverworld !== 'undefined') { const o = TourOverworld.owner; add('owCache', [o && o.cache && o.cache.cv, TourOverworld.spare]); }
     if (typeof TourMapKeys !== 'undefined') s.mapTaps = TourMapKeys.taps ? TourMapKeys.taps.length : 0;
-    if (typeof TripFX !== 'undefined') s.tripFrames = TripFX.frames.length;
+    if (typeof TripFX !== 'undefined' && TripFX.frames) s.tripFrames = TripFX.frames.length;
     if (typeof Game !== 'undefined') { add('vignette', Game.vignette); s.canvasMP = +(this.px(Game.canvas) / 1e6).toFixed(3); s.rows = +Game.rows.toFixed(2); s.errors = Math.max(Game.errors || 0, window.__sbwErrors || 0); }
     if (typeof entityFault !== 'undefined' && entityFault.seen) s.faultKinds = Object.keys(entityFault.seen).length;
     if (typeof Input !== 'undefined') { s.touches = Input.touches.size; s.uiTaps = Input.taps.length; }
