@@ -285,10 +285,10 @@ const fruitBatArt = (ctx, e, x, y, m) => {
 const enemies = {
   mzGhostCrab: { cls: TourEnemy.make(GHOST), place: 'walk' },
   mzDungBeetle: { cls: TourEnemy.make({ w: 26, h: 20, speed: 0.9, behavior: 'pusher', maxScale: 2, ballKind: 'dung', art: beetleArt, burst: '#1a9a4a', atlas: 'mz_x' }), place: 'walk' },
-  mzPangolin: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.9, behavior: 'curlShield', curlT: 1.5, art: pangolinArt, burst: '#9a7a4a', atlas: 'mz_x' }), place: 'walk' },
+  mzPangolin: { cls: TourEnemy.make({ belly: true, w: 30, h: 22, speed: 0.9, behavior: 'curlShield', curlT: 1.5, art: pangolinArt, burst: '#9a7a4a', atlas: 'mz_x' }), place: 'walk' },
   mzChameleon: { cls: TourEnemy.make({ w: 24, h: 20, speed: 0, behavior: 'tongue', len: 3, art: chameleonArt, burst: '#4aa04a', atlas: 'mz_x', init(e) { e.seed = Math.random() * 360; } }), place: 'walk' },
-  mzMoleRat: { cls: TourEnemy.make({ w: 26, h: 22, speed: 1.2, behavior: 'burrower', art: moleRatArt, burst: '#c8907a', atlas: 'mz_x' }), place: 'walk' },
-  mzFruitBat: { cls: TourFlyer.make({ w: 26, h: 14, range: 3, speed: 1.3, swoop: true, art: fruitBatArt, burst: '#8a5a3a', atlas: 'mz_x' }), place: 'fly' }
+  mzMoleRat: { cls: TourEnemy.make({ belly: true, w: 26, h: 22, speed: 1.2, behavior: 'burrower', art: moleRatArt, burst: '#c8907a', atlas: 'mz_x' }), place: 'walk' },
+  mzFruitBat: { cls: TourFlyer.make({ belly: true, w: 26, h: 14, range: 3, speed: 1.3, swoop: true, art: fruitBatArt, burst: '#8a5a3a', atlas: 'mz_x' }), place: 'fly' }
 };
 for (const k in enemies) { ENTITY_TYPES[k] = enemies[k].cls; Tour.enemyInfo[k] = { place: enemies[k].place, country: 'mz' }; }
 
@@ -341,6 +341,34 @@ Object.assign(ENTITY_TYPES, { mzBeam: MzBeam, mzKeyShutter: MzKeyShutter });
 
 /* ================= skins ================= */
 const skins = {
+  // 4-3: the long dead branch from crown to crown (a pupoBar look): grey, knobbly, with weaver nests dangling under it
+  mzDeadBranch(ctx, e, t) {
+    const x0 = e.x + 2, x1 = e.x + e.w - 2, y = e.y;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(x0 - 18, y + 6); ctx.quadraticCurveTo((x0 + x1) / 2, y - 6, x1 + 18, y + 4); ctx.stroke();
+    ctx.strokeStyle = '#8a8478'; ctx.lineWidth = 8; ctx.stroke();
+    ctx.strokeStyle = '#b0aa9c'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x0 - 14, y + 2); ctx.quadraticCurveTo((x0 + x1) / 2, y - 9, x1 + 14, y); ctx.stroke();
+    // knots and broken twig stubs
+    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 5; for (let k = 1; k < 6; k++) { const xx = x0 + k * (x1 - x0) / 6; ctx.beginPath(); ctx.moveTo(xx, y - 3); ctx.lineTo(xx + 8, y - 14 - (k % 2) * 5); ctx.stroke(); }
+    ctx.strokeStyle = '#8a8478'; ctx.lineWidth = 2.5; for (let k = 1; k < 6; k++) { const xx = x0 + k * (x1 - x0) / 6; ctx.beginPath(); ctx.moveTo(xx, y - 3); ctx.lineTo(xx + 8, y - 14 - (k % 2) * 5); ctx.stroke(); }
+    ctx.lineCap = 'butt';
+    // weaver nests dangling on short strands (small, so Pupo hanging beneath stays clear)
+    for (let k = 0; k < 4; k++) { const xx = x0 + (k + 0.5) * (x1 - x0) / 4 + 14, sw = Math.sin(t * 1.3 + k) * 2;
+      ctx.strokeStyle = '#6a5a2a'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(xx, y + 2); ctx.lineTo(xx + sw, y + 12); ctx.stroke();
+      ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.ellipse(xx + sw, y + 18, 7, 8.5, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#c8a050'; ctx.beginPath(); ctx.ellipse(xx + sw, y + 18, 5.6, 7, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#5a4020'; ctx.beginPath(); ctx.arc(xx + sw, y + 22, 2, 0, TAU); ctx.fill(); }
+    pupoRing(ctx, x0 + 8, y, 4.5); pupoRing(ctx, x1 - 8, y, 4.5);
+  },
+  // 4-6: the buried dhow's mast (a climb strip look): a weathered pole with rope lashings, grip lines
+  mzMastPole(ctx, e, t) {
+    const x = e.cx;
+    ctx.fillStyle = '#1c1426'; ctx.fillRect(x - 7.5, e.top - 2, 15, e.bottom - e.top + 2);
+    ctx.fillStyle = '#9a6a3a'; ctx.fillRect(x - 6, e.top - 1, 12, e.bottom - e.top + 1);
+    ctx.fillStyle = '#b8864e'; ctx.fillRect(x - 6, e.top - 1, 3.5, e.bottom - e.top + 1);
+    ctx.fillStyle = '#e8d8a8'; for (let y = e.top + 14; y < e.bottom - 6; y += 30) { ctx.fillRect(x - 7, y, 14, 3); ctx.fillRect(x - 7, y + 5, 14, 2); }
+    ctx.strokeStyle = '#f4ecd0'; ctx.lineWidth = 1.2; for (let y = e.top + 8; y < e.bottom - 2; y += 10) { ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y - 2); ctx.stroke(); }
+  },
   // a termite mound with a hole wider than the rest; a line of ants marches in (the door to the cupim)
   mzMoundDoor(ctx, e, t) {
     const x = e.x + e.w / 2, y = e.y + e.h;
@@ -726,7 +754,104 @@ P.cabinRock = (st, o) => {
   B.anchor(o.back, x + 7, y1);
   st.y = y1; return x + 12;
 };
+/* ---------------- Pupo in Mozambique (docs/design/PUPO.md §4.2, §4.3) ---------------- */
+// a Nap Box sitting on the crown just built (o.back tiles from its end), taking no room of its own
+P.napBox = (st, o) => { const tx = st.x - (o.back || 3), ty = st.gy - 1; st.B.set(tx, ty, T.QBLOCK); st.B.item(tx, ty, 'pupo'); st.B.spawn('napBox', tx, ty, {}); return st.x; };
+// 4-3's Pupo obstacle, The Upside-Down Commute: the widest gap, and the evening gust here blows BACK (a headwind over
+// the whole gap: no jump or glide gets across). A long dead branch runs from over this crown to over the next one, weaver
+// nests dangling under it and fruit bats hanging along it. Pupo grabs it (Action), hangs upside down and shimmies across
+// (the wind can't shift him), nose to nose with the bats ("...excuse me."), and drops onto the far crown. The wind leaves
+// one row free under the branch where the checker's hanging Pupo stands (its ghost floor). { w, wind, gap: the far
+// crown's rise (rows) }
+P.commute = (st, o) => {
+  const B = st.B, w = o.w || 18, gy = st.gy, x0 = st.x, x1 = x0 + w - 1, bar = gy - 5, wind = -(o.wind || 280);
+  B.zone(x0, 0, w, bar + 2, wind, 0, 0, 'wind');
+  B.zone(x0, bar + 3, w, B.H - bar - 3, wind, 0, 0, 'wind');
+  B.spawn('mzGustFx', x0, B.H - 1, { w, h: B.H, dir: -1 });
+  B.spawn('sign', x0 - 4, gy - 1, { text: 'THE GUST BLOWS BACK HERE: NO JUMPING IT! PUPO CAN HANG FROM THE OLD BRANCH (ACTION)' });
+  B.spawn('pupoBar', x0 - 2, bar, { w: w + 4, look: 'mzDeadBranch' });
+  for (let k = 0; k < 3; k++) B.spawn('mzBranchBat', x0 + 3 + k * 6, bar, { k });
+  st.coins(x0 + 2, x1 - 2, bar + 5);
+  // the far crown, a row higher than this one (the branch's drop lands on it; a glide never would), with a weaver-nest
+  // pad that bounces on up to the next crown
+  st.x = x1 + 1;
+  return P.crown(st, { gap: 0, gy: gy - (o.rise != null ? o.rise : 1), w: o.cw || 7, nest: true });
+};
+// 4-6's Pupo bonus (a helper level): the first hull chamber is the dhow's deck, with Pupo's Nap Box on it and the dhow's
+// mast standing up out of the sand: a shaft up from the deck to the surface, the mast on up into the sky and the
+// crow's nest six rows over the dune (out of Brady's jump; the level has three extra rows of sky for it), its coins up top. Pupo grips the mast (Action) and climbs
+// all the way up; Brady can drop down the shaft but never climb it.
+P.mastHold = (st, o) => {
+  const B = st.B, x = st.x, nx = P.hullChamber(st, o), floor = st.y, mx = x + 2, nest = Math.max(2, (o.nest || 2));
+  B.set(x + 8, floor - 1, T.QBLOCK); B.item(x + 8, floor - 1, 'pupo'); B.spawn('napBox', x + 8, floor - 1, {});
+  for (let y = nest + 1; y < floor; y++) B.set(mx, y, T.EMPTY);
+  for (let q = -2; q <= 2; q++) if (q) { B.set(mx + q, nest, T.HARD); B.setHide(mx + q, nest, 1); }
+  B.spawn('pupoClimb', mx, floor - 1, { h: floor - nest, side: 1, look: 'mzMastPole' });
+  B.decorAt('mzCrowsNest', mx, nest + 1, 0);
+  for (let q = -2; q <= 2; q++) { B.set(mx + q, nest - 1, T.PICK); if (q !== 0) B.set(mx + q, nest - 2, T.PICK); }
+  return nx;
+};
 for (const k in P) Tour.pieces['mz.' + k] = P[k];
+// 4-3: a fruit bat hanging from the dead branch, nose down. When Pupo shimmies up to it, it squeaks, flaps over him and
+// hangs on again behind him; Pupo, politely: "...excuse me." (they are friends, never enemies)
+class MzBranchBat extends Ent {
+  constructor(g, s) { super(g, s, 26, 30); this.bx = s.x; this.by = s.y - TS / 2; this.k = s.k || 0; this.x = this.bx - 13; this.y = this.by; this.back = true; this.friendly = true; this.fly = 0; this.fx = 0; this.tx = 0; this.dir = 1; }
+  update(dt) {
+    this.t += dt; const g = this.g;
+    if (this.fly > 0) {
+      this.fly -= dt; const k = 1 - Math.max(0, this.fly) / 0.7; this.bx = lerp(this.fx, this.tx, k); this.x = this.bx - 13;
+      return;
+    }
+    const R = PupoG1.near(g, this.bx, this.by + 44, 30, 'hang');
+    if (R) {
+      const p = g.player, f = p.facing || 1; this.fx = this.bx; this.tx = clamp(p.cx - f * 54, this.bx - 4 * TS, this.bx + 4 * TS); this.dir = this.tx > this.fx ? 1 : -1; this.fly = 0.7;
+      PupoRide.say(g, p.cx, p.y - 14, '...EXCUSE ME.'); g.parts.text(this.bx, this.by + 30, 'SQUEAK!', '#ffe8f0'); PupoRide.sfx('batSqueak', 'pick', { pitch: 2.2, vol: 0.35 });
+    }
+  }
+  draw(ctx) {
+    const x = this.bx, y = this.by, t = this.t + this.k * 1.3;
+    if (this.fly > 0) {
+      // flapping over Pupo to its new spot: a little hop arc, wings out
+      const k = 1 - this.fly / 0.7, yy = y + 18 - Math.sin(k * Math.PI) * 22;
+      ctx.save(); ctx.translate(x, yy); ctx.scale(this.dir, 1);
+      const f = Math.sin(this.t * 30);
+      ctx.fillStyle = '#1c1426'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 3, -1); ctx.quadraticCurveTo(s * 15, -14 - f * 6, s * 24, -2 - f * 4); ctx.quadraticCurveTo(s * 14, 3, s * 3, 4); ctx.fill(); }
+      ctx.fillStyle = '#4a2a20'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 3, -1); ctx.quadraticCurveTo(s * 14, -12 - f * 6, s * 21, -2 - f * 4); ctx.quadraticCurveTo(s * 13, 1.5, s * 3, 2.5); ctx.fill(); }
+      ctx.fillStyle = '#8a5a3a'; ctx.beginPath(); ctx.ellipse(0, 0, 6, 7, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(2, -7, 5, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(4.5, -8, 1.3, 0, TAU); ctx.fill();
+      ctx.restore(); return;
+    }
+    // hanging: feet on the branch, wings wrapped round like a little cloak, the face upside down at the bottom
+    const sw = Math.sin(t * 1.4) * 0.08;
+    ctx.save(); ctx.translate(x, y + 2); ctx.rotate(sw);
+    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(-2, 6); ctx.moveTo(3, 0); ctx.lineTo(2, 6); ctx.stroke();
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.ellipse(0, 15, 9.5, 11.5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#4a2a20'; ctx.beginPath(); ctx.ellipse(0, 15, 8, 10, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#6a3e2c'; ctx.beginPath(); ctx.ellipse(-2, 13, 3, 7, 0.2, 0, TAU); ctx.fill();
+    // the head at the bottom (upside down): ears pointing down, a fox-like snout, sleepy eyes
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(0, 27, 6.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8a5a3a'; ctx.beginPath(); ctx.arc(0, 27, 5.2, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#5a3a2a'; ctx.beginPath(); ctx.moveTo(-5, 29); ctx.lineTo(-6, 35); ctx.lineTo(-2, 31); ctx.fill(); ctx.beginPath(); ctx.moveTo(5, 29); ctx.lineTo(6, 35); ctx.lineTo(2, 31); ctx.fill();
+    ctx.fillStyle = '#2a1810'; ctx.beginPath(); ctx.arc(0, 22, 1.4, 0, TAU); ctx.fill();
+    const blink = (t % 5) < 0.2; ctx.fillStyle = '#ffffff'; if (!blink) { ctx.beginPath(); ctx.arc(-2.2, 27.5, 1.2, 0, TAU); ctx.arc(2.2, 27.5, 1.2, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.mzBranchBat = MzBranchBat;
+// 4-6: the crow's nest on top of the buried dhow's mast: a woven basket round the platform, a pennant on a staff
+Decor.mzCrowsNest = (ctx, x, y, t) => {
+  const top = y - TS;
+  ctx.fillStyle = '#1c1426'; rr(ctx, x - 2.5 * TS - 2, top - 2, 5 * TS + 4, TS + 10, 6); ctx.fill();
+  ctx.fillStyle = '#a8784a'; rr(ctx, x - 2.5 * TS, top, 5 * TS, TS + 6, 5); ctx.fill();
+  ctx.strokeStyle = '#7a5230'; ctx.lineWidth = 1.6; for (let k = 0; k < 9; k++) { const xx = x - 2.5 * TS + 8 + k * 17; ctx.beginPath(); ctx.moveTo(xx, top + 2); ctx.lineTo(xx - 4, top + TS + 4); ctx.stroke(); }
+  ctx.fillStyle = '#c8986a'; ctx.fillRect(x - 2.5 * TS, top, 5 * TS, 4);
+  // the gap the mast comes up through
+  ctx.fillStyle = '#3a2418'; ctx.fillRect(x - TS / 2 + 2, top, TS - 4, TS + 6);
+  // the pennant on a staff at the back
+  const px = x + 2 * TS; ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, top - 74); ctx.stroke();
+  ctx.fillStyle = '#e8323a'; ctx.beginPath(); ctx.moveTo(px, top - 74); ctx.quadraticCurveTo(px - 18, top - 70 + Math.sin(t * 4) * 3, px - 34, top - 66 + Math.sin(t * 4 + 1) * 4); ctx.lineTo(px, top - 58); ctx.fill();
+};
+
 
 // the crown of a baobab (an island): thick branches holding a flat crown, the trunk down into the haze
 Decor.mzCrown = (ctx, x, y, t, th, d) => {
@@ -849,7 +974,7 @@ const levels = [
     ] },
 
   // 4-3 SKY: baobab crowns at sunset; weaver nests bounce you; honey and bees; evening gusts and fruit bats
-  { n: 3, name: 'Baobab Skyline', mapLabel: 'Baobabs', arch: 'sky', theme: 'mz_copas',
+  { n: 3, name: 'Baobab Skyline', mapLabel: 'Baobabs', arch: 'sky', theme: 'mz_copas', pupo: 'level',   // Mozambique's Pupo level: The Upside-Down Commute
     gimmick: 'Hop the crowns of giant baobabs at sunset: weaver nests bounce, honey sticks, gusts carry you',
     hint: 'Nests bounce you high. Honey slows your jump. The evening gusts push you over the wide gaps',
     postcard: 'The baobabs are upside-down trees, they say. I stood on one. It felt right-side up. ♥ C',
@@ -860,6 +985,7 @@ const levels = [
       { id: 'copas', gen: 'islands', W: 200, H: 30, GY: 16, script: [
         ['crownStart'],
         ['crown', { w: 6, stand: 'plane', tight: true }],
+        ['napBox', { tight: true }],   // Pupo's Nap Box on the first crown
         // ① crowns as islands, weaver nests bounce you
         ['crown', { gap: 4, gy: 15, w: 7, item: 'power', enemy: 'mzChameleon', tight: true }],
         ['crown', { gap: 4, gy: 13, w: 6, nest: true, tight: true }],
@@ -870,13 +996,14 @@ const levels = [
         ['crown', { gap: 3, gy: 11, w: 6, nest: true, tight: true }],
         ['cp', { tight: true }],
         ['crownify', { n: 6, tight: true }],
+        ['napBox', { tight: true, back: 5 }],   // the backup Nap Box at the honey checkpoint (the near side of the commute)
         ['crown', { gap: 3, gy: 8, w: 6, item: 'lsd', tight: true }],
         ['crown', { gap: 5, gy: 12, w: 7, honey: true, enemy: 'mzChameleon', tight: true }],
         // ③ evening gusts and fruit bats over the widest gaps
         ['gust', { w: 9, fx: 1, bat: true, gold: 'risky', tight: true }],
         ['crown', { gap: 9, gy: 13, w: 6, tight: true }],
-        ['gust', { w: 8, fx: 1, bat: true, tight: true }],
-        ['crown', { gap: 8, gy: 12, w: 7, nest: true, tight: true }],
+        // Pupo's obstacle, The Upside-Down Commute (PUPO.md §4.2): the widest gap, a gust that blows back, the dead branch
+        ['commute', { w: 18, wind: 280, rise: 1, tight: true }],
         ['crown', { gap: 3, gy: 6, w: 6, enemy: 'mzMonkey', tight: true }],
         ['gust', { w: 9, fx: 1, tight: true }],
         ['crownFinale', { gap: 9, gy: 11, tight: true }]
@@ -945,7 +1072,7 @@ const levels = [
     ] },
 
   // 4-6 DIG (secret): dig through the dune into the buried dhow's hull
-  { n: 6, name: 'Buried Dhow', mapLabel: 'Dhow', arch: 'dig', secret: true, theme: 'mz_areia',
+  { n: 6, name: 'Buried Dhow', mapLabel: 'Dhow', arch: 'dig', secret: true, theme: 'mz_areia', pupo: 'helper',   // Pupo's Nap Box on the dhow's deck, the mast climb
     gimmick: 'Dig down through the dune into a buried dhow: chambers of cashews, mole-rats, cave-ins',
     hint: 'Stomp (down + jump) on sand to dig. The hard hat\'s dash digs sideways and breaks rock',
     postcard: 'A whole boat under the sand, full of cashews. The mole-rats had eaten half. ♥ C',
@@ -953,10 +1080,10 @@ const levels = [
     mapCell: [1, 1], mapFrom: 1,
     exits: { main: { to: 'node:4-4' } },
     areas: [
-      { id: 'areia', gen: 'dig', W: 120, H: 40, script: [
+      { id: 'areia', gen: 'dig', W: 120, H: 43, surface: 11, script: [
         ['standSign', { item: 'hat', text: 'STOMP ON SAND TO DIG. THE HARD HAT DASH DIGS SIDEWAYS' }],
         ['itemBlock', { item: 'power', y: 4 }],
-        ['hullChamber', { w: 12, h: 4, dy: 3, gold: 'must', enemy: 'mzMoleRat' }],
+        ['mastHold', { w: 12, h: 4, dy: 3, gold: 'must', enemy: 'mzMoleRat', nest: 5 }],   // the dhow's deck: Pupo, and the mast to the crow's nest
         ['rockBand', { w: 5 }],
         ['hullChamber', { w: 10, h: 4, dy: 4, item: 'magnet', caveIn: true }],
         ['cabinRock', { to: 'cabine@in', back: 'cabinBack' }],
