@@ -65,7 +65,7 @@ the JavaScript.
 | Graphics tiers with an automatic controller, Settings and pause `GFX` switch, FPS readout | `14_quality.js`, `13_ui.js`, `99_main.js` | see below |
 
 ## Graphics tiers (`src/14_quality.js`)
-Cut levels, in this order: 1 trip effects (no joint breathing copy, no mushroom jiggle, half the trip shapes) and the bloom sampled every
+Cut levels, in this order: 1 trip effects (no onset lean or joint breathing copy, no cycling line colours, coarser sway bands, half the trip shapes; see "Trip effects" below) and the bloom sampled every
 4th frame; 2 particles and weather at half density, enemies and bosses re-inked at 30 Hz in a scratch area fitted to
 what their art was seen to reach; 3 the light keylines and form shading of code-drawn art (Brady keeps his keyline; all
 dark ink stays); 4 bloom, vignette, the haze between backdrop layers, the sky's light rays, the trips' colour pass on the level and their shapes; 5 the farthest parallax
@@ -84,6 +84,32 @@ Settings -> FPS COUNTER: ON shows, at the bottom centre of the screen: frames pe
 in it, the game's own work per frame (JavaScript; Safari draws on another thread, so low FPS with low work means
 drawing is the cost), the tier (and the AUTO level) and the canvas resolution. Ask Brady to read it off in Mexico 1-5's
 arena, Brazil 3-1 and 3-5, and the overworld.
+
+## Trip effects (17 November, `src/15_postfx.js` TripFX)
+Brady wanted the mushroom and acid trips "wavier and trippier" again, in the toon look. What each one costs per frame:
+- one full-screen 'color' blend (a 'hue' blend at night) colours sky, backdrop and tiles together (the old build used two,
+  one behind the level and one on it); LOW keeps a single pass on the sky only;
+- the sway: the level so far (backdrop + tiles, before the characters) copied once into PostFX.shroomWob and drawn back
+  in 3 device px rows (4 from MEDIUM) moved by whole pixels; the mushroom all through, the LSD only in its strong first
+  ~2.6 s (the long mild part of the flight drops it); none at LOW or with FX CALM;
+- HIGH only: the onset lean (one copy into PostFX.tripWarp and one transformed draw, for ~1.4 s after the pickup, shared
+  with the joint's breath) and, in the LSD's strong part, the cycling line colours (one 'lighten' pass).
+No per-frame allocations: no canvases (both scratch canvases are PostFX's fixed view-size ones), no gradients (the joint's
+two per-frame gradients and its soft smoke sprite are gone), colour strings cached per whole degree.
+Measured (WebKit, raster flushed, 180 synchronous draws per state, mean of two alternating runs of the live build and
+this one on a shared, busy Mac; identical code paths differ by up to ~15 % between runs), ms per frame:
+
+| tier | scene | no trip | mushroom onset | mushroom | LSD strong | LSD mild flight |
+|---|---|---|---|---|---|---|
+| HIGH | 1-1 | 3.2 | 4.1 -> 5.9 | 7.0 -> 7.0 | 4.8-5.3 -> 6.8-7.2 | 4.8 -> 4.9 |
+| HIGH | 3-1 | 7.6 | 8.4 -> 9.9 | 9.0 -> 10.1 | 9.1-9.6 -> 10.8-11.4 | 8.6 -> 8.9 |
+| HIGH | boss 1-5 | 6.8 | 8.0 -> 9.0 | 8.9 -> 9.1 | 8.6 -> 8.8-9.2 | 8.6 -> 8.0 |
+| MEDIUM | 1-1 / 3-1 / boss | 3.3 / 7.3 / 6.3 | +0.8 / +0.8 / +0.9 | +0.9 / +1.2 / +0.7 | +0.5-0.9 | +0.2-0.4 |
+| LOW | 1-1 / 3-1 / boss | 2.7 / 5.5 / 4.5 | within noise of the live build | | | |
+
+(old -> new; MEDIUM and LOW rows: new minus live.) The LSD's strong part and the mushroom's first second at HIGH cost
+about 1-2 ms more than the live effect on the Mac; the AUTO tier drops to MEDIUM if a phone can't keep up. Nothing
+measured on an iPhone.
 
 ## Regression guard
 `BRADY_DIST=<dist> node tools/sbw_perf_test.js --short` (about 10 minutes) runs the reference levels (1-1, 1-2),
