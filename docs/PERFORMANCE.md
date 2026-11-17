@@ -94,8 +94,15 @@ times and that held ink pictures match live ink pixel for pixel. `--short --writ
 after an intended change (say why in the commit).
 
 ## Long sessions (November 16): "laggy after a couple of levels", "glitchy after a few deaths"
-What a level, a death or a map visit left behind, found by reading the code (branch `sbw/long-session`). **Not yet
-measured**: run `BRADY_DIST=<dist> node tools/sbw_session_test.js` alone on a quiet machine (about 10 minutes).
+What a level, a death or a map visit left behind (branch `sbw/long-session`). Measured on the Mac with
+`BRADY_DIST=<dist> node tools/sbw_session_test.js [--engine webkit]` (about 15 minutes, alone on the machine): four
+repeats of 1-1 with deaths, the three trips and a trail death, 4-1 (the most inked props) with a death, the 1-5 boss
+with a death, a level cleared out to the map, the overworld and the title.
+- The old live build (c3ed88a): glow canvases +600 to +700 per repeat (2218 after four), canvases alive 718 -> 2316
+  (Chromium, after forced GC), 7 slick / hot trail tiles left in the cached level after every trail death. Its frame
+  cost on the Mac did NOT grow (18.4 -> 18.4 ms): the growth is memory, which is what an iPhone feels.
+- This branch: every count flat from repeat 2 to 4 (canvases 34.1 -> 34.3 MP, glows 8, no trail tiles, no prop
+  re-bakes), frame cost flat (Chromium 19.5 -> 19.7 ms per step, WebKit 8.0 -> 8.3). Nothing measured on an iPhone.
 - **Mushroom sparkles made 16 new glow canvases every frame** (the live build, `main`: `15_postfx.js` asked
   `PostFX.glow` for a new `hsl()` hue each frame, cached forever): about 4000 canvases (~64 MB) per mushroom, kept all
   session. `sbw/items-fix` replaced that code; `src/16_session.js` also caps the glow cache.
@@ -104,8 +111,9 @@ measured**: run `BRADY_DIST=<dist> node tools/sbw_session_test.js` alone on a qu
 - **Canvases dropped without being freed** (iOS keeps their memory until the garbage collector runs, and caps a page's
   canvas memory): backdrops and tile sets rebuilt on every atlas arrival and zoom, the inked-prop cache (48 pictures
   of any size, now also a 12 MP budget), the ink memo, the overworld's painted map (a new one of up to 4096 px square
-  per map visit, now reused), the vignette and the HUD / light-map canvases of every Play (one per death). They are now
-  freed when dropped (`releaseCanvases`, `03a_atlas.js`; `Play.onSceneExit`, `16_session.js`).
+  per map visit, now reused), the vignette, the HUD / light-map canvases of every Play (one per death) and the title
+  screen's sprites (about 7 MP per visit). They are now freed when dropped (`releaseCanvases`, `03a_atlas.js`;
+  `onSceneExit`, called by `Game.setScene`).
 - **Every zoom change re-allocated the main canvas** (`Game.setRows` -> `resize`: each level start, boss fight, map);
   now only a real size change does.
 - Small: joystick taps during levels queued for the map all session; the power picker chip could stay "held" after a
