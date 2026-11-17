@@ -148,6 +148,10 @@ SURF.SLICK = 3; SURF.HOT = 4;
 const TourTrails = {
   lay(g, tx, ty, kind, t) {
     const A = g.area; if (tx < 0 || ty < 0 || tx >= A.W || ty >= A.H || !SOLID[A.tiles[ty * A.W + tx]]) return;
+    // the runtime area shares its surf array with the cached level (Play.makeRuntimeArea copies tiles and hide, not
+    // surf): copy it before the first trail, or a trail still down when Brady dies stays in the level for every later
+    // try as an invisible slick or hot tile
+    if (!A.surfOwn) { A.surf = A.surf ? new Uint8Array(A.surf) : new Uint8Array(A.W * A.H); A.surfOwn = true; }
     A.trails = A.trails || []; const k = ty * A.W + tx;
     const was = A.trails.find(q => q.k === k);
     if (was) { was.t = t; was.kind = kind; return; }

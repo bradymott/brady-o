@@ -222,6 +222,8 @@ Object.assign(Player.prototype, {
   };
   Input.onUp = function (e, cancel) {
     const t = this.touches.get(e.pointerId);
+    // the chip's finger lifted after a pause / mode change turned its touch into a plain one: the chip still lets go
+    if (TourPicker.touchId === e.pointerId && !(t && t.role === 'pick')) TourPicker.touchId = null;
     if (t && t.role === 'pick') {
       if (e.cancelable) e.preventDefault();
       this.touches.delete(e.pointerId); TourPicker.touchId = null;
@@ -230,6 +232,7 @@ Object.assign(Player.prototype, {
     }
     return up0.call(this, e, cancel);
   };
+  const ra = Input.releaseAll; Input.releaseAll = function () { TourPicker.touchId = null; return ra.apply(this, arguments); };
   window.addEventListener('keydown', e => {
     if (Input.mode !== 'game') return;
     if (e.code === 'KeyE') Input.pickCycle = 1;
