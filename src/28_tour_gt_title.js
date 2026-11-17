@@ -228,7 +228,7 @@ const SBWT = {
       fx.globalCompositeOperation = 'source-atop';
       fx.fillStyle = st.hi || 'rgba(255,250,236,0.85)'; rr(fx, -m.width / 2 + size * 0.06, -cap + size * 0.06, m.width - size * 0.12, cap * 0.16, cap * 0.08); fx.fill();
       fx.fillStyle = 'rgba(40,10,60,0.16)'; fx.fillRect(-m.width, -cap * 0.14, m.width * 2, cap * 0.14);
-      x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(f, 0, 0);
+      x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(f, 0, 0); f.width = f.height = 1;   // (the face canvas is done with: freed now)
     });
   },
   // the width of SUPER BRADY-O's main line at a font size: BRADY, the hyphen, the globe O, plus the ink
@@ -531,6 +531,13 @@ class SBWTitleScene {
     const calm = this.calm;
     this.go = { t: 0, end: calm ? 0.3 : 1.45 };
     if (!calm) this.burst(this.cta.x + this.cta.w / 2, this.cta.y, 20, 240);
+  }
+  // left for another scene (Game.setScene): its sprites (about 7 MP of canvases per visit) are freed now, not left to
+  // the garbage collector; coming back (Settings) rebuilds them on the next draw
+  onSceneExit() {
+    if (typeof releaseCanvases !== 'function') return;
+    for (const k of Object.keys(this)) { const v = this[k]; if (v && typeof v === 'object' && (Array.isArray(v) || Object.getPrototypeOf(v) === Object.prototype || (typeof HTMLCanvasElement !== 'undefined' && v instanceof HTMLCanvasElement))) releaseCanvases(v); }
+    this.bW = null;
   }
   leave() {
     const fresh = !Save.data.seenTourIntro;
@@ -877,6 +884,7 @@ class SBWFadeIn {
     ctx.globalAlpha = clamp(1 - this.t / this.dur, 0, 1); ctx.fillStyle = SBWT.CREAM; ctx.fillRect(0, 0, Game.cssW, Game.cssH); ctx.globalAlpha = 1;
   }
   resize() { if (this.inner.resize) this.inner.resize(); }
+  onSceneExit(next) { if (this.inner.onSceneExit && next !== this.inner) this.inner.onSceneExit(next); }
 }
 
 // the world app's title is the show above (the scene keeps the name TitleScene; the combined build keeps its picker)

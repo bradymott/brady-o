@@ -61,13 +61,15 @@ const SessionStats = {
       const p = g.player; if (p) { s.ps = p.state; s.power = p.power; s.fx = p.fx ? Object.keys(p.fx).filter(k => p.fx[k] > 0).join(',') : ''; }
     }
     const add = (name, v) => { const h = this.held(v); s[name + 'N'] = h.n; s[name + 'MP'] = +(h.px / 1e6).toFixed(3); };
-    if (typeof BG !== 'undefined') { s.bgEntries = Object.keys(BG.cache).length; add('bg', Object.values(BG.cache).map(b => [b.layers.map(L => L.canvas), b.cel, b.stars, b.clouds.map(c => c.c)])); add('bgFrame', BG.frameCache.c); }
+    if (typeof BG !== 'undefined') { s.bgEntries = Object.keys(BG.cache).length; add('bg', Object.values(BG.cache).map(b => [b.layers.map(L => L.canvas), b.cel, b.stars, b.clouds.map(c => c.c)])); add('bgFrame', BG.frameCache && BG.frameCache.c); }
     if (typeof TileArt !== 'undefined') { s.tileEntries = Object.keys(TileArt.cache).length; add('tiles', TileArt.cache); }
     if (typeof Ink !== 'undefined') {
-      s.inkScratch = Ink.scratch.size; s.inkScratchMP = +(Ink.scratchPx / 1e6).toFixed(3);
-      s.inkHeld = Ink.heldLru.size; s.inkHeldMP = +(Ink.heldPx / 1e6).toFixed(3);
-      s.inkMemo = Ink.memo.size; s.inkMemoMP = +(Ink.memoPx / 1e6).toFixed(3);
-      s.inkBoxes = Ink.boxes.size; s.inkReach = Ink.reach.size;
+      // (older builds have fewer of these: what exists is counted)
+      if (Ink.scratch && Ink.scratch.size != null) { s.inkScratch = Ink.scratch.size; s.inkScratchMP = +(Ink.scratchPx / 1e6).toFixed(3); }
+      else if (Ink.pool) { const h = this.held(Ink.pool); s.inkScratch = h.n; s.inkScratchMP = +(h.px / 1e6).toFixed(3); }   // (the old grow-only scratch set)
+      if (Ink.heldLru) { s.inkHeld = Ink.heldLru.size; s.inkHeldMP = +(Ink.heldPx / 1e6).toFixed(3); }
+      if (Ink.memo) { s.inkMemo = Ink.memo.size; s.inkMemoMP = +(Ink.memoPx / 1e6).toFixed(3); }
+      if (Ink.boxes) s.inkBoxes = Ink.boxes.size; if (Ink.reach) s.inkReach = Ink.reach.size;
     }
     const IC = typeof window !== 'undefined' && window.BRADY_INKCACHE;   // (src/30_tour_sprites.js keeps it in its own scope)
     if (IC) { s.inkCache = IC.map.size; add('inkCache', [...IC.map.values()].map(e => e.c)); s.inkCacheBakes = IC.bakes || 0; }

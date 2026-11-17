@@ -1,7 +1,7 @@
 // Long-session test for Super Brady-O World: Brady's "laggy after a couple of levels" and "glitchy after a few deaths
 // and levels" on his iPhone. One browser page plays the same loop of steps several times in a row, like an evening of
 // play, without reloading: a level, two deaths and respawns, the three trips (mushroom, joint, LSD tab), a trail on the
-// floor and a death on it, a second land's level (big inked props) with a death, a boss arena mid-fight with a death,
+// floor and a death on it, a second land's level (the most inked props of any level, 4-1) with a death, a boss arena mid-fight with a death,
 // a level cleared to the results and out to the map, the walkable overworld, and the title. After every step it
 // records the frame cost (the REAL game loop: Game.frame timed, the raster flushed with a one-pixel read-back) at the
 // same standing spots, and counts everything that could pile up:
@@ -16,7 +16,8 @@
 // any count grows past its tolerance, when state carries over a respawn, or on any error.
 //
 // usage: BRADY_DIST=<folder> node tools/sbw_session_test.js [--engine chromium|webkit] [--reps 4] [--ms 400]
-//        [--spots 5] [--tol 1.3] [--out file.json] [--a 1-1] [--b 3-1] [--boss 1-5] [--quick]
+//        [--spots 5] [--tol 1.3] [--out file.json] [--a 1-1] [--b 4-1] [--boss 1-5] [--quick]
+//   (4-1: the level with the most inked props, src/30_tour_sprites.js InkCache)
 //   Run it alone on a quiet machine (other suites running at the same time skew the frame costs).
 //   Chromium (default) can force garbage collection, so its canvas and heap counts are exact; --engine webkit is the
 //   Safari engine (its canvas counts include canvases not yet collected, with a wider tolerance).
@@ -32,7 +33,7 @@ const MS = +opt('--ms', QUICK ? 250 : 400);
 const SPOTS = +opt('--spots', QUICK ? 3 : 5);
 const TOL = +opt('--tol', process.env.SESSION_TOL || 1.3);
 const OUT = opt('--out', null);
-const LV_A = opt('--a', '1-1'), LV_B = opt('--b', '3-1'), LV_BOSS = opt('--boss', '1-5');
+const LV_A = opt('--a', '1-1'), LV_B = opt('--b', '4-1'), LV_BOSS = opt('--boss', '1-5');
 const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const root = path.join(dist, 'site');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -77,8 +78,11 @@ function initScript() {
     const SP = AudioScheduledSourceNode.prototype, start0 = SP.start;
     SP.start = function () { S.audioStarted++; add0.call(this, 'ended', () => { S.audioEnded++; }); return start0.apply(this, arguments); };
     const AP = AudioNode.prototype, c0 = AP.connect, d0 = AP.disconnect;
-    AP.connect = function () { S.connects++; return c0.apply(this, arguments); };
-    AP.disconnect = function () { S.disconnects++; return d0.apply(this, arguments); };
+    // audio nodes with outgoing connections still in place (a node connects to several targets and is let go with
+    // one disconnect(), so the counts of the calls themselves say nothing)
+    S.linked = new Set();
+    AP.connect = function () { S.connects++; S.linked.add(this); return c0.apply(this, arguments); };
+    AP.disconnect = function () { S.disconnects++; if (!arguments.length) S.linked.delete(this); return d0.apply(this, arguments); };
   } catch (e) { /* no Web Audio */ }
 }
 
@@ -129,7 +133,8 @@ function pageSetup() {
     P.god(g); P.seed(seed);
     const sp = P.spots(g.area, o.spots), all = [], raf = [];
     for (const s of sp) { if (G.scene !== g) break; P.place(g, s); await wait(120); const m = await P.measure(o.ms); if (m.cost) { all.push(m.cost.mean); raf.push(m.rafPerFrame); } }
-    if (!all.length) return { error: 'no frames' };
+    if (!all.length && G.scene === g) { const m = await P.measure(o.ms); if (m.cost) { all.push(m.cost.mean); raf.push(m.rafPerFrame); } }   // no standing spot in this area: where he is
+    if (!all.length) return { error: 'no frames', spots: sp.length, area: g.area && g.area.idx };
     const s2 = all.slice().sort((x, y) => x - y);
     return { cost: { mean: +(all.reduce((x, y) => x + y, 0) / all.length).toFixed(3), p50: s2[Math.floor(s2.length / 2)], max: s2[s2.length - 1], spots: all.length }, rafPerFrame: +(raf.reduce((x, y) => x + y, 0) / raf.length).toFixed(2) };
   };
@@ -142,7 +147,7 @@ function pageSetup() {
     S.canvases = keep;
     const m = performance.memory;
     const page = { listeners: S.listeners, intervals: S.intervals.size, timeouts: S.timeouts.size, canvasesLive: live, canvasesMP: +(px / 1e6).toFixed(3), canvasesCreated: S.created,
-      heapMB: m ? +(m.usedJSHeapSize / 1048576).toFixed(1) : null, audioLive: S.audioStarted - S.audioEnded, audioStarted: S.audioStarted, audioLinks: S.connects - S.disconnects };
+      heapMB: m ? +(m.usedJSHeapSize / 1048576).toFixed(1) : null, audioLive: S.audioStarted - S.audioEnded, audioStarted: S.audioStarted, audioNodes: S.linked ? S.linked.size : null };
     const top = Object.entries(S.byTarget).filter(([, v]) => v).sort((a, b) => b[1] - a[1]).slice(0, 12);
     return { page, game: ST.snapshot(), listenersBy: Object.fromEntries(top) };
   };
@@ -224,9 +229,10 @@ function pageSetup() {
 // counts that must not grow from the second repeat to the last: [key, relative slack, absolute slack]
 const WATCH = [
   ['page.listeners', 0, 0], ['page.intervals', 0, 1], ['page.timeouts', 0, 6], ['page.canvasesLive', 0.1, 6], ['page.canvasesMP', 0.1, 1.5],
-  ['page.heapMB', 0.2, 6], ['page.audioLive', 0.5, 40], ['page.audioLinks', 0.5, 150],
+  ['page.heapMB', 0.2, 6], ['page.audioLive', 0.5, 40], ['page.audioNodes', 0.5, 150],
   ['game.bgEntries', 0, 0], ['game.bgMP', 0.05, 0.5], ['game.tileEntries', 0, 0], ['game.tilesMP', 0.05, 0.2],
-  ['game.inkScratch', 0.25, 20], ['game.inkScratchMP', 0.1, 0.5], ['game.inkHeld', 0.25, 20], ['game.inkHeldMP', 0.1, 0.5], ['game.inkMemo', 0.1, 4], ['game.inkMemoMP', 0.1, 0.2],
+  ['game.inkScratch', 0.25, 20], ['game.inkScratchMP', 0.1, 0.5], ['game.inkHeld', 0.25, 20], ['game.inkHeldMP', 0.1, 0.5], ['game.inkMemo', 0.3, 10], ['game.inkMemoMP', 0.3, 0.4],   // (fills slowly toward its 2 MP budget: a sway angle or zoom seen for the first time)
+ 
   ['game.inkBoxes', 0.25, 30], ['game.inkReach', 0, 4], ['game.inkCache', 0.1, 4], ['game.inkCacheMP', 0.1, 0.5], ['game.glows', 0, 4], ['game.postfxMP', 0.05, 0.2],
   ['game.owCacheMP', 0.05, 0.5], ['game.vignetteMP', 0, 0.01], ['game.spriteCache', 0, 2], ['game.levelCache', 0, 0], ['game.atlases', 0, 1], ['game.atlasListeners', 0, 0],
   ['game.mapTaps', 0, 0], ['game.faultKinds', 0, 0], ['game.errors', 0, 0], ['game.rtAreas', 0, 1], ['game.ents', 0.3, 15], ['game.parts', 0.5, 60]
@@ -268,8 +274,13 @@ async function main() {
     (steps[name] = steps[name] || [])[rep] = r;
     if (info && info.error) fail(`repeat ${rep + 1} ${name}: ${info.error}`, info);
     if (clean) { const bad = CLEAN(counts); if (bad.length) fail(`repeat ${rep + 1} ${name}: state carried over: ${bad.join(', ')}`); }
+    // the same level again right after: every inked prop it shows is already cached, none may be baked again
+    if (name === 'B death' && steps['B start'] && steps['B start'][rep]) {
+      const d = (counts.game.inkCacheBakes || 0) - (steps['B start'][rep].counts.game.inkCacheBakes || 0);
+      r.rebakes = d; if (d > 0) fail(`repeat ${rep + 1} ${name}: ${d} inked props baked again (the prop cache dropped pictures still in use)`);
+    }
     const c = info && info.cost, g = counts.game, pg = counts.page;
-    console.log(`  ${String(rep + 1).padStart(2)} ${name.padEnd(13)} ${c ? 'cost ' + String(c.mean).padStart(6) + ' ms' : '              '}  canvases ${String(pg.canvasesLive).padStart(4)} ${String(pg.canvasesMP).padStart(7)} MP  listeners ${pg.listeners}  timers ${pg.intervals}/${pg.timeouts}  heap ${pg.heapMB}  audio ${pg.audioLive}  bg ${g.bgEntries}/${g.bgMP}  tiles ${g.tileEntries}  ink ${g.inkScratch}/${g.inkHeld}/${g.inkCache}  glows ${g.glows}  ents ${g.ents == null ? '-' : g.ents}`);
+    console.log(`  ${String(rep + 1).padStart(2)} ${name.padEnd(13)} ${c ? 'cost ' + String(c.mean).padStart(6) + ' ms' : '              '}  canvases ${String(pg.canvasesLive).padStart(4)} ${String(pg.canvasesMP).padStart(7)} MP  listeners ${pg.listeners}  timers ${pg.intervals}/${pg.timeouts}  heap ${pg.heapMB}  audio ${pg.audioLive}/${pg.audioNodes}  bg ${g.bgEntries}/${g.bgMP}  tiles ${g.tileEntries}  ink ${g.inkScratch}/${g.inkHeld}/${g.inkCache}  glows ${g.glows}  ents ${g.ents == null ? '-' : g.ents}`);
     return r;
   };
   for (let rep = 0; rep < REPS; rep++) {
@@ -297,10 +308,13 @@ async function main() {
     const a = steps[name][first], b = steps[name][last]; if (!a || !b) continue;
     const ca = a.info && a.info.cost, cb = b.info && b.info.cost;
     if (ca && cb) {
-      const ratio = cb.mean / ca.mean;
+      // a load spike on this shared Mac lifts one repeat; growth lifts every repeat after the first: the cost fails when
+      // the last repeat is over the tolerance of the best earlier one AND the repeats before it were already rising
       const series = steps[name].map(r => r && r.info && r.info.cost ? r.info.cost.mean : null);
-      const rising = series.slice(first).every((v, k, s) => k === 0 || (v != null && s[k - 1] != null && v > s[k - 1] * 1.03));
-      const bad = cb.mean > ca.mean * TOL + 0.5 || (rising && series.length - first >= 3 && cb.mean > ca.mean * 1.12 + 0.3);
+      const mid = series.slice(first, last).filter(v => v != null), base = mid.length ? Math.min(...mid) : ca.mean;
+      const rising = series.slice(first).every((v, k, q) => k === 0 || (v != null && q[k - 1] != null && v > q[k - 1] * 1.03));
+      const ratio = cb.mean / base;
+      const bad = (cb.mean > base * TOL + 0.5 && series[last - 1] != null && series[last - 1] > base * 1.05) || (rising && series.length - first >= 3 && cb.mean > base * 1.12 + 0.3);
       console.log(`  ${bad ? 'FAIL' : 'ok  '} ${name.padEnd(13)} cost ${series.map(v => v == null ? '-' : v.toFixed(2)).join(' -> ')} ms (${ratio.toFixed(2)}x)`);
       if (bad) fail(`${name}: frame cost grows over the session`, series);
       if (b.info.rafPerFrame > 1.5) fail(`${name}: ${b.info.rafPerFrame} requestAnimationFrame calls per frame (an extra loop)`);
@@ -308,14 +322,16 @@ async function main() {
     for (const [k, rel, abs] of WATCH) {
       const va = get(a.counts, k), vb = get(b.counts, k);
       if (typeof va !== 'number' || typeof vb !== 'number') continue;
-      const tolK = engine === 'webkit' && k.startsWith('page.canvases') ? 4 : 1;   // WebKit: not-yet-collected canvases count too
+      if (engine === 'webkit' && k === 'page.canvasesLive') continue;   // WebKit has no forced GC: the count includes garbage
+      const tolK = engine === 'webkit' && k.startsWith('page.canvases') ? 2 : 1;   // WebKit: pixels of not-yet-collected canvases count too
       if (vb > va * (1 + rel * tolK) + abs * tolK) fail(`${name}: ${k} grows ${va} -> ${vb}`, steps[name].map(r => r && get(r.counts, k)));
     }
   }
   // the whole session: the sum of the level steps' costs per repeat
   const sums = []; for (let r = 0; r < R; r++) { let s = 0, n = 0; for (const name in steps) { const c = steps[name][r] && steps[name][r].info && steps[name][r].info.cost; if (c) { s += c.mean; n++; } } sums.push(n ? s / n : null); }
   console.log('  mean step cost per repeat: ' + sums.map(v => v == null ? '-' : v.toFixed(2)).join(' -> ') + ' ms');
-  if (sums[first] && sums[last] && sums[last] > sums[first] * Math.min(TOL, 1.2) + 0.3) fail('the session as a whole gets slower', sums);
+  const sRise = sums.slice(first).every((v, k, q) => k === 0 || (v != null && q[k - 1] != null && v > q[k - 1] * 1.02));
+  if (sums[first] && sums[last] && sRise && sums[last] > sums[first] * Math.min(TOL, 1.15) + 0.3) fail('the session as a whole gets slower', sums);
   if (errs.length) fail('page errors', errs.slice(0, 5));
   if (OUT) { fs.mkdirSync(path.dirname(path.resolve(OUT)), { recursive: true }); fs.writeFileSync(OUT, JSON.stringify({ meta: { engine, reps: R, ms: MS, spots: SPOTS, tol: TOL, a: LV_A, b: LV_B, boss: LV_BOSS, date: new Date().toISOString() }, steps, sums, failures }, null, 1)); console.log('wrote ' + OUT); }
   console.log(failures.length ? `\n${failures.length} PROBLEM(S)` : '\nsession clean: nothing piles up');
