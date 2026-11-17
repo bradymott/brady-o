@@ -295,7 +295,7 @@ TourHooks.on('afterEntities', (play, ctx, layers) => {
 });
 TourRuleCut.hatOf = function (e) { const n = e.constructor && e.constructor.name || 'x'; let h = 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) | 0; return TOUR_HATS[Math.abs(h) % TOUR_HATS.length]; };
 TourRuleCut.hat = function (ctx, e, play) {
-  const kind = e._hat || (e._hat = this.hatOf(e)), x = e.x + e.w / 2, y = e.y + 2, s = clamp(e.w / 30, 0.6, 1.3), INK = '#1a1018';
+  const kind = e._hat || (e._hat = this.hatOf(e)), x = e.x + e.w / 2, y = e.y - e.h * 0.14, s = clamp(e.w / 20, 1, 1.9), INK = '#1a1018';
   ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(Math.sin(play.t * 3 + e.x) * 0.08); ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
   if (kind === 'cone') { ctx.fillStyle = '#ff5fa0'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(0, -16); ctx.lineTo(6, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(0, -16, 2.5, 0, TAU); ctx.fill(); }
   else if (kind === 'crown') { for (let q = -2; q <= 2; q++) { ctx.fillStyle = TourRuleCut.CROWN[q + 2]; ctx.beginPath(); ctx.arc(q * 4, -2, 2.8, 0, TAU); ctx.fill(); ctx.stroke(); } }

@@ -507,8 +507,8 @@ Tour.pieces.loadingDock = function (st, o) {
   B.fill(gx - 6, gy - 3, gx - 5, gy - 1, T.HARD);
   for (let x = gx - 4; x <= gx + 3; x++) B.set(x, gy - 6, T.SEMI);
   for (let y = gy - 8; y < gy - 6; y++) for (let x = gx - 4; x <= gx + 3; x++) if (y >= 0) B.set(x, y, T.EMPTY);
-  B.decorAt('bkCase', gx - 5, gy - 3, 3);
-  B.decorAt('bkCrewArrow', gx + 1, gy - 6, 0);
+  B.decorAt('bkCase', gx - 9, gy, 3);
+  B.decorAt('bkCrewArrow', gx - 7, gy, 0);
   // the floor on past the gate to the area's edge, the seam, the way back's landing
   const x1 = Math.max(st.x + 3, gx + 9);
   st.floor(gx + 1, x1, gy);
