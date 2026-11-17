@@ -883,7 +883,7 @@ const boss = {
       for (let k = 0; k < 3; k++) this.grow(b, k);
       K.say(b.g, b, 'ODD SOCKS UNITE!', '#ffe8a0');
       // one loose sock already lies in the arena: the first match
-      this.drop(b, b.heads[0].col, b.arenaX0 + 5 * TS, b.floorY - 4, 0, 0);
+      this.drop(b, b.heads[0].col, b.arenaX0 + 9 * TS, b.floorY - 4, 0, 0);
       b.g.toast('KICK A LOOSE SOCK INTO ITS TWIN!');
     },
     // a new head of colour col (default: the next colour round)
@@ -903,7 +903,7 @@ const boss = {
     },
     hit(b, kind, src) {
       if (b.act === 'exit') return false;
-      if (kind === 'prop' && src && src.isSock) {
+      if (kind === 'prop' && src && src.isSock && src.thrownBy) {
         const k = b.heads.findIndex(H => H.col === src.sock && !H.pair);
         if (k >= 0) {
           b.heads[k].pair = 0.001; src.remove = true;
@@ -919,7 +919,7 @@ const boss = {
         if (b.vuln && b.droop != null && b.heads[b.droop]) {
           // the dizzy head pops off: a loose sock flies out; its twin grows back, and the heap grows one more head
           const H = b.heads[b.droop];
-          this.drop(b, H.col, b.x - 10, b.y + 40, -6 * TS, -9 * TS);
+          this.drop(b, H.col, b.x - 36, b.y + 40, -6 * TS, -9 * TS);
           H.grow = 0; H.pair = 0;
           b.popped++;
           if (b.heads.length < HYDRA.MAXH && b.heads.length < b.hp + 1) this.grow(b);
@@ -1010,17 +1010,18 @@ const boss = {
       const squash = P === 'crouch' ? 0.85 : P === 'air' ? 1.08 : 1, top = by - 56 * squash;
       // the necks and heads (behind the heap's front)
       const n = b.heads ? b.heads.length : 0;
-      for (let k = 0; k < n; k++) {
+      // one head on its neck (the dizzy one is drawn last, over the heap, bigger: that is the one to stomp)
+      const head = k => {
         const H = b.heads[k], S = LOST_SOCKS[H.col], hp = this.headPos(b, k, n), gk = H.grow * (1 - clamp(H.pair / 0.6, 0, 1)) * (1 - fold);
-        if (gk <= 0.02) continue;
-        const droop = b.droop === k && P === 'dizzy', baseX = x + 30 + (k / Math.max(1, n - 1)) * (w - 60), baseY = top + 14;
+        if (gk <= 0.02) return;
+        const droop = b.droop === k && P === 'dizzy', big = droop ? 1.35 : 1, baseX = x + 30 + (k / Math.max(1, n - 1)) * (w - 60), baseY = top + 14;
         const hx = lerp(baseX, droop ? hp.x - b.dir * 26 : hp.x, gk), hy = lerp(baseY, droop ? by - 30 : hp.y, gk);
         // the neck: a long sock leg, its pattern along it
         ctx.strokeStyle = INK; ctx.lineWidth = 15; ctx.beginPath(); ctx.moveTo(baseX, baseY); ctx.quadraticCurveTo(baseX, (baseY + hy) / 2 - 10, hx, hy); ctx.stroke();
         ctx.strokeStyle = S.body; ctx.lineWidth = 11; ctx.stroke();
         ctx.strokeStyle = S.mark; ctx.lineWidth = 3; ctx.setLineDash(S.pat === 'stripes' ? [3, 5] : [1.5, 6]); ctx.stroke(); ctx.setLineDash([]);
         // the head: a sock-puppet head with button eyes and a stitched mouth (open when it spits)
-        ctx.save(); ctx.translate(hx, hy); ctx.rotate(droop ? b.dir * 0.9 : Math.sin(t * 3 + H.sway) * 0.15); ctx.scale(gk, gk);
+        ctx.save(); ctx.translate(hx, hy); ctx.rotate(droop ? b.dir * 0.9 : Math.sin(t * 3 + H.sway) * 0.15); ctx.scale(gk * big, gk * big);
         ctx.fillStyle = S.body; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 15, 12, 0, 0, TAU); ctx.fill(); ctx.stroke();
         ctx.save(); ctx.beginPath(); ctx.ellipse(0, 0, 15, 12, 0, 0, TAU); ctx.clip(); LostArt.pattern(ctx, S, -14, -12, 28, 22); ctx.restore();
         ctx.fillStyle = S.cuff; ctx.fillRect(-6, -14, 12, 4);
@@ -1029,12 +1030,14 @@ const boss = {
         if (droop) { K.dizzy(ctx, 0, -18, t); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; for (const ex of [-5, 3]) { ctx.beginPath(); ctx.moveTo(ex - 2, -5); ctx.lineTo(ex + 2, -1); ctx.moveTo(ex + 2, -5); ctx.lineTo(ex - 2, -1); ctx.stroke(); } }
         else { ctx.fillStyle = '#f2ece0'; for (const ex of [-6, 2]) { ctx.beginPath(); ctx.arc(ex - b.dir * 2, -3, 3.4, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.fillStyle = INK; for (const ex of [-6, 2]) { ctx.beginPath(); ctx.arc(ex - b.dir * 3, -3, 1.4, 0, TAU); ctx.fill(); } }
         ctx.restore();
-      }
+      };
+      for (let k = 0; k < n; k++) if (!(b.droop === k && P === 'dizzy')) head(k);
       // the heap: a mound of odd socks, every one a different kind
       ctx.save(); ctx.translate(x + w / 2, by); ctx.scale(1, squash * (1 - fold * 0.45));
       ctx.fillStyle = '#6a5a7a'; ctx.strokeStyle = INK; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(-w / 2, 0); ctx.quadraticCurveTo(-w / 2 + 6, -46, -20, -56); ctx.quadraticCurveTo(0, -62, 22, -56); ctx.quadraticCurveTo(w / 2 - 4, -46, w / 2, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
       for (let k = 0; k < LOST_HEAP.length; k++) { const q = LOST_HEAP[k]; LostArt.sock(ctx, q[0], q[1], q[2], q[3] + Math.sin(t * 2 + k) * 0.05, 1.3); }
       ctx.restore();
+      if (P === 'dizzy' && b.droop != null && b.droop < n) head(b.droop);
       if (P === 'static') { ctx.strokeStyle = '#fff6a0'; ctx.lineWidth = 2; for (let k = 0; k < 4; k++) { const a = t * 9 + k * 1.6, r = 50 + 8 * Math.sin(t * 20 + k); ctx.beginPath(); ctx.moveTo(x + w / 2 + Math.cos(a) * r, by - 40 + Math.sin(a) * r * 0.5); ctx.lineTo(x + w / 2 + Math.cos(a + 0.3) * (r + 10), by - 40 + Math.sin(a + 0.3) * r * 0.5); ctx.stroke(); } }
       if (P === 'exit') { ctx.fillStyle = '#ffe8a0'; ctx.font = LostArt.F11; ctx.textAlign = 'center'; ctx.fillText('♥', x + w / 2 + Math.sin(t * 4) * 10, by - 70 - b.at * 10); }
       ctx.restore();
@@ -1051,7 +1054,6 @@ const arenaPieces = {
     const B = st.B, { x0, w, GY } = o;
     for (let q = 0; q < 3; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); }
     B.decorAt('lostBin', x0 + 1, GY, 3); B.decorAt('lostShelf', x0 + w - 3, GY, 5);
-    B.decorAt('lostSockPile', x0 + 8, GY, 6);
   }
 };
 
