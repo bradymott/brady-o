@@ -76,6 +76,10 @@ const PupoReach = {
     this.rvx = vx; this.rvy = vy;
   },
   ax: 1, ay: 0, neutral: true, rvx: 0, rvy: 0,
+  // the mammals of every land (only mammals have belly buttons; the rest get a nose boop); an enemy cfg's belly: true adds more
+  MAMMALS: new Set(['aqSeal', 'aqOrca', 'brSloth', 'brCoati', 'brJaguar', 'ecAlpaca', 'ecSeaLion', 'ecSeaLionLand', 'frPoodle', 'frCat', 'frBoar', 'frMole', 'esBat', 'esLynx', 'esSheep',
+    'mxBurro', 'mxChihuahua', 'mxBat', 'mxArmadillo', 'jpTanuki', 'mzWarthog', 'mzMonkey', 'mzPangolin', 'mzMoleRat', 'mzFruitBat', 'idMacaque', 'idCivet', 'idBat',
+    'npMarmot', 'npMarmotWatch', 'npYeti', 'npYetiSleep', 'npBat', 'vnBat', 'maFennec', 'maGoat', 'maCat']),
 
   /* ---------- the target search (15 Hz and on every press; the best one is kept in R.tg) ---------- */
   verbOf(kind) { return kind === 'hook' || kind === 'post' ? 'grab' : kind === 'handle' ? 'pull' : kind === 'item' || kind === 'gold' || kind === 'key' || kind === 'coin' || kind === 'snatch' ? 'fetch' : 'poke'; },
@@ -212,7 +216,7 @@ const PupoReach = {
     switch (a.kind) {
       case 'enemy': {
         if (e && !e.dead && !e.remove) {
-          const belly = !!(e.cfg && e.cfg.belly), type = e.s && e.s.type;
+          const type = e.s && e.s.type, belly = !!(e.cfg && e.cfg.belly) || PupoReach.MAMMALS.has(type);
           a.belly = belly; a.boop = 0.35; a.bx = a.x; a.by = a.y;
           let ok;
           if (type === 'brSloth' && e.befriend) { ok = e.befriend(); g.parts.text(e.cx, e.y - 10, '...COUSIN.', '#fff2c0'); }
@@ -726,7 +730,22 @@ PupoRide.cacheObjs = function (g) {
   const al0 = PupoRide.areaLoaded;
   PupoRide.areaLoaded = function (g) { this.cacheObjs(g); return al0.call(this, g); };
   // a mode's own draw origin and box (climbing, hanging, swinging...), and the arm drawn after the ride
-  PupoRide.overs.push((ctx, p, g, R, t) => PupoArms.draw(ctx, p, g, R, t));
+  // the arm goes in front of the ride, except while swinging: then it is drawn behind Pupo and Brady (it would cross Brady's face)
+  PupoRide.unders.push((ctx, p, g, R, t) => { if (R.mode === 'swing') PupoArms.draw(ctx, p, g, R, t); });
+  PupoRide.overs.push((ctx, p, g, R, t) => { if (R.mode !== 'swing') PupoArms.draw(ctx, p, g, R, t); });
+  // the camera: while swinging it leads in the swing's direction (0.13 of the view); while climbing Brady sits at 60 % of
+  // the view's height, to show more above (TourHooks.camera, at the end of Play.updateCamera)
+  TourHooks.on('camera', (play, dt) => {
+    const p = play.player, R = play.pupo; if (!p || !p.pupoRide || !R || !R.mode || !play.area) return;
+    const A = play.area, k = 1 - Math.exp(-dt * 5);
+    if (R.mode === 'swing') {
+      const lead = clamp(p.vx / (10 * TS), -1, 1) * Game.viewW * 0.13, tx = clamp(p.cx - Game.viewW * 0.42 + lead, 0, Math.max(0, A.W * TS - Game.viewW));
+      play.camX += (tx - play.camX) * k;
+    } else if (R.mode === 'climb') {
+      const ty = clamp(p.y + p.h * 0.5 - Game.viewH * 0.6, 0, Math.max(0, A.H * TS - Game.viewH));
+      play.camY += (ty - play.camY) * k;
+    }
+  });
   PupoRide.overs.push((ctx, p, g, R, t) => PupoArms.marker(ctx, p, g, R, t));
 }
 

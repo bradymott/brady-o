@@ -73,6 +73,9 @@ C.section(want, 'poke', () => {
   // the brSloth ceiling-droppers are Pupo's cousins: befriended
   G.step(g, 0.6); const E6 = foe(g, 2.5 * TS, 'brSloth'); G.step(g, 0.5); G.step(g, 1 / 120, { actionPressed: true }); G.step(g, 0.3);
   C.check('a brSloth is befriended, never hostile again', E6.friendT > 0 && !E6.enemy, { friend: E6.friendT, enemy: E6.enemy });
+  // mammals have belly buttons, by name in every land (no cfg needed)
+  G.step(g, 0.6); const E9 = foe(g, 2.5 * TS, 'mxChihuahua'); G.step(g, 1 / 120, { actionPressed: true }); G.step(g, 0.2);
+  C.check('a chihuahua (a mammal) is booped in its belly button', E9.dead && g.pupo.arm.belly === true);
   // a gift box in reach opens on a poke
   g = ride(24); p = g.player; const A = g.area; A.tiles[11 * A.W + 26] = T.QBLOCK; A.contents['26,11'] = 'oneup';
   G.step(g, 0.1); G.step(g, 1 / 120, { up: true, right: true, actionPressed: true }); G.step(g, 0.3);
@@ -97,6 +100,8 @@ C.section(want, 'swing', () => {
   let passed = false;
   for (let i = 0; i < 240 && !passed; i++) { G.step(g, 1 / 120, { right: true }); const s = g.pupo.sw; if (s.om > 0 && s.th > 0.3) { const e0 = s.e; G.step(g, 1 / 120, { right: true, actionPressed: true }); passed = g.pupo.sw.e !== e0; } }
   C.check('Action at the next hook passes him hand over hand, still swinging', passed && g.pupo.mode === 'swing');
+  { let lead = 0; for (let i = 0; i < 240 && g.pupo.mode === 'swing'; i++) { G.step(g, 1 / 120); if (p.vx > 6 * TS) lead = Math.max(lead, G.run('Game.viewW') * 0.42 - (p.cx - g.camX)); }
+    C.check('swinging, the camera leads in the swing\'s direction', lead > 20, lead); }
   // let go on the forward swing: flies across the pit
   let let0 = null;
   for (let i = 0; i < 900 && g.pupo.mode === 'swing'; i++) {
@@ -128,8 +133,10 @@ C.section(want, 'climb', () => {
   G.step(g, 1.0, { right: true });
   C.check('walking into a climb strip: he grips it on his own', g.pupo.mode === 'climb', g.pupo.mode);
   const y0 = p.y; G.step(g, 0.5, { up: true }); const up = (y0 - p.y) / 0.5 / TS;
+  G.step(g, 0.4, { up: true }); G.step(g, 1.2); const camK = (p.y + p.h * 0.5 - g.camY) / G.run('Game.viewH');
+  C.check(`climbing, the camera keeps Brady at 60 % of the view's height (${camK.toFixed(2)})`, g.pupo.mode === 'climb' && near(camK, 0.6, 0.06), camK);
   C.check(`Up climbs at ${up.toFixed(2)} t/s (3.2)`, near(up, 3.2, 0.25), up);
-  G.step(g, 2.5, { up: true });
+  G.step(g, 2.0, { up: true });
   C.check('at the top he pulls up onto the wall top and stands there', !g.pupo.mode && p.onGround && near(p.y + p.h, 7 * TS, 2) && p.cx > 48 * TS, { feet: (p.y + p.h) / TS, x: p.cx / TS });
   // leap off
   g = ride(44); p = g.player; G.step(g, 1.0, { right: true }); G.step(g, 0.4, { up: true });

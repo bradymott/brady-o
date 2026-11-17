@@ -51,6 +51,9 @@ C.section(want, 'box', () => {
   g.bumpBlock(7, 8, false, p); G.step(g, 0.05);
   const nf = g.pupo.free;
   C.check('a used Nap Box refills: the sleeping Pupo vanishes and pops out of this box', old.remove && nf && nf !== old && nf.mode === 'unfold' && Math.abs(nf.cx - 7.5 * TS) < 2 * TS, { old: old.remove, mode: nf && nf.mode });
+  // landing on a used box while Pupo is elsewhere refills it too
+  g = ridingYard(); { const p2 = g.player; put(g, 25, 9 * TS); G.step(g, 0.3); const o2 = R.dismount(p2, 'nap'); G.step(g, 2.2); put(g, 7, 6 * TS); G.step(g, 0.8);
+    C.check('landing on a used Nap Box while Pupo sleeps elsewhere: he pops out of it', o2.remove && g.pupo.free && g.pupo.free !== o2, { removed: o2.remove }); }
   // while riding, a used box is just a box
   g = ridingYard(); const before = g.pupo.free; g.bumpBlock(7, 8, false, g.player);
   C.check('bumping a used box while riding changes nothing', g.player.pupoRide && g.pupo.where === 'ride' && !before);
@@ -211,6 +214,21 @@ C.section(want, 'carry', () => {
   C.check('the level clear: Brady hops off, Pupo waves and climbs into his box', !q.pupoRide && q.w !== K.W && pack, { ride: q.pupoRide, pack: !!pack });
   G.step(g2, 2.0);
   C.check('...and is gone into it', pack.remove);
+});
+
+C.section(want, 'hooks', () => {
+  // the run state rides the secrets' TourHooks (areaLoaded, levelClear), not a wrapper of Play.loadArea / levelClear
+  const TH = G.run('TourHooks'), PL = G.run('Play.prototype');
+  const al = TH.areaLoaded.filter(f => /PupoRide/.test(String(f))), lc = TH.levelClear.filter(f => /PupoRide/.test(String(f)));
+  C.check('Pupo registers on TourHooks.areaLoaded and .levelClear and wraps neither Play.loadArea nor Play.levelClear', al.length === 1 && lc.length === 1 && !/PupoRide/.test(String(PL.loadArea)) && !/PupoRide/.test(String(PL.levelClear)));
+  // without the areaLoaded handler a door would drop him: the hook is what carries the ride
+  let g = ridingYard(); const loft = g.entities.find(e => e.constructor.name === 'Portal' && e.target.area === 1);
+  TH.off('areaLoaded', al[0]); put(g, loft.cx / TS - 0.5, loft.y + loft.h); G.step(g, 0.2); g.enterPortal(loft); G.step(g, 1.5);
+  const without = g.player.pupoRide; TH.on('areaLoaded', al[0]);
+  g = ridingYard(); put(g, loft.cx / TS - 0.5, loft.y + loft.h); G.step(g, 0.2); g.enterPortal(g.entities.find(e => e.constructor.name === 'Portal' && e.target.area === 1)); G.step(g, 1.5);
+  C.check('through TourHooks.areaLoaded: the ride survives the door (and not without the handler)', g.player.pupoRide && !without, { with: g.player.pupoRide, without });
+  const q = g.player; g.levelClear({ cx: q.cx + 60, y: q.y, exitKey: 'main' });
+  C.check('through TourHooks.levelClear: Pupo packs into his box at the clear', !q.pupoRide && g.entities.some(e => e.pupoFree && e.mode === 'pack'));
 });
 
 C.section(want, 'none', () => {

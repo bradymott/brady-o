@@ -34,6 +34,7 @@ const PupoRide = {
   modes: {},                // R.mode -> { update(p, dt, inp, g, R), pose(p, R, o) }: climbing, hanging, swinging... (PU-2, PU-3)
   afters: [],               // after Brady's step while riding: (p, dt, inp, g, R, inMode)
   overs: [],                // drawn after the ride, in world space: (ctx, p, g, R, t)
+  unders: [],               // drawn before the ride (behind Pupo and Brady), in world space: (ctx, p, g, R, t)
   napSpots: [],             // where a Pupo who falls asleep in mid-air ends up: (g, p) -> { x, y, hang } or null
   says: { ow: '...OW.', better: '...BETTER.', pupo: '...PUPO.', wake: '...PUPO?', wait: "...I'LL... WAIT... HERE.", box: '...I WAS... IN HERE... THE WHOLE TIME.', nap: '...ZZZ.', first: '...I HAD... A GOOD NAP.' },
 
@@ -294,6 +295,7 @@ const PupoRide = {
     if (p.state === 'portal') { a0 = 1 - clamp(p.portalT / 0.4, 0, 1); ctx.save(); ctx.globalAlpha = a0; }
     if (flick) o.rider = null;
     PlayerFx.under(ctx, p, t);
+    for (let i = 0; i < this.unders.length; i++) this.unders[i](ctx, p, g, R, t);
     const bx = o.boxX != null ? o.boxX : o.x - 56, by = o.boxY != null ? o.boxY : o.y - 100, bw = o.boxW || 112, bh = o.boxH || 106;
     Ink.around(ctx, bx, by, bw, bh, this.inkFn, this.INK);
     o.boxX = o.boxY = null; o.boxW = o.boxH = 0; o.moodX = null;
@@ -383,6 +385,10 @@ const PupoRide = {
       const e = new PupoFree(g, { x: fx - p.facing * 30, y: fy, facing: p.facing, mode: 'pack' }); g.spawn(e);
     } else if (R.free && !R.free.remove && R.freeArea === g.area.idx) R.free.setMode('pack');
   },
+  landedOn(p) {
+    const g = p.g, A = g.area, ty = Math.floor((p.y + p.h + 1) / TS);
+    for (let tx = Math.floor((p.x + 2) / TS); tx <= Math.floor((p.x + p.w - 2) / TS); tx++) if (tileAt(A, tx, ty) === T.USED && A.contents[tx + ',' + ty] === 'pupo') { this.refill(g, tx, ty); return; }
+  },
   died(p) { if (p.pupoRide) { this.zPuff(p.g, p.cx, p.y + p.h - 20); this.dismount(p, 'gone'); } }
 };
 PupoRide.GS1 = { sx: 1, sy: 1 };
@@ -447,13 +453,21 @@ class NapBox extends Ent {
       c.save(); c.translate(-w / 2, -h); c.rotate(-0.4 - k * 1.6); c.fillRect(0, -2, 14, 4); c.restore();
       c.save(); c.translate(w / 2, -h); c.rotate(0.4 + k * 1.6 + Math.PI); c.fillRect(0, -2, 14, 4); c.restore();
     }
-    // the hand-lettered tag
-    c.fillStyle = '#f2e6c8'; c.save(); c.translate(-w / 2 + 2, -6); c.rotate(-0.2); c.fillRect(-6, -4, 11, 8); c.fillStyle = '#6a4a2a'; c.fillRect(-4.5, -2, 8, 1); c.fillRect(-4.5, 0.5, 6, 1); c.restore();
+    // the hand-lettered tag on a string: FRAGILE in big letters, the rest small (the land's language)
+    const tag = NapBox.tagLines(this.cc);
+    c.save(); c.translate(-w / 2 - 3, -9); c.rotate(-0.12);
+    c.fillStyle = '#f2e6c8'; c.fillRect(-9, -6, 21, 13); c.strokeStyle = '#6a4a2a'; c.lineWidth = 0.6; c.strokeRect(-9, -6, 21, 13);
+    c.fillStyle = '#5a1e14'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `bold 5.2px ${FONT_UI}`; c.fillText(tag[0], 1.5, -2.2, 19);
+    c.font = `3.1px ${FONT_UI}`; c.fillText(tag[1], 1.5, 3.2, 19);
+    c.restore();
     c.restore();
   }
   get light() { return { r: 40, c: 'rgba(255,230,180,' }; }
 }
 NapBox.paintFn = c => NapBox.cur.paint(c);
+NapBox.tags = {};
+NapBox.tagLines = cc => NapBox.tags[cc] || (NapBox.tags[cc] = (NAPBOX_TAG[cc] || 'FRAGILE \u2014 SLOTH ASLEEP').split(' \u2014 '));
 const PUPO_STAMP = { mx: '#e83a3a', ec: '#8a4a2a', br: '#3ab84a', mz: '#c8a03a', ma: '#3a6ae8', es: '#e8a83a', fr: '#9a6ae8', nl: '#ff8a2a', id: '#3ac8a8', vn: '#e8d83a', jp: '#ff7ab8', np: '#e8e8f0', aq: '#7ad0ff', w22: '#ffd84a' };
 
 /* ---------- Pupo off the ride: sitting, asleep (on the ground or dangling), waking, waiting, packing up ---------- */
@@ -566,7 +580,13 @@ Tour.pieces.napBox = function (st, o) {
 {
   const P = Player.prototype, G = Play.prototype;
   const up0 = P.update;
-  P.update = function (dt, inp) { if (!this.pupoRide) return up0.call(this, dt, inp); return PupoRide.update(this, dt, inp, up0); };
+  P.update = function (dt, inp) {
+    if (this.pupoRide) return PupoRide.update(this, dt, inp, up0);
+    // landing on a used Nap Box while Pupo is not with Brady refills it too (as a bump from below does)
+    const was = this.onGround, vy0 = this.vy, r = up0.call(this, dt, inp);
+    if (this.onGround && !was && vy0 > 3 * TS && this.state === 'play' && !this.dead && this.g.pupo && this.g.level && this.g.level.tour) PupoRide.landedOn(this);
+    return r;
+  };
   // the hit order while riding (§1.4): star, the Pupo shield, then Pupo; Hard Hat, HANDS, FEET and FORM only without him
   const hurt0 = P.hurt;
   P.hurt = function (src) {

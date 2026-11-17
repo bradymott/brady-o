@@ -152,7 +152,7 @@ const PupoPowerFx = {
     // the boops land: a belly-button dot on every target and a white ink ring growing in it
     for (let i = 0; i < this.n; i++) {
       const tAt = this.boopAt(i, tr);
-      if (t0 < tAt && t >= tAt) { const B = this.boops[i]; B.on = true; B.x = this.tx[i]; B.y = this.ty[i]; B.t0 = tAt; if (i % 4 === 0) { this.sfxO.pitch = 0.55 + i * 0.03; PupoRide.sfx('pupoBoop', 'pick', this.sfxO); } }
+      if (t0 < tAt && t >= tAt) { const B = this.boops[i]; B.on = true; this.targets[i].pupoBoop = tAt; B.x = this.tx[i]; B.y = this.ty[i]; B.t0 = tAt; if (i % 4 === 0) { this.sfxO.pitch = 0.55 + i * 0.03; PupoRide.sfx('pupoBoop', 'pick', this.sfxO); } }
     }
     // the pop at 1.60: the hits are applied here
     if (!this.hitDone && t >= 1.60) { this.hitDone = true; this.pop(g, tr); }
@@ -174,7 +174,7 @@ const PupoPowerFx = {
     if (tr.shake && !this.calm) g.shake(tr.shake);
     Sound.play('kick', { vol: 0.5, pitch: 0.8 });
   },
-  finish(g) { const T = this.targets; if (T) T.length = 0; this.n = 0; for (const a of this.arms || []) a.on = false; for (const b of this.bfs || []) b.on = false; for (const b of this.boops || []) b.on = false; },
+  finish(g) { const T = this.targets; if (T) { for (let i = 0; i < T.length; i++) T[i].pupoBoop = 0; T.length = 0; } this.n = 0; for (const a of this.arms || []) a.on = false; for (const b of this.bfs || []) b.on = false; for (const b of this.boops || []) b.on = false; },
 
   /* ---------- drawing in the world (after the inked body): the arms, the eyes, the carpet tongue, boops, butterflies ---------- */
   draw(ctx, p, g, R, t) {
@@ -438,6 +438,12 @@ window.addEventListener('keydown', e => { if (Input.mode === 'game' && (e.code =
     }
     return pr0.call(this, c);
   };
+  // a booped target squashes and giggles (a quick wobble about its feet) until the pop (TourHooks.entityDraw)
+  TourHooks.on('entityDraw', (play, ctx, e) => {
+    const R = play.pupo; if (!e.pupoBoop || !R || !(R.showT > 0)) return false;
+    const k = Math.sin((R.showT - e.pupoBoop) * TAU * 5) * 0.14 * Math.max(0, 1 - (R.showT - e.pupoBoop) / 0.6), fx = e.x + e.w / 2, fy = e.y + e.h;
+    ctx.translate(fx, fy); ctx.scale(1 + k, 1 - k); ctx.translate(-fx, -fy); e.draw(ctx, play.t); return true;
+  });
   // the show's world part, after the inked body; the post-power shield stars are drawn by PupoRide.drawStatus
   PupoRide.overs.push((ctx, p, g, R, t) => PupoPowerFx.draw(ctx, p, g, R, t));
   // a hit during the show is impossible (the world is frozen); the shield after it is PupoRide's R.shieldT / powerShield

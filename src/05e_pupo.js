@@ -192,7 +192,7 @@ const Pupo = {
     } else if (pose === 'climb') {
       const ph = (o && o.phase != null) ? o.phase : t;
       bob = Math.sin(ph * TAU) * 1.2;
-      set(out.seat, -13, -40 + bob); set(out.shoulderF, 9, -40 + bob); set(out.shoulderB, 5, -38 + bob); set(out.belly, 6, -18 + bob);
+      set(out.seat, -24, -46 + bob); set(out.shoulderF, 9, -40 + bob); set(out.shoulderB, 5, -38 + bob); set(out.belly, 6, -18 + bob);
       hx = 8; hy = -52 + bob;
     } else {
       bob = pose === 'rear' || pose === 'power' ? 0 : Math.sin(t * 1.6) * 0.6;
@@ -294,8 +294,9 @@ const Pupo = {
     // the far arm and the far leg grip the pole
     if (!o.armsOff) Pupo.arm(ctx, 5, -38 + bob, 16, -60 - Math.max(0, -k) * 8, { w: 7, col: C.furSh, t, bands: false });
     outlinedCapsule(ctx, -2, -10, 12, -4 + k * 3, 9, C.furSh); Pupo.hand(ctx, 13, -4 + k * 3, -0.3, 0.9, false);
+    // Brady-O clings on behind him (drawn first, so Pupo's body is in front and the two never blur together)
+    if (o.rider) { ctx.save(); o.rider(ctx, -24, -46 + bob); ctx.restore(); }
     ctx.save(); ctx.translate(0, bob); ctx.rotate(-0.08); this.sitBody(ctx, 0); ctx.restore();
-    if (o.rider) { ctx.save(); o.rider(ctx, -13, -40 + bob); ctx.restore(); }
     outlinedCapsule(ctx, 4, -10, 14, -12 - k * 3, 9, C.fur); Pupo.hand(ctx, 15, -12 - k * 3, -0.3, 0.9, false);
     ctx.save(); ctx.translate(8, -52 + bob); ctx.rotate(-0.12); Pupo.head(ctx, 0, 0, 1.75, t, o.mood || 'calm', o.spiral); ctx.restore();
     if (!o.armsOff) Pupo.arm(ctx, 9, -40 + bob, 18, -62 - Math.max(0, k) * 8, { w: 7.5, col: C.fur, t, bands: false });
