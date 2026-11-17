@@ -167,24 +167,31 @@ const TOUR_OW_MAPS = {
     scenes: { '5-1': 'souk', '5-2': 'caravan', '5-3': ['village', { wall: '#7ab4e8', walls: ['#7ab4e8', '#5a9ad8', '#a8d0f0'], roof: '#5a8ac8', flat: true, n: 7, ground: '#c8d8e8' }], '5-4': ['grove', { trees: ['palm', 'palm', 'olive'], ground: '#d8b078' }], '5-5': 'riad', '5-6': 'carpets' },
     live: [['walk', 'camel', [[500, 700], [600, 680], [720, 700]], 9], ['walk', 'camel', [[1000, 820], [1100, 800], [1180, 760]], 7], ['walk', 'fennec', [[880, 470], [940, 450]], 10], ['circle', 820, 400, 80, 1], ['sail', [[40, 300], [60, 900], [400, 950], [20, 500]], 10]]
   },
-  // Spain: the tomato town, the windmill plateau, the pintxos bar, the city of arts by the sea, the volcano
-  // island over a bridge, the old market hall
+  // Spain: a Z: east along the north coast (tomatoes, the pintxos bar), down across the windmill plateau to the
+  // City of Arts, over the strait to the volcano island, then east along the south coast to the old market hall
   es: {
-    w: 1600, h: 960,
-    land: [[[60, 520], [130, 340], [300, 230], [540, 170], [800, 140], [1060, 150], [1250, 200], [1380, 300], [1300, 430], [1350, 560], [1440, 700], [1420, 850], [1160, 910], [860, 895], [560, 920], [300, 900], [110, 800]],
-      [[1420, 330], [1520, 300], [1570, 400], [1540, 500], [1450, 515], [1400, 430]]],
-    nodes: { start: [160, 620], '6-1': [360, 700], '6-2': [780, 790], '6-3': [1180, 760], '6-4': [1490, 410], '6-5': [800, 260], '6-6': [1050, 520], 'bottle:4': [1180, 560], '6-7': [380, 420], 'house:es-pintxos': [620, 470], port: [600, 185] },
-    paths: { 'start>6-1': [[250, 680]], '6-1>6-2': [[570, 780]], '6-2>6-3': [[990, 800]], '6-3>6-4': [[1340, 700], [1430, 560]], '6-3>6-6': [[1120, 640]], '6-6>6-4': [[1290, 470]], '6-4>6-5': [[1400, 290], [1100, 250]], '6-1>6-7': [[330, 560]], '6-2>house:es-pintxos': [[700, 620]], '6-5>port': [[700, 200]] },
+    labels: { '6-6': 'Aquarium', '6-7': 'Molinos' },
+    w: 1500, h: 960,
+    pal: { land: '#b4a466', light: '#d8c890', path: '#f3d2a2', cliff: '#9a5a3a', beach: '#ecd2a0' },
+    bridge: 'stone',
+    land: [[[80, 90], [500, 70], [1000, 80], [1350, 110], [1460, 260], [1450, 520], [1400, 760], [1280, 880], [1000, 900], [700, 890], [580, 860], [530, 720], [440, 640], [260, 610], [120, 560], [70, 380]],
+      [[220, 700], [330, 662], [460, 700], [500, 800], [420, 880], [280, 890], [200, 820]]],
+    nodes: { start: [160, 190], '6-1': [540, 170], '6-7': [330, 380], 'house:es-pintxos': [1200, 320], '6-2': [960, 200], '6-3': [760, 480], '6-6': [450, 520], 'bottle:4': [300, 520], '6-4': [430, 760], '6-5': [800, 790], port: [1170, 760] },
+    paths: { 'start>6-1': [[350, 160]], '6-1>6-7': [[420, 290]], '6-1>6-2': [[750, 200]], '6-2>house:es-pintxos': [[1090, 280]], '6-2>6-3': [[880, 340]], '6-3>6-6': [[600, 520]], '6-6>bottle:4': [[375, 530]], '6-6>6-4': [[400, 650]], '6-3>6-4': [[600, 600], [470, 700]], '6-4>6-5': [[560, 820]], '6-5>port': [[990, 800]] },
     feat: [
-      ['patch', '#d9c48a', [[220, 330], [460, 300], [520, 460], [420, 540], [240, 520]]],
-      ['sprite', 'windmill', 300, 360, 18], ['sprite', 'windmill', 470, 370, 18], ['sprite', 'windmill', 260, 480, 16],
-      ['trees', 'orange', 1150, 620, 90, 8], ['trees', 'olive', 500, 640, 110, 9], ['trees', 'cypress', 900, 360, 90, 6],
-      ['town', 1270, 820, 6, 50, 'flat'], ['town', 320, 790, 5, 45],
-      ['landmark', 940, 410, 56]
+      ['contours', '#c8b47a', [[180, 300], [460, 280], [640, 360], [560, 430], [300, 460], [150, 420]], 3],
+      ['sprite', 'windmill', 240, 330, 18, { spin: 1 }], ['sprite', 'windmill', 440, 340, 18, { spin: 1 }], ['sprite', 'windmill', 220, 440, 16, { spin: 1 }],
+      ['patch', '#d8604a', [[580, 90], [700, 100], [690, 140], [600, 140]]],
+      ['fields', '#a89a5a', [[900, 380], [1100, 380], [1140, 470], [960, 500]], ['#6a8a4a', '#7a9a5a'], 0.4],
+      ['trees', 'orange', 1250, 520, 120, 10], ['trees', 'olive', 640, 660, 110, 8], ['trees', 'cypress', 1000, 640, 80, 5], ['trees', 'olive', 1100, 180, 80, 5],
+      ['volcano', 290, 820, 50, { lava: false, col: '#8a6a5a' }],
+      ['sprite', 'paella', 1000, 860, 18], ['sprite', 'paella', 620, 410, 14], ['sprite', 'hayroll', 200, 520, 10], ['sprite', 'hayroll', 520, 600, 10],
+      ['town', 1300, 760, 6, 50, 'flat'], ['town', 700, 100, 4, 40], ['town', 940, 760, 4, 40, 'flat'],
+      ['landmark', 1330, 380, 54]
     ],
-    flora: ['olive', 'orange', 'cypress'], density: 30,
+    flora: ['olive', 'orange', 'cypress', 'bush'], density: 36,
     scenes: { '6-1': 'tomatina', '6-2': 'pintxos', '6-3': 'arts', '6-4': ['grove', { trees: ['pine', 'pine', 'rock'], ground: '#9a8a7a' }], '6-5': ['grove', { trees: ['orange', 'orange', 'olive'], ground: '#e8d0a0' }], '6-6': 'aquarium', '6-7': ['windmills', { ground: '#d9c48a' }] },
-    live: [['sail', [[1450, 600], [1590, 640], [1560, 940], [1300, 950]], 10]]
+    live: [['mill', 240, 330, 18], ['mill', 440, 340, 18], ['mill', 220, 440, 16], ['sail', [[1350, 900], [1480, 700], [1480, 940]], 10], ['circle', 380, 330, 70, 1], ['fish', 510, 760, '#8ab0d0']]
   },
   // France: Paris on the river with the iron tower (daylight), the lavender fields, the abbey islet in the bay
   // (drawn as a plain rock town), the truffle woods, the château, balloons
