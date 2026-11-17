@@ -639,7 +639,7 @@ class GameOverScene {
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
     UI.title(ctx, 'GAME OVER', W / 2, H / 2 - 50, Math.min(48, W * 0.09));
     ctx.save(); ctx.textAlign = 'center'; ctx.font = `13px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillText(this.level && this.level.tour ? 'Baron Bric-a-Brac wins this round. Not the trip.' : 'The Man wins this round. Not the war.', W / 2, H / 2 - 12); ctx.restore();
+    ctx.fillText(this.level && this.level.tour ? 'Piwi Squirmin\' wins this round. Not the trip.' : 'The Man wins this round. Not the war.', W / 2, H / 2 - 12); ctx.restore();
     UI.drawButtons(ctx, this.btns);
   }
 }

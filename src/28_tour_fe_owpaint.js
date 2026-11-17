@@ -408,7 +408,7 @@ const TourOWPaint = {
     const E = TourProgress.exitsFound(n.id); if (E.total < 2) return;
     for (let q = 0; q < E.total; q++) { c.fillStyle = q < E.found ? '#7ae0ff' : 'rgba(28,20,38,0.35)'; c.strokeStyle = this.INK; c.lineWidth = 0.9; c.beginPath(); c.arc((q - (E.total - 1) / 2) * 7, 13.5, 2.3, 0, TAU); c.fill(); c.stroke(); }
   },
-  // the boss fort: walls, towers, a gate, the land's roof motif and a flag (the Baron's until the boss falls)
+  // the boss fort: walls, towers, a gate, the land's roof motif and a flag (Piwi's until the boss falls)
   fort(c, ow, n, here) {
     const C = ow.C, t = ow.t, ink = this.INK, done = n.done, open = n.enter;
     const wall = open ? (done ? '#f3e2c0' : '#e2cfae') : '#b8b4c0', dark = shade(wall, -0.25);
@@ -430,13 +430,13 @@ const TourOWPaint = {
     // flag on the right tower
     const fx = 19, fy = -38, f = Math.sin(t * 5) * 2;
     c.strokeStyle = ink; c.lineWidth = 1.6; c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx, fy - 18); c.stroke();
-    c.fillStyle = done ? C.colors.a : '#6a4a8a'; c.beginPath(); c.moveTo(fx, fy - 18); c.lineTo(fx + 14, fy - 15 + f); c.lineTo(fx, fy - 10); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = done ? C.colors.a : PIWI.jacket; c.beginPath(); c.moveTo(fx, fy - 18); c.lineTo(fx + 14, fy - 15 + f); c.lineTo(fx, fy - 10); c.closePath(); c.fill(); c.stroke();
     c.fillStyle = done ? '#ffd84a' : '#e8d8ff'; c.font = 'bold 6px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    if (done) { c.beginPath(); TourKit.star(c, fx + 5, fy - 14.5 + f * 0.5, 2.6, 1.1, 5); c.fill(); } else c.fillText('B', fx + 5, fy - 14 + f * 0.5);
+    if (done) { c.beginPath(); TourKit.star(c, fx + 5, fy - 14.5 + f * 0.5, 2.6, 1.1, 5); c.fill(); } else { c.fillStyle = PIWI.tie; c.fillText('P', fx + 5, fy - 14 + f * 0.5); }
     if (open) this.postcards(c, n, ow, -28);
     if (done) this.pips(c, Object.assign({}, n));
   },
-  // the Baron's roadblock, themed per land (crates, a fallen log, boulders, ice blocks, paper lanterns...), with his B sign
+  // Piwi's roadblock, themed per land (crates, a fallen log, boulders, ice blocks, paper lanterns...), with his P sign
   roadblock(c, ow, x, y, ang, port) {
     const ink = this.INK, t = ow.t, kind = { mx: 'crates', es: 'crates', fr: 'crates', ec: 'log', br: 'log', id: 'log', vn: 'log', ma: 'rocks', mz: 'rocks', np: 'rocks', aq: 'ice', nl: 'barrier', jp: 'barrier', w22: 'barrier' }[ow.cc] || 'barrier';
     c.save(); c.translate(x, y);
@@ -451,14 +451,14 @@ const TourOWPaint = {
       for (const s of [-1, 1]) { c.fillStyle = '#8a5a3a'; c.fillRect(s * 12 - 2, -16, 4, 19); c.strokeRect(s * 12 - 2, -16, 4, 19); }
       c.save(); c.rotate(Math.sin(t * 2) * 0.02);
       c.fillStyle = '#ffd23a'; c.fillRect(-16, -13, 32, 7); c.strokeRect(-16, -13, 32, 7);
-      c.fillStyle = '#6a4a8a'; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(-14 + i * 8, -13); c.lineTo(-10 + i * 8, -13); c.lineTo(-14 + i * 8 + 1, -6); c.lineTo(-18 + i * 8 + 1, -6); c.closePath(); c.fill(); }
+      c.fillStyle = PIWI.jacket; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(-14 + i * 8, -13); c.lineTo(-10 + i * 8, -13); c.lineTo(-14 + i * 8 + 1, -6); c.lineTo(-18 + i * 8 + 1, -6); c.closePath(); c.fill(); }
       c.strokeRect(-16, -13, 32, 7); c.restore();
     }
-    // the Baron's sign on a stick
+    // Piwi's sign on a stick
     c.beginPath(); c.moveTo(14, 2); c.lineTo(14, -22); c.stroke();
     c.save(); c.translate(14, -26); c.rotate(Math.sin(t * 2.2 + x) * 0.06);
-    c.fillStyle = '#6a4a8a'; c.beginPath(); c.arc(0, 0, 6.5, 0, TAU); c.fill(); c.stroke();
-    c.fillStyle = '#ffe8a8'; c.font = `7px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(port ? '✈' : 'B', 0, 0.5);
+    c.fillStyle = PIWI.jacket; c.beginPath(); c.arc(0, 0, 6.5, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = port ? '#ffe8a8' : PIWI.tie; c.font = `7px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(port ? '✈' : 'P', 0, 0.5);
     c.restore(); c.restore();
   }
 };

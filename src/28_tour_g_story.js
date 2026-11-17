@@ -1,65 +1,26 @@
 /* ============================================================
-   World tour: the story.
-   Brady and Chinka set off on the trip of a lifetime. In Mexico,
-   BARON BRIC-A-BRAC, a greedy souvenir collector with a shrink-ray
-   camera, snaps the Palace of Fine Arts down to snow-globe size and
-   floats off in his snow-globe blimp. Chinka leaps onto his rope
-   ladder and sends Brady postcards from every stop. Each country's
-   castle boss guards one shrunken landmark; beating it pops the
-   landmark back to size. The showdown is in Nepal, in the Himalayas.
+   World tour: the story (docs/design/STORY_PIWI.md).
+   PIWI SQUIRMIN', a lonely ventriloquist dummy with a flying
+   Showtrunk, hooks Chinka-O into his show cage in Mexico City and
+   takes her on his world tour. Each land is a tour date: its boss is
+   tonight's act and a landmark is shrunk into scenery. Brady-O
+   chases him on Pupo, their giant sloth, following Chinka-O's
+   postcards. The Grand Finale is in Nepal; the encore in World 22.
+   The cast is drawn in 05b_piwi.js, 05c_chinka.js, 05d_showtrunk.js
+   and 05e_pupo.js.
    ============================================================ */
+// the old villain's drawing calls, kept as an adapter so every caller now draws Piwi and his Showtrunk
 const TourVillain = {
-  // the Baron: tiny, pompous, coat covered in souvenir pins, a snow globe on his top hat
   draw(ctx, x, y, s, t, pose) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    const bob = Math.sin(t * 3) * 1.5;
-    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(0, 0, 18, 4, 0, 0, TAU); ctx.fill();
-    // boots and coat
-    ctx.fillStyle = '#2a1a2a'; rr(ctx, -10, -8, 9, 8, 3); ctx.fill(); rr(ctx, 1, -8, 9, 8, 3); ctx.fill();
-    const cg = ctx.createLinearGradient(0, -48, 0, -6); cg.addColorStop(0, '#7a2ac8'); cg.addColorStop(1, '#4a1a8a');
-    ctx.fillStyle = cg; ctx.beginPath(); ctx.moveTo(-15, -6); ctx.quadraticCurveTo(-18, -30 + bob, -11, -46 + bob); ctx.lineTo(11, -46 + bob); ctx.quadraticCurveTo(18, -30 + bob, 15, -6); ctx.closePath(); ctx.fill();
-    // souvenir pins all over the coat
-    const pins = ['#ffd84a', '#ff4f8a', '#38c8ff', '#5ad04a', '#ffffff', '#ff9a3a'];
-    for (let k = 0; k < 9; k++) { ctx.fillStyle = pins[k % 6]; ctx.beginPath(); ctx.arc(-10 + (k % 3) * 9 + (k > 5 ? 3 : 0), -38 + Math.floor(k / 3) * 10 + bob, 2.2, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = '#ffd84a'; for (let k = 0; k < 3; k++) ctx.fillRect(-1, -40 + k * 10 + bob, 2, 2);
-    // head, monocle, grin
-    ctx.fillStyle = '#f2c8a8'; ctx.beginPath(); ctx.arc(0, -54 + bob, 10, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(4, -55 + bob, 3.6, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(7, -53 + bob); ctx.lineTo(9, -44 + bob); ctx.stroke();
-    ctx.fillStyle = '#1a1020'; ctx.beginPath(); ctx.arc(-4, -55 + bob, 1.4, 0, TAU); ctx.arc(4, -55 + bob, 1.2, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#3a1a1a'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(0, -50 + bob, 4.5, 0.2, Math.PI - 0.2); ctx.stroke();
-    ctx.fillStyle = '#5a3a2a'; ctx.beginPath(); ctx.ellipse(-4, -49.5 + bob, 4, 1.4, 0.3, 0, TAU); ctx.ellipse(4, -49.5 + bob, 4, 1.4, -0.3, 0, TAU); ctx.fill();
-    // the top hat with a snow globe on it
-    ctx.fillStyle = '#1a1020'; ctx.fillRect(-11, -64 + bob, 22, 3); rr(ctx, -7, -80 + bob, 14, 17, 2); ctx.fill();
-    ctx.fillStyle = '#ff4f8a'; ctx.fillRect(-7, -68 + bob, 14, 3);
-    ctx.fillStyle = 'rgba(200,240,255,0.7)'; ctx.beginPath(); ctx.arc(0, -86 + bob, 6, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#ffffff'; for (let k = 0; k < 4; k++) ctx.fillRect(-3 + ((t * 10 + k * 3) % 6), -89 + k * 1.5 + bob, 1, 1);
-    // the Shrink-o-Matic camera
-    if (pose !== 'empty') {
-      ctx.save(); ctx.translate(14, -32 + bob);
-      ctx.fillStyle = '#3a3a4a'; rr(ctx, -4, -6, 18, 12, 3); ctx.fill();
-      ctx.fillStyle = '#8af0ff'; ctx.beginPath(); ctx.arc(9, 0, 4, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#ffd84a'; ctx.fillRect(0, -9, 5, 3);
-      if (pose === 'flash') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(12, 0, 2, 12, 0, 60); g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(1, 'rgba(160,230,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(12, 0, 60, 0, TAU); ctx.fill(); ctx.restore(); }
-      ctx.restore();
-    }
-    ctx.restore();
+    Piwi.draw(ctx, { x, y, scale: s * 1.5, t, pose: { flash: 'gloat', camera: 'talk', empty: 'idle' }[pose] || 'idle', facing: 1 });
+    if (pose === 'flash') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x + 14 * s, y - 40 * s, 2, x + 14 * s, y - 40 * s, 60 * s); g.addColorStop(0, 'rgba(255,250,210,0.95)'); g.addColorStop(1, 'rgba(255,230,140,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x + 14 * s, y - 40 * s, 60 * s, 0, TAU); ctx.fill(); ctx.restore(); }
   },
-  // the snow-globe blimp
-  blimp(ctx, x, y, s, t) {
-    ctx.save(); ctx.translate(x, y + Math.sin(t * 1.5) * 4); ctx.scale(s, s);
-    const g = ctx.createRadialGradient(-20, -20, 10, 0, 0, 70); g.addColorStop(0, 'rgba(230,250,255,0.95)'); g.addColorStop(1, 'rgba(120,190,230,0.85)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 70, 40, 0, 0, TAU); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2; ctx.stroke();
-    // a tiny shrunken landmark inside, with snow swirling
-    ctx.fillStyle = '#e8b838'; ctx.beginPath(); ctx.arc(0, 14, 14, Math.PI, TAU); ctx.fill(); ctx.fillStyle = '#f2e2c8'; ctx.fillRect(-18, 14, 36, 12);
-    ctx.fillStyle = '#ffffff'; for (let k = 0; k < 16; k++) { const a = k * 0.8 + t; ctx.fillRect(Math.cos(a) * (20 + k * 2) % 60, -20 + ((k * 7 + t * 12) % 40), 1.6, 1.6); }
-    ctx.fillStyle = '#7a2ac8'; rr(ctx, -30, 36, 60, 16, 6); ctx.fill();
-    ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('BRIC-A-BRAC', 0, 47);
-    for (const px of [-74, 74]) { ctx.fillStyle = '#4a1a8a'; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px + Math.sign(px) * 14, -12); ctx.lineTo(px + Math.sign(px) * 14, 12); ctx.closePath(); ctx.fill(); }
-    ctx.strokeStyle = '#8a6a4a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(20, 52); ctx.lineTo(28, 110); ctx.stroke();
-    ctx.restore();
-  }
+  blimp(ctx, x, y, s, t) { Showtrunk.draw(ctx, { x, y: y + 20 * s, scale: s * 0.8, t, piwi: null, chinka: true }); }
 };
+// a story character with the game's ink line and Brady's cream rim (the way the player is drawn)
+function storyInk(ctx, x, y, w, h, fn, below) {
+  Ink.around(ctx, x - w / 2, y - h, w, h + (below || 8), fn, { pad: 10, width: 1.0, color: '#120e16', rim: '#e7e3d7', hero: true });
+}
 
 /* ---------- backdrops ---------- */
 Object.assign(BGPaint, {
@@ -142,37 +103,52 @@ const TourTitle = {
 
 /* ---------- the story panels ---------- */
 function tourStage(ctx, W, H, t, theme) { return storyStage(ctx, W, H, t, theme); }
+// the story cast, each inked, standing on the ground line gy at scale s
+const TourCast = {
+  brady(ctx, x, gy, s, t, st, f) { storyInk(ctx, x, gy, 70 * s, 84 * s, c => { c.save(); c.translate(x, gy); c.scale(s, s); drawBrady(c, { x: 0, y: 0, facing: f || 1, small: false, power: 0, anim: { state: st || 'idle', t, phase: t * 12, speed: 1 }, hair: null, look: Save.data.look, time: t }); c.restore(); }); },
+  chinka(ctx, x, gy, s, t, pose, f) { storyInk(ctx, x, gy, 80 * s, 100 * s, c => ChinkaO.draw(c, { x, y: gy, scale: s, t, pose: pose || 'idle', facing: f || 1 })); },
+  piwi(ctx, x, gy, s, t, pose, f) { storyInk(ctx, x, gy, 70 * s, 80 * s, c => Piwi.draw(c, { x, y: gy, scale: s, t, pose: pose || 'idle', facing: f || 1 })); },
+  pupo(ctx, x, gy, s, t, pose, f, rider) {
+    storyInk(ctx, x, gy, 150 * s, (rider ? 130 : 90) * s, c => Pupo.draw(c, { x, y: gy, scale: s, t, pose: pose || 'idle', facing: f || 1,
+      rider: rider ? (c2, sx, sy) => drawBrady(c2, { x: sx, y: sy + 25, facing: 1, small: false, power: 0, anim: { state: 'ride', t, phase: 0, speed: 1 }, hair: null, look: Save.data.look, time: t }) : null }), 20 * s);
+  },
+  trunk(ctx, x, y, s, t, piwi, chinka) { storyInk(ctx, x, y, 160 * s, 130 * s, c => Showtrunk.draw(c, { x, y, scale: s, t, piwi, chinka }), chinka ? 110 * s : 10 * s); }
+};
 function TourIntroPanels() {
-  const brady = (ctx, x, gy, s, t, st, f) => { ctx.save(); ctx.translate(x, gy); ctx.scale(s, s); drawBrady(ctx, { x: 0, y: 0, facing: f || 1, small: false, power: 0, anim: { state: st || 'idle', t, phase: t * 12, speed: 1 }, hair: null, look: Save.data.look, time: t }); ctx.restore(); };
-  const chinka = (ctx, x, gy, s, t, pose, f) => drawChinka(ctx, { x, y: gy, scale: s, t, pose: pose || 'wave', facing: f || 1 });
+  const C = TourCast;
   return [
-    { text: 'Brady and Chinka finally booked it: the trip of a lifetime. Twelve countries, two passports and one very small plane.',
-      scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_title'); brady(ctx, W * 0.36, gy, s, t, 'idle', 1); chinka(ctx, W * 0.5, gy, s, t, 'cheer', -1); ctx.save(); ctx.translate(W * 0.75, gy - 30 * s); ctx.scale(s * 1.2, s * 1.2); TourMapScene.prototype.drawPlane.call({ t }, ctx, 0, 0, 0); ctx.restore(); } },
-    { text: 'First stop: Mexico City. Then a giant snow globe floated over the plaza... and a tiny man with a big camera leaned out. "MAGNIFICENT! I\'LL TAKE IT!"',
-      scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); TourVillain.blimp(ctx, W * 0.66, gy - 120 * s, s * 0.9, t); TourVillain.draw(ctx, W * 0.66, gy - 150 * s, s * 0.6, t, pt > 1.4 ? 'flash' : 'camera'); brady(ctx, W * 0.28, gy, s, t, 'idle', 1); chinka(ctx, W * 0.38, gy, s, t, 'captive', 1); if (pt > 1.4 && pt < 1.9) { ctx.fillStyle = `rgba(255,255,255,${0.8 * (1 - (pt - 1.4) / 0.5)})`; ctx.fillRect(0, 0, W, H); } } },
-    { text: 'FLASH! The Palace of Fine Arts shrank down to snow-globe size. Baron Bric-a-Brac popped it in his pocket. "The finest souvenir collection on Earth needs the finest landmarks!"',
-      scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); TourVillain.blimp(ctx, W * 0.7, gy - 130 * s + Math.sin(t) * 6, s * 0.9, t); TourVillain.draw(ctx, W * 0.45, gy, s * 1.2, t, 'camera'); brady(ctx, W * 0.2, gy, s, t, 'idle', 1); } },
-    { text: 'Chinka didn\'t wait. She grabbed the blimp\'s rope ladder as it lifted off. "Brady! I\'ll follow him. Watch for my postcards!"',
-      scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_dusk'); const k = Math.min(1, pt * 0.35); TourVillain.blimp(ctx, W * (0.55 + k * 0.2), gy - 150 * s - k * 40 * s, s * 0.9, t); chinka(ctx, W * (0.58 + k * 0.2), gy - 40 * s - k * 40 * s, s * 0.9, t, 'wave', -1); brady(ctx, W * 0.25, gy, s, t, 'run', 1); } },
-    { text: 'Every country he visits, he shrinks something else. Follow Chinka\'s postcards, beat the Baron\'s goons, put the world back to size and bring Chinka home.',
-      scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_title'); brady(ctx, W * 0.32, gy, s * 1.1, t, 'victory', 1); ctx.save(); ctx.translate(W * 0.62, gy - 60 * s); ctx.rotate(-0.1); ctx.scale(s * 1.6, s * 1.6); TourArt.postcard(ctx, 0, 0, t, false); ctx.restore(); } }
+    { text: 'Brady-O, Chinka-O and Pupo, their giant sloth, set off on the trip of a lifetime. Two passports. One very small plane.',
+      scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_title'); C.pupo(ctx, W * 0.2, gy, s * 0.8, t, 'idle', 1); C.brady(ctx, W * 0.38, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.5, gy, s, t, 'wave', -1); ctx.save(); ctx.translate(W * 0.75, gy - 30 * s); ctx.scale(s * 1.2, s * 1.2); TourMapScene.prototype.drawPlane.call({ t }, ctx, 0, 0, 0); ctx.restore(); } },
+    { text: 'First stop, Mexico City. A flying trunk landed, its lid opened into a tiny stage, and a wooden dummy bowed to nobody. "OPENING NIGHT!"',
+      scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); C.trunk(ctx, W * 0.68, gy, s * 0.62, t, 'talk', false); C.pupo(ctx, W * 0.14, gy, s * 0.8, t, 'idle', 1); C.brady(ctx, W * 0.28, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.4, gy, s, t, 'idle', 1); } },
+    { text: 'His head fell off mid-song. Chinka-O stepped in and finished his number with a perfect pirouette. "A STAR! You\'re my LEADING LADY!"',
+      scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); C.trunk(ctx, W * 0.72, gy, s * 0.62, t, pt > 1.6 ? 'gloat' : 'startled', false); C.pupo(ctx, W * 0.14, gy, s * 0.8, t, 'happy', 1); C.brady(ctx, W * 0.28, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.46, gy, s, t, 'pirouette', 1); } },
+    { text: 'A hook swung out and popped her into his show cage. FWOOMP: his spotlight shrank the Palace of Fine Arts. "Every show needs scenery!"',
+      scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'mx_mercado'); C.trunk(ctx, W * 0.64, gy - 110 * s, s * 0.62, t, 'gloat', true); C.pupo(ctx, W * 0.16, gy, s * 0.8, t, 'poke', 1); C.brady(ctx, W * 0.32, gy, s, t, 'idle', 1); if (pt > 1.4 && pt < 1.9) { ctx.fillStyle = `rgba(255,248,220,${0.8 * (1 - (pt - 1.4) / 0.5)})`; ctx.fillRect(0, 0, W, H); } } },
+    { text: '"Brady! I\'m fine. He\'s made of wood and scared of termites. Look after Pupo. Follow my postcards!" And up went Piwi Squirmin\'s trunk.',
+      scene(ctx, W, H, t, pt) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_dusk'); const k = Math.min(1, pt * 0.35); C.trunk(ctx, W * (0.58 + k * 0.18), gy - 120 * s - k * 40 * s, s * 0.62, t, 'gloat', true); C.pupo(ctx, W * 0.14, gy, s * 0.8, t, 'walk', 1); C.brady(ctx, W * 0.32, gy, s, t, 'run', 1); } },
+    { text: 'Pupo sat in the empty plaza, hugging her pink bow. "We\'re getting her back, buddy." A very long pause. "...climb on."',
+      scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_dusk'); C.pupo(ctx, W * 0.5, gy, s, t, 'sad', -1); C.brady(ctx, W * 0.3, gy, s, t, 'idle', 1); } },
+    { text: 'Piwi Squirmin\'s World Tour: twelve tour dates. Crash every show, put the scenery back and bring Chinka-O home.',
+      scene(ctx, W, H, t) { const { gy, s } = tourStage(ctx, W, H, t, 'tour_title'); C.pupo(ctx, W * 0.36, gy, s * 0.9, t, 'ride', 1, true); ctx.save(); ctx.translate(W * 0.66, gy - 60 * s); ctx.rotate(-0.1); ctx.scale(s * 1.6, s * 1.6); TourArt.postcard(ctx, 0, 0, t, false); ctx.restore(); } }
   ];
 }
 
-// arriving in a country for the first time: Chinka's postcard (shown on the map)
+// arriving in a country for the first time: Chinka-O's postcard (shown on the map)
 function tourArrivalCard(C) {
-  return { title: 'POSTCARD FROM ' + C.name.toUpperCase(), text: C.arrival || ('Brady! The Baron\'s blimp landed in ' + C.name + '. Find his goon, save the landmark! ♥ C') };
+  return { title: 'POSTCARD FROM ' + C.name.toUpperCase(), text: C.arrival || ('Brady! Piwi\'s trunk landed in ' + C.name + '. Crash his show, save the landmark! ♥ C') };
 }
 
-/* ---------- the ending (after the showdown in Nepal) ---------- */
+/* ---------- the ending (after the Grand Finale in Nepal) ---------- */
 class TourEndingScene {
   constructor() {
     this.t = 0; this.stage = 0; Input.setMode('ui'); Sound.music(Sound.trackNames.indexOf('tour_ending') >= 0 ? 'tour_ending' : 'ending'); Sound.play('reunion');
     this.lines = [
-      'The Baron\'s Shrink-o-Matic sputters... FLASH. Baron Bric-a-Brac is now exactly snow-globe sized.',
+      'The Shrink-Spot sputters... FWOOMP. Piwi Squirmin\' is now exactly pocket-sized, rattling in his own prop jar.',
       'One by one, the landmarks pop back to full size all over the world. Somewhere, a volcano sighs with relief.',
-      'Chinka: "You followed every postcard?"  Brady: "Every. Single. One. Your handwriting is beautiful."',
-      'Sunrise over the Himalayas. Two passports full of stamps. Best. Trip. Ever.'
+      'Chinka-O: "You followed every postcard?"  Brady-O: "Every. Single. One. Your handwriting is beautiful."',
+      'Pupo reaches out, very slowly, and pokes Chinka-O\'s belly button. "...your pupo. ...I missed it."',
+      'Sunrise over the Himalayas. Two passports full of stamps, one giant sleepy sloth, one very quiet dummy. Best. Trip. Ever.'
     ];
     this.parts = new Particles();
     Save.data.beatGame = true; Save.save();
@@ -187,34 +163,37 @@ class TourEndingScene {
     }
   }
   draw(ctx) {
-    const W = Game.cssW, H = Game.cssH;
+    const W = Game.cssW, H = Game.cssH, C = TourCast, st = this.stage, t = this.t;
     ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
-    const { gy, s } = storyStage(ctx, W, H, this.t, 'tour_himalaya');
+    const { gy, s: s0 } = storyStage(ctx, W, H, t, 'tour_himalaya');
+    // in portrait the three stand closer and smaller, so nobody leaves the screen
+    const s = W < H ? Math.min(s0, W / 230) : s0;
     // prayer flags strung respectfully across the far ridge
     ctx.save(); ctx.strokeStyle = 'rgba(80,60,60,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, gy - 120 * s); ctx.quadraticCurveTo(W / 2, gy - 90 * s, W, gy - 130 * s); ctx.stroke();
     const fc = ['#3a7ad8', '#ffffff', '#e8483a', '#4ab05a', '#ffd84a'];
     for (let i = 0; i < 24; i++) { const k = i / 24, fx = k * W, fy = (1 - k) * (1 - k) * (gy - 120 * s) + 2 * (1 - k) * k * (gy - 90 * s) + k * k * (gy - 130 * s); ctx.fillStyle = fc[i % 5]; ctx.fillRect(fx, fy, 8 * s * 0.6, 10 * s * 0.6); }
     ctx.restore();
-    const k = Math.min(1, this.t / 2.5);
-    ctx.save(); ctx.translate(W * 0.5 - 40 * s * (1 - k), gy); ctx.scale(s * 1.1, s * 1.1);
-    drawBrady(ctx, { x: 0, y: 0, facing: 1, small: false, power: 0, anim: { state: this.stage >= 3 ? 'victory' : 'idle', t: this.t, phase: 0 }, hair: null, look: Save.data.look, time: this.t });
+    const k = Math.min(1, t / 2.5), bx0 = W < H ? W / 2 - 14 * s : W * 0.36;
+    C.brady(ctx, bx0 - 40 * s * (1 - k), gy, s * 1.05, t, st >= 4 ? 'victory' : 'idle', 1);
+    C.chinka(ctx, bx0 + 34 * s + 40 * s * (1 - k), gy, s * 1.05, t, st === 2 ? 'reunion' : st === 3 ? 'hug' : 'wave', st === 3 ? 1 : -1);
+    C.pupo(ctx, bx0 + 82 * s, gy, s * 0.95, t, st === 3 ? 'poke' : 'happy', -1);
+    // Piwi, pocket-sized in his own prop jar
+    const jx = bx0 - 74 * s, jy = gy - 4 * s;
+    ctx.save(); ctx.translate(jx, jy); ctx.scale(s * 0.5, s * 0.5);
+    ctx.fillStyle = 'rgba(200,240,255,0.45)'; ctx.beginPath(); ctx.arc(0, -40, 40, Math.PI, TAU); ctx.lineTo(40, 0); ctx.lineTo(-40, 0); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = PIWI.jacket; rr(ctx, -44, -4, 88, 14, 4); ctx.fill();
+    Piwi.draw(ctx, { x: 0, y: -4, scale: 1, t, pose: 'startled', noStrings: true });
     ctx.restore();
-    drawChinka(ctx, { x: W * 0.5 + 30 * s + 40 * s * (1 - k), y: gy, scale: s * 1.1, t: this.t, pose: this.stage >= 3 ? 'cheer' : 'wave', facing: -1 });
-    // the Baron, now a souvenir himself
-    ctx.save(); ctx.translate(W * 0.78, gy - 8 * s); ctx.scale(s * 0.5, s * 0.5);
-    ctx.fillStyle = 'rgba(200,240,255,0.55)'; ctx.beginPath(); ctx.arc(0, -40, 40, 0, TAU); ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#7a2ac8'; rr(ctx, -34, -4, 68, 14, 4); ctx.fill();
-    TourVillain.draw(ctx, 0, -6, 0.5, this.t, 'empty');
-    ctx.restore();
-    if (k >= 1) for (let i = 0; i < 3; i++) { const hy = gy - 90 * s - ((this.t * 30 + i * 30) % 90); ctx.fillStyle = `rgba(255,80,140,${1 - ((this.t * 30 + i * 30) % 90) / 90})`; ctx.font = `${16 + i * 4}px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.fillText('♥', W * 0.5 + 10 * s + Math.sin(this.t * 2 + i) * 12, hy); }
+    if (k >= 1) for (let i = 0; i < 3; i++) { const hy = gy - 110 * s - ((t * 30 + i * 30) % 90); ctx.fillStyle = `rgba(255,80,140,${1 - ((t * 30 + i * 30) % 90) / 90})`; ctx.font = `${16 + i * 4}px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.fillText('♥', bx0 + 16 * s + Math.sin(t * 2 + i) * 12, hy); }
     ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
     this.parts.draw(ctx);
     const bw = Math.min(W - 40, 640), bx = (W - bw) / 2, by = Math.max(20, insets.t + 14);
-    ctx.fillStyle = 'rgba(10,6,20,0.78)'; rr(ctx, bx, by, bw, 74, 14); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = `${W < 600 ? 13 : 15}px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const lines = wrapText(ctx, this.lines[Math.min(this.stage, this.lines.length - 1)], bw - 40);
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, by + 30 + (i - (lines.length - 1) / 2) * 19));
-    ctx.font = `10px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffd84a'; ctx.fillText('TAP', W / 2, by + 62);
+    ctx.font = `${W < 600 ? 13 : 15}px ${FONT_UI}`;
+    const lines = wrapText(ctx, this.lines[Math.min(st, this.lines.length - 1)], bw - 40), bh = Math.max(74, 40 + lines.length * 19);
+    ctx.fillStyle = 'rgba(10,6,20,0.78)'; rr(ctx, bx, by, bw, bh, 14); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, by + 20 + i * 19));
+    ctx.font = `10px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffd84a'; ctx.fillText('TAP', W / 2, by + bh - 11);
   }
 }
 
@@ -222,15 +201,15 @@ class TourEndingScene {
 function tourCreditsLines() {
   const tot = TourProgress.totals();
   const bosses = [];
-  for (const C of Tour.mainCountries()) if (C.boss) bosses.push(C.boss.name + '  ·  ' + C.name);
+  for (const C of Tour.mainCountries()) if (C.boss && C.id !== 'np') bosses.push(C.boss.name + '  ·  ' + C.name);
   return [
-    ['Chinka is home. The world is back to size. The Baron is a snow globe.', 's'], ['', ''],
-    ['STARRING', 'k'], ['Brady  ·  long hair, man bun, many passport stamps', 'v'], ['Chinka  ·  fearless, fast, excellent postcards', 'v'], ['', ''],
-    ['AND INTRODUCING', 'k'], ['Baron Bric-a-Brac  ·  collector of other people\'s landmarks', 'v'], ['', ''],
+    ['Chinka-O is home. The world is back to size. Piwi is pocket-sized.', 's'], ['', ''],
+    ['STARRING', 'k'], ['Brady-O  ·  man bun, square shades, many passport stamps', 'v'], ['Chinka-O  ·  prima ballerina, unimpressed, excellent postcards', 'v'], ['Pupo  ·  giant sloth, steed, belly button enthusiast', 'v'], ['', ''],
+    ['AND INTRODUCING', 'k'], ['Piwi Squirmin\'  ·  a dummy with a dream (and a hook)', 'v'], ['', ''],
     ['LOCALS WHO GOT IN THE WAY', 'k'], ['Jumping jalapeños and walking corn', 'v'], ['Piñata burros full of candy', 'v'], ['Marching baguettes and rolling croissants', 'v'], ['Crêpe pans with surprisingly good aim', 'v'], ['', ''],
-    ['THE BARON\'S GOONS', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
-    ['YOUR STATS', 'k'], [`Postcards from Chinka: ${tot.gold} / ${tot.goldTotal}`, 'v'], [`Levels cleared: ${tot.done} / ${tot.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Baron got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
-    [tot.gold >= tot.goldTotal ? 'Every postcard found. Chinka framed them all.' : 'Some postcards are still out there, somewhere in the world...', 's'],
+    ['TONIGHT\'S ACTS', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
+    ['YOUR STATS', 'k'], [`Postcards from Chinka-O: ${tot.gold} / ${tot.goldTotal}`, 'v'], [`Levels cleared: ${tot.done} / ${tot.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times Piwi got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
+    [tot.gold >= tot.goldTotal ? 'Every postcard found. Chinka-O framed them all.' : 'Some postcards are still out there, somewhere in the world...', 's'],
     [Tour.countries.w22 && TourProgress.countryUnlocked(Tour.countries.w22) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', ''],
     ['Pack light. Stay curious. Send postcards.', 's'], ['', ''], ['', '']
   ];

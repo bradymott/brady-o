@@ -1262,7 +1262,7 @@ const levels = [
   { n: 5, name: 'Estádio do Tucanão', mapLabel: 'Estádio', arch: 'lair', theme: 'br_barracao',
     gimmick: 'The players\' tunnel: kick footballs into targets to open the shutters, then O Tucanão\'s pitch',
     hint: 'Only a football reaches O Tucanão: run into a ball to kick it, stomp a ball to volley it up!',
-    postcard: 'Sugarloaf is back by the bay, full size! The Baron sailed for Africa. Next stop: Mozambique! ♥ C',
+    postcard: 'Sugarloaf is back by the bay, full size! Piwi flew for Africa. Next stop: Mozambique! ♥ C',
     enemies: [['brPandeiro', 2], ['brBrigadeiro', 1]], boss: 'br_toucan',
     mapCell: [1, 2], mapFrom: [3, 5],
     exits: { main: { to: 'country:next' } },

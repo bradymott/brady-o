@@ -914,7 +914,7 @@ const levels = [
   { n: 5, name: 'Château des Glaces', mapLabel: 'Château', arch: 'lair', theme: 'fr_chateau', boss: 'fr_souffle',
     gimmick: 'Mirror doors and falling chandeliers lead to the ballroom, where Le Grand Soufflé waits by the great oven',
     hint: 'In the ballroom: jump into each wall mirror from its balcony to aim it at the oven, then lure him into the light',
-    postcard: 'The iron tower is back to full size! The Baron flew north, muttering about tulips. ♥ C',
+    postcard: 'The iron tower is back to full size! Piwi flew north, muttering about tulips. ♥ C',
     enemies: [['frAccordion', 2], ['frBaguette', 1], ['frPoele', 2]],
     mapCell: [1, 2], mapFrom: 3,
     exits: { main: { to: 'country:next' } },

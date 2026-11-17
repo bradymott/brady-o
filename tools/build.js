@@ -34,7 +34,7 @@ const APPS = {
   },
   world: {
     dir: 'super-brady-o-world', name: 'Super Brady-O World', short: 'Super Brady-O',
-    desc: 'Brady flies around the world after Baron Bric-a-Brac, who bottles every landmark he can find: a 2D platformer across twelve countries.',
+    desc: 'Brady-O chases Piwi Squirmin\', a runaway ventriloquist dummy who has whisked his wife Chinka-O off on a world tour: a 2D platformer across twelve countries.',
     // the title's sky blue: the launch screen and the browser bars match the title show
     color: '#2c9cf0', saveKey: 'super-brady-o-world-save-v2',
     icons: ['icon-32.png'],   // a small favicon (tools/make_icon.js renders it for this app)

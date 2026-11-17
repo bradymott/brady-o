@@ -42,7 +42,7 @@ Brady arrives at Burning Man as a clueless first-timer with no camp. Over one we
 
 ## Super Brady-O World
 
-Baron Bric-a-Brac is shrinking and stealing the world's landmarks, so Super Brady-O flies after him on a world map. The route runs Mexico → Ecuador → Brazil → Mozambique → Morocco → Valencia → Paris → Amsterdam → Bali → Vietnam → Japan → Nepal, where the finale happens. Chinka sends postcard clues.
+Piwi Squirmin', a lonely ventriloquist dummy, has hooked Brady-O's wife Chinka-O into the show cage of his flying Showtrunk and taken her on his world tour, shrinking a landmark in every land for scenery. Brady-O chases him across a world map, riding Pupo, their giant sloth. The route runs Mexico → Ecuador → Brazil → Mozambique → Morocco → Valencia → Paris → Amsterdam → Bali → Vietnam → Japan → Nepal, where the finale happens. Chinka-O sends postcard clues (and sabotages every show).
 
 - **Countries:** five levels each, with its own landmarks, enemies, music, castle boss and **signature item**:
   - Mexico: taco toss

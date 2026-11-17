@@ -5,7 +5,7 @@
    which scene a stop gets; props are placed in free spots around the
    stop (clear of trails, labels, other stops and water), painted once
    into the map, and a few parts move every frame. A stop not cleared
-   yet shows its scene a little greyed under the Baron's gloom; a
+   yet shows its scene a little greyed under Piwi's gloom; a
    cleared one brightens and flies a string of pennants. Night levels
    sit under a small patch of night sky.
    ============================================================ */
@@ -102,7 +102,7 @@ const TourOWScenes = {
       if (K.live) K.live.call(this, ctx, S, t);
       ctx.restore();
     }
-    // the Baron's blimp hangs over a boss fort until the boss falls
+    // Piwi's Showtrunk hangs over the boss fort (tonight's venue) until the boss falls
     for (const n of ow.nodes) if (n.boss && n.visible && !n.done) { const p = ow.G.pos[n.key]; if (p && p.x > vr.x0 - 80 && p.x < vr.x1 + 80 && p.y > vr.y0 - 40 && p.y < vr.y1 + 140) TourPanelFx.airship(ctx, p.x + 34, p.y - 74 + Math.sin(t * 1.3) * 3, t); }
     const L = ow.G.M.live || [];
     for (const l of L) { const f = this.liveKinds[l[0]]; if (f) { ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = this.INK; ctx.lineWidth = 1.6; f.call(this, ctx, ow, l, t, vr); ctx.restore(); } }
@@ -759,9 +759,9 @@ const TourOWScenes = {
     crevasse: {
       paint(c, S) { const p = S.anchor(38); if (!p) return; this.base(c, S, p, 42, 18, '#eef6fa'); c.fillStyle = S.col('#2a6aa8'); c.beginPath(); c.moveTo(p.x - 34, p.y); for (let i = 1; i <= 8; i++) c.lineTo(p.x - 34 + i * 8.5, p.y + (i % 2 ? -4 : 3)); for (let i = 8; i >= 0; i--) c.lineTo(p.x - 34 + i * 8.5, p.y + (i % 2 ? 1 : 7)); c.closePath(); c.fill(); c.stroke(); }
     },
-    // the Baron's supply depot: crates stamped B, barrels, a tarp
+    // Piwi's prop depot: crates stamped P, barrels, a tarp
     depot: {
-      paint(c, S) { const p = S.anchor(40); if (!p) return; this.base(c, S, p, 44, 20, '#c8c4b8'); for (const [dx, dy] of [[-22, 2], [-10, 4], [-16, -8]]) { this.R(c, p.x + dx - 6, p.y + dy - 10, 12, 10, S.col('#a8784a')); c.fillStyle = '#6a4a8a'; c.font = 'bold 6px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('B', p.x + dx, p.y + dy - 5); } for (const dx of [10, 18]) { this.R(c, p.x + dx - 3.5, p.y - 8, 7, 10, S.col('#4a4a5a')); } this.P(c, [[p.x + 22, p.y + 4], [p.x + 30, p.y - 12], [p.x + 40, p.y + 4]], S.col('#6a4a8a')); }
+      paint(c, S) { const p = S.anchor(40); if (!p) return; this.base(c, S, p, 44, 20, '#c8c4b8'); for (const [dx, dy] of [[-22, 2], [-10, 4], [-16, -8]]) { this.R(c, p.x + dx - 6, p.y + dy - 10, 12, 10, S.col('#a8784a')); c.fillStyle = PIWI.jacket; c.font = 'bold 6px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('P', p.x + dx, p.y + dy - 5); } for (const dx of [10, 18]) { this.R(c, p.x + dx - 3.5, p.y - 8, 7, 10, S.col('#4a4a5a')); } this.P(c, [[p.x + 22, p.y + 4], [p.x + 30, p.y - 12], [p.x + 40, p.y + 4]], S.col(PIWI.jacket)); }
     },
     /* ----- Antarctica ----- */
     // penguins as bowling pins, a snowball rolling at them

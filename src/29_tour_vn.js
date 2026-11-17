@@ -1411,7 +1411,7 @@ Tour.country({
   themes, painters, dyn, decor, decorLights, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_vn', boss: 'tour_vn_boss' },
   landmark: 'the Japanese Covered Bridge of Hoi An',
-  arrival: 'Xin chào, Brady! The Baron squeezed a whole bridge into a snow globe and flew off with a coffee to go. A pho cart lent me a lasso made of noodles. Trust me. ♥ C',
+  arrival: 'Xin chào, Brady! Piwi squeezed a whole bridge into a snow globe and flew off with a coffee to go. A pho cart lent me a lasso made of noodles. Trust me. ♥ C',
   emblem(ctx, x, y, r, t) { lantern(ctx, x, y, r * 0.75, '#e8323a', t || 0, false); },
   coin: COIN,
   star: { name: 'GOLDEN LOTUS', draw(ctx, x, y, t) {

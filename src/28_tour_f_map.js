@@ -1,6 +1,6 @@
 /* ============================================================
    World tour: the maps. The world route map (pins on a stylized
-   globe, the plane, the Baron's airship) and the scene that
+   globe, the plane, Piwi's Showtrunk) and the scene that
    switches between it and each land's walkable overworld.
    ============================================================ */
 // simplified coastlines as [lon, lat] rings (hand-made, stylized)
@@ -98,7 +98,7 @@ try { window.addEventListener('keydown', e => { if (e.repeat) return; if (e.code
    The map scene. Two modes:
    - 'land': the walkable overworld of one land (28_tour_fd_overworld.js): Brady walks the trails between level
      stops with the joystick or the arrow keys, a tap walks him to a stop, jump / Enter goes in.
-   - 'route': the world route map: pins on the globe, the Baron's airship, the lighthouse, secret flights. Pick a
+   - 'route': the world route map: pins on the globe, Piwi's Showtrunk, the lighthouse, secret flights. Pick a
      land (left / right or a tap) and fly there; landing puts Brady on that land's airstrip.
    Opened after a level with { from: id }: Brady stands on that level's stop, the reveal queue plays, then he walks
    on to whatever the exit opened.
@@ -518,7 +518,7 @@ class TourMapScene {
     ctx.restore();
   }
 
-  /* ---------- world-map extras: contrail, the Baron's jars, the airship, flight arcs, bottles, the lighthouse ---------- */
+  /* ---------- world-map extras: contrail, Piwi's prop jars, the Showtrunk, flight arcs, bottles, the lighthouse ---------- */
   updateWorldFx(dt) {
     const T = TourProgress.data();
     this.trail = (this.trail || []).filter(p => (p.age += dt) < 2);
