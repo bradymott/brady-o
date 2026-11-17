@@ -276,26 +276,34 @@ const TOUR_OW_MAPS = {
     scenes: { '9-1': 'surf', '9-2': 'kites', '9-3': 'volcano', '9-4': 'manta', '9-5': ['grove', { trees: ['round', 'palm', 'round'], critters: ['monkey', 'monkey'] }], '9-6': 'canopy', '9-7': 'bluefire' },
     live: [['kite', 170, 560, '#ff4f8a'], ['kite', 300, 400, '#ffd23a'], ['kite', 250, 620, '#38c8ff'], ['walk', 'monkey', [[1250, 640], [1320, 620], [1380, 600]], 8], ['sail', [[60, 780], [300, 980], [900, 990], [400, 940]], 10, '#f4ede0', '#ff8a3a'], ['sail', [[1450, 120], [1490, 600], [1470, 300]], 8, '#f4ede0', '#38a8e8'], ['fish', 1460, 720, '#ffd23a'], ['walk', 'gecko', [[880, 820], [920, 800]], 5]]
   },
-  // Vietnam: train street, the bay of limestone towers, the lantern town, the cave mountains, the delta
-  // market, the citadel
+  // Vietnam: a long land walked in an S from the bottom up: east along the train street to the bay of
+  // limestone towers, back west past the lantern town on its river to the cave mountains, then north to the
+  // citadel and east across the delta's rice paddies to the harbour; junks sail among the karsts
   vn: {
-    labels: { '10-6': 'Mekong Market' },
-    w: 1600, h: 960,
-    land: [[[80, 700], [100, 560], [200, 450], [330, 380], [420, 260], [560, 170], [800, 130], [1040, 140], [1250, 190], [1400, 300], [1450, 450], [1420, 600], [1500, 720], [1450, 860], [1200, 900], [920, 880], [620, 900], [340, 880], [160, 820]]],
-    nodes: { start: [180, 760], '10-1': [380, 740], '10-2': [780, 700], '10-3': [1190, 760], '10-4': [1290, 470], '10-5': [790, 260], '10-6': [1010, 520], 'house:vn-chonho': [430, 470], port: [1150, 195] },
-    paths: { 'start>10-1': [[270, 760]], '10-1>10-2': [[580, 760]], '10-2>10-3': [[1000, 740]], '10-3>10-4': [[1290, 620]], '10-4>10-5': [[1050, 330]], '10-3>10-6': [[1100, 620]], '10-2>house:vn-chonho': [[580, 560]], '10-5>port': [[970, 200]] },
+    labels: { '10-6': 'Mekong Market', 'house:vn-chonho': 'Chợ Nhỏ' },
+    w: 1100, h: 1390,
+    pal: { land: '#5a9a6a', light: '#a8c878', path: '#f0dc9c', sea: '#4a9a98' },
+    trail: 'planks', bridge: 'rope',
+    land: [[[60, 1330], [560, 1350], [860, 1320], [930, 1230], [880, 1160], [900, 1060], [1000, 970], [960, 830], [1000, 630], [1060, 410], [1000, 150], [800, 50], [480, 45], [200, 130], [150, 330], [230, 510], [130, 670], [90, 870], [200, 1010], [80, 1140]]],
+    nodes: { start: [170, 1250], '10-1': [460, 1220], '10-2': [800, 1110], 'house:vn-chonho': [880, 920], '10-3': [700, 830], '10-6': [840, 530], '10-4': [330, 750], '10-5': [400, 380], port: [760, 210] },
+    paths: { 'start>10-1': [[310, 1260]], '10-1>10-2': [[640, 1190]], '10-2>house:vn-chonho': [[860, 1010]], '10-2>10-3': [[780, 970]], '10-3>10-6': [[800, 670]], '10-3>10-4': [[520, 750]], '10-4>10-5': [[310, 570]], '10-5>port': [[560, 260]] },
     feat: [
-      ['lake', [[620, 810], [760, 780], [900, 800], [950, 865], [860, 905], [680, 905]]],
-      ['sprite', 'karst', 700, 860, 22, { sea: true }], ['sprite', 'karst', 790, 850, 26, { sea: true }], ['sprite', 'karst', 880, 870, 20, { sea: true }],
-      ['range', 'karst', [[1380, 400, 26], [1420, 540, 22], [1200, 390, 24], [1250, 340, 20]], {}],
-      ['river', [[900, 600], [960, 660], [1010, 720], [1050, 800], [1060, 900]], 14],
-      ['paddies', '#a8d070', [[290, 560], [500, 520], [560, 640], [420, 680], [280, 660]]],
-      ['trees', 'bamboo', 600, 330, 90, 7], ['town', 1300, 820, 6, 50], ['town', 640, 250, 5, 50],
-      ['landmark', 1420, 250, 54]
+      ['rail', [[60, 1160], [300, 1140], [600, 1140], [880, 1230]]],
+      ['sprite', 'karst', 980, 1160, 22, { sea: true }], ['sprite', 'karst', 1040, 1090, 26, { sea: true }], ['sprite', 'karst', 970, 1270, 18, { sea: true }], ['sprite', 'karst', 1060, 1230, 20, { sea: true }], ['sprite', 'karst', 1060, 990, 16, { sea: true }],
+      ['range', 'karst', [[170, 830, 26], [230, 920, 22], [450, 910, 20], [160, 570, 22], [480, 630, 24], [560, 550, 18]], {}],
+      ['river', [[1000, 790], [840, 750], [700, 740], [560, 690], [400, 630], [300, 490], [180, 430]], 14],
+      ['river', [[620, 430], [700, 330], [820, 290], [1040, 290]], 14], ['river', [[620, 430], [660, 240], [700, 50]], 12],
+      ['paddies', '#a8d070', [[480, 510], [620, 530], [700, 410], [560, 330], [440, 390]]],
+      ['paddies', '#b0d880', [[820, 210], [960, 240], [990, 140], [860, 100]]], ['paddies', '#a0c868', [[260, 290], [380, 270], [400, 170], [260, 170]]],
+      ['wall', [[310, 430], [490, 430], [490, 320], [310, 320]], '#c8a070', true],
+      ['trees', 'bamboo', 600, 1010, 100, 8], ['trees', 'palm', 880, 410, 80, 7], ['trees', 'dragonfruit', 640, 140, 70, 5],
+      ['town', 300, 1210, 7, 50], ['town', 640, 870, 5, 40],
+      ['sprite', 'lantern', 560, 830, 14, { col: '#ff5a3a' }], ['sprite', 'lantern', 780, 790, 14, { col: '#ffd23a' }], ['sprite', 'stilt', 900, 340, 15], ['sprite', 'stilt', 260, 390, 14],
+      ['landmark', 120, 970, 50]
     ],
-    flora: ['palm', 'bamboo', 'round'], density: 30,
-    scenes: { '10-1': 'trainstreet', '10-2': 'junks', '10-3': ['village', { wall: '#e8c870', walls: ['#e8c870', '#e8a060', '#c8d870'], roof: '#a84a3a', n: 6, lanterns: true, ground: '#d8c8a0' }], '10-4': 'cave', '10-5': 'moat', '10-6': ['floatmarket', { river: 0 }] },
-    live: [['sail', [[1450, 900], [1590, 940], [1590, 640], [1520, 900]], 9, '#7a4a30', '#c8402a']]
+    flora: ['palm', 'bamboo', 'round', 'bush'], density: 40,
+    scenes: { '10-1': 'trainstreet', '10-2': 'junks', '10-3': ['village', { wall: '#e8c870', walls: ['#e8c870', '#e8a060', '#c8d870'], roof: '#a84a3a', n: 6, lanterns: true, ground: '#d8c8a0' }], '10-4': 'cave', '10-5': 'moat', '10-6': ['floatmarket', { river: 1 }] },
+    live: [['train', [[60, 1160], [300, 1140], [600, 1140], [880, 1230]], 40, '#e8423a', 4], ['sail', [[940, 1290], [1080, 1190], [1080, 970], [960, 1090]], 8, '#7a4a30', '#c8402a'], ['lanterns', 0, 5], ['walk', 'buffalo', [[480, 450], [560, 470], [640, 440]], 5], ['walk', 'goose', [[880, 150], [940, 160]], 6], ['circle', 330, 870, 60, 0.9]]
   },
   // Japan: the sushi harbour, the bullet train line, the snowy cone, the bamboo night woods, the neon towers,
   // the kappa garden pond
