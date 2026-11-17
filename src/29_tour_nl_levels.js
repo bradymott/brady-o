@@ -166,6 +166,7 @@ const skins = {
   nlMillDoor(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#2a5a3a'; rr(ctx, x - 13, y - 44, 26, 44, 12); ctx.fill(); ctx.fillStyle = '#e8e0d0'; ctx.fillRect(x - 1, y - 40, 2, 38); ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(x + 7, y - 20, 2, 0, TAU); ctx.fill(); },
   nlHutDoor(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#8a3a2a'; ctx.fillRect(x - 26, y - 56, 52, 56); ctx.fillStyle = '#f0f8ff'; ctx.beginPath(); ctx.moveTo(x - 32, y - 54); ctx.lineTo(x, y - 74); ctx.lineTo(x + 32, y - 54); ctx.fill(); ctx.fillStyle = '#3a2016'; rr(ctx, x - 11, y - 44, 22, 44, 4); ctx.fill(); ctx.fillStyle = '#ffd890'; ctx.fillRect(x + 14, y - 40, 8, 10); ctx.fillStyle = '#ffffff'; ctx.font = `7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('SCHAATS', x, y - 60); },
   nlCellarHatch(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x - 28, y - 6, 56, 6); ctx.fillStyle = '#8a6a44'; for (let k = 0; k < 4; k++) ctx.fillRect(x - 26 + k * 13.5, y - 5, 11, 4); ctx.fillStyle = '#3a3a44'; ctx.fillRect(x - 3, y - 6, 6, 2); },
+  nlStairsDown(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#3a2a20'; rr(ctx, x - 16, y - 56, 32, 56, 4); ctx.fill(); for (let k = 0; k < 5; k++) { ctx.fillStyle = k % 2 ? '#8a6a44' : '#a87a4a'; ctx.fillRect(x - 12 + k * 1.5, y - 52 + k * 10, 24 - k * 3, 8); } ctx.fillStyle = '#ffffff'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▼', x, y - 60); },
   nlStairsUp(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#5a4030'; rr(ctx, x - 16, y - 56, 32, 56, 4); ctx.fill(); for (let k = 0; k < 5; k++) { ctx.fillStyle = k % 2 ? '#a87a4a' : '#8a6a44'; ctx.fillRect(x - 12, y - 52 + k * 10, 24, 8); } ctx.fillStyle = '#ffffff'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('▲', x, y - 60); }
 };
 
@@ -283,6 +284,149 @@ const stamps = {
 };
 
 /* ---------------- the levels ---------------- */
+/* ---------- 8-2: the auction's cold store, a puzzle of three flower tokens ----------
+   Six bays, 3 x 2 (26 x 14 each): the gallery, the clock floor and the loading dock upstairs; the tulip cold room,
+   the bulb sorting belts and the daffodil chiller downstairs, joined by open aisles and one staircase. Three roller
+   shutters (tulip red, daffodil yellow, hyacinth blue) open with their own flower token, and each token waits behind
+   another shutter: daffodil (free, on the crates) -> the daffodil shutter hides the tulip -> the tulip shutter hides
+   the hyacinth (and a star) -> the hyacinth shutter opens the loading dock. Each shutter has a window that shows
+   what waits behind it. */
+const flower = (col, mid) => (c, x, y) => {
+  c.strokeStyle = '#2a7a3a'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(x, y + 12); c.lineTo(x, y); c.stroke();
+  c.fillStyle = '#3a9a4a'; c.beginPath(); c.ellipse(x + 5, y + 7, 5, 2.4, -0.5, 0, TAU); c.fill();
+  c.fillStyle = col; c.beginPath(); c.moveTo(x - 8, y - 2); c.lineTo(x - 8, y - 12); c.lineTo(x - 4, y - 8); c.lineTo(x, y - 14); c.lineTo(x + 4, y - 8); c.lineTo(x + 8, y - 12); c.lineTo(x + 8, y - 2); c.quadraticCurveTo(x, y + 4, x - 8, y - 2); c.closePath(); c.fill();
+  if (mid) { c.fillStyle = mid; c.beginPath(); c.arc(x, y - 6, 3, 0, TAU); c.fill(); }
+};
+const hyacinth = (c, x, y) => {
+  c.strokeStyle = '#2a7a3a'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(x, y + 12); c.lineTo(x, y + 2); c.stroke();
+  for (let k = 0; k < 9; k++) { const r = k % 3, q = Math.floor(k / 3); c.fillStyle = k % 2 ? '#5a6ae8' : '#7a8aff'; c.beginPath(); c.arc(x - 5 + r * 5, y - 12 + q * 5, 3.2, 0, TAU); c.fill(); }
+};
+// a token: a round auction chip with the flower on it
+const chip = (col, art) => (c, x, y, t) => { c.fillStyle = '#f4f0e8'; c.beginPath(); c.arc(x, y, 15, 0, TAU); c.fill(); c.strokeStyle = col; c.lineWidth = 3; c.beginPath(); c.arc(x, y, 13, 0, TAU); c.stroke(); c.save(); c.translate(x, y + 2); c.scale(0.8, 0.8); art(c, 0, 0, t); c.restore(); };
+if (typeof TourMaze !== 'undefined') TourMaze.addKeys({
+  nlTulip: { name: 'TULIP TOKEN', toast: 'TULIP TOKEN! IT OPENS THE RED SHUTTER', col: '#e8322a', icon: chip('#e8322a', flower('#e8322a')) },
+  nlDaffodil: { name: 'DAFFODIL TOKEN', toast: 'DAFFODIL TOKEN! IT OPENS THE YELLOW SHUTTER', col: '#ffd23a', icon: chip('#e8b21a', flower('#ffd23a', '#ff8a1a')) },
+  nlHyacinth: { name: 'HYACINTH TOKEN', toast: 'HYACINTH TOKEN! IT OPENS THE BLUE SHUTTER', col: '#6a7aff', icon: chip('#5a6ae8', hyacinth) },
+  // not a key: the loading dock's exit sign, seen through the blue shutter's window
+  nlDock: { name: 'EXIT', col: '#3aa86a', icon: (c, x, y) => { c.fillStyle = '#2a9a5a'; c.fillRect(x - 14, y - 9, 28, 18); c.fillStyle = '#ffffff'; c.font = `bold 9px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.fillText('EXIT', x, y + 3); } }
+});
+const shutter = (id, col, icon, peek, need) => ['piece', TourMaze.lock('mazeShutter', { col, icon, peek, need }), { id }];
+const VEIL = {
+  R: shutter('tulip', '#d8322a', 'nlTulip', 'nlHyacinth', 'THE RED SHUTTER: IT NEEDS A TULIP TOKEN'),
+  Y: shutter('daffodil', '#e8b21a', 'nlDaffodil', 'nlTulip', 'THE YELLOW SHUTTER: IT NEEDS A DAFFODIL TOKEN'),
+  U: shutter('hyacinth', '#4a5ad8', 'nlHyacinth', 'nlDock', 'THE BLUE SHUTTER: IT NEEDS A HYACINTH TOKEN'),
+  r: ['spawn', 'key', { id: 'tulip', look: 'nlTulip' }], d: ['spawn', 'key', { id: 'daffodil', look: 'nlDaffodil' }], u: ['spawn', 'key', { id: 'hyacinth', look: 'nlHyacinth' }],
+  K: ['spawn', 'sweeper', { len: 3, speed: 1.1, look: 'nlAuctionClock' }],
+  k: ['piece', 'crates', { h: 4 }], t: ['decor', 'nlTrolley'],
+  e: ['enemy', 'nlBulb'], w: ['enemy', 'nlClog'], m: ['enemy', 'nlBee'],
+  i: ['spawn', 'sign', { text: 'AUCTION BOARD. TODAY: TULIPS (RED), DAFFODILS (YELLOW), HYACINTHS (BLUE). EACH SHUTTER OPENS WITH ITS OWN FLOWER TOKEN. PEEK THROUGH A SHUTTER\'S WINDOW TO SEE WHAT IS BEHIND IT.' }]
+};
+const bay = (rows, extra) => { const e = Object.assign({}, extra || {}), legend = Object.assign({}, VEIL, e.legend || {}); delete e.legend; return Object.assign({ floor: 12, rows, legend }, e); };
+const veiling = {
+  // upstairs, left: the buyers' gallery (the start); the tulip shutter's little vault: the hyacinth token and a star
+  gallery: bay([
+    '##########################',
+    '#######..................#',
+    '#######..................#',
+    '#######......o.o.o.......#',
+    '#######..................#',
+    '#######.....------.......#',
+    '#######..................#',
+    '#.....#..................#',
+    '#..?..#...?..............#',
+    '#.....#...................',
+    '#.....#...................',
+    '#.u...R.@.i..t............',
+    '##########################',
+    '##########################'
+  ], { items: ['star', 'power'] }),
+  // upstairs, middle: the auction clock (its hand sweeps the floor), the stairs down to the sorting belts, P1
+  clock: bay([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#....o.o.o.......*.......#',
+    '#........................#',
+    '#...-----.......-----....#',
+    '#....m...................#',
+    '#........................#',
+    '#.---.......K...----.....#',
+    '..........................',
+    '..........................',
+    '.....................1D...',
+    '##########################',
+    '##########################'
+  ], { gold: { '*': 'must' }, legend: { 1: ['anchor', 'clockStairs'] }, doors: [{ to: 'veiling@beltStairs', look: 'nlStairsDown' }] }),
+  // upstairs, right: the loading dock behind the hyacinth shutter, and the way out
+  dock: bay([
+    '##########################',
+    '#...........#............#',
+    '#...........#............#',
+    '#..o.o.o....#...*........#',
+    '#...........#............#',
+    '#..-----....#..----......#',
+    '#...........#............#',
+    '#...........#............#',
+    '#.......m...#.....---....#',
+    '.........................#',
+    '.........................#',
+    '....w.......U........G...#',
+    '##########################',
+    '##########################'
+  ], { gold: { '*': 'high' } }),
+  // downstairs, left: the tulip cold room: the daffodil token on top of the crates, the cold-mist door (secret)
+  coldroom: bay([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#.........o.o.o..........#',
+    '#........................#',
+    '#........................#',
+    '#...................d....#',
+    '#.....h..................#',
+    '#.........................',
+    '#.........................',
+    '#..D9.....e.......k.......',
+    '##########################',
+    '##########################'
+  ], { hidden: ['oneup'], legend: { 9: ['anchor', 'koelBack'] }, doors: [{ to: 'koelcel@in', look: 'nlColdMist' }] }),
+  // downstairs, middle: the bulb sorting belts and the stairs up
+  belts: bay([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#..............*.........#',
+    '#........................#',
+    '#........................#',
+    '#.........?..----........#',
+    '..........................',
+    '..........................',
+    '....D2.......e............',
+    '#######>>>>>>###<<<<<<####',
+    '##########################'
+  ], { items: ['beans'], gold: { '*': 'risky' }, legend: { 2: ['anchor', 'beltStairs'] }, doors: [{ to: 'veiling@clockStairs', look: 'nlStairsUp' }] }),
+  // downstairs, right: the daffodil chiller: the yellow shutter, the tulip token behind it
+  chiller: bay([
+    '##########################',
+    '#.............#..........#',
+    '#.............#..........#',
+    '#.............#..........#',
+    '#..o.o.o......#...o.o.o..#',
+    '#..-----......#..........#',
+    '#.............#..........#',
+    '#.............#..........#',
+    '#.............#..........#',
+    '.........................#',
+    '.........................#',
+    '.....w........Y.....r....#',
+    '##########################',
+    '##########################'
+  ])
+};
+
 const levels = [
   // 8-1 SWITCH: the polder's water level
   { n: 1, name: 'Polder Pumps', mapLabel: 'Polder', arch: 'switch', theme: 'nl_polder',
@@ -316,35 +460,16 @@ const levels = [
       { id: 'gemaal', gen: 'room', role: 'secret', stamp: 'gemaal' }
     ] },
   // 8-2 FACTORY: the flower auction
-  { n: 2, name: 'Flower Auction', mapLabel: 'Auction', arch: 'factory', theme: 'nl_veiling',
-    gimmick: 'Trolleys of tulips ride the belts, the auction clock\'s hand sweeps the floor, crate stacks to climb',
-    hint: 'Duck the clock hand or jump it. The Pocket Sundial slows everything down',
+  { n: 2, name: 'Flower Auction', mapLabel: 'Auction', arch: 'vault', theme: 'nl_veiling',
+    gimmick: 'The auction\'s cold store: three roller shutters, three flower tokens, and every token is locked behind another shutter. Work out the order',
+    hint: 'Peek through a shutter\'s window to see what is behind it. The daffodil token is free: start there',
     postcard: 'A flower auction with a clock that counts DOWN. Whoever presses first buys the tulips. ♥ C',
     enemies: [['nlBee', 2], ['nlBulb', 2], ['nlClog', 2]],
     mapCell: [1, 0], mapFrom: 0,
     exits: { main: { to: '8-3' }, secret: { to: '8-6', hint: 'Cold mist creeps out of a door at the auction...' } },
     areas: [
-      { id: 'veiling', gen: 'strip', W: 200, H: 20,
-        script: [
-          ['itemBlock', { item: 'power', y: 4 }],
-          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
-          ['trolleys', { n: 2 }],
-          ['enemies', { kind: 'nlBulb', n: 1, len: 8 }],
-          ['gearStand', { item: 'sundial' }],
-          ['clock', { gold: 'must' }],
-          ['crates', { h: 3 }],
-          ['belt', { dir: -1, n: 9 }],
-          ['enemies', { kind: 'nlBee', n: 2, len: 10 }],
-          'cp',
-          ['coldDoor', { to: 'koelcel@in', back: 'koelBack' }],
-          ['clock', { len: 4, speed: 1.3 }],
-          ['postcard', { kind: 'risky', dy: -2, dx: -6 }],
-          ['crates', { h: 4 }],
-          ['itemBlock', { item: 'kazoo', y: 4 }],
-          ['trolleys', { n: 3 }],
-          ['enemies', { kind: 'nlClog', n: 2, len: 10 }],
-          ['gate', { exit: 'main' }]
-        ] },
+      { id: 'veiling', gen: 'maze', cells: [3, 2], cell: [26, 14],
+        script: [[veiling.gallery, veiling.clock, veiling.dock], [veiling.coldroom, veiling.belts, veiling.chiller]] },
       { id: 'koelcel', gen: 'room', role: 'secret', stamp: 'koelcel' }
     ] },
   // 8-3 RACE: the bike lane, against a gull on a cargo bike
@@ -367,6 +492,7 @@ const levels = [
           ['door', { to: 'brug@in', perch: 0, look: 'nlStairsUp', back: 'brugBack' }],
           'drawbridge',
           'cp',
+          ['itemBlock', { item: 'star', y: 4 }],   // a star for the gull stretch (Brady: mix up the power-ups)
           'hop',
           ['drawbridge', { fast: true }],
           ['postcard', { kind: 'risky', dy: -5, dx: -4 }],
@@ -452,10 +578,11 @@ const levels = [
           ['mill', {}],
           ['enemies', { kind: 'nlBee', n: 1, len: 8 }],
           'cp',
+          ['itemBlock', { item: 'lsd', y: 5 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           ['mill', { reverse: true }],
           ['tulips', { n: 4 }],
+          ['enemies', { kind: 'nlBee', n: 1, len: 8 }],
           ['mill', { reverse: true, speed: 1.0, gold: 'risky' }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
           ['mill', { reverse: true }],
           ['millDoor', { to: 'molen@in', back: 'molenBack' }],
           ['gate', { exit: 'main' }]

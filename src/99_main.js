@@ -263,7 +263,7 @@ window.__iconKart = (x, N, maskable) => {
   }
 };
 window.BRADY = {};
-['LookScene', 'SettingsScene', 'CreditsScene', 'Game', 'Save', 'getLevel', 'Validator', 'TS', 'T', 'SOLID', 'Decor', 'PostFX', 'WorldFx', 'TripFX', 'Particles', 'Weather', 'Player', 'Gate', 'Boss', 'QualityTier', 'PerfHud', 'WORLDS', 'WORLD_ORDER', 'CLASSIC_WORLDS', 'WORLD3_REGIONS', 'WorldGame', 'Input', 'Sound', 'THEMES', 'Atlas', 'Ink', 'TileArt', 'BG', 'ENTITY_TYPES', 'Play', 'MapScene', 'TitleScene', 'StoryScene', 'EndingScene', 'GameOverScene', 'goToMap', 'startGame', 'appHomeScene']
+['SettingsScene', 'CreditsScene', 'Game', 'Save', 'getLevel', 'Validator', 'TS', 'T', 'SOLID', 'Decor', 'PostFX', 'WorldFx', 'TripFX', 'Particles', 'Weather', 'Player', 'Gate', 'Boss', 'QualityTier', 'PerfHud', 'WORLDS', 'WORLD_ORDER', 'CLASSIC_WORLDS', 'WORLD3_REGIONS', 'WorldGame', 'Input', 'Sound', 'THEMES', 'Atlas', 'Ink', 'TileArt', 'BG', 'ENTITY_TYPES', 'Play', 'MapScene', 'TitleScene', 'StoryScene', 'EndingScene', 'GameOverScene', 'goToMap', 'startGame', 'appHomeScene']
   .forEach(k => { try { const v = eval(k); if (v !== undefined) window.BRADY[k] = v; } catch (e) { /* not in this app */ } });
 window.BRADY.APP = APP;
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

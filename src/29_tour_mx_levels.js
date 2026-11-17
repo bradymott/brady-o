@@ -602,7 +602,8 @@ const stamps = {
     doors: [{ to: 'patio@pantryBack' }],
     gold: { '*': 'hidden' }
   },
-  // 1-6's swallow nest in the pit wall: mud nests, an LSD tab, P2
+  // 1-6's swallow nest in the pit wall: mud nests, an LSD tab, P2 (the LSD box sits a row lower than the panel: one row
+  // higher and the tab hovered at the very top of Brady's jump, out of reach while it was over the box)
   nido: {
     floor: 9,
     rows: [
@@ -610,8 +611,8 @@ const stamps = {
       '#..........................#',
       '#..n.....n.....n...........#',
       '#..........*...............#',
-      '#........-----.....?.......#',
-      '#..........................#',
+      '#........-----.............#',
+      '#..................?.......#',
       '#..o.o.o.o.o...............#',
       '#..........................#',
       '#.@D.......................#',
@@ -681,7 +682,10 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['rooftops', { lane: 'roof', n: 2 }],
         ['flat', { lane: 'cellar', n: 30 }],
         ['sync'],
-        // ② melons down the street; gaps and papel-picado ropes on the roofs; the corn that pops
+        // ② Magic Beans first (Brady wants the fart float early): float up to the roofs; then melons down the street,
+        // gaps and papel-picado ropes on the roofs; the corn that pops
+        ['gearStand', { lane: 'street', item: 'beans' }],   // the first jump power of the game, out in the open on a stand
+        ['tip', { lane: 'street', text: 'MAGIC BEANS! TAP JUMP AGAIN AND AGAIN IN THE AIR TO FART-FLOAT UP TO THE ROOFS' }],
         ['melons', { lane: 'street' }],
         ['enemies', { lane: 'street', kind: 'mxElote', n: 1, len: 8 }],
         ['step', { lane: 'street', h: -3 }],
@@ -729,7 +733,7 @@ const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
         'posts', 'vendor', ['arch', {}], ['axolotls', { n: 1 }], 'posts',
         // ② the first lock: the lever picks the garden channel (lifted) or the market channel
         ['fork', { len: 46, skin: 'mxLockLever', gold: false,
-          upper: [['chinampa', {}], ['highPost', { gold: 'must' }], ['boatBlock', { item: 'power', dy: 6 }], ['bridge', { enemy: false }], 'herons'],
+          upper: [['chinampa', {}], ['highPost', { gold: 'must' }], ['boatBlock', { item: 'lsd', dy: 6 }], ['bridge', { enemy: false }], 'herons'],
           lower: [['bridge', { enemy: false }], 'posts', ['chinampa', {}], 'posts'] }],
         'cp',
         // ③ the double fork with axolotls on both channels; a willow hides the third channel

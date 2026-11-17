@@ -529,7 +529,7 @@ TourBehave.frostBreath = {
       e.vx = 0; const c = TB.par(e, 'cone', 3) * TS, box = { x: e.dir > 0 ? e.x + e.w : e.x - c, y: e.y - TS * 0.5, w: c, h: e.h + TS }, g = e.g;
       if (Math.random() < 0.8) g.burst(e.cx + e.dir * (14 + Math.random() * c), e.cy + (Math.random() - 0.5) * 24, 1, '#c8f0ff', 'spark');
       if (!e.iced) { e.iced = true; const ty = Math.floor((e.y + e.h + 2) / TS); for (let tx = Math.floor(box.x / TS); tx <= Math.floor((box.x + box.w) / TS); tx++) if (tileAt(g.area, tx, ty) === T.GROUND) { g.setTile(tx, ty, T.ICE); g.spawn(new TourThaw(g, tx, ty, 5)); } }
-      const p2 = TB.p(e); if (p2 && overlap(box, p2) && !(p2.frozenT > 0)) { p2.frozenT = 0.8; p2.stun(0.8); }
+      const p2 = TB.p(e); if (p2 && overlap(box, p2) && !(p2.frozenUntil > e.g.t)) { p2.frozenUntil = e.g.t + 0.8; p2.frozenT = 0.8; p2.stun(0.8); }   // a deadline, not a timer nobody runs down (the old one froze Brady only once a level)
       for (const o of g.entities) if (o !== e && o.enemy && !o.dead && overlap(box, o) && o.stun) o.stun(5);
       if (e.bt > 1.0) { TB.go(e, 'pant'); e.iced = false; }
     } else if (st === 'pant') { e.vx = 0; if (e.bt > 1.0) { TB.go(e, 'walk'); e.cool = 2.5; } }

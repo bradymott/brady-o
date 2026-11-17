@@ -20,7 +20,10 @@ Object.assign(TourBuild, {
       areaBase: spec.areas.length, problems, pool: (spec.enemies || []).map(e => Array.isArray(e) ? e : [e, 1])
     };
     const built = [];
-    spec.areas.forEach((A, k) => {
+    const hooks = typeof TourHooks !== 'undefined' ? TourHooks : null;
+    spec.areas.forEach((A0, k) => {
+      // secrets: a registered room type may rewrite the area spec before its gen runs (TourHooks.room)
+      const A = hooks ? hooks.roomSpec(A0, ctx) : A0;
       const role = A.role || (k === 0 ? 'main' : 'sub');
       const S = Object.assign({}, spec, { script: null, style: null }, A);
       // a theme that doesn't exist yet (new art comes later) falls back to the level's own, or its cave look for rooms
@@ -37,7 +40,10 @@ Object.assign(TourBuild, {
       area.role = role; area.aid = A.id || ('area' + k); area.gen = A.gen || 'strip';
       if (A.bottomKill) area.bottomKill = true;
       if (A.camera) area.camera = A.camera;
+      if (hooks) tourSecretsArea(ctx, A, area, r, hooks);
       if (A.mirror) tourMirrorArea(area, r.B, k, r.anchors);
+      // seams written on the spec (back, seams) are in the area as played: added after the mirror
+      if (hooks) tourSpecSeams(ctx, A, area);
       built.push({ A, area, anchors: Object.assign({}, r.anchors), B: r.B, time: r.time });
     });
     // rooms made by legacy pieces (bonus) come after the spec's areas
@@ -55,6 +61,8 @@ Object.assign(TourBuild, {
     for (const a of areas) for (const s of a.spawns) if (s.targetRef) s.target = find(s.targetRef);
     // edges to other areas written as refs
     for (const a of areas) for (const e of a.edges || []) if (e.toRef) { const t = find(e.toRef); if (t) { e.area = t.area; e.to = [Math.floor(t.x / TS), Math.floor(t.y / TS)]; } }
+    // secrets: seams on an area's edge resolve like doors (TourSeams in 28_tour_a2_hooks.js)
+    for (const a of areas) for (const sm of a.seams || []) if (sm.toRef && !sm.target) { sm.target = find(sm.toRef); if (!sm.target) problems.push(`seam ${a.aid}/${sm.side}: no target '${sm.toRef}'`); }
     tourPickGoldV2(ctx, built);
     const b0 = built[0], st0 = b0.anchors.start || b0.anchors.in || { x: 5 * TS + TS / 2, y: 14 * TS };
     const gen0 = (spec.areas[0].gen || 'strip');
@@ -64,6 +72,9 @@ Object.assign(TourBuild, {
       time: spec.time || b0.time || 300, d, secret: spec.exits.secret ? { kind: 'secretExit', to: spec.exits.secret.to } : null,
       warps: null, hint: spec.hint || null, design: spec, tour: true, country: C.id, exits: spec.exits, problems, v2: true
     };
+    // secrets: the buttons placed in this level (their rule numbers), for the validator and the map
+    const buttons = []; for (const a of areas) for (const s of a.spawns) if (s.type === 'button') buttons.push(s.rule);
+    if (buttons.length) level.buttons = buttons;
     if (problems.length && typeof console !== 'undefined') for (const pr of problems) console.warn('tour ' + id + ': ' + pr);
     return level;
   },
@@ -98,6 +109,7 @@ function tourMirrorArea(A, B, k, anchors) {
   for (const L of A.locks || []) flipList(L.tiles);
   for (const v of A.vkeys || []) flipList(v.tiles);
   for (const e of A.edges || []) { e.from[0] = fx(e.from[0]); if (e.area == null || e.area === k) e.to[0] = fx(e.to[0]); }
+  if (A.seams && typeof TourSeams !== 'undefined') TourSeams.mirror(A);
   const rect = r => { const a = fx(r[2]), b = fx(r[0]); r[0] = a; r[2] = b; };
   for (const g in A.toggles || {}) { const G = A.toggles[g]; for (const r of G.A) rect(r); for (const r of G.B) rect(r); flipList(G.switches); }
   for (const n of A.noGrabs || []) { const a = fx(n[1]), b = fx(n[0]); n[0] = a; n[1] = b; }
@@ -106,6 +118,31 @@ function tourMirrorArea(A, B, k, anchors) {
   for (const a of an) if (a) a.x = PX - a.x;
   if (B) for (const g of B.goldSpots) g.tx = fx(g.tx);
   A.mirrored = true;
+}
+
+/* secrets (docs/design/SECRETS_CONTRACTS.md): what generateV2 adds to an area from the new spec fields. Only fields
+   the spec sets are written, so a level that uses none of them builds exactly as before.
+   room -> area.roomType (and the room type's build step), zone -> area.zone, needs -> area.needs, paceTo -> area.paceTo,
+   seams recorded by pieces or the stamp legend (B.seams, in build coordinates: flipped with a mirrored area) */
+function tourSecretsArea(ctx, A, area, r, hooks) {
+  if (A.room) { area.roomType = A.room; hooks.roomBuilt(A, ctx, r); }
+  if (A.zone) area.zone = A.zone;
+  if (A.needs) area.needs = A.needs;
+  if (A.paceTo) area.paceTo = A.paceTo;
+  const B = r.B;
+  if (B && B.seams && B.seams.length) area.seams = (area.seams || []).concat(B.seams);
+}
+// the spec's own seams: back: { side, span, to, needs } (or the room stamp's back), seams: [{ side, a, b, to, needs }]
+function tourSpecSeams(ctx, A, area) {
+  const st = A.gen === 'room' && A.stamp ? TourStamp.get(A.stamp, ctx.C.id) : null;
+  const list = [];
+  const back = A.back || (st && st.back);
+  if (back) { if (back.side && back.span) list.push(TourSeams.fromBack(back)); else ctx.problems.push(`area ${A.id}: back needs { side, span: [a, b], to }`); }
+  for (const s of A.seams || []) list.push(TourSeams.norm(s));
+  for (const s of list) {
+    if (!TourSeams.SIDES[s.side]) { ctx.problems.push(`area ${A.id}: seam side '${s.side}' is not top, bottom, left or right`); continue; }
+    (area.seams || (area.seams = [])).push(s);
+  }
 }
 
 /* postcards across every area: 'must' spots first, then one each of hidden, risky and high, then the rest spread out,

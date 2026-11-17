@@ -617,10 +617,10 @@ const levels = [
         ['pool', { n: 16, text: 'FALL THROUGH A GAP IN THE GLASS: UNDER THE LAKE, YOUR REFLECTION WALKS UPSIDE DOWN', door: 'under@in', back: 'underBack' }],
         ['enemies', { kind: 'w22Moth', n: 1, len: 8 }],
         'cp',
+        ['itemBlock', { item: 'star', y: 4 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
         ['pool', { n: 14, stones: [4, 8], enemy: 'w22Alarm' }],
         // ③ swap above and below in mid-air
         ['pool', { n: 18, holes: [1, 6, 11, 15], stones: [], gold: 'risky' }],
-        ['itemBlock', { item: 'star', y: 4 }],
         ['stones', { n: 5 }],
         ['gate', { exit: 'main' }]
       ] },
@@ -674,12 +674,12 @@ const levels = [
         ['pages', { n: 6 }],
         ['drawer', { to: 'drawer@in', back: 'drawerBack' }],
         'cp',
+        ['itemBlock', { item: 'lsd', y: 4 }],   // y 4 keeps the tab in jump reach; moved up from the end (Brady: star / acid too often came at the end, where they are no use)
         ['enemies', { kind: 'w22Envelope', n: 2, len: 10 }],
         ['inkpot', { drip: true }],
         ['pages', { n: 7 }],
         // ③ paperclip springs to the top of the coffee cup
         ['cup', { gold: 'risky' }],
-        ['itemBlock', { item: 'lsd', y: 5 }],
         ['bank', { h: -2 }],
         ['keys', { n: 10, word: 'THEEND' }],
         ['pencil', { n: 8 }],

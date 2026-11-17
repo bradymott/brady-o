@@ -21,6 +21,7 @@
 //   against the stored baseline (tools/perf_baseline.json) relative to the reference level of the same run.
 //   BRADY_DIST=<folder> to test a private build.
 const pw = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs'), http = require('http');
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -366,7 +367,7 @@ async function main() {
   const srv = sides[0].srv, browser = sides[0].browser, url = sides[0].url;
   const mk = async (sd) => {
     sd = sd || sides[0]; const browser = sd.browser, url = sd.url;
-    const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: engine !== 'firefox', hasTouch: true, serviceWorkers: 'block' });
+    const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: engine !== 'firefox', hasTouch: true, serviceWorkers: 'block' }); await silence(ctx);
     const page = await ctx.newPage();
     page.__errs = [];
     page.on('pageerror', e => page.__errs.push('pageerror: ' + e.message));
