@@ -87,6 +87,10 @@ TourRooms.def('climb', {
     g.need('the top', 10, top - 1);
     const needGate = keep.extras.some(e => e[0] === 'spawn' && e[1] === 'gate');
     if (keep.gate || needGate) { const k2 = Object.assign({}, keep, { fake: false }); g.gateWing(k2, W - 5, top - 1); }
+    // the way out from the top: a second door back to where the room's own door leads. The only other way down was the
+    // one-way hatch (DOWN + JUMP on it), which nobody finds in the dark (Brady, 1-4's Obsidian Chimney: "there's no way
+    // to get down once you reach the top")
+    if (keep.door) g.door(keep.gate || needGate ? 15 : W - 4, top - 1, keep.door);
     g.coins(14, 16, 3);
     // the ledges, side to side, three rows apart
     let left = true, n = 0;
