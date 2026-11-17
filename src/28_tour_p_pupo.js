@@ -286,7 +286,7 @@ const PupoRide = {
   },
   drawRide(p, ctx, t) {
     const g = p.g, R = this.st(g), o = this.pose(p, R);
-    o.t = t; o.scale = this.ART; o.facing = p.facing; o.mood = R.showT > 0 ? 'spiral' : R.drowsyT > 0 ? 'drowsy' : (o.moodX || 'calm');
+    o.t = t; o.scale = this.ART * (o.big || 1); o.facing = p.facing; o.mood = R.showT > 0 ? 'spiral' : R.drowsyT > 0 ? 'drowsy' : (o.moodX || 'calm');
     o.rider = this.riderFn; this.cur = p;
     // Brady's flicker when hurt (Pupo's own grace and shield never flicker)
     const flick = p.invuln > 0 && Math.floor(p.invuln * 16) % 2 === 0;
@@ -313,7 +313,8 @@ const PupoRide = {
     // the swing up onto his back (0.25 s)
     const up = R.mountT > 0 ? R.mountT / this.K.MOUNT_T : 0;
     c.translate(sx - up * 10, sy + up * 30); c.scale(k * gs.sx, k * gs.sy);
-    o.x = 0; o.y = hang ? (D.headY + D.headR + 18) : D.hip - 4;
+    // hanging on: his raised hands on the grip point; seated: his hips on it
+    o.x = 0; o.y = hang ? (D.shoulder + D.upper + D.fore - 2) : D.hip - 4;
     drawBrady(c, o);
   },
   // the status over the ride: drowsy z's, the post-power shield stars
@@ -591,7 +592,7 @@ Tour.pieces.napBox = function (st, o) {
   P.updateAnim = function (dt, inp) {
     if (this.pupoRide) this.idleT = 0;
     ua0.call(this, dt, inp);
-    if (this.pupoRide && this.state === 'play') { const R = this.g.pupo; this.anim.state = R && R.mode === 'hang' ? 'hang' : this.throwT > 0 ? 'throw' : 'ride'; if (this.anim.state === 'throw') this.anim.base = 'ride'; }
+    if (this.pupoRide && this.state === 'play') { const R = this.g.pupo; this.anim.state = R && (R.mode === 'hang' || R.mode === 'climb') ? 'hang' : this.throwT > 0 ? 'throw' : 'ride'; if (this.anim.state === 'throw') this.anim.base = 'ride'; }
   };
   const dr0 = P.draw;
   P.draw = function (ctx, t) { if (!this.pupoRide) return dr0.call(this, ctx, t); PupoRide.drawRide(this, ctx, t); };

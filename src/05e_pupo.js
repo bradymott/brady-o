@@ -187,12 +187,12 @@ const Pupo = {
       hx = 30; hy = pose === 'sleep' ? -16 : (-34 + bob) * flat;
     } else if (pose === 'hang') {
       bob = Math.sin(t * 1.6) * 0.8;
-      set(out.seat, -4, 50 + bob); set(out.shoulderF, 22, 26 + bob); set(out.shoulderB, 17, 26 + bob); set(out.belly, 2, 18 + bob);
+      set(out.seat, -4, 42 + bob); set(out.shoulderF, 22, 26 + bob); set(out.shoulderB, 17, 26 + bob); set(out.belly, 2, 18 + bob);
       hx = 30; hy = 38 + bob;
     } else if (pose === 'climb') {
       const ph = (o && o.phase != null) ? o.phase : t;
       bob = Math.sin(ph * TAU) * 1.2;
-      set(out.seat, -16, -26 + bob); set(out.shoulderF, 9, -40 + bob); set(out.shoulderB, 5, -38 + bob); set(out.belly, 6, -18 + bob);
+      set(out.seat, -13, -40 + bob); set(out.shoulderF, 9, -40 + bob); set(out.shoulderB, 5, -38 + bob); set(out.belly, 6, -18 + bob);
       hx = 8; hy = -52 + bob;
     } else {
       bob = pose === 'rear' || pose === 'power' ? 0 : Math.sin(t * 1.6) * 0.6;
@@ -295,7 +295,7 @@ const Pupo = {
     if (!o.armsOff) Pupo.arm(ctx, 5, -38 + bob, 16, -60 - Math.max(0, -k) * 8, { w: 7, col: C.furSh, t, bands: false });
     outlinedCapsule(ctx, -2, -10, 12, -4 + k * 3, 9, C.furSh); Pupo.hand(ctx, 13, -4 + k * 3, -0.3, 0.9, false);
     ctx.save(); ctx.translate(0, bob); ctx.rotate(-0.08); this.sitBody(ctx, 0); ctx.restore();
-    if (o.rider) { ctx.save(); o.rider(ctx, -16, -26 + bob); ctx.restore(); }
+    if (o.rider) { ctx.save(); o.rider(ctx, -13, -40 + bob); ctx.restore(); }
     outlinedCapsule(ctx, 4, -10, 14, -12 - k * 3, 9, C.fur); Pupo.hand(ctx, 15, -12 - k * 3, -0.3, 0.9, false);
     ctx.save(); ctx.translate(8, -52 + bob); ctx.rotate(-0.12); Pupo.head(ctx, 0, 0, 1.75, t, o.mood || 'calm', o.spiral); ctx.restore();
     if (!o.armsOff) Pupo.arm(ctx, 9, -40 + bob, 18, -62 - Math.max(0, k) * 8, { w: 7.5, col: C.fur, t, bands: false });
@@ -309,7 +309,7 @@ const Pupo = {
     if (pose === 'hang') {
       // upside down under a bar (the origin): hands and feet up on the bar, back hanging down, Brady-O under his back
       ctx.save(); ctx.scale(1, -1); this.allFours(ctx, o, 'hang', t); ctx.restore();
-      if (o.rider) { ctx.save(); o.rider(ctx, -4, 50); ctx.restore(); }
+      if (o.rider) { ctx.save(); o.rider(ctx, -4, 42); ctx.restore(); }
       ctx.restore(); return;
     }
     if (pose === 'climb') { this.climb(ctx, o, t); ctx.restore(); return; }

@@ -67,12 +67,12 @@ const PupoPower = {
 
 /* ---------- the show: pools built once ---------- */
 const PupoPowerFx = {
-  N_ARMS: 16, N_BF: 32, TIERS: [{ arms: 12, bands: 6, rug: 0, bf: 24, bob: true, box: true, shake: 3 }, { arms: 8, bands: 4, rug: 1, bf: 12, bob: false, box: true, shake: 3 }, { arms: 4, bands: 3, rug: 2, bf: 6, bob: false, box: false, shake: 0 }],
+  N_ARMS: 16, N_BF: 32, BIG: 1.3, TIERS: [{ arms: 12, bands: 6, rug: 0, bf: 24, bob: true, box: true, shake: 3 }, { arms: 8, bands: 4, rug: 1, bf: 12, bob: false, box: true, shake: 3 }, { arms: 4, bands: 3, rug: 2, bf: 6, bob: false, box: false, shake: 0 }],
   COLS: ['#e8413a', '#ff9a2a', '#ffd84a', '#4ac46a', '#3a8ae8', '#9a5ae8'],
   init() {
     if (this.arms) return;
     this.targets = []; this.tx = new Float32Array(16); this.ty = new Float32Array(16); this.hitDone = false; this.n = 0;
-    this.arms = []; for (let i = 0; i < this.N_ARMS; i++) this.arms.push({ on: false, ox: 0, oy: 0, ang: 0, tx: 0, ty: 0, born: 0, shoot: 0, tgt: -1, len: 0, col: i % 2 ? '#b48c62' : '#86643f', sag: 0, w: 5 });
+    this.arms = []; for (let i = 0; i < this.N_ARMS; i++) this.arms.push({ on: false, ox: 0, oy: 0, sa: 0, ang: 0, tx: 0, ty: 0, born: 0, shoot: 0, tgt: -1, len: 0, col: i % 2 ? '#b48c62' : '#86643f', sag: 0, w: 5 });
     this.bfs = []; for (let i = 0; i < this.N_BF; i++) this.bfs.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, t0: 0, col: this.COLS[i % 6], s: 1, ph: i * 0.37 });
     this.boops = []; for (let i = 0; i < 16; i++) this.boops.push({ on: false, x: 0, y: 0, t0: 0 });
     this.an = Pupo.newAnchors();
@@ -104,7 +104,9 @@ const PupoPowerFx = {
       // every which way: the angle to its target, or a jumble of directions (never a symmetric fan)
       a.tgt = i < this.n ? i : -1;
       a.ang = a.tgt >= 0 ? Math.atan2(this.ty[i] - (p.y + p.h * 0.4), this.tx[i] - p.cx) : -Math.PI / 2 + ((i * 2.399) % TAU) - 1.2;
-      a.ox = Math.cos(a.ang + (i % 3 - 1) * 0.5) * (8 + (i * 5) % 9); a.oy = -24 - Math.sin(a.ang) * 6 + (i % 4) * 3;
+      // it sprouts from his back and sides (around the upper body), the stub sticks out its own way, never a fan
+      const oa = -0.15 - ((i * 0.618) % 1) * 2.85; a.ox = Math.cos(oa) * 13; a.oy = -30 + Math.sin(oa) * 15;
+      a.sa = oa + (((i * 0.383) % 1) - 0.5) * 1.4;
       a.born = 0.30 + i * 0.035; a.shoot = 1.00 + (i % tr.arms) * 0.03; a.len = 0; a.sag = ((i * 7) % 5 - 2) * 3; a.w = 4.5 + (i % 3) * 0.6;
       a.tx = a.tgt >= 0 ? this.tx[i] : p.cx + Math.cos(a.ang) * 2.2 * TS; a.ty = a.tgt >= 0 ? this.ty[i] : p.y + p.h * 0.4 + Math.sin(a.ang) * 2.2 * TS;
     }
@@ -124,7 +126,7 @@ const PupoPowerFx = {
   // the belly button in the world (the art's anchor, scaled and mirrored)
   bellyX: 0, bellyY: 0, mouthX: 0, mouthY: 0,
   anchorsNow(g, p, t) {
-    const o = g.pupo.draw, S = PupoRide.ART, f = p.facing, an = Pupo.anchors('rear', t, this.an);
+    const o = g.pupo.draw, S = PupoRide.ART * this.BIG, f = p.facing, an = Pupo.anchors('rear', t, this.an); this.sc = this.BIG;
     this.bellyX = o.x + f * an.belly.x * S; this.bellyY = o.y + an.belly.y * S;
     this.mouthX = o.x + f * an.mouth.x * S; this.mouthY = o.y + an.mouth.y * S;
     this.eyeLX = o.x + f * an.eyeL.x * S; this.eyeLY = o.y + an.eyeL.y * S; this.eyeRX = o.x + f * an.eyeR.x * S; this.eyeRY = o.y + an.eyeR.y * S; this.eyeR = an.eyeR_r * S;
@@ -150,7 +152,7 @@ const PupoPowerFx = {
     // the boops land: a belly-button dot on every target and a white ink ring growing in it
     for (let i = 0; i < this.n; i++) {
       const tAt = this.boopAt(i, tr);
-      if (t0 < tAt && t >= tAt) { const B = this.boops[i]; B.on = true; B.x = this.tx[i]; B.y = this.ty[i]; B.t0 = tAt; if (i % 4 === 0) PupoRide.sfx('pupoBoop', 'pick', { pitch: 0.55 + i * 0.03, vol: 0.4 }); }
+      if (t0 < tAt && t >= tAt) { const B = this.boops[i]; B.on = true; B.x = this.tx[i]; B.y = this.ty[i]; B.t0 = tAt; if (i % 4 === 0) { this.sfxO.pitch = 0.55 + i * 0.03; PupoRide.sfx('pupoBoop', 'pick', this.sfxO); } }
     }
     // the pop at 1.60: the hits are applied here
     if (!this.hitDone && t >= 1.60) { this.hitDone = true; this.pop(g, tr); }
@@ -158,13 +160,14 @@ const PupoPowerFx = {
   // when target i is booped: rounds of the tier's arm count, 0.03 s apart, 0.12 s to arrive; later rounds at 1.25 s
   boopAt(i, tr) { const r = Math.floor(i / tr.arms), j = i % tr.arms; return (r === 0 ? 1.00 : 1.25) + j * 0.03 + 0.12; },
   pop(g, tr) {
-    const K = PupoPower.K, src = g.player;
+    const K = PupoPower.K, src = g.player; let chain = 0;
     for (let i = 0; i < this.n; i++) {
       const e = this.targets[i]; if (!e || e.remove || e.dead) continue;
       const x = e.x + e.w / 2, y = e.y + e.h / 2;
       const r = e.hit('pupoPower', src);
       if (r === true || (r && r !== 'bounce')) {
-        g.chainScore(e); g.burst(x, y, 14, '#ffd84a', 'confetti');
+        // 200 x the chain (no extra lives: the chain table's 1-UPs are for stomps)
+        chain++; g.addScore(200 * chain, x, y); g.burst(x, y, 14, '#ffd84a', 'confetti');
         if (typeof GearCoin !== 'undefined') g.spawn(new GearCoin(g, x, y - 6));
       } else if (e.stun) e.stun(K.STUN_NO); else e.stunT = K.STUN_NO;
     }
@@ -184,20 +187,25 @@ const PupoPowerFx = {
     const wav = calm ? 0 : Math.sin(st * TAU * 3);
     for (let i = 0; i < this.N_ARMS; i++) {
       const a = this.arms[i]; if (!a.on || st < a.born) continue;
-      const ox = bx + a.ox * f * 0.6, oy = by + a.oy;
+      const sc = this.sc, ox = bx + a.ox * f * sc, oy = by + a.oy * sc;
       // the target this arm is on now (a second round takes targets 13-16 after the first boop)
       let ti = a.tgt; if (ti >= 0 && this.n > tr.arms && st > 1.25 && i + tr.arms < this.n) ti = i + tr.arms;
       const txx = ti >= 0 ? this.tx[ti] : a.tx, tyy = ti >= 0 ? this.ty[ti] : a.ty;
-      const dx = txx - ox, dy = tyy - oy, D = Math.sqrt(dx * dx + dy * dy) || 1;
-      const sprout = Math.min(1, (st - a.born) / 0.12), stub = 0.9 * TS * easeInOut(sprout);
-      let L = stub;
-      if (st >= a.shoot && st < 1.80) L = stub + (D - stub) * Math.min(1, (st - a.shoot) / 0.12);
-      if (st >= 1.25 && ti !== a.tgt && ti >= 0) L = stub + (D - stub) * Math.min(1, (st - 1.25 - (i % tr.arms) * 0.03) / 0.12);
-      if (st >= 1.80) { const k = clamp((st - 1.80) / 0.5, 0, 1); L = (k < 0.7 ? D * (1 - k / 0.7) - 6 * Math.sin(k / 0.7 * Math.PI) : -4 * Math.sin((k - 0.7) / 0.3 * Math.PI)); if (L < 2) continue; }
-      if (L < 2) continue;
-      const ux = dx / D, uy = dy / D;
-      this.armO.w = a.w; this.armO.col = a.col; this.armO.t = t; this.armO.point = true; this.armO.sag = a.sag + wav * 4 * (i % 2 ? 1 : -1); this.armO.handScale = 0.95;
-      Pupo.arm(ctx, ox, oy, ox + ux * L, oy + uy * L, this.armO);
+      // the stub: 1.3 tiles out its own way (wiggling), then the tip travels to the target, then snaps back to the stub
+      const sprout = Math.min(1, (st - a.born) / 0.12), stub = 1.3 * TS * easeInOut(sprout);
+      const sx2 = ox + Math.cos(a.sa) * f * stub, sy2 = oy + Math.sin(a.sa) * stub;
+      let k = 0;
+      if (st >= a.shoot && st < 1.80) k = Math.min(1, (st - a.shoot) / 0.12);
+      if (st >= 1.25 && ti !== a.tgt && ti >= 0 && st < 1.80) k = Math.min(1, (st - 1.25 - (i % tr.arms) * 0.03) / 0.12);
+      if (st >= 1.80) {
+        // back like a tape measure: to the stub, past it once, and in
+        const q = clamp((st - 1.80) / 0.5, 0, 1); k = q < 0.5 ? 1 - q / 0.5 : 0;
+        if (q >= 0.5) { const r = (q - 0.5) / 0.5, L = stub * (1 - r) + Math.sin(r * Math.PI) * 6; if (L < 2) continue; this.armTip(ctx, a, ox, oy, ox + Math.cos(a.sa) * f * L, oy + Math.sin(a.sa) * L, t, wav, i, 0); continue; }
+      }
+      if (stub < 2) continue;
+      const hx = sx2 + (txx - sx2) * k, hy = sy2 + (tyy - sy2) * k, D = Math.hypot(hx - ox, hy - oy);
+      // a long arm bows into an arc (alternately up and down), so the tangle reads as noodles, not poles
+      this.armTip(ctx, a, ox, oy, hx, hy, t, wav, i, D * 0.16 * (i % 2 ? 1 : -1));
     }
     // the spiral eyes: 0.55-1.00 they spin up, back to his eyes with a slow blink after 1.80
     if (st > 0.55 && st < 2.30) {
@@ -215,6 +223,11 @@ const PupoPowerFx = {
     for (let i = 0; i < this.N_BF; i++) { const b = this.bfs[i]; if (!b.on || b.s <= 0.02) continue; Pupo.butterfly(ctx, b.x, b.y, 1.05 * b.s, (calm ? st * 0.5 : st * 1.346) + b.ph, b.col); }
   },
   armO: { w: 5, col: '#b48c62', t: 0, point: true, sag: 0, handScale: 1 },
+  armTip(ctx, a, x0, y0, x1, y1, t, wav, i, bow) {
+    const O = this.armO; O.w = a.w * this.sc; O.col = a.col; O.t = t; O.point = true; O.sag = bow + a.sag + wav * 4 * (i % 2 ? 1 : -1); O.handScale = 0.95 * this.sc;
+    Pupo.arm(ctx, x0, y0, x1, y1, O);
+  },
+  sc: 1, sfxO: { pitch: 1, vol: 0.4 },
   // the carpet tongue: 6 tiles at 10 t/s from 0.70 s; along the floor in front of him, or straight down in mid-air; it rolls
   // back up from 1.80 to 2.30; drawn in slices of the cached rug strip, with an ink edge and a rolled cylinder at the front
   drawTongue(ctx, p, st, tr, f) {
@@ -295,32 +308,31 @@ const PupoPowerFx = {
     const x = gr.x + W / 2;
     if (tr.bob && !calm && st > 1.18 && st < 2.3) {
       // each letter bobs 2 px at 2 Hz, a quarter turn apart
-      const L = this.letters; let lx = x - cw / 2;
-      for (let i = 0; i < L.length; i++) { const c = L[i]; ctx.drawImage(c, lx, y - ch / 2 + Math.sin(st * TAU * 2 + i * 0.8) * 2, c.width / Game.dpr, ch); lx += c.width / Game.dpr; }
+      const d = Game.dpr, x0 = x - cw / 2;
+      for (let i = 0; i < this.nL; i++) { const sx = this.lx[i], sw = this.lw[i]; if (sw <= 0) continue; ctx.drawImage(txt, sx * d, 0, sw * d, txt.height, x0 + sx, y - ch / 2 + Math.sin(st * TAU * 2 + i * 0.8) * 2, sw, ch); }
     } else ctx.drawImage(txt, x - cw * s / 2, y - ch * s / 2, cw * s, ch * s);
   },
-  // "PUPO POWER!" drawn once into a canvas at 80 % of the view's width (rebuilt only when the resolution changes), and its letters
-  textW: 0, textDpr: 0, text: null, letters: null,
+  // "PUPO POWER!" drawn once into a canvas at 80 % of the view's width (rebuilt only when the resolution changes); the letters'
+  // positions are kept so the letter bob draws slices of the same canvas
+  textW: 0, textDpr: 0, text: null, lx: new Float32Array(12), lw: new Float32Array(12), nL: 0,
   textCanvas(W) {
     const dpr = Game.dpr, tw = Math.round(W * 0.8);
     if (this.text && this.textW === tw && this.textDpr === dpr) return this.text;
-    const str = 'PUPO POWER!', size = Math.round(tw / 6.4), font = `${size}px ${FONT_DISPLAY}`;
-    const meas = makeCanvas(4, 4).getContext('2d'); meas.font = font;
-    const pad = 10, ch = Math.round(size * 1.35) + pad * 2;
-    const draw = (s) => {
-      const w = Math.ceil(meas.measureText(s).width * (tw / Math.max(1, meas.measureText(str).width))) + pad * 2;
-      const c = makeCanvas(Math.ceil(w * dpr), Math.ceil(ch * dpr)), x = c.getContext('2d');
-      x.setTransform(dpr * tw / Math.max(1, meas.measureText(str).width), 0, 0, dpr, 0, 0); x.font = font; x.textBaseline = 'middle'; x.lineJoin = 'round';
-      const ox = pad * Math.max(1, meas.measureText(str).width) / tw, oy = ch / 2;
-      // a solid 4 px darker drop down-right, a 6 px black outline, the yellow face
-      x.lineWidth = 12; x.strokeStyle = '#1c1426'; x.strokeText(s, ox + 4, oy + 4); x.fillStyle = '#c27a00'; x.fillText(s, ox + 4, oy + 4);
-      x.strokeText(s, ox, oy); x.fillStyle = '#ffd84a'; x.fillText(s, ox, oy);
-      return c;
-    };
-    this.text = draw(str); this.letters = [];
-    for (const chr of str) this.letters.push(draw(chr === ' ' ? ' ' : chr));
-    this.textW = tw; this.textDpr = dpr;
-    return this.text;
+    const str = 'PUPO POWER!', pad = 12, x = makeCanvas(4, 4).getContext('2d');
+    x.font = `100px ${FONT_DISPLAY}`; const w100 = Math.max(1, x.measureText(str).width), size = Math.max(12, Math.floor(100 * (tw - 2 * pad) / w100));
+    x.font = `${size}px ${FONT_DISPLAY}`;
+    const tw2 = x.measureText(str).width, ch = Math.round(size * 1.25) + pad * 2, cw = Math.ceil(tw2) + pad * 2;
+    const c = makeCanvas(Math.ceil(cw * dpr), Math.ceil(ch * dpr)), y = c.getContext('2d');
+    y.setTransform(dpr, 0, 0, dpr, 0, 0); y.font = `${size}px ${FONT_DISPLAY}`; y.textBaseline = 'middle'; y.lineJoin = 'round';
+    const lw = Math.max(4, size * 0.09), dr = Math.max(3, size * 0.06);
+    // a solid darker drop down-right, a black outline, the yellow face
+    y.lineWidth = lw * 2; y.strokeStyle = '#1c1426'; y.strokeText(str, pad + dr, ch / 2 + dr); y.fillStyle = '#c27a00'; y.fillText(str, pad + dr, ch / 2 + dr);
+    y.strokeText(str, pad, ch / 2); y.fillStyle = '#ffd84a'; y.fillText(str, pad, ch / 2);
+    // where each letter sits (for the bob)
+    let acc = 0; this.nL = str.length;
+    for (let i = 0; i < str.length; i++) { const adv = x.measureText(str.slice(0, i + 1)).width; this.lx[i] = i === 0 ? 0 : pad + acc; this.lw[i] = (i === 0 ? pad : 0) + adv - acc + (i === str.length - 1 ? pad : 0); acc = adv; }
+    this.text = c; this.textW = tw; this.textDpr = dpr;
+    return c;
   }
 };
 
@@ -408,7 +420,7 @@ window.addEventListener('keydown', e => { if (Input.mode === 'game' && (e.code =
   // the show's pose: Pupo rears up on his hind legs, Brady clings to his scruff, legs flying
   PupoRide.modes.power = {
     update(p, dt, inp, g, R) {},
-    pose(p, R, o) { o.pose = 'rear'; o.x = p.cx - p.facing * 4; o.y = p.y + p.h - Math.min(1, R.showT / 0.3) * 4; o.armsOff = true; o.still = true; o.rider = null; o.boxY = o.y - 120; o.boxH = 126; o.moodX = 'spiral'; return o; }
+    pose(p, R, o) { const k = Math.min(1, R.showT / 0.3); o.pose = 'rear'; o.big = 1 + (PupoPowerFx.BIG - 1) * k; o.x = p.cx - p.facing * 4; o.y = p.y + p.h; o.armsOff = true; o.still = true; o.rider = null; o.boxX = o.x - 70; o.boxW = 140; o.boxY = o.y - 140; o.boxH = 146; o.moodX = 'spiral'; return o; }
   };
   const ps0 = PupoRide.pose;
   PupoRide.pose = function (p, R) {
@@ -420,8 +432,8 @@ window.addEventListener('keydown', e => { if (Input.mode === 'game' && (e.code =
     const p = this.cur, R = p.g.pupo;
     if (R.showT > 0) {
       // Brady first, behind the head, his hands in Pupo's scruff (drawn in Pupo's art space)
-      const o = R.draw; c.save(); c.translate(o.x, o.y); c.scale(this.ART * (o.facing || 1), this.ART);
-      const a = p.anim, st = a.state; a.state = 'hang'; this.paintRider(c, -10, -66); a.state = st; c.restore();
+      const o = R.draw, bg = o.big || 1; c.save(); c.translate(o.x, o.y); c.scale(this.ART * (o.facing || 1), this.ART);
+      const a = p.anim, st = a.state; a.state = 'hang'; this.paintRider(c, -10 * bg, -66 * bg); a.state = st; c.restore();
       Pupo.draw(c, o); return;
     }
     return pr0.call(this, c);

@@ -789,7 +789,7 @@ const PupoArms = {
   };
   const ps0 = PupoRide.pose;
   PupoRide.pose = function (p, R) {
-    const o = R.draw; o.rot = 0; o.armsOff = false;
+    const o = R.draw; o.rot = 0; o.armsOff = false; o.big = 0;
     const r = ps0.call(this, p, R);
     const a = R.arm; if (a && a.phase !== 0) r.armsOff = true;
     return r;

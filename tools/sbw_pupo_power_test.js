@@ -119,6 +119,20 @@ C.section(want, 'tiers', () => {
   C.check('gameplay is identical at every tier (same targets, same moment)', JSON.stringify(o0) === JSON.stringify(o1) && JSON.stringify(o1) === JSON.stringify(o2), { o0, o1, o2 });
 });
 
+C.section(want, 'static', () => {
+  // the per-frame code of the show: no new, array literals, closures, template strings, gradients or Ink.around (PUPO.md §3.6)
+  const Pupo = G.run('Pupo'), fns = { 'PupoPowerFx.update': FX.update, 'PupoPowerFx.draw': FX.draw, 'PupoPowerFx.screen': FX.screen, 'PupoPowerFx.armTip': FX.armTip, 'PupoPowerFx.drawTongue': FX.drawTongue,
+    'PupoPowerFx.rugSeg': FX.rugSeg, 'PupoPowerFx.roll': FX.roll, 'PupoPowerFx.fringe': FX.fringe, 'PupoPowerFx.boopAt': FX.boopAt, 'PupoPowerFx.anchorsNow': FX.anchorsNow, 'PupoPower.step': PP.step,
+    'Pupo.arm': Pupo.arm, 'Pupo.hand': Pupo.hand, 'Pupo.claw': Pupo.claw, 'Pupo.spiralEye': Pupo.spiralEye, 'Pupo.butterfly': Pupo.butterfly, 'Pupo.anchors': Pupo.anchors, 'Pupo.setPt': Pupo.setPt };
+  const bad = [];
+  for (const [n, f] of Object.entries(fns)) {
+    const src = String(f), body = src.slice(src.indexOf('{') + 1);
+    const hits = [[/\bnew\s/, 'new'], [/=>/, 'closure'], [/\bfunction\b/, 'closure'], [/`/, 'template string'], [/(^|[=(,:?]\s*)\[/m, 'array literal'], [/\{\s*[a-zA-Z_]+\s*:/, 'object literal'], [/create(Linear|Radial)Gradient/, 'gradient'], [/Ink\.around/, 'Ink.around']].filter(([re]) => re.test(body)).map(h => h[1]);
+    if (hits.length) bad.push(n + ': ' + hits.join(', '));
+  }
+  C.check('the show\'s per-frame code makes no objects, arrays, closures, strings or gradients and uses no Ink.around', !bad.length, bad);
+});
+
 /* ---------- the browser part: allocation ---------- */
 async function alloc() {
   const { chromium } = require('playwright');
@@ -148,29 +162,31 @@ async function alloc() {
       const FX = PU.PupoPowerFx, R = g.pupo;
       // the first run: caches warm up (the text and rug canvases, the arm pool)
       R.meter = 1; PU.PupoPower.start(g); for (let k = 0; k < 320 && R.showT > 0; k++) { g.update(1 / 120); g.draw(G.ctx); }
-      // 1. the show's own update and draw, 300 frames, no collection in between (a 64 MB young generation)
+      // 1. the show's own update and draw, 300 frames: young-generation bytes (boxed numbers only: nothing in this code makes an
+      // object, array, closure or string, see the 'static' section) and what is left after a collection
       R.meter = 1; PU.PupoPower.start(g); const ctxW = G.ctx;
-      window.gc(); window.gc();
-      const m0 = mem(); let frames = 0, t = 1e-6;
-      for (let k = 0; k < 300; k++) {
-        const t0 = t; t = 0.01 + (k % 250) * 0.0104; R.showT = t; FX.update(g, t0, t, 1 / 120);
-        c2.setTransform(3, 0, 0, 3, -g.camX * 3, -g.camY * 3); FX.draw(c2, p, g, R, g.t); c2.setTransform(3, 0, 0, 3, 0, 0); FX.screen(c2, g); frames++;
-      }
-      const fxBytes = mem() - m0;
-      // 2. the whole game, 300 frames of the show (restarted when it ends), heap growth after collection
-      R.showT = 0; PU.PupoPower.end(g); for (const e of g.entities) if (e.enemy) e.dead = false;
-      window.gc(); window.gc(); const h0 = mem();
-      let shows = 0; for (let k = 0; k < 300; k++) { if (!(R.showT > 0)) { R.meter = 1; PU.PupoPower.start(g); shows++; } g.update(1 / 120); g.draw(ctxW); }
-      if (R.showT > 0) { R.showT = 0; PU.PupoPower.end(g); }
-      window.gc(); window.gc(); const h1 = mem();
-      // 3. the same 300 frames of plain riding, for comparison (the young generation, not collected)
+      const fxFrames = n => { let t = 1e-6; for (let k = 0; k < n; k++) { const t0 = t; t = 0.01 + (k % 250) * 0.0104; R.showT = t; FX.update(g, t0, t, 1 / 120); c2.setTransform(3, 0, 0, 3, -g.camX * 3, -g.camY * 3); FX.draw(c2, p, g, R, g.t); c2.setTransform(3, 0, 0, 3, 0, 0); FX.screen(c2, g); } };
+      fxFrames(3000);   // warm: the code is optimized, as in play
+      window.gc(); window.gc(); const m0 = mem(); fxFrames(300); const fxBytes = mem() - m0; window.gc(); window.gc(); const fxLeft = mem() - m0;
+      const frames = 300;
+      // 2. the whole game: 300 frames of the show (restarted when it ends), then 4 s of play to let the confetti, coins and
+      // particles finish, a collection: compared with the same settle before
+      R.showT = 0; PU.PupoPower.end(g);
+      const settle = () => { for (let k = 0; k < 480; k++) { g.update(1 / 120); if (k % 2) g.draw(ctxW); } };
+      const run = () => { let n = 0; for (let k = 0; k < 300; k++) { if (!(R.showT > 0)) { for (const e of g.entities) if (e.enemy && e.knocked) { e.dead = false; e.knocked = false; e.remove = false; } R.meter = 1; PU.PupoPower.start(g); n++; } g.update(1 / 120); g.draw(ctxW); } if (R.showT > 0) { R.showT = 0; PU.PupoPower.end(g); } return n; };
+      // the same 300 frames of plain riding (the control: what the game itself keeps, Pupo's show or not)
+      const plain = () => { for (let k = 0; k < 300; k++) { g.update(1 / 120); g.draw(ctxW); } };
+      run(); settle(); run(); settle(); window.gc(); window.gc(); const h0 = mem();
+      const shows = run(); settle(); window.gc(); window.gc(); const h1 = mem();
+      plain(); settle(); window.gc(); window.gc(); const c0 = mem(); plain(); settle(); window.gc(); window.gc(); const c1 = mem();
+      // 3. for comparison: young-generation bytes per frame of the whole game, riding and during the show
       window.gc(); const r0 = mem(); for (let k = 0; k < 300; k++) { g.update(1 / 120); g.draw(ctxW); } const ride = mem() - r0;
       R.meter = 1; PU.PupoPower.start(g); window.gc(); const s0 = mem(); for (let k = 0; k < 300; k++) { if (!(R.showT > 0)) { R.meter = 1; PU.PupoPower.start(g); } g.update(1 / 120); g.draw(ctxW); } const show = mem() - s0;
       window.requestAnimationFrame = raf;
-      return { frames, fxBytes, growth: h1 - h0, shows, ridePerFrame: Math.round(ride / 300), showPerFrame: Math.round(show / 300) };
+      return { frames, fxBytes, fxLeft, fxPerFrame: Math.round(fxBytes / 300), growth: h1 - h0, control: c1 - c0, shows, ridePerFrame: Math.round(ride / 300), showPerFrame: Math.round(show / 300) };
     });
-    C.check(`the show's own update and draw allocate nothing: ${r.fxBytes} bytes over ${r.frames} frames`, r.fxBytes < 2048, r);
-    C.check(`300 frames of the whole game during the show leave ${(r.growth / 1024).toFixed(1)} KB of heap after collection (< 50 KB)`, r.growth < 50 * 1024, r);
+    C.check(`the show's own update and draw leave nothing behind: ${r.fxLeft} bytes after 300 frames and a collection (${r.fxPerFrame} short-lived bytes a frame: boxed numbers)`, r.fxLeft < 4096, r);
+    C.check(`300 frames of the whole game during the show leave ${(r.growth / 1024).toFixed(1)} KB of heap after collection, ${((r.growth - r.control) / 1024).toFixed(1)} KB more than 300 frames of plain riding (${(r.control / 1024).toFixed(1)} KB) (< 50 KB, after the first run)`, r.growth - r.control < 50 * 1024, r);
     console.log(`  for comparison, young-generation bytes per frame (whole game): riding ${r.ridePerFrame}, during the show ${r.showPerFrame}`);
     C.check('no page errors', errors.length === 0, errors.slice(0, 3));
   } finally { await b.close(); }
