@@ -295,17 +295,18 @@ const PupoRide = {
     if (flick) o.rider = null;
     PlayerFx.under(ctx, p, t);
     const bx = o.boxX != null ? o.boxX : o.x - 56, by = o.boxY != null ? o.boxY : o.y - 100, bw = o.boxW || 112, bh = o.boxH || 106;
-    Ink.around(ctx, bx, by, bw, bh, this.inkFn, { pad: 6, width: 1.0, color: '#120e16', rim: '#e7e3d7', hero: true });
+    Ink.around(ctx, bx, by, bw, bh, this.inkFn, this.INK);
     o.boxX = o.boxY = null; o.boxW = o.boxH = 0; o.moodX = null;
     PlayerFx.over(ctx, p, t);
     for (let i = 0; i < this.overs.length; i++) this.overs[i](ctx, p, g, R, t);
     this.drawStatus(ctx, p, R, t);
     if (p.state === 'portal') ctx.restore();
   },
+  INK: { pad: 6, width: 1.0, color: '#120e16', rim: '#e7e3d7', hero: true },   // Brady's own ink look (made once: nothing is allocated per frame)
   paintRide(c) { const p = this.cur, R = p.g.pupo; Pupo.draw(c, R.draw); },
   // Brady on Pupo's back: drawn inside Pupo's art space (scaled by ART, mirrored by facing), his hips on the seat
   paintRider(c, sx, sy) {
-    const p = this.cur, R = p.g.pupo, o = R.bo, k = ART_SCALE.brady / this.ART, gs = p.growScale();
+    const p = this.cur, R = p.g.pupo, o = R.bo, k = ART_SCALE.brady / this.ART, gs = p.growT > 0 ? p.growScale() : this.GS1;
     o.facing = 1; o.small = p.small; o.power = p.power; o.anim = p.anim; o.look = Save.data.look; o.star = p.star > 0; o.time = R.draw.t;
     o.trip = p.lsdT > 0; o.held = p.g.level && p.g.level.tour ? 'joint' : null; o.floaty = false; o.fly = false;
     const D = p.small ? BRADY_DIM.small : BRADY_DIM.big, hang = p.anim.state === 'hang';
@@ -383,6 +384,7 @@ const PupoRide = {
   },
   died(p) { if (p.pupoRide) { this.zPuff(p.g, p.cx, p.y + p.h - 20); this.dismount(p, 'gone'); } }
 };
+PupoRide.GS1 = { sx: 1, sy: 1 };
 PupoRide.inkFn = c => PupoRide.paintRide(c);
 PupoRide.riderFn = (c, sx, sy) => PupoRide.paintRider(c, sx, sy);
 
