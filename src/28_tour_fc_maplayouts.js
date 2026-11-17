@@ -27,13 +27,15 @@
    falls back to its mapCell on the layout's grid ([x0, y0 of cell 0,0, dx, dy]).
    ============================================================ */
 const TOUR_OW_MAPS = {
-  // Mexico: the market town by the west coast, the canals, the cenote in the jungle, the volcano, the desert
-  // with its cactus, the hacienda on the hill
+  // Mexico: a horseshoe walk round the middle of the land: along the south coast from the market town over the
+  // canals to the cenote in the jungle, up past the volcano, and back west along the top to the hacienda; the
+  // desert with its cactus in the north-west, monarch butterflies, a vulture circling (the shape every other land
+  // now departs from)
   mx: {
     labels: { '1-3': 'Cenote', '1-4': 'Volcán', '1-5': 'Hacienda', '1-6': 'Swallow Pit' },
     w: 1600, h: 960,
     land: [[[70, 640], [120, 450], [250, 330], [390, 170], [620, 95], [900, 80], [1160, 105], [1360, 170], [1500, 290], [1545, 470], [1525, 640], [1560, 790], [1460, 895], [1180, 915], [880, 890], [600, 920], [330, 905], [130, 860], [60, 760]]],
-    nodes: { start: [165, 770], '1-1': [380, 745], '1-2': [780, 790], '1-3': [1180, 760], '1-4': [1300, 470, 'w'], '1-5': [800, 255], '1-6': [800, 525], 'house:mx-tienda': [350, 480], port: [1170, 205] },
+    nodes: { start: [165, 770], '1-1': [380, 745], '1-2': [780, 790], '1-3': [1180, 760], '1-4': [1300, 470, 'w'], '1-5': [800, 255], '1-6': [800, 525], 'house:mx-tienda': [350, 480], port: [1170, 205], '1-7': [560, 440] },
     paths: { 'start>1-1': [[270, 790]], '1-1>1-2': [[570, 820]], '1-2>1-3': [[985, 745]], '1-3>1-4': [[1270, 640]], '1-4>1-5': [[1080, 330]], '1-3>1-6': [[1060, 610], [900, 590]], '1-6>1-5': [[770, 390]], '1-1>house:mx-tienda': [[310, 620]], '1-5>port': [[990, 205]] },
     feat: [
       ['patch', '#dcc685', [[170, 420], [300, 300], [520, 210], [640, 300], [560, 400], [420, 430], [260, 470]]],
@@ -49,7 +51,7 @@ const TOUR_OW_MAPS = {
     ],
     flora: ['cactus', 'agave', 'round', 'bush'], density: 52,
     scenes: { '1-1': 'market', '1-2': ['canals', { river: 1 }], '1-3': 'cenote', '1-4': 'volcano', '1-5': 'hacienda', '1-6': 'pit', 'house:mx-tienda': 'keeper', start: 'airstrip' },
-    live: [['sail', [[60, 960], [40, 300], [300, 30], [1300, 40], [1580, 400], [1590, 940]], 14], ['flutter', 1060, 660, '#ff8a1a'], ['flutter', 300, 640, '#ffb81a'], ['spout', 1560, 160]]
+    live: [['sail', [[60, 960], [40, 300], [300, 30], [1300, 40], [1580, 400], [1590, 940]], 14], ['flutter', 1060, 660, '#ff8a1a'], ['flutter', 300, 640, '#ffb81a'], ['spout', 1560, 160], ['circle', 560, 360, 90, 1.1], ['walk', 'dog', [[420, 860], [520, 870], [600, 850]], 9]]
   },
   // Ecuador: the equator line on the coast, the Amazon canopy, the Andes with the crater, and the Galápagos
   // islands joined by long bridges
