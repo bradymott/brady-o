@@ -22,6 +22,7 @@
 //   Chromium (default) can force garbage collection, so its canvas and heap counts are exact; --engine webkit is the
 //   Safari engine (its canvas counts include canvases not yet collected, with a wider tolerance).
 const pw = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs'), http = require('http');
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -252,6 +253,7 @@ async function main() {
   const launchArgs = engine === 'chromium' ? ['--js-flags=--expose-gc', '--enable-precise-memory-info', '--autoplay-policy=no-user-gesture-required'] : [];
   const browser = await pw[engine].launch({ args: launchArgs });
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: engine !== 'firefox', hasTouch: true, serviceWorkers: 'block' });
+  await silence(ctx);
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push('pageerror: ' + e.message));
@@ -299,6 +301,9 @@ async function main() {
     await step(rep, 'map', async o => window.__ses.map(o));
     await step(rep, 'title', async o => window.__ses.title());
   }
+  // the speakers stayed silent (tools/sbw_silent.js): every real audio context's output went through a gain of 0
+  const quiet = await page.evaluate(() => window.__sbwSilent ? window.__sbwSilent.report() : null).catch(() => null);
+  if (process.env.BRADY_SOUND !== '1' && quiet && quiet.gains.some(g => g !== 0)) fail('sound reached the speakers', quiet);
   await browser.close(); srv.close();
 
   /* ---------------- the verdict ---------------- */
