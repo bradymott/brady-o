@@ -322,7 +322,102 @@ const P = {
     return x + w + 3;
   }
 };
+/* ---------------- Pupo in Ecuador (docs/design/PUPO.md §4.2, §4.3) ---------------- */
+// a Nap Box on its own bit of floor (the shared piece leaves its column to the gen, and the canopy's islands have none)
+P.napBox = (st, o) => { const x = st.x; st.floor(x, x + 2); st.x = x + 1; Tour.pieces.napBox(st, o); return x + 3; };
+// 2-4's Pupo obstacle, The Golden Pod: an overhead pod conveyor carries the cacao pods along under its housing and back
+// inside it; one pod is gold. Pupo's arm snatches it on the low run (stick up + Action); it comes
+// round again every `period` s (the housing is rows gy-8..gy-7, so it stays in view over the pods). The cooling tunnel's
+// cold-store door rolls up the moment he has it, and the wall over the
+// door runs up to the roof. Brady alone can't reach the pod (and touching it does nothing). { n, key, period }
+P.goldenPod = (st, o) => {
+  const B = st.B, x = st.x, n = o.n || 14, key = o.key || 'goldpod', gy = st.gy, per = o.period || 6.5;
+  st.floor(x, x + n + 6);
+  st.sign(x, 'THE COOLING TUNNEL OPENS FOR THE GOLDEN POD. TOO HIGH? PUPO: HOLD UP AND TAP ACTION');
+  for (let q = 1; q <= n; q++) for (let y = gy - 8; y <= gy - 7; y++) { B.set(x + q, y, T.HARD); B.setHide(x + q, y, 1); }
+  // the path: the low run tile by tile (each step takes the same time), up into the housing, back, down
+  // (the low run hangs half a row under the spawn row, nearer the floor and in view; the return run is out of reach)
+  const path = []; for (let q = 0; q < n; q++) path.push([q, 0.5]); path.push([n - 1, -1.5], [0, -1.5]);
+  B.spawn('ecPodBelt', x + 1, gy - 6, { n, period: per, key });
+  B.spawn('pupoSnatch', x + 1, gy - 6, { key, path, period: per, look: 'ecGoldenPod', opens: true, name: 'THE GOLDEN POD! THE COOLING TUNNEL OPENS', hot: 'STUCK ON ITS HOOK! PUPO CAN TUG IT FREE' });
+  st.coins(x + 3, x + n - 2, gy - 2);
+  // the cooling tunnel's door
+  const dx = x + n + 4;
+  tourShutterLock(B, dx, gy - 3, gy - 1, key, 'ecCoolDoor');
+  B.fill(dx, 0, dx, gy - 4, T.HARD);
+  B.decorAt('ecFrost', dx + 1, gy, 0);
+  return dx + 2;
+};
+// 2-2's Pupo bonus: a cacao tree with a hollow larder of chocolate coins at its foot, shut by a bark shutter; the shutter's
+// pull handle (a giant chocolate bar on a chain) hangs from a branch four rows up, where only Pupo's arm takes hold. { lock }
+P.cacaoLarder = (st, o) => {
+  const B = st.B, x = st.x, gy = st.gy, id = o.lock || 'larder';
+  st.floor(x, x + 11);
+  for (let xx = x + 6; xx <= x + 10; xx++) for (let y = gy - 3; y <= gy - 1; y++) { B.set(xx, y, T.HARD); B.setHide(xx, y, 1); }
+  for (let xx = x + 7; xx <= x + 9; xx++) for (let y = gy - 2; y <= gy - 1; y++) { B.set(xx, y, T.PICK); B.setHide(xx, y, 0); }
+  tourShutterLock(B, x + 6, gy - 2, gy - 1, id, 'ecBarkDoor');
+  B.prop('ecCacaoTree', x + 6, gy - 3, 5, 3, 'none', { handleX: x + 3 });
+  B.spawn('pupoHandle', x + 3, gy - 5, { lock: id, once: true, look: 'ecChocBar' });
+  return x + 12;
+};
 for (const k in P) Tour.pieces['ec.' + k] = P[k];
+// a belt lever pokes too: Pupo's arm pulls it (the same as THROW or Up)
+EcBeltLever.prototype.pull = function () { if (this.cool <= 0) this.flip(); };
+// the pod conveyor (2-4): the housing, the drums at both ends, the chain and the plain pods riding with the golden one
+// (the same path and clock as the pupoSnatch it was built with; the golden pod draws itself)
+class EcPodBelt extends Ent {
+  constructor(g, s) {
+    super(g, s, (s.n || 14) * TS + 32, 3 * TS); this.n = s.n || 14; this.period = s.period || 6.5; this.key = s.key; this.back = true; this.friendly = true;
+    this.ox = s.x; this.oy = s.y - TS / 2; this.x = this.ox - TS / 2 - 16; this.y = this.oy - 2.5 * TS; this.gold = null;
+  }
+  update(dt) { this.t += dt; if (!this.gold) for (const e of this.g.entities) if (e.pupoSnatch && e.keyId === this.key) { this.gold = e; break; } }
+  // a pod's place at loop phase u (0..1): the same sums as PupoSnatch.place -> this.px, this.py
+  at(u) {
+    const n = this.n, segs = n + 2, s = (u - Math.floor(u)) * segs, i = Math.floor(s), f = s - i;
+    if (i < n - 1) { this.px = this.ox + (i + f) * TS; this.py = this.oy + 0.5 * TS; }
+    else if (i === n - 1) { this.px = this.ox + (n - 1) * TS; this.py = this.oy + (0.5 - 2 * f) * TS; }
+    else if (i === n) { this.px = this.ox + (n - 1) * (1 - f) * TS; this.py = this.oy - 1.5 * TS; }
+    else { this.px = this.ox; this.py = this.oy + (0.5 - 2 * (1 - f)) * TS; }
+  }
+  draw(ctx) {
+    const t = this.g.t, u0 = t / this.period, hb = this.oy - 2, x0 = this.ox - TS / 2 - 6, x1 = this.ox + (this.n - 0.5) * TS + 6;
+    // the plain pods (five, evenly round the loop with the golden one), hanging on hooks from the chain
+    for (let k = 1; k < 6; k++) {
+      this.at(u0 + k / 6); if (this.py < hb + 4) continue;
+      const x = this.px, y = this.py;
+      ecPod(ctx, x, y, 1, '#c8642a', '#8a3a14', Math.sin(t * 2 + k) * 0.08);
+    }
+    // the housing: a riveted steel box, a hazard stripe along its foot, the chain sliding under it
+    ctx.fillStyle = INK; rr(ctx, x0 - 2, hb - 2 * TS - 2, x1 - x0 + 4, 2 * TS + 4, 6); ctx.fill();
+    ctx.fillStyle = '#7a8090'; rr(ctx, x0, hb - 2 * TS, x1 - x0, 2 * TS, 5); ctx.fill();
+    ctx.fillStyle = '#9aa0b0'; ctx.fillRect(x0 + 4, hb - 2 * TS + 4, x1 - x0 - 8, 5);
+    ctx.fillStyle = '#ffd23a'; ctx.fillRect(x0, hb - 9, x1 - x0, 7);
+    ctx.fillStyle = INK; for (let xx = x0 + 4 - ((t * 40) % 14); xx < x1 - 6; xx += 14) { if (xx < x0 + 2) continue; ctx.beginPath(); ctx.moveTo(xx, hb - 2); ctx.lineTo(xx + 6, hb - 9); ctx.lineTo(xx + 10, hb - 9); ctx.lineTo(xx + 4, hb - 2); ctx.fill(); }
+    ctx.fillStyle = '#5a6070'; for (let xx = x0 + 10; xx < x1 - 6; xx += 24) { ctx.beginPath(); ctx.arc(xx, hb - 2 * TS + 16, 2.2, 0, TAU); ctx.arc(xx, hb - 18, 2.2, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#ffffff'; ctx.font = `bold 11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('CACAO EXPRESS', (x0 + x1) / 2, hb - TS + 2);
+    // the drums at both ends (they turn with the belt)
+    for (const dx of [x0 + 2, x1 - 2]) {
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(dx, hb - TS, 15, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#c87a3a'; ctx.beginPath(); ctx.arc(dx, hb - TS, 12.5, 0, TAU); ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 2.4; const a = t * 2.4;
+      ctx.beginPath(); ctx.moveTo(dx + Math.cos(a) * 11, hb - TS + Math.sin(a) * 11); ctx.lineTo(dx - Math.cos(a) * 11, hb - TS - Math.sin(a) * 11);
+      ctx.moveTo(dx + Math.sin(a) * 11, hb - TS - Math.cos(a) * 11); ctx.lineTo(dx - Math.sin(a) * 11, hb - TS + Math.cos(a) * 11); ctx.stroke();
+    }
+    // the golden pod's empty hook once Pupo has it
+    const gd = this.gold; if (gd && (gd.taken || gd.remove)) { this.at(u0); if (this.py >= hb + 4) { ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(this.px, hb); ctx.lineTo(this.px, hb + 8); ctx.stroke(); ctx.beginPath(); ctx.arc(this.px, hb + 10, 3, 0, Math.PI); ctx.stroke(); } }
+  }
+}
+EcPodBelt.prototype.px = 0; EcPodBelt.prototype.py = 0;
+ENTITY_TYPES.ecPodBelt = EcPodBelt;
+// a cacao pod: a ridged, pointed oval (col, a darker ridge colour), hanging point-down
+function ecPod(ctx, x, y, s, col, rid, rot) {
+  ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot); ctx.scale(s, s);
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(0, -12); ctx.quadraticCurveTo(11, -8, 8, 4); ctx.quadraticCurveTo(4, 12, 0, 14); ctx.quadraticCurveTo(-4, 12, -8, 4); ctx.quadraticCurveTo(-11, -8, 0, -12); ctx.fill();
+  ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, -10); ctx.quadraticCurveTo(9, -7, 6.5, 4); ctx.quadraticCurveTo(3, 10.5, 0, 12); ctx.quadraticCurveTo(-3, 10.5, -6.5, 4); ctx.quadraticCurveTo(-9, -7, 0, -10); ctx.fill();
+  ctx.strokeStyle = rid; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(-3, -8); ctx.quadraticCurveTo(-5, 2, -1.5, 10); ctx.moveTo(3, -8); ctx.quadraticCurveTo(5, 2, 1.5, 10); ctx.stroke();
+  ctx.fillStyle = '#5a3a1a'; ctx.fillRect(-1.5, -14, 3, 4);
+  ctx.restore();
+}
 Object.assign(Decor, {
   ecPoolRim(ctx, x, y, t) { ctx.fillStyle = '#2a2a32'; ctx.beginPath(); ctx.ellipse(x, y + 2, 72, 9, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#3ab8d8'; ctx.beginPath(); ctx.ellipse(x, y + 4, 62, 6, 0, 0, TAU); ctx.fill(); },
   ecLavaArch(ctx, x, y, t, th, d) { const w = d.w, h = d.h, x0 = x - w / 2; ctx.fillStyle = '#3a3a44'; ctx.beginPath(); ctx.moveTo(x0 - 6, y); ctx.lineTo(x0 - 6, y - h); ctx.lineTo(x0 + w + 6, y - h); ctx.lineTo(x0 + w + 6, y); ctx.lineTo(x0 + w - 8, y); ctx.quadraticCurveTo(x, y - h + 26, x0 + 8, y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(x0 - 4, y - h + 2, w + 8, 3); },
@@ -388,6 +483,51 @@ const skins = {
     ecMist(ctx, e, t) {
       const x = e.cx, y = e.y + e.h;
       for (let q = 0; q < 8; q++) { const u = (t * 0.5 + q / 8) % 1; ctx.fillStyle = `rgba(240,255,255,${0.45 * (1 - u)})`; ctx.beginPath(); ctx.arc(x + Math.sin(q * 2 + t) * 14, y - u * 220, 10 + u * 18, 0, TAU); ctx.fill(); }
+    },
+    // 2-4: the golden cacao pod on its hook under the conveyor (a pupoSnatch look); it hides inside the housing on the way back
+    ecGoldenPod(ctx, e, t) {
+      const x = e.cx, y = e.cy;
+      if (!e.taken && y < e.oy + 6) return;
+      // a soft gold ring behind it so it reads among the plain pods at phone size
+      ctx.fillStyle = 'rgba(255,224,90,0.35)'; ctx.beginPath(); ctx.arc(x, y + 1, 17 + Math.sin(t * 5) * 1.5, 0, TAU); ctx.fill();
+      ecPod(ctx, x, y, 1.15, '#ffd23a', '#c88a10', e.taken ? 0 : Math.sin(t * 2) * 0.08);
+      ctx.fillStyle = '#fffbe0'; ctx.beginPath(); ctx.ellipse(x - 3, y - 4, 2, 4, -0.3, 0, TAU); ctx.fill();
+      const s = (t * 1.3) % 1; ctx.save(); ctx.translate(x + 9, y - 10); ctx.rotate(s * 3); ctx.fillStyle = '#ffffff'; ctx.beginPath(); TourKit.star(ctx, 0, 0, 3.6 * (1 - Math.abs(s - 0.5)), 1.2, 4); ctx.fill(); ctx.restore();
+    },
+    // 2-4: the cooling tunnel's cold-store door (a shutter): frosty slats with a golden-pod badge; it rolls up when opened
+    ecCoolDoor(ctx, e, t) {
+      const x = e.x, y = e.y, w = e.w, h = e.h, k = e.k || 0, hh = h * (1 - k * 0.92);
+      ctx.fillStyle = INK; ctx.fillRect(x - 4, y - 8, w + 8, h + 8);
+      ctx.fillStyle = '#5a6a7a'; ctx.fillRect(x - 2, y - 6, w + 4, 6);
+      for (let yy = 0; yy < hh; yy += 8) { ctx.fillStyle = (yy / 8) % 2 ? '#cfe6f4' : '#e8f6ff'; ctx.fillRect(x + 1, y + yy, w - 2, Math.min(8, hh - yy)); }
+      if (k < 0.5) {
+        const by = y + hh * 0.42; ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + w / 2, by, 10, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#3a4a5a'; ctx.beginPath(); ctx.arc(x + w / 2, by, 8, 0, TAU); ctx.fill();
+        ecPod(ctx, x + w / 2, by, 0.48, '#ffd23a', '#c88a10', 0);
+        ctx.fillStyle = '#ffffff'; for (let q = 0; q < 3; q++) ctx.fillRect(x + 3 + q * 9, y + hh - 4, 5, 2);
+      }
+    },
+    // 2-2: the bark shutter over the cacao tree's larder
+    ecBarkDoor(ctx, e, t) {
+      const x = e.x, y = e.y, w = e.w, h = e.h, k = e.k || 0, hh = h * (1 - k * 0.92);
+      ctx.fillStyle = INK; rr(ctx, x - 1, y - 2, w + 2, hh + 3, 5); ctx.fill();
+      ctx.fillStyle = '#7a5032'; rr(ctx, x + 1, y, w - 2, hh, 4); ctx.fill();
+      ctx.strokeStyle = '#4a2e1c'; ctx.lineWidth = 1.5; for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.moveTo(x + 7 + q * 8, y + 3); ctx.lineTo(x + 6 + q * 8, y + hh - 3); ctx.stroke(); }
+      if (k < 0.5) { ctx.fillStyle = '#c8902a'; ctx.beginPath(); ctx.arc(x + w - 7, y + hh / 2, 3, 0, TAU); ctx.fill(); }
+    },
+    // 2-2: the larder's pull handle: a giant chocolate bar hanging on a chain from the branch (a pupoHandle look)
+    ecChocBar(ctx, e, t) {
+      const x = e.hx, k = e.k || 0, y = e.hy + k * 10;
+      ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, e.hy - 44); ctx.lineTo(x, y - 18); ctx.stroke();
+      ctx.strokeStyle = '#b8b8c8'; ctx.lineWidth = 2; ctx.setLineDash([3, 2]); ctx.beginPath(); ctx.moveTo(x, e.hy - 44); ctx.lineTo(x, y - 18); ctx.stroke(); ctx.setLineDash([]);
+      const sw = e.used ? 0 : Math.sin(t * 1.6) * 0.06; ctx.save(); ctx.translate(x, y - 10); ctx.rotate(sw);
+      ctx.fillStyle = INK; rr(ctx, -17, -14, 34, 23, 4); ctx.fill();
+      ctx.fillStyle = '#6a3418'; rr(ctx, -15, -12, 30, 19, 3); ctx.fill();
+      ctx.strokeStyle = '#4a200c'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-5, -11); ctx.lineTo(-5, 6); ctx.moveTo(5, -11); ctx.lineTo(5, 6); ctx.moveTo(-14, -2); ctx.lineTo(14, -2); ctx.stroke();
+      ctx.fillStyle = '#8a4a24'; ctx.fillRect(-13, -10, 6, 2); ctx.fillRect(-3, -10, 6, 2); ctx.fillRect(7, -10, 6, 2);
+      ctx.fillStyle = '#ffd23a'; ctx.fillRect(-15, 3, 30, 4); ctx.fillStyle = '#c8902a'; ctx.fillRect(-15, 6, 30, 1);
+      ctx.restore();
+      pupoRing(ctx, x, y + 2, 4.5);
     }
 };
 
@@ -578,6 +718,37 @@ const stamps = {
 
 // decor the stamps use: a bird's nest of twigs with blue eggs, a rainbow in the mist
 Object.assign(Decor, {
+  // 2-2: the cacao tree over its larder: a mossy trunk (the larder's tiles), a leafy crown, pods on the trunk and a long
+  // branch reaching left to where the chocolate-bar handle hangs (d.handleX)
+  ecCacaoTree(ctx, x, y, t, th, d) {
+    const x0 = x - d.w / 2, top = y - d.h, hx = d.handleX * TS + TS / 2, cx = x + 6;
+    // the trunk up to the crown (art only: the solid part is the larder at its foot)
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(cx - 20, top + 4); ctx.quadraticCurveTo(cx - 12, top - 40, cx - 14, top - 84); ctx.lineTo(cx + 16, top - 84); ctx.quadraticCurveTo(cx + 12, top - 40, cx + 22, top + 4); ctx.fill();
+    ctx.fillStyle = '#6a4630'; ctx.beginPath(); ctx.moveTo(cx - 17, top + 4); ctx.quadraticCurveTo(cx - 9, top - 40, cx - 11, top - 82); ctx.lineTo(cx + 13, top - 82); ctx.quadraticCurveTo(cx + 9, top - 40, cx + 19, top + 4); ctx.fill();
+    // the branch out to where the chocolate-bar handle hangs
+    ctx.strokeStyle = INK; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx - 8, top - 50); ctx.quadraticCurveTo((cx + hx) / 2, top - 92, hx - 6, top - 86); ctx.stroke();
+    ctx.strokeStyle = '#6a4630'; ctx.lineWidth = 7; ctx.stroke(); ctx.lineCap = 'butt';
+    ctx.fillStyle = '#4e8a3a'; ctx.beginPath(); ctx.ellipse(hx - 4, top - 90, 12, 6, -0.3, 0, TAU); ctx.fill();
+    // the larder at its foot (its tiles): a mossy bole, its hollow (behind the shutter) a dim nook where the coins show
+    ctx.fillStyle = INK; rr(ctx, x0 - 2, top - 2, d.w + 4, d.h + 4, 12); ctx.fill();
+    ctx.fillStyle = '#6a4630'; rr(ctx, x0, top, d.w, d.h, 11); ctx.fill();
+    ctx.fillStyle = '#7e5a3c'; ctx.fillRect(x0 + d.w - 18, top + 6, 8, d.h - 10);
+    ctx.fillStyle = '#4e8a3a'; for (let q = 0; q < 4; q++) { ctx.beginPath(); ctx.ellipse(x0 + 14 + q * 36, top + 5, 10, 5, 0.3, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#3a2416'; rr(ctx, x0 + TS - 2, y - 2 * TS, 3 * TS + 2, 2 * TS, 6); ctx.fill();
+    ctx.fillStyle = '#4e3220'; ctx.fillRect(x0 + TS + 4, y - 2 * TS + 6, 3 * TS - 10, 3);
+    ctx.fillStyle = '#e8c890'; rr(ctx, x0 + TS + 4, top + 3, 3 * TS - 8, 13, 3); ctx.fill();
+    ctx.fillStyle = '#5a3418'; ctx.font = `bold 8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('DESPENSA', x0 + 2.5 * TS, top + 13);
+    // the crown
+    const C = [[-34, -100, 30], [0, -118, 36], [36, -102, 30], [-6, -86, 28]];
+    ctx.fillStyle = INK; for (const [dx, dy, r] of C) { ctx.beginPath(); ctx.arc(cx + dx, top + dy, r + 2, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#3e7a34'; for (const [dx, dy, r] of C) { ctx.beginPath(); ctx.arc(cx + dx, top + dy, r, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#5aa04a'; for (const [dx, dy, r] of C) { ctx.beginPath(); ctx.arc(cx + dx - r * 0.3, top + dy - r * 0.35, r * 0.42, 0, TAU); ctx.fill(); }
+    // pods growing straight out of the trunk (cacao does that)
+    ecPod(ctx, cx + 14, top - 30, 0.8, '#e8902a', '#a8501a', 0.3);
+    ecPod(ctx, cx - 14, top - 56, 0.7, '#c8b82a', '#8a7a14', -0.2);
+  },
+  // 2-4: frost breathing out under the cooling tunnel's door
+  ecFrost(ctx, x, y, t) { for (let q = 0; q < 4; q++) { const u = (t * 0.5 + q / 4) % 1; ctx.fillStyle = `rgba(230,248,255,${0.55 * (1 - u)})`; ctx.beginPath(); ctx.arc(x - 6 + u * 26, y - 6 - u * 10, 5 + u * 7, 0, TAU); ctx.fill(); } },
   ecNest(ctx, x, y, t) {
     ctx.fillStyle = '#8a6a3a'; ctx.beginPath(); ctx.ellipse(x, y - 6, 15, 7, 0, 0, TAU); ctx.fill();
     ctx.strokeStyle = '#5a4020'; ctx.lineWidth = 1.2; for (let k = 0; k < 7; k++) { ctx.beginPath(); ctx.moveTo(x - 15 + k * 4, y - 9 + (k % 2) * 3); ctx.lineTo(x - 9 + k * 4, y - 3 - (k % 2) * 3); ctx.stroke(); }
@@ -629,7 +800,7 @@ const L1 = { n: 1, name: 'Hemisphere Hop', arch: 'flip', theme: 'ec_equator',
       wormhole: { title: 'THE CHOCOLATE WORMHOLE', rule: 'A WORMHOLE IN THE COCOA SACKS! HOP IN (UP) AND IT SHOOTS YOU FAR AHEAD', to: 'mitad@wormOut' } }
   ] };
 
-const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_dusk',
+const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_dusk', pupo: 'helper',
   gimmick: 'No ground: swing vine to vine, then ride the swing at the end of the world',
   hint: 'Jump into a vine to grab it, jump again to let go at the top of the swing',
   postcard: 'Brady, the frogs here are see-through. I checked. Twice. ♥ C',
@@ -640,9 +811,13 @@ const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_du
     { id: 'canopy', gen: 'islands', W: 210, H: 24, bottomKill: true,
       script: [
         ['startStamp', { id: 'copa' }],
+        // Pupo (a helper here, PUPO.md §4.3): his Nap Box on the start tree; his bonus is the cacao tree's larder of
+        // chocolate coins, whose bark shutter only his arm can pull open (the chocolate bar on the chain, high up)
+        ['napBox', {}],
         // ① vines between giant trees
         ['itemBlock', { item: 'power', y: 4 }],
         ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
+        ['cacaoLarder', { lock: 'larder' }],
         ['vines', { n: 3 }],
         ['branches', {}],
         ['secretDoor', { to: 'treehouse@in', look: 'ecLeafLadder', back: 'treeBack' }],
@@ -702,7 +877,7 @@ const L3 = { n: 3, name: 'Booby Dash', arch: 'race', theme: 'ec_islas',
       script: [['arches', {}], ['postcard', { kind: 'hidden', dx: -5, dy: -8 }], ['airBlock', { item: 'oneup', dy: 5 }], ['coveExit', { exit: 'secret' }]] }
   ] };
 
-const L4 = { n: 4, name: 'Cacao Works', arch: 'factory', theme: 'ec_fabrica',
+const L4 = { n: 4, name: 'Cacao Works', arch: 'factory', theme: 'ec_fabrica', pupo: 'level',   // Ecuador's Pupo level: The Golden Pod
   gimmick: 'Ride the belts through a chocolate factory: roasting presses stamp, the vats bubble, a lever turns the belts round',
   hint: 'Presses hiss before they slam: wait for the hiss, then run under',
   postcard: 'I licked a chocolate press. It was hot. Worth it. ♥ C',
@@ -720,16 +895,23 @@ const L4 = { n: 4, name: 'Cacao Works', arch: 'factory', theme: 'ec_fabrica',
         // ① belts carry pods and Brady
         ['belt', { n: 10 }],
         ['pressLine', { n: 12, presses: 1 }],
+        // Pupo (PUPO.md §4.2): his Nap Box by the first catwalk; he rides the belts, the presses and the vats with Brady
+        ['napBox', {}],
         ['catwalk8', { n: 12, gold: 'must', item: 'sundial', hidden: true }],
         // ② roasting presses in rhythm, chocolate vats
         ['vat', { n: 10 }],
         ['pressLine', { n: 16, presses: 2 }],
         ['foilStack', { to: 'envoltura@in', back: 'foilBack' }],
         'cp',
-        // ③ the reverse lever over the vats; the cooling tunnel
+        ['napBox', {}],   // the backup Nap Box at the press checkpoint (the near side of the Golden Pod)
+        // ③ the reverse lever over the vats (Pupo's arm pulls it too); the Golden Pod; the cooling tunnel
         ['pressLine', { n: 14, presses: 2, dir: -1, lever: true }],
         ['postcard', { kind: 'risky', dx: -8, dy: -2 }],
         ['vat', { n: 12, dir: 1 }],
+        ['enemies', { kind: 'ecCacao', n: 2, len: 10 }],
+        // The Golden Pod: the cooling tunnel opens only for the golden pod riding the conveyor overhead; only Pupo's arm
+        // reaches it (it comes round again every 6.5 s)
+        ['goldenPod', { n: 14, key: 'goldpod' }],
         ['iceRun', { n: 12 }],
         ['enemies', { kind: 'ecIceCube', n: 2, len: 10 }],
         ['finish', { look: 'ecExitSign' }]
