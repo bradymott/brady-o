@@ -245,11 +245,11 @@ const mangoArt = (ctx, e, x, y, m) => {
 };
 const fruit = (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 8); ctx.fillStyle = '#c8b898'; ctx.beginPath(); ctx.ellipse(0, 0, 5, 7, 0, 0, TAU); ctx.fill(); ctx.restore(); };
 const enemies = {
-  mzWarthog: { cls: TourEnemy.make({ w: 36, h: 24, speed: 1.0, behavior: 'charge', range: 8, chargeSpeed: 6.5, art: warthogArt, burst: '#7a5a4a', onNotice: e => K.say(e.g, e, 'OINK!', '#ffd84a') }), place: 'walk' },
+  mzWarthog: { cls: TourEnemy.make({ belly: true, w: 36, h: 24, speed: 1.0, behavior: 'charge', range: 8, chargeSpeed: 6.5, art: warthogArt, burst: '#7a5a4a', onNotice: e => K.say(e.g, e, 'OINK!', '#ffd84a') }), place: 'walk' },
   mzCashew: { cls: TourEnemy.make({ w: 18, h: 26, speed: 1.0, behavior: 'hop', hopV: 11, hopEvery: 1.3, art: cashewArt, burst: '#ff6a2a' }), place: 'walk' },
   mzWeaver: { cls: TourFlyer.make({ w: 22, h: 14, range: 3, speed: 1.2, swoop: true, art: weaverArt, burst: '#ffd23a' }), place: 'fly' },
   mzPrawn: { cls: TourEnemy.make({ w: 30, h: 20, speed: 1.4, behavior: 'walk', art: prawnArt, burst: '#ff7a5a' }), place: 'walk' },
-  mzMonkey: { cls: TourEnemy.make({ w: 20, h: 36, speed: 0.6, behavior: 'throw', every: 2.2, range: 9, pace: true, art: monkeyArt, burst: '#9a9a8a', shoot: e => {
+  mzMonkey: { cls: TourEnemy.make({ belly: true, w: 20, h: 36, speed: 0.6, behavior: 'throw', every: 2.2, range: 9, pace: true, art: monkeyArt, burst: '#9a9a8a', shoot: e => {
     tourFire(e.g, e.cx + e.dir * 12, e.y + 6, { kind: 'fruit', vx: e.dir * 3.6 * TS, vy: -6 * TS, grav: PHYS.gDown * 0.4, w: 12, h: 14, life: 3, col: '#c8b898', stompable: true, art: fruit }); K.say(e.g, e, 'OOK!', '#ffffff');
   } }), place: 'walk' },
   mzGhostCrab: { cls: TourEnemy.make({ w: 22, h: 14, speed: 2.6, behavior: 'walk', art: ghostCrabArt, burst: '#e8e0c8', glow: 'rgba(220,255,240,' }), place: 'walk' },
