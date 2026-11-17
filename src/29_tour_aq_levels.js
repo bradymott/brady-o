@@ -900,13 +900,13 @@ const levels = [
         ['drifts', { n: 2 }],
         ['rookeryDrift', { to: 'rookery@in', back: 'rookBack' }],
         'cp',
+        ['itemBlock', { item: 'star', y: 4 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
         ['skuas', { n: 2, len: 14 }],
         // ③ the blizzard on thin ice
         'blizzard',
         ['thinIce', { n: 5, gold: 'risky' }],
         ['nest', {}],
         'blizzard',
-        ['itemBlock', { item: 'star', y: 4 }],
         ['thinIce', { n: 6 }],
         ['skuas', { n: 1, len: 10 }],
         ['eggFinale', {}]

@@ -732,7 +732,7 @@ const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
         'posts', 'vendor', ['arch', {}], ['axolotls', { n: 1 }], 'posts',
         // ② the first lock: the lever picks the garden channel (lifted) or the market channel
         ['fork', { len: 46, skin: 'mxLockLever', gold: false,
-          upper: [['chinampa', {}], ['highPost', { gold: 'must' }], ['boatBlock', { item: 'power', dy: 6 }], ['bridge', { enemy: false }], 'herons'],
+          upper: [['chinampa', {}], ['highPost', { gold: 'must' }], ['boatBlock', { item: 'lsd', dy: 6 }], ['bridge', { enemy: false }], 'herons'],
           lower: [['bridge', { enemy: false }], 'posts', ['chinampa', {}], 'posts'] }],
         'cp',
         // ③ the double fork with axolotls on both channels; a willow hides the third channel

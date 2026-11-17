@@ -614,12 +614,12 @@ const L1 = { n: 1, name: 'Hemisphere Hop', arch: 'flip', theme: 'ec_equator',
         ['ceilingDrop', { to: 'chocolateria@in', back: 'shopBack', y: 6, item: 'power' }],
         ['enemies', { kind: 'ecBanana', n: 2, len: 10 }],
         'cp',
+        ['highBlock', { item: 'lsd' }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
         // ③ mid-air flips over gaps; hummingbirds dart
         ['flipGap', { w: 12, gold: 'risky' }],
         ['enemies', { kind: 'ecHummingbird', n: 1, len: 8 }],
         'cacao',
         ['flipGap', { w: 10 }],
-        ['highBlock', { item: 'lsd' }],
         ['flipline', { w: 10 }],
         ['finish', { look: 'ecHemiArch' }]
       ] },

@@ -954,12 +954,12 @@ const levels = [
           ['steps', { up: true }],
           ['bridge', { gold: true }],
           'cp',
+          ['itemBlock', { item: 'lsd', y: 5 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           'barge',
+          ['enemies', { n: 2, len: 10 }],
           ['door', { to: 'seineQuai@in', perch: 0, look: 'frQuaiStairs', back: 'quaiBack' }],
           ['bookboxes', { n: 3 }],
           ['steps', {}],
-          ['itemBlock', { item: 'lsd', y: 5 }],
-          ['enemies', { n: 2, len: 10 }],
           'barge',
           ['bridge', { gold: true }],
           ['gate', { exit: 'main' }]

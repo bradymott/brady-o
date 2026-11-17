@@ -1021,11 +1021,11 @@ const levels = [
           ['coinSlot', {}],
           ['enemies', { kind: 'jpCapsule', n: 2, len: 10 }],
           'cp',
+          ['itemBlock', { item: 'star', y: 5 }],   // was an acid tab at the very end: now a star for the chute and the capsules (Brady)
           ['chute', { n: 5, first: true }],
           ['openCapsule', { to: 'capsuleRoom@in', back: 'capsuleBack' }],
           ['sandalTanuki', {}],
           ['capsules', { n: 3 }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
           ['drum', { r: 4 }],
           ['enemies', { kind: 'jpCapsule', n: 1, len: 8 }],
           ['gate', { exit: 'main' }]
@@ -1055,11 +1055,11 @@ const levels = [
           ['petalDraft', { h: 12 }],
           'cp',
           ['gearStand', { item: 'plane', skin: 'jpCraneStand' }],
+          ['itemBlock', { item: 'lsd', y: 5 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           // ③ down to the lake and its reflections, a last thermal up
           ['craneChain', { n: 3, gap: 5 }],
           ['lakeIslets', { n: 4, gold: 'risky' }],
           ['enemies', { kind: 'jpUmbrellaFly', n: 1, len: 6 }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
           ['petalDraft', { h: 12 }],
           ['craneChain', { n: 2 }],
           ['gate', { exit: 'main' }]

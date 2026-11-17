@@ -699,6 +699,7 @@ const levels = [
           ['ballRide', { gold: 'risky' }],
           ['ballWall', {}],
           'cp',
+          ['itemBlock', { item: 'lsd', y: 4 }],   // an acid tab for the marmot sentinels (Brady: mix up the power-ups)
           // ③ full-size balls and the marmots' whistles
           ['sentinel', { sign: true }],
           ['itemBlock', { item: 'globe', y: 4 }],

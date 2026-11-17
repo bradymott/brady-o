@@ -703,6 +703,7 @@ const levels = [
           ['mineMouth', { to: 'tambang@in', back: 'tambangBack' }],
           ['descend', { n: 2 }],
           'cp',
+          ['itemBlock', { item: 'star', y: 4 }],   // a star for the civets and hot rocks (Brady: mix up the power-ups)
           // ③ civets in the ash fields while the flow speeds up
           'civets',
           ['hotrocks', { n: 6, phase: 2 }],
@@ -794,11 +795,11 @@ const levels = [
           ['lianas', { n: 2 }],
           ['nestTree', { to: 'nest@in', back: 'nestBack' }],
           'cp',
+          ['itemBlock', { item: 'lsd', y: 5 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           // ③ hornbills dart across the swing chains
           ['lianas', { n: 3, hornbill: true, gold: 'risky' }],
           ['enemies', { kind: 'idMacaque', n: 1, len: 8 }],
           ['orangutan', { to: [14, -3] }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
           ['lianas', { n: 2, hornbill: true }],
           ['end', { exit: 'main' }]
         ] },

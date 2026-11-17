@@ -533,11 +533,11 @@ const levels = [
           ['workshop', { to: 'xuong@in', back: 'xuongBack' }],
           ['silkAwning', { n: 2 }],
           'cp',
+          ['itemBlock', { item: 'lsd', y: 5 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           ['lanternShop', {}],
           // ③ floating lanterns and silkworms
           ['riverLanterns', { n: 2, silk: true }],
           ['silkAwning', { n: 3, len: 14 }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
           ['lanternShop', {}],
           ['riverLanterns', { n: 3, span: 13, gold: 'risky' }],
           'bridgearch',
