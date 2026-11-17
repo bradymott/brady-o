@@ -1303,6 +1303,8 @@ class Play {
     const tag = (x, y, txt) => {
       ctx.font = `12px ${FONT_DISPLAY}`;
       const w = ctx.measureText(txt).width + 18;
+      // kept on screen: a long tip by the jump button would run off the right edge (it moves in, and up clear of RUN · THROW)
+      const xc = clamp(x, w / 2 + 6, Game.cssW - w / 2 - 6); if (xc !== x) { y -= 28; x = xc; }
       ctx.fillStyle = 'rgba(10,8,18,0.75)'; rr(ctx, x - w / 2, y - 12, w, 24, 12); ctx.fill();
       ctx.strokeStyle = 'rgba(255,216,74,0.7)'; ctx.lineWidth = 1.2; ctx.stroke();
       ctx.fillStyle = '#ffd84a'; ctx.fillText(txt, x, y + 1);
