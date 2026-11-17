@@ -13,6 +13,7 @@
    ============================================================ */
 (() => {
 if (typeof BOSS_BRAINS === 'undefined' || typeof Boss === 'undefined') return;
+const K = TourKit;
 const ACTS = {
   mx_pinata: 'THE WARM-UP ACT', ec_tortoise: 'THE WALKING STAGE', br_toucan: 'THE FLYING USHER', mz_hermit: 'THE PROPS MASTER',
   ma_berrad: 'THE MAGICIAN', es_paella: 'COOKING WITH PIWI', fr_souffle: 'THE PASTRY CHEF', nl_cheese: 'THE ONLY PAYING FAN',
