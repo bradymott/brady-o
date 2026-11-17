@@ -52,7 +52,7 @@ const P = {
   // a sandbar with a star block high over it (the big-set reward)
   starBar(st, o) {
     const x = st.x, n = 8; st.floor(x, x + n - 1); st.decor('idPalmS', x + 1); st.decor('idUmbrella', x + 6);
-    st.block(x + 4, st.gy - 5, o.item || 'star'); st.coins(x + 2, x + 6, st.gy - 2);
+    st.block(x + 4, st.gy - 4, o.item || 'star');   // gy - 4: big Brady can jump to the joint over it (sbw_items_test) st.coins(x + 2, x + 6, st.gy - 2);
     return x + n;
   },
 

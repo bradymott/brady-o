@@ -226,13 +226,43 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     check('joint pickup: a green moment that starts at once, holds, then clears (~1.35 s)', f.jointStart > 0 && f.jointMid > 0.9 && f.jointEnd === 0, f);
     check('joint pickup: the world eases into slow-mo (and out)', f.slowmo < 0.7 && f.worldDt < 0.95, { slowmo: f.slowmo, worldDt: f.worldDt });
     check('LSD: strong at first, a subtle level while flying, gone after the flight', f.lsdPeak > 0.9 && f.lsdLow > 0.2 && f.lsdLow < 0.4 && f.flying && f.lsdEnd === 0, f);
-    check('mushroom: same family, starts and ends', f.shroom > 0.9 && f.shroomEnd === 0, f);
+    check('mushroom: the trip starts and ends', f.shroom > 0.9 && f.shroomEnd === 0, f);
     check('fractal frames cached (built a few rows at a time)', f.frames > 0, f.frames);
     check('full effects: the world breathes (a warped copy of the view)', f.breath, f);
     check('reduced effects: no slow-mo, no breath, the trips still start and end', c.slowmo === 1 && c.worldDt > 0.98 && !c.breath && c.jointMid > 0.9 && c.jointEnd === 0 && c.lsdEnd === 0, c);
     // the pause menu offers the switch in tour levels
     const pause = await page.evaluate(() => { const g = S(); g.openPause(); const labels = g.pauseUI.map(b => b.label); const fx = g.pauseUI.find(b => /^FX /.test(b.label)); const before = fx.label; fx.fn(); const after = g.pauseUI.find(b => /^FX /.test(b.label)).label; fx.fn(); g.closePause(); return { labels, before, after }; });
     check('pause menu: an FX FULL / FX CALM switch', pause.before === 'FX FULL' && pause.after === 'FX CALM', pause);
+  });
+
+  /* ---------- the magic mushroom, frame by frame: it walks to Brady, he grows smoothly, the level trips ---------- */
+  await section('mushroom', async () => {
+    const r = await page.evaluate(() => {
+      const B = window.BRADY, T = window.BRADY_POWERS.TripFX, st = B.Save.data.settings; st.reduceMotion = false;
+      const g = lab('gear.stands'), p = P(); p.hurt = () => {}; p.setPower(0, true); sim(0.1);
+      const it = new window.BRADY_TOUR.TourItem(g, p.cx + 70, p.y + p.h - 24, 'mushroom'); it.emerge = 0; it.vx = -it.speedX; it.hoverY = it.y; g.spawn(it);
+      const o = { inSolid: 0, frames: [], collected: -1, shroom: [] }, SOL = new Set([1, 2, 3, 4, 5, 8, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22]);   // the SOLID tile ids (00_core.js)
+      const inSolid = (A, b) => { for (let y = Math.floor((b.y + 1) / 32); y <= Math.floor((b.y + b.h - 1) / 32); y++) for (let x = Math.floor((b.x + 1) / 32); x <= Math.floor((b.x + b.w - 1) / 32); x++) if (x >= 0 && y >= 0 && x < A.W && y < A.H && SOL.has(A.tiles[y * A.W + x])) return true; return false; };
+      for (let k = 0; k < 240; k++) {
+        sim(1 / 120, { right: k > 30 });
+        if (!it.remove && inSolid(g.area, it)) o.inSolid++;
+        if (it.remove && o.collected < 0) o.collected = k;
+        if (o.collected >= 0) { const gs = p.growScale(); o.frames.push({ sy: +gs.sy.toFixed(4), small: p.small, x: +p.x.toFixed(2), growT: p.growT }); }
+        o.shroom.push(+T.levels(g).shroom.toFixed(3));
+      }
+      // draw a mushroom frame: the wobble copies the view at full effects, not with FX CALM
+      const PF = window.BRADY_POWERS.PostFX; PF.shroomWob = null; g.dizzy = 2; B.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); g.draw(B.Game.ctx); o.wobble = !!PF.shroomWob;
+      st.reduceMotion = true; PF.shroomWob = null; g.draw(B.Game.ctx); o.wobbleCalm = !!PF.shroomWob; st.reduceMotion = false;
+      return o;
+    });
+    const grow = r.frames.filter(f => f.growT > 0), sy = grow.map(f => f.sy);
+    const mono = sy.every((v, i) => i === 0 || v >= sy[i - 1] - 1e-6), alt = r.frames.some((f, i) => i > 0 && f.small !== r.frames[i - 1].small);
+    check('mushroom: walks to Brady and is collected, never inside a solid', r.collected > 0 && r.inSolid === 0, { collected: r.collected, inSolid: r.inSolid });
+    check('mushroom grow: the height scales up smoothly and monotonically (no strobe between the two forms)', grow.length >= 30 && sy[0] < 0.75 && Math.abs(sy[sy.length - 1] - 1) < 0.06 && mono && !alt, { n: grow.length, first: sy[0], last: sy[sy.length - 1], mono, alt });
+    check('mushroom grow: Brady keeps moving while he grows (no freeze)', grow.length > 10 && grow[grow.length - 1].x > grow[0].x + 4, grow.length ? { x0: grow[0].x, x1: grow[grow.length - 1].x } : null);
+    const sh = r.shroom, steps = sh.slice(1).map((v, i) => Math.abs(v - sh[i])), peak = Math.max.apply(null, sh);
+    check('mushroom trip: eases in smoothly (no jump bigger than 0.05 a frame) and reaches full strength', peak > 0.95 && Math.max.apply(null, steps) < 0.05, { peak, maxStep: Math.max.apply(null, steps) });
+    check('mushroom trip: the level itself wobbles at full effects (a copy of the view), not with FX CALM', r.wobble && !r.wobbleCalm, { wobble: r.wobble, calm: r.wobbleCalm });
   });
 
   check('no page errors', errors.length === 0, errors.slice(0, 5));

@@ -103,7 +103,7 @@ Object.assign(Player.prototype, {
 {
   const u0 = TourItem.prototype.update;
   TourItem.prototype.update = function (dt) {
-    if (this.dropped) { this.t += dt; this.life -= dt; this.y = this.hoverY + Math.sin(this.t * 4) * 3; if (this.life <= 0) { this.remove = true; this.g.burst(this.cx, this.cy, 6, '#ffffff', 'spark'); } return; }
+    if (this.dropped) { this.t += dt; this.life -= dt; ItemSpace.keepFree(this, true); this.y = this.hoverY + Math.sin(this.t * 4) * 3; if (this.life <= 0) { this.remove = true; this.g.burst(this.cx, this.cy, 6, '#ffffff', 'spark'); } return; }
     return u0.call(this, dt);
   };
   const d0 = TourItem.prototype.draw;

@@ -5,14 +5,16 @@
    "the essentials", in small steps (cut levels 0..7), cut in this
    order when frames run long:
      1  trip effects: no breathing copy, no colour sheen, no fractal
-        (a gradient wash instead); the bloom is sampled less often
+        (a gradient wash instead), no mushroom wobble; the bloom is
+        sampled less often
      2  ambient particles and weather at half density; code-drawn
         enemies and bosses re-inked at 30 Hz (the frame between
         blits the finished picture where the enemy now is), in a
         scratch area fitted to what their art was seen to reach
      3  the light keylines and the form shading of code-drawn art
         (Brady keeps his keyline; every dark ink line stays)
-     4  the bloom, the vignette, the haze between backdrop layers, the sky's light rays
+     4  the bloom, the vignette, the haze between backdrop layers, the sky's light rays,
+        the mushroom's second colour pass
      5  the farthest parallax layer
      6  internal resolution 2x -> 1.75x
      7  internal resolution -> 1.5x (never lower on a hi-dpi screen)

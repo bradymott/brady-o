@@ -351,11 +351,11 @@ class Play {
       bump();
       if (it === 'pick') { this.spawn(new PickPop(this, tx * TS + TS / 2, ty * TS - 8)); this.addPick(); return; }
       let kind = it;
-      if (this.level.tour) { this.spawn(new TourItem(this, tx * TS + TS / 2, ty * TS, TourPowers.blockItem(it, this))); Sound.play('appear'); if (t === T.HIDDEN) { this.egg('hidden-block'); Sound.play('secret', { vol: 0.5 }); } return; }
+      if (this.level.tour) { const ti = new TourItem(this, tx * TS + TS / 2, ty * TS, TourPowers.blockItem(it, this)); ItemSpace.fromBlock(ti, this, tx, ty); this.spawn(ti); Sound.play('appear'); if (t === T.HIDDEN) { this.egg('hidden-block'); Sound.play('secret', { vol: 0.5 }); } return; }
       if (it === 'power') kind = (this.player && this.player.power > 0) ? 'vinyl' : 'coffee';
       if (it === 'oneup') kind = 'cassette';
       if (typeof it === 'string' && it.startsWith('bag:')) kind = it.slice(4);
-      this.spawn(new Item(this, tx * TS + TS / 2, ty * TS, kind));
+      const item = new Item(this, tx * TS + TS / 2, ty * TS, kind); ItemSpace.fromBlock(item, this, tx, ty); this.spawn(item);
       Sound.play('appear');
       if (t === T.HIDDEN) { this.egg('hidden-block'); Sound.play('secret', { vol: 0.5 }); }
       return;
@@ -877,7 +877,7 @@ class Play {
     const pad = TPAD * S;
     const t = this.t;
     const qf = Math.floor(t * 6) % 4, cf = Math.floor(t * 10) % 4;
-    const bumpOf = (x, y) => { for (const b of A.bumps) if (b.tx === x && b.ty === y) return Math.sin((1 - b.t / 0.18) * Math.PI) * 8; return 0; };
+    const bumpOf = (x, y) => { for (const b of A.bumps) if (b.tx === x && b.ty === y) return Math.sin((1 - b.t / 0.18) * Math.PI) * (b.amp || 8); return 0; };
     const crumbleOf = (x, y) => { for (const c of A.crumbles) if (c.tx === x && c.ty === y && c.state === 'shake') return Math.sin(t * 80) * 1.5; return 0; };
     const p = this.player;
     // fake walls fade when Brady is inside them

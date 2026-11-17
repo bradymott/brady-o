@@ -27,6 +27,9 @@ function checkLevel(G, id) {
     if (!lvl.areas.some(a => a.role === 'secret' || a.bonus)) warns.push('no secret area');
     for (const pr of lvl.problems || []) warns.push(pr);
     if (r.guardHit) warns.push('search guard hit');
+    // an item block needs an open side for its item to come out of (ItemSpace; tools/sbw_items_test.js follows each one)
+    const IS = G.run('ItemSpace'), T = G.T;
+    lvl.areas.forEach(A => { for (const k in A.contents || {}) { const [x, y] = k.split(',').map(Number), t = A.tiles[y * A.W + x]; if ((t === T.QBLOCK || t === T.HIDDEN || t === T.QBRICK) && ![[0, -1], [0, 1], [-1, 0], [1, 0]].some(([dx, dy]) => IS.open(A, x + dx, y + dy))) { flags.push(`ITEM BLOCK ${A.aid || ''}(${x},${y}) BOXED IN`); fail = true; } } });
   } else {
     if (lvl.secret && lvl.secret.kind === 'secretExit' && !r.secretGoal) flags.push('SECRET EXIT UNREACHABLE');
     if (lvl.warps && lvl.warps.some(x => r.warps.indexOf(x) < 0)) flags.push('WARPS ' + r.warps.join(','));

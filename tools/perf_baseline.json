@@ -1,0 +1,66 @@
+{
+ "meta": {
+  "tier": 0,
+  "engine": "webkit",
+  "gpu": false,
+  "flush": true,
+  "throttle": 1,
+  "ms": 400,
+  "spots": 14,
+  "canvas": [
+   1688,
+   780
+  ],
+  "dpr": 2,
+  "label": "",
+  "date": "2026-11-17T03:40:04.076Z"
+ },
+ "ref": "1-1",
+ "note": "p95 and mean frame cost of each scenario divided by the mean of 1-1 measured right after it (machine independent); see tools/sbw_perf_test.js and docs/PERFORMANCE.md",
+ "rel": {
+  "3-4": {
+   "p95": 1.963,
+   "mean": 1.066
+  },
+  "boss 3-5": {
+   "p95": 1.751,
+   "mean": 1.287
+  },
+  "1-2": {
+   "p95": 1.622,
+   "mean": 0.989
+  },
+  "3-5": {
+   "p95": 1.496,
+   "mean": 1.026
+  },
+  "1-1": {
+   "p95": 1.468,
+   "mean": 0.993
+  },
+  "3-1": {
+   "p95": 1.516,
+   "mean": 1.017
+  },
+  "3-3": {
+   "p95": 1.301,
+   "mean": 0.941
+  },
+  "1-5": {
+   "p95": 1.152,
+   "mean": 0.865
+  },
+  "boss 1-5": {
+   "p95": 1.115,
+   "mean": 0.836
+  },
+  "map mx": {
+   "p95": 1.046,
+   "mean": 0.657
+  },
+  "map route": {
+   "p95": 0.967,
+   "mean": 0.701
+  }
+ }
+}
