@@ -27,7 +27,7 @@ const SIGN_TEXTS = [
   'Up on a porta-potty door to step through. Hold your breath.',
   'Tap jump again in mid-air to headbang. Spikes hate that.',
   'Your pack holds one spare power-up. Tap it when you need it.',
-  'Welcome home!'
+  'Next stop: the whole wide world!'
 ];
 
 function levelDifficulty(w, i) {

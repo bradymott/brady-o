@@ -173,8 +173,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       // no jump power: nothing; while carrying: nothing; a hit drops the jump power before FORM
       { lab('gear.stands'); const g = S(), p = P(); p.collect('gear:socks'); sim(0.5); p.carrying = { item: 'egg', from: null, fallY: p.y };
         up(p, 0.2); const vy = p.vy; sim(1 / 120, J); out.carry = { vy0: Math.round(vy), vy1: Math.round(p.vy) }; p.carrying = null;
-        sim(1); p.setPower(1, true); p.invuln = 0; p.hurt({ x: p.x + 30, w: 10 }); out.hit = { slot: p.jumpPow, power: p.power, dropped: g.entities.some(e => e.dropped && e.kind === 'gear:socks') };
-        sim(0.1); const it = g.entities.find(e => e.dropped && e.kind === 'gear:socks'); if (it) { p.invuln = 0; it.touchPlayer(p); } out.hit.regrab = p.jumpPow && p.jumpPow.id; }
+        sim(1); p.setPower(1, true); p.invuln = 0; p.hurt({ x: p.x + 30, w: 10 }); out.hit = { slot: p.jumpPow, power: p.power, dropped: g.entities.some(e => e.lost && e.kind === 'gear:socks') };
+        sim(0.1); const it = g.entities.find(e => e.lost && e.kind === 'gear:socks'); if (it) { p.invuln = 0; p.x = it.cx - p.w / 2; p.y = it.cy - p.h / 2; it.touchPlayer(p); sim(0.05); } out.hit.regrab = p.jumpPow && p.jumpPow.id; }
       // one at a time: a new one replaces the old; gear stands and item blocks hand them out
       { lab('gear.stands'); const g = S(), p = P(); p.collect('gear:socks'); p.collect('gear:beans'); out.replace = p.jumpPow.id;
         out.names = ['socks', 'cake', 'beans'].map(id => T.TourPowers.name('gear:' + id)); out.block = T.TourPowers.blockItem('cake', g); }
@@ -196,7 +196,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     check('magic beans: trousers down in the squat, back up after landing; the meter refills on the ground', b.pantsAir > 0.9 && b.squat === 'squat' && b.pantsLand === 0 && b.refill === 1, b);
     check('magic beans: a green puff knocks out an ordinary enemy below', b.kill, b);
     check('no jump power while carrying something (CARRY levels stay fair)', Math.abs(r.carry.vy1 - r.carry.vy0) < 60, r.carry);
-    check('a hit drops the jump power (before FORM); it floats and can be grabbed back', r.hit.slot === null && r.hit.power === 1 && r.hit.dropped && r.hit.regrab === 'socks', r.hit);
+    check('a hit takes the jump power (before FORM); it pops off and is gone (tools/sbw_hits_test.js has the whole ladder)', r.hit.slot === null && r.hit.power === 1 && r.hit.dropped && !r.hit.regrab, r.hit);
     check('one jump power at a time; names; item blocks hand them out', r.replace === 'beans' && r.names.join() === 'SPRING SOCKS,POUND CAKE,MAGIC BEANS' && r.block === 'gear:cake', r);
   });
 
