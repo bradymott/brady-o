@@ -142,6 +142,16 @@ const TourSecrets = {
   };
 }
 
+// a bonus land still being built has no boss yet: its last level is drawn as an ordinary stop, not a fort
+{
+  const nd0 = TourGraph.nodes;
+  TourGraph.nodes = function (C) {
+    const out = nd0.call(this, C);
+    if (C.bonus) for (const n of out) if (n.boss && n.L && n.L.kind !== 'castle') n.boss = false;
+    return out;
+  };
+}
+
 /* ---------- the hooks' call sites on the maps ---------- */
 // owDraw(ow, ctx, vr): the overworld's live layer, in map units, over everything but the HUD
 // owTap(ow, tap) -> true: a tap the extras used (before the overworld's own)

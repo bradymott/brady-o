@@ -122,6 +122,20 @@ if (want('seams')) {
   }
 }
 
+/* ---------- Pupo rides along through a seam where he may go (PUPO.md §1.7: pupoOk / noPupo) ---------- */
+if (want('pupo')) {
+  const PR = run("typeof PupoRide !== 'undefined' ? PupoRide : null");
+  if (!PR) check('pupo: PupoRide exists', false);
+  else for (const B of backstages()) {
+    if (!B.from) continue;
+    const g = start(B.lvl), tag = B.id + ' ' + B.aid;
+    const allowed = PR.allowed(B.lvl, B.k);
+    PR.mount(g.player, true);
+    const got = goThrough(g, B.from.area, B.from.seam);
+    check(tag + `: riding Pupo through the seam: he ${allowed ? 'comes along' : 'waits behind'} (allowed: ${allowed})`, got === B.k && !!g.player.pupoRide === allowed, { got, riding: !!g.player.pupoRide });
+  }
+}
+
 /* ---------- warps ---------- */
 if (want('warps')) {
   const W = run('TourSecrets').warps();
