@@ -578,7 +578,7 @@ class SettingsScene {
 
 /* ---------------- Pause ---------------- */
 function buildPauseUI(play) {
-  const W = Game.cssW, H = Game.cssH;
+  const W = Game.cssW, H = typeof Play !== 'undefined' && Play.uiH ? Play.uiH() : Game.cssH;   // portrait: inside the game view, above the pad
   const bw = Math.min(240, W * 0.6), bh = 44, x = (W - bw) / 2;
   // secrets: extra pages (WP-5's rules page) from TourHooks.pausePages: { label, fn }, one full-width row each;
   // the menu moves up half a row per extra row so it still fits a landscape phone
@@ -609,7 +609,7 @@ function buildPauseUI(play) {
   return list;
 }
 function drawPauseUI(ctx, play) {
-  const W = Game.cssW, H = Game.cssH;
+  const W = Game.cssW, H = typeof Play !== 'undefined' && Play.uiH ? Play.uiH() : Game.cssH;   // portrait: inside the game view, above the pad
   ctx.save();
   ctx.fillStyle = 'rgba(6,4,14,0.6)'; ctx.fillRect(0, 0, W, H);
   const xr = (play.pauseUI && play.pauseUI.extraRows) || 0, up = xr * 27;   // rows added by TourHooks.pausePages

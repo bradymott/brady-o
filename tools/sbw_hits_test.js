@@ -217,6 +217,34 @@ const hitFrom = p => ({ x: p.x + p.w + 4, y: p.y, w: 20, h: 20 });
   check('Ecuador boss: his head (past the shell) hurts like his body, walking or rearing', res.every(r => r.before && !r.after), res);
 }
 
+{
+  // solid parts drawn past a boss's hurt box (src/28_tour_hd_reach.js): inside one, Brady is touched like by the body;
+  // just past its end, nothing; while the boss reels or its weak spot is open, nothing
+  const BR = G.run('BossReach'), res = [];
+  for (const B of G.run('__bossLevels')()) {
+    const L = BR.LIST[B.style]; if (!L) continue;
+    for (const r of L) {
+      const g = start(B.id), b = G.run('__toBoss')(g, B.area), p = g.player;
+      for (let k = 0; k < 120 * 4 && b.state !== 'fight'; k++) { p.invuln = 99; g.update(1 / 120); }
+      const act = (r.acts && r.acts[0]) || (r.poses && r.poses[0]) || 'walk';
+      const pose = (r.poses && r.poses[0]) || (r.notPoses ? 'walk' : act);
+      const set = () => { b.act = act; b.pose = pose; b.vuln = false; b.hurtT = 0; b.dir = r.dir || -1; b.x = (b.arenaX0 + b.arenaX1) / 2 - b.w / 2; };
+      const tryAt = (dx, mod) => {
+        set(); if (mod) mod();
+        const q = BR.boxes(b).find(z => z.part === r.part);
+        load(p, { power: 1, hands: 'gear:plane' }); p.invuln = 0; p.state = 'play'; p.dead = false;
+        // facing left, the part is on the left: Brady's right edge just inside it (or 2 px short of it)
+        if (b.dir > 0) p.x = dx === 'in' ? q.x + 2 : q.x + q.w + 2; else p.x = dx === 'in' ? q.x + q.w - 2 - p.w : q.x - 2 - p.w; p.y = q.y + q.h / 2 - p.h / 2; p.vx = 0; p.vy = 0; p.prevBottom = p.y + p.h;
+        const touchesBody = G.run('overlap')(p, b);
+        BR.check(g); return { lost: !p.handsKind(), touchesBody };
+      };
+      const inside = tryAt('in'), past = tryAt('past'), reel = tryAt('in', () => { b.hurtT = 0.5; }), weak = tryAt('in', () => { b.vuln = true; });
+      res.push({ boss: B.style, part: r.part, inside, past, reel, weak });
+      check(`reach ${B.style} ${r.part}${r.dir ? (r.dir > 0 ? ' (facing right)' : ' (facing left)') : ''}: inside it Brady loses one thing; past its end, while reeling or with the weak spot open, nothing`, inside.lost && !inside.touchesBody && !past.lost && !reel.lost && !weak.lost, { inside, past, reel, weak });
+    }
+  }
+}
+
 /* ---------- the sweeps ---------- */
 // the deliberate safe touches (each is coded on purpose in the boss's or enemy's own file)
 const BOSS_SAFE = {

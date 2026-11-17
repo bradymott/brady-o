@@ -217,6 +217,10 @@ class Play {
      20 % larger on a small screen. Climbing, falling and flying areas keep 11 rows of look-ahead; a boss arena is
      framed whole (as many rows as its width needs, up to the standard 12). Far: the standard 12 rows.
      Settings: Save.data.settings.zoom = 'near' | 'far' (unset: Near on touch screens and short windows). */
+  /* the height the end-of-level and pause screens lay out in: its middle is the middle of the game view. In landscape
+     that is the whole screen; in portrait the controller pad covers the lower part of the screen, so the results'
+     NEXT / MAP / PLAY AGAIN and the pause menu's lower rows used to sit hidden under it */
+  static uiH() { const r = Game.gameRect; return r ? Math.min(Game.cssH, 2 * r.y + r.h) : Game.cssH; }
   static zoomNear() { const z = Save.data.settings.zoom; return z ? z === 'near' : (Game.forceTouchUI || Game.cssH < 520); }
   viewRows() {
     if (!Play.zoomNear()) return VIEW_ROWS;
@@ -772,7 +776,7 @@ class Play {
   buildResultsUI() {
     const next = this.nextLevelId();
     const btns = [];
-    const W = Game.cssW, H = Game.cssH;
+    const W = Game.cssW, H = Play.uiH();
     const bw = Math.min(170, W * 0.36), bh = 48, y = H * 0.5 + 90;
     const finale = this.level.tour ? Tour.isFinale(this.id) : !!FINALE_LEVELS[this.id];
     if (finale) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: this.level.tour ? 'HOME TOGETHER ♥' : 'FIND CHINKA ♥', primary: true, fn: () => this.goNext(null) });
@@ -1355,7 +1359,7 @@ class Play {
     ctx.restore();
   }
   drawResults(ctx) {
-    const W = Game.cssW, H = Game.cssH;
+    const W = Game.cssW, H = Play.uiH();
     const k = this.state === 'results' ? Math.min(1, this.stateT * 4) : 1;
     ctx.save();
     ctx.fillStyle = `rgba(6,4,14,${0.55 * k + 0.2})`; ctx.fillRect(0, 0, W, H);
