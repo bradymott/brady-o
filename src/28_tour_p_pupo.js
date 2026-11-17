@@ -442,10 +442,10 @@ class NapBox extends Ent {
     // a postage stamp sticker with the land's little icon (never a flag)
     c.fillStyle = '#fff4dc'; c.fillRect(4, -16, 9, 9); c.fillStyle = PUPO_STAMP[this.cc] || '#e83a3a'; c.beginPath(); c.arc(8.5, -11.5, 2.6, 0, TAU); c.fill();
     if (closed) {
-      // packing tape crossed over the lid, three cream claw tips under the flap
+      // packing tape crossed over the lid, three round cream claw tips peeking out under the flap
       c.fillStyle = '#e8d49a'; c.fillRect(-2.5, -h - 2, 5, 12); c.fillRect(-w / 2, -h + 1, w, 3.5);
       c.fillStyle = '#9a6a36'; c.fillRect(-w / 2 - 1, -h - 2, w + 2, 3);
-      c.fillStyle = '#f4ead8'; for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(-12 + i * 3.2, -h + 1); c.lineTo(-10.6 + i * 3.2, -h + 5); c.lineTo(-9.4 + i * 3.2, -h + 1); c.closePath(); c.fill(); }
+      for (let i = 0; i < 3; i++) { c.fillStyle = 'rgba(26,18,36,0.62)'; c.beginPath(); c.arc(-10.6 + i * 3.4, -h + 2.6, 1.9, 0, TAU); c.fill(); c.fillStyle = '#f4ead8'; c.beginPath(); c.arc(-10.6 + i * 3.4, -h + 2.6, 1.3, 0, TAU); c.fill(); }
     } else {
       // open: the flaps up, the empty dark inside
       const k = easeInOut(this.k);

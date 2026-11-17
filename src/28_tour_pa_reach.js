@@ -30,7 +30,7 @@ const PupoReach = {
     HOOK_LEN: 2.5 * TS, HOOK_MIN: 1.5 * TS, HOOK_MAX: 5 * TS, SWING_G: 40 * TS, PUMP: 0.6, REEL: 12 * TS, REEL_STICK: 4 * TS,
     RELEASE_K: 1.15, RELEASE_UP: 3 * TS, RELEASE_MAX: 14 * TS, RELEASE_MAX_D: 10 * TS,
     ZIP: 16 * TS, PULLUP: 0.3, CLIMB_UP: 3.2 * TS, CLIMB_DOWN: 4.5 * TS, CLIMB_D: 2.2 * TS, LEAP_X: 6.5 * TS, LEAP_Y: -13 * TS,
-    SHIMMY: 2.6 * TS, HANG_DROP: 38, LEDGE_AHEAD: 2 * TS, LEDGE_UP: 2 * TS, LEDGE_DOWN: 0.5 * TS, SCAN: 1 / 15
+    SHIMMY: 2.6 * TS, HANG_DROP: 38, LEDGE_REACH: 3.5 * TS, CONE_G: 100 * Math.PI / 180, LEDGE_STEP: 2.5 * TS, GRAB_BUFFER: 0.25, SCAN: 1 / 15
   },
   /* ---------- geometry (shared with the validator) ---------- */
   // the shoulder the arms start from: (cx + facing * 6, y + 14) of the riding box
@@ -85,7 +85,7 @@ const PupoReach = {
     'npMarmot', 'npMarmotWatch', 'npYeti', 'npYetiSleep', 'npBat', 'vnBat', 'maFennec', 'maGoat', 'maCat']),
 
   /* ---------- the target search (15 Hz and on every press; the best one is kept in R.tg) ---------- */
-  verbOf(kind) { return kind === 'hook' || kind === 'post' ? 'grab' : kind === 'handle' ? 'pull' : kind === 'item' || kind === 'gold' || kind === 'key' || kind === 'coin' || kind === 'snatch' ? 'fetch' : 'poke'; },
+  verbOf(kind) { return kind === 'hook' || kind === 'post' || kind === 'strip' || kind === 'bar' || kind === 'ledge' ? 'grab' : kind === 'handle' ? 'pull' : kind === 'item' || kind === 'gold' || kind === 'key' || kind === 'coin' || kind === 'snatch' ? 'fetch' : 'poke'; },
   classify(e, p) {
     if (e.remove || e === p) return null;
     if (e.pupoGrabPt) return e.kind;
@@ -135,6 +135,35 @@ const PupoReach = {
       best = s; this.keep(tg, kind, e, this.px, this.py);
     }
     if (urgentD < 1e9) return tg;
+    // climb strips and bars: grabbed only with Action (the nearest point on them)
+    const objs = A.pupoObjs, reachG = drowsy ? K.REACH_D : K.REACH;
+    if (objs) for (let i = 0; i < objs.length; i++) {
+      const e = objs[i]; if (e.remove || e.cool > 0 || !(e.pupoClimb || e.pupoBar)) continue;
+      if (e.pupoClimb) { this.px = e.cx; this.py = clamp(sy - 1.5 * TS, e.top + 8, e.bottom - 8); }   // a hand-hold above his head (the marker clear of Brady)
+      else { this.px = clamp(sx, e.x0, e.x1); this.py = e.y; }
+      const dx = this.px - sx, dy = this.py - sy, d = Math.sqrt(dx * dx + dy * dy); if (d > reachG) continue;
+      const ang = this.angle(dx, dy); if (ang > K.CONE_G && d > TS) continue;
+      const sc = this.score(d, reachG, Math.min(ang, cone), cone, false);
+      if (sc >= best || !this.los(A, sx, sy, this.px, this.py, grilles)) continue;
+      best = sc; this.keep(tg, e.pupoClimb ? 'strip' : 'bar', e, this.px, this.py);
+    }
+    // ledge lips: the near corner of a standable tile top with room for him on it, higher than a step (any height in
+    // the air), within 3.5 tiles of the shoulder and in sight (Action grabs it and he pulls himself up)
+    if (!R.mode) {
+      const lr = drowsy ? Math.min(K.LEDGE_REACH, K.REACH_D) : K.LEDGE_REACH, feet = p.y + p.h, cx0 = Math.floor(p.cx / TS), cy0 = Math.floor(sy / TS);
+      const rr0 = Math.ceil(lr / TS) + 1;
+      for (let ty = cy0 - rr0; ty <= Math.floor(feet / TS) + 1; ty++) for (let tx = cx0 - rr0; tx <= cx0 + rr0; tx++) {
+        const t = tileAt(A, tx, ty); if (!(SOLID[t] || t === T.SEMI) || t === T.SPIKES || SOLID[tileAt(A, tx, ty - 1)] || SOLID[tileAt(A, tx, ty - 2)]) continue;
+        const lipY = ty * TS; if (lipY > feet - (p.onGround ? K.LEDGE_STEP : 4)) continue;
+        const side = tx * TS + TS / 2 > p.cx ? 1 : -1; if (SOLID[tileAt(A, tx - side, ty)] || tileAt(A, tx - side, ty) === T.SEMI) continue;   // an edge facing him
+        const qx = side > 0 ? tx * TS : (tx + 1) * TS, dx = qx - sx, dy = lipY - sy, d = Math.sqrt(dx * dx + dy * dy); if (d > lr) continue;
+        const ang = this.angle(dx, dy); if (ang > K.CONE_G && d > TS) continue;
+        if (!regionFree(A, tx * TS + TS / 2 - p.w / 2, lipY - p.h, p.w, p.h)) continue;
+        const sc = this.score(d, lr, Math.min(ang, cone), cone, false) + 0.15;
+        if (sc >= best || !this.los(A, sx, sy, qx - side * 2, lipY - 2, grilles)) continue;
+        best = sc; this.keep(tg, 'ledge', null, qx, lipY); tg.tx = tx; tg.ty = ty;
+      }
+    }
     // tiles: gift boxes and Nap Boxes (poke), coins (fetch; they only win when nothing else is there)
     const r = Math.ceil(K.REACH / TS), cx = Math.floor(sx / TS), cy = Math.floor(sy / TS);
     for (let ty = cy - r; ty <= cy + r; ty++) for (let tx = cx - r; tx <= cx + r; tx++) {
@@ -249,6 +278,7 @@ const PupoReach = {
         this.back(a, 0.05); break;
       case 'coin': if (tileAt(A, a.tx, a.ty) === T.PICK) { g.setTile(a.tx, a.ty, T.EMPTY); a.coin = true; } this.back(a, 0.05); break;
       case 'hook': a.phase = 4; PupoRide.enter(g, p, 'swing', e); break;
+      case 'strip': case 'bar': case 'ledge': a.phase = 4; this.reachTo(p, g, R, a.kind, e, a.tx, a.ty); break;
       case 'post': a.phase = 4; PupoRide.enter(g, p, 'zip', e); break;
       case 'handle': a.phase = 4; PupoRide.enter(g, p, 'pull', e); break;
       default: this.back(a, 0);
@@ -404,65 +434,57 @@ const PupoReach = {
     },
     pose(p, R, o) { const e = R.hg.e; o.pose = 'hang'; o.x = p.cx - p.facing * 4; o.y = e.y; o.still = true; o.boxX = p.cx - 56; o.boxY = e.y - 12; o.boxW = 112; o.boxH = p.y + p.h - e.y + 30; return o; }
   },
+  // pulled along the arm to what he grabbed (a ledge, a climb strip, a bar), then he stands, climbs or hangs
   ledge: {
     enter(p, g, R) { },
     update(p, dt, inp, g, R) {
-      const K = PupoReach.K, l = R.lg; l.t += dt; const k = Math.min(1, l.t / K.PULLUP);
-      PupoReach.place(p, lerp(l.fx, l.tx, k), lerp(l.fy, l.ty, k) - Math.sin(k * Math.PI) * 6);
-      if (k >= 1) { PupoRide.leave(g, p); p.onGround = true; p.vy = 0; p.vx = 0; }
+      const l = R.lg; l.t += dt; const k = Math.min(1, l.t / l.dur);
+      PupoReach.place(p, lerp(l.fx, l.tx, k), lerp(l.fy, l.ty, k) - (l.kind === 'ledge' ? Math.sin(k * Math.PI) * 6 : 0));
+      p.vx = 0; p.vy = 0; p.onGround = false;
+      if (k < 1) return;
+      PupoRide.leave(g, p);
+      if (l.kind === 'strip' && l.e && !l.e.remove) PupoRide.enter(g, p, 'climb', l.e);
+      else if (l.kind === 'bar' && l.e && !l.e.remove) PupoRide.enter(g, p, 'hang', l.e);
+      else { p.onGround = true; }
     },
-    pose(p, R, o) { o.pose = 'ride'; o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.rot = -p.facing * 0.25 * (1 - Math.min(1, R.lg.t / 0.3)); o.rotX = p.cx; o.rotY = p.y + p.h; o.still = true; return o; }
+    pose(p, R, o) { o.pose = 'ride'; o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.rot = -p.facing * 0.25 * (1 - Math.min(1, R.lg.t / R.lg.dur)); o.rotX = p.cx; o.rotY = p.y + p.h; o.armsOff = true; o.still = true; return o; }
   },
 
   /* ---------- after Brady's step while riding: the arm, the marker search, the automatic grips ---------- */
   after(p, dt, inp, g, R, inMode) {
     const a = this.arm(R);
     if (R.showT > 0) return;
-    // Action: stretch (not while swinging, zipping, pulling or pulling up)
+    // Action: stretch (not while swinging, zipping, pulling or being pulled to a grab)
     const busy = R.mode === 'swing' || R.mode === 'zip' || R.mode === 'pull' || R.mode === 'ledge' || (R.mode === 'climb' && R.cl && R.cl.up > 0);
-    if (inp.actionPressed && !busy) this.fire(p, g, R, inp);
+    if (inp.actionPressed && !busy) {
+      // in the air with nothing to grab yet: the press is kept for a moment (falling past an edge, pressing a little early)
+      if (!p.onGround && !R.mode) { const k = this.scan(p, g, R, inp).kind; R.grabBuf = this.grabKind(k) ? 0 : this.K.GRAB_BUFFER; }
+      this.fire(p, g, R, inp);
+    } else if (R.grabBuf > 0) {
+      R.grabBuf -= dt;
+      if (!R.mode && !p.onGround) {
+        const tg = this.scan(p, g, R, inp);
+        // a grab comes into reach while the buffered press is still fresh: the boop is cut short and he grabs it
+        if (this.grabKind(tg.kind) && (a.phase === 0 || a.kind === 'air')) { a.phase = 0; a.len = 0; a.cool = 0; R.grabBuf = 0; this.fire(p, g, R, inp); }
+      } else R.grabBuf = 0;
+    }
     this.stepArm(p, dt, g, R);
     // the marker's search, 15 times a second
     if ((R.scanT = (R.scanT || 0) - dt) <= 0) { R.scanT = this.K.SCAN; this.scan(p, g, R, inp); }
-    if (inMode) return;
-    this.autoGrip(p, inp, g, R);
+    // nothing grabs on its own any more: strips, bars and ledges are grabbed with Action (Brady asked: he should fall
+    // like Brady when nothing is pressed)
   },
-  autoGrip(p, inp, g, R) {
-    const K = this.K, A = g.area, objs = A.pupoObjs;
-    const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
-    if (objs) for (let i = 0; i < objs.length; i++) {
-      const e = objs[i]; if (e.remove || e.cool > 0) continue;
-      // climb strips: grip on touch while moving toward one, or in mid-air
-      if (e.pupoClimb) {
-        if (Math.abs(p.cx - e.cx) > 12 || p.y + p.h < e.top + 4 || p.y > e.bottom) continue;
-        if (!p.onGround || (dir && dir === (e.side || dir)) || inp.up) { PupoRide.enter(g, p, 'climb', e); return; }
-      }
-      // bars: grip when his head touches one on the way up
-      if (e.pupoBar) {
-        if (p.vy < 0 && p.cx >= e.x0 && p.cx <= e.x1 && p.y <= e.y + 8 && p.y >= e.y - 14) { PupoRide.enter(g, p, 'hang', e); return; }
-      }
-    }
-    // the ledge catch (an assist): falling or near the top of a jump, stick toward the ledge
-    if (!p.onGround && !p.inWater && dir && p.vy > -2 * TS) {
-      const lead = dir > 0 ? p.x + p.w : p.x, head = p.y;
-      const t0 = Math.floor((head - K.LEDGE_UP) / TS), t1 = Math.floor((head + K.LEDGE_DOWN) / TS);
-      for (let k = 0; k <= 2; k++) {
-        const tx = Math.floor((lead + dir * (k * TS + 1)) / TS);
-        if (Math.abs(tx * TS + TS / 2 - lead) > K.LEDGE_AHEAD + TS / 2) continue;
-        for (let ty = t1; ty >= t0; ty--) {
-          const t = tileAt(A, tx, ty), above = tileAt(A, tx, ty - 1);
-          if (!(SOLID[t] || t === T.SEMI) || SOLID[above]) continue;
-          const lipY = ty * TS, cx = dir > 0 ? tx * TS + p.w / 2 + 2 : (tx + 1) * TS - p.w / 2 - 2;
-          if (lipY > p.y + p.h - 6) continue;   // a floor he will just land on
-          if (!regionFree(A, cx - p.w / 2, lipY - p.h, p.w, p.h)) continue;
-          // nothing solid in between: a clear line to the air just off the lip's corner
-          if (!this.los(A, this.shoulderX(p), this.shoulderY(p), dir > 0 ? tx * TS - 2 : (tx + 1) * TS + 2, lipY - 2, null)) continue;
-          const l = R.lg || (R.lg = { t: 0, fx: 0, fy: 0, tx: 0, ty: 0 });
-          l.t = 0; l.fx = p.cx; l.fy = p.y + p.h; l.tx = cx; l.ty = lipY;
-          PupoRide.enter(g, p, 'ledge', null); return;
-        }
-      }
-    }
+  grabKind(k) { return k === 'hook' || k === 'post' || k === 'strip' || k === 'bar' || k === 'ledge'; },
+  // pulled along the arm to what he grabbed: 16 t/s, at least 0.25 s
+  reachTo(p, g, R, kind, e, tx, ty) {
+    const K = this.K, l = R.lg || (R.lg = { t: 0, dur: 0.3, fx: 0, fy: 0, tx: 0, ty: 0, kind: null, e: null });
+    l.t = 0; l.kind = kind; l.e = e; l.fx = p.cx; l.fy = p.y + p.h;
+    if (kind === 'strip') { l.tx = e.cx; l.ty = clamp(p.y + p.h, e.top + p.h * 0.6, e.bottom); }
+    else if (kind === 'bar') { l.tx = clamp(p.cx, e.x0, e.x1); l.ty = e.y + K.HANG_DROP + p.h; }
+    else { l.tx = tx * TS + TS / 2; l.ty = ty * TS; }
+    l.dur = Math.max(0.25, Math.hypot(l.tx - l.fx, l.ty - l.fy) / K.ZIP);
+    PupoRide.sfx('pupoGrip', 'pick', { pitch: 0.55, vol: 0.45 });
+    PupoRide.enter(g, p, 'ledge', null);
   },
   // a nap in mid-air: he dangles asleep from the nearest hook or bar within 5 tiles
   napSpot(g, p) {

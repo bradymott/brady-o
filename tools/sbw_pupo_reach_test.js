@@ -130,8 +130,15 @@ C.section(want, 'zip', () => {
 
 C.section(want, 'climb', () => {
   let g = ride(44), p = g.player;
-  G.step(g, 1.0, { right: true });
-  C.check('walking into a climb strip: he grips it on his own', g.pupo.mode === 'climb', g.pupo.mode);
+  const TIPS = G.run('Save.data.tips'); delete TIPS.pupoGrip; delete TIPS.pupoClimb;
+  G.step(g, 1.0, { right: true }); G.step(g, 0.5, { right: true, up: true });
+  const lab1 = g.pupoLabel && g.pupoLabel.key;
+  C.check('walking into a climb strip (even holding Up) does nothing: no grip without Action', !g.pupo.mode && p.onGround, g.pupo.mode);
+  C.check('...the marker shows it as a grab (the grab paw)', g.pupo.tg.kind === 'strip' && PR.verbOf(g.pupo.tg.kind) === 'grab', g.pupo.tg.kind);
+  G.step(g, 1 / 120, { right: true, actionPressed: true }); G.step(g, 0.5);
+  C.check('Action at the strip: the arm grabs it and he starts climbing', g.pupo.mode === 'climb', g.pupo.mode);
+  const lab2 = g.pupoLabel && g.pupoLabel.key;
+  C.check('the tutorial: GRAB over the strip before, HOLD UP once he holds it', lab1 === 'pupoGrip' && lab2 === 'pupoClimb' && TIPS.pupoGrip === true, { lab1, lab2 });
   const y0 = p.y; G.step(g, 0.5, { up: true }); const up = (y0 - p.y) / 0.5 / TS;
   G.step(g, 0.4, { up: true }); G.step(g, 1.2); const camK = (p.y + p.h * 0.5 - g.camY) / G.run('Game.viewH');
   C.check(`climbing, the camera keeps Brady at 60 % of the view's height (${camK.toFixed(2)})`, g.pupo.mode === 'climb' && near(camK, 0.6, 0.06), camK);
@@ -139,18 +146,26 @@ C.section(want, 'climb', () => {
   G.step(g, 2.0, { up: true });
   C.check('at the top he pulls up onto the wall top and stands there', !g.pupo.mode && p.onGround && near(p.y + p.h, 7 * TS, 2) && p.cx > 48 * TS, { feet: (p.y + p.h) / TS, x: p.cx / TS });
   // leap off
-  g = ride(44); p = g.player; G.step(g, 1.0, { right: true }); G.step(g, 0.4, { up: true });
+  g = ride(44); p = g.player; G.step(g, 1.0, { right: true }); G.step(g, 1 / 120, { actionPressed: true }); G.step(g, 0.5); G.step(g, 0.4, { up: true });
   G.step(g, 1 / 120, { jumpPressed: true }); const lv = [p.vx / TS, p.vy / TS];
   C.check('Jump leaps off away from the strip (6.5 t/s away, 13 t/s up)', !g.pupo.mode && near(lv[0], -6.5, 0.3) && lv[1] < -11, lv);
+  // jumping past the strip without pressing: he falls back down
+  g = ride(44); p = g.player; G.step(g, 1.0, { right: true }); let gripped = false;
+  G.step(g, 0.05, { jump: true, jumpPressed: true }); for (let i = 0; i < 180; i++) { G.step(g, 1 / 120, { right: true, jump: true }); if (g.pupo.mode) gripped = true; }
+  C.check('jumping up the strip without Action: no grip, he falls back to the floor', !gripped && p.onGround && near(p.y + p.h, FLOOR, 2), { gripped, feet: (p.y + p.h) / TS });
   // Brady alone does not climb
   const g2 = G.lab('reach'); put(g2, 44, FLOOR); G.step(g2, 0.3); G.step(g2, 1.0, { right: true }); G.step(g2, 0.6, { up: true });
   C.check('Brady alone slides off: the strip is not climbable without Pupo', !g2.player.pupoRide && g2.player.onGround && near(g2.player.y + g2.player.h, FLOOR, 2));
 });
 
 C.section(want, 'hang', () => {
-  const g = ride(58), p = g.player;
-  G.step(g, 0.05, { right: true, jump: true, jumpPressed: true }); G.step(g, 0.6, { right: true, jump: true });
-  C.check('jumping into a bar: his head touches it and he hangs upside down from it', g.pupo.mode === 'hang', g.pupo.mode);
+  let g = ride(58), p = g.player, hung = false;
+  G.step(g, 0.05, { right: true, jump: true, jumpPressed: true }); for (let i = 0; i < 72; i++) { G.step(g, 1 / 120, { right: true, jump: true }); if (g.pupo.mode) hung = true; }
+  C.check('jumping into a bar without Action: he does not hang, he falls', !hung && !g.pupo.mode, g.pupo.mode);
+  g = ride(58); p = g.player;
+  G.step(g, 0.05, { right: true, jump: true, jumpPressed: true }); G.step(g, 0.25, { right: true, jump: true });
+  G.step(g, 1 / 120, { actionPressed: true }); G.step(g, 0.6);
+  C.check('jumping toward a bar and pressing Action: the arm grabs it and he hangs upside down from it', g.pupo.mode === 'hang', g.pupo.mode);
   const x0 = p.cx; G.step(g, 1.0, { right: true }); const sh = (p.cx - x0) / TS;
   C.check(`Left / Right shimmies at ${sh.toFixed(2)} t/s (2.6), over the spikes`, near(sh, 2.6, 0.2) && p.pupoRide && !(g.pupo.drowsyT > 0), sh);
   G.step(g, 3.8, { right: true });
@@ -159,13 +174,37 @@ C.section(want, 'hang', () => {
 });
 
 C.section(want, 'ledge', () => {
-  const g = ride(120), p = g.player, A = g.area;
-  for (let y = 10; y <= 13; y++) for (let x = 124; x <= 127; x++) A.tiles[y * A.W + x] = T.HARD;   // a ledge 4 tiles up
-  put(g, 122, FLOOR); G.step(g, 0.3);
-  // just short: a jump up and toward it, falling past the lip
+  const block = A => { for (let y = 10; y <= 13; y++) for (let x = 124; x <= 127; x++) A.tiles[y * A.W + x] = T.HARD; };   // a ledge 4 tiles up
+  // a jump that falls short, stick held toward the lip, no Action: he falls back down
+  let g = ride(120), p = g.player; block(g.area); put(g, 122, FLOOR); G.step(g, 0.3);
   p.vy = -12.5 * TS; p.onGround = false; let caught = false;
-  for (let i = 0; i < 120; i++) { G.step(g, 1 / 120, { right: true, jump: true }); if (g.pupo.mode === 'ledge') caught = true; }
-  C.check('the ledge catch: near the top of a jump, stick toward a lip within reach: he hauls himself up', caught && p.onGround && near(p.y + p.h, 10 * TS, 2), { caught, feet: (p.y + p.h) / TS });
+  for (let i = 0; i < 120; i++) { G.step(g, 1 / 120, { right: true, jump: true }); if (g.pupo.mode) caught = true; }
+  C.check('falling past a lip with the stick toward it and no Action: no catch, he lands on the floor below', !caught && p.onGround && near(p.y + p.h, FLOOR, 2), { caught, feet: (p.y + p.h) / TS });
+  // the same jump, Action at the top: the arm grabs the lip and he pulls himself up
+  g = ride(120); p = g.player; block(g.area); put(g, 122, FLOOR); G.step(g, 0.3);
+  p.vy = -12.5 * TS; p.onGround = false; caught = false;
+  for (let i = 0; i < 160; i++) { G.step(g, 1 / 120, { right: true, jump: true, actionPressed: i === 40 }); if (g.pupo.mode === 'ledge') caught = true; }
+  C.check('the same jump with Action: the arm grabs the lip and he hauls himself up onto it', caught && p.onGround && near(p.y + p.h, 10 * TS, 2), { caught, feet: (p.y + p.h) / TS, tg: g.pupo.tg.kind });
+  // walking off the top: he falls like Brady (no automatic catch on the way down)
+  G.step(g, 0.2); caught = false; let fell = false;
+  for (let i = 0; i < 240; i++) { G.step(g, 1 / 120, { right: true }); if (g.pupo.mode) caught = true; if (!p.onGround && p.vy > 0) fell = true; }
+  C.check('walking off a ledge while riding: he falls to the floor below, nothing grabs', fell && !caught && p.onGround && near(p.y + p.h, FLOOR, 2), { caught, fell, feet: (p.y + p.h) / TS });
+  // the buffer: Action pressed a moment before the lip comes into reach (a running jump at a 5-tile wall) still catches it
+  g = ride(119); p = g.player; for (let y = 9; y <= 13; y++) for (let x = 124; x <= 127; x++) g.area.tiles[y * g.area.W + x] = T.HARD;
+  put(g, 119, FLOOR); G.step(g, 0.3); G.step(g, 1 / 120, { right: true, jump: true, jumpPressed: true });
+  caught = false; let early = null;
+  for (let i = 0; i < 100; i++) {
+    const inReach = PR.scan(p, g, g.pupo, { right: true }).kind === 'ledge';
+    const press = early == null && i >= 8 && !inReach;
+    if (press) early = i;
+    G.step(g, 1 / 120, { right: true, jump: true, actionPressed: press }); if (g.pupo.mode === 'ledge') caught = true;
+  }
+  C.check('pressing Action a little early (0.2 s before the lip is in reach) still catches it', early != null && caught && p.onGround && near(p.y + p.h, 9 * TS, 2), { early, caught, feet: (p.y + p.h) / TS });
+  // without the buffer's window: pressed far too early, nothing
+  g = ride(119); p = g.player; for (let y = 9; y <= 13; y++) for (let x = 124; x <= 127; x++) g.area.tiles[y * g.area.W + x] = T.HARD;
+  put(g, 117, FLOOR); G.step(g, 0.3); G.step(g, 1 / 120, { right: true, jump: true, jumpPressed: true }); caught = false;
+  for (let i = 0; i < 200; i++) { G.step(g, 1 / 120, { right: true, jump: true, actionPressed: i === 1 }); if (g.pupo.mode) caught = true; }
+  C.check('...but a press long before (out of reach the whole buffer) is just a boop: he lands on the floor', !caught && near(p.y + p.h, FLOOR, 2), { caught, feet: (p.y + p.h) / TS });
 });
 
 C.section(want, 'pull', () => {
