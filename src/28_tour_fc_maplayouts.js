@@ -360,21 +360,33 @@ const TOUR_OW_MAPS = {
     scenes: { '12-1': 'gorge', '12-2': ['herd', { animal: 'yak' }], '12-3': 'camp', '12-4': 'seracs', '12-6': 'crevasse', '12-7': 'depot' },
     live: [['walk', 'yak', [[420, 1080], [500, 1050], [560, 1000]], 5], ['walk', 'yak', [[250, 1100], [300, 1120]], 4], ['circle', 600, 680, 110, 1.3], ['flakes', 200, 90, 1000, 500, 40], ['walk', 'redpanda', [[150, 1180], [200, 1200]], 5]]
   },
-  // Antarctica: the ice shelf, penguins, the station, icebergs in a dark sea
+  // Antarctica: a horseshoe of ice shelf around a dark bay full of pack ice, walked up its east arm, west along
+  // its top and over an ice bridge to the floe of Big Tusk; penguin rookeries, a station with a blinking mast,
+  // crevasses, igloos; seals pop up in the bay, a whale spouts, snow falls
   aq: {
     labels: { '13-4': 'Big Tusk' },
-    w: 1500, h: 820,
-    pal: { sea: '#2f6496', deep: '#173a64', land: '#e6f2f8', light: '#ffffff', path: '#bcd6ea', beach: '#cfe6f2', cliff: '#86b2d0', wall: '#ffd23a', roof: '#e8423a' },
-    land: [[[60, 560], [120, 380], [300, 250], [560, 180], [860, 160], [1140, 190], [1360, 290], [1450, 460], [1400, 640], [1240, 740], [960, 770], [640, 780], [340, 760], [130, 690]]],
-    nodes: { start: [180, 600], '13-1': [370, 625], '13-2': [740, 660], '13-3': [1120, 620], '13-4': [760, 360], '13-5': [380, 335], 'house:aq-store': [1250, 420], port: [1060, 260, 'n'] },
-    paths: { '13-3>13-4': [[980, 450]], '13-3>house:aq-store': [[1230, 540]], '13-4>port': [[900, 280]] },
+    w: 1500, h: 1000,
+    pal: { sea: '#2a5a8a', deep: '#142f54', land: '#e4f0f6', light: '#ffffff', path: '#bcd6ea', beach: '#cfe6f2', cliff: '#86b2d0', wall: '#ffd23a', roof: '#e8423a' },
+    sea: 'pack', coast: 'ice', trail: 'prints', bridge: 'ice', tufts: 'snow', meadow: false, foamY: 24,
+    land: [[[1420, 900], [1440, 600], [1380, 300], [1200, 120], [800, 70], [400, 80], [120, 160], [50, 320], [120, 410], [350, 390], [600, 410], [800, 430], [1010, 480], [1090, 620], [1110, 900], [1260, 950]],
+      [[400, 520], [200, 470], [60, 560], [40, 760], [150, 900], [350, 900], [440, 760], [450, 600]],
+      [[940, 640], [820, 600], [720, 660], [740, 760], [860, 790], [940, 740]]],
+    nodes: { start: [1270, 830], '13-1': [1250, 520], '13-5': [830, 700], '13-2': [960, 230], '13-3': [540, 260], 'house:aq-store': [240, 230], '13-4': [260, 620], port: [250, 810] },
+    paths: { 'start>13-1': [[1230, 680]], '13-1>13-5': [[1030, 640]], '13-1>13-2': [[1160, 330]], '13-2>13-3': [[750, 200]], '13-3>house:aq-store': [[390, 220]], '13-3>13-4': [[450, 430], [350, 540]], '13-4>port': [[200, 720]] },
     feat: [
-      ['sprite', 'berg', 190, 170, 30, { sea: true }], ['sprite', 'berg', 1380, 140, 34, { sea: true }], ['sprite', 'berg', 1440, 760, 26, { sea: true }], ['sprite', 'berg', 260, 790, 22, { sea: true }],
-      ['range', 'mtn', [[560, 300, 44], [1290, 560, 40], [200, 470, 34]], { col: '#c6dcec', snow: true }],
-      ['trees', 'penguin', 580, 520, 80, 7], ['landmark', 940, 260, 56]
+      ['cracks', [[1380, 400], [1120, 300], [1020, 460], [1100, 700], [1350, 720]], 9],
+      ['cracks', [[800, 120], [400, 120], [200, 300], [600, 360], [800, 300]], 8],
+      ['snow', [[380, 640], [200, 560], [80, 660], [100, 820], [300, 860], [400, 760]]],
+      ['range', 'mtn', [[1080, 150, 46], [680, 120, 40], [320, 130, 44], [1360, 450, 34]], { col: '#c6dcec', snow: true }],
+      ['trees', 'penguin', 1360, 650, 70, 8], ['trees', 'penguin', 800, 340, 80, 9], ['trees', 'penguin', 160, 800, 60, 6], ['trees', 'penguin', 860, 720, 40, 3],
+      ['sprite', 'igloo', 1180, 420, 14], ['sprite', 'igloo', 380, 330, 14], ['sprite', 'snowman', 1100, 760, 12], ['sprite', 'snowman', 640, 160, 11],
+      ['sprite', 'seal', 300, 860, 14], ['sprite', 'seal', 1040, 580, 12],
+      ['sprite', 'berg', 740, 500, 30, { sea: true }], ['sprite', 'berg', 580, 640, 24, { sea: true }], ['sprite', 'berg', 1440, 140, 26, { sea: true }], ['sprite', 'berg', 40, 960, 22, { sea: true }], ['sprite', 'berg', 620, 900, 28, { sea: true }],
+      ['landmark', 1380, 760, 46]
     ],
-    flora: ['rock', 'penguin'], density: 14,
-    scenes: { '13-1': 'bowling', '13-2': 'aurora', '13-3': 'station', '13-4': 'walrus', '13-5': 'colony' }
+    flora: ['rock', 'penguin', 'rock'], density: 30,
+    scenes: { '13-1': 'bowling', '13-2': 'aurora', '13-3': 'station', '13-4': 'walrus', '13-5': 'colony' },
+    live: [['seal', 650, 560], ['seal', 940, 880], ['spout', 520, 760], ['walk', 'penguin', [[1200, 600], [1140, 620], [1080, 600]], 6], ['walk', 'penguin', [[350, 700], [290, 720]], 5], ['flakes', 60, 60, 1440, 960, 46], ['circle', 900, 420, 90, 0.9]]
   },
   // World 22: pastel islands in a violet sea, clocks and crystals, the mirror lake
   w22: {
