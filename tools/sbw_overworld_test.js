@@ -226,7 +226,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       return out;
     });
     const bad = L.filter(x => x.probs.length);
-    check(`layouts at ${W}x${H}: all ${L.length} lands have every stop on land, apart, labelled without overlaps, reachable, trails clear of other stops, touch targets >= 40 px`, L.length === 14 && !bad.length, bad.map(x => x.cc + ': ' + x.probs.slice(0, 4).join('; ')));
+    check(`layouts at ${W}x${H}: all ${L.length} lands have every stop on land, apart, labelled without overlaps, reachable, trails clear of other stops, touch targets >= 40 px`, L.length >= 14 && !bad.length, bad.map(x => x.cc + ': ' + x.probs.slice(0, 4).join('; ')));
     // the HUD stays out of the notch / home-indicator insets and the card stays on screen
     const hud = await page.evaluate(() => { const m = new TT.TourMapScene({}); window.BRADY.Game.setScene(m); m.card = null; settle(1); const ow = m.ow, c = ow.cardR, W = window.BRADY.Game.cssW, H = window.BRADY.Game.cssH; return { card: [c.x, c.y, c.w, c.h], ok: c.x >= 0 && c.y >= 0 && c.x + c.w <= W && c.y + c.h <= H && c.w >= 200 }; });
     check(`the info card fits the screen at ${W}x${H}`, hud.ok, hud);

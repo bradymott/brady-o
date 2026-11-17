@@ -11,13 +11,14 @@ if (!C) return;
 /* ---------- 1-4 Volcán Escape: the Rigging above the crater rim ----------
    The tell: on the rim, by the gate, a sandbag on a rope dangles down from above the top of the screen over a spring,
    with a CREW ONLY sign. Hold jump on the spring: Brady flies off the top of the screen into the Rigging over the
-   volcano set: catwalks, the fly gallery, Piwi's stagehand mice, a ghost light. The rope through the hole in the deck
-   is the way back down onto the rim; the Wormhole at the far end goes to Ecuador's Devil's Cauldron (2-7). */
+   volcano set: catwalks, the fly gallery, Piwi's stagehand mice, a ghost light. Up on the fly gallery: a Brady Button
+   (Piwi's House Rule 3, NO DANCING: slapping it opens the bonus land Festival Fields). The rope through the hole in
+   the deck is the way back down onto the rim; the Wormhole at the far end goes to Ecuador's Devil's Cauldron (2-7). */
 Tour.pieces['mx.rimRigging'] = function (st, o) {
   const B = st.B, y = st.y + 1;   // the rim's floor row (craterRim leaves the cursor one row above it)
   B.spawn('spring', 2, y - 1, {}); B.springs.push([2, y - 1]);
   B.decorAt('bkDangle', 2, y, 0);
-  B.decorAt('bkCrewSign', 6, y, 1);
+  B.decorAt('bkCrewSign', 6, y, 2);
   TourSeams.add(B, { side: 'top', a: 1, b: 4, to: o.to || 'rigging@in' });
   B.anchor('riggingDrop', 8, y - 1);
 };
@@ -28,7 +29,7 @@ const stamps = {
       'HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH',
       'H..............................................H',
       'H..................o.o.o.o.o.o.................H',
-      'H.........................m....................H',
+      'H.........................m....u...............H',
       'H................-----------------.............H',
       'H............o.o.o.......................o.o.o.H',
       'H..............................................H',
@@ -44,7 +45,8 @@ const stamps = {
     ],
     legend: {
       r: ['decor', 'bkRopeDown'], k: ['decor', 'bkGhostLight'], n: ['decor', 'bkCrewSign'], f: ['decor', 'bkFlatBack'],
-      q: ['decor', 'bkRack'], x: ['decor', 'bkCase'], m: ['spawn', 'bkMouse', {}], w: ['spawn', 'warp', { exit: 'warp' }]
+      q: ['decor', 'bkRack'], x: ['decor', 'bkCase'], m: ['spawn', 'bkMouse', {}], w: ['spawn', 'warp', { exit: 'warp' }],
+      u: ['spawn', 'button', { rule: 3 }]
     }
   }
 };

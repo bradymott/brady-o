@@ -84,6 +84,7 @@ const TourBackstage = {
     ctx.fillText(this.STENCILS[k % this.STENCILS.length], cx, by - ch / 2, cw - 10);
   },
   RACK: ['#ff7ab0', '#3ac8d8', '#ffd84a', '#8a5aff'],
+  SIGN2: ['BACKSTAGE', 'MIND THE GAP', '↑ RIGGING ↑'],
   // a wormhole swallowing the screen: rings spin out from the warp until the view is all wormhole
   swirl(ctx, play, Wf, x0, y0, W, H) {
     const t = play.t, k = clamp(Wf.t / 1.1, 0, 1), cx = Wf.x, cy = Wf.y;
@@ -103,7 +104,7 @@ const TourBackstage = {
   // the trunk a wormhole lives in: a battered touring trunk stood on end, lid open, the wormhole spinning inside.
   // (x, by) = bottom centre; k = 0..1 how wide the wormhole is open; locked: padlocked shut
   trunk(ctx, x, by, t, k, label, locked, near) {
-    const w = 46, h = 62, x0 = x - w / 2, y0 = by - h, INK = this.INK;
+    const w = 56, h = 76, x0 = x - w / 2, y0 = by - h, INK = this.INK;
     ctx.save();
     ctx.lineJoin = 'round';
     // the lid swung open to the right
@@ -403,9 +404,9 @@ Object.assign(Decor, {
   bkCrewSign(ctx, x, y, t, th, d) {
     const INK = TourBackstage.INK; ctx.save();
     ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 10, y); ctx.lineTo(x - 6, y - 30); ctx.moveTo(x + 10, y); ctx.lineTo(x + 6, y - 30); ctx.stroke();
-    ctx.fillStyle = '#f2d23a'; rr(ctx, x - 26, y - 50, 52, 24, 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f2d23a'; rr(ctx, x - 34, y - 50, 68, 24, 2); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#1a1416'; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('CREW ONLY', x, y - 42); ctx.fillText((d && d.seed % 2) ? 'MIND THE GAP' : 'BACKSTAGE', x, y - 33);
+    ctx.fillText('CREW ONLY', x, y - 42); ctx.fillText(TourBackstage.SIGN2[((d && d.seed) || 0) % 3], x, y - 33, 64);
     ctx.restore();
   },
   // a rope hanging down from the flies through a hole in the deck (the way back down to the stage)
@@ -419,7 +420,7 @@ Object.assign(Decor, {
   },
   // a sandbag on a rope dangling down from above the top of the view: the tell for a Rigging above
   bkDangle(ctx, x, y, t) {
-    ctx.save(); const sw = Math.sin(t * 1.1) * 4, by = y - 92;
+    ctx.save(); const sw = Math.sin(t * 1.1) * 4, by = y - 66;
     ctx.strokeStyle = '#c8a870'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, by - 400); ctx.quadraticCurveTo(x + sw * 0.5, by - 200, x + sw, by); ctx.stroke();
     ctx.fillStyle = '#7a6a4a'; ctx.strokeStyle = TourBackstage.INK; ctx.lineWidth = 2; rr(ctx, x + sw - 10, by, 20, 24, 8); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#5a4c34'; ctx.fillRect(x + sw - 3, by - 2, 6, 6);
@@ -491,5 +492,118 @@ Tour.pieces.rigging = function (st, o) {
   if (o.back) B.anchor(o.back, x + w + 1, st.gy - 1);
   return Math.max(st.x, x + w + 1);
 };
+// the Loading Dock (after a strip's last step, past its gate): a stack of flight cases before the gate and a truss
+// over it; drop down beyond the gate without touching it and walk on off the right edge into the dock: { to, back }
+Tour.pieces.loadingDock = function (st, o) {
+  const B = st.B;
+  let g = null; for (const s of B.spawns) if (s.type === 'gate' && (!s.exit || s.exit === 'main')) g = s;
+  if (!g) { if (st.ctx.problems) st.ctx.problems.push('loadingDock: no gate before it'); return st.x; }
+  const gx = Math.floor(g.x / TS), gy = Math.floor(g.y / TS) + 1;   // the gate's column and its floor row
+  // the cases: a three-high stack two columns back from the gate's left, a truss over the gate
+  B.fill(gx - 6, gy - 3, gx - 5, gy - 1, T.HARD);
+  for (let x = gx - 4; x <= gx + 3; x++) B.set(x, gy - 7, T.SEMI);
+  for (let y = 0; y < gy - 7; y++) for (let x = gx - 4; x <= gx + 3; x++) if (B.get(x, y) !== T.EMPTY && y >= gy - 9) B.set(x, y, T.EMPTY);
+  B.decorAt('bkCase', gx - 5, gy - 3, 3);
+  B.decorAt('bkCrewArrow', gx + 1, gy - 7, 0);
+  // the floor on past the gate to the area's edge, the seam, the way back's landing
+  const x1 = Math.max(st.x + 3, gx + 9);
+  st.floor(gx, x1);
+  for (let y = gy - 6; y < gy; y++) for (let x = gx + 1; x <= x1; x++) B.set(x, y, T.EMPTY);
+  TourSeams.add(B, { side: 'right', a: gy - 3, b: gy - 1, to: o.to });
+  B.anchor(o.back || 'dockBack', x1 - 1, gy - 1);
+  return x1 + 1;
+};
+// a Loading Dock's room: the crew's ramp, flight cases to hop, a crew golf cart, Piwi's mice, the Wormhole at the far
+// end; the left edge goes back out to the stage: variant 0..2 changes the layout
+TourBackstage.dockStamp = function (to, variant) {
+  const V = [
+    ['HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH',
+     'H..................................H',
+     'H..................................H',
+     'H..................................H',
+     'H..............o.o.o...............H',
+     'H..................................H',
+     'H.............-------..............H',
+     'H..................................H',
+     'H.......xxx.............-----......H',
+     'e.......xxx........................H',
+     'e.......xxx.......m................H',
+     'e.@..n...........#####.....k...w...H',
+     '####################################',
+     '####################################'],
+    ['HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH',
+     'H..................................H',
+     'H..................................H',
+     'H..................o.o.o...........H',
+     'H..................................H',
+     'H.................-----............H',
+     'H..................................H',
+     'H..........----..........xx........H',
+     'H........................xx........H',
+     'e......xx.........m......xx........H',
+     'e......xx................xx........H',
+     'e.@..n.xx....k...........xx....w...H',
+     '####################################',
+     '####################################'],
+    ['HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH',
+     'H..................................H',
+     'H..................................H',
+     'H..................................H',
+     'H......o.o.o..........o.o.o........H',
+     'H..................................H',
+     'H.....-------........-------.......H',
+     'H..................................H',
+     'H..................................H',
+     'e.............xxx..................H',
+     'e.............xxx......m...........H',
+     'e.@..n........xxx...k.........w....H',
+     '####################################',
+     '####################################']
+  ];
+  return { floor: 12, rows: V[(variant || 0) % V.length],
+    legend: { e: ['seam', 'left', to], x: ['tile', 'HARD'], n: ['decor', 'bkCrewSign'], k: ['decor', 'bkCart'], m: ['spawn', 'bkMouse', {}], w: ['spawn', 'warp', { exit: 'warp' }] } };
+};
+/* add a Loading Dock with a Wormhole to a registered level, from a land's own file or a secrets file:
+   TourBackstage.addDock('<cc>', n, { to: '<w>-<i>', label: 'ECUADOR', hint, variant })
+   The dock is appended after the main area's last step (so nothing earlier in the level moves), the warp exit and
+   the backstage room are added. Only for strip-like main areas that are not autoscroll, rail or ride. */
+TourBackstage.addDock = function (cc, n, o) {
+  const C = Tour.countries[cc], L = C && C.levels[n - 1];
+  if (!L || !L.areas || L.areas.some(a => a.id === 'dock')) return false;
+  const A0 = L.areas[0];
+  if (!A0.script || ['rail', 'ride', 'swim', 'climb', 'maze', 'room', 'arena', 'rise', 'shaft', 'dig'].indexOf(A0.gen || 'strip') >= 0 || A0.autoscroll || A0.mirror) { Tour.problems.push(`${C.world}-${n}: addDock needs a plain strip main area`); return false; }
+  const id = 'dock';
+  const stamp = TourBackstage.dockStamp(A0.id + '@dockBack', o.variant);
+  // a Brady Button in the dock: { button: <rule> } stands on the floor in the middle of the room
+  if (o.button) { stamp.rows = stamp.rows.slice(); const r = stamp.rows[11]; stamp.rows[11] = r.slice(0, 20) + 'u' + r.slice(21); stamp.legend = Object.assign({}, stamp.legend, { u: ['spawn', 'button', { rule: o.button }] }); }
+  const spec = Object.assign({}, L, {
+    n,
+    exits: Object.assign({}, L.exits, { warp: { to: o.to, via: 'warp', label: o.label, hint: o.hint || 'Crew-only stencils by the gate...' } }),
+    areas: [Object.assign({}, A0, { script: A0.script.concat([['loadingDock', { to: id + '@in' }]]) })].concat(L.areas.slice(1), [
+      { id, gen: 'room', role: 'backstage', zone: 'dock', theme: 'bk_dock', stamp }
+    ])
+  });
+  Tour.amend(cc, { levels: [spec] });
+  return true;
+};
+Object.assign(Decor, {
+  // a stencilled CREW ONLY arrow board on a stand, pointing on past the gate
+  bkCrewArrow(ctx, x, y) {
+    ctx.save(); ctx.strokeStyle = TourBackstage.INK; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 26); ctx.stroke();
+    ctx.fillStyle = '#f2d23a'; ctx.beginPath(); ctx.moveTo(x - 24, y - 44); ctx.lineTo(x + 14, y - 44); ctx.lineTo(x + 26, y - 35); ctx.lineTo(x + 14, y - 26); ctx.lineTo(x - 24, y - 26); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#1a1416'; ctx.font = TourBackstage.F6; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('CREW ONLY', x - 2, y - 35);
+    ctx.restore();
+  },
+  // the crew's little electric cart, loaded with a prop
+  bkCart(ctx, x, y, t) {
+    const INK = TourBackstage.INK; ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = '#e8e4d8'; rr(ctx, x - 30, y - 30, 60, 22, 5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3a3440'; ctx.fillRect(x - 24, y - 52, 3, 22); ctx.fillRect(x + 4, y - 52, 3, 22); ctx.fillRect(x - 26, y - 54, 34, 4);
+    TourBackstage.caseBox(ctx, x + 18, y - 30, 22, 18, 5);
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x - 18, y - 6, 6, 0, TAU); ctx.arc(x + 18, y - 6, 6, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+});
 // (exposed for the browser tests)
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.TourBackstage = TourBackstage; } } catch (e) { /* not in a browser */ }

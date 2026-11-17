@@ -31,7 +31,7 @@ function checkLevel(G, id) {
     if (!r.budget.ok) { flags.push('BUDGET ' + r.budget.errors.join('; ')); fail = true; }
     for (const wn of r.budget.warnings || []) warns.push(wn);
     // the secret-room rule: an area flagged secret, or a fake/hidden-gated pocket holding P2
-    if (!lvl.areas.some(a => a.role === 'secret' || a.bonus)) warns.push('no secret area');
+    if (!lvl.areas.some(a => a.role === 'secret' || a.role === 'backstage' || a.bonus)) warns.push('no secret area');   // a backstage area is a secret area too
     for (const pr of lvl.problems || []) warns.push(pr);
     if (r.guardHit) warns.push('search guard hit');
     if (secretChecks(G, lvl, r, flags, warns)) fail = true;

@@ -16,9 +16,11 @@ const validate = (spec, i) => { const lvl = build(spec, i); return { lvl, r: Val
 const fresh = () => { Save.data = Save.defaults(); Save.data.v = 3; TourProgress.data(); };
 
 section('spec', () => {
-  const mains = Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].mainCount, 0), listed = Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].levels.length, 0);
-  check(`68 main levels in 14 countries (${Tour.allLevelIds().length} with the secret levels)`, mains === 68 && Tour.allLevelIds().length === listed && Tour.worldList().length === 14, { mains, listed });
-  check('every country knows its main-level count (5, or 4 for the secret lands)', Tour.worldList().every(w => { const C = Tour.byWorld[w]; return C.mainCount === (C.secret ? 4 : 5); }), Tour.worldList().map(w => Tour.byWorld[w].id + Tour.byWorld[w].mainCount));
+  // the tour's 14 lands (bonus lands, opened by Brady Buttons, come on top: src/29_tour_fest*.js ...)
+  const tourWs = Tour.worldList().filter(w => !Tour.byWorld[w].bonus);
+  const mains = tourWs.reduce((n, w) => n + Tour.byWorld[w].mainCount, 0), listed = Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].levels.length, 0);
+  check(`68 main levels in 14 countries (${Tour.allLevelIds().length} with the secret and bonus levels)`, mains === 68 && Tour.allLevelIds().length === listed && tourWs.length === 14, { mains, listed });
+  check('every country knows its main-level count (5, or 4 for the secret lands; a bonus land up to 4)', Tour.worldList().every(w => { const C = Tour.byWorld[w]; return C.bonus ? C.mainCount >= 1 && C.mainCount <= 4 : C.mainCount === (C.secret ? 4 : 5); }), Tour.worldList().map(w => Tour.byWorld[w].id + Tour.byWorld[w].mainCount));
   const L84 = Tour.specOf('8-4');
   check('a legacy secret: {to} becomes exits.secret = land:aq', L84.exits.secret && L84.exits.secret.to === 'land:aq' && L84.secret === false, L84.exits);
   check('main exits default to the next level, the boss to country:next', Tour.specOf('1-1').exits.main.to === '1-2' && Tour.specOf('1-5').exits.main.to === 'country:next' && Tour.specOf('13-4').exits.main.to === null, [Tour.specOf('1-1').exits, Tour.specOf('1-5').exits]);

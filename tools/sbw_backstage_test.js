@@ -79,9 +79,10 @@ function goThrough(g, ai, s) {
     if (sp) { p.x = sp.cx - p.w / 2; p.y = sp.y - p.h - 6; p.vy = 2 * TS; p.vx = 0; }
     hold(g, { jump: true }, 3, moved);
   } else if (s.side === 'bottom') {
-    let ty = 0; while (ty < A.H - 1 && run(`SOLID[${A.tiles[ty * A.W + mid]}]`) === false) ty++;
-    p.x = mid * TS + TS / 2 - p.w / 2; p.y = Math.max(0, (ty - 3)) * TS; p.vx = 0; p.vy = 0;
-    hold(g, {}, 3, moved);
+    // stand over the pit (the lowest solid row above it) and drop in, pressing down (sinks through mud too)
+    const solid = run('SOLID'); let ty = A.H - 1; while (ty > 0 && !solid[A.tiles[ty * A.W + mid]]) ty--;
+    p.x = mid * TS + TS / 2 - p.w / 2; p.y = (ty + 1) * TS + 4; p.vx = 0; p.vy = 0;
+    hold(g, { down: true }, 4, moved);
   } else {
     const left = s.side === 'left', row = s.b;
     p.x = left ? TS * 1.5 : (A.W - 2) * TS - p.w; p.y = (row + 1) * TS - p.h; p.vx = 0; p.vy = 0;

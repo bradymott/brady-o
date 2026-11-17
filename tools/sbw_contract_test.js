@@ -194,12 +194,16 @@ section('rules', () => {
   check('a warp that cannot be reached is WARP <key> UNREACHABLE (not EXIT ...)', (() => { const L = build(STAGE_SPEC()); L.areas[0].seams = L.areas[0].seams.filter(s => s.side !== 'right'); const fl = flagsOf(L).flags; return fl.includes('WARP WARP UNREACHABLE'); })());
   check('a dormant warp unreachable with the rules on is flagged (rules on)', variant(L => { const w = L.areas[4]; w.spawns.find(s => s.type === 'warp').x = 40 * TS; }).includes('WARP WARP2 UNREACHABLE (rules on)'));
   // whole-game rules (--rules): buttons, warps per land, room variety; --release turns the rollout warnings into errors
-  const res = [{ id: '1-1', info: { buttons: [7], warps: [], rooms: ['pantry'] } }, { id: '1-2', info: { buttons: [7], warps: [], rooms: ['pantry', 'closing'] } }];
-  G.run('globalThis.TOUR_RULES = { 7: { opens: ["1-6", "land:nowhere"] }, 3: { opens: ["land:aq"] } }');
+  // a land with no warp in its specs yet (the rollout adds them land by land; Mexico has one since stage B)
+  const NW = (() => { const T = G.Tour; for (const w of T.worldList()) { const C = T.byWorld[w]; if (!C.levels.some(L => Object.keys(L.exits || {}).some(k => L.exits[k] && L.exits[k].via === 'warp'))) return C; } return null; })();
+  const nw = NW ? NW.world : 1, nwId = NW ? NW.id : 'mx';
+  const res = [{ id: nw + '-1', info: { buttons: [7], warps: [], rooms: ['pantry'] } }, { id: nw + '-2', info: { buttons: [7], warps: [], rooms: ['pantry', 'closing'] } }];
+  // the fixture rules stand in for the game's own (TOUR_RULES, src/28_tour_sb_buttons.js) while this runs
+  G.run('globalThis.__fx = { 7: { opens: ["1-6", "land:nowhere"] }, 3: { opens: ["land:aq"] } }; if (typeof TOUR_RULES !== "undefined") { globalThis.__savedRules = Object.assign({}, TOUR_RULES); for (const k in TOUR_RULES) delete TOUR_RULES[k]; Object.assign(TOUR_RULES, __fx); } else globalThis.TOUR_RULES = __fx');
   const R = VL.secretRules(G, res, false), Rr = VL.secretRules(G, res, true);
-  G.run('delete globalThis.TOUR_RULES');
+  G.run('if (globalThis.__savedRules) { for (const k in TOUR_RULES) delete TOUR_RULES[k]; Object.assign(TOUR_RULES, __savedRules); delete globalThis.__savedRules; } else delete globalThis.TOUR_RULES');
   check('--rules: a button placed twice, a rule with no button, an opens target that does not exist are errors', R.errors.some(e => /rule 7: its button is placed 2 times/.test(e)) && R.errors.some(e => /rule 3: its button is placed 0 times/.test(e)) && R.errors.some(e => /rule 7: opens 'land:nowhere'/.test(e)) && !R.errors.some(e => /'1-6'/.test(e)), R.errors);
-  check('--rules: lands without a warp and with under 3 room types are warnings (errors with --release)', R.warnings.some(w => /lands without a warp.*mx/.test(w)) && R.warnings.some(w => /fewer than 3 secret-room types.*mx/.test(w)) && Rr.errors.some(e => /lands without a warp/.test(e)), R);
+  check('--rules: lands without a warp and with under 3 room types are warnings (errors with --release)', R.warnings.some(w => new RegExp('lands without a warp.*' + nwId).test(w)) && R.warnings.some(w => new RegExp('fewer than 3 secret-room types.*' + nwId).test(w)) && Rr.errors.some(e => /lands without a warp/.test(e)), R);
   const R3 = VL.secretRules(G, [{ id: '1-1', info: { buttons: [], warps: [], rooms: ['closing', 'closing', 'closing'] } }], false);
   check('--rules: a new room type more than twice in a land is flagged', R3.warnings.some(w => /room type closing used 3 times/.test(w)), R3);
   check('--rules: a placed button with no TOUR_RULES entry is an error', VL.secretRules(G, res, false).errors.some(e => /no such rule in TOUR_RULES/.test(e)));
