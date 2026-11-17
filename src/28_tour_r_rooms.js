@@ -137,8 +137,14 @@ const TourRooms = {
     R.bars = null;
   },
   // big text in the middle-top of the view, in world coordinates (afterEntities runs in the world transform)
+  // the top of the room's HUD in world units: under the game's toast while one shows (they never overlap)
+  hudY(play, dy) {
+    const k = Game.gameRect && Game.gameRect.h ? Game.gameRect.h / Game.viewH : 1;
+    const below = play.toastT > 0 && play.toastBottom ? (play.toastBottom - (Game.gameRect.y || 0)) / k + 8 : 0;
+    return play.camY + Math.max(dy || 0, below);
+  },
   hudText(play, ctx, str, col, size, dy) {
-    const x = play.camX + Game.viewW / 2, y = play.camY + (dy || 34);
+    const x = play.camX + Game.viewW / 2, y = this.hudY(play, 0) + (dy || 34);
     ctx.save(); ctx.font = `${size || 16}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const w = ctx.measureText(str).width + 22, h = (size || 16) + 12;
     ctx.fillStyle = 'rgba(14,8,26,0.72)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
@@ -148,7 +154,7 @@ const TourRooms = {
   },
   // a round clock face with a sweeping hand and the seconds left
   clock(play, ctx, left, total, col) {
-    const x = play.camX + Game.viewW / 2, y = play.camY + 36, r = 17, k = clamp(left / total, 0, 1);
+    const x = play.camX + Game.viewW / 2, y = this.hudY(play, 0) + 36, r = 17, k = clamp(left / total, 0, 1);
     ctx.save();
     ctx.fillStyle = 'rgba(14,8,26,0.78)'; ctx.beginPath(); ctx.arc(x, y, r + 4, 0, TAU); ctx.fill();
     ctx.fillStyle = left < 4 && Math.floor(left * 4) % 2 ? '#ff6a5a' : (col || '#ffd84a');
@@ -160,7 +166,7 @@ const TourRooms = {
   },
   // a counter pill under the clock: "3 / 8" with an icon painter
   counter(play, ctx, n, of, icon, dx) {
-    const x = play.camX + Game.viewW / 2 + (dx || 0), y = play.camY + 72;
+    const x = play.camX + Game.viewW / 2 + (dx || 0), y = this.hudY(play, 0) + 72;
     ctx.save(); ctx.font = `13px ${FONT_DISPLAY}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     const str = n + ' / ' + of, w = ctx.measureText(str).width + 40;
     ctx.fillStyle = 'rgba(14,8,26,0.72)'; rr(ctx, x - w / 2, y - 12, w, 24, 12); ctx.fill();

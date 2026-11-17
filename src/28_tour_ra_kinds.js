@@ -323,7 +323,7 @@ TourRooms.def('fetch', {
   draw(play, ctx, A, R, kit) {
     if (R.won) return;
     // the recipe card: the three ingredients, ticked once found
-    const n = kit.data.ings.length, x = play.camX + Game.viewW / 2, y = play.camY + 40;
+    const n = kit.data.ings.length, x = play.camX + Game.viewW / 2, y = TourRooms.hudY(play, 0) + 40;
     ctx.save(); ctx.fillStyle = 'rgba(255,248,232,0.92)'; rr(ctx, x - n * 22 - 8, y - 20, n * 44 + 16, 40, 8); ctx.fill(); ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 1.5; ctx.stroke();
     kit.data.ings.forEach((i, k) => {
       const L = TourMaze.KEYS[i.look], cx = x - (n - 1) * 22 + k * 44, got = play.keys.has(i.id);

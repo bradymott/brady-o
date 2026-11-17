@@ -227,7 +227,7 @@ TourRooms.def('pick', {
     const K = TourRoomKit, W = 30 + K.eastW(keep, o, false);
     const g = K.room(W), Y = K.Y;
     const x0 = g.west(keep), x1 = K.east(g, keep, A, o, { cage: false }), mid = Math.floor((x0 + x1) / 2);
-    const main = K.prize(o, keep)[0];
+    const main0 = K.prize(o, keep)[0], main = main0 === 'pick' || main0 === 'picks' ? 'oneup' : main0;
     const pool = (o.choices || ['power', 'star', 'oneup', 'magnet', 'sundial']).filter(it => it !== main);
     const choices = [main, pool[0], pool[1]];
     for (let k = 2; k > 0; k--) { const j = Math.floor(rng() * (k + 1)); [choices[k], choices[j]] = [choices[j], choices[k]]; }
@@ -235,7 +235,7 @@ TourRooms.def('pick', {
     xs.forEach((x, k) => { g.fill(x, 9, x + 1, Y, '#'); g.box(x, 5, choices[k]); g.put(x + 1, 5, '.'); });
     g.data.boxes = xs.map((x, k) => ({ x, y: 5, it: choices[k] }));
     // the old room's other boxes (5-2 had one, 2-6 two): on a shelf by the door
-    K.prize(o, keep).slice(1).forEach((it, k) => { g.box(x0 + 1 + k * 2, 6, it); });
+    K.prize(o, keep).slice(1).filter(it => it !== 'picks').forEach((it, k) => { g.box(x0 + 1 + k * 2, 6, it); });
     g.put(mid, 1, '*'); g.coins(mid - 7, mid - 6, 8); g.coins(mid + 7, mid + 8, 8);
     g.dress(keep, [x0, x1 - 1], Y);
     return g;
@@ -312,11 +312,18 @@ TourRooms.def('bouncy', {
   draw(play, ctx, A, R, kit) {
     // the inflatable: fat striped cushions over the towers' tops, a soft lip along the floor
     const D = kit.data, cols = D.skin, t = play.t;
-    for (const [x, y] of D.towers) {
-      const px = x * TS, py = y * TS, w = 3 * TS;
-      ctx.save(); ctx.fillStyle = cols[(x >> 1) % cols.length]; rr(ctx, px - 4, py - 6 + Math.sin(t * 3 + x) * 1.5, w + 8, 14, 7); ctx.fill(); ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,0.45)'; rr(ctx, px + 2, py - 4 + Math.sin(t * 3 + x) * 1.5, w - 4, 4, 2); ctx.fill(); ctx.restore();
-    }
+    D.towers.forEach(([x, y], k) => {
+      const px = x * TS, py = y * TS, w = 3 * TS, h = (11 - y) * TS, col = cols[k % cols.length], wob = Math.sin(t * 3 + k) * 1.5;
+      ctx.save();
+      // a fat inflatable column: soft sides, light stripes, a puffy cap with a pennant
+      ctx.fillStyle = col; rr(ctx, px - 3, py + 4, w + 6, h - 4, 10); ctx.fill(); ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.28)'; for (let j = 0; j < 3; j++) rr(ctx, px + 8 + j * 28, py + 12, 9, h - 20, 4), ctx.fill();
+      ctx.fillStyle = cols[(k + 1) % cols.length]; rr(ctx, px - 6, py - 6 + wob, w + 12, 16, 8); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; rr(ctx, px + 2, py - 3 + wob, w - 4, 4, 2); ctx.fill();
+      ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + w / 2, py - 6 + wob); ctx.lineTo(px + w / 2, py - 30); ctx.stroke();
+      ctx.fillStyle = cols[(k + 2) % cols.length]; ctx.beginPath(); ctx.moveTo(px + w / 2, py - 30); ctx.lineTo(px + w / 2 + 16 + Math.sin(t * 5 + k) * 3, py - 25); ctx.lineTo(px + w / 2, py - 20); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    });
     const [a, b] = D.span, yy = (10 + 1) * TS;
     ctx.save();
     for (let x = a; x <= b; x++) { ctx.fillStyle = cols[x % cols.length]; const s = Math.sin(t * 5 + x * 0.7) * 2; rr(ctx, x * TS, yy - 3 + s, TS, 10, 5); ctx.fill(); }
