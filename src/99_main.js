@@ -68,7 +68,7 @@ const Game = {
     } catch (e) { /* not available */ }
   },
 
-  resize() {
+  resize(why) {
     measureInsets();
     const vv = window.visualViewport;
     const cssW = Math.max(200, Math.round(vv ? vv.width : window.innerWidth));
@@ -77,7 +77,10 @@ const Game = {
     const cap = this.dprCap || (hq ? 3 : 2);
     const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, hq ? 3 : 2, cap));
     this.cssW = cssW; this.cssH = cssH; this.dpr = dpr;
-    this.canvas.width = Math.round(cssW * dpr); this.canvas.height = Math.round(cssH * dpr);
+    // a zoom change (setRows: every level start, boss fight and map) keeps the canvas when its size is the same;
+    // anything else re-allocates it (iOS may drop a background page's canvas memory)
+    const cw = Math.round(cssW * dpr), ch = Math.round(cssH * dpr);
+    if (why !== 'rows' || this.canvas.width !== cw || this.canvas.height !== ch) { this.canvas.width = cw; this.canvas.height = ch; }
     this.canvas.style.width = cssW + 'px'; this.canvas.style.height = cssH + 'px';
     const portrait = cssH > cssW * 1.05;
     let gr;
@@ -92,12 +95,17 @@ const Game = {
     // vignette
     // vignette pre-rendered at the game view's exact pixel size (no per-frame scaling)
     const vw = Math.round(this.viewW * this.S), vh = Math.round(this.viewH * this.S);
-    const v = makeCanvas(vw, vh), vx = v.getContext('2d');
-    vx.save(); vx.translate(vw / 2, vh / 2); vx.scale(vw / 256, vh / 256);
-    const g = vx.createRadialGradient(0, 0, 60, 0, 0, 182);
-    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.42)');
-    vx.fillStyle = g; vx.fillRect(-128, -128, 256, 256); vx.restore();
-    this.vignette = v;
+    // (the same size: the one already painted is kept, not a new full-screen canvas per resize)
+    const v0 = this.vignette;
+    if (!(v0 && v0.width === Math.max(1, vw) && v0.height === Math.max(1, vh))) {
+      if (v0) { v0.width = 1; v0.height = 1; }
+      const v = makeCanvas(vw, vh), vx = v.getContext('2d');
+      vx.save(); vx.translate(vw / 2, vh / 2); vx.scale(vw / 256, vh / 256);
+      const g = vx.createRadialGradient(0, 0, 60, 0, 0, 182);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.42)');
+      vx.fillStyle = g; vx.fillRect(-128, -128, 256, 256); vx.restore();
+      this.vignette = v;
+    }
     Input.computeLayout(cssW, cssH, gr);
     if (this.scene && this.scene.resize) this.scene.resize();
     // the 2D game's Play scene only exists in the apps that bundle it (the Burning Man app doesn't)
@@ -107,8 +115,11 @@ const Game = {
   },
 
   /* setRows(n): show n tile rows (the camera zoom); a change re-lays out the view */
-  setRows(n) { n = n || VIEW_ROWS; if (Math.abs(n - this.rows) < 1e-3) return; this.rows = n; if (this.canvas) this.resize(); },
+  setRows(n) { n = n || VIEW_ROWS; if (Math.abs(n - this.rows) < 1e-3) return; this.rows = n; if (this.canvas) this.resize('rows'); },
   setScene(s) {
+    // the scene left behind frees what it alone held (Play: its HUD and light-map canvases; src/16_session.js)
+    const old = this.scene;
+    if (old && old !== s && old.onSceneExit) { try { old.onSceneExit(s); } catch (e) { this.reportError(e); } }
     // in the Burning Man and Art Cart apps, "back to the title" means that app's own home screen
     if ((APP === 'burningman' || APP === 'kart') && typeof TitleScene !== 'undefined' && s instanceof TitleScene) s = appHomeScene();
     // scenes without a zoom of their own (menus, maps, story) use the standard view

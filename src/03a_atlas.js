@@ -85,8 +85,10 @@ const Atlas = {
   /* memory held by decoded atlas images, in MB (for tests and the debug overlay) */
   decodedMB() { let b = 0; for (const n in this.atlases) { const a = this.atlases[n]; if (a.ready && a.img) b += (a.img.naturalWidth || 0) * (a.img.naturalHeight || 0) * 4; if (a.halo) b += a.halo.width * a.halo.height * 4; } return Math.round(b / 1e5) / 10; },
   flushCaches() {
-    if (typeof TileArt !== 'undefined') TileArt.cache = {};
-    if (typeof BG !== 'undefined') BG.cache = {};
+    // the old pictures' surfaces are freed now (releaseCanvases): on iOS a dropped canvas keeps its memory until the
+    // garbage collector gets to it, and a level start rebuilds these once per arriving atlas
+    if (typeof TileArt !== 'undefined') { for (const k in TileArt.cache) releaseCanvases(TileArt.cache[k]); TileArt.cache = {}; }
+    if (typeof BG !== 'undefined') { for (const k in BG.cache) BG.release(BG.cache[k]); BG.cache = {}; }
   },
   arrived(name) {
     // painted caches were built without this art: rebuild them on the next frame
@@ -168,3 +170,18 @@ const Atlas = {
   }
 };
 try { window.BRADY_ATLAS = Atlas; } catch (e) { /* not in a browser */ }
+
+/* releaseCanvases(o): shrink every canvas held in o (a canvas, or arrays / plain objects of them, a few levels deep) to
+   1 x 1 px, freeing its surface at once. iOS Safari only frees a dropped canvas's memory when the garbage collector
+   collects the element, and caps the total canvas memory of a page: pictures thrown away level after level (backdrops,
+   tile sets, inked props) pile up until drawing gets slow and new canvases fail. Only for pictures nothing else
+   draws from any more (1 x 1, not 0 x 0: a stray draw from a released canvas stays harmless). */
+function releaseCanvases(o, depth) {
+  depth = depth || 0;
+  if (!o || depth > 4 || typeof o !== 'object') return;
+  if (typeof HTMLCanvasElement !== 'undefined' && o instanceof HTMLCanvasElement) { o.width = 1; o.height = 1; return; }
+  if (typeof HTMLImageElement !== 'undefined' && o instanceof HTMLImageElement) return;
+  if (Array.isArray(o)) { for (const v of o) releaseCanvases(v, depth + 1); return; }
+  if (Object.getPrototypeOf(o) !== Object.prototype) return;   // plain objects only
+  for (const k in o) releaseCanvases(o[k], depth + 1);
+}

@@ -18,7 +18,7 @@ const TileArt = {
     const k = themeKey + '@' + S.toFixed(3);
     if (this.cache[k]) return this.cache[k];
     const keys = Object.keys(this.cache);
-    if (keys.length >= 3) delete this.cache[keys[0]];
+    if (keys.length >= 3) { if (typeof releaseCanvases === 'function') releaseCanvases(this.cache[keys[0]]); delete this.cache[keys[0]]; }   // freed now (iOS)
     const a = this.build(themeKey, S);
     this.cache[k] = a;
     return a;
