@@ -65,10 +65,10 @@ the JavaScript.
 | Graphics tiers with an automatic controller, Settings and pause `GFX` switch, FPS readout | `14_quality.js`, `13_ui.js`, `99_main.js` | see below |
 
 ## Graphics tiers (`src/14_quality.js`)
-Cut levels, in this order: 1 trip effects (no breathing copy, colour sheen or fractal) and the bloom sampled every
+Cut levels, in this order: 1 trip effects (no joint breathing copy, no mushroom jiggle, half the trip shapes) and the bloom sampled every
 4th frame; 2 particles and weather at half density, enemies and bosses re-inked at 30 Hz in a scratch area fitted to
 what their art was seen to reach; 3 the light keylines and form shading of code-drawn art (Brady keeps his keyline; all
-dark ink stays); 4 bloom, vignette, the haze between backdrop layers, the sky's light rays; 5 the farthest parallax
+dark ink stays); 4 bloom, vignette, the haze between backdrop layers, the sky's light rays, the trips' colour pass on the level and their shapes; 5 the farthest parallax
 layer; 6 and 7 internal resolution 1.75x and 1.5x (never lower). HIGH = 0, MEDIUM = 2, LOW = 5.
 
 AUTO (default) starts where the last session settled (one step better, to re-check), steps down after two slow 1 s
