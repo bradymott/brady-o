@@ -970,7 +970,7 @@ const P = {
     // the bakery's delivery belt runs backward: walk (or run) against it
     for (let q = 9; q < 17; q++) B.set(x + q, st.gy, T.CONV_L);
     st.coins(x + 10, x + 15, st.gy - 3);
-    st.block(x + 12, st.gy - 5, 'power');
+    st.block(x + 12, st.gy - 4, 'power');   // gy - 4: big Brady can jump to the joint over it (sbw_items_test)
     st.enemy('frBaguette', x + 6, st.gy);
     return x + 19;
   },

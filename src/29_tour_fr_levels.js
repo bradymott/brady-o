@@ -987,7 +987,7 @@ const levels = [
           'cp',
           ['balloonHop', { rise: 6, drift: 4 }],
           ['balloonHop', { rise: 4, drift: 4 }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
+          ['itemBlock', { item: 'lsd', y: 4 }],   // y 4: the tab floating over it is in jump reach (sbw_items_test)
           ['step', { h: -6 }],
           ['tetherBalloon', { to: 'alize@in', rise: 9, look: 'frCloudDoor' }],
           ['burner', { h: 9 }],

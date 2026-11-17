@@ -10,7 +10,7 @@ Everything below is on `main` and deployed to https://bradymott.github.io/brady-
 - **Freeze report (Mexico "first water level")**: not reproduced as a true freeze. Fixed: Brady started 1-2 on the dock instead of in the boat and drowned every life. Added: a per-entity error safety net, a real-time soak test (`tools/sbw_soak_test.js`), seeded and fixed-step boss tests.
 
 ## Run before every merge
-`validate_levels --rules`, `gameplay_test <shots>`, `boss_test --shots <dir>`, `apps_test "" <dir>`, `sbw_graphics_test`, `sbw_atlas_test`, `sbw_toolkit_test`, `sbw_powers_test`, `sbw_overworld_test`, `sbw_soak_test`, `save_test`, `sbw_snapshot`, `levels_br_mz_test`, `levels_aq_w22_test`, `sbw_toolkit_shots <outdir> --checks` (the first argument is the output folder). Last full run on `main`: all passing, 88 levels finishable, gameplay 52/52, bosses 172/172.
+`validate_levels --rules`, `gameplay_test <shots>`, `boss_test --shots <dir>`, `apps_test "" <dir>`, `sbw_graphics_test`, `sbw_atlas_test`, `sbw_toolkit_test`, `sbw_powers_test`, `sbw_overworld_test`, `sbw_soak_test`, `save_test`, `sbw_snapshot`, `levels_br_mz_test`, `levels_aq_w22_test`, `sbw_toolkit_shots <outdir> --checks` (the first argument is the output folder), `sbw_items_test` (every item block bumped: the item never stays in a ceiling and Brady can reach it; `--reach` for the full reach search). Last full run on `main`: all passing, 88 levels finishable, gameplay 52/52, bosses 172/172.
 
 ## Open items
 1. **Nothing has been verified on a real iPhone by an agent.** Unknown: frame rate during the acid trip, the overworld's one-off map repaint after a reveal, how Zoom: Near feels, and whether the freeze Brady saw is gone. Ask Brady.

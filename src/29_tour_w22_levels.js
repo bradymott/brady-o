@@ -466,7 +466,7 @@ const cell = (marks, nums, extra) => {
 };
 const corridor = {
   // A the lobby (start); a door out to the clock hall
-  lobby: cell([[2, 11, '@'], [4, 11, 'i'], [8, 7, '?'], [6, 4, 'o.o.o.o'], [6, 5, '-----']], [[1, 9], [2, 13], [3, 17]], { items: ['power'] }),
+  lobby: cell([[2, 11, '@'], [4, 11, 'i'], [8, 8, '?'], [6, 4, 'o.o.o.o'], [6, 5, '-----']], [[1, 9], [2, 13], [3, 17]], { items: ['power'] }),
   // B the clock hall: a door that loops back to the lobby; the floor gives way at the far end (down to E)
   clocks: cell([[2, 6, '-----'], [12, 6, '-----'], [3, 4, 'o.o'], [13, 4, 'o.o'], [8, 11, 'q'], [16, 11, 'a']], [[4, 6], [5, 10], [6, 15]]),
   // C the gallery: P1 up on the gallery, the way out
