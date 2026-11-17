@@ -522,6 +522,7 @@ Tour.amend('ma', {
           'sig',
           ['caravan', { span: 13 }],
           'cp',
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), early in the land (Brady's request)
           // ② the sandstorm
           'storm',
           ['enemies', { n: 2 }],
@@ -655,11 +656,11 @@ Tour.amend('ma', {
           ['rugIsland', { w: 6, moth: true }],
           ['door', { to: 'tent@in', look: 'maTentDoor', back: 'tentBack', perch: 3 }],
           ['gust', { w: 14, dir: 1 }],
+          ['itemBlock', { item: 'lsd', y: 4 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           // ③ moths nibbling the carpets while the storks swoop
           ['rugIsland', { w: 7, moth: true, tight: true }],
           ['rugIsland', { w: 6, dy: -2, moth: true, tight: true }],
           ['enemies', { kind: 'maStork', n: 1 }],
-          ['itemBlock', { item: 'lsd', y: 4 }],
           ['flyingRugs', { n: 2, span: 10 }],
           ['end', { exit: 'main' }]
         ] },

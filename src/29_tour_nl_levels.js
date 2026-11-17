@@ -367,6 +367,7 @@ const levels = [
           ['door', { to: 'brug@in', perch: 0, look: 'nlStairsUp', back: 'brugBack' }],
           'drawbridge',
           'cp',
+          ['itemBlock', { item: 'star', y: 4 }],   // a star for the gull stretch (Brady: mix up the power-ups)
           'hop',
           ['drawbridge', { fast: true }],
           ['postcard', { kind: 'risky', dy: -5, dx: -4 }],
@@ -452,10 +453,11 @@ const levels = [
           ['mill', {}],
           ['enemies', { kind: 'nlBee', n: 1, len: 8 }],
           'cp',
+          ['itemBlock', { item: 'lsd', y: 5 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           ['mill', { reverse: true }],
           ['tulips', { n: 4 }],
+          ['enemies', { kind: 'nlBee', n: 1, len: 8 }],
           ['mill', { reverse: true, speed: 1.0, gold: 'risky' }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
           ['mill', { reverse: true }],
           ['millDoor', { to: 'molen@in', back: 'molenBack' }],
           ['gate', { exit: 'main' }]

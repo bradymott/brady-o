@@ -205,6 +205,7 @@ Tour.amend('es', {
           ['toothpicks', { n: 2, enemy: 'esGamba' }],
           ['shaker', { gold: 'must' }],
           ['gearStand', { item: 'wand' }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), to float over the oil slick (Brady's request)
           // ② the oil slick and rolling olives
           ['oilSpill', { n: 10, olives: 2 }],
           ['breads', { n: 4, seed: 2, enemy: 'esPulpo' }],
@@ -244,12 +245,12 @@ Tour.amend('es', {
           'bats',
           'drop',
           ['secretDoor', { to: 'umbracle@in', look: 'curtain', skin: 'esArchCurtain', back: 'umbBack' }],
+          ['itemBlock', { item: 'lsd', y: 5 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           // ③ all of it together, bats swooping
           ['ribs', { n: 4 }],
           ['lights', { n: 5 }],
           'eyelid',
           'bats',
-          ['itemBlock', { item: 'lsd', y: 5 }],
           'drop',
           ['end', { exit: 'main' }]
         ] },

@@ -267,16 +267,17 @@ TourGear.register({ id: 'box', name: 'CARDBOARD BOX', hint: 'HOLD DOWN TO HIDE',
   }
 });
 TourGear.register({ id: 'kazoo', name: 'KAZOO', hint: 'THROW = HONK: STUNS, RINGS BELLS, REVEALS', cooldown: 0.5, glow: '#ffe060',
-  icon(ctx, x, y, t) {
+  icon(ctx, x, y, t, quiet) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(-0.3);
     ctx.fillStyle = '#e8323a'; ctx.beginPath(); ctx.moveTo(-11, -3); ctx.lineTo(6, -5); ctx.lineTo(11, -7); ctx.lineTo(11, 7); ctx.lineTo(6, 5); ctx.lineTo(-11, 3); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(-1, -4, 3, 0, TAU); ctx.fill(); ctx.fillRect(-11, -1, 17, 2);
     ctx.restore();
+    if (quiet) return;   // in Brady's hand the kazoo is silent until he honks it
     ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 1.4; for (let k = 0; k < 3; k++) { const a = (t * 2 + k * 0.3) % 1; ctx.globalAlpha = 1 - a; ctx.beginPath(); ctx.arc(x + 12, y - 4, 4 + k * 3 + a * 3, -0.6, 0.6); ctx.stroke(); } ctx.globalAlpha = 1;
   },
   action(p, g) {
     const { box, list } = GearFx.inFront(p, 3, 1.5);
-    TourKit.sfx('kazoo', 'artcarHorn', { vol: 0.6, pitch: 1.8 }); p.honkT = 0.35;
+    TourKit.sfx('kazoo', 'artcarHorn', { vol: 0.6, pitch: 1.8 }); if (p.hands) p.hands.honkT = 0.35;
     for (const e of list) {
       if (e.boss) continue;
       if (e.reveal) e.reveal(3);
@@ -288,11 +289,15 @@ TourGear.register({ id: 'kazoo', name: 'KAZOO', hint: 'THROW = HONK: STUNS, RING
     if (g.boss && g.boss.brain && g.boss.brain.onBell && Math.abs(g.boss.cx - p.cx) < 6 * TS) g.boss.brain.onBell(g.boss);
     return true;
   },
+  // the honk's timer lives on the kazoo in Brady's hands and runs down here (it once never did, so the
+  // sound arcs and the HONK! stayed on screen for good after the first honk)
+  update(p, dt) { const h = p.hands; if (h && h.honkT > 0) h.honkT = Math.max(0, h.honkT - dt); },
   drawOn(p, ctx, t) {
-    ctx.save(); ctx.translate(p.cx + p.facing * 8, p.y + (p.small ? 10 : 16)); ctx.scale(p.facing * 0.55, 0.55); this.icon(ctx, 0, 0, t); ctx.restore();
-    if (p.honkT > 0) {
+    ctx.save(); ctx.translate(p.cx + p.facing * 8, p.y + (p.small ? 10 : 16)); ctx.scale(p.facing * 0.55, 0.55); this.icon(ctx, 0, 0, t, true); ctx.restore();
+    const honkT = (p.hands && p.hands.honkT) || 0;
+    if (honkT > 0) {
       // the honk: three bold sound arcs fanning out, and a HONK! that pops
-      const k = 1 - p.honkT / 0.35, cy = p.y + (p.small ? 10 : 16);
+      const k = 1 - honkT / 0.35, cy = p.y + (p.small ? 10 : 16);
       ctx.save(); ctx.lineCap = 'round';
       for (let i = 0; i < 3; i++) { const r = 14 + i * 16 + k * 26, a = (1 - k) * (1 - i * 0.2); ctx.globalAlpha = a; ctx.strokeStyle = i % 2 ? '#ff6a3a' : '#ffd23a'; ctx.lineWidth = 4 - i; ctx.beginPath(); ctx.arc(p.cx + p.facing * 10, cy, r, p.facing > 0 ? -0.7 : Math.PI - 0.7, p.facing > 0 ? 0.7 : Math.PI + 0.7); ctx.stroke(); }
       ctx.globalAlpha = 1 - k; ctx.font = `${12 + k * 6}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#1c1426'; ctx.fillText('HONK!', p.cx + p.facing * (40 + k * 16) + 1.5, cy - 22 - k * 10 + 1.5); ctx.fillStyle = '#ffd23a'; ctx.fillText('HONK!', p.cx + p.facing * (40 + k * 16), cy - 22 - k * 10);

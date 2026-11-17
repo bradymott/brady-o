@@ -468,6 +468,7 @@ const levels = [
           ['cafe', { to: 'caphe@in', back: 'caBack' }],
           'stools',
           'cp',
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), to float up to the wires (Brady's request)
           // ③ the wires over the tracks while the train passes below
           ['trainWires', { len: 30, period: 8 }],
           ['rooftops', { n: 2, gold: true }],
@@ -532,11 +533,11 @@ const levels = [
           ['workshop', { to: 'xuong@in', back: 'xuongBack' }],
           ['silkAwning', { n: 2 }],
           'cp',
+          ['itemBlock', { item: 'lsd', y: 5 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           ['lanternShop', {}],
           // ③ floating lanterns and silkworms
           ['riverLanterns', { n: 2, silk: true }],
           ['silkAwning', { n: 3, len: 14 }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
           ['lanternShop', {}],
           ['riverLanterns', { n: 3, span: 13, gold: 'risky' }],
           'bridgearch',

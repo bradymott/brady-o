@@ -660,6 +660,7 @@ const levels = [
           ['gearStand', { item: 'plane' }],
           ['teaHouse', { to: 'chiya@in', back: 'teaBack' }],
           'cp',
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), for the windy bridges (Brady's request)
           ['skyBridge', { n: 9, monal: true, dy: 1 }],
           ['gustWind', { sign: true }],
           ['enemies', { kind: 'npMonal', n: 1, len: 6 }],
@@ -698,6 +699,7 @@ const levels = [
           ['ballRide', { gold: 'risky' }],
           ['ballWall', {}],
           'cp',
+          ['itemBlock', { item: 'lsd', y: 4 }],   // an acid tab for the marmot sentinels (Brady: mix up the power-ups)
           // ③ full-size balls and the marmots' whistles
           ['sentinel', { sign: true }],
           ['itemBlock', { item: 'globe', y: 4 }],
