@@ -207,6 +207,8 @@ class Play {
     this.boss = this.entities.find(e => e.boss && !e.remove) || null;
     this.refreshPlatforms();
     Game.setRows(this.viewRows());
+    // secrets: room clocks arm, timers re-base (TourHooks.areaLoaded, 28_tour_a2_hooks.js)
+    if (typeof TourHooks !== 'undefined' && TourHooks.areaLoaded.length) TourHooks.each('areaLoaded', this, this.area);
   }
   /* ---------- camera zoom ----------
      Near (the phone default): 10 tile rows instead of 12, so Brady, the enemies, the items and the hazards are all
@@ -395,11 +397,14 @@ class Play {
     this.secretClear = gate.secret ? (gate.secretWorld || 'world') : null;
     this.secretFoundNow = !!gate.secret;
     this.recordProgress();
+    // secrets: an exit kind's own clear (a warp sends Brady off: TourHooks.levelClear)
+    if (typeof TourHooks !== 'undefined' && TourHooks.levelClear.length) TourHooks.each('levelClear', this, gate);
     for (let i = 0; i < 3; i++) setTimeout(() => { if (Game.scene === this) { this.burst(gate.cx + (Math.random() - 0.5) * 200, gate.y - 40 - Math.random() * 80, 40, '#fff', 'firework'); Sound.play('pick', { pitch: 0.5 }); } }, 400 + i * 450);
   }
   recordProgress() {
     const d = Save.data, id = this.id;
-    d.done[id] = true;
+    // secrets: an exit kind may leave the level not done (TourHooks.exitKind(via, { marksDone: false })); default done
+    if (!(typeof TourHooks !== 'undefined') || TourHooks.marksDone(this.level, this.exitKey)) d.done[id] = true;
     if (this.secretClear) d.secretExits[id] = true;
     this.opened = this.level.tour && typeof TourProgress !== 'undefined' ? TourProgress.complete(id, !!this.secretClear, this.exitKey) : WorldGame.complete(id, !!this.secretClear);
     if (FINALE_LEVELS[id]) d.beatGame = true;
@@ -535,6 +540,8 @@ class Play {
     const k = ty > this.camY ? 7 : 4.5;
     this.camY += (ty - this.camY) * (1 - Math.exp(-dt * k));
     this.camX = clamp(this.camX, 0, maxX);
+    // secrets: a scripted camera (the treasure-map peek) may set camX / camY last (TourHooks.camera)
+    if (typeof TourHooks !== 'undefined' && TourHooks.camera.length) TourHooks.each('camera', this, dt);
   }
 
   /* ---------- update ---------- */
@@ -654,6 +661,8 @@ class Play {
     p.update(dt, inp);
     // collisions
     if (p.state === 'play' && !p.dead) this.collide(p);
+    // secrets: per-frame play hooks (TourHooks.playUpdate, 28_tour_a2_hooks.js)
+    if (typeof TourHooks !== 'undefined' && TourHooks.playUpdate.length) TourHooks.each('playUpdate', this, dt);
     // removals
     for (let i = this.entities.length - 1; i >= 0; i--) { const e = this.entities[i]; if (e.remove) { if (e.onRemove) e.onRemove(); this.entities.splice(i, 1); } }
     // tile animations: bumps and crumbles
@@ -834,9 +843,12 @@ class Play {
     if (A.water) { ctx.setTransform(1, 0, 0, 1, gx, gy); this.drawUnderwater(ctx, VW * S, VH * S); wt(); }
     // contact shadows ground every actor (and lift the ones in the air off the floor)
     this.drawShadows(ctx, layers[1], layers[2], layers[3]);
-    for (let li = 0; li < 3; li++) for (const e of layers[li]) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
+    // secrets: entityDraw handlers may wrap an entity's draw (hats, dancing); afterEntities draws over them (TourHooks)
+    const ed = typeof TourHooks !== 'undefined' && TourHooks.entityDraw.length ? TourHooks : null;
+    for (let li = 0; li < 3; li++) for (const e of layers[li]) { try { if (ed) ed.drawEntity(this, ctx, e); else e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
     this.player.draw(ctx, this.t);
-    for (const e of layers[3]) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
+    for (const e of layers[3]) { try { if (ed) ed.drawEntity(this, ctx, e); else e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
+    if (typeof TourHooks !== 'undefined' && TourHooks.afterEntities.length) { TourHooks.each('afterEntities', this, ctx, layers); wt(); }
     // foreground: water pools, fake walls
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     this.drawTiles(ctx, camX, camY, true);
@@ -1347,7 +1359,9 @@ class Play {
     ctx.font = `${Math.min(38, W * 0.07)}px ${FONT_DISPLAY}`;
     const g = ctx.createLinearGradient(0, H / 2 - 120, 0, H / 2 - 80); g.addColorStop(0, '#fff6c0'); g.addColorStop(1, '#ff4fd8');
     ctx.fillStyle = g;
-    ctx.fillText(this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'CHINKA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'WELCOME HOME!', W / 2, H / 2 - 100);
+    // secrets: an exit kind's title (a warp's own title) or a resultsTitle hook (TourHooks.titleFor)
+    const hookTitle = typeof TourHooks !== 'undefined' ? TourHooks.titleFor(this) : null;
+    ctx.fillText(hookTitle || (this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'CHINKA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'WELCOME HOME!'), W / 2, H / 2 - 100);
     ctx.font = `14px ${FONT_UI}`; ctx.fillStyle = '#ffffff';
     ctx.fillText(this.level.name + ' cleared', W / 2, H / 2 - 66);
     ctx.font = `13px ${FONT_DISPLAY}`;

@@ -602,7 +602,9 @@ class SettingsScene {
     const pw = Math.min(460, W - 40), px = (W - pw) / 2;
     const motionRow = typeof TourKit !== 'undefined';   // Super Brady-O World: a reduced-motion switch
     const tiers = typeof QualityTier !== 'undefined';   // GRAPHICS and FPS COUNTER rows (src/14_quality.js)
-    const nRows = (motionRow ? 8 : 7) + (typeof Play !== 'undefined' && Play.zoomNear ? 1 : 0) + (tiers ? 2 : 0);
+    // secrets: extra rows from TourHooks.settings (WP-5's effects switch): { label, value, fn }
+    const hookRows = typeof TourHooks !== 'undefined' && TourHooks.settings.length ? TourHooks.settings.map(f => { try { return f(this); } catch (err) { TourHooks.fault('settings', err); return null; } }).filter(Boolean) : [];
+    const nRows = (motionRow ? 8 : 7) + (typeof Play !== 'undefined' && Play.zoomNear ? 1 : 0) + (tiers ? 2 : 0) + hookRows.length;
     let y = Math.max(70, insets.t + 64);
     // many rows on a short landscape screen: two columns, so every button stays a comfortable size to tap
     const cols = (H - y - 30) / nRows < 40 && W >= 600 ? 2 : 1, perCol = Math.ceil(nRows / cols);
@@ -624,6 +626,7 @@ class SettingsScene {
       ...(tiers ? [row('GRAPHICS', QualityTier.label() + (QualityTier.auto ? ' (NOW ' + QualityTier.name() + ')' : ''), () => { QualityTier.cycle(); this.build(); }),
         row('FPS COUNTER', st.fps ? 'ON' : 'OFF', () => { st.fps = !st.fps; PerfHud.sync(); this.build(); })] : []),
       ...(motionRow ? [row('MOTION EFFECTS', TourKit.reduceMotion() ? 'REDUCED' : 'FULL', () => { st.reduceMotion = !TourKit.reduceMotion(); this.build(); })] : []),
+      ...hookRows.map(o => row(o.label, o.value, () => { try { o.fn(); } catch (err) { TourHooks.fault('settings', err); } this.build(); })),
       row('RESET PROGRESS', this.confirmReset ? 'TAP AGAIN TO ERASE' : 'ERASE ALL', () => { if (this.confirmReset) { const look = Save.data.look; Save.reset(); Save.data.look = look; Save.save(); this.confirmReset = false; Sound.play('powerdown'); } else this.confirmReset = true; this.build(); })
     ];
     Save.save();
@@ -646,7 +649,10 @@ class SettingsScene {
 function buildPauseUI(play) {
   const W = Game.cssW, H = Game.cssH;
   const bw = Math.min(240, W * 0.6), bh = 44, x = (W - bw) / 2;
-  let y = H / 2 - 100;
+  // secrets: extra pages (WP-5's rules page) from TourHooks.pausePages: { label, fn }, one full-width row each;
+  // the menu moves up half a row per extra row so it still fits a landscape phone
+  const pages = typeof TourHooks !== 'undefined' && TourHooks.pausePages.length ? TourHooks.pausePages.map(f => { try { return f(play); } catch (err) { TourHooks.fault('pausePages', err); return null; } }).filter(Boolean) : [];
+  let y = H / 2 - 100 - pages.length * 27;
   const st = Save.data.settings;
   const list = [
     { x, y, w: bw, h: bh + 4, label: 'RESUME', primary: true, fn: () => play.closePause() },
@@ -666,6 +672,8 @@ function buildPauseUI(play) {
     ...(play.viewRows ? [{ x, y: y += 54, w: bw / 2 - 5, h: bh, label: Play.zoomNear() ? 'ZOOM: NEAR' : 'ZOOM: FAR', size: 11, fn: () => { st.zoom = Play.zoomNear() ? 'far' : 'near'; Save.save(); Game.setRows(play.viewRows()); play.pauseUI = buildPauseUI(play); } }] : []),
     ...(typeof QualityTier !== 'undefined' ? [{ x: play.viewRows ? x + bw / 2 + 5 : x, y: play.viewRows ? y : y += 54, w: play.viewRows ? bw / 2 - 5 : bw, h: bh, label: 'GFX: ' + QualityTier.label(), size: 11, fn: () => { QualityTier.cycle(); play.pauseUI = buildPauseUI(play); } }] : [])
   ];
+  for (const b of pages) list.push(Object.assign({ x, y: y += 54, w: bw, h: bh, size: 12 }, b));
+  list.extraRows = pages.length;
   list.focus = 0;
   return list;
 }
@@ -673,10 +681,11 @@ function drawPauseUI(ctx, play) {
   const W = Game.cssW, H = Game.cssH;
   ctx.save();
   ctx.fillStyle = 'rgba(6,4,14,0.6)'; ctx.fillRect(0, 0, W, H);
-  UI.panel(ctx, W / 2 - Math.min(150, W * 0.4), H / 2 - 160, Math.min(300, W * 0.8), play.pauseUI && play.pauseUI.length > 5 ? 336 : 330);
-  UI.title(ctx, 'PAUSED', W / 2, H / 2 - 130, 24);
+  const xr = (play.pauseUI && play.pauseUI.extraRows) || 0, up = xr * 27;   // rows added by TourHooks.pausePages
+  UI.panel(ctx, W / 2 - Math.min(150, W * 0.4), H / 2 - 160 - up, Math.min(300, W * 0.8), (play.pauseUI && play.pauseUI.length > 5 ? 336 : 330) + xr * 54);
+  UI.title(ctx, 'PAUSED', W / 2, H / 2 - 130 - up, 24);
   ctx.textAlign = 'center'; ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillText(`${play.level.worldName} · ${play.level.name}`, W / 2, H / 2 - 110);
+  ctx.fillText(`${play.level.worldName} · ${play.level.name}`, W / 2, H / 2 - 110 - up);
   UI.drawButtons(ctx, play.pauseUI);
   ctx.restore();
 }
