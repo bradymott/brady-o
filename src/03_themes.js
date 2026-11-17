@@ -782,9 +782,9 @@ const BG = {
     const th0 = THEMES[themeKey], bake = !!(veil && this.bakeable(th0));
     const k = themeKey + '@' + scale.toFixed(2) + (bake ? '|' + veil : '');
     if (this.cache[k]) return this.cache[k];
-    // keep cache small (memory on phones)
+    // keep cache small (memory on phones); the backdrop dropped is freed at once (BG.release)
     const keys = Object.keys(this.cache);
-    if (keys.length >= 2) delete this.cache[keys[0]];
+    if (keys.length >= 2) { this.release(this.cache[keys[0]]); delete this.cache[keys[0]]; }
     const th = THEMES[themeKey];
     const H = VIEW_ROWS * TS; // 448
     const rng = mulberry32(hashStr(themeKey));
@@ -807,7 +807,7 @@ const BG = {
       const px = pc.getContext('2d');
       px.scale(ps, ps); px.translate(0, -top - cut);
       try { BGPaint[L.kind].call(BGPaint, px, spec, mulberry32(hashStr(themeKey + i)), H + 60); } catch (e) { console.warn('bg paint', L.kind, e); }
-      if (L.blur) { ctx.imageSmoothingEnabled = true; ctx.drawImage(pc, 0, 0, c.width, c.height); }
+      if (L.blur) { ctx.imageSmoothingEnabled = true; ctx.drawImage(pc, 0, 0, c.width, c.height); pc.width = pc.height = 1; }   // the small paint is done with
       // ... and a procedural layer's empty rows can be trimmed off too (BG.trimPainted: off, it costs 30-100 ms per
       // backdrop at an area's start on a Mac for well under a millisecond a frame)
       let cv = c, cut2 = cut;
@@ -870,6 +870,13 @@ const BG = {
     }
     this.cache[k] = res;
     return res;
+  },
+  // free a backdrop's own pictures (its layers, sun or moon, stars, clouds): a few screens of canvas each
+  release(bg) {
+    if (!bg || typeof releaseCanvases !== 'function') return;
+    for (const L of bg.layers || []) releaseCanvases(L.canvas);
+    releaseCanvases(bg.cel); releaseCanvases(bg.stars);
+    for (const cl of bg.clouds || []) releaseCanvases(cl && cl.c);
   },
 
   /* lift: logical px the parallax layers are raised by (a zoomed-in game view shows fewer rows: its floor sits
