@@ -388,20 +388,36 @@ const TOUR_OW_MAPS = {
     scenes: { '13-1': 'bowling', '13-2': 'aurora', '13-3': 'station', '13-4': 'walrus', '13-5': 'colony' },
     live: [['seal', 650, 560], ['seal', 940, 880], ['spout', 520, 760], ['walk', 'penguin', [[1200, 600], [1140, 620], [1080, 600]], 6], ['walk', 'penguin', [[350, 700], [290, 720]], 5], ['flakes', 60, 60, 1440, 960, 46], ['circle', 900, 420, 90, 0.9]]
   },
-  // World 22: pastel islands in a violet sea, clocks and crystals, the mirror lake
+  // World 22: floating islands in a starry void laid out like a clock face: the station in the middle, then
+  // six o'clock (the clocks), nine (the corridor of doors), twelve (the mirror lake) and three (the 22nd door);
+  // floating steps join them; the writer's desk drifts at half past ten; an empty island waits at half past one
   w22: {
     labels: { '22-1': 'Clocks', '22-2': 'Corridor', '22-5': "Writer's Desk" },
-    w: 1500, h: 820,
-    pal: { sea: '#5c4ca0', deep: '#2e2460', cliff: '#5a5a8a', path: '#fff0c8' },
-    land: [[[80, 560], [140, 400], [320, 300], [560, 260], [820, 240], [1080, 260], [1320, 330], [1430, 480], [1380, 640], [1180, 720], [900, 760], [600, 760], [320, 740], [130, 680]]],
-    nodes: { start: [190, 600], '22-1': [380, 620], '22-2': [760, 660], '22-3': [1130, 600], '22-4': [770, 380], '22-5': [400, 385], port: [1100, 330, 'n'] },
-    paths: { '22-3>22-4': [[980, 460]], '22-2>22-5': [[560, 520]], '22-4>port': [[940, 330]] },
+    w: 1200, h: 1200,
+    pal: { sea: '#3a2e78', deep: '#160f3a', cliff: '#5a4a8a', path: '#fff0c8', land: '#a0a8cc', light: '#d0d4f0' },
+    sea: 'stars', coast: 'float', trail: 'sparkle', bridge: 'steps', foam: false, birds: false, tufts: 'none', meadow: '#d8ccf0',
+    land: [[[460, 530], [600, 470], [740, 530], [760, 650], [600, 720], [450, 650]],
+      [[470, 900], [600, 850], [740, 900], [740, 990], [600, 1050], [460, 990]],
+      [[120, 540], [250, 490], [370, 540], [380, 640], [250, 700], [120, 650]],
+      [[470, 140], [600, 100], [740, 140], [760, 250], [600, 310], [450, 250]],
+      [[830, 540], [960, 490], [1090, 540], [1090, 650], [960, 700], [830, 650]],
+      [[120, 160], [220, 120], [320, 160], [320, 250], [220, 290], [120, 250]],
+      [[880, 160], [960, 130], [1050, 165], [1050, 240], [960, 270], [880, 235]]],
+    nodes: { start: [540, 570], port: [670, 650], '22-1': [600, 950], '22-2': [260, 600], '22-5': [220, 210], '22-3': [620, 280], '22-4': [960, 620], '22-6': [965, 205] },
+    paths: { 'start>22-1': [[520, 760]], '22-1>22-2': [[380, 820]], '22-2>22-5': [[220, 400]], '22-2>22-3': [[400, 400]], '22-3>22-4': [[830, 400]], '22-4>port': [[820, 690]] },
     feat: [
-      ['lake', [[1200, 480], [1300, 460], [1355, 545], [1285, 610], [1205, 585]]],
-      ['fields', '#c8b8e8', [[480, 600], [640, 560], [700, 700], [520, 720]], ['#d8ccf0', '#b8a8d8'], 0.78, 'bands'],
-      ['trees', 'clock', 560, 330, 80, 4], ['trees', 'crystal', 1000, 680, 80, 5], ['landmark', 600, 520, 56]
+      ['checker', [[490, 540], [600, 500], [710, 545], [720, 640], [600, 690], [480, 640]], ['#e8e0f8', '#7a6ab8'], 24, 0.2],
+      ['lake', [[520, 170], [600, 140], [690, 170], [680, 220], [600, 240], [520, 215]]],
+      ['swirl', 980, 610, 50, '#c8a8ff'], ['swirl', 600, 960, 40, '#ffd86a'],
+      ['sprite', 'melt', 500, 960, 16], ['sprite', 'melt', 700, 990, 14], ['sprite', 'clock', 690, 920, 14],
+      ['sprite', 'door', 160, 600, 14, { v: 0.1 }], ['sprite', 'door', 340, 560, 14, { v: 0.4 }], ['sprite', 'door', 330, 650, 13, { v: 0.7 }], ['sprite', 'stairs', 170, 650, 14],
+      ['sprite', 'crystal', 500, 250, 14], ['sprite', 'crystal', 720, 250, 12], ['sprite', 'crystal', 710, 160, 12],
+      ['sprite', 'cup', 1040, 590, 14], ['sprite', 'stairs', 870, 640, 14], ['sprite', 'crystal', 1060, 640, 12],
+      ['sprite', 'cup', 150, 230, 12], ['sprite', 'crystal', 1000, 220, 14], ['sprite', 'crystal', 920, 225, 10], ['sprite', 'stairs', 1000, 175, 12],
+      ['landmark', 610, 600, 44]
     ],
-    flora: ['crystal', 'clock'], density: 16,
-    scenes: { '22-1': 'clocks', '22-2': 'doors', '22-3': 'mirror', '22-4': 'bigdoor', '22-5': 'desk' }
+    flora: ['crystal', 'clock', 'melt'], density: 18, woods: false,
+    scenes: { '22-1': 'clocks', '22-2': 'doors', '22-3': 'mirror', '22-4': 'bigdoor', '22-5': 'desk' },
+    live: [['clock', 380, 900, 16], ['clock', 860, 880, 12], ['clock', 820, 330, 10], ['plane', 400, 420, 90], ['plane', 860, 900, 60], ['bob', 'rock', 1100, 420], ['bob', 'rock', 90, 880], ['bob', 'rock', 1100, 1000], ['bob', 'rock', 420, 60]]
   }
 };
