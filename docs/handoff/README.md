@@ -63,7 +63,8 @@ If you are running in parallel and #3 hasn't landed yet, the Art Cart agent wait
 ## 4. Brady and Chinka: the appearance rules (latest wins)
 - **Brady:**
   - man bun, hair pulled back with a clean nape (no loose curtain of hair)
-  - dark square sunglasses, stubble
+  - dark square sunglasses, **no stubble** (clean-shaven; Brady's call, 16 Nov 2026, overriding the older docs that say stubble)
+  - his own hair and skin colour; one look only (Super Brady-O World's LOOK picker was removed, 16 Nov 2026)
   - black T-shirt, black trousers and black sneakers (no blue denim)
   - sacred-geometry blackwork sleeve tattoos on both arms, forearms included
 - **Chinka: CONFLICT, ask Brady.** The original spec and ChatGPT's Art Cart notes say long dark wavy hair, sunglasses, a brown tee or top, black leggings, white sneakers and an LED necklace. ChatGPT's Burning Man pass instead gave her ivory fabric, a pleated skirt and gold accents. Show Brady both and let him choose before more Chinka work.

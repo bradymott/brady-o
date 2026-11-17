@@ -794,6 +794,7 @@ const levels = [
         'sig',
         ['mounds'],
         'cp',
+        ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), for hopping the thorns (Brady's request)
         // ② dung beetles: knock the beetle, kick its ball at the hedge
         ['beetleRun', { n: 16, sign: 'STOMP THE BEETLE, THEN KICK ITS BALL AT THE HEDGE' }],
         ['ballPocket'],

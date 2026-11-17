@@ -1135,6 +1135,7 @@ const levels = [
         ['float', { span: 10 }],
         ['enemies', { kind: 'brBrigadeiro', n: 1, len: 12 }],
         'cp',
+        'lsd',   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
         // ② floats step per bar, cannons fire on four
         ['beatFloats', { span: 16, parrot: true }],
         ['beatCannons', { n: 16, enemy: 'brPandeiro' }],
@@ -1142,7 +1143,6 @@ const levels = [
         ['bellGate'],
         // ③ everything at once
         ['lightFloor', { n: 9, float: true, cannon: true }],
-        'lsd',
         ['beatFloats', { span: 13 }],
         ['drumChain', { n: 6, gold: 'risky' }],
         ['enemies', { kind: 'brBrigadeiro', n: 1, len: 10 }],
@@ -1174,6 +1174,7 @@ const levels = [
         ['slothGrove', { n: 2, sign: 'SLOTHS DROP WHEN YOU WALK UNDER. WAIT FOR THE SHAKE!' }],
         ['caimans', { n: 3 }],
         'cp',
+        ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), early in the land (Brady's request)
         ['leapers', { span: 9 }],
         ['slothGrove', { n: 3 }],
         ['step', { h: -2 }],
@@ -1302,13 +1303,13 @@ const levels = [
         ['isle', { gap: 4, gy: 13, w: 6, enemy: 'brGull', tight: true }],
         ['isle', { gap: 7, gy: 26, w: 5, gold: ['risky', 2, -2], ring: false, tight: true }],
         ['thermalLift', { w: 3, top: 8, bottom: 32, tight: true }],
-        ['isle', { gy: 14, w: 8, stand: true, decor: 'brBeachSet', tight: true }],
+        ['isle', { gy: 14, w: 8, stand: true, decor: 'brBeachSet', item: 'lsd', tight: true }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
         ['cp', { tight: true }],
         ['isle', { gap: 4, gy: 12, w: 7, enemy: 'brKite', tight: true }],
         // ③ the volleyball net throws you high; a long glide through the rings to the beach
         ['volleyIsland', { gap: 2, gy: 12, tight: true }],
         ['isle', { gap: 1, gy: 5, w: 6, enemy: 'brKite', tight: true }],
-        ['isle', { gap: 7, gy: 14, w: 7, coconut: true, item: 'lsd', stand: true, tight: true }],
+        ['isle', { gap: 7, gy: 14, w: 7, coconut: true, stand: true, tight: true }],
         ['thermalLift', { w: 3, top: 5, bottom: 24, tight: true }],
         ['isle', { gy: 10, w: 5, enemy: 'brSwift', tight: true }],
         ['beachFinale', { gap: 6, gy: 13, tight: true }]

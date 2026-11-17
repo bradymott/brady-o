@@ -5,6 +5,7 @@
 // Exits 1 if any check fails (part of the regular suite: docs/handoff/SUPER_BRADY_O_WORLD.md).
 // Full resolution is pinned before every capture (the adaptive quality would otherwise drop it on a busy machine).
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const out = path.resolve(process.argv[2] || path.join(__dirname, '..', 'shots', 'lab'));
 const flags = process.argv.slice(3).filter(a => a.startsWith('--')), want = process.argv.slice(3).filter(a => !a.startsWith('--'));
@@ -18,7 +19,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await silence(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -414,7 +415,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       { const [g, p] = hall(); const e = put(g, 'lab_swarm', 26, 10); at(p, 5); sim(1); out.swarm = { followers: g.entities.filter(o => o.constructor.name === 'TourSwarmling').length }; }
       { const [g, p] = hall(); const e = put(g, 'lab_platEater', 30, 3); at(p, 12); sim(4); out.platEater = { eaten: g.entities.filter(o => o.constructor.name === 'TourRegrow').length }; }
       { const [g, p] = hall(); const a = put(g, 'lab_alarmCaller', 25, 10, { dir: -1 }); const sl = put(g, 'lab_sleeper2', 35, 10); a.cool = 0; at(p, 22); out.alarm = watch(a, 3); out.woke = sl.bst; }
-      { const [g, p] = hall(); const e = put(g, 'lab_frostBreath', 24, 10); e.cool = 0; at(p, 21); let frozen = false; out.frostBreath = watch(e, 3.5, () => { if (p.frozenT > 0) frozen = true; }); out.frozen = frozen; }
+      { const [g, p] = hall(); const e = put(g, 'lab_frostBreath', 24, 10); e.cool = 0; at(p, 21); let frozen = false; out.frostBreath = watch(e, 3.5, () => { if (p.frozenT > 0) frozen = true; }); out.frozen = frozen;
+        // a second breath freezes him again (the freeze once used a timer nothing ran down, so it worked once a level)
+        sim(1.5); e.cool = 0; e.bst = 'walk'; at(p, 21); let again = false; watch(e, 3.5, () => { if (p.stunT > 0.3) again = true; }); out.frozenAgain = again; }
       { const [g, p] = hall(); const e = put(g, 'lab_lightFrozen', 36, 10); at(p, 5); sim(0.5); const far = e.bst; at(p, Math.floor(e.cx / 32) - 2); sim(0.3); out.lightFrozen = { far, near: e.bst }; }
       { const [g, p] = hall(); const e = put(g, 'lab_inkBlot', 23, 10); e.cool = 0; at(p, 20); out.inkBlot = watch(e, 1.5); out.blots = (g.inkBlots || []).length; }
       { const [g, p] = hall(); g.picks = 20; const e = put(g, 'lab_tongue', 23, 10); e.cool = 0; at(p, 20); out.tongue = watch(e, 1.5); out.coins = g.picks; }
@@ -448,6 +451,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     check('plat eater: eats one-way tiles that regrow', r.platEater.eaten >= 1, r.platEater);
     check('alarm caller: tell, call, the sleeper wakes', has(r.alarm, 'tell', 'call') && r.woke !== 'sleep', { alarm: r.alarm, woke: r.woke });
     check('frost breath: tell, breathe (Brady frozen), pant', has(r.frostBreath, 'tell', 'breathe', 'pant') && r.frozen, r.frostBreath);
+    check('frost breath: a second breath freezes Brady again', r.frozenAgain, { again: r.frozenAgain });
     check('light frozen: walks in the dark, a statue in the light', r.lightFrozen.far !== 'statue' && r.lightFrozen.near === 'statue', r.lightFrozen);
     check('ink blot: tell, squirt (a blot on the view)', has(r.inkBlot, 'tell', 'squirt') && r.blots === 1, r.inkBlot);
     check('tongue: tell, lash (takes coins)', has(r.tongue, 'tell', 'lash') && r.coins < 20, { seq: r.tongue, coins: r.coins });

@@ -36,8 +36,10 @@ class TourItem extends Ent {
     this.t += dt;
     // the pop (ItemSpace picks the open side when the block has a solid over it)
     if (this.emerge > 0) { if (ItemSpace.emergeStep(this, dt)) { this.vx = this.speedX ? ItemSpace.walkDir(this, this.g) * this.speedX : 0; this.hoverY = this.y; ItemSpace.keepFree(this, !this.speedX); } return; }
-    // the joint, the LSD tab and souvenirs hover where they came out (never inside a solid, bob included)
-    if (!this.speedX) { if (this.kind === 'lsd') this.x += Math.sin(this.t * 1.3) * 0.15; ItemSpace.keepFree(this, true); this.y = this.hoverY + Math.sin(this.t * 2.2) * 4; return; }
+    // the joint, the LSD tab and souvenirs hover where they came out (never inside a solid, bob included). The LSD tab
+    // sways about 14 px either side of where it came out, on its own clock from the pop (it used to step 0.15 px a frame
+    // from the entity's random clock, so its swing was centred up to 14 px off to one side, differently every time)
+    if (!this.speedX) { if (this.kind === 'lsd') { this.swayT = (this.swayT || 0) + dt; this.x += Math.cos(this.swayT * 1.3) * 18 * dt; } ItemSpace.keepFree(this, true); this.y = this.hoverY + Math.sin(this.t * 2.2) * 4; return; }
     ItemSpace.keepFree(this, false);
     this.vy += PHYS.gDown * 0.8 * dt; if (this.vy > 14 * TS) this.vy = 14 * TS;
     const vx = this.vx;

@@ -157,8 +157,141 @@ const stamps = {
   }
 };
 
+/* ---------- 6-2: the pintxos bar and the inside of its wall ----------
+   Two maps on top of each other, 90 x 24 each: the bar (barra) and the cavity inside its back wall (pared). Racks of
+   wine bottles from floor to ceiling cut the bar into three parts (the start, the middle counter with its shelf, the
+   far end with the top shelf and the last pintxo); in the wall, wiring, a fat pipe and wedged corks cut it up in
+   other places. Every mouse hole in the bar opens straight into the wall behind it at the same spot, and back. The
+   corkscrew on the middle shelf opens the cork that plugs the wall's top ledge, the only way up to the top shelf. */
+const BW = 90, BH = 24, BF = 21;
+// the bar's racks of wine bottles, floor to ceiling (a solid prop)
+if (typeof Decor !== 'undefined') Decor.esBottleRack = (ctx, x, y, t, th, d) => {
+  const w = d.w, h = d.h, x0 = x - w / 2, cols = ['#2a6a3a', '#5a1a2a', '#8a6a2a', '#2a4a6a'];
+  ctx.fillStyle = '#6a4228'; ctx.fillRect(x0, y - h, w, h);
+  for (let yy = y - 6; yy > y - h + 10; yy -= 44) {
+    ctx.fillStyle = '#8a5a34'; ctx.fillRect(x0, yy, w, 6);
+    for (let k = 0; k < Math.floor(w / 16); k++) { const bx = x0 + 8 + k * 16, c = cols[(k + Math.floor(yy / 44)) % 4]; ctx.fillStyle = c; rr(ctx, bx - 6, yy - 30, 12, 30, 4); ctx.fill(); ctx.fillRect(bx - 2.5, yy - 40, 5, 12); ctx.fillStyle = '#f4e8d0'; ctx.fillRect(bx - 5, yy - 20, 10, 8); ctx.fillStyle = '#c8302a'; ctx.fillRect(bx - 3, yy - 42, 6, 4); }
+  }
+};
+if (typeof TourMaze !== 'undefined') TourMaze.addKeys({
+  esCorkscrew: { name: 'CORKSCREW', toast: 'A CORKSCREW! THERE IS A CORK STUCK SOMEWHERE IN THE WALL...', col: '#c8c8d8', glow: '#f4f0ff',
+    icon: (c, x, y) => { c.fillStyle = '#8a5226'; rr(c, x - 12, y - 12, 24, 7, 3); c.fill(); c.strokeStyle = '#c8ccd8'; c.lineWidth = 3; c.beginPath(); for (let k = 0; k <= 12; k++) { const yy = y - 5 + k * 1.4; c.lineTo(x + Math.sin(k * 1.2) * 4, yy); } c.stroke(); } },
+  esCork: { name: 'CORK', icon: (c, x, y) => { c.fillStyle = '#c8945a'; rr(c, x - 9, y - 12, 18, 24, 4); c.fill(); c.fillStyle = '#a8743a'; for (let k = 0; k < 5; k++) { c.beginPath(); c.arc(x - 4 + (k % 3) * 4, y - 8 + k * 4, 1.3, 0, TAU); c.fill(); } } }
+});
+// the cork wedged in the wall's top ledge: a big cork with a hole for the corkscrew, pulled out when Brady has one
+class EsCorkPlug extends ENTITY_TYPES.mazeShutter {
+  draw(ctx) {
+    const k = this.open ? clamp(1 - (this.openT || 0) / 0.6, 0, 1) : 0, x = this.x + 6, y = this.y - k * 40, w = TS, h = this.h;
+    ctx.save(); ctx.globalAlpha = 1 - k;
+    Ink.around(ctx, x - 6, y - 6, w + 12, h + 12, c => {
+      c.fillStyle = '#c8945a'; rr(c, x - 2, y, w + 4, h, 8); c.fill();
+      c.fillStyle = '#a8743a'; for (let q = 0; q < 14; q++) { c.beginPath(); c.arc(x + 4 + (q * 7) % (w - 6), y + 8 + (q * 13) % (h - 14), 1.6, 0, TAU); c.fill(); }
+      c.fillStyle = '#5a3a1a'; c.beginPath(); c.arc(x + w / 2, y + 10, 4, 0, TAU); c.fill();
+    }, { pad: 4 });
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.esCorkPlug = EsCorkPlug;
+const grid = (fillCh) => Array.from({ length: BH }, (_, y) => Array.from({ length: BW }, (_, x) => (y >= BF || x === 0 || x === BW - 1) ? '#' : fillCh));
+const putter = g => ({
+  put: (x, y, s) => { for (let k = 0; k < s.length; k++) g[y][x + k] = s[k]; },
+  fill: (x0, y0, x1, y1, ch) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) g[y][x] = ch; }
+});
+// the bar: three parts between two racks of bottles
+const barRows = (() => {
+  const g = grid('.'), { put, fill } = putter(g);
+  fill(1, 0, BW - 2, 0, '#');                       // the ceiling (the racks reach it)
+  put(30, 20, 'R'); put(60, 20, 'R');               // the two racks of bottles, floor to ceiling (x 30-33 and 60-63)
+  // part 1: the start, a power-up, the Crawl Pads, the first mouse hole
+  put(3, 20, '@'); put(5, 17, '?'); put(8, 20, 'p'); put(12, 20, 'D1'); put(17, 20, 'i'); put(22, 20, 'e');
+  put(14, 16, 'o.o.o');
+  // part 2: the middle counter, the bread steps up to the shelf, the corkscrew, a star, two mouse holes
+  put(36, 20, 'n'); put(54, 20, 'f'); put(56, 20, 'D2');
+  fill(36, 15, 58, 15, '-'); put(40, 14, 'D3'); put(46, 11, '?'); put(50, 14, 'k'); put(54, 12, '*');
+  put(43, 12, 'o.o');
+  // part 3: the far counter (a mouse hole from the wall, beans, a hidden 1UP, the cheese wedge), the top shelf and the gate
+  put(64, 20, '5D'); put(68, 17, '?'); put(70, 17, 'h'); put(73, 20, 'q');
+  fill(64, 8, 88, 8, '#'); put(66, 7, 'D4'); put(85, 7, 'G'); put(72, 5, 'o.o.o.o'); put(78, 7, 'e');
+  return g.map(r => r.join(''));
+})();
+// the wall: wiring to crawl under, the fat pipe and its walkway, wedged corks, the top ledge plugged by a cork
+const wallRows = (() => {
+  const g = grid('.'), { put, fill } = putter(g);
+  fill(1, 0, BW - 2, 0, '#');
+  // part 1: under the first mouse hole, the wiring (a crawlway) and the steps up to the walkway on the pipe
+  put(12, 20, 'D1'); fill(14, 1, 15, 18, '#'); put(14, 19, 'TT');
+  fill(17, 19, 17, 20, '#'); fill(19, 17, 19, 20, '#');
+  fill(20, 15, 62, 15, '#');                        // the walkway on the pipe
+  fill(46, 16, 49, 20, '#');                        // the fat pipe down to the floor
+  put(40, 14, 'D3'); put(47, 12, '%'); put(30, 17, 'm'); put(26, 12, 'o.o.o');
+  // part 2: the floor past the pipe, a cork step back up to the walkway, the second and fifth mouse holes
+  fill(52, 17, 53, 20, '#'); put(56, 20, 'D2'); put(64, 20, '5D'); put(60, 20, 'e');
+  // corks wedged in the wall as ledges up to the top ledge
+  fill(80, 17, 82, 17, '-'); fill(84, 14, 86, 14, '-'); fill(80, 11, 82, 11, '-');
+  fill(60, 8, 79, 8, '#'); put(66, 7, 'D4'); put(72, 7, 'K'); fill(72, 1, 72, 4, '#'); put(76, 4, 'm'); put(68, 5, 'o.o');
+  return g.map(r => r.join(''));
+})();
+const hole = (to, back) => ({ to: to, look: back ? 'esHoleBack' : 'esMouseHole' });
+const barStamp = {
+  floor: BF, rows: barRows,
+  legend: {
+    R: ['piece', (st) => { st.B.prop('esBottleRack', st.x, 1, 4, BF - 1, 'body', {}); return st.x; }],
+    p: ['gear', 'pads'], n: ['piece', 'breads', { n: 3 }], k: ['spawn', 'key', { id: 'corkscrew', look: 'esCorkscrew' }],
+    q: ['piece', 'cheese', { to: 'queso@in', back: 'quesoBack' }],
+    e: ['enemy', 'esGamba'], f: ['enemy', 'esOlive'],
+    i: ['spawn', 'sign', { text: 'EVERY MOUSE HOLE IN THE BAR GOES STRAIGHT INTO THE WALL BEHIND IT. THE WALL IS A WHOLE OTHER BAR. (FOR MICE.)' }],
+    1: ['anchor', 'b1'], 2: ['anchor', 'b2'], 3: ['anchor', 'b3'], 4: ['anchor', 'b4'], 5: ['anchor', 'b5']
+  },
+  items: ['star', 'power', 'beans'], hidden: ['oneup'],
+  doors: [hole('pared@w4'), hole('pared@w3'), hole('pared@w1'), hole('pared@w2'), hole('pared@w5')],   // in reading order
+  gold: { '*': 'must' }
+};
+const wallStamp = {
+  floor: BF, rows: wallRows,
+  legend: {
+    K: ['piece', TourMaze.lock('esCorkPlug', { col: '#c8945a', peek: null, need: 'A CORK IS STUCK HERE. IT NEEDS A CORKSCREW' }), { id: 'corkscrew' }],
+    m: ['enemy', 'esBat'], e: ['enemy', 'esGamba'],
+    1: ['anchor', 'w1'], 2: ['anchor', 'w2'], 3: ['anchor', 'w3'], 4: ['anchor', 'w4'], 5: ['anchor', 'w5']
+  },
+  doors: [hole('barra@b4', true), hole('barra@b3', true), hole('barra@b1', true), hole('barra@b2', true), hole('barra@b5', true)],
+  gold: { '%': 'risky' }
+};
+// the inside of the bar's wall (6-2's second map): wooden studs and lath with blobs of plaster, a copper pipe and
+// wires along it, lost corks and a mouse's matchbox bed. Warm and dim, never a cave.
+if (typeof BGPaint !== 'undefined') BGPaint.esLath = function (ctx, L, rng, H) {
+  ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
+  for (let y = 6; y < H; y += 22) { ctx.fillStyle = y % 44 ? '#6a4228' : '#5e3a22'; ctx.fillRect(0, y, BG_W, 14); ctx.fillStyle = 'rgba(240,230,210,0.35)'; for (let x = (y * 7) % 37; x < BG_W; x += 30 + (x * 13) % 40) { ctx.beginPath(); ctx.ellipse(x, y + 16, 7, 4, 0, 0, TAU); ctx.fill(); } }
+  for (let x = 40; x < BG_W; x += 170) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(x, 0, 26, H); ctx.fillStyle = '#6a4228'; ctx.fillRect(x + 20, 0, 6, H); }
+  const py = L.base - 120; ctx.fillStyle = '#c87a3a'; ctx.fillRect(0, py, BG_W, 12); ctx.fillStyle = '#e8a060'; ctx.fillRect(0, py + 2, BG_W, 3);
+  for (let x = 90; x < BG_W; x += 210) { ctx.fillStyle = '#a85a2a'; ctx.fillRect(x, py - 3, 10, 18); }
+  ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 3; ctx.beginPath(); for (let x = 0; x <= BG_W; x += 16) ctx.lineTo(x, py + 40 + Math.sin(x * 0.03) * 10); ctx.stroke();
+  ctx.strokeStyle = '#c8302a'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = 0; x <= BG_W; x += 16) ctx.lineTo(x, py + 50 + Math.sin(x * 0.025 + 1) * 12); ctx.stroke();
+  for (let k = 0; k < 6; k++) { const x = 70 + k * 165 + rng() * 40, y = L.base - 30 - rng() * 200; ctx.fillStyle = '#c8945a'; rr(ctx, x - 6, y - 9, 12, 18, 3); ctx.fill(); }
+  const bx = 600; ctx.fillStyle = '#e8c050'; ctx.fillRect(bx, L.base - 22, 54, 20); ctx.fillStyle = '#c8302a'; ctx.fillRect(bx, L.base - 22, 54, 5); ctx.fillStyle = '#f4f0e8'; ctx.fillRect(bx + 6, L.base - 28, 40, 8); ctx.fillStyle = '#c8302a'; ctx.fillRect(bx + 6, L.base - 28, 14, 8);
+};
+if (THEMES.es_pintxos) THEMES.es_pared = Object.assign({}, THEMES.es_pintxos, {
+  name: 'Inside the Wall', particles: 'dust', rays: null, sky: ['#2a1a12', '#3a2418', '#4a2e1e'], horizonGlow: '#c8945a',
+  layers: [{ kind: 'esLath', color: '#3a2418', base: 360, f: 0.06 }],
+  ground: { style: 'rock', cap: '#8a5a34', capHi: '#b8844a', dirt: '#5e3a22', dirt2: '#4a2e1a', rock: '#6a4228' },
+  hard: { c1: '#c87a3a', c2: '#8a4a22' }, semi: { style: 'plank', c1: '#c8945a', c2: '#8a6a3a' },
+  fog: '#c8945a', darkness: 0.25, decor: []
+});
+// the mouse hole seen from inside the wall: bar light spilling through an arched hole, a chalk arrow, a crumb on the sill
+const wallSkins = {
+  esHoleBack(ctx, e, t) {
+    const x = e.cx, y = e.y + e.h;
+    ctx.fillStyle = 'rgba(255,220,150,0.18)'; ctx.beginPath(); ctx.moveTo(x - 16, y); ctx.lineTo(x - 30, y - 6); ctx.lineTo(x + 30, y - 6); ctx.lineTo(x + 16, y); ctx.fill();
+    ctx.fillStyle = '#ffe8b0'; ctx.beginPath(); ctx.arc(x, y, 16, Math.PI, TAU); ctx.fill();
+    ctx.fillStyle = '#f4c84a'; ctx.beginPath(); ctx.arc(x, y, 11, Math.PI, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(240,240,230,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 8, y - 30); ctx.lineTo(x + 8, y - 30); ctx.moveTo(x + 2, y - 35); ctx.lineTo(x + 8, y - 30); ctx.lineTo(x + 2, y - 25); ctx.stroke();
+    ctx.fillStyle = '#e8c070'; ctx.beginPath(); ctx.arc(x + 12, y - 2, 2.5, 0, TAU); ctx.fill();
+  }
+};
+stamps.barra = barStamp;
+stamps.pared = wallStamp;
+
 Tour.amend('es', {
-  stamps,
+  stamps, skins: wallSkins,
   levels: [
     /* 6-1 HOLD: three plazas of the tomato fight in Buñol */
     { n: 1, name: 'La Tomatina', mapLabel: 'Tomatina', arch: 'hold', theme: 'es_tomatina',
@@ -191,34 +324,15 @@ Tour.amend('es', {
 
     /* 6-2 MINI: tiny Brady on a giant pintxos bar in San Sebastián */
     { n: 2, name: 'Pintxos Bar', mapLabel: 'Pintxos', arch: 'mini', theme: 'es_pintxos',
-      gimmick: 'Brady is pocket-sized on a giant bar counter: toothpick bridges, bread-slice steps, an olive-oil slick, a salt shaker to climb',
-      hint: 'Crawl Pads: hold DOWN and walk to crawl through low holes',
+      gimmick: 'Brady is pocket-sized in a pintxos bar, and the bar has a second bar inside its wall: every mouse hole leads straight through to the other side',
+      hint: 'Racks of bottles block the bar; the wall behind it is blocked in other places. Weave in and out through the mouse holes. A corkscrew opens the stuck cork',
       postcard: 'Everything here is on a toothpick. Even me, nearly. ♥ C',
-      enemies: [['esOlive', 2], ['esGamba', 2], ['esPulpo', 1]],
+      enemies: [['esOlive', 2], ['esGamba', 2], ['esBat', 2]],
       mapCell: [1, 0], mapFrom: 0,
       exits: { main: { to: '6-3' }, secret: { to: 'house:es-pintxos', hint: 'A mouse hole at the foot of the cheese wedge...' } },
       areas: [
-        { id: 'barra', gen: 'strip', W: 200, H: 22, script: [
-          // ① toothpicks and bread
-          ['itemBlock', { item: 'power', y: 4 }],
-          ['breads', { n: 3 }],
-          ['toothpicks', { n: 2, enemy: 'esGamba' }],
-          ['shaker', { gold: 'must' }],
-          ['gearStand', { item: 'wand' }],
-          // ② the oil slick and rolling olives
-          ['oilSpill', { n: 10, olives: 2 }],
-          ['breads', { n: 4, seed: 2, enemy: 'esPulpo' }],
-          ['gearStand', { item: 'pads' }],
-          ['cheese', { to: 'queso@in', back: 'quesoBack' }],
-          // ③ more toothpicks, the octopus, the tortilla flipper
-          ['toothpicks', { n: 3, w: 4 }],
-          ['enemies', { kind: 'esPulpo', n: 1 }],
-          ['oilSpill', { n: 8 }],
-          ['pancake', {}],
-          ['postcard', { kind: 'risky', dx: -3, dy: -9 }],
-          ['enemies', { kind: 'esGamba', n: 2 }],
-          ['end', { exit: 'main' }]
-        ] },
+        { id: 'barra', gen: 'room', theme: 'es_pintxos', stamp: 'barra' },
+        { id: 'pared', gen: 'room', role: 'sub', theme: 'es_pared', stamp: 'pared' },
         { id: 'queso', gen: 'room', role: 'secret', theme: 'es_pintxos', stamp: 'queso' }
       ] },
 
@@ -244,12 +358,12 @@ Tour.amend('es', {
           'bats',
           'drop',
           ['secretDoor', { to: 'umbracle@in', look: 'curtain', skin: 'esArchCurtain', back: 'umbBack' }],
+          ['itemBlock', { item: 'lsd', y: 5 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           // ③ all of it together, bats swooping
           ['ribs', { n: 4 }],
           ['lights', { n: 5 }],
           'eyelid',
           'bats',
-          ['itemBlock', { item: 'lsd', y: 5 }],
           'drop',
           ['end', { exit: 'main' }]
         ] },

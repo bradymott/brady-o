@@ -512,7 +512,7 @@ class TourMapScene {
     ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(3, 12); ctx.lineTo(7, 12); ctx.lineTo(5, 0); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-16, -8); ctx.lineTo(-12, -8); ctx.lineTo(-8, 0); ctx.fill();
     ctx.fillStyle = '#38c8ff'; ctx.beginPath(); ctx.ellipse(6, -2, 4, 2.6, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = HAIR_COLORS[(Save.data && Save.data.look && Save.data.look.hair) || 0].base; ctx.beginPath(); ctx.arc(4, -6, 2.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = HAIR_COLORS[BRADY_LOOK.hair].base; ctx.beginPath(); ctx.arc(4, -6, 2.6, 0, TAU); ctx.fill();
     ctx.fillStyle = '#ffd84a'; ctx.fillRect(14, -1.5, 3, 3);
     ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.5; const pr = Math.sin(this.t * 40) * 6; ctx.beginPath(); ctx.moveTo(17, -pr); ctx.lineTo(17, pr); ctx.stroke();
     ctx.restore();
