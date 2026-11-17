@@ -8346,7 +8346,7 @@ const SIGN_TEXTS = [
   'Up on a porta-potty door to step through. Hold your breath.',
   'Tap jump again in mid-air to headbang. Spikes hate that.',
   'Your pack holds one spare power-up. Tap it when you need it.',
-  'Welcome home!'
+  'Next stop: the whole wide world!'
 ];
 
 function levelDifficulty(w, i) {
@@ -13843,6 +13843,8 @@ class Play {
     Input.setMode('game');
     Sound.setTempoBoost(false);
     this.mus(this.area.music);
+    // world tour: the powers Brady finished his last level with (28_tour_dk_carry.js)
+    if (typeof TourCarry !== 'undefined') TourCarry.start(this, opts);
   }
 
   /* ---------- area management ---------- */
@@ -15043,7 +15045,7 @@ class Play {
     ctx.fillStyle = g;
     // secrets: an exit kind's title (a warp's own title) or a resultsTitle hook (TourHooks.titleFor)
     const hookTitle = typeof TourHooks !== 'undefined' ? TourHooks.titleFor(this) : null;
-    ctx.fillText(hookTitle || (this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'CHINKA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'WELCOME HOME!'), W / 2, H / 2 - 100);
+    ctx.fillText(hookTitle || (this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'CHINKA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'YOU DID IT!'), W / 2, H / 2 - 100);
     ctx.font = `14px ${FONT_UI}`; ctx.fillStyle = '#ffffff';
     ctx.fillText(this.level.name + ' cleared', W / 2, H / 2 - 66);
     ctx.font = `13px ${FONT_DISPLAY}`;
@@ -23391,6 +23393,143 @@ const BoxOpen = {
 }
 try { window.BRADY_POWERS = Object.assign(window.BRADY_POWERS || {}, { BoxOpen }); } catch (e) { /* not in a browser */ }
 
+/* ---- 28_tour_dk_carry.js ---- */
+/* ============================================================
+   World tour: powers carry from one level to the next.
+   When Brady clears a level (any exit, boss levels included), what
+   he holds is written to the save (Save.data.tour.carry); the next
+   tour level he starts fresh (from the map, NEXT, PLAY AGAIN or
+   RESTART LEVEL) gives it back:
+   - FORM: big (magic mushroom) or the joint (smoke puffs); the
+     Hydration Station gift and opts.power still apply (the larger
+     one wins);
+   - HANDS: the gear item (with its uses left) or the country's
+     signature item (with its time left: the carpet, the chili);
+   - FEET: the jump power (Spring Socks, Pound Cake, Magic Beans,
+     with a full gas meter);
+   - BUFFS: the magnet and sundial timers, the time left;
+   - TIMED: the LSD flight, the invincibility star and the trip
+     colours (the mushroom's dizzy colours, the joint's green
+     moment): the time left when he touched the exit;
+   - the power picker's choice (which power THROW uses).
+   Not here: the Backpack (already kept in Save.data.pack, live,
+   through deaths and between levels, as before), the kandi
+   bracelet (the gift gives one at every level start, as before),
+   keys, boxes, rides, lives, coins and score (level-bound or
+   already global).
+   Rules:
+   - a death keeps the in-level rules: Brady respawns small with
+     nothing (a respawn is a Play built with opts.checkpoint, also
+     after GAME OVER -> CONTINUE); the stored carry is untouched;
+   - quitting (WORLD MAP, RESTART LEVEL) or GAME OVER -> MAP leave
+     the stored carry as it was when he entered: re-entering gives
+     it again (no way to lose or to farm powers by quitting);
+   - a clear always overwrites it (a replayed level too);
+   - parking: a level that starts on a moving ride (an autoscroll:
+     boats, trains, the gondola, the surf) or underwater would
+     waste or misuse a flight (the LSD tab, a flying signature
+     item: he would float off the boat), so those wait in the carry
+     (carry.parked) and come back at the next level that starts on
+     foot. A parked signature item waits until his hands are free
+     at a level start.
+   Everything else that limits a power is already in the engine
+   (jump powers off while carrying a box, bounded in boss arenas).
+   ============================================================ */
+const TourCarry = {
+  TIMED: ['star', 'lsd', 'dizzy', 'joint'],
+  // the store in the save (null when there is none: an old save, a new game)
+  get() { const T = Save.data && Save.data.tour; const c = T && T.carry; return c && typeof c === 'object' ? c : null; },
+  set(c) { const T = typeof TourProgress !== 'undefined' ? TourProgress.data() : (Save.data.tour || (Save.data.tour = {})); T.carry = c; },
+  // the start area of a level: a ride or autoscroll (the screen moves on its own) or underwater: no flight at the start
+  noFlightStart(level) {
+    const s = level && level.start, a = s && level.areas && level.areas[s.area || 0];
+    if (!a) return false;
+    return !!(a.autoscroll || a.water || a.gen === 'ride' || a.gen === 'rail' || a.gen === 'swim');
+  },
+  flightSig(sig) { const P = sig && typeof TourPowers !== 'undefined' ? TourPowers.get(sig.id) : null; return !!(P && P.flight); },
+  round(x) { return Math.round(x * 100) / 100; },
+  // what Brady holds right now (a plain object, JSON-safe)
+  snapshot(play) {
+    const p = play.player, c = { v: 1, from: play.id };
+    if (!p) return c;
+    c.power = p.power > 0 ? p.power : 0;
+    if (p.star > 0) c.star = this.round(p.star);
+    if (p.lsdT > 0) c.lsd = this.round(p.lsdT);
+    if (play.dizzy > 0) c.dizzy = this.round(play.dizzy);
+    if (play.tripJoint > 0) c.joint = this.round(play.tripJoint);
+    if (p.hands && p.hands.id) c.hands = { id: p.hands.id, uses: p.hands.uses || 0 };
+    else if (p.sig && p.sig.id) c.sig = { id: p.sig.id, t: this.round(p.sig.t || 0), n: p.sig.n || 0 };
+    if (p.jumpPow && p.jumpPow.id) c.jump = { id: p.jumpPow.id };
+    if (p.buffs) { const b = {}; let any = false; for (const k in p.buffs) if (p.buffs[k] > 0) { b[k] = this.round(p.buffs[k]); any = true; } if (any) c.buffs = b; }
+    if (play.powHist && play.powHist.length) c.pick = { hist: play.powHist.slice(-12), seq: Object.assign({}, play.powSeq || {}), n: play.powN || 0 };
+    // what waited in the carry during this level comes along (the slot is free again, or it waits on)
+    const pk = play.carryParked;
+    if (pk) {
+      if (pk.lsd > 0) c.lsd = Math.max(c.lsd || 0, pk.lsd);
+      if (pk.sig) { if (!c.hands && !c.sig) c.sig = pk.sig; else c.parked = { sig: pk.sig }; }
+    }
+    return c;
+  },
+  // split a stored carry for this level: what Brady gets now, and what waits
+  split(c, level) {
+    const now = Object.assign({}, c), park = {};
+    delete now.parked;
+    const noFly = this.noFlightStart(level);
+    if (noFly && now.lsd > 0) { park.lsd = now.lsd; delete now.lsd; }
+    if (now.sig && noFly && this.flightSig(now.sig)) { park.sig = now.sig; delete now.sig; }
+    const ps = c.parked && c.parked.sig;
+    if (ps) {
+      if (!now.sig && !now.hands && !(noFly && this.flightSig(ps))) now.sig = ps;
+      else if (!park.sig) park.sig = ps;
+    }
+    return { now, park: (park.lsd > 0 || park.sig) ? park : null };
+  },
+  // Play's constructor calls this last (12_play.js)
+  start(play, opts) {
+    if (!play.level || !play.level.tour) return;
+    const c = this.get();
+    if (!c) return;
+    const respawn = !!opts && Object.prototype.hasOwnProperty.call(opts, 'checkpoint');
+    const sp = this.split(c, play.level);
+    // a respawn: the in-level rules (Brady comes back small with nothing); only what waits keeps waiting
+    if (respawn) { play.carryParked = sp.park; return; }
+    play.carryParked = sp.park;
+    const got = this.apply(play, sp.now);
+    if (got && play.toast) play.toast(sp.park ? 'POWERS KEPT! (SOME WAIT FOR THE NEXT LEVEL)' : 'POWERS KEPT FROM THE LAST LEVEL!');
+    else if (sp.park && play.toast) play.toast('YOUR TRIP WAITS FOR THE NEXT LEVEL');
+    play.carryApplied = sp.now;
+  },
+  // give Brady a loadout; true if anything was given
+  apply(play, c) {
+    const p = play.player; if (!p || !c) return false;
+    let got = false;
+    const pw = Math.min(2, Math.floor(+c.power || 0));   // 0 small, 1 big, 2 the joint
+    if (pw > 0 && pw > p.power) { p.setPower(pw, true); got = true; }
+    if (c.hands && typeof TourGear !== 'undefined' && TourGear.get(c.hands.id)) { p.hands = { id: c.hands.id, uses: c.hands.uses || 0, t: 0, cool: 0 }; p.sig = null; got = true; }
+    else if (c.sig && typeof TourPowers !== 'undefined' && TourPowers.get(c.sig.id)) { p.sig = { id: c.sig.id, t: c.sig.t || 0, n: c.sig.n || 0 }; p.hands = null; got = true; }
+    if (c.jump && typeof TourJump !== 'undefined' && TourJump.is(c.jump.id)) { p.jumpPow = { id: c.jump.id, gas: 1, used: false, pants: 0 }; got = true; }
+    if (c.buffs && p.buffs) for (const k in c.buffs) if (c.buffs[k] > 0) { p.buffs[k] = c.buffs[k]; got = true; }
+    if (c.lsd > 0 && c.lsd <= 10) { p.lsdT = c.lsd; p.glideT = 0; play.lsdK = 0.2; got = true; }
+    if (c.star > 0 && c.star <= 10) { p.star = c.star; play.mus('star'); got = true; }
+    if (c.dizzy > 0) play.dizzy = c.dizzy;
+    if (c.joint > 0) play.tripJoint = c.joint;
+    if (c.pick && Array.isArray(c.pick.hist)) { play.powHist = c.pick.hist.slice(); play.powSeq = Object.assign({}, c.pick.seq || {}); play.powN = c.pick.n || 0; }
+    return got;
+  }
+};
+{
+  // a clear: write what he holds, read before the clear takes the star away
+  const lc = Play.prototype.levelClear;
+  Play.prototype.levelClear = function (gate) {
+    let snap = null;
+    if (this.state === 'play' && this.level && this.level.tour) { try { snap = TourCarry.snapshot(this); } catch (err) { console.error('carry snapshot', err); } }
+    const r = lc.call(this, gate);
+    if (snap && this.state === 'clear') { TourCarry.set(snap); Save.save(); }
+    return r;
+  };
+}
+try { window.BRADY_CARRY = TourCarry; } catch (e) { /* not in a browser */ }
+
 /* ---- 28_tour_e_art.js ---- */
 /* ============================================================
    World tour: shared art. The level goal (a giant passport stamp
@@ -30343,6 +30482,102 @@ class TourShop extends Ent {
 ENTITY_TYPES.souvenirShop = TourShop;
 try { Object.assign(window.BRADY_TOUR, { TourDoom, TourBeam, TourThief, TourRival, TourSneak, TourShop, TourHoldArena }); } catch (e) { /* not in a browser */ }
 
+/* ---- 28_tour_hc_hits.js ---- */
+/* ============================================================
+   World tour: what a hit costs Brady (the hit ladder). ONE place for
+   the whole order, the outermost tour wrapper of Player.hurt (the
+   gear, jump-power and carry wrappers in 28_tour_dg_gear.js,
+   28_tour_di_jumps.js and 28_tour_hb_systems.js sit inside it and
+   are now only reached for the cases this file passes through).
+   Each hit takes away exactly ONE thing, first to last:
+     1 the HANDS item (gear, the Hard Hat included, or the country's
+       signature item),
+     2 the jump power (the FEET slot: Spring Socks, Pound Cake,
+       Magic Beans),
+     3 the kandi bracelet (the gift's extra hit),
+     4 the joint (smoke puffs) -> big,
+     5 big (the magic mushroom) -> small,
+     6 small with nothing left: a life.
+   What is lost pops off him and falls away (it can't be picked up
+   again: before this, the item floated right where he stood for
+   two seconds and he walked straight back into it, so a hit often
+   cost nothing at all). After every step: the normal 2 s flicker,
+   so one touch never takes two things.
+   Not part of the ladder: the star (no damage, unchanged), the
+   Backpack (a reserve, never lost to a hit), trips and timed
+   effects (LSD flight, the trip colours, magnet and sundial buffs:
+   effects, not armour; a hit neither ends them nor is absorbed by
+   them). Passed through unchanged to the older code: not playing,
+   dead, the post-hit flicker, the star, riding (mounted), the old
+   molly effect. Pits, lava, crushers and the timer call die()
+   directly and still kill outright. A grab is released and a
+   carried box is dropped, then the ladder takes its one step.
+   ============================================================ */
+const TourHits = {
+  INVULN: 2.0,
+  // the step the next hit takes for this Brady
+  step(p) {
+    if (p.handsKind && p.handsKind()) return 'hands';
+    if (p.jumpPow) return 'feet';
+    if (p.kandi > 0) return 'kandi';
+    if (p.power === 2) return 'joint';
+    if (p.power > 0) return 'big';
+    return 'life';
+  },
+  // the lost thing pops off him and falls away
+  pop(p, kind, dir) {
+    const g = p.g; if (!g || !g.spawn) return;
+    g.spawn(new LostPower(g, p.cx, p.y + Math.min(14, p.h * 0.3), kind, dir));
+  },
+  name(kind) { try { return kind === 'joint' ? 'JOINT' : kind === 'mushroom' ? 'MUSHROOM' : TourPowers.name(String(kind).split('#')[0]); } catch (e) { return ''; } }
+};
+// a lost power: up, a spin, down off the screen; harmless, never collected
+class LostPower extends Ent {
+  constructor(g, x, y, kind, dir) {
+    super(g, null, 20, 20); this.x = x - 10; this.y = y - 10; this.kind = kind; this.friendly = true; this.lost = true;
+    this.vx = (dir || 1) * 1.8 * TS; this.vy = -8.5 * TS; this.life = 1.3; this.rot = 0;
+  }
+  update(dt) { this.t += dt; this.life -= dt; this.vy += PHYS.gDown * 0.55 * dt; this.x += this.vx * dt; this.y += this.vy * dt; this.rot += (this.vx > 0 ? 1 : -1) * 7 * dt; if (this.life <= 0) this.remove = true; }
+  draw(ctx) {
+    ctx.save(); ctx.globalAlpha = clamp(this.life / 0.4, 0, 1);
+    ctx.translate(this.cx, this.cy); ctx.rotate(this.rot); ctx.scale(1.1, 1.1);
+    try { if (typeof TourPicker !== 'undefined') TourPicker.icon(ctx, this.kind, 0, 0, this.t, this.g); } catch (e) { /* an unknown kind: nothing drawn */ }
+    ctx.restore();
+  }
+}
+{
+  const inner = Player.prototype.hurt;
+  Player.prototype.hurt = function (src) {
+    const g = this.g;
+    if (!(g && g.level && g.level.tour) || this.dead || this.state !== 'play' || this.star > 0 || this.invuln > 0 || this.mounted || (this.fx && this.fx.molly > 0)) return inner.call(this, src);
+    if (this.grabbedBy) { const gb = this.grabbedBy; this.grabbedBy = null; if (gb.release) gb.release(true); }
+    if (this.carrying && this.dropCarry) this.dropCarry('DROPPED IT!');
+    const step = TourHits.step(this);
+    this.lastHit = step;
+    if (step === 'life') { this.die(); return; }
+    const away = src && src.x !== undefined ? (this.cx < (src.x + (src.w || 0) / 2) ? -1 : 1) : -this.facing;
+    if (step === 'hands') {
+      const k = this.handsKind(), hat = this.hands && this.hands.id === 'hat';
+      this.clearHands(); TourHits.pop(this, k, away);
+      if (hat) { Sound.play('bump'); g.burst(this.cx, this.y, 14, '#ffd84a', 'debris'); g.parts.text(this.cx, this.y - 10, 'CLONK! HAT LOST', '#ffd84a'); }
+      else { Sound.play('powerdown', { vol: 0.6 }); g.parts.text(this.cx, this.y - 10, 'LOST ' + TourHits.name(k) + '!', '#ffffff'); }
+    } else if (step === 'feet') {
+      const k = 'gear:' + this.jumpPow.id; this.jumpPow = null; this.pound = null; TourHits.pop(this, k, away);
+      Sound.play('powerdown', { vol: 0.6 }); g.parts.text(this.cx, this.y - 10, 'LOST ' + TourHits.name(k) + '!', '#ffffff');
+    } else if (step === 'kandi') {
+      this.kandi--; Sound.play('powerdown', { vol: 0.6 });
+      g.burst(this.cx, this.cy, 18, '#ff7ad8', 'confetti'); g.parts.text(this.cx, this.y - 8, 'KANDI SNAPPED!', '#ff9ad8');
+    } else {
+      // the size steps: the joint goes (smoke puffs), then the mushroom (big -> small)
+      this.setPower(step === 'joint' ? 1 : 0, true); TourHits.pop(this, step === 'joint' ? 'joint' : 'mushroom', away);
+      Sound.play('powerdown'); g.burst(this.cx, this.cy, 12, '#ff4fd8', 'spark');
+    }
+    this.invuln = TourHits.INVULN; this.hurtFlash = 0.3; g.shake(4);
+    this.vx = away * 4 * TS; this.vy = Math.min(this.vy, -6 * TS);
+  };
+}
+try { window.BRADY_HITS = { TourHits, LostPower }; } catch (e) { /* not in a browser */ }
+
 /* ---- 28_tour_i_behave.js ---- */
 /* ============================================================
    World tour: the enemy behaviour library (LEVEL_OVERHAUL.md §4).
@@ -36044,6 +36279,14 @@ const boss = {
         if (b.at > 4) b.die();
       }
       b.fall(dt);
+      // his head sticks out ~16 px past the shell on its long neck (drawn at d * 44): it touches Brady like his body
+      // does (it used to pass straight through him: Brady saw the head on him and nothing happened)
+      const p = g.player;
+      if (b.state === 'fight' && b.pose !== 'shell' && b.pose !== 'tuck' && p && !p.dead) {
+        const hx = b.cx + b.dir * (b.pose === 'peek' ? 34 : b.pose === 'rear' ? 46 : 44), hy = b.y + b.h - (b.pose === 'peek' ? 24 : 30);
+        const head = { x: hx - 14, y: hy - 10, w: 28, h: 20 };
+        if (overlap(p, head) && !overlap(p, b)) b.touchPlayer(p);
+      }
     },
     hit(b, kind, src) {
       if (b.act === 'sulk') return false;
