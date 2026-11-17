@@ -193,23 +193,33 @@ const TOUR_OW_MAPS = {
     scenes: { '6-1': 'tomatina', '6-2': 'pintxos', '6-3': 'arts', '6-4': ['grove', { trees: ['pine', 'pine', 'rock'], ground: '#9a8a7a' }], '6-5': ['grove', { trees: ['orange', 'orange', 'olive'], ground: '#e8d0a0' }], '6-6': 'aquarium', '6-7': ['windmills', { ground: '#d9c48a' }] },
     live: [['mill', 240, 330, 18], ['mill', 440, 340, 18], ['mill', 220, 440, 16], ['sail', [[1350, 900], [1480, 700], [1480, 940]], 10], ['circle', 380, 330, 70, 1], ['fish', 510, 760, '#8ab0d0']]
   },
-  // France: Paris on the river with the iron tower (daylight), the lavender fields, the abbey islet in the bay
-  // (drawn as a plain rock town), the truffle woods, the château, balloons
+  // France: a six-sided land walked as a spiral out of Paris (its blocks and the iron tower in daylight in the
+  // middle), clockwise past the lavender, over the causeway to the abbey islet in the bay (a plain rock town), the
+  // truffle woods in the west and the château gardens in the north; the Seine crosses the land, balloons drift
   fr: {
+    labels: { '7-7': 'Balloons', '7-6': 'Seine' },
     w: 1600, h: 960,
-    land: [[[70, 560], [110, 380], [230, 270], [420, 200], [600, 120], [860, 90], [1120, 110], [1340, 180], [1500, 300], [1550, 480], [1510, 640], [1380, 700], [1250, 700], [1120, 760], [1040, 880], [800, 910], [520, 920], [280, 900], [100, 800]],
-      [[1255, 800], [1330, 768], [1405, 800], [1395, 862], [1300, 885], [1245, 850]]],
-    nodes: { start: [170, 700], '7-1': [370, 720], '7-2': [780, 790], '7-3': [1325, 822], '7-4': [1290, 470], '7-5': [790, 255], '7-6': [420, 410, 'e'], '7-7': [800, 520], 'house:fr-brocante': [1180, 255], port: [1040, 150, 'n'] },
-    paths: { 'start>7-1': [[260, 730]], '7-1>7-2': [[580, 790]], '7-2>7-3': [[1000, 800], [1180, 805]], '7-3>7-4': [[1400, 720], [1330, 590]], '7-4>7-5': [[1040, 330]], '7-1>7-6': [[350, 560]], '7-3>7-7': [[1060, 660]], '7-4>house:fr-brocante': [[1260, 350]], '7-5>port': [[920, 175]] },
+    pal: { land: '#86b07e', light: '#b8d39a', path: '#f4ead0', beach: '#efe2bc' },
+    trail: 'cobble', bridge: 'stone', tufts: 'flowers', flowerCols: ['#e8423a', '#ffffff', '#9a6ad8'],
+    land: [[[250, 100], [700, 60], [1150, 80], [1450, 250], [1530, 520], [1350, 820], [1000, 880], [870, 790], [760, 760], [600, 780], [480, 880], [200, 860], [90, 560], [110, 300]],
+      [[640, 822], [712, 800], [780, 830], [772, 892], [690, 910], [630, 878]]],
+    nodes: { start: [1010, 400], '7-1': [790, 470], '7-6': [540, 380], '7-2': [1020, 640], '7-3': [705, 855], '7-7': [420, 760], '7-4': [300, 540], 'house:fr-brocante': [210, 330], '7-5': [560, 170], port: [1060, 160] },
+    paths: { 'start>7-1': [[900, 420]], '7-1>7-6': [[660, 400]], '7-1>7-2': [[900, 580]], '7-2>7-3': [[880, 760], [780, 800]], '7-3>7-7': [[560, 830]], '7-3>7-4': [[560, 760], [380, 680]], '7-4>house:fr-brocante': [[230, 440]], '7-4>7-5': [[360, 330]], '7-5>port': [[820, 120]] },
     feat: [
-      ['river', [[200, 300], [300, 400], [430, 470], [520, 530], [570, 640], [600, 770], [640, 930]], 16],
-      ['fields', '#7a8a5a', [[640, 600], [770, 590], [910, 630], [930, 710], [700, 710]], ['#9a6ad8', '#a682e0'], 0.3],
-      ['trees', 'round', 1320, 360, 110, 10], ['trees', 'poplar', 620, 330, 90, 8], ['trees', 'cypress', 980, 700, 60, 4],
-      ['town', 470, 800, 6, 45], ['landmark', 225, 530, 60]
+      ['river', [[1530, 300], [1300, 330], [1120, 470], [900, 520], [700, 520], [560, 460], [400, 440], [90, 420]], 16],
+      ['blocks', [[720, 400], [860, 380], [880, 460], [860, 560], [740, 570], [700, 480]], { step: 30, street: 9, cols: ['#f0e4c8', '#e8dcc0', '#dcd4c4'], road: '#a8a0b0' }],
+      ['fields', '#7a8a5a', [[1080, 560], [1250, 540], [1300, 680], [1150, 720], [1060, 660]], ['#9a6ad8', '#a682e0'], 0.3],
+      ['fields', '#c8b060', [[1200, 280], [1350, 290], [1380, 380], [1230, 400]], ['#ffd23a', '#e8b82a'], -0.2],
+      ['fields', '#7aa060', [[440, 140], [620, 110], [700, 200], [540, 250], [420, 220]], ['#4a8a4a', '#6aa85a'], 0, 'bands'],
+      ['trees', 'round', 260, 600, 120, 12], ['trees', 'poplar', 620, 300, 100, 8], ['fields', '#9a8a5a', [[1080, 760], [1250, 720], [1320, 790], [1200, 850], [1060, 830]], ['#7a3a8a', '#5a8a3a'], 0.5],
+      ['trees', 'poplar', 1250, 470, 60, 5], ['trees', 'cypress', 1400, 600, 60, 4],
+      ['town', 160, 720, 5, 40], ['town', 1350, 200, 5, 45], ['town', 700, 880, 4, 26, 'flat'],
+      ['sprite', 'cheese', 1000, 260, 16], ['sprite', 'cheese', 300, 820, 14], ['sprite', 'hayroll', 480, 640, 10], ['sprite', 'hayroll', 520, 670, 10],
+      ['landmark', 880, 330, 62]
     ],
-    flora: ['round', 'poplar', 'cypress'], density: 32,
+    flora: ['round', 'poplar', 'cypress', 'bush'], density: 40,
     scenes: { '7-1': 'paris', '7-2': 'lavender', '7-3': 'islet', '7-4': 'truffle', '7-5': 'garden', '7-6': ['barges', { river: 0 }], '7-7': 'balloons' },
-    live: [['sail', [[1100, 940], [1590, 900], [1590, 720], [1250, 950]], 10]]
+    live: [['balloon', 1250, 420, '#ff5a6a', '#ffd23a'], ['balloon', 380, 280, '#38a8e8', '#ffffff'], ['walk', 'pig', [[230, 640], [300, 660], [340, 640]], 6], ['sail', [[1100, 940], [1590, 900], [1590, 720], [1250, 950]], 10], ['flutter', 1180, 620, '#ffffff']]
   },
   // the Netherlands: polders and canals, tulip stripes, windmills, the frozen canals, the old weigh house town
   nl: {
