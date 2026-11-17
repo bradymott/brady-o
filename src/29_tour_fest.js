@@ -317,9 +317,9 @@ class FestBed extends Ent {
       ctx.fillStyle = '#ff5fa0'; for (let k = 6; k < w - 4; k += 12) ctx.fillRect(x + k, y + 2 + sq, 6, 4);
       ctx.fillStyle = '#5a6a7a'; ctx.fillRect(x + 6, y + 9, 4, TS - 9); ctx.fillRect(x + w - 10, y + 9, 4, TS - 9);
     } else {
-      ctx.fillStyle = '#ff7ab0'; rr(ctx, x, y + 6 + sq, w, TS - 10 - sq, 9); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5; for (let k = 10; k < w - 6; k += 10) { ctx.beginPath(); ctx.moveTo(x + k, y + 10 + sq); ctx.lineTo(x + k, y + TS - 8); ctx.stroke(); }
-      ctx.fillStyle = '#ffd0e4'; rr(ctx, x + 4, y + 9 + sq, 16, 8, 4); ctx.fill();
+      ctx.fillStyle = '#ff7ab0'; rr(ctx, x - 2, y - 3 + sq, w + 4, TS - sq, 10); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5; for (let k = 10; k < w - 6; k += 10) { ctx.beginPath(); ctx.moveTo(x + k, y + 3 + sq); ctx.lineTo(x + k, y + TS - 6); ctx.stroke(); }
+      ctx.fillStyle = '#ffd0e4'; rr(ctx, x + 4, y + 2 + sq, 16, 8, 4); ctx.fill();
     }
     ctx.restore();
   }

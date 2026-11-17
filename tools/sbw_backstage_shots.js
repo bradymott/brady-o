@@ -140,7 +140,7 @@ async function session(viewport, fn) {
       await shot('51-dock-3-1-inside.png');
       const r2 = await page.evaluate(() => { thaw(); const b = S().entities.find(e => e.isButton); const p = P(); p.x = b.x - p.w - 2; p.y = b.y + b.h - p.h; p.facing = 1; sim(0.2); sim(0.05, { action: true, actionPressed: true }); sim(6); return { rules: window.BRADY.Save.data.tour.rules }; });
       check('3-1: the dock\'s Brady Button revokes rule 7 (hats)', !!r2.rules[7], r2);
-      await page.evaluate(() => { const g = play('3-1'); P().invuln = 999; sim(0.5); freeze(); });
+      await page.evaluate(() => { const g = play('3-1'); P().invuln = 999; const e = g.entities.find(x => x.enemy && !x.boss && x.w < 90); if (e) place(Math.floor(e.cx / 32) - 3, Math.floor((e.y + e.h - 1) / 32)); sim(0.5); freeze(); });
       await shot('52-hats-and-dancing-3-1.png');
     });
     // a festival enemy dancing (rule 3 is revoked in this session)

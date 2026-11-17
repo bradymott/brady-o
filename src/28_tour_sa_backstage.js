@@ -214,6 +214,10 @@ TourHooks.on('playUpdate', (play, dt) => { if (play.warpFx) play.warpFx.t += dt;
     update(dt) {
       this.t += dt; if (this.flee > 0) this.flee -= dt;
       const A = this.g.area, sp = this.speed * (this.flee > 0 ? 2.6 : 1), nx = this.x + this.dir * sp * dt;
+      // it drops to the floor if it starts in the air (a plain fall, no bounce)
+      const under = Math.floor((this.y + this.h + 1) / TS), cx0 = Math.floor(this.cx / TS);
+      if (!(SOLID[tileAt(A, cx0, under)] || tileAt(A, cx0, under) === T.SEMI)) { this.vy = Math.min((this.vy || 0) + 40 * TS * dt, 12 * TS); this.y += this.vy * dt; if (this.y > A.H * TS) this.remove = true; return; }
+      if (this.vy) { this.vy = 0; this.y = under * TS - this.h; }
       const ahead = Math.floor((this.dir > 0 ? nx + this.w + 1 : nx - 1) / TS), ty = Math.floor((this.y + this.h - 4) / TS), below = Math.floor((this.y + this.h + 2) / TS);
       const wall = SOLID[tileAt(A, ahead, ty)], gap = !(SOLID[tileAt(A, ahead, below)] || tileAt(A, ahead, below) === T.SEMI);
       if (wall || gap || ahead <= 0 || ahead >= A.W - 1) this.dir = -this.dir; else this.x = nx;
@@ -498,17 +502,18 @@ Tour.pieces.loadingDock = function (st, o) {
   const B = st.B;
   let g = null; for (const s of B.spawns) if (s.type === 'gate' && (!s.exit || s.exit === 'main')) g = s;
   if (!g) { if (st.ctx.problems) st.ctx.problems.push('loadingDock: no gate before it'); return st.x; }
-  const gx = Math.floor(g.x / TS), gy = Math.floor(g.y / TS) + 1;   // the gate's column and its floor row
+  const gx = Math.floor(g.x / TS), gy = Math.round(g.y / TS);   // the gate's column and the row it stands on
   // the cases: a three-high stack two columns back from the gate's left, a truss over the gate
   B.fill(gx - 6, gy - 3, gx - 5, gy - 1, T.HARD);
-  for (let x = gx - 4; x <= gx + 3; x++) B.set(x, gy - 7, T.SEMI);
-  for (let y = 0; y < gy - 7; y++) for (let x = gx - 4; x <= gx + 3; x++) if (B.get(x, y) !== T.EMPTY && y >= gy - 9) B.set(x, y, T.EMPTY);
+  for (let x = gx - 4; x <= gx + 3; x++) B.set(x, gy - 6, T.SEMI);
+  for (let y = gy - 8; y < gy - 6; y++) for (let x = gx - 4; x <= gx + 3; x++) if (y >= 0) B.set(x, y, T.EMPTY);
   B.decorAt('bkCase', gx - 5, gy - 3, 3);
-  B.decorAt('bkCrewArrow', gx + 1, gy - 7, 0);
+  B.decorAt('bkCrewArrow', gx + 1, gy - 6, 0);
   // the floor on past the gate to the area's edge, the seam, the way back's landing
   const x1 = Math.max(st.x + 3, gx + 9);
-  st.floor(gx, x1);
-  for (let y = gy - 6; y < gy; y++) for (let x = gx + 1; x <= x1; x++) B.set(x, y, T.EMPTY);
+  st.floor(gx + 1, x1, gy);
+  for (let y = gy - 5; y < gy; y++) for (let x = gx + 1; x <= x1; x++) B.set(x, y, T.EMPTY);
+  for (let y = gy - 6; y < gy - 5; y++) for (let x = gx + 4; x <= x1; x++) B.set(x, y, T.EMPTY);
   TourSeams.add(B, { side: 'right', a: gy - 3, b: gy - 1, to: o.to });
   B.anchor(o.back || 'dockBack', x1 - 1, gy - 1);
   return x1 + 1;
