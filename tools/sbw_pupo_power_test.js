@@ -176,7 +176,8 @@ async function alloc() {
       const run = () => { let n = 0; for (let k = 0; k < 300; k++) { if (!(R.showT > 0)) { for (const e of g.entities) if (e.enemy && e.knocked) { e.dead = false; e.knocked = false; e.remove = false; } R.meter = 1; PU.PupoPower.start(g); n++; } g.update(1 / 120); g.draw(ctxW); } if (R.showT > 0) { R.showT = 0; PU.PupoPower.end(g); } return n; };
       // the same 300 frames of plain riding (the control: what the game itself keeps, Pupo's show or not)
       const plain = () => { for (let k = 0; k < 300; k++) { g.update(1 / 120); g.draw(ctxW); } };
-      run(); settle(); run(); settle(); window.gc(); window.gc(); const h0 = mem();
+      // the engine's own bounded caches (held ink pictures, box owners, particle pools) fill up over the first runs
+      for (let w = 0; w < 5; w++) { run(); settle(); } window.gc(); window.gc(); const h0 = mem();
       const shows = run(); settle(); window.gc(); window.gc(); const h1 = mem();
       plain(); settle(); window.gc(); window.gc(); const c0 = mem(); plain(); settle(); window.gc(); window.gc(); const c1 = mem();
       // 3. for comparison: young-generation bytes per frame of the whole game, riding and during the show
