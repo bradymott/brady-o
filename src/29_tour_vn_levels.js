@@ -445,6 +445,94 @@ const stamps = {
 P.boatDoor = (st, o) => { st.B.spawn('portal', st.x, st.gy - 1, { kind: 'door', look: 'vnEmptyBoat', targetRef: 'thuyen@in' }); st.B.anchor('boatBack', st.x + 2, st.gy - 1); return st.x; };
 
 /* ---------------- the levels ---------------- */
+/* ---------- 10-3: the night market, where the gongs swap the stall blinds ----------
+   A covered market of two storeys, 80 x 24: the street (rows 14-18) and the upper gallery (rows 8-12, x 1-45), joined
+   by three stair holes, each with a stack of plastic stools under it. Every stall has a bamboo blind in red or green;
+   a lowered blind closes the lane. Ringing a gong flips every blind of its colour: the open ones drop, the closed ones
+   roll up (a dashed outline shows where a raised blind will come down). The only red gong is at the start and the
+   only green gong is up in the gallery, so the way is: red, up the stairs to green, back down to red, round by the
+   gallery and out along the street. */
+const MW = 80, MH = 24, MF = 19, ROOF = 13, UP = 7;   // width, height, the ground row, the gallery floor (the street's roof), the gallery's roof
+const CARTS = { red: '#e8323a', green: '#2aa86a' };
+// a stall blind across a lane: { g, state: 'A' (down while the gong's bit is 0) or 'B' (down while it is 1), w, h, look }
+const blind = (st, o) => {
+  const B = st.B, w = o.w || 2, h = o.h || 5, x = st.x, y1 = st.gy - 1, r = [x, y1 - h + 1, x + w - 1, y1];
+  const down = o.state !== 'B';
+  for (let y = r[1]; y <= r[3]; y++) for (let xx = r[0]; xx <= r[2]; xx++) { B.set(xx, y, down ? T.HARD : T.EMPTY); if (down) B.setHide(xx, y, 1); }
+  B.toggle(o.g, down ? [r] : [], down ? [] : [r], { kind: 'switch' });
+  B.spawn('toggleGate', r[0], r[1], { g: o.g, rect: r, state: down ? 'A' : 'B', look: o.look });
+  return st.x;
+};
+const gong = (st, o) => { st.B.switchAt(o.g, st.x, st.gy - 1); st.B.spawn('toggleSwitch', st.x, st.gy - 1, { g: o.g, kind: 'switch', look: o.look }); return st.x; };
+const stools = (st, o) => { for (let k = 0; k < (o.w || 2); k++) st.B.prop('vnStoolStack', st.x + k, st.gy - (o.h || 2), 1, o.h || 2, 'body', { h: o.h || 2 }); return st.x; };
+// a stall's bamboo blind in its colour: rolled up under the lintel when open (with a dashed outline of where it drops),
+// down to the floor when closed, with the stall's lantern and a fruit sign
+const blindSkin = col => (ctx, e, t) => {
+  const x = e.x, y = e.y, w = e.w, h = e.h, k = e.k;
+  ctx.save(); ctx.strokeStyle = '#5e3417'; ctx.lineWidth = 3; ctx.strokeRect(x - 1, y, w + 2, 1); ctx.restore();
+  if (k < 0.98) { ctx.save(); ctx.setLineDash([6, 5]); ctx.strokeStyle = col; ctx.globalAlpha = 0.6; ctx.lineWidth = 2; ctx.strokeRect(x + 3, y + 3, w - 6, h - 6); ctx.restore(); }
+  const hh = Math.max(10, h * k);
+  Ink.around(ctx, x - 4, y - 4, w + 8, h + 8, c => {
+    for (let yy = y; yy < y + hh; yy += 5) { c.fillStyle = Math.floor((yy - y) / 5) % 2 ? shade(col, -0.18) : col; c.fillRect(x + 1, yy, w - 2, Math.min(5, y + hh - yy)); }
+    c.fillStyle = '#c8a060'; for (let q = 0; q < 3; q++) c.fillRect(x + 4 + q * (w - 10) / 2, y, 2, hh);
+    c.fillStyle = '#5e3417'; c.fillRect(x - 2, y + hh - 4, w + 4, 5);
+    if (k > 0.5) { c.fillStyle = '#f4e8d0'; c.beginPath(); c.arc(x + w / 2, y + hh * 0.45, 9, 0, TAU); c.fill(); c.fillStyle = col; c.beginPath(); c.arc(x + w / 2, y + hh * 0.45, 5, 0, TAU); c.fill(); }
+  }, { pad: 4 });
+  const lx = x + w / 2, ly = y + 6; ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(lx, ly + 10, 6, 8, 0, 0, TAU); ctx.fill(); ctx.fillStyle = `rgba(255,230,150,${0.55 + 0.3 * Math.sin(t * 4 + lx)})`; ctx.beginPath(); ctx.ellipse(lx, ly + 10, 3, 5, 0, 0, TAU); ctx.fill();
+};
+// a market gong on a wooden frame, its rim in the colour of the blinds it moves
+const gongSkin = col => (ctx, e, t) => {
+  const x = e.cx, y = e.y + e.h, sw = e.cool > 0 ? Math.sin(t * 40) * 2 * e.cool : 0;
+  Ink.around(ctx, x - 22, y - 62, 44, 64, c => {
+    c.fillStyle = '#6a3a1a'; c.fillRect(x - 18, y - 56, 4, 56); c.fillRect(x + 14, y - 56, 4, 56); c.fillRect(x - 20, y - 60, 40, 6);
+    c.strokeStyle = '#3a2418'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x - 6, y - 54); c.lineTo(x - 4 + sw, y - 44); c.moveTo(x + 6, y - 54); c.lineTo(x + 4 + sw, y - 44); c.stroke();
+    c.fillStyle = col; c.beginPath(); c.arc(x + sw, y - 30, 14, 0, TAU); c.fill();
+    c.fillStyle = '#e8b830'; c.beginPath(); c.arc(x + sw, y - 30, 10.5, 0, TAU); c.fill();
+    c.fillStyle = '#c8902a'; c.beginPath(); c.arc(x + sw, y - 30, 4, 0, TAU); c.fill();
+    c.fillStyle = '#5e3417'; c.save(); c.translate(x + 15, y - 12); c.rotate(-0.6); c.fillRect(-1.5, -12, 3, 14); c.fillStyle = '#c8b090'; c.beginPath(); c.arc(0, -13, 4, 0, TAU); c.fill(); c.restore();
+  }, { pad: 4 });
+};
+const marketSkins = { vnBlindRed: blindSkin(CARTS.red), vnBlindGreen: blindSkin(CARTS.green), vnGongRed: gongSkin(CARTS.red), vnGongGreen: gongSkin(CARTS.green) };
+const market = (() => {
+  const g = Array.from({ length: MH }, (_, y) => Array.from({ length: MW }, (_, x) => (y >= MF || x === 0 || x === MW - 1) ? '#' : '.'));
+  const put = (x, y, s) => { for (let k = 0; k < s.length; k++) g[y][x + k] = s[k]; };
+  const fill = (x0, y0, x1, y1, ch) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) g[y][x] = ch; };
+  fill(1, ROOF, MW - 2, ROOF, '#');          // the street's roof (the gallery's floor)
+  fill(1, UP, 45, UP, '#');                  // the gallery's roof
+  fill(46, UP, 46, ROOF, '#');               // the gallery's far end wall
+  fill(1, 0, MW - 2, UP - 1, '.');           // open sky over the roofs (out of reach)
+  for (const sx of [3, 20, 36]) fill(sx, ROOF, sx + 1, ROOF, '.');   // the three stair holes
+  // the street: stools under each hole; the start, the red gong, the board, the first red blind (down)
+  put(3, 18, 'u'); put(20, 18, 'u'); put(36, 18, 'u');
+  put(7, 18, '@'); put(9, 18, 'R'); put(11, 18, 'i'); put(13, 15, '?'); put(15, 18, 'a');
+  put(26, 18, 'k'); put(30, 18, 't'); put(42, 15, '?'); put(50, 18, 'q'); put(56, 14, 'w'); put(56, 15, '%');
+  put(60, 18, 'k'); put(64, 18, 't'); put(66, 15, 'h'); put(69, 18, '9D'); put(75, 18, 'G');
+  put(22, 16, 'o.o.o'); put(44, 16, 'o.o.o'); put(70, 15, 'o.o.o');
+  // the gallery: the green blind by the left stairs (down), P1, a checkpoint, the green gong
+  put(8, 12, 'z'); put(24, 9, '*'); put(28, 12, 'c'); put(32, 12, 'n'); put(40, 10, 'm');
+  put(14, 10, 'o.o.o'); put(36, 9, 'o.o.o');
+  return g.map(r => r.join(''));
+})();
+const marketStamp = {
+  floor: MF, rows: market,
+  legend: {
+    R: ['piece', gong, { g: 0, look: 'vnGongRed' }], n: ['piece', gong, { g: 1, look: 'vnGongGreen' }],
+    a: ['piece', blind, { g: 0, state: 'A', look: 'vnBlindRed' }],        // red, down at the start
+    k: ['piece', blind, { g: 0, state: 'B', look: 'vnBlindRed' }],        // red, up at the start
+    z: ['piece', blind, { g: 1, state: 'A', look: 'vnBlindGreen' }],      // green (gallery), down at the start
+    q: ['piece', blind, { g: 1, state: 'A', look: 'vnBlindGreen' }],      // green (street), down at the start
+    u: ['piece', stools, { w: 2, h: 3 }],
+    i: ['spawn', 'sign', { text: 'NIGHT MARKET. A GONG FLIPS EVERY BLIND OF ITS COLOUR: THE OPEN ONES DROP, THE CLOSED ONES ROLL UP. THE STOOLS UNDER THE HOLES ARE THE STAIRS.' }],
+    t: ['enemy', 'vnToad'], m: ['enemy', 'vnMosquito'], w: ['enemy', 'vnSilkworm'],
+    9: ['anchor', 'xuongBack']
+  },
+  items: ['power', 'star'], hidden: ['oneup'],
+  doors: [{ to: 'xuong@in', look: 'vnWorkshopDoor' }],
+  gold: { '*': 'must', '%': 'risky' }
+};
+Object.assign(skins, marketSkins);
+stamps.market = marketStamp;
+
 const levels = [
   // 10-1 DOOM (periodic): the train down Train Street
   { n: 1, name: 'Train Street', arch: 'doom', theme: 'vn_street',
@@ -468,6 +556,7 @@ const levels = [
           ['cafe', { to: 'caphe@in', back: 'caBack' }],
           'stools',
           'cp',
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), to float up to the wires (Brady's request)
           // ③ the wires over the tracks while the train passes below
           ['trainWires', { len: 30, period: 8 }],
           ['rooftops', { n: 2, gold: true }],
@@ -509,39 +598,15 @@ const levels = [
       { id: 'hang', gen: 'room', role: 'secret', theme: 'vn_cave', stamp: 'hang' }
     ] },
   // 10-3 LAMP: Hoi An by lantern light
-  { n: 3, name: 'Hoi An Lanterns', arch: 'lamp', theme: 'vn_river', dark: true,
-    gimmick: 'The old town by the light of a paper lantern: relight it at the lantern shops, lasso the ferry over the river, ride the floating lanterns while silkworms drop',
-    hint: 'Your lantern fades: touch a lantern shop\'s big lantern to relight it. THROW at the moored boat to pull it over',
+  { n: 3, name: 'Hoi An Lanterns', arch: 'gong', theme: 'vn_river',
+    gimmick: 'The night market on wheels: ring a gong and every stall cart of its colour rolls to its other spot. Change the street until there is a way through',
+    hint: 'A dashed outline shows where a cart will roll. Red moves the red carts, green the green ones; you may need a gong twice',
     postcard: 'The whole river is floating lanterns tonight. I made a wish. It was about you. (And noodles.) ♥ C',
-    enemies: [['vnToad', 2], ['vnMosquito', 2], ['vnSilkworm', 2]],
+    enemies: [['vnToad', 2], ['vnMosquito', 2], ['vnSilkworm', 1]],
     mapCell: [2, 0], mapFrom: 1,
     exits: { main: { to: '10-4' }, secret: { to: '10-6', hint: 'A lantern workshop has a back door to the river...' } },
     areas: [
-      { id: 'phoco', gen: 'strip', W: 200, H: 18, lamp: { r0: 170, r1: 70, decay: 24 },
-        script: [
-          'pho',
-          ['gearStand', { item: 'hat' }],
-          ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
-          // ① the lantern shops
-          ['lanternShop', {}],
-          ['oldstreet', {}],
-          ['lanterns', { n: 1 }],
-          ['lanternShop', { gold: 'must' }],
-          // ② the ferry
-          ['ferry', {}],
-          ['workshop', { to: 'xuong@in', back: 'xuongBack' }],
-          ['silkAwning', { n: 2 }],
-          'cp',
-          ['lanternShop', {}],
-          // ③ floating lanterns and silkworms
-          ['riverLanterns', { n: 2, silk: true }],
-          ['silkAwning', { n: 3, len: 14 }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
-          ['lanternShop', {}],
-          ['riverLanterns', { n: 3, span: 13, gold: 'risky' }],
-          'bridgearch',
-          ['end', { exit: 'main' }]
-        ] },
+      { id: 'phoco', gen: 'room', theme: 'vn_river', stamp: 'market' },
       { id: 'xuong', gen: 'room', role: 'secret', stamp: 'xuong' }
     ] },
   // 10-4 RISE (flood): the cave floods while Brady climbs to the skylight

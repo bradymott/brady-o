@@ -1,6 +1,7 @@
 // Super Brady-O World: Brady's powers in the real game (headless Chrome).
 // Sections: picker (the power picker and the action button), air (a second jump press without a jump power),
-// jumps (double jump, ground pound, fart float), trips (joint / LSD / mushroom screen moments, the effects setting).
+// jumps (double jump, ground pound, fart float), trips (joint / LSD / mushroom screen moments, the effects setting),
+// gear (on-use effects such as the kazoo's HONK! go away again).
 // usage: BRADY_DIST=<dist> node tools/sbw_powers_test.js [section ...]
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs');
@@ -267,6 +268,26 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const sh = r.shroom, steps = sh.slice(1).map((v, i) => Math.abs(v - sh[i])), peak = Math.max.apply(null, sh);
     check('mushroom trip: eases in smoothly (no jump bigger than 0.05 a frame) and reaches full strength', peak > 0.95 && Math.max.apply(null, steps) < 0.05, { peak, maxStep: Math.max.apply(null, steps) });
     check('mushroom trip: the level itself wobbles at full effects (a copy of the view), not with FX CALM', r.wobble && !r.wobbleCalm, { wobble: r.wobble, calm: r.wobbleCalm });
+  });
+
+  /* ---------- gear with an on-use effect: it must go away again (Brady: the kazoo's HONK! and sound lines stayed for good) ---------- */
+  await section('gear', async () => {
+    const r = await page.evaluate(() => {
+      const B = window.BRADY, CR = CanvasRenderingContext2D.prototype, ft0 = CR.fillText, arc0 = CR.arc;
+      const g = lab('gear.stands'), p = P(); p.collect('gear:kazoo'); sim(1.6);
+      // what Brady's own drawing puts on screen: HONK! texts and arcs (the idle kazoo draws no sound arcs in his hand)
+      const look = () => { let honk = 0, arcs = 0; CR.fillText = function (str) { if (String(str).includes('HONK')) honk++; return ft0.apply(this, arguments); }; CR.arc = function () { arcs++; return arc0.apply(this, arguments); };
+        try { const c = B.Game.ctx; c.save(); window.BRADY_TOUR.TourGear.get('kazoo').drawOn(p, c, g.t); c.restore(); } finally { CR.fillText = ft0; CR.arc = arc0; } return { honk, arcs }; };
+      const o = { held: p.hands && p.hands.id, idle: look() };
+      sim(0.02, { actionPressed: true }); o.honked = look();
+      sim(3); o.after = look(); o.timer = p.hands && p.hands.honkT;
+      sim(0.6); sim(0.02, { actionPressed: true }); o.again = look(); sim(1); o.againAfter = look();
+      return o;
+    });
+    check('kazoo: in hand', r.held === 'kazoo', r.held);
+    check('kazoo: a honk shows the HONK! and the sound arcs', r.honked.honk > 0 && r.honked.arcs > r.idle.arcs, { idle: r.idle, honked: r.honked });
+    check('kazoo: three seconds later the HONK! and the arcs are gone (back to the idle drawing)', r.after.honk === 0 && r.after.arcs === r.idle.arcs && r.timer === 0, { after: r.after, timer: r.timer });
+    check('kazoo: a second honk shows them again and they go again', r.again.honk > 0 && r.againAfter.honk === 0 && r.againAfter.arcs === r.idle.arcs, { again: r.again, againAfter: r.againAfter });
   });
 
   check('no page errors', errors.length === 0, errors.slice(0, 5));
