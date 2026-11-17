@@ -206,7 +206,8 @@ section('rules', () => {
   check('--rules: lands without a warp and with under 3 room types are warnings (errors with --release)', R.warnings.some(w => new RegExp('lands without a warp.*' + nwId).test(w)) && R.warnings.some(w => new RegExp('fewer than 3 secret-room types.*' + nwId).test(w)) && Rr.errors.some(e => /lands without a warp/.test(e)), R);
   const R3 = VL.secretRules(G, [{ id: '1-1', info: { buttons: [], warps: [], rooms: ['closing', 'closing', 'closing'] } }], false);
   check('--rules: a new room type more than twice in a land is flagged', R3.warnings.some(w => /room type closing used 3 times/.test(w)), R3);
-  check('--rules: a placed button with no TOUR_RULES entry is an error', VL.secretRules(G, res, false).errors.some(e => /no such rule in TOUR_RULES/.test(e)));
+  // (rule 99 is in no rule table, the fixture's or the game's)
+  check('--rules: a placed button with no TOUR_RULES entry is an error', VL.secretRules(G, [{ id: nw + '-1', info: { buttons: [99], warps: [], rooms: [] } }], false).errors.some(e => /rule 99 .*no such rule in TOUR_RULES/.test(e)));
   void good;
   reset();
 });
