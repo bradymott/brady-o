@@ -102,7 +102,6 @@ TourRooms.def('climb', {
     g.put(W - 4, Y, 's');
     g.put(left ? 3 : W - 4, Math.floor(H / 2) - 2, '*');
     g.dress(keep, [x0 + 1, W - 7], Y);
-    g.area = { camera: 'shaft' };
     return g;
   },
   update(play, dt, A, R, kit) {

@@ -375,7 +375,7 @@ TourRooms.def('lamps', {
     for (let tries = 0; tries < 8; tries++) { ord.sort(() => rng() - 0.5); if (ord.some((v, k) => v !== k)) break; }
     spots.slice(0, n).forEach((s, k) => { g.put(s[0], s[1], g.L(['spawn', 'roomLamp', { k, ord: ord.indexOf(k), sym: (k + (o.sym || 0)) % 4 }])); g.vline(s[0] + 1, s[1], s[1], g.L(['vkey', ids[k]])); g.need('lamp ' + k, s[0], s[1]); });
     g.data.order = ord.map(k => (k + (o.sym || 0)) % 4);
-    g.data.mural = [Math.floor((x0 + x1) / 2), 2];
+    g.data.mural = [x0 + 3, 6];   // at eye level by the door, clear of the toast and the HUD
     g.dress(keep, [x0, at(0.27), at(0.75)], Y);
     return g;
   },
