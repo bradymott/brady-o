@@ -27,8 +27,8 @@ const PupoReach = {
   K: {
     REACH: 5 * TS, POKE: 4 * TS, REACH_D: 3.5 * TS, CONE: 40 * Math.PI / 180, CONE_N: 50 * Math.PI / 180, NEAR: 2 * TS,
     OUT: 30 * TS, BACK: 22 * TS, HOLD: 0.10, COOL: 0.20, COOL_D: 0.50, GRAB_T: 0.17, TUG: 0.5,
-    HOOK_LEN: 2.5 * TS, HOOK_MIN: 1.5 * TS, HOOK_MAX: 5 * TS, SWING_G: 40 * TS, PUMP: 0.6, REEL: 12 * TS, REEL_STICK: 4 * TS,
-    RELEASE_K: 1.15, RELEASE_UP: 3 * TS, RELEASE_MAX: 14 * TS, RELEASE_MAX_D: 10 * TS,
+    HOOK_LEN: 2.5 * TS, HOOK_MIN: 1.5 * TS, HOOK_MAX: 5 * TS, SWING_G: 40 * TS, PUMP: 3.0, DAMP: 0.99, REEL: 12 * TS, REEL_STICK: 4 * TS,
+    RELEASE_K: 1.15, RELEASE_UP: 4 * TS, RELEASE_MAX: 16 * TS, RELEASE_MAX_D: 12 * TS, RELEASE_MIN_X: 6 * TS, RELEASE_MIN_UP: 13 * TS, RELEASE_COYOTE: 0.15,
     ZIP: 16 * TS, PULLUP: 0.3, CLIMB_UP: 3.2 * TS, CLIMB_DOWN: 4.5 * TS, CLIMB_D: 2.2 * TS, LEAP_X: 6.5 * TS, LEAP_Y: -13 * TS,
     SHIMMY: 2.6 * TS, HANG_DROP: 38, LEDGE_REACH: 3.5 * TS, CONE_G: 100 * Math.PI / 180, LEDGE_STEP: 2.5 * TS, GRAB_BUFFER: 0.25, SCAN: 1 / 15
   },
@@ -68,12 +68,41 @@ const PupoReach = {
   angle(dx, dy) { const l = Math.sqrt(dx * dx + dy * dy) || 1; const c = (dx * this.ax + dy * this.ay) / l; return Math.acos(clamp(c, -1, 1)); },
   score(d, reach, ang, cone, enemy) { return d / reach + 0.5 * ang / cone - (enemy ? 0.2 : 0); },
   // the swing release (§2.3): the speed along the swing x1.15, plus 3 t/s up, capped -> this.rvx, this.rvy
-  release(th, om, L, drowsy) {
-    const K = this.K, v = om * L * K.RELEASE_K;
-    let vx = Math.cos(th) * v, vy = -Math.sin(th) * v - K.RELEASE_UP;
+  /* the swing's let-go (Jump): along the swing's tangent (x1.15), plus 4 t/s up, and never limp. Toward dir (the
+     stick, else the way he is swinging, else facing) he goes at least 6 t/s, and at least 0.6 x the swing's full speed
+     (its speed at the bottom, x1.15: a big swing throws far from any point of it); up at least 13 t/s. Capped at
+     16 t/s (drowsy 12). */
+  release(th, om, L, drowsy, dir) {
+    const K = this.K, v = om * L * K.RELEASE_K, vb = Math.sqrt(v * v + 2 * K.SWING_G * L * (1 - Math.cos(th))) * K.RELEASE_K;
+    let vx = Math.cos(th) * v, vy = -Math.sin(th) * v;
+    const fwd = Math.max(vx * dir, 0.6 * vb, K.RELEASE_MIN_X); vx = dir * fwd;
+    vy = Math.min(vy - K.RELEASE_UP, -K.RELEASE_MIN_UP);
     const m = Math.sqrt(vx * vx + vy * vy), cap = drowsy ? K.RELEASE_MAX_D : K.RELEASE_MAX;
-    if (m > cap) { vx *= cap / m; vy *= cap / m; }
+    if (m > cap) { const k = cap / m; vx *= k; vy *= k; }
     this.rvx = vx; this.rvy = vy;
+  },
+  // Jump on a swing: the launch (and the swing's state is kept for a moment, for a Jump pressed just after a drop)
+  launch(p, g, R, dir) {
+    const s = R.sw, d = dir || (Math.abs(s.om * s.L) > TS ? Math.sign(s.om) : p.facing || 1);
+    this.release(s.th, s.om, s.L, R.drowsyT > 0, d);
+    PupoRide.leave(g, p); R.swingCoyote = 0; this.armFree(R);
+    p.vx = this.rvx; p.vy = this.rvy; p.airMax = Math.abs(p.vx); p.jumping = false; p.onGround = false; p.coyote = 0; p.facing = d;
+    Sound.play('jump', { pitch: 0.9 });
+  },
+  // off a swing the arm is home at once, so Action can catch the next hook in mid-air
+  armFree(R) { const a = this.arm(R); a.phase = 0; a.len = 0; a.cool = 0; a.kind = null; a.e = null; },
+  // the coyote launch: from the swing state at the moment he let go
+  launchFrom(p, R, dir) {
+    const s = R.sw, d = dir || (Math.abs(s.om * s.L) > TS ? Math.sign(s.om) : p.facing || 1);
+    this.release(s.th, s.om, s.L, R.drowsyT > 0, d);
+    p.vx = this.rvx; p.vy = this.rvy; p.airMax = Math.abs(p.vx); p.jumping = false; p.facing = d; p.jumpBuf = 0;
+    Sound.play('jump', { pitch: 0.9 });
+  },
+  // Down (or the hook going away): let go with the swing's own speed; a Jump in the next 0.15 s still launches
+  dropSwing(p, g, R, forced) {
+    const s = R.sw, vx = Math.cos(s.th) * s.om * s.L, vy = -Math.sin(s.th) * s.om * s.L;
+    PupoRide.leave(g, p); R.swingCoyote = this.K.RELEASE_COYOTE; this.armFree(R);
+    p.vx = vx; p.vy = Math.max(vy, 0); p.airMax = Math.abs(p.vx); p.jumping = false; p.onGround = false; p.coyote = 0;
   },
   ax: 1, ay: 0, neutral: true, rvx: 0, rvy: 0,
   // the builder: the bottom row a piece may dig to (a layered gen's lane band, or the area), and a hole in the floor there
@@ -292,7 +321,7 @@ const PupoReach = {
   swing: {
     enter(p, g, R, e) {
       const K = PupoReach.K, s = R.sw || (R.sw = { e: null, px: 0, py: 0, th: 0, om: 0, L: 0, target: 0 });
-      s.e = e; s.px = e.hx; s.py = e.hy;
+      s.e = e; s.px = e.hx; s.py = e.hy; s.downHeld = true;
       const bx = p.x + p.w / 2, by = p.y + p.h / 2, dx = bx - s.px, dy = by - s.py, L = Math.sqrt(dx * dx + dy * dy) || 1;
       s.th = Math.atan2(dx, dy); s.L = L; s.target = K.HOOK_LEN;
       // his speed at the grab carries into the swing
@@ -302,15 +331,18 @@ const PupoReach = {
     },
     update(p, dt, inp, g, R) {
       const K = PupoReach.K, s = R.sw, A = g.area, e = s.e;
-      if (!e || e.remove) { PupoRide.leave(g, p); return; }
+      if (!e || e.remove) { PupoReach.dropSwing(p, g, R, true); return; }
       s.px = e.hx; s.py = e.hy;
       // reel to 2.5 tiles, Up reels in to 1.5, Down lets out to 5
-      if (inp.up) s.target = Math.max(K.HOOK_MIN, s.target - K.REEL_STICK * dt); else if (inp.down) s.target = Math.min(K.HOOK_MAX, s.target + K.REEL_STICK * dt);
+      if (inp.up) s.target = Math.max(K.HOOK_MIN, s.target - K.REEL_STICK * dt);
+      // Down lets go on purpose: a gentle drop with the swing's own speed (no hop)
+      if (inp.downPressed || (inp.down && !s.downHeld)) { PupoReach.dropSwing(p, g, R, false); return; }
+      s.downHeld = !!inp.down;
       const L0 = s.L; s.L = approach(s.L, s.target, K.REEL * dt);
       if (s.L !== L0) s.om *= L0 / s.L;
       const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
       s.om += (-(K.SWING_G / s.L) * Math.sin(s.th) + dir * K.PUMP) * dt;
-      s.om *= Math.pow(0.985, dt * 60);
+      s.om *= Math.pow(K.DAMP, dt * 60);
       const th1 = s.th + s.om * dt, cx = s.px + Math.sin(th1) * s.L, cy = s.py + Math.cos(th1) * s.L;
       if (regionFree(A, cx - p.w / 2, cy - p.h / 2, p.w, p.h)) { s.th = th1; p.x = cx - p.w / 2; p.y = cy - p.h / 2; }
       else { s.om *= -0.3; }
@@ -327,12 +359,7 @@ const PupoReach = {
         }
       }
       // Jump lets go: the speed along the swing x1.15, plus 3 t/s up (capped)
-      if (inp.jumpPressed) {
-        PupoReach.release(s.th, s.om, s.L, R.drowsyT > 0);
-        PupoRide.leave(g, p);
-        p.vx = PupoReach.rvx; p.vy = PupoReach.rvy; p.airMax = Math.abs(p.vx); p.jumping = false; p.onGround = false; p.coyote = 0;
-        Sound.play('jump', { pitch: 0.9 });
-      }
+      if (inp.jumpPressed) { PupoReach.launch(p, g, R, dir); return; }
       const a = PupoReach.arm(R); if (a.phase === 4) { a.x = s.px; a.y = s.py; a.len = Math.hypot(a.x - PupoReach.shoulderX(p), a.y - PupoReach.shoulderY(p)); }
     },
     pose(p, R, o) { const s = R.sw; o.pose = 'ride'; o.x = p.cx - p.facing * 6; o.y = p.y + p.h; o.rot = -s.th * 0.6; o.rotX = PupoReach.shoulderX(p); o.rotY = PupoReach.shoulderY(p); o.armsOff = true; o.still = true; return o; }
@@ -454,6 +481,10 @@ const PupoReach = {
   after(p, dt, inp, g, R, inMode) {
     const a = this.arm(R);
     if (R.showT > 0) return;
+    if (R.swingCoyote > 0) {
+      R.swingCoyote -= dt;
+      if (inp.jumpPressed && !R.mode && !p.onGround && R.sw) { const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0); R.swingCoyote = 0; this.launchFrom(p, R, dir); }
+    }
     // Action: stretch (not while swinging, zipping, pulling or being pulled to a grab)
     const busy = R.mode === 'swing' || R.mode === 'zip' || R.mode === 'pull' || R.mode === 'ledge' || (R.mode === 'climb' && R.cl && R.cl.up > 0);
     if (inp.actionPressed && !busy) {

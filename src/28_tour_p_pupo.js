@@ -31,6 +31,7 @@ const PupoRide = {
     METER_T: 30, METER_POKE: 0.10, METER_HIT: 0.25, METER_START: 0.5
   },
   simRide: false,           // PupoVal (28_tour_pc_pupoval.js): the validator's simulated bodies ride Pupo
+  downHeld: false,          // the real Down while riding, for the physics only (sinking through lifts)
   ART: 0.8,                 // Pupo's art units -> world px (his back is about 1.1 tiles high)
   modes: {},                // R.mode -> { update(p, dt, inp, g, R), pose(p, R, o) }: climbing, hanging, swinging... (PU-2, PU-3)
   afters: [],               // after Brady's step while riding: (p, dt, inp, g, R, inMode)
@@ -90,6 +91,7 @@ const PupoRide = {
     if (at) { const bottom = at.y; p.x = at.x - p.w / 2; p.y = bottom - p.h; }
     p.crouch = false; p.pupoRide = true; p.pupoFlop = false; p.mounted = false; p.hang = false;
     if (!this.setBox(p, K.W, K.H)) { if (!this.setBox(p, K.W, K.FLOP_H)) this.setBox(p, K.W, K.FLOP_H, true); p.pupoFlop = true; }
+    p.pound = null; p.flipT = 0;   // a jump power in progress stops (they are off while riding)
     R.where = 'ride'; R.mode = ''; R.free = null; R.freeArea = -1; R.parkArea = -1; R.holdT = 0; R.mountT = quiet ? 0 : K.MOUNT_T;
     if (!R.met) {
       R.met = true; R.meter = Math.max(R.meter, K.METER_START);
@@ -224,7 +226,7 @@ const PupoRide = {
   update(p, dt, inp, up0) {
     const g = p.g, R = this.st(g), K = this.K;
     if (p.state !== 'play' || p.dead) return up0.call(p, dt, inp);
-    inp = inp || this.EMPTY;
+    inp = inp || this.EMPTY; this.downHeld = !!inp.down;
     this.tick(p, R, dt);
     // a grabber cannot carry Brady off Pupo: the grab counts as one hit on Pupo
     if (p.grabbedBy) {
@@ -256,12 +258,13 @@ const PupoRide = {
     const wantFlop = !!inp.down && ground && !S.down;
     if (wantFlop && !p.pupoFlop) this.setFlop(p, true);
     else if (!wantFlop && p.pupoFlop && !this.setFlop(p, false)) S.jumpPressed = false;
-    // hold Down for a second, standing still: hop off (anywhere with room to stand)
+    // holding Down standing still: on solid ground it only shows the HOP OFF label (Down + Jump hops off); it no longer
+    // hops off by itself there (it fired by accident after sinking down an air vent with Down held). On a one-way floor,
+    // where Down + Jump drops both through, holding Down for a second is still the way off.
     if (inp.down && ground && !inp.left && !inp.right && Math.abs(p.vx) < 10) {
       R.holdT += dt;
-      if (R.holdT >= K.HOLD_HOP && regionFree(g.area, p.cx - 11, p.y + p.h - PLAYER_DIM.big.h, 22, PLAYER_DIM.big.h)) { this.dismount(p, 'hop'); return up0.call(p, dt, this.EMPTY); }
+      if (p.groundTile === T.SEMI && R.holdT >= K.HOLD_HOP && regionFree(g.area, p.cx - 11, p.y + p.h - PLAYER_DIM.big.h, 22, PLAYER_DIM.big.h)) { this.dismount(p, 'hop'); return up0.call(p, dt, this.EMPTY); }
     } else R.holdT = 0;
-    if (R.holdT > 0.35 && R.holdT - dt <= 0.35) this.tip(g, 'pupoOff', 'HOLD ▼ (OR ▼ + JUMP): HOP OFF PUPO');
     const r = up0.call(p, dt, S);
     if (p.pupoRide && p.state === 'play' && !p.dead) this.after(p, dt, inp, g, R, false);
     return r;
@@ -318,7 +321,10 @@ const PupoRide = {
     c.translate(sx - up * 10, sy + up * 30); c.scale(k * gs.sx, k * gs.sy);
     // hanging on: his raised hands on the grip point; seated: his hips on it
     o.x = 0; o.y = hang ? (D.shoulder + D.upper + D.fore - 2) : D.hip - 4;
+    // flopped: he lies along Pupo's back in his flying pose, arms forward round Pupo's neck
+    const a = p.anim, st0 = a.state; if (p.pupoFlop && !hang) a.state = 'fly';
     drawBrady(c, o);
+    a.state = st0;
   },
   // the status over the ride: drowsy z's, the post-power shield stars
   drawStatus(ctx, p, R, t) {
@@ -608,6 +614,12 @@ Tour.pieces.napBox = function (st, o) {
   // no jump powers on Pupo (no hover, double jump or pound)
   const aj0 = P.airJump;
   if (aj0) P.airJump = function (inp) { if (this.pupoRide) return false; return aj0.call(this, inp); };
+  // ...and nothing of theirs runs while riding, in any state: no pound in progress, no fart float, no flip
+  const ja0 = P.jumpAfter;
+  if (ja0) P.jumpAfter = function (dt, inp) {
+    if (this.pupoRide) { this.pound = null; this.flipT = 0; const J = this.jumpPow; if (J) { J.down = false; J.pants = 0; J.used = false; } if (this.squashT > 0) this.squashT -= dt; return; }
+    return ja0.call(this, dt, inp);
+  };
   // Brady sits (or hangs on) while riding; no idle air guitar on Pupo's back
   const ua0 = P.updateAnim;
   P.updateAnim = function (dt, inp) {
@@ -650,7 +662,10 @@ Tour.pieces.napBox = function (st, o) {
     opts.speedMul = (s0 == null ? 1 : s0) * (p.pupoFlop ? K.FLOP_SPEED / PHYS.walk : K.SPEED_MUL);
     opts.swimMul = (w0 == null ? 1 : w0) * K.SWIM_MUL;
     if (p.pupoFlop) p.runT = 0;
-    try { return ppf0(p, inp, area, dt, platforms, opts); } finally { opts.speedMul = s0; opts.swimMul = w0; }
+    // holding Down sinks through a lift (updraft, vent, steam...) exactly as on foot: Brady's own step gets no Down while
+    // riding (it would crouch), so the physics alone is told (only for the real rider, never the checker's bodies)
+    const d0 = inp.down; if (p.g && PupoRide.downHeld) inp.down = true;
+    try { return ppf0(p, inp, area, dt, platforms, opts); } finally { opts.speedMul = s0; opts.swimMul = w0; inp.down = d0; }
   };
   // the power picker's chip hides while riding: the action button belongs to Pupo
   if (typeof TourPicker !== 'undefined') {

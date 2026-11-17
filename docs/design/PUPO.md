@@ -70,7 +70,7 @@ The lid pops and Pupo unfolds over 1.2 s. First he yawns. In the yawn **both arm
 ### 1.2 Mounting, dismounting, carrying
 | Situation | What happens |
 |---|---|
-| Hop off | **Down + Jump** on solid ground: Brady hops up and off, and Pupo sits where he is. On a one-way floor, Down + Jump drops *both* through it, as Brady alone does today. To hop off there, **hold Down for 1.0 s** while standing still. That works anywhere. |
+| Hop off | **Down + Jump** on solid ground: Brady hops up and off, and Pupo sits where he is. On a one-way floor, Down + Jump drops *both* through it, as Brady alone does today. To hop off there, **hold Down for 1.0 s** while standing still. (Nov 17: holding Down hops off only on a one-way floor; on solid ground it shows the HOP OFF label instead, because it fired by accident after sinking down an air vent with Down held.) |
 | Get back on | Walk into the sitting Pupo, as when mounting. |
 | Doors, areas, Wormholes in and out of backstage seams | Pupo goes along, still ridden. |
 | Doors into an area where Pupo is not allowed (§1.7) | Pupo hops off on the near side ("...I'll... wait... here.") and sits by the door. Coming back through that door, Brady remounts automatically. |
@@ -499,7 +499,7 @@ Indonesia, Nepal, Antarctica and World 22 get no helper level. Their Pupo level 
   - Respawns give Pupo back (§1.2).
   - The validator proves each checkpoint can reach the exit starting **without** Pupo (§7.6, check `CP STRANDS`).
 - **With him:**
-  - Pupo never takes anything away: Brady can hop off anywhere (Down + Jump, or hold Down).
+  - Pupo never takes anything away: Brady can hop off anywhere (Down + Jump; on a one-way floor, hold Down).
   - The riding box fits every 2-tile passage, and the flop fits 1-tile passages.
   - `noPupo` areas park him automatically.
   - He is never carried into another level, so "arriving with him" only happens inside a level, where all of the above holds.

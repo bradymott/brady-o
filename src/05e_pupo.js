@@ -41,7 +41,8 @@ const PUPO = {
 };
 // the eyes on the head, in head units: [x, y, stripe direction]
 const PUPO_EYES = [-1.8, -1, -1, 3.6, 1, 1];
-const PUPO_HEAD_S = 2.05;   // a big round head, as Brady's is
+const PUPO_HEAD_S = 2.05;
+const PUPO_FLOP_TILT = 1.2;   // Brady-O's lean when lying along a flopped Pupo (radians from upright)   // a big round head, as Brady's is
 const Pupo = {
   C: PUPO,
   // a round fur shape in Brady's drawing language: a thin soft outline (like his clothes), the fur, and one shade step
@@ -259,6 +260,8 @@ const Pupo = {
     this.leg(ctx, -14, -22, -12, legPh, Math.PI, false, true, bob, lift0, t, swing);
     if (!armsOff) this.leg(ctx, 22, -28, 31, legPh, 0, true, true, bob, lift0, t, swing);
     if (pose === 'flop' || pose === 'sleep') ctx.restore();
+    // flopped flat: Brady-O lies along his back, hugging on (his head over Pupo's neck), drawn unsquashed
+    if (pose === 'flop' && o.rider) { ctx.save(); ctx.translate(-14, -24 + bob * 0.62); ctx.rotate(PUPO_FLOP_TILT); o.rider(ctx, 0, 0); ctx.restore(); }
     // the head, on a short neck, swinging slowly (resting on the paws when asleep)
     const mood = o.mood || (pose === 'sleep' ? 'sleep' : 'calm');
     if (pose === 'hang') {
