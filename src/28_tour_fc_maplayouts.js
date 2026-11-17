@@ -221,25 +221,33 @@ const TOUR_OW_MAPS = {
     scenes: { '7-1': 'paris', '7-2': 'lavender', '7-3': 'islet', '7-4': 'truffle', '7-5': 'garden', '7-6': ['barges', { river: 0 }], '7-7': 'balloons' },
     live: [['balloon', 1250, 420, '#ff5a6a', '#ffd23a'], ['balloon', 380, 280, '#38a8e8', '#ffffff'], ['walk', 'pig', [[230, 640], [300, 660], [340, 640]], 6], ['sail', [[1100, 940], [1590, 900], [1590, 720], [1250, 950]], 10], ['flutter', 1180, 620, '#ffffff']]
   },
-  // the Netherlands: polders and canals, tulip stripes, windmills, the frozen canals, the old weigh house town
+  // the Netherlands: reclaimed land behind a dike; from the harbour in the north-east the walk goes down through
+  // the polders, west past the flower auction and the bike lanes, then in across the canal rings (half circles
+  // round the old town, the harbour water on top) to the weigh house among the cheese wheels; windmills turn, a
+  // goose cycles the dike road
   nl: {
+    labels: { '8-6': 'Windmills' },
     w: 1600, h: 960,
-    land: [[[60, 520], [120, 330], [300, 220], [540, 170], [800, 140], [1060, 150], [1300, 200], [1470, 320], [1540, 500], [1510, 700], [1400, 860], [1150, 910], [850, 890], [560, 915], [290, 900], [100, 800]]],
-    nodes: { start: [160, 620], '8-1': [360, 700], '8-2': [780, 790], '8-3': [1190, 760], '8-4': [1290, 470], '8-5': [790, 250], '8-6': [800, 520], 'house:nl-winkel': [400, 450], port: [1140, 220] },
-    paths: { 'start>8-1': [[250, 680]], '8-1>8-2': [[560, 780]], '8-2>8-3': [[990, 800]], '8-3>8-4': [[1300, 620]], '8-4>8-5': [[1050, 330]], '8-2>8-6': [[800, 650]], '8-6>8-4': [[1050, 500]], '8-1>house:nl-winkel': [[360, 570]], '8-5>port': [[970, 210]] },
+    pal: { land: '#86bc6e', light: '#b0d888', path: '#e8c0a0', sea: '#5a9ab8', cliff: '#6a8a5a' },
+    coast: 'dike', trail: 'bricks', tufts: 'flowers', flowerCols: ['#ff4a5a', '#ffd23a', '#ff8ad0', '#ffffff'], foamY: 9,
+    land: [[[60, 110], [500, 100], [700, 130], [900, 130], [1100, 100], [1540, 110], [1550, 500], [1530, 900], [800, 910], [70, 900], [50, 500]]],
+    nodes: { start: [1420, 250], '8-1': [1340, 520], 'house:nl-winkel': [1440, 760], '8-2': [1060, 820], '8-6': [760, 690], '8-3': [560, 830], '8-4': [360, 460], '8-5': [800, 220], port: [580, 175] },
+    paths: { 'start>8-1': [[1400, 380]], '8-1>house:nl-winkel': [[1420, 640]], '8-1>8-2': [[1220, 700]], '8-2>8-6': [[900, 720]], '8-2>8-3': [[810, 870]], '8-6>8-4': [[540, 600]], '8-3>8-4': [[400, 680]], '8-4>8-5': [[520, 300]], '8-5>port': [[690, 170]] },
     feat: [
-      ['fields', '#6a9a4a', [[420, 790], [540, 760], [660, 820], [640, 880], [460, 880]], ['#ff4a5a', '#ffd23a', '#ff8ad0', '#ffffff', '#ff7a1a'], 0.12, 'bands'],
-      ['fields', '#7ac860', [[120, 420], [300, 320], [420, 360], [300, 520], [160, 540]], ['#86cc6a', '#6ab45a'], -0.2, 'bands'],
-      ['fields', '#7ac860', [[930, 600], [1080, 570], [1120, 680], [960, 700]], ['#86cc6a', '#6ab45a'], 0.5, 'bands'],
-      ['river', [[540, 170], [560, 300], [600, 420], [640, 560], [660, 700], [680, 920]], 12],
-      ['river', [[900, 650], [1100, 620], [1300, 560], [1540, 520]], 12],
-      ['snow', [[1180, 380], [1400, 360], [1450, 520], [1300, 560], [1180, 520]]],
-      ['sprite', 'windmill', 220, 650, 18], ['sprite', 'windmill', 520, 640, 18], ['sprite', 'windmill', 980, 420, 18], ['sprite', 'windmill', 1420, 700, 18],
-      ['town', 620, 250, 8, 70], ['landmark', 1390, 260, 56]
+      ['river', [[320, 105], [340, 300], [460, 470], [620, 560], [800, 590], [980, 560], [1140, 470], [1260, 300], [1280, 105]], 14],
+      ['river', [[500, 105], [520, 240], [620, 360], [800, 410], [980, 360], [1080, 240], [1100, 105]], 12],
+      ['polders', [[70, 520], [300, 480], [520, 620], [560, 760], [420, 890], [80, 890]], 0.35],
+      ['polders', [[1150, 700], [1400, 680], [1530, 760], [1520, 890], [1100, 895]], -0.3, ['#9ad07a', '#86c06a', '#b0d878']],
+      ['fields', '#6a9a4a', [[600, 720], [760, 700], [960, 730], [1000, 800], [620, 800]], ['#ff4a5a', '#ffd23a', '#ff8ad0', '#ffffff', '#ff7a1a'], 0.12, 'bands'],
+      ['sprite', 'gable', 640, 300, 16, { v: 0.1 }], ['sprite', 'gable', 960, 300, 16, { v: 0.5 }], ['sprite', 'gable', 600, 470, 16, { v: 0.8 }], ['sprite', 'gable', 1010, 460, 16, { v: 0.3 }], ['sprite', 'gable', 420, 340, 15, { v: 0.6 }], ['sprite', 'gable', 1190, 380, 15, { v: 0.2 }],
+      ['sprite', 'wheel', 720, 250, 12], ['sprite', 'wheel', 880, 250, 12], ['sprite', 'cheese', 760, 300, 12],
+      ['sprite', 'windmill', 120, 760, 18, { spin: 1 }], ['sprite', 'windmill', 500, 670, 18, { spin: 1 }], ['sprite', 'windmill', 1180, 800, 18, { spin: 1 }], ['sprite', 'windmill', 1460, 560, 18, { spin: 1 }], ['sprite', 'windmill', 160, 300, 16, { spin: 1 }],
+      ['trees', 'willow', 1420, 380, 80, 6], ['trees', 'poplar', 240, 220, 70, 5],
+      ['landmark', 1450, 220, 50]
     ],
-    flora: ['willow', 'round', 'poplar'], density: 26,
+    flora: ['willow', 'round', 'poplar'], density: 26, woods: false,
     scenes: { '8-1': ['windmills', { n: 2, ground: '#86cc6a', wall: '#7a5a4a', roof: '#3a3a4a' }], '8-2': 'greenhouse', '8-3': 'bikes', '8-4': 'skating', '8-5': 'canalhouses', '8-6': ['windmills', { n: 3, ground: '#9ad07a' }] },
-    live: [['sail', [[60, 700], [80, 940], [500, 960], [200, 900]], 9]]
+    live: [['mill', 120, 760, 18], ['mill', 500, 670, 18], ['mill', 1180, 800, 18], ['mill', 1460, 560, 18], ['mill', 160, 300, 16], ['walk', 'bike', [[1100, 885], [1300, 885], [1500, 870]], 22], ['bob', 'duck', 470, 465], ['bob', 'duck', 1110, 255], ['sail', [[300, 40], [1500, 30], [1550, 70], [200, 70]], 14]]
   },
   // Bali: the surf beach, the kite fields, the volcano, the manta jetty, the rice terraces, the monkey forest
   id: {
