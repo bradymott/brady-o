@@ -978,6 +978,14 @@ const boss = {
         if (b.at > 4) b.die();
       }
       b.fall(dt);
+      // his head sticks out ~16 px past the shell on its long neck (drawn at d * 44): it touches Brady like his body
+      // does (it used to pass straight through him: Brady saw the head on him and nothing happened)
+      const p = g.player;
+      if (b.state === 'fight' && b.pose !== 'shell' && b.pose !== 'tuck' && p && !p.dead) {
+        const hx = b.cx + b.dir * (b.pose === 'peek' ? 34 : b.pose === 'rear' ? 46 : 44), hy = b.y + b.h - (b.pose === 'peek' ? 24 : 30);
+        const head = { x: hx - 14, y: hy - 10, w: 28, h: 20 };
+        if (overlap(p, head) && !overlap(p, b)) b.touchPlayer(p);
+      }
     },
     hit(b, kind, src) {
       if (b.act === 'sulk') return false;

@@ -154,7 +154,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       // stacking (§5.2): a star blocks; gear swaps into the Backpack; a hit drops HANDS before FORM; the Backpack swaps back
       { const [g, p] = fresh(); p.setPower(1, true); give(p, 'kazoo'); give(p, 'wand'); const pack = p.pack, hands = p.hands && p.hands.id;
         p.star = 2; p.hurt({ x: p.x + 40, w: 10 }); const starBlock = p.hands && p.hands.id === 'wand' && p.power === 1; p.star = 0; p.invuln = 0;
-        p.hurt({ x: p.x + 40, w: 10 }); const dropped = !p.hands && p.power === 1 && g.entities.some(e => e.dropped);
+        p.hurt({ x: p.x + 40, w: 10 }); const dropped = !p.hands && p.power === 1 && g.entities.some(e => e.lost);
         p.invuln = 0; p.hurt({ x: p.x + 40, w: 10 }); const formDown = p.power === 0;
         const swapped = p.usePack() && p.hands && p.hands.id === 'kazoo' && !p.pack;
         p.collect('sig:taco'); const sigInHands = p.sig && p.sig.id === 'taco' && p.pack === 'gear:kazoo' && !p.hands;
