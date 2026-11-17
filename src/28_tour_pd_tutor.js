@@ -33,10 +33,11 @@ const PupoTutor = {
     T.pupoHop || this.done('pupoHop');
     if (!T.pupoGrab && R.mode === 'swing') { L.key = 'pupoGrab'; L.x = p.cx; L.y = p.y - 26; return L; }
     if (!T.pupoClimb && R.mode === 'climb') { L.key = 'pupoClimb'; L.x = p.cx; L.y = p.y - 26; return L; }
-    if (!T.pupoOff && R.holdT > 0.35) { L.key = 'pupoOff'; L.x = p.cx; L.y = p.y - 26; return L; }
     const tg = R.tg;
     if (!T.pupoGrip && tg && (tg.kind === 'strip' || tg.kind === 'bar' || tg.kind === 'ledge') && !R.mode) { L.key = 'pupoGrip'; L.x = tg.x; L.y = tg.y - 30; return L; }
     if (!T.pupoPoke && tg && tg.kind === 'enemy') { L.key = 'pupoPoke'; L.x = tg.x; L.y = tg.y - 34; return L; }
+    // how to hop off, early: 1.5 s after the first mount (on the ground, no enemy to poke first), or when Down is held
+    if (!T.pupoOff && !R.mode && p.onGround && (g.pupoRideT > 1.5 || R.holdT > 0.35)) { L.key = 'pupoOff'; L.x = p.cx; L.y = p.y - 26; return L; }
     if (!T.pupoReach && (!tg || !tg.kind) && !R.mode && this.upOnly(g, p, R)) { L.key = 'pupoReach'; L.x = this.ux; L.y = this.uy - 34; return L; }
     return null;
   },
@@ -52,6 +53,7 @@ const PupoTutor = {
     return this.uHit;
   },
   step(g, dt) {
+    if (g.player && g.player.pupoRide) g.pupoRideT = (g.pupoRideT || 0) + dt;
     const L = this.pick(g);
     if (!L) { if (g.pupoLabel) g.pupoLabel.t = 0; return; }
     if (g.pupoLabelKey !== L.key) { g.pupoLabelKey = L.key; L.t = 0; }

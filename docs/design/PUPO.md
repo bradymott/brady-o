@@ -573,7 +573,7 @@ There are no text walls. There are at most six one-line labels, each shown once 
    - In the plaza (beat ③) the meter is full. A "stall party" of 6 peppers and elotes marches in from both sides.
    - The Pupo Power button bobs. Label: **"TAP PUPO!"** with an arrow pointing at it.
    - The whole show plays.
-8. **Hop off** (taught later, by need). The first time the player holds Down on Pupo for 1 s, the label reads **"▼ + JUMP: HOP OFF"**.
+8. **Hop off** (taught early: Brady missed it when it only came later). 1.5 s after the first mount, on the ground with no enemy to poke (the POKE label wins while one is in reach), the label **"▼ + JUMP: HOP OFF"** shows over Brady for up to 6 s, or until he hops off. Holding Down also shows it.
 
 The rest of 1-1 plays as it does now, with Pupo or without him. The Loading Dock and Wormhole R1 (secrets WP-6) still lie past the gate, and Pupo can come along.
 

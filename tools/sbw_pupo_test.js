@@ -239,11 +239,14 @@ C.section(want, 'tutorial', () => {
   const hop = g.pupoLabel && g.pupoLabel.key;
   G.step(g, 0.8, { left: true }); G.step(g, 1.0, { right: true });
   C.check('HOP ON shows over the sitting Pupo, and is done once Brady gets on', hop === 'pupoHop' && G.run('Save.data.tips.pupoHop') === true && g.player.pupoRide, { hop });
+  { const R = g.pupo, t0 = g.pupoRideT || 0; let early = null; for (let i = 0; i < 400 && !early; i++) { G.step(g, 1 / 120); if (g.pupoLabel && g.pupoLabel.key === 'pupoOff') early = (g.pupoRideT || 0) - t0; }
+    C.check('HOP OFF (▼ + JUMP) shows by itself soon after the first mount, with no enemy about', early != null && G.run('PupoTutor.TEXT.pupoOff') === '▼ + JUMP: HOP OFF', { early, rideT: g.pupoRideT, mode: R.mode }); }
+  delete T.pupoOff;
   const p = g.player; put(g, 40, 9 * TS); G.step(g, 0.3);
   const E = G.run('ENTITY_TYPES.mxElote'), e = new E(g, { type: 'mxElote', x: p.cx + 3 * TS, y: p.y + p.h, dir: -1 }); e.vx = 0; e.speed = 0; g.spawn(e); G.step(g, 0.2);
   const poke = g.pupoLabel && g.pupoLabel.key; G.step(g, 1 / 120, { actionPressed: true }); G.step(g, 0.3);
   C.check('POKE shows over the first enemy in reach, and is done after the first poke', poke === 'pupoPoke' && G.run('Save.data.tips.pupoPoke') === true, { poke });
-  G.step(g, 0.5, { down: true }); const off = g.pupoLabel && g.pupoLabel.key;
+  delete T.pupoOff;   G.step(g, 0.5, { down: true }); const off = g.pupoLabel && g.pupoLabel.key;
   C.check('holding Down on Pupo: HOP OFF', off === 'pupoOff', { off });
   // every label is short enough for a portrait phone
   C.check('every label fits a portrait phone (at most 18 characters)', Object.values(PT.TEXT).every(t => t.length <= 18), PT.TEXT);
