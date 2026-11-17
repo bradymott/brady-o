@@ -205,6 +205,7 @@ Tour.amend('es', {
           ['toothpicks', { n: 2, enemy: 'esGamba' }],
           ['shaker', { gold: 'must' }],
           ['gearStand', { item: 'wand' }],
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), to float over the oil slick (Brady's request)
           // ② the oil slick and rolling olives
           ['oilSpill', { n: 10, olives: 2 }],
           ['breads', { n: 4, seed: 2, enemy: 'esPulpo' }],

@@ -468,6 +468,7 @@ const levels = [
           ['cafe', { to: 'caphe@in', back: 'caBack' }],
           'stools',
           'cp',
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), to float up to the wires (Brady's request)
           // ③ the wires over the tracks while the train passes below
           ['trainWires', { len: 30, period: 8 }],
           ['rooftops', { n: 2, gold: true }],

@@ -681,7 +681,10 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['rooftops', { lane: 'roof', n: 2 }],
         ['flat', { lane: 'cellar', n: 30 }],
         ['sync'],
-        // ② melons down the street; gaps and papel-picado ropes on the roofs; the corn that pops
+        // ② Magic Beans first (Brady wants the fart float early): float up to the roofs; then melons down the street,
+        // gaps and papel-picado ropes on the roofs; the corn that pops
+        ['gearStand', { lane: 'street', item: 'beans' }],   // the first jump power of the game, out in the open on a stand
+        ['tip', { lane: 'street', text: 'MAGIC BEANS! TAP JUMP AGAIN AND AGAIN IN THE AIR TO FART-FLOAT UP TO THE ROOFS' }],
         ['melons', { lane: 'street' }],
         ['enemies', { lane: 'street', kind: 'mxElote', n: 1, len: 8 }],
         ['step', { lane: 'street', h: -3 }],

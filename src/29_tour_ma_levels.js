@@ -381,6 +381,7 @@ Tour.amend('ma', {
           'sig',
           ['caravan', { span: 13 }],
           'cp',
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), early in the land (Brady's request)
           // ② the sandstorm
           'storm',
           ['enemies', { n: 2 }],

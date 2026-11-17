@@ -665,6 +665,7 @@ const levels = [
           ['lumbung', { to: 'lumbung@in', back: 'lumbungBack' }],
           ['glideGap', { w: 13, drop: 2 }],
           'cp',
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), to float the kite relay (Brady's request)
           // ③ the kite relay in a strong wind
           ['gearStand', { item: 'plane' }],
           ['windKites', { n: 3, gold: 'risky' }],

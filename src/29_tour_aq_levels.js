@@ -778,6 +778,7 @@ const levels = [
         ['igloo', { to: 'igloo@in', back: 'iglooBack' }],
         'cp',
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), over the seal holes (Brady's request)
         // ③ roll it down over the seal holes while the seals pop up
         ['bank', { h: 1 }],
         ['snowPile', {}],

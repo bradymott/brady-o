@@ -865,6 +865,7 @@ const levels = [
           ['plateWheel', { up: true }],
           ['kaiten', { n: 10, h: 3, gap: 2, enemy: 'jpTako' }],
           'cp',
+          ['gearStand', { item: 'beans' }],   // Magic Beans (fart float), early in the land (Brady's request); a stand, as 11-1 has its 5 item blocks
           // ② chopsticks from above, tea steam, the cold fridge
           ['shelfRun', {}],
           ['teacup', { first: true }],

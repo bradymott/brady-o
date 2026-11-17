@@ -653,6 +653,7 @@ const L2 = { n: 2, name: 'Canopy of Baños', arch: 'swing', theme: 'ec_amazon_du
         ['enemies', { kind: 'ecGlassFrog', n: 2 }],
         ['ring', { len: 3 }], ['ring', { len: 3 }],
         // ③ the swing at the end of the world, then vines across the falls
+        ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), to float across the falls (Brady's request)
         ['catapult', { to: [16, -2], skin: 'ecTreeSwing' }],
         ['postcard', { kind: 'risky', dy: -7 }],
         ['vines', { n: 4 }],

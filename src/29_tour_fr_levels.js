@@ -819,6 +819,7 @@ const levels = [
           ['lavenderRows', { n: 2 }],
           ['thiefStop', { n: 1 }],
           'cp',
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), early in the land (Brady's request)
           ['sunflowers', { n: 4, gold: 'must' }],
           ['gearStand', { item: 'kazoo' }],
           ['farmyard', { boars: 2 }],

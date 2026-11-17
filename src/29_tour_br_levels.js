@@ -1174,6 +1174,7 @@ const levels = [
         ['slothGrove', { n: 2, sign: 'SLOTHS DROP WHEN YOU WALK UNDER. WAIT FOR THE SHAKE!' }],
         ['caimans', { n: 3 }],
         'cp',
+        ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), early in the land (Brady's request)
         ['leapers', { span: 9 }],
         ['slothGrove', { n: 3 }],
         ['step', { h: -2 }],
