@@ -900,13 +900,13 @@ const sushiLoop = {
     '#..#......-------........#',
     '#..#.....................#',
     '#..#.....................#',
-    '#..#....?...?............#',
+    '#..#....?...?...?........#',
     '#........................#',
     '#........................#',
     '#G.V.@w...i...a..........#',
     '#########>>>>>>>>>>>>>####',
     '##########################'
-  ], { items: ['power', 'cake'], legend: { V: ['piece', shutterPiece, { opens: 'noren' }], i: ['spawn', 'sign', { text: 'THE NOREN (THE WAY OUT) IS SHUT TILL CLOSING. THE SWITCH IS IN THE PANTRY. THE BELT ONLY GOES ROUND ONE WAY...' }] } }),
+  ], { items: ['power', 'cake', 'beans'], legend: { V: ['piece', shutterPiece, { opens: 'noren' }], i: ['spawn', 'sign', { text: 'THE NOREN (THE WAY OUT) IS SHUT TILL CLOSING. THE SWITCH IS IN THE PANTRY. THE BELT ONLY GOES ROUND ONE WAY...' }] } }),
   // the kitchen: the hatch on to the cold store; the staff door (opened from the roof) and the stairs up to the pantry hatch
   kitchen: loopCell([
     '##########################',
