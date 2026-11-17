@@ -188,11 +188,12 @@ class TourEndingScene {
     ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
     this.parts.draw(ctx);
     const bw = Math.min(W - 40, 640), bx = (W - bw) / 2, by = Math.max(20, insets.t + 14);
-    ctx.fillStyle = 'rgba(10,6,20,0.78)'; rr(ctx, bx, by, bw, 74, 14); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = `${W < 600 ? 13 : 15}px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const lines = wrapText(ctx, this.lines[Math.min(st, this.lines.length - 1)], bw - 40);
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, by + 30 + (i - (lines.length - 1) / 2) * 19));
-    ctx.font = `10px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffd84a'; ctx.fillText('TAP', W / 2, by + 62);
+    ctx.font = `${W < 600 ? 13 : 15}px ${FONT_UI}`;
+    const lines = wrapText(ctx, this.lines[Math.min(st, this.lines.length - 1)], bw - 40), bh = Math.max(74, 40 + lines.length * 19);
+    ctx.fillStyle = 'rgba(10,6,20,0.78)'; rr(ctx, bx, by, bw, bh, 14); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, by + 20 + i * 19));
+    ctx.font = `10px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffd84a'; ctx.fillText('TAP', W / 2, by + bh - 11);
   }
 }
 

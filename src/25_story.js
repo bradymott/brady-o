@@ -53,15 +53,17 @@ class StoryScene {
     ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
     // caption card
     const a = Math.min(1, this.pt * 3);
-    const bw = Math.min(W - 40, 680), bx = (W - bw) / 2, by = H - Math.max(16, insets.b + 10) - 92;
+    // the card grows with the caption (three lines or more in portrait), so the text never runs into TAP TO CONTINUE
+    const bw = Math.min(W - 40, 680), bx = (W - bw) / 2;
     ctx.save(); ctx.globalAlpha = a;
-    ctx.fillStyle = 'rgba(10,6,20,0.82)'; rr(ctx, bx, by, bw, 84, 16); ctx.fill();
+    ctx.font = `${W < 600 ? 13 : 15}px ${FONT_UI}`;
+    const lines = wrapText(ctx, p.text, bw - 40), bh = Math.max(84, 44 + lines.length * 20), by = H - Math.max(16, insets.b + 10) - bh - 8;
+    ctx.fillStyle = 'rgba(10,6,20,0.82)'; rr(ctx, bx, by, bw, bh, 16); ctx.fill();
     ctx.strokeStyle = 'rgba(255,216,74,0.5)'; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.fillStyle = '#ffffff'; ctx.font = `${W < 600 ? 13 : 15}px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const lines = wrapText(ctx, p.text, bw - 40);
-    lines.forEach((l, k) => ctx.fillText(l, W / 2, by + 42 + (k - (lines.length - 1) / 2) * 20));
+    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    lines.forEach((l, k) => ctx.fillText(l, W / 2, by + 16 + 10 + k * 20));
     ctx.font = `10px ${FONT_DISPLAY}`; ctx.fillStyle = 'rgba(255,216,74,0.8)';
-    ctx.fillText(this.i < this.panels.length - 1 ? 'TAP TO CONTINUE' : 'TAP TO START', W / 2, by + 74 + Math.sin(this.t * 4) * 1.5);
+    ctx.fillText(this.i < this.panels.length - 1 ? 'TAP TO CONTINUE' : 'TAP TO START', W / 2, by + bh - 12 + Math.sin(this.t * 4) * 1.5);
     ctx.restore();
     // panel dots
     for (let k = 0; k < this.panels.length; k++) { ctx.fillStyle = k === this.i ? '#ffd84a' : 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.arc(W / 2 - (this.panels.length - 1) * 8 + k * 16, by - 12, 3.5, 0, TAU); ctx.fill(); }

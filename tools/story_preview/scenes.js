@@ -47,8 +47,9 @@ let bad = 0;
         }, post);
         await page.waitForTimeout(1200);
         await page.evaluate(() => {
-          const g = window.BRADY.Game.scene; let b = g.entities.find(e => e.boss && !e.remove);
-          if (!b) { const k = g.level.areas.findIndex(a => a.role === 'arena' || a.spawns.some(s => s.type === 'boss')); const a = g.level.areas[k], an = (a.anchors && (a.anchors.in || a.anchors.start)) || { x: 112, y: (a.H - 4) * 32 }; g.loadArea(k, an.x, an.y, 0); b = g.entities.find(e => e.boss && !e.remove); }
+          // the Other Brady's arena (the lead-in hall has a camp boss of its own)
+          const g = window.BRADY.Game.scene; let b = g.entities.find(e => e.style === 'w22_other' && !e.remove);
+          if (!b) { const k = g.level.areas.findIndex(a => a.role === 'arena'); const a = g.level.areas[k], an = (a.anchors && (a.anchors.in || a.anchors.start)) || { x: 112, y: (a.H - 4) * 32 }; g.loadArea(k, an.x, an.y, 0); b = g.entities.find(e => e.style === 'w22_other' && !e.remove); }
           const p = g.player; p.x = b.arenaX0 + 40; p.y = b.floorY - p.h - 4; p.vy = 0; p.invuln = 99;
           window.__b = b;
         });
