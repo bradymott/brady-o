@@ -305,23 +305,32 @@ const TOUR_OW_MAPS = {
     scenes: { '10-1': 'trainstreet', '10-2': 'junks', '10-3': ['village', { wall: '#e8c870', walls: ['#e8c870', '#e8a060', '#c8d870'], roof: '#a84a3a', n: 6, lanterns: true, ground: '#d8c8a0' }], '10-4': 'cave', '10-5': 'moat', '10-6': ['floatmarket', { river: 1 }] },
     live: [['train', [[60, 1160], [300, 1140], [600, 1140], [880, 1230]], 40, '#e8423a', 4], ['sail', [[940, 1290], [1080, 1190], [1080, 970], [960, 1090]], 8, '#7a4a30', '#c8402a'], ['lanterns', 0, 5], ['walk', 'buffalo', [[480, 450], [560, 470], [640, 440]], 5], ['walk', 'goose', [[880, 150], [940, 160]], 6], ['circle', 330, 870, 60, 0.9]]
   },
-  // Japan: the sushi harbour, the bullet train line, the snowy cone, the bamboo night woods, the neon towers,
-  // the kappa garden pond
+  // Japan: a staircase of straight railway trails stepping down from the north-west, every turn a right angle,
+  // as the line runs from the sushi harbour past the snowy cone to the neon blocks and the kappa garden;
+  // the bullet train races along the coast, cherry petals fall
   jp: {
-    labels: { '11-6': 'Capsule Toys', '11-1': 'Sushi' },
+    labels: { '11-6': 'Capsule Toys', '11-1': 'Sushi', '11-7': 'Fuji Thermals' },
     w: 1600, h: 960,
-    land: [[[80, 720], [140, 560], [300, 470], [420, 330], [600, 230], [820, 160], [1060, 120], [1300, 150], [1480, 240], [1530, 400], [1450, 560], [1350, 700], [1200, 820], [960, 890], [680, 900], [420, 890], [200, 840]]],
-    nodes: { start: [180, 760], '11-1': [380, 760], '11-2': [780, 790], '11-3': [1180, 700], '11-4': [1310, 470], '11-5': [800, 285], '11-6': [1290, 245, 'w'], '11-7': [380, 480], 'house:jp-omise': [820, 525], port: [610, 300, 'n'] },
-    paths: { 'start>11-1': [[270, 780]], '11-1>11-2': [[580, 820]], '11-2>11-3': [[1000, 780]], '11-3>11-4': [[1280, 600]], '11-4>11-5': [[1060, 380]], '11-2>11-7': [[560, 620]], '11-3>house:jp-omise': [[1000, 600]], '11-4>11-6': [[1360, 360]], '11-5>port': [[680, 255]] },
+    pal: { land: '#8ab496', light: '#c8dcae', path: '#f4ead4', sea: '#6aaac0' },
+    trail: 'rail', tufts: 'flowers', flowerCols: ['#ffb7c9', '#ffffff'],
+    land: [[[140, 70], [700, 60], [1200, 80], [1470, 140], [1540, 400], [1520, 700], [1450, 900], [900, 910], [400, 900], [90, 820], [60, 400]]],
+    nodes: { start: [200, 160], '11-1': [520, 160], '11-2': [520, 440], '11-7': [240, 620], '11-3': [880, 440], 'house:jp-omise': [880, 210], '11-4': [880, 720], '11-6': [620, 790], '11-5': [1260, 720], port: [1260, 420] },
+    paths: { 'start>11-1': [[360, 160]], '11-1>11-2': [[520, 300]], '11-2>11-7': [[520, 620]], '11-2>11-3': [[700, 440]], '11-3>house:jp-omise': [[880, 330]], '11-3>11-4': [[880, 580]], '11-4>11-6': [[750, 790]], '11-4>11-5': [[1070, 720]], '11-5>port': [[1260, 570]] },
     feat: [
-      ['volcano', 545, 440, 70, { lava: false, col: '#7a86a8' }],
-      ['trees', 'bamboo', 1150, 600, 110, 10], ['trees', 'cherry', 680, 660, 120, 10], ['trees', 'bonsai', 420, 620, 80, 5],
-      ['lake', [[880, 300], [960, 290], [990, 340], [930, 362], [870, 342]]],
-      ['town', 1400, 520, 6, 50, 'flat'], ['town', 400, 850, 5, 40]
+      ['rail', [[90, 860], [500, 880], [1000, 880], [1430, 860], [1500, 600], [1480, 250]]],
+      ['blocks', [[960, 500], [1160, 500], [1180, 640], [960, 650]], { step: 34, street: 9, cols: ['#4a4a6a', '#5a4a7a', '#3a5a7a'], road: '#2a2a3a', lit: true }],
+      ['blocks', [[640, 240], [780, 250], [780, 360], [640, 370]], { step: 34, street: 9, cols: ['#e8d8c8', '#d8c8b8', '#c8d0d8'], road: '#a8a0a8' }],
+      ['volcano', 250, 400, 74, { lava: false, col: '#7a86a8' }],
+      ['lake', [[1180, 780], [1260, 800], [1290, 850], [1200, 860], [1150, 830]]],
+      ['trees', 'cherry', 680, 620, 110, 10], ['trees', 'cherry', 400, 760, 90, 7], ['trees', 'bamboo', 1100, 300, 110, 10], ['trees', 'bonsai', 1380, 600, 70, 5], ['trees', 'cherry', 1380, 300, 60, 5],
+      ['sprite', 'onigiri', 400, 560, 18], ['sprite', 'onigiri', 1080, 820, 16], ['sprite', 'onigiri', 720, 160, 14],
+      ['sprite', 'neon', 1000, 470, 14, { v: 0.2 }], ['sprite', 'neon', 1120, 470, 16, { v: 0.6 }], ['sprite', 'neon', 1180, 600, 13, { v: 0.9 }],
+      ['town', 620, 110, 5, 40, 'flat'], ['town', 1360, 160, 4, 40],
+      ['landmark', 1420, 470, 52]
     ],
-    flora: ['bonsai', 'cherry', 'round'], density: 30,
+    flora: ['bonsai', 'cherry', 'round'], density: 34,
     scenes: { '11-1': 'sushi', '11-2': 'bullettrain', '11-3': 'bamboonight', '11-4': 'neon', '11-5': 'kappapond', '11-6': 'gacha', '11-7': 'glider' },
-    live: [['sail', [[60, 760], [120, 940], [700, 950], [300, 900]], 10]]
+    live: [['train', [[90, 860], [500, 880], [1000, 880], [1430, 860], [1500, 600], [1480, 250]], 90, '#38a8e8', 5], ['flakes', 560, 520, 820, 720, 14, '#ffc8d8', true], ['walk', 'shiba', [[300, 250], [380, 240], [420, 260]], 10], ['sail', [[160, 30], [800, 25], [1200, 40], [700, 50]], 12], ['fish', 1220, 820, '#ff7a3a']]
   },
   // Nepal: highlands above a sea of clouds; rope bridges over the rivers, the yak pass, the icefall, the
   // supply depot, the Baron's fortress under the snow peaks
