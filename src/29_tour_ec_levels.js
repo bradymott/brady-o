@@ -396,7 +396,8 @@ class EcPodBelt extends Ent {
     ctx.fillStyle = '#5a6070'; for (let xx = x0 + 10; xx < x1 - 6; xx += 24) { ctx.beginPath(); ctx.arc(xx, hb - 2 * TS + 16, 2.2, 0, TAU); ctx.arc(xx, hb - 18, 2.2, 0, TAU); ctx.fill(); }
     ctx.fillStyle = '#ffffff'; ctx.font = `bold 11px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('CACAO EXPRESS', (x0 + x1) / 2, hb - TS + 2);
     // the drums at both ends (they turn with the belt)
-    for (const dx of [x0 + 2, x1 - 2]) {
+    for (let end = 0; end < 2; end++) {
+      const dx = end ? x1 - 2 : x0 + 2;
       ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(dx, hb - TS, 15, 0, TAU); ctx.fill();
       ctx.fillStyle = '#c87a3a'; ctx.beginPath(); ctx.arc(dx, hb - TS, 12.5, 0, TAU); ctx.fill();
       ctx.strokeStyle = INK; ctx.lineWidth = 2.4; const a = t * 2.4;
@@ -716,6 +717,8 @@ const stamps = {
   }
 };
 
+// the cacao tree's crown: circles (dx, dy, r) over the trunk, made once
+const EC_TREE_CROWN = [-34, -100, 30, 0, -118, 36, 36, -102, 30, -6, -86, 28];
 // decor the stamps use: a bird's nest of twigs with blue eggs, a rainbow in the mist
 Object.assign(Decor, {
   // 2-2: the cacao tree over its larder: a mossy trunk (the larder's tiles), a leafy crown, pods on the trunk and a long
@@ -739,10 +742,10 @@ Object.assign(Decor, {
     ctx.fillStyle = '#e8c890'; rr(ctx, x0 + TS + 4, top + 3, 3 * TS - 8, 13, 3); ctx.fill();
     ctx.fillStyle = '#5a3418'; ctx.font = `bold 8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('DESPENSA', x0 + 2.5 * TS, top + 13);
     // the crown
-    const C = [[-34, -100, 30], [0, -118, 36], [36, -102, 30], [-6, -86, 28]];
-    ctx.fillStyle = INK; for (const [dx, dy, r] of C) { ctx.beginPath(); ctx.arc(cx + dx, top + dy, r + 2, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = '#3e7a34'; for (const [dx, dy, r] of C) { ctx.beginPath(); ctx.arc(cx + dx, top + dy, r, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = '#5aa04a'; for (const [dx, dy, r] of C) { ctx.beginPath(); ctx.arc(cx + dx - r * 0.3, top + dy - r * 0.35, r * 0.42, 0, TAU); ctx.fill(); }
+    const C = EC_TREE_CROWN;
+    ctx.fillStyle = INK; for (let k = 0; k < C.length; k += 3) { ctx.beginPath(); ctx.arc(cx + C[k], top + C[k + 1], C[k + 2] + 2, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#3e7a34'; for (let k = 0; k < C.length; k += 3) { ctx.beginPath(); ctx.arc(cx + C[k], top + C[k + 1], C[k + 2], 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#5aa04a'; for (let k = 0; k < C.length; k += 3) { const r = C[k + 2]; ctx.beginPath(); ctx.arc(cx + C[k] - r * 0.3, top + C[k + 1] - r * 0.35, r * 0.42, 0, TAU); ctx.fill(); }
     // pods growing straight out of the trunk (cacao does that)
     ecPod(ctx, cx + 14, top - 30, 0.8, '#e8902a', '#a8501a', 0.3);
     ecPod(ctx, cx - 14, top - 56, 0.7, '#c8b82a', '#8a7a14', -0.2);

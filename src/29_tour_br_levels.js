@@ -1072,7 +1072,10 @@ class BrCousin extends Ent {
     const o = BrCousin.o, S = PupoRide.ART * 0.92, an = BrCousin.an;
     o.x = this.bx; o.y = this.by; o.t = Math.round(((this.t + this.k) % 2.4) / 0.6) * 0.6; o.scale = S; o.facing = this.facing; o.mood = this.mood;
     BrCousin.cur = o;
-    Ink.around(ctx, this.bx - 50, this.by - 14, 100, 66, BrCousin.inkFn, { pad: 6, owner: this, key: o.mood + ':' + o.t, rim: Ink.keyline });
+    // the held picture's key, rebuilt only when the mood or the breathing frame changes (no string per frame)
+    if (o.mood !== this.kMood || o.t !== this.kT) { this.kMood = o.mood; this.kT = o.t; this.inkKey = o.mood + ':' + o.t; }
+    const io = this.inkOpts || (this.inkOpts = { pad: 6, owner: this, key: '', rim: Ink.keyline }); io.key = this.inkKey;
+    Ink.around(ctx, this.bx - 50, this.by - 14, 100, 66, BrCousin.inkFn, io);
     // the arm down to the hand held out (the ring is the hook's own drawing)
     Pupo.anchors('hang', o.t, an);
     const sx = this.bx + this.facing * an.shoulderF.x * S, sy = this.by + an.shoulderF.y * S, hold = this.held ? Math.sin(this.t * 9) * 1.5 : 0;

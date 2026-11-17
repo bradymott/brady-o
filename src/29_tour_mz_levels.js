@@ -815,8 +815,8 @@ class MzBranchBat extends Ent {
       const k = 1 - this.fly / 0.7, yy = y + 18 - Math.sin(k * Math.PI) * 22;
       ctx.save(); ctx.translate(x, yy); ctx.scale(this.dir, 1);
       const f = Math.sin(this.t * 30);
-      ctx.fillStyle = '#1c1426'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 3, -1); ctx.quadraticCurveTo(s * 15, -14 - f * 6, s * 24, -2 - f * 4); ctx.quadraticCurveTo(s * 14, 3, s * 3, 4); ctx.fill(); }
-      ctx.fillStyle = '#4a2a20'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 3, -1); ctx.quadraticCurveTo(s * 14, -12 - f * 6, s * 21, -2 - f * 4); ctx.quadraticCurveTo(s * 13, 1.5, s * 3, 2.5); ctx.fill(); }
+      ctx.fillStyle = '#1c1426'; for (let s = -1; s <= 1; s += 2) { ctx.beginPath(); ctx.moveTo(s * 3, -1); ctx.quadraticCurveTo(s * 15, -14 - f * 6, s * 24, -2 - f * 4); ctx.quadraticCurveTo(s * 14, 3, s * 3, 4); ctx.fill(); }
+      ctx.fillStyle = '#4a2a20'; for (let s = -1; s <= 1; s += 2) { ctx.beginPath(); ctx.moveTo(s * 3, -1); ctx.quadraticCurveTo(s * 14, -12 - f * 6, s * 21, -2 - f * 4); ctx.quadraticCurveTo(s * 13, 1.5, s * 3, 2.5); ctx.fill(); }
       ctx.fillStyle = '#8a5a3a'; ctx.beginPath(); ctx.ellipse(0, 0, 6, 7, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(2, -7, 5, 0, TAU); ctx.fill();
       ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(4.5, -8, 1.3, 0, TAU); ctx.fill();
       ctx.restore(); return;
