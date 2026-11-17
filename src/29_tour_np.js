@@ -612,7 +612,7 @@ const P = {
 // THE STOLEN LANDMARKS. Piwi keeps the shrunken landmarks of the whole tour in jars and throws them at Brady one
 // at a time. A thrown landmark lands as a world object: kick it (run into it) or stomp it to launch it and it lobs
 // itself back at Piwi. A landmark that hits him is RETURNED: it hurts him and pops back to full size behind the
-// summit. Stomps bounce off (NOT THE HAT!).
+// summit. Stomps bounce off (NOT THE HAIR!).
 //   Phase 1 (hp 7-5): the Showtrunk (Chinka-O in its show cage), three landmarks, snow-globe drops and low swoops.
 //   Phase 2 (hp 4-2): he crashes and climbs into THE SHOWSTOPPER, a stage mech built from his props: it walks, stomps, charges
 //                     with its windmill arm and fires the spotlight beam. Three more landmarks.
@@ -872,7 +872,7 @@ function mechArt(ctx, b, t) {
 const boss = {
   id: 'np_baron', name: 'Piwi Squirmin\'', hp: BARON_HP, dims: [140, 84], floats: true, music: 'tour_np_boss', country: 'np',
   brain: {
-    guardText: 'NOT THE HAT!',
+    guardText: 'NOT THE HAIR!',
     phases: [4, 1],
     wake(b) { b.phase = 1; b.thrown = 0; b.quota = 3; b.parts = 3; b.told = false; b.fired = false; K.say(b.g, b, 'AH, MISTER BUN! JUST IN TIME FOR THE FINALE!', '#ffd84a'); },
     noDisc(b) { return true; },

@@ -173,18 +173,18 @@ class TourEndingScene {
     const fc = ['#3a7ad8', '#ffffff', '#e8483a', '#4ab05a', '#ffd84a'];
     for (let i = 0; i < 24; i++) { const k = i / 24, fx = k * W, fy = (1 - k) * (1 - k) * (gy - 120 * s) + 2 * (1 - k) * k * (gy - 90 * s) + k * k * (gy - 130 * s); ctx.fillStyle = fc[i % 5]; ctx.fillRect(fx, fy, 8 * s * 0.6, 10 * s * 0.6); }
     ctx.restore();
-    const k = Math.min(1, t / 2.5);
-    C.brady(ctx, W * 0.36 - 40 * s * (1 - k), gy, s * 1.05, t, st >= 4 ? 'victory' : 'idle', 1);
-    C.chinka(ctx, W * 0.36 + 34 * s + 40 * s * (1 - k), gy, s * 1.05, t, st === 2 ? 'reunion' : st === 3 ? 'hug' : 'wave', st === 3 ? 1 : -1);
-    C.pupo(ctx, W * 0.36 + 82 * s, gy, s * 0.95, t, st === 3 ? 'poke' : 'happy', -1);
+    const k = Math.min(1, t / 2.5), bx0 = W < H ? W / 2 - 14 * s : W * 0.36;
+    C.brady(ctx, bx0 - 40 * s * (1 - k), gy, s * 1.05, t, st >= 4 ? 'victory' : 'idle', 1);
+    C.chinka(ctx, bx0 + 34 * s + 40 * s * (1 - k), gy, s * 1.05, t, st === 2 ? 'reunion' : st === 3 ? 'hug' : 'wave', st === 3 ? 1 : -1);
+    C.pupo(ctx, bx0 + 82 * s, gy, s * 0.95, t, st === 3 ? 'poke' : 'happy', -1);
     // Piwi, pocket-sized in his own prop jar
-    const jx = W * 0.36 - 74 * s, jy = gy - 4 * s;
+    const jx = bx0 - 74 * s, jy = gy - 4 * s;
     ctx.save(); ctx.translate(jx, jy); ctx.scale(s * 0.5, s * 0.5);
     ctx.fillStyle = 'rgba(200,240,255,0.45)'; ctx.beginPath(); ctx.arc(0, -40, 40, Math.PI, TAU); ctx.lineTo(40, 0); ctx.lineTo(-40, 0); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = PIWI.jacket; rr(ctx, -44, -4, 88, 14, 4); ctx.fill();
     Piwi.draw(ctx, { x: 0, y: -4, scale: 1, t, pose: 'startled', noStrings: true });
     ctx.restore();
-    if (k >= 1) for (let i = 0; i < 3; i++) { const hy = gy - 110 * s - ((t * 30 + i * 30) % 90); ctx.fillStyle = `rgba(255,80,140,${1 - ((t * 30 + i * 30) % 90) / 90})`; ctx.font = `${16 + i * 4}px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.fillText('♥', W * 0.36 + 16 * s + Math.sin(t * 2 + i) * 12, hy); }
+    if (k >= 1) for (let i = 0; i < 3; i++) { const hy = gy - 110 * s - ((t * 30 + i * 30) % 90); ctx.fillStyle = `rgba(255,80,140,${1 - ((t * 30 + i * 30) % 90) / 90})`; ctx.font = `${16 + i * 4}px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.fillText('♥', bx0 + 16 * s + Math.sin(t * 2 + i) * 12, hy); }
     ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
     this.parts.draw(ctx);
     const bw = Math.min(W - 40, 640), bx = (W - bw) / 2, by = Math.max(20, insets.t + 14);
