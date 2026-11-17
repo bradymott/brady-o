@@ -92,3 +92,21 @@ divides every scenario's mean and p95 frame cost by the mean of 1-1 measured rig
 over `tools/perf_baseline.json` x 1.35 (`PERF_TOL` to change). It also checks the tier controller on synthetic frame
 times and that held ink pictures match live ink pixel for pixel. `--short --write-baseline` rewrites the baseline
 after an intended change (say why in the commit).
+
+## Long sessions (November 16): "laggy after a couple of levels", "glitchy after a few deaths"
+What a level, a death or a map visit left behind, found by reading the code (branch `sbw/long-session`). **Not yet
+measured**: run `BRADY_DIST=<dist> node tools/sbw_session_test.js` alone on a quiet machine (about 10 minutes).
+- **Mushroom sparkles made 16 new glow canvases every frame** (the live build, `main`: `15_postfx.js` asked
+  `PostFX.glow` for a new `hsl()` hue each frame, cached forever): about 4000 canvases (~64 MB) per mushroom, kept all
+  session. `sbw/items-fix` replaced that code; `src/16_session.js` also caps the glow cache.
+- **Trails wrote into the cached level**: a slime / coffee trail still down when Brady died stayed in the level for
+  every later try as an invisible slick or hot tile (`28_tour_i_behave.js` now copies the area's `surf` first).
+- **Canvases dropped without being freed** (iOS keeps their memory until the garbage collector runs, and caps a page's
+  canvas memory): backdrops and tile sets rebuilt on every atlas arrival and zoom, the inked-prop cache (48 pictures
+  of any size, now also a 12 MP budget), the ink memo, the overworld's painted map (a new one of up to 4096 px square
+  per map visit, now reused), the vignette and the HUD / light-map canvases of every Play (one per death). They are now
+  freed when dropped (`releaseCanvases`, `03a_atlas.js`; `Play.onSceneExit`, `16_session.js`).
+- **Every zoom change re-allocated the main canvas** (`Game.setRows` -> `resize`: each level start, boss fight, map);
+  now only a real size change does.
+- Small: joystick taps during levels queued for the map all session; the power picker chip could stay "held" after a
+  pause.
