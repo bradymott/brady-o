@@ -1244,7 +1244,7 @@ Tour.country({
   themes, painters, decor, decorLights, beatArt, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_es', boss: 'tour_es_boss' },
   landmark: 'the silk exchange',
-  arrival: 'Brady! The Baron shrank the Silk Exchange and hid it in a paella pan. It smells AMAZING in there. ♥ C',
+  arrival: 'Brady! Piwi shrank the Silk Exchange for his cooking show set. It smells AMAZING in there. I added extra chilli. ♥ C',
   coin: { name: 'ORANGE', draw(ctx, x, y) {
     ctx.fillStyle = '#ff8a1a'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(x - 3, y - 3, 2.5, 0, TAU); ctx.fill();

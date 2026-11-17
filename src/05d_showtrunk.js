@@ -5,7 +5,7 @@
    stands open as a little stage: velvet curtains, footlights and a
    bulb-lit marquee that says PIWI! Under it, on a chain, hangs the
    gilded show cage where Chinka-O sits on a swing with her popcorn.
-   It replaces the Baron's snow-globe blimp on the title, the route
+   It replaced the old villain's blimp on the title, the route
    map, the land maps and the Nepal fight. Not referenced yet.
      Showtrunk.draw(ctx, { x, y, scale, t, piwi: pose | null, chinka: true | false, party })
        origin: the middle of the trunk's base; the cage hangs below it

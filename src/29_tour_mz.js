@@ -831,7 +831,7 @@ Tour.country({
   themes, painters, dyn, decor, decorLights, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_mz', boss: 'tour_mz_boss' },
   landmark: 'the great baobab',
-  arrival: 'Brady! The Baron shrank the biggest baobab in Africa and put it in a flowerpot. Rude! ♥ C',
+  arrival: 'Brady! Piwi shrank the biggest baobab in Africa into a flowerpot "for the set". Rude! The crab he hired is ruder. ♥ C',
   coin: { name: 'CASHEW NUT', draw(ctx, x, y) {
     ctx.fillStyle = '#e8c890'; ctx.beginPath(); ctx.arc(x + 1, y - 2, 7.5, Math.PI * 0.9, Math.PI * 2.2); ctx.quadraticCurveTo(x + 2, y + 9, x - 5, y + 5); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#b8945a'; ctx.lineWidth = 1.2; ctx.stroke();

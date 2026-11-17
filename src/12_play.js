@@ -163,6 +163,8 @@ class Play {
     Input.setMode('game');
     Sound.setTempoBoost(false);
     this.mus(this.area.music);
+    // world tour: the powers Brady finished his last level with (28_tour_dk_carry.js)
+    if (typeof TourCarry !== 'undefined') TourCarry.start(this, opts);
   }
 
   /* ---------- area management ---------- */
@@ -1363,7 +1365,7 @@ class Play {
     ctx.fillStyle = g;
     // secrets: an exit kind's title (a warp's own title) or a resultsTitle hook (TourHooks.titleFor)
     const hookTitle = typeof TourHooks !== 'undefined' ? TourHooks.titleFor(this) : null;
-    ctx.fillText(hookTitle || (this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'CHINKA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'WELCOME HOME!'), W / 2, H / 2 - 100);
+    ctx.fillText(hookTitle || (this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'CHINKA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'YOU DID IT!'), W / 2, H / 2 - 100);
     ctx.font = `14px ${FONT_UI}`; ctx.fillStyle = '#ffffff';
     ctx.fillText(this.level.name + ' cleared', W / 2, H / 2 - 66);
     ctx.font = `13px ${FONT_DISPLAY}`;

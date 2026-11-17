@@ -192,18 +192,8 @@ const TourPanelFx = {
   flag(ctx, x, y, t) { ctx.save(); ctx.strokeStyle = '#30474f'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y + 10); ctx.lineTo(x, y - 8); ctx.stroke(); ctx.fillStyle = Math.sin(t * 6) > 0 ? '#ffd84a' : '#ff9a3a'; ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x - 11, y - 4); ctx.lineTo(x, y); ctx.fill(); ctx.fillStyle = '#30474f'; ctx.font = 'bold 7px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('?', x - 4, y - 3.5); ctx.restore(); },
   jar(ctx, x, y, s) { ctx.save(); ctx.strokeStyle = 'rgba(220,240,255,0.95)'; ctx.fillStyle = 'rgba(200,230,255,0.22)'; ctx.lineWidth = 1.5; rr(ctx, x - s * 0.8, y - s * 1.6, s * 1.6, s * 1.6, s * 0.4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#8a6a9a'; rr(ctx, x - s * 0.6, y - s * 1.85, s * 1.2, s * 0.3, 2); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.moveTo(x - s * 0.5, y - s * 1.3); ctx.lineTo(x - s * 0.5, y - s * 0.5); ctx.stroke(); ctx.restore(); },
   postmark(ctx, x, y, col) { ctx.save(); ctx.translate(x, y); ctx.rotate(-0.2); ctx.strokeStyle = col; ctx.globalAlpha = 0.85; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, 7, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, TAU); ctx.stroke(); for (let q = -1; q <= 1; q++) { ctx.beginPath(); ctx.moveTo(8, q * 3); ctx.quadraticCurveTo(12, q * 3 - 2, 16, q * 3); ctx.stroke(); } ctx.restore(); },
-  airship(ctx, x, y, t) {
-    ctx.save(); ctx.translate(x, y);
-    ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(0, 26, 16, 3, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#5a4a6a'; ctx.strokeStyle = '#2a2034'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(0, 0, 20, 8, 0, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#8a7aa0'; ctx.beginPath(); ctx.ellipse(-3, -3, 13, 3, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#5a4a6a'; ctx.beginPath(); ctx.moveTo(-18, 0); ctx.lineTo(-25, -7); ctx.lineTo(-25, 7); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#3a2e48'; rr(ctx, -6, 8, 12, 5, 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#ffd84a'; ctx.fillRect(-3, 9.5, 2, 2); ctx.fillRect(1, 9.5, 2, 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1; const pr = Math.sin(t * 30) * 4; ctx.beginPath(); ctx.moveTo(-26, -pr); ctx.lineTo(-26, pr); ctx.stroke();
-    ctx.fillStyle = '#e8d8ff'; ctx.font = 'bold 6px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('B', 2, 2);
-    ctx.restore();
-  },
+  // Piwi's Showtrunk over the next tour date (05d_showtrunk.js); the name is kept for its callers
+  airship(ctx, x, y, t) { Showtrunk.mini(ctx, x, y - 4, t, 0.85); },
   lighthouse(ctx, x, y, t, lit) {
     ctx.save(); ctx.translate(x, y);
     if (lit) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.rotate(t * 0.8); const g = ctx.createLinearGradient(0, 0, 70, 0); g.addColorStop(0, 'rgba(255,240,170,0.6)'); g.addColorStop(1, 'rgba(255,240,170,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(70, -36); ctx.lineTo(70, -8); ctx.closePath(); ctx.fill(); ctx.restore(); }

@@ -1979,7 +1979,7 @@ Tour.country({
   themes, painters, dyn, decor, decorLights, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_id', boss: 'tour_id_boss' },
   landmark: 'the Jatiluwih rice terraces',
-  arrival: 'Selamat datang, Brady! The Baron shrank a whole hillside of rice terraces into a snow globe. A gecko here says it can lend you a surfboard... ♥ C',
+  arrival: 'Selamat datang, Brady! Piwi shrank a whole hillside of rice terraces into a snow globe. A gecko here says it can lend you a surfboard... ♥ C',
   emblem(ctx, x, y, r) { frangipani(ctx, x, y, r * 0.95, 0.3, '#ffffff'); },
   coin: COIN,
   star: { name: 'GOLDEN GECKO', draw(ctx, x, y, t) {

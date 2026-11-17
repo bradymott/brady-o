@@ -154,7 +154,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       // stacking (§5.2): a star blocks; gear swaps into the Backpack; a hit drops HANDS before FORM; the Backpack swaps back
       { const [g, p] = fresh(); p.setPower(1, true); give(p, 'kazoo'); give(p, 'wand'); const pack = p.pack, hands = p.hands && p.hands.id;
         p.star = 2; p.hurt({ x: p.x + 40, w: 10 }); const starBlock = p.hands && p.hands.id === 'wand' && p.power === 1; p.star = 0; p.invuln = 0;
-        p.hurt({ x: p.x + 40, w: 10 }); const dropped = !p.hands && p.power === 1 && g.entities.some(e => e.dropped);
+        p.hurt({ x: p.x + 40, w: 10 }); const dropped = !p.hands && p.power === 1 && g.entities.some(e => e.lost);
         p.invuln = 0; p.hurt({ x: p.x + 40, w: 10 }); const formDown = p.power === 0;
         const swapped = p.usePack() && p.hands && p.hands.id === 'kazoo' && !p.pack;
         p.collect('sig:taco'); const sigInHands = p.sig && p.sig.id === 'taco' && p.pack === 'gear:kazoo' && !p.hands;
@@ -354,7 +354,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       m.cam.lon = -30; m.cam.lat = 5; sim(0.05); const x = m.sx(-30), y = m.sy(5); window.BRADY.Input.taps.push({ x, y }); sim(0.05);
       return { jars: !!T.jars.mx, lighthouse: T.lighthouse };
     });
-    check('world map: the boss fell, so the Baron\'s jar over Mexico shatters and the airship moves on', r7.jar && r7.airship && r8.jars, Object.assign({}, r7, r8));
+    check('world map: the boss fell, so Piwi\'s prop jar over Mexico shatters and the Showtrunk moves on', r7.jar && r7.airship && r8.jars, Object.assign({}, r7, r8));
     check('world map: five bottles show the lighthouse; a tap lights its beam', r8.lighthouse === true, r8);
     check('world map: the secret flight arc starts at a country whose level has the flight exit (Ecuador 2-7, or the test exit in Mexico)', r7.from === 'ec' || r7.from === 'mx', r7);
     await page.evaluate(() => { const m = S(); m.cam.lon = -40; m.cam.lat = 10; m.cam.z = 3.2; sim(0.3); m.update = function () {}; });
