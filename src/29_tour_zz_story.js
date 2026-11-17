@@ -19,11 +19,10 @@ const ACTS = {
   ma_berrad: 'THE MAGICIAN', es_paella: 'COOKING WITH PIWI', fr_souffle: 'THE PASTRY CHEF', nl_cheese: 'THE ONLY PAYING FAN',
   id_kera: 'THE SCRIPT THIEF', vn_phin: 'THE CATERER', jp_kappa: 'THE CO-STAR', aq_walrus: 'THE CRITIC', np_baron: 'THE GRAND FINALE'
 };
-const VERDICTS = {
-  mx_pinata: '...good... pupo.', ec_tortoise: '...your pupo... is inside... your house.', br_toucan: '...next... year.',
-  mz_hermit: '...which shell... has... the pupo.', ma_berrad: '...hot... pupo.', es_paella: '...I found... one rice.',
-  fr_souffle: '...sorry.', nl_cheese: '...a pupo... in the cheese.', id_kera: '...best... friend.', vn_phin: '...one sip... still slow.',
-  jp_kappa: '...bowing... back...', aq_walrus: '...too polite... to look.'
+const VERDICTS = {   // short: speech floats over Brady-O and must fit a portrait phone
+  mx_pinata: '...good pupo.', ec_tortoise: '...pupo in a house.', br_toucan: '...next year.', mz_hermit: '...which shell?',
+  ma_berrad: '...hot pupo.', es_paella: '...one rice.', fr_souffle: '...sorry.', nl_cheese: '...cheese pupo.',
+  id_kera: '...best friend.', vn_phin: '...still slow.', jp_kappa: '...bowing back.', aq_walrus: '...too polite.'
 };
 for (const id in ACTS) {
   const B = BOSS_BRAINS[id]; if (!B) continue;
@@ -35,31 +34,33 @@ Boss.prototype.die = function () {
   die.call(this);
   const g = this.g, p = g && g.player, v = VERDICTS[this.style];
   if (v && p && !p.dead) K.say(g, p, 'PUPO: ' + v.toUpperCase(), '#f0d8b0');
-  if (this.style === 'w22_other' && g) g.spawn(new W22Encore(g, { x: (this.arenaX0 + this.arenaX1) / 2 - 4 * TS, y: this.floorY }));
+  if (this.style === 'w22_other' && g) { const px = p ? p.cx : (this.arenaX0 + this.arenaX1) / 2, x = clamp(px + 4 * TS, this.arenaX0 + 3 * TS, this.arenaX1 - 3 * TS); g.spawn(new W22Encore(g, { x, y: this.floorY })); }
 };
 
 /* World 22: Piwi behind the mirror, with his carved understudy of Brady-O */
 class W22Encore extends Ent {
   constructor(g, s) {
     super(g, s, 30, 60); this.friendly = true; this.t = 0; this.post = !!Save.data.beatGame; this.i = -1; this.next = 1.2; this.gone = false;
+    // short lines: speech floats over the speaker and must fit a portrait phone
     this.script = this.post ? [
-      ['piwi', 'talk', '...FINE. NO TRUNK. NO SCENERY. NO ACTS.'],
-      ['piwi', 'talk', 'ONE LAST SHOW? FOR AN AUDIENCE OF... THREE?'],
-      ['piwi', 'gloat', 'TA-DAAA! THANK YOU! THANK YOU!'],
-      ['chinka', 'unimpressed', 'TWO STARS FOR THE SHOW. ONE FOR THE BOW.'],
+      ['piwi', 'talk', '...FINE. NO TRUNK.'],
+      ['piwi', 'talk', 'ONE LAST SHOW?'],
+      ['piwi', 'gloat', 'TA-DAAA! THANK YOU!'],
+      ['chinka', 'unimpressed', 'TWO STARS FOR THE SHOW.'],
+      ['chinka', 'wave', 'ONE FOR THE BOW.'],
       ['piwi', 'startled', 'THREE STARS!'],
-      ['pupo', 'idle', 'PUPO: ...I MADE YOU... A PUPO.'],
-      ['piwi', 'gloat', 'PUPPET THEATRE, MEXICO CITY. MATINÉES DAILY. NO HOOKS!']
+      ['pupo', 'idle', 'PUPO: ...MADE YOU A PUPO.'],
+      ['piwi', 'gloat', 'MATINÉES DAILY! NO HOOKS!']
     ] : [
       ['piwi', 'startled', 'MY UNDERSTUDY! RUINED!'],
-      ['piwi', 'talk', 'FINE! SEE YOU AT THE FINALE, MISTER BUN!']
+      ['piwi', 'talk', 'SEE YOU AT THE FINALE!']
     ];
     this.pose = 'startled';
   }
   update(dt) {
     this.t += dt; this.next -= dt;
     if (this.next <= 0 && this.i < this.script.length - 1) {
-      this.i++; this.next = 2.6;
+      this.i++; this.next = 2.3;
       const [who, pose, line] = this.script[this.i];
       if (who === 'piwi') this.pose = pose; else if (who === 'chinka') this.chinkaPose = pose;
       const at = who === 'pupo' ? this.g.player : this;
