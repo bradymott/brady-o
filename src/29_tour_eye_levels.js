@@ -170,7 +170,7 @@ const A1 = {
 };
 const AISLE = {
   l: ['decor', 'eyeLamp'], j: ['decor', 'eyeSnoozer'], u: ['decor', 'eyeGalley'], f: ['decor', 'eyeCockpit'], r: ['decor', 'bkCrewSign'],
-  n: ['enemy', 'eyeGoose'], p: ['piece', 'box', { item: 'power' }], w: ['piece', 'walrus', { w: 3 }], z: ['piece', 'sloth', { ax: 6, w: 3, speed: 0.8 }],
+  n: ['enemy', 'eyeGoose'], p: ['piece', 'box', { item: 'power' }], w: ['piece', 'walrus', { w: 3 }], z: ['piece', 'sloth', { ax: 6, w: 3, speed: 1.4 }],
   x: ['piece', 'binDrop', {}], a: ['anchor', 'crewBack'],
   k: ['spawn', 'sign', { text: 'THE DRINKS TROLLEY HAS BROKEN LOOSE! RUN FOR THE FRONT GALLEY!' }], '8': ['decor', 'eyeSpill'],
   K: ['spawn', 'portal', { kind: 'door', look: 'eyeCurtain', targetRef: 'crew@in' }]
@@ -189,10 +189,10 @@ const stamps = {
       '#.-------............h.......#',
       '#............................#',
       '#..j.........j...-------.....#',
-      '#..-----.....----............#',
+      '#..-----.....----........m...#',
       '#............................#',
       '#............................#',
-      '#.@...D..l..........l...m....#',
+      '#.@...D..l..........l........#',
       '##############################',
       '##############################'],
     gold: { '*': 'hidden' }, hidden: ['oneup'],
@@ -287,9 +287,9 @@ stamps.eyePetHold = {
     '############################',
     '#..........................#',
     '#.................*........#',
-    '#..............-----.......#',
+    '#.....h........-----.......#',
     '#..........................#',
-    '#........h.................#',
+    '#..........................#',
     '#...-----..................#',
     '#..........................#',
     '#..........-----...........#',
@@ -345,7 +345,7 @@ const wingRows = (() => {
 const WING = {
   k: ['spawn', 'sign', { text: 'WING WALK! THE FLAPS TILT: LAND ON THE HIGH END. THE ENGINES\' HOT AIR LIFTS YOU. MIND THE GAPS' }],
   p: ['piece', 'box', { item: 'power' }], q: ['piece', 'flap', { len: 5 }], d: ['piece', 'flap', { len: 5 }],
-  X: ['piece', 'exhaust', { w: 2, up: 9 }], '5': ['piece', 'gull', { ax: 13, w: 3, speed: 1.3 }], m: ['enemy', 'eyeGoon'],
+  X: ['piece', 'exhaust', { w: 2, up: 9 }], '5': ['piece', 'gull', { ax: 13, w: 3, speed: 2.0 }], m: ['enemy', 'eyeGoon'],
   t: ['seam', 'bottom', 'gear@in'], Y: ['spawn', 'eyeSlideTell', { w: 3 }], a: ['anchor', 'gearBack'],
   '6': ['decor', 'eyeWinglet'], f: ['decor', 'eyeFuselage'], E: ['decor', 'eyeEngine'], n: ['decor', 'eyeNoStep']
 };
@@ -360,7 +360,7 @@ stamps.eyeGearBay = {
     'H............*...............H',
     'H..........-----.............H',
     'H............................H',
-    'H...h........................H',
+    'H.......h....................H',
     'H.................-----......H',
     'H............................H',
     'H.....-----..................H',
