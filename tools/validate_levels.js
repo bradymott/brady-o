@@ -95,8 +95,13 @@ function secretChecks(G, lvl, r, flags, warns) {
   // new room types: Brady can always leave the way he came (no soft-locks, §2)
   lvl.areas.forEach((a, k) => {
     if (!a.roomType || a.roomType === 'pantry' || checked.has(k)) return;
-    if (!Validator.escape(lvl, k, null, { rules: 'all' })) { flags.push(`ROOM ${a.aid} (${a.roomType}) HAS NO WAY OUT`); fail = true; }
+    // a room whose only way on is a level exit (11-2's siding: its gate) is not a trap either
+    if (!Validator.escape(lvl, k, null, { rules: 'all' }) && !roomExit(G, lvl, k)) { flags.push(`ROOM ${a.aid} (${a.roomType}) HAS NO WAY OUT`); fail = true; }
   });
+  // the secret-room kit (src/28_tour_r_rooms.js, docs/design/SECRET_ROOMS.md): each room's prize, tokens, lamps, win
+  // spot and finish reachable (one search per level with the rooms' probes)
+  const RC = G.run("typeof TourRooms !== 'undefined' ? TourRooms : null");
+  if (RC) for (const e of RC.check(lvl, Validator)) { flags.push(e); fail = true; }
   // warp exits need a label (at most 14 characters, shown on the warp)
   for (const k of warpKeys) { const lb = lvl.exits[k].label; if (!lb || String(lb).length > 14) { flags.push(`WARP ${k.toUpperCase()} LABEL ${lb ? 'TOO LONG' : 'MISSING'}`); fail = true; } }
   for (const k in lvl.exits || {}) if (lvl.exits[k] && lvl.exits[k].needs && !TN.valid(lvl.exits[k].needs)) { flags.push(`EXIT ${k.toUpperCase()} BAD NEEDS ${JSON.stringify(lvl.exits[k].needs)}`); fail = true; }
@@ -105,6 +110,13 @@ function secretChecks(G, lvl, r, flags, warns) {
   // per-area pace (Hourglass Well and friends): named, so a miss says where
   for (const pa of (r.pace && r.pace.areas) || []) if (!pa.ok) flags.push(`PACE ${pa.aid} ${pa.margin != null ? 'margin ' + pa.margin : pa.why}`);
   return fail;
+}
+// from room k's way in, the search reaches one of the level's exits
+function roomExit(G, lvl, k) {
+  const a = lvl.areas[k], st = a.anchors && (a.anchors.in || a.anchors.start);
+  if (!st) return false;
+  const r = G.Validator.run(lvl, { start: { area: k, x: st.x, y: st.y }, rules: 'all', until: res => Object.keys(res.exits).some(x => res.exits[x]) });
+  return Object.keys(r.exits).some(x => r.exits[x]);
 }
 // --rules: the secrets rules over the whole game (the results carry each level's secretsInfo)
 function secretRules(G, results, release) {
@@ -137,6 +149,9 @@ function secretRules(G, results, release) {
     const types = {}; for (const id of ids) for (const t of byId[id].rooms) types[t] = (types[t] || 0) + 1;
     if (Object.keys(types).length < 3) dull.push(`${C.id} (${Object.keys(types).join('/') || 'none'})`);
     for (const t in types) if (t !== 'pantry' && types[t] > 2) later.push(`${C.id}: room type ${t} used ${types[t]} times (max 2, §2.9)`);
+    // the secret-room kit (docs/design/SECRET_ROOMS.md): every room in a land is a different kind
+    const KITS = G.run("typeof TourRooms !== 'undefined' ? TourRooms.kinds : {}");
+    for (const t in types) if (KITS[t] && types[t] > 1) errors.push(`${C.id}: secret-room kind ${t} used ${types[t]} times (each room in a land is a different kind)`);
   }
   if (noWarp.length) later.push(`lands without a warp (§3.5): ${noWarp.join(', ')}`);
   if (dull.length) later.push(`lands with fewer than 3 secret-room types (§2.9): ${dull.join(', ')}`);

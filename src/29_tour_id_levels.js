@@ -637,7 +637,8 @@ const levels = [
           ['surf', { n: 6, jelly: 1, tight: true }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'gua', gen: 'room', role: 'secret', stamp: 'gua' }
+      { id: 'gua', gen: 'room', role: 'secret', stamp: 'gua', room: 'lantern',
+        lantern: { title: 'THE SEA CAVE', rule: 'THE SEA CAVE UNDER THE PIER IS PITCH DARK. YOUR LIGHT FADES: RELIGHT IT AT THE LAMPS. THE ROCKS SHOW ONLY IN THE LIGHT' } }
     ] },
   // 9-2 GLIDE: the kite festival over the rice terraces
   { n: 2, name: 'Kite Festival', arch: 'glide', theme: 'id_kites',
@@ -675,7 +676,8 @@ const levels = [
           ['terraceIsle', { n: 2 }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'lumbung', gen: 'room', role: 'secret', stamp: 'lumbung' }
+      { id: 'lumbung', gen: 'room', role: 'secret', stamp: 'lumbung', room: 'whack',
+        whack: { title: 'WHACK-A-RAT', rule: 'RATS IN THE RICE BARN! STOMP EIGHT OF THEM AS THEY POP UP', critter: 'rat', need: 8, t: 22 } }
     ] },
   // 9-3 DOOM: Batur erupts at dawn; the lava flow chases Brady down the mountain
   { n: 3, name: 'Batur Eruption', arch: 'doom', theme: 'id_batur',
@@ -712,7 +714,8 @@ const levels = [
           ['bombs', { len: 14, every: 1.3 }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'tambang', gen: 'room', role: 'secret', stamp: 'tambang' }
+      { id: 'tambang', gen: 'room', role: 'secret', stamp: 'tambang', room: 'gauntlet',
+        gauntlet: { title: 'THE SULFUR MINE', rule: 'THE OLD SULFUR MINE: RUN IT TO THE END. THE PLANKS DON\'T LAST', beats: ['fallers', 'steps', 'ceiling'] } }
     ] },
   // 9-4 LAMP (in the water): the night dive at Manta Point
   { n: 4, name: 'Manta Night Dive', arch: 'lamp', theme: 'id_dive',
@@ -747,7 +750,8 @@ const levels = [
           ['manta', { w: 16 }],
           'jellies'
         ] },
-      { id: 'kapal', gen: 'room', role: 'secret', stamp: 'kapal' }
+      { id: 'kapal', gen: 'room', role: 'secret', stamp: 'kapal', room: 'grotto',
+        grotto: { title: 'THE SUNKEN WRECK', rule: 'THE WRECK\'S HOLD IS FULL OF WATER. SWIM TO THE CAPTAIN\'S CABIN AT THE BACK', half: false } }
     ] },
   // 9-5 LAIR: the monkey forest, then Boss Kera in the durian grove
   { n: 5, name: 'Monkey Forest', arch: 'lair', theme: 'id_ruins', boss: 'id_kera',
@@ -770,7 +774,8 @@ const levels = [
           ['postcard', { kind: 'risky', dx: -12, dy: -5 }],
           ['groveGate', { to: 'grove' }]
         ] },
-      { id: 'akar', gen: 'room', role: 'secret', stamp: 'akar' },
+      { id: 'akar', gen: 'room', role: 'secret', stamp: 'akar', room: 'ambush',
+        ambush: { title: 'THE CIVETS\' ROOT CELLAR', rule: 'THE CIVETS GUARD THEIR ROOT CELLAR AND THE DOOR HAS JAMMED: STOMP THEM ALL', critters: ['idCivet', 'idDuck'] } },
       { id: 'grove', gen: 'arena', role: 'arena', layout: 'grove', arenaW: 26, H: 22, roof: false }
     ] },
   // 9-6 SWING (secret): the Borneo canopy with the orangutans
@@ -803,7 +808,8 @@ const levels = [
           ['lianas', { n: 2, hornbill: true }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'nest', gen: 'room', role: 'secret', stamp: 'nest' }
+      { id: 'nest', gen: 'room', role: 'secret', stamp: 'nest', room: 'bouncy',
+        bouncy: { title: 'THE ORANGUTAN\'S SPRINGY NEST', rule: 'AN ORANGUTAN\'S GIANT NEST, ALL SPRINGY BRANCHES. ONLY THE TRUNKS ARE FIRM. THE PRIZE IS ON THE TALLEST', skin: ['#8ac84a', '#e8a84a', '#5aa86a'] } }
     ] },
   // 9-7 RAIL (secret): the blue-fire sulfur mine in the crater at night
   { n: 7, name: 'Blue Fire Rails', arch: 'rail', secret: true, theme: 'id_ijen', dark: true,
@@ -829,7 +835,8 @@ const levels = [
           ['fork', { len: 36, upper: [['flames', { n: 2, gap: 8 }]], lower: [['sulfurCask', {}], ['flames', { n: 2 }]] }],
           ['flames', { n: 2, period: 2.4 }]
         ] },
-      { id: 'depot', gen: 'room', role: 'secret', stamp: 'depot' }
+      { id: 'depot', gen: 'room', role: 'secret', stamp: 'depot', room: 'doors',
+        doors: { title: 'THE MINE DEPOT', rule: 'THE DEPOT\'S LOCKERS AND STORE ROOMS: WHICH DOOR GOES WHERE?', joke: 'A LOCKER FULL OF MINERS\' SOCKS. PHEW.' } }
     ] }
 ];
 

@@ -723,7 +723,8 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado', 
         ['pupoTickle', { lane: 'cellar', lock: 'tickle:mx11', belly: [-0.6, -1], pocket: 5 }],
         ['cellarDress', { lane: 'cellar' }]
       ] },
-    { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega' }
+    { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega', room: 'lamps',
+      lamps: { title: 'THE CHILI CELLAR', rule: 'THE MARKET CELLAR IS PITCH DARK. LIGHT ITS LAMPS IN THE ORDER THE PAINTED TILE SHOWS', sym: 0 } }
   ] };
 
 const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
@@ -750,7 +751,8 @@ const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
         ['fork', { len: 30, skin: 'mxLockLever', gold: false, upper: [['axolotls', { n: 1 }], 'herons'], lower: [['axolotls', { n: 2 }], ['chinampa', { gold: 'risky' }]] }],
         ['arch', {}], ['boatBlock', { item: 'lsd', dy: 8 }]
       ] },
-    { id: 'embarcadero', gen: 'room', role: 'secret', theme: 'mx_canal', stamp: 'embarcadero' }
+    { id: 'embarcadero', gen: 'room', role: 'secret', theme: 'mx_canal', stamp: 'embarcadero', room: 'whack',
+      whack: { title: 'WHACK-AN-AXOLOTL', rule: 'AXOLOTLS POP UP THROUGH THE OLD LANDING\'S FLOOR! BOOP EIGHT OF THEM BEFORE TIME IS UP', critter: 'axolotl', need: 8, t: 22 } }
   ] };
 
 const L3 = { n: 3, name: 'Cenote of Light', arch: 'dive', theme: 'mx_cenote',
@@ -827,7 +829,8 @@ const L4 = { n: 4, name: 'Volcán Escape', arch: 'tower', theme: 'mx_volcan',
         'vdouble',
         ['craterRim', {}]
       ] },
-    { id: 'boveda', gen: 'room', role: 'secret', theme: 'mx_volcan', dark: true, stamp: 'boveda' }
+    { id: 'boveda', gen: 'room', role: 'secret', theme: 'mx_volcan', dark: true, stamp: 'boveda', room: 'climb',
+      climb: { title: 'THE OBSIDIAN CHIMNEY', rule: 'AN OLD LAVA CHIMNEY, LONG COLD. CLIMB TO THE TOP: SOME LEDGES ARE BRITTLE', style: 'crumble' } }
   ] };
 
 const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata', pupo: 'level',   // Mexico's Pupo level (lead-in)
@@ -858,7 +861,8 @@ const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacie
         ['pupoClimb', { h: 7 }],
         ['door', { to: 'fiesta@in', perch: 0, look: 'tourDoor' }]
       ] },
-    { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa' },
+    { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa', room: 'fetch',
+      fetch: { title: 'THE HEN\'S MOLE', rule: 'THE HACIENDA HEN NEEDS A CHILI, A CACAO POD AND A TOMATO FOR HER MOLE. BRING THEM TO THE POT', ingredients: ['tokChili', 'tokCacao', 'tokTomato'], dish: 'MOLE! THE HEN IS DELIGHTED.' } },
     { id: 'fiesta', gen: 'arena', role: 'arena', layout: 'fiesta', arenaW: 24, H: 22 }
   ] };
 
@@ -900,7 +904,8 @@ const L6 = { n: 6, name: 'Pit of Swallows', arch: 'fall', secret: true, theme: '
         ['ledges', { n: 1, enemy: 'mxBat' }],
         ['spikePair', { h1: 5, h2: 9 }]
       ] },
-    { id: 'nido', gen: 'room', role: 'secret', stamp: 'nido' }
+    { id: 'nido', gen: 'room', role: 'secret', stamp: 'nido', room: 'floaty',
+      floaty: { title: 'THE SWALLOWS\' UPDRAFT', rule: 'WARM AIR RISES OUT OF THE PIT: IN HERE YOU FLOAT LIKE A SWALLOW. BIG FLOATY JUMPS!', gravity: 0.45 } }
   ] };
 
 /* ---------------- pre-rendered scenes (tools/blender/sprites/mx_bodega.py, mx_sotano.py): Mexico wires its own atlases

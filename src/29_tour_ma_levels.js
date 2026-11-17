@@ -536,7 +536,8 @@ Tour.amend('ma', {
           ['enemies', { n: 2 }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'camp', gen: 'room', role: 'secret', theme: 'ma_tent', stamp: 'oasisCamp' }
+        { id: 'camp', gen: 'room', role: 'secret', theme: 'ma_tent', stamp: 'oasisCamp', room: 'pick',
+          pick: { title: 'THE CARAVAN BARGAIN', rule: 'A CAMEL TRADER LAYS OUT THREE BOXES ON HIS RUG. YOU MAY TAKE ONE. ONE!' } }
       ] },
 
     /* 5-3 PHASE: the sun-moon lantern turns the blue medina from day to night and back */
@@ -579,7 +580,8 @@ Tour.amend('ma', {
           ['enemies', { kind: 'maTeapot', n: 1 }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'riad', gen: 'room', role: 'secret', theme: 'ma_riad', stamp: 'blueRiad' }
+        { id: 'riad', gen: 'room', role: 'secret', theme: 'ma_riad', stamp: 'blueRiad', room: 'lamps',
+          lamps: { title: 'THE RIAD\'S LANTERNS', rule: 'THE BLUE RIAD IS DARK. LIGHT ITS LANTERNS IN THE ORDER THE TILE PICTURE SHOWS', sym: 1 } }
       ] },
 
     /* 5-4 FORT: kasbah walls, the tower room's chain and lids, the Brass Owl */
@@ -605,7 +607,8 @@ Tour.amend('ma', {
         ] },
         { id: 'tower', gen: 'room', role: 'sub', theme: 'ma_atlas', stamp: 'owlTower' },
         { id: 'owl', gen: 'arena', role: 'arena', layout: 'owl', arenaW: 24, H: 16, theme: 'ma_atlas' },
-        { id: 'loft', gen: 'room', role: 'secret', stamp: 'pigeonLoft' }
+        { id: 'loft', gen: 'room', role: 'secret', stamp: 'pigeonLoft', room: 'ambush',
+          ambush: { title: 'THE GOAT LOFT', rule: 'THE KASBAH GOATS AND FENNECS DON\'T LIKE VISITORS. THE DOOR IS STUCK: STOMP THEM ALL', critters: ['maGoat', 'maFennec'] } }
       ] },
 
     /* 5-5 LAIR: fountain galleries, then Berrad the Magnificent in the riad courtyard */
@@ -627,7 +630,8 @@ Tour.amend('ma', {
           ['itemBlock', { item: 'sig', y: 4 }],
           ['door', { to: 'arena@in', perch: 0, look: 'maRiadDoor' }]
         ] },
-        { id: 'court', gen: 'room', role: 'secret', theme: 'ma_riad', stamp: 'smallCourt' },
+        { id: 'court', gen: 'room', role: 'secret', theme: 'ma_riad', stamp: 'smallCourt', room: 'fetch',
+          fetch: { title: 'MINT TEA FOR THE OWL', rule: 'THE OLD OWL WANTS HIS MINT TEA: FIND THE MINT, THE SUGAR AND THE TEAPOT, THEN TO THE POT', ingredients: ['tokMint', 'tokSugar', 'tokTeapot'], dish: 'MINT TEA! THE OWL IS ALMOST SMILING.' } },
         { id: 'arena', gen: 'arena', role: 'arena', layout: 'riad', arenaW: 26, H: 20, roof: false }
       ] },
 
@@ -664,7 +668,8 @@ Tour.amend('ma', {
           ['flyingRugs', { n: 2, span: 10 }],
           ['end', { exit: 'main' }]
         ] },
-        { id: 'tent', gen: 'room', role: 'secret', theme: 'ma_tent', stamp: 'skyTent' }
+        { id: 'tent', gen: 'room', role: 'secret', theme: 'ma_tent', stamp: 'skyTent', room: 'floaty',
+          floaty: { title: 'THE FLYING CARPET TENT', rule: 'A TENT FULL OF FLYING CARPETS: EVERYTHING FLOATS IN HERE. BIG FLOATY JUMPS!' } }
       ] }
   ]
 });

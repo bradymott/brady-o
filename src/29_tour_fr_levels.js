@@ -799,7 +799,8 @@ const levels = [
           ['door', { to: 'place@roofBack', perch: 0, look: 'frShopDoor' }]
         ] },
       { id: 'cafe', gen: 'room', role: 'sub', theme: 'fr_place', stamp: 'cafe' },
-      { id: 'quai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'quai' }
+      { id: 'quai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'quai', room: 'doors',
+        doors: { title: 'THE BOOKSTALL CUPBOARDS', rule: 'THE BOOKSELLERS\' GREEN BOXES ARE ALL DOORS. WHICH ONE GOES WHERE?', joke: 'A CUPBOARD OF UNSOLD POETRY. NOTHING ELSE.' } }
     ] },
   // 7-2 THIEF: the magpie and the stamps, across Provence
   { n: 2, name: 'Lavender Magpie', mapLabel: 'Lavender', arch: 'thief', theme: 'fr_provence',
@@ -832,7 +833,8 @@ const levels = [
           ['thiefStop', { n: 3, lock: true }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'mas', gen: 'room', role: 'secret', stamp: 'mas' }
+      { id: 'mas', gen: 'room', role: 'secret', stamp: 'mas', room: 'fetch',
+        fetch: { title: 'RATATOUILLE!', rule: 'THE FARMHOUSE COOK NEEDS A TOMATO, AN AUBERGINE AND A COURGETTE. BRING THEM TO THE POT', ingredients: ['tokTomato', 'tokEggplant', 'tokZucchini'], dish: 'RATATOUILLE! MAGNIFIQUE!' } }
     ] },
   // 7-3 TIDE: the bay of the abbey island (background only), the tide in and out, the bore at the end
   { n: 3, name: 'Mont-Saint-Michel Tides', mapLabel: 'The Bay', arch: 'tide', theme: 'fr_baie',
@@ -878,8 +880,10 @@ const levels = [
           ['enemies', { kind: 'frGull', n: 1, len: 8 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'bateau', gen: 'room', role: 'secret', stamp: 'bateau' },
-      { id: 'banc', gen: 'room', role: 'secret', theme: 'fr_baie', stamp: 'banc' }
+      { id: 'bateau', gen: 'room', role: 'secret', stamp: 'bateau', room: 'shell',
+        shell: { title: 'THE OYSTER SHELL GAME', rule: 'THE OLD BOATMAN HIDES A PRIZE UNDER ONE OF THREE BOWLS. WATCH, THEN STOMP THE RIGHT ONE', cup: 'bowl', dealer: 'crab', joke: ['fish', 'sock'] } },
+      { id: 'banc', gen: 'room', role: 'secret', theme: 'fr_baie', stamp: 'banc', room: 'floaty',
+        floaty: { title: 'THE CLOUD BANK', rule: 'INSIDE A CLOUD THE GRAVITY IS ALL FLUFF. BIG FLOATY JUMPS!', gravity: 0.4 } }
     ] },
   // 7-4 DIG: Périgord truffles, under the oaks
   { n: 4, name: 'Truffle Hunt', mapLabel: 'Truffles', arch: 'dig', theme: 'fr_perigord',
@@ -908,7 +912,8 @@ const levels = [
           ['caveIn', { w: 12, dy: 2, enemy: 'frBoar' }],
           'exit'
         ] },
-      { id: 'grotte', gen: 'room', role: 'secret', stamp: 'grotte' }
+      { id: 'grotte', gen: 'room', role: 'secret', stamp: 'grotte', room: 'lamps',
+        lamps: { title: 'THE PAINTED CAVE', rule: 'LIGHT THE CAVE\'S LAMPS IN THE ORDER THE PAINTING SHOWS', sym: 2 } }
     ] },
   // 7-5 LAIR: the château of mirrors and Le Grand Soufflé's ballroom
   { n: 5, name: 'Château des Glaces', mapLabel: 'Château', arch: 'lair', theme: 'fr_chateau', boss: 'fr_souffle',
@@ -934,7 +939,8 @@ const levels = [
           ['enemies', { kind: 'frAccordion', n: 1, len: 8 }],
           ['door', { to: 'ballroom', perch: 0, look: 'frBallroomDoor' }]
         ] },
-      { id: 'boudoir', gen: 'room', role: 'secret', stamp: 'boudoir' },
+      { id: 'boudoir', gen: 'room', role: 'secret', stamp: 'boudoir', room: 'bouncy',
+        bouncy: { title: 'THE BOUNCY CANOPY BED', rule: 'THE QUEEN\'S BED IS ONE BIG MATTRESS. ONLY THE BEDPOSTS ARE FIRM. THE PRIZE IS ON THE TALLEST', skin: ['#e8a8d8', '#fff0c8', '#a8c8ff'] } },
       { id: 'ballroom', gen: 'arena', role: 'arena', layout: 'ballroom', arenaW: 26, H: 18 }
     ] },
   // 7-6 SCROLL (secret): the Seine quays, the bouquinistes' boxes in time with the music
@@ -964,7 +970,8 @@ const levels = [
           ['bridge', { gold: true }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'seineQuai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'seineQuai' }
+      { id: 'seineQuai', gen: 'room', role: 'secret', theme: 'fr_quai', stamp: 'seineQuai', room: 'rush',
+        rush: { title: 'CROISSANT RUSH', rule: 'THE BAKERY BOAT DROPPED ITS CROISSANTS! GRAB ALL SIX BEFORE THE PIGEONS DO', look: 'tokCroissant', n: 6, t: 16 } }
     ] },
   // 7-7 SKY (secret): balloons over France; one trade-wind balloon flies east (the secret flight to Vietnam)
   { n: 7, name: 'Montgolfière Skies', mapLabel: 'Balloons', arch: 'sky', secret: true, theme: 'fr_ciel',
@@ -994,11 +1001,13 @@ const levels = [
           ['burner', { h: 9 }],
           ['postcard', { kind: 'risky', dy: -9, dx: -4 }],
           ['enemies', { kind: 'frMacaron', n: 1, len: 8 }],
+          ['anchor', { name: 'wormOut', tight: true }],   // where the balloon basket's Wormhole drops Brady (tight: no breather)
           ['balloonHop', { rise: 5, drift: 3 }],
           ['postcard', { kind: 'must', dy: -4 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'nacelle', gen: 'room', role: 'secret', stamp: 'nacelle' },
+      { id: 'nacelle', gen: 'room', role: 'secret', stamp: 'nacelle', room: 'wormhole',
+        wormhole: { title: 'THE BALLOON WORMHOLE', rule: 'THERE IS A WORMHOLE IN THIS BALLOON BASKET! HOP IN (UP) AND IT SHOOTS YOU FAR AHEAD', to: 'ciel@wormOut' } },
       { id: 'alize', gen: 'islands', role: 'secret', W: 60, H: 24,
         script: [
           ['flat', { n: 5 }],
