@@ -17,34 +17,28 @@ In a terminal: `cd ~/brady-o`, then `claude`, then paste:
 2. `docs/handoff/SBW_RESUME.md`: what shipped and the test list.
 3. `docs/design/SECRETS_WARPS_SWITCHES.md` (Brady's decisions at the top), `docs/design/SECRETS_CONTRACTS.md`, `docs/design/PUPO.md`, `docs/design/STORY_PIWI.md` (on `sbw/story-piwi` / `sbw/story-b` until merged), `docs/design/LEVEL_OVERHAUL.md`, `docs/design/TOOLKIT_STATUS.md`, `docs/PERFORMANCE.md`.
 
-## State of `main` (918ba7a, deployed 17 Nov)
-Live at https://bradymott.github.io/brady-o/super-brady-o-world/. On top of the 11 Nov state it has: items fix, performance tiers, new title and icon, toon-style mushroom/acid trips, Morocco door maze with no fake doors plus four more maze levels (6-2, 8-2, 10-3, 11-1), a different map per land, one Brady look (LOOK picker removed, no stubble), kazoo "HONK" fix, Magic Beans in level 1 or 2 of every land, star/acid pickups moved off level ends, secrets hooks (`TourHooks`/`TourNeeds`/`TourSeams`, `src/28_tour_a2_hooks.js`), long-session fixes (`src/16_session.js`: canvases freed between scenes, no trail tiles left after a death), silent browser tests (`tools/sbw_silent.js`; `BRADY_SOUND=1` to hear them). Last full suite: all passing, 88 levels finishable, gameplay 52/52, bosses 172/172.
+## State of `main` (ecf5cca, deployed 17 Nov, save key v3)
+Live at https://bradymott.github.io/brady-o/super-brady-o-world/. Everything below is merged, tested and deployed; no agent work is outstanding and every `sbw/*` branch on origin is merged except `sbw/music-pilot`.
+- Earlier this session: items fix, performance tiers, title and icon, door mazes (5-1, 6-2, 8-2, 10-3, 11-1), a different map per land, one Brady look (no stubble, LOOK removed), kazoo fix, Magic Beans early in every land, star/acid off level ends, long-session cleanup (`src/16_session.js`), silent tests (`tools/sbw_silent.js`).
+- **Story:** Piwi Squirmin' replaces the Baron everywhere (`src/28_tour_g_story.js`, `29_tour_zz_story.js`, art `05b`–`05e`); intro, title, Nepal finale, ending, credits.
+- **Powers carry between levels** (`src/28_tour_dk_carry.js`) and the **hit ladder** (`src/28_tour_hc_hits.js`): each hit takes one thing (hands item, jump power, kandi, joint, big, life). Boss reach boxes (`28_tour_hd_reach.js`). "YOU DID IT!" banner. Portrait end screens fit the game area.
+- **Freeze fix:** taking a signature item with hands and Backpack full looped forever (`28_tour_dg_gear.js`); a dropped item now can't be re-taken until Brady steps clear. This was also the 12-1 soak crash.
+- **Trips:** mushroom, acid and joint sway and undulate the world in the toon style (`src/15_postfx.js`).
+- **Secret rooms:** 86 rooms, 18 kinds, none repeated within a land (`src/28_tour_r*.js`, `docs/design/SECRET_ROOMS.md`); climb rooms have a door at the top; `tools/sbw_wayout_test.js`.
+- **Pupo:** rideable in Mexico (Nap Box + tutorial in 1-1, Pupo level before the 1-5 boss), round art in Brady's style, press-to-grab only, Down+Jump hops off, PUPO POWER! (`src/05e_pupo.js`, `28_tour_p*.js`, `docs/design/PUPO.md`).
+- **Backstage, Wormholes, Brady Buttons** (`src/28_tour_s*.js`, `29_tour_mx_secrets.js`, `29_tour_fest*.js`; where everything is hidden: `docs/design/BACKSTAGE_STATUS.md`): the Rigging above Mexico 1-4, 12 Wormholes, two Brady Buttons (rules 3 and 7), bonus land Festival Fields (23-1…23-4). 91 levels.
+Last full suite (on ecf5cca): all passing; 91 levels finishable, gameplay 52/52, bosses all passing.
 
-## Brady's decisions since 11 Nov (settled; use the names exactly)
-- Villain is **Piwi Squirmin'**, a Pee-wee-Herman-esque ventriloquist dummy (an original character, a nod not a lookalike), not the Baron. He has stolen Brady-O's wife **Chinka-O** (ballerina, pink tutu, Latina/Ecuadorian, black hair; draw her warmly, never a helpless prize) and takes her round the world; Brady-O chases.
-- **Pupo**, Chinka-O's pet sloth, is Brady-O's sidekick and rideable steed: found in Nap Boxes, stretch arms (poke belly buttons, swing, zip, climb, fetch), special Pupo levels (one or two per land), and **PUPO POWER!**. Must stay an original mount.
-- Secrets: warps are **Wormholes**, big buttons are **Brady Buttons**; three bonus lands approved; warps may jump two lands ahead.
-- **Every secret room must be different** (enemies, obstacles, prizes, Pupo...), not the same box + coins + postcard.
-- **Powers carry from a cleared level into the next level**; the level-clear banner says **"YOU DID IT!"**, not "WELCOME HOME!".
-- More maze levels; the more creative the levels the better; no repeated level types; reset all save progress when levels change.
+## Brady's decisions (settled; use the names exactly)
+- Villain **Piwi Squirmin'** (original ventriloquist dummy) has taken **Chinka-O** (ballerina, pink tutu, Latina/Ecuadorian, black hair; drawn warmly). **Pupo** the sloth is Brady-O's steed: round, in Brady's art style, never spiky; nothing grabs automatically; Down+Jump to hop off (no button).
+- **Wormholes**, **Brady Buttons**, three bonus lands. Every secret room different. Powers carry between levels. One power lost per hit, then shrink, then a life. Trips wavy and trippy but readable and smooth. More maze levels; the more creative the better. Save wipes are fine.
 
-## Branches in progress (agents were running when this was written)
-Check each branch's tip and whether it is already in `main` (`git branch -r --merged origin/main`). If an agent's session is gone, start a new Opus agent on the branch with a full brief.
-- `sbw/story-b`: story phase B, replacing the Baron with Piwi everywhere (strings, title blimp, boss intros, ending, reunion in the Nepal finale), built on `sbw/story-piwi` (character art `src/05b`–`05e`).
-- `sbw/pupo` (tip 8b160b9 had riding, arms and Pupo Power working in a lab level): now merging main, fixing a failing heap-growth check, validator rules (PU-4), and putting Pupo into Mexico (Nap Box + tutorial in 1-1, one Mexico Pupo level). Other 13 lands wait for Brady's reaction.
-- `sbw/carry-powers`: powers carry between levels + "YOU DID IT!".
-- `sbw/secret-rooms`: every secret room a different kind; inventory and catalogue in `docs/design/SECRET_ROOMS.md`; Mexico last (Pupo agent is editing `src/29_tour_mx_levels.js`).
-- `sbw/music-pilot` (985c183): untouched. Merge only after Brady has listened (`brady-o-music-preview/after/listen_ab.html` on his Desktop). To do: run `sbw_audio_test`, fix canal/cenote/volcano songs never playing.
-- Merge order suggestion: carry-powers → story-b → pupo → secret-rooms, full suite on each merged result.
-
-## Not started
-Secrets WP-2…WP-6 (save v3/maps, backstage + Wormholes, Brady Buttons, bonus lands); Pupo in the other 13 lands (with a save reset); bosses still code-drawn.
-
-## Open questions for Brady (defaults proceed if he doesn't answer)
-- Is the lag gone on his iPhone? Nothing has ever been measured on a real phone. Ask for FPS COUNTER readings (Settings) after three or four levels, in the Mexico boss and Brazil 3-1/3-5.
-- Does he like the new music direction?
-- Defaults in force: reunion in the Nepal finale; Pupo sits out boss fights; Pupo Power charges in about 30 s; sleepy-then-nap hit rule; mazes replaced existing levels.
-- Known loose end: the full soak test has hung once each on 8-1 and 22-5 (passes on every retry; cause unknown; a 4-minute watchdog now fails the level instead of hanging).
+## What to do next
+1. **Ask Brady how the new build plays** (backstage, Festival Fields, Pupo, secret-room difficulty and wording, trips on his phone, whether the lag is gone: FPS COUNTER in Settings). Nothing has ever been measured on a real iPhone.
+2. **Backstage rollout (not built):** bonus lands Lost & Found (24-x) and The Red-Eye (25-x); bonus levels 1-7 and 22-6; Brady Buttons for rules 1, 9, 10, 12 and what they open; Rigging/Under-Stage/Wings entrances outside Mexico and Festival Fields; no Wormhole yet in Bali (9) or Vietnam (10); rule 7 opens nothing until 1-7 exists.
+3. **Pupo in the other 13 lands** (one or two Pupo levels each) and the seven planned Pupo-den secret rooms (1-4, 3-3, 4-3, 8-6, 10-4, 13-2, 11-6).
+4. **Music pilot** `sbw/music-pilot` (985c183): merge only after Brady has listened (`brady-o-music-preview/after/listen_ab.html` on his Desktop).
+5. Loose ends: two Nepal backdrop strips still show the Baron's banners (need a Blender re-render); post-credits card and a World 22 postcard still old text; old "RUN · THROW" label can overlap the Pupo button early in 1-1; `sbw_wayout_test` (without `--rooms`) flags 3-1 at x 111–150; a carried star replays on each re-entry of a level; perf and session tests give false failures when the Mac is loaded (re-run alone); bosses still code-drawn.
 
 ## How to work safely
 - **Browser tests one at a time across all agents.** Shared lock: `mkdir <scratchpad>/test.lock` before, `rmdir` after. With four agents the queue is the bottleneck; fewer agents finish sooner.
