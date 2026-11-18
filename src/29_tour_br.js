@@ -315,7 +315,7 @@ const enemies = {
   brBrigadeiro: { cls: TourEnemy.make({ w: 20, h: 22, speed: 1.0, behavior: 'hop', hopV: 11, hopEvery: 1.2, art: brigadeiroArt, burst: '#4a2416' }), place: 'walk' },
   brPandeiro: { cls: TourEnemy.make({ w: 26, h: 26, speed: 2.0, behavior: 'walk', art: pandeiroArt, burst: '#c8a060' }), place: 'walk' },
   brCoati: { cls: BrCoati, place: 'walk' },
-  brJaguar: { cls: TourEnemy.make({ w: 40, h: 26, speed: 1.0, behavior: 'charge', range: 8, chargeSpeed: 6.5, hp: 2, art: jaguarArt, burst: '#e8a83a', onNotice: e => K.say(e.g, e, 'RRRAWR!', '#ffd84a') }), place: 'walk' },
+  brJaguar: { cls: TourEnemy.make({ belly: true, w: 40, h: 26, speed: 1.0, behavior: 'charge', range: 8, chargeSpeed: 6.5, hp: 2, art: jaguarArt, burst: '#e8a83a', onNotice: e => K.say(e.g, e, 'RRRAWR!', '#ffd84a') }), place: 'walk' },
   brPiranha: { cls: TourLeaper.make({ w: 22, h: 18, jumpV: 15, every: 1.4, art: piranhaArt, splash: '#a8d88a' }), place: 'here' }
 };
 // a confetti cannon from the carnival floats
