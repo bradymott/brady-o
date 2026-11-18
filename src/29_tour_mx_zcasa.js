@@ -208,12 +208,12 @@ const house = {
     R(ROOM, [23, '#'], [24, '#'], [25, '#'], [26, '#']),
     R(OPEN, [1, '-'], [2, '-'], [3, '-'], [4, '-'], [5, '-']),
     OPEN,
-    R(OPEN, [3, 't'], [9, 'c'], [10, 'm'], [12, 'B'], [14, 'x'], [16, 'B'], [17, 'z'], [18, 'P'], [19, 'N'], [20, 'u'], [22, 'D'], [24, 'i'], [25, 'Z']),
+    R(OPEN, [3, 't'], [9, 'c'], [10, 'm'], [12, 'B'], [14, 'x'], [16, 'B'], [17, 'z'], [20, 'u'], [22, 'D'], [24, 'i'], [25, 'Z']),
     R(WALL, [6, 'X'], [13, 'd'], [14, 'd'], [15, 'd']),
     R(WALL, [13, 'd'], [14, 'd'], [15, 'd'])
   ], { gold: { '*': 'must' }, doors: [{ to: 'castillo@in', look: 'mxCasaBouncyDoor' }],
     legend: { d: ['seam', 'bottom', 'under@in', { tell: 'well' }], x: ['decor', 'mxCasaWell'], z: ['anchor', 'underBack'], i: ['anchor', 'bouncyBack'],
-      X: ['piece', 'mx.casaX', { id: 'map:casa' }], N: ['piece', 'napBox', {}], P: ['piece', 'pupoFetch', { h: 6, item: 'oneup' }],
+      X: ['piece', 'mx.casaX', { id: 'map:casa' }],
       Z: ['piece', 'mx.casaGate', { id: 'casa:garden', h: 3, kind: 'gate', icon: 'mxCasaKeyGarden', need: 'LOCKED! PIWI DROPPED THE GARDEN KEY DOWN THE OLD CISTERN, UP ON THE ROOF' }],
       u: ['spawn', 'sign', { text: 'THE GARDEN GATE IS LOCKED. THE WELL GOES DOWN A LONG WAY. THE X? ASK THE PARROT' }] } }),
   // the garden: orange trees, nopales, the gate out
@@ -489,7 +489,7 @@ TourRooms.def('treasure', {
 });
 
 /* ================= the level ================= */
-const L7 = { n: 7, name: 'Casa de Sorpresas', mapLabel: 'Casa', arch: 'bonus', secret: true, mapHidden: true, theme: 'mx_casa', pupo: 'helper', time: 900,
+const L7 = { n: 7, name: 'Casa de Sorpresas', mapLabel: 'Casa', arch: 'bonus', secret: true, mapHidden: true, theme: 'mx_casa', time: 900,
   gimmick: 'A big old house round a courtyard, full of surprises. Piwi locked the garden gate: work out the house to find the key',
   hint: 'The garden key is down the old cistern on the roof. Its key is somewhere nobody ever walks... look up',
   postcard: 'A whole house of surprises! Even the attic is upside down. The animals look great in their hats. ♥ C',
