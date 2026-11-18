@@ -18,6 +18,8 @@
      being pulled to a grab skip Brady's own step, and with it the coin
      pick-up; the same tile check runs after those steps instead (a coin
      column up 3-3's cecropia, coins along a swing)
+   - pupoSnatch { cam: rows }: the camera keeps a high moving key's run
+     below the HUD (2-4's golden pod conveyor)
    Nothing here allocates per frame.
    ============================================================ */
 const PupoG1 = {
@@ -55,5 +57,26 @@ if (typeof PupoRide !== 'undefined') PupoRide.afters.push((p, dt, inp, g, R, inM
   if (!inMode || !p.pupoRide) return;
   const A = g.area, x0 = Math.floor(p.x / TS), x1 = Math.floor((p.x + p.w - 0.01) / TS), y0 = Math.floor(p.y / TS), y1 = Math.floor((p.y + p.h - 0.01) / TS);
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (tileAt(A, tx, ty) === T.PICK) { g.setTile(tx, ty, T.EMPTY); g.addPick(tx * TS + TS / 2, ty * TS + TS / 2); }
+});
+// the camera under a high moving key (pupoSnatch { cam: rows }: 2-4's golden pod on its overhead conveyor): while Brady
+// is under its run, the point `rows` over the key's line sits at 24 % of the view's height, so the conveyor's housing
+// and the pods are on screen and never under the HUD chips (as 28_tour_pf_g2.js does for the high bars and hooks).
+// The area's keys are found once per area (A.g1Snatch); a ceiling on camY that eases in, the plain camera free below it.
+if (typeof TourHooks !== 'undefined') TourHooks.on('camera', (play, dt) => {
+  const p = play.player, A = play.area; if (!p || p.dead || !A) return;
+  if (A.g1Snatch === undefined) {
+    A.g1Snatch = null;
+    for (const e of A.entities) if (e.pupoSnatch && e.s && e.s.cam) {
+      let a = 0, b = 0; for (const q of e.path) { a = Math.min(a, q[0]); b = Math.max(b, q[0]); }
+      (A.g1Snatch || (A.g1Snatch = [])).push({ e, x0: e.ox + a * TS, x1: e.ox + b * TS, ay: e.oy - e.s.cam * TS });
+    }
+  }
+  const L = A.g1Snatch; let ay = null;
+  if (L) for (let i = 0; i < L.length; i++) { const k = L[i]; if (p.cx > k.x0 - 3 * TS && p.cx < k.x1 + 3 * TS && p.y > k.ay && p.y < k.ay + 10 * TS) { ay = k.ay; break; } }
+  if (ay == null) { play.g1CamLim = null; return; }
+  const ty = clamp(ay - Game.viewH * 0.24, 0, Math.max(0, A.H * TS - Game.viewH));
+  let lim = play.g1CamLim == null ? Math.max(play.camY, ty) : play.g1CamLim;
+  lim += (ty - lim) * (1 - Math.exp(-dt * 5)); play.g1CamLim = lim;
+  if (play.camY > lim) play.camY = lim;
 });
 try { window.BRADY_PUPO = Object.assign(window.BRADY_PUPO || {}, { PupoG1 }); } catch (e) { /* not in a browser */ }

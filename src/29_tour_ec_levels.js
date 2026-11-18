@@ -339,7 +339,8 @@ P.goldenPod = (st, o) => {
   // (the low run hangs half a row under the spawn row, nearer the floor and in view; the return run is out of reach)
   const path = []; for (let q = 0; q < n; q++) path.push([q, 0.5]); path.push([n - 1, -1.5], [0, -1.5]);
   B.spawn('ecPodBelt', x + 1, gy - 6, { n, period: per, key });
-  B.spawn('pupoSnatch', x + 1, gy - 6, { key, path, period: per, look: 'ecGoldenPod', opens: true, name: 'THE GOLDEN POD! THE COOLING TUNNEL OPENS', say: '...SHINY.', hot: 'STUCK ON ITS HOOK! PUPO CAN TUG IT FREE' });
+  // cam: the housing and the pods kept below the HUD while Brady is under the belt (28_tour_pe_g1.js)
+  B.spawn('pupoSnatch', x + 1, gy - 6, { key, path, period: per, look: 'ecGoldenPod', cam: 1.4, opens: true, name: 'THE GOLDEN POD! THE COOLING TUNNEL OPENS', say: '...SHINY.', hot: 'STUCK ON ITS HOOK! PUPO CAN TUG IT FREE' });
   st.coins(x + 3, x + n - 2, gy - 2);
   // the cooling tunnel's door
   const dx = x + n + 4;

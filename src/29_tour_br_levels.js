@@ -1018,7 +1018,7 @@ P.slothBridge = (st, o) => {
   B.prop('brCousinBranch', x0 - 1, by, w + 5, 1, 'none', {});
   for (let i = 1; i <= n; i++) {
     const hx = x0 + Math.round(i * w / (n + 1)) - 1;
-    B.spawn('pupoGrab', hx, gy - 5, { kind: 'hook', look: 'brCousinHand' });
+    B.spawn('pupoGrab', hx, gy - 5, { kind: 'hook', look: 'brCousinHand', cam: 3 });   // cam: the branch and the cousins' lines kept below the HUD (28_tour_pf_g2.js)
     B.spawn('brCousin', hx, gy - 5, { k: i - 1, n, by });
   }
   // coins along the swing, a reward for taking the cousins' hands
