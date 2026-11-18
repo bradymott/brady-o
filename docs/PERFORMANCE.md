@@ -144,6 +144,24 @@ with a death, a level cleared out to the map, the overworld and the title.
   now only a real size change does.
 - Small: joystick taps during levels queued for the map all session; the power picker chip could stay "held" after a
   pause.
+- **18 Nov: the WebKit "map and title jump in the 4th repeat" failure is the browser, not the game** (branch
+  `sbw/session-webkit`; Mac load 2.2-3.9). The game's own share of the frame did not grow in any run: map draw
+  1.7-2.9 ms and title draw 0.4-1.3 ms in every repeat, also in the slow ones. All the extra time is in the one-pixel
+  read-back that ends each measured frame, i.e. WebKit's GPU process rasterising the frame (map flush 5 -> 19 ms,
+  title 3 -> 15 ms). The spikes land on random steps: with 6 repeats the map jumped in repeat 4 (38 ms) and was back
+  to 6.8 ms in repeat 5; with 10 short repeats map and title jumped in repeats 2 and 5; other runs spiked level steps
+  instead (65 ms on 1-1 in repeat 4). Most follow a WebKit-wide memory drop (WebContent 300-400 MB -> 70-190 MB,
+  GPU process 150 -> 50 MB in a few seconds, with no system memory pressure and usually no full JS collection),
+  after which the processes rebuild for some seconds. The test only fails when a spike lands on its last repeat, and
+  map and title are the last steps of it. Chromium is clean because the test forces a garbage collection after every
+  step there. `sbw_session_test` now re-measures a cost that is over its tolerance in the last repeat with one extra
+  confirmation repeat and fails only if it is over again (same tolerance), and prints each step's "js" part (first
+  run with it, load 3.5: map 10.0 -> 18.3 ms, title 3.8 -> 21.0 ms in repeat 4, confirmation 11.1 and 4.2 ms, js
+  flat; two 1-1 steps still failed with their js flat, so on this loaded Mac WebKit runs still need reading; Chromium
+  is noisy too at this load: title 10.5 -> 22.9 ms back and forth with js 0.2, a 6-repeat run clean). A lead
+  for later, not the cause: the game makes about 100 KB of JS garbage per frame in a level and 20-35 KB on the map and
+  title (Chromium heap sampling: colour strings, `drawBrady` / `Ink.around` closures, the HUD). That is a steady cost
+  (garbage-collection pauses), not one that grows, and nothing was measured on an iPhone.
 
 ## The Brazil football freeze (Brady, 17 Nov): found and fixed
 Brady: "every time i touch that ball everything freezes and the music starts repeating a tiny sound over and over".
