@@ -41,13 +41,31 @@ On the world route map, a new island in the North Atlantic. Fly there from any l
 - It SHUSHES (hush waves roll both ways along the stage: jump them), HOPS at Brady, and every so often stops to LISTEN: its dial lights up, and that is the moment to stomp the dial. Any other stomp bounces off. Six stomps; at four it adds FEEDBACK (music notes arc out). The last stomp turns it up to eleven and it blows its fuse.
 - Beating it completes Festival Fields.
 
+### Mexico 1-7 Casa de Sorpresas (bonus level), opened by Rule 7
+- **How it opens:** slap the Brady Button for **Rule 7: NO HATS ON ANIMALS** (Brazil 3-1's Loading Dock). The REVOKED card also says "NEW IN MEXICO: 1-7 CASA DE SORPRESAS!". Next time you are on Mexico's map, a gold trail grows from the Hacienda (1-5) and the **Casa** stop pops up (it sits by the cactus desert, left of the hacienda). Until then the stop is hidden.
+- **The idea:** a big old house round a courtyard, full of surprises. Piwi locked the **garden gate** (in the courtyard). Work out the house to open it:
+  1. Upstairs (the arched **↑ ARRIBA** stairs in the entrance hall) is the **attic** door. In the **Topsy-Turvy Attic** everything has fallen up: step over the painted line and Brady walks on the ceiling past an upside-down wardrobe, trunk and rocking chair to the **cistern key**. The second line drops him back down; a door on that side leads out.
+  2. On the **roof terrace** the old **cistern** (ALJIBE) is behind a padlocked grille: the cistern key opens it. Inside, the **Hourglass Cistern**: sand pours in the moment Brady lands; climb the shelves to the rim before it catches him (being caught never hurts: the sand spits him out at the bottom and pours again). At the rim: the **garden key** and a Sundial box; a door at the top goes back out.
+  3. From the roof, the hole by the washing line drops down into the courtyard (one way). The garden key opens the garden gate; the exit is in the garden (back to the map).
+- **The other surprises (all optional):**
+  - **Xolo's Tiendita after hours** (the shop with the half-down shutter and CERRADO sign in the entrance hall): a Closing Time room, 14 seconds to grab coins and the mushroom / 1UP boxes before the shutters come down and Xolo sweeps Brady out.
+  - **Piwi's Piñata Pound** (the purple PIÑATA POUND door upstairs, right): a Monster Closet: the confiscated piñata donkeys and peppers drop in, stomp them all; the cage opens on a Star box.
+  - **The Piñata-Donkey Bouncy Castle** (the big pink donkey in the courtyard; go in by its flap): bounce to the tallest tower for a 1UP.
+  - **The Parrot's Map Room**: hidden behind the wall next to the **painting of a parrot holding a map** (Piwi's wing, upstairs right; dust puffs from a crack and the painting has an arrow). Take the torn map off the shelf: it shows the X is **by the orange tree** in the courtyard. Back there the scuffed patch of soil now sparkles with a red X; stand on it and Brady digs up a chest: a 1UP and a shower of golden limes. (The room's box holds a Magnet.)
+  - **Pupo:** a Nap Box in the courtyard (Mexico is a Pupo land). He is a helper only: a 1UP box high over the courtyard only his arms reach; the level never needs him. He waits outside the attic (it is upside down).
+- **Backstage:**
+  - **The Under-Stage:** down the **courtyard well** (the one with the yellow CREW tag on its bucket; hop over the brick rim and drop in). Brady lands on a crash mat under the stage. **P2** is up the catwalks; a coin brick is hidden there too. The stage door goes back up to the courtyard.
+  - **The Wings:** at the very start, the velvet curtain stirring in the open **front doors** of the entrance hall, and a wind-up mouse runs that way: walk **left** off the start. **P3** is up the catwalks; a 1UP is hidden over the ghost light. Walk off the right edge to go back in.
+- **Postcards:** P1 at the top of the bougainvillea trellis in the courtyard; P2 in the Under-Stage; P3 in the Wings.
+- Code: `src/29_tour_mx_zcasa.js` (the level, three new room kinds `topsy`, `hourglass`, `treasure`, the X, keys and padlocks, looks, the rule 7 wiring, the map stop and scene). Pictures: `tools/sbw_casa_shots.js`.
+
 ### Wormholes across the tour (Loading Docks)
 In each level below there is a **stack of flight cases before the finish gate and a yellow CREW ONLY sign on a truss over the gate**. Climb the cases, cross the truss over the gate **without touching the gate**, drop down past it and keep walking right off the edge: the Loading Dock. Its Wormhole (far right) leads to:
 
 | Level | Wormhole to | Notes |
 |---|---|---|
 | 2-3 Booby Dash | BRAZIL: 3-6 Rio Hang-Glide | one land ahead |
-| 3-1 Samba Sunrise | MOZAMBIQUE: 4-6 Buried Dhow | **Brady Button (Rule 7: NO HATS ON ANIMALS)** in the middle of the dock: every animal gets a little hat |
+| 3-1 Samba Sunrise | MOZAMBIQUE: 4-6 Buried Dhow | **Brady Button (Rule 7: NO HATS ON ANIMALS)** in the middle of the dock: every animal gets a little hat, and Mexico's bonus level 1-7 Casa de Sorpresas opens |
 | 4-1 Ostrich Dash | HATCHLINGS: 4-4 Hatchling Night | same land |
 | 5-3 Chefchaouen Blue | FRANCE: 7-6 Seine Chase | two lands ahead |
 | 6-3 City of Arts by Night | AQUARIUM: 6-6 Oceanogràfic | same land |
@@ -76,7 +94,7 @@ The dock's left edge goes back to the level (beyond the gate). A Wormhole within
 Save: key `super-brady-o-world-save-v3` (one clean reset, Brady: "wipe my save i dont care"); settings and look come over from v2 once.
 
 ## Not built yet (design §4.4 / §3.5)
-- Lost & Found (24-1..4) and The Red-Eye (25-1..4); Mexico 1-7 Casa de Sorpresas; 22-6 The Rulebook.
+- Lost & Found (24-1..4) and The Red-Eye (25-1..4); 22-6 The Rulebook.
 - Brady Buttons for rules 1, 9, 10, 12 and what they open (dormant Wormholes, express trails, night flights, the lost suitcase).
 - Rigging / Under-Stage / Wings entrances outside Mexico and Festival Fields (the rest of the tour has Loading Docks, which are added after a level's last step so nothing in the level moves).
 - Bali (world 9) and Vietnam (10) have no Wormhole of their own yet (no plain strip level to put a dock on without regenerating it).
