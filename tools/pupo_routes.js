@@ -4,7 +4,8 @@
 // They cover what the level checker only approximates: the snatch timing, the swing release, the bar shimmy in the
 // wind, the climb's pull-up, the pull handle.
 //
-// A route: { name, level, start: { box: n } (Brady beside the level's n-th Nap Box, by x; he opens it and gets on),
+// A route: { name, level, start: { box: n, area } (Brady beside the n-th Nap Box, by x, of the first area or of area id
+//   `area`; he opens it and gets on),
 //   boxShot: a name for the shots of the box shut and Pupo's yawn, safe (Brady can't be hurt: enemies and presses still
 //   act), steps: [...] }
 // Steps (each runs at the game's fixed 1/120 s step; `until` and `check` are expressions over the state S below):
@@ -20,7 +21,7 @@
 // S: x, y (tiles: Brady's centre and his feet), mode (Pupo's: '', 'swing', 'climb', 'hang'...), ride, ground, dead,
 //    drowsy, key (a function: key('goldpod')), coins (the coin count), area (the area id), t (route seconds), riding
 //    (seconds on Pupo so far), meter, text (the last floating line said near Brady)
-// Owner of the entries: the land's Pupo group (P2-G1: ec, br, mz).
+// Owner of the entries: the land's Pupo group (P2-G1: ec, br, mz; P2-G2: ma, es, fr; P2-G4: jp, np, aq, w22).
 const ROUTES = [
   // ---- the first Nap Box of each Pupo level: he comes out and Brady gets on ----
   { name: '2-4 the first Nap Box', level: '2-4', start: { box: 0 }, boxShot: 'ec24-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo at the first catwalk' }] },
@@ -209,6 +210,98 @@ const ROUTES = [
     { check: 'coins >= 8', name: 'the cooling rack\'s coins' },
     { check: 'said("CRUSTY")', name: 'Pupo on the first baguette: "...crusty."' },
     { shot: 'fr71-ovens-after' }
+  ] },
+  // ---- P2-G4: Japan, Nepal, Antarctica, World 22 (src/28_tour_ph_g4.js) ----
+  { name: '11-3 the first Nap Box', level: '11-3', start: { box: 0 }, boxShot: 'jp113-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo at the start of the grove' }] },
+  { name: '11-3 bamboo bend', level: '11-3', start: { box: 1 }, boxShot: 'jp113-cp', safe: true, steps: [
+    { run: 1, until: 'x >= 176.8 && ground', max: 20 },
+    { hold: {}, until: 'ground', max: 2 },
+    { shot: 'jp113-bamboo-before' },
+    { grab: { up: true }, until: 'mode === "climb"', max: 4 },
+    { hold: { up: true }, until: 'mode === "bend"', max: 6 },
+    { hold: {}, until: '!mode', max: 4, shotAt: { t: 0.75, name: 'jp113-bamboo-during' } },
+    { hold: {}, until: 'ground', max: 2 },
+    { check: 'ride && ground && x >= 189 && !dead', name: 'across the stream on the bending bamboo, riding' },
+    { check: 'said("WHOA") && said("SOFT")', name: 'Pupo as it bends ("...whoa.") and on the far bank ("...soft... landing.")' },
+    { check: 'coins >= 3', name: 'coins along the bamboo\'s arc' },
+    { shot: 'jp113-bamboo-after' }
+  ] },
+  { name: '11-4 the noodle sign\'s onigiri', level: '11-4', start: { box: 0 }, boxShot: 'jp114', safe: true, steps: [
+    { put: [23, 108] },
+    { hold: {}, until: 'ground', max: 2 },
+    { face: 1 },
+    { shot: 'jp114-sign-before' },
+    { grab: { up: true }, until: 'mode === "pull"', max: 4 },
+    { wait: 1.8, },
+    { check: 'said("SNACK")', name: 'Pupo tugs the onigiri: "...snack?"' },
+    { shot: 'jp114-sign-pulled' },
+    { hold: { left: true }, until: 'coins >= 10', max: 6 },
+    { check: 'coins >= 10 && ride', name: 'the gondola dropped: its ten coins, on Pupo' },
+    { check: 'said("TIPS")', name: 'Pupo at the gondola: "...tips."' },
+    { shot: 'jp114-sign-after' }
+  ] },
+  { name: '12-3 the first Nap Box', level: '12-3', start: { box: 0 }, boxShot: 'np123-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo by the first boulder' }] },
+  { name: '12-3 the ticklish yeti', level: '12-3', start: { box: 1 }, boxShot: 'np123-cp', safe: true, steps: [
+    { put: [158, 14] },
+    { run: 1, until: 'x >= 165.4 && ground', max: 8 },
+    { hold: {}, until: 'ground', max: 2 },
+    { face: 1 },
+    { shot: 'np123-yeti-before' },
+    { grab: {}, until: 'said("HEE HEE")', max: 6, shotAt: { when: 'armOut', name: 'np123-yeti-during' } },
+    { wait: 1.2 },
+    { shot: 'np123-yeti-rolling' },
+    { wait: 1.6 },
+    { run: 1, until: 'x >= 178 && ground', max: 8 },
+    { check: 'ride && x >= 178 && !dead', name: 'through the pass on Pupo, the yeti slid away' },
+    { shot: 'np123-yeti-after' }
+  ] },
+  { name: '13-3 the first Nap Box', level: '13-3', start: { box: 0 }, boxShot: 'aq133-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo at the station gate' }] },
+  { name: '13-3 reel in the floe', level: '13-3', start: { box: 0, area: 'harbour' }, boxShot: 'aq133-harbour', safe: true, steps: [
+    { run: 1, until: 'x >= 27.8 && ground', max: 20 },
+    { hold: { right: true }, until: 'x >= 28.3', max: 1 },
+    { hold: {}, until: 'ground', max: 2 },
+    { face: 1 },
+    { shot: 'aq133-floe-before' },
+    { grab: { right: true }, until: 'mode === "pull"', max: 4 },
+    { wait: 0.8 },
+    { shot: 'aq133-floe-reeling' },
+    { wait: 3.6 },
+    { hold: { right: true }, until: 'x >= 30.4', max: 2 },
+    { hold: {}, until: 'ground', max: 2 },
+    { check: 'ride && ground && x >= 29.5 && x <= 32', name: 'aboard the floe at the dock' },
+    { grab: { right: true }, until: 'mode === "pull"', max: 4 },
+    { wait: 1.5 },
+    { shot: 'aq133-floe-during' },
+    { wait: 3.2 },
+    { check: 'ride && ground && x >= 41 && !dead', name: 'the floe pushed out across the harbour, Brady and Pupo aboard' },
+    { hold: { right: true }, until: 'x >= 45 && ground', max: 3 },
+    { check: 'ride && ground && x >= 45 && !dead', name: 'onto the far quay, riding' },
+    { hold: { right: true }, until: 'x >= 54', max: 3 },
+    { shot: 'aq133-floe-quay' },
+    { hold: { up: true }, press: 'up', every: 0.3, until: 'area === "plough"', max: 3 },
+    { check: 'area === "plough" && !ride', name: 'through the airlock into the plough arena: Pupo waits at its door' },
+    { check: 'said("FLOE") && said("HMPH")', name: 'Pupo: "...come... here... floe.", the penguins: "HMPH."' },
+    { shot: 'aq133-floe-after' }
+  ] },
+  { name: '22-1 the first Nap Box', level: '22-1', start: { box: 0 }, boxShot: 'w221-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo at the start of the platform' }] },
+  { name: '22-1 sloth o\'clock', level: '22-1', start: { box: 2 }, boxShot: 'w221-wormout', safe: true, steps: [
+    { run: 1, until: 'x >= 228.3 && ground', max: 8 },
+    { hold: {}, until: 'ground', max: 2 },
+    { shot: 'w221-clock-before' },
+    { hold: {}, press: 'jump', every: 0.6, until: 't > 1.3', max: 2 },
+    { check: 'y >= 19.9', name: 'a jump in the falling time goes nowhere (still on the tower floor)' },
+    { grab: { up: true }, until: 'mode === "swing"', max: 4 },
+    { hold: {}, until: 'y <= 15', max: 8, shotAt: { t: 2.2, name: 'w221-clock-during' } },
+    { hold: {}, until: 'y <= 13', max: 8 },
+    { wait: 0.9 },
+    { shot: 'w221-clock-top' },
+    { hold: { right: true }, press: 'jump', every: 5, until: 'mode !== "swing"', max: 1 },
+    { hold: { right: true }, until: 'ground', max: 3 },
+    { check: 'ride && ground && y <= 13.1 && x >= 227.5 && !dead', name: 'off the minute hand onto the balcony at the top, riding' },
+    { hold: { right: true }, until: 'x >= 233', max: 2 },
+    { check: 'ride && ground && y <= 13.1 && x >= 233', name: 'on along the upper platform' },
+    { check: 'said("2:22") && said("FLIES")', name: 'Pupo at the hand ("...2:22.") and letting go at the top ("...time... flies.")' },
+    { shot: 'w221-clock-after' }
   ] }
 ];
 
@@ -240,6 +333,8 @@ function RUNNER() {
       const t0 = g.parts.text.bind(g.parts); g.parts.text = (x, y, s, c) => { this.said.push(String(s)); return t0(x, y, s, c); };
       const a0 = g.addPick.bind(g); g.addPick = (x, y) => { this.coinN++; return a0(x, y); };
       this.frames(0.3, {});
+      // start: { area: id } begins in that area of the level (13-3's harbour, past the module) (P2-G4)
+      if (route.start.area) { const ai = g.level.areas.findIndex(a => a.aid === route.start.area); g.loadArea(ai, 6 * TS, 6 * TS); this.frames(0.3, {}); }
       const boxes = []; g.area.spawns.forEach(s => { if (s.type === 'napBox') boxes.push(s); }); boxes.sort((a, b) => a.x - b.x);
       const b = boxes[route.start.box || 0], tx = Math.floor(b.x / TS), ty = Math.floor(b.y / TS) - 1, p = g.player;
       // stand beside the box (on its left), open it (as a bump would), and walk into Pupo once he has unfolded
