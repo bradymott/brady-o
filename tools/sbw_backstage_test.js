@@ -48,6 +48,8 @@ const TP = G.TourProgress, Save = G.Save;
 let failures = 0, checks = 0;
 const check = (name, ok, info) => { checks++; if (!ok || verbose) console.log((ok ? 'PASS ' : 'FAIL ') + name + (info !== undefined ? '  ' + (typeof info === 'string' ? info : JSON.stringify(info)) : '')); if (!ok) failures++; };
 const level = id => { const [w, i] = id.split('-').map(Number); return G.getLevel(w, i); };
+// the rule numbers a needs asks for ('rule:9', or a list), revoked in the save (rule 9's dormant Wormholes, rule 1's glass)
+const grant = needs => { const T = TP.data(); for (const q of [].concat(needs || [])) { const m = /^rule:(\d+)$/.exec(q); if (m && !T.rules[m[1]]) T.rules[m[1]] = { at: 'test' }; } };
 const aidOf = (lvl, k) => lvl.areas[k].aid;
 
 /* every backstage area in the game, with the seam that leads into it */
@@ -95,7 +97,9 @@ if (want('seams')) {
   check('there is at least one backstage area', list.length > 0, list.length);
   for (const B of list) {
     const tag = B.id + ' ' + B.aid;
-    check(tag + ': a seam leads into it', !!B.from, B.from && B.from.seam.side);
+    // a room reached by a stage door instead (5-1's evidence locker, 10-2's dock: rule 9) passes on its door
+    const viaDoor = !B.from && B.lvl.areas.some((a2, j) => j !== B.k && a2.spawns.some(s2 => s2.type === 'portal' && s2.target && s2.target.area === B.k));
+    check(tag + (viaDoor ? ': a stage door leads into it' : ': a seam leads into it'), !!B.from || viaDoor, B.from && B.from.seam.side);
     if (!B.from) continue;
     const g = start(B.lvl);
     g.player.power = 1;   // a power to carry through
@@ -150,6 +154,12 @@ if (want('warps')) {
     g.loadArea(ai, sp.x, sp.y); g.player.invuln = 5;
     const e = g.entities.find(x => x.isWarp);
     check(tag + ': it is a Wormhole entity', !!e);
+    if (e && sp.needs) {
+      hold(g, { up: true, upPressed: true }, 0.1); hold(g, {}, 0.5);
+      check(tag + ': dormant (' + [].concat(sp.needs).join(',') + '): padlocked, Up does nothing', e.locked && !e.used && g.state === 'play');
+      grant(sp.needs);
+      check(tag + ': its rule revoked, the padlock is off', !e.locked);
+    }
     // a plain touch does nothing
     hold(g, {}, 1);
     check(tag + ': standing at it without Up does nothing', g.state === 'play' && !e.used);
@@ -182,6 +192,7 @@ if (want('progress')) {
     const tag = `${w.id} ${w.key}`;
     Save.data = Save.defaults(); const T = TP.data();
     const C = Tour.countries[w.cc], TC = Tour.countries[w.toCc];
+    grant(w.needs);
     const before = TP.exitsFound(w.id);
     TP.exit(w.id, w.key);
     // play the reveals the way the maps do
@@ -215,8 +226,15 @@ if (want('buttons')) {
     const b = g.entities.find(e => e.isButton && e.rule === +n);
     check(tag + ': it is a Brady Button entity', !!b);
     if (!b) continue;
+    const p = g.player;
+    if (sp.needs) {
+      p.x = b.x - p.w - 2; p.y = b.y + b.h - p.h; p.vx = p.vy = 0; p.facing = 1;
+      hold(g, {}, 0.3); hold(g, { action: true, actionPressed: true }, 0.1); hold(g, {}, 0.5);
+      check(tag + ': under glass (' + [].concat(sp.needs).join(',') + '): a slap does nothing yet', !TR.isRevoked(+n) && !b.pressed && !g.buttonFx);
+      grant(sp.needs); hold(g, {}, 1.5);
+    }
     // jumping on it does nothing
-    const p = g.player; p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 6 * TS;
+    p.x = b.cx - p.w / 2; p.y = b.y - p.h - 40; p.vy = 6 * TS;
     hold(g, {}, 0.8);
     check(tag + ': landing on it does nothing', !TR.isRevoked(+n) && !b.pressed);
     // slap it from the side: stand next to it, Action

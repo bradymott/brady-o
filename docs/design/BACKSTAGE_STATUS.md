@@ -144,6 +144,47 @@ On the world route map, a jet over the North Pacific (fly there from any land). 
 - He circles (the sack hangs low enough to reach from the crate stacks or the middle shelf), **swoops** low across the hold (the sack trails behind him near the floor: hop on it once he has passed), flings **pretzels that boomerang back**, calls **two of his crew** (after two hits) and **flaps a gale** across the hold (after four). Five hits; then he flies off without his pretzels.
 - Beating him completes The Red-Eye.
 
+### Morocco 5-1 Souk Labyrinth: Piwi's Evidence Locker and Brady Button Rule 9 (NO SHORTCUTS)
+- **The way in:** in the **basket weavers' hall** (take the paprika door down from the souk gate), on the far side of the hole that drops to the cumin cellar, stands a **plain plank door with KEEP OUT nailed across it, Piwi's purple wax seal, and a brass tube running up out of its frame** into the ceiling (the same tube every Brady Button has). Its little plaque shows a padlock. Hop over the hole and press **Up** at it.
+- **Inside:** Piwi's evidence locker, a plain storeroom: tall shelves of confiscated fun (piñatas, kites, cheese wheels, maracas, drums, party hats), each with a tag; a chicken-wire cage marked CONFISCATED; crates with Piwi's seal; a wind-up mouse; a sign: "CONFISCATED FUN: NO REFUNDS. AND NO SHORTCUTS, EVER."
+- **Brady Button (Rule 9: NO SHORTCUTS):** on the floor in the middle. Stand beside it and press **Action**. The REVOKED card says **6 WORMHOLES UNLOCKED · EXPRESS TRAILS ON BEATEN LANDS**.
+- The way back is the same door. The maze's route, its doors and its puzzle are unchanged (the locker leads nowhere but back); `sbw_mazes_test` still plays the route and the rooftop key is still needed.
+
+### Rule 9's six dormant Wormholes (they all lead *back* to secret levels Brady may have missed)
+Until Rule 9 is revoked each one is **padlocked**: a chain across the trunk and a luggage tag, **HELD BY ORDER OF PIWI SQUIRMIN' — RULE 9**, with a FREIGHT SUSPENDED notice board beside it (pressing Up only says PADLOCKED). Once revoked the padlock is gone, the notice gets a red REVOKED sticker, and the Wormhole works like any other (the map's exit dots count it from then on).
+
+| Level | Where | The tell (from the level) | Wormhole to |
+|---|---|---|---|
+| 4-2 Dune Stampede | Loading Dock past the finish | flight cases stacked before the finish gate, a CREW ONLY arrow, a truss over the gate: climb the cases, cross the truss without touching the gate, drop and walk on right | MEXICO: 1-6 Pit of Swallows |
+| 6-1 La Tomatina | Loading Dock past the finish | the same flight cases and truss by the gate | ECUADOR: 2-6 Galápagos Snorkel |
+| 7-3 Mont-Saint-Michel Tides | Loading Dock past the causeway's gate (the second part of the level) | the same flight cases and truss by the causeway gate | BALLOONS: 7-7 Montgolfière Skies (same land) |
+| 9-3 Batur Eruption | Loading Dock past the finish | the same flight cases and truss by the gate | MOZAMBIQUE: 4-6 Buried Dhow. **Bali's first Wormhole.** |
+| 10-2 Ha Long Junk | a crew door on the landing past the gate (the ride scrolls, so there is no edge to walk off: a stage door instead) | at the landing: flight cases before the gate and a truss over it; past the gate a black **CREW ONLY** stage door; press Up | MOROCCO: 5-6 Carpet Skies. **Vietnam's first Wormhole.** |
+| 12-2 Yak Caravan Pass | the Wings, left of the start (12-2 already had a Loading Dock with the Wormhole to Antarctica) | at the very start a red velvet curtain stirs at the left edge and a wind-up mouse runs that way: walk **left** off the start | JAPAN: 11-7 Fuji Thermals |
+
+Each dock room has its way back at the left edge (10-2's: the stage door); 12-2's Wings go back by walking off their right edge.
+
+### Rule 9's express trails
+On the map of every land **whose boss Brady has beaten**, a **brass rail line** runs straight from the airstrip to the port, walkable both ways (a toast says EXPRESS TRAIL: AIRSTRIP ⇄ PORT! the first time a land's map shows it). Bonus lands have none.
+
+### World 22 22-5 The Writer's Desk: the margin (the Wings) and Brady Button Rule 1 (NO FUN)
+- **The way in:** at the very start of the desk, the **page's edge curls up at the far left** with a red margin line and "← margin" scribbled beside it, and a wind-up mouse runs off that way. Walk **left** off the start.
+- **Inside:** the margin of Piwi's page: blue ruled lines, the red margin line, hole punches, his doodles and notes to himself ("rule 13: no rule 13", "buy more glass", a frowning doodle of himself labelled "me (cross)"), an eraser, a pencil stub, a sign.
+- **Brady Button (Rule 1: NO FUN):** under a **glass cloche** with a yellow sticky note, **NOT YET. — PIWI**. Until Rules 3, 7, 9, 10 and 12 are all revoked, slapping it (or jumping on it) only goes TINK! and a toast says how many of the other five are done. Once all five are, the glass lifts off: slap it. The REVOKED card says **NEW IN WORLD 22: 22-6 THE RULEBOOK!**
+- **What Rule 1 changes everywhere** (all of it follows Settings → HATS & DANCING): Piwi's Showtrunk on the maps is a **party blimp** (striped, PARTY! on its side, bunting, a disco ball, Piwi in a party hat), and one drifts over every land's map and over the world map; the **Postcard Lighthouse's beam turns rainbow**; and **the ending gains two cards**: the whole world throws a party, Piwi sulks in the corner under his own little rain cloud... then a toe taps, then a knee, and he dances until sunrise.
+- **The way back:** walk off the right edge of the margin.
+
+### World 22 22-6 The Rulebook (bonus level), opened by Rule 1
+- **How it opens:** the REVOKED card, then next time on World 22's map a gold trail grows from the Writer's Desk (22-5) across the top of the map to the **Rulebook** stop (top right). Until then the stop is hidden.
+- **The idea:** inside Piwi's House Rules itself. The backdrop is the open book, every rule stamped REVOKED. The floor is the tops of closed books.
+- **Route:** the opening page (a sign explains everything) → a power-up box → **two page-turn platforms** over a gap: each page is a spine (a closed book standing on end, it never moves) with a leaf lying on one side of it; every couple of seconds the leaf **turns over to the other side**. Just before it turns, the leaf's corner curls up and flashes and a yellow curved arrow shows over the spine. Wait on a spine, then cross. P1 floats over the first spine → **three rubber stamps** on handles from above: each rests high, then shakes and glows red (its DENIED mark on the floor lights up) and slams down; walk under them while they rise. They cost a hit, never a life → a moth → **the footnotes**: a giant standing tome, HOUSE RULES VOL. 2, with lines of small print sticking out as ledges ("¹ Fun is not permitted.", "² Nor is giggling."); climb them to the top for **P3** → checkpoint → a power-up box → **the Small Print** (secret): a crack in a page wall puffs dust; walk into it → **three page-turns** (the clocks alternate: wait for the next page to come round) → an envelope → **two faster stamps** → a book's cover standing ajar, CHAPTER THE LAST: press Up.
+- **The Small Print** (the secret room, a PICK ONE room): "Piwi's lawyer laid out three boxes. The small print says: take one. ONE!" **P2** is up on the shelf. The door goes back out.
+- **The Rulebook** (the mini-boss, 3 pages): a flapping hardback, HOUSE RULES on the cover and an embossed scowl, with two bendy arms holding rubber stamps. It hovers over Brady, stops, raises its stamps (**red marks show on the floor**: get out from under them), **slams down and falls open**, dazed, a red ribbon sticking up with the next rules on it: **stomp it** and a page tears out (RIIIP! RULES 3 & 7, then RULES 9, 10 & 12, then RULE 1: NO FUN). Stomping it while it flies just bounces off its hard cover. After one page each slam splashes two **ink blots** that roll along the floor (jump them); after two it **slams twice** before it falls open. The last page and it snaps shut, shakes, bursts into loose pages: THE RULEBOOK IS CLOSED! The door opens; the gate beyond goes back to the map.
+- **Postcards:** P1 over the first page-turn spine; P2 in the Small Print; P3 on top of the footnotes tome.
+
+### Piwi's House Rules page (pause menu and map menu: HOUSE RULES)
+All six rules are listed. Revoked rules: where the button was and what it opened, with a REVOKED stamp. Unfound rules: **RULE ?: ████████**; once the Postcard Lighthouse is lit, each also says which land its button is in. Rule 1, once Brady has seen it under its glass, shows its name and how many of the other five are revoked.
+
 ## How it works (code)
 | File | What |
 |---|---|
@@ -157,6 +198,11 @@ On the world route map, a jet over the North Pacific (fly there from any land). 
 | `src/29_tour_zz_secrets.js` | the Loading Docks across the tour |
 | `src/29_tour_jp_secrets.js` | Japan 11-4's Rigging (the rooftop's tell, the spring, the top seam: added by wrapping the climb gen for that one area, so the tower is built exactly as before) and its Brady Button (rule 10) |
 | `src/29_tour_eye.js`, `src/29_tour_eye_levels.js` | The Red-Eye: route stop, looks (night cabin, decks, sky, hold), critters (goose, meal tray, Piwi's gulls, carry-on bag), the runaway trolley (the chase's look), the walrus, the dropping bins, the lurch clock and its sliding carts, the exhaust, the escort gull, the boss Captain Gull (`tools/boss_tests/eye.js`), the jet map; levels 25-1..25-4; `TOUR_RULES[10]` and the night flights on the route map (`tools/sbw_eye_shots.js` for pictures and in-game checks) |
+| `src/29_tour_zz_wormholes9.js` | Rule 9: `TOUR_RULES[9]`, 5-1's evidence locker (a copy of the weavers' cell stamp with one more door), its looks; the six dormant Wormholes (`needs: 'rule:9'`: docks appended after a level's last step, 10-2's crew door by wrapping the ride gen, 12-2's Wings by wrapping the strip gen for that one area), the padlock tag (a wrapper on the Wormhole's draw), the express trails (a wrapper on `TourGraph.edges` plus an `owDraw` rail) |
+| `src/29_tour_w22_zrulebook.js` | Rule 1: `TOUR_RULES[1]`, the button under glass (a subclass of the Brady Button for spawns with `needs`), 22-5's margin (the strip gen wrapped for that one area), 22-6 The Rulebook (theme, page-turn toggles of kind `page`, rubber stamps, footnotes, the Small Print, the mini-boss `w22_rulebook`), the party blimp and rainbow beam (wrappers on `TourPanelFx.airship` / `lighthouse`, `owDraw`, `routeDraw`), the ending's party (a wrapper on `TourEndingScene`), the HOUSE RULES page (`TourRuleCut.lines` / `page` replaced) |
+| `tools/sbw_rulebook_test.js` | node: rules 9 and 1, the dormant Wormholes, express trails, pages, stamps, the mini-boss, the page, the party |
+| `tools/sbw_rulebook_shots.js` | browser: screenshots and in-game checks of all of the above (landscape and portrait) |
+| `tools/boss_tests/w22_rulebook.js` | the mini-boss in `boss_test` |
 | `tools/validate_levels.js` | new check: `BACKSTAGE <aid> TRAP AT x,y`: from every spot reachable in a backstage area, a Wormhole or the way out must still be reachable (no prize up a climb with no way back) |
 | `tools/sbw_backstage_test.js` | node: every seam in and back out, Pupo riding through each seam, every Wormhole (Up only, clear, save, map queue), map progress, every button, the checker's trap fixtures |
 | `tools/sbw_backstage_shots.js` | browser: screenshots and in-game checks of all of the above |
@@ -165,7 +211,6 @@ On the world route map, a jet over the North Pacific (fly there from any land). 
 Save: key `super-brady-o-world-save-v3` (one clean reset, Brady: "wipe my save i dont care"); settings and look come over from v2 once.
 
 ## Not built yet (design §4.4 / §3.5)
-- 22-6 The Rulebook.
-- Brady Buttons for rules 1 and 9 and what they open (dormant Wormholes, express trails).
-- Rigging / Under-Stage / Wings entrances outside Mexico, Festival Fields, Netherlands 8-3, Japan 11-4, Lost & Found and The Red-Eye (the rest of the tour has Loading Docks, which are added after a level's last step so nothing in the level moves).
-- Bali (world 9) and Vietnam (10) have no Wormhole of their own yet (no plain strip level to put a dock on without regenerating it).
+- Rigging / Under-Stage / Wings entrances outside Mexico, Festival Fields, Netherlands 8-3, Japan 11-4, Nepal 12-2, World 22 22-5, Lost & Found and The Red-Eye (the rest of the tour has Loading Docks, which are added after a level's last step so nothing in the level moves).
+- The design put D2 (6-1) in the Rigging, D3 (7-3) in an Under-Stage at low tide and D5 (10-2) in an Under-Stage sea cave; they are Loading Docks (10-2's behind a crew door, as its ride scrolls) so nothing in those levels had to move.
+- The express trails are drawn as a straight rail; they have no map-layout bends and no growing-trail animation (a toast instead).
