@@ -1112,7 +1112,7 @@ Decor.brCecropia = (ctx, x, y, t, th, d) => {
 // piranhas in the river under the cousins: little red fins and eyes cruising to and fro (the water is not for swimming)
 Decor.brPiranhaFins = (ctx, x, y, t) => {
   for (let k = 0; k < 3; k++) {
-    const fx = x + Math.sin(t * (0.7 + k * 0.23) + k * 2.1) * (120 + k * 30), fy = y - 18 + Math.sin(t * 3 + k) * 1.5, d = Math.cos(t * (0.7 + k * 0.23) + k * 2.1) > 0 ? 1 : -1;
+    const fx = x + Math.sin(t * (0.7 + k * 0.23) + k * 2.1) * (120 + k * 30), fy = y - 27 + Math.sin(t * 3 + k) * 1.5, d = Math.cos(t * (0.7 + k * 0.23) + k * 2.1) > 0 ? 1 : -1;
     ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.moveTo(fx - 9 * d, fy + 2); ctx.lineTo(fx + 2 * d, fy - 11); ctx.lineTo(fx + 8 * d, fy + 2); ctx.fill();
     ctx.fillStyle = '#e8503a'; ctx.beginPath(); ctx.moveTo(fx - 6 * d, fy + 1); ctx.lineTo(fx + 2 * d, fy - 8); ctx.lineTo(fx + 6 * d, fy + 1); ctx.fill();
     ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(fx + 12 * d, fy + 1, 2.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(fx + 12.6 * d, fy + 1, 1.2, 0, TAU); ctx.fill();
