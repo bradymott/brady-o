@@ -14,6 +14,8 @@ const args = process.argv.slice(2), verbose = args.includes('--verbose'), ROOMS 
 const TOPN = +(args[args.indexOf('--top') + 1] || 2) || 2, only = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--top');
 const A = loadGame();
 const { Validator, T, TS, Tour } = A;
+// a Pupo level's way on can need Pupo: from a spot, the search rides him from every Nap Box it reaches (PupoVal)
+const PV = A.run("typeof PupoVal !== 'undefined' ? PupoVal : null"), search = (L, o) => PV && PV.has(L) ? PV.run(L, o) : Validator.run(L, o);
 let failures = 0, warnings = 0, spots = 0;
 const anyExit = r => Object.keys(r.exits || {}).length > 0;
 const t0 = Date.now();
@@ -47,11 +49,11 @@ for (const C of Object.values(Tour.countries)) for (const id of Tour.levelIds(C)
       const start = { area: ai, x: tx * TS + TS / 2, y: ty * TS };
       // a room: out through its door (any other area) is enough; elsewhere: one of the level's exits
       const done = a.roomKit ? (r => anyExit(r) || r.areasReached.some((v, k) => v && k !== ai)) : anyExit;
-      const base = opened(lvl, ai), r = Validator.run(base, { start, until: done });
+      const base = opened(lvl, ai), r = search(base, { start, until: done });
       if (done(r)) { if (verbose) console.log(`ok   ${id} ${a.aid}(${tx},${ty})`); continue; }
       // again with this area's one-way floors open (a DOWN + JUMP drop through them)
       const open = Object.assign({}, base, { areas: base.areas.map((b, k) => k !== ai ? b : Object.assign({}, b, { tiles: b.tiles.map(t => t === T.SEMI ? T.EMPTY : t) })) });
-      const r2 = Validator.run(open, { start, until: done });
+      const r2 = search(open, { start, until: done });
       const where = `${id} ${lvl.name}: ${a.aid}${a.roomKit ? ' (room: ' + a.roomKit.kind + ')' : a.role ? ' (' + a.role + ')' : ''} at (${tx},${ty})${what ? ' by ' + what : ''}`;
       if (done(r2)) { warnings++; console.log(`WARN ${where}: the only way down to an exit is a DOWN + JUMP drop through a one-way floor`); }
       else { failures++; console.log(`FAIL ${where}: no way back to an exit from here without dying`); }

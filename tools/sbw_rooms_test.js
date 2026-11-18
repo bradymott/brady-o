@@ -142,7 +142,11 @@ const WIN = {
     g.bumpBlock(b0.x, b0.y, true, P(g)); wait(g, 0.2);
     check(g.level.id + ' ' + A.aid + ' pick: taking one box empties the other two', B.every(b => G.run('tileAt')(g.area, b.x, b.y) === T.USED), B.map(b => G.run('tileAt')(g.area, b.x, b.y)));
   },
-  closing(g, A, R, kit) {}
+  closing(g, A, R, kit) {},
+  // Mexico 1-7's kinds (src/29_tour_mx_zcasa.js): the key on the attic ceiling, the cistern's rim, the treasure map
+  topsy(g, A, R, kit) { const e = g.entities.find(x => x.id === kit.o.key && !x.remove); if (e) e.touchPlayer(P(g)); wait(g, 0.3, () => R.won); },
+  hourglass(g, A, R, kit) { place(g, 14, kit.data.top - 1); wait(g, 0.5, () => R.won); check(g.level.id + ' ' + A.aid + ' hourglass: once at the rim the sand stops', A.risingLava && A.risingLava.speed === 0); },
+  treasure(g, A, R, kit) { const e = g.entities.find(x => x.id === kit.o.map && !x.remove); if (e) e.touchPlayer(P(g)); wait(g, 0.3, () => R.won); }
 };
 // kinds without a game to win: their reward is the checker's (validate_levels' room probes)
 const NOGAME = { grotto: 1, lantern: 1, bouncy: 1, floaty: 1, wormhole: 1, pick: 1, closing: 1 };
