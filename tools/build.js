@@ -36,7 +36,7 @@ const APPS = {
     dir: 'super-brady-o-world', name: 'Super Brady-O World', short: 'Super Brady-O',
     desc: 'Brady-O chases Piwi Squirmin\', a runaway ventriloquist dummy who has whisked his wife Chinka-O off on a world tour: a 2D platformer across twelve countries.',
     // the title's sky blue: the launch screen and the browser bars match the title show
-    color: '#2c9cf0', saveKey: 'super-brady-o-world-save-v4',
+    color: '#2c9cf0', saveKey: 'super-brady-o-world-save-v5',
     icons: ['icon-32.png'],   // a small favicon (tools/make_icon.js renders it for this app)
     // the world tour replaced the Black Rock City lands, their level designs, themes and city map
     files: f => !isBurns(f) && !isKart(f) && !['08c_designs.js', '20b_world_themes.js', '24_sloth.js', '26_worlddata.js', '27_brcmap.js', '27_brcmap_land.js'].includes(f)

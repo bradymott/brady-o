@@ -92,9 +92,9 @@ const FONT_UI = '"Rubik", "Avenir Next", "Helvetica Neue", system-ui, sans-serif
 // ---- Save data -------------------------------------------------
 const Save = {
   // each standalone app keeps its own save; the combined test build keeps the original key
-  key: ({ burningman: 'bgtbm-save-v1', world: 'super-brady-o-world-save-v4', kart: 'art-cart-save-v1' })[typeof BRADY_APP !== 'undefined' ? BRADY_APP : ''] || 'brady-o-save-v1',
+  key: ({ burningman: 'bgtbm-save-v1', world: 'super-brady-o-world-save-v5', kart: 'art-cart-save-v1' })[typeof BRADY_APP !== 'undefined' ? BRADY_APP : ''] || 'brady-o-save-v1',
   // an older save of the same app: when the current key is missing, only its settings and look are copied over (once)
-  legacyKey: ({ world: 'super-brady-o-world-save-v3' })[typeof BRADY_APP !== 'undefined' ? BRADY_APP : ''] || null,
+  legacyKey: ({ world: 'super-brady-o-world-save-v4' })[typeof BRADY_APP !== 'undefined' ? BRADY_APP : ''] || null,
   data: null,
   defaults() {
     return {
