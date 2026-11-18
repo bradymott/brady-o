@@ -291,6 +291,7 @@ stamps.barra = barStamp;
 stamps.pared = wallStamp;
 
 /* ---------------- Pupo in Spain (docs/design/PUPO.md §4.2, §4.3) ---------------- */
+const ES_ARCH_FONT = 'bold 9px ' + (typeof FONT_DISPLAY !== 'undefined' ? FONT_DISPLAY : 'sans-serif');
 const PP = {
   // a Nap Box on its own bit of street
   napBox(st, o) { const tx = st.x + 1; st.floor(st.x, st.x + 2); st.B.set(tx, st.gy - 1, T.QBLOCK); st.B.item(tx, st.gy - 1, 'pupo'); st.B.spawn('napBox', tx, st.gy - 1, {}); return st.x + 3; },
@@ -303,7 +304,7 @@ const PP = {
     const B = st.B, x = st.x, gy = st.gy, h = o.h || 6, key = o.key || 'ham', px = x + 6, top = gy - h, gx = x + 13;
     st.floor(x, gx + 1);
     st.sign(x + 1, 'THE PLAZA OPENS WHEN SOMEONE TAKES THE HAM OFF THE SOAPED POLE. TOO SLIPPERY? PUPO CAN CLIMB IT (ACTION)');
-    B.spawn('pupoClimb', px, gy - 1, { h, side: 1, look: 'esSoapyPole', slick: 'TOO SOAPY! (PUPO CAN CLIMB IT)', squeak: 'SQUEAK' });
+    B.spawn('pupoClimb', px, gy - 1, { h, side: 1, look: 'esSoapyPole', slick: 'TOO SOAPY! (PUPO CAN CLIMB IT)', squeak: 'SQUEAK', cam: 2.5, camKey: key });
     // the crossbar at the top: a tile each side of the pole, where he pulls himself up (he lands on the right: the ham
     // hangs over that end, from the hook at the top of the mast, so Up + Action reaches it)
     for (const q of [-1, 1]) { B.set(px + q, top, T.HARD); B.setHide(px + q, top, 1); }
@@ -333,7 +334,7 @@ const PP = {
     B.decor.push({ kind: 'esGiantSails', x: (mx + 2) * TS + TS / 2, y: hubY * TS + TS / 2, w: 2 * len * TS, id, len: len * TS, a: 0.4 });
     B.spawn('esSailBrake', mx + 2, hubY, { g, id });
     // the flat sail: a bar from the hub out over the lane to above the loft (four rows over it)
-    B.spawn('pupoBar', mx + 2, hubY, { w: l0 + 2 - (mx + 2), look: 'esSailBar', need: { g, on: true }, say: '...WHEE... SLOWLY.', dropSay: '...WINDY... AGAIN.' });
+    B.spawn('pupoBar', mx + 2, hubY, { w: l0 + 2 - (mx + 2), look: 'esSailBar', need: { g, on: true }, cam: true, say: '...WHEE... SLOWLY.', dropSay: '...WINDY... AGAIN.' });
     // the hay loft on its posts (the lane runs under it), its coins on top
     for (let xx = l0; xx <= l1; xx++) { B.set(xx, roof, T.HARD); B.setHide(xx, roof, 1); }
     B.prop('esHayLoft', l0, roof, 4, gy - roof, 'none', {});
@@ -411,7 +412,7 @@ Object.assign(Decor, {
     ctx.fillStyle = '#e8c890'; ctx.fillRect(x - 19, top, 38, d.h - 2);
     ctx.fillStyle = '#d0a870'; for (let yy = y - 30; yy > top; yy -= 30) ctx.fillRect(x - 19, yy, 38, 4);
     ctx.fillStyle = '#c8302a'; ctx.fillRect(x - 19, y - 22, 38, 8);
-    ctx.fillStyle = '#ffd84a'; ctx.font = `bold 9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('PLAZA 3', x, y - 15);
+    ctx.fillStyle = '#ffd84a'; ctx.font = ES_ARCH_FONT; ctx.textAlign = 'center'; ctx.fillText('PLAZA 3', x, y - 15);
   }
 });
 const pupoSkins = {
@@ -488,7 +489,7 @@ Tour.amend('es', {
           ['millDoor', { to: 'molino@in', back: 'molinoBack' }],
           'crates',
           // Pupo's obstacle, The Soapy Pole (PUPO.md §4.2): plaza three opens when someone takes the ham off the top
-          ['soapyPole', { h: 6, key: 'ham' }],
+          ['soapyPole', { h: 5, key: 'ham' }],
           // ③ plaza three: balconies, a star, storks in the waves; P3 on the truck
           ['plaza', { k: 3, gold: 'risky' }],
           ['end', { exit: 'main' }]

@@ -493,7 +493,7 @@ const PP = {
     st.floor(x, x + 18);
     st.sign(x + 1, 'THE MOUNTAIN WIND POURS DOWN THE TOWER: NO JUMPING UP IT! PUPO CAN ZIP UP THE BEAM ENDS (ACTION)');
     const lx = c0 + (n % 2) * 4;
-    B.prop('maBeamTower', c0 - 2, top - 3, 9, gy - top + 3, 'none', { n, ledge: [lx * TS, top * TS, 5 * TS] });
+    B.prop('maBeamTower', c0 - 2, top - 3, 11, gy - top + 3, 'none', { n, ledge: [lx * TS, top * TS, 5 * TS] });
     for (let k = 0; k < n; k++) {
       const bx = c0 + (k % 2) * 4, by = gy - 2 - 2 * k;
       B.set(bx, by, T.SEMI); B.setHide(bx, by, 1);
@@ -507,7 +507,9 @@ const PP = {
     // the downdraft: from above the ledge to the ground, over the whole face and two columns either side
     B.zone(c0 - 3, top - 4, 12, gy - top + 4, 0, (o.wind || 150) * TS, 0, 'downdraft');
     B.spawn('maDownWind', c0 - 3, gy - 1, { w: 12, h: gy - top + 4 });
-    return c0 + 10;
+    // the kasbah's back yard past the tower (room for the camera to bring the ledge in from the screen's edge)
+    st.floor(c0 + 10, c0 + 19); st.decor('maJar', c0 + 13); st.decor('maJar', c0 + 16);
+    return c0 + 20;
   },
   /* 5-3's Pupo bonus (a helper level), by day: a washing line strung from a blue house's roof over the lane to a taller
      house's roof terrace, with a 1-up waiting up there. The lane is too wide to jump and the terrace too high to reach
@@ -531,7 +533,7 @@ const PP = {
     st.block(t1 - 2, roofT - 3, 'oneup');
     // the line: from over the first roof to over the terrace's near end (four rows over it: hanging, his feet are half
     // a tile above the terrace, so he shimmies over it and drops on)
-    B.spawn('pupoBar', a1 - 2, roofT - 4, { w: t0 + 1 - (a1 - 2) + 1, look: 'maLaundryBar', need: { g, on: false }, say: '...FRESH... SHEETS.', dropSay: '...OH. NIGHT.' });
+    B.spawn('pupoBar', a1 - 2, roofT - 4, { w: t0 + 1 - (a1 - 2) + 1, look: 'maLaundryBar', need: { g, on: false }, cam: true, say: '...FRESH... SHEETS.', dropSay: '...OH. NIGHT.' });
     st.sign(x, 'BY DAY A WASHING LINE HANGS OVER THE LANE. PUPO CAN HANG FROM IT (ACTION) AND SHIMMY ACROSS');
     st.coins(a1 + 2, t0 - 2, gy - 3);
     return t1 + 4;
@@ -586,6 +588,13 @@ class MaDownWind extends Ent {
     ctx.fillStyle = 'rgba(200,140,90,0.75)';
     for (let k = 0; k < 10; k++) { const u = ((t * (320 + k * 23) + k * 131) % h), xx = x0 + 6 + ((k * 89) % (w - 12)) + Math.sin(t * 3 + k) * 4; ctx.fillRect(xx, y0 + u, 2.5, 2.5); }
     ctx.lineCap = 'butt';
+    // where the wind hits the ground it rolls out sideways in little dust puffs
+    ctx.fillStyle = '#ecc896';
+    for (let k = 0; k < 6; k++) {
+      const u = (t * 0.9 + k / 6) % 1, cx = x0 + w / 2 + (k % 2 ? 1 : -1) * (12 + u * w * 0.45), r = 5 + u * 9;
+      ctx.globalAlpha = 0.55 * (1 - u); ctx.beginPath(); ctx.ellipse(cx, y0 + h - r * 0.6, r, r * 0.6, 0, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 }
 Object.assign(ENTITY_TYPES, { maWatchGoat: MaWatchGoat, maDownWind: MaDownWind });

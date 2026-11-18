@@ -14,6 +14,8 @@
    - pupoClimb { slick, squeak }: Brady alone touching the strip gets
      the `slick` line (a hint that only Pupo climbs it); while Pupo
      climbs, `squeak` puffs out every few steps (the soaped pole, 6-1)
+   - the camera near a high Pupo object (pupoBar / pupoClimb { cam }):
+     the bar, or the prize over the strip, kept on screen below the HUD
    - a poke key for the level checker: any spawn with
      { pokeKey: id, pokeAt: [[x, y] px...] } holds the virtual key `id`
      at every riding standing spot with one of those points within
@@ -93,6 +95,37 @@ if (typeof PupoVal !== 'undefined') {
     return D;
   };
 }
+// the camera on a climb by zips (5-4's beam ends, in their downdraft): while Pupo is on the ladder Brady sits at 62 % of
+// the view's height, so the next beam end above is on screen (in portrait the plain camera kept it under the HUD)
+if (typeof TourHooks !== 'undefined') TourHooks.on('camera', (play, dt) => {
+  const p = play.player, R = play.pupo, A = play.area; if (!p || !p.pupoRide || !R || R.mode === 'climb' || !A || !A.zones) return;
+  let hit = false; for (const z of A.zones) if (z.kind === 'downdraft' && p.cx > z.x - 2 * TS && p.cx < z.x + z.w + 2 * TS && p.y + p.h <= z.y + z.h + 4) hit = true;
+  if (!hit) return;
+  const k = 1 - Math.exp(-dt * 5), ty = clamp(p.y + p.h * 0.5 - Game.viewH * 0.62, 0, Math.max(0, A.H * TS - Game.viewH));
+  play.camY += (ty - play.camY) * k;
+});
+// the camera under a high Pupo object (pupoBar { cam: true }: 5-3's washing line, 6-7's sail; pupoClimb { cam: rows }:
+// 6-1's soaped pole, with the ham `rows` over its top; pupoGrab { cam: rows }: 7-1's baguettes in the oven vault): near it, the bar (or the ham) sits at 24 % of the view's height,
+// so it is on screen from the ground and never under the HUD chips (the plain camera kept it at the top edge)
+if (typeof TourHooks !== 'undefined') TourHooks.on('camera', (play, dt) => {
+  const p = play.player, A = play.area; if (!p || p.dead || !A || !A.pupoObjs) return;
+  for (let i = 0; i < A.pupoObjs.length; i++) {
+    const e = A.pupoObjs[i], c = e.s && e.s.cam; if (!c) continue;
+    let ay;
+    if (e.pupoBar) { if (!e.up || !p.pupoRide || p.cx < e.x0 - 4 * TS || p.cx > e.x1 + 2 * TS) continue; ay = e.y; }
+    else if (e.pupoClimb) { if (Math.abs(p.cx - e.cx) > 6 * TS || (play.keys && e.s.camKey && play.keys.has(e.s.camKey))) continue; ay = e.top - c * TS; }
+    else if (e.pupoGrabPt) { if (!p.pupoRide || Math.abs(p.cx - e.hx) > 5 * TS) continue; ay = e.hy - c * TS; }
+    else continue;
+    if (p.y < ay || p.y > ay + 10 * TS) continue;
+    // a ceiling on camY that eases in (so entering the spot never snaps the view); the plain camera is free below it
+    const ty = clamp(ay - Game.viewH * 0.24, 0, Math.max(0, A.H * TS - Game.viewH));
+    let lim = play.g2CamLim == null ? Math.max(play.camY, ty) : play.g2CamLim;
+    lim += (ty - lim) * (1 - Math.exp(-dt * 5)); play.g2CamLim = lim;
+    if (play.camY > lim) play.camY = lim;
+    return;
+  }
+  play.g2CamLim = null;
+});
 // the thief in hiding (7-2's magpie in the dovecote): out of sight and untouchable until whoever hid it catches it
 if (typeof TourThief !== 'undefined') {
   const T0 = TourThief.prototype, dr0 = T0.draw, cp0 = T0.collidePlayer, hit0 = T0.hit;

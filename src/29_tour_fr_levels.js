@@ -1042,7 +1042,7 @@ Object.assign(P, {
     for (let y = top; y <= gy - 4; y++) for (let xx = t0; xx <= t1; xx++) { B.set(xx, y, T.HARD); B.setHide(xx, y, 1); }
     const holes = [];
     for (const r of [gy - 6, gy - 7]) for (const c of [t0, t1]) { B.set(c, r, T.EMPTY); holes.push([c, r]); }
-    B.prop('frDovecote', t0, top, 4, gy - top, 'none', {});
+    B.prop('frDovecote', t0, top, 4, gy - top, 'none', { holes: holes.map(([c, r]) => [c * TS + TS / 2 + (c === t0 ? -4 : 4), r * TS + TS / 2]) });
     // the stone ledges either side, three rows up (from them the holes are in poke reach)
     for (let q = 1; q <= 4; q++) { B.set(t0 - q, gy - 3, T.SEMI); B.set(t1 + q, gy - 3, T.SEMI); }
     B.decorAt('frLavenderBush', t0 - 6, gy, 1); B.decorAt('frLavenderBush', t1 + 6, gy, 2);
@@ -1063,10 +1063,11 @@ Object.assign(P, {
     const B = st.B, x = st.x, gy = st.gy, w = o.w || 11, x0 = x + 4, x1 = x0 + w - 1, bot = B.H - 1, vault = gy - 6;
     st.floor(x, x0 - 1);
     st.sign(x + 1, 'HOT OVENS! THE BAKER STUCK HIS BAGUETTES UP IN THE VAULT: PUPO CAN SWING ON THEM (ACTION) TO THE COOLING RACK');
-    for (let xx = x0; xx <= x1; xx++) { for (let y = gy; y <= bot; y++) B.set(xx, y, T.EMPTY); B.set(xx, bot - 1, T.LAVA); B.set(xx, bot, T.LAVA); }
+    // the trench: one row deep, then hot coals all the way down
+    for (let xx = x0; xx <= x1; xx++) { B.set(xx, gy, T.EMPTY); for (let y = gy + 1; y <= bot; y++) B.set(xx, y, T.LAVA); }
     for (let xx = x0 - 1; xx <= x1 + 6; xx++) { B.set(xx, vault, T.HARD); B.setHide(xx, vault, 1); }
     B.prop('frOvenVault', x0 - 1, vault, w + 8, bot - vault + 1, 'none', { trench: [x0 * TS, (x1 + 1) * TS, gy * TS] });
-    for (let k = 0; k < 3; k++) B.spawn('pupoGrab', x0 + 1 + k * 4, vault + 1, { kind: 'hook', look: 'frBaguetteHook', say: k === 0 ? '...CRUSTY.' : null });
+    for (let k = 0; k < 3; k++) B.spawn('pupoGrab', x0 + 1 + k * 4, vault + 1, { kind: 'hook', look: 'frBaguetteHook', cam: 1.6, say: k === 0 ? '...CRUSTY.' : null });
     // the cooling rack on the far side, its coins, the bakery's end wall
     st.floor(x1 + 1, x1 + 6);
     B.picksRow(x1 + 2, x1 + 5, gy - 1); B.picksRow(x1 + 2, x1 + 5, gy - 2);
@@ -1083,7 +1084,7 @@ Object.assign(P, {
 const FR_DOVE_ORDER = [0, 3, 2, 1, 2, 0, 3, 1];
 class FrDovecote extends Ent {
   constructor(g, s) {
-    super(g, s, 4 * TS, 4 * TS); this.x = s.x - TS / 2; this.y = s.y - 6 * TS; this.friendly = true; this.pupoTickle = true;
+    super(g, s, 4 * TS, 4 * TS); this.x = s.x - TS / 2; this.y = s.y - 6 * TS; this.friendly = true; this.pupoTickle = true; this.noShadow = true;
     this.holes = (s.holes || []).map(([c, r]) => ({ x: c * TS + TS / 2, y: r * TS + TS / 2, side: 0 }));
     const mid = this.x + 2 * TS; for (const h of this.holes) h.side = h.x < mid ? -1 : 1;
     this.period = s.period || 2; this.thief = null; this.dove = false; this.done = false; this.k = 0; this.cyc = 0; this.bx = 0; this.by = 0; this.no = 0; this.coo = 0;
@@ -1099,7 +1100,7 @@ class FrDovecote extends Ent {
     if (!this.thief) for (const e of g.entities) if (e instanceof TourThief) { this.thief = e; break; }
     const th = this.thief; if (!th || this.done) return;
     if (!this.dove && th.stop === 3 && !th.hop && !th.done && th.state === 'wait') {
-      this.dove = true; th.dove = true; this.k = 0; this.cyc = 0;
+      this.dove = true; th.dove = true; th.noShadow = true; this.k = 0; this.cyc = 0;
       g.parts.text(th.cx, th.y - 10, 'COO?!', '#ffffff'); g.burst(th.cx, th.y + 10, 10, '#f4f0ff', 'dust');
     }
     if (!this.dove) return;
@@ -1111,7 +1112,7 @@ class FrDovecote extends Ent {
     const g = this.g;
     if (this.done || !this.dove) return;
     if (this.peeking && Math.hypot(x - this.bx, y - this.by) < 20) {
-      const th = this.thief; this.done = true; th.dove = false; th.x = this.bx - th.w / 2; th.y = this.by - th.h / 2;
+      const th = this.thief; this.done = true; th.dove = false; th.noShadow = false; th.x = this.bx - th.w / 2; th.y = this.by - th.h / 2;
       g.parts.text(this.bx, this.by - 14, 'SQUAWK!', '#ffffff'); g.burst(this.bx, this.by, 14, '#18181e', 'dust');
       th.catchIt();
       PupoRide.say(g, p.cx, p.y - 18, '...NO... PUPO?');
@@ -1160,6 +1161,12 @@ Object.assign(Decor, {
     // the glazed-tile band (green and yellow), a third of the way up
     const by = y - 4.6 * TS; ctx.fillStyle = INK; ctx.fillRect(x0 - 3, by - 2, w + 6, 14);
     for (let k = 0; k < w / 10; k++) { ctx.fillStyle = k % 2 ? '#4a9a5a' : '#e8c03a'; ctx.fillRect(x0 + k * 10, by, 10, 10); }
+    // the nesting holes (d.holes: their centres): dark arched niches, a little stone lip under each
+    if (d.holes) for (const [hx, hy] of d.holes) {
+      ctx.fillStyle = INK; rr(ctx, hx - 13, hy - 14, 26, 28, 11); ctx.fill();
+      ctx.fillStyle = '#2a2026'; rr(ctx, hx - 10, hy - 11, 20, 24, 9); ctx.fill();
+      ctx.fillStyle = INK; ctx.fillRect(hx - 17, hy + 12, 34, 7); ctx.fillStyle = '#f0e2c4'; ctx.fillRect(hx - 15, hy + 13, 30, 4);
+    }
     // the arch over the lane
     ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x0 + 8, y); ctx.lineTo(x0 + 8, arch + 30); ctx.quadraticCurveTo(x0 + 8, arch + 2, x, arch + 2); ctx.quadraticCurveTo(x0 + w - 8, arch + 2, x0 + w - 8, arch + 30); ctx.lineTo(x0 + w - 8, y); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#5a4a3a'; ctx.beginPath(); ctx.moveTo(x0 + 11, y); ctx.lineTo(x0 + 11, arch + 31); ctx.quadraticCurveTo(x0 + 11, arch + 5, x, arch + 5); ctx.quadraticCurveTo(x0 + w - 11, arch + 5, x0 + w - 11, arch + 31); ctx.lineTo(x0 + w - 11, y); ctx.closePath(); ctx.fill();
@@ -1173,17 +1180,16 @@ Object.assign(Decor, {
   // 7-1: the bread ovens' brick vault over the trench of hot coals, an oven mouth glowing in its back wall (d.trench)
   frOvenVault(ctx, x, y, t, th, d) {
     const w = d.w, x0 = x - w / 2, top = y - d.h, [tx0, tx1, ty] = d.trench;
-    ctx.fillStyle = '#5a3a2a'; ctx.fillRect(x0, top + TS, w, ty - top - TS);
+    ctx.fillStyle = '#5a3a2a'; ctx.fillRect(x0, top + TS, w, y - top - TS);
     ctx.fillStyle = INK; ctx.fillRect(x0 - 2, top - 2, w + 4, TS + 4);
     ctx.fillStyle = '#b8603a'; ctx.fillRect(x0, top, w, TS);
     ctx.fillStyle = '#9a4a2a'; for (let k = 0; k < w / 24; k++) ctx.fillRect(x0 + k * 24 + ((k % 2) * 12), top + 14, 2, 18);
     ctx.fillRect(x0, top + 14, w, 2);
     // oven mouths in the back wall, glowing (a slow flicker, no flash)
     for (let ox = tx0 + 40; ox < tx1 - 30; ox += 120) {
-      const f = 0.75 + Math.sin(t * 3 + ox) * 0.1;
       ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(ox, ty - 6, 30, Math.PI, 0); ctx.lineTo(ox + 30, ty + 10); ctx.lineTo(ox - 30, ty + 10); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = `rgba(255,${Math.round(150 * f)},60,1)`; ctx.beginPath(); ctx.arc(ox, ty - 6, 25, Math.PI, 0); ctx.lineTo(ox + 25, ty + 8); ctx.lineTo(ox - 25, ty + 8); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#ffe080'; ctx.beginPath(); ctx.ellipse(ox, ty + 2, 16, 6, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ff8a3a'; ctx.beginPath(); ctx.arc(ox, ty - 6, 25, Math.PI, 0); ctx.lineTo(ox + 25, ty + 8); ctx.lineTo(ox - 25, ty + 8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffe080'; ctx.globalAlpha = 0.8 + Math.sin(t * 3 + ox) * 0.2; ctx.beginPath(); ctx.ellipse(ox, ty + 2, 16, 6, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
     }
   },
   // 7-1: the cooling rack of fresh loaves on the far side

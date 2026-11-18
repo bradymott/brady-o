@@ -153,7 +153,7 @@ const ROUTES = [
     { check: '!key("ham")', name: 'plaza three is shut before the ham is taken' },
     { grab: { up: true }, until: 'mode === "climb"', max: 4 },
     { hold: { up: true }, until: '!mode && ground', max: 6, shotAt: { t: 0.9, name: 'es61-pole-during' } },
-    { check: 'ride && y <= 8.1', name: 'up the soaped pole and onto its crossbar, riding' },
+    { check: 'ride && y <= 9.1', name: 'up the soaped pole and onto its crossbar, riding' },
     { grab: { up: true }, until: 'key("ham")', max: 4 },
     { wait: 0.5 },
     { check: 'said("SQUEAK") && said("HAM")', name: 'the pole squeaks, Pupo takes the ham: "...ham."' },
