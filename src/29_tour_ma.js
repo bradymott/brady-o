@@ -343,8 +343,8 @@ const enemies = {
   } }), place: 'walk' },
   maCobra: { cls: TourLeaper.make({ w: 22, h: 30, jumpV: 9, every: 1.8, stompable: true, art: cobraArt, splash: '#c8a060' }), place: 'here' },
   maScarab: { cls: TourEnemy.make({ w: 22, h: 18, speed: 0.8, behavior: 'roll', range: 8, rollSpeed: 6, art: scarabArt, burst: '#3a8ab8' }), place: 'walk' },
-  maFennec: { cls: TourEnemy.make({ w: 24, h: 20, speed: 1.6, behavior: 'hop', hopV: 12, hopEvery: 1.1, art: fennecArt, burst: '#f0d8a8' }), place: 'walk' },
-  maGoat: { cls: TourEnemy.make({ w: 30, h: 26, speed: 0.8, behavior: 'charge', range: 6, chargeSpeed: 5.5, art: goatArt, burst: '#f4f0e8', onNotice: e => K.say(e.g, e, 'MEHHH!', '#ffffff') }), place: 'walk' },
+  maFennec: { cls: TourEnemy.make({ belly: true, w: 24, h: 20, speed: 1.6, behavior: 'hop', hopV: 12, hopEvery: 1.1, art: fennecArt, burst: '#f0d8a8' }), place: 'walk' },
+  maGoat: { cls: TourEnemy.make({ belly: true, w: 30, h: 26, speed: 0.8, behavior: 'charge', range: 6, chargeSpeed: 5.5, art: goatArt, burst: '#f4f0e8', onNotice: e => K.say(e.g, e, 'MEHHH!', '#ffffff') }), place: 'walk' },
   maOrange: { cls: TourEnemy.make({ w: 20, h: 20, speed: 0.9, behavior: 'roll', range: 9, rollSpeed: 6.5, art: orangeArt, burst: '#ff8a1a' }), place: 'walk' },
   // the street snail: tucked in its shell by day in 5-3, out at night leaving a slick trail (TourBehave.maShellSnail)
   maSnail: { cls: TourEnemy.make({ w: 30, h: 20, speed: 0.5, behavior: 'maShellSnail', trail: 'slime', trailT: 4, art: snailArt, burst: '#c8b898' }), place: 'walk' }
@@ -1356,7 +1356,7 @@ const storkArt = (ctx, e, x, y, m, t) => {
 const MA_X = 'ma_x';
 const maEnemies = {
   maMoth: { cls: TourEnemy.make({ w: 24, h: 18, speed: 0.7, behavior: 'platEater', every: 1.2, regrow: 6, edgeTurn: true, atlas: MA_X, art: mothArt, burst: '#f4e8d0' }), place: 'walk' },
-  maCat: { cls: TourEnemy.make({ w: 26, h: 20, speed: 1.4, behavior: 'sleeper', base: 'pouncer', phaseWake: true, hear: 3, range: 6, tell: 1.0, atlas: MA_X, art: catArt, burst: '#e8964a' }), place: 'walk' },
+  maCat: { cls: TourEnemy.make({ belly: true, w: 26, h: 20, speed: 1.4, behavior: 'sleeper', base: 'pouncer', phaseWake: true, hear: 3, range: 6, tell: 1.0, atlas: MA_X, art: catArt, burst: '#e8964a' }), place: 'walk' },
   maStork: { cls: TourFlyer.make({ w: 34, h: 24, speed: 0.7, range: 3, swoop: true, atlas: MA_X, art: storkArt, burst: '#fbfbf6', onSwoop: e => K.sfx('clatter', 'select', { vol: 0.4, pitch: 1.4 }) }), place: 'fly' }
 };
 // modes the behaviours use that the atlas has under another name

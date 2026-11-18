@@ -233,7 +233,7 @@ const enemies = {
   esTomato: { cls: TourEnemy.make({ w: 22, h: 24, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, art: tomatoArt, burst: '#e8322a' }), place: 'walk' },
   esOrange: { cls: TourEnemy.make({ w: 20, h: 20, speed: 0.9, behavior: 'roll', range: 9, rollSpeed: 6.5, art: orangeArt, burst: '#ff8a1a' }), place: 'walk' },
   esHorchata: { cls: TourEnemy.make({ w: 18, h: 30, speed: 1.2, behavior: 'walk', art: horchataArt, burst: '#f4ead0' }), place: 'walk' },
-  esBat: { cls: TourFlyer.make({ w: 30, h: 14, range: 4, speed: 1.1, swoop: true, art: batArt, burst: '#2a2a3a' }), place: 'fly' },
+  esBat: { cls: TourFlyer.make({ belly: true, w: 30, h: 14, range: 4, speed: 1.1, swoop: true, art: batArt, burst: '#2a2a3a' }), place: 'fly' },
   esJelly: { cls: EsJelly, place: 'swim' },
   esShark: { cls: TourSwimmer.make({ w: 44, h: 16, speed: 1.8, range: 5, art: sharkArt }), place: 'swim' },
   esPetardo: { cls: TourEnemy.make({ w: 14, h: 26, speed: 0.8, behavior: 'charge', range: 6, chargeSpeed: 6, windup: 0.6, art: petardoArt, burst: '#ffd23a', onNotice: e => K.say(e.g, e, 'TSSS...', '#ffd23a') }), place: 'walk' }
@@ -943,8 +943,8 @@ Object.assign(enemies, {
   esGamba: { cls: TourEnemy.make({ w: 20, h: 20, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, atlas: ES_X, art: gambaArt, burst: '#ff6a5a' }), place: 'walk' },
   esLizard: { cls: TourEnemy.make({ w: 26, h: 14, speed: 0.6, behavior: 'pouncer', range: 6, tell: 1.0, atlas: ES_X, art: lizardArt, burst: '#4a4a44' }), place: 'walk' },
   esKestrel: { cls: TourFlyer.make({ w: 28, h: 18, speed: 1.2, range: 4, swoop: true, atlas: ES_X, art: kestrelArt, burst: '#c87a3a' }), place: 'fly' },
-  esLynx: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.8, behavior: 'pouncer', range: 6, tell: 1.0, atlas: ES_X, art: lynxArt, burst: '#d8a868' }), place: 'walk' },
-  esSheep: { cls: TourEnemy.make({ w: 28, h: 24, speed: 0.6, behavior: 'walk', atlas: ES_X, art: sheepArt, burst: '#f4f0e6' }), place: 'walk' }
+  esLynx: { cls: TourEnemy.make({ belly: true, w: 30, h: 22, speed: 0.8, behavior: 'pouncer', range: 6, tell: 1.0, atlas: ES_X, art: lynxArt, burst: '#d8a868' }), place: 'walk' },
+  esSheep: { cls: TourEnemy.make({ belly: true, w: 28, h: 24, speed: 0.6, behavior: 'walk', atlas: ES_X, art: sheepArt, burst: '#f4f0e6' }), place: 'walk' }
 });
 for (const [m, list] of [['land', ['land', 'stun', 'walk']], ['tell', ['tell', 'crouch', 'walk']], ['squirt', ['squirt', 'tell', 'idle', 'walk']], ['eat', ['eat', 'walk']]]) if (!TourSprite.FALLBACK.walk[m]) TourSprite.FALLBACK.walk[m] = list;
 for (const [m, list] of [['tell', ['swoop', 'fly']], ['carry', ['carry', 'swoop', 'fly']], ['drop', ['fly']], ['rest', ['rest', 'fly']], ['return', ['fly']], ['patrol', ['fly']]]) if (!TourSprite.FALLBACK.fly[m]) TourSprite.FALLBACK.fly[m] = list;
