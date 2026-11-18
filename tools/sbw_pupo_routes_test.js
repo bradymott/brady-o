@@ -105,6 +105,15 @@ if (!want.length || want.includes('g2')) C.section([], 'g2', () => {
     const p = g.player; at(g, Math.floor(post.hx / 32) - 1, Math.floor(z.y / 32) + Math.round(z.h / 32)); G.step(g, 0.3);
     const y0 = p.y; let top = p.y; G.step(g, 1 / 120, { jump: true, jumpPressed: true }); for (let k = 0; k < 60; k++) { G.step(g, 1 / 120, { jump: true }); top = Math.min(top, p.y); }
     C.check(`5-4: a jump in the downdraft rises ${((y0 - top) / 32).toFixed(2)} tiles (less than one)`, y0 - top < 32, { rise: (y0 - top) / 32 });
+    // the jump powers Brady may carry in: a spring sock's second jump, six puffs of magic beans
+    for (const id of ['socks', 'beans']) {
+      at(g, Math.floor(post.hx / 32) - 1, Math.floor(z.y / 32) + Math.round(z.h / 32)); G.step(g, 0.3);
+      p.jumpPow = { id, gas: 1, used: false, pants: 0 }; const b0 = p.y; let hi = p.y;
+      G.step(g, 1 / 120, { jump: true, jumpPressed: true });
+      for (let k = 0; k < 150; k++) { G.step(g, 1 / 120, k % 12 === 6 ? { jump: true, jumpPressed: true } : { jump: true }); hi = Math.min(hi, p.y); }
+      C.check(`5-4: with ${id} in the downdraft Brady rises ${((b0 - hi) / 32).toFixed(2)} tiles (the first beam end is two up)`, b0 - hi < 1.5 * 32, { rise: (b0 - hi) / 32 });
+      p.jumpPow = null;
+    }
   }
 });
 C.done();
