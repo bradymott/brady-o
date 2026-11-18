@@ -209,6 +209,79 @@ const ROUTES = [
     { check: 'coins >= 8', name: 'the cooling rack\'s coins' },
     { check: 'said("CRUSTY")', name: 'Pupo on the first baguette: "...crusty."' },
     { shot: 'fr71-ovens-after' }
+  ] },
+  // ---- P2-G3: the Netherlands, Indonesia, Vietnam (owner: the P2-G3 group) ----
+  { name: '8-1 the first Nap Box', level: '8-1', start: { box: 0 }, boxShot: 'nl81-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo on the first houseboat' }] },
+  { name: '8-1 the drawbridge chain', level: '8-1', start: { box: 1 }, boxShot: 'nl81-cp', safe: true, steps: [
+    { run: 1, until: 'x >= 133 && ground && y <= 14.1', max: 12 },
+    { hold: { right: true }, until: 'x >= 136.6', max: 3 },
+    { hold: {}, until: 'ground', max: 2 }, { wait: 0.3 },
+    { check: 'ride && y <= 14.1 && x < 137.9', name: 'on the near dike by the stuck drawbridge' },
+    { shot: 'nl81-bridge-before' },
+    { face: 1 }, { grab: {}, until: 'mode === "pull"', max: 3, shotAt: { when: 'mode === "pull"', name: 'nl81-bridge-pull' } },
+    { wait: 1.2 },
+    { shot: 'nl81-bridge-during' },
+    { check: 'said("SORRY") && said("KRAAK")', name: 'the chain pulled: the herons squawk ("KRAAK!"), Pupo: "...sorry... birds."' },
+    { hold: { right: true }, until: 'x >= 151.5 && ground', max: 5 },
+    { check: 'ride && ground && x >= 151.5 && y <= 14.1 && !dead', name: 'across the drawbridge onto the far dike, riding' },
+    { shot: 'nl81-bridge-after' }
+  ] },
+  { name: '8-6 the lattice sail', level: '8-6', start: { box: 0 }, boxShot: 'nl86', safe: true, steps: [
+    { run: 1, until: 'x >= 26 && ground', max: 4 },
+    { hold: { right: true }, until: 'x >= 29.2', max: 3 },
+    { hold: {}, until: 'ground', max: 2 },
+    { shot: 'nl86-sail-before' },
+    { grab: { up: true }, until: 'mode === "climb"', max: 4 },
+    { hold: { up: true }, until: '!mode && ground', max: 6, shotAt: { t: 1.0, name: 'nl86-sail-during' } },
+    { check: 'ride && y <= 8.1', name: 'up the slippery sail onto the mill\'s stage, riding' },
+    { hold: { right: true }, until: 'x >= 32.4', max: 2 }, { hold: {}, until: 'ground', max: 1 },
+    { hold: { jump: true }, press: 'jump', every: 1.2, until: 'coins >= 5', max: 4 },
+    { check: 'coins >= 5', name: 'the ring of coins over the stage (one jump through its middle)' },
+    { hold: {}, until: 'ground', max: 2 },
+    { shot: 'nl86-sail-after' }
+  ] },
+  { name: '9-6 the first Nap Box', level: '9-6', start: { box: 0 }, boxShot: 'id96-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo on the start ledge' }] },
+  { name: '9-6 thorny rattan', level: '9-6', start: { box: 1 }, boxShot: 'id96-cp', safe: true, steps: [
+    { run: 1, until: 'x >= 148 && ground', max: 4 },
+    { hold: { right: true }, until: 'x >= 151.4', max: 4 },
+    { hold: {}, until: 'ground', max: 2 }, { wait: 0.3 },
+    { check: 'ride && ground && x < 152.9', name: 'on the ledge at the ravine' },
+    { shot: 'id96-rattan-before' },
+    { swing: 1, until: '(ground && x >= 170) || dead', max: 16, shotAt: { mode: 'swing', name: 'id96-rattan-during' } },
+    { check: 'ride && ground && x >= 170 && !dead', name: 'across the ravine cane to cane, riding' },
+    { hold: { right: true }, until: 'x >= 173', max: 2 }, { hold: {}, until: 'ground', max: 1 },
+    { wait: 2.6 },
+    { check: 'said("PRICKLY") && said("NICE") && said("YOU TOO")', name: 'the first cane ("...prickly. ...fine."), the mother orangutan: "...nice... arms." "...you too."' },
+    { shot: 'id96-rattan-after' }
+  ] },
+  { name: '10-4 the first Nap Box', level: '10-4', start: { box: 0 }, boxShot: 'vn104-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo on the first dry ledge' }] },
+  { name: '10-4 the cave pearl', level: '10-4', start: { box: 1 }, boxShot: 'vn104-cp', safe: true, steps: [
+    { put: [7, 49] },
+    { hold: {}, until: 'ground', max: 2 },
+    { shot: 'vn104-pearl-before' },
+    { check: '!key("pearl")', name: 'the skylight gate is shut before the pearl is taken' },
+    { face: -1 }, { grab: { left: true }, until: 'key("pearl")', max: 6, shotAt: { when: 'armOut', name: 'vn104-pearl-during' } },
+    { wait: 0.5 },
+    { check: 'said("SHINY")', name: 'the pearl through the grille: "...shiny... and wet."' },
+    { hold: { right: true }, until: 'x >= 23.5', max: 6 },
+    { shot: 'vn104-pearl-after' },
+    { hold: { jump: true }, press: 'jump', every: 1, until: 'ground && y <= 45.1', max: 3 },
+    { check: 'ride && y <= 45.1', name: 'through the skylight gate and up through the rock shelf, riding' }
+  ] },
+  { name: '10-6 the lantern hooks', level: '10-6', start: { box: 0 }, boxShot: 'vn106', safe: true, steps: [
+    { hold: { left: true }, until: 'x <= 46.3', max: 3 },
+    { hold: { up: true }, press: 'up', every: 0.3, until: 'area === "kenh"', max: 3 },
+    { check: 'ride && area === "kenh"', name: 'into the canal lane on Pupo' },
+    { run: 1, until: 'x >= 18 && ground && y <= 13.1', max: 8 },
+    { hold: { right: true }, until: 'x >= 20.6', max: 2 }, { hold: {}, until: 'ground', max: 1 },
+    { shot: 'vn106-hooks-before' },
+    { swing: 1, until: '(ground && x >= 37.5 && y <= 13.1) || (ground && y > 17) || dead', max: 16, shotAt: { mode: 'swing', name: 'vn106-hooks-during' } },
+    { check: 'ride && ground && y <= 13.1 && x >= 37.5', name: 'over the rainy lane on the lantern hooks, onto the teahouse roof' },
+    { hold: { right: true }, until: 'x >= 39.5', max: 2 }, { hold: {}, until: 'ground', max: 1 },
+    { grab: { up: true, right: true }, until: 'lives >= 10', max: 5 },
+    { check: 'lives >= 10', name: 'the 1-up on the teahouse roof (Pupo pokes its box open and fetches it)' },
+    { check: 'said("PRETTY")', name: 'Pupo on the first lantern: "...pretty."' },
+    { shot: 'vn106-hooks-after' }
   ] }
 ];
 
