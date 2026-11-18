@@ -293,9 +293,9 @@ const enemies = {
   npMomo: { cls: TourEnemy.make({ w: 26, h: 22, speed: 1.0, behavior: 'hop', hopV: 9.5, hopEvery: 1.3, art: momoArt, burst: '#ffffff' }), place: 'walk' },
   npRoti: { cls: TourEnemy.make({ w: 24, h: 22, speed: 0.8, behavior: 'roll', range: 8, rollSpeed: 6.4, rollT: 2.4, art: rotiArt, burst: '#e8a050' }), place: 'walk' },
   npMonal: { cls: TourFlyer.make({ w: 30, h: 16, range: 3, speed: 1.1, swoop: true, art: monalArt, burst: '#3a5ad8' }), place: 'fly' },
-  npMarmot: { cls: TourEnemy.make({ w: 22, h: 30, speed: 0.6, behavior: 'throw', range: 9, every: 2.4, art: marmotArt, burst: '#b8864a', shoot: (e, p) => { tourFire(e.g, e.cx + e.dir * 10, e.y + 6, { kind: 'pebble', vx: e.dir * 5 * TS, vy: -6 * TS, grav: PHYS.gDown * 0.4, w: 10, h: 10, life: 3, thru: true, col: '#8a8680', art: pebbleArt }); K.say(e.g, e, 'EEEEP!', '#ffffff'); } }), place: 'walk' },
+  npMarmot: { cls: TourEnemy.make({ belly: true, w: 22, h: 30, speed: 0.6, behavior: 'throw', range: 9, every: 2.4, art: marmotArt, burst: '#b8864a', shoot: (e, p) => { tourFire(e.g, e.cx + e.dir * 10, e.y + 6, { kind: 'pebble', vx: e.dir * 5 * TS, vy: -6 * TS, grav: PHYS.gDown * 0.4, w: 10, h: 10, life: 3, thru: true, col: '#8a8680', art: pebbleArt }); K.say(e.g, e, 'EEEEP!', '#ffffff'); } }), place: 'walk' },
   npChough: { cls: TourFlyer.make({ w: 28, h: 14, range: 2.5, speed: 1.3, swoop: true, art: chough, burst: '#1a1a24' }), place: 'fly' },
-  npYeti: { cls: TourEnemy.make({ w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'throw', pace: true, range: 10, every: 2.2, art: yetiArt, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'OOF! *FLUFF*', '#e8f0ff'), shoot: (e, p) => { tourFire(e.g, e.cx + e.dir * 18, e.y + 10, { kind: 'snowball', vx: e.dir * 6 * TS, vy: -5 * TS, grav: PHYS.gDown * 0.35, w: 16, h: 16, life: 3, thru: true, stompable: true, col: '#ffffff', art: snowShotArt }); } }), place: 'walk' },
+  npYeti: { cls: TourEnemy.make({ belly: true, w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'throw', pace: true, range: 10, every: 2.2, art: yetiArt, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'OOF! *FLUFF*', '#e8f0ff'), shoot: (e, p) => { tourFire(e.g, e.cx + e.dir * 18, e.y + 10, { kind: 'snowball', vx: e.dir * 6 * TS, vy: -5 * TS, grav: PHYS.gDown * 0.35, w: 16, h: 16, life: 3, thru: true, stompable: true, col: '#ffffff', art: snowShotArt }); } }), place: 'walk' },
   npSnowball: { cls: TourEnemy.make({ w: 24, h: 24, speed: 0.8, behavior: 'roll', range: 9, rollSpeed: 7, rollT: 2.8, art: snowballArt, burst: '#ffffff' }), place: 'walk' },
   npTinBot: { cls: TourEnemy.make({ w: 22, h: 46, speed: 1.1, behavior: 'walk', art: tinBotArt, burst: '#9aa0b0' }), place: 'walk' },
   npBobble: { cls: TourEnemy.make({ w: 24, h: 36, inkPad: 10, sprite: 'piwiBobble', speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, art: bobbleArt, burst: '#7a2ac8' }), place: 'walk' },
@@ -1133,11 +1133,11 @@ const batArt = (ctx, e, x, y, m, t) => {
   ctx.restore();
 };
 Object.assign(enemies, {
-  npYeti: { cls: TourEnemy.make({ w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'frostBreath', cone: 3, art: yetiArt2, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'OOF! *FLUFF*', '#e8f0ff') }), place: 'walk' },
-  npYetiSleep: { cls: TourEnemy.make({ w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'sleeper', base: 'frostBreath', hear: 4, cone: 3, sprite: 'yeti', art: yetiArt2, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'HUH?! *FLUFF*', '#e8f0ff') }), place: 'walk' },
-  npMarmot: { cls: TourEnemy.make({ w: 22, h: 30, speed: 0, behavior: 'sleeper', base: 'alarmCaller', hear: 3, cone: 5, wake: 12, art: marmotArt2, burst: '#b8864a' }), place: 'walk' },
-  npMarmotWatch: { cls: TourEnemy.make({ w: 22, h: 30, speed: 0, behavior: 'alarmCaller', cone: 5, wake: 12, sprite: 'marmot', art: marmotArt2, burst: '#b8864a' }), place: 'walk' },
-  npBat: { cls: TourFlyer.make({ w: 28, h: 18, range: 2.5, speed: 1.3, swoop: true, atlas: NP_X, art: batArt, burst: '#8a62c0' }), place: 'fly' }
+  npYeti: { cls: TourEnemy.make({ belly: true, w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'frostBreath', cone: 3, art: yetiArt2, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'OOF! *FLUFF*', '#e8f0ff') }), place: 'walk' },
+  npYetiSleep: { cls: TourEnemy.make({ belly: true, w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'sleeper', base: 'frostBreath', hear: 4, cone: 3, sprite: 'yeti', art: yetiArt2, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'HUH?! *FLUFF*', '#e8f0ff') }), place: 'walk' },
+  npMarmot: { cls: TourEnemy.make({ belly: true, w: 22, h: 30, speed: 0, behavior: 'sleeper', base: 'alarmCaller', hear: 3, cone: 5, wake: 12, art: marmotArt2, burst: '#b8864a' }), place: 'walk' },
+  npMarmotWatch: { cls: TourEnemy.make({ belly: true, w: 22, h: 30, speed: 0, behavior: 'alarmCaller', cone: 5, wake: 12, sprite: 'marmot', art: marmotArt2, burst: '#b8864a' }), place: 'walk' },
+  npBat: { cls: TourFlyer.make({ belly: true, w: 28, h: 18, range: 2.5, speed: 1.3, swoop: true, atlas: NP_X, art: batArt, burst: '#8a62c0' }), place: 'fly' }
 });
 for (const [m, list] of [['call', ['call', 'whistle', 'throw', 'idle']], ['sleep', ['sleep', 'idle', 'walk']], ['awake', ['walk']], ['wake', ['wake', 'tell', 'walk']], ['breathe', ['breathe', 'throw', 'walk']], ['pant', ['pant', 'idle', 'walk']], ['tell', ['tell', 'notice', 'idle', 'walk']]]) if (!TourSprite.FALLBACK.walk[m]) TourSprite.FALLBACK.walk[m] = list;
 

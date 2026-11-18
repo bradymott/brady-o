@@ -454,6 +454,115 @@ const P = {
   // the open drawer: a door into it
   drawer(st, o) { const B = st.B, x = st.x; st.floor(x, x + 6); B.spawn('portal', x + 3, st.gy - 1, { kind: 'door', look: 'w22DrawerDoor', targetRef: o.to }); if (o.back) B.anchor(o.back, x + 6, st.gy - 1); return x + 7; }
 };
+/* ---------------- Pupo in World 22 (docs/design/PUPO.md §4.2; the clock's minute hand in 28_tour_ph_g4.js) ---------------- */
+Object.assign(P, {
+  // a Nap Box on the ground at the cursor (the box and a step of floor past it)
+  napBox(st, o) {
+    const tx = st.x + 1, ty = st.gy - 1;
+    st.floor(st.x, tx + 1);
+    st.B.set(tx, ty, T.QBLOCK); st.B.item(tx, ty, 'pupo'); st.B.spawn('napBox', tx, ty, {});
+    return tx + 2;
+  },
+  /* 22-1's Pupo obstacle, Sloth O'Clock: the station's clock tower, the only way to the upper platform. Time falls
+     down the tower like rain (a downdraft over its whole floor: no jump, spring sock or bean puff rises in it). The
+     giant clock face on its back wall is stuck at 2:22; Pupo grabs the minute hand there (Action), and it crawls round
+     with him, past half past and quarter to, up to the top; Jump lets go onto the upper platform ("...time... flies.").
+     Let go anywhere else and the hand winds back to 2:22. The way on carries on from the platform, rise rows higher.
+     { rise } */
+  clockTower(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, iw = 8, wl = x + 3, i0 = wl + 1, wr = i0 + iw, rise = o.rise || 7, top = gy - rise, cxT = i0 + 3;
+    st.floor(x, wr - 1);
+    st.sign(x, 'TIME FALLS DOWN THE CLOCK TOWER: NO JUMPING UP IT! PUPO CAN RIDE THE MINUTE HAND (ACTION) TO THE TOP');
+    // the tower's left wall, from the top of the sky to its doorway (three rows over the floor)
+    B.fill(wl, 0, wl, gy - 4, T.HARD); for (let y = 0; y <= gy - 4; y++) B.setHide(wl, y, 1);
+    B.prop('w22ClockShaft', wl, 0, iw + 1, gy, 'none', { top, door: gy - 3 });
+    // the upper platform beyond it (its wall is the tower's right side), a little balcony reaching in over the shaft
+    // (the hand's turn from 2:22 by half past and quarter to never sweeps that corner)
+    st.floor(wr, wr + 5, top);
+    for (let q = wr - 3; q < wr; q++) B.set(q, top, T.SEMI);
+    // the falling time: a downdraft over the floor of the tower, six rows deep
+    B.zone(i0, gy - 6, iw, 6, 0, (o.wind || 150) * TS, 0, 'downdraft');
+    B.spawn('w22TimeFall', i0, gy - 1, { w: iw, h: 6 });
+    // the clock and its minute hand (the hand is the moving hook), stuck at 2:22
+    B.spawn('pupoGrab', cxT, gy - 8, { kind: 'hook', look: 'w22ClockHand', say: '...2:22.', ledge: [(wr - 3) * TS, wr * TS, top * TS],
+      clock: { r: 3, from: 22, to: 60, crawl: 7, back: 2.2, say: '...TIME... FLIES.' } });
+    st.coins(i0 + 1, i0 + 2, gy - 2);
+    st.coins(wr + 1, wr + 4, top - 2);
+    st.gy = top;
+    return wr + 6;
+  }
+});
+// 22-1: falling time inside the clock tower: little brass ticks and lilac seconds raining down (shapes from the clock)
+class W22TimeFall extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 8) * TS, (s.h || 6) * TS); this.x = s.x - TS / 2; this.y = s.y + TS - this.h; this.back = true; this.friendly = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x0 = this.x, y0 = this.y, w = this.w, h = this.h, t = this.t;
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 14; k++) {
+      const sp = 210 + (k * 37) % 110, u = (t * sp + k * 97) % (h + 40) - 30, xx = x0 + 10 + ((k * 59) % (w - 20));
+      ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 4.4; ctx.beginPath(); ctx.moveTo(xx, y0 + u); ctx.lineTo(xx, y0 + u + 9); ctx.stroke();
+      ctx.strokeStyle = k % 3 ? '#c8b8ff' : '#ffd84a'; ctx.lineWidth = 2.4; ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+  }
+}
+ENTITY_TYPES.w22TimeFall = W22TimeFall;
+// 22-1: the clock tower's inside: a tall plum shaft with brass trim, the doorway at the bottom left, the platform's
+// lintel at the top right
+Decor.w22ClockShaft = (ctx, x, y, t, th, d) => {
+  const x0 = x - d.w / 2, w = d.w, y0 = y - d.h;
+  ctx.fillStyle = '#2a1e3e'; ctx.fillRect(x0 + TS, y0, w - TS, d.h);
+  ctx.fillStyle = '#34264c'; for (let yy = y0 + 20; yy < y; yy += 48) ctx.fillRect(x0 + TS, yy, w - TS, 20);
+  // the left wall (its tiles are hidden): plum brick with a brass edge
+  ctx.fillStyle = '#1c1426'; ctx.fillRect(x0 - 2, y0, TS + 4, d.door * TS - y0);
+  ctx.fillStyle = '#5a3e7a'; ctx.fillRect(x0, y0, TS, d.door * TS - y0);
+  ctx.fillStyle = '#c8902a'; ctx.fillRect(x0 + TS - 5, y0, 4, d.door * TS - y0);
+  ctx.fillStyle = '#4a3266'; for (let yy = y0 + 10; yy < d.door * TS - 10; yy += 24) ctx.fillRect(x0 + 4, yy, TS - 12, 10);
+  // the doorway's arch
+  ctx.fillStyle = '#c8902a'; ctx.fillRect(x0 - 4, d.door * TS - 8, TS + 8, 8);
+};
+// the plate's text for each minute (built once: no strings per frame)
+const W22_MIN = []; for (let i = 0; i <= 60; i++) W22_MIN.push(i === 60 ? '3:00' : '2:' + (i < 10 ? '0' : '') + i);
+Object.assign(skins, {
+  // 22-1: the giant station clock (drawn by its minute hand, a moving pupoGrab): a cream face with brass rim, ticks and
+  // the 12-3-6-9 numerals, the hour hand on 2, the brass minute hand to the hook (its ring), a 2:22 plate under it
+  w22ClockHand(ctx, e, t) {
+    const cx = e.ax, cy = e.ay, R = (e.s.clock.r || 3) * TS + 26, m = e.cm || 22;
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(cx, cy, R + 9, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c8902a'; ctx.beginPath(); ctx.arc(cx, cy, R + 6, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#fff4dc'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#f0e2c0'; ctx.beginPath(); ctx.arc(cx, cy, R * 0.62, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#1c1426'; ctx.lineCap = 'round';
+    for (let i = 0; i < 60; i++) {
+      const a = i / 60 * TAU, big = i % 5 === 0, r0 = R - (big ? 14 : 7), s = Math.sin(a), c = Math.cos(a);
+      ctx.lineWidth = big ? 4 : 1.6; ctx.beginPath(); ctx.moveTo(cx + s * r0, cy - c * r0); ctx.lineTo(cx + s * (R - 3), cy - c * (R - 3)); ctx.stroke();
+    }
+    ctx.fillStyle = '#1c1426'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('12', cx, cy - R + 30); ctx.fillText('3', cx + R - 28, cy); ctx.fillText('6', cx, cy + R - 28); ctx.fillText('9', cx - R + 28, cy);
+    // the 2:22 plate, lit while the hand rests there (low on the face, where it shows from the tower floor)
+    const rest = m < 23;
+    ctx.fillStyle = '#1c1426'; rr(ctx, cx - 28, cy + 50, 56, 22, 5); ctx.fill();
+    ctx.fillStyle = rest ? '#ffd84a' : '#8a7a5a'; ctx.font = 'bold 16px sans-serif'; ctx.fillText(W22_MIN[Math.min(60, Math.floor(m))], cx, cy + 61.5);
+    // the hour hand, stuck on 2
+    const ha = (2 + m / 60) / 12 * TAU;
+    pupoLine(ctx, cx, cy, cx + Math.sin(ha) * R * 0.5, cy - Math.cos(ha) * R * 0.5, 7, '#3a2a4a');
+    // the minute hand: brass, out to the hook, the ring where Pupo's hand goes
+    pupoLine(ctx, cx - (e.hx - cx) * 0.18, cy - (e.hy - cy) * 0.18, e.hx, e.hy, 6, '#c8902a');
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(cx, cy, 5, 0, TAU); ctx.fill();
+    pupoRing(ctx, e.hx, e.hy, 6.5);
+    // the balcony at the top of the tower, in front of the face (its tiles are one-way: Pupo lands on it off the hand)
+    const L = e.s.ledge;
+    if (L) {
+      ctx.fillStyle = '#1c1426'; ctx.fillRect(L[0] - 3, L[2] - 3, L[1] - L[0] + 3, 12);
+      ctx.fillStyle = '#c8902a'; ctx.fillRect(L[0], L[2], L[1] - L[0], 6); ctx.fillStyle = '#ffd84a'; ctx.fillRect(L[0], L[2], L[1] - L[0], 2);
+      ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 3; ctx.beginPath();
+      for (let x = L[0] + 6; x < L[1]; x += 15) { ctx.moveTo(x, L[2] + 6); ctx.lineTo(L[1] - 2, L[2] + 6 + (L[1] - x) * 0.5); }
+      ctx.stroke();
+    }
+    ctx.lineCap = 'butt'; ctx.textBaseline = 'alphabetic';
+  }
+});
 for (const k in P) Tour.pieces['w22.' + k] = P[k];
 
 /* ================= stamps ================= */
@@ -532,7 +641,7 @@ for (const k in corridor) { const c = corridor[k]; delete c.legend2; }
 /* ================= the levels ================= */
 const levels = [
   // 22-1 PHASE: strike the station clock: 2:22 <-> 22:22
-  { n: 1, name: 'The Station of Clocks', arch: 'phase', theme: 'w22_dusk',
+  { n: 1, name: 'The Station of Clocks', arch: 'phase', theme: 'w22_dusk', pupo: 'level',   // World 22's Pupo level: Sloth O'Clock
     gimmick: 'Clock faces drift round; strike the station clock and 2:22 becomes 22:22: brass hands vanish, lilac numerals glow, and your echo follows',
     hint: 'Strike a station clock (UP) to swap 2:22 and 22:22. Brass hands are there at 2:22, lilac 22s at 22:22',
     postcard: 'The station clock says 22:22. It said 22:22 an hour ago, too. ♥ C',
@@ -540,9 +649,10 @@ const levels = [
     mapCell: [0, 0], mapFrom: -1,
     exits: { main: { to: '22-2' } },
     areas: [
-      { id: 'station', gen: 'strip', W: 156, H: 18, phase: { night: 'w22_2222' }, script: [
+      { id: 'station', gen: 'strip', W: 176, H: 24, GY: 20, gyMin: 8, gyMax: 21, phase: { night: 'w22_2222' }, script: [   // six more rows of sky (the clock tower's top stays clear of the HUD)
         ['itemBlock', { item: 'power', y: 4 }],
         ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
+        ['napBox', {}],   // Pupo's Nap Box at the start of the platform
         // ① clock faces drift round
         ['clocks', {}],
         ['postcard', { kind: 'must', dx: -9, dy: -8 }],
@@ -557,6 +667,7 @@ const levels = [
         ['bank', { h: 2 }],
         ['bigClock', { to: 'clock@in', back: 'clockBack' }],
         'cp',
+        ['napBox', {}],   // Pupo again, at the strike-the-clock checkpoint
         ['strike', {}],
         ['lateLedge', { y: 6, gold: 'risky' }],
         ['slabs', { n: 9, day: [[0, 2, 3]], night: [[5, 4, 3]] }],
@@ -564,6 +675,10 @@ const levels = [
         ['echoRun', { n: 30, mixed: true, text: 'YOUR ECHO WALKS WHERE YOU WALKED, A MOMENT LATER. KEEP MOVING' }],
         ['bank', { h: -2 }],
         ['anchor', { name: 'wormOut', tight: true }],   // where the clock room's Wormhole drops Brady (tight: no breather)
+        ['napBox', {}],   // a Nap Box here too: the Wormhole may drop Brady here without Pupo
+        // Pupo's obstacle, Sloth O'Clock (PUPO.md §4.2): the clock tower, its minute hand stuck at 2:22 (after the
+        // Wormhole's drop, so the secret skips the middle of the level but never the tower)
+        ['clockTower', { rise: 7 }],
         ['gearStand', { item: 'sundial' }],
         ['strike', {}],
         ['slabs', { n: 9, day: [[0, 3, 3]], night: [[5, 2, 3]] }],

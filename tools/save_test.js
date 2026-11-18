@@ -8,7 +8,7 @@ let bad = 0;
 const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name + (info !== undefined ? '  ' + JSON.stringify(info) : '')); if (!ok) bad++; };
 // 18 Nov 2026: bumped to v4 (new bonus lands, 1-7 and the Pupo levels changed the level set); the names V2 / V1 below now mean
 // "the previous key" (v3) and "the one before" (v2).
-const KEY = 'super-brady-o-world-save-v4', V2 = 'super-brady-o-world-save-v3', V1 = 'super-brady-o-world-save-v2';
+const KEY = 'super-brady-o-world-save-v5', V2 = 'super-brady-o-world-save-v4', V1 = 'super-brady-o-world-save-v3';
 // 1. a fresh boot
 {
   const G = loadGame({ load: true });

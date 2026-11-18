@@ -169,10 +169,10 @@ const orcaArt = (ctx, e, x, y, m) => {
 };
 const enemies = {
   aqSkua: { cls: TourFlyer.make({ w: 32, h: 14, range: 4, speed: 0.9, swoop: true, art: skuaArt, burst: '#6a5040' }), place: 'fly' },
-  aqSeal: { cls: TourLeaper.make({ w: 30, h: 16, jumpV: 14, every: 1.6, art: sealArt, splash: '#bfe8ff' }), place: 'here' },
+  aqSeal: { cls: TourLeaper.make({ belly: true, w: 30, h: 16, jumpV: 14, every: 1.6, art: sealArt, splash: '#bfe8ff' }), place: 'here' },
   aqSnowball: { cls: TourEnemy.make({ w: 22, h: 22, speed: 0.8, behavior: 'roll', range: 9, rollSpeed: 6.4, art: snowballArt, burst: '#ffffff' }), place: 'walk' },
   aqRover: { cls: TourEnemy.make({ w: 28, h: 26, speed: 1.1, behavior: 'walk', hp: 2, art: roverArt, burst: '#c8d0d8', glow: 'rgba(60,255,160,' }), place: 'walk' },
-  aqOrca: { cls: TourLeaper.make({ w: 40, h: 20, jumpV: 17, every: 1.8, drift: 1.2, art: orcaArt, splash: '#bfe8ff' }), place: 'here' }
+  aqOrca: { cls: TourLeaper.make({ belly: true, w: 40, h: 20, jumpV: 17, every: 1.8, drift: 1.2, art: orcaArt, splash: '#bfe8ff' }), place: 'here' }
 };
 // the penguin who teaches Brady to belly-slide
 const penguinFriend = (ctx, e, x, y, m, t) => { penguin(ctx, x, y, t, 1.5, m === 'wave'); if (m !== 'wave') { ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 42 + Math.sin(t * 5) * 2); } };
