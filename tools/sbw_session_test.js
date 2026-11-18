@@ -13,10 +13,13 @@
 //   - carried-over state after a respawn or a new level: trip timers, the hurry tempo, power effects, touches, the
 //     picker chip, slick / hot trail tiles left in the cached level
 // It FAILS when, between the second repeat (the first one fills the caches) and the last, the frame cost of a step or
-// any count grows past its tolerance, when state carries over a respawn, or on any error.
+// any count grows past its tolerance, when state carries over a respawn, or on any error. A frame cost over its
+// tolerance in the last repeat is measured again in one extra confirmation repeat and fails only if it is over again
+// (growth stays; the WebKit raster spikes that land on a different step each run do not). Each cost also shows its
+// "js" part: the game's own update and draw calls, before the browser rasterises them.
 //
 // usage: BRADY_DIST=<folder> node tools/sbw_session_test.js [--engine chromium|webkit] [--reps 4] [--ms 400]
-//        [--spots 5] [--tol 1.3] [--out file.json] [--a 1-1] [--b 4-1] [--boss 1-5] [--quick]
+//        [--spots 5] [--tol 1.3] [--out file.json] [--a 1-1] [--b 4-1] [--boss 1-5] [--quick] [--no-confirm]
 //   (4-1: the level with the most inked props, src/30_tour_sprites.js InkCache)
 //   Run it alone on a quiet machine (other suites running at the same time skew the frame costs).
 //   Chromium (default) can force garbage collection, so its canvas and heap counts are exact; --engine webkit is the
@@ -97,14 +100,16 @@ function pageSetup() {
   // pin the look: no tier changes or resolution drops in the middle of a run
   P.pin = () => { G.slowT = -1e9; G.lowered = 0; if (B.QualityTier && B.QualityTier.pin) B.QualityTier.pin(0); };
   // ---- frame cost: Game.frame timed with the raster flushed (one pixel read back) ----
-  let rec = null; const f0 = G.frame; let frames = 0, rafAtFrame = 0, rafPerFrame = [];
+  // (js: the frame before the flush, the game's own update and draw calls; the rest of the cost is the browser
+  // rasterising them, which on WebKit runs in its GPU process and swings with whatever else that process and the Mac do)
+  let rec = null, recJs = null; const f0 = G.frame; let frames = 0, rafAtFrame = 0, rafPerFrame = [];
   G.frame = function (t) {
     const a = performance.now(); f0.call(this, t); frames++;
-    if (rec) { G.ctx.getImageData(0, 0, 1, 1); rec.push(performance.now() - a); rafPerFrame.push(S.raf - rafAtFrame); }
+    if (rec) { const b = performance.now(); G.ctx.getImageData(0, 0, 1, 1); rec.push(performance.now() - a); recJs.push(b - a); rafPerFrame.push(S.raf - rafAtFrame); }
     rafAtFrame = S.raf;
   };
   const stats = arr => { if (!arr.length) return null; const s = arr.slice().sort((x, y) => x - y), q = k => s[Math.min(s.length - 1, Math.floor(k * s.length))]; return { mean: +(arr.reduce((x, y) => x + y, 0) / arr.length).toFixed(3), p50: +q(0.5).toFixed(3), p95: +q(0.95).toFixed(3), n: arr.length }; };
-  P.measure = async ms => { rec = []; rafPerFrame = []; await wait(ms); const r = rec; rec = null; const rp = rafPerFrame.length ? rafPerFrame.reduce((x, y) => x + y, 0) / rafPerFrame.length : 0; return { cost: stats(r), rafPerFrame: +rp.toFixed(2) }; };
+  P.measure = async ms => { rec = []; recJs = []; rafPerFrame = []; await wait(ms); const r = rec, rj = recJs; rec = null; recJs = null; const rp = rafPerFrame.length ? rafPerFrame.reduce((x, y) => x + y, 0) / rafPerFrame.length : 0; const cost = stats(r); if (cost) cost.js = stats(rj).mean; return { cost, rafPerFrame: +rp.toFixed(2) }; };
   // ---- god mode for the measured windows, and a real death when asked ----
   P.god = g => { const p = g && g.player; if (!p || p.__god) return; p.__god = true; p.hurt = function () {}; p.die = function () {}; };
   P.mortal = g => { const p = g && g.player; if (p) { delete p.hurt; delete p.die; p.__god = false; } };
@@ -132,12 +137,12 @@ function pageSetup() {
   P.measureLevel = async (o, seed) => {
     const g = G.scene; if (!(g instanceof B.Play)) return { error: 'not in a level: ' + (g && g.constructor.name) };
     P.god(g); P.seed(seed);
-    const sp = P.spots(g.area, o.spots), all = [], raf = [];
-    for (const s of sp) { if (G.scene !== g) break; P.place(g, s); await wait(120); const m = await P.measure(o.ms); if (m.cost) { all.push(m.cost.mean); raf.push(m.rafPerFrame); } }
-    if (!all.length && G.scene === g) { const m = await P.measure(o.ms); if (m.cost) { all.push(m.cost.mean); raf.push(m.rafPerFrame); } }   // no standing spot in this area: where he is
+    const sp = P.spots(g.area, o.spots), all = [], raf = [], js = [];
+    for (const s of sp) { if (G.scene !== g) break; P.place(g, s); await wait(120); const m = await P.measure(o.ms); if (m.cost) { all.push(m.cost.mean); js.push(m.cost.js); raf.push(m.rafPerFrame); } }
+    if (!all.length && G.scene === g) { const m = await P.measure(o.ms); if (m.cost) { all.push(m.cost.mean); js.push(m.cost.js); raf.push(m.rafPerFrame); } }   // no standing spot in this area: where he is
     if (!all.length) return { error: 'no frames', spots: sp.length, area: g.area && g.area.idx };
     const s2 = all.slice().sort((x, y) => x - y);
-    return { cost: { mean: +(all.reduce((x, y) => x + y, 0) / all.length).toFixed(3), p50: s2[Math.floor(s2.length / 2)], max: s2[s2.length - 1], spots: all.length }, rafPerFrame: +(raf.reduce((x, y) => x + y, 0) / raf.length).toFixed(2) };
+    return { cost: { mean: +(all.reduce((x, y) => x + y, 0) / all.length).toFixed(3), js: +(js.reduce((x, y) => x + y, 0) / js.length).toFixed(3), p50: s2[Math.floor(s2.length / 2)], max: s2[s2.length - 1], spots: all.length }, rafPerFrame: +(raf.reduce((x, y) => x + y, 0) / raf.length).toFixed(2) };
   };
   // ---- counts ----
   P.counts = async () => {
@@ -247,6 +252,15 @@ const CLEAN = s => {
   return bad;
 };
 const get = (o, k) => k.split('.').reduce((a, q) => a == null ? a : a[q], o);
+// the cost of a step in repeat `last` against the earlier repeats (repeat 1 fills the caches): a spike is over the
+// tolerance of every earlier repeat; growth is rising from repeat to repeat and 12 % over the earlier median
+function costBad(series, first, last, tol) {
+  const cb = series[last], ca = series[first]; if (cb == null || ca == null) return false;
+  const mid = series.slice(first, last).filter(v => v != null), base = mid.length ? Math.max(...mid) : ca;
+  const early = series.slice(0, last).filter(v => v != null).sort((x, y) => x - y), f0 = early.length ? early[Math.floor(early.length / 2)] : ca;   // (the median of the earlier repeats: one quiet repeat is not a baseline)
+  const rising = series.slice(first, last + 1).every((v, k, q) => k === 0 || (v != null && q[k - 1] != null && v > q[k - 1] * 1.03));
+  return cb > base * tol + 0.5 || (rising && last + 1 - first >= 3 && cb > f0 * 1.12 + 0.3);
+}
 
 async function main() {
   const srv = await serve(root), url = 'http://127.0.0.1:' + srv.address().port + '/super-brady-o-world/index.html';
@@ -282,11 +296,11 @@ async function main() {
       r.rebakes = d; if (d > 0) fail(`repeat ${rep + 1} ${name}: ${d} inked props baked again (the prop cache dropped pictures still in use)`);
     }
     const c = info && info.cost, g = counts.game, pg = counts.page;
-    console.log(`  ${String(rep + 1).padStart(2)} ${name.padEnd(13)} ${c ? 'cost ' + String(c.mean).padStart(6) + ' ms' : '              '}  canvases ${String(pg.canvasesLive).padStart(4)} ${String(pg.canvasesMP).padStart(7)} MP  listeners ${pg.listeners}  timers ${pg.intervals}/${pg.timeouts}  heap ${pg.heapMB}  audio ${pg.audioLive}/${pg.audioNodes}  bg ${g.bgEntries}/${g.bgMP}  tiles ${g.tileEntries}  ink ${g.inkScratch}/${g.inkHeld}/${g.inkCache}  glows ${g.glows}  ents ${g.ents == null ? '-' : g.ents}`);
+    console.log(`  ${String(rep + 1).padStart(2)} ${name.padEnd(13)} ${c ? 'cost ' + String(c.mean).padStart(6) + ' ms (js ' + (c.js == null ? '-' : c.js.toFixed(2)) + ')' : '                         '}  canvases ${String(pg.canvasesLive).padStart(4)} ${String(pg.canvasesMP).padStart(7)} MP  listeners ${pg.listeners}  timers ${pg.intervals}/${pg.timeouts}  heap ${pg.heapMB}  audio ${pg.audioLive}/${pg.audioNodes}  bg ${g.bgEntries}/${g.bgMP}  tiles ${g.tileEntries}  ink ${g.inkScratch}/${g.inkHeld}/${g.inkCache}  glows ${g.glows}  ents ${g.ents == null ? '-' : g.ents}`);
     return r;
   };
-  for (let rep = 0; rep < REPS; rep++) {
-    console.log(`repeat ${rep + 1}`);
+  const playRepeat = async (rep, label) => {
+    console.log(label || `repeat ${rep + 1}`);
     await step(rep, 'A start', async o => { const P = window.__ses; if (!await P.startLevel(o.a)) return { error: 'level never started' }; return P.measureLevel(o, 1); }, true);
     await step(rep, 'A death 1', async o => { const P = window.__ses, d = await P.die(); if (d.error) return d; return P.measureLevel(o, 1); }, true);
     await step(rep, 'A death 2', async o => { const P = window.__ses, d = await P.die(); if (d.error) return d; return P.measureLevel(o, 1); }, true);
@@ -300,14 +314,23 @@ async function main() {
     await step(rep, 'A to map', async o => { const P = window.__ses; if (!await P.startLevel(o.a)) return { error: 'level never started' }; return P.clearToMap(); });
     await step(rep, 'map', async o => window.__ses.map(o));
     await step(rep, 'title', async o => window.__ses.title());
-  }
+  };
+  for (let rep = 0; rep < REPS; rep++) await playRepeat(rep);
+  // A step's frame cost over its tolerance in the last repeat is checked once more by a confirmation repeat: growth
+  // stays, while a one-off spike does not (on WebKit the raster runs in the browser's GPU process, and its memory
+  // clean-ups and the Mac's other work lift a whole step now and then, landing on a different step each run;
+  // see docs/PERFORMANCE.md, "Long sessions").
+  const R = REPS, first = R >= 3 ? 1 : 0, last = R - 1;
+  const costSeries = name => steps[name].slice(0, R).map(r => r && r.info && r.info.cost ? r.info.cost.mean : null);
+  const spiked = Object.keys(steps).filter(name => { const q = costSeries(name); return q[first] != null && q[last] != null && costBad(q, first, last, TOL); });
+  let confirmed = false;
+  if (spiked.length && !has('--no-confirm')) { await playRepeat(R, `confirmation repeat (the cost of ${spiked.join(', ')} was over its tolerance in repeat ${R})`); confirmed = true; }
   // the speakers stayed silent (tools/sbw_silent.js): every real audio context's output went through a gain of 0
   const quiet = await page.evaluate(() => window.__sbwSilent ? window.__sbwSilent.report() : null).catch(() => null);
   if (process.env.BRADY_SOUND !== '1' && quiet && quiet.gains.some(g => g !== 0)) fail('sound reached the speakers', quiet);
   await browser.close(); srv.close();
 
   /* ---------------- the verdict ---------------- */
-  const R = REPS, first = R >= 3 ? 1 : 0, last = R - 1;
   console.log(`\ntrend: repeat ${first + 1} -> repeat ${last + 1} (repeat 1 fills the caches)`);
   for (const name in steps) {
     const a = steps[name][first], b = steps[name][last]; if (!a || !b) continue;
@@ -315,15 +338,20 @@ async function main() {
     if (ca && cb) {
       // a load spike on this shared Mac lifts one repeat; growth lifts every repeat after the first: the cost fails when
       // the last repeat is over the tolerance of the best earlier one AND the repeats before it were already rising
-      const series = steps[name].map(r => r && r.info && r.info.cost ? r.info.cost.mean : null);
-      // (a spike: over the tolerance of every earlier repeat; growth: rising from repeat to repeat and 12 % over the earlier median)
-      const mid = series.slice(first, last).filter(v => v != null), base = mid.length ? Math.max(...mid) : ca.mean;
-      const early = series.slice(0, last).filter(v => v != null).sort((x, y) => x - y), f0 = early.length ? early[Math.floor(early.length / 2)] : ca.mean;   // (the median of the earlier repeats: one quiet repeat is not a baseline)
-      const rising = series.slice(first).every((v, k, q) => k === 0 || (v != null && q[k - 1] != null && v > q[k - 1] * 1.03));
+      const series = costSeries(name);
+      const early = series.slice(0, last).filter(v => v != null).sort((x, y) => x - y), f0 = early.length ? early[Math.floor(early.length / 2)] : ca.mean;
       const ratio = cb.mean / f0;
-      const bad = cb.mean > base * TOL + 0.5 || (rising && series.length - first >= 3 && cb.mean > f0 * 1.12 + 0.3);
-      console.log(`  ${bad ? 'FAIL' : 'ok  '} ${name.padEnd(13)} cost ${series.map(v => v == null ? '-' : v.toFixed(2)).join(' -> ')} ms (${ratio.toFixed(2)}x)`);
-      if (bad) fail(`${name}: frame cost grows over the session`, series);
+      let bad = costBad(series, first, last, TOL), note = '';
+      const js = steps[name].slice(0, R).map(r => r && r.info && r.info.cost && r.info.cost.js != null ? r.info.cost.js.toFixed(2) : '-').join(' -> ');
+      // the confirmation repeat stands in for the spiked one: the step fails only if it is over the tolerance again
+      const cr = confirmed && steps[name][R], cc = cr && cr.info && cr.info.cost;
+      if (bad && confirmed) {
+        const q2 = series.slice(0, last).concat([cc ? cc.mean : null]);
+        bad = !cc || costBad(q2, first, last, TOL);
+        note = cc ? `; confirmation repeat ${cc.mean.toFixed(2)} ms (js ${cc.js != null ? cc.js.toFixed(2) : '-'}): ${bad ? 'still over' : 'a one-off spike'}` : '; no confirmation measurement';
+      }
+      console.log(`  ${bad ? 'FAIL' : 'ok  '} ${name.padEnd(13)} cost ${series.map(v => v == null ? '-' : v.toFixed(2)).join(' -> ')} ms (${ratio.toFixed(2)}x; js ${js})${note}`);
+      if (bad) fail(`${name}: frame cost grows over the session`, confirmed && cc ? series.concat([cc.mean]) : series);
       if (b.info.rafPerFrame > 1.5) fail(`${name}: ${b.info.rafPerFrame} requestAnimationFrame calls per frame (an extra loop)`);
     }
     for (const [k, rel, abs] of WATCH) {
@@ -343,7 +371,7 @@ async function main() {
   const sRise = sums.slice(first).every((v, k, q) => k === 0 || (v != null && q[k - 1] != null && v > q[k - 1] * 1.02));
   if (sums[first] && sums[last] && sRise && sums[last] > sums[first] * Math.min(TOL, 1.15) + 0.3) fail('the session as a whole gets slower', sums);
   if (errs.length) fail('page errors', errs.slice(0, 5));
-  if (OUT) { fs.mkdirSync(path.dirname(path.resolve(OUT)), { recursive: true }); fs.writeFileSync(OUT, JSON.stringify({ meta: { engine, reps: R, ms: MS, spots: SPOTS, tol: TOL, a: LV_A, b: LV_B, boss: LV_BOSS, date: new Date().toISOString() }, steps, sums, failures }, null, 1)); console.log('wrote ' + OUT); }
+  if (OUT) { fs.mkdirSync(path.dirname(path.resolve(OUT)), { recursive: true }); fs.writeFileSync(OUT, JSON.stringify({ meta: { engine, reps: R, confirmed, ms: MS, spots: SPOTS, tol: TOL, a: LV_A, b: LV_B, boss: LV_BOSS, date: new Date().toISOString() }, steps, sums, failures }, null, 1)); console.log('wrote ' + OUT); }
   console.log(failures.length ? `\n${failures.length} PROBLEM(S)` : '\nsession clean: nothing piles up');
   process.exit(failures.length ? 1 : 0);
 }
