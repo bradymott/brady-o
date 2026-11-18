@@ -31,6 +31,8 @@ const F5 = '5px ' + FONT_DISPLAY, F6 = '6px ' + FONT_DISPLAY, F7 = '7px ' + FONT
   F10 = '10px ' + FONT_DISPLAY, F11 = '11px ' + FONT_DISPLAY, F12 = '12px ' + FONT_DISPLAY, HAND = 'italic 9px ' + FONT_UI, HAND7 = 'italic 7px ' + FONT_UI;
 const PAPER = '#f6eedc', PAPER2 = '#ebdfc4', LINE = '#9ab0d8', LEATHER = '#5a2a6a', LEATHER2 = '#3e1a4c', GOLD = '#e8b84a', RED = '#d0203a';
 const party = () => TourRules.fxOn('party');
+// constant arrays for the draw code (no per-frame allocation)
+const SIDES = [-1, 1], DASH = [4, 4], NODASH = [], TOME_BANDS = [0.08, 0.16, 0.84, 0.92];
 
 /* ================= the Brady Button under its glass ================= */
 // A button spawn with needs (rule 1's) stands under a glass cloche until they are met: slapping it, or jumping on it,
@@ -161,12 +163,12 @@ const marginStamp = back => ({
     'HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH',
     'H..................................H',
     'H..................................H',
-    'H.........o.o.o....................H',
     'H..................................H',
+    'H..................................H',
+    'H.........o.o.o....................H',
     'H........-----.....................H',
     'H..................................H',
     'H.................-----............H',
-    'H..................................H',
     'H..........................----....e',
     'H..................................e',
     'H..k...d....n...u.......m....j.@...e',
@@ -196,14 +198,14 @@ Object.assign(BGPaint, {
     for (let x = 20, sp = 0; x < BG_W; x += 520, sp++) {
       for (const side of [0, 1]) {
         const px = x + side * 250, pw = 240, top = 30, bot = L.base;
-        ctx.fillStyle = side ? PAPER : PAPER2; ctx.fillRect(px, top, pw, bot - top);
+        ctx.fillStyle = side ? '#b8a8c8' : '#ad9dbe'; ctx.fillRect(px, top, pw, bot - top);
         ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(side ? px : px + pw - 22, top, 22, bot - top);
         ctx.fillStyle = '#6a3a8a'; ctx.font = 'bold 15px serif'; ctx.textAlign = 'left';
         for (let k = 0; k < 3; k++) {
           const n = (sp * 2 + side) * 3 + k, y = top + 46 + k * 90, R = RULES[n % RULES.length];
-          ctx.fillStyle = '#5a2a6a'; ctx.fillText(R, px + 20, y);
-          ctx.fillStyle = 'rgba(80,60,90,0.35)'; for (let q = 0; q < 4; q++) ctx.fillRect(px + 20, y + 14 + q * 12, 160 + rng() * 50, 4);
-          if (n % RULES.length) { ctx.save(); ctx.translate(px + 150, y + 22); ctx.rotate(-0.2); ctx.strokeStyle = 'rgba(208,32,58,0.75)'; ctx.lineWidth = 4; ctx.strokeRect(-56, -16, 112, 32); ctx.fillStyle = 'rgba(208,32,58,0.75)'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('REVOKED', 0, 7); ctx.restore(); ctx.textAlign = 'left'; }
+          ctx.fillStyle = 'rgba(70,40,90,0.45)'; ctx.fillText(R, px + 20, y);
+          ctx.fillStyle = 'rgba(70,50,90,0.2)'; for (let q = 0; q < 4; q++) ctx.fillRect(px + 20, y + 14 + q * 12, 160 + rng() * 50, 4);
+          if (n % RULES.length) { ctx.save(); ctx.translate(px + 150, y + 22); ctx.rotate(-0.2); ctx.strokeStyle = 'rgba(160,30,60,0.4)'; ctx.lineWidth = 4; ctx.strokeRect(-56, -16, 112, 32); ctx.fillStyle = 'rgba(160,30,60,0.4)'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('REVOKED', 0, 7); ctx.restore(); ctx.textAlign = 'left'; }
         }
         ctx.fillStyle = 'rgba(90,60,40,0.5)'; ctx.font = '12px serif'; ctx.textAlign = 'center'; ctx.fillText(String(22 + sp * 2 + side), px + pw / 2, bot - 14); ctx.textAlign = 'left';
       }
@@ -283,9 +285,9 @@ class RbPage extends Ent {
     ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(sx - 15, top, 30, Math.min(bot - top, 400));
     ctx.fillStyle = PAPER; ctx.fillRect(sx - 14, top, 28, 7); ctx.fillStyle = GOLD; ctx.fillRect(sx - 14, top, 28, 1.5);
     // where the leaf will land: a faint dotted outline
-    ctx.globalAlpha = 0.45; ctx.strokeStyle = '#fff4e0'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+    ctx.globalAlpha = 0.45; ctx.strokeStyle = '#fff4e0'; ctx.lineWidth = 1.5; ctx.setLineDash(DASH);
     if (on) ctx.strokeRect(sx - 15 - Lw, top + 1, Lw, 8); else ctx.strokeRect(sx + 15, top + 1, Lw, 8);
-    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.setLineDash(NODASH); ctx.globalAlpha = 1;
     const k = clamp(this.flipT / 0.4, 0, 1);
     if (k < 1) {
       // turning: the leaf sweeps over the spine (from the side it was on to the other)
@@ -295,8 +297,8 @@ class RbPage extends Ent {
     } else {
       // lying flat: a page with ruled lines and a line of tiny print; its corner curls up just before it turns
       const d = on ? 1 : -1, x0 = d > 0 ? sx + 15 : sx - 15 - Lw, curl = next < 0.9 ? (0.9 - next) / 0.9 : 0;
-      ctx.fillStyle = PAPER2; ctx.fillRect(x0, top + 6, Lw, 6);
-      ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.fillStyle = '#d8c8a8'; ctx.fillRect(x0, top + 8, Lw, 7); ctx.fillStyle = '#ff7ab0'; ctx.fillRect(x0, top + 13, Lw, 2);
+      ctx.fillStyle = curl > 0 && Math.sin(this.t * 24) > 0 ? '#fff2a0' : '#fffdf4'; ctx.strokeStyle = INK; ctx.lineWidth = 2;
       const cw = 22 * curl, ox = d > 0 ? x0 + Lw : x0;
       ctx.beginPath();
       if (d > 0) { ctx.moveTo(x0, top); ctx.lineTo(ox - cw, top); ctx.lineTo(ox, top + 8 - cw * 1.4); ctx.lineTo(ox, top + 8); ctx.lineTo(x0, top + 8); }
@@ -309,8 +311,8 @@ class RbPage extends Ent {
         ctx.beginPath(); ctx.moveTo(ox, top + 8 - cw * 1.4 + sh); ctx.lineTo(ox - d * cw, top + sh); ctx.lineTo(ox - d * cw * 0.4, top - cw * 0.5 + sh); ctx.closePath(); ctx.fill(); ctx.stroke();
         // the curved arrow over the spine: it is about to turn
         ctx.globalAlpha = 0.5 + 0.5 * curl; ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(sx, top - 26, 14, d > 0 ? Math.PI * 1.05 : Math.PI * 1.95, d > 0 ? Math.PI * 1.95 : Math.PI * 1.05, d < 0); ctx.stroke();
-        const ax = sx - d * 14, ay = top - 24; ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.moveTo(ax - 5, ay - 4); ctx.lineTo(ax + 5, ay - 4); ctx.lineTo(ax, ay + 4); ctx.fill();
+        ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(sx, top - 78, 18, d > 0 ? Math.PI * 1.05 : Math.PI * 1.95, d > 0 ? Math.PI * 1.95 : Math.PI * 1.05, d < 0); ctx.stroke();
+        const ax = sx - d * 18, ay = top - 76; ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.moveTo(ax - 7, ay - 5); ctx.lineTo(ax + 7, ay - 5); ctx.lineTo(ax, ay + 6); ctx.fill();
         ctx.globalAlpha = 1;
       }
     }
@@ -367,9 +369,11 @@ class RbStamp extends Ent {
 Object.assign(Decor, {
   r1Footnote(ctx, x, y, t, th, d) {
     const n = (d && d.seed) || 1, x0 = x - TS / 2;
-    ctx.save(); ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillRect(x0 - 2, y, 2 * TS + 4, 10); ctx.strokeRect(x0 - 2, y, 2 * TS + 4, 10);
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+    ctx.fillStyle = '#d8c8a8'; ctx.fillRect(x0 - 2, y + 10, 2 * TS + 4, 4);
+    ctx.fillStyle = '#fffdf4'; ctx.fillRect(x0 - 2, y, 2 * TS + 4, 12); ctx.strokeRect(x0 - 2, y, 2 * TS + 4, 14);
     ctx.fillStyle = '#5a2a6a'; ctx.font = F6; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(FOOTNOTES[n % FOOTNOTES.length], x0 + 2, y + 5.5, 2 * TS - 2);
+    ctx.fillText(FOOTNOTES[n % FOOTNOTES.length], x0 + 1, y + 6.5, 2 * TS);
     ctx.restore();
   },
   // a standing tome (its body is solid): VOLUME 2 down its spine
@@ -378,7 +382,7 @@ Object.assign(Decor, {
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
     ctx.fillStyle = LEATHER; ctx.fillRect(x0, y0, w, h); ctx.strokeRect(x0, y0, w, h);
     ctx.fillStyle = LEATHER2; ctx.fillRect(x0 + w - 12, y0, 12, h);
-    ctx.fillStyle = GOLD; for (const f of [0.08, 0.16, 0.84, 0.92]) ctx.fillRect(x0 + 4, y0 + h * f, w - 8, 3);
+    ctx.fillStyle = GOLD; for (const f of TOME_BANDS) ctx.fillRect(x0 + 4, y0 + h * f, w - 8, 3);
     ctx.fillStyle = PAPER; ctx.fillRect(x0 + 2, y0 - 6, w - 4, 6); ctx.strokeRect(x0 + 2, y0 - 6, w - 4, 6);
     ctx.save(); ctx.translate(x, y0 + h * 0.5); ctx.rotate(-Math.PI / 2); ctx.fillStyle = GOLD; ctx.font = F11; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('HOUSE RULES · VOL. 2', 0, 0, h - 40); ctx.restore();
     ctx.restore();
@@ -445,17 +449,14 @@ const P = {
     const B = st.B, x = st.x, gy = st.gy;
     st.floor(x, x + 13);
     B.prop('r1Tome', x + 6, gy - 9, 3, 9, 'body');
-    for (const [lx, ly, nn] of [[x + 3, gy - 3, 1], [x + 2, gy - 6, 2]]) { st.semi(lx, lx + 1, ly); B.decorAt('r1Footnote', lx, ly, nn); }
-    B.decorAt('r1Footnote', x + 10, gy - 4, 3); st.semi(x + 10, x + 11, gy - 4);
+    for (const [lx, ly, nn] of [[x + 3, gy - 3, 1], [x + 2, gy - 6, 2], [x + 10, gy - 4, 3]]) { st.semi(lx, lx + 1, ly); B.setHide(lx, ly, 1); B.setHide(lx + 1, ly, 1); B.decorAt('r1Footnote', lx, ly, nn); }
     st.gold(x + 7, gy - 12, o.gold || 'high');
     st.coins(x + 6, x + 8, gy - 10);
     return x + 14;
   },
-  // the Rulebook's arena: footnote ledges at each side and one higher in the middle, a lectern
+  // the Rulebook's arena: open floor (its slam needs room to dodge), a lectern with an ink pad by the way in
   arena_rulebook(st, o) {
-    const B = st.B, { x0, w, GY } = o;
-    for (let q = 0; q < 3; q++) { B.set(x0 + 2 + q, GY - 4, T.SEMI); B.set(x0 + w - 5 + q, GY - 4, T.SEMI); }
-    B.decorAt('r1Footnote', x0 + 2, GY - 4, 4); B.decorAt('r1Footnote', x0 + w - 5, GY - 4, 5);
+    const B = st.B, { x0, GY } = o;
     B.decorAt('r1Lectern', x0 + 1, GY, 0);
   }
 };
@@ -561,7 +562,7 @@ const rbArt = (ctx, b, t) => {
     ctx.fillStyle = '#ffe8ec'; ctx.font = F5; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.save(); ctx.translate(rx, y - 34); ctx.rotate(-Math.PI / 2); ctx.fillText(RB_PAGES[clamp(3 - Math.ceil(b.hp), 0, 2)], 0, 0, 34); ctx.restore();
     // the arms flopped out, stamps on the floor
-    for (const d of [-1, 1]) { ctx.strokeStyle = LEATHER; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x + d * 44, y - 8); ctx.quadraticCurveTo(x + d * 56, y - 18, x + d * 64, y - 6); ctx.stroke(); ctx.fillStyle = RED; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; rr(ctx, x + d * 64 - 10, y - 8, 20, 8, 2); ctx.fill(); ctx.stroke(); }
+    for (const d of SIDES) { ctx.strokeStyle = LEATHER; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x + d * 44, y - 8); ctx.quadraticCurveTo(x + d * 56, y - 18, x + d * 64, y - 6); ctx.stroke(); ctx.fillStyle = RED; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; rr(ctx, x + d * 64 - 10, y - 8, 20, 8, 2); ctx.fill(); ctx.stroke(); }
     TourKit.dizzy && TourKit.dizzy(ctx, x, y - 60, t);
     ctx.restore(); return;
   }
@@ -570,7 +571,7 @@ const rbArt = (ctx, b, t) => {
   ctx.translate(shake, 0);
   // the arms with their stamps (behind the covers): raised while aiming, thrust down in the slam
   const armY = P === 'aim' ? -26 : P === 'slam' ? 22 : 8 + Math.sin(t * 6) * 3;
-  for (const d of [-1, 1]) {
+  for (const d of SIDES) {
     const hx = x + d * 46, hy = cy + armY;
     ctx.strokeStyle = INK; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(x + d * 18, cy + 6); ctx.quadraticCurveTo(x + d * 40, cy + 2, hx, hy); ctx.stroke();
     ctx.strokeStyle = LEATHER; ctx.lineWidth = 4.5; ctx.stroke();
@@ -598,20 +599,13 @@ const rbArt = (ctx, b, t) => {
   ctx.fillStyle = GOLD; ctx.fillRect(x - 3, cy - chh / 2 + 6, 6, 2); ctx.fillRect(x - 3, cy + chh / 2 - 8, 6, 2);
   if (P === 'exit') { ctx.fillStyle = PAPER; for (let k = 0; k < 6; k++) { const a = t * 3 + k, r = 20 + ((t * 40 + k * 13) % 50); ctx.fillRect(x + Math.cos(a) * r - 4, cy + Math.sin(a) * r * 0.6 - 3, 8, 6); } }
   ctx.restore();
-  // the tell for the slam: two red marks on the floor under the stamps
-  if (P === 'aim' && b.state === 'fight') {
-    ctx.save(); ctx.globalAlpha = 0.45 + 0.4 * Math.sin(t * 18); ctx.fillStyle = RED;
-    for (const d of [-1, 1]) { ctx.beginPath(); ctx.ellipse(x + d * 46, b.floorY - 3, 16, 5, 0, 0, TAU); ctx.fill(); }
-    ctx.beginPath(); ctx.ellipse(x, b.floorY - 3, 34, 6, 0, 0, TAU); ctx.fill();
-    ctx.restore();
-  }
 };
 Tour.boss({
   id: 'w22_rulebook', name: 'The Rulebook', hp: 3, dims: [72, 56], floats: true, music: 'tour_w22_boss', country: 'w22',
   brain: {
     guardText: 'HARDBACK!',
     phases: [2, 1],
-    hoverY(b) { return b.floorY - b.h - 6.5 * TS; },
+    hoverY(b) { return b.floorY - b.h - 3.5 * TS; },
     wake(b) { b.g.toast('WHEN IT SLAMS DOWN IT FALLS OPEN: STOMP IT TO TEAR OUT A PAGE'); K.say(b.g, b, 'RULE 1: NO FUN!', '#ffd84a'); b.slams = 0; },
     hit(b, kind) {
       if (kind === 'stomp' || kind === 'spin') {
@@ -644,13 +638,13 @@ Tour.boss({
         if (b.y + b.h >= b.floorY) {
           b.y = b.floorY - b.h; b.vy = 0; b.slams++;
           g.shake(7); K.sfx('stomp', 'stomp', { vol: 0.8, pitch: 0.6 }); g.burst(b.cx, b.floorY - 4, 14, '#2a1640', 'dust');
-          if (ph >= 2) for (const d of [-1, 1]) tourFire(g, b.cx + d * 50, b.floorY - 8, { vx: d * (ph >= 3 ? 5.5 : 4.5) * TS, vy: 0, w: 22, h: 15, life: 3.2, thru: true, col: '#2a1640', art: blotArt, dir: d });
+          if (ph >= 2) for (const d of SIDES) tourFire(g, b.cx + d * 50, b.floorY - 8, { vx: d * (ph >= 3 ? 5.5 : 4.5) * TS, vy: 0, w: 22, h: 15, life: 3.2, thru: true, col: '#2a1640', art: blotArt, dir: d });
           if (ph >= 3 && b.slams < 2) b.go('hop'); else b.go('open');
         }
       } else if (b.act === 'hop') {
         // phase 3: up a little and across to slam again
-        b.pose = 'rise'; b.vx = 0; b.hover(dt, hy + 2 * TS, p ? p.cx : b.cx);
-        if (b.at > 0.5) b.go('aim');
+        b.pose = 'rise'; b.vx = 0; b.hover(dt, hy, p ? p.cx : b.cx);
+        if (b.at > 0.45) b.go('aim');
       } else if (b.act === 'open') {
         // fallen open, dazed: the moment to stomp
         b.pose = 'open'; b.vx = 0; b.vuln = true; b.guard = 'hurt'; b.y = b.floorY - b.h;
@@ -669,6 +663,16 @@ Tour.boss({
     },
     draw(b, ctx, t) { rbArt(ctx, b, t); }
   }
+});
+// the tell for the slam: red marks on the floor under the book and its two stamps while it aims (drawn in world
+// coordinates over the floor: the boss's own art is inked in a box round its body)
+TourHooks.on('afterEntities', (play, ctx) => {
+  const b = play.boss; if (!b || b.style !== 'w22_rulebook' || b.state !== 'fight' || (b.act !== 'aim' && b.act !== 'slam')) return;
+  ctx.save(); ctx.globalAlpha = b.act === 'slam' ? 0.85 : 0.45 + 0.4 * Math.sin(b.t * 18); ctx.fillStyle = RED;
+  for (const d of SIDES) { ctx.beginPath(); ctx.ellipse(b.cx + d * 46, b.floorY - 7, 17, 6, 0, 0, TAU); ctx.fill(); }
+  ctx.beginPath(); ctx.ellipse(b.cx, b.floorY - 7, 36, 7, 0, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1; ctx.fillStyle = '#ffffff'; ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.font = F12; ctx.textAlign = 'center'; ctx.strokeText('!', b.cx, b.floorY - 18); ctx.fillText('!', b.cx, b.floorY - 18);
+  ctx.restore();
 });
 // the banner when it is beaten
 {
@@ -868,5 +872,5 @@ const TourRulesUI = {
   };
 }
 
-try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; Object.assign(window.BRADY_TOUR, { TourParty, TourRulebook: { level: L6, pieces: P, stamps } }); } } catch (e) { /* not in a browser */ }
+try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; Object.assign(window.BRADY_TOUR, { TourParty, TourRuleCut, TourRulebook: { level: L6, pieces: P, stamps } }); } } catch (e) { /* not in a browser */ }
 })();

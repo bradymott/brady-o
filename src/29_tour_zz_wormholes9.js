@@ -52,16 +52,46 @@ const F6 = '6px ' + FONT_DISPLAY, F7 = '7px ' + FONT_DISPLAY, F8 = '8px ' + FONT
 /* ---------- the dormant docks ---------- */
 const STENCIL = { look: 'r9CrewDoor' };
 // a dock room for a dormant Wormhole: the shipped dock layouts, the Wormhole padlocked until rule 9
+// two layouts (the Wormhole in the middle of the room, clear of the phone's buttons; coins low enough to stay clear
+// of the HUD); the left edge goes back out, or a stage door does (door: true)
+const DORMANT_ROOMS = [
+  ['HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH',
+   'H..................................H',
+   'H..................................H',
+   'H..................................H',
+   'H..................................H',
+   'H.............o.o.o................H',
+   'H............-------...............H',
+   'H..................................H',
+   'H......................-----.......H',
+   'e.......xxx........................H',
+   'e.......xxx.......m................H',
+   'e.@..n..xxx....w.....N.......k.....H',
+   '####################################',
+   '####################################'],
+  ['HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH',
+   'H..................................H',
+   'H..................................H',
+   'H..................................H',
+   'H..................................H',
+   'H....................o.o.o.........H',
+   'H...................-----..........H',
+   'H..................................H',
+   'H.........----.....................H',
+   'e......xx..........................H',
+   'e......xx.........m................H',
+   'e.@..n.xx.......w......N...k.......H',
+   '####################################',
+   '####################################']
+];
 const dockRoom = (back, variant, key, door) => {
-  const S = TourBackstage.dockStamp(back, variant);
-  S.rows = S.rows.slice();
-  S.legend = Object.assign({}, S.legend, { w: ['spawn', 'warp', { exit: key, needs: NEED }], N: ['decor', 'r9Notice'] });
-  // a notice board by the Wormhole: FREIGHT SUSPENDED (the same in every dormant dock)
-  const r = S.rows[11], wi = r.indexOf('w'); if (wi > 4) S.rows[11] = r.slice(0, wi - 3) + 'N' + r.slice(wi - 2);
+  const rows = DORMANT_ROOMS[(variant || 0) % DORMANT_ROOMS.length].slice();
+  const S = { floor: 12, rows, legend: { e: ['seam', 'left', back], x: ['tile', 'HARD'], n: ['decor', 'bkCrewSign'], k: ['decor', 'bkCart'], m: ['spawn', 'bkMouse', {}],
+    w: ['spawn', 'warp', { exit: key, needs: NEED }], N: ['decor', 'r9Notice'] } };
   if (door) {
     // reached by a stage door (no seam): the left edge is wall, a door stands by the way in
-    for (let y = 9; y <= 11; y++) S.rows[y] = 'H' + S.rows[y].slice(1);
-    S.rows[11] = S.rows[11].slice(0, 3) + 'D' + S.rows[11].slice(4);
+    for (let y = 9; y <= 11; y++) rows[y] = 'H' + rows[y].slice(1);
+    rows[11] = rows[11].slice(0, 3) + 'D' + rows[11].slice(4);
     S.doors = [{ to: back, look: STENCIL.look }];
     delete S.legend.e;
   }
@@ -87,8 +117,8 @@ const dormantDock = (cc, n, aid, o) => {
 };
 dormantDock('mz', 2, 'dunas', { room: 'dock', to: '1-6', label: 'MEXICO', variant: 0, hint: 'Flight cases stacked by the finish, CREW ONLY over it...' });
 dormantDock('es', 1, 'bunol', { room: 'dock', to: '2-6', label: 'ECUADOR', variant: 1, hint: 'Flight cases stacked by the finish, CREW ONLY over it...' });
-dormantDock('fr', 3, 'chaussee', { room: 'dock', to: '7-7', label: 'BALLOONS', variant: 2, hint: 'Flight cases stacked by the causeway gate, CREW ONLY over it...' });
-dormantDock('id', 3, 'gunung', { room: 'dock', to: '4-6', label: 'MOZAMBIQUE', variant: 0, hint: 'Flight cases stacked by the finish, CREW ONLY over it...' });
+dormantDock('fr', 3, 'chaussee', { room: 'dock', to: '7-7', label: 'BALLOONS', variant: 0, hint: 'Flight cases stacked by the causeway gate, CREW ONLY over it...' });
+dormantDock('id', 3, 'gunung', { room: 'dock', to: '4-6', label: 'MOZAMBIQUE', variant: 1, hint: 'Flight cases stacked by the finish, CREW ONLY over it...' });
 
 /* D5 10-2: the junk's ride scrolls, so its area can have no seam. On the landing at the end: the same tell as every
    dock (a stack of flight cases before the gate, a truss over it, a CREW ONLY arrow), and beyond the gate a crew door
@@ -144,12 +174,12 @@ const wingsStamp = (back, key) => ({
     'HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH',
     'H..................................H',
     'H..................................H',
+    'H..................................H',
+    'H..................................H',
     'H.........o.o.o....................H',
-    'H..................................H',
     'H........-----.....................H',
-    'H..................................H',
-    'H...h.............-----............H',
-    'H..................................H',
+    'H...h..............................H',
+    'H.................-----............H',
     'H..........................----....e',
     'H..................................e',
     'H..k..r..w..N.....x....m...q...@...e',
@@ -257,7 +287,7 @@ Object.assign(Decor, {
     ctx.restore();
   }
 });
-const R9_CRATES = [[-24, 0, 26, 22], [2, 0, 24, 18], [-14, 22, 24, 18]];
+const R9_CRATES = [[-24, 0, 26, 22], [2, 0, 24, 18], [-14, 22, 24, 18]], RAIL_OFF = [-3.2, 3.2];
 // the storeroom's door in the souk: a plain plank door, a brass pneumatic tube running up out of its frame into the
 // ceiling (the same tube every Brady Button has), Piwi's purple wax seal; the plaque shows a padlock
 TOUR_SKINS.r9LockerDoor = (ctx, e, t) => {
@@ -296,11 +326,11 @@ const lockerStamp = {
     'HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH',
     'H..................................H',
     'H..................................H',
-    'H..........o.o.o...................H',
     'H..................................H',
+    'H..................................H',
+    'H..........o.o.o...................H',
     'H.........-----....................H',
     'H..................................H',
-    'H.........................h........H',
     'H.................-----............H',
     'H..................................H',
     'H..................................H',
@@ -308,7 +338,6 @@ const lockerStamp = {
     '####################################',
     '####################################'
   ],
-  hidden: ['oneup'],
   doors: [{ to: 'souk@lockerBack', look: 'r9LockerBack' }],
   legend: {
     i: ['spawn', 'sign', { text: 'PIWI SQUIRMIN\'S EVIDENCE LOCKER. CONFISCATED FUN: NO REFUNDS. AND NO SHORTCUTS, EVER. — PIWI' }],
@@ -346,7 +375,7 @@ const TourExpress = {
       const a = pts[i], b = pts[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, nx = -dy / L * 5, ny = dx / L * 5;
       ctx.beginPath(); ctx.moveTo(a[0] - nx, a[1] - ny); ctx.lineTo(a[0] + nx, a[1] + ny); ctx.stroke();
     }
-    for (const off of [-3.2, 3.2]) {
+    for (const off of RAIL_OFF) {
       ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 2.6; ctx.beginPath();
       for (let i = 0; i < n; i++) { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, px = pts[i][0] - dy / L * off, py = pts[i][1] + dx / L * off; if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
       ctx.stroke(); ctx.strokeStyle = '#f0c25a'; ctx.lineWidth = 1.2; ctx.stroke();
