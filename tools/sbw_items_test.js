@@ -87,6 +87,8 @@ const masksOf = A => { const gs = Object.keys(A.toggles || {}).map(Number).filte
 /* every item block of one level: bump it, then (when asked) one validator search for the whole level */
 function scanLevel(G, id, reachAll) {
   const { T, TS, Validator, getLevel } = G;
+  // a level with Nap Boxes: what the plain search leaves unanswered may be reached riding Pupo (P2-G4: 11-3's LSD box past the bamboo)
+  const PV = G.run("typeof PupoVal !== 'undefined' && PupoVal.probeRun ? PupoVal : null"), reachRun = (l, o) => PV && PV.has(l) ? PV.probeRun(l, o) : Validator.run(l, o);
   const bump = G.run('__bump'), tname = t => Object.keys(T).find(k => T[k] === t) || t;
   const blockTiles = new Set([T.QBLOCK, T.HIDDEN, T.QBRICK]);
   const [w, i] = id.split('-').map(Number);
@@ -119,14 +121,14 @@ function scanLevel(G, id, reachAll) {
     // stop the search once every block has been bumped and every item touched (somewhere on its path)
     const groups = need.flatMap(row => [[row.under, row.top, row.left, row.right], ...row.runs.filter(r => r.probes.length).map(r => r.probes)]);
     const answered = () => groups.every(gr => gr.some(q => q.hit));
-    const t0 = Date.now(); Validator.run(lvl, { probes, untilProbes: answered }); ms = Date.now() - t0;
+    const t0 = Date.now(); reachRun(lvl, { probes, untilProbes: answered }); ms = Date.now() - t0;
     for (const row of need) { row.checked = true; row.bumpable = !!row.under.hit; row.openable = !!(row.under.hit || row.top.hit || row.left.hit || row.right.hit); for (const r of row.runs) r.reach = r.probes.some(q => q.hit); }
     // the search moves big Brady; an item that small Brady bumped out only has to be in small Brady's reach
     const small = need.filter(row => row.bumpable).flatMap(row => row.runs.filter(r => !r.power && !r.reach && r.probes.length));
     if (small.length) {
       const probes2 = small.flatMap(r => r.probes.map(q => Object.assign({}, q, { hit: false, run: r })));
       const groups2 = small.map(r => probes2.filter(q => q.run === r));
-      const t1 = Date.now(); Validator.run(lvl, { probes: probes2, dim: G.PLAYER_DIM.small, untilProbes: () => groups2.every(gr => gr.some(q => q.hit)) }); ms += Date.now() - t1;
+      const t1 = Date.now(); reachRun(lvl, { probes: probes2, dim: G.PLAYER_DIM.small, untilProbes: () => groups2.every(gr => gr.some(q => q.hit)) }); ms += Date.now() - t1;
       for (const q of probes2) if (q.hit) q.run.reach = true;
       for (const r of small) delete r.probes;
     }

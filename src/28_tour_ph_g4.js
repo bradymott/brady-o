@@ -30,6 +30,7 @@
      turn, one edge to the next, entered from any riding spot in reach
      of it at rest; a ferry is an edge from every riding spot in reach
      of its handle to its quay. All only while riding.
+   - PupoVal.probeRun: probes answered riding too (sbw_items_test)
    - the camera under a high Pupo object (s.camTop: a px row to keep on
      screen, s.camK of the view's height below its top edge, under the
      HUD) while Brady is within s.camX of it and no more than s.camD
@@ -251,6 +252,23 @@ if (typeof PupoVal !== 'undefined') {
     return D;
   };
 }
+
+// probes (tools/sbw_items_test.js asks whether Brady touches the spot under a box): the plain search, then, for what it
+// left unanswered, a riding search from every Nap Box it reached (a box past a Pupo obstacle is opened riding him)
+if (typeof PupoVal !== 'undefined') PupoVal.probeRun = function (level, opts) {
+  const boxes = this.boxes(level), bp = boxes.map(b => ({ ai: b.ai, x: (b.tx - 1) * TS, y: (b.ty - 1) * TS, w: 3 * TS, h: 3 * TS, hit: false }));
+  const until = opts.untilProbes, r = Validator.run(level, Object.assign({}, opts, { probes: opts.probes.concat(bp), untilProbes: until ? () => until() && bp.every(q => q.hit) : null }));
+  if (until ? until() : opts.probes.every(q => q.hit)) return r;
+  const D = this.derive(level);
+  for (let i = 0; i < boxes.length; i++) {
+    if (!bp[i].hit) continue;
+    const st = this.spotOf(level, boxes[i]); if (!st) continue;
+    PupoRide.simRide = true;
+    try { Validator.run(D, Object.assign({}, opts, { dim: this.DIM, start: st, earlyExit: false })); } finally { PupoRide.simRide = false; }
+    if (until ? until() : opts.probes.every(q => q.hit)) break;
+  }
+  return r;
+};
 
 /* ---------- the camera under a high Pupo object (s.camTop: a px row kept s.camK (0.2) of the view below its top, clear of the HUD; s.camX px) ---------- */
 if (typeof TourHooks !== 'undefined') TourHooks.on('camera', (play, dt) => {
