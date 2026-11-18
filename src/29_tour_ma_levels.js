@@ -472,6 +472,210 @@ const stamps = {
   }
 };
 
+/* ---------------- Pupo in Morocco (docs/design/PUPO.md §4.2, §4.3) ---------------- */
+const PP = {
+  // a Nap Box on the ground, o.back columns behind the cursor (under the argan tree just built), taking no room
+  napBox(st, o) {
+    const tx = st.x - (o.back || 0), ty = st.gy - 1 - (o.y || 0);
+    if (!o.back) st.floor(tx - 1, tx + 1);
+    st.B.set(tx, ty, T.QBLOCK); st.B.item(tx, ty, 'pupo'); st.B.spawn('napBox', tx, ty, {});
+    return o.back ? st.x : st.x + 2;
+  },
+  /* 5-4's Pupo obstacle, The Beam-End Ladder: the kasbah tower's smooth mud wall, the ends of its wooden floor beams
+     sticking out of it in a zig-zag (two rows up and four columns across each time) and the tower-room window at the
+     top on its little ledge. The mountain wind pours straight down the tower's face (a downdraft over the whole climb):
+     a jump, a spring sock or a puff of magic beans goes nowhere in it, but Pupo zips along his own arm from beam end to
+     beam end (Action), and the wind can't touch a zip. The kasbah goats watch from the ledge, unimpressed.
+     The tower itself is scenery (not solid): only the beam ends and the ledge stand, as one-way tops (a zip's straight
+     line up to the next beam end would clip a solid one's corner). { n: beam ends } */
+  beamTower(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, n = o.n || 5, c0 = x + 6, top = gy - 2 * (n + 1);
+    st.floor(x, x + 18);
+    st.sign(x + 1, 'THE MOUNTAIN WIND POURS DOWN THE TOWER: NO JUMPING UP IT! PUPO CAN ZIP UP THE BEAM ENDS (ACTION)');
+    const lx = c0 + (n % 2) * 4;
+    B.prop('maBeamTower', c0 - 2, top - 3, 11, gy - top + 3, 'none', { n, ledge: [lx * TS, top * TS, 5 * TS] });
+    for (let k = 0; k < n; k++) {
+      const bx = c0 + (k % 2) * 4, by = gy - 2 - 2 * k;
+      B.set(bx, by, T.SEMI); B.setHide(bx, by, 1);
+      B.spawn('pupoGrab', bx, by - 1, { kind: 'post', look: 'maBeamEnd', say: k === 0 ? '...UP... WE GO.' : null });
+    }
+    // the window ledge, its own beam end at the near corner (the last zip), the window and the goats at the far end
+    for (let q = 0; q < 5; q++) { B.set(lx + q, top, T.SEMI); B.setHide(lx + q, top, 1); }
+    B.spawn('pupoGrab', lx, top - 1, { kind: 'post', look: 'maBeamEnd' });
+    B.spawn('portal', lx + 2, top - 1, { kind: 'door', look: 'maTowerWindow', targetRef: o.to || null });
+    B.spawn('maWatchGoat', lx + 4, top - 1, { dir: -1, k: 0 });
+    // the downdraft: from above the ledge to the ground, over the whole face and two columns either side
+    B.zone(c0 - 3, top - 4, 12, gy - top + 4, 0, (o.wind || 150) * TS, 0, 'downdraft');
+    B.spawn('maDownWind', c0 - 3, gy - 1, { w: 12, h: gy - top + 4 });
+    // the kasbah's back yard past the tower (room for the camera to bring the ledge in from the screen's edge)
+    st.floor(c0 + 10, c0 + 19); st.decor('maJar', c0 + 13); st.decor('maJar', c0 + 16);
+    return c0 + 20;
+  },
+  /* 5-3's Pupo bonus (a helper level), by day: a washing line strung from a blue house's roof over the lane to a taller
+     house's roof terrace, with a 1-up waiting up there. The lane is too wide to jump and the terrace too high to reach
+     from the street; Pupo hangs from the line (Action) and shimmies across under the sheets. By night the washing is
+     taken in and the line is gone. { lane: the lane's width, g: the phase group } */
+  laundryTerrace(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, lane = o.lane || 10, g = o.g || 0;
+    const a0 = x + 1, a1 = a0 + 7, t0 = a1 + lane + 1, t1 = t0 + 6, roofA = gy - 5, roofT = gy - 7;
+    st.floor(x, t1 + 3);
+    // the first house: steps up its side to the roof (as blueHouse does)
+    for (let k = 0; k < 4; k++) B.fill(a0 + k, gy - 1 - k, a0 + k, gy - 1, T.BRICK);
+    B.fill(a0 + 4, roofA, a1, gy - 1, T.BRICK);
+    st.decor('maFlowerPots', a1 - 1, roofA);
+    // the tall house with its roof terrace, a little parapet, coins and the 1-up box; the lane runs on under it through
+    // a covered passage (as Chefchaouen's lanes do)
+    B.fill(t0, roofT, t1, gy - 4, T.BRICK);
+    B.prop('maPassage', t0, gy - 3, t1 - t0 + 1, 3, 'none', {});
+    B.set(t1, roofT - 1, T.BRICK);
+    st.decor('maFlowerPots', t0 + 1, roofT);
+    B.picksRow(t0 + 1, t1 - 1, roofT - 1);
+    st.block(t1 - 2, roofT - 3, 'oneup');
+    // the line: from over the first roof to over the terrace's near end (four rows over it: hanging, his feet are half
+    // a tile above the terrace, so he shimmies over it and drops on)
+    B.spawn('pupoBar', a1 - 2, roofT - 4, { w: t0 + 1 - (a1 - 2) + 1, look: 'maLaundryBar', need: { g, on: false }, cam: true, say: '...FRESH... SHEETS.', dropSay: '...OH. NIGHT.' });
+    st.sign(x, 'BY DAY A WASHING LINE HANGS OVER THE LANE. PUPO CAN HANG FROM IT (ACTION) AND SHIMMY ACROSS');
+    st.coins(a1 + 2, t0 - 2, gy - 3);
+    return t1 + 4;
+  }
+};
+for (const k in PP) Tour.pieces['ma.' + k] = PP[k];
+
+// 5-4: a kasbah goat watching from the tower-room ledge; Pupo arriving gets one flat "MEH."
+class MaWatchGoat extends Ent {
+  constructor(g, s) { super(g, s, 30, 26); this.x = s.x - 15; this.y = s.y - 26; this.dir = s.dir || -1; this.friendly = true; this.back = true; this.said = false; this.chew = 0; }
+  update(dt) {
+    this.t += dt; this.chew += dt;
+    if (this.said) return;
+    const g = this.g, p = g.player;
+    if (p && p.pupoRide && !p.dead && Math.abs(p.cx - this.cx) < 4 * TS && Math.abs(p.y + p.h - (this.y + this.h)) < TS) {
+      this.said = true; g.parts.text(this.cx, this.y - 12, 'MEH.', '#ffffff');
+      PupoRide.say(g, p.cx, p.y - 30, '...NICE... VIEW.');
+    }
+  }
+  draw(ctx) {
+    const x = this.cx, y = this.y + this.h, d = this.dir, jaw = Math.sin(this.chew * 9) > 0.3 ? 1.5 : 0;
+    ctx.save(); ctx.translate(x, y); ctx.scale(d, 1); ctx.lineJoin = 'round';
+    // legs, body, head: a flat cream goat with a dark ink rim
+    ctx.fillStyle = INK; for (const lx of [-10, -4, 4, 9]) ctx.fillRect(lx - 2.5, -10, 5, 10);
+    ctx.fillStyle = '#d8ccb8'; for (const lx of [-10, -4, 4, 9]) ctx.fillRect(lx - 1.5, -9, 3, 9);
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(-1, -15, 15, 9.5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#f4ecdc'; ctx.beginPath(); ctx.ellipse(-1, -15, 13.4, 8, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c8a878'; ctx.beginPath(); ctx.ellipse(-6, -17, 5, 3, 0.3, 0, TAU); ctx.fill();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(13, -22, 7.6, 6.4, 0.35, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#f4ecdc'; ctx.beginPath(); ctx.ellipse(13, -22, 6, 4.9, 0.35, 0, TAU); ctx.fill();
+    // horns, a beard that wags as it chews, a bored half-lidded eye
+    ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(9, -28, 5, Math.PI * 0.9, Math.PI * 1.75); ctx.stroke();
+    ctx.strokeStyle = '#9a8a72'; ctx.lineWidth = 2.2; ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(15, -18); ctx.lineTo(17 + jaw, -10); ctx.lineTo(12, -17); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(14.5, -23.5, 2, 0, TAU); ctx.fill();
+    ctx.fillStyle = INK; ctx.fillRect(12.4, -25.6, 4.4, 2); ctx.beginPath(); ctx.arc(15, -23, 0.9, 0, TAU); ctx.fill();
+    ctx.restore(); ctx.lineCap = 'butt';
+  }
+}
+// 5-4: the downdraft over the tower's face: thin streaks of wind and grit racing down (cheap: lines from the clock)
+class MaDownWind extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 10) * TS, (s.h || 10) * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.back = true; this.friendly = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x0 = this.x, y0 = this.y, w = this.w, h = this.h, t = this.t;
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 16; k++) {
+      const sp = 260 + (k * 37) % 120, u = ((t * sp + k * 97) % (h + 60)) - 40, xx = x0 + 10 + ((k * 61) % (w - 20)), len = 26 + (k % 3) * 12;
+      ctx.strokeStyle = k % 4 ? 'rgba(255,255,255,0.5)' : 'rgba(255,232,190,0.7)'; ctx.lineWidth = k % 3 ? 2 : 3;
+      ctx.beginPath(); ctx.moveTo(xx, y0 + u); ctx.lineTo(xx - 3, y0 + u + len); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(200,140,90,0.75)';
+    for (let k = 0; k < 10; k++) { const u = ((t * (320 + k * 23) + k * 131) % h), xx = x0 + 6 + ((k * 89) % (w - 12)) + Math.sin(t * 3 + k) * 4; ctx.fillRect(xx, y0 + u, 2.5, 2.5); }
+    ctx.lineCap = 'butt';
+    // where the wind hits the ground it rolls out sideways in little dust puffs
+    ctx.fillStyle = '#ecc896';
+    for (let k = 0; k < 6; k++) {
+      const u = (t * 0.9 + k / 6) % 1, cx = x0 + w / 2 + (k % 2 ? 1 : -1) * (12 + u * w * 0.45), r = 5 + u * 9;
+      ctx.globalAlpha = 0.55 * (1 - u); ctx.beginPath(); ctx.ellipse(cx, y0 + h - r * 0.6, r, r * 0.6, 0, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+Object.assign(ENTITY_TYPES, { maWatchGoat: MaWatchGoat, maDownWind: MaDownWind });
+// 5-4: the kasbah tower behind the beam ends: rammed earth in warm bands, crenellated corners, slit windows, the
+// tower-room window up top (the portal draws its own frame); d.n beam ends
+Decor.maBeamTower = (ctx, x, y, t, th, d) => {
+  const w = d.w - 40, h = d.h, x0 = x - w / 2, top = y - h, inset = 9, edge = yy => inset * (y - yy) / (y - top - 24);
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x0 - 3, y); ctx.lineTo(x0 + inset - 2, top + 22); ctx.lineTo(x0 + w - inset + 2, top + 22); ctx.lineTo(x0 + w + 3, y); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#c8784a'; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + inset, top + 24); ctx.lineTo(x0 + w - inset, top + 24); ctx.lineTo(x0 + w, y); ctx.closePath(); ctx.fill();
+  // rammed-earth courses (darker bands following the taper) and a lighter sunny edge
+  ctx.fillStyle = '#b4683e'; for (let yy = y - 40; yy > top + 40; yy -= 44) { const e = edge(yy); ctx.fillRect(x0 + e, yy, w - 2 * e, 8); }
+  ctx.fillStyle = '#e09868'; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + inset, top + 24); ctx.lineTo(x0 + inset + 8, top + 24); ctx.lineTo(x0 + 8, y); ctx.closePath(); ctx.fill();
+  // the crenellated top: a band of carved diamonds, then corner merlons
+  ctx.fillStyle = INK; ctx.fillRect(x0 + 4, top + 2, w - 8, 26);
+  ctx.fillStyle = '#d88a58'; ctx.fillRect(x0 + 6, top + 4, w - 12, 22);
+  ctx.fillStyle = '#8a4a2a'; for (let xx = x0 + 18; xx < x0 + w - 14; xx += 22) { ctx.beginPath(); ctx.moveTo(xx, top + 8); ctx.lineTo(xx + 6, top + 15); ctx.lineTo(xx, top + 22); ctx.lineTo(xx - 6, top + 15); ctx.closePath(); ctx.fill(); }
+  for (const mx of [x0 + 4, x0 + w - 26]) { ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(mx, top + 4); ctx.lineTo(mx + 4, top - 22); ctx.lineTo(mx + 18, top - 22); ctx.lineTo(mx + 22, top + 4); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#d88a58'; ctx.beginPath(); ctx.moveTo(mx + 2, top + 2); ctx.lineTo(mx + 5.5, top - 20); ctx.lineTo(mx + 16.5, top - 20); ctx.lineTo(mx + 20, top + 2); ctx.closePath(); ctx.fill(); }
+  // two slit windows between the beam ends
+  ctx.fillStyle = '#3a2018'; for (let k = 0; k < 2; k++) { rr(ctx, x - 3, y - 110 - k * 128, 6, 22, 3); ctx.fill(); }
+  // the window ledge: a cedar balcony on two brackets (its tiles are the standing part)
+  if (d.ledge) {
+    const [lx, ly, lw] = d.ledge;
+    ctx.fillStyle = INK; rr(ctx, lx - 3, ly - 3, lw + 6, 16, 4); ctx.fill();
+    ctx.fillStyle = '#9a6a3a'; rr(ctx, lx, ly, lw, 11, 3); ctx.fill(); ctx.fillStyle = '#b8844a'; ctx.fillRect(lx, ly, lw, 3);
+    for (const bx of [lx + 18, lx + lw - 22]) { ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(bx - 6, ly + 10); ctx.lineTo(bx + 6, ly + 10); ctx.lineTo(bx - 6, ly + 30); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#7a5030'; ctx.beginPath(); ctx.moveTo(bx - 4, ly + 11); ctx.lineTo(bx + 3, ly + 11); ctx.lineTo(bx - 4, ly + 25); ctx.closePath(); ctx.fill(); }
+  }
+};
+// 5-3: the covered passage under the tall house: a shady horseshoe arch over the lane
+Decor.maPassage = (ctx, x, y, t, th, d) => {
+  const w = d.w, h = d.h, x0 = x - w / 2;
+  ctx.fillStyle = '#2a4a7a'; ctx.beginPath(); ctx.moveTo(x0 + 4, y); ctx.lineTo(x0 + 4, y - h + 30); ctx.quadraticCurveTo(x0 + 4, y - h + 2, x, y - h + 2); ctx.quadraticCurveTo(x0 + w - 4, y - h + 2, x0 + w - 4, y - h + 30); ctx.lineTo(x0 + w - 4, y); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#3a6aa8'; ctx.fillRect(x0 + 4, y - 10, w - 8, 10);
+  ctx.strokeStyle = '#e8f0ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0 + 4, y); ctx.lineTo(x0 + 4, y - h + 30); ctx.quadraticCurveTo(x0 + 4, y - h + 2, x, y - h + 2); ctx.quadraticCurveTo(x0 + w - 4, y - h + 2, x0 + w - 4, y - h + 30); ctx.lineTo(x0 + w - 4, y); ctx.stroke();
+};
+const pupoSkins = {
+  // 5-4: a beam end (a pupoGrab post look): a squared cedar log end out of the wall, end grain rings, the brass ring on top
+  maBeamEnd(ctx, e, t) {
+    const x = e.hx, y = e.standY;
+    ctx.fillStyle = INK; rr(ctx, x - 17, y - 2, 34, TS - 2, 5); ctx.fill();
+    ctx.fillStyle = '#8a5a32'; rr(ctx, x - 15, y, 30, TS - 6, 4); ctx.fill();
+    ctx.fillStyle = '#a8743e'; ctx.fillRect(x - 15, y, 30, 5);
+    ctx.strokeStyle = '#5a3a1e'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(x, y + 13, 8, 6, 0, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x, y + 13, 3.5, 2.6, 0, 0, TAU); ctx.stroke();
+    pupoRing(ctx, x, y - 6, 4.5);
+  },
+  // 5-4: the tower-room window (a portal look): a horseshoe-arched opening with open cedar shutters and lamplight inside
+  maTowerWindow(ctx, e, t) {
+    const x = e.cx, y = e.y + e.h, w = 34, h = 50;
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x - w / 2 - 3, y); ctx.lineTo(x - w / 2 - 3, y - h + 14); ctx.arc(x, y - h + 14, w / 2 + 3, Math.PI, 0); ctx.lineTo(x + w / 2 + 3, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd890'; ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.lineTo(x - w / 2, y - h + 14); ctx.arc(x, y - h + 14, w / 2, Math.PI, 0); ctx.lineTo(x + w / 2, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffb860'; ctx.fillRect(x - w / 2, y - 16, w, 16);
+    for (const s of [-1, 1]) { ctx.fillStyle = INK; ctx.fillRect(x + s * (w / 2 + 2) - (s < 0 ? 14 : 0), y - h + 8, 14, h - 8); ctx.fillStyle = '#6a8a4a'; ctx.fillRect(x + s * (w / 2 + 3) - (s < 0 ? 12 : 0), y - h + 10, 12, h - 12); ctx.fillStyle = '#4a6a34'; for (let yy = y - h + 16; yy < y - 4; yy += 8) ctx.fillRect(x + s * (w / 2 + 3) - (s < 0 ? 12 : 0), yy, 12, 2); }
+    // a brass lantern hanging inside
+    const ly = y - h + 22 + Math.sin(t * 1.6) * 1.2; ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, y - h + 4); ctx.lineTo(x, ly - 7); ctx.stroke();
+    ctx.fillStyle = '#c8a03a'; ctx.beginPath(); ctx.moveTo(x - 5, ly - 7); ctx.lineTo(x + 5, ly - 7); ctx.lineTo(x + 6, ly + 2); ctx.lineTo(x, ly + 7); ctx.lineTo(x - 6, ly + 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff4c0'; ctx.fillRect(x - 2, ly - 4, 4, 5);
+  },
+  // 5-3: the washing line over the lane (a pupoBar look): poles on the roofs, the line, sheets and socks pegged on it;
+  // by night only the poles are left
+  maLaundryBar(ctx, e, t) {
+    const x0 = e.x + 4, x1 = e.x + e.w - 4, y = e.y, k = e.lk = approach(e.lk == null ? 1 : e.lk, e.up ? 1 : 0, 1 / 30);
+    ctx.fillStyle = INK; ctx.fillRect(x0 - 4, y - 8, 8, 4 * TS - 12); ctx.fillRect(x1 - 4, y - 8, 8, 3 * TS + 4);
+    ctx.fillStyle = '#7a5a3a'; ctx.fillRect(x0 - 2, y - 6, 4, 4 * TS - 16); ctx.fillRect(x1 - 2, y - 6, 4, 3 * TS);
+    if (k < 0.05) return;
+    ctx.save(); if (k < 1) ctx.globalAlpha = k;
+    const mid = (x0 + x1) / 2;
+    ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x0, y); ctx.quadraticCurveTo(mid, y + 6, x1, y); ctx.stroke();
+    ctx.strokeStyle = '#f4f0e6'; ctx.lineWidth = 2; ctx.stroke();
+    const cols = ['#e8503a', '#ffffff', '#f0c040', '#3aa86a', '#e86aa8', '#4a86d0'];
+    for (let q = 0, xx = x0 + 10; xx < x1 - 22; xx += 34, q++) {
+      const u = (xx - x0) / (x1 - x0), sag = 4 * u * (1 - u) * 6, sw = Math.sin(t * 2 + q) * 2, wide = q % 3 === 1;
+      const cw = wide ? 22 : 12, ch = wide ? 18 : 14;
+      ctx.fillStyle = INK; rr(ctx, xx - 1.5, y + sag - 1.5, cw + 3, ch + 3, 3); ctx.fill();
+      ctx.fillStyle = cols[q % cols.length]; ctx.beginPath(); ctx.moveTo(xx, y + sag); ctx.lineTo(xx + cw, y + sag); ctx.lineTo(xx + cw - 1 + sw, y + sag + ch); ctx.lineTo(xx + 1 + sw, y + sag + ch); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#c8c0b0'; ctx.fillRect(xx + 2, y + sag - 3, 2, 5); ctx.fillRect(xx + cw - 4, y + sag - 3, 2, 5);
+    }
+    ctx.restore();
+    pupoRing(ctx, x0 + 14, y + 1, 4.2); pupoRing(ctx, x1 - 14, y + 1, 4.2);
+  }
+};
+Tour.amend('ma', { skins: pupoSkins });
+
 Tour.amend('ma', {
   stamps, skins: soukSkins,
   levels: [
@@ -541,7 +745,7 @@ Tour.amend('ma', {
       ] },
 
     /* 5-3 PHASE: the sun-moon lantern turns the blue medina from day to night and back */
-    { n: 3, name: 'Chefchaouen Blue', mapLabel: 'Blue City', arch: 'phase', theme: 'ma_azul',
+    { n: 3, name: 'Chefchaouen Blue', mapLabel: 'Blue City', arch: 'phase', theme: 'ma_azul', pupo: 'helper',   // Pupo's Nap Box by the first blue stair, the washing line to the roof terrace
       gimmick: 'Strike the sun-moon lantern: by day laundry lines and napping cats, by night lantern strings, prowling cats and snails',
       hint: 'Press UP at a sun-moon lantern to flip day and night (you can do it in mid-air)',
       postcard: 'Everything here is blue, even the stairs. At night the cats run the town. ♥ C',
@@ -552,11 +756,15 @@ Tour.amend('ma', {
         secret: { to: 'house:ma-bazar', hint: 'At night a lantern hangs over a door painted the colour of the wall...' }
       },
       areas: [
-        { id: 'medina', gen: 'strip', W: 200, H: 22, phase: { night: 'ma_azul_night' }, script: [
+        { id: 'medina', gen: 'strip', W: 222, H: 24, GY: 16, gyMax: 16, phase: { night: 'ma_azul_night' }, script: [   // two more rows of sky (the roof terrace stays clear of the HUD)
           // ① day: blue stairs, laundry lines, napping cats
           ['itemBlock', { item: 'power', y: 4 }],
           ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
+          // Pupo (a helper here, PUPO.md §4.3): his Nap Box at the foot of the first blue stair; his bonus is the roof
+          // terrace across the lane, reached by day along the washing line
+          ['napBox', {}],
           ['blueHouse', { w: 8, h: 5, gold: 'must' }],
+          ['laundryTerrace', { lane: 10 }],
           ['enemies', { kind: 'maCat', n: 1 }],
           ['lines', { n: 6 }],
           ['blueHouse', { w: 6, h: 3 }],
@@ -585,7 +793,7 @@ Tour.amend('ma', {
       ] },
 
     /* 5-4 FORT: kasbah walls, the tower room's chain and lids, the Brass Owl */
-    { n: 4, name: 'Kasbah of the Brass Owl', mapLabel: 'Kasbah', arch: 'fort', theme: 'ma_atlas', boss: 'ma_owl', mid: true,
+    { n: 4, name: 'Kasbah of the Brass Owl', mapLabel: 'Kasbah', arch: 'fort', theme: 'ma_atlas', boss: 'ma_owl', mid: true, pupo: 'level',   // Morocco's Pupo level: The Beam-End Ladder
       gimmick: 'Kasbah walls and a tree full of goats, a tower of chains and tagine lids, then Piwi\'s clockwork owl',
       hint: 'Pull a chain while the Brass Owl looks the other way: the lid drops on it',
       postcard: 'A brass owl guarded the kasbah. It fell apart into teaspoons! We kept one. ♥ C',
@@ -593,17 +801,25 @@ Tour.amend('ma', {
       mapCell: [2, 1], mapFrom: [2, 5],
       exits: { main: { to: '5-5' } },
       areas: [
-        { id: 'kasbah', gen: 'strip', W: 80, H: 20, script: [
+        // five more rows of sky over the kasbah (the tower climbs to row 7, clear of the HUD); gyMax keeps the steps where they were
+        { id: 'kasbah', gen: 'strip', W: 120, H: 24, GY: 19, gyMax: 19, gyMin: 12, script: [
           ['portcullis', { title: 'KASBAH OF THE BRASS OWL' }],
           ['itemBlock', { item: 'power', y: 4 }],
           ['kasbahWall', { n: 3, enemy: 'maFennec' }],
           ['arganTree', { gold: 'must' }],
+          ['napBox', { back: 4 }],   // Pupo's Nap Box under the argan tree (PUPO.md §4.2); he waits at the owl arena door
           ['kasbahWall', { n: 2 }],
           ['step', { h: 3 }],
           ['secretDoor', { to: 'loft@in', look: 'fake', back: 'loftBack' }],
           ['step', { h: -3 }],
+          'cp',
+          ['napBox', {}],   // the backup Nap Box at the checkpoint (the near side of the ladder)
           ['enemies', { kind: 'maGoat', n: 1 }],
-          ['door', { to: 'tower@in', look: 'maKasbahDoor', perch: 0 }]
+          ['kasbahWall', { n: 3, enemy: 'maFennec' }],
+          ['arganTree', { goats: false }],
+          ['kasbahWall', { n: 2 }],
+          // Pupo's obstacle, The Beam-End Ladder: up the tower's beam ends to the tower-room window, in a downdraft
+          ['beamTower', { n: 5, to: 'tower@in' }]
         ] },
         { id: 'tower', gen: 'room', role: 'sub', theme: 'ma_atlas', stamp: 'owlTower' },
         { id: 'owl', gen: 'arena', role: 'arena', layout: 'owl', arenaW: 24, H: 16, theme: 'ma_atlas' },

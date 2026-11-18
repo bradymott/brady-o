@@ -607,9 +607,10 @@ const stamps = {
       [8, 18, 'n'], [3, 18, '@'], [11, 18, 'D'], [13, 18, 'a'], [21, 18, 'K'], [31, 18, 'l'],
       [34, 18, 'D'], [36, 18, 'r'], [44, 18, 'D'], [46, 18, 'f'], [48, 18, 'l'],
       [52, 18, '1'], [54, 18, '2'], [56, 18, '3'], [54, 13, 'm'], [60, 18, 'G'],
-      [27, 9, 'e']
+      [27, 9, 'e'], [16, 18, 'x']
     ], { open: true }),
     legend: {
+      x: ['piece', 'napBox', {}],   // Pupo's Nap Box in the plaza (PUPO.md §4.3); his bonus is past the bakery's back door
       n: ['spawn', 'sign', { text: 'THREE DELIVERIES OPEN THE POST OFFICE: BREAD, A LETTER, A CRÊPE' }],
       a: ['anchor', 'bakeBack'], r: ['anchor', 'roofBack'], f: ['anchor', 'cafeBack'],
       K: ['piece', 'skinDoor', { to: 'quai@in', look: 'fake', skin: 'frTornPoster', back: 'quaiBack' }],
@@ -765,7 +766,7 @@ const stamps = {
 /* ---------------- the levels ---------------- */
 const levels = [
   // 7-1 HUB (errand): the plaza and its three rounds
-  { n: 1, name: 'Paris Morning Rounds', mapLabel: 'Paris', arch: 'hub', theme: 'fr_place',
+  { n: 1, name: 'Paris Morning Rounds', mapLabel: 'Paris', arch: 'hub', theme: 'fr_place', pupo: 'helper',   // Pupo's Nap Box in the plaza, the baguette hooks over the bakery's ovens
     gimmick: 'Three errands from the plaza: bread from the bakery, a letter over the rooftops, a crêpe from the café',
     hint: 'Each door leads to an errand. Bring all three deliveries back to the post office',
     postcard: 'Bonjour from Paris! Three errands before breakfast: the baker, the roofer and the crêpe café. ♥ C',
@@ -784,7 +785,8 @@ const levels = [
           'croissants',
           ['enemies', { kind: 'frBaguette', n: 1, len: 8 }],
           ['delivery', { id: 'd1', item: 'bread' }],
-          ['door', { to: 'place@bakeBack', perch: 0, look: 'frShopDoor' }]
+          ['door', { to: 'place@bakeBack', perch: 0, look: 'frShopDoor' }],
+          ['ovenHooks', { w: 11 }]   // Pupo's bonus past the back door: baguette hooks over the ovens to the cooling rack
         ] },
       { id: 'toits', gen: 'strip', role: 'sub', theme: 'fr_toits', W: 86, H: 20,
         enemies: [['frCat', 1], ['frPigeon', 1]],
@@ -803,7 +805,7 @@ const levels = [
         doors: { title: 'THE BOOKSTALL CUPBOARDS', rule: 'THE BOOKSELLERS\' GREEN BOXES ARE ALL DOORS. WHICH ONE GOES WHERE?', joke: 'A CUPBOARD OF UNSOLD POETRY. NOTHING ELSE.' } }
     ] },
   // 7-2 THIEF: the magpie and the stamps, across Provence
-  { n: 2, name: 'Lavender Magpie', mapLabel: 'Lavender', arch: 'thief', theme: 'fr_provence',
+  { n: 2, name: 'Lavender Magpie', mapLabel: 'Lavender', arch: 'thief', theme: 'fr_provence', pupo: 'level',   // France's Pupo level: The Dovecote
     gimmick: 'A magpie snatches the passport stamps: chase it through lavender rows, sunflowers and a sleepy farmyard',
     hint: 'Stomp the magpie when you catch up: three catches win the stamps back. Walk softly past sleeping boars',
     postcard: 'Provence smells like a giant bar of lavender soap. A magpie stole my passport stamps! ♥ C',
@@ -823,14 +825,17 @@ const levels = [
           ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), early in the land (Brady's request)
           ['sunflowers', { n: 4, gold: 'must' }],
           ['gearStand', { item: 'kazoo' }],
+          ['pupoBox', {}],   // Pupo's Nap Box at the farmhouse yard (PUPO.md §4.2): he rides the chase with Brady
           ['farmyard', { boars: 2 }],
           ['skinDoor', { to: 'mas@in', look: 'fake', skin: 'frMasWall', back: 'masBack' }],
           ['thiefStop', { n: 2 }],
           'cp',
+          ['pupoBox', {}],   // the backup Nap Box at the distillery checkpoint (the near side of the dovecote)
           ['enemies', { kind: 'frSnail', n: 2, len: 10 }],
           ['distillery', { gold: 'high' }],
           ['farmyard', { boars: 1 }],
-          ['thiefStop', { n: 3, lock: true }],
+          // Pupo's obstacle, The Dovecote (PUPO.md §4.2): the third catch, the magpie hiding in the pigeon tower
+          ['dovecote', {}],
           ['gate', { exit: 'main' }]
         ] },
       { id: 'mas', gen: 'room', role: 'secret', stamp: 'mas', room: 'fetch',
@@ -1018,6 +1023,195 @@ const levels = [
         ] }
     ] }
 ];
+
+/* ---------------- Pupo in France (docs/design/PUPO.md §4.2, §4.3) ---------------- */
+Object.assign(P, {
+  // a Nap Box on its own bit of ground (not 'napBox': the stamps use the shared piece of that name)
+  pupoBox(st, o) { const tx = st.x + 1; st.floor(st.x, st.x + 2); st.B.set(tx, st.gy - 1, T.QBLOCK); st.B.item(tx, st.gy - 1, 'pupo'); st.B.spawn('napBox', tx, st.gy - 1, {}); return st.x + 3; },
+  /* 7-2's Pupo obstacle, The Dovecote (the magpie's third stop, in place of thiefStop 3): a tall Provençal pigeon
+     tower on an arch over the lane, two nesting holes up each face, 5-6 tiles over the ground. The magpie flies up on
+     to its roof and dives in, then peeks out of a different hole every two seconds (the pigeons in the others are not
+     pleased). No stomp, kazoo or throw reaches it in there; from the stone ledges either side of the tower, Pupo
+     pokes into the right hole (Action) and out it tumbles with the last stamp. The gate's shutter opens on stamp 3,
+     as before. The level checker holds stamp 3 at any riding spot with a hole in poke reach and in sight. */
+  dovecote(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, t0 = x + 8, t1 = t0 + 3, top = gy - 10, lx = x + 21;
+    st.floor(x, lx + 2);
+    st.sign(x + 1, 'THE MAGPIE HID IN THE DOVECOTE! IT PEEKS OUT OF A DIFFERENT HOLE EVERY 2 SECONDS. PUPO CAN POKE IT OUT (ACTION)');
+    // the tower over its arch (the lane runs under it), the nesting holes cut into its two faces
+    for (let y = top; y <= gy - 4; y++) for (let xx = t0; xx <= t1; xx++) { B.set(xx, y, T.HARD); B.setHide(xx, y, 1); }
+    const holes = [];
+    for (const r of [gy - 6, gy - 7]) for (const c of [t0, t1]) { B.set(c, r, T.EMPTY); holes.push([c, r]); }
+    B.prop('frDovecote', t0, top, 4, gy - top, 'none', { holes: holes.map(([c, r]) => [c * TS + TS / 2 + (c === t0 ? -4 : 4), r * TS + TS / 2]) });
+    // the stone ledges either side, three rows up (from them the holes are in poke reach)
+    for (let q = 1; q <= 4; q++) { B.set(t0 - q, gy - 3, T.SEMI); B.set(t1 + q, gy - 3, T.SEMI); }
+    B.decorAt('frLavenderBush', t0 - 6, gy, 1); B.decorAt('frLavenderBush', t1 + 6, gy, 2);
+    // the magpie's third stop: the tower's roof; the dovecote hides it there and runs the peeking
+    B.route.push([t0 + 1, top - 1, 3]);
+    const pts = holes.map(([c, r]) => [c * TS + TS / 2, r * TS + TS / 2]);
+    B.spawn('frDovecote', t0, gy - 4, { holes, pokeKey: 'stamp3', pokeAt: pts, period: o.period || 2 });
+    // the gate's shutter (as thiefStop { lock } built it)
+    tourShutterLock(B, lx, gy - 3, gy - 1, 'stamp3', o.lockLook);
+    B.fill(lx, Math.max(0, gy - 9), lx, gy - 4, T.HARD);
+    return lx + 3;
+  },
+  /* 7-1's Pupo bonus (a helper level), past the bakery's back door: the bread ovens in a trench of hot coals, eleven
+     tiles across under a brick vault, the baker's baguettes stuck up in the vault like hooks. Brady can't jump it (the
+     vault cuts his jump short); Pupo swings baguette to baguette (Action at each) and lets go (Jump) on to the cooling
+     rack, where the coins are. { w: the trench's width } */
+  ovenHooks(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, w = o.w || 11, x0 = x + 4, x1 = x0 + w - 1, bot = B.H - 1, vault = gy - 6;
+    st.floor(x, x0 - 1);
+    st.sign(x + 1, 'HOT OVENS! THE BAKER STUCK HIS BAGUETTES UP IN THE VAULT: PUPO CAN SWING ON THEM (ACTION) TO THE COOLING RACK');
+    // the trench: one row deep, then hot coals all the way down
+    for (let xx = x0; xx <= x1; xx++) { B.set(xx, gy, T.EMPTY); for (let y = gy + 1; y <= bot; y++) B.set(xx, y, T.LAVA); }
+    for (let xx = x0 - 1; xx <= x1 + 6; xx++) { B.set(xx, vault, T.HARD); B.setHide(xx, vault, 1); }
+    B.prop('frOvenVault', x0 - 1, vault, w + 8, bot - vault + 1, 'none', { trench: [x0 * TS, (x1 + 1) * TS, gy * TS] });
+    for (let k = 0; k < 3; k++) B.spawn('pupoGrab', x0 + 1 + k * 4, vault + 1, { kind: 'hook', look: 'frBaguetteHook', cam: 1.6, say: k === 0 ? '...CRUSTY.' : null });
+    // the cooling rack on the far side, its coins, the bakery's end wall
+    st.floor(x1 + 1, x1 + 6);
+    B.picksRow(x1 + 2, x1 + 5, gy - 1); B.picksRow(x1 + 2, x1 + 5, gy - 2);
+    B.decorAt('frCoolingRack', x1 + 4, gy, 0);
+    for (let y = vault; y < gy; y++) B.set(x1 + 7, y, T.HARD);
+    return x1 + 8;
+  }
+});
+
+// 7-2: the dovecote's peeking: once the magpie has flown up on to the roof (its third stop) it dives in and is out of
+// sight (TourThief.dove: no stomp, kazoo or throw); it then peeks out of one hole after another, two seconds each.
+// While it peeks, that hole is a tickle-style poke target (pupoTickle: awake is false only then); a poke there catches
+// it (the thief's own catchIt: stamp 3, the gate opens, it flies off); a poke into an empty hole gets "...not... there."
+const FR_DOVE_ORDER = [0, 3, 2, 1, 2, 0, 3, 1];
+class FrDovecote extends Ent {
+  constructor(g, s) {
+    super(g, s, 4 * TS, 4 * TS); this.x = s.x - TS / 2; this.y = s.y - 6 * TS; this.friendly = true; this.pupoTickle = true; this.noShadow = true;
+    this.holes = (s.holes || []).map(([c, r]) => ({ x: c * TS + TS / 2, y: r * TS + TS / 2, side: 0 }));
+    const mid = this.x + 2 * TS; for (const h of this.holes) h.side = h.x < mid ? -1 : 1;
+    this.period = s.period || 2; this.thief = null; this.dove = false; this.done = false; this.k = 0; this.cyc = 0; this.bx = 0; this.by = 0; this.no = 0; this.coo = 0;
+  }
+  get awake() { return this.done || !this.dove || !this.peeking; }
+  get peeking() { return this.dove && !this.done && this.cyc < this.period - 0.45; }
+  get cur() { return this.holes[this.order(this.k)]; }
+  // a fixed shuffle round the holes (left low, right high, left high, right low...), never the same hole twice running
+  order(k) { const n = this.holes.length; return n === 4 ? FR_DOVE_ORDER[k % 8] : n ? k % n : 0; }
+  update(dt) {
+    this.t += dt; if (this.no > 0) this.no -= dt; if (this.coo > 0) this.coo -= dt;
+    const g = this.g;
+    if (!this.thief) for (const e of g.entities) if (e instanceof TourThief) { this.thief = e; break; }
+    const th = this.thief; if (!th || this.done) return;
+    if (!this.dove && th.stop === 3 && !th.hop && !th.done && th.state === 'wait') {
+      this.dove = true; th.dove = true; th.noShadow = true; this.k = 0; this.cyc = 0;
+      g.parts.text(th.cx, th.y - 10, 'COO?!', '#ffffff'); g.burst(th.cx, th.y + 10, 10, '#f4f0ff', 'dust');
+    }
+    if (!this.dove) return;
+    this.cyc += dt;
+    if (this.cyc >= this.period) { this.cyc = 0; this.k++; }
+    const h = this.cur; if (h) { this.bx = h.x + h.side * 6; this.by = h.y; }
+  }
+  tickle(p, x, y) {
+    const g = this.g;
+    if (this.done || !this.dove) return;
+    if (this.peeking && Math.hypot(x - this.bx, y - this.by) < 20) {
+      const th = this.thief; this.done = true; th.dove = false; th.noShadow = false; th.x = this.bx - th.w / 2; th.y = this.by - th.h / 2;
+      g.parts.text(this.bx, this.by - 14, 'SQUAWK!', '#ffffff'); g.burst(this.bx, this.by, 14, '#18181e', 'dust');
+      th.catchIt();
+      PupoRide.say(g, p.cx, p.y - 18, '...NO... PUPO?');
+      return;
+    }
+    if (!(this.no > 0)) { this.no = 1.2; PupoRide.say(g, p.cx, p.y - 18, '...NOT... THERE.'); g.parts.text(x, y - 10, 'COO!', '#e8e4f0'); this.coo = 0.8; this.cooX = x; this.cooY = y; }
+  }
+  draw(ctx) {
+    const t = this.t;
+    // pigeons in the other holes: grey heads that bob in and out; the one just poked flaps its head indignantly
+    for (let i = 0; i < this.holes.length; i++) {
+      const h = this.holes[i], mag = this.peeking && h === this.cur;
+      if (mag) continue;
+      const out = Math.sin(t * 1.3 + i * 2.1) > 0.35 ? 1 : 0; if (!out) continue;
+      const x = h.x + h.side * 7, y = h.y + 6;
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x, y - 4, 7, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#a8a8b8'; ctx.beginPath(); ctx.arc(x, y - 4, 5.6, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#7ac8a0'; ctx.fillRect(x - 4, y, 8, 2);
+      ctx.fillStyle = '#e8a050'; ctx.beginPath(); ctx.moveTo(x + h.side * 5, y - 5); ctx.lineTo(x + h.side * 10, y - 3.5); ctx.lineTo(x + h.side * 5, y - 2); ctx.fill();
+      ctx.fillStyle = '#ff7a3a'; ctx.beginPath(); ctx.arc(x + h.side * 2.5, y - 6, 1.4, 0, TAU); ctx.fill();
+    }
+    if (!this.peeking) return;
+    // the magpie peeking: its black head and white cheek out of the hole, beak first, the last stamp in its beak
+    const h = this.cur, k = Math.min(1, this.cyc / 0.2), s = h.side, x = h.x + s * (2 + 8 * k), y = h.y + 2 + Math.sin(t * 6) * 1.2;
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, 1);
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(0, 0, 10, 9, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#18181e'; ctx.beginPath(); ctx.ellipse(0, 0, 8.6, 7.6, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#2a4a8a'; ctx.beginPath(); ctx.ellipse(-3, -4, 4, 2, -0.3, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(1, 3, 4.5, 3, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(6, -3); ctx.lineTo(16, 0); ctx.lineTo(6, 2.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd84a'; ctx.fillRect(12, -1, 7, 6); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(12, -1, 7, 6);
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(3, -3, 2, 0, TAU); ctx.fill(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(3.6, -3, 1, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.frDovecote = FrDovecote;
+Object.assign(Decor, {
+  // 7-2: the pigeon tower: pale stone with ochre render, a band of glazed tiles (to keep rats from climbing), a little
+  // stone lip under each hole, a lean-to roof of terracotta tiles, and the arch over the lane at its foot
+  frDovecote(ctx, x, y, t, th, d) {
+    const w = d.w, h = d.h, x0 = x - w / 2, top = y - h, arch = y - 3 * TS;
+    ctx.fillStyle = INK; ctx.fillRect(x0 - 3, top - 2, w + 6, h + 2);
+    ctx.fillStyle = '#e8d4b0'; ctx.fillRect(x0, top, w, h);
+    ctx.fillStyle = '#d8b888'; ctx.fillRect(x0 + w - 14, top, 14, h);
+    ctx.fillStyle = 'rgba(200,150,100,0.45)'; for (let k = 0; k < 9; k++) { ctx.beginPath(); ctx.ellipse(x0 + 14 + (k * 37) % (w - 28), top + 30 + (k * 53) % (h - 120), 9, 5, 0, 0, TAU); ctx.fill(); }
+    // the glazed-tile band (green and yellow), a third of the way up
+    const by = y - 4.6 * TS; ctx.fillStyle = INK; ctx.fillRect(x0 - 3, by - 2, w + 6, 14);
+    for (let k = 0; k < w / 10; k++) { ctx.fillStyle = k % 2 ? '#4a9a5a' : '#e8c03a'; ctx.fillRect(x0 + k * 10, by, 10, 10); }
+    // the nesting holes (d.holes: their centres): dark arched niches, a little stone lip under each
+    if (d.holes) for (const [hx, hy] of d.holes) {
+      ctx.fillStyle = INK; rr(ctx, hx - 13, hy - 14, 26, 28, 11); ctx.fill();
+      ctx.fillStyle = '#2a2026'; rr(ctx, hx - 10, hy - 11, 20, 24, 9); ctx.fill();
+      ctx.fillStyle = INK; ctx.fillRect(hx - 17, hy + 12, 34, 7); ctx.fillStyle = '#f0e2c4'; ctx.fillRect(hx - 15, hy + 13, 30, 4);
+    }
+    // the arch over the lane
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x0 + 8, y); ctx.lineTo(x0 + 8, arch + 30); ctx.quadraticCurveTo(x0 + 8, arch + 2, x, arch + 2); ctx.quadraticCurveTo(x0 + w - 8, arch + 2, x0 + w - 8, arch + 30); ctx.lineTo(x0 + w - 8, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5a4a3a'; ctx.beginPath(); ctx.moveTo(x0 + 11, y); ctx.lineTo(x0 + 11, arch + 31); ctx.quadraticCurveTo(x0 + 11, arch + 5, x, arch + 5); ctx.quadraticCurveTo(x0 + w - 11, arch + 5, x0 + w - 11, arch + 31); ctx.lineTo(x0 + w - 11, y); ctx.closePath(); ctx.fill();
+    // the lean-to roof: terracotta tiles sloping down to the right, a little weathervane
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x0 - 12, top + 6); ctx.lineTo(x0 - 6, top - 34); ctx.lineTo(x0 + w + 14, top - 8); ctx.lineTo(x0 + w + 14, top + 6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#c8603a'; ctx.beginPath(); ctx.moveTo(x0 - 9, top + 3); ctx.lineTo(x0 - 4, top - 30); ctx.lineTo(x0 + w + 11, top - 6); ctx.lineTo(x0 + w + 11, top + 3); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#a8442a'; ctx.lineWidth = 2; for (let k = 1; k < 8; k++) { const u = k / 8; ctx.beginPath(); ctx.moveTo(x0 - 6 + u * (w + 17), top - 30 + u * 24); ctx.lineTo(x0 - 6 + u * (w + 17), top + 3); ctx.stroke(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x0 + 6, top - 26); ctx.lineTo(x0 + 6, top - 52); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x0 + 6, top - 52); ctx.lineTo(x0 + 22, top - 47); ctx.lineTo(x0 + 6, top - 43); ctx.closePath(); ctx.fill();
+  },
+  // 7-1: the bread ovens' brick vault over the trench of hot coals, an oven mouth glowing in its back wall (d.trench)
+  frOvenVault(ctx, x, y, t, th, d) {
+    const w = d.w, x0 = x - w / 2, top = y - d.h, [tx0, tx1, ty] = d.trench;
+    ctx.fillStyle = '#5a3a2a'; ctx.fillRect(x0, top + TS, w, y - top - TS);
+    ctx.fillStyle = INK; ctx.fillRect(x0 - 2, top - 2, w + 4, TS + 4);
+    ctx.fillStyle = '#b8603a'; ctx.fillRect(x0, top, w, TS);
+    ctx.fillStyle = '#9a4a2a'; for (let k = 0; k < w / 24; k++) ctx.fillRect(x0 + k * 24 + ((k % 2) * 12), top + 14, 2, 18);
+    ctx.fillRect(x0, top + 14, w, 2);
+    // oven mouths in the back wall, glowing (a slow flicker, no flash)
+    for (let ox = tx0 + 40; ox < tx1 - 30; ox += 120) {
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(ox, ty - 6, 30, Math.PI, 0); ctx.lineTo(ox + 30, ty + 10); ctx.lineTo(ox - 30, ty + 10); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ff8a3a'; ctx.beginPath(); ctx.arc(ox, ty - 6, 25, Math.PI, 0); ctx.lineTo(ox + 25, ty + 8); ctx.lineTo(ox - 25, ty + 8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffe080'; ctx.globalAlpha = 0.8 + Math.sin(t * 3 + ox) * 0.2; ctx.beginPath(); ctx.ellipse(ox, ty + 2, 16, 6, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+    }
+  },
+  // 7-1: the cooling rack of fresh loaves on the far side
+  frCoolingRack(ctx, x, y) {
+    ctx.fillStyle = INK; ctx.fillRect(x - 34, y - 70, 4, 70); ctx.fillRect(x + 30, y - 70, 4, 70);
+    for (const sy of [y - 66, y - 44, y - 22]) { ctx.fillStyle = INK; ctx.fillRect(x - 36, sy, 72, 4); ctx.fillStyle = '#d89a4a'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(x - 20 + k * 20, sy - 5, 9, 5, 0, 0, TAU); ctx.fill(); } }
+  }
+});
+const pupoSkins = {
+  // 7-1: a baguette stuck up in the vault (a pupoGrab hook look): the loaf from the bricks down, the brass ring at its tip
+  frBaguetteHook(ctx, e, t) {
+    const x = e.hx, y = e.hy, sw = Math.sin(t * 1.2 + x) * 0.04;
+    ctx.save(); ctx.translate(x, y - 8); ctx.rotate(sw);
+    ctx.fillStyle = INK; rr(ctx, -7, -40, 14, 42, 7); ctx.fill();
+    ctx.fillStyle = '#d89a4a'; rr(ctx, -5.5, -38, 11, 39, 5.5); ctx.fill();
+    ctx.fillStyle = '#f0c27a'; ctx.fillRect(-4, -36, 3, 34);
+    ctx.strokeStyle = '#a86a2a'; ctx.lineWidth = 1.6; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-4, -32 + k * 9); ctx.lineTo(4, -28 + k * 9); ctx.stroke(); }
+    ctx.restore();
+    pupoRing(ctx, x, y, 5);
+  }
+};
+Tour.amend('fr', { skins: pupoSkins });
 
 Tour.amend('fr', {
   stamps, skins,

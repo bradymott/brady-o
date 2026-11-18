@@ -708,8 +708,8 @@ const enemies = {
   frPoele: { cls: modal(TourEnemy.make({ w: 26, h: 24, speed: 0.5, behavior: 'boomerang', out: 5, every: 2.4, art: poeleArt, projectileArt: flyingCrepeArt, burst: '#4a4a58',
     onDefeat: e => K.say(e.g, e, 'CLANG!', '#d8d8e8') }), { idle: 'idle', tell: 'throw', throw: 'throw' }), place: 'walk' },
   frPigeon: { cls: TourFlyer.make({ w: 24, h: 16, range: 3, speed: 1.1, swoop: true, art: pigeonArt }), place: 'fly' },
-  frPoodle: { cls: TourEnemy.make({ w: 24, h: 22, speed: 1.3, behavior: 'charge', range: 7, chargeSpeed: 6.5, art: poodleArt, onNotice: e => K.say(e.g, e, 'WOOF', '#ffffff') }), place: 'walk' },
-  frCat: { cls: TourEnemy.make({ w: 24, h: 16, speed: 1.2, behavior: 'charge', range: 6, chargeSpeed: 7.5, windup: 0.5, chargeT: 1, art: catArt, onNotice: e => K.say(e.g, e, 'MRRROW', '#c8ff6a') }), place: 'walk' },
+  frPoodle: { cls: TourEnemy.make({ belly: true, w: 24, h: 22, speed: 1.3, behavior: 'charge', range: 7, chargeSpeed: 6.5, art: poodleArt, onNotice: e => K.say(e.g, e, 'WOOF', '#ffffff') }), place: 'walk' },
+  frCat: { cls: TourEnemy.make({ belly: true, w: 24, h: 16, speed: 1.2, behavior: 'charge', range: 6, chargeSpeed: 7.5, windup: 0.5, chargeT: 1, art: catArt, onNotice: e => K.say(e.g, e, 'MRRROW', '#c8ff6a') }), place: 'walk' },
   frKeychain: { cls: TourEnemy.make({ w: 16, h: 36, speed: 1.4, behavior: 'hop', hopV: 8, hopEvery: 1.6, art: keychainArt, burst: '#c8a060' }), place: 'walk' },
   frAccordion: { cls: TourEnemy.make({ w: 26, h: 30, speed: 0.4, behavior: 'throw', every: 2.6, range: 11, art: accordionArt, shoot: (e, p) => {
     // a wheezy musical note that bobs through the air
@@ -719,11 +719,11 @@ const enemies = {
   // the rooster: Brady in its cone, it inhales (0.5 s) and crows: every sleeping boar nearby wakes up facing him
   frCoq: { cls: modal(TourEnemy.make({ w: 22, h: 30, speed: 0, behavior: 'alarmCaller', cone: 5, wake: 12, art: coqArt, burst: '#c8562a' }), { idle: 'walk', tell: 'notice', call: 'notice' }), place: 'walk' },
   // the wild boar: asleep (stomp it for double coins) until a noise or the rooster; awake it snorts and charges
-  frBoar: { cls: modal(TourEnemy.make({ w: 30, h: 22, speed: 0.9, behavior: 'sleeper', hear: 4, art: boarArt, burst: '#6a4430', think: boarThink }), { sleep: 'idle', wake: 'notice', awake: 'walk' }), place: 'walk' },
+  frBoar: { cls: modal(TourEnemy.make({ belly: true, w: 30, h: 22, speed: 0.9, behavior: 'sleeper', hear: 4, art: boarArt, burst: '#6a4430', think: boarThink }), { sleep: 'idle', wake: 'notice', awake: 'walk' }), place: 'walk' },
   // the snail: curls into its shell when Brady is in the air above it (stomps bounce); stomp it as it uncurls
   frSnail: { cls: modal(TourEnemy.make({ w: 24, h: 18, speed: 0.45, behavior: 'curlShield', curlT: 1.5, art: snailArt, burst: '#b8783a' }), { ball: 'curl', uncurl: 'stun' }), place: 'walk' },
   // the mole: a moving soil bump under Brady's feet; it pops up (tell 0.7 s), then sits stunned a moment
-  frMole: { cls: modal(TourEnemy.make({ w: 24, h: 22, speed: 1.2, behavior: 'burrower', art: moleArt, burst: '#5a4a48' }), { pop: 'walk', exposed: 'stun', dig: 'idle' }), place: 'walk' },
+  frMole: { cls: modal(TourEnemy.make({ belly: true, w: 24, h: 22, speed: 1.2, behavior: 'burrower', art: moleArt, burst: '#5a4a48' }), { pop: 'walk', exposed: 'stun', dig: 'idle' }), place: 'walk' },
   // the magpie: the stamp thief of 7-2 (TourThief draws it); as a plain enemy it is an item thief
   frMagpie: { cls: modal(TourEnemy.make({ w: 26, h: 20, speed: 1.4, behavior: 'itemThief', flee: 8, art: magpieArt, burst: '#18181e' }), { walk: 'fly', idle: 'fly', flee: 'fly', grab: 'swoop', notice: 'swoop' }), place: 'walk' },
   // the oyster: open 1.2 s (stomp it now), then it snaps shut (hurts if Brady is in it) and stays shut 0.6 s
