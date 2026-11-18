@@ -263,7 +263,7 @@ const ROUTES = [
     { face: -1 }, { grab: { left: true }, until: 'key("pearl")', max: 6, shotAt: { when: 'armOut', name: 'vn104-pearl-during' } },
     { wait: 0.5 },
     { check: 'said("SHINY")', name: 'the pearl through the grille: "...shiny... and wet."' },
-    { hold: { right: true }, until: 'x >= 23.5', max: 6 },
+    { run: 1, until: 'x >= 23.5 && ground', max: 6 },   // (hopping the chamber's own Nap Box on the way)
     { shot: 'vn104-pearl-after' },
     { hold: { jump: true }, press: 'jump', every: 1, until: 'ground && y <= 45.1', max: 3 },
     { check: 'ride && y <= 45.1', name: 'through the skylight gate and up through the rock shelf, riding' }

@@ -948,7 +948,7 @@ const levels = [
           // Pupo (PUPO.md §4.2): the backup Nap Box at the catapult checkpoint, then Thorny Rattan over the ravine
           ['napBox', {}],
           ['rattan', { w: 17, n: 5 }],
-          ['itemBlock', { item: 'lsd', y: 5 }],   // past the ravine (the acid trip's flight must not carry Brady over it)
+          ['itemBlock', { item: 'lsd', y: 4 }],   // past the ravine (the acid trip's flight must not carry Brady over it)
           // ③ hornbills dart across the swing chains
           ['lianas', { n: 3, hornbill: true, gold: 'risky' }],
           ['enemies', { kind: 'idMacaque', n: 1, len: 8 }],

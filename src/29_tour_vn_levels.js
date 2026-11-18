@@ -284,7 +284,9 @@ const PP = {
     B.fill(W - 2, F - 3, W - 2, F - 1, T.EMPTY);
     st.sign(9, 'THE SKYLIGHT GATE OPENS WITH THE CAVE PEARL. IT LIES IN THE POOL BEHIND THE RUSTY GRILLE: A LONG ARM COULD REACH IN', F);
     st.coins(8, g0 - 3, F - 2);
-    B.decorAt('vnFungi', 12, F, 5); B.decorAt('vnPearls', 17, F, 6);
+    // a Nap Box in the chamber too: Brady come up here on his own (Pupo left asleep below) gets him back by the grille
+    B.set(15, F - 1, T.QBLOCK); B.item(15, F - 1, 'pupo'); B.spawn('napBox', 15, F - 1, {});
+    B.decorAt('vnFungi', 12, F, 5); B.decorAt('vnPearls', 18, F, 6);
     st.top(C);
   },
   /* 10-6's Pupo bonus (a helper level): the canal lane. A lantern seller's house with steps up to its roof, then lantern
