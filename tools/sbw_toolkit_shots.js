@@ -39,6 +39,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       if (inp) for (const key in inp) I[key] = false;
     };
     window.S = () => window.BRADY.Game.scene; window.P = () => window.BRADY.Game.scene.player;
+    // is e of class `name` (or a subclass of it: other lands' files register subclasses, e.g. Lost & Found's Souvenir Stand)
+    window.isA = (e, name) => { for (let c = e && e.constructor; c && c.name; c = Object.getPrototypeOf(c)) if (c.name === name) return true; return false; };
     window.lab = (path, opts) => {
       const B = window.BRADY, T = window.BRADY_TOUR; let spec = window.SBW_LAB; for (const k of path.split('.')) spec = spec[k]; if (spec.spec) spec = spec.spec;
       const lvl = T.TourBuild.fromSpec(T.Tour.countries[spec.host || 'mx'], spec, 90);
@@ -187,7 +189,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const r = await page.evaluate(() => {
       const out = {};
       const go = n => { lab('objects.' + n); const g = S(), p = P(); for (const e of g.entities) if (e.enemy) e.remove = true; sim(0.05); return [g, p]; };
-      const ent = (g, name) => g.entities.find(e => e.constructor.name === name);
+      const ent = (g, name) => g.entities.find(e => isA(e, name));
       const to = (p, e, dx) => { p.x = e.cx + (dx || 0) - p.w / 2; p.y = e.y + e.h - p.h - 2; p.vx = p.vy = 0; sim(0.15); };
       { const [g, p] = go('keyLock'); const k = ent(g, 'Key'), L = ent(g, 'Lock'); to(p, k); sim(0.1); to(p, L, -30); sim(0.4, { right: true }); out.keyLock = { key: g.keys.has('k1'), open: L.open || L.remove }; }
       { const [g, p] = go('lever'); const lv = ent(g, 'TourLever'), sh = ent(g, 'TourShutter'); to(p, lv); sim(0.05, { actionPressed: true }); sim(0.5); out.lever = { pulled: lv.pulled, open: sh.open }; }
@@ -231,7 +233,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const r = await page.evaluate(() => {
       const out = {};
       const go = n => { lab('systems.' + n); const g = S(), p = P(); for (const e of g.entities) if (e.enemy && !e.constructor.name.startsWith('Tour') ) e.remove = true; sim(0.05); return [g, p]; };
-      const ent = (g, name) => g.entities.find(e => e.constructor.name === name);
+      const ent = (g, name) => g.entities.find(e => isA(e, name));
       const to = (p, e, dx) => { p.x = e.cx + (dx || 0) - p.w / 2; p.y = e.y + e.h - p.h - 2; p.vx = p.vy = 0; sim(0.15); };
       { const [g, p] = go('flip'); const fl = ent(g, 'TourFlipLine'); p.x = fl.x - 3 * 32; p.y = (g.area.H - 4) * 32 - p.h; let up = false, minY = 1e9; for (let k = 0; k < 120; k++) { sim(0.05, { right: true }); if (p.flipped) up = true; minY = Math.min(minY, p.y); } out.flip = { up, ceiling: Math.round(minY / 32), after: !p.flipped, alive: !p.dead, x: Math.round(p.cx / 32), end: Math.round((fl.x + fl.w) / 32) }; }
       { const [g, p] = go('lamp'); const L0 = g.collectLights(g.camX, g.camY)[0].r; sim(10); const L1 = g.collectLights(g.camX, g.camY)[0].r; const lp = ent(g, 'TourLampPost'); to(p, lp); sim(0.3); const L2 = g.collectLights(g.camX, g.camY)[0].r; out.lamp = { L0: Math.round(L0), L1: Math.round(L1), L2: Math.round(L2), dark: !!g.area.dark }; }
@@ -279,7 +281,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const pics = { flip: ['TourFlipLine', 4, 'flip'], lamp: ['TourLampPost', -60], phase: ['TourToggleSwitch', 40, 'night'], tide: [null, 0], chase: ['TourDoom', 0, 'chase'], carry: ['TourPedestal', -40, 'carry'], wheel: ['TourWheelHub', -40], seesaw: ['TourSeesaw', -70], balloon: ['TourBalloon', 0, 'ride'], mirrors: ['TourSunSource', 60, 'lit'], hold: ['TourHoldArena', 0, 'hold'], thief: ['TourThief', -60], rival: ['TourRival', -40], sneak: ['TourWatcher', -40], bottle: ['TourBottle', -60], shop: ['TourShop', 0], ball: ['TourBall', -50] };
     for (const [n, [cls, dx, how]] of Object.entries(pics)) {
       await page.evaluate(([n, cls, dx, how]) => {
-        lab('systems.' + n); const g = S(), p = P(); const e = cls ? g.entities.find(x => x.constructor.name === cls) : null;
+        lab('systems.' + n); const g = S(), p = P(); const e = cls ? g.entities.find(x => isA(x, cls)) : null;
         if (e && how !== 'chase') { p.x = e.cx + dx - p.w / 2; p.y = Math.min(e.y + e.h, (g.area.H - 3) * 32) - p.h - 2; }
         if (how === 'flip') { p.x = e.x + 5 * 32; p.y = 2 * 32; p.flipped = true; for (let k = 0; k < 30; k++) sim(0.03, { right: true }); }
         else if (how === 'night') { g.flipToggle(0); sim(0.6); }
@@ -313,10 +315,10 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const r2 = await page.evaluate(() => {
       const m = S(); m.update = m._u; sim(3); for (let k = 0; k < 40 && !m.ow.idle(); k++) sim(0.25); const T = window.BRADY_TOUR.TourProgress.data();
       const house = m.ow.by['house:mx-tienda'];
-      return { pending: T.pending.length, revealed: !!T.revealed['house:mx-tienda'], path: Object.keys(T.paths), house: !!(house && house.visible), reveal: !!m.reveal, at: m.ow.walker.at };
+      return { pending: T.pending.length, revealed: !!T.revealed['house:mx-tienda'], path: Object.keys(T.paths), standPath: 'mx:0>' + window.BRADY_TOUR.TourProgress.stopIndex(window.BRADY_TOUR.Tour.countries.mx, 'house:mx-tienda'), house: !!(house && house.visible), reveal: !!m.reveal, at: m.ow.walker.at };
     });
     check('map: clearing 1-1 by its secret exit queues a gold trail and the Souvenir Stand, played in the overworld', r1.rev.join() === 'path,house' && r1.reveal === 'path' && r1.mode === 'land', r1);
-    check('map: the reveal plays, is written to the save (paths, revealed), the stand stays on the map and Brady walks to it', r2.pending === 0 && r2.revealed && r2.path.some(k => k === 'mx:0>6') && r2.house && !r2.reveal && r2.at === 'house:mx-tienda', r2);
+    check('map: the reveal plays, is written to the save (paths, revealed), the stand stays on the map and Brady walks to it', r2.pending === 0 && r2.revealed && r2.path.some(k => k === r2.standPath) && r2.house && !r2.reveal && r2.at === 'house:mx-tienda', r2);
     // the joystick walks Brady down the trail to 1-1 and back up to the stand; a tap on the stop he stands on goes in
     const tapNode = key => page.evaluate(k => { const ow = S().ow, p = ow.nodeScreen(k); ow.testTaps = [{ x: p.x, y: p.y }]; sim(0.02); }, key);
     await page.evaluate(() => { sim(0.05, { down: true }); sim(3); });
@@ -329,9 +331,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const r3b = await page.evaluate(() => S().ow.walker.at);
     check('map: the joystick walks Brady along the trail to 1-1 and back up to the stand', r3.at11 === '1-1' && r3.walking && r3b === 'house:mx-tienda', Object.assign(r3, { at: r3b }));
     await tapNode('house:mx-tienda');
-    const r4 = await page.evaluate(() => { sim(0.8); const g = S(); const shop = g.entities && g.entities.find(e => e.constructor.name === 'TourShop'); return { scene: g.constructor.name, house: g.level && g.level.house, shop: !!shop, items: shop ? shop.items.map(i => i.kind + ':' + i.price) : null }; });
+    const r4 = await page.evaluate(() => { sim(0.8); const g = S(); const shop = g.entities && g.entities.find(e => isA(e, 'TourShop')); return { scene: g.constructor.name, house: g.level && g.level.house, shop: !!shop, items: shop ? shop.items.map(i => i.kind + ':' + i.price) : null }; });
     check('map: a tap on the stop he stands on opens the Souvenir Stand room with its counter', r4.scene === 'Play' && r4.house === 'mx-tienda' && r4.shop, r4);
-    await page.evaluate(() => { const g = S(); g.player.invuln = 0; const sh = g.entities.find(e => e.constructor.name === 'TourShop'); g.player.x = sh.cx - 40; sim(0.3); freeze(); });
+    await page.evaluate(() => { const g = S(); g.player.invuln = 0; const sh = g.entities.find(e => isA(e, 'TourShop')); g.player.x = sh.cx - 40; sim(0.3); freeze(); });
     await shot('map-house-room.png');
     const r5 = await page.evaluate(() => { const g = S(); g.update = g._upd; const gate = g.entities.find(e => e.constructor.name === 'Gate'); g.player.x = gate.cx - 10; g.player.y = gate.y + gate.h - g.player.h; sim(0.5); for (let k = 0; k < 40 && g.state !== 'results'; k++) sim(0.25, { jumpPressed: true }); const T = window.BRADY_TOUR.TourProgress.data(); return { state: g.state, visits: T.houses['mx-tienda'] || 0, done: Object.keys(window.BRADY.Save.data.done) }; });
     check('map: leaving the stand counts a visit and touches no level progress', r5.visits === 1 && r5.done.join() === '1-1', r5);
