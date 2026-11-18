@@ -1035,8 +1035,8 @@ const PJ = {
     B.fill(lx0, ly, lx1, ly, T.GROUND);
     B.decorAt('jpNoodleSign', W - 7, ly, 0);
     B.toggle(gi, [], [], { kind: 'gondola' });
-    // the camera keeps the sign, the onigiri and the gondola below the HUD while Brady is in this band
-    B.spawn('pupoHandle', W - 5, ly - 5, { g: gi, once: true, look: 'jpOnigiriPull', say: '...SNACK?', camTop: (ly - 5.5) * TS, camK: 0.12, camX: 30 * TS });
+    // the camera keeps the sign, the onigiri and the gondola below the HUD while Brady is up on the sign's ledge
+    B.spawn('pupoHandle', W - 5, ly - 5, { g: gi, once: true, look: 'jpOnigiriPull', say: '...SNACK?', camTop: (ly - 5.5) * TS, camK: 0.22, camD: 5, camX: 30 * TS });
     B.spawn('pupoGondola', 4, y0 - 8, { g: gi, drop: 7, coins: 10, look: 'jpCoinGondola', say: '...TIPS.' });
     for (let q = st.mid - 2; q < st.mid + 2; q++) B.set(q, y0 - 6, T.SEMI);
     st.coins(lx0 + 1, lx0 + 4, ly - 2);

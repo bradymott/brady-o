@@ -32,7 +32,8 @@
      of its handle to its quay. All only while riding.
    - the camera under a high Pupo object (s.camTop: a px row to keep on
      screen, s.camK of the view's height below its top edge, under the
-     HUD) while Brady is within s.camX of it (11-4's onigiri)
+     HUD) while Brady is within s.camX of it and no more than s.camD
+     rows below that row (11-4's onigiri, seen from its ledge)
    Nothing here allocates per frame.
    ============================================================ */
 const PupoG4 = {
@@ -259,7 +260,7 @@ if (typeof TourHooks !== 'undefined') TourHooks.on('camera', (play, dt) => {
     for (const e of A.entities) if (e.s && e.s.camTop != null) (A.g4Cam || (A.g4Cam = [])).push(e);
   }
   const L = A.g4Cam; let ay = null, kk = 0.2;
-  if (L) for (let i = 0; i < L.length; i++) { const e = L[i], s = e.s, x = s.x; if (Math.abs(p.cx - x) < (s.camX || 6 * TS) && p.y > s.camTop - 2 * TS && p.y < s.camTop + 12 * TS && (!s.camRide || p.pupoRide)) { ay = s.camTop; if (s.camK != null) kk = s.camK; break; } }
+  if (L) for (let i = 0; i < L.length; i++) { const e = L[i], s = e.s, x = s.x; if (Math.abs(p.cx - x) < (s.camX || 6 * TS) && p.y > s.camTop - 2 * TS && p.y < s.camTop + (s.camD || 12) * TS && (!s.camRide || p.pupoRide)) { ay = s.camTop; if (s.camK != null) kk = s.camK; break; } }
   if (ay == null) { play.g4CamLim = null; return; }
   const ty = clamp(ay - Game.viewH * kk, 0, Math.max(0, A.H * TS - Game.viewH));
   let lim = play.g4CamLim == null ? Math.max(play.camY, ty) : play.g4CamLim;

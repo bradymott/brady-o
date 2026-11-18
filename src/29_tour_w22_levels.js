@@ -484,7 +484,7 @@ Object.assign(P, {
     B.zone(i0, gy - 6, iw, 6, 0, (o.wind || 150) * TS, 0, 'downdraft');
     B.spawn('w22TimeFall', i0, gy - 1, { w: iw, h: 6 });
     // the clock and its minute hand (the hand is the moving hook), stuck at 2:22
-    B.spawn('pupoGrab', cxT, gy - 8, { kind: 'hook', look: 'w22ClockHand', say: '...2:22.',
+    B.spawn('pupoGrab', cxT, gy - 8, { kind: 'hook', look: 'w22ClockHand', say: '...2:22.', ledge: [(wr - 3) * TS, wr * TS, top * TS],
       clock: { r: 3, from: 22, to: 60, crawl: 7, back: 2.2, say: '...TIME... FLIES.' } });
     st.coins(i0 + 1, i0 + 2, gy - 2);
     st.coins(wr + 1, wr + 4, top - 2);
@@ -540,10 +540,10 @@ Object.assign(skins, {
     }
     ctx.fillStyle = '#1c1426'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('12', cx, cy - R + 30); ctx.fillText('3', cx + R - 28, cy); ctx.fillText('6', cx, cy + R - 28); ctx.fillText('9', cx - R + 28, cy);
-    // the 2:22 plate, lit while the hand rests there
+    // the 2:22 plate, lit while the hand rests there (low on the face, where it shows from the tower floor)
     const rest = m < 23;
-    ctx.fillStyle = '#1c1426'; rr(ctx, cx - 26, cy + 26, 52, 20, 5); ctx.fill();
-    ctx.fillStyle = rest ? '#ffd84a' : '#5a4a3a'; ctx.font = 'bold 15px sans-serif'; ctx.fillText(W22_MIN[Math.min(60, Math.floor(m))], cx, cy + 36.5);
+    ctx.fillStyle = '#1c1426'; rr(ctx, cx - 28, cy + 50, 56, 22, 5); ctx.fill();
+    ctx.fillStyle = rest ? '#ffd84a' : '#8a7a5a'; ctx.font = 'bold 16px sans-serif'; ctx.fillText(W22_MIN[Math.min(60, Math.floor(m))], cx, cy + 61.5);
     // the hour hand, stuck on 2
     const ha = (2 + m / 60) / 12 * TAU;
     pupoLine(ctx, cx, cy, cx + Math.sin(ha) * R * 0.5, cy - Math.cos(ha) * R * 0.5, 7, '#3a2a4a');
@@ -551,6 +551,15 @@ Object.assign(skins, {
     pupoLine(ctx, cx - (e.hx - cx) * 0.18, cy - (e.hy - cy) * 0.18, e.hx, e.hy, 6, '#c8902a');
     ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(cx, cy, 5, 0, TAU); ctx.fill();
     pupoRing(ctx, e.hx, e.hy, 6.5);
+    // the balcony at the top of the tower, in front of the face (its tiles are one-way: Pupo lands on it off the hand)
+    const L = e.s.ledge;
+    if (L) {
+      ctx.fillStyle = '#1c1426'; ctx.fillRect(L[0] - 3, L[2] - 3, L[1] - L[0] + 3, 12);
+      ctx.fillStyle = '#c8902a'; ctx.fillRect(L[0], L[2], L[1] - L[0], 6); ctx.fillStyle = '#ffd84a'; ctx.fillRect(L[0], L[2], L[1] - L[0], 2);
+      ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 3; ctx.beginPath();
+      for (let x = L[0] + 6; x < L[1]; x += 15) { ctx.moveTo(x, L[2] + 6); ctx.lineTo(L[1] - 2, L[2] + 6 + (L[1] - x) * 0.5); }
+      ctx.stroke();
+    }
     ctx.lineCap = 'butt'; ctx.textBaseline = 'alphabetic';
   }
 });
