@@ -13,6 +13,7 @@
 //   { grab: { up, right... }, until, max }   aim with the stick and press Action whenever the paw marker shows a target
 //   { swing: 1|-1, until, max }        swing hand to hand: Action at the next hook, Jump to let go toward the far side
 //   { put: [tx, feetRow] }              move Brady (and Pupo, if ridden) to stand at that tile (skips a stretch)
+//   { face: 1|-1 }                      turn to face that way (a tap of the stick, without walking off a beam end)
 //   { wait: s }, { check: expr, name }, { shot: name }   (a shot is taken by the browser tool; the Node test skips it)
 // S: x, y (tiles: Brady's centre and his feet), mode (Pupo's: '', 'swing', 'climb', 'hang'...), ride, ground, dead,
 //    drowsy, key (a function: key('goldpod')), coins (the coin count), area (the area id), t (route seconds), riding
@@ -94,6 +95,53 @@ const ROUTES = [
     { hold: { right: true }, until: 'coins >= 7', max: 2 },
     { check: 'coins >= 7', name: 'the crow\'s-nest coins' },
     { shot: 'mz46-mast-after' }
+  ] },
+  // ---- P2-G2: Morocco, Spain, France ----
+  { name: '5-4 the first Nap Box', level: '5-4', start: { box: 0 }, boxShot: 'ma54-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo under the argan tree' }] },
+  { name: '5-4 the beam-end ladder', level: '5-4', start: { box: 1 }, boxShot: 'ma54-cp', safe: true, steps: [
+    { run: 1, until: 'x >= 164 && ground', max: 40 },
+    { hold: {}, until: 'ground', max: 2 },
+    { shot: 'ma54-ladder-before' },
+    { hold: {}, press: 'jump', every: 0.6, until: 't > 1.3', max: 2 },
+    { check: 'y >= 18.9', name: 'a jump in the downdraft goes nowhere (still at the foot of the tower)' },
+    { face: 1 }, { grab: {}, until: 'mode === "zip"', max: 3 },
+    { hold: {}, until: '!mode && ground', max: 2 },
+    { check: 'ride && y <= 17.1', name: 'zipped onto the first beam end' },
+    { face: 1 }, { grab: {}, until: 'mode === "zip"', max: 3 },
+    { hold: {}, until: '!mode && ground', max: 2 },
+    { shot: 'ma54-ladder-during' },
+    { face: -1 }, { grab: {}, until: 'mode === "zip"', max: 3 },
+    { hold: {}, until: '!mode && ground', max: 2 },
+    { face: 1 }, { grab: {}, until: 'mode === "zip"', max: 3 },
+    { hold: {}, until: '!mode && ground', max: 2 },
+    { face: -1 }, { grab: {}, until: 'mode === "zip"', max: 3 },
+    { hold: {}, until: '!mode && ground', max: 2 },
+    { face: 1 }, { grab: {}, until: 'mode === "zip"', max: 3 },
+    { hold: {}, until: '!mode && ground', max: 2 },
+    { check: 'ride && ground && y <= 7.1', name: 'up the beam ends onto the window ledge, riding' },
+    { hold: { right: true }, until: 'x >= 172.4', max: 2 },
+    { wait: 0.3 },
+    { check: 'said("UP") && said("MEH") && said("VIEW")', name: 'Pupo sets off ("...up... we go."), the goat: "MEH.", Pupo: "...nice... view."' },
+    { shot: 'ma54-ladder-after' },
+    { hold: { up: true }, press: 'up', every: 0.3, until: 'area === "tower"', max: 3 },
+    { check: 'area === "tower" && ride', name: 'through the window into the tower room, still riding' }
+  ] },
+  { name: '5-3 the washing line', level: '5-3', start: { box: 0 }, boxShot: 'ma53', safe: true, steps: [
+    { run: 1, until: 'x >= 44.5 && ground && y <= 11.1', max: 14 },
+    { hold: {}, until: 'ground', max: 2 },
+    { shot: 'ma53-line-before' },
+    { grab: { up: true }, until: 'mode === "hang"', max: 4 },
+    { hold: { right: true }, until: 'x >= 51', max: 6 },
+    { shot: 'ma53-line-during' },
+    { hold: { right: true }, until: 'x >= 58.3', max: 8 },
+    { check: 'mode === "hang"', name: 'still hanging from the washing line over the lane' },
+    { hold: { down: true }, until: 'ground', max: 3 },
+    { check: 'ride && ground && y <= 9.1', name: 'dropped onto the roof terrace, riding' },
+    { check: 'said("SHEETS")', name: 'Pupo under the washing: "...fresh... sheets."' },
+    { hold: { right: true }, until: 'x >= 60', max: 2 },
+    { grab: { up: true, right: true }, until: 'lives >= 10', max: 5 },
+    { check: 'lives >= 10', name: 'the 1-up on the roof terrace (Pupo pokes its box open and fetches it)' },
+    { shot: 'ma53-line-after' }
   ] }
 ];
 
@@ -112,7 +160,7 @@ function RUNNER() {
       const g = this.g, p = g.player, P = g.pupo || {};
       return { x: p.cx / TS, y: (p.y + p.h) / TS, mode: P.mode || '', ride: !!p.pupoRide, ground: !!p.onGround, dead: !!p.dead || g.player !== p,
         drowsy: P.drowsyT > 0, coins: this.coinN, key: k => g.keys.has(k), area: g.area && g.area.aid, t: this.t, riding: this.riding,
-        meter: P.meter || 0, said: s => this.said.some(w => w.indexOf(s) >= 0), armOut: !!(P.arm && P.arm.phase >= 2 && P.arm.kind && P.arm.kind !== 'air') };
+        meter: P.meter || 0, lives: Save.data.lives, said: s => this.said.some(w => w.indexOf(s) >= 0), armOut: !!(P.arm && P.arm.phase >= 2 && P.arm.kind && P.arm.kind !== 'air') };
     },
     test(expr) { const S = this.S(); return !!(new Function('S', 'with (S) { return (' + expr + '); }'))(S); },
     start(route) {
@@ -202,6 +250,7 @@ function RUNNER() {
         if (s.shot) { this.i++; if (!this.shotsTaken[s.shot]) { this.shotsTaken[s.shot] = true; return { shot: s.shot }; } continue; }
         if (s.check) { (this.test(s.check) ? this.passes : this.fails).push(s.name || s.check); if (!this.test(s.check)) this.fails[this.fails.length - 1] += '  ' + JSON.stringify(this.info()); this.i++; continue; }
         if (s.wait) { this.frames(s.wait, {}); this.i++; continue; }
+        if (s.face) { this.g.player.facing = s.face; this.i++; continue; }
         if (s.bump) { this.g.bumpBlock(this.box.tx, this.box.ty, false, this.g.player); this.i++; continue; }
         if (s.mount) { this.mount(); this.i++; if (!this.g.player.pupoRide) break; continue; }
         if (s.put) { const g = this.g, p = g.player; p.x = s.put[0] * TS + TS / 2 - p.w / 2; p.y = s.put[1] * TS - p.h; p.vx = p.vy = 0; g.camX = Math.max(0, Math.min(g.area.W * TS - Game.viewW, p.cx - Game.viewW * 0.42)); this.frames(0.5, {}); this.i++; continue; }
