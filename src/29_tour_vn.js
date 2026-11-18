@@ -533,7 +533,7 @@ const enemies = {
   vnMosquito: { cls: TourFlyer.make({ w: 18, h: 14, range: 2, speed: 2.2, swoop: true, art: mosquitoArt, burst: '#3a3a4a', onSwoop: e => TourKit.sfx('mosquito', null, { vol: 0.25 }) }), place: 'fly' },
   vnToad: { cls: TourEnemy.make({ w: 24, h: 18, speed: 0.9, behavior: 'hop', hopV: 10, hopEvery: 1.5, art: toadArt, burst: '#6a7a3a' }), place: 'walk' },
   vnGoi: { cls: TourEnemy.make({ w: 18, h: 36, speed: 1.0, behavior: 'walk', art: goiArt, burst: '#f4f0e8' }), place: 'walk' },
-  vnBat: { cls: TourFlyer.make({ w: 28, h: 14, range: 2.5, speed: 1.3, swoop: true, art: birdArt('#2a2430', '#2a2430'), burst: '#2a2430' }), place: 'fly' },
+  vnBat: { cls: TourFlyer.make({ belly: true, w: 28, h: 14, range: 2.5, speed: 1.3, swoop: true, art: birdArt('#2a2430', '#2a2430'), burst: '#2a2430' }), place: 'fly' },
   vnCaveCrab: { cls: TourEnemy.make({ w: 28, h: 16, speed: 1.1, behavior: 'walk', edgeTurn: true, art: caveCrabArt, burst: '#f4eef8' }), place: 'walk' },
   vnBean: { cls: TourEnemy.make({ w: 20, h: 30, speed: 1.2, behavior: 'walk', art: beanArt, burst: '#5a3a1a' }), place: 'walk' }
 };
