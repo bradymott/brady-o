@@ -1108,6 +1108,8 @@ class FrDovecote extends Ent {
     if (this.cyc >= this.period) { this.cyc = 0; this.k++; }
     const h = this.cur; if (h) { this.bx = h.x + h.side * 6; this.by = h.y; }
   }
+  // (Pupo's lines start over the "▼ + JUMP: HOP OFF" label, which sits at p.y - 26 on these ledges, and away from
+  // the tower, where the hole's own SQUAWK! and the stamp count rise)
   tickle(p, x, y) {
     const g = this.g;
     if (this.done || !this.dove) return;
@@ -1115,10 +1117,10 @@ class FrDovecote extends Ent {
       const th = this.thief; this.done = true; th.dove = false; th.noShadow = false; th.x = this.bx - th.w / 2; th.y = this.by - th.h / 2;
       g.parts.text(this.bx, this.by - 14, 'SQUAWK!', '#ffffff'); g.burst(this.bx, this.by, 14, '#18181e', 'dust');
       th.catchIt();
-      PupoRide.say(g, p.cx, p.y - 18, '...NO... PUPO?');
+      PupoRide.say(g, p.cx + (p.cx < this.cx ? -36 : 36), p.y - 50, '...NO... PUPO?');
       return;
     }
-    if (!(this.no > 0)) { this.no = 1.2; PupoRide.say(g, p.cx, p.y - 18, '...NOT... THERE.'); g.parts.text(x, y - 10, 'COO!', '#e8e4f0'); this.coo = 0.8; this.cooX = x; this.cooY = y; }
+    if (!(this.no > 0)) { this.no = 1.2; PupoRide.say(g, p.cx + (p.cx < this.cx ? -36 : 36), p.y - 50, '...NOT... THERE.'); g.parts.text(x, y - 10, 'COO!', '#e8e4f0'); this.coo = 0.8; this.cooX = x; this.cooY = y; }
   }
   draw(ctx) {
     const t = this.t;
