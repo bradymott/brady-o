@@ -290,11 +290,181 @@ const wallSkins = {
 stamps.barra = barStamp;
 stamps.pared = wallStamp;
 
+/* ---------------- Pupo in Spain (docs/design/PUPO.md §4.2, §4.3) ---------------- */
+const PP = {
+  // a Nap Box on its own bit of street
+  napBox(st, o) { const tx = st.x + 1; st.floor(st.x, st.x + 2); st.B.set(tx, st.gy - 1, T.QBLOCK); st.B.item(tx, st.gy - 1, 'pupo'); st.B.spawn('napBox', tx, st.gy - 1, {}); return st.x + 3; },
+  /* 6-1's Pupo obstacle, The Soapy Pole: plaza three's gate stays shut until someone takes the ham off the top of the
+     soaped pole (that is how the real tomato fight starts). Brady slides straight off it ("TOO SOAPY!"); Pupo grips
+     it (Action), climbs, squeaking, pulls up on the crossbar and reaches up for the ham. The ham is only ever taken by
+     his arm (a pupoSnatch that stands still): a spring sock or a puff of beans up there gets a hint, never the ham.
+     The gate rolls up the moment he has it, and plaza three's waves begin. { h: the pole's height, key } */
+  soapyPole(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, h = o.h || 6, key = o.key || 'ham', px = x + 6, top = gy - h, gx = x + 13;
+    st.floor(x, gx + 1);
+    st.sign(x + 1, 'THE PLAZA OPENS WHEN SOMEONE TAKES THE HAM OFF THE SOAPED POLE. TOO SLIPPERY? PUPO CAN CLIMB IT (ACTION)');
+    B.spawn('pupoClimb', px, gy - 1, { h, side: 1, look: 'esSoapyPole', slick: 'TOO SOAPY! (PUPO CAN CLIMB IT)', squeak: 'SQUEAK' });
+    // the crossbar at the top: a tile each side of the pole, where he pulls himself up (he lands on the right: the ham
+    // hangs over that end, from the hook at the top of the mast, so Up + Action reaches it)
+    for (const q of [-1, 1]) { B.set(px + q, top, T.HARD); B.setHide(px + q, top, 1); }
+    B.spawn('pupoSnatch', px + 1, top - 3, { key, path: [[0, 0]], period: 9, look: 'esHam', opens: true, name: 'THE HAM! PLAZA THREE OPENS', say: '...HAM.', hot: 'IT WON\'T COME OFF! PUPO\'S ARM CAN TUG IT' });
+    st.decor('esPots', x + 3); st.decor('esPots', x + 10);
+    // plaza three's gate: a roller of crates and planks under a stone arch, the arch up to the top of the area
+    tourShutterLock(B, gx, gy - 3, gy - 1, key, 'esPlazaGate');
+    for (let y = 0; y <= gy - 4; y++) { B.set(gx, y, T.HARD); B.setHide(gx, y, 1); }
+    B.prop('esPlazaArch', gx, 0, 1, gy - 3, 'none', {});
+    return gx + 2;
+  },
+  /* 6-7's Pupo bonus (a helper level): the Giant, the oldest and biggest mill of La Mancha. While the wind blows its
+     great sails turn like the others'; when it drops they stop with one sail flat out over the lane, and Pupo can hang
+     under it (Action) from the mill's gallery and shimmy out to the hay loft on its posts, where the miller keeps his
+     coins. The loft is too high to jump to from the lane and too far from the gallery (nine tiles); the lane runs on
+     under it. { g: the wind group } */
+  stillMill(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, g = o.g || 0, mx = x + 4, gal = gy - 4, hubY = gy - 10, roof = gy - 6, l0 = mx + 14, l1 = l0 + 3;
+    st.floor(x, l1 + 3);
+    st.sign(x, 'THE GIANT: WITH THE WIND OFF ITS SAILS STAND STILL. PUPO CAN HANG UNDER ONE (ACTION) TO THE HAY LOFT');
+    B.fill(x + 1, gy - 2, x + 2, gy - 1, T.HARD); B.setHide(x + 1, gy - 2, 1); B.setHide(x + 2, gy - 2, 1); B.setHide(x + 1, gy - 1, 1); B.setHide(x + 2, gy - 1, 1);
+    B.prop('esSacks', x + 1, gy - 2, 2, 2, 'none', {});
+    for (let q = -1; q <= 4; q++) B.set(mx + q, gal, T.SEMI);
+    B.prop('esStillMillTower', mx, hubY, 4, gy - hubY, 'none', { gal: gal * TS });
+    // the sails are scenery behind the ground (a decor the brake entity turns); the hub is at the bar's height
+    const id = 'giant' + x, len = l0 + 1.5 - (mx + 2);
+    B.decor.push({ kind: 'esGiantSails', x: (mx + 2) * TS + TS / 2, y: hubY * TS + TS / 2, w: 2 * len * TS, id, len: len * TS, a: 0.4 });
+    B.spawn('esSailBrake', mx + 2, hubY, { g, id });
+    // the flat sail: a bar from the hub out over the lane to above the loft (four rows over it)
+    B.spawn('pupoBar', mx + 2, hubY, { w: l0 + 2 - (mx + 2), look: 'esSailBar', need: { g, on: true }, say: '...WHEE... SLOWLY.', dropSay: '...WINDY... AGAIN.' });
+    // the hay loft on its posts (the lane runs under it), its coins on top
+    for (let xx = l0; xx <= l1; xx++) { B.set(xx, roof, T.HARD); B.setHide(xx, roof, 1); }
+    B.prop('esHayLoft', l0, roof, 4, gy - roof, 'none', {});
+    B.picksRow(l0, l1, roof - 1); B.picksRow(l0 + 1, l1 - 1, roof - 2);
+    st.coins(mx + 7, l0 - 2, gy - 3);
+    return l1 + 4;
+  }
+};
+for (const k in PP) Tour.pieces['es.' + k] = PP[k];
+
+// 6-7: the Giant's brake: while the wind blows the sails turn; when it drops they ease to a stop with one sail flat out
+// over the lane (the bar). The sails are a decor behind the ground (they dip below it as they turn); this turns them.
+class EsSailBrake extends Ent {
+  constructor(g, s) {
+    super(g, s, TS, TS); this.gi = s.g || 0; this.friendly = true; this.back = true; this.d = null;
+    for (const d of (g.area && g.area.decor) || []) if (d.kind === 'esGiantSails' && d.id === s.id) this.d = d;
+    if (this.d) this.d.a = 0.4;
+  }
+  update(dt) {
+    this.t += dt; const d = this.d; if (!d) return;
+    const wind = !(this.g.toggleBit && this.g.toggleBit(this.gi));
+    if (wind) d.a = (d.a + dt * 0.8) % TAU;
+    else { const q = Math.PI / 2, tgt = Math.round(d.a / q) * q; d.a = approach(d.a, tgt, dt * 2.5); }
+  }
+  draw(ctx) {}
+}
+Object.assign(ENTITY_TYPES, { esSailBrake: EsSailBrake });
+Object.assign(Decor, {
+  // 6-7: the Giant's four great sails from the hub (d.a turns them): a stock and a lattice frame each
+  esGiantSails(ctx, x, y, t, th, d) {
+    const L = d.len, a0 = d.a || 0;
+    for (let k = 0; k < 4; k++) {
+      const a = a0 + k * Math.PI / 2, c = Math.cos(a), s = Math.sin(a), ex = x + c * L, ey = y + s * L, nx = -s, ny = c;
+      ctx.lineCap = 'round'; ctx.strokeStyle = INK; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.strokeStyle = '#7a5a3a'; ctx.lineWidth = 5; ctx.stroke(); ctx.lineCap = 'butt';
+      const w0 = 16, w1 = 34, f0x = x + c * 44, f0y = y + s * 44;
+      ctx.fillStyle = 'rgba(236,226,204,0.6)'; ctx.beginPath(); ctx.moveTo(f0x - nx * 5, f0y - ny * 5); ctx.lineTo(ex - nx * 5, ey - ny * 5); ctx.lineTo(ex - nx * w1, ey - ny * w1); ctx.lineTo(f0x - nx * w0, f0y - ny * w0); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.stroke();
+      ctx.strokeStyle = '#8a6a4a'; ctx.lineWidth = 1.6; ctx.beginPath();
+      for (let u = 0.14; u < 1; u += 0.08) { const px = x + c * L * u, py = y + s * L * u, ww = w0 + (w1 - w0) * u; ctx.moveTo(px - nx * 5, py - ny * 5); ctx.lineTo(px - nx * ww, py - ny * ww); }
+      ctx.stroke();
+    }
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x, y, 11, 0, TAU); ctx.fill(); ctx.fillStyle = '#c8902a'; ctx.beginPath(); ctx.arc(x, y, 8, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#7a5a2a'; ctx.beginPath(); ctx.arc(x, y, 3, 0, TAU); ctx.fill();
+  },
+  // 6-7: two flour sacks to step up on (their tiles are solid)
+  esSacks(ctx, x, y) {
+    for (const [dx, dy, w] of [[-14, 0, 26], [12, 0, 26], [-1, -26, 28]]) { ctx.fillStyle = INK; rr(ctx, x + dx - w / 2 - 2, y + dy - 30, w + 4, 32, 9); ctx.fill(); ctx.fillStyle = '#f4ecd8'; rr(ctx, x + dx - w / 2, y + dy - 28, w, 28, 8); ctx.fill(); ctx.fillStyle = '#c8b898'; ctx.fillRect(x + dx - 6, y + dy - 18, 12, 3); }
+  },
+  // 6-7: the old mill's whitewashed tower, its dark cap under the hub, a door, and the wooden gallery round it (d.gal)
+  esStillMillTower(ctx, x, y, t, th, d) {
+    const top = y - d.h + 16, w0 = 52, w1 = 40;
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x - w0 - 3, y); ctx.lineTo(x - w1 - 3, top); ctx.lineTo(x + w1 + 3, top); ctx.lineTo(x + w0 + 3, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fbf8f0'; ctx.beginPath(); ctx.moveTo(x - w0, y); ctx.lineTo(x - w1, top); ctx.lineTo(x + w1, top); ctx.lineTo(x + w0, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e8e2d4'; ctx.beginPath(); ctx.moveTo(x + w0 - 16, y); ctx.lineTo(x + w1 - 12, top); ctx.lineTo(x + w1, top); ctx.lineTo(x + w0, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x - w1 - 8, top + 4); ctx.quadraticCurveTo(x, top - 46, x + w1 + 8, top + 4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#4a4450'; ctx.beginPath(); ctx.moveTo(x - w1 - 4, top + 1); ctx.quadraticCurveTo(x, top - 41, x + w1 + 4, top + 1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5a4a3a'; rr(ctx, x - 12, y - 46, 24, 46, 10); ctx.fill(); ctx.fillStyle = '#3a6a9a'; rr(ctx, x - 8, top + 34, 16, 20, 7); ctx.fill();
+    if (d.gal) { const gy = d.gal; ctx.fillStyle = INK; ctx.fillRect(x - w0 - 34, gy - 3, 2 * w0 + 76, 11); ctx.fillStyle = '#9a6a3a'; ctx.fillRect(x - w0 - 32, gy - 1, 2 * w0 + 72, 7); ctx.fillStyle = '#7a5030'; for (let xx = x - w0 - 30; xx < x + w0 + 40; xx += 14) ctx.fillRect(xx, gy - 16, 3, 16); ctx.fillRect(x - w0 - 32, gy - 18, 2 * w0 + 72, 3); }
+  },
+  // 6-7: the hay loft on four posts (its roof tiles are the standing part; the lane runs under it)
+  esHayLoft(ctx, x, y, t, th, d) {
+    const w = d.w, top = y - d.h, x0 = x - w / 2;
+    ctx.fillStyle = INK; for (const px of [x0 + 6, x0 + w - 12]) ctx.fillRect(px - 1, top + 30, 8, d.h - 30);
+    ctx.fillStyle = '#8a6a44'; for (const px of [x0 + 6, x0 + w - 12]) ctx.fillRect(px + 0.5, top + 30, 5, d.h - 30);
+    ctx.fillStyle = INK; rr(ctx, x0 - 3, top - 2, w + 6, 34, 5); ctx.fill();
+    ctx.fillStyle = '#c89a5a'; rr(ctx, x0 - 1, top, w + 2, 30, 4); ctx.fill();
+    ctx.strokeStyle = '#9a6a3a'; ctx.lineWidth = 2; for (let xx = x0 + 8; xx < x0 + w; xx += 12) { ctx.beginPath(); ctx.moveTo(xx, top + 2); ctx.lineTo(xx, top + 28); ctx.stroke(); }
+    ctx.fillStyle = '#f0d070'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.ellipse(x0 + 10 + k * (w - 20) / 4, top + 1, 9, 4, 0, Math.PI, TAU); ctx.fill(); }
+  },
+  // 6-1: plaza three's stone arch over the gate (the column above the gate is solid, up to the top of the area)
+  esPlazaArch(ctx, x, y, t, th, d) {
+    const top = y - d.h;
+    ctx.fillStyle = INK; ctx.fillRect(x - 21, top, 42, d.h);
+    ctx.fillStyle = '#e8c890'; ctx.fillRect(x - 19, top, 38, d.h - 2);
+    ctx.fillStyle = '#d0a870'; for (let yy = y - 30; yy > top; yy -= 30) ctx.fillRect(x - 19, yy, 38, 4);
+    ctx.fillStyle = '#c8302a'; ctx.fillRect(x - 19, y - 22, 38, 8);
+    ctx.fillStyle = '#ffd84a'; ctx.font = `bold 9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('PLAZA 3', x, y - 15);
+  }
+});
+const pupoSkins = {
+  // 6-1: the soaped pole (a climb strip look): a tall pine pole slick with soap, suds sliding down it, grip rings,
+  // the crossbar at the top
+  esSoapyPole(ctx, e, t) {
+    const x = e.cx, top = e.top, bot = e.bottom;
+    ctx.fillStyle = INK; ctx.fillRect(x - 8, top - 4, 16, bot - top + 4);
+    ctx.fillStyle = '#c89a62'; ctx.fillRect(x - 6.5, top - 2, 13, bot - top + 2);
+    ctx.fillStyle = '#e8c48a'; ctx.fillRect(x - 6.5, top - 2, 4, bot - top + 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.6; for (let y = top + 8; y < bot - 4; y += 12) { ctx.beginPath(); ctx.moveTo(x - 6, y + 1); ctx.lineTo(x + 6, y - 2); ctx.stroke(); }
+    // suds sliding down (from the clock: no allocation)
+    for (let k = 0; k < 6; k++) { const u = ((t * 0.18 + k / 6) % 1), yy = top + 6 + u * (bot - top - 10), xx = x + (k % 2 ? 4 : -4); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(xx, yy, 3.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(xx, yy, 2.6, 0, TAU); ctx.fill(); }
+    // the crossbar: a plank across the top, the hook over it for the ham's cord
+    ctx.fillStyle = INK; rr(ctx, x - 50, top - 4, 100, 12, 4); ctx.fill(); ctx.fillStyle = '#9a6a3a'; rr(ctx, x - 48, top - 2, 96, 8, 3); ctx.fill();
+    ctx.fillStyle = INK; ctx.fillRect(x - 3, top - 120, 6, 118); ctx.fillStyle = '#c89a62'; ctx.fillRect(x - 2, top - 119, 4, 117);
+    ctx.fillStyle = INK; ctx.fillRect(x - 3, top - 122, 40, 6); ctx.fillStyle = '#9aa0b0'; ctx.fillRect(x - 2, top - 121, 38, 4);
+    ctx.fillStyle = '#e8303a'; ctx.beginPath(); ctx.moveTo(x, top - 120); ctx.lineTo(x - 18, top - 112 + Math.sin(t * 5) * 2); ctx.lineTo(x, top - 104); ctx.closePath(); ctx.fill();
+  },
+  // 6-1: the ham on its cord from the hook over the pole (a pupoSnatch look); once taken it rides Pupo's arm
+  esHam(ctx, e, t) {
+    const x = e.cx, y = e.cy, sw = e.taken ? 0 : Math.sin(t * 1.7) * 0.12;
+    if (!e.taken) { ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 1, y - 38); ctx.lineTo(x + 1, y - 22); ctx.stroke(); }
+    ctx.save(); ctx.translate(x, y); ctx.rotate(sw);
+    // a whole cured leg: the hoof and bone at the top, the plump leg below, a red ribbon
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(-3, -16); ctx.lineTo(5, -16); ctx.lineTo(13, 4); ctx.quadraticCurveTo(12, 17, 0, 17); ctx.quadraticCurveTo(-13, 15, -10, 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#a8422a'; ctx.beginPath(); ctx.moveTo(-1.5, -14); ctx.lineTo(3.5, -14); ctx.lineTo(11, 4); ctx.quadraticCurveTo(10, 14.5, 0, 15); ctx.quadraticCurveTo(-11, 13, -8.5, 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#d8785a'; ctx.beginPath(); ctx.ellipse(-2, 6, 4.5, 6.5, 0.2, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#f4e8d0'; ctx.fillRect(-2, -20, 6, 6); ctx.fillStyle = '#3a2418'; ctx.fillRect(-2.5, -24, 7, 5);
+    ctx.fillStyle = '#e8303a'; ctx.fillRect(-4, -12, 10, 3);
+    ctx.restore();
+  },
+  // 6-1: plaza three's gate (a shutter look): crates and planks lashed into a roller gate, a ham painted on it
+  esPlazaGate(ctx, e, t) {
+    const x = e.x, y = e.y, w = e.w, h = e.h, k = e.k || 0, hh = h * (1 - k * 0.92);
+    ctx.fillStyle = INK; ctx.fillRect(x - 3, y - 4, w + 6, hh + 4);
+    for (let yy = 0; yy < hh; yy += 12) { ctx.fillStyle = (yy / 12) % 2 ? '#b8844a' : '#d09a5a'; ctx.fillRect(x - 1, y + yy, w + 2, Math.min(10, hh - yy)); }
+    if (k < 0.5) { const cy = y + hh * 0.45; ctx.fillStyle = '#fff4e0'; ctx.beginPath(); ctx.arc(x + w / 2, cy, 9, 0, TAU); ctx.fill(); ctx.fillStyle = '#a8422a'; ctx.beginPath(); ctx.ellipse(x + w / 2, cy + 1, 4, 6, 0.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#f4e8d0'; ctx.fillRect(x + w / 2, cy - 7, 3, 4); }
+  },
+  // 6-7: the flat sail's arm (a pupoBar look): only the brass rings where the hands go (the sails draw the rest);
+  // the rings show only while the sail stands still
+  esSailBar(ctx, e, t) {
+    if (!e.up) return;
+    pupoRing(ctx, e.x0 + 60, e.y + 3, 4.4); pupoRing(ctx, e.x1 - 8, e.y + 3, 4.4);
+  }
+};
+Tour.amend('es', { skins: pupoSkins });
+
 Tour.amend('es', {
   stamps, skins: wallSkins,
   levels: [
     /* 6-1 HOLD: three plazas of the tomato fight in Buñol */
-    { n: 1, name: 'La Tomatina', mapLabel: 'Tomatina', arch: 'hold', theme: 'es_tomatina',
+    { n: 1, name: 'La Tomatina', mapLabel: 'Tomatina', arch: 'hold', theme: 'es_tomatina', pupo: 'level',   // Spain's Pupo level: The Soapy Pole
       gimmick: 'Three plazas shut tight around the tomato fight: hold out through the waves while the trucks lob and the storks swoop',
       hint: 'A plaza opens again after its third wave. Storks only carry you back a bit: wriggle free!',
       postcard: 'I am red from head to toe. It is the best day of my life. ♥ C',
@@ -306,15 +476,19 @@ Tour.amend('es', {
           ['itemBlock', { item: 'sig', y: 4 }],
           ['postcard', { kind: 'must', dx: 7, dy: -7 }],
           'balconies',
+          ['napBox', {}],   // Pupo's Nap Box by the tomato truck (PUPO.md §4.2): he rides the tomato fight with Brady
           // ① plaza one: tomato waves, a truck lobbing more
           ['plaza', { k: 1 }],
           ['itemBlock', { item: 'power', y: 4 }],
           ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
           'cp',
+          ['napBox', {}],   // the backup Nap Box at the plaza two checkpoint (the near side of the soapy pole)
           // ② plaza two: a floor of pulp and loose crates
           ['plaza', { k: 2 }],
           ['millDoor', { to: 'molino@in', back: 'molinoBack' }],
           'crates',
+          // Pupo's obstacle, The Soapy Pole (PUPO.md §4.2): plaza three opens when someone takes the ham off the top
+          ['soapyPole', { h: 6, key: 'ham' }],
           // ③ plaza three: balconies, a star, storks in the waves; P3 on the truck
           ['plaza', { k: 3, gold: 'risky' }],
           ['end', { exit: 'main' }]
@@ -463,7 +637,7 @@ Tour.amend('es', {
       ] },
 
     /* 6-7 SWITCH (secret): the windmills of La Mancha */
-    { n: 7, name: 'Molinos de La Mancha', mapLabel: 'Molinos', arch: 'switch', secret: true, theme: 'es_mancha',
+    { n: 7, name: 'Molinos de La Mancha', mapLabel: 'Molinos', arch: 'switch', secret: true, theme: 'es_mancha', pupo: 'helper',   // Pupo's Nap Box by the first mill, the Giant's still sail
       gimmick: 'The wind lever: with the wind on, the sails turn and cloth boards hold in the gust; with it off, the sails stop and the calm steps settle',
       hint: 'Pull the wind lever (UP) to start or stop the wind. A paper plane can hit it from afar',
       postcard: 'Windmills as far as I can see. One of them waved at me. Probably. ♥ C',
@@ -471,18 +645,21 @@ Tour.amend('es', {
       mapCell: [0, 1], mapFrom: 0,
       exits: { main: {} },
       areas: [
-        { id: 'mancha', gen: 'strip', W: 190, H: 20, script: [
+        { id: 'mancha', gen: 'strip', W: 214, H: 22, GY: 16, gyMax: 16, script: [   // two more rows of sky (the Giant's sail stays clear of the HUD)
           ['itemBlock', { item: 'power', y: 4 }],
           // ① wind on: ride the turning sails, cross on the wind-held boards
           ['windSwitch', {}],
           ['windmill', { r: 4, gold: 'must' }],
+          ['napBox', {}],   // Pupo (a helper here, PUPO.md §4.3): his Nap Box by the first mill
           ['enemies', { kind: 'esSheep', n: 2 }],
           ['windBoards', { n: 7 }],
           ['gearStand', { item: 'plane' }],
           // ② wind off: the sails stop, the boards fall, the calm steps settle
           ['windSwitch', {}],
           ['calmSteps', { n: 3, gold: 'risky' }],
+          ['stillMill', {}],   // Pupo's bonus: with the wind off, the Giant's flat sail out to the hay loft's coins
           ['enemies', { kind: 'esLynx', n: 1 }],
+          'cp',   // where the level's own half-way checkpoint always was (the two Pupo steps would have moved it)
           ['windmill', { r: 5, speed: 0.45 }],
           // ③ flip the wind on the move
           ['windSwitch', {}],

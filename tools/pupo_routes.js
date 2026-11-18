@@ -14,6 +14,7 @@
 //   { swing: 1|-1, until, max }        swing hand to hand: Action at the next hook, Jump to let go toward the far side
 //   { put: [tx, feetRow] }              move Brady (and Pupo, if ridden) to stand at that tile (skips a stretch)
 //   { face: 1|-1 }                      turn to face that way (a tap of the stick, without walking off a beam end)
+//   { flip: g }                         flip toggle group g (as its switch would: the wind, day and night)
 //   { wait: s }, { check: expr, name }, { shot: name }   (a shot is taken by the browser tool; the Node test skips it)
 // S: x, y (tiles: Brady's centre and his feet), mode (Pupo's: '', 'swing', 'climb', 'hang'...), ride, ground, dead,
 //    drowsy, key (a function: key('goldpod')), coins (the coin count), area (the area id), t (route seconds), riding
@@ -142,6 +143,40 @@ const ROUTES = [
     { grab: { up: true, right: true }, until: 'lives >= 10', max: 5 },
     { check: 'lives >= 10', name: 'the 1-up on the roof terrace (Pupo pokes its box open and fetches it)' },
     { shot: 'ma53-line-after' }
+  ] },
+  { name: '6-1 the first Nap Box', level: '6-1', start: { box: 0 }, boxShot: 'es61-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo by the tomato truck' }] },
+  { name: '6-1 the soapy pole', level: '6-1', start: { box: 1 }, boxShot: 'es61-cp', safe: true, steps: [
+    { put: [141, 13] },
+    { hold: {}, until: 'ground', max: 2 },
+    { shot: 'es61-pole-before' },
+    { check: '!key("ham")', name: 'plaza three is shut before the ham is taken' },
+    { grab: { up: true }, until: 'mode === "climb"', max: 4 },
+    { hold: { up: true }, until: '!mode && ground', max: 6, shotAt: { t: 0.9, name: 'es61-pole-during' } },
+    { check: 'ride && y <= 8.1', name: 'up the soaped pole and onto its crossbar, riding' },
+    { grab: { up: true }, until: 'key("ham")', max: 4 },
+    { wait: 0.5 },
+    { check: 'said("SQUEAK") && said("HAM")', name: 'the pole squeaks, Pupo takes the ham: "...ham."' },
+    { shot: 'es61-pole-ham' },
+    { run: 1, until: 'x >= 154 && ground', max: 8 },
+    { check: 'ride && x >= 154', name: 'through plaza three\'s gate on Pupo' },
+    { shot: 'es61-pole-after' }
+  ] },
+  { name: '6-7 the Giant\'s still sail', level: '6-7', start: { box: 0 }, boxShot: 'es67', safe: true, steps: [
+    { flip: 0 },
+    { put: [97, 12] },
+    { hold: {}, until: 'ground', max: 2 },
+    { shot: 'es67-sail-before' },
+    { grab: { up: true }, until: 'mode === "hang"', max: 4 },
+    { hold: { right: true }, until: 'x >= 103', max: 6 },
+    { shot: 'es67-sail-during' },
+    { hold: { right: true }, until: 'x >= 110.3', max: 8 },
+    { check: 'mode === "hang"', name: 'still hanging under the Giant\'s sail over the lane' },
+    { hold: { down: true }, until: 'ground', max: 3 },
+    { check: 'ride && ground && y <= 10.1 && x >= 109', name: 'dropped onto the hay loft, riding' },
+    { hold: { right: true }, until: 'coins >= 6', max: 2 },
+    { check: 'coins >= 6', name: 'the hay loft\'s coins' },
+    { check: 'said("WHEE")', name: 'Pupo under the sail: "...whee... slowly."' },
+    { shot: 'es67-sail-after' }
   ] }
 ];
 
@@ -251,6 +286,7 @@ function RUNNER() {
         if (s.check) { (this.test(s.check) ? this.passes : this.fails).push(s.name || s.check); if (!this.test(s.check)) this.fails[this.fails.length - 1] += '  ' + JSON.stringify(this.info()); this.i++; continue; }
         if (s.wait) { this.frames(s.wait, {}); this.i++; continue; }
         if (s.face) { this.g.player.facing = s.face; this.i++; continue; }
+        if (s.flip != null) { this.g.flipToggle(s.flip); this.frames(0.6, {}); this.i++; continue; }
         if (s.bump) { this.g.bumpBlock(this.box.tx, this.box.ty, false, this.g.player); this.i++; continue; }
         if (s.mount) { this.mount(); this.i++; if (!this.g.player.pupoRide) break; continue; }
         if (s.put) { const g = this.g, p = g.player; p.x = s.put[0] * TS + TS / 2 - p.w / 2; p.y = s.put[1] * TS - p.h; p.vx = p.vy = 0; g.camX = Math.max(0, Math.min(g.area.W * TS - Game.viewW, p.cx - Game.viewW * 0.42)); this.frames(0.5, {}); this.i++; continue; }
