@@ -15,6 +15,7 @@
 //   { put: [tx, feetRow] }              move Brady (and Pupo, if ridden) to stand at that tile (skips a stretch)
 //   { face: 1|-1 }                      turn to face that way (a tap of the stick, without walking off a beam end)
 //   { flip: g }                         flip toggle group g (as its switch would: the wind, day and night)
+//   { exec: 'js' }                      run a line with (g, p) in the game (to skip ahead: a thief caught twice already)
 //   { wait: s }, { check: expr, name }, { shot: name }   (a shot is taken by the browser tool; the Node test skips it)
 // S: x, y (tiles: Brady's centre and his feet), mode (Pupo's: '', 'swing', 'climb', 'hang'...), ride, ground, dead,
 //    drowsy, key (a function: key('goldpod')), coins (the coin count), area (the area id), t (route seconds), riding
@@ -177,6 +178,37 @@ const ROUTES = [
     { check: 'coins >= 6', name: 'the hay loft\'s coins' },
     { check: 'said("WHEE")', name: 'Pupo under the sail: "...whee... slowly."' },
     { shot: 'es67-sail-after' }
+  ] },
+  { name: '7-2 the first Nap Box', level: '7-2', start: { box: 0 }, boxShot: 'fr72-first', safe: true, steps: [{ check: 'ride', name: 'on Pupo at the farmhouse yard' }] },
+  { name: '7-2 the dovecote', level: '7-2', start: { box: 1 }, boxShot: 'fr72-cp', safe: true, steps: [
+    // the magpie caught twice already: it flies on to its third stop, the dovecote's roof
+    { exec: 'const th = g.entities.find(e => e.catchIt && e.route), r = th.route[2]; th.caught = 2; th.stop = 3; th.cool = 0; th.hop = null; th.state = "wait"; th.x = r.x - th.w / 2; th.y = r.y - th.h;' },
+    { put: [236, 10] },
+    { hold: {}, until: 'ground', max: 2 },
+    { wait: 0.5 },
+    { check: '!key("stamp3") && said("COO?!")', name: 'the magpie flies up and dives into the dovecote; the gate is shut' },
+    { shot: 'fr72-dove-before' },
+    { grab: { up: true, right: true }, until: 'key("stamp3")', max: 14, shotAt: { when: 'armOut', name: 'fr72-dove-during' } },
+    { wait: 0.6 },
+    { check: 'said("SQUAWK") && said("PUPO?")', name: 'poked out of its hole ("SQUAWK!"), and no belly button: "...no... pupo?"' },
+    { shot: 'fr72-dove-after' },
+    { hold: { down: true }, press: 'jump', every: 1, max: 0.3 },
+    { run: 1, until: 'x >= 254 && ground', max: 10 },
+    { check: 'ride && x >= 254', name: 'through the shutter to the gate on Pupo' }
+  ] },
+  { name: '7-1 the baguette hooks', level: '7-1', start: { box: 0 }, boxShot: 'fr71', safe: true, steps: [
+    { run: -1, until: 'x <= 11.7', max: 4 },
+    { hold: { up: true }, press: 'up', every: 0.3, until: 'area === "boulangerie"', max: 3 },
+    { check: 'ride && area === "boulangerie"', name: 'into the bakery on Pupo' },
+    { put: [107, 10] },
+    { hold: {}, until: 'ground', max: 2 },
+    { shot: 'fr71-ovens-before' },
+    { swing: 1, until: '(ground && x >= 120.5) || dead', max: 14, shotAt: { mode: 'swing', name: 'fr71-ovens-during' } },
+    { check: 'ride && ground && x >= 120.5 && !dead', name: 'over the hot ovens on the baguettes, onto the cooling rack, riding' },
+    { hold: { right: true }, until: 'coins >= 8', max: 3 },
+    { check: 'coins >= 8', name: 'the cooling rack\'s coins' },
+    { check: 'said("CRUSTY")', name: 'Pupo on the first baguette: "...crusty."' },
+    { shot: 'fr71-ovens-after' }
   ] }
 ];
 
@@ -287,6 +319,7 @@ function RUNNER() {
         if (s.wait) { this.frames(s.wait, {}); this.i++; continue; }
         if (s.face) { this.g.player.facing = s.face; this.i++; continue; }
         if (s.flip != null) { this.g.flipToggle(s.flip); this.frames(0.6, {}); this.i++; continue; }
+        if (s.exec) { (new Function('g', 'p', s.exec))(this.g, this.g.player); this.frames(0.2, {}); this.i++; continue; }
         if (s.bump) { this.g.bumpBlock(this.box.tx, this.box.ty, false, this.g.player); this.i++; continue; }
         if (s.mount) { this.mount(); this.i++; if (!this.g.player.pupoRide) break; continue; }
         if (s.put) { const g = this.g, p = g.player; p.x = s.put[0] * TS + TS / 2 - p.w / 2; p.y = s.put[1] * TS - p.h; p.vx = p.vy = 0; g.camX = Math.max(0, Math.min(g.area.W * TS - Game.viewW, p.cx - Game.viewW * 0.42)); this.frames(0.5, {}); this.i++; continue; }
