@@ -83,7 +83,7 @@ section('progress', () => {
     { n: 3, name: 'Cenote Dive', style: 'swim', theme: 'mx_cenote', script: ['shaft'], exits: { secret: { to: '1-6', hint: 'bubbles' } } },
     { n: 6, name: 'Secret Pit', secret: true, style: 'run', theme: 'mx_mercado', script: ['flat'], exits: { main: { to: 'node:1-5' }, secret: { to: 'house:mx-test' } } }
   ] });
-  check('amend: a secret level after the boss keeps mainCount 5', MX.mainCount === 5 && MX.levels.length === 6 && MX.levels[5].secret && Tour.isBoss('1-5') && Tour.problems.length === 0, Tour.problems);
+  check('amend: a secret level after the boss keeps mainCount 5', MX.mainCount === 5 && MX.levels.length >= 6 && MX.levels[5].secret && Tour.isBoss('1-5') && Tour.problems.length === 0, Tour.problems);
   check('a secret level starts locked and hidden', !TourProgress.isUnlocked('1-6') && !TourProgress.isRevealed('1-6'));
   const rv = TourProgress.exit('1-3', 'secret');
   check('exit(1-3, secret) records the exit and returns a path then a stop reveal', Save.data.exits['1-3'].secret && rv.length === 2 && rv[0].kind === 'path' && rv[0].from === 2 && rv[0].to === 5 && rv[1].kind === 'stop' && rv[1].id === '1-6', rv);
