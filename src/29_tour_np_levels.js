@@ -636,6 +636,90 @@ const stamps = {
 };
 
 /* ---------------- the levels ---------------- */
+/* ---------------- Pupo in Nepal (docs/design/PUPO.md §4.2; the tickle gate's extras in 28_tour_ph_g4.js) ---------------- */
+const PN = {
+  // a Nap Box on the ground at the cursor (the box and a step of floor past it)
+  napBox(st, o) {
+    const tx = st.x + 1, ty = st.gy - 1;
+    st.floor(st.x, tx + 1);
+    st.B.set(tx, ty, T.QBLOCK); st.B.item(tx, ty, 'pupo'); st.B.spawn('napBox', tx, ty, {});
+    return tx + 2;
+  },
+  /* 12-3's Pupo obstacle, The Ticklish Yeti: the only pass runs under a crag, and a huge yeti is asleep across it,
+     snoring snow. Brady (on Pupo or not) just bounces off its fur. Pupo finds its belly button under the fur (Action,
+     one slow poke): it giggles in its sleep, rolls onto its back and slides away down the slope beyond, still asleep.
+     The trail then runs on two rows lower. { rock: the crag's width } */
+  yetiPass(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, rw = o.rock || 6, x0 = x + 5, lx = x0 + 1, x1 = x0 + rw;
+    st.floor(x, x1 + 1);
+    st.sign(x, 'A HUGE YETI IS ASLEEP IN THE PASS: YOU JUST BOUNCE OFF ITS FUR. PUPO KNOWS WHERE ITS BELLY BUTTON IS (ACTION)');
+    // the crag over the pass, from the top of the sky down to three rows over the trail
+    B.fill(x0, 0, x1 - 1, gy - 4, T.HARD); for (let yy = 0; yy <= gy - 4; yy++) for (let xx = x0; xx < x1; xx++) B.setHide(xx, yy, 1);
+    B.prop('npCragFace', x0, 0, rw, gy - 3, 'none', {});
+    // the sleeper: its body is the lock (all three rows); its belly button low on its near side
+    B.lock(lx, gy - 3, gy - 1, 'yeti', 'door');
+    B.spawn('pupoTickle', lx, gy - 1, { lock: 'yeti', belly: [-0.3, -0.7], look: 'npTickleYeti', bounce: 'BOING! ...ZZZ', dur: 2.8 });
+    st.coins(x + 1, x + 3, gy - 3);
+    // the slope beyond: down two rows, the way the yeti slides
+    st.floor(x1 + 2, x1 + 3, gy + 1); st.floor(x1 + 4, x1 + 9, gy + 2);
+    st.gy = gy + 2;
+    st.coins(x1 + 5, x1 + 8, gy - 1);
+    return x1 + 10;
+  }
+};
+for (const k in PN) Tour.pieces['np.' + k] = PN[k];
+// 12-3: the crag over the pass: grey-blue rock with snow on its ledges and icicles along its underside
+Decor.npCragFace = (ctx, x, y, t, th, d) => {
+  const w = d.w, h = d.h, x0 = x - w / 2, y1 = y, y0 = y - h;
+  ctx.fillStyle = '#1c1426'; ctx.fillRect(x0 - 2, y0, w + 4, h + 2);
+  ctx.fillStyle = '#6a7a96'; ctx.fillRect(x0, y0, w, h);
+  ctx.fillStyle = '#5a6884'; for (let yy = y0 + 20; yy < y1 - 20; yy += 46) { ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x0 + w * 0.6, yy + 14); ctx.lineTo(x0 + w, yy + 4); ctx.lineTo(x0 + w, yy + 12); ctx.lineTo(x0 + w * 0.6, yy + 22); ctx.lineTo(x0, yy + 8); ctx.closePath(); ctx.fill(); }
+  ctx.fillStyle = '#8a9ab4'; ctx.fillRect(x0, y0, 8, h);
+  // snow along its ledges, a snow cap on its lip
+  ctx.fillStyle = '#f4f8ff'; for (let yy = y0 + 64; yy < y1 - 40; yy += 92) { rr(ctx, x0 - 3, yy, w * 0.55, 8, 4); ctx.fill(); }
+  // the lip over the pass, with icicles
+  ctx.fillStyle = '#1c1426'; rr(ctx, x0 - 6, y1 - 12, w + 12, 14, 6); ctx.fill();
+  ctx.fillStyle = '#f4f8ff'; rr(ctx, x0 - 4, y1 - 10, w + 8, 10, 5); ctx.fill();
+  for (let xx = x0 + 6; xx < x0 + w - 4; xx += 13) { const l = 8 + ((xx * 7) % 9); ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.moveTo(xx - 4, y1); ctx.lineTo(xx, y1 + l + 2); ctx.lineTo(xx + 4, y1); ctx.fill(); ctx.fillStyle = '#c8e8ff'; ctx.beginPath(); ctx.moveTo(xx - 2.6, y1); ctx.lineTo(xx, y1 + l); ctx.lineTo(xx + 2.6, y1); ctx.fill(); }
+};
+// 12-3: the huge sleeping yeti (a pupoTickle look): curled on its side across the pass in its red scarf, snoring puffs of
+// snow; the belly button a little swirl in the pale fur of its tummy. Tickled: it giggles (a wobble), rolls onto its back
+// and slides off down the slope, still fast asleep
+skins.npTickleYeti = (ctx, e, t) => {
+  const k = e.k || 0, roll = Math.min(1, k / 0.3), slide = k <= 0.3 ? 0 : (k - 0.3) / 0.7, wob = e.giggle > 0 ? Math.sin(e.t * 40) * 2.4 : 0;
+  // it rolls onto its back about its middle (nudging away from Pupo), then slides off down the slope
+  const br = Math.sin(e.t * 1.5) * 2, x = e.cx + roll * 0.4 * TS + slide * slide * 8 * TS, y = e.y + e.h + slide * 2.2 * TS, rot = roll * Math.PI / 2 + slide * 0.25;
+  ctx.save(); ctx.translate(x + wob, y - 46); ctx.rotate(rot); ctx.translate(0, 46); ctx.lineJoin = 'round';
+  // the body: a big fluffy mound
+  ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.ellipse(0, -46, 48, 49 + br * 0.5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#eef4ff'; ctx.beginPath(); ctx.ellipse(0, -46, 45.5, 46.5 + br * 0.5, 0, 0, TAU); ctx.fill();
+  // fur scallops on its back, a cool shade
+  ctx.fillStyle = '#c8d8f0'; ctx.beginPath(); ctx.ellipse(14, -54, 30, 36, 0.3, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#eef4ff'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(-26 + i * 13, -88 + Math.abs(i - 2) * 6, 9, 0, TAU); ctx.fill(); }
+  // the tummy and its belly button
+  ctx.fillStyle = '#f8f0e8'; ctx.beginPath(); ctx.ellipse(-14, -36, 24, 28, -0.2, 0, TAU); ctx.fill();
+  if (!e.awake && !(e.giggle > 0)) { ctx.fillStyle = '#d8c0d8'; ctx.beginPath(); ctx.arc(-20, -24, 4.2, 0, TAU); ctx.fill(); ctx.fillStyle = '#8a6aa8'; ctx.beginPath(); ctx.arc(-20, -23.4, 1.8, 0, TAU); ctx.fill(); }
+  // a big foot, its pads
+  ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.ellipse(28, -12, 18, 11, -0.2, 0, TAU); ctx.fill(); ctx.fillStyle = '#e4ecfa'; ctx.beginPath(); ctx.ellipse(28, -12, 16, 9, -0.2, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#9aa8c8'; ctx.beginPath(); ctx.ellipse(31, -12, 7, 5, -0.2, 0, TAU); ctx.fill(); for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(38 + i * 1, -20 + i * 6, 2.6, 0, TAU); ctx.fill(); }
+  // the head on the near side, the red scarf, closed eyes, a sleepy smile
+  ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(-32, -66, 22, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#eef4ff'; ctx.beginPath(); ctx.arc(-32, -66, 19.5, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#c8d8f0'; ctx.beginPath(); ctx.ellipse(-36, -62, 12, 10, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#d8322a'; rr(ctx, -46, -48, 34, 9, 4); ctx.fill(); ctx.fillStyle = '#ffd23a'; for (let i = 0; i < 4; i++) ctx.fillRect(-42 + i * 8, -40, 2, 4);
+  ctx.strokeStyle = '#3a4a6a'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  for (const ex of [-42, -31]) { ctx.beginPath(); ctx.arc(ex, -68, 3.4, 0.2, Math.PI - 0.2); ctx.stroke(); }
+  ctx.beginPath(); ctx.arc(-37, -58, 4, 0.3, Math.PI - 0.3); ctx.stroke();
+  // giggling in its sleep: a grin and pink cheeks
+  if (e.giggle > 0 || e.awake) { ctx.fillStyle = '#ffb0c0'; for (const ex of [-47, -25]) { ctx.beginPath(); ctx.arc(ex, -60, 3.4, 0, TAU); ctx.fill(); } }
+  ctx.restore(); ctx.lineCap = 'butt';
+  if (e.awake) return;
+  // snoring: puffs of snow blown out of its mouth on each breath, and a slow z
+  const ph = (e.t * 0.55) % 1;
+  if (ph < 0.6) { const q = ph / 0.6; ctx.fillStyle = '#ffffff'; for (let i = 0; i < 4; i++) { const qq = (q + i * 0.17) % 1; ctx.beginPath(); ctx.arc(e.cx - 40 - qq * 34, e.y + e.h - 62 - qq * 26 + Math.sin(i * 2.1 + e.t) * 4, 2 + qq * 3.5, 0, TAU); ctx.fill(); } }
+  const z = (e.t * 0.45) % 1; PupoRide.zGlyph(ctx, e.cx - 54 - z * 10, e.y + 30 - z * 16, 4 + z * 4);
+};
+
 const levels = [
   // 12-1 SKY: suspension bridges from ridge to ridge
   { n: 1, name: 'Suspension Bridges', arch: 'sky', theme: 'np_hills',
@@ -716,7 +800,7 @@ const levels = [
         bigone: { title: 'THE BIG YETI', rule: 'A GIANT YETI LIVES IN THIS ICE CAVE. ITS BREATH IS FREEZING. STOMP IT THREE TIMES', critter: 'npYeti', name: 'THE BIG YETI' } }
     ] },
   // 12-3 SNEAK: the blizzard night, yetis on watch
-  { n: 3, name: 'Blizzard Night', arch: 'sneak', theme: 'np_blizzard',
+  { n: 3, name: 'Blizzard Night', arch: 'sneak', theme: 'np_blizzard', pupo: 'level',   // Nepal's Pupo level: The Ticklish Yeti
     gimmick: 'Yetis keep watch with lanterns in the storm: hide behind rocks, in the box, or slip by in a white-out; marmots whistle the sleepers awake',
     hint: 'In a white-out the yetis can\'t see you. Crouch behind a rock to hide. Walk past sleepers, don\'t run',
     postcard: 'I can\'t see a thing up here, Brady. But I can hear a yeti humming. It\'s a nice tune. ♥ C',
@@ -724,21 +808,25 @@ const levels = [
     mapCell: [2, 0], mapFrom: 1,
     exits: { main: { to: '12-4' }, secret: { to: '12-7', hint: 'A sled track leads off the trail to a shed with Piwi\'s badge...' } },
     areas: [
-      { id: 'himpat', gen: 'strip', W: 230, H: 20,
+      { id: 'himpat', gen: 'strip', W: 250, H: 20, gyMax: 16,
         script: [
           'storm',
           ['itemBlock', { item: 'power', y: 4 }],
           ['gearStand', { item: 'box' }],
           // ① the gusts hide you from the yeti on watch
           ['shelterHut', { gold: 'must' }],
+          ['napBox', {}],   // Pupo's Nap Box by the first boulder
           ['yetiWatch', { first: true }],
           'shelter',
           ['iceGate', {}],
           // ② boulders to hide behind
           ['yetiWatch', {}],
           'cp',
+          ['napBox', {}],   // Pupo again, at the shelter checkpoint
           ['shelter', { n: 3 }],
           ['sledShed', { to: 'depotShed@in', back: 'shedBack' }],
+          // Pupo's obstacle, The Ticklish Yeti (PUPO.md §4.2): a huge yeti asleep across the only pass
+          ['yetiPass', {}],
           // ③ sleeping yetis and marmot sentinels together
           ['sleepYeti', { gold: 'risky', sign: true }],
           ['yetiWatch', { two: true }],
