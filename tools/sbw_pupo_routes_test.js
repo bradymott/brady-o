@@ -227,4 +227,105 @@ if (!want.length || want.includes('g4')) C.section([], 'g4', () => {
     C.check('22-1: the checker rides the hand only riding (ghosts and edges along its turn on the riding copy)', gh(D.areas[0]) > gh(L.areas[0]) && cnt(D.areas[0]) > cnt(L.areas[0]));
   }
 });
+// ---- the P2-G3 rollout's checks (owner: the P2-G3 group): the Netherlands, Indonesia and Vietnam objects, and the
+// camera box of src/28_tour_pg_g3.js. Brady alone (plain, a spring sock, magic beans) never gets past a Pupo obstacle.
+if (!want.length || want.includes('g3')) C.section([], 'g3', () => {
+  const play = G.run('(l => { Save.data.lives = 9; const g = new Play(l, {}); Game.scene = g; g.state = "play"; g.fade.a = 0; g.fade.target = 0; g.timeLeft = 999; return g; })');
+  const said = g => { const out = []; const t0 = g.parts.text.bind(g.parts); g.parts.text = (x, y, s, c) => { out.push(String(s)); return t0(x, y, s, c); }; return out; };
+  const at = (g, tx, feet) => { const p = g.player; p.x = tx * 32 + 16 - p.w / 2; p.y = feet * 32 - p.h; p.vx = p.vy = 0; p.dead = false; };
+  // Brady alone runs from column tx0 (feet on row feet) to the edge at column edge and jumps right, with power `pow`
+  // (null, 'socks', 'beans'); true if he ever stands at or past column far
+  const leap = (g, tx0, feet, edge, far, pow) => {
+    at(g, tx0, feet); G.step(g, 0.3); const p = g.player; p.invuln = 99;
+    p.jumpPow = pow ? { id: pow, gas: 1, used: false, pants: 0 } : null;
+    let jumped = false, k = 0, past = false;
+    for (let f = 0; f < 600; f++) {
+      const q = g.player; if (q !== p || q.dead) break;
+      const inp = { right: true, jump: true };
+      if (!jumped && q.cx >= (edge + 0.2) * 32) { inp.jumpPressed = true; jumped = true; k = 0; }
+      else if (jumped && pow === 'socks' && ++k === 30) inp.jumpPressed = true;
+      else if (jumped && pow === 'beans' && ++k % 14 === 0) inp.jumpPressed = true;
+      G.step(g, 1 / 120, inp);
+      if (q.onGround && q.cx >= far * 32) past = true;
+    }
+    p.jumpPow = null; return past;
+  };
+  // 8-1: the drawbridge chain
+  {
+    const g = play(G.getLevel(8, 1)); G.step(g, 0.2);
+    const h = g.entities.find(e => e.pupoHandle && e.s.look === 'nlBridgeChain'), gates = g.entities.filter(e => e.s && e.s.look === 'nlDrawbridge'), herons = g.entities.filter(e => e.constructor.name === 'NlHeron');
+    C.check('8-1: the pull chain, two drawbridge leaves and two herons', !!h && gates.length === 2 && herons.length === 2);
+    const c0 = gates[0].s.rect[0], d = gates[0].s.rect[1], c1 = gates[1].s.rect[2], A = g.area, T = G.run('T');
+    C.check('8-1: the deck is not there until the chain is pulled', A.tiles[d * A.W + c0 + 3] === T.EMPTY && !g.toggleBit(3));
+    for (const pow of [null, 'socks', 'beans']) C.check(`8-1: Brady alone (${pow || 'a plain jump'}) never gets over the canal in the sea wind`, !leap(g, c0 - 5, d, c0 - 1, c1 + 1, pow));
+    // in the canal: the current carries him back, at high water (swimming) and at low water (on the bed)
+    for (const high of [true, false]) {
+      if (g.toggleBit(1) !== high) { g.flipToggle(1); G.step(g, 4); }
+      const feet = high ? d + 3 : d + 8; at(g, c0 + 4, feet); g.player.invuln = 99; const x0 = g.player.cx; let maxX = x0;
+      for (let f = 0; f < 360; f++) { G.step(g, 1 / 120, { right: true, jump: f % 30 === 0, jumpPressed: f % 30 === 0 }); maxX = Math.max(maxX, g.player.cx); }
+      C.check(`8-1: in the canal at ${high ? 'high water (swimming)' : 'low water (on the bed)'} the current carries Brady back (from column ${(x0 / 32).toFixed(1)} to ${(g.player.cx / 32).toFixed(1)}, never past ${(maxX / 32).toFixed(1)})`, g.player.cx < x0 && maxX < (c0 + 6) * 32);
+    }
+    const out = said(g), p = g.player; h.pull(g, p); G.step(g, 0.3);
+    C.check('8-1: the chain pulled: the deck is down (one-way, hidden under the drawn leaves), the herons squawk', g.toggleBit(3) && A.tiles[d * A.W + c0 + 3] === T.SEMI && A.hide[d * A.W + c0 + 3] === 1 && out.some(s => /KRAAK/.test(s)));
+    at(g, c0 - 2, d); g.player.invuln = 99; G.step(g, 3, { right: true });
+    C.check('8-1: on the deck the wind leaves Brady be: he walks across to the far dike', g.player.cx >= (c1 + 1) * 32 && g.player.onGround, g.player.cx / 32);
+    h.pull(g, p); G.step(g, 0.3);
+    C.check('8-1: pulled again, the drawbridge lifts', !g.toggleBit(3) && A.tiles[d * A.W + c0 + 3] === T.EMPTY);
+  }
+  // 8-6: the old mill's sail is slick for Brady alone
+  {
+    const g = play(G.getLevel(8, 6)); G.step(g, 0.2); const pole = g.entities.find(e => e.pupoClimb && e.s.look === 'nlSailLattice'), out = said(g);
+    const p = g.player; p.x = pole.cx - p.w / 2; p.y = pole.bottom - p.h - 40; p.vx = p.vy = 0; G.step(g, 1 / 120);
+    C.check('8-6: Brady alone on the lattice sail: "THE SAIL IS SLIPPERY!", no climbing', !!pole && out.some(s => /SLIPPERY/.test(s)) && !(g.pupo && g.pupo.mode === 'climb'), out);
+  }
+  // 9-6: thorny rattan
+  {
+    const g = play(G.getLevel(9, 6)); G.step(g, 0.2);
+    const hooks = g.entities.filter(e => e.pupoGrabPt && e.s.look === 'idRattan').sort((a, b) => a.hx - b.hx), A = g.area, T = G.run('T');
+    const spiky = hooks.every(e => { const tx = Math.floor(e.hx / 32), ty = Math.floor(e.hy / 32); return A.tiles[(ty - 1) * A.W + tx] === T.SPIKES_CEIL; });
+    C.check('9-6: five rattan hooks, each at the tip of a cane of spike tiles', hooks.length === 5 && spiky);
+    const x0 = Math.floor(hooks[0].hx / 32) - 2, gy = Math.floor(hooks[0].hy / 32) + 5, far = Math.floor(hooks[4].hx / 32) + 3;
+    for (const pow of [null, 'socks', 'beans']) C.check(`9-6: Brady alone (${pow || 'a plain jump'}) never gets over the ravine in its wind`, !leap(g, x0 - 4, gy, x0 - 1, far, pow));
+    // a cane hurts Brady
+    const p = g.player, cane = hooks[1]; p.x = cane.hx + 16 - 1; p.y = cane.hy - 32 - p.h + 20; p.vx = p.vy = 0;
+    C.check('9-6: Brady touching a rattan cane is touching spikes', G.run('spikeContact')(p, A));
+    const mum = g.entities.find(e => e.constructor.name === 'IdMotherOrangutan');
+    C.check('9-6: the mother orangutan waits past the ravine', !!mum && mum.cx > far * 32 - 64);
+  }
+  // 10-4: the cave pearl, and the camera box over the chamber
+  {
+    const g = play(G.getLevel(10, 4)); G.step(g, 0.2);
+    const pearl = g.entities.find(e => e.pupoSnatch && e.s.look === 'vnPearl'), gate = g.entities.find(e => e.shutter && e.id === 'pearl'), gr = g.entities.find(e => e.pupoGrille);
+    C.check('10-4: the pearl (a snatch key) behind a grille, the skylight gate shut', !!pearl && !!gr && !!gate && !gate.open);
+    const A = g.area, SOL = G.run('SOLID'), tx = Math.floor(pearl.cx / 32), ty = Math.floor(pearl.cy / 32);
+    let walled = true; for (let y = ty - 3; y <= ty + 1; y++) for (let x = 0; x <= 5; x++) { const inside = x >= 1 && x <= 4 && y >= ty - 2 && y <= ty; if (!inside && !SOL[A.tiles[y * A.W + x]]) walled = false; }
+    C.check('10-4: the pool is walled in (rock, the floor, the grille): Brady alone never touches the pearl', walled);
+    const C0 = gr.s.camBox[4] + 1, F = C0 + 4, VH = G.run('Game.viewH');
+    at(g, 8, F); G.step(g, 1.5);
+    const top = (C0 - 1) * 32 - g.camY;
+    C.check(`10-4: the camera keeps the rock shelf on screen over the chamber (the shelf ${Math.round(top)} px down a ${Math.round(VH)} px view)`, top >= VH * 0.2 && top <= VH * 0.5, { top, camY: g.camY });
+    const p = g.player; pearl.give(p); G.step(g, 0.5);
+    C.check('10-4: the pearl brought in: the key, the skylight gate opens', g.keys.has('pearl') && gate.open);
+  }
+  // 10-6: the rain over the lantern lane: no sock jump gets onto the teahouse roof
+  {
+    const g = play(G.getLevel(10, 6)); G.step(g, 0.2);
+    const kenh = g.level.areas.findIndex(a => a.aid === 'kenh'); g.loadArea ? g.loadArea(kenh, 'in') : null; G.step(g, 0.3);
+    const hooks = g.entities.filter(e => e.pupoGrabPt && e.s.look === 'vnLanternHook').sort((a, b) => a.hx - b.hx);
+    C.check('10-6: six lantern hooks over the canal lane', hooks.length === 6, hooks.length);
+    if (hooks.length === 6) {
+      const roofRow = Math.floor(hooks[0].hy / 32) + 5, r0 = Math.floor(hooks[5].hx / 32) - 1, gy = roofRow + 5;
+      let onRoof = false;
+      for (const sx of [r0 - 3, r0 + 9, r0 + 10]) for (const dir of [-1, 1]) {
+        at(g, sx, gy); G.step(g, 0.2); const p = g.player; p.invuln = 99; p.jumpPow = { id: 'socks', gas: 1, used: false, pants: 0 };
+        for (let f = 0; f < 240; f++) { const inp = { right: dir > 0, left: dir < 0, jump: true }; if (f === 2 || f === 50) inp.jumpPressed = true; G.step(g, 1 / 120, inp); if (g.player.onGround && g.player.y + g.player.h <= roofRow * 32 + 2 && g.player.cx > r0 * 32 && g.player.cx < (r0 + 7) * 32) onRoof = true; }
+        p.jumpPow = null;
+      }
+      C.check('10-6: in the rain a spring sock\'s double jump from the lane never lands on the teahouse roof', !onRoof);
+      // and from the lantern seller's roof straight across
+      const nearEdge = Math.floor(hooks[0].hx / 32) - 2;
+      C.check('10-6: Brady alone (a spring sock) never gets across from the lantern seller\'s roof', !leap(g, nearEdge - 3, roofRow, nearEdge, r0, 'socks'));
+    }
+  }
+});
 C.done();

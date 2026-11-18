@@ -256,6 +256,165 @@ const P = {
   }
 };
 
+/* ---------------- Pupo in Vietnam (docs/design/PUPO.md §4.2, §4.3) ---------------- */
+const VNINK = '#1c1426';
+const PP = {
+  // a Nap Box on the ledge or band dy rows under the cursor row (the cave climb's pieces move st.y up), column x
+  napAt(st, o) { const tx = o.x, ty = st.y + (o.dy || 0) - 1; st.B.set(tx, ty, T.QBLOCK); st.B.item(tx, ty, 'pupo'); st.B.spawn('napBox', tx, ty, {}); return st.x; },
+  /* 10-4's Pupo obstacle, The Cave Pearl: a rock shelf seals the cave above, and the only way on up is the old
+     skylight gate in its corner, which opens with the cave pearl. The pearl lies in a flooded rimstone pool in the
+     other corner, walled in behind a rusty grille: Brady can't squeeze through the bars, but Pupo's arm reaches
+     through them (Action) and brings it out ("...shiny... and wet."); the gate rolls open at once. The flood keeps
+     rising under them (Pupo swims it fast). The pool's floor and the gate room's are solid rock; the rest of the
+     chamber's floor is one-way, so the climb comes up through it. 7 rows. { key } */
+  pearlGate(st, o) {
+    const B = st.B, W = st.W, key = o.key || 'pearl', F = st.y - 3, C = F - 4, g0 = W - 7;
+    // the rock shelf (a hole over the gate room), the chamber's floor (one-way, solid under the pool and the gate room)
+    B.fill(1, C, W - 2, C, T.GROUND); for (let x = g0 + 1; x <= W - 3; x++) B.set(x, C, T.EMPTY);
+    for (let x = 2; x <= W - 3; x++) B.set(x, F, T.SEMI);
+    B.fill(1, F, 5, F, T.GROUND); B.fill(g0, F, W - 2, F, T.GROUND);
+    // the pool: walled in by the shelf, the floor and the grille; water and the pearl inside
+    B.fill(1, F - 3, 4, F - 1, T.EMPTY); B.fill(1, F - 2, 4, F - 1, T.WATER);
+    for (let y = F - 3; y <= F - 1; y++) B.set(5, y, T.HARD);
+    B.spawn('pupoGrille', 5, F - 1, { w: 1, h: 3, camBox: [1, W - 2, C, F + 4, C - 1] });   // the camera keeps the shelf in view (28_tour_pg_g3.js)
+    B.prop('vnRimPool', 1, F - 3, 4, 3, 'none', {});
+    B.spawn('pupoSnatch', 2, F - 1, { key, path: [[0, 0]], period: 9, look: 'vnPearl', opens: true, name: 'THE CAVE PEARL! THE SKYLIGHT GATE OPENS', say: '...SHINY... AND WET.' });
+    // the skylight gate: the gate room's left wall (a shutter on the pearl's key), the way up through the shelf's hole
+    tourShutterLock(B, g0, F - 3, F - 1, key, 'vnSkylightGate');
+    B.fill(W - 2, F - 3, W - 2, F - 1, T.EMPTY);
+    st.sign(9, 'THE SKYLIGHT GATE OPENS WITH THE CAVE PEARL. IT LIES IN THE POOL BEHIND THE RUSTY GRILLE: A LONG ARM COULD REACH IN', F);
+    st.coins(8, g0 - 3, F - 2);
+    // a Nap Box in the chamber too: Brady come up here on his own (Pupo left asleep below) gets him back by the grille
+    B.set(15, F - 1, T.QBLOCK); B.item(15, F - 1, 'pupo'); B.spawn('napBox', 15, F - 1, {});
+    B.decorAt('vnFungi', 12, F, 5); B.decorAt('vnPearls', 18, F, 6);
+    st.top(C);
+  },
+  /* 10-6's Pupo bonus (a helper level): the canal lane. A lantern seller's house with steps up to its roof, then lantern
+     hooks on a string out over the lane to a stilt teahouse's roof, where a 1-up box waits under the lanterns. A rain
+     cloud hangs over the lane: its downpour knocks anyone in the air straight down (a jump, a spring sock, a glide), but
+     Pupo swings hook to hook (Action) under it. The lane runs on under the teahouse; the rain stops short of walking
+     height. { n: hooks } */
+  lanternRoofs(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, n = o.n || 6, roof = gy - 5, r0 = x + 25, r1 = x + 31;
+    st.floor(x, r1 + 4);
+    // the lantern seller's house: two steps up its side, the roof
+    B.fill(x + 3, gy - 2, x + 3, gy - 1, T.HARD); B.fill(x + 4, roof, x + 9, gy - 1, T.HARD);
+    for (let xx = x + 3; xx <= x + 9; xx++) for (let y = roof; y < gy; y++) B.setHide(xx, y, 1);
+    B.prop('vnLanternHouse', x + 3, roof - 2, 7, gy - roof + 2, 'none', {});
+    // the teahouse on its stilts: a two-row body (the lane passes under it), the roof with the 1-up and coins
+    B.fill(r0, roof, r1, roof + 1, T.HARD); for (let xx = r0; xx <= r1; xx++) for (let y = roof; y <= roof + 1; y++) B.setHide(xx, y, 1);
+    B.prop('vnTeahouse', r0, roof - 2, r1 - r0 + 1, gy - roof + 2, 'none', {});
+    st.block(r1 - 2, roof - 3, 'oneup'); B.picksRow(r0 + 1, r1 - 4, roof - 2);
+    // the rain cloud: a downpour from the sky to a little under the roofs (a sock's jump from the lane never gets up to
+    // the teahouse's roof), well over walking height in the lane. The cloud hangs over the lantern string (drawn first)
+    const z = B.zone(x + 10, 0, r1 + 4 - (x + 10), roof, 0, 150 * TS, 0, 'downdraft'); z.h = roof * TS + 20;
+    B.spawn('vnRainCloud', x + 10, roof - 1, { w: r1 + 4 - (x + 10), h: roof, gy, cloud: roof - 8.6 });
+    // the lantern string and its hooks, three tiles apart, five rows over the roofs
+    for (let i = 0; i < n; i++) B.spawn('pupoGrab', x + 11 + 3 * i, roof - 5, { kind: 'hook', look: 'vnLanternHook', cam: 3, say: i === 0 ? '...PRETTY.' : null });
+    B.prop('vnLanternString', x + 9, roof - 7, 3 * n + 4, 2, 'none', {});
+    st.sign(x + 1, 'A RAIN CLOUD OVER THE LANTERN LANE! NO JUMPING UP THERE. PUPO CAN SWING ON THE LANTERN HOOKS (ACTION)');
+    return r1 + 5;
+  }
+};
+for (const k in PP) Tour.pieces['vn.' + k] = PP[k];
+// 10-6: the little rain cloud over the lantern lane: a grey puff and its rain streaks down to the lane (cheap: lines
+// from the clock)
+class VnRainCloud extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 10) * TS, (s.h || 8) * TS); this.x = s.x - TS / 2; this.y = 0; this.ly = (s.gy || 14) * TS; this.cly = (s.cloud || 4) * TS; this.back = true; this.friendly = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x0 = this.x, w = this.w, t = this.t, cy = this.cly, ly = this.ly;
+    ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(200,225,255,0.7)'; ctx.lineWidth = 1.6;
+    for (let k = 0; k < 22; k++) {
+      const xx = x0 + 8 + ((k * 53) % (w - 16)), u = (t * (520 + (k % 5) * 40) + k * 71) % (ly - cy);
+      ctx.beginPath(); ctx.moveTo(xx, cy + u); ctx.lineTo(xx - 3, cy + u + 14); ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+    for (let k = 0, xx = x0 + 6; xx < x0 + w - 10; xx += 36, k++) {
+      const r = 15 + (k % 3) * 4, yy = cy - 6 + Math.sin(t * 0.7 + k) * 2;
+      ctx.fillStyle = VNINK; ctx.beginPath(); ctx.arc(xx + 18, yy, r + 2, 0, TAU); ctx.fill();
+    }
+    for (let k = 0, xx = x0 + 6; xx < x0 + w - 10; xx += 36, k++) {
+      const r = 15 + (k % 3) * 4, yy = cy - 6 + Math.sin(t * 0.7 + k) * 2;
+      ctx.fillStyle = k % 2 ? '#8a94a8' : '#9aa4b8'; ctx.beginPath(); ctx.arc(xx + 18, yy, r, 0, TAU); ctx.fill();
+    }
+  }
+}
+Object.assign(ENTITY_TYPES, { vnRainCloud: VnRainCloud });
+const vnPupoSkins = {
+  // 10-4: the cave pearl (a still pupoSnatch look): a creamy pearl with a soft shine, sitting in the pool
+  vnPearl(ctx, e, t) {
+    const x = e.cx, y = e.cy + 4;
+    ctx.fillStyle = VNINK; ctx.beginPath(); ctx.arc(x, y, 9.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#f4ece0'; ctx.beginPath(); ctx.arc(x, y, 8, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#d8c8e0'; ctx.beginPath(); ctx.arc(x + 2, y + 2, 5, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x - 3, y - 3, 2.6 + Math.sin(t * 2) * 0.4, 0, TAU); ctx.fill();
+  },
+  // 10-4: the skylight gate (a shutter look): an old iron gate in a stone frame, a round pearl-shaped socket on it
+  vnSkylightGate(ctx, e, t) {
+    const x = e.x, y = e.y, w = e.w, h = e.h, k = e.k || 0, up = h * k;
+    ctx.fillStyle = VNINK; ctx.fillRect(x - 4, y - 8, w + 8, 10); ctx.fillStyle = '#7a7470'; ctx.fillRect(x - 2, y - 6, w + 4, 6);
+    ctx.save(); ctx.beginPath(); ctx.rect(x - 4, y, w + 8, h); ctx.clip();
+    const gy = y - up;
+    ctx.fillStyle = VNINK; ctx.fillRect(x + 2, gy, w - 4, h);
+    ctx.fillStyle = '#5a6a6a'; for (let xx = x + 5; xx < x + w - 4; xx += 7) ctx.fillRect(xx, gy + 2, 4, h - 4);
+    ctx.fillStyle = '#7a8a84'; ctx.fillRect(x + 3, gy + 10, w - 6, 5); ctx.fillRect(x + 3, gy + h - 18, w - 6, 5);
+    ctx.fillStyle = VNINK; ctx.beginPath(); ctx.arc(x + w / 2, gy + h / 2, 8, 0, TAU); ctx.fill();
+    ctx.fillStyle = e.open ? '#f4ece0' : '#2a2430'; ctx.beginPath(); ctx.arc(x + w / 2, gy + h / 2, 5.6, 0, TAU); ctx.fill();
+    ctx.restore();
+  },
+  // 10-6: a lantern hook (a pupoGrab hook look): a red paper lantern on the string, the brass ring under it
+  vnLanternHook(ctx, e, t) {
+    const x = e.hx, y = e.hy, sw = Math.sin(t * 1.4 + e.ax * 0.02) * 1.5;
+    ctx.strokeStyle = VNINK; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x, y - 2 * TS + 4); ctx.lineTo(x + sw, y - 30); ctx.stroke();
+    ctx.fillStyle = VNINK; ctx.beginPath(); ctx.ellipse(x + sw, y - 18, 11, 13, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = LANT[Math.floor(e.ax / 96) % LANT.length]; ctx.beginPath(); ctx.ellipse(x + sw, y - 18, 9.4, 11.4, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x + sw, y - 18, 4.5, 11.4, 0, 0, TAU); ctx.stroke();
+    ctx.fillStyle = '#ffd23a'; ctx.fillRect(x + sw - 6, y - 31, 12, 3); ctx.fillRect(x + sw - 6, y - 8, 12, 3);
+    pupoRing(ctx, x + sw, y, 5);
+  }
+};
+Object.assign(Decor, {
+  // 10-4: the rimstone pool behind the grille: stepped stone rims round still water, a glow on the pearl's side
+  vnRimPool(ctx, x, y, t, th, d) {
+    const x0 = x - d.w / 2, top = y - d.h;
+    ctx.fillStyle = '#2a3a3a'; ctx.fillRect(x0, top, d.w, d.h);
+    ctx.fillStyle = 'rgba(120,200,190,0.35)'; ctx.beginPath(); ctx.ellipse(x0 + 30, y - 22, 34, 18, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = VNINK; for (let k = 0; k < 3; k++) { rr(ctx, x0 + 4 + k * 38, y - 10 - (k % 2) * 4, 34, 8, 4); ctx.fill(); }
+    ctx.fillStyle = '#c8b898'; for (let k = 0; k < 3; k++) { rr(ctx, x0 + 6 + k * 38, y - 9 - (k % 2) * 4, 30, 5, 3); ctx.fill(); }
+  },
+  // 10-6: the lantern seller's house: plaster walls, a tiled roof, lanterns along its eave
+  vnLanternHouse(ctx, x, y, t, th, d) {
+    const x0 = x - d.w / 2 + TS, w = d.w - TS, top = y - d.h + 2 * TS;
+    ctx.fillStyle = VNINK; ctx.fillRect(x0 - 2, top - 2, w + 4, y - top + 2);
+    ctx.fillStyle = '#e8c87a'; ctx.fillRect(x0, top, w, y - top);
+    ctx.fillStyle = '#c84a2a'; ctx.fillRect(x0 - 6, top - 6, w + 12, 8); ctx.fillStyle = '#a8321a'; for (let xx = x0 - 6; xx < x0 + w + 6; xx += 8) ctx.fillRect(xx, top - 6, 3, 8);
+    ctx.fillStyle = '#5a3a1a'; rr(ctx, x0 + w / 2 - 12, y - 46, 24, 46, 3); ctx.fill();
+    ctx.fillStyle = '#7ab8d8'; ctx.fillRect(x0 + 10, top + 16, 22, 18); ctx.fillRect(x0 + w - 32, top + 16, 22, 18);
+    for (let k = 0; k < 4; k++) { const lx = x0 + 14 + k * (w - 28) / 3; ctx.fillStyle = VNINK; ctx.beginPath(); ctx.ellipse(lx, top + 10, 7, 8.4, 0, 0, TAU); ctx.fill(); ctx.fillStyle = LANT[k]; ctx.beginPath(); ctx.ellipse(lx, top + 10, 5.6, 7, 0, 0, TAU); ctx.fill(); }
+    // the steps up its side
+    ctx.fillStyle = VNINK; ctx.fillRect(x - d.w / 2, y - 2 * TS - 2, TS + 2, 2 * TS + 2); ctx.fillStyle = '#a88a5a'; ctx.fillRect(x - d.w / 2 + 2, y - 2 * TS, TS - 2, 2 * TS); ctx.fillStyle = '#8a6a3a'; ctx.fillRect(x - d.w / 2 + 2, y - 2 * TS, TS - 2, 5);
+  },
+  // 10-6: the stilt teahouse over the lane: a wooden body on posts (the lane under it), a railing round its roof
+  vnTeahouse(ctx, x, y, t, th, d) {
+    const x0 = x - d.w / 2, w = d.w, top = y - d.h + 2 * TS, body = top + 2 * TS;
+    ctx.fillStyle = VNINK; for (const px of [x0 + 8, x0 + w - 14]) ctx.fillRect(px - 1, body - 2, 8, y - body + 2);
+    ctx.fillStyle = '#6a4a2a'; for (const px of [x0 + 8, x0 + w - 14]) ctx.fillRect(px + 1, body, 4, y - body);
+    ctx.fillStyle = VNINK; ctx.fillRect(x0 - 2, top - 2, w + 4, 2 * TS + 4);
+    ctx.fillStyle = '#9a6a3a'; ctx.fillRect(x0, top, w, 2 * TS); ctx.fillStyle = '#b8844a'; ctx.fillRect(x0, top, w, 4);
+    ctx.fillStyle = '#7a5030'; for (let xx = x0 + 6; xx < x0 + w; xx += 14) ctx.fillRect(xx, top + 6, 3, 2 * TS - 8);
+    ctx.fillStyle = VNINK; ctx.fillRect(x0, top - 20, w, 4); for (let xx = x0 + 2; xx < x0 + w; xx += 20) ctx.fillRect(xx, top - 20, 4, 20);
+    ctx.fillStyle = '#e8322a'; ctx.fillRect(x0 + 1, top - 19, w - 2, 2);
+  },
+  // 10-6: the lantern string the hooks hang from, between two poles
+  vnLanternString(ctx, x, y, t, th, d) {
+    const x0 = x - d.w / 2 + 6, x1 = x + d.w / 2 - 6, yy = y - d.h + 8;
+    ctx.strokeStyle = VNINK; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, yy); ctx.quadraticCurveTo(x, yy + 10, x1, yy); ctx.stroke();
+    ctx.strokeStyle = '#c8a03a'; ctx.lineWidth = 1.4; ctx.stroke();
+  }
+});
+Tour.amend('vn', { skins: vnPupoSkins });
+
 /* ---------------- small entities ---------------- */
 // bats flutter out of the cave mouth now and then (the tell of the hidden cove)
 class VnCaveBats extends Ent {
@@ -395,9 +554,11 @@ const stamps = {
       [26, 16, '1'], [29, 16, 'D'], [31, 16, 'w'],
       [43, 16, '2'], [46, 16, 'D'], [48, 16, 'j'],
       [55, 16, '3'], [60, 16, 'G'],
-      [20, 16, 'k'], [36, 16, 'k'], [52, 16, 'k']
+      [20, 16, 'k'], [36, 16, 'k'], [52, 16, 'k'],
+      [50, 16, 'x']   // Pupo's Nap Box (PUPO.md §4.3), by the canal lane's door (past the duck's gate, like the door)
     ], { open: true, wall: '#' }),
     legend: {
+      x: ['piece', 'napBox', {}],
       n: ['spawn', 'sign', { text: 'TRADE YOUR WAY TO THE STAMP: A COCONUT FOR THE BUFFALO, CANDY FOR THE DUCK, FRUIT FOR THE GECKO' }],
       a: ['anchor', 'vuonBack'], w: ['anchor', 'loBack'], j: ['anchor', 'kenhBack'],
       E: ['piece', 'boatDoor', {}],
@@ -614,7 +775,7 @@ const levels = [
         lamps: { title: 'THE LANTERN WORKSHOP', rule: 'THE LANTERN MAKER\'S WORKSHOP IS DARK. LIGHT HER LANTERNS IN THE ORDER HER SKETCH SHOWS', sym: 3 } }
     ] },
   // 10-4 RISE (flood): the cave floods while Brady climbs to the skylight
-  { n: 4, name: 'Son Doong Flood', arch: 'rise', theme: 'vn_cave',
+  { n: 4, name: 'Son Doong Flood', arch: 'rise', theme: 'vn_cave', pupo: 'level',   // Vietnam's Pupo level: The Cave Pearl
     gimmick: 'The giant cave floods: swim and climb, lasso the stalactites and reel up the shafts, a jungle under the skylight, the water still rising',
     hint: 'The water keeps rising! Lasso a stalactite and hold UP to reel in. Fins help you swim',
     postcard: 'There\'s a whole jungle growing inside this cave. And a river. And now a lot more river. ♥ C',
@@ -622,16 +783,19 @@ const levels = [
     mapCell: [2, 1], mapFrom: 2,
     exits: { main: { to: '10-5' } },
     areas: [
-      { id: 'hang', gen: 'rise', W: 28, H: 110, risingWater: { speed: 0.35, delay: 8 },
+      { id: 'hang', gen: 'rise', W: 28, H: 118, risingWater: { speed: 0.35, delay: 8 },   // 8 more rows for the pearl gate
         script: [
           'cstart',
           ['finsBand', { item: 'power' }],
           ['cledges', { n: 3 }],
           ['reel', { gold: true }],
+          ['napAt', { x: 25, dy: 3 }],   // Pupo (PUPO.md §4.2): his Nap Box on the first dry ledge, over the first shaft
           ['cledges', { n: 3, flip: true, bat: true }],
           'ccp',
+          ['napAt', { x: 23, dy: 3 }],   // the backup Nap Box at the checkpoint (the near side of the pearl gate)
           'chamber',
           ['skyGarden', { to: 'rung@in', back: 'rungBack' }],
+          ['pearlGate', { key: 'pearl' }],   // The Cave Pearl
           ['reel', { flip: true }],
           ['cledges', { n: 3 }],
           ['reel', {}],
@@ -665,7 +829,7 @@ const levels = [
       { id: 'kettle', gen: 'arena', role: 'arena', layout: 'kettle', arenaW: 26, H: 18, roof: false }
     ] },
   // 10-6 HUB (errand, secret): the Mekong floating market
-  { n: 6, name: 'Mekong Floating Market', arch: 'hub', secret: true, theme: 'vn_mekong',
+  { n: 6, name: 'Mekong Floating Market', arch: 'hub', secret: true, theme: 'vn_mekong', pupo: 'helper',   // Pupo's Nap Box in the plaza, the lantern hooks over the canal lane to a 1-up
     gimmick: 'Trade your way through a floating market: a coconut from the orchard, coconut candy from the workshop, fruit from the canal boats, and the stamp',
     hint: 'Each friend wants something: the buffalo a coconut, the duck candy, the gecko fruit',
     postcard: 'A whole market on boats! I bought coconut candy from a duck. Don\'t ask. ♥ C',
@@ -685,9 +849,10 @@ const levels = [
           ['goods', { id: 'k1', item: 'coconut' }],
           ['door', { to: 'cho@vuonBack', perch: 0, look: 'vnMarketDoor' }]
         ] },
-      { id: 'kenh', gen: 'strip', role: 'sub', W: 70, H: 18,
+      { id: 'kenh', gen: 'strip', role: 'sub', W: 70, H: 22, GY: 18, gyMax: 18,   // four more rows of sky (the lantern hooks stay clear of the HUD)
         enemies: [['vnShrimp', 1]],
         script: [
+          ['lanternRoofs', { n: 6 }],   // Pupo's bonus (a helper here, PUPO.md §4.3): lantern hooks over the lane to a 1-up
           ['sampans', { span: 9 }],
           ['ferry', {}],
           ['sampans', { span: 11, speed: 1.8, shrimp: true }],

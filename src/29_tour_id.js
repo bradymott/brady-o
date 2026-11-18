@@ -757,7 +757,7 @@ const hornbillArt = (ctx, e, x, y, m, t) => {
   if (m !== 'ko') { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(13, -5, 2, 0, TAU); ctx.fill(); ctx.fillStyle = '#c82a2a'; ctx.beginPath(); ctx.arc(13.4, -5, 1, 0, TAU); ctx.fill(); }
   ctx.restore();
 };
-const IdMacaque = modal(TourEnemy.make({ w: 22, h: 28, speed: 1.3, behavior: 'itemThief', flee: 8, atlas: ID_X, sprite: 'macaque', art: macaqueArt, burst: '#9a8a76' }), { leave: 'flee', approach: 'walk' });
+const IdMacaque = modal(TourEnemy.make({ belly: true, w: 22, h: 28, speed: 1.3, behavior: 'itemThief', flee: 8, atlas: ID_X, sprite: 'macaque', art: macaqueArt, burst: '#9a8a76' }), { leave: 'flee', approach: 'walk' });
 const IdTokay = modal(TourEnemy.make({ w: 26, h: 12, speed: 1.4, behavior: 'wallCrawl', atlas: ID_X, sprite: 'gecko', art: tokayArt, burst: '#6a8ad0', edgeTurn: true }), { climb: 'crawl', ceil: 'crawl', drop: 'crawl', walk: 'crawl' });
 const IdRafflesia = modal(TourEnemy.make({ w: 34, h: 24, speed: 0, behavior: 'inhaleBlast', range: 5, atlas: ID_X, sprite: 'rafflesia', art: rafflesiaArt, burst: '#c8302a' }), { tell: 'inhale', gasp: 'stun', walk: 'idle' });
 const IdHornbill = modal(TourFlyer.make({ w: 34, h: 18, speed: 1.0, range: 7, behavior: 'hoverDart', atlas: ID_X, sprite: 'hornbill', art: hornbillArt, burst: '#1a1a22' }), { hover: 'fly', aim: 'fly', dart: 'swoop', recover: 'stun', return: 'fly' });
@@ -779,8 +779,8 @@ const enemies = {
   } }), place: 'walk' },
   idDragonfly: { cls: TourFlyer.make({ w: 30, h: 12, range: 3, speed: 1.5, swoop: true, art: dragonflyArt, burst: '#e8402a' }), place: 'fly' },
   idSate: { cls: TourEnemy.make({ w: 14, h: 44, speed: 0.9, behavior: 'walk', spiky: true, art: sateArt, burst: '#a8501a', onDefeat: e => K.say(e.g, e, 'SATAY LATER!', '#ffd23a') }), place: 'walk' },
-  idCivet: { cls: TourEnemy.make({ w: 30, h: 16, speed: 0.9, behavior: 'charge', range: 7, chargeSpeed: 7.4, windup: 0.6, chargeT: 1, art: civetArt, glow: 'rgba(255,230,140,', burst: '#4a4440', onNotice: e => K.say(e.g, e, 'HISSS', '#ffe08a') }), place: 'walk' },
-  idBat: { cls: TourFlyer.make({ w: 30, h: 16, range: 3, speed: 1.0, swoop: true, art: batArt, burst: '#8a5a32' }), place: 'fly' },
+  idCivet: { cls: TourEnemy.make({ belly: true, w: 30, h: 16, speed: 0.9, behavior: 'charge', range: 7, chargeSpeed: 7.4, windup: 0.6, chargeT: 1, art: civetArt, glow: 'rgba(255,230,140,', burst: '#4a4440', onNotice: e => K.say(e.g, e, 'HISSS', '#ffe08a') }), place: 'walk' },
+  idBat: { cls: TourFlyer.make({ belly: true, w: 30, h: 16, range: 3, speed: 1.0, swoop: true, art: batArt, burst: '#8a5a32' }), place: 'fly' },
   idLionfish: { cls: TourSwimmer.make({ w: 30, h: 18, speed: 1.2, range: 3, art: lionfishArt }), place: 'swim' }
 };
 
