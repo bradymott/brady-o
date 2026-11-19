@@ -1,5 +1,21 @@
 # Super Art Kart: relay to the next agent (written Nov 11, 2026)
 
+## Update, Nov 19 2026: the whole game is built and live (read this first; the rest of the file is history)
+- **Live on `main` and gh-pages:** career mode, Battle Royale, 12 drivers, stat points, Burn the Man, the Man boss, and for ALL 12 cars their own career track (`src/43_cart_j_<track>.js`) and royale arena (`src/43_cart_i_royale_<arena>.js`), plus a secret level with its own mini-game for every car (`src/43_cart_g_*.js`). No stand-in levels remain. Brady confirmed the driver swap (Party Boy for Partied Too Hard, Messiah Complex for Undercover Cop).
+- **Tested on the release build:** `apps_test` 3/3, `cart_career_test` (every career and royale stage loads, drives and passes), `cart_item_test`, `cart_battle_test`, and the three secret tests (`cart_secret_secA_test.js`, `cart_secret_secB_test.js`, `cart_secret_c_test.js`). Each level also passed `cart_track_test.js <track>` / `ARENAS=<id> cart_royale_test.js <out> match 3` when it was built.
+- **Brady said (Nov 19):** skip screenshot reviews, don't wait for his reaction between stages, just finish to playable. He has NOT yet played any of it; nothing has been tuned by a human.
+- **Next: balance and polish after he plays.** Known rough spots from the builders' reports:
+  - Too many hazard hits per race (target 5–20): Laser Tomb lasers (~30), Shipwreck Bay crabs (26–36), The Foundry molten copper, Dragon's Keep gates.
+  - Hazards that rarely land: Disco Reef spotlights, Sand Maw (Shark Dunes; could fail the "fired but never landed" check on another seed), Greenhouse flytraps, Storm Cell arc fences, Skull Cove blowholes and kegs.
+  - Pace: Sugar Rush Bakery is 12–17% slower per km than Neon Nights.
+  - Looks: several arenas are dark from above (Roller Disco, Fire Garden, Storm Cell, Skull Cove) or pale and sparse in daylight (Tiltyard, Sand Pit, Tide Pool, Shipwreck Bay, Bath Time); Electric Deep arc zap is thin; Mixing Bowl mixer head is a plain shape.
+  - Secret games: School of Glitter ends in ~55 s (raise the goal to 20); Love Train never reaches 10 on autopilot (maybe 8); Dragon's Hoard favours raiders; Vibe Check is short on the small Sugar Counter.
+  - Royale: boss camera crops the Man in landscape, spectate camera can sit inside a pile, no dedicated royale sounds; boss tuned against a clumsy bot (88% wins), not a person.
+  - Frosting Frenzy (paint the floor) resembles a well-known turf-painting game: fine for the personal site, flag before any commercial release.
+- **Load order rule:** files load in filename order; track files that sort before `43_cart_j_kit.js` build `pts` lazily and guard registries with `var X = (typeof X !== 'undefined' && X) || {};`. Several arenas reuse builder functions from their car's track file.
+- **Briefs for subagents:** `tools/dev/briefs/LEVEL_BRIEF.md`, `SECRET_BRIEF.md`. Add to any new brief: `BRADY_DIST` must be an absolute scratchpad path and nothing outside the scratchpad may be deleted (an agent built into the home folder and deleted the output on Nov 19).
+- **Never touch Super Brady-O World or Burning Man files;** before every commit to `main`, diff against `origin/main` excluding kart files.
+
 ## Brady: how to continue
 1. Open Terminal and run: `cd ~/brady-o && claude`
 2. Paste this as your first message:
