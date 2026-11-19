@@ -3,6 +3,7 @@
 // usage: node tools/gameplay_test.js [shotsDir]   (BRADY_DIST=<folder> to test a private build)
 //        tests <dist>/site/super-brady-o-world/index.html (falls back to <dist>/brady-o.html)
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const shots = process.argv[2] || path.join(__dirname, '..', 'shots');
 fs.mkdirSync(shots, { recursive: true });
@@ -13,7 +14,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
 
 (async () => {
   const browser = await chromium.launch();
-  const context = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const context = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await silence(context);
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -56,13 +57,16 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     window.near = (type, dx, props) => { const g = S(), p = P(); const C = ctor(type); const e = new C(g, Object.assign({ x: p.cx + (dx || 60), y: p.y + p.h, dir: -1 }, props || {})); g.spawn(e); return e; };
   });
 
-  // 1. Title -> card -> intro story -> world map
-  const card = await page.evaluate(() => { const s = window.BRADY.Game.scene; return { app: window.BRADY.APP, n: s.cards.length, c: { x: s.cards[0].x + s.cards[0].w / 2, y: s.cards[0].y + s.cards[0].h / 2 } }; });
-  check('the world app title has one Super Brady-O World card', card.app === 'world' && card.n === 1, card.app);
+  // 1. Title -> TAP TO PLAY (the plane takes off) -> intro story -> world map
+  await page.waitForTimeout(1200);   // the logo drops in
+  const card = await page.evaluate(() => { const s = window.BRADY.Game.scene; return { app: window.BRADY.APP, name: s.constructor.name, label: s.ctaLabel, c: s.cta && { x: s.cta.x + s.cta.w / 2, y: s.cta.y + s.cta.h / 2 } }; });
+  check('the world app title is the title show, with TAP TO PLAY for a new player', card.app === 'world' && card.name === 'TitleScene' && card.label === 'TAP TO PLAY' && !!card.c, card);
   await shot('01-title.png');
-  await page.mouse.click(card.c.x, card.c.y); await page.waitForTimeout(500);
+  await page.mouse.click(card.c.x, card.c.y);
+  await page.waitForFunction(() => { const s = window.BRADY.Game.scene; return s.constructor.name === 'StoryScene' || (s.inner && s.inner.constructor.name === 'StoryScene'); }, null, { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(600);
   const story = await page.evaluate(() => window.BRADY.Game.scene.constructor.name);
-  check('the card opens the intro story', story === 'StoryScene', story);
+  check('tapping play flies off into the intro story', story === 'StoryScene', story);
   await page.mouse.click(437, 150); await page.waitForTimeout(700);
   await shot('02-story.png');
   for (let k = 0; k < 8; k++) { const n = await page.evaluate(() => window.BRADY.Game.scene.constructor.name); if (n !== 'StoryScene') break; await page.mouse.click(437, 150); await page.waitForTimeout(700); }
@@ -289,7 +293,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     return out;
   });
   check('surfboard, noodle lasso, nunchucks and yak ride all work in their countries', Object.values(sigs4).every(s => s.has && s.alive && s.moved > 60), sigs4);
-  // the finale: Baron Bric-a-Brac's three phases in Nepal, then home together, the ending and the credits
+  // the finale: Piwi Squirmin's three phases in Nepal, then home together, the ending and the credits
   const fin = await page.evaluate(() => {
     start('12-5'); clearEnemies(); const b = arenaBoss(), g = S(), p = P();
     p.x = b.arenaX0 + 64; p.y = b.floorY - p.h - 4; p.invuln = 999; sim(3);
@@ -304,11 +308,11 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const I = window.BRADY.Input; for (let k = 0; k < 40 && window.BRADY.Game.scene === E; k++) { I.jumpPressed = true; E.update(1 / 60); I.jumpPressed = false; }
     return { name: b.name, phases: [...phases].join(','), beaten: !!b.remove, results, ending, credits: window.BRADY.Game.scene.constructor.name };
   });
-  check('Baron Bric-a-Brac fights in three phases; beating him leads home, to the ending and the credits', fin.phases === '1,2,3' && fin.beaten && fin.results === 'results' && fin.ending === 'TourEndingScene' && fin.credits === 'CreditsScene', fin);
+  check('Piwi Squirmin\' fights in three phases; beating him leads home, to the ending and the credits', fin.phases === '1,2,3' && fin.beaten && fin.results === 'results' && fin.ending === 'TourEndingScene' && fin.credits === 'CreditsScene', fin);
   // the route on the map: Mexico to Nepal in order, and the postcard count across all lands
   // level totals come from the game data: 68 main levels (5 per country, 4 in each secret land) plus however many
   // secret levels the countries have so far
-  const order = await page.evaluate(() => { const Ws = T.Tour.worldList(), C = w => T.Tour.byWorld[w]; return { route: T.Tour.mainCountries().map(C => C.id).join(','), secret: Ws.filter(w => C(w).secret).join(','), levels: T.Tour.allLevelIds().length, listed: Ws.reduce((n, w) => n + C(w).levels.length, 0), main: Ws.reduce((n, w) => n + C(w).mainCount, 0), mainOk: Ws.every(w => C(w).mainCount === (C(w).secret ? 4 : 5)) }; });
+  const order = await page.evaluate(() => { const Ws = T.Tour.worldList(), C = w => T.Tour.byWorld[w]; return { route: T.Tour.mainCountries().map(C => C.id).join(','), secret: Ws.filter(w => C(w).secret && !C(w).bonus).join(','), levels: T.Tour.allLevelIds().length, listed: Ws.reduce((n, w) => n + C(w).levels.length, 0), main: Ws.filter(w => !C(w).bonus).reduce((n, w) => n + C(w).mainCount, 0), mainOk: Ws.filter(w => !C(w).bonus).every(w => C(w).mainCount === (C(w).secret ? 4 : 5)) }; });
   check(`the map route runs Mexico to Nepal with both secret lands, 68 main levels (${order.levels} in all)`, order.route === 'mx,ec,br,mz,ma,es,fr,nl,id,vn,jp,np' && order.secret === '13,22' && order.main === 68 && order.mainOk && order.levels === order.listed, order);
   // the secret lands: hidden on the map until found; Antarctica behind a cracked wall in 8-4, World 22 behind door 22 in 5-2 (22 postcards)
   const secrets = await page.evaluate(() => {
@@ -385,7 +389,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   const pause = await page.evaluate(() => { start('7-2'); const g = S(); g.openPause(); const labels = g.pauseUI.map(b => b.label); g.closePause(); return labels; });
   check('pause offers the world map', pause.includes('WORLD MAP'), pause);
   const credits = await page.evaluate(() => { const B = window.BRADY; const c = new B.CreditsScene('world'); B.Game.setScene(c); for (let k = 0; k < 60; k++) c.update(1 / 60); c.draw(B.Game.ctx); return c.lines.map(l => l[0]).join(' | '); });
-  check('the credits tell the world-tour story', /Baron Bric-a-Brac/.test(credits) && /postcards/i.test(credits) && !/playa|Burning|the Man\b/.test(credits), credits.slice(0, 160));
+  check('the credits tell the world-tour story', /Piwi Squirmin/.test(credits) && /postcards/i.test(credits) && !/playa|Burning|the Man\b/.test(credits), credits.slice(0, 160));
   const ending = await page.evaluate(() => { const B = window.BRADY; const e = new T.TourEndingScene(); B.Game.setScene(e); for (let k = 0; k < 30; k++) e.update(1 / 60); e.draw(B.Game.ctx); return e.lines.length; });
   check('the ending scene plays', ending >= 3, ending);
   await shot('13-ending.png');

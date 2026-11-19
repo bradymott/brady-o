@@ -602,7 +602,8 @@ const stamps = {
     doors: [{ to: 'patio@pantryBack' }],
     gold: { '*': 'hidden' }
   },
-  // 1-6's swallow nest in the pit wall: mud nests, an LSD tab, P2
+  // 1-6's swallow nest in the pit wall: mud nests, an LSD tab, P2 (the LSD box sits a row lower than the panel: one row
+  // higher and the tab hovered at the very top of Brady's jump, out of reach while it was over the box)
   nido: {
     floor: 9,
     rows: [
@@ -610,8 +611,8 @@ const stamps = {
       '#..........................#',
       '#..n.....n.....n...........#',
       '#..........*...............#',
-      '#........-----.....?.......#',
-      '#..........................#',
+      '#........-----.............#',
+      '#..................?.......#',
       '#..o.o.o.o.o...............#',
       '#..........................#',
       '#.@D.......................#',
@@ -659,7 +660,7 @@ const stamps = {
 };
 
 /* ---------------- the levels ---------------- */
-const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
+const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado', pupo: 'helper',   // Pupo's tutorial (PUPO.md §6): he is optional here
   gimmick: 'Three lanes at once: rooftops, street and the cellar canal. Awnings bounce you up, trapdoors drop you down',
   hint: 'Hold jump on an awning to bounce up to the rooftops',
   postcard: 'Brady! The market has three floors and the melons use all of them. ♥ C',
@@ -681,7 +682,15 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['rooftops', { lane: 'roof', n: 2 }],
         ['flat', { lane: 'cellar', n: 30 }],
         ['sync'],
-        // ② melons down the street; gaps and papel-picado ropes on the roofs; the corn that pops
+        // ② Magic Beans first (Brady wants the fart float early): float up to the roofs; then melons down the street,
+        // gaps and papel-picado ropes on the roofs; the corn that pops
+        // Pupo (PUPO.md §6): a Nap Box snores between two stalls; two chihuahuas to poke; a piñata box too high for Brady
+        ['napBox', { lane: 'street' }],
+        ['flat', { lane: 'street', n: 4 }],
+        ['enemies', { lane: 'street', kind: 'mxChihuahua', n: 2, len: 10 }],
+        ['pupoFetch', { lane: 'street', h: 6, item: 'oneup' }],
+        ['gearStand', { lane: 'street', item: 'beans' }],   // the first jump power of the game, out in the open on a stand
+        ['tip', { lane: 'street', text: 'MAGIC BEANS! TAP JUMP AGAIN AND AGAIN IN THE AIR TO FART-FLOAT UP TO THE ROOFS' }],
         ['melons', { lane: 'street' }],
         ['enemies', { lane: 'street', kind: 'mxElote', n: 1, len: 8 }],
         ['step', { lane: 'street', h: -3 }],
@@ -690,6 +699,8 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['tip', { lane: 'roof', text: 'A PAPER PLANE! HOLD JUMP WHILE FALLING TO GLIDE. THROW IT AT THINGS FAR AWAY' }],
         ['gearStand', { lane: 'roof', item: 'plane' }],
         ['postcard', { lane: 'roof', kind: 'must', dy: -3 }],
+        // a Pupo bonus: papel-picado hooks across a roof gap too wide to jump, candy coins along the swing
+        ['pupoGap', { lane: 'roof', w: 9, hooks: 2, coins: true }],
         ['gap', { lane: 'street', n: 3 }],
         ['trapdoor', { lane: 'street', to: 'bodega@in', crate: true, back: 'bodegaBack', look: 'mxTrapdoor' }],
         ['flat', { lane: 'cellar', n: 6 }],
@@ -708,15 +719,18 @@ const L1 = { n: 1, name: 'Mercado Mayhem', arch: 'parade', theme: 'mx_mercado',
         ['sync'],
         ['stamp', { id: 'escenario', lane: 'street' }],
         ['sync'],
+        // a Pupo bonus at the cellar's end: a ticklish burro asleep across a pocket of coins
+        ['pupoTickle', { lane: 'cellar', lock: 'tickle:mx11', belly: [-0.6, -1], pocket: 5 }],
         ['cellarDress', { lane: 'cellar' }]
       ] },
-    { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega' }
+    { id: 'bodega', gen: 'room', role: 'secret', theme: 'mx_bodega', dark: true, stamp: 'bodega', room: 'lamps',
+      lamps: { title: 'THE CHILI CELLAR', rule: 'THE MARKET CELLAR IS PITCH DARK. LIGHT ITS LAMPS IN THE ORDER THE PAINTED TILE SHOWS', sym: 0 } }
   ] };
 
 const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
   gimmick: 'Ride a trajinera through branching canals: a lever picks the channel, the lock lifts the boat',
   hint: 'Touch a lever post and tap THROW to pick the high channel',
-  postcard: 'The axolotls here keep shrinking and growing back. Like my patience with the Baron. ♥ C',
+  postcard: 'The axolotls here keep shrinking and growing back. Like Piwi\'s ego. ♥ C',
   enemies: [['mxHeron', 1]],
   mapCell: [1, 0], mapFrom: 0,
   exits: { main: { to: '1-3' } },
@@ -729,7 +743,7 @@ const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
         'posts', 'vendor', ['arch', {}], ['axolotls', { n: 1 }], 'posts',
         // ② the first lock: the lever picks the garden channel (lifted) or the market channel
         ['fork', { len: 46, skin: 'mxLockLever', gold: false,
-          upper: [['chinampa', {}], ['highPost', { gold: 'must' }], ['boatBlock', { item: 'power', dy: 6 }], ['bridge', { enemy: false }], 'herons'],
+          upper: [['chinampa', {}], ['highPost', { gold: 'must' }], ['boatBlock', { item: 'lsd', dy: 6 }], ['bridge', { enemy: false }], 'herons'],
           lower: [['bridge', { enemy: false }], 'posts', ['chinampa', {}], 'posts'] }],
         'cp',
         // ③ the double fork with axolotls on both channels; a willow hides the third channel
@@ -737,7 +751,8 @@ const L2 = { n: 2, name: 'Xochimilco Forks', arch: 'rail', theme: 'mx_canal',
         ['fork', { len: 30, skin: 'mxLockLever', gold: false, upper: [['axolotls', { n: 1 }], 'herons'], lower: [['axolotls', { n: 2 }], ['chinampa', { gold: 'risky' }]] }],
         ['arch', {}], ['boatBlock', { item: 'lsd', dy: 8 }]
       ] },
-    { id: 'embarcadero', gen: 'room', role: 'secret', theme: 'mx_canal', stamp: 'embarcadero' }
+    { id: 'embarcadero', gen: 'room', role: 'secret', theme: 'mx_canal', stamp: 'embarcadero', room: 'whack',
+      whack: { title: 'WHACK-AN-AXOLOTL', rule: 'AXOLOTLS POP UP THROUGH THE OLD LANDING\'S FLOOR! BOOP EIGHT OF THEM BEFORE TIME IS UP', critter: 'axolotl', need: 8, t: 22 } }
   ] };
 
 const L3 = { n: 3, name: 'Cenote of Light', arch: 'dive', theme: 'mx_cenote',
@@ -788,7 +803,7 @@ const L3 = { n: 3, name: 'Cenote of Light', arch: 'dive', theme: 'mx_cenote',
 const L4 = { n: 4, name: 'Volcán Escape', arch: 'tower', theme: 'mx_volcan',
   gimmick: 'Climb out of the crater: steam vents, crumbling obsidian, rolling armadillos; the lava wakes up behind you',
   hint: 'Ride the steam up the chimneys. Keep climbing: the lava is rising!',
-  postcard: 'The Baron tried to bottle the volcano. It did not agree. ♥ C',
+  postcard: 'Piwi tried to book the volcano as his opening act. It did not agree. ♥ C',
   enemies: [['mxArmadillo', 1], ['mxBat', 1]],
   mapCell: [2, 1], mapFrom: 2,
   exits: { main: { to: '1-5' } },
@@ -814,10 +829,11 @@ const L4 = { n: 4, name: 'Volcán Escape', arch: 'tower', theme: 'mx_volcan',
         'vdouble',
         ['craterRim', {}]
       ] },
-    { id: 'boveda', gen: 'room', role: 'secret', theme: 'mx_volcan', dark: true, stamp: 'boveda' }
+    { id: 'boveda', gen: 'room', role: 'secret', theme: 'mx_volcan', dark: true, stamp: 'boveda', room: 'climb',
+      climb: { title: 'THE OBSIDIAN CHIMNEY', rule: 'AN OLD LAVA CHIMNEY, LONG COLD. CLIMB TO THE TOP: SOME LEDGES ARE BRITTLE', style: 'crumble' } }
   ] };
 
-const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata',
+const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacienda', boss: 'mx_pinata', pupo: 'level',   // Mexico's Pupo level (lead-in)
   gimmick: 'Swinging piñatas, candy cannons, the balcony; then El Gran Piñatón on his pulley rope in the tall patio',
   hint: 'Break the piñata from BELOW: headbutt him when he swings low. Bounce off the awnings when he rises!',
   postcard: 'You did it! The Palace of Fine Arts popped back to full size. Next stop: Ecuador! ♥ C',
@@ -829,18 +845,24 @@ const L5 = { n: 5, name: 'Fiesta de la Hacienda', arch: 'lair', theme: 'mx_hacie
       script: [
         ['startStamp', { id: 'porton' }],
         ['itemBlock', { item: 'power' }],
+        // Pupo's level (PUPO.md §4): his Nap Box by the gate; the patio's cactus garden is too wide to jump, only his arms
+        // swing across it on the piñata hooks; the hacienda wall only he can climb. He waits at the arena door
+        ['napBox', {}],
         // the lead-in teaches what the fight needs: swinging piñatas, things from below, bouncing high
         ['swingers', { n: 3 }],
         ['cannons', {}],
         ['postcard', { kind: 'risky', dx: -8, dy: -7 }],
         'balcony',
         ['secretDoor', { to: 'despensa@in', look: 'fake', back: 'pantryBack' }],
+        ['pupoGap', { w: 12, hooks: 3, under: 'spikes', coins: true }],
         ['enemies', { n: 1, kind: 'mxBurro' }],
         'sig',
         ['itemBlock', { item: 'power' }],
+        ['pupoClimb', { h: 7 }],
         ['door', { to: 'fiesta@in', perch: 0, look: 'tourDoor' }]
       ] },
-    { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa' },
+    { id: 'despensa', gen: 'room', role: 'secret', stamp: 'despensa', room: 'fetch',
+      fetch: { title: 'THE HEN\'S MOLE', rule: 'THE HACIENDA HEN NEEDS A CHILI, A CACAO POD AND A TOMATO FOR HER MOLE. BRING THEM TO THE POT', ingredients: ['tokChili', 'tokCacao', 'tokTomato'], dish: 'MOLE! THE HEN IS DELIGHTED.' } },
     { id: 'fiesta', gen: 'arena', role: 'arena', layout: 'fiesta', arenaW: 24, H: 22 }
   ] };
 
@@ -882,7 +904,8 @@ const L6 = { n: 6, name: 'Pit of Swallows', arch: 'fall', secret: true, theme: '
         ['ledges', { n: 1, enemy: 'mxBat' }],
         ['spikePair', { h1: 5, h2: 9 }]
       ] },
-    { id: 'nido', gen: 'room', role: 'secret', stamp: 'nido' }
+    { id: 'nido', gen: 'room', role: 'secret', stamp: 'nido', room: 'floaty',
+      floaty: { title: 'THE SWALLOWS\' UPDRAFT', rule: 'WARM AIR RISES OUT OF THE PIT: IN HERE YOU FLOAT LIKE A SWALLOW. BIG FLOATY JUMPS!', gravity: 0.45 } }
   ] };
 
 /* ---------------- pre-rendered scenes (tools/blender/sprites/mx_bodega.py, mx_sotano.py): Mexico wires its own atlases

@@ -245,11 +245,11 @@ const mangoArt = (ctx, e, x, y, m) => {
 };
 const fruit = (ctx, s, t) => { ctx.save(); ctx.translate(s.cx, s.cy); ctx.rotate(t * 8); ctx.fillStyle = '#c8b898'; ctx.beginPath(); ctx.ellipse(0, 0, 5, 7, 0, 0, TAU); ctx.fill(); ctx.restore(); };
 const enemies = {
-  mzWarthog: { cls: TourEnemy.make({ w: 36, h: 24, speed: 1.0, behavior: 'charge', range: 8, chargeSpeed: 6.5, art: warthogArt, burst: '#7a5a4a', onNotice: e => K.say(e.g, e, 'OINK!', '#ffd84a') }), place: 'walk' },
+  mzWarthog: { cls: TourEnemy.make({ belly: true, w: 36, h: 24, speed: 1.0, behavior: 'charge', range: 8, chargeSpeed: 6.5, art: warthogArt, burst: '#7a5a4a', onNotice: e => K.say(e.g, e, 'OINK!', '#ffd84a') }), place: 'walk' },
   mzCashew: { cls: TourEnemy.make({ w: 18, h: 26, speed: 1.0, behavior: 'hop', hopV: 11, hopEvery: 1.3, art: cashewArt, burst: '#ff6a2a' }), place: 'walk' },
   mzWeaver: { cls: TourFlyer.make({ w: 22, h: 14, range: 3, speed: 1.2, swoop: true, art: weaverArt, burst: '#ffd23a' }), place: 'fly' },
   mzPrawn: { cls: TourEnemy.make({ w: 30, h: 20, speed: 1.4, behavior: 'walk', art: prawnArt, burst: '#ff7a5a' }), place: 'walk' },
-  mzMonkey: { cls: TourEnemy.make({ w: 20, h: 36, speed: 0.6, behavior: 'throw', every: 2.2, range: 9, pace: true, art: monkeyArt, burst: '#9a9a8a', shoot: e => {
+  mzMonkey: { cls: TourEnemy.make({ belly: true, w: 20, h: 36, speed: 0.6, behavior: 'throw', every: 2.2, range: 9, pace: true, art: monkeyArt, burst: '#9a9a8a', shoot: e => {
     tourFire(e.g, e.cx + e.dir * 12, e.y + 6, { kind: 'fruit', vx: e.dir * 3.6 * TS, vy: -6 * TS, grav: PHYS.gDown * 0.4, w: 12, h: 14, life: 3, col: '#c8b898', stompable: true, art: fruit }); K.say(e.g, e, 'OOK!', '#ffffff');
   } }), place: 'walk' },
   mzGhostCrab: { cls: TourEnemy.make({ w: 22, h: 14, speed: 2.6, behavior: 'walk', art: ghostCrabArt, burst: '#e8e0c8', glow: 'rgba(220,255,240,' }), place: 'walk' },
@@ -546,6 +546,8 @@ class MzShell extends TourProp {
     }
   }
   touchPlayer(p) { if (this.held) return; super.touchPlayer(p); }
+  // a cold shell's picture never changes (the ink is drawn once and reused)
+  inkKey() { const b = this.g.boss, heat = this.held && b ? (b.heat || 0) : this.hotT; return heat > 0 ? null : 'cold'; }
   paint(ctx, x, y, t) {
     const b = this.g.boss, heat = this.held && b ? (b.heat || 0) / 3 : (this.hotT > 0 ? Math.min(1, this.hotT / 2.5) : 0);
     shellArt[this.kind](ctx, x, y, t, heat);
@@ -829,7 +831,7 @@ Tour.country({
   themes, painters, dyn, decor, decorLights, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_mz', boss: 'tour_mz_boss' },
   landmark: 'the great baobab',
-  arrival: 'Brady! The Baron shrank the biggest baobab in Africa and put it in a flowerpot. Rude! ♥ C',
+  arrival: 'Brady! Piwi shrank the biggest baobab in Africa into a flowerpot "for the set". Rude! The crab he hired is ruder. ♥ C',
   coin: { name: 'CASHEW NUT', draw(ctx, x, y) {
     ctx.fillStyle = '#e8c890'; ctx.beginPath(); ctx.arc(x + 1, y - 2, 7.5, Math.PI * 0.9, Math.PI * 2.2); ctx.quadraticCurveTo(x + 2, y + 9, x - 5, y + 5); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#b8945a'; ctx.lineWidth = 1.2; ctx.stroke();

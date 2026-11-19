@@ -2,13 +2,14 @@
 //   node tools/apps_test.js [siteDir=dist/site] [shotsDir=shots]
 // Checks: the app id, its first scene, its page title and its own save key. Saves a screenshot per app.
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const site = path.resolve(process.argv[2] || path.join(dist, 'site'));
 const shots = path.resolve(process.argv[3] || path.join(__dirname, '..', 'shots'));
 const EXPECT = {
   'burning-man': { app: 'burningman', title: 'Brady Goes to Burning Man', key: 'bgtbm-save-v1' },
-  'super-brady-o-world': { app: 'world', title: 'Super Brady-O World', key: 'super-brady-o-world-save-v2' },
+  'super-brady-o-world': { app: 'world', title: 'Super Brady-O World', key: 'super-brady-o-world-save-v5' },
   'art-cart': { app: 'kart', title: 'Super Art Kart', key: 'art-cart-save-v1' }
 };
 (async () => {
@@ -16,7 +17,7 @@ const EXPECT = {
   const browser = await chromium.launch();
   let bad = 0;
   for (const [dir, want] of Object.entries(EXPECT)) {
-    const page = await (await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage();
+    const page = await (await silence(await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }))).newPage();
     const errs = [];
     page.on('pageerror', e => errs.push(e.message.slice(0, 200)));
     page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text().slice(0, 200)); });

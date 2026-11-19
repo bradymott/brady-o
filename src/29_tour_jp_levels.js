@@ -507,6 +507,7 @@ const P = {
   // the lobby: a vending machine, the first block, a lucky cat on the first floor
   lobby(st, o) {
     const B = st.B, W = st.W, y = st.y - 3;
+    if (o.nap) { B.set(o.nap, st.y - 1, T.QBLOCK); B.item(o.nap, st.y - 1, 'pupo'); B.spawn('napBox', o.nap, st.y - 1, {}); }   // Pupo's Nap Box in the street (11-4)
     B.decorAt('jpVending', 6, st.y, 1); B.decorAt('jpCones', 10, st.y, 2);
     B.fill(W - 10, y, W - 3, y, T.GROUND); st.block(W - 6, y - 4, 'power');
     st.coins(W - 9, W - 4, y - 2);
@@ -843,42 +844,342 @@ const stamps = {
 };
 
 /* ---------------- the levels ---------------- */
+/* ---------- 11-1: the sushi loop ----------
+   The restaurant is a loop of rooms joined by the belt's one-way flap hatches: the counter -> the kitchen -> the cold
+   store -> the roof sign -> back to the counter. Brady can't go back through a hatch (he comes out of a chute in the
+   ceiling of the next room), so he goes round, and what he switches on one lap opens the way on the next: the roof
+   sign's lever opens the kitchen's staff door (up to the pantry hatch), and the pantry's lever opens the noren at the
+   counter, the way out. Each hatch has a sign of the room it goes to; each shut door says which lever opens it. */
+const ROOM_ICONS = {
+  plate: (c, x, y) => { c.fillStyle = '#f4f0e8'; c.beginPath(); c.ellipse(x, y + 3, 10, 4, 0, 0, TAU); c.fill(); c.fillStyle = '#ff8a6a'; rr(c, x - 6, y - 4, 12, 6, 3); c.fill(); c.fillStyle = '#ffffff'; c.fillRect(x - 6, y + 0, 12, 3); },
+  pot: (c, x, y) => { c.fillStyle = '#5a5a6a'; rr(c, x - 9, y - 3, 18, 10, 3); c.fill(); c.fillRect(x - 11, y - 3, 22, 3); c.fillStyle = 'rgba(255,255,255,0.7)'; for (const sx of [-4, 2]) { c.beginPath(); c.arc(x + sx, y - 8, 2.5, 0, TAU); c.fill(); } },
+  snow: (c, x, y) => { c.strokeStyle = '#3a8ad8'; c.lineWidth = 2; for (let k = 0; k < 3; k++) { const a = k * Math.PI / 3; c.beginPath(); c.moveTo(x - Math.cos(a) * 8, y - Math.sin(a) * 8); c.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); c.stroke(); } },
+  roof: (c, x, y) => { c.fillStyle = '#2a2a3a'; c.fillRect(x - 10, y - 7, 20, 13); c.fillStyle = '#ff3a8a'; c.font = `bold 8px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.fillText('★', x, y + 3); },
+  rice: (c, x, y) => { c.fillStyle = '#e8dcc0'; rr(c, x - 8, y - 8, 16, 15, 4); c.fill(); c.fillStyle = '#c8302a'; c.fillRect(x - 5, y - 3, 10, 5); }
+};
+// a stainless flap hatch the belt runs into, one way, with a sign of where it goes
+const hatchSkin = icon => (ctx, e, t) => {
+  const x = e.cx, y = e.y + e.h, fl = Math.sin(t * 3) * 0.5 + 0.5;
+  ctx.fillStyle = '#3a3a44'; rr(ctx, x - 18, y - 52, 36, 52, 4); ctx.fill();
+  ctx.fillStyle = '#c8ccd4'; rr(ctx, x - 15, y - 48, 30, 46, 3); ctx.fill();
+  ctx.fillStyle = '#a8acb8'; ctx.fillRect(x - 15, y - 26 - fl * 2, 30, 3);
+  ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.moveTo(x - 6, y - 16); ctx.lineTo(x + 6, y - 10); ctx.lineTo(x - 6, y - 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#2a2a3a'; ctx.font = `bold 6px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('ONE WAY', x, y - 32);
+  const py = y - 70; ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x - 7, py - 10); ctx.lineTo(x - 5, y - 52); ctx.moveTo(x + 7, py - 10); ctx.lineTo(x + 5, y - 52); ctx.stroke();
+  ctx.fillStyle = '#f4f0e8'; rr(ctx, x - 13, py - 10, 26, 21, 4); ctx.fill(); ctx.strokeStyle = '#2a1820'; ctx.lineWidth = 2; rr(ctx, x - 13, py - 10, 26, 21, 4); ctx.stroke();
+  ROOM_ICONS[icon](ctx, x, py);
+};
+const loopSkins = {
+  // a two-way door: a noren curtain of indigo cloth with a white wave
+  jpNoren(ctx, e, t) { const x = e.cx, y = e.y + e.h; ctx.fillStyle = '#5e3417'; ctx.fillRect(x - 20, y - 58, 40, 5); ctx.fillStyle = '#2a1a14'; rr(ctx, x - 16, y - 52, 32, 52, 3); ctx.fill(); for (let k = 0; k < 3; k++) { const sw = Math.sin(t * 2 + k) * 1.5; ctx.fillStyle = '#2a3a8a'; ctx.fillRect(x - 18 + k * 12 + sw, y - 53, 11, 30); ctx.strokeStyle = '#f4f0e8'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x - 12 + k * 12 + sw, y - 34, 4, Math.PI, TAU); ctx.stroke(); } }
+};
+for (const ic in ROOM_ICONS) loopSkins['jpHatch_' + ic] = hatchSkin(ic);
+// where the belt drops Brady into a room: a chute from the ceiling, plates sliding down it (not a door: there's no way back up)
+if (typeof Decor !== 'undefined') Decor.jpChute = (ctx, x, y, t) => {
+  const top = y - 6 * TS, bot = y - 1.6 * TS;
+  ctx.fillStyle = '#a8acb8'; ctx.beginPath(); ctx.moveTo(x - 20, top); ctx.lineTo(x + 6, top); ctx.lineTo(x + 22, bot); ctx.lineTo(x - 4, bot); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 2; ctx.stroke();
+  for (let k = 0; k < 3; k++) { const f = ((t * 0.5 + k / 3) % 1), px = x - 7 + f * 16, py = top + 10 + f * (bot - top - 16); ctx.fillStyle = '#f4f0e8'; ctx.beginPath(); ctx.ellipse(px, py, 7, 3, 0.5, 0, TAU); ctx.fill(); ctx.fillStyle = SUSHI[k % SUSHI.length][0]; ctx.fillRect(px - 4, py - 4, 8, 3); }
+  ctx.fillStyle = '#ff8a2a'; ctx.font = `bold 7px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('IN ▼', x + 9, bot + 10);
+};
+// stamp pieces: a lever that opens a lock for good, and the lock (a shutter in the wall)
+const leverPiece = (st, o) => { st.B.spawn('lever', st.x, st.gy - 1, { opens: o.opens }); st.B.vkey(o.opens, [[st.x, st.gy - 1]]); return st.x; };
+const shutterPiece = (st, o) => { tourShutterLock(st.B, st.x, st.gy - (o.h || 3), st.gy - 1, o.opens, o.look || null); return st.x; };
+const LOOP = {
+  w: ['decor', 'jpChute'], a: ['enemy', 'jpTamago'], t: ['enemy', 'jpTako'], x: ['enemy', 'jpWasabi'], m: ['enemy', 'jpCrow'],
+  k: ['decor', 'jpFridgeFood']
+};
+const loopCell = (rows, extra) => { const e = Object.assign({}, extra || {}), legend = Object.assign({}, LOOP, e.legend || {}); delete e.legend; return Object.assign({ floor: 12, rows, legend }, e); };
+const sushiLoop = {
+  // the counter: the start, the belt to the kitchen hatch, the noren (the way out) shut until the pantry lever is pulled
+  counter: loopCell([
+    '##########################',
+    '#..#.....................#',
+    '#..#.....................#',
+    '#..#.......o.o.o.o.......#',
+    '#..#.....................#',
+    '#..#......-------........#',
+    '#..#.....................#',
+    '#..#.....................#',
+    '#..#....?...?...?........#',
+    '#........................#',
+    '#........................#',
+    '#G.V.@w...i...a..........#',
+    '#########>>>>>>>>>>>>>####',
+    '##########################'
+  ], { items: ['power', 'cake', 'beans'], legend: { V: ['piece', shutterPiece, { opens: 'noren' }], i: ['spawn', 'sign', { text: 'THE NOREN (THE WAY OUT) IS SHUT TILL CLOSING. THE SWITCH IS IN THE PANTRY. THE BELT ONLY GOES ROUND ONE WAY...' }] } }),
+  // the kitchen: the hatch on to the cold store; the staff door (opened from the roof) and the stairs up to the pantry hatch
+  kitchen: loopCell([
+    '##########################',
+    '#.............#..........#',
+    '#.............#..........#',
+    '#...o.o.o.....#....*.....#',
+    '#.............#..........#',
+    '#.............#..........#',
+    '#.....-----...#..--------#',
+    '#.............#..........#',
+    '#.............#..........#',
+    '#.............#....---...#',
+    '#........................#',
+    '#..w........i.V..........#',
+    '#####>>>>>>>##############',
+    '##########################'
+  ], { gold: { '*': 'must' }, legend: { V: ['piece', shutterPiece, { opens: 'staff' }], i: ['spawn', 'sign', { text: 'STAFF ONLY. OPENED BY THE LEVER UP ON THE ROOF SIGN.' }] } }),
+  // the pantry (lap two): the lever that opens the noren; the hatch on to the cold store
+  pantry: loopCell([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#......o.o.o.o...........#',
+    '#........................#',
+    '#.....-------............#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#..w.......J.....t.......#',
+    '##########################',
+    '##########################'
+  ], { legend: { J: ['piece', leverPiece, { opens: 'noren' }] } }),
+  // the cold store: ice on the floor, the fridge (secret), a door to the tea station, the hatch up to the roof sign
+  cold: loopCell([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#....o.o.o.o.............#',
+    '#........................#',
+    '#...------...............#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#..w....D9....7D....x....#',
+    '#####IIIIIIIIIII##########',
+    '##########################'
+  ], { legend: { 9: ['anchor', 'fridgeBack'], 7: ['anchor', 'teaBack'] }, doors: [{ to: 'reizoko@in', look: 'jpFridgeDoor' }, { to: 'kaiten@teaIn', look: 'jpNoren' }] }),
+  // the roof sign: the lever that opens the kitchen's staff door; a hidden 1UP; crows; the hatch back down to the counter
+  roof: loopCell([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#.........*..............#',
+    '#........................#',
+    '#.......-----............#',
+    '#........................#',
+    '#........................#',
+    '#...h........----........#',
+    '#........................#',
+    '#........................#',
+    '#..w.......J......m......#',
+    '##########################',
+    '##########################'
+  ], { hidden: ['oneup'], gold: { '*': 'risky' }, legend: { J: ['piece', leverPiece, { opens: 'staff' }] } }),
+  // the tea station off the cold store: a star for the roof's crows
+  tea: loopCell([
+    '##########################',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#.........o.o.o..........#',
+    '#........................#',
+    '#........................#',
+    '#........................#',
+    '#.........?..............#',
+    '#........................#',
+    '#........................#',
+    '#...D6.......k.......k...#',
+    '##########################',
+    '##########################'
+  ], { items: ['star'], legend: { 6: ['anchor', 'teaIn'] }, doors: [{ to: 'kaiten@teaBack', look: 'jpNoren' }] })
+};
+Object.assign(skins, loopSkins);
+
+/* ---------------- Pupo in Japan (docs/design/PUPO.md §4.2, §4.3; the mechanics in 28_tour_ph_g4.js) ---------------- */
+const PJ = {
+  // a Nap Box on the ground at the cursor (it takes two columns: the box and a step of floor past it)
+  napBox(st, o) {
+    const tx = st.x + 1, ty = st.gy - 1;
+    st.floor(st.x, tx + 1);
+    st.B.set(tx, ty, T.QBLOCK); st.B.item(tx, ty, 'pupo'); st.B.spawn('napBox', tx, ty, {});
+    return tx + 2;
+  },
+  /* 11-3's Pupo obstacle, Bamboo Bend: a stream too wide to jump, and the valley wind blowing up it (a headwind over the
+     water: no jump, spring sock or puff of magic beans gets across). On the near bank stands one very tall bamboo stalk.
+     Pupo grips it (Action) and climbs; past half way it bends under his weight and lowers him, slowly, onto the far bank,
+     then springs back up. Coins hang along its arc. { w: the stream's width, h: the stalk's grippable height } */
+  bambooBend(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, w = o.w || 10, h = o.h || 8, sx = x + 4, x1 = sx + w;
+    st.floor(x, sx);
+    st.sign(x, 'THE VALLEY WIND BLOWS UP THE STREAM: NO JUMPING IT! PUPO CAN CLIMB THE TALL BAMBOO (ACTION)');
+    pond(st, sx + 1, x1, gy + 2);
+    // the headwind: over the water, the whole height of the grove
+    B.zone(sx + 1, 0, w, B.H, -(o.wind || 300), 0, 0, 'wind');
+    B.spawn('jpValleyWind', sx + 1, gy, { w, h: h + 3 });
+    // the stalk: its grippable part is h rows; it bends to the far bank, one column past the water's edge
+    B.spawn('pupoClimb', sx, gy - 1, { h, side: 0, look: 'jpBambooBend', slick: 'TOO SMOOTH! PUPO CAN CLIMB IT',
+      bend: { to: [w + 2, 0], at: 0.5, say: '...WHOA.', land: '...SOFT... LANDING.' } });
+    // coins along the arc it sweeps over the stream
+    for (let k = 1; k <= 5; k++) { const a = 0.3 + k * 0.22, r = 5 + k * 1.2, cx = Math.round(sx + Math.sin(a) * r), cy = Math.round(gy - 1 - Math.cos(a) * r); if (cx > sx && cx <= x1) B.set(cx, cy, T.PICK); }
+    st.floor(x1 + 1, x1 + 5);
+    st.decor('jpFern', x1 + 4, gy, 3);
+    return x1 + 6;
+  },
+  /* 11-4's Pupo bonus (a helper level): a band over the lobby. A noodle-stand sign stands on a ledge, an onigiri on a
+     string hanging from its bracket five rows over the ledge, out of Brady's reach. A window-washer's gondola hangs high
+     on the left, loaded with coins. Pupo tugs the onigiri (Action): the gondola drops to the floor and pays out its coins
+     to whoever touches it. The band's way up (the ledge, a rung, the next floor) is for anyone. */
+  signDrop(st, o) {
+    const B = st.B, W = st.W, y0 = st.y, ly = y0 - 3, lx0 = W - 11, lx1 = W - 3, gi = o.g || 3;
+    B.fill(lx0, ly, lx1, ly, T.GROUND);
+    B.decorAt('jpNoodleSign', W - 7, ly, 0);
+    B.toggle(gi, [], [], { kind: 'gondola' });
+    // the camera keeps the sign, the onigiri and the gondola below the HUD while Brady is up on the sign's ledge
+    B.spawn('pupoHandle', W - 5, ly - 5, { g: gi, once: true, look: 'jpOnigiriPull', say: '...SNACK?', camTop: (ly - 5.5) * TS, camK: 0.22, camD: 5, camX: 30 * TS });
+    B.spawn('pupoGondola', 4, y0 - 8, { g: gi, drop: 7, coins: 10, look: 'jpCoinGondola', say: '...TIPS.' });
+    for (let q = st.mid - 2; q < st.mid + 2; q++) B.set(q, y0 - 6, T.SEMI);
+    st.coins(lx0 + 1, lx0 + 4, ly - 2);
+    if (o.sign) B.spawn('sign', lx0 - 2, y0 - 1, { text: 'AN ONIGIRI HANGS FROM THE NOODLE SIGN. ONLY PUPO\'S LONG ARM REACHES IT' });
+    st.top(y0 - 9);
+  }
+};
+for (const k in PJ) Tour.pieces['jp.' + k] = PJ[k];
+// 11-3: at night the umbrella spirits and the lantern spirits have no belly buttons: Pupo is baffled every time
+if (typeof PupoReach !== 'undefined' && typeof PupoRide !== 'undefined') {
+  const c0 = PupoReach.contact;
+  PupoReach.contact = function (p, g, R, a) {
+    const e = a.e, ty = a.kind === 'enemy' && e && e.s ? e.s.type : null;
+    c0.call(this, p, g, R, a);
+    if ((ty === 'jpUmbrella' || ty === 'jpChochin') && g && g.area && g.area.night && !(R.sayT > 0)) PupoRide.say(g, p.cx, p.y - 30, '...NO... PUPO?');
+  };
+}
+// 11-3: the valley wind over the stream: bamboo leaves and thin wind lines racing back up it (cheap: shapes from the clock)
+class JpValleyWind extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 10) * TS, (s.h || 10) * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.back = true; this.friendly = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x0 = this.x, y0 = this.y, w = this.w, h = this.h, t = this.t;
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 9; k++) {
+      const sp = 300 + (k * 41) % 140, u = (t * sp + k * 113) % (w + 80), xx = x0 + w + 20 - u, yy = y0 + 14 + ((k * 67) % (h - 28)) + Math.sin(t * 2 + k) * 6, len = 30 + (k % 3) * 14;
+      ctx.strokeStyle = k % 3 ? 'rgba(255,255,255,0.45)' : 'rgba(220,255,210,0.6)'; ctx.lineWidth = k % 2 ? 2 : 3;
+      ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx + len, yy + 2); ctx.stroke();
+    }
+    for (let k = 0; k < 7; k++) {
+      const u = (t * (240 + k * 19) + k * 151) % (w + 60), xx = x0 + w + 10 - u, yy = y0 + 10 + ((k * 89) % (h - 20)) + Math.sin(t * 5 + k * 2) * 10;
+      ctx.save(); ctx.translate(xx, yy); ctx.rotate(Math.sin(t * 7 + k) * 0.8);
+      ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.ellipse(0, 0, 8, 3.6, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = k % 2 ? '#8ac850' : '#b8e070'; ctx.beginPath(); ctx.ellipse(0, 0, 6.6, 2.3, 0, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    ctx.lineCap = 'butt';
+  }
+}
+ENTITY_TYPES.jpValleyWind = JpValleyWind;
+const pupoSkins = {
+  // 11-3: the very tall bamboo stalk (a bending climb strip): a green culm with pale nodes (Pupo's grip lines), a tuft of
+  // leaves at the tip; bent by e.bendA about its foot, a little more toward the tip
+  jpBambooBend(ctx, e, t) {
+    const b = e.s.bend || {}, L = ((b.to && b.to[0]) || 10) * TS + 8, a = e.bendA || 0, x0 = e.cx, y0 = e.bottom, N = 13, seg = L / N;
+    const sway = a === 0 ? Math.sin(t * 1.3) * 0.015 : 0;
+    ctx.lineCap = 'round';
+    for (let pass = 0; pass < 3; pass++) {
+      ctx.strokeStyle = pass === 0 ? '#1c1426' : pass === 1 ? '#5a9a3a' : '#9ad060'; ctx.lineWidth = pass === 0 ? 15 : pass === 1 ? 11 : 3.4;
+      ctx.beginPath(); let x = x0 + (pass === 2 ? -2 : 0), y = y0; ctx.moveTo(x, y);
+      for (let i = 1; i <= N; i++) { const u = i / N, an = (a + sway * i) * (0.96 + 0.1 * u); x += Math.sin(an) * seg; y -= Math.cos(an) * seg; ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+    // the nodes: a pale ring across the culm at each joint
+    let x = x0, y = y0;
+    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2.4;
+    for (let i = 1; i < N; i++) {
+      const u = i / N, an = (a + sway * i) * (0.96 + 0.1 * u); x += Math.sin(an) * seg; y -= Math.cos(an) * seg;
+      const nx = Math.cos(an) * 7, ny = Math.sin(an) * 7;
+      ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(x - nx, y - ny); ctx.lineTo(x + nx, y + ny); ctx.stroke();
+      ctx.strokeStyle = '#e4f4c0'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - nx * 0.8, y - ny * 0.8); ctx.lineTo(x + nx * 0.8, y + ny * 0.8); ctx.stroke();
+    }
+    // the tip's leaves (they trail behind as it bends)
+    const an = (a + sway * N) * 1.06; x += Math.sin(an) * seg; y -= Math.cos(an) * seg;
+    for (let k = 0; k < 5; k++) {
+      const la = an - 1.9 + k * 0.75 + Math.sin(t * 2 + k) * 0.08;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(la);
+      ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.ellipse(0, -16, 5.4, 17, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = k % 2 ? '#6ab040' : '#8ccc58'; ctx.beginPath(); ctx.ellipse(0, -16, 3.6, 15, 0, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    ctx.lineCap = 'butt';
+  },
+  // 11-4: an onigiri on a string (a pull handle): a rice triangle with a nori band, the brass ring under it
+  jpOnigiriPull(ctx, e, t) {
+    const x = e.hx, y = e.hy + e.k * 10 + Math.sin(t * 1.8) * 1.2;
+    pupoLine(ctx, x, e.hy - 30, x, y - 12, 2, '#e8dcc0');
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.moveTo(x, y - 16); ctx.quadraticCurveTo(x + 15, y + 6, x + 11, y + 8); ctx.lineTo(x - 11, y + 8); ctx.quadraticCurveTo(x - 15, y + 6, x, y - 16); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x, y - 13); ctx.quadraticCurveTo(x + 12, y + 5, x + 9, y + 6); ctx.lineTo(x - 9, y + 6); ctx.quadraticCurveTo(x - 12, y + 5, x, y - 13); ctx.fill();
+    ctx.fillStyle = '#1e2a20'; ctx.fillRect(x - 6, y - 1, 12, 8);
+    ctx.fillStyle = '#e8eef0'; ctx.fillRect(x - 5, y - 5, 2, 2);
+    pupoRing(ctx, x, y + 14, 4.5);
+  },
+  // 11-4: the window-washer's gondola full of coins, on two cables up the face (it drops when the onigiri is tugged)
+  jpCoinGondola(ctx, e, t) {
+    const x = e.x, y = e.y, w = e.w, top = e.y0 - 2 * TS;
+    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 10, top); ctx.lineTo(x + 10, y + 2); ctx.moveTo(x + w - 10, top); ctx.lineTo(x + w - 10, y + 2); ctx.stroke();
+    ctx.strokeStyle = '#9aa0b0'; ctx.lineWidth = 1.4; ctx.stroke();
+    // the davit arm the cables hang from
+    ctx.fillStyle = '#1c1426'; ctx.fillRect(x - 4, top - 6, w + 8, 8); ctx.fillStyle = '#c8ccd8'; ctx.fillRect(x - 2, top - 4, w + 4, 4);
+    // the cradle: a rail, the tub, its logo stripe
+    ctx.fillStyle = '#1c1426'; rr(ctx, x, y + 4, w, e.h - 2, 4); ctx.fill();
+    ctx.fillStyle = '#e8ecf4'; rr(ctx, x + 2, y + 6, w - 4, e.h - 6, 3); ctx.fill();
+    ctx.fillStyle = '#ff5a8a'; ctx.fillRect(x + 2, y + 14, w - 4, 4);
+    ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x, y + 4); ctx.lineTo(x, y - 6); ctx.lineTo(x + w, y - 6); ctx.lineTo(x + w, y + 4); ctx.stroke();
+    // the coins piled in it (gone once paid out)
+    if (!e.paid) for (let i = 0; i < 6; i++) {
+      const cx = x + 18 + i * 12, cy = y + 2 - (i % 2) * 5;
+      ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(cx, cy, 6.4, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(cx, cy, 5, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff2a8'; ctx.fillRect(cx - 1, cy - 3, 2, 4);
+    }
+  }
+};
+Object.assign(skins, pupoSkins);
+// 11-4: the noodle stand's neon sign on its ledge, a bracket arm out over the ledge for the onigiri's string
+Decor.jpNoodleSign = (ctx, x, y, t) => {
+  const on = Math.sin(t * 2.2) > -0.85;
+  ctx.fillStyle = '#1c1426'; ctx.fillRect(x - 3, y - 70, 6, 70); ctx.fillRect(x - 3, y - 166, 6, 40); ctx.fillRect(x - 3, y - 170, 74, 6);
+  ctx.fillStyle = '#5a5a6a'; ctx.fillRect(x - 1.5, y - 68, 3, 68); ctx.fillRect(x - 1.5, y - 164, 3, 38); ctx.fillRect(x - 1, y - 168, 70, 2);
+  ctx.fillStyle = '#1c1426'; rr(ctx, x - 30, y - 128, 60, 60, 8); ctx.fill();
+  ctx.fillStyle = '#2a1e3a'; rr(ctx, x - 27, y - 125, 54, 54, 6); ctx.fill();
+  // a neon noodle bowl, steam and chopsticks
+  ctx.lineCap = 'round'; ctx.lineWidth = 3.4; ctx.strokeStyle = on ? '#ffb83a' : '#6a4a2a';
+  ctx.beginPath(); ctx.arc(x, y - 100, 16, 0.1, Math.PI - 0.1); ctx.closePath(); ctx.stroke();
+  ctx.strokeStyle = on ? '#3af0ff' : '#2a5a6a'; ctx.beginPath(); ctx.moveTo(x + 4, y - 102); ctx.lineTo(x + 20, y - 120); ctx.moveTo(x + 9, y - 102); ctx.lineTo(x + 23, y - 116); ctx.stroke();
+  ctx.strokeStyle = on ? '#ff5a8a' : '#6a2a3a'; ctx.lineWidth = 2.4; for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(x + k * 8, y - 106); ctx.quadraticCurveTo(x + k * 8 + 4, y - 112, x + k * 8, y - 118); ctx.stroke(); }
+  ctx.lineCap = 'butt';
+};
+
 const levels = [
   // 11-1 FACTORY: the sushi carousel
-  { n: 1, name: 'Sushi Carousel', arch: 'factory', theme: 'jp_sushi',
-    gimmick: 'A giant conveyor-belt sushi bar: ride the plates along the belts, dodge the chopsticks, float on tea steam, and mind the soy bottle with a leaf on its cap',
-    hint: 'Belts carry you; some turn round when their arrows blink. A soy bottle with a leaf is a tanuki!',
-    postcard: 'Brady! The sushi goes round and round on little plates. One soy bottle winked at me. ♥ C',
-    enemies: [['jpTamago', 2], ['jpTako', 2], ['jpWasabi', 1], ['jpTanuki', 1]],
+  { n: 1, name: 'Sushi Carousel', arch: 'loop', theme: 'jp_sushi',
+    gimmick: 'The sushi belt runs one way round the whole restaurant, through flap hatches you can\'t come back through. Go round, pull a lever, go round again',
+    hint: 'Each hatch shows the room it leads to. A shut door says which lever opens it: you will be back this way on the next lap',
+    postcard: 'Brady! The sushi goes round and round on little plates. So did we. ♥ C',
+    enemies: [['jpTamago', 2], ['jpTako', 2], ['jpWasabi', 1], ['jpCrow', 1]],
     mapCell: [0, 0], mapFrom: -1,
     exits: { main: { to: '11-2' } },
     areas: [
-      { id: 'kaiten', gen: 'strip', W: 210, H: 20,
-        script: [
-          'shiba',
-          ['itemBlock', { item: 'power', y: 4 }],
-          ['itemBlock', { item: 'cake', y: 4 }],   // a jump power (bonus)
-          // ① the belts on their counters, the plate wheel over the soy
-          ['kaiten', { n: 8, h: 2, first: true }],
-          ['kaiten', { n: 9, h: -1, gap: 3, enemy: 'jpTamago' }],
-          'counter',
-          ['plateWheel', { up: true }],
-          ['kaiten', { n: 10, h: 3, gap: 2, enemy: 'jpTako' }],
-          'cp',
-          // ② chopsticks from above, tea steam, the cold fridge
-          ['shelfRun', {}],
-          ['teacup', { first: true }],
-          ['fridge', { to: 'reizoko@in', back: 'fridgeBack' }],
-          ['kaiten', { n: 9, dir: -1, h: -2, gap: 3 }],
-          // ③ the soy-bottle tanuki and the belts that turn round
-          ['soyTanuki', { sign: true, two: true }],
-          ['reverseBelt', { n: 9, first: true }],
-          ['itemBlock', { item: 'oneup', y: 4, hidden: true }],
-          ['reverseBelt', { n: 10, period: 2.6, phase: 1 }],
-          ['enemies', { kind: 'jpWasabi', n: 2, len: 8 }],
-          ['gate', { exit: 'main' }]
+      { id: 'kaiten', gen: 'maze', cells: [3, 2], cell: [26, 14],
+        script: [[sushiLoop.counter, sushiLoop.kitchen, sushiLoop.pantry], [sushiLoop.roof, sushiLoop.cold, sushiLoop.tea]],
+        // the belt's flap hatches: one way only (Brady drops out of a chute in the next room's ceiling)
+        links: [
+          { from: [0, 0], to: [1, 0], kind: 'oneway', at: [22, 11], toAt: [4, 11], look: 'jpHatch_pot' },
+          { from: [1, 0], to: [1, 1], kind: 'oneway', at: [9, 11], toAt: [4, 11], look: 'jpHatch_snow' },
+          { from: [1, 0], to: [2, 0], kind: 'oneway', at: [21, 5], toAt: [4, 11], look: 'jpHatch_rice' },
+          { from: [2, 0], to: [1, 1], kind: 'oneway', at: [22, 11], toAt: [4, 11], look: 'jpHatch_snow' },
+          { from: [1, 1], to: [0, 1], kind: 'oneway', at: [22, 11], toAt: [4, 11], look: 'jpHatch_roof' },
+          { from: [0, 1], to: [0, 0], kind: 'oneway', at: [22, 11], toAt: [7, 11], look: 'jpHatch_plate' }
         ] },
-      { id: 'reizoko', gen: 'room', role: 'secret', theme: 'jp_fridge', stamp: 'reizoko' }
+      { id: 'reizoko', gen: 'room', role: 'secret', theme: 'jp_fridge', stamp: 'reizoko', room: 'closing',
+        closing: { title: 'THE FRIDGE LIGHT GOES OUT', rule: 'INSIDE THE GIANT FRIDGE: GRAB WHAT YOU CAN BEFORE THE DOOR SHUTS AND THE LIGHT GOES OUT', keeper: 'tanuki', word: 'LIGHTS OUT!' } }
     ] },
   // 11-2 RIDE: on the roof of the bullet train; a station's siding is the way to Fuji
   { n: 2, name: 'Bullet Train', arch: 'ride', theme: 'jp_rail',
@@ -909,10 +1210,11 @@ const levels = [
           ['tunnel', { n: 14 }],
           ['fujiview', { item: 'star' }]
         ] },
-      { id: 'sokusen', gen: 'room', role: 'secret', theme: 'jp_rail', stamp: 'sokusen' }
+      { id: 'sokusen', gen: 'room', role: 'secret', theme: 'jp_rail', stamp: 'sokusen', room: 'gauntlet',
+        gauntlet: { title: 'THE OLD SIDING', rule: 'AN OLD SIDING NOBODY USES. RUN IT TO THE BUFFERS', beats: ['crumble', 'wall', 'steps'] } }
     ] },
   // 11-3 PHASE: the bamboo grove by day and by night
-  { n: 3, name: 'Night of Things', arch: 'phase', theme: 'jp_bamboo',
+  { n: 3, name: 'Night of Things', arch: 'phase', theme: 'jp_bamboo', pupo: 'level',   // Japan's Pupo level: Bamboo Bend
     gimmick: 'Ring the wind chime and the bamboo grove falls into night: lantern spirits blink closer, umbrellas hop, glowing stones rise from the pond. One stone lantern has a leaf on top',
     hint: 'Ring the wind chime (UP) to swap day and night. A bamboo pole crosses by day; glowing stones by night',
     postcard: 'The bamboo is taller than a house. At night the umbrellas here go hopping! Honestly. ♥ C',
@@ -920,7 +1222,7 @@ const levels = [
     mapCell: [2, 0], mapFrom: 1,
     exits: { main: { to: '11-4' }, secret: { to: 'house:jp-omise', hint: 'A teahouse in the grove: behind the tea room\'s far screen...' } },
     areas: [
-      { id: 'chikurin', gen: 'strip', W: 220, H: 20, phase: { night: 'jp_bamboo_night' },
+      { id: 'chikurin', gen: 'strip', W: 236, H: 23, GY: 17, gyMin: 11, gyMax: 18, phase: { night: 'jp_bamboo_night' },   // three more rows of sky (the tall bamboo's top stays clear of the HUD)
         script: [
           ['itemBlock', { item: 'power', y: 4 }],
           ['itemBlock', { item: 'beans', y: 4 }],   // a jump power (bonus)
@@ -929,6 +1231,7 @@ const levels = [
           ['step', { h: 2 }],
           'shoots',
           ['step', { h: 2 }],
+          ['napBox', {}],   // Pupo's Nap Box at the start of the grove
           'grove',
           ['phaseCross', { n: 7 }],
           // ② the wind chime: night falls; the things wake
@@ -938,7 +1241,10 @@ const levels = [
           ['nightThings', { len: 12 }],
           ['step', { h: -3 }],
           'cp',
+          ['napBox', {}],   // Pupo again, at the wind-chime checkpoint
           ['teahouse', { to: 'chashitsu@in', back: 'teaBack' }],
+          // Pupo's obstacle, Bamboo Bend (PUPO.md §4.2): the stream in the valley wind, the bamboo that bends across it
+          ['bambooBend', { w: 10, h: 8 }],
           ['lanternTanuki', {}],
           ['itemBlock', { item: 'lsd', y: 5 }],
           // ③ swap on the move: a crossing for each, tanuki among the lanterns, spirits blinking in
@@ -952,10 +1258,11 @@ const levels = [
           ['kpond', {}],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'chashitsu', gen: 'room', role: 'secret', theme: 'jp_castle', stamp: 'chashitsu' }
+      { id: 'chashitsu', gen: 'room', role: 'secret', theme: 'jp_castle', stamp: 'chashitsu', room: 'lamps',
+        lamps: { title: 'THE TEA HOUSE LANTERNS', rule: 'THE TEA HOUSE IS DARK. LIGHT ITS LANTERNS IN THE ORDER THE SCROLL SHOWS', sym: 2 } }
     ] },
   // 11-4 TOWER (c) exterior: up the outside of a neon tower at dusk
-  { n: 4, name: 'Neon Tower', arch: 'tower', theme: 'jp_tower',
+  { n: 4, name: 'Neon Tower', arch: 'tower', theme: 'jp_tower', pupo: 'helper',   // Pupo's Nap Box in the street, the noodle sign's onigiri
     gimmick: 'Climb the outside of a tower at dusk: window-washer gondolas, neon sign ledges that blink off, air-con draughts, a claw-machine lift, then the rooftop',
     hint: 'Neon signs blink before they go dark. Hop into an air-con draught to float up',
     postcard: 'You\'re climbing the OUTSIDE of a skyscraper. The window washers waved. ♥ C',
@@ -963,9 +1270,10 @@ const levels = [
     mapCell: [2, 1], mapFrom: 2,
     exits: { main: { to: '11-5' }, secret: { to: '11-6', hint: 'A lit arcade window halfway up the tower...' } },
     areas: [
-      { id: 'biru', gen: 'climb', variant: 'exterior', W: 30, H: 110,
+      { id: 'biru', gen: 'climb', variant: 'exterior', W: 30, H: 119,   // nine rows for the noodle-sign band (the rooftop and its Rigging stay where they were)
         script: [
-          'lobby',
+          ['lobby', { nap: 12 }],
+          ['signDrop', { sign: true }],
           ['gondolaBand', { left: true, rise: 8, first: true, enemy: 'jpCapsule' }],
           ['neonBand', { n: 3, gold: 'must', first: true }],
           ['gondolaBand', { left: false, rise: 7, gear: 'plane' }],
@@ -976,13 +1284,14 @@ const levels = [
           ['neonBand', { n: 3, flip: true, enemy: 'jpCrow' }],
           ['clawBand', { rise: 10 }]
         ] },
-      { id: 'gachaRoom', gen: 'room', role: 'secret', theme: 'jp_neon', stamp: 'gachaRoom' }
+      { id: 'gachaRoom', gen: 'room', role: 'secret', theme: 'jp_neon', stamp: 'gachaRoom', room: 'pick',
+        pick: { title: 'THE PRIZE MACHINE', rule: 'A PRIZE MACHINE WITH THREE CAPSULES IN THE WINDOW. YOU GET ONE TURN' } }
     ] },
   // 11-5 LAIR: the castle garden and the Great Kappa's pond
   { n: 5, name: 'Kappa Garden', arch: 'lair', theme: 'jp_castle', boss: 'jp_kappa',
     gimmick: 'Nightingale floors chirp underfoot, a polite heron guards a gate, a revolving wall turns twice; then the Great Kappa at his garden pond',
     hint: 'Kappa are VERY polite. When he glares, crouch (hold DOWN) facing him: he bows back and spills his dish. Block his pond with the stones!',
-    postcard: 'The golden fish are back on the castle roof! The Baron took off toward the Himalaya. This is it, Brady. ♥ C',
+    postcard: 'The golden fish are back on the castle roof! Piwi took off toward the Himalaya for his GRAND FINALE. This is it, Brady. ♥ C',
     enemies: [['jpUmbrella', 2], ['jpTop', 2]],
     mapCell: [1, 2], mapFrom: 3,
     exits: { main: { to: 'country:next' } },
@@ -1000,7 +1309,8 @@ const levels = [
           'gardenP1',
           ['door', { to: 'pond', perch: 0, look: 'jpGardenGate' }]
         ] },
-      { id: 'kura', gen: 'room', role: 'secret', stamp: 'kura' },
+      { id: 'kura', gen: 'room', role: 'secret', stamp: 'kura', room: 'doors',
+        doors: { title: 'THE STOREHOUSE DOORS', rule: 'THE CASTLE STOREHOUSE: SLIDING DOORS EVERYWHERE. WHICH ONE GOES WHERE?', joke: 'A CUPBOARD OF ONE HUNDRED IDENTICAL TEACUPS.' } },
       { id: 'pond', gen: 'arena', role: 'arena', layout: 'pond', arenaW: 26, H: 18, roof: false }
     ] },
   // 11-6 MINI (secret): inside a capsule-toy machine
@@ -1020,16 +1330,17 @@ const levels = [
           ['coinSlot', {}],
           ['enemies', { kind: 'jpCapsule', n: 2, len: 10 }],
           'cp',
+          ['itemBlock', { item: 'star', y: 5 }],   // was an acid tab at the very end: now a star for the chute and the capsules (Brady)
           ['chute', { n: 5, first: true }],
           ['openCapsule', { to: 'capsuleRoom@in', back: 'capsuleBack' }],
           ['sandalTanuki', {}],
           ['capsules', { n: 3 }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
           ['drum', { r: 4 }],
           ['enemies', { kind: 'jpCapsule', n: 1, len: 8 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'capsuleRoom', gen: 'room', role: 'secret', theme: 'jp_gacha', stamp: 'capsuleRoom' }
+      { id: 'capsuleRoom', gen: 'room', role: 'secret', theme: 'jp_gacha', stamp: 'capsuleRoom', room: 'bouncy',
+        bouncy: { title: 'INSIDE A CAPSULE TOY', rule: 'INSIDE A GIANT CAPSULE TOY: ALL SQUISHY. ONLY THE TOWERS ARE FIRM. THE PRIZE IS ON THE TALLEST', skin: ['#ff7ab0', '#7ad8ff', '#ffe07a'] } }
     ] },
   // 11-7 GLIDE (secret): over the lake under the volcano
   { n: 7, name: 'Fuji Thermals', arch: 'glide', secret: true, theme: 'jp_fuji',
@@ -1054,16 +1365,17 @@ const levels = [
           ['petalDraft', { h: 12 }],
           'cp',
           ['gearStand', { item: 'plane', skin: 'jpCraneStand' }],
+          ['itemBlock', { item: 'lsd', y: 5 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
           // ③ down to the lake and its reflections, a last thermal up
           ['craneChain', { n: 3, gap: 5 }],
           ['lakeIslets', { n: 4, gold: 'risky' }],
           ['enemies', { kind: 'jpUmbrellaFly', n: 1, len: 6 }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
           ['petalDraft', { h: 12 }],
           ['craneChain', { n: 2 }],
           ['gate', { exit: 'main' }]
         ] },
-      { id: 'hutRoom', gen: 'room', role: 'secret', theme: 'jp_fuji', stamp: 'hutRoom' }
+      { id: 'hutRoom', gen: 'room', role: 'secret', theme: 'jp_fuji', stamp: 'hutRoom', room: 'floaty',
+        floaty: { title: 'THIN AIR ON FUJI', rule: 'SO HIGH UP THE AIR IS THIN AND YOU ARE LIGHT AS A FEATHER. BIG FLOATY JUMPS!', gravity: 0.5 } }
     ] }
 ];
 

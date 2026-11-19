@@ -1,14 +1,14 @@
 /* ============================================================
    NEPAL (world 12, the grand finale): the country's look, cast,
-   objects, the Tin Yak and Baron Bric-a-Brac. The levels (v2 format)
+   objects, the Tin Yak and Piwi Squirmin'. The levels (v2 format)
    are in 29_tour_np_levels.js:
    12-1 Suspension Bridges   SKY    ridge to ridge over open sky; red planks swing down in the gusts
    12-2 Yak Caravan Pass     ROLL   snowballs grow as you push them and smash snow walls; yetis breathe frost
    12-3 Blizzard Night       SNEAK  yetis on watch with lanterns; hide behind rocks, in the box, in the white-outs
    12-4 Khumbu Icefall       RISE   the icefall gives way below: ladders, icicles, seracs, faster in the serac field
-   12-5 Baron's Fortress     LAIR   cameras, a jar to kick through crates, the archive; the Baron on the summit
+   12-5 Piwi's Playhouse     LAIR   Shrink-Spots, a jar to kick through crates, the archive; Piwi's Grand Finale
    12-6 Crevasse Drop        FALL   (secret) down the blue-ice crevasse; ice bridges burst under a long fall
-   12-7 Baron's Supply Depot FORT   (secret) crate belts and lifts, then the Tin Yak
+   12-7 Piwi's Prop Depot    FORT   (secret) crate belts and lifts, then the Tin Yak
    Mountains, monasteries, stupas and prayer flags are scenery only, painted with respect, never the joke.
    ============================================================ */
 (() => {
@@ -92,13 +92,13 @@ const painters = {
     for (let i = 0; i < 40; i++) { const x = rng() * BG_W, y = rng() * H, w = 30 + rng() * 60, h = 40 + rng() * 120; ctx.fillStyle = rng() < 0.5 ? 'rgba(255,255,255,0.25)' : 'rgba(40,100,160,0.18)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w * 0.6, y - 8); ctx.lineTo(x + w, y + h * 0.3); ctx.lineTo(x + w * 0.7, y + h); ctx.lineTo(x + w * 0.1, y + h * 0.8); ctx.closePath(); ctx.fill(); }
     ctx.strokeStyle = 'rgba(20,60,120,0.25)'; ctx.lineWidth = 2; for (let i = 0; i < 18; i++) { const x = rng() * BG_W; ctx.beginPath(); ctx.moveTo(x, rng() * H); ctx.lineTo(x + (rng() - 0.5) * 30, rng() * H); ctx.stroke(); }
   },
-  // the Baron's fortress: a purple vault lined with shelves of stolen snow globes and his monocle banners
+  // Piwi's playhouse: a purple vault lined with shelves of shrunken scenery and his P banners
   npVault(ctx, L, rng, H) {
     ctx.fillStyle = L.color; ctx.fillRect(0, 0, BG_W, H);
     for (let x = 0; x < BG_W; x += 64) { ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(x, 0, 32, H); }
     for (let x = 30; x < BG_W; x += 300) {
-      ctx.fillStyle = '#4a1a8a'; ctx.fillRect(x, 60, 70, 120); ctx.fillStyle = '#ffd84a'; ctx.fillRect(x, 60, 70, 6); ctx.beginPath(); ctx.moveTo(x, 180); ctx.lineTo(x + 35, 196); ctx.lineTo(x + 70, 180); ctx.fill();
-      ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x + 35, 118, 18, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + 48, 130); ctx.lineTo(x + 54, 160); ctx.stroke();
+      ctx.fillStyle = PIWI.jacketSh; ctx.fillRect(x, 60, 70, 120); ctx.fillStyle = '#ffd84a'; ctx.fillRect(x, 60, 70, 6); ctx.beginPath(); ctx.moveTo(x, 180); ctx.lineTo(x + 35, 196); ctx.lineTo(x + 70, 180); ctx.fill();
+      Piwi.badge(ctx, x + 35, 118, 20);
     }
     for (const sy of [L.base - 150, L.base - 90]) {
       ctx.fillStyle = '#5a3a7a'; ctx.fillRect(0, sy, BG_W, 6);
@@ -187,7 +187,7 @@ const themes = {
     fog: '#e8f6ff', ground: glacier, hard: { c1: '#a8d8f4', c2: '#5a98c8' }, semi: { style: 'plank', c1: '#c8ccd4', c2: '#8a8e98' }, decor: ['npSnowTuft']
   }),
   np_fortress: Object.assign({}, base, {
-    name: "Baron's Fortress", music: 'tour_np_fort', particles: 'motes',
+    name: "Piwi's Playhouse", music: 'tour_np_fort', particles: 'motes',
     sky: ['#2a0a4a', '#4a1a6a', '#6a2a8a'], horizonGlow: '#ffd84a', celestial: { type: 'none' }, stars: 0,
     layers: [{ kind: 'npVault', color: '#3a1460', base: 340, f: 0.08 }],
     fog: '#b88ad8', liquid: 'np_vault', ground: marble, hard: { c1: '#c8a03a', c2: '#8a6a1a' }, semi: { style: 'plank', c1: '#ffd84a', c2: '#a8801a' },
@@ -268,7 +268,7 @@ const yetiArt = (ctx, e, x, y, m, t) => {
   ctx.restore();
 };
 const snowballArt = (ctx, e, x, y, m, t) => { ctx.save(); ctx.translate(x, y - 12); if (m === 'roll' || m === 'curl') ctx.rotate(e.t * 9 * e.dir); ctx.fillStyle = '#f4f8ff'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(160,190,230,0.6)'; ctx.beginPath(); ctx.arc(4, 4, 7, 0, TAU); ctx.fill(); if (m !== 'roll' && m !== 'curl' && m !== 'flat' && m !== 'ko') K.eyes(ctx, 3, -2, e.dir, 2.2, 1.6, false); ctx.restore(); };
-// the Baron's goons: wind-up souvenir toys
+// Piwi's stagehands: wind-up souvenir toys
 const tinBotArt = (ctx, e, x, y, m, t) => {
   ctx.save(); ctx.translate(x, y); ctx.scale(e.dir, m === 'flat' ? 0.4 : 1);
   const st = m === 'walk' ? Math.sin(t * 10) * 2 : 0;
@@ -281,9 +281,9 @@ const tinBotArt = (ctx, e, x, y, m, t) => {
 };
 const bobbleArt = (ctx, e, x, y, m, t) => {
   ctx.save(); ctx.translate(x, y); const sq = m === 'flat' ? 0.4 : 1; ctx.scale(e.dir, sq);
-  ctx.fillStyle = '#ffd84a'; rr(ctx, -9, -6, 18, 6, 2); ctx.fill(); ctx.fillStyle = '#7a2ac8'; rr(ctx, -6, -20, 12, 14, 3); ctx.fill();
-  const wob = Math.sin(t * 14) * 0.25; ctx.save(); ctx.translate(0, -22); ctx.rotate(wob); ctx.fillStyle = '#c8c8d0'; ctx.fillRect(-1, -4, 2, 4); ctx.fillStyle = '#f2c8a8'; ctx.beginPath(); ctx.arc(0, -14, 12, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1020'; ctx.fillRect(-9, -27, 18, 4); rr(ctx, -6, -36, 12, 10, 2); ctx.fill();
-  if (m !== 'flat' && m !== 'ko') { K.eyes(ctx, 2, -15, 1, 2.6, 1.8, false); ctx.strokeStyle = '#3a1a1a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(2, -9, 3, 0.2, Math.PI - 0.2); ctx.stroke(); }
+  ctx.fillStyle = '#ffd84a'; rr(ctx, -9, -6, 18, 6, 2); ctx.fill(); ctx.fillStyle = PIWI.jacket; rr(ctx, -6, -20, 12, 14, 3); ctx.fill(); ctx.fillStyle = PIWI.tie; ctx.fillRect(-3, -20, 6, 3);
+  const wob = Math.sin(t * 14) * 0.25; ctx.save(); ctx.translate(0, -22); ctx.rotate(wob); ctx.fillStyle = '#c8c8d0'; ctx.fillRect(-1, -4, 2, 4);
+  Piwi.head(ctx, 0, -13, 1.05, t, { jaw: m === 'hop' ? 2.5 : 0, eyes: m === 'stun' || m === 'ko' || m === 'flat' ? 'dizzy' : 'open', look: 1 });
   ctx.restore(); ctx.restore();
 };
 const globeArt = (ctx, e, x, y, m, t) => { ctx.save(); ctx.translate(x, y - 12); const rolling = m === 'roll' || m === 'curl'; if (rolling) ctx.rotate(e.t * 10 * e.dir); ctx.fillStyle = 'rgba(210,240,255,0.8)'; ctx.beginPath(); ctx.arc(0, -2, 11, 0, TAU); ctx.fill(); ctx.fillStyle = '#e8b838'; ctx.fillRect(-4, -4, 8, 8); ctx.fillStyle = '#7a2ac8'; ctx.fillRect(-9, 6, 18, 5); ctx.fillStyle = '#ffffff'; for (let k = 0; k < 4; k++) ctx.fillRect(-6 + ((t * 9 + k * 4) % 12), -10 + k * 3, 1.5, 1.5); if (!rolling && m !== 'flat' && m !== 'ko') K.eyes(ctx, 2, -4, e.dir, 2, 1.5, true); ctx.restore(); };
@@ -293,12 +293,12 @@ const enemies = {
   npMomo: { cls: TourEnemy.make({ w: 26, h: 22, speed: 1.0, behavior: 'hop', hopV: 9.5, hopEvery: 1.3, art: momoArt, burst: '#ffffff' }), place: 'walk' },
   npRoti: { cls: TourEnemy.make({ w: 24, h: 22, speed: 0.8, behavior: 'roll', range: 8, rollSpeed: 6.4, rollT: 2.4, art: rotiArt, burst: '#e8a050' }), place: 'walk' },
   npMonal: { cls: TourFlyer.make({ w: 30, h: 16, range: 3, speed: 1.1, swoop: true, art: monalArt, burst: '#3a5ad8' }), place: 'fly' },
-  npMarmot: { cls: TourEnemy.make({ w: 22, h: 30, speed: 0.6, behavior: 'throw', range: 9, every: 2.4, art: marmotArt, burst: '#b8864a', shoot: (e, p) => { tourFire(e.g, e.cx + e.dir * 10, e.y + 6, { kind: 'pebble', vx: e.dir * 5 * TS, vy: -6 * TS, grav: PHYS.gDown * 0.4, w: 10, h: 10, life: 3, thru: true, col: '#8a8680', art: pebbleArt }); K.say(e.g, e, 'EEEEP!', '#ffffff'); } }), place: 'walk' },
+  npMarmot: { cls: TourEnemy.make({ belly: true, w: 22, h: 30, speed: 0.6, behavior: 'throw', range: 9, every: 2.4, art: marmotArt, burst: '#b8864a', shoot: (e, p) => { tourFire(e.g, e.cx + e.dir * 10, e.y + 6, { kind: 'pebble', vx: e.dir * 5 * TS, vy: -6 * TS, grav: PHYS.gDown * 0.4, w: 10, h: 10, life: 3, thru: true, col: '#8a8680', art: pebbleArt }); K.say(e.g, e, 'EEEEP!', '#ffffff'); } }), place: 'walk' },
   npChough: { cls: TourFlyer.make({ w: 28, h: 14, range: 2.5, speed: 1.3, swoop: true, art: chough, burst: '#1a1a24' }), place: 'fly' },
-  npYeti: { cls: TourEnemy.make({ w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'throw', pace: true, range: 10, every: 2.2, art: yetiArt, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'OOF! *FLUFF*', '#e8f0ff'), shoot: (e, p) => { tourFire(e.g, e.cx + e.dir * 18, e.y + 10, { kind: 'snowball', vx: e.dir * 6 * TS, vy: -5 * TS, grav: PHYS.gDown * 0.35, w: 16, h: 16, life: 3, thru: true, stompable: true, col: '#ffffff', art: snowShotArt }); } }), place: 'walk' },
+  npYeti: { cls: TourEnemy.make({ belly: true, w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'throw', pace: true, range: 10, every: 2.2, art: yetiArt, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'OOF! *FLUFF*', '#e8f0ff'), shoot: (e, p) => { tourFire(e.g, e.cx + e.dir * 18, e.y + 10, { kind: 'snowball', vx: e.dir * 6 * TS, vy: -5 * TS, grav: PHYS.gDown * 0.35, w: 16, h: 16, life: 3, thru: true, stompable: true, col: '#ffffff', art: snowShotArt }); } }), place: 'walk' },
   npSnowball: { cls: TourEnemy.make({ w: 24, h: 24, speed: 0.8, behavior: 'roll', range: 9, rollSpeed: 7, rollT: 2.8, art: snowballArt, burst: '#ffffff' }), place: 'walk' },
   npTinBot: { cls: TourEnemy.make({ w: 22, h: 46, speed: 1.1, behavior: 'walk', art: tinBotArt, burst: '#9aa0b0' }), place: 'walk' },
-  npBobble: { cls: TourEnemy.make({ w: 24, h: 36, inkPad: 10, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, art: bobbleArt, burst: '#7a2ac8' }), place: 'walk' },
+  npBobble: { cls: TourEnemy.make({ w: 24, h: 36, inkPad: 10, sprite: 'piwiBobble', speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, art: bobbleArt, burst: '#7a2ac8' }), place: 'walk' },
   npGlobe: { cls: TourEnemy.make({ w: 24, h: 26, speed: 0.8, behavior: 'roll', range: 8, rollSpeed: 6.8, rollT: 2.4, art: globeArt, burst: '#bfe8ff' }), place: 'walk' }
 };
 
@@ -472,7 +472,7 @@ class NpIcicle extends Ent {
     ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(x - 4, y + 2, 2, 14); ctx.globalAlpha = 1;
   }
 }
-// a shrink-ray security camera: its beam sweeps the hall; caught in it for a moment, FLASH: big Brady goes small
+// a Shrink-Spot (one of Piwi's stage follow-spots that shrinks what it lights): its beam sweeps the hall; caught in it for a moment, FLASH: big Brady goes small
 class NpCamera extends Ent {
   constructor(g, s) { super(g, s, 26, 18); this.x = s.x - 13; this.y = (s.top != null ? s.top : 0) * TS; this.range = (s.range || 7) * TS; this.ph = s.phase || 0; this.lock = 0; this.cool = 0; this.flashT = 0; this.ang = 0; }
   update(dt) {
@@ -492,12 +492,12 @@ class NpCamera extends Ent {
     const x = this.cx, y = this.y + 10, a = this.ang;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     const L = this.range, sp = 0.2, hot = this.lock > 0.05;
-    ctx.fillStyle = hot ? `rgba(255,120,200,${0.18 + this.lock * 0.4})` : 'rgba(140,240,255,0.13)';
+    ctx.fillStyle = hot ? `rgba(255,120,200,${0.18 + this.lock * 0.4})` : 'rgba(255,236,160,0.15)';
     ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a - sp) * L, y + Math.sin(a - sp) * L); ctx.lineTo(x + Math.cos(a + sp) * L, y + Math.sin(a + sp) * L); ctx.closePath(); ctx.fill();
     if (this.flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${this.flashT * 1.5})`; ctx.beginPath(); ctx.arc(x, y, 40 + (0.4 - this.flashT) * 200, 0, TAU); ctx.fill(); }
     ctx.restore();
     ctx.fillStyle = '#3a3a4a'; ctx.fillRect(x - 2, this.y - 6, 4, 8);
-    ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = '#5a5a6a'; rr(ctx, -10, -8, 24, 16, 4); ctx.fill(); ctx.fillStyle = '#7a2ac8'; ctx.fillRect(-10, -8, 24, 4); ctx.fillStyle = hot ? '#ff5ac8' : '#8af0ff'; ctx.beginPath(); ctx.arc(14, 0, 5, 0, TAU); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = '#26222e'; rr(ctx, -10, -8, 24, 16, 4); ctx.fill(); ctx.fillStyle = PIWI.jacket; ctx.fillRect(-10, -8, 24, 4); ctx.fillRect(12, -9, 3, 18); ctx.fillStyle = hot ? '#ff5ac8' : '#fff2a8'; ctx.beginPath(); ctx.arc(14, 0, 5, 0, TAU); ctx.fill(); ctx.restore();
     ctx.fillStyle = Math.sin(this.t * 6) > 0 ? '#ff3a3a' : '#5a1a1a'; ctx.beginPath(); ctx.arc(x - 7, this.y + 2, 2, 0, TAU); ctx.fill();
   }
   get light() { return { r: 40, c: 'rgba(140,240,255,', x: this.cx, y: this.y + 10 }; }
@@ -532,7 +532,7 @@ const P = {
   /* 12-2: the pass */
   // stone steps up (or down) the mountainside: the yak strides straight up them
   slope(st, o) { let x = st.x; const n = o.n || 6, up = !o.down; for (let k = 0; k < n; k++) { st.floor(x, x + 1); x += 2; st.gy = clamp(st.gy + (up ? -1 : 1), st.gyMin, st.gyMax); } st.floor(x, x + 3); st.coins(x, x + 3, st.gy - 2); if (o.gold) st.gold(x + 2, st.gy - 4, 'high'); st.enemy(o.enemy || 'npSnowball', x + 3, st.gy); return x + 4; },
-  // a gully choked with packed snow (or a wall of the Baron's crates): a yak pen just before it
+  // a gully choked with packed snow (or a wall of Piwi's crates): a yak pen just before it
   snowwall(st, o) {
     const x = st.x, B = st.B; st.floor(x, x + 10);
     if (o.pen !== false) st.spawn('npPen', x + 2, st.gy - 1, {});
@@ -593,12 +593,12 @@ const P = {
   },
   ccp(st) { const B = st.B, W = st.W, y = st.y - 3; B.fill(2, y, W - 3, y, T.GROUND); st.spawn('checkpoint', Math.floor(W / 2) + 4, y - 1); st.spawn('npPen', 5, y - 1, {}); for (let q = st.mid - 2; q < st.mid + 2; q++) B.set(q, y, T.SEMI); st.top(y - 3); },
 
-  /* 12-5: the Baron's fortress */
-  // a vault corridor watched by shrink-ray cameras
+  /* 12-5: Piwi's fortress */
+  // a vault corridor watched by Shrink-Spots
   cameras(st, o) { const x = st.x, B = st.B, n = o.n || 2, w = n * 6 + 4; st.floor(x, x + w - 1); B.fill(x, 0, x + w - 1, st.gy - 7, T.HARD); for (let k = 0; k < n; k++) st.spawn('npCamera', x + 4 + k * 6, st.gy - 1, { top: st.gy - 6, range: 7, phase: k * 1.7 }); st.enemy('npTinBot', x + w - 3, st.gy); st.coins(x + 2, x + w - 3, st.gy - 2); if (o.gold) st.gold(x + 3 + 3, st.gy - 4, 'risky'); return x + w; },
   gallery(st, o) { const x = st.x; st.floor(x, x + 13); st.semi(x + 3, x + 6, st.gy - 3); st.semi(x + 8, x + 11, st.gy - 5); st.block(x + 9, st.gy - 8, o.item || 'power'); st.decor('npGlobeStand', x + 1); st.decor('npCrateStack', x + 12); st.enemy('npBobble', x + 6, st.gy); st.gold(x + 4, st.gy - 6, 'hidden'); return x + 14; },
   belts(st, o) { const x = st.x, B = st.B, n = 12; st.floor(x, x + n - 1); for (let c = x + 1; c < x + n - 1; c++) B.set(c, st.gy, T.CONV_L); st.enemy('npGlobe', x + n - 2, st.gy); st.enemy('npTinBot', x + 6, st.gy); st.coins(x + 2, x + n - 3, st.gy - 3); return x + n; },
-  // the summit of the roof of the world: a flat roof with four ledges, the Baron's jar shelf and prayer flags behind
+  // the summit of the roof of the world: a flat roof with four ledges, Piwi's jar shelf and prayer flags behind
   arena_summit(st, o) {
     const B = st.B, { x0, w, GY } = o;
     for (let q = 0; q < 4; q++) { B.set(x0 + 3 + q, GY - 4, T.SEMI); B.set(x0 + w - 7 + q, GY - 4, T.SEMI); }
@@ -608,16 +608,16 @@ const P = {
   }
 };
 
-/* ---------------- the final boss: BARON BRIC-A-BRAC ---------------- */
-// THE STOLEN LANDMARKS. The Baron keeps the shrunken landmarks of the whole tour in jars and throws them at Brady one
+/* ---------------- the final boss: PIWI SQUIRMIN' ---------------- */
+// THE STOLEN LANDMARKS. Piwi keeps the shrunken landmarks of the whole tour in jars and throws them at Brady one
 // at a time. A thrown landmark lands as a world object: kick it (run into it) or stomp it to launch it and it lobs
-// itself back at the Baron. A landmark that hits him is RETURNED: it hurts him and pops back to full size behind the
-// summit. Stomps bounce off (NOT THE HAT!).
-//   Phase 1 (hp 7-5): the snow-globe airship, three landmarks, snow-globe drops and low swoops.
-//   Phase 2 (hp 4-2): he crashes and lands in a bric-a-brac mech built from the stolen things: it walks, stomps, charges
-//                     with its windmill arm and fires the laser monocle. Three more landmarks.
+// itself back at Piwi. A landmark that hits him is RETURNED: it hurts him and pops back to full size behind the
+// summit. Stomps bounce off (NOT THE HAIR!).
+//   Phase 1 (hp 7-5): the Showtrunk (Chinka-O in its show cage), three landmarks, snow-globe drops and low swoops.
+//   Phase 2 (hp 4-2): he crashes and climbs into THE SHOWSTOPPER, a stage mech built from his props: it walks, stomps, charges
+//                     with its windmill arm and fires the spotlight beam. Three more landmarks.
 //   Phase 3 (hp 1):   the mech breaks; on foot he runs the ledge with the last jar while gales buffet the summit.
-//   Finish: the Shrink-o-Matic goes off in his own face, every landmark pops back, Chinka arrives.
+//   Finish: his Shrink-Spot goes off in his own face, every landmark pops back, Chinka-O runs to Brady-O.
 const LANDMARKS = [
   { id: 'ec', name: 'THE VOLCANO' }, { id: 'nl', name: 'THE WINDMILL' }, { id: 'fr', name: 'THE IRON TOWER' },
   { id: 'br', name: 'SUGARLOAF' }, { id: 'mz', name: 'THE BAOBAB' }, { id: 'ma', name: 'THE KASBAH' },
@@ -708,7 +708,7 @@ function jarArt(ctx, x, y, id, t, s, empty) {
   ctx.restore();
 }
 // a thrown landmark: a world object. Brady kicks it (runs into it) or stomps it to launch it, and a fresh kick lobs it
-// back at the Baron in an arc that lands on where he is heading. While it flies after the Baron threw it, it hurts.
+// back at Piwi in an arc that lands on where he is heading. While it flies after Piwi threw it, it hurts.
 const NpLandmark = TourProp.make({
   w: 30, h: 32, kick: 8, bounce: 0.45, friction: 7, gravity: 0.3, hurts: true, hp: 1, burst: '#bfe8ff',
   init(e, s) { e.lm = LANDMARKS[s.lm || 0]; e.landmark = true; e.lobbed = false; e.rest = 0; e.spin = 0; },
@@ -718,7 +718,7 @@ const NpLandmark = TourProp.make({
       e.lobbed = true; e.rest = 0;
       if (b && b.state === 'fight' && b.act !== 'finale' && Math.abs(b.cx - e.cx) > TS && sign(b.cx - e.cx) === sign(e.vx || 1)) {
         const sp = Math.max(Math.abs(e.vx), 6 * TS), gr = PHYS.gDown * 0.3;
-        // lead the target: where will the Baron be when it gets there?
+        // lead the target: where will Piwi be when it gets there?
         let tx = b.cx; for (let k = 0; k < 2; k++) { const tt = Math.abs(tx - e.cx) / sp; tx = clamp(b.cx + (b.vx || 0) * tt, b.arenaX0 + 20, b.arenaX1 - 20); }
         const tt = Math.max(0.15, Math.abs(tx - e.cx) / sp);
         e.vx = sign(tx - e.cx) * sp; e.vy = clamp((b.cy - e.cy - 0.5 * gr * tt * tt) / tt, -16 * TS, 1 * TS);
@@ -737,7 +737,7 @@ const NpLandmark = TourProp.make({
     if (e.onGround && !e.fast) { ctx.fillStyle = `rgba(122,255,216,${0.6 + 0.4 * Math.sin(t * 8)})`; ctx.font = `9px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('KICK IT BACK', x, y - 44 + Math.sin(t * 6) * 3); }
   }
 });
-// the summit itself: prayer flags high above (scenery), the Baron's shelf of jars, and the restored landmarks growing
+// the summit itself: prayer flags high above (scenery), Piwi's shelf of jars, and the restored landmarks growing
 // back to full size along the back of the roof of the world
 class NpRoof extends Ent {
   constructor(g, s) { super(g, s, 10, 10); this.npRoof = true; this.friendly = true; this.x0 = s.x0 * TS; this.x = this.x0; this.w = s.w * TS; this.x1 = this.x0 + this.w; this.floorY = s.y; this.y = this.floorY - 9 * TS; this.h = 9 * TS; this.freed = {}; this.n = 0; }
@@ -763,7 +763,7 @@ class NpRoof extends Ent {
     }
   }
 }
-// Chinka: tied up in the gondola in phase 1, she bails out on a scrap of balloon when it pops, cheers from the ledge,
+// Chinka-O: in the show cage under the Showtrunk in phase 1; when it crashes she tiptoes out and floats down on her tutu, cheers from the ledge,
 // and runs to Brady when the last landmark is home
 class NpChinka extends Ent {
   constructor(g, s) { super(g, s, 24, 46); this.friendly = true; this.npChinka = true; this.state = 'chute'; this.tx = s.tx; this.ty = s.ty; this.lineT = 1; this.facing = 1; this.hearts = 0; }
@@ -774,7 +774,7 @@ class NpChinka extends Ent {
       if (this.y >= this.ty - this.h - 0.5) { this.state = 'cheer'; this.lineT = 0.4; }
     } else if (this.state === 'cheer') {
       this.lineT -= dt; if (p) this.facing = sign(p.cx - this.cx) || 1;
-      if (this.lineT <= 0) { this.lineT = 7 + Math.random() * 3; K.say(g, this, pick(['KICK IT BACK, BRADY!', 'YOU\'VE GOT THIS!', 'THAT\'S MY BRADY!', 'HE HATES THAT!']), '#ff9ad8'); }
+      if (this.lineT <= 0) { this.lineT = 7 + Math.random() * 3; K.say(g, this, pick(['KICK IT BACK, BRADY!', 'YOU\'VE GOT THIS!', 'THAT\'S MY BRADY!', 'HE HATES THAT!', 'TELL HIM IT\'S A WOODPECKER!', 'GO, PUPO!']), '#ff9ad8'); }
     } else if (this.state === 'run') {
       if (p) { const tx = p.cx + (p.cx < this.cx ? 34 : -34); this.x = approach(this.x, tx - this.w / 2, 5.5 * TS * dt); this.facing = sign(p.cx - this.cx) || 1; this.y = approach(this.y, p.y + p.h - this.h, 7 * TS * dt); if (Math.abs(this.cx - tx) < 2) { this.state = 'hug'; K.say(g, this, '♥ BRADY! YOU DID IT! ♥', '#ff9ad8'); } }
     } else if (this.state === 'hug') { if (p) this.facing = sign(p.cx - this.cx) || 1; this.hearts += dt; if (this.hearts > 0.3) { this.hearts = 0; g.burst(this.cx + (Math.random() - 0.5) * 40, this.y, 2, '#ff9ad8', 'confetti'); } }
@@ -782,8 +782,7 @@ class NpChinka extends Ent {
   arrive() { if (this.state !== 'hug') { this.state = 'run'; K.say(this.g, this, 'BRADY!', '#ff9ad8'); } }
   draw(ctx) {
     const t = this.t;
-    if (this.state === 'chute') { ctx.fillStyle = 'rgba(200,235,255,0.75)'; ctx.beginPath(); ctx.arc(this.cx, this.y - 30, 30, Math.PI, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(90,60,120,0.7)'; ctx.lineWidth = 1; for (const dx of [-28, 0, 28]) { ctx.beginPath(); ctx.moveTo(this.cx + dx, this.y - 30); ctx.lineTo(this.cx, this.y + 8); ctx.stroke(); } }
-    drawChinka(ctx, { x: this.cx, y: this.y + this.h, scale: 0.9, t, pose: this.state === 'chute' ? 'jump' : this.state === 'run' ? 'run' : this.state === 'hug' ? 'hug' : 'cheer', facing: this.facing });
+    ChinkaO.draw(ctx, { x: this.cx, y: this.y + this.h, scale: 0.9, t, pose: this.state === 'chute' ? 'tiptoe' : this.state === 'run' ? 'walk' : this.state === 'hug' ? 'reunion' : 'wave', facing: this.facing });
   }
 }
 // the gales of the summit: warned by the wind sound and the streaks, then a push that lasts a couple of seconds
@@ -823,10 +822,10 @@ function baronThrow(b, x, y) {
 function baronFinale(b, dt) {
   const g = b.g, at = b.at;
   b.vx = 0; b.pose = 'finale';
-  if (b.first) { b.face(); K.say(g, b, 'NOOO! MY COLLECTION!', '#ffd84a'); b.fin = 0; g.shake(6); }
+  if (b.first) { b.face(); K.say(g, b, 'NOOO! MY SCENERY!', '#ffd84a'); b.fin = 0; g.shake(6); }
   const times = [0.8, 1.4, 1.7, 2.0, 2.3, 2.6, 3.0, 3.8, 6.2];
   const step = k => { if (b.fin < k && at >= times[k - 1]) { b.fin = k; return true; } return false; };
-  // the Shrink-o-Matic slips out of his hand and goes off in his own face
+  // the Shrink-Spot slips out of his hand and goes off in his own face
   if (step(1)) { g.flash = 1; TourKit.sfx('camera_flash', 'laser', { vol: 0.7 }); K.say(g, b, 'OOPS.', '#8af0ff'); g.burst(b.cx, b.cy, 20, '#8af0ff', 'spark'); }
   for (let k = 0; k < 5; k++) if (step(2 + k)) { const r = baronRoof(b); if (r) { const left = LANDMARKS.filter(l => !r.freed[l.id]); for (let q = 0; q < Math.ceil(left.length / (5 - k)); q++) if (left[q]) r.free(left[q]); } }
   if (step(7)) { g.bannerText = 'EVERY LANDMARK RETURNED!'; g.bannerT = 3; Sound.play('secret'); const c = g.entities.find(e => e.npChinka); if (c) c.arrive(); }
@@ -852,7 +851,7 @@ function mechArt(ctx, b, t) {
   }
   // the kasbah crate body, pinned with souvenirs
   ctx.fillStyle = '#d8a86a'; rr(ctx, -42, -102, 84, 54, 6); ctx.fill(); ctx.fillStyle = '#b8884a'; for (let q = -40; q < 40; q += 8) ctx.fillRect(q, -104, 4, 4); ctx.fillRect(-42, -78, 84, 3);
-  ctx.fillStyle = '#7a2ac8'; rr(ctx, -30, -72, 60, 14, 3); ctx.fill(); ctx.save(); ctx.scale(b.dir, 1); ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('BRIC-A-BRAC MK II', 0, -62); ctx.restore();
+  ctx.fillStyle = PIWI.jacket; rr(ctx, -30, -72, 60, 14, 3); ctx.fill(); ctx.save(); ctx.scale(b.dir, 1); ctx.fillStyle = '#ffd84a'; ctx.font = `8px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('SHOWSTOPPER', 0, -62); ctx.restore();
   const pins = ['#ffd84a', '#ff4f8a', '#38c8ff', '#5ad04a', '#ffffff', '#ff9a3a']; for (let q = 0; q < 6; q++) { ctx.fillStyle = pins[q]; ctx.beginPath(); ctx.arc(-30 + q * 12, -92, 3, 0, TAU); ctx.fill(); }
   // the jar rack on top: this phase's landmarks still to throw
   for (let q = 0; q < 3; q++) jarArt(ctx, -28 + q * 28, -104, LANDMARKS[3 + q].id, t, 0.42, b.thrown > 3 + q);
@@ -861,21 +860,21 @@ function mechArt(ctx, b, t) {
   if (b.parts > 1) { ctx.save(); ctx.translate(50, -86); ctx.rotate(P === 'wind' ? -1.6 + Math.sin(t * 30) * 0.05 : 0.5); ctx.fillStyle = '#8a6a4a'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-10, 34); ctx.lineTo(10, 34); ctx.lineTo(6, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#6aa84a'; for (const [dx, dy] of [[-8, 36], [0, 40], [9, 36]]) { ctx.beginPath(); ctx.arc(dx, dy, 3, 0, TAU); ctx.fill(); } ctx.restore(); }
   // the held jar during the wind-up
   if (P === 'wind') { const sh = Math.sin(t * 40) * 2; jarArt(ctx, 52 + sh, -118, LANDMARKS[Math.min(b.thrown, 6)].id, t, 0.75, false); ctx.fillStyle = '#ffd84a'; ctx.font = `12px ${FONT_DISPLAY}`; ctx.fillText('!', 52, -160); }
-  // the cockpit dome with the Baron inside, his monocle hot when the laser charges
+  // the cockpit dome with Piwi inside, his spotlight hot when the beam charges
   ctx.fillStyle = 'rgba(200,240,255,0.35)'; ctx.beginPath(); ctx.arc(0, -108, 22, Math.PI, TAU); ctx.fill(); ctx.strokeStyle = b.parts < 1 ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.5; ctx.stroke();
   if (b.parts < 1) { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.moveTo(-10, -126); ctx.lineTo(-2, -116); ctx.lineTo(-6, -108); ctx.stroke(); }
-  TourVillain.draw(ctx, 0, -104, 0.42, t, 'empty');
+  Piwi.draw(ctx, { x: 0, y: -88, scale: 0.6, t, pose: P === 'aim' ? 'gloat' : 'talk', noStrings: true });
   if (P === 'aim') { const q = Math.min(1, b.at / 0.9); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,80,80,${0.4 + 0.6 * q})`; ctx.beginPath(); ctx.arc(2, -127, 3 + q * 4, 0, TAU); ctx.fill(); ctx.restore(); }
   ctx.restore();
   // the laser's aiming line: the tell
   if (P === 'aim' && b.aimY != null) { const q = Math.min(1, b.at / 0.9); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,80,80,${0.3 + 0.6 * q})`; ctx.lineWidth = 1 + q * 2; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.moveTo(b.cx + b.dir * 20, b.aimY); ctx.lineTo(b.dir > 0 ? b.arenaX1 : b.arenaX0, b.aimY); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); }
 }
 const boss = {
-  id: 'np_baron', name: 'Baron Bric-a-Brac', hp: BARON_HP, dims: [140, 84], floats: true, music: 'tour_np_boss', country: 'np',
+  id: 'np_baron', name: 'Piwi Squirmin\'', hp: BARON_HP, dims: [140, 84], floats: true, music: 'tour_np_boss', country: 'np',
   brain: {
-    guardText: 'NOT THE HAT!',
+    guardText: 'NOT THE HAIR!',
     phases: [4, 1],
-    wake(b) { b.phase = 1; b.thrown = 0; b.quota = 3; b.parts = 3; b.told = false; b.fired = false; K.say(b.g, b, 'AH, THE LAST SOUVENIR: YOU!', '#ffd84a'); },
+    wake(b) { b.phase = 1; b.thrown = 0; b.quota = 3; b.parts = 3; b.told = false; b.fired = false; K.say(b.g, b, 'AH, MISTER BUN! JUST IN TIME FOR THE FINALE!', '#ffd84a'); },
     noDisc(b) { return true; },
     hit(b, kind, src) {
       if (b.act === 'finale' || b.act === 'crash' || b.act === 'wreck') return false;
@@ -897,13 +896,13 @@ const boss = {
       if (n === 2) {
         b.quota = 6; b.hurtT = 3.0; b.landed = false; b.mechK = 0; b.vy = 0;
         g.burst(b.cx, b.cy, 60, '#bfe8ff', 'confetti'); g.shake(10); Sound.play('break', { pitch: 0.6, vol: 0.9 });
-        K.say(g, b, 'MY AIRSHIP! ...TO THE MECH!', '#ffd84a'); g.bannerText = 'THE BRIC-A-BRAC MECH'; g.bannerT = 2.2;
+        K.say(g, b, 'MY TRUNK! ...TO THE SHOWSTOPPER!', '#ffd84a'); g.bannerText = 'THE SHOWSTOPPER'; g.bannerT = 2.2;
         g.spawn(new NpChinka(g, { x: b.cx - 24, y: b.y + b.h, tx: b.arenaX0 + 6 * TS, ty: b.floorY - 4 * TS }));
         b.go('crash');
       }
       if (n === 3) {
         b.quota = 7; b.hurtT = 2.4; g.flash = 0.6; g.shake(12); Sound.play('break', { pitch: 0.5, vol: 1 });
-        K.say(g, b, 'MY MECH! FINE. I\'LL DO IT MYSELF!', '#ffd84a'); g.bannerText = 'THE LAST LANDMARK'; g.bannerT = 2.2;
+        K.say(g, b, 'MY SHOWSTOPPER! FINE. SOLO ACT!', '#ffd84a'); g.bannerText = 'THE LAST LANDMARK'; g.bannerT = 2.2;
         g.spawn(new NpGale(g, { x: b.arenaX0, y: b.floorY, x0: b.arenaX0, x1: b.arenaX1 }));
         b.go('wreck');
       }
@@ -919,12 +918,12 @@ const boss = {
         if (b.act === 'walk') { b.face(); b.hover(dt, hy + Math.sin(b.t * 1.4) * 12, p ? p.cx + (p.cx < b.cx ? 30 : -30) : undefined); b.pose = 'fly'; if (b.at > 1.5) { b.cycle++; b.go(!baronOut(b) && b.thrown < b.quota ? 'throw' : ['globes', 'swoop'][b.cycle % 2]); } }
         else if (b.act === 'throw') {
           b.face(); b.hover(dt, hy, p ? p.cx : undefined); b.pose = 'wind';
-          if (first) { K.say(g, b, pick(['CATCH!', 'A SOUVENIR FOR YOU!', 'HEADS UP, SOUVENIR!']), '#ffd84a'); Sound.play('throw', { pitch: 0.7, vol: 0.4 }); }
+          if (first) { K.say(g, b, pick(['CATCH!', 'A PROP FOR YOU!', 'HEADS UP, MISTER BUN!']), '#ffd84a'); Sound.play('throw', { pitch: 0.7, vol: 0.4 }); }
           if (b.at > 0.85 && !b.fired) { b.fired = true; baronThrow(b, b.cx + b.dir * 18, b.y + b.h - 10); }
           if (b.at > 1.5) { b.fired = false; b.go('walk'); }
         } else if (b.act === 'globes') {
           b.hover(dt, hy, p ? p.cx : undefined); b.pose = 'drop';
-          if (first) { b.n = 0; K.say(g, b, 'SNOW GLOBES! FREE OF CHARGE!', '#ffd84a'); }
+          if (first) { b.n = 0; K.say(g, b, 'SNOW GLOBES! FREE WITH EVERY TICKET!', '#ffd84a'); }
           if (b.at > 0.5 + b.n * 0.3 && b.n < 4) { b.n++; tourFire(g, b.cx + (b.n - 2.5) * 26, b.y + b.h, { kind: 'globe', vx: p ? clamp((p.cx - b.cx) / 1.4, -4 * TS, 4 * TS) : 0, vy: 1 * TS, grav: PHYS.gDown * 0.45, w: 18, h: 18, life: 4, col: '#bfe8ff', art: globeShot }); Sound.play('throw', { pitch: 1.4, vol: 0.35 }); }
           if (b.at > 2.2) b.go('walk');
         } else if (b.act === 'swoop') {
@@ -942,7 +941,7 @@ const boss = {
         if (b.act === 'crash') {
           b.pose = 'crash'; b.vy += PHYS.gDown * 0.5 * dt; b.y += b.vy * dt; b.x += (b.dir || 1) * 0.5 * TS * dt;
           if (b.y + b.h >= b.floorY) { b.y = b.floorY - b.h; b.vy = 0; if (!b.landed) { b.landed = true; g.shake(12); g.burst(b.cx, b.floorY, 40, '#bfe8ff', 'debris'); Sound.play('stomp', { pitch: 0.4 }); baronSize(b, 96, 120, true); b.mechK = 0; } }
-          if (b.landed) { b.mechK = Math.min(1, b.mechK + dt / 1.4); if (b.mechK >= 1) { K.say(g, b, 'BEHOLD: BRIC-A-BRAC MK II!', '#ffd84a'); g.shake(6); b.go('walk'); } }
+          if (b.landed) { b.mechK = Math.min(1, b.mechK + dt / 1.4); if (b.mechK >= 1) { K.say(g, b, 'BEHOLD: THE SHOWSTOPPER!', '#ffd84a'); g.shake(6); b.go('walk'); } }
           return;
         }
         if (b.act === 'walk') {
@@ -951,17 +950,17 @@ const boss = {
           if (b.at > 1.8) { b.cycle++; b.go(!baronOut(b) && b.thrown < b.quota ? 'throw' : ['laser', 'stomp', 'charge'][b.cycle % 3]); }
         } else if (b.act === 'throw') {
           b.vx = 0; b.face(); b.pose = 'wind';
-          if (first) { K.say(g, b, pick(['TAKE THIS ONE TOO!', 'FETCH, SOUVENIR!', 'MECH THROW!']), '#ffd84a'); Sound.play('throw', { pitch: 0.7, vol: 0.4 }); }
+          if (first) { K.say(g, b, pick(['TAKE THIS ONE TOO!', 'FETCH, MISTER BUN!', 'BIG FINISH!']), '#ffd84a'); Sound.play('throw', { pitch: 0.7, vol: 0.4 }); }
           if (b.at > 0.85 && !b.fired) { b.fired = true; baronThrow(b, b.cx + b.dir * 46, b.y + 10); }
           if (b.at > 1.5) { b.fired = false; b.go('walk'); }
         } else if (b.act === 'laser') {
           b.vx = 0; b.face(); b.pose = 'aim';
-          if (first) { b.aimY = p ? p.cy : b.floorY - 28; K.say(g, b, 'MONOCLE... ENGAGE!', '#ff8a8a'); Sound.play('laser', { vol: 0.25, pitch: 0.5 }); }
+          if (first) { b.aimY = p ? p.cy : b.floorY - 28; K.say(g, b, 'SPOTLIGHT... ON ME!', '#ff8a8a'); Sound.play('laser', { vol: 0.25, pitch: 0.5 }); }
           if (b.at > 0.9 && !b.fired) { b.fired = true; g.flash = Math.max(g.flash || 0, 0.3); Sound.play('laser', { vol: 0.6 }); g.shake(4); for (let k = 0; k < 3; k++) tourFire(g, b.cx + b.dir * (56 + k * 44), b.aimY, { kind: 'beam', vx: b.dir * 16 * TS, w: 60, h: 14, life: 1.4, thru: true, col: '#ff5a5a', art: beamArt }); }
           if (b.at > 1.5) { b.fired = false; b.aimY = null; b.go('walk'); }
         } else if (b.act === 'stomp') {
           b.vx = 0; b.pose = 'lift'; b.lift = Math.min(1, b.at / 0.7);
-          if (first) K.say(g, b, 'MECH STOMP!', '#ffd84a');
+          if (first) K.say(g, b, 'TAP DANCE!', '#ffd84a');
           if (b.at > 0.75 && !b.fired) { b.fired = true; b.lift = 0; g.shake(10); Sound.play('stomp', { pitch: 0.4 }); for (const d of [-1, 1]) tourFire(g, b.cx + d * (b.w / 2 + 12), b.floorY - 14, { kind: 'quake', vx: d * 5 * TS, w: 26, h: 24, ground: true, life: 3, col: '#c8a8ff', art: quakeArt }); }
           if (b.at > 1.4) { b.fired = false; b.go('walk'); }
         } else if (b.act === 'charge') {
@@ -986,7 +985,7 @@ const boss = {
         else if (b.at > 2.6) b.go('taunt');
       } else if (b.act === 'taunt') {
         b.vx = 0; b.face(); b.pose = 'taunt';
-        if (first) K.say(g, b, pick(['YOU\'LL NEVER GET THIS ONE!', 'IT\'S MINE! MINE!', 'CATCH ME IF YOU CAN!']), '#ffd84a');
+        if (first) K.say(g, b, pick(['YOU\'LL NEVER GET THIS ONE!', 'THE SHOW MUST GO ON!', 'CATCH ME IF YOU CAN!']), '#ffd84a');
         if (b.at > 1.1) { b.dir = -b.dir; b.go('run'); }
       } else if (b.act === 'throw') {
         b.vx = 0; b.face(); b.pose = 'wind';
@@ -995,7 +994,7 @@ const boss = {
         if (b.at > 1.4) { b.fired = false; b.dir = -b.dir; b.go('run'); }
       } else if (b.act === 'flash') {
         b.vx = 0; b.face(); b.pose = b.at < 0.7 ? 'aim' : 'flash';
-        if (first) K.say(g, b, 'SMILE FOR THE SHRINK-O-MATIC!', '#8af0ff');
+        if (first) K.say(g, b, 'SMILE FOR THE SHRINK-SPOT!', '#8af0ff');
         if (b.at > 0.7 && !b.fired) { b.fired = true; g.flash = Math.max(g.flash || 0, 0.4); TourKit.sfx('camera_flash', 'laser', { vol: 0.6 }); tourFire(g, b.cx + b.dir * 30, b.floorY - 30, { kind: 'beam', vx: b.dir * 12 * TS, w: 44, h: 14, life: 2, thru: true, col: '#8af0ff', art: shrinkBeamArt }); }
         if (b.at > 1.2) { b.fired = false; b.dir = -b.dir; b.go('run'); }
       } else if (b.act === 'hop') {
@@ -1008,34 +1007,32 @@ const boss = {
     },
     hurt(b) {
       const g = b.g, ph = b.phase || 1;
-      if (ph === 1) { K.say(g, b, pick(['MY PAINTWORK!', 'THAT WAS NOT YOURS TO RETURN!', 'HOW RUDE!']), '#ffd84a'); b.go('reel'); }
-      else if (ph === 2) { b.parts = Math.max(0, (b.parts || 0) - 1); K.say(g, b, pick(['MY BRIC! MY BRAC!', 'NOT THE WINDMILL ARM!', 'WARRANTY VOID!']), '#ffd84a'); g.burst(b.cx, b.y + 30, 20, '#d8a86a', 'debris'); b.go('stagger'); }
-      else { K.say(g, b, pick(['OW! MY MONOCLE!', 'UNHAND MY LANDMARK!']), '#ffd84a'); b.go('tumble'); }
+      if (ph === 1) { K.say(g, b, pick(['MY LACQUER!', 'THAT WAS SCENERY!', 'HOW RUDE!']), '#ffd84a'); b.go('reel'); }
+      else if (ph === 2) { b.parts = Math.max(0, (b.parts || 0) - 1); K.say(g, b, pick(['MY PROPS!', 'NOT THE WINDMILL ARM!', 'BOO! I MEAN, OW!']), '#ffd84a'); g.burst(b.cx, b.y + 30, 20, '#d8a86a', 'debris'); b.go('stagger'); }
+      else { K.say(g, b, pick(['OW! MY HINGES!', 'UNHAND MY LANDMARK!']), '#ffd84a'); b.go('tumble'); }
       g.burst(b.cx, b.y + 20, 16, '#ffd84a', 'confetti');
     },
     draw(b, ctx, t) {
       const ph = b.phase || 1, d = b.dir || 1, P = b.pose;
       if (ph === 1 || b.act === 'crash') {
         const cy = b.y + 40, tilt = b.act === 'swoop' ? (b.sdir || 1) * 0.12 : b.act === 'reel' ? Math.sin(t * 14) * 0.15 : b.act === 'crash' ? Math.min(1, b.at) * 0.5 : 0;
-        if (b.act === 'crash' && b.landed) { if ((b.mechK || 0) < 1) { ctx.save(); ctx.globalAlpha = 1 - b.mechK; TourVillain.blimp(ctx, b.cx, b.y + b.h - 40, 1, t); ctx.restore(); } mechArt(ctx, b, t); return; }
+        if (b.act === 'crash' && b.landed) { if ((b.mechK || 0) < 1) { ctx.save(); ctx.globalAlpha = 1 - b.mechK; Showtrunk.draw(ctx, { x: b.cx, y: b.y + b.h - 2, scale: 0.7, t, piwi: null, chinka: false }); ctx.restore(); } mechArt(ctx, b, t); return; }
         ctx.save(); ctx.translate(b.cx, cy); ctx.rotate(tilt);
-        TourVillain.blimp(ctx, 0, 0, 1, t);
-        for (let k = 0; k < 3; k++) jarArt(ctx, -30 + k * 30, 72, LANDMARKS[k].id, t, 0.42, b.thrown > k);
-        if (b.act !== 'crash') drawChinka(ctx, { x: -26, y: 54, scale: 0.36, t, pose: 'captive', facing: 1 });
-        ctx.save(); ctx.scale(d, 1); TourVillain.draw(ctx, 18, 54, 0.42, t, P === 'wind' ? 'empty' : P === 'drop' ? 'flash' : null); ctx.restore();
+        Showtrunk.draw(ctx, { x: 0, y: 38, scale: 0.7, t, piwi: P === 'drop' ? 'gloat' : P === 'wind' ? 'talk' : b.act === 'reel' ? 'startled' : 'idle', piwiFacing: d, chinka: b.act !== 'crash' });
+        for (let k = 0; k < 3; k++) jarArt(ctx, [-44, -28, 34][k], 54, LANDMARKS[k].id, t, 0.42, b.thrown > k);
         if (P === 'wind') { const sh = Math.sin(t * 40) * 2; jarArt(ctx, 0 + sh, -44, LANDMARKS[Math.min(b.thrown, 6)].id, t, 0.8, false); ctx.fillStyle = '#ffd84a'; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', 0, -86); }
         ctx.restore();
         return;
       }
       if (ph === 2) { mechArt(ctx, b, t); return; }
-      // phase 3: the little Baron on foot (and, at the end, shrunk inside his own snow globe)
+      // phase 3: Piwi on foot (and, at the end, pocket-sized in his own prop jar)
       if (b.act === 'wreck' && b.at < 0.3) { mechArt(ctx, b, t); return; }
       const s = b.act === 'finale' ? 1 - (b.shrinkK || 0) * 0.68 : 1;
       ctx.save(); ctx.translate(b.cx, b.y + b.h);
       if (P === 'tumble') ctx.rotate(-d * Math.min(1, b.at) * TAU * 0.5 * Math.max(0, 1 - b.at * 0.3));
       if (P === 'run') ctx.rotate(d * 0.12);
       ctx.scale(d * s, s);
-      TourVillain.draw(ctx, 0, 0, 1, t, P === 'wind' ? 'empty' : P === 'flash' || P === 'aim' ? 'flash' : null);
+      Piwi.draw(ctx, { x: 0, y: 0, scale: 1.5, t, pose: P === 'run' ? 'walk' : P === 'tumble' || P === 'hop' ? 'startled' : P === 'flash' || P === 'aim' || P === 'taunt' ? 'gloat' : P === 'wind' ? 'talk' : b.act === 'finale' ? 'startled' : 'idle' });
       if (P === 'wind' || P === 'taunt' || P === 'run') { const sh = P === 'wind' ? Math.sin(t * 40) * 2 : 0; jarArt(ctx, 8 + sh, P === 'wind' ? -92 : -40, LANDMARKS[6].id, t, 0.7, b.thrown > 6); if (P === 'wind') { ctx.fillStyle = '#ffd84a'; ctx.font = `12px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('!', 8, -134); } }
       ctx.restore();
       if (b.act === 'finale' && (b.shrinkK || 0) >= 1) { ctx.save(); ctx.translate(b.cx, b.y + b.h); jarArt(ctx, 0, 2, 'np', t, 1.25, 'dome'); ctx.restore(); }
@@ -1061,7 +1058,7 @@ Object.assign(painters, {
   npIceSlabs(ctx, L, rng, H) {
     for (let i = 0; i < 14; i++) { const x = rng() * BG_W, y = rng() * H, w = 60 + rng() * 80, h = 20 + rng() * 30; ctx.fillStyle = `rgba(150,200,240,${0.25 + rng() * 0.15})`; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y + h * 0.3); ctx.lineTo(x + w * 0.8, y + h); ctx.lineTo(x + w * 0.1, y + h * 0.8); ctx.closePath(); ctx.fill(); }
   },
-  // the Baron's supply depot: slate-violet wall panels, his banners, shelves of stencilled supply crates
+  // Piwi's supply depot: slate-violet wall panels, his banners, shelves of stencilled supply crates
   npDepotWall(ctx, L, rng, H) {
     ctx.fillStyle = '#3a3a5a'; ctx.fillRect(0, 0, BG_W, H);
     for (let x = 0; x < BG_W; x += 96) { ctx.fillStyle = '#44446a'; ctx.fillRect(x + 4, 0, 88, H); ctx.fillStyle = '#2a2a44'; ctx.fillRect(x, 0, 4, H); }
@@ -1083,9 +1080,9 @@ Object.assign(themes, {
     layers: [{ kind: 'npCrevasse', color: '#3a7ab8', base: 0, f: 0.04 }, { kind: 'npIceSlabs', color: '#8ac0e8', base: 0, f: 0.12 }],
     fog: '#a8d8f8', ground: crevasseIce, hard: { c1: '#a8d8f4', c2: '#3a78b0' }, semi: { style: 'plank', c1: '#c8e8f8', c2: '#7ab0d8' }, decor: ['npSnowTuft']
   }),
-  // 12-7: the Baron's supply depot (the fortress kit, colder and more workaday)
+  // 12-7: Piwi's supply depot (the fortress kit, colder and more workaday)
   np_depot: Object.assign({}, base, {
-    name: "Baron's Supply Depot", music: 'tour_np_fort', particles: 'motes',
+    name: "Piwi's Prop Depot", music: 'tour_np_fort', particles: 'motes',
     sky: ['#1a1a34', '#2a2a4a', '#3a3a5a'], horizonGlow: '#ffd84a', celestial: { type: 'none' }, stars: 0,
     layers: [{ kind: 'npDepotWall', color: '#3a3a5a', base: 0, f: 0.06 }],
     fog: '#8a8ab8', ground: depotFloor, hard: { c1: '#a8804a', c2: '#6a4a24' }, semi: { style: 'plank', c1: '#c8a070', c2: '#8a6a44' },
@@ -1136,16 +1133,16 @@ const batArt = (ctx, e, x, y, m, t) => {
   ctx.restore();
 };
 Object.assign(enemies, {
-  npYeti: { cls: TourEnemy.make({ w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'frostBreath', cone: 3, art: yetiArt2, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'OOF! *FLUFF*', '#e8f0ff') }), place: 'walk' },
-  npYetiSleep: { cls: TourEnemy.make({ w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'sleeper', base: 'frostBreath', hear: 4, cone: 3, sprite: 'yeti', art: yetiArt2, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'HUH?! *FLUFF*', '#e8f0ff') }), place: 'walk' },
-  npMarmot: { cls: TourEnemy.make({ w: 22, h: 30, speed: 0, behavior: 'sleeper', base: 'alarmCaller', hear: 3, cone: 5, wake: 12, art: marmotArt2, burst: '#b8864a' }), place: 'walk' },
-  npMarmotWatch: { cls: TourEnemy.make({ w: 22, h: 30, speed: 0, behavior: 'alarmCaller', cone: 5, wake: 12, sprite: 'marmot', art: marmotArt2, burst: '#b8864a' }), place: 'walk' },
-  npBat: { cls: TourFlyer.make({ w: 28, h: 18, range: 2.5, speed: 1.3, swoop: true, atlas: NP_X, art: batArt, burst: '#8a62c0' }), place: 'fly' }
+  npYeti: { cls: TourEnemy.make({ belly: true, w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'frostBreath', cone: 3, art: yetiArt2, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'OOF! *FLUFF*', '#e8f0ff') }), place: 'walk' },
+  npYetiSleep: { cls: TourEnemy.make({ belly: true, w: 40, h: 54, speed: 0.7, hp: 2, behavior: 'sleeper', base: 'frostBreath', hear: 4, cone: 3, sprite: 'yeti', art: yetiArt2, burst: '#f4f8ff', onHurt: e => K.say(e.g, e, 'HUH?! *FLUFF*', '#e8f0ff') }), place: 'walk' },
+  npMarmot: { cls: TourEnemy.make({ belly: true, w: 22, h: 30, speed: 0, behavior: 'sleeper', base: 'alarmCaller', hear: 3, cone: 5, wake: 12, art: marmotArt2, burst: '#b8864a' }), place: 'walk' },
+  npMarmotWatch: { cls: TourEnemy.make({ belly: true, w: 22, h: 30, speed: 0, behavior: 'alarmCaller', cone: 5, wake: 12, sprite: 'marmot', art: marmotArt2, burst: '#b8864a' }), place: 'walk' },
+  npBat: { cls: TourFlyer.make({ belly: true, w: 28, h: 18, range: 2.5, speed: 1.3, swoop: true, atlas: NP_X, art: batArt, burst: '#8a62c0' }), place: 'fly' }
 });
 for (const [m, list] of [['call', ['call', 'whistle', 'throw', 'idle']], ['sleep', ['sleep', 'idle', 'walk']], ['awake', ['walk']], ['wake', ['wake', 'tell', 'walk']], ['breathe', ['breathe', 'throw', 'walk']], ['pant', ['pant', 'idle', 'walk']], ['tell', ['tell', 'notice', 'idle', 'walk']]]) if (!TourSprite.FALLBACK.walk[m]) TourSprite.FALLBACK.walk[m] = list;
 
 /* ---------------- the Tin Yak (12-7 mini-boss, §4.4) ---------------- */
-// the depot's crate walls: stacks of the Baron's crates the Tin Yak rams; in phase 2 they ride the conveyor and shift
+// the depot's crate walls: stacks of Piwi's crates the Tin Yak rams; in phase 2 they ride the conveyor and shift
 class NpCrateWall extends Ent {
   constructor(g, s) {
     super(g, s, 2 * TS, (s.h || 3) * TS); this.crateWall = true; this.h0 = s.h || 3; this.tx = Math.floor(s.x / TS); this.ty1 = Math.floor((s.y - 1) / TS); this.ty0 = this.ty1 - this.h0 + 1;
@@ -1351,8 +1348,8 @@ Tour.country({
   id: 'np', colors: COL, tagline: 'Suspension bridges, a yak named Hrumph and the roof of the world',
   themes, painters, dyn, decor, decorLights, enemies, entities, pieces: P, boss, bosses: [tinYakBoss], power, tracks,
   music: { level: 'tour_np', boss: 'tour_np_boss' },
-  landmark: 'the snow globes of the whole world',
-  arrival: 'Namaste, Brady! The Baron\'s fortress is up in the mountains, full of every landmark he stole. A yak has offered to carry you. I said yes for you. ♥ C',
+  landmark: 'every landmark on Piwi\'s prop shelf',
+  arrival: 'Namaste, Brady! Piwi\'s Grand Finale is up on the roof of the world, with every landmark he shrank as scenery. A yak has offered to carry you. Pupo is jealous. ♥ C',
   emblem(ctx, x, y, r, t) { ctx.save(); ctx.translate(x, y); peak(ctx, 0, r * 0.7, r * 2, r * 1.5, '#5a7ab8', '#ffffff', 3); ctx.restore(); },
   coin: COIN,
   star: { name: 'GOLDEN RHODODENDRON', draw(ctx, x, y, t) { for (let k = 0; k < 5; k++) { const a = k * TAU / 5 + Math.sin(t * 2) * 0.1; ctx.fillStyle = k % 2 ? '#ffe070' : '#ffd24a'; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * 5, y + Math.sin(a) * 5, 5.5, 4, a, 0, TAU); ctx.fill(); } ctx.fillStyle = '#c8901a'; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, TAU); ctx.fill(); } },
@@ -1379,13 +1376,13 @@ Tour.country({
       gimmick: 'Climb the great icefall: aluminium ladder bridges over the crevasses, icicles that drop when you pass beneath, seracs that crumble underfoot, alpine choughs',
       enemies: [['npChough', 2]],
       hint: 'Icicles shiver before they drop. Don\'t stand on the seracs for long!',
-      postcard: 'The ice up here groans like an old house. The Baron\'s fortress is right at the top. ♥ C',
+      postcard: 'The ice up here groans like an old house. Piwi\'s playhouse is right at the top. ♥ C',
       script: ['cstart', ['iledges', { n: 4 }], 'ladders', 'icicles', 'ccp', 'seracs', ['ladders', { n: 3, gold: true }], ['iledges', { n: 3, flip: true }], 'icicles', 'seracs'] },
-    { name: "Baron's Fortress", style: 'castle', theme: 'np_fortress', boss: 'np_baron', arena: 'summit', arenaW: 30, roof: false,
-      gimmick: 'The Baron\'s vault: shrink-ray security cameras sweep the halls, wind-up souvenir goons, crate walls for the yak to smash, conveyor floors; then Baron Bric-a-Brac on the summit, who throws the stolen landmarks (kick them back!): his airship, his bric-a-brac mech, then on foot in the gales',
+    { name: "Piwi's Playhouse", style: 'castle', theme: 'np_fortress', boss: 'np_baron', arena: 'summit', arenaW: 30, roof: false,
+      gimmick: 'Piwi\'s playhouse: Shrink-Spots sweep the halls, wind-up stagehands, crate walls for the yak to smash, conveyor floors; then Piwi Squirmin\'s Grand Finale on the summit, where he throws the shrunken landmarks (kick them back!): his Showtrunk, his Showstopper mech, then on foot in the gales',
       enemies: [['npTinBot', 2], ['npBobble', 2], ['npGlobe', 1]],
-      hint: 'Stay out of the camera beams! The Baron throws the stolen landmarks: kick them right back at him',
-      postcard: 'WE DID IT, BRADY! Every landmark is back to size and the Baron is a snow globe. Let\'s go home. ♥ C',
+      hint: 'Stay out of the spotlights! Piwi throws the shrunken landmarks: kick them right back at him',
+      postcard: 'WE DID IT, BRADY! Every landmark is back to size and Piwi is pocket-sized. Let\'s go home. ♥ C',
       script: [['pen', {}], 'gallery', ['cameras', { n: 2 }], ['enemies', { n: 2 }], ['snowwall', { look: 'crates' }], 'cp', ['cameras', { n: 3, gold: true }], 'belts', ['gallery', { item: 'star' }], 'arena'] }
   ]
 });

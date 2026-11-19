@@ -37,6 +37,7 @@ const Game = {
     this.forceTouchUI = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
     Input.usingTouch = this.forceTouchUI;
     this.resize();
+    if (typeof QualityTier !== 'undefined') { QualityTier.init(); PerfHud.sync(); }
     window.addEventListener('resize', () => this.resize());
     if (window.visualViewport) window.visualViewport.addEventListener('resize', () => this.resize());
     window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 250));
@@ -67,7 +68,7 @@ const Game = {
     } catch (e) { /* not available */ }
   },
 
-  resize() {
+  resize(why) {
     measureInsets();
     const vv = window.visualViewport;
     const cssW = Math.max(200, Math.round(vv ? vv.width : window.innerWidth));
@@ -76,7 +77,10 @@ const Game = {
     const cap = this.dprCap || (hq ? 3 : 2);
     const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, hq ? 3 : 2, cap));
     this.cssW = cssW; this.cssH = cssH; this.dpr = dpr;
-    this.canvas.width = Math.round(cssW * dpr); this.canvas.height = Math.round(cssH * dpr);
+    // a zoom change (setRows: every level start, boss fight and map) keeps the canvas when its size is the same;
+    // anything else re-allocates it (iOS may drop a background page's canvas memory)
+    const cw = Math.round(cssW * dpr), ch = Math.round(cssH * dpr);
+    if (why !== 'rows' || this.canvas.width !== cw || this.canvas.height !== ch) { this.canvas.width = cw; this.canvas.height = ch; }
     this.canvas.style.width = cssW + 'px'; this.canvas.style.height = cssH + 'px';
     const portrait = cssH > cssW * 1.05;
     let gr;
@@ -91,12 +95,17 @@ const Game = {
     // vignette
     // vignette pre-rendered at the game view's exact pixel size (no per-frame scaling)
     const vw = Math.round(this.viewW * this.S), vh = Math.round(this.viewH * this.S);
-    const v = makeCanvas(vw, vh), vx = v.getContext('2d');
-    vx.save(); vx.translate(vw / 2, vh / 2); vx.scale(vw / 256, vh / 256);
-    const g = vx.createRadialGradient(0, 0, 60, 0, 0, 182);
-    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.42)');
-    vx.fillStyle = g; vx.fillRect(-128, -128, 256, 256); vx.restore();
-    this.vignette = v;
+    // (the same size: the one already painted is kept, not a new full-screen canvas per resize)
+    const v0 = this.vignette;
+    if (!(v0 && v0.width === Math.max(1, vw) && v0.height === Math.max(1, vh))) {
+      if (v0) { v0.width = 1; v0.height = 1; }
+      const v = makeCanvas(vw, vh), vx = v.getContext('2d');
+      vx.save(); vx.translate(vw / 2, vh / 2); vx.scale(vw / 256, vh / 256);
+      const g = vx.createRadialGradient(0, 0, 60, 0, 0, 182);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.42)');
+      vx.fillStyle = g; vx.fillRect(-128, -128, 256, 256); vx.restore();
+      this.vignette = v;
+    }
     Input.computeLayout(cssW, cssH, gr);
     if (this.scene && this.scene.resize) this.scene.resize();
     // the 2D game's Play scene only exists in the apps that bundle it (the Burning Man app doesn't)
@@ -106,8 +115,11 @@ const Game = {
   },
 
   /* setRows(n): show n tile rows (the camera zoom); a change re-lays out the view */
-  setRows(n) { n = n || VIEW_ROWS; if (Math.abs(n - this.rows) < 1e-3) return; this.rows = n; if (this.canvas) this.resize(); },
+  setRows(n) { n = n || VIEW_ROWS; if (Math.abs(n - this.rows) < 1e-3) return; this.rows = n; if (this.canvas) this.resize('rows'); },
   setScene(s) {
+    // the scene left behind frees what it alone held (Play: its HUD and light-map canvases; src/16_session.js)
+    const old = this.scene;
+    if (old && old !== s && old.onSceneExit) { try { old.onSceneExit(s); } catch (e) { this.reportError(e); } }
     // in the Burning Man and Art Cart apps, "back to the title" means that app's own home screen
     if ((APP === 'burningman' || APP === 'kart') && typeof TitleScene !== 'undefined' && s instanceof TitleScene) s = appHomeScene();
     // scenes without a zoom of their own (menus, maps, story) use the standard view
@@ -129,7 +141,9 @@ const Game = {
     // measured on the real frame time: a phone crawling at 2-5 fps (frames over 0.2 s) counts as slow too
     if (raw > 0.026 && raw < 1) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 0.5);
     const floorDpr = (window.devicePixelRatio || 1) >= 2 ? 1.5 : 1;
-    if (this.slowT > 2.5 && this.quality >= 1) {
+    // Super Brady-O World has graphics tiers (src/14_quality.js) that do this in finer steps, with hysteresis
+    if (typeof QualityTier !== 'undefined' && QualityTier.frame(raw)) { /* handled */ }
+    else if (this.slowT > 2.5 && this.quality >= 1) {
       this.quality = 0; this.slowT = 0;
     } else if (this.slowT > 2.5 && (this.lowered || 0) < 2 && this.dpr > floorDpr) {
       this.lowered = (this.lowered || 0) + 1; this.slowT = 0;
@@ -138,6 +152,9 @@ const Game = {
     }
     this.acc += dt;
     Input.pollGamepad();
+    // debug timing hook (tools/sbw_perf_test.js, the on-screen FPS readout): null when off, so it costs nothing
+    const pf = this.perf;
+    if (pf) pf.t0 = performance.now();
     let steps = 0;
     try {
       while (this.acc >= STEP && steps < 30) {
@@ -146,13 +163,17 @@ const Game = {
         if (steps === 1) Input.endFrame();
       }
     } catch (e) { this.reportError(e); this.acc = 0; }
+    if (pf) pf.t1 = performance.now();
     try {
       const ctx = this.ctx;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.fillStyle = '#07040e'; ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      // a scene that paints every pixel itself (coversCanvas) skips the clear: one full-screen fill less per frame
+      if (!(this.scene.coversCanvas && this.scene.coversCanvas())) { ctx.fillStyle = '#07040e'; ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); }
       this.scene.draw(ctx);
       if (this.gameRect.h < this.cssH - 2 && typeof Play !== 'undefined' && this.scene instanceof Play) this.drawPortraitPad(ctx);
+      if (typeof PerfHud !== 'undefined' && PerfHud.on) PerfHud.draw(ctx);
     } catch (e) { this.reportError(e); }
+    if (pf) { pf.t2 = performance.now(); pf.frame(raw, steps); }
     this.frames++;
   },
 
@@ -253,7 +274,7 @@ window.__iconKart = (x, N, maskable) => {
   }
 };
 window.BRADY = {};
-['LookScene', 'SettingsScene', 'CreditsScene', 'Game', 'Save', 'getLevel', 'Validator', 'WORLDS', 'WORLD_ORDER', 'CLASSIC_WORLDS', 'WORLD3_REGIONS', 'WorldGame', 'Input', 'Sound', 'THEMES', 'Atlas', 'Ink', 'TileArt', 'BG', 'ENTITY_TYPES', 'Play', 'MapScene', 'TitleScene', 'StoryScene', 'EndingScene', 'GameOverScene', 'goToMap', 'startGame', 'appHomeScene']
+['SettingsScene', 'CreditsScene', 'Game', 'Save', 'getLevel', 'Validator', 'TS', 'T', 'SOLID', 'Decor', 'PostFX', 'WorldFx', 'TripFX', 'Particles', 'Weather', 'Player', 'Gate', 'Boss', 'QualityTier', 'PerfHud', 'WORLDS', 'WORLD_ORDER', 'CLASSIC_WORLDS', 'WORLD3_REGIONS', 'WorldGame', 'Input', 'Sound', 'THEMES', 'Atlas', 'Ink', 'TileArt', 'BG', 'ENTITY_TYPES', 'Play', 'MapScene', 'TitleScene', 'StoryScene', 'EndingScene', 'GameOverScene', 'goToMap', 'startGame', 'appHomeScene']
   .forEach(k => { try { const v = eval(k); if (v !== undefined) window.BRADY[k] = v; } catch (e) { /* not in this app */ } });
 window.BRADY.APP = APP;
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

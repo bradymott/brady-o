@@ -1,5 +1,5 @@
 // Test fixture for the textured skinned hero path (BurnsSkinPBR, docs/BURNS_GUIDE.md §6.12). Builds textured, skinned
-// GLBs programmatically from assets/models/shared/brady.glb, without Blender:
+// GLBs programmatically from assets/models/legacy/brady_classic.glb (the procedural Brady), without Blender:
 //   node tools/make_skin_fixture.js [outDir]        (default: $BRADY_DIST/fixtures, else dist/fixtures; never shipped)
 // Writes
 //   skinfix.glb             the "look" variant: skin with pore normals and a blackwork band on the arms, fabric weave,
@@ -17,7 +17,7 @@ const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : pat
 const outDir = path.resolve(process.argv[2] || path.join(dist, 'fixtures'));
 
 /* ---------------- GLB in ---------------- */
-const src = fs.readFileSync(path.join(root, 'assets', 'models', 'shared', 'brady.glb'));
+const src = fs.readFileSync(path.join(root, 'assets', 'models', 'legacy', 'brady_classic.glb'));
 const jlen = src.readUInt32LE(12), J0 = JSON.parse(src.slice(20, 20 + jlen).toString());
 const binOff = 20 + jlen + 8, BIN0 = src.slice(binOff, binOff + src.readUInt32LE(20 + jlen));
 const CT = { 5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array };

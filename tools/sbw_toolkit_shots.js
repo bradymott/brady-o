@@ -5,6 +5,7 @@
 // Exits 1 if any check fails (part of the regular suite: docs/handoff/SUPER_BRADY_O_WORLD.md).
 // Full resolution is pinned before every capture (the adaptive quality would otherwise drop it on a busy machine).
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const out = path.resolve(process.argv[2] || path.join(__dirname, '..', 'shots', 'lab'));
 const flags = process.argv.slice(3).filter(a => a.startsWith('--')), want = process.argv.slice(3).filter(a => !a.startsWith('--'));
@@ -18,7 +19,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await silence(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -38,6 +39,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       if (inp) for (const key in inp) I[key] = false;
     };
     window.S = () => window.BRADY.Game.scene; window.P = () => window.BRADY.Game.scene.player;
+    // is e of class `name` (or a subclass of it: other lands' files register subclasses, e.g. Lost & Found's Souvenir Stand)
+    window.isA = (e, name) => { for (let c = e && e.constructor; c && c.name; c = Object.getPrototypeOf(c)) if (c.name === name) return true; return false; };
     window.lab = (path, opts) => {
       const B = window.BRADY, T = window.BRADY_TOUR; let spec = window.SBW_LAB; for (const k of path.split('.')) spec = spec[k]; if (spec.spec) spec = spec.spec;
       const lvl = T.TourBuild.fromSpec(T.Tour.countries[spec.host || 'mx'], spec, 90);
@@ -103,6 +106,20 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     });
     check('dig: three stomps on soil dig Brady three tiles down', r.dropped >= 3 && !r.dead, r);
     await page.evaluate(() => freeze()); await shot('obj-dig.png');
+    // the hard hat's dash as BIG Brady underground: it digs a column as tall as he is (two blocks), so he can walk into
+    // the tunnel he digs (it used to dig only the block by his legs, and he was stuck)
+    const r2 = await page.evaluate(() => {
+      lab('gens.dig'); const g = S(), p = P(), A = g.area; standAt(24, 3); p.setPower(1, true); p.collect('gear:hat'); sim(0.3);
+      for (let k = 0; k < 3; k++) { sim(0.05, { down: true, jumpPressed: true, jump: true }); sim(0.5); }
+      p.facing = 1; const feet = Math.floor((p.y + p.h - 4) / 32), head = Math.floor((p.y + 4) / 32), x0 = p.cx, c0 = Math.floor(p.cx / 32);
+      const S0 = window.BRADY.T.SOIL, soilAhead = [head, feet].map(y => A.tiles[y * A.W + c0 + 2] === S0);
+      for (let k = 0; k < 3; k++) { sim(0.05, { actionPressed: true, right: true }); sim(0.45, { right: true }); }
+      const c1 = Math.floor(p.cx / 32), tunnel = [];
+      for (let x = c0 + 2; x < c1; x++) tunnel.push([head, feet].every(y => A.tiles[y * A.W + x] !== S0));
+      return { big: p.power > 0 && p.h > 40, rows: feet - head + 1, soilAhead, moved: Math.round((p.cx - x0) / 32), tunnel2High: tunnel.length > 0 && tunnel.every(Boolean), dead: p.dead };
+    });
+    check('dig: big Brady\'s hard hat dash digs a 2-high tunnel ahead and he walks into it', r2.big && r2.rows === 2 && r2.soilAhead.every(Boolean) && r2.moved >= 3 && r2.tunnel2High && !r2.dead, r2);
+    await page.evaluate(() => freeze()); await shot('obj-dig-big-hat.png');
   });
   // a rising flood: the water line climbs and Brady swims in it
   await run('flood', async () => {
@@ -153,7 +170,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       // stacking (§5.2): a star blocks; gear swaps into the Backpack; a hit drops HANDS before FORM; the Backpack swaps back
       { const [g, p] = fresh(); p.setPower(1, true); give(p, 'kazoo'); give(p, 'wand'); const pack = p.pack, hands = p.hands && p.hands.id;
         p.star = 2; p.hurt({ x: p.x + 40, w: 10 }); const starBlock = p.hands && p.hands.id === 'wand' && p.power === 1; p.star = 0; p.invuln = 0;
-        p.hurt({ x: p.x + 40, w: 10 }); const dropped = !p.hands && p.power === 1 && g.entities.some(e => e.dropped);
+        p.hurt({ x: p.x + 40, w: 10 }); const dropped = !p.hands && p.power === 1 && g.entities.some(e => e.lost);
         p.invuln = 0; p.hurt({ x: p.x + 40, w: 10 }); const formDown = p.power === 0;
         const swapped = p.usePack() && p.hands && p.hands.id === 'kazoo' && !p.pack;
         p.collect('sig:taco'); const sigInHands = p.sig && p.sig.id === 'taco' && p.pack === 'gear:kazoo' && !p.hands;
@@ -186,7 +203,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const r = await page.evaluate(() => {
       const out = {};
       const go = n => { lab('objects.' + n); const g = S(), p = P(); for (const e of g.entities) if (e.enemy) e.remove = true; sim(0.05); return [g, p]; };
-      const ent = (g, name) => g.entities.find(e => e.constructor.name === name);
+      const ent = (g, name) => g.entities.find(e => isA(e, name));
       const to = (p, e, dx) => { p.x = e.cx + (dx || 0) - p.w / 2; p.y = e.y + e.h - p.h - 2; p.vx = p.vy = 0; sim(0.15); };
       { const [g, p] = go('keyLock'); const k = ent(g, 'Key'), L = ent(g, 'Lock'); to(p, k); sim(0.1); to(p, L, -30); sim(0.4, { right: true }); out.keyLock = { key: g.keys.has('k1'), open: L.open || L.remove }; }
       { const [g, p] = go('lever'); const lv = ent(g, 'TourLever'), sh = ent(g, 'TourShutter'); to(p, lv); sim(0.05, { actionPressed: true }); sim(0.5); out.lever = { pulled: lv.pulled, open: sh.open }; }
@@ -230,7 +247,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const r = await page.evaluate(() => {
       const out = {};
       const go = n => { lab('systems.' + n); const g = S(), p = P(); for (const e of g.entities) if (e.enemy && !e.constructor.name.startsWith('Tour') ) e.remove = true; sim(0.05); return [g, p]; };
-      const ent = (g, name) => g.entities.find(e => e.constructor.name === name);
+      const ent = (g, name) => g.entities.find(e => isA(e, name));
       const to = (p, e, dx) => { p.x = e.cx + (dx || 0) - p.w / 2; p.y = e.y + e.h - p.h - 2; p.vx = p.vy = 0; sim(0.15); };
       { const [g, p] = go('flip'); const fl = ent(g, 'TourFlipLine'); p.x = fl.x - 3 * 32; p.y = (g.area.H - 4) * 32 - p.h; let up = false, minY = 1e9; for (let k = 0; k < 120; k++) { sim(0.05, { right: true }); if (p.flipped) up = true; minY = Math.min(minY, p.y); } out.flip = { up, ceiling: Math.round(minY / 32), after: !p.flipped, alive: !p.dead, x: Math.round(p.cx / 32), end: Math.round((fl.x + fl.w) / 32) }; }
       { const [g, p] = go('lamp'); const L0 = g.collectLights(g.camX, g.camY)[0].r; sim(10); const L1 = g.collectLights(g.camX, g.camY)[0].r; const lp = ent(g, 'TourLampPost'); to(p, lp); sim(0.3); const L2 = g.collectLights(g.camX, g.camY)[0].r; out.lamp = { L0: Math.round(L0), L1: Math.round(L1), L2: Math.round(L2), dark: !!g.area.dark }; }
@@ -278,7 +295,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const pics = { flip: ['TourFlipLine', 4, 'flip'], lamp: ['TourLampPost', -60], phase: ['TourToggleSwitch', 40, 'night'], tide: [null, 0], chase: ['TourDoom', 0, 'chase'], carry: ['TourPedestal', -40, 'carry'], wheel: ['TourWheelHub', -40], seesaw: ['TourSeesaw', -70], balloon: ['TourBalloon', 0, 'ride'], mirrors: ['TourSunSource', 60, 'lit'], hold: ['TourHoldArena', 0, 'hold'], thief: ['TourThief', -60], rival: ['TourRival', -40], sneak: ['TourWatcher', -40], bottle: ['TourBottle', -60], shop: ['TourShop', 0], ball: ['TourBall', -50] };
     for (const [n, [cls, dx, how]] of Object.entries(pics)) {
       await page.evaluate(([n, cls, dx, how]) => {
-        lab('systems.' + n); const g = S(), p = P(); const e = cls ? g.entities.find(x => x.constructor.name === cls) : null;
+        lab('systems.' + n); const g = S(), p = P(); const e = cls ? g.entities.find(x => isA(x, cls)) : null;
         if (e && how !== 'chase') { p.x = e.cx + dx - p.w / 2; p.y = Math.min(e.y + e.h, (g.area.H - 3) * 32) - p.h - 2; }
         if (how === 'flip') { p.x = e.x + 5 * 32; p.y = 2 * 32; p.flipped = true; for (let k = 0; k < 30; k++) sim(0.03, { right: true }); }
         else if (how === 'night') { g.flipToggle(0); sim(0.6); }
@@ -312,10 +329,10 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const r2 = await page.evaluate(() => {
       const m = S(); m.update = m._u; sim(3); for (let k = 0; k < 40 && !m.ow.idle(); k++) sim(0.25); const T = window.BRADY_TOUR.TourProgress.data();
       const house = m.ow.by['house:mx-tienda'];
-      return { pending: T.pending.length, revealed: !!T.revealed['house:mx-tienda'], path: Object.keys(T.paths), house: !!(house && house.visible), reveal: !!m.reveal, at: m.ow.walker.at };
+      return { pending: T.pending.length, revealed: !!T.revealed['house:mx-tienda'], path: Object.keys(T.paths), standPath: 'mx:0>' + window.BRADY_TOUR.TourProgress.stopIndex(window.BRADY_TOUR.Tour.countries.mx, 'house:mx-tienda'), house: !!(house && house.visible), reveal: !!m.reveal, at: m.ow.walker.at };
     });
     check('map: clearing 1-1 by its secret exit queues a gold trail and the Souvenir Stand, played in the overworld', r1.rev.join() === 'path,house' && r1.reveal === 'path' && r1.mode === 'land', r1);
-    check('map: the reveal plays, is written to the save (paths, revealed), the stand stays on the map and Brady walks to it', r2.pending === 0 && r2.revealed && r2.path.some(k => k === 'mx:0>6') && r2.house && !r2.reveal && r2.at === 'house:mx-tienda', r2);
+    check('map: the reveal plays, is written to the save (paths, revealed), the stand stays on the map and Brady walks to it', r2.pending === 0 && r2.revealed && r2.path.some(k => k === r2.standPath) && r2.house && !r2.reveal && r2.at === 'house:mx-tienda', r2);
     // the joystick walks Brady down the trail to 1-1 and back up to the stand; a tap on the stop he stands on goes in
     const tapNode = key => page.evaluate(k => { const ow = S().ow, p = ow.nodeScreen(k); ow.testTaps = [{ x: p.x, y: p.y }]; sim(0.02); }, key);
     await page.evaluate(() => { sim(0.05, { down: true }); sim(3); });
@@ -328,9 +345,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const r3b = await page.evaluate(() => S().ow.walker.at);
     check('map: the joystick walks Brady along the trail to 1-1 and back up to the stand', r3.at11 === '1-1' && r3.walking && r3b === 'house:mx-tienda', Object.assign(r3, { at: r3b }));
     await tapNode('house:mx-tienda');
-    const r4 = await page.evaluate(() => { sim(0.8); const g = S(); const shop = g.entities && g.entities.find(e => e.constructor.name === 'TourShop'); return { scene: g.constructor.name, house: g.level && g.level.house, shop: !!shop, items: shop ? shop.items.map(i => i.kind + ':' + i.price) : null }; });
+    const r4 = await page.evaluate(() => { sim(0.8); const g = S(); const shop = g.entities && g.entities.find(e => isA(e, 'TourShop')); return { scene: g.constructor.name, house: g.level && g.level.house, shop: !!shop, items: shop ? shop.items.map(i => i.kind + ':' + i.price) : null }; });
     check('map: a tap on the stop he stands on opens the Souvenir Stand room with its counter', r4.scene === 'Play' && r4.house === 'mx-tienda' && r4.shop, r4);
-    await page.evaluate(() => { const g = S(); g.player.invuln = 0; const sh = g.entities.find(e => e.constructor.name === 'TourShop'); g.player.x = sh.cx - 40; sim(0.3); freeze(); });
+    await page.evaluate(() => { const g = S(); g.player.invuln = 0; const sh = g.entities.find(e => isA(e, 'TourShop')); g.player.x = sh.cx - 40; sim(0.3); freeze(); });
     await shot('map-house-room.png');
     const r5 = await page.evaluate(() => { const g = S(); g.update = g._upd; const gate = g.entities.find(e => e.constructor.name === 'Gate'); g.player.x = gate.cx - 10; g.player.y = gate.y + gate.h - g.player.h; sim(0.5); for (let k = 0; k < 40 && g.state !== 'results'; k++) sim(0.25, { jumpPressed: true }); const T = window.BRADY_TOUR.TourProgress.data(); return { state: g.state, visits: T.houses['mx-tienda'] || 0, done: Object.keys(window.BRADY.Save.data.done) }; });
     check('map: leaving the stand counts a visit and touches no level progress', r5.visits === 1 && r5.done.join() === '1-1', r5);
@@ -353,7 +370,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       m.cam.lon = -30; m.cam.lat = 5; sim(0.05); const x = m.sx(-30), y = m.sy(5); window.BRADY.Input.taps.push({ x, y }); sim(0.05);
       return { jars: !!T.jars.mx, lighthouse: T.lighthouse };
     });
-    check('world map: the boss fell, so the Baron\'s jar over Mexico shatters and the airship moves on', r7.jar && r7.airship && r8.jars, Object.assign({}, r7, r8));
+    check('world map: the boss fell, so Piwi\'s prop jar over Mexico shatters and the Showtrunk moves on', r7.jar && r7.airship && r8.jars, Object.assign({}, r7, r8));
     check('world map: five bottles show the lighthouse; a tap lights its beam', r8.lighthouse === true, r8);
     check('world map: the secret flight arc starts at a country whose level has the flight exit (Ecuador 2-7, or the test exit in Mexico)', r7.from === 'ec' || r7.from === 'mx', r7);
     await page.evaluate(() => { const m = S(); m.cam.lon = -40; m.cam.lat = 10; m.cam.z = 3.2; sim(0.3); m.update = function () {}; });
@@ -414,7 +431,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       { const [g, p] = hall(); const e = put(g, 'lab_swarm', 26, 10); at(p, 5); sim(1); out.swarm = { followers: g.entities.filter(o => o.constructor.name === 'TourSwarmling').length }; }
       { const [g, p] = hall(); const e = put(g, 'lab_platEater', 30, 3); at(p, 12); sim(4); out.platEater = { eaten: g.entities.filter(o => o.constructor.name === 'TourRegrow').length }; }
       { const [g, p] = hall(); const a = put(g, 'lab_alarmCaller', 25, 10, { dir: -1 }); const sl = put(g, 'lab_sleeper2', 35, 10); a.cool = 0; at(p, 22); out.alarm = watch(a, 3); out.woke = sl.bst; }
-      { const [g, p] = hall(); const e = put(g, 'lab_frostBreath', 24, 10); e.cool = 0; at(p, 21); let frozen = false; out.frostBreath = watch(e, 3.5, () => { if (p.frozenT > 0) frozen = true; }); out.frozen = frozen; }
+      { const [g, p] = hall(); const e = put(g, 'lab_frostBreath', 24, 10); e.cool = 0; at(p, 21); let frozen = false; out.frostBreath = watch(e, 3.5, () => { if (p.frozenT > 0) frozen = true; }); out.frozen = frozen;
+        // a second breath freezes him again (the freeze once used a timer nothing ran down, so it worked once a level)
+        sim(1.5); e.cool = 0; e.bst = 'walk'; at(p, 21); let again = false; watch(e, 3.5, () => { if (p.stunT > 0.3) again = true; }); out.frozenAgain = again; }
       { const [g, p] = hall(); const e = put(g, 'lab_lightFrozen', 36, 10); at(p, 5); sim(0.5); const far = e.bst; at(p, Math.floor(e.cx / 32) - 2); sim(0.3); out.lightFrozen = { far, near: e.bst }; }
       { const [g, p] = hall(); const e = put(g, 'lab_inkBlot', 23, 10); e.cool = 0; at(p, 20); out.inkBlot = watch(e, 1.5); out.blots = (g.inkBlots || []).length; }
       { const [g, p] = hall(); g.picks = 20; const e = put(g, 'lab_tongue', 23, 10); e.cool = 0; at(p, 20); out.tongue = watch(e, 1.5); out.coins = g.picks; }
@@ -448,6 +467,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     check('plat eater: eats one-way tiles that regrow', r.platEater.eaten >= 1, r.platEater);
     check('alarm caller: tell, call, the sleeper wakes', has(r.alarm, 'tell', 'call') && r.woke !== 'sleep', { alarm: r.alarm, woke: r.woke });
     check('frost breath: tell, breathe (Brady frozen), pant', has(r.frostBreath, 'tell', 'breathe', 'pant') && r.frozen, r.frostBreath);
+    check('frost breath: a second breath freezes Brady again', r.frozenAgain, { again: r.frozenAgain });
     check('light frozen: walks in the dark, a statue in the light', r.lightFrozen.far !== 'statue' && r.lightFrozen.near === 'statue', r.lightFrozen);
     check('ink blot: tell, squirt (a blot on the view)', has(r.inkBlot, 'tell', 'squirt') && r.blots === 1, r.inkBlot);
     check('tongue: tell, lash (takes coins)', has(r.tongue, 'tell', 'lash') && r.coins < 20, { seq: r.tongue, coins: r.coins });

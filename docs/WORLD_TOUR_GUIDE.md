@@ -46,7 +46,7 @@ All `src/*.js` files are concatenated alphabetically into one strict-mode IIFE, 
 | `28_tour_d_actors.js` | Enemy toolkit: `TourEnemy`, `TourFlyer`, `TourSwimmer`, `TourLeaper`, `TourFriend`, `tourFire` |
 | `28_tour_e_art.js` | Shared art: the goal (passport-stamp post), checkpoints, Chinka's postcards, coins, crates, doors, the default boat |
 | `28_tour_f_map.js` | `TourMapScene`: the world map, flights, the level panel |
-| `28_tour_g_story.js` | The villain (Baron Bric-a-Brac), intro panels, arrival postcards, the ending, credits, title art, title/map songs |
+| `28_tour_g_story.js` | The villain (Piwi Squirmin'), intro panels, arrival postcards, the ending, credits, title art, title/map songs |
 | **`29_tour_<cc>.js`** | **One file per country** (loads after all of the above) |
 
 **Wrap the whole country file in an IIFE** (`(() => { ... })();`) so your top-level names can't collide with other countries. The only global you call is `Tour.country({...})`.
@@ -85,7 +85,7 @@ Tour.country({
   colors: COL,
   tagline: 'Volcanoes, giant tortoises and the middle of the world',   // map panel subtitle
   arrival: 'Brady! ... ♥ C',                  // Chinka's postcard when Brady first lands here
-  landmark: 'the ...',                        // what the Baron shrank (story flavour)
+  landmark: 'the ...',                        // what Piwi shrank (story flavour)
   themes: { ec_beach: {...} },                // added to THEMES (section 7)
   painters: { ecIsland(ctx, L, rng, H) {} },  // background layer painters (BGPaint)
   dyn: { ecWaves(ctx, L, camX, oy, S, W, t, th) {} },  // animated layers (BGDyn)

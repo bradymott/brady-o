@@ -349,7 +349,7 @@ const JumpHud = {
     const p = play.player, J = p.jumpPow;
     if (J) {
       const r = Math.max(11, b.r * 0.36), x = b.x + b.r * 0.72, y = b.y - b.r * 0.72;
-      const off = !!p.carrying || (J.id === 'socks' && J.used && !p.onGround) || (J.id === 'beans' && J.gas < 1 / TourJump.GAS - 1e-6);
+      const off = !!p.carrying || !!p.pupoRide || (J.id === 'socks' && J.used && !p.onGround) || (J.id === 'beans' && J.gas < 1 / TourJump.GAS - 1e-6);
       ctx.save();
       ctx.fillStyle = 'rgba(14,10,26,0.8)'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.2; ctx.stroke();
@@ -367,7 +367,7 @@ const JumpHud = {
   hudIcon(ctx, x, y, play) {
     const J = play.player && play.player.jumpPow; if (!J) return;
     ctx.save(); ctx.fillStyle = 'rgba(10,8,18,0.55)'; ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU); ctx.fill();
-    ctx.globalAlpha = play.player.carrying ? 0.45 : 1; ctx.translate(x, y); ctx.scale(0.6, 0.6); TourGear.icon(ctx, 'gear:' + J.id, 0, 0, play.t, play); ctx.restore();
+    ctx.globalAlpha = play.player.carrying || play.player.pupoRide ? 0.45 : 1; ctx.translate(x, y); ctx.scale(0.6, 0.6); TourGear.icon(ctx, 'gear:' + J.id, 0, 0, play.t, play); ctx.restore();
     if (J.id === 'beans') { ctx.save(); this.meter(ctx, x, y, 14, J.gas, J.emptyT > 0); ctx.restore(); }
   },
   // six segments around the badge, green while there is gas

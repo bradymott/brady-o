@@ -683,6 +683,110 @@ const P = {
     return nx + 11;
   }
 };
+/* ---------------- Pupo in Antarctica (docs/design/PUPO.md §4.2; the ferry floe in 28_tour_ph_g4.js) ---------------- */
+Object.assign(P, {
+  // a Nap Box on the ground at the cursor (the box and a step of floor past it)
+  napBox(st, o) {
+    const tx = st.x + 1, ty = st.gy - 1;
+    st.floor(st.x, tx + 1);
+    st.B.set(tx, ty, T.QBLOCK); st.B.item(tx, ty, 'pupo'); st.B.spawn('napBox', tx, ty, {});
+    return tx + 2;
+  },
+  /* 13-3's Pupo obstacle, Reel in the Floe: the way on crosses the station harbour, too wide to jump, and the stepping
+     floe (three penguins aboard) has drifted to the far side. A ferry line runs over the water from the dock's bollard
+     to the quay's, its fish-shaped float hanging out over the water, out of Brady's reach. Pupo grabs the float
+     (Action) and reels the floe in to the dock; hop on, pull again and it pushes back out, carrying everyone across.
+     The penguins look put out. { w: the harbour's width, g: the toggle group } */
+  harbour(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, w = o.w || 13, fw = 4, d = x + 4, x1 = d + w, gi = o.g || 0;
+    st.floor(x, d);
+    st.sign(x, 'THE WIND OFF THE ICE BLOWS BACK OVER THE HARBOUR. PUPO CAN REEL THE FLOE IN BY ITS FISH FLOAT (ACTION), THEN PULL AGAIN TO CROSS');
+    icePool(st, d + 1, x1);
+    // the katabatic wind off the ice cap, blowing back over the water (no jump or glide crosses it); the floe and its
+    // penguins are a windbreak for whoever stands on it
+    B.zone(d + 1, 0, w, B.H, -(o.wind || 300), 0, 0, 'wind', { ferry: gi });
+    B.spawn('aqKatabatic', d + 1, gy, { w, h: 6 });
+    B.toggle(gi, [], [], { kind: 'floe' });
+    const hx = d + 4, hy = gy - 3;
+    B.spawn('pupoHandle', hx, hy, { g: gi, look: 'aqFishFloat', say: '...COME... HERE... FLOE.' });
+    B.spawn('pupoFerry', d + 1, gy, { g: gi, w: fw, dx: w - fw, look: 'aqFloe', huff: 'HMPH.', quay: [x1 + 2, gy], float: [hx * TS + TS / 2, (hy + 1) * TS - TS / 2 + 6] });
+    B.prop('aqFerryLine', d, gy - 4, x1 - d + 2, 4, 'none', {});
+    st.floor(x1 + 1, x1 + 6);
+    st.decor('aqPenguins', x1 + 5, gy, 2);
+    return x1 + 7;
+  }
+});
+// 13-3: the wind off the ice over the harbour: snow streaks and flurries racing back across the water
+class AqKatabatic extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 10) * TS, (s.h || 6) * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.back = true; this.friendly = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x0 = this.x, y0 = this.y, w = this.w, h = this.h, t = this.t;
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 10; k++) {
+      const sp = 320 + (k * 43) % 150, u = (t * sp + k * 109) % (w + 80), xx = x0 + w + 20 - u, yy = y0 + 10 + ((k * 61) % (h - 20)) + Math.sin(t * 2.4 + k) * 5, len = 28 + (k % 3) * 16;
+      ctx.strokeStyle = k % 3 ? 'rgba(255,255,255,0.5)' : 'rgba(200,236,255,0.7)'; ctx.lineWidth = k % 2 ? 2 : 3;
+      ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx + len, yy + 3); ctx.stroke();
+    }
+    ctx.fillStyle = '#ffffff';
+    for (let k = 0; k < 12; k++) { const u = (t * (380 + k * 21) + k * 131) % (w + 40), xx = x0 + w + 10 - u, yy = y0 + 6 + ((k * 83) % (h - 12)) + Math.sin(t * 6 + k) * 6; ctx.fillRect(xx, yy, 3, 3); }
+    ctx.lineCap = 'butt';
+  }
+}
+ENTITY_TYPES.aqKatabatic = AqKatabatic;
+// 13-3: the ferry line: a bollard on the dock and one on the quay, a rope slung between them over the harbour
+Decor.aqFerryLine = (ctx, x, y, t, th, d) => {
+  const x0 = x - d.w / 2 + TS / 2, x1 = x + d.w / 2 - TS / 2, top = y - d.h + 10;
+  for (const bx of [x0, x1]) {
+    ctx.fillStyle = '#1c1426'; rr(ctx, bx - 7, top - 4, 14, y - top + 4, 4); ctx.fill();
+    ctx.fillStyle = '#e8b040'; rr(ctx, bx - 5, top - 2, 10, y - top, 3); ctx.fill();
+    ctx.fillStyle = '#c88a20'; ctx.fillRect(bx - 5, top + 14, 10, 4); ctx.fillRect(bx - 5, top + 40, 10, 4);
+  }
+  ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x0, top + 4); ctx.quadraticCurveTo((x0 + x1) / 2, top + 26, x1, top + 4); ctx.stroke();
+  ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 2; ctx.stroke();
+};
+Object.assign(skins, {
+  // 13-3: the fish-shaped float (a pull handle look): an orange fish bobbing on its rope, the brass ring on its nose
+  aqFishFloat(ctx, e, t) {
+    const x = e.hx, y = e.hy + e.k * 8 + Math.sin(t * 2.2) * 2, tw = Math.sin(t * 5) * 0.25;
+    pupoLine(ctx, x + 4, e.hy - 34, x + 4, y - 6, 2, '#d8c8a0');
+    ctx.save(); ctx.translate(x, y);
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.ellipse(4, 0, 15, 9, 0, 0, TAU); ctx.fill();
+    ctx.save(); ctx.translate(17, 0); ctx.rotate(tw); ctx.beginPath(); ctx.moveTo(-2, 0); ctx.lineTo(10, -9); ctx.lineTo(10, 9); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(8, -6.5); ctx.lineTo(8, 6.5); ctx.closePath(); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.ellipse(4, 0, 13, 7.4, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(2, -7, 3.4, 14); ctx.fillRect(9, -6, 3, 12);
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-4, -2, 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(-4.4, -2, 1.3, 0, TAU); ctx.fill();
+    ctx.restore();
+    pupoRing(ctx, x - 13, y + 1, 4.2);
+  },
+  // 13-3: the stepping floe (a pupoFerry look): a thick slab of sea ice riding in the water, three penguins aboard; they
+  // flap and huff while it moves and lean away with their flippers crossed when someone climbs aboard; its rope runs
+  // to the float
+  aqFloe(ctx, e, t) {
+    const x = e.x, y = e.y, w = e.w, p = e.g.player, aboard = p && p.ride === e, mv = e.moving;
+    const f = e.s.float; if (f) { ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(x + w - 6, y + 4); ctx.quadraticCurveTo((x + w + f[0]) / 2, y + 30, f[0] - 12, f[1] + 2); ctx.stroke(); ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 1.6; ctx.stroke(); }
+    const bob = Math.sin(t * 1.7) * 1.5;
+    // a thick slab sitting deep in the water (its foot under the waterline, two rows down)
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.moveTo(x - 3, y - 2); ctx.lineTo(x + w + 3, y - 2); ctx.lineTo(x + w - 4, y + 78 + bob); ctx.lineTo(x + 6, y + 78 + bob); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#9ad4f0'; ctx.beginPath(); ctx.moveTo(x, y + 4); ctx.lineTo(x + w, y + 4); ctx.lineTo(x + w - 7, y + 75 + bob); ctx.lineTo(x + 9, y + 75 + bob); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#78bce0'; ctx.beginPath(); ctx.moveTo(x + w * 0.55, y + 4); ctx.lineTo(x + w, y + 4); ctx.lineTo(x + w - 7, y + 75 + bob); ctx.lineTo(x + w * 0.6, y + 75 + bob); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#f4fbff'; rr(ctx, x - 1, y, w + 2, 9, 4); ctx.fill();
+    ctx.fillStyle = '#c8ecff'; ctx.fillRect(x + 12, y + 18, w - 34, 3); ctx.fillRect(x + 22, y + 34, w - 52, 3);
+    // the penguins (they huddle at the far end while someone is aboard)
+    for (let i = 0; i < 3; i++) {
+      const px = aboard ? x + w - 9 - i * 10 : x + 18 + i * 40, flap = mv ? Math.sin(t * 14 + i) * 0.3 : 0;
+      ctx.save(); ctx.translate(px, y + 1); ctx.rotate(aboard ? 0.18 : flap * 0.3);
+      penguin(ctx, 0, 0, mv ? t : 0, 1.05, false, i === 1);
+      // crossed flippers and a flat, unimpressed brow
+      ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+      if (aboard || mv) { ctx.beginPath(); ctx.moveTo(-6, -10); ctx.lineTo(6, -8); ctx.moveTo(-6, -8); ctx.lineTo(6, -10); ctx.stroke(); }
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(1, -22); ctx.lineTo(6, -21.5); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.lineCap = 'butt';
+  }
+});
 for (const k in P) Tour.pieces['aq.' + k] = P[k];
 
 // the snowball and the wall it smashes, on the Snow-Plough's arena: two ledges (over the three-row walls), the chutes
@@ -713,9 +817,9 @@ const stamps = {
   // 13-3: the module: a heater, the lab door, the airlock to the hangar
   module: {
     floor: 11,
-    rows: room(34, 14, 11, [[2, 10, '@'], [6, 10, 'k'], [10, 6, '-----'], [11, 4, 'o.o.o'], [13, 2, '?'], [17, 10, 'DK'], [24, 10, 'c'], [30, 10, 'D']]),
+    rows: room(34, 14, 11, [[2, 10, '@'], [6, 10, 'k'], [10, 7, '-----'], [11, 4, 'o.o.o'], [13, 3, '?'], [17, 10, 'DK'], [24, 10, 'c'], [30, 10, 'D']]),
     legend: { k: ['decor', 'aqCrates'], K: ['anchor', 'labBack'] },
-    items: ['power'], doors: [{ to: 'lab@in', look: 'aqLabDoor' }, { to: 'plough@in', look: 'aqAirlock' }]
+    items: ['power'], doors: [{ to: 'lab@in', look: 'aqLabDoor' }, { to: 'harbour@in', look: 'aqAirlock' }]
   },
   // 13-3 (s): the lab: P2, a water bottle, the back door to the Station Store
   lab: {
@@ -778,6 +882,7 @@ const levels = [
         ['igloo', { to: 'igloo@in', back: 'iglooBack' }],
         'cp',
         ['itemBlock', { item: 'power', y: 4 }],
+        ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), over the seal holes (Brady's request)
         // ③ roll it down over the seal holes while the seals pop up
         ['bank', { h: 1 }],
         ['snowPile', {}],
@@ -788,7 +893,8 @@ const levels = [
         ['conga', { len: 13, n: 5 }],
         ['flagGate', {}]
       ] },
-      { id: 'igloo', gen: 'room', role: 'secret', theme: 'aq_igloo', stamp: 'igloo' }
+      { id: 'igloo', gen: 'room', role: 'secret', theme: 'aq_igloo', stamp: 'igloo', room: 'whack',
+        whack: { title: 'BOP-A-SKUA', rule: 'THE EGG-THIEVING SKUAS POP OUT OF THE ICE HOLES! STOMP EIGHT TO KEEP THE EGGS SAFE', critter: 'skua', need: 8, t: 22 } }
     ] },
 
   // 13-2 FLIP: aurora bands turn gravity over; icebergs hang from the sky; mid-air swaps
@@ -825,11 +931,12 @@ const levels = [
         ['conga', { len: 10, n: 4 }],
         ['flagGate', {}]
       ] },
-      { id: 'berg', gen: 'room', role: 'secret', theme: 'aq_berg', stamp: 'berg' }
+      { id: 'berg', gen: 'room', role: 'secret', theme: 'aq_berg', stamp: 'berg', room: 'climb',
+        climb: { title: 'INSIDE THE ICEBERG', rule: 'A CHIMNEY UP THE MIDDLE OF THE ICEBERG. SOME LEDGES ARE THIN ICE', style: 'crumble' } }
     ] },
 
   // 13-3 FORT: the station, the module, the Snow-Plough Bot; the lab door to the Station Store
-  { n: 3, name: 'Aurora Station', arch: 'fort', theme: 'aq_station', boss: 'aq_plough', mid: true,
+  { n: 3, name: 'Aurora Station', arch: 'fort', theme: 'aq_station', boss: 'aq_plough', mid: true, pupo: 'level',   // Antarctica's Pupo level (lead-in): Reel in the Floe
     gimmick: 'A research station under the aurora: module roofs, the heater vent, the radio mast, then the Snow-Plough Bot in the vehicle hangar',
     hint: 'Jump the Snow-Plough Bot\'s snow walls. After three shoves it overheats: stomp its exhaust!',
     postcard: 'The sky is dancing green. The scientists gave me cocoa and a very serious hat. ♥ C',
@@ -837,8 +944,9 @@ const levels = [
     mapCell: [2, 0], mapFrom: 1,
     exits: { main: { to: '13-4' }, secret: { to: 'house:aq-store', hint: 'A lab door in the station module, its window glowing...' } },
     areas: [
-      { id: 'station', gen: 'strip', W: 80, H: 18, dark: true, script: [
+      { id: 'station', gen: 'strip', W: 110, H: 18, dark: true, script: [
         ['stationGate', {}],
+        ['napBox', {}],   // Pupo's Nap Box at the station gate
         ['itemBlock', { item: 'power', y: 4 }],
         ['gearStand', { item: 'hat' }],
         ['modules', {}],
@@ -850,7 +958,17 @@ const levels = [
       ] },
       { id: 'module', gen: 'room', role: 'sub', theme: 'aq_module', stamp: 'module' },
       { id: 'plough', gen: 'arena', role: 'arena', layout: 'plough', arenaW: 24, H: 16, theme: 'aq_station', roof: true },
-      { id: 'lab', gen: 'room', role: 'secret', theme: 'aq_lab', stamp: 'lab' }
+      { id: 'lab', gen: 'room', role: 'secret', theme: 'aq_lab', stamp: 'lab', room: 'closing',
+        closing: { title: 'THE STATION SHOP: CLOSING TIME', rule: 'THE STATION SHOP IS CLOSING FOR THE NIGHT: GRAB WHAT YOU CAN, TOP SHELF FIRST', keeper: 'penguin', word: 'CLOSED!' } },
+      // Pupo's obstacle, Reel in the Floe (PUPO.md §4.2): out of the module's back airlock, the station harbour and its
+      // drifting floe (past the lab, so the secret never needs Pupo); Pupo then waits at the plough arena's door (boss
+      // arenas are no place for him)
+      { id: 'harbour', gen: 'strip', role: 'sub', W: 44, H: 18, dark: true, script: [
+        ['napBox', {}],   // Pupo again, out of the airlock (after the module's checkpoint)
+        ['flat', { n: 6 }],
+        ['harbour', { w: 15 }],
+        ['door', { to: 'plough@in', perch: 0, look: 'aqAirlock' }]
+      ] }
     ] },
 
   // 13-4 LAIR: the crevasse teaches the kicked ice blocks and the dropped icicles, then Big Tusk on the floe
@@ -874,7 +992,8 @@ const levels = [
         ['kickRun', { len: 14, enemy: 'aqSnowball' }],
         ['door', { to: 'glacier', perch: 0, look: 'aqFloeGate' }]
       ] },
-      { id: 'cave', gen: 'room', role: 'secret', theme: 'aq_icecave', stamp: 'cave' },
+      { id: 'cave', gen: 'room', role: 'secret', theme: 'aq_icecave', stamp: 'cave', room: 'bigone',
+        bigone: { title: 'THE BIG ROVER', rule: 'A GIANT ROBOT ROVER IS LOOSE IN THE ICE CAVE. STOMP IT THREE TIMES', critter: 'aqRover', name: 'THE BIG ROVER' } },
       { id: 'glacier', gen: 'arena', role: 'arena', layout: 'glacier', arenaW: 26, H: 18, roof: false }
     ] },
 
@@ -899,18 +1018,19 @@ const levels = [
         ['drifts', { n: 2 }],
         ['rookeryDrift', { to: 'rookery@in', back: 'rookBack' }],
         'cp',
+        ['itemBlock', { item: 'star', y: 4 }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
         ['skuas', { n: 2, len: 14 }],
         // ③ the blizzard on thin ice
         'blizzard',
         ['thinIce', { n: 5, gold: 'risky' }],
         ['nest', {}],
         'blizzard',
-        ['itemBlock', { item: 'star', y: 4 }],
         ['thinIce', { n: 6 }],
         ['skuas', { n: 1, len: 10 }],
         ['eggFinale', {}]
       ] },
-      { id: 'rookery', gen: 'room', role: 'secret', theme: 'aq_rookery', stamp: 'rookery' }
+      { id: 'rookery', gen: 'room', role: 'secret', theme: 'aq_rookery', stamp: 'rookery', room: 'rush',
+        rush: { title: 'THE LOST EGGS', rule: 'SIX PENGUIN EGGS ROLLED AWAY IN THE BLIZZARD! GRAB THEM ALL BEFORE THEY FREEZE', look: 'tokEgg', n: 6, t: 17 } }
     ] }
 ];
 

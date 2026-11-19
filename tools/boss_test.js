@@ -5,6 +5,7 @@
 // ctor(type), clearEnemies(), near(type, dx, props), boss() (the arena's boss), enterArena() (Brady walks in, the
 // boss wakes, the intro plays), spawnAt(type, x, y, props).
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const args = process.argv.slice(2);
 const si = args.indexOf('--shots');
@@ -18,7 +19,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
 
 (async () => {
   const browser = await chromium.launch();
-  const context = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const context = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await silence(context);
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));

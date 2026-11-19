@@ -16,7 +16,10 @@ const TourStamp = {
   TILE: { empty: 'EMPTY', ground: 'GROUND', brick: 'BRICK', coinbrick: 'QBRICK', hard: 'HARD', semi: 'SEMI', pillar: 'PILLAR', spikes: 'SPIKES',
     ceilspikes: 'SPIKES_CEIL', liquid: 'LAVA', water: 'WATER', ice: 'ICE', convL: 'CONV_L', convR: 'CONV_R', crumble: 'CRUMBLE', fake: 'FAKE',
     soil: 'SOIL', lintel: 'LINTEL', bounce: 'GROUND', sticky: 'GROUND' },
-  CUSTOM: ['spawn', 'enemy', 'decor', 'anchor', 'tile', 'piece', 'gear', 'key', 'lock', 'vkey'],
+  // secrets (docs/design/SECRETS_CONTRACTS.md): 'seam' [side, 'area@anchor', { needs }] marks a seam span on the area's
+  // edge (every cell of one letter is one span); 'xmark' [id] is the Treasure Map's X, a one-tile floor lock;
+  // 'lock' [id, { needsAll: [ids], needs }] opens only when every listed key is held
+  CUSTOM: ['spawn', 'enemy', 'decor', 'anchor', 'tile', 'piece', 'gear', 'key', 'lock', 'vkey', 'seam', 'xmark'],
   // look a stamp up by name: the country's own first ('<cc>.<name>'), then a shared one; objects pass through
   get(name, cc) {
     if (name && typeof name === 'object') return name;
@@ -50,7 +53,7 @@ const TourStamp = {
     const B = st.B, P = this.parse(stamp), legend = stamp.legend || {}, ctx = st.ctx;
     const items = stamp.items || [], hidden = stamp.hidden || [], doors = stamp.doors || [];
     let qi = 0, hi = 0, di = 0;
-    const lockRuns = {};
+    const lockRuns = {}, seamCells = {};
     const anchors = {};
     const later = [];
     for (let y = 0; y < P.H; y++) for (let x = 0; x < P.W; x++) {
@@ -86,11 +89,23 @@ const TourStamp = {
         case 'piece': later.push(() => { const sx = st.x, sg = st.gy; st.x = tx; st.gy = ty + 1; st.run([e[1], Object.assign({}, e[2] || {})]); st.x = sx; st.gy = sg; }); break;
         case 'gear': later.push(() => { if (Tour.pieces.gearStand) { const sx = st.x, sg = st.gy; st.x = tx; st.gy = ty + 1; Tour.pieces.gearStand(st, { item: e[1], here: true }); st.x = sx; st.gy = sg; } else B.spawn('gearStand', tx, ty, { item: e[1] }); }); break;
         case 'key': later.push(() => B.spawn('key', tx, ty, { id: e[1] })); break;
-        case 'lock': { const k = e[1] + '@' + tx; const run = lockRuns[k]; if (run && run.y1 === ty - 1) run.y1 = ty; else lockRuns[k] = { id: e[1], x: tx, y0: ty, y1: ty }; break; }
+        case 'lock': { const k = e[1] + '@' + tx; const run = lockRuns[k]; if (run && run.y1 === ty - 1) run.y1 = ty; else lockRuns[k] = { id: e[1], x: tx, y0: ty, y1: ty, o: e[2] }; break; }
         case 'vkey': B.vkey(e[1], [[tx, ty]]); break;
+        case 'seam': (seamCells[ch] || (seamCells[ch] = { e, cells: [] })).cells.push([tx, ty]); break;
+        case 'xmark': B.lock(tx, ty, ty, e[1], 'xmark'); break;
       }
     }
-    for (const k in lockRuns) { const r = lockRuns[k]; B.lock(r.x, r.y0, r.y1, r.id, 'door'); }
+    for (const k in lockRuns) {
+      const r = lockRuns[k]; B.lock(r.x, r.y0, r.y1, r.id, 'door');
+      // needsAll / needs on the lock (the validator's area.locks entry and the game's lock spawn)
+      if (r.o && (r.o.needsAll || r.o.needs)) { const L = B.locks[B.locks.length - 1], sp = B.spawns[B.spawns.length - 1]; for (const f of ['needsAll', 'needs']) if (r.o[f]) { L[f] = r.o[f]; sp[f] = r.o[f]; } }
+    }
+    for (const ch in seamCells) {
+      const { e, cells } = seamCells[ch], side = e[1], along = side === 'left' || side === 'right' ? 1 : 0;
+      const vals = cells.map(c => c[along]), a = Math.min(...vals), b = Math.max(...vals);
+      if (new Set(vals).size !== b - a + 1) P.problems.push(`seam letter '${ch}' is not one unbroken run`);
+      if (typeof TourSeams !== 'undefined') TourSeams.add(B, Object.assign({ side, a, b, to: e[2] }, e[3] || {}));
+    }
     for (const f of later) f();
     if (ctx && ctx.problems) for (const pr of P.problems) ctx.problems.push(`stamp ${stamp.id || ''}: ${pr}`);
     return { anchors, problems: P.problems, W: P.W, H: P.H };
@@ -124,4 +139,4 @@ Tour.pieces.startStamp = function (st, o) {
   TourStamp.place(st, S, 0, st.gy - P.floor, { first: !st.ctx.areaIndex });
   return Math.max(st.x, W);
 };
-try { Object.assign(window.BRADY_TOUR, { TourStamp, TourPanel, TourPanelFx, TourLandscape }); } catch (e) { /* not in a browser */ }
+try { Object.assign(window.BRADY_TOUR, { TourStamp, TourPanel, TourPanelFx, TourLandscape, TourHooks, TourNeeds, TourSeams }); } catch (e) { /* not in a browser */ }

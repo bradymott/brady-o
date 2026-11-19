@@ -1,0 +1,5826 @@
+{
+ "pair": {
+  "dist": "../dist-before",
+  "levels": {
+   "1-1": {
+    "flush": 16.822857142857142,
+    "cost": {
+     "mean": 19.085714285714285,
+     "p50": 16,
+     "p95": 34,
+     "p99": 59,
+     "max": 108,
+     "n": 175
+    },
+    "upd": 0.32,
+    "drw": 18.765714285714285,
+    "gap": {
+     "mean": 20.091428571428573,
+     "p50": 17,
+     "p95": 35,
+     "p99": 60,
+     "max": 109,
+     "n": 175
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 412,
+    "spots": [
+     {
+      "area": 0,
+      "x": 9,
+      "y": 11,
+      "mean": 14.9,
+      "p95": 16
+     },
+     {
+      "area": 0,
+      "x": 28,
+      "y": 26,
+      "mean": 15.55,
+      "p95": 24
+     },
+     {
+      "area": 0,
+      "x": 85,
+      "y": 17,
+      "mean": 31,
+      "p95": 59
+     },
+     {
+      "area": 0,
+      "x": 127,
+      "y": 16,
+      "mean": 14.57,
+      "p95": 19
+     },
+     {
+      "area": 0,
+      "x": 180,
+      "y": 11,
+      "mean": 23.13,
+      "p95": 41
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 6,
+      "mean": 30.64,
+      "p95": 108
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 10,
+      "mean": 15.81,
+      "p95": 18
+     },
+     {
+      "area": 1,
+      "x": 22,
+      "y": 6,
+      "mean": 23.73,
+      "p95": 42
+     },
+     {
+      "area": 1,
+      "x": 28,
+      "y": 10,
+      "mean": 16.81,
+      "p95": 19
+     },
+     {
+      "area": 1,
+      "x": 38,
+      "y": 10,
+      "mean": 18.11,
+      "p95": 34
+     }
+    ],
+    "areas": 2,
+    "trace": [
+     "0:5:true:693:10",
+     "1:5:true:693:10"
+    ],
+    "profile": {
+     "counts": {
+      "drawImage": 161.1,
+      "drawPx": 12630769,
+      "fillRectPx": 6763975,
+      "fillText": 11.9,
+      "strokeText": 0,
+      "grad": 31.45,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 1.683,
+      "inkPx": 44513,
+      "shadowBlur": 0.983,
+      "filter": 0,
+      "comp": 21.883,
+      "save": 73.7
+     },
+     "time": {
+      "update": 0.4,
+      "bg": 0.05,
+      "trip": 0,
+      "decor": 0.417,
+      "drawTiles": 0.267,
+      "drawShadows": 0.067,
+      "ink": 0.533,
+      "brady": 0.5,
+      "particles": 0,
+      "weather": 0.067,
+      "postfx": 0.083,
+      "worldfx": 0,
+      "drawHUD": 0.5,
+      "drawToast": 0,
+      "controls": 0.117,
+      "drawTutorial": 0.017,
+      "draw": 2.45,
+      "drawLighting": 0.1
+     },
+     "scene": {
+      "parts": 5.683,
+      "weather": 15,
+      "ents": 13,
+      "entsUpd": 3.2,
+      "entsDrawn": 2.35
+     },
+     "pxBy": [
+      [
+       "bg",
+       6860
+      ],
+      [
+       "other",
+       3950
+      ],
+      [
+       "postfx",
+       2752
+      ],
+      [
+       "ink<brady",
+       2428
+      ],
+      [
+       "drawLighting",
+       1259
+      ],
+      [
+       "ink<ent:Gold/gold",
+       1243
+      ],
+      [
+       "drawTiles",
+       686
+      ],
+      [
+       "decor",
+       187
+      ],
+      [
+       "brady",
+       16
+      ],
+      [
+       "ent:MxElote/mxElote",
+       6
+      ],
+      [
+       "drawHUD",
+       3
+      ],
+      [
+       "ent:Gate/gate",
+       1
+      ],
+      [
+       "weather",
+       1
+      ],
+      [
+       "ent:cls/mxChihuahua",
+       1
+      ]
+     ],
+     "drawByClass": [
+      [
+       "Gold/gold",
+       0.117
+      ],
+      [
+       "Portal/portal",
+       0.033
+      ],
+      [
+       "cls/mxChihuahua",
+       0.017
+      ],
+      [
+       "Gate/gate",
+       0.017
+      ],
+      [
+       "Sign/sign",
+       0
+      ],
+      [
+       "MxElote/mxElote",
+       0
+      ],
+      [
+       "Checkpoint/checkpoint",
+       0
+      ],
+      [
+       "Geyser/geyser",
+       0
+      ]
+     ]
+    },
+    "worstSpot": {
+     "area": 0,
+     "x": 85,
+     "y": 17,
+     "mean": 31,
+     "p95": 59,
+     "profile": {
+      "frames": 6,
+      "pxBy": [
+       [
+        "bg",
+        10562
+       ],
+       [
+        "other",
+        3950
+       ],
+       [
+        "postfx",
+        2752
+       ],
+       [
+        "ink<brady",
+        2439
+       ],
+       [
+        "drawTiles",
+        891
+       ],
+       [
+        "ink<ent:Gold/gold",
+        633
+       ],
+       [
+        "decor",
+        355
+       ],
+       [
+        "ent:MxElote/mxElote",
+        21
+       ],
+       [
+        "brady",
+        16
+       ],
+       [
+        "drawHUD",
+        3
+       ],
+       [
+        "weather",
+        2
+       ]
+      ],
+      "counts": {
+       "drawImage": 196,
+       "drawPx": 13407839,
+       "fillRectPx": 8217975,
+       "fillText": 11,
+       "strokeText": 0,
+       "grad": 33.833,
+       "getImageData": 1,
+       "putImageData": 0,
+       "ink": 1.833,
+       "inkPx": 47721,
+       "shadowBlur": 0.833,
+       "filter": 0,
+       "comp": 21.833,
+       "save": 94.833
+      },
+      "time": {
+       "update": 0.333,
+       "bg": 0,
+       "trip": 0,
+       "decor": 0.833,
+       "drawTiles": 0.167,
+       "drawShadows": 0,
+       "ink": 0.833,
+       "brady": 0.667,
+       "particles": 0,
+       "weather": 0.167,
+       "postfx": 0,
+       "worldfx": 0,
+       "drawHUD": 0.333,
+       "drawToast": 0,
+       "controls": 0.167,
+       "drawTutorial": 0,
+       "draw": 2.833
+      },
+      "drawByClass": [
+       [
+        "Gold/gold",
+        0.333
+       ],
+       [
+        "MxElote/mxElote",
+        0
+       ]
+      ],
+      "updByClass": [
+       [
+        "mxMelonCart",
+        0
+       ],
+       [
+        "MxElote",
+        0
+       ],
+       [
+        "TourGearStand",
+        0
+       ],
+       [
+        "cls",
+        0
+       ],
+       [
+        "Geyser",
+        0
+       ],
+       [
+        "Gold",
+        0
+       ]
+      ],
+      "scene": {
+       "parts": 2.5,
+       "weather": 30,
+       "ents": 22,
+       "entsUpd": 5,
+       "entsDrawn": 1.8333333333333333
+      },
+      "profCost": {
+       "mean": 27.833333333333332,
+       "p50": 29,
+       "p95": 35,
+       "p99": 35,
+       "max": 35,
+       "n": 6
+      },
+      "at": {
+       "area": 0,
+       "x": 85,
+       "y": 17
+      }
+     }
+    }
+   },
+   "1-2": {
+    "flush": 16.165644171779142,
+    "cost": {
+     "mean": 18.012269938650306,
+     "p50": 17,
+     "p95": 27,
+     "p99": 35,
+     "max": 45,
+     "n": 163
+    },
+    "upd": 0.27607361963190186,
+    "drw": 17.736196319018404,
+    "gap": {
+     "mean": 19.263803680981596,
+     "p50": 17,
+     "p95": 29,
+     "p99": 37,
+     "max": 46,
+     "n": 163
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 160,
+    "spots": [
+     {
+      "area": 0,
+      "x": 3,
+      "y": 12,
+      "mean": 14,
+      "p95": 17
+     },
+     {
+      "area": 0,
+      "x": 25,
+      "y": 11,
+      "mean": 14.9,
+      "p95": 22
+     },
+     {
+      "area": 0,
+      "x": 64,
+      "y": 11,
+      "mean": 15.15,
+      "p95": 20
+     },
+     {
+      "area": 0,
+      "x": 104,
+      "y": 2,
+      "mean": 18.37,
+      "p95": 28
+     },
+     {
+      "area": 0,
+      "x": 217,
+      "y": 8,
+      "mean": 16.45,
+      "p95": 21
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 7,
+      "mean": 21.73,
+      "p95": 35
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 10,
+      "mean": 20.59,
+      "p95": 34
+     },
+     {
+      "area": 1,
+      "x": 28,
+      "y": 4,
+      "mean": 21.87,
+      "p95": 45
+     },
+     {
+      "area": 1,
+      "x": 28,
+      "y": 10,
+      "mean": 22.93,
+      "p95": 30
+     }
+    ],
+    "areas": 2,
+    "trace": [
+     "0:5:true:693:10",
+     "1:4:true:693:10"
+    ],
+    "profile": {
+     "counts": {
+      "drawImage": 115.463,
+      "drawPx": 11500525,
+      "fillRectPx": 7082399,
+      "fillText": 8.333,
+      "strokeText": 0,
+      "grad": 36.833,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 1.444,
+      "inkPx": 39403,
+      "shadowBlur": 0.444,
+      "filter": 0,
+      "comp": 19.111,
+      "save": 73.574
+     },
+     "time": {
+      "update": 0.37,
+      "bg": 0.148,
+      "trip": 0,
+      "decor": 0,
+      "drawTiles": 0.259,
+      "drawShadows": 0.019,
+      "ink": 0.407,
+      "brady": 0.333,
+      "particles": 0,
+      "weather": 0.037,
+      "postfx": 0.093,
+      "worldfx": 0,
+      "drawHUD": 0.5,
+      "drawToast": 0,
+      "controls": 0.019,
+      "drawTutorial": 0,
+      "draw": 1.815
+     },
+     "scene": {
+      "parts": 5.037,
+      "weather": 16.667,
+      "ents": 15.333,
+      "entsUpd": 2.444,
+      "entsDrawn": 2.333
+     },
+     "pxBy": [
+      [
+       "bg",
+       8437
+      ],
+      [
+       "other",
+       3950
+      ],
+      [
+       "postfx",
+       2752
+      ],
+      [
+       "ink<brady",
+       2274
+      ],
+      [
+       "ink<ent:Gold/gold",
+       685
+      ],
+      [
+       "drawTiles",
+       304
+      ],
+      [
+       "ent:TourRailTrack/railTrack",
+       149
+      ],
+      [
+       "brady",
+       14
+      ],
+      [
+       "decor",
+       9
+      ],
+      [
+       "ent:cls/mxXolo",
+       4
+      ],
+      [
+       "drawHUD",
+       3
+      ],
+      [
+       "ent:TourRailCart/railCart",
+       2
+      ],
+      [
+       "ent:TourRailSwitch/railSwitch",
+       0
+      ],
+      [
+       "ent:Sign/sign",
+       0
+      ]
+     ],
+     "drawByClass": [
+      [
+       "Gold/gold",
+       0.13
+      ],
+      [
+       "TourRailTrack/railTrack",
+       0.074
+      ],
+      [
+       "FallingPlatform/fplat",
+       0.037
+      ],
+      [
+       "MxAxolotl/mxAxolotl",
+       0.037
+      ],
+      [
+       "Sign/sign",
+       0.019
+      ],
+      [
+       "Portal/portal",
+       0.019
+      ],
+      [
+       "TourRailCart/railCart",
+       0
+      ],
+      [
+       "cls/mxXolo",
+       0
+      ]
+     ]
+    },
+    "worstSpot": {
+     "area": 1,
+     "x": 28,
+     "y": 10,
+     "mean": 22.93,
+     "p95": 30,
+     "profile": {
+      "frames": 6,
+      "pxBy": [
+       [
+        "bg",
+        8497
+       ],
+       [
+        "other",
+        3950
+       ],
+       [
+        "postfx",
+        2752
+       ],
+       [
+        "ink<brady",
+        2332
+       ],
+       [
+        "ink<ent:Gold/gold",
+        1170
+       ],
+       [
+        "drawTiles",
+        748
+       ],
+       [
+        "brady",
+        16
+       ],
+       [
+        "drawHUD",
+        3
+       ]
+      ],
+      "counts": {
+       "drawImage": 179,
+       "drawPx": 12431143,
+       "fillRectPx": 7038284,
+       "fillText": 8,
+       "strokeText": 0,
+       "grad": 30,
+       "getImageData": 1,
+       "putImageData": 0,
+       "ink": 2,
+       "inkPx": 51286,
+       "shadowBlur": 1,
+       "filter": 0,
+       "comp": 23,
+       "save": 54
+      },
+      "time": {
+       "update": 0.333,
+       "bg": 0.167,
+       "trip": 0,
+       "decor": 0,
+       "drawTiles": 0.333,
+       "drawShadows": 0.167,
+       "ink": 0.667,
+       "brady": 0.5,
+       "particles": 0,
+       "weather": 0,
+       "postfx": 0.167,
+       "worldfx": 0,
+       "drawHUD": 0.5,
+       "drawToast": 0,
+       "controls": 0,
+       "drawTutorial": 0,
+       "draw": 2.167
+      },
+      "drawByClass": [
+       [
+        "Gold/gold",
+        0.167
+       ],
+       [
+        "Portal/portal",
+        0
+       ]
+      ],
+      "updByClass": [
+       [
+        "Portal",
+        0
+       ],
+       [
+        "Gold",
+        0
+       ]
+      ],
+      "scene": {
+       "parts": 9.5,
+       "weather": 0,
+       "ents": 2,
+       "entsUpd": 2,
+       "entsDrawn": 2
+      },
+      "profCost": {
+       "mean": 22.666666666666668,
+       "p50": 22,
+       "p95": 26,
+       "p99": 26,
+       "max": 26,
+       "n": 6
+      },
+      "at": {
+       "area": 1,
+       "x": 28,
+       "y": 10
+      }
+     }
+    }
+   },
+   "1-6": {
+    "flush": 20.352941176470587,
+    "cost": {
+     "mean": 22.30392156862745,
+     "p50": 16,
+     "p95": 58,
+     "p99": 93,
+     "max": 126,
+     "n": 102
+    },
+    "upd": 0.3235294117647059,
+    "drw": 21.980392156862745,
+    "gap": {
+     "mean": 23.441176470588236,
+     "p50": 17,
+     "p95": 59,
+     "p99": 94,
+     "max": 127,
+     "n": 102
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 228,
+    "spots": [
+     {
+      "area": 0,
+      "x": 5,
+      "y": 98,
+      "mean": 15.45,
+      "p95": 25
+     },
+     {
+      "area": 0,
+      "x": 6,
+      "y": 166,
+      "mean": 20.6,
+      "p95": 44
+     },
+     {
+      "area": 0,
+      "x": 10,
+      "y": 115,
+      "mean": 16.84,
+      "p95": 31
+     },
+     {
+      "area": 0,
+      "x": 15,
+      "y": 26,
+      "mean": 65.6,
+      "p95": 93
+     },
+     {
+      "area": 0,
+      "x": 15,
+      "y": 62,
+      "mean": 70.2,
+      "p95": 126
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 8,
+      "mean": 15.38,
+      "p95": 17
+     },
+     {
+      "area": 1,
+      "x": 26,
+      "y": 8,
+      "mean": 19.71,
+      "p95": 32
+     }
+    ],
+    "areas": 2,
+    "trace": [
+     "0:5:true:762:11",
+     "1:2:true:693:10"
+    ],
+    "profile": {
+     "counts": {
+      "drawImage": 185.191,
+      "drawPx": 10266712,
+      "fillRectPx": 5427362,
+      "fillText": 8,
+      "strokeText": 0,
+      "grad": 32.024,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 3.452,
+      "inkPx": 55045,
+      "shadowBlur": 0.571,
+      "filter": 0,
+      "comp": 36.69,
+      "save": 62.024
+     },
+     "time": {
+      "update": 0.333,
+      "bg": 0.19,
+      "trip": 0,
+      "decor": 0.167,
+      "drawTiles": 0.167,
+      "drawShadows": 0.024,
+      "ink": 0.667,
+      "brady": 0.357,
+      "particles": 0,
+      "weather": 0.024,
+      "drawLighting": 0.119,
+      "postfx": 0.095,
+      "worldfx": 0.024,
+      "drawHUD": 0.286,
+      "drawToast": 0.024,
+      "controls": 0.048,
+      "drawTutorial": 0.024,
+      "draw": 1.952
+     },
+     "scene": {
+      "parts": 7.071,
+      "weather": 17.143,
+      "ents": 12.857,
+      "entsUpd": 4.429,
+      "entsDrawn": 2.881
+     },
+     "pxBy": [
+      [
+       "other",
+       3950
+      ],
+      [
+       "bg",
+       3079
+      ],
+      [
+       "postfx",
+       2752
+      ],
+      [
+       "ink<brady",
+       2118
+      ],
+      [
+       "drawLighting",
+       1828
+      ],
+      [
+       "ink<ent:Gold/gold",
+       752
+      ],
+      [
+       "ink<other",
+       596
+      ],
+      [
+       "drawTiles",
+       477
+      ],
+      [
+       "ink<ent:cls/mxSwallow",
+       125
+      ],
+      [
+       "brady",
+       14
+      ],
+      [
+       "drawHUD",
+       3
+      ],
+      [
+       "ent:Checkpoint/checkpoint",
+       0
+      ],
+      [
+       "ent:Gate/gate",
+       0
+      ]
+     ],
+     "drawByClass": [
+      [
+       "Gold/gold",
+       0.095
+      ],
+      [
+       "cls/mxSwallow",
+       0.048
+      ],
+      [
+       "Portal/portal",
+       0.024
+      ],
+      [
+       "Gate/gate",
+       0
+      ],
+      [
+       "Checkpoint/checkpoint",
+       0
+      ]
+     ]
+    },
+    "worstSpot": {
+     "area": 0,
+     "x": 15,
+     "y": 62,
+     "mean": 70.2,
+     "p95": 126,
+     "profile": {
+      "frames": 6,
+      "pxBy": [
+       [
+        "other",
+        3950
+       ],
+       [
+        "bg",
+        2797
+       ],
+       [
+        "postfx",
+        2752
+       ],
+       [
+        "ink<other",
+        2029
+       ],
+       [
+        "ink<brady",
+        2022
+       ],
+       [
+        "drawLighting",
+        1763
+       ],
+       [
+        "ink<ent:Gold/gold",
+        1332
+       ],
+       [
+        "ink<ent:cls/mxSwallow",
+        478
+       ],
+       [
+        "drawTiles",
+        259
+       ],
+       [
+        "brady",
+        13
+       ],
+       [
+        "drawHUD",
+        3
+       ]
+      ],
+      "counts": {
+       "drawImage": 323,
+       "drawPx": 11411620,
+       "fillRectPx": 5986456,
+       "fillText": 8,
+       "strokeText": 0,
+       "grad": 37,
+       "getImageData": 1,
+       "putImageData": 0,
+       "ink": 9,
+       "inkPx": 112449,
+       "shadowBlur": 1,
+       "filter": 0,
+       "comp": 77,
+       "save": 82
+      },
+      "time": {
+       "update": 0.5,
+       "bg": 0.333,
+       "trip": 0,
+       "decor": 0,
+       "drawTiles": 0.167,
+       "drawShadows": 0,
+       "ink": 1.667,
+       "brady": 0.667,
+       "particles": 0,
+       "weather": 0,
+       "drawLighting": 0,
+       "postfx": 0.167,
+       "worldfx": 0,
+       "drawHUD": 0.167,
+       "drawToast": 0,
+       "controls": 0,
+       "drawTutorial": 0,
+       "draw": 2.5
+      },
+      "drawByClass": [
+       [
+        "cls/mxSwallow",
+        0.167
+       ],
+       [
+        "Gold/gold",
+        0
+       ]
+      ],
+      "updByClass": [
+       [
+        "cls",
+        0
+       ],
+       [
+        "Gold",
+        0
+       ]
+      ],
+      "scene": {
+       "parts": 2.1666666666666665,
+       "weather": 24,
+       "ents": 28,
+       "entsUpd": 8,
+       "entsDrawn": 8
+      },
+      "profCost": {
+       "mean": 59.166666666666664,
+       "p50": 59,
+       "p95": 67,
+       "p99": 67,
+       "max": 67,
+       "n": 6
+      },
+      "at": {
+       "area": 0,
+       "x": 15,
+       "y": 62
+      }
+     }
+    }
+   },
+   "4-5": {
+    "flush": 21.584615384615386,
+    "cost": {
+     "mean": 23.5,
+     "p50": 18,
+     "p95": 59,
+     "p99": 109,
+     "max": 117,
+     "n": 130
+    },
+    "upd": 0.34615384615384615,
+    "drw": 23.153846153846153,
+    "gap": {
+     "mean": 24.26153846153846,
+     "p50": 19,
+     "p95": 59,
+     "p99": 110,
+     "max": 118,
+     "n": 130
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 414,
+    "spots": [
+     {
+      "area": 0,
+      "x": 9,
+      "y": 13,
+      "mean": 13,
+      "p95": 15
+     },
+     {
+      "area": 0,
+      "x": 47,
+      "y": 13,
+      "mean": 18.71,
+      "p95": 22
+     },
+     {
+      "area": 0,
+      "x": 87,
+      "y": 12,
+      "mean": 20.59,
+      "p95": 35
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 4,
+      "mean": 19.5,
+      "p95": 26
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 9,
+      "mean": 16.9,
+      "p95": 20
+     },
+     {
+      "area": 1,
+      "x": 26,
+      "y": 9,
+      "mean": 17.95,
+      "p95": 24
+     },
+     {
+      "area": 2,
+      "x": 11,
+      "y": 9,
+      "mean": 54.17,
+      "p95": 86
+     },
+     {
+      "area": 2,
+      "x": 11,
+      "y": 13,
+      "mean": 70.8,
+      "p95": 109
+     },
+     {
+      "area": 2,
+      "x": 35,
+      "y": 13,
+      "mean": 64.67,
+      "p95": 117
+     }
+    ],
+    "areas": 3,
+    "trace": [
+     "0:3:true:693:10",
+     "1:3:true:693:10",
+     "2:3:true:831:12"
+    ],
+    "profile": {
+     "counts": {
+      "drawImage": 220.556,
+      "drawPx": 18975227,
+      "fillRectPx": 8445749,
+      "fillText": 9.37,
+      "strokeText": 0,
+      "grad": 26.556,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 3.5,
+      "inkPx": 96521,
+      "shadowBlur": 0.722,
+      "filter": 0,
+      "comp": 32.722,
+      "save": 62.593
+     },
+     "time": {
+      "update": 0.407,
+      "bg": 0.019,
+      "trip": 0.019,
+      "decor": 0.056,
+      "drawTiles": 0.296,
+      "drawShadows": 0.019,
+      "ink": 0.833,
+      "brady": 0.407,
+      "particles": 0.019,
+      "weather": 0.019,
+      "postfx": 0.056,
+      "worldfx": 0,
+      "drawHUD": 0.408,
+      "drawToast": 0,
+      "controls": 0.074,
+      "drawTutorial": 0,
+      "draw": 2.018
+     },
+     "scene": {
+      "parts": 15.333,
+      "weather": 12,
+      "ents": 6.556,
+      "entsUpd": 3.778,
+      "entsDrawn": 3.5
+     },
+     "pxBy": [
+      [
+       "bg",
+       9201
+      ],
+      [
+       "other",
+       3950
+      ],
+      [
+       "postfx",
+       2752
+      ],
+      [
+       "ink<other",
+       2724
+      ],
+      [
+       "ink<ent:anon/mzShellPot",
+       2131
+      ],
+      [
+       "ink<brady",
+       2055
+      ],
+      [
+       "ink<ent:anon/mzShellBottle",
+       1298
+      ],
+      [
+       "ink<ent:anon/mzShellBucket",
+       1298
+      ],
+      [
+       "ink<ent:Gold/gold",
+       1094
+      ],
+      [
+       "drawTiles",
+       591
+      ],
+      [
+       "decor",
+       169
+      ],
+      [
+       "ink<ent:TourTrapdoor/trapdoor",
+       140
+      ],
+      [
+       "brady",
+       13
+      ],
+      [
+       "drawHUD",
+       2
+      ]
+     ],
+     "drawByClass": [
+      [
+       "Gold/gold",
+       0.259
+      ],
+      [
+       "anon/mzShellPot",
+       0.074
+      ],
+      [
+       "anon/mzShellBucket",
+       0.056
+      ],
+      [
+       "cls/mzPrawn",
+       0.019
+      ],
+      [
+       "Portal/portal",
+       0.019
+      ],
+      [
+       "MzChiliBasket/mzChiliBasket",
+       0.019
+      ],
+      [
+       "anon/mzShellBottle",
+       0.019
+      ],
+      [
+       "Checkpoint/checkpoint",
+       0
+      ]
+     ]
+    },
+    "worstSpot": {
+     "area": 2,
+     "x": 11,
+     "y": 13,
+     "mean": 70.8,
+     "p95": 109,
+     "profile": {
+      "frames": 6,
+      "pxBy": [
+       [
+        "bg",
+        10068
+       ],
+       [
+        "ink<other",
+        8670
+       ],
+       [
+        "ink<ent:anon/mzShellPot",
+        4164
+       ],
+       [
+        "ink<ent:anon/mzShellBottle",
+        4157
+       ],
+       [
+        "ink<ent:anon/mzShellBucket",
+        4157
+       ],
+       [
+        "other",
+        3950
+       ],
+       [
+        "postfx",
+        2752
+       ],
+       [
+        "ink<brady",
+        1704
+       ],
+       [
+        "ink<ent:Gold/gold",
+        1131
+       ],
+       [
+        "decor",
+        490
+       ],
+       [
+        "drawTiles",
+        479
+       ],
+       [
+        "brady",
+        11
+       ],
+       [
+        "drawHUD",
+        2
+       ],
+       [
+        "ent:MzChiliBasket/mzChiliBasket",
+        2
+       ]
+      ],
+      "counts": {
+       "drawImage": 321.167,
+       "drawPx": 31425580,
+       "fillRectPx": 10311883,
+       "fillText": 11.333,
+       "strokeText": 0,
+       "grad": 31,
+       "getImageData": 1,
+       "putImageData": 0,
+       "ink": 7,
+       "inkPx": 180388,
+       "shadowBlur": 1,
+       "filter": 0,
+       "comp": 58,
+       "save": 81
+      },
+      "time": {
+       "update": 0.667,
+       "bg": 0,
+       "trip": 0,
+       "decor": 0,
+       "drawTiles": 0.5,
+       "drawShadows": 0.167,
+       "ink": 1.333,
+       "brady": 0.333,
+       "particles": 0,
+       "weather": 0,
+       "postfx": 0.167,
+       "worldfx": 0,
+       "drawHUD": 0,
+       "drawToast": 0,
+       "controls": 0.333,
+       "drawTutorial": 0,
+       "draw": 2.667
+      },
+      "drawByClass": [
+       [
+        "Gold/gold",
+        0.333
+       ],
+       [
+        "anon/mzShellBucket",
+        0.333
+       ],
+       [
+        "MzChiliBasket/mzChiliBasket",
+        0
+       ],
+       [
+        "anon/mzShellPot",
+        0
+       ],
+       [
+        "anon/mzShellBottle",
+        0
+       ]
+      ],
+      "updByClass": [
+       [
+        "",
+        0.167
+       ],
+       [
+        "MzChiliBasket",
+        0
+       ],
+       [
+        "Gold",
+        0
+       ]
+      ],
+      "scene": {
+       "parts": 77.16666666666667,
+       "weather": 0,
+       "ents": 8,
+       "entsUpd": 7,
+       "entsDrawn": 7
+      },
+      "profCost": {
+       "mean": 54.833333333333336,
+       "p50": 54,
+       "p95": 58,
+       "p99": 58,
+       "max": 58,
+       "n": 6
+      },
+      "at": {
+       "area": 2,
+       "x": 11,
+       "y": 13
+      }
+     }
+    }
+   },
+   "6-4": {
+    "flush": 19.571428571428573,
+    "cost": {
+     "mean": 21.484126984126984,
+     "p50": 20,
+     "p95": 33,
+     "p99": 51,
+     "max": 52,
+     "n": 126
+    },
+    "upd": 0.29365079365079366,
+    "drw": 21.19047619047619,
+    "gap": {
+     "mean": 22.373015873015873,
+     "p50": 20,
+     "p95": 34,
+     "p99": 52,
+     "max": 53,
+     "n": 126
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 252,
+    "spots": [
+     {
+      "area": 0,
+      "x": 10,
+      "y": 11,
+      "mean": 16.25,
+      "p95": 29
+     },
+     {
+      "area": 0,
+      "x": 52,
+      "y": 15,
+      "mean": 14.67,
+      "p95": 17
+     },
+     {
+      "area": 0,
+      "x": 115,
+      "y": 15,
+      "mean": 29.09,
+      "p95": 52
+     },
+     {
+      "area": 0,
+      "x": 157,
+      "y": 18,
+      "mean": 27.62,
+      "p95": 45
+     },
+     {
+      "area": 0,
+      "x": 199,
+      "y": 22,
+      "mean": 30.18,
+      "p95": 51
+     },
+     {
+      "area": 1,
+      "x": 8,
+      "y": 7,
+      "mean": 21.88,
+      "p95": 38
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 10,
+      "mean": 21.12,
+      "p95": 46
+     },
+     {
+      "area": 1,
+      "x": 28,
+      "y": 10,
+      "mean": 20.82,
+      "p95": 45
+     }
+    ],
+    "areas": 2,
+    "trace": [
+     "0:5:true:762:11",
+     "1:3:true:693:10"
+    ],
+    "profile": {
+     "counts": {
+      "drawImage": 167.896,
+      "drawPx": 11207607,
+      "fillRectPx": 6468328,
+      "fillText": 7.958,
+      "strokeText": 0,
+      "grad": 26.458,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 2.583,
+      "inkPx": 78810,
+      "shadowBlur": 0.375,
+      "filter": 0,
+      "comp": 26.708,
+      "save": 68.208
+     },
+     "time": {
+      "update": 0.417,
+      "bg": 0.021,
+      "trip": 0,
+      "ink": 0.771,
+      "decor": 0.125,
+      "drawTiles": 0.313,
+      "drawShadows": 0,
+      "brady": 0.458,
+      "particles": 0,
+      "weather": 0.042,
+      "postfx": 0.042,
+      "worldfx": 0,
+      "drawHUD": 0.458,
+      "drawToast": 0.021,
+      "controls": 0.063,
+      "drawTutorial": 0.021,
+      "draw": 1.896
+     },
+     "scene": {
+      "parts": 12.5,
+      "weather": 22.5,
+      "ents": 7.75,
+      "entsUpd": 2,
+      "entsDrawn": 1.521
+     },
+     "pxBy": [
+      [
+       "bg",
+       6504
+      ],
+      [
+       "other",
+       3950
+      ],
+      [
+       "postfx",
+       2752
+      ],
+      [
+       "ink<brady",
+       2161
+      ],
+      [
+       "ink<ent:Gold/gold",
+       760
+      ],
+      [
+       "drawTiles",
+       546
+      ],
+      [
+       "ink<decor",
+       455
+      ],
+      [
+       "ink<ent:TourGearStand/gearStand",
+       407
+      ],
+      [
+       "decor",
+       70
+      ],
+      [
+       "ink<other",
+       54
+      ],
+      [
+       "brady",
+       14
+      ],
+      [
+       "drawHUD",
+       2
+      ],
+      [
+       "ent:cls/esLizard",
+       1
+      ],
+      [
+       "particles",
+       0
+      ]
+     ],
+     "drawByClass": [
+      [
+       "Gold/gold",
+       0.146
+      ],
+      [
+       "TourGearStand/gearStand",
+       0.083
+      ],
+      [
+       "cls/esLizard",
+       0.042
+      ],
+      [
+       "Portal/portal",
+       0.042
+      ],
+      [
+       "Checkpoint/checkpoint",
+       0
+      ]
+     ]
+    },
+    "worstSpot": {
+     "area": 0,
+     "x": 199,
+     "y": 22,
+     "mean": 30.18,
+     "p95": 51,
+     "profile": {
+      "frames": 6,
+      "pxBy": [
+       [
+        "bg",
+        6164
+       ],
+       [
+        "other",
+        3950
+       ],
+       [
+        "postfx",
+        2752
+       ],
+       [
+        "ink<brady",
+        2022
+       ],
+       [
+        "drawTiles",
+        812
+       ],
+       [
+        "ink<ent:TourGearStand/gearStand",
+        789
+       ],
+       [
+        "ink<other",
+        433
+       ],
+       [
+        "brady",
+        13
+       ],
+       [
+        "drawHUD",
+        2
+       ],
+       [
+        "ent:Portal/portal",
+        0
+       ]
+      ],
+      "counts": {
+       "drawImage": 195,
+       "drawPx": 10827994,
+       "fillRectPx": 6110964,
+       "fillText": 7.667,
+       "strokeText": 0,
+       "grad": 29,
+       "getImageData": 1,
+       "putImageData": 0,
+       "ink": 3,
+       "inkPx": 78800,
+       "shadowBlur": 0,
+       "filter": 0,
+       "comp": 30,
+       "save": 61
+      },
+      "time": {
+       "update": 0.5,
+       "bg": 0,
+       "trip": 0,
+       "drawTiles": 0.5,
+       "drawShadows": 0,
+       "ink": 0.667,
+       "brady": 0.833,
+       "particles": 0,
+       "weather": 0,
+       "postfx": 0,
+       "worldfx": 0,
+       "drawHUD": 0.333,
+       "drawToast": 0,
+       "controls": 0.167,
+       "drawTutorial": 0.167,
+       "draw": 2.5
+      },
+      "drawByClass": [
+       [
+        "Portal/portal",
+        0.333
+       ],
+       [
+        "TourGearStand/gearStand",
+        0
+       ]
+      ],
+      "updByClass": [
+       [
+        "TourGearStand",
+        0
+       ],
+       [
+        "Portal",
+        0
+       ],
+       [
+        "Gate",
+        0
+       ]
+      ],
+      "scene": {
+       "parts": 7.666666666666667,
+       "weather": 36,
+       "ents": 12,
+       "entsUpd": 4,
+       "entsDrawn": 3
+      },
+      "profCost": {
+       "mean": 28.833333333333332,
+       "p50": 29,
+       "p95": 37,
+       "p99": 37,
+       "max": 37,
+       "n": 6
+      },
+      "at": {
+       "area": 0,
+       "x": 199,
+       "y": 22
+      }
+     }
+    }
+   },
+   "6-5": {
+    "flush": 19.955882352941178,
+    "cost": {
+     "mean": 21.96323529411765,
+     "p50": 15,
+     "p95": 58,
+     "p99": 100,
+     "max": 101,
+     "n": 136
+    },
+    "upd": 0.3382352941176471,
+    "drw": 21.625,
+    "gap": {
+     "mean": 23.125,
+     "p50": 17,
+     "p95": 58,
+     "p99": 101,
+     "max": 101,
+     "n": 136
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 312,
+    "spots": [
+     {
+      "area": 0,
+      "x": 9,
+      "y": 13,
+      "mean": 14.71,
+      "p95": 16
+     },
+     {
+      "area": 0,
+      "x": 47,
+      "y": 13,
+      "mean": 16.33,
+      "p95": 19
+     },
+     {
+      "area": 0,
+      "x": 69,
+      "y": 4,
+      "mean": 20.88,
+      "p95": 40
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 5,
+      "mean": 16.05,
+      "p95": 39
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 10,
+      "mean": 14.62,
+      "p95": 16
+     },
+     {
+      "area": 1,
+      "x": 19,
+      "y": 7,
+      "mean": 15.05,
+      "p95": 17
+     },
+     {
+      "area": 2,
+      "x": 11,
+      "y": 9,
+      "mean": 63.33,
+      "p95": 100
+     },
+     {
+      "area": 2,
+      "x": 11,
+      "y": 13,
+      "mean": 64,
+      "p95": 97
+     },
+     {
+      "area": 2,
+      "x": 35,
+      "y": 13,
+      "mean": 62.17,
+      "p95": 101
+     }
+    ],
+    "areas": 3,
+    "trace": [
+     "0:3:true:693:10",
+     "1:3:true:693:10",
+     "2:3:true:831:12"
+    ],
+    "profile": {
+     "counts": {
+      "drawImage": 174.648,
+      "drawPx": 13552603,
+      "fillRectPx": 6269912,
+      "fillText": 10.944,
+      "strokeText": 0,
+      "grad": 27.185,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 2.37,
+      "inkPx": 58419,
+      "shadowBlur": 1.481,
+      "filter": 0,
+      "comp": 25.259,
+      "save": 71.222
+     },
+     "time": {
+      "update": 0.389,
+      "bg": 0.111,
+      "trip": 0,
+      "decor": 0.019,
+      "drawTiles": 0.259,
+      "drawShadows": 0,
+      "ink": 0.833,
+      "brady": 0.556,
+      "particles": 0.019,
+      "weather": 0.074,
+      "postfx": 0.037,
+      "worldfx": 0,
+      "drawHUD": 0.426,
+      "drawToast": 0,
+      "controls": 0.074,
+      "drawTutorial": 0.019,
+      "draw": 2.037
+     },
+     "scene": {
+      "parts": 22.87,
+      "weather": 10,
+      "ents": 5.222,
+      "entsUpd": 2.87,
+      "entsDrawn": 1.963
+     },
+     "pxBy": [
+      [
+       "bg",
+       5176
+      ],
+      [
+       "other",
+       3950
+      ],
+      [
+       "ink<other",
+       3482
+      ],
+      [
+       "postfx",
+       2752
+      ],
+      [
+       "ink<brady",
+       2100
+      ],
+      [
+       "ink<ent:EsCrate/esCrate",
+       1601
+      ],
+      [
+       "drawTiles",
+       532
+      ],
+      [
+       "decor",
+       184
+      ],
+      [
+       "ink<ent:Gold/gold",
+       28
+      ],
+      [
+       "brady",
+       13
+      ],
+      [
+       "drawHUD",
+       3
+      ],
+      [
+       "weather",
+       1
+      ],
+      [
+       "ent:Checkpoint/checkpoint",
+       0
+      ],
+      [
+       "ent:Spring/spring",
+       0
+      ]
+     ],
+     "drawByClass": [
+      [
+       "EsCrate/esCrate",
+       0.241
+      ],
+      [
+       "Gold/gold",
+       0.019
+      ],
+      [
+       "Spring/spring",
+       0.019
+      ],
+      [
+       "Portal/portal",
+       0
+      ],
+      [
+       "Checkpoint/checkpoint",
+       0
+      ],
+      [
+       "EsCrackers/esCrackers",
+       0
+      ]
+     ]
+    },
+    "worstSpot": {
+     "area": 2,
+     "x": 11,
+     "y": 13,
+     "mean": 64,
+     "p95": 97,
+     "profile": {
+      "frames": 6,
+      "pxBy": [
+       [
+        "ink<other",
+        11332
+       ],
+       [
+        "ink<ent:EsCrate/esCrate",
+        5212
+       ],
+       [
+        "other",
+        3950
+       ],
+       [
+        "bg",
+        3352
+       ],
+       [
+        "postfx",
+        2752
+       ],
+       [
+        "ink<brady",
+        1704
+       ],
+       [
+        "drawTiles",
+        789
+       ],
+       [
+        "decor",
+        256
+       ],
+       [
+        "brady",
+        11
+       ],
+       [
+        "drawHUD",
+        3
+       ]
+      ],
+      "counts": {
+       "drawImage": 307,
+       "drawPx": 22529562,
+       "fillRectPx": 6831984,
+       "fillText": 15,
+       "strokeText": 0,
+       "grad": 27,
+       "getImageData": 1,
+       "putImageData": 0,
+       "ink": 5,
+       "inkPx": 113085,
+       "shadowBlur": 2,
+       "filter": 0,
+       "comp": 43,
+       "save": 72
+      },
+      "time": {
+       "update": 0.833,
+       "bg": 0.167,
+       "trip": 0,
+       "decor": 0,
+       "drawTiles": 0.167,
+       "drawShadows": 0,
+       "ink": 1.333,
+       "brady": 0.667,
+       "particles": 0,
+       "weather": 0,
+       "postfx": 0,
+       "worldfx": 0,
+       "drawHUD": 0.5,
+       "drawToast": 0,
+       "controls": 0.333,
+       "drawTutorial": 0,
+       "draw": 2.667
+      },
+      "drawByClass": [
+       [
+        "EsCrate/esCrate",
+        0.833
+       ]
+      ],
+      "updByClass": [
+       [
+        "EsCrate",
+        0.167
+       ]
+      ],
+      "scene": {
+       "parts": 9,
+       "weather": 0,
+       "ents": 5,
+       "entsUpd": 4,
+       "entsDrawn": 4
+      },
+      "profCost": {
+       "mean": 55.5,
+       "p50": 56,
+       "p95": 59,
+       "p99": 59,
+       "max": 59,
+       "n": 6
+      },
+      "at": {
+       "area": 2,
+       "x": 11,
+       "y": 13
+      }
+     }
+    }
+   },
+   "7-5": {
+    "flush": 18.347517730496453,
+    "cost": {
+     "mean": 20.382978723404257,
+     "p50": 15,
+     "p95": 43,
+     "p99": 76,
+     "max": 88,
+     "n": 141
+    },
+    "upd": 0.3617021276595745,
+    "drw": 20.02127659574468,
+    "gap": {
+     "mean": 22.340425531914892,
+     "p50": 17,
+     "p95": 44,
+     "p99": 76,
+     "max": 89,
+     "n": 141
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 304,
+    "spots": [
+     {
+      "area": 0,
+      "x": 9,
+      "y": 13,
+      "mean": 12.86,
+      "p95": 15
+     },
+     {
+      "area": 0,
+      "x": 47,
+      "y": 13,
+      "mean": 12.24,
+      "p95": 17
+     },
+     {
+      "area": 0,
+      "x": 85,
+      "y": 13,
+      "mean": 22.31,
+      "p95": 26
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 10,
+      "mean": 19.71,
+      "p95": 25
+     },
+     {
+      "area": 1,
+      "x": 11,
+      "y": 5,
+      "mean": 14.48,
+      "p95": 17
+     },
+     {
+      "area": 1,
+      "x": 28,
+      "y": 10,
+      "mean": 13.33,
+      "p95": 15
+     },
+     {
+      "area": 2,
+      "x": 11,
+      "y": 13,
+      "mean": 44.13,
+      "p95": 76
+     },
+     {
+      "area": 2,
+      "x": 12,
+      "y": 8,
+      "mean": 40.22,
+      "p95": 71
+     },
+     {
+      "area": 2,
+      "x": 34,
+      "y": 13,
+      "mean": 50.86,
+      "p95": 88
+     }
+    ],
+    "areas": 3,
+    "trace": [
+     "0:3:true:693:10",
+     "1:3:true:693:10",
+     "2:3:true:831:12"
+    ],
+    "profile": {
+     "counts": {
+      "drawImage": 190.704,
+      "drawPx": 15085914,
+      "fillRectPx": 6612380,
+      "fillText": 10.852,
+      "strokeText": 0,
+      "grad": 27.704,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 2.667,
+      "inkPx": 86320,
+      "shadowBlur": 0.778,
+      "filter": 0,
+      "comp": 27.333,
+      "save": 56.148
+     },
+     "time": {
+      "update": 0.444,
+      "bg": 0.056,
+      "trip": 0,
+      "drawTiles": 0.278,
+      "drawShadows": 0.037,
+      "ink": 0.87,
+      "brady": 0.63,
+      "particles": 0.037,
+      "weather": 0.037,
+      "postfx": 0.056,
+      "worldfx": 0.019,
+      "drawHUD": 0.556,
+      "drawToast": 0,
+      "controls": 0.037,
+      "drawTutorial": 0.019,
+      "draw": 2.278,
+      "decor": 0.037
+     },
+     "scene": {
+      "parts": 13.667,
+      "weather": 12,
+      "ents": 8.111,
+      "entsUpd": 3.167,
+      "entsDrawn": 2.463
+     },
+     "pxBy": [
+      [
+       "bg",
+       4557
+      ],
+      [
+       "other",
+       3950
+      ],
+      [
+       "ink<other",
+       2779
+      ],
+      [
+       "postfx",
+       2752
+      ],
+      [
+       "ink<ent:FrOven/frOven",
+       2414
+      ],
+      [
+       "ink<brady",
+       2084
+      ],
+      [
+       "ink<ent:FrMirror/frMirror",
+       1953
+      ],
+      [
+       "drawTiles",
+       634
+      ],
+      [
+       "ink<ent:Gold/gold",
+       450
+      ],
+      [
+       "ink<ent:TourRing/ring",
+       100
+      ],
+      [
+       "brady",
+       13
+      ],
+      [
+       "decor",
+       5
+      ],
+      [
+       "drawHUD",
+       3
+      ],
+      [
+       "ent:M/frPoele",
+       3
+      ]
+     ],
+     "drawByClass": [
+      [
+       "FrMirror/frMirror",
+       0.167
+      ],
+      [
+       "Gold/gold",
+       0.074
+      ],
+      [
+       "FrOven/frOven",
+       0.056
+      ],
+      [
+       "TourDraft/tourDraft",
+       0.037
+      ],
+      [
+       "TourRing/ring",
+       0.019
+      ],
+      [
+       "Portal/portal",
+       0
+      ],
+      [
+       "FrChandelier/frChandelier",
+       0
+      ],
+      [
+       "M/frPoele",
+       0
+      ]
+     ]
+    },
+    "worstSpot": {
+     "area": 2,
+     "x": 34,
+     "y": 13,
+     "mean": 50.86,
+     "p95": 88,
+     "profile": {
+      "frames": 6,
+      "pxBy": [
+       [
+        "ink<other",
+        9229
+       ],
+       [
+        "ink<ent:FrOven/frOven",
+        7126
+       ],
+       [
+        "ink<ent:FrMirror/frMirror",
+        5459
+       ],
+       [
+        "other",
+        3950
+       ],
+       [
+        "bg",
+        3347
+       ],
+       [
+        "postfx",
+        2752
+       ],
+       [
+        "ink<brady",
+        852
+       ],
+       [
+        "drawTiles",
+        812
+       ],
+       [
+        "decor",
+        5
+       ],
+       [
+        "drawHUD",
+        3
+       ],
+       [
+        "brady",
+        0
+       ]
+      ],
+      "counts": {
+       "drawImage": 300,
+       "drawPx": 25839738,
+       "fillRectPx": 7694358,
+       "fillText": 13,
+       "strokeText": 0,
+       "grad": 34,
+       "getImageData": 1,
+       "putImageData": 0,
+       "ink": 5,
+       "inkPx": 172928,
+       "shadowBlur": 1,
+       "filter": 0,
+       "comp": 44,
+       "save": 62
+      },
+      "time": {
+       "update": 0.667,
+       "bg": 0.333,
+       "trip": 0,
+       "decor": 0,
+       "drawTiles": 0,
+       "drawShadows": 0,
+       "ink": 1.333,
+       "brady": 0.833,
+       "particles": 0,
+       "weather": 0,
+       "postfx": 0,
+       "worldfx": 0,
+       "drawHUD": 0.833,
+       "drawToast": 0,
+       "controls": 0,
+       "drawTutorial": 0,
+       "draw": 3
+      },
+      "drawByClass": [
+       [
+        "FrMirror/frMirror",
+        0.833
+       ],
+       [
+        "FrOven/frOven",
+        0
+       ]
+      ],
+      "updByClass": [
+       [
+        "FrMirror",
+        0.167
+       ],
+       [
+        "FrOven",
+        0
+       ]
+      ],
+      "scene": {
+       "parts": 13,
+       "weather": 0,
+       "ents": 5,
+       "entsUpd": 4,
+       "entsDrawn": 4
+      },
+      "profCost": {
+       "mean": 44.5,
+       "p50": 46,
+       "p95": 49,
+       "p99": 49,
+       "max": 49,
+       "n": 6
+      },
+      "at": {
+       "area": 2,
+       "x": 34,
+       "y": 13
+      }
+     }
+    }
+   },
+   "8-2": {
+    "flush": 12.487804878048781,
+    "cost": {
+     "mean": 14.841463414634147,
+     "p50": 14,
+     "p95": 23,
+     "p99": 25,
+     "max": 25,
+     "n": 82
+    },
+    "upd": 0.524390243902439,
+    "drw": 14.317073170731707,
+    "gap": {
+     "mean": 33.34146341463415,
+     "p50": 33,
+     "p95": 34,
+     "p99": 35,
+     "max": 35,
+     "n": 82
+    },
+    "heapStart": 0,
+    "heapEnd": 0,
+    "allocMBs": 0,
+    "gcs": 0,
+    "canvases": 313,
+    "spots": [
+     {
+      "area": 0,
+      "x": 9,
+      "y": 13,
+      "mean": 11.6,
+      "p95": 14
+     },
+     {
+      "area": 0,
+      "x": 47,
+      "y": 13,
+      "mean": 23,
+      "p95": 25
+     },
+     {
+      "area": 0,
+      "x": 85,
+      "y": 13,
+      "mean": 13.36,
+      "p95": 17
+     },
+     {
+      "area": 0,
+      "x": 123,
+      "y": 13,
+      "mean": 14.9,
+      "p95": 19
+     },
+     {
+      "area": 0,
+      "x": 161,
+      "y": 13,
+      "mean": 13.6,
+      "p95": 16
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 6,
+      "mean": 14.7,
+      "p95": 19
+     },
+     {
+      "area": 1,
+      "x": 9,
+      "y": 9,
+      "mean": 13.7,
+      "p95": 16
+     },
+     {
+      "area": 1,
+      "x": 28,
+      "y": 10,
+      "mean": 14.09,
+      "p95": 16
+     }
+    ],
+    "areas": 2,
+    "trace": [
+     "0:5:true:693:10",
+     "1:3:true:693:10"
+    ],
+    "profile": {
+     "counts": {
+      "drawImage": 164.687,
+      "drawPx": 8796264,
+      "fillRectPx": 5427298,
+      "fillText": 9,
+      "strokeText": 0,
+      "grad": 24.271,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 1.313,
+      "inkPx": 42641,
+      "shadowBlur": 1.75,
+      "filter": 0,
+      "comp": 17.229,
+      "save": 77.563
+     },
+     "time": {
+      "update": 0.417,
+      "bg": 0.021,
+      "trip": 0,
+      "decor": 0.083,
+      "drawTiles": 0.458,
+      "drawShadows": 0,
+      "ink": 0.604,
+      "brady": 0.646,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0.084,
+      "worldfx": 0.021,
+      "drawHUD": 0.583,
+      "drawToast": 0,
+      "controls": 0.084,
+      "drawTutorial": 0,
+      "draw": 2.313
+     },
+     "scene": {
+      "parts": 24.333,
+      "weather": 18.75,
+      "ents": 9.25,
+      "entsUpd": 2.292,
+      "entsDrawn": 1.896
+     },
+     "pxBy": [
+      [
+       "bg",
+       4277
+      ],
+      [
+       "other",
+       3713
+      ],
+      [
+       "postfx",
+       2576
+      ],
+      [
+       "ink<brady",
+       2275
+      ],
+      [
+       "drawTiles",
+       696
+      ],
+      [
+       "ink<ent:Gold/gold",
+       251
+      ],
+      [
+       "ink<ent:TourGearStand/gearStand",
+       233
+      ],
+      [
+       "ink<decor",
+       166
+      ],
+      [
+       "brady",
+       15
+      ],
+      [
+       "decor",
+       10
+      ],
+      [
+       "ent:NlClog/nlClog",
+       3
+      ],
+      [
+       "drawHUD",
+       3
+      ],
+      [
+       "ent:cls/nlBee",
+       3
+      ],
+      [
+       "ent:Gate/gate",
+       1
+      ]
+     ],
+     "drawByClass": [
+      [
+       "Sweeper/sweeper",
+       0.042
+      ],
+      [
+       "Gate/gate",
+       0.042
+      ],
+      [
+       "Portal/portal",
+       0.042
+      ],
+      [
+       "TourGearStand/gearStand",
+       0.042
+      ],
+      [
+       "anon/nlBulb",
+       0.021
+      ],
+      [
+       "cls/nlBee",
+       0.021
+      ],
+      [
+       "NlClog/nlClog",
+       0.021
+      ],
+      [
+       "Gold/gold",
+       0
+      ]
+     ]
+    },
+    "worstSpot": {
+     "area": 0,
+     "x": 47,
+     "y": 13,
+     "mean": 23,
+     "p95": 25,
+     "profile": {
+      "frames": 6,
+      "pxBy": [
+       [
+        "other",
+        3950
+       ],
+       [
+        "bg",
+        3357
+       ],
+       [
+        "postfx",
+        2752
+       ],
+       [
+        "ink<brady",
+        2438
+       ],
+       [
+        "ink<ent:Gold/gold",
+        2005
+       ],
+       [
+        "ink<ent:TourGearStand/gearStand",
+        1863
+       ],
+       [
+        "ink<decor",
+        1328
+       ],
+       [
+        "drawTiles",
+        844
+       ],
+       [
+        "brady",
+        16
+       ],
+       [
+        "drawHUD",
+        3
+       ],
+       [
+        "decor",
+        0
+       ]
+      ],
+      "counts": {
+       "drawImage": 262,
+       "drawPx": 12903988,
+       "fillRectPx": 5652824,
+       "fillText": 9,
+       "strokeText": 0,
+       "grad": 24.5,
+       "getImageData": 1,
+       "putImageData": 0,
+       "ink": 3.5,
+       "inkPx": 147109,
+       "shadowBlur": 1,
+       "filter": 0,
+       "comp": 32.5,
+       "save": 95.667
+      },
+      "time": {
+       "update": 0.333,
+       "bg": 0,
+       "trip": 0,
+       "decor": 0.167,
+       "drawTiles": 0.5,
+       "drawShadows": 0,
+       "ink": 0.833,
+       "brady": 0.5,
+       "particles": 0,
+       "weather": 0,
+       "postfx": 0,
+       "worldfx": 0,
+       "drawHUD": 0.667,
+       "drawToast": 0,
+       "controls": 0,
+       "drawTutorial": 0,
+       "draw": 2.667
+      },
+      "drawByClass": [
+       [
+        "TourGearStand/gearStand",
+        0.333
+       ],
+       [
+        "anon/nlBulb",
+        0.167
+       ],
+       [
+        "Sweeper/sweeper",
+        0.167
+       ],
+       [
+        "Gold/gold",
+        0
+       ]
+      ],
+      "updByClass": [
+       [
+        "",
+        0
+       ],
+       [
+        "TourGearStand",
+        0
+       ],
+       [
+        "Sweeper",
+        0
+       ],
+       [
+        "TourCurtain",
+        0
+       ],
+       [
+        "Gold",
+        0
+       ]
+      ],
+      "scene": {
+       "parts": 16.666666666666668,
+       "weather": 30,
+       "ents": 14,
+       "entsUpd": 4,
+       "entsDrawn": 4
+      },
+      "profCost": {
+       "mean": 27.5,
+       "p50": 26,
+       "p95": 39,
+       "p99": 39,
+       "max": 39,
+       "n": 6
+      },
+      "at": {
+       "area": 0,
+       "x": 47,
+       "y": 13
+      }
+     }
+    }
+   }
+  },
+  "bosses": {},
+  "maps": {}
+ },
+ "meta": {
+  "engine": "webkit",
+  "gpu": false,
+  "flush": true,
+  "throttle": 1,
+  "ms": 350,
+  "spots": 10,
+  "canvas": [
+   1688,
+   780
+  ],
+  "dpr": 2,
+  "label": "",
+  "date": "2026-11-11T15:26:10.254Z"
+ },
+ "levels": {
+  "1-1": {
+   "flush": 10.682051282051281,
+   "cost": {
+    "mean": 12.928205128205128,
+    "p50": 12,
+    "p95": 23,
+    "p99": 39,
+    "max": 45,
+    "n": 195
+   },
+   "upd": 0.35384615384615387,
+   "drw": 12.574358974358974,
+   "gap": {
+    "mean": 17.92820512820513,
+    "p50": 17,
+    "p95": 30,
+    "p99": 41,
+    "max": 50,
+    "n": 195
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 439,
+   "spots": [
+    {
+     "area": 0,
+     "x": 9,
+     "y": 11,
+     "mean": 12.52,
+     "p95": 16
+    },
+    {
+     "area": 0,
+     "x": 28,
+     "y": 26,
+     "mean": 13.95,
+     "p95": 23
+    },
+    {
+     "area": 0,
+     "x": 85,
+     "y": 17,
+     "mean": 19.13,
+     "p95": 39
+    },
+    {
+     "area": 0,
+     "x": 127,
+     "y": 16,
+     "mean": 12.62,
+     "p95": 15
+    },
+    {
+     "area": 0,
+     "x": 180,
+     "y": 11,
+     "mean": 12.42,
+     "p95": 27
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 6,
+     "mean": 15.67,
+     "p95": 45
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 10,
+     "mean": 11.33,
+     "p95": 16
+    },
+    {
+     "area": 1,
+     "x": 22,
+     "y": 6,
+     "mean": 12.65,
+     "p95": 24
+    },
+    {
+     "area": 1,
+     "x": 28,
+     "y": 10,
+     "mean": 10.17,
+     "p95": 15
+    },
+    {
+     "area": 1,
+     "x": 38,
+     "y": 10,
+     "mean": 10.29,
+     "p95": 14
+    }
+   ],
+   "areas": 2,
+   "trace": [
+    "0:5:true:693:10",
+    "1:5:true:693:10"
+   ],
+   "profile": {
+    "counts": {
+     "drawImage": 136.817,
+     "drawPx": 9273325,
+     "fillRectPx": 4432321,
+     "fillText": 8.9,
+     "strokeText": 0,
+     "grad": 22,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 1.033,
+     "inkPx": 68683,
+     "shadowBlur": 0.333,
+     "filter": 0,
+     "comp": 16.033,
+     "save": 38.517
+    },
+    "time": {
+     "update": 0.35,
+     "bg": 0.15,
+     "trip": 0.017,
+     "decor": 0.383,
+     "drawTiles": 0.233,
+     "drawShadows": 0.033,
+     "ink": 0.55,
+     "brady": 0.6,
+     "particles": 0,
+     "weather": 0.05,
+     "postfx": 0.1,
+     "worldfx": 0.017,
+     "drawHUD": 0.25,
+     "drawToast": 0,
+     "controls": 0.1,
+     "drawTutorial": 0.117,
+     "draw": 2.333,
+     "drawLighting": 0.067
+    },
+    "scene": {
+     "parts": 5.867,
+     "weather": 15,
+     "ents": 13,
+     "entsUpd": 3.233,
+     "entsDrawn": 2.467
+    },
+    "pxBy": [
+     [
+      "bg",
+      6053
+     ],
+     [
+      "other",
+      1975
+     ],
+     [
+      "ink<brady",
+      1450
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "drawLighting",
+      1261
+     ],
+     [
+      "drawTiles",
+      691
+     ],
+     [
+      "drawHUD",
+      576
+     ],
+     [
+      "decor",
+      187
+     ],
+     [
+      "ink<ent:Gold/gold",
+      36
+     ],
+     [
+      "ent:Gold/gold",
+      19
+     ],
+     [
+      "brady",
+      16
+     ],
+     [
+      "ent:MxElote/mxElote",
+      6
+     ],
+     [
+      "ent:cls/mxChihuahua",
+      2
+     ],
+     [
+      "ent:Gate/gate",
+      1
+     ]
+    ],
+    "drawByClass": [
+     [
+      "Gate/gate",
+      0.033
+     ],
+     [
+      "cls/mxChihuahua",
+      0.017
+     ],
+     [
+      "cls/mxXolo",
+      0.017
+     ],
+     [
+      "MxElote/mxElote",
+      0.017
+     ],
+     [
+      "Gold/gold",
+      0.017
+     ],
+     [
+      "Portal/portal",
+      0.017
+     ],
+     [
+      "Sign/sign",
+      0
+     ],
+     [
+      "Checkpoint/checkpoint",
+      0
+     ]
+    ]
+   },
+   "worstSpot": {
+    "area": 0,
+    "x": 85,
+    "y": 17,
+    "mean": 19.13,
+    "p95": 39,
+    "profile": {
+     "frames": 6,
+     "pxBy": [
+      [
+       "bg",
+       8904
+      ],
+      [
+       "other",
+       2633
+      ],
+      [
+       "postfx",
+       1431
+      ],
+      [
+       "ink<brady",
+       1423
+      ],
+      [
+       "drawTiles",
+       898
+      ],
+      [
+       "drawHUD",
+       576
+      ],
+      [
+       "decor",
+       354
+      ],
+      [
+       "ent:MxElote/mxElote",
+       21
+      ],
+      [
+       "brady",
+       16
+      ],
+      [
+       "weather",
+       2
+      ],
+      [
+       "ent:Gold/gold",
+       0
+      ]
+     ],
+     "counts": {
+      "drawImage": 162.667,
+      "drawPx": 9758716,
+      "fillRectPx": 6499235,
+      "fillText": 8,
+      "strokeText": 0,
+      "grad": 22.333,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 1,
+      "inkPx": 67970,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 14.5,
+      "save": 39.167
+     },
+     "time": {
+      "update": 0,
+      "bg": 0.333,
+      "trip": 0,
+      "decor": 0.667,
+      "drawTiles": 0,
+      "drawShadows": 0,
+      "ink": 0.833,
+      "brady": 1,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0.167,
+      "worldfx": 0,
+      "drawHUD": 0.333,
+      "drawToast": 0,
+      "controls": 0,
+      "drawTutorial": 0.167,
+      "draw": 2.667
+     },
+     "drawByClass": [
+      [
+       "Gold/gold",
+       0
+      ],
+      [
+       "MxElote/mxElote",
+       0
+      ]
+     ],
+     "updByClass": [
+      [
+       "mxMelonCart",
+       0
+      ],
+      [
+       "MxElote",
+       0
+      ],
+      [
+       "TourGearStand",
+       0
+      ],
+      [
+       "cls",
+       0
+      ],
+      [
+       "Geyser",
+       0
+      ],
+      [
+       "Gold",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 21.5,
+      "weather": 30,
+      "ents": 22,
+      "entsUpd": 5,
+      "entsDrawn": 2
+     },
+     "profCost": {
+      "mean": 16,
+      "p50": 17,
+      "p95": 18,
+      "p99": 18,
+      "max": 18,
+      "n": 6
+     },
+     "at": {
+      "area": 0,
+      "x": 85,
+      "y": 17
+     }
+    }
+   }
+  },
+  "1-2": {
+   "flush": 11.238095238095237,
+   "cost": {
+    "mean": 12.973544973544973,
+    "p50": 12,
+    "p95": 18,
+    "p99": 26,
+    "max": 29,
+    "n": 189
+   },
+   "upd": 0.291005291005291,
+   "drw": 12.682539682539682,
+   "gap": {
+    "mean": 16.88888888888889,
+    "p50": 17,
+    "p95": 20,
+    "p99": 30,
+    "max": 33,
+    "n": 189
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 161,
+   "spots": [
+    {
+     "area": 0,
+     "x": 3,
+     "y": 12,
+     "mean": 12.38,
+     "p95": 16
+    },
+    {
+     "area": 0,
+     "x": 25,
+     "y": 11,
+     "mean": 13.76,
+     "p95": 18
+    },
+    {
+     "area": 0,
+     "x": 64,
+     "y": 11,
+     "mean": 12.57,
+     "p95": 15
+    },
+    {
+     "area": 0,
+     "x": 104,
+     "y": 2,
+     "mean": 14.95,
+     "p95": 19
+    },
+    {
+     "area": 0,
+     "x": 217,
+     "y": 8,
+     "mean": 13.33,
+     "p95": 16
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 7,
+     "mean": 12.71,
+     "p95": 17
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 10,
+     "mean": 10.55,
+     "p95": 13
+    },
+    {
+     "area": 1,
+     "x": 28,
+     "y": 4,
+     "mean": 11.95,
+     "p95": 16
+    },
+    {
+     "area": 1,
+     "x": 28,
+     "y": 10,
+     "mean": 14.89,
+     "p95": 29
+    }
+   ],
+   "areas": 2,
+   "trace": [
+    "0:5:true:693:10",
+    "1:4:true:693:10"
+   ],
+   "profile": {
+    "counts": {
+     "drawImage": 96.333,
+     "drawPx": 7453927,
+     "fillRectPx": 5442810,
+     "fillText": 5.333,
+     "strokeText": 0,
+     "grad": 25.944,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 1,
+     "inkPx": 67970,
+     "shadowBlur": 0,
+     "filter": 0,
+     "comp": 14.5,
+     "save": 33.537
+    },
+    "time": {
+     "update": 0.445,
+     "bg": 0.278,
+     "trip": 0,
+     "decor": 0.019,
+     "drawTiles": 0.093,
+     "drawShadows": 0.019,
+     "ink": 0.482,
+     "brady": 0.537,
+     "particles": 0,
+     "weather": 0.037,
+     "postfx": 0.037,
+     "worldfx": 0.037,
+     "drawHUD": 0.241,
+     "drawToast": 0.019,
+     "controls": 0.074,
+     "drawTutorial": 0.019,
+     "draw": 1.704
+    },
+    "scene": {
+     "parts": 6.426,
+     "weather": 16.667,
+     "ents": 15.333,
+     "entsUpd": 2.444,
+     "entsDrawn": 2.333
+    },
+    "pxBy": [
+     [
+      "bg",
+      6499
+     ],
+     [
+      "other",
+      2633
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "ink<brady",
+      1274
+     ],
+     [
+      "drawHUD",
+      576
+     ],
+     [
+      "drawTiles",
+      300
+     ],
+     [
+      "ent:TourRailTrack/railTrack",
+      148
+     ],
+     [
+      "brady",
+      12
+     ],
+     [
+      "ent:Gold/gold",
+      9
+     ],
+     [
+      "decor",
+      8
+     ],
+     [
+      "ent:cls/mxXolo",
+      4
+     ],
+     [
+      "ent:TourRailCart/railCart",
+      2
+     ],
+     [
+      "ent:TourRailSwitch/railSwitch",
+      0
+     ],
+     [
+      "ent:Sign/sign",
+      0
+     ]
+    ],
+    "drawByClass": [
+     [
+      "TourRailTrack/railTrack",
+      0.093
+     ],
+     [
+      "TourRailCart/railCart",
+      0.037
+     ],
+     [
+      "cls/mxXolo",
+      0.019
+     ],
+     [
+      "TourRailSwitch/railSwitch",
+      0.019
+     ],
+     [
+      "cls/mxHeron",
+      0.019
+     ],
+     [
+      "Portal/portal",
+      0.019
+     ],
+     [
+      "Sign/sign",
+      0
+     ],
+     [
+      "FallingPlatform/fplat",
+      0
+     ]
+    ]
+   },
+   "worstSpot": {
+    "area": 0,
+    "x": 104,
+    "y": 2,
+    "mean": 14.95,
+    "p95": 19,
+    "profile": {
+     "frames": 6,
+     "pxBy": [
+      [
+       "bg",
+       6256
+      ],
+      [
+       "other",
+       2633
+      ],
+      [
+       "postfx",
+       1431
+      ],
+      [
+       "ink<brady",
+       689
+      ],
+      [
+       "drawHUD",
+       576
+      ],
+      [
+       "drawTiles",
+       167
+      ],
+      [
+       "ent:TourRailTrack/railTrack",
+       122
+      ],
+      [
+       "decor",
+       9
+      ],
+      [
+       "brady",
+       1
+      ],
+      [
+       "ent:cls/mxHeron",
+       0
+      ]
+     ],
+     "counts": {
+      "drawImage": 72,
+      "drawPx": 6479732,
+      "fillRectPx": 5403122,
+      "fillText": 5,
+      "strokeText": 0,
+      "grad": 18,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 1,
+      "inkPx": 67970,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 14.5,
+      "save": 46
+     },
+     "time": {
+      "update": 0.5,
+      "bg": 0.5,
+      "trip": 0,
+      "decor": 0,
+      "drawTiles": 0,
+      "drawShadows": 0,
+      "ink": 0.167,
+      "brady": 0.333,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0.167,
+      "worldfx": 0.167,
+      "drawHUD": 0.167,
+      "drawToast": 0.167,
+      "controls": 0,
+      "drawTutorial": 0,
+      "draw": 2
+     },
+     "drawByClass": [
+      [
+       "TourRailTrack/railTrack",
+       0.333
+      ],
+      [
+       "cls/mxHeron",
+       0.167
+      ],
+      [
+       "FallingPlatform/fplat",
+       0
+      ]
+     ],
+     "updByClass": [
+      [
+       "FallingPlatform",
+       0
+      ],
+      [
+       "cls",
+       0
+      ],
+      [
+       "TourCurtain",
+       0
+      ],
+      [
+       "TourRailTrack",
+       0
+      ],
+      [
+       "TourRailCart",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 14,
+      "weather": 30,
+      "ents": 26,
+      "entsUpd": 3,
+      "entsDrawn": 3
+     },
+     "profCost": {
+      "mean": 13.333333333333334,
+      "p50": 15,
+      "p95": 16,
+      "p99": 16,
+      "max": 16,
+      "n": 6
+     },
+     "at": {
+      "area": 0,
+      "x": 104,
+      "y": 2
+     }
+    }
+   }
+  },
+  "1-6": {
+   "flush": 15.256880733944953,
+   "cost": {
+    "mean": 17.211009174311926,
+    "p50": 12,
+    "p95": 55,
+    "p99": 95,
+    "max": 100,
+    "n": 109
+   },
+   "upd": 0.3853211009174312,
+   "drw": 16.825688073394495,
+   "gap": {
+    "mean": 22.94495412844037,
+    "p50": 17,
+    "p95": 56,
+    "p99": 95,
+    "max": 101,
+    "n": 109
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 243,
+   "spots": [
+    {
+     "area": 0,
+     "x": 5,
+     "y": 98,
+     "mean": 13.1,
+     "p95": 16
+    },
+    {
+     "area": 0,
+     "x": 6,
+     "y": 166,
+     "mean": 19.31,
+     "p95": 34
+    },
+    {
+     "area": 0,
+     "x": 10,
+     "y": 115,
+     "mean": 40,
+     "p95": 95
+    },
+    {
+     "area": 0,
+     "x": 15,
+     "y": 26,
+     "mean": 14.75,
+     "p95": 74
+    },
+    {
+     "area": 0,
+     "x": 15,
+     "y": 62,
+     "mean": 47.14,
+     "p95": 100
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 8,
+     "mean": 10.52,
+     "p95": 13
+    },
+    {
+     "area": 1,
+     "x": 26,
+     "y": 8,
+     "mean": 9.43,
+     "p95": 12
+    }
+   ],
+   "areas": 2,
+   "trace": [
+    "0:5:true:762:11",
+    "1:2:true:693:10"
+   ],
+   "profile": {
+    "counts": {
+     "drawImage": 109.929,
+     "drawPx": 7769292,
+     "fillRectPx": 3636520,
+     "fillText": 5.381,
+     "strokeText": 0,
+     "grad": 19.619,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 1.143,
+     "inkPx": 61743,
+     "shadowBlur": 0.31,
+     "filter": 0,
+     "comp": 18.357,
+     "save": 31.095
+    },
+    "time": {
+     "update": 0.357,
+     "bg": 0.119,
+     "trip": 0,
+     "decor": 0.119,
+     "drawTiles": 0.143,
+     "drawShadows": 0.024,
+     "ink": 0.452,
+     "brady": 0.452,
+     "particles": 0.048,
+     "weather": 0,
+     "drawLighting": 0.119,
+     "postfx": 0.048,
+     "worldfx": 0,
+     "drawHUD": 0.262,
+     "drawToast": 0.024,
+     "controls": 0.024,
+     "drawTutorial": 0,
+     "draw": 1.619
+    },
+    "scene": {
+     "parts": 18.452,
+     "weather": 17.143,
+     "ents": 12.952,
+     "entsUpd": 4.524,
+     "entsDrawn": 1.024
+    },
+    "pxBy": [
+     [
+      "bg",
+      3075
+     ],
+     [
+      "other",
+      2633
+     ],
+     [
+      "drawLighting",
+      1811
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "ink<brady",
+      1249
+     ],
+     [
+      "drawHUD",
+      576
+     ],
+     [
+      "drawTiles",
+      469
+     ],
+     [
+      "ink<other",
+      135
+     ],
+     [
+      "brady",
+      14
+     ],
+     [
+      "ent:Gold/gold",
+      12
+     ],
+     [
+      "ent:Checkpoint/checkpoint",
+      0
+     ],
+     [
+      "ent:Gate/gate",
+      0
+     ]
+    ],
+    "drawByClass": [
+     [
+      "Gold/gold",
+      0.048
+     ],
+     [
+      "Gate/gate",
+      0.024
+     ],
+     [
+      "Checkpoint/checkpoint",
+      0.024
+     ],
+     [
+      "Portal/portal",
+      0
+     ]
+    ]
+   },
+   "worstSpot": {
+    "area": 0,
+    "x": 15,
+    "y": 62,
+    "mean": 47.14,
+    "p95": 100,
+    "profile": {
+     "frames": 6,
+     "pxBy": [
+      [
+       "bg",
+       2787
+      ],
+      [
+       "other",
+       2633
+      ],
+      [
+       "drawLighting",
+       1760
+      ],
+      [
+       "postfx",
+       1431
+      ],
+      [
+       "ink<brady",
+       1182
+      ],
+      [
+       "ink<other",
+       947
+      ],
+      [
+       "drawHUD",
+       576
+      ],
+      [
+       "drawTiles",
+       262
+      ],
+      [
+       "ent:Gold/gold",
+       18
+      ],
+      [
+       "brady",
+       13
+      ]
+     ],
+     "counts": {
+      "drawImage": 100.333,
+      "drawPx": 7895081,
+      "fillRectPx": 3712812,
+      "fillText": 5.667,
+      "strokeText": 0,
+      "grad": 17.833,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 2,
+      "inkPx": 71572,
+      "shadowBlur": 0.167,
+      "filter": 0,
+      "comp": 23.5,
+      "save": 29.667
+     },
+     "time": {
+      "update": 0.333,
+      "bg": 0.167,
+      "trip": 0,
+      "decor": 0.167,
+      "drawTiles": 0,
+      "drawShadows": 0,
+      "ink": 0.667,
+      "brady": 0.667,
+      "particles": 0.167,
+      "weather": 0,
+      "drawLighting": 0,
+      "postfx": 0,
+      "worldfx": 0,
+      "drawHUD": 0.333,
+      "drawToast": 0,
+      "controls": 0,
+      "drawTutorial": 0,
+      "draw": 1.833
+     },
+     "drawByClass": [
+      [
+       "Gold/gold",
+       0
+      ]
+     ],
+     "updByClass": [
+      [
+       "cls",
+       0
+      ],
+      [
+       "Gold",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 16.333333333333332,
+      "weather": 24,
+      "ents": 28.666666666666668,
+      "entsUpd": 8.666666666666666,
+      "entsDrawn": 1.6666666666666667
+     },
+     "profCost": {
+      "mean": 16,
+      "p50": 17,
+      "p95": 18,
+      "p99": 18,
+      "max": 18,
+      "n": 6
+     },
+     "at": {
+      "area": 0,
+      "x": 15,
+      "y": 62
+     }
+    }
+   }
+  },
+  "4-5": {
+   "flush": 11.359116022099448,
+   "cost": {
+    "mean": 13.143646408839778,
+    "p50": 12,
+    "p95": 22,
+    "p99": 26,
+    "max": 29,
+    "n": 181
+   },
+   "upd": 0.39779005524861877,
+   "drw": 12.74585635359116,
+   "gap": {
+    "mean": 17.46961325966851,
+    "p50": 17,
+    "p95": 24,
+    "p99": 30,
+    "max": 34,
+    "n": 181
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 387,
+   "spots": [
+    {
+     "area": 0,
+     "x": 9,
+     "y": 13,
+     "mean": 11.95,
+     "p95": 14
+    },
+    {
+     "area": 0,
+     "x": 47,
+     "y": 13,
+     "mean": 13.21,
+     "p95": 26
+    },
+    {
+     "area": 0,
+     "x": 87,
+     "y": 12,
+     "mean": 11.24,
+     "p95": 15
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 4,
+     "mean": 10.9,
+     "p95": 15
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 9,
+     "mean": 9.86,
+     "p95": 12
+    },
+    {
+     "area": 1,
+     "x": 26,
+     "y": 9,
+     "mean": 9.95,
+     "p95": 11
+    },
+    {
+     "area": 2,
+     "x": 11,
+     "y": 9,
+     "mean": 15.24,
+     "p95": 20
+    },
+    {
+     "area": 2,
+     "x": 11,
+     "y": 13,
+     "mean": 18.61,
+     "p95": 25
+    },
+    {
+     "area": 2,
+     "x": 35,
+     "y": 13,
+     "mean": 18.94,
+     "p95": 29
+    }
+   ],
+   "areas": 3,
+   "trace": [
+    "0:3:true:693:10",
+    "1:3:true:693:10",
+    "2:3:true:831:12"
+   ],
+   "profile": {
+    "counts": {
+     "drawImage": 160.555,
+     "drawPx": 10017085,
+     "fillRectPx": 4659456,
+     "fillText": 6.722,
+     "strokeText": 0,
+     "grad": 18.833,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 2.852,
+     "inkPx": 138722,
+     "shadowBlur": 0.389,
+     "filter": 0,
+     "comp": 18.111,
+     "save": 46.315
+    },
+    "time": {
+     "update": 0.371,
+     "bg": 0.167,
+     "trip": 0,
+     "decor": 0.019,
+     "drawTiles": 0.185,
+     "drawShadows": 0.019,
+     "ink": 0.741,
+     "brady": 0.593,
+     "particles": 0.019,
+     "weather": 0.037,
+     "postfx": 0.037,
+     "worldfx": 0,
+     "drawHUD": 0.204,
+     "drawToast": 0,
+     "controls": 0.093,
+     "drawTutorial": 0,
+     "draw": 1.722
+    },
+    "scene": {
+     "parts": 18.907,
+     "weather": 12,
+     "ents": 6.222,
+     "entsUpd": 3.444,
+     "entsDrawn": 3.222
+    },
+    "pxBy": [
+     [
+      "bg",
+      8072
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "ink<brady",
+      1382
+     ],
+     [
+      "other",
+      1317
+     ],
+     [
+      "ink<other",
+      909
+     ],
+     [
+      "drawTiles",
+      606
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "decor",
+      169
+     ],
+     [
+      "ink<ent:Gold/gold",
+      62
+     ],
+     [
+      "ink<ent:anon/mzShellPot",
+      56
+     ],
+     [
+      "ink<ent:anon/mzShellBucket",
+      35
+     ],
+     [
+      "ink<ent:anon/mzShellBottle",
+      35
+     ],
+     [
+      "brady",
+      14
+     ],
+     [
+      "ent:Gold/gold",
+      7
+     ]
+    ],
+    "drawByClass": [
+     [
+      "Gold/gold",
+      0.019
+     ],
+     [
+      "Checkpoint/checkpoint",
+      0.019
+     ],
+     [
+      "anon/mzShellPot",
+      0.019
+     ],
+     [
+      "MzChiliBasket/mzChiliBasket",
+      0.019
+     ],
+     [
+      "anon/mzShellBucket",
+      0.019
+     ],
+     [
+      "Sign/sign",
+      0
+     ],
+     [
+      "TourTrapdoor/trapdoor",
+      0
+     ],
+     [
+      "cls/mzPrawn",
+      0
+     ]
+    ]
+   },
+   "worstSpot": {
+    "area": 2,
+    "x": 35,
+    "y": 13,
+    "mean": 18.94,
+    "p95": 29,
+    "profile": {
+     "frames": 6,
+     "pxBy": [
+      [
+       "bg",
+       8298
+      ],
+      [
+       "ink<other",
+       3410
+      ],
+      [
+       "postfx",
+       1431
+      ],
+      [
+       "other",
+       1317
+      ],
+      [
+       "ink<brady",
+       991
+      ],
+      [
+       "drawHUD",
+       575
+      ],
+      [
+       "drawTiles",
+       529
+      ],
+      [
+       "decor",
+       491
+      ],
+      [
+       "ink<ent:anon/mzShellPot",
+       130
+      ],
+      [
+       "ink<ent:anon/mzShellBucket",
+       130
+      ],
+      [
+       "ink<ent:anon/mzShellBottle",
+       130
+      ],
+      [
+       "ent:Gold/gold",
+       22
+      ],
+      [
+       "brady",
+       11
+      ],
+      [
+       "ent:MzChiliBasket/mzChiliBasket",
+       2
+      ]
+     ],
+     "counts": {
+      "drawImage": 211,
+      "drawPx": 12384961,
+      "fillRectPx": 5079846,
+      "fillText": 8.5,
+      "strokeText": 0,
+      "grad": 13,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 6,
+      "inkPx": 251771,
+      "shadowBlur": 0.5,
+      "filter": 0,
+      "comp": 25.5,
+      "save": 44
+     },
+     "time": {
+      "update": 0.5,
+      "bg": 0,
+      "trip": 0,
+      "decor": 0,
+      "drawTiles": 0.5,
+      "drawShadows": 0,
+      "ink": 1.333,
+      "brady": 0.5,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0,
+      "worldfx": 0,
+      "drawHUD": 0.333,
+      "drawToast": 0,
+      "controls": 0,
+      "drawTutorial": 0,
+      "draw": 2.167
+     },
+     "drawByClass": [
+      [
+       "Gold/gold",
+       0
+      ],
+      [
+       "MzChiliBasket/mzChiliBasket",
+       0
+      ],
+      [
+       "anon/mzShellPot",
+       0
+      ],
+      [
+       "anon/mzShellBucket",
+       0
+      ],
+      [
+       "anon/mzShellBottle",
+       0
+      ]
+     ],
+     "updByClass": [
+      [
+       "MzChiliBasket",
+       0
+      ],
+      [
+       "",
+       0
+      ],
+      [
+       "Gold",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 16.333333333333332,
+      "weather": 0,
+      "ents": 8,
+      "entsUpd": 7,
+      "entsDrawn": 7
+     },
+     "profCost": {
+      "mean": 17.666666666666668,
+      "p50": 18,
+      "p95": 20,
+      "p99": 20,
+      "max": 20,
+      "n": 6
+     },
+     "at": {
+      "area": 2,
+      "x": 35,
+      "y": 13
+     }
+    }
+   }
+  },
+  "6-4": {
+   "flush": 13.69281045751634,
+   "cost": {
+    "mean": 15.450980392156863,
+    "p50": 14,
+    "p95": 24,
+    "p99": 34,
+    "max": 41,
+    "n": 153
+   },
+   "upd": 0.3137254901960784,
+   "drw": 15.137254901960784,
+   "gap": {
+    "mean": 18.431372549019606,
+    "p50": 17,
+    "p95": 25,
+    "p99": 35,
+    "max": 42,
+    "n": 153
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 360,
+   "spots": [
+    {
+     "area": 0,
+     "x": 10,
+     "y": 11,
+     "mean": 15.1,
+     "p95": 20
+    },
+    {
+     "area": 0,
+     "x": 52,
+     "y": 15,
+     "mean": 16.95,
+     "p95": 24
+    },
+    {
+     "area": 0,
+     "x": 115,
+     "y": 15,
+     "mean": 24.13,
+     "p95": 41
+    },
+    {
+     "area": 0,
+     "x": 157,
+     "y": 18,
+     "mean": 23.4,
+     "p95": 34
+    },
+    {
+     "area": 0,
+     "x": 199,
+     "y": 22,
+     "mean": 16.75,
+     "p95": 24
+    },
+    {
+     "area": 1,
+     "x": 8,
+     "y": 7,
+     "mean": 11.38,
+     "p95": 15
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 10,
+     "mean": 10.57,
+     "p95": 13
+    },
+    {
+     "area": 1,
+     "x": 28,
+     "y": 10,
+     "mean": 10.29,
+     "p95": 12
+    }
+   ],
+   "areas": 2,
+   "trace": [
+    "0:5:true:762:11",
+    "1:3:true:693:10"
+   ],
+   "profile": {
+    "counts": {
+     "drawImage": 149.521,
+     "drawPx": 8466091,
+     "fillRectPx": 4347116,
+     "fillText": 4.938,
+     "strokeText": 0,
+     "grad": 16.833,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 2.229,
+     "inkPx": 104836,
+     "shadowBlur": 0.042,
+     "filter": 0,
+     "comp": 21.417,
+     "save": 41.896
+    },
+    "time": {
+     "update": 0.375,
+     "bg": 0.104,
+     "trip": 0.042,
+     "ink": 0.75,
+     "decor": 0.167,
+     "drawTiles": 0.146,
+     "drawShadows": 0.021,
+     "brady": 0.479,
+     "particles": 0.042,
+     "weather": 0.021,
+     "postfx": 0.084,
+     "worldfx": 0,
+     "drawHUD": 0.25,
+     "drawToast": 0.063,
+     "controls": 0.083,
+     "drawTutorial": 0.021,
+     "draw": 1.896
+    },
+    "scene": {
+     "parts": 14.5,
+     "weather": 22.5,
+     "ents": 8.125,
+     "entsUpd": 2,
+     "entsDrawn": 1.479
+    },
+    "pxBy": [
+     [
+      "bg",
+      5928
+     ],
+     [
+      "other",
+      2140
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "ink<brady",
+      1324
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "drawTiles",
+      559
+     ],
+     [
+      "ink<decor",
+      370
+     ],
+     [
+      "ink<ent:TourGearStand/gearStand",
+      294
+     ],
+     [
+      "decor",
+      71
+     ],
+     [
+      "ink<other",
+      49
+     ],
+     [
+      "ink<ent:Gold/gold",
+      46
+     ],
+     [
+      "brady",
+      14
+     ],
+     [
+      "ent:Gold/gold",
+      12
+     ],
+     [
+      "ent:cls/esLizard",
+      1
+     ]
+    ],
+    "drawByClass": [
+     [
+      "TourGearStand/gearStand",
+      0.146
+     ],
+     [
+      "cls/esLizard",
+      0.042
+     ],
+     [
+      "Portal/portal",
+      0.042
+     ],
+     [
+      "Gold/gold",
+      0.021
+     ],
+     [
+      "Checkpoint/checkpoint",
+      0
+     ]
+    ]
+   },
+   "worstSpot": {
+    "area": 0,
+    "x": 115,
+    "y": 15,
+    "mean": 24.13,
+    "p95": 41,
+    "profile": {
+     "frames": 6,
+     "pxBy": [
+      [
+       "bg",
+       5101
+      ],
+      [
+       "other",
+       2633
+      ],
+      [
+       "postfx",
+       1431
+      ],
+      [
+       "ink<decor",
+       1353
+      ],
+      [
+       "ink<brady",
+       1182
+      ],
+      [
+       "ink<ent:TourGearStand/gearStand",
+       1117
+      ],
+      [
+       "drawHUD",
+       575
+      ],
+      [
+       "drawTiles",
+       342
+      ],
+      [
+       "brady",
+       13
+      ],
+      [
+       "ent:Checkpoint/checkpoint",
+       0
+      ],
+      [
+       "particles",
+       0
+      ]
+     ],
+     "counts": {
+      "drawImage": 166.333,
+      "drawPx": 9094510,
+      "fillRectPx": 4653652,
+      "fillText": 5,
+      "strokeText": 0,
+      "grad": 16,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 4,
+      "inkPx": 174176,
+      "shadowBlur": 0,
+      "filter": 0,
+      "comp": 32.5,
+      "save": 43.333
+     },
+     "time": {
+      "update": 0.5,
+      "bg": 0,
+      "trip": 0.167,
+      "ink": 0.5,
+      "decor": 0.167,
+      "drawTiles": 0.167,
+      "drawShadows": 0,
+      "brady": 0.333,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0,
+      "worldfx": 0,
+      "drawHUD": 0.333,
+      "drawToast": 0,
+      "controls": 0,
+      "drawTutorial": 0,
+      "draw": 1.5
+     },
+     "drawByClass": [
+      [
+       "TourGearStand/gearStand",
+       0.167
+      ],
+      [
+       "Checkpoint/checkpoint",
+       0
+      ]
+     ],
+     "updByClass": [
+      [
+       "Checkpoint",
+       0
+      ],
+      [
+       "TourGearStand",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 11.333333333333334,
+      "weather": 36,
+      "ents": 12,
+      "entsUpd": 2,
+      "entsDrawn": 1.1666666666666667
+     },
+     "profCost": {
+      "mean": 25.833333333333332,
+      "p50": 27,
+      "p95": 28,
+      "p99": 28,
+      "max": 28,
+      "n": 6
+     },
+     "at": {
+      "area": 0,
+      "x": 115,
+      "y": 15
+     }
+    }
+   }
+  },
+  "6-5": {
+   "flush": 12.19774011299435,
+   "cost": {
+    "mean": 14.033898305084746,
+    "p50": 13,
+    "p95": 24,
+    "p99": 32,
+    "max": 35,
+    "n": 177
+   },
+   "upd": 0.3107344632768362,
+   "drw": 13.72316384180791,
+   "gap": {
+    "mean": 17.677966101694917,
+    "p50": 17,
+    "p95": 27,
+    "p99": 37,
+    "max": 40,
+    "n": 177
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 342,
+   "spots": [
+    {
+     "area": 0,
+     "x": 9,
+     "y": 13,
+     "mean": 11.9,
+     "p95": 14
+    },
+    {
+     "area": 0,
+     "x": 47,
+     "y": 13,
+     "mean": 12.19,
+     "p95": 15
+    },
+    {
+     "area": 0,
+     "x": 69,
+     "y": 4,
+     "mean": 13.58,
+     "p95": 26
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 5,
+     "mean": 10.71,
+     "p95": 12
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 10,
+     "mean": 11.62,
+     "p95": 14
+    },
+    {
+     "area": 1,
+     "x": 19,
+     "y": 7,
+     "mean": 11.76,
+     "p95": 14
+    },
+    {
+     "area": 2,
+     "x": 11,
+     "y": 9,
+     "mean": 17.05,
+     "p95": 24
+    },
+    {
+     "area": 2,
+     "x": 11,
+     "y": 13,
+     "mean": 23.36,
+     "p95": 35
+    },
+    {
+     "area": 2,
+     "x": 35,
+     "y": 13,
+     "mean": 17.68,
+     "p95": 26
+    }
+   ],
+   "areas": 3,
+   "trace": [
+    "0:3:true:693:10",
+    "1:3:true:693:10",
+    "2:3:true:831:12"
+   ],
+   "profile": {
+    "counts": {
+     "drawImage": 145.945,
+     "drawPx": 8340368,
+     "fillRectPx": 3845428,
+     "fillText": 6.926,
+     "strokeText": 0,
+     "grad": 21.241,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 2.37,
+     "inkPx": 129147,
+     "shadowBlur": 0.37,
+     "filter": 0,
+     "comp": 17.426,
+     "save": 47.796
+    },
+    "time": {
+     "update": 0.296,
+     "bg": 0.204,
+     "trip": 0,
+     "decor": 0,
+     "drawTiles": 0.241,
+     "drawShadows": 0.056,
+     "ink": 0.648,
+     "brady": 0.556,
+     "particles": 0.037,
+     "weather": 0.019,
+     "postfx": 0.074,
+     "worldfx": 0.019,
+     "drawHUD": 0.185,
+     "drawToast": 0,
+     "controls": 0.13,
+     "drawTutorial": 0.019,
+     "draw": 1.796
+    },
+    "scene": {
+     "parts": 20.241,
+     "weather": 10,
+     "ents": 5.333,
+     "entsUpd": 3,
+     "entsDrawn": 2.13
+    },
+    "pxBy": [
+     [
+      "bg",
+      4591
+     ],
+     [
+      "other",
+      2194
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "ink<brady",
+      1344
+     ],
+     [
+      "ink<other",
+      1228
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "drawTiles",
+      535
+     ],
+     [
+      "decor",
+      185
+     ],
+     [
+      "ink<ent:EsCrate/esCrate",
+      46
+     ],
+     [
+      "ink<ent:Gold/gold",
+      40
+     ],
+     [
+      "brady",
+      13
+     ],
+     [
+      "ent:Gold/gold",
+      4
+     ],
+     [
+      "weather",
+      1
+     ],
+     [
+      "ent:Checkpoint/checkpoint",
+      0
+     ]
+    ],
+    "drawByClass": [
+     [
+      "Gold/gold",
+      0.019
+     ],
+     [
+      "Portal/portal",
+      0
+     ],
+     [
+      "Checkpoint/checkpoint",
+      0
+     ],
+     [
+      "Spring/spring",
+      0
+     ],
+     [
+      "EsCrackers/esCrackers",
+      0
+     ],
+     [
+      "EsCrate/esCrate",
+      0
+     ]
+    ]
+   },
+   "worstSpot": {
+    "area": 2,
+    "x": 11,
+    "y": 13,
+    "mean": 23.36,
+    "p95": 35,
+    "profile": {
+     "frames": 6,
+     "pxBy": [
+      [
+       "ink<other",
+       4055
+      ],
+      [
+       "bg",
+       3352
+      ],
+      [
+       "postfx",
+       1431
+      ],
+      [
+       "other",
+       1317
+      ],
+      [
+       "ink<brady",
+       1088
+      ],
+      [
+       "drawTiles",
+       813
+      ],
+      [
+       "drawHUD",
+       575
+      ],
+      [
+       "decor",
+       255
+      ],
+      [
+       "ink<ent:EsCrate/esCrate",
+       160
+      ],
+      [
+       "brady",
+       11
+      ]
+     ],
+     "counts": {
+      "drawImage": 221.833,
+      "drawPx": 10488757,
+      "fillRectPx": 2567960,
+      "fillText": 8.5,
+      "strokeText": 0,
+      "grad": 17,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 5,
+      "inkPx": 249126,
+      "shadowBlur": 0.5,
+      "filter": 0,
+      "comp": 20.5,
+      "save": 49
+     },
+     "time": {
+      "update": 0.333,
+      "bg": 0.167,
+      "trip": 0,
+      "decor": 0,
+      "drawTiles": 0.167,
+      "drawShadows": 0,
+      "ink": 1,
+      "brady": 0.333,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0.333,
+      "worldfx": 0,
+      "drawHUD": 0.167,
+      "drawToast": 0,
+      "controls": 0,
+      "drawTutorial": 0,
+      "draw": 1.833
+     },
+     "drawByClass": [
+      [
+       "EsCrate/esCrate",
+       0
+      ]
+     ],
+     "updByClass": [
+      [
+       "EsCrate",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 16.333333333333332,
+      "weather": 0,
+      "ents": 5,
+      "entsUpd": 4,
+      "entsDrawn": 4
+     },
+     "profCost": {
+      "mean": 18.166666666666668,
+      "p50": 19,
+      "p95": 21,
+      "p99": 21,
+      "max": 21,
+      "n": 6
+     },
+     "at": {
+      "area": 2,
+      "x": 11,
+      "y": 13
+     }
+    }
+   }
+  },
+  "7-5": {
+   "flush": 11.345945945945946,
+   "cost": {
+    "mean": 13.254054054054054,
+    "p50": 12,
+    "p95": 20,
+    "p99": 23,
+    "max": 24,
+    "n": 185
+   },
+   "upd": 0.3621621621621622,
+   "drw": 12.891891891891891,
+   "gap": {
+    "mean": 17.005405405405405,
+    "p50": 17,
+    "p95": 20,
+    "p99": 25,
+    "max": 31,
+    "n": 185
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 335,
+   "spots": [
+    {
+     "area": 0,
+     "x": 9,
+     "y": 13,
+     "mean": 10.95,
+     "p95": 13
+    },
+    {
+     "area": 0,
+     "x": 47,
+     "y": 13,
+     "mean": 10.48,
+     "p95": 12
+    },
+    {
+     "area": 0,
+     "x": 85,
+     "y": 13,
+     "mean": 17.05,
+     "p95": 23
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 10,
+     "mean": 11.5,
+     "p95": 21
+    },
+    {
+     "area": 1,
+     "x": 11,
+     "y": 5,
+     "mean": 10.48,
+     "p95": 14
+    },
+    {
+     "area": 1,
+     "x": 28,
+     "y": 10,
+     "mean": 10.81,
+     "p95": 12
+    },
+    {
+     "area": 2,
+     "x": 11,
+     "y": 13,
+     "mean": 15.48,
+     "p95": 17
+    },
+    {
+     "area": 2,
+     "x": 12,
+     "y": 8,
+     "mean": 17.16,
+     "p95": 24
+    },
+    {
+     "area": 2,
+     "x": 34,
+     "y": 13,
+     "mean": 15.86,
+     "p95": 19
+    }
+   ],
+   "areas": 3,
+   "trace": [
+    "0:3:true:693:10",
+    "1:3:true:693:10",
+    "2:3:true:831:12"
+   ],
+   "profile": {
+    "counts": {
+     "drawImage": 155.537,
+     "drawPx": 8122993,
+     "fillRectPx": 3817057,
+     "fillText": 7.556,
+     "strokeText": 0,
+     "grad": 19.111,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 2.481,
+     "inkPx": 138950,
+     "shadowBlur": 0.278,
+     "filter": 0,
+     "comp": 17.722,
+     "save": 40.593
+    },
+    "time": {
+     "update": 0.37,
+     "bg": 0.074,
+     "trip": 0,
+     "drawTiles": 0.352,
+     "drawShadows": 0,
+     "ink": 0.685,
+     "brady": 0.5,
+     "particles": 0.037,
+     "weather": 0.037,
+     "postfx": 0.111,
+     "worldfx": 0.019,
+     "drawHUD": 0.259,
+     "drawToast": 0.037,
+     "controls": 0.074,
+     "drawTutorial": 0.019,
+     "draw": 2,
+     "decor": 0.074
+    },
+    "scene": {
+     "parts": 16.5,
+     "weather": 12,
+     "ents": 8.111,
+     "entsUpd": 3.13,
+     "entsDrawn": 2.556
+    },
+    "pxBy": [
+     [
+      "bg",
+      4557
+     ],
+     [
+      "other",
+      2194
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "ink<brady",
+      1310
+     ],
+     [
+      "ink<other",
+      956
+     ],
+     [
+      "drawTiles",
+      630
+     ],
+     [
+      "drawHUD",
+      576
+     ],
+     [
+      "ink<ent:TourRing/ring",
+      92
+     ],
+     [
+      "ink<ent:FrOven/frOven",
+      73
+     ],
+     [
+      "ink<ent:FrMirror/frMirror",
+      53
+     ],
+     [
+      "ink<ent:Gold/gold",
+      37
+     ],
+     [
+      "brady",
+      13
+     ],
+     [
+      "ent:Gold/gold",
+      7
+     ],
+     [
+      "decor",
+      5
+     ]
+    ],
+    "drawByClass": [
+     [
+      "FrMirror/frMirror",
+      0.056
+     ],
+     [
+      "FrOven/frOven",
+      0.037
+     ],
+     [
+      "Portal/portal",
+      0.037
+     ],
+     [
+      "TourRing/ring",
+      0.019
+     ],
+     [
+      "FrChandelier/frChandelier",
+      0
+     ],
+     [
+      "M/frPoele",
+      0
+     ],
+     [
+      "Checkpoint/checkpoint",
+      0
+     ],
+     [
+      "Gold/gold",
+      0
+     ]
+    ]
+   },
+   "worstSpot": {
+    "area": 2,
+    "x": 12,
+    "y": 8,
+    "mean": 17.16,
+    "p95": 24,
+    "profile": {
+     "frames": 6,
+     "pxBy": [
+      [
+       "bg",
+       3308
+      ],
+      [
+       "other",
+       2633
+      ],
+      [
+       "ink<other",
+       2444
+      ],
+      [
+       "postfx",
+       1431
+      ],
+      [
+       "ink<brady",
+       991
+      ],
+      [
+       "drawHUD",
+       576
+      ],
+      [
+       "ink<ent:FrOven/frOven",
+       234
+      ],
+      [
+       "ink<ent:FrMirror/frMirror",
+       206
+      ],
+      [
+       "drawTiles",
+       204
+      ],
+      [
+       "brady",
+       11
+      ],
+      [
+       "decor",
+       2
+      ]
+     ],
+     "counts": {
+      "drawImage": 150.667,
+      "drawPx": 8272125,
+      "fillRectPx": 3767407,
+      "fillText": 10.5,
+      "strokeText": 0,
+      "grad": 16,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 5,
+      "inkPx": 266555,
+      "shadowBlur": 0.5,
+      "filter": 0,
+      "comp": 20.5,
+      "save": 33
+     },
+     "time": {
+      "update": 0.167,
+      "bg": 0,
+      "trip": 0,
+      "decor": 0.333,
+      "drawTiles": 0.5,
+      "drawShadows": 0,
+      "ink": 1,
+      "brady": 0.5,
+      "particles": 0,
+      "weather": 0,
+      "postfx": 0,
+      "worldfx": 0.167,
+      "drawHUD": 0.333,
+      "drawToast": 0,
+      "controls": 0.167,
+      "drawTutorial": 0,
+      "draw": 2.667
+     },
+     "drawByClass": [
+      [
+       "FrOven/frOven",
+       0.167
+      ],
+      [
+       "FrMirror/frMirror",
+       0
+      ]
+     ],
+     "updByClass": [
+      [
+       "FrOven",
+       0
+      ],
+      [
+       "FrMirror",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 3.1666666666666665,
+      "weather": 0,
+      "ents": 5,
+      "entsUpd": 4,
+      "entsDrawn": 4
+     },
+     "profCost": {
+      "mean": 15.333333333333334,
+      "p50": 17,
+      "p95": 17,
+      "p99": 17,
+      "max": 17,
+      "n": 6
+     },
+     "at": {
+      "area": 2,
+      "x": 12,
+      "y": 8
+     }
+    }
+   }
+  },
+  "8-2": {
+   "flush": 9.238095238095237,
+   "cost": {
+    "mean": 11.101190476190476,
+    "p50": 11,
+    "p95": 17,
+    "p99": 20,
+    "max": 21,
+    "n": 168
+   },
+   "upd": 0.2857142857142857,
+   "drw": 10.81547619047619,
+   "gap": {
+    "mean": 16.708333333333332,
+    "p50": 17,
+    "p95": 20,
+    "p99": 22,
+    "max": 24,
+    "n": 168
+   },
+   "heapStart": 0,
+   "heapEnd": 0,
+   "allocMBs": 0,
+   "gcs": 0,
+   "canvases": 256,
+   "spots": [
+    {
+     "area": 0,
+     "x": 9,
+     "y": 13,
+     "mean": 9.38,
+     "p95": 13
+    },
+    {
+     "area": 0,
+     "x": 47,
+     "y": 13,
+     "mean": 15.67,
+     "p95": 20
+    },
+    {
+     "area": 0,
+     "x": 85,
+     "y": 13,
+     "mean": 10.19,
+     "p95": 13
+    },
+    {
+     "area": 0,
+     "x": 123,
+     "y": 13,
+     "mean": 11.33,
+     "p95": 16
+    },
+    {
+     "area": 0,
+     "x": 161,
+     "y": 13,
+     "mean": 10,
+     "p95": 12
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 6,
+     "mean": 11.29,
+     "p95": 14
+    },
+    {
+     "area": 1,
+     "x": 9,
+     "y": 9,
+     "mean": 10.19,
+     "p95": 12
+    },
+    {
+     "area": 1,
+     "x": 28,
+     "y": 10,
+     "mean": 10.76,
+     "p95": 15
+    }
+   ],
+   "areas": 2,
+   "trace": [
+    "0:5:true:693:10",
+    "1:3:true:693:10"
+   ],
+   "profile": {
+    "counts": {
+     "drawImage": 154.354,
+     "drawPx": 7676114,
+     "fillRectPx": 3492924,
+     "fillText": 6.271,
+     "strokeText": 0,
+     "grad": 11.938,
+     "getImageData": 1,
+     "putImageData": 0,
+     "ink": 1.208,
+     "inkPx": 78985,
+     "shadowBlur": 0.604,
+     "filter": 0,
+     "comp": 14.958,
+     "save": 34.167
+    },
+    "time": {
+     "update": 0.458,
+     "bg": 0.125,
+     "trip": 0,
+     "decor": 0.042,
+     "drawTiles": 0.25,
+     "drawShadows": 0,
+     "ink": 0.625,
+     "brady": 0.583,
+     "particles": 0.042,
+     "weather": 0.042,
+     "postfx": 0.104,
+     "worldfx": 0.021,
+     "drawHUD": 0.271,
+     "drawToast": 0.021,
+     "controls": 0.125,
+     "drawTutorial": 0,
+     "draw": 1.979
+    },
+    "scene": {
+     "parts": 20.313,
+     "weather": 18.75,
+     "ents": 9.5,
+     "entsUpd": 2.313,
+     "entsDrawn": 2
+    },
+    "pxBy": [
+     [
+      "bg",
+      4717
+     ],
+     [
+      "other",
+      1865
+     ],
+     [
+      "ink<brady",
+      1440
+     ],
+     [
+      "postfx",
+      1431
+     ],
+     [
+      "drawTiles",
+      718
+     ],
+     [
+      "drawHUD",
+      575
+     ],
+     [
+      "ink<ent:TourGearStand/gearStand",
+      216
+     ],
+     [
+      "ink<decor",
+      111
+     ],
+     [
+      "ink<ent:Gold/gold",
+      46
+     ],
+     [
+      "decor",
+      18
+     ],
+     [
+      "brady",
+      16
+     ],
+     [
+      "ent:Gold/gold",
+      8
+     ],
+     [
+      "ent:NlClog/nlClog",
+      3
+     ],
+     [
+      "ent:cls/nlBee",
+      3
+     ]
+    ],
+    "drawByClass": [
+     [
+      "Gold/gold",
+      0.083
+     ],
+     [
+      "Portal/portal",
+      0.063
+     ],
+     [
+      "Gate/gate",
+      0.042
+     ],
+     [
+      "cls/nlBee",
+      0.042
+     ],
+     [
+      "TourGearStand/gearStand",
+      0.021
+     ],
+     [
+      "Sweeper/sweeper",
+      0.021
+     ],
+     [
+      "Checkpoint/checkpoint",
+      0.021
+     ],
+     [
+      "anon/nlBulb",
+      0
+     ]
+    ]
+   },
+   "worstSpot": {
+    "area": 0,
+    "x": 47,
+    "y": 13,
+    "mean": 15.67,
+    "p95": 20,
+    "profile": {
+     "frames": 6,
+     "pxBy": [
+      [
+       "bg",
+       3357
+      ],
+      [
+       "other",
+       1756
+      ],
+      [
+       "ink<ent:TourGearStand/gearStand",
+       1729
+      ],
+      [
+       "postfx",
+       1431
+      ],
+      [
+       "ink<brady",
+       1423
+      ],
+      [
+       "ink<decor",
+       885
+      ],
+      [
+       "drawTiles",
+       839
+      ],
+      [
+       "drawHUD",
+       575
+      ],
+      [
+       "ink<ent:Gold/gold",
+       182
+      ],
+      [
+       "ent:Gold/gold",
+       32
+      ],
+      [
+       "brady",
+       16
+      ],
+      [
+       "decor",
+       0
+      ]
+     ],
+     "counts": {
+      "drawImage": 220.833,
+      "drawPx": 9275257,
+      "fillRectPx": 2949109,
+      "fillText": 6.333,
+      "strokeText": 0,
+      "grad": 10.167,
+      "getImageData": 1,
+      "putImageData": 0,
+      "ink": 2.5,
+      "inkPx": 152528,
+      "shadowBlur": 0.167,
+      "filter": 0,
+      "comp": 23,
+      "save": 39
+     },
+     "time": {
+      "update": 0.833,
+      "bg": 0,
+      "trip": 0,
+      "decor": 0,
+      "drawTiles": 0.333,
+      "drawShadows": 0,
+      "ink": 0.833,
+      "brady": 0.5,
+      "particles": 0,
+      "weather": 0.333,
+      "postfx": 0.167,
+      "worldfx": 0,
+      "drawHUD": 0.333,
+      "drawToast": 0,
+      "controls": 0.167,
+      "drawTutorial": 0,
+      "draw": 2.5
+     },
+     "drawByClass": [
+      [
+       "TourGearStand/gearStand",
+       0.167
+      ],
+      [
+       "Gold/gold",
+       0.167
+      ],
+      [
+       "Sweeper/sweeper",
+       0.167
+      ],
+      [
+       "anon/nlBulb",
+       0
+      ]
+     ],
+     "updByClass": [
+      [
+       "",
+       0.167
+      ],
+      [
+       "TourGearStand",
+       0
+      ],
+      [
+       "Sweeper",
+       0
+      ],
+      [
+       "TourCurtain",
+       0
+      ],
+      [
+       "Gold",
+       0
+      ]
+     ],
+     "scene": {
+      "parts": 16.833333333333332,
+      "weather": 30,
+      "ents": 14,
+      "entsUpd": 4,
+      "entsDrawn": 4
+     },
+     "profCost": {
+      "mean": 18.166666666666668,
+      "p50": 17,
+      "p95": 25,
+      "p99": 25,
+      "max": 25,
+      "n": 6
+     },
+     "at": {
+      "area": 0,
+      "x": 47,
+      "y": 13
+     }
+    }
+   }
+  }
+ },
+ "bosses": {},
+ "maps": {},
+ "errors": []
+}

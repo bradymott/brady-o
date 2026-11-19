@@ -52,7 +52,7 @@ const P = {
   // a sandbar with a star block high over it (the big-set reward)
   starBar(st, o) {
     const x = st.x, n = 8; st.floor(x, x + n - 1); st.decor('idPalmS', x + 1); st.decor('idUmbrella', x + 6);
-    st.block(x + 4, st.gy - 5, o.item || 'star'); st.coins(x + 2, x + 6, st.gy - 2);
+    st.block(x + 4, st.gy - 4, o.item || 'star');   // gy - 4: big Brady can jump to the joint over it (sbw_items_test) st.coins(x + 2, x + 6, st.gy - 2);
     return x + n;
   },
 
@@ -305,6 +305,150 @@ const P = {
   // a sulfur cask rolling along the lower deck
   sulfurCask(st, o) { const deck = st.deck || st.gy; st.B.spawn('idCask', st.x + 2, deck - 1, { dir: -1 }); return st.x + 4; }
 };
+
+/* ---------------- Pupo in Indonesia (docs/design/PUPO.md §4.2) ---------------- */
+const IDINK = '#1c1426', RAVINE_WIND = -330;   // the ravine's wind, px/s (faster than Brady runs)
+const PP = {
+  // a Nap Box on its own bit of ledge
+  napBox(st, o) { const x = st.x; st.floor(x, x + 2); st.B.set(x + 1, st.gy - 1, T.QBLOCK); st.B.item(x + 1, st.gy - 1, 'pupo'); st.B.spawn('napBox', x + 1, st.gy - 1, {}); return x + 3; },
+  /* 9-6's Pupo obstacle, Thorny Rattan: the lianas run out at a deep ravine. Only rattan canes hang across it from the
+     canopy, and they are all thorns: the cane is spike tiles (they hurt Brady), but Pupo's hooked claws hold the
+     ring-knots at their tips (Action) and he swings cane to cane. The ravine breathes a cold wind back up the gorge (a
+     headwind over its first two-thirds): no jump, spring sock, bean puff or glide gets across. On the far side a mother
+     orangutan and Pupo trade a long, slow look ("...nice... arms."). The hooks are three tiles apart (the checker's
+     hanging Pupo walks their ghosts), the last one out of the wind so he lets go in calm air. { w, n } */
+  rattan(st, o) {
+    const B = st.B, x = st.x, gy = st.gy, w = o.w || 17, n = o.n || 5, x0 = x + 4, x1 = x0 + w - 1;
+    st.floor(x, x0 - 1);
+    st.sign(x, 'ONLY THORNY RATTAN HANGS OVER THE RAVINE, AND ITS WIND BLOWS BACK: NO JUMPING IT! PUPO\'S CLAWS CAN HOLD THE CANES (ACTION)');
+    st.pit(x0, x1);
+    B.prop('idRattanCanopy', x0 - 2, gy - 11, w + 4, 2, 'none', {});
+    for (let i = 0; i < n; i++) {
+      const gx = x0 + 2 + i * 3;
+      for (let y = gy - 8; y <= gy - 6; y++) { B.set(gx, y, T.SPIKES_CEIL); B.setHide(gx, y, 1); }
+      B.spawn('pupoGrab', gx, gy - 5, { kind: 'hook', look: 'idRattan', cam: 4, say: i === 0 ? '...PRICKLY. ...FINE.' : null });
+    }
+    // the wind over the ravine's first two-thirds (the last cane hangs in calm air)
+    const ww = 3 * (n - 2) + 2;
+    B.zone(x0, 0, ww, B.H, RAVINE_WIND, 0, 0, 'wind');
+    B.spawn('idRavineWind', x0, gy - 1, { w: ww, h: 9 });
+    st.coins(x0 + 2, x1 - 2, gy - 3);
+    // the far side: the mother orangutan on a mossy stump, her baby on her back
+    st.floor(x1 + 1, x1 + 11);
+    B.spawn('idMotherOrangutan', x1 + 8, gy - 1, {});
+    return x1 + 12;
+  }
+};
+for (const k in PP) Tour.pieces['id.' + k] = PP[k];
+// 9-6: a mother orangutan on a mossy stump past the ravine, her baby clinging to her back. When Pupo comes swinging
+// over the canes she turns, slowly, and watches; when he lands she and Pupo trade a long, slow look: "...nice...
+// arms." She holds one long arm up, considers it: "...you too." (a friend, never an enemy)
+class IdMotherOrangutan extends Ent {
+  constructor(g, s) { super(g, s, 40, 56); this.x = s.x - 20; this.y = s.y - 56; this.back = true; this.friendly = true; this.look = 0; this.lookT = 0; this.stage = 0; this.k = 0; this.arm = 0; }
+  update(dt) {
+    this.t += dt; const g = this.g, p = g.player;
+    const near = p && !p.dead && p.pupoRide && Math.abs(p.cx - this.cx) < 9 * TS;
+    // her head turns toward Pupo (slowly) while he is near
+    this.look = approach(this.look, near ? 1 : 0, dt * 0.8);
+    if (this.stage === 1 && (this.k += dt) > 1.6) { this.stage = 2; this.k = 0; g.parts.text(this.cx, this.y - 34, '...YOU TOO.', '#fff2c0'); }
+    if (this.stage === 2) this.arm = approach(this.arm, (this.k += dt) < 2.4 ? 1 : 0, dt * 1.2);
+    if (this.stage === 0 && near && p.onGround && Math.abs(p.cx - this.cx) < 5 * TS && this.look > 0.8) { this.stage = 1; this.k = 0; PupoRide.say(g, p.cx, p.y - 18, '...NICE... ARMS.'); }
+  }
+  draw(ctx) {
+    // drawn at 1.4x round her feet: a big, calm ape (taller than Pupo and Brady together)
+    ctx.save(); ctx.translate(this.cx, this.y + this.h); ctx.scale(1.4, 1.4); ctx.translate(-this.cx, -(this.y + this.h));
+    this.art(ctx);
+    ctx.restore();
+  }
+  art(ctx) {
+    const x = this.cx, y = this.y + this.h, t = this.t, lk = easeInOut(this.look), br = Math.sin(t * 1.3) * 1;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // the mossy stump
+    ctx.fillStyle = IDINK; rr(ctx, x - 22, y - 16, 44, 18, 6); ctx.fill();
+    ctx.fillStyle = '#7a5a3a'; rr(ctx, x - 20, y - 14, 40, 14, 5); ctx.fill(); ctx.fillStyle = '#5aa84a'; rr(ctx, x - 20, y - 15, 40, 5, 3); ctx.fill();
+    const by = y - 14;
+    // her long arms: one resting on the stump; the other held up (the "you too")
+    const up = easeInOut(this.arm);
+    ctx.strokeStyle = IDINK; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x - 10, by - 22); ctx.quadraticCurveTo(x - 24, by - 8, x - 18, by + 2); ctx.stroke();
+    ctx.strokeStyle = '#c8642a'; ctx.lineWidth = 6.4; ctx.stroke();
+    ctx.strokeStyle = IDINK; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x + 10, by - 22); ctx.quadraticCurveTo(x + 26 - up * 4, by - 14 - up * 26, x + 22 - up * 6, by + 2 - up * 52); ctx.stroke();
+    ctx.strokeStyle = '#c8642a'; ctx.lineWidth = 6.4; ctx.stroke();
+    // the round body, the paler tummy (with its belly button), the baby peeking over her shoulder
+    ctx.fillStyle = IDINK; ctx.beginPath(); ctx.ellipse(x, by - 18 + br, 17, 19, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c8642a'; ctx.beginPath(); ctx.ellipse(x, by - 18 + br, 15.4, 17.4, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#e09060'; ctx.beginPath(); ctx.ellipse(x + 1, by - 14 + br, 9, 10, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#a84a1a'; ctx.beginPath(); ctx.arc(x + 1, by - 12 + br, 1.3, 0, TAU); ctx.fill();
+    const bx = x - 12 + Math.sin(t * 0.7) * 1.5, byy = by - 40 + br;
+    ctx.fillStyle = IDINK; ctx.beginPath(); ctx.arc(bx, byy, 8, 0, TAU); ctx.fill(); ctx.fillStyle = '#d8743a'; ctx.beginPath(); ctx.arc(bx, byy, 6.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#f0c098'; ctx.beginPath(); ctx.ellipse(bx + 1.5, byy + 1, 4, 3.4, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = IDINK; ctx.beginPath(); ctx.arc(bx - 0.5, byy - 0.5, 1.1, 0, TAU); ctx.arc(bx + 3, byy - 0.5, 1.1, 0, TAU); ctx.fill();
+    // her head: turns from the baby toward Pupo (the face slides over), sleepy kind eyes, the wide cheek pads
+    const hx = x + 2 - 6 + lk * 10, hy = by - 44 + br;
+    ctx.fillStyle = IDINK; ctx.beginPath(); ctx.ellipse(hx, hy, 15, 13, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c8642a'; ctx.beginPath(); ctx.ellipse(hx, hy, 13.4, 11.4, 0, 0, TAU); ctx.fill();
+    const fx = hx - 3 + lk * 6;
+    ctx.fillStyle = '#e8b890'; ctx.beginPath(); ctx.ellipse(fx, hy + 2, 8.5, 7.5, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = IDINK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(fx - 3.4, hy - 0.5, 1.8, 0.1, Math.PI - 0.1); ctx.moveTo(fx + 5.2, hy - 0.5); ctx.arc(fx + 3.4, hy - 0.5, 1.8, 0.1, Math.PI - 0.1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fx - 3, hy + 5.5); ctx.quadraticCurveTo(fx, hy + 7, fx + 3, hy + 5.5); ctx.stroke();
+    ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
+  }
+}
+// 9-6: the ravine's wind: leaves and streaks racing back up the gorge (cheap: positions from the clock)
+class IdRavineWind extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 10) * TS, (s.h || 9) * TS); this.x = s.x - TS / 2; this.y = s.y - this.h; this.back = true; this.friendly = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x0 = this.x, w = this.w, h = this.h, t = this.t;
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 8; k++) {
+      const u = (w + 60) - ((t * (300 + (k * 37) % 120) + k * 131) % (w + 100)), yy = this.y + 16 + ((k * 61) % (h - 30)), len = 26 + (k % 3) * 12;
+      ctx.strokeStyle = k % 3 ? 'rgba(255,255,255,0.5)' : 'rgba(220,255,220,0.65)'; ctx.lineWidth = k % 2 ? 2 : 3;
+      ctx.beginPath(); ctx.moveTo(x0 + u, yy); ctx.lineTo(x0 + u + len, yy - 3); ctx.stroke();
+    }
+    for (let k = 0; k < 6; k++) {
+      const u = (w + 40) - ((t * (260 + k * 29) + k * 173) % (w + 80)), yy = this.y + 10 + ((k * 89) % (h - 20)) + Math.sin(t * 3 + k) * 6;
+      ctx.fillStyle = IDINK; ctx.beginPath(); ctx.ellipse(x0 + u, yy, 5.5, 3.2, t * 4 + k, 0, TAU); ctx.fill();
+      ctx.fillStyle = k % 2 ? '#7ac84a' : '#c8a83a'; ctx.beginPath(); ctx.ellipse(x0 + u, yy, 4, 2, t * 4 + k, 0, TAU); ctx.fill();
+    }
+    ctx.lineCap = 'butt';
+  }
+}
+Object.assign(ENTITY_TYPES, { idMotherOrangutan: IdMotherOrangutan, idRavineWind: IdRavineWind });
+const idPupoSkins = {
+  // 9-6: a thorny rattan cane (a pupoGrab hook look): from the canopy down to its tip, ringed with thorns, a knot and
+  // the brass ring where Pupo's claws hold
+  idRattan(ctx, e, t) {
+    const x = e.hx, y = e.hy, top = y - 5.6 * TS, sw = Math.sin(t * 0.9 + e.ax * 0.01) * 1.2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = IDINK; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x + sw, y - 8); ctx.stroke();
+    ctx.strokeStyle = '#8a9a3a'; ctx.lineWidth = 6; ctx.stroke();
+    ctx.strokeStyle = '#b8c860'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 1.5, top); ctx.lineTo(x - 1.5 + sw, y - 10); ctx.stroke();
+    // the thorns: short dark spines in rings down the cane, and the segment joints
+    ctx.strokeStyle = IDINK; ctx.lineWidth = 1.8;
+    for (let yy = top + 10; yy < y - 14; yy += 14) {
+      const xx = x + sw * (yy - top) / (y - top);
+      ctx.beginPath(); ctx.moveTo(xx - 4, yy); ctx.lineTo(xx - 9, yy - 4); ctx.moveTo(xx + 4, yy); ctx.lineTo(xx + 9, yy - 4); ctx.moveTo(xx - 4, yy + 6); ctx.lineTo(xx - 8, yy + 3); ctx.moveTo(xx + 4, yy + 6); ctx.lineTo(xx + 8, yy + 3); ctx.stroke();
+      ctx.fillStyle = '#5a6a24'; ctx.fillRect(xx - 3, yy + 9, 6, 2);
+    }
+    ctx.lineCap = 'butt';
+    ctx.fillStyle = IDINK; ctx.beginPath(); ctx.arc(x + sw, y - 7, 4, 0, TAU); ctx.fill(); ctx.fillStyle = '#6a7a2a'; ctx.beginPath(); ctx.arc(x + sw, y - 7, 2.7, 0, TAU); ctx.fill();
+    pupoRing(ctx, x + sw, y, 5.5);
+  }
+};
+Object.assign(Decor, {
+  // 9-6: the canopy over the ravine: a long mossy bough the rattan hangs from, leaf clumps along it
+  idRattanCanopy(ctx, x, y, t, th, d) {
+    const x0 = x - d.w / 2, x1 = x + d.w / 2, by = y - d.h + 18;
+    ctx.fillStyle = IDINK; rr(ctx, x0 - 4, by - 9, d.w + 8, 20, 9); ctx.fill();
+    ctx.fillStyle = '#6a4a2a'; rr(ctx, x0 - 2, by - 7, d.w + 4, 16, 8); ctx.fill(); ctx.fillStyle = '#5aa84a'; rr(ctx, x0 - 2, by - 8, d.w + 4, 6, 3); ctx.fill();
+    for (let xx = x0 + 10, k = 0; xx < x1; xx += 46, k++) {
+      ctx.fillStyle = IDINK; ctx.beginPath(); ctx.ellipse(xx, by - 12, 22, 13, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = k % 2 ? '#3a8a3a' : '#4a9a3a'; ctx.beginPath(); ctx.ellipse(xx, by - 12, 20, 11, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#6ab84a'; ctx.beginPath(); ctx.ellipse(xx - 5, by - 16, 9, 5, 0, 0, TAU); ctx.fill();
+    }
+  }
+});
+Tour.amend('id', { skins: idPupoSkins });
 
 /* ---------------- entities ---------------- */
 // 9-5's lead-in durian tree: one branch; landing on it shakes the crown and a durian drops down the trunk
@@ -606,7 +750,7 @@ const levels = [
   { n: 1, name: 'Kuta Surf', arch: 'ride', theme: 'id_surf',
     gimmick: 'A gecko lends a surfboard: ride the swells, hop the lava-rock reefs, launch off a big set for the high coins',
     hint: 'Surf the sea! Jump off a wave crest for big air. THROW sprays water',
-    postcard: 'Brady! Bali smells like frangipani and sunscreen. The Baron\'s blimp went inland. Catch a wave and follow! ♥ C',
+    postcard: 'Brady! Bali smells like frangipani and sunscreen. Piwi\'s trunk went inland. Catch a wave and follow! ♥ C',
     enemies: [['idUrchin', 2], ['idFlyfish', 2]],
     mapCell: [0, 0], mapFrom: -1,
     exits: { main: { to: '9-2' } },
@@ -637,13 +781,14 @@ const levels = [
           ['surf', { n: 6, jelly: 1, tight: true }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'gua', gen: 'room', role: 'secret', stamp: 'gua' }
+      { id: 'gua', gen: 'room', role: 'secret', stamp: 'gua', room: 'lantern',
+        lantern: { title: 'THE SEA CAVE', rule: 'THE SEA CAVE UNDER THE PIER IS PITCH DARK. YOUR LIGHT FADES: RELIGHT IT AT THE LAMPS. THE ROCKS SHOW ONLY IN THE LIGHT' } }
     ] },
   // 9-2 GLIDE: the kite festival over the rice terraces
   { n: 2, name: 'Kite Festival', arch: 'glide', theme: 'id_kites',
     gimmick: 'Fold a paper plane and glide over the rice terraces: ride the giant kites, warm air lifts you, ducks paddle across in a line',
     hint: 'Hold jump while falling to glide with the paper plane. Warm air rises over the terraces',
-    postcard: 'The whole sky is full of kites! One of them looks like the Baron\'s blimp... no, it\'s a fish. ♥ C',
+    postcard: 'The whole sky is full of kites! One of them looks like Piwi\'s trunk... no, it\'s a fish. ♥ C',
     enemies: [['idDuck', 1], ['idScarecrow', 1], ['idDragonfly', 2]],
     mapCell: [1, 0], mapFrom: 0,
     exits: { main: { to: '9-3' }, secret: { to: '9-6', hint: 'A rice barn on stilts has a door up in its loft...' } },
@@ -665,6 +810,7 @@ const levels = [
           ['lumbung', { to: 'lumbung@in', back: 'lumbungBack' }],
           ['glideGap', { w: 13, drop: 2 }],
           'cp',
+          ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), to float the kite relay (Brady's request)
           // ③ the kite relay in a strong wind
           ['gearStand', { item: 'plane' }],
           ['windKites', { n: 3, gold: 'risky' }],
@@ -674,7 +820,8 @@ const levels = [
           ['terraceIsle', { n: 2 }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'lumbung', gen: 'room', role: 'secret', stamp: 'lumbung' }
+      { id: 'lumbung', gen: 'room', role: 'secret', stamp: 'lumbung', room: 'whack',
+        whack: { title: 'WHACK-A-RAT', rule: 'RATS IN THE RICE BARN! STOMP EIGHT OF THEM AS THEY POP UP', critter: 'rat', need: 8, t: 22 } }
     ] },
   // 9-3 DOOM: Batur erupts at dawn; the lava flow chases Brady down the mountain
   { n: 3, name: 'Batur Eruption', arch: 'doom', theme: 'id_batur',
@@ -702,6 +849,7 @@ const levels = [
           ['mineMouth', { to: 'tambang@in', back: 'tambangBack' }],
           ['descend', { n: 2 }],
           'cp',
+          ['itemBlock', { item: 'star', y: 4 }],   // a star for the civets and hot rocks (Brady: mix up the power-ups)
           // ③ civets in the ash fields while the flow speeds up
           'civets',
           ['hotrocks', { n: 6, phase: 2 }],
@@ -710,7 +858,8 @@ const levels = [
           ['bombs', { len: 14, every: 1.3 }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'tambang', gen: 'room', role: 'secret', stamp: 'tambang' }
+      { id: 'tambang', gen: 'room', role: 'secret', stamp: 'tambang', room: 'gauntlet',
+        gauntlet: { title: 'THE SULFUR MINE', rule: 'THE OLD SULFUR MINE: RUN IT TO THE END. THE PLANKS DON\'T LAST', beats: ['fallers', 'steps', 'ceiling'] } }
     ] },
   // 9-4 LAMP (in the water): the night dive at Manta Point
   { n: 4, name: 'Manta Night Dive', arch: 'lamp', theme: 'id_dive',
@@ -745,13 +894,14 @@ const levels = [
           ['manta', { w: 16 }],
           'jellies'
         ] },
-      { id: 'kapal', gen: 'room', role: 'secret', stamp: 'kapal' }
+      { id: 'kapal', gen: 'room', role: 'secret', stamp: 'kapal', room: 'grotto',
+        grotto: { title: 'THE SUNKEN WRECK', rule: 'THE WRECK\'S HOLD IS FULL OF WATER. SWIM TO THE CAPTAIN\'S CABIN AT THE BACK', half: false } }
     ] },
   // 9-5 LAIR: the monkey forest, then Boss Kera in the durian grove
   { n: 5, name: 'Monkey Forest', arch: 'lair', theme: 'id_ruins', boss: 'id_kera',
     gimmick: 'A jungle garden by an old mossy wall: macaques snatch power-ups, durian trees drop their fruit, gongs open the gate; then Boss Kera',
     hint: 'Boss Kera laughs at stomps. Land on a branch of the tree he perches in: a durian drops on his head!',
-    postcard: 'The rice terraces are back! The Baron flew north to Vietnam. I smell pho. ♥ C',
+    postcard: 'The rice terraces are back! Piwi flew north to Vietnam. I smell pho. ♥ C',
     enemies: [['idSate', 2], ['idMacaque', 2]],
     mapCell: [1, 2], mapFrom: 3,
     exits: { main: { to: 'country:next' } },
@@ -768,11 +918,12 @@ const levels = [
           ['postcard', { kind: 'risky', dx: -12, dy: -5 }],
           ['groveGate', { to: 'grove' }]
         ] },
-      { id: 'akar', gen: 'room', role: 'secret', stamp: 'akar' },
+      { id: 'akar', gen: 'room', role: 'secret', stamp: 'akar', room: 'ambush',
+        ambush: { title: 'THE CIVETS\' ROOT CELLAR', rule: 'THE CIVETS GUARD THEIR ROOT CELLAR AND THE DOOR HAS JAMMED: STOMP THEM ALL', critters: ['idCivet', 'idDuck'] } },
       { id: 'grove', gen: 'arena', role: 'arena', layout: 'grove', arenaW: 26, H: 22, roof: false }
     ] },
   // 9-6 SWING (secret): the Borneo canopy with the orangutans
-  { n: 6, name: 'Orangutan Canopy', arch: 'swing', secret: true, theme: 'id_rimba',
+  { n: 6, name: 'Orangutan Canopy', arch: 'swing', secret: true, theme: 'id_rimba', pupo: 'level',   // Indonesia's Pupo level: Thorny Rattan
     gimmick: 'Swing on lianas through the Borneo canopy; orangutan friends throw you across; hornbills dart over the gaps',
     hint: 'Jump into a liana to grab it. Sit in an orangutan\'s hands and press THROW to fly',
     postcard: 'An orangutan threw me across the forest. Very gently. Then it waved. ♥ C',
@@ -785,6 +936,7 @@ const levels = [
           ['gearStand', { item: 'wand' }],
           ['itemBlock', { item: 'power', y: 4 }],
           ['itemBlock', { item: 'socks', y: 4 }],   // a jump power (bonus)
+          ['napBox', {}],   // Pupo's Nap Box on the start ledge (he rides the lianas and the orangutans' throws with Brady)
           // ① lianas between the giant trees
           ['lianas', { n: 3 }],
           'rafflesiaIsle',
@@ -793,15 +945,19 @@ const levels = [
           ['lianas', { n: 2 }],
           ['nestTree', { to: 'nest@in', back: 'nestBack' }],
           'cp',
+          // Pupo (PUPO.md §4.2): the backup Nap Box at the catapult checkpoint, then Thorny Rattan over the ravine
+          ['napBox', {}],
+          ['rattan', { w: 17, n: 5 }],
+          ['itemBlock', { item: 'lsd', y: 4 }],   // past the ravine (the acid trip's flight must not carry Brady over it)
           // ③ hornbills dart across the swing chains
           ['lianas', { n: 3, hornbill: true, gold: 'risky' }],
           ['enemies', { kind: 'idMacaque', n: 1, len: 8 }],
           ['orangutan', { to: [14, -3] }],
-          ['itemBlock', { item: 'lsd', y: 5 }],
           ['lianas', { n: 2, hornbill: true }],
           ['end', { exit: 'main' }]
         ] },
-      { id: 'nest', gen: 'room', role: 'secret', stamp: 'nest' }
+      { id: 'nest', gen: 'room', role: 'secret', stamp: 'nest', room: 'bouncy',
+        bouncy: { title: 'THE ORANGUTAN\'S SPRINGY NEST', rule: 'AN ORANGUTAN\'S GIANT NEST, ALL SPRINGY BRANCHES. ONLY THE TRUNKS ARE FIRM. THE PRIZE IS ON THE TALLEST', skin: ['#8ac84a', '#e8a84a', '#5aa86a'] } }
     ] },
   // 9-7 RAIL (secret): the blue-fire sulfur mine in the crater at night
   { n: 7, name: 'Blue Fire Rails', arch: 'rail', secret: true, theme: 'id_ijen', dark: true,
@@ -827,7 +983,8 @@ const levels = [
           ['fork', { len: 36, upper: [['flames', { n: 2, gap: 8 }]], lower: [['sulfurCask', {}], ['flames', { n: 2 }]] }],
           ['flames', { n: 2, period: 2.4 }]
         ] },
-      { id: 'depot', gen: 'room', role: 'secret', stamp: 'depot' }
+      { id: 'depot', gen: 'room', role: 'secret', stamp: 'depot', room: 'doors',
+        doors: { title: 'THE MINE DEPOT', rule: 'THE DEPOT\'S LOCKERS AND STORE ROOMS: WHICH DOOR GOES WHERE?', joke: 'A LOCKER FULL OF MINERS\' SOCKS. PHEW.' } }
     ] }
 ];
 

@@ -233,7 +233,7 @@ const enemies = {
   esTomato: { cls: TourEnemy.make({ w: 22, h: 24, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, art: tomatoArt, burst: '#e8322a' }), place: 'walk' },
   esOrange: { cls: TourEnemy.make({ w: 20, h: 20, speed: 0.9, behavior: 'roll', range: 9, rollSpeed: 6.5, art: orangeArt, burst: '#ff8a1a' }), place: 'walk' },
   esHorchata: { cls: TourEnemy.make({ w: 18, h: 30, speed: 1.2, behavior: 'walk', art: horchataArt, burst: '#f4ead0' }), place: 'walk' },
-  esBat: { cls: TourFlyer.make({ w: 30, h: 14, range: 4, speed: 1.1, swoop: true, art: batArt, burst: '#2a2a3a' }), place: 'fly' },
+  esBat: { cls: TourFlyer.make({ belly: true, w: 30, h: 14, range: 4, speed: 1.1, swoop: true, art: batArt, burst: '#2a2a3a' }), place: 'fly' },
   esJelly: { cls: EsJelly, place: 'swim' },
   esShark: { cls: TourSwimmer.make({ w: 44, h: 16, speed: 1.8, range: 5, art: sharkArt }), place: 'swim' },
   esPetardo: { cls: TourEnemy.make({ w: 14, h: 26, speed: 0.8, behavior: 'charge', range: 6, chargeSpeed: 6, windup: 0.6, art: petardoArt, burst: '#ffd23a', onNotice: e => K.say(e.g, e, 'TSSS...', '#ffd23a') }), place: 'walk' }
@@ -312,7 +312,8 @@ class EsCrate extends Ent {
   draw(ctx) {
     // the light-up floor tile under a hopping crate (phase 2)
     if (this.hop) { const k = Math.max(0, this.lit), c = ['#5ad8ff', '#ff5aa8', '#ffd23a'][this.slot % 3]; ctx.fillStyle = k > 0 ? c : 'rgba(255,255,255,0.18)'; ctx.fillRect(this.x - 6, this.y + this.h - 3, this.w + 12, 5); if (k > 0) { ctx.fillStyle = `rgba(255,255,255,${0.5 * k})`; ctx.fillRect(this.x - 4, this.y + this.h - 2, this.w + 8, 2); } }
-    Ink.ent(ctx, this, c => this.drawArt(c));
+    // at rest (no wobble, no squash) the crate's picture does not change: inked once and reused
+    Ink.ent(ctx, this, c => this.drawArt(c), { key: !this.wob && !this.squash ? 'rest' : null });
   }
   drawArt(ctx) {
     const x = this.cx, y = this.y + this.h, w = Math.sin(this.t * 40) * this.wob * 2;
@@ -942,8 +943,8 @@ Object.assign(enemies, {
   esGamba: { cls: TourEnemy.make({ w: 20, h: 20, speed: 1.0, behavior: 'hop', hopV: 10, hopEvery: 1.2, atlas: ES_X, art: gambaArt, burst: '#ff6a5a' }), place: 'walk' },
   esLizard: { cls: TourEnemy.make({ w: 26, h: 14, speed: 0.6, behavior: 'pouncer', range: 6, tell: 1.0, atlas: ES_X, art: lizardArt, burst: '#4a4a44' }), place: 'walk' },
   esKestrel: { cls: TourFlyer.make({ w: 28, h: 18, speed: 1.2, range: 4, swoop: true, atlas: ES_X, art: kestrelArt, burst: '#c87a3a' }), place: 'fly' },
-  esLynx: { cls: TourEnemy.make({ w: 30, h: 22, speed: 0.8, behavior: 'pouncer', range: 6, tell: 1.0, atlas: ES_X, art: lynxArt, burst: '#d8a868' }), place: 'walk' },
-  esSheep: { cls: TourEnemy.make({ w: 28, h: 24, speed: 0.6, behavior: 'walk', atlas: ES_X, art: sheepArt, burst: '#f4f0e6' }), place: 'walk' }
+  esLynx: { cls: TourEnemy.make({ belly: true, w: 30, h: 22, speed: 0.8, behavior: 'pouncer', range: 6, tell: 1.0, atlas: ES_X, art: lynxArt, burst: '#d8a868' }), place: 'walk' },
+  esSheep: { cls: TourEnemy.make({ belly: true, w: 28, h: 24, speed: 0.6, behavior: 'walk', atlas: ES_X, art: sheepArt, burst: '#f4f0e6' }), place: 'walk' }
 });
 for (const [m, list] of [['land', ['land', 'stun', 'walk']], ['tell', ['tell', 'crouch', 'walk']], ['squirt', ['squirt', 'tell', 'idle', 'walk']], ['eat', ['eat', 'walk']]]) if (!TourSprite.FALLBACK.walk[m]) TourSprite.FALLBACK.walk[m] = list;
 for (const [m, list] of [['tell', ['swoop', 'fly']], ['carry', ['carry', 'swoop', 'fly']], ['drop', ['fly']], ['rest', ['rest', 'fly']], ['return', ['fly']], ['patrol', ['fly']]]) if (!TourSprite.FALLBACK.fly[m]) TourSprite.FALLBACK.fly[m] = list;
@@ -1243,7 +1244,7 @@ Tour.country({
   themes, painters, decor, decorLights, beatArt, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_es', boss: 'tour_es_boss' },
   landmark: 'the silk exchange',
-  arrival: 'Brady! The Baron shrank the Silk Exchange and hid it in a paella pan. It smells AMAZING in there. ♥ C',
+  arrival: 'Brady! Piwi shrank the Silk Exchange for his cooking show set. It smells AMAZING in there. I added extra chilli. ♥ C',
   coin: { name: 'ORANGE', draw(ctx, x, y) {
     ctx.fillStyle = '#ff8a1a'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(x - 3, y - 3, 2.5, 0, TAU); ctx.fill();

@@ -2,12 +2,13 @@
 // cleanly, with procedural art drawing (no errors) while they decode again.
 // usage: node tools/sbw_atlas_test.js   (build first; BRADY_DIST=<folder> for a private build)
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), assert = require('assert');
 const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const page_ = 'file://' + path.join(dist, 'site', 'super-brady-o-world', 'index.html');
 (async () => {
   const browser = await chromium.launch();
-  const page = await (await browser.newContext({ viewport: { width: 844, height: 390 } })).newPage();
+  const page = await (await silence(await browser.newContext({ viewport: { width: 844, height: 390 } }))).newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });

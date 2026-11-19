@@ -1,0 +1,49 @@
+reference (owner found smooth): before 1-1/1-2 mean 20.31 ms, p95 32.0 ms
+id          before mean/p95   after mean/p95   ratio   after/ref   top raster (MP per frame, after)
+boss 6-5      86.8 / 118       58.6 /  83    0.68    2.89 2.59   ink<ent:EsCrate/esCrate 5.1, ink<other 4.4, ink<ent:anon 4.4, bg 3.4
+boss 4-5      59.9 /  85       39.4 /  57    0.66    1.94 1.78   bg 8.3, ink<ent:anon/mzShellBucket 4.2, ink<ent:anon/mzShellPot 4.2, ink<other 3.7
+6-4           47.9 /  78       29.9 /  50    0.62    1.47 1.56   bg 5.9, other 2.1, postfx 1.4, ink<brady 1.4
+boss 7-5      45.9 /  56       37.0 /  47    0.81    1.82 1.47   ink<ent:FrDecoy 8.4, ink<ent:FrOven/frOven 7.5, ink<ent:FrMirror/frMirror 6.0, bg 3.3
+boss 3-5      43.2 /  56       33.0 /  44    0.76    1.62 1.38   bg 8.3, ink<other 6.8, other 2.8, postfx 1.4
+7-5           41.9 / 106       26.4 /  67    0.63    1.30 2.09   bg 4.6, ink<ent:FrOven/frOven 2.4, other 2.2, ink<ent:FrMirror/frMirror 1.9
+6-5           39.0 / 108       23.8 /  61    0.61    1.17 1.91   bg 4.6, other 2.2, ink<ent:EsCrate/esCrate 1.6, postfx 1.4
+6-6           38.9 /  65       19.6 /  29    0.50    0.96 0.91   bg 4.4, other 2.6, ink<brady 1.6, postfx 1.4
+4-5           38.3 /  93       22.7 /  64    0.59    1.12 2.00   bg 8.1, ink<ent:anon/mzShellPot 2.1, postfx 1.4, ink<brady 1.4
+boss 11-5     38.2 /  47       32.8 /  42    0.86    1.61 1.31   bg 5.1, ink<other 5.0, ink<ent:anon/jpStone 4.4, postfx 1.4
+boss 2-5      34.7 /  44       21.0 /  28    0.60    1.03 0.88   bg 5.2, ink<other 3.6, postfx 1.4, other 1.3
+6-7           34.0 /  60       19.7 /  32    0.58    0.97 1.00   bg 5.2, other 2.6, ink<brady 1.6, postfx 1.4
+boss 8-5      32.7 /  41       27.6 /  36    0.84    1.36 1.13   ink<other 7.1, bg 3.4, ink<ent:NlHatch/nlHatch 2.5, postfx 1.4
+boss 12-5     32.0 /  42       20.9 /  29    0.65    1.03 0.91   ink<other 13.7, bg 6.3, postfx 1.4, other 1.3
+boss 9-5      31.8 /  46       33.7 /  45    1.06    1.66 1.41   bg 6.4, ink<other 4.7, ink<ent:anon 2.7, other 2.6
+boss 13-4     30.8 /  39       25.6 /  33    0.83    1.26 1.03   bg 4.3, ink<other 3.8, other 2.6, postfx 1.4
+6-2           30.6 /  58       18.2 /  32    0.59    0.90 1.00   bg 5.2, other 2.6, ink<brady 1.6, postfx 1.4
+6-1           30.6 /  49       16.1 /  24    0.53    0.79 0.75   bg 6.2, other 2.0, ink<brady 1.9, postfx 1.4
+7-7           30.5 /  57       18.7 /  39    0.61    0.92 1.22   bg 7.5, other 2.2, postfx 1.4, ink<ent:TourBalloon/balloon 1.4
+4-3           30.3 /  56       14.7 /  22    0.49    0.73 0.69   bg 9.3, other 2.0, postfx 1.4, ink<brady 1.4
+4-4           30.1 /  58       16.8 /  27    0.56    0.83 0.84   bg 6.0, drawLighting 2.0, other 1.8, ink<brady 1.6
+7-3           29.9 /  58       18.7 /  44    0.63    0.92 1.38   bg 5.8, other 2.3, ink<brady 1.6, postfx 1.4
+boss 5-5      29.4 /  37       22.2 /  30    0.76    1.09 0.94   ink<other 5.2, bg 3.4, ink<ent:MaPot/maPot 2.8, other 2.6
+7-6           29.1 /  55       18.6 /  34    0.64    0.91 1.06   bg 8.9, other 2.6, ink<brady 1.6, postfx 1.4
+3-6           28.4 /  46       15.4 /  28    0.54    0.76 0.88   bg 6.5, other 2.1, postfx 1.4, ink<brady 1.4
+3-5           27.7 /  45       15.7 /  25    0.57    0.77 0.78   bg 4.9, ink<brady 1.8, other 1.8, postfx 1.4
+1-6           27.4 /  67       18.1 /  58    0.66    0.89 1.81   bg 3.1, other 2.6, drawLighting 1.8, postfx 1.4
+8-2           27.2 /  52       22.3 /  57    0.82    1.10 1.78   bg 4.7, other 1.9, ink<brady 1.6, postfx 1.4
+boss 1-5      27.0 /  36       22.9 /  31    0.85    1.13 0.97   bg 5.4, ink<other 3.8, other 2.6, drawLighting 1.9
+4-6           26.5 /  47       16.6 /  27    0.63    0.82 0.84   bg 3.4, other 2.6, drawTiles 1.4, postfx 1.4
+5-5           26.4 /  44       19.0 /  34    0.72    0.93 1.06   bg 3.5, other 2.6, ink<other 1.6, postfx 1.4
+7-4           26.3 /  48       19.4 /  35    0.74    0.95 1.09   bg 6.3, other 2.0, postfx 1.4, ink<brady 1.4
+8-1           26.0 /  46       21.9 /  39    0.84    1.08 1.22   bg 6.0, other 2.0, ink<brady 1.9, postfx 1.4
+6-3           25.3 /  41       15.8 /  25    0.62    0.78 0.78   bg 4.1, other 2.6, drawLighting 2.2, ink<brady 1.6
+4-2           25.0 /  36       13.7 /  20    0.55    0.67 0.63   bg 4.4, other 2.6, ink<brady 1.6, postfx 1.4
+7-1           24.5 /  39       18.1 /  31    0.74    0.89 0.97   bg 7.6, other 2.6, ink<brady 1.6, postfx 1.4
+7-2           24.4 /  42       17.3 /  26    0.71    0.85 0.81   bg 7.0, other 2.0, ink<brady 1.6, postfx 1.4
+11-5          23.7 /  44       16.1 /  37    0.68    0.79 1.16   bg 5.9, ink<other 1.6, postfx 1.4, ink<ent:anon/jpStone 1.4
+5-4           22.9 /  41       16.2 /  28    0.71    0.80 0.88   bg 5.7, ink<brady 1.5, postfx 1.4, other 1.3
+13-4          22.2 /  42       15.9 /  32    0.72    0.78 1.00   bg 5.2, other 2.2, postfx 1.4, ink<brady 1.3
+3-4           20.9 /  47       14.0 /  33    0.67    0.69 1.03   bg 4.1, other 2.1, ink<brady 1.6, postfx 1.4
+1-5           18.4 /  28       12.8 /  20    0.70    0.63 0.63   bg 4.8, other 2.2, drawLighting 1.8, postfx 1.4
+3-2           18.0 /  27       12.0 /  18    0.67    0.59 0.56   bg 5.3, other 2.0, ink<brady 1.6, postfx 1.4
+3-3           17.8 /  26       12.6 /  19    0.71    0.62 0.59   bg 5.3, other 2.0, postfx 1.4, ink<brady 1.4
+3-1           16.1 /  22       13.2 /  19    0.82    0.65 0.59   bg 5.5, other 2.0, ink<brady 1.5, postfx 1.4
+
+117 scenarios; over the reference (mean or p95): boss 6-5 58.6/83, boss 4-5 39.4/57, 6-4 29.9/50, boss 7-5 37.0/47, boss 3-5 33.0/44, 7-5 26.4/67, 6-5 23.8/61, 4-5 22.7/64, boss 11-5 32.8/42, boss 2-5 21.0/28, boss 8-5 27.6/36, boss 12-5 20.9/29, boss 9-5 33.7/45, boss 13-4 25.6/33, 7-7 18.7/39, 7-3 18.7/44, boss 5-5 22.2/30, 7-6 18.6/34, 1-6 18.1/58, 8-2 22.3/57, boss 1-5 22.9/31, 5-5 19.0/34, 7-4 19.4/35, 8-1 21.9/39, 11-5 16.1/37, 3-4 14.0/33

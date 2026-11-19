@@ -5,6 +5,7 @@ class Particles {
   constructor() { this.list = []; }
   add(p) { if (this.list.length > 450) this.list.shift(); this.list.push(p); }
   burst(x, y, n, col, type) {
+    if (QualityTier.partK < 1 && n > 2) n = Math.ceil(n * QualityTier.partK);   // graphics tiers: fewer bits
     for (let i = 0; i < n; i++) {
       const a = Math.random() * TAU, s = Math.random();
       const p = { x, y, vx: Math.cos(a) * s * 140, vy: Math.sin(a) * s * 140, life: 0.5 + Math.random() * 0.4, max: 0, col, type, size: 2 + Math.random() * 2.5, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 12, g: 0 };
@@ -20,18 +21,23 @@ class Particles {
   }
   text(x, y, str, col) { this.add({ x, y, vx: 0, vy: -50, life: 0.9, max: 0.9, type: 'text', str, col: col || '#ffffff', g: 0 }); }
   update(dt) {
-    const L = this.list;
-    for (let i = L.length - 1; i >= 0; i--) {
+    // the living ones are compacted in place (one pass, no splice per dead particle)
+    const L = this.list; let j = 0;
+    for (let i = 0; i < L.length; i++) {
       const p = L[i];
       p.life -= dt;
-      if (p.life <= 0) { L.splice(i, 1); continue; }
+      if (p.life <= 0) continue;
       p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
       if (p.type === 'dust') { p.vx *= 0.92; p.size += dt * 6; }
       if (p.type === 'bubble') p.x += Math.sin(p.life * 10) * 0.4;
       if (p.rot !== undefined) p.rot += p.vr * dt;
+      L[j++] = p;
     }
+    L.length = j;
   }
   draw(ctx) {
+    // spinning bits (confetti, debris) are placed with one setTransform each instead of save/translate/rotate/restore
+    const m = ctx.getTransform(), plain = !m.b && !m.c, S = m.a;
     for (const p of this.list) {
       const k = p.life / p.max;
       if (p.type === 'text') {
@@ -43,7 +49,10 @@ class Particles {
       }
       ctx.globalAlpha = k;
       if (p.type === 'dust') { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill(); }
-      else if (p.type === 'debris' || p.type === 'confetti') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.type === 'confetti' ? p.size * 0.5 : p.size); ctx.restore(); }
+      else if (p.type === 'debris' || p.type === 'confetti') {
+        if (plain) { const c = Math.cos(p.rot) * S, sn = Math.sin(p.rot) * S; ctx.setTransform(c, sn, -sn, c, m.e + S * p.x, m.f + m.d * p.y); ctx.fillStyle = p.col; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.type === 'confetti' ? p.size * 0.5 : p.size); ctx.setTransform(m); }
+        else { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.type === 'confetti' ? p.size * 0.5 : p.size); ctx.restore(); }
+      }
       else if (p.type === 'bubble') { ctx.strokeStyle = 'rgba(220,250,255,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.stroke(); }
       else { ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.5 + k * 0.5), 0, TAU); ctx.fill(); }
     }
@@ -79,8 +88,12 @@ class Weather {
     }
   }
   draw(ctx, t) {
-    const k = this.kind;
-    for (const p of this.list) {
+    const k = this.kind, L = this.list, n = QualityTier.weatherK < 1 ? Math.ceil(L.length * QualityTier.weatherK) : L.length;
+    const m = ctx.getTransform(), plain = !m.b && !m.c, S = m.a;
+    const spin = (x, y, a) => { if (plain) { const c = Math.cos(a) * S, sn = Math.sin(a) * S; ctx.setTransform(c, sn, -sn, c, m.e + S * x, m.f + m.d * y); return false; } ctx.save(); ctx.translate(x, y); ctx.rotate(a); return true; };
+    const unspin = saved => { if (saved) ctx.restore(); else ctx.setTransform(m); };
+    for (let i = 0; i < n; i++) {
+      const p = L[i];
       if (k === 'snow') { ctx.fillStyle = `rgba(255,255,255,${p.a})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, TAU); ctx.fill(); }
       else if (k === 'rain' || k === 'neonrain') { ctx.strokeStyle = k === 'rain' ? 'rgba(200,210,255,0.35)' : (p.s > 13 ? 'rgba(255,90,220,0.35)' : 'rgba(80,240,255,0.3)'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.s * 0.15, p.y + p.s); ctx.stroke(); }
       else if (k === 'fireflies' || k === 'motes') {
@@ -89,11 +102,11 @@ class Weather {
         ctx.fillStyle = `rgba(${c},${a * 0.25})`; ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, TAU); ctx.fill();
         ctx.fillStyle = `rgba(${c},${a})`; ctx.beginPath(); ctx.arc(p.x, p.y, 1.4, 0, TAU); ctx.fill();
       }
-      else if (k === 'leaves' || k === 'petals') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.ph * 2); ctx.fillStyle = k === 'leaves' ? (p.s > 4 ? '#c8a03a' : '#7ab04a') : '#ffc0d8'; ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.5, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+      else if (k === 'leaves' || k === 'petals') { const sv = spin(p.x, p.y, p.ph * 2); ctx.fillStyle = k === 'leaves' ? (p.s > 4 ? '#c8a03a' : '#7ab04a') : '#ffc0d8'; ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.5, 0, 0, TAU); ctx.fill(); unspin(sv); }
       else if (k === 'sand') { ctx.fillStyle = 'rgba(255,220,160,0.5)'; ctx.fillRect(p.x, p.y, 3, 1); }
       else if (k === 'bubbles') { ctx.strokeStyle = 'rgba(200,240,255,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p.x, p.y, p.s + 1, 0, TAU); ctx.stroke(); }
       else if (k === 'embers' || k === 'sparks') { ctx.fillStyle = k === 'embers' ? `rgba(255,${120 + Math.floor(p.a * 100)},40,${p.a})` : `rgba(255,220,120,${p.a})`; ctx.fillRect(p.x, p.y, 2, 2); }
-      else if (k === 'confetti') { ctx.fillStyle = p.col; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.ph * 3); ctx.fillRect(-2, -1, 4, 2); ctx.restore(); }
+      else if (k === 'confetti') { ctx.fillStyle = p.col; const sv = spin(p.x, p.y, p.ph * 3); ctx.fillRect(-2, -1, 4, 2); unspin(sv); }
       else if (k === 'glitch') { if (Math.sin(p.ph * 7) > 0.3) { ctx.fillStyle = Math.sin(p.ph) > 0 ? 'rgba(255,0,212,0.35)' : 'rgba(0,255,154,0.35)'; ctx.fillRect(p.x, p.y, 12 + p.s * 10, 3); } }
       else if (k === 'dust') { ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, TAU); ctx.fill(); }
     }
@@ -141,6 +154,7 @@ class Play {
     this.sigCarry = opts.sig || null; this.dizzy = 0;
     // atlas memory: keep only what this level draws (its country's and its areas' themes); drop the rest
     if (typeof Atlas !== 'undefined') Atlas.keep(this.atlasNames());
+    Ink.flushHeld();   // the last level's held ink pictures
     // Hydration Station's gift: Brady always starts big (one more health step)
     this.loadArea(start.area, start.x, start.y, Math.max(opts.power || 0, gifts.hydration ? 1 : 0));
     this.camX = clamp(this.player.cx - Game.viewW * 0.4, 0, Math.max(0, this.area.W * TS - Game.viewW));
@@ -149,6 +163,8 @@ class Play {
     Input.setMode('game');
     Sound.setTempoBoost(false);
     this.mus(this.area.music);
+    // world tour: the powers Brady finished his last level with (28_tour_dk_carry.js)
+    if (typeof TourCarry !== 'undefined') TourCarry.start(this, opts);
   }
 
   /* ---------- area management ---------- */
@@ -193,12 +209,18 @@ class Play {
     this.boss = this.entities.find(e => e.boss && !e.remove) || null;
     this.refreshPlatforms();
     Game.setRows(this.viewRows());
+    // secrets: room clocks arm, timers re-base (TourHooks.areaLoaded, 28_tour_a2_hooks.js)
+    if (typeof TourHooks !== 'undefined' && TourHooks.areaLoaded.length) TourHooks.each('areaLoaded', this, this.area);
   }
   /* ---------- camera zoom ----------
      Near (the phone default): 10 tile rows instead of 12, so Brady, the enemies, the items and the hazards are all
      20 % larger on a small screen. Climbing, falling and flying areas keep 11 rows of look-ahead; a boss arena is
      framed whole (as many rows as its width needs, up to the standard 12). Far: the standard 12 rows.
      Settings: Save.data.settings.zoom = 'near' | 'far' (unset: Near on touch screens and short windows). */
+  /* the height the end-of-level and pause screens lay out in: its middle is the middle of the game view. In landscape
+     that is the whole screen; in portrait the controller pad covers the lower part of the screen, so the results'
+     NEXT / MAP / PLAY AGAIN and the pause menu's lower rows used to sit hidden under it */
+  static uiH() { const r = Game.gameRect; return r ? Math.min(Game.cssH, 2 * r.y + r.h) : Game.cssH; }
   static zoomNear() { const z = Save.data.settings.zoom; return z ? z === 'near' : (Game.forceTouchUI || Game.cssH < 520); }
   viewRows() {
     if (!Play.zoomNear()) return VIEW_ROWS;
@@ -337,11 +359,11 @@ class Play {
       bump();
       if (it === 'pick') { this.spawn(new PickPop(this, tx * TS + TS / 2, ty * TS - 8)); this.addPick(); return; }
       let kind = it;
-      if (this.level.tour) { this.spawn(new TourItem(this, tx * TS + TS / 2, ty * TS, TourPowers.blockItem(it, this))); Sound.play('appear'); if (t === T.HIDDEN) { this.egg('hidden-block'); Sound.play('secret', { vol: 0.5 }); } return; }
+      if (this.level.tour) { const ti = new TourItem(this, tx * TS + TS / 2, ty * TS, TourPowers.blockItem(it, this)); ItemSpace.fromBlock(ti, this, tx, ty); this.spawn(ti); Sound.play('appear'); if (t === T.HIDDEN) { this.egg('hidden-block'); Sound.play('secret', { vol: 0.5 }); } return; }
       if (it === 'power') kind = (this.player && this.player.power > 0) ? 'vinyl' : 'coffee';
       if (it === 'oneup') kind = 'cassette';
       if (typeof it === 'string' && it.startsWith('bag:')) kind = it.slice(4);
-      this.spawn(new Item(this, tx * TS + TS / 2, ty * TS, kind));
+      const item = new Item(this, tx * TS + TS / 2, ty * TS, kind); ItemSpace.fromBlock(item, this, tx, ty); this.spawn(item);
       Sound.play('appear');
       if (t === T.HIDDEN) { this.egg('hidden-block'); Sound.play('secret', { vol: 0.5 }); }
       return;
@@ -381,11 +403,14 @@ class Play {
     this.secretClear = gate.secret ? (gate.secretWorld || 'world') : null;
     this.secretFoundNow = !!gate.secret;
     this.recordProgress();
+    // secrets: an exit kind's own clear (a warp sends Brady off: TourHooks.levelClear)
+    if (typeof TourHooks !== 'undefined' && TourHooks.levelClear.length) TourHooks.each('levelClear', this, gate);
     for (let i = 0; i < 3; i++) setTimeout(() => { if (Game.scene === this) { this.burst(gate.cx + (Math.random() - 0.5) * 200, gate.y - 40 - Math.random() * 80, 40, '#fff', 'firework'); Sound.play('pick', { pitch: 0.5 }); } }, 400 + i * 450);
   }
   recordProgress() {
     const d = Save.data, id = this.id;
-    d.done[id] = true;
+    // secrets: an exit kind may leave the level not done (TourHooks.exitKind(via, { marksDone: false })); default done
+    if (!(typeof TourHooks !== 'undefined') || TourHooks.marksDone(this.level, this.exitKey)) d.done[id] = true;
     if (this.secretClear) d.secretExits[id] = true;
     this.opened = this.level.tour && typeof TourProgress !== 'undefined' ? TourProgress.complete(id, !!this.secretClear, this.exitKey) : WorldGame.complete(id, !!this.secretClear);
     if (FINALE_LEVELS[id]) d.beatGame = true;
@@ -521,6 +546,8 @@ class Play {
     const k = ty > this.camY ? 7 : 4.5;
     this.camY += (ty - this.camY) * (1 - Math.exp(-dt * k));
     this.camX = clamp(this.camX, 0, maxX);
+    // secrets: a scripted camera (the treasure-map peek) may set camX / camY last (TourHooks.camera)
+    if (typeof TourHooks !== 'undefined' && TourHooks.camera.length) TourHooks.each('camera', this, dt);
   }
 
   /* ---------- update ---------- */
@@ -640,6 +667,8 @@ class Play {
     p.update(dt, inp);
     // collisions
     if (p.state === 'play' && !p.dead) this.collide(p);
+    // secrets: per-frame play hooks (TourHooks.playUpdate, 28_tour_a2_hooks.js)
+    if (typeof TourHooks !== 'undefined' && TourHooks.playUpdate.length) TourHooks.each('playUpdate', this, dt);
     // removals
     for (let i = this.entities.length - 1; i >= 0; i--) { const e = this.entities[i]; if (e.remove) { if (e.onRemove) e.onRemove(); this.entities.splice(i, 1); } }
     // tile animations: bumps and crumbles
@@ -747,7 +776,7 @@ class Play {
   buildResultsUI() {
     const next = this.nextLevelId();
     const btns = [];
-    const W = Game.cssW, H = Game.cssH;
+    const W = Game.cssW, H = Play.uiH();
     const bw = Math.min(170, W * 0.36), bh = 48, y = H * 0.5 + 90;
     const finale = this.level.tour ? Tour.isFinale(this.id) : !!FINALE_LEVELS[this.id];
     if (finale) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: this.level.tour ? 'HOME TOGETHER ♥' : 'FIND CHINKA ♥', primary: true, fn: () => this.goNext(null) });
@@ -773,6 +802,8 @@ class Play {
   closePause() { this.paused = false; Sound.resume(); Input.setMode('game'); Sound.play('select'); }
 
   /* ---------- rendering ---------- */
+  // the backdrop's sky fills the whole game view; in landscape that is the whole canvas (src/99_main.js skips its clear)
+  coversCanvas() { const r = Game.gameRect; return r.x === 0 && r.y === 0 && r.w === Game.cssW && r.h === Game.cssH; }
   draw(ctx) {
     const S = Game.S, VW = Game.viewW, VH = Game.viewH;
     const A = this.area;
@@ -783,13 +814,13 @@ class Play {
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     ctx.beginPath(); ctx.rect(0, 0, VW * S, VH * S); ctx.clip();
     // a zoomed-in view keeps the backdrop framed as at the standard zoom: its ground line rises with the floor
-    BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash, (VIEW_ROWS * TS - VH) * 0.68);
     // Atmospheric separation belongs behind solids, collectibles and characters.
     // Keep each country's own sky/fog colour rather than flattening every world to grey.
+    // (a 16 % veil in that colour: baked into the backdrop when it can be, BG.get, else one fill over it)
+    const th0 = THEMES[this.themeKey], veil = this.level.tour ? th0.fog || th0.sky[1] : null;
+    const baked = BG.draw(ctx, this.themeKey, camX, camY, Math.max(0, A.H * TS - VH), VW, VH, S, this.t, this.flash, (VIEW_ROWS * TS - VH) * 0.68, veil);
     if (this.level.tour) {
-      const th = THEMES[this.themeKey];
-      ctx.fillStyle = rgba(th.fog || th.sky[1], 0.16);
-      ctx.fillRect(0, 0, VW * S, VH * S);
+      if (!baked) { ctx.fillStyle = rgba(veil, 0.16); ctx.fillRect(0, 0, VW * S, VH * S); }
       // trip moments: the strong part (fractals, the green haze) sits behind the tiles and characters
       TripFX.back(ctx, this, Math.round(VW * S), Math.round(VH * S));
     }
@@ -800,13 +831,15 @@ class Play {
     for (const d of A.decor) { const hw = (d.w || 0) / 2 + 80; if (d.x > camX - hw && d.x < camX + VW + hw) Decor.draw(ctx, d, this.t, th); }
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     this.drawTiles(ctx, camX, camY, false);
+    if (this.level.tour) TripFX.mid(ctx, this, Math.round(VW * S), Math.round(VH * S));   // trip colours on the level, before the characters
     wt();
     if (A.risingLava) this.drawRisingLava(ctx, camX, VW);
     // entities: platforms/props first, then items, enemies, player, projectiles
-    const vis = e => e.x + e.w > camX - 60 && e.x < camX + VW + 60 && e.y + e.h > camY - 160 && e.y < camY + VH + 60;
-    const layers = [[], [], [], []];
+    // (the four draw lists are reused from frame to frame: no per-frame garbage)
+    const layers = this.drawLists || (this.drawLists = [[], [], [], []]);
+    for (const L of layers) L.length = 0;
     for (const e of this.entities) {
-      if (e.remove || !vis(e)) continue;
+      if (e.remove || !(e.x + e.w > camX - 60 && e.x < camX + VW + 60 && e.y + e.h > camY - 160 && e.y < camY + VH + 60)) continue;
       if (e.isPlatform || e.back || e instanceof Gate || e instanceof Checkpoint || e instanceof Sign || e instanceof Portal || e instanceof Spring) layers[0].push(e);
       else if (e.item || e instanceof Gold || e instanceof PickPop) layers[1].push(e);
       else if (e.friendly) layers[3].push(e);
@@ -815,10 +848,13 @@ class Play {
     // underwater: the blue wash and caustics go over the scenery but under the characters, so enemies stay crisp
     if (A.water) { ctx.setTransform(1, 0, 0, 1, gx, gy); this.drawUnderwater(ctx, VW * S, VH * S); wt(); }
     // contact shadows ground every actor (and lift the ones in the air off the floor)
-    this.drawShadows(ctx, layers[1].concat(layers[2], layers[3]));
-    for (const L of layers.slice(0, 3)) for (const e of L) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
+    this.drawShadows(ctx, layers[1], layers[2], layers[3]);
+    // secrets: entityDraw handlers may wrap an entity's draw (hats, dancing); afterEntities draws over them (TourHooks)
+    const ed = typeof TourHooks !== 'undefined' && TourHooks.entityDraw.length ? TourHooks : null;
+    for (let li = 0; li < 3; li++) for (const e of layers[li]) { try { if (ed) ed.drawEntity(this, ctx, e); else e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
     this.player.draw(ctx, this.t);
-    for (const e of layers[3]) { try { e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
+    for (const e of layers[3]) { try { if (ed) ed.drawEntity(this, ctx, e); else e.draw(ctx, this.t); } catch (err) { entityFault(e, err, 'draw'); wt(); } }
+    if (typeof TourHooks !== 'undefined' && TourHooks.afterEntities.length) { TourHooks.each('afterEntities', this, ctx, layers); wt(); }
     // foreground: water pools, fake walls
     ctx.setTransform(1, 0, 0, 1, gx, gy);
     this.drawTiles(ctx, camX, camY, true);
@@ -836,7 +872,7 @@ class Play {
     WorldFx.apply(ctx, this, Math.round(VW * S), Math.round(VH * S));
     if (this.level.tour) TripFX.post(ctx, this, Math.round(VW * S), Math.round(VH * S));
     if (this.player && this.player.buffs && this.player.buffs.sundial > 0) { const W = Math.round(VW * S), H = Math.round(VH * S), k = Math.min(1, this.player.buffs.sundial, 0.9 + (TourKit.reduceMotion() ? 0 : 0.1 * Math.sin(this.t * 4))); const gg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.65); gg.addColorStop(0, 'rgba(120,80,30,0)'); gg.addColorStop(1, `rgba(120,80,30,${0.45 * k})`); ctx.fillStyle = gg; ctx.fillRect(0, 0, W, H); }
-    ctx.drawImage(Game.vignette, 0, 0); // vignette
+    if (QualityTier.vignette) ctx.drawImage(Game.vignette, 0, 0); // vignette
     if (this.flash > 0 && !th.storm) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, this.flash * 0.7)})`; ctx.fillRect(0, 0, VW * S, VH * S); }
     ctx.restore();
     // screen-space UI
@@ -860,7 +896,7 @@ class Play {
     const pad = TPAD * S;
     const t = this.t;
     const qf = Math.floor(t * 6) % 4, cf = Math.floor(t * 10) % 4;
-    const bumpOf = (x, y) => { for (const b of A.bumps) if (b.tx === x && b.ty === y) return Math.sin((1 - b.t / 0.18) * Math.PI) * 8; return 0; };
+    const bumpOf = (x, y) => { for (const b of A.bumps) if (b.tx === x && b.ty === y) return Math.sin((1 - b.t / 0.18) * Math.PI) * (b.amp || 8); return 0; };
     const crumbleOf = (x, y) => { for (const c of A.crumbles) if (c.tx === x && c.ty === y && c.state === 'shake') return Math.sin(t * 80) * 1.5; return 0; };
     const p = this.player;
     // fake walls fade when Brady is inside them
@@ -939,7 +975,7 @@ class Play {
   }
   /* A soft contact shadow under each actor on (or above) a floor tile: an ellipse on the floor that shrinks and fades
      the higher the actor is; nothing over a pit. Enemies, friends, items, bosses and Brady; world transform. */
-  drawShadows(ctx, list) {
+  drawShadows(ctx, ...lists) {
     const A = this.area, p = this.player;
     ctx.save(); ctx.fillStyle = 'rgb(24,12,40)';
     const one = (e, scale) => {
@@ -953,7 +989,7 @@ class Play {
       const rx = Math.min(30, e.w * 0.5 * (scale || 1)) * (0.55 + 0.45 * k), ry = Math.max(1.6, rx * 0.2);
       ctx.globalAlpha = 0.3 * k; ctx.beginPath(); ctx.ellipse(fx, gy + 0.5, rx, ry, 0, 0, TAU); ctx.fill();
     };
-    for (const e of list) { if (e.enemy || e.friendly || e.item || e.boss || e.cfg) one(e, e.boss ? 0.8 : 1.2); }
+    for (const list of lists) for (const e of list) { if (e.enemy || e.friendly || e.item || e.boss || e.cfg) one(e, e.boss ? 0.8 : 1.2); }
     if (p && !p.dead) one(p, 1.3);
     ctx.restore();
   }
@@ -1128,7 +1164,21 @@ class Play {
     ctx.restore();
   }
 
+  /* The HUD is painted into its own canvas every second frame (its pulses and the timer read the same at 30 Hz) and
+     blitted on the others: dozens of small vector shapes, a mini Brady and text glyphs every frame cost about a
+     millisecond of Safari's drawing time on a Mac. A change of size repaints it at once. */
   drawHUD(ctx) {
+    const k = Game.dpr, cw = Math.ceil(Game.cssW * k), ch = Math.ceil(Math.min(Game.cssH, 170) * k);
+    let c = this.hudC;
+    if (!c || c.width !== cw || c.height !== ch) { c = this.hudC = makeCanvas(cw, ch); this.hudN = 0; }
+    if ((this.hudN = (this.hudN || 0) + 1) % 2 === 1) {
+      const x = c.getContext('2d');
+      x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, cw, ch); x.setTransform(k, 0, 0, k, 0, 0);
+      this.paintHUD(x);
+    }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(c, 0, 0); ctx.restore();
+  }
+  paintHUD(ctx) {
     const W = Game.cssW, top = Math.max(8, insets.t + 4), left = Math.max(12, insets.l + 6), right = Math.max(12, insets.r + 6);
     const gr = Game.gameRect;
     ctx.save();
@@ -1259,6 +1309,8 @@ class Play {
     const tag = (x, y, txt) => {
       ctx.font = `12px ${FONT_DISPLAY}`;
       const w = ctx.measureText(txt).width + 18;
+      // kept on screen: a long tip by the jump button would run off the right edge (it moves in, and up clear of RUN · THROW)
+      const xc = clamp(x, w / 2 + 6, Game.cssW - w / 2 - 6); if (xc !== x) { y -= 28; x = xc; }
       ctx.fillStyle = 'rgba(10,8,18,0.75)'; rr(ctx, x - w / 2, y - 12, w, 24, 12); ctx.fill();
       ctx.strokeStyle = 'rgba(255,216,74,0.7)'; ctx.lineWidth = 1.2; ctx.stroke();
       ctx.fillStyle = '#ffd84a'; ctx.fillText(txt, x, y + 1);
@@ -1307,7 +1359,7 @@ class Play {
     ctx.restore();
   }
   drawResults(ctx) {
-    const W = Game.cssW, H = Game.cssH;
+    const W = Game.cssW, H = Play.uiH();
     const k = this.state === 'results' ? Math.min(1, this.stateT * 4) : 1;
     ctx.save();
     ctx.fillStyle = `rgba(6,4,14,${0.55 * k + 0.2})`; ctx.fillRect(0, 0, W, H);
@@ -1315,7 +1367,9 @@ class Play {
     ctx.font = `${Math.min(38, W * 0.07)}px ${FONT_DISPLAY}`;
     const g = ctx.createLinearGradient(0, H / 2 - 120, 0, H / 2 - 80); g.addColorStop(0, '#fff6c0'); g.addColorStop(1, '#ff4fd8');
     ctx.fillStyle = g;
-    ctx.fillText(this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'CHINKA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'WELCOME HOME!', W / 2, H / 2 - 100);
+    // secrets: an exit kind's title (a warp's own title) or a resultsTitle hook (TourHooks.titleFor)
+    const hookTitle = typeof TourHooks !== 'undefined' ? TourHooks.titleFor(this) : null;
+    ctx.fillText(hookTitle || (this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'CHINKA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'YOU DID IT!'), W / 2, H / 2 - 100);
     ctx.font = `14px ${FONT_UI}`; ctx.fillStyle = '#ffffff';
     ctx.fillText(this.level.name + ' cleared', W / 2, H / 2 - 66);
     ctx.font = `13px ${FONT_DISPLAY}`;

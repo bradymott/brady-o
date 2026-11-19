@@ -384,7 +384,7 @@ const Sprites = {
       ctx.fillStyle = '#0a0a0e'; ctx.fillRect(-0.5, -2.2, 1, 4.4); ctx.restore();
     }
   },
-  goldRecord(ctx, x, y, t, ghost) {
+  goldRecord(ctx, x, y, t, ghost, q) {   // q: { s, a } a fixed spin and twinkle (the cached frames of Gold.draw)
     // centre
     ctx.save();
     if (ghost) ctx.globalAlpha *= 0.35;
@@ -392,7 +392,7 @@ const Sprites = {
     const gg = ctx.createRadialGradient(x, y, 2, x, y, 30); gg.addColorStop(0, 'rgba(255,220,100,0.55)'); gg.addColorStop(1, 'rgba(255,200,60,0)');
     ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(x, y, 30, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
-    const s = Math.cos(t * 2.5);
+    const s = q ? q.s : Math.cos(t * 2.5);
     ctx.translate(x, y); ctx.scale(Math.max(0.15, Math.abs(s)), 1);
     const g = ctx.createRadialGradient(-5, -5, 1, 0, 0, 15);
     g.addColorStop(0, '#fff8d0'); g.addColorStop(0.5, '#ffcc3a'); g.addColorStop(1, '#a8660a');
@@ -405,8 +405,8 @@ const Sprites = {
     ctx.restore();
     // twinkle
     const tw = (t * 1.3) % 1;
-    if (tw < 0.3 && !ghost) {
-      const a = Math.sin(tw / 0.3 * Math.PI);
+    if (q ? q.a > 0 && !ghost : tw < 0.3 && !ghost) {
+      const a = q ? q.a : Math.sin(tw / 0.3 * Math.PI);
       ctx.save(); ctx.globalAlpha *= a; ctx.fillStyle = '#ffffff';
       ctx.translate(x + 8, y - 9);
       ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(1.2, -1.2); ctx.lineTo(6, 0); ctx.lineTo(1.2, 1.2); ctx.lineTo(0, 6); ctx.lineTo(-1.2, 1.2); ctx.lineTo(-6, 0); ctx.lineTo(-1.2, -1.2); ctx.fill();

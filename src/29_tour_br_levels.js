@@ -276,7 +276,7 @@ const enemies = {
   brPandeiro: { cls: TourEnemy.make(PANDEIRO), place: 'walk' },
   brBrigadeiro: { cls: TourEnemy.make(BRIGADEIRO), place: 'walk' },
   brParrot: { cls: TourFlyer.make({ w: 28, h: 16, range: 4, speed: 1.0, swoop: true, art: parrotArt, burst: '#e8302a', atlas: 'br_x' }), place: 'fly' },
-  brSloth: { cls: TourEnemy.make({ w: 26, h: 26, speed: 0.5, behavior: 'ceilingDrop', tell: 0.6, stuckT: 2.5, climbSpeed: 0.6, art: slothArt, burst: '#9a8060', atlas: 'br_x' }), place: 'here' },
+  brSloth: { cls: TourEnemy.make({ belly: true, w: 26, h: 26, speed: 0.5, behavior: 'ceilingDrop', tell: 0.6, stuckT: 2.5, climbSpeed: 0.6, art: slothArt, burst: '#9a8060', atlas: 'br_x' }), place: 'here' },
   brSwift: { cls: TourFlyer.make({ w: 26, h: 12, range: 7, speed: 1.0, behavior: 'hoverDart', art: swiftArt, burst: '#3a3a48', atlas: 'br_x' }), place: 'here' },
   brPiranha: { cls: TourSwimmer.make({ w: 22, h: 16, speed: 1.2, behavior: 'swarm', n: 4, range: 4, atlas: 'br_x', burst: '#e8422a',
     // the school's followers always draw through cfg.art, so the art reaches for the atlas itself
@@ -356,7 +356,7 @@ class BrKickTarget extends Ent {
       const cx = x + w / 2, cy = y + h / 2 + 2, r = this.done ? 0 : 13;
       if (r) for (let k = 3; k > 0; k--) { c.fillStyle = k % 2 ? '#ff3d3d' : '#ffffff'; c.beginPath(); c.arc(cx, cy, r * k / 3, 0, TAU); c.fill(); }
       else { c.fillStyle = '#1aa85a'; c.font = `bold 12px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.fillText('✓', cx, cy + 4); }
-    }, { pad: 6 });
+    }, { pad: 6, owner: this, key: this.done ? 'done' : 'ready' });
     if (!this.done) { const k = 0.5 + 0.5 * Math.sin(this.t * 4); ctx.fillStyle = `rgba(255,216,74,${0.4 + 0.5 * k})`; ctx.font = `10px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillText('KICK!', this.cx, this.y - 6); }
   }
 }
@@ -393,6 +393,17 @@ Object.assign(ENTITY_TYPES, { brBeatFloat: BrBeatFloat, brBeatCannon: BrBeatCann
 
 /* ================= country looks for library objects (skins) ================= */
 const skins = {
+  // 3-3: the inner bark of the hollow cecropia (a climb strip look): ridged pale bark with grip rings, in the dark slit
+  // (a narrow ridge down the slit's far wall, so the coin column up the middle stays in plain sight)
+  brCecropiaBark(ctx, e, t) {
+    const x = e.cx + 10;
+    ctx.fillStyle = '#1c1426'; ctx.fillRect(x - 4.5, e.top - 1, 9, e.bottom - e.top + 1);
+    ctx.fillStyle = '#c8c0a0'; ctx.fillRect(x - 3, e.top, 6, e.bottom - e.top);
+    ctx.fillStyle = '#e4dcbc'; ctx.fillRect(x - 3, e.top, 2, e.bottom - e.top);
+    ctx.strokeStyle = '#7a7058'; ctx.lineWidth = 2; for (let y = e.top + 10; y < e.bottom - 4; y += 12) { ctx.beginPath(); ctx.moveTo(x - 3, y); ctx.lineTo(x + 3, y - 2); ctx.stroke(); }
+  },
+  // 3-2: a sloth cousin's hand held out (the cousin entity draws the arm): only the brass ring of every grab point
+  brCousinHand(ctx, e, t) { pupoRing(ctx, e.hx, e.hy, 5.5); },
   // a gate of hanging brass bells across the avenue (the kazoo's honk rings them and it swings open)
   brBellGate(ctx, e, t) {
     const x = e.x, y = e.y, w = e.w, h = e.h, cx = x + w / 2;
@@ -985,7 +996,139 @@ P.beachFinale = (st, o) => {
   B.spawn('gate', x + 11, st.gy - 1, { exit: 'main' });
   return x + 21;
 };
+// 3-1: a second kazoo stand just past the checkpoint, on the floor already there (it takes no room, so nothing after it
+// moves: the Loading Dock, its Wormhole and its Brady Button stay put). A respawn at the checkpoint comes back with
+// nothing and the first bell gate shut again behind it, so without this stand the second bell gate could never be rung
+// (tools/sbw_wayout_test.js found it: no way back to an exit from x 111-150)
+P.kazooStand = (st, o) => { const x = st.x + (o.dx || 1); st.B.spawn('gearStand', x, st.gy - 1, { item: 'kazoo' }); st.B.vkey('gear:kazoo', [[x, st.gy - 1], [x, st.gy - 2]]); return st.x; };
+/* ---------------- Pupo in Brazil (docs/design/PUPO.md §4.2, §4.3) ---------------- */
+// a Nap Box on its own bit of floor (the shared piece leaves its column to the gen)
+P.napBox = (st, o) => { const x = st.x; st.floor(x, x + 2); st.x = x + 1; Tour.pieces.napBox(st, o); return x + 3; };
+// 3-2's Pupo obstacle, The Sloth Bridge: a river of piranhas too wide to jump. On the far bank Pupo's cousins hang from
+// a long branch over the water, each reaching one arm down with a hand out (a brass ring: a pupoGrab hook): Pupo grabs
+// the first hand and swings hand to hand across. Hooks <= 4 tiles apart, 5 rows up (as the shared pupoGap). { w, n }
+P.slothBridge = (st, o) => {
+  const B = st.B, w = o.w || 16, n = o.n || 3, gy = st.gy;
+  let x = st.x; st.floor(x, x + 3);
+  st.sign(x + 1, "TOO WIDE TO JUMP! PUPO'S COUSINS LEND A HAND: ACTION AT A HAND, JUMP TO LET GO");
+  x += 4; const x0 = x, x1 = x0 + w - 1;
+  st.pit(x0, x1); B.fill(x0, gy + 1, x1, st.H - 1, T.LAVA);
+  const by = gy - 7;
+  B.decorAt('brPiranhaFins', x0 + Math.floor(w / 2), gy + 2, 0);
+  B.prop('brCousinBranch', x0 - 1, by, w + 5, 1, 'none', {});
+  for (let i = 1; i <= n; i++) {
+    const hx = x0 + Math.round(i * w / (n + 1)) - 1;
+    B.spawn('pupoGrab', hx, gy - 5, { kind: 'hook', look: 'brCousinHand', cam: 3 });   // cam: the branch and the cousins' lines kept below the HUD (28_tour_pf_g2.js)
+    B.spawn('brCousin', hx, gy - 5, { k: i - 1, n, by });
+  }
+  // coins along the swing, a reward for taking the cousins' hands
+  for (let q = x0 + 1; q < x1; q++) B.set(q, gy - 2 - Math.round(Math.sin((q - x0) / (x1 - x0) * Math.PI) * 2), T.PICK);
+  st.floor(x1 + 1, x1 + 7);
+  B.prop('brTree', x1 + 4, gy - 10, 2, 10, 'none', {});
+  return x1 + 8;
+};
+// 3-3's Pupo bonus (a helper level, PUPO.md §4.3): a climb band with Pupo's Nap Box on its floor and a hollow cecropia
+// trunk against the right wall beside a little cascade. A column of coins runs up the slit inside the trunk: Brady jumps
+// in for the lowest two, Pupo grips the trunk's inner bark (Action) and climbs the whole column. Ledges up the left side
+// for everyone; the band's top floor is a normal one-way floor.
+P.cecropiaBand = (st, o) => {
+  const B = st.B, W = st.W, y0 = st.y, cx = W - 5, top = y0 - 13;
+  // the Nap Box in the open (never under the low ledge on the left: a used box there would pen big Brady in)
+  B.set(12, y0 - 1, T.QBLOCK); B.item(12, y0 - 1, 'pupo'); B.spawn('napBox', 12, y0 - 1, {});
+  // the trunk (hidden tiles, drawn by the prop) with the alcove at its foot and the slit up its middle
+  for (let x = W - 8; x <= W - 2; x++) for (let y = top; y <= y0 - 1; y++) { B.set(x, y, T.HARD); B.setHide(x, y, 1); }
+  for (let x = W - 8; x <= cx; x++) for (let y = y0 - 2; y <= y0 - 1; y++) { B.set(x, y, T.EMPTY); B.setHide(x, y, 0); }
+  for (let y = top + 1; y <= y0 - 3; y++) { B.set(cx, y, T.EMPTY); B.setHide(cx, y, 0); }
+  B.prop('brCecropia', W - 8, top, 7, y0 - top, 'none', { slit: cx });
+  B.spawn('pupoClimb', cx, y0 - 1, { h: 12, side: 1, look: 'brCecropiaBark' });
+  for (let y = y0 - 5; y >= top + 1; y--) if (y !== y0 - 6) B.set(cx, y, T.PICK);
+  B.prop('brCascade', W - 11, top - 2, 2, y0 - top + 2, 'none', {});
+  // ledges up the left (a zig-zag) to the band's top floor
+  B.fill(2, y0 - 3, 9, y0 - 3, T.GROUND); B.fill(st.mid - 5, y0 - 6, st.mid + 1, y0 - 6, T.GROUND); B.fill(2, y0 - 9, 9, y0 - 9, T.GROUND); B.fill(st.mid - 5, y0 - 12, st.mid + 1, y0 - 12, T.GROUND);
+  st.coins(3, 8, y0 - 5); st.coins(3, 8, y0 - 11);
+  st.top(y0 - 15);
+};
 for (const k in P) Tour.pieces['br.' + k] = P[k];
+// a sloth cousin hanging from the branch over the river (3-2): upside down like Pupo on a bar, in mossier fur, one arm
+// stretched down with its hand out round the brass ring (the pupoGrab hook at the same spot). It says hello when Pupo
+// takes its hand; the last one waves him off. Drawn with Pupo's own art (05e_pupo.js) through the ink pass, the arm
+// outside it (as Pupo's stretch arms are).
+class BrCousin extends Ent {
+  constructor(g, s) {
+    super(g, s, 4 * TS, 4 * TS); this.hx = s.x; this.hy = s.y - TS / 2; this.by = s.by * TS + TS / 2; this.k = s.k || 0; this.n = s.n || 3;
+    this.facing = this.k % 2 ? -1 : 1; this.bx = this.hx - this.facing * 14; this.x = this.hx - 2 * TS; this.y = this.by - 12; this.h = this.hy - this.by + 30;
+    this.back = true; this.friendly = true; this.hook = null; this.held = false; this.mood = 'calm'; this.said = 0;
+  }
+  update(dt) {
+    this.t += dt; const g = this.g;
+    if (!this.hook) for (const e of g.entities) if (e.pupoGrabPt && Math.abs(e.hx - this.hx) < 2 && Math.abs(e.hy - this.hy) < 2) { this.hook = e; break; }
+    const R = g.pupo, on = !!(R && R.mode === 'swing' && R.sw && R.sw.e === this.hook && this.hook);
+    if (on && !this.held) { this.said++; PupoRide.say(g, this.hx, this.hy - 26, BrCousin.HI[this.k % BrCousin.HI.length]); PupoRide.sfx('pupoGiggle', 'pick', { pitch: 0.55 + this.k * 0.08, vol: 0.5 }); }
+    if (!on && this.held && this.k === this.n - 1) PupoRide.say(g, this.hx, this.hy - 26, '...BYE... COUSIN.');
+    this.held = on;
+    this.mood = on ? 'happy' : (this.t + this.k * 1.7) % 6 < 0.25 ? 'blink' : PupoG1.near(g, this.hx, this.hy, 5 * TS) ? 'happy' : 'calm';
+  }
+  draw(ctx) {
+    const o = BrCousin.o, S = PupoRide.ART * 0.92, an = BrCousin.an;
+    o.x = this.bx; o.y = this.by; o.t = Math.round(((this.t + this.k) % 2.4) / 0.6) * 0.6; o.scale = S; o.facing = this.facing; o.mood = this.mood;
+    BrCousin.cur = o;
+    // the held picture's key, rebuilt only when the mood or the breathing frame changes (no string per frame)
+    if (o.mood !== this.kMood || o.t !== this.kT) { this.kMood = o.mood; this.kT = o.t; this.inkKey = o.mood + ':' + o.t; }
+    const io = this.inkOpts || (this.inkOpts = { pad: 6, owner: this, key: '', rim: Ink.keyline }); io.key = this.inkKey;
+    Ink.around(ctx, this.bx - 50, this.by - 14, 100, 66, BrCousin.inkFn, io);
+    // the arm down to the hand held out (the ring is the hook's own drawing)
+    Pupo.anchors('hang', o.t, an);
+    const sx = this.bx + this.facing * an.shoulderF.x * S, sy = this.by + an.shoulderF.y * S, hold = this.held ? Math.sin(this.t * 9) * 1.5 : 0;
+    Pupo.arm(ctx, sx, sy, this.hx, this.hy - 4 + hold, { w: 5.5, col: BrCousin.FUR.fur, t: this.t, point: false, sag: this.facing * 5, handScale: 0.95 });
+  }
+}
+BrCousin.HI = ['...HI... COUSIN.', '...HOLD ON.', '...SAY HI... TO GRANDMA.'];
+// mossier, greener fur than Pupo's (real sloths grow algae): swapped into PUPO only while a cousin is painted
+BrCousin.FUR = { fur: '#9c9468', furSh: '#78704a', furDk: '#5e5838', furHi: '#bab486' };
+BrCousin.SAVE = { fur: '', furSh: '', furDk: '', furHi: '' };
+BrCousin.o = { x: 0, y: 0, scale: 1, facing: 1, t: 0, pose: 'hang', mood: 'calm', rider: null, armsOff: true, phase: null, spiral: 0, still: true, reach: 0 };
+BrCousin.an = Pupo.newAnchors();
+BrCousin.inkFn = c => {
+  const F = BrCousin.FUR, Sv = BrCousin.SAVE;
+  for (const k in F) { Sv[k] = PUPO[k]; PUPO[k] = F[k]; }
+  try { Pupo.draw(c, BrCousin.cur); } finally { for (const k in F) PUPO[k] = Sv[k]; }
+};
+ENTITY_TYPES.brCousin = BrCousin;
+// the hollow cecropia (3-3): a pale ringed trunk against the wall, the dark slit up its middle (d.slit, a tile column),
+// the alcove at its foot, an umbrella of big hand-shaped leaves on top
+Decor.brCecropia = (ctx, x, y, t, th, d) => {
+  const x0 = x - d.w / 2, top = y - d.h, sx = d.slit * TS;
+  ctx.fillStyle = '#1c1426'; rr(ctx, x0 - 2, top - 2, d.w + 4, d.h + 4, 14); ctx.fill();
+  ctx.fillStyle = '#b8b498'; rr(ctx, x0, top, d.w, d.h, 12); ctx.fill();
+  ctx.fillStyle = '#d4d0b4'; ctx.fillRect(x0 + 10, top + 6, 14, d.h - 12);
+  ctx.strokeStyle = '#8a866c'; ctx.lineWidth = 2.5; for (let yy = top + 28; yy < y - 8; yy += 44) { ctx.beginPath(); ctx.moveTo(x0 + 4, yy); ctx.quadraticCurveTo(x, yy + 6, x0 + d.w - 4, yy); ctx.stroke(); }
+  // the slit and the alcove: dark inside
+  ctx.fillStyle = '#2a2018'; rr(ctx, sx + 2, top + TS + 2, TS - 4, d.h - 3 * TS - 2, 6); ctx.fill(); rr(ctx, x0, y - 2 * TS, sx + TS - x0 - 2, 2 * TS, 8); ctx.fill();
+  // the leaves: a crown of big lobed leaves (pale undersides)
+  for (let k = 0; k < 5; k++) { const a = -Math.PI * 0.9 + k * Math.PI * 0.2, lx = x + Math.cos(a) * 44, ly = top - 6 + Math.sin(a) * 26;
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.ellipse(lx, ly, 26, 11, a + Math.PI / 2, 0, TAU); ctx.fill();
+    ctx.fillStyle = k % 2 ? '#4a9a44' : '#5ab050'; ctx.beginPath(); ctx.ellipse(lx, ly, 24, 9, a + Math.PI / 2, 0, TAU); ctx.fill(); }
+};
+// piranhas in the river under the cousins: little red fins and eyes cruising to and fro (the water is not for swimming)
+Decor.brPiranhaFins = (ctx, x, y, t) => {
+  for (let k = 0; k < 3; k++) {
+    const fx = x + Math.sin(t * (0.7 + k * 0.23) + k * 2.1) * (120 + k * 30), fy = y - 27 + Math.sin(t * 3 + k) * 1.5, d = Math.cos(t * (0.7 + k * 0.23) + k * 2.1) > 0 ? 1 : -1;
+    ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.moveTo(fx - 9 * d, fy + 2); ctx.lineTo(fx + 2 * d, fy - 11); ctx.lineTo(fx + 8 * d, fy + 2); ctx.fill();
+    ctx.fillStyle = '#e8503a'; ctx.beginPath(); ctx.moveTo(fx - 6 * d, fy + 1); ctx.lineTo(fx + 2 * d, fy - 8); ctx.lineTo(fx + 6 * d, fy + 1); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(fx + 12 * d, fy + 1, 2.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#1c1426'; ctx.beginPath(); ctx.arc(fx + 12.6 * d, fy + 1, 1.2, 0, TAU); ctx.fill();
+  }
+};
+// the branch the cousins hang from, from the far bank's tree out over the river
+Decor.brCousinBranch = (ctx, x, y, t, th, d) => {
+  const x0 = x - d.w / 2, x1 = x + d.w / 2, yy = y - d.h / 2;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#1c1426'; ctx.lineWidth = 15; ctx.beginPath(); ctx.moveTo(x1 + 30, yy - 18); ctx.quadraticCurveTo(x, yy + 10, x0, yy - 4); ctx.stroke();
+  ctx.strokeStyle = '#6a4a2e'; ctx.lineWidth = 11; ctx.stroke();
+  ctx.strokeStyle = '#86603c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x1 + 24, yy - 21); ctx.quadraticCurveTo(x, yy + 5, x0 + 4, yy - 8); ctx.stroke();
+  ctx.lineCap = 'butt';
+  ctx.fillStyle = '#3e8a3a'; for (let k = 0; k < 9; k++) { const lx = x0 + 10 + k * (d.w - 20) / 8, ly = yy - 4 + Math.sin(k * 2.1) * 4 + Math.sin((lx - x) / d.w * Math.PI) * 6; ctx.beginPath(); ctx.ellipse(lx, ly - 7, 9, 4, -0.5 + (k % 2), 0, TAU); ctx.fill(); }
+};
+
 // the boss pitch, reshaped for the v2 lair (34 wide, open sky): the bateria's drums pop up on the beat (phase 2 he
 // dives on them), two stands to stand on, the ball cannon on the left, goal nets at both ends; phase 3 cracks the
 // floor at x0 + 9 and x0 + 15 (the brain); P3 sits over the ball cannon
@@ -1135,6 +1278,8 @@ const levels = [
         ['float', { span: 10 }],
         ['enemies', { kind: 'brBrigadeiro', n: 1, len: 12 }],
         'cp',
+        ['kazooStand', {}],   // a kazoo again after the checkpoint: a respawn here has none, and the bell gates need one
+        'lsd',   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
         // ② floats step per bar, cannons fire on four
         ['beatFloats', { span: 16, parrot: true }],
         ['beatCannons', { n: 16, enemy: 'brPandeiro' }],
@@ -1142,17 +1287,17 @@ const levels = [
         ['bellGate'],
         // ③ everything at once
         ['lightFloor', { n: 9, float: true, cannon: true }],
-        'lsd',
         ['beatFloats', { span: 13 }],
         ['drumChain', { n: 6, gold: 'risky' }],
         ['enemies', { kind: 'brBrigadeiro', n: 1, len: 10 }],
         ['sambaFinale']
       ] },
-      { id: 'barracao', gen: 'room', role: 'secret', theme: 'br_workshop', stamp: 'barracao' }
+      { id: 'barracao', gen: 'room', role: 'secret', theme: 'br_workshop', stamp: 'barracao', room: 'bouncy',
+        bouncy: { title: 'THE CARNIVAL FLOAT BOUNCE', rule: 'A HALF-BUILT CARNIVAL FLOAT, FULLY INFLATED. THE FLOOR BOUNCES: THE PRIZE IS ON THE TALLEST TOWER', skin: ['#ff4ab8', '#ffd23a', '#3ad8a8'] } }
     ] },
 
   // 3-2 THIEF: Quati snatches Chinka's stamps and runs through the Pantanal
-  { n: 2, name: 'Coati Caper', mapLabel: 'Coati', arch: 'thief', theme: 'br_pantanal',
+  { n: 2, name: 'Coati Caper', mapLabel: 'Coati', arch: 'thief', theme: 'br_pantanal', pupo: 'level',   // Brazil's Pupo level: The Sloth Bridge
     gimmick: 'Quati the coati grabs the passport stamps: chase him on capybaras and caimans, catch him three times',
     hint: 'Stomp Quati (or kick the football at him) while he waits: three catches open the ranger gate',
     postcard: 'A coati stole my stamps. A different coati stole my sandwich. They work as a team. ♥ C',
@@ -1167,18 +1312,23 @@ const levels = [
         'sig',
         // ① the snatch, the chase on capybara rides
         ['capybaras', { span: 12 }],
+        ['napBox', {}],   // Pupo (PUPO.md §4.2): his Nap Box right after the first capybara ride
         ['thiefStop', { n: 1 }],
         ['postcard', { kind: 'must', dx: 3, dy: -4 }],
         ['step', { h: 2 }],
-        // ② sloths drop from branches, caimans float like logs
+        // ② sloths drop from branches (a poke from Pupo makes a dropper a friend), caimans float like logs
         ['slothGrove', { n: 2, sign: 'SLOTHS DROP WHEN YOU WALK UNDER. WAIT FOR THE SHAKE!' }],
         ['caimans', { n: 3 }],
         'cp',
+        ['napBox', {}],   // the backup Nap Box at the caiman checkpoint (the near side of the Sloth Bridge)
         ['leapers', { span: 9 }],
         ['slothGrove', { n: 3 }],
         ['step', { h: -2 }],
         ['thiefStop', { n: 2 }],
-        ['hollowTree', { to: 'toca@in', back: 'tocaBack' }],
+        ['hollowTree', { to: 'toca@in', back: 'tocaBack' }],   // the secret stays this side of the river: it never needs Pupo
+        // The Sloth Bridge: Quati leaps the piranha river; Pupo's cousins hang from a branch over it, hands held out
+        ['slothBridge', { w: 16, n: 3 }],
+        ['itemBlock', { item: 'beans', y: 4 }],   // Magic Beans (fart float), early in the land (Brady's request); past the river: they would float over it
         // ③ the jaguar prowls while Quati hides up a nest tree
         ['capybaras', { span: 10 }],
         'jaguar',
@@ -1187,11 +1337,12 @@ const levels = [
         ['enemies', { kind: 'brCrab', n: 2, len: 10 }],
         ['stampFinale']
       ] },
-      { id: 'toca', gen: 'room', role: 'secret', theme: 'br_toca', stamp: 'toca' }
+      { id: 'toca', gen: 'room', role: 'secret', theme: 'br_toca', stamp: 'toca', room: 'ambush',
+        ambush: { title: 'THE COATI GANG\'S BURROW', rule: 'THE COATIS WANT THEIR STASH BACK! THE DOOR IS JAMMED: STOMP THEM ALL', critters: ['brCoati', 'brCrab'] } }
     ] },
 
   // 3-3 TOWER (b) facade: three falls push you down; catwalks, logs, a sloth; rainbow bridges and swifts up top
-  { n: 3, name: 'Iguaçu Falls', mapLabel: 'Iguaçu', arch: 'tower', theme: 'br_falls',
+  { n: 3, name: 'Iguaçu Falls', mapLabel: 'Iguaçu', arch: 'tower', theme: 'br_falls', pupo: 'helper',
     gimmick: 'Climb the face of the falls: three cascades push you down, logs tumble, rainbows bridge the mist',
     hint: 'Waterfalls push you down: climb beside them, not in them. Rainbows in the mist are solid!',
     postcard: 'Iguaçu is so loud I can\'t hear myself think. A rainbow held me up. True story. ♥ C',
@@ -1199,8 +1350,10 @@ const levels = [
     mapCell: [2, 0], mapFrom: 1,
     exits: { main: { to: '3-4' }, secret: { to: '3-6', hint: 'A rainbow sits on one water curtain halfway up the falls...' } },
     areas: [
-      { id: 'cataratas', gen: 'climb', variant: 'facade', W: 34, H: 118, script: [
+      { id: 'cataratas', gen: 'climb', variant: 'facade', W: 34, H: 133, script: [
         ['blockBand', { item: 'power' }],
+        // Pupo (a helper here, PUPO.md §4.3): his Nap Box, and the hollow cecropia with a coin column only he can climb
+        ['cecropiaBand', {}],
         // ① wet rocks beside three falls that push you down
         ['threeFalls', { h: 12 }],
         ['walkway', { n: 3 }],
@@ -1217,7 +1370,8 @@ const levels = [
         ['climbCard', { kind: 'risky', x: 4, dy: -2 }],
         ['overlook']
       ] },
-      { id: 'garganta', gen: 'room', role: 'secret', theme: 'br_garganta', stamp: 'garganta' }
+      { id: 'garganta', gen: 'room', role: 'secret', theme: 'br_garganta', stamp: 'garganta', room: 'climb',
+        climb: { title: 'INSIDE THE DEVIL\'S THROAT', rule: 'A CHIMNEY OF WET ROCK BEHIND THE FALLS. CLIMB TO THE TOP', style: 'crumble' } }
     ] },
 
   // 3-4 TIDE: rain squalls fill the lagoons every 14 s; walk the beds at low water, swim over the dunes at high
@@ -1254,14 +1408,15 @@ const levels = [
         ['dune', { w: 10, h: 4 }],
         ['duneFinale']
       ] },
-      { id: 'jangada', gen: 'room', role: 'secret', theme: 'br_jangada', stamp: 'jangada' }
+      { id: 'jangada', gen: 'room', role: 'secret', theme: 'br_jangada', stamp: 'jangada', room: 'grotto',
+        grotto: { title: 'THE SUNKEN RAFT', rule: 'THE LAGOON FLOODED THE RAFT SHED. SWIM TO THE BACK', half: false } }
     ] },
 
   // 3-5 LAIR: the players' tunnel teaches the ball (kick it into targets to roll up shutters), then the pitch
   { n: 5, name: 'Estádio do Tucanão', mapLabel: 'Estádio', arch: 'lair', theme: 'br_barracao',
     gimmick: 'The players\' tunnel: kick footballs into targets to open the shutters, then O Tucanão\'s pitch',
     hint: 'Only a football reaches O Tucanão: run into a ball to kick it, stomp a ball to volley it up!',
-    postcard: 'Sugarloaf is back by the bay, full size! The Baron sailed for Africa. Next stop: Mozambique! ♥ C',
+    postcard: 'Sugarloaf is back by the bay, full size! Piwi flew for Africa. Next stop: Mozambique! ♥ C',
     enemies: [['brPandeiro', 2], ['brBrigadeiro', 1]], boss: 'br_toucan',
     mapCell: [1, 2], mapFrom: [3, 5],
     exits: { main: { to: 'country:next' } },
@@ -1277,7 +1432,8 @@ const levels = [
         ['enemies', { kind: 'brBrigadeiro', n: 1, len: 10 }],
         ['door', { to: 'estadio@in', perch: 0, look: 'brTunnelExit' }]
       ] },
-      { id: 'vestiario', gen: 'room', role: 'secret', theme: 'br_vestiario', stamp: 'vestiario' },
+      { id: 'vestiario', gen: 'room', role: 'secret', theme: 'br_vestiario', stamp: 'vestiario', room: 'rush',
+        rush: { title: 'KIT BEFORE KICK-OFF!', rule: 'THE MATCH STARTS SOON! GRAB ALL SIX BALLS BEFORE THE WHISTLE', look: 'tokBall', n: 6, t: 16 } },
       { id: 'estadio', gen: 'arena', role: 'arena', layout: 'estadio', arenaW: 34, roof: false, theme: 'br_estadio' }
     ] },
 
@@ -1302,18 +1458,19 @@ const levels = [
         ['isle', { gap: 4, gy: 13, w: 6, enemy: 'brGull', tight: true }],
         ['isle', { gap: 7, gy: 26, w: 5, gold: ['risky', 2, -2], ring: false, tight: true }],
         ['thermalLift', { w: 3, top: 8, bottom: 32, tight: true }],
-        ['isle', { gy: 14, w: 8, stand: true, decor: 'brBeachSet', tight: true }],
+        ['isle', { gy: 14, w: 8, stand: true, decor: 'brBeachSet', item: 'lsd', tight: true }],   // moved up from the end (Brady: star / acid too often came at the end, where they are no use)
         ['cp', { tight: true }],
         ['isle', { gap: 4, gy: 12, w: 7, enemy: 'brKite', tight: true }],
         // ③ the volleyball net throws you high; a long glide through the rings to the beach
         ['volleyIsland', { gap: 2, gy: 12, tight: true }],
         ['isle', { gap: 1, gy: 5, w: 6, enemy: 'brKite', tight: true }],
-        ['isle', { gap: 7, gy: 14, w: 7, coconut: true, item: 'lsd', stand: true, tight: true }],
+        ['isle', { gap: 7, gy: 14, w: 7, coconut: true, stand: true, tight: true }],
         ['thermalLift', { w: 3, top: 5, bottom: 24, tight: true }],
         ['isle', { gy: 10, w: 5, enemy: 'brSwift', tight: true }],
         ['beachFinale', { gap: 6, gy: 13, tight: true }]
       ] },
-      { id: 'quiosque', gen: 'room', role: 'secret', theme: 'br_quiosque', stamp: 'quiosque' }
+      { id: 'quiosque', gen: 'room', role: 'secret', theme: 'br_quiosque', stamp: 'quiosque', room: 'prank',
+        prank: { title: 'FREE COCONUT WATER!', rule: 'A GIANT COCONUT CHEST: FREE COCONUT WATER FOR EVERYONE! GO ON, OPEN IT', gag: 'snakes', label: 'FREE COCONUTS', line: 'OK, OK. THE REAL PRIZE IS IN THE CAGE.' } }
     ] }
 ];
 

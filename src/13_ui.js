@@ -182,9 +182,8 @@ class TitleScene {
       by = y0 + ch + 12;
     }
     const bw = Math.min(150, (W - side * 2 - gap) / 2);
-    this.btns = [
-      { x: W / 2 - bw - gap / 2, y: by, w: bw, h: 40, label: 'LOOK', fn: () => { Sound.play('select'); Game.setScene(new LookScene()); } },
-      { x: W / 2 + gap / 2, y: by, w: bw, h: 40, label: 'SETTINGS', fn: () => { Sound.play('select'); Game.setScene(new SettingsScene(this)); } }
+    this.btns = [   // (no LOOK button: Brady has one look, src/05_brady.js)
+      { x: W / 2 - bw / 2, y: by, w: bw, h: 40, label: 'SETTINGS', fn: () => { Sound.play('select'); Game.setScene(new SettingsScene(this)); } }
     ];
     this.btns.focus = 0;
     this.bradyPos = { x: W - side - 26, y: Math.max(64, top + 56), s: 0.9 };
@@ -524,76 +523,6 @@ class MapScene {
   }
 }
 
-/* ---------------- Look editor ---------------- */
-class LookScene {
-  constructor() { this.t = 0; this.anim = { state: 'idle', t: 0, phase: 0 }; this.hair = null; Input.setMode('ui'); this.build(); }
-  build() {
-    const W = Game.cssW, H = Game.cssH;
-    const L = Save.data.look;
-    const portrait = H > W;
-    this.preview = portrait ? { x: W / 2, y: H * 0.5, s: Math.min(3, W / 120) } : { x: W * 0.27, y: H * 0.84, s: Math.min(4.2, H / 92) };
-    this.swX = portrait ? 24 : W * 0.5; this.swY = portrait ? H * 0.56 : Math.max(70, insets.t + 62); this.swW = portrait ? W - 48 : W * 0.46;
-    this.size = Math.min(38, this.swW / 9 - 5);
-    const ty = this.swY + 26 + this.size * 2 + 64;
-    const bw = (this.swW - 10) / 2, bh = 34;
-    const toggle = (label, i, fn) => ({ x: this.swX + (i % 2) * (bw + 10), y: ty + Math.floor(i / 2) * (bh + 8), w: bw, h: bh, label, size: 11, fn: () => { fn(); Sound.play('select'); Save.save(); this.build(); } });
-    const cyc = (v, arr) => arr[(arr.indexOf(v) + 1) % arr.length];
-    this.btns = [
-      { x: Math.max(14, insets.l + 8), y: Math.max(12, insets.t + 6), w: 92, h: 38, label: '◀ BACK', fn: () => { Sound.play('back'); Save.save(); Game.setScene(new TitleScene()); } },
-      toggle('HAIR: ' + (L.style === 'down' ? 'WORN DOWN' : 'MAN BUN'), 0, () => { L.style = L.style === 'down' ? 'bun' : 'down'; }),
-      toggle('GLASSES: ' + ({ shades: 'SHADES', clear: 'CLEAR', none: 'NONE' }[L.glasses] || 'SHADES'), 1, () => { L.glasses = cyc(L.glasses || 'shades', ['shades', 'clear', 'none']); }),
-      toggle('TATTOOS: ' + (L.tattoos === false ? 'OFF' : 'ON'), 2, () => { L.tattoos = L.tattoos === false; }),
-      toggle('STUBBLE: ' + (L.beard === false ? 'OFF' : 'ON'), 3, () => { L.beard = L.beard === false; })
-    ];
-  }
-  resize() { this.build(); }
-  swatches() {
-    const out = [];
-    const size = this.size;
-    let col = 0;
-    HAIR_COLORS.forEach((h, i) => { if (h.secret && !Save.data.eggs.code) return; out.push({ kind: 'hair', i, x: this.swX + (col++) * (size + 5), y: this.swY + 26, s: size }); });
-    for (let i = 0; i < SKIN_TONES.length; i++) out.push({ kind: 'skin', i, x: this.swX + i * (size + 5), y: this.swY + 26 + size + 40, s: size });
-    return out;
-  }
-  update(dt) {
-    this.t += dt; this.anim.t += dt;
-    this.anim.state = (this.t % 9) > 6 ? 'airguitar' : 'idle';
-    const hit = UI.hitButtons(this.btns); if (hit) { hit.fn(); return; }
-    for (const tp of Input.taps) for (const sw of this.swatches()) {
-      if (tp.x >= sw.x && tp.x <= sw.x + sw.s && tp.y >= sw.y && tp.y <= sw.y + sw.s) { Save.data.look[sw.kind] = sw.i; Sound.play('select'); Save.save(); }
-    }
-    const ha = hairAnchor(0, 0, 1, false, bradyPose(this.anim, false));
-    if (!this.hair) this.hair = makeHair(BRADY_DIM.big.hairN, ha.x, ha.y);
-    stepHair(this.hair, ha.x, ha.y, 1, BRADY_DIM.big.hairL, dt, Math.sin(this.t) * 900 + (this.anim.state === 'airguitar' ? Math.sin(this.anim.t * 16) * 9000 : 0));
-  }
-  draw(ctx) {
-    const W = Game.cssW, H = Game.cssH;
-    drawMenuBackdrop(ctx, 'backstage', this.t, 10);
-    ctx.fillStyle = 'rgba(6,4,14,0.45)'; ctx.fillRect(0, 0, W, H);
-    UI.title(ctx, 'LOOK', W / 2, Math.max(34, insets.t + 30), 28);
-    const p = this.preview;
-    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, 26 * p.s, 5 * p.s, 0, 0, TAU); ctx.fill();
-    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.s, p.s);
-    drawBrady(ctx, { x: 0, y: 0, facing: 1, small: false, power: 0, anim: this.anim, hair: this.hair, look: Save.data.look, time: this.t });
-    ctx.restore();
-    ctx.save(); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.font = `13px ${FONT_DISPLAY}`; ctx.fillStyle = '#ffd84a';
-    const size = this.size;
-    ctx.fillText('HAIR  ·  ' + (HAIR_COLORS[Save.data.look.hair] || HAIR_COLORS[0]).name.toUpperCase(), this.swX, this.swY + 10);
-    ctx.fillText('SKIN  ·  ' + SKIN_TONES[Save.data.look.skin].name.toUpperCase(), this.swX, this.swY + 26 + size + 24);
-    for (const sw of this.swatches()) {
-      const c = sw.kind === 'hair' ? HAIR_COLORS[sw.i] : SKIN_TONES[sw.i];
-      const g = ctx.createLinearGradient(sw.x, sw.y, sw.x + sw.s, sw.y + sw.s);
-      g.addColorStop(0, sw.kind === 'hair' ? c.hi : c.base); g.addColorStop(1, sw.kind === 'hair' ? c.base : c.sh);
-      ctx.fillStyle = g; rr(ctx, sw.x, sw.y, sw.s, sw.s, 10); ctx.fill();
-      const on = Save.data.look[sw.kind] === sw.i;
-      ctx.strokeStyle = on ? '#ffffff' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = on ? 3 : 1; rr(ctx, sw.x, sw.y, sw.s, sw.s, 10); ctx.stroke();
-    }
-    ctx.restore();
-    UI.drawButtons(ctx, this.btns);
-  }
-}
-
 /* ---------------- Settings ---------------- */
 class SettingsScene {
   constructor(back) { this.t = 0; this.back = back; this.confirmReset = false; Input.setMode('ui'); this.build(); }
@@ -601,9 +530,17 @@ class SettingsScene {
     const W = Game.cssW, H = Game.cssH, st = Save.data.settings;
     const pw = Math.min(460, W - 40), px = (W - pw) / 2;
     const motionRow = typeof TourKit !== 'undefined';   // Super Brady-O World: a reduced-motion switch
-    const rowH = Math.min(50, (H - 140) / ((motionRow ? 8 : 7) + (typeof Play !== 'undefined' && Play.zoomNear ? 1 : 0)));
+    const tiers = typeof QualityTier !== 'undefined';   // GRAPHICS and FPS COUNTER rows (src/14_quality.js)
+    // secrets: extra rows from TourHooks.settings (WP-5's effects switch): { label, value, fn }
+    const hookRows = typeof TourHooks !== 'undefined' && TourHooks.settings.length ? TourHooks.settings.map(f => { try { return f(this); } catch (err) { TourHooks.fault('settings', err); return null; } }).filter(Boolean) : [];
+    const nRows = (motionRow ? 8 : 7) + (typeof Play !== 'undefined' && Play.zoomNear ? 1 : 0) + (tiers ? 2 : 0) + hookRows.length;
     let y = Math.max(70, insets.t + 64);
-    const row = (label, value, fn) => { const b = { x: px, y, w: pw, h: rowH - 8, label: `${label}:  ${value}`, size: 13, fn }; y += rowH; return b; };
+    // many rows on a short landscape screen: two columns, so every button stays a comfortable size to tap
+    const cols = (H - y - 30) / nRows < 40 && W >= 600 ? 2 : 1, perCol = Math.ceil(nRows / cols);
+    const cw = cols === 2 ? Math.min(330, (W - 60) / 2) : pw, cx0 = cols === 2 ? (W - cw * 2 - 16) / 2 : px;
+    const rowH = Math.min(50, (H - y - 30) / perCol), y0 = y;
+    let k = 0;
+    const row = (label, value, fn) => { const c = Math.floor(k / perCol), b = { x: cx0 + c * (cw + 16), y: y0 + (k % perCol) * rowH, w: cw, h: rowH - 8, label: `${label}:  ${value}`, size: cols === 2 ? 12 : 13, fn }; k++; return b; };
     const pct = v => Math.round(v * 100) + '%';
     const cycle = (v, arr) => arr[(arr.indexOf(v) + 1) % arr.length];
     this.btns = [
@@ -613,9 +550,12 @@ class SettingsScene {
       row('BUTTON SIZE', { 0.85: 'SMALL', 1: 'MEDIUM', 1.2: 'LARGE' }[st.ctrlScale] || 'MEDIUM', () => { st.ctrlScale = cycle(st.ctrlScale, [0.85, 1, 1.2]); Game.resize(); this.build(); }),
       row('CONTROLS', st.lefty ? 'JUMP ON LEFT' : 'JUMP ON RIGHT', () => { st.lefty = !st.lefty; Game.resize(); this.build(); }),
       row('SCREEN SHAKE', st.shake ? 'ON' : 'OFF', () => { st.shake = !st.shake; this.build(); }),
-      row('QUALITY', st.hq ? 'ULTRA' : 'HIGH', () => { st.hq = !st.hq; Game.resize(); this.build(); }),
+      row(tiers ? 'RESOLUTION' : 'QUALITY', st.hq ? (tiers ? 'ULTRA (3X)' : 'ULTRA') : (tiers ? 'STANDARD (2X)' : 'HIGH'), () => { st.hq = !st.hq; Game.resize(); this.build(); }),
       ...(typeof Play !== 'undefined' && Play.zoomNear ? [row('ZOOM', Play.zoomNear() ? 'NEAR (BIGGER)' : 'FAR (SEE MORE)', () => { st.zoom = Play.zoomNear() ? 'far' : 'near'; this.build(); })] : []),
+      ...(tiers ? [row('GRAPHICS', QualityTier.label() + (QualityTier.auto ? ' (NOW ' + QualityTier.name() + ')' : ''), () => { QualityTier.cycle(); this.build(); }),
+        row('FPS COUNTER', st.fps ? 'ON' : 'OFF', () => { st.fps = !st.fps; PerfHud.sync(); this.build(); })] : []),
       ...(motionRow ? [row('MOTION EFFECTS', TourKit.reduceMotion() ? 'REDUCED' : 'FULL', () => { st.reduceMotion = !TourKit.reduceMotion(); this.build(); })] : []),
+      ...hookRows.map(o => row(o.label, o.value, () => { try { o.fn(); } catch (err) { TourHooks.fault('settings', err); } this.build(); })),
       row('RESET PROGRESS', this.confirmReset ? 'TAP AGAIN TO ERASE' : 'ERASE ALL', () => { if (this.confirmReset) { const look = Save.data.look; Save.reset(); Save.data.look = look; Save.save(); this.confirmReset = false; Sound.play('powerdown'); } else this.confirmReset = true; this.build(); })
     ];
     Save.save();
@@ -629,16 +569,21 @@ class SettingsScene {
     UI.title(ctx, 'SETTINGS', W / 2, Math.max(34, insets.t + 30), 28);
     UI.drawButtons(ctx, this.btns);
     ctx.save(); ctx.textAlign = 'center'; ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.fillText('Sound off? Check the silent switch on your iPhone.  ·  Keyboard & Bluetooth controllers work too.', W / 2, H - Math.max(14, insets.b + 8));
+    const tip = ['Sound off? Check the silent switch on your iPhone.', 'Keyboard & Bluetooth controllers work too.'], ty = H - Math.max(14, insets.b + 8);
+    if (ctx.measureText(tip.join('  ·  ')).width < W - 24) ctx.fillText(tip.join('  ·  '), W / 2, ty);   // one line, or two on a narrow (portrait) screen
+    else { ctx.fillText(tip[0], W / 2, ty - 15); ctx.fillText(tip[1], W / 2, ty); }
     ctx.restore();
   }
 }
 
 /* ---------------- Pause ---------------- */
 function buildPauseUI(play) {
-  const W = Game.cssW, H = Game.cssH;
+  const W = Game.cssW, H = typeof Play !== 'undefined' && Play.uiH ? Play.uiH() : Game.cssH;   // portrait: inside the game view, above the pad
   const bw = Math.min(240, W * 0.6), bh = 44, x = (W - bw) / 2;
-  let y = H / 2 - 100;
+  // secrets: extra pages (WP-5's rules page) from TourHooks.pausePages: { label, fn }, one full-width row each;
+  // the menu moves up half a row per extra row so it still fits a landscape phone
+  const pages = typeof TourHooks !== 'undefined' && TourHooks.pausePages.length ? TourHooks.pausePages.map(f => { try { return f(play); } catch (err) { TourHooks.fault('pausePages', err); return null; } }).filter(Boolean) : [];
+  let y = H / 2 - 100 - pages.length * 27;
   const st = Save.data.settings;
   const list = [
     { x, y, w: bw, h: bh + 4, label: 'RESUME', primary: true, fn: () => play.closePause() },
@@ -654,19 +599,24 @@ function buildPauseUI(play) {
       { x: x + bw / 2 + 5, y, w: bw / 2 - 5, h: bh, label: st.sfx > 0 ? 'SFX ON' : 'SFX OFF', size: 12, fn: () => { st.sfx = st.sfx > 0 ? 0 : 0.8; Sound.setSfxVolume(st.sfx); Save.save(); play.pauseUI = buildPauseUI(play); } }
     ]),
     // camera zoom (Play.viewRows): Near shows everything 20 % larger, Far shows more of the level
-    ...(play.viewRows ? [{ x, y: y += 54, w: bw, h: bh, label: Play.zoomNear() ? 'ZOOM: NEAR' : 'ZOOM: FAR', size: 12, fn: () => { st.zoom = Play.zoomNear() ? 'far' : 'near'; Save.save(); Game.setRows(play.viewRows()); play.pauseUI = buildPauseUI(play); } }] : [])
+    // ... and the graphics tier (src/14_quality.js) beside it
+    ...(play.viewRows ? [{ x, y: y += 54, w: bw / 2 - 5, h: bh, label: Play.zoomNear() ? 'ZOOM: NEAR' : 'ZOOM: FAR', size: 11, fn: () => { st.zoom = Play.zoomNear() ? 'far' : 'near'; Save.save(); Game.setRows(play.viewRows()); play.pauseUI = buildPauseUI(play); } }] : []),
+    ...(typeof QualityTier !== 'undefined' ? [{ x: play.viewRows ? x + bw / 2 + 5 : x, y: play.viewRows ? y : y += 54, w: play.viewRows ? bw / 2 - 5 : bw, h: bh, label: 'GFX: ' + QualityTier.label(), size: 11, fn: () => { QualityTier.cycle(); play.pauseUI = buildPauseUI(play); } }] : [])
   ];
+  for (const b of pages) list.push(Object.assign({ x, y: y += 54, w: bw, h: bh, size: 12 }, b));
+  list.extraRows = pages.length;
   list.focus = 0;
   return list;
 }
 function drawPauseUI(ctx, play) {
-  const W = Game.cssW, H = Game.cssH;
+  const W = Game.cssW, H = typeof Play !== 'undefined' && Play.uiH ? Play.uiH() : Game.cssH;   // portrait: inside the game view, above the pad
   ctx.save();
   ctx.fillStyle = 'rgba(6,4,14,0.6)'; ctx.fillRect(0, 0, W, H);
-  UI.panel(ctx, W / 2 - Math.min(150, W * 0.4), H / 2 - 160, Math.min(300, W * 0.8), play.pauseUI && play.pauseUI.length > 5 ? 336 : 330);
-  UI.title(ctx, 'PAUSED', W / 2, H / 2 - 130, 24);
+  const xr = (play.pauseUI && play.pauseUI.extraRows) || 0, up = xr * 27;   // rows added by TourHooks.pausePages
+  UI.panel(ctx, W / 2 - Math.min(150, W * 0.4), H / 2 - 160 - up, Math.min(300, W * 0.8), (play.pauseUI && play.pauseUI.length > 5 ? 336 : 330) + xr * 54);
+  UI.title(ctx, 'PAUSED', W / 2, H / 2 - 130 - up, 24);
   ctx.textAlign = 'center'; ctx.font = `11px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillText(`${play.level.worldName} · ${play.level.name}`, W / 2, H / 2 - 110);
+  ctx.fillText(`${play.level.worldName} · ${play.level.name}`, W / 2, H / 2 - 110 - up);
   UI.drawButtons(ctx, play.pauseUI);
   ctx.restore();
 }
@@ -689,7 +639,7 @@ class GameOverScene {
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
     UI.title(ctx, 'GAME OVER', W / 2, H / 2 - 50, Math.min(48, W * 0.09));
     ctx.save(); ctx.textAlign = 'center'; ctx.font = `13px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillText(this.level && this.level.tour ? 'Baron Bric-a-Brac wins this round. Not the trip.' : 'The Man wins this round. Not the war.', W / 2, H / 2 - 12); ctx.restore();
+    ctx.fillText(this.level && this.level.tour ? 'Piwi Squirmin\' wins this round. Not the trip.' : 'The Man wins this round. Not the war.', W / 2, H / 2 - 12); ctx.restore();
     UI.drawButtons(ctx, this.btns);
   }
 }

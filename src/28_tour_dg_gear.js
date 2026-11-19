@@ -51,7 +51,7 @@ Object.assign(Player.prototype, {
   },
   // a floating pickup that waits a moment (a hit, a full backpack)
   dropKind(kind, life) {
-    const g = this.g, it = new TourItem(g, this.cx, this.y + 4, kind); it.emerge = 0; it.speedX = 0; it.hoverY = this.y - 10; it.y = it.hoverY; it.life = life || 2; it.dropped = true;
+    const g = this.g, it = new TourItem(g, this.cx, this.y + 4, kind); it.emerge = 0; it.speedX = 0; it.hoverY = this.y - 10; it.y = it.hoverY; it.life = life || 2; it.dropped = true; it.waitClear = true;
     g.spawn(it);
   },
   takeGear(G, src) {
@@ -103,11 +103,18 @@ Object.assign(Player.prototype, {
 {
   const u0 = TourItem.prototype.update;
   TourItem.prototype.update = function (dt) {
-    if (this.dropped) { this.t += dt; this.life -= dt; this.y = this.hoverY + Math.sin(this.t * 4) * 3; if (this.life <= 0) { this.remove = true; this.g.burst(this.cx, this.cy, 6, '#ffffff', 'spark'); } return; }
+    if (this.dropped) { this.t += dt; this.life -= dt; ItemSpace.keepFree(this, true); this.y = this.hoverY + Math.sin(this.t * 4) * 3; if (this.life <= 0) { this.remove = true; this.g.burst(this.cx, this.cy, 6, '#ffffff', 'spark'); } return; }
     return u0.call(this, dt);
   };
   const d0 = TourItem.prototype.draw;
-  TourItem.prototype.draw = function (ctx) { if (this.dropped && this.life < 0.8 && Math.floor(this.t * 12) % 2) return; return d0.call(this, ctx); };
+  TourItem.prototype.draw = function (ctx) { if (this.dropped && this.life < 0.8 && Math.floor(this.t * 12) % 2) return; return d0.call(this, ctx); };  /* a dropped item can't be taken back until Brady has stepped clear of it once. It appears on top of him, and taking it
+     straight back swaps it with the item in his hands, which drops that one (the Backpack is full) right on him too: the
+     collision loop met each new drop in the same frame and swapped forever, filling memory until the page died (the
+     freeze when picking up a signature item, e.g. Brazil's FOOTBALL, with gear in hands and the Backpack full) */
+  const tp0 = TourItem.prototype.touchPlayer;
+  TourItem.prototype.touchPlayer = function (p) { if (this.dropped && this.waitClear) return; return tp0.call(this, p); };
+  const u1 = TourItem.prototype.update;
+  TourItem.prototype.update = function (dt) { if (this.waitClear) { const p = this.g.player; if (!p || !overlap(this, p)) this.waitClear = false; } return u1.call(this, dt); };
 }
 
 /* ---------- shared bits ---------- */
@@ -267,16 +274,17 @@ TourGear.register({ id: 'box', name: 'CARDBOARD BOX', hint: 'HOLD DOWN TO HIDE',
   }
 });
 TourGear.register({ id: 'kazoo', name: 'KAZOO', hint: 'THROW = HONK: STUNS, RINGS BELLS, REVEALS', cooldown: 0.5, glow: '#ffe060',
-  icon(ctx, x, y, t) {
+  icon(ctx, x, y, t, quiet) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(-0.3);
     ctx.fillStyle = '#e8323a'; ctx.beginPath(); ctx.moveTo(-11, -3); ctx.lineTo(6, -5); ctx.lineTo(11, -7); ctx.lineTo(11, 7); ctx.lineTo(6, 5); ctx.lineTo(-11, 3); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(-1, -4, 3, 0, TAU); ctx.fill(); ctx.fillRect(-11, -1, 17, 2);
     ctx.restore();
+    if (quiet) return;   // in Brady's hand the kazoo is silent until he honks it
     ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 1.4; for (let k = 0; k < 3; k++) { const a = (t * 2 + k * 0.3) % 1; ctx.globalAlpha = 1 - a; ctx.beginPath(); ctx.arc(x + 12, y - 4, 4 + k * 3 + a * 3, -0.6, 0.6); ctx.stroke(); } ctx.globalAlpha = 1;
   },
   action(p, g) {
     const { box, list } = GearFx.inFront(p, 3, 1.5);
-    TourKit.sfx('kazoo', 'artcarHorn', { vol: 0.6, pitch: 1.8 }); p.honkT = 0.35;
+    TourKit.sfx('kazoo', 'artcarHorn', { vol: 0.6, pitch: 1.8 }); if (p.hands) p.hands.honkT = 0.35;
     for (const e of list) {
       if (e.boss) continue;
       if (e.reveal) e.reveal(3);
@@ -288,11 +296,15 @@ TourGear.register({ id: 'kazoo', name: 'KAZOO', hint: 'THROW = HONK: STUNS, RING
     if (g.boss && g.boss.brain && g.boss.brain.onBell && Math.abs(g.boss.cx - p.cx) < 6 * TS) g.boss.brain.onBell(g.boss);
     return true;
   },
+  // the honk's timer lives on the kazoo in Brady's hands and runs down here (it once never did, so the
+  // sound arcs and the HONK! stayed on screen for good after the first honk)
+  update(p, dt) { const h = p.hands; if (h && h.honkT > 0) h.honkT = Math.max(0, h.honkT - dt); },
   drawOn(p, ctx, t) {
-    ctx.save(); ctx.translate(p.cx + p.facing * 8, p.y + (p.small ? 10 : 16)); ctx.scale(p.facing * 0.55, 0.55); this.icon(ctx, 0, 0, t); ctx.restore();
-    if (p.honkT > 0) {
+    ctx.save(); ctx.translate(p.cx + p.facing * 8, p.y + (p.small ? 10 : 16)); ctx.scale(p.facing * 0.55, 0.55); this.icon(ctx, 0, 0, t, true); ctx.restore();
+    const honkT = (p.hands && p.hands.honkT) || 0;
+    if (honkT > 0) {
       // the honk: three bold sound arcs fanning out, and a HONK! that pops
-      const k = 1 - p.honkT / 0.35, cy = p.y + (p.small ? 10 : 16);
+      const k = 1 - honkT / 0.35, cy = p.y + (p.small ? 10 : 16);
       ctx.save(); ctx.lineCap = 'round';
       for (let i = 0; i < 3; i++) { const r = 14 + i * 16 + k * 26, a = (1 - k) * (1 - i * 0.2); ctx.globalAlpha = a; ctx.strokeStyle = i % 2 ? '#ff6a3a' : '#ffd23a'; ctx.lineWidth = 4 - i; ctx.beginPath(); ctx.arc(p.cx + p.facing * 10, cy, r, p.facing > 0 ? -0.7 : Math.PI - 0.7, p.facing > 0 ? 0.7 : Math.PI + 0.7); ctx.stroke(); }
       ctx.globalAlpha = 1 - k; ctx.font = `${12 + k * 6}px ${FONT_DISPLAY}`; ctx.textAlign = 'center'; ctx.fillStyle = '#1c1426'; ctx.fillText('HONK!', p.cx + p.facing * (40 + k * 16) + 1.5, cy - 22 - k * 10 + 1.5); ctx.fillStyle = '#ffd23a'; ctx.fillText('HONK!', p.cx + p.facing * (40 + k * 16), cy - 22 - k * 10);
@@ -377,9 +389,22 @@ const GearHit = {
       else if (e.breakWall && e.hit) e.hit(kind, p);
     }
     if (!water && p.hands && p.hands.id === 'hat') {
-      const tx = Math.floor((p.facing > 0 ? p.x + p.w + 4 : p.x - 4) / TS);
-      for (const ty of [Math.floor((p.y + 4) / TS), Math.floor((p.y + p.h - 4) / TS)]) if (tileAt(g.area, tx, ty) === T.SOIL) p.dig(p.facing);
+      // the soil column just ahead of him, head to boots: two blocks when he is big, one when small, so he can always
+      // walk into the tunnel he digs (it used to dig only the block by his legs, which a big Brady can't fit through)
+      const tx = Math.floor((p.facing > 0 ? p.x + p.w + 4 : p.x - 4) / TS), t0 = Math.floor((p.y + 4) / TS), t1 = Math.floor((p.y + p.h - 4) / TS);
+      this.digColumn(p, g, tx, t0, t1);
     }
+  },
+  // dig the soil (only soil) in column tx, rows t0..t1; returns how many blocks went
+  digColumn(p, g, tx, t0, t1) {
+    const A = g.area; let dug = 0;
+    for (let ty = t0; ty <= t1; ty++) {
+      if (tileAt(A, tx, ty) !== T.SOIL) continue;
+      g.setTile(tx, ty, T.EMPTY); dug++;
+      g.burst(tx * TS + TS / 2, ty * TS + TS / 2, 10, '#8a6040', 'debris'); g.burst(tx * TS + TS / 2, ty * TS + 4, 6, '#c8a070', 'dust');
+    }
+    if (dug) { TourKit.sfx('dig', 'crumble', { vol: 0.6 }); g.shake(2); }
+    return dug;
   }
 };
 // the hard hat's headlamp and the box: lights and hiding

@@ -1449,7 +1449,7 @@ const skins = {
 /* ---------------- the country (its levels: 29_tour_mx_levels.js) ---------------- */
 Tour.country({
   id: 'mx',
-  arrival: 'Brady! The Baron shrank the Palace of Fine Arts down to the size of a piñata. Follow the confetti! ♥ C', colors: COL, tagline: 'Tacos, piñatas and a volcano with a temper',
+  arrival: 'Brady! A wooden twerp called Piwi Squirmin\' hooked me into his flying trunk. I\'m fine. He shrank the Palace of Fine Arts for scenery. Look after Pupo, follow the confetti, bring churros! ♥ C', colors: COL, tagline: 'Tacos, piñatas and a volcano with a temper',
   themes, painters, dyn, decor, platforms, enemies, entities, pieces: P, boss, power, tracks, stamps, skins,
   decorLights: { mxCellarLamp: [150, '#ffc070', -22] },
   map: { fort: 'hacienda', start: [0, 0] },

@@ -1,8 +1,10 @@
 // Super Brady-O World: Brady's powers in the real game (headless Chrome).
 // Sections: picker (the power picker and the action button), air (a second jump press without a jump power),
-// jumps (double jump, ground pound, fart float), trips (joint / LSD / mushroom screen moments, the effects setting).
+// jumps (double jump, ground pound, fart float), trips (joint / LSD / mushroom screen moments, the effects setting),
+// gear (on-use effects such as the kazoo's HONK! go away again).
 // usage: BRADY_DIST=<dist> node tools/sbw_powers_test.js [section ...]
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const appPage = path.join(dist, 'site', 'super-brady-o-world', 'index.html');
@@ -13,7 +15,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true }); await silence(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -171,8 +173,8 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       // no jump power: nothing; while carrying: nothing; a hit drops the jump power before FORM
       { lab('gear.stands'); const g = S(), p = P(); p.collect('gear:socks'); sim(0.5); p.carrying = { item: 'egg', from: null, fallY: p.y };
         up(p, 0.2); const vy = p.vy; sim(1 / 120, J); out.carry = { vy0: Math.round(vy), vy1: Math.round(p.vy) }; p.carrying = null;
-        sim(1); p.setPower(1, true); p.invuln = 0; p.hurt({ x: p.x + 30, w: 10 }); out.hit = { slot: p.jumpPow, power: p.power, dropped: g.entities.some(e => e.dropped && e.kind === 'gear:socks') };
-        sim(0.1); const it = g.entities.find(e => e.dropped && e.kind === 'gear:socks'); if (it) { p.invuln = 0; it.touchPlayer(p); } out.hit.regrab = p.jumpPow && p.jumpPow.id; }
+        sim(1); p.setPower(1, true); p.invuln = 0; p.hurt({ x: p.x + 30, w: 10 }); out.hit = { slot: p.jumpPow, power: p.power, dropped: g.entities.some(e => e.lost && e.kind === 'gear:socks') };
+        sim(0.1); const it = g.entities.find(e => e.lost && e.kind === 'gear:socks'); if (it) { p.invuln = 0; p.x = it.cx - p.w / 2; p.y = it.cy - p.h / 2; it.touchPlayer(p); sim(0.05); } out.hit.regrab = p.jumpPow && p.jumpPow.id; }
       // one at a time: a new one replaces the old; gear stands and item blocks hand them out
       { lab('gear.stands'); const g = S(), p = P(); p.collect('gear:socks'); p.collect('gear:beans'); out.replace = p.jumpPow.id;
         out.names = ['socks', 'cake', 'beans'].map(id => T.TourPowers.name('gear:' + id)); out.block = T.TourPowers.blockItem('cake', g); }
@@ -194,7 +196,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     check('magic beans: trousers down in the squat, back up after landing; the meter refills on the ground', b.pantsAir > 0.9 && b.squat === 'squat' && b.pantsLand === 0 && b.refill === 1, b);
     check('magic beans: a green puff knocks out an ordinary enemy below', b.kill, b);
     check('no jump power while carrying something (CARRY levels stay fair)', Math.abs(r.carry.vy1 - r.carry.vy0) < 60, r.carry);
-    check('a hit drops the jump power (before FORM); it floats and can be grabbed back', r.hit.slot === null && r.hit.power === 1 && r.hit.dropped && r.hit.regrab === 'socks', r.hit);
+    check('a hit takes the jump power (before FORM); it pops off and is gone (tools/sbw_hits_test.js has the whole ladder)', r.hit.slot === null && r.hit.power === 1 && r.hit.dropped && !r.hit.regrab, r.hit);
     check('one jump power at a time; names; item blocks hand them out', r.replace === 'beans' && r.names.join() === 'SPRING SOCKS,POUND CAKE,MAGIC BEANS' && r.block === 'gear:cake', r);
   });
 
@@ -216,7 +218,11 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
         // draw a frame with every trip on (no errors), and check the breath copy only happens at full motion
         g.tripJoint = 0.8; g.lsdK = 1; g.dizzy = 2; B.PostFX = window.BRADY_POWERS.PostFX; window.BRADY_POWERS.PostFX.tripWarp = null;
         B.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); g.draw(B.Game.ctx); o.breath = !!window.BRADY_POWERS.PostFX.tripWarp;
-        o.frames = T.frames.length;
+        // nothing is allocated per frame: 90 more trip frames at changing times add no canvases or glow sprites, and the
+        // cached colour strings stay bounded (whole degrees: at most 5 x 360)
+        const PF = window.BRADY_POWERS.PostFX, keys0 = Object.keys(PF).length, glow0 = Object.keys(PF.glowCache).length;
+        for (let i = 0; i < 90; i++) { g.t += 0.37; B.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); g.draw(B.Game.ctx); }
+        o.alloc = { canvases: Object.keys(PF).length - keys0, glow: Object.keys(PF.glowCache).length - glow0, cols: T.cols ? T.cols.reduce((a, c) => a + c.filter(Boolean).length, 0) : 0 };
         return o;
       };
       out.full = run(false); out.calm = run(true); st.reduceMotion = false;
@@ -226,13 +232,75 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     check('joint pickup: a green moment that starts at once, holds, then clears (~1.35 s)', f.jointStart > 0 && f.jointMid > 0.9 && f.jointEnd === 0, f);
     check('joint pickup: the world eases into slow-mo (and out)', f.slowmo < 0.7 && f.worldDt < 0.95, { slowmo: f.slowmo, worldDt: f.worldDt });
     check('LSD: strong at first, a subtle level while flying, gone after the flight', f.lsdPeak > 0.9 && f.lsdLow > 0.2 && f.lsdLow < 0.4 && f.flying && f.lsdEnd === 0, f);
-    check('mushroom: same family, starts and ends', f.shroom > 0.9 && f.shroomEnd === 0, f);
-    check('fractal frames cached (built a few rows at a time)', f.frames > 0, f.frames);
-    check('full effects: the world breathes (a warped copy of the view)', f.breath, f);
+    check('mushroom: the trip starts and ends', f.shroom > 0.9 && f.shroomEnd === 0, f);
+    check('trips allocate nothing per frame (no new canvases or glow sprites over 90 frames, colour strings bounded)', f.alloc.canvases === 0 && f.alloc.glow === 0 && f.alloc.cols <= 1800 && c.alloc.canvases === 0 && c.alloc.glow === 0, { full: f.alloc, calm: c.alloc });
+    check('full effects: the joint makes the world breathe (a warped copy of the view)', f.breath, f);
     check('reduced effects: no slow-mo, no breath, the trips still start and end', c.slowmo === 1 && c.worldDt > 0.98 && !c.breath && c.jointMid > 0.9 && c.jointEnd === 0 && c.lsdEnd === 0, c);
     // the pause menu offers the switch in tour levels
     const pause = await page.evaluate(() => { const g = S(); g.openPause(); const labels = g.pauseUI.map(b => b.label); const fx = g.pauseUI.find(b => /^FX /.test(b.label)); const before = fx.label; fx.fn(); const after = g.pauseUI.find(b => /^FX /.test(b.label)).label; fx.fn(); g.closePause(); return { labels, before, after }; });
     check('pause menu: an FX FULL / FX CALM switch', pause.before === 'FX FULL' && pause.after === 'FX CALM', pause);
+  });
+
+  /* ---------- the magic mushroom, frame by frame: it walks to Brady, he grows smoothly, the level trips ---------- */
+  await section('mushroom', async () => {
+    const r = await page.evaluate(() => {
+      const B = window.BRADY, T = window.BRADY_POWERS.TripFX, st = B.Save.data.settings; st.reduceMotion = false;
+      const g = lab('gear.stands'), p = P(); p.hurt = () => {}; p.setPower(0, true); sim(0.1);
+      const it = new window.BRADY_TOUR.TourItem(g, p.cx + 70, p.y + p.h - 24, 'mushroom'); it.emerge = 0; it.vx = -it.speedX; it.hoverY = it.y; g.spawn(it);
+      const o = { inSolid: 0, frames: [], collected: -1, shroom: [] }, SOL = new Set([1, 2, 3, 4, 5, 8, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22]);   // the SOLID tile ids (00_core.js)
+      const inSolid = (A, b) => { for (let y = Math.floor((b.y + 1) / 32); y <= Math.floor((b.y + b.h - 1) / 32); y++) for (let x = Math.floor((b.x + 1) / 32); x <= Math.floor((b.x + b.w - 1) / 32); x++) if (x >= 0 && y >= 0 && x < A.W && y < A.H && SOL.has(A.tiles[y * A.W + x])) return true; return false; };
+      for (let k = 0; k < 240; k++) {
+        sim(1 / 120, { right: k > 30 });
+        if (!it.remove && inSolid(g.area, it)) o.inSolid++;
+        if (it.remove && o.collected < 0) o.collected = k;
+        if (o.collected >= 0) { const gs = p.growScale(); o.frames.push({ sy: +gs.sy.toFixed(4), small: p.small, x: +p.x.toFixed(2), growT: p.growT }); }
+        o.shroom.push(+T.levels(g).shroom.toFixed(3));
+      }
+      // draw a mushroom frame: the wobble copies the view at full effects, not with FX CALM
+      const PF = window.BRADY_POWERS.PostFX; PF.shroomWob = null; g.dizzy = 2; B.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); g.draw(B.Game.ctx); o.wobble = !!PF.shroomWob;
+      st.reduceMotion = true; PF.shroomWob = null; g.draw(B.Game.ctx); o.wobbleCalm = !!PF.shroomWob; st.reduceMotion = false;
+      return o;
+    });
+    const grow = r.frames.filter(f => f.growT > 0), sy = grow.map(f => f.sy);
+    const mono = sy.every((v, i) => i === 0 || v >= sy[i - 1] - 1e-6), alt = r.frames.some((f, i) => i > 0 && f.small !== r.frames[i - 1].small);
+    check('mushroom: walks to Brady and is collected, never inside a solid', r.collected > 0 && r.inSolid === 0, { collected: r.collected, inSolid: r.inSolid });
+    check('mushroom grow: the height scales up smoothly and monotonically (no strobe between the two forms)', grow.length >= 30 && sy[0] < 0.75 && Math.abs(sy[sy.length - 1] - 1) < 0.06 && mono && !alt, { n: grow.length, first: sy[0], last: sy[sy.length - 1], mono, alt });
+    check('mushroom grow: Brady keeps moving while he grows (no freeze)', grow.length > 10 && grow[grow.length - 1].x > grow[0].x + 4, grow.length ? { x0: grow[0].x, x1: grow[grow.length - 1].x } : null);
+    const sh = r.shroom, steps = sh.slice(1).map((v, i) => Math.abs(v - sh[i])), peak = Math.max.apply(null, sh);
+    check('mushroom trip: eases in smoothly (no jump bigger than 0.05 a frame) and reaches full strength', peak > 0.95 && Math.max.apply(null, steps) < 0.05, { peak, maxStep: Math.max.apply(null, steps) });
+    check('mushroom trip: the level itself wobbles at full effects (a copy of the view), not with FX CALM', r.wobble && !r.wobbleCalm, { wobble: r.wobble, calm: r.wobbleCalm });
+  });
+
+  /* ---------- gear with an on-use effect: it must go away again (Brady: the kazoo's HONK! and sound lines stayed for good) ---------- */
+  await section('gear', async () => {
+    const r = await page.evaluate(() => {
+      const B = window.BRADY, CR = CanvasRenderingContext2D.prototype, ft0 = CR.fillText, arc0 = CR.arc;
+      const g = lab('gear.stands'), p = P(); p.collect('gear:kazoo'); sim(1.6);
+      // what Brady's own drawing puts on screen: HONK! texts and arcs (the idle kazoo draws no sound arcs in his hand)
+      const look = () => { let honk = 0, arcs = 0; CR.fillText = function (str) { if (String(str).includes('HONK')) honk++; return ft0.apply(this, arguments); }; CR.arc = function () { arcs++; return arc0.apply(this, arguments); };
+        try { const c = B.Game.ctx; c.save(); window.BRADY_TOUR.TourGear.get('kazoo').drawOn(p, c, g.t); c.restore(); } finally { CR.fillText = ft0; CR.arc = arc0; } return { honk, arcs }; };
+      const o = { held: p.hands && p.hands.id, idle: look() };
+      sim(0.02, { actionPressed: true }); o.honked = look();
+      sim(3); o.after = look(); o.timer = p.hands && p.hands.honkT;
+      sim(0.6); sim(0.02, { actionPressed: true }); o.again = look(); sim(1); o.againAfter = look();
+      return o;
+    });
+    check('kazoo: in hand', r.held === 'kazoo', r.held);
+    check('kazoo: a honk shows the HONK! and the sound arcs', r.honked.honk > 0 && r.honked.arcs > r.idle.arcs, { idle: r.idle, honked: r.honked });
+    check('kazoo: three seconds later the HONK! and the arcs are gone (back to the idle drawing)', r.after.honk === 0 && r.after.arcs === r.idle.arcs && r.timer === 0, { after: r.after, timer: r.timer });
+    check('kazoo: a second honk shows them again and they go again', r.again.honk > 0 && r.againAfter.honk === 0 && r.againAfter.arcs === r.idle.arcs, { again: r.again, againAfter: r.againAfter });
+  });
+
+  /* ---------- the test makes no sound (tools/sbw_silent.js): the game's audio runs, its output gain is exactly 0 ---------- */
+  await section('silent', async () => {
+    if (process.env.BRADY_SOUND === '1') return;
+    const r = await page.evaluate(async () => {
+      const S = window.BRADY.Sound; S.unlock(); S.music('title'); S.play('jump'); await new Promise(f => setTimeout(f, 400));
+      return { report: window.__sbwSilent && window.__sbwSilent.report(), track: S.currentTrack, enabled: S.enabled };
+    });
+    const rep = r.report || {};
+    check('silent: the game\'s sound runs (a context, a track) but every output gain is 0 and nothing bypasses it',
+      rep.contexts >= 1 && rep.gains.length === rep.contexts && rep.gains.every(g => g === 0) && rep.direct === 0 && !!r.track, r);
   });
 
   check('no page errors', errors.length === 0, errors.slice(0, 5));

@@ -148,6 +148,10 @@ SURF.SLICK = 3; SURF.HOT = 4;
 const TourTrails = {
   lay(g, tx, ty, kind, t) {
     const A = g.area; if (tx < 0 || ty < 0 || tx >= A.W || ty >= A.H || !SOLID[A.tiles[ty * A.W + tx]]) return;
+    // the runtime area shares its surf array with the cached level (Play.makeRuntimeArea copies tiles and hide, not
+    // surf): copy it before the first trail, or a trail still down when Brady dies stays in the level for every later
+    // try as an invisible slick or hot tile
+    if (!A.surfOwn) { A.surf = A.surf ? new Uint8Array(A.surf) : new Uint8Array(A.W * A.H); A.surfOwn = true; }
     A.trails = A.trails || []; const k = ty * A.W + tx;
     const was = A.trails.find(q => q.k === k);
     if (was) { was.t = t; was.kind = kind; return; }
@@ -529,7 +533,7 @@ TourBehave.frostBreath = {
       e.vx = 0; const c = TB.par(e, 'cone', 3) * TS, box = { x: e.dir > 0 ? e.x + e.w : e.x - c, y: e.y - TS * 0.5, w: c, h: e.h + TS }, g = e.g;
       if (Math.random() < 0.8) g.burst(e.cx + e.dir * (14 + Math.random() * c), e.cy + (Math.random() - 0.5) * 24, 1, '#c8f0ff', 'spark');
       if (!e.iced) { e.iced = true; const ty = Math.floor((e.y + e.h + 2) / TS); for (let tx = Math.floor(box.x / TS); tx <= Math.floor((box.x + box.w) / TS); tx++) if (tileAt(g.area, tx, ty) === T.GROUND) { g.setTile(tx, ty, T.ICE); g.spawn(new TourThaw(g, tx, ty, 5)); } }
-      const p2 = TB.p(e); if (p2 && overlap(box, p2) && !(p2.frozenT > 0)) { p2.frozenT = 0.8; p2.stun(0.8); }
+      const p2 = TB.p(e); if (p2 && overlap(box, p2) && !(p2.frozenUntil > e.g.t)) { p2.frozenUntil = e.g.t + 0.8; p2.frozenT = 0.8; p2.stun(0.8); }   // a deadline, not a timer nobody runs down (the old one froze Brady only once a level)
       for (const o of g.entities) if (o !== e && o.enemy && !o.dead && overlap(box, o) && o.stun) o.stun(5);
       if (e.bt > 1.0) { TB.go(e, 'pant'); e.iced = false; }
     } else if (st === 'pant') { e.vx = 0; if (e.bt > 1.0) { TB.go(e, 'walk'); e.cool = 2.5; } }

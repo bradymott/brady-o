@@ -1,8 +1,10 @@
 // The walkable overworld (src/28_tour_f*.js): walking only along open trails, going into a level from its stop,
 // coming back to the right stop, a hidden trail revealed by a secret exit, houses and Bottle Mail coves, the flight
-// between lands, secret lands hidden until found, and every land's layout at three phone sizes.
+// between lands, secret lands hidden until found, every land's layout at three phone sizes, every stop of every land
+// reached by walking, and no two lands with the same layout shape.
 // usage: BRADY_DIST=<dist> node tools/sbw_overworld_test.js [shotsDir]
 const { chromium } = require('playwright');
+const { silence } = require('./sbw_silent');   // no game music out of the Mac's speakers
 const path = require('path'), fs = require('fs');
 const dist = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const appPage = 'file://' + path.join(dist, 'site', 'super-brady-o-world', 'index.html');
@@ -13,7 +15,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await silence(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -54,7 +56,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   check('a new game opens the walkable overworld of Mexico with Chinka\'s postcard; Brady walks from the airstrip to 1-1', r1.mode === 'land' && r1.sel === 'mx' && r1.card && r1.at0 === 'start' && r1.at === '1-1', r1);
   if (shots) await page.screenshot({ path: path.join(shots, 'ow-01-start.png') });
 
-  // 2. Walking only along open trails: 1-2 is behind the Baron's roadblock
+  // 2. Walking only along open trails: 1-2 is behind Piwi's roadblock
   const r2 = await page.evaluate(() => {
     const ow = OW(), p = ow.G.pos['1-2'], q = ow.G.pos['1-1'];
     const dir = { right: p.x > q.x, left: p.x < q.x };
@@ -66,7 +68,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     sim(0.05, { right: q.x > s.x, left: q.x < s.x }); sim(2.5);
     return { blocked, back, again: ow.walker.at, toast: S().toastMsg };
   });
-  check('the joystick walks Brady only along open trails (the closed trail to 1-2 bumps; the airstrip and back work)', r2.blocked && r2.back === 'start' && r2.again === '1-1' && /BLOCKED|BARON/.test(r2.toast), r2);
+  check('the joystick walks Brady only along open trails (the closed trail to 1-2 bumps; the airstrip and back work)', r2.blocked && r2.back === 'start' && r2.again === '1-1' && /BLOCKED|PIWI/.test(r2.toast), r2);
 
   // 3. Going into a level from its stop (jump), and the tap on a stop
   const r3 = await page.evaluate(() => { sim(0.02, { jumpPressed: true }); sim(0.8); const g = S(); return { scene: g.constructor.name, id: g.id }; });
@@ -95,7 +97,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     let rv2 = null; for (let k = 0; k < 200 && !rv2; k++) { m.update(1 / 60); if (m.ow.reveal && m.ow.reveal.r.kind !== rv1) rv2 = m.ow.reveal.r.kind; }
     settle();
     const T = TT.TourProgress.data();
-    return { hidden, rv1, rv2, revealed: !!T.revealed['house:mx-tienda'], path: !!T.paths['mx:0>6'], pending: T.pending.length, at: m.ow.walker.at };
+    return { hidden, rv1, rv2, revealed: !!T.revealed['house:mx-tienda'], path: !!T.paths['mx:0>' + TT.TourProgress.stopIndex(TT.Tour.countries.mx, 'house:mx-tienda')], pending: T.pending.length, at: m.ow.walker.at };
   });
   check('a secret exit reveals its hidden trail and stop in the overworld (trail, then the stand), then Brady walks there', r5.hidden && r5.rv1 === 'path' && r5.rv2 === 'house' && r5.revealed && r5.path && r5.pending === 0 && r5.at === 'house:mx-tienda', r5);
   if (shots) { await page.evaluate(() => { window.__keep = JSON.stringify(window.BRADY.Save.data); clear('1-3', 'secret'); window.BRADY.Save.data.done['1-2'] = true; const m = mapFrom('1-3'); for (let k = 0; k < 70; k++) m.update(1 / 60); }); await page.screenshot({ path: path.join(shots, 'ow-05-reveal.png') }); await page.evaluate(() => { settle(); const B = window.BRADY; B.Save.data = JSON.parse(window.__keep); }); }
@@ -224,12 +226,64 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
       return out;
     });
     const bad = L.filter(x => x.probs.length);
-    check(`layouts at ${W}x${H}: all ${L.length} lands have every stop on land, apart, labelled without overlaps, reachable, trails clear of other stops, touch targets >= 40 px`, L.length === 14 && !bad.length, bad.map(x => x.cc + ': ' + x.probs.slice(0, 4).join('; ')));
+    check(`layouts at ${W}x${H}: all ${L.length} lands have every stop on land, apart, labelled without overlaps, reachable, trails clear of other stops, touch targets >= 40 px`, L.length >= 14 && !bad.length, bad.map(x => x.cc + ': ' + x.probs.slice(0, 4).join('; ')));
     // the HUD stays out of the notch / home-indicator insets and the card stays on screen
     const hud = await page.evaluate(() => { const m = new TT.TourMapScene({}); window.BRADY.Game.setScene(m); m.card = null; settle(1); const ow = m.ow, c = ow.cardR, W = window.BRADY.Game.cssW, H = window.BRADY.Game.cssH; return { card: [c.x, c.y, c.w, c.h], ok: c.x >= 0 && c.y >= 0 && c.x + c.w <= W && c.y + c.h <= H && c.w >= 200 }; });
     check(`the info card fits the screen at ${W}x${H}`, hud.ok, hud);
     if (shots) await page.screenshot({ path: path.join(shots, `ow-12-layout-${W}x${H}.png`) });
   }
+  // 13. Every stop of every land can be walked to (all stops revealed, all trails open): Brady walks there from
+  // the airstrip along the trails, stop by stop, and ends up standing on it
+  await page.setViewportSize({ width: 844, height: 390 }); await page.waitForTimeout(300);
+  const walks = await page.evaluate(() => {
+    const B = window.BRADY, out = [];
+    for (const cc in TT.Tour.countries) {
+      const C = TT.Tour.countries[cc]; fresh(); const T = TT.TourProgress.data(), d = B.Save.data;
+      T.lands[cc] = true; T.flights[cc] = true; T.cards[cc] = true; T.seen[cc] = true;
+      for (const id of TT.Tour.levelIds(C)) { d.done[id] = true; d.unlocked[id] = true; T.revealed[id] = true; }
+      for (const H of C.houses || []) T.revealed['house:' + H.id] = true;
+      for (const b of TT.TourMapScene.Graph.bottles(C)) T.bottles[b.n] = true;
+      TT.Tour.panelStops(C).forEach((S2, k) => { const f = S2.mapFrom != null ? S2.mapFrom : k - 1; for (const a of (Array.isArray(f) ? f : [f])) if (a >= 0) T.paths[cc + ':' + a + '>' + k] = true; });
+      const m = new TT.TourMapScene({}); m.card = null; m.sel = cc; m.ow = new TT.TourMapScene.Overworld(m, C, { at: 'start' }); m.mode = 'land'; B.Game.setScene(m);
+      const ow = m.ow; for (let k = 0; k < 240 && !ow.idle(); k++) m.update(1 / 60);
+      const missed = [];
+      for (const n of ow.nodes) {
+        if (n.key === ow.walker.at) continue;
+        const r = TT.TourMapScene.Graph.route(ow.edges, ow.walker.at, n.key);
+        if (!r) { missed.push(n.key + ' (no route)'); continue; }
+        ow.walkRoute(r, false); for (let k = 0; k < 60 * 60 && (ow.walker.seg || ow.walker.queue.length); k++) m.update(1 / 60);
+        if (ow.walker.at !== n.key) missed.push(n.key + ' (stopped at ' + ow.walker.at + ')');
+      }
+      out.push({ cc, n: ow.nodes.length, missed });
+    }
+    return out;
+  });
+  const unwalked = walks.filter(w => w.missed.length);
+  check(`every stop of every land (${walks.length} lands, ${walks.reduce((s, w) => s + w.n, 0)} stops) is reached by walking the trails from the airstrip`, walks.length > 0 && !unwalked.length, unwalked.map(w => w.cc + ': ' + w.missed.join(', ')));
+
+  // 14. No two lands share a layout shape: the main route (airstrip, main levels, port), scaled to the map,
+  // sampled at 24 points along its length, differs from every other land's by a mean distance of 0.1 map or more
+  const shapes = await page.evaluate(() => {
+    const out = {};
+    for (const cc in TT.Tour.countries) {
+      const C = TT.Tour.countries[cc], G = TT.TourMapScene.OW.geo(C);
+      const keys = ['start'].concat(Array.from({ length: C.mainCount }, (_, i) => C.world + '-' + (i + 1)), ['port']).filter(k => G.pos[k]);
+      const P = keys.map(k => [G.pos[k].x / G.w, G.pos[k].y / G.h]), L = [0];
+      for (let i = 1; i < P.length; i++) L.push(L[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+      const res = [];
+      for (let k = 0; k < 24; k++) { const s = L[L.length - 1] * k / 23; let i = 1; while (i < L.length - 1 && L[i] < s) i++; const u = (s - L[i - 1]) / ((L[i] - L[i - 1]) || 1); res.push([P[i - 1][0] + (P[i][0] - P[i - 1][0]) * u, P[i - 1][1] + (P[i][1] - P[i - 1][1]) * u]); }
+      out[cc] = res;
+    }
+    return out;
+  });
+  const sk = Object.keys(shapes), alike = []; let closest = [9, ''];
+  for (let i = 0; i < sk.length; i++) for (let j = i + 1; j < sk.length; j++) {
+    const a = shapes[sk[i]], b = shapes[sk[j]], d = a.reduce((s, p, k) => s + Math.hypot(p[0] - b[k][0], p[1] - b[k][1]), 0) / a.length;
+    if (d < closest[0]) closest = [d, sk[i] + '/' + sk[j]]; if (d < 0.1) alike.push(sk[i] + '/' + sk[j] + ' ' + d.toFixed(3));
+  }
+  check(`no two lands share a layout shape (closest pair ${closest[1]}: ${closest[0].toFixed(3)} of the map apart, at least 0.1 needed)`, sk.length > 1 && !alike.length, alike);
+  if (shots) await page.screenshot({ path: path.join(shots, 'ow-14-last-land.png') });
+
   check('no page errors', errors.length === 0, errors.slice(0, 5));
   console.log(failures ? `${failures} CHECK(S) FAILED` : 'ALL CHECKS PASSED');
   await browser.close();

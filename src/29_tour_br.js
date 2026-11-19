@@ -315,7 +315,7 @@ const enemies = {
   brBrigadeiro: { cls: TourEnemy.make({ w: 20, h: 22, speed: 1.0, behavior: 'hop', hopV: 11, hopEvery: 1.2, art: brigadeiroArt, burst: '#4a2416' }), place: 'walk' },
   brPandeiro: { cls: TourEnemy.make({ w: 26, h: 26, speed: 2.0, behavior: 'walk', art: pandeiroArt, burst: '#c8a060' }), place: 'walk' },
   brCoati: { cls: BrCoati, place: 'walk' },
-  brJaguar: { cls: TourEnemy.make({ w: 40, h: 26, speed: 1.0, behavior: 'charge', range: 8, chargeSpeed: 6.5, hp: 2, art: jaguarArt, burst: '#e8a83a', onNotice: e => K.say(e.g, e, 'RRRAWR!', '#ffd84a') }), place: 'walk' },
+  brJaguar: { cls: TourEnemy.make({ belly: true, w: 40, h: 26, speed: 1.0, behavior: 'charge', range: 8, chargeSpeed: 6.5, hp: 2, art: jaguarArt, burst: '#e8a83a', onNotice: e => K.say(e.g, e, 'RRRAWR!', '#ffd84a') }), place: 'walk' },
   brPiranha: { cls: TourLeaper.make({ w: 22, h: 18, jumpV: 15, every: 1.4, art: piranhaArt, splash: '#a8d88a' }), place: 'here' }
 };
 // a confetti cannon from the carnival floats
@@ -618,7 +618,7 @@ const platforms = {
 };
 
 /* ---------------- the boss: O TUCANÃO ---------------- */
-// The Baron's giant toucan rules the air: the only thing that reaches him is a FOOTBALL. The ball cannon
+// Piwi's flying usher, a giant toucan, rules the air: the only thing that reaches him is a FOOTBALL. The ball cannon
 // keeps the pitch stocked; run into a ball to kick it along the floor (for his low swoops), stomp a ball
 // to volley it straight up at him. A ball in the face knocks him out of the sky to the floor, where he
 // staggers (stomp him for a bonus hit). Phase 2 the carnival drums kick in and he dives on the beat, beak
@@ -900,7 +900,7 @@ Tour.country({
   themes, painters, decor, decorLights, beatArt, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_br', boss: 'tour_br_boss' },
   landmark: 'Sugarloaf Mountain',
-  arrival: 'Brady! The Baron is trying to fit Sugarloaf Mountain into a carnival float. Hurry! ♥ C',
+  arrival: 'Brady! Piwi is squeezing Sugarloaf Mountain onto a carnival float for his Samba Spectacular. I swapped his tap shoes for flip-flops. ♥ C',
   coin: { name: 'PÃO DE QUEIJO', draw(ctx, x, y) {
     ctx.fillStyle = '#e8b85a'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();
     ctx.fillStyle = '#f8d88a'; ctx.beginPath(); ctx.arc(x - 1, y - 1.5, 6.5, 0, TAU); ctx.fill();

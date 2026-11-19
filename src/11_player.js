@@ -1,6 +1,7 @@
 /* ============================================================
    Player — Brady
    ============================================================ */
+const GROW_T = 0.36;   // the grow / shrink after a power change (s)
 class Player {
   constructor(g, x, y, power) {
     this.g = g;
@@ -46,7 +47,7 @@ class Player {
       }
       const ha = hairAnchor(this.cx, this.y + this.h, this.facing, n === 0, null);
       this.hair = makeHair(n === 0 ? BRADY_DIM.small.hairN : BRADY_DIM.big.hairN, ha.x, ha.y);
-      if (!quiet) { this.growT = 0.6; this.growFrom = was; }
+      if (!quiet) { this.growT = GROW_T; this.growFrom = was; if (this.g.burst) this.g.burst(this.cx, this.y + this.h * 0.4, 10, '#fff2c0', 'spark'); }
     }
     if (!quiet) Sound.play(n > was ? 'powerup' : 'powerdown');
   }
@@ -80,6 +81,8 @@ class Player {
 
   die(reason) {
     if (this.dead) return;
+    // secrets: a handler may turn this death into something softer (TourHooks.playerDie, 28_tour_a2_hooks.js)
+    if (typeof TourHooks !== 'undefined' && TourHooks.playerDie.length && TourHooks.run('playerDie', this.g, this, reason)) return;
     this.dead = true; this.state = 'dying'; this.deathT = 0;
     this.vy = -12 * TS; this.vx = 0; this.star = 0;
     Sound.stopMusic(); Sound.play('die');
@@ -218,7 +221,7 @@ class Player {
   magnetPull(dt) {
     const g = this.g, A = g.area, r = 5, cx = Math.floor(this.cx / TS), cy = Math.floor(this.cy / TS);
     for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) if (tileAt(A, x, y) === T.PICK && (x - cx) ** 2 + (y - cy) ** 2 <= r * r) { g.setTile(x, y, T.EMPTY); g.spawn(new GearCoin(g, x * TS + TS / 2, y * TS + TS / 2)); }
-    for (const e of g.entities) if (e instanceof TourItem && !e.dropped && e.emerge <= 0 && Math.hypot(e.cx - this.cx, e.cy - this.cy) < r * TS) { const d = Math.hypot(this.cx - e.cx, this.cy - e.cy) || 1; e.x += (this.cx - e.cx) / d * 12 * TS * dt; e.y += (this.cy - e.cy) / d * 12 * TS * dt; if (e.hoverY != null) e.hoverY = e.y; }
+    for (const e of g.entities) if (e instanceof TourItem && !e.dropped && e.emerge <= 0 && Math.hypot(e.cx - this.cx, e.cy - this.cy) < r * TS) { const d = Math.hypot(this.cx - e.cx, this.cy - e.cy) || 1, b = e.speedX ? 0 : 4, nx = e.x + (this.cx - e.cx) / d * 12 * TS * dt, ny = e.y + (this.cy - e.cy) / d * 12 * TS * dt; if (ItemSpace.free(A, nx, e.y - b, e.w, e.h + 2 * b)) e.x = nx; if (ItemSpace.free(A, e.x, ny - b, e.w, e.h + 2 * b)) e.y = ny; if (e.hoverY != null) e.hoverY = e.y; }   // never through a wall
   }
   stun(t) { if (this.star > 0 || this.fx.molly > 0) return; this.stunT = Math.max(this.stunT, t); this.vx *= 0.3; this.g.parts.text(this.cx, this.y - 10, 'DAZED', '#ffffff'); }
   slowDown(t) { if (this.star > 0 || this.fx.molly > 0) return; this.slowT = Math.max(this.slowT, t); }
@@ -235,7 +238,7 @@ class Player {
       if (this.deathT > 2.4) g.onPlayerDead();
       return;
     }
-    if (this.growT > 0) { this.growT -= dt; this.updateHair(dt); return; }
+    if (this.growT > 0) this.growT = Math.max(0, this.growT - dt);   // the grow plays while he keeps moving (no freeze)
     if (this.state === 'portal') { this.portalT += dt; this.updateHair(dt); return; }
     if (this.state === 'clear') { this.updateClear(dt); return; }
 
@@ -437,6 +440,8 @@ class Player {
     if (lavaContact(this, A)) { this.die('lava'); return; }
     if (A.risingLava && this.y + this.h > g.lavaY + 6) { this.die('lava'); return; }
     if (spikeContact(this, A)) this.hurt({ x: this.x, w: this.w, spikes: true });
+    // secrets: a seam on this area's edge takes Brady through before the pit line or the wall stops him (TourSeams)
+    if (A.seams && typeof TourHooks !== 'undefined' && TourHooks.offEdgeCheck(g, this, inp)) return;
     if (this.y > A.H * TS + 20) { this.die('pit'); return; }
     // autoscroll: the screen edge pushes Brady along
     if (A.autoscroll) {
@@ -519,6 +524,16 @@ class Player {
     stepHair(this.hair, ha.x, ha.y, this.facing, D.hairL, dt, wind);
   }
 
+  /* the grow (or shrink) after a power change: the new form, scaled from the old height to its own with an ease and a
+     little sideways squash, about his feet. Monotonic in height, never a strobe between the two forms. */
+  growScale() {
+    if (!(this.growT > 0)) return { sx: 1, sy: 1 };
+    const k = 1 - this.growT / GROW_T, e = 1 - Math.pow(1 - k, 3);
+    const from = this.growFrom === 0 ? PLAYER_DIM.small.h : PLAYER_DIM.big.h, to = this.small ? PLAYER_DIM.small.h : PLAYER_DIM.big.h;
+    const r = from / to;
+    return { sx: (1 + (Math.sqrt(r) - 1) * (1 - e)) * (1 + 0.07 * Math.sin(k * Math.PI)), sy: r + (1 - r) * e };
+  }
+
   draw(ctx, t) {
     if (this.state === 'portal') {
       const k = clamp(this.portalT / 0.4, 0, 1);
@@ -527,8 +542,7 @@ class Player {
       ctx.restore(); return;
     }
     if (this.invuln > 0 && !this.dead && Math.floor(this.invuln * 16) % 2 === 0) return;
-    let small = this.small;
-    if (this.growT > 0) small = Math.floor(this.growT * 14) % 2 === 0 ? (this.growFrom === 0) : (this.power === 0);
+    const small = this.small, gs = this.growScale();
     const o = { x: this.cx, y: this.y + this.h, facing: this.facing, small, power: this.power, anim: this.anim, hair: this.hair, look: Save.data.look, star: this.star > 0, time: t, fly: this.fly > 0 || this.lsdT > 0, floaty: this.floaty > 0 || (this.power === 2 && this.g.level && this.g.level.tour && !this.inWater) };
     if (this.lsdT > 0 && this.lsdT < 2 && Math.floor(this.lsdT * 10) % 2 === 0) o.alpha = 0.45;
     if (this.g.level && this.g.level.tour) { o.trip = this.lsdT > 0; o.held = 'joint'; }
@@ -555,7 +569,13 @@ class Player {
     if (small !== this.small) o.hair = null;
     PlayerFx.under(ctx, this, t);
     // drawn a little larger than the hitbox (ART_SCALE) so he reads on a phone; the physics box is unchanged
-    Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady, ART_SCALE.brady); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16', rim: '#e7e3d7' });
+    // PERFORMANCE: the scratch area of his ink pass is fitted to what he can reach in ordinary play (measured over
+    // every pose, power and size: arms 19 px past the box's sides, the bun and a balloon 28 px above it, 7 px below),
+    // a third fewer pixels than the old 34 px slack all round; flying, the star, a ride, a spin and death keep the
+    // old generous box, and so does the grow/shrink squash (it can draw him taller than the fitted box)
+    const plain = !o.fly && !o.star && o.rot == null && !this.mounted && !this.dead && !(o.floaty && this.crouch) && !(o.look && o.look.style === 'down') && !(this.growT > 0);
+    if (plain) Ink.around(ctx, this.x - 26, this.y - 42, this.w + 52, this.h + 50, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady * gs.sx, ART_SCALE.brady * gs.sy); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 5, width: 1.0, color: '#120e16', rim: '#e7e3d7', hero: true });
+    else Ink.around(ctx, this.x - 8, this.y - 14, this.w + 16, this.h + 14, c => { c.save(); c.translate(o.x, o.y); c.scale(ART_SCALE.brady * gs.sx, ART_SCALE.brady * gs.sy); c.translate(-o.x, -o.y); drawBrady(c, o); c.restore(); }, { pad: 34, width: 1.0, color: '#120e16', rim: '#e7e3d7', hero: true });
     PlayerFx.over(ctx, this, t);
   }
   get light() { return { r: this.g.area.water ? 150 : 170, c: 'rgba(255,240,220,' }; }

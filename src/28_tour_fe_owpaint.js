@@ -11,20 +11,28 @@ const TourOWPaint = {
   rng(seed) { return mulberry32(hashStr(String(seed))); },
 
   /* ---------- the static map ---------- */
+  // a land's own painter of one part (TourOWLands in 28_tour_fg_owlands.js): M.sea, M.coast, M.tufts, M.trail, M.bridge
+  style(part, M) { const T = typeof TourOWLands !== 'undefined' ? TourOWLands : null, k = M && M[part]; return T && k && T[part] && T[part][k] || null; },
   map(c, ow) {
     const G = ow.G, L = ow.look, M = G.M, ink = this.INK;
     c.lineJoin = 'round'; c.lineCap = 'round';
-    // the sea: a soft gradient and little wave marks
+    // the sea: a soft gradient and little wave marks (or the land's own sea: clouds, stars, pack ice, reefs...)
     const sg = c.createLinearGradient(0, 0, 0, G.h); sg.addColorStop(0, mix(L.sea, '#ffffff', 0.08)); sg.addColorStop(1, L.deep);
     c.fillStyle = sg; c.fillRect(0, 0, G.w, G.h);
-    const R = this.rng(G.cc + 'sea');
-    c.strokeStyle = rgba(mix(L.sea, '#ffffff', 0.5), 0.35); c.lineWidth = 2;
-    for (let i = 0; i < Math.round(G.w * G.h / 9000); i++) {
-      const x = R() * G.w, y = R() * G.h; if (G.land.some(r => OWGeo.inPoly(x, y + 20, r))) continue;
-      c.beginPath(); c.arc(x, y, 6, Math.PI * 1.15, Math.PI * 1.85); c.stroke(); c.beginPath(); c.arc(x + 11, y, 6, Math.PI * 1.15, Math.PI * 1.85); c.stroke();
+    const sea = this.style('sea', M);
+    if (sea) { c.save(); sea.call(this, c, ow); c.restore(); }
+    else {
+      const R = this.rng(G.cc + 'sea');
+      c.strokeStyle = rgba(mix(L.sea, '#ffffff', 0.5), 0.35); c.lineWidth = 2;
+      for (let i = 0; i < Math.round(G.w * G.h / 9000); i++) {
+        const x = R() * G.w, y = R() * G.h; if (G.land.some(r => OWGeo.inPoly(x, y + 20, r))) continue;
+        c.beginPath(); c.arc(x, y, 6, Math.PI * 1.15, Math.PI * 1.85); c.stroke(); c.beginPath(); c.arc(x + 11, y, 6, Math.PI * 1.15, Math.PI * 1.85); c.stroke();
+      }
     }
-    // the islands: shallows, foam, the cliff side, the top, a beach band, the ink line
-    for (const ring of G.land) {
+    // the islands: shallows, foam, the cliff side, the top, a beach band, the ink line (or the land's own coast)
+    const coast = this.style('coast', M);
+    G.land.forEach((ring, i) => {
+      if (coast) { c.save(); coast.call(this, c, ow, ring, i); c.restore(); return; }
       OWGeo.path(c, ring, true); c.strokeStyle = rgba(mix(L.sea, '#ffffff', 0.3), 0.5); c.lineWidth = 64; c.stroke();
       c.strokeStyle = rgba(mix(L.sea, '#ffffff', 0.45), 0.55); c.lineWidth = 34; c.stroke();
       c.save(); c.translate(0, 13); OWGeo.path(c, ring, true); c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = 9; c.stroke();
@@ -33,17 +41,21 @@ const TourOWPaint = {
       c.save(); c.translate(0, 6.5); OWGeo.path(c, ring, true); c.strokeStyle = rgba(shade(L.cliff, -0.3), 0.6); c.lineWidth = 1.4; c.stroke(); c.restore();
       OWGeo.path(c, ring, true); c.fillStyle = L.land; c.fill();
       c.save(); OWGeo.path(c, ring, true); c.clip();
-      c.strokeStyle = L.beach; c.lineWidth = 26; OWGeo.path(c, ring, true); c.stroke();
+      c.strokeStyle = L.beach; c.lineWidth = M.beachW || 26; OWGeo.path(c, ring, true); c.stroke();
       c.restore();
       OWGeo.path(c, ring, true); c.strokeStyle = ink; c.lineWidth = 2.6; c.stroke();
-    }
-    // ground: light meadows and grass tufts, inside the land
+    });
+    // ground: light meadows and grass tufts, inside the land (M.meadow: false or a colour; M.tufts: the land's own marks)
     c.save(); c.beginPath(); for (const ring of G.land) { c.moveTo(ring[0][0], ring[0][1]); for (const p of ring) c.lineTo(p[0], p[1]); c.closePath(); } c.clip();
     const R2 = this.rng(G.cc + 'ground');
-    for (let i = 0; i < 26; i++) { const x = R2() * G.w, y = R2() * G.h, r = 50 + R2() * 110; c.fillStyle = rgba(L.light, 0.35); c.beginPath(); c.ellipse(x, y, r, r * 0.55, 0, 0, TAU); c.fill(); }
+    if (M.meadow !== false) for (let i = 0; i < 26; i++) { const x = R2() * G.w, y = R2() * G.h, r = 50 + R2() * 110; c.fillStyle = rgba(M.meadow || L.light, 0.35); c.beginPath(); c.ellipse(x, y, r, r * 0.55, 0, 0, TAU); c.fill(); }
     for (const f of M.feat || []) this.ground(c, ow, f);
-    c.strokeStyle = rgba(shade(L.land, -0.25), 0.55); c.lineWidth = 1.4;
-    for (let i = 0; i < Math.round(G.w * G.h / 2600); i++) { const x = R2() * G.w, y = R2() * G.h; if (!this.dry(G, x, y)) continue; c.beginPath(); c.moveTo(x - 3, y); c.lineTo(x - 1.5, y - 4); c.moveTo(x, y); c.lineTo(x + 0.5, y - 5); c.moveTo(x + 3, y); c.lineTo(x + 2, y - 3.5); c.stroke(); }
+    const tufts = this.style('tufts', M);
+    if (tufts) tufts.call(this, c, ow, R2);
+    else {
+      c.strokeStyle = rgba(shade(L.land, -0.25), 0.55); c.lineWidth = 1.4;
+      for (let i = 0; i < Math.round(G.w * G.h / 2600); i++) { const x = R2() * G.w, y = R2() * G.h; if (!this.dry(G, x, y)) continue; c.beginPath(); c.moveTo(x - 3, y); c.lineTo(x - 1.5, y - 4); c.moveTo(x, y); c.lineTo(x + 0.5, y - 5); c.moveTo(x + 3, y); c.lineTo(x + 2, y - 3.5); c.stroke(); }
+    }
     c.restore();
     if (typeof TourOWScenes !== 'undefined' && TourOWScenes.groundPaint[G.cc]) { c.save(); TourOWScenes.groundPaint[G.cc].call(TourOWScenes, c, ow); c.restore(); }
     // water inside the land: rivers, then lakes
@@ -55,6 +67,7 @@ const TourOWPaint = {
     const sprites = this.sprites(ow);
     sprites.sort((a, b) => a.y - b.y);
     for (const s of sprites) { c.save(); c.translate(s.x, s.y); this.sprite(c, ow, s); c.restore(); }
+    G.placed = {}; for (const s of sprites) if (s.o && s.o.spin) G.placed[Math.round(s.x) + ',' + Math.round(s.y)] = true;   // windmills whose sails turn live
     if (typeof TourOWScenes !== 'undefined') TourOWScenes.paint(c, ow);
   },
   // inside the land, away from water
@@ -62,6 +75,7 @@ const TourOWPaint = {
   // ground features: biome patches, dunes, fields, snow
   ground(c, ow, f) {
     const L = ow.look, k = f[0];
+    if (typeof TourOWLands !== 'undefined' && TourOWLands.ground[k]) { c.save(); TourOWLands.ground[k].call(this, c, ow, f); c.restore(); return; }
     if (k === 'patch' || k === 'dunes' || k === 'snow' || k === 'fields' || k === 'paddies') {
       const pts = OWGeo.spline(TourOW.pairs(f[2] || f[1]), true, 6), col = k === 'snow' ? '#f4f8fb' : k === 'dunes' ? (f[1] || '#e8c27a') : f[1];
       OWGeo.path(c, pts, true); c.fillStyle = typeof col === 'string' ? col : L.light; c.fill(); c.strokeStyle = c.fillStyle; c.lineWidth = 12; c.stroke();
@@ -109,11 +123,15 @@ const TourOWPaint = {
     c.strokeStyle = rgba('#1c1426', 0.18); c.lineWidth = 15; c.save(); c.translate(0, 2.5); c.stroke(); c.restore();
     c.strokeStyle = ink; c.lineWidth = 12.5; c.stroke();
     c.strokeStyle = col; c.lineWidth = 8.5; c.stroke();
-    c.strokeStyle = rgba(gold ? '#fff8c0' : mix(col, '#ffffff', 0.55), 0.85); c.lineWidth = 2; c.setLineDash([3, 9]); c.stroke(); c.setLineDash([]);
+    const ts = this.style('trail', ow.G.M);
+    if (ts && !gold) ts.call(this, c, ow, pts, col);
+    else { c.strokeStyle = rgba(gold ? '#fff8c0' : mix(col, '#ffffff', 0.55), 0.85); c.lineWidth = 2; c.setLineDash([3, 9]); c.stroke(); c.setLineDash([]); }
     // bridges over water
+    const bs = this.style('bridge', ow.G.M);
     for (const [w0, w1] of P.water || []) {
       const a = Math.max(s0, w0 - 6), b = Math.min(s1, w1 + 6); if (b - a < 4) continue;
       const bp = this.sub(P, a, b);
+      if (bs) { c.save(); bs.call(this, c, ow, bp, gold); c.restore(); continue; }
       OWGeo.path(c, bp, false); c.lineCap = 'butt'; c.strokeStyle = ink; c.lineWidth = 15; c.stroke(); c.strokeStyle = '#b8814c'; c.lineWidth = 11; c.stroke();
       c.strokeStyle = rgba('#6a4426', 0.8); c.lineWidth = 11; c.setLineDash([1.6, 4.4]); c.stroke(); c.setLineDash([]);
       // rails
@@ -133,8 +151,17 @@ const TourOWPaint = {
     const G = ow.G, M = G.M, out = [], R = this.rng(G.cc + 'flora');
     const curves = TourOW.allCurves(ow.C).map(x => x.P.pts);
     const nodes = Object.keys(G.pos).map(k => G.pos[k]);
-    const clear = (x, y, r, sea) => {
+    // ground features no tree grows on: city blocks, boards, terraces, fields (rings), railways and walls (lines)
+    const rings = [], lines = [];
+    for (const f of M.feat || []) {
+      if (f[0] === 'blocks' || f[0] === 'checker' || f[0] === 'polders') rings.push(OWGeo.spline(TourOW.pairs(f[1]), true, 6));
+      else if (f[0] === 'terraces' || f[0] === 'fields' || f[0] === 'paddies') rings.push(OWGeo.spline(TourOW.pairs(f[2]), true, 6));
+      else if (f[0] === 'rail' || f[0] === 'wall') lines.push(OWGeo.spline(TourOW.pairs(f[1]), false, 6));
+    }
+    const clear = (x, y, r, sea, free) => {
       if (sea ? this.dry(G, x, y) || G.land.some(q => OWGeo.distPoly(x, y, q) < r) : !this.dry(G, x, y)) return false;
+      for (const L2 of lines) if (OWGeo.distPoly(x, y, L2) < r * 0.6 + 12) return false;
+      if (free) for (const q of rings) if (OWGeo.inPoly(x, y, q)) return false;
       for (const p of nodes) { if (Math.hypot(p.x - x, p.y - y) < r + 34) return false; if (Math.abs(p.x - x) < 40 + r * 0.5 && y > p.y && y - p.y < 46 + r) return false; }
       for (const pts of curves) if (OWGeo.distPoly(x, y, pts) < r * 0.6 + 12) return false;
       for (const s of out) if (Math.hypot(s.x - x, s.y - y) < (s.r + r) * 0.62) return false;
@@ -155,16 +182,16 @@ const TourOWPaint = {
     let made = 0;
     for (let i = 0; i < n * 8 && made < n; i++) {
       const x = R() * G.w, y = R() * G.h, s = 9 + R() * 6;
-      if (!clear(x, y, s)) continue;
+      if (!clear(x, y, s, false, true)) continue;
       out.push({ k: flora[Math.floor(R() * flora.length)], x, y, r: s, o: { v: R() } }); made++;
     }
     // empty stretches of land become little woods (M.forest kinds, else the flora)
     const fk = M.forest || flora, step = 95;
     for (let gy = step / 2; gy < G.h; gy += step) for (let gx = step / 2; gx < G.w; gx += step) {
       const x = gx + (R() - 0.5) * 30, y = gy + (R() - 0.5) * 30;
-      if (!this.dry(G, x, y) || out.some(s => Math.hypot(s.x - x, s.y - y) < 62)) continue;
+      if (M.woods === false || !this.dry(G, x, y) || out.some(s => Math.hypot(s.x - x, s.y - y) < 62)) continue;
       if (nodes.some(p => Math.hypot(p.x - x, p.y - y) < 110)) continue;
-      for (let i = 0; i < 9; i++) { const a = R() * TAU, d = Math.sqrt(R()) * 40, tx = x + Math.cos(a) * d, ty = y + Math.sin(a) * d * 0.7, sz = 10 + R() * 6; if (clear(tx, ty, sz)) out.push({ k: fk[Math.floor(R() * fk.length)], x: tx, y: ty, r: sz, o: { v: R() } }); }
+      for (let i = 0; i < 9; i++) { const a = R() * TAU, d = Math.sqrt(R()) * 40, tx = x + Math.cos(a) * d, ty = y + Math.sin(a) * d * 0.7, sz = 10 + R() * 6; if (clear(tx, ty, sz, false, true)) out.push({ k: fk[Math.floor(R() * fk.length)], x: tx, y: ty, r: sz, o: { v: R() } }); }
     }
     return out;
   },
@@ -248,6 +275,7 @@ const TourOWPaint = {
       this.P(c, [[-r * 0.32, 0], [-r * 0.24, -r * 1.1], [r * 0.24, -r * 1.1], [r * 0.32, 0]], o.col || '#f3e6cc');
       this.P(c, [[-r * 0.32, -r * 1.1], [0, -r * 1.45], [r * 0.32, -r * 1.1]], '#a8503a');
       c.fillStyle = '#3a2a3a'; c.fillRect(-2, -r * 0.35, 4, r * 0.35);
+      if (o.spin) { c.fillStyle = '#5a4a3a'; c.beginPath(); c.arc(0, -r * 1.12, 2.2, 0, TAU); c.fill(); return; }   // the sails turn on the live layer
       c.save(); c.translate(0, -r * 1.12); c.rotate(0.35 + (o.v || 0)); c.lineWidth = 1.4;
       for (let i = 0; i < 4; i++) { c.rotate(Math.PI / 2); c.fillStyle = '#fff8ea'; c.beginPath(); c.rect(1, -2.5, r * 0.95, 5); c.fill(); c.stroke(); }
       c.fillStyle = '#5a4a3a'; c.beginPath(); c.arc(0, 0, 2.2, 0, TAU); c.fill(); c.restore();
@@ -260,7 +288,7 @@ const TourOWPaint = {
     const G = ow.G, t = ow.t;
     // foam laps at the cliffs
     ctx.save(); ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 3; ctx.setLineDash([10, 16]); ctx.lineDashOffset = -t * 9;
-    for (const ring of G.land) { ctx.save(); ctx.translate(0, 13 + Math.sin(t * 1.3) * 1.5); OWGeo.path(ctx, ring, true); ctx.stroke(); ctx.restore(); }
+    if (G.M.foam !== false) for (const ring of G.land) { ctx.save(); ctx.translate(0, (G.M.foamY != null ? G.M.foamY : 13) + Math.sin(t * 1.3) * 1.5); OWGeo.path(ctx, ring, true); ctx.stroke(); ctx.restore(); }
     ctx.setLineDash([]); ctx.restore();
     // sea glints
     if (!G.glints) { const R = this.rng(G.cc + 'glint'); G.glints = []; for (let i = 0; i < 40; i++) { const x = R() * G.w, y = R() * G.h, ph = R() * TAU; if (!G.land.some(r => OWGeo.inPoly(x, y + 18, r))) G.glints.push([x, y, ph]); } }
@@ -277,7 +305,7 @@ const TourOWPaint = {
     const G = ow.G, t = ow.t;
     // birds
     ctx.strokeStyle = 'rgba(30,24,44,0.75)'; ctx.lineWidth = 1.6;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < (G.M.birds === false ? 0 : 3); i++) {
       const x = ((t * (22 + i * 6) + i * 520) % (G.w + 200)) - 100, y = 120 + i * 210 + Math.sin(t * 0.7 + i) * 30, f = Math.sin(t * 9 + i * 2) * 3;
       if (x < vr.x0 - 20 || x > vr.x1 + 20 || y < vr.y0 - 20 || y > vr.y1 + 20) continue;
       for (const [dx, dy] of [[0, 0], [12, 6], [-10, 7]]) { ctx.beginPath(); ctx.moveTo(x + dx - 6, y + dy - f); ctx.quadraticCurveTo(x + dx - 3, y + dy - 3, x + dx, y + dy); ctx.quadraticCurveTo(x + dx + 3, y + dy - 3, x + dx + 6, y + dy - f); ctx.stroke(); }
@@ -380,7 +408,7 @@ const TourOWPaint = {
     const E = TourProgress.exitsFound(n.id); if (E.total < 2) return;
     for (let q = 0; q < E.total; q++) { c.fillStyle = q < E.found ? '#7ae0ff' : 'rgba(28,20,38,0.35)'; c.strokeStyle = this.INK; c.lineWidth = 0.9; c.beginPath(); c.arc((q - (E.total - 1) / 2) * 7, 13.5, 2.3, 0, TAU); c.fill(); c.stroke(); }
   },
-  // the boss fort: walls, towers, a gate, the land's roof motif and a flag (the Baron's until the boss falls)
+  // the boss fort: walls, towers, a gate, the land's roof motif and a flag (Piwi's until the boss falls)
   fort(c, ow, n, here) {
     const C = ow.C, t = ow.t, ink = this.INK, done = n.done, open = n.enter;
     const wall = open ? (done ? '#f3e2c0' : '#e2cfae') : '#b8b4c0', dark = shade(wall, -0.25);
@@ -402,13 +430,13 @@ const TourOWPaint = {
     // flag on the right tower
     const fx = 19, fy = -38, f = Math.sin(t * 5) * 2;
     c.strokeStyle = ink; c.lineWidth = 1.6; c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx, fy - 18); c.stroke();
-    c.fillStyle = done ? C.colors.a : '#6a4a8a'; c.beginPath(); c.moveTo(fx, fy - 18); c.lineTo(fx + 14, fy - 15 + f); c.lineTo(fx, fy - 10); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = done ? C.colors.a : PIWI.jacket; c.beginPath(); c.moveTo(fx, fy - 18); c.lineTo(fx + 14, fy - 15 + f); c.lineTo(fx, fy - 10); c.closePath(); c.fill(); c.stroke();
     c.fillStyle = done ? '#ffd84a' : '#e8d8ff'; c.font = 'bold 6px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    if (done) { c.beginPath(); TourKit.star(c, fx + 5, fy - 14.5 + f * 0.5, 2.6, 1.1, 5); c.fill(); } else c.fillText('B', fx + 5, fy - 14 + f * 0.5);
+    if (done) { c.beginPath(); TourKit.star(c, fx + 5, fy - 14.5 + f * 0.5, 2.6, 1.1, 5); c.fill(); } else { c.fillStyle = PIWI.tie; c.fillText('P', fx + 5, fy - 14 + f * 0.5); }
     if (open) this.postcards(c, n, ow, -28);
     if (done) this.pips(c, Object.assign({}, n));
   },
-  // the Baron's roadblock, themed per land (crates, a fallen log, boulders, ice blocks, paper lanterns...), with his B sign
+  // Piwi's roadblock, themed per land (crates, a fallen log, boulders, ice blocks, paper lanterns...), with his P sign
   roadblock(c, ow, x, y, ang, port) {
     const ink = this.INK, t = ow.t, kind = { mx: 'crates', es: 'crates', fr: 'crates', ec: 'log', br: 'log', id: 'log', vn: 'log', ma: 'rocks', mz: 'rocks', np: 'rocks', aq: 'ice', nl: 'barrier', jp: 'barrier', w22: 'barrier' }[ow.cc] || 'barrier';
     c.save(); c.translate(x, y);
@@ -423,14 +451,14 @@ const TourOWPaint = {
       for (const s of [-1, 1]) { c.fillStyle = '#8a5a3a'; c.fillRect(s * 12 - 2, -16, 4, 19); c.strokeRect(s * 12 - 2, -16, 4, 19); }
       c.save(); c.rotate(Math.sin(t * 2) * 0.02);
       c.fillStyle = '#ffd23a'; c.fillRect(-16, -13, 32, 7); c.strokeRect(-16, -13, 32, 7);
-      c.fillStyle = '#6a4a8a'; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(-14 + i * 8, -13); c.lineTo(-10 + i * 8, -13); c.lineTo(-14 + i * 8 + 1, -6); c.lineTo(-18 + i * 8 + 1, -6); c.closePath(); c.fill(); }
+      c.fillStyle = PIWI.jacket; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(-14 + i * 8, -13); c.lineTo(-10 + i * 8, -13); c.lineTo(-14 + i * 8 + 1, -6); c.lineTo(-18 + i * 8 + 1, -6); c.closePath(); c.fill(); }
       c.strokeRect(-16, -13, 32, 7); c.restore();
     }
-    // the Baron's sign on a stick
+    // Piwi's sign on a stick
     c.beginPath(); c.moveTo(14, 2); c.lineTo(14, -22); c.stroke();
     c.save(); c.translate(14, -26); c.rotate(Math.sin(t * 2.2 + x) * 0.06);
-    c.fillStyle = '#6a4a8a'; c.beginPath(); c.arc(0, 0, 6.5, 0, TAU); c.fill(); c.stroke();
-    c.fillStyle = '#ffe8a8'; c.font = `7px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(port ? '✈' : 'B', 0, 0.5);
+    c.fillStyle = PIWI.jacket; c.beginPath(); c.arc(0, 0, 6.5, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = port ? '#ffe8a8' : PIWI.tie; c.font = `7px ${FONT_DISPLAY}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(port ? '✈' : 'P', 0, 0.5);
     c.restore(); c.restore();
   }
 };

@@ -343,8 +343,8 @@ const enemies = {
   } }), place: 'walk' },
   maCobra: { cls: TourLeaper.make({ w: 22, h: 30, jumpV: 9, every: 1.8, stompable: true, art: cobraArt, splash: '#c8a060' }), place: 'here' },
   maScarab: { cls: TourEnemy.make({ w: 22, h: 18, speed: 0.8, behavior: 'roll', range: 8, rollSpeed: 6, art: scarabArt, burst: '#3a8ab8' }), place: 'walk' },
-  maFennec: { cls: TourEnemy.make({ w: 24, h: 20, speed: 1.6, behavior: 'hop', hopV: 12, hopEvery: 1.1, art: fennecArt, burst: '#f0d8a8' }), place: 'walk' },
-  maGoat: { cls: TourEnemy.make({ w: 30, h: 26, speed: 0.8, behavior: 'charge', range: 6, chargeSpeed: 5.5, art: goatArt, burst: '#f4f0e8', onNotice: e => K.say(e.g, e, 'MEHHH!', '#ffffff') }), place: 'walk' },
+  maFennec: { cls: TourEnemy.make({ belly: true, w: 24, h: 20, speed: 1.6, behavior: 'hop', hopV: 12, hopEvery: 1.1, art: fennecArt, burst: '#f0d8a8' }), place: 'walk' },
+  maGoat: { cls: TourEnemy.make({ belly: true, w: 30, h: 26, speed: 0.8, behavior: 'charge', range: 6, chargeSpeed: 5.5, art: goatArt, burst: '#f4f0e8', onNotice: e => K.say(e.g, e, 'MEHHH!', '#ffffff') }), place: 'walk' },
   maOrange: { cls: TourEnemy.make({ w: 20, h: 20, speed: 0.9, behavior: 'roll', range: 9, rollSpeed: 6.5, art: orangeArt, burst: '#ff8a1a' }), place: 'walk' },
   // the street snail: tucked in its shell by day in 5-3, out at night leaving a slick trail (TourBehave.maShellSnail)
   maSnail: { cls: TourEnemy.make({ w: 30, h: 20, speed: 0.5, behavior: 'maShellSnail', trail: 'slime', trailT: 4, art: snailArt, burst: '#c8b898' }), place: 'walk' }
@@ -1097,7 +1097,7 @@ const boss = {
   }
 };
 
-/* ---------------- 5-4's mini-boss: THE BRASS OWL (the Baron's clockwork sentry) ---------------- */
+/* ---------------- 5-4's mini-boss: THE BRASS OWL (Piwi's clockwork stage-door guard) ---------------- */
 // It perches under one of three tagine lids hanging from the tower roof. Every four seconds its head turns right
 // round (gears clank first). While it looks away, pull a chain: that lid drops on it. Pull while it watches and it
 // screeches, hops clear and blows a volley of brass feathers. Phase 2: it flies a lap of the room and lands under a
@@ -1356,7 +1356,7 @@ const storkArt = (ctx, e, x, y, m, t) => {
 const MA_X = 'ma_x';
 const maEnemies = {
   maMoth: { cls: TourEnemy.make({ w: 24, h: 18, speed: 0.7, behavior: 'platEater', every: 1.2, regrow: 6, edgeTurn: true, atlas: MA_X, art: mothArt, burst: '#f4e8d0' }), place: 'walk' },
-  maCat: { cls: TourEnemy.make({ w: 26, h: 20, speed: 1.4, behavior: 'sleeper', base: 'pouncer', phaseWake: true, hear: 3, range: 6, tell: 1.0, atlas: MA_X, art: catArt, burst: '#e8964a' }), place: 'walk' },
+  maCat: { cls: TourEnemy.make({ belly: true, w: 26, h: 20, speed: 1.4, behavior: 'sleeper', base: 'pouncer', phaseWake: true, hear: 3, range: 6, tell: 1.0, atlas: MA_X, art: catArt, burst: '#e8964a' }), place: 'walk' },
   maStork: { cls: TourFlyer.make({ w: 34, h: 24, speed: 0.7, range: 3, swoop: true, atlas: MA_X, art: storkArt, burst: '#fbfbf6', onSwoop: e => K.sfx('clatter', 'select', { vol: 0.4, pitch: 1.4 }) }), place: 'fly' }
 };
 // modes the behaviours use that the atlas has under another name
@@ -1624,7 +1624,7 @@ Tour.country({
   themes, painters, dyn, decor, decorLights, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_ma', boss: 'tour_ma_boss' },
   landmark: 'the great kasbah',
-  arrival: 'Brady! The Baron rolled up a whole kasbah like a rug and hid it in the souk. ♥ C',
+  arrival: 'Brady! Piwi rolled up a whole kasbah like a rug for his magic act. I rolled myself up in a rug too. Nearly got out! ♥ C',
   coin: { name: 'DATE', draw(ctx, x, y) {
     ctx.fillStyle = '#8a4a2a'; ctx.beginPath(); ctx.ellipse(x, y, 6, 8.5, 0.2, 0, TAU); ctx.fill();
     ctx.strokeStyle = '#5a2a1a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 2, y - 6); ctx.quadraticCurveTo(x + 2, y, x - 1, y + 6); ctx.stroke();

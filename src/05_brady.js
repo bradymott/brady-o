@@ -247,8 +247,11 @@ function drawHairMass(ctx, pts, wTop, wTip, base, hi, sx, sy, facing) {
 /*
   drawBrady(ctx, o)
   o: { x, y (feet centre, world), facing, small, power (0..2), anim, hair (world pts), look, alpha, star, time, scale }
-  look: { hair, skin, style: 'bun'|'down', glasses: 'shades'|'clear'|'none', tattoos: bool, beard: bool }
+  o.look is ignored: Brady has exactly one look (BRADY_LOOK below)
 */
+// Brady's one look (his call, Nov 2026; the LOOK picker is gone): man bun, dark square shades, no stubble, the
+// blackwork sleeves, his own hair (Sun-Kissed Brown) and skin (Light). A look stored by an old save is ignored.
+const BRADY_LOOK = Object.freeze({ hair: 0, skin: 1, style: 'bun', glasses: 'shades', tattoos: true });
 const INK = '#17141c';
 
 // the outline of a limb capsule as a path (for clipping the tattoo to the arm)
@@ -322,11 +325,9 @@ function elbowMandala(ctx, sx, sy, ex, ey, hx, hy, w, wf, skinCol, small) {
 function drawBrady(ctx, o) {
   const D = o.small ? BRADY_DIM.small : BRADY_DIM.big;
   const P = bradyPose(o.anim, o.small);
-  const look = o.look || {};
-  const style = look.style || 'bun', glasses = look.glasses || 'shades';
-  const tattoos = look.tattoos !== false, beard = look.beard !== false;
-  const hair = HAIR_COLORS[look.hair] || HAIR_COLORS[0];
-  const skin = SKIN_TONES[look.skin] || SKIN_TONES[1];
+  const look = BRADY_LOOK;
+  const style = look.style, glasses = look.glasses, tattoos = look.tattoos;
+  const hair = HAIR_COLORS[look.hair], skin = SKIN_TONES[look.skin];
   const f = o.facing;
   ctx.save();
   ctx.translate(o.x, o.y);
@@ -520,15 +521,7 @@ function drawBrady(ctx, o) {
   ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(0.5, 0.5, R, R * 1.06, 0, 0, TAU); ctx.fill();
   // a cel highlight on the cheekbone and brow side: the head rounds out
   ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.beginPath(); ctx.ellipse(R * 0.42, -R * 0.22, R * 0.5, R * 0.34, -0.5, 0, TAU); ctx.fill();
-  // stubble along the jaw and upper lip
-  if (beard) {
-    ctx.save(); ctx.beginPath(); ctx.ellipse(0.5, 0.5, R, R * 1.06, 0, 0, TAU); ctx.clip();
-    ctx.fillStyle = rgba(shade(hair.base, -0.15), 0.3);
-    ctx.beginPath(); ctx.moveTo(-R * 0.35, R * 0.1); ctx.quadraticCurveTo(-R * 0.1, R * 0.95, R * 0.55, R * 1.1);
-    ctx.quadraticCurveTo(R * 1.15, R * 0.9, R * 1.08, R * 0.3); ctx.lineTo(R * 0.95, R * 0.32);
-    ctx.quadraticCurveTo(R * 0.62, R * 0.18, R * 0.32, R * 0.3); ctx.quadraticCurveTo(R * 0.05, R * 0.4, -R * 0.1, R * 0.05); ctx.closePath(); ctx.fill();
-    ctx.restore();
-  }
+  // (no stubble: clean-shaven, Brady's call)
   // ear
   ctx.fillStyle = skin.sh; ctx.beginPath(); ctx.ellipse(-R * 0.25, R * 0.15, R * 0.18, R * 0.26, 0, 0, TAU); ctx.fill();
   // eyes (hidden behind dark shades)

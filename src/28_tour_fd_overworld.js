@@ -174,6 +174,10 @@ class TourOverworld {
     this.scene = scene; this.C = C; this.cc = C.id; this.t = 0;
     this.G = TourOW.geo(C); this.look = TourOW.look(C);
     TourOverworld.hookTaps(); if (TourMapKeys.taps) TourMapKeys.taps.length = 0;
+    // the last overworld's painted map canvas is reused (ensureCache); that one repaints into a new canvas if it is
+    // ever drawn again
+    const last = TourOverworld.owner;
+    if (last && last !== this && last.cache) { TourOverworld.spare = last.cache.cv; last.cache = null; TourOverworld.owner = null; }
     this.prevEnter = false; this.prevDir = null; this.sinceArrive = 1; this.bumpT = 0;
     this.sparks = []; this.dust = []; this.menu = null; this.iris = { t: 0, dur: TourKit.reduceMotion() ? 0.01 : 0.45, open: true, col: o.landing ? '#fffcf0' : '#07040e' };
     this.refresh();
@@ -256,7 +260,8 @@ class TourOverworld {
     const up = e => {
       const d = downs.get(e.pointerId); downs.delete(e.pointerId); if (!d || e.type !== 'pointerup') return;
       const p = Input.pos(e);
-      if (d.moved < 16 && Math.hypot(p.x - d.x, p.y - d.y) < 16 && performance.now() - d.t < 600 && (d.role === 'stick' || d.role === 'cam')) TourMapKeys.taps.push({ x: p.x, y: p.y });
+      // (only while an overworld is on screen: taps on the joystick during a level used to pile up here all session)
+      if (d.moved < 16 && Math.hypot(p.x - d.x, p.y - d.y) < 16 && performance.now() - d.t < 600 && (d.role === 'stick' || d.role === 'cam') && Game.scene && Game.scene.ow && TourMapKeys.taps.length < 16) TourMapKeys.taps.push({ x: p.x, y: p.y });
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
   }
@@ -349,7 +354,7 @@ class TourOverworld {
       if (e.open && !e.fresh) { if (s > bs) { bs = s; best = e; } } else if (s > bb) { bb = s; blocked = e; }
     }
     if (best) { this.walkRoute([best.a === w.at ? best.b : best.a], false); return; }
-    if (blocked) this.bump(blocked.kind === 'port' ? 'THE PORT OPENS WHEN THE BOSS FALLS' : 'THE BARON BLOCKED THIS TRAIL: CLEAR ' + this.levelName(blocked.a === w.at ? blocked.a : blocked.b) + ' FIRST');
+    if (blocked) this.bump(blocked.kind === 'port' ? 'THE PORT OPENS WHEN THE BOSS FALLS' : 'PIWI BLOCKED THIS TRAIL: CLEAR ' + this.levelName(blocked.a === w.at ? blocked.a : blocked.b) + ' FIRST');
   }
   levelName(key) { const n = this.by[key]; return n && n.kind === 'level' ? n.id : 'THIS STOP'; }
   walkRoute(keys, auto) {
@@ -496,8 +501,14 @@ class TourOverworld {
     const G = this.G, cs = Math.min(Math.max(1, Game.dpr * this.z), 2.2, 4096 / G.w, 4096 / G.h);
     if (this.cache && !this.dirty && Math.abs(this.cache.cs - cs) < 0.01) return;
     const cw = Math.ceil(G.w * cs), ch = Math.ceil(G.h * cs);
+    // Memory: the painted map is up to 4096 px square (tens of MB). Every map visit makes a new overworld; it takes
+    // over the last one's canvas (TourOverworld.spare) and a size change resizes it in place, instead of a new canvas
+    // per visit and per zoom that iOS only frees when the garbage collector gets to it.
     let cv = this.cache && this.cache.cv;
-    if (!cv || cv.width !== cw || cv.height !== ch) cv = makeCanvas(cw, ch);
+    if (!cv && TourOverworld.spare) { cv = TourOverworld.spare; TourOverworld.spare = null; }
+    if (!cv) cv = makeCanvas(cw, ch);
+    else if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+    TourOverworld.owner = this;
     const c = cv.getContext('2d');
     c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cw, ch); c.setTransform(cs, 0, 0, cs, 0, 0);
     const t0 = performance.now();
@@ -549,7 +560,7 @@ class TourOverworld {
     if (R && R.key) for (const e of this.edges) if (e.open && (e.a === R.key || e.b === R.key) && this.by[e.a === R.key ? e.b : e.a].visible) { const P = TourOW.curve(this.G, e); if (P) TourOWPaint.trail(ctx, this, P, e.gold, [0, P.len]); }
     if (K) for (const e of K.list) { const P = TourOW.curve(this.G, e); if (!P) continue; const k = clamp((K.t - 0.35) / (K.dur - 0.45), 0, 1); if (k > 0) TourOWPaint.trail(ctx, this, P, false, [0, P.len * k]); }
   }
-  // a closed main trail: the Baron's roadblock at its middle (shakes and bursts when the trail opens)
+  // a closed main trail: Piwi's roadblock at its middle (shakes and bursts when the trail opens)
   drawBlock(ctx, e) {
     const K = this.clears, clearing = K && K.list.indexOf(e) >= 0;
     if (clearing && K.burst) return;
@@ -601,7 +612,7 @@ class TourOverworld {
     ctx.fillStyle = 'rgba(20,14,30,0.3)'; ctx.beginPath(); ctx.ellipse(w.x, w.y - lift + 1, 9 - hop * 0.3, 3, 0, 0, TAU); ctx.fill();
     const o = { x, y, facing: w.facing, small: true, power: 0, look: Save.data.look, time: this.t, scale: 0.86,
       anim: walking ? { state: 'run', t: this.t, phase: w.t * 13, speed: 0.85 } : hop > 0 ? { state: 'jump', t: this.t, phase: 0 } : { state: 'idle', t: this.t, phase: 0 } };
-    Ink.around(ctx, x - 12, y - 32, 24, 32, c => drawBrady(c, o), { pad: 14, width: 0.95, color: '#120e16' });
+    Ink.around(ctx, x - 12, y - 32, 24, 32, c => drawBrady(c, o), { pad: 14, width: 0.95, color: '#120e16', hero: true });
     // the stop he stands on: a soft bobbing marker over his head
     if (!walking && !this.reveal && !this.clears && node && node.enter && (node.kind === 'level' || node.kind === 'house' || node.kind === 'port')) {
       const by = y - 40 + Math.sin(this.t * 4) * 2.5;

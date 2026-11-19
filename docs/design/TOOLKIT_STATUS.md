@@ -79,7 +79,7 @@ Rules of thumb:
 ### Spec format (§7.2) and save (§3.5)
 | Item | Status | Notes |
 |---|---|---|
-| Save v2 key `super-brady-o-world-save-v2`, `exits`, tour `revealed/paths/flights/bottles/lighthouse/houses/pending` | tested | `tools/save_test.js`; settings and look copied once from v1; v1 untouched |
+| Save v3 key `super-brady-o-world-save-v3` (17 Nov 2026, the secrets reset; v2 before), `exits`, tour `revealed/paths/flights/bottles/lighthouse/houses/pending` | tested | `tools/save_test.js`; settings and look copied once from v1; v1 untouched |
 | level `n`, `arch`, `secret: true`, `exits { main, secret, … }`, `areas`, `mapCell`, `mapFrom` | tested | `n` mismatches and main-after-secret go to `Tour.problems` (reported by `--rules`) |
 | legacy `style`/`script` levels | tested | build byte-identical (`tools/sbw_snapshot.js`); legacy `secret: { to }` becomes `exits.secret = { to: 'land:<to>' }` |
 | `C.mainCount`, `Tour.isBoss`, `isFinale`, WORLDS `kinds`/`mainCount` | tested | |
@@ -191,13 +191,13 @@ Core ids unchanged. Gear `plane hat pads magnet fins box kazoo wand sundial glob
 | Item | Status | Notes |
 |---|---|---|
 | a full-screen walkable overworld per land (`28_tour_fd_overworld.js`): Brady walks the open trails with the joystick / arrows, a tap walks him to a stop, jump / Enter / a tap on his stop goes in; the info card (name, type, postcards, exits, best time) | tested | `tools/sbw_overworld_test.js` |
-| graph (`TourGraph` in `28_tour_fb_mapgraph.js`): levels + houses from `mapFrom`, the airstrip (`start`), the port (opens when the boss falls), Bottle Mail coves (`bottle:<n>`), trails from `tour.paths`; a trail is open when its exit was taken, a closed main trail shows the Baron's roadblock (it bursts once when the trail opens, `tour.ow.open`), a closed secret trail is hidden | tested | |
+| graph (`TourGraph` in `28_tour_fb_mapgraph.js`): levels + houses from `mapFrom`, the airstrip (`start`), the port (opens when the boss falls), Bottle Mail coves (`bottle:<n>`), trails from `tour.paths`; a trail is open when its exit was taken, a closed main trail shows Piwi's roadblock (it bursts once when the trail opens, `tour.ow.open`), a closed secret trail is hidden | tested | |
 | layouts (`28_tour_fc_maplayouts.js`, `TOUR_OW_MAPS[cc]`): coasts, stop positions, trail bends, scenery, label overrides; any stop not listed falls back to its `mapCell` | tested | layouts checked at 844x390, 390x844, 568x320 |
 | painting (`28_tour_fe_owpaint.js`): the static map is painted once into an offscreen canvas and blitted; scenes per stop (`28_tour_ff_owscenes.js`) dim until cleared, pennants once cleared, night levels under a night-sky dome | implemented | |
 | reveal queue in the overworld: trail grows, stop pops, banner; route-map reveals (new land, secret flight, lighthouse) play on the world route map | tested | |
 | returning after a level: Brady stands on its stop, then walks to what the exit opened (`tour.lastExit`, consumed once); results offer MAP (tour levels no longer jump straight to the next level) | tested | |
 | world route map: boarding at the airstrip / port takes off, the map pulls back, left / right picks an open land, the plane flies, touches down and lands on the next land's airstrip; world button and M open it from anywhere | tested | |
-| world map extras: contrail, the Baron's jars, airship, secret-flight arcs, bottle currents, the Postcard Lighthouse, the "22?" ghost pin | tested | |
+| world map extras: contrail, Piwi's jars, airship, secret-flight arcs, bottle currents, the Postcard Lighthouse, the "22?" ghost pin | tested | |
 
 ## Levels in the v2 format
 | Country | Levels | Where |

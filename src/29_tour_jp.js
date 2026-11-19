@@ -1673,7 +1673,7 @@ Tour.country({
   themes, painters, dyn, decor, decorLights, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_jp', boss: 'tour_jp_boss' },
   landmark: 'the golden roof fish of the castle',
-  arrival: 'Konnichiwa, Brady! The Baron pried the two golden fish off a castle roof and is taking them home on the bullet train. A Shiba here owns nunchucks. Don\'t ask. ♥ C',
+  arrival: 'Konnichiwa, Brady! Piwi pried the two golden fish off a castle roof for his set and is taking them on the bullet train. A Shiba here owns nunchucks. Don\'t ask. ♥ C',
   emblem(ctx, x, y, r, t) { blossom(ctx, x, y, r * 0.9, '#ffb7c9', (t || 0) * 0.3); },
   coin: COIN,
   star: { name: 'GOLDEN SAKURA', draw(ctx, x, y, t) { blossom(ctx, x, y, 11, '#ffd24a', Math.sin(t * 2) * 0.2); ctx.fillStyle = '#fff6c0'; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, TAU); ctx.fill(); } },
@@ -1706,7 +1706,7 @@ Tour.country({
       gimmick: 'Nightingale floors chirp underfoot and wake the spinning-top traps (hop the beams to stay quiet), revolving secret walls, a koi moat; then the Great Kappa at his garden pond',
       enemies: [['jpUmbrella', 2], ['jpTop', 2]],
       hint: 'Kappa are VERY polite. When he glares, crouch (hold DOWN) facing him: he bows back and spills his dish. Block his pond with the stones!',
-      postcard: 'The golden fish are back on the castle roof! The Baron took off toward the Himalaya. This is it, Brady. ♥ C',
+      postcard: 'The golden fish are back on the castle roof! Piwi took off toward the Himalaya for his GRAND FINALE. This is it, Brady. ♥ C',
       script: [['shiba', { quiet: true }], 'moat', 'nightingale', ['enemies', { n: 2 }], ['revolve', { first: true }], 'cp', ['nightingale', { n: 14 }], 'garden', ['moat', { gold: true }], 'revolve', 'arena'] }
   ]
 });

@@ -413,7 +413,7 @@ const EC_X = 'ec_x';
 const enemies = {
   ecBanana: { cls: TourEnemy.make({ w: 16, h: 32, speed: 1.0, behavior: 'walk', art: bananaArt, burst: '#ffe04a' }), place: 'walk' },
   ecCacao: { cls: TourEnemy.make({ w: 24, h: 18, speed: 0.8, behavior: 'roll', range: 9, rollSpeed: 6.4, art: cacaoArt, burst: '#e8902a' }), place: 'walk' },
-  ecAlpaca: { cls: TourEnemy.make({ w: 26, h: 46, speed: 0.5, behavior: 'throw', every: 2.4, range: 10, pace: true, hp: 2, art: alpacaArt, burst: '#f2e8d8', shoot: (e) => {
+  ecAlpaca: { cls: TourEnemy.make({ belly: true, w: 26, h: 46, speed: 0.5, behavior: 'throw', every: 2.4, range: 10, pace: true, hp: 2, art: alpacaArt, burst: '#f2e8d8', shoot: (e) => {
     tourFire(e.g, e.cx + e.dir * 14, e.y + 6, { kind: 'spit', vx: e.dir * 4.5 * TS, vy: -4 * TS, grav: PHYS.gDown * 0.35, w: 10, h: 10, life: 3, col: '#c8e8f0', art: (ctx, s) => { ctx.fillStyle = 'rgba(220,240,250,0.9)'; ctx.beginPath(); ctx.arc(s.cx, s.cy, 4, 0, TAU); ctx.arc(s.cx - 3, s.cy + 2, 2.5, 0, TAU); ctx.fill(); } });
     K.say(e.g, e, 'PTOO!', '#ffffff'); Sound.play('throw', { pitch: 1.6, vol: 0.4 });
   } }), place: 'walk' },
@@ -425,13 +425,13 @@ const enemies = {
   ecHummingbird: { cls: TourFlyer.make({ w: 22, h: 12, speed: 1, behavior: 'hoverDart', range: 7, art: hummingArt, burst: '#2ac88a', atlas: EC_X }), place: 'fly' },
   ecCrab: { cls: TourEnemy.make({ w: 24, h: 14, inkPad: 6, speed: 2.6, behavior: 'walk', art: crabArt, burst: '#ff5a2a', atlas: EC_X }), place: 'walk' },
   ecDipper: { cls: TourEnemy.make({ w: 20, h: 18, inkPad: 6, speed: 0.6, behavior: 'ceilingDrop', tell: 0.5, stuckT: 1.6, art: dipperArt, burst: '#5a3a2a', atlas: EC_X }), place: 'here' },
-  ecSeaLionLand: { cls: TourEnemy.make({ w: 36, h: 16, speed: 0.6, behavior: 'charge', range: 7, chargeSpeed: 7.5, windup: 0.5, art: seaLionArt, burst: '#8a7a6a', atlas: EC_X }), place: 'walk' },
+  ecSeaLionLand: { cls: TourEnemy.make({ belly: true, w: 36, h: 16, speed: 0.6, behavior: 'charge', range: 7, chargeSpeed: 7.5, windup: 0.5, art: seaLionArt, burst: '#8a7a6a', atlas: EC_X }), place: 'walk' },
   ecIguana: { cls: TourEnemy.make({ w: 30, h: 18, speed: 0.4, behavior: 'throw', every: 2.2, range: 7, pace: true, art: iguanaArt, burst: '#3a3a44', shoot: (e) => {
     for (let k = -1; k <= 1; k++) tourFire(e.g, e.cx + e.dir * 16, e.y + 4, { kind: 'salt', vx: e.dir * (2.4 + k * 0.6) * TS, vy: (-2.6 + k) * TS, grav: PHYS.gDown * 0.12, w: 8, h: 8, life: 2.2, col: '#ffffff', art: salt });
     K.say(e.g, e, 'ACHOO!', '#ffffff'); Sound.play('throw', { pitch: 2, vol: 0.3 });
   } }), place: 'walk' },
   ecIceCube: { cls: TourEnemy.make({ w: 24, h: 24, speed: 1.5, behavior: 'walk', art: iceCubeArt, burst: '#d8f4ff' }), place: 'walk' },
-  ecSeaLion: { cls: TourSwimmer.make({ w: 36, h: 16, speed: 2.0, range: 5, art: seaLionArt }), place: 'swim' },
+  ecSeaLion: { cls: TourSwimmer.make({ belly: true, w: 36, h: 16, speed: 2.0, range: 5, art: seaLionArt }), place: 'swim' },
   ecPuffer: { cls: EcPuffer, place: 'swim' },
   ecPenguin: { cls: TourSwimmer.make({ w: 26, h: 14, speed: 3.2, range: 6, chase: false, art: penguinArt }), place: 'swim' }
 };
@@ -826,7 +826,7 @@ const platforms = {
 };
 
 /* ---------------- the boss: EL TORTUGÓN ---------------- */
-// The Baron's giant grumpy tortoise. His shell is too hard to stomp: FLIP him. Three volcano vents sit in
+// Piwi's "walking stage": a giant grumpy tortoise he hired by the hour. His shell is too hard to stomp: FLIP him. Three volcano vents sit in
 // the arena floor; stomp the lever to pop the next one, and when he walks (or spins) over a popping vent
 // he's launched onto his back, legs waving: now stomp the belly. Phase 2 he tucks in and spins across the
 // floor like a disc while the equator's low-gravity bubbles switch on and off; phase 3 the floor tilts
@@ -978,6 +978,14 @@ const boss = {
         if (b.at > 4) b.die();
       }
       b.fall(dt);
+      // his head sticks out ~16 px past the shell on its long neck (drawn at d * 44): it touches Brady like his body
+      // does (it used to pass straight through him: Brady saw the head on him and nothing happened)
+      const p = g.player;
+      if (b.state === 'fight' && b.pose !== 'shell' && b.pose !== 'tuck' && p && !p.dead) {
+        const hx = b.cx + b.dir * (b.pose === 'peek' ? 34 : b.pose === 'rear' ? 46 : 44), hy = b.y + b.h - (b.pose === 'peek' ? 24 : 30);
+        const head = { x: hx - 14, y: hy - 10, w: 28, h: 20 };
+        if (overlap(p, head) && !overlap(p, b)) b.touchPlayer(p);
+      }
     },
     hit(b, kind, src) {
       if (b.act === 'sulk') return false;
@@ -1082,7 +1090,7 @@ Tour.country({
   themes, painters, dyn, decor, decorLights, platforms, enemies, entities, pieces: P, boss, power, tracks,
   music: { level: 'tour_ec', boss: 'tour_ec_boss' },
   landmark: 'the Equator monument',
-  arrival: 'Brady! The Baron wants the Equator monument, globe and all. I\'m riding along in his snack crate. ♥ C',
+  arrival: 'Brady! My country! And Piwi wants the Equator monument as scenery for his balancing act. I\'m in his show cage, eating his snacks. Give Pupo a hug from me. Slowly. ♥ C',
   coin: { name: 'CACAO BEAN', draw(ctx, x, y) {
     ctx.fillStyle = '#c8901a'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill();
     ctx.fillStyle = '#7a3a1a'; ctx.beginPath(); ctx.ellipse(x, y, 5.5, 7.5, 0.3, 0, TAU); ctx.fill();

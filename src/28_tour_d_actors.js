@@ -373,7 +373,8 @@ class TourProp extends Ent {
     if (Math.abs(p.vx) > 2 * TS && sign(p.vx) === side) this.kick(side, p);
     else { this.x += side * 1.5; p.x -= side; }
   }
-  draw(ctx) { Ink.ent(ctx, this, c => this.drawArt(c)); }
+  // inkKey(): a subclass that knows when its picture is unchanged returns a key for it (Ink.around opts.key)
+  draw(ctx) { const k = this.inkKey && !this.dead ? this.inkKey() : null; Ink.ent(ctx, this, c => this.drawArt(c), k != null ? { key: k } : undefined); }
   drawArt(ctx) {
     if (this.dead && this.knocked) { ctx.save(); ctx.translate(this.cx, this.cy); ctx.rotate(this.spin || 0); this.cfg.art(ctx, this, 0, this.h / 2, this.g.t); ctx.restore(); return; }
     ctx.save();
