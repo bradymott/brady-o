@@ -177,7 +177,7 @@ for (const car in SPECIAL) CASES.push(Object.assign({ id: SPECIAL_ID[car], kind:
     const rings = [[8, 0.2, 0], [14, -0.3, 0], [22, 0, 0], [-8, 0, 0], [30, 0.3, 0], [40, 0, 0], [-16, 0, 0]];
     for (const where of arenas.concat(['gp'])) {
       for (const [id, car] of M) {
-        const c = where === 'gp' ? { id, kind: 'item', mode: 'gp', car, secs: 6 } : (royaleOnly.includes(where) ? { id, kind: 'item', mode: 'royale', arena: where, objective: 'royale', car, rivals: rings, secs: 6 } : { id, kind: 'item', mode: 'battle', arena: where, objective: 'vibe', car, rivals: rings, secs: 6 });
+        const c = where === 'gp' ? { id, kind: 'item', mode: 'gp', car, secs: 6 } : (royaleOnly.includes(where) ? { id, kind: 'item', mode: 'royale', arena: where, objective: 'royale', car, rivals: rings, secs: 6 } : { id, kind: 'item', mode: 'battle', arena: where, objective: 'vibe', car, rivals: rings, secs: 6, seed: where === 'moon' ? 8 : undefined });   // Luna Playa: random float heights (s.rng) decide whether a rival is in reach, so the seed is pinned
         const r = await page.evaluate(pageRun, c);
         const flight = ['glide', 'breach', 'hover', 'shell', 'warp'].includes(id);
         const why = r.err ? r.err : flight ? ok((r.flew || r.jump > 20) && !r.flying && (r.endH < 1.0 || r.moonFloat) && r.onCourse && !r.out, 'flight did not land safely on the course (endH ' + r.endH + ', onCourse ' + r.onCourse + ')')

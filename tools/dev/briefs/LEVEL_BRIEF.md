@@ -17,6 +17,8 @@ The owner (Brady, not a programmer, plays on an iPhone) wants the game finished 
 - `src/43_cart_i_royale_<arena>.js`: the royale arena. Its own layout and 2–3 hazards. Register as the recipe says, including `CART_ROYALE_ARENAS.<carId>`, the menu icon, and its hazard ids in `CART_ROY_DMG` (a small, local edit in `src/43_cart_i_royale.js`: re-read right before editing, add only your lines).
 - Use ids and names nobody else will pick: prefix every global, `E.` field and `s.` field with a short tag unique to your level.
 - Write each new file in your scratchpad first, `node --check` it, then copy it into `src/`. A half-written file in `src/` breaks everyone's build. If a build fails in someone else's file, wait a minute and retry; never edit their file.
+- LOAD ORDER (this broke the build for everyone in the first batch): files load in filename order. A track file that sorts before `43_cart_j_kit.js` cannot touch `CartKit` at load time, and no file may assume a registry already exists. Guard every registry (`var X = (typeof X !== 'undefined' && X) || {};`) and build anything that needs the kit lazily, as the finished first-batch files do (see `src/43_cart_j_bathtime.js`). After copying a file into `src/`, build and confirm the kart app still boots (apps_test) before moving on.
+- Hazard shots for the track test register in the shared `debug.trackShots.<trackId>` table (see `src/43_cart_j_bathtime.js`). The royale test has an `ARENAS=<id>` filter; use it.
 - Test-file edits (`tools/cart_royale_test.js` arena list and views): add only your lines. If the test cannot run a single arena, give it a small optional filter (e.g. an env var) rather than running every arena.
 
 ## Testing (required before you report)

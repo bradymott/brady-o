@@ -420,8 +420,11 @@ const CartWorlds = {
     // (43_cart_ca_decor.js), so a long sight line no longer draws every post at full detail
     CartDecor.protos(E); CartDecor.barriers(E, T, D); CartDecor.lamps(E, T, D);
     // start/finish arch + grandstand + crowd + hero cast
+    // Burn Night is the busiest view in the game (the Man, lasers, fireworks): a lighter crowd keeps it in the iPhone budget
+    const lite = D.theme === 'burn';
+    if (lite) E.crowdNear = 0;   // spectators always in their lighter far model (night: the detail barely reads)
     { const g = T.at(0, {}); CartDecor.gantry(E, T, D);
-      for (const side of [1, -1]) { const off = side > 0 ? g.wr + 6 : -g.wl - 6, x = g.x + g.nx * off + g.tx * 4, z = g.z + g.nz * off + g.tz * 4; E.spots.push(...CartScene.bleachers(api, x, z, g.yaw + (side > 0 ? Math.PI / 2 : -Math.PI / 2), 22, 4, rng)); if (night) api.light(x, z, 16, '#ffb0e0', 0.5); }
+      for (const side of [1, -1]) { const off = side > 0 ? g.wr + 6 : -g.wl - 6, x = g.x + g.nx * off + g.tx * 4, z = g.z + g.nz * off + g.tz * 4; E.spots.push(...CartScene.bleachers(api, x, z, g.yaw + (side > 0 ? Math.PI / 2 : -Math.PI / 2), 22, lite ? 3 : 4, rng)); if (night) api.light(x, z, 16, '#ffb0e0', 0.5); }
       const heroes = ['greeter_f', 'burney', 'firespinner', 'annoyingdj', 'furry', 'sparklepony', 'burnermom', 'greeter_m'];
       heroes.forEach((type, i) => { const side = i % 2 ? 1 : -1, off = side > 0 ? g.wr + 2.4 : -g.wl - 2.4, along = -10 + Math.floor(i / 2) * 7; E.heroes.push({ type, x: g.x + g.nx * off + g.tx * along, z: g.z + g.nz * off + g.tz * along, yaw: Math.atan2(-g.nx * side, -g.nz * side), anim: type === 'firespinner' ? 'firespin' : type === 'annoyingdj' ? 'dj' : type === 'burney' ? 'photo' : i % 3 === 0 ? 'cheer' : 'wave' }); });
     }
@@ -431,7 +434,7 @@ const CartWorlds = {
       const g = T.at(s, {}), side = g.k > 0 ? -1 : 1, off = side > 0 ? g.wr + 15 : -g.wl - 15;
       const x = g.x + g.nx * off, z = g.z + g.nz * off, yaw = Math.atan2(-g.nx * side, -g.nz * side);
       if (this.clear(T, x, z, 9)) { CartScene.camp(api, x, z, yaw, rng, night || D.tod === 'sunset', nameIx++); taken.push([x, z, 12]); }
-      if (Math.abs(g.k) > 0.008 && rng() < 0.75) { const n = 10 + Math.floor(rng() * 8), w0 = side > 0 ? g.wr : -g.wl; for (let k = 0; k < n; k++) { const a = rng() - 0.5, dd = w0 + side * (2.6 + rng() * 4), cx = g.x + g.nx * dd + g.tx * a * 16, cz = g.z + g.nz * dd + g.tz * a * 16; if (this.clear(T, cx, cz, 1.5)) E.spots.push({ x: cx, z: cz, yaw: yaw + (rng() - 0.5) * 0.6 }); } }
+      if (Math.abs(g.k) > 0.008 && rng() < 0.75) { const n = lite ? 6 + Math.floor(rng() * 4) : 10 + Math.floor(rng() * 8), w0 = side > 0 ? g.wr : -g.wl; for (let k = 0; k < n; k++) { const a = rng() - 0.5, dd = w0 + side * (2.6 + rng() * 4), cx = g.x + g.nx * dd + g.tx * a * 16, cz = g.z + g.nz * dd + g.tz * a * 16; if (this.clear(T, cx, cz, 1.5)) E.spots.push({ x: cx, z: cz, yaw: yaw + (rng() - 0.5) * 0.6 }); } }
     }
     // joke signs
     for (let k = 0; k < 6; k++) { const s = T.L * (0.1 + k * 0.15), g = T.at(s, {}), side = k % 2 ? 1 : -1, off = side > 0 ? g.wr + 3.5 : -g.wl - 3.5; api.sign(CART_JOKE_SIGNS[(k + nameIx) % CART_JOKE_SIGNS.length], g.x + g.nx * off, g.z + g.nz * off, { yaw: g.yaw + Math.PI, h: 1.0, y: 1.6, post: true, maxW: 2.6, style: { bg: '#ffe24a', fg: '#1a1a1a', border: '#1a1a1a' }, glow: night ? '#ffe24a' : null }); }

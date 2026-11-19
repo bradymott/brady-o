@@ -208,7 +208,7 @@ Object.assign(CartRaceScene.prototype, {
     for (const h of this.heroes) { const d2 = (h.ch.x - cam.x) * (h.ch.x - cam.x) + (h.ch.z - cam.z) * (h.ch.z - cam.z); h._d2 = d2; h._in = d2 < 90 * 90 && BurnsM.sphereVisible(P, h.ch.x, h.ch.y + 1, h.ch.z, 2); if (h._in || (wantShadow && d2 < 40 * 40)) heroes.push(h); }
     // crowds: drawn to 115 m past their edge
     let nearG = null;
-    for (const G of this.E.crowds) { const d = Math.hypot(G.cx - cam.x, G.cz - cam.z); G._d = d; G._near = false; if (d < 115 + G.rad && BurnsM.sphereVisible(P, G.cx, 1.5, G.cz, G.rad + 2)) { crowds.push(G); if (d < 45 && (!nearG || d < nearG._d)) nearG = G; } }
+    for (const G of this.E.crowds) { const d = Math.hypot(G.cx - cam.x, G.cz - cam.z); G._d = d; G._near = false; if (d < 115 + G.rad && BurnsM.sphereVisible(P, G.cx, 1.5, G.cz, G.rad + 2)) { crowds.push(G); if (d < (this.E.crowdNear !== undefined ? this.E.crowdNear : 45) && (!nearG || d < nearG._d)) nearG = G; } }   // E.crowdNear: a busy track can turn the full-detail group off (0)
     if (nearG) nearG._near = true;   // only the closest group gets the full-detail spectators (~47k triangles a group)
     // instanced props (barriers, lamps, roadside art: 43_cart_ca_decor.js): culled and given a detail level per copy
     const inst = W.inst, statD = env.fogD > 0.011 ? 160 : 290;

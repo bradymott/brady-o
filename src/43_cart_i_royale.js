@@ -43,6 +43,15 @@ const CART_ROY_DMG = {
   // logged-only tags (no hit()): LECTURE, 5 MPH ZONE, PART THE TRAFFIC. CAN I BORROW THAT? steals, no damage.
   airhorn: 8, lightsout: 8, afterparty: 10, bungee: 14, roadwork: 12, holdwater: 14, lecture: 6, fivemph: 5, parting: 6,
   // arena hazards and the Man
+  rdoball: 12, rdobeam: 8, rdocrab: 6,   // ROLLER DISCO (43_cart_i_royale_rollerdisco.js): disco balls, disco beams, roller crabs
+  vltlaser: 7, vltcoins: 12, vltmummy: 8,   // THE VAULT (43_cart_i_royale_vault.js): laser sweep, gold rush, mummy guards
+  mxbegg: 12, mxbyolk: 6, mxbpin: 16, mxbflour: 8,   // THE MIXING BOWL (43_cart_i_royale_mixbowl.js): egg drop, yolk slick, rolling pin, flour sifter
+  fgn_arm: 12, fgn_bloom: 10, fgn_whirl: 12,   // FIRE GARDEN (43_cart_i_royale_firegarden.js): kraken fire, fire blooms, fire whirls
+  btbduck: 12, btbslosh: 11, btbbomb: 10,   // THE BIG TUB (43_cart_i_royale_bigtub.js): duck charge, the slosh, bath bombs
+  tyd_lance: 10, tyd_fireball: 12, tyd_breath: 11,   // THE TILTYARD (43_cart_i_royale_tiltyard.js): jousting knights, catapult fireballs, the roost dragon
+  ghs_trap: 13, ghs_salt: 9, ghs_pepper: 9,   // THE GREENHOUSE (43_cart_i_royale_greenhouse.js): venus flytraps, the salt shaker, the pepper pot
+  skcghost: 12, skcspout: 10, skckeg: 12,   // SKULL COVE (43_cart_i_royale_skullcove.js): the ghost galleon, blowholes, powder kegs
+  spt_fin: 12, spt_devil: 10, spt_sink: 8,   // THE SAND PIT (43_cart_i_royale_sandpit.js): fin bite, dust devils, quicksand
   tile: 9, subwave: 10, lovebomb: 12, firepit: 5, embervent: 12, stomp: 20, sweep: 18, ember: 12, emberfire: 5
 };
 const CART_ROY_KIND = { spin: 15, knock: 18, flip: 20, dazzle: 12, bubble: 14, stun: 14, slip: 10, foam: 10, whirl: 18, launch: 22, charm: 8, goo: 10, slow: 8 };

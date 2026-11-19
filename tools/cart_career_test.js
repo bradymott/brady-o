@@ -198,14 +198,14 @@ const check = (name, ok, info) => { console.log((ok ? 'ok   ' : 'FAIL ') + name 
     const open = C.secret('snail'), games = [];
     for (const g of open.games) { C.playSecret('snail', g); const s = window.BRADY.Game.scene; games.push({ g, mode: s.mode, arena: s.arenaId, obj: s.objective, car: s.carId }); const r = C.win(g === 'vibe' ? 2 : 1); games[games.length - 1].pass = r.pass; games[games.length - 1].complete = r.complete; }
     const second = C.win; void second;
-    return { locked, open, games, complete: C.complete('snail'), soon: C.secret('fish') };
+    return { locked, open, games, complete: C.complete('snail'), soon: (() => { const L = window.BRADY_BURNS.CART_SECRET_LEVELS, id = Object.keys(L).find(c => !L[c].arena); return id ? Object.assign({ car: id, soonName: L[id].soon }, C.secret(id)) : null; })() };
   });
   check('a secret level is locked until its car wins the Battle Royale', !gate.locked.unlocked && gate.open.unlocked, [gate.locked.unlocked, gate.open.unlocked]);
   check('Turbo Escargot\'s secret level: Trick Attack, Vibe Check, Glow Grab in Bowl-O-Rama', gate.open.ready && gate.games.length === 3 && gate.games.every(g => g.arena === 'skate' && g.car === 'snail') && gate.games.map(g => g.obj).join() === 'trick,vibe,glow', gate.games);
   check('a mini-game needs 1st: 2nd in Vibe Check does not clear it', gate.games[1].pass === false && gate.games[0].pass && gate.games[2].pass, gate.games.map(g => g.pass));
   const fin2 = await ev(() => { const C = window.BRADY_CART.debug.career; C.playSecret('snail', 'vibe'); return { r: C.win(1), complete: C.complete('snail') }; });
   check('all three secret games won: the game is won with Turbo Escargot', fin2.r.pass && fin2.r.complete && fin2.complete, fin2);
-  check('cars without a secret arena yet show "coming soon"', !gate.soon.ready && gate.soon.games.length === 0 && /ROLLER/.test(gate.soon.name), gate.soon);
+  check('cars without a secret arena yet show "coming soon" (none left = every level built)', !gate.soon || (!gate.soon.ready && gate.soon.games.length === 0 && gate.soon.name === gate.soon.soonName), gate.soon);
   // a level built later plugs in by assigning the registries alone (career track, royale arena, secret level)
   const plug = await ev(() => {
     const B = window.BRADY_BURNS, C = window.BRADY_CART.debug.career, T = B.CART_CAREER_TRACKS, A = B.CART_ROYALE_ARENAS, L = B.CART_SECRET_LEVELS;
