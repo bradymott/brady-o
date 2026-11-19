@@ -214,7 +214,7 @@ const scenes = async (page, shot, run, tag) => {
   await page.evaluate(clipOf);
   await scene('w22-doors', () => {
     fresh(); rules([3, 7]); play('22-2'); go('corridor', 11, 10);
-    const a = drop('w22Moth', 3), b = drop('w22Alarm', 5); sim(0.3);
+    const a = drop('w22Moth', 5), b = drop('w22Alarm', 7.5); a.vx = b.vx = 0; sim(0.1);
     const doors = S().entities.filter(e => e.constructor.name === 'W22NumDoorE' && Math.abs(e.cx - P().cx) < 300);
     return { clip: clipOf(doors.concat([a, P()]), 50), doors: doors.length };
   }, '02-w22-doors.png', (r, keys) => check(tag + ' w22-doors: the numbered doors stand there, hatless', r.doors >= 2 && keys.indexOf('w22NumDoorE') < 0 && keys.indexOf('w22Alarm') < 0 && keys.indexOf('w22Moth') >= 0, { r, keys }));

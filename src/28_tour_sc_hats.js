@@ -21,8 +21,9 @@ const TourHats = {
   INK: '#1c1426',
   // [fx, fxFlip, fy, size]: see the header. One row per animal type.
   HEADS: {},
-  // types drawn as another type's art: their hat goes where that type's would
-  ALIAS: { tourRival: e => e.s && e.s.art, tourThief: e => e.s && e.s.art },
+  // types drawn as another type's art: their hat goes where that type's would (a rival drawn from a skin of its own,
+  // like 4-1's ostrich, has a row 'look:<skin>')
+  ALIAS: { tourRival: e => e.s && (e.s.art || (e.s.look && 'look:' + e.s.look)), tourThief: e => e.s && (e.s.art || (e.s.look && 'look:' + e.s.look)) },
   // poses with no head to wear a hat on
   SKIP_MODES: new Set(['ko', 'flat', 'roll', 'curl', 'ball', 'under', 'dig', 'disguise', 'gone', 'fade', 'hang', 'drop', 'climb', 'stuck', 'flip', 'topple', 'shell', 'folded', 'deflate', 'invert', 'tiny', 'mimic', 'wait', 'hide', 'hidden', 'ceil', 'sleep', 'crouch']),
   NOT: null,   // filled below
@@ -241,6 +242,8 @@ TourHats.NOT = new Set([].concat(
 
 /* ---------- the animals: [fx, fxFlip, fy, size] (see the header) ---------- */
 Object.assign(TourHats.HEADS, {
+  // 4-1's racing ostrich (a tourRival drawn from its own skin)
+  'look:mzOstrichRival': [0.6, -0.38, -1.8, 0.6],
   mxChihuahua: [0.72, 0.72, -1.5, 0], mxAxolotlWalk: [0.43, 0.44, -0.9, 0], mxAxolotlSwim: [0.37, 0.38, -1.11, 0], mxBlindFish: [0.3, 0.3, -0.95, 0],
   mxSwallow: [-0.39, -0.38, -1.56, 0], mxHeron: [0.27, 0.28, -1.45, 0], mxFish: [0.35, 0.35, -0.95, 0], mxBat: [0.03, 0.04, -1.25, 0],
   mxArmadillo: [0.45, 0.45, -0.85, 0], mxXolo: [0.7, 0.7, -1.25, 0.75],

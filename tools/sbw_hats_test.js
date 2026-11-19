@@ -28,7 +28,7 @@ const types = Object.keys(ET).filter(k => k.indexOf('roomBig:') !== 0);
 
 if (want('classify')) {
   const neither = types.filter(k => !H.HEADS[k] && !H.NOT.has(k)), both = types.filter(k => H.HEADS[k] && H.NOT.has(k));
-  const stale = Object.keys(H.HEADS).concat([...H.NOT]).filter(k => !ET[k]);
+  const stale = Object.keys(H.HEADS).concat([...H.NOT]).filter(k => !ET[k] && k.indexOf('look:') !== 0);
   check(`every one of the ${types.length} registered types is sorted: ${Object.keys(H.HEADS).length} animals wear a hat, ${H.NOT.size} other types don't`, !neither.length && !both.length, { neither, both });
   check('no stale names in the lists (a type that is no longer registered)', !stale.length, stale);
   if (list) for (const k of types.slice().sort()) console.log('  ' + (H.HEADS[k] ? 'HAT  ' + H.kindOf(k).padEnd(7) : 'no   ' + ''.padEnd(7)) + k);
