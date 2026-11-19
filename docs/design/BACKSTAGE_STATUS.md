@@ -108,7 +108,7 @@ In each level below there is a **stack of flight cases before the finish gate an
 | 13-1 Ice Shelf Bowling | HOME: 1-6 Pit of Swallows | back to Mexico's secret pit |
 | 22-1 The Station of Clocks | THE DESK: 22-5 The Writer's Desk | same land |
 
-The dock's left edge goes back to the level (beyond the gate). A Wormhole within a land plays as a hop on the map: Brady spins into a wormhole at one stop and out at the other, and a sparkly trail joins them.
+The dock's left edge goes back to the level (beyond the gate). Once Brady is through a Wormhole the map's trip can't be cut short: until he has popped out at the other end, ▲, taps on the stops and the map's buttons only skip the reveals (18 Nov fix: before, ▲ pressed as the map opened went straight back into the level he had just left, and ▲ as the WORMHOLE! banner ended dropped the trip; a save left like that plays its trip the next time a map opens). A Wormhole within a land plays as a hop on the map: Brady spins into a wormhole at one stop and out at the other, and a sparkly trail joins them.
 
 ### Japan 11-4 Neon Tower: the Rigging above the rooftop (Brady Button, Rule 10)
 - **The way in:** climb all the way to the rooftop (the finish gate is up there). On the left of the roof a **red aircraft-warning lamp blinks on its mast** at the top of the screen, and an **air-con unit's steam plume** rises off the top; under them is a **spring** by a yellow **CREW ONLY** sign. Stand on the spring and **hold jump**: Brady flies off the top of the screen into the Rigging over the tower set.
@@ -206,6 +206,7 @@ All six rules are listed. Revoked rules: where the button was and what it opened
 | `tools/validate_levels.js` | new check: `BACKSTAGE <aid> TRAP AT x,y`: from every spot reachable in a backstage area, a Wormhole or the way out must still be reachable (no prize up a climb with no way back) |
 | `tools/sbw_backstage_test.js` | node: every seam in and back out, Pupo riding through each seam, every Wormhole (Up only, clear, save, map queue), map progress, every button, the checker's trap fixtures |
 | `tools/sbw_backstage_shots.js` | browser: screenshots and in-game checks of all of the above |
+| `tools/sbw_wormhole_trips.js` | browser: every Wormhole end to end as a player takes it, on a fresh save with ordinary progression: Up at the trunk, the WORMHOLE! results, a real tap on MAP, the map's trip, then where Brady stands (land, stop, unlocked, visible, enterable, a trail to it, nothing left in the save) and going in starts the target level; variants: an impatient player pressing ▲ and tapping all through the trip, a second trip, PLAY AGAIN then the pause menu's WORLD MAP, calm motion, a Brady Button slapped first, the page reloaded on the results / mid-trip / on touch-down, a save left half-way by the old build; landscape and portrait |
 | `tools/sbw_lost_shots.js` | browser: screenshots and in-game checks of Lost & Found, the 8-3 graveyard and its button, the REVOKED card, the suitcase on a map and the RETURNED shelf |
 
 Save: key `super-brady-o-world-save-v3` (one clean reset, Brady: "wipe my save i dont care"); settings and look come over from v2 once.
