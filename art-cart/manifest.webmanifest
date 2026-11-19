@@ -1,6 +1,6 @@
 {
-  "name": "Art Cart",
-  "short_name": "Art Cart",
+  "name": "Super Art Kart",
+  "short_name": "Super Art Kart",
   "description": "Battle-race wild art cars across the playa: every car has its own weapon.",
   "id": "./",
   "start_url": "./",
@@ -17,5 +17,24 @@
     "games",
     "entertainment"
   ],
-  "icons": []
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }
