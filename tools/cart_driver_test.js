@@ -186,11 +186,12 @@ function pageFinish() {
   }
 
   // 4. every special
+  let warm = false;
   for (const key in CASES) {
     const c = Object.assign({ key }, CASES[key]); if (only && key !== only && c.id !== only) continue;
     const a = await page.evaluate(pageCase, c);
     if (a.err) { fails.push(key + ': ' + a.err); console.log('FAIL', key, a.err); continue; }
-    await page.evaluate(() => { const D = window.BRADY_CART.debug; const s = D.scene(); for (let i = 0; i < 3; i++) { s.lastFrame = performance.now() - 16; D.frame(); } });
+    await page.evaluate(n => { const D = window.BRADY_CART.debug; const s = D.scene(); for (let i = 0; i < n; i++) { s.lastFrame = performance.now() - 16; D.frame(); } }, warm ? 3 : 12); warm = true;   // the first race render compiles its shaders
     const file = path.join(out, 'special-' + key + '.png'); await page.screenshot({ path: file });
     const r = await page.evaluate(pageFinish);
     if (r.err) { fails.push(key + ': ' + r.err); console.log('FAIL', key, r.err); continue; }

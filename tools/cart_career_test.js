@@ -160,6 +160,35 @@ const check = (name, ok, info) => { console.log((ok ? 'ok   ' : 'FAIL ') + name 
   await ev(() => window.BRADY_CART.debug.career.press('CONTINUE'));
   await shot('prize-royale-land', 1500);
 
+  // ---- every stage of a full Career and a full Battle Royale really plays (Octo: stand-in levels for the cars without
+  //      their own): load, drive 1.5 s on autopilot, a sane kart, then win; royale stages report C2's result ----
+  for (const kind of ['career', 'royale']) {
+    const sm = await ev(kind => {
+      const C = window.BRADY_CART.debug.career, D = window.BRADY_CART.debug; C.reset('octo'); C.start('octo', kind, 555);
+      const rows = [];
+      for (let i = 0; i < 13; i++) {
+        const st = C.stage('octo', kind), r = C.play('octo', kind), s = D.scene(); D.skipIntro();
+        const x0 = s.player.x, z0 = s.player.z; D.sim(1.5, { auto: true });
+        const p = s.player, sane = isFinite(p.x) && isFinite(p.z), moved = Math.hypot(p.x - x0, p.z - z0);
+        const o = C.win(i === 12 ? 1 : 1 + (i % 3));
+        rows.push({ i, owner: st.owner, lvl: st.track || st.arena, standIn: st.standIn, mode: r.mode, sane, moved: +moved.toFixed(1), pass: !!(o && o.pass), roy: kind === 'royale' ? !!s.royaleResult : null });
+        if (!o || !o.pass) break;
+      }
+      return { rows, prog: C.prog('octo') };
+    }, kind);
+    const R = sm.rows;
+    check(kind + ': all 13 stages load, drive and pass (stand-ins where a car has no level)', R.length === 13 && R.every(r => r.sane && r.pass) && R.filter(r => r.standIn).length >= 9 && sm.prog[kind + 'Won'] === 1, R.map(r => r.owner + ':' + r.lvl + (r.standIn ? '*' : '') + ':' + r.mode + ':' + r.moved + (r.pass ? '' : ':FAIL')));
+    if (kind === 'royale') check('royale: every stage plays in royale mode and reports C2\'s result; the final is the Man', R.every(r => r.mode === 'royale' && r.roy) && R[12].lvl === 'man', R.map(r => r.mode + ':' + r.roy));
+  }
+  // the royale final decides itself: the fight ended without the Man destroyed is a loss; destroyed is the win
+  const manFin = await ev(() => {
+    const C = window.BRADY_CART.debug.career, D = window.BRADY_CART.debug; C.reset('octo'); C.start('octo', 'royale', 556);
+    window.BRADY_BURNS.cartSave().prog.octo.royale.stage = 12;
+    const one = defeated => { C.play('octo', 'royale'); const s = D.scene(); D.skipIntro(); D.sim(0.5, { auto: true }); if (s.roy) s.roy.bossDefeated = defeated; s.state = 'race'; s.finishRace(); return { won: s.stageWon, out: Object.assign({}, s.runOut), btns: (s.btns || []).map(b => b.label), stage: C.run('octo', 'royale').stage }; };
+    const a = one(false), b = one(true); C.reset('octo'); return { a, b };
+  });
+  check('royale final: the Man not destroyed = no win (RETRY), destroyed = Battle Royale won', manFin.a.won === false && !manFin.a.out.pass && manFin.a.stage === 12 && manFin.a.btns.some(l => /RETRY/.test(l)) && manFin.b.won === true && manFin.b.out.pass && manFin.b.out.done, manFin);
+
   // ---- secret gating, the three games, the game won with a car ----
   const gate = await ev(() => {
     const C = window.BRADY_CART.debug.career, sv = window.BRADY_BURNS.cartSave();
@@ -177,6 +206,15 @@ const check = (name, ok, info) => { console.log((ok ? 'ok   ' : 'FAIL ') + name 
   const fin2 = await ev(() => { const C = window.BRADY_CART.debug.career; C.playSecret('snail', 'vibe'); return { r: C.win(1), complete: C.complete('snail') }; });
   check('all three secret games won: the game is won with Turbo Escargot', fin2.r.pass && fin2.r.complete && fin2.complete, fin2);
   check('cars without a secret arena yet show "coming soon"', !gate.soon.ready && gate.soon.games.length === 0 && /ROLLER/.test(gate.soon.name), gate.soon);
+  // a level built later plugs in by assigning the registries alone (career track, royale arena, secret level)
+  const plug = await ev(() => {
+    const B = window.BRADY_BURNS, C = window.BRADY_CART.debug.career, T = B.CART_CAREER_TRACKS, A = B.CART_ROYALE_ARENAS, L = B.CART_SECRET_LEVELS;
+    const keep = [T.fish, A.fish, L.fish]; C.reset('fish'); C.start('fish', 'career', 7); C.start('fish', 'royale', 7);
+    T.fish = 'dawn'; A.fish = 'moon'; L.fish = { arena: 'mud', game: 'rescue' };
+    const r = { car: C.stage('fish', 'career', 0), roy: C.stage('fish', 'royale', 0), sec: C.secret('fish') };
+    T.fish = keep[0]; A.fish = keep[1]; L.fish = keep[2]; C.reset('fish'); return r;
+  });
+  check('a new level plugs in through the registries alone', plug.car.track === 'dawn' && !plug.car.standIn && plug.roy.arena === 'moon' && !plug.roy.standIn && plug.sec.openable && plug.sec.ready && plug.sec.games.join() === 'rescue,vibe,glow', plug);
   const cel = await ev(() => window.BRADY_CART.debug.career.press('CONTINUE'));
   check('CONTINUE shows the game-won celebration', cel && cel.state === 'complete', cel);
   await shot('complete-land', 1500);

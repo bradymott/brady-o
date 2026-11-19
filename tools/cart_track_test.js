@@ -34,6 +34,7 @@ function pageRace(o) {
       s.update(STEP); t += STEP;
       if (Math.round(t * 60) % 30 === 0) for (let i = 0; i < n; i++) { const k = K[i]; if (k.finished) continue; if (k.prog > last[i] + 15) { last[i] = k.prog; lastT[i] = t; } else if (t - lastT[i] > 6 && s.state === 'race') { stuck.push({ k: k.id, t: +t.toFixed(1), x: +k.x.toFixed(1), z: +k.z.toFixed(1), s: +k.loc.s.toFixed(1), d: +k.loc.d.toFixed(1) }); lastT[i] = t; } }
       if (s.state === 'done' && s.stateT > 0.1 && K.every(k => k.finished)) break;
+      if (s.state === 'done' && s.stateT > 4) s.stateT = 4;   // hold the results screen until every kart is in (it would estimate the rest 9 s after the player)
     }
     const fin = K.map(k => ({ id: k.id, finished: k.finished, est: !!k.estimated, t: +(k.finishT || 0).toFixed(2), laps: k.lapTimes.map(x => +x.toFixed(2)) }));
     const kit = s.kit || {};
@@ -83,6 +84,7 @@ function pageView(o) {
     console.log(`race seed ${seed}: L ${r.L} m, ${r.simT} s simulated, finished ${r.fin.filter(f => f.finished && !f.est).length}/8, laps ${laps.length}, lap ${Math.min(...laps).toFixed(1)}–${Math.max(...laps).toFixed(1)} s (avg ${avg(laps).toFixed(1)}; ${(avg(per) * 1000).toFixed(1)} s/km vs ref ${(avg(refPer) * 1000).toFixed(1)})`);
     console.log('   hazards fired', JSON.stringify(r.fired), 'hits', JSON.stringify(r.hits), 'touches', JSON.stringify(r.touch), 'stuck', JSON.stringify(r.stuck));
     console.log('   finishers', r.fin.map(f => f.id + ' ' + f.t + (f.est ? '~' : '')).join(', '));
+    console.log('   player (autopilot) laps', JSON.stringify((r.fin.find(f => /brady/.test(f.id)) || {}).laps));
     if (r.fin.some(f => !f.finished || f.est)) fails.push(`seed ${seed}: not every kart finished (${r.fin.filter(f => f.est || !f.finished).map(f => f.id).join(',')})`);
     if (r.stuck.length) fails.push(`seed ${seed}: stuck ${JSON.stringify(r.stuck.slice(0, 4))}`);
     if (refPer.length && (avg(per) > avg(refPer) * 1.4 || avg(per) < avg(refPer) * 0.75)) fails.push(`seed ${seed}: lap time per km ${(avg(per) * 1000).toFixed(1)} out of range of ${ref} ${(avg(refPer) * 1000).toFixed(1)}`);
@@ -111,9 +113,11 @@ function pageView(o) {
 
   }
   // 3. hazards in action (the level registers a shot helper: debug.levelShots() -> [{ name, f, lat, wait(s) }])
-  const shots = ONLY && ONLY !== 'shots' ? [] : await page.evaluate(() => window.BRADY_CART.debug.levelShots ? window.BRADY_CART.debug.levelShots() : []);
+  // (several track files load at once: a level registers its own pair in debug.trackShots[track] = { list(), shot(name) }; the old
+  //  single debug.levelShots / levelShot pair is the fallback)
+  const shots = ONLY && ONLY !== 'shots' ? [] : await page.evaluate(tr => { const D = window.BRADY_CART.debug, P = D.trackShots && D.trackShots[tr]; return P ? P.list() : D.levelShots ? D.levelShots() : []; }, track);
   for (const sh of shots) {
-    const r = await page.evaluate(name => { try { return window.BRADY_CART.debug.levelShot(name); } catch (e) { return { err: String(e).slice(0, 300) }; } }, sh.name);
+    const r = await page.evaluate(([name, tr]) => { try { const D = window.BRADY_CART.debug, P = D.trackShots && D.trackShots[tr]; return P ? P.shot(name) : D.levelShot(name); } catch (e) { return { err: String(e).slice(0, 300) }; } }, [sh.name, track]);
     if (r && r.err) { fails.push('shot ' + sh.name + ': ' + r.err); continue; }
     const file = path.join(out, 'hazard-' + sh.name + '.png'); await page.screenshot({ path: file }); console.log('hazard', sh.name, JSON.stringify(r), file);
     if (r && r.ok === false) fails.push('shot ' + sh.name + ' did not catch its moment');

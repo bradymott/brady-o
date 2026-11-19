@@ -172,12 +172,12 @@ for (const car in SPECIAL) CASES.push(Object.assign({ id: SPECIAL_ID[car], kind:
   // the matrix: sky drops + flights + foam/devil in every arena and a Grand Prix race (errors, an effect, safe landings)
   const OLD = !!process.env.OLD;   // auditing an older build: just the per-item cases
   if (!OLD && (!only || only === 'matrix')) {
-    const arenas = await page.evaluate(() => window.BRADY_BURNS.CART_ARENAS.map(a => a.id));
+    const arenas = await page.evaluate(() => window.BRADY_BURNS.CART_ARENAS.map(a => a.id)), royaleOnly = await page.evaluate(() => window.BRADY_BURNS.CART_ARENAS.filter(a => a.royale).map(a => a.id));   // Battle Royale arenas play only in royale mode
     const M = [['skymail', 'heart'], ['bombs', 'heart'], ['ducks', 'heart'], ['foam', 'heart'], ['devil', 'heart'], ['glide', 'dragon'], ['breach', 'whale'], ['hover', 'jelly'], ['shell', 'snail'], ['dive', 'shark'], ['warp', 'pyramid'], ['toss', 'octo'], ['wave', 'galleon'], ['frosting', 'cupcake'], ['surf', 'duck'], ['throb', 'heart'], ['decoys', 'fish']];
     const rings = [[8, 0.2, 0], [14, -0.3, 0], [22, 0, 0], [-8, 0, 0], [30, 0.3, 0], [40, 0, 0], [-16, 0, 0]];
     for (const where of arenas.concat(['gp'])) {
       for (const [id, car] of M) {
-        const c = where === 'gp' ? { id, kind: 'item', mode: 'gp', car, secs: 6 } : { id, kind: 'item', mode: 'battle', arena: where, objective: 'vibe', car, rivals: rings, secs: 6 };
+        const c = where === 'gp' ? { id, kind: 'item', mode: 'gp', car, secs: 6 } : (royaleOnly.includes(where) ? { id, kind: 'item', mode: 'royale', arena: where, objective: 'royale', car, rivals: rings, secs: 6 } : { id, kind: 'item', mode: 'battle', arena: where, objective: 'vibe', car, rivals: rings, secs: 6 });
         const r = await page.evaluate(pageRun, c);
         const flight = ['glide', 'breach', 'hover', 'shell', 'warp'].includes(id);
         const why = r.err ? r.err : flight ? ok((r.flew || r.jump > 20) && !r.flying && (r.endH < 1.0 || r.moonFloat) && r.onCourse && !r.out, 'flight did not land safely on the course (endH ' + r.endH + ', onCourse ' + r.onCourse + ')')

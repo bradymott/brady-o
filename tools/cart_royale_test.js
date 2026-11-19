@@ -66,6 +66,8 @@ function pgDamage(c) {
         if (c.after.what === 'slime') { const h = s.hazards.find(o => o.type === 'slime'); if (h) { x = h.x; z = h.z; } }
         if (c.after.what === 'tumble') { const o = s.props.tumbles.find(q => q.alive); if (o) { x = o.gx; z = o.gz; } }
         if (c.after.what === 'start') { x = x0; z = z0; }
+        if (c.after.what === 'duck') { const d = s.ix && s.ix.ducks.find(o => o.live && o.visible && o.rest); if (d) { x = d.gx; z = d.gz; } }
+        if (c.after.what === 'landing') { x = P.x + Math.sin(P.yaw) * 4 + 1.5; z = P.z + Math.cos(P.yaw) * 4; }
         if (c.after.what === 'behind') { x = P.x - Math.sin(P.yaw) * 6; z = P.z - Math.cos(P.yaw) * 6; }
         if (x !== undefined) { const i = s.karts.findIndex(k => !k.player); D.place(i, x - 1.5, z, yaw, { frozen: false, speed: 6 }); s.karts[i].invT = 0; }
       }
@@ -116,12 +118,62 @@ function pgBossFight(c) {
   } catch (e) { return { err: String(e && e.stack || e).slice(0, 600) }; }
 }
 
+// the boss fight played by an imperfect, human-like autopilot (no keep-alive): it reacts late or early to the shockwave and
+// the sweep (a timing error drawn per threat, sometimes it misses a hop outright), fires its weapon after a reaction delay and
+// wastes some shots, uses gift items late and wastes some, and goes for a repair kit when it is low. A gift box roll every
+// ~13 s stands in for picking up boxes. Returns the outcome and the fight length.
+function pgBossHuman(c) {
+  const D = window.BRADY_CART.debug, STEP = 1 / 60;
+  try {
+    D.start({ mode: 'royale', arena: 'man', car: c.car || 'heart', driver: 'brady', seed: c.seed || 5, autoGas: true, phase: 2 });
+    const s = D.scene(); s.state = 'race'; s.stateT = 0; s.raceT = 0; s.autoDrive = true;
+    const B = s.boss, P = s.player, H = Object.assign({ miss: 0.18, err: [-0.12, 0.22], fireDelay: [0.25, 1.4], waste: 0.25, itemDelay: [0.8, 4], itemWaste: 0.25, giftEvery: 13 }, c.h || {});
+    let seed = (c.seed || 5) * 7919 + 13; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }, rr = a => a[0] + rnd() * (a[1] - a[0]);
+    const threat = new Map(); let fireAt = -1, itemAt = -1, hops = 0, missed = 0, hitsBy = {}, shots = 0, wasted = 0;
+    const rules = s.rules, step0 = rules.onStep, goal0 = rules.aiGoal;
+    // a decision per threat: miss it, or hop with a timing error (seconds; + = late)
+    const decide = key => { let d = threat.get(key); if (!d) { d = { miss: rnd() < H.miss, err: rr(H.err), done: false }; threat.set(key, d); } return d; };
+    rules.onStep = function (s2, k, dt, racing) {
+      if (!k.player || !B.active) return step0.call(this, s2, k, dt, racing);
+      const I = k.inp, drift0 = I.driftPress, fire0 = I.fire, item0 = I.item;
+      step0.call(this, s2, k, dt, racing);
+      const wantFire = I.fire && !fire0, wantItem = I.item && !item0; I.driftPress = drift0; I.fire = fire0; I.item = item0;
+      const r = Math.hypot(k.x, k.z), lead = 0.17;
+      // the shockwave rolls out at 19 m/s: hop when it is (lead + err) seconds away
+      B.waves.forEach((w, i) => { if (!w.live || w.r >= r) return; const d = decide('w' + i + ':' + w.born); const tta = (r - w.r) / 19; if (!d.done && !d.miss && tta <= lead + d.err) { d.done = true; I.driftPress = true; hops++; } if (!d.done && d.miss && tta < 0.05) { d.done = true; missed++; } });
+      // the sweep line: hop when it reaches you (angular distance / its speed)
+      const W = B.sweep; if (W && W.on && r > 12 && r < W.R) { const a = Math.atan2(k.x, k.z), da = cartWrapT(a - W.a) * W.dir, tta = da / W.w; const d = decide('s' + B.n); if (da > 0 && !d.done && !d.miss && tta <= lead * 0.8 + d.err * 0.8) { d.done = true; I.driftPress = true; hops++; } if (da > 0 && d.miss && !d.done && tta < 0.05) { d.done = true; missed++; } }
+      // the weapon: after a reaction delay; some shots go wide (the reload is spent)
+      if (wantFire) { if (fireAt < 0) fireAt = s2.raceT + rr(H.fireDelay); if (s2.raceT >= fireAt) { fireAt = -1; shots++; if (rnd() < H.waste) { wasted++; k.wpn.t = k.wpn.def.reload; } else I.fire = true; } } else if (k.wpn.t > 0) fireAt = -1;
+      if (wantItem) { if (itemAt < 0) itemAt = s2.raceT + rr(H.itemDelay); if (s2.raceT >= itemAt) { itemAt = -1; if (rnd() < H.itemWaste) { k.item = null; } else I.item = true; } }
+    };
+    function cartWrapT(a) { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
+    rules.aiGoal = function (s2, k) {
+      const g = goal0.call(this, s2, k); if (!g || !k.player) return g;
+      if (k.hp < 45 && s2.roy) { let b = null, bd = 1e9; for (const o of s2.roy.kits) { if (!o.alive) continue; const d = Math.hypot(o.gx - k.x, o.gz - k.z); if (d < bd) { bd = d; b = o; } } if (b) g.goal = [b.gx, b.gz]; }
+      return g;
+    };
+    // wave ids (a wave object is reused): tag each new one
+    let born = 0; const waveTag = () => { for (const w of B.waves) { if (w.live && w._seen !== true) { w._seen = true; w.born = ++born; } if (!w.live) w._seen = false; } };
+    let t0 = null, lastGift = 0, kits = 0, hp0 = P.hp;
+    for (let i = 0; i < 60 * 600 && s.state === 'race'; i++) {
+      waveTag(); s.update(STEP);
+      if (B.active && t0 === null) { t0 = s.raceT; lastGift = s.raceT; }
+      if (P.hp > hp0 + 20) kits++; hp0 = P.hp;
+      if (B.active && !P.item && P.roul <= 0 && s.raceT - lastGift > H.giftEvery) { lastGift = s.raceT; P.item = ['skymail', 'bombs', 'devil', 'potty', 'foam', 'water', 'glow', 'shield', 'tumble', 'whistle', 'ducks', 'throb'][Math.floor(rnd() * 12)]; P.roul = 0; }
+    }
+    rules.onStep = step0; rules.aiGoal = goal0;
+    const hurt = {}; for (const e of s.events) if (e.type === 'dmg' && e.player) hurt[e.src] = +((hurt[e.src] || 0) + e.n).toFixed(1);
+    return { seed: c.seed, car: c.car, won: !!s.roy.bossDefeated, fight: t0 === null ? null : +(s.raceT - t0).toFixed(1), bossHp: +B.hp.toFixed(1), playerHp: +P.hp.toFixed(1), hops, missed, shots, wasted, kits, hurt, bossBy: B.dmgBy };
+  } catch (e) { return { err: String(e && e.stack || e).slice(0, 600) }; }
+}
+
 // ---------------- cases ----------------
 const WEAPONS = { bassdrop: {}, dazzle: {}, torch: { rivals: [[6, 0], [3, 4]] }, fireball: {}, bubbles: { secs: 5 }, laser: {}, sprinkles: { after: { t: 0.6, what: 'mine' } }, cannon: { rivals: [[0, 9], [0, -9], [2, 12]], speed: 2 }, slime: { secs: 4, after: { t: 1.2, what: 'slime' } }, zap: {}, chomp: { rivals: [[7, 0], [12, 0]] }, geyser: {} };
 const CARS = { bassdrop: 'heart', dazzle: 'fish', torch: 'octo', fireball: 'dragon', bubbles: 'duck', laser: 'pyramid', sprinkles: 'cupcake', cannon: 'galleon', slime: 'snail', zap: 'jelly', chomp: 'shark', geyser: 'whale' };
 const ITEMS = {
-  tumble: { after: { t: 0.5, what: 'tumble' }, speed: 4 }, devil: { secs: 8 }, potty: { rivals: [[40, 0], [44, 1], [36, -1]], secs: 5 }, foam: { rivals: [[4, 0], [3, 3], [-4, 0]] }, whistle: {}, skymail: { secs: 6 }, bombs: { secs: 6, rivals: [[36, -3], [48, 3], [60, -3], [72, 3], [84, 0]] }, ducks: { secs: 6, speed: 4, rivals: [[20, 0], [26, 0]], after: { t: 1.5, what: 'behind' } },
-  throb: {}, decoys: { rivals: [[3, 2], [3, -2], [5, 0]], speed: 3 }, toss: {}, glide: { secs: 6 }, surf: {}, warp: { after: { t: 1.4, what: 'start' }, secs: 5 }, frosting: { secs: 5 }, wave: { secs: 5 }, shell: { secs: 6 }, hover: { secs: 6, speed: 8 }, dive: { secs: 6 }, breach: { secs: 7, rivals: [[20, 0], [32, 0], [44, 0], [56, 0], [68, 0], [80, 0], [26, 4]] }
+  tumble: { after: { t: 0.5, what: 'tumble' }, speed: 4 }, devil: { secs: 8 }, potty: { rivals: [[40, 0], [44, 1], [36, -1]], secs: 5 }, foam: { rivals: [[4, 0], [3, 3], [-4, 0]] }, whistle: {}, skymail: { secs: 6 }, bombs: { secs: 6, rivals: [[36, -3], [48, 3], [60, -3], [72, 3], [84, 0]] }, ducks: { secs: 6, speed: 4, rivals: [[20, 0], [26, 0]], after: { t: 3.5, what: 'duck' } },
+  throb: {}, decoys: { rivals: [[3, 2], [3, -2], [5, 0]], speed: 3 }, toss: {}, glide: { secs: 6 }, surf: {}, warp: { after: { t: 1.4, what: 'start' }, secs: 5 }, frosting: { secs: 5 }, wave: { secs: 5 }, shell: { secs: 6 }, hover: { secs: 6, speed: 8 }, dive: { secs: 6 }, breach: { secs: 7, rivals: [[20, 0], [32, 0], [44, 0], [56, 0], [68, 0], [80, 0], [26, 4]], after: { t: 4.2, what: 'landing' } }
 };
 const SPECIAL_CAR = { throb: 'heart', decoys: 'fish', toss: 'octo', glide: 'dragon', surf: 'duck', warp: 'pyramid', frosting: 'cupcake', wave: 'galleon', shell: 'snail', hover: 'jelly', dive: 'shark', breach: 'whale' };
 
@@ -136,7 +188,8 @@ const SPECIAL_CAR = { throb: 'heart', decoys: 'fish', toss: 'octo', glide: 'drag
   // ---------- 1. matches ----------
   if (part === 'all' || part === 'match') {
     console.log('== MATCHES (AI only, autopilot player)');
-    for (const arena of ['sound', 'man', 'playa']) {
+    // ARENAS=id,id runs only those arenas' matches (each level agent checks its own arena)
+    for (const arena of process.env.ARENAS ? process.env.ARENAS.split(',') : ['sound', 'man', 'playa']) {
       const rs = [];
       for (let i = 0; i < NSEED; i++) {
         const r = await page.evaluate(pgMatch, { arena, seed: 11 + i * 7 });
@@ -176,7 +229,7 @@ const SPECIAL_CAR = { throb: 'heart', decoys: 'fish', toss: 'octo', glide: 'drag
       if (r.err) { fail(`${c.id}: ${r.err}`); continue; }
       const line = `  ${c.id.padEnd(10)} ${c.kind.padEnd(6)} dmg ${String(r.dmg).padStart(5)} on ${r.victims} car(s)` + (r.heal ? ` · heal ${r.heal}` : '') + (r.ram ? ` · ram ${r.ram}` : '') + (r.blocked ? ` · blocked ${r.blocked}` : '') + (c.extra ? '  (not in the core list: reported)' : '');
       console.log(line);
-      if (c.extra) continue;
+      if (c.extra) { if (['airhorn', 'lightsout', 'afterparty'].includes(c.id) && !(r.dmg > 0)) fail(`${c.id} (driver special, kind 'drv'): no damage`); continue; }
       if (c.id === 'water') { if (!(r.heal > 0)) fail('water: no heal'); }
       else if (c.id === 'glow') { if (!(r.ram > 0)) fail('glow: no ram damage'); }
       else if (c.id === 'shield') { if (!(r.blocked > 0 && r.hp1 >= r.hp0)) fail(`shield: not blocked (hp ${r.hp0}→${r.hp1})`); }
@@ -187,7 +240,7 @@ const SPECIAL_CAR = { throb: 'heart', decoys: 'fish', toss: 'octo', glide: 'drag
   if (part === 'all' || part === 'boss') {
     console.log('== THE MAN');
     const bc = [];
-    for (const id in WEAPONS) bc.push({ id, kind: 'weapon', car: CARS[id], dist: { torch: 19, bassdrop: 22, zap: 26, chomp: 17, sprinkles: 16 }[id] || 26, after: id === 'sprinkles' ? 'atFeet' : null, yawOff: id === 'sprinkles' ? Math.PI : id === 'cannon' ? Math.PI / 2 : id === 'slime' ? Math.PI : 0, speed: id === 'slime' ? 10 : 6 });
+    for (const id in WEAPONS) bc.push({ id, kind: 'weapon', car: CARS[id], dist: { torch: 19, bassdrop: 22, zap: 26, chomp: 17, sprinkles: 16, slime: 15 }[id] || 26, after: id === 'sprinkles' ? 'atFeet' : null, yawOff: id === 'sprinkles' ? Math.PI : id === 'cannon' || id === 'slime' ? Math.PI / 2 : 0, speed: id === 'slime' ? 8 : 6 });
     for (const id of ['tumble', 'devil', 'potty', 'foam', 'whistle', 'skymail', 'bombs', 'ducks', 'water', 'throb', 'decoys', 'toss', 'glide', 'surf', 'warp', 'frosting', 'wave', 'shell', 'hover', 'dive', 'breach'])
       bc.push({ id, kind: 'item', car: SPECIAL_CAR[id], dist: { foam: 17, throb: 20, decoys: 15, potty: 45, breach: 24, shell: 22, dive: 18, hover: 22, glide: 26, toss: 20, tumble: 15 }[id] || 28, secs: 7, yawOff: id === 'tumble' || id === 'warp' ? Math.PI : 0, speed: id === 'decoys' || id === 'surf' || id === 'dive' ? 14 : 6 });
     let noHurt = [];
@@ -208,11 +261,30 @@ const SPECIAL_CAR = { throb: 'heart', decoys: 'fish', toss: 'octo', glide: 'drag
     const f2 = await page.evaluate(pgBossFight, { keepAlive: false, seed: 9 });
     if (f2.err) fail('boss fight 2: ' + f2.err); else { console.log(`  unassisted autopilot: ${f2.defeated ? 'won' : 'lost'} after ${f2.fight}s (boss HP ${f2.bossHp}, the Man dealt ${f2.perMin} HP/min) · results top: ${JSON.stringify(f2.results)} · stageWon ${f2.stageWon}`); if (!f2.defeated && f2.stageWon !== false) fail('a lost boss fight must set stageWon false'); if (!f2.defeated && (!f2.results || f2.results[0][0] !== 'THE MAN')) fail('a lost boss fight must put THE MAN on top'); }
   }
+  // ---------- 3b. the boss against a human-like player ----------
+  if (part === 'all' || part === 'boss' || part === 'human') {
+    console.log('== THE MAN vs a human-like autopilot (late / early hops, missed hops, slow and wasted shots)');
+    const cars = ['heart', 'octo', 'fish', 'jelly', 'shark', 'whale', 'galleon', 'snail', 'dragon', 'duck', 'pyramid', 'cupcake'];
+    const N = part === 'human' ? Math.max(NSEED, 12) : 8, rs = [];
+    for (let i = 0; i < N; i++) {
+      const r = await page.evaluate(pgBossHuman, { seed: 21 + i * 13, car: cars[i % cars.length] }); report.human = report.human || []; report.human.push(r);
+      if (r.err) { fail('human boss fight: ' + r.err); continue; } rs.push(r);
+      console.log(`  ${r.car.padEnd(8)} seed ${r.seed}: ${r.won ? 'WON ' : 'LOST'} in ${r.fight}s · Man HP ${r.bossHp} · player HP ${r.playerHp} · hops ${r.hops} missed ${r.missed} · shots ${r.shots} (wasted ${r.wasted}) · kits ${r.kits} · hurt by ${JSON.stringify(r.hurt)}`);
+    }
+    if (rs.length) {
+      const won = rs.filter(r => r.won), rate = won.length / rs.length, avgW = won.reduce((a, r) => a + r.fight, 0) / Math.max(1, won.length), avgL = rs.filter(r => !r.won).reduce((a, r, _, A) => a + r.fight / A.length, 0);
+      console.log(`  human-like: won ${won.length}/${rs.length} (${Math.round(rate * 100)}%) · avg winning fight ${avgW.toFixed(0)}s · avg losing fight ${avgL.toFixed(0)}s`);
+      if (rate < 0.55 || rate > 0.92) fail(`human-like win rate ${Math.round(rate * 100)}% outside 55–92%`);
+      if (won.length && (avgW < 100 || avgW > 260)) fail(`human-like winning fight ${avgW.toFixed(0)}s outside 100–260s`);
+    }
+  }
   // ---------- 4. screenshots ----------
   if (part === 'all' || part === 'shots') {
     console.log('== SCREENSHOTS');
     const shoot = async (pg, name, setup) => {
       const st = await pg.evaluate(setup);
+      // hold the staged moment: the page's own real-time loop would keep stepping the sim between here and the capture
+      await pg.evaluate(() => { const s = window.BRADY_CART.debug.scene(); s.update = function () {}; });
       for (let i = 0; i < 3; i++) await pg.evaluate(() => window.BRADY_CART.debug.frame());
       await pg.waitForTimeout(150);
       const stats = await pg.evaluate(() => { const s = window.BRADY_CART.debug.scene(); return { draws: s.stats.draws, tris: Math.round(s.stats.tris) }; });
@@ -231,36 +303,39 @@ const SPECIAL_CAR = { throb: 'heart', decoys: 'fish', toss: 'octo', glide: 'drag
       ['man-overview', 'man', null, cam(110, 50, 110, 0, 10, 0, 1.0)],
       ['man-ground', 'man', null, cam(0, 4, 60, 0, 14, 0, 1.15)]
     ];
-    for (const [name, arena, o, c] of views) await shoot(page, name, new Function(`const s = ${start(arena, o)}; (${c})(s); s.update(1/60); return null;`));
+    for (const [name, arena, o, c] of views) if (!process.env.SHOTS || new RegExp(process.env.SHOTS).test(name)) await shoot(page, name, new Function(`const s = ${start(arena, o)}; (${c})(s); s.update(1/60); return null;`));
     await page.evaluate(() => { window.__cartHideHUD = false; });
-    // gameplay views with the HUD: a fight, the dance floor pulsing, a cupid lock, a bass wave, a knock-out, spectating
+    // gameplay views with the HUD, in landscape and portrait: a fight, the storm, the dance floor pulsing, a cupid lock, a bass wave,
+    // a knock-out and its poof, spectating, the results, the Man royale, and the boss phases. SHOTS=<regex> retakes a subset.
+    const pp = await mk(390, 844);
+    const only = process.env.SHOTS ? new RegExp(process.env.SHOTS) : null;
     const play = (arena, secs, extra) => new Function(`const s = ${start(arena)}; ${extra || ''}; const n = Math.round(${secs} * 60); for (let i = 0; i < n && s.state === 'race'; i++) s.update(1 / 60); return { t: s.raceT };`);
-    await shoot(page, 'hud-fight-landscape', play('sound', 34));
-    await shoot(page, 'hud-later-landscape', play('sound', 95));
     const floorCam = cam(0, 46, 62, 0, 0, 8, 1.0);
-    await shoot(page, 'sound-floor-warn', new Function(`const s = ${start('sound')}; for (let i = 0; i < 600; i++) { s.update(1/60); if (s.snd.phase === 'warn' && s.raceT > 6) break; } (${floorCam})(s); return { pat: s.snd.pat };`));
-    await shoot(page, 'sound-floor-hot', new Function(`const s = ${start('sound')}; for (let i = 0; i < 600; i++) { s.update(1/60); if (s.snd.phase === 'hot' && s.raceT > 6) break; } (${floorCam})(s); return { pat: s.snd.pat };`));
-    await page.evaluate(() => { window.__cartHideHUD = false; });
-    await shoot(page, 'sound-bass-warn', new Function(`const s = ${start('sound')}; const D = window.BRADY_CART.debug, b = s.snd.subs[0]; D.place(-1, b.b.cx + Math.sin(b.b.yaw) * 14, b.b.cz + Math.cos(b.b.yaw) * 14, b.b.yaw + Math.PI, { speed: 0 }); s.autoDrive = false; b.next = 1.0; b.warn = 0; for (let i = 0; i < 40; i++) { s.update(1/60); s.player.inp.gas = 0; } return null;`));
-    await shoot(page, 'sound-cupid-lock', new Function(`const s = ${start('sound')}; const D = window.BRADY_CART.debug, d = s.snd.drones[0]; D.place(-1, 0, 150, Math.PI / 2, { speed: 0 }); s.autoDrive = false; s.autoGas = false; s.player.invT = 0; d.x = 6; d.z = 150; d.cool = 0; for (let i = 0; i < 50; i++) { s.update(1/60); s.player.inp.gas = 0; if (d.st === 'lock' && d.t > 0.6) break; } return { st: d.st };`));
-    for (const [nm, fr] of [['royale-knockout', 50], ['royale-poof', 96]]) await shoot(page, nm, new Function(`const s = ${start('sound')}; const D = window.BRADY_CART.debug; D.place(-1, 0, 150, Math.PI / 2, { speed: 0 }); s.autoDrive = false; s.autoGas = false; const i = s.karts.findIndex(k => !k.player); D.place(i, 14, 150, 0.6, { frozen: true }); D.hurt(i, 200, 'test'); for (let f = 0; f < ${fr}; f++) s.update(1/60); return null;`));
-    await shoot(page, 'royale-spectating', new Function(`const s = ${start('sound')}; s.roy.keepGoing = false; s.autoDrive = true; for (let i = 0; i < 1200; i++) s.update(1/60); window.BRADY_CART.debug.hurt(-1, 200, 'test'); for (let i = 0; i < 100; i++) s.update(1/60); return null;`));
-    await shoot(page, 'man-royale-hud', play('man', 30));
-    // the boss phases
     // the player parked 46 m out facing the Man, so the chase camera looks at him
     const boss = (st, setup) => new Function(`const s = ${start('man', { phase: 2 })}; s.autoDrive = false; s.autoGas = false; window.BRADY_CART.debug.place(-1, 0, 46, Math.PI, { speed: 0 }); ${setup}`);
-    await shoot(page, 'boss-wake', boss('wake', `for (let i = 0; i < 120; i++) s.update(1/60); return { st: s.boss.st };`));
-    await shoot(page, 'boss-stomp-telegraph', boss('stomp', `for (let i = 0; i < 400; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.st === 'stomp' && s.boss.t > 0.8) break; } return { st: s.boss.st };`));
-    await shoot(page, 'boss-shockwave', boss('stomp', `for (let i = 0; i < 600; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.waves.some(w => w.live && w.r > 20)) break; } return { st: s.boss.st };`));
-    await shoot(page, 'boss-sweep', boss('sweep', `for (let i = 0; i < 3000; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.st === 'idle' && s.boss.t > s.boss.dur - 0.05 && s.boss.n > 0) s.boss.last = 'stomp'; if (s.boss.st === 'sweep' && s.boss.hit && s.boss.ht > 0.4) break; } return { st: s.boss.st };`));
-    await shoot(page, 'boss-embers', boss('embers', `for (let i = 0; i < 4000; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.st === 'embers' && s.boss.hit && s.boss.ht > 0.6) break; } return { st: s.boss.st };`));
-    await shoot(page, 'boss-weakpoint', boss('rest', `for (let i = 0; i < 3000; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.st === 'rest' && s.boss.t > 0.7) break; } return { st: s.boss.st };`));
-    await shoot(page, 'boss-burning', boss('dying', `for (let i = 0; i < 300; i++) s.update(1/60); s.boss.st = 'rest'; s.boss.hp = 1; window.BRADY_BURNS.CART_ARENA_RULES.man.bossHit(s, s.player, 'spin', { weapon: 'bassdrop' }); for (let i = 0; i < 150; i++) s.update(1/60); return null;`));
-    await shoot(page, 'boss-collapsed', boss('dying', `for (let i = 0; i < 300; i++) s.update(1/60); s.boss.st = 'rest'; s.boss.hp = 1; window.BRADY_BURNS.CART_ARENA_RULES.man.bossHit(s, s.player, 'spin', { weapon: 'bassdrop' }); for (let i = 0; i < 330; i++) s.update(1/60); return null;`));
-    // portrait HUD
-    const pp = await mk(390, 844);
-    await shoot(pp, 'hud-fight-portrait', play('sound', 40));
-    await shoot(pp, 'boss-portrait', boss('stomp', `for (let i = 0; i < 1200; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.st === 'rest') break; } return null;`));
+    const ko = fr => new Function(`const s = ${start('sound')}; const D = window.BRADY_CART.debug; D.place(-1, 0, 150, Math.PI / 2, { speed: 0 }); s.autoDrive = false; s.autoGas = false; const i = s.karts.findIndex(k => !k.player); D.place(i, 14, 150, 0.6, { frozen: true }); for (let f = 0; f < 30; f++) s.update(1/60); D.hurt(i, 200, 'test'); for (let f = 0; f < ${fr}; f++) s.update(1/60); return null;`);
+    const shots = [
+      ['hud-fight', play('sound', 34)],
+      ['hud-storm', new Function(`const s = ${start('sound')}; for (let i = 0; i < 150 * 60 && s.state === 'race'; i++) { s.update(1/60); s.player.hp = Math.max(s.player.hp, 80); s.player.invT = Math.max(s.player.invT, 0.5); } const Z = s.roy.zone, P = s.player, a = Math.atan2(P.x - Z.x, P.z - Z.z), d = Z.r + 5; window.BRADY_CART.debug.place(-1, Z.x + Math.sin(a) * d, Z.z + Math.cos(a) * d, a + Math.PI, { speed: 6 }); s.autoDrive = false; for (let i = 0; i < 70; i++) s.update(1/60); return { r: Z.r };`)],
+      ['sound-floor-warn', new Function(`const s = ${start('sound')}; for (let i = 0; i < 600; i++) { s.update(1/60); if (s.snd.phase === 'warn' && s.raceT > 6) break; } (${floorCam})(s); return { pat: s.snd.pat };`)],
+      ['sound-floor-hot', new Function(`const s = ${start('sound')}; for (let i = 0; i < 600; i++) { s.update(1/60); if (s.snd.phase === 'hot' && s.raceT > 6) break; } (${floorCam})(s); return { pat: s.snd.pat };`)],
+      ['sound-bass-warn', new Function(`window.__cartHideHUD = false; const s = ${start('sound')}; const D = window.BRADY_CART.debug, b = s.snd.subs[0]; D.place(-1, b.b.cx + Math.sin(b.b.yaw) * 14, b.b.cz + Math.cos(b.b.yaw) * 14, b.b.yaw + Math.PI, { speed: 0 }); s.autoDrive = false; b.next = 1.0; b.warn = 0; for (let i = 0; i < 40; i++) { s.update(1/60); s.player.inp.gas = 0; } return null;`)],
+      ['sound-cupid-lock', new Function(`const s = ${start('sound')}; const D = window.BRADY_CART.debug, d = s.snd.drones[0]; D.place(-1, 0, 150, Math.PI / 2, { speed: 0 }); s.autoDrive = false; s.autoGas = false; s.player.invT = 0; d.x = 6; d.z = 150; d.cool = 0; for (let i = 0; i < 50; i++) { s.update(1/60); s.player.inp.gas = 0; if (d.st === 'lock' && d.t > 0.6) break; } return { st: d.st };`)],
+      ['royale-knockout', ko(50)], ['royale-poof', ko(96)],
+      ['royale-spectating', new Function(`const s = ${start('sound')}; s.roy.keepGoing = false; s.autoDrive = true; for (let i = 0; i < 1200; i++) s.update(1/60); window.BRADY_CART.debug.hurt(-1, 200, 'test'); for (let i = 0; i < 100; i++) s.update(1/60); return null;`)],
+      ['royale-results', new Function(`const s = ${start('sound')}; s.roy.keepGoing = false; s.autoDrive = true; for (let i = 0; i < 1800; i++) s.update(1/60); window.BRADY_CART.debug.hurt(-1, 200, 'test'); for (let i = 0; i < 1500 && s.state === 'race'; i++) s.update(1/60); s.finishRace(); for (let i = 0; i < 90; i++) s.update(1/60); return { state: s.state, place: s.royaleResult && s.royaleResult.playerPlace };`)],
+      ['man-royale-hud', play('man', 30)],
+      ['boss-wake', boss('wake', `for (let i = 0; i < 120; i++) s.update(1/60); return { st: s.boss.st };`)],
+      ['boss-stomp-telegraph', boss('stomp', `for (let i = 0; i < 400; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.st === 'stomp' && s.boss.t > 0.8) break; } return { st: s.boss.st };`)],
+      ['boss-shockwave', boss('stomp', `for (let i = 0; i < 600; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.waves.some(w => w.live && w.r > 20)) break; } return { st: s.boss.st };`)],
+      ['boss-sweep', boss('sweep', `for (let i = 0; i < 3000; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.st === 'idle' && s.boss.t > s.boss.dur - 0.05 && s.boss.n > 0) s.boss.last = 'stomp'; if (s.boss.st === 'sweep' && s.boss.hit && s.boss.ht > 0.4) break; } return { st: s.boss.st };`)],
+      ['boss-embers', boss('embers', `for (let i = 0; i < 4000; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.st === 'embers' && s.boss.hit && s.boss.ht > 0.6) break; } return { st: s.boss.st };`)],
+      ['boss-weakpoint', boss('rest', `for (let i = 0; i < 3000; i++) { s.update(1/60); s.player.invT = 2; if (s.boss.st === 'rest' && s.boss.t > 0.7) break; } return { st: s.boss.st };`)],
+      ['boss-burning', boss('dying', `for (let i = 0; i < 300; i++) s.update(1/60); s.boss.st = 'rest'; s.boss.hp = 1; window.BRADY_BURNS.CART_ARENA_RULES.man.bossHit(s, s.player, 'spin', { weapon: 'bassdrop' }); for (let i = 0; i < 150; i++) s.update(1/60); return null;`)],
+      ['boss-collapsed', boss('dying', `for (let i = 0; i < 300; i++) s.update(1/60); s.boss.st = 'rest'; s.boss.hp = 1; window.BRADY_BURNS.CART_ARENA_RULES.man.bossHit(s, s.player, 'spin', { weapon: 'bassdrop' }); for (let i = 0; i < 330; i++) s.update(1/60); return null;`)],
+      ['boss-lost', boss('lost', `for (let i = 0; i < 300; i++) s.update(1/60); window.BRADY_CART.debug.hurt(-1, 500, 'test'); for (let i = 0; i < 1200 && s.state === 'race'; i++) s.update(1/60); s.finishRace(); for (let i = 0; i < 90; i++) s.update(1/60); return { state: s.state };`)]
+    ];
+    for (const [pg, sfx] of [[page, '-landscape'], [pp, '-portrait']]) for (const [nm, fn] of shots) { if (only && !only.test(nm + sfx)) continue; await pg.evaluate(() => { window.__cartHideHUD = false; }); await shoot(pg, nm + sfx, fn); }
     const pk = report.render.reduce((a, r) => ({ draws: Math.max(a.draws, r.draws), tris: Math.max(a.tris, r.tris) }), { draws: 0, tris: 0 });
     console.log(`  PEAK: ${pk.draws} draws · ${(pk.tris / 1000).toFixed(0)}k triangles (budget 120 / 420k)`);
     if (pk.draws > 120) fail(`peak draws ${pk.draws} > 120`);

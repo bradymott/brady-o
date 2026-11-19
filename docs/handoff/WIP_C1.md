@@ -1,55 +1,52 @@
-# WIP — C1 "framework" (Art Cart career / royale / secret levels), Nov 11 2026
+# WIP — C1 "framework" (Art Cart career / royale / secret levels), Nov 19 2026
 
-Design: `docs/ART_CART_CAREER.md` (sections 1, 2 "Burn the Man", 5 gating, 6). Nothing committed; all in the working tree of this worktree.
+Design: `docs/ART_CART_CAREER.md`. Changes are in the working tree of this worktree (the organizer commits).
+Scratchpad S = `/private/tmp/claude-501/-Users-bradymott-brady-o/525dd309-9ce0-46f8-a74e-5f850617a07d/scratchpad` (dist `S/dist-C1`, shots `S/shots-C1`).
 
-## Files
-- NEW `src/43_cart_h_career.js` — registries, per-car save (`Save.data.cart.prog[carId]`), run order, stage options, results/verdict panel, stat points, secret-level gating, game-won state, hooks wrapping `CartRaceScene.finishRace / buildButtons / drawResults / leave`, debug API `BRADY_CART.debug.career`.
-- NEW `src/43_cart_hb_final.js` — `CART_RACE_RULES.plunger`: the career final BURN THE MAN on the `burn` track (plungers, AI, HUD, pointer, minimap dots, fuse, ignition, fireworks, camera on the Man, results).
-- NEW `src/43_cart_hc_screens.js` — menu screens (methods on `KartMenuScene`): quick, run map, secret, secretGames, garage, prize, complete; 3D car thumbnails atlas (`carThumbs`).
-- `src/43_cart_f_menu.js` (mine) — new home (CAREER · BATTLE ROYALE · SECRET LEVELS · QUICK RACE · POWER-UPS + settings), flows, dispatch to `layout_/draw_/update_<state>`, GARAGE button + progress chips on the car card, stat pips (car / driver / points). Someone else renamed the logo to SUPER ART KART in this file — kept.
-- Small hooks in shared files: `src/43_cart_d_sim.js` (retired objectives → vibe; `this.run`, `poolCar = opts.levelCar`, `opts.final` → `CART_RACE_RULES`; career grid start at back; `cartAiScale`; `manHold`; `rules.noLaps`; `rules.aiOffset`; removed hill/flag lines from `aiArena`), `src/43_cart_e_scene.js` (intro sub `CartCareer.introSub`, `rules.desc`, `rules.noRaceHud`, `rules.camera`), `src/43_cart_a_data.js` (header comment only).
-- Tests: NEW `tools/cart_career_test.js`; `tools/cart_battle_test.js` now runs only secret-level arenas × their 3 games and fails if hill/flag reappear.
+## Files (C1)
+- `src/43_cart_h_career.js`: registries, per-car save (`Save.data.cart.prog[carId]`), run order, stage options, results/verdict panel, stat points, secret-level gating, game-won state, hooks wrapping `CartRaceScene.finishRace / buildButtons / drawResults / leave`, debug API `BRADY_CART.debug.career`.
+- `src/43_cart_hb_final.js`: the career final, BURN THE MAN (`CART_RACE_RULES.plunger`).
+- `src/43_cart_hc_screens.js`: menu screens (quick, run map, secret, secretGames, garage, prize, complete).
+- `src/43_cart_f_menu.js`: home menu and flows. `cartMenuArenas()` hides `royale: true` arenas (Sound Camp, the Man) from the old battle grid and the power-ups guide.
+- Small hooks in shared files: d_sim, e_scene, a_data (see git diff).
+- Tests: `tools/cart_career_test.js` (52 checks) and `tools/cart_battle_test.js` (secret-level arenas × 3 games).
 
-## DONE and verified (cart_career_test: 47/47 ok, exit 0, run 2; cart_battle_test ok; showroom shots ok)
-- Run order rules (own level first, 11 shuffled once and saved, final last), lose/retry, top-3 advance, CONTINUE → map, save + resume across reload, 13-stage map.
-- Level's special in everyone's pool (≈9% of rival rolls on Bass Valentine's level, 0 elsewhere).
-- Burn the Man to completion: 3 pushes → fuse → Man ignites (burn > 0.5), results, Career won, +1 stat point, prize screen. Balance (autopilot player vs real AI, 12 seeds): player wins 6/12, 30–118 s.
-- Stat points: +1 speed pip = +0.75 vmax; re-assign to accel = +2.7 acc; applies in TT; AI skill +0.007/point; driver `.stat` pip (Brady speed) applies.
-- Battle Royale run via C2's `mode:'royale'` (CART_STAGE_MODES.royale is set by C2): 13 stages, final, +1 point, secret unlocked.
-- Secret gating: locked until Royale won; Turbo Escargot = Trick Attack/Vibe/Glow in Bowl-O-Rama; 2nd place doesn't clear; all 3 → game won → celebration. Five cars without an arena + Bass Valentine's own playa game show "coming soon".
-- Old save loads (trophies, best, wins kept; removed driver → brady). No hill/flag on any arena; a scene asked for hill plays vibe.
-- Perf, Burn the Man at gfx high: peak 88 draws / 403k tris (start grid; the burn track grid was already the busiest view), burning ≈ 62 draws / 255k.
-- Screenshots (844x390 `-land`, 390x844 `-port`): `/private/tmp/claude-501/-Users-bradymott-brady-o/300b6139-7b8a-41ee-8c06-1aa73a659be0/scratchpad/shots-C1/`.
+## Nov 19 round (after the origin/main merge)
+- Fixed:
+  - royale arenas are hidden from the battle / objective grids and the ARENA POWERS tab;
+  - the results panel always shows the player's row when the list is cut (in portrait, 8th place was invisible);
+  - secret-levels portrait cards (the car name was hidden behind the chip);
+  - prize portrait (the medal text sat under the buttons);
+  - garage landscape (the car ran off the bottom);
+  - the landscape burn camera is closer, so the Man fills the view;
+  - the celebration landscape car is bigger.
+- Every registry now plugs in by assignment. That includes `CART_SECRET_LEVELS`, which was a `const` and is now a guarded `var` with defaults. The arena tidy re-runs when a menu opens or a secret stage starts, so a secret arena registered by a later file is picked up.
+- Test additions:
+  - a full Career and a full Battle Royale with Octo (stand-ins for every car except Bass Valentine) play every stage for 1.5 s on autopilot and pass;
+  - every royale stage plays in royale mode and returns C2's `royaleResult`;
+  - the royale final honours `s.stageWon`: the Man not destroyed is a loss with RETRY, destroyed is a win;
+  - registering a career track, royale arena or secret level at runtime takes effect.
 
-## NOT verified at the stop (machine load avg ~58, everything timed out — a timeout is not a pass)
-- `tools/cart_item_test.js`, `tools/cart_shots.js`: timed out booting; rerun. `tools/apps_test.js` PASSED at the stop on the final build (all three apps).
-- Last edits after the 47/47 run, not screenshot-checked: closer camera + extra flames during the burn (`hb_final.draw/camera`), driver pip restyle (`cartPip`), portrait NEW RUN button moved to top right, secret-games portrait subtitle, prize/complete layout, `debug.career.win` forcing `stageWon` for self-deciding finals. All pass `node --check`; the build succeeds.
+## Verified (Nov 19)
+- cart_career_test: 52/52 ok, exit 0. This includes the old-save checks: trophies, best times and wins kept, a removed driver id falls back to brady, progress starts empty.
+- Other tool results: see the C1 report of Nov 19.
 
-## HALF-DONE / weak
-- Run map shows stand-in tracks/arenas marked `*` (registries default to existing tracks/arenas; C3/C2 override per car: heart → `loveparade`, heart royale → `sound`, man royale → `man`).
-- Results in forced (debug) wins show estimated times out of order — debug only.
-- The old `arena` / `objective` menu states still exist (unreachable); hill/flag sim/HUD code is dormant, not deleted.
-- Burn moment: the career-test burn shot shows it, but the burn could be bigger still (owner review).
+## How a level plugs in (assign in your own file; never redeclare with const/let)
+- Career track: add the track to `CART_TRACKS`, then `CART_CAREER_TRACKS[carId] = trackId`.
+- Royale arena: push the arena into `CART_ARENAS` with `royale: true` (this keeps it off the old battle menu), then `CART_ROYALE_ARENAS[carId] = arenaId`.
+- Secret level: push the arena into `CART_ARENAS` (no `royale` flag) and add its own game to `CART_OBJECTIVES`, then `CART_SECRET_LEVELS[carId] = { arena: arenaId, game: objectiveId }`. Game null means "coming soon". Vibe Check and Glow Grab are added automatically.
+- The run map's `*` stand-in mark disappears by itself. Saves with a run in progress pick up new levels at the next stage they play, because levels are resolved at play time, not at run start.
 
-## NOT STARTED from my scope
-- Nothing major; polish pass on the new screens with Brady.
-
-## Interfaces others rely on (assign, never redeclare with const/let — one bundle scope)
-- `CART_CAREER_TRACKS[carId] = trackId`, `CART_ROYALE_ARENAS[carId] = arenaId` ('man' = finals), `CART_STAGE_MODES.royale = true`, `CART_RACE_RULES[id]` (picked by `opts.final`).
-- Stage opts: `opts.run = { car, kind, stage, owner, seed, game }`, `opts.levelCar` → `s.poolCar`. A scene may set `s.stageWon` (C2's royale final does: Man destroyed).
-- `cartKartStats(car, drv, fOrPlayer)` is defined in h_career (car + stat points + driver `.stat`, max 5). No other file may declare it.
-- Driver ids are never hard-coded (read from `CART_DRIVERS`).
+## Weak / open
+- 11 cars still play stand-in tracks and arenas. 5 cars have no secret arena ("coming soon"). Bass Valentine's own secret game is not built.
+- Forced (debug) wins show estimated times out of order. This is debug only.
+- The old `arena` / `objective` menu states can't be reached from the home menu. The hill/flag code is dormant, not deleted.
+- The plunger final's balance has not been tried by Brady (CART_PLG in hb_final).
 
 ## How to run
 ```
-export NODE_PATH=/Users/bradymott/brady-o/node_modules; S=<scratchpad>
+export NODE_PATH=/Users/bradymott/brady-o/node_modules
 BRADY_DIST=$S/dist-C1 node tools/build.js
-BRADY_DIST=$S/dist-C1 node tools/cart_career_test.js $S/shots-C1      # ~10–25 min on a loaded machine
-BRADY_DIST=$S/dist-C1 node tools/cart_battle_test.js $S/shots-C1-battle "" 25
+BRADY_DIST=$S/dist-C1 node tools/cart_career_test.js $S/shots-C1
 ```
 Debug: `BRADY_CART.debug.career.{reset,start,run,prog,stage,opts,play,playSecret,win(place),lose,press(label),points,alloc,kart,secret,complete,final,plunge,menu}` (`win`/`plunge` are dev-only).
-
-## Next steps for a fresh agent
-1. On a quiet machine rerun build, cart_career_test, cart_item_test, cart_battle_test, cart_shots, apps_test; Read the career screenshots (esp. `final-burn-*`, `prize-*`, `run-map-*-port`, `garage-*`) and fix anything cramped.
-2. Show Brady the flow; tune the plunger final (CART_PLG in hb_final: spacing 120–190 m, AI aim 15–45%).
-3. When C2/C3 add more levels they only assign the registries; the map's `*` stand-in marks disappear by themselves.

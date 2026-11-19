@@ -38,6 +38,10 @@ const CART_ROY_DMG = {
   tumble: 12, devil: 18, potty: 18, foam: 10, whistle: 8, skymail: 24, bombs: 16, ducks: 6,
   // car specials
   throb: 10, decoys: 12, toss: 20, glide: 15, surf: 16, warp: 14, frosting: 10, wave: 20, shell: 12, hover: 12, dive: 20, breach: 22,
+  // driver specials (C3, 43_cart_j_drivers.js): small but real, since they mostly disrupt. Through hit() with kind 'drv':
+  // AIR HORN, LIGHTS OUT, RAVE TRAIN; through hit() with a cartoon kind: BONKED, ROAD WORK, HOLD MY WATER (also its backfire);
+  // logged-only tags (no hit()): LECTURE, 5 MPH ZONE, PART THE TRAFFIC. CAN I BORROW THAT? steals, no damage.
+  airhorn: 8, lightsout: 8, afterparty: 10, bungee: 14, roadwork: 12, holdwater: 14, lecture: 6, fivemph: 5, parting: 6,
   // arena hazards and the Man
   tile: 9, subwave: 10, lovebomb: 12, firepit: 5, embervent: 12, stomp: 20, sweep: 18, ember: 12, emberfire: 5
 };
@@ -186,6 +190,8 @@ CART_OBJECTIVES.royale = {
       // RANGER WHISTLE slows without a hit(), rubber ducks only slow you: here they sting a little
       const log0 = s.log;
       s.log = function (type, o) { const e = log0.call(this, type, o); if (type === 'duck' && o && this.roy) { const v = this.karts.find(q => q.id === o.k), b = this.karts.find(q => q.id === o.by); if (v && v.roy && !v.out && (v.roy.duckT || 0) <= this.raceT) { v.roy.duckT = this.raceT + 0.6; cartRoyDamage(this, v, CART_ROY_DMG.ducks, b !== v ? b : null, 'ducks'); } }
+        // driver-special tags (a 'hit' event with kind 'drv' and no hit() call: the lecture, the 5 MPH zone, the parting)
+        if (type === 'hit' && o && o.kind === 'drv' && o.item && this.roy && CART_ROY_DMG[o.item]) { const v = this.karts.find(q => q.id === o.k), b = this.karts.find(q => q.id === o.by); if (v && v.roy && !v.out && v.invT <= 0 && !((v.roy.tagT || 0) > this.raceT)) { v.roy.tagT = this.raceT + 0.8; cartRoyDamage(this, v, CART_ROY_DMG[o.item], b !== v ? b : null, o.item); } }
         if (type === 'hit' && o && o.kind === 'slow' && o.item && this.roy) { const v = this.karts.find(q => q.id === o.k), b = this.karts.find(q => q.id === o.by); if (v && v.invT <= 0) cartRoyDamage(this, v, cartRoyDmgOf(o.item, 'slow'), b, o.item); } return e; };
     },
     update(s, dt) {
@@ -200,6 +206,11 @@ CART_OBJECTIVES.royale = {
         if (k.out && !r.poofed) { r.koT += dt; if (r.koT > 1.5) cartRoyPoof(s, k); }
         if (r.poofT > 0) r.poofT -= dt;
       }
+      // repair kits (they work in the boss fight too)
+      for (const o of R.kits) {
+        if (!o.alive) { o.t -= dt; if (o.t <= 0) { o.alive = 1; if (s.fx) s.fx.burst(o.gx, 1.2, o.gz, 'star', 8, '#5aff8a'); } continue; }
+        for (const k of K) { if (k.out || k.hp >= k.hpMax - 0.5) continue; const dx = k.x - o.gx, dz = k.z - o.gz; if (dx * dx + dz * dz < 7.3 && Math.abs(k.y - s.terrain.height(o.gx, o.gz)) < 2.5) { o.alive = 0; o.t = 18; cartRoyHeal(s, k, CART_ROY_HEAL.repair, 'repair'); Sound.play('pick', { vol: k.player ? 0.8 : 0.25, pitch: 1.2 }); break; } }
+      }
       if (R.phase === 2) return R.endNow;   // the final's boss fight (its rules drive it)
       // the storm: holds, then closes on the end point
       const Z = R.zone, ST = CART_ROYALE.storm, u = clamp((R.t - ST.start) / (ST.end - ST.start), 0, 1), e = u * u * (3 - 2 * u);
@@ -210,11 +221,6 @@ CART_OBJECTIVES.royale = {
         Z.tick = 0.5;
         const late = R.t > ST.end + 15 ? 2 : 1;
         for (const k of K) { if (k.out) continue; const d = Math.hypot(k.x - Z.x, k.z - Z.z); k.roy.inStorm = d > Z.r; if (d > Z.r) { k.roy.stormT += 0.5; cartRoyDamage(s, k, ST.dps * 0.5 * late, null, 'storm'); } }
-      }
-      // repair kits
-      for (const o of R.kits) {
-        if (!o.alive) { o.t -= dt; if (o.t <= 0) { o.alive = 1; if (s.fx) s.fx.burst(o.gx, 1.2, o.gz, 'star', 8, '#5aff8a'); } continue; }
-        for (const k of K) { if (k.out || k.hp >= k.hpMax - 0.5) continue; const dx = k.x - o.gx, dz = k.z - o.gz; if (dx * dx + dz * dz < 7.3 && Math.abs(k.y - s.terrain.height(o.gx, o.gz)) < 2.5) { o.alive = 0; o.t = 18; cartRoyHeal(s, k, CART_ROY_HEAL.repair, 'repair'); Sound.play('pick', { vol: k.player ? 0.8 : 0.25, pitch: 1.2 }); break; } }
       }
       // AI use their WATER when hurt
       for (const k of K) if (!k.player && !k.out && k.item === 'water' && k.hp < 72 && k.ai && k.ai.itemT > -2.5) k.ai.itemT = -3;
@@ -236,8 +242,9 @@ CART_OBJECTIVES.royale = {
     onHit(s, k, src, kind, o) {
       if (!s.roy) return;
       if (k.bossProxy) { if (s.rules.bossHit) s.rules.bossHit(s, src, kind, o); return; }
+      if (src === k) return;   // your own mines, slime and splashes only do their cartoon effect on you (HOLD MY WATER's backfire has no src: it hurts)
       const what = (o && (o.weapon || o.item)) || kind;
-      cartRoyDamage(s, k, cartRoyDmgOf(what, kind), src && src !== k ? src : null, what);
+      cartRoyDamage(s, k, cartRoyDmgOf(what, kind), src || null, what);
       if (!k.out) k.invT = Math.min(k.invT, CART_ROYALE.invT);
     },
     rank(s) {

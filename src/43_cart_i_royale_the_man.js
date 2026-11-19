@@ -200,8 +200,8 @@ CART_ARENA_RULES.man = {
     // fail: the results say THE MAN WINS
     const end0 = s.endBattle;
     s.endBattle = function () { const r = end0.call(this); if (this.roy && this.roy.phase === 2 && !this.roy.bossDefeated) { this.msgs.length = 0; this.banner('THE MAN WINS', '#ff6a3a', 3, 'RETRY starts at the Man fight'); } return r; };
-    s.roy.aimAt = (s2, k) => (B.active && !B.dead && k.player ? (cartManProxy(s2), B.px) : null);
-    if (s.opts.phase === 2) B.direct = true;
+    if (s.roy) s.roy.aimAt = (s2, k) => (B.active && !B.dead && k.player ? (cartManProxy(s2), B.px) : null);
+    if (s.opts.phase === 2 && s.roy) B.direct = true;   // (any other mode: just the arena and its hazards)
   },
   // phase 1 won: the boss wakes instead of the match ending
   royaleWon(s) { if (s.roy.phase === 2) return true; cartManBegin(s, false); return true; },
@@ -218,8 +218,11 @@ CART_ARENA_RULES.man = {
   // the autopilot circles the Man at weapon range, away from the embers
   aiGoal(s, k) {
     const B = s.boss; if (!B || !B.active || !k.player) return null;
-    const a = Math.atan2(k.x, k.z) + 0.6, D = k.wpn.def, rr = D.kind === 'ring' ? CART_MAN.hitR + D.range * 0.55 : 30;
-    return { goal: [Math.sin(a) * rr, Math.cos(a) * rr], prey: null };
+    // the orbit suits the weapon: rings and dashes close in, droppers and side guns skim his plinth, shooters stay out at 30 m
+    const a = Math.atan2(k.x, k.z) + 0.6, D = k.wpn.def, C = CART_MAN, rr = D.kind === 'ring' ? C.hitR + D.range * 0.55 : D.kind === 'dash' ? C.hitR + D.range * 0.6 : D.kind === 'drop' ? C.plinth + 3.6 : D.kind === 'side' ? C.hitR + 8 : 30;
+    // a forward weapon that is ready: turn in toward him to line up the shot (as a player would), then circle again
+    if (k.wpn.t <= 0 && /cone|shot|dash|target/.test(D.kind)) { const r = Math.hypot(k.x, k.z) || 1, o = B.aimG || (B.aimG = { goal: [0, 0], prey: null }); o.goal[0] = k.x / r * (C.plinth + 2); o.goal[1] = k.z / r * (C.plinth + 2); return o; }
+    const o = B.orbG || (B.orbG = { goal: [0, 0], prey: null }); o.goal[0] = Math.sin(a) * rr; o.goal[1] = Math.cos(a) * rr; return o;
   },
   onUpdate(s, dt, racing) {
     const B = s.boss, C = CART_MAN, M = s.man, P = s.player; if (!B) return;
@@ -230,7 +233,7 @@ CART_ARENA_RULES.man = {
     const live = racing && s.state === 'race';
     if (live && B.direct && !B.active && s.raceT > 0.2) cartManBegin(s, true);
     // phase 1 hazards: fire pits and ember vents
-    if (live && s.roy.phase !== 2) cartManHazards(s, dt);
+    if (live && (!s.roy || s.roy.phase !== 2)) cartManHazards(s, dt);
     if (!B.active) { if (M) M.burn = Math.max(0, M.burn - dt); return; }
     // fire on him grows as he weakens
     if (M) M.burn = B.dead ? Math.min(1, M.burn + dt * 0.6) : 0.08 + 0.45 * (1 - B.hp / B.max);
@@ -246,9 +249,9 @@ CART_ARENA_RULES.man = {
     if (B.ramT > 0) B.ramT -= dt;
     { const r = Math.hypot(P.x, P.z), into = -(P.vx * P.x + P.vz * P.z) / (r || 1); if (r < C.plinth + 2.4 && into > 9 && B.ramT <= 0) { B.ramT = 0.9; cartManDamage(s, (into - 7) * (P.boostT > 0 || P.dashT > 0 ? 1.5 : 1) * 0.9, 'ram'); if (s.fx) s.fx.spark(P.x, 1.5, P.z, 16, '#ffd890', 10); } }
     // mines dropped at his feet go off
-    for (const m of s.props.mines) if (m.alive && Math.hypot(m.gx, m.gz) < C.plinth + 2.8) { m.alive = 0; m.visible = false; cartManDamage(s, CART_ROY_DMG.sprinkles, 'sprinkles'); if (s.fx) s.fx.confetti(m.gx, 1, m.gz, 24); }
+    for (const m of s.props.mines) if (m.alive && Math.hypot(m.gx, m.gz) < C.plinth + 4.6) { m.alive = 0; m.visible = false; cartManDamage(s, CART_ROY_DMG.sprinkles, 'sprinkles'); if (s.fx) s.fx.confetti(m.gx, 1, m.gz, 24); }
     // a slime trail laid along his plinth makes him slip
-    for (const h of s.hazards) if (h.type === 'slime' && !h.manHit && Math.hypot(h.x, h.z) < C.plinth + 2.6) { h.manHit = true; if (!B.slimeT || B.slimeT <= 0) { B.slimeT = 0.8; cartManDamage(s, CART_ROY_DMG.slime, 'slime'); } }
+    for (const h of s.hazards) if (h.type === 'slime' && !h.manHit && Math.hypot(h.x, h.z) < C.plinth + 4.6) { h.manHit = true; if (!B.slimeT || B.slimeT <= 0) { B.slimeT = 0.8; cartManDamage(s, CART_ROY_DMG.slime, 'slime'); } }
     if (B.slimeT > 0) B.slimeT -= dt;
     // the attack cycle
     const rage = B.hp < B.max * 0.5, sp = rage ? 1.25 : 1;
@@ -316,7 +319,7 @@ CART_ARENA_RULES.man = {
     const B = s.boss, C = CART_MAN, M = s.man; if (!B) return;
     const sc = C.scale;
     // phase 1: the pits and vents
-    if (s.roy && s.roy.phase !== 2) {
+    if (!s.roy || s.roy.phase !== 2) {
       for (const [a, r] of C.pits) { const x = Math.sin(a) * r, z = Math.cos(a) * r; R.flat.flat(x, 0.08, z, 10, 10, t * 0.3, Sp.glow, C.fire, 0.55 + 0.15 * Math.sin(t * 7 + a), true); if (Math.random() < 0.7) s.fx.fire(x + (Math.random() - 0.5) * 7, 0.1, z + (Math.random() - 0.5) * 7, 1.6); }
       for (const v of B.vents) { if (v.warn) { const a = 0.5 + 0.5 * Math.sin(t * 16); R.flat.flat(v.x, 0.1, v.z, 11, 11, t * 2, Sp.warn, C.red, 0.5 + 0.4 * a, true); R.bbs.bb(v.x, 1.5, v.z, 4, 4, Sp.glow, C.fire, a, true); } if (v.fire >= 0) { for (let i = 0; i < 6; i++) s.fx.add(v.x + (Math.random() - 0.5) * 1.5, 0.5, v.z + (Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 3, 14 + Math.random() * 8, (Math.random() - 0.5) * 3, 1.0, 0.8, 0.3, C.ember, 1, 'flame', 1); R.bbs.streak(v.x, 6, v.z, 0, 1, 0, 12, 3, Sp.streak, C.fire, 0.8); } }
     }
@@ -354,12 +357,13 @@ CART_ARENA_RULES.man = {
   },
   royaleHud(s, ctx, W, H, top, left) {
     const B = s.boss; if (!B || !B.active) return;
-    const portrait = H > W, bw = Math.min(portrait ? 300 : 360, W - 40), x = W / 2 - bw / 2, y = portrait ? top + 140 : top + 4;
+    // portrait: under the health panel, left of the radar (the Man fills the middle of a tall screen); landscape: top centre
+    const portrait = H > W, bw = portrait ? Math.max(160, W - Math.max(14, insets.r + 6) - 86 - 22 - left) : Math.min(360, W - 40), x = portrait ? left + 4 : W / 2 - bw / 2, y = portrait ? top + 66 : top + 4, cx = x + bw / 2;
     ctx.save(); ctx.fillStyle = 'rgba(20,6,4,0.6)'; burnsRR(ctx, x - 10, y - 4, bw + 20, 40, 12); ctx.fill(); ctx.restore();
-    BurnsUI.text(ctx, 'THE MAN', W / 2, y + 7, 13, '#ffb070', { glow: '#ff5a1a' });
+    BurnsUI.text(ctx, 'THE MAN', cx, y + 7, 13, '#ffb070', { glow: '#ff5a1a' });
     cartRoyBar(ctx, x, y + 17, bw, 14, B.hp / B.max, B.st === 'rest' ? '#ffffff' : B.flash > 0 ? '#ffd890' : '#ff6a2a');
-    if (B.st === 'rest' && s.state === 'race') BurnsUI.text(ctx, 'WEAK POINT — HIT HIM NOW!', W / 2, y + 50, 13, '#ffffff', { glow: '#ffb020' });
-    else if (B.hp < B.max * 0.5 && !B.dead && s.state === 'race') BurnsUI.text(ctx, 'HE\'S ENRAGED', W / 2, y + 50, 11, '#ff8a6a', { ui: true });
+    if (B.st === 'rest' && s.state === 'race') BurnsUI.text(ctx, 'WEAK POINT — HIT HIM NOW!', portrait ? W / 2 : cx, portrait ? y + 86 : y + 50, 13, '#ffffff', { glow: '#ffb020' });
+    else if (B.hp < B.max * 0.5 && !B.dead && s.state === 'race') BurnsUI.text(ctx, 'HE\'S ENRAGED', cx, y + 50, 11, '#ff8a6a', { ui: true });
   },
   radar(s, ctx, P, sc) { const q = CART_ROY_T.p; P(0, 0, q); ctx.fillStyle = '#ff8a3a'; ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(3, CART_MAN.plinth * sc), 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,90,30,0.6)'; for (const [a, r] of CART_MAN.pits) { P(Math.sin(a) * r, Math.cos(a) * r, q); ctx.beginPath(); ctx.arc(q.x, q.y, 2.5, 0, TAU); ctx.fill(); } }
 };

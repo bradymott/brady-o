@@ -153,8 +153,9 @@ CART_RACE_RULES.plunger = {
     const P = s.plg; if (!P || !P.winner || !s.man) return null;
     const M = s.man.ch, sc = M.scale || 1, k = s.player, c = CART_PLG_T.cam;
     let dx = k.x - M.x, dz = k.z - M.z; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-    const a = Math.atan2(dx, dz) + (P.igniteT > 0 ? P.igniteT * 0.08 : 0), d = 36 * Math.max(0.8, sc);
-    c.tx = M.x; c.ty = M.y + 4.5 * sc + (P.igniteT > 0 ? 2 : 0); c.tz = M.z;
+    // landscape (a short view): closer and aimed higher so the burning Man fills the screen's height as in portrait
+    const wide = Game.cssW > Game.cssH, a = Math.atan2(dx, dz) + (P.igniteT > 0 ? P.igniteT * 0.08 : 0), d = (wide ? 24 : 36) * Math.max(0.8, sc);
+    c.tx = M.x; c.ty = M.y + (wide ? 6 : 4.5) * sc + (P.igniteT > 0 ? 2 : 0); c.tz = M.z;
     c.px = M.x + Math.sin(a) * d; c.py = M.y + 2 * sc; c.pz = M.z + Math.cos(a) * d; c.fov = 1.0;
     void fdt; return c;
   },

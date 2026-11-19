@@ -132,6 +132,13 @@ Love Parade's sub, drone, conga line and cannon each do all of these:
    - Shake: `s.shakeIt(a)` when the player is close (`CartKit.near(s, x, z, r)`).
    - Particles: `s.fx.confetti`, `.hearts`, `.notes`, `.spark`, `.dust`.
 
+### Balance targets (from Love Parade)
+
+- Hazard hits (spins, knocks) across a whole 8-kart, 3-lap race: roughly 5–20. The test fails above 60.
+- Soft effects (shoves, blinding) can be more frequent: Love Parade sees about 50 bass shoves and 10 confetti blinds per race.
+- Lap pace within about 10% of Neon Nights per km: Love Parade runs 44–46 s/km against Neon's 41–42.
+- Banners: a first-lap hint and a hazard's own banner must not overlap. Love Parade stores `L.hintT` when a hint shows and holds back the hazard banner for 2.3 s afterwards.
+
 ### Moving meshes
 
 - `CartKit.group(s, [['name', build(m, i), n]])` returns `{ name: [objs] }`.
@@ -150,7 +157,7 @@ The road edges must always read at night. Love Parade uses three layers:
 ## 5. Budgets and allocation rules
 
 - **Per view (iPhone):** at most 420k triangles and 120 draw calls, main pass and shadow pass together.
-  - Love Parade peaks at about … (see the C3 report).
+  - Love Parade peaks at 379k triangles (the start grid) and 76 draw calls (Nov 19); there is no shadow pass at night. Leave about 40k triangles of headroom for items and specials going off in the pack.
   - Instanced kinds cost 1–3 draws each.
   - Each static set piece is merged into 64 m chunks.
   - Watch the number of instanced kinds and pooled groups.
@@ -170,7 +177,37 @@ The road edges must always read at night. Love Parade uses three layers:
 
    It checks:
    - two full 8-kart races on autopilot (one in career mode): every kart finishes, nobody is stuck, and lap time per km is within range of the reference track;
+     (the race is held open until the last kart is in: normally the results come 9 s after the player finishes and the rest are estimated);
    - every hazard that fired also landed, and the hit count is not absurd;
    - the grid plus 10 pack views round the lap, against the peak triangle and draw budgets.
 3. Read the screenshots: `view-*.png`, `hazard-*.png`. Fix whatever is unreadable, unfair or dull.
 4. Start without the menus: `BRADY_CART.debug.start({ mode: 'career', track: '<id>' })`, or `mode: 'quick'`.
+
+## Royale arena (one per car; model: `src/43_cart_i_royale_sound.js`, THE SOUND CAMP)
+
+The royale rules (HP, damage, knock-outs, storm, repair kits, AI, HUD, results) live in `src/43_cart_i_royale.js` and work in any arena. A new royale arena only builds the world, its hazards and its registration. One file, `src/43_cart_i_royale_<name>.js` (sorts after `43_cart_i_royale.js`).
+
+1. **World:** `CartWorlds.arena_<id> = function (A, night) { const E = this.base(seed, [-235, -235, 235, 235], groundCol, rough); ... return this.finish(E); }`. The scene finds it by `'arena_' + id`.
+   - `Object.assign(E, { id, arena: A, sky, tod, music, night, R })`. `R` is the playable radius. Make it about 175–180 m (twice the old arenas).
+   - `E.walls = poly` (closed fence polygon), then `CartDecor.protos(E)`. Build meshes with `CartScene.mesh(api, x, z, yaw, m => {...; return { cols }}, { hi: true })` and repeated props with `api.instanceProto` / `api.instance`. Ground art goes in `api.paint`.
+   - Required spots: `E.spawn` (8 entries `{x, z, yaw}`, spread round a ring at r ≈ 140–146), `E.gifts` (about 16–20 `{x, z}`), `E.orbSpots` (about 40). Also `E.zones`, `E.flagSpots` and `E.captures` (one each, so the legacy objectives don't crash).
+   - `E.royale = { R: R - 4, x: 0, z: 0, ends: [[x, z]...], repairs: [[x, z]...], storm: { name, col }, avoid: [[x, z, r]...], route(x0, z0, tx, tz, G) }`:
+     - `ends`: where the storm can close (3–6 points, about 70–90 m out).
+     - `repairs`: about 6–8 repair-kit spots.
+     - `avoid` (optional): no-go circles for roaming AI.
+     - `route` (optional): only if walls block straight lines; it writes a detour goal into `G` and returns true.
+2. **Hazards:** `CART_ARENA_RULES.<id> = { music, onLoad(s), onUpdate(s, dt, racing), render(s, R), draw(s, R, Sp, t), lights(s, add), radar(s, ctx, P, sc) }`.
+   - Keep the state on `s.<short>`, preallocated in `onLoad`.
+   - Moving meshes go in one or two `BurnsGroup`s, posed in `render`.
+   - Telegraphs and effects go in `draw` as sprites and flats.
+   - Hazards hurt cars only through `s.hit(k, kind, null, { item: '<hazardId>', banner })`. Royale damage then comes from `CART_ROY_DMG[<hazardId>]`, so add each new hazard id to that table in `43_cart_i_royale.js` (≤ 30, typically 8–12). Each hazard must warn first (≥ 1 s), then hit.
+   - Gate the hazards with `live = racing && s.state === 'race' && !(s.obj && s.obj.ended)`.
+   - `radar` draws the arena's landmarks on the minimap (`P(x, z, CART_ROY_T.p)` → screen).
+3. **Register:**
+   - `CART_ARENAS.push({ id, name, sub, objectives: ['royale'], royale: true, levelCar: '<carId>', col, tod, blurb })`. `levelCar` puts that car's special in everyone's gift boxes.
+   - `CART_ROYALE_ARENAS.<carId> = '<id>'`.
+   - `CART_ARENA_ICONS.<id> = (ctx, s, t, col) => {...}` (a canvas icon for the menus).
+4. **Test:** start it with `debug.start({ mode: 'royale', arena: '<id>' })`.
+   - Add the arena to the `match` list in `tools/cart_royale_test.js` (`for (const arena of [...])`) and add its world views to `views`.
+   - Run `node tools/cart_royale_test.js <out> match 3`. The checks: matches ≤ 300 s, average first KO ≥ 20 s, autopilot survives ≥ 60 s, every KO has damage sources.
+   - Then run `shots`: peak ≤ 120 draws and ≤ 420k triangles.

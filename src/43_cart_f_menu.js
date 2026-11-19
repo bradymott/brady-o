@@ -16,6 +16,13 @@ function cartCycleVol(key) {
   if (key === 'music') Sound.setMusicVolume(st.music); else Sound.setSfxVolume(st.sfx);
   Save.save();
 }
+// the arenas the battle / objective grids and the power-ups guide list: Battle Royale arenas (A.royale: the Sound
+// Camp, the Man) are played only through the Battle Royale run, never picked here. Cached; rebuilt if arenas register late.
+const CART_MENU_ARENAS = { n: -1, list: [] };
+function cartMenuArenas() {
+  if (CART_MENU_ARENAS.n !== CART_ARENAS.length) { CART_MENU_ARENAS.n = CART_ARENAS.length; CART_MENU_ARENAS.list = CART_ARENAS.filter(a => !a.royale); }
+  return CART_MENU_ARENAS.list;
+}
 // a game update swaps the offline cache while the page is already running on the old one, which would leave new code
 // drawing the previous version's car models; reload once, from the menu, as soon as the new cache has taken over
 const CartFresh = { stale: false, check() { if (this.stale) { this.stale = false; location.reload(); } } };
@@ -105,7 +112,7 @@ class CartGuide {
       { label: 'SPECIALS', intro: 'Every car and every driver has a special. Only they find it in gift boxes.', rows: CART_CARS.filter(c => CART_SPECIALS[c.id]).map(c => row(CART_SPECIALS[c.id].id, c.name, luma(c.col) < 0.6 ? c.col2 : c.col)).concat(CART_DRIVERS.filter(d => d.special && CART_ITEMS[d.special]).map(d => row(d.special, d.short || d.name, d.col))) },   // C3: + the drivers' specials
       { label: 'ARENA POWERS', intro: 'Found in their own arena. Win all its objectives to get them in races.', rows: [] }
     ];
-    for (const A of CART_ARENAS) for (const p of A.powers || []) if (CART_ITEMS[p]) this.tabs[2].rows.push(row(p, A.name + (sv.mastered[A.id] ? ' ✓' : ''), A.col));
+    for (const A of cartMenuArenas()) for (const p of A.powers || []) if (CART_ITEMS[p]) this.tabs[2].rows.push(row(p, A.name + (sv.mastered[A.id] ? ' ✓' : ''), A.col));
     this.build();
   }
   build() {
@@ -180,6 +187,7 @@ const CART_GUIDE_GLOW = { glow: '#ff4fd8' };
 class KartMenuScene {
   constructor(o) {
     o = o || {};
+    if (typeof cartTidyArenas === 'function') cartTidyArenas();   // secret levels registered by later files (43_cart_h_career.js)
     this.t = 0; this.time = 0; this.state = o.state || 'mode';
     const sv = cartSave();
     this.drvSel = Math.max(0, CART_DRIVERS.findIndex(d => d.id === sv.driver));
@@ -318,14 +326,14 @@ class KartMenuScene {
       this.btns = [back];
     } else if (this.state === 'arena') {
       // a grid: 4 across in landscape, 2 in portrait, as many rows as the arenas need
-      const top = safeT + (P ? 100 : 56), bottom = H - safeB, n = CART_ARENAS.length, cols = Math.min(n, P ? 2 : 4), nr = Math.ceil(n / cols);
+      const top = safeT + (P ? 100 : 56), bottom = H - safeB, n = cartMenuArenas().length, cols = Math.min(n, P ? 2 : 4), nr = Math.ceil(n / cols);
       const cw = (W - safeL - safeR - (cols - 1) * 10) / cols, ch = (bottom - top - (nr - 1) * 10) / nr;
-      CART_ARENAS.forEach((a, i) => this.cards.push({ i, x: safeL + (i % cols) * (cw + 10), y: top + Math.floor(i / cols) * (ch + 10), w: cw, h: ch }));
+      cartMenuArenas().forEach((a, i) => this.cards.push({ i, x: safeL + (i % cols) * (cw + 10), y: top + Math.floor(i / cols) * (ch + 10), w: cw, h: ch }));
       this.btns = [back];
     } else if (this['layout_' + this.state]) {
       this['layout_' + this.state]({ W, H, P, safeT, safeB, safeL, safeR, back, setRect, sr, sv });
     } else if (this.state === 'objective') {
-      const A = CART_ARENAS[this.arenaSel], top = safeT + (P ? 110 : 70), bottom = H - safeB, n = A.objectives.length, cols = P ? 1 : 2, nr = Math.ceil(n / cols);
+      const A = cartMenuArenas()[this.arenaSel], top = safeT + (P ? 110 : 70), bottom = H - safeB, n = A.objectives.length, cols = P ? 1 : 2, nr = Math.ceil(n / cols);
       const cw = (W - safeL - safeR - (cols - 1) * 12) / cols, ch = Math.min(120, (bottom - top - (nr - 1) * 10) / nr);
       A.objectives.forEach((id, i) => this.cards.push({ i, id, x: safeL + (i % cols) * (cw + 12), y: top + Math.floor(i / cols) * (ch + 10), w: cw, h: ch }));
       this.btns = [back];
@@ -411,7 +419,7 @@ class KartMenuScene {
     else if (this.state === 'cup') this.start({ mode: 'gp', cup: CART_CUPS[i].id, race: 0 });
     else if (this.state === 'track') this.start({ mode: 'tt', track: CART_TRACK_ORDER[i] });
     else if (this.state === 'arena') { this.arenaSel = i; this.objSel = 0; this.state = 'objective'; Sound.play('select'); this.build(); }
-    else if (this.state === 'objective') this.start({ mode: 'battle', arena: CART_ARENAS[this.arenaSel].id, objective: CART_ARENAS[this.arenaSel].objectives[i] });
+    else if (this.state === 'objective') this.start({ mode: 'battle', arena: cartMenuArenas()[this.arenaSel].id, objective: cartMenuArenas()[this.arenaSel].objectives[i] });
   }
   /* ---------- 3D: the showroom stage + cached driver portraits ---------- */
   // aim the camera so a vertical cylinder on the turntable axis (radius rh, from y0 to y1) fills a screen rectangle (CSS px):
@@ -565,8 +573,10 @@ class KartMenuScene {
       R.begin(env);
       CART_DRIVERS.forEach((d, i) => {
         const D = CartDrivers.model(d.id), ch = new BurnsChar(D.model); ch.scale = D.man ? 0.14 : 1; ch.yaw = 0.3; ch.play(D.man ? 'idle' : 'wave', {}, true); ch.update(0.4); ch.faceOverride = D.man ? -1 : 3; ch.compute();
-        const headY = (D.model.headY || 1.62) * ch.scale - (D.man ? 0.0 : 0.12), bg = burnsRGBf(shade(d.col, -0.55));
-        R.portrait({ x: (i % cols) * cw, y: Math.floor(i / cols) * chh, w: cw, h: chh }, env, BURNS_ATLAS.T, bg, headY, RR => BurnsSkinActor.draw(null, RR, d.type, ch, null, 0.6) || RR.skin(D.model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
+        let headY = (D.model.headY || 1.62) * ch.scale - (D.man ? 0.0 : 0.12); const bg = burnsRGBf(shade(d.col, -0.55));
+        // C3: a skinned character (the realistic Brady is taller than the cartoon rig) is framed on its own head joint
+        try { const SK = typeof BurnsSkinActor !== 'undefined' && BurnsSkinActor.of(BurnsSkinActor.kindOf(d.id), ch); if (SK && SK.sync(ch)) { const hp = SK.S.headPos([0, 0, 0]); if (hp[1] > 0.8 && hp[1] < 3) headY = hp[1] - 0.16; } } catch (e) { /* keep the rig's head height */ }
+        R.portrait({ x: (i % cols) * cw, y: Math.floor(i / cols) * chh, w: cw, h: chh }, env, BURNS_ATLAS.T, bg, headY, RR => BurnsSkinActor.draw(null, RR, d.type, ch, null, 1.1) || RR.skin(D.model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
       });
       R.post.noFx = [0, 0, 1, 1];
       R.end(env, { fires: [], bloom: 0 });
@@ -796,7 +806,7 @@ class KartMenuScene {
     this.title(ctx, 'BATTLE · PICK AN ARENA');
     const sv = cartSave();
     for (const c of this.cards) {
-      const A = CART_ARENAS[c.i], on = c.i === this.arenaSel, small = c.h < 150, fs = Math.min(18, c.w * 0.07, c.h * 0.11);
+      const A = cartMenuArenas()[c.i], on = c.i === this.arenaSel, small = c.h < 150, fs = Math.min(18, c.w * 0.07, c.h * 0.11);
       this.drawCard(ctx, c, on, A.col);
       cartArenaIcon(ctx, A.id, c.x + c.w / 2, c.y + c.h * (small ? 0.3 : 0.34), Math.min(c.w, c.h) * (small ? 0.18 : 0.22), this.t, A.col);
       BurnsUI.text(ctx, A.name, c.x + c.w / 2, c.y + c.h * (small ? 0.58 : 0.62), fs, A.col, {});
@@ -806,7 +816,7 @@ class KartMenuScene {
     }
   }
   drawObjectives(ctx) {
-    const A = CART_ARENAS[this.arenaSel], sv = cartSave();
+    const A = cartMenuArenas()[this.arenaSel], sv = cartSave();
     this.title(ctx, 'PICK AN OBJECTIVE', A.name);
     for (const c of this.cards) {
       const O = CART_OBJECTIVES[c.id], on = c.i === this.objSel, wins = sv.wins[A.id + ':' + c.id] || 0;

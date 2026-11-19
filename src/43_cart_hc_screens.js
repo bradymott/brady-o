@@ -242,11 +242,11 @@ Object.assign(KartMenuScene.prototype, {
       const C = CART_CARS[c.i], L = CART_SECRET_LEVELS[C.id], p = cartProg(C.id), done = cartCarComplete(C.id), col = C.col === '#2a2236' ? C.col2 : C.col;
       ctx.save(); if (c.disabled) ctx.globalAlpha = 0.78;
       this.drawCard(ctx, c, c.open && c.ready, col);
-      const ih = c.h * 0.56;
+      const ih = Math.min(c.h * 0.56, c.h - 60);   // short portrait cards: room for the two names above the chip
       if (c.open && c.ready) { ctx.save(); burnsRR(ctx, c.x + 3, c.y + 3, c.w - 6, ih, 9); ctx.clip(); const g = ctx.createLinearGradient(c.x, c.y, c.x, c.y + ih); g.addColorStop(0, rgba(cartArena(L.arena).col, 0.35)); g.addColorStop(1, 'rgba(10,6,24,0.2)'); ctx.fillStyle = g; ctx.fillRect(c.x, c.y, c.w, ih + 4); ctx.restore(); cartArenaIcon(ctx, L.arena, c.x + c.w / 2, c.y + ih * 0.52, Math.min(c.w, ih) * 0.3, t, cartArena(L.arena).col); }
       else { this.drawThumb(ctx, C.id, c.x + 3, c.y + 3, c.w - 6, ih, 9); ctx.fillStyle = 'rgba(8,4,18,0.55)'; burnsRR(ctx, c.x + 3, c.y + 3, c.w - 6, ih, 9); ctx.fill(); if (!c.open) cartLockIcon(ctx, c.x + c.w / 2, c.y + ih * 0.5, Math.min(16, ih * 0.22), '#ffd84a'); }
-      BurnsUI.text(ctx, cartSecretName(C.id), c.x + c.w / 2, c.y + ih + 15, Math.min(11.5, c.w * 0.075), c.open && c.ready ? '#ffffff' : 'rgba(255,255,255,0.75)', { ui: true, sw: 2.5 });
-      BurnsUI.text(ctx, C.name, c.x + c.w / 2, c.y + ih + 30, Math.min(9.5, c.w * 0.065), col, CART_TXT_CU);
+      BurnsUI.text(ctx, cartSecretName(C.id), c.x + c.w / 2, c.y + ih + 14, Math.min(11.5, c.w * 0.075), c.open && c.ready ? '#ffffff' : 'rgba(255,255,255,0.75)', { ui: true, sw: 2.5 });
+      BurnsUI.text(ctx, C.name, c.x + c.w / 2, c.y + ih + 28, Math.min(9.5, c.w * 0.065), col, CART_TXT_CU);
       const won = cartSecretGames(C.id).filter(g => g && p.secret[g]).length;
       const tag = done ? '★ GAME WON' : !c.ready ? (c.open ? 'UNLOCKED · COMING SOON' : 'COMING SOON') : c.open ? won + ' / 3 WON' + (c.full ? '' : ' · 1 COMING SOON') : 'WIN ITS ROYALE';
       this.chip(ctx, tag, c.x + c.w / 2, c.y + c.h - 12, done ? '#ffd84a' : !c.ready ? '#c8b8e0' : c.open ? '#7aff8a' : '#ff9ad8');
@@ -303,7 +303,7 @@ Object.assign(KartMenuScene.prototype, {
     });
     this.btns.push({ x: px + pw / 2 - 80, y: py + ph - 52, w: 160, h: 42, label: 'DONE ✓', primary: true, fn: () => { this.back(); } });
     this.btns.push(back);
-    if (P) setRect(safeL, Math.max(96, insets.t + 92), W - safeR, py - 8); else setRect(safeL, safeT + 44, px - 16, H - safeB);
+    if (P) setRect(safeL, Math.max(96, insets.t + 92), W - safeR, py - 8); else setRect(safeL + 10, safeT + 52, px - 24, H - safeB - 30);   // a margin: the car's nose must not run off the bottom
   },
   draw_garage(ctx) {
     const C = CART_CARS[this.carSel], G = this.garRect, p = cartProg(C.id), free = cartPointsFree(C.id), D = CART_DRIVERS[this.drvSel], parts = cartStatParts(C.id, D && D.id);
@@ -335,7 +335,9 @@ Object.assign(KartMenuScene.prototype, {
     ];
     if (kind === 'royale' && cartSecretOpenable(car)) this.btns[0].label = 'SECRET LEVEL ▶';
     this._conf = null;
-    if (P) setRect(safeL, H * 0.3, W - safeR, y - 70); else setRect(W * 0.28, safeT + 96, W * 0.72, y - 46);
+    // portrait: the car, then (royale) SECRET LEVEL UNLOCKED, then the medal and its three lines, all above the buttons
+    this._prizeY = y;
+    if (P) setRect(safeL, H * 0.3, W - safeR, y - (kind === 'royale' ? 220 : 152)); else setRect(W * 0.25, safeT + 70, W * 0.75, y - 12);
   },
   afterPrize() {
     Sound.play('select'); const car = CART_CARS[this.carSel].id, kind = this.kind || 'career';
@@ -351,14 +353,14 @@ Object.assign(KartMenuScene.prototype, {
     BurnsUI.text(ctx, C.name + (kind === 'career' ? ' burned the Man!' : ' destroyed the Man!'), W / 2, y + 28, 13, '#ffffff', CART_TXT_U);
     // the medal: +1 STAT POINT
     // portrait: under the car; landscape: beside it (the car turns in the middle third)
-    const mx = P ? W / 2 : W * 0.86, my = P ? H - Math.max(14, insets.b + 8) - 50 - 70 : H * 0.42, r = P ? 26 : 30;
+    const mx = P ? W / 2 : W * 0.86, my = P ? (this._prizeY || H - 84) - 100 : H * 0.42, r = P ? 26 : 30;
     ctx.save(); ctx.shadowColor = '#ffd84a'; ctx.shadowBlur = 20 + 8 * Math.sin(t * 5); const g = ctx.createRadialGradient(mx - r * 0.3, my - r * 0.3, 2, mx, my, r); g.addColorStop(0, '#fff6c0'); g.addColorStop(1, '#d89a1a'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, r, 0, TAU); ctx.fill(); ctx.restore();
     BurnsUI.text(ctx, '+1', mx, my + 1, r * 0.8, '#5a2a00', { stroke: false });
     BurnsUI.text(ctx, 'STAT POINT', mx, my + r + 15, 14, '#ffd84a', {});
     BurnsUI.text(ctx, 'for ' + C.name, mx, my + r + 32, 11, '#ffffff', CART_TXT_U);
     BurnsUI.text(ctx, 'spend it in the garage', mx, my + r + 47, 10, 'rgba(255,255,255,0.7)', CART_TXT_U);
     if (kind === 'royale') {
-      const ux = P ? W / 2 : W * 0.14, uy = P ? my - r - 40 : H * 0.42;
+      const ux = P ? W / 2 : W * 0.14, uy = P ? my - r - 66 : H * 0.42;
       BurnsUI.text(ctx, 'SECRET LEVEL', ux, uy, 14, '#9ad8ff', { glow: '#3a6aff' });
       BurnsUI.text(ctx, 'UNLOCKED!', ux, uy + 17, 14, '#9ad8ff', { glow: '#3a6aff' });
       BurnsUI.text(ctx, cartSecretName(C.id) + (cartSecretOpenable(C.id) ? '' : ' · coming soon'), ux, uy + 36, 10.5, '#ffffff', CART_TXT_U);
@@ -375,7 +377,7 @@ Object.assign(KartMenuScene.prototype, {
       { x: W / 2 - bw - 6, y, w: bw, h: 46, label: 'HOME', fn: () => { Sound.play('back'); this.state = 'mode'; this.build(); } }
     ];
     this._conf = null;
-    if (P) setRect(safeL, H * 0.3, W - safeR, y - 90); else setRect(W * 0.26, safeT + 100, W * 0.74, y - 40);
+    if (P) setRect(safeL, H * 0.3, W - safeR, y - 90); else setRect(W * 0.24, safeT + 78, W * 0.76, y - 30);
   },
   draw_complete(ctx) {
     const W = Game.cssW, H = Game.cssH, P = this.portrait, C = CART_CARS[this.carSel], t = this.t, won = CART_CARS.filter(c => cartCarComplete(c.id)).length;

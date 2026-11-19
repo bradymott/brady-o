@@ -13,6 +13,9 @@
    these names with const/let (the bundle is one scope):
      CART_CAREER_TRACKS[carId] = trackId   the car's career level (a CART_TRACKS id); 'man' = the career final
      CART_ROYALE_ARENAS[carId] = arenaId   the car's royale arena (a CART_ARENAS id); 'man' = the royale final
+     CART_SECRET_LEVELS[carId] = { arena, game }   the car's secret level: arena = a CART_ARENAS id, game = its own
+                                           CART_OBJECTIVES id (null until built: shown "coming soon"); Vibe Check and
+                                           Glow Grab are added automatically (exactly three games)
      CART_STAGE_MODES.royale = true        set by the royale file once new CartRaceScene({ mode: 'royale', arena })
                                            plays a royale; until then royale stages run as Vibe Check (mode 'battle')
      CART_RACE_RULES[id] = rules           race rules picked with opts.final = id (same hooks as CART_ARENA_RULES,
@@ -34,13 +37,15 @@ for (const id in CART_STANDIN_TRACKS) if (!CART_CAREER_TRACKS[id]) CART_CAREER_T
 for (const id in CART_STANDIN_ARENAS) if (!CART_ROYALE_ARENAS[id]) CART_ROYALE_ARENAS[id] = CART_STANDIN_ARENAS[id];
 /* secret levels: one per car, exactly three mini-games (its own, Vibe Check, Glow Grab). arena null = not built yet;
    game null = the level's own game is not built yet ("coming soon", never faked) */
-const CART_SECRET_LEVELS = {
+var CART_SECRET_LEVELS = (typeof CART_SECRET_LEVELS !== 'undefined' && CART_SECRET_LEVELS) || {};
+const CART_SECRET_DEFAULTS = {
   snail: { arena: 'skate', game: 'trick' }, shark: { arena: 'mx', game: 'race' }, heart: { arena: 'playa', game: null },
   whale: { arena: 'deep', game: 'pearl' }, jelly: { arena: 'moon', game: 'crater' }, duck: { arena: 'mud', game: 'rescue' },
   pyramid: { arena: 'temple', game: 'relic' },
   fish: { arena: null, game: null, soon: 'ROLLER RINK' }, octo: { arena: null, game: null, soon: 'THE FORGE' }, dragon: { arena: null, game: null, soon: 'JOUSTING GROUNDS' },
   cupcake: { arena: null, game: null, soon: 'CANDY CRATER' }, galleon: { arena: null, game: null, soon: 'TREASURE ISLE' }
 };
+for (const id in CART_SECRET_DEFAULTS) if (!CART_SECRET_LEVELS[id]) CART_SECRET_LEVELS[id] = CART_SECRET_DEFAULTS[id];
 const CART_STAT_KEYS = ['speed', 'accel', 'handling', 'weight'];
 const CART_RUN_KINDS = { career: { name: 'CAREER', final: 'BURN THE MAN', col: '#ffd84a' }, royale: { name: 'BATTLE ROYALE', final: 'THE MAN', col: '#ff4f8a' } };
 const CART_RUN_LEN = 13;   // the car's own level + the other eleven + the final
@@ -49,10 +54,11 @@ const CART_RUN_LEN = 13;   // the car's own level + the other eleven + the final
    and a scene asked for one plays Vibe Check, see the CartRaceScene constructor). Secret-level arenas offer exactly
    their three games. */
 const CART_RETIRED_OBJECTIVES = { hill: 1, flag: 1 };
+// re-runnable (cheap, not per frame): runs at load and again whenever a menu opens or a secret stage starts, so a
+// secret level / arena registered by a later file (CART_SECRET_LEVELS[car] = { arena, game }) is picked up
 function cartTidyArenas() {
   for (const A of CART_ARENAS) {
-    if (A._tidy) continue; A._tidy = true;
-    A.objectives = A.objectives.filter(o => !CART_RETIRED_OBJECTIVES[o]);
+    if (!A._tidy) { A._tidy = true; A.objectives = A.objectives.filter(o => !CART_RETIRED_OBJECTIVES[o]); }
     for (const car in CART_SECRET_LEVELS) { const L = CART_SECRET_LEVELS[car]; if (L.arena !== A.id) continue; A.secretOf = car; A.objectives = cartSecretGames(car).filter(Boolean); }
   }
 }
@@ -104,7 +110,7 @@ function cartSecretReady(car) { const G = cartSecretGames(car); return G.length 
 function cartSecretOpenable(car) { return cartSecretGames(car).length === 3; }   // its arena exists (its own game may still be coming)
 function cartSecretUnlocked(car) { return (cartProg(car).royaleWon | 0) > 0; }
 function cartSecretName(car) { const L = CART_SECRET_LEVELS[car]; return L && L.arena ? cartArena(L.arena).name : (L && L.soon) || 'SECRET LEVEL'; }
-function cartSecretOpts(car, game) { const L = CART_SECRET_LEVELS[car], sv = cartSave(); return { mode: 'battle', arena: L.arena, objective: game, car, driver: sv.driver, autoGas: sv.autoGas !== false, run: { car, kind: 'secret', game, stage: 0, owner: car } }; }
+function cartSecretOpts(car, game) { cartTidyArenas(); const L = CART_SECRET_LEVELS[car], sv = cartSave(); return { mode: 'battle', arena: L.arena, objective: game, car, driver: sv.driver, autoGas: sv.autoGas !== false, run: { car, kind: 'secret', game, stage: 0, owner: car } }; }
 function cartSecretWon(car) { const G = cartSecretGames(car), p = cartProg(car); return G.length === 3 && G.every(g => g && p.secret[g]); }
 // the game is won with a car once its Career, Battle Royale and all three secret games are won
 function cartCarComplete(car) { const p = cartProg(car); return (p.careerWon | 0) > 0 && (p.royaleWon | 0) > 0 && cartSecretWon(car); }
@@ -135,6 +141,8 @@ function cartKartStats(car, drv, player) {
 }
 // rivals sharpen a little with every stat point the player drives with (a maxed car must stay beatable)
 function cartAiScale(s) { return s && s.carId ? 0.007 * cartPointsUsed(s.carId) : 0; }
+
+function cartPlayerRow(res) { for (let i = 0; i < res.length; i++) if (res[i].player) return i; return -1; }
 
 /* ---------------- a stage's result ----------------
    called once when a run stage reaches its results; records the place, advances the run, awards points */
@@ -203,8 +211,10 @@ const CartCareer = {
     // standings
     const rx = wide ? P.x + 200 : P.x + 16, rw = wide ? P.w - 216 : P.w - 32, ry0 = wide ? P.y + 46 : vy + (o.stale ? 50 : 40), rh = wide ? 24 : 21, bottom = P.y + P.h - 64;
     const unit = s.plg ? ' ⚡' : '', isB = s.isBattle && !s.isRace;
-    for (let i = 0; i < s.results.length; i++) {
-      const r = s.results[i], y = ry0 + i * rh; if (y + rh / 2 > bottom) break;
+    // rows that fit; when the list is cut, the last row shown is always the player's
+    const n = s.results.length, fit = Math.max(1, Math.min(n, Math.floor((bottom - ry0) / rh + 0.5))), meI = cartPlayerRow(s.results);
+    for (let j = 0; j < fit; j++) {
+      const i = j === fit - 1 && meI >= fit ? meI : j, r = s.results[i], y = ry0 + j * rh;
       ctx.fillStyle = r.player ? 'rgba(255,216,74,0.2)' : i < 3 && !o.final && run.kind !== 'secret' ? 'rgba(122,255,138,0.07)' : 'rgba(255,255,255,0.05)';
       burnsRR(ctx, rx, y - rh / 2 + 2, rw, rh - 4, 7); ctx.fill();
       BurnsUI.text(ctx, cartOrdinal(r.rank), rx + 20, y, 11, r.rank === 1 ? '#ffd84a' : '#ffffff', CART_TXT_C);

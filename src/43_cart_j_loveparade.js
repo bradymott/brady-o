@@ -223,14 +223,14 @@ const LpMesh = {
 
 /* ---------------- the rules: hazards and enemies at run time ---------------- */
 const LP_SUB = { period: 8, tele: 2, speed: 34, reach: 30, band: 1.5, push: 9.5 };
-const LP_DRONES = 3, LP_MINES = 8, LP_DANCERS = 8, LP_CANNON = { period: 5.6, tele: 1.1, len: 27, half: 0.42 };
+const LP_DRONES = 4, LP_MINES = 10, LP_DANCERS = 8, LP_CANNON = { period: 5.6, tele: 1.1, len: 27, half: 0.42 };
 CART_TRACK_RULES.loveparade = {
   onLoad(s) {
     const E = s.E, lp = E.lp, T = s.T || s.TR;
     const G = CartKit.group(s, [['cones', LpMesh.cone, 4], ['drones', LpMesh.drone, LP_DRONES], ['mines', LpMesh.mine, LP_MINES], ['bodies', LpMesh.dancer, LP_DANCERS], ['legs', LpMesh.leg, LP_DANCERS * 2], ['barrels', LpMesh.barrel, 4]]);
     const L = s.lp = { G, subs: [], drones: [], mines: [], conga: null, cannons: [], blind: 0, said: {} };
     lp.subs.forEach((q, i) => L.subs.push(Object.assign({}, q, { off: i * 2.5, t0: -99, R: 0, mask: 0, live: false, beat: -1, cone: G.cones[i] })));
-    for (let i = 0; i < LP_DRONES; i++) L.drones.push({ i, obj: G.drones[i], s: lp.S.chicane0 + i * 30, d: 0, h: 5.8, vs: 0, cool: 1.5 + i * 1.1, tgt: null, mode: 'patrol', x: 0, y: 0, z: 0, yaw: 0, ph: i * 2.1 });
+    for (let i = 0; i < LP_DRONES; i++) L.drones.push({ i, obj: G.drones[i], s: lp.S.chicane0 + i * 24, d: 0, h: 5.8, vs: 0, cool: 1.5 + i * 1.1, tgt: null, mode: 'patrol', x: 0, y: 0, z: 0, yaw: 0, ph: i * 2.1 });
     for (let i = 0; i < LP_MINES; i++) L.mines.push({ obj: G.mines[i], live: false, t: 0, x: 0, z: 0, y0: 0, fall: 0.9, life: 7.5, landed: false, owner: null });
     const g = T.at(lp.crossing.s, {});
     L.conga = { s: lp.crossing.s, x: g.x, z: g.z, nx: g.nx, nz: g.nz, tx: g.tx, tz: g.tz, hw: g.hw, dir: 1, head: -g.hw - 6, state: 'walk', wait: 0, speed: 4.2, gap: 1.7, ds: [], cool: [] };
@@ -266,7 +266,7 @@ CART_TRACK_RULES.loveparade = {
     // blinded by confetti: a storm of paper over the screen, clearing from the middle
     if (L.blind > 0) { const a = Math.min(1, L.blind * 1.2), n = 90, tt = s.time; ctx.save(); for (let i = 0; i < n; i++) { const u = (i * 0.618 + tt * (0.25 + (i % 5) * 0.06)) % 1, x = ((i * 97) % 100) / 100 * W + Math.sin(tt * 3 + i) * 20, y = u * (H + 40) - 20, cx = x - W / 2, cy = y - H / 2, far = Math.min(1, Math.hypot(cx / W, cy / H) * 2.4); ctx.globalAlpha = a * (0.35 + 0.65 * far); ctx.fillStyle = LP_CONFETTI[i % 7]; ctx.save(); ctx.translate(x, y); ctx.rotate(tt * 4 + i); ctx.fillRect(-7, -4, 14, 8); ctx.restore(); } ctx.restore(); }
     // first-lap hints as each hazard comes up
-    const hint = (key, sv, text, sub) => { if (L.said[key] || p.lap > 1) return; const ds = CartKit.ds(s.T, p.loc.s, sv); if (ds > 0 && ds < 70) { L.said[key] = true; s.banner(text, '#ff9ad0', 2.0, sub); } };
+    const hint = (key, sv, text, sub) => { if (L.said[key] || p.lap > 1) return; const ds = CartKit.ds(s.T, p.loc.s, sv); if (ds > 0 && ds < 70) { L.said[key] = true; L.hintT = s.time; s.banner(text, '#ff9ad0', 2.0, sub); } };
     if (s.state === 'race' && s.T) { const S = s.E.lp.S; hint('subs', L.subs[0].s, 'BASS DROPS AHEAD!', 'HOP on the drop and the wave passes under'); hint('drones', S.chicane0, 'CUPID DRONES!', 'steer off the heart targets'); hint('conga', L.conga.s, 'CONGA CROSSING!', 'brake or find the gap'); hint('cannons', L.cannons[0].s, 'CONFETTI CANNONS!', 'pass while they reload'); }
   }
 };
@@ -317,7 +317,7 @@ function lpDrones(s, L, dt, racing) {
     if (d.tgt) {
       const k = d.tgt; d.chase += dt;
       const lead = Math.max(8, k.speed * 1.15); goalS = k.loc.s + lead; goalD = k.loc.d;
-      if (d.chase > 0.6 && Math.abs(CartKit.ds(T, d.s, goalS)) < 6) { lpDropMine(s, L, d, k); d.tgt = null; d.cool = 2.6 + Math.random() * 1.6; d.mode = 'patrol'; }
+      if (d.chase > 0.6 && Math.abs(CartKit.ds(T, d.s, goalS)) < 6) { lpDropMine(s, L, d, k); d.tgt = null; d.cool = 1.8 + Math.random() * 1.2; d.mode = 'patrol'; }
       else if (d.chase > 3.5 || k.out || k.finished) { d.tgt = null; d.cool = 1.2; }
     }
     // fly: fast along the course toward the goal, sway, bank
@@ -331,7 +331,8 @@ function lpDropMine(s, L, d, k) {
   const T = s.T || s.TR, g = T.at(k.loc.s + Math.max(14, k.speed * 1.0), LP_T.at), dd = clamp(k.loc.d, -g.hw + 1.5, g.hw - 1.5);
   m.live = true; m.t = 0; m.landed = false; m.x = g.x + g.nx * dd; m.z = g.z + g.nz * dd; m.y0 = d.y; m.sx = d.x; m.sz = d.z; m.owner = d; m.mask = 0;
   CartKit.fired(s, 'heartmine'); cartIxSound(s, 'throw', m.x, m.z, 0.5, 1.4); cartIxSound(s, 'cartSparkle', m.x, m.z, 0.4, 1.3);
-  if (k.player) s.banner('HEART MINE INCOMING!', '#ff4f8a', 1.0, 'steer off the target', true);
+  if (k.player) L.said.drones = true;   // the drop itself teaches it: no first-lap hint on top of it
+  if (k.player && !(s.time - (L.hintT || -9) < 2.3)) s.banner('HEART MINE INCOMING!', '#ff4f8a', 1.0, 'steer off the target', true);
 }
 function lpMines(s, L, dt) {
   for (const m of L.mines) {
@@ -345,7 +346,7 @@ function lpMines(s, L, dt) {
     }
     if (m.live && m.landed) {
       cartIxObs(s, m.x, m.z, 1.8);
-      for (const k of s.karts) { if (k.out || k.air) continue; if (Math.hypot(k.x - m.x, k.z - m.z) < 1.7) { lpMinePop(s, m, k); break; } }
+      for (const k of s.karts) { if (k.out || k.air) continue; if (Math.hypot(k.x - m.x, k.z - m.z) < 1.9) { lpMinePop(s, m, k); break; } }
       if (m.t > m.life) { m.live = false; if (s.fx) s.fx.burst(m.x, gy + 0.8, m.z, 'heart', 6, '#ff4f8a'); }
     } else if (m.live && u > 0.4) cartIxObs(s, m.x, m.z, 2.2);
     if (o) { o.live = m.live; o.visible = m.live; o.x = lerp(m.sx, m.x, u); o.z = lerp(m.sz, m.z, u); o.y = m.landed ? gy : lerp(m.y0 - 1, gy, u * u); o.yaw = m.t * (m.landed ? 0.8 : 4); o.pitch = 0; o.roll = 0; o.scale = m.landed ? 1.7 + Math.pow(Math.max(0, Math.sin(m.t * 6)), 8) * 0.15 : 1.4; }
