@@ -174,7 +174,9 @@ const GhsMesh = {
     m.color('#5aa040').shine(2); m.ellipsoid(0, 0, r, r + 0.4, 2.6, r + 0.4, { seg: 28, rings: 8, phi1: Math.PI / 2 });
     m.color('#ff6a8a').shine(3); m.disc(0, 0.02, r, r - 0.1, 28, { both: true });
     m.color('#e8506a'); m.ellipsoid(0, 0.4, r * 1.25, 1.6, 0.6, 1.6, { seg: 10, rings: 5 });
-    m.color('#fff4c8').shine(1); for (let i = 0; i < 22; i++) { const a = i / 22 * TAU; if (Math.cos(a) < -0.7) continue; m.limb(Math.sin(a) * (r + 0.2), 0, r + Math.cos(a) * (r + 0.2), Math.sin(a) * (r + 1.3), -0.3, r + Math.cos(a) * (r + 1.3), 0.2, 0.04, { seg: 4 }); }
+    m.color('#3a7a2a').shine(2); m.torus(0, 0, r, r + 0.3, 0.5, { seg: 32, tseg: 6 });
+    m.color('#c8304a').shine(2); m.disc(0, 0.04, r, r * 0.55, 20, { both: true });
+    m.color('#fff4c8').shine(1); for (let i = 0; i < 28; i++) { const a = i / 28 * TAU; if (Math.cos(a) < -0.75) continue; m.limb(Math.sin(a) * (r + 0.4), 0, r + Math.cos(a) * (r + 0.4), Math.sin(a) * (r + 2.6), -0.5, r + Math.cos(a) * (r + 2.6), 0.32, 0.05, { seg: 5 }); }
     m.shine(0);
   },
   // a shaker (upright, forward +z): a fat glass body, a domed cap full of holes; i 0 = salt (white), 1 = pepper (dark)

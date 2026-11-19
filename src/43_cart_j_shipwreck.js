@@ -347,7 +347,7 @@ function swbWorld(id, D) {
   for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + 0.3, b = T.bounds, x = (b.x0 + b.x1) / 2 + Math.sin(a) * 230, z = (b.z0 + b.z1) / 2 + Math.cos(a) * 230; if (CartWorlds.clear(T, x, z, 40)) E.terrain.add(CartFeat.mound(x, z, 30, 5, { col: '#d0c6a8' })); }
   // gift rows, boost pads (one in the hull's belly, one on the hook's exit, one down the drive), the grid
   const f = s => wrap(s) / T.L;
-  CartKit.gifts(E, T, [f(sOf(-30, 20)), f(S.broad - 55), f(S.gallows + 55), f(S.krakB + 45), f(S.crab - 52)]);
+  CartKit.gifts(E, T, [f(sOf(-29, -5)), f(S.broad - 55), f(S.gallows + 55), f(S.krakB + 45), f(S.crab - 52)]);
   CartKit.boosts(E, T, [[f(S.hull), 0], [f(S.krakB + 25), 0.35], [f(sOf(-27, -150)), -0.3]]);
   CartKit.grid(E, T);
   return CartKit.finish(E);
@@ -401,7 +401,7 @@ const SwbMesh = {
 };
 
 /* ---------------- the rules: hazards and enemies at run time ---------------- */
-const SWB_GUN = { period: 6.6, warn: 1.4, speed: 28, r: 1.7, push: 11 };
+const SWB_GUN = { period: 6.6, warn: 1.4, speed: 28, r: 2.0, push: 11 };
 const SWB_ANCHOR = { period: 4.4, amp: 1.0, len: 14.7, pivot: 16.2, low: 3.0, r: 2.3 };
 const SWB_ARM = { period: 8.4, rumble: 0.7, rise: 1.25, slam: 0.22, lie: 1.25, lift: 0.55, sink: 0.6, seg: 3.1, n: 6, band: 2.0 };
 const SWB_CRAB = { speed: 4.6, pause: 1.3, r: 1.9 };
@@ -413,7 +413,7 @@ CART_TRACK_RULES.shipwreck = {
     B.guns.forEach((q, i) => L.guns.push(Object.assign({}, q, { off: i * 2.2, st: 'idle', t: 0, c: -1, d: 0, dir: -q.sd, mask: 0, gun: G.guns[i], ball: G.balls[i] })));
     for (const q of L.guns) q.d0 = q.sd > 0 ? q.wr + 2.6 : -q.wl - 2.6;
     B.anchors.forEach((q, i) => L.anchors.push(Object.assign({}, q, { ph: i * Math.PI * 0.5, th: 0, w: 0, low: false, mask: 0, cool: [0, 0, 0, 0, 0, 0, 0, 0], obj: G.anchors[i], bx: 0, by: 0, bz: 0, lat: 0 })));
-    B.arms.forEach((q, i) => L.arms.push(Object.assign({}, q, { toff: i * SWB_ARM.period / 2, reach0: SWB_ARM.n * SWB_ARM.seg - q.hoff, st: 'hide', u: 0, c: -1, mask: 0, cool: [0, 0, 0, 0, 0, 0, 0, 0], phi: [0, 0, 0, 0, 0, 0], sinkY: -20, segs: G.arms.slice(i * 6, i * 6 + 6), reach: 0 })));
+    B.arms.forEach((q, i) => L.arms.push(Object.assign({}, q, { toff: i * SWB_ARM.period / 2, reach0: q.hw * 0.45, seg: (q.hoff + q.hw * 0.45) / SWB_ARM.n, st: 'hide', u: 0, c: -1, mask: 0, cool: [0, 0, 0, 0, 0, 0, 0, 0], phi: [0, 0, 0, 0, 0, 0], sinkY: -20, segs: G.arms.slice(i * 6, i * 6 + 6), reach: 0 })));
     B.crabs.forEach((q, i) => L.crabs.push(Object.assign({}, q, { d: (i % 2 ? 1 : -1) * (q.hw + 3), dir: i % 2 ? -1 : 1, st: 'wait', wait: i * 0.9, sp: SWB_CRAB.speed * (0.85 + (i % 3) * 0.15), cool: [0, 0, 0, 0, 0, 0, 0, 0], snap: 0, x2: 0, z2: 0, body: G.crabs[i], claws: [G.claws[i * 2], G.claws[i * 2 + 1]] })));
     CartKit.state(s);
   },
@@ -431,7 +431,7 @@ CART_TRACK_RULES.shipwreck = {
       if (q.st === 'idle') continue;
       const ds = CartKit.ahead(s, k, q.s); if (ds < 1.5 || ds > 40) continue;
       const ta = ds / Math.max(6, k.speed), tf = q.st === 'warn' ? SWB_GUN.warn - q.t : -q.t, bd = q.d0 + q.dir * Math.max(0, ta - tf) * SWB_GUN.speed;
-      if (ta > tf - 0.25 && Math.abs(bd - k.loc.d) < 4.2 && good) { ease(); break; }
+      if (ta > tf - 0.25 && Math.abs(bd - k.loc.d) < 4.2 && luck < 0.3 + (sk - 0.85) * 2) { ease(); break; }
     }
     for (const a of L.anchors) {
       const ds = CartKit.ahead(s, k, a.s); if (ds < 1 || ds > 34) continue;
@@ -482,7 +482,7 @@ function swbGuns(s, L, dt, racing) {
       if (q.dir * (q.d - far) > 0) { q.st = 'idle'; q.t = 0; if (s.fx && CartKit.near(s, q.x, q.z, 100)) s.fx.dust(q.x + q.nx * q.d, 0.4, q.z + q.nz * q.d, 6, '#d8ccb0'); }
       else {
         const x = q.x + q.nx * q.d, z = q.z + q.nz * q.d, y = swbBallY(q);
-        cartIxObs(s, x + q.nx * q.dir * 3, z + q.nz * q.dir * 3, 2.6);
+        cartIxObs(s, x, z, 1.6);
         if (racing) for (const k of s.karts) {
           if (k.out || (q.mask & (1 << k.slot))) continue;
           if (Math.hypot(k.x - x, k.z - z) > C.r + 0.9) continue;
@@ -560,8 +560,7 @@ function swbArms(s, L, dt, racing) {
     // the reach across the road (lateral from the centre, on the hole's side positive), for hits and the AI
     // (r.reach0: how far past the centre line the tip reaches toward the far side; r.hoff: the hole's lateral)
     const live = st === 'slam' || st === 'lie';
-    // the AI only sees the arm once it is down (the warning it reads by skill in onStep)
-    if (st === 'lie') for (let d = -r.reach0 + 1.5; d < r.hw; d += 4) cartIxObs(s, r.x + r.nx * r.sd * d, r.z + r.nz * r.sd * d, 1.8);
+    // no cartIxObs for the arm: the AI reads the warning and the arm on the road by skill in onStep (ease off, hop)
     for (let i = 0; i < 8; i++) if (r.cool[i] > 0) r.cool[i] -= dt;
     if (racing && live) for (const k of s.karts) {
       if (k.out) continue;
@@ -581,8 +580,8 @@ function swbArms(s, L, dt, racing) {
     const yaw = Math.atan2(-r.uz, r.ux); let px = r.bx, pz = r.bz, py = lerp(-0.2, 0.9, st === 'slam' ? r.u : st === 'lie' ? 1 : st === 'lift' ? 1 - r.u : 0) - r.sinkY;
     for (let i = 0; i < 6; i++) {
       const o = r.segs[i]; if (!o) continue; const a = r.phi[i], vis = st !== 'hide';
-      o.live = vis; o.visible = vis; o.x = px; o.y = py; o.z = pz; o.yaw = yaw; o.pitch = 0; o.roll = -a; o.scale = 1;
-      const h = Math.sin(a) * C.seg, v = Math.cos(a) * C.seg; px += r.ux * h; pz += r.uz * h; py += v;
+      o.live = vis; o.visible = vis; o.x = px; o.y = py; o.z = pz; o.yaw = yaw; o.pitch = 0; o.roll = -a; o.scale = r.seg / C.seg;
+      const h = Math.sin(a) * r.seg, v = Math.cos(a) * r.seg; px += r.ux * h; pz += r.uz * h; py += v;
       if (st === 'lie' || (st === 'slam' && r.u > 0.8)) py = Math.max(py, 0.9 - (i + 1) * 0.12);
     }
   }

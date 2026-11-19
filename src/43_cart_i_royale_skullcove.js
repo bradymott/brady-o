@@ -20,7 +20,7 @@
 const SKC_C = {
   R: 178, skullR: 15, stackR: 96, stackN: 7, wreckR: 132,
   ghost: { first: 14, period: 15, warn: 2.2, speed: 34, len: 14, beam: 5.2, lane: 12 },
-  spout: { first: 6, period: 3.4, warn: 1.4, dur: 1.0, r: 4.6 },
+  spout: { first: 6, period: 3.0, warn: 1.4, dur: 1.0, r: 5.4 },
   keg: { first: 9, period: 4.2, warn: 1.6, r: 8.5 },
   green: [0.35, 1, 0.55], ghostCol: [0.55, 1, 0.75], white: [1, 1, 1], black: [0, 0, 0], foam: [0.85, 0.95, 1], sea: [0.35, 0.7, 1], red: [1, 0.2, 0.12], amber: [1, 0.62, 0.15], gold: [1, 0.8, 0.3], smoke: [0.7, 0.7, 0.72]
 };
@@ -31,8 +31,8 @@ const SKC_KEGS = SKC_WRECKS.slice(1).map((a, i) => [a + 0.08, 116 + (i % 2) * 6]
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_skullcove = function (A, night) {
-  const C = SKC_C, E = this.base(2131, [-235, -235, 235, 235], '#4c5868', 0.05);
-  const sky = Object.assign(CART_SKIES.night(), { zen: '#040a16', sky: '#1c3450', hor: '#1e4a5a', fog: '#0e1e28', fogD: 0.0040, mid: '#14303a', midK: 0.35, cityK: 0, emB: 1.9, keyK: 0.7, key: '#b8d8ff', stars: 1, moon: [20, 26], clouds: 0.25, cloudCol: '#2a3a4a' });
+  const C = SKC_C, E = this.base(2131, [-235, -235, 235, 235], '#6a7a92', 0.05);
+  const sky = Object.assign(CART_SKIES.night(), { zen: '#040a16', sky: '#1c3450', hor: '#1e4a5a', fog: '#0e1e28', fogD: 0.0040, mid: '#14303a', midK: 0.35, cityK: 0, emB: 1.9, keyK: 0.95, key: '#c8e0ff', stars: 1, moon: [20, 26], clouds: 0.25, cloudCol: '#2a3a4a' });
   Object.assign(E, { id: 'skullcove', arena: A, sky, tod: 'night', music: 'kart3', night: true, R: C.R });
   const api = E.api, T = E.terrain, rng = mulberry32(2131);
   const ang = (a, r) => [Math.sin(a) * r, Math.cos(a) * r];
@@ -213,7 +213,7 @@ CART_ARENA_RULES.skullcove = {
     D.spoutNext -= dt;
     if (D.spoutNext <= 0) {
       D.spoutNext = C.spout.period;
-      const n = D.t > 60 ? 2 : 1;
+      const n = D.t > 30 ? 2 : 1;
       for (let j = 0; j < n; j++) { let i = Math.floor(s.rng() * D.holes.length); for (let tries = 0; tries < 6 && (D.holes[i].st !== 'idle' || i === D.lastHole); tries++) i = (i + 3) % D.holes.length; const h = D.holes[i]; if (h.st !== 'idle') continue; h.st = 'warn'; h.t = 0; h.mask = 0; D.lastHole = i; if (nearP(h.x, h.z, 14)) s.banner('BLOWHOLE!', '#9ad8ff', 1.0, 'off the slab!', true); }
     }
     for (const h of D.holes) {
