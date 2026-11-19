@@ -234,8 +234,8 @@ const SWB_KINDS = {
 
 /* ---------------- building the world ---------------- */
 function swbWorld(id, D) {
-  const sky = Object.assign({}, CART_SKIES.day(), { zen: '#3a8ee0', hor: '#d8f0f0', sky: '#a8dcf0', fog: '#cfe4e4', fogD: 0.0026, haze: 0.3, clouds: 0.55, mid: '#9ac8d0', midK: 0.18, key: '#fff8e8', keyK: 1.05, gnd: '#d8d0b8' });
-  const W = CartKit.world(id, D, { worldId: 1231, night: false, sky, ground: '#cdc3a6', crack: 0.05,
+  const sky = Object.assign({}, CART_SKIES.day(), { zen: '#3a8ee0', hor: '#d8f0f0', sky: '#a8dcf0', fog: '#a8c8d0', fogD: 0.0024, haze: 0.18, clouds: 0.55, mid: '#9ac8d0', midK: 0.18, key: '#fff8e8', keyK: 1.05, gnd: '#d8d0b8' });
+  const W = CartKit.world(id, D, { worldId: 1231, night: false, sky, ground: '#aea48a', crack: 0.05,
     road: { shoulder: 'rgba(150,130,100,0.25)', band: 'rgba(122,104,84,0.78)', edge: 'rgba(250,244,226,0.95)', edgeW: 0.6, centerFn: swbPaintCenter } });
   const { E, T, api, rng } = W;
   const sOf = (x, z) => CartKit.sOf(T, x, z), wrap = s => ((s % T.L) + T.L) % T.L;
@@ -628,7 +628,7 @@ function swbDraw(s, L, R, S, t) {
     if (q.st === 'warn') {
       // the lane flashes red across the road, arrows point the way the ball will go; the fuse fizzes at the port
       const u = q.t / SWB_GUN.warn, fl = 0.35 + 0.65 * Math.max(0, Math.sin(t * (14 + u * 14))), span = q.hw * 2 + 6;
-      R.flat.flat(q.x, 0.09, q.z, span, 3.6, q.yaw, S.square, C.red, (0.3 + 0.35 * u) * fl, false);
+      R.flat.flat(q.x, 0.09, q.z, span, 3.6, q.yaw, S.square, C.red, (0.55 + 0.4 * u) * fl, false);
       for (const sd of [-1, 1]) R.flat.flat(q.x + q.tx * sd * 2.3, 0.1, q.z + q.tz * sd * 2.3, span, 0.35, q.yaw, S.square, C.warn, 0.9 * fl, false);
       for (let i = 0; i < 5; i++) { const v = ((i / 5 + t * 1.3) % 1), dd = q.d0 + q.dir * v * (span - 4); R.flat.flat(q.x + q.nx * dd, 0.11, q.z + q.nz * dd, 3.2, 3.2, Math.atan2(q.nx * q.dir, q.nz * q.dir), S.arrow, C.white, 0.9 * fl, false); }
       R.bbs.bb(q.px - q.nx * q.sd * 0.6, 3.6, q.pz - q.nz * q.sd * 0.6, 1.4 + Math.random() * 0.6, 1.4 + Math.random() * 0.6, S.spark, C.gold, 1, true, t * 9);
@@ -646,7 +646,7 @@ function swbDraw(s, L, R, S, t) {
     const h = Math.max(0, a.by), sh = 2.4 + h * 0.25;
     R.flat.flat(a.bx, 0.1, a.bz, sh * 1.6, sh, a.yaw, S.shadow, C.black, clamp(0.75 - h * 0.05, 0.2, 0.7), false);
     const lowSoon = Math.abs(a.th) < 0.75, fl = 0.4 + 0.6 * Math.max(0, Math.sin(t * 16));
-    if (lowSoon) { const ext = 7.6; for (let i = -3; i <= 3; i++) { const d = i / 3 * ext; R.flat.flat(a.x + a.nx * d, 0.09, a.z + a.nz * d, 2.6, 4.4, a.yaw, S.square, C.red, (0.18 + 0.2 * (1 - Math.abs(a.th) / 0.75)) * fl, false); } }
+    if (lowSoon) { const ext = 7.6; for (let i = -3; i <= 3; i++) { const d = i / 3 * ext; R.flat.flat(a.x + a.nx * d, 0.09, a.z + a.nz * d, 2.6, 4.4, a.yaw, S.square, C.red, (0.35 + 0.3 * (1 - Math.abs(a.th) / 0.75)) * fl, false); } }
     if (a.low) R.bbs.streak(a.bx, a.by + 0.4, a.bz, a.nx * (a.w > 0 ? -1 : 1), 0, a.nz * (a.w > 0 ? -1 : 1), 3.5, 1.2, S.streak, C.white, 0.35);
   }
   for (const r of L.arms) {
@@ -655,7 +655,7 @@ function swbDraw(s, L, R, S, t) {
     if (r.st === 'rumble' || r.st === 'rise') {
       // the slam zone flashes purple over three quarters of the road; the gap stays dark; sand boils at the hole
       const u = r.st === 'rumble' ? r.u * 0.4 : 0.4 + r.u * 0.6, fl = 0.35 + 0.65 * Math.max(0, Math.sin(t * (10 + u * 16)));
-      for (let d = -reach + 1; d < r.hw + 1; d += 2.2) R.flat.flat(r.x + r.nx * r.sd * d, 0.09, r.z + r.nz * r.sd * d, 2.4, SWB_ARM.band * 2 + 0.8, Math.atan2(r.tx, r.tz), S.square, C.purple, (0.25 + 0.4 * u) * fl, false);
+      for (let d = -reach + 1; d < r.hw + 1; d += 2.2) R.flat.flat(r.x + r.nx * r.sd * d, 0.09, r.z + r.nz * r.sd * d, 2.4, SWB_ARM.band * 2 + 0.8, Math.atan2(r.tx, r.tz), S.square, C.purple, (0.5 + 0.45 * u) * fl, false);
       for (const e of [-1, 1]) R.flat.flat(r.x + r.nx * r.sd * ((r.hw - reach) / 2) + r.tx * e * (SWB_ARM.band + 0.5), 0.1, r.z + r.nz * r.sd * ((r.hw - reach) / 2) + r.tz * e * (SWB_ARM.band + 0.5), 0.45, r.hw + reach, Math.atan2(r.nx, r.nz), S.square, C.white, 0.8 * fl, false);
       R.flat.flat(r.x - r.nx * r.sd * (reach + (r.hw - reach) / 2), 0.1, r.z - r.nz * r.sd * (reach + (r.hw - reach) / 2), r.hw - reach, 3.2, Math.atan2(r.tx, r.tz), S.arrow, [0.5, 1, 0.6], 0.55 * fl, false);
       for (let i = 0; i < 3; i++) { const v = ((t * 1.4 + i / 3) % 1); R.flat.flat(r.bx, 0.12, r.bz, 3 + v * 6, 3 + v * 6, 0, S.ring, C.sand, 0.8 * (1 - v), false); }

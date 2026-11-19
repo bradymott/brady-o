@@ -346,10 +346,10 @@ CART_TRACK_RULES.electricdeep = {
     }
     for (const e of L.eels) {
       if (e.st === 'rest') continue;
-      const ds = CartKit.ahead(s, k, e.s); if (ds < 2 || ds > 40) continue;
+      const ds = CartKit.ahead(s, k, e.s); if (ds < 5 || ds > 40 || k.speed < 12) continue;   // ease off, never stop: a crawling car sees the eel in its path every time
       const ta = ds / Math.max(6, k.speed), dir = -e.sd, delay = e.st === 'warn' ? ELD_EEL.warn - e.t : 0, hd = e.d + dir * Math.max(0, ta - delay) * ELD_EEL.speed, tl = hd - dir * ELD_EEL_N * ELD_EEL.seg;
       const lo = Math.min(hd, tl) - 2.5, hi = Math.max(hd, tl) + 2.5;
-      if (k.loc.d > lo && k.loc.d < hi && luck < 0.5 + (sk - 0.85) * 3) { if (k.speed > 9) I.gas = 0; if (k.speed > 16) I.brake = 0.5; break; }
+      if (k.loc.d > lo && k.loc.d < hi && luck < 0.5 + (sk - 0.85) * 3) { I.gas = 0; if (k.speed > 18) I.brake = 0.4; break; }
     }
   },
   draw(s, R, S, t) { const L = s.eld; if (L) eldDraw(s, L, R, S, t); },

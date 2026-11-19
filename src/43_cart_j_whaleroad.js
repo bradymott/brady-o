@@ -25,7 +25,7 @@ const WRD_T = { at: {}, at2: {}, p: {} };
 /* ---------------- the course ---------------- */
 // corners [x, z, radius]: the surf straight (south, heading east), blowhole point (the south-east headland), the
 // narrows (north-east chicane over the tidal flats), the dune road (north), gull alley (west, heading south)
-const WRD_POLY = [[-206, -120, 45], [130, -128, 50], [232, -58, 30], [212, 46, 26], [130, 70, 20], [72, 130, 22], [-28, 92, 20], [-122, 134, 34], [-226, 56, 40]];
+const WRD_POLY = [[-206, -120, 45], [130, -128, 50], [232, -58, 30], [212, 46, 26], [130, 70, 24], [72, 130, 26], [-28, 92, 24], [-122, 134, 34], [-226, 56, 40]];
 // the shoreline (sea on the outside): west shore x ≈ -292, south shore z ≈ -152, the headland's east shore x ≈ 266
 const wrdShoreZ = x => -152 + 5 * Math.sin(x * 0.035) + 3 * Math.sin(x * 0.09 + 1);
 const wrdShoreXW = z => -292 + 5 * Math.sin(z * 0.04 + 2) + 3 * Math.sin(z * 0.11);
@@ -222,7 +222,7 @@ function wrdWorld(id, D) {
   E.wrd.waves = []; for (let i = 0; i < 3; i++) { const s = S.wave + (i - 1) * 32, g = T.at(s, {}), sea = g.nz < 0 ? 1 : -1; E.wrd.waves.push({ i, s, x: g.x, z: g.z, nx: g.nx, nz: g.nz, tx: g.tx, tz: g.tz, yaw: g.yaw, hw: g.hw, wl: g.wl, wr: g.wr, sea }); }
   E.wrd.vents = []; const VL = [-0.45, 0.42, -0.05, 0.5, -0.5, 0.15], VS = [-40, -26, -12, 2, 16, 30];
   for (let i = 0; i < 6; i++) { const s = S.blow + VS[i], g = T.at(s, {}), d = VL[i] * g.hw; E.wrd.vents.push({ i, s, d, x: g.x + g.nx * d, z: g.z + g.nz * d, tx: g.tx, tz: g.tz }); }
-  E.wrd.rocks = []; const RL = [0.42, -0.45, 0.05, -0.5, 0.45, -0.1], RS = [-40, -27, -14, 0, 14, 28];
+  E.wrd.rocks = []; const RL = [0.3, -0.3, 0, -0.32, 0.3, 0], RS = [-40, -27, -14, 0, 14, 28];
   for (let i = 0; i < 6; i++) { const s = S.rocks + RS[i], g = T.at(s, {}), d = RL[i] * g.hw; E.wrd.rocks.push({ i, s, d, x: g.x + g.nx * d, z: g.z + g.nz * d, yaw: g.yaw + i }); }
   // ---- the coast: sea, shallows, wet sand and foam; dunes and grass inland; the headland's rock; the tidal flats ----
   api.paint((ctx, P, Sc) => {
@@ -467,13 +467,13 @@ function wrdRocks(s, L, dt, racing) {
     r.u = r.st === 'down' ? ph / down : r.st === 'rise' ? (ph - down) / C.rise : r.st === 'up' ? (ph - down - C.rise) / C.up : (ph - down - C.rise - C.up) / C.sink;
     r.h = r.st === 'rise' ? r.u * r.u * (3 - 2 * r.u) : r.st === 'up' ? 1 : r.st === 'sink' ? 1 - r.u : 0;
     if (r.st === 'rise' && r.c !== c) { r.c = c; r.mask = 0; CartKit.fired(s, 'barnacle'); if (CartKit.near(s, r.x, r.z, 60)) { cartIxSound(s, 'splash', r.x, r.z, 0.5, 1.2); cartIxSound(s, 'crumble', r.x, r.z, 0.4, 0.7); } }
-    if (r.st === 'up' || (r.st === 'rise' && r.u > 0.3) || (r.st === 'sink' && r.u < 0.5)) cartIxObs(s, r.x, r.z, C.r + 1.6);
+    if (r.st === 'up' || (r.st === 'rise' && r.u > 0.3) || (r.st === 'sink' && r.u < 0.5)) cartIxObs(s, r.x, r.z, C.r + 2.2);
     if (r.h > 0.45 && racing) for (const k of s.karts) {
       if (k.out || (k.air && k.y > s.terrain.height(k.x, k.z) + 2 * r.h)) continue;
       const dx = k.x - r.x, dz = k.z - r.z, D = Math.hypot(dx, dz), m = C.r + 1.1; if (D > m) continue;
       const nx = dx / (D || 1), nz = dz / (D || 1), vn = k.vx * nx + k.vz * nz;
       k.x = r.x + nx * m; k.z = r.z + nz * m; if (vn < 0) { k.vx -= 1.5 * vn * nx; k.vz -= 1.5 * vn * nz; }
-      if (!(r.mask & (1 << k.slot))) { r.mask |= 1 << k.slot; if (CartKit.hit(s, k, 'spin', 'barnacle', { dur: 0.85, banner: 'BARNACLED!' })) { cartIxSound(s, 'bump', k.x, k.z, 0.9, 0.7); if (s.fx) s.fx.spark(k.x, k.y + 0.8, k.z, 8, '#ffffff', 5); } }
+      if (!(r.mask & (1 << k.slot)) && r.st !== 'rise' && vn < -2) { r.mask |= 1 << k.slot; if (CartKit.hit(s, k, 'spin', 'barnacle', { dur: 0.85, banner: 'BARNACLED!' })) { cartIxSound(s, 'bump', k.x, k.z, 0.9, 0.7); if (s.fx) s.fx.spark(k.x, k.y + 0.8, k.z, 8, '#ffffff', 5); } }
     }
     const o = r.obj; if (o) { const on = r.h > 0.01, shake = r.st === 'rise' ? Math.sin(s.time * 38) * 0.06 : 0; o.live = on; o.visible = on; o.x = r.x + shake; o.z = r.z; o.y = -C.depth * (1 - r.h) - 0.15; o.yaw = r.yaw; o.pitch = 0; o.roll = shake; o.scale = 1; }
   }

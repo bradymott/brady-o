@@ -249,7 +249,7 @@ function gdnWorld(id, D) {
     // the patio: big sandstone flagstones round the start straight
     for (let s = T.L - 150; s < T.L + 60; s += 6) { const g = T.at(((s % T.L) + T.L) % T.L, {}); for (let d = -g.hw - 12; d <= g.hw + 12; d += 6) { const q = P(g.x + g.nx * (d + ((s / 6) % 2) * 3), g.z + g.nz * (d + ((s / 6) % 2) * 3)); ctx.fillStyle = `rgba(${210 + (Math.abs(Math.floor(d * 3 + s)) % 30)},${190 + (Math.abs(Math.floor(d + s * 2)) % 25)},160,0.55)`; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(Math.atan2(g.tz, g.tx)); ctx.fillRect(-2.8 * Sc, -2.8 * Sc, 5.5 * Sc, 5.5 * Sc); ctx.restore(); } }
     // the rockery's gravel and the cabbage patch's soil rows
-    for (const [sv, rr, col] of [[S.gnome, 46, 'rgba(190,184,170,0.5)'], [S.slug, 52, 'rgba(110,76,44,0.55)']]) { const g = T.at(sv, {}); for (let i = 0; i < 260; i++) { const a = rng() * TAU, r = Math.sqrt(rng()) * rr, q = P(g.x + Math.cos(a) * r, g.z + Math.sin(a) * r); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(q[0], q[1], (1.5 + rng() * 2.5) * Sc, 0, TAU); ctx.fill(); } }
+    for (const [sv, rr, col] of [[S.gnome, 46, 'rgba(190,184,170,0.5)'], [S.slug, 52, 'rgba(110,76,44,0.55)']]) { const g = T.at(sv, {}); for (let i = 0; i < 260; i++) { const a = rng() * TAU, r = Math.sqrt(rng()) * rr, x = g.x + Math.cos(a) * r, z = g.z + Math.sin(a) * r; if (!CartWorlds.clear(T, x, z, 2)) continue; const q = P(x, z); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(q[0], q[1], (1.5 + rng() * 2.5) * Sc, 0, TAU); ctx.fill(); } }
     { const g = T.at(S.slug, {}); for (let r = -5; r <= 5; r++) { ctx.strokeStyle = 'rgba(80,52,30,0.45)'; ctx.lineWidth = 2.2 * Sc; ctx.beginPath(); for (let u = -50; u <= 50; u += 5) { const q = P(g.x + g.tx * u + g.nx * r * 7, g.z + g.tz * u + g.nz * r * 7); if (u === -50) ctx.moveTo(q[0], q[1]); else ctx.lineTo(q[0], q[1]); } ctx.stroke(); } }
     // the river: a wide blue ribbon with a pale edge and ripples, the pond at its end
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -372,7 +372,7 @@ const GdnMesh = {
 
 /* ---------------- the rules: hazards at run time ---------------- */
 const GDN_GNOME = { period: 7.5, wind: 1.1, jump: 0.7, stand: 2.2, back: 0.6, land: 2.7, body: 2.1 };
-const GDN_SLUG = { speed: 2.3, peek: 1.3, rest: 2.2, edge: 4.5, gap: 1.0, life: 8.0, r: 1.25, n: 30, len: 3.3 };
+const GDN_SLUG = { speed: 2.3, peek: 1.3, rest: 2.2, edge: 6, gap: 1.0, life: 8.0, r: 1.4, n: 30, len: 4.9, half: 2.9, scale: 1.5 };
 const GDN_SPR = { period: 6.6, warn: 1.25, sweep: 2.3, arc: 1.05, push: 9 };
 const GDN_ROBIN = { eye: 1.35, peck: 0.35, eat: 1.2, fly: 1.0, cool: 1.3, r: 3.0, zone: 46, scale: 1.25 };
 CART_TRACK_RULES.garden = {
@@ -473,7 +473,7 @@ function gdnGnomes(s, L, dt, racing) {
     const o = g.obj; if (o) {
       const crouch = st === 'wind' ? 1 - 0.18 * Math.min(1, u * 2) : 1, wob = st === 'wind' ? Math.sin(s.time * 30) * 0.12 * (0.4 + u) : 0;
       const face = st === 'stand' ? Math.atan2(-T.at(g.s, GDN_T.at2).tx, -T.at(g.s, GDN_T.at2).tz) : st === 'jump' || st === 'back' ? Math.atan2((st === 'jump' ? g.tx - g.hx : g.hx - g.tx), (st === 'jump' ? g.tz - g.hz : g.hz - g.tz)) : g.yaw;
-      o.live = true; o.visible = true; o.x = g.x; o.z = g.z; o.y = s.terrain.height(g.x, g.z) + g.y; o.yaw = face + (st === 'stand' ? Math.sin(s.time * 5) * 0.25 : 0); o.pitch = st === 'jump' ? -0.3 + u * 0.5 : 0; o.roll = wob; o.scale = 0.95 * crouch;
+      o.live = true; o.visible = true; o.x = g.x; o.z = g.z; o.y = s.terrain.height(g.x, g.z) + g.y; o.yaw = face + (st === 'stand' ? Math.sin(s.time * 5) * 0.25 : 0); o.pitch = st === 'jump' ? -0.3 + u * 0.5 : 0; o.roll = wob; o.scale = 1.3 * crouch;
     }
   }
 }
@@ -498,11 +498,11 @@ function gdnSlugs(s, L, dt, racing) {
     const x = sl.x + sl.nx * sl.d, z = sl.z + sl.nz * sl.d, hx = sl.nx * dir, hz = sl.nz * dir;
     sl.wx = x; sl.wz = z; sl.hx = hx; sl.hz = hz;
     // the body: AI steers round it; contact knocks
-    if (Math.abs(sl.d) < Math.max(sl.wl, sl.wr) + 3) { cartIxObs(s, x + hx * 1.6, z + hz * 1.6, 2.6); cartIxObs(s, x - hx * 1.6, z - hz * 1.6, 2.4); }
+    if (Math.abs(sl.d) < Math.max(sl.wl, sl.wr) + 3) { cartIxObs(s, x + hx * 2.4, z + hz * 2.4, 3.2); cartIxObs(s, x - hx * 2.4, z - hz * 2.4, 3.0); }
     if (racing && sl.st === 'crawl') for (const k of s.karts) {
       if (k.out || (sl.mask & (1 << k.slot)) || (k.air && k.y > s.terrain.height(k.x, k.z) + 1.6)) continue;
       const dx = k.x - x, dz = k.z - z, along = dx * hx + dz * hz, across = dx * hz - dz * hx;
-      if (Math.abs(along) > C.len + 1.0 || Math.abs(across) > 2.3) continue;
+      if (Math.abs(along) > C.len + 1.0 || Math.abs(across) > C.half) continue;
       sl.mask |= 1 << k.slot;
       if (CartKit.hit(s, k, 'knock', 'slug', { dx: hx, dz: hz, power: 10, dur: 0.8, banner: 'SLUGGED!' })) { cartIxSound(s, 'splat', k.x, k.z, 0.9, 0.8); if (s.fx) s.fx.burst(k.x, k.y + 0.8, k.z, 'ring', 8, '#c8ff70'); }
     }
@@ -520,7 +520,7 @@ function gdnSlugs(s, L, dt, racing) {
     }
     const o = sl.obj; if (o) {
       const rear = sl.st === 'peek' ? Math.sin(Math.min(1, sl.t / C.peek) * Math.PI) * 0.25 : 0, inch = sl.st === 'crawl' ? 1 + Math.sin(s.time * 5 + sl.i) * 0.05 : 1;
-      o.live = true; o.visible = true; o.x = x; o.z = z; o.y = s.terrain.height(x, z); o.yaw = Math.atan2(hx, hz); o.pitch = -rear; o.roll = 0; o.scale = inch;
+      o.live = true; o.visible = true; o.x = x; o.z = z; o.y = s.terrain.height(x, z); o.yaw = Math.atan2(hx, hz); o.pitch = -rear; o.roll = 0; o.scale = inch * C.scale;
     }
   }
 }
@@ -556,7 +556,7 @@ function gdnSprinkler(s, L, dt, racing) {
       if (s.fx && CartKit.near(s, k.x, k.z, 80)) s.fx.burst(k.x, k.y + 1.2, k.z, 'ring', 8, '#bfe8ff');
     }
   }
-  const o = P.obj; if (o) { const shud = st === 'warn' ? Math.sin(s.time * 50) * 0.04 : 0, ca = Math.cos(P.a), sa = Math.sin(P.a); o.live = true; o.visible = true; o.x = P.x; o.z = P.z; o.y = s.terrain.height(P.x, P.z) + 0.4; o.yaw = Math.atan2(P.nx * ca + P.tx * sa, P.nz * ca + P.tz * sa); o.pitch = shud; o.roll = shud; o.scale = 1.6; }
+  const o = P.obj; if (o) { const shud = st === 'warn' ? Math.sin(s.time * 50) * 0.04 : 0, ca = Math.cos(P.a), sa = Math.sin(P.a); o.live = true; o.visible = true; o.x = P.x; o.z = P.z; o.y = s.terrain.height(P.x, P.z) + 0.4; o.yaw = Math.atan2(P.nx * ca + P.tx * sa, P.nz * ca + P.tz * sa); o.pitch = shud; o.roll = shud; o.scale = 2.4; }
 }
 // ---- the robin: perches on the bird bath; picks a car coming down the straight, a target locks on the road where
 // that car will be (it flutters over it), swoops and pecks, pecks the ground a moment, flies home ----
@@ -581,11 +581,11 @@ function gdnRobin(s, L, dt, racing) {
   } else if (B.st === 'eye') {
     // flutter up and hover over the target, high
     const u = Math.min(1, B.t / C.eye), e = u * u * (3 - 2 * u);
-    B.x = lerp(B.fx0, B.ax, e); B.z = lerp(B.fz0, B.az, e); B.y = lerp(B.py, 14, Math.min(1, u * 2));
+    B.x = lerp(B.fx0, B.ax, e); B.z = lerp(B.fz0, B.az, e); B.y = lerp(B.py, 9, Math.min(1, u * 2));
     cartIxObs(s, B.ax, B.az, C.r + 0.8);
     if (B.t > C.eye) { B.st = 'peck'; B.t = 0; CartKit.fired(s, 'robin'); }
   } else if (B.st === 'peck') {
-    const u = Math.min(1, B.t / C.peck); B.x = B.ax; B.z = B.az; B.y = 14 * (1 - u * u);
+    const u = Math.min(1, B.t / C.peck); B.x = B.ax; B.z = B.az; B.y = 9 * (1 - u * u);
     cartIxObs(s, B.ax, B.az, C.r + 0.8);
     if (B.t > C.peck) {
       B.st = 'eat'; B.t = 0; B.y = 0;
@@ -618,8 +618,9 @@ function gdnDraw(s, L, R, S, t) {
     if (!gdnNear(cam, g.hx, g.hz, 200)) continue;
     if (g.st === 'wind' || g.st === 'jump') {
       const fl = 0.45 + 0.55 * Math.max(0, Math.sin(t * 18)), u = g.st === 'wind' ? g.u * 0.6 : 0.6 + g.u * 0.4, r = GDN_GNOME.land * 2;
-      R.flat.flat(g.tx, 0.1, g.tz, r * (1.6 - u * 0.6), r * (1.6 - u * 0.6), t * 2, S.reticle || S.ring, C.red, 0.85 * fl, false);
-      R.flat.flat(g.tx, 0.09, g.tz, r, r, 0, S.glow, C.hot, 0.35 * fl, true);
+      R.flat.flat(g.tx, 0.09, g.tz, r, r, 0, S.glow, C.red, 0.6 * fl, true);
+      R.flat.flat(g.tx, 0.1, g.tz, r * (1.6 - u * 0.6), r * (1.6 - u * 0.6), t * 2, S.reticle || S.ring, C.red, 1, false);
+      R.flat.flat(g.tx, 0.11, g.tz, r * 0.9, r * 0.9, 0, S.ring, C.white, 0.8 * fl, false);
       R.flat.flat(g.tx, 0.08, g.tz, 1 + u * 3.5, 1 + u * 3.5, 0, S.shadow, C.black, 0.25 + u * 0.4, false);
       if (g.st === 'wind') R.bbs.bb(g.hx, 6.6, g.hz, 2.6, 2.6, S.warn, C.warn, 0.6 + 0.4 * fl, true);
     } else if (g.st === 'stand') {
@@ -661,7 +662,9 @@ function gdnDraw(s, L, R, S, t) {
       // the jet: an arc of water from the nozzle to the far side of the road, spray where it lands
       const ca = Math.cos(P.a), sa = Math.sin(P.a), jx = P.nx * ca + P.tx * sa, jz = P.nz * ca + P.tz * sa, Lj = (P.off + P.wl + P.wr + 4) / ca, n = 12, a = Math.min(1, P.u * 10, (1 - P.u) * 10);
       let px = P.x, pz = P.z, py = 5.2;
-      for (let i = 1; i <= n; i++) { const u = i / n, x = P.x + jx * Lj * u, z = P.z + jz * Lj * u, y = 5.2 + Lj * 0.35 * u - (Lj * 0.35 + 4.5) * u * u; R.bbs.streak((px + x) / 2, (py + y) / 2, (pz + z) / 2, x - px, y - py, z - pz, Math.hypot(x - px, y - py, z - pz) + 0.6, 1.1, S.streak, i % 2 ? C.water : C.white, 0.75 * a); if (i % 2 === 0) R.bbs.bb(x, y, z, 1.8, 1.8, S.puff, C.white, 0.45 * a, false, t * 3 + i); px = x; py = y; pz = z; }
+      for (let i = 1; i <= n; i++) { const u = i / n, x = P.x + jx * Lj * u, z = P.z + jz * Lj * u, y = 5.2 + Lj * 0.3 * u - (Lj * 0.3 + 4.2) * u * u, sl = Math.hypot(x - px, y - py, z - pz) + 0.8; R.bbs.streak((px + x) / 2, (py + y) / 2, (pz + z) / 2, x - px, y - py, z - pz, sl, 4.4, S.streak, C.water, 0.95 * a); R.bbs.streak((px + x) / 2, (py + y) / 2 + 0.2, (pz + z) / 2, x - px, y - py, z - pz, sl, 2.0, S.streak, C.white, 0.9 * a); R.bbs.bb(x, y, z, 2.6, 2.6, S.puff, C.white, 0.55 * a, false, t * 3 + i); if (i % 2) R.bbs.bb(x + Math.sin(t * 9 + i) * 0.8, y - 1 - ((t * 3 + i * 0.3) % 1) * 3, z, 0.6, 1.1, S.drop, C.water, 0.9 * a, false); px = x; py = y; pz = z; }
+      // the wet stripe on the road right under the jet (where it's hitting now)
+      { const l0 = (P.off - 2) / ca, l1 = Lj, lm = (l0 + l1) / 2; R.flat.flat(P.x + jx * lm, 0.09, P.z + jz * lm, 3.4, l1 - l0, Math.atan2(jx, jz), S.square, C.deep, 0.55 * a, false); R.flat.flat(P.x + jx * lm, 0.1, P.z + jz * lm, 1.6, l1 - l0, Math.atan2(jx, jz), S.square, C.water, 0.7 * a, false); }
       for (let i = 0; i < 4; i++) { const u = 0.35 + i * 0.2, x = P.x + jx * Lj * u, z = P.z + jz * Lj * u; R.flat.flat(x, 0.1, z, 6, 6, t * 3 + i, S.ring, C.white, 0.45 * a, false); R.flat.flat(x, 0.09, z, 5, 5, 0, S.glow, C.water, 0.3 * a, true); }
       R.bbs.bb(px, 1.0, pz, 5, 3, S.puff, C.white, 0.7 * a, false, t * 4);
       if (s.fx && Math.random() < 0.5 && gdnNear(cam, P.x, P.z, 100)) s.fx.add(px, 1, pz, (Math.random() - 0.5) * 6, 3 + Math.random() * 3, (Math.random() - 0.5) * 6, 0.6, 0.4, 0.15, C.water, 0.9, 'drop', 0, 0, 0);
@@ -671,8 +674,9 @@ function gdnDraw(s, L, R, S, t) {
   if (gdnNear(cam, B.px, B.pz, 260)) {
     if (B.st === 'eye' || B.st === 'peck') {
       const u = B.st === 'eye' ? Math.min(1, B.t / GDN_ROBIN.eye) : 1, fl = 0.5 + 0.5 * Math.sin(t * (10 + u * 18)), r = GDN_ROBIN.r * 2;
-      R.flat.flat(B.ax, 0.1, B.az, r * (1.8 - u * 0.8), r * (1.8 - u * 0.8), t * 3, S.reticle || S.ring, C.red, 0.9 * fl, false);
-      R.flat.flat(B.ax, 0.09, B.az, r, r, 0, S.glow, C.hot, 0.4, true);
+      R.flat.flat(B.ax, 0.09, B.az, r * 1.2, r * 1.2, 0, S.glow, C.red, 0.6 * fl, true);
+      R.flat.flat(B.ax, 0.1, B.az, r * (1.8 - u * 0.8), r * (1.8 - u * 0.8), t * 3, S.reticle || S.ring, C.red, 1, false);
+      R.flat.flat(B.ax, 0.11, B.az, r * 0.9, r * 0.9, 0, S.ring, C.white, 0.8 * fl, false);
       R.flat.flat(B.ax, 0.08, B.az, 1.5 + u * 4, 1.5 + u * 4, 0, S.shadow, C.black, 0.25 + u * 0.4, false);
     } else if (B.st === 'eat') {
       R.flat.flat(B.x, 0.08, B.z, 6, 6, 0, S.shadow, C.black, 0.45, false);

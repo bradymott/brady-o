@@ -510,9 +510,9 @@ function ltbDraw(s, L, R, Sp, t) {
       } else {
         // ON: a curtain of red beams in the lane, a hot band on the floor
         R.flat.flat(cx, 0.1, cz, lw * 0.95, 2.4, q.yaw, Sp.square, C.red, 0.7, true);
-        for (const y of [0.6, 1.4, 2.2]) R.bbs.streak(cx, y, cz, q.nx, 0, q.nz, lw, 0.28, Sp.streak, C.hot, 0.95);
+        for (const y of [0.45, 0.95, 1.45, 1.95, 2.45]) { R.bbs.streak(cx, y, cz, q.nx, 0, q.nz, lw, 0.42, Sp.streak, C.hot, 1); R.bbs.streak(cx, y, cz, q.nx, 0, q.nz, lw, 1.1, Sp.streak, C.red, 0.45); }
         for (const e of [-0.5, 0.5]) R.bbs.streak(cx + q.nx * e * lw, 1.4, cz + q.nz * e * lw, 0, 1, 0, 2.8, 0.18, Sp.streak, C.red, 0.85);
-        R.bbs.bb(cx, 1.4, cz, lw * 0.9, 2.6, Sp.glow, C.red, 0.3, true);
+        R.bbs.bb(cx, 1.4, cz, lw * 1.2, 3.4, Sp.glow, C.red, 0.55, true);
       }
     }
   }
@@ -523,14 +523,14 @@ function ltbDraw(s, L, R, Sp, t) {
     for (const tl of Tr.tiles) {
       if (!ltbTrapHot(Tr.cyc, tl.r, tl.c)) continue;
       if (Tr.ph === 'warn') { const jx = Math.sin(t * 40 + tl.r) * 0.08; R.flat.flat(tl.x + jx, 0.1, tl.z, LTB_TRAP.row * 0.92, tl.w * 0.92, tl.yaw + Math.PI / 2, Sp.square, C.amber, (0.25 + 0.4 * bl) * (0.5 + Tr.u * 0.5), true); R.flat.flat(tl.x, 0.11, tl.z, 2.2, 2.2, t * 0.5, Sp.cross || Sp.warn, C.amber, 0.6 * bl, true); }
-      else { const open = Math.min(1, Tr.u * 6), cl = Tr.u > 0.85 ? (1 - Tr.u) / 0.15 : 1, k = open * cl; R.flat.flat(tl.x, 0.1, tl.z, LTB_TRAP.row * 0.95 * k, tl.w * 0.95 * k, tl.yaw + Math.PI / 2, Sp.square, C.black, 0.92, false); R.flat.flat(tl.x, 0.11, tl.z, LTB_TRAP.row * 0.6 * k, tl.w * 0.6 * k, tl.yaw + Math.PI / 2, Sp.ring, C.gold, 0.55, true); R.flat.flat(tl.x, 0.12, tl.z, LTB_TRAP.row * 1.02, tl.w * 1.02, tl.yaw + Math.PI / 2, Sp.square, C.red, 0.18, true); }
+      else { const open = Math.min(1, Tr.u * 6), cl = Tr.u > 0.85 ? (1 - Tr.u) / 0.15 : 1, k = open * cl; R.flat.flat(tl.x, 0.1, tl.z, LTB_TRAP.row * 0.95 * k, tl.w * 0.95 * k, tl.yaw + Math.PI / 2, Sp.square, C.black, 0.92, false); R.flat.flat(tl.x, 0.11, tl.z, LTB_TRAP.row * 0.6 * k, tl.w * 0.6 * k, tl.yaw + Math.PI / 2, Sp.ring, C.gold, 0.9, true); R.flat.flat(tl.x, 0.12, tl.z, LTB_TRAP.row * 1.05, tl.w * 1.05, tl.yaw + Math.PI / 2, Sp.ring, C.red, 0.8, true); }
     }
   }
   // the stone: its lane lights up with chevrons pointing at the traffic, a shadow under it
   const St = L.stone, T = s.T || s.TR;
   if ((St.ph === 'warn' || St.ph === 'roll') && near(St.x, St.z, 260)) {
     const at = LTB_T.at2, fl = St.ph === 'warn' ? 0.5 + 0.5 * Math.sin(t * 16) : 0.75;
-    for (let r = 4; r < St.run; r += 7) { const sv = St.s0 - r; if (CartKit.ds(T, sv, St.sv) > 2) continue; T.at(sv, at); const x = at.x + at.nx * St.d, z = at.z + at.nz * St.d, ph = ((r / 7 - t * 3) % 3 + 3) % 3 < 1 ? 1 : 0.45; R.flat.flat(x, 0.1, z, 5.5, 5.5, at.yaw + Math.PI, Sp.arrow, C.amber, fl * ph * 0.9, true); R.flat.flat(x, 0.09, z, 7, 7.2, at.yaw, Sp.square, C.amber, 0.12 * fl, true); }
+    for (let r = 4; r < St.run; r += 7) { const sv = St.s0 - r; if (CartKit.ds(T, sv, St.sv) < 2) continue; T.at(sv, at); const x = at.x + at.nx * St.d, z = at.z + at.nz * St.d, ph = ((r / 7 - t * 3) % 3 + 3) % 3 < 1 ? 1 : 0.45; R.flat.flat(x, 0.1, z, 5.5, 5.5, at.yaw + Math.PI, Sp.arrow, C.amber, fl * ph * 0.9, true); R.flat.flat(x, 0.09, z, 7, 7.2, at.yaw, Sp.square, C.amber, 0.12 * fl, true); }
     R.flat.flat(St.x, 0.12, St.z, LTB_STONE.r * 2.4, LTB_STONE.r * 2.4, 0, Sp.shadow, C.black, 0.6, false);
     if (St.ph === 'warn') R.bbs.bb(St.x, St.y + LTB_STONE.r + 2.2, St.z, 3, 3, Sp.warn, C.amber, 0.6 + 0.4 * fl, true);
   }

@@ -16,7 +16,7 @@
    ============================================================ */
 const VLT_C = {
   R: 178, plinth: 11, colR: 58, colN: 8, colRad: 2.4, pileR: 104, pileN: 10, pileRad: 5,
-  sweep: { period: 17, first: 15, warn: 1.8, dur: 5.5, h: 0.9 },
+  sweep: { period: 17, first: 18, warn: 1.8, dur: 5.5, h: 0.9 },
   drop: { n: 3, aim: 1.0, hold: 0.4, fall: 0.4, r: 4.4, life: 4, sink: 0.6 },
   mum: { n: 4, chase: 30, speed: 5.4, near: 7, raise: 1.0, lunge: 0.5, reach: 4, grab: 2.6, down: 1.8, up: 0.6, sc: 1.35 },
   red: [1, 0.16, 0.22], hot: [1, 0.35, 0.45], gold: [1, 0.8, 0.3], amber: [1, 0.62, 0.15], green: [0.25, 1, 0.55], lime: [0.6, 1, 0.35], white: [1, 1, 1], black: [0, 0, 0], cyan: [0.3, 0.95, 1]
@@ -25,7 +25,7 @@ const VLT_T = { p: {} };
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_vault = function (A, night) {
-  const V = VLT_C, E = this.base(2106, [-235, -235, 235, 235], '#5a4834', 0.05);
+  const V = VLT_C, E = this.base(2106, [-235, -235, 235, 235], '#a08260', 0.05);
   const sky = Object.assign(CART_SKIES.night(), { sky: '#1a2448', hor: '#2a3a6a', fog: '#141a2c', fogD: 0.0042, mid: '#2a2040', midK: 0.35, cityK: 0.2, emB: 1.9, keyK: 0.6, key: '#c8d0ff', stars: 1 });
   Object.assign(E, { id: 'vault', arena: A, sky, tod: 'night', music: 'kart2', night: true, R: V.R });
   const api = E.api, rng = mulberry32(2106);
@@ -115,7 +115,9 @@ CartWorlds.arena_vault = function (A, night) {
   for (let i = 0; i < 12; i++) { const a = (i + 0.5) / 12 * TAU, [x, z] = ang(a, V.R - 0.6); CartScene.mesh(api, x, z, a + Math.PI, m => { m.color('#3a2a1e').shine(1); m.box(0, 5.6, -0.2, 0.4, 1.1, 0.4); m.limb(0, 5.6, 0, 0, 6.3, 0.7, 0.1, 0.1, { seg: 5 }); m.color('#ffd84a', 0.2).shine(3); m.push(); m.tf(0, 6.4, 0.8); m.lathe([[0.55, 0.3], [0.45, 0], [0.15, -0.25], [0, -0.27]], { seg: 10 }); m.pop(); m.emissive(0).shine(0); return { lights: [{ x: 0, y: 6.9, z: 0.8, s: 1.8, c: '#ffa040', fire: true }] }; }, { hi: true, noAO: true }); api.light(x * 0.96, z * 0.96, 12, '#ffa040', 0.45); }
   // ---- beyond the wall: the downline of little pyramids, searchlights, the far skyline ----
   api.instanceProto('vlt_pyr', m => { m.color('#c49c64'); m.cyl(0, 0, 0, 10, 0, 9.5, 4, { stripes: ['#d6b07a', '#a8824e'], yaw0: Math.PI / 4 }); m.color('#ffffff', 1); for (let i = 0; i < 4; i++) { const b = Math.PI / 4 + i * Math.PI / 2; m.limb(Math.sin(b) * 10, 0.1, Math.cos(b) * 10, 0, 9.5, 0, 0.16, 0.1, { seg: 4 }); } m.emissive(0); return {}; }, { r: 10, near: 60, mid: 200, farD: 520, lo: true });
-  for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + rng() * 0.1, r = 250 + rng() * 80, [x, z] = ang(a, r); api.instance('vlt_pyr', x, z, { y: 0, yaw: rng(), scale: 1.2 + rng() * 1.4, tint: cartTintOf(['#3aff8a', '#ff3ad8', '#38f2ff', '#ffd84a'][i % 4]), noCol: true }); }
+  for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + rng() * 0.1, r = 205 + rng() * 22, [x, z] = ang(a, r); api.instance('vlt_pyr', x, z, { y: 0, yaw: rng(), scale: 0.9 + rng() * 0.8, tint: cartTintOf(['#3aff8a', '#ff3ad8', '#38f2ff', '#ffd84a'][i % 4]), noCol: true }); }
+  // warm light pools over the whole floor (the hall reads at night) and a ring of green at the columns
+  for (const [r, c] of [[30, '#ffd890'], [84, '#ffc070'], [124, '#ffd890'], [158, '#ffb060']]) { const n = Math.round(TAU * r / 42); for (let i = 0; i < n; i++) { const [x, z] = ang((i + 0.5) / n * TAU, r); api.light(x, z, 24, i % 4 === 3 ? '#3aff8a' : c, 0.42); } }
   E.beams = [];
   for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.6, [x, z] = ang(a, V.R + 30); E.beams.push({ kind: 'search', x, y: 1, z, c: [0.4, 1, 0.65], ph: i * 1.7, sp: 0.35 + i * 0.07, len: 160, w: 7, a: 0.18 }); }
   for (let i = 0; i < 3; i++) E.beams.push({ kind: 'laser', x: Math.sin(i * 2.1) * 3, y: 6, z: Math.cos(i * 2.1) * 3, c: [[0.25, 1, 0.55], [1, 0.3, 0.9], [0.3, 0.95, 1]][i], ph: i * 1.3, sp: 0.4 + i * 0.05, len: 120, w: 0.55, a: 0.45 });
@@ -230,9 +232,10 @@ CART_ARENA_RULES.vault = {
 function vltArm(R, Sp, E, a, alpha, w) {
   const V = VLT_C, ux = Math.sin(a), uz = Math.cos(a), r0 = V.plinth + 0.5, c = vltShadow(E, a, V.R), r1 = c ? c.r - 2.5 : V.R;
   const L = r1 - r0, mx = ux * (r0 + L / 2), mz = uz * (r0 + L / 2);
-  R.bbs.streak(mx, V.sweep.h, mz, ux, 0, uz, L, 0.45 * w + 0.1, Sp.streak, V.hot, alpha);
-  R.bbs.streak(mx, V.sweep.h, mz, ux, 0, uz, L, 1.4 * w, Sp.streak, V.red, 0.45 * alpha);
-  R.flat.flat(mx, 0.11, mz, 2.4 * w + 0.4, L, a, Sp.square, V.red, 0.3 * alpha, true);
+  R.bbs.streak(mx, V.sweep.h, mz, ux, 0, uz, L, 0.9 * w + 0.15, Sp.streak, V.hot, alpha);
+  R.bbs.streak(mx, V.sweep.h, mz, ux, 0, uz, L, 3.2 * w, Sp.streak, V.red, 0.55 * alpha);
+  R.bbs.streak(mx, V.sweep.h + 0.7, mz, ux, 0, uz, L, 0.5 * w + 0.1, Sp.streak, V.hot, 0.7 * alpha);
+  R.flat.flat(mx, 0.11, mz, 5 * w + 0.6, L, a, Sp.square, V.red, 0.4 * alpha, true);
   if (c && alpha > 0.5) R.bbs.bb(ux * r1, V.sweep.h, uz * r1, 3, 3, Sp.glow, V.hot, alpha, true);
 }
 // ---- the laser sweep: warn (the capstone spins up, the alarm rings), then one full turn of the arm ----

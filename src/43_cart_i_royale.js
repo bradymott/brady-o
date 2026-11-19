@@ -52,6 +52,8 @@ const CART_ROY_DMG = {
   ghs_trap: 13, ghs_salt: 9, ghs_pepper: 9,   // THE GREENHOUSE (43_cart_i_royale_greenhouse.js): venus flytraps, the salt shaker, the pepper pot
   skcghost: 12, skcspout: 10, skckeg: 12,   // SKULL COVE (43_cart_i_royale_skullcove.js): the ghost galleon, blowholes, powder kegs
   spt_fin: 12, spt_devil: 10, spt_sink: 8,   // THE SAND PIT (43_cart_i_royale_sandpit.js): fin bite, dust devils, quicksand
+  stcarc: 9, stcjelly: 10, stcbolt: 12,   // THE STORM CELL (43_cart_i_royale_stormcell.js): arc fences, jelly stings, core strikes
+  tdp_ring: 6, tdp_clam: 12, tdp_geyser: 11,   // TIDE POOL (43_cart_i_royale_tidepool.js): the blowhole blast ring wave, clam snap, geysers
   tile: 9, subwave: 10, lovebomb: 12, firepit: 5, embervent: 12, stomp: 20, sweep: 18, ember: 12, emberfire: 5
 };
 const CART_ROY_KIND = { spin: 15, knock: 18, flip: 20, dazzle: 12, bubble: 14, stun: 14, slip: 10, foam: 10, whirl: 18, launch: 22, charm: 8, goo: 10, slow: 8 };

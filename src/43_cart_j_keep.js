@@ -508,7 +508,7 @@ CART_TRACK_RULES.keep = {
       for (const lf of q.leaves) { const pa = (lf.ph + ta) % DKP_GATE.P; if (pa > DKP_GATE.warn - 0.1 && pa < DKP_GATE.warn + DKP_GATE.swing + DKP_GATE.shut + 0.15 && notice(lf.cyc + gi)) { dkpSteer(s, k, -lf.sd * dkpWall(s, k, -lf.sd) * 0.5); break; } }
     }
     const P = L.port, dp = CartKit.ds(T, k.loc.s, P.s);
-    if (dp > 1.5 && dp < 55) { const ta = dp / Math.max(6, k.speed), pa = (P.ph + ta) % DKP_PORT.P, w0 = DKP_PORT.open + DKP_PORT.warn - 0.15, w1 = w0 + 0.15 + DKP_PORT.slam + DKP_PORT.down + 0.45; if (pa > w0 && pa < w1 && notice(P.cyc)) { I.gas = 0; if (k.speed > 9) I.brake = 0.7; } }
+    if (dp > 1.5 && dp < 55) { const ta = dp / Math.max(6, k.speed), pa = (P.ph + ta) % DKP_PORT.P, w0 = DKP_PORT.open + DKP_PORT.warn - 0.15, w1 = w0 + 0.15 + DKP_PORT.slam + DKP_PORT.down + 0.45; if (pa > w0 && pa < w1 && ((k.slot * 7 + P.cyc * 3) % 10) / 10 < p - 0.3) { I.gas = 0; if (k.speed > 9) I.brake = 0.7; } }
     for (const n of L.knights) {
       if (n.st !== 'warn' && n.st !== 'charge') continue;
       const dk = CartKit.ds(T, k.loc.s, n.s); if (dk < -3 || dk > 75) continue;

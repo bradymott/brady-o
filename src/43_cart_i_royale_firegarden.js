@@ -73,8 +73,8 @@ const CART_FGN_KINDS = {
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_firegarden = function (A, night) {
-  const C = CART_FGN, E = this.base(2143, [-235, -235, 235, 235], '#5a4038', 0.05);
-  const sky = Object.assign(CART_SKIES.night(), { zen: '#0a0504', hor: '#8a2c0e', sky: '#4a2418', fog: '#2a120c', fogD: 0.0042, mid: '#4a1a0a', midK: 0.4, cityCol: '#ff6a2a', cityK: 0.6, emB: 1.85, keyK: 0.5, key: '#ffc8a0', stars: 0.45, cloudCol: '#4a1e12', rim: '#ff8a4a' });
+  const C = CART_FGN, E = this.base(2143, [-235, -235, 235, 235], '#8a6652', 0.06);
+  const sky = Object.assign(CART_SKIES.night(), { zen: '#0a0504', hor: '#8a2c0e', sky: '#4a2418', fog: '#3a1a10', fogD: 0.0036, mid: '#4a1a0a', midK: 0.4, cityCol: '#ff6a2a', cityK: 0.6, emB: 1.85, keyK: 0.5, key: '#ffc8a0', stars: 0.45, cloudCol: '#4a1e12', rim: '#ff8a4a' });
   Object.assign(E, { id: 'firegarden', arena: A, sky, tod: 'night', music: 'kart4', night: true, R: C.R });
   const api = E.api, T = E.terrain, rng = mulberry32(2143);
   E.walls = []; for (let i = 0; i < 48; i++) { const a = i / 48 * TAU; E.walls.push(fgnAng(a, C.R)); }
@@ -121,6 +121,15 @@ CartWorlds.arena_firegarden = function (A, night) {
   for (let i = 0; i < C.wallN; i++) { const b = fgnGapA(i) + 0.3; { const [x, z] = fgnAng(b, 152); wall(x, z, b + 0.7, '#d07a40'); const [x2, z2] = fgnAng(b + 0.05, 159); wall(x2, z2, b + 2.3, '#e8a060'); } }
   for (let i = 0; i < 4; i++) { const a = fgnGapA((i * 1.5) | 0) + 0.85 + i * 0.1, [x, z] = fgnAng(a, 140); T.add(CartFeat.ramp(x, z, a + Math.PI / 2 * (i % 2 ? 1 : -1), 6, 7, 2.0, { col: '#4a3430', stripe: i % 2 ? '#ff7a2a' : '#ffc070' })); }
   for (const [a, r] of [[0.9, 168], [3.0, 166], [5.2, 170]]) T.add(CartFeat.mound(Math.sin(a) * r, Math.cos(a) * r, 13, 2.6, { col: '#3a2a26' }));
+  // ---- the open ground: clusters of fire flowers (with stems you can hit) and ember lamps, light pools ----
+  for (let i = 0; i < 22; i++) {
+    const a = (i + 0.5) / 22 * TAU + (rng() - 0.5) * 0.12, r = i % 2 ? 40 + rng() * 14 : 96 + rng() * 40, [cx, cz] = fgnAng(a, r);
+    if (E.beds.some(b => Math.hypot(b.x - cx, b.z - cz) < C.bed + 6) || E.pits.some(p => Math.hypot(p[0] - cx, p[1] - cz) < 8) || Math.abs(r - C.wallR) < 8) continue;
+    for (let j = 0; j < 3; j++) { const x = cx + Math.sin(j * 2.1 + i) * 1.6, z = cz + Math.cos(j * 2.1 + i) * 1.6; CartKit.put(E, 'fdy_flower', x, z, rng() * TAU, ['#ffb070', '#e8905a', '#f0c090'][j], { scale: 0.9 + rng() * 0.5, noLights: j > 0 }); }
+    E.art.push({ x: cx, z: cz, r: 2.8 }); api.light(cx, cz, 12, '#ff8a3a', 0.4);
+  }
+  for (let i = 0; i < C.wallN; i++) for (const sd of [-1, 1]) { const a = fgnGapA(i) + sd * 0.07, [x, z] = fgnAng(a, C.wallR + 2); CartDecor.put(E, 'lamp', x, z, a + Math.PI, '#ffb060', { y: 0, dusk: true }); E.art.push({ x, z, r: 1 }); }
+  for (let i = 0; i < 12; i++) { const [x, z] = fgnAng(i / 12 * TAU + 0.26, 150); api.light(x, z, 18, '#ff7a3a', 0.35); }
   // ---- the fence, furnaces and smokestacks beyond it, crowds and firespinners, searchlights ----
   for (let i = 0; i < 48; i++) { const a = E.walls[i], b = E.walls[(i + 1) % 48], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.round(L / 7), yaw = Math.atan2(b[0] - a[0], b[1] - a[1]); for (let j = 0; j < n; j++) { const u = (j + 0.5) / n, x = lerp(a[0], b[0], u), z = lerp(a[1], b[1], u), c = (Math.floor((i * n + j) / 2) % 3) === 2 ? '#3a302c' : (Math.floor((i * n + j) / 2) % 2 ? '#ff6a2a' : '#c8743a'); CartDecor.put(E, 'rail', x, z, yaw, c, { y: 0, noLights: true }); if (j % 2 === 0) api.glow(x, 0.98, z, 0.9, c); } }
   for (let i = 0; i < 8; i++) { const a = (i + 0.25) / 8 * TAU, [x, z] = fgnAng(a, C.R + 16); CartScene.mesh(api, x, z, a + Math.PI, fdyFurnace, { hi: false }); api.light(x * 0.94, z * 0.94, 14, '#ff6a1a', 0.5); }
