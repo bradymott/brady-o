@@ -467,7 +467,7 @@ express: { mx: true }                 // Rule 9 express trails already animated,
 // existing and reused: lands (bonus lands open through it), revealed, paths, pending, exits
 ```
 
-- `Save.data.settings.ruleFx: true` (the SHOW / HIDE setting).
+- `Save.data.settings.hatsFx` and `.danceFx` (Settings: ANIMAL HATS and DANCING, ON unless false; 18 Nov they replaced the combined `ruleFx` HATS & DANCING switch, which an old save's both follow until flipped).
 - The engine's `v: 3` field stays as it is. A fresh save still runs through the old `v < 3` wipe because `Save.defaults()` says `v: 1`. That is harmless, so don't "fix" it.
 
 ### 5.4 Progress, route and reveals (`src/28_tour_a_core.js`)

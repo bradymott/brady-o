@@ -259,9 +259,9 @@ if (want('party')) {
   const PF = run('TourPanelFx'), ST = run('Showtrunk'); let mini = 0; const m0 = ST.mini; ST.mini = function () { mini++; };
   const ctx = new Proxy({}, { get: () => () => ({}), set: () => true });
   PF.airship(ctx, 10, 10, 0); const asBlimp = mini === 0;
-  Save.data.settings.ruleFx = false; PF.airship(ctx, 10, 10, 0); const offTrunk = mini === 1; Save.data.settings.ruleFx = true;
+  Save.data.settings.danceFx = false; PF.airship(ctx, 10, 10, 0); const offTrunk = mini === 1; delete Save.data.settings.danceFx;
   ST.mini = m0;
-  check('party: the Showtrunk is a party blimp on the maps (and back to the trunk with HATS & DANCING off)', asBlimp && offTrunk, { asBlimp, offTrunk });
+  check('party: the Showtrunk is a party blimp on the maps (and back to the trunk with DANCING off)', asBlimp && offTrunk, { asBlimp, offTrunk });
 }
 
 console.log(`\n${checks - failures}/${checks} rulebook checks passed`);

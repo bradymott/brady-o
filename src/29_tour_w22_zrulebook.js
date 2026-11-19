@@ -9,7 +9,7 @@
      that one area) and one extra area: nothing on the desk moves.
    - What it changes: Piwi's Showtrunk is a party blimp on every map (and one drifts over every land's map), the
      Postcard Lighthouse's beam turns rainbow, and the ending gains a short party scene (Piwi sulks, then dances).
-     All three follow Settings -> HATS & DANCING.
+     All three follow Settings -> DANCING (TourRules.fxOn('party') reads that switch).
    - What it opens: 22-6 THE RULEBOOK (arch 'bonus', secret, hidden on World 22's map until the rule is revoked, then
      a gold trail grows from 22-5 to it, as 1-7 does): inside Piwi's House Rules itself. Page-turn platforms (a page's
      corner curls up before it turns; the spine never moves), rubber-stamp crushers (they glow red and shake before
