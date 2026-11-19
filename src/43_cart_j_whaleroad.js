@@ -10,8 +10,8 @@
                        on it, mist rises: 1.3 s), then ERUPTS and launches anything on it sky high. Steer off the
                        bubbling rings; they take turns, so there is always a dry line
      BARNACLE NARROWS  a causeway over the tidal flats: BARNACLE ROCKS rise out of the tide pools in the road (the pool
-                       drains and swirls: 1.2 s), stand for a few seconds and sink back. Two sets take turns: weave
-                       round the ones that are up; hitting one spins you out
+                       drains and swirls: 1.2 s), stand for a few seconds and sink back. Two sets take turns (right
+                       side, then left side): keep to the clear side; driving into one spins you out
      GULL ALLEY        the harbour straight: SEAGULLS circle overhead. One picks a car, screeches and hovers while a
                        target flashes on the road where that car is heading (1.4 s), then DIVES on it: it snatches
                        your item and flaps in your face. Change your line; the target doesn't follow you
@@ -222,8 +222,9 @@ function wrdWorld(id, D) {
   E.wrd.waves = []; for (let i = 0; i < 3; i++) { const s = S.wave + (i - 1) * 32, g = T.at(s, {}), sea = g.nz < 0 ? 1 : -1; E.wrd.waves.push({ i, s, x: g.x, z: g.z, nx: g.nx, nz: g.nz, tx: g.tx, tz: g.tz, yaw: g.yaw, hw: g.hw, wl: g.wl, wr: g.wr, sea }); }
   E.wrd.vents = []; const VL = [-0.45, 0.42, -0.05, 0.5, -0.5, 0.15], VS = [-40, -26, -12, 2, 16, 30];
   for (let i = 0; i < 6; i++) { const s = S.blow + VS[i], g = T.at(s, {}), d = VL[i] * g.hw; E.wrd.vents.push({ i, s, d, x: g.x + g.nx * d, z: g.z + g.nz * d, tx: g.tx, tz: g.tz }); }
-  E.wrd.rocks = []; const RL = [0.3, -0.3, 0, -0.32, 0.3, 0], RS = [-40, -27, -14, 0, 14, 28];
-  for (let i = 0; i < 6; i++) { const s = S.rocks + RS[i], g = T.at(s, {}), d = RL[i] * g.hw; E.wrd.rocks.push({ i, s, d, x: g.x + g.nx * d, z: g.z + g.nz * d, yaw: g.yaw + i }); }
+  // two sets that take turns: the even rocks sit right of centre, the odd ones left, so one side is always clear
+  E.wrd.rocks = []; const RL = [0.32, -0.32, 0.32, -0.32], RS = [-24, -10, 6, 20];
+  for (let i = 0; i < 4; i++) { const s = S.rocks + RS[i], g = T.at(s, {}), d = RL[i] * g.hw; E.wrd.rocks.push({ i, s, d, x: g.x + g.nx * d, z: g.z + g.nz * d, tx: g.tx, tz: g.tz, yaw: g.yaw + i }); }
   // ---- the coast: sea, shallows, wet sand and foam; dunes and grass inland; the headland's rock; the tidal flats ----
   api.paint((ctx, P, Sc) => {
     const B = E.world.bounds, X0 = B.x0 - 60, X1 = B.x1 + 60, Z0 = B.z0 - 60, Z1 = B.z1 + 60;
@@ -343,13 +344,13 @@ const WrdMesh = {
 /* ---------------- the rules: hazards at run time ---------------- */
 const WRD_WAVE = { period: 7.2, warn: 1.6, wash: 1.25, half: 7, band: 2.4, push: 10 };
 const WRD_BLOW = { period: 5.6, warn: 1.3, erupt: 0.9, r: 3.2, vy: 12 };
-const WRD_ROCK = { period: 10, rise: 1.2, up: 3.8, sink: 1.0, r: 2.3, depth: 2.6 };
+const WRD_ROCK = { period: 10, rise: 1.2, up: 2.8, sink: 0.8, r: 2.3, depth: 2.6 };   // each set is out 4.8 s of 10: the sets never overlap
 const WRD_GULL = { n: 3, lock: 1.4, dive: 0.55, away: 1.3, r: 3.1, cool: [2.5, 4.5], y: 16 };
-const WRD_WHALE = { period: 17, x: 175, z: -232, scale: 5.5 };
+const WRD_WHALE = { period: 17, x: 110, z: -205, scale: 7 };
 CART_TRACK_RULES.whaleroad = {
   onLoad(s) {
     const E = s.E, B = E.wrd;
-    const G = CartKit.group(s, [['whale', WrdMesh.whale, 1], ['rocks', WrdMesh.rock, 6], ['gulls', WrdMesh.gull, WRD_GULL.n], ['wingsR', m => WrdMesh.wing(m, 1), WRD_GULL.n], ['wingsL', m => WrdMesh.wing(m, -1), WRD_GULL.n]]);
+    const G = CartKit.group(s, [['whale', WrdMesh.whale, 1], ['rocks', WrdMesh.rock, 4], ['gulls', WrdMesh.gull, WRD_GULL.n], ['wingsR', m => WrdMesh.wing(m, 1), WRD_GULL.n], ['wingsL', m => WrdMesh.wing(m, -1), WRD_GULL.n]]);
     const L = s.wrd = { G, rng: mulberry32(5150), waves: [], vents: [], rocks: [], gulls: [], whale: { st: 'under', u: 0, x: WRD_WHALE.x, z: WRD_WHALE.z, obj: G.whale[0] }, feather: 0, splash: 0, said: {}, hintT: -9 };
     B.waves.forEach((q, i) => L.waves.push(Object.assign({}, q, { off: i * 2.4, st: 'calm', u: 0, c: -1, front: 0, mask: 0 })));
     B.vents.forEach((q, i) => L.vents.push(Object.assign({}, q, { off: (i * 0.93 + (i % 2) * 2.8) % WRD_BLOW.period, st: 'calm', u: 0, c: -1, mask: 0 })));
@@ -473,6 +474,7 @@ function wrdRocks(s, L, dt, racing) {
       const dx = k.x - r.x, dz = k.z - r.z, D = Math.hypot(dx, dz), m = C.r + 1.1; if (D > m) continue;
       const nx = dx / (D || 1), nz = dz / (D || 1), vn = k.vx * nx + k.vz * nz;
       k.x = r.x + nx * m; k.z = r.z + nz * m; if (vn < 0) { k.vx -= 1.5 * vn * nx; k.vz -= 1.5 * vn * nz; }
+      if (k.speed < 5) { k.vx += r.tx * 5; k.vz += r.tz * 5; }   // never pinned: a stalled car is slid on past the rock
       if (!(r.mask & (1 << k.slot)) && r.st !== 'rise' && vn < -2) { r.mask |= 1 << k.slot; if (CartKit.hit(s, k, 'spin', 'barnacle', { dur: 0.85, banner: 'BARNACLED!' })) { cartIxSound(s, 'bump', k.x, k.z, 0.9, 0.7); if (s.fx) s.fx.spark(k.x, k.y + 0.8, k.z, 8, '#ffffff', 5); } }
     }
     const o = r.obj; if (o) { const on = r.h > 0.01, shake = r.st === 'rise' ? Math.sin(s.time * 38) * 0.06 : 0; o.live = on; o.visible = on; o.x = r.x + shake; o.z = r.z; o.y = -C.depth * (1 - r.h) - 0.15; o.yaw = r.yaw; o.pitch = 0; o.roll = shake; o.scale = 1; }
@@ -572,8 +574,8 @@ function wrdDraw(s, L, R, S, t) {
       const wetL = Math.abs((w.sea > 0 ? w.wr + 8 : -(w.wl + 8)) - f), wc = (f + (w.sea > 0 ? w.wr + 8 : -(w.wl + 8))) / 2;
       R.flat.flat(w.x + w.nx * wc, 0.08, w.z + w.nz * wc, wetL, WRD_WAVE.half * 2, w.yaw, S.square, C.deep, 0.3 * a, false);
       R.flat.flat(w.x + w.nx * f, 0.1, w.z + w.nz * f, 4, WRD_WAVE.half * 2 + 2, w.yaw, S.square, C.water, 0.6 * a, false);
-      for (let i = 0; i <= 8; i++) { const along = (i / 8 - 0.5) * (WRD_WAVE.half * 2 + 1), x = w.x + w.tx * along + w.nx * f, z = w.z + w.tz * along + w.nz * f, h = 2.2 + Math.sin(t * 9 + i * 1.7) * 0.5;
-        R.bbs.bb(x, h * 0.5, z, 3.6, h * 1.3, S.puff, C.water, 0.85 * a, false, t * 3 + i); R.bbs.bb(x - w.nx * w.sea * 0.6, h + 0.3, z - w.nz * w.sea * 0.6, 3.0, 1.8, S.foam || S.puff, C.foam, 0.95 * a, false, i + t); }
+      for (let i = 0; i <= 8; i++) { const along = (i / 8 - 0.5) * (WRD_WAVE.half * 2 + 1), x = w.x + w.tx * along + w.nx * f, z = w.z + w.tz * along + w.nz * f, h = 3.2 + Math.sin(t * 9 + i * 1.7) * 0.6;
+        R.bbs.bb(x, h * 0.5, z, 4.8, h * 1.5, S.puff, C.water, 0.9 * a, false, t * 3 + i); R.bbs.bb(x + w.nx * w.sea * 1.2, h * 0.35, z + w.nz * w.sea * 1.2, 4.2, h, S.puff, C.sea, 0.8 * a, false, i); R.bbs.bb(x - w.nx * w.sea * 0.6, h + 0.4, z - w.nz * w.sea * 0.6, 4.0, 2.4, S.foam || S.puff, C.foam, 0.95 * a, false, i + t); }
     }
   }
   for (const v of L.vents) {

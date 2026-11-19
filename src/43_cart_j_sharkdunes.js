@@ -50,7 +50,7 @@ CART_CAREER_TRACKS.shark = 'sharkdunes';
 // a FIN cruising through sand, facing +z, about 3 m tall at scale 1: a slate fin with a pale tip, a nick out of the
 // trailing edge and three glowing teal freckles; a sand wake heaped round its base
 function shdFin(m, lo) {
-  const P = [[-1.8, -0.4], [1.4, -0.4], [1.05, 0.5], [0.9, 1.1], [0.95, 1.55], [0.7, 1.75], [0.95, 2.05], [1.35, 2.95], [0.85, 2.9], [0.25, 2.55], [-0.35, 1.95], [-0.95, 1.2], [-1.45, 0.45]];
+  const P = SHD_FIN_P;
   m.push(); m.tf(0, 0, 0, Math.PI / 2);
   m.color('#4a6a8a').shine(3); m.extrude(P, 0.44, { convex: false });
   m.color('#dfe8f0').shine(3); m.extrude([[0.55, 2.55], [0.95, 2.62], [1.35, 2.95], [0.85, 2.9]], 0.48, { convex: false });
@@ -111,29 +111,32 @@ function shdTower(m) {
   m.shine(0);
   return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.7, hz: 1.7, y0: 0, y1: 8 }] };
 }
-// THE CHOMPER: a giant sand sculpture of a land-shark leaping out of a dune, with sunglasses, a bucket and spade
+// THE CHOMPER: a giant sand sculpture of a land-shark leaping nose-up out of a dune: torpedo body, big dorsal fin,
+// crescent tail still in the sand, sunglasses and a toothy grin; a bucket, a spade and little castles round it
+const SHD_FIN_P = [[-1.8, -0.4], [1.4, -0.4], [1.05, 0.5], [0.9, 1.1], [0.95, 1.55], [0.7, 1.75], [0.95, 2.05], [1.35, 2.95], [0.85, 2.9], [0.25, 2.55], [-0.35, 1.95], [-0.95, 1.2], [-1.45, 0.45]];
 function shdSculpture(m) {
-  const sand = '#e6c48a', wet = '#c89a62';
+  const sand = '#e6c48a', wet = '#b88a52';
   m.color(sand).shine(0);
-  m.ellipsoid(0, 0, 0, 22, 5.5, 16, { seg: 28, rings: 10, phi0: Math.PI / 2 });   // the dune it bursts from
-  // the body: a fat arc of ellipsoids rising out of the dune, nose up
-  const B = [[0, 3, -10, 4.2, 3.6, 5.0], [0, 6.5, -5, 5.2, 4.6, 5.5], [0, 10.5, 0.5, 5.6, 5.2, 5.6], [0, 14.5, 5, 5.0, 4.8, 5.0], [0, 17.5, 8.5, 3.9, 3.8, 3.8]];
-  for (const [x, y, z, rx, ry, rz] of B) m.ellipsoid(x, y, z, rx, ry, rz, { seg: 22, rings: 14 });
-  m.ellipsoid(0, 19.8, 10.6, 2.7, 2.6, 2.8, { seg: 18, rings: 12 });   // the snout
-  // a big friendly grin: a dark groove and a row of rounded teeth
-  m.color(wet); { let px = 0, py = 0, pz = 0; for (let i = 0; i <= 10; i++) { const a = i / 10 * Math.PI, x = Math.cos(a) * 3.6, yz = Math.sin(a) * 3.6, y = 16.6 - yz * 0.4, z = 10.2 + yz * 0.85; if (i) m.limb(px, py, pz, x, y, z, 0.42, 0.42, { seg: 6 }); px = x; py = y; pz = z; } }
-  m.color('#fff6e4').shine(2); for (let i = 0; i < 7; i++) { const a = (i + 0.5) / 7 * Math.PI, x = Math.cos(a) * 3.3, yz = Math.sin(a) * 3.3; m.ball(x, 16.6 - yz * 0.4, 10.2 + yz * 0.85, 0.48, { seg: 8, rings: 6 }); }
-  // the dorsal fin, the pectoral fins, the tail flicking out of the sand behind
-  m.color(sand).shine(0);
-  m.push(); m.tf(0, 14, 1, 0, 0.6, 0); m.push(); m.tf(-0.6, 0, 0, Math.PI / 2); m.extrude([[-3, 0], [3, 0], [2.2, 1.5], [3.2, 5.2], [0.8, 3.6], [-1.8, 1.4]], 1.2, { convex: false }); m.pop(); m.pop();
-  for (const sd of [-1, 1]) { m.push(); m.tf(sd * 5.2, 8, 0, 0, 0.3, sd * 0.9); m.ellipsoid(0, 0, 0, 4.2, 0.8, 2.4, { seg: 14, rings: 8 }); m.pop(); }
-  m.push(); m.tf(0, 2.6, -17, 0, -0.5, 0); m.ellipsoid(0, 2.5, 0, 1.4, 4.2, 1.8, { seg: 12, rings: 8 }); m.push(); m.tf(0, 6.5, 0, 0, 0.6, 0); m.ellipsoid(0, 2, 0, 1.2, 3.5, 1.6, { seg: 12, rings: 8 }); m.pop(); m.pop();
-  // sunglasses
-  m.color('#1a2230').shine(4); for (const sd of [-1, 1]) { m.push(); m.tf(sd * 2.1, 20.6, 11.6, 0, -0.5, 0); m.roundBox(0, 0, 0, 2.6, 1.6, 0.4, 0.4); m.pop(); }
-  m.color('#ff4a8a').shine(3); m.limb(-3.4, 20.8, 11.2, 3.4, 20.8, 11.2, 0.2, 0.2, { seg: 6 });
-  // the bucket and spade, and a little castle
-  m.color('#ff5a4a').shine(3);
-  m.push(); m.tf(14, 0, 9); m.lathe([[0, 0], [2.1, 0], [2.6, 3.6], [2.4, 3.7], [1.9, 0.3], [0, 0.3]], { seg: 20 }); m.pop();
+  m.ellipsoid(0, 0, -6, 20, 5.5, 16, { seg: 28, rings: 10, phi0: Math.PI / 2 });   // the dune it bursts from
+  m.push(); m.tf(0, 9.5, 0, 0, -0.55);   // body frame: z along the body (nose +z), tipped nose-up
+  m.color(sand); m.ellipsoid(0, 0, 0, 4.8, 4.4, 13, { seg: 26, rings: 16 });
+  m.ellipsoid(0, -0.4, 11.2, 3.6, 3.2, 4.6, { seg: 20, rings: 12 });                 // the snout
+  m.color('#f2dcb0'); m.ellipsoid(0, -2.2, 3, 3.6, 2.4, 10, { seg: 20, rings: 10 });   // a paler belly
+  // the dorsal fin and the crescent tail (flat, thick slabs of sand)
+  m.color(sand); m.push(); m.tf(0, 3.4, -1, Math.PI / 2, 0, 0, 2.6, 2.6, 2.6); m.extrude(SHD_FIN_P, 0.4, { convex: false }); m.pop();
+  m.push(); m.tf(0, 0.3, -12.5, Math.PI / 2, 0, 0, 2.3, 2.3, 2.3); m.extrude([[-1, -0.5], [1.5, -0.3], [3.2, 3.2], [2.4, 3.0], [0.4, 0.8]], 0.5, { convex: false }); m.extrude([[1.5, 0.3], [3.0, -2.0], [2.6, -2.4], [0.4, -0.6], [-1, 0.5]], 0.5, { convex: false }); m.pop();
+  for (const sd of [-1, 1]) { m.push(); m.tf(sd * 4.6, -2, 5, sd * 0.5, 0, sd * 0.45); m.ellipsoid(0, 0, 0, 4.0, 0.8, 2.2, { seg: 14, rings: 8 }); m.pop(); }
+  // gills
+  m.color(wet); for (const sd of [-1, 1]) for (let i = 0; i < 3; i++) m.limb(sd * 4.3, 1.6, 6.5 - i * 1.3, sd * 4.5, -1.4, 6.0 - i * 1.3, 0.22, 0.22, { seg: 5 });
+  // a big friendly grin and rounded teeth
+  { let px = 0, py = 0, pz = 0; for (let i = 0; i <= 10; i++) { const a = i / 10 * Math.PI, x = Math.cos(a) * 3.0, y = -1.6 - Math.sin(a) * 0.7, z = 12.6 + Math.sin(a) * 2.3; if (i) m.limb(px, py, pz, x, y, z, 0.36, 0.36, { seg: 6 }); px = x; py = y; pz = z; } }
+  m.color('#fff6e4').shine(2); for (let i = 1; i < 8; i++) { const a = i / 8 * Math.PI; m.ball(Math.cos(a) * 2.8, -1.3 - Math.sin(a) * 0.6, 12.6 + Math.sin(a) * 2.2, 0.42, { seg: 8, rings: 6 }); }
+  // sunglasses on the snout
+  m.color('#1a2230').shine(4); for (const sd of [-1, 1]) { m.push(); m.tf(sd * 1.7, 1.6, 13.4, sd * 0.25, -0.3); m.roundBox(0, 0, 0, 2.6, 1.7, 0.5, 0.45); m.pop(); }
+  m.color('#ff4a8a').shine(3); m.limb(-3.4, 1.9, 12.6, 3.4, 1.9, 12.6, 0.18, 0.18, { seg: 6 });
+  m.pop();
+  // the bucket, the spade, little castles
+  m.color('#ff5a4a').shine(3); m.push(); m.tf(14, 0, 9); m.lathe([[0, 0], [2.1, 0], [2.6, 3.6], [2.4, 3.7], [1.9, 0.3], [0, 0.3]], { seg: 20 }); m.pop();
   m.color('#3ac8f0').shine(3); m.push(); m.tf(-13, 3.5, 10, 0.5, 0, 0.5); m.limb(0, 0, 0, 0, 7, 0, 0.3, 0.3, { seg: 8 }); m.roundBox(0, -1.4, 0, 2.2, 3.0, 0.3, 0.3); m.pop();
   m.color(sand).shine(0); for (const [x, z, h] of [[-15, -6, 4.5], [-19, -2, 3.5], [-12, -10, 3.2]]) { m.cyl(x, 0, z, 1.6, 1.4, h, 12); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; m.box(x + Math.cos(a) * 1.25, h + 0.4, z + Math.sin(a) * 1.25, 0.5, 0.8, 0.5); } }
   m.shine(0);
@@ -191,7 +194,7 @@ function shdWorld(id, D) {
     const c = P(SHD_BASIN[0], SHD_BASIN[1]); ctx.fillStyle = 'rgba(150,100,55,0.22)'; ctx.beginPath(); ctx.arc(c[0], c[1], 58 * Sc, 0, TAU); ctx.fill();
     for (let r = 10; r < 58; r += 6) { ctx.strokeStyle = 'rgba(120,80,40,0.16)'; ctx.lineWidth = 0.6 * Sc; ctx.beginPath(); ctx.arc(c[0], c[1], r * Sc, 0, TAU); ctx.stroke(); }
     // fin alley: red and white shark-warning chevrons on the shoulders
-    for (let s = S.fin - 50; s < S.fin + 80; s += 5) { const g = T.at(wrap(s), {}); for (const sd of [1, -1]) { const off = sd * (g.hw + 2.2), q = P(g.x + g.nx * off, g.z + g.nz * off); ctx.fillStyle = Math.floor(s / 5) % 2 ? 'rgba(255,80,60,0.55)' : 'rgba(255,255,255,0.6)'; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(Math.atan2(g.tz, g.tx)); ctx.fillRect(-1.2 * Sc, -0.8 * Sc, 2.4 * Sc, 1.6 * Sc); ctx.restore(); } }
+    for (let s = S.fin - 50; s < S.fin + 80; s += 5) { const g = T.at(wrap(s), {}); for (const sd of [1, -1]) { const off = sd * (g.hw + 2.2), q = P(g.x + g.nx * off, g.z + g.nz * off); ctx.fillStyle = Math.floor(s / 5) % 2 ? 'rgba(46,200,200,0.55)' : 'rgba(255,255,255,0.6)'; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(Math.atan2(g.tz, g.tx)); ctx.fillRect(-1.2 * Sc, -0.8 * Sc, 2.4 * Sc, 1.6 * Sc); ctx.restore(); } }
   });
   // ---- jumps on the road: THE LAUNCH (a tabletop after the start), the DUNE ROLLERS, the DUNE RUN tabletop ----
   const feat = (s, fn) => { const g = T.at(wrap(s), {}); const f = fn(g), cx = g.x, cz = g.z, yaw = g.yaw; f.col = '#dcb47a'; f.stripe = '#ff6a4a'; f.stripeFn = (x, z) => Math.floor(cartLocal(x, z, cx, cz, yaw)[0] / 1.6 + 100) % 2 === 0; E.terrain.add(f); return f; };
@@ -295,7 +298,7 @@ const ShdMesh = {
 const SHD_FIN = { period: 7.5, stalk: 1.3, speed: 22, half: 1.2, len: 3.0, out: 5.5, scale: 1.5 };
 const SHD_DEV = { n: 3, period: 9.5, brew: 1.4, speed: 5.0, core: 2.4, R: 6.5, gap: 40 };
 const SHD_QS = { period: 6.6, churn: 1.3, sink: 2.8, r: 4.6, core: 1.9, spots: [[-26, -0.45], [-9, 0.42], [9, -0.42], [26, 0.45]] };
-const SHD_MAW = { period: 7.2, rumble: 1.4, gulp: 1.0, r: 4.9 };
+const SHD_MAW = { period: 7.2, rumble: 1.4, gulp: 1.0, r: 5.5 };
 CART_TRACK_RULES.sharkdunes = {
   onLoad(s) {
     const E = s.E, B = E.shd, T = s.T || s.TR;
@@ -327,7 +330,7 @@ CART_TRACK_RULES.sharkdunes = {
     }
     const hopAt = (sv, d, r) => { const ds = CartKit.ahead(s, k, sv); return ds > 1 && ds < Math.max(4, k.speed * 0.2) && Math.abs(d - k.loc.d) < r && !k.air; };
     for (const q of L.qs) if (q.st === 'sink' && hopAt(q.s, q.d, SHD_QS.r) && luck < 0.4 + (sk - 0.85) * 3) { I.driftPress = true; I.drift = false; return; }
-    const M = L.maw; if (M.st === 'gulp' && M.u < 0.6 && hopAt(M.s, M.lane * M.hw * 0.45, SHD_MAW.r) && luck < 0.45 + (sk - 0.85) * 3) { I.driftPress = true; I.drift = false; }
+    const M = L.maw; if (M.st === 'gulp' && M.u < 0.6 && hopAt(M.s, M.lane * M.hw * 0.45, SHD_MAW.r) && luck < 0.3 + (sk - 0.85) * 3) { I.driftPress = true; I.drift = false; }
   },
   draw(s, R, S, t) { const L = s.shd; if (L) shdDraw(s, L, R, S, t); },
   lights(s, add) {},
@@ -432,7 +435,7 @@ function shdMaw(s, L, dt, racing) {
   M.st = ph < sleep ? 'sleep' : ph < sleep + C.rumble ? 'rumble' : 'gulp'; M.u = M.st === 'rumble' ? (ph - sleep) / C.rumble : M.st === 'gulp' ? (ph - sleep - C.rumble) / C.gulp : 0;
   if (M.st === 'rumble' && M.u < 0.05 && CartKit.near(s, M.cx, M.cz, 70)) cartIxSound(s, 'dust', M.cx, M.cz, 0.5, 0.6);
   if (M.st === 'gulp' && !M.fired) { M.fired = true; CartKit.fired(s, 'shd_maw'); if (CartKit.near(s, M.cx, M.cz, 80)) { cartIxSound(s, 'cartChomp', M.cx, M.cz, 1, 0.6); cartIxSound(s, 'cartBoom', M.cx, M.cz, 0.5, 0.7); if (CartKit.near(s, M.cx, M.cz, 30)) s.shakeIt(0.5); } if (s.fx && CartKit.near(s, M.cx, M.cz, 120)) s.fx.dust(M.cx, 0.5, M.cz, 26, '#e0c088'); }
-  if (M.st !== 'sleep') cartIxObs(s, M.cx, M.cz, C.r + (M.st === 'gulp' ? 1.5 : 0.8));
+  if (M.st === 'gulp' || (M.st === 'rumble' && M.u > 0.45)) cartIxObs(s, M.cx, M.cz, C.r + (M.st === 'gulp' ? 1.0 : 0.4));   // the AI reacts late: the weak ones get gulped
   if (M.st === 'gulp' && M.u > 0.12 && M.u < 0.6 && racing) for (const k of s.karts) {
     if (k.out || k.sunk || (M.mask & (1 << k.slot)) || (k.air && k.y > s.terrain.height(k.x, k.z) + 1.0)) continue;
     const dx = k.x - M.cx, dz = k.z - M.cz, D = Math.hypot(dx, dz); if (D > C.r) continue;
@@ -461,10 +464,12 @@ function shdDraw(s, L, R, S, t) {
     if (f.st === 'stalk') {
       // the fin's path: an orange band across the road, chevrons, sand spraying up at the far edge
       const fl = 0.55 + 0.45 * Math.max(0, Math.sin(t * 18)), dir = -f.sd, edge = Math.max(f.wl, f.wr) + 2;
-      R.flat.flat(f.x, 0.09, f.z, edge * 2, SHD_FIN.len * 2 + 1.0, f.yaw, S.square, C.hot, 0.62 * fl, false);
+      R.flat.flat(f.x, 0.09, f.z, edge * 2, SHD_FIN.len * 2 + 4.0, f.yaw, S.square, C.hot, 0.7 * fl, false);
       for (let i = 0; i < 6; i++) { const u = ((i / 6 + t * 1.3) % 1), dd = f.sd * edge + dir * u * edge * 2, ay = Math.atan2(f.nx * dir, f.nz * dir); R.flat.flat(f.x + f.nx * dd, 0.105, f.z + f.nz * dd, 5.2, 5.2, ay, S.arrow, C.black, 0.45 * fl, false); R.flat.flat(f.x + f.nx * dd, 0.11, f.z + f.nz * dd, 4.6, 4.6, ay, S.arrow, C.white, fl, false); }
       for (const sd of [-1, 1]) R.flat.flat(f.x + f.tx * sd * (SHD_FIN.len + 0.5), 0.1, f.z + f.tz * sd * (SHD_FIN.len + 0.5), edge * 2, 0.5, f.yaw, S.square, C.white, 0.9 * fl, false);
       R.bbs.bb(f.px, 5.5, f.pz, 2.6, 2.6, S.warn, C.hot, fl, false);
+      // a fence of sand spurts and warning marks standing up along the path, so it reads from far down the road
+      for (let i = 0; i < 7; i++) { const dd = f.sd * edge + dir * (i + 0.5) / 7 * edge * 2, x = f.x + f.nx * dd, z = f.z + f.nz * dd, hop = Math.abs(Math.sin(t * 9 + i * 0.9)); R.bbs.bb(x, 0.9 + hop * 0.9, z, 2.2, 2.2, S.puff, C.sand, 0.8, false, t * 2 + i); R.bbs.bb(x, 2.2 + hop * 0.9, z, 1.5, 1.5, S.warn, C.hot, fl, false); }
       if (s.fx && Math.random() < 0.6) s.fx.add(f.px, 0.6, f.pz, (Math.random() - 0.5) * 3, 3 + Math.random() * 3, (Math.random() - 0.5) * 3, 0.9, 0.6, 1.6, C.sand, 0.8, 'puff', 4, Math.random() * 6, 1);
     }
     if (f.st === 'dash') { const dir = -f.sd; for (let i = 1; i <= 5; i++) R.bbs.bb(f.px - f.nx * dir * i * 1.4, 0.7, f.pz - f.nz * dir * i * 1.4, 3.6 - i * 0.4, 2.0 - i * 0.25, S.puff, C.sand, 0.85 - i * 0.14, false, t * 3 + i); R.flat.flat(f.px - f.nx * dir * 4, gy, f.pz - f.nz * dir * 4, 2.6, 9, Math.atan2(f.nx, f.nz), S.shadow, C.sandDark, 0.5, false); }
@@ -548,7 +553,7 @@ function shdShot(D, name) {
   const hold = () => { if (pin) { P.x = pin.x; P.z = pin.z; P.yaw = pin.yaw; P.vx = P.vz = 0; } for (const q of pins) { q.k.x = q.x; q.k.z = q.z; q.k.yaw = q.yaw; q.k.vx = q.k.vz = 0; } };
   const wait = (fn, secs) => { for (let i = 0; i < secs * 60; i++) { s.update(STEP); hold(); if (fn()) return true; } return false; };
   let ok = true;
-  if (name === 'fin-stalk' || name === 'fin') { const f = L.fins[1]; park(f.s - 26, -0.35, 0, true); rivals([[-40, 0, 1]]); ok = wait(() => name === 'fin-stalk' ? f.st === 'stalk' && f.t > 0.8 : f.st === 'dash' && Math.abs(f.d) < 4, 16); }
+  if (name === 'fin-stalk' || name === 'fin') { const f = L.fins[1]; park(f.s - 17, 0.35, 0, true); rivals([[-40, 0, 1]]); ok = wait(() => name === 'fin-stalk' ? f.st === 'stalk' && f.t > 0.8 : f.st === 'dash' && Math.abs(f.d) < 4, 16); }
   else if (name === 'devil-brew' || name === 'devil') { const v = L.devils[1]; park(v.s0 - 28, 0, 0, true); rivals([[-50, 0, 1]]); ok = wait(() => name === 'devil-brew' ? v.st === 'brew' && v.u > 0.6 : v.st === 'go' && v.u > 0.35 && v.u < 0.6, 16); }
   else if (name === 'sanded') { const v = L.devils[1]; park(v.s0 + 2, 0, 0, false); rivals([[-50, 0, 1]]); ok = wait(() => L.blind > 0.6, 24); }
   else if (name === 'quick-churn' || name === 'quicksand') { const q = L.qs[1]; park(q.s - 15, -0.2, 0, true); rivals([[-50, 0, 1]]); ok = wait(() => name === 'quick-churn' ? q.st === 'churn' && q.u > 0.6 : q.st === 'sink' && q.u > 0.3, 16); }

@@ -156,7 +156,7 @@ const check = (name, ok, info) => { console.log((ok ? 'ok   ' : 'FAIL ') + name 
   if (roy.fail !== undefined) { check('every royale stage won through the debug API', false, roy); roy.o = { run: {} }; roy.sec = { games: [] }; roy.prog = {}; }
   check('royale stage 1 is the car\'s royale arena (Vibe Check stand-in until the royale mode lands)', roy.o.run.owner === 'heart' && (roy.o.mode === 'royale' || (roy.o.mode === 'battle' && roy.o.objective === 'vibe')), roy.o);
   check('winning the Battle Royale: stat point + secret level unlocked', !roy.lockedBefore && roy.sec.unlocked && roy.prog.royaleWon === 1 && roy.prog.points === 2 && roy.o.last.unlocked, [roy.sec, roy.prog.points]);
-  check('Bass Valentine\'s secret level: Vibe Check + Glow Grab, its own game "coming soon" (no completion yet)', roy.sec.games[0] === null && roy.sec.games[1] === 'vibe' && roy.sec.games[2] === 'glow' && !roy.sec.ready && roy.sec.openable, roy.sec);
+  check('Bass Valentine\'s secret level: its own game (Love Train) + Vibe Check + Glow Grab, not complete yet', roy.sec.games[0] === 'lovetrain' && roy.sec.games[1] === 'vibe' && roy.sec.games[2] === 'glow' && roy.sec.ready && roy.sec.openable && !roy.sec.complete, roy.sec);
   await ev(() => window.BRADY_CART.debug.career.press('CONTINUE'));
   await shot('prize-royale-land', 1500);
 
@@ -177,7 +177,7 @@ const check = (name, ok, info) => { console.log((ok ? 'ok   ' : 'FAIL ') + name 
       return { rows, prog: C.prog('octo') };
     }, kind);
     const R = sm.rows;
-    check(kind + ': all 13 stages load, drive and pass (stand-ins where a car has no level)', R.length === 13 && R.every(r => r.sane && r.pass) && R.filter(r => r.standIn).length >= 9 && sm.prog[kind + 'Won'] === 1, R.map(r => r.owner + ':' + r.lvl + (r.standIn ? '*' : '') + ':' + r.mode + ':' + r.moved + (r.pass ? '' : ':FAIL')));
+    check(kind + ': all 13 stages load, drive and pass (stand-ins, marked *, where a car has no level yet)', R.length === 13 && R.every(r => r.sane && r.pass) && sm.prog[kind + 'Won'] === 1, R.map(r => r.owner + ':' + r.lvl + (r.standIn ? '*' : '') + ':' + r.mode + ':' + r.moved + (r.pass ? '' : ':FAIL')));
     if (kind === 'royale') check('royale: every stage plays in royale mode and reports C2\'s result; the final is the Man', R.every(r => r.mode === 'royale' && r.roy) && R[12].lvl === 'man', R.map(r => r.mode + ':' + r.roy));
   }
   // the royale final decides itself: the fight ended without the Man destroyed is a loss; destroyed is the win

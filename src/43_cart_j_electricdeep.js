@@ -506,15 +506,15 @@ function eldDraw(s, L, R, S, t) {
     if (a.st === 'warn') {
       // a zig-zag flashing across the road, little arcs creeping in from both electrodes, sparks climbing the coils
       const fl = 0.35 + 0.65 * Math.max(0, Math.sin(t * 22));
-      for (let i = 0; i < 9; i++) { const u = (i + 0.5) / 9, d = lerp(-a.hw, a.hw, u), off = (i % 2 ? 1 : -1) * 0.9; R.flat.flat(a.x + a.nx * d + a.tx * off, 0.1, a.z + a.nz * d + a.tz * off, 2.6, 0.7, a.yaw + Math.PI / 2 + (i % 2 ? 0.7 : -0.7), S.square, C.volt, 0.9 * fl, true); }
+      for (let i = 0; i < 9; i++) { const u = (i + 0.5) / 9, d = lerp(-a.hw, a.hw, u), off = (i % 2 ? 1 : -1) * 0.9; R.flat.flat(a.x + a.nx * d + a.tx * off, 0.1, a.z + a.nz * d + a.tz * off, 2.8, 1.0, a.yaw + Math.PI / 2 + (i % 2 ? 0.7 : -0.7), S.square, C.volt, 0.9 * fl, true); }
       R.flat.flat(a.x, 0.08, a.z, a.hw * 2 + 2, ELD_ARC.band * 2, a.yaw, S.square, C.cyan, 0.22 * fl, true);
       const reach = a.u * 0.5;
-      eldBolt(R, S, e0.x, 1.3, e0.z, lerp(e0.x, e1.x, reach), 1.3, lerp(e0.z, e1.z, reach), 4, 1.0, 0.16, C.cyan, 0.9, a.i * 3, t);
-      eldBolt(R, S, e1.x, 1.3, e1.z, lerp(e1.x, e0.x, reach), 1.3, lerp(e1.z, e0.z, reach), 4, 1.0, 0.16, C.cyan, 0.9, a.i * 3 + 1, t);
+      eldBolt(R, S, e0.x, 1.3, e0.z, lerp(e0.x, e1.x, reach), 1.3, lerp(e0.z, e1.z, reach), 4, 1.0, 0.26, C.cyan, 0.9, a.i * 3, t);
+      eldBolt(R, S, e1.x, 1.3, e1.z, lerp(e1.x, e0.x, reach), 1.3, lerp(e1.z, e0.z, reach), 4, 1.0, 0.26, C.cyan, 0.9, a.i * 3 + 1, t);
       for (const e of a.el) { const y = 1.4 + ((t * 6 + a.i) % 1) * 5.5; R.bbs.bb(e.tx, y, e.tz, 1.4, 1.4, S.spark, C.ice, 0.9, true); }
     } else if (a.st === 'zap') {
       const al = 1 - a.u * 0.5;
-      for (let k = 0; k < 3; k++) eldBolt(R, S, e0.x, 1.3, e0.z, e1.x, 1.3, e1.z, 9, 1.6, k ? 0.16 : 0.3, k === 2 ? C.violet : C.cyan, al, a.i * 7 + k * 13, t);
+      for (let k = 0; k < 3; k++) eldBolt(R, S, e0.x, 1.3, e0.z, e1.x, 1.3, e1.z, 9, 1.6, k ? 0.3 : 0.55, k === 2 ? C.violet : C.cyan, al, a.i * 7 + k * 13, t);
       eldBolt(R, S, e0.tx, 9.2, e0.tz, e0.x, 1.4, e0.z, 4, 0.9, 0.18, C.cyan, al, a.i + 40, t); eldBolt(R, S, e1.tx, 9.2, e1.tz, e1.x, 1.4, e1.z, 4, 0.9, 0.18, C.cyan, al, a.i + 50, t);
       R.flat.flat(a.x, 0.1, a.z, a.hw * 2 + 6, 9, a.yaw, S.glow, C.ice, 0.8 * al, true);
       R.bbs.bb(a.x, 1.6, a.z, 12, 6, S.glow, C.cyan, 0.55 * al, true);
@@ -614,7 +614,7 @@ function eldShot(D, name) {
   else if (name === 'tube') { park(L.tube.s0 - 6, 0.1, 0, true); rivals([[14, 0.3, 1], [24, -0.3, 1], [-40, 0, 1]]); ok = wait(() => L.tube.st === 'surge' && L.tube.u > 0.3, 10); }
   else if (name === 'jelly-warn' || name === 'jelly') { const j = L.jellies[2]; ok = wait(() => j.st === (name === 'jelly' ? 'sting' : 'warn') && (name === 'jelly' ? j.u > 0.3 : j.u > 0.6), 12); const sv = CartKit.sOf(T, j.gx, j.gz); park(sv - 17, 0, 0, true); rivals([[-50, 0, 1]]); s.update(STEP); hold(); }
   else if (name === 'eel-warn' || name === 'eel') { const e = L.eels[0]; park(e.s - 18, 0.2, 0, true); rivals([[-50, 0, 1]]); ok = wait(() => name === 'eel-warn' ? e.st === 'warn' && e.t > 0.9 : e.st === 'cross' && e.segs[5] && e.segs[5].visible && Math.abs(e.d) < 4, 16); }
-  else if (name === 'jolt') { park(CartKit.sOf(T, -162, 70), 0.2, 0, true); P.yaw += 0.9; pin.yaw = P.yaw; rivals([[10, 0.3, 1], [16, -0.3, 1]]); wait(() => false, 0.5); }
+  else if (name === 'jolt') { park(CartKit.sOf(T, -162, 70), 0.2, 0, true); P.yaw += 1.35; pin.yaw = P.yaw; rivals([[10, 0.3, 1], [16, -0.3, 1]]); wait(() => false, 0.5); }
   s.snapCam = true; for (let i = 0; i < 4; i++) { D.step(1, 1); hold(); }
   return { ok, draws: s.stats.draws, tris: s.stats.tris, hits: (s.kit || {}).hits, touch: (s.kit || {}).touch, p: [+P.x.toFixed(1), +P.z.toFixed(1), +P.loc.s.toFixed(1)] };
 }

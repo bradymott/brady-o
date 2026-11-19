@@ -89,7 +89,7 @@ function stcJelly(m, col, lo) {
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_stormcell = function (A, night) {
-  const S = STC, E = this.base(2143, [-245, -245, 245, 245], '#223044', 0.02);
+  const S = STC, E = this.base(2143, [-245, -245, 245, 245], '#34506e', 0.02);
   const sky = Object.assign(CART_SKIES.night(), { zen: '#010510', hor: '#0a3450', fog: '#04182a', fogD: 0.0052, haze: 0.35, sky: '#08243e', gnd: '#061420', mid: '#04263c', midK: 0.35, cityK: 0, key: '#7ac8ff', keyK: 0.5, emB: 1.9, stars: 0.2, clouds: 0, moonK: 0.3, rim: '#38f2ff' });
   Object.assign(E, { id: 'stormcell', arena: A, sky, tod: 'night', music: 'kart3', night: true, R: S.R });
   const api = E.api, T = E.terrain, rng = mulberry32(2143), taken = [];
@@ -101,7 +101,7 @@ CartWorlds.arena_stormcell = function (A, night) {
     for (let row = -36; row <= 36; row++) for (let col = -24; col <= 24; col++) {
       const cx = col * hs * 1.5, cz = row * hh * 2 + (col % 2 ? hh : 0), r = Math.hypot(cx, cz); if (r > S.R + 40) continue;
       const q = P(cx, cz), n = stcH(col * 7.1 + row * 3.3);
-      ctx.fillStyle = `rgba(${n < 0.5 ? '10,18,30' : '40,58,80'},${0.22 + n * 0.25})`; ctx.strokeStyle = 'rgba(90,150,190,0.22)';
+      ctx.fillStyle = `rgba(${n < 0.5 ? '10,18,30' : '40,58,80'},${0.22 + n * 0.25})`; ctx.strokeStyle = 'rgba(110,190,230,0.42)';
       ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU, p = P(cx + Math.cos(a) * (hs - 0.4), cz + Math.sin(a) * (hs - 0.4)); if (k) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); } ctx.closePath(); ctx.fill(); ctx.stroke(); void q;
     }
     // the cracks: jagged and branching, cyan, brightest near the core
@@ -110,7 +110,7 @@ CartWorlds.arena_stormcell = function (A, night) {
       let a = i / 16 * TAU + rng() * 0.2, r = S.coreR + 2, p = P(...stcAng(a, r));
       for (let j = 0; j < 14 && r < S.R - 4; j++) {
         const r2 = r + 6 + rng() * 9, a2 = a + (rng() - 0.5) * 0.25, q = P(...stcAng(a2, r2)), f = 1 - r / S.R;
-        ctx.strokeStyle = `rgba(56,242,255,${0.18 + f * 0.5})`; ctx.lineWidth = (0.3 + f * 0.9) * sc; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+        ctx.strokeStyle = `rgba(56,242,255,${0.4 + f * 0.55})`; ctx.lineWidth = (0.5 + f * 1.3) * sc; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
         if (rng() < 0.3) { const b = P(...stcAng(a2 + (rng() - 0.5) * 0.4, r2 + 8)); ctx.lineWidth = 0.3 * sc; ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
         r = r2; a = a2; p = q;
       }
@@ -118,7 +118,7 @@ CartWorlds.arena_stormcell = function (A, night) {
     for (let i = 0; i < 700; i++) { const a = rng() * TAU, r = rng() * (S.R + 30), q = P(...stcAng(a, r)); ctx.fillStyle = `rgba(${['56,242,255', '154,90,255', '122,255,106', '255,90,216'][i % 4]},${0.3 + rng() * 0.5})`; ctx.beginPath(); ctx.arc(q[0], q[1], (0.12 + rng() * 0.25) * sc, 0, TAU); ctx.fill(); }
     // the core's copper plaza and the fence ring line: yellow and black hazard dashes
     const c0 = P(0, 0); ctx.strokeStyle = 'rgba(200,122,58,0.55)'; ctx.lineWidth = 0.6 * sc; for (const r of [16, 22, 28]) { ctx.beginPath(); ctx.arc(c0[0], c0[1], r * sc, 0, TAU); ctx.stroke(); }
-    ctx.lineWidth = 1.4 * sc; ctx.setLineDash([3 * sc, 2.5 * sc]); ctx.strokeStyle = 'rgba(255,226,90,0.55)'; ctx.beginPath(); ctx.arc(c0[0], c0[1], S.ringR * sc, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.lineWidth = 1.4 * sc; ctx.setLineDash([3 * sc, 2.5 * sc]); ctx.strokeStyle = 'rgba(255,226,90,0.9)'; ctx.beginPath(); ctx.arc(c0[0], c0[1], S.ringR * sc, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
   });
   // ---- THE STORM CORE ----
   CartScene.mesh(api, 0, 0, 0, stcCore, { hi: true, noAO: true });

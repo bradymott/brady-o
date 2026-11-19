@@ -66,7 +66,7 @@ function swbGate(m, W) {
   // rigging: ropes from the yard ends to the ground
   m.color('#c8b890'); for (const sd of [-1, 1]) { m.limb(sd * (W / 2 + 1.5), 15.2, 0, sd * (W / 2 + 6), 0.2, 3, 0.05, 0.05, { seg: 3, ends: false }); m.limb(sd * (W / 2 + 1.5), 15.2, 0, sd * (W / 2 + 6), 0.2, -3, 0.05, 0.05, { seg: 3, ends: false }); }
   // the sail (two layers, a ragged bottom edge), a skull-and-anchor emblem stitched on the back
-  m.color('#efe4c8'); for (let i = 0; i < 9; i++) { const x0 = -6.4 + i * 1.42, drop = 3.6 + Math.sin(i * 2.1) * 0.5; m.box(x0 + 0.71, 15.0 - drop / 2, 0.15, 1.44, drop, 0.06); }
+  for (let i = 0; i < 9; i++) { const x0 = -6.4 + i * 1.42, drop = 3.6 + Math.sin(i * 2.1) * 0.5; m.color(i % 2 ? '#d8c49a' : '#b8382a'); m.box(x0 + 0.71, 15.0 - drop / 2, 0.15, 1.44, drop, 0.06); }
   m.color('#1a1a1e'); m.ball(0, 13.0, 0.35, 0.75, { seg: 10, rings: 7 }); m.color('#efe4c8'); for (const sx of [-0.26, 0.26]) m.ball(sx, 13.1, 0.95, 0.17, { seg: 6, rings: 4 });
   m.color('#1a1a1e'); m.limb(-1.2, 11.8, 0.3, 1.2, 11.4, 0.3, 0.1, 0.1, { seg: 4 }); m.limb(-1.2, 11.4, 0.3, 1.2, 11.8, 0.3, 0.1, 0.1, { seg: 4 });
   m.shine(0);
@@ -298,7 +298,7 @@ function swbWorld(id, D) {
   // ---- the start: the mast gate with its sail, grandstands, treasure heaps, half-buried bows down the drive ----
   { const g = T.at(0, {}), Wd = g.wl + g.wr + 5;
     CartScene.mesh(api, g.x, g.z, g.yaw, m => swbGate(m, Wd), { hi: true });
-    api.sign('SHIPWRECK BAY', g.x - g.tx * 0.5, g.z - g.tz * 0.5, { yaw: g.yaw + Math.PI, h: 1.7, y: 12.6, post: false, maxW: 9, style: { bg: '#efe4c8', fg: '#3a2416', border: '#8a2a1e' } });
+    api.sign('SHIPWRECK BAY', g.x - g.tx * 0.5, g.z - g.tz * 0.5, { yaw: g.yaw + Math.PI, h: 2.2, y: 12.9, post: false, maxW: 11, style: { bg: '#efe4c8', fg: '#3a2416', border: '#8a2a1e' } });
     for (const sd of [1, -1]) { const p = side(18, sd, 6); E.spots.push(...CartScene.bleachers(api, p.x, p.z, p.yaw, 22, 3, rng)); taken.push([p.x, p.z, 16]); }
     const heroes = ['burney', 'sparklepony', 'playaartist', 'burnermom', 'furry', 'burnerkid'];
     heroes.forEach((type, i) => { const p = side(-8 + Math.floor(i / 2) * 8, i % 2 ? 1 : -1, 2.4); E.heroes.push({ type, x: p.x, z: p.z, yaw: p.yaw, anim: i % 3 ? 'dance' : 'wave' }); });
@@ -404,7 +404,7 @@ const SwbMesh = {
 const SWB_GUN = { period: 6.6, warn: 1.4, speed: 28, r: 1.7, push: 11 };
 const SWB_ANCHOR = { period: 4.4, amp: 1.0, len: 14.7, pivot: 16.2, low: 3.0, r: 2.3 };
 const SWB_ARM = { period: 8.4, rumble: 0.7, rise: 1.25, slam: 0.22, lie: 1.25, lift: 0.55, sink: 0.6, seg: 3.1, n: 6, band: 2.0 };
-const SWB_CRAB = { speed: 4.6, pause: 1.3, r: 2.1 };
+const SWB_CRAB = { speed: 4.6, pause: 1.3, r: 1.9 };
 CART_TRACK_RULES.shipwreck = {
   onLoad(s) {
     const E = s.E, B = E.swb;
@@ -442,8 +442,8 @@ CART_TRACK_RULES.shipwreck = {
       if (r.st === 'hide') continue;
       const ds = CartKit.ahead(s, k, r.s); if (ds < 1 || ds > 38) continue;
       const inZone = r.sd * k.loc.d > -r.reach0;
-      if ((r.st === 'rumble' || r.st === 'rise' || r.st === 'slam') && inZone && ds < 26 && good) { ease(); break; }
-      if (r.st === 'lie' && ds < Math.max(4, k.speed * 0.24) && inZone && !k.air && good) { I.driftPress = true; I.drift = false; break; }
+      if ((r.st === 'rise' || r.st === 'slam') && inZone && ds < 22 && luck < 0.3 + (sk - 0.85) * 2) { ease(); break; }
+      if (r.st === 'lie' && ds < Math.max(4, k.speed * 0.24) && inZone && !k.air && luck < 0.35 + (sk - 0.85) * 2) { I.driftPress = true; I.drift = false; break; }
     }
   },
   draw(s, R, S, t) { const L = s.swb; if (L) swbDraw(s, L, R, S, t); },
@@ -560,14 +560,15 @@ function swbArms(s, L, dt, racing) {
     // the reach across the road (lateral from the centre, on the hole's side positive), for hits and the AI
     // (r.reach0: how far past the centre line the tip reaches toward the far side; r.hoff: the hole's lateral)
     const live = st === 'slam' || st === 'lie';
-    if (live || st === 'rise') for (let d = -r.reach0 + 1.5; d < r.hw; d += 3) cartIxObs(s, r.x + r.nx * r.sd * d, r.z + r.nz * r.sd * d, st === 'rise' ? 2.2 : 2.6);
+    // the AI only sees the arm once it is down (the warning it reads by skill in onStep)
+    if (st === 'lie') for (let d = -r.reach0 + 1.5; d < r.hw; d += 4) cartIxObs(s, r.x + r.nx * r.sd * d, r.z + r.nz * r.sd * d, 1.8);
     for (let i = 0; i < 8; i++) if (r.cool[i] > 0) r.cool[i] -= dt;
     if (racing && live) for (const k of s.karts) {
       if (k.out) continue;
       const dx = k.x - r.x, dz = k.z - r.z, along = dx * r.tx + dz * r.tz, lat = (dx * r.nx + dz * r.nz) * r.sd;
-      if (Math.abs(along) > SWB_ARM.band + 0.6 || lat < -r.reach0 || lat > r.hoff) continue;
+      if (Math.abs(along) > SWB_ARM.band + 1.0 || lat < -r.reach0 || lat > r.hoff) continue;
       const gy = s.terrain.height(k.x, k.z);
-      if (st === 'slam' && r.u > 0.6 && !(r.mask & (1 << k.slot))) {
+      if (st === 'slam' && r.u > 0.45 && !(r.mask & (1 << k.slot))) {
         r.mask |= 1 << k.slot; if (k.air && k.y > gy + 2.2) continue;
         if (CartKit.hit(s, k, 'flip', 'kraken', { dx: r.tx, dz: r.tz, banner: 'KRAKEN SLAM!' })) { cartIxSound(s, 'bump', k.x, k.z, 1, 0.5); if (s.fx) s.fx.burst(k.x, k.y + 1, k.z, 'star', 14, '#d86ac8'); }
       } else if (st === 'lie' && r.cool[k.slot] <= 0 && !(r.mask & (1 << k.slot))) {

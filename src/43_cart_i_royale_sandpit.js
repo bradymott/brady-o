@@ -57,20 +57,32 @@ CartWorlds.arena_sandpit = function (A, night) {
   }
   for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + 0.4, [x, z] = ang(a, 76 + (i % 2) * 8); CartKit.put(E, 'shd_umbrella', x, z, a, ['#ff5a7a', '#2ec8c8', '#ffd23a', '#ff8a2a'][i % 4]); CartKit.put(E, 'shd_buoy', x + 4, z - 3, a, '#ffffff'); }
   for (let i = 0; i < 18; i++) { const a = rng() * TAU, r = 30 + rng() * 140; const [x, z] = ang(a, r); if (Math.hypot(x, z) < 22 || E.sptPits.some(p => Math.hypot(p.x - x, p.z - z) < 12)) continue; CartKit.put(E, i % 2 ? 'shd_cactus' : 'shd_buoy', x, z, a, i % 2 ? '#5aa860' : '#ffffff', { scale: 1 + rng() * 0.3 }); E.art.push({ x, z, r: 1.1 }); }
-  for (const [a, r, rr, h] of [[0.0, 100, 18, 3.6], [1.25, 150, 16, 3.0], [2.3, 104, 18, 4.0], [3.4, 150, 15, 3.0], [4.3, 102, 17, 3.4], [5.4, 150, 16, 3.2]]) { const [x, z] = ang(a + 0.62, r); T.add(CartFeat.mound(x, z, rr, h, { col: '#e4c48c', res: 1.6 })); }
+  for (const [a, r, rr, h] of [[0.0, 100, 18, 3.6], [1.25, 150, 16, 3.0], [2.3, 104, 18, 4.0], [3.4, 150, 15, 3.0], [4.3, 102, 17, 3.4], [5.4, 150, 16, 3.2], [0.7, 62, 10, 2.2], [3.0, 64, 10, 2.4], [5.0, 66, 10, 2.0], [1.9, 160, 12, 4.5], [4.0, 160, 12, 4.5]]) { const [x, z] = ang(a + 0.62, r); T.add(CartFeat.mound(x, z, rr, h, { col: '#d8ac72', res: 1.6 })); }
   for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.8, [x, z] = ang(a, 42); T.add(CartFeat.ramp(x, z, a + Math.PI / 2 * (i % 2 ? 1 : -1), 6, 7, 2.0, { col: '#c8925a', stripe: i % 2 ? '#ff6a4a' : '#2ec8c8' })); }
   // ---- the cliff ring (the fence): banded sandstone slabs, cliffs and mesas beyond ----
   const n = 48, poly = []; for (let i = 0; i < n; i++) { const a = i / n * TAU; poly.push([Math.sin(a) * R, Math.cos(a) * R]); }
   E.walls = poly;
   api.instanceProto('spt_cliff', m => {
-    // a 13 m wide slab of banded rock, 9–10 m tall; the face (+z) looks into the pit
-    const C = ['#c8643a', '#d87a48', '#b85432', '#e09058'];
-    for (let i = 0; i < 4; i++) { m.color(C[i]).shine(0); m.roundBox(Math.sin(i * 2.1) * 0.4, 1.2 + i * 2.3, -i * 0.35, 13.4 - i * 0.6, 2.4, 5 - i * 0.4, 0.8); }
-    m.color('#e8a868'); m.roundBox(0, 10.2, -1.2, 11.6, 0.6, 3.2, 0.3);
-    m.color('#d8a070'); m.ellipsoid(0, 0, 2.6, 7.5, 1.8, 2.2, { seg: m.lo ? 8 : 12, rings: 5, phi1: Math.PI / 2 });
-    return { cols: [{ t: 'box', x: 0, z: 0, hx: 6.7, hz: 2.6, y0: 0, y1: 10 }] };
-  }, { r: 8, near: 60, mid: 180, farD: 420, lo: true, far: m => { m.color('#c8643a'); m.box(0, 5, 0, 13, 10, 5); } });
-  for (let i = 0; i < n; i++) { const a = (i + 0.5) / n * TAU, [x, z] = ang(a, R + 2.8); api.instance('spt_cliff', x, z, { y: 0, yaw: a + Math.PI, scale: 1 + ((i * 7) % 5) * 0.06, tint: cartTintOf('#ffffff') }); }
+    // a 25 m run of banded sandstone, about 10 m tall: rounded strata stepping back, a cap, a talus of boulders in
+    // front; the face (+z) looks into the pit
+    const C = ['#c8643a', '#e09058', '#b85432', '#d87a48', '#e8a868'], sg = m.lo ? 10 : 16;
+    for (let i = 0; i < 5; i++) { m.color(C[i]).shine(0); m.ellipsoid(Math.sin(i * 2.1) * 1.2, 1.4 + i * 2.1, -i * 0.7, 13.4 - i * 1.0, 1.75, 4.4 - i * 0.45, { seg: sg, rings: 6 }); }
+    m.color('#d89a68'); for (const [x, r] of [[-7, 1.6], [-2, 1.1], [4, 1.8], [9, 1.2]]) m.ellipsoid(x, r * 0.5, 3.8, r * 1.4, r, r * 1.2, { seg: 8, rings: 5 });
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: 12.5, hz: 3.2, y0: 0, y1: 10 }] };
+  }, { r: 14, near: 70, mid: 200, farD: 460, lo: true, far: m => { m.color('#c8643a'); m.ellipsoid(0, 4, 0, 13, 6, 4, { seg: 8, rings: 4 }); } });
+  for (let i = 0; i < n; i++) { const a = (i + 0.5) / n * TAU, [x, z] = ang(a, R + 3.5); api.instance('spt_cliff', x, z, { y: 0, yaw: a + Math.PI, scale: 1 + ((i * 7) % 5) * 0.05, tint: cartTintOf('#ffffff') }); }
+  // three sandstone arches out on the sand: drive under them
+  for (let i = 0; i < 3; i++) {
+    const a = i / 3 * TAU + 1.25, [x, z] = ang(a, 108), yaw = a + Math.PI / 2, W = 15, H = 10;
+    CartScene.mesh(api, x, z, yaw, m => {
+      const C = ['#c8643a', '#e09058', '#d87a48'];
+      for (const sd of [-1, 1]) for (let k = 0; k < 4; k++) { m.color(C[k % 3]).shine(0); m.ellipsoid(sd * W / 2 + Math.sin(k * 1.7) * 0.3, 1.2 + k * 2.2, 0, 2.6 - k * 0.2, 1.5, 2.4 - k * 0.15, { seg: 12, rings: 6 }); }
+      let px = 0, py = 0; m.color('#d87a48'); for (let k = 0; k <= 12; k++) { const u = k / 12, ax = lerp(-W / 2, W / 2, u), ay = 8.2 + Math.sin(u * Math.PI) * 2.6; if (k) m.limb(px, py, 0, ax, ay, 0, 1.9, 1.9, { seg: 10 }); px = ax; py = ay; }
+      m.color('#e8a868'); m.ellipsoid(0, H + 1.1, 0, 4, 0.9, 1.8, { seg: 12, rings: 5 });
+      return { cols: [{ t: 'cyl', x: -W / 2, z: 0, r: 2.6, y0: 0, y1: 9, camPass: true }, { t: 'cyl', x: W / 2, z: 0, r: 2.6, y0: 0, y1: 9, camPass: true }] };
+    }, { hi: true });
+    const c = Math.cos(yaw), sn = Math.sin(yaw); for (const sd of [-1, 1]) E.art.push({ x: x + sd * W / 2 * c, z: z - sd * W / 2 * sn, r: 2.8 });
+  }
   // a little striped barrier in front of the cliffs, so the edge reads
   for (let i = 0; i < n; i++) { const a0 = poly[i], b0 = poly[(i + 1) % n], L = Math.hypot(b0[0] - a0[0], b0[1] - a0[1]), k = Math.round(L / 7), yaw = Math.atan2(b0[0] - a0[0], b0[1] - a0[1]); for (let j = 0; j < k; j++) { const u = (j + 0.5) / k; CartDecor.put(E, 'rail', lerp(a0[0], b0[0], u), lerp(a0[1], b0[1], u), yaw, (i + j) % 3 === 0 ? '#2ec8c8' : (i + j) % 3 === 1 ? '#ffffff' : '#ff7a5a', { y: 0, noLights: true }); } }
   for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + 0.2, [x, z] = ang(a, 300 + (i % 3) * 40); CartScene.mesh(api, x, z, a, m => shdMesa(m, 60 + (i % 3) * 18, 44 + (i % 4) * 12, 91 + i), { noAO: true }); }
