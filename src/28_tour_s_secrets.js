@@ -339,5 +339,87 @@ TourHooks.on('routeDraw', (scene, ctx, layer) => {
     }
   }
 });
+/* ---------- a Wormhole trip can't be cancelled by the player (Brady's reports, 18 Nov 2026) ----------
+   The map's GO button is the jump button (▲), and a tap on a stop or the info card goes in too. Before the trip had
+   started (the map opening, the land's own reveals, the frame they end) a press went into the stop Brady stood on:
+   the level he had just left ("the Wormhole just goes to the same level"). And in the frame the route map's
+   WORMHOLE! reveal ended, ▲ was "fly to the land you are in", which closed the route map back onto the land he
+   left: the trip was lost and its arrival stayed in the save ("the Wormhole goes nowhere"). Now:
+   - the overworld ignores going in, walking, the menu and the world button while this land has a Wormhole trip
+     still to play (its hop, or a route-map trip from here) and while Brady spins in or out of a wormhole; taps and
+     ▲ still skip the reveals
+   - the route map ignores its buttons from the moment the wormhole crosses the globe until Brady touches down
+   - Brady pops out where the trip's own reveal says (not a single save slot a second trip could overwrite)
+   - a save from the broken build is repaired when a map opens: an arrival with no trip left to play gets its trip
+     queued again, and the map plays it as it would have
+   - reloaded the moment he touched down, Brady still stands at the stop the Wormhole led to (its reveal still to play) */
+const TourWarpTrip = {
+  // a Wormhole trip waits for this land's map (or is playing in it)
+  pendingIn(ow) {
+    if (ow.hopFx || ow.emergeFx) return true;
+    const T = TourProgress.data();
+    if (T.hop && T.hop.cc === ow.cc) return true;
+    for (const r of T.pending) if (r.kind === 'warp' && r.from === ow.cc) return true;
+    return false;
+  },
+  // the save's arrival with no trip left to play (the broken build's leftovers): queue its trip again
+  repair() {
+    const T = Save.data && Save.data.tour; if (!T || !T.arrive || !Array.isArray(T.pending)) return false;
+    const A = T.arrive, TC = Tour.countries[A.cc], TL = Tour.specOf(A.at);
+    if (!TC || !TL || Tour.countryOf(A.at) !== TC) { T.arrive = null; return true; }
+    if (T.pending.some(r => r.kind === 'warp' && r.to === A.cc)) return false;
+    const FC = A.from ? Tour.countryOf(A.from) : null;
+    Save.data.unlocked[A.at] = true;
+    if (A.from) { const links = T.warpLinks[A.cc] || (T.warpLinks[A.cc] = {}); if (!links[A.at]) links[A.at] = A.from; }
+    T.pending.push({ kind: 'warp', from: FC ? FC.id : A.cc, to: A.cc, id: A.at, src: A.from || A.at });
+    return true;
+  }
+};
+{
+  const b0 = TourMap.build;
+  TourMap.build = function () { const r = b0.apply(this, arguments); try { if (TourWarpTrip.repair()) Save.save(); } catch (e) { /* never block the map */ } return r; };
+  const OW = TourOverworld.prototype, up0 = OW.update;
+  OW.update = function (dt, inp) {
+    if (inp && !this.reveal && !this.clears && TourWarpTrip.pendingIn(this)) {
+      inp.taps = []; inp.enter = false; inp.dir = null; inp.back = false; inp.world = false;
+      if (TourMapKeys.m) TourMapKeys.m = false;
+    }
+    // reloaded the moment Brady touched down: back onto the stop the Wormhole led to (still hidden: its reveal plays)
+    const T = TourProgress.data(), E = T.emerged;
+    if (E && E.cc === this.cc) {
+      const n = this.by[E.at], w = this.walker;
+      if (n && n.visible) T.emerged = null;
+      else if (!this._emergeChecked && !this.emergeFx && !w.seg && !w.queue.length && w.at !== E.at && this.G.pos[E.at]) {
+        const p = this.G.pos[E.at]; w.at = E.at; w.x = p.x; w.y = p.y; this.autoTarget = null;
+        this.cam.x = p.x; this.cam.y = p.y; this.clampCam(); (T.panelAt = T.panelAt || {})[this.cc] = E.at;
+      }
+      this._emergeChecked = true;
+    }
+    const hop0 = this.hopFx, r = up0.call(this, dt, inp), F = this.hopFx;
+    // an in-land hop has started (the save's hop is used up): reloaded now, Brady is already at the other end
+    if (F && F !== hop0) { (T.panelAt = T.panelAt || {})[this.cc] = F.to; T.emerged = { cc: this.cc, at: F.to }; Save.save(); }
+    return r;
+  };
+  const em0 = OW.emergeAt;
+  OW.emergeAt = function (key) { const ok = em0.call(this, key); if (ok) TourProgress.data().emerged = { cc: this.cc, at: key }; return ok; };
+  const S = TourMapScene.prototype;
+  // the trip's own target: set when its reveal starts, used when Brady touches down
+  const nr0 = S.nextRouteReveal;
+  S.nextRouteReveal = function () { nr0.call(this); const R = this.rReveal; if (R && R.r.kind === 'warp') this.warpAt = { cc: R.r.to, at: R.r.id }; };
+  const ri0 = S.routeInput;
+  S.routeInput = function () {
+    if (this.warpLand || (this.rRevealQ && this.rRevealQ.some(r => r.kind === 'warp'))) { Input.taps.length = 0; TourMapKeys.enter = false; TourMapKeys.m = false; return; }
+    return ri0.call(this);
+  };
+  const land0 = S.land;
+  S.land = function (id) {
+    const W = this.warpAt; this.warpAt = null;
+    const T = TourProgress.data();
+    // the trip's own arrival wins over the save's single slot (a second trip could have overwritten it)
+    if (W && W.cc === id && Tour.specOf(W.at)) T.arrive = { cc: id, at: W.at, from: (T.arrive && T.arrive.at === W.at && T.arrive.from) || null };
+    return land0.call(this, id);
+  };
+}
+
 // (exposed on window.BRADY_TOUR for the browser tests)
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.TourSecrets = TourSecrets; } } catch (e) { /* not in a browser */ }
