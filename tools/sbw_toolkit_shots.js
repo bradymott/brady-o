@@ -106,6 +106,20 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     });
     check('dig: three stomps on soil dig Brady three tiles down', r.dropped >= 3 && !r.dead, r);
     await page.evaluate(() => freeze()); await shot('obj-dig.png');
+    // the hard hat's dash as BIG Brady underground: it digs a column as tall as he is (two blocks), so he can walk into
+    // the tunnel he digs (it used to dig only the block by his legs, and he was stuck)
+    const r2 = await page.evaluate(() => {
+      lab('gens.dig'); const g = S(), p = P(), A = g.area; standAt(24, 3); p.setPower(1, true); p.collect('gear:hat'); sim(0.3);
+      for (let k = 0; k < 3; k++) { sim(0.05, { down: true, jumpPressed: true, jump: true }); sim(0.5); }
+      p.facing = 1; const feet = Math.floor((p.y + p.h - 4) / 32), head = Math.floor((p.y + 4) / 32), x0 = p.cx, c0 = Math.floor(p.cx / 32);
+      const S0 = window.BRADY.T.SOIL, soilAhead = [head, feet].map(y => A.tiles[y * A.W + c0 + 2] === S0);
+      for (let k = 0; k < 3; k++) { sim(0.05, { actionPressed: true, right: true }); sim(0.45, { right: true }); }
+      const c1 = Math.floor(p.cx / 32), tunnel = [];
+      for (let x = c0 + 2; x < c1; x++) tunnel.push([head, feet].every(y => A.tiles[y * A.W + x] !== S0));
+      return { big: p.power > 0 && p.h > 40, rows: feet - head + 1, soilAhead, moved: Math.round((p.cx - x0) / 32), tunnel2High: tunnel.length > 0 && tunnel.every(Boolean), dead: p.dead };
+    });
+    check('dig: big Brady\'s hard hat dash digs a 2-high tunnel ahead and he walks into it', r2.big && r2.rows === 2 && r2.soilAhead.every(Boolean) && r2.moved >= 3 && r2.tunnel2High && !r2.dead, r2);
+    await page.evaluate(() => freeze()); await shot('obj-dig-big-hat.png');
   });
   // a rising flood: the water line climbs and Brady swims in it
   await run('flood', async () => {

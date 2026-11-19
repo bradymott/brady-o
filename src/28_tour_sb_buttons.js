@@ -6,8 +6,8 @@
    hats...) and extra content opens (a bonus land, a bonus level).
    Here: TOUR_RULES (only the rules whose button is placed: validate_levels --rules checks each is placed once), the
    button entity (spawn { type: 'button', rule }), TourRules.revoke (saved at once in Save.data.tour.rules), the cut to
-   the map (the REVOKED card, then a little world map with the land that opened), the cosmetic effects (dancing,
-   hats) with their Settings switch, the HOUSE RULES page in the pause menu and the map's brass badges.
+   the map (the REVOKED card, then a little world map with the land that opened), the dancing and the Settings switches (ANIMAL HATS,
+   DANCING; the hats themselves are in 28_tour_sc_hats.js), the HOUSE RULES page in the pause menu and the map's brass badges.
    ============================================================ */
 // n -> { title, sign (what changed, one line), opens: [targets], fx: 'dance' | 'hats' | null }
 const TOUR_RULES = {
@@ -20,11 +20,23 @@ const TOUR_RULE_LIST = [1, 3, 7, 9, 10, 12];
 const TourRules = {
   isRevoked(n) { const T = Save.data.tour; return !!(T && T.rules && T.rules[n]); },
   count() { const T = Save.data.tour; return T && T.rules ? Object.keys(T.rules).length : 0; },
-  // the cosmetic effects show (Settings: HATS & DANCING), and this rule's effect is on
+  // this rule's effect is on and its Settings switch shows it (ANIMAL HATS for 'hats'; DANCING for 'dance' and
+  // rule 1's 'party')
   fxOn(kind) {
-    if (Save.data.settings.ruleFx === false) return false;
+    if (!this.fxShown(kind)) return false;
     for (const n in TOUR_RULES) if (TOUR_RULES[n].fx === kind && this.isRevoked(n)) return true;
     return false;
+  },
+  /* the two switches: Save.data.settings.hatsFx (ANIMAL HATS) and .danceFx (DANCING), ON unless false. A save from
+     before the split has only the old combined ruleFx (HATS & DANCING): while a switch has never been flipped it
+     follows that, so a player who had turned the combined one off finds both off. */
+  fxKey(kind) { return kind === 'hats' ? 'hatsFx' : 'danceFx'; },
+  fxShown(kind) { const S = Save.data.settings, v = S[this.fxKey(kind)]; return v === undefined ? S.ruleFx !== false : v !== false; },
+  fxToggle(kind) {
+    const S = Save.data.settings;
+    S.hatsFx = this.fxShown('hats'); S.danceFx = this.fxShown('dance');
+    S[this.fxKey(kind)] = !S[this.fxKey(kind)];
+    Save.save(); this.syncFx();
   },
   anyFx() { for (const n in TOUR_RULES) if (TOUR_RULES[n].fx && this.isRevoked(n)) return true; return false; },
   /* revoke(n, at): saved at once; returns the reveals it queued (empty when it was revoked already). Opens:
@@ -265,17 +277,25 @@ const TourRuleCut = {
 };
 // the pause menu row (once a button has been found) and the Settings switch (once an effect is on)
 TourHooks.on('pausePages', play => play.level && play.level.tour && TourRules.count() ? { label: 'HOUSE RULES (' + TourRules.count() + ')', fn: () => { play.closePause(); play.rulesPage = TourRuleCut.lines(); Sound.play('select'); } } : null);
-TourHooks.on('settings', () => TourRules.anyFx() ? { label: 'HATS & DANCING', value: Save.data.settings.ruleFx === false ? 'HIDE' : 'SHOW', fn: () => { Save.data.settings.ruleFx = Save.data.settings.ruleFx === false; Save.save(); TourRules.syncFx(); } } : null);
+// two switches, each once its rule is revoked: ANIMAL HATS (rule 7) and DANCING (rule 3; rule 1's party blimp and
+// rainbow beam follow it too). Each takes effect at once.
+TourHooks.on('settings', () => TourRules.isRevoked(7) ? { label: 'ANIMAL HATS', value: TourRules.fxShown('hats') ? 'ON' : 'OFF', fn: () => TourRules.fxToggle('hats') } : null);
+TourHooks.on('settings', () => TourRules.isRevoked(3) || TourRules.isRevoked(1) ? { label: 'DANCING', value: TourRules.fxShown('dance') ? 'ON' : 'OFF', fn: () => TourRules.fxToggle('dance') } : null);
 
-/* ---------- the effects: everyone dances (rule 3), animals wear little hats (rule 7) ---------- */
-const TOUR_HATS = ['cone', 'crown', 'tophat', 'beanie', 'toque', 'bobble'];
+/* ---------- the effects: everyone dances (rule 3); the animals' hats (rule 7) are in src/28_tour_sc_hats.js ---------- */
+// who dances: the tour's enemies and friends (not bosses, not the buttons)
+TourRules.dances = e => !!((e.enemy || e.friendly) && !e.boss && !e.dead && !e.isButton);
+// the dance: a squash and a sway on a 120 bpm beat, each critter a little out of step (cosmetic: the hitbox is
+// untouched). The hats (afterEntities) wear the same transform, so a hat stays on its dancing head.
+TourRules.danceXf = (play, ctx, e) => {
+  const ph = play.t * 12.566 + e.x * 0.05, k = 1 + 0.07 * Math.sin(ph), fx = e.x + e.w / 2, fy = e.y + e.h;
+  ctx.translate(fx, fy); ctx.rotate(Math.sin(ph * 0.5) * 0.06); ctx.scale(1 / k, k); ctx.translate(-fx, -fy);
+};
 // the dance handler is only in the entityDraw list while dancing is on (an entityDraw handler costs a save/restore
 // round every entity every frame), synced when an area loads, a rule is revoked or the Settings switch flips
 const tourDance = (play, ctx, e) => {
-  if (!(e.enemy || e.friendly) || e.boss || e.dead || e.isButton || !play.level || !play.level.tour) return false;
-  // a squash and a sway on a 120 bpm beat, each critter a little out of step (cosmetic: the hitbox is untouched)
-  const ph = play.t * 12.566 + e.x * 0.05, k = 1 + 0.07 * Math.sin(ph), fx = e.x + e.w / 2, fy = e.y + e.h;
-  ctx.translate(fx, fy); ctx.rotate(Math.sin(ph * 0.5) * 0.06); ctx.scale(1 / k, k); ctx.translate(-fx, -fy);
+  if (!TourRules.dances(e) || !play.level || !play.level.tour) return false;
+  TourRules.danceXf(play, ctx, e);
   e.draw(ctx, play.t);
   return true;
 };
@@ -284,27 +304,6 @@ TourRules.syncFx = function () {
   if (on && !has) TourHooks.on('entityDraw', tourDance); else if (!on && has) TourHooks.off('entityDraw', tourDance);
 };
 TourHooks.on('areaLoaded', () => TourRules.syncFx());
-TourHooks.on('afterEntities', (play, ctx, layers) => {
-  if (!TourRules.fxOn('hats') || !play.level || !play.level.tour) return;
-  const E = play.entities;
-  for (let k = 0; k < E.length; k++) {
-    const e = E[k];
-    if (!(e.enemy || e.friendly) || e.boss || e.dead || e.remove || e.isButton || e.w > 90 || !play.onScreen(e, 40)) continue;
-    TourRuleCut.hat(ctx, e, play);
-  }
-});
-TourRuleCut.hatOf = function (e) { const n = e.constructor && e.constructor.name || 'x'; let h = 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) | 0; return TOUR_HATS[Math.abs(h) % TOUR_HATS.length]; };
-TourRuleCut.hat = function (ctx, e, play) {
-  const kind = e._hat || (e._hat = this.hatOf(e)), x = e.x + e.w / 2, y = e.y - e.h * 0.14, s = clamp(e.w / 20, 1, 1.9), INK = '#1a1018';
-  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(Math.sin(play.t * 3 + e.x) * 0.08); ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
-  if (kind === 'cone') { ctx.fillStyle = '#ff5fa0'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(0, -16); ctx.lineTo(6, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(0, -16, 2.5, 0, TAU); ctx.fill(); }
-  else if (kind === 'crown') { for (let q = -2; q <= 2; q++) { ctx.fillStyle = TourRuleCut.CROWN[q + 2]; ctx.beginPath(); ctx.arc(q * 4, -2, 2.8, 0, TAU); ctx.fill(); ctx.stroke(); } }
-  else if (kind === 'tophat') { ctx.fillStyle = '#26222c'; ctx.fillRect(-8, -2, 16, 3); ctx.fillRect(-5, -13, 10, 12); ctx.strokeRect(-5, -13, 10, 12); ctx.fillStyle = '#d0203a'; ctx.fillRect(-5, -5, 10, 2); }
-  else if (kind === 'beanie') { ctx.fillStyle = '#3ac8d8'; ctx.beginPath(); ctx.arc(0, 0, 7, Math.PI, 0); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#ff5fa0'; ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(0, -10); ctx.stroke(); ctx.fillStyle = '#ffd84a'; const a = play.t * 12; ctx.fillRect(-6 * Math.cos(a), -11, 12 * Math.cos(a), 2); }
-  else if (kind === 'toque') { ctx.fillStyle = '#ffffff'; ctx.fillRect(-5, -6, 10, 6); ctx.strokeRect(-5, -6, 10, 6); ctx.beginPath(); ctx.arc(-3, -9, 4, 0, TAU); ctx.arc(3, -9, 4, 0, TAU); ctx.arc(0, -12, 4, 0, TAU); ctx.fill(); ctx.stroke(); }
-  else { ctx.fillStyle = '#ff9a3a'; ctx.beginPath(); ctx.arc(0, 0, 6.5, Math.PI, 0); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, -8, 3, 0, TAU); ctx.fill(); ctx.stroke(); }
-  ctx.restore();
-};
 
 /* ---------- the maps: a brass dome by every stop whose button Brady slapped; the overworld menu page ---------- */
 TourHooks.on('owDraw', (ow, ctx) => {

@@ -389,9 +389,22 @@ const GearHit = {
       else if (e.breakWall && e.hit) e.hit(kind, p);
     }
     if (!water && p.hands && p.hands.id === 'hat') {
-      const tx = Math.floor((p.facing > 0 ? p.x + p.w + 4 : p.x - 4) / TS);
-      for (const ty of [Math.floor((p.y + 4) / TS), Math.floor((p.y + p.h - 4) / TS)]) if (tileAt(g.area, tx, ty) === T.SOIL) p.dig(p.facing);
+      // the soil column just ahead of him, head to boots: two blocks when he is big, one when small, so he can always
+      // walk into the tunnel he digs (it used to dig only the block by his legs, which a big Brady can't fit through)
+      const tx = Math.floor((p.facing > 0 ? p.x + p.w + 4 : p.x - 4) / TS), t0 = Math.floor((p.y + 4) / TS), t1 = Math.floor((p.y + p.h - 4) / TS);
+      this.digColumn(p, g, tx, t0, t1);
     }
+  },
+  // dig the soil (only soil) in column tx, rows t0..t1; returns how many blocks went
+  digColumn(p, g, tx, t0, t1) {
+    const A = g.area; let dug = 0;
+    for (let ty = t0; ty <= t1; ty++) {
+      if (tileAt(A, tx, ty) !== T.SOIL) continue;
+      g.setTile(tx, ty, T.EMPTY); dug++;
+      g.burst(tx * TS + TS / 2, ty * TS + TS / 2, 10, '#8a6040', 'debris'); g.burst(tx * TS + TS / 2, ty * TS + 4, 6, '#c8a070', 'dust');
+    }
+    if (dug) { TourKit.sfx('dig', 'crumble', { vol: 0.6 }); g.shake(2); }
+    return dug;
   }
 };
 // the hard hat's headlamp and the box: lights and hiding
