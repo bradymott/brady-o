@@ -514,7 +514,10 @@ function eldDraw(s, L, R, S, t) {
       for (const e of a.el) { const y = 1.4 + ((t * 6 + a.i) % 1) * 5.5; R.bbs.bb(e.tx, y, e.tz, 1.4, 1.4, S.spark, C.ice, 0.9, true); }
     } else if (a.st === 'zap') {
       const al = 1 - a.u * 0.5;
-      for (let k = 0; k < 3; k++) eldBolt(R, S, e0.x, 1.3, e0.z, e1.x, 1.3, e1.z, 9, 1.6, k ? 0.3 : 0.55, k === 2 ? C.violet : C.cyan, al, a.i * 7 + k * 13, t);
+      // a thick, bright arc: a wide soft glow under the whole span, a fat white-hot main bolt, two thinner strands
+      { const dx = e1.x - e0.x, dz = e1.z - e0.z, l = Math.hypot(dx, dz) || 1; R.bbs.streak((e0.x + e1.x) / 2, 1.4, (e0.z + e1.z) / 2, dx / l, 0, dz / l, l * 1.08, 4.2, S.glow, C.cyan, 0.75 * al); R.bbs.streak((e0.x + e1.x) / 2, 1.4, (e0.z + e1.z) / 2, dx / l, 0, dz / l, l * 1.04, 1.8, S.glow, C.white, 0.6 * al); R.bbs.streak((e0.x + e1.x) / 2, 1.35, (e0.z + e1.z) / 2, dx / l, 0, dz / l, l, 1.0, S.streak, C.white, al);
+        for (let i = 0; i <= 8; i++) { const u = i / 8, fl = 0.75 + 0.25 * eldH(Math.floor(t * 24) + i * 3 + a.i); R.bbs.bb(lerp(e0.x, e1.x, u), 1.5, lerp(e0.z, e1.z, u), 5.2 * fl, 4.4 * fl, S.glow, i % 2 ? C.cyan : C.ice, 0.7 * al, true); } }
+      for (let k = 0; k < 3; k++) eldBolt(R, S, e0.x, 1.3, e0.z, e1.x, 1.3, e1.z, 9, 1.6, k ? 0.5 : 1.05, k === 2 ? C.violet : C.cyan, al, a.i * 7 + k * 13, t);
       eldBolt(R, S, e0.tx, 9.2, e0.tz, e0.x, 1.4, e0.z, 4, 0.9, 0.18, C.cyan, al, a.i + 40, t); eldBolt(R, S, e1.tx, 9.2, e1.tz, e1.x, 1.4, e1.z, 4, 0.9, 0.18, C.cyan, al, a.i + 50, t);
       R.flat.flat(a.x, 0.1, a.z, a.hw * 2 + 6, 9, a.yaw, S.glow, C.ice, 0.8 * al, true);
       R.bbs.bb(a.x, 1.6, a.z, 12, 6, S.glow, C.cyan, 0.55 * al, true);

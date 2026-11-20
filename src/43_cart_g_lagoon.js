@@ -7,7 +7,7 @@
    Its own game: X MARKS THE SPOT. A treasure map names the landmark the X is buried
    near; find the red X in the sand (it shows up when you're close, the HOT/COLD meter
    helps), stop on it and dig. First to dig it up gets the chest, then a new map.
-   First to 4 chests wins.
+   First to 3 chests wins.
    Registers itself: CART_ARENAS, CartWorlds.arena_lagoon, CART_ARENA_RULES.lagoon,
    CART_OBJECTIVES.xmarks, CART_ARENA_ICONS.lagoon, CART_SECRET_LEVELS.galleon.
    Everything here is an original design (affectionate pirate satire, PG-13).
@@ -362,9 +362,11 @@ CART_ARENA_RULES.lagoon = {
 };
 
 /* ---------------- X MARKS THE SPOT ---------------- */
+// the leader (alone at the top) digs a little slower: a mild catch-up
+function lgnDigT(X, k) { return LGN_C.DIG_T * (k.score > 0 && k.score >= (X.lead || 1e9) ? 1.3 : 1); }
 CART_OBJECTIVES.xmarks = {
-  name: 'X MARKS THE SPOT', short: 'Dig up the buried gold', time: 120, goal: 4, unit: ' chests',
-  desc: 'The map names a landmark. Find the red X near it (HOT / COLD helps), stop on it and dig. First to 4 chests wins.',
+  name: 'X MARKS THE SPOT', short: 'Dig up the buried gold', time: 120, goal: 3, unit: ' chests',
+  desc: 'The map names a landmark. Find the red X near it (HOT / COLD helps), stop on it and dig. First to 3 chests wins.',
   fx: {
     init(s) {
       const E = s.E;
@@ -375,7 +377,18 @@ CART_OBJECTIVES.xmarks = {
     place(s) {
       const X = s.lgnX, n = X.spots.length;
       if (!n) { X.x = (s.rng() - 0.5) * 120; X.z = (s.rng() - 0.5) * 120; X.mark = 0; }
-      else { let p = null; for (let tries = 0; tries < 30; tries++) { p = X.spots[Math.floor(s.rng() * n)]; if (p.mark !== X.last) break; } X.x = p.x; X.z = p.z; X.mark = p.mark; }
+      else {
+        // catch-up: when one car is ahead, the next X goes to the candidate spot furthest from it
+        let lead = null, top = 0, second = 0;
+        for (const k of s.karts) { if (k.score > top) { second = top; top = k.score; lead = k; } else if (k.score > second) second = k.score; }
+        if (top <= second) lead = null;
+        let p = null, bs = -1;
+        for (let tries = 0, got = 0; tries < 30 && got < (lead ? 5 : 1); tries++) {
+          const q = X.spots[Math.floor(s.rng() * n)]; if (q.mark === X.last && tries < 29) continue;
+          got++; const sc = lead ? Math.hypot(q.x - lead.x, q.z - lead.z) : 0; if (sc > bs) { bs = sc; p = q; }
+        }
+        X.x = p.x; X.z = p.z; X.mark = p.mark;
+      }
       X.last = X.mark; X.y = s.terrain.height(X.x, X.z); X.on = true; X.round++;
       for (const k of s.karts) k.lgnDig = 0;
       s.log('xmap', { mark: X.marks[X.mark].name, x: +X.x.toFixed(1), z: +X.z.toFixed(1) });
@@ -386,7 +399,10 @@ CART_OBJECTIVES.xmarks = {
       const C = LGN_C, X = s.lgnX, K = s.karts, G = CART_OBJECTIVES.xmarks.goal;
       if (X.chestT > 0) X.chestT -= dt;
       if (!X.on) { X.gap -= dt; if (X.gap <= 0) this.place(s); return false; }
-      let done = null;
+      let done = null, lead = 0, nTop = 0;
+      for (const k of K) { if (k.score > lead) { lead = k.score; nTop = 1; } else if (k.score === lead) nTop++; }
+      if (nTop > 1) lead = 1e9;   // a tie at the top: nobody is the leader
+      X.lead = lead;
       for (const k of K) {
         if (k.out) { k.lgnDig = 0; continue; }
         const d = Math.hypot(k.x - X.x, k.z - X.z);
@@ -396,7 +412,7 @@ CART_OBJECTIVES.xmarks = {
           // sand flies off the shovel
           if (Math.random() < 0.6) { const a = Math.random() * TAU; s.fx.add(k.x + Math.sin(a) * 1.2, X.y + 0.4, k.z + Math.cos(a) * 1.2, Math.sin(a) * 2.5, 4 + Math.random() * 3, Math.cos(a) * 2.5, 0.8, 0.5, 0.25, C.sand, 0.95, 'dot', 2); }
           if (k.player && Math.floor(k.lgnDig * 3) !== Math.floor((k.lgnDig - dt) * 3)) Sound.play('stomp', { vol: 0.35, pitch: 0.9 + k.lgnDig * 0.3 });
-          if (k.lgnDig >= C.DIG_T && (!done || k.lgnDig > done.lgnDig)) done = k;
+          if (k.lgnDig >= lgnDigT(X, k) && (!done || k.lgnDig > done.lgnDig)) done = k;
         } else k.lgnDig = Math.max(0, k.lgnDig - dt * 2.5);
       }
       if (done) {
@@ -440,7 +456,7 @@ CART_OBJECTIVES.xmarks = {
           if (Math.random() < 0.25 * vis) s.fx.glint(X.x + (Math.random() - 0.5) * 3, y + 0.5 + Math.random(), X.z + (Math.random() - 0.5) * 3, '#ffe08a');
         }
         // dig progress rings (each digger's colour), seen by everyone
-        for (const q of s.karts) if (q.lgnDig > 0.05 && q._in) { const u = clamp(q.lgnDig / C.DIG_T, 0, 1), col = burnsRGBf(q.car.col); R.flat.flat(X.x, X.y + 0.14, X.z, 2.6 + u * 6, 2.6 + u * 6, -t * 3, S.ring, col, 0.5 + u * 0.5, true); R.bbs.bb(q.x, q.y + (q.M ? q.M.h : 3) + 1.4, q.z, 1.2 + u, 1.2 + u, S.star, C.gold, 0.5 + u * 0.5, true, t * 3); }
+        for (const q of s.karts) if (q.lgnDig > 0.05 && q._in) { const u = clamp(q.lgnDig / lgnDigT(X, q), 0, 1), col = burnsRGBf(q.car.col); R.flat.flat(X.x, X.y + 0.14, X.z, 2.6 + u * 6, 2.6 + u * 6, -t * 3, S.ring, col, 0.5 + u * 0.5, true); R.bbs.bb(q.x, q.y + (q.M ? q.M.h : 3) + 1.4, q.z, 1.2 + u, 1.2 + u, S.star, C.gold, 0.5 + u * 0.5, true, t * 3); }
       }
       // the chest pops out of the hole and spills gold
       if (X.chestT > 0) {
@@ -454,21 +470,25 @@ CART_OBJECTIVES.xmarks = {
     // the treasure map card: where, how warm, the arrow, the dig meter
     hud(s, ctx, top, left) {
       const C = LGN_C, X = s.lgnX, k = s.player; if (!X || !k || s.state !== 'race') return false;
-      const W = Game.cssW, H = Game.cssH, portrait = H > W, cy = portrait ? top + 160 : top + 64, cw = Math.min(250, W * 0.42), cx = W / 2;
+      // portrait: a two-row card under the scoreboard, below the banners; landscape: one slim row between the timer and the banners
+      const W = Game.cssW, H = Game.cssH, portrait = H > W, cx = W / 2;
+      const cw = portrait ? Math.min(250, W * 0.62) : clamp(W - 430, 300, 440), ch = portrait ? 40 : 26, cy0 = portrait ? top + 186 : top + 47, mid = cy0 + ch / 2;
       ctx.save();
       // the map card (parchment, a torn-ish edge)
-      ctx.fillStyle = 'rgba(244,226,176,0.92)'; burnsRR(ctx, cx - cw / 2, cy - 4, cw, 40, 9); ctx.fill();
-      ctx.strokeStyle = 'rgba(120,70,30,0.8)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); burnsRR(ctx, cx - cw / 2 + 3, cy - 1, cw - 6, 34, 7); ctx.stroke(); ctx.setLineDash([]);
-      if (!X.on) { BurnsUI.text(ctx, 'DRAWING A NEW MAP…', cx, cy + 16, 12, '#5a2a10', { ui: true, stroke: false }); ctx.restore(); return false; }
-      const d = Math.hypot(k.x - X.x, k.z - X.z), M = X.marks[X.mark];
-      BurnsUI.text(ctx, 'X IS NEAR ' + M.name, cx, cy + 8, 12, '#5a2a10', { ui: true, stroke: false });
+      ctx.fillStyle = 'rgba(244,226,176,0.92)'; burnsRR(ctx, cx - cw / 2, cy0, cw, ch, 9); ctx.fill();
+      ctx.strokeStyle = 'rgba(120,70,30,0.8)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); burnsRR(ctx, cx - cw / 2 + 3, cy0 + 3, cw - 6, ch - 6, 7); ctx.stroke(); ctx.setLineDash([]);
+      if (!X.on) { BurnsUI.text(ctx, 'DRAWING A NEW MAP…', cx, mid, 12, '#5a2a10', { ui: true, stroke: false }); ctx.restore(); return false; }
+      const d = Math.hypot(k.x - X.x, k.z - X.z), M = X.marks[X.mark], title = 'X IS NEAR ' + M.name;
+      ctx.font = `600 12px ${FONT_UI}`; const tw = portrait ? 0 : ctx.measureText(title).width;
+      if (portrait) BurnsUI.text(ctx, title, cx, cy0 + 12, 12, '#5a2a10', { ui: true, stroke: false });
+      else BurnsUI.text(ctx, title, cx - cw / 2 + 12, mid, 12, '#5a2a10', { ui: true, stroke: false, align: 'left' });
       // HOT / COLD
       const heat = clamp(1 - (d - 4) / 80, 0, 1), lab = d < C.DIG ? 'ON THE X!' : d < 16 ? 'HOT!' : d < 32 ? 'WARM' : d < 60 ? 'COOL' : 'COLD';
-      const bw = cw - 96, bx = cx - cw / 2 + 12, by = cy + 22;
+      const bx = portrait ? cx - cw / 2 + 12 : cx - cw / 2 + 24 + tw, bw = Math.max(30, (portrait ? cw - 96 : cx + cw / 2 - 84 - bx)), by = portrait ? cy0 + 26 : mid - 3.5;
       ctx.fillStyle = 'rgba(90,50,20,0.25)'; burnsRR(ctx, bx, by, bw, 7, 3.5); ctx.fill();
       const g = ctx.createLinearGradient(bx, 0, bx + bw, 0); g.addColorStop(0, '#5ab0ff'); g.addColorStop(0.5, '#ffb040'); g.addColorStop(1, '#ff2a1a');
       ctx.fillStyle = g; burnsRR(ctx, bx, by, Math.max(7, bw * heat), 7, 3.5); ctx.fill();
-      BurnsUI.text(ctx, lab, bx + bw + 42, by + 3, 12, d < 16 ? (Math.floor(s.time * 6) % 2 ? '#ff2a1a' : '#c81a10') : d < 32 ? '#d86a10' : '#2a6ab0', { ui: true, stroke: false });
+      BurnsUI.text(ctx, lab, bx + bw + 42, by + 3.5, 12, d < 16 ? (Math.floor(s.time * 6) % 2 ? '#ff2a1a' : '#c81a10') : d < 32 ? '#d86a10' : '#2a6ab0', { ui: true, stroke: false });
       // the arrow: to the landmark until the X is in sight, then to the X
       const near = d < C.SEE, tx = near ? X.x : M.x, tz = near ? X.z : M.z, ty = near ? X.y + 2.5 : s.terrain.height(M.x, M.z) + 12;
       if (d > 5 && s.R.project(tx, ty, tz, W, H, LGN_P)) {
@@ -480,7 +500,7 @@ CART_OBJECTIVES.xmarks = {
       }
       // digging: a big shovel meter in the middle; close but too fast: tell them to stop
       if (k.lgnDig > 0.02) {
-        const u = clamp(k.lgnDig / C.DIG_T, 0, 1), mx = W / 2, my = H * (portrait ? 0.42 : 0.36), r = 26;
+        const u = clamp(k.lgnDig / lgnDigT(X, k), 0, 1), mx = W / 2, my = H * (portrait ? 0.42 : 0.36), r = 26;
         ctx.fillStyle = 'rgba(30,16,8,0.55)'; ctx.beginPath(); ctx.arc(mx, my, r + 8, 0, TAU); ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(mx, my, r, 0, TAU); ctx.stroke();
         ctx.strokeStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(mx, my, r, -Math.PI / 2, -Math.PI / 2 + TAU * u); ctx.stroke();

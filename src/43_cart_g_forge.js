@@ -277,22 +277,24 @@ CART_ARENA_RULES.forge = {
   },
   hud(s, ctx, W, H, top, left) {
     const G = s.frg, k = s.player; if (!G || !k || !k.frg || s.state !== 'race') return;
-    const portrait = H > W, y = portrait ? top + 58 + 5 * 17 + 14 : top + 62, n = G.braz.length;
+    // portrait: under the scoreboard and below the banners; landscape: one row in the band between the timer and the banners
+    const portrait = H > W, y = portrait ? top + 196 : top + 60, n = G.braz.length;
+    let mine = 0; for (const b of G.braz) if (b.owner === k) mine++;
+    const sn = k.frg.snuffT > 0, msg = sn ? 'TORCH OUT · ' + k.frg.snuffT.toFixed(1) + 's' : !portrait && s.raceT < 6 ? 'DRIVE PAST THE BRAZIERS TO LIGHT THEM' : 'YOUR FIRES ' + mine + ' · BELLOWS IN ' + Math.ceil(G.bellowsT) + 's';
+    ctx.font = `600 12px ${FONT_UI}`; const tw = portrait ? 0 : ctx.measureText(msg).width;
     // the forge row: one flame per brazier, in its owner's colour
-    const w = Math.min(14, (W - 40) / n), x0 = W / 2 - (n - 1) * w / 2;
+    const w = Math.min(14, (W - 40) / n), x0 = portrait ? W / 2 - (n - 1) * w / 2 : W / 2 - ((n - 1) * w + 16 + tw) / 2;
     ctx.save();
     ctx.fillStyle = 'rgba(10,4,20,0.5)'; burnsRR(ctx, x0 - w, y - 9, n * w + w, 18, 9); ctx.fill();
-    let mine = 0;
     for (let i = 0; i < n; i++) {
-      const b = G.braz[i], x = x0 + i * w; if (b.owner === k) mine++;
+      const b = G.braz[i], x = x0 + i * w;
       ctx.fillStyle = b.owner ? b.owner.car.col : 'rgba(255,255,255,0.18)';
       ctx.beginPath(); ctx.moveTo(x, y - 6 - (b.flare > 0 ? 2 : 0)); ctx.quadraticCurveTo(x + w * 0.38, y + 1, x, y + 5); ctx.quadraticCurveTo(x - w * 0.38, y + 1, x, y - 6 - (b.flare > 0 ? 2 : 0)); ctx.fill();
       if (b.owner === k) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 1.5; ctx.stroke(); }
     }
     ctx.restore();
-    const sn = k.frg.snuffT > 0;
-    BurnsUI.text(ctx, sn ? 'TORCH OUT · ' + k.frg.snuffT.toFixed(1) + 's' : 'YOUR FIRES ' + mine + ' · BELLOWS IN ' + Math.ceil(G.bellowsT) + 's', W / 2, y + 20, 12, sn ? (Math.floor(s.time * 6) % 2 ? '#ff6a6a' : '#ffffff') : G.pump > 0 ? '#ffd84a' : '#ffd8a0', { ui: true });
-    if (s.raceT < 6) BurnsUI.text(ctx, 'DRIVE PAST THE BRAZIERS TO LIGHT THEM', W / 2, y + 38, 12, '#ffb050', { glow: '#a04010' });
+    BurnsUI.text(ctx, msg, portrait ? W / 2 : x0 + (n - 1) * w + 16, portrait ? y + 20 : y, 12, sn ? (Math.floor(s.time * 6) % 2 ? '#ff6a6a' : '#ffffff') : G.pump > 0 ? '#ffd84a' : '#ffd8a0', { ui: true, align: portrait ? 'center' : 'left' });
+    if (portrait && s.raceT < 6) BurnsUI.text(ctx, 'DRIVE PAST THE BRAZIERS TO LIGHT THEM', W / 2, y + 38, 12, '#ffb050', { glow: '#a04010' });
     // the arrow to the best brazier
     const b = FRG_pick(s, k, false);
     if (b) { const p = FRG_P.proj; if (s.R.project(b.x, 5.5, b.z, W, H, p)) { const ax = clamp(p.x, 30, W - 30), ay = clamp(p.y, 70, H - 120); ctx.save(); ctx.translate(ax, ay); ctx.fillStyle = b.owner ? b.owner.car.col : '#ffd84a'; ctx.strokeStyle = '#1a1020'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(-9, -6); ctx.lineTo(9, -6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); } }

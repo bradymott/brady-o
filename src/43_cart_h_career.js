@@ -50,6 +50,43 @@ const CART_STAT_KEYS = ['speed', 'accel', 'handling', 'weight'];
 const CART_RUN_KINDS = { career: { name: 'CAREER', final: 'BURN THE MAN', col: '#ffd84a' }, royale: { name: 'BATTLE ROYALE', final: 'THE MAN', col: '#ff4f8a' } };
 const CART_RUN_LEN = 13;   // the car's own level + the other eleven + the final
 
+/* ---------------- sound cues for the Career, the Battle Royale, the Man and the wins ----------------
+   The engine's SFX table (01_audio.js, a shared core file) is closed to other files, so each cue here layers the
+   engine's existing synthesized sounds, with its own pitch, volume and timing, into a distinct sound:
+   [sfx name, volume, pitch, delay in s]. cartSfx(id, vol) plays one (a no-op without audio). */
+const CART_SFX = {
+  hurt: [['hurt3d', 0.7, 1.05], ['bump', 0.5, 0.75]],                                             // you take damage
+  lowHp: [['kartCountdown', 0.75, 0.5], ['kartCountdown', 0.75, 0.5, 0.17], ['hurt3d', 0.35, 0.7, 0.05]], // low-health warning: a double alarm beep
+  koOut: [['powerdown', 0.95, 0.85], ['die', 0.55, 1.1, 0.25]],                                     // you are knocked out
+  poof: [['poundTuck', 0.8, 0.7], ['cartSparkle', 0.55, 0.8, 0.04], ['break', 0.45, 0.65, 0.02]],    // a knocked-out car goes POOF
+  koRival: [['ticket', 0.7, 0.9], ['kartFinish', 0.35, 1.35, 0.08]],                               // you knocked a rival out
+  repair: [['oneup', 0.7, 1.0], ['glowstick', 0.5, 1.2, 0.12], ['pantsSnap', 0.3, 0.6]],            // a repair kit
+  stormWarn: [['wind', 0.75, 0.8], ['thunder', 0.55, 0.85, 0.15], ['kartFinalLap', 0.55, 0.75, 0.35]], // the storm closes in
+  manWake: [['man_roar', 1, 0.9], ['poundLand', 0.8, 0.55, 0.3], ['crowd', 0.6, 1, 0.6]],
+  manStomp: [['man_stomp', 1, 0.85], ['poundLand', 0.9, 0.5, 0.02], ['cartBass', 0.45, 0.7, 0.04]],   // his stomp and its shockwave
+  manSweep: [['flame_jet', 1, 0.75], ['man_roar', 0.4, 1.35], ['wind', 0.5, 1.4, 0.2]],             // his fire sweep
+  manEmbers: [['firework_launch', 0.8, 0.55], ['flame_jet', 0.6, 1.4, 0.1]],                        // he throws the ember rain
+  emberHit: [['firework_burst', 0.35, 1.5]],
+  manWeak: [['secret', 0.9, 1.0], ['shield', 0.55, 1.25, 0.05], ['glowstick', 0.5, 0.8, 0.2]],       // his weak point opens
+  manHit: [['bossHit', 0.6, 1.1]], manHitWeak: [['bossHit', 0.8, 0.8], ['cartSparkle', 0.4, 1.3]],
+  manDefeat: [['bossDie', 1, 0.8], ['man_roar', 0.9, 0.6, 0.1], ['neon_flash', 0.8, 0.7, 0.3], ['crowd_cheer', 1, 1, 0.6], ['firework_launch', 0.6, 1, 0.9], ['firework_burst', 0.8, 1, 1.7], ['kartFinish', 0.8, 1, 2.0]],
+  plunger: [['poundLand', 0.9, 0.9], ['pantsSnap', 0.6, 0.55], ['cartZap', 0.45, 1.6, 0.06]],         // KA-CHUNK
+  fuse: [['glowstick', 0.6, 0.7], ['firework_launch', 0.45, 1.6]],                                  // the fuse spark races to the Man
+  ignite: [['neon_flash', 1, 0.8], ['flame_jet', 1, 0.6, 0.1], ['man_roar', 0.8, 0.8, 0.25], ['crowd_cheer', 1, 1, 0.4], ['firework_launch', 0.7, 1, 0.6], ['firework_burst', 0.9, 1, 1.3], ['firework_burst', 0.7, 1.25, 1.9]],
+  statPoint: [['token_get', 0.95, 1], ['coinTally', 0.6, 1, 0.45], ['coinTally', 0.6, 1.2, 0.55], ['gold', 0.5, 1, 0.7]],   // a stat point awarded
+  prize: [['crowd_cheer', 0.8, 1], ['firework_launch', 0.5, 1.1, 0.2], ['firework_burst', 0.6, 1, 0.9]],
+  gameWon: [['kartFinish', 1, 0.9], ['crowd_cheer', 1, 1, 0.2], ['token_get', 1, 0.75, 1.0], ['gold', 0.8, 0.75, 1.5], ['firework_launch', 0.6, 1, 0.4], ['firework_burst', 0.9, 1, 1.1], ['firework_launch', 0.5, 1.2, 1.9], ['firework_burst', 0.8, 1.2, 2.6], ['firework_burst', 0.7, 0.9, 3.0]],
+  firework: [['firework_launch', 0.3, 1], ['firework_burst', 0.35, 1, 0.7]]
+};
+function cartSfx(id, vol, pitch) {
+  const L = CART_SFX[id]; if (!L || typeof Sound === 'undefined') return;
+  const v = vol === undefined ? 1 : vol, p = pitch || 1;
+  for (const c of L) {
+    const o = { vol: Math.min(1, c[1] * v), pitch: c[2] * p };
+    if (c[3]) setTimeout(() => Sound.play(c[0], o), c[3] * 1000); else Sound.play(c[0], o);
+  }
+}
+
 /* King of the Hill and Capture the Flag are retired: off every arena's list (old saves' wins for them stay harmless,
    and a scene asked for one plays Vibe Check, see the CartRaceScene constructor). Secret-level arenas offer exactly
    their three games. */
@@ -288,6 +325,9 @@ if (typeof window !== 'undefined' && window.BRADY_CART) window.BRADY_CART.debug.
   // the career final: the plunger state, and (DEV ONLY) drop the player right onto the live plunger
   final() { const s = Game.scene, P = s && s.plg; if (!P) return null; return { alive: P.alive, n: P.n, x: +P.x.toFixed(1), z: +P.z.toFixed(1), counts: s.karts.map(k => ({ id: k.id, player: k.player, plg: k.plg })), winner: P.winner ? P.winner.id : null, playerWon: !!(P.winner && P.winner.player), igniteT: +P.igniteT.toFixed(2), burn: s.man ? +s.man.burn.toFixed(3) : null, state: s.state }; },
   plunge() { const s = Game.scene, P = s && s.plg; if (!P || !P.alive) return false; const k = s.player, a = P.yaw - Math.PI / 2; window.BRADY_CART.debug.place(-1, P.x - Math.sin(a) * 6, P.z - Math.cos(a) * 6, a, { speed: 8 }); return true; },
-  menu(o) { Game.setScene(new KartMenuScene(o)); return Game.scene.state; }
+  menu(o) { Game.setScene(new KartMenuScene(o)); return Game.scene.state; },
+  // the sound cues: every layer must be one of the engine's sounds; sfx(id) plays one
+  sfxCheck() { const names = new Set(Sound.sfxNames || []), bad = []; for (const id in CART_SFX) for (const c of CART_SFX[id]) if (!names.has(c[0])) bad.push(id + ':' + c[0]); return { cues: Object.keys(CART_SFX).length, bad }; },
+  sfx(id) { cartSfx(id); return !!CART_SFX[id]; }
 };
 if (typeof window !== 'undefined' && window.BRADY_BURNS) for (const k of ['CART_CAREER_TRACKS', 'CART_ROYALE_ARENAS', 'CART_STAGE_MODES', 'CART_RACE_RULES', 'CART_SECRET_LEVELS', 'CartCareer']) Object.defineProperty(window.BRADY_BURNS, k, { get: () => eval(k), configurable: true });

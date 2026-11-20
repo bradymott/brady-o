@@ -44,7 +44,7 @@ const CART_ROY_DMG = {
   airhorn: 8, lightsout: 8, afterparty: 10, bungee: 14, roadwork: 12, holdwater: 14, lecture: 6, fivemph: 5, parting: 6,
   // arena hazards and the Man
   rdoball: 12, rdobeam: 8, rdocrab: 6,   // ROLLER DISCO (43_cart_i_royale_rollerdisco.js): disco balls, disco beams, roller crabs
-  vltlaser: 7, vltcoins: 12, vltmummy: 8,   // THE VAULT (43_cart_i_royale_vault.js): laser sweep, gold rush, mummy guards
+  vltlaser: 4, vltcoins: 12, vltmummy: 8,   // THE VAULT (43_cart_i_royale_vault.js): laser sweep, gold rush, mummy guards
   mxbegg: 12, mxbyolk: 6, mxbpin: 16, mxbflour: 8,   // THE MIXING BOWL (43_cart_i_royale_mixbowl.js): egg drop, yolk slick, rolling pin, flour sifter
   fgn_arm: 12, fgn_bloom: 10, fgn_whirl: 12,   // FIRE GARDEN (43_cart_i_royale_firegarden.js): kraken fire, fire blooms, fire whirls
   btbduck: 12, btbslosh: 11, btbbomb: 10,   // THE BIG TUB (43_cart_i_royale_bigtub.js): duck charge, the slosh, bath bombs
@@ -74,7 +74,7 @@ function cartRoyDamage(s, k, n, src, what) {
   const key = what || 'hit'; k.roy.dmgBy[key] = (k.roy.dmgBy[key] || 0) + n;
   if (src && src !== k && src.roy) { src.roy.dealt += n; k.roy.lastBy = src; }
   s.log('dmg', { k: k.id, by: src && src.id, src: key, n: +n.toFixed(1), hp: +k.hp.toFixed(1), player: k.player });
-  if (k.player) { R.hurtFlash = 0.45; }
+  if (k.player) { R.hurtFlash = 0.45; if (s.raceT - (R.hurtSfxT === undefined ? -9 : R.hurtSfxT) > 0.35) { R.hurtSfxT = s.raceT; cartSfx('hurt', key === 'storm' || key === 'emberfire' || key === 'firepit' ? 0.5 : 1); } }
   if (k.hp <= 0.001) cartRoyKO(s, k, src, key);
   return n;
 }
@@ -94,16 +94,16 @@ function cartRoyKO(s, k, src, what) {
   R.koN++; if (R.firstKO === undefined) R.firstKO = s.raceT;
   s.log('ko', { k: k.id, by: src && src.id, src: what, place: k.roy.place, t: +s.raceT.toFixed(2), player: k.player });
   if (s.fx) { s.fx.burst(k.x, k.y + 1.5, k.z, 'star', 18, '#ffe24a'); s.fx.smoke(k.x, k.y + 1.5, k.z, 10, '#4a4652'); }
-  Sound.play('powerdown', { vol: k.player ? 0.95 : 0.45 });
+  if (k.player) cartSfx('koOut'); else Sound.play('powerdown', { vol: 0.4 });
   if (k.player) { s.banner('KNOCKED OUT!', '#ff6a6a', 2.4, cartOrdinal(k.roy.place) + ' PLACE' + (src && src !== k ? ' · by ' + src.car.name : '')); s.shakeIt(1); R.spect = src && src !== k && !src.out ? src : null; R.spectT = 0; }
   else s.banner(src && src.player ? 'KNOCKOUT! ' + k.car.name : k.car.name + ' IS OUT!', src && src.player ? '#7aff8a' : '#ffd84a', 1.6, (s.karts.filter(o => !o.out).length) + ' LEFT', true);
-  if (src && src.player && !k.player) Sound.play('kartFinish', { vol: 0.45, pitch: 1.3 });
+  if (src && src.player && !k.player) cartSfx('koRival');
 }
 // the car's last hop ends in a POOF: a ball of smoke and stars, and it is gone
 function cartRoyPoof(s, k) {
   k.roy.poofed = true; k.roy.poofT = 0.6; k.roy.px = k.x; k.roy.py = k.y; k.roy.pz = k.z; k.hidden = true; k.sunk = true; k.vx = 0; k.vz = 0;
   if (s.fx) { s.fx.burst(k.x, k.y + 1.4, k.z, 'puff', 22, '#e8e0f0'); s.fx.burst(k.x, k.y + 1.6, k.z, 'star', 14, k.car.col); s.fx.confetti(k.x, k.y + 1.5, k.z, 18); }
-  Sound.play('break', { vol: k.player ? 0.8 : 0.35, pitch: 0.8 });
+  const cm = s.camKart || s.player; cartSfx('poof', k.player || k === cm ? 1 : cm && Math.hypot(k.x - cm.x, k.z - cm.z) < 45 ? 0.6 : 0.3);
 }
 
 /* ---------------- rams (s.onRam from collideKarts; velocities before the bounce) ---------------- */
@@ -195,6 +195,9 @@ CART_OBJECTIVES.royale = {
       // aim assist for the player's forward weapons (and the autopilot)
       const fire0 = s.fireWeapon;
       s.fireWeapon = function (k) { if (k.player && this.roy) cartRoyAim(this, k); return fire0.call(this, k); };
+      // spectating: the camera orbits the followed car from high and far back (never down inside a pile of cars)
+      const cam0 = s.updateCamera;
+      s.updateCamera = function (fdt) { const Y = this.roy, k = this.camKart; if (!Y || !k || k.hidden || !this.player || !this.player.out || Y.phase === 2 || this.state !== 'race') return cam0.call(this, fdt); cartRoySpectCam(this, k, fdt); };
       // WATER BOTTLE repairs
       const use0 = s.useItem;
       s.useItem = function (k) { const it = k.item, r = use0.call(this, k); if (it === 'water' && this.roy) cartRoyHeal(this, k, CART_ROY_HEAL.water, 'water'); return r; };
@@ -210,6 +213,8 @@ CART_OBJECTIVES.royale = {
       R.t += dt; R.pulse += dt;
       if (!R.protect) { R.protect = true; for (const k of K) k.invT = Math.max(k.invT, CART_ROYALE.protect); if (s.player) s.banner('3 S SPAWN PROTECTION', '#9af0ff', 1.6, 'spread out, grab gift boxes', true); }
       if (R.hurtFlash > 0) R.hurtFlash -= dt;
+      // low health: a double alarm beep when you drop under a quarter, again every few seconds while you stay there
+      { const P = s.player; if (P && !P.out && P.hp < P.hpMax * 0.25 && s.state === 'race') { R.lowT = (R.lowT || 0) - dt; if (R.lowT <= 0) { R.lowT = 3.5; cartSfx('lowHp', 0.75); } } else R.lowT = 0; s.noControls = !!(P && P.out); }
       // per-car timers, knock-out poofs
       for (const k of K) {
         const r = k.roy; if (!r) continue;
@@ -220,13 +225,13 @@ CART_OBJECTIVES.royale = {
       // repair kits (they work in the boss fight too)
       for (const o of R.kits) {
         if (!o.alive) { o.t -= dt; if (o.t <= 0) { o.alive = 1; if (s.fx) s.fx.burst(o.gx, 1.2, o.gz, 'star', 8, '#5aff8a'); } continue; }
-        for (const k of K) { if (k.out || k.hp >= k.hpMax - 0.5) continue; const dx = k.x - o.gx, dz = k.z - o.gz; if (dx * dx + dz * dz < 7.3 && Math.abs(k.y - s.terrain.height(o.gx, o.gz)) < 2.5) { o.alive = 0; o.t = 18; cartRoyHeal(s, k, CART_ROY_HEAL.repair, 'repair'); Sound.play('pick', { vol: k.player ? 0.8 : 0.25, pitch: 1.2 }); break; } }
+        for (const k of K) { if (k.out || k.hp >= k.hpMax - 0.5) continue; const dx = k.x - o.gx, dz = k.z - o.gz; if (dx * dx + dz * dz < 7.3 && Math.abs(k.y - s.terrain.height(o.gx, o.gz)) < 2.5) { o.alive = 0; o.t = 18; cartRoyHeal(s, k, CART_ROY_HEAL.repair, 'repair'); cartSfx('repair', k.player ? 1 : 0.25); break; } }
       }
       if (R.phase === 2) return R.endNow;   // the final's boss fight (its rules drive it)
       // the storm: holds, then closes on the end point
       const Z = R.zone, ST = CART_ROYALE.storm, u = clamp((R.t - ST.start) / (ST.end - ST.start), 0, 1), e = u * u * (3 - 2 * u);
       Z.r = lerp(Z.r0, ST.minR, e); Z.x = lerp(R.layout.x0, R.layout.ex, e); Z.z = lerp(R.layout.z0, R.layout.ez, e);
-      if (!Z.warned && R.t > ST.start - 10) { Z.warned = true; s.banner('THE ' + R.layout.storm.name + ' IS COMING', R.layout.storm.col, 2.2, 'stay inside the ring', false); Sound.play('dust', { vol: 0.7 }); }
+      if (!Z.warned && R.t > ST.start - 10) { Z.warned = true; s.banner('THE ' + R.layout.storm.name + ' IS COMING', R.layout.storm.col, 2.2, 'stay inside the ring', false); cartSfx('stormWarn'); }
       Z.tick -= dt;
       if (Z.tick <= 0) {
         Z.tick = 0.5;
@@ -240,8 +245,9 @@ CART_OBJECTIVES.royale = {
       const P = s.player;
       if (alive <= 1) { if (alive === 1 && !P.out && s.rules.royaleWon && s.rules.royaleWon(s)) return false; return true; }
       if (P && P.out && !R.keepGoing) {   // (tests: keepGoing plays an AI-only match to the end)
-        if (R.spect && R.spect.out) R.spect = K.find(k => !k.out) || null;
-        if (!R.spect) R.spect = K.reduce((b, k) => (!k.out && (!b || k.hp > b.hp) ? k : b), null);
+        // follow the car that got you; when it is out too, the strongest car still running (most KOs, then HP)
+        if (R.spect && R.spect.out) R.spect = null;
+        if (!R.spect) R.spect = K.reduce((b, k) => (!k.out && (!b || k.roy.kos * 60 + k.hp > b.roy.kos * 60 + b.hp) ? k : b), null);
         s.camKart = R.spect; R.spectT += dt;
         const tap = Input.taps.length || Input.jumpPressed || Input.actionPressed || (Input.hudPressed && Input.hudPressed.fire);
         if ((R.spectT > 1.5 && tap) || R.spectT > 9 || s.autoDrive && R.spectT > 2) { R.quick = true; return true; }
@@ -413,9 +419,37 @@ function cartRoyHud(s, ctx, top, left) {
       ctx.beginPath(); ctx.moveTo(0, -sz * 1.3); ctx.lineTo(-sz, sz * 0.6); ctx.lineTo(sz, sz * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     }
   }
-  if (k.out && Y.phase !== 2) { BurnsUI.text(ctx, 'SPECTATING' + (Y.spect ? ' · ' + Y.spect.car.name : ''), W / 2, H * 0.3, 16, '#ff9ad8', {}); if (Y.spectT > 1.5) BurnsUI.text(ctx, 'TAP TO SKIP TO RESULTS', W / 2, H * 0.3 + 24, 12, 'rgba(255,255,255,' + (0.5 + 0.5 * Math.sin(t * 5)) + ')', { ui: true }); }
+  if (k.out && Y.phase !== 2) cartRoySpectHud(s, ctx, W, H, t);
   if (s.rules.royaleHud) s.rules.royaleHud(s, ctx, W, H, top, left);
   void L;
+}
+// spectating: who you are watching, and a clear TAP TO SKIP (the drive buttons are hidden while you are out)
+function cartRoySpectHud(s, ctx, W, H, t) {
+  const Y = s.roy, o = Y.spect, portrait = H > W, bot = H - Math.max(16, insets.b + 10);
+  const y1 = bot - 22, y0 = y1 - (portrait ? 54 : 46);
+  if (o) {
+    const name = o.car.name, sub = (Y.aliveN || 0) + ' CARS LEFT';
+    ctx.save(); ctx.font = `700 15px ${FONT_UI}`; const tw = Math.min(W - 40, Math.max(220, ctx.measureText(name).width + 120));
+    BurnsUI.pill(ctx, W / 2 - tw / 2, y0 - 19, tw, 38, 'rgba(12,6,26,0.78)', rgba(o.car.col === '#2a2236' ? o.car.col2 : o.car.col, 0.8)); ctx.restore();
+    BurnsUI.text(ctx, 'SPECTATING', W / 2 - tw / 2 + 16, y0 - 6, 9, 'rgba(255,255,255,0.7)', { align: 'left', ui: true, stroke: false });
+    BurnsUI.text(ctx, sub, W / 2 + tw / 2 - 16, y0 - 6, 9, '#ffd84a', { align: 'right', ui: true, stroke: false });
+    BurnsUI.text(ctx, name, W / 2, y0 + 7, 15, o.car.light || '#ffffff', { ui: true });
+  }
+  const ready = Y.spectT > 1.5, a = ready ? 0.75 + 0.25 * Math.sin(t * 5) : 0.35, bw = Math.min(W - 40, 280);
+  ctx.save(); ctx.globalAlpha = a; BurnsUI.pill(ctx, W / 2 - bw / 2, y1 - 17, bw, 34, ready ? 'rgba(255,79,216,0.85)' : 'rgba(40,30,60,0.8)', 'rgba(255,255,255,0.8)');
+  BurnsUI.text(ctx, 'TAP TO SKIP  ▶', W / 2, y1 + 0.5, 14, '#ffffff', { ui: true }); ctx.restore();
+}
+function cartRoySpectCam(s, k, fdt) {
+  const Y = s.roy, cam = s.cam, portrait = Game.cssH > Game.cssW;
+  if (Y.spectFor !== k) { Y.spectFor = k; Y.spectA = Math.atan2(cam.x - k.x, cam.z - k.z); }
+  Y.spectA += fdt * 0.22;
+  const d = portrait ? 25 : 20, h = portrait ? 14 : 11;
+  const px = k.x + Math.sin(Y.spectA) * d, pz = k.z + Math.cos(Y.spectA) * d, py = Math.max(k.y + h, s.terrain.height(px, pz) + 3);
+  const kk = 1 - Math.exp(-4.5 * fdt);
+  cam.x = lerp(cam.x, px, kk); cam.y = lerp(cam.y, py, kk); cam.z = lerp(cam.z, pz, kk);
+  cam.tx = lerp(cam.tx, k.x, kk * 1.6); cam.ty = lerp(cam.ty, k.y + 1.2, kk * 1.6); cam.tz = lerp(cam.tz, k.z, kk * 1.6);
+  cam.fov = BurnsM.damp(cam.fov || 1, portrait ? 1.25 : 0.95, 3, fdt); cam.roll = 0;
+  s.camYaw = Math.atan2(k.x - cam.x, k.z - cam.z);
 }
 function cartRoyRadar(s, ctx, x, y, S) {
   const Y = s.roy, k = s.player, Z = Y.zone, R0 = Y.layout.R0, sc = S / 2 / (R0 + 12), cx = x + S / 2, cy = y + S / 2;

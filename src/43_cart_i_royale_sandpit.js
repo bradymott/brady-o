@@ -27,8 +27,8 @@ const SPT_T = { p: { x: 0, y: 0 } };
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_sandpit = function (A, night) {
-  const S = SPT, R = S.R, E = this.base(2143, [-260, -260, 260, 260], '#e2c08a', 0);
-  const sky = Object.assign({}, CART_SKIES.day(), { zen: '#2f6ad0', hor: '#ffe2b4', sky: '#9cc8f0', fog: '#f0d8b0', fogD: 0.0022, haze: 0.35, clouds: 0.25, mid: '#e8b888', midK: 0.25, key: '#fff0d8', keyK: 1.05, gnd: '#e8cc98' });
+  const S = SPT, R = S.R, E = this.base(2143, [-260, -260, 260, 260], '#e6b878', 0);
+  const sky = Object.assign({}, CART_SKIES.day(), { zen: '#2f6ad0', hor: '#ffe2b4', sky: '#9cc8f0', fog: '#ecd4b0', fogD: 0.0014, haze: 0.14, clouds: 0.3, fogMax: 0.6, mid: '#e8b888', midK: 0.25, key: '#fff0d8', keyK: 1.05, gnd: '#e8cc98' });
   Object.assign(E, { id: 'sandpit', arena: A, sky, tod: 'day', music: 'kart3', night: false, R });
   const api = E.api, T = E.terrain, rng = mulberry32(2143);
   const ang = (a, r) => [Math.sin(a) * r, Math.cos(a) * r];
@@ -36,10 +36,17 @@ CartWorlds.arena_sandpit = function (A, night) {
   E.sptPits = []; for (let i = 0; i < S.pitN; i++) { const [x, z] = ang(pitA(i), S.pitR); E.sptPits.push({ x, z }); }
   // ---- ground paint: wind ripples, the damp quicksand patches, a sand mandala round the sculpture, fin trails ----
   api.paint((ctx, P, sc) => {
-    for (let i = 0; i < 1000; i++) { const x = (rng() - 0.5) * 500, z = (rng() - 0.5) * 500, q = P(x, z), L = (4 + rng() * 10) * sc; ctx.strokeStyle = rng() < 0.5 ? 'rgba(170,120,70,0.16)' : 'rgba(255,240,210,0.22)'; ctx.lineWidth = (0.25 + rng() * 0.3) * sc; ctx.beginPath(); ctx.moveTo(q[0] - L, q[1]); ctx.quadraticCurveTo(q[0], q[1] - L * 0.25, q[0] + L, q[1]); ctx.stroke(); }
-    for (const p of E.sptPits) { const c = P(p.x, p.z); ctx.fillStyle = 'rgba(140,95,50,0.32)'; ctx.beginPath(); ctx.arc(c[0], c[1], (S.qs.r + 1.5) * sc, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.setLineDash([1.2 * sc, 1.2 * sc]); ctx.lineWidth = 0.4 * sc; ctx.beginPath(); ctx.arc(c[0], c[1], (S.qs.r + 1.2) * sc, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
+    // Nov 19 polish: colour and contrast on the open sand: big soft patches of red-orange and pale sand (dune shading),
+    // sandstone pebble scatter, beach towels by the umbrellas, shells and starfish
+    for (let i = 0; i < 70; i++) { const x = (rng() - 0.5) * 420, z = (rng() - 0.5) * 420, q = P(x, z), r = (12 + rng() * 26) * sc, g = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], r); g.addColorStop(0, i % 3 ? 'rgba(214,128,70,0.32)' : 'rgba(255,236,196,0.4)'); g.addColorStop(1, 'rgba(214,128,70,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, TAU); ctx.fill(); }
+    for (let i = 0; i < 18; i++) { let a = rng() * TAU, r = 40 + rng() * 130; ctx.strokeStyle = 'rgba(176,100,52,0.3)'; ctx.lineWidth = (2 + rng() * 2.5) * sc; ctx.beginPath(); for (let k = 0; k < 22; k++) { a += 0.025; r += Math.sin(k * 0.5 + i) * 1.2; const q = P(...ang(a, r)); if (k) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); } ctx.stroke(); }
+    for (let i = 0; i < 600; i++) { const a = rng() * TAU, r = 20 + rng() * 160, q = P(...ang(a, r)); ctx.fillStyle = ['rgba(180,90,50,0.55)', 'rgba(120,70,40,0.45)', 'rgba(255,250,240,0.7)'][i % 3]; ctx.beginPath(); ctx.arc(q[0], q[1], (0.15 + rng() * 0.3) * sc, 0, TAU); ctx.fill(); }
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + 0.4, q = P(...ang(a + 0.06, 76 + (i % 2) * 8)), TC = [['#ff5a7a', '#ffffff'], ['#2ec8c8', '#ffd23a'], ['#ffd23a', '#ff8a2a'], ['#ff8a2a', '#2ec8c8']][i % 4]; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(-a + 0.4); for (let k = 0; k < 5; k++) { ctx.fillStyle = TC[k % 2]; ctx.globalAlpha = 0.9; ctx.fillRect(-1.6 * sc, (-3 + k * 1.2) * sc, 3.2 * sc, 1.2 * sc); } ctx.globalAlpha = 1; ctx.restore(); }
+    for (let i = 0; i < 40; i++) { const a = rng() * TAU, r = 30 + rng() * 140, q = P(...ang(a, r)), h = 0.7 * sc; ctx.fillStyle = i % 2 ? 'rgba(255,110,80,0.9)' : 'rgba(255,240,220,0.9)'; ctx.beginPath(); for (let k = 0; k < 10; k++) { const b = k / 10 * TAU + a, rr = k % 2 ? h * 0.4 : h; ctx.lineTo(q[0] + Math.sin(b) * rr, q[1] + Math.cos(b) * rr); } ctx.closePath(); ctx.fill(); }
+    for (let i = 0; i < 1000; i++) { const x = (rng() - 0.5) * 500, z = (rng() - 0.5) * 500, q = P(x, z), L = (4 + rng() * 10) * sc; ctx.strokeStyle = rng() < 0.5 ? 'rgba(160,100,56,0.3)' : 'rgba(255,240,210,0.35)'; ctx.lineWidth = (0.25 + rng() * 0.3) * sc; ctx.beginPath(); ctx.moveTo(q[0] - L, q[1]); ctx.quadraticCurveTo(q[0], q[1] - L * 0.25, q[0] + L, q[1]); ctx.stroke(); }
+    for (const p of E.sptPits) { const c = P(p.x, p.z); ctx.fillStyle = 'rgba(120,76,40,0.5)'; ctx.beginPath(); ctx.arc(c[0], c[1], (S.qs.r + 1.5) * sc, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.setLineDash([1.2 * sc, 1.2 * sc]); ctx.lineWidth = 0.4 * sc; ctx.beginPath(); ctx.arc(c[0], c[1], (S.qs.r + 1.2) * sc, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
     const c0 = P(0, 0);
-    for (let r = 22; r < 40; r += 4) { ctx.strokeStyle = r % 8 ? 'rgba(255,120,80,0.28)' : 'rgba(46,200,200,0.28)'; ctx.lineWidth = 1.0 * sc; ctx.beginPath(); ctx.arc(c0[0], c0[1], r * sc, 0, TAU); ctx.stroke(); }
+    for (let r = 22; r < 40; r += 4) { ctx.strokeStyle = r % 8 ? 'rgba(255,110,70,0.6)' : 'rgba(46,200,200,0.6)'; ctx.lineWidth = 1.3 * sc; ctx.beginPath(); ctx.arc(c0[0], c0[1], r * sc, 0, TAU); ctx.stroke(); }
     for (let i = 0; i < 24; i++) { const a = i / 24 * TAU, p = P(...ang(a, 24)), q = P(...ang(a, 38)); ctx.strokeStyle = 'rgba(255,240,210,0.35)'; ctx.lineWidth = 0.5 * sc; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); }
     for (let i = 0; i < 8; i++) { let a = rng() * TAU, r = 50 + rng() * 100; ctx.strokeStyle = 'rgba(150,100,55,0.18)'; ctx.lineWidth = 1.2 * sc; ctx.beginPath(); for (let k = 0; k < 30; k++) { a += 0.03 + Math.sin(k * 0.4 + i) * 0.03; r += Math.sin(k * 0.3 + i * 2) * 1.5; const q = P(...ang(a, r)); if (k) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); } ctx.stroke(); }
   });
@@ -56,6 +63,9 @@ CartWorlds.arena_sandpit = function (A, night) {
     E.art.push({ x, z, r: 7.5 });
   }
   for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + 0.4, [x, z] = ang(a, 76 + (i % 2) * 8); CartKit.put(E, 'shd_umbrella', x, z, a, ['#ff5a7a', '#2ec8c8', '#ffd23a', '#ff8a2a'][i % 4]); CartKit.put(E, 'shd_buoy', x + 4, z - 3, a, '#ffffff'); }
+  // Nov 19 polish: a few more props on the open sand: boulder pairs, umbrellas out by the cliffs, cactus clumps
+  for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + 0.05, r = 86 + (i % 3) * 22, [x, z] = ang(a, r); if (E.sptPits.some(p => Math.hypot(p.x - x, p.z - z) < 14) || Math.abs(r - 120) < 8) continue; CartKit.put(E, 'shd_rock', x, z, a * 5, ['#d8905a', '#e0a070', '#c8784a'][i % 3], { scale: 1.1 + (i % 2) * 0.4 }); CartKit.put(E, 'shd_rock', x + 3, z + 2, a * 7, '#e8b080', { scale: 0.7 }); E.art.push({ x, z, r: 3.2 }); }
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.62, [x, z] = ang(a, 160); CartKit.put(E, 'shd_umbrella', x, z, a, ['#2ec8c8', '#ff5a7a', '#ffd23a'][i % 3]); }
   for (let i = 0; i < 18; i++) { const a = rng() * TAU, r = 30 + rng() * 140; const [x, z] = ang(a, r); if (Math.hypot(x, z) < 22 || E.sptPits.some(p => Math.hypot(p.x - x, p.z - z) < 12)) continue; CartKit.put(E, i % 2 ? 'shd_cactus' : 'shd_buoy', x, z, a, i % 2 ? '#5aa860' : '#ffffff', { scale: 1 + rng() * 0.3 }); E.art.push({ x, z, r: 1.1 }); }
   for (const [a, r, rr, h] of [[0.0, 100, 18, 3.6], [1.25, 150, 16, 3.0], [2.3, 104, 18, 4.0], [3.4, 150, 15, 3.0], [4.3, 102, 17, 3.4], [5.4, 150, 16, 3.2], [0.7, 62, 10, 2.2], [3.0, 64, 10, 2.4], [5.0, 66, 10, 2.0], [1.9, 160, 12, 4.5], [4.0, 160, 12, 4.5]]) { const [x, z] = ang(a + 0.62, r); T.add(CartFeat.mound(x, z, rr, h, { col: '#d8ac72', res: 1.6 })); }
   for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.8, [x, z] = ang(a, 42); T.add(CartFeat.ramp(x, z, a + Math.PI / 2 * (i % 2 ? 1 : -1), 6, 7, 2.0, { col: '#c8925a', stripe: i % 2 ? '#ff6a4a' : '#2ec8c8' })); }

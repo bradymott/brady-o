@@ -34,7 +34,7 @@ CartWorlds.arena_moon = function (A, night) {
   const sky = Object.assign({}, BURNS_PALETTES.night, {
     zen: '#000003', hor: '#06070f', mid: '#03040a', midK: 0.5, fog: '#0b0b14', fogD: 0.0018, fogH: 0.02, haze: 0.12, fogMax: 0.55,
     sun: [205, -25], sunCol: '#000000', sunSize: 0.0001, moon: [30, 48], moonK: 0, stars: 1, milkyway: 1.3, clouds: 0, cloudCol: '#000000',
-    mtnCol: '#050508', mtnH: 0.9, city: [0, 0], cityCol: '#000000', cityK: 0, sky: '#2e3858', gnd: '#141418', key: '#c8d8ff', keyK: 0.8, emB: 1.6, rim: '#9ab0ff', dust: 0.08
+    mtnCol: '#050508', mtnH: 0.9, city: [0, 0], cityCol: '#000000', cityK: 0, sky: '#2e3858', gnd: '#1a1a24', key: '#d8e4ff', keyK: 0.95, emB: 1.8, rim: '#b0a0ff', dust: 0.08
   });
   Object.assign(E, { id: 'moon', arena: A, sky, tod: 'night', music: 'kart3', night: true, R: 135 });
   const api = E.api, T = E.terrain, rng = mulberry32(2004);
@@ -58,6 +58,16 @@ CartWorlds.arena_moon = function (A, night) {
     for (const [x, z] of PADS) { const q = P(x, z); for (const [r, w, a] of [[9, 0.5, 0.7], [6.5, 0.3, 0.5], [2.2, 0.8, 0.8]]) { ctx.strokeStyle = `rgba(200,230,255,${a})`; ctx.lineWidth = w * S; ctx.beginPath(); ctx.arc(q[0], q[1], r * S, 0, TAU); ctx.stroke(); } }
     // the base apron
     { const q = P(0, 0); ctx.fillStyle = 'rgba(150,150,166,0.35)'; ctx.beginPath(); ctx.arc(q[0], q[1], 22 * S, 0, TAU); ctx.fill(); }
+    // painted guide lines from the apron to each landing pad (cyan dashes) and a hazard chevron ring on the apron
+    ctx.setLineDash([1.6 * S, 1.2 * S]); ctx.lineWidth = 0.7 * S; ctx.strokeStyle = 'rgba(90,242,255,0.55)';
+    for (const [x, z] of PADS) { const a = P(x * 0.32, z * 0.32), b = P(x * 0.86, z * 0.86); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+    ctx.setLineDash([]);
+    { const q = P(0, 0); for (let i = 0; i < 24; i++) { const a0 = i / 24 * TAU, a1 = a0 + TAU / 48; ctx.strokeStyle = i % 2 ? 'rgba(255,210,60,0.55)' : 'rgba(30,30,40,0.5)'; ctx.lineWidth = 1.2 * S; ctx.beginPath(); ctx.arc(q[0], q[1], 21 * S, a0, a1); ctx.stroke(); } }
+    // big soft mineral fields: violet, teal and gold tints across the grey (lunar maria seen up close)
+    for (let i = 0; i < 40; i++) { const q = P((rng() - 0.5) * 280, (rng() - 0.5) * 280), r = (10 + rng() * 18) * S, c = ['150,110,255', '80,220,255', '255,200,110'][i % 3], g = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], r); g.addColorStop(0, `rgba(${c},0.3)`); g.addColorStop(1, `rgba(${c},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, TAU); ctx.fill(); }
+    // mineral glints in the regolith: violet and teal dust, brighter on the crater rims
+    for (let i = 0; i < 260; i++) { const x = (rng() - 0.5) * 280, z = (rng() - 0.5) * 280, q = P(x, z); ctx.fillStyle = rng() < 0.5 ? 'rgba(170,130,255,0.18)' : 'rgba(90,230,255,0.15)'; ctx.beginPath(); ctx.arc(q[0], q[1], (0.3 + rng() * 1.2) * S, 0, TAU); ctx.fill(); }
+    for (const c of CR) { const q = P(c[0], c[1]); ctx.strokeStyle = 'rgba(230,230,250,0.28)'; ctx.lineWidth = 1.6 * S; ctx.beginPath(); ctx.arc(q[0], q[1], (c[2] + c[3] * 0.4) * S, 0, TAU); ctx.stroke(); }
   });
   // ---- terrain: the four big craters, little craters, regolith dunes, two kickers ----
   CR.forEach(c => T.add(cartMoonCrater(c[0], c[1], c[2], c[3], c[4])));
@@ -119,6 +129,10 @@ CartWorlds.arena_moon = function (A, night) {
   // ---- viewing stand (mission control) and the cast ----
   E.spots.push(...CartScene.bleachers(api, 0, 30, Math.PI, 18, 3, rng));
   E.heroes.push({ type: 'badideaguy', x: 6, z: 20, yaw: Math.PI, anim: 'dare' }, { type: 'burney', x: -6, z: 20, yaw: Math.PI, anim: 'photo' }, { type: 'fencebot_a', x: 40, z: 112, yaw: 0.3 + Math.PI, anim: 'robot' }, { type: 'fencebot_b', x: 44, z: 110, yaw: 0.3 + Math.PI, anim: 'robot' }, { type: 'sparklepony', x: 66, z: 72, yaw: -2.3, anim: 'cheer' });
+  // ---- coloured light pools: the crater floors glow faintly, the pads and the rover loop are lit like a runway ----
+  CR.forEach((c, i) => api.light(c[0], c[1], c[2] + 4, ['#b07aff', '#5af2ff', '#ff7ac8', '#7affb0'][i], 0.45));
+  for (const [x, z] of PADS) api.light(x, z, 15, '#5af2ff', 0.5);
+  for (let i = 0; i < 18; i++) { const a = i / 18 * TAU, r = 34 + Math.sin(a * 3) * 6 + 2.6, x = Math.sin(a) * r, z = Math.cos(a) * r; api.glow(x, 0.4, z, 1.1, i % 2 ? '#ffd23a' : '#5af2ff'); if (i % 3 === 0) api.light(x, z, 6, '#9ad8ff', 0.35); }
   // ---- objective spots ----
   E.zones = CR.map((c, i) => ({ x: c[0], z: c[1], r: c[2] - c[3] * 0.8 + 1.5, name: names[i] }));
   E.craters = E.zones;

@@ -17,7 +17,7 @@
    CART_SECRET_LEVELS.cupcake. Globals PTY_*, scene state s.pty, world E.pty.
    ============================================================ */
 
-const PTY_C = { HX: 58, HZ: 44, CR: 16, CS: 3.0, PAINT_R: 2.4, CHERRY_R: 9, HIT_R: 5.5, CHERRIES: 3, CHERRY_T: 6 };
+const PTY_C = { HX: 66, HZ: 50, CR: 16, CS: 3.0, PAINT_R: 2.4, CHERRY_R: 9, HIT_R: 5.5, CHERRIES: 3, CHERRY_T: 6 };
 // the frosting colours, one per starting slot (the player's is shown on the HUD)
 const PTY_COLS = ['#ff5aa8', '#5ac8ff', '#b07aff', '#5ae88a', '#ffd23a', '#ff8a3a', '#8a5236', '#ff3a4a'];
 const PTY_NAMES = ['STRAWBERRY', 'BLUEBERRY', 'LAVENDER', 'MINT', 'LEMON', 'ORANGE', 'CHOCOLATE', 'CHERRY'];
@@ -26,16 +26,17 @@ const PTY_SH = PTY_COLS.map(c => { const v = burnsRGBf(c); return [0.86, 1, 1.12
 const PTY_RGB = PTY_COLS.map(c => burnsRGBf(c));
 const PTY_P = {}, PTY_WHITE = [1, 1, 1], PTY_CHERRY = [1, 0.15, 0.25];
 // the counter's outline: a rounded rectangle
-function ptyPoly() { const C = PTY_C, out = []; for (const [cx, cz, a0] of [[C.HX - C.CR, C.HZ - C.CR, 0], [C.HX - C.CR, -(C.HZ - C.CR), Math.PI / 2], [-(C.HX - C.CR), -(C.HZ - C.CR), Math.PI], [-(C.HX - C.CR), C.HZ - C.CR, Math.PI * 1.5]]) for (let i = 0; i <= 5; i++) { const a = a0 + i / 5 * Math.PI / 2; out.push([cx + Math.sin(a) * C.CR, cz + Math.cos(a) * C.CR]); } return out; }
+// (inset > 0 pulls it in: the cars' wall sits a little inside the fence so no nose pokes through the candy canes)
+function ptyPoly(inset) { const C = PTY_C, r = C.CR - (inset || 0), out = []; for (const [cx, cz, a0] of [[C.HX - C.CR, C.HZ - C.CR, 0], [C.HX - C.CR, -(C.HZ - C.CR), Math.PI / 2], [-(C.HX - C.CR), -(C.HZ - C.CR), Math.PI], [-(C.HX - C.CR), C.HZ - C.CR, Math.PI * 1.5]]) for (let i = 0; i <= 5; i++) { const a = a0 + i / 5 * Math.PI / 2; out.push([cx + Math.sin(a) * r, cz + Math.cos(a) * r]); } return out; }
 // how far (x, z) is inside the rounded rectangle (negative = outside)
 function ptyInside(x, z) { const C = PTY_C, ax = Math.abs(x) - (C.HX - C.CR), az = Math.abs(z) - (C.HZ - C.CR); if (ax <= 0 || az <= 0) return Math.min(C.HX - Math.abs(x), C.HZ - Math.abs(z)); return C.CR - Math.hypot(ax, az); }
 // obstacles (circle footprints) the frosting can't go under
-const PTY_OBST = [[0, 0, 8.4], [34, -22, 4.2], [-36, -24, 4.2], [32, 24, 3.6], [-6, -30, 3.8], [-10, 31, 3.4], [-31, 9, 2.4], [-31, 18, 2.4], [-31, 0, 2.4]];
+const PTY_OBST = [[0, 0, 8.4], [34, -22, 4.2], [-36, -24, 4.2], [32, 24, 3.6], [-6, -30, 3.8], [-10, 31, 3.4], [-31, 9, 2.4], [-31, 18, 2.4], [-31, 0, 2.4], [52, 22, 3.6], [-54, -8, 3.4]];
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_pantry = function (A, night) {
   const C = PTY_C, E = this.base(2044, [-110, -110, 110, 110], '#a8785a', 0.1);
-  const sky = Object.assign(CART_SKIES.day(), { sky: '#ffd8ea', hor: '#ffe6d0', fog: '#e8c8d4', fogD: 0.002, zen: '#9ac8ff', key: '#fff2e0', keyK: 1.0, clouds: 0.35, haze: 0.08 });
+  const sky = Object.assign(CART_SKIES.day(), { sky: '#ffd8ea', hor: '#ffe6d0', fog: '#f0d2c8', fogD: 0.0012, zen: '#9ac8ff', key: '#fff2e0', keyK: 1.0, clouds: 0.35, haze: 0.03 });
   Object.assign(E, { id: 'pantry', arena: A, sky, tod: 'day', music: 'kart1', night: false, R: 50 });
   const api = E.api, rng = mulberry32(4444);
   const free = (x, z, r) => ptyInside(x, z) > r + 2 && PTY_OBST.every(o => Math.hypot(x - o[0], z - o[1]) > o[2] + r);
@@ -124,8 +125,24 @@ CartWorlds.arena_pantry = function (A, night) {
     return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.5, hz: 13.4, y0: 0, y1: 2.8 }] };
   }, { hi: true });
   for (const z of [-4, 0, 4, 8, 12, 16, 20]) E.art.push({ x: -31, z: z - 2, r: 2.0 });
+  // ---- more cover out on the wider counter: a stack of giant cookies and a teacup ----
+  CartScene.mesh(api, 52, 22, 0.7, m => {
+    const cc = ['#d8a060', '#c88a48', '#e0b070', '#b87838'];
+    for (let i = 0; i < 4; i++) { const y = i * 1.05, o = (i % 2 ? 0.35 : -0.3); m.color(cc[i]).shine(0); m.roundCyl(o, y, o * 0.6, 3.2 - i * 0.12, 1.0, 0.45, { seg: 20 }); m.color('#4a2a18'); for (let j = 0; j < 7; j++) { const a = j * 2.3 + i, r = 0.8 + (j % 3) * 0.8; m.ball(o + Math.sin(a) * r, y + 1.0, o * 0.6 + Math.cos(a) * r, 0.28, { seg: 5, rings: 3 }); } }
+    m.color('#ffffff').shine(1); m.roundCyl(0.3, 4.2, 0.2, 2.4, 0.35, 0.15, { seg: 16 }); m.shine(0);
+    return { cols: [{ t: 'cyl', x: 0, z: 0, r: 3.5, y0: 0, y1: 4.5 }] };
+  }, { hi: true });
+  E.art.push({ x: 52, z: 22, r: 3.8 });
+  CartScene.mesh(api, -54, -8, -0.5, m => {
+    m.color('#f4fbff').shine(3); m.lathe([[0, 0], [4.2, 0], [4.4, 0.25], [0, 0.3]], { seg: 24 });   // the saucer
+    m.lathe([[0, 0.3], [1.6, 0.3], [2.6, 1.6], [3.0, 3.4], [3.1, 3.6], [2.9, 3.6], [0, 3.0]], { seg: 22 });
+    m.color('#ff8ab8').shine(2); m.torus(0, 3.0, 0, 2.95, 0.12, { seg: 22, tseg: 4 }); m.color('#8a4a2a').shine(1); m.lathe([[0, 3.0], [2.85, 3.0], [2.85, 3.1], [0, 3.1]], { seg: 22 });
+    m.color('#f4fbff').shine(3); m.push(); m.tf(3.2, 2.0, 0, 0, Math.PI / 2, 0); m.torus(0, 0, 0, 0.9, 0.2, { seg: 12, tseg: 5 }); m.pop(); m.shine(0);
+    return { cols: [{ t: 'cyl', x: 0, z: 0, r: 3.2, y0: 0, y1: 3.6 }] };
+  }, { hi: true });
+  E.art.push({ x: -54, z: -8, r: 3.5 });
   // ---- the candy-cane fence: striped posts with curled tops and a taffy rail ----
-  const poly = ptyPoly(); E.walls = poly;
+  const poly = ptyPoly(); E.walls = ptyPoly(1.3);
   const per = []; for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 4.5)); for (let j = 0; j < n; j++) per.push([lerp(a[0], b[0], j / n), lerp(a[1], b[1], j / n), Math.atan2(b[0] - a[0], b[1] - a[1]), L / n]); }
   per.forEach(([x, z, yaw, seg], i) => {
     const ox = x * 1.02, oz = z * 1.02;
@@ -153,6 +170,19 @@ CartWorlds.arena_pantry = function (A, night) {
   }, { noAO: true });
   for (const [x, z, c, h] of [[86, 4, '#ffd8a0', 16], [84, -26, '#c8f0d8', 12], [-88, -10, '#d8c8ff', 18], [-84, -40, '#ffd0e0', 13]]) CartScene.mesh(api, x, z, 0, m => { m.color('#f4fbff', 0.02).shine(3); m.lathe([[0, 0], [6, 0], [6.6, 1], [6.6, h - 2], [5, h], [0, h]], { seg: 18 }); m.color(c).shine(2); m.lathe([[0, h], [5.4, h], [5.4, h + 2.5], [0, h + 3]], { seg: 18 }); m.color('#c8965a'); for (let i = 0; i < 6; i++) m.roundCyl(Math.sin(i * 1.1) * 2.6, 1 + i * 1.8, Math.cos(i * 1.1) * 2.6, 2.4, 0.6, 0.3, { seg: 12 }); m.shine(0); }, { noAO: true });
   CartScene.mesh(api, 40, -80, 0, m => { m.color('#ffffff').shine(3); m.lathe([[0, 0], [8, 0], [16, 8], [16.5, 8.5], [0, 8]], { seg: 24 }); m.color('#ff6a3a').shine(2); for (const [x, z] of [[-5, 2], [4, -4], [2, 6]]) m.ball(x, 9, z, 4, { seg: 12, rings: 8 }); m.color('#ffe24a'); m.ellipsoid(-1, 10, -1, 6, 2.2, 2.6, { seg: 12, rings: 6 }); m.shine(0); }, { noAO: true });
+  // ---- the rest of the kitchen closes the horizon: pastel cupboard walls on the other three sides (one mesh each) ----
+  for (const [x, z, yaw, col, door] of [[106, 0, -Math.PI / 2, '#fbe8d8', '#a8dcf0'], [-106, 0, Math.PI / 2, '#fbe8d8', '#f8c0d8'], [0, -104, 0, '#fff0e0', '#c8f0d0']]) {
+    CartScene.mesh(api, x, z, yaw, m => {
+      m.color(col).shine(0); m.box(0, 22, -1.5, 220, 46, 2);                                   // the wall
+      m.color('#e8d0c0'); m.box(0, 0.8, 1, 220, 1.6, 3);                                       // the skirting
+      for (let i = 0; i < 8; i++) {                                                             // big cupboard doors with knobs
+        const u = -84 + i * 24; m.color(door).shine(1); m.roundBox(u, 9, 0.2, 21, 15, 1.2, 0.6); m.color(shade(door, -0.12)); m.roundBox(u, 9, 0.75, 17, 11, 0.4, 0.4);
+        m.color('#ffffff').shine(3); m.ball(u + (i % 2 ? -8 : 8), 9, 1.3, 0.7, { seg: 8, rings: 5 }); m.shine(0);
+        m.color(door).shine(1); m.roundBox(u, 33, 0.2, 21, 13, 1.2, 0.6); m.color('#ffffff').shine(3); m.ball(u + (i % 2 ? -8 : 8), 28.5, 1.3, 0.6, { seg: 8, rings: 5 }); m.shine(0);
+      }
+      m.color('#f4e4d4'); m.box(0, 18, 1.4, 220, 1.4, 4);                                       // the worktop lip between the rows
+    }, { noAO: true });
+  }
   // ---- the cast: a pastry chef (cheering), two sweet-toothed onlookers ----
   E.heroes.push({ type: 'sparklepony', x: 18, z: -38, yaw: 0.2, anim: 'cheer' }, { type: 'playaartist', x: -44, z: 36, yaw: 2.3, anim: 'cheer' }, { type: 'burney', x: 48, z: 34, yaw: -2.2, anim: 'photo' });
   // ---- objective spots ----
@@ -161,7 +191,7 @@ CartWorlds.arena_pantry = function (A, night) {
   E.flagSpots = [{ x: 0, z: 16 }, { x: 20, z: -30 }, { x: -20, z: -10 }, { x: 14, z: 34 }];
   E.captures = [{ x: 46, z: 0, r: 7 }, { x: -46, z: -34, r: 7 }, { x: 0, z: -36, r: 7 }, { x: 46, z: 34, r: 7 }];
   for (const [x, z] of [[18, 0], [-18, 0], [0, 18], [0, -18], [44, 8], [-44, 34], [20, 34], [-22, -36], [44, -34], [12, -40], [-46, -8], [20, -10]]) E.gifts.push({ x, z });
-  E.spawn = []; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + Math.PI / 8, x = Math.sin(a) * 40, z = Math.cos(a) * 30; E.spawn.push({ x, z, yaw: Math.atan2(-x, -z) }); }
+  E.spawn = []; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + Math.PI / 8, x = Math.sin(a) * 50, z = Math.cos(a) * 38; E.spawn.push({ x, z, yaw: Math.atan2(-x, -z) }); }
   // the frosting grid's cells: inside the fence and clear of the props
   const nx = Math.ceil(C.HX * 2 / C.CS), nz = Math.ceil(C.HZ * 2 / C.CS), x0 = -nx * C.CS / 2, z0 = -nz * C.CS / 2;
   const ok = new Uint8Array(nx * nz);
@@ -288,7 +318,10 @@ CART_ARENA_RULES.pantry = {
   music: 'kart1',
   hud(s, ctx, W, H, top, left) {
     const P = s.pty, k = s.player; if (!P || !k || s.objective !== 'frost') return;
-    const portrait = H > W, y = portrait ? top + 58 + 5 * 17 + 18 : top + 58, bw = Math.min(230, W * 0.4), bx = W / 2 - bw / 2, me = k.ptyC;
+    // portrait: under the scoreboard and below the banners; landscape: bar and label on one row between the timer and the banners
+    const portrait = H > W, y = portrait ? top + 196 : top + 60, me = k.ptyC, label = 'YOUR FROSTING: ' + PTY_NAMES[me] + ' · ' + Math.round(k.score) + '%';
+    ctx.font = `12px ${FONT_DISPLAY}`; const tw = portrait ? 0 : ctx.measureText(label).width + 16;
+    const bw = portrait ? Math.min(230, W * 0.4) : Math.min(190, W * 0.24), bx = portrait ? W / 2 - bw / 2 : W / 2 - (bw + tw) / 2;
     // the share bar: every colour's slice of the counter (yours first, outlined), the bare marble grey
     ctx.save();
     ctx.fillStyle = 'rgba(10,4,20,0.55)'; burnsRR(ctx, bx - 6, y - 9, bw + 12, 18, 9); ctx.fill();
@@ -297,7 +330,7 @@ CART_ARENA_RULES.pantry = {
     for (const q of s.battleRank()) { const i = q.ptyC; if (i !== me) seg(i, bw * P.count[i] / P.total); }
     ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x, y - 5, bx + bw - x, 10);
     ctx.restore();
-    BurnsUI.text(ctx, 'YOUR FROSTING: ' + PTY_NAMES[me] + ' · ' + Math.round(k.score) + '%', W / 2, y + 18, 12, PTY_COLS[me] === '#8a5236' ? '#d8a070' : PTY_COLS[me], { glow: '#1a0a18' });
+    BurnsUI.text(ctx, label, portrait ? W / 2 : bx + bw + 16, portrait ? y + 18 : y, 12, PTY_COLS[me] === '#8a5236' ? '#d8a070' : PTY_COLS[me], { glow: '#1a0a18', align: portrait ? 'center' : 'left' });
     // the nearest cherry bomb
     if (s.state !== 'race') return;
     let best = null, bd = 60; for (const ch of P.cherries) { if (!ch.alive) continue; const d = Math.hypot(ch.x - k.x, ch.z - k.z); if (d < bd && d > 6) { bd = d; best = ch; } }

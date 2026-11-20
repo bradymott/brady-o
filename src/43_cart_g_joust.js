@@ -19,7 +19,7 @@
 
 const JST_C = {
   WALL_R: 92, NEST_R: 66, NEST_IN: 5.6, CHEST_R: 36, MOUND_R: 14, MOUND_H: 2.8,
-  CAP: 6, COINS: 40, START_COINS: 26, RAID_T: 0.55, CROWN_V: 5, CROWN_FIRST: 18, CROWN_EVERY: 26,
+  CAP: 6, COINS: 40, START_COINS: 26, RAID_T: 0.9, RAID_MAX: 3, RAID_LOCK: 14, CROWN_V: 5, CROWN_FIRST: 18, CROWN_EVERY: 26,
   NAMES: ['EMBER NEST', 'CINDER NEST', 'SOOT NEST', 'ASH NEST', 'FLARE NEST', 'BLAZE NEST', 'SMOKE NEST', 'SPARK NEST']
 };
 const JST_GOLD = [1, 0.78, 0.25], JST_RED = [1, 0.3, 0.25], JST_P = {};   // HUD projection scratch
@@ -134,9 +134,10 @@ CartWorlds.arena_joust = function (A, night) {
   for (const n of E.jst.nests) {
     CartScene.mesh(api, n.x, n.z, n.a, m => {
       const R = C.NEST_IN + 0.9;
-      m.color('#8a5a2a').shine(0); m.torus(0, 0.45, 0, R, 0.75, { seg: 26, tseg: 6 });
-      m.color('#a8743a'); for (let i = 0; i < 26; i++) { const a = i / 26 * TAU, b = a + 0.5 + (i % 3) * 0.12, y0 = 0.3 + (i % 2) * 0.5; m.limb(Math.sin(a) * (R + 0.4), y0, Math.cos(a) * (R + 0.4), Math.sin(b) * (R - 0.3), 1.0 - (i % 2) * 0.4, Math.cos(b) * (R - 0.3), 0.08, 0.06, { seg: 4 }); }
-      m.color('#c89a5a'); for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + 0.2; m.limb(Math.sin(a) * (R - 0.6), 1.05, Math.cos(a) * (R - 0.6), Math.sin(a + 0.3) * (R + 0.9), 0.2, Math.cos(a + 0.3) * (R + 0.9), 0.06, 0.04, { seg: 4 }); }
+      // the twig rim is a low, squashed ring over a matching hump in the ground (see below): cars ride up and over it
+      m.color('#8a5a2a').shine(0); m.torus(0, 0.32, 0, R, 0.85, { seg: 26, tseg: 6, sy: 0.5 });
+      m.color('#a8743a'); for (let i = 0; i < 26; i++) { const a = i / 26 * TAU, b = a + 0.5 + (i % 3) * 0.12, y0 = 0.25 + (i % 2) * 0.3; m.limb(Math.sin(a) * (R + 0.5), y0, Math.cos(a) * (R + 0.5), Math.sin(b) * (R - 0.4), 0.75 - (i % 2) * 0.25, Math.cos(b) * (R - 0.4), 0.08, 0.06, { seg: 4 }); }
+      m.color('#c89a5a'); for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + 0.2; m.limb(Math.sin(a) * (R - 0.6), 0.7, Math.cos(a) * (R - 0.6), Math.sin(a + 0.3) * (R + 0.9), 0.15, Math.cos(a + 0.3) * (R + 0.9), 0.06, 0.04, { seg: 4 }); }
       // perch post on the outer side, with a curled iron hook and a lantern
       m.color('#3a3036').shine(2); m.limb(0, 0, R + 1.4, 0, 6.2, R + 1.4, 0.16, 0.11, { seg: 6 }); m.limb(0, 6.0, R + 1.4, 0, 6.2, R + 0.2, 0.07, 0.06, { seg: 4 });
       m.color('#ffb050', 0.9); m.push(); m.tf(0, 5.1, R + 0.2); m.lathe([[0, 0], [0.22, 0.04], [0.3, 0.35], [0.22, 0.65], [0, 0.7]], { seg: 8 }); m.pop(); m.emissive(0).shine(0);
@@ -144,6 +145,8 @@ CartWorlds.arena_joust = function (A, night) {
     }, { hi: true });
     const R = C.NEST_IN + 0.9, px = n.x + Math.sin(n.a) * (R + 0.2), pz = n.z + Math.cos(n.a) * (R + 0.2);
     api.glow(px, 5.45, pz, 1.5, '#ffb050');
+    // the rim's hump in the ground (no mesh of its own): a car crossing the twig ring rides up and over it instead of through it
+    { const cx = n.x, cz = n.z, r0 = R - 1.5, r1 = R + 1.5; T.add({ x0: cx - r1 - 1, z0: cz - r1 - 1, x1: cx + r1 + 1, z1: cz + r1 + 1, kind: 'dirt', noMesh: true, h(x, z) { const d = Math.hypot(x - cx, z - cz); if (d <= r0 || d >= r1) return 0; return 0.55 * 0.5 * (1 - Math.cos((d - r0) / (r1 - r0) * TAU)); } }); }
     // twig ring collision: the posts round the rim (an open nest: drive in over the low side)
     E.art.push({ x: n.x + Math.sin(n.a) * (R + 1.4), z: n.z + Math.cos(n.a) * (R + 1.4), r: 0.8 });
   }
@@ -204,7 +207,7 @@ CartWorlds.arena_joust = function (A, night) {
 function jstState(s) {
   if (s.jst) return s.jst;
   const E = s.E, J = E.jst;
-  s.jst = { nests: J.nests.map((n, i) => ({ x: n.x, z: n.z, a: n.a, name: n.name, i, owner: null, hoard: 0, raider: null, raidT: 0, warnT: 0, guard: false, obj: null })), chests: J.chests.map((c, i) => ({ x: c.x, z: c.z, t: 1 + i * 0.4 })), coins: [], crown: null, crownT: JST_C.CROWN_FIRST, groups: [], t: 0 };
+  s.jst = { nests: J.nests.map((n, i) => ({ x: n.x, z: n.z, a: n.a, name: n.name, i, owner: null, hoard: 0, raider: null, raidT: 0, warnT: 0, lockT: 0, took: 0, guard: false, obj: null })), chests: J.chests.map((c, i) => ({ x: c.x, z: c.z, t: 1 + i * 0.4 })), coins: [], crown: null, crownT: JST_C.CROWN_FIRST, groups: [], t: 0 };
   return s.jst;
 }
 function jstSpawnCoin(s, x, z, vx, vz, vy, from) {
@@ -228,7 +231,7 @@ function jstSpill(s, k, src) {
 /* ---------------- DRAGON'S HOARD ---------------- */
 CART_OBJECTIVES.hoard = {
   name: "DRAGON'S HOARD", short: 'Biggest hoard of gold', time: 100, goal: 0, unit: ' gold',
-  desc: 'Scoop up loose gold (carry 6) and bank it in YOUR nest. A hit spills half of what you carry. Park in a rival\'s nest to raid it; sit in yours to guard it. The Crown is worth 5. Biggest hoard at the bell wins.',
+  desc: 'Scoop up loose gold (carry 6) and bank it in YOUR nest. A hit spills half of what you carry. Park in a rival\'s nest to raid up to 3 coins; sit in yours to guard it. The Crown is worth 5. Biggest hoard at the bell wins.',
   fx: {
     init(s) {
       const J = jstState(s), C = JST_C, maxB = Math.min(64, BurnsGL.maxBones || 32);
@@ -266,7 +269,7 @@ CART_OBJECTIVES.hoard = {
       const CR = J.crown;
       if (!CR.alive) { J.crownT -= dt; if (J.crownT <= 0) { CR.alive = true; CR.holder = null; CR.x = 0; CR.z = 0.5; CR.y = s.terrain.height(0, 0.5); CR.cool = 0; CR.from = null; s.banner('THE CROWN APPEARS!', '#ffd23a', 1.6, 'on the gold mountain · worth ' + C.CROWN_V, true); Sound.play('kartFinalLap', { vol: 0.4 }); s.log('crown', {}); } }
       else if (CR.cool > 0) CR.cool -= dt;
-      for (const n of J.nests) { n.guard = false; n.raider = null; if (n.warnT > 0) n.warnT -= dt; }
+      for (const n of J.nests) { n.guard = false; n.raider = null; if (n.warnT > 0) n.warnT -= dt; if (n.lockT > 0) n.lockT -= dt; }
       for (const k of K) {
         if (k.out) continue;
         const own = k.jstNest;
@@ -298,7 +301,7 @@ CART_OBJECTIVES.hoard = {
               s.fx.confetti(n.x, 2, n.z, 10 + v * 3); s.fx.burst(n.x, 1.5, n.z, 'star', 8 + v * 2, '#ffd23a');
               if (k.player) { s.banner('+' + v + ' BANKED!', '#7aff8a', 1.2, 'hoard: ' + k.score); Sound.play('kartLap', { vol: 0.65 }); }
             }
-          } else if (n.owner && n.owner !== k && n.hoard > 0) {
+          } else if (n.owner && n.owner !== k && n.hoard > 0 && n.lockT <= 0) {
             n.raider = k; k.jstRaiding = true;
           }
         }
@@ -306,12 +309,14 @@ CART_OBJECTIVES.hoard = {
       // a raid only works while the owner is away from home
       for (const n of J.nests) {
         n.hoard = n.owner ? n.owner.score : 0;
-        const r = n.raider; if (!r) { continue; }
+        const r = n.raider; if (!r) { n.took = 0; continue; }
         if (n.guard) { if (r.player && n.warnT <= 0) { n.warnT = 2; s.banner('GUARDED!', '#ff9a3a', 0.9, n.owner.car.name + ' is sitting on it', true); } continue; }
         if (r.jstCarry >= C.CAP) continue;
         r.jstRaidT = (r.jstRaidT || 0) + dt;
         if (r.jstRaidT >= C.RAID_T) {
           r.jstRaidT = 0; n.owner.score--; n.hoard = n.owner.score; r.jstCarry++;
+          // a raid takes at most a few coins, then the nest's alarm locks it for a while
+          if (++n.took >= C.RAID_MAX) { n.took = 0; n.lockT = C.RAID_LOCK; if (r.player) s.banner('THE NEST SLAMS SHUT', '#ffd23a', 1.0, 'raid it again later', true); }
           s.log('raid', { k: r.id, from: n.owner.id, player: r.player, victim: n.owner.player });
           s.fx.burst(n.x, 1.6, n.z, 'star', 6, '#ffd23a');
           if (r.player) Sound.play('glowstick', { vol: 0.5, pitch: 0.9 + r.jstCarry * 0.08 });
@@ -340,7 +345,7 @@ CART_OBJECTIVES.hoard = {
       // raiders by temperament (every third car) and anyone near a fat, unguarded rival nest
       let best = null, bs = 0;
       for (const n of J.nests) {
-        if (n === own || !n.owner || n.hoard < 3) continue;
+        if (n === own || !n.owner || n.hoard < 3 || n.lockT > 0) continue;
         const ow = n.owner, away = Math.hypot(ow.x - n.x, ow.z - n.z), d = Math.hypot(n.x - k.x, n.z - k.z);
         if (away < 16) continue;
         const sc = n.hoard * (k.slot % 3 === 0 ? 2 : 1) - d * 0.12 + (ow.player ? 1 : 0);
@@ -362,20 +367,23 @@ CART_ARENA_RULES.joust = {
   music: 'kart2',
   hud(s, ctx, W, H, top, left) {
     const J = s.jst, k = s.player, C = JST_C; if (!J || !k || s.objective !== 'hoard' || k.out) return;
-    const portrait = H > W, y = portrait ? top + 58 + 5 * 17 + 18 : top + 58;
-    // the carry meter: six coin slots, plus the crown
-    const n = C.CAP, w = 15, x0 = W / 2 - (n - 1) * w / 2 - (k.jstCrown ? 10 : 0);
-    ctx.save();
-    ctx.fillStyle = 'rgba(10,4,20,0.5)'; burnsRR(ctx, x0 - 14, y - 11, (n - 1) * w + 28 + (k.jstCrown ? 22 : 0), 22, 11); ctx.fill();
-    for (let i = 0; i < n; i++) { const x = x0 + i * w, on = i < k.jstCarry; ctx.beginPath(); ctx.arc(x, y, 5.5, 0, TAU); ctx.fillStyle = on ? '#ffc83a' : 'rgba(255,255,255,0.14)'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = on ? '#fff0a0' : 'rgba(255,255,255,0.35)'; ctx.stroke(); }
-    if (k.jstCrown) { const x = x0 + n * w + 4; ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(x - 7, y + 5); ctx.lineTo(x - 7, y - 4); ctx.lineTo(x - 3.5, y); ctx.lineTo(x, y - 6); ctx.lineTo(x + 3.5, y); ctx.lineTo(x + 7, y - 4); ctx.lineTo(x + 7, y + 5); ctx.closePath(); ctx.fill(); }
-    ctx.restore();
+    // portrait: under the scoreboard and below the banners; landscape: meter and message on one row between the timer and the banners
+    const portrait = H > W, y = portrait ? top + 196 : top + 60;
     const full = k.jstCarry >= C.CAP, own = k.jstNest, raided = own.raider && !own.guard;
     let msg = full ? 'ARMS FULL · HOME TO YOUR NEST' : k.jstCrown ? 'BANK THE CROWN IN YOUR NEST' : k.jstCarry > 0 ? 'CARRYING ' + k.jstCarry + ' · BANK IT IN YOUR NEST' : 'GRAB GOLD · YOUR HOARD ' + k.score, col = full || k.jstCrown ? '#7aff8a' : '#ffd23a';
     if (raided) { msg = 'YOUR NEST IS BEING RAIDED!'; col = Math.sin(s.time * 12) > 0 ? '#ff5a5a' : '#ffb0b0'; }
     else if (k.jstRaidT > 0) { msg = 'RAIDING!'; col = '#7aff8a'; }
     else if (own.guard && k.jstCarry === 0) { msg = 'GUARDING YOUR HOARD (' + k.score + ')'; col = '#9ad8ff'; }
-    BurnsUI.text(ctx, msg, W / 2, y + 20, 12, col, { glow: '#2a1a08' });
+    ctx.font = `12px ${FONT_DISPLAY}`;
+    // the carry meter: six coin slots, plus the crown
+    const n = C.CAP, w = 15, mw = (n - 1) * w + 28 + (k.jstCrown ? 22 : 0), tw = portrait ? 0 : ctx.measureText(msg).width + 12;
+    const x0 = portrait ? W / 2 - (n - 1) * w / 2 - (k.jstCrown ? 10 : 0) : W / 2 - (mw + tw) / 2 + 14;
+    ctx.save();
+    ctx.fillStyle = 'rgba(10,4,20,0.5)'; burnsRR(ctx, x0 - 14, y - 11, (n - 1) * w + 28 + (k.jstCrown ? 22 : 0), 22, 11); ctx.fill();
+    for (let i = 0; i < n; i++) { const x = x0 + i * w, on = i < k.jstCarry; ctx.beginPath(); ctx.arc(x, y, 5.5, 0, TAU); ctx.fillStyle = on ? '#ffc83a' : 'rgba(255,255,255,0.14)'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = on ? '#fff0a0' : 'rgba(255,255,255,0.35)'; ctx.stroke(); }
+    if (k.jstCrown) { const x = x0 + n * w + 4; ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(x - 7, y + 5); ctx.lineTo(x - 7, y - 4); ctx.lineTo(x - 3.5, y); ctx.lineTo(x, y - 6); ctx.lineTo(x + 3.5, y); ctx.lineTo(x + 7, y - 4); ctx.lineTo(x + 7, y + 5); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+    BurnsUI.text(ctx, msg, portrait ? W / 2 : x0 - 14 + mw + 12, portrait ? y + 20 : y, 12, col, { glow: '#2a1a08', align: portrait ? 'center' : 'left' });
     // where to go: home (green) when carrying, else the nearest coin (gold) / the crown
     if (s.state !== 'race') return;
     let tx = 0, tz = 0, ty = 2, tc = '#ffd23a', any = false;
@@ -414,6 +422,7 @@ CART_ARENA_RULES.joust = {
       const ow = n.owner, o = n.obj; if (!ow) { o.visible = false; continue; }
       const col = burnsRGBf(jstCol(ow)), raided = n.raider && !n.guard, gy = 0.08;
       R.flat.flat(n.x, gy, n.z, JST_C.NEST_IN * 2, JST_C.NEST_IN * 2, t * 0.3, S.ring, raided ? JST_RED : col, raided ? 0.6 + 0.4 * Math.sin(t * 14) : (ow.player ? 0.85 : 0.55), true);
+      if (n.lockT > 0) R.flat.flat(n.x, gy + 0.02, n.z, JST_C.NEST_IN * 1.6, JST_C.NEST_IN * 1.6, -t * 0.6, S.ring, [1, 1, 1], 0.35 + 0.15 * Math.sin(t * 5), true);   // just raided: the nest is locked
       if (ow.player) R.flat.flat(n.x, gy, n.z, JST_C.NEST_IN * 2.6, JST_C.NEST_IN * 2.6, -t * 0.5, S.ring, [1, 1, 1], 0.3 + 0.2 * Math.sin(t * 4), true);
       const R2 = JST_C.NEST_IN + 0.9 + 1.4, px = n.x + Math.sin(n.a) * R2, pz = n.z + Math.cos(n.a) * R2;
       R.bbs.bb(px + 0.0, 6.9, pz, 2.2, 1.4, S.square, col, 0.95, false, Math.sin(t * 3 + n.i) * 0.08);

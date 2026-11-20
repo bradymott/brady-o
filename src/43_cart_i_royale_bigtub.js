@@ -27,19 +27,19 @@ const BTB_T = { v: [0, 0] };
 /* ---------------- the world ---------------- */
 CartWorlds.arena_bigtub = function (A, night) {
   const S = BTB, R = S.R, E = this.base(2113, [-260, -260, 260, 260], '#7cc4dc', 0);
-  const sky = Object.assign(CART_SKIES.day(), { zen: '#5aa8f0', hor: '#ffe4f2', sky: '#bfe4ff', fog: '#c8e2f0', fogD: 0.0014, haze: 0.15, clouds: 0.6, key: '#fff4e8', keyK: 1.0, gnd: '#cfeaf0' });
+  const sky = Object.assign(CART_SKIES.day(), { zen: '#5aa8f0', hor: '#ffe4f2', sky: '#bfe4ff', fog: '#a8d6f0', fogD: 0.0009, haze: 0.07, fogMax: 0.55, clouds: 0.6, key: '#fff4e8', keyK: 1.0, gnd: '#cfeaf0' });
   Object.assign(E, { id: 'bigtub', arena: A, sky, tod: 'day', music: 'kart2', night: false, R });
   const api = E.api, T = E.terrain, rng = mulberry32(2113);
   const ang = (a, r) => [Math.sin(a) * r, Math.cos(a) * r];
   // ---- the floor: glossy enamel inside the tub (soft aqua puddles, a ring of anti-slip daisies), tiles outside ----
   api.paint((ctx, P, sc) => {
     const c0 = P(0, 0);
-    for (let x = -260; x < 260; x += 10) for (let z = -260; z < 260; z += 10) { if (Math.hypot(x + 5, z + 5) < R + 6) continue; const q = P(x, z); ctx.fillStyle = ((x + z) / 10) & 1 ? 'rgba(255,255,255,0.5)' : 'rgba(150,215,228,0.35)'; ctx.fillRect(q[0], q[1] - 10 * sc, 9.4 * sc, 9.4 * sc); }
-    const g = ctx.createRadialGradient(c0[0], c0[1], 10 * sc, c0[0], c0[1], R * sc); g.addColorStop(0, 'rgba(170,226,242,0.9)'); g.addColorStop(0.55, 'rgba(110,196,226,0.9)'); g.addColorStop(1, 'rgba(60,150,200,0.92)');
+    for (let x = -260; x < 260; x += 10) for (let z = -260; z < 260; z += 10) { if (Math.hypot(x + 5, z + 5) < R + 6) continue; const q = P(x, z); ctx.fillStyle = ((x + z) / 10) & 1 ? 'rgba(255,255,255,0.7)' : (((x * 7 + z * 3) / 10) % 5 === 0 ? 'rgba(255,138,192,0.8)' : 'rgba(80,190,225,0.6)'); ctx.fillRect(q[0], q[1] - 10 * sc, 9.4 * sc, 9.4 * sc); }
+    const g = ctx.createRadialGradient(c0[0], c0[1], 10 * sc, c0[0], c0[1], R * sc); g.addColorStop(0, 'rgba(160,226,246,0.95)'); g.addColorStop(0.55, 'rgba(90,190,230,0.95)'); g.addColorStop(1, 'rgba(36,130,196,0.95)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c0[0], c0[1], R * sc, 0, TAU); ctx.fill();
-    for (let i = 0; i < 46; i++) { const a = rng() * TAU, r = 30 + rng() * 135, q = P(...ang(a, r)); ctx.fillStyle = `rgba(120,200,235,${0.12 + rng() * 0.12})`; ctx.beginPath(); ctx.ellipse(q[0], q[1], (4 + rng() * 12) * sc, (2 + rng() * 6) * sc, rng() * 3, 0, TAU); ctx.fill(); }
+    for (let i = 0; i < 46; i++) { const a = rng() * TAU, r = 30 + rng() * 135, q = P(...ang(a, r)); ctx.fillStyle = `rgba(${rng() < 0.5 ? '200,240,255' : '60,160,215'},${0.2 + rng() * 0.15})`; ctx.beginPath(); ctx.ellipse(q[0], q[1], (4 + rng() * 12) * sc, (2 + rng() * 6) * sc, rng() * 3, 0, TAU); ctx.fill(); }
     // anti-slip daisies in a ring
-    for (let i = 0; i < 36; i++) { const a = i / 36 * TAU, q = P(...ang(a, 120)), rr = 2.4 * sc; ctx.fillStyle = i % 2 ? 'rgba(255,138,192,0.55)' : 'rgba(122,216,240,0.55)'; for (let p = 0; p < 6; p++) { const b = p / 6 * TAU; ctx.beginPath(); ctx.ellipse(q[0] + Math.cos(b) * rr, q[1] + Math.sin(b) * rr, rr * 0.75, rr * 0.4, b, 0, TAU); ctx.fill(); } ctx.fillStyle = 'rgba(255,220,80,0.8)'; ctx.beginPath(); ctx.arc(q[0], q[1], rr * 0.5, 0, TAU); ctx.fill(); }
+    for (let i = 0; i < 36; i++) { const a = i / 36 * TAU, q = P(...ang(a, 120)), rr = 2.4 * sc; ctx.fillStyle = i % 2 ? 'rgba(255,120,185,0.85)' : 'rgba(255,255,255,0.85)'; for (let p = 0; p < 6; p++) { const b = p / 6 * TAU; ctx.beginPath(); ctx.ellipse(q[0] + Math.cos(b) * rr, q[1] + Math.sin(b) * rr, rr * 0.75, rr * 0.4, b, 0, TAU); ctx.fill(); } ctx.fillStyle = 'rgba(255,220,80,0.8)'; ctx.beginPath(); ctx.arc(q[0], q[1], rr * 0.5, 0, TAU); ctx.fill(); }
     // the drain: rings of grout round it
     const d0 = P(S.drain[0], S.drain[1]); for (let r = 6; r < 20; r += 3.5) { ctx.strokeStyle = 'rgba(90,170,210,0.4)'; ctx.lineWidth = 1 * sc; ctx.beginPath(); ctx.arc(d0[0], d0[1], r * sc, 0, TAU); ctx.stroke(); }
   });
@@ -94,6 +94,18 @@ CartWorlds.arena_bigtub = function (A, night) {
   for (let i = 0; i < 8; i++) { const a = (i + 0.3) / 8 * TAU, [x, z] = ang(a, R + 26); if (Math.abs(cartWrap(a)) < 0.3) continue; const k = i % 3; CartScene.mesh(api, x, z, a + Math.PI, k === 0 ? btbBigBottle : k === 1 ? btmTowels : btmMug, { hi: false, scale: k === 0 ? 1.6 : 1.4 }); }
   CartScene.mesh(api, 0, 255, Math.PI, m => btmWall(m, 640, 150), { noAO: true });
   CartScene.mesh(api, 255, 0, -Math.PI / 2, m => btmWall(m, 640, 150), { noAO: true });
+  // Nov 19 polish: colour on the far walls (they read pale through the steam): a deep aqua dado band, a row of pink and
+  // yellow accent tiles, a big round mirror with a gold frame, a chrome towel rail with striped towels
+  for (const [x, z, yaw] of [[0, 255, Math.PI], [255, 0, -Math.PI / 2]]) CartScene.mesh(api, x, z, yaw, m => {
+    const L = 640, AC = ['#ff8ac0', '#ffd23a', '#5adca0', '#c08aff'];
+    m.color('#2a9ed0').shine(3); m.box(0, 58, 1.75, L, 12, 0.1); m.color('#ffffff').shine(2); m.box(0, 64.4, 1.8, L, 0.8, 0.12); m.box(0, 51.6, 1.8, L, 0.8, 0.12);
+    for (let k = -26; k <= 26; k++) { m.color(AC[(k + 26) % 4]).shine(2); m.box(k * 12, 16, 1.75, 11.4, 11.4, 0.1); }
+    m.push(); m.tf(-60, 96, 1.8, 0, Math.PI / 2, 0); m.color('#f0c050').shine(4); m.cyl(0, 0, 0, 26, 26, 0.6, 40); m.color('#d8f0ff').shine(5); m.cyl(0, 0.6, 0, 23.5, 23.5, 0.15, 40); m.color('#ffffff', 0.4); m.cyl(-8, 0.8, -8, 4, 4, 0.05, 12); m.emissive(0); m.pop();
+    m.color('#e6eef4').shine(5); m.limb(40, 70, 4, 140, 70, 4, 0.9, 0.9, { seg: 10 }); for (const x2 of [40, 140]) m.limb(x2, 70, 1.6, x2, 70, 4, 0.7, 0.7, { seg: 8 });
+    const TW = [['#ff6aa8', '#ffffff'], ['#5adca0', '#ffd23a'], ['#6ab8ff', '#ffffff']];
+    for (let k = 0; k < 3; k++) { const x2 = 58 + k * 32; for (let j = 0; j < 6; j++) { m.color(TW[k][j % 2]).shine(0); m.box(x2, 66 - j * 4.6, 4.6, 22, 4.6, 1.4); } }
+    m.shine(0); return { cols: [] };
+  }, { noAO: true });
   for (const a of [0.9, 2.6, 3.7, 5.4]) { const [x, z] = ang(a, R + 7); E.spots.push(...CartScene.bleachers(api, x, z, a + Math.PI, 22, 3, rng)); }
   // ---- royale spots: gift boxes, repair kits, spawns, the storm's end points ----
   for (let i = 0; i < 6; i++) { const [x, z] = ang(i / 6 * TAU + 0.5, 45); E.gifts.push({ x, z }); }

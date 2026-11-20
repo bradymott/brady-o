@@ -20,8 +20,8 @@
 const SKC_C = {
   R: 178, skullR: 15, stackR: 96, stackN: 7, wreckR: 132,
   ghost: { first: 14, period: 15, warn: 2.2, speed: 34, len: 14, beam: 5.2, lane: 12 },
-  spout: { first: 6, period: 3.0, warn: 1.4, dur: 1.0, r: 5.4 },
-  keg: { first: 9, period: 4.2, warn: 1.6, r: 8.5 },
+  spout: { first: 6, period: 3.0, warn: 1.4, dur: 1.0, r: 6.4 },
+  keg: { first: 9, period: 4.2, warn: 1.6, r: 10 },
   green: [0.35, 1, 0.55], ghostCol: [0.55, 1, 0.75], white: [1, 1, 1], black: [0, 0, 0], foam: [0.85, 0.95, 1], sea: [0.35, 0.7, 1], red: [1, 0.2, 0.12], amber: [1, 0.62, 0.15], gold: [1, 0.8, 0.3], smoke: [0.7, 0.7, 0.72]
 };
 const SKC_T = { p: {} };
@@ -31,7 +31,7 @@ const SKC_KEGS = SKC_WRECKS.slice(1).map((a, i) => [a + 0.08, 116 + (i % 2) * 6]
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_skullcove = function (A, night) {
-  const C = SKC_C, E = this.base(2131, [-235, -235, 235, 235], '#6a7a92', 0.05);
+  const C = SKC_C, E = this.base(2131, [-235, -235, 235, 235], '#7a8ca8', 0.05);
   const sky = Object.assign(CART_SKIES.night(), { zen: '#040a16', sky: '#1c3450', hor: '#1e4a5a', fog: '#0e1e28', fogD: 0.0040, mid: '#14303a', midK: 0.35, cityK: 0, emB: 1.9, keyK: 0.95, key: '#c8e0ff', stars: 1, moon: [20, 26], clouds: 0.25, cloudCol: '#2a3a4a' });
   Object.assign(E, { id: 'skullcove', arena: A, sky, tod: 'night', music: 'kart3', night: true, R: C.R });
   const api = E.api, T = E.terrain, rng = mulberry32(2131);
@@ -49,11 +49,11 @@ CartWorlds.arena_skullcove = function (A, night) {
     // the moon's path on the water
     for (let i = 0; i < 40; i++) { const r = C.R + 20 + i * 3, q = P(Math.sin(i * 1.7) * (2 + i * 0.3), r); ctx.fillStyle = `rgba(230,240,255,${0.35 - i * 0.007})`; ctx.fillRect(q[0] - (1 + i * 0.12) * sc, q[1] - 0.3 * sc, (2 + i * 0.24) * sc, 0.6 * sc); }
     // tide channels: dark wet sand winding in from the sea to the skull, a glint of water in each
-    for (let c = 0; c < 3; c++) { let a = -0.4 + c * 0.4, r = C.R + 8; ctx.lineCap = 'round'; const pts = []; while (r > C.skullR + 6) { pts.push(ang(a, r)); r -= 6; a += Math.sin(r * 0.05 + c * 2) * 0.05 + (c - 1) * 0.012; } for (const [w, col] of [[7, 'rgba(18,28,40,0.55)'], [2.4, 'rgba(60,110,150,0.45)']]) { ctx.strokeStyle = col; ctx.lineWidth = w * sc; ctx.beginPath(); pts.forEach((p, i) => { const q = P(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.stroke(); } }
+    for (let c = 0; c < 3; c++) { let a = -0.4 + c * 0.4, r = C.R + 8; ctx.lineCap = 'round'; const pts = []; while (r > C.skullR + 6) { pts.push(ang(a, r)); r -= 6; a += Math.sin(r * 0.05 + c * 2) * 0.05 + (c - 1) * 0.012; } for (const [w, col] of [[7, 'rgba(18,28,40,0.5)'], [3.0, 'rgba(70,170,200,0.6)'], [1.0, 'rgba(120,255,210,0.55)']]) { ctx.strokeStyle = col; ctx.lineWidth = w * sc; ctx.beginPath(); pts.forEach((p, i) => { const q = P(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.stroke(); } }
     // bioluminescent plankton specks along the channels and the shore
-    for (let i = 0; i < 260; i++) { const a = (rng() - 0.5) * 1.6, r = 40 + rng() * (C.R - 30), q = P(...ang(a, r)); ctx.fillStyle = `rgba(90,255,200,${0.25 + rng() * 0.3})`; ctx.beginPath(); ctx.arc(q[0], q[1], (0.15 + rng() * 0.25) * sc, 0, TAU); ctx.fill(); }
+    for (let i = 0; i < 260; i++) { const a = (rng() - 0.5) * 1.6, r = 40 + rng() * (C.R - 30), q = P(...ang(a, r)); ctx.fillStyle = `rgba(90,255,200,${0.45 + rng() * 0.4})`; ctx.beginPath(); ctx.arc(q[0], q[1], (0.25 + rng() * 0.35) * sc, 0, TAU); ctx.fill(); }
     // the blowhole slabs: dark rock round each hole
-    for (const h of E.skc.holes) { const q = P(h.x, h.z); ctx.fillStyle = 'rgba(30,34,44,0.85)'; ctx.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, r = (C.spout.r + 1.6 + Math.sin(i * 2.7 + h.x) * 0.8) * sc; ctx.lineTo(q[0] + Math.cos(a) * r, q[1] + Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(150,200,230,0.45)'; ctx.lineWidth = 0.3 * sc; ctx.stroke(); }
+    for (const h of E.skc.holes) { const q = P(h.x, h.z); ctx.fillStyle = 'rgba(30,34,44,0.85)'; ctx.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, r = (C.spout.r + 1.6 + Math.sin(i * 2.7 + h.x) * 0.8) * sc; ctx.lineTo(q[0] + Math.cos(a) * r, q[1] + Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(170,230,255,0.85)'; ctx.lineWidth = 0.55 * sc; ctx.stroke(); }
     // scorched sand round the keg stacks
     for (const k of E.skc.kegs) { const q = P(k.x, k.z), g = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], C.keg.r * sc); g.addColorStop(0, 'rgba(20,14,12,0.55)'); g.addColorStop(1, 'rgba(20,14,12,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], C.keg.r * sc, 0, TAU); ctx.fill(); }
     // shells and fish bones
@@ -84,17 +84,28 @@ CartWorlds.arena_skullcove = function (A, night) {
     return { cols: [{ t: 'cyl', x: 0, z: 1, r: C.skullR, y0: 0, y1: 28 }], lights: [{ x: -4.8, y: 13.4, z: 12.5, s: 3, c: '#7aff9a' }, { x: 4.8, y: 13.4, z: 12.5, s: 3, c: '#7aff9a' }, { x: 0, y: 5, z: 10, s: 2.4, c: '#ffcc44' }] };
   }, { hi: true });
   E.art.push({ x: 0, z: 0, r: C.skullR + 1 });
-  api.light(0, -8, 30, '#4aff8a', 0.5); api.light(0, 0, 60, '#2a6a8a', 0.35);
+  api.light(0, -8, 30, '#4aff8a', 0.6); api.light(0, 0, 60, '#2a7a9a', 0.5);
+  // moonlight pools over the open sand, warm lantern light at the wrecks, a sea-blue glow at every blowhole slab
+  for (const [r, n] of [[56, 7], [104, 10], [150, 14]]) for (let i = 0; i < n; i++) { const [x, z] = ang((i + 0.5) / n * TAU, r); api.light(x, z, 30, i % 3 ? '#6a9ad8' : '#4ac8a8', 0.42); }
+  for (const a of SKC_WRECKS) { const [x, z] = ang(a, 134); api.light(x, z, 16, '#ffb060', 0.6); }
+  for (const h of E.skc.holes) api.light(h.x, h.z, 10, '#7ad8ff', 0.6);
+  for (const k of E.skc.kegs) api.light(k.x, k.z, 12, '#ff7a3a', 0.65);
   api.sign('SKULL\nCOVE', 0, -C.skullR - 4, { yaw: Math.PI, h: 1.2, y: 1.6, post: true, maxW: 3.6, style: { bg: '#1a1410', fg: '#7aff9a', border: '#7aff9a' }, glow: '#4aff8a' });
   // ---- SEA STACKS: tall rock pillars in a ring (cover) ----
   api.instanceProto('skc_stack', m => {
-    m.color('#ffffff').shine(0);
-    const L = [[0, 2.5, 5.2, 3.2], [0.4, 7.5, 4.4, 3.0], [-0.3, 12.5, 3.8, 2.8], [0.2, 16.8, 3.2, 2.4], [0, 20.2, 2.4, 1.6]];
-    for (const [x, y, r, h] of L) m.ellipsoid(x, y, x * 0.5, r, h, r * 0.9, { seg: m.lo ? 9 : 14, rings: m.lo ? 6 : 8 });
-    m.color('#3a5a3a'); m.ellipsoid(0, 21.6, 0, 2.2, 0.6, 2.0, { seg: 8, rings: 4 });
-    m.color('#e8e8e0'); for (let i = 0; i < 10; i++) { const a = i * 2.3; m.ball(Math.sin(a) * 5.1, 1.0 + (i % 3) * 0.6, Math.cos(a) * 4.6, 0.3, { seg: 5, rings: 3 }); }
+    // a weathered sea stack: one tapering, leaning column with layered rock ledges, jagged faces, fallen boulders, a mossy top
+    const prof = [[5.6, 0], [5.3, 2.4], [4.7, 5.2], [5.1, 5.6], [4.4, 6.2], [4.0, 9.8], [4.4, 10.2], [3.7, 10.8], [3.3, 14.4], [3.7, 14.8], [3.0, 15.4], [2.6, 18.6], [2.1, 20.4], [1.2, 21.4], [0, 21.7]];
+    const jag = (th, v) => 1 + 0.11 * Math.cos(th * 3 + v * 9) + 0.07 * Math.cos(th * 7 + 1.3 + v * 4) + 0.04 * Math.cos(th * 13 + v * 21);
+    m.color('#ffffff').shine(0); m.push(); m.tf(0, 0, 0, 0, 0, 0.05); m.lathe(prof, { seg: m.lo ? 10 : 16, rMod: jag }); m.pop();
+    // darker strata under each ledge, a crack running up one face
+    m.color('#b8bcc4'); for (const [y, r] of [[5.45, 4.95], [10.05, 4.25], [14.65, 3.55]]) { m.push(); m.tf(0.25 * y / 15, y, 0, 0, 0, 0.05); m.torus(0, 0, 0, r, 0.22, { seg: m.lo ? 10 : 16, tseg: 3 }); m.pop(); }
+    m.color('#5a5e68'); m.limb(4.6, 1.0, 1.2, 4.1, 5.0, 1.5, 0.12, 0.08, { seg: 3 }); m.limb(4.1, 5.0, 1.5, 3.9, 8.6, 0.8, 0.08, 0.05, { seg: 3 });
+    m.color('#3a5a3a'); m.ellipsoid(0.9, 21.2, 0, 2.0, 0.6, 1.8, { seg: 8, rings: 4 }); m.ellipsoid(1.0, 15.2, 2.6, 1.2, 0.35, 1.0, { seg: 6, rings: 3 });
+    m.color('#f0f0ea'); m.limb(1.6, 20.4, 1.0, 2.6, 15.8, 1.6, 0.25, 0.12, { seg: 4 });   // gull streaks down from the top
+    m.color('#d8d8d0'); for (const [x, z, r] of [[5.6, 2.4, 1.3], [-4.8, 3.6, 1.0], [2.2, -5.8, 0.9]]) m.ellipsoid(x, r * 0.55, z, r, r * 0.75, r * 0.9, { seg: 7, rings: 4 });
+    m.color('#e8e8e0'); for (let i = 0; i < 10; i++) { const a = i * 2.3; m.ball(Math.sin(a) * 5.3, 1.0 + (i % 3) * 0.6, Math.cos(a) * 4.9, 0.3, { seg: 5, rings: 3 }); }
     return { cols: [{ t: 'cyl', x: 0, z: 0, r: 5.0, y0: 0, y1: 22 }] };
-  }, { r: 6, near: 50, mid: 160, farD: 420, lo: true, far: m => { m.color('#ffffff'); m.ellipsoid(0, 6, 0, 5, 7, 4.6, { seg: 6, rings: 4 }); m.ellipsoid(0, 16, 0, 3.4, 6, 3, { seg: 6, rings: 4 }); } });
+  }, { r: 6, near: 50, mid: 160, farD: 420, lo: true, far: m => { m.color('#ffffff'); m.lathe([[5.4, 0], [4.4, 6], [3.6, 12], [2.6, 18], [0, 21.6]], { seg: 6 }); } });
   for (let i = 0; i < C.stackN; i++) { const a = (i + 0.3) / C.stackN * TAU, r = C.stackR + (i % 2) * 10, [x, z] = ang(a, r); api.instance('skc_stack', x, z, { y: 0, yaw: a * 3, scale: 0.85 + (i % 3) * 0.12, tint: cartTintOf(['#5a6070', '#4e5664', '#646a78'][i % 3]) }); E.art.push({ x, z, r: 5.2 }); api.light(x, z, 12, '#4aff8a', 0.25); }
   // ---- wrecks heeled over on the outer sand (cover), each with a powder keg stack beside it ----
   const wreck = (x, z, yaw, L, col) => {
@@ -168,6 +179,18 @@ function cartSkcGhost(m) {
 }
 
 /* ---------------- the rules ---------------- */
+// the idle blowhole / keg stack with the most cars near it (so they go off where the action is; ties broken at random,
+// the j-th pick skips the busiest), or -1 when no car is near any
+function skcBusiest(s, list, near, j) {
+  let best = -1, bs = 0, second = -1, ss = 0;
+  for (let i = 0; i < list.length; i++) {
+    const h = list[i]; if (h.st !== 'idle') continue; let n = 0;
+    for (const k of s.karts) if (!k.out && !k.hidden && (k.x - h.x) ** 2 + (k.z - h.z) ** 2 < near * near) n++;
+    if (!n) continue; const sc = n + s.rng() * 0.9;
+    if (sc > bs) { second = best; ss = bs; best = i; bs = sc; } else if (sc > ss) { second = i; ss = sc; }
+  }
+  return j ? second : best;
+}
 CART_ARENA_RULES.skullcove = {
   music: 'kart3',
   onLoad(s) {
@@ -214,7 +237,7 @@ CART_ARENA_RULES.skullcove = {
     if (D.spoutNext <= 0) {
       D.spoutNext = C.spout.period;
       const n = D.t > 30 ? 2 : 1;
-      for (let j = 0; j < n; j++) { let i = Math.floor(s.rng() * D.holes.length); for (let tries = 0; tries < 6 && (D.holes[i].st !== 'idle' || i === D.lastHole); tries++) i = (i + 3) % D.holes.length; const h = D.holes[i]; if (h.st !== 'idle') continue; h.st = 'warn'; h.t = 0; h.mask = 0; D.lastHole = i; if (nearP(h.x, h.z, 14)) s.banner('BLOWHOLE!', '#9ad8ff', 1.0, 'off the slab!', true); }
+      for (let j = 0; j < n; j++) { let i = skcBusiest(s, D.holes, 22, j); if (i < 0) i = Math.floor(s.rng() * D.holes.length); for (let tries = 0; tries < 6 && (D.holes[i].st !== 'idle' || i === D.lastHole); tries++) i = (i + 3) % D.holes.length; const h = D.holes[i]; if (h.st !== 'idle') continue; h.st = 'warn'; h.t = 0; h.mask = 0; D.lastHole = i; if (nearP(h.x, h.z, 14)) s.banner('BLOWHOLE!', '#9ad8ff', 1.0, 'off the slab!', true); }
     }
     for (const h of D.holes) {
       if (h.st === 'idle') continue; h.t += dt;
@@ -226,7 +249,7 @@ CART_ARENA_RULES.skullcove = {
     }
     // ---- powder kegs: one stack at a time lights its fuse (1.6 s), then BOOM ----
     D.kegNext -= dt;
-    if (D.kegNext <= 0) { D.kegNext = C.keg.period + s.rng() * 1.5; const K = D.kegs[(D.kegI = (D.kegI + 1 + Math.floor(s.rng() * 2)) % D.kegs.length)]; if (K.st === 'idle') { K.st = 'fuse'; K.t = 0; Sound.play('cartSparkle', { vol: nearP(K.x, K.z, 40) ? 0.6 : 0.15, pitch: 0.5 }); if (nearP(K.x, K.z, 20)) s.banner('POWDER KEGS!', '#ff6a3a', 1.0, 'get clear!', true); } }
+    if (D.kegNext <= 0) { D.kegNext = C.keg.period + s.rng() * 1.5; const kb = skcBusiest(s, D.kegs, 28, 0), K = D.kegs[(D.kegI = kb >= 0 ? kb : (D.kegI + 1 + Math.floor(s.rng() * 2)) % D.kegs.length)]; if (K.st === 'idle') { K.st = 'fuse'; K.t = 0; Sound.play('cartSparkle', { vol: nearP(K.x, K.z, 40) ? 0.6 : 0.15, pitch: 0.5 }); if (nearP(K.x, K.z, 20)) s.banner('POWDER KEGS!', '#ff6a3a', 1.0, 'get clear!', true); } }
     for (const K of D.kegs) {
       if (K.st === 'idle') continue; K.t += dt;
       if (K.st === 'fuse' && K.t >= C.keg.warn) {

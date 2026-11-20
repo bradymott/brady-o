@@ -283,8 +283,8 @@ const LtbMesh = {
 };
 
 /* ---------------- the rules: hazards and enemies at run time ---------------- */
-const LTB_TRAP = { row: 4, cols: 5, period: 3.6, warn: 1.0, open: 1.25 };
-const LTB_GATE = { period: 4.6, arm: 1.1, on: 1.3, lanes: 5, band: 1.5 };
+const LTB_TRAP = { row: 4, cols: 5, period: 4.2, warn: 1.1, open: 1.15 };
+const LTB_GATE = { period: 5.0, arm: 1.2, on: 0.75, lanes: 5, band: 1.1 };
 const LTB_STONE = { period: 11, tele: 1.6, speed: 18, r: 3.5, sink: 0.7 };
 const LTB_MUMMY = { n: 6, raise: 1.0, lunge: 0.5, down: 1.6, up: 0.6, reach: 3.4, grab: 2.5, sc: 1.3 };
 // is trap tile (row r, column c) in this cycle's pattern? (at most 3 of 5 tiles in a row ever open)

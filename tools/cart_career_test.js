@@ -44,6 +44,9 @@ const check = (name, ok, info) => { console.log((ok ? 'ok   ' : 'FAIL ') + name 
   check('old save: per-car progress starts empty', mig.prog.points === 0 && !mig.prog.career && !mig.prog.royale, mig.prog);
   check('King of the Hill and Capture the Flag are on no arena', !mig.hillFlag, mig.objectives);
   check('secret-level arenas offer exactly their three games', mig.objectives.filter(s => /^(skate|mx|deep|moon|mud|temple):/.test(s)).every(s => s.split(':')[1].split(',').length === 3), mig.objectives);
+  // the Career / Royale / boss / win sound cues are layered from the engine's own sounds: every layer must exist
+  const sfx = await ev(() => window.BRADY_CART.debug.career.sfxCheck());
+  check('sound cues: every layer is one of the engine\'s sounds', sfx.cues >= 20 && !sfx.bad.length, sfx);
   const retired = await ev(() => { const B = window.BRADY_BURNS, s = new B.CartRaceScene({ mode: 'battle', arena: 'skate', objective: 'hill', car: 'heart', seed: 3 }); return s.objective; });
   check('a scene asked for King of the Hill plays Vibe Check', retired === 'vibe', retired);
 

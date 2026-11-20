@@ -470,9 +470,9 @@ const DkpMesh = {
 
 /* ---------------- the rules: hazards and enemies at run time ---------------- */
 const DKP_GATE = { P: 6.4, warn: 1.2, swing: 0.4, shut: 1.3, open: 0.6 };   // each leaf: warn → swing shut → shut → swing open; the pair's two leaves half a period apart
-const DKP_PORT = { P: 8.0, open: 4.4, warn: 1.3, slam: 0.2, down: 0.6, rise: 1.5, top: 8.2 };
+const DKP_PORT = { P: 8.0, open: 4.2, warn: 1.3, slam: 0.2, down: 0.8, rise: 1.5, top: 8.2 };
 const DKP_JOUST = { warn: 1.5, speed: 16, P: 15.6 };
-const DKP_CAT = { wind: 1.1, throw: 0.3, reload: 0.9, flight: 1.35, R: 3.3 };
+const DKP_CAT = { wind: 1.1, throw: 0.3, reload: 0.9, flight: 1.35, R: 2.9 };
 const DKP_BALLS = 4, DKP_SCORCH = 6;
 CART_TRACK_RULES.keep = {
   onLoad(s) {
@@ -508,12 +508,12 @@ CART_TRACK_RULES.keep = {
       for (const lf of q.leaves) { const pa = (lf.ph + ta) % DKP_GATE.P; if (pa > DKP_GATE.warn - 0.1 && pa < DKP_GATE.warn + DKP_GATE.swing + DKP_GATE.shut + 0.15 && notice(lf.cyc + gi)) { dkpSteer(s, k, -lf.sd * dkpWall(s, k, -lf.sd) * 0.5); break; } }
     }
     const P = L.port, dp = CartKit.ds(T, k.loc.s, P.s);
-    if (dp > 1.5 && dp < 55) { const ta = dp / Math.max(6, k.speed), pa = (P.ph + ta) % DKP_PORT.P, w0 = DKP_PORT.open + DKP_PORT.warn - 0.15, w1 = w0 + 0.15 + DKP_PORT.slam + DKP_PORT.down + 0.45; if (pa > w0 && pa < w1 && ((k.slot * 7 + P.cyc * 3) % 10) / 10 < p - 0.3) { I.gas = 0; if (k.speed > 9) I.brake = 0.7; } }
+    if (dp > 1.5 && dp < 55) { const ta = dp / Math.max(6, k.speed), pa = (P.ph + ta) % DKP_PORT.P, w0 = DKP_PORT.open + DKP_PORT.warn - 0.15, w1 = w0 + 0.15 + DKP_PORT.slam + DKP_PORT.down + 0.45; if (pa > w0 && pa < w1 && ((k.slot * 7 + P.cyc * 3) % 10) / 10 < p - 0.3 && k.speed > 7) { I.gas = 0; if (k.speed > 9) I.brake = 0.7; } }
     for (const n of L.knights) {
       if (n.st !== 'warn' && n.st !== 'charge') continue;
       const dk = CartKit.ds(T, k.loc.s, n.s); if (dk < -3 || dk > 75) continue;
       // the knight comes at you fast: only the sharper drivers see him in time (fewer than for the gates)
-      if (Math.abs(k.loc.d - n.d) < 5.5 && dk < 45 && ((k.slot * 7 + (n.cyc + n.i) * 3) % 10) / 10 < p - 0.3) dkpSteer(s, k, -n.sd * dkpWall(s, k, -n.sd) * 0.5);
+      if (Math.abs(k.loc.d - n.d) < 5.5 && dk < 45 && ((k.slot * 7 + (n.cyc + n.i) * 3) % 10) / 10 < p) dkpSteer(s, k, -n.sd * dkpWall(s, k, -n.sd) * 0.5);
     }
   },
   draw(s, R, S, t) { const L = s.dkp; if (L) dkpDraw(s, L, R, S, t); },
@@ -558,7 +558,7 @@ function dkpGates(s, L, dt, racing) {
       if (racing) for (const k of s.karts) {
         if (k.out || (lf.mask & (1 << k.slot)) || k.y > 3.6) continue;
         const rx = k.x - lf.px, rz = k.z - lf.pz, u = clamp(rx * lf.dx + rz * lf.dz, 0, lf.len), ex = rx - lf.dx * u, ez = rz - lf.dz * u;
-        if (ex * ex + ez * ez > 1.55 * 1.55) continue;
+        if (ex * ex + ez * ez > 1.3 * 1.3) continue;
         lf.mask |= 1 << k.slot;
         if (lf.moving) { const px = mx * 0.8 + q.tx * 0.4, pz = mz * 0.8 + q.tz * 0.4; CartKit.hit(s, k, 'knock', 'gate', { dx: px, dz: pz, power: 9, dur: 0.9, banner: 'GATE SLAM!' }); }
         else if (lf.a > 0.9) { if (CartKit.hit(s, k, 'spin', 'gate', { dur: 0.85, banner: 'SHUT GATE!' })) { const vt = k.vx * q.tx + k.vz * q.tz; if (vt > 0) { k.vx -= q.tx * vt * 0.8; k.vz -= q.tz * vt * 0.8; } } }
@@ -582,7 +582,7 @@ function dkpPortcullis(s, L, dt, racing) {
     if (racing) for (const k of s.karts) {
       if (k.out || (P.mask & (1 << k.slot)) || k.y > P.y + 1.4) continue;
       const rx = k.x - P.x, rz = k.z - P.z, along = rx * P.tx + rz * P.tz, lat = rx * P.nx + rz * P.nz;
-      if (Math.abs(along) > 1.7 || lat < -P.wl - 1 || lat > P.wr + 1) continue;
+      if (Math.abs(along) > 2.2 || lat < -P.wl - 1 || lat > P.wr + 1) continue;
       P.mask |= 1 << k.slot;
       if (CartKit.hit(s, k, 'spin', 'portcullis', { dur: 1.0, banner: 'PORTCULLIS!' })) { const vt = k.vx * P.tx + k.vz * P.tz; k.vx -= P.tx * (vt + 4); k.vz -= P.tz * (vt + 4); cartIxSound(s, 'bump', k.x, k.z, 0.9, 0.6); if (s.fx) s.fx.burst(k.x, k.y + 1.2, k.z, 'star', 12, '#ffffff'); }
     }
@@ -615,7 +615,7 @@ function dkpKnights(s, L, dt, racing) {
       for (const k of s.karts) {
         if (k.out || (n.mask & (1 << k.slot)) || k.y > 3.5) continue;
         const dk = CartKit.ds(T, k.loc.s, sv), lat = Math.abs(k.loc.d - d);
-        if (lat > 2.8 || dk < -2.2 || dk > (n.st === 'charge' ? 5.6 : 2.4)) continue;
+        if (lat > 2.5 || dk < -2.2 || dk > (n.st === 'charge' ? 5.6 : 2.4)) continue;
         n.mask |= 1 << k.slot;
         const px = -n.sd * g.nx * 0.85 - g.tx * 0.3, pz = -n.sd * g.nz * 0.85 - g.tz * 0.3;
         if (CartKit.hit(s, k, 'knock', 'joust', { dx: px, dz: pz, power: 10, dur: 1.0, banner: 'JOUSTED!' })) { cartIxSound(s, 'bump', k.x, k.z, 0.9, 1.2); cartIxSound(s, 'crowd', k.x, k.z, 0.6, 1.3); if (s.fx) { s.fx.burst(k.x, k.y + 1.6, k.z, 'star', 10, '#ffe85a'); s.fx.burst(k.x, k.y + 1.4, k.z, 'puff', 8, '#fff4a0'); } }
@@ -655,7 +655,7 @@ function dkpCatapults(s, L, dt, racing) {
         c.ball = null; c.tgt = null;
       }
     } else if (c.st === 'throw') { c.pitch = lerp(-2.85, -1.05, Math.min(1, c.t / C.throw)); if (c.t >= C.throw) { c.st = 'reload'; c.t = 0; } }
-    else if (c.st === 'reload') { c.pitch = lerp(-1.05, -1.25, Math.min(1, c.t / C.reload)); if (c.t >= C.reload) { c.st = 'idle'; c.t = 0; c.cool = 3.4 + Math.random() * 1.8; } }
+    else if (c.st === 'reload') { c.pitch = lerp(-1.05, -1.25, Math.min(1, c.t / C.reload)); if (c.t >= C.reload) { c.st = 'idle'; c.t = 0; c.cool = 4.2 + Math.random() * 1.8; } }
     const o = c.obj; if (o) { o.live = true; o.visible = true; o.x = c.x; o.y = 1.75 * sc; o.z = c.z; o.yaw = c.yaw; o.pitch = c.pitch; o.roll = 0; o.scale = sc; }
   }
   for (const b of L.balls) {

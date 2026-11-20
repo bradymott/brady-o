@@ -21,13 +21,13 @@ const BKY_C = { pink: [1, 0.45, 0.75], hot: [1, 0.25, 0.55], mint: [0.45, 1, 0.8
 const BKY_PAL = ['#ff9ccf', '#8ff0c8', '#ffe08a', '#8ad0ff', '#c8a0ff', '#ffb08a'];
 const BKY_GUM = ['#ff3a5a', '#ffd23a', '#3ad0ff', '#5aff7a', '#ff8a2a', '#c86aff', '#ff6ad0', '#ffffff'];
 const BKY_GUM_F = BKY_GUM.map(c => burnsRGBf(c));
-const BKY_FROST_F = [[1, 0.62, 0.84], [0.62, 1, 0.86], [1, 0.95, 0.6]];
+const BKY_FROST_F = [[1, 0.36, 0.72], [0.3, 1, 0.74], [1, 0.9, 0.28]], BKY_BOG_RIM = [0.3, 0.1, 0.06];
 const BKY_T = { at: {}, at2: {} };
 
 /* ---------------- the course ---------------- */
 // corners [x, z, radius]: the boulevard (south, heading east), the donut drop (east side, north), the candy-cane crook
 // (a hook west and back down: the hairpin), the cake hill (north-west) and the sprinkle meadow back to the line
-const BKY_POLY = [[-170, 0, 38], [130, 0, 34], [190, 70, 30], [185, 170, 34], [110, 205, 28], [60, 160, 18], [70, 95, 20], [-10, 80, 25], [-60, 150, 30], [-150, 175, 34], [-215, 95, 32]];
+const BKY_POLY = [[-170, 0, 38], [130, 0, 34], [190, 70, 30], [185, 170, 34], [110, 205, 28], [60, 160, 24], [70, 95, 25], [-10, 80, 28], [-60, 150, 30], [-150, 175, 34], [-215, 95, 32]];
 const bkyWidth = (x, z) => (x > 40 && x < 95 && z > 85 && z < 185 ? 1.1 : 1);   // the crook's hairpin is a touch wider
 CART_TRACKS.bakery = {
   name: 'SUGAR RUSH BAKERY', car: 'cupcake', tod: 'day', music: 'kart2', width: 20, shoulder: 6, theme: 'bakery', blurb: 'Whisks, rolling donuts and a gumball avalanche',
@@ -311,9 +311,9 @@ const BkyMesh = {
   donut(m, i) {
     const ic = ['#ff8ac8', '#8a4a2a', '#ffe08a', '#8ad0ff', '#ffffff', '#c8a0ff'][i % 6];
     m.push(); m.tf(0, 0, 0, 0, 0, Math.PI / 2);
-    m.color('#d89a5a').shine(1); m.torus(0, 0, 0, 1.6, 1.2, { seg: 20, tseg: 9 });
-    m.color(ic).shine(2); m.torus(0, 0.55, 0, 1.6, 0.95, { seg: 20, tseg: 7, sy: 0.6 }); m.torus(0, -0.55, 0, 1.6, 0.95, { seg: 20, tseg: 7, sy: 0.6 });
-    for (let j = 0; j < 14; j++) { const a = j / 14 * TAU, r = 1.6 + ((j * 5) % 3 - 1) * 0.45; m.color(BKY_GUM[(j + i) % 7]); m.push(); m.tf(Math.sin(a) * r, 1.12, Math.cos(a) * r, a * 2.3); m.box(0, 0, 0, 0.42, 0.14, 0.14); m.pop(); m.push(); m.tf(Math.sin(a + 0.2) * r, -1.12, Math.cos(a + 0.2) * r, a * 1.7); m.box(0, 0, 0, 0.42, 0.14, 0.14); m.pop(); }
+    m.color('#d89a5a').shine(1); m.torus(0, 0, 0, 1.5, 1.4, { seg: 20, tseg: 9, sy: 1.12 });   // a fat donut: it reads head-on
+    m.color(ic).shine(2); m.torus(0, 0.95, 0, 1.5, 1.12, { seg: 20, tseg: 7, sy: 0.62 }); m.torus(0, -0.95, 0, 1.5, 1.12, { seg: 20, tseg: 7, sy: 0.62 });
+    for (let j = 0; j < 14; j++) { const a = j / 14 * TAU, r = 1.5 + ((j * 5) % 3 - 1) * 0.5; m.color(BKY_GUM[(j + i) % 7]); m.push(); m.tf(Math.sin(a) * r, 1.66, Math.cos(a) * r, a * 2.3); m.box(0, 0, 0, 0.42, 0.14, 0.14); m.pop(); m.push(); m.tf(Math.sin(a + 0.2) * r, -1.66, Math.cos(a + 0.2) * r, a * 1.7); m.box(0, 0, 0, 0.42, 0.14, 0.14); m.pop(); }
     m.pop(); m.shine(0);
   },
   gumball(m, i) { m.color(BKY_GUM[i % 8]).shine(3); m.ball(0, 0, 0, 1.0, { seg: 12, rings: 8 }); m.color('#ffffff', 0.4); m.ball(-0.35, 0.4, 0.55, 0.18, { seg: 6, rings: 4 }); m.emissive(0).shine(0); },
@@ -337,8 +337,8 @@ const BkyMesh = {
 
 /* ---------------- the rules: hazards and enemies at run time ---------------- */
 const BKY_WHISK = { period: 5.2, warn: 1.3, drop: 0.25, down: 1.4, rise: 0.5, r: 3.7, top: 17.0, low: 8.7 };   // top / low: the whisk hub's height (its tip hangs 8.5 m below)
-const BKY_DONUT = { every: 2.7, warn: 1.2, fall: 0.35, speed: 13, R: 2.75, N: 6 };
-const BKY_GUMS = { period: 7.5, warn: 1.5, pour: 2.0, n: 12, band: 6.5 };
+const BKY_DONUT = { every: 3.2, warn: 1.2, fall: 0.35, speed: 13, R: 2.9, N: 6 };
+const BKY_GUMS = { period: 7.5, warn: 1.5, pour: 1.7, n: 12, band: 6.5 };
 const BKY_BOG = { period: 7.2, slide: 1.0, warn: 1.2, pipe: 0.45, life: 5.4, r: 4.0 };
 CART_TRACK_RULES.bakery = {
   onLoad(s) {
@@ -366,7 +366,7 @@ CART_TRACK_RULES.bakery = {
     if (ds > 2 && ds < 45 && (G.st === 'pour' || (G.st === 'warn' && G.t > BKY_GUMS.warn * 0.4))) {
       // arrive while it pours? (the pour ends at warn + pour); careful drivers wait, the rest gamble on a gap
       const ta = ds / Math.max(6, k.speed), left = G.st === 'warn' ? BKY_GUMS.warn - G.t + BKY_GUMS.pour : BKY_GUMS.pour - G.t;
-      if (ta < left + 0.2 && ((k.slot * 3 + G.cyc) % 10) / 10 < 0.35 + (sk - 0.85) * 4) { if (k.speed > 10) I.gas = 0; if (k.speed > 17) I.brake = 0.6; }
+      if (ta < left + 0.2 && ((k.slot * 3 + G.cyc) % 10) / 10 < 0.2 + (sk - 0.85) * 3) { if (k.speed > 12) I.gas = 0; if (k.speed > 19) I.brake = 0.4; }
     }
     if (!k.air) for (const b of L.bogs) {
       if (!b.live || b.t > BKY_BOG.life - 0.4) continue;
@@ -406,11 +406,11 @@ function bkyWhisks(s, L, dt, racing) {
     if (q.st === 'down' && prev === 'drop') { if (s.fx && CartKit.near(s, q.lx, q.lz, 120)) s.fx.dust(q.lx, 0.3, q.lz, 12, '#fff4e4'); if (CartKit.near(s, q.lx, q.lz, 24)) s.shakeIt(0.3); }
     // the AI sees the swirl and keeps out of the lane while it is about to plunge and while it is down
     // (from late in the warning: drivers who react late get whisked)
-    if (q.tele > 0.55 || q.st === 'drop' || q.st === 'down') cartIxObs(s, q.lx, q.lz, W.r + 0.2);
+    if (q.st === 'drop' || q.st === 'down') cartIxObs(s, q.lx, q.lz, W.r + 0.2);
     if (racing && (q.st === 'down' || (q.st === 'drop' && u > 0.6))) for (const k of s.karts) {
-      if (k.out || (q.mask & (1 << k.slot)) || Math.hypot(k.x - q.lx, k.z - q.lz) > W.r) continue;
+      if (k.out || (q.mask & (1 << k.slot)) || Math.hypot(k.x - q.lx, k.z - q.lz) > W.r + 0.3) continue;
       q.mask |= 1 << k.slot;
-      if (CartKit.hit(s, k, 'spin', 'whisk', { dur: 1.1, banner: 'WHISKED!' })) { cartIxSound(s, 'bump', k.x, k.z, 0.8, 1.4); if (s.fx) s.fx.burst(k.x, k.y + 1.2, k.z, 'star', 10, '#ffffff'); }
+      if (CartKit.hit(s, k, 'spin', 'whisk', { dur: 0.9, banner: 'WHISKED!' })) { cartIxSound(s, 'bump', k.x, k.z, 0.8, 1.4); if (s.fx) s.fx.burst(k.x, k.y + 1.2, k.z, 'star', 10, '#ffffff'); }
     }
     const h = q.head; if (h) { h.live = true; h.visible = true; h.x = q.x; h.y = q.y + 2.0; h.z = q.z; h.yaw = q.yaw; h.pitch = 0; h.roll = 0; h.scale = 1; }
     const w = q.whisk; if (w) { w.live = true; w.visible = true; w.x = q.lx; w.y = q.y; w.z = q.lz; w.yaw = q.spin; w.pitch = 0; w.roll = q.st === 'down' ? Math.sin(s.time * 31) * 0.03 : 0; w.scale = 1; }
@@ -437,9 +437,9 @@ function bkyDonuts(s, L, dt, racing) {
       // the AI sees it coming: the donut and the stretch of its lane just in front of it
       for (let r = 0; r <= 12; r += 6) cartIxObs(s, d.x + d.fx * r, d.z + d.fz * r, 3.3 - r * 0.08);
       if (racing) for (const k of s.karts) {
-        if (k.out || (d.mask & (1 << k.slot)) || k.y > 4.5 || Math.hypot(k.x - d.x, k.z - d.z) > 2.9) continue;
+        if (k.out || (d.mask & (1 << k.slot)) || k.y > 4.5 || Math.hypot(k.x - d.x, k.z - d.z) > 2.7) continue;
         d.mask |= 1 << k.slot;
-        if (CartKit.hit(s, k, 'knock', 'donut', { dur: 1.0, dx: d.fx, dz: d.fz, power: 9, banner: 'BOWLED OVER!' })) { cartIxSound(s, 'bump', k.x, k.z, 0.9, 0.8); if (s.fx) s.fx.burst(d.x, 2, d.z, 'star', 12, '#ffe08a'); d.st = 'flop'; d.t = 0; break; }
+        if (CartKit.hit(s, k, 'knock', 'donut', { dur: 0.8, dx: d.fx, dz: d.fz, power: 8, banner: 'BOWLED OVER!' })) { cartIxSound(s, 'bump', k.x, k.z, 0.9, 0.8); if (s.fx) s.fx.burst(d.x, 2, d.z, 'star', 12, '#ffe08a'); d.st = 'flop'; d.t = 0; break; }
       }
       if (CartKit.ds(T, S.d0, d.s) < 0) { d.st = 'flop'; d.t = 0; }
     } else if (d.st === 'flop') { const u = clamp(d.t / 0.6, 0, 1); d.flop = u * Math.PI / 2; d.y = lerp(D.R, 0.9, u); if (d.t > 1.1) { d.st = 'off'; if (s.fx && CartKit.near(s, d.x, d.z, 120)) s.fx.dust(d.x, 0.6, d.z, 10, '#d89a5a'); } }
@@ -473,7 +473,7 @@ function bkyGumballs(s, L, dt, racing) {
       if (k.out || (b.mask & (1 << k.slot)) || k.shieldT > 0 || k.y > b.y + 1.2 || Math.hypot(k.x - b.x, k.z - b.z) > 2.3) continue;
       b.mask |= 1 << k.slot;
       // a shove across the road the way the ball rolls, a wobble, a moment of lost speed
-      const px = -G.sd * G.nx, pz = -G.sd * G.nz; k.vx = k.vx * 0.8 + px * 7; k.vz = k.vz * 0.8 + pz * 7; k.slowT = Math.max(k.slowT, 0.7); k.yaw = cartWrap(k.yaw + (Math.random() - 0.5) * 0.35);
+      const px = -G.sd * G.nx, pz = -G.sd * G.nz; k.vx = k.vx * 0.8 + px * 7; k.vz = k.vz * 0.8 + pz * 7; k.slowT = Math.max(k.slowT, 0.45); k.yaw = cartWrap(k.yaw + (Math.random() - 0.5) * 0.35);
       CartKit.touch(s, k, 'gumball', 'GUMBALLED!', '#ffd23a');
       if (k.player) { s.shakeIt(0.4); Sound.play('bump', { vol: 0.7, pitch: 1.5 }); }
       if (s.fx) s.fx.burst(b.x, b.y, b.z, 'star', 6, BKY_GUM[b.ph % 8]);
@@ -564,9 +564,11 @@ function bkyDraw(s, L, R, S, t) {
   for (const b of L.bogs) {
     if (!b.live || (b.x - cam.x) ** 2 + (b.z - cam.z) ** 2 > 200 * 200) continue;
     const g = Math.min(1, b.t / 0.35), a = Math.min(1, (BKY_BOG.life - b.t) / 0.8), r = b.r * g;
+    R.flat.flat(b.x, 0.075, b.z, r * 2.75, r * 2.75, 0.9, S.splat || S.dot, BKY_BOG_RIM, 0.8 * a, false);   // a dark chocolate rim so it reads on the pink and the brown
     R.flat.flat(b.x, 0.08, b.z, r * 2.3, r * 2.3, 0.4, S.splat || S.dot, b.col, 0.97 * a, false);
     for (let i = 0; i < 5; i++) { const ang = i * 1.256 + 0.3, dd = r * 0.6; R.flat.flat(b.x + Math.sin(ang) * dd, 0.09, b.z + Math.cos(ang) * dd, r * 1.2, r * 1.2, i, S.splat || S.dot, b.col, 0.97 * a, false); }
     for (let i = 0; i < 9; i++) { const ang = i * 2.4, dd = r * (0.2 + (i % 3) * 0.25); R.flat.flat(b.x + Math.sin(ang) * dd, 0.1, b.z + Math.cos(ang) * dd, 0.7, 0.22, i * 1.3, S.square, BKY_GUM_F[i % 7], a, false); }
+    R.flat.flat(b.x - r * 0.25, 0.105, b.z - r * 0.2, r * 0.9, r * 0.55, 0.6, S.glow, C.white, 0.55 * a, true);   // a glossy highlight
   }
 }
 

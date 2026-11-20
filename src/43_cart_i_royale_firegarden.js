@@ -73,8 +73,8 @@ const CART_FGN_KINDS = {
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_firegarden = function (A, night) {
-  const C = CART_FGN, E = this.base(2143, [-235, -235, 235, 235], '#8a6652', 0.06);
-  const sky = Object.assign(CART_SKIES.night(), { zen: '#0a0504', hor: '#8a2c0e', sky: '#4a2418', fog: '#3a1a10', fogD: 0.0036, mid: '#4a1a0a', midK: 0.4, cityCol: '#ff6a2a', cityK: 0.6, emB: 1.85, keyK: 0.5, key: '#ffc8a0', stars: 0.45, cloudCol: '#4a1e12', rim: '#ff8a4a' });
+  const C = CART_FGN, E = this.base(2143, [-235, -235, 235, 235], '#a87a5e', 0.06);
+  const sky = Object.assign(CART_SKIES.night(), { zen: '#0a0504', hor: '#8a2c0e', sky: '#4a2418', fog: '#2e1610', fogD: 0.0026, mid: '#4a1a0a', midK: 0.4, cityCol: '#ff6a2a', cityK: 0.6, emB: 1.85, keyK: 0.72, key: '#ffd0a8', stars: 0.45, cloudCol: '#4a1e12', rim: '#ff8a4a' });
   Object.assign(E, { id: 'firegarden', arena: A, sky, tod: 'night', music: 'kart4', night: true, R: C.R });
   const api = E.api, T = E.terrain, rng = mulberry32(2143);
   E.walls = []; for (let i = 0; i < 48; i++) { const a = i / 48 * TAU; E.walls.push(fgnAng(a, C.R)); }
@@ -85,29 +85,33 @@ CartWorlds.arena_firegarden = function (A, night) {
     for (let i = 0; i < 460; i++) { const x = (rng() - 0.5) * 460, z = (rng() - 0.5) * 460, q = P(x, z); ctx.fillStyle = rng() < 0.6 ? `rgba(30,16,12,${0.06 + rng() * 0.1})` : `rgba(150,90,60,${0.05 + rng() * 0.07})`; ctx.beginPath(); ctx.ellipse(q[0], q[1], (2 + rng() * 9) * sc, (1 + rng() * 5) * sc, rng() * 3, 0, TAU); ctx.fill(); }
     const c0 = P(0, 0);
     // the plaza: rings of brick
-    for (let r = C.plinth + 1; r < C.plinth + 13; r += 1.1) { const n = Math.round(TAU * r / 1.6); for (let j = 0; j < n; j++) { const a = (j + (Math.round(r) % 2) * 0.5) / n * TAU, q = P(...fgnAng(a, r)); ctx.fillStyle = (j + Math.round(r)) % 3 ? 'rgba(120,50,30,0.6)' : 'rgba(92,38,24,0.6)'; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(-a); ctx.fillRect(-0.72 * sc, -0.45 * sc, 1.44 * sc, 0.9 * sc); ctx.restore(); } }
+    for (let r = C.plinth + 1; r < C.plinth + 13; r += 1.1) { const n = Math.round(TAU * r / 1.6); for (let j = 0; j < n; j++) { const a = (j + (Math.round(r) % 2) * 0.5) / n * TAU, q = P(...fgnAng(a, r)); ctx.fillStyle = (j + Math.round(r)) % 3 ? 'rgba(190,90,50,0.75)' : 'rgba(150,64,36,0.75)'; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(-a); ctx.fillRect(-0.72 * sc, -0.45 * sc, 1.44 * sc, 0.9 * sc); ctx.restore(); } }
     ctx.strokeStyle = 'rgba(255,120,40,0.6)'; ctx.lineWidth = 0.5 * sc; ctx.beginPath(); ctx.arc(c0[0], c0[1], (C.plinth + 13.2) * sc, 0, TAU); ctx.stroke();
     // lava cracks: from the plaza out between the beds, jagged and glowing
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (let i = 0; i < 18; i++) { let a = i / 18 * TAU + rng() * 0.2, r = C.plinth + 14; ctx.strokeStyle = `rgba(255,${90 + Math.floor(rng() * 80)},30,${0.4 + rng() * 0.3})`; ctx.lineWidth = (0.3 + rng() * 0.5) * sc; ctx.beginPath(); let q = P(...fgnAng(a, r)); ctx.moveTo(q[0], q[1]); const end = 50 + rng() * 60; while (r < end) { r += 2 + rng() * 3; a += (rng() - 0.5) * 0.08; q = P(...fgnAng(a, r)); ctx.lineTo(q[0], q[1]); } ctx.stroke(); }
+    for (let i = 0; i < 18; i++) { let a = i / 18 * TAU + rng() * 0.2, r = C.plinth + 14; ctx.strokeStyle = `rgba(255,${110 + Math.floor(rng() * 80)},40,${0.65 + rng() * 0.3})`; ctx.lineWidth = (0.6 + rng() * 0.7) * sc; ctx.beginPath(); let q = P(...fgnAng(a, r)); ctx.moveTo(q[0], q[1]); const end = 50 + rng() * 60; while (r < end) { r += 2 + rng() * 3; a += (rng() - 0.5) * 0.08; q = P(...fgnAng(a, r)); ctx.lineTo(q[0], q[1]); } ctx.stroke(); }
     // the beds: dark soil, a copper rim, a faint ember glow
-    for (let i = 0; i < C.bedN; i++) { const q = P(...fgnAng(fgnGapA(i), C.bedR)); ctx.fillStyle = 'rgba(28,14,10,0.85)'; ctx.beginPath(); ctx.arc(q[0], q[1], C.bed * sc, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(210,120,60,0.9)'; ctx.lineWidth = 0.6 * sc; ctx.beginPath(); ctx.arc(q[0], q[1], C.bed * sc, 0, TAU); ctx.stroke(); ctx.fillStyle = 'rgba(255,110,30,0.12)'; ctx.beginPath(); ctx.arc(q[0], q[1], C.bed * 0.7 * sc, 0, TAU); ctx.fill(); }
+    for (let i = 0; i < C.bedN; i++) { const q = P(...fgnAng(fgnGapA(i), C.bedR)); ctx.fillStyle = 'rgba(28,14,10,0.85)'; ctx.beginPath(); ctx.arc(q[0], q[1], C.bed * sc, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(210,120,60,0.9)'; ctx.lineWidth = 0.6 * sc; ctx.beginPath(); ctx.arc(q[0], q[1], C.bed * sc, 0, TAU); ctx.stroke(); ctx.fillStyle = 'rgba(255,120,40,0.3)'; ctx.beginPath(); ctx.arc(q[0], q[1], C.bed * 0.7 * sc, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,200,90,0.9)'; ctx.lineWidth = 0.35 * sc; ctx.beginPath(); ctx.arc(q[0], q[1], (C.bed + 0.9) * sc, 0, TAU); ctx.stroke(); }
+    // two brick ring paths (inside and outside the pipe walls) with dark kerbs: the garden reads as a laid-out place from above
+    for (const rr of [86, 140]) { ctx.strokeStyle = 'rgba(40,18,12,0.55)'; ctx.lineWidth = 7.6 * sc; ctx.beginPath(); ctx.arc(c0[0], c0[1], rr * sc, 0, TAU); ctx.stroke(); ctx.strokeStyle = 'rgba(196,96,52,0.8)'; ctx.lineWidth = 6.4 * sc; ctx.setLineDash([1.4 * sc, 0.3 * sc]); ctx.beginPath(); ctx.arc(c0[0], c0[1], rr * sc, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.strokeStyle = 'rgba(255,170,90,0.6)'; ctx.lineWidth = 0.3 * sc; for (const o of [-3.4, 3.4]) { ctx.beginPath(); ctx.arc(c0[0], c0[1], (rr + o) * sc, 0, TAU); ctx.stroke(); } }
     // lanes through the wall gaps (soft ember carpet)
-    for (let i = 0; i < C.wallN; i++) { const a = fgnGapA(i), p0 = P(...fgnAng(a, C.wallR - 14)), p1 = P(...fgnAng(a, C.wallR + 14)); ctx.strokeStyle = 'rgba(255,120,50,0.14)'; ctx.lineWidth = 12 * sc; ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke(); }
+    for (let i = 0; i < C.wallN; i++) { const a = fgnGapA(i), p0 = P(...fgnAng(a, C.wallR - 14)), p1 = P(...fgnAng(a, C.wallR + 14)); ctx.strokeStyle = 'rgba(200,100,56,0.5)'; ctx.lineWidth = 12 * sc; ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke(); }
   });
   // ---- the copper kraken ----
   CartScene.mesh(api, 0, 0, 0, fgnKraken, { hi: true });
   E.arms = []; for (let i = 0; i < C.armN; i++) { const a = fgnArmA(i), [x, z] = fgnAng(a, C.tipR); E.arms.push({ i, a, x, z }); api.fire(x, C.tipY, z, 0.6, { hazard: false }); }
   api.sign('FIRE GARDEN', 0, C.plinth + 1.0, { yaw: 0, h: 0.9, y: 0.3, post: false, maxW: 6, style: { bg: '#2a120a', fg: '#ffd080', border: '#ff7a2a' }, glow: '#ff7a2a' });
   api.sign('FIRE GARDEN', 0, -C.plinth - 1.0, { yaw: Math.PI, h: 0.9, y: 0.3, post: false, maxW: 6, style: { bg: '#2a120a', fg: '#ffd080', border: '#ff7a2a' }, glow: '#ff7a2a' });
-  api.light(0, 0, 48, '#ff6a2a', 0.5); api.light(0, 0, 24, '#ffd0a0', 0.3);
+  api.light(0, 0, 50, '#ff7a3a', 0.75); api.light(0, 0, 26, '#ffd8a8', 0.5);
+  // warm light pools over the open garden (it reads at night from the chase camera and from above)
+  for (const [r, n, c] of [[46, 6, '#ffb070'], [100, 10, '#ff9a50'], [140, 14, '#ffc080'], [164, 16, '#ff8a4a']]) for (let i = 0; i < n; i++) { const [x, z] = fgnAng((i + 0.25) / n * TAU, r); api.light(x, z, 28, c, 0.5); }
   E.art.push({ x: 0, z: 0, r: C.plinth + 1.2 });
   // ---- the fire-flower beds (the flowers have no collider: you drive through the bed) ----
   E.beds = [];
   for (let i = 0; i < C.bedN; i++) {
     const a = fgnGapA(i), [bx, bz] = fgnAng(a, C.bedR), fl = [];
     for (let j = 0; j < 9; j++) { const fa = j / 9 * TAU + i, fr = j === 0 ? 0 : (j % 2 ? 4.2 : 7.2), x = bx + Math.sin(fa) * fr, z = bz + Math.cos(fa) * fr; fl.push([x, z]); CartKit.put(E, 'fdy_flower', x, z, rng() * TAU, ['#e8905a', '#ffb070', '#d06a3a', '#f0c090'][j % 4], { scale: 1.2 + rng() * 0.5, noCol: true, noLights: j % 3 !== 0 }); }
-    E.beds.push({ i, x: bx, z: bz, fl }); api.light(bx, bz, 14, '#ff8a3a', 0.45);
+    E.beds.push({ i, x: bx, z: bz, fl }); api.light(bx, bz, 16, '#ffa040', 0.75);
   }
   // ---- the copper pipe walls with gaps, and fire pits in front of each ----
   const wall = (x, z, yaw, col) => { CartKit.put(E, 'fgn_pipewall', x, z, yaw, col, { y: 0, noLights: true }); E.art.push({ x, z, r: 3.1 }); };

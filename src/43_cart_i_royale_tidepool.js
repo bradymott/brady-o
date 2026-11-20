@@ -27,7 +27,7 @@ const TDP_T = { p: {} };
 /* ---------------- the world ---------------- */
 CartWorlds.arena_tidepool = function (A, night) {
   const S = TDP, R = S.R, E = this.base(2131, [-280, -280, 280, 280], '#cdb486', 0);
-  const sky = Object.assign(CART_SKIES.day(), { zen: '#3a8ee8', hor: '#ffeccc', sky: '#a4d8ff', fog: '#cfe6f2', fogD: 0.0016, haze: 0.18, clouds: 0.6, key: '#fff0dc', keyK: 1.05, gnd: '#dfe8cc' });
+  const sky = Object.assign(CART_SKIES.day(), { zen: '#3a8ee8', hor: '#ffeccc', sky: '#a4d8ff', fog: '#cfe6f2', fogD: 0.0012, haze: 0.1, clouds: 0.6, key: '#fff0dc', keyK: 1.05, gnd: '#dfe8cc' });
   Object.assign(E, { id: 'tidepool', arena: A, sky, tod: 'day', music: 'kart4', night: false, R });
   const api = E.api, T = E.terrain, rng = mulberry32(2131);
   const ang = (a, r) => [Math.sin(a) * r, Math.cos(a) * r];
@@ -40,12 +40,15 @@ CartWorlds.arena_tidepool = function (A, night) {
     ctx.fillStyle = gs; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1 * sc; for (let r = R + 25; r < 300; r += 18) { ctx.beginPath(); ctx.arc(c0[0], c0[1], r * sc, 0, TAU); ctx.stroke(); }
     // the pool floor
-    const g = ctx.createRadialGradient(c0[0], c0[1], 10 * sc, c0[0], c0[1], (R + 8) * sc); g.addColorStop(0, '#d2b480'); g.addColorStop(0.7, '#c09c6a'); g.addColorStop(1, '#7a7a68');
+    const g = ctx.createRadialGradient(c0[0], c0[1], 10 * sc, c0[0], c0[1], (R + 8) * sc); g.addColorStop(0, '#e2c08a'); g.addColorStop(0.6, '#d0a66c'); g.addColorStop(0.88, '#a8906a'); g.addColorStop(1, '#5e6a5a');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c0[0], c0[1], (R + 8) * sc, 0, TAU); ctx.fill();
     // rock shelves (dark), shallow pools (turquoise, a pale rim), pink coralline crusts
     for (let i = 0; i < 40; i++) { const a = rng() * TAU, r = 40 + rng() * 130, q = P(...ang(a, r)), w = (5 + rng() * 12) * sc, e = 0.4 + rng() * 0.4, rot = rng() * 3; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(rot); ctx.scale(1, e); const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, w); gr.addColorStop(0, 'rgba(96,92,88,0.8)'); gr.addColorStop(0.7, 'rgba(110,104,96,0.6)'); gr.addColorStop(1, 'rgba(110,104,96,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, w, 0, TAU); ctx.fill(); ctx.restore(); }
-    for (let i = 0; i < 38; i++) { const a = rng() * TAU, r = 30 + rng() * 140, q = P(...ang(a, r)), w = (4 + rng() * 11) * sc; const e = 0.5 + rng() * 0.4, rot = rng() * 3; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(rot); ctx.scale(1, e); const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, w * 1.35); gr.addColorStop(0, 'rgba(20,110,170,0.9)'); gr.addColorStop(0.5, 'rgba(40,165,205,0.85)'); gr.addColorStop(0.72, 'rgba(120,215,225,0.75)'); gr.addColorStop(0.8, 'rgba(150,130,100,0.45)'); gr.addColorStop(1, 'rgba(150,130,100,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, w * 1.35, 0, TAU); ctx.fill(); ctx.restore(); }
-    for (let i = 0; i < 30; i++) { const a = rng() * TAU, r = 25 + rng() * 150, q = P(...ang(a, r)), w = (1.5 + rng() * 3) * sc; ctx.fillStyle = 'rgba(255,120,160,0.7)'; ctx.beginPath(); ctx.arc(q[0], q[1], w, 0, TAU); ctx.fill(); }
+    for (let i = 0; i < 38; i++) { const a = rng() * TAU, r = 30 + rng() * 140, q = P(...ang(a, r)), w = (4 + rng() * 11) * sc; const e = 0.5 + rng() * 0.4, rot = rng() * 3; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(rot); ctx.scale(1, e); const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, w * 1.35); gr.addColorStop(0, 'rgba(10,80,160,0.95)'); gr.addColorStop(0.45, 'rgba(20,150,210,0.95)'); gr.addColorStop(0.66, 'rgba(70,215,225,0.9)'); gr.addColorStop(0.72, 'rgba(240,255,250,0.9)'); gr.addColorStop(0.77, 'rgba(110,100,84,0.6)'); gr.addColorStop(1, 'rgba(110,100,84,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, w * 1.35, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(-w * 0.3 + k * w * 0.25, -w * 0.25 + k * w * 0.12, w * 0.16, w * 0.04, 0.3, 0, TAU); ctx.fill(); }
+      for (let k = 0; k < 7; k++) { const b = k / 7 * TAU + rot; ctx.fillStyle = ['rgba(255,90,150,0.95)', 'rgba(255,180,60,0.95)', 'rgba(160,110,255,0.9)', 'rgba(80,220,150,0.9)'][k % 4]; ctx.beginPath(); ctx.arc(Math.cos(b) * w * 1.0, Math.sin(b) * w * 1.0, w * 0.08, 0, TAU); ctx.fill(); }
+      ctx.restore(); }
+    for (let i = 0; i < 60; i++) { const a = rng() * TAU, r = 25 + rng() * 150, q = P(...ang(a, r)), w = (1.5 + rng() * 3) * sc; ctx.fillStyle = i % 3 ? 'rgba(255,110,160,0.8)' : 'rgba(255,170,90,0.8)'; ctx.beginPath(); ctx.arc(q[0], q[1], w, 0, TAU); ctx.fill(); }
     // sand ripples
     ctx.strokeStyle = 'rgba(150,120,80,0.25)'; ctx.lineWidth = 0.5 * sc; for (let i = 0; i < 70; i++) { const a = rng() * TAU, r = 30 + rng() * 140, q = P(...ang(a, r)), w = (3 + rng() * 6) * sc, b = rng() * 3; for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.arc(q[0] + Math.cos(b) * k * 1.2 * sc, q[1] + Math.sin(b) * k * 1.2 * sc, w, b - 0.6, b + 0.6); ctx.stroke(); } }
     // the blowhole rock's wet apron and the clams' rings of crushed shell
@@ -55,8 +58,17 @@ CartWorlds.arena_tidepool = function (A, night) {
   // ---- the rim: a ring of barnacled boulders and kelp (one lumpy lathe), the fence just inside it ----
   CartScene.mesh(api, 0, 0, 0, m => {
     const lump = th => 1 + 0.025 * Math.sin(th * 23) + 0.015 * Math.sin(th * 57 + 1);
-    m.color('#6e6a66').shine(1); m.lathe([[R + 0.5, 0], [R + 0.3, 3], [R + 1.5, 6.5], [R + 4, S.rimH], [R + 7.5, S.rimH - 1], [R + 10, 4], [R + 11, 0]], { seg: 160, rMod: (th, t) => t > 0.05 && t < 0.95 ? lump(th) : 1 });
+    m.color('#7a6e62').shine(1); m.lathe([[R + 0.5, 0], [R + 0.3, 3], [R + 1.5, 6.5], [R + 4, S.rimH], [R + 7.5, S.rimH - 1], [R + 10, 4], [R + 11, 0]], { seg: 160, rMod: (th, t) => t > 0.05 && t < 0.95 ? lump(th) : 1 });
     m.color('#3a6a3a').shine(2); m.lathe([[R + 0.4, 0], [R + 0.4, 1.6], [R + 0.25, 1.6], [R + 0.25, 0]], { seg: 160 });
+    // Nov 19 polish: the rim gets colour: a dark wet foot, a green weed band, kelp fronds draped over the top, mussel
+    // beds, pink coralline crusts and starfish on the face
+    const fr = y => y <= 3 ? R + 0.5 - 0.2 * y / 3 : y <= 6.5 ? R + 0.3 + (y - 3) * 1.2 / 3.5 : R + 1.5 + (y - 6.5);   // the inner face's radius at height y
+    const band = (y0, y1, col, k) => { m.color(col).shine(2); m.lathe([[fr(y0) - 0.12, y0], [fr((y0 + y1) / 2) - 0.2, (y0 + y1) / 2], [fr(y1) - 0.12, y1], [fr(y1) + 0.3, y1], [fr(y0) + 0.3, y0], [fr(y0) - 0.12, y0]], { seg: 160, rMod: th => 1 + 0.006 * Math.sin(th * k) + 0.004 * Math.sin(th * (k * 2.7) + 1) }); };
+    band(0, 1.5, '#3a4446', 31); band(2.0, 3.6, '#3e6a30', 41); band(5.2, 6.4, '#c8a860', 23);
+    m.color('#2e6a2a').shine(2); for (let i = 0; i < 70; i++) { const th = i / 70 * TAU + Math.sin(i * 3.7) * 0.02, c = Math.sin(th), d = Math.cos(th), w = Math.sin(i * 1.9) * 0.6, y2 = 2.6 + (i % 3) * 0.5, r0 = fr(S.rimH - 0.3) - 0.3, r1 = fr(5.6) - 0.5, r2 = fr(y2) - 0.5; m.limb(c * r0, S.rimH - 0.3, d * r0, c * r1 + d * w, 5.6, d * r1 - c * w, 0.6, 0.5, { seg: 5 }); m.limb(c * r1 + d * w, 5.6, d * r1 - c * w, c * r2 - d * w, y2, d * r2 + c * w, 0.5, 0.2, { seg: 5 }); }
+    m.color('#2a2e44').shine(3); for (let i = 0; i < 90; i++) { const th = i / 90 * TAU + 0.03, y = 2.2 + ((i * 0.37) % 1) * 2.4, r = fr(y) - 0.1; m.ellipsoid(Math.sin(th) * r, y, Math.cos(th) * r, 0.5, 0.28, 0.35, { seg: 5, rings: 3 }); }
+    m.color('#ff7aa8').shine(1); for (let i = 0; i < 40; i++) { const th = i / 40 * TAU + 0.11, y = 4.5 + ((i * 0.53) % 1) * 3, r = fr(y) - 0.12; m.ellipsoid(Math.sin(th) * r, y, Math.cos(th) * r, 1.0, 0.5, 0.3, { seg: 6, rings: 3 }); }
+    for (let i = 0; i < 14; i++) { const th = i / 14 * TAU + 0.2, y = 5 + (i % 3), r = fr(y) - 0.3, x0 = Math.sin(th) * r, z0 = Math.cos(th) * r; m.color(['#ff8a3a', '#c05aff', '#ff4a6a'][i % 3]).shine(1); for (let k = 0; k < 5; k++) { const b = k / 5 * TAU, ex = Math.cos(th) * Math.cos(b) * 1.1, ez = -Math.sin(th) * Math.cos(b) * 1.1; m.limb(x0, y, z0, x0 + ex - Math.sin(th) * 0.15, y + Math.sin(b) * 1.1, z0 + ez - Math.cos(th) * 0.15, 0.32, 0.1, { seg: 4 }); } }
     m.color('#f2efe6').shine(2); for (let i = 0; i < 240; i++) { const th = i / 240 * TAU + Math.sin(i * 7.1) * 0.01, y = 2.4 + ((i * 0.618) % 1) * 5, r = R + 0.4 + (y - 2) * 0.38; m.ball(Math.sin(th) * r, y, Math.cos(th) * r, 0.22 + (i % 3) * 0.08, { seg: 5, rings: 3 }); }
     return { cols: [] };
   }, { hi: true, noAO: true });

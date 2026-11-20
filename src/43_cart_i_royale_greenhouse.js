@@ -106,6 +106,7 @@ CartWorlds.arena_greenhouse = function (A, night) {
   // ---- royale spots: gift boxes, repair kits, spawns, the storm's end points ----
   for (let i = 0; i < 6; i++) { const [x, z] = ang(i / 6 * TAU + 0.5, 40); E.gifts.push({ x, z }); }
   for (let i = 0; i < 6; i++) { const [x, z] = ang(i / 6 * TAU, 82); E.gifts.push({ x, z }); }
+  for (let i = 0; i < G.trap.n; i++) { const [x, z] = ang(trapA(i), G.trap.ring + 2); E.gifts.push({ x, z }); }   // bait: a gift box on every flytrap pad
   for (let i = 0; i < 6; i++) { const [x, z] = ang(i / 6 * TAU + 0.26, 132); E.gifts.push({ x, z }); }
   const repairs = []; for (let i = 0; i < 6; i++) repairs.push(ang(i / 6 * TAU + 0.78, 110)); repairs.push([30, -32], [-34, 30]);
   E.spawn = []; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + 0.2, [x, z] = ang(a, 144); E.spawn.push({ x, z, yaw: a + Math.PI / 2 }); }
@@ -121,13 +122,15 @@ function ghsTrapBase(m) {
   m.color('#5aa040').shine(2); m.push(); m.tf(0, 0, 0, 0, 0, 0, 1, 1, 1); m.ellipsoid(0, 0.05, 0, r + 0.6, 0.35, r + 0.6, { seg: 32, rings: 6, phi1: Math.PI / 2 }); m.pop();
   m.color('#ff7a9a', 0.05).shine(3); m.disc(0, 0.38, 0, r - 0.2, 32); m.emissive(0);
   m.color('#e8506a'); for (let i = 0; i < 10; i++) { const a = i * 2.39996, f = Math.sqrt((i + 0.5) / 10) * (r - 1.5); m.ellipsoid(Math.sin(a) * f, 0.4, Math.cos(a) * f, 0.6, 0.06, 0.6, { seg: 8, rings: 3 }); }
-  m.color('#fff4c8').shine(1); for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; if (Math.cos(a) < -0.7) continue; m.limb(Math.sin(a) * (r + 0.2), 0.3, Math.cos(a) * (r + 0.2), Math.sin(a) * (r + 1.0), 0.55, Math.cos(a) * (r + 1.0), 0.16, 0.03, { seg: 4 }); }
+  m.color('#fff4c8').shine(1); for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; if (Math.cos(a) < -0.7) continue; m.limb(Math.sin(a) * (r + 0.2), 0.3, Math.cos(a) * (r + 0.2), Math.sin(a) * (r + 1.8), 0.9, Math.cos(a) * (r + 1.8), 0.24, 0.04, { seg: 4 }); }
   // the stem and the hinge at the back
-  m.color('#4a9038').shine(1); m.limb(0, 0, -r - 3, 0, 1.6, -r - 0.6, 1.3, 1.0, { seg: 10 }); m.ball(0, 1.6, -r - 0.6, 1.1, { seg: 10, rings: 8 });
+  // the stem: a thick neck rising from the soil behind the pad and arching over into the hinge, a leaf-stalk either side
+  m.color('#4a9038').shine(1); m.limb(0, 0, -r - 5.5, 0, 2.6, -r - 4.4, 1.5, 1.3, { seg: 10 }); m.limb(0, 2.6, -r - 4.4, 0, 3.6, -r - 2.4, 1.3, 1.15, { seg: 10 }); m.limb(0, 3.6, -r - 2.4, 0, 1.7, -r - 0.6, 1.15, 1.0, { seg: 10 }); m.ball(0, 2.6, -r - 4.4, 1.3, { seg: 10, rings: 8 }); m.ball(0, 3.6, -r - 2.4, 1.15, { seg: 10, rings: 8 }); m.ball(0, 1.6, -r - 0.6, 1.1, { seg: 10, rings: 8 });
+  m.color('#3a7a2a'); for (const sd of [-1, 1]) m.limb(0, 3.2, -r - 3.2, sd * 3.2, 0.4, -r - 5.2, 0.35, 0.2, { seg: 5 });
   // spiky leaves fanning out behind
   m.color('#5ab048').shine(1); for (let i = 0; i < 6; i++) { const a = Math.PI + (i - 2.5) * 0.42; m.push(); m.tf(Math.sin(a) * 6 + 0, 0.3, Math.cos(a) * 6 - r - 1, a, -0.25, 0); m.ellipsoid(0, 0, 0, 1.4, 0.15, 4.2, { seg: 10, rings: 4 }); m.pop(); }
   m.shine(0);
-  return { cols: [{ t: 'cyl', x: 0, z: -r - 1.5, r: 2.2, y0: 0, y1: 3 }] };
+  return { cols: [{ t: 'cyl', x: 0, z: -r - 1.5, r: 2.2, y0: 0, y1: 4 }, { t: 'cyl', x: 0, z: -r - 4.6, r: 1.6, y0: 0, y1: 4 }] };
 }
 // a potting bench (long axis = local x): slatted top on legs, flowerpots, seed trays, a trowel
 function ghsBench(m) {
@@ -172,11 +175,18 @@ const GhsMesh = {
   jaw(m) {
     const r = GHS.trap.r;
     m.color('#5aa040').shine(2); m.ellipsoid(0, 0, r, r + 0.4, 2.6, r + 0.4, { seg: 28, rings: 8, phi1: Math.PI / 2 });
-    m.color('#ff6a8a').shine(3); m.disc(0, 0.02, r, r - 0.1, 28, { both: true });
+    // the inside (seen from the front while the jaw is up): a pink rim fading to a dark red throat, veins, trigger hairs.
+    // Layers lower in y show in front (the inside faces down when shut)
+    m.color('#ff7a98').shine(3); m.disc(0, 0.08, r, r - 0.1, 28, { both: true });
+    m.color('#d83a5a').shine(3); m.disc(0, 0.02, r, r * 0.78, 24, { both: true });
+    m.color('#7a1028').shine(2); m.disc(0, -0.04, r, r * 0.5, 20, { both: true });
+    m.color('#3a0612').shine(2); m.disc(0, -0.08, r, r * 0.26, 14, { both: true });
+    m.color('#a81c3a'); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; m.limb(Math.sin(a) * r * 0.3, -0.06, r + Math.cos(a) * r * 0.3, Math.sin(a + 0.15) * r * 0.85, -0.02, r + Math.cos(a + 0.15) * r * 0.85, 0.09, 0.05, { seg: 3, ends: false }); }
+    m.color('#ffe0a0').shine(1); for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + 0.5, x = Math.sin(a) * r * 0.42, z = r + Math.cos(a) * r * 0.42; m.limb(x, -0.06, z, x * 1.1, -1.3, z, 0.1, 0.04, { seg: 4 }); m.ball(x * 1.1, -1.32, z, 0.12, { seg: 5, rings: 3 }); }
     m.color('#e8506a'); m.ellipsoid(0, 0.4, r * 1.25, 1.6, 0.6, 1.6, { seg: 10, rings: 5 });
     m.color('#3a7a2a').shine(2); m.torus(0, 0, r, r + 0.3, 0.5, { seg: 32, tseg: 6 });
-    m.color('#c8304a').shine(2); m.disc(0, 0.04, r, r * 0.55, 20, { both: true });
-    m.color('#fff4c8').shine(1); for (let i = 0; i < 28; i++) { const a = i / 28 * TAU; if (Math.cos(a) < -0.75) continue; m.limb(Math.sin(a) * (r + 0.4), 0, r + Math.cos(a) * (r + 0.4), Math.sin(a) * (r + 2.6), -0.5, r + Math.cos(a) * (r + 2.6), 0.32, 0.05, { seg: 5 }); }
+    // the cilia: long pale teeth round the rim, curling down toward the pad (they interlock when the trap shuts)
+    m.color('#fff4c8').shine(1); for (let i = 0; i < 30; i++) { const a = i / 30 * TAU; if (Math.cos(a) < -0.75) continue; const x0 = Math.sin(a) * (r + 0.4), z0 = r + Math.cos(a) * (r + 0.4), x1 = Math.sin(a) * (r + 2.4), z1 = r + Math.cos(a) * (r + 2.4), x2 = Math.sin(a) * (r + 3.4), z2 = r + Math.cos(a) * (r + 3.4); m.limb(x0, 0, z0, x1, -0.4, z1, 0.4, 0.2, { seg: 5 }); m.limb(x1, -0.4, z1, x2, -1.5, z2, 0.2, 0.04, { seg: 4 }); }
     m.shine(0);
   },
   // a shaker (upright, forward +z): a fat glass body, a domed cap full of holes; i 0 = salt (white), 1 = pepper (dark)
@@ -240,7 +250,7 @@ function ghsTraps(s, D, dt, live) {
       tr.open = 1 - Math.min(1, tr.t / S.snap);
       if (tr.t > S.snap) {
         tr.st = 'chew'; tr.t = 0; tr.open = 0;
-        if (live) for (const k of s.karts) { if (k.out) continue; const dx = k.x - tr.x, dz = k.z - tr.z, d = Math.hypot(dx, dz); if (d > S.r + 0.6 || k.y > 5) continue; s.hit(k, 'knock', null, { item: 'ghs_trap', dx: dx / (d || 1), dz: dz / (d || 1), power: 16, banner: 'SNAPPED!' }); }
+        if (live) for (const k of s.karts) { if (k.out) continue; const dx = k.x - tr.x, dz = k.z - tr.z, d = Math.hypot(dx, dz); if (d > S.r + 1.6 || k.y > 5) continue; s.hit(k, 'knock', null, { item: 'ghs_trap', dx: dx / (d || 1), dz: dz / (d || 1), power: 16, banner: 'SNAPPED!' }); }
         const P = s.player, near = P && Math.hypot(P.x - tr.x, P.z - tr.z) < 60; Sound.play('cartChomp', { vol: near ? 0.9 : 0.15, pitch: 0.7 }); if (near) s.shakeIt(0.7);
         if (s.fx) { s.fx.burst(tr.x, 2.5, tr.z, 'ring', 12, '#ff8aa8'); s.fx.dust(tr.x, 0.5, tr.z, 10, '#a8c870'); }
       }

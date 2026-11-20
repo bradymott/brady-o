@@ -330,7 +330,7 @@ const DrfMesh = {
 
 /* ---------------- the rules: hazards and enemies at run time ---------------- */
 const DRF_BALL = { period: 7.2, tele: 1.3, speed: 9.5, r: 2.1, push: 9 };
-const DRF_SPOT = { period: 5.6, sweep: 3.2, lock: 1.15, flash: 0.3, R: 4.4, move: 7 };
+const DRF_SPOT = { period: 5.6, sweep: 3.1, lock: 1.15, flash: 0.4, R: 4.7, move: 7.5 };
 const DRF_CRABS = 6, DRF_CRAB = { r: 1.85, w: 0.55, cool: 1.5 };
 const DRF_WAX = { speed: 3.8, wait: 2.6, life: 9, band: 2.8, slide: 1.2, rinkGrip: 0.62, waxGrip: 0.14 };
 CART_TRACK_RULES.discoreef = {
@@ -368,7 +368,7 @@ CART_TRACK_RULES.discoreef = {
     // mirror balls: will the ball be in my lane when I get there? ease off (good drivers check every time)
     for (const q of D.lanes) {
       const ds = CartKit.ds(s.T, k.loc.s, q.s); if (ds < 2 || ds > 42) continue;
-      if (((k.slot * 7 + q.i * 5 + q.run) % 10) / 10 > 0.6 + (sk - 0.85) * 4) continue;
+      if (((k.slot * 7 + q.i * 5 + q.run) % 10) / 10 > 0.24 + (sk - 0.85) * 3) continue;
       const ta = ds / Math.max(6, k.speed), u = drfBallU(s, q, s.time + ta); if (u < 0) continue;
       const dB = lerp(q.d0, q.d1, u / drfLaneLen(q)); if (Math.abs(dB - k.loc.d) < DRF_BALL.r + 2.4) { if (k.speed > 8) I.gas = 0; if (k.speed > 13) I.brake = 0.6; break; }
     }
@@ -406,10 +406,10 @@ function drfBalls(s, D, dt, racing) {
     q.u = u;
     if (u >= 0) {
       const d = lerp(q.d0, q.d1, u / len); q.bx = q.x + q.nx * d; q.bz = q.z + q.nz * d; q.rollA += DRF_BALL.speed * dt / DRF_BALL.r;
-      cartIxObs(s, q.bx, q.bz, DRF_BALL.r + 0.8); cartIxObs(s, q.bx + q.nx * dir * 4, q.bz + q.nz * dir * 4, DRF_BALL.r + 0.6);
+      cartIxObs(s, q.bx, q.bz, DRF_BALL.r + 0.5); cartIxObs(s, q.bx + q.nx * dir * 3, q.bz + q.nz * dir * 3, DRF_BALL.r + 0.2);
       if (racing) for (const k of s.karts) {
         if (k.out || (q.mask & (1 << k.slot))) continue;
-        if (Math.hypot(k.x - q.bx, k.z - q.bz) > DRF_BALL.r + 1.1) continue;
+        if (Math.hypot(k.x - q.bx, k.z - q.bz) > DRF_BALL.r + 1.6) continue;
         q.mask |= 1 << k.slot;
         if (CartKit.hit(s, k, 'knock', 'mirrorball', { dx: q.nx * dir, dz: q.nz * dir, power: DRF_BALL.push, dur: 0.9, banner: 'MIRROR BALL!' })) { if (s.fx) { s.fx.burst(k.x, k.y + 1.2, k.z, 'star', 14, '#dfefff'); s.fx.spark(k.x, k.y + 1, k.z, 10, '#ffffff', 6); } cartIxSound(s, 'break', k.x, k.z, 0.7, 1.6); }
       }
@@ -454,7 +454,7 @@ function drfSpots(s, D, dt, racing) {
     }
     p.st = st;
     // the AI sees the light stop and steers off it
-    if (st === 'lock' || st === 'flash') cartIxObs(s, p.cx, p.cz, DRF_SPOT.R + 1.0);
+    if ((st === 'lock' && p.lock > 0.45) || st === 'flash') cartIxObs(s, p.cx, p.cz, DRF_SPOT.R + 0.6);
     // aim the lamp at the spot
     const o = p.obj; if (o) { const dx = p.cx - p.lx, dz = p.cz - p.lz, dh = Math.hypot(dx, dz); o.live = true; o.visible = true; o.x = p.lx; o.y = p.ly; o.z = p.lz; o.yaw = Math.atan2(dx, dz); o.pitch = Math.atan2(p.ly, dh) + (st === 'lock' ? Math.sin(s.time * 30) * 0.02 : 0); o.roll = 0; o.scale = 1.6; }
   }

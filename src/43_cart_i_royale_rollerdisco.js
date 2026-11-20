@@ -76,8 +76,8 @@ function rdoMast(m) {
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_rollerdisco = function (A, night) {
-  const S = RDO, E = this.base(2143, [-235, -235, 235, 235], '#4a4a78', 0.03);
-  const sky = Object.assign(CART_SKIES.night(), { zen: '#04081c', sky: '#2a3a7a', hor: '#2a4a8a', fog: '#141a3a', fogD: 0.004, mid: '#1a2050', midK: 0.4, cityCol: '#38f2ff', cityK: 0.8, emB: 1.9, keyK: 0.5, key: '#c0d8ff' });
+  const S = RDO, E = this.base(2143, [-235, -235, 235, 235], '#6c6cb4', 0.03);
+  const sky = Object.assign(CART_SKIES.night(), { zen: '#04081c', sky: '#2a3a7a', hor: '#2a4a8a', fog: '#141a3a', fogD: 0.0034, mid: '#1a2050', midK: 0.4, cityCol: '#38f2ff', cityK: 0.8, emB: 1.9, keyK: 0.78, key: '#c8d8ff', gnd: '#2a2a5a' });
   Object.assign(E, { id: 'rollerdisco', arena: A, sky, tod: 'night', music: 'kart3', night: true, R: S.R });
   const api = E.api, rng = mulberry32(2143);
   const ang = (a, r) => [Math.sin(a) * r, Math.cos(a) * r];
@@ -85,15 +85,17 @@ CartWorlds.arena_rollerdisco = function (A, night) {
   api.paint((ctx, P, sc) => {
     for (let i = 0; i < 420; i++) { const x = (rng() - 0.5) * 460, z = (rng() - 0.5) * 460, q = P(x, z); ctx.fillStyle = `rgba(${rng() < 0.5 ? '20,24,50' : '120,140,190'},${0.05 + rng() * 0.07})`; ctx.beginPath(); ctx.ellipse(q[0], q[1], (3 + rng() * 10) * sc, (0.6 + rng() * 1.6) * sc, 0.5, 0, TAU); ctx.fill(); }
     const c0 = P(0, 0);
-    ctx.fillStyle = '#2a1a4a'; ctx.beginPath(); ctx.arc(c0[0], c0[1], (S.rink + 1) * sc, 0, TAU); ctx.fill();
-    for (let r = 10; r < S.rink; r += 7) { ctx.strokeStyle = r % 14 ? 'rgba(90,232,255,0.4)' : 'rgba(255,106,208,0.35)'; ctx.lineWidth = 0.3 * sc; ctx.setLineDash([3 * sc, 2 * sc]); ctx.beginPath(); ctx.arc(c0[0], c0[1], r * sc, 0, TAU); ctx.stroke(); }
+    ctx.fillStyle = '#5a46a8'; ctx.beginPath(); ctx.arc(c0[0], c0[1], (S.rink + 1) * sc, 0, TAU); ctx.fill();
+    // a big painted starburst on the rink (reads from the chase camera and from above)
+    for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, w = 0.09, p = P(...ang(a - w, 11)), q = P(...ang(a, S.rink - 2)), r = P(...ang(a + w, 11)); ctx.fillStyle = i % 2 ? 'rgba(255,120,220,0.32)' : 'rgba(110,240,255,0.3)'; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.lineTo(r[0], r[1]); ctx.fill(); }
+    for (let r = 10; r < S.rink; r += 7) { ctx.strokeStyle = r % 14 ? 'rgba(120,240,255,0.7)' : 'rgba(255,130,220,0.65)'; ctx.lineWidth = 0.45 * sc; ctx.setLineDash([3 * sc, 2 * sc]); ctx.beginPath(); ctx.arc(c0[0], c0[1], r * sc, 0, TAU); ctx.stroke(); }
     ctx.setLineDash([]); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 0.6 * sc; ctx.beginPath(); ctx.arc(c0[0], c0[1], (S.rink + 0.5) * sc, 0, TAU); ctx.stroke();
     for (let i = 0; i < 120; i++) { const a = rng() * TAU, r = rng() * S.rink, q = P(...ang(a, r)); ctx.fillStyle = `rgba(255,255,255,${0.04 + rng() * 0.06})`; ctx.beginPath(); ctx.arc(q[0], q[1], (0.3 + rng() * 0.8) * sc, 0, TAU); ctx.fill(); }
     for (const A of RDO_ALLEYS) {
       const p0 = rdoAlleyPt(A, 0, [0, 0]), p1 = rdoAlleyPt(A, S.alleyEnd * 2, [0, 0]), q0 = P(p0[0], p0[1]), q1 = P(p1[0], p1[1]);
-      ctx.strokeStyle = 'rgba(60,30,110,0.9)'; ctx.lineWidth = 8 * sc; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(q0[0], q0[1]); ctx.lineTo(q1[0], q1[1]); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,216,74,0.9)'; ctx.lineWidth = 0.5 * sc; for (const o of [-3.4, 3.4]) { const ox = A.ax === 'z' ? o : 0, oz = A.ax === 'x' ? o : 0, a = P(p0[0] + ox, p0[1] + oz), b = P(p1[0] + ox, p1[1] + oz); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
-      for (let u = 4; u < S.alleyEnd * 2; u += 3) { const p = rdoAlleyPt(A, u, [0, 0]), q = P(p[0], p[1]); ctx.fillStyle = (u / 3) % 2 < 1 ? 'rgba(200,230,255,0.25)' : 'rgba(255,140,230,0.2)'; ctx.beginPath(); ctx.arc(q[0], q[1], 0.5 * sc, 0, TAU); ctx.fill(); }
+      ctx.strokeStyle = 'rgba(120,70,200,0.95)'; ctx.lineWidth = 8 * sc; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(q0[0], q0[1]); ctx.lineTo(q1[0], q1[1]); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,226,110,1)'; ctx.lineWidth = 0.8 * sc; for (const o of [-3.4, 3.4]) { const ox = A.ax === 'z' ? o : 0, oz = A.ax === 'x' ? o : 0, a = P(p0[0] + ox, p0[1] + oz), b = P(p1[0] + ox, p1[1] + oz); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+      for (let u = 4; u < S.alleyEnd * 2; u += 3) { const p = rdoAlleyPt(A, u, [0, 0]), q = P(p[0], p[1]); ctx.fillStyle = (u / 3) % 2 < 1 ? 'rgba(220,240,255,0.55)' : 'rgba(255,150,235,0.5)'; ctx.beginPath(); ctx.arc(q[0], q[1], 0.7 * sc, 0, TAU); ctx.fill(); }
     }
   });
   // ---- the rink: a flush LED rim, the boards (cover, with gaps), the mirror ball's frame ----
@@ -103,7 +105,9 @@ CartWorlds.arena_rollerdisco = function (A, night) {
   for (let i = 0; i < 4; i++) { const [x, z] = ang(i / 4 * TAU + Math.PI / 4, 64); E.art.push({ x, z, r: 2.4 }); }
   api.sign('ROLLER DISCO', 0, -S.rink - 3, { yaw: Math.PI, h: 1.2, y: 1.6, post: true, maxW: 6, style: { bg: '#0a1830', fg: '#ffffff', border: '#ff6ad0' }, glow: '#ff6ad0' });
   api.sign('ROLLER DISCO', 0, S.rink + 3, { yaw: 0, h: 1.2, y: 1.6, post: true, maxW: 6, style: { bg: '#0a1830', fg: '#ffffff', border: '#ff6ad0' }, glow: '#ff6ad0' });
-  api.light(0, 0, 50, '#a070ff', 0.6); api.light(0, 0, 24, '#bfe0ff', 0.45); for (let i = 0; i < 6; i++) { const [x, z] = ang(i / 6 * TAU + 0.5, 30); api.light(x, z, 18, S.pal[i], 0.45); }
+  api.light(0, 0, 54, '#b080ff', 0.85); api.light(0, 0, 26, '#d8e8ff', 0.6);
+  // broad coloured light pools over the whole floor (the reef reads at night from the chase camera and from above)
+  for (const [r, n] of [[78, 8], [118, 12], [156, 16]]) for (let i = 0; i < n; i++) { const [x, z] = ang((i + 0.5) / n * TAU, r); api.light(x, z, 30, S.pal[(i + n) % 6], 0.5); } for (let i = 0; i < 6; i++) { const [x, z] = ang(i / 6 * TAU + 0.5, 30); api.light(x, z, 18, S.pal[i], 0.45); }
   // ---- the alleys: a conch chute at the start of each, a coral hoop at its end ----
   E.rdoAlleys = [];
   for (let i = 0; i < 4; i++) {

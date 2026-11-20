@@ -298,7 +298,7 @@ const ShdMesh = {
 const SHD_FIN = { period: 7.5, stalk: 1.3, speed: 22, half: 1.2, len: 3.0, out: 5.5, scale: 1.5 };
 const SHD_DEV = { n: 3, period: 9.5, brew: 1.4, speed: 5.0, core: 2.4, R: 6.5, gap: 40 };
 const SHD_QS = { period: 6.6, churn: 1.3, sink: 2.8, r: 4.6, core: 1.9, spots: [[-26, -0.45], [-9, 0.42], [9, -0.42], [26, 0.45]] };
-const SHD_MAW = { period: 7.2, rumble: 1.4, gulp: 1.0, r: 5.5 };
+const SHD_MAW = { rest: 2.6, rumble: 1.4, gulp: 1.0, r: 4.6 };
 CART_TRACK_RULES.sharkdunes = {
   onLoad(s) {
     const E = s.E, B = E.shd, T = s.T || s.TR;
@@ -308,7 +308,7 @@ CART_TRACK_RULES.sharkdunes = {
     for (const f of L.fins) f.d = f.sd > 0 ? f.wr + SHD_FIN.out : -f.wl - SHD_FIN.out;
     for (let i = 0; i < SHD_DEV.n; i++) { const sv = B.S.dev + (i - 1) * SHD_DEV.gap; L.devils.push({ i, s0: sv, s: sv, d: 0, x: 0, z: 0, st: 'calm', u: 0, c: -1, sd: 1, mask: 0, gmask: 0, off: i * 3.1, spin: 0, obj: G.tumble[i] }); }
     SHD_QS.spots.forEach(([ds, lat], i) => { const sv = B.S.qs + ds, g = T.at(((sv % T.L) + T.L) % T.L, {}); L.qs.push({ i, s: sv, d: lat * g.hw, x: g.x + g.nx * lat * g.hw, z: g.z + g.nz * lat * g.hw, off: (i === 0 || i === 3) ? 0 : SHD_QS.period / 2, st: 'firm', u: 0, c: -1, mask: 0, hmask: 0 }); });
-    { const g = T.at(B.S.maw, {}); L.maw = { s: B.S.maw, x: g.x, z: g.z, nx: g.nx, nz: g.nz, tx: g.tx, tz: g.tz, yaw: g.yaw, hw: g.hw, st: 'sleep', u: 0, c: -1, lane: 1, cx: g.x, cz: g.z, mask: 0, lo: G.jawLo[0], hi: G.jawHi[0] }; }
+    { const g = T.at(B.S.maw, {}); L.maw = { s: B.S.maw, x: g.x, z: g.z, nx: g.nx, nz: g.nz, tx: g.tx, tz: g.tz, yaw: g.yaw, hw: g.hw, st: 'sleep', u: 0, t: 0, dd: 0, c: -1, lane: 1, cx: g.x, cz: g.z, mask: 0, lo: G.jawLo[0], hi: G.jawHi[0] }; }
     CartKit.state(s);
   },
   onUpdate(s, dt, racing) {
@@ -330,7 +330,7 @@ CART_TRACK_RULES.sharkdunes = {
     }
     const hopAt = (sv, d, r) => { const ds = CartKit.ahead(s, k, sv); return ds > 1 && ds < Math.max(4, k.speed * 0.2) && Math.abs(d - k.loc.d) < r && !k.air; };
     for (const q of L.qs) if (q.st === 'sink' && hopAt(q.s, q.d, SHD_QS.r) && luck < 0.4 + (sk - 0.85) * 3) { I.driftPress = true; I.drift = false; return; }
-    const M = L.maw; if (M.st === 'gulp' && M.u < 0.6 && hopAt(M.s, M.lane * M.hw * 0.45, SHD_MAW.r) && luck < 0.3 + (sk - 0.85) * 3) { I.driftPress = true; I.drift = false; }
+    const M = L.maw; if (M.st === 'gulp' && M.u < 0.6 && hopAt(M.s, M.dd || 0, SHD_MAW.r) && luck < 0.1 + (sk - 0.85) * 2) { I.driftPress = true; I.drift = false; }
   },
   draw(s, R, S, t) { const L = s.shd; if (L) shdDraw(s, L, R, S, t); },
   lights(s, add) {},
@@ -430,13 +430,23 @@ function shdQuick(s, L, dt, racing) {
 }
 // ---- THE SAND MAW: sleeps; rumble (a ring cracks over one lane, eye-stalks peep out, 1.4 s); gulp (bursts up, snaps) ----
 function shdMaw(s, L, dt, racing) {
-  const C = SHD_MAW, M = L.maw, tt = s.time + 1.5, c = Math.floor(tt / C.period), ph = tt - c * C.period, sleep = C.period - C.rumble - C.gulp;
-  if (M.c !== c) { M.c = c; M.lane = (c % 2) ? 1 : -1; M.mask = 0; M.fired = false; const d = M.lane * M.hw * 0.45; M.cx = M.x + M.nx * d; M.cz = M.z + M.nz * d; }
-  M.st = ph < sleep ? 'sleep' : ph < sleep + C.rumble ? 'rumble' : 'gulp'; M.u = M.st === 'rumble' ? (ph - sleep) / C.rumble : M.st === 'gulp' ? (ph - sleep - C.rumble) / C.gulp : 0;
+  // it hunts: asleep until a car comes up (and it has rested), then it rumbles (1.4 s: the cracking ring creeps toward
+  // that car for the first 60%, then locks) and gulps; the ring always shows where, so a lane switch beats it
+  const C = SHD_MAW, M = L.maw, T = s.T || s.TR;
+  M.t = (M.t || 0) + dt;
+  if (M.st === 'sleep') {
+    if (M.t > C.rest) { let best = null, bd = 50; for (const k of s.karts) { if (k.out || k.finished) continue; const ds = CartKit.ds(T, k.loc.s, M.s); if (ds > 20 && ds < bd) { bd = ds; best = k; } }
+      if (best) { M.st = 'rumble'; M.t = 0; M.mask = 0; M.fired = false; M.dd = clamp(best.loc.d, -M.hw * 0.5, M.hw * 0.5); } }
+  } else if (M.st === 'rumble') {
+    if (M.t < C.rumble * 0.5) { let best = null, bd = 50; for (const k of s.karts) { if (k.out || k.finished) continue; const ds = CartKit.ds(T, k.loc.s, M.s); if (ds > 6 && ds < bd) { bd = ds; best = k; } } if (best) M.dd = approach(M.dd, clamp(best.loc.d, -M.hw * 0.5, M.hw * 0.5), 7 * dt); }
+    if (M.t >= C.rumble) { M.st = 'gulp'; M.t = 0; }
+  } else if (M.st === 'gulp' && M.t >= C.gulp) { M.st = 'sleep'; M.t = 0; }
+  M.lane = M.dd >= 0 ? 1 : -1; M.cx = M.x + M.nx * M.dd; M.cz = M.z + M.nz * M.dd;
+  M.u = M.st === 'rumble' ? M.t / C.rumble : M.st === 'gulp' ? M.t / C.gulp : 0;
   if (M.st === 'rumble' && M.u < 0.05 && CartKit.near(s, M.cx, M.cz, 70)) cartIxSound(s, 'dust', M.cx, M.cz, 0.5, 0.6);
   if (M.st === 'gulp' && !M.fired) { M.fired = true; CartKit.fired(s, 'shd_maw'); if (CartKit.near(s, M.cx, M.cz, 80)) { cartIxSound(s, 'cartChomp', M.cx, M.cz, 1, 0.6); cartIxSound(s, 'cartBoom', M.cx, M.cz, 0.5, 0.7); if (CartKit.near(s, M.cx, M.cz, 30)) s.shakeIt(0.5); } if (s.fx && CartKit.near(s, M.cx, M.cz, 120)) s.fx.dust(M.cx, 0.5, M.cz, 26, '#e0c088'); }
-  if (M.st === 'gulp' || (M.st === 'rumble' && M.u > 0.45)) cartIxObs(s, M.cx, M.cz, C.r + (M.st === 'gulp' ? 1.0 : 0.4));   // the AI reacts late: the weak ones get gulped
-  if (M.st === 'gulp' && M.u > 0.12 && M.u < 0.6 && racing) for (const k of s.karts) {
+  if (M.st === 'gulp' || (M.st === 'rumble' && M.u > 0.85)) cartIxObs(s, M.cx, M.cz, C.r + 0.4);   // the AI only sees it once it bursts up: the slow ones get gulped
+  if (M.st === 'gulp' && M.u > 0.08 && M.u < 0.6 && racing) for (const k of s.karts) {
     if (k.out || k.sunk || (M.mask & (1 << k.slot)) || (k.air && k.y > s.terrain.height(k.x, k.z) + 1.0)) continue;
     const dx = k.x - M.cx, dz = k.z - M.cz, D = Math.hypot(dx, dz); if (D > C.r) continue;
     M.mask |= 1 << k.slot;

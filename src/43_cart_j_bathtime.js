@@ -219,8 +219,8 @@ const BTM_KINDS = {
 
 /* ---------------- building the world ---------------- */
 function btmWorld(id, D) {
-  const sky = Object.assign({}, CART_SKIES.day(), { zen: '#5aa8f0', hor: '#ffe4f2', sky: '#bfe4ff', fog: '#cfe6f2', fogD: 0.0021, haze: 0.25, clouds: 0.65, mid: '#a8d8e8', midK: 0.2, key: '#fff4e8', keyK: 1.0, gnd: '#cfeaf0' });
-  const W = CartKit.world(id, D, { worldId: 1213, night: false, sky, ground: '#9fd6e4', crack: 0,
+  const sky = Object.assign({}, CART_SKIES.day(), { zen: '#2a7ae8', hor: '#ffc0e0', sky: '#7cc4ff', fog: '#9ccbea', fogD: 0.0015, haze: 0.12, clouds: 0.65, mid: '#6ab8e0', midK: 0.28, key: '#fff0dc', keyK: 1.05, gnd: '#9ad0e4' });
+  const W = CartKit.world(id, D, { worldId: 1213, night: false, sky, ground: '#6cbcd8', crack: 0,
     road: { shoulder: 'rgba(120,170,190,0.22)', band: 'rgba(58,118,168,0.78)', edge: 'rgba(255,255,255,0.95)', edgeW: 0.65, centerFn: btmPaintCenter } });
   const { E, T, api, rng } = W;
   const sOf = (x, z) => CartKit.sOf(T, x, z);
@@ -233,11 +233,11 @@ function btmWorld(id, D) {
     const b = T.bounds, g = 8;
     for (let x = Math.floor((b.x0 - 90) / g) * g; x < b.x1 + 90; x += g) for (let z = Math.floor((b.z0 - 90) / g) * g; z < b.z1 + 90; z += g) {
       const q = P(x, z), k = ((x / g) + (z / g)) & 1, n = Math.sin(x * 0.37 + z * 0.71) * 0.5 + 0.5;
-      ctx.fillStyle = k ? `rgba(240,252,255,${0.42 + n * 0.12})` : `rgba(110,190,215,${0.25 + n * 0.1})`; ctx.fillRect(q[0], q[1] - g * Sc, g * Sc - 0.6 * Sc, g * Sc - 0.6 * Sc);
+      ctx.fillStyle = k ? `rgba(236,250,255,${0.26 + n * 0.1})` : `rgba(56,150,206,${0.36 + n * 0.12})`; ctx.fillRect(q[0], q[1] - g * Sc, g * Sc - 0.6 * Sc, g * Sc - 0.6 * Sc);
     }
     // the plaza: a disc of small white and aqua tiles round the drain, a dark ring of grout where the water turns
     const c = P(BTM_PLAZA[0], BTM_PLAZA[1]);
-    ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(c[0], c[1], 19 * Sc, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(214,240,252,0.6)'; ctx.beginPath(); ctx.arc(c[0], c[1], 19 * Sc, 0, TAU); ctx.fill();
     for (let r = 4; r < 19; r += 3) { ctx.strokeStyle = r % 2 ? 'rgba(90,180,220,0.45)' : 'rgba(150,220,240,0.5)'; ctx.lineWidth = 1.3 * Sc; ctx.beginPath(); ctx.arc(c[0], c[1], r * Sc, 0, TAU); ctx.stroke(); }
     ctx.strokeStyle = 'rgba(40,120,170,0.55)'; ctx.lineWidth = 0.6 * Sc; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; ctx.beginPath(); ctx.moveTo(c[0] + Math.cos(a) * 4 * Sc, c[1] + Math.sin(a) * 4 * Sc); ctx.quadraticCurveTo(c[0] + Math.cos(a + 0.6) * 12 * Sc, c[1] + Math.sin(a + 0.6) * 12 * Sc, c[0] + Math.cos(a + 1.1) * 19 * Sc, c[1] + Math.sin(a + 1.1) * 19 * Sc); ctx.stroke(); }
     // the shower straight: a slate-blue wet floor with drain channels at both edges
@@ -499,9 +499,10 @@ function btmBubbles(s, L, dt, racing) {
     if ((b.vd > 0 && b.d > b.end) || (b.vd < 0 && b.d < b.end)) { btmPop(s, b); continue; }
     if (u > 0.3 && Math.abs(b.d) < 10.5) cartIxObs(s, b.x, b.z, b.r + 0.9);   // only over the road: obstacles on the shoulder pin cars to the barrier
     if (racing && u > 0.5) for (const k of s.karts) {
-      if (k.out || k.bubbleT > 0 || s.time < (k.btmBubT || 0)) continue;
+      // a bubbled car is never caught again until it has driven on (no re-catch in place, however long it sits there)
+      if (k.out || k.bubbleT > 0 || s.time < (k.btmBubT || 0) || (k.btmBubP !== undefined && k.prog < k.btmBubP + 40)) continue;
       if ((k.x - b.x) ** 2 + (k.z - b.z) ** 2 > (b.r + 1.0) ** 2 || k.y > b.y + b.r) continue;
-      if (CartKit.hit(s, k, 'bubble', 'bubble', { banner: 'BUBBLED!' })) { k.btmBubT = s.time + 5.5; btmPop(s, b); cartIxSound(s, 'pop', k.x, k.z, 0.8, 1.0); break; }
+      if (CartKit.hit(s, k, 'bubble', 'bubble', { banner: 'BUBBLED!' })) { k.btmBubT = s.time + 5.5; k.btmBubP = k.prog; btmPop(s, b); cartIxSound(s, 'pop', k.x, k.z, 0.8, 1.0); break; }
     }
   }
 }
@@ -581,8 +582,10 @@ function btmDraw(s, L, R, S, t) {
   for (const p of L.puddles) {
     if (!p.live || !near(p.x, p.z, 180)) continue;
     const a = Math.min(1, p.t * 5, (BTM_SOAP.life - p.t) * 1.5), w = p.r * 2.3 * Math.min(1, 0.4 + p.t * 3);
-    R.flat.flat(p.x, 0.1, p.z, w, w, p.rot, S.splat || S.puff, C.white, 0.85 * a, false);
-    R.flat.flat(p.x, 0.11, p.z, w * 0.8, w * 0.8, p.rot + 1, S.foam || S.bubble, C.lav, 0.6 * a, false);
+    R.flat.flat(p.x, 0.095, p.z, w * 1.22, w * 1.22, p.rot + 0.5, S.splat || S.puff, BTM_C.hot, 0.75 * a, false);   // a hot-pink rim: it reads on the bright floor
+    R.flat.flat(p.x, 0.1, p.z, w, w, p.rot, S.splat || S.puff, C.white, 0.95 * a, false);
+    R.flat.flat(p.x, 0.11, p.z, w * 0.8, w * 0.8, p.rot + 1, S.foam || S.bubble, BTM_C.deep, 0.75 * a, false);
+    R.flat.flat(p.x, 0.115, p.z, w * 0.9, w * 0.9, t * 0.8 + p.rot, S.ring, BTM_C.lav, 0.9 * a, false);
     R.bbs.bb(p.x + Math.sin(t * 3 + p.rot) * 0.6, 0.6, p.z + Math.cos(t * 2 + p.rot) * 0.6, 1.2, 1.2, S.star, C.white, 0.7 * a * (0.5 + 0.5 * Math.sin(t * 7 + p.rot)), true, t);
   }
   for (const b of L.bubbles) {
@@ -616,12 +619,15 @@ function btmDraw(s, L, R, S, t) {
     if (W.st === 'warn') {
       const fl = 0.4 + 0.6 * Math.max(0, Math.sin(t * 14));
       for (let i = 0; i < 3; i++) { const u = 1 - ((W.u * 1.5 + i / 3) % 1), r = 4 + u * BTM_WHIRL.R; R.flat.flat(W.x, 0.1, W.z, r * 2, r * 2, W.ang, S.ring, C.aqua, 0.9 * (1 - u * 0.5) * fl, false); }
-      R.flat.flat(W.x, 0.09, W.z, BTM_WHIRL.R * 2, BTM_WHIRL.R * 2, -W.ang * 2, S.swirl, C.blue, 0.5 * W.u, false);
+      R.flat.flat(W.x, 0.085, W.z, BTM_WHIRL.R * 2.1, BTM_WHIRL.R * 2.1, 0, S.glow, BTM_C.deep, 0.55 * W.u, false);
+      R.flat.flat(W.x, 0.09, W.z, BTM_WHIRL.R * 2, BTM_WHIRL.R * 2, -W.ang * 2, S.swirl, BTM_C.navy, 0.85 * W.u, false);
       R.bbs.streak(W.x, (W.plugY + 26) / 2, W.z, 0, 1, 0, Math.max(1, 26 - W.plugY), 0.35, S.streak, [0.75, 0.6, 0.3], 0.95);
     } else if (W.st === 'spin') {
       const a = Math.min(1, W.u * 8, (1 - W.u) * 6), R0 = BTM_WHIRL.R;
-      R.flat.flat(W.x, 0.08, W.z, R0 * 2.1, R0 * 2.1, -W.ang, S.swirl, BTM_C.navy, 0.9 * a, false);
-      R.flat.flat(W.x, 0.09, W.z, R0 * 1.5, R0 * 1.5, -W.ang * 1.6, S.swirl, C.aqua, 0.7 * a, false);
+      R.flat.flat(W.x, 0.075, W.z, R0 * 2.3, R0 * 2.3, 0, S.glow, BTM_C.deep, 0.95 * a, false);   // deep water under the swirl so it reads on the bright floor
+      R.flat.flat(W.x, 0.08, W.z, R0 * 2.1, R0 * 2.1, -W.ang, S.swirl, BTM_C.navy, 1.0 * a, false);
+      R.flat.flat(W.x, 0.085, W.z, R0 * 2.1, R0 * 2.1, -W.ang * 1.2 + 1.5, S.swirl, BTM_C.navy, 0.8 * a, false);
+      R.flat.flat(W.x, 0.09, W.z, R0 * 1.5, R0 * 1.5, -W.ang * 1.6, S.swirl, C.aqua, 0.9 * a, false);
       R.flat.flat(W.x, 0.1, W.z, R0 * 0.8, R0 * 0.8, -W.ang * 2.4, S.swirl, C.white, 0.7 * a, false);
       R.flat.flat(W.x, 0.07, W.z, BTM_WHIRL.core * 2.6, BTM_WHIRL.core * 2.6, 0, S.shadow, C.black, 0.7 * a, false);
       R.flat.flat(W.x, 0.11, W.z, R0 * 2, R0 * 2, 0, S.ring, C.white, 0.6 * a, false);

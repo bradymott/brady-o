@@ -42,6 +42,27 @@ function cartManIcon(ctx, x, y, s, t, burn) {
   ctx.restore();
 }
 
+// a soft rotating sunburst (behind a medal)
+function cartSunburst(ctx, x, y, r, t, col, a) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(t * 0.4); ctx.globalAlpha = a; ctx.fillStyle = col;
+  for (let i = 0; i < 12; i++) { const b = i / 12 * TAU; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, b - 0.09, b + 0.09); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+}
+// a four-point twinkle
+function cartTwinkle(ctx, x, y, s, col) {
+  ctx.save(); ctx.translate(x, y); ctx.fillStyle = col; ctx.beginPath();
+  ctx.moveTo(0, -s); ctx.quadraticCurveTo(0, 0, s, 0); ctx.quadraticCurveTo(0, 0, 0, s); ctx.quadraticCurveTo(0, 0, -s, 0); ctx.quadraticCurveTo(0, 0, 0, -s); ctx.fill(); ctx.restore();
+}
+// a five-point star with an outline
+function cartStar(ctx, x, y, r, col, edge) {
+  ctx.save(); ctx.translate(x, y); ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+  ctx.closePath(); ctx.fillStyle = col; ctx.fill(); if (edge) { ctx.strokeStyle = edge; ctx.lineWidth = 1.4; ctx.stroke(); } ctx.restore();
+}
+/* the 3D celebration on the showroom stage (prize and game-won screens): fireworks behind the podium, stage spotlights,
+   and (game won) the Man standing tall and glowing behind it. Pooled; nothing allocated per frame. */
+const CART_CELEB = { fw: [], dirs: [], cols: [], man: null, next: 0, p: [0, 0, 0], gold: [1, 0.8, 0.3], fire: [1, 0.5, 0.18], white: [1, 1, 1] };
+(function () { const n = 26; for (let i = 0; i < n; i++) { const y = 1 - (i + 0.5) / n * 2, r = Math.sqrt(1 - y * y), a = i * 2.39996; CART_CELEB.dirs.push([Math.cos(a) * r, y, Math.sin(a) * r]); } for (let i = 0; i < 6; i++) CART_CELEB.fw.push({ live: false, x: 0, y: 0, z: 0, t: 0, r: 6, c: 0 }); })();
 Object.assign(KartMenuScene.prototype, {
   /* ---------- shared bits ---------- */
   mapBackdrop(ctx, W, H) {
@@ -115,6 +136,49 @@ Object.assign(KartMenuScene.prototype, {
       p.x += p.vx * dt + Math.sin(this.t * 2 + p.r) * 0.6; p.y += p.vy * dt; p.r += p.vr * dt;
       if (p.y > H + 10) { p.y = -10; p.x = Math.random() * W; }
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore();
+    }
+  },
+  // the Man behind the podium (game won): the shared neon Man, cheering (skinned pass)
+  celebSkin(R) {
+    if (this.state !== 'complete' || typeof BurnsManModel === 'undefined') return;
+    let M = CART_CELEB.man;
+    if (!M) { const model = BurnsManModel.build(), ch = new BurnsChar(model); ch.play('cheer', {}, true); M = CART_CELEB.man = { model, ch }; }
+    // portrait: straight behind the car, above it; landscape (a short view): off to the side of the car, under the title
+    const ch = M.ch, P = this.portrait, D = P ? 58 : 60, az = 0.38, side = P ? 0 : -0.42;
+    ch.x = -Math.sin(az + side) * D; ch.z = -Math.cos(az + side) * D; ch.y = 0; ch.yaw = az + side; ch.scale = P ? 0.62 : 0.42;
+    ch.update(1 / 60); ch.compute(); R.skin(M.model.geo, ch.bones, ch.nb, null, 3, 0.3);
+  },
+  celebFx(R, S, t, dt) {
+    const C = CART_CELEB, cam = this.cam, P = this.portrait, big = this.state === 'complete';
+    // the Man's glow: a warm halo round him and a fire-coloured pool at his feet
+    if (big && C.man) { const ch = C.man.ch, sc = ch.scale, k = 0.85 + 0.15 * Math.sin(t * 2.2); R.bbs.bb(ch.x, 6.5 * sc, ch.z, 30 * sc * k, 38 * sc * k, S.glow, C.fire, 0.42, true); R.bbs.bb(ch.x, 8.4 * sc, ch.z, 6 * sc, 6 * sc, S.glow, C.gold, 0.7 * k, true); R.flat.flat(ch.x, 0.05, ch.z, 26 * sc, 26 * sc, t * 0.3, S.ring, C.fire, 0.6, true); }
+    // stage spotlights sweeping up from round the podium
+    const nL = big ? 6 : 4;
+    for (let i = 0; i < nL; i++) {
+      const a = i / nL * TAU + 0.3, x = Math.sin(a) * (CART_STAGE.R + 0.6), z = Math.cos(a) * (CART_STAGE.R + 0.6), sw = Math.sin(t * 0.7 + i * 1.7) * 0.35, c = C.cols[i % 7] || (C.cols[i % 7] = burnsRGBf(BURNS_NEON[i % 7]));
+      const dx = Math.sin(a + sw) * 0.35, dz = Math.cos(a + sw) * 0.35, L = 26;
+      R.bbs.streak(x + dx * L / 2, L / 2, z + dz * L / 2, dx, 1, dz, L, 1.6, S.streak, c, 0.22);
+      R.bbs.bb(x, 0.4, z, 1.6, 1.6, S.glow, c, 0.8, true);
+    }
+    // fireworks: launched into the part of the sky the camera sees behind the stage
+    C.next -= dt;
+    if (C.next <= 0) {
+      const f = C.fw.find(q => !q.live);
+      if (f) {
+        const fx = cam.tx - cam.x, fy = cam.ty - cam.y, fz = cam.tz - cam.z, fl = Math.hypot(fx, fy, fz) || 1, ux = fx / fl, uy = fy / fl, uz = fz / fl;
+        const rx = uz, rz = -ux, rl = Math.hypot(rx, rz) || 1, d = 34 + Math.random() * 14, th = Math.tan((cam.fov || 0.7) / 2) * d, tw = th * Game.cssW / Math.max(1, Game.cssH);
+        const ox = (Math.random() * 2 - 1) * tw * 0.8, oy = th * (0.15 + Math.random() * 0.7);
+        f.x = cam.x + ux * d + rx / rl * ox; f.y = cam.y + uy * d + oy; f.z = cam.z + uz * d + rz / rl * ox;
+        f.live = true; f.t = 0; f.r = 5 + Math.random() * 4; f.c = Math.floor(Math.random() * 7);
+        if (big && Math.random() < 0.6) cartSfx('firework', 0.7, 0.85 + Math.random() * 0.3);
+      }
+      C.next = big ? 0.35 + Math.random() * 0.6 : 0.8 + Math.random() * 1.0;
+    }
+    for (const f of C.fw) {
+      if (!f.live) continue; f.t += dt; const u = f.t / 1.8; if (u >= 1) { f.live = false; continue; }
+      const c = C.cols[f.c] || (C.cols[f.c] = burnsRGBf(BURNS_NEON[f.c])), e = 1 - Math.pow(1 - u, 3), rr = f.r * e, drop = 2.2 * u * u, a = Math.pow(1 - u, 1.4);
+      if (u < 0.12) R.bbs.bb(f.x, f.y, f.z, f.r * 1.6, f.r * 1.6, S.glow, C.white, 0.8 * (1 - u / 0.12), true);
+      for (const v of C.dirs) { const x = f.x + v[0] * rr, y = f.y + v[1] * rr - drop, z = f.z + v[2] * rr; R.bbs.bb(x, y, z, 1.1, 1.1, S.glow, c, a, true); R.bbs.bb(x, y, z, 0.35, 0.35, S.core, C.white, a, true); }
     }
   },
   // the GARAGE button's wrench and the count of points waiting to be spent
@@ -334,7 +398,7 @@ Object.assign(KartMenuScene.prototype, {
       { x: W / 2 - bw - 6, y, w: bw, h: 46, label: 'SPEND IT', fn: () => this.openGarage('prize') }
     ];
     if (kind === 'royale' && cartSecretOpenable(car)) this.btns[0].label = 'SECRET LEVEL ▶';
-    this._conf = null;
+    if (this._builtState !== 'prize') { this._conf = null; this._celebT0 = this.t; cartSfx('prize'); setTimeout(() => cartSfx('statPoint'), 450); }
     // portrait: the car, then (royale) SECRET LEVEL UNLOCKED, then the medal and its three lines, all above the buttons
     this._prizeY = y;
     if (P) setRect(safeL, H * 0.3, W - safeR, y - (kind === 'royale' ? 220 : 152)); else setRect(W * 0.25, safeT + 70, W * 0.75, y - 12);
@@ -353,9 +417,13 @@ Object.assign(KartMenuScene.prototype, {
     BurnsUI.text(ctx, C.name + (kind === 'career' ? ' burned the Man!' : ' destroyed the Man!'), W / 2, y + 28, 13, '#ffffff', CART_TXT_U);
     // the medal: +1 STAT POINT
     // portrait: under the car; landscape: beside it (the car turns in the middle third)
-    const mx = P ? W / 2 : W * 0.86, my = P ? (this._prizeY || H - 84) - 100 : H * 0.42, r = P ? 26 : 30;
-    ctx.save(); ctx.shadowColor = '#ffd84a'; ctx.shadowBlur = 20 + 8 * Math.sin(t * 5); const g = ctx.createRadialGradient(mx - r * 0.3, my - r * 0.3, 2, mx, my, r); g.addColorStop(0, '#fff6c0'); g.addColorStop(1, '#d89a1a'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, r, 0, TAU); ctx.fill(); ctx.restore();
-    BurnsUI.text(ctx, '+1', mx, my + 1, r * 0.8, '#5a2a00', { stroke: false });
+    const mx = P ? W / 2 : W * 0.86, my = P ? (this._prizeY || H - 84) - 100 : H * 0.42, u = t - (this._celebT0 || 0), pop = u < 0.45 ? 0 : u < 0.75 ? BurnsM.smoothstep(0.45, 0.75, u) * 1.25 : 1 + 0.25 * Math.max(0, 1 - (u - 0.75) * 4), r = (P ? 26 : 30) * pop;
+    if (r > 1) {
+      cartSunburst(ctx, mx, my, r * 2.6, t, '#ffd84a', 0.35);
+      ctx.save(); ctx.shadowColor = '#ffd84a'; ctx.shadowBlur = 20 + 8 * Math.sin(t * 5); const g = ctx.createRadialGradient(mx - r * 0.3, my - r * 0.3, 2, mx, my, r); g.addColorStop(0, '#fff6c0'); g.addColorStop(1, '#d89a1a'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, r, 0, TAU); ctx.fill(); ctx.strokeStyle = '#fff2b0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mx, my, r * 0.82, 0, TAU); ctx.stroke(); ctx.restore();
+      BurnsUI.text(ctx, '+1', mx, my + 1, r * 0.8, '#5a2a00', { stroke: false });
+      for (let i = 0; i < 4; i++) { const a = t * 1.3 + i * TAU / 4, rr = r * 1.45; cartTwinkle(ctx, mx + Math.cos(a) * rr, my + Math.sin(a) * rr, 5 + 2 * Math.sin(t * 6 + i), '#fff6c0'); }
+    }
     BurnsUI.text(ctx, 'STAT POINT', mx, my + r + 15, 14, '#ffd84a', {});
     BurnsUI.text(ctx, 'for ' + C.name, mx, my + r + 32, 11, '#ffffff', CART_TXT_U);
     BurnsUI.text(ctx, 'spend it in the garage', mx, my + r + 47, 10, 'rgba(255,255,255,0.7)', CART_TXT_U);
@@ -367,28 +435,44 @@ Object.assign(KartMenuScene.prototype, {
     }
   },
 
-  /* ---------- the game won with this car: Career + Battle Royale + the secret level's three games ---------- */
+  /* ---------- the game won with this car: Career + Battle Royale + the secret level's three games ----------
+     the car and its driver on a gold-lit podium, the Man glowing behind, fireworks and confetti, GAME WON, the tally
+     of the twelve cars, the fanfare, and a clear button to start with another car */
   layout_complete(L) {
     const { W, H, P, safeT, safeB, safeL, safeR, setRect } = L, car = CART_CARS[this.carSel].id, p = cartProg(car);
-    if (!p.celebrated) { p.celebrated = Date.now(); Save.save(); Sound.play('kartFinish'); Sound.play('crowd', { vol: 0.7 }); }
-    const bw = Math.min(230, (W - safeL - safeR - 12) / 2), y = H - safeB - 50;
+    if (!p.celebrated) { p.celebrated = Date.now(); Save.save(); }
+    if (this._builtState !== 'complete') { this._conf = null; this._celebT0 = this.t; cartSfx('gameWon'); }
+    const bw = Math.min(250, (W - safeL - safeR - 12) / 2), y = H - safeB - 50, next = CART_CARS.findIndex(c => !cartCarComplete(c.id));
     this.btns = [
-      { x: W / 2 + 6, y, w: bw, h: 46, label: 'ANOTHER CAR ▶', primary: true, fn: () => { Sound.play('select'); const next = CART_CARS.findIndex(c => !cartCarComplete(c.id)); if (next >= 0) this.carSel = next; this.mode = 'career'; this.kind = 'career'; this.state = 'car'; this.build(); } },
+      { x: W / 2 + 6, y, w: bw, h: 46, label: next >= 0 ? (P ? 'ANOTHER CAR ▶' : 'PLAY ANOTHER CAR ▶') : 'PICK A CAR ▶', primary: true, fn: () => { Sound.play('select'); if (next >= 0) this.carSel = next; this.mode = 'career'; this.kind = 'career'; this.state = 'car'; this.build(); } },
       { x: W / 2 - bw - 6, y, w: bw, h: 46, label: 'HOME', fn: () => { Sound.play('back'); this.state = 'mode'; this.build(); } }
     ];
-    this._conf = null;
-    if (P) setRect(safeL, H * 0.3, W - safeR, y - 90); else setRect(W * 0.24, safeT + 78, W * 0.76, y - 30);
+    this._tallyY = y - (P ? 30 : 22);
+    if (P) setRect(safeL, Math.max(196, insets.t + 190), W - safeR, this._tallyY - 52); else setRect(W * 0.25, safeT + 92, W * 0.75, this._tallyY - 26);
   },
   draw_complete(ctx) {
-    const W = Game.cssW, H = Game.cssH, P = this.portrait, C = CART_CARS[this.carSel], t = this.t, won = CART_CARS.filter(c => cartCarComplete(c.id)).length;
-    this.confettiStep(ctx, W, H, 110);
-    const y = P ? Math.max(84, insets.t + 80) : Math.max(36, insets.t + 30);
-    // a ring of stars behind the headline
-    for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + t * 0.4, x = W / 2 + Math.cos(a) * Math.min(W * 0.4, 260), yy = y + 12 + Math.sin(a) * 26; BurnsUI.text(ctx, '★', x, yy, 14 + 4 * Math.sin(t * 3 + i), BURNS_NEON[i % 7], { stroke: false }); }
-    BurnsUI.text(ctx, 'YOU WON THE GAME!', W / 2, y, Math.min(34, W * 0.075) * (1 + 0.04 * Math.sin(t * 3)), '#ffd84a', { glow: '#ff4fd8' });
-    BurnsUI.text(ctx, 'with ' + C.name, W / 2, y + 30, 15, C.col === '#2a2236' ? C.col2 : C.col, { glow: C.light });
-    BurnsUI.text(ctx, 'Career, Battle Royale and every secret game won', W / 2, y + 50, 11, '#ffffff', CART_TXT_U);
-    const by = H - Math.max(14, insets.b + 8) - 50;
-    BurnsUI.text(ctx, won >= CART_CARS.length ? 'EVERY CAR CONQUERED. LEGEND OF THE PLAYA.' : won + ' of ' + CART_CARS.length + ' cars won · pick another car and do it again!', W / 2, by - 16, 12, '#ffd84a', CART_TXT_U);
+    const W = Game.cssW, H = Game.cssH, P = this.portrait, C = CART_CARS[this.carSel], t = this.t, u = t - (this._celebT0 || 0), won = CART_CARS.filter(c => cartCarComplete(c.id)).length, n = CART_CARS.length;
+    this.confettiStep(ctx, W, H, 120);
+    // a white flash as it opens
+    if (u < 0.6) { ctx.fillStyle = `rgba(255,250,230,${0.7 * (1 - u / 0.6)})`; ctx.fillRect(0, 0, W, H); }
+    const y = P ? Math.max(92, insets.t + 86) : Math.max(38, insets.t + 32), pop = 1 + Math.max(0, 0.5 - u) * 1.2, ccol = C.col === '#2a2236' ? C.col2 : C.col;
+    // the headline on a soft dark band, with twinkles
+    const g = ctx.createLinearGradient(0, y - 40, 0, y + 72); g.addColorStop(0, 'rgba(10,4,20,0)'); g.addColorStop(0.35, 'rgba(10,4,20,0.55)'); g.addColorStop(1, 'rgba(10,4,20,0)'); ctx.fillStyle = g; ctx.fillRect(0, y - 40, W, 112);
+    for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + t * 0.35, x = W / 2 + Math.cos(a) * Math.min(W * 0.42, 280), yy = y + 4 + Math.sin(a) * 24; cartTwinkle(ctx, x, yy, 5 + 2.5 * Math.sin(t * 3 + i), BURNS_NEON[i % 7]); }
+    BurnsUI.text(ctx, 'GAME WON!', W / 2, y, Math.min(P ? 44 : 42, W * 0.1) * pop * (1 + 0.03 * Math.sin(t * 3)), '#ffd84a', { glow: '#ff4fd8' });
+    BurnsUI.text(ctx, C.name, W / 2, y + (P ? 36 : 33), P ? 19 : 17, ccol, { glow: C.light });
+    // what was won: three ticks
+    const parts = ['CAREER', 'BATTLE ROYALE', 'SECRET LEVEL'];
+    ctx.save(); ctx.font = `600 11px ${FONT_UI}`; const ws = parts.map(q => ctx.measureText(q).width + 30), tw = ws.reduce((a, b) => a + b, 0) + 16; ctx.restore();
+    let x = W / 2 - tw / 2; const cy = y + (P ? 62 : 56);
+    parts.forEach((q, i) => { cartCheckIcon(ctx, x + 8, cy, 7, '#7aff8a'); BurnsUI.text(ctx, q, x + 20, cy + 0.5, 11, '#ffffff', CART_TXT_UL); x += ws[i] + 8; });
+    // the tally: the twelve cars, a gold star for every car the game is won with
+    const ty = this._tallyY || H - 90, sp = Math.min(26, (W - 60) / n);
+    for (let i = 0; i < n; i++) {
+      const c = CART_CARS[i], done = cartCarComplete(c.id), px = W / 2 + (i - (n - 1) / 2) * sp, me = i === this.carSel;
+      if (done) { if (me) { ctx.save(); ctx.globalAlpha = 0.45 + 0.25 * Math.sin(t * 5); ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(px, ty - 14, 11, 0, TAU); ctx.fill(); ctx.restore(); } cartStar(ctx, px, ty - 14, me ? 9 : 7.5, '#ffd84a', '#7a4a00'); }
+      else { ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.arc(px, ty - 14, 6, 0, TAU); ctx.fill(); ctx.fillStyle = c.col === '#2a2236' ? c.col2 : c.col; ctx.globalAlpha = 0.55; ctx.beginPath(); ctx.arc(px, ty - 14, 3, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+    }
+    BurnsUI.text(ctx, won >= n ? 'ALL ' + n + ' CARS COMPLETE · LEGEND OF THE PLAYA!' : won + ' OF ' + n + ' CARS COMPLETE · now do it with another car!', W / 2, ty + 6, 12, '#ffd84a', CART_TXT_U);
   }
 });

@@ -135,7 +135,7 @@ function cartManPose(B) {
 const CART_MAN_ATTACKS = ['stomp', 'sweep', 'embers'];
 function cartManBegin(s, direct) {
   const R = s.roy, B = s.boss, P = s.player;
-  R.phase = 2; s.obj.time = 99999; s.opts.phase = 2; s.camKart = null;
+  R.phase = 2; s.obj.time = 99999; s.opts.phase = 2; s.camKart = null; CART_MAN_CAM.init = false;
   // the rivals are gone (in a direct start they poof right away)
   for (const k of s.karts) { if (k.player) continue; if (!k.out) { k.out = true; k.hp = 0; k.outT = 0; k.roy.place = 8; } k.roy.poofed = true; k.hidden = true; k.sunk = true; }
   // the stand-in target: a copy of a rival's record, kept on the plinth edge facing the player
@@ -144,7 +144,7 @@ function cartManBegin(s, direct) {
   B.active = true; B.hp = B.max; B.st = 'wake'; B.t = 0; B.dur = direct ? 3.0 : 4.2; B.n = 0; B.last = ''; B.ramT = 0;
   P.hp = P.hpMax; P.invT = 3; P.wpn.t = 0; P.item = P.item || 'skymail'; P.roul = 0;
   s.banner('THE MAN AWAKENS!', '#ff8a3a', 3.0, 'destroy him to win the Battle Royale');
-  Sound.play('stomp', { vol: 1, pitch: 0.5 }); Sound.play('crowd', { vol: 0.7 }); s.shakeIt(1);
+  cartSfx('manWake'); s.shakeIt(1);
   s.log('bossStart', { direct: !!direct });
 }
 function cartManDamage(s, n, what) {
@@ -153,7 +153,7 @@ function cartManDamage(s, n, what) {
   B.hp -= n; B.flash = 0.25; B.dmgBy[what] = (B.dmgBy[what] || 0) + n; B.taken += n;
   s.log('bossDmg', { src: what, n: +n.toFixed(1), hp: +B.hp.toFixed(1), weak });
   if (s.fx) { const hy = CART_MAN.y + 8.4 * CART_MAN.scale * (weak ? 0.8 : 1); s.fx.spark(B.hx, hy, B.hz, weak ? 26 : 12, weak ? '#ffffff' : '#ffb040', 10); if (weak) s.fx.burst(B.hx, hy, B.hz, 'star', 10, '#ffffff'); }
-  Sound.play('kartHit', { vol: 0.6, pitch: weak ? 0.7 : 0.9 });
+  cartSfx(weak ? 'manHitWeak' : 'manHit', 0.85);
   if (weak && !B.weakTold) { B.weakTold = true; s.banner('WEAK POINT!', '#ffffff', 1.2, 'double damage while he is down', true); }
   if (B.hp <= 0.001) cartManDie(s);
   return n;
@@ -161,7 +161,7 @@ function cartManDamage(s, n, what) {
 function cartManDie(s) {
   const B = s.boss; B.dead = true; B.st = 'dying'; B.t = 0; s.roy.bossDefeated = true;
   s.banner('THE MAN BURNS!', '#ffd84a', 4.5, 'YOU WIN THE BATTLE ROYALE!');
-  Sound.play('cartBoom', { vol: 1, pitch: 0.6 }); Sound.play('crowd', { vol: 1 }); Sound.play('kartFinish', { vol: 0.9 }); s.shakeIt(1);
+  cartSfx('manDefeat'); s.shakeIt(1);
   s.log('bossDefeated', { t: +s.raceT.toFixed(1) });
 }
 // the boss's attacks land on the player through hit(); a shield throws the hit back at him
@@ -259,12 +259,12 @@ CART_ARENA_RULES.man = {
     if (B.st === 'wake') { if (B.t >= B.dur) cartManNext(s, 'idle', 1.2); }
     else if (B.st === 'idle') { if (B.t >= B.dur) { let a; do { a = CART_MAN_ATTACKS[Math.floor(s.rng() * 3)]; } while (a === B.last); if (B.n === 0) a = 'stomp'; B.last = a; B.n++; cartManNext(s, a, (a === 'stomp' ? 1.3 : a === 'sweep' ? 1.2 : 1.0) / sp); B.hit = false; B.ht = 0; if (a === 'sweep') { const pa = Math.atan2(P.x, P.z), dir = s.rng() < 0.5 ? 1 : -1; B.sweep = { on: false, a0: pa - dir * 1.3, a: pa - dir * 1.3, dir, R: 66, w: 1.6 * sp, end: pa + dir * 1.3, mask: 0 }; } s.banner(a === 'stomp' ? 'STOMP! HOP THE SHOCKWAVE' : a === 'sweep' ? 'FIRE SWEEP! HOP IT' : 'EMBER RAIN! DODGE THE TARGETS', '#ff8a3a', 1.3, null, true); } }
     else if (B.st === 'stomp') {
-      if (!B.hit && B.t >= B.dur) { B.hit = true; B.ht = 0; cartManWave(s); if (rage) B.second = 0.75; Sound.play('stomp', { vol: 1, pitch: 0.45 }); Sound.play('cartBoom', { vol: 0.8, pitch: 0.6 }); s.shakeIt(0.9); if (s.fx) s.fx.dust(0, C.y + 0.5, 0, 30, '#c8a080'); }
-      if (B.hit) { B.ht += dt; if (B.second > 0) { B.second -= dt; if (B.second <= 0) { cartManWave(s); Sound.play('stomp', { vol: 1, pitch: 0.55 }); s.shakeIt(0.7); } } if (B.ht > 2.0) cartManNext(s, 'rest', 2.6); }
+      if (!B.hit && B.t >= B.dur) { B.hit = true; B.ht = 0; cartManWave(s); if (rage) B.second = 0.75; cartSfx('manStomp'); s.shakeIt(0.9); if (s.fx) s.fx.dust(0, C.y + 0.5, 0, 30, '#c8a080'); }
+      if (B.hit) { B.ht += dt; if (B.second > 0) { B.second -= dt; if (B.second <= 0) { cartManWave(s); cartSfx('manStomp', 0.85, 1.15); s.shakeIt(0.7); } } if (B.ht > 2.0) cartManNext(s, 'rest', 2.6); }
     }
     else if (B.st === 'sweep') {
       const W = B.sweep;
-      if (!B.hit && B.t >= B.dur) { B.hit = true; B.ht = 0; W.on = true; Sound.play('flame', { vol: 1, pitch: 0.7 }); }
+      if (!B.hit && B.t >= B.dur) { B.hit = true; B.ht = 0; W.on = true; cartSfx('manSweep'); }
       if (B.hit) {
         B.ht += dt; W.a += W.dir * W.w * dt; B.yaw = W.a;
         // the fire line: from his plinth out to W.R; anything on the ground it crosses burns (hop over it)
@@ -273,7 +273,7 @@ CART_ARENA_RULES.man = {
       }
     }
     else if (B.st === 'embers') {
-      if (!B.hit && B.t >= B.dur) { B.hit = true; B.ht = 0; const n = rage ? 14 : 11; for (let i = 0; i < n; i++) { const E = B.embers[i]; const lead = 0.6 + s.rng() * 1.6, a = s.rng() * TAU, rr = i < 4 ? s.rng() * 4 : 4 + s.rng() * 13; E.live = true; E.t = 0; E.delay = 0.5 + i * 0.12 + s.rng() * 0.3; E.x = P.x + P.vx * lead + Math.sin(a) * rr; E.z = P.z + P.vz * lead + Math.cos(a) * rr; const d = Math.hypot(E.x, E.z); if (d < C.plinth + 2) { E.x *= (C.plinth + 2) / d; E.z *= (C.plinth + 2) / d; } } Sound.play('flame', { vol: 0.9, pitch: 1.3 }); }
+      if (!B.hit && B.t >= B.dur) { B.hit = true; B.ht = 0; const n = rage ? 14 : 11; for (let i = 0; i < n; i++) { const E = B.embers[i]; const lead = 0.6 + s.rng() * 1.6, a = s.rng() * TAU, rr = i < 4 ? s.rng() * 4 : 4 + s.rng() * 13; E.live = true; E.t = 0; E.delay = 0.5 + i * 0.12 + s.rng() * 0.3; E.x = P.x + P.vx * lead + Math.sin(a) * rr; E.z = P.z + P.vz * lead + Math.cos(a) * rr; const d = Math.hypot(E.x, E.z); if (d < C.plinth + 2) { E.x *= (C.plinth + 2) / d; E.z *= (C.plinth + 2) / d; } } cartSfx('manEmbers'); }
       if (B.hit) { B.ht += dt; if (B.ht > 2.6) cartManNext(s, 'rest', 2.4); }
     }
     else if (B.st === 'rest') { if (B.t >= B.dur) cartManNext(s, 'idle', rage ? 0.8 : 1.2); }
@@ -290,7 +290,7 @@ CART_ARENA_RULES.man = {
         if (!P.out && Math.hypot(P.x - E.x, P.z - E.z) < 4.4 && P.y < 3) cartManHitPlayer(s, 'spin', 'ember', { banner: 'EMBER HIT!', dur: 0.9 });
         const F = B.patches.find(q => q.t <= 0) || B.patches[0]; F.t = 3; F.x = E.x; F.z = E.z;
         if (s.fx) { s.fx.burst(E.x, 0.5, E.z, 'spark', 16, '#ffb040'); s.fx.smoke(E.x, 0.6, E.z, 4, '#5a4040'); }
-        if (Math.hypot(P.x - E.x, P.z - E.z) < 40) Sound.play('cartBoom', { vol: 0.35, pitch: 1.6 });
+        if (Math.hypot(P.x - E.x, P.z - E.z) < 40) cartSfx('emberHit');
       }
     }
     for (const F of B.patches) { if (F.t <= 0) continue; F.t -= dt; }
@@ -312,7 +312,8 @@ CART_ARENA_RULES.man = {
       return { px: Math.sin(a) * d, py: 3 + B.u * 3, pz: Math.cos(a) * d, tx: 0, ty: CART_MAN.y + 9 * sc * (0.6 + 0.3 * B.u), tz: 0, fov: 1.15 };
     }
     if (B.st === 'dying' && B.t < 6) { const a = Math.atan2(P.x, P.z) + B.t * 0.08, d = 70; return { px: Math.sin(a) * d, py: 9 + B.t, pz: Math.cos(a) * d, tx: 0, ty: CART_MAN.y + 6 * sc, tz: 0, fov: 1.2 }; }
-    return null;
+    if (B.dead || P.out || s.state !== 'race') return null;
+    return cartManChaseCam(s, fdt);
   },
   render(s, R) { /* the Man himself is drawn by the scene */ },
   draw(s, R, Sp, t) {
@@ -358,16 +359,46 @@ CART_ARENA_RULES.man = {
   royaleHud(s, ctx, W, H, top, left) {
     const B = s.boss; if (!B || !B.active) return;
     // portrait: under the health panel, left of the radar (the Man fills the middle of a tall screen); landscape: top centre
-    const portrait = H > W, bw = portrait ? Math.max(160, W - Math.max(14, insets.r + 6) - 86 - 22 - left) : Math.min(360, W - 40), x = portrait ? left + 4 : W / 2 - bw / 2, y = portrait ? top + 66 : top + 4, cx = x + bw / 2;
+    // both orientations: under the health panel, at the left (never over the Man, who fills the middle of the view)
+    const portrait = H > W, bw = portrait ? Math.max(160, W - Math.max(14, insets.r + 6) - 86 - 22 - left) : Math.min(230, W * 0.3), x = left + 4, y = top + 66, cx = x + bw / 2;
     ctx.save(); ctx.fillStyle = 'rgba(20,6,4,0.6)'; burnsRR(ctx, x - 10, y - 4, bw + 20, 40, 12); ctx.fill(); ctx.restore();
     BurnsUI.text(ctx, 'THE MAN', cx, y + 7, 13, '#ffb070', { glow: '#ff5a1a' });
     cartRoyBar(ctx, x, y + 17, bw, 14, B.hp / B.max, B.st === 'rest' ? '#ffffff' : B.flash > 0 ? '#ffd890' : '#ff6a2a');
-    if (B.st === 'rest' && s.state === 'race') BurnsUI.text(ctx, 'WEAK POINT — HIT HIM NOW!', portrait ? W / 2 : cx, portrait ? y + 86 : y + 50, 13, '#ffffff', { glow: '#ffb020' });
-    else if (B.hp < B.max * 0.5 && !B.dead && s.state === 'race') BurnsUI.text(ctx, 'HE\'S ENRAGED', cx, y + 50, 11, '#ff8a6a', { ui: true });
+    if (B.st === 'rest' && s.state === 'race') BurnsUI.text(ctx, 'WEAK POINT — HIT HIM NOW!', x - 4, y + 52, 12, '#ffffff', { glow: '#ffb020', align: 'left' });
+    else if (B.hp < B.max * 0.5 && !B.dead && s.state === 'race') BurnsUI.text(ctx, 'HE\'S ENRAGED', x - 4, y + 50, 11, '#ff8a6a', { ui: true, align: 'left' });
   },
   radar(s, ctx, P, sc) { const q = CART_ROY_T.p; P(0, 0, q); ctx.fillStyle = '#ff8a3a'; ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(3, CART_MAN.plinth * sc), 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,90,30,0.6)'; for (const [a, r] of CART_MAN.pits) { P(Math.sin(a) * r, Math.cos(a) * r, q); ctx.beginPath(); ctx.arc(q.x, q.y, 2.5, 0, TAU); ctx.fill(); } }
 };
-function cartManNext(s, st, dur) { const B = s.boss; B.st = st; B.t = 0; B.u = 0; B.dur = dur; B.hit = false; B.ht = 0; if (st === 'rest') B.weakTold = B.weakTold || false; }
+/* the boss fight's chase camera: the usual chase camera, but when the Man is ahead it tilts up, backs off and widens just
+   enough to keep all of him (head included) and your car in the view, in landscape and portrait */
+const CART_MAN_CAM = { px: 0, py: 0, pz: 0, tx: 0, ty: 0, tz: 0, fov: 1, e: 0, f: 0, c: 0, init: false };
+function cartManChaseCam(s, fdt) {
+  const P = s.player, C = CART_MAN, B = s.boss, o = CART_MAN_CAM, W = Game.cssW, H = Game.cssH, portrait = H > W * 1.05, asp = W / Math.max(1, H);
+  const yaw = s.camYaw !== undefined ? s.camYaw : P.yaw, fx = Math.sin(yaw), fz = Math.cos(yaw);
+  const sp = clamp(P.speed / 30, 0, 1.3), Mo = P.M, tall = Math.max(0, Mo.h - 3);
+  const d0 = (portrait ? 11.5 : 8.8) + sp * 1.4 + tall * 1.1 + Mo.len * 0.12, h0 = (portrait ? 4.6 : 3.5) + sp * 0.4 + tall * 0.85, fov0 = (portrait ? 1.32 : 1.0) + sp * 0.08;
+  const mx = s.man ? s.man.ch.x : 0, mz = s.man ? s.man.ch.z : 0, dx = mx - P.x, dz = mz - P.z;
+  const off = Math.abs(cartWrap(Math.atan2(dx, dz) - yaw)), hfov = Math.atan(Math.tan(fov0 / 2) * asp);
+  const face = 1 - BurnsM.smoothstep(hfov * 0.75, hfov + 0.5, off);
+  const top = C.y + 13 * C.scale * (B.st === 'rest' ? 0.9 : 1) + 2.4, fwd = dx * fx + dz * fz, fovMax = portrait ? 1.62 : 1.3;
+  const normC = Math.atan2(1.7 - h0, d0 + 6);
+  let e = 0, fov = fov0, cen = normC;
+  for (let i = 0; i <= 13; i++) {
+    e = i * 2;
+    const d = d0 + e, hy = h0 + e * 0.45, hd = Math.max(4, fwd + d - 6), aTop = Math.atan2(top - hy, hd), aCar = Math.atan2(-hy + 0.1, d - 1.6);
+    const need = (aTop - aCar) * 1.1 + 0.04;
+    fov = clamp(need, fov0, fovMax);
+    cen = clamp(aTop + 0.035 - fov / 2, normC, aCar + fov / 2 - 0.05);
+    if (need <= fovMax) break;
+  }
+  const w = fwd > -4 ? face : 0, k = o.init ? 1 - Math.exp(-3.5 * fdt) : 1; o.init = true;
+  o.e = lerp(o.e, e * w, k); o.f = lerp(o.f, lerp(fov0, fov, w), k); o.c = lerp(o.c, lerp(normC, cen, w), k);
+  const d = d0 + o.e, hy = h0 + o.e * 0.45;
+  o.px = P.x - fx * d; o.py = P.y + hy; o.pz = P.z - fz * d;
+  o.tx = P.x + fx * 6; o.tz = P.z + fz * 6; o.ty = o.py + Math.tan(o.c) * (d + 6); o.fov = o.f;
+  return o;
+}
+function cartManNext(s, st, dur) { const B = s.boss; B.st = st; B.t = 0; B.u = 0; B.dur = dur; B.hit = false; B.ht = 0; if (st === 'rest') { B.weakTold = B.weakTold || false; cartSfx('manWeak'); } }
 function cartManWave(s) { const B = s.boss, w = B.waves.find(q => !q.live) || B.waves[0]; w.live = true; w.r = CART_MAN.plinth + 1; w.mask = 0; }
 // the stand-in target on the plinth edge facing the player (it is reset every frame: nothing sticks to it)
 function cartManProxy(s) {

@@ -309,7 +309,7 @@ const FdyMesh = {
 /* ---------------- the rules: hazards and enemies at run time ---------------- */
 const FDY_JET = { period: 4.8, tele: 1.25, burn: 0.9, half: 1.7 };
 const FDY_BEL = { period: 6.4, tele: 1.6, speed: 36, band: 2.4, width: 7.5, push: 7.5 };
-const FDY_LAD = { period: 7.2, tele: 1.5, pour: 0.7, life: 4.0, r: 2.9, y: 10.6, tilt: 1.05 };
+const FDY_LAD = { period: 7.2, tele: 1.6, pour: 0.7, life: 4.0, r: 2.5, y: 10.6, tilt: 1.05 };
 const FDY_TOR = { tele: 1.4, speed: 6.0, r: 3.0, sway: 3.0 };
 CART_TRACK_RULES.foundry = {
   onLoad(s) {
@@ -337,7 +337,7 @@ CART_TRACK_RULES.foundry = {
       const lat = (k.x - q.x) * q.dx + (k.z - q.z) * q.dz; if (lat > -1 && lat < q.reach + 1 && good && k.speed > 12) { I.gas = 0; if (q.on && k.speed > 20) I.brake = 0.4; }
     }
     for (const q of L.bel) { if (q.tele < 0.55) continue; const ds = CartKit.ahead(s, k, q.s); if (ds > 4 && ds < 24 && good && k.speed > 14) I.gas = 0; }
-    for (const q of L.lad) { const P = q.pud; if (!P.live || P.t > FDY_LAD.life * 0.85 || k.air) continue; const dx = P.x - k.x, dz = P.z - k.z, fw = dx * Math.sin(k.yaw) + dz * Math.cos(k.yaw), sideD = Math.abs(dx * Math.cos(k.yaw) - dz * Math.sin(k.yaw)); if (fw > 2 && fw < 3 + k.speed * 0.22 && sideD < FDY_LAD.r + 0.8 && good) { I.driftPress = true; I.drift = false; } }
+    for (const q of L.lad) { const P = q.pud; if (!P.live || P.t > FDY_LAD.life * 0.7 || k.air) continue; const dx = P.x - k.x, dz = P.z - k.z, fw = dx * Math.sin(k.yaw) + dz * Math.cos(k.yaw), sideD = Math.abs(dx * Math.cos(k.yaw) - dz * Math.sin(k.yaw)); if (fw > 2 && fw < 3 + k.speed * 0.22 && sideD < FDY_LAD.r + 0.8 && good) { I.driftPress = true; I.drift = false; } }
   },
   draw(s, R, S, t) { const L = s.fdy; if (L) fdyDraw(s, L, R, S, t); },
   lights(s, add) {
@@ -425,7 +425,7 @@ function fdyLadles(s, L, dt, racing) {
       // aim: the nearest car coming up to the gantry (else a lane of its own)
       q.aimed = true; q.cyc++; let best = null, bd = 1e9;
       for (const k of s.karts) { if (k.out || k.finished) continue; const ds = CartKit.ahead(s, k, q.s); if (ds > 10 && ds < 85 && ds < bd) { bd = ds; best = k; } }
-      q.d = clamp(best && q.cyc % 3 !== 0 ? best.loc.d : [-0.45, 0.4, 0, -0.2, 0.5][(q.cyc + q.i) % 5] * q.hw, -q.hw * 0.62, q.hw * 0.62);
+      q.d = clamp(best && q.cyc % 3 === 0 ? best.loc.d : [-0.45, 0.4, 0, -0.2, 0.5][(q.cyc + q.i) % 5] * q.hw, -q.hw * 0.62, q.hw * 0.62);
     }
     const pouring = ph < Q.pour;
     if (pouring && !q.pouring) {
@@ -443,7 +443,7 @@ function fdyLadles(s, L, dt, racing) {
     const P = q.pud;
     if (P.live) {
       P.t += dt; if (P.t > Q.life) P.live = false;
-      else if (P.t < Q.life * 0.85) {
+      else if (P.t < Q.life * 0.7) {
         cartIxObs(s, P.x, P.z, Q.r);
         if (racing) for (const k of s.karts) { if (k.out || (P.mask & (1 << k.slot))) continue; if (k.air && k.y > s.terrain.height(k.x, k.z) + 0.25) continue; if (Math.hypot(k.x - P.x, k.z - P.z) < Q.r) { P.mask |= 1 << k.slot; if (fdyBurn(s, k, 'molten', 'MOLTEN COPPER!')) k.slowT = Math.max(k.slowT, 1.0); } }
       }

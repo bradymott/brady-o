@@ -5,7 +5,7 @@
    eight great COLUMNS; ten heaps of TREASURE (coin mounds, chests, jars) on the outer floor; vault doors in the walls.
    Its enemies (all telegraphed, all readable on a phone):
      · LASER SWEEP: the capstone spins up and an alarm ring flashes (1.8 s), then a red laser arm sweeps the whole floor
-       once (5.5 s): 7 HP and a spin. HOP over it as it reaches you, or hide in the shadow of a column or a treasure heap
+       once (5.5 s, every 24 s): 4 HP and a spin. HOP over it as it reaches you, or hide in the shadow of a column or a treasure heap
      · GOLD RUSH: a gold target locks onto a car (1.0 s), stops (0.4 s: swerve!), and a heap of coins crashes down on it
        (12 HP and a knock); the heap stays a moment as cover, then sinks
      · MUMMY GUARDS: bandage-wrapped burners shuffle after the nearest car; when close they RAISE THEIR ARMS (1 s, a lime
@@ -16,7 +16,7 @@
    ============================================================ */
 const VLT_C = {
   R: 178, plinth: 11, colR: 58, colN: 8, colRad: 2.4, pileR: 104, pileN: 10, pileRad: 5,
-  sweep: { period: 17, first: 18, warn: 1.8, dur: 5.5, h: 0.9 },
+  sweep: { period: 24, first: 20, warn: 1.8, dur: 5.5, h: 0.9 },   // Nov 19 polish: every 24 s (was 17) at 4 HP (was 7): it was the arena's biggest damage source
   drop: { n: 3, aim: 1.0, hold: 0.4, fall: 0.4, r: 4.4, life: 4, sink: 0.6 },
   mum: { n: 4, chase: 30, speed: 5.4, near: 7, raise: 1.0, lunge: 0.5, reach: 4, grab: 2.6, down: 1.8, up: 0.6, sc: 1.35 },
   red: [1, 0.16, 0.22], hot: [1, 0.35, 0.45], gold: [1, 0.8, 0.3], amber: [1, 0.62, 0.15], green: [0.25, 1, 0.55], lime: [0.6, 1, 0.35], white: [1, 1, 1], black: [0, 0, 0], cyan: [0.3, 0.95, 1]

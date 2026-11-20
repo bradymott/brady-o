@@ -76,7 +76,7 @@ CART_RACE_RULES.plunger = {
     // the fuse spark races from the plunger to the Man
     if (s.man) { P.fuseT = 0; P.fx0 = P.x; P.fy0 = P.y + 1.6; P.fz0 = P.z; P.fxN = k.plg; }
     const near = Math.hypot(k.x - s.cam.x, k.z - s.cam.z) < 40;
-    Sound.play('stomp', { vol: k.player ? 0.9 : near ? 0.5 : 0.25, pitch: 0.8 }); if (k.player) { Sound.play('kartBoost', { vol: 0.6 }); s.shakeIt(0.6); }
+    cartSfx('plunger', k.player ? 1 : near ? 0.55 : 0.25); if (s.man) cartSfx('fuse', k.player ? 0.8 : 0.3); if (k.player) { Sound.play('kartBoost', { vol: 0.6 }); s.shakeIt(0.6); }
     s.log('plunger', { k: k.id, n: k.plg, player: k.player });
     if (k.plg >= P.goal) return this.win(s, k);
     if (k.player) s.banner('KA-CHUNK! ' + k.plg + ' / ' + P.goal, '#ffd84a', 1.8, k.plg === P.goal - 1 ? 'ONE MORE LIGHTS THE MAN!' : 'Find the next plunger');
@@ -93,10 +93,11 @@ CART_RACE_RULES.plunger = {
   ignite(s) {
     const P = s.plg; if (P.igniteT >= 0) return; P.igniteT = 0; P.fuseT = -1;
     const k = P.winner;
-    s.banner('THE MAN BURNS!', '#ff8a2a', 5, k && k.player ? 'YOU LIT HIM!' : k ? k.car.name + ' LIT HIM' : '');
-    s.flash = 1; s.white = 0.5; s.shakeIt(1);
-    Sound.play('crowd', { vol: 0.9 }); Sound.play(k && k.player ? 'kartFinish' : 'powerdown', { vol: 0.8 });
-    if (s.man) { const M = s.man.ch, sc = M.scale || 1; s.fx.confetti(M.x, M.y + 6 * sc, M.z, 80); for (let i = 0; i < 4; i++) s.fx.firework(M.x + (s.rng() - 0.5) * 30, M.y + 30 + s.rng() * 20, M.z + (s.rng() - 0.5) * 30, BURNS_NEON[i]); }
+    // (the title card is drawn by hud(): big, on a dark band, readable over the fire)
+    s.msgs.length = 0;
+    s.flash = 1; s.white = 0.8; s.shakeIt(1);
+    if (k && k.player) cartSfx('ignite'); else { Sound.play('crowd', { vol: 0.9 }); Sound.play('powerdown', { vol: 0.8 }); Sound.play('flame_jet', { vol: 0.8, pitch: 0.7 }); }
+    if (s.man) { const M = s.man.ch, sc = M.scale || 1; s.fx.confetti(M.x, M.y + 6 * sc, M.z, 140); s.fx.burst(M.x, M.y + 2, M.z, 'spark', 60, '#ffd84a'); s.fx.burst(M.x, M.y + 8 * sc, M.z, 'star', 30, '#ffffff'); for (let i = 0; i < 7; i++) s.fx.firework(M.x + (s.rng() - 0.5) * 40, M.y + 28 + s.rng() * 30, M.z + (s.rng() - 0.5) * 40, BURNS_NEON[i]); }
     s.log('manBurns', { by: k ? k.id : null, player: !!(k && k.player) });
   },
   onUpdate(s, dt, racing) {
@@ -116,7 +117,7 @@ CART_RACE_RULES.plunger = {
       if (P.fuseT >= CART_PLG.fuse) {
         P.fuseT = -1;
         if (s.man) { const M = s.man.ch, sc = M.scale || 1; s.fx.firework(M.x, M.y + 9 * sc, M.z, P.fxN >= P.goal ? '#ff8a2a' : '#ffd84a'); s.fx.spark(M.x, M.y + 5 * sc, M.z, 24, '#ffb040', 10); }
-        if (P.winner) this.ignite(s); else Sound.play('kartLap', { vol: 0.35, pitch: 0.7 });
+        if (P.winner) this.ignite(s); else Sound.play('firework_burst', { vol: 0.4, pitch: 1.2 });
       }
     }
     let top = 0; for (const k of s.karts) if (k.plg > top) top = k.plg;
@@ -127,7 +128,7 @@ CART_RACE_RULES.plunger = {
       if (s.man) {
         s.man.burn = Math.min(1, P.igniteT / 2.6);
         P.fwT -= dt;
-        if (P.fwT <= 0 && P.igniteT < 9) { P.fwT = 0.12 + s.rng() * 0.18; const M = s.man.ch, a = s.rng() * TAU, r = 20 + s.rng() * 70; s.fx.firework(M.x + Math.cos(a) * r, M.y + 35 + s.rng() * 40, M.z + Math.sin(a) * r, BURNS_NEON[Math.floor(s.rng() * 7)]); }
+        if (P.fwT <= 0 && P.igniteT < 12) { P.fwT = 0.06 + s.rng() * 0.12; if (s.rng() < 0.12) Sound.play('firework_burst', { vol: 0.3 + s.rng() * 0.3, pitch: 0.8 + s.rng() * 0.5 }); const M = s.man.ch, a = s.rng() * TAU, r = 20 + s.rng() * 70; s.fx.firework(M.x + Math.cos(a) * r, M.y + 35 + s.rng() * 40, M.z + Math.sin(a) * r, BURNS_NEON[Math.floor(s.rng() * 7)]); }
       }
     }
     // pose the plunger: it rises out of the ground, bobs its handle up and down to beckon, slams down when pushed, then sinks
@@ -154,9 +155,10 @@ CART_RACE_RULES.plunger = {
     const M = s.man.ch, sc = M.scale || 1, k = s.player, c = CART_PLG_T.cam;
     let dx = k.x - M.x, dz = k.z - M.z; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
     // landscape (a short view): closer and aimed higher so the burning Man fills the screen's height as in portrait
-    const wide = Game.cssW > Game.cssH, a = Math.atan2(dx, dz) + (P.igniteT > 0 ? P.igniteT * 0.08 : 0), d = (wide ? 24 : 36) * Math.max(0.8, sc);
-    c.tx = M.x; c.ty = M.y + (wide ? 6 : 4.5) * sc + (P.igniteT > 0 ? 2 : 0); c.tz = M.z;
-    c.px = M.x + Math.sin(a) * d; c.py = M.y + 2 * sc; c.pz = M.z + Math.cos(a) * d; c.fov = 1.0;
+    // the camera sits above the cars (so none parks in front of the lens) and eases back as the fireworks fill the sky
+    const wide = Game.cssW > Game.cssH, u = P.igniteT > 0 ? Math.min(1, P.igniteT / 6) : 0, a = Math.atan2(dx, dz) + (P.igniteT > 0 ? P.igniteT * 0.08 : 0), d = (wide ? 19 : 27) * Math.max(0.8, sc) * (1 + u * 0.3);
+    c.tx = M.x; c.ty = M.y + (wide ? 6 : 5) * sc + (P.igniteT > 0 ? 2 + u * 3 : 0); c.tz = M.z;
+    c.px = M.x + Math.sin(a) * d; c.py = M.y + (wide ? 2.6 : 3.4) * sc + u * 3; c.pz = M.z + Math.cos(a) * d; c.fov = wide ? 1.05 + u * 0.15 : 1.1 + u * 0.1;
     void fdt; return c;
   },
   draw(s, R, S, t) {
@@ -180,9 +182,12 @@ CART_RACE_RULES.plunger = {
     // the burn: big flames climbing the figure and a hot glow (on top of the scene's own Man fire)
     if (s.man && P.igniteT >= 0) {
       const M = s.man.ch, sc = M.scale || 1, b = s.man.burn;
-      for (let i = 0; i < 4; i++) s.fx.fire(M.x + (Math.random() - 0.5) * 5 * sc, M.y + Math.random() * 11 * sc * b, M.z + (Math.random() - 0.5) * 4 * sc, 3.6 * sc * (0.5 + b * 0.5));
-      if (Math.random() < 0.3) s.fx.spark(M.x + (Math.random() - 0.5) * 6 * sc, M.y + Math.random() * 10 * sc, M.z, 3, '#ffb040', 8);
-      R.bbs.bb(M.x, M.y + 5 * sc, M.z, 26 * sc, 34 * sc, S.glow, C.fire, 0.35 * b, true);
+      for (let i = 0; i < 6; i++) s.fx.fire(M.x + (Math.random() - 0.5) * 6 * sc, M.y + Math.random() * 12 * sc * b, M.z + (Math.random() - 0.5) * 5 * sc, 4.4 * sc * (0.5 + b * 0.5));
+      if (Math.random() < 0.6) s.fx.spark(M.x + (Math.random() - 0.5) * 8 * sc, M.y + Math.random() * 12 * sc, M.z + (Math.random() - 0.5) * 4 * sc, 4, '#ffb040', 10);
+      R.bbs.bb(M.x, M.y + 5 * sc, M.z, 34 * sc, 44 * sc, S.glow, C.fire, 0.45 * b, true);
+      R.bbs.bb(M.x, M.y + 7 * sc, M.z, 14 * sc, 22 * sc, S.glow, C.gold, 0.5 * b * (0.8 + 0.2 * Math.sin(t * 11)), true);
+      // the ignition: a ring of fire rolls out over the playa, and a pillar of light goes up
+      const it = P.igniteT; if (it < 3) { const gy = s.terrain.height(M.x, M.z) + 0.3, r = 8 + it * 34, a = 1 - it / 3; R.flat.flat(M.x, gy, M.z, r * 2, r * 2, 0, S.ring, C.fire, 0.95 * a, true); R.flat.flat(M.x, gy + 0.05, M.z, r * 1.6, r * 1.6, 0, S.ring, C.gold, 0.7 * a, true); R.bbs.streak(M.x, M.y + 40, M.z, 0, 1, 0, 80, 8 * a + 2, S.streak, C.white, 0.8 * a); }
     }
     // the Man's stage glows hotter with every plunger pushed
     if (s.man && P.heat > 0.02 && P.igniteT < 0) { const M = s.man.ch, gy = s.terrain.height(M.x, M.z) + 0.2; R.flat.flat(M.x, gy, M.z, 40, 40, t * 0.3, S.ring, C.fire, 0.5 * P.heat * (0.8 + 0.2 * Math.sin(t * 4)), true); }
@@ -238,6 +243,19 @@ CART_RACE_RULES.plunger = {
     else if (!P.alive && !P.winner && s.state === 'race') BurnsUI.text(ctx, 'NEXT PLUNGER COMING…', W / 2, portrait ? H * 0.3 : H * 0.24, 12, 'rgba(255,216,74,0.85)', CART_TXT_U);
     // the minimap, with the plunger and the Man on it
     s.drawMinimap(ctx); this.mapDots(s, ctx, W, H, portrait, t);
+    if (P.igniteT >= 0) this.burnCard(s, ctx, W, H, portrait, t);
+  },
+  // THE MAN BURNS!: a big title on a dark band (readable over the fire), popping in with the ignition
+  burnCard(s, ctx, W, H, portrait, t) {
+    const P = s.plg, u = P.igniteT, a = clamp(u * 3, 0, 1) * clamp((11 - u) * 0.8, 0, 1); if (a <= 0) return;
+    const k = P.winner, mine = !!(k && k.player), y = portrait ? H * 0.24 : H * 0.3, pop = 1 + Math.max(0, 0.35 - u) * 1.6, fs = Math.min(portrait ? 40 : 46, W * 0.1) * pop;
+    ctx.save(); ctx.globalAlpha = a;
+    const g = ctx.createLinearGradient(0, y - 60, 0, y + 60); g.addColorStop(0, 'rgba(20,4,0,0)'); g.addColorStop(0.3, 'rgba(20,4,0,0.72)'); g.addColorStop(0.7, 'rgba(20,4,0,0.72)'); g.addColorStop(1, 'rgba(20,4,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, y - 60, W, 120);
+    ctx.fillStyle = 'rgba(255,200,80,0.8)'; ctx.fillRect(0, y - 38, W, 1.5); ctx.fillRect(0, y + 40, W, 1.5);
+    BurnsUI.text(ctx, 'THE MAN BURNS!', W / 2, y - 6, fs, '#fff4c8', { glow: '#ff3a00' });
+    BurnsUI.text(ctx, mine ? 'YOU LIT HIM!' : k ? k.car.name + ' LIT HIM' : '', W / 2, y + 26, 15, mine ? '#ffd84a' : '#ffb08a', { ui: true });
+    ctx.restore();
   },
   pointer(s, ctx, W, H, portrait) {
     const P = s.plg, k = s.player, R = s.R, o = CART_PLG_T.p, t = s.time;

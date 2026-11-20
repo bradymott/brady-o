@@ -84,9 +84,9 @@ CART_ARENAS.push({
 CartWorlds.arena_mud = function (A, night) {
   const E = this.base(2007, [-150, -130, 150, 130], '#5c4432', 0.05);
   const sky = Object.assign({}, BURNS_PALETTES.day, {
-    zen: '#6a7482', hor: '#b8b6b0', sky: '#9aa2ac', fog: '#b8b0a8', fogD: 0.01, fogH: 0.05, haze: 0.5, fogMax: 0.93,
+    zen: '#4a6a90', hor: '#f0c49a', sky: '#a8b8cc', fog: '#d0b498', fogD: 0.006, fogH: 0.05, haze: 0.34, fogMax: 0.88,
     clouds: 0.95, cloudCol: '#8a9098', cloudScale: 0.8, cloudSpeed: 0.03, sun: [150, 40], sunCol: '#c8c8c8', sunSize: 0.0004,
-    key: '#c4cad4', keyK: 0.5, rim: '#d8dce4', mid: '#88909a', midK: 0.3, gnd: '#6a5a48', mtnCol: '#7a7a82', emB: 1.2, dust: 0
+    key: '#f4e2c8', keyK: 0.78, rim: '#ffe0b8', mid: '#88909a', midK: 0.3, gnd: '#6a5a48', mtnCol: '#7a7a82', emB: 1.2, dust: 0
   });
   Object.assign(E, { id: 'mud', arena: A, sky, tod: 'dust', music: 'kart1', night: false, rain: true });
   const api = E.api, T = E.terrain, rng = mulberry32(2024);
@@ -115,7 +115,14 @@ CartWorlds.arena_mud = function (A, night) {
     for (let i = 0; i < 70; i++) { const x = (rng() - 0.5) * 270, z = (rng() - 0.5) * 230, a = rng() * TAU, L = 8 + rng() * 22; for (const o of [-0.9, 0.9]) { const a0 = P(x + Math.cos(a + Math.PI / 2) * o, z + Math.sin(a + Math.PI / 2) * o), a1 = P(x + Math.cos(a) * L + Math.cos(a + Math.PI / 2) * o, z + Math.sin(a) * L + Math.sin(a + Math.PI / 2) * o); ctx.beginPath(); ctx.moveTo(a0[0], a0[1]); ctx.quadraticCurveTo((a0[0] + a1[0]) / 2 + (rng() - 0.5) * 3 * S, (a0[1] + a1[1]) / 2 + (rng() - 0.5) * 3 * S, a1[0], a1[1]); ctx.stroke(); } }
     // wet sheen blotches
     for (let i = 0; i < 160; i++) { const x = (rng() - 0.5) * 280, z = (rng() - 0.5) * 240, q = P(x, z); ctx.fillStyle = `rgba(${rng() < 0.5 ? '50,34,24' : '150,140,130'},${0.05 + rng() * 0.08})`; ctx.beginPath(); ctx.ellipse(q[0], q[1], (2 + rng() * 7) * S, (1 + rng() * 3) * S, rng() * 3, 0, TAU); ctx.fill(); }
-    for (const p of E.puddles) { const q = P(p.x, p.z); ctx.fillStyle = 'rgba(48,34,26,0.7)'; ctx.beginPath(); ctx.ellipse(q[0], q[1], (p.r + 0.6) * S, (p.r * 0.8 + 0.6) * S, p.a, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(150,172,196,0.85)'; ctx.beginPath(); ctx.ellipse(q[0], q[1], p.r * S, p.r * 0.8 * S, p.a, 0, TAU); ctx.fill(); }
+    for (const p of E.puddles) { const q = P(p.x, p.z); ctx.fillStyle = 'rgba(48,34,26,0.7)'; ctx.beginPath(); ctx.ellipse(q[0], q[1], (p.r + 0.6) * S, (p.r * 0.8 + 0.6) * S, p.a, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(150,172,196,0.85)'; ctx.beginPath(); ctx.ellipse(q[0], q[1], p.r * S, p.r * 0.8 * S, p.a, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(235,245,255,0.5)'; ctx.beginPath(); ctx.ellipse(q[0] - p.r * 0.25 * S, q[1] - p.r * 0.2 * S, p.r * 0.45 * S, p.r * 0.14 * S, p.a + 0.4, 0, TAU); ctx.fill(); }
+    // drying crust: big pale cracked patches between the bogs (the mud is not all soup)
+    for (let i = 0; i < 60; i++) { const x = (rng() - 0.5) * 270, z = (rng() - 0.5) * 230; if (E.mud.some(m => Math.hypot(x - m.x, z - m.z) < m.r + 4)) continue; const q = P(x, z), r = (5 + rng() * 9) * S, g = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], r); g.addColorStop(0, 'rgba(178,140,98,0.55)'); g.addColorStop(0.7, 'rgba(160,124,86,0.35)'); g.addColorStop(1, 'rgba(160,124,86,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(90,60,40,0.35)'; ctx.lineWidth = 0.15 * S; for (let j = 0; j < 6; j++) { let a = rng() * TAU, px = q[0], py = q[1]; ctx.beginPath(); ctx.moveTo(px, py); for (let k = 0; k < 4; k++) { a += (rng() - 0.5) * 1.2; px += Math.cos(a) * r * 0.22; py += Math.sin(a) * r * 0.22; ctx.lineTo(px, py); } ctx.stroke(); } }
+    // soggy moop: scraps of flagging tape, lost glow sticks and a few faded tarps sunk in the mud
+    const tape = ['#ff6a1a', '#ff3a8a', '#3ae0ff', '#ffe24a', '#7aff5a'];
+    for (let i = 0; i < 140; i++) { const q = P((rng() - 0.5) * 270, (rng() - 0.5) * 230); ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(rng() * 3); ctx.fillStyle = tape[i % tape.length]; ctx.globalAlpha = 0.7; ctx.fillRect(-1.0 * S, -0.14 * S, 2.0 * S, 0.28 * S); ctx.restore(); }
+    for (let i = 0; i < 9; i++) { const q = P((rng() - 0.5) * 240, (rng() - 0.5) * 200); ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(rng() * 3); ctx.fillStyle = ['rgba(42,86,200,0.35)', 'rgba(200,60,60,0.3)', 'rgba(60,160,90,0.3)'][i % 3]; ctx.fillRect(-2.5 * S, -1.8 * S, 5 * S, 3.6 * S); ctx.restore(); }
   });
   /* ---- boardwalks: tan planks on joists, a low terrain feature so cars ride on them (grippy, no dust) ---- */
   for (const b of E.boards) {
@@ -190,6 +197,21 @@ CartWorlds.arena_mud = function (A, night) {
   // joke signs
   const jokes = ['PLAYA\nCLOSED\nFOR SOUP', 'BOARDWALK\nSPEED LIMIT\n(IGNORED)', 'MOOP\nOR\nMUD?', 'NO SWIMMING\n(IN THE\nROAD)'];
   jokes.forEach((t, i) => { const a = i / 4 * TAU + 0.4, x = Math.cos(a) * 100, z = Math.sin(a) * 100; api.sign(t, x, z, { yaw: a + Math.PI / 2, h: 1.0, y: 1.6, post: true, maxW: 2.6, style: { bg: '#ffe24a', fg: '#1a1a1a', border: '#1a1a1a' } }); });
+  // the ring: tall striped marker poles with a big flag and a work light pooling on the planks
+  const flagCols = ['#ff5a2a', '#ffd23a', '#3ad8ff', '#ff4fa8', '#7aff5a', '#b07aff', '#ff8a3a', '#38f2ff'];
+  oct.forEach((v, i) => {
+    const w = oct[(i + 1) % 8], x = (v[0] + w[0]) / 2, z = (v[1] + w[1]) / 2, px = x * 1.08, pz = z * 1.08, c = flagCols[i];   // mid-edge, just outside the ring (clear of the spurs)
+    CartScene.mesh(api, px, pz, Math.atan2(x, z), m => {
+      for (let j = 0; j < 6; j++) { m.color(j % 2 ? '#f4f0e8' : c).shine(1); m.limb(0, j * 1.3, 0, 0, (j + 1) * 1.3, 0, 0.14, 0.13, { seg: 6 }); }
+      m.color(c, 0.25).shine(1); m.push(); m.tf(0, 7.0, 0.05); m.surf(6, 2, (u, v, out) => { out[0] = u * 2.6; out[1] = -v * 1.6; out[2] = Math.sin(u * 4 + i) * 0.25 * u; }); m.surf(6, 2, (u, v, out) => { out[0] = u * 2.6; out[1] = -v * 1.6; out[2] = Math.sin(u * 4 + i) * 0.25 * u; }, { flip: true }); m.pop();
+      m.color('#ffe8b0', 0.9); m.ball(0, 8.0, 0, 0.28, { seg: 8, rings: 5 }); m.emissive(0).shine(0);
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.25, y0: 0, y1: 8 }] };
+    }, { noAO: true });
+    api.glow(px, 8.0, pz, 2.2, '#ffe0a0'); api.light(x, z, 13, i % 2 ? '#ffd8a0' : c, 0.45); E.art.push({ x: px, z: pz, r: 0.8 });
+  });
+  // warm light pools on the four landmarks so the eye finds them through the drizzle
+  for (const k in LM) api.light(LM[k][0], LM[k][1], 22, '#ffc880', 0.4);
+  api.light(0, 0, 18, '#ffd8a0', 0.35);
   // the perimeter: orange trash fence
   this.perimeter(E, [[-140, -120], [140, -120], [140, 120], [-140, 120]], 'fence');
   /* ---- objective spots ---- */

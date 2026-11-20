@@ -5,7 +5,7 @@
    plants, bubbling air stones, a brass diver's helmet, a giant spiral shell and a hollow
    log you can drive through. A mirror ball hangs over it all and throws sweeping beams.
    Its own game: SCHOOL OF GLITTER (collect mirror fish that swim behind you as a school,
-   ram a rival's school to cut it and steal every fish behind the cut).
+   ram a rival's school to cut it: steal the tail; the leader steals at most 6).
    Registers itself in CART_ARENAS / CART_ARENA_RULES / CART_OBJECTIVES / CART_ARENA_ICONS
    and CART_SECRET_LEVELS.fish. Globals AQM_*, scene state s.aqm, world state E.aqm, kart k.aqm.
    Everything here is an original design.
@@ -17,6 +17,7 @@ const AQM_C = {
   RELEASE_T: 2.6,               // seconds between castle releases
   GRAB_R: 2.9,                  // drive this close to a loose fish to collect it
   CUT_R: 2.4,                   // touch a rival's school fish this close to cut it
+  CUT_MAX: 6,                   // the LEADER's cut steals at most this many fish; the rest of the tail swims loose (catch-up)
   SPACING: 1.75,                // metres between fish in a school
   SLOW: 0.014,                  // top speed lost per fish carried (a big school is a long, slow target)
   LOCK_T: 1.5,                  // a fish that just joined a school can't be cut for this long
@@ -201,7 +202,7 @@ CART_ARENA_RULES.aquarium = {
   aiGoal(s, k, nearestRival) { return s.objective === 'shoal' && s.aqm && s.aqm.fish ? AQM_aiGoal(s, k) : null; },
   hud(s, ctx, W, H, top, left) {
     const G = s.aqm, k = s.player; if (!G || !G.fish || !k || !k.aqm) return;
-    const portrait = H > W, y = portrait ? top + 58 + 5 * 17 + 14 : top + 62, n = k.aqm.school.length;
+    const portrait = H > W, y = portrait ? top + 196 : top + 60, n = k.aqm.school.length;   // clear of the scoreboard and the banners
     if (s.state !== 'race') return;
     if (G.t < 7) BurnsUI.text(ctx, 'DRIVE THROUGH MIRROR FISH · RAM A RIVAL\'S SCHOOL TO STEAL IT', W / 2, y, portrait ? 10 : 12, '#bff4ff', { glow: '#1a8aa0' });
     else if (k.aqm.threat > 0) BurnsUI.text(ctx, 'A RIVAL IS ON YOUR TAIL!', W / 2, y, 13, Math.floor(s.time * 6) % 2 ? '#ff6a9a' : '#ffffff', { glow: '#ff2060' });
@@ -274,16 +275,18 @@ function AQM_scatter(s, k, src) {
   s.fx.burst(k.x, k.y + 1.5, k.z, 'star', 12, '#dff4ff'); s.log('shoalscatter', { k: k.id, n, by: src && src.id });
   if (k.player) { s.banner('-' + n + (thief ? ' FISH STOLEN' : ' FISH SCATTERED'), '#ff9ae0', 1.1); Sound.play('splash', { vol: 0.6, pitch: 1.2 }); }
 }
-// rival a cuts b's school at fish j: a takes j..end
+// rival a cuts b's school at fish j: a takes j..end; when a already leads it takes at most CUT_MAX and the rest scatter loose
 function AQM_cut(s, a, b, j) {
-  const Sb = b.aqm.school, n = Sb.length - j;
-  for (let i = j; i < Sb.length; i++) AQM_join(s, a, Sb[i]);
+  let lead = true; for (const q of s.karts) if (q !== a && q.aqm.school.length >= a.aqm.school.length) { lead = false; break; }
+  const Sb = b.aqm.school, n0 = Sb.length - j, n = lead ? Math.min(n0, AQM_C.CUT_MAX) : n0;
+  for (let i = j; i < j + n; i++) AQM_join(s, a, Sb[i]);
+  for (let i = j + n; i < Sb.length; i++) { const f = Sb[i], ang = s.rng() * TAU, sp = 6 + s.rng() * 5; f.owner = null; f.state = 'scatter'; f.t = 0.9; f.from = b; f.cool = 1.6; f.vx = Math.sin(ang) * sp; f.vz = Math.cos(ang) * sp; }
   Sb.length = j; b.score = j; a.aqm.cutT = 2.0; b.aqm.lostT = 3.0;
   const f = a.aqm.school[a.aqm.school.length - 1];
   s.fx.burst(f.x, f.y, f.z, 'star', 16, a.car.col); s.fx.ring(f.x, f.y, f.z, 4, '#ffffff', 0.4);
   s.log('shoalcut', { k: a.id, from: b.id, n, player: !!a.player, victim: !!b.player });
   if (a.player) { s.banner('SNIP! +' + n + ' FISH', '#7aff8a', 1.3, 'stolen from ' + b.car.name); Sound.play('kartLap', { vol: 0.7, pitch: 1.2 }); Sound.play('cartSparkle', { vol: 0.6 }); }
-  else if (b.player) { s.banner('YOUR SCHOOL WAS CUT! -' + n, '#ff6a9a', 1.4, a.car.name + ' took them'); Sound.play('powerdown', { vol: 0.6, pitch: 1.3 }); s.shakeIt(0.3); }
+  else if (b.player) { s.banner('YOUR SCHOOL WAS CUT! -' + n0, '#ff6a9a', 1.4, a.car.name + ' took them'); Sound.play('powerdown', { vol: 0.6, pitch: 1.3 }); s.shakeIt(0.3); }
   else if (n >= 4) s.banner(a.car.name + ' STEALS ' + n + ' FISH', '#ff9a3a', 1.0, null, true);
 }
 // the HUD arrow target: 1 = a loose fish (AQM_P.tx/tz), 2 = a rival's school (AQM_P.col)
@@ -315,8 +318,8 @@ function AQM_aiGoal(s, k) {
 }
 CART_OBJECTIVES.shoal = {
   name: 'SCHOOL OF GLITTER', short: 'Biggest school of mirror fish',
-  desc: 'Drive through mirror fish to grow a school behind you. Ram a rival\'s school to cut it and steal the rest; a hit steals a fish. First to 18.',
-  time: 100, goal: 18, unit: ' fish',
+  desc: 'Drive through mirror fish to grow a school behind you. Ram a rival\'s school to cut it and steal the tail (the leader steals at most 6). A hit steals a fish. First to 20.',
+  time: 120, goal: 20, unit: ' fish',
   fx: {
     init(s) {
       const C = AQM_C, I = s.W.instancer(), G = s.aqm = s.aqm || { t: 0 };

@@ -72,23 +72,25 @@ function tydHead(m) {
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_tiltyard = function (A, night) {
-  const S = TYD, E = this.base(2140, [-235, -235, 235, 235], '#6f8f48', 0);
-  const sky = Object.assign(CART_SKIES.day(), { hor: '#f6dcb4', sky: '#a4c8f0', clouds: 0.62, mtnCol: '#6a7a8a', mtnH: 4.2, fogD: 0.0019, haze: 0.28, fogMax: 0.7 });
+  const S = TYD, E = this.base(2140, [-235, -235, 235, 235], '#5e9a3a', 0);
+  const sky = Object.assign(CART_SKIES.day(), { hor: '#f4dcb8', sky: '#8cbcf0', zen: '#3a86e0', clouds: 0.62, mtnCol: '#5a7a6a', mtnH: 4.2, fogD: 0.0013, haze: 0.12, fogMax: 0.55, fog: '#c8dcec' });
   Object.assign(E, { id: 'tiltyard', arena: A, sky, tod: 'day', music: 'kart2', night: false, R: S.R });
   const api = E.api, rng = mulberry32(2140), ang = (a, r) => [Math.sin(a) * r, Math.cos(a) * r];
   CartDecor.protos(E); CartKit.kinds(E, DKP_KINDS);
   const coverA = i => (i + 0.5) / 8 * TAU, catA = i => Math.PI / 4 + i * Math.PI / 2;
   // ---- ground paint: grass mottle and flowers, the sand of the lists, the riding lanes, dirt paths, painted shields ----
   api.paint((ctx, P, sc) => {
-    for (let i = 0; i < 300; i++) { const x = (rng() - 0.5) * 460, z = (rng() - 0.5) * 460, q = P(x, z); ctx.fillStyle = rng() < 0.5 ? `rgba(60,90,30,${0.12 + rng() * 0.14})` : `rgba(160,180,80,${0.1 + rng() * 0.12})`; ctx.beginPath(); ctx.ellipse(q[0], q[1], (3 + rng() * 12) * sc, (2 + rng() * 7) * sc, rng() * 3, 0, TAU); ctx.fill(); }
-    for (let i = 0; i < 160; i++) { const x = (rng() - 0.5) * 440, z = (rng() - 0.5) * 440, q = P(x, z); ctx.fillStyle = ['rgba(255,240,120,0.6)', 'rgba(255,255,255,0.55)', 'rgba(230,110,190,0.5)'][i % 3]; ctx.beginPath(); ctx.arc(q[0], q[1], 0.35 * sc, 0, TAU); ctx.fill(); }
+    // mown stripes across the whole field (light / dark bands), then the mottle
+    for (let k = -24; k < 24; k++) { const q0 = P(k * 10, -260), q1 = P(k * 10, 260); ctx.strokeStyle = k % 2 ? 'rgba(150,200,80,0.28)' : 'rgba(40,90,30,0.22)'; ctx.lineWidth = 10 * sc; ctx.beginPath(); ctx.moveTo(q0[0], q0[1]); ctx.lineTo(q1[0], q1[1]); ctx.stroke(); }
+    for (let i = 0; i < 300; i++) { const x = (rng() - 0.5) * 460, z = (rng() - 0.5) * 460, q = P(x, z); ctx.fillStyle = rng() < 0.5 ? `rgba(40,80,24,${0.14 + rng() * 0.16})` : `rgba(160,180,80,${0.1 + rng() * 0.12})`; ctx.beginPath(); ctx.ellipse(q[0], q[1], (3 + rng() * 12) * sc, (2 + rng() * 7) * sc, rng() * 3, 0, TAU); ctx.fill(); }
+    for (let i = 0; i < 420; i++) { const x = (rng() - 0.5) * 440, z = (rng() - 0.5) * 440, q = P(x, z); ctx.fillStyle = ['rgba(255,236,90,0.85)', 'rgba(255,255,255,0.8)', 'rgba(235,90,180,0.75)', 'rgba(120,150,255,0.7)'][i % 4]; ctx.beginPath(); ctx.arc(q[0], q[1], (0.35 + (i % 3) * 0.15) * sc, 0, TAU); ctx.fill(); }
     ctx.lineCap = 'round';
-    for (let i = 0; i < 8; i++) { const a = coverA(i) + TAU / 16, p0 = P(...ang(a, 52)), p1 = P(...ang(a, S.R - 6)); ctx.strokeStyle = 'rgba(160,128,84,0.45)'; ctx.lineWidth = 7 * sc; ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke(); }
+    for (let i = 0; i < 8; i++) { const a = coverA(i) + TAU / 16, p0 = P(...ang(a, 52)), p1 = P(...ang(a, S.R - 6)); ctx.strokeStyle = 'rgba(176,130,78,0.75)'; ctx.lineWidth = 7 * sc; ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke(); }
     const c0 = P(0, 0); ctx.fillStyle = 'rgba(214,184,128,0.95)'; ctx.beginPath(); ctx.ellipse(c0[0], c0[1], 44 * sc, 84 * sc, 0, 0, TAU); ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 0.5 * sc; ctx.beginPath(); ctx.ellipse(c0[0], c0[1], 44.5 * sc, 84.5 * sc, 0, 0, TAU); ctx.stroke();
     for (const sd of [-1, 1]) { for (let z = -S.lz - 4; z < S.lz + 4; z += 2) { const q = P(sd * S.laneX, z); ctx.fillStyle = Math.floor(z / 2) % 2 ? 'rgba(236,212,160,0.8)' : 'rgba(226,198,146,0.8)'; ctx.fillRect(q[0] - 2.4 * sc, q[1] - 1 * sc, 4.8 * sc, 2 * sc); } const a = P(sd * (S.laneX + 2.6), -S.lz - 4), b = P(sd * (S.laneX + 2.6), S.lz + 4); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 0.3 * sc; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
     // big painted shields on the grass between the cover pieces
-    for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + TAU / 8, q = P(...ang(a, 88)), h = 6 * sc; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(-a); ctx.fillStyle = i % 2 ? 'rgba(30,74,184,0.55)' : 'rgba(200,16,46,0.55)'; ctx.beginPath(); ctx.moveTo(-h, -h); ctx.lineTo(h, -h); ctx.lineTo(h, 0); ctx.quadraticCurveTo(h, h, 0, h * 1.5); ctx.quadraticCurveTo(-h, h, -h, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(242,182,48,0.7)'; ctx.fillRect(-h * 0.15, -h * 0.9, h * 0.3, h * 2); ctx.fillRect(-h * 0.8, -h * 0.35, h * 1.6, h * 0.3); ctx.restore(); }
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + TAU / 16, q = P(...ang(a, i % 2 ? 150 : 88)), h = 7 * sc; ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(-a); ctx.fillStyle = (i >> 1) % 2 ? 'rgba(30,74,184,0.85)' : 'rgba(200,16,46,0.85)'; ctx.beginPath(); ctx.moveTo(-h, -h); ctx.lineTo(h, -h); ctx.lineTo(h, 0); ctx.quadraticCurveTo(h, h, 0, h * 1.5); ctx.quadraticCurveTo(-h, h, -h, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(242,182,48,0.95)'; ctx.fillRect(-h * 0.15, -h * 0.9, h * 0.3, h * 2); ctx.fillRect(-h * 0.8, -h * 0.35, h * 1.6, h * 0.3); ctx.restore(); }
   });
   // ---- THE LISTS: the tilt, grandstands both sides (with gaps to drive through), banners ----
   CartScene.mesh(api, 0, 0, 0, tydTilt, { hi: true });
@@ -112,6 +114,10 @@ CartWorlds.arena_tiltyard = function (A, night) {
   // hay bale walls and the odd oak on the outer field
   for (let i = 0; i < 8; i++) { const a = coverA(i) + TAU / 16 + 0.18, [x, z] = ang(a, 138); CartKit.put(E, 'dkp_hay', x, z, a + Math.PI / 2, '#c8102e'); E.art.push({ x, z, r: 4 }); }
   for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.5, [x, z] = ang(a, 164); CartKit.put(E, 'dkp_tree', x, z, a, ['#5f8a3a', '#4f7a34', '#6a9a40'][i % 3], { scale: 1.2 }); E.art.push({ x, z, r: 1.4 }); }
+  // Nov 19 polish: more life on the open field: oaks between the cover, hay bales round the lists, herald banners on the outer ring
+  for (let i = 0; i < 8; i++) { const a = coverA(i) + 0.2, r = 76 + (i % 2) * 8, [x, z] = ang(a, r); if (Math.abs(x) < S.standX + 12 && Math.abs(z) < 90) continue; CartKit.put(E, 'dkp_tree', x, z, a, ['#4f8a34', '#5f9a3a', '#3f7a2e'][i % 3], { scale: 1.0 + (i % 3) * 0.15 }); E.art.push({ x, z, r: 1.4 }); }
+  for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + TAU / 8, [x, z] = ang(a, 66); CartKit.put(E, 'dkp_hay', x, z, a, '#c8102e'); E.art.push({ x, z, r: 4 }); }
+  for (let i = 0; i < 16; i++) { const a = (i + 0.5) / 16 * TAU, [x, z] = ang(a, S.R - 6); CartKit.put(E, 'dkp_banner', x, z, a + Math.PI, DKP_HERALD[i % DKP_HERALD.length]); }
   // ---- the four catapults on the outer field, facing in ----
   E.tydCats = []; for (let i = 0; i < 4; i++) { const a = catA(i), [x, z] = ang(a, S.catR); CartScene.mesh(api, x, z, a + Math.PI, dkpCatapult, { hi: true, scale: 1.4 }); E.tydCats.push({ x, z, yaw: a + Math.PI, a }); E.art.push({ x, z, r: 4 }); }
   // ---- the castle wall all round, towers, the countryside beyond ----
@@ -121,7 +127,7 @@ CartWorlds.arena_tiltyard = function (A, night) {
   for (let i = 0; i < 60; i++) { const a = rng() * TAU, r = S.R + 18 + rng() * 45, x = Math.sin(a) * r, z = Math.cos(a) * r; CartKit.put(E, i % 5 === 0 ? 'dkp_house' : 'dkp_tree', x, z, rng() * TAU, ['#5f8a3a', '#4f7a34', '#6a9a40', '#8a9a3a'][i % 4], { scale: 1 + rng() * 0.5 }); }
   E.heroes.push({ type: 'greeter_f', x: -4, z: -96, yaw: 0, anim: 'cheer' }, { type: 'burnermom', x: 4, z: -96, yaw: 0, anim: 'wave' }, { type: 'sparklepony', x: -24, z: 50, yaw: Math.PI / 2, anim: 'cheer' });
   // ---- royale spots ----
-  for (const [x, z] of [[-17, -46], [17, -46], [-17, 46], [17, 46], [-17, 0], [17, 0]]) E.gifts.push({ x, z });
+  for (const [x, z] of [[-17, -46], [17, -46], [-17, 46], [17, 46], [-S.laneX, -24], [S.laneX, 24]]) E.gifts.push({ x, z });   // two in the knights' lanes
   for (let i = 0; i < 8; i++) { const [x, z] = ang(coverA(i) + TAU / 16, 96); E.gifts.push({ x, z }); }
   for (let i = 0; i < 4; i++) { const [x, z] = ang(catA(i) + 0.25, 158); E.gifts.push({ x, z }); }
   const repairs = []; for (let i = 0; i < 8; i++) repairs.push(ang(coverA(i) + TAU / 16 - 0.12, 128));
@@ -166,7 +172,7 @@ CART_ARENA_RULES.tiltyard = {
   lights(s, add) {
     const D = s.tyd; if (!D) return;
     for (const b of D.balls) if (b.live) add(b.x, b.y, b.z, 12, TYD_C.fire, 1.6, 2);
-    const g = D.drag; if (g.st === 'breath') add(g.x + Math.sin(g.yaw) * 14, 2, g.z + Math.cos(g.yaw) * 14, 26, TYD_C.fire, 2, 2);
+    const g = D.drag; if (g.st === 'breath') { add(g.x + Math.sin(g.yaw) * 14, 3, g.z + Math.cos(g.yaw) * 14, 30, TYD_C.fire, 2.4, 2); add(g.x + Math.sin(g.yaw) * 40, 2, g.z + Math.cos(g.yaw) * 40, 30, TYD_C.fire, 2, 2); }
   },
   radar(s, ctx, P, sc) {
     const q = CART_ROY_T.p;
@@ -272,7 +278,7 @@ function tydDragon(s, D, dt, live) {
     }
   } else if (g.st === 'warn') {
     g.yaw = g.y0 + cartWrap(g.a0 - g.y0) * BurnsM.smoothstep(0, 1, Math.min(1, g.t / 0.8));
-    if (g.t >= J.warn) { g.st = 'breath'; g.t = 0; }
+    if (g.t >= J.warn) { g.st = 'breath'; g.t = 0; const P = s.player, d = P ? Math.hypot(P.x - g.x, P.z - g.z) : 999; if (d < J.range + 30) { cartIxSound(s, 'flame', g.x, g.z, 1.0, 0.55); cartIxSound(s, 'cartBoom', g.x, g.z, 0.5, 0.5); } if (d < J.range + 5) s.shakeIt(0.5); }
   } else if (g.st === 'breath') {
     const u = Math.min(1, g.t / J.breath); g.yaw = g.a0 + cartWrap(g.a1 - g.a0) * u;
     if (live) for (const k of s.karts) {
@@ -323,8 +329,22 @@ function tydDraw(s, D, R, Sp, t) {
     R.bbs.bb(hx, hy, hz, 3 + g.t * 2, 3 + g.t * 2, Sp.glow, C.fire, 0.3 + 0.4 * (g.t / J.warn), true);
   } else if (g.st === 'breath') {
     const fx = Math.sin(g.yaw), fz = Math.cos(g.yaw);
-    for (let i = 1; i <= 14; i++) { const u = i / 14, r = 7 + u * (J.range - 7), y = lerp(hy, 1.2, Math.min(1, u * 1.6)), w = 2 + u * 5, f = 0.8 + 0.2 * Math.sin(t * 30 + i); R.bbs.bb(g.x + fx * r, y, g.z + fz * r, w * f, w * 1.2 * f, Sp.flame, i % 3 ? C.fire : C.gold, 0.95, true); R.bbs.bb(g.x + fx * r, y, g.z + fz * r, w * 1.8, w * 1.8, Sp.glow, C.ember, 0.35, true); }
-    for (let r = 10; r < J.range; r += 8) R.flat.flat(g.x + fx * r, 0.12, g.z + fz * r, 4 + r * 0.12, 8, g.yaw, Sp.glow, C.fire, 0.6, true);
+    // the jet: a thick roaring cone of flame from the jaws down to the ground, glowing round it, white-hot in the throat
+    for (let i = 1; i <= 18; i++) {
+      const u = i / 18, r = 6 + u * (J.range - 6), y = lerp(hy, 1.6, Math.min(1, u * 1.5)), w = 3 + u * 10, f = 0.8 + 0.25 * Math.sin(t * 30 + i * 1.7), jx = Math.sin(t * 23 + i) * 0.5 * w * 0.2, x = g.x + fx * r - fz * jx, z = g.z + fz * r + fx * jx;
+      R.bbs.bb(x, y, z, w * 2.0, w * 2.0, Sp.glow, C.ember, 0.4, true);
+      R.bbs.bb(x, y + w * 0.15, z, w * f, w * 1.3 * f, Sp.flame, i % 3 ? C.fire : C.gold, 0.95, true);
+      if (i < 10) R.bbs.bb(x, y, z, w * 0.45, w * 0.6, Sp.flame, C.gold, 1, true);
+    }
+    // the swept ground burns behind the jet: a fan of flames over the part of the cone already swept, dying down
+    const span = cartWrap(g.yaw - g.a0), n = Math.max(1, Math.ceil(Math.abs(span) / 0.09));
+    for (let j = 0; j < n; j++) {
+      const an = g.a0 + span * j / n, al = 0.35 + 0.6 * j / n, sa = Math.sin(an), ca = Math.cos(an);
+      for (let r = 12; r < J.range; r += 7) { const h = (2.2 + ((r * 7 + j * 13) % 5) * 0.45) * (0.85 + 0.15 * Math.sin(t * 11 + r + j)); R.bbs.bb(g.x + sa * r, h * 0.45, g.z + ca * r, h * 0.9, h * 1.4, Sp.flame, (j + r) % 2 ? C.fire : C.gold, al, true); }
+      R.flat.flat(g.x + sa * J.range * 0.55, 0.11, g.z + ca * J.range * 0.55, 6, J.range * 0.9, an, Sp.glow, C.ember, 0.3 * al, true);
+    }
+    for (let r = 10; r < J.range; r += 8) R.flat.flat(g.x + fx * r, 0.12, g.z + fz * r, 6 + r * 0.16, 9, g.yaw, Sp.glow, C.fire, 0.75, true);
+    if (s.fx && Math.random() < 0.6) { const r = 8 + Math.random() * (J.range - 8); s.fx.spark(g.x + fx * r, 1.5, g.z + fz * r, 3, '#ffd060', 7); }
     if (s.fx && Math.random() < 0.8) { const r = 10 + Math.random() * (J.range - 10); s.fx.fire(g.x + fx * r, 0.6, g.z + fz * r, 1.6); }
   }
 }

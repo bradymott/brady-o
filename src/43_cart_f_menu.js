@@ -339,6 +339,7 @@ class KartMenuScene {
       this.btns = [back];
     }
     this.btns.focus = 0;
+    this._builtState = this.state;   // (the prize / celebration screens play their fanfare only when first opened)
   }
   // home picks: career / royale → driver → car → the run map; quick → GRAND PRIX or TIME TRIAL; secret → the secret levels
   pick(mode) {
@@ -483,8 +484,9 @@ class KartMenuScene {
     const showStand = st === 'driver', s = this.pstand;
     if (showStand) { s.x = 0; s.y = SH; s.z = 0; s.yaw = Math.sin(this.time * 0.5) * 0.4; s.scale = drv.scale * 1.15; s.play(Math.floor(this.time / 3) % 2 ? 'cheer' : 'wave'); s.update(fdt); s.compute(); }
     // per-car colours (cached: the LED ring and the light pools take the car's light colour)
-    if (this.ledFor !== cdef.id) {
-      this.ledFor = cdef.id; const c = burnsRGBf(cdef.light), k = 2.4;
+    const celeb = st === 'prize' || st === 'complete', ledKey = celeb ? cdef.id + ':gold' : cdef.id;   // a won car stands on a gold-lit podium
+    if (this.ledFor !== ledKey) {
+      this.ledFor = ledKey; const c = burnsRGBf(celeb ? '#ffc840' : cdef.light), k = 2.4;
       this.ledCol[0] = c[0]; this.ledCol[1] = c[1]; this.ledCol[2] = c[2];
       this.ledTint[0] = c[0] * k; this.ledTint[1] = c[1] * k; this.ledTint[2] = c[2] * k; this.ledTint[3] = 1;
     }
@@ -525,6 +527,7 @@ class KartMenuScene {
     BurnsM.a34Set(this.ringB, 0, 0, 0, 0, showStand ? this.time * 0.3 : car.yaw, 0, 0, 1, 1, 1);
     R.skin(World.ring, this.ringB, 1, this.ledTint, 0, 0);
     this.drawSubject(R, showStand, 0.6, 0.6);
+    if (celeb) this.celebSkin(R);   // the Man glowing behind the podium (43_cart_hc_screens.js)
     // the car's mirror image under the smoked-glass top (mirrored geometry winds the other way)
     if (!showStand && M.nb * 12 <= this.mirB.length) {
       cartMirrorBones(car.bones, this.mirB, M.nb, SH);
@@ -537,6 +540,7 @@ class KartMenuScene {
     const S = BURNS_SPRITES.R, tm = this.time, p = this.tmp3;
     // out-of-focus playa lights far behind the stage
     for (const b of World.bokeh) R.bbs.bb(b.x, b.y, b.z, b.s, b.s, S.core, b.c, b.a * (0.75 + 0.25 * Math.sin(tm * b.w + b.ph)), true);
+    if (celeb) this.celebFx(R, S, tm, fdt);   // fireworks, stage spotlights, the Man's glow
     if (!showStand) {
       for (const L of M.lights) {
         cartLocalToWorld(car, L.x, L.y, L.z, p);

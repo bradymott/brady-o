@@ -5,8 +5,8 @@
    30 m up. Round it a ring of six CONDUCTOR PYLONS (the ring's line is painted on the floor in yellow); rock spires,
    tube-worm thickets, black smokers and basalt arches for cover; trench walls and drifting giant jellies beyond the fence.
    Its hazards (all telegraphed, all readable on a phone):
-     · ARC FENCES: two opposite stretches of the pylon ring flash yellow (a zig-zag along the line, little arcs creeping
-       in from the pylons, 1.6 s), then a WALL OF LIGHTNING runs between the pylons (1.3 s): cross it on the ground and
+     · ARC FENCES: every other stretch of the pylon ring (three of six) flashes yellow (a zig-zag along the line, little arcs creeping
+       in from the pylons, 1.6 s), then a WALL OF LIGHTNING runs between the pylons (2.0 s): cross it on the ground and
        you're zapped (9 HP). Cross somewhere else, wait, or HOP it
      · JELLY DRIFTERS: five giant jellyfish drift over the floor. One flashes and a ring closes on the floor below it
        (1.4 s), then it STINGS everything in the ring (10 HP, stunned). The dim ones are harmless: drive under them
@@ -17,7 +17,7 @@
    ============================================================ */
 const STC = {
   R: 178, coreR: 10, ringR: 92, pyN: 6, orbY: 30,
-  fence: { first: 7, period: 9, warn: 1.6, live: 1.3, band: 2.4 },
+  fence: { first: 7, period: 8.5, warn: 1.6, live: 2.0, band: 3.0 },
   jelly: { n: 5, first: 9, period: 7.6, warn: 1.4, sting: 0.35, R: 7, R0: 16, y: 7.5, sc: 2.1 },
   strike: { first: 10, period: 6.5, lock: 1.3, hold: 0.45, bolt: 0.35, r: 5.5 },
   C: { cyan: [0.25, 0.95, 1], ice: [0.7, 0.95, 1], violet: [0.62, 0.38, 1], pink: [1, 0.35, 0.85], volt: [1, 0.92, 0.3], white: [1, 1, 1], black: [0, 0, 0], snow: [0.7, 0.9, 1], warn: [1, 0.7, 0.2] },
@@ -89,8 +89,8 @@ function stcJelly(m, col, lo) {
 
 /* ---------------- the world ---------------- */
 CartWorlds.arena_stormcell = function (A, night) {
-  const S = STC, E = this.base(2143, [-245, -245, 245, 245], '#34506e', 0.02);
-  const sky = Object.assign(CART_SKIES.night(), { zen: '#010510', hor: '#0a3450', fog: '#04182a', fogD: 0.0052, haze: 0.35, sky: '#08243e', gnd: '#061420', mid: '#04263c', midK: 0.35, cityK: 0, key: '#7ac8ff', keyK: 0.5, emB: 1.9, stars: 0.2, clouds: 0, moonK: 0.3, rim: '#38f2ff' });
+  const S = STC, E = this.base(2143, [-245, -245, 245, 245], '#4a7096', 0.02);
+  const sky = Object.assign(CART_SKIES.night(), { zen: '#010510', hor: '#0a3450', fog: '#06203a', fogD: 0.0038, haze: 0.3, sky: '#08243e', gnd: '#061420', mid: '#04263c', midK: 0.35, cityK: 0, key: '#8ad0ff', keyK: 0.72, emB: 1.9, stars: 0.2, clouds: 0, moonK: 0.3, rim: '#38f2ff' });
   Object.assign(E, { id: 'stormcell', arena: A, sky, tod: 'night', music: 'kart3', night: true, R: S.R });
   const api = E.api, T = E.terrain, rng = mulberry32(2143), taken = [];
   const free = (x, z, r) => taken.every(q => Math.hypot(q[0] - x, q[1] - z) > q[2] + r);
@@ -101,7 +101,7 @@ CartWorlds.arena_stormcell = function (A, night) {
     for (let row = -36; row <= 36; row++) for (let col = -24; col <= 24; col++) {
       const cx = col * hs * 1.5, cz = row * hh * 2 + (col % 2 ? hh : 0), r = Math.hypot(cx, cz); if (r > S.R + 40) continue;
       const q = P(cx, cz), n = stcH(col * 7.1 + row * 3.3);
-      ctx.fillStyle = `rgba(${n < 0.5 ? '10,18,30' : '40,58,80'},${0.22 + n * 0.25})`; ctx.strokeStyle = 'rgba(110,190,230,0.42)';
+      ctx.fillStyle = `rgba(${n < 0.5 ? '24,40,64' : '70,100,140'},${0.18 + n * 0.22})`; ctx.strokeStyle = 'rgba(130,215,255,0.6)';
       ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU, p = P(cx + Math.cos(a) * (hs - 0.4), cz + Math.sin(a) * (hs - 0.4)); if (k) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); } ctx.closePath(); ctx.fill(); ctx.stroke(); void q;
     }
     // the cracks: jagged and branching, cyan, brightest near the core
@@ -110,7 +110,7 @@ CartWorlds.arena_stormcell = function (A, night) {
       let a = i / 16 * TAU + rng() * 0.2, r = S.coreR + 2, p = P(...stcAng(a, r));
       for (let j = 0; j < 14 && r < S.R - 4; j++) {
         const r2 = r + 6 + rng() * 9, a2 = a + (rng() - 0.5) * 0.25, q = P(...stcAng(a2, r2)), f = 1 - r / S.R;
-        ctx.strokeStyle = `rgba(56,242,255,${0.4 + f * 0.55})`; ctx.lineWidth = (0.5 + f * 1.3) * sc; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+        ctx.strokeStyle = `rgba(80,245,255,${0.55 + f * 0.45})`; ctx.lineWidth = (0.8 + f * 1.5) * sc; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
         if (rng() < 0.3) { const b = P(...stcAng(a2 + (rng() - 0.5) * 0.4, r2 + 8)); ctx.lineWidth = 0.3 * sc; ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
         r = r2; a = a2; p = q;
       }
@@ -118,13 +118,15 @@ CartWorlds.arena_stormcell = function (A, night) {
     for (let i = 0; i < 700; i++) { const a = rng() * TAU, r = rng() * (S.R + 30), q = P(...stcAng(a, r)); ctx.fillStyle = `rgba(${['56,242,255', '154,90,255', '122,255,106', '255,90,216'][i % 4]},${0.3 + rng() * 0.5})`; ctx.beginPath(); ctx.arc(q[0], q[1], (0.12 + rng() * 0.25) * sc, 0, TAU); ctx.fill(); }
     // the core's copper plaza and the fence ring line: yellow and black hazard dashes
     const c0 = P(0, 0); ctx.strokeStyle = 'rgba(200,122,58,0.55)'; ctx.lineWidth = 0.6 * sc; for (const r of [16, 22, 28]) { ctx.beginPath(); ctx.arc(c0[0], c0[1], r * sc, 0, TAU); ctx.stroke(); }
-    ctx.lineWidth = 1.4 * sc; ctx.setLineDash([3 * sc, 2.5 * sc]); ctx.strokeStyle = 'rgba(255,226,90,0.9)'; ctx.beginPath(); ctx.arc(c0[0], c0[1], S.ringR * sc, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.lineWidth = 2.0 * sc; ctx.setLineDash([3 * sc, 2.5 * sc]); ctx.strokeStyle = 'rgba(255,230,100,1)'; ctx.beginPath(); ctx.arc(c0[0], c0[1], S.ringR * sc, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
   });
   // ---- THE STORM CORE ----
   CartScene.mesh(api, 0, 0, 0, stcCore, { hi: true, noAO: true });
   api.sign('THE STORM CELL', 0, -S.coreR - 0.3, { yaw: Math.PI, h: 0.9, y: 0.4, post: false, maxW: 6, style: { bg: '#04142a', fg: '#ffffff', border: '#38f2ff' }, glow: '#38f2ff' });
   api.sign('THE STORM CELL', 0, S.coreR + 0.3, { yaw: 0, h: 0.9, y: 0.4, post: false, maxW: 6, style: { bg: '#04142a', fg: '#ffffff', border: '#38f2ff' }, glow: '#38f2ff' });
-  api.light(0, 0, 50, '#38f2ff', 0.55); api.light(0, 0, 24, '#d8f8ff', 0.35);
+  api.light(0, 0, 52, '#38f2ff', 0.8); api.light(0, 0, 26, '#d8f8ff', 0.5);
+  // broad cyan / violet / green light pools over the floor (it reads from the chase camera and from above); yellow on the fence ring
+  { const PC = ['#38f2ff', '#9a6aff', '#5affb0', '#4a8aff']; for (const [r, n] of [[60, 8], [124, 12], [158, 16]]) for (let i = 0; i < n; i++) { const [x, z] = stcAng((i + 0.5) / n * TAU, r); api.light(x, z, 30, PC[(i + n) % 4], 0.5); } for (let i = 0; i < 12; i++) { const [x, z] = stcAng((i + 0.5) / 12 * TAU, S.ringR); api.light(x, z, 16, '#ffe25a', 0.45); } }
   E.art.push({ x: 0, z: 0, r: S.coreR + 0.8 }); taken.push([0, 0, 30]);
   // ---- the six conductor pylons ----
   for (let i = 0; i < S.pyN; i++) { const [x, z] = stcPy(i); CartScene.mesh(api, x, z, i / S.pyN * TAU, stcPylon, { hi: true, noAO: true }); api.light(x, z, 16, '#38f2ff', 0.5); E.art.push({ x, z, r: 2.4 }); taken.push([x, z, 9]); }
@@ -190,7 +192,7 @@ CART_ARENA_RULES.stormcell = {
   music: 'kart3',
   onLoad(s) {
     const S = STC;
-    const D = s.stc = { t: 0, fc: -1, fst: 'idle', fu: 0, fpair: [0, 3], fmask: 0, jellies: [], strike: { st: 'idle', t: 0, next: S.strike.first, tgt: null, rx: 0, rz: 0, last: null, warned: false }, py: [] };
+    const D = s.stc = { t: 0, fc: -1, fst: 'idle', fu: 0, fpair: [0, 2, 4], fmask: 0, jellies: [], strike: { st: 'idle', t: 0, next: S.strike.first, tgt: null, rx: 0, rz: 0, last: null, warned: false }, py: [] };
     for (let i = 0; i < S.pyN; i++) { const [x, z] = stcPy(i); D.py.push({ x, z }); }
     for (let i = 0; i < S.jelly.n; i++) D.jellies.push({ i, x: 0, y: S.jelly.y, z: 0, st: 'drift', u: 0, c: -1, mask: 0, off: i * 1.55, col: STC_JF[i] });
     const G = new BurnsGroup(Math.min(64, BurnsGL.maxBones || 32)), groups = [G];
@@ -211,10 +213,10 @@ CART_ARENA_RULES.stormcell = {
       if (tt < 0) D.fst = 'idle';
       else {
         const c = Math.floor(tt / F.period), ph = tt - c * F.period, w0 = F.period - F.warn - F.live;
-        D.fpair[0] = (c * 2 + Math.floor(c / 3)) % 3; D.fpair[1] = D.fpair[0] + 3;
+        D.fpair[0] = c % 2; D.fpair[1] = D.fpair[0] + 2; D.fpair[2] = D.fpair[0] + 4;   // every other stretch of the ring (half of it) goes live
         D.fst = ph < w0 ? 'idle' : ph < w0 + F.warn ? 'warn' : 'live'; D.fu = D.fst === 'warn' ? (ph - w0) / F.warn : D.fst === 'live' ? (ph - w0 - F.warn) / F.live : 0;
         if (D.fst === 'warn' && D.fwc !== c) { D.fwc = c; if (P && !P.out) { for (const i of D.fpair) if (stcSegDist(i, P.x, P.z) < 28) { s.banner('ARC FENCE CHARGING!', '#ffe25a', 1.2, 'don\'t cross the yellow line', true); break; } } Sound.play('cartSparkle', { vol: 0.4, pitch: 0.6 }); }
-        if (D.fst === 'live' && D.fc !== c) { D.fc = c; D.fmask = 0; const near = P ? Math.min(stcSegDist(D.fpair[0], P.x, P.z), stcSegDist(D.fpair[1], P.x, P.z)) : 999; Sound.play('cartZap', { vol: near < 60 ? 0.9 : 0.3, pitch: 0.7 }); if (near < 25) s.shakeIt(0.4); }
+        if (D.fst === 'live' && D.fc !== c) { D.fc = c; D.fmask = 0; const near = P ? Math.min(stcSegDist(D.fpair[0], P.x, P.z), stcSegDist(D.fpair[1], P.x, P.z), stcSegDist(D.fpair[2], P.x, P.z)) : 999; Sound.play('cartZap', { vol: near < 60 ? 0.9 : 0.3, pitch: 0.7 }); if (near < 25) s.shakeIt(0.4); }
         if (D.fst === 'live') for (const k of s.karts) {
           if (k.out || (D.fmask & (1 << k.slot))) continue;
           let hit = false; for (const i of D.fpair) { if (stcSegDist(i, k.x, k.z) < F.band && STC_T.u > 0.03 && STC_T.u < 0.97) { hit = true; break; } }
@@ -277,7 +279,7 @@ CART_ARENA_RULES.stormcell = {
     R.bbs.bb(0, S.orbY, 0, 22, 22, Sp.glow, C.cyan, 0.5, true);
     if (stcH(Math.floor(t * 10)) > 0.45) { const a = stcH(Math.floor(t * 10) + 3) * TAU; stcBolt(R, Sp, 0, S.orbY, 0, Math.cos(a) * (S.coreR - 2), 27, Math.sin(a) * (S.coreR - 2), 5, 1.4, 0.22, C.cyan, 0.9, 3, t); }
     // the pylons' toroids glow; the fences' warning and their lightning
-    for (let i = 0; i < S.pyN; i++) { const p = D.py[i], on = D.fst !== 'idle' && (D.fpair[0] === i || D.fpair[1] === i || (D.fpair[0] + 1) % S.pyN === i || (D.fpair[1] + 1) % S.pyN === i); R.bbs.bb(p.x, 12.6, p.z, on ? 9 : 5, on ? 9 : 5, Sp.glow, on && D.fst === 'warn' ? C.volt : C.cyan, on ? 0.8 : 0.4, true); }
+    for (let i = 0; i < S.pyN; i++) { const p = D.py[i], on = D.fst !== 'idle'; R.bbs.bb(p.x, 12.6, p.z, on ? 9 : 5, on ? 9 : 5, Sp.glow, on && D.fst === 'warn' ? C.volt : C.cyan, on ? 0.8 : 0.4, true); }
     if (D.fst !== 'idle') for (const i of D.fpair) {
       const a = D.py[i], b = D.py[(i + 1) % S.pyN], mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, L = Math.hypot(b.x - a.x, b.z - a.z), yaw = Math.atan2(b.x - a.x, b.z - a.z);
       if (Math.hypot(mx - cam.x, mz - cam.z) > 260) continue;

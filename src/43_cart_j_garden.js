@@ -23,6 +23,7 @@
    ============================================================ */
 const GDN_C = { white: [1, 1, 1], black: [0, 0, 0], blue: [0.3, 0.62, 1], deep: [0.12, 0.4, 0.85], water: [0.6, 0.86, 1], aqua: [0.4, 0.9, 1], slime: [0.62, 1, 0.3], slimeHi: [0.85, 1, 0.55], green: [0.35, 0.85, 0.3], red: [1, 0.25, 0.25], hot: [1, 0.35, 0.2], warn: [1, 0.7, 0.2], yellow: [1, 0.9, 0.3], soil: [0.45, 0.32, 0.2], feather: [0.55, 0.38, 0.25] };
 const GDN_T = { at: {}, at2: {}, p: {} };
+const GDN_SLIME_RIM = [0.12, 0.32, 0.06];
 
 /* ---------------- the course ---------------- */
 // corners [x, z, radius]: the patio straight (south, heading east), the gnome rockery (east, a dogleg inward), the
@@ -373,8 +374,8 @@ const GdnMesh = {
 /* ---------------- the rules: hazards at run time ---------------- */
 const GDN_GNOME = { period: 7.5, wind: 1.1, jump: 0.7, stand: 2.2, back: 0.6, land: 2.7, body: 2.1 };
 const GDN_SLUG = { speed: 2.3, peek: 1.3, rest: 2.2, edge: 6, gap: 1.0, life: 8.0, r: 1.4, n: 30, len: 4.9, half: 2.9, scale: 1.5 };
-const GDN_SPR = { period: 6.6, warn: 1.25, sweep: 2.3, arc: 1.05, push: 9 };
-const GDN_ROBIN = { eye: 1.35, peck: 0.35, eat: 1.2, fly: 1.0, cool: 1.3, r: 3.0, zone: 46, scale: 1.25 };
+const GDN_SPR = { period: 5.8, warn: 1.25, sweep: 2.6, arc: 1.05, push: 9 };
+const GDN_ROBIN = { eye: 1.35, peck: 0.35, eat: 1.2, fly: 1.0, cool: 1.3, r: 3.4, zone: 46, scale: 1.25 };
 CART_TRACK_RULES.garden = {
   onLoad(s) {
     const E = s.E, B = E.gdn;
@@ -539,7 +540,7 @@ function gdnSprinkler(s, L, dt, racing) {
   if (st === 'sweep') {
     const ca = Math.cos(P.a), sa = Math.sin(P.a);
     // obstacles along the jet over the road (the AI's line around it, mostly so it brakes for it)
-    for (let p = P.off + 2; p < P.off + P.wl + P.wr; p += 6) cartIxObs(s, P.x + (P.nx * ca + P.tx * sa) * p / ca, P.z + (P.nz * ca + P.tz * sa) * p / ca, 1.8);
+    for (let p = P.off + 2; p < P.off + P.wl + P.wr; p += 6) cartIxObs(s, P.x + (P.nx * ca + P.tx * sa) * p / ca, P.z + (P.nz * ca + P.tz * sa) * p / ca, 1.2);
     if (racing) for (const k of s.karts) {
       if (k.out || (P.mask & (1 << k.slot))) continue;
       const along = CartKit.ds(T, P.s, k.loc.s); if (Math.abs(along) > 70) continue;
@@ -632,8 +633,9 @@ function gdnDraw(s, L, R, S, t) {
     if (!gdnNear(cam, sl.x, sl.z, 200)) continue;
     // the slime: glossy green blobs with glints
     for (const p of sl.trail) {
-      if (!p.live) continue; const a = Math.min(1, p.t * 4, (GDN_SLUG.life - p.t) * 0.8), w = GDN_SLUG.r * 2.4;
-      R.flat.flat(p.x, 0.09, p.z, w, w * 1.1, p.rot, S.splat || S.puff, C.slime, 0.75 * a, false);
+      if (!p.live) continue; const a = Math.min(1, p.t * 4, (GDN_SLUG.life - p.t) * 0.8), w = GDN_SLUG.r * 3.1;
+      R.flat.flat(p.x, 0.085, p.z, w * 1.2, w * 1.3, p.rot + 0.4, S.splat || S.puff, GDN_SLIME_RIM, 0.7 * a, false);   // a dark rim: the line reads at speed
+      R.flat.flat(p.x, 0.09, p.z, w, w * 1.1, p.rot, S.splat || S.puff, C.slime, 0.95 * a, false);
       R.flat.flat(p.x, 0.1, p.z, w * 0.6, w * 0.6, p.rot + 1, S.glow, C.slimeHi, 0.4 * a, true);
       if ((p.rot * 7 | 0) % 3 === 0) R.bbs.bb(p.x, 0.5, p.z, 0.9, 0.9, S.star, C.white, 0.6 * a * (0.5 + 0.5 * Math.sin(t * 6 + p.rot)), true, t);
     }
@@ -662,7 +664,7 @@ function gdnDraw(s, L, R, S, t) {
       // the jet: an arc of water from the nozzle to the far side of the road, spray where it lands
       const ca = Math.cos(P.a), sa = Math.sin(P.a), jx = P.nx * ca + P.tx * sa, jz = P.nz * ca + P.tz * sa, Lj = (P.off + P.wl + P.wr + 4) / ca, n = 12, a = Math.min(1, P.u * 10, (1 - P.u) * 10);
       let px = P.x, pz = P.z, py = 5.2;
-      for (let i = 1; i <= n; i++) { const u = i / n, x = P.x + jx * Lj * u, z = P.z + jz * Lj * u, y = 5.2 + Lj * 0.3 * u - (Lj * 0.3 + 4.2) * u * u, sl = Math.hypot(x - px, y - py, z - pz) + 0.8; R.bbs.streak((px + x) / 2, (py + y) / 2, (pz + z) / 2, x - px, y - py, z - pz, sl, 4.4, S.streak, C.water, 0.95 * a); R.bbs.streak((px + x) / 2, (py + y) / 2 + 0.2, (pz + z) / 2, x - px, y - py, z - pz, sl, 2.0, S.streak, C.white, 0.9 * a); R.bbs.bb(x, y, z, 2.6, 2.6, S.puff, C.white, 0.55 * a, false, t * 3 + i); if (i % 2) R.bbs.bb(x + Math.sin(t * 9 + i) * 0.8, y - 1 - ((t * 3 + i * 0.3) % 1) * 3, z, 0.6, 1.1, S.drop, C.water, 0.9 * a, false); px = x; py = y; pz = z; }
+      for (let i = 1; i <= n; i++) { const u = i / n, x = P.x + jx * Lj * u, z = P.z + jz * Lj * u, y = 5.2 + Lj * 0.3 * u - (Lj * 0.3 + 4.2) * u * u, sl = Math.hypot(x - px, y - py, z - pz) + 0.8; R.bbs.streak((px + x) / 2, (py + y) / 2, (pz + z) / 2, x - px, y - py, z - pz, sl, 7.0, S.glow, C.deep, 0.8 * a); R.bbs.streak((px + x) / 2, (py + y) / 2, (pz + z) / 2, x - px, y - py, z - pz, sl, 5.4, S.streak, C.water, 1.0 * a); R.bbs.streak((px + x) / 2, (py + y) / 2 + 0.2, (pz + z) / 2, x - px, y - py, z - pz, sl, 2.8, S.streak, C.white, 1.0 * a); R.bbs.bb(x, y, z, 3.6, 3.6, S.puff, C.white, 0.7 * a, false, t * 3 + i); if (i % 2) R.bbs.bb(x + Math.sin(t * 9 + i) * 0.8, y - 1 - ((t * 3 + i * 0.3) % 1) * 3, z, 0.6, 1.1, S.drop, C.water, 0.9 * a, false); px = x; py = y; pz = z; }
       // the wet stripe on the road right under the jet (where it's hitting now)
       { const l0 = (P.off - 2) / ca, l1 = Lj, lm = (l0 + l1) / 2; R.flat.flat(P.x + jx * lm, 0.09, P.z + jz * lm, 3.4, l1 - l0, Math.atan2(jx, jz), S.square, C.deep, 0.55 * a, false); R.flat.flat(P.x + jx * lm, 0.1, P.z + jz * lm, 1.6, l1 - l0, Math.atan2(jx, jz), S.square, C.water, 0.7 * a, false); }
       for (let i = 0; i < 4; i++) { const u = 0.35 + i * 0.2, x = P.x + jx * Lj * u, z = P.z + jz * Lj * u; R.flat.flat(x, 0.1, z, 6, 6, t * 3 + i, S.ring, C.white, 0.45 * a, false); R.flat.flat(x, 0.09, z, 5, 5, 0, S.glow, C.water, 0.3 * a, true); }

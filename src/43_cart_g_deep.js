@@ -22,9 +22,9 @@ CART_ARENAS.push({
 CartWorlds.arena_deep = function (A, night) {
   const E = this.base(2005, [-150, -150, 150, 150], '#6a8a9a', 0.02);
   const sky = Object.assign({}, BURNS_PALETTES.night, {
-    fog: '#082e54', fogD: 0.018, fogH: 0.01, fogMax: 0.96, haze: 0.65, zen: '#04182c', hor: '#0a3a62', sky: '#2e6a98', gnd: '#163444',
-    key: '#9ae0ff', keyK: 0.55, stars: 0, clouds: 0, emB: 1.6, moon: [40, 62], moonK: 0, cityK: 0, milkyway: 0, mtnH: 0, mid: '#082e54', midK: 0.5,
-    sun: [205, -20], dust: 0.25, rays: 0, rim: '#7ad8ff', exposure: 0.92, grade: [1.05, 0.1, 0.42]
+    fog: '#0c4070', fogD: 0.0115, fogH: 0.01, fogMax: 0.92, haze: 0.48, zen: '#04182c', hor: '#0a3a62', sky: '#2e6a98', gnd: '#163444',
+    key: '#9ae0ff', keyK: 0.72, stars: 0, clouds: 0, emB: 1.6, moon: [40, 62], moonK: 0, cityK: 0, milkyway: 0, mtnH: 0, mid: '#082e54', midK: 0.5,
+    sun: [205, -20], dust: 0.25, rays: 0, rim: '#7ad8ff', exposure: 1.02, grade: [1.05, 0.1, 0.42]
   });
   Object.assign(E, { id: 'deep', arena: A, sky, tod: A.tod, music: 'kart3', night: true, R: 135, vents: [], clams: [], buoys: [], anemones: [] });
   const api = E.api, T = E.terrain, rng = mulberry32(55);
@@ -38,6 +38,16 @@ CartWorlds.arena_deep = function (A, night) {
       ctx.stroke();
     }
     for (let i = 0; i < 90; i++) { const x = (rng() - 0.5) * 280, z = (rng() - 0.5) * 280, q = P(x, z); ctx.fillStyle = rng() < 0.5 ? 'rgba(30,80,70,0.22)' : 'rgba(200,220,210,0.12)'; ctx.beginPath(); ctx.ellipse(q[0], q[1], (3 + rng() * 9) * S, (2 + rng() * 5) * S, rng() * 3, 0, TAU); ctx.fill(); }
+    // sunlight caustics: soft pale patches netted with bright wavy lines
+    for (let i = 0; i < 46; i++) {
+      const x = (rng() - 0.5) * 250, z = (rng() - 0.5) * 250, q = P(x, z), r = (6 + rng() * 10) * S, g = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], r);
+      g.addColorStop(0, 'rgba(170,235,255,0.22)'); g.addColorStop(1, 'rgba(170,235,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(200,245,255,0.22)'; ctx.lineWidth = 0.25 * S;
+      for (let j = 0; j < 5; j++) { const a = rng() * TAU, rr = r * (0.3 + rng() * 0.5); ctx.beginPath(); ctx.ellipse(q[0] + Math.cos(a) * rr * 0.5, q[1] + Math.sin(a) * rr * 0.5, rr * 0.5, rr * 0.3, a, 0, TAU); ctx.stroke(); }
+    }
+    // bioluminescent specks drifting in trails across the sand
+    const bio = ['rgba(90,255,220,0.7)', 'rgba(255,110,190,0.6)', 'rgba(140,200,255,0.7)'];
+    for (let t = 0; t < 30; t++) { let x = (rng() - 0.5) * 240, z = (rng() - 0.5) * 240, a = rng() * TAU; ctx.fillStyle = bio[t % 3]; for (let k = 0; k < 22; k++) { a += (rng() - 0.5) * 0.5; x += Math.sin(a) * 1.4; z += Math.cos(a) * 1.4; const q = P(x, z); ctx.beginPath(); ctx.arc(q[0], q[1], (0.12 + rng() * 0.14) * S, 0, TAU); ctx.fill(); } }
   });
   // ---- terrain: the reef, coral mounds, low dunes ----
   const coral = ['#ff7a9a', '#ff9a5a', '#c86aff', '#ffd06a', '#5affc8', '#ff6ab0'];
@@ -152,6 +162,19 @@ CartWorlds.arena_deep = function (A, night) {
   for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + 1.1, r = 42 + (i % 3) * 18; const x = Math.sin(a) * r, z = Math.cos(a) * r; clam(x, z, a + Math.PI); }
   const signs = ['SHARK NET\n(TOTALLY SAFE)', 'DRY PLAYA\n↑ THAT WAY', 'NO MOOP\nNO FISHING', 'HYDRATE?\nDONE.'];
   signs.forEach((t, i) => { const a = i / 4 * TAU + 0.9, x = Math.sin(a) * 118, z = Math.cos(a) * 118; api.sign(t, x, z, { yaw: a + Math.PI, h: 1.1, y: 1.8, post: true, maxW: 3.2, style: { bg: ['#1a2a3a', '#ffe24a', '#2a1a3a', '#1a3a2a'][i], fg: ['#9af0ff', '#1a1a1a', '#ff9ad8', '#ffffff'][i], border: '#ffffff' }, glow: ['#5ac8ff', '#ffe24a', '#ff4fd8', '#7aff5a'][i] }); api.light(x, z, 8, ['#5ac8ff', '#ffe24a', '#ff4fd8', '#7aff5a'][i], 0.4); });
+  // light pools on the coral mounds (each glows its own colour) and a drift of moon jellies overhead (one mesh, no colliders)
+  [[-48, -80], [62, -58], [58, 66], [-66, 60], [0, -92], [96, 8], [-98, -4], [6, 96], [-30, -110], [100, -80]].forEach(([x, z], i) => api.light(x, z, 13, coral[i % coral.length], 0.42));
+  const jellies = [[-30, 30, 8], [40, -20, 9.5], [-70, -20, 7.5], [20, 60, 10], [80, 40, 8.5], [-40, -60, 9], [64, -86, 8], [-90, 70, 9.5]];
+  CartScene.mesh(api, 0, 0, 0, m => {
+    jellies.forEach(([x, z, y], i) => {
+      const c = ['#ff9ad8', '#9af0ff', '#c8a0ff', '#7affd8'][i % 4];
+      m.color(c, 0.55).shine(2); m.ellipsoid(x, y, z, 1.6, 1.1, 1.6, { seg: 12, rings: 6, phi1: Math.PI / 2 });
+      m.color('#ffffff', 0.7); m.torus(x, y, z, 1.45, 0.08, { seg: 12, tseg: 3 });
+      m.color(c, 0.35); for (let j = 0; j < 6; j++) { const a = j / 6 * TAU, tx = x + Math.sin(a) * 0.9, tz = z + Math.cos(a) * 0.9; m.limb(tx, y, tz, tx + Math.sin(a + 1) * 0.4, y - 2.6 - (j % 2) * 0.8, tz + Math.cos(a + 1) * 0.4, 0.07, 0.03, { seg: 4 }); }
+    });
+    m.emissive(0).shine(0);
+  }, { noAO: true, hi: true });
+  jellies.forEach(([x, z, y], i) => { const c = ['#ff9ad8', '#9af0ff', '#c8a0ff', '#7affd8'][i % 4]; api.glow(x, y + 0.3, z, 3.4, c); api.light(x, z, 9, c, 0.35); });
   const poly = []; for (let i = 0; i < 28; i++) { const a = i / 28 * TAU; poly.push([Math.sin(a) * 135, Math.cos(a) * 135]); }
   this.perimeter(E, poly, 'chain');
   for (const [x, z, yaw] of [[0, 112, Math.PI], [-108, 10, Math.PI / 2]]) E.spots.push(...CartScene.bleachers(api, x, z, yaw, 18, 3, rng));

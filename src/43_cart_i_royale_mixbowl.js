@@ -58,6 +58,33 @@ CartWorlds.arena_mixbowl = function (A, night) {
     m.color('#dfe4ea').shine(3); m.torus(0, 70, R + 52, 19.6, 1.0, { seg: 40, tseg: 5 }); m.roundBox(0, 76, -9.4, 16, 6, 1, 0.5);
     m.limb(0, 60, R + 52, 0, 26, R + 52, 1.2, 1.0, { seg: 12 }); m.cyl(0, 57, R + 52, 3.2, 2.2, 3.2, 20);
     m.push(); m.tf(10.2, 60, 0, 0, 0, Math.PI / 2); m.cyl(0, 0, 0, 3.2, 3.2, 1.0, 20); m.color('#ff5a8a'); m.cyl(0, 1.0, 0, 0.8, 0.8, 1.4, 10); m.pop();
+    // Nov 19 polish: real mixer detail. Chrome bands down both sides of the arm and round the column, the tilt-head hinge pin
+    const zc = (R + 52) / 2 - 6, zh = R + 52;
+    m.color('#e8ecf2').shine(4);
+    for (const sd of [-1, 1]) { m.box(sd * 12.15, 77, zc + 4, 0.5, 1.8, R + 52); m.box(sd * 12.15, 72.4, zc + 4, 0.4, 0.7, R + 52); }
+    m.roundBox(0, 8.4, 0, 34.4, 0.9, 30.4, 0.4); m.roundBox(0, 70.5, 0, 20.6, 1.2, 18.6, 0.5);
+    m.push(); m.tf(0, 72.5, -4, 0, 0, Math.PI / 2); m.cyl(0, -12.6, 0, 2.6, 2.6, 25.2, 20); m.pop();
+    // the speed lever: a dark slot plate with notches on the column's side, a chrome lever, a white knob
+    m.color('#5a3048').shine(2); m.roundBox(10.25, 66, 0, 0.5, 2.6, 10, 0.3);
+    m.color('#ffffff', 0.2).shine(1); for (let k = 0; k < 6; k++) m.box(10.55, 67.6, -3.6 + k * 1.45, 0.12, 0.7, 0.25); m.emissive(0);
+    m.color('#e8ecf2').shine(4); m.limb(10.4, 66, 1.4, 13.6, 68.8, 3.6, 0.42, 0.32, { seg: 8 }); m.color('#ffffff').shine(3); m.ball(13.8, 69, 3.8, 1.2, { seg: 12, rings: 8 });
+    // the speed dial on both sides of the head: a chrome bezel, a white face, coloured ticks, a red pointer
+    for (const sd of [-1, 1]) {
+      m.push(); m.tf(sd * 18.6, 75, zh - 3, 0, 0, -sd * Math.PI / 2, 1.6, 1.6, 1.6);
+      m.color('#e8ecf2').shine(4); m.cyl(0, 0, 0, 4.4, 4.4, 1.0, 28); m.color('#fffaf4').shine(1); m.cyl(0, 1.0, 0, 3.6, 3.6, 0.2, 24);
+      const TK = ['#3ad0ff', '#5aff7a', '#ffd23a', '#ff8a2a', '#ff3a5a'];
+      for (let k = 0; k < 10; k++) { const a = -2.2 + k / 9 * 4.4; m.color(TK[Math.floor(k / 2)], 0.3); m.box(Math.sin(a) * 2.9, 1.25, Math.cos(a) * 2.9, 0.35, 0.12, 0.9); } m.emissive(0);
+      m.color('#e8302a').shine(2); m.limb(0, 1.35, 0, Math.sin(0.9) * 2.6, 1.35, Math.cos(0.9) * 2.6, 0.28, 0.12, { seg: 5 }); m.color('#3a3a44'); m.cyl(0, 1.2, 0, 0.6, 0.6, 0.35, 10);
+      m.pop();
+    }
+    // a logo-free badge: a chrome oval with a pink enamel inset and a little whisk in relief, on the column front and both sides of the arm
+    const badge = (x, y, z, yaw) => { m.push(); m.tf(x, y, z, yaw, Math.PI / 2, 0, 1.6, 1, 1); m.color('#e8ecf2').shine(4); m.cyl(0, 0, 0, 3.4, 3.4, 0.5, 24); m.color('#ff5a9a').shine(3); m.cyl(0, 0.5, 0, 2.7, 2.7, 0.15, 22); m.pop();
+      m.push(); m.tf(x, y, z, yaw, 0, 0); m.color('#ffffff').shine(3); m.limb(0, -2, 0.75, 0, 0.2, 0.75, 0.22, 0.22, { seg: 6 }); for (let k = 0; k < 3; k++) { const w = 0.5 + k * 0.45; m.limb(-w, 0.2, 0.75, 0, 2.2, 0.75, 0.1, 0.1, { seg: 4 }); m.limb(w, 0.2, 0.75, 0, 2.2, 0.75, 0.1, 0.1, { seg: 4 }); } m.pop(); };
+    badge(0, 48, 9.05, 0); for (const sd of [-1, 1]) { badge(sd * 12.2, 80.5, zh - 34, sd * Math.PI / 2); badge(sd * 12.2, 80.5, zc - 20, sd * Math.PI / 2); }
+    // the nose: a chrome attachment-hub cap with a knurled ring and a pink screw knob
+    m.push(); m.tf(0, 72, zh + 20.6, 0, Math.PI / 2, 0); m.color('#e8ecf2').shine(4); m.cyl(0, -1, 0, 6.2, 5.6, 2.2, 28); for (let k = 0; k < 16; k++) { const a = k / 16 * TAU; m.box(Math.sin(a) * 6.0, 0.2, Math.cos(a) * 6.0, 0.5, 1.4, 0.5); } m.color('#ff5a8a').shine(2); m.cyl(0, 1.2, 0, 2.2, 1.8, 1.8, 16); m.pop();
+    // vent slots along the top of the head
+    m.color('#c86a9e').shine(1); for (let k = 0; k < 7; k++) m.roundBox(-6 + k * 2, 84.6, zh - 6, 0.7, 0.3, 7, 0.15);
     m.shine(0);
     return { cols: [{ t: 'box', x: 0, z: 0, hx: 17, hz: 15, y0: 0, y1: 76 }] };
   }, { hi: true, noAO: true });

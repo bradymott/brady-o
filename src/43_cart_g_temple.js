@@ -541,6 +541,7 @@ CartWorlds.arena_temple = function (A, night) {
     ctx.strokeStyle = 'rgba(255,230,180,0.7)'; ctx.lineWidth = 0.6 * S; ctx.setLineDash([2 * S, 2 * S]); ctx.beginPath(); ctx.arc(c[0], c[1], C.ALTAR_R * S, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = 'rgba(90,60,40,0.5)'; ctx.beginPath(); ctx.arc(c[0], c[1], 7 * S, 0, TAU); ctx.fill();
     for (const deg of C.courts) { const q = P(Math.cos(deg * D2R) * 58, Math.sin(deg * D2R) * 58); ctx.fillStyle = 'rgba(235,205,160,0.3)'; ctx.beginPath(); ctx.arc(q[0], q[1], 11 * S, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(200,90,50,0.45)'; ctx.lineWidth = 0.8 * S; ctx.beginPath(); ctx.arc(q[0], q[1], 9 * S, 0, TAU); ctx.stroke(); }
+    for (let i = 0; i < 180; i++) { const q = P((rng() - 0.5) * 240, (rng() - 0.5) * 240); ctx.fillStyle = rng() < 0.5 ? 'rgba(255,140,60,0.45)' : 'rgba(255,210,120,0.35)'; ctx.beginPath(); ctx.arc(q[0], q[1], (0.15 + rng() * 0.25) * S, 0, TAU); ctx.fill(); }   // embers in the ash
     for (let i = 0; i < 220; i++) { const x = (rng() - 0.5) * 270, z = (rng() - 0.5) * 270, q = P(x, z); ctx.fillStyle = `rgba(${rng() < 0.5 ? '90,64,50' : '230,200,170'},${0.05 + rng() * 0.08})`; ctx.beginPath(); ctx.ellipse(q[0], q[1], (2 + rng() * 7) * S, (1 + rng() * 4) * S, rng() * 3, 0, TAU); ctx.fill(); }
   });
   // the altar spire: four tapering legs, five square tiers with X braces and eaves, a glowing heart lantern, a finial
@@ -573,6 +574,8 @@ CartWorlds.arena_temple = function (A, night) {
     }
     api.light(cx, cz, 15, '#ffb060', 0.6);
   }
+  // warm light pools down the corridors (amber, rose, gold) and paper lanterns on the inner ring's posts so the maze reads from the chase cam
+  for (const [r, n, o] of [[30, 8, 0.2], [86, 14, 0.1]]) for (let i = 0; i < n; i++) { const a = i / n * TAU + o, x = Math.cos(a) * r, z = Math.sin(a) * r; if (!wallClear(x, z, 3)) continue; api.light(x, z, r < 50 ? 9 : 11, ['#ffb060', '#ff7a8a', '#ffd27a'][i % 3], 0.42); api.glow(x, 0.25, z, 2.6, ['#ffb060', '#ff7a8a', '#ffd27a'][i % 3]); }
   // orange lamps around the outer corridor, a hero or two, camps and a crowd beyond the trash fence
   for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + 0.15, x = Math.cos(a) * 113, z = Math.sin(a) * 113; CartScene.lamp(api, x, z, i % 3 ? '#ff9a3a' : '#ffd27a', true); }
   const poly = []; for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; poly.push([Math.sin(a) * C.PERIM, Math.cos(a) * C.PERIM]); }

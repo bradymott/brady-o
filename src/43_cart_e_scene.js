@@ -469,7 +469,7 @@ Object.assign(CartRaceScene.prototype, {
     if (!this.paused && this.msgs.length) this.drawBanners(ctx, W, H, top, portrait);
     if (!this.paused) cartItemsHud(this, ctx, W, H);   // incoming missiles, foam / love / frosting on screen, ride meters
     // ---- controls ----
-    if (racing && !this.paused) this.drawControls(ctx);
+    if (racing && !this.paused && !this.noControls) this.drawControls(ctx);   // (a knocked-out royale player spectates: no drive buttons)
     // pause button
     if (L && (racing || this.state === 'intro')) { ctx.save(); ctx.fillStyle = 'rgba(10,6,24,0.55)'; ctx.beginPath(); ctx.arc(L.pause.x, L.pause.y, 19, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.fillRect(L.pause.x - 6, L.pause.y - 7, 4, 14); ctx.fillRect(L.pause.x + 2, L.pause.y - 7, 4, 14); ctx.restore(); }
     if (this.state === 'done' && this.stateT > 1.5) BurnsUI.text(ctx, 'TAP TO CONTINUE', W / 2, H - Math.max(26, insets.b + 20), 13, 'rgba(255,255,255,' + (0.5 + 0.5 * Math.sin(t * 5)) + ')', {});

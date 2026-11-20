@@ -5,8 +5,9 @@
    on every bar of the bass, tosses out hearts. Drive through a heart and it joins
    your LOVE TRAIN: a conga line of hearts that dances along behind you. Drive
    through a rival's train to CUT it: every heart behind the cut spills loose
-   (grab them!). Getting hit by anything shakes half your train off. The lit piece
-   moves every few bars. First to a 10-heart train wins; at the whistle the
+   (grab them!). Getting hit by anything shakes a quarter of your train off; a train that was
+   just cut can't be cut again for a moment. The lit piece moves every few bars.
+   First to an 8-heart train wins; at the whistle the
    longest train wins.
    Registers itself: CART_OBJECTIVES.lovetrain, CART_SECRET_LEVELS.heart.
    Everything here is an original design.
@@ -44,8 +45,8 @@ function plg2Hitch(s, k, x, y, z) {
 }
 
 CART_OBJECTIVES.lovetrain = {
-  name: 'LOVE TRAIN', short: 'Longest heart train wins', time: 120, goal: 10, unit: ' ♥',
-  desc: 'The lit art piece throws hearts on the beat: grab them to grow your love train. Drive through a rival\'s train to cut it. Hits cost half. First to 10 wins.',
+  name: 'LOVE TRAIN', short: 'Longest heart train wins', time: 120, goal: 8, unit: ' ♥',
+  desc: 'The lit art piece throws hearts on the beat: grab them to grow your love train. Drive through a rival\'s train to cut it. Hits cost a quarter. First to 8 wins.',
   fx: {
     init(s) {
       const C = PLG2_C, E = s.E;
@@ -53,7 +54,7 @@ CART_OBJECTIVES.lovetrain = {
       const loose = []; for (let i = 0; i < C.POOL; i++) loose.push({ on: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, land: false, from: null, cool: 0, ph: 0, age: 0 });
       s.plg2 = { t: 0, beat: -1, bar: 0, lit: Math.floor(s.rng() * pieces.length), next: -1, pieces, loose, pulse: 0, drops: 0, cuts: 0 };
       for (const k of s.karts) {
-        k.plg2n = 0; k.score = 0; k.plg2Cut = 0; k.plg2Col = burnsRGBf(k.car.col);
+        k.plg2n = 0; k.score = 0; k.plg2Cut = 0; k.plg2Safe = 0; k.plg2Col = burnsRGBf(k.car.col);
         if (!k.plg2x) { k.plg2x = new Float32Array(C.MAX); k.plg2y = new Float32Array(C.MAX); k.plg2z = new Float32Array(C.MAX); }
       }
     },
@@ -71,7 +72,7 @@ CART_OBJECTIVES.lovetrain = {
             P.lit = n; s.banner(P.pieces[n].name + ' IS CALLING', '#ff4fd8', 1.3, 'hearts on the beat', true);
             Sound.play('cartBass', { vol: 0.35, pitch: 1.1 });
           }
-          const L = P.pieces[P.lit], live = P.loose.reduce((a, h) => a + (h.on ? 1 : 0), 0), want = live < 10 ? 3 : live < 22 ? 2 : 0;
+          const L = P.pieces[P.lit], live = P.loose.reduce((a, h) => a + (h.on ? 1 : 0), 0), want = live < 8 ? 2 : live < 20 ? 1 : 0;
           for (let i = 0; i < want; i++) {
             const h = P.loose.find(q => !q.on); if (!h) break;
             const a = s.rng() * TAU, d = L.r + 4 + s.rng() * 9, T = 1.15;
@@ -104,7 +105,7 @@ CART_OBJECTIVES.lovetrain = {
       // ---- the trains follow their cars like a conga line ----
       const fol = Math.min(1, dt * 14);
       for (const k of K) {
-        if (k.plg2Cut > 0) k.plg2Cut -= dt;
+        if (k.plg2Cut > 0) k.plg2Cut -= dt; if (k.plg2Safe > 0) k.plg2Safe -= dt;
         const n = k.plg2n; if (!n) continue;
         const back = (k.M ? k.M.len * 0.5 : 2.2) + 0.8;
         let px = k.x - Math.sin(k.yaw) * back, pz = k.z - Math.cos(k.yaw) * back;
@@ -122,10 +123,10 @@ CART_OBJECTIVES.lovetrain = {
       for (const c of K) {
         if (c.out || c.plg2Cut > 0) continue;
         for (const o of K) {
-          if (o === c || o.out || o.plg2n < 2) continue;
+          if (o === c || o.out || o.plg2n < 2 || o.plg2Safe > 0) continue;
           let at = -1; for (let j = 1; j < o.plg2n; j++) { const dx = c.x - o.plg2x[j], dz = c.z - o.plg2z[j]; if (dx * dx + dz * dz < C.CUT * C.CUT && Math.abs(c.y + 1 - o.plg2y[j]) < 3) { at = j; break; } }
           if (at < 0) continue;
-          const lost = plg2Spill(s, o, at, 5); c.plg2Cut = 0.7; P.cuts++;
+          const lost = plg2Spill(s, o, at, 5); c.plg2Cut = 1.2; o.plg2Safe = 2.5; P.cuts++;
           s.log('traincut', { k: o.id, by: c.id, n: lost, player: o.player, byPlayer: c.player });
           s.fx.burst(c.x, c.y + 1.5, c.z, 'heart', 10, '#ff4fd8'); s.fx.spark(c.x, c.y + 1, c.z, 10, '#ffffff', 7);
           if (o.player) { s.banner('TRAIN CUT!', '#ff6a6a', 1.2, '-' + lost + ' by ' + c.car.name); Sound.play('break', { vol: 0.7, pitch: 1.2 }); }
@@ -135,10 +136,10 @@ CART_OBJECTIVES.lovetrain = {
       }
       return K.some(k => k.plg2n >= G);
     },
-    // anything that hits you shakes half your train loose
+    // anything that hits you shakes a quarter of your train loose
     onHit(s, k) {
       const n = k.plg2n | 0; if (n < 1) return;
-      const lost = plg2Spill(s, k, n - Math.ceil(n / 2), 4);
+      const lost = plg2Spill(s, k, n - Math.ceil(n / 4), 4);
       s.log('trainshake', { k: k.id, n: lost });
       if (k.player && lost) s.banner('-' + lost + ' HEART' + (lost > 1 ? 'S' : ''), '#ff9ad8', 0.9, null, true);
     },
@@ -194,14 +195,18 @@ CART_OBJECTIVES.lovetrain = {
     // the train meter (hearts), the lit piece, the arrow, the beat
     hud(s, ctx, top, left) {
       const C = PLG2_C, P = s.plg2, k = s.player; if (!P || !k || s.state !== 'race') return false;
-      const W = Game.cssW, H = Game.cssH, portrait = H > W, cy = portrait ? top + 160 : top + 64, G = CART_OBJECTIVES.lovetrain.goal, n = k.plg2n | 0;
+      // portrait: a two-row card under the scoreboard, below the banners; landscape: one slim row between the timer and the banners
+      const W = Game.cssW, H = Game.cssH, portrait = H > W, G = CART_OBJECTIVES.lovetrain.goal, n = k.plg2n | 0, cx = W / 2;
+      const cw = portrait ? Math.min(260, W * 0.66) : clamp(W - 430, 300, 420), ch = portrait ? 42 : 26, cy0 = portrait ? top + 186 : top + 47, mid = cy0 + ch / 2;
       ctx.save();
-      const cw = Math.min(260, W * 0.44), cx = W / 2;
-      ctx.fillStyle = 'rgba(40,6,28,0.6)'; burnsRR(ctx, cx - cw / 2, cy - 4, cw, 42, 10); ctx.fill();
-      ctx.strokeStyle = `rgba(255,79,216,${0.4 + P.pulse * 0.5})`; ctx.lineWidth = 1.5 + P.pulse * 1.5; burnsRR(ctx, cx - cw / 2, cy - 4, cw, 42, 10); ctx.stroke();
-      BurnsUI.text(ctx, '♥ ' + P.pieces[P.lit].name + ' IS CALLING', cx, cy + 8, 11, '#ff9ad8', { ui: true });
+      ctx.fillStyle = 'rgba(40,6,28,0.6)'; burnsRR(ctx, cx - cw / 2, cy0, cw, ch, 10); ctx.fill();
+      ctx.strokeStyle = `rgba(255,79,216,${0.4 + P.pulse * 0.5})`; ctx.lineWidth = 1.5 + P.pulse * 1.5; burnsRR(ctx, cx - cw / 2, cy0, cw, ch, 10); ctx.stroke();
+      const title = '♥ ' + P.pieces[P.lit].name + ' IS CALLING';
+      ctx.font = `600 11px ${FONT_UI}`; const tw = portrait ? 0 : ctx.measureText(title).width;
+      if (portrait) BurnsUI.text(ctx, title, cx, cy0 + 12, 11, '#ff9ad8', { ui: true });
+      else BurnsUI.text(ctx, title, cx - cw / 2 + 12, mid, 11, '#ff9ad8', { ui: true, align: 'left' });
       // one little heart per car of your train, the goal marked
-      const hs = Math.min(15, (cw - 24) / G), x0 = cx - (G - 1) * hs / 2, y = cy + 25;
+      const room = portrait ? cw - 24 : cw - tw - 40, hs = Math.min(15, room / G), x0 = portrait ? cx - (G - 1) * hs / 2 : cx + cw / 2 - 14 - (G - 1) * hs, y = portrait ? cy0 + 29 : mid + 1;
       for (let i = 0; i < G; i++) {
         const on = i < n, sz = (on ? 5.4 : 4.2) * (on && i === n - 1 ? 1 + P.pulse * 0.25 : 1), x = x0 + i * hs;
         ctx.fillStyle = on ? '#ff2a7a' : 'rgba(255,255,255,0.18)';
