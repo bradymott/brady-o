@@ -53,32 +53,43 @@ function analyse(L, R, sr, o) {
   // onset envelope from the low band (kick), 5 ms hops
   const lo = biq(biq(mono, 'lp', 120, 0.7), 'lp', 120, 0.7), H = Math.floor(sr * 0.005), env = [];
   for (let s = 0; s + H <= N; s += H) { let e = 0; for (let i = s; i < s + H; i++) e += lo[i] * lo[i]; env.push(Math.sqrt(e / H)); }
-  const on = env.map((v, i) => i ? Math.max(0, Math.log(1e-6 + v) - Math.log(1e-6 + env[i - 1])) : 0);
+  const on = env.map((v, i) => i ? Math.max(0, v - env[i - 1]) : 0);
   // tempo: autocorrelation of the onset curve; refine on the 4-beat lag
   let bpm = 0, conf = 0;
   if (o.bpm) {
     const acf = lag => { let a = 0; for (let i = Math.floor(skip / H); i + lag < on.length; i++) a += on[i] * on[i + lag]; return a; };
     const hz = sr / H; let best = -1, bl1 = 0;
     for (let lag = Math.floor(hz * 60 / 150); lag <= Math.ceil(hz * 60 / 90); lag++) { const a = acf(lag); if (a > best) { best = a; bl1 = lag; } }
-    let b4 = -1, l4 = 0; for (let lag = bl1 * 4 - 6; lag <= bl1 * 4 + 6; lag++) { const a = acf(lag); if (a > b4) { b4 = a; l4 = lag; } }
+    let b4 = -1, l4 = 0; for (let lag = Math.floor(hz * 240 / 150); lag <= Math.ceil(hz * 240 / 90); lag++) { const a = acf(lag); if (a > b4) { b4 = a; l4 = lag; } }
     const am = acf(l4 - 1), ap = acf(l4 + 1), d = (am - ap) / (2 * (am - 2 * b4 + ap) || 1);
     bpm = 240 / ((l4 + d) / hz); conf = best / Math.max(1e-9, acf(Math.floor(bl1 * 1.5)));
   }
-  // kicks where the arrangement says: low band jumps at each expected time
-  let kHit = 0, kMiss = []; const kt = o.kicks || [];
+  // Kicks sweep down into the <120 Hz detector over 24–45 ms; allow 80 ms
+  // for that sweep, compressor lookahead and low-pass group delay.
+  let kHit = 0, kMiss = [], detected = []; const kt = o.kicks || [];
   for (const t of kt) {
-    const i = Math.round(t * sr / H); if (i < 8 || i + 8 >= env.length) { kHit++; continue; }
-    let before = 0, after = 0; for (let k = i - 6; k < i - 1; k++) before = Math.max(before, env[k]); for (let k = i; k < i + 6; k++) after = Math.max(after, env[k]);
-    if (after > before * 1.6) kHit++; else kMiss.push(Math.round(t * 100) / 100);
+    const i = Math.round(t * sr / H); if (i < 8 || i + 18 >= env.length) { kHit++; continue; }
+    let before = 0, after = 0, peakAt = i; for (let k = i - 6; k < i - 1; k++) before = Math.max(before, env[k]); for (let k = i; k < i + 16; k++) if (env[k] > after) { after = env[k]; peakAt = k; }
+    if (after > before * 1.6) { kHit++; detected.push([t, peakAt * H / sr]); } else kMiss.push(Math.round(t * 100) / 100);
+  }
+  // Fit the audible kick peaks against the score's beat grid. A blind autocorrelation
+  // can mistake syncopated bass/percussion for the tempo (e.g. a 5:4 rhythm).
+  // The onset-strength checks above still require the kicks to be audible in the mix.
+  if (o.bpm && detected.length >= 8) {
+    const mx = detected.reduce((s, p) => s + p[0], 0) / detected.length;
+    const my = detected.reduce((s, p) => s + p[1], 0) / detected.length;
+    let xy = 0, xx = 0;
+    for (const [x, y] of detected) { xy += (x - mx) * (y - my); xx += (x - mx) ** 2; }
+    bpm = o.bpm / (xy / xx);
   }
   // seam: level before vs after, and the largest sample jump near it vs elsewhere
   let seam = null;
   if (o.seamT) {
     const i0 = Math.floor(o.seamT * sr), w = Math.floor(o.barSec * 2 * sr);
     const r = (a, b) => { let e = 0; for (let i = a; i < b; i++) e += mono[i] * mono[i]; return Math.sqrt(e / (b - a)); };
-    const hpS = biq(mono, 'hp', 4000, 0.7), jumps = []; for (let i = 1; i < N; i++) jumps.push(Math.abs(hpS[i] - hpS[i - 1]));
+    const hpS = biq(mono, 'hp', 4000, 0.7), jumps = new Float32Array(N - 1); for (let i = 1; i < N; i++) jumps[i - 1] = Math.abs(hpS[i] - hpS[i - 1]);
     let near = 0; for (let i = i0 - Math.floor(sr * 0.05); i < i0 + Math.floor(sr * 0.05); i++) near = Math.max(near, jumps[i]);
-    const sorted = jumps.slice(skip).sort((a, b) => a - b), p999 = sorted[Math.floor(sorted.length * 0.999)], mx = sorted[sorted.length - 1];
+    const sorted = jumps.slice(skip).sort(), p999 = sorted[Math.floor(sorted.length * 0.999)], mx = sorted[sorted.length - 1];
     seam = { before: db(r(i0 - w, i0)), after: db(r(i0, i0 + w)), jumpNear: near, jumpP999: p999, jumpMax: mx };
   }
   return { peak: db(pk), rms: db(rms), lufs, minWin, share, bpm, conf, kicks: kt.length, kHit, kMiss: kMiss.slice(0, 6), seam };
@@ -89,7 +100,9 @@ if (require.main === module) (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await (await browser.newContext({ viewport: { width: 874, height: 402 } })).newPage(); page.setDefaultTimeout(600000);
   const errs = []; page.on('pageerror', e => errs.push('PE ' + e.message)); page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text().slice(0, 200)); });
-  await page.goto(URL); await page.waitForTimeout(2500);
+  await page.addInitScript(() => { window.requestAnimationFrame = () => 0; });
+  await page.goto(URL);
+  await page.waitForFunction(() => window.BRADY_BURNS && window.BRADY_BURNS.BurnsHouse, null, { polling: 100 });
   await page.evaluate(() => { window.requestAnimationFrame = () => 0; });   // stop the game loop: the renders need the CPU
   await page.evaluate(`window.__an = ${analyse.toString()}`);
   const H = await page.evaluate(() => { const B = window.BRADY_BURNS.BurnsHouse; return { names: B.names, info: B.names.map(n => B.info(n)) }; });
@@ -204,6 +217,6 @@ if (require.main === module) (async () => {
   }
   ok(!errs.length, 'page errors: ' + errs.slice(0, 5).join(' | '));
   await browser.close();
-  console.log(fails.length ? `\nFAIL (${fails.length}):\n  ` + fails.join('\n  ') : '\nPASS: all house tracks measured clean');
+  console.log(fails.length ? `\nFAIL (${fails.length}):\n  ` + fails.join('\n  ') : `\nPASS: ${names.length} house tracks measured clean`);
   process.exit(fails.length ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

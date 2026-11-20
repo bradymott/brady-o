@@ -238,12 +238,12 @@ const BurnsHouse = (() => {
     for (const o of b.osc) o.o.frequency.setTargetAtTime(f * o.k, t, 0.004);
     const A = b.amp.gain;
     A.setTargetAtTime(v, t, 0.0025); A.setTargetAtTime(v * p.sus, t + 0.025, p.dcy); A.setTargetAtTime(0, t + dur, 0.014);
-    if (p.body) { const F = b.lp.frequency; F.setTargetAtTime(Math.min(8000, p.cut * (1 + p.fe * v / I.lvl.bass)), t, 0.002); F.setTargetAtTime(p.cut, t + 0.006, p.fd); }
+    if (p.body) { const F = b.lp.frequency; F.setTargetAtTime(Math.min(8000, p.cut * (1 + p.fe * v / Math.max(1e-6, I.lvl.bass))), t, 0.002); F.setTargetAtTime(p.cut, t + 0.006, p.fd); }
   }
 
   /* ---------------- compile a track ---------------- */
-  const LV = { kick: 0.85, clap: 0.5, snr: 0.4, ch: 0.44, oh: 0.34, shk: 0.32, rim: 0.3, ride: 0.24, cgh: 0.36, cgl: 0.36, bgo: 0.28, perc: 0.22,
-    bass: 0.42, pad: 0.24, stab: 0.3, keys: 0.42, motif: 0.26 };
+  const LV = { kick: 0.64, clap: 0.60, snr: 0.4, ch: 0.55, oh: 0.43, shk: 0.32, rim: 0.3, ride: 0.24, cgh: 0.36, cgl: 0.36, bgo: 0.28, perc: 0.22,
+    bass: 0.24, pad: 0.32, stab: 0.4, keys: 0.52, motif: 0.26 };
   const MASTER = 0.8;   // keeps the soundtrack at the old music's loudness (~-19 LUFS), so the SFX balance is unchanged
   const DRUMS = ['kick', 'clap', 'snr', 'ch', 'oh', 'shk', 'rim', 'ride', 'cgh', 'cgl', 'bgo', 'perc'];
   function compile(name, D) {
@@ -294,18 +294,22 @@ const BurnsHouse = (() => {
     I.lp = c.createBiquadFilter(); I.lp.type = 'lowpass'; I.lp.Q.value = 0.9; I.lp.frequency.value = 17000;
     I.duck.connect(I.lp); I.lp.connect(I.trim);
     const musRev = G(T.D.rev == null ? 0.28 : T.D.rev); I.lp.connect(musRev); musRev.connect(io.rev);
-    // pads: stereo merger -> slow-moving low-pass -> duck
+    // Leave the sub range to the kick and bass; chord roots otherwise mask the beat.
+    I.harmonyHP = c.createBiquadFilter(); I.harmonyHP.type = 'highpass';
+    I.harmonyHP.frequency.value = 180; I.harmonyHP.Q.value = 0.707;
+    I.harmonyHP.connect(I.duck); nodes.push(I.harmonyHP);
+    // pads: stereo merger -> slow-moving low-pass -> high-pass -> duck
     const P = T.D.pad || {};
     I.padMerge = c.createChannelMerger(2);
     I.padLP = c.createBiquadFilter(); I.padLP.type = 'lowpass'; I.padLP.Q.value = P.q || 0.8; I.padLP.frequency.value = P.cut || 1200;
-    I.padMerge.connect(I.padLP); I.padLP.connect(I.duck);
+    I.padMerge.connect(I.padLP); I.padLP.connect(I.harmonyHP);
     const lfo = c.createOscillator(), lfoG = G((P.cut || 1200) * (P.lfoAmt == null ? 0.35 : P.lfoAmt));
     lfo.frequency.value = P.lfo || 0.06; lfo.connect(lfoG); lfoG.connect(I.padLP.frequency);
-    I.stabBus = G(1); I.stabBus.connect(I.duck);
+    I.stabBus = G(1); I.stabBus.connect(I.harmonyHP);
     const stabDly = G(T.D.stab ? (T.D.stab.dly == null ? 0.3 : T.D.stab.dly) : 0); I.stabBus.connect(stabDly); stabDly.connect(io.dly);
-    I.keysBus = G(1); I.keysBus.connect(I.duck);
+    I.keysBus = G(1); I.keysBus.connect(I.harmonyHP);
     const keysDly = G(T.D.keys ? (T.D.keys.dly || 0.12) : 0); I.keysBus.connect(keysDly); keysDly.connect(io.dly);
-    I.motifBus = G(1); I.motifBus.connect(I.duck);
+    I.motifBus = G(1); I.motifBus.connect(I.harmonyHP);
     const motifDly = G(0.32); I.motifBus.connect(motifDly); motifDly.connect(io.dly);
     I.fxBus = G(1); I.fxBus.connect(I.trim); const fxRev = G(0.35); I.fxBus.connect(fxRev); fxRev.connect(io.rev);
     // the bass: one persistent mono voice
@@ -318,7 +322,7 @@ const BurnsHouse = (() => {
       const o1 = c.createOscillator(); o1.type = bp.w; o1.connect(lp); osc.push({ o: o1, k: 1 });
       if (bp.reese) { const o2 = c.createOscillator(); o2.type = bp.w; o2.detune.value = bp.reese; o1.detune.value = -bp.reese; o2.connect(lp); osc.push({ o: o2, k: 1 }); }
     }
-    amp.connect(I.duck);
+    I.bassDuck = G(1); amp.connect(I.bassDuck); I.bassDuck.connect(I.duck); nodes.push(I.bassDuck);
     I.bass = { p: bp, osc, amp, lp };
     const t0 = c.currentTime;
     for (const o of osc) { o.o.frequency.value = 55; o.o.start(t0); I.srcs.push(o.o); }
@@ -374,6 +378,9 @@ const BurnsHouse = (() => {
       const v = (+c / 9) * lvlOf(T, S, layer) * (base === 'kick' || base === 'clap' ? 1 : 0.9 + 0.2 * I.rnd());
       if (base === 'kick') {
         hit(I, I.B.kick[T.kick], t, v, I.trim);
+        // Keep the bass out of the kick transient, then let the note breathe back in.
+        I.bassDuck.gain.setTargetAtTime(0.12, t, 0.002);
+        I.bassDuck.gain.setTargetAtTime(1, t + 0.075, sd * 0.8);
         if (T.pump) { const g = I.duck.gain; g.setTargetAtTime(1 - T.pump, t, 0.0025); g.setTargetAtTime(1, t + 0.03, sd * 1.25); }
       } else hit(I, I.B[base], t + sw + (base === 'clap' || base === 'snr' ? 0 : jit()), v, I.drumBus);
     }
@@ -555,7 +562,7 @@ const BurnsHouse = (() => {
       bass2: { tone: 'rolling', pat: 'r.rr.rr.r.rr.rof', lo: 30 },
       pad: { cut: 800, center: 61, a: 1.0, rel: 1.4, lfo: 0.04 },
       stab: { pat: '...7......6..5..', cut: 900, fe: 3, fd: 0.06, dcy: 0.09, gate: 0.12, center: 64, dly: 0.45, q: 2.5 },
-      loop: [[16, 'kick clap ch oh bass pad:.7', [1500, 4500]], [16, 'kick clap ch oh shk rim bass2 pad stab', [4500, 7000]],
+      loop: [[16, 'kick clap ch oh bass pad:.9', [1500, 4500]], [16, 'kick clap ch oh shk rim bass2 pad stab', [4500, 7000]],
         [8, 'ch:.6 shk pad stab', [2000, 900], 'swell'], [8, 'kick ch oh shk bass pad stab', [900, 6000], 'riser roll gap'],
         [16, 'kick clap ch oh shk ride rim bass2 pad stab', [8000, 8000], 'crash boom'], [8, 'kick clap ch oh bass pad', [6000, 1500]]]
     });
@@ -610,6 +617,7 @@ const BurnsHouse = (() => {
     });
     // ---------- 5 Costco Soul Trading Co.: jazzy house ----------
     H.add('bm_costco', {
+      lvl: { bass: 0.12 },
       title: 'Bulk Aisle Soul', key: 'C major', mood: 'jazzy house, playful but tasteful', bpm: 120, kick: 'deep', pump: 0.4, sw: 0.11,
       prog: 'Cmaj9 Am9 Dm9 G13',
       drums: { kick: K4, clap: CL, ch: CHS, oh: OH, shk: SHK, rim: '..4.......4..4..' },
@@ -623,13 +631,14 @@ const BurnsHouse = (() => {
     });
     // ---------- 6 The Art Car Hunt: tech house with fire ----------
     H.add('bm_artcar', {
+      lvl: { kick: 0.48, bass: 0.18, pad: 0.45, stab: 0.60 },
       title: 'Octopus Ink', key: 'F minor', mood: 'tech house, percussive, hot', bpm: 126, kick: 'tech', pump: 0.48, sw: 0.06,
       prog: 'Fm7 Fm7 Fm7 Fm7 Dbmaj7 Dbmaj7 Eb Eb',
       drums: { kick: K4, clap: CL, ch: CH16, oh: OH, shk: SHK16, ride: '..5...5...5...5.', cgh: '..5..4....5..4..', perc: '...4..4....4..4.', rim: '.3...3.3...3...3' },
       bass: { tone: 'tech', pat: '..r..r.r..r..rr.', lo: 29 },
       stab: { pat: '...6....7.......', cut: 800, fe: 3.5, fd: 0.05, dcy: 0.07, gate: 0.1, center: 62, dly: 0.4, q: 3 },
       pad: { cut: 700, center: 60, a: 1, rel: 1.2 },
-      loop: [[16, 'kick clap ch oh rim bass', [2500, 6000]], [16, 'kick clap ch oh shk cgh perc rim bass stab', [6000, 8000]],
+      loop: [[16, 'kick clap ch oh rim bass pad:.65 stab:.5', [2500, 6000]], [16, 'kick clap ch oh shk cgh perc rim bass stab', [6000, 8000]],
         [8, 'ch:.7 shk cgh perc pad stab', [2500, 1200]], [8, 'kick ch oh shk perc bass stab', [1200, 8000], 'riser roll gap'],
         [16, 'kick clap ch oh shk ride cgh perc rim bass stab pad:.6', [9000, 9000], 'crash boom'], [8, 'kick clap ch oh rim bass', [8000, 2500]]]
     });
@@ -649,6 +658,7 @@ const BurnsHouse = (() => {
     });
     // ---------- 8 Hell Station: tension ----------
     H.add('bm_hell', {
+      lvl: { kick: 0.48, bass: 0.18, pad: 0.45, stab: 0.60 },
       title: 'Running on Fumes', key: 'E phrygian', mood: 'dark tech house, metallic tension', bpm: 126, kick: 'tech', pump: 0.5, sw: 0.04,
       prog: 'Em7 Em7 Fmaj7 Em7',
       drums: { kick: K4, clap: CL, ch: CH16, oh: OH, ride: '..5...5...5...5.', perc: '.5..5...5..5.5..', rim: '..3..3..3..3.3..', snr: '............4...' },
@@ -661,6 +671,7 @@ const BurnsHouse = (() => {
     });
     // ---------- 9 Deep Playa Showdown: dust storm ----------
     H.add('bm_deep', {
+      lvl: { kick: 0.48, bass: 0.18, pad: 0.45, stab: 0.60 },
       title: 'Whiteout', key: 'B minor', mood: 'deep, dubby, hypnotic in the dust', bpm: 124, kick: 'punch', pump: 0.48, sw: 0.06,
       prog: 'Bm9 Bm9 Gmaj9 Gmaj9 Em9 Em9 F#7sus4 F#7sus4',
       drums: { kick: K4, clap: CL, ch: CH16, oh: OH, shk: SHK16, rim: '..3...3....3..3.' },
@@ -673,6 +684,7 @@ const BurnsHouse = (() => {
     });
     // ---------- 10 The Man Pavilion: the approach ----------
     H.add('bm_pavilion', {
+      lvl: { kick: 0.48, bass: 0.18, pad: 0.45, stab: 0.60 },
       title: 'The Approach', key: 'C minor', mood: 'melodic, building tension', bpm: 124, kick: 'punch', pump: 0.45, sw: 0.04,
       prog: 'Cm9 Cm9 Abmaj7 Abmaj7 Fm9 Fm9 G7sus4 G7sus4',
       drums: { kick: K4, clap: CL, ch: CH16, oh: OH, ride: '..5...5...5...5.', snr: '............4.3.' },
@@ -685,6 +697,7 @@ const BurnsHouse = (() => {
     });
     // ---------- Boss fights (worlds 3, 4, 8) ----------
     H.add('bm_boss', {
+      lvl: { kick: 0.48, bass: 0.18, pad: 0.45, stab: 0.60 },
       title: 'Showdown', key: 'A minor', mood: 'tense, driving tech house', bpm: 126, kick: 'tech', pump: 0.52, sw: 0.03,
       prog: 'Am7 Am7 Bbmaj7 Am7',
       drums: { kick: K4, clap: CL, ch: CH16, oh: OH, ride: '..6...6...6...6.', snr: '..........4..4.4', perc: '.4..4..4..4..4..' },
@@ -718,6 +731,7 @@ const BurnsHouse = (() => {
     });
     // ---------- The Burn: the big release ----------
     H.add('bm_burn', {
+      lvl: { bass: 0.05, kick: 0.72 },
       title: 'The Burn', key: 'D major', mood: 'euphoric melodic house, the big release', bpm: 124, kick: 'punch', pump: 0.5, sw: 0.04, trim: 1.05,
       prog: 'Bm9 Gmaj9 Dmaj9 A6',
       drums: { kick: K4, clap: CL, ch: CH16, oh: OH, shk: SHK16, ride: '..5...5...5...5.' },
@@ -732,6 +746,7 @@ const BurnsHouse = (() => {
     });
     // ---------- 11 Sound Camp Crawl (also the camp sandbox) ----------
     H.add('bm_soundcamp', {
+      lvl: { kick: 0.48, bass: 0.18, pad: 0.45, stab: 0.60 },
       title: 'Esplanade Peak Hour', key: 'A minor', mood: 'tech house, chunky and bouncy', bpm: 126, kick: 'tech', pump: 0.5, sw: 0.08,
       prog: 'Am7 Am7 Am7 Am7 Fmaj7 Fmaj7 G6 G6',
       drums: { kick: K4, clap: CL, ch: CH16, oh: OH, shk: SHK16, ride: '..5...5...5...5.', perc: '...4..4.....4...', rim: '.3...3.3.3...3..' },
@@ -755,6 +770,7 @@ const BurnsHouse = (() => {
     });
     // ---------- 13 The Workshops: organic, playful ----------
     H.add('bm_workshops', {
+      lvl: { bass: 0.12 },
       title: 'Contact Improv', key: 'D dorian', mood: 'organic house, light and curious', bpm: 118, kick: 'soft', pump: 0.35, sw: 0.13,
       prog: 'Dm9 Dm9 G9 G9',
       drums: { kick: K4, clap: CL, shk: SHK16, cgh: '..5..4.5..4..5..', cgl: '5.....5...5.....', bgo: '...4.....4..4...', perc: '......3.......3.', oh: OH },
@@ -779,6 +795,7 @@ const BurnsHouse = (() => {
     });
     // ---------- 15 Exodus (and the chase) ----------
     H.add('bm_exodus', {
+      lvl: { bass: 0.12, kick: 0.68 },
       title: 'Exodus', key: 'E major', mood: 'balearic house, sleepy sunrise highway', bpm: 116, kick: 'soft', pump: 0.35, sw: 0.12,
       prog: 'Emaj9 Emaj9 C#m9 C#m9 Amaj9 Amaj9 B6 B6',
       drums: { kick: K4, clap: CL, ch: CHS, oh: OH, shk: SHK, cgh: '......4.......3.' },
@@ -790,6 +807,7 @@ const BurnsHouse = (() => {
         [8, 'pad keys motif shk', [3000, 1500]], [16, 'kick clap ch oh shk cgh bass pad keys motif', [8000, 8000], 'crash'], [8, 'kick ch shk bass pad keys', [6000, 2000]]]
     });
     H.add('bm_chase', {
+      lvl: { kick: 0.48, bass: 0.18, pad: 0.45, stab: 0.60 },
       title: 'Lights in the Mirror', key: 'F minor', mood: 'urgent, driving tension', bpm: 128, kick: 'tech', pump: 0.52, sw: 0.03,
       prog: 'Fm7 Fm7 Gbmaj7 Fm7',
       drums: { kick: K4, clap: CL, ch: CH16, oh: OH, ride: '..6...6...6...6.', perc: '.4..4..4..4..4..', snr: '..........4..4.4' },
@@ -822,6 +840,7 @@ const BurnsHouse = (() => {
     });
     // ---------- 17 Root Society (home): day and night ----------
     H.add('bm_root', {
+      lvl: { bass: 0.12 },
       title: 'Root Society', key: 'D minor', mood: 'melodic organic house, home', bpm: 120, kick: 'deep', pump: 0.42, sw: 0.1,
       prog: 'Dm9 Dm9 Bbmaj9 Bbmaj9 Gm9 Gm9 A7sus4 A7sus4',
       drums: { kick: K4, clap: CL, ch: CHS, oh: OH, shk: SHK16, cgh: '..5..4.5..4..5..', cgl: '5.....5....5....', bgo: '.....4.......4..' },
