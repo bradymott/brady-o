@@ -1,4 +1,6 @@
 # Brady Goes to Burning Man: handoff for its agent
+> Latest: [20 November finishing release and validation](BURNING_MAN_FINISH.md). Read that first; the older PR/roadmap notes below are historical context.
+
 
 Read [README.md](README.md) first: owner, ownership rules, appearance rules, deploy.
 

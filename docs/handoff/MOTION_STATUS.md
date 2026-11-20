@@ -1,3 +1,5 @@
+> Superseded by the completed [20 November finishing release](BURNING_MAN_FINISH.md). The WIP notes below are retained as history.
+
 # Realistic Brady: motion fixes (WIP, branch burning-man/brady-motion)
 
 Stopped mid-task (Brady closing the laptop). Nothing pushed. Nothing below has been seen running in the game yet.

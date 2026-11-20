@@ -1,3 +1,5 @@
+> Superseded by the completed [20 November finishing release](BURNING_MAN_FINISH.md). The WIP notes below are retained as history.
+
 # Burning Man: house soundtrack + new icon — status (WIP, Nov 11 2026)
 
 Branch `burning-man/house-music-icon` (local only, not pushed, not merged, not deployed).

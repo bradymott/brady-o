@@ -1,5 +1,5 @@
 // Motion verification for the realistic Brady: gait strips (walk 3 m/s, jog 7.6, RUN 10.6; behind + side) and the
-// formerly-cartoon player states (double jump, pound, spin, bike, e-bike). Deterministic frames via Playwright's clock.
+// formerly-cartoon player states (double jump, pound, spin, bike, e-bike). Fixed simulation and animation steps.
 //   BRADY_DIST=<dist> node motion_shots.js <outDir> <tag> [strips|states|all]
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs'), http = require('http');
@@ -72,12 +72,15 @@ const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/6
       await step(page, 1200);
       // bike (the city's BIKE button summons the e-bike when the item is owned; the yellow bike otherwise)
       for (const kind of ['ebike', 'bike']) {
-        await page.evaluate(kind => { const s = window.BRADY_BURNS.debug.scene(); s.settingsRide = kind; const sv = window.BRADY_BURNS.BurnsSave.get(); if (sv.settings) sv.settings.ride = kind; s.inp.bike = true; }, kind);
+        await page.evaluate(kind => { const s = window.BRADY_BURNS.debug.scene(); s.settingsRide = kind; const sv = window.BRADY_BURNS.BurnsSave.get(); if (sv.settings) sv.settings.ride = kind; }, kind);
+        await step(page, 100); // let the city apply the selected bike before the mount input
+        await page.evaluate(() => { window.BRADY_BURNS.debug.scene().inp.bike = true; });
         await step(page, 400);
         await page.evaluate(() => { window.BRADY_BURNS.debug.scene().__mz = 1; }); await step(page, 1200);
         await shot(kind + '_ride');
         const v = await page.evaluate(() => { const s = window.BRADY_BURNS.debug.scene(), p = s.player; const r = { vehicle: !!p.vehicle, ebike: !!(p.vehicle && p.vehicle.ebike) }; s.__mz = 0; s.inp.bike = true; return r; });
         log[kind + '_vehicle_' + W] = v;
+        if (v.ebike !== (kind === 'ebike')) errs.push(kind + ' selection did not apply');
         await step(page, 600);
       }
       await ctx.close();
@@ -86,4 +89,6 @@ const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/6
   await browser.close(); srv.close();
   fs.writeFileSync(path.join(out, tag + '_log.json'), JSON.stringify(log, null, 1));
   console.log(JSON.stringify(log)); console.log(errs.length ? 'ERRORS\n' + errs.slice(0, 8).join('\n') : 'no page errors');
+  const bad = tag !== 'before' && Object.values(log).some(v => v.skinned === false || v.vehicle === false);
+  if (bad || errs.length) { console.error('FAIL: missing realistic character or vehicle'); process.exitCode = 1; }
 })().catch(e => { console.error(e); process.exit(1); });
