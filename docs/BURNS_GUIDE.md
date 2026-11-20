@@ -576,6 +576,8 @@ Stage 2 of the glTF plan (`docs/ART_CART_GLTF_PILOT.md` §1): real texture maps 
 - **Budget.** Measured in world 1 with the mannequin standing in for Brady (7.7k triangles, 25 joints): the same frame swapped off/on is 74/74 draws and 349k/347k triangles (the procedural Brady costs about as much); the shadow pass grows by one skinned caster (+9k triangles). `BurnsSkinActor.drawn` counts skinned main-pass draws, `sparkled` the glints.
 - **Testing.** `node tools/skinactor_test.js [outDir]` (with `BRADY_DIST` set, the site served over http): Burning Man world 1 with the swap off and on (draw/triangle deltas), Brady walking (`shots/skinactor/player-walk.png`), mid-jump (`player-jump.png`), a spawned Chinka actor with sparkles (`chinka.png`), the Man's captive (`chinka-captive.png`), the bike with the procedural fallback (`player-bike.png`); Art Cart's showroom with Brady (`cart-showroom-brady.png`), the driver screen with Chinka (`cart-driver-chinka.png`) and a race start (`cart-race.png`). It fails on page errors or when a swap that should be live isn't.
 
+**Realistic Brady action coverage (November 2026).** The asset includes `spin`, `flip`, `pound`, `bike`, and `climb` clips. The bridge carries the procedural whole-body pitch/roll/pivot into those clips, and maps artwork climbing/hanging, zip lines, piloting, freefall, canopy hanging, and rough landings to suitable skinned clips. Flight controllers explicitly set their animation name before applying a custom pose. Walking/running use ground distance for phase; the authored gait reduces torso roll and counterbalances the head. Check `tools/burns_actions_test.js` and `tools/brady_motion_shots.js` in addition to the regular skin-actor test.
+
 ### 6.12 Textured skinned heroes (`BurnsSkinPBR`) and the character GLB contract
 The realistic-character path (`src/40_burns_bf_skinpbr.js`): a **skinned glTF that carries UVs and texture maps** is drawn GPU-skinned (64 joints, 4 weights) **and** textured (base colour, normal, ORM, emissive), with a dedicated skin, cloth and hair shading model, alpha-tested hair cards, three LODs, tier-sized textures and blink/talk/smile face poses. It switches on **by itself**: `BurnsSkin.load`/`preload` look at the file, so `BurnsSkinActor` (§6.11), `BurnsSkin.spawn` (§6.9) and Art Cart's drivers draw a textured `brady.glb` with no code change. Untextured files (today's `brady.glb`, `chinka.glb`, the mannequin) keep the 32-byte path of §6.9 byte for byte (proved by a frame-locked pixel diff, see Testing). `window.__burnsNoSkinPBR = true` before loading forces the old path (comparisons).
 
@@ -1070,6 +1072,7 @@ name above to a house track through `BurnsHouse.ROUTE` (e.g. `burns_w7` → `bm_
 city's day groove, never the old chiptune. To give a new place its own track: `BurnsHouse.add('bm_myplace', {...})`
 (format in the file header: tempo, chords per bar, drum/bass patterns, sections with filter sweeps and builds) and add
 `my_name: 'bm_myplace'` to `BurnsHouse.ROUTE`. The city switches day/night with `BurnsHouse.setCityNight(on)`.
+The 29 tracks use per-track mix levels, a separate bass duck under each kick, and a 180 Hz high-pass on the chord layers to keep the low end clear.
 Test: `tools/burns_music_test.js` (renders every track offline and measures tempo, kicks, loudness, spectrum, loop seam).
 
 SFX:

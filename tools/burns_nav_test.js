@@ -26,7 +26,7 @@ const check = (ok, what, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + what 
 (async () => {
   const { srv, url } = await serve(site);
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-  const ctx = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 874, height: 402 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   const page = await ctx.newPage(); page.setDefaultTimeout(600000);
   const errs = [];
   page.on('pageerror', e => errs.push('PE ' + e.message));

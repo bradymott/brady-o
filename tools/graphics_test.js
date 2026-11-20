@@ -117,7 +117,7 @@ const clips = ['idle','walk','run','jump','land','hurt','knocked','dance','wave'
       console.log('BUDGET', JSON.stringify(report.budget || []));
       if (over.length) throw new Error('Budget regression vs main:\n' + over.join('\n'));
     } else console.log('BUDGET skipped: no baseline at ' + basePath);
-    for (const c of report.characters) if (c.tris > 25000) throw new Error(c.name + ' over the 25k-triangle hero budget: ' + c.tris);
+    for (const c of report.characters) if (c.tris > 35000) throw new Error(c.name + ' over the 35k-triangle textured hero budget (§6.12): ' + c.tris);
     console.log('CHARACTERS', JSON.stringify(report.characters));
     console.log('TIERS', JSON.stringify(report.tiers));
     if(report.errors.length) throw new Error(report.errors.join('\n'));

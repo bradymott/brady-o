@@ -3,6 +3,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 // usage: node tools/burns_flow_test.js   (BRADY_DIST=<folder> for a private build)
 const D = 'file://' + path.join(process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist'), 'site/burning-man/index.html');
+const failures = [];
 const log = (...a) => console.log(...a);
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -11,7 +12,7 @@ const log = (...a) => console.log(...a);
   await page.goto(D); await page.waitForTimeout(2500);
   await page.evaluate(() => { localStorage.clear(); window.BRADY.Save.load(); window.requestAnimationFrame = () => 0; });
   const run = async (n) => page.evaluate((n) => { const G = window.BRADY.Game; let e = null; try { for (let k = 0; k < n; k++) { const s = G.scene; for (let i = 0; i < 4; i++) s.update(1 / 120); if (s.fade !== undefined && s.state === 'play') s.fade = 0; s.lastFrame = performance.now() - 16; G.ctx.setTransform(1, 0, 0, 1, 0, 0); s.draw(G.ctx); } } catch (err) { e = String(err && err.stack || err).slice(0, 300); } const s = G.scene; return { scene: s.constructor.name, world: s.worldId, state: s.state, e, p: s.player ? [Math.round(s.player.x), Math.round(s.player.z)] : null, next: window.BRADY_BURNS.BurnsOW && (window.BRADY_BURNS.BurnsOW.nextPlace() || {}).world, pal: s.palA ? [s.palA, s.palB, s.tod] : null, region: s.region || null }; }, n);
-  const waitPlay = async (world) => { for (let i = 0; i < 200; i++) { const r = await run(1); if (r.state === 'play' && (!world || r.world === world)) return r; await page.waitForTimeout(200); } return run(1); };
+  const waitPlay = async (world) => { for (let i = 0; i < 200; i++) { const r = await run(1); if (r.state === 'play' && (!world || r.world === world)) return r; await page.waitForTimeout(200); } failures.push('World ' + world + ' never entered play'); return run(1); };
   // the title app is up: press CONTINUE/START (fresh save -> the prologue first)
   let r = await waitPlay(900); log('title', JSON.stringify(r));
   await page.evaluate(() => window.BRADY.Game.scene.toHub());
@@ -33,12 +34,16 @@ const log = (...a) => console.log(...a);
   await page.evaluate(() => window.BRADY.Game.scene.openTravelMap());
   r = await run(2); log('map', JSON.stringify(r));
   await page.evaluate(() => { const h = window.BRADY.Game.scene; h.sel = 17; window.BRADY_BURNS.BurnsSave.get().unlocked[17] = true; h.play(); });
-  r = await run(6); log('after travel', JSON.stringify(r), JSON.stringify(await page.evaluate(() => { const P = window.BRADY_BURNS.BURNS_OW.PLACES.find(q => q.world === 17); return [Math.round(P.x), Math.round(P.z)]; })));
+  r = await run(6); if (r.world !== 500 || r.e) failures.push('Map travel failed'); log('after travel', JSON.stringify(r), JSON.stringify(await page.evaluate(() => { const P = window.BRADY_BURNS.BURNS_OW.PLACES.find(q => q.world === 17); return [Math.round(P.x), Math.round(P.z)]; })));
   // quit to the title and CONTINUE: back where Brady was
   await page.evaluate(() => { const s = window.BRADY.Game.scene; s.player.teleport(120, 0.2, 380, 0); s.saveRun(); window.BRADY_BURNS.BurnsOW.saveSpot(s); s.quit(false); });
   r = await waitPlay(900); log('title again', JSON.stringify(r));
   await page.evaluate(() => window.BRADY.Game.scene.toHub());
   r = await waitPlay(500); log('CONTINUE', JSON.stringify(r));
+  if (!r.p || Math.abs(r.p[0] - 120) > 3 || Math.abs(r.p[1] - 380) > 3) failures.push('Continue did not restore the saved position');
   log('errors:', errs.length, errs.slice(0, 8).join('\n  '));
   await browser.close();
+  const fatal = errs.filter(e => !/GPU stall|GL Driver/.test(e));
+  console.log(failures.length || fatal.length ? 'FAIL: ' + failures.concat(fatal).join(' | ') : 'PASS: story, travel and Continue');
+  process.exitCode = failures.length || fatal.length ? 1 : 0;
 })();

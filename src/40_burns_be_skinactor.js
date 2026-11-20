@@ -3,8 +3,7 @@
    The bridge between the engine's procedural characters (BurnsChar, animated by name through BURNS_ANIMS) and the
    skinned glTF characters of §6.9 (BurnsSkinnedChar, clips from a file). An entity keeps driving its BurnsChar exactly
    as before; at draw time the bridge reads the BurnsChar's placement, animation name and clock, plays the matching
-   clip on a BurnsSkinnedChar and draws THAT with R.skinW instead. When the animation has no clip (bike, climb, flips,
-   zip lines, the DJ booth...) or the asset isn't loaded, every hook returns false and the caller draws the procedural
+   clip on a BurnsSkinnedChar and draws THAT with R.skinW instead. When the animation has no mapped clip or the asset isn't loaded, every hook returns false and the caller draws the procedural
    model as it always did, so nothing in play depends on a model file being there. See docs/BURNS_GUIDE.md §6.11.
 
    Who is swapped:  Brady (the player, the dialogue portrait, Art Cart's driver)  <- models/brady.glb.gz
@@ -29,7 +28,8 @@ const BURNS_SKINACTOR = {
     // (spin about Y, the flip and pound somersaults, the fly/bike pitch) comes from the BurnsChar's pose (see ROOT)
     spin: 'spin', flip: 'flip', pound: 'pound', bike: 'bike', climb: 'climb',
     fly: 'jump', float: 'jump', victory: 'cheer', throw: 'wave', bell: 'wave', clipboard: 'talk', dazed: 'hurt',
-    burnsDJBrady: 'dance', bbaZip: 'cheer'
+    burnsDJBrady: 'dance', bbaZip: 'cheer', bbaClimb: 'climb', bbaHang: 'cheer',
+    bw14Pilot: 'drive', bw14Free: 'spin', bw14Hang: 'cheer', bw14Climb: 'climb', bw14Tumble: 'flip', bw14Splat: 'spin'
   },
   // when the asset lacks a clip, the next one down (every chain ends at idle, which every asset has)
   FALLBACK: { run: 'walk', walk: 'idle', jump: 'idle', land: 'idle', hurt: 'idle', knocked: 'hurt', dance: 'idle', wave: 'idle', talk: 'idle', hug: 'wave', sit: 'idle', sleep: 'sit', cheer: 'wave', captive: 'hurt', photo: 'idle', drive: 'sit', fire: 'drive', sulk: 'drive' },
@@ -37,7 +37,7 @@ const BURNS_SKINACTOR = {
   // engine animations whose whole-body motion (P.yaw / P.pitch / P.roll about P.pivot, P.y hop) is applied to the
   // skinned model too; spin/flip/pound/bike/climb have no FALLBACK on purpose: an asset without those clips (Chinka,
   // the mannequin) still hands those states to the procedural model, as before
-  ROOT: { spin: 1, flip: 1, pound: 1, fly: 1, bike: 1 },
+  ROOT: { spin: 1, flip: 1, pound: 1, fly: 1, bike: 1, bw14Pilot: 1, bw14Free: 1, bw14Hang: 1, bw14Tumble: 1, bw14Splat: 1 },
   // walk/run cadence from the ground covered: metres per clip cycle (the run's grows with speed, like a real stride)
   STRIDE: { walk: 1.45, run: 5.2, runRef: 7.6, runK: 0.6 },   // play once and hold the last frame; everything else loops
   FILES: { brady: 'brady', chinka: 'chinka' },           // kind -> models/<stem>.glb(.gz)

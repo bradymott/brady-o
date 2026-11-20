@@ -6,6 +6,7 @@ const path = require('path');
 const DIST = process.env.BRADY_DIST ? path.resolve(process.env.BRADY_DIST) : path.join(__dirname, '..', 'dist');
 const SHOTS = path.join(__dirname, '..', 'shots', 'worlds'); require('fs').mkdirSync(SHOTS, { recursive: true });
 const D = path.join(DIST, 'site/burning-man/index.html');
+let failures = 0;
 const log = (...a) => process.stderr.write(a.join(' ') + '\n');
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -23,7 +24,10 @@ const log = (...a) => process.stderr.write(a.join(' ') + '\n');
     await page.waitForTimeout(1500);
     const st = await page.evaluate(() => { window.requestAnimationFrame = () => 0; const G = window.BRADY.Game, s = G.scene; let ok = true, e = null; try { for (let i = 0; i < 60; i++) s.update(1 / 120); s.fade = 0; s.lastFrame = performance.now() - 16; G.ctx.setTransform(1, 0, 0, 1, 0, 0); s.draw(G.ctx); } catch (err) { ok = false; e = String(err && err.message); } return { state: s.state, msg: s.noglMsg || null, ok, e, actors: s.actors ? s.actors.length : 0, draws: s.stats && s.stats.draws, tris: s.stats && Math.round(s.stats.tris / 1000) + 'k', sh: s.R && Math.round((s.R.shadowStats || 0) / 1000) + 'k' }; });
     try { await page.screenshot({ path: path.join(SHOTS, 'world' + id + '.png'), timeout: 120000 }); } catch (e) { log('shot timeout', id); }
+    if (!st.ok || st.state !== 'play' || errs.length) failures++;
     log('world', id, JSON.stringify(st), errs.length ? '\n   ' + errs.slice(0, 6).join('\n   ') : '');
   }
   await browser.close();
+  console.log(failures ? `FAIL: ${failures} worlds` : 'PASS: every registered world loaded');
+  process.exitCode = failures ? 1 : 0;
 })();

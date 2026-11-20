@@ -119,6 +119,7 @@ class BW14_Fly {
     const P = this.pl, s = this.seat(); p.x = s[0]; p.y = s[1]; p.z = s[2]; p.yaw = P.yaw; p.vx = p.vy = p.vz = 0; p.grounded = false;
     const k = { steer: clamp(P.ail, -1, 1), happy: P.V > 25 };
     // pivot at the seat so Brady rides rigidly with the cabin (same rotation order as the plane)
+    p.ch.play('bw14Pilot');
     p.ch.poseFn = (Pz, t) => { BURNS_ANIMS.bw14Pilot(Pz, t, k); Pz.pitch = -P.pitch; Pz.roll = P.bank; Pz.pivot = 0; };
   }
   stepParked(p, dt) { this.posePlane(dt); }
@@ -347,6 +348,7 @@ class BW14_Fly {
     // Brady: belly to earth, head toward travel
     p.x = D.x; p.y = D.y; p.z = D.z; p.yaw = D.yaw; p.vx = D.vx; p.vy = D.vy; p.vz = D.vz; p.grounded = false;
     const k = { track: clamp(I.sy, 0, 1), turn: clamp(I.sx, -1, 1) };
+    p.ch.play('bw14Free');
     p.ch.poseFn = (Pz, t) => BURNS_ANIMS.bw14Free(Pz, t, k);
     if (Math.random() < dt * 40) g.fx.add(D.x + (Math.random() - 0.5) * 3, D.y - 3 - Math.random() * 6, D.z + (Math.random() - 0.5) * 3, 0, 16 + Math.random() * 8, 0, 0.5, 0.06, 0.03, [1, 1, 1], 0.5, 'streak', 16);
     if (Math.floor(this.freeT * 2) !== Math.floor((this.freeT - dt) * 2) && agl < C.PULL_HI + 30 && agl > C.PULL_LO - 10) burnsSfx('dialogue_blip', { pitch: 2, vol: 0.4 });   // altimeter beeps near the window
@@ -385,6 +387,7 @@ class BW14_Fly {
     D.x += D.vx * dt; D.y += D.vy * dt; D.z += D.vz * dt;
     if (k > 0.35 && !this.snapped && !dead) { this.snapped = true; g.shake(0.45); burnsSfx('land', { pitch: 0.6, vol: 0.9 }); g.fx.burst(D.x, D.y + 6, D.z, 'star', 16, '#ffffff'); }
     p.x = D.x; p.y = D.y; p.z = D.z; p.yaw = D.yaw; p.grounded = false;
+    p.ch.play('bw14Hang');
     p.ch.poseFn = (Pz, t) => BURNS_ANIMS.bw14Hang(Pz, t, { l: 0.3, r: 0.3 });
     this.poseCanopy(dt);
     const gy = g.world.surface(D.x, D.z, D.y + 1, 0.3, BURNS_SURF); this.agl = D.y - gy.y;
@@ -440,6 +443,7 @@ class BW14_Fly {
     this.checkAirPickups(D.x, D.y + 0.9, D.z, 3.2);
     p.x = D.x; p.y = D.y; p.z = D.z; p.yaw = D.yaw; p.vx = D.vx; p.vy = D.vy; p.vz = D.vz; p.grounded = false;
     const k = { l: D.L, r: D.R, roll: D.roll * 0.6 };
+    p.ch.play('bw14Hang');
     p.ch.poseFn = (Pz, t) => BURNS_ANIMS.bw14Hang(Pz, t, k);
     this.poseCanopy(dt);
     if (this.agl < 6 && this.agl > 0.5 && !this.flareHint && brake < 0.3) { this.flareHint = true; BW14_HUD.flash(g, 'FLARE!', 0.9); }

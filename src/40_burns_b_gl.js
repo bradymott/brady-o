@@ -329,7 +329,7 @@ void main(){
 #endif
   float e = vC.a;
   // the Burn: everything below the fire front is alight (the front climbs from his feet to his raised hands)
-  float hy = (vW.y - uRain.y) * uRain.w, burnL = uRain.w > 0.0 && uRainK.y > 0.0 ? smoothstep(uRainK.z + 0.8, uRainK.z - 1.6, hy) : 0.0;
+  float hy = (vW.y - uRain.y) * uRain.w, burnL = uRain.w > 0.0 && uRainK.y > 0.0 ? (1.0 - smoothstep(uRainK.z - 1.6, uRainK.z + 0.8, hy)) : 0.0;
   if (uRain.w > 0.0 && e > 0.5) {
     // white tubes: a rainbow travelling out from the heart in slow waves (a point changes colour over seconds; the
     // brightest band passes about every 4 s, so nothing flashes); the red heart beats about once a second.
@@ -360,7 +360,7 @@ void main(){
   if (burnL > 0.0) {
     // burning timber: flickering orange-to-yellow tongues that run up the trusses, a white-hot band at the front
     float fl = 0.5 + 0.5 * sin(vW.y * 2.6 - uTime * 8.0 + sin(vW.x * 1.7 + vW.z * 1.3 + uTime * 2.1) * 2.6);
-    float edge = smoothstep(1.8, 0.0, abs(hy - uRainK.z));
+    float edge = (1.0 - smoothstep(0.0, 1.8, abs(hy - uRainK.z)));
     vec3 fire = mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.72, 0.28), clamp(fl * 0.6 + edge * 0.5, 0.0, 1.0)) * (1.2 + 1.1 * fl + 1.2 * edge);
     c = mix(c * 0.35, fire, burnL * (0.55 + 0.4 * fl));
     e = max(e, burnL);

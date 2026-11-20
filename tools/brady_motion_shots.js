@@ -11,12 +11,13 @@ const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/6
   fs.mkdirSync(out, { recursive: true });
   const { srv, url } = await serve(site); const browser = await chromium.launch(); const errs = [], log = {};
   const boot = async (W, H, world, pre) => {
-    const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: UA });
+    const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, userAgent: UA });
+    await ctx.addInitScript(() => { window.requestAnimationFrame = () => 0; });
     const page = await ctx.newPage(); page.on('pageerror', e => errs.push(e.message.slice(0, 200)));
     await page.goto(url + 'burning-man/');
-    await page.waitForFunction(() => window.BRADY_BURNS && window.BRADY_BURNS.debug && window.BRADY_BURNS.BurnsSkinActor && window.BRADY_BURNS.BurnsSkinActor.ready, null, { timeout: 420000 });
-    await page.evaluate(([world, pre]) => { localStorage.clear(); if (pre) window.BRADY_BURNS.BurnsSave.addItem(pre); window.__burnsHideHUD = true; window.BRADY_BURNS.debug.play(world); }, [world, pre]);
-    await page.waitForFunction(() => { const s = window.BRADY_BURNS.debug.scene(); return s && s.player && s.world && s.state !== 'load'; }, null, { timeout: 420000 });
+    await page.waitForFunction(() => window.BRADY_BURNS && window.BRADY_BURNS.debug && window.BRADY_BURNS.BurnsSkinActor && window.BRADY_BURNS.BurnsSkinActor.ready, null, { timeout: 120000, polling: 100 });
+    await page.evaluate(([world, pre]) => { localStorage.clear(); if (pre) { window.BRADY_BURNS.BurnsSave.addItem('bike'); window.BRADY_BURNS.BurnsSave.addItem(pre); } window.__burnsHideHUD = true; window.BRADY_BURNS.debug.play(world); const s = window.BRADY_BURNS.debug.scene(); if (s.state === 'load') s.load(); window.BRADY_BURNS.debug.skipCine(); }, [world, pre]);
+    await page.waitForFunction(() => { const s = window.BRADY_BURNS.debug.scene(); return s && s.player && s.world && s.state !== 'load'; }, null, { timeout: 120000, polling: 100 });
     await page.waitForFunction(() => { const D = window.BRADY_BURNS.debug; D.skipCine(); const st = D.state(); return !st.cine && !st.dialog; }, null, { timeout: 420000, polling: 250 });
     await page.evaluate(() => {
       const D = window.BRADY_BURNS.debug, s = D.scene();
@@ -25,10 +26,10 @@ const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/6
       s.__mz = 0; s.readInput = function () { const p = this.player; p.inp.mx = 0; p.inp.mz = this.__mz; p.inp.mag = Math.abs(this.__mz); p.inp.jump = false; p.inp.action = false; };
       const p = s.player; p.yaw = 0; D.sim(0.3);
     });
-    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') }); await page.waitForTimeout(300); await page.clock.pauseAt(new Date('2026-01-01T01:00:00Z'));
+
     return { ctx, page };
   };
-  const step = (page, ms) => page.clock.runFor(ms);
+  const step = (page, ms) => page.evaluate(ms => { const B = window.BRADY_BURNS, G = window.BRADY.Game, s = B.debug.scene(); const dt = Math.max(1 / 120, ms / 1000); for (let t = 0; t < dt; t += 1 / 120) { s.update(1 / 120); s.player.ch.update(1 / 120); } s.lastFrame = performance.now(); s.fade = 0; s.dayCardT = -1; s.banners = []; G.ctx.setTransform(1, 0, 0, 1, 0, 0); s.draw(G.ctx); }, ms);
   const cam = (page, view) => page.evaluate(view => {
     const s = window.BRADY_BURNS.debug.scene(), p = s.player;
     s.camMode = 'normal'; s.camYaw = view === 'side' ? p.yaw + Math.PI / 2 : p.yaw; s.camPitch = view === 'side' ? 0.12 : 0.3; s.snapCam = true; s.lastManual = s.time;
@@ -36,10 +37,10 @@ const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/6
   const active = page => page.evaluate(() => { const s = window.BRADY_BURNS.debug.scene(), p = s.player, a = p.ch._skinActor; return { anim: p.ch.anim, skinned: !!(a && a.active), clip: a && a._clip, hsp: +Math.hypot(p.vx, p.vz).toFixed(2) }; });
   if (what !== 'states') {
     const { ctx, page } = await boot(844, 390, 17);
-    for (const [name, v, cyc] of [['walk3', 3.0, 1.33], ['jog', 7.6, 0.8], ['RUN', 10.6, 0.575]]) {
+    for (const [name, v, cyc] of [['walk', 2.2, 1.0], ['jog', 7.6, 0.8], ['RUN', 10.6, 0.575]]) {
       for (const view of ['behind', 'side']) {
         await page.evaluate(v => { const s = window.BRADY_BURNS.debug.scene(), p = s.player; Object.defineProperty(p, 'speedMul', { configurable: true, get: () => v / 7.6 }); s.__mz = 1; p.yaw = 0; }, v);
-        for (let i = 0; i < 40; i++) { await cam(page, view); await step(page, 40); }
+        await cam(page, view); await step(page, 1600);
         const info = [];
         for (let f = 0; f < 10; f++) {
           await cam(page, view); await step(page, Math.round(cyc * 1000 / 10));
