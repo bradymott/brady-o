@@ -24,11 +24,22 @@ const BURNS_SKINACTOR = {
     idle: 'idle', walk: 'walk', run: 'run', charge: 'run', jump: 'jump', fall: 'jump', land: 'land', hurt: 'hurt', yell: 'hurt',
     knocked: 'knocked', dance: 'dance', shuffle: 'dance', wave: 'wave', talk: 'talk', phone: 'talk', hug: 'hug', sit: 'sit',
     sleep: 'sleep', cheer: 'cheer', captive: 'captive', photo: 'photo', drive: 'drive',
-    cartDrive: 'drive', cartFire: 'fire', cartHit: 'hurt', cartCheer: 'cheer', cartSulk: 'sulk'
+    cartDrive: 'drive', cartFire: 'fire', cartHit: 'hurt', cartCheer: 'cheer', cartSulk: 'sulk',
+    // the player's action states: their own clips where the asset has them (the realistic Brady), the body rotation
+    // (spin about Y, the flip and pound somersaults, the fly/bike pitch) comes from the BurnsChar's pose (see ROOT)
+    spin: 'spin', flip: 'flip', pound: 'pound', bike: 'bike', climb: 'climb',
+    fly: 'jump', float: 'jump', victory: 'cheer', throw: 'wave', bell: 'wave', clipboard: 'talk', dazed: 'hurt',
+    burnsDJBrady: 'dance', bbaZip: 'cheer'
   },
   // when the asset lacks a clip, the next one down (every chain ends at idle, which every asset has)
   FALLBACK: { run: 'walk', walk: 'idle', jump: 'idle', land: 'idle', hurt: 'idle', knocked: 'hurt', dance: 'idle', wave: 'idle', talk: 'idle', hug: 'wave', sit: 'idle', sleep: 'sit', cheer: 'wave', captive: 'hurt', photo: 'idle', drive: 'sit', fire: 'drive', sulk: 'drive' },
-  ONESHOT: { jump: 1, land: 1, knocked: 1, fire: 1 },   // play once and hold the last frame; everything else loops
+  ONESHOT: { jump: 1, land: 1, knocked: 1, fire: 1 },
+  // engine animations whose whole-body motion (P.yaw / P.pitch / P.roll about P.pivot, P.y hop) is applied to the
+  // skinned model too; spin/flip/pound/bike/climb have no FALLBACK on purpose: an asset without those clips (Chinka,
+  // the mannequin) still hands those states to the procedural model, as before
+  ROOT: { spin: 1, flip: 1, pound: 1, fly: 1, bike: 1 },
+  // walk/run cadence from the ground covered: metres per clip cycle (the run's grows with speed, like a real stride)
+  STRIDE: { walk: 1.45, run: 5.2, runRef: 7.6, runK: 0.6 },   // play once and hold the last frame; everything else loops
   FILES: { brady: 'brady', chinka: 'chinka' },           // kind -> models/<stem>.glb(.gz)
   STAND_IN: 'mannequin',
   LOD_D2: 45 * 45,        // actors beyond this draw the procedural LOD (a few hundred triangles vs ~8k skinned)
@@ -60,8 +71,10 @@ class BurnsSkinActor {
      nothing. */
   sync(ch) {
     const S = this.S;
-    if (ch.poseFn) { this._anim = null; this.active = false; return false; }   // a custom pose function (pilot seats, zip lines…)
+    // a custom pose function (stunt bikes, pilot seats, zip lines…) keeps the skinned model when the engine animation
+    // underneath has a clip (the bike: the whole-body pitch/roll comes from the pose); otherwise the procedural model
     const clip = this.clipFor(ch.anim);
+    if (ch.poseFn && (!clip || !BURNS_SKINACTOR.ROOT[ch.anim])) { this._anim = null; this.active = false; return false; }
     if (!clip) { this._anim = ch.anim; this._animT = ch.animT; this.active = false; return false; }
     const same = ch.anim === this._anim;
     let dt = same && ch.animT >= this._animT ? ch.animT - this._animT : ch.animT;
@@ -76,9 +89,19 @@ class BurnsSkinActor {
     const moved = ch.x !== this._x || ch.y !== this._y || ch.z !== this._z || ch.yaw !== this._yaw || sc !== this._sc;
     S.x = this._x = ch.x; S.y = this._y = ch.y; S.z = this._z = ch.z; S.yaw = this._yaw = ch.yaw; S.scale = this._sc = sc;
     S.tint = ch.tint || this.tint; S.face = ch.face || 0;
+    // whole-body motion of the action states, from the procedural pose the BurnsChar computes anyway
+    const P = ch.P, R = BURNS_SKINACTOR.ROOT[ch.anim] && P;
+    S.pitch = R ? P.pitch : 0; S.roll = R ? P.roll : 0; S.yaw2 = R ? P.yaw : 0; S.pivot = R ? P.pivot : 0; S.dy = R && ch.anim === 'spin' ? P.y * sc : 0;
     if (dt > 0) S.update(dt);
-    // walk/run: the clip follows the BurnsChar's stride phase (ground covered; the clock when it isn't moving)
-    if ((clip === 'walk' || clip === 'run') && ch._stridePhase !== undefined && S.anim) S.animT = ch._stridePhase * S.anim.duration;
+    // walk/run: the clip phase follows the ground covered (feet planted); the clock when not moving
+    if ((clip === 'walk' || clip === 'run') && S.anim) {
+      const T = BURNS_SKINACTOR.STRIDE, travel = Number.isFinite(this._px) ? Math.hypot(ch.x - this._px, ch.z - this._pz) : 0;
+      const v = dt > 0 ? travel / dt : 0, m = (clip === 'walk' ? T.walk : T.run * Math.pow(Math.max(0.3, v / sc) / T.runRef, T.runK)) * sc;
+      const byClock = dt * S.speed / S.anim.duration;
+      this._ph = ((this._ph || 0) + (travel > 0.001 && travel < 5 * sc ? travel / m : byClock)) % 1;
+      S.animT = this._ph * S.anim.duration;
+    }
+    this._px = ch.x; this._pz = ch.z;
     if (dt > 0 || moved || !S.computed) S.compute();
     this.active = true;
     return true;

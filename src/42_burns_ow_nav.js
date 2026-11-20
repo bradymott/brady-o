@@ -108,7 +108,7 @@ const BURNS_OW_EBIKE = { after: 8, giverPlace: 8, charger: '3:00 Plaza', charger
     },
     labels(g) {
       const L = [], sv = BurnsSave.get(), nx = BurnsOW.nextPlace(), K = typeof BurnsCamps !== 'undefined' ? BurnsCamps.kinds : {};
-      L.push({ x: 0, z: 0, text: 'THE MAN', col: '#ffd84a', pri: 90 });
+      L.push({ x: 0, z: 0, text: 'THE MAN', col: '#ffd84a', pri: 90, gap: 15 });   // (gap: clear of his glyph, see keep)
       L.push({ x: 0, z: -250, text: 'TEMPLE', col: '#ffd8a0', pri: 88 });
       const cc = O.address('Center Camp'); L.push({ x: cc[0], z: cc[1], text: 'CENTER CAMP', col: '#ffffff', pri: 86, mark: 'dot' });
       for (const P of O.PLACES) {
@@ -120,12 +120,21 @@ const BURNS_OW_EBIKE = { after: 8, giverPlace: 8, charger: '3:00 Plaza', charger
         if (C.kind === 'rootSociety') continue;   // HOME
         const k = K[C.kind], st = O.state && O.state.camps && O.state.camps.find(c => c.kind === C.kind);
         const q = st && st.entrance ? [st.entrance.x, st.entrance.z] : O.at(C.h, C.r || O.ESP + 9 + C.front);
-        L.push({ x: q[0], z: q[1], text: k ? String(k.short || k.name).toUpperCase() : '', col: (k && k.mapCol) || '#ff8ad8', pri: C.kind === 'centerCamp' ? 0 : 40, mark: 'dot' });
+        L.push({ x: q[0], z: q[1], text: k && C.kind !== 'centerCamp' ? String(k.short || k.name).toUpperCase() : '', col: (k && k.mapCol) || '#ff8ad8', pri: 40, mark: 'dot' });   // (Center Camp has its own label)
       }
       for (const A of O.ART) { const q = O.at(A.h, A.r), I = typeof BurnsBigArt !== 'undefined' && BurnsBigArt.info ? BurnsBigArt.info(A.kind) : null; L.push({ x: q[0], z: q[1], text: I ? I.name.replace(/^The /, '').toUpperCase() : '', col: '#9af8ff', pri: 30, mark: 'square' }); }
       const ch = BurnsOW.ebikeCharger && BurnsOW.ebikeCharger(); if (ch && g.missions.state('owEbike') === 'active') L.push({ x: ch.x, z: ch.z, text: 'SOLAR CHARGER', col: BURNS_NAV.hex, pri: 60, mark: 'dot' });
+      // zoomed in: the street names round Brady (the lettered rings at his clock position, and the nearest radial)
+      if (g.mapZoom) {
+        const p = g.player, d = Math.hypot(p.x, p.z), hp = clamp(O.clock(p.x, p.z), O.H0, O.H1), hs = clamp(hp + (hp < 6 ? 0.18 : -0.18), O.H0, O.H1), sc = 'rgba(255,236,214,0.8)';
+        O.RINGS.forEach((r, i) => { const q = O.at(hs, r); L.push({ x: q[0], z: q[1], text: O.STREETS[i].toUpperCase(), col: sc, pri: 6, size: 8 }); });
+        const hr = clamp(Math.round(hp * 4) / 4, O.H0, O.H1), q = O.at(hr, clamp(d, O.ESP + 20, O.OUTER - 20) + 22);
+        L.push({ x: q[0], z: q[1], text: O.hourName(hr), col: sc, pri: 7, size: 8 });
+      }
       return L;
-    }
+    },
+    // the Man's glyph in the middle of the map: no labels on top of him
+    keep(g, P, sc) { const c = P(0, 0), s = clamp(sc * 0.55, 0.08, 0.3); return [[c[0] - 44 * s, c[1] + 4 - 186 * s, c[0] + 44 * s, c[1] + 5]]; }
   };
 
   // with the guide arrow on, the guide stands in for the city's own yellow story arrow (one arrow on screen)

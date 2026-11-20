@@ -42,19 +42,22 @@
    ============================================================ */
 
 const BURNS_DJ_TRACKS = [
-  { id: 'w6', bpm: 126, genre: 'house', name: 'Esplanade Peak Hour', artist: 'The Lamplight Choir' },
-  { id: 'land9', bpm: 126, genre: 'trance', name: 'Sunrise Sermon', artist: 'Dawn Patrol' },
-  { id: 'title', bpm: 124, genre: 'house', name: 'Welcome Home Anthem', artist: 'Gate Road Kids' },
-  { id: 'underground', bpm: 124, genre: 'techno', name: 'Deep Dome Dub', artist: 'Sub Lima' },
-  { id: 'burns_w9', bpm: 124, genre: 'techno', name: 'Whiteout (Extended)', artist: 'Dust Devil Collective' },
-  { id: 'burns_w3', bpm: 124, genre: 'disco', name: 'Sequins & Sorrow', artist: 'Glitter Bomb' },
-  { id: 'land3', bpm: 128, genre: 'house', name: 'Laser Lasso', artist: 'Esplanade Kids' },
-  { id: 'burns_w6', bpm: 128, genre: 'techno', name: 'Octopus Ink (Fire Edit)', artist: 'Tentacle Theory' },
-  { id: 'burns_w7', bpm: 122, genre: 'melodic', name: 'Golden Hour Hug', artist: 'Heart Car Hotline' },
-  { id: 'w8', bpm: 122, genre: 'techno', name: 'Deep Playa Hypnosis', artist: 'Moop Patrol' },
-  { id: 'w7', bpm: 120, genre: 'disco', name: 'Cowbell Commune', artist: 'The Disco Sherpas' },
-  { id: 'boss', bpm: 140, genre: 'breaks', name: 'Acid Dust Storm', artist: 'Whirlwind Kevin' },
-  { id: 'man_boss', bpm: 136, genre: 'bass', name: 'Effigy Stomp', artist: 'Wooden Feelings' }
+  // the game's own house tracks (41_burns_music.js); bpm must match the track so the decks line up
+  { id: 'bm_soundcamp', bpm: 126, genre: 'house', name: 'Esplanade Peak Hour', artist: 'The Lamplight Choir' },
+  { id: 'bm_artcar', bpm: 126, genre: 'techno', name: 'Octopus Ink (Fire Edit)', artist: 'Tentacle Theory' },
+  { id: 'bm_hell', bpm: 126, genre: 'techno', name: 'Running on Fumes', artist: 'Moop Patrol' },
+  { id: 'bm_citynight', bpm: 124, genre: 'house', name: 'Neon Esplanade', artist: 'Gate Road Kids' },
+  { id: 'bm_deep', bpm: 124, genre: 'techno', name: 'Whiteout (Extended)', artist: 'Dust Devil Collective' },
+  { id: 'bm_costume', bpm: 124, genre: 'disco', name: 'Sequins & Dust', artist: 'Glitter Bomb' },
+  { id: 'bm_skydive', bpm: 124, genre: 'trance', name: 'Freefall', artist: 'Dawn Patrol' },
+  { id: 'bm_sunrise', bpm: 122, genre: 'melodic', name: 'First Light', artist: 'Heart Car Hotline' },
+  { id: 'bm_rhythm', bpm: 122, genre: 'house', name: 'Bamboo Floor', artist: 'Sub Lima' },
+  { id: 'bm_cityday', bpm: 122, genre: 'house', name: 'Dust & Daylight', artist: 'The Disco Sherpas' },
+  { id: 'bm_man', bpm: 128, genre: 'bass', name: 'Effigy Stomp', artist: 'Wooden Feelings' },
+  { id: 'bm_chase', bpm: 128, genre: 'breaks', name: 'Lights in the Mirror', artist: 'Whirlwind Kevin' },
+  { id: 'bm_giant', bpm: 128, genre: 'techno', name: 'Giant', artist: 'Tentacle Theory' },
+  { id: 'bm_title', bpm: 120, genre: 'disco', name: 'Golden Hour', artist: 'Esplanade Kids' },
+  { id: 'bm_root', bpm: 120, genre: 'melodic', name: 'Root Society', artist: 'The Lamplight Choir' }
 ];
 const BURNS_DJ_LANES = [
   { col: '#ff4fd8', label: 'KICK', sfx: 'bump', pitch: 1.0, vol: 0.55 },
@@ -137,6 +140,7 @@ const BurnsDJ = {
   // two decks at the same tempo (closest to the request), genre first
   pickTracks(bpm, genre, music) {
     bpm = clamp(+bpm || 124, 80, 170);
+    if (music && typeof BurnsHouse !== 'undefined') music = BurnsHouse.resolve(music) || music;   // 'burns_w6' -> its house track
     const names = (window.Sound && Sound.trackNames) || [];
     const avail = BURNS_DJ_TRACKS.filter(t => !names.length || names.indexOf(t.id) >= 0);
     const L = avail.length ? avail : BURNS_DJ_TRACKS;

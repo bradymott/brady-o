@@ -31,7 +31,7 @@ BurnsWorlds.register({
   id: BURNS_TITLE_WORLD, name: 'Brady Goes to Burning Man', sub: '', hidden: true, dayCard: false, noOutro: true,
   sky: { zen: '#2a2c6a', hor: '#ff9a62', fog: '#d89a7a', fogD: 0.0062, fogH: 0.05, haze: 0.5, fogMax: 0.88, sun: [208, 5.5], sunCol: '#ffb070', sunSize: 0.0019, moon: [30, 26], moonK: 0.5, stars: 0.12, mtnCol: '#5a3a5a', mtnH: 3.2, city: [10, 0], cityCol: '#ff6ab0', cityK: 0.3, sky: '#9a86b8', gnd: '#7a5246', key: '#ffb684', keyK: 1.0, rim: '#ffb0d8', emB: 1.5, clouds: 0.45, cloudCol: '#ffb090' },
   sky2: 'night', tod: 0.12,
-  music: 'burns_hub',
+  music: 'burns_title',   // the house soundtrack's title track (falls back to the hub tune without it)
   bounds: [-260, -320, 260, 220],
   spawn: { x: 8.36, y: 3.36, z: 42.4, yaw: Math.PI },
   ground: { base: '#c9a07c', crack: 0.26, mottle: 0.4, res: 0.6 },

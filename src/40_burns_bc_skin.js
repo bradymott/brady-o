@@ -218,6 +218,7 @@ class BurnsSkinnedChar {
   constructor(asset) {
     this.asset = asset; this.nb = asset.nb; this.bounds = asset.bounds; this.height = asset.height;
     this.x = 0; this.y = 0; this.z = 0; this.yaw = 0; this.scale = 1;
+    this.pitch = 0; this.roll = 0; this.yaw2 = 0; this.pivot = 0; this.dy = 0;   // whole-body extras (spin, flips), pivot in model units
     this.sk = new BurnsSkeleton(asset); this.palette = this.sk.palette;
     this.anim = null; this.animT = 0; this.speed = 1; this.loop = true; this.ended = false;
     this.prev = null; this.prevT = 0; this.prevSpeed = 1; this.prevLoop = true; this.fade = 1; this.fadeDur = 0.2;
@@ -253,7 +254,11 @@ class BurnsSkinnedChar {
   // the joint palette (Float32Array nb * 12) for R.skinW
   compute() {
     const sk = this.sk, L = sk.local;
-    BurnsM.a34Set(sk.root, 0, this.x, this.y, this.z, this.yaw, 0, 0, this.scale, this.scale, this.scale);
+    BurnsM.a34Set(sk.root, 0, this.x, this.y + this.dy, this.z, this.yaw + this.yaw2, this.pitch, this.roll, this.scale, this.scale, this.scale);
+    if (this.pitch || this.roll) {   // rotate about a point pivot (model units) above the feet, not about the feet
+      const o = sk.root, h = this.pivot;
+      o[3] -= o[1] * h; o[7] += this.scale * h - o[5] * h; o[11] -= o[9] * h;
+    }
     L.set(sk.rest);
     if (this.anim) this.anim.sample(this._wrap(this.anim, this.animT, this.loop), L);
     if (this.prev && this.fade < 1) {

@@ -3,7 +3,7 @@
 //   node tools/skinactor_test.js [outDir=shots/skinactor]
 // Serves dist/site (or $BRADY_DIST/site) over http. Burning Man: world 1, cutscene skipped; measures draws/triangles
 // with the swap off and on, shoots Brady walking and mid-jump, a Chinka actor with her sparkles, the Man's captive
-// Chinka, and Brady on the bike (procedural fallback: no skinned Brady). Art Cart: the per-app build ships no character
+// Chinka, Brady's action states (double jump, spin, pound) and Brady on the bike, all on the skinned model. Art Cart: the per-app build ships no character
 // files, so the test copies them into <site>/art-cart/models (the scratch build only) and shoots the showroom with
 // Brady, the driver screen with Chinka, and a race start. Fails on page errors or when a swap that should be live isn't.
 const { chromium } = require('playwright');
@@ -93,6 +93,19 @@ const MOVE0 = { up: false, down: false, left: false, right: false, jump: false, 
   const air = await bridge();
   await shot(page, 'player-jump.png');
   check('bm: mid-air Brady maps jump -> ' + (air.clip || 'none'), !air.grounded && air.active && (air.anim === 'jump' || air.anim === 'fall'), air);
+  // the action states stay on the realistic model (their own clips + the body rotation from the procedural pose):
+  // double jump (flip), spin attack, ground pound (tuck, then the slam)
+  const state = async (label, setup, want) => {
+    await page.evaluate(setup);
+    await page.waitForTimeout(90);
+    const b = await bridge();
+    check('bm: ' + label + ' keeps the skinned Brady (' + want + ' clip)', b.active && b.clip === want, b);
+  };
+  await state('double jump', () => { const D = window.BRADY_BURNS.debug, p = D.scene().player; D.teleport(p.x, p.z, p.y + 2); p.grounded = false; p.vy = 10.2; p.jumps = 2; p.ch.play('flip', null, true); }, 'flip');
+  await page.evaluate(m => { window.BRADY_BURNS.debug.sim(1.5, m); }, MOVE0);
+  await state('spin attack', () => { const p = window.BRADY_BURNS.debug.scene().player; p.spinT = 0.45; p.spinId = (p.spinId || 0) + 1; }, 'spin');
+  await page.evaluate(m => { window.BRADY_BURNS.debug.sim(1.0, m); }, MOVE0);
+  await state('ground pound', () => { const D = window.BRADY_BURNS.debug, p = D.scene().player; D.teleport(p.x, p.z, p.y + 4); p.grounded = false; p.vy = 0; p.pound = 1; p.poundT = 0.25; }, 'pound');
   await page.evaluate(m => { window.BRADY_BURNS.debug.sim(1.5, m); }, MOVE0);
   // a Chinka actor 3 m in front of Brady, facing him: skinned with sparkles
   const chinka = await page.evaluate(() => {
@@ -123,12 +136,12 @@ const MOVE0 = { up: false, down: false, left: false, right: false, jump: false, 
   await page.waitForTimeout(800);
   await shot(page, 'chinka-captive.png');
   check('bm: captive Chinka (the Man) is skinned', !!(captive && captive.active && captive.anim === 'captive'), captive);
-  // the bike: not handled, so the procedural Brady rides it
+  // the bike: the realistic Brady rides it (bike clip)
   await page.evaluate(m => { const D = window.BRADY_BURNS.debug, s = D.scene(), p = s.player; D.teleport(p.x + 20, p.z + 20); p.yaw = Math.PI; s.camYaw = Math.PI; D.give('bike'); s.bike.x = p.x; s.bike.z = p.z; s.bike.y = p.y; s.bike.yaw = p.yaw; s.bike.mount(p); D.sim(1.5, Object.assign({}, m, { up: true })); }, MOVE0);
   await page.waitForTimeout(600);
   const bike = await bridge();
   await shot(page, 'player-bike.png');
-  check('bm: on the bike the skinned Brady steps aside (procedural)', bike.anim === 'bike' && !bike.active, bike);
+  check('bm: on the bike Brady stays skinned (bike clip)', bike.anim === 'bike' && bike.active && bike.clip === 'bike', bike);
   const bikeStats = await stats();
   console.log('on bike    ', JSON.stringify(bikeStats));
   const drawn = await page.evaluate(() => window.BRADY_BURNS.BurnsSkinActor.stats().drawn);

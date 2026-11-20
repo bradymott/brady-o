@@ -29,6 +29,8 @@ const APPS = {
     dir: 'burning-man', name: 'Brady Goes to Burning Man', short: 'Burning Man',
     desc: 'A 3D open-world adventure: Brady goes to Burning Man for the first time, becomes a burner, and rescues Chinka from the Man.',
     color: '#0d0716', saveKey: 'bgtbm-save-v1',
+    // home-screen icons kept in the repo (tools/make_burns_icon.js), so the site no longer depends on gh-pages copies
+    iconDir: path.join(root, 'assets', 'icons', 'burning-man'),
     // shared core + the 3D game; 2D-game modules the 3D game borrows are listed in BURNS_DEPS
     files: f => /^(00|01|02|99)_/.test(f) || isBurns(f) || BURNS_DEPS.includes(f)
   },
@@ -241,14 +243,16 @@ for (const [id, A] of Object.entries(APPS)) {
   const dir = path.join(siteDir, A.dir);
   fs.mkdirSync(dir, { recursive: true });
   // per-app icons from dist/icons/<id>/ (tools/make_icon.js); fall back to the shared ones
-  const iconSrc = f => [path.join(dist, 'icons', id, f), path.join(dist, 'icons', f)].find(p => fs.existsSync(p));
+  const iconSrc = f => [A.iconDir && path.join(A.iconDir, f), path.join(dist, 'icons', id, f), path.join(dist, 'icons', f)].find(p => p && fs.existsSync(p));
   const icons = ICONS.concat(A.icons || []).filter(f => iconSrc(f));
   for (const f of icons) fs.copyFileSync(iconSrc(f), path.join(dir, f));
   const html = pageHtml({ title: A.name, appleTitle: A.short, desc: A.desc, color: A.color, code,
     extra: `<link rel="manifest" href="manifest.webmanifest">\n${icons.includes('icon-180.png') ? '<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">' : ''}\n${icons.includes('icon-192.png') ? '<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">' : ''}${icons.includes('icon-32.png') ? '\n<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">' : ''}\n${swReg}` });
   fs.writeFileSync(path.join(dir, 'index.html'), html);
   fs.writeFileSync(path.join(dir, 'manifest.webmanifest'), JSON.stringify(manifestFor(A.name, A.short, A.desc, A.color, icons), null, 2));
-  const v = crypto.createHash('sha1').update(html).digest('hex').slice(0, 10);
+  const vh = crypto.createHash('sha1').update(html);
+  if (A.iconDir) for (const f of icons) vh.update(fs.readFileSync(iconSrc(f)));   // new icon art -> new offline cache, so phones fetch it
+  const v = vh.digest('hex').slice(0, 10);
   // Blender-made models (assets/models/<app>/*.glb) ship beside the page as models/*.glb and are cached offline
   const models = copyModels(A.dir, path.join(dir, 'models'), id !== 'world');   // the 2D app needs no 3D characters
   const sprites = copySprites(A.dir, path.join(dir, 'sprites'));                 // the 2D app's pre-rendered atlases

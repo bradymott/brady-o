@@ -913,21 +913,22 @@ Read it with `g.camMode`, set it with `g.setCamMode(mode)`, and check `g.firstPe
 
 **Speeds (m/s):** walk (stick part-way) 2–4, jog (stick fully pushed, the old top speed) 7.6, **RUN 10.6**, yellow bike 12.5, **e-bike 18**.
 
-**The guide arrow.** A pause-menu toggle (**GUIDE ARROW**, also in SETTINGS; saved as `settings.guide`, off by default). When it's on, a glowing arrow lies on the ground just in front of Brady pointing at the current objective, with its name and distance under it; a pin and the distance float over the spot when it's on screen, and the spot itself gets a ring and a thin beam of light. It hides when there's nothing to go to, and shrinks to a ring when Brady is there. It costs no draw calls (sprites).
+**The guide arrow.** A pause-menu toggle (**GUIDE ARROW**, also in SETTINGS; saved as `settings.guide`, off by default). When it's on, a glowing arrow lies on the ground just in front of Brady pointing at the current objective (it is kept in view: nudged beside him when the target is dead ahead, so his body doesn't hide it, and beside him pointing back when the target is behind the camera), with its name and distance under it; a pin and the distance float over the spot when it's on screen, and the spot itself gets a ring and a thin beam of light. It hides when there's nothing to go to, and shrinks to a ring when Brady is there. It costs no draw calls (sprites).
 - **What it points at.** `def.guide(g)` if your world has one (or `BurnsNav.guides[worldId] = fn` from another file), returning the targets best first: a point `{x, z, y, label, col}`, `[x, z]`, an actor or actor id, or an array of them. Return `null` for "nothing to go to", `undefined` for the default.
 - **The default** (`BurnsNav.defaultTargets`): a Burn Token lying on the ground nearby; then the tracked mission, the other active main missions, and active side quests. For each mission: its `guide` field (§7) or `m.data.guide`, a `talk` target, the actor carrying its `?` (`m.data.marker`), the nearest untaken pickup for `collect`/`find`, the nearest enemy (with `tag`) for `defeat`, the companion if an `escort` buddy is far behind, `target`, `marker`, and last the giver. With nothing active, it shows the nearest `'!'` giver of a main mission.
 - **Read it:** `g.navGuide` (`{x, z, label, dist, yaw}`; null when off or nothing), `g.navTargets` (all highlighted spots), `g.navArrow` (where the ground arrow is). Targets refresh four times a second; the bearing updates every step.
 - **Wiring a world:** give a `custom` mission a `guide` when its `marker` is only where it started (a fetch, a chase, a "go back to X"). Set `m.data.guide` as the steps change.
 
-**The map page.** A world with `def.cityMap` gets a full-screen map in the pause menu (its MAP button): the world's own drawing, labels placed most important first without overlapping, the guide's targets as pulsing rings, and Brady as an arrow pointing the way he faces. Buttons: **ZOOM IN** (around Brady) / **WHOLE CITY**, **GUIDE ARROW**, **FAST TRAVEL** (the hub travel map).
+**The map page.** A world with `def.cityMap` gets a full-screen map in the pause menu (its MAP button): the world's own drawing, labels placed most important first (each tries eight spots round its point, keeps clear of other labels, Brady, the markers and any `keep` rects, and hides when nothing is free; the objective's labels go first and always show, on a dark pill; zoomed in, the city adds its street names round Brady), the guide's targets as pulsing rings, and Brady as an arrow pointing the way he faces. Buttons: **ZOOM IN** (around Brady) / **WHOLE CITY**, **GUIDE ARROW**, **FAST TRAVEL** (the hub travel map).
 ```js
 def.cityMap = { title: 'Black Rock City', bounds: { x0, x1, z0, z1 }, legend: '…',
   draw(g, ctx, P, sc, t) { /* P(x, z) -> [px, py]; sc = px per metre */ },
-  labels(g) { return [{ x, z, text, col, pri, mark: 'dot' | 'diamond' | 'square' }]; } };
+  labels(g) { return [{ x, z, text, col, pri, mark: 'dot' | 'diamond' | 'square', size, gap }]; },   // gap: px from the point
+  keep(g, P, sc) { return [[x0, y0, x1, y1]]; } };   // optional: screen rects no label may cover
 ```
-`g._cityMap` holds what was drawn (`brady: {x, y, rot}`, `targets`) for tests. +x is right and +z is down (6:00 at the bottom).
+`g._cityMap` holds what was drawn (`brady: {x, y, rot}`, `targets`, `labels: [{text, target, r}]`) for tests. +x is right and +z is down (6:00 at the bottom).
 
-**RUN.** A round **RUN** button left of BIKE (touch): tap it and Brady runs (x1.4, `BURNS_NAV.runMul`) until he stops for a moment, mounts a vehicle or a cutscene starts; it lights up while on. **Shift** runs while held (it stays ACTION in menus and other apps). `g.running` is true while he runs; the player's `runK` multiplies his speed.
+**RUN.** A round **RUN** button in the right-hand cluster, left of BIKE in landscape and above it in portrait (never in the joystick's half of the screen; at least 10 px from every other control, checked by the nav test in both orientations): tap it and Brady runs (x1.4, `BURNS_NAV.runMul`) until he stops for a moment, mounts a vehicle or a cutscene starts; it lights up while on. **Shift** runs while held (it stays ACTION in menus and other apps). `g.running` is true while he runs; the player's `runK` multiplies his speed.
 
 **Camera behind Brady.** Setting **CAMERA BEHIND BRADY** (`settings.follow`, off by default): the camera turns to sit behind the way Brady faces (or his vehicle) on its own, so CAM is never needed. It turns faster the more he heads away from the camera (running sideways makes a wide, slow turn, not a spin; running at the camera holds it), settles behind him half a second after he stops, waits a second after you orbit by hand, and holds still in dialogue. Cutscene cameras, boss framing, CAM recentering and first person (where his body already follows the look) come first.
 
@@ -977,7 +978,7 @@ g.cutscene([
 ## 12. Bosses and the Man
 
 **The model** (`BurnsManModel`, `src/40_burns_e_props.js`): the classic lattice Man, one model for every Man in both games (the city landmark, all the bosses, the title screen, Art Cart's driver, portrait and Burn Night landmark). Open timber trusses with crossed bracing on the shared 16-bone rig (legs apart: the knee and ankle offsets splay outward), a faceted lantern head, neon tubes along the front edges of every limb and a heart in the chest. About 5.7k triangles, one draw call.
-- **Rainbow neon.** The tubes are white emissive vertices (`'#ffffff', 1`), the lantern core is white at 0.75 and the heart is red; `geo.rainbow = { bone, at }` (the heart) tells `R.skin()` to set `uRain` for that one draw, and the skinned fragment shader colours them: a rainbow whose hue travels outward from the heart (one full cycle in about 14 s at any point), a soft bright band passing every ~4 s and a slow breath, so nothing flashes (all well under 3 Hz); the heart beats about once a second. By day (`uExp.z`, the renderer's night factor) the tubes are unlit grey glass and the heart is red paint. No mesh rebuilds, no extra draw calls.
+- **Rainbow neon.** The tubes are white emissive vertices (`'#ffffff', 1`), the lantern core is white at 0.75 and the heart is red; `geo.rainbow = { bone, at }` (the heart) tells `R.skin()` to set `uRain` for that one draw, and the skinned fragment shader colours them: a rainbow whose hue travels outward from the heart (one full cycle in about 14 s at any point), a soft bright band passing every ~4 s and a slow breath, so nothing flashes (all well under 3 Hz); the heart beats about once a second. By day (`uExp.z`, the renderer's night factor) the tubes are unlit grey glass and the heart is red paint. **The Burn:** `geo.rainBurn = { k, front, t }` (k 0..1, the fire front in figure units above the heart, t = `performance.now()`; ignored after 0.4 s, so it must be refreshed every frame) sets everything below the front alight in the same shader and fades the neon (`uRainK.yz`); World 10's Burn drives it. No mesh rebuilds, no extra draw calls.
 - **Hurt cue.** `BurnsManBoss` sets `geo.rainHurt`: the neon turns red when he's hit and throbs red while he's stunned (on top of the heart sprite above his head).
 - **Light.** `BurnsManModel.light(g, x, y, z, scale)` queues one point light in the current neon colour at night (the city and World 10 call it from `env`); like every point light it only wins a slot when the camera is near.
 
@@ -1059,10 +1060,17 @@ World 10 should pass `next` to roll into the ending; `StoryScene` and `CreditsSc
 
 ## 14. Audio names
 
-Tracks:
-- Hub and story: `burns_hub`, `burns_intro`, `burns_victory`, `burns_ending`.
-- Worlds: `burns_w1`…`burns_w10`.
-- The Man: `man_boss`, `man_giant`.
+Tracks (names the game asks for):
+- Hub and story: `burns_title`, `burns_hub` (the city: day or night by itself), `burns_intro`, `burns_victory`, `burns_ending`.
+- Worlds: `burns_w1`…`burns_w17` (`burns_w17n` = Root Society at night, `burns_w15_chase`, `burns_w16_wonk`).
+- Bosses: `boss`, `man_boss`, `man_giant`.
+
+**The soundtrack is house music made in code** (`src/41_burns_music.js`, `BurnsHouse`). `burnsMusic(name)` routes every
+name above to a house track through `BurnsHouse.ROUTE` (e.g. `burns_w7` → `bm_sunrise`); a name with no route plays the
+city's day groove, never the old chiptune. To give a new place its own track: `BurnsHouse.add('bm_myplace', {...})`
+(format in the file header: tempo, chords per bar, drum/bass patterns, sections with filter sweeps and builds) and add
+`my_name: 'bm_myplace'` to `BurnsHouse.ROUTE`. The city switches day/night with `BurnsHouse.setCityNight(on)`.
+Test: `tools/burns_music_test.js` (renders every track offline and measures tempo, kicks, loudness, spectrum, loop seam).
 
 SFX:
 - Movement: `footstep, land, jump3d, doublejump, groundpound, spin`.
