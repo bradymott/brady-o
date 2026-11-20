@@ -2327,6 +2327,11 @@ const Sound = (() => {
   function compile(name) {
     if (CACHE[name]) return CACHE[name];
     const T = TRACKS[name], warn = [];
+    if (T.eng) {   // a track driven by its own step engine (added with addTrack(name, { eng, bpm, xf, xfi, dtb }))
+      const sd = 60 / (T.bpm * 4);
+      return (CACHE[name] = { name, eng: T.eng, ev: [], total: 1 << 30, warn, loop: true, bpm: T.bpm, spb: 4, sd, dt: Math.min(1.5, (T.dtb || 0.75) * 60 / T.bpm),
+        sw: 0, sw8: 0, pump: 0, wr: 0, kit: '', rv: 0, dl: 0, crush: false, xf: T.xf || 0, xfi: T.xfi || 0 });
+    }
     const spb = T.spb || 4, bpb = T.bpb || 4, spBar = spb * bpb, bars = T.bars, total = bars * spBar;
     const tr = T.tr || 0;
     const ev = new Array(total);
@@ -2460,18 +2465,28 @@ const Sound = (() => {
     out.connect(dest);
     if (cfg.rv) { const r = gain(cfg.rv); out.connect(r); r.connect(mRevIn); nodes.push(r); }
     if (cfg.dl) { const d = gain(cfg.dl); out.connect(d); d.connect(delayIn); nodes.push(d); }
+    if (cfg.eng) {   // engine tracks get their own reverb and echo sends (faded with the track) and build their own voices
+      const rs = gain(1), ds = gain(1); rs.connect(mRevIn); ds.connect(delayIn); nodes.push(rs, ds);
+      let inst = null;
+      try { inst = cfg.eng.open({ ctx, out, rev: rs, dly: ds }); } catch (e) { inst = null; }
+      if (inst && inst.nodes) for (const n of inst.nodes) nodes.push(n);
+      return { out, duck, nodes, inst, sends: [rs, ds] };
+    }
     return { out, duck, nodes };
   }
   function release(m, ms) {
-    setTimeout(() => { for (const n of m.o.nodes) { try { n.disconnect(); } catch (e) { /* ignore */ } } }, ms);
+    setTimeout(() => {
+      if (m.o.inst && m.cfg.eng && m.cfg.eng.close) { try { m.cfg.eng.close(m.o.inst); } catch (e) { /* ignore */ } }
+      for (const n of m.o.nodes) { try { n.disconnect(); } catch (e) { /* ignore */ } } }, ms);
   }
   function fadeOut(m) {
     if (!m) return;
     try {
-      const now = ctx.currentTime, gp = m.o.out.gain;
-      gp.cancelScheduledValues(now); gp.setTargetAtTime(0, now, 0.07);
+      const now = ctx.currentTime, gp = m.o.out.gain, tau = m.cfg.xf ? m.cfg.xf / 3 : 0.07;
+      gp.cancelScheduledValues(now); gp.setTargetAtTime(0, now, tau);
+      if (m.o.sends) for (const s of m.o.sends) { s.gain.cancelScheduledValues(now); s.gain.setTargetAtTime(0, now, tau); }
     } catch (e) { /* ignore */ }
-    release(m, 2500);
+    release(m, m.cfg.xf ? Math.max(2500, m.cfg.xf * 1000 + 1500) : 2500);
   }
   function startTimer() { if (!timer) { try { timer = setInterval(tick, TICK_MS); } catch (e) { timer = null; } } }
   function stopTimer() { if (timer) { try { clearInterval(timer); } catch (e) { /* ignore */ } timer = null; } }
@@ -2480,8 +2495,8 @@ const Sound = (() => {
     const cfg = compile(name);
     fadeOut(mus); mus = null;
     const now = ctx.currentTime, o = makeOut(cfg);
-    o.out.gain.setValueAtTime(0, now); o.out.gain.linearRampToValueAtTime(1, now + 0.06);
-    if (cfg.dl) delayNode.delayTime.setTargetAtTime(cfg.dt, now, 0.05);
+    o.out.gain.setValueAtTime(0, now); o.out.gain.linearRampToValueAtTime(1, now + (cfg.xfi || 0.06));
+    if (cfg.dl || cfg.eng) delayNode.delayTime.setTargetAtTime(cfg.dt, now, 0.05);
     mus = { name, cfg, step: 0, next: now + 0.06, o, end: 0 };
     if (!userPaused) startTimer();
     tick();
@@ -2499,6 +2514,7 @@ const Sound = (() => {
       let guard = 0;
       while (m.next < now + LOOKAHEAD && guard++ < 96) {
         const sd = cfg.sd / (boost ? 1.25 : 1), evs = cfg.ev[m.step];
+        if (cfg.eng) { try { cfg.eng.step(m.o.inst, m.step, m.next, sd); } catch (e) { /* never throw from the scheduler */ } }
         if (evs) {
           let tt = m.next;
           if (cfg.sw && (m.step & 1)) tt += cfg.sw * sd;                          // 16th swing
@@ -3186,7 +3202,7 @@ const BURNS_SFX_FALLBACK = {
 const BURNS_MUSIC_FALLBACK = {
   burns_hub: 'map', burns_intro: 'story', burns_w1: 'w5', burns_w2: 'w6', burns_w3: 'w7', burns_w4: 'w7', burns_w5: 'w6',
   burns_w6: 'w8', burns_w7: 'w9', burns_w8: 'w8', burns_w9: 'w9', burns_w10: 'final', man_boss: 'boss', man_giant: 'final',
-  burns_victory: 'clear', burns_ending: 'ending'
+  burns_victory: 'clear', burns_ending: 'ending', burns_title: 'burns_hub', burns_w14: 'burns_w3'
 };
 function burnsHas(list, name) { try { return !!(list && list.indexOf(name) >= 0); } catch (e) { return false; } }
 function burnsSfx(name, opts, fallback) {
@@ -3196,9 +3212,13 @@ function burnsSfx(name, opts, fallback) {
     if (fb) Sound.play(fb, opts);
   } catch (e) { /* audio must never break the game */ }
 }
+// The Burning Man app's soundtrack (41_burns_music.js) sets BURNS_MUSIC_ROUTE.fn: it turns any track name the game
+// asks for into one of its own house tracks. Apps without it (Art Cart) keep the plain names.
+const BURNS_MUSIC_ROUTE = { fn: null };
 function burnsMusic(name, fallback) {
   try {
     if (!name) { Sound.stopMusic && Sound.stopMusic(); return; }
+    if (BURNS_MUSIC_ROUTE.fn) { const r = BURNS_MUSIC_ROUTE.fn(name, fallback); if (r && burnsHas(Sound.trackNames, r)) { Sound.music(r); return; } }
     if (burnsHas(Sound.trackNames, name)) { Sound.music(name); return; }
     const fb = fallback || BURNS_MUSIC_FALLBACK[name];
     if (fb) Sound.music(fb);
@@ -3856,7 +3876,7 @@ void main(){
 varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG; varying vec3 vL;
 uniform sampler2D uTex;
 uniform vec4 uTint; uniform vec3 uRimC; uniform float uRim;
-uniform vec4 uRain; uniform vec2 uRainK;   // the Man's neon: heart position (world), 1/scale (0 = off); x hurt 0..1
+uniform vec4 uRain; uniform vec4 uRainK;   // the Man's neon: heart position (world), 1/scale (0 = off); x hurt 0..1, y burn 0..1, z fire front (figure units above the heart)
 ${BURNS_GLSL_LIGHT}
 void main(){
   vec4 t = texture2D(uTex, vT);
@@ -3878,6 +3898,8 @@ void main(){
   n = (t.a > 0.02 && t.a < 0.999) ? nb : normalize(mix(n, nc, cloth));
 #endif
   float e = vC.a;
+  // the Burn: everything below the fire front is alight (the front climbs from his feet to his raised hands)
+  float hy = (vW.y - uRain.y) * uRain.w, burnL = uRain.w > 0.0 && uRainK.y > 0.0 ? (1.0 - smoothstep(uRainK.z - 1.6, uRainK.z + 0.8, hy)) : 0.0;
   if (uRain.w > 0.0 && e > 0.5) {
     // white tubes: a rainbow travelling out from the heart in slow waves (a point changes colour over seconds; the
     // brightest band passes about every 4 s, so nothing flashes); the red heart beats about once a second.
@@ -3886,7 +3908,7 @@ void main(){
     if (vC.g > 0.9 && vC.b > 0.9) {
       vec3 hue = 0.18 + 0.82 * (0.5 + 0.5 * cos(6.2832 * (fract(d * 0.11 - uTime * 0.07) + vec3(0.0, 0.3333, 0.6667))));
       float wave = 0.62 + 0.38 * smoothstep(-0.3, 0.9, sin(d * 0.8 - uTime * 1.5)), breathe = 0.88 + 0.12 * sin(uTime * 0.6);
-      vec3 nc = mix(hue * wave * breathe, vec3(1.0, 0.1, 0.12) * (0.75 + 0.25 * wave), uRainK.x);
+      vec3 nc = mix(hue * wave * breathe, vec3(1.0, 0.1, 0.12) * (0.75 + 0.25 * wave), uRainK.x) * (1.0 - 0.85 * uRainK.y) * (1.0 - burnL);   // the neon dies as the fire takes him
       float tube = step(0.95, e);
       alb = mix(mix(bLin(vec3(0.86, 0.74, 0.6)), bLin(vec3(0.5, 0.53, 0.58)), tube), bLin(nc) * mix(0.5, 1.0, tube), nt);
       e = nt;
@@ -3905,6 +3927,14 @@ void main(){
   vec3 v = normalize(uCam - vW);
   c += uRimC * pow(1.0 - max(dot(n, v), 0.0), 2.5) * uRim;
   c = mix(c, bLin(uTint.rgb), uTint.a);
+  if (burnL > 0.0) {
+    // burning timber: flickering orange-to-yellow tongues that run up the trusses, a white-hot band at the front
+    float fl = 0.5 + 0.5 * sin(vW.y * 2.6 - uTime * 8.0 + sin(vW.x * 1.7 + vW.z * 1.3 + uTime * 2.1) * 2.6);
+    float edge = (1.0 - smoothstep(0.0, 1.8, abs(hy - uRainK.z)));
+    vec3 fire = mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.72, 0.28), clamp(fl * 0.6 + edge * 0.5, 0.0, 1.0)) * (1.2 + 1.1 * fl + 1.2 * edge);
+    c = mix(c * 0.35, fire, burnL * (0.55 + 0.4 * fl));
+    e = max(e, burnL);
+  }
   if (uTrip > 0.0) c = bTrip(c, vW);
   gl_FragColor = bOut(bFogMix(c, vW, e), 1.0);
 }`;
@@ -4873,7 +4903,7 @@ class BurnsRenderer {
     // the Man's rainbow neon: anchor (his heart) and scale come from his own bone palette
     if (u.uRain && (geo.rainbow || this._rain)) {
       const rb = geo.rainbow;
-      if (rb) { const o = rb.bone * 12, a = rb.at, sc = Math.hypot(bones[o], bones[o + 4], bones[o + 8]) || 1; gl.uniform4f(u.uRain, bones[o] * a[0] + bones[o + 1] * a[1] + bones[o + 2] * a[2] + bones[o + 3], bones[o + 4] * a[0] + bones[o + 5] * a[1] + bones[o + 6] * a[2] + bones[o + 7], bones[o + 8] * a[0] + bones[o + 9] * a[1] + bones[o + 10] * a[2] + bones[o + 11], 1 / sc); gl.uniform2f(u.uRainK, geo.rainHurt || 0, 0); }
+      if (rb) { const o = rb.bone * 12, a = rb.at, sc = Math.hypot(bones[o], bones[o + 4], bones[o + 8]) || 1; gl.uniform4f(u.uRain, bones[o] * a[0] + bones[o + 1] * a[1] + bones[o + 2] * a[2] + bones[o + 3], bones[o + 4] * a[0] + bones[o + 5] * a[1] + bones[o + 6] * a[2] + bones[o + 7], bones[o + 8] * a[0] + bones[o + 9] * a[1] + bones[o + 10] * a[2] + bones[o + 11], 1 / sc); const bn = geo.rainBurn && performance.now() - geo.rainBurn.t < 400 ? geo.rainBurn : null; gl.uniform4f(u.uRainK, geo.rainHurt || 0, bn ? bn.k : 0, bn ? bn.front : 0, 0); }
       else gl.uniform4f(u.uRain, 0, 0, 0, 0);
       this._rain = !!rb;
     }
@@ -5606,6 +5636,7 @@ class BurnsSkinnedChar {
   constructor(asset) {
     this.asset = asset; this.nb = asset.nb; this.bounds = asset.bounds; this.height = asset.height;
     this.x = 0; this.y = 0; this.z = 0; this.yaw = 0; this.scale = 1;
+    this.pitch = 0; this.roll = 0; this.yaw2 = 0; this.pivot = 0; this.dy = 0;   // whole-body extras (spin, flips), pivot in model units
     this.sk = new BurnsSkeleton(asset); this.palette = this.sk.palette;
     this.anim = null; this.animT = 0; this.speed = 1; this.loop = true; this.ended = false;
     this.prev = null; this.prevT = 0; this.prevSpeed = 1; this.prevLoop = true; this.fade = 1; this.fadeDur = 0.2;
@@ -5641,7 +5672,11 @@ class BurnsSkinnedChar {
   // the joint palette (Float32Array nb * 12) for R.skinW
   compute() {
     const sk = this.sk, L = sk.local;
-    BurnsM.a34Set(sk.root, 0, this.x, this.y, this.z, this.yaw, 0, 0, this.scale, this.scale, this.scale);
+    BurnsM.a34Set(sk.root, 0, this.x, this.y + this.dy, this.z, this.yaw + this.yaw2, this.pitch, this.roll, this.scale, this.scale, this.scale);
+    if (this.pitch || this.roll) {   // rotate about a point pivot (model units) above the feet, not about the feet
+      const o = sk.root, h = this.pivot;
+      o[3] -= o[1] * h; o[7] += this.scale * h - o[5] * h; o[11] -= o[9] * h;
+    }
     L.set(sk.rest);
     if (this.anim) this.anim.sample(this._wrap(this.anim, this.animT, this.loop), L);
     if (this.prev && this.fade < 1) {
@@ -6426,8 +6461,7 @@ if (typeof window !== 'undefined') {
    The bridge between the engine's procedural characters (BurnsChar, animated by name through BURNS_ANIMS) and the
    skinned glTF characters of §6.9 (BurnsSkinnedChar, clips from a file). An entity keeps driving its BurnsChar exactly
    as before; at draw time the bridge reads the BurnsChar's placement, animation name and clock, plays the matching
-   clip on a BurnsSkinnedChar and draws THAT with R.skinW instead. When the animation has no clip (bike, climb, flips,
-   zip lines, the DJ booth...) or the asset isn't loaded, every hook returns false and the caller draws the procedural
+   clip on a BurnsSkinnedChar and draws THAT with R.skinW instead. When the animation has no mapped clip or the asset isn't loaded, every hook returns false and the caller draws the procedural
    model as it always did, so nothing in play depends on a model file being there. See docs/BURNS_GUIDE.md §6.11.
 
    Who is swapped:  Brady (the player, the dialogue portrait, Art Cart's driver)  <- models/brady.glb.gz
@@ -6447,11 +6481,23 @@ const BURNS_SKINACTOR = {
     idle: 'idle', walk: 'walk', run: 'run', charge: 'run', jump: 'jump', fall: 'jump', land: 'land', hurt: 'hurt', yell: 'hurt',
     knocked: 'knocked', dance: 'dance', shuffle: 'dance', wave: 'wave', talk: 'talk', phone: 'talk', hug: 'hug', sit: 'sit',
     sleep: 'sleep', cheer: 'cheer', captive: 'captive', photo: 'photo', drive: 'drive',
-    cartDrive: 'drive', cartFire: 'fire', cartHit: 'hurt', cartCheer: 'cheer', cartSulk: 'sulk'
+    cartDrive: 'drive', cartFire: 'fire', cartHit: 'hurt', cartCheer: 'cheer', cartSulk: 'sulk',
+    // the player's action states: their own clips where the asset has them (the realistic Brady), the body rotation
+    // (spin about Y, the flip and pound somersaults, the fly/bike pitch) comes from the BurnsChar's pose (see ROOT)
+    spin: 'spin', flip: 'flip', pound: 'pound', bike: 'bike', climb: 'climb',
+    fly: 'jump', float: 'jump', victory: 'cheer', throw: 'wave', bell: 'wave', clipboard: 'talk', dazed: 'hurt',
+    burnsDJBrady: 'dance', bbaZip: 'cheer', bbaClimb: 'climb', bbaHang: 'cheer',
+    bw14Pilot: 'drive', bw14Free: 'spin', bw14Hang: 'cheer', bw14Climb: 'climb', bw14Tumble: 'flip', bw14Splat: 'spin'
   },
   // when the asset lacks a clip, the next one down (every chain ends at idle, which every asset has)
   FALLBACK: { run: 'walk', walk: 'idle', jump: 'idle', land: 'idle', hurt: 'idle', knocked: 'hurt', dance: 'idle', wave: 'idle', talk: 'idle', hug: 'wave', sit: 'idle', sleep: 'sit', cheer: 'wave', captive: 'hurt', photo: 'idle', drive: 'sit', fire: 'drive', sulk: 'drive' },
-  ONESHOT: { jump: 1, land: 1, knocked: 1, fire: 1 },   // play once and hold the last frame; everything else loops
+  ONESHOT: { jump: 1, land: 1, knocked: 1, fire: 1 },
+  // engine animations whose whole-body motion (P.yaw / P.pitch / P.roll about P.pivot, P.y hop) is applied to the
+  // skinned model too; spin/flip/pound/bike/climb have no FALLBACK on purpose: an asset without those clips (Chinka,
+  // the mannequin) still hands those states to the procedural model, as before
+  ROOT: { spin: 1, flip: 1, pound: 1, fly: 1, bike: 1, bw14Pilot: 1, bw14Free: 1, bw14Hang: 1, bw14Tumble: 1, bw14Splat: 1 },
+  // walk/run cadence from the ground covered: metres per clip cycle (the run's grows with speed, like a real stride)
+  STRIDE: { walk: 1.45, run: 5.2, runRef: 7.6, runK: 0.6 },   // play once and hold the last frame; everything else loops
   FILES: { brady: 'brady', chinka: 'chinka' },           // kind -> models/<stem>.glb(.gz)
   STAND_IN: 'mannequin',
   LOD_D2: 45 * 45,        // actors beyond this draw the procedural LOD (a few hundred triangles vs ~8k skinned)
@@ -6483,8 +6529,10 @@ class BurnsSkinActor {
      nothing. */
   sync(ch) {
     const S = this.S;
-    if (ch.poseFn) { this._anim = null; this.active = false; return false; }   // a custom pose function (pilot seats, zip lines…)
+    // a custom pose function (stunt bikes, pilot seats, zip lines…) keeps the skinned model when the engine animation
+    // underneath has a clip (the bike: the whole-body pitch/roll comes from the pose); otherwise the procedural model
     const clip = this.clipFor(ch.anim);
+    if (ch.poseFn && (!clip || !BURNS_SKINACTOR.ROOT[ch.anim])) { this._anim = null; this.active = false; return false; }
     if (!clip) { this._anim = ch.anim; this._animT = ch.animT; this.active = false; return false; }
     const same = ch.anim === this._anim;
     let dt = same && ch.animT >= this._animT ? ch.animT - this._animT : ch.animT;
@@ -6499,9 +6547,19 @@ class BurnsSkinActor {
     const moved = ch.x !== this._x || ch.y !== this._y || ch.z !== this._z || ch.yaw !== this._yaw || sc !== this._sc;
     S.x = this._x = ch.x; S.y = this._y = ch.y; S.z = this._z = ch.z; S.yaw = this._yaw = ch.yaw; S.scale = this._sc = sc;
     S.tint = ch.tint || this.tint; S.face = ch.face || 0;
+    // whole-body motion of the action states, from the procedural pose the BurnsChar computes anyway
+    const P = ch.P, R = BURNS_SKINACTOR.ROOT[ch.anim] && P;
+    S.pitch = R ? P.pitch : 0; S.roll = R ? P.roll : 0; S.yaw2 = R ? P.yaw : 0; S.pivot = R ? P.pivot : 0; S.dy = R && ch.anim === 'spin' ? P.y * sc : 0;
     if (dt > 0) S.update(dt);
-    // walk/run: the clip follows the BurnsChar's stride phase (ground covered; the clock when it isn't moving)
-    if ((clip === 'walk' || clip === 'run') && ch._stridePhase !== undefined && S.anim) S.animT = ch._stridePhase * S.anim.duration;
+    // walk/run: the clip phase follows the ground covered (feet planted); the clock when not moving
+    if ((clip === 'walk' || clip === 'run') && S.anim) {
+      const T = BURNS_SKINACTOR.STRIDE, travel = Number.isFinite(this._px) ? Math.hypot(ch.x - this._px, ch.z - this._pz) : 0;
+      const v = dt > 0 ? travel / dt : 0, m = (clip === 'walk' ? T.walk : T.run * Math.pow(Math.max(0.3, v / sc) / T.runRef, T.runK)) * sc;
+      const byClock = dt * S.speed / S.anim.duration;
+      this._ph = ((this._ph || 0) + (travel > 0.001 && travel < 5 * sc ? travel / m : byClock)) % 1;
+      S.animT = this._ph * S.anim.duration;
+    }
+    this._px = ch.x; this._pz = ch.z;
     if (dt > 0 || moved || !S.computed) S.compute();
     this.active = true;
     return true;
@@ -13038,11 +13096,13 @@ class BurnsManBoss {
       const pump = Math.abs(Math.sin(u * 5));
       S(B.UARM_L, -0.1, 0, 2.8 + pump * 0.2); S(B.UARM_R, -0.1, 0, -2.8 - pump * 0.2); S(B.CHEST, -0.1); S(B.HEAD, -0.35);
     } else if (st === 'stunned') {
+      // a slump onto hands and knees: knees down, shins flat behind, hands planted under the shoulders, head hanging
+      // (the head ends up where the old kneel put it, so the bonk is unchanged; arms out wide read as spider legs)
       const k = clamp(u / 0.6, 0, 1), wob = Math.sin(t * 3) * 0.05;
-      S(B.THIGH_L, -1.25 * k); S(B.SHIN_L, 2.1 * k); S(B.THIGH_R, -1.25 * k); S(B.SHIN_R, 2.1 * k);
-      S(B.CHEST, 1.15 * k + wob); S(B.HEAD, 0.3 * k);
-      S(B.UARM_L, -1.2 * k, 0, 0.6); S(B.UARM_R, -1.2 * k, 0, -0.6); S(B.FARM_L, -0.3, 0, 0); S(B.FARM_R, -0.3, 0, 0);
-      P.y = -4.4 * k;
+      S(B.THIGH_L, -0.55 * k); S(B.SHIN_L, 1.95 * k); S(B.FOOT_L, 0.4 * k); S(B.THIGH_R, -0.55 * k); S(B.SHIN_R, 1.95 * k); S(B.FOOT_R, 0.4 * k);
+      S(B.CHEST, 1.2 * k + wob); S(B.HEAD, 0.75 * k);
+      S(B.UARM_L, -1.05 * k, 0, 0.1); S(B.UARM_R, -1.05 * k, 0, -0.1); S(B.FARM_L, -0.9 * k); S(B.FARM_R, -0.9 * k);
+      P.y = -3.55 * k;
     } else if (st === 'hurt') {
       const k = Math.max(0, 1 - u / 1.0);
       S(B.CHEST, -0.5 * k); S(B.HEAD, -0.6 * k + Math.sin(t * 25) * 0.1 * k); S(B.UARM_L, -0.5, 0, 2.0); S(B.UARM_R, -0.5, 0, -2.0);
@@ -13183,11 +13243,15 @@ class BurnsManBoss {
   }
   draw(R) {
     const S = BURNS_SPRITES.R, h = this.head(), glow = this.headGlow;
-    R.bbs.bb(h[0], h[1], h[2], 9 * this.scale * glow, 9 * this.scale * glow, S.glow, [1, 0.55, 0.85], 0.55, true);
-    const fw = this.ch.bonePoint(BURNS_BONES.HEAD, 0, 1.9, 1.2);
-    R.bbs.bb(fw[0], fw[1], fw[2], 1.7 * this.scale, 1.7 * this.scale, S.heart, this.st === 'stunned' || this.st === 'hurt' ? [1, 0.25, 0.25] : [1, 0.35, 0.75], 0.95, true);
-    const heart = this.ch.bonePoint(BURNS_BONES.CHEST, 0, 2.5, 0.4);
-    R.bbs.bb(heart[0], heart[1], heart[2], 6 * this.scale, 6 * this.scale, S.glow, [1, 0.3, 0.6], 0.5 + Math.sin(this.t * 6) * 0.2, true);
+    // while he burns (geo.rainBurn, set by the Burn) his pink glows go out with the neon
+    const bn = this.model.geo.rainBurn, lit = bn && performance.now() - bn.t < 400 ? 1 - bn.k : 1;
+    if (lit > 0.02) {
+      R.bbs.bb(h[0], h[1], h[2], 9 * this.scale * glow, 9 * this.scale * glow, S.glow, [1, 0.55, 0.85], 0.55 * lit, true);
+      const fw = this.ch.bonePoint(BURNS_BONES.HEAD, 0, 1.9, 1.2);
+      R.bbs.bb(fw[0], fw[1], fw[2], 1.7 * this.scale, 1.7 * this.scale, S.heart, this.st === 'stunned' || this.st === 'hurt' ? [1, 0.25, 0.25] : [1, 0.35, 0.75], 0.95 * lit, true);
+      const heart = this.ch.bonePoint(BURNS_BONES.CHEST, 0, 2.5, 0.4);
+      R.bbs.bb(heart[0], heart[1], heart[2], 6 * this.scale, 6 * this.scale, S.glow, [1, 0.3, 0.6], (0.5 + Math.sin(this.t * 6) * 0.2) * lit, true);
+    }
     if (this.st === 'flash' && this.flashK > 0) R.bbs.bb(h[0], h[1], h[2], 30 * this.flashK * this.scale, 30 * this.flashK * this.scale, S.glow, [1, 0.9, 1], 0.6 * this.flashK, true);
     if (this.beam) {
       const n = 44, c = Math.sin(this.beam.ang), s = Math.cos(this.beam.ang), y = this.y + this.beam.h * 0.7;

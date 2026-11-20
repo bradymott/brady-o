@@ -2328,6 +2328,11 @@ const Sound = (() => {
   function compile(name) {
     if (CACHE[name]) return CACHE[name];
     const T = TRACKS[name], warn = [];
+    if (T.eng) {   // a track driven by its own step engine (added with addTrack(name, { eng, bpm, xf, xfi, dtb }))
+      const sd = 60 / (T.bpm * 4);
+      return (CACHE[name] = { name, eng: T.eng, ev: [], total: 1 << 30, warn, loop: true, bpm: T.bpm, spb: 4, sd, dt: Math.min(1.5, (T.dtb || 0.75) * 60 / T.bpm),
+        sw: 0, sw8: 0, pump: 0, wr: 0, kit: '', rv: 0, dl: 0, crush: false, xf: T.xf || 0, xfi: T.xfi || 0 });
+    }
     const spb = T.spb || 4, bpb = T.bpb || 4, spBar = spb * bpb, bars = T.bars, total = bars * spBar;
     const tr = T.tr || 0;
     const ev = new Array(total);
@@ -2461,18 +2466,28 @@ const Sound = (() => {
     out.connect(dest);
     if (cfg.rv) { const r = gain(cfg.rv); out.connect(r); r.connect(mRevIn); nodes.push(r); }
     if (cfg.dl) { const d = gain(cfg.dl); out.connect(d); d.connect(delayIn); nodes.push(d); }
+    if (cfg.eng) {   // engine tracks get their own reverb and echo sends (faded with the track) and build their own voices
+      const rs = gain(1), ds = gain(1); rs.connect(mRevIn); ds.connect(delayIn); nodes.push(rs, ds);
+      let inst = null;
+      try { inst = cfg.eng.open({ ctx, out, rev: rs, dly: ds }); } catch (e) { inst = null; }
+      if (inst && inst.nodes) for (const n of inst.nodes) nodes.push(n);
+      return { out, duck, nodes, inst, sends: [rs, ds] };
+    }
     return { out, duck, nodes };
   }
   function release(m, ms) {
-    setTimeout(() => { for (const n of m.o.nodes) { try { n.disconnect(); } catch (e) { /* ignore */ } } }, ms);
+    setTimeout(() => {
+      if (m.o.inst && m.cfg.eng && m.cfg.eng.close) { try { m.cfg.eng.close(m.o.inst); } catch (e) { /* ignore */ } }
+      for (const n of m.o.nodes) { try { n.disconnect(); } catch (e) { /* ignore */ } } }, ms);
   }
   function fadeOut(m) {
     if (!m) return;
     try {
-      const now = ctx.currentTime, gp = m.o.out.gain;
-      gp.cancelScheduledValues(now); gp.setTargetAtTime(0, now, 0.07);
+      const now = ctx.currentTime, gp = m.o.out.gain, tau = m.cfg.xf ? m.cfg.xf / 3 : 0.07;
+      gp.cancelScheduledValues(now); gp.setTargetAtTime(0, now, tau);
+      if (m.o.sends) for (const s of m.o.sends) { s.gain.cancelScheduledValues(now); s.gain.setTargetAtTime(0, now, tau); }
     } catch (e) { /* ignore */ }
-    release(m, 2500);
+    release(m, m.cfg.xf ? Math.max(2500, m.cfg.xf * 1000 + 1500) : 2500);
   }
   function startTimer() { if (!timer) { try { timer = setInterval(tick, TICK_MS); } catch (e) { timer = null; } } }
   function stopTimer() { if (timer) { try { clearInterval(timer); } catch (e) { /* ignore */ } timer = null; } }
@@ -2481,8 +2496,8 @@ const Sound = (() => {
     const cfg = compile(name);
     fadeOut(mus); mus = null;
     const now = ctx.currentTime, o = makeOut(cfg);
-    o.out.gain.setValueAtTime(0, now); o.out.gain.linearRampToValueAtTime(1, now + 0.06);
-    if (cfg.dl) delayNode.delayTime.setTargetAtTime(cfg.dt, now, 0.05);
+    o.out.gain.setValueAtTime(0, now); o.out.gain.linearRampToValueAtTime(1, now + (cfg.xfi || 0.06));
+    if (cfg.dl || cfg.eng) delayNode.delayTime.setTargetAtTime(cfg.dt, now, 0.05);
     mus = { name, cfg, step: 0, next: now + 0.06, o, end: 0 };
     if (!userPaused) startTimer();
     tick();
@@ -2500,6 +2515,7 @@ const Sound = (() => {
       let guard = 0;
       while (m.next < now + LOOKAHEAD && guard++ < 96) {
         const sd = cfg.sd / (boost ? 1.25 : 1), evs = cfg.ev[m.step];
+        if (cfg.eng) { try { cfg.eng.step(m.o.inst, m.step, m.next, sd); } catch (e) { /* never throw from the scheduler */ } }
         if (evs) {
           let tt = m.next;
           if (cfg.sw && (m.step & 1)) tt += cfg.sw * sd;                          // 16th swing
@@ -15380,7 +15396,7 @@ function drawLogo(ctx, x, y, size, t, txt) {
 const GAMES_ALL = [
   { id: 'burns', title: 'BURNING MAN', sub: 'Brady goes to Burning Man (3D)', col: '#ff6a2a' },
   { id: 'world', title: 'SUPER BRADY-O WORLD', sub: 'Super Brady-O travels the world', col: '#7ad86a' },
-  { id: 'kart', title: 'ART CART', sub: 'Battle-race wild art cars', col: '#ff4fd8' }
+  { id: 'kart', title: 'SUPER ART KART', sub: 'Battle-race wild art cars', col: '#ff4fd8' }
 ];
 // the standalone Super Brady-O World app shows only its own game
 const GAMES = (typeof BRADY_APP !== 'undefined' && BRADY_APP === 'world') ? GAMES_ALL.filter(g => g.id === 'world') : GAMES_ALL;
@@ -15409,7 +15425,7 @@ function startGame(id) {
   } else if (id === 'kart') {
     const K = kartScenes();
     if (K) Game.setScene(new K.KartMenuScene());
-    else if (Game.scene && Game.scene.toastMsg !== undefined) Game.scene.toastMsg = 'ART CART IS STILL WARMING UP';
+    else if (Game.scene && Game.scene.toastMsg !== undefined) Game.scene.toastMsg = 'SUPER ART KART IS STILL WARMING UP';
   }
 }
 // the kart racer and the city map live in their own modules; find them however they were exported
