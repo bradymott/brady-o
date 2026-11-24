@@ -315,7 +315,7 @@ BurnsWorlds.register({
     api.prop('booth', { x: -19.5, z: -214, roof: '#ff4fd8' }); api.prop('booth', { x: 19.5, z: -214, roof: '#38f2ff' });
     api.npc({ id: 'moe', name: 'GATE CREW MOE', type: 'gate', seed: 1, x: -17.2, z: -221, yaw: Math.PI / 2,
       talk(g, a) {
-        const hasT = g.hasItem('ticket'), gr = g.missions.isDone('greeters');
+        const hasT = g.hasItem('ticket') || g.missions.isDone('ticket'), gr = g.missions.isDone('greeters');
         if (BURNS_W1.state.gateOpen) { g.say(a, ['Go! Get her back! I\'ll hold your spot in the... well, you\'re through.']); return; }
         if (!hasT) g.say(a, ['Ticket and ID, please. ...No ticket? No entry. Rules are rules, even out here.']);
         else if (!gr) g.say(a, ['Ticket\'s legit! But you haven\'t been greeted. Greeter Station\'s back on the left. You\'ll know it when you get hugged.']);
@@ -362,14 +362,26 @@ BurnsWorlds.register({
     api.marker('party', -30, 90, 'Party', { col: '#ff4fd8' });
     api.region('gate', 0, -220, 20);
     // the boss starts when you walk into the arena with the gate open
-    api.trigger({ x: 0, z: -252, r: 10, when: g2 => BURNS_W1.state.gateOpen && !BURNS_W1.state.bossStarted && !g2.missions.isDone('boss'), onEnter: g2 => BURNS_W1.bossIntro(g2) });
+    api.trigger({ x: 0, z: -252, r: 10, when: g2 => BURNS_W1.state.gateOpen && BURNS_W1.fightPending(g2), onEnter: g2 => BURNS_W1.bossIntro(g2) });
+    // ...and from the ACTION button in the glowing ring (explains what's missing when it can't start yet)
+    api.interact({ x: 0, z: -262, r: 7, label: 'FIGHT: THE MAN', when: g2 => BURNS_W1.fightPending(g2), fn: g2 => BURNS_W1.tryFight(g2, true) });
+  },
+  // the guide arrow for the boss stage: Moe opens the gate, then the ring in the arena (the default otherwise)
+  guide(g) {
+    const S = BURNS_W1.state, M = g.missions;
+    if (!S || M.isDone('boss') || M.active().length || !BURNS_W1.reqsMet(g) || (S.man && S.man.active)) return undefined;
+    if (!S.gateOpen && g.player.z > BURNS_W1.GATE_Z) { const moe = g.actor('moe'); if (moe) return { x: moe.x, z: moe.z, label: 'TALK TO GATE CREW MOE' }; }
+    return { x: 0, z: -262, label: 'FIGHT THE MAN' };
   },
   onStart(g) {
     const S = BURNS_W1.state;
     const ci = g.actor('chinkaIntro'); if (ci && S.introDone) { ci.hidden = true; }
     S.ticketPick = g.pickups.items.find(P => P.id === 'ticketItem') || null;
+    // the ticket token is proof enough of the ticket (older saves can have one without the other)
+    if (g.missions.isDone('ticket') && !g.hasItem('ticket')) BurnsSave.addItem('ticket');
     if (g.missions.isDone('boss')) { S.man.hidden = true; S.gateOpen = true; S.barrier.off = true; S.bossStarted = true; }
-    else if (g.missions.isDone('greeters') && g.hasItem('ticket') && BurnsSave.flag(1, 'gate')) { S.gateOpen = true; S.barrier.off = true; }
+    // the gate stays open once Moe opened it (the saved flag means both requirements were met on that visit)
+    else if (BurnsSave.flag(1, 'gate')) { S.gateOpen = true; S.barrier.off = true; }
     // dusk -> night as tokens come in
     g.tod = Math.min(0.9, BurnsSave.tokenCount(1) * 0.18);
     if (BurnsSave.hasItem('ticket') || g.missions.isDone('ticket')) S.ticket = { done: true };
@@ -391,6 +403,7 @@ BurnsWorlds.register({
       for (let i = 0; i < 3; i++) { const a = Math.random() * TAU, d = 2 + Math.random() * 14; g.fx.add(p.x + Math.cos(a) * d, p.y + Math.random() * 3, p.z + Math.sin(a) * d, 7 + Math.random() * 4, 0.3, -2 + Math.random(), 1.2, 1.5, 4, [0.85, 0.72, 0.6], 0.3, 'puff', 0); }
     }
     BURNS_W1.updateTicket(g, dt);
+    BURNS_W1.watchArena(g, dt);
     // raise the barrier arms
     if (S.arms) for (let i = 0; i < S.arms.length; i++) { const a = S.arms[i]; a.roll = BurnsM.damp(a.roll || 0, S.gateOpen ? 1.35 : 0, 2, dt); }
     for (const t of S.timers || []) { t.t -= dt; if (t.t <= 0 && !t.done) { t.done = true; t.fn(); } }
@@ -523,9 +536,55 @@ BURNS_W1.openGate = function (g) {
 };
 
 /* ---------------- boss intro + defeat ---------------- */
+/* The fight can never be locked out: it is pending whenever the Man isn't beaten, isn't fighting and his intro isn't
+   playing. Being anywhere in the arena with both requirements met starts it (hopping the barrier included); without
+   them Brady is told what's missing. */
+BURNS_W1.reqsMet = function (g) {
+  return (g.missions.isDone('ticket') && g.missions.isDone('greeters')) || !!BurnsSave.flag(1, 'gate');
+};
+BURNS_W1.fightPending = function (g) {
+  const S = BURNS_W1.state;
+  return !!(S && S.man && S.introDone && !S.introRunning && !S.man.active && !g.missions.isDone('boss'));
+};
+BURNS_W1.inArena = function (p) {
+  const A = BURNS_W1.ARENA;
+  return p.z < BURNS_W1.GATE_Z - 1 && Math.hypot(p.x - A.x, p.z - A.z) < A.r + 1;
+};
+BURNS_W1.missing = function (g) {
+  const t = g.missions.isDone('ticket') || g.hasItem('ticket'), gr = g.missions.isDone('greeters');
+  if (!t && !gr) return 'Find your ticket and get past the greeters first. Lucky at the Pre-Gate Party has a spare ticket.';
+  if (!t) return 'Find your ticket first. Lucky at the Pre-Gate Party has a spare.';
+  if (!gr) return 'Get past the greeters first. Mama Dusty is at the Greeter Station, west of the gate.';
+  return '';
+};
+BURNS_W1.tryFight = function (g, pressed) {
+  const S = BURNS_W1.state;
+  if (!BURNS_W1.fightPending(g)) return false;
+  if (BURNS_W1.reqsMet(g)) {
+    if (!S.gateOpen) { S.gateOpen = true; S.barrier.off = true; BurnsSave.flag(1, 'gate', true); }
+    BURNS_W1.bossIntro(g);
+    return true;
+  }
+  const msg = BURNS_W1.missing(g);
+  g._w1hint = msg;
+  if (pressed || !(g.time - (S.hintT === undefined ? -99 : S.hintT) < 7)) {
+    S.hintT = g.time;
+    g.banner('NOT YET!', msg, { col: '#ff9a4a', small: true });
+    if (pressed) burnsSfx('bump', { vol: 0.5 });
+  }
+  return false;
+};
+BURNS_W1.watchArena = function (g) {
+  const S = BURNS_W1.state, p = g.player;
+  if (!S || g.state !== 'play' || g.cine || g.dialog.open || p.dead || g.faintT > 0) return;
+  if (!BURNS_W1.fightPending(g) || !BURNS_W1.inArena(p)) { if (g._w1hint && !BURNS_W1.inArena(p)) g._w1hint = null; return; }
+  BURNS_W1.tryFight(g, false);
+};
 BURNS_W1.bossIntro = function (g) {
   const S = BURNS_W1.state, man = S.man, p = g.player, A = BURNS_W1.ARENA;
-  if (S.bossStarted) return; S.bossStarted = true;
+  if (!BURNS_W1.fightPending(g)) return;
+  S.bossStarted = true; S.introRunning = true; g._w1hint = null;
+  const bm = g.missions.get('boss'); if (bm && bm.state === 'locked') bm.state = 'available';   // an old save with the gate flag but a requirement token missing
   g.missions.start('boss', true);
   g.cutscene([
     { music: 'man_boss' },
@@ -537,7 +596,7 @@ BURNS_W1.bossIntro = function (g) {
     { say: ['man', ['SMALL MAN WITH A BUN. SHE IS MINE NOW. WE ARE... SOULMATES.']] },
     { say: ['brady', ['You\'ve known her for twenty minutes!']] },
     { say: ['man', ['THE BEST TWENTY MINUTES OF MY LIFE!']] },
-    { do: g2 => { p.teleport(0, 0, -250, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = man; man.start(); g2.banner('FIGHT!', 'Jump his shockwaves · hide from the NEON FLASH · bonk his head when he collapses', { col: '#ffe24a' }); } }
+    { do: g2 => { p.teleport(0, 0, -250, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = man; man.start(); S.introRunning = false; g2.banner('FIGHT!', 'Jump his shockwaves · hide from the NEON FLASH · bonk his head when he collapses', { col: '#ffe24a' }); } }
   ]);
 };
 BURNS_W1.bossDefeated = function (g) {
@@ -563,3 +622,6 @@ BURNS_W1.bossDefeated = function (g) {
     ], g2 => g2.finishWorld());
   });
 };
+
+/* test hook: the World 1 state (tools/burns_boss_entry_test.js) */
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W1 });

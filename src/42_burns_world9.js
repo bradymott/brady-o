@@ -418,7 +418,7 @@ BURNS_W9.buildArena = function (api, g) {
   };
   chair(A.x - 15, A.z + 10, 0.4, '#c84a3a'); chair(A.x + 16, A.z + 8, -0.6, '#3a8ac8'); chair(A.x + 12, A.z - 16, Math.PI - 0.3, '#e8b030'); chair(A.x - 14, A.z - 14, Math.PI + 0.5, '#8a4ac8');
   api.sign('THE WAITING CHAIRS', A.x - 22, A.z + 22, { yaw: -0.6, h: 1.0, style: { bg: '#2a1a2a', fg: '#ffd0f4', size: 38, border: '#ffd0f4' } });
-  api.prop('artcar', { x: A.x + 24, z: A.z + 16, yaw: -1.2, len: 8, col: '#2a3a5a', sculpt: '#ff4fd8' }); covers.push({ x: A.x + 24, z: A.z + 16, r: 2.2 });
+  if (typeof BurnsArtCars !== 'undefined') BurnsArtCars.park(api, 'dusty_doubloon', A.x + 24, A.z + 16, -1.2); else api.prop('artcar', { x: A.x + 24, z: A.z + 16, yaw: -1.2, len: 8, col: '#2a3a5a', sculpt: '#ff4fd8' }); covers.push({ x: A.x + 24, z: A.z + 16, r: 2.2 });
   for (let i = 0; i < 3; i++) api.prop('portapotty', { x: A.x - 26 + i * 1.35, z: A.z - 4, col: '#3a8a3a' });
   covers.push({ x: A.x - 24.6, z: A.z - 4, r: 2.0 });
   // lamp posts around the arena, the Dust Whale (rebar ribs) for looks

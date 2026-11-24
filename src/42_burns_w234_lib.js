@@ -577,3 +577,5 @@ BURNS_ANIMS.w234carryIdle = (P, t) => {
     return base.call(this, m, o);
   };
 })();
+
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W234 });   // tests (tools/burns_artcars_test.js holds the parade still)

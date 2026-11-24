@@ -183,8 +183,10 @@ BW17C.build = function (api, g) {
   });
   // the Disco Duck, broken down on the open playa (drivable once she's fixed: the flag is shared with old saves)
   { const [h, r] = BW17C.SPOTS.duck, q = at(h, r), yaw = out(h) + Math.PI / 2; L.duck = q; L.duckYaw = yaw;
-    S.duckCar = api.artCar({ x: q[0], z: q[1], yaw, build: m => BW17.B.duckModel(m), maxSpeed: 7.5, label: 'DRIVE THE DUCK', horn: 'artcarHorn',
-      hornLines: ['QUACK QUACK!', 'IT\'S THE DISCO DUCK!', 'Duck! Duck! DUCK!'], driveHint: 'DRIVING THE DISCO DUCK · JUMP = QUACK', when: () => !!BurnsSave.flag(17, 'duckFixed') }); }
+    const duck = { x: q[0], z: q[1], yaw, build: m => BW17.B.duckModel(m), maxSpeed: 7.5, label: 'DRIVE THE DUCK', horn: 'artcarHorn',
+      hornLines: ['QUACK QUACK!', 'IT\'S THE DISCO DUCK!', 'Duck! Duck! DUCK!'], driveHint: 'DRIVING THE DISCO DUCK · JUMP = QUACK', when: () => !!BurnsSave.flag(17, 'duckFixed') };
+    // the Disco Duck is Super Art Kart's Quackzilla (41_burns_artcars.js); the procedural duck where the models can't load
+    S.duckCar = typeof BurnsArtCars !== 'undefined' && BurnsArtCars.canLoad() ? BurnsArtCars.vehicle(api, 'quackzilla', Object.assign(duck, { build: undefined, lit: !!BurnsSave.flag(17, 'duckFixed') })) : api.artCar(duck); }
   // the heart car on the deep playa, a DJ silhouette at the decks, a crowd that never went to bed
   { const [h, r] = BW17C.SPOTS.heart, q = at(h, r); L.heartCar = BW17.B.heartCar(api, q[0], q[1], 0); L.heartFloor = L.heartCar.floor;
     BW17.B.heartDJ(api, L.heartCar.booth[0], L.heartCar.boothY, L.heartCar.booth[1], Math.PI);
@@ -463,7 +465,7 @@ BW17C.crankStep = function (g, m, dt) {
   const end = () => { S.crank = null; p.locked = false; p.animOverride = null; if (g.modal === 'w17c') g.modal = null; BW17C.meter(null); };
   if (st.n >= 14) {
     end(); BurnsSave.flag(17, 'duckFixed', true); burnsSfx('artcarHorn'); g.shake(0.3);
-    const D = S.duckCar; if (D) for (let i = 0; i < 30; i++) g.fx.add(D.x + (Math.random() - 0.5) * 3, 5 + Math.random(), D.z + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 2 + Math.random() * 2, (Math.random() - 0.5) * 3, 2.2, 0.4, 0.6, [0.85, 0.95, 1], 0.6, 'bubble', 2 | 4);
+    const D = S.duckCar; if (D && D.artKart) BurnsArtCars.setLit(D.artKart, true);   // her lights come on if (D) for (let i = 0; i < 30; i++) g.fx.add(D.x + (Math.random() - 0.5) * 3, 5 + Math.random(), D.z + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 2 + Math.random() * 2, (Math.random() - 0.5) * 3, 2.2, 0.4, 0.6, [0.85, 0.95, 1], 0.6, 'bubble', 2 | 4);
     g.banner('QUAAACK!', 'The Disco Duck lives! ACTION by her seat to DRIVE', { col: '#ffd21a', big: true });
     g.missions.complete('w17c_duck');
   } else if (st.t > 6.3) { end(); const a = g.actor('w17c_quack'); if (a) a.say('She coughed! Crank harder!', 2); }

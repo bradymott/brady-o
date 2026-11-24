@@ -475,7 +475,12 @@ BurnsWorlds.register({
       for (let th = 60; th >= 30; th -= 2.5) path.push(at(th, 256));
       path.push(at(28, 248), at(27, 230), at(28, 212));
       const builds = [W2.carSnail, W2.carTeapot, W2.carCupcake, W2.carWhale, W2.carJelly, W2.carDisco];
-      S.parade = BW.parade(api, { path, builds: builds.map(b => (m, i) => b.call(W2, m, i)), n: 18, speed: 2.4 });
+      // the first snail, cupcake, whale and jellyfish of the parade are Super Art Kart's own (41_burns_artcars.js); the
+      // rest stay procedural, so the parade keeps its 18 cars inside the phone budget (Art Kart cars cost a draw each)
+      const art = typeof BurnsArtCars !== 'undefined' && BurnsArtCars.canLoad() ? { 0: 'turbo_escargot', 2: 'frosted_fury', 3: 'whale_of_a_time', 4: 'jelly_jolt' } : {};
+      const artB = {}; for (const k in art) artB[k] = BurnsArtCars.build(art[k], {});
+      S.parade = BW.parade(api, { path, builds: builds.map(b => (m, i) => artB[i] ? artB[i](m) : b.call(W2, m, i)), n: 18, speed: 2.4 });
+      for (const k in art) BurnsArtCars.track(api.world.game, art[k], S.parade.cars[k].mv, null, { driver: true });
       S.parade.onHit = (g2) => { g2.toast('ART CARS HAVE THE RIGHT OF WAY!'); };
       // a photo riding on top of the whale
       const car = S.parade.cars[3];
