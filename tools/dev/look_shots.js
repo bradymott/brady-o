@@ -60,7 +60,7 @@ function serve(root) { return new Promise(res => { const srv = http.createServer
         B.BurnsGL.configure(tier);
         if (S.pal) { s.palA = S.pal[0]; s.palB = S.pal[1]; s.tod = S.pal[2]; s.todTarget = null; if (typeof BURNS_OW !== 'undefined' && BURNS_OW.state) BURNS_OW.state.palKey = S.pal.join('|'); }
         if (S.tp) D.teleport(S.tp[0], S.tp[1]);
-        for (let i = 0; i < 30; i++) s.update(1 / 30);
+        for (let i = 0; i < 90; i++) s.update(1 / 30);   // let the city's tiles stream in
         if (S.pal) { s.palA = S.pal[0]; s.palB = S.pal[1]; s.tod = S.pal[2]; s.todTarget = null; }
         const env = B.BurnsEnv.build(s.palA, s.palB, s.tod, {}, s.time);
         const sd = env.sunDir, saz = Math.atan2(sd[0], sd[2]);
@@ -71,7 +71,11 @@ function serve(root) { return new Promise(res => { const srv = http.createServer
         s.q = 1;
         if (S.pre) new Function('s', 'B', S.pre)(s, B);   // LOOK_PRE: code run with the scene before drawing
         const draw = () => { s.fade = 0; s.dayCardT = -1; s.banners = []; if (s.dialog) s.dialog.open = false; window.BRADY.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); s.q = 1; s.draw(window.BRADY.Game.ctx); };
-        draw(); draw();
+        draw();
+        // finish streaming the city's tiles around this camera (each draw only builds for a few ms), and let the
+        // tiles' people join, so every run shoots the same finished scene
+        if (s.tiles) for (let i = 0; i < 400 && (s.tiles.queue.length || s.tiles.job || s.tiles.people.length); i++) s.tiles.step(50);
+        draw();
         const gl = B.BurnsGL.gl; gl.finish();
         const t0 = performance.now(); for (let i = 0; i < 3; i++) { draw(); } gl.finish();
         const ms = (performance.now() - t0) / 3;

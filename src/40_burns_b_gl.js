@@ -45,8 +45,9 @@ const BURNS_GFX = {
    horizon haze band (radians); ridges: 1 = ridged mountain ranges instead of the soft silhouette. A palette's
    skyGrad / hazeBand / ridges override these. toneDay / toneNight: [warm highlights, cool shadows] split tone in
    the final grade (0 = off), blended by how dark the scene is. dust: playa dust on props, vehicles and people
-   (up-facing surfaces and a band at the foot), tinted like the world's ground (0 = off). */
-const BURNS_LOOK = { alkali: 0, tracks: 0, cracks: 1, skyGrad: 0, hazeBand: 0.3, ridges: 0, toneDay: [0, 0], toneNight: [0, 0], dust: 0 };
+   (up-facing surfaces and a band at the foot), tinted like the world's ground (0 = off). grime: tone variation
+   across plain painted static surfaces (0 = off; 0.4 = about +-10%). */
+const BURNS_LOOK = { alkali: 0, tracks: 0, cracks: 1, skyGrad: 0, hazeBand: 0.3, ridges: 0, toneDay: [0, 0], toneNight: [0, 0], dust: 0, grime: 0 };
 
 const BURNS_GLSL_OUT = `
 uniform vec4 uExp;   // x exposure (LDR path), y dust haze, z night 0..1, w glow boost
@@ -194,7 +195,7 @@ const BURNS_GLSL_POSTVS = `attribute vec2 aPos; varying vec2 vUV; void main(){ v
 // the static mesh fragment shader (merged chunks and instanced props share it)
 const BURNS_GLSL_MESHFS = `precision highp float;
 varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
-uniform sampler2D uTex;
+uniform sampler2D uTex, uDetM;
 uniform float uAlphaK;
 ${BURNS_GLSL_LIGHT}
 void main(){
@@ -203,6 +204,9 @@ void main(){
   vec3 n = normalize(vN);
   if (uDust.x > 0.0) alb = bDust(alb, n, vW, vC.a);
 #ifdef BUMP
+  // weathering: plain painted surfaces vary a little in tone across their faces (sun-bleached, scuffed, dusty),
+  // which breaks the flat computer-colour look; atlas-textured and glowing parts are left alone
+  if (uDust.z > 0.0 && t.a < 0.02 && vC.a < 0.5) alb *= 1.0 + (texture2D(uDetM, vW.xz * 0.12 + vec2(vW.y * 0.09, -vW.y * 0.07)).g - 0.5) * uDust.z;
   vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.004);
   n = t.a > 0.02 ? nb : n;
 #endif
@@ -1168,8 +1172,10 @@ class BurnsRenderer {
     if (u.uDust) {
       // dust tinted like this world's playa (its ground colour, as the ground shader calibrates it)
       const gb = world && world.ground && world.ground.base, dk = BURNS_LOOK.dust || 0;
-      if (gb && dk > 0) { const l = 0.3 * gb[0] + 0.59 * gb[1] + 0.11 * gb[2], a = BURNS_LOOK.alkali || 0; gl.uniform3f(u.uDustC, Math.pow(lerp(gb[0], l * 1.07, a), 2.2), Math.pow(lerp(gb[1], l * 1.01, a), 2.2), Math.pow(lerp(gb[2], l * 0.9, a), 2.2)); gl.uniform4f(u.uDust, dk, 0.8, 0, 0); }
-      else gl.uniform4f(u.uDust, 0, 1, 0, 0);
+      const gm = BurnsWorld._detT && BurnsWorld._detT.tex && BurnsWorld._detT.gen === BurnsGL.gen ? BURNS_LOOK.grime || 0 : 0;
+      if (u.uDetM) { gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, gm > 0 ? BurnsWorld._detT.tex : BurnsGL.white); gl.uniform1i(u.uDetM, 7); gl.activeTexture(gl.TEXTURE0); }
+      if (gb && dk > 0) { const l = 0.3 * gb[0] + 0.59 * gb[1] + 0.11 * gb[2], a = BURNS_LOOK.alkali || 0; gl.uniform3f(u.uDustC, Math.pow(lerp(gb[0], l * 1.07, a), 2.2), Math.pow(lerp(gb[1], l * 1.01, a), 2.2), Math.pow(lerp(gb[2], l * 0.9, a), 2.2)); gl.uniform4f(u.uDust, dk, 0.8, gm, 0); }
+      else gl.uniform4f(u.uDust, 0, 1, gm, 0);
     }
     if (u.uLm) {
       const lm = world && world.lightmap;
