@@ -544,7 +544,6 @@ void main(){
   // (a gentle warp: a strong one swirls the cracks into whorls where the noise is steep)
   vec2 wv = (vec2(m1.g, m2.g) - 0.5) * 0.45;
   vec4 d1 = texture2D(uDet, vW.xz * uDetK.x + wv);
-  vec4 d2 = texture2D(uDet, vW.xz * uDetK.z);
   vec4 d4 = texture2D(uDet, vW.xz * uDetK.x * 2.7 + wv.yx * 1.3 + 0.21);
   float crust = smoothstep(0.3, 0.66, m2.g * 0.65 + m1.g * 0.35);   // 0 = drifted smooth dust, 1 = cracked crust
   // tyre ruts, bike tracks and footprints crush the crust into powder (no cracks, paler, a shallow dip)
@@ -563,8 +562,7 @@ void main(){
   // up close the crack lines; far away only their average (crack density darkens the crust a touch)
   float ck = (d1.r * crustAA * mix(0.2, 1.0, crust) + d4.r * 0.22 * crustAA * crust) * (1.0 - trk) * uLook.z;
   alb *= 1.0 - ck * uDetK.y * 1.15 - crust * far * uDetK.y * 0.12;
-  alb *= 1.0 + (d2.g - 0.5) * uDetK.w;
-  alb *= mix(0.9, 1.07, m2.g) * mix(0.96, 1.03, m1.g);
+  alb *= mix(0.9, 1.07, m2.g) * (1.0 + (m1.g - 0.5) * (uDetK.w + 0.07));   // mottling at two scales (m1 also serves the old mottle layer)
   alb = mix(alb, alb * vec3(1.05, 1.03, 0.99), (1.0 - crust) * 0.6);   // dust drifts read paler and warmer
   alb *= 0.94 + (d1.b - 0.5) * 0.16 * fade * crust + 0.06;              // plate-to-plate tone
   alb *= 1.0 + trk * 0.03;
