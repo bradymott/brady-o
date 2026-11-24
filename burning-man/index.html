@@ -11237,6 +11237,26 @@ const BurnsProps = {
     m.pop();
     return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.1, hz: 1.1, y0: 0, y1: 1.0 }], lights: [], top: 1.0 };
   },
+  // a dome tent: rounded body, a darker door flap, two guy lines and a lantern by the door (o.col, o.lantern).
+  // The Blender model (tools/blender/bm_tent.py, 'domeTent' in 41_burns_glbprops.js) replaces it when loaded.
+  domeTent(m, o) {
+    o = o || {}; const col = o.col || '#f4f2ee';
+    m.color(col).shine(1); m.ellipsoid(0, 0, 0, 1.5, 1.25, 1.2, m.lo ? { seg: 7, rings: 3 } : { seg: 12, rings: 5 }); m.shine(0);
+    m.color('#2a2a34'); m.ellipsoid(0, 0.02, 1.08, 0.55, 0.85, 0.16, { seg: 8, rings: 3 });
+    if (!m.lo) { m.color('#e8e8ec'); m.limb(-1.4, 0.7, 0, -2.2, 0, 0, 0.012, 0.012, { seg: 3, ends: false }); m.limb(1.4, 0.7, 0, 2.2, 0, 0, 0.012, 0.012, { seg: 3, ends: false }); }
+    if (o.lantern !== false) { m.color('#ffe6c0', 1); m.ball(0.75, 0.9, 1.15, 0.09, { seg: 6, rings: 4 }); m.emissive(0); }
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.4, hz: 1.1, y0: 0, y1: 1.2 }], lights: [], top: 1.2 };
+  },
+  // the Esplanade lamp post: a tall wooden pole with a lantern on a crook toward +Z (the city's ow_lamp). The Blender
+  // model (tools/blender/bm_lamp.py, 'lampPost' in 41_burns_glbprops.js) replaces it when loaded.
+  lampPost(m) {
+    m.color('#6a4a32'); m.roundBox(0, 3.4, 0, 0.18, 6.8, 0.18, 0.04, { k: 1, m: 1 });
+    m.limb(0, 6.6, 0, 0, 6.85, 0.55, 0.05, 0.05, { seg: 5 });
+    m.color('#3a2a1e'); m.box(0, 0.05, 0, 0.6, 0.1, 0.6);
+    m.color('#ffc070', 1); m.roundBox(0, 6.35, 0.6, 0.32, 0.42, 0.32, 0.06, { k: 1, m: 1 }); m.emissive(0);
+    m.color('#2a2a30'); m.box(0, 6.6, 0.6, 0.38, 0.06, 0.38);
+    return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.16, y0: 0, y1: 6.8 }] };
+  },
   chair(m, o) {
     o = o || {}; const col = o.col || '#2a6ac8';
     m.color('#9a9aa2'); for (const [x, z] of [[0.25, 0.25], [-0.25, 0.25], [0.25, -0.25], [-0.25, -0.25]]) m.box(x, 0.22, z, 0.03, 0.44, 0.03);
@@ -13129,12 +13149,17 @@ class BurnsFX {
   draw(R) {
     const P = this.p, S = BURNS_SPRITES.R, regs = this.kinds.map(k => S[k] || S.glow);
     const col = [0, 0, 0];
+    // dust and smoke are lit by the scene: at night they take the moonlight (dim and cool) instead of glowing tan
+    // (Burning Man's look only: Super Art Kart keeps its own)
+    const nk = typeof BURNS_LOOK !== 'undefined' && BURNS_LOOK.alkali > 0 ? (R.night || 0) : 0, kP = this.kIdx.puff, kS = this.kIdx.smoke;
+    const lr = 1 - nk * 0.6, lg = 1 - nk * 0.56, lb = 1 - nk * 0.4, la = 1 - nk * 0.5;
     for (let i = 0; i < this.n; i++) {
       const o = i * 16, life = P[o + 6], max = P[o + 7], t = 1 - life / max, fl = this.f[i];
       const size = lerp(P[o + 8], P[o + 9], t);
       const fade = Math.min(1, life / Math.min(0.35, max * 0.5)) * Math.min(1, t * 8 + 0.2);
       col[0] = P[o + 10]; col[1] = P[o + 11]; col[2] = P[o + 12];
-      const a = P[o + 13] * fade;
+      let a = P[o + 13] * fade;
+      if (nk > 0 && !(fl & 1) && (this.k[i] === kP || this.k[i] === kS)) { col[0] *= lr; col[1] *= lg; col[2] *= lb; a *= la; }
       if (fl & 8) R.flat.flat(P[o], P[o + 1], P[o + 2], size, size, P[o + 14], regs[this.k[i]], col, a, !!(fl & 1));
       else if (fl & 16) R.bbs.streak(P[o], P[o + 1], P[o + 2], P[o + 3], P[o + 4], P[o + 5], size * 3, size * 0.5, regs[this.k[i]], col, a);
       else R.bbs.bb(P[o], P[o + 1], P[o + 2], size, size, regs[this.k[i]], col, a, !!(fl & 1), P[o + 14]);
@@ -14976,12 +15001,22 @@ class BurnsPlayScene {
     this.fastAcc = fdt < 0.0175 ? (this.fastAcc || 0) + fdt : 0;
     if (this.fastAcc > 5 && this.q < 1) { this.q = Math.min(1, this.q + 0.08); this.fastAcc = 0; }
   }
+  // Blender-made props (41_burns_glbprops.js) are swapped in while a world builds, and a world (the city's instanced
+  // prototypes above all) keeps whatever it built: so the first load waits for them, at most 6 s (slow networks keep
+  // the procedural props)
+  glbReady() {
+    const G = typeof BurnsGLBProps !== 'undefined' ? BurnsGLBProps : null;
+    if (!G || G.ready || (typeof BRADY_APP !== 'undefined' && BRADY_APP !== 'burningman')) return true;
+    try { G.preload(); } catch (e) { return true; }
+    const now = performance.now(); if (!this.glbWait) this.glbWait = now;
+    return now - this.glbWait > 6000;
+  }
   draw(ctx) {
     const W = Game.cssW, H = Game.cssH, dpr = Game.dpr;
     if (this.state === 'missing') return BurnsUI.drawMissing(ctx, this);
     if (this.state === 'load') {
       BurnsUI.drawLoading(ctx, this);
-      if (this.loadFrames = (this.loadFrames || 0) + 1, this.loadFrames >= 2) {
+      if (this.loadFrames = (this.loadFrames || 0) + 1, this.loadFrames >= 2 && this.glbReady()) {
         try { this.load(); } catch (e) { console.error(e); Game.reportError(e); this.state = 'nogl'; this.noglMsg = 'This world failed to load.'; this.buildNoGL(); Input.setMode('ui'); }
       }
       return;
@@ -24035,8 +24070,9 @@ try { if (window.BRADY_BURNS) window.BRADY_BURNS.BurnsDJ = BurnsDJ; } catch (e) 
    sizes the model doesn't cover, on file:// pages, and until the models arrive.
    See docs/BURNS_GUIDE.md §5.1.
    ============================================================ */
-// prop kind -> file stem under models/ (assets/models/burning-man/<stem>.glb)
-const BURNS_GLB_PROPS = { rv: 'rv', bus: 'bus', dome: 'dome', tipi: 'tipi', portapotty: 'potty', shade: 'shade' };
+// prop kind -> file stem under models/ (assets/models/burning-man/<stem>.glb). A stem may also ship <stem>_lo.glb: the
+// mid-distance level (instanced props' m.lo build, traffic LOD twins, opts.lo), used instead of the procedural lo build.
+const BURNS_GLB_PROPS = { rv: 'rv', bus: 'bus', dome: 'dome', tipi: 'tipi', portapotty: 'potty', shade: 'shade', domeTent: 'tent', trailer: 'trailer', lampPost: 'lamp', camper: 'camper' };
 
 /* ---- BurnsGLTF.emit: append a glb's triangles to a BurnsMesh under its current transform ---- */
 // once per doc: every primitive baked to file space (node world matrices applied), grouped by root node name
@@ -24145,9 +24181,14 @@ const BurnsGLBProps = {
         let file = stem + '.glb';
         if (have.has(file + '.gz') && BurnsGLTF.canInflate()) file += '.gz';
         else if (!have.has(file)) continue;
-        jobs.push(BurnsGLTF.fetch(this.base() + file)
-          .then(doc => { const F = BurnsGLTF.flatten(doc); if (F.nv > 60000) throw new Error('too many vertices (' + F.nv + ')'); this.docs[kind] = doc; })
-          .catch(e => { console.warn('glb prop ' + kind + ' failed: ' + (e && e.message || e)); }));
+        const get = (f, key) => BurnsGLTF.fetch(this.base() + f)
+          .then(doc => { const F = BurnsGLTF.flatten(doc); if (F.nv > 60000) throw new Error('too many vertices (' + F.nv + ')'); this.docs[key] = doc; })
+          .catch(e => { console.warn('glb prop ' + key + ' failed: ' + (e && e.message || e)); });
+        jobs.push(get(file, kind));
+        // the mid-distance level, when the prop has one
+        let lo = stem + '_lo.glb';
+        if (have.has(lo + '.gz') && BurnsGLTF.canInflate()) lo += '.gz';
+        if (have.has(lo)) jobs.push(get(lo, kind + '_lo'));
       }
       return Promise.all(jobs);
     }).then(() => { this.install(); this.ready = true; });
@@ -24161,8 +24202,9 @@ const BurnsGLBProps = {
       const orig = BurnsProps[kind] || null; this.orig[kind] = orig;
       BurnsProps[kind] = function (m, o) {
         o = o || {};
-        const doc = G.docs[kind];
-        if (!doc || m.lo || o.lo || o.glb === false || G.off()) { G.fallbacks++; return orig ? orig.call(this, m, o) : G.plain[kind].call(this, m, o); }
+        // low-detail builds use the prop's _lo model when it has one, the procedural lo build otherwise
+        const doc = (m.lo || o.lo) ? G.docs[kind + '_lo'] : G.docs[kind];
+        if (!doc || o.glb === false || G.off()) { G.fallbacks++; return orig ? orig.call(this, m, o) : G.plain[kind].call(this, m, o); }
         const out = G.build[kind].call(this, m, o, doc);
         if (out === null) { G.fallbacks++; return orig ? orig.call(this, m, o) : G.plain[kind].call(this, m, o); }
         G.count++; return out;
@@ -24187,6 +24229,15 @@ const BurnsGLBProps = {
       else { m.color(o.canvas || o.col || '#ece0c4'); m.lathe([[r, 0], [r * 0.66, h * 0.36], [0, h * 0.96]], { seg: 16 }); }
       return BurnsGLBProps.tipiInfo(r, h);
     }
+  },
+  // the shade model's cover and frame (`body` root) as any builder's canopy: w × d, frame top at h, cloth colour col.
+  // Returns false (draw your own) when the model isn't loaded, and for low-detail builds (a flat sheet is enough past
+  // 40 m and the city has hundreds of camp fronts). Used by the city's camp frontages.
+  canopy(m, w, d, h, col) {
+    const doc = m.lo ? null : this.docs.shade;
+    if (!doc || this.off()) return false;
+    BurnsGLTF.emit(m, doc, { roots: ['body'], scale: [w / 5, 1, d / 5], at: [0, h - 2.9, 0], colors: { cover: col } });
+    return true;
   },
   tipiInfo(r, h) {
     return { cols: [{ t: 'cyl', x: 0, z: 0, r: r * 0.78, y0: 0, y1: h * 0.5 }], lights: [{ x: 0, y: h * 1.03, z: 0, s: 0.9, c: '#ffd890' }, { x: 0, y: 1.5, z: r * 0.88, s: 0.5, c: '#ffd890' }, { x: 0, y: 0, z: 0, s: 0, c: '#ffb070', pool: r * 2.2, i: 0.35 }], top: h };
@@ -24247,6 +24298,42 @@ const BurnsGLBProps = {
       BurnsGLTF.emit(m, doc, { roots: ['body'], scale: r / R0, colors });
       BurnsGLTF.emit(m, doc, { roots: ['door'], at: [0, 0, r - 0.15] });
       return { cols: [{ t: 'dome', x: 0, z: 0, r: r, y0: 0, cover: true }], lights: [{ x: 0, y: 0, z: 0, s: 0, c: typeof o.glow === 'string' ? o.glow : (o.glow === true && typeof o.col === 'string' ? o.col : '#ff70c0'), pool: r * 1.6 }], top: r, glb: true };
+    },
+    // pickup + polished-aluminium trailer (tools/blender/bm_trailer.py): same footprint, colliders and lights as the
+    // procedural one; the truck's paint is picked from the same seeded list
+    trailer(m, o, doc) {
+      const r = this.rngFor(o), W = 2.4, H = 2.9, tL = 7;
+      BurnsGLTF.emit(m, doc, { colors: { truck: o.col || r.pick(['#2a2a30', '#8a1a1a', '#e8e8e8', '#2a4a7a']) } });
+      const cols = [
+        { t: 'box', x: 0, z: -2.6, hx: W / 2, hz: tL / 2, y0: 0, y1: H, cover: true },
+        { t: 'box', x: 0, z: 3.6, hx: 1.05, hz: 2.6, y0: 0, y1: 1.2 },
+        { t: 'box', x: 0, z: 3.95, hx: 0.98, hz: 1.0, y0: 0, y1: 1.9 }
+      ];
+      return { cols, lights: [{ x: 0.72, y: 1.02, z: 6.25, s: 1.0, c: '#fff0c8', beam: 0 }, { x: -0.72, y: 1.02, z: 6.25, s: 1.0, c: '#fff0c8', beam: 0 }, { x: 0.75, y: 0.85, z: -6.1, s: 0.6, c: '#ff3020' }, { x: -0.75, y: 0.85, z: -6.1, s: 0.6, c: '#ff3020' }], top: H, len: 12.6, w: W, glb: true };
+    },
+    // pickup with a camper shell (tools/blender/bm_camper.py): same colliders and lights as the procedural camper
+    camper(m, o, doc) {
+      const r = this.rngFor(o), L = 6.2, W = 2.2, zf = L / 2, zb = -L / 2;
+      const col = o.col || r.pick(['#a83a2a', '#2a4a8a', '#e8e0d0', '#3a6a3a', '#5a5a64']), shell = o.shell || r.pick(['#e8e4dc', '#d8d0c0', '#f4f0e8']);
+      BurnsGLTF.emit(m, doc, { colors: { truck: col, shell } });
+      const cols = [
+        { t: 'box', x: 0, z: zf - 0.9, hx: W / 2, hz: 0.9, y0: 0, y1: 1.33 },
+        { t: 'box', x: 0, z: zf - 2.3, hx: W / 2, hz: 0.7, y0: 0, y1: 2.1 },
+        { t: 'box', x: 0, z: (zb + zf - 2.95) / 2, hx: (W + 0.15) / 2, hz: (zf - 2.95 - zb + 0.2) / 2, y0: 0, y1: 2.75, cover: true }
+      ];
+      return { cols, lights: [{ x: 0.7, y: 1.0, z: zf + 0.1, s: 1.0, c: '#fff0c8', beam: 0 }, { x: -0.7, y: 1.0, z: zf + 0.1, s: 1.0, c: '#fff0c8', beam: 0 }, { x: 0.95, y: 1.0, z: zb - 0.1, s: 0.7, c: '#ff3020' }, { x: -0.95, y: 1.0, z: zb - 0.1, s: 0.7, c: '#ff3020' }], top: 2.75, len: L, w: W, glb: true };
+    },
+    // the Esplanade lamp post (tools/blender/bm_lamp.py): wooden pole, iron crook, a lantern that glows at night
+    lampPost(m, o, doc) {
+      BurnsGLTF.emit(m, doc, {});
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.16, y0: 0, y1: 6.8 }], glb: true };
+    },
+    // the two-pole dome tent (tools/blender/bm_tent.py): near-white fly for the city's per-copy tints, or o.col
+    domeTent(m, o, doc) {
+      const colors = {}; if (o.col) colors.fly = colors.tape = o.col;
+      if (o.lantern === false) colors['led_ffe0b0'] = { col: '#3a3a40', e: 0 };
+      BurnsGLTF.emit(m, doc, { colors });
+      return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.4, hz: 1.1, y0: 0, y1: 1.2 }], lights: [], top: 1.2, glb: true };
     },
     tipi(m, o, doc) {
       const r = o.r || 2.6, h = o.h || 5.6, R0 = 2.6, H0 = 5.6;
@@ -25879,7 +25966,7 @@ const BurnsOW = {
     veh('trailer', 7, boxFar(2.4, 2.6, 11.5, '#c8ccd4'));
     veh('bus', 4, boxFar(2.6, 3.0, 11, '#6a3ab0', '#ffd84a'));
     // tents: one white tent with a lantern by the door, tinted per copy (the tent colours)
-    api.instanceProto('ow_tent', m => this.domeTent(m, '#f4f2ee', true), { near: 30, mid: 110, r: 2 });
+    api.instanceProto('ow_tent', m => P.domeTent(m, { col: '#f4f2ee' }), { near: 30, mid: 110, r: 2 });
     api.instanceProto('ow_domeL', m => P.dome(m, { r: 4.2, col: '#e0d0f0', alt: '#b8a0e0', freq: 2, lights: true }), { near: 50, mid: 170, r: 5, far: m => { m.color('#e0d0f0'); m.dome(0, 0, 0, 4.2, 1, { frame: false }); m.color('#ff4fd8', 1); m.box(0, 0.3, 0, 8.6, 0.3, 0.3); m.emissive(0); }, farD: 280 });
     api.instanceProto('ow_barrel', m => { m.color('#6a3a24').shine(1); m.cyl(0, 0, 0, 0.42, 0.42, 0.95, 10, { smooth: true }); m.shine(0); m.color('#ff7a2a', 1); m.cyl(0, 0.9, 0, 0.36, 0.36, 0.06, 10, {}); m.emissive(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.45, y0: 0, y1: 1.0 }] }; }, { near: 30, mid: 100, lo: false, r: 0.8 });
     api.instanceProto('ow_totem', m => this.totem(m), { near: 45, mid: 180, r: 2, far: m => { m.color('#3a2a4a'); m.box(0, 3, 0, 0.5, 6, 0.5); m.color('#38f2ff', 1); m.box(0, 5.2, 0, 1.4, 0.6, 1.4); m.emissive(0); }, farD: 300 });
@@ -25902,14 +25989,8 @@ const BurnsOW = {
     api.instanceProto('ow_bikes', m => this.bikeRack(m), { near: 60, lo: false, r: 2, shadow: false });
   },
   // Esplanade lamp post: a tall wooden pole with a lantern on a crook (the lamplighters light them at dusk)
-  lampPost(m) {
-    m.color('#6a4a32'); m.roundBox(0, 3.4, 0, 0.18, 6.8, 0.18, 0.04, { k: 1, m: 1 });
-    m.limb(0, 6.6, 0, 0, 6.85, 0.55, 0.05, 0.05, { seg: 5 });
-    m.color('#3a2a1e'); m.box(0, 0.05, 0, 0.6, 0.1, 0.6);
-    m.color('#ffc070', 1); m.roundBox(0, 6.35, 0.6, 0.32, 0.42, 0.32, 0.06, { k: 1, m: 1 }); m.emissive(0);
-    m.color('#2a2a30'); m.box(0, 6.6, 0.6, 0.38, 0.06, 0.38);
-    return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.16, y0: 0, y1: 6.8 }] };
-  },
+  // (BurnsProps.lampPost, replaced by the Blender lamp when it's loaded)
+  lampPost(m) { return BurnsProps.lampPost(m, {}); },
   // a burner on a bike (one static mesh: it's instanced and slides along the streets), LED strip on the frame
   rider(m) {
     BurnsProps.bikeShape(m, 0, 0, 0, 0, '#ffd21a');
@@ -25921,14 +26002,8 @@ const BurnsOW = {
     m.color(skin); for (const sx of [-1, 1]) m.limb(sx * 0.16, 1.5, 0.0, sx * 0.24, 1.15, 0.42, 0.045, 0.04, { seg: 5 });
     return {};
   },
-  // a dome tent: rounded body, a darker door flap and two guy lines
-  domeTent(m, col, lantern) {
-    m.color(col).shine(1); m.ellipsoid(0, 0, 0, 1.5, 1.25, 1.2, m.lo ? { seg: 7, rings: 3 } : { seg: 12, rings: 5 }); m.shine(0);
-    m.color('#2a2a34'); m.ellipsoid(0, 0.02, 1.08, 0.55, 0.85, 0.16, { seg: 8, rings: 3 });
-    if (!m.lo) { m.color('#e8e8ec'); m.limb(-1.4, 0.7, 0, -2.2, 0, 0, 0.012, 0.012, { seg: 3, ends: false }); m.limb(1.4, 0.7, 0, 2.2, 0, 0, 0.012, 0.012, { seg: 3, ends: false }); }
-    if (lantern) { m.color('#ffe6c0', 1); m.ball(0.75, 0.9, 1.15, 0.09, { seg: 6, rings: 4 }); m.emissive(0); }
-    return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.4, hz: 1.1, y0: 0, y1: 1.2 }] };
-  },
+  // the dome tent is BurnsProps.domeTent (40_burns_e_props.js), replaced by the Blender model when it's loaded
+  domeTent(m, col, lantern) { return BurnsProps.domeTent(m, { col, lantern: !!lantern }); },
   // a lit totem: stacked rings and orbs on a pole (an art installation in front of a camp)
   totem(m) {
     m.color('#3a2a4a'); m.roundBox(0, 3, 0, 0.42, 6, 0.42, 0.08, { k: 1, m: 1 });
@@ -25957,8 +26032,10 @@ const BurnsOW = {
   camp(m, col, v) {
     const P = BurnsProps, w = 9, d = 7, h = 3.3, cols = [];
     m.color('#4a4a52'); for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) m.box(sx * (w / 2 - 0.1), h / 2, sz * (d / 2 - 0.1), 0.1, h, 0.1);
-    m.color(col); m.box(0, h + 0.03, 0, w + 0.2, 0.06, d + 0.2, { uv: BURNS_ATLAS.pattern('canvas'), uvFaces: ['py', 'ny'] });
-    if (!m.lo) { m.color(col); for (let k = 0; k < 9; k++) { m.push(); m.tf(-w / 2 + 0.5 + k, h - 0.18, d / 2 + 0.1); m.poly([[-0.4, 0.15, 0], [0.4, 0.15, 0], [0, -0.35, 0]]); m.pop(); } }
+    // the canopy: the Blender shade's cloth and frame (sagging cloth, scalloped valance) when it's loaded, else a sheet
+    const glb = typeof BurnsGLBProps !== 'undefined' && BurnsGLBProps.canopy(m, w, d, h, col), fz = glb ? d / 2 + 0.2 : d / 2 + 0.1;
+    if (!glb) { m.color(col); m.box(0, h + 0.03, 0, w + 0.2, 0.06, d + 0.2, { uv: BURNS_ATLAS.pattern('canvas'), uvFaces: ['py', 'ny'] }); }
+    if (!m.lo) { m.color(col); for (let k = 0; k < 9; k++) { m.push(); m.tf(-w / 2 + 0.5 + k, h - (glb ? 0.3 : 0.18), fz); m.poly([[-0.4, 0.15, 0], [0.4, 0.15, 0], [0, -0.35, 0]]); m.pop(); } }
     m.color('#d8d0c8'); m.box(0, 0.02, 0.5, 6, 0.04, 4.2, { uv: BURNS_ATLAS.pattern(v === 1 ? 'plaid' : 'tiedye'), uvFaces: ['py'] });
     if (v === 0) {
       m.push(); m.tf(0, 0, -1.6); P.couch(m, { col: '#e8d4d0' }); m.pop();
@@ -25981,7 +26058,9 @@ const BurnsOW = {
     }
     if (!m.lo) for (let k = 0; k < 12; k++) { m.color(BURNS_NEON[k % 7], 1); m.ball(-w / 2 + 0.4 + k * 0.75, h - 0.35 - Math.sin(k / 11 * Math.PI) * 0.35, -d / 2 + 0.1, 0.06, { seg: 5, rings: 3 }); }
     // LED strips along the canopy's front and sides (the copy's tint colours them; they read from far away at night)
-    m.color('#ffffff', 1); m.box(0, h - 0.04, d / 2 + 0.12, w + 0.2, 0.08, 0.05); for (const sx of [-1, 1]) m.box(sx * (w / 2 + 0.12), h - 0.04, 0, 0.05, 0.08, d + 0.2);
+    // (with the Blender canopy the strips run along the valance's hem, just outside it)
+    const ly = glb ? h - 0.2 : h - 0.04, lo2 = glb ? 0.27 : 0.12;
+    m.color('#ffffff', 1); m.box(0, ly, d / 2 + lo2, w + 0.2, 0.08, 0.05); for (const sx of [-1, 1]) m.box(sx * (w / 2 + lo2), ly, 0, 0.05, 0.08, d + 0.2);
     m.emissive(0);
     return { cols };
   },
@@ -33648,8 +33727,9 @@ const BW17 = {
 (() => {
   if (typeof BURNS_PALETTES === 'undefined') return;
   const P = BURNS_PALETTES, A = (base, o) => Object.assign({}, P[base] || P.day, o);
-  P.bw17day = A('day', { hor: '#f6dcb6', fog: '#ecd4b2', fogD: 0.0042, haze: 0.42, dust: 0.3, mid: '#86b8ea', sun: [150, 52], clouds: 0.42, cloudCol: '#fff6ec' });
-  P.bw17morning = A('day', { zen: '#4a82d4', hor: '#ffe2bc', mid: '#a8c8ec', midK: 0.3, fog: '#f0d8bc', fogD: 0.0046, haze: 0.45, dust: 0.32, sun: [40, 16], sunCol: '#fff0d0', key: '#ffe6c4', keyK: 0.88, sky: '#c4d0ec', gnd: '#c8a68a', clouds: 0.38, rays: 0.8 });
+  // (Nov 24: thinner fog by day: the camp read pale and washed out after the new look; see also def.env in world17)
+  P.bw17day = A('day', { hor: '#f6dcb6', fog: '#e4c8a2', fogD: 0.0028, haze: 0.26, dust: 0.26, mid: '#86b8ea', sun: [150, 52], clouds: 0.42, cloudCol: '#fff6ec' });
+  P.bw17morning = A('day', { zen: '#4a82d4', hor: '#ffe2bc', mid: '#a8c8ec', midK: 0.3, fog: '#e8ceb0', fogD: 0.0032, haze: 0.3, dust: 0.28, sun: [40, 16], sunCol: '#fff0d0', key: '#ffe6c4', keyK: 0.88, sky: '#c4d0ec', gnd: '#c8a68a', clouds: 0.38, rays: 0.8 });
   P.bw17gold = A('dusk', { zen: '#3f62b4', hor: '#ffbf7c', mid: '#f2a888', midK: 0.32, fog: '#e8b892', fogD: 0.006, haze: 0.45, dust: 0.35, sun: [236, 9], sunCol: '#ffc27c', key: '#ffcc92', keyK: 0.98, sky: '#b6aed2', gnd: '#aa8466', emB: 1.22, stars: 0, moonK: 0, clouds: 0.46, cloudCol: '#ffd6ae', rays: 1.35, cityK: 0.12 });
   P.bw17dusk = A('dusk', { sun: [246, -0.5], hor: '#ff9a6a', zen: '#2c2254', mid: '#b2607e', midK: 0.38, stars: 0.3, moonK: 0.5, emB: 1.4, rays: 1.2 });
   P.bw17night = A('night', { sky: '#46467e', gnd: '#30263a', keyK: 0.46, fogD: 0.0085, dust: 0.25, stars: 1, moonK: 1, emB: 1.75, cityK: 0.62, milkyway: 1.2 });
@@ -39790,11 +39870,12 @@ const BW12 = {
   TREE: { x: 74, z: 62 },
   state: null
 };
-BW12.SKY_A = { zen: '#1c2454', mid: '#5a4c8e', midK: 0.38, hor: '#f2a286', fog: '#a898b4', fogD: 0.0072, fogH: 0.05, haze: 0.62, fogMax: 0.9,
+// (Nov 24: thinner fog: the Temple read pale and flat after the new look; see also def.env below)
+BW12.SKY_A = { zen: '#1c2454', mid: '#5a4c8e', midK: 0.38, hor: '#f2a286', fog: '#9c8aa8', fogD: 0.0054, fogH: 0.05, haze: 0.46, fogMax: 0.8,
   sun: [195, -3], sunCol: '#ffb080', sunSize: 0.002, moon: [25, 30], moonK: 0.6, stars: 0.45, mtnCol: '#4a3a5e', mtnH: 3.0,
   city: [0, 0], cityCol: '#ff8ad0', cityK: 0.22, sky: '#9a96c4', gnd: '#a07a70', key: '#e0bcc0', keyK: 0.6, emB: 1.45, rim: '#d8b8ff',
   clouds: 0.38, cloudCol: '#e8a8b4', cloudScale: 0.5 };
-BW12.SKY_B = { zen: '#3a5aa8', mid: '#d0a0c0', midK: 0.42, hor: '#ffcf9a', fog: '#f0c8ac', fogD: 0.0062, fogH: 0.05, haze: 0.66, fogMax: 0.88,
+BW12.SKY_B = { zen: '#3a5aa8', mid: '#d0a0c0', midK: 0.42, hor: '#ffcf9a', fog: '#e4b89a', fogD: 0.0042, fogH: 0.05, haze: 0.42, fogMax: 0.74,
   sun: [195, 7], sunCol: '#ffd090', sunSize: 0.0028, moon: [25, 18], moonK: 0.1, stars: 0, mtnCol: '#7a5a7a', mtnH: 3.0,
   city: [0, 0], cityCol: '#ff9ad0', cityK: 0.05, sky: '#c8b8d8', gnd: '#c09080', key: '#ffcc90', keyK: 1.0, emB: 1.25, rim: '#ffd8b0',
   clouds: 0.5, cloudCol: '#ffc8b8', cloudScale: 0.5 };
@@ -40041,6 +40122,10 @@ BurnsWorlds.register({
   env(g, env) {
     const S = BW12.state;
     if (S && S.glowK) { env.emB += S.glowK * 0.3; }
+    // by day: less ground dust haze and a firmer grade, so the Temple's wood and the people read against the pale
+    // playa (Nov 24 look pass; the palette alone washed out to pink)
+    const day = clamp(env.sunDir[1] * 5, 0, 1);
+    env.dust = 0.5 - 0.32 * day; env.grade = [1.08 + 0.1 * day, 0.12 + 0.16 * day, 0.32]; env.exposure = 1 - 0.07 * day;
   },
   update(g, dt) {
     const S = BW12.state, p = g.player;
@@ -44061,6 +44146,12 @@ BurnsWorlds.register({
   bike: true,
   ground: { base: '#cba680', crack: 0.27, mottle: 0.38, res: 0.5 },
   dust: 1.0,
+  // by day: less ground dust haze and a firmer grade, so the camp's domes, tipis and coliseum read against the pale
+  // playa (Nov 24 look pass; the palettes' own dust setting isn't read by the engine)
+  env(g, env) {
+    const day = clamp(env.sunDir[1] * 5, 0, 1);
+    env.dust = 0.5 - 0.32 * day; env.grade = [1.08 + 0.1 * day, 0.12 + 0.16 * day, 0.32]; env.exposure = 1 - 0.07 * day;
+  },
   missions: [
     { id: 'arrive', name: 'Follow the Bass', short: 'Follow the bass to Root Society', type: 'custom', start: 'auto', token: false, silent: true, marker: { x: 6, z: 12 },
       desc: 'Tuesday morning. Somewhere a sound system is purring like a giant cat. Follow it, and find whoever is in charge.', hint: 'Through the root gate on Esplanade, then the plaza by the coliseum',
