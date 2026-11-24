@@ -14,7 +14,7 @@
    ============================================================ */
 // prop kind -> file stem under models/ (assets/models/burning-man/<stem>.glb). A stem may also ship <stem>_lo.glb: the
 // mid-distance level (instanced props' m.lo build, traffic LOD twins, opts.lo), used instead of the procedural lo build.
-const BURNS_GLB_PROPS = { rv: 'rv', bus: 'bus', dome: 'dome', tipi: 'tipi', portapotty: 'potty', shade: 'shade', domeTent: 'tent', trailer: 'trailer', lampPost: 'lamp' };
+const BURNS_GLB_PROPS = { rv: 'rv', bus: 'bus', dome: 'dome', tipi: 'tipi', portapotty: 'potty', shade: 'shade', domeTent: 'tent', trailer: 'trailer', lampPost: 'lamp', camper: 'camper' };
 
 /* ---- BurnsGLTF.emit: append a glb's triangles to a BurnsMesh under its current transform ---- */
 // once per doc: every primitive baked to file space (node world matrices applied), grouped by root node name
@@ -252,6 +252,18 @@ const BurnsGLBProps = {
         { t: 'box', x: 0, z: 3.95, hx: 0.98, hz: 1.0, y0: 0, y1: 1.9 }
       ];
       return { cols, lights: [{ x: 0.72, y: 1.02, z: 6.25, s: 1.0, c: '#fff0c8', beam: 0 }, { x: -0.72, y: 1.02, z: 6.25, s: 1.0, c: '#fff0c8', beam: 0 }, { x: 0.75, y: 0.85, z: -6.1, s: 0.6, c: '#ff3020' }, { x: -0.75, y: 0.85, z: -6.1, s: 0.6, c: '#ff3020' }], top: H, len: 12.6, w: W, glb: true };
+    },
+    // pickup with a camper shell (tools/blender/bm_camper.py): same colliders and lights as the procedural camper
+    camper(m, o, doc) {
+      const r = this.rngFor(o), L = 6.2, W = 2.2, zf = L / 2, zb = -L / 2;
+      const col = o.col || r.pick(['#a83a2a', '#2a4a8a', '#e8e0d0', '#3a6a3a', '#5a5a64']), shell = o.shell || r.pick(['#e8e4dc', '#d8d0c0', '#f4f0e8']);
+      BurnsGLTF.emit(m, doc, { colors: { truck: col, shell } });
+      const cols = [
+        { t: 'box', x: 0, z: zf - 0.9, hx: W / 2, hz: 0.9, y0: 0, y1: 1.33 },
+        { t: 'box', x: 0, z: zf - 2.3, hx: W / 2, hz: 0.7, y0: 0, y1: 2.1 },
+        { t: 'box', x: 0, z: (zb + zf - 2.95) / 2, hx: (W + 0.15) / 2, hz: (zf - 2.95 - zb + 0.2) / 2, y0: 0, y1: 2.75, cover: true }
+      ];
+      return { cols, lights: [{ x: 0.7, y: 1.0, z: zf + 0.1, s: 1.0, c: '#fff0c8', beam: 0 }, { x: -0.7, y: 1.0, z: zf + 0.1, s: 1.0, c: '#fff0c8', beam: 0 }, { x: 0.95, y: 1.0, z: zb - 0.1, s: 0.7, c: '#ff3020' }, { x: -0.95, y: 1.0, z: zb - 0.1, s: 0.7, c: '#ff3020' }], top: 2.75, len: L, w: W, glb: true };
     },
     // the Esplanade lamp post (tools/blender/bm_lamp.py): wooden pole, iron crook, a lantern that glows at night
     lampPost(m, o, doc) {
