@@ -58,6 +58,15 @@ BurnsWorlds.register({
       onComplete(g) { BW7.bootFound(g); } }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
+    // the Glitter Queen comes down whenever Brady is on the dance floor after the sunrise (not only from the sunrise scene,
+    // which a quit or reload skips); before the sunrise he's told to climb the heart
+    BurnsBossGate.add(api, { mission: 'boss',
+      inArena: (g2, p) => Math.hypot(p.x - BW7.FLOOR.x, p.z - BW7.FLOOR.z) < BW7.FLOOR.r && p.y < 6,
+      running: () => !!(BW7.state.queenOn || BW7.state.queenIntro),
+      start: g2 => BW7.queenArrives(g2),
+      button: { x: BW7.FLOOR.x, z: BW7.FLOOR.z + 6, r: 6, label: 'FIGHT: GLITTER QUEEN' }, repeat: Infinity });
     const R = api.rng;
     BW7.state = { introDone: !!BurnsSave.flag(7, 'intro'), wob: [], drones: [], speedK: 1, quiz: 0 };
     /* ---------------- ground ---------------- */
@@ -638,7 +647,8 @@ BW7.sunrise = function (g) {
   ], () => BW567K.after(g, 1.5, g2 => BW7.queenArrives(g2)));
 };
 BW7.queenArrives = function (g) {
-  const S = BW7.state, q = g.actor('queen'), F = BW7.FLOOR, p = g.player; if (!q || S.queenOn) return;
+  const S = BW7.state, q = g.actor('queen'), F = BW7.FLOOR, p = g.player; if (!q || S.queenOn || S.queenIntro || g.missions.isDone('boss')) return;
+  S.queenIntro = true; g._bossHint = null;
   q.hidden = false; q.x = F.x + 20; q.z = F.z - 10; q.y = 9; q.data.flyIn = true;
   g.missions.start('boss', true);
   g.cutscene([
@@ -651,7 +661,7 @@ BW7.queenArrives = function (g) {
     { say: [q, ['Hiii! Sorry, can everyone move? The sunrise is SPONSORED now.', 'This is a hashtag-no-filter moment. So get out of my filter.']] },
     { say: ['brady', ['It\'s a sunrise. It belongs to everybody.']] },
     { say: [q, ['Everything belongs to my FOLLOWERS. Drones! Get his bad side! He only HAS bad sides!']] },
-    { do: g2 => { S.queenOn = true; q.data.flyIn = false; q.data.mode = 'float'; q.data.t = 3.5; q.data.ang = Math.atan2(q.x - F.x, q.z - F.z); q.data.alt = 4.2; for (const a of g2.actors) if (a.def.crowd7) { a.home = { x: a.x + (a.x - F.x) * 0.6, z: a.z + (a.z - F.z) * 0.6 }; a.x = a.home.x; a.z = a.home.z; }
+    { do: g2 => { S.queenOn = true; S.queenIntro = false; q.data.flyIn = false; q.data.mode = 'float'; q.data.t = 3.5; q.data.ang = Math.atan2(q.x - F.x, q.z - F.z); q.data.alt = 4.2; for (const a of g2.actors) if (a.def.crowd7) { a.home = { x: a.x + (a.x - F.x) * 0.6, z: a.z + (a.z - F.z) * 0.6 }; a.x = a.home.x; a.z = a.home.z; }
       g2.boss = BW567K.bar('THE GLITTER QUEEN', q, 4, { get st() { return q.data.mode === 'likes' ? 'stunned' : q.data.mode; } });
       g2.banner('FIGHT!', 'Hide behind the speakers from the glare · dodge the drones · bonk her while she checks her likes', { col: '#ff9ad8' }); } }
   ]);

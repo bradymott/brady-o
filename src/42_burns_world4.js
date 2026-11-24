@@ -57,6 +57,8 @@ BurnsWorlds.register({
       desc: 'The Velvet Creeper boa-lassoed your informant into the big pink dome. Dodge his lasso, pop his pickup lines, and bonk him while he\'s tangled.', hint: 'Inside the big pink dome', lockedDesc: 'Find the informant first.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const W4 = BURNS_W4, R = api.rng, BW = BURNS_W234;
     BW.reset(g);
     W4.state = { introDone: !!BurnsSave.flag(4, 'intro'), lines: [], quiz: -1 };
@@ -329,6 +331,12 @@ BURNS_W4.buildDome = function (api, g) {
     spec: Object.assign(BurnsRig.npcSpec('furcoat', 99), { coat: { kind: 'fur', col: '#7a1a8a', trim: '#ff9ad8' }, top: { kind: 'tank', col: '#f4f0e8' }, bottom: { kind: 'shorts', col: '#ff3b8a' }, shoes: { kind: 'boots', col: '#ffd84a' }, glasses: 'shades', hat: null, goggles: false, hair: { style: 'wavy', col: '#2a1a12', hi: '#5a3a2a' }, face: 'smug', acc: ['ledNecklace', 'bracelets'], key: 'w4:velvet' }) });
   api.checkpoint('cp_dome', D.x + 6, D.z + D.r + 6, { yaw: Math.PI, name: 'The Big Pink Dome' });
   api.trigger({ x: D.x, z: D.z, r: D.r - 3, y1: 4, onEnter: g2 => BURNS_W4.bossIntro(g2) });
+  // ...and from anywhere on the dome floor (or the FIGHT button); without a friend for Velvet Brady is told what's left
+  BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => Math.hypot(p.x - D.x, p.z - D.z) < D.r - 0.5 && p.y < 4.5,
+    running: () => !!BURNS_W4.state.bossStarted,
+    start: g2 => BURNS_W4.bossIntro(g2),
+    button: { x: D.x, z: D.z + 6, r: 6, label: 'FIGHT: VELVET CREEPER' } });
 };
 
 /* ---------------- runtime wiring ---------------- */

@@ -67,6 +67,8 @@ BurnsWorlds.register({
       onComplete(g) { BW5.finale(g); } }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const R = api.rng;
     BW5.state = { introDone: !!BurnsSave.flag(5, 'intro'), lifts: [], turn: [], turnOpen: false, carts: [], gary: null, chute: { on: false, hits: 0 }, photo: false, quiz: 0 };
     const S = BW5.state;
@@ -644,6 +646,12 @@ BW5.buildDock = function (api, g) {
       lines: ['Everything is FREE. It\'s TERRIFYING. I love it.', 'Take a glow stick. Take nine. I want NOTHING. Oh wow.'], gift: { kind: 'glowstick', n: 9 } });
   }
   api.trigger({ x: A.x, z: A.z, r: 13, when: g2 => g2.missions.state('boss') === 'available' && !BW5.state.bossOn, onEnter: g2 => BW5.bossIntro(g2) });
+  // ...and from anywhere on the dock (or the FIGHT button); before Rhonda's escort Brady is told what's left
+  BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => Math.hypot(p.x - A.x, p.z - A.z) < 20,
+    running: () => !!BW5.state.bossOn,
+    start: g2 => BW5.bossIntro(g2),
+    button: { x: A.x, z: A.z + 5, r: 6, label: 'FIGHT: BARTER BARON' } });
 };
 
 // Biscuit's lookout, out the back behind the Barter Baron's toll gate. When the shared big-art module
@@ -1162,7 +1170,7 @@ BW5.updateForklift = function (g, dt) {
 };
 BW5.bossIntro = function (g) {
   const S = BW5.state, a = g.actor('baron'), p = g.player, A = BW5.DOCK;
-  if (S.bossOn || !a) return; S.bossOn = true;
+  if (S.bossOn || !a || g.missions.isDone('boss')) return; S.bossOn = true; g._bossHint = null;
   g.missions.start('boss', true);
   g.cutscene([
     { music: 'man_boss' },

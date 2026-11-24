@@ -73,6 +73,8 @@ BurnsWorlds.register({
       desc: 'He grew. A lot. Hide from his neon flash (green rings are safe), dodge face fire and arm fireworks, bonk his head.', hint: 'The Man Pavilion', lockedDesc: 'Beat him on his saucer first.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'giant');
     const W = BURNS_W10;
     W.state = { introDone: !!BurnsSave.flag(10, 'intro'), phase: 0, lampGlows: [], lamps: [], cars: [], beamsOn: false, onDeckT: 0, mortars: [], spinners: [], burnK: 0, fireH: 0, armsK: undefined, collapseK: 0, after: false };
     if (!BurnsSave.hasItem('bike')) BurnsSave.addItem('bike');
@@ -350,6 +352,14 @@ BURNS_W10.buildArena = function (api, g) {
   g.addBoss(man);
   st.man = man;
   api.trigger({ x: 0, z: 68, r: 9, when: g2 => !BURNS_W10.state.fighting && !BURNS_W10.state.after && (g2.missions.state('saucer') === 'available' || (g2.missions.state('giant') === 'available' && BURNS_W10.state.phase === 2)), onEnter: g2 => BURNS_W10.arenaEnter(g2) });
+  // ...and from anywhere inside the crowd barrier (the gap's edges, a reload at the Giant camp flag), or the FIGHT
+  // button by the pavilion; without the ride and the lamps Brady is told what's left (src/42_burns_a_bossgate.js)
+  BurnsBossGate.add(api, { mission: g2 => g2.missions.isDone('saucer') ? 'giant' : 'saucer',
+    inArena: (g2, p) => Math.hypot(p.x, p.z) < 64,
+    running: () => { const S2 = BURNS_W10.state; return !!(S2.fighting || S2.after || S2.burning); },
+    ready: g2 => g2.missions.state('saucer') === 'available' || (g2.missions.state('giant') === 'available' && BURNS_W10.state.phase === 2),
+    start: g2 => BURNS_W10.arenaEnter(g2),
+    button: { x: 0, z: 40, r: 8, label: 'FIGHT: THE MAN' } });
 };
 
 /* ---------------- the cameo crowd: the whole cast, cheering ---------------- */
@@ -828,3 +838,6 @@ BURNS_W10.afterBurn = function (g, inCine) {
     for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; g.addTempFire(Math.sin(a) * 4, W.DECK, Math.cos(a) * 4, 1.2, 1e6); }
   }
 };
+
+/* test hook: the World 10 state (tools/burns_boss_entry_test.js) */
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W10 });

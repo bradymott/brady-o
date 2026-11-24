@@ -223,7 +223,7 @@ BurnsWorlds.register({
     S.poles.forEach((P, i) => { if (P.limbo) return; g.interactables.push({ x: P.x, z: P.z, y: P.y, r: P.r, label: 'GRAB POLE', when: g2 => g2.missions.state('haul') === 'active' && S.carry === null && !P.taken && !P.delivered, fn: g2 => BW16.grabPole(g2, i) }); });
     S.sails.forEach(s => g.interactables.push({ x: s.winch.x, z: s.winch.z, r: 2.4, label: 'HOIST!', when: g2 => g2.missions.state('sails') === 'active' && !s.done, fn: g2 => BW16.hoist(g2, s) }));
     S.hooks.forEach(h => g.interactables.push({ x: h.x, z: h.z, y: h.y, r: 2.0, label: 'HANG LANTERN', when: g2 => g2.missions.state('lanterns') === 'active' && !h.hung, fn: g2 => BW16.hang(g2, h) }));
-    g.interactables.push({ x: BW16.TREE.x, z: BW16.TREE.z, y: 4.26, r: 2.2, label: 'TAKE THE BIKE', when: g2 => g2.missions.state('bike') === 'active', fn: g2 => BW16.takeBike(g2) });
+    g.interactables.push({ x: BW16.TREE.x, z: BW16.TREE.z, y: 4.26, r: 2.2, label: 'TAKE THE BIKE', when: g2 => BW16.bikeOpen(g2), fn: g2 => BW16.takeBike(g2) });
     // put the camp back the way the save remembers it
     if (M.isDone('haul')) { for (const P of S.poles) { P.delivered = true; if (P.mv) P.mv.visible = false; } for (const r of S.ribs) r.visible = true; }
     if (M.isDone('lash')) for (const q of S.panels) { q.done = true; q.seatT = 1; q.mv.y = F.h + 0.004; q.mv.pitch = q.mv.roll = 0; }
@@ -232,6 +232,8 @@ BurnsWorlds.register({
     if (BW16.BUILD.every(id => M.isDone(id))) { S.alive = true; S.aliveK = 1; for (const a of g.actors) if (a.def.bw16Crowd) BW16.stage(a, 'dance', { style: a.def.style || 0, bpm: BW16.BPM }); const w = g.actor('wolfie'); if (w) BW16.place(w, F.x - 3.0, F.z + 7.6, Math.PI, 'idle'); }
     if (M.isDone('contest')) BW16.afterContest(g, true);
     S.treeBike.visible = !M.isDone('bike');
+    // the bike job is only started by the post-contest scene: a quit or reload after the contest must not lose it
+    if (M.isDone('contest') && M.state('bike') === 'available') M.start('bike', true);
     if (M.isDone('guard')) BW16.openField(g, true);
     if (M.isDone('contest') && !M.isDone('elder')) { BW16.wonkOn(g); S.wonk = 0.6; burnsMusic(BW16.track('burns_w16_wonk', 'glitch')); if (!BurnsSave.groundScore()) BurnsSave.setGroundScore(true); if (M.state('gs101') === 'available') M.start('gs101', true); }
     g.tod = BW16.wantTod(g);
@@ -405,9 +407,12 @@ BW16.floorAlive = function (g) {
     { say: [w || 'wolfie', ['The contest starts whenever you\'re ready. Come talk to me.']] }
   ], g2 => { g2.banner('THE FLOOR IS ALIVE', 'Talk to Wolfie to enter the dance contest.', { col: '#ffd36a' }); g2.missions.track('contest'); });
 };
+// the yellow bike can be taken once the contest is won (active, or still waiting after a quit/reload)
+BW16.bikeOpen = function (g) { const st = g.missions.state('bike'); return st === 'active' || (st === 'available' && g.missions.isDone('contest')); };
 BW16.takeBike = function (g) {
   const S = BW16.state;
-  if (g.missions.state('bike') !== 'active') return;
+  if (!BW16.bikeOpen(g)) return;
+  if (g.missions.state('bike') === 'available') g.missions.start('bike', true);
   S.treeBike.visible = false;
   g.fx.confetti(BW16.TREE.x, 5, BW16.TREE.z, 30); burnsSfx('bike_bell');
   g.giveItem('bike');
