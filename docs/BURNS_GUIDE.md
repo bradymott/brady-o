@@ -1106,6 +1106,27 @@ SFX:
 
 Older SFX also work (`jump, stomp, hurt, select, back, pick, powerup, splash, secret, gold, artcarHorn, flame, dust, wind, crowd, gift`…). Unknown names fall back to something close (`BURNS_SFX_FALLBACK`), so use the new names freely.
 
+### 14.1 The DJ decks (`BurnsDJ`, `src/41_burns_dj.js`)
+
+A modal minigame that plays like a real two-deck DJ set (Brady's brief, Nov 2026: "like DJing, not Dance Dance Revolution"). It's used by the camps' **PLAY A SET** booths, World 11 (the DJ-off and the Wobble Dome headline set), World 6 (El Pulpo's party and the DJ battle, through `BW567K.dj`) and `40_burns_i_play.js` (`g.modalOn()`).
+
+**Calling it.** `BurnsDJ.open(g, { title, bpm, genre, difficulty, duration, crowd, booth, exclude, music, deckA, quotes, intro, deck3d, tutorial, onDone(r) })`; the file header lists every option. `difficulty` is `1`/`2`/`3` (easy, normal, hard), a fraction `0..1`, or a name. `duration` picks the length: under 70 s asked for = two mixes, 70 or more = three (a real set takes about 2–3 minutes). `onDone(r)` gets `{ score, grade, crowdPeak, perfects, greats, oks, misses, maxCombo, accuracy, forfeit, title, bpm, mixes, cleanMixes, trainwrecks }` after the results card (grades: S ≥ 0.9, A ≥ 0.78, B ≥ 0.62, C ≥ 0.42). `BurnsDJ.isOpen(g)`; `BurnsDJ.session` is the live set; `session.autoplay(q)` plays it by itself (1 expert, 0.5 sloppy, 0 idle).
+
+**How a set plays.** Deck A (left) plays to the crowd; the free deck is prepared:
+1. **Pick** one of three records (name, BPM, Camelot key, energy). The crowd wants ▲ energy, ▼ a breather or ▶ more of the same; ✓/~/✗ marks show BPM, key and vibe fit (hard mode shows the facts only). A poor pick still works.
+2. **Cue:** press the free deck's PLAY on the 1 of the live record's 8-bar phrase (the counter above the lanes, the last bar counts down on the button). It plays in Brady's "headphones": quietly, the crowd doesn't hear it.
+3. **Match:** the pitch fader until its kicks stop sliding against the live deck's (the two kick lanes share one time line; the BPM turns green; close enough snaps), then the jog wheel until they land together. Within the window it **locks** (green bracket, "● LOCKED") and stays locked: the deck follows the live tempo and the phase is trimmed continuously. Easy has a SYNC button.
+4. **Blend:** two upfaders (relative drag, multi-touch) and a LOW kill per channel (bass swap). Locked + over 2–4+ bars = a great mix; two records audible while unlocked = TRAINWRECK (red light, booing crowd, energy drains); both faders down = dead air.
+5. **Party** (a phrase on the new record): HORN, HEY!, ROLL, SWEEP pads (quantised: horn and shout on the next 8th, roll and sweep run up to the next bar line), LOOP (tap = one bar, hold = half-bar roll; slip mode, the record keeps its place) and the FILTER (drag left low-pass / right high-pass, springs back). Landing on a phrase 1 lifts the crowd; spam (3+ pads in 4 bars, the horn twice in 8) annoys it.
+
+Help, so nothing stalls: the crate picks after a while, the house presses PLAY on the 1 after missed phrases, glides the pitch, nudges the jog, and the "house engineer" blends if the faders sit still; dead air brings the live fader back. Sooner on easy and for a player who isn't touching anything, later on hard (and helped steps score low). The first set ever (save flag `0:djTaught`) explains each step in a second line; later sets show the one-line instruction and a pulsing ring + arrow on the control to touch.
+
+**Audio.** `Sound.musicBus()` (`01_audio.js`) hands the DJ Sound's context and music buses; `BurnsHouse.engine` (`41_burns_music.js`) is the step engine. Each deck runs its own engine instance with its own clock (`BurnsDJDeck.pump`, a 25 ms timer + every frame, 140 ms lookahead), so the two records really play at independent tempos: deck → channel in → LOW shelf (−30 dB kill) → upfader (gain = fader^1.5, or the 0.3 headphone cue) → sum → high-pass → low-pass (the FILTER) → trim → Sound's music bus (volume setting, compressor, master). Reverb sends follow the fader; each deck has its own tempo-synced echo. Pause and tab-hide unload both records' voices and shift their clocks past the gap; closing the set (or any error, or the scene changing) stops every voice (`engine.close(I, true)` also stops pads and risers), disconnects the nodes and puts the world's track back. Typical load: two decks ≈ 2× one world track.
+
+**Adding a record.** Add the track to `BURNS_DJ_TRACKS` (`id`, `genre`, `name`, `artist`, `energy` 1..5, `vibe`); BPM and key come from the track itself. It needs a section with a kick (the cue point is the start of the first one).
+
+**Test.** `tools/burns_dj_test.js` plays sets with real touches in both orientations (beginner, expert, idle, DJ-off, forfeit) and records each deck before and after its fader plus the master, to measure that both kicks are present, that LOCKED kicks land within a few ms with no drift (and unlocked ones don't), that the faders set the levels, that nothing clips and that no DJ voice outlives the set. It writes `good_mix.wav`, `trainwreck.wav` and step-by-step screenshots.
+
 ---
 
 ## 15. Performance budget (60 fps on a recent iPhone)
