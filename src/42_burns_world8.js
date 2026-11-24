@@ -162,6 +162,8 @@ BurnsWorlds.register({
       desc: 'Twenty-two years on the playa. Showered twice. He wants El Pulpo impounded.', hint: 'The DPW yard, north end', lockedDesc: 'Fuel up El Pulpo first.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const W8 = BURNS_W8, R = api.rng, S = BurnsW8910Shape;
     W8.state = { introDone: !!BurnsSave.flag(8, 'intro'), fuel: 0, fueling: false, raidT: 0, raiders: [], forks: [], gateOn: false, bossStarted: false };
     const st = W8.state;
@@ -283,7 +285,11 @@ BurnsWorlds.register({
   onRespawn(g) {
     const S = BURNS_W8.state;
     BurnsW8910Haz.clear(g);
-    if (S.bossStarted && !g.missions.isDone('boss')) BURNS_W8.rustyReset(g);
+    if (S.bossStarted && !g.missions.isDone('boss')) {
+      BURNS_W8.rustyReset(g);
+      // the camp flag is outside the yard: open the gate bar so the road (where the guide arrow points) leads back in
+      S.gateOn = false; if (S.gate) S.gate.off = true;
+    }
   },
   env(g, env) {
     const S = BURNS_W8.state;
@@ -586,6 +592,13 @@ BURNS_W8.buildYard = function (api, g) {
     defeatLine: 'FINE! FINE. You can have your stupid gas.' });
   W8.state.rustyDef = rusty;
   api.trigger({ x: W8.GATE.x, z: W8.GATE.z - 3, r: 7, when: g2 => g2.missions.state('boss') === 'available' && !BURNS_W8.state.bossStarted, onEnter: g2 => BURNS_W8.bossIntro(g2) });
+  // ...and from anywhere in the yard (beside the gate bar, over the containers, on a return visit), or the FIGHT button
+  // in the middle; before El Pulpo is fueled Brady is told what's left (src/42_burns_a_bossgate.js)
+  W8.state.bossGate = BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => p.z < W8.GATE.z - 1 && Math.hypot(p.x - Y.x, p.z - Y.z) < Y.r + 1,
+    running: () => !!BURNS_W8.state.bossStarted,
+    start: g2 => BURNS_W8.bossIntro(g2),
+    button: { x: Y.x, z: Y.z + 8, r: 6, label: 'FIGHT: FOREMAN RUSTY' } });
 };
 // the telehandler: body + boom movers (Rusty sits in the cab)
 BURNS_W8.telehandler = function (api) {
@@ -849,7 +862,7 @@ BURNS_W8.RUSTY_PHASES = [
 ];
 BURNS_W8.bossIntro = function (g) {
   const S = BURNS_W8.state, Y = BURNS_W8.YARD, p = g.player, a = g.actor('rusty'), T = S.tele;
-  if (S.bossStarted) return; S.bossStarted = true;
+  if (S.bossStarted || g.missions.isDone('boss')) return; S.bossStarted = true; g._bossHint = null;
   if (p.vehicle) p.vehicle.dismount(p);
   g.missions.start('boss', true);
   g.cutscene([
@@ -1110,3 +1123,6 @@ BURNS_W8.burtUpdate = function (g, dt) {
   if (S.burtGo < 8 && Math.random() < dt * 4) g.fx.smoke(a.x, a.y + 1.9, a.z, 1, '#4a4448');
   if (S.burtGo > 8) S.burtGo = 0;
 };
+
+/* test hook: the World 8 state (tools/burns_boss_entry_test.js) */
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W8 });

@@ -67,6 +67,8 @@ BurnsWorlds.register({
       desc: 'He\'s out there in the dust with Chinka. Hide from the flash behind the giant chairs.', hint: 'The open flats north of the Outpost', lockedDesc: 'Get through the whiteout and help the lost burners first.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const W9 = BURNS_W9, S = BurnsW8910Shape;
     W9.state = { introDone: !!BurnsSave.flag(9, 'intro'), storm: 0.35, surgeT: 30, surge: 0, darkwads: [], lampGlows: [], beaconOn: !!BurnsSave.flag(9, 'beacon'), goggles: !!BurnsSave.flag(9, 'goggles'), followers: [], beatT: 0, warmT: 0, mothGlows: [], neck: null };
     const st = W9.state;
@@ -443,6 +445,13 @@ BURNS_W9.buildArena = function (api, g) {
   man.hidden = true; man.showChinka = true;
   W9.state.man = man; W9.state.covers = covers;
   api.trigger({ x: A.x, z: A.z + 30, r: 12, when: g2 => g2.missions.state('boss') === 'available' && !BURNS_W9.state.bossStarted, onEnter: g2 => BURNS_W9.bossIntro(g2) });
+  // ...and from anywhere in the arena (any side, on a bike, after a faint or a return visit), or the FIGHT button in the
+  // middle; without the whiteout and the lost burners Brady is told what's left (src/42_burns_a_bossgate.js)
+  W9.state.gate = BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => Math.hypot(p.x - A.x, p.z - A.z) < A.r + 1,
+    running: g2 => { const S2 = BURNS_W9.state; return !!(S2.introRunning || S2.ending || (S2.man.active && !S2.man.defeated)); },
+    start: g2 => BURNS_W9.bossIntro(g2),
+    button: { x: A.x, z: A.z + 8, r: 7, label: 'FIGHT: THE MAN' } });
 };
 
 /* ---------------- intro ---------------- */
@@ -675,7 +684,9 @@ BURNS_W9.devilEnd = function (g) { const S = BURNS_W9.state; S.forceStorm = unde
 /* ---------------- the Man in the storm ---------------- */
 BURNS_W9.bossIntro = function (g) {
   const S = BURNS_W9.state, man = S.man, p = g.player, A = BURNS_W9.ARENA;
-  if (S.bossStarted) return; S.bossStarted = true;
+  // (once per fight, not once per visit: the arena gate can start it again until he's beaten)
+  if (g.missions.isDone('boss') || S.introRunning || S.ending || (man.active && !man.defeated)) return;
+  S.bossStarted = true; S.introRunning = true; g._bossHint = null;
   if (p.vehicle) p.vehicle.dismount(p);
   g.missions.start('boss', true);
   g.cutscene([
@@ -690,7 +701,7 @@ BURNS_W9.bossIntro = function (g) {
     { say: ['man', ['SMALL MAN. YOU FOLLOWED US INTO THE STORM.', 'THE DUST IS MY WITNESS. SHE WILL LEARN TO LOVE ME.']] },
     { say: ['brady', ['She doesn\'t love you. She doesn\'t even like sand!']] },
     { say: ['man', ['THEN I WILL BURY YOU IN IT!']] },
-    { do: g2 => { S.forceStorm = undefined; p.teleport(A.x, 0, A.z + 22, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = burnsW8910Proxy(man, { camY: 8 }); man.start(); g2.banner('FIGHT!', 'Dodge everything · bonk his head when he collapses', { col: '#ffe24a' }); } }
+    { do: g2 => { S.forceStorm = undefined; p.teleport(A.x, 0, A.z + 22, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = burnsW8910Proxy(man, { camY: 8 }); man.start(); S.introRunning = false; g2.banner('FIGHT!', 'Dodge everything · bonk his head when he collapses', { col: '#ffe24a' }); } }
   ]);
 };
 BURNS_W9.bossDefeated = function (g) {
@@ -742,3 +753,6 @@ BURNS_W9.darkwadTalk = function (g, a) {
     if (n === S.darkwads.length) { g.glow += 20; g.banner('EVERY DARKWAD GLOWS', 'The playa is a little safer tonight. +20 glow sticks.', { col: '#7aff5a' }); }
   });
 };
+
+/* test hook: the World 9 state (tools/burns_boss_entry_test.js) */
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W9 });
