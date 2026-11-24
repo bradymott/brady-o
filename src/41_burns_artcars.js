@@ -363,7 +363,7 @@ const BurnsArtCars = {
       if (c.g !== g || !c.drawn || !c.M) continue;
       if (shadow) { if (!R.shadowNear(c.car.x, c.car.y, c.car.z, c.rad)) continue; R.skin(c.M.geo, c.bones, c.M.nb, null, 0, 0); this.stats.shadow++; if (c.drvOn) R.skin(c.drv.model.lod || c.drv.model.geo, c.drv.bones, c.drv.ch.nb, null, 0, 0); continue; }
       if (!c.inView) continue;
-      const dark = c.litK < 0.98 ? [0.03, 0.025, 0.05, 0.62 * (1 - c.litK)] : null;
+      const dark = c.litK < 0.98 ? [0.03, 0.025, 0.05, 0.62 * (1 - c.litK) * (0.15 + 0.85 * (R.night || 0))] : null;   // switched off: dark at night, barely by day
       R.skin(c.M.geo, c.bones, c.M.nb, dark, 0, 0.3);
       if (c.drvOn) { const dm = c.drv.model; R.skin(c.d2 > 16 * 16 && dm.lod ? dm.lod : dm.geo, c.drv.bones, c.drv.ch.nb, null, c.drv.ch.face, 0.45); this.stats.drivers = (this.stats.drivers || 0) + 1; }
       this.stats.drawn++; if (c.lod === 'hi') this.stats.hi++; this.stats.tris += c.M.geo.count / 3;
