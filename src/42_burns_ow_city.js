@@ -359,7 +359,7 @@ const BurnsOW = {
       case 'costco': { const b = back(8); api.prop('shade', { x: b[0], z: b[1], yaw, w: 10, d: 6, col: '#e8e0d0' }); api.sign('COSTCO\nSOUL TRADING', x + c * 4, z - s * 4, { yaw: yaw + Math.PI, h: 2.4, style: { bg: '#2a2a6a', fg: '#ffffff', border: '#ff4a4a' } }); for (let i = 0; i < 3; i++) api.prop('cooler', { x: b[0] + c * (i * 1.4 - 1.4), z: b[1] - s * (i * 1.4 - 1.4) + 2, yaw }); break; }
       case 'deep': api.prop('campFlag', { x: x + 2, z }); for (let i = 0; i < 5; i++) api.glow(x + Math.sin(i) * 6, 0.5, z + Math.cos(i) * 6, 0.8, BURNS_NEON[i % 7]); break;
       case 'sound': api.sign('THE SOUND CAMPS\n10:00 PLAZA', x, z + 2, { yaw: yaw + Math.PI, h: 2.6, style: { bg: '#1a0a2a', fg: '#ff9af0', border: '#ff4fd8', glow: '#ff4fd8' } }); break;
-      case 'heart': { const b = back(7); api.mesh(b[0], b[1], m => this.heartCar(m), { yaw: yaw + Math.PI / 2 }); api.light(b[0], b[1], 12, '#ff4f8a', 0.5); break; }
+      case 'heart': { const b = back(8); if (typeof BurnsArtCars !== 'undefined') BurnsArtCars.park(api, 'bass_valentine', b[0], b[1], yaw + Math.PI / 2); else api.mesh(b[0], b[1], m => this.heartCar(m), { yaw: yaw + Math.PI / 2 }); api.light(b[0], b[1], 12, '#ff4f8a', 0.5); break; }
       case 'hell': this.hellStation(api, x, z); break;
       case 'storm': for (let i = 0; i < 4; i++) api.glow(x + Math.sin(i * 1.6) * 5, 0.6, z + Math.cos(i * 1.6) * 5, 1.0, '#9ad0ff'); api.prop('campFlag', { x, z }); break;
       case 'temple': break;
@@ -467,17 +467,23 @@ BurnsWorlds.register({
     for (const h of [3, 6, 9]) for (let r = 60; r < O.ESP - 20; r += 32) { const q = O.at(h + 0.012 * 300 / r, r); api.instance('ow_lamp', q[0], q[1], { yaw: O.yawOut(h) }); api.light(q[0], q[1], 7, '#ffb060', 0.38); }
     // street signs on the playa side of the Esplanade at every hour (the city side gets its own at each corner)
     for (let h = O.H0; h <= O.H1 + 1e-6; h += 1) BurnsOW.streetSign(api, h, 0, O.at(h + 0.02, O.ESP - 9));
-    // ---- open-playa art cars cruising around the Man (rideable movers) ----
-    for (let i = 0; i < 3; i++) {
-      const col = ['#3a8ac8', '#c8a03a', '#8a3ac8'][i], sc = ['#38f2ff', '#ffd84a', '#ff4fd8'][i];
-      const mv = api.mover(m => BurnsProps.artcar(m, { len: 8, w: 3.6, col, sculpt: sc }), {});
-      S.cars.push({ mv, r: 150 + i * 32, w: (i % 2 ? -1 : 1) * 3.4 / (150 + i * 32), a: i * 2.1 });
+    // ---- the art cars: Super Art Kart's twelve, at art-car size (src/41_burns_artcars.js) ----
+    // three circle the Man on the open playa (rideable movers), clear of the promenade lamps (r 92, 124, 156)
+    for (const [stem, r, dir, a] of BURNS_OW.CIRCLE_CARS) {
+      const mv = BurnsArtCars.mover(api, stem, { x: Math.sin(a) * r, z: -Math.cos(a) * r, driver: true }).mv;
+      S.cars.push({ mv, r, w: dir * 2.6 / r, a });
     }
-    // ---- two art cars anyone can drive (DRIVE), parked on the open playa ----
-    // the green one by the 6:00 promenade is Rae's race car (quicker)
-    for (const [x, z, yaw, col, sc, fast] of [[-24, 236, Math.PI, '#2a8a6a', '#7aff5a', true], [232, 36, -Math.PI / 2, '#8a2a6a', '#ff4fd8', false]]) {
-      try { const v = api.artCar(Object.assign({ x, z, yaw, col, sculpt: sc, len: 8, w: 3.6 }, fast ? { maxSpeed: 16, accel: 6, turn: 1.25 } : {})); if (fast) S.raceCar = v; } catch (e) { console.error('ow art car', e); }
+    // four cruise the streets at a walking-to-biking pace: both lanes of the Esplanade and of three lettered streets
+    S.cruise = [];
+    for (const [stem, lane, ph, v] of BURNS_OW.STREET_CARS) {
+      try { const L = BurnsOW.carLoop(lane), c = BurnsArtCars.mover(api, stem, { driver: true }); S.cruise.push({ mv: c.mv, L, s: ph * L.len, v, i: 0, yaw: null }); } catch (e) { console.error('ow art car ' + stem, e); }
     }
+    BurnsOW.cruise(0);
+    // two anyone can DRIVE, parked on the open playa: the green dragon by the 6:00 promenade is Rae's race car (quicker)
+    for (const [stem, x, z, yaw, fast] of [['sir_scorchalot', -24, 236, Math.PI, true], ['dune_chomper', 232, 36, -Math.PI / 2, false]]) {
+      try { const v = BurnsArtCars.vehicle(api, stem, Object.assign({ x, z, yaw }, fast ? { maxSpeed: 16, accel: 6, turn: 1.25 } : {})); if (fast) S.raceCar = v; } catch (e) { console.error('ow art car', e); }
+    }
+    // (Quackzilla is Root Society's Disco Duck, parked on the open playa by 2:00: 42_burns_w17_e_city.js)
     // ---- the side quests' people and things ----
     { const q = O.at(6.15, 332); api.npc({ id: 'owSage', type: 'burner', seed: 23, name: 'SAGE', x: q[0], z: q[1] - 34, yaw: Math.PI, behavior: 'chill', talk: (gg, a) => BurnsOW.giver(gg, a, 'owTemple', ['Have you sat at the Temple yet?', 'Walk out past the Man, toward 12:00. Sit a while.'], ['You went. I can tell.']) }); }
     api.pickup('glowstick', 203, 0.9, -351, { mission: 'owLantern', gate: true, label: 'LOST LANTERN', col: '#ffb060' });
@@ -772,6 +778,8 @@ Object.assign(BurnsOW, {
       C.a += C.w * dt; const mv = C.mv;
       mv.x = Math.sin(C.a) * C.r; mv.z = -Math.cos(C.a) * C.r; mv.y = 0; mv.yaw = (C.w > 0 ? Math.PI / 2 : -Math.PI / 2) - C.a;   // facing along the circle
     }
+    // ...and cruise the streets
+    BurnsOW.cruise(dt);
     // dust devils drift (day only)
     for (const D of S.devils) { D.t += dt; D.x += Math.sin(D.t * 0.13 + D.a) * dt * 2.2; D.z += Math.cos(D.t * 0.11 + D.a * 1.7) * dt * 2.2; }
     // dust in the air by day: soft clouds rolling down the streets with the wind, all around Brady (drawn in drawSprites)
@@ -835,6 +843,50 @@ Object.assign(BurnsOW, {
     ctx.fillStyle = 'rgba(255,216,74,0.92)'; ctx.strokeStyle = 'rgba(30,14,40,0.8)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 6); ctx.lineTo(0, 2); ctx.lineTo(-8, 6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     BurnsUI.text(ctx, `${nx.name}  ${d > 999 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m'}`, x, y + 18, 11, '#ffd84a', { ui: true });
+  }
+});
+
+/* ---------------- the art cars' routes (Super Art Kart's cars: src/41_burns_artcars.js) ----------------
+   CIRCLE_CARS: [stem, radius, direction, start angle] round the Man on the open playa, between the promenade lamps
+   (r 92, 124, 156, 188) and inside the big art (the glowshroom grove reaches in to r 172).
+   STREET_CARS: [stem, lane, start (0..1 along its loop), speed m/s]. A lane is { r: street radius, out / in: the two
+   lanes' offsets from the street's centre, h0 / h1: where it turns round (default the city's ends, 2:00 and 10:00) }:
+   out along r + out, a wide U-turn, back along r - in. Checked against every static collider along the way
+   (tools/burns_artcars_test.js routes): the Esplanade's lanes sit between the lamp line and the corner signs; Arcade,
+   Bonfire and Dreamer are crossed by Center Camp, the plazas and the bigger theme camps, so the street cars use
+   Carousel (Root Society's tipis reach it at 2:00, so its loop turns at 2:10). */
+BURNS_OW.CIRCLE_CARS = [['whale_of_a_time', 108, 1, 0.4], ['dusty_doubloon', 140, -1, 2.3], ['jelly_jolt', 140, -1, 2.3 + Math.PI], ['glitterfin', 108, 1, 0.4 + Math.PI]];
+BURNS_OW.STREET_CARS = [
+  ['pyramid_scheme', { r: 300, out: 2.4, in: 3.4 }, 0.05, 3.0], ['frosted_fury', { r: 300, out: 2.4, in: 3.4 }, 0.55, 3.0],
+  ['turbo_escargot', { r: 435, out: 2.6, in: 2.6, h0: 2.17 }, 0.2, 2.6], ['calamari_inferno', { r: 435, out: 2.4, in: 2.4, h0: 2.17 }, 0.7, 2.6]
+];
+Object.assign(BurnsOW, {
+  // a closed loop for a street car: out along the outer lane from h0 to h1, a wide U-turn past the end, back along the
+  // inner lane, and round again
+  carLoop(lane) {
+    const O = BURNS_OW, r = lane.r, ro = r + (lane.out || 0), ri = r - (lane.in || 0), h0 = lane.h0 || O.H0, h1 = lane.h1 || O.H1, pts = [];
+    const ends = 0.06 * 300 / r;   // how far past the ends the turns reach (about 18 m)
+    const turn = (h, sgn, ra, rb) => { for (let k = 1; k < 8; k++) { const a = k / 8 * Math.PI; pts.push(O.at(h + sgn * Math.sin(a) * ends, (ra + rb) / 2 + (ra - rb) / 2 * Math.cos(a))); } };
+    for (let h = h0; h <= h1 + 1e-6; h += 0.025) pts.push(O.at(h, ro));
+    turn(h1, 1, ro, ri);
+    for (let h = h1; h >= h0 - 1e-6; h -= 0.025) pts.push(O.at(h, ri));
+    turn(h0, -1, ri, ro);
+    const acc = [0]; for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    acc.push(acc[acc.length - 1] + Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]));
+    return { pts, acc, len: acc[acc.length - 1] };
+  },
+  // move the street cars along their loops; the heading eases round the corners
+  cruise(dt) {
+    const S = BURNS_OW.state; if (!S || !S.cruise) return;
+    for (const C of S.cruise) {
+      const L = C.L, pts = L.pts, acc = L.acc;
+      C.s = (C.s + C.v * dt) % L.len;
+      let i = C.i; while (i < pts.length - 1 && acc[i + 1] < C.s) i++; while (i > 0 && acc[i] > C.s) i--; if (acc[i + 1] < C.s) i = 0;
+      C.i = i; const a = pts[i], b = pts[(i + 1) % pts.length], t = (C.s - acc[i]) / ((acc[i + 1] - acc[i]) || 1);
+      const want = Math.atan2(b[0] - a[0], b[1] - a[1]), mv = C.mv;
+      C.yaw = C.yaw === null || dt <= 0 ? want : C.yaw + BurnsM.wrap(want - C.yaw) * Math.min(1, dt * 2.2);
+      mv.x = lerp(a[0], b[0], t); mv.z = lerp(a[1], b[1], t); mv.y = 0; mv.yaw = C.yaw;
+    }
   }
 });
 

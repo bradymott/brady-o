@@ -233,15 +233,25 @@ BURNS_W10.seated = function (m, R) {
 };
 
 /* ---------------- art cars around the outer ring ---------------- */
+// the ring's art cars, in order round the circle (the first six are the dark ones)
+BURNS_W10.CARS = ['whale_of_a_time', 'glitterfin', 'pyramid_scheme', 'jelly_jolt', 'quackzilla', 'turbo_escargot', 'dusty_doubloon', 'frosted_fury', 'dune_chomper'];
 BURNS_W10.buildArtCars = function (api) {
   const st = BURNS_W10.state, R = mulberry32(1020);
   const cols = ['#3a1a5a', '#1a3a5a', '#5a1a2a', '#1a4a3a', '#4a3a1a', '#2a1a4a', '#5a2a1a', '#1a2a4a', '#3a3a1a', '#4a1a4a'];
   const sculpts = ['#ff4fd8', '#38f2ff', '#ffe24a', '#7aff5a', '#ff7a2a', '#9a6bff', '#ff3b5c', '#38f2ff', '#ffe24a', '#ff4fd8'];
+  let nArt = 0;
   for (let i = 0; i < 10; i++) {
     const a = (i + 0.5) / 10 * TAU + 0.1; if (Math.abs(BurnsM.wrap(a)) < 0.25) continue;
     const r = 96, x = Math.sin(a) * r, z = Math.cos(a) * r, yaw = a + Math.PI / 2;
-    api.prop('artcar', { x, z, yaw, len: 9, col: cols[i], sculpt: sculpts[i] });
     const dormant = st.cars.length < 6, glows = [];
+    // Super Art Kart's cars (41_burns_artcars.js), dark until Brady rings his bell at them; their own LEDs light up
+    if (typeof BurnsArtCars !== 'undefined' && BurnsArtCars.canLoad()) {
+      const art = BurnsArtCars.park(api, BURNS_W10.CARS[nArt++ % BURNS_W10.CARS.length], x, z, yaw, { lit: !dormant });
+      api.light(x, z, 12, sculpts[i], 0.3);
+      if (dormant) st.cars.push({ x, z, yaw, glows, lit: false, col: sculpts[i], art });
+      continue;
+    }
+    api.prop('artcar', { x, z, yaw, len: 9, col: cols[i], sculpt: sculpts[i] });
     for (let k = 0; k < 10; k++) { const t = k / 9, lx = (t - 0.5) * 8, gx = x + Math.cos(yaw) * 0 + Math.sin(yaw) * lx, gz = z + Math.cos(yaw) * lx; const G = BurnsW8910.glow(api, gx + Math.cos(yaw) * 2.2, 1.2 + (k % 2) * 0.4, gz - Math.sin(yaw) * 2.2, 1.0, sculpts[(i + k) % 10]); if (dormant) BurnsW8910.setGlow(G, false); glows.push(G); }
     const big = BurnsW8910.glow(api, x, 4.2, z, 7, sculpts[i]); if (dormant) BurnsW8910.setGlow(big, false); glows.push(big);
     api.light(x, z, 12, sculpts[i], 0.3);
@@ -531,6 +541,7 @@ BURNS_W10.ringBell = function (g) {
 };
 BURNS_W10.wakeCar = function (g, c, quiet) {
   if (c.lit) return; c.lit = true; for (const G of c.glows) BurnsW8910.setGlow(G, true);
+  if (c.art) BurnsArtCars.setLit(c.art, true);
   if (quiet) return;
   for (let i = 0; i < 18; i++) g.fx.add(c.x + (Math.random() - 0.5) * 3, 3, c.z + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 2, 10 + Math.random() * 5, (Math.random() - 0.5) * 2, 0.6, 1.6, 0.6, [1, 0.55, 0.15], 1, 'flame', 1);
   g.fx.confetti(c.x, 4, c.z, 30); burnsSfx('artcarHorn'); burnsSfx('flame_jet'); burnsSfx('crowd_cheer', { vol: 0.5 });

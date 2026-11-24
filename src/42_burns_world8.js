@@ -191,7 +191,7 @@ BurnsWorlds.register({
     /* ---------------- the fuel line ---------------- */
     const lineKinds = [['boxtruck', 84], ['rv', 70], ['bus', 56], ['van', 44], ['camper', 34], ['car', 25]];
     lineKinds.forEach(([k, z], i) => api.prop(k, { x: -12, z, yaw: Math.PI, seed: 800 + i }));
-    api.prop('artcar', { x: -21, z: 64, yaw: Math.PI + 0.1, len: 8, col: '#3a1a5a', sculpt: '#ffd84a' });
+    if (typeof BurnsArtCars !== 'undefined') BurnsArtCars.park(api, 'sir_scorchalot', -22, 64, Math.PI + 0.1); else api.prop('artcar', { x: -21, z: 64, yaw: Math.PI + 0.1, len: 8, col: '#3a1a5a', sculpt: '#ffd84a' });   // a dragon queuing for gas
     api.crowd(-20, 78, 3, 3, { behaviors: ['idle', 'sit', 'idle'] });
     api.npc({ type: 'sparklepony', seed: 81, x: -6, z: 60, name: 'SEQUIN', lines: ['Can you spare some gas money? I mean gas. I mean money. I mean a ride to the Temple?', 'I\'ve been in this line since Tuesday. I came for ice. This is the gas line.', 'Is it true DPW live out here ALL YEAR? Like... on purpose?'] });
     api.glowLine(-5.5, 80, -5.5, 30, 10);

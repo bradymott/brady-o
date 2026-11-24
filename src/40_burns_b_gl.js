@@ -613,15 +613,17 @@ void main(){
   for (int j = -1; j <= 2; j++) for (int i = -1; i <= 2; i++) c += texture2D(uSrc, vUV + vec2(float(i) - 0.5, float(j) - 0.5) * uTx);
   gl_FragColor = c / 16.0;
 }`, ['aPos']);
-    // god rays: radial blur of bright sky pixels toward the sun's screen position
+    // god rays: radial blur of bright sky pixels toward the sun's screen position.
+    // Each sample is soft-compressed: the HDR sky around a low sun reaches 5-40, and summing that raw used to
+    // lay an orange veil over the whole screen (Brady's "sun rays wash everything out" report, World 1 / Gate Road).
     P.rays = this.program(VS, `precision highp float; varying vec2 vUV; uniform sampler2D uSrc, uDepth; uniform vec2 uSunUV; uniform float uAsp;
 void main(){
   vec2 dv = (uSunUV - vUV) / 28.0;
   vec2 uv = vUV; float w = 1.0; vec3 acc = vec3(0.0);
   for (int i = 0; i < 28; i++) {
     float sky = step(0.99999, texture2D(uDepth, uv).r);
-    vec3 c = texture2D(uSrc, uv).rgb;
-    acc += max(c - vec3(0.9), vec3(0.0)) * sky * w;
+    vec3 b = max(texture2D(uSrc, uv).rgb - vec3(1.0), vec3(0.0));
+    acc += b / (1.0 + b * 0.3) * sky * w;
     w *= 0.955; uv += dv;
   }
   gl_FragColor = vec4(acc / 28.0, 1.0);
@@ -668,7 +670,16 @@ void main(){
     c *= mix(1.0, ao, uK.z * (1.0 - smoothstep(0.8, 2.5, lum)));
   }
   c += texture2D(uBloom, uv).rgb * uK.y;
-  if (uK.w > 0.0) c += texture2D(uRays, uv).rgb * uRaysC * uK.w;
+  if (uK.w > 0.0) {
+    // god rays, kept from washing the scene out: shafts are light scattered in the air between the camera and a
+    // surface, so near things (Brady, cars, signs) get little of it; they never pile onto already-bright pixels;
+    // and the total has a soft ceiling, so a low sun reads as a warm glow, not a white-out.
+    vec3 r = texture2D(uRays, uv).rgb * uRaysC * uK.w;
+    float zr = dep >= 0.99999 ? 1.0 : mix(0.25, 1.0, smoothstep(8.0, 120.0, lin(dep)));
+    float lc = dot(c, vec3(0.3, 0.59, 0.11));
+    r *= zr / (1.0 + lc);
+    c += r / (1.0 + r * 1.3);
+  }
 #ifdef HDR
   c = bAces(c * uK.x);
   c = pow(c, vec3(1.0 / 2.2));

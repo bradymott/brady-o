@@ -249,8 +249,10 @@ BW11.build = function (api, g) {
     { path: [[-150, 12], [-90, -20], [0, -12], [90, -20], [150, 12], [90, 8], [0, 14], [-90, 8], [-150, 12]], n: 3, speed: 8, off: 0 }
   ]);
   // art cars cruising the open playa (lights moving in the dark)
-  api.artCar({ x: -40, z: -90, yaw: 1.2, path: [[-40, -90], [30, -110], [70, -80], [20, -70], [-50, -70]], pathSpeed: 2.6, drivable: false, col: '#2a1a4a', sculpt: '#ff4fd8', len: 9, w: 4 });
-  api.artCar({ x: 40, z: -20, yaw: -1.6, path: [[40, -20], [-30, -18], [-60, -60], [-10, -100], [50, -70]], pathSpeed: 2.2, drivable: false, col: '#1a3a3a', sculpt: '#7aff5a', len: 8, w: 3.6 });
+  // (Super Art Kart's two sound cars, 41_burns_artcars.js: the heart car and the laser pyramid)
+  const car11 = (stem, o) => typeof BurnsArtCars !== 'undefined' ? BurnsArtCars.vehicle(api, stem, o) : api.artCar(o);
+  car11('bass_valentine', { x: -40, z: -90, yaw: 1.2, path: [[-40, -90], [30, -110], [70, -80], [20, -70], [-50, -70]], pathSpeed: 2.6, drivable: false, col: '#2a1a4a', sculpt: '#ff4fd8', len: 9, w: 4 });
+  car11('pyramid_scheme', { x: 40, z: -20, yaw: -1.6, path: [[40, -20], [-30, -18], [-60, -60], [-10, -100], [50, -70]], pathSpeed: 2.2, drivable: false, col: '#1a3a3a', sculpt: '#7aff5a', len: 8, w: 3.6 });
   // interactables: plug in the bass
   const J = S.junction;
   g.interactables.push({ x: J.x, z: J.z, y: J.y, r: 2.4, label: 'PLUG IN', when: g2 => g2.missions.state('cable') === 'active' && g2.missions.get('cable').n >= 3, fn: g2 => BW11.plugIn(g2) });
