@@ -80,6 +80,8 @@ BurnsWorlds.register({
       onComplete(g) { BW12.ending(g); } }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'hope');
     const R = api.rng, TC = BW12.TC;
     BW12.state = { introDone: !!BurnsSave.flag(12, 'intro'), timers: [], lamps: [], bells: [], rung: {}, trace: null, ink: null, carry: null, motes: [], windT: 6, writeAt: null };
     const S = BW12.state;

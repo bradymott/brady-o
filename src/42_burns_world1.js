@@ -55,6 +55,8 @@ BurnsWorlds.register({
       desc: 'He\'s blocking the gate. With your wife. Take cover from his neon flash.', hint: 'Through the gate', lockedDesc: 'Needs a ticket and a proper greeting.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const W1 = BURNS_W1, R = api.rng, L = W1.LANES;
     W1.state = { gust: 0, ticket: null, gateOpen: false, round: 0, introDone: !!BurnsSave.flag(1, 'intro') };
     const S = W1.state;

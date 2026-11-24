@@ -149,7 +149,7 @@ BurnsWorlds.register({
       onEvent(g, m, name) { if (name === 'lit') { g.missions.progress('darkwads'); return true; } },
       onComplete(g) { const r = g.actor('ranger'); if (r) r.say('Four darkwads, illuminated. I\'m writing you a commendation. In triplicate.', 3); g.addGlow(15); g.player.givePower('water'); g.toast('+15 GLOW STICKS'); } }
   ],
-  build(api, g) { BW11.build(api, g); },
+  build(api, g) { BW11.build(api, g); BurnsBossGate.finale(api, 'set'); },   // (finishes a won-but-unfinished finale: 42_burns_a_bossgate.js)
   onStart(g) { BW11.onStart(g); },
   update(g, dt) { BW11.update(g, dt); },
   drawSprites(g, R) { BW11.drawLasers(g, R); BW11Dome.drawSprites(g, R); BW11.drawExtras(g, R); },

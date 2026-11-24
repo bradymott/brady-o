@@ -97,6 +97,16 @@ BurnsWorlds.register({
       onStart(g) { BURNS_W2.escapeStart(g); }, onFail(g) { BURNS_W2.escapeFail(g); } }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'escape');
+    // the escape starts in Kevin's tent (SLEEP), not at the RV: standing at the RV before that, Brady is told so
+    BurnsBossGate.add(api, { mission: 'escape',
+      when: g2 => g2.missions.state('escape') === 'available' && !BURNS_W2.state.esc,
+      inArena: (g2, p) => Math.hypot(p.x - BURNS_W2.RLD[0], p.z - BURNS_W2.RLD[1]) < 10,
+      running: () => !!BURNS_W2.state.esc, ready: () => false, start: () => {},
+      missing: () => 'Kevin said get some sleep first. SLEEP in his tent at camp (7:30 & E); the run back here starts at 4 AM.',
+      guide: () => { const T = BURNS_W2.state.tent; return T ? [{ x: T.x, z: T.z, label: 'SLEEP IN KEVIN\'S TENT' }] : undefined; },
+      repeat: Infinity });
     const W2 = BURNS_W2, R = api.rng, BW = BURNS_W234, RR = W2.R;
     BW.reset(g);
     W2.state = { introDone: !!BurnsSave.flag(2, 'intro'), followers: [], swarms: [], spinners: [], jets: [], warned: 0, sole: [], trail: [] };
@@ -727,6 +737,7 @@ BurnsWorlds.register({
     if (!S.spinnerActors) S.spinnerActors = g.actors.filter(a => a.behName === 'w2Spinner');
     W2.carryCheck(g);
     if (S.esc) W2.escapeStep(g, dt);
+    W2.markEscape(g);
     // walking lost burners home (followers that get boxed in by camps catch up behind Brady)
     if (g.missions.state('lost') === 'active' || g.missions.state('lost') === 'available') {
       for (const L of S.lost) {
@@ -970,6 +981,15 @@ BURNS_W2.markHaul = function (g, dropped) {
     else if (ground) m.def.marker = ground;
     m.def.short = id === 'stash' ? (BW.S.carry ? 'Into the RV (side door)' : 'Grab your gear by the RV') : (BW.S.carry ? 'To Kevin\'s tent (7:30 & E)' : 'Pick your stuff back up!');
   }
+};
+// the escape's arrow: Kevin's tent while it's time to sleep, the pink RV once the run is on
+BURNS_W2.markEscape = function (g) {
+  const S = BURNS_W2.state, m = g.missions.get('escape'); if (!m || !S.tent) return;
+  const sleep = m.state === 'available' && !S.esc;
+  if (sleep === S.escMarkSleep) return;
+  S.escMarkSleep = sleep;
+  m.def.marker = sleep ? { x: S.tent.x, z: S.tent.z } : { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] };
+  m.def.short = sleep ? 'Sleep in Kevin\'s tent (7:30 & E)' : 'RUN! Back to the pink RV';
 };
 BURNS_W2.rvEnter = function (g) {
   const S = BURNS_W2.state;
@@ -1493,3 +1513,6 @@ BURNS_W2.lostHome = function (g, a, L) {
 /* test/debug access (the bundle is one IIFE) */
 BURNS_W2.lib = () => BURNS_W234;
 try { (window.BRADY_W234 = window.BRADY_W234 || {}).w2 = BURNS_W2; } catch (e) { /* no window */ }
+
+/* test hook: the World 2 state (tools/burns_boss_entry_test.js) */
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W2 });

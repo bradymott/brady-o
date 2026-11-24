@@ -63,6 +63,8 @@ BurnsWorlds.register({
       desc: 'Fuzz is wearing a full fursuit in the midday sun. Walk them to the misting station at the bike clinic before they melt.', hint: 'Fuzz sits by the Costume Cult tent' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const W3 = BURNS_W3, R = api.rng, BW = BURNS_W234;
     BW.reset(g);
     W3.state = { introDone: !!BurnsSave.flag(3, 'intro'), gates: [], wheels: [], lookouts: [] };
@@ -439,6 +441,12 @@ BURNS_W3.buildGrave = function (api, g) {
   // wheel projectiles (a small pool of movers)
   for (let i = 0; i < 6; i++) { const mv = api.mover(m => { m.color('#18181c'); BW.ring(m, 0, 0, 0, 0.42, 0.06, { roll: Math.PI / 2, seg: 16, tseg: 5 }); m.color('#ffd21a'); BW.ring(m, 0, 0, 0, 0.3, 0.025, { roll: Math.PI / 2, seg: 14, tseg: 3 }); m.color('#c8c8d0'); BW.ball(m, 0, 0, 0, 0.06); return {}; }, {}); mv.noCollide = true; mv.visible = false; S.wheels.push({ mv, live: false, x: 0, z: 0 }); }
   api.trigger({ x: gx, z: gz, r: 17, onEnter: g2 => BURNS_W3.bossIntro(g2) });
+  // ...and from anywhere among the bike heaps (or the FIGHT button); without the look and the bike Brady is told what's left
+  BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => Math.hypot(p.x - gx, p.z - gz) < 20,
+    running: () => !!BURNS_W3.state.bossStarted,
+    start: g2 => BURNS_W3.bossIntro(g2),
+    button: { x: gx, z: gz + 4, r: 6, label: 'FIGHT: THE BARON' } });
 };
 BURNS_W3.tallBike = function (m) {
   const BW = BURNS_W234, wr = 0.38;

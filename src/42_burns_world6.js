@@ -59,9 +59,12 @@ BurnsWorlds.register({
     { id: 'party', name: 'Party Animal', short: 'Get 40 burners partying at once', type: 'custom', giver: 'barnacle', start: 'manual', requires: ['board'], marker: { x: -92, z: 30 },
       desc: 'Park El Pulpo at a glowing PARTY SPOT, throw a party, DJ a killer set and gift jello shots. Partiers follow you to the next spot. Get 40 dancing at once.', hint: 'Party spots: the Glowshroom Grove, Sparkle Pony Stables, Crusty Corner, Solar Bro Farm, the Big Empty', lockedDesc: 'Commandeer the octopus first.' },
     { id: 'boss', name: 'Hostile Takeover', type: 'boss', start: 'manual', requires: ['party'], tokenDirect: true, short: 'Defeat Chad, Founder & CEO!', marker: { x: 0, z: -134 },
+      guide(g) { return BW6.state && BW6.state.chadOn ? 'chad' : undefined; },   // mid-fight: where he actually is (his arena is the party spot)
       desc: 'Chad wants to turn your party into a platform. Dodge his pitch decks and VC drones, make him crash his giant e-unicycle, then bonk him (or flame him).', hint: 'He crashes your biggest party', lockedDesc: 'Throw a party worth taking over.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const R = api.rng;
     BW6.state = { introDone: !!BurnsSave.flag(6, 'intro'), lilies: [], party: null, followers: [], shots: 20, back: [], jugs: 0, darkwads: [], jump: null, honk: [] };
     const S = BW6.state;
@@ -304,6 +307,14 @@ BW6.buildEmpty = function (api, g) {
   const spec = BW567K.mine('techbro', 666, { kind: 'chad', face: 'smug', glasses: 'shades', beard: null, goggles: false, hat: null, hair: { style: 'short', col: '#e8c860', hi: '#fff0b0' }, top: { kind: 'button', col: '#ffffff' }, vest: 'fleece', vestCol: '#1a1a24', bottom: { kind: 'chinos', col: '#c8b48a' }, acc: ['headset', 'bracelets'], prop: 'phone', body: { h: 1.04, w: 1.12 } });
   api.enemy({ id: 'chad', name: 'CHAD, FOUNDER & CEO', type: 'techbro', spec, scale: 1.35, x: s.x + 14, z: s.z - 14, yaw: -0.7, behavior: 'bw6Chad', hp: 4, boss: true, drop: 14, always: true, chatter: false, keepBehavior: true, uni: 7,
     onDefeat(g2) { BW6.chadDefeated(g2); } });
+  // Chad's showdown also starts when Brady walks up to him at the Big Empty (or presses FIGHT there), not only during
+  // a party (a quit, a reload or a faint can leave him waiting here); before the party he says what's needed
+  const sx = s.x, sz = s.z;
+  BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => Math.hypot(p.x - sx, p.z - sz) < 26 || Math.hypot(p.x - (sx + 14), p.z - (sz - 14)) < 8,
+    running: () => !!BW6.state.chadOn,
+    start: g2 => BW6.chadArrives(g2, true),
+    button: { x: sx + 10, z: sz - 10, r: 6, label: 'FIGHT: CHAD' }, repeat: Infinity });
 };
 // local party crowd around a spot: [[type, n], ...]
 BW6.locals = function (api, s, list, kind) {
@@ -1049,10 +1060,10 @@ BW6.foundOcto = function (g) {
     { do: g2 => { if (b) b.setBehavior('sit'); } }
   ]);
 };
-BW6.chadArrives = function (g) {
-  const S = BW6.state, P = S.party, c = g.actor('chad'), p = g.player; if (!c || S.chadOn) return;
-  S.chadOn = true;
-  const A = { x: P ? P.x : p.x, z: P ? P.z : p.z };
+BW6.chadArrives = function (g, here) {   // here: started at the Big Empty, not by a party (fight where Brady stands unless a party is on)
+  const S = BW6.state, P = S.party, c = g.actor('chad'), p = g.player; if (!c || S.chadOn || g.missions.isDone('boss')) return;
+  S.chadOn = true; g._bossHint = null;
+  const useP = P && (!here || P.on), A = { x: useP ? P.x : p.x, z: useP ? P.z : p.z };
   c.data.arena = A; c.x = A.x + 18; c.z = A.z + 6; c.y = g.world.height(c.x, c.z); c.home = { x: A.x, z: A.z };
   g.missions.start('boss', true);
   g.cutscene([
