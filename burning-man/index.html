@@ -3607,6 +3607,18 @@ const BURNS_GFX = {
   }
 };
 
+/* ---------------- the look: per-game art direction the renderer reads every frame ----------------
+   The engine defaults keep Super Art Kart's look; Brady Goes to Burning Man raises them in 40_burns_l_app.js.
+   alkali: pull the playa toward its real pale, low-saturation crust (0..1); tracks: tyre ruts, bike tracks and
+   footprints on the playa (0..1); cracks: crack contrast (1 = default). A world's def.ground.look overrides any of them.
+   skyGrad: 0 the classic sky gradient, 1 one that reaches blue sooner and keeps its colour; hazeBand: height of the
+   horizon haze band (radians); ridges: 1 = ridged mountain ranges instead of the soft silhouette. A palette's
+   skyGrad / hazeBand / ridges override these. toneDay / toneNight: [warm highlights, cool shadows] split tone in
+   the final grade (0 = off), blended by how dark the scene is. dust: playa dust on props, vehicles and people
+   (up-facing surfaces and a band at the foot), tinted like the world's ground (0 = off). grime: tone variation
+   across plain painted static surfaces (0 = off; 0.4 = about +-10%). */
+const BURNS_LOOK = { alkali: 0, tracks: 0, cracks: 1, skyGrad: 0, hazeBand: 0.3, ridges: 0, toneDay: [0, 0], toneNight: [0, 0], dust: 0, grime: 0 };
+
 const BURNS_GLSL_OUT = `
 uniform vec4 uExp;   // x exposure (LDR path), y dust haze, z night 0..1, w glow boost
 vec3 bLin(vec3 c) { return pow(max(c, vec3(0.0)), vec3(2.2)); }
@@ -3631,6 +3643,12 @@ uniform vec3 uPC[NPL];
 uniform int uNPL;
 #endif
 uniform float uTrip, uTime, uEmB;
+uniform vec4 uDust; uniform vec3 uDustC;   // playa dust on things: x amount, y height of the dusty band at the foot (m); colour (linear)
+// fine playa dust settles on whatever faces up and coats everything near the ground (not on glowing parts)
+vec3 bDust(vec3 alb, vec3 n, vec3 w, float e) {
+  float k = (smoothstep(0.55, 0.95, n.y) * 0.55 + (1.0 - smoothstep(0.0, uDust.y, w.y)) * 0.45) * uDust.x * (1.0 - step(0.5, e));
+  return mix(alb, uDustC * (0.8 + 0.4 * alb), k);
+}
 #ifdef SHADOWS
 uniform highp sampler2DShadow uShadow;
 uniform mat4 uShadowM;
@@ -3747,14 +3765,18 @@ const BURNS_GLSL_POSTVS = `attribute vec2 aPos; varying vec2 vUV; void main(){ v
 // the static mesh fragment shader (merged chunks and instanced props share it)
 const BURNS_GLSL_MESHFS = `precision highp float;
 varying vec3 vW; varying vec3 vN; varying vec4 vC; varying vec2 vT; varying float vG;
-uniform sampler2D uTex;
+uniform sampler2D uTex, uDetM;
 uniform float uAlphaK;
 ${BURNS_GLSL_LIGHT}
 void main(){
   vec4 t = texture2D(uTex, vT);
   vec3 alb = bLin(vC.rgb * (1.0 - t.a) + t.rgb);
   vec3 n = normalize(vN);
+  if (uDust.x > 0.0) alb = bDust(alb, n, vW, vC.a);
 #ifdef BUMP
+  // weathering: plain painted surfaces vary a little in tone across their faces (sun-bleached, scuffed, dusty),
+  // which breaks the flat computer-colour look; atlas-textured and glowing parts are left alone
+  if (uDust.z > 0.0 && t.a < 0.02 && vC.a < 0.5) alb *= 1.0 + (texture2D(uDetM, vW.xz * 0.12 + vec2(vW.y * 0.09, -vW.y * 0.07)).g - 0.5) * uDust.z;
   vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.004);
   n = t.a > 0.02 ? nb : n;
 #endif
@@ -3883,6 +3905,7 @@ void main(){
   vec3 srgb = vC.rgb * (1.0 - t.a) + t.rgb;
   vec3 alb = bLin(srgb);
   vec3 n = normalize(vN);
+  if (uDust.x > 0.0) alb = bDust(alb, n, vW, vC.a);
 #ifdef BUMP
   vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.0025);
   // cloth: soft folds + a fine weave on matte, untextured, non-skin surfaces (bone-local, so it rides the body)
@@ -3947,20 +3970,29 @@ uniform vec3 uZen, uHor, uFogC, uSunD, uSunC, uMoonD, uMtnC, uCityD, uCityC;
 uniform vec4 uSkyK, uCloud, uMid, uAtm;
 uniform vec3 uCloudC;
 uniform float uTime, uHaze, uTrip, uEqui;
+uniform vec4 uSkyL;   // x gradient (0 classic, 1 the look's: quicker to blue, chroma kept), y horizon haze band height (rad), z ridged mountains, w -
 ${BURNS_GLSL_OUT}
 float h3(vec3 p){ p = fract(p * 0.3183099 + vec3(0.11, 0.17, 0.13)); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float h2(vec2 p){ p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
 float n2(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(h2(i), h2(i + vec2(1.0, 0.0)), f.x), mix(h2(i + vec2(0.0, 1.0)), h2(i + vec2(1.0, 1.0)), f.x), f.y); }
 float fbm(vec2 p){ return n2(p) * 0.5 + n2(p * 2.03 + 1.7) * 0.25 + n2(p * 4.01 + 5.3) * 0.125 + n2(p * 8.07 + 9.1) * 0.0625; }
+// a ridged range along the horizon: noise sampled around a circle (seamless in azimuth), sharp crests, eroded flanks
+float ridge(vec2 q){ float s = 0.0, a = 0.55; for (int k = 0; k < 5; k++) { float v = 1.0 - abs(n2(q) * 2.0 - 1.0); s += v * v * a; q = q * 2.07 + vec2(3.1, 1.7); a *= 0.5; } return s; }
 void main(){
   vec3 d;
   if (uEqui > 0.5) { float lon = vN.x * 3.14159265, lat = vN.y * 1.57079633; d = vec3(sin(lon) * cos(lat), sin(lat), cos(lon) * cos(lat)); }   // the probe: one pixel per direction
   else d = normalize(uF + uR * (vN.x * uTan.x) + uU * ((vN.y - uTan.z) * uTan.y));
   float el = asin(clamp(d.y, -1.0, 1.0));
+  // below the horizon the sky is only the fog colour (the ground covers it on screen; the probe's lower half)
+  if (el < -0.02 && uTrip <= 0.0) { gl_FragColor = bOut(bLin(uFogC), 1.0); return; }
   float az = atan(d.x, d.z);
   float gy = pow(clamp(el / 1.25, 0.0, 1.0), 0.55);
+  gy = mix(gy, 1.0 - exp(-max(el, 0.0) * 3.4), uSkyL.x);
   vec3 col = mix(uHor, uZen, gy);
+  // a linear blend of a warm horizon and a blue zenith goes grey in between; the look keeps its colour
+  float cl0 = dot(col, vec3(0.3, 0.59, 0.11));
+  col = max(mix(vec3(cl0), col, 1.0 + 1.2 * gy * (1.0 - gy) * uSkyL.x), 0.0);
   col = mix(col, uMid.rgb, uMid.a * (1.0 - abs(gy * 2.0 - 1.0)));
   float sEl = asin(clamp(uSunD.y, -1.0, 1.0));
   float sd = max(dot(d, uSunD), 0.0);
@@ -4022,10 +4054,33 @@ void main(){
   }
   float cg = max(dot(hd, uCityD), 0.0);
   col += uCityC * pow(cg, 5.0) * exp(-max(el, 0.0) * 10.0);
-  col = mix(col, uFogC, uHaze * (1.0 - smoothstep(0.0, 0.3, el)));
+  col = mix(col, uFogC, uHaze * (1.0 - smoothstep(0.0, uSkyL.y, el)));
   float m = uSkyK.w * (0.55 + 0.24 * sin(az * 3.0 + 1.3) + 0.12 * sin(az * 7.0 + 0.4) + 0.06 * sin(az * 19.0 + 2.1) + 0.03 * sin(az * 43.0));
   bool mtn = el < m;
-  if (mtn) col = mix(uMtnC, uFogC, clamp(1.0 - (m - el) / max(m, 0.001) * 1.2, 0.0, 1.0) * 0.55);
+  if (uSkyL.z > 0.5 && uSkyK.w > 0.0 && el < uSkyK.w * 1.1 && el > -0.03) {
+    // two ranges: a far, hazy crest line and a nearer, darker one across part of the horizon (the Black Rock and
+    // Granite ranges); sunlit faces away from a low sun, backlit silhouettes toward it, gullies, a hazy foot
+    vec2 ring = vec2(cos(az), sin(az));
+    // (peaks stay within the classic silhouette's height, so a low sun the palettes place above the hills stays visible)
+    float hf = uSkyK.w * (0.25 + 0.72 * ridge(ring * 2.3 + 11.0));
+    // a low sun sets into a saddle in the range rather than behind a peak (the sun disc is the point of a sunset)
+    float saddle = 1.0 - 0.55 * smoothstep(0.97, 1.0, dot(hd, hs)) * smoothstep(0.22, 0.02, sEl);
+    hf *= saddle;
+    float sect = smoothstep(0.35, 0.65, n2(ring * 1.4 + 4.0)) * saddle;
+    float hn = uSkyK.w * (0.1 + 0.55 * ridge(ring * 4.1 + 2.0)) * sect;
+    float lit = mix(1.12, 0.72, pow(toward, 2.0) * (0.4 + 0.6 * tw));
+    float gul = 0.86 + 0.14 * n2(vec2(az * 150.0, el * 22.0 + n2(vec2(az * 40.0, 0.0)) * 2.0));
+    vec3 air = mix(uFogC, uHor, 0.45);   // distance turns the ranges toward the sky's own horizon colour (blue by day)
+    mtn = el < max(hf, hn);
+    if (el < hf) {
+      float k = clamp(el / max(hf, 0.001), 0.0, 1.0);
+      col = mix(air, uMtnC * lit * gul, (0.32 + 0.3 * k) * (1.0 - uHaze * 0.35));
+    }
+    if (el < hn) {
+      float k = clamp(el / max(hn, 0.001), 0.0, 1.0);
+      col = mix(mix(air, uFogC, 0.5), uMtnC * lit * 0.85 * gul, (0.5 + 0.35 * k) * (1.0 - uHaze * 0.3));
+    }
+  } else if (mtn) col = mix(uMtnC, uFogC, clamp(1.0 - (m - el) / max(m, 0.001) * 1.2, 0.0, 1.0) * 0.55);
   if (el < 0.0) col = uFogC;
   if (uTrip > 0.0) { float a = uTime * 0.9 + az * 2.0; col = mix(col, col.gbr * 1.2 + 0.05 * vec3(sin(a), sin(a + 2.0), sin(a + 4.0)), uTrip * 0.6); }
   vec3 lin = bLin(col);
@@ -4038,47 +4093,57 @@ uniform mat4 uVP; uniform vec4 uPaintXf;
 varying vec3 vW; varying vec3 vN; varying vec2 vP;
 void main(){ vW = aPos; vN = aNrm; vP = (aPos.xz - uPaintXf.xy) * uPaintXf.zw; gl_Position = uVP * vec4(aPos, 1.0); }`, `precision highp float;
 varying vec3 vW; varying vec3 vN; varying vec2 vP;
-uniform sampler2D uPaint, uDet;
+uniform sampler2D uPaint, uDet, uTrk;
 uniform vec4 uDetK;
+uniform vec4 uLook;   // x alkali calibration (pale, low-saturation crust), y tyre tracks / footprints, z crack strength, w -
 uniform vec3 uGround;
 ${BURNS_GLSL_LIGHT}
 void main(){
   vec3 n = normalize(vN);
   vec4 p = texture2D(uPaint, vP);
   vec3 alb = uGround * (1.0 - p.a) + p.rgb;
+  // the real playa is a pale, nearly neutral alkali crust; painted roads and marks keep most of their colour
+  float l0 = dot(alb, vec3(0.3, 0.59, 0.11));
+  alb = mix(alb, vec3(l0) * vec3(1.1, 1.0, 0.86), uLook.x * (1.0 - 0.25 * p.a));
   float dist = length(vW - uCam);
   float fade = clamp(1.5 - dist / 55.0, 0.0, 1.0);
-  // natural playa: low-frequency warp breaks the crack grid, patches of smooth drifted dust vs. cracked crust,
-  // brightness/colour mottling at two scales, a second crack scale, and fine grit + specks (MOOP) up close
+  // natural playa: low-frequency warp breaks the tile, patches of smooth drifted dust vs. cracked crust,
+  // brightness/colour mottling at two scales, plates of slightly different tone, fine grit + specks up close
   vec4 m1 = texture2D(uDet, vW.xz * 0.0071 + vec2(0.13, 0.71));
   vec4 m2 = texture2D(uDet, vW.xz * 0.0023 + vec2(0.57, 0.29));
-  vec2 wv = (vec2(m1.g, m2.g) - 0.5) * 1.6;
+  // (a gentle warp: a strong one swirls the cracks into whorls where the noise is steep)
+  vec2 wv = (vec2(m1.g, m2.g) - 0.5) * 0.45;
   vec4 d1 = texture2D(uDet, vW.xz * uDetK.x + wv);
-  vec4 d2 = texture2D(uDet, vW.xz * uDetK.z);
-  vec4 d3 = texture2D(uDet, vW.xz * uDetK.x * 0.21 + 0.37 + wv * 0.4);
   vec4 d4 = texture2D(uDet, vW.xz * uDetK.x * 2.7 + wv.yx * 1.3 + 0.21);
-  float far = clamp((dist - 28.0) / 80.0, 0.0, 1.0);
-  float crust = smoothstep(0.26, 0.62, m2.g * 0.65 + m1.g * 0.35);   // 0 = drifted smooth dust, 1 = cracked crust
+  float crust = smoothstep(0.3, 0.66, m2.g * 0.65 + m1.g * 0.35);   // 0 = drifted smooth dust, 1 = cracked crust
+  // tyre ruts, bike tracks and footprints crush the crust into powder (no cracks, paler, a shallow dip)
+  vec2 tq = vec2(vW.x * 0.8 + vW.z * 0.6, vW.z * 0.8 - vW.x * 0.6) * (1.0 / 48.0);
+  vec4 tr = texture2D(uTrk, tq + vec2(0.31, 0.77));
+  float near = 1.0 - smoothstep(6.0, 20.0, dist);
+  float trk = clamp(tr.r * (1.0 - smoothstep(40.0, 120.0, dist)) + tr.g * 0.7 * (1.0 - smoothstep(15.0, 45.0, dist)) + tr.b * (1.0 - smoothstep(8.0, 25.0, dist)), 0.0, 1.0) * uLook.y * smoothstep(0.2, 0.45, m1.g + 0.25);
   // Filter fine crust by its screen footprint. Grazing views on a phone otherwise
   // turn the high-frequency cracks into a crawling grid even with MSAA enabled.
   float crustAA = fade;
 #ifdef BUMP
   vec2 footprint = fwidth(vW.xz * uDetK.x);
-  crustAA *= 1.0 - smoothstep(0.015, 0.065, max(footprint.x, footprint.y));
+  crustAA *= 1.0 - smoothstep(0.02, 0.09, max(footprint.x, footprint.y));
 #endif
-  float ck = mix(d1.r * crustAA, d3.r * 0.55, far) * mix(0.25, 1.0, crust) + d4.r * 0.35 * crustAA * crust;
-  alb *= 1.0 - ck * uDetK.y;
-  alb *= 1.0 + (d2.g - 0.5) * uDetK.w;
-  alb *= mix(0.9, 1.07, m2.g) * mix(0.96, 1.03, m1.g);
-  alb = mix(alb, alb * vec3(1.06, 1.03, 0.97), (1.0 - crust) * 0.6);   // dust drifts read paler and warmer
-  alb *= 0.95 + d1.b * 0.1 * fade;
+  float far = clamp((dist - 28.0) / 80.0, 0.0, 1.0);
+  // up close the crack lines; far away only their average (crack density darkens the crust a touch)
+  float ck = (d1.r * crustAA * mix(0.2, 1.0, crust) + d4.r * 0.22 * crustAA * crust) * (1.0 - trk) * uLook.z;
+  alb *= 1.0 - ck * uDetK.y * 1.15 - crust * far * uDetK.y * 0.12;
+  alb *= mix(0.9, 1.07, m2.g) * (1.0 + (m1.g - 0.5) * (uDetK.w + 0.07));   // mottling at two scales (m1 also serves the old mottle layer)
+  alb = mix(alb, alb * vec3(1.05, 1.03, 0.99), (1.0 - crust) * 0.6);   // dust drifts read paler and warmer
+  alb *= 0.94 + (d1.b - 0.5) * 0.16 * fade * crust + 0.06;              // plate-to-plate tone
+  alb *= 1.0 + trk * 0.03;
   vec4 g1 = texture2D(uDet, vW.xz * 1.9 + 0.43);
-  float near = 1.0 - smoothstep(6.0, 20.0, dist);
-  alb *= 1.0 - (step(0.988, g1.b) * 0.4 + (g1.b - 0.5) * 0.06) * near * uDetK.y * 3.0;
+  // specks of grit (MOOP): a sparse hash of the grain (B also carries plate tone, so a plain threshold would clump)
+  alb *= 1.0 - (step(0.994, fract(g1.b * 37.0)) * 0.25 + (g1.b - 0.5) * 0.06) * near * uDetK.y * 3.0;
   alb = bLin(alb);
 #ifdef BUMP
-  float hgt = mix(d1.a, d3.a, far) * mix(0.35, 1.0, crust) + d4.a * 0.3 * crust + (g1.b - 0.5) * 0.15 * near;
-  n = bBump(n, vW, hgt, mix(0.012 * crustAA, 0.025, far) * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y));
+  // (tracks only flatten the relief: an 8-bit track mask in the height itself bands into contour rings)
+  float hgt = d1.a * mix(0.3, 1.0, crust) + d4.a * 0.25 * crust + (g1.b - 0.5) * 0.12 * near;
+  n = bBump(n, vW, hgt, 0.028 * crustAA * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y) * uLook.z * (1.0 - 0.6 * trk));
 #endif
   float sh = bShadow(vW, n);
   vec3 c = bShade(alb, n, vW, 0.05, 0.0, sh);
@@ -4103,14 +4168,14 @@ void main(){
   vT = aBone; vC = aCol;
   gl_Position = uVP * vec4(p, 1.0);
 }`, `precision mediump float;
-uniform sampler2D uTex; uniform vec3 uFogC; uniform float uGlowK;
+uniform sampler2D uTex; uniform vec3 uFogC; uniform float uGlowK, uSprLit;
 varying vec2 vT; varying vec4 vC; varying float vF;
 void main(){
   vec4 c = texture2D(uTex, vT) * vC;
   if (c.a + c.r + c.g + c.b < 0.003) discard;
   vec3 rgb = mix(c.rgb, uFogC * c.a, vF);
 #ifdef HDR
-  gl_FragColor = vec4(pow(max(rgb, vec3(0.0)), vec3(2.2)) * (c.a < 0.004 ? uGlowK : 1.0), c.a);
+  gl_FragColor = vec4(pow(max(rgb, vec3(0.0)), vec3(2.2)) * (c.a < 0.004 ? uGlowK : uSprLit), c.a);
 #else
   gl_FragColor = vec4(rgb, c.a);
 #endif
@@ -4207,6 +4272,7 @@ uniform vec4 uDof;    // x focus (m), y aperture, z -, w on
 uniform vec4 uNF;
 uniform vec4 uNoFx;   // a rect (uv) without ssao/dof (dialogue portrait)
 uniform vec3 uRaysC, uGrade;
+uniform vec4 uTone;   // split tone: x warm highlights, y cool shadows (0 = off)
 float lin(float d){ float z = d * 2.0 - 1.0; return 2.0 * uNF.x * uNF.y / (uNF.y + uNF.x - z * (uNF.y - uNF.x)); }
 float h2(vec2 p){ p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
 vec3 bAces(vec3 c) { return clamp((c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14), 0.0, 1.0); }
@@ -4258,6 +4324,11 @@ void main(){
   float l = dot(c, vec3(0.3, 0.59, 0.11));
   c = mix(vec3(l), c, uGrade.x);
   c = mix(c, c * c * (3.0 - 2.0 * c), uGrade.y);
+  if (uTone.x + uTone.y > 0.0) {
+    // a film-like split tone: cool shadows, warm highlights (gold by day; deep blue nights with warm lamps)
+    float lt = dot(c, vec3(0.3, 0.59, 0.11));
+    c *= mix(mix(vec3(1.0), vec3(0.9, 0.97, 1.1), uTone.y), mix(vec3(1.0), vec3(1.06, 1.0, 0.9), uTone.x), smoothstep(0.08, 0.7, lt));
+  }
   vec2 vq = uv - 0.5;
   c *= 1.0 - dot(vq, vq) * uGrade.z;
   c += (h2(gl_FragCoord.xy + fract(t) * 61.0) - 0.5) / 255.0;
@@ -4670,6 +4741,14 @@ class BurnsRenderer {
     if (u.uPL) gl.uniform4fv(u.uPL, this.pl.subarray(0, (BurnsGL.Q ? BurnsGL.Q.npl : 4) * 4));
     if (u.uPC) gl.uniform3fv(u.uPC, this.pc.subarray(0, (BurnsGL.Q ? BurnsGL.Q.npl : 4) * 3));
     if (u.uNPL) gl.uniform1i(u.uNPL, this.npl);
+    if (u.uDust) {
+      // dust tinted like this world's playa (its ground colour, as the ground shader calibrates it)
+      const gb = world && world.ground && world.ground.base, dk = BURNS_LOOK.dust || 0;
+      const gm = BurnsWorld._detT && BurnsWorld._detT.tex && BurnsWorld._detT.gen === BurnsGL.gen ? BURNS_LOOK.grime || 0 : 0;
+      if (u.uDetM) { gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, gm > 0 ? BurnsWorld._detT.tex : BurnsGL.white); gl.uniform1i(u.uDetM, 7); gl.activeTexture(gl.TEXTURE0); }
+      if (gb && dk > 0) { const l = 0.3 * gb[0] + 0.59 * gb[1] + 0.11 * gb[2], a = BURNS_LOOK.alkali || 0; gl.uniform3f(u.uDustC, Math.pow(lerp(gb[0], l * 1.1, a), 2.2), Math.pow(lerp(gb[1], l, a), 2.2), Math.pow(lerp(gb[2], l * 0.86, a), 2.2)); gl.uniform4f(u.uDust, dk, 0.8, gm, 0); }
+      else gl.uniform4f(u.uDust, 0, 1, gm, 0);
+    }
     if (u.uLm) {
       const lm = world && world.lightmap;
       if (lm) gl.uniform4f(u.uLm, lm.x0, lm.z0, 1 / lm.w, 1 / lm.d); else gl.uniform4f(u.uLm, 0, 0, 0, 0);
@@ -4754,7 +4833,9 @@ class BurnsRenderer {
   }
   sky(env) {
     const gl = BurnsGL.gl, p = BurnsGL.progs.sky, u = p.u, B = this.B;
-    gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
+    // depth-tested at the far plane without writing depth: drawn after the opaque scene it shades only the pixels
+    // nothing covers (Burning Man draws it after the ground and buildings); drawn first it covers everything as before
+    gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(false); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
     gl.useProgram(p.p);
     gl.bindBuffer(gl.ARRAY_BUFFER, BurnsGL.fsBuf); BurnsGL.enable(1); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
     gl.uniform3f(u.uF, B.fx, B.fy, B.fz); gl.uniform3f(u.uR, B.rx, B.ry, B.rz); gl.uniform3f(u.uU, B.ux, B.uy, B.uz);
@@ -4770,6 +4851,8 @@ class BurnsRenderer {
     if (u.uAtm) gl.uniform4f(u.uAtm, env.scatter === undefined ? 1 : env.scatter, env.milkyway === undefined ? 1 : env.milkyway, this.hdr ? (env.sunHDR || 7) : 0, env.belt === undefined ? 1 : env.belt);
     if (u.uExp) gl.uniform4f(u.uExp, env.exposure || 1, 0, 0, 1);
     gl.uniform1f(u.uTime, env.time || 0); gl.uniform1f(u.uHaze, env.haze); gl.uniform1f(u.uTrip, env.trip || 0);
+    const LK = BURNS_LOOK;
+    if (u.uSkyL) gl.uniform4f(u.uSkyL, env.skyGrad !== undefined ? env.skyGrad : LK.skyGrad, env.hazeBand || LK.hazeBand, env.ridges !== undefined ? env.ridges : LK.ridges, 0);
     this.probe(env);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.stats.draws++;
@@ -4804,7 +4887,10 @@ class BurnsRenderer {
     gl.uniform3fv(u.uGround, G.base);
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, BurnsGL.tex(G.paintT)); gl.uniform1i(u.uPaint, 2);
     gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, BurnsGL.tex(G.detT)); gl.uniform1i(u.uDet, 3);
+    gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, G.trkT ? BurnsGL.tex(G.trkT) : BurnsGL.black); gl.uniform1i(u.uTrk, 6);
     gl.activeTexture(gl.TEXTURE0);
+    const LK = BURNS_LOOK, gk = G.look || {};
+    gl.uniform4f(u.uLook, gk.alkali !== undefined ? gk.alkali : LK.alkali, gk.tracks !== undefined ? gk.tracks : LK.tracks, gk.cracks !== undefined ? gk.cracks : LK.cracks, 0);
     for (const g of G.geos) {
       BurnsGL.geo(g);
       gl.bindBuffer(gl.ARRAY_BUFFER, g.vbo); BurnsGL.layoutGround();
@@ -4973,6 +5059,9 @@ class BurnsRenderer {
     gl.uniform4f(u.uFog, env.fogD, env.fogH, env.fogE, env.fogMax); gl.uniform3fv(u.uFogC, env.fogCol);
     gl.uniform1f(u.uFlat, isFlat ? 1 : 0);
     if (u.uGlowK) gl.uniform1f(u.uGlowK, this.hdr ? 1.25 + 1.6 * (this.night || 0) : 1);
+    // alpha sprites (dust, smoke, petals) are unlit: the look brings them up to the daylight the ground gets, so a dust
+    // puff doesn't read as a dark smudge on the sunlit playa (black blob shadows are unaffected)
+    if (u.uSprLit) { const L = this.lin, kl = 0.3 * L.key[0] + 0.59 * L.key[1] + 0.11 * L.key[2], al = 0.3 * L.sky[0] + 0.59 * L.sky[1] + 0.11 * L.sky[2]; gl.uniform1f(u.uSprLit, this.hdr && BURNS_LOOK.alkali > 0 ? clamp(0.55 * kl + 0.6 * al, 1, 1.7) : 1); }
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, BurnsGL.tex(spriteT)); gl.uniform1i(u.uTex, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, BurnsGL.spriteBuf);
     const q = Math.min(n, BurnsGL.MAXQ);
@@ -5190,6 +5279,8 @@ class BurnsRenderer {
       const rc = this.lin.sun; gl.uniform3f(u.uRaysC, 0.55 + rc[0] * 0.4, 0.5 + rc[1] * 0.4, 0.45 + rc[2] * 0.4);
       const gr = fx.grade || env.grade || [1.08, 0.12, 0.32];
       gl.uniform3f(u.uGrade, gr[0], gr[1], gr[2]);
+      const td = BURNS_LOOK.toneDay, tn = BURNS_LOOK.toneNight;
+      if (u.uTone) gl.uniform4f(u.uTone, lerp(td[0], tn[0], night), lerp(td[1], tn[1], night), 0, 0);
     });
     gl.activeTexture(gl.TEXTURE0);
     gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.enable(gl.CULL_FACE);
@@ -11864,7 +11955,9 @@ class BurnsWorld {
     this.paintPools(this.lights);
     this.lightmap = { T: { src: this.lightC, opts: {} }, x0: f.x0, z0: f.z0, w: f.w, d: f.d };
     this.ground.paintT = { src: this.paintC, opts: { mips: true, premult: true, aniso: 8 } };
-    this.ground.detT = { src: BurnsWorld.detailTexture(), opts: { mips: true, repeat: true, aniso: 8 } };
+    // the crust and track sheets are shared by every world (one GPU texture each, never freed)
+    this.ground.detT = BurnsWorld._detT || (BurnsWorld._detT = { src: BurnsWorld.detailTexture(), opts: { mips: true, repeat: true, aniso: 8 } });
+    this.ground.trkT = BurnsWorld._trkT || (BurnsWorld._trkT = { src: BurnsWorld.trackTexture(), opts: { mips: true, repeat: true, aniso: 8 } });
     this.minimap = this.buildMinimap();
   }
   buildGround() {
@@ -11899,7 +11992,7 @@ class BurnsWorld {
     this.ground = {
       geos, px0: pf.x0, pz0: pf.z0, pw: pf.w, pd: pf.d,
       base: burnsRGBf(g.base || '#c9a27e'), crackScale: g.crackScale || 0.16, crackK: g.crack === undefined ? 0.28 : g.crack,
-      mottleScale: g.mottleScale || 0.012, mottleK: g.mottle === undefined ? 0.35 : g.mottle
+      mottleScale: g.mottleScale || 0.012, mottleK: g.mottle === undefined ? 0.35 : g.mottle, look: g.look || null
     };
   }
   buildMinimap() {
@@ -11916,6 +12009,107 @@ class BurnsWorld {
   }
   static detailTexture() {
     if (BurnsWorld._det) return BurnsWorld._det;
+    try { BurnsWorld._det = BurnsWorld.playaTexture(); return BurnsWorld._det; } catch (e) { console.warn('burns: playa texture', e); }
+    return BurnsWorld.detailTextureOld();
+  }
+  /* The playa's alkali crust, tileable 512 px (one tile = 1 / crackScale metres, 6.25 m by default):
+     R crack mask: a wobbly Voronoi network of plates with uneven widths (some cracks nearly healed),
+       subdivided by fainter, thinner second-generation cracks
+     G low-frequency mottling (also the shader's crust / drifted-dust mask)
+     B per-plate tone + fine grain (the shader varies brightness plate by plate)
+     A height (0.5..1): flat plates at slightly different levels, curled lips beside each crack, the crack itself deep */
+  static playaTexture() {
+    const N = 512, c = makeCanvas(N, N), x = c.getContext('2d'), img = x.createImageData(N, N), D = img.data;
+    const H = BurnsM.hash, rng = mulberry32(1234);
+    // tileable value noise, period N; the lattice of each cell size is hashed once into a table (this runs per texel)
+    const lat = {};
+    const vn = (X, Y, cell) => {
+      const p = N / cell; let L = lat[cell];
+      if (!L) { L = lat[cell] = new Float32Array(p * p); for (let j = 0; j < p; j++) for (let i = 0; i < p; i++) L[j * p + i] = H(i * 131 + j * 977 + cell * 7); }
+      const u = X / cell, v = Y / cell, a = Math.floor(u), b = Math.floor(v), fu = u - a, fv = v - b;
+      const a0 = ((a % p) + p) % p, b0 = ((b % p) + p) % p, a1 = (a0 + 1) % p, b1 = (b0 + 1) % p;
+      const su = fu * fu * (3 - 2 * fu), sv = fv * fv * (3 - 2 * fv);
+      const r0 = L[b0 * p + a0] + (L[b0 * p + a1] - L[b0 * p + a0]) * su, r1 = L[b1 * p + a0] + (L[b1 * p + a1] - L[b1 * p + a0]) * su;
+      return r0 + (r1 - r0) * sv;
+    };
+    // jittered seed grids (fully jittered: plates of uneven size); level 1 ~ 0.55 m plates, level 2 subdivides them
+    const grid = (G, seed) => { const P = new Float32Array(G * G * 2), r = mulberry32(seed); for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { P[(j * G + i) * 2] = (i + 0.08 + r() * 0.84) * N / G; P[(j * G + i) * 2 + 1] = (j + 0.08 + r() * 0.84) * N / G; } return P; };
+    const G1 = 11, G2 = 27, P1 = grid(G1, 7), P2 = grid(G2, 11);
+    // nearest two seeds -> distance to their bisector (true crack distance) and the two cell ids
+    const vor = (X, Y, G, P, out) => {
+      const cs = N / G, ci = Math.floor(X / cs), cj = Math.floor(Y / cs);
+      let d1 = 1e9, d2 = 1e9, a1x = 0, a1y = 0, a2x = 0, a2y = 0, id1 = 0, id2 = 0;
+      for (let oj = -1; oj <= 1; oj++) for (let oi = -1; oi <= 1; oi++) {
+        const ii = ci + oi, jj = cj + oj, wi = ((ii % G) + G) % G, wj = ((jj % G) + G) % G, k = (wj * G + wi) * 2;
+        const px = P[k] + (ii - wi) * cs, py = P[k + 1] + (jj - wj) * cs, dx = X - px, dy = Y - py, d = dx * dx + dy * dy;
+        if (d < d1) { d2 = d1; a2x = a1x; a2y = a1y; id2 = id1; d1 = d; a1x = px; a1y = py; id1 = wj * G + wi; }
+        else if (d < d2) { d2 = d; a2x = px; a2y = py; id2 = wj * G + wi; }
+      }
+      const ex = a2x - a1x, ey = a2y - a1y, el = Math.hypot(ex, ey) || 1;
+      out[0] = (d2 - d1) / (2 * el); out[1] = id1; out[2] = id2; out[3] = Math.sqrt(d1);
+      return out;
+    };
+    const o1 = [0, 0, 0, 0], o2 = [0, 0, 0, 0];
+    for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
+      // wobble the crack lines (real cracks wander), then the two crack generations
+      const wx = (vn(X, y, 32) - 0.5) * 9 + (vn(X + 91, y, 8) - 0.5) * 2.4, wy = (vn(X, y + 57, 32) - 0.5) * 9 + (vn(X, y + 33, 8) - 0.5) * 2.4;
+      vor(X + wx, y + wy, G1, P1, o1);
+      vor(X + wx * 0.6, y + wy * 0.6, G2, P2, o2);
+      const pa = Math.min(o1[1], o1[2]), pb = Math.max(o1[1], o1[2]), eh = H(pa * 1009 + pb * 31 + 5);
+      // primary crack: width 0.7..2.6 px (2..6 cm), a few edges almost healed over
+      const w1 = (0.7 + 1.9 * eh * eh) * (eh < 0.1 ? 0.35 : 1), k1 = eh < 0.1 ? 0.45 : 1;
+      const cr1 = clamp(1 - (o1[0] - w1 * 0.5) / 1.1, 0, 1) * k1;
+      // second generation: thinner, fainter, only across part of each plate (they die out mid-plate)
+      const qa = Math.min(o2[1], o2[2]), qb = Math.max(o2[1], o2[2]), qh = H(qa * 613 + qb * 17 + 9);
+      const reach = clamp((vn(X + 17, y + 71, 16) - 0.35) * 3, 0, 1) * (qh > 0.35 ? 1 : 0);
+      const cr2 = clamp(1 - (o2[0] - 0.35) / 0.9, 0, 1) * 0.55 * reach * clamp(o1[0] / 4 - 0.4, 0, 1);
+      const crack = Math.max(cr1, cr2);
+      // height: plate level (per plate), a raised curled lip just beside the crack, a gentle dish toward the plate centre
+      const plate = H(o1[1] * 7 + 3), e = o1[0];
+      const lip = Math.exp(-Math.pow((e - w1 * 0.5 - 1.8) / 1.6, 2)) * (0.12 + 0.18 * eh);
+      const dish = clamp(e / 22, 0, 1) * 0.05;
+      const hgt = clamp(0.62 + (plate - 0.5) * 0.12 + lip - dish + (vn(X, y, 4) - 0.5) * 0.05 - 0.6 * cr1 - 0.3 * cr2, 0, 1);
+      const tone = clamp(0.5 + (plate - 0.5) * 0.55 + (H(o1[1] * 3 + 1) - 0.5) * 0.15, 0, 1);
+      const o = (y * N + X) * 4;
+      D[o] = crack * 255;
+      D[o + 1] = (vn(X, y, 64) * 0.55 + vn(X, y, 32) * 0.3 + vn(X + 7, y + 3, 16) * 0.15) * 255;
+      D[o + 2] = clamp(tone * 0.75 + rng() * 0.25, 0, 1) * 255;
+      D[o + 3] = 128 + Math.round(hgt * 127);   // alpha stays >= 0.5: a canvas stores premultiplied colour, so a low alpha would wipe R, G and B
+    }
+    x.putImageData(img, 0, 0);
+    return c;
+  }
+  /* Tyre ruts, bike tracks and footprints across the playa: a tileable 512 px sheet (one tile = 48 m), drawn once.
+     R car ruts (pairs, 1.6 m apart), G bike tracks (single wandering lines), B footprints. */
+  static trackTexture() {
+    if (BurnsWorld._trk) return BurnsWorld._trk;
+    const N = 512, S = N / 48, c = makeCanvas(N, N), x = c.getContext('2d'), rng = mulberry32(4242);
+    x.fillStyle = '#000'; x.fillRect(0, 0, N, N);
+    x.globalCompositeOperation = 'lighter'; x.lineCap = 'round'; x.lineJoin = 'round';
+    const path = (len, turn) => { const pts = []; let px = rng() * N, py = rng() * N, a = rng() * TAU, da = 0; for (let i = 0; i < len; i++) { pts.push([px, py, a]); da = da * 0.9 + (rng() - 0.5) * turn; a += da; px += Math.cos(a) * 6; py += Math.sin(a) * 6; } return pts; };
+    const stroke = (pts, off, w, col) => {
+      for (const sx of [-N, 0, N]) for (const sy of [-N, 0, N]) {
+        x.beginPath();
+        pts.forEach((p, i) => { const qx = p[0] - Math.sin(p[2]) * off + sx, qy = p[1] + Math.cos(p[2]) * off + sy; if (i) x.lineTo(qx, qy); else x.moveTo(qx, qy); });
+        x.strokeStyle = col; x.lineWidth = w; x.stroke();
+      }
+    };
+    for (let k = 0; k < 9; k++) { const p = path(70 + Math.floor(rng() * 60), 0.018), a = 0.35 + rng() * 0.4; for (const s of [-1, 1]) { stroke(p, s * 0.8 * S, 0.42 * S, `rgba(255,0,0,${a * 0.25})`); stroke(p, s * 0.8 * S, 0.3 * S, `rgba(255,0,0,${a * 0.35})`); stroke(p, s * 0.8 * S, 0.18 * S, `rgba(255,0,0,${a * 0.6})`); } }
+    for (let k = 0; k < 14; k++) stroke(path(40 + Math.floor(rng() * 60), 0.05), 0, 0.06 * S + 0.6, `rgba(0,255,0,${0.35 + rng() * 0.45})`);
+    // footprints: little ovals along walking lines
+    for (let k = 0; k < 14; k++) {
+      const p = path(22, 0.04);
+      for (let i = 0; i < p.length; i++) for (const sx of [-N, 0, N]) for (const sy of [-N, 0, N]) {
+        const q = p[i], side = i % 2 ? 1 : -1, fx = q[0] - Math.sin(q[2]) * side * 0.12 * S + sx, fy = q[1] + Math.cos(q[2]) * side * 0.12 * S + sy;
+        x.save(); x.translate(fx, fy); x.rotate(q[2]); x.fillStyle = `rgba(0,0,255,${0.5 + rng() * 0.4})`;
+        x.beginPath(); x.ellipse(0, 0, 0.14 * S, 0.06 * S, 0, 0, TAU); x.fill(); x.restore();
+      }
+    }
+    x.globalCompositeOperation = 'source-over';
+    BurnsWorld._trk = c;
+    return c;
+  }
+  static detailTextureOld() {
     // R: playa crack network (jittered-grid Voronoi edges), G: mottling, B: grain. Tileable 256px.
     const N = 256, G = 9, cs = N / G, c = makeCanvas(N, N), x = c.getContext('2d'), img = x.createImageData(N, N), D = img.data;
     const rng = mulberry32(99), P = [];
@@ -14877,10 +15071,10 @@ class BurnsPlayScene {
     }
     // ---- main pass ----
     R.begin(env);
-    R.sky(env);
     R.ground(this.world.ground, env, this.world);
     R.statics(this.world.chunks, env, this.world, BURNS_ATLAS.T, this.def.drawDist || (env.fogD > 0.02 ? 120 : 260));   // def.drawDist: per-world static draw distance (m)
     if (inst) inst.draw(R, env, this.world);
+    R.sky(env);   // after the ground and buildings: the sky only shades what they leave uncovered (depth-tested at the far plane)
     if (env.trip > 0.01 && this.world.ghosts.length) R.ghost(this.world.ghosts, env, this.world, BURNS_ATLAS.T, 0.55 + env.trip * 0.35);
     // skinned: groups (vehicles, movers, pickups), characters, bosses
     R.skinBegin(env, this.world, BURNS_ATLAS.T);
@@ -15817,7 +16011,7 @@ const BurnsUI = {
    debug API are always there; the hub, the title app and the worlds add their own entries. */
 window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, {
   BurnsPlayScene, BurnsWorlds, BurnsSave, BurnsScenes, BurnsGL, BurnsRenderer, BurnsEnv, BurnsChar,
-  BurnsManBoss, BurnsRig, BurnsProps, BurnsMesh, BurnsBehaviors, BURNS_ATLAS, BURNS_SPRITES,
+  BurnsManBoss, BurnsRig, BurnsProps, BurnsMesh, BurnsBehaviors, BURNS_ATLAS, BURNS_SPRITES, BURNS_LOOK, BURNS_PALETTES, BurnsWorld,
   debug: {
     scene() { return Game.scene; },
     play(w, opts) { return BurnsScenes.play(w || 1, opts || {}); },
@@ -16127,6 +16321,12 @@ const BURNS_STORY_IN = {
   15: 'Exodus. The long road home, with a few detours.'
 };
 const BURNS_TITLE_WORLD = 900;
+
+// this game's art direction on the shared engine (Super Art Kart keeps the engine defaults): BURNS_LOOK in 40_burns_b_gl.js
+Object.assign(BURNS_LOOK, { alkali: 0.7, tracks: 1, cracks: 1, skyGrad: 1, hazeBand: 0.14, ridges: 1, toneDay: [0.5, 0.35], toneNight: [0.3, 0.6], dust: 0.35, grime: 0.35 });
+// a clear desert day: deep blue overhead, milky blue-white at the horizon, dust low down; nights deep blue, not purple
+Object.assign(BURNS_PALETTES.day, { zen: '#2c64c8', mid: '#74a6e2', midK: 0.45, hor: '#dfe6ec', fog: '#e6dac8', mtnCol: '#7c7470' });
+Object.assign(BURNS_PALETTES.night, { zen: '#03081a', hor: '#18203e', fog: '#1a2036', sky: '#3c4c80', gnd: '#2a2c3e', key: '#9cb0e4', mid: '#0e1634', mtnCol: '#0a0e1c', cloudCol: '#1c2340' });
 
 /* ---------------- the title world: the playa at golden hour ---------------- */
 BurnsWorlds.register({
