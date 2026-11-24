@@ -429,6 +429,7 @@ const BurnsUI = {
     const list = [];
     if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') return this.buildMenu(g);
     if (g.pauseTab === 'citymap' && typeof BurnsNav !== 'undefined') return BurnsNav.buildMap(g);
+    if (g.pauseTab === 'testjump' && typeof BurnsTestJump !== 'undefined') return BurnsTestJump.build(g);   // playtest mode (42_burns_zz_testjump.js)
     if (g.pauseTab === 'missions') {
       list.push({ x: Math.max(14, insets.l + 8), y: Math.max(12, insets.t + 6), w: 92, h: 38, label: '◀ BACK', fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
     } else if (g.pauseTab === 'settings') {
@@ -448,6 +449,7 @@ const BurnsUI = {
       list.push({ x: W / 2 - bw / 2, y: y0 + rows * 46 + 6, w: bw, h: 40, label: '◀ BACK', primary: true, fn: () => { g.pauseTab = 'main'; g.buildPause(); } });
     } else {
       const items = [['RESUME', () => g.closePause(), true]];
+      if (typeof BurnsTestJump !== 'undefined' && BurnsTestJump.on()) items.push(['TEST: JUMP TO WORLD', () => BurnsTestJump.open(g)]);
       items.push([BurnsSave.hasItem('www') ? 'WHAT WHERE WHEN' : 'MISSIONS', () => { g.pauseTab = 'missions'; g.buildPause(); burnsSfx('map_open'); }]);
       if (typeof BurnsNav !== 'undefined') items.push(['GUIDE ARROW: ' + (BurnsNav.on('guide') ? 'ON' : 'OFF'), () => { BurnsNav.toggle('guide'); g.buildPause(); }]);
       if (g.missions.side().length) items.push(['SIDE QUESTS', () => { g.boardTab = g.boardTab || 'available'; g.pauseTab = 'board'; g.menuScroll = 0; g.buildPause(); burnsSfx('map_open'); }]);
@@ -469,6 +471,7 @@ const BurnsUI = {
   },
   updatePause(g, dt) {
     if (Input.pausePressed) { if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') g.menuBack(); else if (g.pauseTab !== 'main') { g.pauseTab = 'main'; g.buildPause(); } else g.closePause(); return; }
+    if (g.pauseTab === 'testjump' && typeof BurnsTestJump !== 'undefined') BurnsTestJump.update(g);
     const hit = BurnsUIKit.hitButtons(g.pauseUI);
     if (hit) { burnsSfx('select'); hit.fn(); return; }
     if (g.pauseTab === 'missions') { for (const t of Input.taps) { if (t.y > Game.cssH * 0.15) g.missionScroll = ((g.missionScroll || 0) + (t.y > Game.cssH * 0.6 ? 1 : -1)); } }
@@ -478,6 +481,7 @@ const BurnsUI = {
     ctx.fillStyle = 'rgba(6,3,14,0.72)'; ctx.fillRect(0, 0, W, H);
     if (g.pauseTab === 'missions') { this.drawMissions(ctx, g); BurnsUIKit.drawButtons(ctx, g.pauseUI); return; }
     if (g.pauseTab === 'citymap' && typeof BurnsNav !== 'undefined') { BurnsNav.drawMap(ctx, g); BurnsUIKit.drawButtons(ctx, g.pauseUI); return; }
+    if (g.pauseTab === 'testjump' && typeof BurnsTestJump !== 'undefined') { BurnsTestJump.draw(ctx, g); return; }
     if (g.pauseTab === 'pack' || g.pauseTab === 'board' || g.pauseTab === 'trade') { this.drawMenu(ctx, g); return; }
     const title = g.pauseTab === 'settings' ? 'SETTINGS' : 'PAUSED';
     if (g.pauseTab !== 'settings') {
@@ -486,6 +490,7 @@ const BurnsUI = {
       const top = y0 - 66, bot = y1 + 16, pw = Math.max(Math.min(320, W * 0.8), x1 - x0 + 40);
       BurnsUIKit.panel(ctx, W / 2 - pw / 2, top, pw, bot - top);
       BurnsUIKit.title(ctx, title, W / 2, top + 26, 24);
+      if (typeof BurnsTestJump !== 'undefined' && BurnsTestJump.on()) BurnsTestJump.tag(ctx, W / 2, top + 1);   // a badge on the panel's top edge
       const meta = BurnsWorlds.meta(g.worldId), day = BurnsWorlds.day(g.worldId);
       this.text(ctx, `${BurnsWorlds.label(g.worldId)} · ${meta.name}${day ? ' · ' + day : ''}`, W / 2, top + 50, 11, 'rgba(255,255,255,0.75)', { ui: true, stroke: false });
     } else BurnsUIKit.title(ctx, title, W / 2, Math.max(36, insets.t + 30), 24);
