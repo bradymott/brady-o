@@ -26,6 +26,12 @@ const BURNS_STORY_IN = {
 };
 const BURNS_TITLE_WORLD = 900;
 
+// this game's art direction on the shared engine (Super Art Kart keeps the engine defaults): BURNS_LOOK in 40_burns_b_gl.js
+Object.assign(BURNS_LOOK, { alkali: 0.7, tracks: 1, cracks: 1, skyGrad: 1, hazeBand: 0.14, ridges: 1, toneDay: [0.5, 0.35], toneNight: [0.3, 0.6], dust: 0.35 });
+// a clear desert day: deep blue overhead, milky blue-white at the horizon, dust low down; nights deep blue, not purple
+Object.assign(BURNS_PALETTES.day, { zen: '#2c64c8', mid: '#74a6e2', midK: 0.45, hor: '#dfe6ec', fog: '#e6dac8', mtnCol: '#7c7470' });
+Object.assign(BURNS_PALETTES.night, { zen: '#03081a', hor: '#18203e', fog: '#1a2036', sky: '#3c4c80', gnd: '#2a2c3e', key: '#9cb0e4', mid: '#0e1634', mtnCol: '#0a0e1c', cloudCol: '#1c2340' });
+
 /* ---------------- the title world: the playa at golden hour ---------------- */
 BurnsWorlds.register({
   id: BURNS_TITLE_WORLD, name: 'Brady Goes to Burning Man', sub: '', hidden: true, dayCard: false, noOutro: true,

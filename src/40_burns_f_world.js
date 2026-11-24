@@ -396,7 +396,9 @@ class BurnsWorld {
     this.paintPools(this.lights);
     this.lightmap = { T: { src: this.lightC, opts: {} }, x0: f.x0, z0: f.z0, w: f.w, d: f.d };
     this.ground.paintT = { src: this.paintC, opts: { mips: true, premult: true, aniso: 8 } };
-    this.ground.detT = { src: BurnsWorld.detailTexture(), opts: { mips: true, repeat: true, aniso: 8 } };
+    // the crust and track sheets are shared by every world (one GPU texture each, never freed)
+    this.ground.detT = BurnsWorld._detT || (BurnsWorld._detT = { src: BurnsWorld.detailTexture(), opts: { mips: true, repeat: true, aniso: 8 } });
+    this.ground.trkT = BurnsWorld._trkT || (BurnsWorld._trkT = { src: BurnsWorld.trackTexture(), opts: { mips: true, repeat: true, aniso: 8 } });
     this.minimap = this.buildMinimap();
   }
   buildGround() {
@@ -431,7 +433,7 @@ class BurnsWorld {
     this.ground = {
       geos, px0: pf.x0, pz0: pf.z0, pw: pf.w, pd: pf.d,
       base: burnsRGBf(g.base || '#c9a27e'), crackScale: g.crackScale || 0.16, crackK: g.crack === undefined ? 0.28 : g.crack,
-      mottleScale: g.mottleScale || 0.012, mottleK: g.mottle === undefined ? 0.35 : g.mottle
+      mottleScale: g.mottleScale || 0.012, mottleK: g.mottle === undefined ? 0.35 : g.mottle, look: g.look || null
     };
   }
   buildMinimap() {
@@ -448,6 +450,102 @@ class BurnsWorld {
   }
   static detailTexture() {
     if (BurnsWorld._det) return BurnsWorld._det;
+    try { BurnsWorld._det = BurnsWorld.playaTexture(); return BurnsWorld._det; } catch (e) { console.warn('burns: playa texture', e); }
+    return BurnsWorld.detailTextureOld();
+  }
+  /* The playa's alkali crust, tileable 512 px (one tile = 1 / crackScale metres, 6.25 m by default):
+     R crack mask: a wobbly Voronoi network of plates with uneven widths (some cracks nearly healed),
+       subdivided by fainter, thinner second-generation cracks
+     G low-frequency mottling (also the shader's crust / drifted-dust mask)
+     B per-plate tone + fine grain (the shader varies brightness plate by plate)
+     A height: flat plates at slightly different levels, curled lips beside each crack, the crack itself deep */
+  static playaTexture() {
+    const N = 512, c = makeCanvas(N, N), x = c.getContext('2d'), img = x.createImageData(N, N), D = img.data;
+    const H = BurnsM.hash, rng = mulberry32(1234);
+    const vn = (X, Y, cell) => {   // tileable value noise, period N
+      const p = N / cell, u = X / cell, v = Y / cell, a = Math.floor(u), b = Math.floor(v), fu = u - a, fv = v - b;
+      const h = (i, j) => H(((i % p) + p) % p * 131 + ((j % p) + p) % p * 977 + cell * 7);
+      const su = fu * fu * (3 - 2 * fu), sv = fv * fv * (3 - 2 * fv);
+      return lerp(lerp(h(a, b), h(a + 1, b), su), lerp(h(a, b + 1), h(a + 1, b + 1), su), sv);
+    };
+    // jittered seed grids (fully jittered: plates of uneven size); level 1 ~ 0.55 m plates, level 2 subdivides them
+    const grid = (G, seed) => { const P = new Float32Array(G * G * 2), r = mulberry32(seed); for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { P[(j * G + i) * 2] = (i + 0.08 + r() * 0.84) * N / G; P[(j * G + i) * 2 + 1] = (j + 0.08 + r() * 0.84) * N / G; } return P; };
+    const G1 = 11, G2 = 27, P1 = grid(G1, 7), P2 = grid(G2, 11);
+    // nearest two seeds -> distance to their bisector (true crack distance) and the two cell ids
+    const vor = (X, Y, G, P, out) => {
+      const cs = N / G, ci = Math.floor(X / cs), cj = Math.floor(Y / cs);
+      let d1 = 1e9, d2 = 1e9, a1x = 0, a1y = 0, a2x = 0, a2y = 0, id1 = 0, id2 = 0;
+      for (let oj = -2; oj <= 2; oj++) for (let oi = -2; oi <= 2; oi++) {
+        const ii = ci + oi, jj = cj + oj, wi = ((ii % G) + G) % G, wj = ((jj % G) + G) % G, k = (wj * G + wi) * 2;
+        const px = P[k] + (ii - wi) * cs, py = P[k + 1] + (jj - wj) * cs, dx = X - px, dy = Y - py, d = dx * dx + dy * dy;
+        if (d < d1) { d2 = d1; a2x = a1x; a2y = a1y; id2 = id1; d1 = d; a1x = px; a1y = py; id1 = wj * G + wi; }
+        else if (d < d2) { d2 = d; a2x = px; a2y = py; id2 = wj * G + wi; }
+      }
+      const ex = a2x - a1x, ey = a2y - a1y, el = Math.hypot(ex, ey) || 1;
+      out[0] = (d2 - d1) / (2 * el); out[1] = id1; out[2] = id2; out[3] = Math.sqrt(d1);
+      return out;
+    };
+    const o1 = [0, 0, 0, 0], o2 = [0, 0, 0, 0];
+    for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
+      // wobble the crack lines (real cracks wander), then the two crack generations
+      const wx = (vn(X, y, 32) - 0.5) * 9 + (vn(X + 91, y, 8) - 0.5) * 2.4, wy = (vn(X, y + 57, 32) - 0.5) * 9 + (vn(X, y + 33, 8) - 0.5) * 2.4;
+      vor(X + wx, y + wy, G1, P1, o1);
+      vor(X + wx * 0.6, y + wy * 0.6, G2, P2, o2);
+      const pa = Math.min(o1[1], o1[2]), pb = Math.max(o1[1], o1[2]), eh = H(pa * 1009 + pb * 31 + 5);
+      // primary crack: width 0.7..2.6 px (2..6 cm), a few edges almost healed over
+      const w1 = (0.7 + 1.9 * eh * eh) * (eh < 0.1 ? 0.35 : 1), k1 = eh < 0.1 ? 0.45 : 1;
+      const cr1 = clamp(1 - (o1[0] - w1 * 0.5) / 1.1, 0, 1) * k1;
+      // second generation: thinner, fainter, only across part of each plate (they die out mid-plate)
+      const qa = Math.min(o2[1], o2[2]), qb = Math.max(o2[1], o2[2]), qh = H(qa * 613 + qb * 17 + 9);
+      const reach = clamp((vn(X + 17, y + 71, 16) - 0.35) * 3, 0, 1) * (qh > 0.35 ? 1 : 0);
+      const cr2 = clamp(1 - (o2[0] - 0.35) / 0.9, 0, 1) * 0.55 * reach * clamp(o1[0] / 4 - 0.4, 0, 1);
+      const crack = Math.max(cr1, cr2);
+      // height: plate level (per plate), a raised curled lip just beside the crack, a gentle dish toward the plate centre
+      const plate = H(o1[1] * 7 + 3), e = o1[0];
+      const lip = Math.exp(-Math.pow((e - w1 * 0.5 - 1.8) / 1.6, 2)) * (0.12 + 0.18 * eh);
+      const dish = clamp(e / 22, 0, 1) * 0.05;
+      const hgt = clamp(0.62 + (plate - 0.5) * 0.12 + lip - dish + (vn(X, y, 4) - 0.5) * 0.05 - 0.6 * cr1 - 0.3 * cr2, 0, 1);
+      const tone = clamp(0.5 + (plate - 0.5) * 0.55 + (H(o1[1] * 3 + 1) - 0.5) * 0.15, 0, 1);
+      const o = (y * N + X) * 4;
+      D[o] = crack * 255;
+      D[o + 1] = (vn(X, y, 64) * 0.6 + vn(X, y, 32) * 0.4) * 255;
+      D[o + 2] = clamp(tone * 0.75 + rng() * 0.25, 0, 1) * 255;
+      D[o + 3] = Math.round(hgt * 255);
+    }
+    x.putImageData(img, 0, 0);
+    return c;
+  }
+  /* Tyre ruts, bike tracks and footprints across the playa: a tileable 512 px sheet (one tile = 48 m), drawn once.
+     R car ruts (pairs, 1.6 m apart), G bike tracks (single wandering lines), B footprints. */
+  static trackTexture() {
+    if (BurnsWorld._trk) return BurnsWorld._trk;
+    const N = 512, S = N / 48, c = makeCanvas(N, N), x = c.getContext('2d'), rng = mulberry32(4242);
+    x.fillStyle = '#000'; x.fillRect(0, 0, N, N);
+    x.globalCompositeOperation = 'lighter'; x.lineCap = 'round'; x.lineJoin = 'round';
+    const path = (len, turn) => { const pts = []; let px = rng() * N, py = rng() * N, a = rng() * TAU, da = 0; for (let i = 0; i < len; i++) { pts.push([px, py, a]); da = da * 0.9 + (rng() - 0.5) * turn; a += da; px += Math.cos(a) * 6; py += Math.sin(a) * 6; } return pts; };
+    const stroke = (pts, off, w, col) => {
+      for (const sx of [-N, 0, N]) for (const sy of [-N, 0, N]) {
+        x.beginPath();
+        pts.forEach((p, i) => { const qx = p[0] - Math.sin(p[2]) * off + sx, qy = p[1] + Math.cos(p[2]) * off + sy; if (i) x.lineTo(qx, qy); else x.moveTo(qx, qy); });
+        x.strokeStyle = col; x.lineWidth = w; x.stroke();
+      }
+    };
+    for (let k = 0; k < 9; k++) { const p = path(70 + Math.floor(rng() * 60), 0.018), a = 0.35 + rng() * 0.4; for (const s of [-1, 1]) { stroke(p, s * 0.8 * S, 0.42 * S, `rgba(255,0,0,${a * 0.25})`); stroke(p, s * 0.8 * S, 0.3 * S, `rgba(255,0,0,${a * 0.35})`); stroke(p, s * 0.8 * S, 0.18 * S, `rgba(255,0,0,${a * 0.6})`); } }
+    for (let k = 0; k < 14; k++) stroke(path(40 + Math.floor(rng() * 60), 0.05), 0, 0.06 * S + 0.6, `rgba(0,255,0,${0.35 + rng() * 0.45})`);
+    // footprints: little ovals along walking lines
+    for (let k = 0; k < 14; k++) {
+      const p = path(22, 0.04);
+      for (let i = 0; i < p.length; i++) for (const sx of [-N, 0, N]) for (const sy of [-N, 0, N]) {
+        const q = p[i], side = i % 2 ? 1 : -1, fx = q[0] - Math.sin(q[2]) * side * 0.12 * S + sx, fy = q[1] + Math.cos(q[2]) * side * 0.12 * S + sy;
+        x.save(); x.translate(fx, fy); x.rotate(q[2]); x.fillStyle = `rgba(0,0,255,${0.5 + rng() * 0.4})`;
+        x.beginPath(); x.ellipse(0, 0, 0.14 * S, 0.06 * S, 0, 0, TAU); x.fill(); x.restore();
+      }
+    }
+    x.globalCompositeOperation = 'source-over';
+    BurnsWorld._trk = c;
+    return c;
+  }
+  static detailTextureOld() {
     // R: playa crack network (jittered-grid Voronoi edges), G: mottling, B: grain. Tileable 256px.
     const N = 256, G = 9, cs = N / G, c = makeCanvas(N, N), x = c.getContext('2d'), img = x.createImageData(N, N), D = img.data;
     const rng = mulberry32(99), P = [];

@@ -37,6 +37,17 @@ const BURNS_GFX = {
   }
 };
 
+/* ---------------- the look: per-game art direction the renderer reads every frame ----------------
+   The engine defaults keep Super Art Kart's look; Brady Goes to Burning Man raises them in 40_burns_l_app.js.
+   alkali: pull the playa toward its real pale, low-saturation crust (0..1); tracks: tyre ruts, bike tracks and
+   footprints on the playa (0..1); cracks: crack contrast (1 = default). A world's def.ground.look overrides any of them.
+   skyGrad: 0 the classic sky gradient, 1 one that reaches blue sooner and keeps its colour; hazeBand: height of the
+   horizon haze band (radians); ridges: 1 = ridged mountain ranges instead of the soft silhouette. A palette's
+   skyGrad / hazeBand / ridges override these. toneDay / toneNight: [warm highlights, cool shadows] split tone in
+   the final grade (0 = off), blended by how dark the scene is. dust: playa dust on props, vehicles and people
+   (up-facing surfaces and a band at the foot), tinted like the world's ground (0 = off). */
+const BURNS_LOOK = { alkali: 0, tracks: 0, cracks: 1, skyGrad: 0, hazeBand: 0.3, ridges: 0, toneDay: [0, 0], toneNight: [0, 0], dust: 0 };
+
 const BURNS_GLSL_OUT = `
 uniform vec4 uExp;   // x exposure (LDR path), y dust haze, z night 0..1, w glow boost
 vec3 bLin(vec3 c) { return pow(max(c, vec3(0.0)), vec3(2.2)); }
@@ -61,6 +72,12 @@ uniform vec3 uPC[NPL];
 uniform int uNPL;
 #endif
 uniform float uTrip, uTime, uEmB;
+uniform vec4 uDust; uniform vec3 uDustC;   // playa dust on things: x amount, y height of the dusty band at the foot (m); colour (linear)
+// fine playa dust settles on whatever faces up and coats everything near the ground (not on glowing parts)
+vec3 bDust(vec3 alb, vec3 n, vec3 w, float e) {
+  float k = (smoothstep(0.55, 0.95, n.y) * 0.55 + (1.0 - smoothstep(0.0, uDust.y, w.y)) * 0.45) * uDust.x * (1.0 - step(0.5, e));
+  return mix(alb, uDustC * (0.8 + 0.4 * alb), k);
+}
 #ifdef SHADOWS
 uniform highp sampler2DShadow uShadow;
 uniform mat4 uShadowM;
@@ -184,6 +201,7 @@ void main(){
   vec4 t = texture2D(uTex, vT);
   vec3 alb = bLin(vC.rgb * (1.0 - t.a) + t.rgb);
   vec3 n = normalize(vN);
+  if (uDust.x > 0.0) alb = bDust(alb, n, vW, vC.a);
 #ifdef BUMP
   vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.004);
   n = t.a > 0.02 ? nb : n;
@@ -313,6 +331,7 @@ void main(){
   vec3 srgb = vC.rgb * (1.0 - t.a) + t.rgb;
   vec3 alb = bLin(srgb);
   vec3 n = normalize(vN);
+  if (uDust.x > 0.0) alb = bDust(alb, n, vW, vC.a);
 #ifdef BUMP
   vec3 nb = bBump(n, vW, dot(t.rgb, vec3(0.3, 0.59, 0.11)), 0.0025);
   // cloth: soft folds + a fine weave on matte, untextured, non-skin surfaces (bone-local, so it rides the body)
@@ -377,20 +396,29 @@ uniform vec3 uZen, uHor, uFogC, uSunD, uSunC, uMoonD, uMtnC, uCityD, uCityC;
 uniform vec4 uSkyK, uCloud, uMid, uAtm;
 uniform vec3 uCloudC;
 uniform float uTime, uHaze, uTrip, uEqui;
+uniform vec4 uSkyL;   // x gradient (0 classic, 1 the look's: quicker to blue, chroma kept), y horizon haze band height (rad), z ridged mountains, w -
 ${BURNS_GLSL_OUT}
 float h3(vec3 p){ p = fract(p * 0.3183099 + vec3(0.11, 0.17, 0.13)); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float h2(vec2 p){ p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
 float n2(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(h2(i), h2(i + vec2(1.0, 0.0)), f.x), mix(h2(i + vec2(0.0, 1.0)), h2(i + vec2(1.0, 1.0)), f.x), f.y); }
 float fbm(vec2 p){ return n2(p) * 0.5 + n2(p * 2.03 + 1.7) * 0.25 + n2(p * 4.01 + 5.3) * 0.125 + n2(p * 8.07 + 9.1) * 0.0625; }
+// a ridged range along the horizon: noise sampled around a circle (seamless in azimuth), sharp crests, eroded flanks
+float ridge(vec2 q){ float s = 0.0, a = 0.55; for (int k = 0; k < 5; k++) { float v = 1.0 - abs(n2(q) * 2.0 - 1.0); s += v * v * a; q = q * 2.07 + vec2(3.1, 1.7); a *= 0.5; } return s; }
 void main(){
   vec3 d;
   if (uEqui > 0.5) { float lon = vN.x * 3.14159265, lat = vN.y * 1.57079633; d = vec3(sin(lon) * cos(lat), sin(lat), cos(lon) * cos(lat)); }   // the probe: one pixel per direction
   else d = normalize(uF + uR * (vN.x * uTan.x) + uU * ((vN.y - uTan.z) * uTan.y));
   float el = asin(clamp(d.y, -1.0, 1.0));
+  // below the horizon the sky is only the fog colour (the ground covers it on screen; the probe's lower half)
+  if (el < -0.02 && uTrip <= 0.0) { gl_FragColor = bOut(bLin(uFogC), 1.0); return; }
   float az = atan(d.x, d.z);
   float gy = pow(clamp(el / 1.25, 0.0, 1.0), 0.55);
+  gy = mix(gy, 1.0 - exp(-max(el, 0.0) * 3.4), uSkyL.x);
   vec3 col = mix(uHor, uZen, gy);
+  // a linear blend of a warm horizon and a blue zenith goes grey in between; the look keeps its colour
+  float cl0 = dot(col, vec3(0.3, 0.59, 0.11));
+  col = max(mix(vec3(cl0), col, 1.0 + 1.2 * gy * (1.0 - gy) * uSkyL.x), 0.0);
   col = mix(col, uMid.rgb, uMid.a * (1.0 - abs(gy * 2.0 - 1.0)));
   float sEl = asin(clamp(uSunD.y, -1.0, 1.0));
   float sd = max(dot(d, uSunD), 0.0);
@@ -452,10 +480,28 @@ void main(){
   }
   float cg = max(dot(hd, uCityD), 0.0);
   col += uCityC * pow(cg, 5.0) * exp(-max(el, 0.0) * 10.0);
-  col = mix(col, uFogC, uHaze * (1.0 - smoothstep(0.0, 0.3, el)));
+  col = mix(col, uFogC, uHaze * (1.0 - smoothstep(0.0, uSkyL.y, el)));
   float m = uSkyK.w * (0.55 + 0.24 * sin(az * 3.0 + 1.3) + 0.12 * sin(az * 7.0 + 0.4) + 0.06 * sin(az * 19.0 + 2.1) + 0.03 * sin(az * 43.0));
   bool mtn = el < m;
-  if (mtn) col = mix(uMtnC, uFogC, clamp(1.0 - (m - el) / max(m, 0.001) * 1.2, 0.0, 1.0) * 0.55);
+  if (uSkyL.z > 0.5 && uSkyK.w > 0.0 && el < uSkyK.w * 1.7 && el > -0.03) {
+    // two ranges: a far, hazy crest line and a nearer, darker one across part of the horizon (the Black Rock and
+    // Granite ranges); sunlit faces away from a low sun, backlit silhouettes toward it, gullies, a hazy foot
+    vec2 ring = vec2(cos(az), sin(az));
+    float hf = uSkyK.w * (0.3 + 0.95 * ridge(ring * 2.3 + 11.0));
+    float sect = smoothstep(0.35, 0.65, n2(ring * 1.4 + 4.0));
+    float hn = uSkyK.w * (0.12 + 0.75 * ridge(ring * 4.1 + 2.0)) * sect;
+    float lit = mix(1.12, 0.72, pow(toward, 2.0) * (0.4 + 0.6 * tw));
+    float gul = 0.86 + 0.14 * n2(vec2(az * 150.0, el * 22.0 + n2(vec2(az * 40.0, 0.0)) * 2.0));
+    mtn = el < max(hf, hn);
+    if (el < hf) {
+      float k = clamp(el / max(hf, 0.001), 0.0, 1.0);
+      col = mix(uFogC, uMtnC * lit * gul, (0.32 + 0.3 * k) * (1.0 - uHaze * 0.35));
+    }
+    if (el < hn) {
+      float k = clamp(el / max(hn, 0.001), 0.0, 1.0);
+      col = mix(uFogC, uMtnC * lit * 0.85 * gul, (0.5 + 0.35 * k) * (1.0 - uHaze * 0.3));
+    }
+  } else if (mtn) col = mix(uMtnC, uFogC, clamp(1.0 - (m - el) / max(m, 0.001) * 1.2, 0.0, 1.0) * 0.55);
   if (el < 0.0) col = uFogC;
   if (uTrip > 0.0) { float a = uTime * 0.9 + az * 2.0; col = mix(col, col.gbr * 1.2 + 0.05 * vec3(sin(a), sin(a + 2.0), sin(a + 4.0)), uTrip * 0.6); }
   vec3 lin = bLin(col);
@@ -468,47 +514,58 @@ uniform mat4 uVP; uniform vec4 uPaintXf;
 varying vec3 vW; varying vec3 vN; varying vec2 vP;
 void main(){ vW = aPos; vN = aNrm; vP = (aPos.xz - uPaintXf.xy) * uPaintXf.zw; gl_Position = uVP * vec4(aPos, 1.0); }`, `precision highp float;
 varying vec3 vW; varying vec3 vN; varying vec2 vP;
-uniform sampler2D uPaint, uDet;
+uniform sampler2D uPaint, uDet, uTrk;
 uniform vec4 uDetK;
+uniform vec4 uLook;   // x alkali calibration (pale, low-saturation crust), y tyre tracks / footprints, z crack strength, w -
 uniform vec3 uGround;
 ${BURNS_GLSL_LIGHT}
 void main(){
   vec3 n = normalize(vN);
   vec4 p = texture2D(uPaint, vP);
   vec3 alb = uGround * (1.0 - p.a) + p.rgb;
+  // the real playa is a pale, nearly neutral alkali crust; painted roads and marks keep most of their colour
+  float l0 = dot(alb, vec3(0.3, 0.59, 0.11));
+  alb = mix(alb, vec3(l0) * vec3(1.07, 1.01, 0.9), uLook.x * (1.0 - 0.25 * p.a));
   float dist = length(vW - uCam);
   float fade = clamp(1.5 - dist / 55.0, 0.0, 1.0);
-  // natural playa: low-frequency warp breaks the crack grid, patches of smooth drifted dust vs. cracked crust,
-  // brightness/colour mottling at two scales, a second crack scale, and fine grit + specks (MOOP) up close
+  // natural playa: low-frequency warp breaks the tile, patches of smooth drifted dust vs. cracked crust,
+  // brightness/colour mottling at two scales, plates of slightly different tone, fine grit + specks up close
   vec4 m1 = texture2D(uDet, vW.xz * 0.0071 + vec2(0.13, 0.71));
   vec4 m2 = texture2D(uDet, vW.xz * 0.0023 + vec2(0.57, 0.29));
-  vec2 wv = (vec2(m1.g, m2.g) - 0.5) * 1.6;
+  // (a gentle warp: a strong one swirls the cracks into whorls where the noise is steep)
+  vec2 wv = (vec2(m1.g, m2.g) - 0.5) * 0.45;
   vec4 d1 = texture2D(uDet, vW.xz * uDetK.x + wv);
   vec4 d2 = texture2D(uDet, vW.xz * uDetK.z);
-  vec4 d3 = texture2D(uDet, vW.xz * uDetK.x * 0.21 + 0.37 + wv * 0.4);
   vec4 d4 = texture2D(uDet, vW.xz * uDetK.x * 2.7 + wv.yx * 1.3 + 0.21);
-  float far = clamp((dist - 28.0) / 80.0, 0.0, 1.0);
-  float crust = smoothstep(0.26, 0.62, m2.g * 0.65 + m1.g * 0.35);   // 0 = drifted smooth dust, 1 = cracked crust
+  float crust = smoothstep(0.3, 0.66, m2.g * 0.65 + m1.g * 0.35);   // 0 = drifted smooth dust, 1 = cracked crust
+  // tyre ruts, bike tracks and footprints crush the crust into powder (no cracks, paler, a shallow dip)
+  vec2 tq = vec2(vW.x * 0.8 + vW.z * 0.6, vW.z * 0.8 - vW.x * 0.6) * (1.0 / 48.0);
+  vec4 tr = texture2D(uTrk, tq + vec2(0.31, 0.77));
+  float near = 1.0 - smoothstep(6.0, 20.0, dist);
+  float trk = clamp(tr.r * (1.0 - smoothstep(40.0, 120.0, dist)) + tr.g * 0.7 * (1.0 - smoothstep(15.0, 45.0, dist)) + tr.b * (1.0 - smoothstep(8.0, 25.0, dist)), 0.0, 1.0) * uLook.y * smoothstep(0.2, 0.45, m1.g + 0.25);
   // Filter fine crust by its screen footprint. Grazing views on a phone otherwise
   // turn the high-frequency cracks into a crawling grid even with MSAA enabled.
   float crustAA = fade;
 #ifdef BUMP
   vec2 footprint = fwidth(vW.xz * uDetK.x);
-  crustAA *= 1.0 - smoothstep(0.015, 0.065, max(footprint.x, footprint.y));
+  crustAA *= 1.0 - smoothstep(0.02, 0.09, max(footprint.x, footprint.y));
 #endif
-  float ck = mix(d1.r * crustAA, d3.r * 0.55, far) * mix(0.25, 1.0, crust) + d4.r * 0.35 * crustAA * crust;
-  alb *= 1.0 - ck * uDetK.y;
+  float far = clamp((dist - 28.0) / 80.0, 0.0, 1.0);
+  // up close the crack lines; far away only their average (crack density darkens the crust a touch)
+  float ck = (d1.r * crustAA * mix(0.2, 1.0, crust) + d4.r * 0.22 * crustAA * crust) * (1.0 - trk) * uLook.z;
+  alb *= 1.0 - ck * uDetK.y * 1.15 - crust * far * uDetK.y * 0.12;
   alb *= 1.0 + (d2.g - 0.5) * uDetK.w;
   alb *= mix(0.9, 1.07, m2.g) * mix(0.96, 1.03, m1.g);
-  alb = mix(alb, alb * vec3(1.06, 1.03, 0.97), (1.0 - crust) * 0.6);   // dust drifts read paler and warmer
-  alb *= 0.95 + d1.b * 0.1 * fade;
+  alb = mix(alb, alb * vec3(1.05, 1.03, 0.99), (1.0 - crust) * 0.6);   // dust drifts read paler and warmer
+  alb *= 0.94 + (d1.b - 0.5) * 0.16 * fade * crust + 0.06;              // plate-to-plate tone
+  alb *= 1.0 + trk * 0.03;
   vec4 g1 = texture2D(uDet, vW.xz * 1.9 + 0.43);
-  float near = 1.0 - smoothstep(6.0, 20.0, dist);
   alb *= 1.0 - (step(0.988, g1.b) * 0.4 + (g1.b - 0.5) * 0.06) * near * uDetK.y * 3.0;
   alb = bLin(alb);
 #ifdef BUMP
-  float hgt = mix(d1.a, d3.a, far) * mix(0.35, 1.0, crust) + d4.a * 0.3 * crust + (g1.b - 0.5) * 0.15 * near;
-  n = bBump(n, vW, hgt, mix(0.012 * crustAA, 0.025, far) * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y));
+  // (tracks only flatten the relief: an 8-bit track mask in the height itself bands into contour rings)
+  float hgt = d1.a * mix(0.3, 1.0, crust) + d4.a * 0.25 * crust + (g1.b - 0.5) * 0.12 * near;
+  n = bBump(n, vW, hgt, 0.014 * crustAA * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y) * uLook.z * (1.0 - 0.6 * trk));
 #endif
   float sh = bShadow(vW, n);
   vec3 c = bShade(alb, n, vW, 0.05, 0.0, sh);
@@ -635,6 +692,7 @@ uniform vec4 uDof;    // x focus (m), y aperture, z -, w on
 uniform vec4 uNF;
 uniform vec4 uNoFx;   // a rect (uv) without ssao/dof (dialogue portrait)
 uniform vec3 uRaysC, uGrade;
+uniform vec4 uTone;   // split tone: x warm highlights, y cool shadows (0 = off)
 float lin(float d){ float z = d * 2.0 - 1.0; return 2.0 * uNF.x * uNF.y / (uNF.y + uNF.x - z * (uNF.y - uNF.x)); }
 float h2(vec2 p){ p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
 vec3 bAces(vec3 c) { return clamp((c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14), 0.0, 1.0); }
@@ -677,6 +735,11 @@ void main(){
   float l = dot(c, vec3(0.3, 0.59, 0.11));
   c = mix(vec3(l), c, uGrade.x);
   c = mix(c, c * c * (3.0 - 2.0 * c), uGrade.y);
+  if (uTone.x + uTone.y > 0.0) {
+    // a film-like split tone: cool shadows, warm highlights (gold by day; deep blue nights with warm lamps)
+    float lt = dot(c, vec3(0.3, 0.59, 0.11));
+    c *= mix(mix(vec3(1.0), vec3(0.9, 0.97, 1.1), uTone.y), mix(vec3(1.0), vec3(1.06, 1.0, 0.9), uTone.x), smoothstep(0.08, 0.7, lt));
+  }
   vec2 vq = uv - 0.5;
   c *= 1.0 - dot(vq, vq) * uGrade.z;
   c += (h2(gl_FragCoord.xy + fract(t) * 61.0) - 0.5) / 255.0;
@@ -1089,6 +1152,12 @@ class BurnsRenderer {
     if (u.uPL) gl.uniform4fv(u.uPL, this.pl.subarray(0, (BurnsGL.Q ? BurnsGL.Q.npl : 4) * 4));
     if (u.uPC) gl.uniform3fv(u.uPC, this.pc.subarray(0, (BurnsGL.Q ? BurnsGL.Q.npl : 4) * 3));
     if (u.uNPL) gl.uniform1i(u.uNPL, this.npl);
+    if (u.uDust) {
+      // dust tinted like this world's playa (its ground colour, as the ground shader calibrates it)
+      const gb = world && world.ground && world.ground.base, dk = BURNS_LOOK.dust || 0;
+      if (gb && dk > 0) { const l = 0.3 * gb[0] + 0.59 * gb[1] + 0.11 * gb[2], a = BURNS_LOOK.alkali || 0; gl.uniform3f(u.uDustC, Math.pow(lerp(gb[0], l * 1.07, a), 2.2), Math.pow(lerp(gb[1], l * 1.01, a), 2.2), Math.pow(lerp(gb[2], l * 0.9, a), 2.2)); gl.uniform4f(u.uDust, dk, 0.8, 0, 0); }
+      else gl.uniform4f(u.uDust, 0, 1, 0, 0);
+    }
     if (u.uLm) {
       const lm = world && world.lightmap;
       if (lm) gl.uniform4f(u.uLm, lm.x0, lm.z0, 1 / lm.w, 1 / lm.d); else gl.uniform4f(u.uLm, 0, 0, 0, 0);
@@ -1173,7 +1242,9 @@ class BurnsRenderer {
   }
   sky(env) {
     const gl = BurnsGL.gl, p = BurnsGL.progs.sky, u = p.u, B = this.B;
-    gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
+    // depth-tested at the far plane without writing depth: drawn after the opaque scene it shades only the pixels
+    // nothing covers (Burning Man draws it after the ground and buildings); drawn first it covers everything as before
+    gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(false); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
     gl.useProgram(p.p);
     gl.bindBuffer(gl.ARRAY_BUFFER, BurnsGL.fsBuf); BurnsGL.enable(1); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
     gl.uniform3f(u.uF, B.fx, B.fy, B.fz); gl.uniform3f(u.uR, B.rx, B.ry, B.rz); gl.uniform3f(u.uU, B.ux, B.uy, B.uz);
@@ -1189,6 +1260,8 @@ class BurnsRenderer {
     if (u.uAtm) gl.uniform4f(u.uAtm, env.scatter === undefined ? 1 : env.scatter, env.milkyway === undefined ? 1 : env.milkyway, this.hdr ? (env.sunHDR || 7) : 0, env.belt === undefined ? 1 : env.belt);
     if (u.uExp) gl.uniform4f(u.uExp, env.exposure || 1, 0, 0, 1);
     gl.uniform1f(u.uTime, env.time || 0); gl.uniform1f(u.uHaze, env.haze); gl.uniform1f(u.uTrip, env.trip || 0);
+    const LK = BURNS_LOOK;
+    if (u.uSkyL) gl.uniform4f(u.uSkyL, env.skyGrad !== undefined ? env.skyGrad : LK.skyGrad, env.hazeBand || LK.hazeBand, env.ridges !== undefined ? env.ridges : LK.ridges, 0);
     this.probe(env);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     this.stats.draws++;
@@ -1223,7 +1296,10 @@ class BurnsRenderer {
     gl.uniform3fv(u.uGround, G.base);
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, BurnsGL.tex(G.paintT)); gl.uniform1i(u.uPaint, 2);
     gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, BurnsGL.tex(G.detT)); gl.uniform1i(u.uDet, 3);
+    gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, G.trkT ? BurnsGL.tex(G.trkT) : BurnsGL.black); gl.uniform1i(u.uTrk, 6);
     gl.activeTexture(gl.TEXTURE0);
+    const LK = BURNS_LOOK, gk = G.look || {};
+    gl.uniform4f(u.uLook, gk.alkali !== undefined ? gk.alkali : LK.alkali, gk.tracks !== undefined ? gk.tracks : LK.tracks, gk.cracks !== undefined ? gk.cracks : LK.cracks, 0);
     for (const g of G.geos) {
       BurnsGL.geo(g);
       gl.bindBuffer(gl.ARRAY_BUFFER, g.vbo); BurnsGL.layoutGround();
@@ -1609,6 +1685,8 @@ class BurnsRenderer {
       const rc = this.lin.sun; gl.uniform3f(u.uRaysC, 0.55 + rc[0] * 0.4, 0.5 + rc[1] * 0.4, 0.45 + rc[2] * 0.4);
       const gr = fx.grade || env.grade || [1.08, 0.12, 0.32];
       gl.uniform3f(u.uGrade, gr[0], gr[1], gr[2]);
+      const td = BURNS_LOOK.toneDay, tn = BURNS_LOOK.toneNight;
+      if (u.uTone) gl.uniform4f(u.uTone, lerp(td[0], tn[0], night), lerp(td[1], tn[1], night), 0, 0);
     });
     gl.activeTexture(gl.TEXTURE0);
     gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.enable(gl.CULL_FACE);

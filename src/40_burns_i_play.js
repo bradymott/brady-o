@@ -1187,10 +1187,10 @@ class BurnsPlayScene {
     }
     // ---- main pass ----
     R.begin(env);
-    R.sky(env);
     R.ground(this.world.ground, env, this.world);
     R.statics(this.world.chunks, env, this.world, BURNS_ATLAS.T, this.def.drawDist || (env.fogD > 0.02 ? 120 : 260));   // def.drawDist: per-world static draw distance (m)
     if (inst) inst.draw(R, env, this.world);
+    R.sky(env);   // after the ground and buildings: the sky only shades what they leave uncovered (depth-tested at the far plane)
     if (env.trip > 0.01 && this.world.ghosts.length) R.ghost(this.world.ghosts, env, this.world, BURNS_ATLAS.T, 0.55 + env.trip * 0.35);
     // skinned: groups (vehicles, movers, pickups), characters, bosses
     R.skinBegin(env, this.world, BURNS_ATLAS.T);

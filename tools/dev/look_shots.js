@@ -1,0 +1,97 @@
+// Look-dev captures: fixed cameras across worlds, times of day, tiers and orientations, for before/after comparison.
+// BRADY_DIST=<dist> node tools/dev/look_shots.js <outDir> [filter-regex]
+// Each shot: { n: name, w: world id, pal: [a, b, t] (optional), tp: [x, z] (optional), yaw: rad | 'sun' | 'anti' | +offset,
+//              pitch, tier, o: 'L'|'P' (landscape 874x402 / portrait 402x874, both at DPR 2), sim: seconds to settle }
+const { chromium } = require('playwright');
+const path = require('path'), fs = require('fs'), http = require('http');
+const site = path.resolve(process.env.BRADY_DIST || 'dist', 'site'), out = path.resolve(process.argv[2] || 'shots/look');
+const filt = process.argv[3] ? new RegExp(process.argv[3]) : null;
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg' };
+const DUSK = ['dusk', 'night', 0], NIGHT = ['dusk', 'night', 1], DAY = ['day', 'dusk', 0], GOLD = ['day', 'dusk', 0.72];
+const SHOTS = [
+  { n: 'city-day', w: 500, pal: DAY, yaw: 'anti', pitch: 0.28 },
+  { n: 'city-day-sun', w: 500, pal: DAY, yaw: 'sun', pitch: 0.4 },
+  { n: 'city-sunset', w: 500, pal: DUSK, yaw: 'sun', pitch: 0.22 },
+  { n: 'city-sunset-anti', w: 500, pal: DUSK, yaw: 'anti', pitch: 0.25 },
+  { n: 'city-night', w: 500, pal: NIGHT, yaw: 'anti', pitch: 0.25 },
+  { n: 'city-night-man', w: 500, pal: NIGHT, yaw: Math.PI, pitch: 0.22 },
+  { n: 'city-esp-day', w: 500, pal: DAY, tp: [0, 322], yaw: Math.PI, pitch: 0.25 },
+  { n: 'city-esp-night', w: 500, pal: NIGHT, tp: [0, 322], yaw: Math.PI, pitch: 0.25 },
+  { n: 'city-street-gold', w: 500, pal: GOLD, tp: [-40, 345], yaw: Math.PI / 2, pitch: 0.25 },
+  { n: 'city-street-night', w: 500, pal: NIGHT, tp: [-40, 345], yaw: Math.PI / 2, pitch: 0.25 },
+  { n: 'w1-line', w: 1, yaw: null, pitch: 0.3 },
+  { n: 'w1-line-sun', w: 1, yaw: 'sun', pitch: 0.25 },
+  { n: 'w17-root', w: 17, yaw: null, pitch: 0.3 },
+  { n: 'w11-party', w: 11, yaw: null, pitch: 0.3 },
+  { n: 'w16-rhythm', w: 16, yaw: null, pitch: 0.3 },
+  { n: 'w12-temple', w: 12, yaw: null, pitch: 0.3 },
+  { n: 'w10-man', w: 10, yaw: null, pitch: 0.3 },
+  { n: 'w9-deep', w: 9, yaw: null, pitch: 0.25 },
+  { n: 'w7-sunrise', w: 7, yaw: 'sun', pitch: 0.25 }
+];
+function serve(root) { return new Promise(res => { const srv = http.createServer((req, rsp) => { let p = decodeURIComponent(req.url.split('?')[0]); if (p.endsWith('/')) p += 'index.html'; const f = path.join(root, p); if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { rsp.writeHead(404); rsp.end(); return; } rsp.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(rsp); }); srv.listen(0, '127.0.0.1', () => res({ srv, url: 'http://127.0.0.1:' + srv.address().port + '/' })); }); }
+(async () => {
+  fs.mkdirSync(out, { recursive: true });
+  const { srv, url } = await serve(site), browser = await chromium.launch({ args: process.env.LOOK_SW ? [] : ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+  const tiers = (process.env.LOOK_TIERS || 'medium').split(','), orients = (process.env.LOOK_O || 'L,P').split(',');
+  const stats = [];
+  for (const o of orients) {
+    const vp = o === 'P' ? { width: 402, height: 874 } : { width: 874, height: 402 };
+    const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await ctx.addInitScript(() => { window.requestAnimationFrame = fn => { window.__lookFrame = fn; return 1; }; window.__burnsHideHUD = true; try { localStorage.clear(); } catch (e) { /* */ } });
+    const page = await ctx.newPage();
+    page.on('pageerror', e => console.log('pageerror', e.message.slice(0, 300)));
+    await page.goto(url + 'burning-man/');
+    await page.waitForFunction(() => !!window.BRADY_BURNS, null, { polling: 100, timeout: 120000 });
+    await page.evaluate(async () => {
+      const B = window.BRADY_BURNS;
+      await B.BurnsGLBProps.preload();
+      await Promise.all(['brady', 'chinka'].map(n => B.BurnsSkin.preload('models/' + n + '.glb.gz')));
+    });
+    if (process.env.LOOK_EVAL) await page.evaluate('with (window.BRADY_BURNS) { ' + process.env.LOOK_EVAL + ' }');   // e.g. LOOK_EVAL='BURNS_LOOK.tracks = 0'
+    for (const S of SHOTS) for (const tier of tiers) {
+      const name = S.n + '-' + tier + '-' + o;
+      if (filt && !filt.test(name)) continue;
+      const r = await page.evaluate(([S, tier]) => {
+        const B = window.BRADY_BURNS, D = B.debug;
+        let s = D.scene();
+        if (!s || s.worldId !== S.w) { D.play(S.w, { fresh: true }); s = D.scene(); if (s.state === 'load') s.load(); D.skipCine(); }
+        B.BurnsGL.configure(tier);
+        if (S.pal) { s.palA = S.pal[0]; s.palB = S.pal[1]; s.tod = S.pal[2]; s.todTarget = null; if (typeof BURNS_OW !== 'undefined' && BURNS_OW.state) BURNS_OW.state.palKey = S.pal.join('|'); }
+        if (S.tp) D.teleport(S.tp[0], S.tp[1]);
+        for (let i = 0; i < 30; i++) s.update(1 / 30);
+        if (S.pal) { s.palA = S.pal[0]; s.palB = S.pal[1]; s.tod = S.pal[2]; s.todTarget = null; }
+        const env = B.BurnsEnv.build(s.palA, s.palB, s.tod, {}, s.time);
+        const sd = env.sunDir, saz = Math.atan2(sd[0], sd[2]);
+        const p = s.player;
+        if (S.yaw === 'sun') s.camYaw = saz; else if (S.yaw === 'anti') s.camYaw = saz + Math.PI; else if (typeof S.yaw === 'number') s.camYaw = S.yaw;
+        if (S.yaw !== null && S.yaw !== undefined) p.yaw = s.camYaw;
+        s.camPitch = S.pitch; s.snapCam = true; s.lastManual = s.time + 1e6; s.manualCam = true;
+        s.q = 1;
+        const draw = () => { s.fade = 0; s.dayCardT = -1; s.banners = []; if (s.dialog) s.dialog.open = false; window.BRADY.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); s.q = 1; s.draw(window.BRADY.Game.ctx); };
+        draw(); draw();
+        const gl = B.BurnsGL.gl; gl.finish();
+        const t0 = performance.now(); for (let i = 0; i < 3; i++) { draw(); } gl.finish();
+        const ms = (performance.now() - t0) / 3;
+        // GPU time per frame (EXT_disjoint_timer_query_webgl2), for real-GPU runs
+        const tq = gl.getExtension('EXT_disjoint_timer_query_webgl2'); let gpu = -1;
+        if (tq) { window.__lookQ = []; window.__lookDraw = draw; for (let i = 0; i < 30; i++) { const q = gl.createQuery(); gl.beginQuery(tq.TIME_ELAPSED_EXT, q); draw(); gl.endQuery(tq.TIME_ELAPSED_EXT); window.__lookQ.push(q); } }
+        draw();
+        return { draws: s.stats.draws, tris: Math.round(s.stats.tris), sh: s.stats.shDraws, ms: Math.round(ms * 10) / 10, gpu, tier: B.BurnsGL.tier, w: B.BurnsGL.canvas.width, h: B.BurnsGL.canvas.height, tod: s.tod, pal: s.palA + '>' + s.palB };
+      }, [S, tier]);
+      await page.waitForTimeout(400);
+      r.gpu = await page.evaluate(async () => {
+        const gl = window.BRADY_BURNS.BurnsGL.gl, Q = window.__lookQ || [], vals = [];
+        for (let k = 0; k < 80 && vals.length < Q.length; k++) { for (const q of Q) if (!q.done && gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)) { q.done = true; vals.push(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6); } if (vals.length < Q.length) await new Promise(r => setTimeout(r, 50)); }
+        vals.sort((a, b) => a - b); window.__lookDraw && window.__lookDraw();
+        return vals.length > 4 ? [Math.round(vals[0] * 100) / 100, Math.round(vals[Math.floor(vals.length / 2)] * 100) / 100] : -1;   // [min, median] ms
+      });
+      await page.screenshot({ path: path.join(out, name + '.png') });
+      r.name = name; stats.push(r);
+      console.log(JSON.stringify(r));
+    }
+    await ctx.close();
+  }
+  fs.writeFileSync(path.join(out, 'stats.json'), JSON.stringify(stats, null, 1));
+  await browser.close(); srv.close();
+})().catch(e => { console.error(e); process.exit(1); });

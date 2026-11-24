@@ -688,7 +688,7 @@ const BurnsUI = {
    debug API are always there; the hub, the title app and the worlds add their own entries. */
 window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, {
   BurnsPlayScene, BurnsWorlds, BurnsSave, BurnsScenes, BurnsGL, BurnsRenderer, BurnsEnv, BurnsChar,
-  BurnsManBoss, BurnsRig, BurnsProps, BurnsMesh, BurnsBehaviors, BURNS_ATLAS, BURNS_SPRITES,
+  BurnsManBoss, BurnsRig, BurnsProps, BurnsMesh, BurnsBehaviors, BURNS_ATLAS, BURNS_SPRITES, BURNS_LOOK, BURNS_PALETTES, BurnsWorld,
   debug: {
     scene() { return Game.scene; },
     play(w, opts) { return BurnsScenes.play(w || 1, opts || {}); },
