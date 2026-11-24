@@ -112,11 +112,11 @@ function pageHelpers() {
   let page = await open('burning-man');
   await page.waitForFunction(() => window.BRADY_BURNS && window.BRADY_BURNS.debug && window.BRADY_BURNS.BurnsSkinActor && window.BRADY_BURNS.BurnsSkinActor.ready && window.BRADY_BURNS.debug.skinHero, null, { timeout: 120000 });
   await page.evaluate(pageHelpers);
-  // the shipped characters: Brady is the textured realistic hero (36-byte path, LOD0 within the 35k budget), Chinka
-  // stays on the untextured 32-byte path
-  const old = await page.evaluate(() => { const A = window.BRADY_BURNS.BurnsSkinActor.assets; return Object.keys(A).map(k => ({ kind: k, name: A[k].name, textured: !!A[k].textured, stub: !!A[k].geo.skinPbr, stride: A[k].geo.stride, tris: A[k].tris })); });
+  // the shipped characters: Brady and Chinka are both textured realistic heroes (36-byte path, LOD0 within the 35k
+  // budget, at most 2 draws a LOD for Chinka: body + hair cards, the LED necklace glowing from the body texture set)
+  const old = await page.evaluate(() => { const A = window.BRADY_BURNS.BurnsSkinActor.assets; return Object.keys(A).map(k => ({ kind: k, name: A[k].name, textured: !!A[k].textured, stub: !!A[k].geo.skinPbr, stride: A[k].geo.stride, tris: A[k].tris, draws: A[k].lods ? A[k].lods.map(L => L && L.parts.length) : null, clips: A[k].clipNames.length })); });
   const oB = old.find(a => a.kind === 'brady'), oC = old.find(a => a.kind === 'chinka');
-  check('shipped GLBs: brady textured (36-byte, <= 35k tris), chinka untextured (32-byte)', !!oB && oB.textured && oB.stub && oB.stride === 36 && oB.tris <= 35000 && !!oC && !oC.textured && !oC.stub && oC.stride === 32, old);
+  check('shipped GLBs: brady and chinka textured (36-byte, <= 35k tris), chinka <= 2 draws per LOD, 1 at LOD2, 19 clips', !!oB && oB.textured && oB.stub && oB.stride === 36 && oB.tris <= 35000 && !!oC && oC.textured && oC.stub && oC.stride === 36 && oC.tris <= 35000 && oC.draws && oC.draws[0] <= 2 && oC.draws[2] === 1 && oC.clips >= 19, old);
   await page.evaluate(() => { localStorage.clear(); window.__burnsHideHUD = true; window.BRADY_BURNS.debug.play(1); });
   await page.waitForFunction(() => { const s = window.BRADY_BURNS.debug.scene(); return s && s.player && s.world && s.state !== 'load'; }, null, { timeout: 120000 });
   await page.evaluate(() => { const D = window.BRADY_BURNS.debug, s = D.scene(); D.skipCine(); s.dayCardT = -1; __T.hook(s); const p = s.player; D.teleport(p.x + 40, p.z + 6); p.yaw = Math.PI; s.camYaw = Math.PI; D.sim(0.5); });

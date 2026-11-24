@@ -659,6 +659,8 @@ class BurnsFace {
   constructor(asset) {
     this.poses = asset.face; this.w = {}; this.set_ = {}; this.auto = true;
     for (const k in this.poses) this.w[k] = 0;
+    // a resting expression from the file (scene extra burns_smile: 0..1, e.g. Chinka's warm smile); none = neutral
+    const rs = +((asset.extras || {}).burns_smile) || 0; if (rs > 0 && this.poses.smile) this.w.smile = clamp(rs, 0, 1);
     this.seed = (asset.name.length * 7919 + 13) >>> 0; this.next = this.rand(1, 3); this.blinkT = -1; this.talkT = 0; this.talking = false; this.ph = 0;
   }
   rand(a, b) { this.seed = (this.seed * 1664525 + 1013904223) >>> 0; return a + (b - a) * (this.seed / 4294967296); }

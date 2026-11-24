@@ -10,8 +10,9 @@ const b = fs.readFileSync(inp), jlen = b.readUInt32LE(12), j = JSON.parse(b.slic
 const rest = b.slice(20 + jlen);
 let dropped = 0;
 for (const a of j.animations || []) {
-  if (!/^face_/.test(a.name)) continue;
-  const re = ONLY[a.name] || FACE, keep = a.channels.filter(c => re.test(j.nodes[c.target.node].name || ''));
+  const nm = a.name.replace(/^[A-Z]_/, '');   // the cast kit prefixes its armatures' actions (F_ / M_)
+  if (!/^face_/.test(nm)) continue;
+  const re = ONLY[nm] || FACE, keep = a.channels.filter(c => re.test(j.nodes[c.target.node].name || ''));
   dropped += a.channels.length - keep.length;
   const used = [...new Set(keep.map(c => c.sampler))], remap = new Map(used.map((s, i) => [s, i]));
   a.samplers = used.map(s => a.samplers[s]);

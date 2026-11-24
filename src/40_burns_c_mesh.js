@@ -415,6 +415,13 @@ const BURNS_ATLAS = {
   // backdrop alone still reads as a photo if anything fails.
   bakePhoto(R) {
     if (this.photoBaked || !this.canvas || !R) return;
+    // the photo shows the same Chinka as the game: wait (a few seconds of frames at most) for the realistic model and
+    // its textures; if they never come (no file, file://, the swap switched off) the procedural Chinka is used
+    const SA = typeof BurnsSkinActor !== 'undefined' ? BurnsSkinActor : null, A = SA && SA.assets && SA.assets.chinka;
+    if (SA && !SA.off() && (!SA.ready || (A && A.texReady && !A._texDone))) {
+      if (A && A.texReady && !A._texHook) { A._texHook = true; A.texReady.then(() => { A._texDone = true; }, () => { A._texDone = true; }); }
+      if ((this._photoWait = (this._photoWait || 0) + 1) < 480) return;
+    }
     this.photoBaked = true;
     let img = null;
     try {
@@ -422,7 +429,7 @@ const BURNS_ATLAS = {
       ch.yaw = 0.32; ch.play('wave', null, true); ch.animT = 0.16; ch.update(0); ch.compute();   // hand up, big smile
       const env = Object.assign(BurnsEnv.build('dusk', 'dusk', 0, {}, 0), { fogD: 0, trip: 0, dust: 0, exposure: 1, emB: 1.3,
         keyDir: [-0.42, 0.52, 0.74], keyCol: [0.96, 0.78, 0.62], sky: [0.6, 0.48, 0.78], gnd: [0.7, 0.48, 0.4], rimCol: [1.0, 0.62, 0.5] });
-      img = R.bakeImage(312, 324, { x: 0.42, y: 1.5, z: 2.75, tx: 0, ty: 1.34, tz: 0, fov: 0.5 }, env, RR => RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.8), this.reg(12.5, 844.5, 103, 107));
+      img = R.bakeImage(312, 324, { x: 0.42, y: 1.5, z: 2.75, tx: 0, ty: 1.34, tz: 0, fov: 0.5 }, env, RR => (SA && SA.draw(null, RR, 'chinka', ch, null, 0.8)) || RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.8), this.reg(12.5, 844.5, 103, 107));
       BurnsGL.freeGeo(model.geo);   // re-uploaded on demand by worlds that show her
     } catch (e) { console.warn('burns: Chinka photo bake failed', e); img = null; }
     if (!img) return;
