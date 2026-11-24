@@ -1,5 +1,6 @@
 # Brady Goes to Burning Man: handoff for its agent
 > Latest: [20 November finishing release and validation](BURNING_MAN_FINISH.md). Read that first; the older PR/roadmap notes below are historical context.
+> 24 November (branch `burning-man/cast-1`): Brady's right sleeve now mirrors his left; realistic Chinka (ivory-and-gold gown, LED necklace) replaces the stylised one everywhere, Art Kart included; NPCs near the camera are drawn by the realistic cast kit (BURNS_GUIDE §6.13). Build scripts: `tools/blender/realistic_chinka/`, `tools/blender/realistic_cast/`; Blender scenes in `private/work/` (`chinka_*.blend`, `cast_*.blend`).
 
 
 Read [README.md](README.md) first: owner, ownership rules, appearance rules, deploy.
