@@ -53,6 +53,16 @@ function bbaRT(W) {
   if (!W._bba) W._bba = { pieces: [], climbs: [], zips: [], kicks: [], loops: [], reveals: [], items: [], beams: [], t: 0, rt: 0, steps: 0, night: 0, climb: null, ride: null, cam: null, air: null, plat: null, errs: {}, kinds: {} };
   return W._bba;
 }
+// A sound that comes from a piece of art: full volume within `near` m of Brady, fading to silence at `far` m.
+// Periodic sounds (the giant's snore, the pump jack) used to play at full volume anywhere in the city.
+function bbaSfxAt(g, x, z, name, opts, near, far) {
+  const p = g && g.player; if (!p) return;
+  const n = near || 15, f = far || 70, d = Math.hypot(p.x - x, p.z - z);
+  const k = d <= n ? 1 : d >= f ? 0 : Math.pow(1 - (d - n) / (f - n), 2);
+  if (k < 0.03) return;
+  const o = Object.assign({}, opts || {}); o.vol = (o.vol === undefined ? 1 : o.vol) * k;
+  burnsSfx(name, o);
+}
 function bbaErr(e) {
   try {
     const k = String(e && e.message || e), R = bbaErr.seen || (bbaErr.seen = {});
@@ -336,7 +346,6 @@ function bbaClimbStep(g, R, dt) {
     p.yaw = Math.atan2(-z.nx, -z.nz); p.coyote = 0.12; p.jumps = 0; p.jumpCut = true; p.grounded = false; p.platform = null;
     p.animOverride = want > 0 ? 'bbaClimb' : 'bbaHang';
     R.climb.t += dt;
-    if (want > 0 && Math.random() < dt * 3) burnsSfx('footstep', { vol: 0.2, pitch: 1.3 });
     return;
   }
   if (busy || p.pound) return;
@@ -1242,7 +1251,7 @@ function bbaPumpBuild(api, g, P) {
     if (a0 < Math.PI / 2 && a1 >= Math.PI / 2) {
       st.lastTop = P.R.t;
       if (nk > 0.3) st.fire = 0.75;
-      burnsSfx('stomp', { vol: 0.3, pitch: 0.5 });
+      bbaSfxAt(gg, P.x, P.z, 'stomp', { vol: 0.3, pitch: 0.5 }, 20, 70);
       if (p.grounded && p.platform === carrier && !p.vehicle) {
         const l = F.l(p.x, p.z);
         if (Math.abs(l[0]) < 1.3 && l[1] > J.LF - 2.1 && l[1] < J.LF - 0.55) {
@@ -1266,7 +1275,7 @@ function bbaPumpBuild(api, g, P) {
         for (let i = 0; i < 2; i++) gg.fx.add(q[0] + (Math.random() - 0.5) * 0.4, q[1], q[2] + (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 1.6, 13 + Math.random() * 6, (Math.random() - 0.5) * 1.6, 0.55, 1.6, 0.6, [1, 0.55, 0.15], 1, 'flame', 1);
       }
       const q = bbaBeamPt(P, st.th, 0, 6, J.LF - 4.2); gg.pointLight(q[0], q[1], q[2], 26, [1, 0.5, 0.15], 2.2);
-      if (Math.random() < wdt * 6) burnsSfx('flame_jet', { vol: 0.5 });
+      if (Math.random() < wdt * 6) bbaSfxAt(gg, P.x, P.z, 'flame_jet', { vol: 0.5 }, 20, 70);
     }
     // the gas flare burns all night
     if (nk > 0.3 && Math.random() < wdt * 30) { const q = F.w(-7.5, 15.9, 7); gg.fx.fire(q[0], q[1], q[2], 1.3); }
@@ -1451,7 +1460,7 @@ function bbaGiantBuild(api, g, P) {
     const a0 = ((st.prev % TAU) + TAU) % TAU, a1 = ((st.ph % TAU) + TAU) % TAU;
     if (a0 < Math.PI / 2 && a1 >= Math.PI / 2) {
       // SNORE: dust clouds + a gust over the mustache
-      st.snore = 1.1; burnsSfx('man_roar', { vol: 0.35, pitch: 0.45 });
+      st.snore = 1.1; bbaSfxAt(gg, mouth[0], mouth[2], 'man_roar', { vol: 0.3, pitch: 0.45 }, 20, 75);
       const p = gg.player, l = F.l(p.x, p.z), ly = (p.y - F.y0) / F.s;
       if (!p.vehicle && Math.abs(l[0]) < 3.2 && l[1] > 26.6 && l[1] < 30.4 && ly > 9.6) {
         p.knock(fwd[0] * 7.5, 8, fwd[1] * 7.5); gg.toast('BLOWN AWAY BY A SNORE!'); gg.shake(0.25);
