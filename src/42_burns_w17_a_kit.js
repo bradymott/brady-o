@@ -65,8 +65,9 @@ const BW17 = {
 (() => {
   if (typeof BURNS_PALETTES === 'undefined') return;
   const P = BURNS_PALETTES, A = (base, o) => Object.assign({}, P[base] || P.day, o);
-  P.bw17day = A('day', { hor: '#f6dcb6', fog: '#ecd4b2', fogD: 0.0042, haze: 0.42, dust: 0.3, mid: '#86b8ea', sun: [150, 52], clouds: 0.42, cloudCol: '#fff6ec' });
-  P.bw17morning = A('day', { zen: '#4a82d4', hor: '#ffe2bc', mid: '#a8c8ec', midK: 0.3, fog: '#f0d8bc', fogD: 0.0046, haze: 0.45, dust: 0.32, sun: [40, 16], sunCol: '#fff0d0', key: '#ffe6c4', keyK: 0.88, sky: '#c4d0ec', gnd: '#c8a68a', clouds: 0.38, rays: 0.8 });
+  // (Nov 24: thinner fog by day: the camp read pale and washed out after the new look; see also def.env in world17)
+  P.bw17day = A('day', { hor: '#f6dcb6', fog: '#e4c8a2', fogD: 0.0028, haze: 0.26, dust: 0.26, mid: '#86b8ea', sun: [150, 52], clouds: 0.42, cloudCol: '#fff6ec' });
+  P.bw17morning = A('day', { zen: '#4a82d4', hor: '#ffe2bc', mid: '#a8c8ec', midK: 0.3, fog: '#e8ceb0', fogD: 0.0032, haze: 0.3, dust: 0.28, sun: [40, 16], sunCol: '#fff0d0', key: '#ffe6c4', keyK: 0.88, sky: '#c4d0ec', gnd: '#c8a68a', clouds: 0.38, rays: 0.8 });
   P.bw17gold = A('dusk', { zen: '#3f62b4', hor: '#ffbf7c', mid: '#f2a888', midK: 0.32, fog: '#e8b892', fogD: 0.006, haze: 0.45, dust: 0.35, sun: [236, 9], sunCol: '#ffc27c', key: '#ffcc92', keyK: 0.98, sky: '#b6aed2', gnd: '#aa8466', emB: 1.22, stars: 0, moonK: 0, clouds: 0.46, cloudCol: '#ffd6ae', rays: 1.35, cityK: 0.12 });
   P.bw17dusk = A('dusk', { sun: [246, -0.5], hor: '#ff9a6a', zen: '#2c2254', mid: '#b2607e', midK: 0.38, stars: 0.3, moonK: 0.5, emB: 1.4, rays: 1.2 });
   P.bw17night = A('night', { sky: '#46467e', gnd: '#30263a', keyK: 0.46, fogD: 0.0085, dust: 0.25, stars: 1, moonK: 1, emB: 1.75, cityK: 0.62, milkyway: 1.2 });

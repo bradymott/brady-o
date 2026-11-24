@@ -1092,12 +1092,22 @@ class BurnsPlayScene {
     this.fastAcc = fdt < 0.0175 ? (this.fastAcc || 0) + fdt : 0;
     if (this.fastAcc > 5 && this.q < 1) { this.q = Math.min(1, this.q + 0.08); this.fastAcc = 0; }
   }
+  // Blender-made props (41_burns_glbprops.js) are swapped in while a world builds, and a world (the city's instanced
+  // prototypes above all) keeps whatever it built: so the first load waits for them, at most 6 s (slow networks keep
+  // the procedural props)
+  glbReady() {
+    const G = typeof BurnsGLBProps !== 'undefined' ? BurnsGLBProps : null;
+    if (!G || G.ready || (typeof BRADY_APP !== 'undefined' && BRADY_APP !== 'burningman')) return true;
+    try { G.preload(); } catch (e) { return true; }
+    const now = performance.now(); if (!this.glbWait) this.glbWait = now;
+    return now - this.glbWait > 6000;
+  }
   draw(ctx) {
     const W = Game.cssW, H = Game.cssH, dpr = Game.dpr;
     if (this.state === 'missing') return BurnsUI.drawMissing(ctx, this);
     if (this.state === 'load') {
       BurnsUI.drawLoading(ctx, this);
-      if (this.loadFrames = (this.loadFrames || 0) + 1, this.loadFrames >= 2) {
+      if (this.loadFrames = (this.loadFrames || 0) + 1, this.loadFrames >= 2 && this.glbReady()) {
         try { this.load(); } catch (e) { console.error(e); Game.reportError(e); this.state = 'nogl'; this.noglMsg = 'This world failed to load.'; this.buildNoGL(); Input.setMode('ui'); }
       }
       return;

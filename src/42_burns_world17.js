@@ -62,6 +62,12 @@ BurnsWorlds.register({
   bike: true,
   ground: { base: '#cba680', crack: 0.27, mottle: 0.38, res: 0.5 },
   dust: 1.0,
+  // by day: less ground dust haze and a firmer grade, so the camp's domes, tipis and coliseum read against the pale
+  // playa (Nov 24 look pass; the palettes' own dust setting isn't read by the engine)
+  env(g, env) {
+    const day = clamp(env.sunDir[1] * 5, 0, 1);
+    env.dust = 0.5 - 0.32 * day; env.grade = [1.08 + 0.1 * day, 0.12 + 0.16 * day, 0.32]; env.exposure = 1 - 0.07 * day;
+  },
   missions: [
     { id: 'arrive', name: 'Follow the Bass', short: 'Follow the bass to Root Society', type: 'custom', start: 'auto', token: false, silent: true, marker: { x: 6, z: 12 },
       desc: 'Tuesday morning. Somewhere a sound system is purring like a giant cat. Follow it, and find whoever is in charge.', hint: 'Through the root gate on Esplanade, then the plaza by the coliseum',

@@ -715,12 +715,17 @@ class BurnsFX {
   draw(R) {
     const P = this.p, S = BURNS_SPRITES.R, regs = this.kinds.map(k => S[k] || S.glow);
     const col = [0, 0, 0];
+    // dust and smoke are lit by the scene: at night they take the moonlight (dim and cool) instead of glowing tan
+    // (Burning Man's look only: Super Art Kart keeps its own)
+    const nk = typeof BURNS_LOOK !== 'undefined' && BURNS_LOOK.alkali > 0 ? (R.night || 0) : 0, kP = this.kIdx.puff, kS = this.kIdx.smoke;
+    const lr = 1 - nk * 0.6, lg = 1 - nk * 0.56, lb = 1 - nk * 0.4, la = 1 - nk * 0.5;
     for (let i = 0; i < this.n; i++) {
       const o = i * 16, life = P[o + 6], max = P[o + 7], t = 1 - life / max, fl = this.f[i];
       const size = lerp(P[o + 8], P[o + 9], t);
       const fade = Math.min(1, life / Math.min(0.35, max * 0.5)) * Math.min(1, t * 8 + 0.2);
       col[0] = P[o + 10]; col[1] = P[o + 11]; col[2] = P[o + 12];
-      const a = P[o + 13] * fade;
+      let a = P[o + 13] * fade;
+      if (nk > 0 && !(fl & 1) && (this.k[i] === kP || this.k[i] === kS)) { col[0] *= lr; col[1] *= lg; col[2] *= lb; a *= la; }
       if (fl & 8) R.flat.flat(P[o], P[o + 1], P[o + 2], size, size, P[o + 14], regs[this.k[i]], col, a, !!(fl & 1));
       else if (fl & 16) R.bbs.streak(P[o], P[o + 1], P[o + 2], P[o + 3], P[o + 4], P[o + 5], size * 3, size * 0.5, regs[this.k[i]], col, a);
       else R.bbs.bb(P[o], P[o + 1], P[o + 2], size, size, regs[this.k[i]], col, a, !!(fl & 1), P[o + 14]);

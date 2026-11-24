@@ -26,11 +26,12 @@ const BW12 = {
   TREE: { x: 74, z: 62 },
   state: null
 };
-BW12.SKY_A = { zen: '#1c2454', mid: '#5a4c8e', midK: 0.38, hor: '#f2a286', fog: '#a898b4', fogD: 0.0072, fogH: 0.05, haze: 0.62, fogMax: 0.9,
+// (Nov 24: thinner fog: the Temple read pale and flat after the new look; see also def.env below)
+BW12.SKY_A = { zen: '#1c2454', mid: '#5a4c8e', midK: 0.38, hor: '#f2a286', fog: '#9c8aa8', fogD: 0.0054, fogH: 0.05, haze: 0.46, fogMax: 0.8,
   sun: [195, -3], sunCol: '#ffb080', sunSize: 0.002, moon: [25, 30], moonK: 0.6, stars: 0.45, mtnCol: '#4a3a5e', mtnH: 3.0,
   city: [0, 0], cityCol: '#ff8ad0', cityK: 0.22, sky: '#9a96c4', gnd: '#a07a70', key: '#e0bcc0', keyK: 0.6, emB: 1.45, rim: '#d8b8ff',
   clouds: 0.38, cloudCol: '#e8a8b4', cloudScale: 0.5 };
-BW12.SKY_B = { zen: '#3a5aa8', mid: '#d0a0c0', midK: 0.42, hor: '#ffcf9a', fog: '#f0c8ac', fogD: 0.0062, fogH: 0.05, haze: 0.66, fogMax: 0.88,
+BW12.SKY_B = { zen: '#3a5aa8', mid: '#d0a0c0', midK: 0.42, hor: '#ffcf9a', fog: '#e4b89a', fogD: 0.0042, fogH: 0.05, haze: 0.42, fogMax: 0.74,
   sun: [195, 7], sunCol: '#ffd090', sunSize: 0.0028, moon: [25, 18], moonK: 0.1, stars: 0, mtnCol: '#7a5a7a', mtnH: 3.0,
   city: [0, 0], cityCol: '#ff9ad0', cityK: 0.05, sky: '#c8b8d8', gnd: '#c09080', key: '#ffcc90', keyK: 1.0, emB: 1.25, rim: '#ffd8b0',
   clouds: 0.5, cloudCol: '#ffc8b8', cloudScale: 0.5 };
@@ -275,6 +276,10 @@ BurnsWorlds.register({
   env(g, env) {
     const S = BW12.state;
     if (S && S.glowK) { env.emB += S.glowK * 0.3; }
+    // by day: less ground dust haze and a firmer grade, so the Temple's wood and the people read against the pale
+    // playa (Nov 24 look pass; the palette alone washed out to pink)
+    const day = clamp(env.sunDir[1] * 5, 0, 1);
+    env.dust = 0.5 - 0.32 * day; env.grade = [1.08 + 0.1 * day, 0.12 + 0.16 * day, 0.32]; env.exposure = 1 - 0.07 * day;
   },
   update(g, dt) {
     const S = BW12.state, p = g.player;
