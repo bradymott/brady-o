@@ -36,11 +36,11 @@ const BURNS_ARTCARS = {
   // per graphics tier: hiD full-detail distance (m), maxHi full-detail cars at once, maxLo race models kept loaded,
   // maxVis cars drawn at once (nearest first), drawD draw distance, shadowD shadow casters within this of the camera
   TIER: {
-    ultra:  { hiD: 30, maxHi: 3, maxLo: 12, maxVis: 9, drawD: 320, shadowD: 90 },
-    high:   { hiD: 24, maxHi: 2, maxLo: 10, maxVis: 7, drawD: 280, shadowD: 75 },
-    medium: { hiD: 16, maxHi: 1, maxLo: 7, maxVis: 5, drawD: 230, shadowD: 55 },
-    low:    { hiD: 0, maxHi: 0, maxLo: 5, maxVis: 4, drawD: 170, shadowD: 0 },
-    legacy: { hiD: 0, maxHi: 0, maxLo: 4, maxVis: 3, drawD: 150, shadowD: 0 }
+    ultra:  { hiD: 30, maxHi: 3, maxLo: 12, maxVis: 12, drawD: 320, shadowD: 90 },
+    high:   { hiD: 24, maxHi: 2, maxLo: 10, maxVis: 10, drawD: 280, shadowD: 75 },
+    medium: { hiD: 16, maxHi: 1, maxLo: 8, maxVis: 8, drawD: 230, shadowD: 55 },
+    low:    { hiD: 0, maxHi: 0, maxLo: 6, maxVis: 6, drawD: 170, shadowD: 0 },
+    legacy: { hiD: 0, maxHi: 0, maxLo: 5, maxVis: 5, drawD: 150, shadowD: 0 }
   },
   HEAD_COL: [1, 0.86, 0.62],
   LOAD_PAD: 90,        // a race model starts loading this far beyond the draw distance
@@ -107,9 +107,11 @@ const BurnsArtCars = {
   // Art Kart's seat empties, measured from the race models (kart metres); refined from the loaded model if it differs
   SEATS: { heart: [-0.6, 1.62, -1.25], octo: [0, 1.6, -1.75], shark: [0, 2.55, 0.3], galleon: [0, 3.02, -1.85], cupcake: [0, 1.12, -1.3], fish: [0, 3.08, 0.05],
     jelly: [0, 1.12, -0.4], pyramid: [0, 1.62, -1.75], duck: [0, 2.48, -0.3], dragon: [0, 2.5, -0.25], snail: [0, 1.86, 0.95], whale: [0, 3.11, -0.55] },
+  // where Brady's feet go when he drives: the seat's hip point, scaled, less the sitting hip height of the 'drive' pose,
+  // and back a little (the pose reaches forward to the wheel; measured from side views)
   seatOf(stem, M) {
     const D = BURNS_ARTCARS.CARS[stem], S = D.s, s = (M && M.seat) || this.SEATS[D.id] || [0, 1.3, 0];
-    return [s[0] * S, s[1] * S - 0.88, s[2] * S];
+    return [s[0] * S, s[1] * S - 0.76, s[2] * S - 0.42];
   },
   track(g, stem, mv, veh, o) {
     const D = BURNS_ARTCARS.CARS[stem];
@@ -122,8 +124,6 @@ const BurnsArtCars = {
     };
     this.cars.push(c);
     this.hook(g);
-    // start fetching the race model now, so it is usually there by the time the world fades in
-    if (this.canLoad()) this.load(stem, false);
     return c;
   },
   // set a car dark or lit (World 10's sleeping cars): the lights, LEDs and glow fade over a second
@@ -173,10 +173,11 @@ const BurnsArtCars = {
       steerTilt: X.steerTilt === undefined ? 0.45 : +X.steerTilt, extra: (typeof X.extra === 'string' ? JSON.parse(X.extra) : X.extra) || CART_GLB_EXTRA[id] || {}, glb: true, lo
     };
   },
-  // colliders from the race model at rest: a height grid over the footprint (3 bands across, 0.4 m rows), rows of
-  // about the same height merged into one box. Kart metres; scaled per car when applied.
+  // colliders from the race model at rest: a height map over the footprint (0.4 m cells, kart metres), opened (eroded
+  // then dilated over 3 x 3 cells) so thin tall bits (a chair back, a rail, a mast) don't become the floor you stand on,
+  // then cells of about the same height merged into boxes, along the car and then across. Scaled per car when applied.
   collidersOf(M) {
-    const G = M.geo, J = M.J, f32 = new Float32Array(G.data), u8 = new Uint8Array(G.data), nv = G.data.byteLength / 24;
+    const G = M.geo, J = M.J, f32 = new Float32Array(G.data), u8 = new Uint8Array(G.data), nv = G.data.byteLength / 24, C = 0.4;
     let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
     const P = new Float32Array(nv * 3);
     for (let i = 0; i < nv; i++) {
@@ -186,22 +187,33 @@ const BurnsArtCars = {
       x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z);
     }
     if (!(x1 > x0 && z1 > z0)) return null;
-    const NX = 3, dz = 0.4, NZ = Math.max(1, Math.ceil((z1 - z0) / dz)), H = [0, 1, 2].map(() => new Float32Array(NZ));
+    const NX = Math.max(1, Math.ceil((x1 - x0) / C)), NZ = Math.max(1, Math.ceil((z1 - z0) / C)), H = new Float32Array(NX * NZ);
     for (let i = 0; i < nv; i++) {
       const y = P[i * 3 + 1]; if (y < 0.12) continue;
-      const a = Math.min(NX - 1, Math.floor((P[i * 3] - x0) / (x1 - x0) * NX)), j = Math.min(NZ - 1, Math.floor((P[i * 3 + 2] - z0) / dz));
-      if (a >= 0 && j >= 0 && y > H[a][j]) H[a][j] = y;
+      const a = Math.min(NX - 1, Math.floor((P[i * 3] - x0) / C)), j = Math.min(NZ - 1, Math.floor((P[i * 3 + 2] - z0) / C)), k = j * NX + a;
+      if (y > H[k]) H[k] = y;
     }
-    const out = [], bx = i => x0 + (x1 - x0) * i / NX;
+    // opening: erode (min of the 3 x 3 neighbourhood, outside = 0) then dilate (max)
+    const pass = (src, mn) => { const o = new Float32Array(src.length); for (let j = 0; j < NZ; j++) for (let a = 0; a < NX; a++) { let v = mn ? 1e9 : 0; for (let dj = -1; dj <= 1; dj++) for (let da = -1; da <= 1; da++) { const jj = j + dj, aa = a + da, h = jj < 0 || jj >= NZ || aa < 0 || aa >= NX ? 0 : src[jj * NX + aa]; v = mn ? Math.min(v, h) : Math.max(v, h); } o[j * NX + a] = mn ? Math.min(v, src[j * NX + a]) : Math.min(v, H[j * NX + a]); } return o; };
+    const O = pass(pass(H, true), false);
+    // keep the original footprint solid to a low height where the opening removed it (wheels, fins), so nothing walks through
+    for (let k = 0; k < O.length; k++) if (H[k] > 0 && O[k] < Math.min(H[k], 1.0)) O[k] = Math.min(H[k], 1.0);
+    const boxes = [];
     for (let a = 0; a < NX; a++) for (let j = 0; j < NZ;) {
-      if (H[a][j] <= 0) { j++; continue; }
-      let k = j, hi = H[a][j], lo = H[a][j];
-      while (k + 1 < NZ && H[a][k + 1] > 0 && Math.max(hi, H[a][k + 1]) - Math.min(lo, H[a][k + 1]) < 0.6) { k++; hi = Math.max(hi, H[a][k]); lo = Math.min(lo, H[a][k]); }
-      const za = z0 + j * dz, zb = Math.min(z1, z0 + (k + 1) * dz);
-      out.push({ x: (bx(a) + bx(a + 1)) / 2, z: (za + zb) / 2, hx: (bx(a + 1) - bx(a)) / 2, hz: (zb - za) / 2, y1: hi });
-      j = k + 1;
+      const h0 = O[j * NX + a]; if (h0 <= 0) { j++; continue; }
+      let k = j, hi = h0, lo = h0;
+      while (k + 1 < NZ) { const h = O[(k + 1) * NX + a]; if (h <= 0 || Math.max(hi, h) - Math.min(lo, h) > 0.35) break; k++; hi = Math.max(hi, h); lo = Math.min(lo, h); }
+      boxes.push({ a0: a, a1: a, j0: j, j1: k, y1: hi }); j = k + 1;
     }
-    return out;
+    // merge neighbouring columns with the same span and height
+    boxes.sort((p, q) => p.j0 - q.j0 || p.j1 - q.j1 || p.a0 - q.a0);
+    const out = [];
+    for (const bx of boxes) {
+      const last = out[out.length - 1];
+      if (last && last.j0 === bx.j0 && last.j1 === bx.j1 && last.a1 + 1 === bx.a0 && Math.abs(last.y1 - bx.y1) < 0.25) { last.a1 = bx.a0; last.y1 = Math.max(last.y1, bx.y1); }
+      else out.push(Object.assign({}, bx));
+    }
+    return out.map(q => ({ x: x0 + (q.a0 + q.a1 + 1) / 2 * C, z: z0 + (q.j0 + q.j1 + 1) / 2 * C, hx: (q.a1 - q.a0 + 1) / 2 * C, hz: (q.j1 - q.j0 + 1) / 2 * C, y1: q.y1 }));
   },
   // swap a car's placeholder colliders for the model's (the mover's dynamic colliders, as addMover makes them)
   applyCols(c, cols) {
@@ -231,8 +243,16 @@ const BurnsArtCars = {
     const W = g.world;
     for (const c of list) if (c.g === g && !c.gone) mine.push(c);
     if (!mine.length) return;
-    // cars whose tile was freed go away with it
-    if (!this._chk || now - this._chk > 2000) { this._chk = now; for (const c of mine) if (W.movers.indexOf(c.mv) < 0) c.gone = true; this.cars = this.cars.filter(c => !c.gone); }
+    // cars whose tile was freed go away with it, and so do the cars of scenes that are gone (the title screen; a world
+    // left without the usual release); a city frozen behind the place Brady entered keeps its cars
+    if (!this._chk || now - this._chk > 2000) {
+      this._chk = now;
+      for (const c of mine) if (W.movers.indexOf(c.mv) < 0) c.gone = true;
+      const alive = new Set(); for (let s = g; s; s = s.parentScene) alive.add(s);
+      if (typeof Game !== 'undefined' && Game.scene) for (let s = Game.scene; s; s = s.parentScene) alive.add(s);
+      for (const c of this.cars) if (!alive.has(c.g)) c.gone = true;
+      this.cars = this.cars.filter(c => !c.gone);
+    }
     const night = R ? (R.night || 0) : 0, t = g.time, P = R && R.planes;
     const beat = Math.pow(Math.max(0, Math.sin(t * 2.1 * Math.PI)), 6);
     const can = this.canLoad();
@@ -321,7 +341,7 @@ const BurnsArtCars = {
       if (c.g !== g || !c.drawn || !c.M) continue;
       if (shadow) { if (!R.shadowNear(c.car.x, c.car.y, c.car.z, c.rad)) continue; R.skin(c.M.geo, c.bones, c.M.nb, null, 0, 0); this.stats.shadow++; continue; }
       if (!c.inView) continue;
-      const dark = c.litK < 0.98 ? [0.04, 0.035, 0.06, 0.42 * (1 - c.litK)] : null;
+      const dark = c.litK < 0.98 ? [0.03, 0.025, 0.05, 0.62 * (1 - c.litK)] : null;
       R.skin(c.M.geo, c.bones, c.M.nb, dark, 0, 0.3);
       this.stats.drawn++; if (c.lod === 'hi') this.stats.hi++; this.stats.tris += c.M.geo.count / 3;
     }
@@ -354,10 +374,33 @@ const BurnsArtCars = {
     const live = new Set(this.cars.map(c => c.stem));
     for (const E of Object.values(this.models)) if (!live.has(E.stem)) this.free(E);
   },
+  // tests: every car of a scene whose footprint (rest bounds, scaled, where it stands now) overlaps a static collider
+  clearance(g) {
+    const W = g.world, out = [];
+    for (const c of this.cars) {
+      if (c.g !== g) continue;
+      const D = c.D, S = c.S, mv = c.mv, hw = (D.b[2] - D.b[0]) * S / 2, hl = (D.b[3] - D.b[1]) * S / 2, zc = (D.b[1] + D.b[3]) / 2 * S, xc = (D.b[0] + D.b[2]) / 2 * S;
+      const fx = Math.sin(mv.yaw), fz = Math.cos(mv.yaw), rx = Math.cos(mv.yaw), rz = -Math.sin(mv.yaw), x = mv.x + fx * zc + rx * xc, z = mv.z + fz * zc + rz * xc;
+      for (const k of W.col.near(x, z, Math.max(hw, hl) + 1, [])) {
+        if (k.mover || k.hidden || k.solid === false || (k.y1 !== undefined && k.y1 < 0.35)) continue;
+        const dx = k.x - x, dz = k.z - z;
+        let hit;
+        if (k.t === 'box' || k.t === 'ramp') {
+          const cy = Math.cos(k.yaw || 0), sy = Math.sin(k.yaw || 0); hit = true;
+          for (const a of [[rx, rz], [fx, fz], [cy, -sy], [sy, cy]]) {
+            const d = Math.abs(dx * a[0] + dz * a[1]), rk = Math.abs(rx * a[0] + rz * a[1]) * hw + Math.abs(fx * a[0] + fz * a[1]) * hl, rc = Math.abs(cy * a[0] - sy * a[1]) * k.hx + Math.abs(sy * a[0] + cy * a[1]) * k.hz;
+            if (d > rk + rc) { hit = false; break; }
+          }
+        } else { const lx = dx * rx + dz * rz, lz = dx * fx + dz * fz, qx = clamp(lx, -hw, hw), qz = clamp(lz, -hl, hl); hit = Math.hypot(lx - qx, lz - qz) < (k.r || 0); }
+        if (hit) out.push({ stem: c.stem, x: +mv.x.toFixed(1), z: +mv.z.toFixed(1), col: k.t, cx: +k.x.toFixed(1), cz: +k.z.toFixed(1), hx: k.hx || k.r, hz: k.hz || k.r, y1: k.y1 });
+      }
+    }
+    return out;
+  },
   info() {
     const m = this.memory();
     return { cars: this.cars.length, drawn: this.stats.drawn, hi: this.stats.hi, shadow: this.stats.shadow, tris: this.stats.tris, loaded: Object.values(this.models).filter(E => E.state === 'ready').map(E => ({ key: E.key, tris: E.tris, mb: +((E.bytes || 0) / 1048576).toFixed(2), ms: E.ms })),
-      loading: Object.values(this.models).filter(E => E.state === 'loading').map(E => E.key), lo: m.lo, hi: m.hi, mb: m.mb, loads: this.stats.loads, frees: this.stats.frees, failed: this.stats.failed, canLoad: this.canLoad(), tier: typeof BurnsGL !== 'undefined' ? BurnsGL.tier : null };
+      loading: Object.values(this.models).filter(E => E.state === 'loading').map(E => E.key), loLoaded: m.lo, hiLoaded: m.hi, mb: m.mb, loads: this.stats.loads, frees: this.stats.frees, failed: this.stats.failed, canLoad: this.canLoad(), tier: typeof BurnsGL !== 'undefined' ? BurnsGL.tier : null };
   }
 };
 // hooks into the play scene (this file is in the Burning Man app only; Art Kart's build never sees it)

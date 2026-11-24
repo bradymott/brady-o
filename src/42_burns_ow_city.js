@@ -483,8 +483,7 @@ BurnsWorlds.register({
     for (const [stem, x, z, yaw, fast] of [['sir_scorchalot', -24, 236, Math.PI, true], ['dune_chomper', 232, 36, -Math.PI / 2, false]]) {
       try { const v = BurnsArtCars.vehicle(api, stem, Object.assign({ x, z, yaw }, fast ? { maxSpeed: 16, accel: 6, turn: 1.25 } : {})); if (fast) S.raceCar = v; } catch (e) { console.error('ow art car', e); }
     }
-    // the octopus waits out by the deep-playa door (World 6, the Art Car Hunt)
-    { const P = O.PLACES.find(q => q.kind === 'deep'); if (P) BurnsArtCars.park(api, 'calamari_inferno', P.x + Math.cos(P.yaw) * 16, P.z - Math.sin(P.yaw) * 16, P.yaw + 0.6); }
+    // (Quackzilla is Root Society's Disco Duck, parked on the open playa by 2:00: 42_burns_w17_e_city.js)
     // ---- the side quests' people and things ----
     { const q = O.at(6.15, 332); api.npc({ id: 'owSage', type: 'burner', seed: 23, name: 'SAGE', x: q[0], z: q[1] - 34, yaw: Math.PI, behavior: 'chill', talk: (gg, a) => BurnsOW.giver(gg, a, 'owTemple', ['Have you sat at the Temple yet?', 'Walk out past the Man, toward 12:00. Sit a while.'], ['You went. I can tell.']) }); }
     api.pickup('glowstick', 203, 0.9, -351, { mission: 'owLantern', gate: true, label: 'LOST LANTERN', col: '#ffb060' });
@@ -859,7 +858,7 @@ Object.assign(BurnsOW, {
 BURNS_OW.CIRCLE_CARS = [['whale_of_a_time', 108, 1, 0.4], ['dusty_doubloon', 140, -1, 2.3], ['jelly_jolt', 140, -1, 2.3 + Math.PI], ['glitterfin', 108, 1, 0.4 + Math.PI]];
 BURNS_OW.STREET_CARS = [
   ['pyramid_scheme', { r: 300, out: 2.4, in: 3.4 }, 0.05, 3.0], ['frosted_fury', { r: 300, out: 2.4, in: 3.4 }, 0.55, 3.0],
-  ['turbo_escargot', { r: 435, out: 2.6, in: 2.6, h0: 2.17 }, 0.2, 2.6], ['quackzilla', { r: 435, out: 2.2, in: 2.2, h0: 2.17 }, 0.7, 2.6]
+  ['turbo_escargot', { r: 435, out: 2.6, in: 2.6, h0: 2.17 }, 0.2, 2.6], ['calamari_inferno', { r: 435, out: 2.4, in: 2.4, h0: 2.17 }, 0.7, 2.6]
 ];
 Object.assign(BurnsOW, {
   // a closed loop for a street car: out along the outer lane from h0 to h1, a wide U-turn past the end, back along the

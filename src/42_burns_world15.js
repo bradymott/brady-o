@@ -180,7 +180,8 @@ BurnsWorlds.register({
       prop(k === 'rv' || k === 'bus' || k === 'trailer' || k === 'van' || k === 'camper' || k === 'boxtruck' ? k : 'vehicle', { x, z, yaw: rng.range(-0.3, 0.3), seed: Math.floor(rng() * 999) });
       prop('crate', { x: x + (x < 0 ? 6 : -6), z: z + 2, s: 1.2 }); prop('crate', { x: x + (x < 0 ? 6.4 : -6.4), z: z + 3.3, y: 1.2, s: 1.0 });
     }
-    prop('artcar', { x: -44, z: -470, yaw: 0.5, len: 10, col: '#ff4fd8' }); prop('artcar', { x: 46, z: -360, yaw: -0.4, len: 9, col: '#38f2ff' });
+    if (typeof BurnsArtCars !== 'undefined') { BurnsArtCars.park(api, 'frosted_fury', -44, -470, 0.5); BurnsArtCars.park(api, 'jelly_jolt', 46, -360, -0.4); }
+    else { prop('artcar', { x: -44, z: -470, yaw: 0.5, len: 10, col: '#ff4fd8' }); prop('artcar', { x: 46, z: -360, yaw: -0.4, len: 9, col: '#38f2ff' }); }
     for (let i = 0; i < 4; i++) prop('portapotty', { x: 22.5, z: -560 + i * 1.35, yaw: -Math.PI / 2, col: i % 2 ? '#2a6ac8' : '#3a8a3a' });
     api.sign('LAST CHANCE\nMOOP CHECK', -22, -545, { yaw: Math.PI / 2, h: 1.2, style: { bg: '#f4e8c8', fg: '#3a1a10', size: 36, border: '#3a1a10' } });
     api.sign('EXODUS\n← THAT WAY', 21, -530, { yaw: -Math.PI / 2, h: 1.2, style: { bg: '#ff8a3a', fg: '#ffffff', size: 40 } });

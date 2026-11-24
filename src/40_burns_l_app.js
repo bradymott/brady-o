@@ -55,7 +55,8 @@ BurnsWorlds.register({
     for (let i = 0; i < 26; i++) { const a = -1.4 + i * 0.11, d = 120 + R() * 50, x = Math.sin(a) * d, z = -Math.cos(a) * d - 30; api.prop(R() < 0.5 ? 'rv' : 'vehicle', { x, z, yaw: a + Math.PI / 2, seed: 900 + i }); if (i % 3 === 0) api.glow(x, 3.6, z, 1.2, BURNS_NEON[i % 7]); }
     for (let i = 0; i < 6; i++) api.prop('dome', { x: -70 + i * 28, z: -150 - (i % 2) * 18, r: 5 + (i % 3), col: BURNS_NEON[(i + 2) % 7], lights: true, glow: true });
     // an art car cruising a loop, a couple of bikes rolling by
-    api.artCar({ x: -10, z: -40, yaw: 1.2, drivable: false, path: [[-10, -40], [30, -70], [40, -130], [-10, -150], [-50, -100], [-40, -50]], pathSpeed: 2.6, label: 'ART CAR' });
+    { const o = { x: -10, z: -40, yaw: 1.2, drivable: false, path: [[-10, -40], [30, -70], [40, -130], [-10, -150], [-50, -100], [-40, -50]], pathSpeed: 2.6, label: 'ART CAR' };
+      if (typeof BurnsArtCars !== 'undefined') BurnsArtCars.vehicle(api, 'bass_valentine', o); else api.artCar(o); }   // Super Art Kart's heart car (41_burns_artcars.js)
     // the Man, glowing out at the centre of the city
     const man = new BurnsManBoss(g, { x: 0, z: -230, yaw: 0, scale: 0.95, hp: 3, holdChinka: false, name: 'THE MAN', attacks: ['stomp'] });
     g.addBoss(man); S.man = man;
