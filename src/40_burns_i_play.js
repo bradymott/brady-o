@@ -1405,7 +1405,7 @@ class BurnsPlayScene {
     const ch = this.pch; ch.x = 0; ch.y = 0; ch.z = 0; ch.yaw = 0.35; ch.scale = scale; ch.play(anim); ch.update(1 / 60); ch.faceOverride = model.man ? 3 : face; ch.compute();
     const r = box.portrait;
     const headY = (model.headY || 1.62) * scale + 0.05;
-    R.portrait({ x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k }, env, BURNS_ATLAS.T, [0.16, 0.1, 0.24], headY, RR => BurnsSkinActor.draw(null, RR, who === 'brady' || who === this.player ? 'brady' : (who && who.type) || (model.spec && model.spec.kind), ch, null, 0.6) || RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
+    R.portrait({ x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k }, env, BURNS_ATLAS.T, [0.16, 0.1, 0.24], headY, RR => BurnsSkinActor.draw(null, RR, who === 'brady' || who === this.player ? 'brady' : (who && who.type) || (model.spec && model.spec.kind), ch, null, 0.6) || (typeof BurnsCast !== 'undefined' && who !== 'brady' && who !== this.player && BurnsCast.drawPortrait(RR, who, model, ch)) || RR.skin(model.geo, ch.bones, ch.nb, null, ch.face, 0.6));
     this.portraitFrame = this.frameN;   // the dialogue box copies it over anything drawn under the box
   }
   /* ---------- pause + results ---------- */

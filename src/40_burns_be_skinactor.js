@@ -189,7 +189,9 @@ Object.assign(BurnsSkinActor, {
   },
   // an actor of the play scene (type 'chinka'); far actors keep the procedural LOD
   drawActor(g, R, a) {
-    if (a.type !== 'chinka' || (a._d2 !== undefined && a._d2 > BURNS_SKINACTOR.LOD_D2)) return false;
+    // everyone else near the camera: the realistic cast (41_burns_cast.js, Burning Man only), when its kit is there
+    if (a.type !== 'chinka') return typeof BurnsCast !== 'undefined' ? BurnsCast.drawActor(g, R, a) : false;
+    if (a._d2 !== undefined && a._d2 > BURNS_SKINACTOR.LOD_D2) return false;
     return this.draw(g, R, 'chinka', a.ch);
   },
   // an Art Cart driver (race or showroom): car = { bones, M }, ch = the driver's BurnsChar already placed by cartPoseDriver

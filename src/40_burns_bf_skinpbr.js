@@ -162,6 +162,12 @@ const BurnsSkinPBR = {
       const X = pr.extras || {}; if (X.burns_lod !== undefined) return clamp(X.burns_lod | 0, 0, 2);
       const N = nodes[ni], s = (N.name || '') + ' ' + ((J.meshes[N.mesh] || {}).name || '') + ' ' + (X.burns_name || ''); const m = /_lod(\d)/i.exec(s); return m ? Math.min(2, +m[1]) : 0;
     };
+    // a kit file (the cast) holds many parts: opts.parts (a Set of base part names, no _LODn suffix) builds a character
+    // from a subset; opts.tint { part: [r, g, b] } multiplies each part's colour (linear); opts.texShare (an object)
+    // shares the decoded textures between characters built from the same doc; opts.clipPrefix ('F_') keeps only that
+    // armature's actions, prefix removed. Part names come from the node or the build's extras.burns_name (gltfpack drops
+    // skinned mesh names: tools/hero_glb.js).
+    const partOf = (ni, pr) => { const X = (pr && pr.extras) || {}, nm = (X.burns_name ? X.burns_name.split('|')[0] : '') || nodes[ni].name || ''; return nm.replace(/_lod\d$/i, ''); };
     const meshNodes = [];
     nodes.forEach((N, ni) => { if (N.mesh !== undefined && N.skin === si) meshNodes.push({ ni }); });
     if (!meshNodes.length) throw new Error('BurnsSkinPBR: skin ' + si + ' has no meshes');
@@ -178,7 +184,10 @@ const BurnsSkinPBR = {
       if (ti === undefined || ti < 0) return null;
       const img = imgOf(ti); if (img < 0 || !J.images[img]) return null;
       const t = J.textures[ti], S = t.sampler !== undefined ? (J.samplers || [])[t.sampler] || {} : {}, repeat = S.wrapS !== 33071 && S.wrapT !== 33071, key = img + (repeat ? 'r' : 'c');
-      if (!texIdx[key]) { texIdx[key] = this.makeTex(D, img, repeat, srgb); textures.push(texIdx[key]); }
+      if (!texIdx[key]) {
+        const sh = opts.texShare; texIdx[key] = sh ? sh[key] || (sh[key] = this.makeTex(D, img, repeat, srgb)) : this.makeTex(D, img, repeat, srgb);
+        textures.push(texIdx[key]);
+      }
       return texIdx[key];
     };
     // materials: factors and kinds go into the vertices; what must match to share a draw goes into the key
@@ -199,9 +208,10 @@ const BurnsSkinPBR = {
       for (const m of meshNodes) {
         for (const pr of (J.meshes[nodes[m.ni].mesh] || {}).primitives || []) {
           if (lodOf(m.ni, pr) !== L) continue;
+          if (opts.parts && !opts.parts.has(partOf(m.ni, pr))) continue;
           if ((pr.mode !== undefined && pr.mode !== 4) || pr.attributes.POSITION === undefined || pr.attributes.JOINTS_0 === undefined) continue;
           const nv = BurnsGLTF.accessor(D, pr.attributes.POSITION).count, ni = pr.indices !== undefined ? BurnsGLTF.accessor(D, pr.indices).count : nv;
-          prims.push({ node: m.ni, pr, nv, ni, I: info(pr.material === undefined ? -1 : pr.material) });
+          prims.push({ node: m.ni, pr, nv, ni, I: info(pr.material === undefined ? -1 : pr.material), tint: opts.tint ? opts.tint[partOf(m.ni, pr)] || null : null });
         }
       }
       if (!prims.length) { lods[L] = null; continue; }
@@ -225,14 +235,16 @@ const BurnsSkinPBR = {
     skin.names.forEach((nm, k) => { jointOf[nm] = k; });
     const n = nodes.length, nodeIndexOf = i => (i >= 0 && i < n ? i : -1);
     const asset = {
-      name: opts.name || (J.asset && J.asset.extras && J.asset.extras.name) || 'skinned', nb, nodes: nodes.map(N => ({ name: N.name || '' })),
+      name: opts.name || (J.asset && J.asset.extras && J.asset.extras.name) || 'skinned', nb, sharedTex: !!opts.texShare, nodes: nodes.map(N => ({ name: N.name || '' })),
       parent: Sk.parent, order: Sk.order, rest: Sk.rest, jointSlots, jointOf, jointNames: skin.names, inverseBind: ib, clips: {}, clipNames: [],
       tris: lods[0].tris, nv: lods[0].nv, extras: Object.assign({}, D.sceneExtras || {}, nodes[ref].extras || {}),
       textured: true, lods, textures, face: null, owner: opts.owner || null
     };
     const clipDefs = BurnsGLTF.clips(D), face = {};
-    for (const nm in clipDefs) {
-      const c = new BurnsClip(clipDefs[nm], nodeIndexOf);
+    const cp = opts.clipPrefix || '';
+    for (const nm0 in clipDefs) {
+      if (cp && nm0.indexOf(cp) !== 0) continue;
+      const nm = nm0.slice(cp.length), c = new BurnsClip(clipDefs[nm0], nodeIndexOf);
       if (/^face_/i.test(nm)) face[nm.slice(5).toLowerCase()] = c; else { asset.clips[nm] = c; asset.clipNames.push(nm); }
     }
     if (Object.keys(face).length) asset.face = this.facePoses(asset, face);
@@ -261,7 +273,7 @@ const BurnsSkinPBR = {
     asset.geo = { skinPbr: asset, count: lods[0].tris * 3, nv: lods[0].nv, stride: BURNS_SKINPBR.STRIDE, weighted: true, bounds: asset.bounds };
     // decode the textures now, at the current tier's size
     const size = BurnsGL.gl ? this.texSize() : 2048;
-    asset.texReady = Promise.all(textures.map(T => this.decode(T, size))).then(() => asset);
+    asset.texReady = Promise.all(textures.map(T => T.pending || (T.bm || T.tex ? null : this.decode(T, size)))).then(() => asset);
     this.assets.push(asset);
     return asset;
   },
@@ -304,6 +316,7 @@ const BurnsSkinPBR = {
         if (u < -0.001 || u > 1.001 || v < -0.001 || v > 1.001) uvOut++;
         u16[o / 2 + 10] = Math.round(clamp(u, 0, 1) * 65535); u16[o / 2 + 11] = Math.round(clamp(v, 0, 1) * 65535);
         let r = bc[0], gg = bc[1], bl = bc[2], ca = 1;
+        if (P.tint) { r *= P.tint[0]; gg *= P.tint[1]; bl *= P.tint[2]; }
         if (col) { r *= BurnsGLTF.comp(col, k, 0); gg *= BurnsGLTF.comp(col, k, 1); bl *= BurnsGLTF.comp(col, k, 2); if (col.n === 4) ca = BurnsGLTF.comp(col, k, 3); }
         u8[o + 24] = BurnsGLTF.srgb8(r); u8[o + 25] = BurnsGLTF.srgb8(gg); u8[o + 26] = BurnsGLTF.srgb8(bl); u8[o + 27] = Math.round(ea * ca);
         // joints + weights, normalised to sum 255 (as §6.9)
@@ -376,10 +389,12 @@ const BurnsSkinPBR = {
   release(asset) {
     if (!asset || !asset.lods) return;
     for (const L of asset.lods) if (L) for (const p of L.parts) BurnsGL.freeGeo(p.geo);
-    for (const T of asset.textures) { this.freeTex(T); T.blob = null; T.failed = true; }
+    if (!asset.sharedTex) for (const T of asset.textures) { this.freeTex(T); T.blob = null; T.failed = true; }   // shared kit textures: their owner frees them (releaseShared)
     const i = this.assets.indexOf(asset); if (i >= 0) this.assets.splice(i, 1);
     if (typeof BurnsSkin !== 'undefined' && BurnsSkin.assets[asset.name] === asset) delete BurnsSkin.assets[asset.name];
   },
+  // the textures a kit shares between the characters built from it (opts.texShare of build)
+  releaseShared(share) { if (share) for (const k in share) { const T = share[k]; this.freeTex(T); T.blob = null; T.failed = true; delete share[k]; } },
   // GPU memory of a textured asset (textures at their uploaded size with mips, plus the vertex/index buffers)
   memory(asset) {
     const tex = asset.textures.map(T => ({ name: T.name, w: T.w, h: T.h, mb: +(T.bytes / 1048576).toFixed(2) }));
