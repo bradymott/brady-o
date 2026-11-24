@@ -39,7 +39,7 @@ def build(B):
         return (x, top_y(x, z) + dy, z)
     B.obj('cover', merge(bm_surf(n, n, top), flip(bm_surf(n, n, lambda u, v: top(u, v, -0.015)))), M_cover)
     # ---- the valance: from the frame edge out and down, scalloped between the pipe ends, both sides ----
-    nv = B.pick(12, 4)
+    nv = B.pick(12, 3)
     def val_side(k):
         # side k: 0 front (+z), 1 right (-x), 2 back (-z), 3 left (+x); t along the side 0..1
         def P(t, s, dy=0.0, push=0.0):
@@ -86,7 +86,7 @@ def build(B):
     # ---- one pole (root `pole`): a pipe leg with a foot plate, a sandbag tie and a clamp ----
     Pole = B.bone('pole', (0, 0, 0))
     B.obj('pole_pipe', (bm_rod_open((0, 0, 0), (0, H0 - 0.02, 0), 0.05, 4) if lo else bm_rod((0, 0, 0), (0, H0 - 0.02, 0), 0.045, L['rod'])), M_pipe, parent=Pole)
-    B.obj('pole_foot', bm_box(0.3, 0.03, 0.3, (0, 0.015, 0)), matte('foot', '#5a5a62'), parent=Pole)
+    if not lo: B.obj('pole_foot', bm_box(0.3, 0.03, 0.3, (0, 0.015, 0)), matte('foot', '#5a5a62'), parent=Pole)
     if not lo: B.obj('pole_clamp', bm_cyl(0.07, 0.07, 0.12, L['cyl_s'], AY, (0, H0 - 0.08, 0)), M_fit, parent=Pole)
     if not lo:
         B.obj('pole_band', bm_cyl(0.05, 0.05, 0.08, 6, AY, (0, 1.2, 0), caps=False), matte('tape', '#ff4fd8'), parent=Pole)

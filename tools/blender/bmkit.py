@@ -195,12 +195,12 @@ def dusty(lo=0.55, hi=0.0, col=(0.93, 0.86, 0.74), top=None):
     return fn
 
 def slim(B, keep=(), small=0.03):
-    """Cheaper bevels: at lo, only the pieces named in `keep` keep their bevel; at hi, bevels of `small` metres or less
-    get one segment (a trim, a lamp, a window only needs to catch one highlight)."""
+    """Cheaper bevels: at lo, only the pieces named in `keep` keep their bevel; at hi, the other pieces' bevels of `small`
+    metres or less get one segment (a trim, a lamp, a window only needs to catch one highlight)."""
     obj0 = B.obj
     def obj(name, bm, m, **kw):
         if B.lo and name not in keep: kw.pop('bevel', None)
-        elif not B.lo and kw.get('bevel') and kw['bevel'] <= small: kw['segments'] = 1
+        elif not B.lo and name not in keep and kw.get('bevel') and kw['bevel'] <= small: kw['segments'] = 1
         return obj0(name, bm, m, **kw)
     B.obj = obj
 
