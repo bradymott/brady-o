@@ -1065,7 +1065,7 @@ class BurnsDJSession {
     else if (S === 'cue') this.cueStep(P);
     else if (S === 'match') this.matchStep(dt);
     if (this.step === 'blend' || (this.step === 'match' && B.playing)) this.blendStep(dt);
-    if (this.step === 'party' && M.heard() >= this.party.end) this.partyEnd();
+    if (this.step === 'party' && M.heard() >= this.party.end + 0.35 * spb) this.partyEnd();   // a little grace: letting go on the closing 1 counts
     this.crowdStep(dt, A, B);
     this.hint = this.makeHint(P);
     this.peak = Math.max(this.peak, this.energy);
@@ -1766,6 +1766,7 @@ class BurnsDJSession {
           // cued: where its kicks will land if PLAY goes down on the next 1
           const np = this.nextPhrase(0), sd = d.sd();
           for (let b = 0; b < 12; b++) drawBeat(np.t + b * 4 * sd, d.kick ? d.kick.at(d.cueStep + b * 4) : 1, b % 4 === 0, b === 0, true);
+          if (nowX + (np.t - tv) * pps > r.x + r.w - 20) BurnsUI.text(ctx, 'AB'[i] + ' STARTS ON THE NEXT 1 ▶', r.x + r.w - 8, r.y + r.h / 2, 9, '#38f2ff', { align: 'right', stroke: false, ui: true });
         }
       } else if (play) BurnsUI.text(ctx, i === 1 - this.live && this.step === 'pick' ? 'PICK A RECORD ▲' : '— empty —', r.x + r.w * 0.62, r.y + r.h / 2, 9, 'rgba(255,255,255,0.4)', { stroke: false, ui: true });
       // now line + deck chip
@@ -1985,7 +1986,7 @@ class BurnsDJSession {
     const lines = h.teach ? BurnsUI.wrap((ctx.font = `600 11px ${FONT_UI}`, ctx), h.teach, port ? W - 40 : W - 60).slice(0, port ? 2 : 1) : [];
     const hh = (port ? 44 : 34) + lines.length * 14;
     ctx.save();
-    if (this.big) ctx.globalAlpha = 0.18;
+    if (this.big && !port) ctx.globalAlpha = 0.25;
     const gr = ctx.createLinearGradient(0, y, 0, y + hh); gr.addColorStop(0, 'rgba(14,6,28,0.82)'); gr.addColorStop(1, 'rgba(14,6,28,0.55)');
     ctx.fillStyle = gr; burnsRR(ctx, 8, y, W - 16, hh, 12); ctx.fill();
     const col = /TRAINWRECK|DEAD AIR/.test(h.title) ? '#ff3b5c' : '#ffe24a';
@@ -2040,11 +2041,12 @@ class BurnsDJSession {
       if (id === 'crate') { if (this.crate && !this.crate.chosen) for (const r of L.crate) { burnsRR(ctx, r.x - 2, r.y - 2, r.w + 4, r.h + 4, 13); ctx.stroke(); } continue; }
       const c = C[id]; if (!c) continue;
       if (c.r) { ctx.beginPath(); ctx.arc(c.x, c.y, c.r + 5 + k * 3, 0, TAU); ctx.stroke(); if (!first) first = { x: c.x, y: c.y - c.r - 6 }; }
-      else { burnsRR(ctx, c.x - 3 - k * 2, c.y - 3 - k * 2, c.w + 6 + k * 4, c.h + 6 + k * 4, 10); ctx.stroke(); if (!first) first = { x: c.x + c.w / 2, y: c.y - 6 }; }
+      else { burnsRR(ctx, c.x - 3 - k * 2, c.y - 3 - k * 2, c.w + 6 + k * 4, c.h + 6 + k * 4, 10); ctx.stroke(); if (!first) first = /^(fad|pitch)/.test(id) ? { side: true, x: c.x + c.w / 2 < L.W / 2 ? c.x + c.w + 8 : c.x - 8, y: c.y + c.h / 2, dir: c.x + c.w / 2 < L.W / 2 ? -1 : 1 } : { x: c.x + c.w / 2, y: c.y - 6 }; }
     }
     ctx.shadowBlur = 0;
     // a bouncing arrow on the first one
-    if (first) { const ay = first.y - 6 - Math.abs(Math.sin(this.rt * 5)) * 7; ctx.fillStyle = '#ffe24a'; ctx.beginPath(); ctx.moveTo(first.x, ay + 8); ctx.lineTo(first.x - 7, ay - 2); ctx.lineTo(first.x + 7, ay - 2); ctx.closePath(); ctx.fill(); }
+    if (first && first.side) { const b = Math.abs(Math.sin(this.rt * 5)) * 7, ax = first.x - first.dir * b; ctx.fillStyle = '#ffe24a'; ctx.beginPath(); ctx.moveTo(ax, first.y); ctx.lineTo(ax - first.dir * 10, first.y - 7); ctx.lineTo(ax - first.dir * 10, first.y + 7); ctx.closePath(); ctx.fill(); }
+    else if (first) { const ay = first.y - 6 - Math.abs(Math.sin(this.rt * 5)) * 7; ctx.fillStyle = '#ffe24a'; ctx.beginPath(); ctx.moveTo(first.x, ay + 8); ctx.lineTo(first.x - 7, ay - 2); ctx.lineTo(first.x + 7, ay - 2); ctx.closePath(); ctx.fill(); }
     ctx.restore();
   }
   drawPops(ctx, L) {
@@ -2088,7 +2090,8 @@ class BurnsDJSession {
     ctx.save(); ctx.globalAlpha = a;
     const port = L.port, cy = L.introY;
     BurnsUI.text(ctx, 'LIVE SET', W / 2, cy, 12, '#ff9ad8', { ui: true });
-    BurnsUI.text(ctx, this.title, W / 2, cy + 24, Math.min(26, W / 16), '#ffffff', { glow: '#ff4fd8' });
+    ctx.font = `26px ${FONT_DISPLAY}`; const tsz = Math.min(26, 26 * (W - 40) / Math.max(1, ctx.measureText(this.title).width));
+    BurnsUI.text(ctx, this.title, W / 2, cy + 24, tsz, '#ffffff', { glow: '#ff4fd8' });
     BurnsUI.text(ctx, `${this.nMixes} MIXES · ${['EASY', 'NORMAL', 'HARD'][this.tier]}${this.teach ? ' · FIRST TIME: STEP BY STEP' : ''}`, W / 2, cy + 46, 11, '#ffe24a', { ui: true });
     if (!this.introT) {
       const B = L.startBtn, pulse = 1 + Math.sin(this.rt * 5) * 0.03;
