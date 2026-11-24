@@ -81,7 +81,7 @@ const PAGE = () => {
         src.connect(n); n.connect(sink); return rec; };
       // where each deck scheduled a kick (only used to know where to look; the onsets are measured in the audio)
       const E = window.BRADY_BURNS.BurnsHouse.engine, step0 = E.__orig || E.step; E.__orig = step0; const ks = [[], []];
-      E.step = function (I, n, tt, sd) { const S2 = window.BRADY_BURNS.BurnsDJ.session; if (S2 && S2.mix) for (let i = 0; i < 2; i++) { const d = S2.mix.decks[i]; if (d.inst === I && d.kick && d.kick.at(n)) ks[i].push(tt); } return step0.apply(this, arguments); };
+      E.step = function (I, n, tt, sd) { const S2 = window.BRADY_BURNS.BurnsDJ.session; if (S2 && S2.mix) for (let i = 0; i < 2; i++) { const d = S2.mix.decks[i]; if (d.inst === I && d.kick && d.kick.at(n)) ks[i].push({ t: tt, id: d.trk && d.trk.id }); } return step0.apply(this, arguments); };
       const T = window.__taps = { ks, sr: c.sampleRate, recs: [mk(M.ch[0].in, 'A_pre'), mk(M.ch[1].in, 'B_pre'), mk(M.ch[0].fad, 'A_post'), mk(M.ch[1].fad, 'B_post'), mk(io.master, 'master', true)], tl: [] };
       T.timer = setInterval(() => { const S2 = DJ().session; if (!S2 || !S2.mix) return; const D = S2.mix.decks, r = S2.rel(); T.tl.push({ t: c.currentTime, lock: S2.lock, ms: r.ok ? r.ms : null, bpmd: r.bpm, live: S2.live, f: [D[0].fader, D[1].fader], g: [D[0].gain, D[1].gain], p: [D[0].playing, D[1].playing], l: [D[0].low, D[1].low], step: S2.step, n: window.__srcLive.size }); }, 25);
       return true;
@@ -138,7 +138,9 @@ const PAGE = () => {
         }
         return res;
       };
-      const kA = onsets(R.A_pre, T.ks[0]).map(o => o.t), kB = onsets(R.B_pre, T.ks[1]).map(o => o.t);
+      // one template per record (a deck plays different records, with different kicks, across the set)
+      const perTrack = (D, list) => { const ids = Array.from(new Set(list.map(k => k.id))); return ids.flatMap(id => onsets(D, list.filter(k => k.id === id).map(k => k.t))).map(o => o.t).sort((a, b) => a - b); };
+      const kA = perTrack(R.A_pre, T.ks[0]), kB = perTrack(R.B_pre, T.ks[1]);
       out.kicks = { A: kA.length, B: kB.length };
       const pairs = []; let ia = 0;
       for (const tb of kB) {
