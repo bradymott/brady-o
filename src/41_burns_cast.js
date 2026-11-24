@@ -14,6 +14,7 @@
    Hooks: BurnsSkinActor.drawActor (non-Chinka actors) and the dialogue portrait (40_burns_i_play.js drawPortrait).
    ============================================================ */
 const BURNS_CAST = {
+  ON: false,   // realistic NPCs wait for Brady's OK (24 Nov 2026); window.__burnsCast = true forces them on for review
   FILE: 'cast',
   NEAR: 8, MID: 24, MAX: 10, MAX_NEAR: 3,
   HEIGHT: { F: 1.66, M: 1.78 },
@@ -37,7 +38,7 @@ class BurnsCastActor extends BurnsSkinActor {
 const BurnsCast = {
   doc: null, kit: null, share: {}, variants: {}, ready: false, failed: false, _p: null,
   n: { built: 0, drawn: 0, near: 0, released: 0 }, frame: -1, chosen: new Set(), nearSet: new Set(),
-  off() { return typeof window !== 'undefined' && (!!window.__burnsNoCast || !!window.__burnsNoSkinActor); },
+  off() { return typeof window !== 'undefined' && (!BURNS_CAST.ON && !window.__burnsCast || !!window.__burnsNoCast || !!window.__burnsNoSkinActor); },
   lin(hex) { const h = (hex || '#ffffff').replace('#', ''), v = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255); return v.map(c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)); },
   tint(target, neutral, k) { const a = this.lin(target), b = this.lin(neutral); return a.map((c, i) => clamp(c / Math.max(b[i], 1e-3) * (k || 1), 0, 1)); },
   /* the kit file: models/cast.glb(.gz), listed in models/index.json (Burning Man's build only) */
