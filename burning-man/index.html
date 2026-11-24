@@ -16152,7 +16152,8 @@ BurnsWorlds.register({
     for (let i = 0; i < 26; i++) { const a = -1.4 + i * 0.11, d = 120 + R() * 50, x = Math.sin(a) * d, z = -Math.cos(a) * d - 30; api.prop(R() < 0.5 ? 'rv' : 'vehicle', { x, z, yaw: a + Math.PI / 2, seed: 900 + i }); if (i % 3 === 0) api.glow(x, 3.6, z, 1.2, BURNS_NEON[i % 7]); }
     for (let i = 0; i < 6; i++) api.prop('dome', { x: -70 + i * 28, z: -150 - (i % 2) * 18, r: 5 + (i % 3), col: BURNS_NEON[(i + 2) % 7], lights: true, glow: true });
     // an art car cruising a loop, a couple of bikes rolling by
-    api.artCar({ x: -10, z: -40, yaw: 1.2, drivable: false, path: [[-10, -40], [30, -70], [40, -130], [-10, -150], [-50, -100], [-40, -50]], pathSpeed: 2.6, label: 'ART CAR' });
+    { const o = { x: -10, z: -40, yaw: 1.2, drivable: false, path: [[-10, -40], [30, -70], [40, -130], [-10, -150], [-50, -100], [-40, -50]], pathSpeed: 2.6, label: 'ART CAR' };
+      if (typeof BurnsArtCars !== 'undefined') BurnsArtCars.vehicle(api, 'bass_valentine', o); else api.artCar(o); }   // Super Art Kart's heart car (41_burns_artcars.js)
     // the Man, glowing out at the centre of the city
     const man = new BurnsManBoss(g, { x: 0, z: -230, yaw: 0, scale: 0.95, hp: 3, holdChinka: false, name: 'THE MAN', attacks: ['stomp'] });
     g.addBoss(man); S.man = man;
@@ -16719,6 +16720,446 @@ const BurnsOpen = {
 };
 
 if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsTiles, BurnsInstancer, BurnsCrowds, BurnsOpen });
+
+/* ---- 41_burns_artcars.js ---- */
+/* ============================================================
+   BRADY GOES TO BURNING MAN — the Super Art Kart cars as Black Rock City's art cars
+   The twelve Blender-made cars of Super Art Kart (assets/models/art-cart/<stem>.glb and <stem>_lo.glb) drive,
+   park and give rides here, scaled up from kart size to art-car size (a small truck to a bus).
+   - Reuse, not copies: the models load through Art Kart's own CartGLB.build (src/43_cart_bb_glb.js: the same bones,
+     part animations, lights and baked AO), and are posed by its cartPoseCar (spinning wheels, the beating heart, the
+     octopus arms with live fire, the swishing fish...). tools/build.js bundles 43_cart_a_data, 43_cart_b_models and
+     43_cart_bb_glb into this app (read only: those files belong to the Art Kart agent) and ships the car files.
+   - Placement: BurnsArtCars.mover / .vehicle / .park put a car on a world mover (api.mover) or a drivable art car
+     (api.artCar), so colliders, riding on the deck, DRIVE, paths and the shadow pass all work as before. The mover
+     carries no triangles of its own: the car is drawn here, one draw call (plus one in the shadow pass) per car.
+   - Phone budget: models load lazily, only for cars near the camera, race (_lo, 6-7k triangles) by default and the
+     showroom model (26-30k) only up close on the tiers that afford it; loaded models, full-detail cars and drawn
+     cars are capped per tier (BURNS_ARTCARS.TIER), unused models are freed, and leaving a world frees its cars.
+   - Fallback: on file:// pages (no fetch) or without the Art Kart modules the procedural BurnsProps.artcar is built
+     into the mover instead, exactly as before.
+   See docs/BURNS_GUIDE.md §8.3.
+   ============================================================ */
+const BURNS_ARTCARS = {
+  // stem -> Art Kart car id, scale (kart -> art car), rest bounds [x0, z0, x1, z1, top] in kart metres, glow colour.
+  // Scales put every car at about 8-11 m long (bounds include fins, tails and wings).
+  CARS: {
+    bass_valentine:   { id: 'heart',   s: 1.6,  b: [-1.33, -2.93, 1.33, 2.87, 3.46], col: '#ff3a6a' },
+    calamari_inferno: { id: 'octo',    s: 1.5,  b: [-1.31, -2.75, 1.31, 3.59, 4.37], col: '#ff8a2a' },
+    dune_chomper:     { id: 'shark',   s: 1.4,  b: [-1.92, -4.1, 1.92, 3.07, 3.17], col: '#38c8ff' },
+    dusty_doubloon:   { id: 'galleon', s: 1.45, b: [-1.89, -3.18, 1.89, 3.68, 5.19], col: '#ffb84a' },
+    frosted_fury:     { id: 'cupcake', s: 1.85, b: [-1.15, -2.22, 1.15, 2.13, 3.9], col: '#ff9ad8' },
+    glitterfin:       { id: 'fish',    s: 1.5,  b: [-1.89, -3.66, 1.89, 2.72, 3.69], col: '#9ad8ff' },
+    jelly_jolt:       { id: 'jelly',   s: 1.7,  b: [-1.64, -2.38, 1.76, 2.38, 4.25], col: '#5af2ff' },
+    pyramid_scheme:   { id: 'pyramid', s: 1.65, b: [-1.33, -2.81, 1.33, 2.83, 3.12], col: '#3aff8a' },
+    quackzilla:       { id: 'duck',    s: 1.7,  b: [-1.37, -2.43, 1.37, 2.71, 4.44], col: '#ffe24a' },
+    sir_scorchalot:   { id: 'dragon',  s: 1.25, b: [-2.83, -4.88, 2.83, 3.87, 4.18], col: '#7aff5a' },
+    turbo_escargot:   { id: 'snail',   s: 1.6,  b: [-1.2, -2.75, 1.2, 3.16, 3.91], col: '#b07aff' },
+    whale_of_a_time:  { id: 'whale',   s: 1.5,  b: [-2.45, -4.22, 2.45, 2.99, 3.73], col: '#4ab0ff' }
+  },
+  // per graphics tier: hiD full-detail distance (m), maxHi full-detail cars at once, maxLo race models kept loaded,
+  // maxVis cars drawn at once (nearest first), drawD draw distance, shadowD shadow casters within this of the camera
+  TIER: {
+    ultra:  { hiD: 30, maxHi: 3, maxLo: 12, maxVis: 12, drawD: 320, shadowD: 90 },
+    high:   { hiD: 24, maxHi: 2, maxLo: 10, maxVis: 10, drawD: 280, shadowD: 75 },
+    medium: { hiD: 16, maxHi: 1, maxLo: 8, maxVis: 8, drawD: 230, shadowD: 55 },
+    low:    { hiD: 0, maxHi: 0, maxLo: 6, maxVis: 6, drawD: 170, shadowD: 0 },
+    legacy: { hiD: 0, maxHi: 0, maxLo: 5, maxVis: 5, drawD: 150, shadowD: 0 }
+  },
+  HEAD_COL: [1, 0.86, 0.62],
+  // drivers for the cars that drive themselves: the cast's procedural burners (one draw each), only close up
+  DRIVERS: [['burner', 5], ['furcoat', 8], ['ledsuit', 4], ['sparklepony', 6], ['tutu', 11]],
+  DRIVER_D: 45, MAX_DRIVERS: { ultra: 5, high: 4, medium: 3, low: 1, legacy: 0 },
+  LOAD_PAD: 90,        // a race model starts loading this far beyond the draw distance
+  HI_PAD: 10,          // ...and a full-detail model this far beyond hiD
+  KEEP_LO: 20, KEEP_HI: 8   // seconds an unused model stays loaded
+};
+
+const BurnsArtCars = {
+  models: {},          // file key (<stem> | <stem>_lo) -> { key, stem, hi, state: 'loading'|'ready'|'failed', M, cols, used, ms, bytes }
+  cars: [],            // every live car (all scenes): { g, stem, D, S, mv, veh, bones, st, car, lit, ... }
+  inflight: 0,
+  _index: null,
+  stats: { loads: 0, frees: 0, failed: 0, drawn: 0, hi: 0, shadow: 0, tris: 0 },
+  tier() { const t = typeof BurnsGL !== 'undefined' && BurnsGL.tier; return BURNS_ARTCARS.TIER[t] || BURNS_ARTCARS.TIER.medium; },
+  // can the Art Kart models be loaded here? (the modules are bundled, fetch works, the page isn't a file)
+  canLoad() {
+    if (typeof window !== 'undefined' && window.__burnsNoArtKart) return false;
+    if (typeof BurnsGLTF === 'undefined' || typeof CartGLB === 'undefined' || typeof cartPoseCar !== 'function' || typeof fetch !== 'function') return false;
+    return !(typeof location !== 'undefined' && location.protocol === 'file:');
+  },
+  index() {
+    if (this._index) return this._index;
+    return (this._index = fetch('models/index.json').then(r => r.ok ? r.json() : []).catch(() => []).then(l => new Set(Array.isArray(l) ? l : [])));
+  },
+
+  /* ---------- placing cars ---------- */
+  // a car on a world mover the world moves itself (mv.x/z/yaw each step): cruisers, parade cars. o: { x, z, yaw, lit,
+  // driver: true (somebody at the wheel) }
+  mover(api, stem, o) {
+    o = o || {};
+    const mv = api.mover(this.build(stem, o), {});
+    mv.x = o.x || 0; mv.z = o.z || 0; mv.yaw = o.yaw || 0; mv.y = api.world.height(mv.x, mv.z);
+    mv.px = mv.x; mv.pz = mv.z; mv.py = mv.y; mv.pyaw = mv.yaw;
+    return this.track(api.world.game, stem, mv, null, o);
+  },
+  // a parked car (a mover that never moves): walk round it, climb on it
+  park(api, stem, x, z, yaw, o) { return this.mover(api, stem, Object.assign({}, o || {}, { x, z, yaw })); },
+  // a drivable art car (api.artCar: DRIVE, honk, flames, an optional autopilot path). o: the usual artCar options
+  vehicle(api, stem, o) {
+    o = o || {};
+    const v = api.artCar(Object.assign({}, o, { build: this.build(stem, o) }));
+    v.y = api.world.height(v.x, v.z); v.syncMover();
+    const c = this.track(api.world.game, stem, v.mv, v, o);
+    v.artKart = c;
+    return v;
+  },
+  // the mover's build: colliders and seat at the car's scaled size; no triangles when the model will be drawn here,
+  // the procedural art car (sized to match) when it can't be
+  build(stem, o) {
+    const D = BURNS_ARTCARS.CARS[stem], S = D.s, b = D.b;
+    const L = (b[3] - b[1]) * S, W = (b[2] - b[0]) * S, zc = (b[1] + b[3]) / 2 * S, top = b[4] * S;
+    return m => {
+      let lights = [];
+      if (!this.canLoad()) {
+        m.push(); m.tf(0, 0, zc); const r = BurnsProps.artcar(m, { len: L, w: Math.min(4.4, W), col: o.col || shade(D.col, -0.45), sculpt: D.col }); m.pop();
+        lights = (r.lights || []).map(q => Object.assign({}, q, { z: (q.z || 0) + zc }));
+      }
+      // until the race model arrives: one box for the body and one for the top (refined from the model on load)
+      const cols = [{ t: 'box', x: 0, z: zc, hx: W * 0.4, hz: L * 0.45, y0: 0, y1: top * 0.45, cover: true }, { t: 'box', x: 0, z: zc, hx: W * 0.25, hz: L * 0.3, y0: top * 0.45, y1: top * 0.95 }];
+      // seat: Art Kart's driver hip point (hips about 0.88 m above Brady's feet when sitting), scaled
+      const seat = this.seatOf(stem);
+      return { cols, lights, top: top * 0.45, len: L, w: Math.min(W, 4.8), seat, poofers: [[W * 0.32, top * 0.55, b[1] * S * 0.6], [-W * 0.32, top * 0.55, b[1] * S * 0.6]], artKart: stem };
+    };
+  },
+  // Art Kart's seat empties, measured from the race models (kart metres); refined from the loaded model if it differs
+  SEATS: { heart: [-0.6, 1.62, -1.25], octo: [0, 1.6, -1.75], shark: [0, 2.55, 0.3], galleon: [0, 3.02, -1.85], cupcake: [0, 1.12, -1.3], fish: [0, 3.08, 0.05],
+    jelly: [0, 1.12, -0.4], pyramid: [0, 1.62, -1.75], duck: [0, 2.48, -0.3], dragon: [0, 2.5, -0.25], snail: [0, 1.86, 0.95], whale: [0, 3.11, -0.55] },
+  // where Brady's feet go when he drives: the seat's hip point, scaled, less the sitting hip height of the 'drive' pose,
+  // and back a little (the pose reaches forward to the wheel; measured from side views)
+  seatOf(stem, M) {
+    const D = BURNS_ARTCARS.CARS[stem], S = D.s, s = (M && M.seat) || this.SEATS[D.id] || [0, 1.3, 0];
+    return [s[0] * S, s[1] * S - 0.76, s[2] * S - 0.42];
+  },
+  track(g, stem, mv, veh, o) {
+    const D = BURNS_ARTCARS.CARS[stem];
+    const c = {
+      g, stem, D, S: D.s, mv, veh, o, lit: o.lit === undefined ? 1 : (o.lit ? 1 : 0), litK: o.lit === false ? 0 : 1,
+      bones: new Float32Array(16 * 12), car: { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, scale: D.s, wheelA: 0, steerVis: 0, bob: 0 },
+      st: { t: Math.random() * 10, speed: 0, steer: 0, fire: 0, boost: 0, air: 0, beat: 0, night: 0 },
+      M: null, lod: null, d2: 1e9, inView: false, drawn: false, colsSet: false, lastT: null, px: mv.x, pz: mv.z, pyaw: mv.yaw,
+      rad: Math.hypot(D.b[2] - D.b[0], D.b[3] - D.b[1]) * 0.5 * D.s
+    };
+    this.cars.push(c);
+    this.hook(g);
+    return c;
+  },
+  // set a car dark or lit (World 10's sleeping cars): the lights, LEDs and glow fade over a second
+  setLit(c, on) { if (c) c.lit = on ? 1 : 0; },
+
+  /* ---------- models ---------- */
+  load(stem, hi) {
+    const key = stem + (hi ? '' : '_lo');
+    let E = this.models[key];
+    if (E) return E;
+    E = this.models[key] = { key, stem, hi: !!hi, state: 'loading', M: null, cols: null, used: performance.now(), ms: 0 };
+    if (!this.canLoad()) { E.state = 'failed'; return E; }
+    this.inflight++;
+    this.index().then(have => {
+      let file = key + '.glb';
+      if (have.has(file + '.gz') && BurnsGLTF.canInflate()) file += '.gz';
+      else if (!have.has(file)) throw new Error('not in this build: ' + file);
+      return BurnsGLTF.fetch('models/' + file);
+    }).then(doc => {
+      if (E.dropped) return;
+      const t0 = performance.now(), D = BURNS_ARTCARS.CARS[stem], R = CartGLB.build(doc, !hi);
+      E.M = this.modelOf(D.id, R, !hi);
+      E.ms = Math.round(performance.now() - t0);
+      E.tris = R.tris || (E.M.geo.count / 3); E.nv = R.nv || 0;
+      E.bytes = (E.M.geo.data ? E.M.geo.data.byteLength : 0) + (E.M.geo.idx ? E.M.geo.idx.byteLength : 0);
+      if (!hi) E.cols = this.collidersOf(E.M);
+      E.state = 'ready'; E.used = performance.now(); this.stats.loads++;
+    }).catch(e => { E.state = 'failed'; this.stats.failed++; console.warn('art cars: ' + key + ': ' + (e && e.message || e)); })
+      .then(() => { this.inflight--; });
+    return E;
+  },
+  // Art Kart's model object (as CartGLB.model makes it) from a rig result
+  modelOf(id, R, lo) {
+    const E = R.empties, X = R.extras || {}, b = R.bounds, fns = (X.rigV && CART_GLB_PARTS[id + ':' + X.rigV]) || CART_GLB_PARTS[id] || {};
+    const pt = (n, d) => E[n] ? [E[n].x, E[n].y, E[n].z] : d;
+    const lights = [];
+    for (const [n, e] of Object.entries(E)) {
+      if (!n.startsWith('light')) continue;
+      const x = e.extras || {}, c = x.color || '#ffffff', L = { x: e.x, y: e.y, z: e.z, s: +x.size || 1, c, cc: burnsRGBf(c) };
+      for (const k of ['big', 'head', 'tail', 'led']) if (x[k]) L[k] = 1;
+      lights.push(L);
+    }
+    const parts = R.partNames.map((n, i) => ({ b: CART_BONES.P0 + i, fn: fns[n] || (() => {}) }));
+    return {
+      id, geo: R.geo, nb: R.nb, J: R.J, parts, seat: pt('seat', null), seatYaw: +X.seatYaw || 0, lights, muzzle: pt('muzzle', [0, 1.6, 2.6]),
+      len: +X.len || (b[5] - b[2]), w: +X.w || (b[3] - b[0]), h: +X.h || b[4], wheelR: +X.wheelR || 0.5,
+      steerTilt: X.steerTilt === undefined ? 0.45 : +X.steerTilt, extra: (typeof X.extra === 'string' ? JSON.parse(X.extra) : X.extra) || CART_GLB_EXTRA[id] || {}, glb: true, lo
+    };
+  },
+  // colliders from the race model at rest: a height map over the footprint (0.4 m cells, kart metres), opened (eroded
+  // then dilated over 3 x 3 cells) so thin tall bits (a chair back, a rail, a mast) don't become the floor you stand on,
+  // then cells of about the same height merged into boxes, along the car and then across. Scaled per car when applied.
+  collidersOf(M) {
+    const G = M.geo, J = M.J, f32 = new Float32Array(G.data), u8 = new Uint8Array(G.data), nv = G.data.byteLength / 24, C = 0.4;
+    let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+    const P = new Float32Array(nv * 3);
+    for (let i = 0; i < nv; i++) {
+      const b = u8[i * 24 + 15] & 63, x = f32[i * 6] + J[b * 3], y = f32[i * 6 + 1] + J[b * 3 + 1], z = f32[i * 6 + 2] + J[b * 3 + 2];
+      P[i * 3] = x; P[i * 3 + 1] = y; P[i * 3 + 2] = z;
+      if (y < 0.12) continue;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z);
+    }
+    if (!(x1 > x0 && z1 > z0)) return null;
+    const NX = Math.max(1, Math.ceil((x1 - x0) / C)), NZ = Math.max(1, Math.ceil((z1 - z0) / C)), H = new Float32Array(NX * NZ);
+    for (let i = 0; i < nv; i++) {
+      const y = P[i * 3 + 1]; if (y < 0.12) continue;
+      const a = Math.min(NX - 1, Math.floor((P[i * 3] - x0) / C)), j = Math.min(NZ - 1, Math.floor((P[i * 3 + 2] - z0) / C)), k = j * NX + a;
+      if (y > H[k]) H[k] = y;
+    }
+    // opening: erode (min of the 3 x 3 neighbourhood, outside = 0) then dilate (max)
+    const pass = (src, mn) => { const o = new Float32Array(src.length); for (let j = 0; j < NZ; j++) for (let a = 0; a < NX; a++) { let v = mn ? 1e9 : 0; for (let dj = -1; dj <= 1; dj++) for (let da = -1; da <= 1; da++) { const jj = j + dj, aa = a + da, h = jj < 0 || jj >= NZ || aa < 0 || aa >= NX ? 0 : src[jj * NX + aa]; v = mn ? Math.min(v, h) : Math.max(v, h); } o[j * NX + a] = mn ? Math.min(v, src[j * NX + a]) : Math.min(v, H[j * NX + a]); } return o; };
+    const O = pass(pass(H, true), false);
+    // keep the original footprint solid to a low height where the opening removed it (wheels, fins), so nothing walks through
+    for (let k = 0; k < O.length; k++) if (H[k] > 0 && O[k] < Math.min(H[k], 1.0)) O[k] = Math.min(H[k], 1.0);
+    const boxes = [];
+    for (let a = 0; a < NX; a++) for (let j = 0; j < NZ;) {
+      const h0 = O[j * NX + a]; if (h0 <= 0) { j++; continue; }
+      let k = j, hi = h0, lo = h0;
+      while (k + 1 < NZ) { const h = O[(k + 1) * NX + a]; if (h <= 0 || Math.max(hi, h) - Math.min(lo, h) > 0.35) break; k++; hi = Math.max(hi, h); lo = Math.min(lo, h); }
+      boxes.push({ a0: a, a1: a, j0: j, j1: k, y1: hi }); j = k + 1;
+    }
+    // merge neighbouring columns with the same span and height
+    boxes.sort((p, q) => p.j0 - q.j0 || p.j1 - q.j1 || p.a0 - q.a0);
+    const out = [];
+    for (const bx of boxes) {
+      const last = out[out.length - 1];
+      if (last && last.j0 === bx.j0 && last.j1 === bx.j1 && last.a1 + 1 === bx.a0 && Math.abs(last.y1 - bx.y1) < 0.25) { last.a1 = bx.a0; last.y1 = Math.max(last.y1, bx.y1); }
+      else out.push(Object.assign({}, bx));
+    }
+    return out.map(q => ({ x: x0 + (q.a0 + q.a1 + 1) / 2 * C, z: z0 + (q.j0 + q.j1 + 1) / 2 * C, hx: (q.a1 - q.a0 + 1) / 2 * C, hz: (q.j1 - q.j0 + 1) / 2 * C, y1: q.y1 }));
+  },
+  // swap a car's placeholder colliders for the model's (the mover's dynamic colliders, as addMover makes them)
+  applyCols(c, cols) {
+    const S = c.S, mv = c.mv;
+    mv.dcols = cols.map(q => ({ t: 'box', mover: mv, lx: q.x * S, lz: q.z * S, lyaw: 0, ly0: 0, ly1: q.y1 * S, hx: q.hx * S, hz: q.hz * S, x: 0, z: 0, yaw: 0, y0: 0, y1: q.y1 * S, cover: q.y1 * S > 1.2 }));
+    c.colsSet = true;
+  },
+  free(E) {
+    E.dropped = true;
+    if (E.M && E.M.geo) try { BurnsGL.freeGeo(E.M.geo); } catch (e) { /* ignore */ }
+    for (const c of this.cars) if (c.M === E.M) { c.M = null; c.lod = null; }
+    delete this.models[E.key];
+    if (E.state === 'ready') this.stats.frees++;
+  },
+  memory() {
+    let bytes = 0, lo = 0, hi = 0;
+    for (const E of Object.values(this.models)) if (E.state === 'ready') { bytes += E.bytes || 0; if (E.hi) hi++; else lo++; }
+    // the JS copy (kept for context loss) and the GPU buffers: twice the geometry
+    return { lo, hi, mb: +(bytes * 2 / 1048576).toFixed(2) };
+  },
+
+  /* ---------- per frame (from the play scene's light gathering, before both render passes) ---------- */
+  frame(g) {
+    const list = this.cars; if (!list.length) return;
+    const R = g.R, cam = g.cam, T = this.tier(), now = performance.now(), mine = this._mine || (this._mine = []);
+    mine.length = 0;
+    const W = g.world;
+    for (const c of list) if (c.g === g && !c.gone) mine.push(c);
+    if (!mine.length) return;
+    // cars whose tile was freed go away with it, and so do the cars of scenes that are gone (the title screen; a world
+    // left without the usual release); a city frozen behind the place Brady entered keeps its cars
+    if (!this._chk || now - this._chk > 2000) {
+      this._chk = now;
+      for (const c of mine) if (W.movers.indexOf(c.mv) < 0) c.gone = true;
+      const alive = new Set(); for (let s = g; s; s = s.parentScene) alive.add(s);
+      if (typeof Game !== 'undefined' && Game.scene) for (let s = Game.scene; s; s = s.parentScene) alive.add(s);
+      for (const c of this.cars) if (!alive.has(c.g)) c.gone = true;
+      this.cars = this.cars.filter(c => !c.gone);
+    }
+    const night = R ? (R.night || 0) : 0, t = g.time, P = R && R.planes;
+    const beat = Math.pow(Math.max(0, Math.sin(t * 2.1 * Math.PI)), 6);
+    const can = this.canLoad();
+    // distances, view test, movement
+    for (const c of mine) {
+      if (c.gone) continue;
+      const mv = c.mv, car = c.car;
+      const dt = c.lastT === null ? 0 : Math.max(0, Math.min(0.25, t - c.lastT)); c.lastT = t;
+      const dx = mv.x - c.px, dz = mv.z - c.pz; c.px = mv.x; c.pz = mv.z;
+      const dist = Math.hypot(dx, dz), fwd = dx * Math.sin(mv.yaw) + dz * Math.cos(mv.yaw);
+      const sp = c.veh ? c.veh.speed : (dt > 0 ? (fwd >= 0 ? 1 : -1) * dist / dt : 0);
+      c.speed = BurnsM.damp(c.speed || 0, sp, 6, dt || 0.016);
+      const turn = dt > 0 ? BurnsM.wrap(mv.yaw - c.pyaw) / dt : 0; c.pyaw = mv.yaw;
+      car.x = mv.x; car.y = mv.y; car.z = mv.z; car.yaw = mv.yaw; car.scale = c.S;
+      car.steerVis = BurnsM.damp(car.steerVis, clamp(turn * 2.5, -1, 1), 4, dt || 0.016);
+      car.wheelA += c.speed * dt / ((c.M ? c.M.wheelR : 0.48) * c.S); c.dtA = dt;
+      const st = c.st; st.t += dt; st.speed = clamp(Math.abs(c.speed) / 14, 0, 1.2); st.steer = car.steerVis; st.beat = beat * c.litK; st.night = night;
+      st.fire = c.veh && c.veh.flameT > 0 ? 1 : BurnsM.damp(st.fire, 0, 3, dt || 0.016);
+      c.litK = BurnsM.damp(c.litK, c.lit, 1.6, dt || 0.016);
+      const cx = mv.x - cam.x, cz = mv.z - cam.z; c.d2 = cx * cx + cz * cz;
+      c.inView = !!P && c.d2 < T.drawD * T.drawD && BurnsM.sphereVisible(P, mv.x, mv.y + c.D.b[4] * c.S * 0.5, mv.z, c.rad + 1);
+      c.drawn = false;
+    }
+    if (!can) return;
+    // which cars draw (nearest first, capped), which of them get the full-detail model
+    const order = this._order || (this._order = []); order.length = 0;
+    for (const c of mine) if (!c.gone && c.d2 < T.drawD * T.drawD) order.push(c);
+    order.sort((a, b) => a.d2 - b.d2);
+    let vis = 0, hiN = 0;
+    for (const c of order) {
+      // a car's race model is wanted while it is drawable or near it; the full-detail one only close up
+      const lo = this.load(c.stem, false); lo.used = now;
+      const wantHi = T.maxHi > 0 && hiN < T.maxHi && c.d2 < (c.lod === 'hi' ? (T.hiD * 1.2) ** 2 : T.hiD * T.hiD);
+      let M = null, lod = null;
+      if (wantHi) { hiN++; const hi = this.load(c.stem, true); hi.used = now; if (hi.state === 'ready') { M = hi.M; lod = 'hi'; } }
+      if (!M && lo.state === 'ready') { M = lo.M; lod = 'lo'; }
+      if (lo.state === 'ready' && !c.colsSet && lo.cols) this.applyCols(c, lo.cols);
+      if (c.veh && M && M.seat && !c.seatSet) { c.veh.seat = this.seatOf(c.stem, M); c.seatSet = true; }
+      c.M = M; c.lod = lod;
+      if (M && (c.inView || c.d2 < T.shadowD * T.shadowD) && vis < T.maxVis) {
+        if (c.inView) vis++;
+        cartPoseCar(M, c.car, c.st, c.bones);
+        c.drawn = true;
+      }
+    }
+    // warm up the race models of cars just beyond the draw distance (so they don't pop in when you turn round)
+    const pad = (T.drawD + BURNS_ARTCARS.LOAD_PAD) ** 2;
+    for (const c of mine) if (!c.gone && c.d2 >= T.drawD * T.drawD && c.d2 < pad) { const E = this.models[c.stem + '_lo']; if (E) E.used = now; else if (this.inflight < 2) this.load(c.stem, false); }
+    // lights: the big feature light and the headlights' pool, at dusk and night, for the cars near the camera
+    if (night > 0.15) for (const c of mine) {
+      if (!c.drawn || c.d2 > 70 * 70 || !c.M) continue;
+      const k = night * c.litK; if (k < 0.05) continue;
+      const big = c.M.lights.find(L => L.big), car = c.car, S = c.S, s = Math.sin(car.yaw), co = Math.cos(car.yaw);
+      if (big) g.pointLight(car.x + (big.x * co + big.z * s) * S, car.y + big.y * S, car.z + (-big.x * s + big.z * co) * S, (7 + big.s) * S, big.cc, 0.9 * k);
+      else g.pointLight(car.x, car.y + c.D.b[4] * S * 0.7, car.z, 9 * S, burnsRGBf(c.D.col), 0.8 * k);
+      const f = (c.D.b[3] * S) + 5;
+      if (Math.abs(c.speed) > 0.3 || c.veh) g.pointLight(car.x + s * f, car.y + 1.3, car.z + co * f, 10, BURNS_ARTCARS.HEAD_COL, 0.7 * k);
+      if (typeof cartOctoLight === 'function' && c.M.extra && c.M.extra.flames) g.pointLight(car.x, car.y + 2.2 * S, car.z, 7 * S, [1, 0.5, 0.16], (0.45 + 0.65 * night) * c.litK);
+    }
+    // drivers at the wheel of the self-driving cars near the camera
+    const maxD = BURNS_ARTCARS.MAX_DRIVERS[typeof BurnsGL !== 'undefined' && BurnsGL.tier] || 0, dD2 = BURNS_ARTCARS.DRIVER_D ** 2;
+    let nd = 0;
+    for (const c of order) {
+      c.drvOn = false;
+      const wants = c.o.driver || (c.veh && !c.veh.rider && c.veh.o.path);
+      if (!wants || !c.drawn || !c.M || nd >= maxD || c.d2 > dD2 || !c.M.seat) continue;
+      if (!c.drv) {
+        const L = BURNS_ARTCARS.DRIVERS, k = this.cars.indexOf(c) % L.length, mods = this._drvModels || (this._drvModels = []);
+        if (!mods[k]) mods[k] = BurnsRig.model(BurnsRig.npcSpec(L[k][0], L[k][1]));
+        const ch = new BurnsChar(mods[k]); ch.play('cartDrive', { steer: 0, speed: 0 }, true);
+        c.drv = { ch, model: mods[k], bones: new Float32Array(ch.nb * 12), car: { bones: c.bones, driverScale: 1 / c.S } };
+      }
+      const D = c.drv, ch = D.ch;
+      ch.k.steer = c.car.steerVis; ch.k.speed = c.st.speed; ch.update(c.dtA || 0.016);
+      D.car.bones = c.bones; cartPoseDriver(D.car, c.M, ch, D.bones);
+      c.drvOn = true; nd++;
+    }
+    this.gc(now);
+  },
+  // free what nobody has wanted for a while, and keep the loaded models under the tier's caps
+  gc(now) {
+    if (this._gcT && now - this._gcT < 1000) return; this._gcT = now;
+    const T = this.tier(), K = BURNS_ARTCARS;
+    const ready = Object.values(this.models).filter(E => E.state === 'ready' || E.state === 'failed');
+    for (const E of ready) if (E.state === 'ready' && now - E.used > (E.hi ? K.KEEP_HI : K.KEEP_LO) * 1000) this.free(E);
+    for (const hi of [false, true]) {
+      const L = Object.values(this.models).filter(E => E.hi === hi && E.state === 'ready').sort((a, b) => a.used - b.used), cap = hi ? T.maxHi + 1 : T.maxLo;
+      while (L.length > cap && now - L[0].used > 500) this.free(L.shift());
+    }
+  },
+  // the scene's def hooks are wrapped (on a per-scene copy of the def) to draw the cars in the shadow and main passes
+  hook(g) {
+    if (!g || g._artKartHooked) return;
+    g._artKartHooked = true;
+    const base = g.def, d = Object.create(base), self = this;
+    d.drawShadows = function (gg, R) { if (base.drawShadows) base.drawShadows.call(base, gg, R); self.draw(gg, R, true); };
+    d.drawSkinned = function (gg, R) { if (base.drawSkinned) base.drawSkinned.call(base, gg, R); self.draw(gg, R, false); };
+    d.drawSprites = function (gg, R) { if (base.drawSprites) base.drawSprites.call(base, gg, R); self.sprites(gg, R); };
+    g.def = d;
+  },
+  draw(g, R, shadow) {
+    if (!shadow) { this.stats.drawn = 0; this.stats.hi = 0; this.stats.tris = 0; this.stats.drivers = 0; } else this.stats.shadow = 0;
+    for (const c of this.cars) {
+      if (c.g !== g || !c.drawn || !c.M) continue;
+      if (shadow) { if (!R.shadowNear(c.car.x, c.car.y, c.car.z, c.rad)) continue; R.skin(c.M.geo, c.bones, c.M.nb, null, 0, 0); this.stats.shadow++; if (c.drvOn) R.skin(c.drv.model.lod || c.drv.model.geo, c.drv.bones, c.drv.ch.nb, null, 0, 0); continue; }
+      if (!c.inView) continue;
+      const dark = c.litK < 0.98 ? [0.03, 0.025, 0.05, 0.62 * (1 - c.litK) * (0.15 + 0.85 * (R.night || 0))] : null;   // switched off: dark at night, barely by day
+      R.skin(c.M.geo, c.bones, c.M.nb, dark, 0, 0.3);
+      if (c.drvOn) { const dm = c.drv.model; R.skin(c.d2 > 16 * 16 && dm.lod ? dm.lod : dm.geo, c.drv.bones, c.drv.ch.nb, null, c.drv.ch.face, 0.45); this.stats.drivers = (this.stats.drivers || 0) + 1; }
+      this.stats.drawn++; if (c.lod === 'hi') this.stats.hi++; this.stats.tris += c.M.geo.count / 3;
+    }
+  },
+  // contact shadow, and at dusk and night the lights: LEDs, head and tail lights, underglow, headlight beams; and
+  // Calamari Inferno's live fire
+  sprites(g, R) {
+    const SP = BURNS_SPRITES.R, night = R.night || 0, t = g.time, ck = R.shadowOn ? 0.5 : 1, p = this._p || (this._p = [0, 0, 0]);
+    for (const c of this.cars) {
+      if (c.g !== g || !c.drawn || !c.inView || !c.M) continue;
+      const M = c.M, car = c.car, S = c.S, k = night * c.litK, gy = car.y;
+      const L0 = (c.D.b[3] - c.D.b[1]) * S, W0 = (c.D.b[2] - c.D.b[0]) * S, zc = (c.D.b[1] + c.D.b[3]) / 2 * S, s = Math.sin(car.yaw), co = Math.cos(car.yaw);
+      R.flat.flat(car.x + s * zc, gy + 0.04, car.z + co * zc, W0 * 0.85, L0 * 1.05, car.yaw, SP.shadow, [0, 0, 0], 0.5 * ck, false);
+      if (k > 0.12) {
+        R.flat.flat(car.x + s * zc, gy + 0.06, car.z + co * zc, W0 + 3.5, L0 + 4, car.yaw, SP.glow, burnsRGBf(c.D.col), 0.36 * k, true);   // underglow
+        if (c.d2 < 130 * 130) for (const L of M.lights) {
+          if (c.d2 > 55 * 55 && !L.big && !L.head) continue;
+          BurnsM.a34Pt(c.bones, 0, L.x, L.y, L.z, p);
+          const fl = L.led ? 0.6 + 0.4 * Math.sin(t * 6 + L.x * 3 + L.z) : 1, sz = L.s * S * (L.big ? 1.4 : 1);
+          R.bbs.bb(p[0], p[1], p[2], sz, sz, SP.glow, L.cc, (L.big ? 0.55 : 0.8) * k * fl, true);
+          if (L.head && c.d2 < 90 * 90 && (Math.abs(c.speed) > 0.3 || c.veh)) R.flat.flat(car.x + s * (c.D.b[3] * S + 6), gy + 0.05, car.z + co * (c.D.b[3] * S + 6), 4.6, 12, car.yaw + Math.PI, SP.beam, [1, 0.92, 0.75], 0.28 * k, true);
+        }
+      }
+      if (c.litK > 0.3 && typeof cartOctoFlames === 'function') cartOctoFlames(R, M, c.bones, c.st, c.d2, Math.sin(car.yaw) * c.speed, Math.cos(car.yaw) * c.speed, night);
+    }
+  },
+  // a world being left: its cars go, and their models with them (unless another live scene still uses them)
+  release(scene) {
+    this.cars = this.cars.filter(c => c.g !== scene);
+    const live = new Set(this.cars.map(c => c.stem));
+    for (const E of Object.values(this.models)) if (!live.has(E.stem)) this.free(E);
+  },
+  // tests: every car of a scene whose footprint (rest bounds, scaled, where it stands now) overlaps a static collider
+  clearance(g) {
+    const W = g.world, out = [];
+    for (const c of this.cars) {
+      if (c.g !== g) continue;
+      const D = c.D, S = c.S, mv = c.mv, hw = (D.b[2] - D.b[0]) * S / 2, hl = (D.b[3] - D.b[1]) * S / 2, zc = (D.b[1] + D.b[3]) / 2 * S, xc = (D.b[0] + D.b[2]) / 2 * S;
+      const fx = Math.sin(mv.yaw), fz = Math.cos(mv.yaw), rx = Math.cos(mv.yaw), rz = -Math.sin(mv.yaw), x = mv.x + fx * zc + rx * xc, z = mv.z + fz * zc + rz * xc;
+      for (const k of W.col.near(x, z, Math.max(hw, hl) + 1, [])) {
+        if (k.mover || k.hidden || k.solid === false || (k.y1 !== undefined && k.y1 < 0.35)) continue;
+        const dx = k.x - x, dz = k.z - z;
+        let hit;
+        if (k.t === 'box' || k.t === 'ramp') {
+          const cy = Math.cos(k.yaw || 0), sy = Math.sin(k.yaw || 0); hit = true;
+          for (const a of [[rx, rz], [fx, fz], [cy, -sy], [sy, cy]]) {
+            const d = Math.abs(dx * a[0] + dz * a[1]), rk = Math.abs(rx * a[0] + rz * a[1]) * hw + Math.abs(fx * a[0] + fz * a[1]) * hl, rc = Math.abs(cy * a[0] - sy * a[1]) * k.hx + Math.abs(sy * a[0] + cy * a[1]) * k.hz;
+            if (d > rk + rc) { hit = false; break; }
+          }
+        } else { const lx = dx * rx + dz * rz, lz = dx * fx + dz * fz, qx = clamp(lx, -hw, hw), qz = clamp(lz, -hl, hl); hit = Math.hypot(lx - qx, lz - qz) < (k.r || 0); }
+        if (hit) out.push({ stem: c.stem, x: +mv.x.toFixed(1), z: +mv.z.toFixed(1), col: k.t, cx: +k.x.toFixed(1), cz: +k.z.toFixed(1), hx: k.hx || k.r, hz: k.hz || k.r, y1: k.y1 });
+      }
+    }
+    return out;
+  },
+  info() {
+    const m = this.memory();
+    return { cars: this.cars.length, drawn: this.stats.drawn, hi: this.stats.hi, drivers: this.stats.drivers || 0, shadow: this.stats.shadow, tris: this.stats.tris, loaded: Object.values(this.models).filter(E => E.state === 'ready').map(E => ({ key: E.key, tris: E.tris, mb: +((E.bytes || 0) / 1048576).toFixed(2), ms: E.ms })),
+      loading: Object.values(this.models).filter(E => E.state === 'loading').map(E => E.key), loLoaded: m.lo, hiLoaded: m.hi, mb: m.mb, loads: this.stats.loads, frees: this.stats.frees, failed: this.stats.failed, canLoad: this.canLoad(), tier: typeof BurnsGL !== 'undefined' ? BurnsGL.tier : null };
+  }
+};
+// hooks into the play scene (this file is in the Burning Man app only; Art Kart's build never sees it)
+if (typeof BurnsPlayScene !== 'undefined') {
+  const P = BurnsPlayScene.prototype, cl = P.collectLights;
+  P.collectLights = function (env) { try { BurnsArtCars.frame(this); } catch (e) { if (!BurnsArtCars._warned) { BurnsArtCars._warned = true; console.warn('art cars: ' + (e && e.stack || e)); } } return cl.apply(this, arguments); };
+}
+if (typeof BurnsScenes !== 'undefined') {
+  const rel = BurnsScenes.releaseWorld;
+  BurnsScenes.releaseWorld = function (scene) { const r = rel.apply(this, arguments); try { BurnsArtCars.release(scene); } catch (e) { /* ignore */ } return r; };
+}
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsArtCars, BURNS_ARTCARS });
 
 /* ---- 41_burns_bigart.js ---- */
 /* ============================================================
@@ -25305,7 +25746,7 @@ const BurnsOW = {
       case 'costco': { const b = back(8); api.prop('shade', { x: b[0], z: b[1], yaw, w: 10, d: 6, col: '#e8e0d0' }); api.sign('COSTCO\nSOUL TRADING', x + c * 4, z - s * 4, { yaw: yaw + Math.PI, h: 2.4, style: { bg: '#2a2a6a', fg: '#ffffff', border: '#ff4a4a' } }); for (let i = 0; i < 3; i++) api.prop('cooler', { x: b[0] + c * (i * 1.4 - 1.4), z: b[1] - s * (i * 1.4 - 1.4) + 2, yaw }); break; }
       case 'deep': api.prop('campFlag', { x: x + 2, z }); for (let i = 0; i < 5; i++) api.glow(x + Math.sin(i) * 6, 0.5, z + Math.cos(i) * 6, 0.8, BURNS_NEON[i % 7]); break;
       case 'sound': api.sign('THE SOUND CAMPS\n10:00 PLAZA', x, z + 2, { yaw: yaw + Math.PI, h: 2.6, style: { bg: '#1a0a2a', fg: '#ff9af0', border: '#ff4fd8', glow: '#ff4fd8' } }); break;
-      case 'heart': { const b = back(7); api.mesh(b[0], b[1], m => this.heartCar(m), { yaw: yaw + Math.PI / 2 }); api.light(b[0], b[1], 12, '#ff4f8a', 0.5); break; }
+      case 'heart': { const b = back(8); if (typeof BurnsArtCars !== 'undefined') BurnsArtCars.park(api, 'bass_valentine', b[0], b[1], yaw + Math.PI / 2); else api.mesh(b[0], b[1], m => this.heartCar(m), { yaw: yaw + Math.PI / 2 }); api.light(b[0], b[1], 12, '#ff4f8a', 0.5); break; }
       case 'hell': this.hellStation(api, x, z); break;
       case 'storm': for (let i = 0; i < 4; i++) api.glow(x + Math.sin(i * 1.6) * 5, 0.6, z + Math.cos(i * 1.6) * 5, 1.0, '#9ad0ff'); api.prop('campFlag', { x, z }); break;
       case 'temple': break;
@@ -25413,17 +25854,23 @@ BurnsWorlds.register({
     for (const h of [3, 6, 9]) for (let r = 60; r < O.ESP - 20; r += 32) { const q = O.at(h + 0.012 * 300 / r, r); api.instance('ow_lamp', q[0], q[1], { yaw: O.yawOut(h) }); api.light(q[0], q[1], 7, '#ffb060', 0.38); }
     // street signs on the playa side of the Esplanade at every hour (the city side gets its own at each corner)
     for (let h = O.H0; h <= O.H1 + 1e-6; h += 1) BurnsOW.streetSign(api, h, 0, O.at(h + 0.02, O.ESP - 9));
-    // ---- open-playa art cars cruising around the Man (rideable movers) ----
-    for (let i = 0; i < 3; i++) {
-      const col = ['#3a8ac8', '#c8a03a', '#8a3ac8'][i], sc = ['#38f2ff', '#ffd84a', '#ff4fd8'][i];
-      const mv = api.mover(m => BurnsProps.artcar(m, { len: 8, w: 3.6, col, sculpt: sc }), {});
-      S.cars.push({ mv, r: 150 + i * 32, w: (i % 2 ? -1 : 1) * 3.4 / (150 + i * 32), a: i * 2.1 });
+    // ---- the art cars: Super Art Kart's twelve, at art-car size (src/41_burns_artcars.js) ----
+    // three circle the Man on the open playa (rideable movers), clear of the promenade lamps (r 92, 124, 156)
+    for (const [stem, r, dir, a] of BURNS_OW.CIRCLE_CARS) {
+      const mv = BurnsArtCars.mover(api, stem, { x: Math.sin(a) * r, z: -Math.cos(a) * r, driver: true }).mv;
+      S.cars.push({ mv, r, w: dir * 2.6 / r, a });
     }
-    // ---- two art cars anyone can drive (DRIVE), parked on the open playa ----
-    // the green one by the 6:00 promenade is Rae's race car (quicker)
-    for (const [x, z, yaw, col, sc, fast] of [[-24, 236, Math.PI, '#2a8a6a', '#7aff5a', true], [232, 36, -Math.PI / 2, '#8a2a6a', '#ff4fd8', false]]) {
-      try { const v = api.artCar(Object.assign({ x, z, yaw, col, sculpt: sc, len: 8, w: 3.6 }, fast ? { maxSpeed: 16, accel: 6, turn: 1.25 } : {})); if (fast) S.raceCar = v; } catch (e) { console.error('ow art car', e); }
+    // four cruise the streets at a walking-to-biking pace: both lanes of the Esplanade and of three lettered streets
+    S.cruise = [];
+    for (const [stem, lane, ph, v] of BURNS_OW.STREET_CARS) {
+      try { const L = BurnsOW.carLoop(lane), c = BurnsArtCars.mover(api, stem, { driver: true }); S.cruise.push({ mv: c.mv, L, s: ph * L.len, v, i: 0, yaw: null }); } catch (e) { console.error('ow art car ' + stem, e); }
     }
+    BurnsOW.cruise(0);
+    // two anyone can DRIVE, parked on the open playa: the green dragon by the 6:00 promenade is Rae's race car (quicker)
+    for (const [stem, x, z, yaw, fast] of [['sir_scorchalot', -24, 236, Math.PI, true], ['dune_chomper', 232, 36, -Math.PI / 2, false]]) {
+      try { const v = BurnsArtCars.vehicle(api, stem, Object.assign({ x, z, yaw }, fast ? { maxSpeed: 16, accel: 6, turn: 1.25 } : {})); if (fast) S.raceCar = v; } catch (e) { console.error('ow art car', e); }
+    }
+    // (Quackzilla is Root Society's Disco Duck, parked on the open playa by 2:00: 42_burns_w17_e_city.js)
     // ---- the side quests' people and things ----
     { const q = O.at(6.15, 332); api.npc({ id: 'owSage', type: 'burner', seed: 23, name: 'SAGE', x: q[0], z: q[1] - 34, yaw: Math.PI, behavior: 'chill', talk: (gg, a) => BurnsOW.giver(gg, a, 'owTemple', ['Have you sat at the Temple yet?', 'Walk out past the Man, toward 12:00. Sit a while.'], ['You went. I can tell.']) }); }
     api.pickup('glowstick', 203, 0.9, -351, { mission: 'owLantern', gate: true, label: 'LOST LANTERN', col: '#ffb060' });
@@ -25718,6 +26165,8 @@ Object.assign(BurnsOW, {
       C.a += C.w * dt; const mv = C.mv;
       mv.x = Math.sin(C.a) * C.r; mv.z = -Math.cos(C.a) * C.r; mv.y = 0; mv.yaw = (C.w > 0 ? Math.PI / 2 : -Math.PI / 2) - C.a;   // facing along the circle
     }
+    // ...and cruise the streets
+    BurnsOW.cruise(dt);
     // dust devils drift (day only)
     for (const D of S.devils) { D.t += dt; D.x += Math.sin(D.t * 0.13 + D.a) * dt * 2.2; D.z += Math.cos(D.t * 0.11 + D.a * 1.7) * dt * 2.2; }
     // dust in the air by day: soft clouds rolling down the streets with the wind, all around Brady (drawn in drawSprites)
@@ -25781,6 +26230,50 @@ Object.assign(BurnsOW, {
     ctx.fillStyle = 'rgba(255,216,74,0.92)'; ctx.strokeStyle = 'rgba(30,14,40,0.8)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 6); ctx.lineTo(0, 2); ctx.lineTo(-8, 6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     BurnsUI.text(ctx, `${nx.name}  ${d > 999 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m'}`, x, y + 18, 11, '#ffd84a', { ui: true });
+  }
+});
+
+/* ---------------- the art cars' routes (Super Art Kart's cars: src/41_burns_artcars.js) ----------------
+   CIRCLE_CARS: [stem, radius, direction, start angle] round the Man on the open playa, between the promenade lamps
+   (r 92, 124, 156, 188) and inside the big art (the glowshroom grove reaches in to r 172).
+   STREET_CARS: [stem, lane, start (0..1 along its loop), speed m/s]. A lane is { r: street radius, out / in: the two
+   lanes' offsets from the street's centre, h0 / h1: where it turns round (default the city's ends, 2:00 and 10:00) }:
+   out along r + out, a wide U-turn, back along r - in. Checked against every static collider along the way
+   (tools/burns_artcars_test.js routes): the Esplanade's lanes sit between the lamp line and the corner signs; Arcade,
+   Bonfire and Dreamer are crossed by Center Camp, the plazas and the bigger theme camps, so the street cars use
+   Carousel (Root Society's tipis reach it at 2:00, so its loop turns at 2:10). */
+BURNS_OW.CIRCLE_CARS = [['whale_of_a_time', 108, 1, 0.4], ['dusty_doubloon', 140, -1, 2.3], ['jelly_jolt', 140, -1, 2.3 + Math.PI], ['glitterfin', 108, 1, 0.4 + Math.PI]];
+BURNS_OW.STREET_CARS = [
+  ['pyramid_scheme', { r: 300, out: 2.4, in: 3.4 }, 0.05, 3.0], ['frosted_fury', { r: 300, out: 2.4, in: 3.4 }, 0.55, 3.0],
+  ['turbo_escargot', { r: 435, out: 2.6, in: 2.6, h0: 2.17 }, 0.2, 2.6], ['calamari_inferno', { r: 435, out: 2.4, in: 2.4, h0: 2.17 }, 0.7, 2.6]
+];
+Object.assign(BurnsOW, {
+  // a closed loop for a street car: out along the outer lane from h0 to h1, a wide U-turn past the end, back along the
+  // inner lane, and round again
+  carLoop(lane) {
+    const O = BURNS_OW, r = lane.r, ro = r + (lane.out || 0), ri = r - (lane.in || 0), h0 = lane.h0 || O.H0, h1 = lane.h1 || O.H1, pts = [];
+    const ends = 0.06 * 300 / r;   // how far past the ends the turns reach (about 18 m)
+    const turn = (h, sgn, ra, rb) => { for (let k = 1; k < 8; k++) { const a = k / 8 * Math.PI; pts.push(O.at(h + sgn * Math.sin(a) * ends, (ra + rb) / 2 + (ra - rb) / 2 * Math.cos(a))); } };
+    for (let h = h0; h <= h1 + 1e-6; h += 0.025) pts.push(O.at(h, ro));
+    turn(h1, 1, ro, ri);
+    for (let h = h1; h >= h0 - 1e-6; h -= 0.025) pts.push(O.at(h, ri));
+    turn(h0, -1, ri, ro);
+    const acc = [0]; for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    acc.push(acc[acc.length - 1] + Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]));
+    return { pts, acc, len: acc[acc.length - 1] };
+  },
+  // move the street cars along their loops; the heading eases round the corners
+  cruise(dt) {
+    const S = BURNS_OW.state; if (!S || !S.cruise) return;
+    for (const C of S.cruise) {
+      const L = C.L, pts = L.pts, acc = L.acc;
+      C.s = (C.s + C.v * dt) % L.len;
+      let i = C.i; while (i < pts.length - 1 && acc[i + 1] < C.s) i++; while (i > 0 && acc[i] > C.s) i--; if (acc[i + 1] < C.s) i = 0;
+      C.i = i; const a = pts[i], b = pts[(i + 1) % pts.length], t = (C.s - acc[i]) / ((acc[i + 1] - acc[i]) || 1);
+      const want = Math.atan2(b[0] - a[0], b[1] - a[1]), mv = C.mv;
+      C.yaw = C.yaw === null || dt <= 0 ? want : C.yaw + BurnsM.wrap(want - C.yaw) * Math.min(1, dt * 2.2);
+      mv.x = lerp(a[0], b[0], t); mv.z = lerp(a[1], b[1], t); mv.y = 0; mv.yaw = C.yaw;
+    }
   }
 });
 
@@ -34169,8 +34662,10 @@ BW17C.build = function (api, g) {
   });
   // the Disco Duck, broken down on the open playa (drivable once she's fixed: the flag is shared with old saves)
   { const [h, r] = BW17C.SPOTS.duck, q = at(h, r), yaw = out(h) + Math.PI / 2; L.duck = q; L.duckYaw = yaw;
-    S.duckCar = api.artCar({ x: q[0], z: q[1], yaw, build: m => BW17.B.duckModel(m), maxSpeed: 7.5, label: 'DRIVE THE DUCK', horn: 'artcarHorn',
-      hornLines: ['QUACK QUACK!', 'IT\'S THE DISCO DUCK!', 'Duck! Duck! DUCK!'], driveHint: 'DRIVING THE DISCO DUCK · JUMP = QUACK', when: () => !!BurnsSave.flag(17, 'duckFixed') }); }
+    const duck = { x: q[0], z: q[1], yaw, build: m => BW17.B.duckModel(m), maxSpeed: 7.5, label: 'DRIVE THE DUCK', horn: 'artcarHorn',
+      hornLines: ['QUACK QUACK!', 'IT\'S THE DISCO DUCK!', 'Duck! Duck! DUCK!'], driveHint: 'DRIVING THE DISCO DUCK · JUMP = QUACK', when: () => !!BurnsSave.flag(17, 'duckFixed') };
+    // the Disco Duck is Super Art Kart's Quackzilla (41_burns_artcars.js); the procedural duck where the models can't load
+    S.duckCar = typeof BurnsArtCars !== 'undefined' && BurnsArtCars.canLoad() ? BurnsArtCars.vehicle(api, 'quackzilla', Object.assign(duck, { build: undefined, lit: !!BurnsSave.flag(17, 'duckFixed') })) : api.artCar(duck); }
   // the heart car on the deep playa, a DJ silhouette at the decks, a crowd that never went to bed
   { const [h, r] = BW17C.SPOTS.heart, q = at(h, r); L.heartCar = BW17.B.heartCar(api, q[0], q[1], 0); L.heartFloor = L.heartCar.floor;
     BW17.B.heartDJ(api, L.heartCar.booth[0], L.heartCar.boothY, L.heartCar.booth[1], Math.PI);
@@ -34449,7 +34944,7 @@ BW17C.crankStep = function (g, m, dt) {
   const end = () => { S.crank = null; p.locked = false; p.animOverride = null; if (g.modal === 'w17c') g.modal = null; BW17C.meter(null); };
   if (st.n >= 14) {
     end(); BurnsSave.flag(17, 'duckFixed', true); burnsSfx('artcarHorn'); g.shake(0.3);
-    const D = S.duckCar; if (D) for (let i = 0; i < 30; i++) g.fx.add(D.x + (Math.random() - 0.5) * 3, 5 + Math.random(), D.z + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 2 + Math.random() * 2, (Math.random() - 0.5) * 3, 2.2, 0.4, 0.6, [0.85, 0.95, 1], 0.6, 'bubble', 2 | 4);
+    const D = S.duckCar; if (D && D.artKart) BurnsArtCars.setLit(D.artKart, true);   // her lights come on if (D) for (let i = 0; i < 30; i++) g.fx.add(D.x + (Math.random() - 0.5) * 3, 5 + Math.random(), D.z + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 2 + Math.random() * 2, (Math.random() - 0.5) * 3, 2.2, 0.4, 0.6, [0.85, 0.95, 1], 0.6, 'bubble', 2 | 4);
     g.banner('QUAAACK!', 'The Disco Duck lives! ACTION by her seat to DRIVE', { col: '#ffd21a', big: true });
     g.missions.complete('w17c_duck');
   } else if (st.t > 6.3) { end(); const a = g.actor('w17c_quack'); if (a) a.say('She coughed! Crank harder!', 2); }
@@ -35145,6 +35640,8 @@ BURNS_ANIMS.w234carryIdle = (P, t) => {
     return base.call(this, m, o);
   };
 })();
+
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W234 });   // tests (tools/burns_artcars_test.js holds the parade still)
 
 /* ---- 42_burns_w567_kit.js ---- */
 /* ============================================================
@@ -37570,15 +38067,25 @@ BURNS_W10.seated = function (m, R) {
 };
 
 /* ---------------- art cars around the outer ring ---------------- */
+// the ring's art cars, in order round the circle (the first six are the dark ones)
+BURNS_W10.CARS = ['whale_of_a_time', 'glitterfin', 'pyramid_scheme', 'jelly_jolt', 'quackzilla', 'turbo_escargot', 'dusty_doubloon', 'frosted_fury', 'dune_chomper'];
 BURNS_W10.buildArtCars = function (api) {
   const st = BURNS_W10.state, R = mulberry32(1020);
   const cols = ['#3a1a5a', '#1a3a5a', '#5a1a2a', '#1a4a3a', '#4a3a1a', '#2a1a4a', '#5a2a1a', '#1a2a4a', '#3a3a1a', '#4a1a4a'];
   const sculpts = ['#ff4fd8', '#38f2ff', '#ffe24a', '#7aff5a', '#ff7a2a', '#9a6bff', '#ff3b5c', '#38f2ff', '#ffe24a', '#ff4fd8'];
+  let nArt = 0;
   for (let i = 0; i < 10; i++) {
     const a = (i + 0.5) / 10 * TAU + 0.1; if (Math.abs(BurnsM.wrap(a)) < 0.25) continue;
     const r = 96, x = Math.sin(a) * r, z = Math.cos(a) * r, yaw = a + Math.PI / 2;
-    api.prop('artcar', { x, z, yaw, len: 9, col: cols[i], sculpt: sculpts[i] });
     const dormant = st.cars.length < 6, glows = [];
+    // Super Art Kart's cars (41_burns_artcars.js), dark until Brady rings his bell at them; their own LEDs light up
+    if (typeof BurnsArtCars !== 'undefined' && BurnsArtCars.canLoad()) {
+      const art = BurnsArtCars.park(api, BURNS_W10.CARS[nArt++ % BURNS_W10.CARS.length], x, z, yaw, { lit: !dormant });
+      api.light(x, z, 12, sculpts[i], 0.3);
+      if (dormant) st.cars.push({ x, z, yaw, glows, lit: false, col: sculpts[i], art });
+      continue;
+    }
+    api.prop('artcar', { x, z, yaw, len: 9, col: cols[i], sculpt: sculpts[i] });
     for (let k = 0; k < 10; k++) { const t = k / 9, lx = (t - 0.5) * 8, gx = x + Math.cos(yaw) * 0 + Math.sin(yaw) * lx, gz = z + Math.cos(yaw) * lx; const G = BurnsW8910.glow(api, gx + Math.cos(yaw) * 2.2, 1.2 + (k % 2) * 0.4, gz - Math.sin(yaw) * 2.2, 1.0, sculpts[(i + k) % 10]); if (dormant) BurnsW8910.setGlow(G, false); glows.push(G); }
     const big = BurnsW8910.glow(api, x, 4.2, z, 7, sculpts[i]); if (dormant) BurnsW8910.setGlow(big, false); glows.push(big);
     api.light(x, z, 12, sculpts[i], 0.3);
@@ -37868,6 +38375,7 @@ BURNS_W10.ringBell = function (g) {
 };
 BURNS_W10.wakeCar = function (g, c, quiet) {
   if (c.lit) return; c.lit = true; for (const G of c.glows) BurnsW8910.setGlow(G, true);
+  if (c.art) BurnsArtCars.setLit(c.art, true);
   if (quiet) return;
   for (let i = 0; i < 18; i++) g.fx.add(c.x + (Math.random() - 0.5) * 3, 3, c.z + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 2, 10 + Math.random() * 5, (Math.random() - 0.5) * 2, 0.6, 1.6, 0.6, [1, 0.55, 0.15], 1, 'flame', 1);
   g.fx.confetti(c.x, 4, c.z, 30); burnsSfx('artcarHorn'); burnsSfx('flame_jet'); burnsSfx('crowd_cheer', { vol: 0.5 });
@@ -38407,8 +38915,10 @@ BW11.build = function (api, g) {
     { path: [[-150, 12], [-90, -20], [0, -12], [90, -20], [150, 12], [90, 8], [0, 14], [-90, 8], [-150, 12]], n: 3, speed: 8, off: 0 }
   ]);
   // art cars cruising the open playa (lights moving in the dark)
-  api.artCar({ x: -40, z: -90, yaw: 1.2, path: [[-40, -90], [30, -110], [70, -80], [20, -70], [-50, -70]], pathSpeed: 2.6, drivable: false, col: '#2a1a4a', sculpt: '#ff4fd8', len: 9, w: 4 });
-  api.artCar({ x: 40, z: -20, yaw: -1.6, path: [[40, -20], [-30, -18], [-60, -60], [-10, -100], [50, -70]], pathSpeed: 2.2, drivable: false, col: '#1a3a3a', sculpt: '#7aff5a', len: 8, w: 3.6 });
+  // (Super Art Kart's two sound cars, 41_burns_artcars.js: the heart car and the laser pyramid)
+  const car11 = (stem, o) => typeof BurnsArtCars !== 'undefined' ? BurnsArtCars.vehicle(api, stem, o) : api.artCar(o);
+  car11('bass_valentine', { x: -40, z: -90, yaw: 1.2, path: [[-40, -90], [30, -110], [70, -80], [20, -70], [-50, -70]], pathSpeed: 2.6, drivable: false, col: '#2a1a4a', sculpt: '#ff4fd8', len: 9, w: 4 });
+  car11('pyramid_scheme', { x: 40, z: -20, yaw: -1.6, path: [[40, -20], [-30, -18], [-60, -60], [-10, -100], [50, -70]], pathSpeed: 2.2, drivable: false, col: '#1a3a3a', sculpt: '#7aff5a', len: 8, w: 3.6 });
   // interactables: plug in the bass
   const J = S.junction;
   g.interactables.push({ x: J.x, z: J.z, y: J.y, r: 2.4, label: 'PLUG IN', when: g2 => g2.missions.state('cable') === 'active' && g2.missions.get('cable').n >= 3, fn: g2 => BW11.plugIn(g2) });
@@ -42149,7 +42659,8 @@ BurnsWorlds.register({
       prop(k === 'rv' || k === 'bus' || k === 'trailer' || k === 'van' || k === 'camper' || k === 'boxtruck' ? k : 'vehicle', { x, z, yaw: rng.range(-0.3, 0.3), seed: Math.floor(rng() * 999) });
       prop('crate', { x: x + (x < 0 ? 6 : -6), z: z + 2, s: 1.2 }); prop('crate', { x: x + (x < 0 ? 6.4 : -6.4), z: z + 3.3, y: 1.2, s: 1.0 });
     }
-    prop('artcar', { x: -44, z: -470, yaw: 0.5, len: 10, col: '#ff4fd8' }); prop('artcar', { x: 46, z: -360, yaw: -0.4, len: 9, col: '#38f2ff' });
+    if (typeof BurnsArtCars !== 'undefined') { BurnsArtCars.park(api, 'frosted_fury', -44, -470, 0.5); BurnsArtCars.park(api, 'jelly_jolt', 46, -360, -0.4); }
+    else { prop('artcar', { x: -44, z: -470, yaw: 0.5, len: 10, col: '#ff4fd8' }); prop('artcar', { x: 46, z: -360, yaw: -0.4, len: 9, col: '#38f2ff' }); }
     for (let i = 0; i < 4; i++) prop('portapotty', { x: 22.5, z: -560 + i * 1.35, yaw: -Math.PI / 2, col: i % 2 ? '#2a6ac8' : '#3a8a3a' });
     api.sign('LAST CHANCE\nMOOP CHECK', -22, -545, { yaw: Math.PI / 2, h: 1.2, style: { bg: '#f4e8c8', fg: '#3a1a10', size: 36, border: '#3a1a10' } });
     api.sign('EXODUS\n← THAT WAY', 21, -530, { yaw: -Math.PI / 2, h: 1.2, style: { bg: '#ff8a3a', fg: '#ffffff', size: 40 } });
@@ -44266,7 +44777,12 @@ BurnsWorlds.register({
       for (let th = 60; th >= 30; th -= 2.5) path.push(at(th, 256));
       path.push(at(28, 248), at(27, 230), at(28, 212));
       const builds = [W2.carSnail, W2.carTeapot, W2.carCupcake, W2.carWhale, W2.carJelly, W2.carDisco];
-      S.parade = BW.parade(api, { path, builds: builds.map(b => (m, i) => b.call(W2, m, i)), n: 18, speed: 2.4 });
+      // the first snail, cupcake, whale and jellyfish of the parade are Super Art Kart's own (41_burns_artcars.js); the
+      // rest stay procedural, so the parade keeps its 18 cars inside the phone budget (Art Kart cars cost a draw each)
+      const art = typeof BurnsArtCars !== 'undefined' && BurnsArtCars.canLoad() ? { 0: 'turbo_escargot', 2: 'frosted_fury', 3: 'whale_of_a_time', 4: 'jelly_jolt' } : {};
+      const artB = {}; for (const k in art) artB[k] = BurnsArtCars.build(art[k], {});
+      S.parade = BW.parade(api, { path, builds: builds.map(b => (m, i) => artB[i] ? artB[i](m) : b.call(W2, m, i)), n: 18, speed: 2.4 });
+      for (const k in art) BurnsArtCars.track(api.world.game, art[k], S.parade.cars[k].mv, null, { driver: true });
       S.parade.onHit = (g2) => { g2.toast('ART CARS HAVE THE RIGHT OF WAY!'); };
       // a photo riding on top of the whale
       const car = S.parade.cars[3];
@@ -50244,7 +50760,7 @@ BurnsWorlds.register({
     /* ---------------- the fuel line ---------------- */
     const lineKinds = [['boxtruck', 84], ['rv', 70], ['bus', 56], ['van', 44], ['camper', 34], ['car', 25]];
     lineKinds.forEach(([k, z], i) => api.prop(k, { x: -12, z, yaw: Math.PI, seed: 800 + i }));
-    api.prop('artcar', { x: -21, z: 64, yaw: Math.PI + 0.1, len: 8, col: '#3a1a5a', sculpt: '#ffd84a' });
+    if (typeof BurnsArtCars !== 'undefined') BurnsArtCars.park(api, 'sir_scorchalot', -22, 64, Math.PI + 0.1); else api.prop('artcar', { x: -21, z: 64, yaw: Math.PI + 0.1, len: 8, col: '#3a1a5a', sculpt: '#ffd84a' });   // a dragon queuing for gas
     api.crowd(-20, 78, 3, 3, { behaviors: ['idle', 'sit', 'idle'] });
     api.npc({ type: 'sparklepony', seed: 81, x: -6, z: 60, name: 'SEQUIN', lines: ['Can you spare some gas money? I mean gas. I mean money. I mean a ride to the Temple?', 'I\'ve been in this line since Tuesday. I came for ice. This is the gas line.', 'Is it true DPW live out here ALL YEAR? Like... on purpose?'] });
     api.glowLine(-5.5, 80, -5.5, 30, 10);
@@ -51585,7 +52101,7 @@ BURNS_W9.buildArena = function (api, g) {
   };
   chair(A.x - 15, A.z + 10, 0.4, '#c84a3a'); chair(A.x + 16, A.z + 8, -0.6, '#3a8ac8'); chair(A.x + 12, A.z - 16, Math.PI - 0.3, '#e8b030'); chair(A.x - 14, A.z - 14, Math.PI + 0.5, '#8a4ac8');
   api.sign('THE WAITING CHAIRS', A.x - 22, A.z + 22, { yaw: -0.6, h: 1.0, style: { bg: '#2a1a2a', fg: '#ffd0f4', size: 38, border: '#ffd0f4' } });
-  api.prop('artcar', { x: A.x + 24, z: A.z + 16, yaw: -1.2, len: 8, col: '#2a3a5a', sculpt: '#ff4fd8' }); covers.push({ x: A.x + 24, z: A.z + 16, r: 2.2 });
+  if (typeof BurnsArtCars !== 'undefined') BurnsArtCars.park(api, 'dusty_doubloon', A.x + 24, A.z + 16, -1.2); else api.prop('artcar', { x: A.x + 24, z: A.z + 16, yaw: -1.2, len: 8, col: '#2a3a5a', sculpt: '#ff4fd8' }); covers.push({ x: A.x + 24, z: A.z + 16, r: 2.2 });
   for (let i = 0; i < 3; i++) api.prop('portapotty', { x: A.x - 26 + i * 1.35, z: A.z - 4, col: '#3a8a3a' });
   covers.push({ x: A.x - 24.6, z: A.z - 4, r: 2.0 });
   // lamp posts around the arena, the Dust Whale (rebar ribs) for looks
@@ -52021,6 +52537,1427 @@ BurnsWorlds.register({
     g.banner('BIG ART SANDBOX', 'Every big art piece in one place. (Debug world)', { col: '#ffd84a' });
   }
 });
+
+/* ---- 43_cart_a_data.js ---- */
+/* ============================================================
+   ART CART — 3D battle-kart racing on the Brady Goes to Burning Man
+   engine (40_burns_*). Wild original art cars, the action-figure cast
+   as drivers, a signature weapon on every car, pickups on top, Grand
+   Prix cups, time trials and open battle arenas with objectives.
+
+   Files (concatenated alphabetically after the engine):
+     43_cart_a_data.js    rosters (cars, drivers, weapons, pickups), cups, tracks, arenas, save
+     43_cart_b_models.js  3D art-car models (multi-bone rigs), driver models, crowd, props
+     43_cart_c_world.js   track runtime, terrain features, track + arena builders (scenery)
+     43_cart_d_sim.js     driving physics, AI, signature weapons, pickups, objectives
+     43_cart_e_scene.js   CartRaceScene: load, loop, chase camera, rendering, HUD, touch
+     43_cart_f_menu.js    KartMenuScene (the app's home): mode → driver → car → cup/track/arena
+
+   Conventions (the engine's): Y up, metres, yaw 0 faces +Z, forward = (sin yaw, cos yaw),
+   right = (-cos yaw, sin yaw); steering right lowers yaw.
+   Entry: new KartMenuScene()   ·   Direct start: new CartRaceScene({mode, cup, race, track,
+     arena, objective, driver, car, autoGas})
+   Save: Save.data.cart = { driver, car, autoGas, trophies:{cupId:1|2|3}, best:{trackId:{lap,total}},
+     wins:{arena:objective:n}, gfx,
+     prog:{carId:{career, royale (runs), careerWon, royaleWon, points, alloc:{stat:n}, secret:{game:n}, celebrated}} }   (43_cart_h_career.js)
+   All art cars, names, drivers, weapons and tracks are original designs. Real art cars are
+   inspiration only; nothing here copies a real car's name, artwork or logo, or any game.
+   ============================================================ */
+
+/* ---------------- the art cars ----------------
+   stats 1..5: speed, accel, handling, weight. weapon: signature weapon id (CART_WEAPONS).
+   look: palette used by the model builder; light: night glow colour. */
+const CART_CARS = [
+  { id: 'heart', name: 'BASS VALENTINE', tag: 'A rolling sound system with a giant beating heart on top.',
+    nod: 'a heart-topped sound car', weapon: 'bassdrop', stats: { speed: 3, accel: 3, handling: 3, weight: 5 },
+    col: '#ff2a5a', col2: '#ffb0c8', light: '#ff3a6a' },
+  { id: 'fish', name: 'GLITTERFIN', tag: 'A mirror-tiled fish that swims through the dust.',
+    nod: 'a mirror-ball fish', weapon: 'dazzle', stats: { speed: 4, accel: 3, handling: 4, weight: 2 },
+    col: '#c8d4ec', col2: '#ff6ad8', light: '#9ad8ff' },
+  { id: 'octo', name: 'CALAMARI INFERNO', tag: 'Eight copper arms. Every one of them breathes fire.',
+    nod: 'a fire-breathing mechanical octopus', weapon: 'torch', stats: { speed: 3, accel: 2, handling: 3, weight: 5 },
+    col: '#c8743a', col2: '#ffd06a', light: '#ff8a2a' },
+  { id: 'dragon', name: 'SIR SCORCHALOT', tag: 'A scaly gentleman dragon with very bad manners.',
+    nod: 'the playa\'s dragon cars', weapon: 'fireball', stats: { speed: 4, accel: 3, handling: 3, weight: 4 },
+    col: '#2ab060', col2: '#ffd84a', light: '#7aff5a' },
+  { id: 'duck', name: 'QUACKZILLA', tag: 'The bath toy that ate the bathtub.',
+    nod: 'a giant rubber duck', weapon: 'bubbles', stats: { speed: 3, accel: 4, handling: 4, weight: 3 },
+    col: '#ffd21a', col2: '#ff8a1a', light: '#ffe24a' },
+  { id: 'pyramid', name: 'PYRAMID SCHEME', tag: 'Join now! Laser light show included. Returns not guaranteed.',
+    nod: 'a temple-pyramid laser sound car', weapon: 'laser', stats: { speed: 4, accel: 2, handling: 3, weight: 4 },
+    col: '#2a2236', col2: '#ffc83a', light: '#3aff8a' },
+  { id: 'cupcake', name: 'FROSTED FURY', tag: 'Tiny, sweet and absolutely furious.',
+    nod: 'the playa\'s cupcake cars', weapon: 'sprinkles', stats: { speed: 3, accel: 5, handling: 5, weight: 1 },
+    col: '#ff8ac8', col2: '#fff4f8', light: '#ff9ad8' },
+  { id: 'galleon', name: 'DUSTY DOUBLOON', tag: 'A pirate galleon that ran aground on dry land. On purpose.',
+    nod: 'a land-sailing galleon', weapon: 'cannon', stats: { speed: 4, accel: 2, handling: 2, weight: 5 },
+    col: '#8a5a32', col2: '#ffd06a', light: '#ffb84a' },
+  { id: 'snail', name: 'TURBO ESCARGOT', tag: 'The fastest snail alive. Slimy about it.',
+    nod: 'a giant snail car', weapon: 'slime', stats: { speed: 5, accel: 3, handling: 2, weight: 3 },
+    col: '#9a6bff', col2: '#7aff5a', light: '#b07aff' },
+  { id: 'jelly', name: 'JELLY JOLT', tag: 'A floating jellyfish full of static and bad intentions.',
+    nod: 'a glowing jellyfish car', weapon: 'zap', stats: { speed: 3, accel: 4, handling: 4, weight: 2 },
+    col: '#c86aff', col2: '#5af2ff', light: '#5af2ff' },
+  { id: 'shark', name: 'DUNE CHOMPER', tag: 'Swims through sand. Bites through bumpers.',
+    nod: 'a cruising land-shark car', weapon: 'chomp', stats: { speed: 4, accel: 4, handling: 3, weight: 3 },
+    col: '#4a82b8', col2: '#f4f4f8', light: '#38c8ff' },
+  { id: 'whale', name: 'WHALE OF A TIME', tag: 'A happy blue whale with a very powerful blowhole.',
+    nod: 'a giant whale party bus', weapon: 'geyser', stats: { speed: 3, accel: 3, handling: 3, weight: 5 },
+    col: '#2a6ad8', col2: '#bfe8ff', light: '#4ab0ff' }
+];
+
+/* ---------------- signature weapons (one per car; reload 5–10 s) ----------------
+   kind drives the AI: 'ring' (around), 'cone' (ahead), 'shot' (projectiles ahead), 'drop' (behind),
+   'side' (broadside), 'dash' (lunge), 'target' (locks on). icon is drawn in 2D by cartIcon(). */
+const CART_WEAPONS = {
+  bassdrop: { name: 'BASS DROP', desc: 'A sub-bass shockwave rings out and knocks every car nearby into a spin.', reload: 8, kind: 'ring', range: 15, col: '#ff3a6a' },
+  dazzle: { name: 'DAZZLE BEAM', desc: 'The mirror ball fires a sparkling beam ahead. Cars caught in it get dazzled and wobble.', reload: 7, kind: 'cone', range: 34, col: '#9ad8ff' },
+  torch: { name: 'TENTACLE TORCH', desc: 'All eight arms blast fire at once. Anything close gets toasted and spins out.', reload: 9, kind: 'ring', range: 10, col: '#ff8a2a' },
+  fireball: { name: 'FIREBALL VOLLEY', desc: 'Three bouncing fireballs fan out ahead. Each hit spins a car.', reload: 7, kind: 'shot', range: 45, col: '#ff6a1a' },
+  bubbles: { name: 'BUBBLE BARRAGE', desc: 'Six giant bath bubbles drift ahead. Get caught and float helplessly.', reload: 6, kind: 'shot', range: 34, col: '#9af0ff' },
+  laser: { name: 'LASER SWEEP', desc: 'A green laser fan sweeps across the road ahead. Touch it and you spin.', reload: 9, kind: 'cone', range: 38, col: '#3aff8a' },
+  sprinkles: { name: 'SPRINKLE MINES', desc: 'Drops a trail of sprinkle bombs. They pop and flip whoever drives over them.', reload: 6, kind: 'drop', range: 26, col: '#ff8ac8' },
+  cannon: { name: 'CANNON BROADSIDE', desc: 'Cannonballs fire out of both sides at once. Pull alongside and BOOM.', reload: 8, kind: 'side', range: 24, col: '#ffb84a' },
+  slime: { name: 'SLIME SLICK', desc: 'A turbo burst that leaves a glowing slime trail. Followers slide right off.', reload: 7, kind: 'drop', range: 24, col: '#7aff5a' },
+  zap: { name: 'ZAP PULSE', desc: 'Lightning arcs to the two closest cars and stuns them.', reload: 6, kind: 'ring', range: 20, col: '#5af2ff' },
+  chomp: { name: 'CHOMP DASH', desc: 'Lunges forward with a huge bite. Rammed cars get flipped.', reload: 7, kind: 'dash', range: 16, col: '#38c8ff' },
+  geyser: { name: 'BLOWHOLE GEYSER', desc: 'A water spout erupts under the car ahead and launches it skyward.', reload: 10, kind: 'target', range: 60, col: '#4ab0ff' }
+};
+
+/* ---------------- drivers: Brady, Chinka and ten burner cliches (C3, Nov 11) ----------------
+   type: an engine character type (40_burns_db_cast.js); 'brady' / 'chinka' are special.
+   stat: the one stat pip the driver adds to any car they drive; special: the driver's own gift-box special (its
+   effect, icon and HUD live in 43_cart_j_drivers.js; the two new characters' types 'messiah' and 'partyboy' are
+   defined there too). The rest of the old cast (and the Man, now the boss) are no
+   longer drivers: they stay in the world as crowd and roadside heroes (by engine type), and a saved driver that is no
+   longer here falls back to Brady (cartSave). */
+const CART_DRIVERS = [
+  { id: 'brady', name: 'BRADY', type: 'brady', line: 'First burn. Fastest burn.', col: '#ff4fd8', stat: 'speed', special: 'firstburn' },
+  { id: 'chinka', name: 'CHINKA', type: 'chinka', line: 'Already lapped you, babe.', col: '#ffd27a', stat: 'handling', special: 'lapped' },
+  { id: 'sparklepony', short: 'SPARKLE', name: 'SPARKLE PONY', type: 'sparklepony', line: 'Can I borrow your boost? And your water?', col: '#c8a0ff', stat: 'accel', special: 'borrow' },
+  { id: 'dpw', name: 'DPW PUNK', type: 'dpw', line: 'Built this road. Own this road.', col: '#ff8a1a', stat: 'weight', special: 'roadwork' },
+  { id: 'deathguild', short: 'DEATH GUILD', name: 'DEATH GUILD', type: 'deathguild', line: 'Two cars enter. Foam bats only.', col: '#8a8a92', stat: 'weight', special: 'bungee' },
+  { id: 'crusty', short: 'CRUSTY', name: 'CRUSTY OLD BURNER', type: 'crusty', line: 'Racing was better on Baker Beach.', col: '#c8925a', stat: 'handling', special: 'lecture' },
+  { id: 'ranger', short: 'RANGER', name: 'OVERZEALOUS RANGER', type: 'ranger', line: 'I am going to need you to slow down.', col: '#9ab07a', stat: 'handling', special: 'fivemph' },
+  { id: 'annoyingdj', short: 'DJ', name: 'ANNOYING DJ', type: 'annoyingdj', line: 'MAKE SOME NOOOISE!', col: '#7aff5a', stat: 'accel', special: 'airhorn' },
+  { id: 'darkwad', name: 'DARKWAD', type: 'darkwad', line: 'Headlights? Never heard of them.', col: '#8a7aa8', stat: 'speed', special: 'lightsout' },
+  { id: 'badideaguy', short: 'BAD IDEA', name: 'BAD IDEA GUY', type: 'badideaguy', line: 'Hold my water bottle. Watch this.', col: '#ffd84a', stat: 'speed', special: 'holdwater' },
+  { id: 'messiah', short: 'MESSIAH', name: 'MESSIAH COMPLEX', type: 'messiah', line: 'Make way. I am kind of a big deal.', col: '#fff0c8', stat: 'accel', special: 'parting' },
+  { id: 'partyboy', short: 'PARTY BOY', name: 'PARTY BOY', type: 'partyboy', line: 'Where\'s the afterparty? Is THIS the afterparty?', col: '#38f2ff', stat: 'weight', special: 'afterparty' }
+];
+
+/* ---------------- pickups (gift boxes on the course; our own festival items) ---------------- */
+const CART_ITEMS = {
+  glow: { name: 'GLOW RUSH', desc: 'A bundle of glow sticks: big speed boost.', col: '#4affd2' },
+  water: { name: 'WATER BOTTLE', desc: 'Shake off any effect, get a vibe back and a small boost.', col: '#5ac8ff' },
+  tumble: { name: 'TUMBLEWEED', desc: 'Drop it behind you. It rolls with the wind.', col: '#c8995a' },
+  devil: { name: 'DUST DEVIL', desc: 'A whirlwind that races up the course, hunts the cars ahead and whirls them into the air.', col: '#e8c890' },
+  potty: { name: 'PORTA-POTTY', desc: 'Parachutes a porta-potty onto the course ahead.', col: '#5a9aff' },
+  foam: { name: 'FOAM PARTY', desc: 'A foam cannon erupts around you: every car close by gets buried in foam, slow and slippery, and a foam pool is left behind.', col: '#f4f8ff' },
+  shield: { name: 'DISCO SHIELD', desc: 'A mirror-ball bubble that blocks the next hit.', col: '#ff9af0' },
+  whistle: { name: 'RANGER WHISTLE', desc: '"SLOW DOWN!" Every car ahead of you brakes.', col: '#ffd84a' },
+  // sky drops (effects in 43_cart_da_items.js)
+  skymail: { name: 'SKY MAIL', desc: 'Three missiles drop out of the sky onto the cars ahead. Swerve when the red target locks!', col: '#ff5a3a' },
+  bombs: { name: 'BOMBS AWAY', desc: 'A line of bombs rains down on the road ahead. Watch the shadows grow; the craters burn for a while.', col: '#ffb02a' },
+  ducks: { name: 'DUCK DOWNPOUR', desc: 'It rains rubber ducks! Dozens litter the track ahead: bump one and it squeaks, scatters and slows you down.', col: '#ffe24a' }
+};
+// the gift-box pool shown spinning in the roulette (car signatures and arena powers join it at roll time)
+const CART_ITEM_IDS = Object.keys(CART_ITEMS);
+// odds by race position bucket: 1st, 2nd–3rd, 4th–5th, 6th–8th (battle uses the middle row). The sky drops are
+// the big attacks: almost never for the leader, common at the back.
+const CART_ITEM_ODDS = [
+  { tumble: 4, devil: 1, potty: 1, foam: 2, shield: 3, water: 1, glow: 1, whistle: 0, skymail: 0, bombs: 0, ducks: 1 },
+  { tumble: 3, devil: 2, potty: 2, foam: 2, shield: 2, water: 1, glow: 2, whistle: 1, skymail: 1, bombs: 1, ducks: 2 },
+  { tumble: 1, devil: 2, potty: 2, foam: 2, shield: 1, water: 2, glow: 3, whistle: 1, skymail: 2, bombs: 2, ducks: 2 },
+  { tumble: 0, devil: 2, potty: 1, foam: 1, shield: 1, water: 2, glow: 4, whistle: 2, skymail: 3, bombs: 2, ducks: 2 }
+];
+/* ---------------- signature specials: one per car, rolled only by that car (effects in 43_cart_da_items.js) ----------------
+   Not only attacks and boosts: three of them fly (dragon, whale, jelly), the snail bounces, the shark swims under the
+   sand, the pyramid teleports, the fish is a shield, the octopus throws. Odds by the same buckets as CART_ITEM_ODDS. */
+const CART_SPECIALS = {
+  heart: { id: 'throb', name: 'HEART THROB', desc: 'Three giant heartbeats. Every rival in range is lovestruck: slow, dreamy and drifting toward you.', col: '#ff4f8a' },
+  fish: { id: 'decoys', name: 'MIRROR SCHOOL', desc: 'Three mirror-ball decoy fish circle your car. They dazzle anyone who touches them and swallow incoming shots.', col: '#bfe0ff' },
+  octo: { id: 'toss', name: 'TENTACLE TOSS', desc: 'Two copper arms grab the closest rivals ahead and fling them over your car to land behind you.', col: '#ff9a4a' },
+  dragon: { id: 'glide', name: 'DRAGON FLIGHT', desc: 'Wings out! Fly over the pack for five seconds and scorch anyone below.', col: '#7aff5a' },
+  duck: { id: 'surf', name: 'BUBBLE BATH SURF', desc: 'Surf a wave of bath foam: a speed surge that bowls rivals aside and leaves a foamy trail.', col: '#9af0ff' },
+  pyramid: { id: 'warp', name: 'PRISM WARP', desc: 'Lift into a beam of light and reappear 45 m up the road. A laser trap stays where you left.', col: '#3aff8a' },
+  cupcake: { id: 'frosting', name: 'FROSTING FLOOD', desc: 'Pipes a river of sticky frosting across the road ahead. Drive in and you are stuck. Hop it!', col: '#ff8ac8' },
+  galleon: { id: 'wave', name: 'ROGUE WAVE', desc: 'A huge wave rolls up the course ahead and wipes out every car it catches. Surf behind it.', col: '#4ab0ff' },
+  snail: { id: 'shell', name: 'SHELL BOUNCE', desc: 'Into the shell! Bounce up the road in giant hops, untouchable, splashing slime on every landing.', col: '#b07aff' },
+  jelly: { id: 'hover', name: 'STORM HOVER', desc: 'Float above the road for five seconds and rain lightning on every car that passes below.', col: '#5af2ff' },
+  shark: { id: 'dive', name: 'SAND DIVE', desc: 'Dive under the playa: only the fin shows and nothing can touch you. Burst out and launch anyone nearby.', col: '#38c8ff' },
+  whale: { id: 'breach', name: 'SKY BREACH', desc: 'The blowhole fires the whole bus into the sky. Swim over the pack, then belly-flop with a tidal splash.', col: '#4ab0ff' }
+};
+for (const car in CART_SPECIALS) { const P = CART_SPECIALS[car]; CART_ITEMS[P.id] = { name: P.name, desc: P.desc, col: P.col, car }; }
+const CART_SPECIAL_ODDS = [0.05, 0.11, 0.15, 0.19];   // chance a gift box holds the car's own special, by bucket
+
+/* ---------------- Grand Prix ---------------- */
+const CART_POINTS = [15, 12, 10, 8, 6, 4, 2, 1];
+const CART_LAPS = 3;
+const CART_CUPS = [
+  { id: 'dust', name: 'DUST CUP', tracks: ['esplanade', 'gateroad', 'deepplaya', 'dawn'], col: '#f0c88a', col2: '#b07a3a' },
+  { id: 'fire', name: 'FIRE CUP', tracks: ['centercamp', 'storm', 'neon', 'burn'], col: '#ff7a3a', col2: '#c02a4a' }
+];
+// time-of-day palettes: names of BURNS_PALETTES (engine) plus our own tweaks (see CART_SKIES in the world file)
+const CART_TOD = { day: 'DAY', sunset: 'SUNSET', night: 'NIGHT', dawn: 'DAWN', dust: 'DUST STORM' };
+
+/* ---------------- battle arenas + objectives ---------------- */
+const CART_OBJECTIVES = {
+  vibe: { name: 'VIBE CHECK', short: 'Last car standing', desc: 'Every car has 4 vibes. Each hit costs one. Lose them all and your lights go out. Last car glowing wins.', time: 180, unit: '♥' },
+  glow: { name: 'GLOW GRAB', short: 'Collect the glow orbs', desc: 'Grab glowing orbs. Get hit and you drop some. First to 15 wins.', goal: 15, time: 150, unit: '●' },
+  hill: { name: 'KING OF THE HILL', short: 'Hold the zone', desc: 'Park inside the glowing zone to score. The zone moves. First to 30 seconds wins.', goal: 30, time: 150, unit: 's' },
+  flag: { name: 'CAPTURE THE FLAG', short: 'Bring the flag home', desc: 'Grab the camp flag and drive it into the capture ring. Getting hit drops it. First to 3 captures.', goal: 3, time: 180, unit: '⚑' },
+  race: { name: 'SCRAMBLE RACE', short: '3 laps over the jumps', desc: 'A three-lap race around the course: jumps, whoops and berms.', time: 0 }
+};
+/* Arena files (43_cart_g_*.js) register themselves here:
+   CART_ARENAS.push({ id, name, sub, objectives, col, tod, powers: [itemIds], blurb })
+   CART_ARENA_RULES[id] = { gravity, music, onLoad(s), onUpdate(s, dt, racing), onStep(s, k, dt, racing),
+     vertical(s, k, dt, racing) -> true when it handled the car's vertical motion, onHit(s, k, kind, src, o),
+     aiGoal(s, k, nearestRival) -> { goal: [x, z], prey } | null, hud(s, ctx, W, H, top, left), draw(s, R, S, t), lights(s, add) }
+   CART_ITEMS[id] = { name, desc, col, arena: id }  +  CART_ITEM_FX[id] = { use(s, k), update(s, dt, racing), shot(s, shot, dt), draw(s, R, shot, S, t) }
+   CART_OBJECTIVES[id] = { name, short, desc, time, goal, unit, fx: { init(s), update(s, dt) -> true to end, rank(s) -> karts sorted, score(k) } }
+   CART_ARENA_ICONS[id] = (ctx, s, t, col) => {}   (the menu card icon, drawn centred at the origin)
+   An arena's powers drop only there until the player has won every one of its objectives ("mastered"); then they
+   join the gift-box pool in every race. */
+const CART_ARENA_RULES = {};
+const CART_ITEM_FX = {};
+const CART_ARENA_ICONS = {};
+const CART_ARENAS = [
+  { id: 'skate', name: 'BOWL-O-RAMA', sub: 'Skate park: bowls, half-pipes, rails and ramps', objectives: ['glow', 'hill', 'vibe', 'flag'], col: '#5ac8ff', tod: 'sunset' },
+  { id: 'mx', name: 'WHOOP-DE-DOO MX', sub: 'Dirt-bike course: jumps, whoops and berms', objectives: ['race', 'flag', 'glow', 'vibe'], col: '#ff9a3a', tod: 'day' },
+  { id: 'playa', name: 'DEEP PLAYA ART PARK', sub: 'Open playa battle zone around giant art', objectives: ['vibe', 'hill', 'glow', 'flag'], col: '#ff4fd8', tod: 'night' }
+];
+
+/* ---------------- lookups + save ---------------- */
+function cartCar(id) { return CART_CARS.find(c => c.id === id) || CART_CARS[0]; }
+function cartDriver(id) { return CART_DRIVERS.find(d => d.id === id) || CART_DRIVERS[0]; }
+function cartArena(id) { return CART_ARENAS.find(a => a.id === id) || CART_ARENAS[0]; }
+function cartCup(id) { return CART_CUPS.find(c => c.id === id) || CART_CUPS[0]; }
+function cartSave() {
+  const d = Save.data;
+  if (!d.cart || typeof d.cart !== 'object') d.cart = {};
+  const k = d.cart;
+  if (!k.trophies) k.trophies = {};
+  if (!k.best) k.best = {};
+  if (!k.wins) k.wins = {};
+  if (k.autoGas === undefined) k.autoGas = true;
+  if (!k.driver || !CART_DRIVERS.some(x => x.id === k.driver)) k.driver = 'brady';
+  if (!k.car || !CART_CARS.some(x => x.id === k.car)) k.car = 'heart';
+  if (!k.gfx) k.gfx = 'auto';
+  if (!k.mastered) k.mastered = {};
+  return k;
+}
+// an arena is mastered once every one of its objectives has been won at least once
+function cartArenaMastered(id) { const A = cartArena(id), w = cartSave().wins; return A.objectives.every(o => (w[A.id + ':' + o] || 0) > 0); }
+// the arena-only items the player has unlocked for the circuit races
+function cartMasteredItems() { const sv = cartSave(), out = []; for (const A of CART_ARENAS) if (sv.mastered[A.id] && A.powers) for (const p of A.powers) if (CART_ITEMS[p]) out.push(p); return out; }
+function cartFmtTime(t) {
+  if (!isFinite(t) || t <= 0) return '--:--.--';
+  const m = Math.floor(t / 60), s = t - m * 60;
+  return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2);
+}
+function cartFmtClock(t) { t = Math.max(0, Math.ceil(t)); const m = Math.floor(t / 60), s = t % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
+function cartOrdinal(n) { return n + (n === 1 ? 'ST' : n === 2 ? 'ND' : n === 3 ? 'RD' : 'TH'); }
+const cartWrap = a => a - TAU * Math.floor((a + Math.PI) / TAU);
+// a small seeded shuffle
+function cartShuffle(arr, rng) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr; }
+function cartRollItem(rank, n, rng, arenaId, carId, drvId, poolCar) {
+  const b = n <= 1 ? 1 : rank <= 1 ? 0 : rank <= 3 ? 1 : rank <= 5 ? 2 : 3, O = CART_ITEM_ODDS[b];
+  // the car's own signature special, or the driver's own special (C3): together 1.4x the car-only rate (still rarer for
+  // the leader), split evenly between the two
+  const SP = carId && CART_SPECIALS[carId], DV = drvId ? CART_DRIVERS.find(d => d.id === drvId) : null, DS = DV && DV.special && CART_ITEMS[DV.special] ? DV.special : null;
+  if ((SP || DS) && rng() < CART_SPECIAL_ODDS[b] * (SP && DS ? 1.4 : 1)) return SP && DS ? (rng() < 0.5 ? SP.id : DS) : SP ? SP.id : DS;
+  // on a car's own level that car's signature special is in everyone's pool (poolCar: the level's car)
+  const PS = poolCar && poolCar !== carId && CART_SPECIALS[poolCar];
+  if (PS && rng() < 0.12) return PS.id;
+  // in an arena with its own powers, almost half the boxes hold one; in races, mastered arena powers join the pool
+  const A = arenaId ? cartArena(arenaId) : null;
+  if (A && A.powers && A.powers.length && rng() < 0.45) return A.powers[Math.floor(rng() * A.powers.length)];
+  if (!arenaId) { const M = cartMasteredItems(); if (M.length && rng() < 0.22) return M[Math.floor(rng() * M.length)]; }
+  let tot = 0; for (const k in O) tot += O[k];
+  let r = rng() * tot; for (const k in O) { r -= O[k]; if (r <= 0) return k; }
+  return 'glow';
+}
+
+/* ---- 43_cart_b_models.js ---- */
+/* ============================================================
+   ART CART — 3D models: the art cars (rigid multi-bone rigs built with
+   the engine's BurnsMesh), drivers (the engine's rounded cast), the
+   cheering crowd (baked cast poses in shared skinned groups) and props.
+
+   Car rig (one draw call per car; bones are rigid):
+     0 body · 1 front-left wheel · 2 front-right · 3 rear-left · 4 rear-right
+     5 steering wheel · 6.. animated parts (tails, wings, tentacles, hearts…)
+   Each part is authored with its joint at the origin; pose = body · T(joint) · R · S.
+   A model: { geo, nb, J (rest joints), parts:[{b, fn}], seat, lights, muzzle, len, w, h, wheelR }
+   part fn(o, s): o = {yaw, pitch, roll, sx, sy, sz, x, y, z} offsets to fill,
+     s = {t, speed, steer, fire (0..1 recent weapon use), boost, air, beat (0..1 music pulse), night}
+   ============================================================ */
+const CART_BONES = { BODY: 0, FL: 1, FR: 2, RL: 3, RR: 4, STEER: 5, P0: 6 };
+const CART_BUILD = {};          // id -> builder(K) (filled here and in 43_cart_ba_cars.js)
+const CartModels = {
+  cache: {},
+  // hi + lo detail models for a car id
+  get(id, lo) {
+    // a Blender-made .glb for this car, once it has loaded (43_cart_bb_glb.js); the procedural model until then
+    if (typeof CartGLB !== 'undefined') { const G = CartGLB.model(id, lo); if (G) return G; }
+    const key = id + (lo ? ':lo' : '');
+    let M = this.cache[key];
+    if (!M) { M = this.build(id, lo); this.cache[key] = M; }
+    return M;
+  },
+  build(id, lo) {
+    const K = cartKit(lo), fn = CART_BUILD[id] || CART_BUILD.heart;
+    fn(K, cartCar(id));
+    const m = K.m;
+    // baked ambient occlusion in the rest pose (wheel wells, under the sculpture, seams)
+    if (!window.__burnsNoAO && !lo) { try { BurnsAO.bake(m.buf, 0, m.nv, m.ind, 0, m.ind.length, { joints: K.J, res: 30, k: 0.85 }); } catch (e) { /* AO is cosmetic */ } }
+    const info = K.info;
+    return {
+      id, geo: m.geo(), nb: K.nb, J: K.J, parts: K.parts, seat: info.seat || [0, 1.3, 0.8], seatYaw: info.seatYaw || 0,
+      lights: K.lights, muzzle: info.muzzle || [0, 1.6, 2.6], len: info.len || 5, w: info.w || 2.5, h: info.h || 3,
+      wheelR: info.wheelR || 0.48, steerTilt: info.steerTilt === undefined ? 0.45 : info.steerTilt, driverScale: info.driverScale || 1,
+      extra: info.extra || {}
+    };
+  }
+};
+function cartKit(lo) {
+  const m = new BurnsMesh(8192); m.lo = !!lo;
+  const J = new Float32Array(16 * 3);
+  const K = { m, lo: !!lo, J, nb: CART_BONES.P0, parts: [], lights: [], info: {} };
+  K.joint = (b, x, y, z) => { J[b * 3] = x; J[b * 3 + 1] = y; J[b * 3 + 2] = z; };
+  // build geometry on bone b, joint-relative
+  K.on = (b, build) => { m.push(); m.identity(); m.setBone(b); build(m); m.pop(); };
+  // a new animated part: joint (x,y,z), animation fn(o, s), geometry build(m) around the joint
+  K.part = (x, y, z, fn, build) => { const b = K.nb++; if (b > 15) throw new Error('cart: too many parts'); K.joint(b, x, y, z); K.parts.push({ b, fn }); K.on(b, build); return b; };
+  K.light = (x, y, z, s, c, o) => { K.lights.push(Object.assign({ x, y, z, s, c, cc: burnsRGBf(c) }, o || {})); };
+  // four wheels on bones 1..4 (axle along X). o: { x, zf, zr, r, w, col, rim, hub }
+  K.wheels = (o) => {
+    const r = o.r || 0.48, w = o.w || 0.36, spots = [[o.x, o.zf], [-o.x, o.zf], [o.x, o.zr], [-o.x, o.zr]];
+    spots.forEach((p, i) => {
+      const b = CART_BONES.FL + i; K.joint(b, p[0], r, p[1]);
+      K.on(b, mm => cartWheel(mm, r, w, o.col || '#18181c', o.rim || '#c8ccd8', p[0] > 0 ? 1 : -1, K.lo));
+    });
+    K.info.wheelR = r;
+  };
+  // driver seat (hips point) + steering wheel on bone 5. o: { col, x, y, z, wheelY, wheelZ, tilt }
+  K.seat = (o) => {
+    const x = o.x || 0, y = o.y, z = o.z, col = o.col || '#2a1a2a';
+    m.push(); m.color(col).shine(1);
+    m.roundBox(x, y - 0.14, z - 0.05, 0.62, 0.16, 0.58, 0.07);            // cushion
+    m.roundBox(x, y + 0.26, z - 0.36, 0.6, 0.7, 0.14, 0.06);             // backrest
+    m.color(shade(col, -0.3)); m.roundBox(x, y - 0.32, z - 0.05, 0.5, 0.22, 0.5, 0.05);
+    m.shine(0); m.pop();
+    const wy = o.wheelY === undefined ? y + 0.42 : o.wheelY, wz = o.wheelZ === undefined ? z + 0.62 : o.wheelZ;
+    m.push(); m.color('#2a2a30').shine(2); m.limb(x, wy - 0.05, wz + 0.05, x, y - 0.1, wz + 0.36, 0.035, 0.05, { seg: 6 }); m.shine(0); m.pop();
+    K.joint(CART_BONES.STEER, x, wy, wz);
+    K.on(CART_BONES.STEER, mm => {
+      mm.color('#1a1a1e').shine(2); mm.push(); mm.tf(0, 0, 0, 0, Math.PI / 2, 0); mm.torus(0, 0, 0, 0.19, 0.03, { seg: K.lo ? 10 : 16, tseg: K.lo ? 4 : 6 }); mm.pop();
+      mm.color('#c8ccd8').shine(3); mm.limb(-0.17, 0, 0, 0.17, 0, 0, 0.018, 0.018, { seg: 5 }); mm.ball(0, 0, 0, 0.05, { seg: 8, rings: 5 });
+      mm.color(o.accent || '#ff4fd8', 1); mm.ball(0, 0, 0.03, 0.025, { seg: 6, rings: 4 }); mm.emissive(0).shine(0);
+    });
+    K.info.seat = [x, y, z]; K.info.steerTilt = o.tilt === undefined ? 0.45 : o.tilt;
+  };
+  return K;
+}
+// a rounded tyre + chrome hub around the origin (axle along X); side = +1 left / -1 right (hub cap faces out)
+function cartWheel(m, r, w, col, rim, side, lo) {
+  m.push(); m.tf(0, 0, 0, 0, 0, Math.PI / 2);
+  const tr = Math.min(w * 0.5, r * 0.32);
+  m.color(col).shine(1);
+  if (lo) m.cyl(0, -w / 2, 0, r, r, w, 9, { smooth: true });
+  else { m.push(); m.tf(0, 0, 0, 0, 0, 0, 1, w / (2 * tr), 1); m.torus(0, 0, 0, r - tr, tr, { seg: 16, tseg: 6 }); m.pop(); m.color('#202024'); m.cyl(0, -w * 0.42, 0, r - tr, r - tr, w * 0.84, 12, { caps: false }); }
+  m.color(rim).shine(3); m.cyl(0, -w * 0.38, 0, r * 0.56, r * 0.56, w * 0.76, lo ? 7 : 12, { smooth: true });
+  if (!lo) { m.color(shade(rim, -0.35)); for (let k = 0; k < 5; k++) { const a = k / 5 * TAU; m.limb(Math.sin(a) * r * 0.12, side * w * 0.39, Math.cos(a) * r * 0.12, Math.sin(a) * r * 0.48, side * w * 0.39, Math.cos(a) * r * 0.48, 0.03, 0.03, { seg: 4, ends: false }); } }
+  m.color('#ff4fd8', 0.9); m.cyl(0, side > 0 ? w * 0.38 : -w * 0.42, 0, r * 0.14, r * 0.14, 0.04, lo ? 6 : 8, { smooth: true }); m.emissive(0);
+  m.shine(0); m.pop();
+}
+// a row of glowing LED bulbs from a to b
+function cartLeds(K, a, b, n, cols, size, lightEvery) {
+  const m = K.m; size = size || 0.07;
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 0.5 : i / (n - 1), c = Array.isArray(cols) ? cols[i % cols.length] : cols;
+    const x = lerp(a[0], b[0], t), y = lerp(a[1], b[1], t), z = lerp(a[2], b[2], t);
+    m.color(c, 1); m.ball(x, y, z, size, { seg: K.lo ? 4 : 6, rings: K.lo ? 3 : 4 });
+    if (lightEvery && i % lightEvery === 0) K.light(x, y, z, size * 9, c, { led: 1 });
+  }
+  m.emissive(0);
+}
+// headlights + tail lights on a front face at z (zb at the back)
+function cartLamps(K, x, y, z, zb, yb) {
+  const m = K.m;
+  for (const s of [1, -1]) {
+    m.color('#2a2a30').shine(3); m.push(); m.tf(s * x, y, z, 0, Math.PI / 2, 0); m.roundCyl(0, -0.06, 0, 0.17, 0.08, 0.03); m.pop();
+    m.color('#fff6d8', 1); m.push(); m.tf(s * x, y, z + 0.02, 0, Math.PI / 2, 0); m.cyl(0, 0, 0, 0.13, 0.13, 0.04, 10, { smooth: true }); m.pop();
+    K.light(s * x, y, z + 0.1, 1.3, '#fff2c8', { head: 1 });
+    m.color('#ff1a2a', 1); m.roundBox(s * x, yb === undefined ? y : yb, zb - 0.02, 0.32, 0.12, 0.06, 0.03);
+    K.light(s * x, yb === undefined ? y : yb, zb - 0.1, 0.9, '#ff2a3a', { tail: 1 });
+  }
+  m.emissive(0).shine(0);
+}
+// a heartbeat "lub-dub" (0..~1) from the part clock: a strong beat, a softer echo, then rest (about 66 bpm)
+function cartLubDub(t) {
+  const ph = (t * 1.1) % 1, g = (c, w) => Math.exp(-((ph - c) * (ph - c)) / (w * w));
+  return g(0.06, 0.045) + 0.62 * g(0.25, 0.05);
+}
+// pose a heart part: base scale k, swelling on each beat (wider than tall, a squishy pump) and on firing; returns the beat
+function cartHeartBeat(o, s, k) {
+  const b = cartLubDub(s.t), p = k * (1 + 0.13 * b + 0.14 * s.fire);
+  o.sx = p * (1 + 0.035 * b); o.sz = o.sx; o.sy = p * (1 - 0.02 * b);
+  o.yaw = Math.sin(s.t * 0.9) * 0.12; o.roll = Math.sin(s.t * 0.7) * 0.03;
+  return b;
+}
+// pose a speaker-cone part facing +X (sx = 1), -X (sx = -1) or -Z (sz = -1): it punches out on the music's beat,
+// a little later per cone (lag in seconds), and buzzes with speed
+function cartConePump(o, s, sx, sz, lag) {
+  const b = Math.pow(Math.max(0, Math.sin((s.t - lag) * 2.1 * Math.PI)), 6), p = 0.85 * b + 0.15 * s.fire + 0.05 * s.speed * Math.abs(Math.sin(s.t * 37));
+  o.x = sx * 0.05 * p; o.z = sz * 0.05 * p;
+  const k = 1 + 0.05 * p; o.sx = k; o.sy = k; o.sz = k;
+}
+// puffy 3D heart (two lobes + a rounded point), centred at the origin, facing +Z; size ~ s
+function cartHeart(m, s, lo) {
+  const seg = lo ? 10 : 18, rings = lo ? 7 : 12;
+  m.ellipsoid(-0.48 * s, 0.22 * s, 0, 0.56 * s, 0.56 * s, 0.42 * s, { seg, rings });
+  m.ellipsoid(0.48 * s, 0.22 * s, 0, 0.56 * s, 0.56 * s, 0.42 * s, { seg, rings });
+  m.push(); m.tf(0, 0.18 * s, 0, 0, Math.PI, 0); m.lathe([[0, -0.0], [0.72 * s, 0.02 * s], [0.66 * s, 0.38 * s], [0.4 * s, 0.72 * s], [0.12 * s, 0.94 * s], [0, 1.0 * s]], { seg, sz: 0.62 }); m.pop();
+}
+// googly cartoon eye looking +Z at (x,y,z), radius r
+function cartEye(m, x, y, z, r, iris, lo, look) {
+  m.color('#ffffff').shine(2); m.ball(x, y, z, r, { seg: lo ? 8 : 14, rings: lo ? 6 : 10 });
+  const lx = (look && look[0]) || 0, ly = (look && look[1]) || 0;
+  m.color(iris || '#1a1a2a').shine(3); m.ball(x + lx * r * 0.5, y + ly * r * 0.5 + r * 0.05, z + r * 0.72, r * 0.45, { seg: lo ? 6 : 10, rings: lo ? 4 : 7 });
+  if (!lo) { m.color('#ffffff', 1); m.ball(x + lx * r * 0.5 + r * 0.16, y + r * 0.25, z + r * 0.98, r * 0.12, { seg: 6, rings: 4 }); m.emissive(0); }
+  m.shine(0);
+}
+// a low skirt/platform chassis with LED strips; o: { len, w, y0, h, col, led }
+function cartPlatform(K, o) {
+  const m = K.m, L = o.len, W = o.w, y = o.y || 0.62, h = o.h || 0.5;
+  m.color(o.col || '#1c1a22').shine(2); m.roundBox(0, y, 0, W, h, L, Math.min(0.2, h * 0.4)); m.shine(0);
+  m.color('#0e0e12'); m.roundBox(0, y - h * 0.42, 0, W - 0.3, h * 0.3, L - 0.5, 0.08);
+  if (o.led) { cartLeds(K, [W / 2 + 0.01, y, L / 2 - 0.3], [W / 2 + 0.01, y, -L / 2 + 0.3], K.lo ? 6 : 12, o.led, 0.06, 4); cartLeds(K, [-W / 2 - 0.01, y, L / 2 - 0.3], [-W / 2 - 0.01, y, -L / 2 + 0.3], K.lo ? 6 : 12, o.led, 0.06, 4); }
+}
+
+/* ---------------- 1. BASS VALENTINE: a sound truck crowned with a beating heart ---------------- */
+CART_BUILD.heart = (K, C) => {
+  const m = K.m, lo = K.lo, B = CART_BONES;
+  K.wheels({ x: 1.12, zf: 1.7, zr: -1.75, r: 0.5, w: 0.42, rim: '#ffb0c8' });
+  // body: glossy black sound truck
+  m.color('#16121a').shine(2); m.roundBox(0, 1.0, -0.1, 2.5, 1.0, 5.0, 0.28); m.shine(0);
+  m.color('#0a080c'); m.roundBox(0, 0.5, -0.1, 2.2, 0.3, 4.6, 0.1);
+  // speaker cones along both flanks: the chrome rim and pink glow ring sit on the body, the cone + dust cap is a part
+  // that punches out on the beat (cartConePump)
+  for (const s of [1, -1]) for (let i = 0; i < 3; i++) {
+    const z = -1.6 + i * 1.25;
+    m.push(); m.tf(s * 1.26, 1.05, z, 0, 0, -s * Math.PI / 2);
+    m.color('#2a2630').shine(2); m.roundCyl(0, -0.02, 0, 0.36, 0.06, 0.02);
+    m.color('#c8ccd8').shine(3); m.push(); m.tf(0, 0.1, 0); m.torus(0, 0, 0, 0.32, 0.03, { seg: lo ? 10 : 18, tseg: 4 }); m.pop();
+    m.color(C.light, 0.9); m.push(); m.tf(0, 0.06, 0); m.torus(0, 0, 0, 0.38, 0.022, { seg: lo ? 10 : 18, tseg: 4 }); m.pop(); m.emissive(0).shine(0);
+    m.pop();
+    K.part(s * 1.26, 1.05, z, (o, st) => cartConePump(o, st, s, 0, i * 0.12), mm => {
+      mm.tf(0, 0, 0, 0, 0, -s * Math.PI / 2);
+      mm.color('#0c0a10').shine(1); mm.lathe([[0.3, 0.1], [0.18, 0.04], [0.06, 0.01], [0, 0.0]], { seg: lo ? 8 : 14 });
+      mm.color(C.col).shine(2); mm.ball(0, 0.03, 0, 0.07, { seg: 8, rings: 5 }); mm.shine(0);
+    });
+  }
+  // front grille with pink LEDs + lamps
+  m.color('#2a2230').shine(3); m.roundBox(0, 1.0, 2.42, 1.9, 0.62, 0.12, 0.05); m.shine(0);
+  for (let r = 0; r < 3; r++) cartLeds(K, [-0.8, 0.82 + r * 0.18, 2.5], [0.8, 0.82 + r * 0.18, 2.5], lo ? 5 : 9, ['#ff3a6a', '#ff9ac8'], 0.045, r === 1 ? 4 : 0);
+  cartLamps(K, 0.95, 1.18, 2.42, -2.62, 1.05);
+  // a low sub stack across the back, behind the driver (facing back)
+  m.color('#1e1a24').shine(1); m.roundBox(0, 1.82, -2.12, 2.2, 0.66, 0.8, 0.12); m.shine(0);
+  for (const s of [1, -1]) {
+    m.push(); m.tf(s * 0.55, 1.82, -2.54, 0, -Math.PI / 2, 0); m.color(C.light, 0.9); m.torus(0, -0.01, 0, 0.29, 0.03, { seg: lo ? 10 : 18, tseg: 4 }); m.emissive(0); m.pop();
+    K.part(s * 0.55, 1.82, -2.54, (o, st) => cartConePump(o, st, 0, -1, 0.05), mm => {
+      mm.tf(0, 0, 0, 0, -Math.PI / 2, 0); mm.color('#0c0a10'); mm.lathe([[0.27, 0.0], [0.17, 0.06], [0.06, 0.09], [0, 0.1]], { seg: lo ? 8 : 14 });
+      mm.color('#c8ccd8').shine(3); mm.ball(0, 0.07, 0, 0.06, { seg: 8, rings: 5 }); mm.shine(0);
+    });
+  }
+  // deck rail with pink bulbs
+  m.color('#3a2a3a').shine(2);
+  for (const s of [1, -1]) m.limb(s * 1.15, 1.85, 1.6, s * 1.15, 1.85, -1.4, 0.035, 0.035, { seg: 5 });
+  m.shine(0);
+  cartLeds(K, [1.15, 1.9, 1.6], [1.15, 1.9, -1.4], lo ? 4 : 8, ['#ff3a6a', '#ffffff'], 0.05);
+  cartLeds(K, [-1.15, 1.9, 1.6], [-1.15, 1.9, -1.4], lo ? 4 : 8, ['#ff3a6a', '#ffffff'], 0.05);
+  // a short chrome pedestal with a glowing collar for the heart
+  m.color('#c8ccd8').shine(3); m.roundCyl(0, 1.5, 0.8, 0.42, 0.3, 0.08); m.shine(0);
+  m.color(C.light, 1); m.torus(0, 1.8, 0.8, 0.4, 0.025, { seg: lo ? 10 : 18, tseg: 4 }); m.emissive(0);
+  // the heart (beats lub-dub), low enough that the chase camera sees the road over it; a ring of marquee bulbs
+  // follows its outline so it reads from behind too
+  const hs = 1.05;
+  K.part(0, 2.62, 0.8, (o, s) => { cartHeartBeat(o, s, 1); }, mm => {
+    mm.color(C.col, 0.32).shine(2); cartHeart(mm, hs, lo); mm.shine(0);
+    const n = lo ? 12 : 22;
+    for (let i = 0; i < n; i++) {
+      const t = i / n * TAU, x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      mm.color(i % 2 ? '#ffffff' : '#ffd0e0', 1); mm.ball(x * 0.062 * hs, y * 0.062 * 0.85 * hs + 0.08 * hs, 0, 0.055, { seg: lo ? 4 : 6, rings: lo ? 3 : 4 });
+    }
+    mm.emissive(0);
+  });
+  K.light(0, 2.7, 0.8, 4.2, C.light, { big: 1 });
+  K.seat({ y: 1.62, z: -1.25, col: '#5a1a2a', accent: '#ff3a6a' });
+  Object.assign(K.info, { muzzle: [0, 2.7, 0.8], len: 5.2, w: 2.6, h: 3.5, extra: { sight: [3.45, 0.8] } });
+};
+
+/* ---------------- 2. GLITTERFIN: a mirror-tiled fish (ride on its back) ---------------- */
+CART_BUILD.fish = (K, C) => {
+  const m = K.m, lo = K.lo, disco = BURNS_ATLAS.pattern('disco');
+  K.wheels({ x: 1.0, zf: 1.6, zr: -1.6, r: 0.44, w: 0.36, rim: '#c8d4ec' });
+  cartPlatform(K, { len: 4.3, w: 2.1, y: 0.62, h: 0.42, col: '#1a1c28', led: ['#9ad8ff', '#ff6ad8'] });
+  m.color('#c8ccd8').shine(3); m.roundCyl(0, 0.8, 0, 0.5, 0.35, 0.06); m.shine(0);
+  // mirror-tiled body (sky reflections on every tile)
+  const uvFn = (x, y, z) => [lerp(disco.u0, disco.u1, ((Math.atan2(x, z) / TAU + 1) * 3) % 1), lerp(disco.v0, disco.v1, ((y + 2) * 0.9) % 1)];
+  m.color('#dfe6f4').shine(3); m.ellipsoid(0, 1.95, 0.1, 1.22, 1.1, 2.35, { seg: lo ? 12 : 22, rings: lo ? 8 : 14, uvFn }); m.shine(0);
+  // pink lips + big eyes
+  m.color('#ff4fb0').shine(2); m.push(); m.tf(0, 1.75, 2.38, 0, Math.PI / 2, 0); m.torus(0, 0, 0, 0.28, 0.11, { seg: lo ? 10 : 16, tseg: lo ? 4 : 6, sy: 0.9 }); m.pop(); m.shine(0);
+  for (const s of [1, -1]) cartEye(m, s * 0.8, 2.25, 1.55, 0.3, '#3a1a5a', lo, [s * 0.4, 0]);
+  // fins: dorsal (body), side fins + tail (animated)
+  m.color(C.col2).shine(2); m.push(); m.tf(0, 2.95, -0.4); m.ellipsoid(0, 0, 0, 0.12, 0.55, 0.9, { seg: 8, rings: 6 }); m.pop(); m.shine(0);
+  for (const s of [1, -1]) K.part(s * 1.1, 1.75, 0.6, (o, st) => { o.roll = s * (0.25 + Math.sin(st.t * 6 + s) * 0.25 * (0.4 + st.speed)); }, mm => { mm.color(C.col2).shine(2); mm.ellipsoid(s * 0.32, -0.05, -0.2, 0.42, 0.06, 0.32, { seg: 8, rings: 5 }); mm.shine(0); });
+  K.part(0, 1.95, -2.2, (o, st) => { o.yaw = Math.sin(st.t * (3 + st.speed * 7)) * (0.25 + 0.25 * st.speed); }, mm => {
+    mm.color(C.col2).shine(2); mm.push(); mm.tf(0, 0, -0.25); mm.limb(0, 0, 0, 0, 0, -0.5, 0.32, 0.18, { seg: 8 }); mm.pop();
+    for (const s of [1, -1]) { mm.push(); mm.tf(0, s * 0.42, -0.95, 0, s * 0.55, 0); mm.ellipsoid(0, 0, 0, 0.07, 0.62, 0.5, { seg: 8, rings: 6 }); mm.pop(); }
+    mm.shine(0);
+  });
+  // a small mirror ball hanging under the chin (the beam comes out of it)
+  m.color('#c8ccd8').shine(3); m.limb(0, 1.35, 1.9, 0, 1.15, 2.2, 0.02, 0.02, { seg: 4 }); m.ball(0, 0.98, 2.3, 0.22, { seg: lo ? 8 : 14, rings: lo ? 6 : 10, uvFn: (x, y, z) => [lerp(disco.u0, disco.u1, (x + 1) * 0.5 % 1), lerp(disco.v0, disco.v1, (y + 1) % 1)] }); m.shine(0);
+  K.light(0, 1.0, 2.3, 2.2, '#bfe8ff', { big: 1 });
+  K.seat({ y: 3.08, z: 0.05, col: '#ff4fb0', accent: '#9ad8ff', wheelY: 3.42, wheelZ: 0.7 });
+  m.color('#c8ccd8').shine(3); m.limb(0, 2.6, 0.75, 0, 3.0, 0.92, 0.04, 0.04, { seg: 5 }); m.shine(0);
+  Object.assign(K.info, { muzzle: [0, 1.0, 2.5], len: 5.0, w: 2.6, h: 3.4 });
+};
+
+/* ---------------- 3. CALAMARI INFERNO: a riveted copper octopus with flame-tipped arms ---------------- */
+CART_BUILD.octo = (K, C) => {
+  const m = K.m, lo = K.lo;
+  K.wheels({ x: 1.1, zf: 1.7, zr: -1.7, r: 0.5, w: 0.4, rim: '#ffd06a', col: '#1a1410' });
+  cartPlatform(K, { len: 4.8, w: 2.4, y: 0.66, h: 0.5, col: '#3a2418', led: ['#ff8a2a', '#ffd06a'] });
+  // brass deck + boiler drum under the head
+  m.color('#b8863a').shine(3); m.roundBox(0, 0.98, -0.3, 2.3, 0.14, 4.0, 0.06); m.shine(0);
+  m.color('#5a3a22').shine(2); m.roundCyl(0, 1.0, 0.55, 0.95, 0.6, 0.12); m.shine(0);
+  // the head (mantle): copper with rivets, porthole eyes; bobs gently
+  const headB = K.part(0, 2.75, 0.55, (o, s) => { o.y = Math.sin(s.t * 2.2) * 0.06; o.pitch = -0.12 + Math.sin(s.t * 1.1) * 0.05; o.yaw = s.steer * 0.12; }, mm => {
+    mm.color(C.col).shine(3); mm.ellipsoid(0, 0.35, -0.2, 1.25, 1.45, 1.35, { seg: lo ? 12 : 20, rings: lo ? 8 : 14 }); mm.shine(0);
+    mm.color('#8a4a22'); mm.ellipsoid(0, -0.5, 0.05, 1.05, 0.45, 1.05, { seg: lo ? 10 : 18, rings: 6, phi0: Math.PI / 2 });
+    if (!lo) { mm.color('#ffd06a').shine(3); for (let r = 0; r < 3; r++) for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, ph = 0.6 + r * 0.45; mm.ball(Math.sin(a) * Math.sin(ph) * 1.27, 0.35 + Math.cos(ph) * 1.47, -0.2 + Math.cos(a) * Math.sin(ph) * 1.37, 0.045, { seg: 5, rings: 3 }); } mm.shine(0); }
+    for (const s of [1, -1]) {
+      mm.color('#ffd06a').shine(3); mm.push(); mm.tf(s * 0.62, 0.05, 0.98, s * 0.5, Math.PI / 2 - 0.15, 0); mm.torus(0, 0, 0, 0.3, 0.07, { seg: lo ? 10 : 16, tseg: 5 }); mm.pop(); mm.shine(0);
+      mm.color('#ff9a2a', 0.85); mm.ellipsoid(s * 0.62, 0.05, 0.98, 0.26, 0.26, 0.12, { seg: 10, rings: 6 }); mm.emissive(0);
+      mm.color('#1a0a04'); mm.ellipsoid(s * 0.66, 0.05, 1.08, 0.1, 0.14, 0.05, { seg: 8, rings: 5 });
+    }
+    // a little chimney that puffs smoke
+    mm.color('#3a2a20').shine(2); mm.limb(0, 1.6, -0.6, 0, 2.05, -0.75, 0.12, 0.14, { seg: 8 }); mm.shine(0);
+  });
+  K.light(0, 2.8, 1.55, 2.4, '#ff9a2a', { big: 1 });
+  // eight arms: copper segments curling out, flame nozzle at each tip
+  for (let i = 0; i < 8; i++) {
+    const a = (i + 0.5) / 8 * TAU, ca = Math.sin(a), sa = Math.cos(a);
+    const jx = ca * 1.05, jz = 0.55 + sa * 1.1, ph = i * 0.8;
+    K.part(jx, 1.55, jz, (o, s) => { const w = Math.sin(s.t * 2.6 + ph); o.yaw = a; o.pitch = -0.15 + w * 0.18 - s.fire * 0.5; o.roll = Math.sin(s.t * 1.9 + ph) * 0.15; }, mm => {
+      // in part space: arm points along local +Z (out from the body) and curls down
+      const pts = [[0, 0, 0], [0, -0.15, 0.5], [0, -0.45, 0.95], [0, -0.8, 1.25], [0, -1.0, 1.45]];
+      for (let k = 0; k < pts.length - 1; k++) { const r0 = 0.24 - k * 0.045, r1 = 0.24 - (k + 1) * 0.045; mm.color(k % 2 ? '#b8682e' : C.col).shine(3); mm.limb(pts[k][0], pts[k][1], pts[k][2], pts[k + 1][0], pts[k + 1][1], pts[k + 1][2], r0, r1, { seg: lo ? 6 : 10 }); }
+      if (!lo) { mm.color('#ffd06a'); for (let k = 1; k < 4; k++) mm.ball(0, pts[k][1] - 0.14, pts[k][2] + 0.04, 0.06, { seg: 6, rings: 4 }); }
+      mm.color('#3a2a20').shine(3); mm.limb(0, -1.0, 1.45, 0, -0.98, 1.68, 0.07, 0.09, { seg: 6 });
+      mm.color('#ff8a2a', 1); mm.ball(0, -0.98, 1.72, 0.07, { seg: 6, rings: 4 }); mm.emissive(0).shine(0);
+    });
+  }
+  cartLamps(K, 0.85, 0.95, 2.42, -2.42, 0.85);
+  K.seat({ y: 1.45, z: -1.75, col: '#5a2a14', accent: '#ff8a2a' });
+  void headB;
+  Object.assign(K.info, { muzzle: [0, 1.6, 1.3], len: 5.2, w: 3.6, h: 4.3, extra: { arms: 8, armZ: 0.55, chimney: [0, 4.7, -0.15] } });
+};
+
+/* ---------------- 5. QUACKZILLA: a giant rubber duck (ride on its back) ---------------- */
+CART_BUILD.duck = (K, C) => {
+  const m = K.m, lo = K.lo;
+  K.wheels({ x: 1.0, zf: 1.5, zr: -1.5, r: 0.42, w: 0.36, rim: '#ff8a1a' });
+  // the bath-water skirt: glossy blue with bubbles
+  m.color('#2a8ad8').shine(3); m.roundBox(0, 0.62, 0, 2.5, 0.42, 4.4, 0.2); m.shine(0);
+  if (!lo) { m.color('#dff4ff', 0.25).shine(3); for (let i = 0; i < 14; i++) { const a = i / 14 * TAU; m.ball(Math.sin(a) * 1.25, 0.86, Math.cos(a) * 2.15, 0.09 + (i % 3) * 0.03, { seg: 6, rings: 4 }); } m.emissive(0).shine(0); }
+  cartLeds(K, [1.26, 0.6, 1.9], [1.26, 0.6, -1.9], lo ? 5 : 10, ['#ffe24a', '#5ac8ff'], 0.055, 3);
+  cartLeds(K, [-1.26, 0.6, 1.9], [-1.26, 0.6, -1.9], lo ? 5 : 10, ['#ffe24a', '#5ac8ff'], 0.055, 3);
+  // body + upturned tail
+  m.color(C.col).shine(2); m.ellipsoid(0, 1.55, -0.1, 1.32, 1.0, 2.05, { seg: lo ? 12 : 22, rings: lo ? 8 : 14 });
+  m.push(); m.tf(0, 1.95, -1.95, 0, -0.75, 0); m.ellipsoid(0, 0, 0, 0.55, 0.32, 0.75, { seg: lo ? 8 : 12, rings: lo ? 6 : 8 }); m.pop(); m.shine(0);
+  // wings (flap on boost)
+  for (const s of [1, -1]) K.part(s * 1.18, 1.7, -0.2, (o, st) => { o.roll = s * (0.1 + Math.max(0, Math.sin(st.t * 14)) * 0.5 * Math.max(st.boost, st.air)); }, mm => { mm.color('#ffc81a').shine(2); mm.ellipsoid(s * 0.05, 0, 0, 0.18, 0.55, 0.95, { seg: lo ? 8 : 12, rings: lo ? 6 : 9 }); mm.shine(0); });
+  // head: bobs, tilts, beak opens on fire
+  K.part(0, 2.55, 1.35, (o, s) => { o.pitch = Math.sin(s.t * 3.1) * 0.08 - s.fire * 0.25; o.roll = Math.sin(s.t * 1.7) * 0.1; o.yaw = s.steer * 0.25; }, mm => {
+    mm.color(C.col).shine(2); mm.ball(0, 0.65, 0.15, 0.92, { seg: lo ? 12 : 20, rings: lo ? 8 : 14 }); mm.shine(0);
+    mm.color('#ff7a12').shine(2); mm.push(); mm.tf(0, 0.38, 1.0, 0, -0.1, 0); mm.ellipsoid(0, 0, 0.1, 0.48, 0.16, 0.45, { seg: lo ? 10 : 14, rings: lo ? 6 : 8 }); mm.ellipsoid(0, -0.14, 0.04, 0.4, 0.1, 0.38, { seg: lo ? 8 : 12, rings: 6 }); mm.pop(); mm.shine(0);
+    for (const s of [1, -1]) cartEye(mm, s * 0.42, 0.95, 0.78, 0.2, '#1a1a2a', lo, [s * 0.3, 0.1]);
+    // a tiny party hat
+    mm.color('#ff4fd8').shine(2); mm.push(); mm.tf(0.15, 1.5, 0.05, 0, 0, -0.2); mm.lathe([[0.28, 0], [0.02, 0.62], [0, 0.64]], { seg: lo ? 8 : 12 }); mm.color('#ffffff'); mm.ball(0, 0.66, 0, 0.08, { seg: 6, rings: 4 }); mm.pop(); mm.shine(0);
+  });
+  K.light(0, 3.1, 2.3, 1.6, '#ffe24a', { big: 1 });
+  K.seat({ y: 2.62, z: -0.25, col: '#ff8a1a', accent: '#5ac8ff', wheelY: 2.98, wheelZ: 0.38 });
+  m.color('#c8ccd8').shine(3); m.limb(0, 2.45, 0.42, 0, 2.95, 0.5, 0.04, 0.04, { seg: 5 }); m.shine(0);
+  Object.assign(K.info, { muzzle: [0, 3.0, 2.4], len: 4.6, w: 2.6, h: 4.2 });
+};
+
+/* ---------------- 6. PYRAMID SCHEME: a stepped laser pyramid on a sound truck ---------------- */
+CART_BUILD.pyramid = (K, C) => {
+  const m = K.m, lo = K.lo, gold = C.col2;
+  K.wheels({ x: 1.12, zf: 1.75, zr: -1.75, r: 0.5, w: 0.42, rim: gold, col: '#141218' });
+  m.color('#1a1622').shine(2); m.roundBox(0, 0.92, 0, 2.5, 0.8, 5.0, 0.22); m.shine(0);
+  m.color('#0a080c'); m.roundBox(0, 0.48, 0, 2.2, 0.26, 4.6, 0.08);
+  cartLamps(K, 0.95, 1.05, 2.48, -2.48, 1.0);
+  // stepped pyramid: four tiers, gold edges with green LED lines
+  const tiers = [[2.4, 3.3, 1.32], [1.9, 2.6, 1.82], [1.4, 1.9, 2.3], [0.9, 1.2, 2.76]];
+  tiers.forEach(([w, d, y], i) => {
+    const pz = 0.5;
+    m.color(i % 2 ? '#2a2236' : '#221c2c').shine(1); m.roundBox(0, y, pz, w, 0.5, d, 0.06); m.shine(0);
+    m.color(gold).shine(3); m.roundBox(0, y + 0.26, pz, w + 0.04, 0.05, d + 0.04, 0.02); m.shine(0);
+    if (!lo || i % 2 === 0) { cartLeds(K, [w / 2 + 0.02, y, pz + d / 2 - 0.15], [w / 2 + 0.02, y, pz - d / 2 + 0.15], lo ? 3 : 6, '#3aff8a', 0.05, i === 1 ? 2 : 0); cartLeds(K, [-w / 2 - 0.02, y, pz + d / 2 - 0.15], [-w / 2 - 0.02, y, pz - d / 2 + 0.15], lo ? 3 : 6, '#3aff8a', 0.05, i === 1 ? 2 : 0); }
+    if (!lo) cartLeds(K, [-w / 2 + 0.15, y, pz - d / 2 - 0.02], [w / 2 - 0.15, y, pz - d / 2 - 0.02], 5, '#3aff8a', 0.05);
+  });
+  // speaker towers at the back corners, flanking the driver, facing the crowd behind
+  for (const s of [1, -1]) {
+    m.color('#141218').shine(1); m.roundBox(s * 0.95, 1.75, -2.0, 0.58, 1.0, 0.6, 0.06); m.shine(0);
+    for (const yy of [1.5, 2.0]) { m.push(); m.tf(s * 0.95, yy, -2.31, 0, -Math.PI / 2, 0); m.color('#0a080c'); m.lathe([[0.22, 0], [0.12, 0.05], [0, 0.06]], { seg: lo ? 8 : 12 }); m.color('#3aff8a', 0.8); m.torus(0, -0.005, 0, 0.23, 0.02, { seg: lo ? 8 : 14, tseg: 3 }); m.emissive(0); m.pop(); }
+  }
+  // the laser turret on top: spins; fires the sweep
+  K.part(0, 3.08, 0.5, (o, s) => { o.yaw = s.t * (1.2 + s.fire * 9); }, mm => {
+    mm.color(gold).shine(3); mm.roundCyl(0, 0, 0, 0.42, 0.22, 0.06); mm.shine(0);
+    mm.color('#1a1622').shine(2); mm.ball(0, 0.42, 0, 0.36, { seg: lo ? 10 : 16, rings: lo ? 7 : 10, phi1: Math.PI * 0.55 }); mm.shine(0);
+    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU; mm.color('#2a2a30').shine(3); mm.limb(Math.sin(a) * 0.2, 0.5, Math.cos(a) * 0.2, Math.sin(a) * 0.46, 0.55, Math.cos(a) * 0.46, 0.06, 0.05, { seg: 6 }); mm.color('#3aff8a', 1); mm.ball(Math.sin(a) * 0.5, 0.55, Math.cos(a) * 0.5, 0.06, { seg: 6, rings: 4 }); mm.emissive(0).shine(0); }
+    mm.color('#7affb0', 1); mm.ball(0, 0.62, 0, 0.16, { seg: 8, rings: 6 }); mm.emissive(0);
+  });
+  K.light(0, 3.7, 0.5, 3.2, '#3aff8a', { big: 1 });
+  K.seat({ y: 1.62, z: -1.75, col: '#2a2236', accent: '#3aff8a', wheelZ: -1.18 });
+  Object.assign(K.info, { muzzle: [0, 3.6, 0.5], len: 5.2, w: 2.6, h: 3.9 });
+};
+
+/* ---------------- drivers ---------------- */
+const CartDrivers = {
+  // the engine's rounded character model for a driver id (+ the scale it rides at)
+  model(id) {
+    const d = cartDriver(id);
+    if (d.type === 'man') return { model: BurnsManModel.build(), scale: 0.165, man: true };
+    if (d.type === 'brady') return { model: BurnsRig.model(BurnsRig.bradySpec('none')), scale: 1 };
+    if (d.type === 'chinka') return { model: BurnsRig.model(BurnsRig.chinkaSpec()), scale: 1 };
+    // riders keep both hands free for the wheel (no held props)
+    const spec = BurnsRig.npcSpec(d.type, 3, { prop: null });
+    return { model: BurnsRig.model(spec), scale: 1 };
+  }
+};
+// extra driver animations (added to the engine's animation table under our own names)
+(() => {
+  const B = BURNS_BONES;
+  const S = (P, b, x, y, z) => { P.r[b * 3] = x; P.r[b * 3 + 1] = y || 0; P.r[b * 3 + 2] = z || 0; };
+  const legs = P => { S(P, B.THIGH_L, -1.45); S(P, B.SHIN_L, 1.45); S(P, B.THIGH_R, -1.45); S(P, B.SHIN_R, 1.45); };
+  // k.steer -1..1 (right = +1), k.lean
+  BURNS_ANIMS.cartDrive = (P, t, k) => {
+    const st = (k && k.steer) || 0, bump = Math.sin(t * 11) * 0.02 * ((k && k.speed) || 0);
+    S(P, B.HIPS, -0.08); S(P, B.CHEST, 0.12 + bump, 0, st * 0.18); S(P, B.HEAD, -0.06, -st * 0.35, st * 0.1);
+    legs(P);
+    S(P, B.UARM_L, -1.15 - st * 0.35, 0, 0.32); S(P, B.FARM_L, -0.75); S(P, B.UARM_R, -1.15 + st * 0.35, 0, -0.32); S(P, B.FARM_R, -0.75);
+    S(P, B.HAIR, 0.3 + bump * 4);
+  };
+  // firing the signature weapon: punch the air, yell
+  BURNS_ANIMS.cartFire = (P, t, k) => {
+    BURNS_ANIMS.cartDrive(P, t, k); const u = Math.min(1, t * 6);
+    S(P, B.UARM_R, -1.2 - 1.6 * u, 0.2, -0.2); S(P, B.FARM_R, -0.2); S(P, B.CHEST, 0.0, -0.25 * u); S(P, B.HEAD, -0.25 * u, -0.2);
+    P.face = 1;
+  };
+  // getting hit: flail, dizzy face
+  BURNS_ANIMS.cartHit = (P, t) => {
+    const w = Math.sin(t * 22) * 0.45; legs(P);
+    S(P, B.UARM_L, -2.0 + w, 0, 0.9); S(P, B.FARM_L, -0.5); S(P, B.UARM_R, -2.0 - w, 0, -0.9); S(P, B.FARM_R, -0.5);
+    S(P, B.CHEST, -0.3, Math.sin(t * 9) * 0.3); S(P, B.HEAD, -0.3, Math.sin(t * 13) * 0.4, Math.sin(t * 7) * 0.2); S(P, B.HAIR, w);
+    P.face = 2;
+  };
+  // celebrating: both arms up, bounce
+  BURNS_ANIMS.cartCheer = (P, t) => {
+    const s = Math.sin(t * 9), b = Math.abs(Math.sin(t * 6)); legs(P);
+    S(P, B.UARM_L, -2.85 + s * 0.2, 0, 0.35); S(P, B.FARM_L, -0.25); S(P, B.UARM_R, -2.85 - s * 0.2, 0, -0.35); S(P, B.FARM_R, -0.25);
+    S(P, B.CHEST, -0.15, s * 0.15); S(P, B.HEAD, -0.3 + b * 0.1, s * 0.3); P.y = b * 0.1; S(P, B.HAIR, b * 0.5);
+    P.face = 3;
+  };
+  // sulking after losing: slumped, head down
+  BURNS_ANIMS.cartSulk = (P, t) => {
+    legs(P); S(P, B.UARM_L, -0.5, 0, 0.2); S(P, B.FARM_L, -0.6); S(P, B.UARM_R, -0.5, 0, -0.2); S(P, B.FARM_R, -0.6);
+    S(P, B.CHEST, 0.45); S(P, B.HEAD, 0.45 + Math.sin(t * 0.8) * 0.05, Math.sin(t * 0.5) * 0.2); P.face = 2;
+  };
+})();
+
+/* ---------------- posing: car bones + its driver riding it ---------------- */
+const CART_TMP = { a: new Float32Array(12), b: new Float32Array(12) };
+// fills car.bones (nb*12) from car.x,y,z,yaw,pitch,roll + parts; st = animation state
+function cartPoseCar(M, car, st, out) {
+  const A = CART_TMP.a, Bm = CART_TMP.b, J = M.J;
+  BurnsM.a34Set(out, 0, car.x, car.y + (car.bob || 0), car.z, car.yaw, car.pitch || 0, car.roll || 0, car.scale || 1, car.scale || 1, car.scale || 1);
+  // wheels: spin around X, the front pair steers
+  const spin = car.wheelA || 0, steer = -(car.steerVis || 0) * 0.45;
+  for (let i = 0; i < 4; i++) {
+    const b = CART_BONES.FL + i;
+    BurnsM.a34Set(A, 0, J[b * 3], J[b * 3 + 1] + (car.susp ? car.susp[i] : 0), J[b * 3 + 2], i < 2 ? steer : 0, spin, 0, 1, 1, 1);
+    BurnsM.a34Mul(out, b * 12, out, 0, A, 0);
+  }
+  { const b = CART_BONES.STEER; BurnsM.a34Set(A, 0, J[b * 3], J[b * 3 + 1], J[b * 3 + 2], 0, -M.steerTilt, (car.steerVis || 0) * 1.6, 1, 1, 1); BurnsM.a34Mul(out, b * 12, out, 0, A, 0); }
+  const o = CART_TMP.o || (CART_TMP.o = {});
+  for (const p of M.parts) {
+    o.yaw = 0; o.pitch = 0; o.roll = 0; o.sx = 1; o.sy = 1; o.sz = 1; o.x = 0; o.y = 0; o.z = 0;
+    p.fn(o, st);
+    BurnsM.a34Set(A, 0, J[p.b * 3] + o.x, J[p.b * 3 + 1] + o.y, J[p.b * 3 + 2] + o.z, o.yaw, o.pitch, o.roll, o.sx, o.sy, o.sz);
+    BurnsM.a34Mul(out, p.b * 12, out, 0, A, 0);
+  }
+  void Bm;
+  return out;
+}
+// driver bones in the car's frame: ch.compute() at the seat, then body · bone
+function cartPoseDriver(car, M, ch, out) {
+  const seat = M.seat, sc = car.driverScale || 1;
+  ch.x = seat[0]; ch.z = seat[2]; ch.y = seat[1] - (car.driverMan ? 5.6 : 0.88) * sc; ch.yaw = M.seatYaw || 0; ch.scale = sc;
+  ch.compute();
+  for (let b = 0; b < ch.nb; b++) BurnsM.a34Mul(out, b * 12, car.bones, 0, ch.bones, b * 12);
+  return out;
+}
+// a world point from a car-local point, using the posed body (pitch, roll, bob): for rendering
+function cartLocalToWorld(car, x, y, z, out) {
+  const B = car.bones; out = out || [0, 0, 0];
+  if (!B || !B[0] && !B[1] && !B[2]) return cartCarPoint(car, x, y, z, out);
+  return BurnsM.a34Pt(B, 0, x, y, z, out);
+}
+// the same from the simulation state alone (position + heading): for gameplay (weapon origins, drops)
+function cartCarPoint(car, x, y, z, out) {
+  out = out || [0, 0, 0]; const c = Math.cos(car.yaw), s = Math.sin(car.yaw);
+  out[0] = car.x + x * c + z * s; out[1] = car.y + y; out[2] = car.z - x * s + z * c;
+  return out;
+}
+
+/* ---------------- the crowd: baked poses of the engine's cast in shared groups ---------------- */
+const CartCrowd = {
+  looks: null,
+  // 24 low-poly spectator looks (~500 triangles each): festival outfits, hats, tutus, LED necklaces, a cheering pose
+  init() {
+    if (this.looks) return this.looks;
+    const rng = mulberry32(4242), faces = ['friendly', 'goofy', 'lashes', 'greeter', 'smug', 'kid'];
+    this.looks = [];
+    for (let i = 0; i < 24; i++) {
+      // a full look and a distant twin (same seed, a third of the triangles) that shares its bones
+      const seed = rng() * 1e9 | 0, m = new BurnsMesh(1024), f = new BurnsMesh(512); m.lo = true; m.setBone(0); f.lo = true; f.far = true; f.setBone(0);
+      this.spectator(m, mulberry32(seed), faces[i % faces.length], i, false);
+      this.spectator(f, mulberry32(seed), faces[i % faces.length], i, true);
+      this.looks.push({ src: m, far: f });
+    }
+    return this.looks;
+  },
+  spectator(m, rng, face, i, far) {
+    const skin = SKIN_TONES[Math.floor(rng() * SKIN_TONES.length)].base, hair = HAIR_COLORS[Math.floor(rng() * 8)].base;
+    const top = rng.pick(BURNS_NEON.concat(['#f4f0e8', '#1a1a22', '#3a6ad8', '#e8a040'])), bot = rng.pick(['#1a1a22', '#3a4a6a', '#6a4a3a', '#e8e0d0', '#2a2a3a']);
+    const h = 0.92 + rng() * 0.16, pose = i % 4, fem = rng() < 0.5;
+    // legs + shoes
+    const sg = far ? 4 : 5, es = far ? 6 : 8, er = far ? 4 : 6;
+    m.color(bot); for (const s of [1, -1]) m.limb(s * 0.09, 0.82 * h, 0, s * 0.11, 0.08, 0.02, 0.075, 0.06, { seg: sg });
+    const shoe = rng.pick(['#1a1a1e', '#f4f4f0', '#8a5a3a', '#ff4fd8']); if (!far) { m.color(shoe); for (const s of [1, -1]) m.ellipsoid(s * 0.11, 0.05, 0.06, 0.07, 0.05, 0.12, { seg: 6, rings: 4 }); }
+    // torso (shirt), optional tutu / fur coat
+    m.color(top).shine(1); m.ellipsoid(0, 1.12 * h, 0, fem ? 0.17 : 0.2, 0.3 * h, 0.13, { seg: es, rings: er }); m.shine(0);
+    const skirt = rng(), skirtCol = rng.pick(['#ff9ad8', '#9af0ff', '#ffe24a', '#c8a0ff']), coat = rng(), coatCol = rng.pick(['#e8dcc8', '#c87ab0', '#7ab0c8', '#2a2a2a']);
+    if (skirt < 0.3) { m.color(skirtCol); m.push(); m.tf(0, 0.86 * h, 0); m.lathe([[0.16, 0], [0.34, -0.1], [0.3, -0.14], [0.12, -0.04]], { seg: far ? 6 : 9 }); m.pop(); }
+    else if (coat < 0.25) { m.color(coatCol); m.ellipsoid(0, 1.0 * h, 0, 0.26, 0.42 * h, 0.18, { seg: es, rings: er }); }
+    // arms: cheering up, waving, or one fist pumping
+    m.color(rng() < 0.5 ? top : skin);
+    const up = [[0.36, 1.78, 0.06], [0.34, 1.82, 0.02]], wave = [[0.4, 1.7, 0.1], [0.32, 1.0, 0.08]], pump = [[0.3, 1.86, 0.08], [0.3, 1.05, 0.12]];
+    const hands = pose === 0 ? up : pose === 1 ? wave : pose === 2 ? pump : [[0.42, 1.55, 0.18], [0.42, 1.55, 0.18]];
+    m.limb(0.19, 1.34 * h, 0, hands[0][0], hands[0][1] * h, hands[0][2], 0.05, 0.042, { seg: sg });
+    m.limb(-0.19, 1.34 * h, 0, -hands[1][0], hands[1][1] * h, hands[1][2], 0.05, 0.042, { seg: sg });
+    if (!far) { m.color(skin); m.ball(hands[0][0], hands[0][1] * h + 0.03, hands[0][2], 0.05, { seg: 5, rings: 4 }); m.ball(-hands[1][0], hands[1][1] * h + 0.03, hands[1][2], 0.05, { seg: 5, rings: 4 }); }
+    // head, face, hair or hat, shades
+    const hy = 1.58 * h;
+    m.color(skin).shine(1); m.ball(0, hy, 0, 0.14, { seg: far ? 7 : 9, rings: far ? 5 : 7 }); m.shine(0);
+    m.color('#ffffff'); m.decal(0, hy - 0.01, 0.135, 0.2, 0.2, BURNS_ATLAS.face(face));
+    m.color(hair).shine(1); m.ellipsoid(0, hy + 0.04, -0.02, 0.15, 0.12, 0.15, { seg: far ? 6 : 8, rings: far ? 3 : 4, phi1: Math.PI * 0.55 });
+    const pony = fem && rng() < 0.6; if (pony) m.limb(0, hy, -0.08, 0, hy - 0.28, -0.12, 0.09, 0.06, { seg: sg });
+    m.shine(0);
+    const hat = rng(), hatCol = rng.pick(['#e8d8a0', '#8a5a3a', '#ff4fd8']), capCol = rng.pick(['#f4f0e8', '#ffb0d8', '#c8a0ff']);
+    if (hat < 0.2) { m.color(hatCol); m.push(); m.tf(0, hy + 0.09, 0); m.cyl(0, 0, 0, 0.3, 0.3, 0.02, far ? 7 : 10, {}); m.lathe([[0.14, 0], [0.12, 0.13], [0, 0.15]], { seg: far ? 6 : 8 }); m.pop(); }
+    else if (hat < 0.35) { m.color(capCol).ellipsoid(0, hy + 0.1, 0, 0.17, 0.12, 0.17, { seg: far ? 6 : 8, rings: far ? 3 : 5 }); }
+    else if (hat < 0.45) { m.color('#ffd84a'); m.push(); m.tf(0, hy + 0.1, 0); m.lathe([[0.12, 0], [0.01, 0.3], [0, 0.31]], { seg: far ? 5 : 7 }); m.pop(); }
+    const shades = rng() < 0.55; if (shades && !far) { m.color('#14141a').shine(3); m.roundBox(0, hy + 0.02, 0.13, 0.22, 0.06, 0.03, 0.015); m.shine(0); }
+    // a glowing LED necklace (shows at night)
+    const ledCol = rng.pick(BURNS_NEON); if (rng() < 0.6) { m.color(ledCol, 1); m.push(); m.tf(0, 1.36 * h, 0.01, 0, 0.25, 0); m.torus(0, 0, 0, 0.12, 0.018, { seg: far ? 6 : 10, tseg: 3 }); m.pop(); m.emissive(0); }
+  },
+  // spectators [{x, z, y, yaw}] -> skinned groups (one draw call per group of up to 60)
+  groups(spots, rng) {
+    const looks = this.init(), out = [], cap = Math.min(60, BurnsGL.maxBones || 32);
+    let G = null;
+    for (const s of spots) {
+      const L = looks[Math.floor(rng() * looks.length)];
+      if (!G || G.objs.length >= cap || G.mesh.nv + L.src.nv > 60000) { if (G) G.finish(); G = new BurnsGroup(cap); G.crowd = true; G.far = new BurnsGroup(cap); out.push(G); }
+      const o = G.addBuilt(L.src, {}, { x: s.x, y: s.y || 0, z: s.z, yaw: s.yaw, baseY: s.y || 0, baseYaw: s.yaw, ph: rng() * 10, hop: 0.5 + rng() * 0.8, scale: 0.95 + rng() * 0.12 });
+      G.far.addBuilt(L.far, {}, {});
+      o.cx = s.x; o.cz = s.z;
+    }
+    if (G) G.finish();
+    for (const g of out) { if (!g.far.geo) g.far.finish(); g.far.bones = g.bones; }   // the distant twin draws with the same bone matrices
+    for (const g of out) { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const o of g.objs) { x0 = Math.min(x0, o.x); z0 = Math.min(z0, o.z); x1 = Math.max(x1, o.x); z1 = Math.max(z1, o.z); } g.cx = (x0 + x1) / 2; g.cz = (z0 + z1) / 2; g.rad = Math.hypot(x1 - x0, z1 - z0) / 2 + 2; }
+    return out;
+  },
+  // per frame: bounce, sway, jump when cars roar past (excite 0..1 per group)
+  animate(G, t, excite) {
+    for (const o of G.objs) {
+      const e = excite || 0, b = Math.abs(Math.sin(t * (4 + o.hop * 3) + o.ph));
+      o.y = o.baseY + b * (0.05 + 0.32 * e * o.hop);
+      o.yaw = o.baseYaw + Math.sin(t * 1.3 + o.ph) * 0.25;
+    }
+  }
+};
+
+/* ---------------- small props drawn in groups: gift boxes, glow orbs, flags, mines ---------------- */
+const CartPropMesh = {
+  // a gift box with a ribbon and a big bow (gifting culture!)
+  gift(m, col) {
+    m.color(col).shine(2); m.roundBox(0, 0, 0, 1.1, 1.1, 1.1, 0.12); m.shine(0);
+    m.color('#ffffff', 0.35); m.roundBox(0, 0, 0, 1.14, 1.14, 0.2, 0.05); m.roundBox(0, 0, 0, 0.2, 1.14, 1.14, 0.05);
+    m.color('#ffe24a', 0.4).shine(2); m.ellipsoid(-0.2, 0.68, 0, 0.24, 0.14, 0.12, { seg: 8, rings: 5 }); m.ellipsoid(0.2, 0.68, 0, 0.24, 0.14, 0.12, { seg: 8, rings: 5 }); m.ball(0, 0.64, 0, 0.1, { seg: 6, rings: 4 });
+    m.color('#ffffff', 0.9); m.decal(0, 0, 0.58, 0.5, 0.5, BURNS_ATLAS.icon('heart') || BURNS_ATLAS.white, { both: false }); m.push(); m.tf(0, 0, 0, Math.PI); m.decal(0, 0, 0.58, 0.5, 0.5, BURNS_ATLAS.icon('heart') || BURNS_ATLAS.white); m.pop();
+    m.emissive(0).shine(0);
+  },
+  orb(m) { m.color('#9afff0', 1); m.ball(0, 0, 0, 0.42, { seg: 10, rings: 8 }); m.color('#ffffff', 1); m.ball(0, 0, 0, 0.24, { seg: 8, rings: 6 }); m.emissive(0); },
+  flag(m) {
+    m.color('#c8ccd8').shine(3); m.limb(0, 0, 0, 0, 3.2, 0, 0.06, 0.05, { seg: 8 }); m.ball(0, 3.25, 0, 0.12, { seg: 8, rings: 6 }); m.shine(0);
+    m.color('#ff4fd8', 0.5); m.push(); m.tf(0, 2.55, 0); m.box(0.55, 0, 0, 1.1, 0.75, 0.05); m.pop();
+    m.color('#ffe24a', 0.8); m.push(); m.tf(0.55, 2.55, 0.03); m.decal(0, 0, 0, 0.5, 0.5, BURNS_ATLAS.icon('heart') || BURNS_ATLAS.white, { both: true }); m.pop(); m.emissive(0);
+  },
+  mine(m) { m.color('#ff8ac8').shine(2); m.ellipsoid(0, 0.2, 0, 0.45, 0.28, 0.45, { seg: 10, rings: 6, phi1: Math.PI * 0.55 }); m.shine(0); for (let i = 0; i < 9; i++) { const a = i * 2.4; m.color(BURNS_NEON[i % 7], 0.6); m.limb(Math.sin(a) * 0.3, 0.35, Math.cos(a) * 0.3, Math.sin(a) * 0.3 + 0.06, 0.38, Math.cos(a) * 0.3, 0.03, 0.03, { seg: 4 }); } m.emissive(0); },
+  potty(m) {
+    m.color('#3a7ad8').shine(2); m.roundBox(0, 1.2, 0, 1.2, 2.4, 1.2, 0.08); m.shine(0);
+    m.color('#e8eef8'); m.roundBox(0, 2.48, 0, 1.3, 0.16, 1.3, 0.06);
+    m.color('#2a5ab8'); m.roundBox(0, 1.15, 0.61, 0.9, 2.0, 0.04, 0.03);
+    m.color('#ffffff', 0.4); m.decal(0, 1.9, 0.64, 0.4, 0.2, BURNS_ATLAS.white); m.emissive(0);
+  },
+  tumble(m) { m.color('#b8894a'); for (let i = 0; i < 7; i++) { m.push(); m.tf(0, 0, 0, i * 0.9, i * 0.7, i * 0.4); m.torus(0, 0, 0, 0.7, 0.05, { seg: 12, tseg: 3 }); m.pop(); } m.color('#8a6a3a'); m.ball(0, 0, 0, 0.45, { seg: 8, rings: 6 }); },
+  shieldBall(m) { m.color('#dfe6f4', 0.25).shine(3); m.ball(0, 0, 0, 0.5, { seg: 12, rings: 8 }); m.shine(0).emissive(0); }
+};
+
+/* ---- 43_cart_bb_glb.js ---- */
+/* ============================================================
+   ART CART — Blender-made art cars (.glb) on the car rig.
+   CartGLB loads models/<stem>.glb (showroom) and models/<stem>_lo.glb (race)
+   through the engine's BurnsGLTF and hands CartModels a model in the same
+   shape its procedural builders make, so the rest of the game can't tell.
+   The procedural cars stay as fallbacks (no file, no network, no WebGL2).
+
+   Rig convention (see docs/BURNS_GUIDE.md §6.8): root nodes named
+     body · wheel_FL · wheel_FR · wheel_RL · wheel_RR · steer · part_<name>…
+   are the bones (car faces +Z, +X is its left); empties `seat`, `muzzle`
+   and `light_<n>` (extras: color, size, big/head/tail/led) are markers;
+   extras on the scene or `body` node may set len, w, h, wheelR, steerTilt,
+   driverScale, seatYaw. Part animations live here, in CART_GLB_PARTS.
+   ============================================================ */
+const CART_GLB = {   // car id -> file stem under models/ (hi: <stem>.glb, race: <stem>_lo.glb)
+  heart: 'bass_valentine', fish: 'glitterfin', octo: 'calamari_inferno', dragon: 'sir_scorchalot', duck: 'quackzilla',
+  pyramid: 'pyramid_scheme', cupcake: 'frosted_fury', galleon: 'dusty_doubloon', snail: 'turbo_escargot', jelly: 'jelly_jolt',
+  shark: 'dune_chomper', whale: 'whale_of_a_time'
+};
+// part node name (without "part_") -> fn(o, s): the same pose functions as the procedural cars (43_cart_b_models.js,
+// 43_cart_ba_cars.js), so a Blender part must be authored in the same local frame as the procedural K.part build.
+// A body extra `rigV` picks a newer table, CART_GLB_PARTS['<id>:<rigV>'], so a rebuilt .glb can change its parts
+// while an older file on a phone's cache keeps the poses it was made for.
+const CART_GLB_PARTS = {
+  // Bass Valentine before the quality-bar rebuild: its heart is shrunk and lowered here so it no longer hides the road
+  heart: {
+    heart: (o, s) => { const k = cartHeartBeat(o, s, 0.78); o.y = -0.45 + 0.02 * k; }
+  },
+  // the rebuilt Bass Valentine (tools/blender/bass_valentine.py, rigV 2): a heart at its final size, pumping cones
+  'heart:2': {
+    heart: (o, s) => { cartHeartBeat(o, s, 1); },
+    coneL0: (o, s) => cartConePump(o, s, 1, 0, 0), coneL1: (o, s) => cartConePump(o, s, 1, 0, 0.12), coneL2: (o, s) => cartConePump(o, s, 1, 0, 0.24),
+    coneR0: (o, s) => cartConePump(o, s, -1, 0, 0), coneR1: (o, s) => cartConePump(o, s, -1, 0, 0.12), coneR2: (o, s) => cartConePump(o, s, -1, 0, 0.24),
+    subL: (o, s) => cartConePump(o, s, 0, -1, 0.05), subR: (o, s) => cartConePump(o, s, 0, -1, 0.05)
+  },
+  fish: {
+    finL: (o, st) => { o.roll = 1 * (0.25 + Math.sin(st.t * 6 + 1) * 0.25 * (0.4 + st.speed)); },
+    finR: (o, st) => { o.roll = -1 * (0.25 + Math.sin(st.t * 6 - 1) * 0.25 * (0.4 + st.speed)); },
+    tail: (o, st) => { o.yaw = Math.sin(st.t * (3 + st.speed * 7)) * (0.25 + 0.25 * st.speed); }
+  },
+  // the rebuilt Glitterfin (tools/blender/glitterfin.py, rigV 2): the mirror-tiled fish swims on its hull (the tiles
+  // shimmer as it turns), the fins and tail ride on it and swish, the chin mirror ball spins
+  'fish:2': {
+    fish: (o, s) => { const p = cartFishSwim(s); o.yaw = p.yaw; o.pitch = p.pitch; o.roll = p.roll; o.y = p.y; },
+    finL: (o, s) => { cartFollow(o, CART_FISH_J.finL, CART_FISH_J.fish, cartFishSwim(s)); o.roll += 0.22 + Math.sin(s.t * 5 + 1) * 0.3 * (0.5 + s.speed); },
+    finR: (o, s) => { cartFollow(o, CART_FISH_J.finR, CART_FISH_J.fish, cartFishSwim(s)); o.roll -= 0.22 + Math.sin(s.t * 5 - 1) * 0.3 * (0.5 + s.speed); },
+    tail: (o, s) => { cartFollow(o, CART_FISH_J.tail, CART_FISH_J.fish, cartFishSwim(s)); o.yaw += Math.sin(s.t * 4.2 - 0.8) * (0.3 + 0.2 * Math.min(1, s.speed)); },
+    ball: (o, s) => { cartFollow(o, CART_FISH_J.ball, CART_FISH_J.fish, cartFishSwim(s)); o.yaw += s.t * (1.3 + 7 * s.fire); }
+  },
+  octo: Object.assign({ head: (o, s) => { o.y = Math.sin(s.t * 2.2) * 0.06; o.pitch = -0.12 + Math.sin(s.t * 1.1) * 0.05; o.yaw = s.steer * 0.12; } },
+    ...[0, 1, 2, 3, 4, 5, 6, 7].map(i => { const a = (i + 0.5) / 8 * TAU, ph = i * 0.8; return { ['arm' + i]: (o, s) => { const w = Math.sin(s.t * 2.6 + ph); o.yaw = a; o.pitch = -0.15 + w * 0.18 - s.fire * 0.5; o.roll = Math.sin(s.t * 1.9 + ph) * 0.15; } }; })),
+  // the rebuilt Calamari Inferno (tools/blender/calamari_inferno.py, rigV 2): the mantle bobs and looks around, the eight
+  // arms (authored along +Z, yawed into place here) curl and uncurl, wave, and rear up with their torches when firing
+  'octo:2': Object.assign({ head: (o, s) => { o.y = Math.sin(s.t * 2.2) * 0.05; o.pitch = -0.05 + Math.sin(s.t * 1.1) * 0.05; o.yaw = s.steer * 0.15 + Math.sin(s.t * 0.6) * 0.1; o.roll = Math.sin(s.t * 1.4) * 0.03; } },
+    ...[0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ ['arm' + i]: (o, s) => cartOctoArm(o, s, i) }))),
+  // Calamari Inferno flame pass (rigV 3): the same motions; the mesh flames are gone (a glowing burner is left at each
+  // tip) and the game draws live fire there (cartOctoFlames), so the arms no longer need the flame-flicker squash
+  'octo:3': Object.assign({ head: (o, s) => { o.y = Math.sin(s.t * 2.2) * 0.05; o.pitch = -0.05 + Math.sin(s.t * 1.1) * 0.05; o.yaw = s.steer * 0.15 + Math.sin(s.t * 0.6) * 0.1; o.roll = Math.sin(s.t * 1.4) * 0.03; } },
+    ...[0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ ['arm' + i]: (o, s) => cartOctoArm(o, s, i, true) }))),
+  dragon: {
+    neck: (o, s) => { o.pitch = -0.1 + Math.sin(s.t * 2.4) * 0.06 - s.fire * 0.45; o.yaw = s.steer * 0.3 + Math.sin(s.t * 0.7) * 0.08; },
+    wingL: (o, st) => { const k = 0.35 + 0.6 * Math.max(st.boost, st.air); o.roll = 1 * (0.25 + Math.sin(st.t * (3 + 9 * k)) * 0.45 * k); },
+    wingR: (o, st) => { const k = 0.35 + 0.6 * Math.max(st.boost, st.air); o.roll = -1 * (0.25 + Math.sin(st.t * (3 + 9 * k)) * 0.45 * k); },
+    tail: (o, s) => { o.yaw = Math.sin(s.t * (2 + s.speed * 4)) * 0.35; }
+  },
+  // the rebuilt Sir Scorchalot (tools/blender/sir_scorchalot.py, rigV 2): the neck sways and rears back when firing, the
+  // jaw rides on it and gapes (with a few idle chomps), the wings flap gently (hard on boost / in the air), the tail wags
+  // and its spade end follows a beat later
+  'dragon:2': {
+    neck: (o, s) => { const p = cartDragonNeck(s); o.pitch = p.pitch; o.yaw = p.yaw; },
+    jaw: (o, s) => { cartFollow(o, CART_DRAGON_J.jaw, CART_DRAGON_J.neck, cartDragonNeck(s)); o.pitch += 0.03 + 0.06 * Math.pow(Math.max(0, Math.sin(s.t * 1.3)), 8) + 0.5 * s.fire; },
+    wingL: (o, s) => cartDragonWing(o, s, 1), wingR: (o, s) => cartDragonWing(o, s, -1),
+    tail: (o, s) => { o.yaw = Math.sin(s.t * 2.6) * (0.26 + 0.1 * Math.min(1, s.speed)) - s.steer * 0.12; },
+    tailTip: (o, s) => {
+      const P = CART_DRAGON_P; P.yaw = Math.sin(s.t * 2.6) * (0.26 + 0.1 * Math.min(1, s.speed)) - s.steer * 0.12; P.pitch = 0; P.roll = 0; P.x = P.y = P.z = 0;
+      cartFollow(o, CART_DRAGON_J.tailTip, CART_DRAGON_J.tail, P); o.yaw += Math.sin(s.t * 2.6 - 1.1) * 0.38; o.pitch += Math.sin(s.t * 1.3) * 0.06;
+    }
+  },
+  duck: {
+    wingL: (o, st) => { o.roll = 1 * (0.1 + Math.max(0, Math.sin(st.t * 14)) * 0.5 * Math.max(st.boost, st.air)); },
+    wingR: (o, st) => { o.roll = -1 * (0.1 + Math.max(0, Math.sin(st.t * 14)) * 0.5 * Math.max(st.boost, st.air)); },
+    head: (o, s) => { o.pitch = Math.sin(s.t * 3.1) * 0.08 - s.fire * 0.25; o.roll = Math.sin(s.t * 1.7) * 0.1; o.yaw = s.steer * 0.25; }
+  },
+  // the rebuilt Quackzilla (tools/blender/quackzilla.py, rigV 2): the duck floats on its bath water (bobs, rocks, leans
+  // into turns, lifts its chest at speed); the wings, head and party hat ride on it, the head tilts and looks into turns,
+  // the hat wobbles on the head, the foam drifts and the ripples breathe
+  'duck:2': {
+    duck: (o, s) => cartChain(o, CART_DUCK2.duck, cartDuckFloat(s)),
+    wingL: (o, s) => cartChain(o, CART_DUCK2.wingL, cartDuckFloat(s), cartDuckWing(s, 1)),
+    wingR: (o, s) => cartChain(o, CART_DUCK2.wingR, cartDuckFloat(s), cartDuckWing(s, -1)),
+    head: (o, s) => cartChain(o, CART_DUCK2.head, cartDuckFloat(s), cartDuckHead(s)),
+    hat: (o, s) => cartChain(o, CART_DUCK2.hat, cartDuckFloat(s), cartDuckHead(s), cartDuckHat(s)),
+    foam: (o, s) => { o.y = Math.sin(s.t * 1.7 + 0.5) * 0.025; o.yaw = Math.sin(s.t * 0.45) * 0.07; },
+    ripple: (o, s) => { const k = 1 + 0.045 * Math.sin(s.t * 2.2) + 0.03 * Math.min(1, s.speed); o.sx = k; o.sz = k; }
+  },
+  pyramid: { turret: (o, s) => { o.yaw = s.t * (1.2 + s.fire * 9); } },
+  // the rebuilt Pyramid Scheme (tools/blender/pyramid_scheme.py, rigV 2): the capstone turns, its four laser emitters
+  // ride it and sweep, the laser-line rings pulse tier by tier, the tower subs pump
+  'pyramid:2': {
+    cap: (o, s) => cartChain(o, CART_PYR2.cap, cartPyrCap(s)),
+    emit0: (o, s) => cartChain(o, CART_PYR2.emit[0], cartPyrCap(s), cartPyrEmit(s, 0)),
+    emit1: (o, s) => cartChain(o, CART_PYR2.emit[1], cartPyrCap(s), cartPyrEmit(s, 1)),
+    emit2: (o, s) => cartChain(o, CART_PYR2.emit[2], cartPyrCap(s), cartPyrEmit(s, 2)),
+    emit3: (o, s) => cartChain(o, CART_PYR2.emit[3], cartPyrCap(s), cartPyrEmit(s, 3)),
+    glow0: (o, s) => cartPyrGlow(o, s, 0), glow1: (o, s) => cartPyrGlow(o, s, 1), glow2: (o, s) => cartPyrGlow(o, s, 2), glow3: (o, s) => cartPyrGlow(o, s, 3),
+    subs: (o, s) => cartConePump(o, s, 0, -1, 0.05)
+  },
+  cupcake: { cherry: (o, s) => { const b = Math.abs(Math.sin(s.t * 7)) * (0.05 + 0.15 * s.speed); o.y = b; o.roll = Math.sin(s.t * 5) * 0.1; } },
+  // the rebuilt Frosted Fury (tools/blender/frosted_fury.py, rigV 2): jiggling frosting, a cherry riding it, twinkling glints
+  'cupcake:2': {
+    frosting: (o, s) => cartCupPose(o, s, 1),
+    cherry: (o, s) => cartCupCherry(o, s),
+    glintA: (o, s) => cartCupGlint(o, s, 0), glintB: (o, s) => cartCupGlint(o, s, 0.5)
+  },
+  galleon: {
+    sailFore: (o, s) => { o.sz = 0.75 + 0.5 * s.speed + Math.sin(s.t * 3 + 0.9) * 0.06; o.yaw = s.steer * 0.12; },
+    sailMain: (o, s) => { o.sz = 0.75 + 0.5 * s.speed + Math.sin(s.t * 3 - 0.6) * 0.06; o.yaw = s.steer * 0.12; },
+    flag: (o, s) => { o.yaw = Math.PI + Math.sin(s.t * 6) * 0.25; }
+  },
+  // the rebuilt Dusty Doubloon (tools/blender/dusty_doubloon.py, rigV 2): the hull rocks on its trailer like a ship at
+  // anchor (about the captain's deck, so the driver stays put); the sails billow with speed and gusts, the pennant
+  // streams and flutters, the stern lanterns swing; all of them ride the hull's rock
+  'galleon:2': {
+    hull: (o, s) => cartChain(o, CART_GALLEON.hull, cartGalleonRock(s)),
+    sailFore: (o, s) => { cartChain(o, CART_GALLEON.sailFore, cartGalleonRock(s), cartGalleonSail(s, 0)); o.sz = cartGalleonBillow(s, 0.9); },
+    sailMain: (o, s) => { cartChain(o, CART_GALLEON.sailMain, cartGalleonRock(s), cartGalleonSail(s, 1)); o.sz = cartGalleonBillow(s, -0.6); },
+    flag: (o, s) => cartChain(o, CART_GALLEON.flag, cartGalleonRock(s), cartGalleonFlag(s)),
+    lanternL: (o, s) => cartChain(o, CART_GALLEON.lanternL, cartGalleonRock(s), cartGalleonLantern(s, 0)),
+    lanternR: (o, s) => cartChain(o, CART_GALLEON.lanternR, cartGalleonRock(s), cartGalleonLantern(s, 1))
+  },
+  // the rebuilt Turbo Escargot (tools/blender/turbo_escargot.py, rigV 2): the slug squashes and stretches in a slow
+  // wave (longer at speed), the eye stalks sway and bob, the shell wobbles and its chase lights flow out along the spiral
+  // (faster with speed, racing on a boost); the eyes and shell ride the squash
+  'snail:2': {
+    slug: (o, s) => cartSnailSquash(o, s),
+    eyeL: (o, s) => cartChain(o, CART_SNAIL.eyeL, cartSnailRide(s, CART_SNAIL.eyeL, 0), cartSnailEye(s, 0)),
+    eyeR: (o, s) => cartChain(o, CART_SNAIL.eyeR, cartSnailRide(s, CART_SNAIL.eyeR, 1), cartSnailEye(s, 1)),
+    shell: (o, s) => cartChain(o, CART_SNAIL.shell, cartSnailRide(s, CART_SNAIL.shell, 2), cartSnailShell(s)),
+    chase: (o, s) => { const ph = cartSnailChase(s); cartChain(o, CART_SNAIL.chase, cartSnailRide(s, CART_SNAIL.shell, 2), cartSnailShell(s), CART_SNAIL_L.chase); o.sx = o.sy = o.sz = Math.exp(-0.12 * ph); }
+  },
+  snail: {
+    eyeL: (o, st) => { o.pitch = -0.3 + Math.sin(st.t * 4 + 1) * 0.18 - st.speed * 0.3; o.roll = 1 * (0.2 + Math.sin(st.t * 3.1 + 2) * 0.15); },
+    eyeR: (o, st) => { o.pitch = -0.3 + Math.sin(st.t * 4 - 1) * 0.18 - st.speed * 0.3; o.roll = -1 * (0.2 + Math.sin(st.t * 3.1 - 2) * 0.15); },
+    shell: (o, s) => { o.roll = Math.sin(s.t * 2.2) * 0.05; o.pitch = -s.boost * 0.06; }
+  },
+  jelly: Object.assign({ bell: (o, s) => { const p = Math.sin(s.t * 3.2); o.sy = 1 + p * 0.07 + s.fire * 0.15; o.sx = o.sz = 1 - p * 0.05 + s.fire * 0.08; } },
+    ...[0, 1, 3, 4, 5].map(i => ({ ['tentacle' + i]: (o, s) => { o.pitch = Math.sin(s.t * 2.2 + i) * 0.25 + s.speed * 0.5; o.roll = Math.sin(s.t * 1.7 + i * 2) * 0.2; } }))),
+  // the rebuilt Jelly Jolt (tools/blender/jelly_jolt.py, rigV 2): the bell pulses (a quick contraction, a slow relax)
+  // and hovers, leaning into its swim; the static bolts flicker on and off and jump about (always on when it fires);
+  // four two-jointed tentacles sway and trail back with speed, the lower half lagging the upper
+  'jelly:2': Object.assign({
+    bell: (o, s) => { const K = cartJellyPulse(s); cartChain(o, CART_JELLY.bell, cartJellyFloat(s, CART_JELLY.bell, 4)); o.sx = o.sz = K[0]; o.sy = K[1]; },
+    zap: (o, s) => { cartChain(o, CART_JELLY.zap, cartJellyFloat(s, CART_JELLY.zap, 5), cartJellyZap(s)); o.sx = o.sy = o.sz = CART_JELLY_L.zapK; }
+  }, ...[0, 1, 2, 3].map(i => ({
+    ['tent' + i + 'a']: (o, s) => cartChain(o, CART_JELLY.tent[i], cartJellyFloat(s, CART_JELLY.tent[i], i), cartJellyTent(s, i, 0)),
+    ['tent' + i + 'b']: (o, s) => cartChain(o, CART_JELLY.knee[i], cartJellyFloat(s, CART_JELLY.tent[i], i), cartJellyTent(s, i, 0), cartJellyTent(s, i, 1))
+  }))),
+  // Jelly Jolt touch-up (rigV 3): the same motions on the new layout (CART_JELLY3: the bell floats higher, tipped up at
+  // the front, with the driver under it and the tentacles hanging round the seat)
+  'jelly:3': Object.assign({
+    bell: (o, s) => { const R = CART_JELLY3, L = CART_JELLY3_L, K = cartJellyPulse(s, L); cartChain(o, R.bell, cartJellyFloat(s, R.bell, 4, R, L)); o.sx = o.sz = K[0]; o.sy = K[1]; },
+    zap: (o, s) => { const R = CART_JELLY3, L = CART_JELLY3_L; cartChain(o, R.zap, cartJellyFloat(s, R.zap, 5, R, L), cartJellyZap(s, L)); o.sx = o.sy = o.sz = L.zapK; }
+  }, ...[0, 1, 2, 3].map(i => ({
+    ['tent' + i + 'a']: (o, s) => cartChain(o, CART_JELLY3.tent[i], cartJellyFloat(s, CART_JELLY3.tent[i], i, CART_JELLY3, CART_JELLY3_L), cartJellyTent(s, i, 0, CART_JELLY3_L)),
+    ['tent' + i + 'b']: (o, s) => cartChain(o, CART_JELLY3.knee[i], cartJellyFloat(s, CART_JELLY3.tent[i], i, CART_JELLY3, CART_JELLY3_L), cartJellyTent(s, i, 0, CART_JELLY3_L), cartJellyTent(s, i, 1, CART_JELLY3_L))
+  }))),
+  shark: {
+    jaw: (o, s) => { o.pitch = 0.08 + s.fire * 0.75 + Math.max(0, Math.sin(s.t * 10)) * 0.05 * s.speed; },
+    tail: (o, s) => { o.yaw = Math.sin(s.t * (3 + s.speed * 6)) * 0.4; }
+  },
+  // the rebuilt Dune Chomper (tools/blender/dune_chomper.py, rigV 2): the jaw chomps (eases open, snaps shut; gapes when
+  // firing), the tail sweeps, the dorsal fin flexes after it and leans into turns, the pectoral fins paddle
+  'shark:2': {
+    jaw: (o, s) => {
+      const ph = (s.t * 0.85) % 1, c = ph < 0.7 ? 0.5 - 0.5 * Math.cos(ph / 0.7 * Math.PI) : ph < 0.8 ? 1 : Math.max(0, 1 - (ph - 0.8) / 0.07);
+      // capped at 0.3 rad (tools/blender/dune_chomper.py JAW_MAX): any wider and the jaw dips into the nose deck
+      o.pitch = Math.min(0.3, 0.03 + 0.19 * c * (1 - s.fire) + 0.27 * s.fire + Math.max(0, Math.sin(s.t * 10)) * 0.03 * s.speed);
+    },
+    tail: (o, s) => { const w = s.t * 4.2; o.yaw = Math.sin(w) * (0.3 + 0.14 * Math.min(1, s.speed)); o.roll = Math.sin(w) * 0.05; },
+    dorsal: (o, s) => { const w = s.t * 4.2 - 1.1; o.roll = Math.sin(w) * 0.07 - s.steer * 0.1; o.yaw = Math.sin(w) * 0.05; },
+    pecL: (o, s) => { o.roll = Math.sin(s.t * 2.6) * 0.14 - 0.05 * s.speed; o.pitch = -0.06 * s.speed; },
+    pecR: (o, s) => { o.roll = -Math.sin(s.t * 2.6) * 0.14 + 0.05 * s.speed; o.pitch = -0.06 * s.speed; }
+  },
+  whale: {
+    flipperL: (o, st) => { o.roll = 1 * (-0.2 + Math.sin(st.t * 3 + 1) * 0.3); },
+    flipperR: (o, st) => { o.roll = -1 * (-0.2 + Math.sin(st.t * 3 - 1) * 0.3); },
+    tail: (o, s) => { o.pitch = Math.sin(s.t * (2 + s.speed * 3)) * 0.3; }
+  },
+  // the rebuilt Whale of a Time (tools/blender/whale_of_a_time.py, rigV 2): flippers paddle, flukes beat, the spout
+  // burbles and puffs (and erupts when firing), the eyes blink, alternate rail bulbs twinkle (shrunk across the rail)
+  'whale:2': Object.assign({
+    flipperL: (o, s) => { o.roll = -0.15 + Math.sin(s.t * 3 + 1) * 0.32; o.pitch = Math.sin(s.t * 3 + 2.2) * 0.08; },
+    flipperR: (o, s) => { o.roll = 0.15 - Math.sin(s.t * 3 + 1) * 0.32; o.pitch = Math.sin(s.t * 3 + 2.2) * 0.08; },
+    tail: (o, s) => { o.pitch = Math.sin(s.t * 2.6) * (0.22 + 0.12 * Math.min(1, s.speed)); },
+    spout: (o, s) => {
+      const ph = (s.t * 0.45) % 1, puff = ph < 0.16 ? Math.sin(ph / 0.16 * Math.PI) : 0;
+      const k = 0.5 + 0.05 * Math.sin(s.t * 9) + 0.45 * puff + 1.1 * s.fire;
+      o.sy = k; o.sx = o.sz = 0.7 + 0.3 * k;
+    },
+    eyes: (o, s) => { const ph = (s.t * 0.29) % 1, b = ph > 0.955 ? Math.sin((ph - 0.955) / 0.045 * Math.PI) : 0; o.sy = 1 - 0.88 * b; }
+  }, ...[['twLA', 0], ['twLB', Math.PI], ['twRA', Math.PI / 2], ['twRB', Math.PI * 1.5]].map(([n, p]) => ({
+    [n]: (o, s) => { const k = 0.4 + 0.65 * Math.pow(0.5 + 0.5 * Math.sin(s.t * 5.3 + p), 2.5) + 0.08 * Math.sin(s.t * 13 + p * 2); o.sx = k; o.sy = k; }
+  })))
+};
+// ---- part-on-part helpers for the Glitterfin / Calamari Inferno / Sir Scorchalot rebuilds (rigV 2) ----
+// Every part bone hangs off the body, so a part that rides on another part (a fin on the swimming fish, a jaw on the
+// neck) copies its parent's pose: cartFollow sets o's angles to the parent's and its offset so that the part (joint J)
+// turns rigidly about the parent's joint P; the caller then adds its own angles on top (exact for an extra pitch when
+// the parent has no roll, and close for the small parent angles used here).
+const CART_FOLLOW_M = new Float32Array(12);
+function cartFollow(o, J, P, p) {
+  const A = CART_FOLLOW_M; BurnsM.a34Set(A, 0, 0, 0, 0, p.yaw, p.pitch, p.roll, 1, 1, 1);
+  const dx = J[0] - P[0], dy = J[1] - P[1], dz = J[2] - P[2];
+  o.x = A[0] * dx + A[1] * dy + A[2] * dz - dx + p.x; o.y = A[4] * dx + A[5] * dy + A[6] * dz - dy + p.y; o.z = A[8] * dx + A[9] * dy + A[10] * dz - dz + p.z;
+  o.yaw = p.yaw; o.pitch = p.pitch; o.roll = p.roll;
+}
+// Glitterfin's joints (tools/blender/glitterfin.py FJ, FIN_J, TAIL_J, BALL_J) and its swim: a gentle S-sway, roll and bob
+const CART_FISH_J = { fish: [0, 2.4, 0.1], finL: [1.1, 1.75, 0.6], finR: [-1.1, 1.75, 0.6], tail: [0, 1.95, -2.2], ball: [0, 0.98, 2.3] };
+const CART_FISH_P = { yaw: 0, pitch: 0, roll: 0, x: 0, y: 0, z: 0 };
+function cartFishSwim(s) {
+  const p = CART_FISH_P, k = 1 + 0.6 * Math.min(1, s.speed);
+  p.yaw = Math.sin(s.t * 2.3) * 0.05 * k + s.steer * 0.04; p.roll = Math.sin(s.t * 1.7 + 1) * 0.03 - s.steer * 0.03;
+  p.pitch = Math.sin(s.t * 1.3) * 0.015 - s.fire * 0.04; p.y = Math.sin(s.t * 2.6) * 0.025;
+  return p;
+}
+// one Calamari Inferno arm: yawed to its place round the body, a slow wave (pitch) and sideways sweep (roll), a curl that
+// bunches the arm up (taller, shorter: the curled tip tightens) and lets it stretch out again, a tremble that jiggles the
+// torch flame at its tip (harder while firing), and every arm rears up when the car fires
+function cartOctoArm(o, s, i, live) {
+  const a = (i + 0.5) / 8 * TAU, ph = i * 0.8, w = Math.sin(s.t * 2.4 + ph), c = Math.sin(s.t * 1.6 + ph * 1.3);
+  o.yaw = a + Math.sin(s.t * 1.9 + ph) * 0.1;
+  o.pitch = -0.05 + w * 0.14 - s.fire * 0.4 + Math.sin(s.t * 19 + i * 2.1) * 0.008 * (1 + 2 * s.fire);
+  o.roll = Math.sin(s.t * 1.7 + ph) * 0.12;
+  // the torch flicker: a fast irregular breath across the arm (sx) and along it (sy); the side tongues of the rebuilt
+  // flames sit off the arm's plane, so they lick outward and back while the arm itself barely changes
+  const f = Math.sin(s.t * 17 + i * 1.3) * 0.6 + Math.sin(s.t * 29.7 + i * 2.9) * 0.4, g = Math.sin(s.t * 23.3 + i * 0.7);
+  o.sx = live ? 1 : 1 + (0.08 + 0.06 * s.fire) * f; o.sy = 1 + 0.12 * c + (live ? 0 : 0.025 * g); o.sz = 1 - 0.07 * c;
+}
+// ---- Calamari Inferno's live fire (rigV 3: body extra.flames = [root x, y, z, nozzle dir x, y, z], part-local) ----
+// Each arm's burner carries a flame drawn every frame as camera-facing sprites in the shared sprite batch (no extra draw
+// calls, no triangles in the car): a soft halo, licking tongues that are born at the nozzle, stretch, break off and rise
+// as they cool from gold to red, a flickering white-hot core, and embers that drift up and are left behind. Tongues lean
+// back with the car's speed and flare up and outward while the Tentacle Torch fires. Cost scales with distance (d2).
+const CART_FLAME = { p: [0, 0, 0], halo: [1, 0.42, 0.1], light: [1, 0.5, 0.16], mir: null, B: null };
+function cartFlameHash(n) { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); }
+// one sprite along a world direction (dx, dy, dz) projected into the view: the texture's top (the flame's tip) points
+// along it; occ > 0 also dims what is behind (keeps the fire saturated over a bright daytime background)
+function cartFlameQuad(R, x, y, z, dx, dy, dz, len, w, reg, r, g, b, a, occ) {
+  const F = CART_FLAME, B = F.B;
+  for (let m = 0; m < (F.mir === null ? 1 : 2); m++) {
+    let yy = y, ddy = dy, aa = a;
+    if (m) { yy = 2 * F.mir - y; ddy = -dy; aa = a * 0.22; }
+    let px = dx * B.rx + ddy * B.ry + dz * B.rz, py = dx * B.ux + ddy * B.uy + dz * B.uz;
+    const l = Math.hypot(px, py); if (l < 1e-5) { px = 0; py = 1; } else { px /= l; py /= l; }
+    R.bbs.quad(x, yy, z, -py * w / 2, px * w / 2, px * len / 2, py * len / 2, reg, r * aa, g * aa, b * aa, aa * occ);
+  }
+}
+// M: the car model, bones: its posed bones, st: its animation state (t, fire), d2: squared distance to the camera,
+// vx / vz: its velocity (m/s), night 0..1, mirror: y of a mirror plane (the showroom's glass) or null
+function cartOctoFlames(R, M, bones, st, d2, vx, vz, night, mirror) {
+  const X = M.extra && M.extra.flames; if (!X || !bones || d2 > 140 * 140 || !R.bbs.B) return;
+  const S = BURNS_SPRITES.R, F = CART_FLAME, P0 = CART_BONES.P0, t = st.t, f = st.fire || 0;
+  const lod = d2 < 30 * 30 ? 2 : d2 < 75 * 75 ? 1 : 0, nT = lod === 2 ? 4 : lod === 1 ? 2 : 1;
+  F.B = R.bbs.B; F.mir = mirror === undefined ? null : mirror;
+  const occ = 0.62 * (1 - night), glowK = 0.55 + 0.5 * night;
+  const L = 1.3 * (1 + 1.4 * f), W = 0.9 * (1 + 0.5 * f);
+  // the car's centre (bone 0's origin) for the outward flare, and the wind (the flames trail back with speed)
+  const cx = bones[3], cz = bones[11];
+  for (let i = 0; i < 8; i++) {
+    const o = (P0 + i) * 12, p = F.p;
+    BurnsM.a34Pt(bones, o, X[0], X[1], X[2], p);
+    const bx = p[0], by = p[1], bz = p[2];
+    // the axis: up, a little along the nozzle, out from the car when firing
+    let ndx = bones[o] * X[3] + bones[o + 1] * X[4] + bones[o + 2] * X[5], ndz = bones[o + 8] * X[3] + bones[o + 9] * X[4] + bones[o + 10] * X[5];
+    let ox = bx - cx, oz = bz - cz; const ol = Math.hypot(ox, oz) || 1; ox /= ol; oz /= ol;
+    let ax = ndx * 0.25 + ox * 1.1 * f, ay = 1, az = ndz * 0.25 + oz * 1.1 * f;
+    const al = Math.hypot(ax, ay, az); ax /= al; ay /= al; az /= al;
+    const seed = i * 7.13, fl = 0.86 + 0.09 * Math.sin(t * 17.3 + seed) + 0.05 * Math.sin(t * 31.1 + seed * 2);
+    // the halo: warm light spilling round the burner
+    R.bbs.bb(bx + ax * L * 0.3, by + ay * L * 0.3, bz + az * L * 0.3, L * 1.7 * fl, L * 1.7 * fl, S.glow, F.halo, (0.26 + 0.2 * f) * glowK * fl, true);
+    if (F.mir !== null) R.bbs.bb(bx + ax * L * 0.3, 2 * F.mir - by - ay * L * 0.3, bz + az * L * 0.3, L * 1.7, L * 1.7, S.glow, F.halo, 0.07 * fl, true);
+    // the body: the flame's steady mass, rooted in the nozzle, breathing and swaying
+    {
+      const bl = L * 0.78 * (0.85 + 0.12 * Math.sin(t * 13 + seed) + 0.08 * Math.sin(t * 21.7 + seed * 3)), bw = W * (0.92 + 0.1 * Math.sin(t * 15.3 + seed * 2));
+      const dx = ax + Math.sin(t * 6.1 + seed) * 0.16 - vx * 0.018, dz = az + Math.cos(t * 5.3 + seed) * 0.16 - vz * 0.018, dl = Math.hypot(dx, ay, dz), k = bl * 0.4 / dl;
+      cartFlameQuad(R, bx + dx * k, by + ay * k, bz + dz * k, dx, ay, dz, bl, bw, S.flame, 1, 0.66, 0.24, 0.85 * fl, occ);
+    }
+    // the tongues: each is born at the nozzle, stretches, pinches off and rises, cooling gold -> orange -> red
+    const rate = (2.3 + 0.4 * cartFlameHash(seed)) * (1 + 0.7 * f);
+    for (let j = 0; j < nT; j++) {
+      const sj = seed + j * 3.71, u = t * rate * (1 + 0.13 * j) + j / nT + cartFlameHash(sj), n = Math.floor(u), ph = u - n;
+      const r1 = cartFlameHash(n * 1.7 + sj), r2 = cartFlameHash(n * 3.1 + sj + 5), age = ph / rate;
+      // a lean of its own (new every lick) and a sway that grows as it rises
+      const sw = 0.55 * ph + 0.12;
+      const lx = (r1 - 0.5) * 0.7 * sw + Math.sin(t * 5.3 + sj) * 0.2 * ph, lz = (r2 - 0.5) * 0.7 * sw + Math.cos(t * 4.1 + sj) * 0.2 * ph;
+      const len = L * (0.55 + 0.6 * Math.sin(Math.PI * Math.min(1, ph * 1.2))) * (0.8 + 0.4 * r1) * (lod === 2 ? 1 : 1.15);
+      const rise = L * 0.85 * Math.pow(ph, 1.4);
+      const w = W * (1.05 - 0.6 * ph) * (0.8 + 0.4 * r2) * (lod === 2 ? 1 : 1.3);
+      const dx = ax + lx - vx * 0.018, dy = ay, dz = az + lz - vz * 0.018, dl = Math.hypot(dx, dy, dz);
+      const k = rise + len * 0.42;
+      const x = bx + dx / dl * k - vx * age * 0.1, y = by + dy / dl * k, z = bz + dz / dl * k - vz * age * 0.1;
+      const a = Math.min(1, ph * 7) * Math.pow(1 - ph, 0.8) * fl * (1 + 0.3 * f);
+      const cool = Math.min(1, ph * 1.3);
+      cartFlameQuad(R, x, y, z, dx, dy, dz, len, w, S.flame, 1, 0.82 - 0.5 * cool, 0.38 - 0.3 * cool, a, occ);
+    }
+    // the core: a short white-hot cone at the nozzle, flickering fast (two crossed sprites out of step)
+    if (lod) for (let c = 0; c < (lod === 2 ? 2 : 1); c++) {
+      const q = c ? 1.7 : 0, cl = L * 0.5 * (0.9 + 0.18 * Math.sin(t * 23 + seed + q) + 0.12 * Math.sin(t * 37.7 + seed * 2 + q)) * (1 - 0.35 * f);
+      const cdx = ax + Math.sin(t * 11 + seed + q) * 0.12 - vx * 0.02, cdz = az + Math.cos(t * 9 + seed + q) * 0.12 - vz * 0.02;
+      cartFlameQuad(R, bx + cdx * cl * 0.38, by + ay * cl * 0.38, bz + cdz * cl * 0.38, cdx, ay, cdz, cl, W * 0.55, S.flame, 1, 0.92, 0.7, 0.9 * fl, occ * 0.5);
+    }
+    // embers: specks that spit out of the flame, drift up and swirl, and are left behind as the car drives on
+    if (lod === 2) for (let e = 0; e < 3 + (f > 0.1 ? 2 : 0); e++) {
+      const se = seed + e * 5.3, E = 1.1, u = t / E + e / 3 + cartFlameHash(se), n = Math.floor(u), ph = u - n, age = ph * E;
+      const r1 = cartFlameHash(n * 2.3 + se), r2 = cartFlameHash(n * 4.7 + se + 1);
+      const x = bx + ax * L * 0.6 + ((r1 - 0.5) * 1.2 + Math.sin(t * 3.1 + se) * 0.25) * ph + ox * f * 2 * ph - vx * age * 0.85;
+      const y = by + ay * L * 0.6 + (0.4 + 1.6 * r2) * ph * (1 + f);
+      const z = bz + az * L * 0.6 + ((r2 - 0.5) * 1.2 + Math.cos(t * 2.7 + se) * 0.25) * ph + oz * f * 2 * ph - vz * age * 0.85;
+      const tw = 0.6 + 0.4 * Math.sin(t * 19 + se * 3), a = (1 - ph) * Math.min(1, ph * 8) * tw, sz = 0.11 * (1 - 0.5 * ph);
+      cartFlameQuad(R, x, y, z, 0, 1, 0, sz, sz, S.core, 1, 0.62 - 0.3 * ph, 0.22 - 0.15 * ph, a, 0);
+    }
+  }
+}
+// the warm flickering light the fire throws on the car and the road (race scenes: through the scene's light picker)
+function cartOctoLight(k, add, t, night) {
+  if (!k.M.extra || !k.M.extra.flames) return;
+  const f = k.st.fire || 0, fl = 0.8 + 0.12 * Math.sin(t * 17.3 + k.x) + 0.08 * Math.sin(t * 29.9);
+  add(k.x, k.y + 2.2, k.z, 6.5 + 5 * f, CART_FLAME.light, (0.45 + 0.65 * night + 1.2 * f) * fl, 1.1);
+}
+// Sir Scorchalot's joints (tools/blender/sir_scorchalot.py NECK_J, its printed JAW_J, TAIL_J, TIP_J) and the neck's sway
+const CART_DRAGON_J = { neck: [0, 2.0, 1.6], jaw: [0, 2.9196, 2.7229], tail: [0, 1.45, -2.25], tailTip: [0, 1.25, -3.45] };
+const CART_DRAGON_P = { yaw: 0, pitch: 0, roll: 0, x: 0, y: 0, z: 0 }, CART_DRAGON_N = { yaw: 0, pitch: 0, roll: 0, x: 0, y: 0, z: 0 };
+function cartDragonNeck(s) {
+  const p = CART_DRAGON_N;
+  p.pitch = -0.08 + Math.sin(s.t * 2.4) * 0.05 - s.fire * 0.3; p.yaw = s.steer * 0.3 + Math.sin(s.t * 0.7) * 0.12;
+  return p;
+}
+// a wing (side 1 = left): a slow, gentle flap with a little sweep; beats harder and faster on boost or in the air
+function cartDragonWing(o, s, side) {
+  const k = Math.max(s.boost, s.air), f = Math.sin(s.t * 3.2) * (1 - k) + Math.sin(s.t * 9) * k;
+  o.roll = side * (0.18 + f * (0.16 + 0.3 * k)); o.yaw = side * Math.sin(s.t * 3.2 - 0.8) * 0.05;
+}
+// ---- chained parts for the Quackzilla / Pyramid Scheme / Frosted Fury rebuilds (rigV 2) ----
+// cartChain poses a part that rides a chain of other parts' motions, exactly: each link L is { j: [x, y, z] (its joint,
+// car space at rest), x, y, z (offset), yaw, pitch, roll } and turns everything after it about its joint; the outermost
+// link comes first and the part's own motion last. The part's joint J then gets the composed offset and angles.
+// A link with `ax` turns in a frame yawed by ax (its pitch then tips about the horizontal axis across direction ax).
+const CART_CHAIN = { m: new Float32Array(12), a: new Float32Array(12), t: new Float32Array(12), q: new Float32Array(12) };
+function cartChain(o, J, l0, l1, l2) {
+  const M = CART_CHAIN.m, A = CART_CHAIN.a, T = CART_CHAIN.t, Q = CART_CHAIN.q;
+  BurnsM.a34Set(M, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1);
+  for (const L of [l0, l1, l2]) {
+    if (!L) continue;
+    const j = L.j;
+    if (L.ax) {
+      BurnsM.a34Set(T, 0, j[0] + (L.x || 0), j[1] + (L.y || 0), j[2] + (L.z || 0), L.ax, 0, 0, 1, 1, 1);
+      BurnsM.a34Set(Q, 0, 0, 0, 0, L.yaw || 0, L.pitch || 0, L.roll || 0, 1, 1, 1); BurnsM.a34Mul(A, 0, T, 0, Q, 0);
+      BurnsM.a34Set(Q, 0, 0, 0, 0, -L.ax, 0, 0, 1, 1, 1); BurnsM.a34Mul(T, 0, A, 0, Q, 0); A.set(T);
+    } else BurnsM.a34Set(A, 0, j[0] + (L.x || 0), j[1] + (L.y || 0), j[2] + (L.z || 0), L.yaw || 0, L.pitch || 0, L.roll || 0, 1, 1, 1);
+    A[3] -= A[0] * j[0] + A[1] * j[1] + A[2] * j[2]; A[7] -= A[4] * j[0] + A[5] * j[1] + A[6] * j[2]; A[11] -= A[8] * j[0] + A[9] * j[1] + A[10] * j[2];
+    BurnsM.a34Mul(T, 0, M, 0, A, 0); M.set(T);
+  }
+  o.x = M[0] * J[0] + M[1] * J[1] + M[2] * J[2] + M[3] - J[0];
+  o.y = M[4] * J[0] + M[5] * J[1] + M[6] * J[2] + M[7] - J[1];
+  o.z = M[8] * J[0] + M[9] * J[1] + M[10] * J[2] + M[11] - J[2];
+  o.pitch = Math.asin(Math.max(-1, Math.min(1, -M[6]))); o.yaw = Math.atan2(M[2], M[10]); o.roll = Math.atan2(M[4], M[5]);
+}
+// Pyramid Scheme's joints (tools/blender/pyramid_scheme.py CAP_J, the emitters, the laser rings, SUBS_J) and motions
+const CART_PYR2 = { cap: [0, 2.58, 0.5], emit: [0, 1, 2, 3].map(k => { const a = TAU * (k + 0.5) / 4; return [Math.sin(a) * 0.5, 2.73, 0.5 + Math.cos(a) * 0.5]; }) };
+const CART_PYR2_L = { c: { j: CART_PYR2.cap }, e: [0, 1, 2, 3].map(k => ({ j: CART_PYR2.emit[k], ax: TAU * (k + 0.5) / 4 })) };
+function cartPyrCap(s) { const L = CART_PYR2_L.c; L.yaw = s.t * 0.7; return L; }
+// an emitter sweeps its beam up and down (out of step with the others); firing, all four scan fast across the road
+function cartPyrEmit(s, k) {
+  const L = CART_PYR2_L.e[k];
+  L.pitch = (0.32 * Math.sin(s.t * 2.2 + k * 1.57) - 0.12) * (1 - s.fire) + s.fire * (0.1 + 0.3 * Math.sin(s.t * 11 + k));
+  return L;
+}
+// a tier's bright laser ring: lit (scale 1, standing just proud of the face) or sunk back into the tier (scale 0.8);
+// the rings chase bottom to top, all light on the music's beat and while firing
+function cartPyrGlow(o, s, i) {
+  const ph = ((s.t * 1.4 - i * 0.22) % 1 + 1) % 1, v = 0.5 + 0.5 * Math.cos(ph * TAU);
+  const on = Math.max(Math.min(1, Math.max(0, (v - 0.35) / 0.3)), s.beat || 0, s.fire);
+  const k = 0.8 + 0.2 * on; o.sx = k; o.sz = k;
+}
+// Frosted Fury's joints (tools/blender/frosted_fury.py FROST_J, CHERRY): the frosting jiggles (squash and stretch, a sway
+// into turns, wilder at speed and when firing), the cherry rides it and bounces, the glints twinkle in turn
+const CART_CUP2 = { frost: [0, 1.6, 0.75], cherry: [0, 3.25, 0.75] };
+const CART_CUP2_L = { f: { j: CART_CUP2.frost }, c: { j: CART_CUP2.cherry } };
+function cartCupFrost(s) {
+  const L = CART_CUP2_L.f, a = 0.03 + 0.04 * Math.min(1, s.speed) + 0.08 * s.fire, w = Math.sin(s.t * 6.5);
+  L.sy = 1 + a * w; L.sxz = 1 - 0.5 * a * w;
+  L.roll = 0.04 * Math.sin(s.t * 3.1) - 0.05 * s.steer; L.pitch = 0.03 * Math.sin(s.t * 2.3 + 1);
+  return L;
+}
+function cartCupPose(o, s, g) {
+  const L = cartCupFrost(s); o.sx = o.sz = L.sxz * g; o.sy = L.sy * g; o.roll = L.roll; o.pitch = L.pitch;
+}
+function cartCupGlint(o, s, ph0) {
+  const ph = ((s.t * 0.8 + ph0) % 1 + 1) % 1, on = Math.max(0, 1 - Math.abs(ph - 0.1) / 0.1, s.fire);
+  cartCupPose(o, s, 0.84 + 0.16 * on);
+}
+function cartCupCherry(o, s) {
+  const F = cartCupFrost(s), C = CART_CUP2_L.c;
+  C.roll = Math.sin(s.t * 5) * 0.12; C.pitch = Math.sin(s.t * 4.3 + 1) * 0.08;
+  cartChain(o, CART_CUP2.cherry, F, C);
+  o.y += (CART_CUP2.cherry[1] - CART_CUP2.frost[1]) * (F.sy - 1) + Math.abs(Math.sin(s.t * 7)) * (0.03 + 0.1 * Math.min(1, s.speed));
+}
+// Quackzilla's joints (tools/blender/quackzilla.py PIVOT, WING_J, HEAD_J, HAT_J) and its float, wing, head and hat motions
+const CART_DUCK2 = { duck: [0, 1.0, 0], wingL: [1.12, 1.86, 0.32], wingR: [-1.12, 1.86, 0.32], head: [0, 2.3, 1.3], hat: [0.17, 3.67, 1.45] };
+const CART_DUCK2_L = { f: { j: CART_DUCK2.duck }, h: { j: CART_DUCK2.head }, t: { j: CART_DUCK2.hat }, wL: { j: CART_DUCK2.wingL }, wR: { j: CART_DUCK2.wingR } };
+function cartDuckFloat(s) {
+  const L = CART_DUCK2_L.f, sp = Math.min(1, s.speed);
+  L.y = 0.045 * Math.sin(s.t * 1.8) + 0.015 * Math.sin(s.t * 4.3 + 1) + 0.03 * s.fire;
+  L.pitch = 0.03 * Math.sin(s.t * 1.3 + 0.6) - 0.04 * sp + 0.05 * s.fire;
+  L.roll = 0.04 * Math.sin(s.t * 1.1) - 0.07 * s.steer; L.yaw = 0.025 * Math.sin(s.t * 0.7);
+  return L;
+}
+function cartDuckWing(s, side) {
+  const L = side > 0 ? CART_DUCK2_L.wL : CART_DUCK2_L.wR;
+  L.roll = side * (0.04 + 0.04 * Math.sin(s.t * 2.3 + side) + Math.max(0, Math.sin(s.t * 14)) * 0.5 * Math.max(s.boost, s.air));
+  return L;
+}
+function cartDuckHead(s) {
+  const L = CART_DUCK2_L.h;
+  L.pitch = Math.sin(s.t * 3.1) * 0.05 - s.fire * 0.22; L.roll = Math.sin(s.t * 1.7) * 0.09; L.yaw = s.steer * 0.3 + Math.sin(s.t * 0.8) * 0.08;
+  return L;
+}
+function cartDuckHat(s) {
+  const L = CART_DUCK2_L.t, k = 0.7 + 0.5 * Math.min(1, s.speed) + 0.6 * s.fire;
+  L.roll = Math.sin(s.t * 5.3 - 0.8) * 0.1 * k; L.pitch = Math.sin(s.t * 4.1 + 0.4) * 0.07 * k;
+  return L;
+}
+// Dusty Doubloon's joints (tools/blender/dusty_doubloon.py: hull at the origin, SAIL_FORE / SAIL_MAIN pivots, the flag
+// at the main mast top, LANT hooks) and its motions. The rock pivot sits at the captain's seat on the stern deck.
+const CART_GALLEON = { hull: [0, 0, 0], sailFore: [0, 3.1, 1.08], sailMain: [0, 3.35, -0.42], flag: [0, 4.97, -0.5], lanternL: [1.13, 3.28, -2.58], lanternR: [-1.13, 3.28, -2.58] };
+const CART_GALLEON_L = { rock: { j: [0, 2.9, -1.85] }, sail: [{ j: CART_GALLEON.sailFore }, { j: CART_GALLEON.sailMain }], flag: { j: CART_GALLEON.flag }, lant: [{ j: CART_GALLEON.lanternL }, { j: CART_GALLEON.lanternR }] };
+function cartGalleonRock(s) {   // a slow roll and pitch, a lean out of turns, the bow lifting with speed
+  const L = CART_GALLEON_L.rock, sp = Math.min(1, s.speed);
+  L.roll = 0.02 * Math.sin(s.t * 1.3) + 0.008 * Math.sin(s.t * 0.47 + 2) - 0.03 * s.steer;
+  L.pitch = 0.012 * Math.sin(s.t * 0.9 + 1) - 0.014 * sp - 0.02 * s.boost + 0.03 * s.fire * Math.sin(s.t * 20);
+  return L;
+}
+function cartGalleonSail(s, i) {   // the sails lean a little into turns and luff in the gusts
+  const L = CART_GALLEON_L.sail[i]; L.yaw = s.steer * 0.1 + Math.sin(s.t * 1.1 + i * 2) * 0.03; L.roll = Math.sin(s.t * 2.3 + i) * 0.015;
+  return L;
+}
+function cartGalleonBillow(s, ph) {   // the canvas fills with speed (z scale of the billow), breathing in the gusts
+  return 0.8 + 0.42 * Math.min(1.2, s.speed) + Math.sin(s.t * 3 + ph) * 0.06 + Math.sin(s.t * 7.7 + ph * 3) * 0.025 * (0.4 + s.speed);
+}
+function cartGalleonFlag(s) {   // streaming back from the mast top, flicking side to side
+  const L = CART_GALLEON_L.flag; L.yaw = Math.PI + Math.sin(s.t * 6) * 0.2 + Math.sin(s.t * 13.1) * 0.06 + s.steer * 0.25; L.roll = Math.sin(s.t * 9.5) * 0.14;
+  return L;
+}
+function cartGalleonLantern(s, i) {   // a pendulum: swings back as the ship speeds up, out of the turns, and keeps swaying
+  const L = CART_GALLEON_L.lant[i], ph = i * 1.7;
+  L.pitch = 0.18 * Math.min(1, s.speed) + Math.sin(s.t * 2.3 + ph) * 0.1; L.roll = Math.sin(s.t * 1.9 + ph) * 0.12 + s.steer * 0.3;
+  return L;
+}
+// Turbo Escargot's joints (tools/blender/turbo_escargot.py: slug at the origin, eye stalk roots, SHELL_AT, the spiral's
+// centre) and motions. The slug squashes about its sole (SOLE_Y, SOLE_Z); a part riding it moves with that point.
+const CART_SNAIL = { eyeL: [0.22, 2.3, 2.55], eyeR: [-0.22, 2.3, 2.55], shell: [0, 1.15, -0.55], chase: [0, 2.45, -0.55], sole: [0.45, 0.3], da2: 1.261357 };
+const CART_SNAIL_L = { ride: [{ j: CART_SNAIL.eyeL }, { j: CART_SNAIL.eyeR }, { j: CART_SNAIL.shell }], eye: [{ j: CART_SNAIL.eyeL }, { j: CART_SNAIL.eyeR }], shell: { j: CART_SNAIL.shell }, chase: { j: CART_SNAIL.chase }, k: [1, 1, 1] };
+function cartSnailK(s) {   // the squash: [sx, sy, sz], a peristaltic wave; the body stretches longer with speed
+  const K = CART_SNAIL_L.k, w = Math.sin(s.t * 3.4), sp = Math.min(1, s.speed);
+  K[0] = 1 - 0.012 * w; K[1] = 1 + 0.03 * w - 0.015 * sp; K[2] = 1 - 0.022 * w + 0.03 * sp + 0.03 * s.boost;
+  return K;
+}
+function cartSnailSquash(o, s) {
+  const K = cartSnailK(s), so = CART_SNAIL.sole;
+  o.sx = K[0]; o.sy = K[1]; o.sz = K[2]; o.y = so[0] * (1 - K[1]); o.z = so[1] * (1 - K[2]);
+}
+function cartSnailRide(s, J, i) {   // where the squash carries a riding part's joint J
+  const L = CART_SNAIL_L.ride[i], K = cartSnailK(s), so = CART_SNAIL.sole;
+  L.x = J[0] * (K[0] - 1); L.y = (J[1] - so[0]) * (K[1] - 1); L.z = (J[2] - so[1]) * (K[2] - 1);
+  return L;
+}
+function cartSnailEye(s, i) {   // the stalks lean back at speed, sway out of phase and bob as the eyes look around
+  const L = CART_SNAIL_L.eye[i], side = i ? -1 : 1, ph = i * 1.9;
+  L.pitch = -0.2 + Math.sin(s.t * 2.6 + ph) * 0.14 - 0.3 * Math.min(1, s.speed) - 0.2 * s.boost;
+  L.roll = side * (0.16 + Math.sin(s.t * 1.9 + ph) * 0.13) - s.steer * 0.2; L.yaw = Math.sin(s.t * 1.3 + ph) * 0.25;
+  L.y = 0.04 * Math.sin(s.t * 4.4 + ph);
+  return L;
+}
+function cartSnailShell(s) {   // a gentle wobble, rocking back on a boost
+  const L = CART_SNAIL_L.shell; L.roll = Math.sin(s.t * 2.2) * 0.035 - s.steer * 0.03; L.pitch = -s.boost * 0.06 + Math.sin(s.t * 1.7) * 0.012;
+  return L;
+}
+function cartSnailChase(s) {   // the chase lights' phase: turning back along the spiral (outward), looping every two slots
+  const dt = s._snT === undefined ? 0 : Math.max(0, Math.min(0.1, s.t - s._snT)); s._snT = s.t;
+  s._snPh = ((s._snPh || 0) + dt * (0.7 + 1.1 * Math.min(1, s.speed) + 3 * s.boost + 2 * s.fire)) % CART_SNAIL.da2;
+  CART_SNAIL_L.chase.pitch = -s._snPh;
+  return -s._snPh;
+}
+// Jelly Jolt's joints (tools/blender/jelly_jolt.py: BELL_AT, the core, TENT_A roots at TENT_R / TENT_Y, knees SEG1
+// below) and motions. The bell scales about BELL_AT; a riding part's joint moves with that scale.
+const CART_JELLY = (() => {
+  const B = [0, 2.1, 0.45], tent = [40, 140, 220, 320].map(d => [Math.sin(d * Math.PI / 180) * 1.22, 2.2, B[2] + Math.cos(d * Math.PI / 180) * 1.22]);
+  return { bell: B, zap: [0, B[1] + 0.72, B[2]], tent, knee: tent.map(p => [p[0], p[1] - 0.56, p[2]]) };
+})();
+const CART_JELLY_L = { k: [1, 1], float: [0, 1, 2, 3, 4, 5].map(() => ({ j: CART_JELLY.bell })), zap: { j: CART_JELLY.zap }, zapK: 1,
+  tent: [0, 1, 2, 3].map(i => [{ j: CART_JELLY.tent[i] }, { j: CART_JELLY.knee[i] }]) };
+// the rigV 3 layout (tools/blender/jelly_jolt.py prints these as JELLY_RIG3: BELL_AT, the zap joint at the tilted core,
+// the four tentacle roots on the tilted rim; the knees hang SEG1 below)
+const CART_JELLY3 = (() => {
+  const tent = [[0.973, 2.6655, 0.4815], [0.6901, 2.4439, -0.7752], [-0.6901, 2.4439, -0.7752], [-0.973, 2.6655, 0.4815]];
+  return { bell: [0, 2.5, 0.05], zap: [0, 3.124, -0.06], tent, knee: tent.map(p => [p[0], p[1] - 0.56, p[2]]) };
+})();
+const CART_JELLY3_L = { k: [1, 1], float: [0, 1, 2, 3, 4, 5].map(() => ({ j: CART_JELLY3.bell })), zap: { j: CART_JELLY3.zap }, zapK: 1,
+  tent: [0, 1, 2, 3].map(i => [{ j: CART_JELLY3.tent[i] }, { j: CART_JELLY3.knee[i] }]) };
+function cartJellyC(s) {   // the swim stroke: 0..1, a quick contraction then a slow relax (about 0.8 strokes a second)
+  const ph = (s.t * 0.8) % 1;
+  return ph < 0.22 ? 0.5 - 0.5 * Math.cos(ph / 0.22 * Math.PI) : Math.exp(-(ph - 0.22) * 5);
+}
+function cartJellyPulse(s, LL = CART_JELLY_L) {   // [radial, vertical] scale of the bell: narrower and taller on the stroke, puffed up when firing
+  const K = LL.k, c = cartJellyC(s);
+  K[0] = 1 - 0.085 * c + 0.07 * s.fire; K[1] = 1 + 0.07 * c + 0.12 * s.fire;
+  return K;
+}
+function cartJellyFloat(s, J, i, R = CART_JELLY, LL = CART_JELLY_L) {   // the hover (rises on the stroke, leans into its swim) plus where the pulse carries J
+  const L = LL.float[i], K = cartJellyPulse(s, LL), c = cartJellyC(s), B = R.bell, sp = Math.min(1, s.speed);
+  L.x = (J[0] - B[0]) * (K[0] - 1); L.z = (J[2] - B[2]) * (K[0] - 1);
+  L.y = (J[1] - B[1]) * (K[1] - 1) + 0.06 * c - 0.03 + 0.02 * Math.sin(s.t * 1.3);
+  L.pitch = 0.07 * sp + 0.02 * Math.sin(s.t * 0.9); L.roll = -0.05 * s.steer + 0.025 * Math.sin(s.t * 0.7 + 1);
+  return L;
+}
+function cartJellyZap(s, LL = CART_JELLY_L) {   // static: on and off in a jittery rhythm, a new direction each flick, always crackling when it fires
+  const n = Math.floor(s.t * 13), f = Math.abs((Math.sin(n * 91.7 + 0.3) * 43758.5453) % 1), L = LL.zap;
+  L.yaw = n * 2.39996; L.pitch = (f - 0.5) * 0.2;
+  LL.zapK = s.fire > 0.05 || f > 0.45 ? 0.85 + 0.35 * ((f * 7.3) % 1) + 0.3 * s.fire : 0.001;
+  return L;
+}
+function cartJellyTent(s, i, seg, LL = CART_JELLY_L) {   // seg 0: the upper half sways and trails; seg 1: the lower half follows a beat later
+  const L = LL.tent[i][seg], sp = Math.min(1.2, s.speed), c = cartJellyC(s), ph = i * 1.6 - seg * 1.1;
+  L.pitch = (seg ? 0.3 : 0.42) * sp + (seg ? 0.26 : 0.17) * Math.sin(s.t * 2.2 + ph) - (seg ? 0.1 : 0.16) * c;
+  L.roll = (seg ? 0.2 : 0.14) * Math.sin(s.t * 1.7 + i * 2 - seg * 0.9) + (seg ? 0 : 0.12 * s.steer);
+  return L;
+}
+// per-car points the race sim reads from M.extra (the procedural values; a glb's body extras.extra JSON overrides)
+// sight: [y, z] of the top of a tall sculpture, car-local: the chase camera rises just enough to see the road over it
+const CART_GLB_EXTRA = {
+  heart: { sight: [3.66, 0.8] },
+  octo: { arms: 8, armZ: 0.55, chimney: [0, 4.7, -0.15] },
+  galleon: { cannons: [[1.6, 1.55, -0.7], [1.6, 1.55, 0.6], [-1.6, 1.55, -0.7], [-1.6, 1.55, 0.6]] },
+  snail: { rockets: [[0.95, 1.9, -1.75], [-0.95, 1.9, -1.75]] }
+};
+const CartGLB = {
+  rigs: {},          // id -> { hi, lo } (BurnsGLTF.rig results)
+  models: {},        // id+':lo' -> model object (built once)
+  ready: false,
+  _p: null,
+  base() { return 'models/'; },
+  // bone index for a root node name: the fixed car bones, then the parts in sorted name order
+  boneFn(partNames) {
+    const fixed = { body: CART_BONES.BODY, wheel_FL: CART_BONES.FL, wheel_FR: CART_BONES.FR, wheel_RL: CART_BONES.RL, wheel_RR: CART_BONES.RR, steer: CART_BONES.STEER };
+    return name => {
+      if (fixed[name] !== undefined) return fixed[name];
+      if (name.startsWith('part_')) { const i = partNames.indexOf(name.slice(5)); return i < 0 ? null : CART_BONES.P0 + i; }
+      return null;
+    };
+  },
+  partNames(doc) {
+    const nodes = doc.json.nodes || [], out = [];
+    for (const r of doc.roots) { const n = nodes[r].name || ''; if (n.startsWith('part_') && BurnsGLTF.subtreeHasMesh(doc, r)) out.push(n.slice(5)); }
+    return out.sort();
+  },
+  build(doc, lo) {
+    const parts = this.partNames(doc);
+    if (CART_BONES.P0 + parts.length > 16) throw new Error('cart glb: too many parts');
+    const R = BurnsGLTF.rig(doc, { bone: this.boneFn(parts), minBones: CART_BONES.P0 + parts.length, ao: !lo, aoRes: 30 });
+    R.partNames = parts;
+    return R;
+  },
+  preload() {
+    if (this._p) return this._p;
+    // no loader, no fetch, or a file:// page (fetch can't read files and logs an error): keep the procedural cars
+    if (typeof BurnsGLTF === 'undefined' || typeof fetch !== 'function' || (typeof location !== 'undefined' && location.protocol === 'file:')) { this.ready = true; return (this._p = Promise.resolve()); }
+    // models/index.json (written by tools/build.js) lists the files that exist, so nothing missing is requested
+    this._p = fetch(this.base() + 'index.json').then(r => r.ok ? r.json() : []).catch(() => []).then(list => {
+      const have = new Set(Array.isArray(list) ? list : []), jobs = [];
+      for (const [id, stem] of Object.entries(CART_GLB)) {
+        for (const lo of [false, true]) {
+          // the build ships .glb.gz (inflated in the browser); a plain .glb is accepted too
+          let file = stem + (lo ? '_lo' : '') + '.glb';
+          if (have.has(file + '.gz') && BurnsGLTF.canInflate()) file += '.gz';
+          else if (!have.has(file)) { if (have.has(file + '.gz')) console.warn('cart: this browser cannot inflate ' + file + '.gz; using the procedural car'); continue; }
+          jobs.push(BurnsGLTF.fetch(this.base() + file)
+            .then(doc => { const R = this.build(doc, lo); (this.rigs[id] = this.rigs[id] || {})[lo ? 'lo' : 'hi'] = R; })
+            .catch(e => { console.warn('cart: glb failed for ' + id + (lo ? ' (lo)' : '') + ': ' + (e && e.message || e)); }));
+        }
+      }
+      return Promise.all(jobs);
+    }).then(() => { this.ready = true; });
+    return this._p;
+  },
+  // a model in CartModels.build's shape, or null (not loaded, or glb models switched off)
+  model(id, lo) {
+    if (typeof window !== 'undefined' && window.__cartNoGLB) return null;
+    const rigs = this.rigs[id]; if (!rigs) return null;
+    const R = lo ? (rigs.lo || rigs.hi) : (rigs.hi || rigs.lo); if (!R) return null;
+    const key = id + (R === rigs.lo ? ':lo' : ':hi');
+    if (this.models[key]) return this.models[key];
+    const E = R.empties, X = R.extras || {}, b = R.bounds, fns = (X.rigV && CART_GLB_PARTS[id + ':' + X.rigV]) || CART_GLB_PARTS[id] || {};
+    const pt = (n, d) => E[n] ? [E[n].x, E[n].y, E[n].z] : d;
+    const lights = [];
+    for (const [n, e] of Object.entries(E)) {
+      if (!n.startsWith('light')) continue;
+      const x = e.extras || {}, c = x.color || '#ffffff', L = { x: e.x, y: e.y, z: e.z, s: +x.size || 1, c, cc: burnsRGBf(c) };
+      for (const k of ['big', 'head', 'tail', 'led']) if (x[k]) L[k] = 1;
+      lights.push(L);
+    }
+    const parts = R.partNames.map((n, i) => ({ b: CART_BONES.P0 + i, fn: fns[n] || (() => {}) }));
+    const M = {
+      id, geo: R.geo, nb: R.nb, J: R.J, parts, seat: pt('seat', [0, 1.3, 0.8]), seatYaw: +X.seatYaw || 0,
+      lights, muzzle: pt('muzzle', [0, 1.6, 2.6]), len: +X.len || (b[5] - b[2]), w: +X.w || (b[3] - b[0]), h: +X.h || b[4],
+      wheelR: +X.wheelR || 0.5, steerTilt: X.steerTilt === undefined ? 0.45 : +X.steerTilt, driverScale: +X.driverScale || 1,
+      extra: (typeof X.extra === 'string' ? JSON.parse(X.extra) : X.extra) || CART_GLB_EXTRA[id] || {}, glb: true, lo: R === rigs.lo
+    };
+    this.models[key] = M;
+    return M;
+  }
+};
+if (typeof window !== 'undefined') {
+  window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { CartGLB, CART_CARS, CartModels });
+  // declared later in the bundle: getters, so they resolve when asked for (tests drive the app through these)
+  for (const k of ['CART_TRACK_ORDER', 'CART_ARENAS', 'CART_CUPS', 'CART_ITEMS', 'CART_OBJECTIVES', 'CART_ARENA_RULES', 'CART_ITEM_FX', 'cartSave', 'cartRollItem', 'cartArenaMastered', 'CartRaceScene', 'KartMenuScene']) Object.defineProperty(window.BRADY_BURNS, k, { get: () => eval(k), configurable: true });
+}
 
 /* ---- 99_main.js ---- */
 /* ============================================================
