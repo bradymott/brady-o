@@ -86,7 +86,7 @@ BurnsWorlds.register({
       onComplete(g) { BW17.after(g, 1.6, g2 => BW17.finale(g2)); } }
   ].concat(BW17.SIDE),
   // the day of the week follows the story (Tuesday the first time; later visits say Friday, Saturday...)
-  build(api, g) { BW17.build(api, g); },
+  build(api, g) { BW17.build(api, g); BurnsBossGate.finale(api, 'lookouts'); },   // (finishes a won-but-unfinished finale: 42_burns_a_bossgate.js)
   onStart(g) { BW17.start(g); },
   update(g, dt) { BW17.update(g, dt); },
   drawSprites(g, R) { BW17.drawSprites(g, R); },

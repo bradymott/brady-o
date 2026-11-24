@@ -92,6 +92,8 @@ BurnsWorlds.register({
       desc: 'Drive the Party Barge to the little desert town of Gerlach. There is a diner. There are pancakes.', hint: 'Follow the highway all the way', marker: { x: -31, z: 692 } }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'gerlach');
     BW15W.terrain();
     const S = BW15D.init(g), R = BW15_ROAD.build(), H = (x, z) => api.height(x, z), rng = mulberry32(15151);
     const at = (s, lat) => R.at(s, lat, {});

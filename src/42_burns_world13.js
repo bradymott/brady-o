@@ -66,6 +66,8 @@ BurnsWorlds.register({
       desc: 'Auntie Pearl\'s famous guided exercise. Ninety-two percent success rate. Needs two stamps: Contact Improv and Tantra Basics.', hint: 'The Dome of Second Chances, north end of the village', lockedDesc: 'Two stamps required: Contact Improv 101 and Tantra Basics.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'lostlove');
     const R = api.rng;
     BW13.state = { timers: [], introDone: !!BurnsSave.flag(13, 'intro'), cushions: [], carried: [], delivered: 0, bowls: [], ex: null, gaze: null, flare: 0, truckT: 0 };
     const S = BW13.state;
