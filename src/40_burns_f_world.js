@@ -462,11 +462,16 @@ class BurnsWorld {
   static playaTexture() {
     const N = 512, c = makeCanvas(N, N), x = c.getContext('2d'), img = x.createImageData(N, N), D = img.data;
     const H = BurnsM.hash, rng = mulberry32(1234);
-    const vn = (X, Y, cell) => {   // tileable value noise, period N
-      const p = N / cell, u = X / cell, v = Y / cell, a = Math.floor(u), b = Math.floor(v), fu = u - a, fv = v - b;
-      const h = (i, j) => H(((i % p) + p) % p * 131 + ((j % p) + p) % p * 977 + cell * 7);
+    // tileable value noise, period N; the lattice of each cell size is hashed once into a table (this runs per texel)
+    const lat = {};
+    const vn = (X, Y, cell) => {
+      const p = N / cell; let L = lat[cell];
+      if (!L) { L = lat[cell] = new Float32Array(p * p); for (let j = 0; j < p; j++) for (let i = 0; i < p; i++) L[j * p + i] = H(i * 131 + j * 977 + cell * 7); }
+      const u = X / cell, v = Y / cell, a = Math.floor(u), b = Math.floor(v), fu = u - a, fv = v - b;
+      const a0 = ((a % p) + p) % p, b0 = ((b % p) + p) % p, a1 = (a0 + 1) % p, b1 = (b0 + 1) % p;
       const su = fu * fu * (3 - 2 * fu), sv = fv * fv * (3 - 2 * fv);
-      return lerp(lerp(h(a, b), h(a + 1, b), su), lerp(h(a, b + 1), h(a + 1, b + 1), su), sv);
+      const r0 = L[b0 * p + a0] + (L[b0 * p + a1] - L[b0 * p + a0]) * su, r1 = L[b1 * p + a0] + (L[b1 * p + a1] - L[b1 * p + a0]) * su;
+      return r0 + (r1 - r0) * sv;
     };
     // jittered seed grids (fully jittered: plates of uneven size); level 1 ~ 0.55 m plates, level 2 subdivides them
     const grid = (G, seed) => { const P = new Float32Array(G * G * 2), r = mulberry32(seed); for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { P[(j * G + i) * 2] = (i + 0.08 + r() * 0.84) * N / G; P[(j * G + i) * 2 + 1] = (j + 0.08 + r() * 0.84) * N / G; } return P; };
@@ -475,7 +480,7 @@ class BurnsWorld {
     const vor = (X, Y, G, P, out) => {
       const cs = N / G, ci = Math.floor(X / cs), cj = Math.floor(Y / cs);
       let d1 = 1e9, d2 = 1e9, a1x = 0, a1y = 0, a2x = 0, a2y = 0, id1 = 0, id2 = 0;
-      for (let oj = -2; oj <= 2; oj++) for (let oi = -2; oi <= 2; oi++) {
+      for (let oj = -1; oj <= 1; oj++) for (let oi = -1; oi <= 1; oi++) {
         const ii = ci + oi, jj = cj + oj, wi = ((ii % G) + G) % G, wj = ((jj % G) + G) % G, k = (wj * G + wi) * 2;
         const px = P[k] + (ii - wi) * cs, py = P[k + 1] + (jj - wj) * cs, dx = X - px, dy = Y - py, d = dx * dx + dy * dy;
         if (d < d1) { d2 = d1; a2x = a1x; a2y = a1y; id2 = id1; d1 = d; a1x = px; a1y = py; id1 = wj * G + wi; }
