@@ -12,8 +12,9 @@
    sizes the model doesn't cover, on file:// pages, and until the models arrive.
    See docs/BURNS_GUIDE.md §5.1.
    ============================================================ */
-// prop kind -> file stem under models/ (assets/models/burning-man/<stem>.glb)
-const BURNS_GLB_PROPS = { rv: 'rv', bus: 'bus', dome: 'dome', tipi: 'tipi', portapotty: 'potty', shade: 'shade' };
+// prop kind -> file stem under models/ (assets/models/burning-man/<stem>.glb). A stem may also ship <stem>_lo.glb: the
+// mid-distance level (instanced props' m.lo build, traffic LOD twins, opts.lo), used instead of the procedural lo build.
+const BURNS_GLB_PROPS = { rv: 'rv', bus: 'bus', dome: 'dome', tipi: 'tipi', portapotty: 'potty', shade: 'shade', domeTent: 'tent' };
 
 /* ---- BurnsGLTF.emit: append a glb's triangles to a BurnsMesh under its current transform ---- */
 // once per doc: every primitive baked to file space (node world matrices applied), grouped by root node name
@@ -122,9 +123,14 @@ const BurnsGLBProps = {
         let file = stem + '.glb';
         if (have.has(file + '.gz') && BurnsGLTF.canInflate()) file += '.gz';
         else if (!have.has(file)) continue;
-        jobs.push(BurnsGLTF.fetch(this.base() + file)
-          .then(doc => { const F = BurnsGLTF.flatten(doc); if (F.nv > 60000) throw new Error('too many vertices (' + F.nv + ')'); this.docs[kind] = doc; })
-          .catch(e => { console.warn('glb prop ' + kind + ' failed: ' + (e && e.message || e)); }));
+        const get = (f, key) => BurnsGLTF.fetch(this.base() + f)
+          .then(doc => { const F = BurnsGLTF.flatten(doc); if (F.nv > 60000) throw new Error('too many vertices (' + F.nv + ')'); this.docs[key] = doc; })
+          .catch(e => { console.warn('glb prop ' + key + ' failed: ' + (e && e.message || e)); });
+        jobs.push(get(file, kind));
+        // the mid-distance level, when the prop has one
+        let lo = stem + '_lo.glb';
+        if (have.has(lo + '.gz') && BurnsGLTF.canInflate()) lo += '.gz';
+        if (have.has(lo)) jobs.push(get(lo, kind + '_lo'));
       }
       return Promise.all(jobs);
     }).then(() => { this.install(); this.ready = true; });
@@ -138,8 +144,9 @@ const BurnsGLBProps = {
       const orig = BurnsProps[kind] || null; this.orig[kind] = orig;
       BurnsProps[kind] = function (m, o) {
         o = o || {};
-        const doc = G.docs[kind];
-        if (!doc || m.lo || o.lo || o.glb === false || G.off()) { G.fallbacks++; return orig ? orig.call(this, m, o) : G.plain[kind].call(this, m, o); }
+        // low-detail builds use the prop's _lo model when it has one, the procedural lo build otherwise
+        const doc = (m.lo || o.lo) ? G.docs[kind + '_lo'] : G.docs[kind];
+        if (!doc || o.glb === false || G.off()) { G.fallbacks++; return orig ? orig.call(this, m, o) : G.plain[kind].call(this, m, o); }
         const out = G.build[kind].call(this, m, o, doc);
         if (out === null) { G.fallbacks++; return orig ? orig.call(this, m, o) : G.plain[kind].call(this, m, o); }
         G.count++; return out;
@@ -224,6 +231,13 @@ const BurnsGLBProps = {
       BurnsGLTF.emit(m, doc, { roots: ['body'], scale: r / R0, colors });
       BurnsGLTF.emit(m, doc, { roots: ['door'], at: [0, 0, r - 0.15] });
       return { cols: [{ t: 'dome', x: 0, z: 0, r: r, y0: 0, cover: true }], lights: [{ x: 0, y: 0, z: 0, s: 0, c: typeof o.glow === 'string' ? o.glow : (o.glow === true && typeof o.col === 'string' ? o.col : '#ff70c0'), pool: r * 1.6 }], top: r, glb: true };
+    },
+    // the two-pole dome tent (tools/blender/bm_tent.py): near-white fly for the city's per-copy tints, or o.col
+    domeTent(m, o, doc) {
+      const colors = {}; if (o.col) colors.fly = colors.tape = o.col;
+      if (o.lantern === false) colors['led_ffe0b0'] = { col: '#3a3a40', e: 0 };
+      BurnsGLTF.emit(m, doc, { colors });
+      return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.4, hz: 1.1, y0: 0, y1: 1.2 }], lights: [], top: 1.2, glb: true };
     },
     tipi(m, o, doc) {
       const r = o.r || 2.6, h = o.h || 5.6, R0 = 2.6, H0 = 5.6;

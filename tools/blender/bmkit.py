@@ -108,3 +108,119 @@ def run_static(stem, build_fn, preview=True, views=None, save=True, level=None, 
     print('BMKIT_REPORT ' + json.dumps({k: v for k, v in report.items() if k != 'per'}))
     print('  per root: %s' % dict(sorted(per.items(), key=lambda kv: -kv[1])))
     return report
+
+# ---------------- the props quality pass (Nov 24): two detail levels, baked vertex colour, private scenes ----------------
+# Most props are seen hundreds of times through the engine's instancer (near / mid / far levels), so every rebuilt prop
+# now ships `<stem>.glb` (near) AND `<stem>_lo.glb` (mid, swapped in by src/41_burns_glbprops.js when m.lo is set).
+# Lighting detail is baked into each vertex's COLOR_0 (the game multiplies it into the material colour, free at run time):
+# short-range ambient occlusion from real ray casts against the whole prop (seams, folds, under trims, between parts)
+# times a per-prop `shade_fn` (dust on lower edges, sun-bleached tops, grime streaks). Glowing parts stay pure white.
+# The engine still bakes its own coarse AO and ground contact on placement, so this bake stays short-range and gentle.
+from mathutils.bvhtree import BVHTree
+PROP_LO = dict(bevel=1, cyl=10, cyl_s=6, torus=8, tube=4, ico=1, prof=14, prof_bev=1, bulbs=0.5, arch=8, rod=4, sph=8, ring=5, surf=8)
+PRIVATE_WORK = os.environ.get('BRADY_PRIVATE_WORK') or os.path.join(ROOT, 'private', 'work')
+
+def _hemi(n):
+    """n cosine-weighted directions about +Z (a fixed golden-angle set, so bakes are deterministic)."""
+    out = []
+    for i in range(n):
+        u = (i + 0.5) / n; r = math.sqrt(u); a = i * 2.399963
+        out.append(Vector((r * math.cos(a), r * math.sin(a), math.sqrt(max(0.0, 1 - u)))))
+    return out
+
+def apply_all(B):
+    """Apply every modifier (bevels, booleans) so the bake and the export see the final triangles."""
+    dg = bpy.context.evaluated_depsgraph_get()
+    for ob in [o for o in B.objs if o.type == 'MESH']:
+        me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
+        old = ob.data; ob.modifiers.clear(); ob.data = me
+        if old.users == 0: bpy.data.meshes.remove(old)
+
+def bake_vcol(B, ao_dist=0.5, ao_k=0.6, rays=16, shade_fn=None, floor=0.42):
+    """Bake COLOR_0 on every piece of B: ao * shade_fn. ao = 1 - ao_k * (occlusion within ao_dist metres), floored.
+    shade_fn(x, y, z, nx, ny, nz, mat_name) -> (r, g, b) multipliers in engine space (y up), default white.
+    Pieces whose material glows (emission) get 1.0 so LEDs keep their full colour."""
+    apply_all(B)
+    meshes = [o for o in B.objs if o.type == 'MESH']
+    V, P = [], []
+    for ob in meshes:
+        mw = ob.matrix_world; base = len(V)
+        V.extend(mw @ v.co for v in ob.data.vertices)
+        P.extend([base + i for i in p.vertices] for p in ob.data.polygons)
+    bvh = BVHTree.FromPolygons(V, P, epsilon=0.0)
+    H = _hemi(rays)
+    def glows(m):
+        if m is None or not m.use_nodes: return False
+        n = next((n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        return bool(n) and n.inputs['Emission Strength'].default_value > 0.05
+    for ob in meshes:
+        me = ob.data; mw = ob.matrix_world; nmat = mw.to_3x3().inverted().transposed()
+        vmat = [None] * len(me.vertices)
+        for p in me.polygons:
+            for i in p.vertices:
+                if vmat[i] is None: vmat[i] = p.material_index
+        mats = [s.material for s in ob.material_slots]
+        try: attr = me.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT')
+        except Exception as e: print('bake_vcol: no colour attribute on', ob.name, e); continue
+        for i, v in enumerate(me.vertices):
+            mi = vmat[i]; m = mats[mi] if mi is not None and mi < len(mats) else (mats[0] if mats else None)
+            if glows(m): attr.data[i].color = (1, 1, 1, 1); continue
+            p = mw @ v.co; n = (nmat @ v.normal).normalized()
+            t = n.orthogonal().normalized(); b = n.cross(t)
+            occ = 0.0
+            o = p + n * 0.012
+            for h in H:
+                d = t * h.x + b * h.y + n * h.z
+                hit = bvh.ray_cast(o, d, ao_dist)
+                if hit[0] is not None: occ += 1.0 - (hit[3] / ao_dist) * 0.5
+            ao = max(floor, 1.0 - ao_k * occ / len(H))
+            r, g, bb = shade_fn(p.x, p.z, -p.y, n.x, n.z, -n.y, (m.name[3:] if m and m.name.startswith('bv_') else (m.name if m else ''))) if shade_fn else (1, 1, 1)
+            attr.data[i].color = (min(1, ao * r), min(1, ao * g), min(1, ao * bb), 1.0)
+        try: me.color_attributes.active_color = attr
+        except Exception: pass
+        try: me.color_attributes.render_color_index = me.color_attributes.find('Col')
+        except Exception: pass
+    B.export_try = [dict(export_vertex_color='ACTIVE'), dict(export_colors=True)]
+
+def dusty(lo=0.55, hi=0.0, col=(0.93, 0.86, 0.74), top=None):
+    """A shade_fn: playa dust that settles on the lowest `lo` metres (tinting toward `col`, strongest at the ground) and,
+    with top=(r, g, b), a sun-bleach on up-facing surfaces."""
+    def fn(x, y, z, nx, ny, nz, mname):
+        k = max(0.0, 1.0 - y / lo) ** 1.6 if lo > 0 else 0.0
+        r, g, b = (1 - k + k * col[0], 1 - k + k * col[1], 1 - k + k * col[2])
+        if top and ny > 0.5:
+            s = (ny - 0.5) * 2
+            r, g, b = r * (1 - s + s * top[0]), g * (1 - s + s * top[1]), b * (1 - s + s * top[2])
+        return r, g, b
+    return fn
+
+def run_prop(stem, build_fn, levels=('hi', 'lo'), bake=None, level_overrides=None, views=(('front', 'front'),), max_tris=None, save=True):
+    """Build, bake and export a prop at two detail levels: assets/models/burning-man/<stem>.glb (hi, near) and
+    <stem>_lo.glb (lo, mid distance). build_fn(B) uses B.lo / B.pick(hi, lo) / B.L[...] for detail.
+    bake: kwargs for bake_vcol (None = no vertex-colour bake). max_tris: {'hi': n, 'lo': n} budget warnings.
+    The scene is saved to private/work/<stem>.blend (git-ignored), previews to shots/blender/<stem>_<level>_<view>.png."""
+    if bpy.context.object and bpy.context.object.mode != 'OBJECT': bpy.ops.object.mode_set(mode='OBJECT')
+    clear(stem)
+    lv_tables = {'hi': dict(PROP_LEVEL), 'lo': dict(PROP_LO)}
+    for k, v in (level_overrides or {}).items(): lv_tables[k].update(v)
+    rep = {}
+    for lv in [l for l in ('lo', 'hi') if l in levels]:
+        B = Build(stem, lv, lv_tables); build_fn(B); B.smooth_by_angle()
+        if bake is not None: bake_vcol(B, **bake)
+        t, v, per = B.tris()
+        path = os.path.join(OUT_BM, stem + ('' if lv == 'hi' else '_lo') + '.glb'); size = B.export(path)
+        lo_b, hi_b = B.bounds()
+        rep[lv] = dict(tris=t, verts=v, bytes=size, bounds=dict(x=[round(lo_b.x, 2), round(hi_b.x, 2)], y=[round(lo_b.z, 2), round(hi_b.z, 2)], z=[round(-hi_b.y, 2), round(-lo_b.y, 2)]))
+        if v > 65535: rep[lv]['error'] = 'too many vertices'
+        if max_tris and t > max_tris.get(lv, 1e9): rep[lv]['warning'] = 'over budget %d' % max_tris[lv]
+        rep[lv]['previews'] = [B.preview(os.path.join(SHOTS, '%s_%s_%s.png' % (stem, lv, tag)), view=VIEWS[vw] if isinstance(vw, str) else vw) for vw, tag in views]
+        if lv == 'lo':
+            for o in B.objs + B.cutters: o.name = o.name + '__lo'
+    for col in bpy.context.scene.collection.children:
+        lc = bpy.context.view_layer.layer_collection.children.get(col.name)
+        if lc: lc.hide_viewport = col.name.endswith('_LO')
+    if save:
+        os.makedirs(PRIVATE_WORK, exist_ok=True)
+        bpy.ops.wm.save_as_mainfile(filepath=os.path.join(PRIVATE_WORK, stem + '.blend'), compress=True)
+    print('BMKIT_REPORT ' + json.dumps(rep))
+    return rep

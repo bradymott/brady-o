@@ -149,7 +149,7 @@ const BurnsOW = {
     veh('trailer', 7, boxFar(2.4, 2.6, 11.5, '#c8ccd4'));
     veh('bus', 4, boxFar(2.6, 3.0, 11, '#6a3ab0', '#ffd84a'));
     // tents: one white tent with a lantern by the door, tinted per copy (the tent colours)
-    api.instanceProto('ow_tent', m => this.domeTent(m, '#f4f2ee', true), { near: 30, mid: 110, r: 2 });
+    api.instanceProto('ow_tent', m => P.domeTent(m, { col: '#f4f2ee' }), { near: 30, mid: 110, r: 2 });
     api.instanceProto('ow_domeL', m => P.dome(m, { r: 4.2, col: '#e0d0f0', alt: '#b8a0e0', freq: 2, lights: true }), { near: 50, mid: 170, r: 5, far: m => { m.color('#e0d0f0'); m.dome(0, 0, 0, 4.2, 1, { frame: false }); m.color('#ff4fd8', 1); m.box(0, 0.3, 0, 8.6, 0.3, 0.3); m.emissive(0); }, farD: 280 });
     api.instanceProto('ow_barrel', m => { m.color('#6a3a24').shine(1); m.cyl(0, 0, 0, 0.42, 0.42, 0.95, 10, { smooth: true }); m.shine(0); m.color('#ff7a2a', 1); m.cyl(0, 0.9, 0, 0.36, 0.36, 0.06, 10, {}); m.emissive(0); return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.45, y0: 0, y1: 1.0 }] }; }, { near: 30, mid: 100, lo: false, r: 0.8 });
     api.instanceProto('ow_totem', m => this.totem(m), { near: 45, mid: 180, r: 2, far: m => { m.color('#3a2a4a'); m.box(0, 3, 0, 0.5, 6, 0.5); m.color('#38f2ff', 1); m.box(0, 5.2, 0, 1.4, 0.6, 1.4); m.emissive(0); }, farD: 300 });
@@ -191,14 +191,8 @@ const BurnsOW = {
     m.color(skin); for (const sx of [-1, 1]) m.limb(sx * 0.16, 1.5, 0.0, sx * 0.24, 1.15, 0.42, 0.045, 0.04, { seg: 5 });
     return {};
   },
-  // a dome tent: rounded body, a darker door flap and two guy lines
-  domeTent(m, col, lantern) {
-    m.color(col).shine(1); m.ellipsoid(0, 0, 0, 1.5, 1.25, 1.2, m.lo ? { seg: 7, rings: 3 } : { seg: 12, rings: 5 }); m.shine(0);
-    m.color('#2a2a34'); m.ellipsoid(0, 0.02, 1.08, 0.55, 0.85, 0.16, { seg: 8, rings: 3 });
-    if (!m.lo) { m.color('#e8e8ec'); m.limb(-1.4, 0.7, 0, -2.2, 0, 0, 0.012, 0.012, { seg: 3, ends: false }); m.limb(1.4, 0.7, 0, 2.2, 0, 0, 0.012, 0.012, { seg: 3, ends: false }); }
-    if (lantern) { m.color('#ffe6c0', 1); m.ball(0.75, 0.9, 1.15, 0.09, { seg: 6, rings: 4 }); m.emissive(0); }
-    return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.4, hz: 1.1, y0: 0, y1: 1.2 }] };
-  },
+  // the dome tent is BurnsProps.domeTent (40_burns_e_props.js), replaced by the Blender model when it's loaded
+  domeTent(m, col, lantern) { return BurnsProps.domeTent(m, { col, lantern: !!lantern }); },
   // a lit totem: stacked rings and orbs on a pole (an art installation in front of a camp)
   totem(m) {
     m.color('#3a2a4a'); m.roundBox(0, 3, 0, 0.42, 6, 0.42, 0.08, { k: 1, m: 1 });

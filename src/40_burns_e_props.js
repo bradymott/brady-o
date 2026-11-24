@@ -407,6 +407,16 @@ const BurnsProps = {
     m.pop();
     return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.1, hz: 1.1, y0: 0, y1: 1.0 }], lights: [], top: 1.0 };
   },
+  // a dome tent: rounded body, a darker door flap, two guy lines and a lantern by the door (o.col, o.lantern).
+  // The Blender model (tools/blender/bm_tent.py, 'domeTent' in 41_burns_glbprops.js) replaces it when loaded.
+  domeTent(m, o) {
+    o = o || {}; const col = o.col || '#f4f2ee';
+    m.color(col).shine(1); m.ellipsoid(0, 0, 0, 1.5, 1.25, 1.2, m.lo ? { seg: 7, rings: 3 } : { seg: 12, rings: 5 }); m.shine(0);
+    m.color('#2a2a34'); m.ellipsoid(0, 0.02, 1.08, 0.55, 0.85, 0.16, { seg: 8, rings: 3 });
+    if (!m.lo) { m.color('#e8e8ec'); m.limb(-1.4, 0.7, 0, -2.2, 0, 0, 0.012, 0.012, { seg: 3, ends: false }); m.limb(1.4, 0.7, 0, 2.2, 0, 0, 0.012, 0.012, { seg: 3, ends: false }); }
+    if (o.lantern !== false) { m.color('#ffe6c0', 1); m.ball(0.75, 0.9, 1.15, 0.09, { seg: 6, rings: 4 }); m.emissive(0); }
+    return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.4, hz: 1.1, y0: 0, y1: 1.2 }], lights: [], top: 1.2 };
+  },
   chair(m, o) {
     o = o || {}; const col = o.col || '#2a6ac8';
     m.color('#9a9aa2'); for (const [x, z] of [[0.25, 0.25], [-0.25, 0.25], [0.25, -0.25], [-0.25, -0.25]]) m.box(x, 0.22, z, 0.03, 0.44, 0.03);
