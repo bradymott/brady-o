@@ -32,7 +32,9 @@ const APPS = {
     // home-screen icons kept in the repo (tools/make_burns_icon.js), so the site no longer depends on gh-pages copies
     iconDir: path.join(root, 'assets', 'icons', 'burning-man'),
     // shared core + the 3D game; 2D-game modules the 3D game borrows are listed in BURNS_DEPS
-    files: f => /^(00|01|02|99)_/.test(f) || isBurns(f) || BURNS_DEPS.includes(f)
+    files: f => /^(00|01|02|99)_/.test(f) || isBurns(f) || BURNS_DEPS.includes(f),
+    // the Super Art Kart cars drive Black Rock City (src/41_burns_artcars.js): their files ship here too
+    models: { 'art-cart': /^(bass_valentine|calamari_inferno|dune_chomper|dusty_doubloon|frosted_fury|glitterfin|jelly_jolt|pyramid_scheme|quackzilla|sir_scorchalot|turbo_escargot|whale_of_a_time)(_lo)?\.glb$/ }
   },
   world: {
     dir: 'super-brady-o-world', name: 'Super Brady-O World', short: 'Super Brady-O',
@@ -53,7 +55,9 @@ const APPS = {
   }
 };
 // 2D-game modules the other apps still use (UI kit, title scene, portraits…). Trim as the apps separate.
-const BURNS_DEPS = [];   // the Burning Man app is engine-only (the Chinka photo is rendered from the 3D model now)
+// the Burning Man app is engine-only (the Chinka photo is rendered from the 3D model now), plus Super Art Kart's car
+// rig, part animations and glb loader (read only, owned by the Art Kart agent) for the city's art cars
+const BURNS_DEPS = ['43_cart_a_data.js', '43_cart_b_models.js', '43_cart_bb_glb.js'];
 const KART_DEPS = [];   // Art Cart is engine-only now (the shared boot code guards its 2D references)
 
 // the atlas names shipped with the 2D app (assets/sprites/super-brady-o-world/<name>.js), baked into the bundle
@@ -159,10 +163,12 @@ const zlib = require('zlib');
 const gltfpack = path.join(root, 'node_modules', '.bin', 'gltfpack');
 const packCache = path.join(dist, '.packcache');
 // assets/models/<app>/ ships with that app; assets/models/shared/ (the characters) ships with every 3D app
-const copyModels = (appDir, outDir, shared) => {
+// extra: { <other app's model dir>: /file pattern/ } (an app that borrows another app's models)
+const copyModels = (appDir, outDir, shared, extra) => {
   const dirs = [path.join(root, 'assets', 'models', appDir)].concat(shared ? [path.join(root, 'assets', 'models', 'shared')] : []).filter(d => fs.existsSync(d));
+  const want = {}; for (const [d, re] of Object.entries(extra || {})) { const p = path.join(root, 'assets', 'models', d); if (fs.existsSync(p)) { dirs.push(p); want[p] = re; } }
   if (!dirs.length) return [];
-  const files = []; for (const d of dirs) for (const f of fs.readdirSync(d)) if (f.endsWith('.glb') && !files.some(x => x.name === f)) files.push({ name: f, dir: d });
+  const files = []; for (const d of dirs) for (const f of fs.readdirSync(d)) if (f.endsWith('.glb') && (!want[d] || want[d].test(f)) && !files.some(x => x.name === f)) files.push({ name: f, dir: d });
   files.sort((a, b) => a.name.localeCompare(b.name));
   fs.mkdirSync(outDir, { recursive: true }); fs.mkdirSync(packCache, { recursive: true });
   const out = [];
@@ -254,7 +260,7 @@ for (const [id, A] of Object.entries(APPS)) {
   if (A.iconDir) for (const f of icons) vh.update(fs.readFileSync(iconSrc(f)));   // new icon art -> new offline cache, so phones fetch it
   const v = vh.digest('hex').slice(0, 10);
   // Blender-made models (assets/models/<app>/*.glb) ship beside the page as models/*.glb and are cached offline
-  const models = copyModels(A.dir, path.join(dir, 'models'), id !== 'world');   // the 2D app needs no 3D characters
+  const models = copyModels(A.dir, path.join(dir, 'models'), id !== 'world', A.models);   // the 2D app needs no 3D characters
   const sprites = copySprites(A.dir, path.join(dir, 'sprites'));                 // the 2D app's pre-rendered atlases
   fs.writeFileSync(path.join(dir, 'sw.js'), swSource('app-' + id, v, ['./', './index.html', './manifest.webmanifest'].concat(icons.map(f => './' + f), models.map(f => './models/' + f))));
   copyFontLicences(dir);
