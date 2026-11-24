@@ -17,9 +17,10 @@ const BURNS_CAST = {
   FILE: 'cast',
   NEAR: 8, MID: 24, MAX: 10, MAX_NEAR: 3,
   HEIGHT: { F: 1.66, M: 1.78 },
+  PORTRAIT_K: 1.5,
   // full-costume looks stay procedural (their identity is the costume)
   EXCLUDE_TYPES: { furry: 1, firespinner: 1, fencebot_a: 1, fencebot_b: 1, deathguild: 1, lamplighter: 1, cultleader: 1, brady: 1, chinka: 1 },
-  EXCLUDE_ACC: ['trashcanHelmet', 'colanderHelmet', 'fireHood', 'flameWings', 'fairyWings', 'lanternPoles', 'wings', 'cape'],
+  EXCLUDE_ACC: ['trashcanHelmet', 'colanderHelmet', 'fireHood', 'flameWings', 'fairyWings', 'lanternPoles', 'wings', 'cape', 'elwire'],
   // engine animations with no clip of their own: play this clip instead of dropping to the procedural figure
   ANIM: { firespin: 'dance', dj: 'dance', robot: 'dance', lantern: 'idle', dare: 'cheer', think: 'idle', radio: 'talk', welcome: 'wave', clipboard: 'talk', phone: 'talk', bell: 'wave', throw: 'wave', victory: 'cheer', yell: 'hurt', shuffle: 'dance', float: 'jump', fly: 'jump', climb: 'idle', spin: 'dance', flip: 'jump', pound: 'jump', bike: 'drive' }
 };
@@ -59,7 +60,7 @@ const BurnsCast = {
   eligible(a) {
     if (!a || BURNS_CAST.EXCLUDE_TYPES[a.type] || !a.model || !a.model.spec) return false;
     const S = a.model.spec;
-    if (S.fursuit || S.hood || S.costume && S.costume !== 'none') return false;
+    if (S.fursuit || S.hood || S.led || S.costume && S.costume !== 'none') return false;   // LED suits glow: their look is the light
     if ((S.acc || []).some(x => BURNS_CAST.EXCLUDE_ACC.includes(x))) return false;
     const hk = S.hat && S.hat.kind; if (hk === 'skullHood' || hk === 'crown' || hk === 'jester') return false;
     if (a.def && (a.def.realistic === false || a.def.scale && Math.abs(a.def.scale - 1) > 0.25)) return false;
@@ -169,6 +170,14 @@ const BurnsCast = {
     if (R.pass !== 'shadow') { this.n.drawn++; if (this.nearSet.has(a)) this.n.near++; }
     return true;
   },
+  // the portrait camera is framed for the procedural figures' big heads: a realistic speaker is drawn PORTRAIT_K times
+  // larger there, and the camera aims at its real head (null = not drawn by the cast: keep the procedural framing)
+  portraitHeadY(who, model) {
+    if (this.off() || !this.ready || !model || !model.spec || who === 'brady') return null;
+    const fake = { type: (who && who.type) || model.spec.kind, model, def: (who && who.def) || {} };
+    if (!this.eligible(fake)) return null;
+    return this.recipe(model.spec).height * BURNS_CAST.PORTRAIT_K * 0.93 + 0.02;
+  },
   // the dialogue portrait: an NPC speaker (an actor, or { name, model } built from a spec) drawn realistic
   drawPortrait(R, who, model, ch) {
     if (this.off() || !this.ready || !model || !model.spec) return false;
@@ -177,8 +186,8 @@ const BurnsCast = {
     let B = ch._castActor;
     try { if (!B || B.spec !== model.spec) { const rc = this.recipe(model.spec), A = this.variant(rc); B = ch._castActor = new BurnsCastActor('cast', A, false); B.spec = model.spec; B.unit = A.extras.unit; } } catch (e) { return false; }
     if (!B.sync(ch)) return false;
-    const keep = BurnsSkinPBR.forceLod; BurnsSkinPBR.forceLod = 0;
-    try { B.draw(R, null, 0.6); } finally { BurnsSkinPBR.forceLod = keep; }
+    const keep = BurnsSkinPBR.forceLod, u = B.unit; BurnsSkinPBR.forceLod = 0; B.unit = u * BURNS_CAST.PORTRAIT_K; B._sc = NaN; B.sync(ch);
+    try { B.draw(R, null, 0.6); } finally { BurnsSkinPBR.forceLod = keep; B.unit = u; }
     return true;
   },
   // a world's composed characters go with it (geometry and the GPU copies of the shared textures; the file stays)
