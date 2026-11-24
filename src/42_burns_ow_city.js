@@ -470,13 +470,13 @@ BurnsWorlds.register({
     // ---- the art cars: Super Art Kart's twelve, at art-car size (src/41_burns_artcars.js) ----
     // three circle the Man on the open playa (rideable movers), clear of the promenade lamps (r 92, 124, 156)
     for (const [stem, r, dir, a] of BURNS_OW.CIRCLE_CARS) {
-      const mv = BurnsArtCars.mover(api, stem, { x: Math.sin(a) * r, z: -Math.cos(a) * r }).mv;
+      const mv = BurnsArtCars.mover(api, stem, { x: Math.sin(a) * r, z: -Math.cos(a) * r, driver: true }).mv;
       S.cars.push({ mv, r, w: dir * 2.6 / r, a });
     }
     // four cruise the streets at a walking-to-biking pace: both lanes of the Esplanade and of three lettered streets
     S.cruise = [];
     for (const [stem, lane, ph, v] of BURNS_OW.STREET_CARS) {
-      try { const L = BurnsOW.carLoop(lane), c = BurnsArtCars.mover(api, stem, {}); S.cruise.push({ mv: c.mv, L, s: ph * L.len, v, i: 0, yaw: null }); } catch (e) { console.error('ow art car ' + stem, e); }
+      try { const L = BurnsOW.carLoop(lane), c = BurnsArtCars.mover(api, stem, { driver: true }); S.cruise.push({ mv: c.mv, L, s: ph * L.len, v, i: 0, yaw: null }); } catch (e) { console.error('ow art car ' + stem, e); }
     }
     BurnsOW.cruise(0);
     // two anyone can DRIVE, parked on the open playa: the green dragon by the 6:00 promenade is Rae's race car (quicker)

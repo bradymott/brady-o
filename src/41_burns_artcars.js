@@ -43,6 +43,9 @@ const BURNS_ARTCARS = {
     legacy: { hiD: 0, maxHi: 0, maxLo: 5, maxVis: 5, drawD: 150, shadowD: 0 }
   },
   HEAD_COL: [1, 0.86, 0.62],
+  // drivers for the cars that drive themselves: the cast's procedural burners (one draw each), only close up
+  DRIVERS: [['burner', 5], ['furcoat', 8], ['ledsuit', 4], ['sparklepony', 6], ['tutu', 11]],
+  DRIVER_D: 45, MAX_DRIVERS: { ultra: 5, high: 4, medium: 3, low: 1, legacy: 0 },
   LOAD_PAD: 90,        // a race model starts loading this far beyond the draw distance
   HI_PAD: 10,          // ...and a full-detail model this far beyond hiD
   KEEP_LO: 20, KEEP_HI: 8   // seconds an unused model stays loaded
@@ -67,7 +70,8 @@ const BurnsArtCars = {
   },
 
   /* ---------- placing cars ---------- */
-  // a car on a world mover the world moves itself (mv.x/z/yaw each step): cruisers, parade cars. o: { x, z, yaw, lit }
+  // a car on a world mover the world moves itself (mv.x/z/yaw each step): cruisers, parade cars. o: { x, z, yaw, lit,
+  // driver: true (somebody at the wheel) }
   mover(api, stem, o) {
     o = o || {};
     const mv = api.mover(this.build(stem, o), {});
@@ -268,7 +272,7 @@ const BurnsArtCars = {
       const turn = dt > 0 ? BurnsM.wrap(mv.yaw - c.pyaw) / dt : 0; c.pyaw = mv.yaw;
       car.x = mv.x; car.y = mv.y; car.z = mv.z; car.yaw = mv.yaw; car.scale = c.S;
       car.steerVis = BurnsM.damp(car.steerVis, clamp(turn * 2.5, -1, 1), 4, dt || 0.016);
-      car.wheelA += c.speed * dt / ((c.M ? c.M.wheelR : 0.48) * c.S);
+      car.wheelA += c.speed * dt / ((c.M ? c.M.wheelR : 0.48) * c.S); c.dtA = dt;
       const st = c.st; st.t += dt; st.speed = clamp(Math.abs(c.speed) / 14, 0, 1.2); st.steer = car.steerVis; st.beat = beat * c.litK; st.night = night;
       st.fire = c.veh && c.veh.flameT > 0 ? 1 : BurnsM.damp(st.fire, 0, 3, dt || 0.016);
       c.litK = BurnsM.damp(c.litK, c.lit, 1.6, dt || 0.016);
@@ -312,6 +316,24 @@ const BurnsArtCars = {
       if (Math.abs(c.speed) > 0.3 || c.veh) g.pointLight(car.x + s * f, car.y + 1.3, car.z + co * f, 10, BURNS_ARTCARS.HEAD_COL, 0.7 * k);
       if (typeof cartOctoLight === 'function' && c.M.extra && c.M.extra.flames) g.pointLight(car.x, car.y + 2.2 * S, car.z, 7 * S, [1, 0.5, 0.16], (0.45 + 0.65 * night) * c.litK);
     }
+    // drivers at the wheel of the self-driving cars near the camera
+    const maxD = BURNS_ARTCARS.MAX_DRIVERS[typeof BurnsGL !== 'undefined' && BurnsGL.tier] || 0, dD2 = BURNS_ARTCARS.DRIVER_D ** 2;
+    let nd = 0;
+    for (const c of order) {
+      c.drvOn = false;
+      const wants = c.o.driver || (c.veh && !c.veh.rider && c.veh.o.path);
+      if (!wants || !c.drawn || !c.M || nd >= maxD || c.d2 > dD2 || !c.M.seat) continue;
+      if (!c.drv) {
+        const L = BURNS_ARTCARS.DRIVERS, k = this.cars.indexOf(c) % L.length, mods = this._drvModels || (this._drvModels = []);
+        if (!mods[k]) mods[k] = BurnsRig.model(BurnsRig.npcSpec(L[k][0], L[k][1]));
+        const ch = new BurnsChar(mods[k]); ch.play('cartDrive', { steer: 0, speed: 0 }, true);
+        c.drv = { ch, model: mods[k], bones: new Float32Array(ch.nb * 12), car: { bones: c.bones, driverScale: 1 / c.S } };
+      }
+      const D = c.drv, ch = D.ch;
+      ch.k.steer = c.car.steerVis; ch.k.speed = c.st.speed; ch.update(c.dtA || 0.016);
+      D.car.bones = c.bones; cartPoseDriver(D.car, c.M, ch, D.bones);
+      c.drvOn = true; nd++;
+    }
     this.gc(now);
   },
   // free what nobody has wanted for a while, and keep the loaded models under the tier's caps
@@ -336,13 +358,14 @@ const BurnsArtCars = {
     g.def = d;
   },
   draw(g, R, shadow) {
-    if (!shadow) { this.stats.drawn = 0; this.stats.hi = 0; this.stats.tris = 0; } else this.stats.shadow = 0;
+    if (!shadow) { this.stats.drawn = 0; this.stats.hi = 0; this.stats.tris = 0; this.stats.drivers = 0; } else this.stats.shadow = 0;
     for (const c of this.cars) {
       if (c.g !== g || !c.drawn || !c.M) continue;
-      if (shadow) { if (!R.shadowNear(c.car.x, c.car.y, c.car.z, c.rad)) continue; R.skin(c.M.geo, c.bones, c.M.nb, null, 0, 0); this.stats.shadow++; continue; }
+      if (shadow) { if (!R.shadowNear(c.car.x, c.car.y, c.car.z, c.rad)) continue; R.skin(c.M.geo, c.bones, c.M.nb, null, 0, 0); this.stats.shadow++; if (c.drvOn) R.skin(c.drv.model.lod || c.drv.model.geo, c.drv.bones, c.drv.ch.nb, null, 0, 0); continue; }
       if (!c.inView) continue;
       const dark = c.litK < 0.98 ? [0.03, 0.025, 0.05, 0.62 * (1 - c.litK)] : null;
       R.skin(c.M.geo, c.bones, c.M.nb, dark, 0, 0.3);
+      if (c.drvOn) { const dm = c.drv.model; R.skin(c.d2 > 16 * 16 && dm.lod ? dm.lod : dm.geo, c.drv.bones, c.drv.ch.nb, null, c.drv.ch.face, 0.45); this.stats.drivers = (this.stats.drivers || 0) + 1; }
       this.stats.drawn++; if (c.lod === 'hi') this.stats.hi++; this.stats.tris += c.M.geo.count / 3;
     }
   },
@@ -399,7 +422,7 @@ const BurnsArtCars = {
   },
   info() {
     const m = this.memory();
-    return { cars: this.cars.length, drawn: this.stats.drawn, hi: this.stats.hi, shadow: this.stats.shadow, tris: this.stats.tris, loaded: Object.values(this.models).filter(E => E.state === 'ready').map(E => ({ key: E.key, tris: E.tris, mb: +((E.bytes || 0) / 1048576).toFixed(2), ms: E.ms })),
+    return { cars: this.cars.length, drawn: this.stats.drawn, hi: this.stats.hi, drivers: this.stats.drivers || 0, shadow: this.stats.shadow, tris: this.stats.tris, loaded: Object.values(this.models).filter(E => E.state === 'ready').map(E => ({ key: E.key, tris: E.tris, mb: +((E.bytes || 0) / 1048576).toFixed(2), ms: E.ms })),
       loading: Object.values(this.models).filter(E => E.state === 'loading').map(E => E.key), loLoaded: m.lo, hiLoaded: m.hi, mb: m.mb, loads: this.stats.loads, frees: this.stats.frees, failed: this.stats.failed, canLoad: this.canLoad(), tier: typeof BurnsGL !== 'undefined' ? BurnsGL.tier : null };
   }
 };
