@@ -214,7 +214,8 @@ class BurnsPlayer {
     this.airT = this.grounded ? 0 : this.airT + dt;
     if (!this.grounded) this.maxFallV = Math.min(this.maxFallV, this.vy);
     const hsp = Math.hypot(this.vx, this.vz);
-    if (this.grounded && hsp > 1.5) { this.stepT -= dt * hsp; if (this.stepT <= 0) { this.stepT = 2.4; burnsSfx('footstep', { vol: 0.25 }); if (Math.random() < 0.5) g.fx.dust(this.x, this.y + 0.05, this.z, 1); } }
+    // Footsteps are silent (Brady asked for the under-foot sound to go); the little dust puffs stay.
+    if (this.grounded && hsp > 1.5) { this.stepT -= dt * hsp; if (this.stepT <= 0) { this.stepT = 2.4; if (Math.random() < 0.5) g.fx.dust(this.x, this.y + 0.05, this.z, 1); } }
     this.animate(hsp);
   }
   onLand(col) {
