@@ -223,6 +223,13 @@ const BurnsHouse = (() => {
       o.connect(s ? gR : gL); o.start(t); o.stop(stop); list.push(o); if (!first) first = o;
     }
     ended(first, list);
+    long(I, list, stop);
+  }
+  // voices that last for bars (pads, risers): remembered so close(I, true) can stop them at once
+  function long(I, list, stop) {
+    const L = I.long || (I.long = []), now = I.ctx.currentTime;
+    if (L.length > 24) I.long = L.filter(v => v.stop > now);
+    I.long.push({ list, stop });
   }
   const BASS = {
     deep: { w: 'triangle', sub: 0.9, body: 0.45, cut: 320, q: 1.2, fe: 1.2, fd: 0.06, dcy: 0.35, sus: 0.75 },
@@ -332,11 +339,13 @@ const BurnsHouse = (() => {
     I.lvl = T.lvl;
     return I;
   }
-  function close(I) {
+  // hard: also stop the long voices still ringing (pads, risers) - the DJ decks unload a record this way
+  function close(I, hard) {
     if (!I || I.closed) return;
     I.closed = true;
     const t = I.ctx.currentTime;
     for (const s of I.srcs) { try { s.stop(t + 0.05); } catch (e) { /* ignore */ } }
+    if (hard && I.long) for (const v of I.long) if (v.stop > t) for (const n of v.list) if (n.stop) { try { n.stop(t + 0.05); } catch (e) { /* ignore */ } }
   }
 
   function sectionStart(I, S, t, sd, from) {
@@ -355,7 +364,7 @@ const BurnsHouse = (() => {
       s.buffer = I.B.noise; s.loop = true; bp.type = 'bandpass'; bp.Q.value = 1.4;
       bp.frequency.setValueAtTime(320, t); bp.frequency.exponentialRampToValueAtTime(7500, t + dur);
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + dur - 0.02); g.gain.linearRampToValueAtTime(0, t + dur + 0.02);
-      s.connect(bp); bp.connect(g); g.connect(I.fxBus); s.start(t); s.stop(t + dur + 0.05); ended(s, [s, bp, g]);
+      s.connect(bp); bp.connect(g); g.connect(I.fxBus); s.start(t); s.stop(t + dur + 0.05); ended(s, [s, bp, g]); long(I, [s], t + dur + 0.05);
     }
     void L;
   }
@@ -491,7 +500,10 @@ const BurnsHouse = (() => {
       introBars: T.introSteps / 16, loopBars: T.loopSteps / 16, sections: T.intro.concat(T.loop).map(S => ({ bars: S.bars, kind: S.kind, layers: Object.keys(S.on), fx: S.fx })) };
   }
 
-  return { add, TRK, info, get live() { return lastI ? { name: lastI.T.name, n: lastI.n, closed: !!lastI.closed, offline: lastI.ctx !== undefined && typeof OfflineAudioContext !== 'undefined' && lastI.ctx instanceof OfflineAudioContext } : null; }, renderOffline, kickTimes, locate: (name, n) => locate(TRK[name], n), get names() { return Object.keys(TRK); } };
+  // engine: the step engine itself, for code that runs its own sequencer (the DJ decks: two tracks at once,
+  // each with its own tempo). open(T, { ctx, out, rev, dly }) -> instance; step(I, n, t, sd); close(I, hard)
+  const engine = { open, step, close };
+  return { add, TRK, info, engine, get live() { return lastI ? { name: lastI.T.name, n: lastI.n, closed: !!lastI.closed, offline: lastI.ctx !== undefined && typeof OfflineAudioContext !== 'undefined' && lastI.ctx instanceof OfflineAudioContext } : null; }, renderOffline, kickTimes, locate: (name, n) => locate(TRK[name], n), get names() { return Object.keys(TRK); } };
 })();
 
 /* ============================================================
