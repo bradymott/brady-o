@@ -1,7 +1,9 @@
 """Blackwork elbow-mandala sleeves painted into the body base colour (MPFB UV, 4K) from a T-pose position map.
 Pattern space: centred on the olecranon, s = metres along the arm toward the shoulder, u = arc length around the arm
 from the back (elbow point) line; r, phi = polar in that unrolled plane.
-LEFT = reconstructed from the photos (IMG_0933-0938); RIGHT = an invented variation (not a mirror)."""
+LEFT = reconstructed from the photos (IMG_0933-0938); RIGHT = the same design mirrored (Brady, 24 Nov 2026: the same
+sleeve on both arms; tat_cfg.json keeps R = L, and arm_coords mirrors the angle). The shipped atlas was patched with
+mirror_sleeve.py."""
 import numpy as np, json, sys, math
 from PIL import Image
 W = '/Users/bradymott/brady-o/private/work/'
