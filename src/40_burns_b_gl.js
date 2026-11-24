@@ -487,13 +487,17 @@ void main(){
   col = mix(col, uFogC, uHaze * (1.0 - smoothstep(0.0, uSkyL.y, el)));
   float m = uSkyK.w * (0.55 + 0.24 * sin(az * 3.0 + 1.3) + 0.12 * sin(az * 7.0 + 0.4) + 0.06 * sin(az * 19.0 + 2.1) + 0.03 * sin(az * 43.0));
   bool mtn = el < m;
-  if (uSkyL.z > 0.5 && uSkyK.w > 0.0 && el < uSkyK.w * 1.7 && el > -0.03) {
+  if (uSkyL.z > 0.5 && uSkyK.w > 0.0 && el < uSkyK.w * 1.1 && el > -0.03) {
     // two ranges: a far, hazy crest line and a nearer, darker one across part of the horizon (the Black Rock and
     // Granite ranges); sunlit faces away from a low sun, backlit silhouettes toward it, gullies, a hazy foot
     vec2 ring = vec2(cos(az), sin(az));
-    float hf = uSkyK.w * (0.3 + 0.95 * ridge(ring * 2.3 + 11.0));
-    float sect = smoothstep(0.35, 0.65, n2(ring * 1.4 + 4.0));
-    float hn = uSkyK.w * (0.12 + 0.75 * ridge(ring * 4.1 + 2.0)) * sect;
+    // (peaks stay within the classic silhouette's height, so a low sun the palettes place above the hills stays visible)
+    float hf = uSkyK.w * (0.25 + 0.72 * ridge(ring * 2.3 + 11.0));
+    // a low sun sets into a saddle in the range rather than behind a peak (the sun disc is the point of a sunset)
+    float saddle = 1.0 - 0.55 * smoothstep(0.97, 1.0, dot(hd, hs)) * smoothstep(0.22, 0.02, sEl);
+    hf *= saddle;
+    float sect = smoothstep(0.35, 0.65, n2(ring * 1.4 + 4.0)) * saddle;
+    float hn = uSkyK.w * (0.1 + 0.55 * ridge(ring * 4.1 + 2.0)) * sect;
     float lit = mix(1.12, 0.72, pow(toward, 2.0) * (0.4 + 0.6 * tw));
     float gul = 0.86 + 0.14 * n2(vec2(az * 150.0, el * 22.0 + n2(vec2(az * 40.0, 0.0)) * 2.0));
     vec3 air = mix(uFogC, uHor, 0.45);   // distance turns the ranges toward the sky's own horizon colour (blue by day)
@@ -530,7 +534,7 @@ void main(){
   vec3 alb = uGround * (1.0 - p.a) + p.rgb;
   // the real playa is a pale, nearly neutral alkali crust; painted roads and marks keep most of their colour
   float l0 = dot(alb, vec3(0.3, 0.59, 0.11));
-  alb = mix(alb, vec3(l0) * vec3(1.07, 1.01, 0.9), uLook.x * (1.0 - 0.25 * p.a));
+  alb = mix(alb, vec3(l0) * vec3(1.1, 1.0, 0.86), uLook.x * (1.0 - 0.25 * p.a));
   float dist = length(vW - uCam);
   float fade = clamp(1.5 - dist / 55.0, 0.0, 1.0);
   // natural playa: low-frequency warp breaks the tile, patches of smooth drifted dust vs. cracked crust,
@@ -1174,7 +1178,7 @@ class BurnsRenderer {
       const gb = world && world.ground && world.ground.base, dk = BURNS_LOOK.dust || 0;
       const gm = BurnsWorld._detT && BurnsWorld._detT.tex && BurnsWorld._detT.gen === BurnsGL.gen ? BURNS_LOOK.grime || 0 : 0;
       if (u.uDetM) { gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, gm > 0 ? BurnsWorld._detT.tex : BurnsGL.white); gl.uniform1i(u.uDetM, 7); gl.activeTexture(gl.TEXTURE0); }
-      if (gb && dk > 0) { const l = 0.3 * gb[0] + 0.59 * gb[1] + 0.11 * gb[2], a = BURNS_LOOK.alkali || 0; gl.uniform3f(u.uDustC, Math.pow(lerp(gb[0], l * 1.07, a), 2.2), Math.pow(lerp(gb[1], l * 1.01, a), 2.2), Math.pow(lerp(gb[2], l * 0.9, a), 2.2)); gl.uniform4f(u.uDust, dk, 0.8, gm, 0); }
+      if (gb && dk > 0) { const l = 0.3 * gb[0] + 0.59 * gb[1] + 0.11 * gb[2], a = BURNS_LOOK.alkali || 0; gl.uniform3f(u.uDustC, Math.pow(lerp(gb[0], l * 1.1, a), 2.2), Math.pow(lerp(gb[1], l, a), 2.2), Math.pow(lerp(gb[2], l * 0.86, a), 2.2)); gl.uniform4f(u.uDust, dk, 0.8, gm, 0); }
       else gl.uniform4f(u.uDust, 0, 1, gm, 0);
     }
     if (u.uLm) {
