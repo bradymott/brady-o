@@ -492,14 +492,15 @@ void main(){
     float hn = uSkyK.w * (0.12 + 0.75 * ridge(ring * 4.1 + 2.0)) * sect;
     float lit = mix(1.12, 0.72, pow(toward, 2.0) * (0.4 + 0.6 * tw));
     float gul = 0.86 + 0.14 * n2(vec2(az * 150.0, el * 22.0 + n2(vec2(az * 40.0, 0.0)) * 2.0));
+    vec3 air = mix(uFogC, uHor, 0.45);   // distance turns the ranges toward the sky's own horizon colour (blue by day)
     mtn = el < max(hf, hn);
     if (el < hf) {
       float k = clamp(el / max(hf, 0.001), 0.0, 1.0);
-      col = mix(uFogC, uMtnC * lit * gul, (0.32 + 0.3 * k) * (1.0 - uHaze * 0.35));
+      col = mix(air, uMtnC * lit * gul, (0.32 + 0.3 * k) * (1.0 - uHaze * 0.35));
     }
     if (el < hn) {
       float k = clamp(el / max(hn, 0.001), 0.0, 1.0);
-      col = mix(uFogC, uMtnC * lit * 0.85 * gul, (0.5 + 0.35 * k) * (1.0 - uHaze * 0.3));
+      col = mix(mix(air, uFogC, 0.5), uMtnC * lit * 0.85 * gul, (0.5 + 0.35 * k) * (1.0 - uHaze * 0.3));
     }
   } else if (mtn) col = mix(uMtnC, uFogC, clamp(1.0 - (m - el) / max(m, 0.001) * 1.2, 0.0, 1.0) * 0.55);
   if (el < 0.0) col = uFogC;
@@ -560,12 +561,13 @@ void main(){
   alb *= 0.94 + (d1.b - 0.5) * 0.16 * fade * crust + 0.06;              // plate-to-plate tone
   alb *= 1.0 + trk * 0.03;
   vec4 g1 = texture2D(uDet, vW.xz * 1.9 + 0.43);
-  alb *= 1.0 - (step(0.988, g1.b) * 0.4 + (g1.b - 0.5) * 0.06) * near * uDetK.y * 3.0;
+  // specks of grit (MOOP): a sparse hash of the grain (B also carries plate tone, so a plain threshold would clump)
+  alb *= 1.0 - (step(0.994, fract(g1.b * 37.0)) * 0.25 + (g1.b - 0.5) * 0.06) * near * uDetK.y * 3.0;
   alb = bLin(alb);
 #ifdef BUMP
   // (tracks only flatten the relief: an 8-bit track mask in the height itself bands into contour rings)
   float hgt = d1.a * mix(0.3, 1.0, crust) + d4.a * 0.25 * crust + (g1.b - 0.5) * 0.12 * near;
-  n = bBump(n, vW, hgt, 0.014 * crustAA * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y) * uLook.z * (1.0 - 0.6 * trk));
+  n = bBump(n, vW, hgt, 0.028 * crustAA * (1.0 - smoothstep(70.0, 170.0, dist)) * step(0.001, uDetK.y) * uLook.z * (1.0 - 0.6 * trk));
 #endif
   float sh = bShadow(vW, n);
   vec3 c = bShade(alb, n, vW, 0.05, 0.0, sh);
@@ -590,14 +592,14 @@ void main(){
   vT = aBone; vC = aCol;
   gl_Position = uVP * vec4(p, 1.0);
 }`, `precision mediump float;
-uniform sampler2D uTex; uniform vec3 uFogC; uniform float uGlowK;
+uniform sampler2D uTex; uniform vec3 uFogC; uniform float uGlowK, uSprLit;
 varying vec2 vT; varying vec4 vC; varying float vF;
 void main(){
   vec4 c = texture2D(uTex, vT) * vC;
   if (c.a + c.r + c.g + c.b < 0.003) discard;
   vec3 rgb = mix(c.rgb, uFogC * c.a, vF);
 #ifdef HDR
-  gl_FragColor = vec4(pow(max(rgb, vec3(0.0)), vec3(2.2)) * (c.a < 0.004 ? uGlowK : 1.0), c.a);
+  gl_FragColor = vec4(pow(max(rgb, vec3(0.0)), vec3(2.2)) * (c.a < 0.004 ? uGlowK : uSprLit), c.a);
 #else
   gl_FragColor = vec4(rgb, c.a);
 #endif
@@ -1468,6 +1470,9 @@ class BurnsRenderer {
     gl.uniform4f(u.uFog, env.fogD, env.fogH, env.fogE, env.fogMax); gl.uniform3fv(u.uFogC, env.fogCol);
     gl.uniform1f(u.uFlat, isFlat ? 1 : 0);
     if (u.uGlowK) gl.uniform1f(u.uGlowK, this.hdr ? 1.25 + 1.6 * (this.night || 0) : 1);
+    // alpha sprites (dust, smoke, petals) are unlit: the look brings them up to the daylight the ground gets, so a dust
+    // puff doesn't read as a dark smudge on the sunlit playa (black blob shadows are unaffected)
+    if (u.uSprLit) { const L = this.lin, kl = 0.3 * L.key[0] + 0.59 * L.key[1] + 0.11 * L.key[2], al = 0.3 * L.sky[0] + 0.59 * L.sky[1] + 0.11 * L.sky[2]; gl.uniform1f(u.uSprLit, this.hdr && BURNS_LOOK.alkali > 0 ? clamp(0.55 * kl + 0.6 * al, 1, 1.7) : 1); }
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, BurnsGL.tex(spriteT)); gl.uniform1i(u.uTex, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, BurnsGL.spriteBuf);
     const q = Math.min(n, BurnsGL.MAXQ);

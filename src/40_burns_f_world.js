@@ -458,7 +458,7 @@ class BurnsWorld {
        subdivided by fainter, thinner second-generation cracks
      G low-frequency mottling (also the shader's crust / drifted-dust mask)
      B per-plate tone + fine grain (the shader varies brightness plate by plate)
-     A height: flat plates at slightly different levels, curled lips beside each crack, the crack itself deep */
+     A height (0.5..1): flat plates at slightly different levels, curled lips beside each crack, the crack itself deep */
   static playaTexture() {
     const N = 512, c = makeCanvas(N, N), x = c.getContext('2d'), img = x.createImageData(N, N), D = img.data;
     const H = BurnsM.hash, rng = mulberry32(1234);
@@ -508,9 +508,9 @@ class BurnsWorld {
       const tone = clamp(0.5 + (plate - 0.5) * 0.55 + (H(o1[1] * 3 + 1) - 0.5) * 0.15, 0, 1);
       const o = (y * N + X) * 4;
       D[o] = crack * 255;
-      D[o + 1] = (vn(X, y, 64) * 0.6 + vn(X, y, 32) * 0.4) * 255;
+      D[o + 1] = (vn(X, y, 64) * 0.55 + vn(X, y, 32) * 0.3 + vn(X + 7, y + 3, 16) * 0.15) * 255;
       D[o + 2] = clamp(tone * 0.75 + rng() * 0.25, 0, 1) * 255;
-      D[o + 3] = Math.round(hgt * 255);
+      D[o + 3] = 128 + Math.round(hgt * 127);   // alpha stays >= 0.5: a canvas stores premultiplied colour, so a low alpha would wipe R, G and B
     }
     x.putImageData(img, 0, 0);
     return c;

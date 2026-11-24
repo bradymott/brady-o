@@ -52,6 +52,7 @@ function serve(root) { return new Promise(res => { const srv = http.createServer
     for (const S of SHOTS) for (const tier of tiers) {
       const name = S.n + '-' + tier + '-' + o;
       if (filt && !filt.test(name)) continue;
+      if (process.env.LOOK_PRE) S.pre = process.env.LOOK_PRE;
       const r = await page.evaluate(([S, tier]) => {
         const B = window.BRADY_BURNS, D = B.debug;
         let s = D.scene();
@@ -68,6 +69,7 @@ function serve(root) { return new Promise(res => { const srv = http.createServer
         if (S.yaw !== null && S.yaw !== undefined) p.yaw = s.camYaw;
         s.camPitch = S.pitch; s.snapCam = true; s.lastManual = s.time + 1e6; s.manualCam = true;
         s.q = 1;
+        if (S.pre) new Function('s', 'B', S.pre)(s, B);   // LOOK_PRE: code run with the scene before drawing
         const draw = () => { s.fade = 0; s.dayCardT = -1; s.banners = []; if (s.dialog) s.dialog.open = false; window.BRADY.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); s.q = 1; s.draw(window.BRADY.Game.ctx); };
         draw(); draw();
         const gl = B.BurnsGL.gl; gl.finish();
