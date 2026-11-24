@@ -25589,6 +25589,144 @@ if (typeof window !== 'undefined') {
   window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsNav, BURNS_NAV, BurnsEBikeModel });
 }
 
+/* ---- 42_burns_a_bossgate.js ---- */
+/* ============================================================
+   BRADY GOES TO BURNING MAN — boss gates: a boss fight can never be walked past
+   A world's walk-in trigger is one way into its boss fight; this makes sure it is never the only one.
+
+   BurnsBossGate.add(api, o) (call from def.build) watches the arena every step:
+   - Brady anywhere in the arena, boss not beaten, fight not running and no cutscene playing:
+       requirements met -> the fight starts (o.start), however he got in (side, back, over a wall, on a bike,
+       after a faint, on a return visit or after a reload)
+       requirements missing -> a short NOT YET! line says what to do (again every few seconds while he stays), and
+       the guide arrow points at that next step until it changes
+   - an ACTION button (o.button: {x, z, y?, r, label}) where a player would stand and look for one: it starts the
+     fight, or says what is missing
+   - g._bossHint holds the current NOT YET line (tests read it)
+   o = { mission: 'boss' | fn(g) -> id, inArena(g, p), running(g) (fight, its intro or its ending in progress),
+         start(g), ready(g)?, missing(g)?, when(g)? (the gate only works while this is true), button?,
+         repeat? (seconds between NOT YET lines while he stays; default 7, Infinity = once per walk-in for busy places),
+         guide?(g) (where the arrow points after a NOT YET, instead of the next required mission) }
+
+   BurnsBossGate.finale(api, ids) (call from def.build): if Brady comes into a world whose last mission(s) are already
+   done but the world was never finished (he quit or reloaded during the victory scene), the world finishes for him
+   instead of leaving him in a quiet arena with nothing left to do and the next world still locked.
+
+   Burning Man only (42_* modules are not in Super Art Kart). BurnsWorlds.register and the world api are unchanged;
+   the guide redirect goes through BurnsNav.guides (or a world's own def.guide calls BurnsBossGate.guide).
+   ============================================================ */
+
+const BurnsBossGate = {
+  add(api, o) {
+    const G = { o, hintT: -99 };
+    api.update(g => { g._bossGate = G; BurnsBossGate.watch(g, G); });
+    if (o.button) { const B = o.button; api.interact({ x: B.x, z: B.z, y: B.y, r: B.r || 6, label: B.label || 'FIGHT!', when: g => BurnsBossGate.pending(g, G), fn: g => BurnsBossGate.tryStart(g, G, true) }); }
+    BurnsBossGate.hookGuide(api);
+    return G;
+  },
+  // worlds without their own def.guide get the redirect through BurnsNav.guides (worlds with one call guide() first)
+  hookGuide(api) {
+    if (typeof BurnsNav === 'undefined' || !api.world || !api.world.def) return;
+    const id = api.world.def.id;
+    if (id === undefined || api.world.def.guide || BurnsNav.guides[id]) return;
+    BurnsNav.guides[id] = g => BurnsBossGate.guide(g);
+  },
+  missionId(g, G) { const m = G.o.mission; return typeof m === 'function' ? m(g) : m || 'boss'; },
+  mission(g, G) { return g.missions.get(BurnsBossGate.missionId(g, G)); },
+  // the fight can be started now or later: not beaten, not running, its intro not playing
+  pending(g, G) {
+    const m = BurnsBossGate.mission(g, G);
+    return !!(m && m.state !== 'done' && !G.o.running(g) && (!G.o.when || G.o.when(g)));
+  },
+  ready(g, G) {
+    if (G.o.ready) return !!G.o.ready(g);
+    const m = BurnsBossGate.mission(g, G);
+    return !!m && (m.state === 'available' || m.state === 'active');
+  },
+  // the first mission still to do on the way to `id` (follows requirements down to one that can be started)
+  nextReq(g, id, depth) {
+    const m = g.missions.get(id); depth = depth || 0;
+    if (!m || m.state === 'done') return null;
+    if (m.state !== 'locked' || depth > 6) return m;
+    for (const r of m.def.requires || []) {
+      if (g.missions.reqDone(r) || typeof r !== 'string' || r.indexOf(':') >= 0) continue;
+      const d = BurnsBossGate.nextReq(g, r, depth + 1); if (d) return d;
+    }
+    return m;
+  },
+  next(g, G) {
+    const m = BurnsBossGate.mission(g, G); if (!m) return null;
+    for (const r of m.def.requires || []) { if (g.missions.reqDone(r)) continue; return typeof r === 'string' && r.indexOf(':') < 0 ? BurnsBossGate.nextReq(g, r) : null; }
+    return null;
+  },
+  missing(g, G) {
+    if (G.o.missing) { const s = G.o.missing(g); if (s) return s; }
+    const m = BurnsBossGate.mission(g, G); if (!m) return '';
+    const nx = BurnsBossGate.next(g, G), first = m.def.lockedDesc || 'Not ready for this fight yet.';
+    if (!nx) return first;
+    const d = nx.def, line = first + ' Next: ' + String(d.short || d.name).replace(/[.!]+$/, '');
+    return d.hint && line.length + d.hint.length < 110 ? line + ' (' + d.hint + ').' : line + '.';
+  },
+  tryStart(g, G, pressed, fresh) {
+    if (!BurnsBossGate.pending(g, G)) return false;
+    if (BurnsBossGate.ready(g, G)) { g._bossHint = null; G.guideTo = null; G.o.start(g); return true; }
+    const msg = BurnsBossGate.missing(g, G);
+    g._bossHint = msg;
+    const nx = BurnsBossGate.next(g, G); G.guideTo = G.o.guide ? { custom: true } : nx ? { id: nx.id, state: nx.state } : null;
+    if (pressed || fresh || !(g.time - G.hintT < (G.o.repeat || 7))) {
+      G.hintT = g.time;
+      g.banner('NOT YET!', msg, { col: '#ff9a4a', small: true });
+      if (pressed) burnsSfx('bump', { vol: 0.5 });
+      if (typeof BurnsNav !== 'undefined' && BurnsNav.refresh) BurnsNav.refresh(g);
+    }
+    return false;
+  },
+  watch(g, G) {
+    const p = g.player;
+    if (!p || g.state !== 'play' || g.cine || g.dialog.open || p.dead || g.faintT > 0 || g.finishing) return;
+    const inside = G.o.inArena(g, p);
+    if (!inside) { if (G.hinted) { G.hinted = false; g._bossHint = null; } return; }
+    if (!BurnsBossGate.pending(g, G)) return;
+    const fresh = !G.hinted;   // just walked in: say it now
+    G.hinted = true;
+    BurnsBossGate.tryStart(g, G, false, fresh);
+  },
+  // the guide arrow: after a NOT YET, the next step (until that mission moves on); otherwise the world's default
+  guide(g) {
+    const G = g._bossGate; if (!G || !G.guideTo || typeof BurnsNav === 'undefined') return undefined;
+    if (G.guideTo.custom) { if (!BurnsBossGate.pending(g, G)) { G.guideTo = null; return undefined; } return G.o.guide(g); }
+    const m = g.missions.get(G.guideTo.id);
+    if (!m || m.state !== G.guideTo.state || m.state === 'done' || (g.boss && g.boss.active && !g.boss.defeated)) { G.guideTo = null; return undefined; }
+    const d = m.def, a = d.giver && m.state === 'available' && g.actor(d.giver);
+    if (a && !a.removed && !a.hidden) return [{ x: a.x, z: a.z, y: a.y, label: 'TALK TO ' + (a.def.name || 'THEM') }];
+    const t = BurnsNav.missionTargets(g, m);
+    return t.length ? t : undefined;
+  },
+
+  /* ---------- a finale that was won but never finished ---------- */
+  finale(api, ids) {
+    const F = { ids: [].concat(ids), t: null };
+    api.update((g, dt) => BurnsBossGate.finaleWatch(g, F, dt));
+    return F;
+  },
+  finaleWatch(g, F, dt) {
+    if (F.t === -1) return;
+    const sv = BurnsSave.get();
+    // decided once, on the first step of the visit: was the finale already won when Brady came in?
+    if (F.t === null) { F.t = !sv.worldDone[g.worldId] && F.ids.every(id => g.missions.isDone(id)) ? 2.5 : -1; return; }
+    if (g.state !== 'play' || g.cine || g.dialog.open || g.finishing || (g.player && g.player.dead)) return;
+    F.t -= dt;
+    if (F.t > 0) return;
+    F.t = -1;
+    if (sv.worldDone[g.worldId]) return;
+    const m = g.missions.get(F.ids[F.ids.length - 1]);
+    g.banner('YOU DID IT!', (m ? m.def.name + ' is done. ' : '') + 'On to the next adventure!', { col: '#ffd84a' });
+    g.finishWorld();
+  }
+};
+
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BurnsBossGate });
+
 /* ---- 42_burns_ow_city.js ---- */
 /* ============================================================
    BRADY GOES TO BURNING MAN — the open world: Black Rock City (world 500)
@@ -37465,6 +37603,8 @@ BurnsWorlds.register({
       desc: 'He\'s blocking the gate. With your wife. Take cover from his neon flash.', hint: 'Through the gate', lockedDesc: 'Needs a ticket and a proper greeting.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const W1 = BURNS_W1, R = api.rng, L = W1.LANES;
     W1.state = { gust: 0, ticket: null, gateOpen: false, round: 0, introDone: !!BurnsSave.flag(1, 'intro') };
     const S = W1.state;
@@ -38112,6 +38252,8 @@ BurnsWorlds.register({
       desc: 'He grew. A lot. Hide from his neon flash (green rings are safe), dodge face fire and arm fireworks, bonk his head.', hint: 'The Man Pavilion', lockedDesc: 'Beat him on his saucer first.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'giant');
     const W = BURNS_W10;
     W.state = { introDone: !!BurnsSave.flag(10, 'intro'), phase: 0, lampGlows: [], lamps: [], cars: [], beamsOn: false, onDeckT: 0, mortars: [], spinners: [], burnK: 0, fireH: 0, armsK: undefined, collapseK: 0, after: false };
     if (!BurnsSave.hasItem('bike')) BurnsSave.addItem('bike');
@@ -38389,6 +38531,14 @@ BURNS_W10.buildArena = function (api, g) {
   g.addBoss(man);
   st.man = man;
   api.trigger({ x: 0, z: 68, r: 9, when: g2 => !BURNS_W10.state.fighting && !BURNS_W10.state.after && (g2.missions.state('saucer') === 'available' || (g2.missions.state('giant') === 'available' && BURNS_W10.state.phase === 2)), onEnter: g2 => BURNS_W10.arenaEnter(g2) });
+  // ...and from anywhere inside the crowd barrier (the gap's edges, a reload at the Giant camp flag), or the FIGHT
+  // button by the pavilion; without the ride and the lamps Brady is told what's left (src/42_burns_a_bossgate.js)
+  BurnsBossGate.add(api, { mission: g2 => g2.missions.isDone('saucer') ? 'giant' : 'saucer',
+    inArena: (g2, p) => Math.hypot(p.x, p.z) < 64,
+    running: () => { const S2 = BURNS_W10.state; return !!(S2.fighting || S2.after || S2.burning); },
+    ready: g2 => g2.missions.state('saucer') === 'available' || (g2.missions.state('giant') === 'available' && BURNS_W10.state.phase === 2),
+    start: g2 => BURNS_W10.arenaEnter(g2),
+    button: { x: 0, z: 40, r: 8, label: 'FIGHT: THE MAN' } });
 };
 
 /* ---------------- the cameo crowd: the whole cast, cheering ---------------- */
@@ -38868,6 +39018,9 @@ BURNS_W10.afterBurn = function (g, inCine) {
   }
 };
 
+/* test hook: the World 10 state (tools/burns_boss_entry_test.js) */
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W10 });
+
 /* ---- 42_burns_world11.js ---- */
 /* ============================================================
    BRADY GOES TO BURNING MAN — World 11: SOUND CAMP CRAWL (Thursday night; plays 9th, after the art car hunt)
@@ -39020,7 +39173,7 @@ BurnsWorlds.register({
       onEvent(g, m, name) { if (name === 'lit') { g.missions.progress('darkwads'); return true; } },
       onComplete(g) { const r = g.actor('ranger'); if (r) r.say('Four darkwads, illuminated. I\'m writing you a commendation. In triplicate.', 3); g.addGlow(15); g.player.givePower('water'); g.toast('+15 GLOW STICKS'); } }
   ],
-  build(api, g) { BW11.build(api, g); },
+  build(api, g) { BW11.build(api, g); BurnsBossGate.finale(api, 'set'); },   // (finishes a won-but-unfinished finale: 42_burns_a_bossgate.js)
   onStart(g) { BW11.onStart(g); },
   update(g, dt) { BW11.update(g, dt); },
   drawSprites(g, R) { BW11.drawLasers(g, R); BW11Dome.drawSprites(g, R); BW11.drawExtras(g, R); },
@@ -39690,6 +39843,8 @@ BurnsWorlds.register({
       onComplete(g) { BW12.ending(g); } }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'hope');
     const R = api.rng, TC = BW12.TC;
     BW12.state = { introDone: !!BurnsSave.flag(12, 'intro'), timers: [], lamps: [], bells: [], rung: {}, trace: null, ink: null, carry: null, motes: [], windT: 6, writeAt: null };
     const S = BW12.state;
@@ -40687,6 +40842,8 @@ BurnsWorlds.register({
       desc: 'Auntie Pearl\'s famous guided exercise. Ninety-two percent success rate. Needs two stamps: Contact Improv and Tantra Basics.', hint: 'The Dome of Second Chances, north end of the village', lockedDesc: 'Two stamps required: Contact Improv 101 and Tantra Basics.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'lostlove');
     const R = api.rng;
     BW13.state = { timers: [], introDone: !!BurnsSave.flag(13, 'intro'), cushions: [], carried: [], delivered: 0, bowls: [], ex: null, gaze: null, flare: 0, truckT: 0 };
     const S = BW13.state;
@@ -42776,6 +42933,8 @@ BurnsWorlds.register({
       desc: 'Drive the Party Barge to the little desert town of Gerlach. There is a diner. There are pancakes.', hint: 'Follow the highway all the way', marker: { x: -31, z: 692 } }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'gerlach');
     BW15W.terrain();
     const S = BW15D.init(g), R = BW15_ROAD.build(), H = (x, z) => api.height(x, z), rng = mulberry32(15151);
     const at = (s, lat) => R.at(s, lat, {});
@@ -43578,7 +43737,7 @@ BurnsWorlds.register({
     S.poles.forEach((P, i) => { if (P.limbo) return; g.interactables.push({ x: P.x, z: P.z, y: P.y, r: P.r, label: 'GRAB POLE', when: g2 => g2.missions.state('haul') === 'active' && S.carry === null && !P.taken && !P.delivered, fn: g2 => BW16.grabPole(g2, i) }); });
     S.sails.forEach(s => g.interactables.push({ x: s.winch.x, z: s.winch.z, r: 2.4, label: 'HOIST!', when: g2 => g2.missions.state('sails') === 'active' && !s.done, fn: g2 => BW16.hoist(g2, s) }));
     S.hooks.forEach(h => g.interactables.push({ x: h.x, z: h.z, y: h.y, r: 2.0, label: 'HANG LANTERN', when: g2 => g2.missions.state('lanterns') === 'active' && !h.hung, fn: g2 => BW16.hang(g2, h) }));
-    g.interactables.push({ x: BW16.TREE.x, z: BW16.TREE.z, y: 4.26, r: 2.2, label: 'TAKE THE BIKE', when: g2 => g2.missions.state('bike') === 'active', fn: g2 => BW16.takeBike(g2) });
+    g.interactables.push({ x: BW16.TREE.x, z: BW16.TREE.z, y: 4.26, r: 2.2, label: 'TAKE THE BIKE', when: g2 => BW16.bikeOpen(g2), fn: g2 => BW16.takeBike(g2) });
     // put the camp back the way the save remembers it
     if (M.isDone('haul')) { for (const P of S.poles) { P.delivered = true; if (P.mv) P.mv.visible = false; } for (const r of S.ribs) r.visible = true; }
     if (M.isDone('lash')) for (const q of S.panels) { q.done = true; q.seatT = 1; q.mv.y = F.h + 0.004; q.mv.pitch = q.mv.roll = 0; }
@@ -43587,6 +43746,8 @@ BurnsWorlds.register({
     if (BW16.BUILD.every(id => M.isDone(id))) { S.alive = true; S.aliveK = 1; for (const a of g.actors) if (a.def.bw16Crowd) BW16.stage(a, 'dance', { style: a.def.style || 0, bpm: BW16.BPM }); const w = g.actor('wolfie'); if (w) BW16.place(w, F.x - 3.0, F.z + 7.6, Math.PI, 'idle'); }
     if (M.isDone('contest')) BW16.afterContest(g, true);
     S.treeBike.visible = !M.isDone('bike');
+    // the bike job is only started by the post-contest scene: a quit or reload after the contest must not lose it
+    if (M.isDone('contest') && M.state('bike') === 'available') M.start('bike', true);
     if (M.isDone('guard')) BW16.openField(g, true);
     if (M.isDone('contest') && !M.isDone('elder')) { BW16.wonkOn(g); S.wonk = 0.6; burnsMusic(BW16.track('burns_w16_wonk', 'glitch')); if (!BurnsSave.groundScore()) BurnsSave.setGroundScore(true); if (M.state('gs101') === 'available') M.start('gs101', true); }
     g.tod = BW16.wantTod(g);
@@ -43760,9 +43921,12 @@ BW16.floorAlive = function (g) {
     { say: [w || 'wolfie', ['The contest starts whenever you\'re ready. Come talk to me.']] }
   ], g2 => { g2.banner('THE FLOOR IS ALIVE', 'Talk to Wolfie to enter the dance contest.', { col: '#ffd36a' }); g2.missions.track('contest'); });
 };
+// the yellow bike can be taken once the contest is won (active, or still waiting after a quit/reload)
+BW16.bikeOpen = function (g) { const st = g.missions.state('bike'); return st === 'active' || (st === 'available' && g.missions.isDone('contest')); };
 BW16.takeBike = function (g) {
   const S = BW16.state;
-  if (g.missions.state('bike') !== 'active') return;
+  if (!BW16.bikeOpen(g)) return;
+  if (g.missions.state('bike') === 'available') g.missions.start('bike', true);
   S.treeBike.visible = false;
   g.fx.confetti(BW16.TREE.x, 5, BW16.TREE.z, 30); burnsSfx('bike_bell');
   g.giveItem('bike');
@@ -43921,7 +44085,7 @@ BurnsWorlds.register({
       onComplete(g) { BW17.after(g, 1.6, g2 => BW17.finale(g2)); } }
   ].concat(BW17.SIDE),
   // the day of the week follows the story (Tuesday the first time; later visits say Friday, Saturday...)
-  build(api, g) { BW17.build(api, g); },
+  build(api, g) { BW17.build(api, g); BurnsBossGate.finale(api, 'lookouts'); },   // (finishes a won-but-unfinished finale: 42_burns_a_bossgate.js)
   onStart(g) { BW17.start(g); },
   update(g, dt) { BW17.update(g, dt); },
   drawSprites(g, R) { BW17.drawSprites(g, R); },
@@ -44604,6 +44768,16 @@ BurnsWorlds.register({
       onStart(g) { BURNS_W2.escapeStart(g); }, onFail(g) { BURNS_W2.escapeFail(g); } }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'escape');
+    // the escape starts in Kevin's tent (SLEEP), not at the RV: standing at the RV before that, Brady is told so
+    BurnsBossGate.add(api, { mission: 'escape',
+      when: g2 => g2.missions.state('escape') === 'available' && !BURNS_W2.state.esc,
+      inArena: (g2, p) => Math.hypot(p.x - BURNS_W2.RLD[0], p.z - BURNS_W2.RLD[1]) < 10,
+      running: () => !!BURNS_W2.state.esc, ready: () => false, start: () => {},
+      missing: () => 'Kevin said get some sleep first. SLEEP in his tent at camp (7:30 & E); the run back here starts at 4 AM.',
+      guide: () => { const T = BURNS_W2.state.tent; return T ? [{ x: T.x, z: T.z, label: 'SLEEP IN KEVIN\'S TENT' }] : undefined; },
+      repeat: Infinity });
     const W2 = BURNS_W2, R = api.rng, BW = BURNS_W234, RR = W2.R;
     BW.reset(g);
     W2.state = { introDone: !!BurnsSave.flag(2, 'intro'), followers: [], swarms: [], spinners: [], jets: [], warned: 0, sole: [], trail: [] };
@@ -45234,6 +45408,7 @@ BurnsWorlds.register({
     if (!S.spinnerActors) S.spinnerActors = g.actors.filter(a => a.behName === 'w2Spinner');
     W2.carryCheck(g);
     if (S.esc) W2.escapeStep(g, dt);
+    W2.markEscape(g);
     // walking lost burners home (followers that get boxed in by camps catch up behind Brady)
     if (g.missions.state('lost') === 'active' || g.missions.state('lost') === 'available') {
       for (const L of S.lost) {
@@ -45477,6 +45652,15 @@ BURNS_W2.markHaul = function (g, dropped) {
     else if (ground) m.def.marker = ground;
     m.def.short = id === 'stash' ? (BW.S.carry ? 'Into the RV (side door)' : 'Grab your gear by the RV') : (BW.S.carry ? 'To Kevin\'s tent (7:30 & E)' : 'Pick your stuff back up!');
   }
+};
+// the escape's arrow: Kevin's tent while it's time to sleep, the pink RV once the run is on
+BURNS_W2.markEscape = function (g) {
+  const S = BURNS_W2.state, m = g.missions.get('escape'); if (!m || !S.tent) return;
+  const sleep = m.state === 'available' && !S.esc;
+  if (sleep === S.escMarkSleep) return;
+  S.escMarkSleep = sleep;
+  m.def.marker = sleep ? { x: S.tent.x, z: S.tent.z } : { x: BURNS_W2.RLD[0], z: BURNS_W2.RLD[1] };
+  m.def.short = sleep ? 'Sleep in Kevin\'s tent (7:30 & E)' : 'RUN! Back to the pink RV';
 };
 BURNS_W2.rvEnter = function (g) {
   const S = BURNS_W2.state;
@@ -46001,6 +46185,9 @@ BURNS_W2.lostHome = function (g, a, L) {
 BURNS_W2.lib = () => BURNS_W234;
 try { (window.BRADY_W234 = window.BRADY_W234 || {}).w2 = BURNS_W2; } catch (e) { /* no window */ }
 
+/* test hook: the World 2 state (tools/burns_boss_entry_test.js) */
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W2 });
+
 /* ---- 42_burns_world3.js ---- */
 /* ============================================================
    BRADY GOES TO BURNING MAN — World 3: COSTUME CULT & THE YELLOW BIKE (Tuesday)
@@ -46067,6 +46254,8 @@ BurnsWorlds.register({
       desc: 'Fuzz is wearing a full fursuit in the midday sun. Walk them to the misting station at the bike clinic before they melt.', hint: 'Fuzz sits by the Costume Cult tent' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const W3 = BURNS_W3, R = api.rng, BW = BURNS_W234;
     BW.reset(g);
     W3.state = { introDone: !!BurnsSave.flag(3, 'intro'), gates: [], wheels: [], lookouts: [] };
@@ -46443,6 +46632,12 @@ BURNS_W3.buildGrave = function (api, g) {
   // wheel projectiles (a small pool of movers)
   for (let i = 0; i < 6; i++) { const mv = api.mover(m => { m.color('#18181c'); BW.ring(m, 0, 0, 0, 0.42, 0.06, { roll: Math.PI / 2, seg: 16, tseg: 5 }); m.color('#ffd21a'); BW.ring(m, 0, 0, 0, 0.3, 0.025, { roll: Math.PI / 2, seg: 14, tseg: 3 }); m.color('#c8c8d0'); BW.ball(m, 0, 0, 0, 0.06); return {}; }, {}); mv.noCollide = true; mv.visible = false; S.wheels.push({ mv, live: false, x: 0, z: 0 }); }
   api.trigger({ x: gx, z: gz, r: 17, onEnter: g2 => BURNS_W3.bossIntro(g2) });
+  // ...and from anywhere among the bike heaps (or the FIGHT button); without the look and the bike Brady is told what's left
+  BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => Math.hypot(p.x - gx, p.z - gz) < 20,
+    running: () => !!BURNS_W3.state.bossStarted,
+    start: g2 => BURNS_W3.bossIntro(g2),
+    button: { x: gx, z: gz + 4, r: 6, label: 'FIGHT: THE BARON' } });
 };
 BURNS_W3.tallBike = function (m) {
   const BW = BURNS_W234, wr = 0.38;
@@ -46952,6 +47147,8 @@ BurnsWorlds.register({
       desc: 'The Velvet Creeper boa-lassoed your informant into the big pink dome. Dodge his lasso, pop his pickup lines, and bonk him while he\'s tangled.', hint: 'Inside the big pink dome', lockedDesc: 'Find the informant first.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const W4 = BURNS_W4, R = api.rng, BW = BURNS_W234;
     BW.reset(g);
     W4.state = { introDone: !!BurnsSave.flag(4, 'intro'), lines: [], quiz: -1 };
@@ -47224,6 +47421,12 @@ BURNS_W4.buildDome = function (api, g) {
     spec: Object.assign(BurnsRig.npcSpec('furcoat', 99), { coat: { kind: 'fur', col: '#7a1a8a', trim: '#ff9ad8' }, top: { kind: 'tank', col: '#f4f0e8' }, bottom: { kind: 'shorts', col: '#ff3b8a' }, shoes: { kind: 'boots', col: '#ffd84a' }, glasses: 'shades', hat: null, goggles: false, hair: { style: 'wavy', col: '#2a1a12', hi: '#5a3a2a' }, face: 'smug', acc: ['ledNecklace', 'bracelets'], key: 'w4:velvet' }) });
   api.checkpoint('cp_dome', D.x + 6, D.z + D.r + 6, { yaw: Math.PI, name: 'The Big Pink Dome' });
   api.trigger({ x: D.x, z: D.z, r: D.r - 3, y1: 4, onEnter: g2 => BURNS_W4.bossIntro(g2) });
+  // ...and from anywhere on the dome floor (or the FIGHT button); without a friend for Velvet Brady is told what's left
+  BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => Math.hypot(p.x - D.x, p.z - D.z) < D.r - 0.5 && p.y < 4.5,
+    running: () => !!BURNS_W4.state.bossStarted,
+    start: g2 => BURNS_W4.bossIntro(g2),
+    button: { x: D.x, z: D.z + 6, r: 6, label: 'FIGHT: VELVET CREEPER' } });
 };
 
 /* ---------------- runtime wiring ---------------- */
@@ -47547,6 +47750,8 @@ BurnsWorlds.register({
       onComplete(g) { BW5.finale(g); } }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const R = api.rng;
     BW5.state = { introDone: !!BurnsSave.flag(5, 'intro'), lifts: [], turn: [], turnOpen: false, carts: [], gary: null, chute: { on: false, hits: 0 }, photo: false, quiz: 0 };
     const S = BW5.state;
@@ -48124,6 +48329,12 @@ BW5.buildDock = function (api, g) {
       lines: ['Everything is FREE. It\'s TERRIFYING. I love it.', 'Take a glow stick. Take nine. I want NOTHING. Oh wow.'], gift: { kind: 'glowstick', n: 9 } });
   }
   api.trigger({ x: A.x, z: A.z, r: 13, when: g2 => g2.missions.state('boss') === 'available' && !BW5.state.bossOn, onEnter: g2 => BW5.bossIntro(g2) });
+  // ...and from anywhere on the dock (or the FIGHT button); before Rhonda's escort Brady is told what's left
+  BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => Math.hypot(p.x - A.x, p.z - A.z) < 20,
+    running: () => !!BW5.state.bossOn,
+    start: g2 => BW5.bossIntro(g2),
+    button: { x: A.x, z: A.z + 5, r: 6, label: 'FIGHT: BARTER BARON' } });
 };
 
 // Biscuit's lookout, out the back behind the Barter Baron's toll gate. When the shared big-art module
@@ -48642,7 +48853,7 @@ BW5.updateForklift = function (g, dt) {
 };
 BW5.bossIntro = function (g) {
   const S = BW5.state, a = g.actor('baron'), p = g.player, A = BW5.DOCK;
-  if (S.bossOn || !a) return; S.bossOn = true;
+  if (S.bossOn || !a || g.missions.isDone('boss')) return; S.bossOn = true; g._bossHint = null;
   g.missions.start('boss', true);
   g.cutscene([
     { music: 'man_boss' },
@@ -48970,9 +49181,12 @@ BurnsWorlds.register({
     { id: 'party', name: 'Party Animal', short: 'Get 40 burners partying at once', type: 'custom', giver: 'barnacle', start: 'manual', requires: ['board'], marker: { x: -92, z: 30 },
       desc: 'Park El Pulpo at a glowing PARTY SPOT, throw a party, DJ a killer set and gift jello shots. Partiers follow you to the next spot. Get 40 dancing at once.', hint: 'Party spots: the Glowshroom Grove, Sparkle Pony Stables, Crusty Corner, Solar Bro Farm, the Big Empty', lockedDesc: 'Commandeer the octopus first.' },
     { id: 'boss', name: 'Hostile Takeover', type: 'boss', start: 'manual', requires: ['party'], tokenDirect: true, short: 'Defeat Chad, Founder & CEO!', marker: { x: 0, z: -134 },
+      guide(g) { return BW6.state && BW6.state.chadOn ? 'chad' : undefined; },   // mid-fight: where he actually is (his arena is the party spot)
       desc: 'Chad wants to turn your party into a platform. Dodge his pitch decks and VC drones, make him crash his giant e-unicycle, then bonk him (or flame him).', hint: 'He crashes your biggest party', lockedDesc: 'Throw a party worth taking over.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const R = api.rng;
     BW6.state = { introDone: !!BurnsSave.flag(6, 'intro'), lilies: [], party: null, followers: [], shots: 20, back: [], jugs: 0, darkwads: [], jump: null, honk: [] };
     const S = BW6.state;
@@ -49215,6 +49429,14 @@ BW6.buildEmpty = function (api, g) {
   const spec = BW567K.mine('techbro', 666, { kind: 'chad', face: 'smug', glasses: 'shades', beard: null, goggles: false, hat: null, hair: { style: 'short', col: '#e8c860', hi: '#fff0b0' }, top: { kind: 'button', col: '#ffffff' }, vest: 'fleece', vestCol: '#1a1a24', bottom: { kind: 'chinos', col: '#c8b48a' }, acc: ['headset', 'bracelets'], prop: 'phone', body: { h: 1.04, w: 1.12 } });
   api.enemy({ id: 'chad', name: 'CHAD, FOUNDER & CEO', type: 'techbro', spec, scale: 1.35, x: s.x + 14, z: s.z - 14, yaw: -0.7, behavior: 'bw6Chad', hp: 4, boss: true, drop: 14, always: true, chatter: false, keepBehavior: true, uni: 7,
     onDefeat(g2) { BW6.chadDefeated(g2); } });
+  // Chad's showdown also starts when Brady walks up to him at the Big Empty (or presses FIGHT there), not only during
+  // a party (a quit, a reload or a faint can leave him waiting here); before the party he says what's needed
+  const sx = s.x, sz = s.z;
+  BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => Math.hypot(p.x - sx, p.z - sz) < 26 || Math.hypot(p.x - (sx + 14), p.z - (sz - 14)) < 8,
+    running: () => !!BW6.state.chadOn,
+    start: g2 => BW6.chadArrives(g2, true),
+    button: { x: sx + 10, z: sz - 10, r: 6, label: 'FIGHT: CHAD' }, repeat: Infinity });
 };
 // local party crowd around a spot: [[type, n], ...]
 BW6.locals = function (api, s, list, kind) {
@@ -49960,10 +50182,10 @@ BW6.foundOcto = function (g) {
     { do: g2 => { if (b) b.setBehavior('sit'); } }
   ]);
 };
-BW6.chadArrives = function (g) {
-  const S = BW6.state, P = S.party, c = g.actor('chad'), p = g.player; if (!c || S.chadOn) return;
-  S.chadOn = true;
-  const A = { x: P ? P.x : p.x, z: P ? P.z : p.z };
+BW6.chadArrives = function (g, here) {   // here: started at the Big Empty, not by a party (fight where Brady stands unless a party is on)
+  const S = BW6.state, P = S.party, c = g.actor('chad'), p = g.player; if (!c || S.chadOn || g.missions.isDone('boss')) return;
+  S.chadOn = true; g._bossHint = null;
+  const useP = P && (!here || P.on), A = { x: useP ? P.x : p.x, z: useP ? P.z : p.z };
   c.data.arena = A; c.x = A.x + 18; c.z = A.z + 6; c.y = g.world.height(c.x, c.z); c.home = { x: A.x, z: A.z };
   g.missions.start('boss', true);
   g.cutscene([
@@ -50133,6 +50355,15 @@ BurnsWorlds.register({
       onComplete(g) { BW7.bootFound(g); } }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
+    // the Glitter Queen comes down whenever Brady is on the dance floor after the sunrise (not only from the sunrise scene,
+    // which a quit or reload skips); before the sunrise he's told to climb the heart
+    BurnsBossGate.add(api, { mission: 'boss',
+      inArena: (g2, p) => Math.hypot(p.x - BW7.FLOOR.x, p.z - BW7.FLOOR.z) < BW7.FLOOR.r && p.y < 6,
+      running: () => !!(BW7.state.queenOn || BW7.state.queenIntro),
+      start: g2 => BW7.queenArrives(g2),
+      button: { x: BW7.FLOOR.x, z: BW7.FLOOR.z + 6, r: 6, label: 'FIGHT: GLITTER QUEEN' }, repeat: Infinity });
     const R = api.rng;
     BW7.state = { introDone: !!BurnsSave.flag(7, 'intro'), wob: [], drones: [], speedK: 1, quiz: 0 };
     /* ---------------- ground ---------------- */
@@ -50713,7 +50944,8 @@ BW7.sunrise = function (g) {
   ], () => BW567K.after(g, 1.5, g2 => BW7.queenArrives(g2)));
 };
 BW7.queenArrives = function (g) {
-  const S = BW7.state, q = g.actor('queen'), F = BW7.FLOOR, p = g.player; if (!q || S.queenOn) return;
+  const S = BW7.state, q = g.actor('queen'), F = BW7.FLOOR, p = g.player; if (!q || S.queenOn || S.queenIntro || g.missions.isDone('boss')) return;
+  S.queenIntro = true; g._bossHint = null;
   q.hidden = false; q.x = F.x + 20; q.z = F.z - 10; q.y = 9; q.data.flyIn = true;
   g.missions.start('boss', true);
   g.cutscene([
@@ -50726,7 +50958,7 @@ BW7.queenArrives = function (g) {
     { say: [q, ['Hiii! Sorry, can everyone move? The sunrise is SPONSORED now.', 'This is a hashtag-no-filter moment. So get out of my filter.']] },
     { say: ['brady', ['It\'s a sunrise. It belongs to everybody.']] },
     { say: [q, ['Everything belongs to my FOLLOWERS. Drones! Get his bad side! He only HAS bad sides!']] },
-    { do: g2 => { S.queenOn = true; q.data.flyIn = false; q.data.mode = 'float'; q.data.t = 3.5; q.data.ang = Math.atan2(q.x - F.x, q.z - F.z); q.data.alt = 4.2; for (const a of g2.actors) if (a.def.crowd7) { a.home = { x: a.x + (a.x - F.x) * 0.6, z: a.z + (a.z - F.z) * 0.6 }; a.x = a.home.x; a.z = a.home.z; }
+    { do: g2 => { S.queenOn = true; S.queenIntro = false; q.data.flyIn = false; q.data.mode = 'float'; q.data.t = 3.5; q.data.ang = Math.atan2(q.x - F.x, q.z - F.z); q.data.alt = 4.2; for (const a of g2.actors) if (a.def.crowd7) { a.home = { x: a.x + (a.x - F.x) * 0.6, z: a.z + (a.z - F.z) * 0.6 }; a.x = a.home.x; a.z = a.home.z; }
       g2.boss = BW567K.bar('THE GLITTER QUEEN', q, 4, { get st() { return q.data.mode === 'likes' ? 'stunned' : q.data.mode; } });
       g2.banner('FIGHT!', 'Hide behind the speakers from the glare · dodge the drones · bonk her while she checks her likes', { col: '#ff9ad8' }); } }
   ]);
@@ -50936,6 +51168,8 @@ BurnsWorlds.register({
       desc: 'Twenty-two years on the playa. Showered twice. He wants El Pulpo impounded.', hint: 'The DPW yard, north end', lockedDesc: 'Fuel up El Pulpo first.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const W8 = BURNS_W8, R = api.rng, S = BurnsW8910Shape;
     W8.state = { introDone: !!BurnsSave.flag(8, 'intro'), fuel: 0, fueling: false, raidT: 0, raiders: [], forks: [], gateOn: false, bossStarted: false };
     const st = W8.state;
@@ -51057,7 +51291,11 @@ BurnsWorlds.register({
   onRespawn(g) {
     const S = BURNS_W8.state;
     BurnsW8910Haz.clear(g);
-    if (S.bossStarted && !g.missions.isDone('boss')) BURNS_W8.rustyReset(g);
+    if (S.bossStarted && !g.missions.isDone('boss')) {
+      BURNS_W8.rustyReset(g);
+      // the camp flag is outside the yard: open the gate bar so the road (where the guide arrow points) leads back in
+      S.gateOn = false; if (S.gate) S.gate.off = true;
+    }
   },
   env(g, env) {
     const S = BURNS_W8.state;
@@ -51360,6 +51598,13 @@ BURNS_W8.buildYard = function (api, g) {
     defeatLine: 'FINE! FINE. You can have your stupid gas.' });
   W8.state.rustyDef = rusty;
   api.trigger({ x: W8.GATE.x, z: W8.GATE.z - 3, r: 7, when: g2 => g2.missions.state('boss') === 'available' && !BURNS_W8.state.bossStarted, onEnter: g2 => BURNS_W8.bossIntro(g2) });
+  // ...and from anywhere in the yard (beside the gate bar, over the containers, on a return visit), or the FIGHT button
+  // in the middle; before El Pulpo is fueled Brady is told what's left (src/42_burns_a_bossgate.js)
+  W8.state.bossGate = BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => p.z < W8.GATE.z - 1 && Math.hypot(p.x - Y.x, p.z - Y.z) < Y.r + 1,
+    running: () => !!BURNS_W8.state.bossStarted,
+    start: g2 => BURNS_W8.bossIntro(g2),
+    button: { x: Y.x, z: Y.z + 8, r: 6, label: 'FIGHT: FOREMAN RUSTY' } });
 };
 // the telehandler: body + boom movers (Rusty sits in the cab)
 BURNS_W8.telehandler = function (api) {
@@ -51623,7 +51868,7 @@ BURNS_W8.RUSTY_PHASES = [
 ];
 BURNS_W8.bossIntro = function (g) {
   const S = BURNS_W8.state, Y = BURNS_W8.YARD, p = g.player, a = g.actor('rusty'), T = S.tele;
-  if (S.bossStarted) return; S.bossStarted = true;
+  if (S.bossStarted || g.missions.isDone('boss')) return; S.bossStarted = true; g._bossHint = null;
   if (p.vehicle) p.vehicle.dismount(p);
   g.missions.start('boss', true);
   g.cutscene([
@@ -51885,6 +52130,9 @@ BURNS_W8.burtUpdate = function (g, dt) {
   if (S.burtGo > 8) S.burtGo = 0;
 };
 
+/* test hook: the World 8 state (tools/burns_boss_entry_test.js) */
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W8 });
+
 /* ---- 42_burns_world9.js ---- */
 /* ============================================================
    BRADY GOES TO BURNING MAN — World 9: DEEP PLAYA SHOWDOWN (night, dust storm)
@@ -51955,6 +52203,8 @@ BurnsWorlds.register({
       desc: 'He\'s out there in the dust with Chinka. Hide from the flash behind the giant chairs.', hint: 'The open flats north of the Outpost', lockedDesc: 'Get through the whiteout and help the lost burners first.' }
   ],
   build(api, g) {
+    // won but never finished (quit during the victory scene): finish now (src/42_burns_a_bossgate.js)
+    BurnsBossGate.finale(api, 'boss');
     const W9 = BURNS_W9, S = BurnsW8910Shape;
     W9.state = { introDone: !!BurnsSave.flag(9, 'intro'), storm: 0.35, surgeT: 30, surge: 0, darkwads: [], lampGlows: [], beaconOn: !!BurnsSave.flag(9, 'beacon'), goggles: !!BurnsSave.flag(9, 'goggles'), followers: [], beatT: 0, warmT: 0, mothGlows: [], neck: null };
     const st = W9.state;
@@ -52331,6 +52581,13 @@ BURNS_W9.buildArena = function (api, g) {
   man.hidden = true; man.showChinka = true;
   W9.state.man = man; W9.state.covers = covers;
   api.trigger({ x: A.x, z: A.z + 30, r: 12, when: g2 => g2.missions.state('boss') === 'available' && !BURNS_W9.state.bossStarted, onEnter: g2 => BURNS_W9.bossIntro(g2) });
+  // ...and from anywhere in the arena (any side, on a bike, after a faint or a return visit), or the FIGHT button in the
+  // middle; without the whiteout and the lost burners Brady is told what's left (src/42_burns_a_bossgate.js)
+  W9.state.gate = BurnsBossGate.add(api, { mission: 'boss',
+    inArena: (g2, p) => Math.hypot(p.x - A.x, p.z - A.z) < A.r + 1,
+    running: g2 => { const S2 = BURNS_W9.state; return !!(S2.introRunning || S2.ending || (S2.man.active && !S2.man.defeated)); },
+    start: g2 => BURNS_W9.bossIntro(g2),
+    button: { x: A.x, z: A.z + 8, r: 7, label: 'FIGHT: THE MAN' } });
 };
 
 /* ---------------- intro ---------------- */
@@ -52563,7 +52820,9 @@ BURNS_W9.devilEnd = function (g) { const S = BURNS_W9.state; S.forceStorm = unde
 /* ---------------- the Man in the storm ---------------- */
 BURNS_W9.bossIntro = function (g) {
   const S = BURNS_W9.state, man = S.man, p = g.player, A = BURNS_W9.ARENA;
-  if (S.bossStarted) return; S.bossStarted = true;
+  // (once per fight, not once per visit: the arena gate can start it again until he's beaten)
+  if (g.missions.isDone('boss') || S.introRunning || S.ending || (man.active && !man.defeated)) return;
+  S.bossStarted = true; S.introRunning = true; g._bossHint = null;
   if (p.vehicle) p.vehicle.dismount(p);
   g.missions.start('boss', true);
   g.cutscene([
@@ -52578,7 +52837,7 @@ BURNS_W9.bossIntro = function (g) {
     { say: ['man', ['SMALL MAN. YOU FOLLOWED US INTO THE STORM.', 'THE DUST IS MY WITNESS. SHE WILL LEARN TO LOVE ME.']] },
     { say: ['brady', ['She doesn\'t love you. She doesn\'t even like sand!']] },
     { say: ['man', ['THEN I WILL BURY YOU IN IT!']] },
-    { do: g2 => { S.forceStorm = undefined; p.teleport(A.x, 0, A.z + 22, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = burnsW8910Proxy(man, { camY: 8 }); man.start(); g2.banner('FIGHT!', 'Dodge everything · bonk his head when he collapses', { col: '#ffe24a' }); } }
+    { do: g2 => { S.forceStorm = undefined; p.teleport(A.x, 0, A.z + 22, Math.PI); g2.camYaw = Math.PI; g2.snapCam = true; g2.boss = burnsW8910Proxy(man, { camY: 8 }); man.start(); S.introRunning = false; g2.banner('FIGHT!', 'Dodge everything · bonk his head when he collapses', { col: '#ffe24a' }); } }
   ]);
 };
 BURNS_W9.bossDefeated = function (g) {
@@ -52630,6 +52889,9 @@ BURNS_W9.darkwadTalk = function (g, a) {
     if (n === S.darkwads.length) { g.glow += 20; g.banner('EVERY DARKWAD GLOWS', 'The playa is a little safer tonight. +20 glow sticks.', { col: '#7aff5a' }); }
   });
 };
+
+/* test hook: the World 9 state (tools/burns_boss_entry_test.js) */
+if (typeof window !== 'undefined') window.BRADY_BURNS = Object.assign(window.BRADY_BURNS || {}, { BURNS_W9 });
 
 /* ---- 42_burns_world98.js ---- */
 /* ============================================================
