@@ -12,7 +12,7 @@ const PALS = { day: ['day', 'dusk', 0.15], night: ['dusk', 'night', 1] };
 // [name, prototype id (or 'car:<stem>'), distance, side offset, pitch]
 const SHOTS = [
   ['rv', 'ow_rv11', 9, 2.5, 0.16], ['trailer', 'ow_trailer7', 9, 2.5, 0.16], ['camper', 'ow_camper5', 7, 2, 0.16], ['bus', 'ow_bus4', 9, 2.5, 0.16],
-  ['tent', 'ow_tent', 5, 1, 0.2], ['shade', 'ow_shade', 9, 2, 0.16], ['camp', 'ow_shadeC0', 10, 2, 0.14], ['dome', 'ow_dome', 11, 2, 0.14],
+  ['tent', 'ow_tent', 5, 1, 0.2], ['shade', 'ow_shade', 6, 1, 0.3], ['camp', 'ow_shadeC0', 7, 0.5, 0.3], ['dome', 'ow_dome', 11, 2, 0.14],
   ['domeL', 'ow_domeL', 11, 2, 0.14], ['hexa', 'ow_hexa', 8, 2, 0.16], ['lamp', 'ow_lamp', 6, 1, 0.05], ['potty', 'ow_potty', 7, 1.5, 0.16],
   ['string', 'ow_string', 7, 1, 0.1], ['car', 'car:turbo_escargot', 9, 2.5, 0.16]
 ];

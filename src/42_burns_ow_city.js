@@ -221,8 +221,10 @@ const BurnsOW = {
   camp(m, col, v) {
     const P = BurnsProps, w = 9, d = 7, h = 3.3, cols = [];
     m.color('#4a4a52'); for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) m.box(sx * (w / 2 - 0.1), h / 2, sz * (d / 2 - 0.1), 0.1, h, 0.1);
-    m.color(col); m.box(0, h + 0.03, 0, w + 0.2, 0.06, d + 0.2, { uv: BURNS_ATLAS.pattern('canvas'), uvFaces: ['py', 'ny'] });
-    if (!m.lo) { m.color(col); for (let k = 0; k < 9; k++) { m.push(); m.tf(-w / 2 + 0.5 + k, h - 0.18, d / 2 + 0.1); m.poly([[-0.4, 0.15, 0], [0.4, 0.15, 0], [0, -0.35, 0]]); m.pop(); } }
+    // the canopy: the Blender shade's cloth and frame (sagging cloth, scalloped valance) when it's loaded, else a sheet
+    const glb = typeof BurnsGLBProps !== 'undefined' && BurnsGLBProps.canopy(m, w, d, h, col), fz = glb ? d / 2 + 0.2 : d / 2 + 0.1;
+    if (!glb) { m.color(col); m.box(0, h + 0.03, 0, w + 0.2, 0.06, d + 0.2, { uv: BURNS_ATLAS.pattern('canvas'), uvFaces: ['py', 'ny'] }); }
+    if (!m.lo) { m.color(col); for (let k = 0; k < 9; k++) { m.push(); m.tf(-w / 2 + 0.5 + k, h - (glb ? 0.3 : 0.18), fz); m.poly([[-0.4, 0.15, 0], [0.4, 0.15, 0], [0, -0.35, 0]]); m.pop(); } }
     m.color('#d8d0c8'); m.box(0, 0.02, 0.5, 6, 0.04, 4.2, { uv: BURNS_ATLAS.pattern(v === 1 ? 'plaid' : 'tiedye'), uvFaces: ['py'] });
     if (v === 0) {
       m.push(); m.tf(0, 0, -1.6); P.couch(m, { col: '#e8d4d0' }); m.pop();
@@ -245,7 +247,9 @@ const BurnsOW = {
     }
     if (!m.lo) for (let k = 0; k < 12; k++) { m.color(BURNS_NEON[k % 7], 1); m.ball(-w / 2 + 0.4 + k * 0.75, h - 0.35 - Math.sin(k / 11 * Math.PI) * 0.35, -d / 2 + 0.1, 0.06, { seg: 5, rings: 3 }); }
     // LED strips along the canopy's front and sides (the copy's tint colours them; they read from far away at night)
-    m.color('#ffffff', 1); m.box(0, h - 0.04, d / 2 + 0.12, w + 0.2, 0.08, 0.05); for (const sx of [-1, 1]) m.box(sx * (w / 2 + 0.12), h - 0.04, 0, 0.05, 0.08, d + 0.2);
+    // (with the Blender canopy the strips run along the valance's hem, just outside it)
+    const ly = glb ? h - 0.2 : h - 0.04, lo2 = glb ? 0.27 : 0.12;
+    m.color('#ffffff', 1); m.box(0, ly, d / 2 + lo2, w + 0.2, 0.08, 0.05); for (const sx of [-1, 1]) m.box(sx * (w / 2 + lo2), ly, 0, 0.05, 0.08, d + 0.2);
     m.emissive(0);
     return { cols };
   },

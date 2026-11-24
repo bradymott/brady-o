@@ -10,7 +10,7 @@ ZF, ZB = L_ / 2, -L_ / 2
 NEON = ['#ff4fd8', '#38f2ff', '#ffe24a', '#7aff5a', '#ff7a3a', '#9a6bff', '#ff3a6a']
 
 def build(B):
-    L = B.L
+    L = B.L; slim(B)
     M_body = paint('body', '#e8b020', coat=0.5, rough=0.32, metal=0.05)   # recoloured from opts.col by the game
     M_dark = matte('dark', '#26262c'); M_glass = metal('glass', '#1a2232', 0.12); M_lit = led('#ffc070', 2.6)
     M_alu = metal('alu', '#d8d8de', 0.3); M_wood = satin('deck', '#8a5a3a', 0.7); M_rail = metal('rail', '#2a2a30', 0.3)
@@ -80,4 +80,6 @@ def build(B):
     B.obj('pipe_cap', bm_cyl(0.14, 0.14, 0.06, L['cyl_s'], AY, (0.8, H + 0.93, 3.2)), M_alu)
 
 if __name__ == '__main__':
-    run_static('bus', build)
+    # near level only (the procedural lo bus is already cheap); one-segment small bevels, AO and dust baked in
+    run_prop('bus', build, levels=('hi',), bake=dict(ao_dist=0.4, ao_k=0.6, rays=12, shade_fn=dusty(0.9, col=(0.84, 0.76, 0.64))),
+             views=[((0.8, -1, 0.45), 'front'), ((-0.9, 0.8, 0.4), 'rear')])

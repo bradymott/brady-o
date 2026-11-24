@@ -51,7 +51,7 @@ def build(B):
     M_pole = satin('pole', '#8c8e96', 0.45)
     M_cord = matte('cord', '#e8e4dc', 0.7)
     M_zip = matte('zip', '#24262c', 0.6)
-    nu, nv = B.pick((24, 7), (12, 4))
+    nu, nv = B.pick((24, 7), (10, 3))
     # ---- the fly: a sagging dome over the footprint ----
     def fly(u, v): return fly_pt(u * TAU, v)
     B.obj('fly', bm_surf(nu, nv, fly, wrap_u=True, merge=True), M_fly)
@@ -61,7 +61,7 @@ def build(B):
     B.obj('floor', bm_loft(rows, closed_u=True, caps=False), M_floor)
     # ---- pole sleeves (the two crossing arcs, taped seams standing slightly proud) ----
     n_arc = B.pick(10, 5)
-    for k, d in enumerate(DIAG[:2]):
+    for k, d in enumerate(DIAG[:2] if not lo else ()):
         pts = [fly_pt(d, 1 - i / n_arc, -0.012) for i in range(n_arc + 1)] + [fly_pt(d + math.pi, i / n_arc, -0.012) for i in range(1, n_arc + 1)]
         pts = [(x, y + 0.008, z) for x, y, z in pts]
         B.obj('sleeve_%d' % k, bm_tube(pts, 0.022, 3, caps=False), M_tape)

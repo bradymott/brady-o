@@ -172,6 +172,14 @@ const BurnsGLBProps = {
       return BurnsGLBProps.tipiInfo(r, h);
     }
   },
+  // the shade model's cover and frame (`body` root) as any builder's canopy: w × d, frame top at h, cloth colour col.
+  // Returns false (draw your own) when the model isn't loaded. Used by the city's camp frontages.
+  canopy(m, w, d, h, col) {
+    const doc = (m.lo ? this.docs.shade_lo : this.docs.shade) || null;
+    if (!doc || this.off()) return false;
+    BurnsGLTF.emit(m, doc, { roots: ['body'], scale: [w / 5, 1, d / 5], at: [0, h - 2.9, 0], colors: { cover: col } });
+    return true;
+  },
   tipiInfo(r, h) {
     return { cols: [{ t: 'cyl', x: 0, z: 0, r: r * 0.78, y0: 0, y1: h * 0.5 }], lights: [{ x: 0, y: h * 1.03, z: 0, s: 0.9, c: '#ffd890' }, { x: 0, y: 1.5, z: r * 0.88, s: 0.5, c: '#ffd890' }, { x: 0, y: 0, z: 0, s: 0, c: '#ffb070', pool: r * 2.2, i: 0.35 }], top: h };
   },

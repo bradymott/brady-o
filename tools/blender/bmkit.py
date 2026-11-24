@@ -194,12 +194,27 @@ def dusty(lo=0.55, hi=0.0, col=(0.93, 0.86, 0.74), top=None):
         return r, g, b
     return fn
 
+def slim(B, keep=(), small=0.03):
+    """Cheaper bevels: at lo, only the pieces named in `keep` keep their bevel; at hi, bevels of `small` metres or less
+    get one segment (a trim, a lamp, a window only needs to catch one highlight)."""
+    obj0 = B.obj
+    def obj(name, bm, m, **kw):
+        if B.lo and name not in keep: kw.pop('bevel', None)
+        elif not B.lo and kw.get('bevel') and kw['bevel'] <= small: kw['segments'] = 1
+        return obj0(name, bm, m, **kw)
+    B.obj = obj
+
 def run_prop(stem, build_fn, levels=('hi', 'lo'), bake=None, level_overrides=None, views=(('front', 'front'),), max_tris=None, save=True):
     """Build, bake and export a prop at two detail levels: assets/models/burning-man/<stem>.glb (hi, near) and
     <stem>_lo.glb (lo, mid distance). build_fn(B) uses B.lo / B.pick(hi, lo) / B.L[...] for detail.
     bake: kwargs for bake_vcol (None = no vertex-colour bake). max_tris: {'hi': n, 'lo': n} budget warnings.
     The scene is saved to private/work/<stem>.blend (git-ignored), previews to shots/blender/<stem>_<level>_<view>.png."""
     if bpy.context.object and bpy.context.object.mode != 'OBJECT': bpy.ops.object.mode_set(mode='OBJECT')
+    # a clean scene: another prop's objects would steal this one's root names (`body` -> `body.001`), and the game
+    # emits roots by name
+    for c in list(bpy.data.collections):
+        for o in list(c.objects): bpy.data.objects.remove(o)
+        bpy.data.collections.remove(c)
     clear(stem)
     lv_tables = {'hi': dict(PROP_LEVEL), 'lo': dict(PROP_LO)}
     for k, v in (level_overrides or {}).items(): lv_tables[k].update(v)
@@ -213,6 +228,7 @@ def run_prop(stem, build_fn, levels=('hi', 'lo'), bake=None, level_overrides=Non
         rep[lv] = dict(tris=t, verts=v, bytes=size, bounds=dict(x=[round(lo_b.x, 2), round(hi_b.x, 2)], y=[round(lo_b.z, 2), round(hi_b.z, 2)], z=[round(-hi_b.y, 2), round(-lo_b.y, 2)]))
         if v > 65535: rep[lv]['error'] = 'too many vertices'
         if max_tris and t > max_tris.get(lv, 1e9): rep[lv]['warning'] = 'over budget %d' % max_tris[lv]
+        for c in bpy.context.scene.collection.children: c.hide_render = c is not B.col
         rep[lv]['previews'] = [B.preview(os.path.join(SHOTS, '%s_%s_%s.png' % (stem, lv, tag)), view=VIEWS[vw] if isinstance(vw, str) else vw) for vw, tag in views]
         if lv == 'lo':
             for o in B.objs + B.cutters: o.name = o.name + '__lo'
@@ -222,5 +238,7 @@ def run_prop(stem, build_fn, levels=('hi', 'lo'), bake=None, level_overrides=Non
     if save:
         os.makedirs(PRIVATE_WORK, exist_ok=True)
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(PRIVATE_WORK, stem + '.blend'), compress=True)
+    names = sorted(o.name for o in bpy.data.objects if o.parent is None and o.type == 'EMPTY' and not o.name.endswith('__lo'))
+    rep['roots'] = names
     print('BMKIT_REPORT ' + json.dumps(rep))
     return rep
