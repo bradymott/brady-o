@@ -31,17 +31,21 @@ STYLES = {
 }
 for S in globals().get('ONLY', ('F', 'M')):
     rig = bpy.data.objects['Arm%s' % S]; LM = json.load(open(W + 'proj/cast%s_lm.json' % S.lower()))
-    regs = [bpy.data.objects['%s_body_%s' % (S, r)] for r in ('head', 'neck', 'chest', 'shoulder') if ('%s_body_%s' % (S, r)) in bpy.data.objects]
-    head = bpy.data.objects['%s_body_head' % S]
+    # the full-resolution body (the region meshes are decimated: a cap built from them comes out faceted and peaked)
+    full = bpy.data.objects['Cast%s_Body' % S]
+    regs = [full]
+    head = full
     verts, polys = [], []
+    armx_ = bpy.data.objects['Arm%s' % S].data.bones['mixamorig:LeftArm'].head_local.x
     for ob in regs:
-        off = len(verts); verts += [v.co.copy() for v in ob.data.vertices]; polys += [[i + off for i in p.vertices] for p in ob.data.polygons]
+        off = len(verts); verts += [v.co.copy() for v in ob.data.vertices]
+        polys += [[i + off for i in p.vertices] for p in ob.data.polygons if all(abs(ob.data.vertices[i].co.x) < armx_ - 0.01 or ob.data.vertices[i].co.z > 1.3 for i in p.vertices)]
     bvh = BVHTree.FromPolygons(verts, polys)
     def push(p, clr):
         loc, n, i, d = bvh.find_nearest(p)
         if loc is None: return p
         return loc + n * clr if (p - loc).dot(n) < clr else p
-    Ph = np.array([v.co[:] for v in head.data.vertices]); top = float(Ph[:, 2].max())
+    Ph = np.array([v.co[:] for v in head.data.vertices]); nz_ = bpy.data.objects['Arm%s' % S].data.bones['mixamorig:Neck'].head_local.z; Ph = Ph[Ph[:, 2] > nz_ + 0.03]; top = float(Ph[:, 2].max())
     eL, eR = Vector(LM['eyeL']), Vector(LM['eyeR']); eye_z = (eL.z + eR.z) / 2
     HC = Vector((0.0, float((Ph[:, 1].max() + Ph[:, 1].min()) / 2), top - 0.105 * top / 1.75))
     CROWN = Vector((0.0, HC.y + 0.01, top))

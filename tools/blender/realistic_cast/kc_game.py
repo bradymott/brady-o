@@ -93,6 +93,33 @@ for ob in parts:
     limit_normalize(ob)
     for md in ob.modifiers:
         if md.type == 'ARMATURE': md.object = ob.parent
+# the beard: off the upper cheeks and closer to the skin (it read as a mask)
+for S in ('M',):
+    bo = bpy.data.objects.get(S + '_face_beard')
+    if bo:
+        LMb = json.load(open(W + 'proj/cast%s_lm.json' % S.lower())); ez = LMb['eyeL'][2]
+        bm = bmesh.new(); bm.from_mesh(bo.data)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if (lambda c: c.z > ez - 0.072 and abs(c.x) > 0.03)(f.calc_center_median())], context='FACES')
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+        bm.normal_update()
+        for v in bm.verts: v.co -= v.normal * 0.0015
+        bm.to_mesh(bo.data); bm.free()
+# the (decimated) scalp sinks 7 mm under the hair caps (it poked through as a peak); hats sit 1.5 cm lower
+for S in ('F', 'M'):
+    LMh = json.load(open(W + 'proj/cast%s_lm.json' % S.lower())); ez = LMh['eyeL'][2]
+    ho = bpy.data.objects.get(S + '_body_head')
+    if ho:
+        cy = sum(v.co.y for v in ho.data.vertices) / max(1, len(ho.data.vertices)); from mathutils import Vector as V3
+        c = V3((0.0, cy, ez - 0.02))
+        bmh = bmesh.new(); bmh.from_mesh(ho.data)
+        scalp = [v for v in bmh.verts if v.co.z > ez + 0.04 and not v.is_boundary]
+        for it in range(12): bmesh.ops.smooth_vert(bmh, verts=scalp, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        for v in scalp:
+            k = min(1.0, max(0.0, (v.co.z - (ez + 0.045)) / 0.03))
+            v.co -= (v.co - c).normalized() * 0.011 * k
+        bmh.to_mesh(ho.data); bmh.free()
+    for o in [o for o in bpy.data.objects if o.name.startswith(S + '_hat_') and '_LOD' not in o.name]:
+        for v in o.data.vertices: v.co.z -= 0.015
 # LOD0 trims after the atlas (collapse keeps the UVs): the head's face stays finer than the scalp and neck
 TRIM = {'_body_head': 4200, '_body_eyeL': 160, '_body_eyeR': 160, '_hair_long': 3200, '_hair_bob': 2600}
 for ob in parts:
