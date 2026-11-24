@@ -172,14 +172,8 @@ const BurnsOW = {
     api.instanceProto('ow_bikes', m => this.bikeRack(m), { near: 60, lo: false, r: 2, shadow: false });
   },
   // Esplanade lamp post: a tall wooden pole with a lantern on a crook (the lamplighters light them at dusk)
-  lampPost(m) {
-    m.color('#6a4a32'); m.roundBox(0, 3.4, 0, 0.18, 6.8, 0.18, 0.04, { k: 1, m: 1 });
-    m.limb(0, 6.6, 0, 0, 6.85, 0.55, 0.05, 0.05, { seg: 5 });
-    m.color('#3a2a1e'); m.box(0, 0.05, 0, 0.6, 0.1, 0.6);
-    m.color('#ffc070', 1); m.roundBox(0, 6.35, 0.6, 0.32, 0.42, 0.32, 0.06, { k: 1, m: 1 }); m.emissive(0);
-    m.color('#2a2a30'); m.box(0, 6.6, 0.6, 0.38, 0.06, 0.38);
-    return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.16, y0: 0, y1: 6.8 }] };
-  },
+  // (BurnsProps.lampPost, replaced by the Blender lamp when it's loaded)
+  lampPost(m) { return BurnsProps.lampPost(m, {}); },
   // a burner on a bike (one static mesh: it's instanced and slides along the streets), LED strip on the frame
   rider(m) {
     BurnsProps.bikeShape(m, 0, 0, 0, 0, '#ffd21a');

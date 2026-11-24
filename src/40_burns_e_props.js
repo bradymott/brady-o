@@ -417,6 +417,16 @@ const BurnsProps = {
     if (o.lantern !== false) { m.color('#ffe6c0', 1); m.ball(0.75, 0.9, 1.15, 0.09, { seg: 6, rings: 4 }); m.emissive(0); }
     return { cols: [{ t: 'box', x: 0, z: 0, hx: 1.4, hz: 1.1, y0: 0, y1: 1.2 }], lights: [], top: 1.2 };
   },
+  // the Esplanade lamp post: a tall wooden pole with a lantern on a crook toward +Z (the city's ow_lamp). The Blender
+  // model (tools/blender/bm_lamp.py, 'lampPost' in 41_burns_glbprops.js) replaces it when loaded.
+  lampPost(m) {
+    m.color('#6a4a32'); m.roundBox(0, 3.4, 0, 0.18, 6.8, 0.18, 0.04, { k: 1, m: 1 });
+    m.limb(0, 6.6, 0, 0, 6.85, 0.55, 0.05, 0.05, { seg: 5 });
+    m.color('#3a2a1e'); m.box(0, 0.05, 0, 0.6, 0.1, 0.6);
+    m.color('#ffc070', 1); m.roundBox(0, 6.35, 0.6, 0.32, 0.42, 0.32, 0.06, { k: 1, m: 1 }); m.emissive(0);
+    m.color('#2a2a30'); m.box(0, 6.6, 0.6, 0.38, 0.06, 0.38);
+    return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.16, y0: 0, y1: 6.8 }] };
+  },
   chair(m, o) {
     o = o || {}; const col = o.col || '#2a6ac8';
     m.color('#9a9aa2'); for (const [x, z] of [[0.25, 0.25], [-0.25, 0.25], [0.25, -0.25], [-0.25, -0.25]]) m.box(x, 0.22, z, 0.03, 0.44, 0.03);

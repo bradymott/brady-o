@@ -14,7 +14,7 @@
    ============================================================ */
 // prop kind -> file stem under models/ (assets/models/burning-man/<stem>.glb). A stem may also ship <stem>_lo.glb: the
 // mid-distance level (instanced props' m.lo build, traffic LOD twins, opts.lo), used instead of the procedural lo build.
-const BURNS_GLB_PROPS = { rv: 'rv', bus: 'bus', dome: 'dome', tipi: 'tipi', portapotty: 'potty', shade: 'shade', domeTent: 'tent' };
+const BURNS_GLB_PROPS = { rv: 'rv', bus: 'bus', dome: 'dome', tipi: 'tipi', portapotty: 'potty', shade: 'shade', domeTent: 'tent', trailer: 'trailer', lampPost: 'lamp' };
 
 /* ---- BurnsGLTF.emit: append a glb's triangles to a BurnsMesh under its current transform ---- */
 // once per doc: every primitive baked to file space (node world matrices applied), grouped by root node name
@@ -173,9 +173,10 @@ const BurnsGLBProps = {
     }
   },
   // the shade model's cover and frame (`body` root) as any builder's canopy: w × d, frame top at h, cloth colour col.
-  // Returns false (draw your own) when the model isn't loaded. Used by the city's camp frontages.
+  // Returns false (draw your own) when the model isn't loaded, and for low-detail builds (a flat sheet is enough past
+  // 40 m and the city has hundreds of camp fronts). Used by the city's camp frontages.
   canopy(m, w, d, h, col) {
-    const doc = (m.lo ? this.docs.shade_lo : this.docs.shade) || null;
+    const doc = m.lo ? null : this.docs.shade;
     if (!doc || this.off()) return false;
     BurnsGLTF.emit(m, doc, { roots: ['body'], scale: [w / 5, 1, d / 5], at: [0, h - 2.9, 0], colors: { cover: col } });
     return true;
@@ -239,6 +240,23 @@ const BurnsGLBProps = {
       BurnsGLTF.emit(m, doc, { roots: ['body'], scale: r / R0, colors });
       BurnsGLTF.emit(m, doc, { roots: ['door'], at: [0, 0, r - 0.15] });
       return { cols: [{ t: 'dome', x: 0, z: 0, r: r, y0: 0, cover: true }], lights: [{ x: 0, y: 0, z: 0, s: 0, c: typeof o.glow === 'string' ? o.glow : (o.glow === true && typeof o.col === 'string' ? o.col : '#ff70c0'), pool: r * 1.6 }], top: r, glb: true };
+    },
+    // pickup + polished-aluminium trailer (tools/blender/bm_trailer.py): same footprint, colliders and lights as the
+    // procedural one; the truck's paint is picked from the same seeded list
+    trailer(m, o, doc) {
+      const r = this.rngFor(o), W = 2.4, H = 2.9, tL = 7;
+      BurnsGLTF.emit(m, doc, { colors: { truck: o.col || r.pick(['#2a2a30', '#8a1a1a', '#e8e8e8', '#2a4a7a']) } });
+      const cols = [
+        { t: 'box', x: 0, z: -2.6, hx: W / 2, hz: tL / 2, y0: 0, y1: H, cover: true },
+        { t: 'box', x: 0, z: 3.6, hx: 1.05, hz: 2.6, y0: 0, y1: 1.2 },
+        { t: 'box', x: 0, z: 3.95, hx: 0.98, hz: 1.0, y0: 0, y1: 1.9 }
+      ];
+      return { cols, lights: [{ x: 0.72, y: 1.02, z: 6.25, s: 1.0, c: '#fff0c8', beam: 0 }, { x: -0.72, y: 1.02, z: 6.25, s: 1.0, c: '#fff0c8', beam: 0 }, { x: 0.75, y: 0.85, z: -6.1, s: 0.6, c: '#ff3020' }, { x: -0.75, y: 0.85, z: -6.1, s: 0.6, c: '#ff3020' }], top: H, len: 12.6, w: W, glb: true };
+    },
+    // the Esplanade lamp post (tools/blender/bm_lamp.py): wooden pole, iron crook, a lantern that glows at night
+    lampPost(m, o, doc) {
+      BurnsGLTF.emit(m, doc, {});
+      return { cols: [{ t: 'cyl', x: 0, z: 0, r: 0.16, y0: 0, y1: 6.8 }], glb: true };
     },
     // the two-pole dome tent (tools/blender/bm_tent.py): near-white fly for the city's per-copy tints, or o.col
     domeTent(m, o, doc) {

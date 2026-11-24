@@ -9,12 +9,13 @@ const site = path.resolve(process.env.BRADY_DIST || 'dist', 'site'), out = path.
 const filt = process.argv[3] ? new RegExp(process.argv[3]) : null;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png' };
 const PALS = { day: ['day', 'dusk', 0.15], night: ['dusk', 'night', 1] };
-// [name, prototype id (or 'car:<stem>'), distance, side offset, pitch]
+// [name, prototype id (or 'car:<stem>'), distance from the prop, approach angle from the prop's front (rad), pitch].
+// Brady stands there; the camera looks past him with the prop a little to the right of centre.
 const SHOTS = [
-  ['rv', 'ow_rv11', 9, 2.5, 0.16], ['trailer', 'ow_trailer7', 9, 2.5, 0.16], ['camper', 'ow_camper5', 7, 2, 0.16], ['bus', 'ow_bus4', 9, 2.5, 0.16],
-  ['tent', 'ow_tent', 5, 1, 0.2], ['shade', 'ow_shade', 6, 1, 0.3], ['camp', 'ow_shadeC0', 7, 0.5, 0.3], ['dome', 'ow_dome', 11, 2, 0.14],
-  ['domeL', 'ow_domeL', 11, 2, 0.14], ['hexa', 'ow_hexa', 8, 2, 0.16], ['lamp', 'ow_lamp', 6, 1, 0.05], ['potty', 'ow_potty', 7, 1.5, 0.16],
-  ['string', 'ow_string', 7, 1, 0.1], ['car', 'car:turbo_escargot', 9, 2.5, 0.16]
+  ['rv', 'ow_rv11', 8, 0.9, 0.16], ['trailer', 'ow_trailer7', 7, 1.0, 0.16], ['camper', 'ow_camper5', 6, 0.9, 0.16], ['bus', 'ow_bus4', 8, 0.9, 0.16],
+  ['tent', 'ow_tent', 4, 0.6, 0.2], ['shade', 'ow_shade', 6, 0.7, 0.1], ['camp', 'ow_shadeC0', 9, 0.2, 0.08], ['dome', 'ow_dome', 10, 0.5, 0.12],
+  ['domeL', 'ow_domeL', 10, 0.5, 0.12], ['hexa', 'ow_hexa', 7, 0.6, 0.16], ['lamp', 'ow_lamp', 3.5, 1.2, -0.05], ['potty', 'ow_potty', 6, 0.5, 0.16],
+  ['string', 'ow_string', 6, 0.4, 0.08], ['car', 'car:turbo_escargot', 8, 0.9, 0.16]
 ];
 const HOME = [-60, 360];   // copies nearest this spot (5:50 & Arcade/Bonfire: a busy neighbourhood near Center Camp)
 function serve(root) { return new Promise(res => { const srv = http.createServer((req, rsp) => { let p = decodeURIComponent(req.url.split('?')[0]); if (p.endsWith('/')) p += 'index.html'; const f = path.join(root, p); if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { rsp.writeHead(404); rsp.end(); return; } rsp.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(rsp); }); srv.listen(0, '127.0.0.1', () => res({ srv, url: 'http://127.0.0.1:' + srv.address().port + '/' })); }); }
@@ -32,10 +33,10 @@ function serve(root) { return new Promise(res => { const srv = http.createServer
     await page.goto(url + 'burning-man/');
     await page.waitForFunction(() => !!window.BRADY_BURNS, null, { polling: 100, timeout: 120000 });
     await page.evaluate(async () => { const B = window.BRADY_BURNS; await B.BurnsGLBProps.preload(); await Promise.all(['brady', 'chinka'].map(n => B.BurnsSkin.preload('models/' + n + '.glb.gz'))); if (B.BurnsArtCars && B.BurnsArtCars.preload) { try { await B.BurnsArtCars.preload(); } catch (e) { /* */ } } });
-    for (const pal of pals) for (const [n, id, d, side, pitch] of SHOTS) {
+    for (const pal of pals) for (const [n, id, d, ang, pitch] of SHOTS) {
       const name = n + '-' + pal + '-' + o;
       if (filt && !filt.test(name)) continue;
-      const r = await page.evaluate(([id, d, side, pitch, P, HOME, tier]) => {
+      const r = await page.evaluate(([id, d, ang, pitch, P, HOME, tier]) => {
         const B = window.BRADY_BURNS, D = B.debug;
         let s = D.scene();
         if (!s || s.worldId !== 500) { D.play(500, { fresh: true }); s = D.scene(); if (s.state === 'load') s.load(); D.skipCine(); }
@@ -58,20 +59,19 @@ function serve(root) { return new Promise(res => { const srv = http.createServer
           tx = L[0].x; tz = L[0].z; tyaw = L[0].yaw;
         }
         // stand d metres away on the copy's front side (+z local), off to one side, looking at it
-        const fx = Math.sin(tyaw), fz = Math.cos(tyaw), sx = Math.cos(tyaw), sz = -Math.sin(tyaw);
-        const px = tx + fx * d + sx * side, pz = tz + fz * d + sz * side;
+        const px = tx + Math.sin(tyaw + ang) * d, pz = tz + Math.cos(tyaw + ang) * d;
         D.teleport(px, pz);
         for (let i = 0; i < 20; i++) s.update(1 / 30);
         if (s.tiles) for (let i = 0; i < 400 && (s.tiles.queue.length || s.tiles.job || s.tiles.people.length); i++) s.tiles.step(50);
         setPal(); D.teleport(px, pz);
-        const yaw = Math.atan2(tx - px, tz - pz);
+        const yaw = Math.atan2(tx - px, tz - pz) + 0.32;   // the prop sits right of Brady
         s.camYaw = yaw; s.player.yaw = yaw; s.camPitch = pitch; s.snapCam = true; s.lastManual = s.time + 1e6; s.manualCam = true; s.q = 1;
         const draw = () => { s.fade = 0; s.dayCardT = -1; s.banners = []; if (s.dialog) s.dialog.open = false; window.BRADY.Game.ctx.setTransform(1, 0, 0, 1, 0, 0); s.q = 1; s.draw(window.BRADY.Game.ctx); };
         draw(); draw();
         const gl = B.BurnsGL.gl; gl.finish();
         const t0 = performance.now(); for (let i = 0; i < 3; i++) draw(); gl.finish();
         return { draws: s.stats.draws, tris: Math.round(s.stats.tris), ms: Math.round((performance.now() - t0) / 3 * 10) / 10, at: [Math.round(tx), Math.round(tz)] };
-      }, [id, d, side, pitch, PALS[pal], HOME, tier]);
+      }, [id, d, ang, pitch, PALS[pal], HOME, tier]);
       if (r.skip) { console.log(name, 'SKIP', r.skip); continue; }
       await page.screenshot({ path: path.join(out, name + '.png') });
       r.name = name; stats.push(r); console.log(JSON.stringify(r));
