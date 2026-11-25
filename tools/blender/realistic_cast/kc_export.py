@@ -18,7 +18,7 @@ for o in objs: o.hide_set(False); o.select_set(True)
 for X in ('F', 'M'): bpy.data.objects['Arm' + X].select_set(True)
 bpy.context.view_layer.objects.active = bpy.data.objects['ArmF']
 kw = dict(filepath=PATH, export_format='GLB', use_selection=True, export_extras=True, export_yup=True, export_apply=True,
-          export_texcoord=True, export_normals=True, export_tangents=True, export_vertex_color='MATERIAL',
+          export_texcoord=True, export_normals=True, export_tangents=True, export_vertex_color='NAME', export_vertex_color_name='BurnsMask', export_all_vertex_colors=False,
           export_materials='EXPORT', export_image_format='AUTO', export_morph=False, export_skins=True,
           export_all_influences=False, export_def_bones=True, export_animations=True, export_animation_mode='NLA_TRACKS',
           export_force_sampling=True, export_optimize_animation_size=True, export_draco_mesh_compression_enable=False,

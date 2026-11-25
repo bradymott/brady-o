@@ -163,7 +163,8 @@ const BurnsSkinPBR = {
       const N = nodes[ni], s = (N.name || '') + ' ' + ((J.meshes[N.mesh] || {}).name || '') + ' ' + (X.burns_name || ''); const m = /_lod(\d)/i.exec(s); return m ? Math.min(2, +m[1]) : 0;
     };
     // a kit file (the cast) holds many parts: opts.parts (a Set of base part names, no _LODn suffix) builds a character
-    // from a subset; opts.tint { part: [r, g, b] } multiplies each part's colour (linear); opts.texShare (an object)
+    // from a subset; opts.tint { part: [r, g, b] } multiplies each part's colour (linear); opts.pattern { part: { ch, col } }
+    // marks a part whose COLOR_0 is a mask set (R/G/B): channel ch blends toward col (linear multiplier), ch < 0 ignores it; opts.texShare (an object)
     // shares the decoded textures between characters built from the same doc; opts.clipPrefix ('F_') keeps only that
     // armature's actions, prefix removed. Part names come from the node or the build's extras.burns_name (gltfpack drops
     // skinned mesh names: tools/hero_glb.js).
@@ -211,7 +212,7 @@ const BurnsSkinPBR = {
           if (opts.parts && !opts.parts.has(partOf(m.ni, pr))) continue;
           if ((pr.mode !== undefined && pr.mode !== 4) || pr.attributes.POSITION === undefined || pr.attributes.JOINTS_0 === undefined) continue;
           const nv = BurnsGLTF.accessor(D, pr.attributes.POSITION).count, ni = pr.indices !== undefined ? BurnsGLTF.accessor(D, pr.indices).count : nv;
-          prims.push({ node: m.ni, pr, nv, ni, I: info(pr.material === undefined ? -1 : pr.material), tint: opts.tint ? opts.tint[partOf(m.ni, pr)] || null : null });
+          prims.push({ node: m.ni, pr, nv, ni, I: info(pr.material === undefined ? -1 : pr.material), tint: opts.tint ? opts.tint[partOf(m.ni, pr)] || null : null, pat: opts.pattern ? opts.pattern[partOf(m.ni, pr)] : undefined });
         }
       }
       if (!prims.length) { lods[L] = null; continue; }
@@ -317,7 +318,9 @@ const BurnsSkinPBR = {
         u16[o / 2 + 10] = Math.round(clamp(u, 0, 1) * 65535); u16[o / 2 + 11] = Math.round(clamp(v, 0, 1) * 65535);
         let r = bc[0], gg = bc[1], bl = bc[2], ca = 1;
         if (P.tint) { r *= P.tint[0]; gg *= P.tint[1]; bl *= P.tint[2]; }
-        if (col) { r *= BurnsGLTF.comp(col, k, 0); gg *= BurnsGLTF.comp(col, k, 1); bl *= BurnsGLTF.comp(col, k, 2); if (col.n === 4) ca = BurnsGLTF.comp(col, k, 3); }
+        if (col && P.pat !== undefined) {   // a pattern-mask part (opts.pattern): its colour channels are masks, not colours
+          if (P.pat && P.pat.ch >= 0) { const w = clamp(BurnsGLTF.comp(col, k, P.pat.ch), 0, 1), c2 = P.pat.col; r += (bc[0] * c2[0] - r) * w; gg += (bc[1] * c2[1] - gg) * w; bl += (bc[2] * c2[2] - bl) * w; }
+        } else if (col) { r *= BurnsGLTF.comp(col, k, 0); gg *= BurnsGLTF.comp(col, k, 1); bl *= BurnsGLTF.comp(col, k, 2); if (col.n === 4) ca = BurnsGLTF.comp(col, k, 3); }
         u8[o + 24] = BurnsGLTF.srgb8(r); u8[o + 25] = BurnsGLTF.srgb8(gg); u8[o + 26] = BurnsGLTF.srgb8(bl); u8[o + 27] = Math.round(ea * ca);
         // joints + weights, normalised to sum 255 (as §6.9)
         let sum = 0;
@@ -489,7 +492,7 @@ void main(){
   }
 #endif
   float nv = max(dot(n, v), 0.02);
-  vec3 em = bLin(texture2D(uEm, vUV).rgb) * uEmF * (vC.a * 3.0);
+  vec3 em = bLin(texture2D(uEm, vUV).rgb) * uEmF * bLin(vC.rgb) * (vC.a * 3.0);   // the vertex colour tints the glow too (one emissive kit part, any colour)
   float e = clamp(max(em.r, max(em.g, em.b)) * 0.8, 0.0, 1.0);
   float sh = mix(bShadow(vW, N), 1.0, step(0.6, e));
   // diffuse: skin wraps red furthest and its shadow edge turns red (pre-integrated look); hair wraps softly

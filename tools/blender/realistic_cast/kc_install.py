@@ -19,10 +19,12 @@ for n in sorted(names):
     old = man['parts'].get(n, {})
     parts[n] = {'sex': S, 'slot': slot, 'kind': kind, 'hides': old.get('hides', []), 'tris': old.get('tris', 0)}
 for S in ('F', 'M'):
-    man['bodies'][S]['regions'] = sorted(p['kind'] for n, p in parts.items() if p['sex'] == S and p['slot'] == 'body' and not p['kind'].startswith('eye'))
+    # head shapes: body_head (A), body_headB, body_headC share topology; one is chosen per character
+    man['bodies'][S]['heads'] = sorted(p['kind'] for n, p in parts.items() if p['sex'] == S and p['slot'] == 'body' and re.match(r'^head[A-Z]?$', p['kind']))
+    man['bodies'][S]['regions'] = sorted(p['kind'] for n, p in parts.items() if p['sex'] == S and p['slot'] == 'body' and not p['kind'].startswith('eye') and not re.match(r'^head[A-Z]$', p['kind']))
 man['parts'] = parts
 sc = js['scenes'][js.get('scene', 0)]; ex = sc.get('extras', {}); ex.pop('blendermcp_server_running', None)
-ex['burns_kit'] = man; sc['extras'] = ex
+ex['burns_kit'] = man; ex['burns_smile'] = 0.35; sc['extras'] = ex   # the resting smile (BurnsFace), as Chinka's
 glb.save(src, js, b)
 dst = os.path.join(repo, 'assets', 'models', 'burning-man', 'cast.glb')
 shutil.copyfile(src, dst)
