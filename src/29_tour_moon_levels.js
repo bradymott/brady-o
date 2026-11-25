@@ -368,5 +368,56 @@ const L4 = { n: 4, name: 'The Moon Base', mapLabel: 'The Moon Base', arch: 'mag'
     { id: 'yard', gen: 'room', theme: 'moon_orbit', stamp: 'moonYard', gravity: 0.2, moon: { drift: { tank: 2 } }, camera: 'free', bottomKill: true }
   ] };
 
-Tour.amend('moon', { stamps, levels: [L1, L2, L3, L4] });
+/* ---------------- 18-5 The Lunar Stage (the boss) ---------------- */
+// the wings behind the stage: crates of shrunk scenery, a stagehand or two, Piwi's posters; then the stage itself
+const wingsRows = (() => {
+  const W = 70, H = 20, Gr = grid(W, H, '.');
+  fillG(Gr, 0, 0, W - 1, 1, 'H'); ground(Gr, 0, W - 1, 16); fillG(Gr, 0, 0, 0, 15, 'H');
+  put(Gr, 3, 15, '@'); put(Gr, 7, 15, 'n'); put(Gr, 9, 11, '?'); put(Gr, 13, 15, 'p');
+  fillG(Gr, 17, 13, 19, 15, 'B'); put(Gr, 18, 9, '*'); put(Gr, 24, 15, 'u');
+  fillG(Gr, 28, 11, 33, 11, '-'); put(Gr, 30, 7, 'A'); put(Gr, 36, 15, 'X');
+  put(Gr, 46, 11, '?'); put(Gr, 50, 15, 'm'); fillG(Gr, 54, 12, 57, 12, '-'); put(Gr, 55, 9, 'R');
+  put(Gr, 62, 15, 'D'); fillG(Gr, W - 1, 0, W - 1, 15, 'H');
+  return rowsOf(Gr);
+})();
+stamps.moonWings = { floor: 16, rows: wingsRows, gold: { '*': 'must', A: 'high', R: 'risky' }, items: ['power', 'power'], doors: [{ to: 'stage@in', look: 'moonHatch' }], legend: {
+  n: ['spawn', 'sign', { text: 'THE LUNAR STAGE: TONIGHT ONLY, MADAME MOO! (SHE HAS BEEN WAITING FOR WEEKS)' }],
+  p: ['decor', 'moonPoster'], u: ['enemy', 'moonHand'], m: ['enemy', 'moonMite'],
+  X: ['piece', 'secretDoor', { to: 'dressing@in', look: 'fake', back: 'dressingBack' }]
+} };
+// the headliner's dressing room behind a loose wall panel: her spare capes, a hidden 1UP
+stamps.moonDressing = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#.........o.o.o..............#',
+    '#........-------.............#',
+    '#............................#',
+    '#..h.................-----...#',
+    '#............................#',
+    '#...-----.........-----......#',
+    '#............................#',
+    '#............................#',
+    '#............................#',
+    '#.@...D.....j.....l.....j....#',
+    '##############################',
+    '##############################'],
+  hidden: ['oneup'], doors: [{ to: 'wings@dressingBack', look: 'moonHatch' }],
+  legend: { l: ['decor', 'moonLamp'], j: ['decor', 'moonPoster'] }
+};
+const L5 = { n: 5, name: 'The Lunar Stage', mapLabel: 'The Lunar Stage', arch: 'lair', theme: 'moon_stage', boss: 'moon_moo',
+  gimmick: 'The last act nobody cancelled: Madame Moo, the cow who jumped over the moon, in her sequined cape. Three acts: the big jump, the milky way, the grand finale',
+  hint: 'Watch for her shadow and jump her shockwaves. When her hooves sink in the dust, stomp her head. When the gravity goes, let her charge into the wall',
+  postcard: 'BRADY! The cow took a bow and jumped over the moon, all the way home. The crater is back in the ground. The tour is OVER. We did it! ♥ C',
+  enemies: [['moonHand', 1], ['moonMite', 1]],
+  mapCell: [1, 1], mapFrom: 3,
+  exits: { main: { to: 'country:next' } },
+  areas: [
+    { id: 'wings', gen: 'room', theme: 'moon_base', stamp: 'moonWings', gravity: G0, moon: { lowg: true } },
+    { id: 'dressing', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonDressing', gravity: G0, moon: { lowg: true } },
+    { id: 'stage', gen: 'arena', role: 'arena', layout: 'stage', arenaW: 30, H: 20, roof: false, theme: 'moon_stage', gravity: G0, moon: { lowg: true } }
+  ] };
+
+Tour.amend('moon', { stamps, levels: [L1, L2, L3, L4, L5] });
 })();
