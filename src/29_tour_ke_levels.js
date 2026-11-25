@@ -1,0 +1,117 @@
+/* ============================================================
+   KENYA: the levels (world 15) and the land's walkable map.
+   15-1 THE GREAT MIGRATION (stampede): run with the wildebeest. The herd is the moving floor: ride their backs
+        across crocodile rivers they swim and over thorn thickets they leap (both too wide or too tall to jump).
+   15-2 GIRAFFE GROVE (necks): carry a bunch of acacia leaves; a giraffe's head follows them. Ride its head and hold
+        UP or DOWN to steer it: up to the canopy, out across a gap. The hidden exit to 15-6 is here.
+   15-3 FLAMINGO LAKE (flock): flamingos standing in the soda lake are the stepping stones, but they panic and fly
+        off a moment after you land; skeins of flamingos carry you across the wide water.
+   15-4 HIGH NOON (shade): the sun is the hazard. A heat gauge fills out in the open and empties in the shade: under
+        acacias and rocks, in a drifting cloud's shadow, in the walking elephant's shadow.
+   15-5 BIG KIBOKO (lair): the waterhole. The hippo who does water ballet.
+   15-6 MEERKAT MANOR (burrow, secret): the warren. Meerkat sentries whistle when they see Brady above ground and an
+        eagle stoops on the spot; drop down the burrows and run the tunnels underneath.
+   ============================================================ */
+(function () {
+const C = Tour.countries.ke;
+if (!C) return;
+const stamps = {};
+
+/* ---------------- 15-1 The Great Migration ---------------- */
+stamps.keDen = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#....................*.......#',
+    '#...................o.o......#',
+    '#.................-------....#',
+    '#............................#',
+    '#..........-----.............#',
+    '#.h.........o.o..............#',
+    '#............................#',
+    '#...-----.........k..........#',
+    '#............................#',
+    '#.@...D......t.........t.....#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'plain@denBack', look: 'keMoundDoor' }],
+  legend: { t: ['decor', 'kePebbles'], k: ['decor', 'keRoots'] }
+};
+const L1 = { n: 1, name: 'The Great Migration', mapLabel: 'Migration', arch: 'stampede', theme: 'ke_mara',
+  gimmick: 'Run with the wildebeest: their backs are the floor. The herd swims the crocodile rivers and leaps the thorn thickets you could never jump',
+  hint: 'Hop on a wildebeest as it runs past and ride it across. Crocs lunge out of the river: watch for the bubbles and the eyes',
+  postcard: 'A MILLION wildebeest, Brady! They all seem to know where they\'re going. Nobody asked for directions. ♥ C',
+  enemies: [['keBeetle', 2], ['keWarthog', 2], ['keVulture', 1]],
+  mapCell: [0, 0], mapFrom: -1,
+  exits: { main: { to: '15-2' } },
+  areas: [
+    { id: 'plain', gen: 'strip', W: 250, H: 18, GY: 14,
+      script: [
+        ['box', { item: 'power' }],
+        ['tip', { text: 'THE GREAT MIGRATION! HOP ON A WILDEBEEST AS IT RUNS PAST: THE HERD SWIMS RIVERS AND LEAPS THORNS YOU CAN\'T' }],
+        ['plain', { n: 6 }],
+        // ① teach: an empty river, then a thicket: just ride
+        ['herdOn', { n: 10, every: 1.1 }],
+        ['river', { w: 11 }],
+        ['plain', { n: 4 }],
+        ['thicket', { h: 6, w: 2 }],
+        ['herdOff', { n: 4 }],
+        ['enemies', { kind: 'keBeetle', n: 2, len: 12 }],
+        ['postcard', { kind: 'must', dx: -6, dy: -4 }],
+        'cp',
+        // ② test: crocs in the rivers, a vulture over the water, a thicket between two rivers
+        ['herdOn', { n: 8, every: 1.15 }],
+        ['river', { w: 13, crocs: 1, gold: 'risky', goldDy: 5 }],
+        ['plain', { n: 3 }],
+        ['thicket', { h: 7, w: 3 }],
+        'cp',
+        ['river', { w: 16, crocs: 2, fly: 'keVulture' }],
+        ['herdOff', { n: 4 }],
+        ['moundDoor', { to: 'den@in', back: 'denBack' }],
+        ['enemies', { kind: 'keWarthog', n: 1, len: 12 }],
+        ['box', { item: 'power' }],
+        'cp',
+        // ③ twist: the gorge leap straight into the long river, a thicket on the far bank, one more river
+        ['herdOn', { n: 8, every: 1.0 }],
+        ['gorge', { w: 10, h: 3 }],
+        ['river', { w: 20, crocs: 3, fly: 'keVulture' }],
+        'cp',
+        ['thicket', { h: 6, w: 2 }],
+        ['river', { w: 12, crocs: 1, gold: 'high', goldDy: 6 }],
+        ['herdOff', { n: 6 }],
+        ['enemies', { kind: 'keWarthog', n: 1, len: 10 }],
+        ['end', { exit: 'main' }]
+      ] },
+    { id: 'den', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keDen' }
+  ] };
+
+Tour.amend('ke', { stamps, levels: [L1] });
+
+/* ---------------- the land's map: the savannah under a big sky ---------------- */
+// the route: the airstrip by the great mountain, down the migration river, through the acacia grove (a meerkat
+// burrow off it), round the pink lake, over the sun-baked plain, to the waterhole; the port is a hot-air balloon
+// launch past the waterhole
+if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.ke = {
+  labels: { '15-1': 'Migration', '15-2': 'Giraffe Grove', '15-3': 'Flamingo Lake', '15-4': 'High Noon', '15-5': 'Waterhole', '15-6': 'Meerkat Manor' },
+  w: 1360, h: 980,
+  pal: { sea: '#4a9ad0', deep: '#2a5a8a', land: '#d8b058', light: '#f0d080', path: '#fff0c8', beach: '#e8c890', cliff: '#a8582a' },
+  coast: 'rock', trail: 'prints', tufts: 'sand', meadow: '#e0c068',
+  land: [[[70, 120], [380, 60], [800, 70], [1180, 110], [1300, 300], [1280, 560], [1300, 800], [1150, 920], [800, 940], [420, 920], [120, 860], [60, 600], [80, 340]]],
+  nodes: { start: [200, 200], '15-1': [420, 230, 'n'], '15-2': [700, 260, 'n'], '15-6': [900, 170, 'n'], '15-3': [980, 470, 'e'], '15-4': [640, 620, 's'], '15-5': [330, 720, 's'], port: [190, 800, 'n'] },
+  paths: { 'start>15-1': [[300, 230]], '15-1>15-2': [[560, 280]], '15-2>15-6': [[800, 190]], '15-6>15-3': [[1000, 300]], '15-2>15-3': [[860, 360]], '15-3>15-4': [[820, 580]], '15-4>15-5': [[480, 700]], '15-5>port': [[250, 780]] },
+  feat: [
+    ['river', [[300, 60], [360, 200], [500, 330], [480, 520], [380, 640], [300, 900]], 18],
+    ['lake', [[900, 430], [1010, 400], [1120, 440], [1120, 530], [1010, 570], [910, 540]]],
+    ['lake', [[280, 690], [350, 670], [400, 710], [370, 760], [290, 760]]],
+    ['patch', '#e8c060', [[560, 540], [800, 520], [860, 700], [640, 760], [540, 680]]],
+    ['trees', 'acacia', 700, 300, 120, 10], ['trees', 'acacia', 1150, 700, 120, 6], ['trees', 'acacia', 200, 450, 100, 5], ['trees', 'acacia', 640, 620, 140, 3],
+    ['sprite', 'giraffe', 760, 330, 20], ['sprite', 'giraffe', 640, 210, 17], ['sprite', 'giraffe', 820, 280, 15],
+    ['sprite', 'termite', 520, 180, 14], ['sprite', 'termite', 950, 200, 12], ['sprite', 'termite', 720, 700, 13], ['sprite', 'termite', 1100, 300, 12],
+    ['landmark', 160, 120, 52]
+  ],
+  flora: ['acacia', 'bush', 'acacia'], density: 40,
+  live: [['walk', 'buffalo', [[380, 380], [520, 420], [600, 450]], 10], ['walk', 'buffalo', [[420, 400], [560, 440]], 9], ['circle', 600, 600, 70, 1.0], ['circle', 980, 380, 50, 0.8]]
+};
+})();
