@@ -211,8 +211,8 @@ async function session(viewport, fn) {
       check('17-2: real inputs: the twist: small seal bergs and a drifting floe', r.ok && r.alive, r);
       await ev(() => { thaw(); play('17-2'); place(110, 13); sim(0.4); freeze(); });
       await shot('23-17-2-twist.png');
-      r = await ev(() => { let res; for (let a = 0; a < 3; a++) { thaw(); play('17-2'); place(150, 13); sim(0.3 + a * 0.9); const ok = hop(182, 14); res = { ok, x: tx(), alive: alive(), tries: a + 1 }; if (ok && res.alive) break; } return res; });
-      check('17-2: real inputs: the last stretch of drifting bergs', r.ok && r.alive, r);
+      r = await ev(() => { const runs = []; for (let a = 0; a < 3; a++) { thaw(); play('17-2'); place(150, 13); sim(0.3 + a * 0.9); const ok = hop(182, 14); runs.push(ok && alive() ? 'ok' : 'fell@' + tx()); } return { runs, ok: runs.every(x => x === 'ok'), alive: true }; });
+      check('17-2: real inputs: the last stretch of drifting bergs (three runs from different moments, each first try)', r.ok, r);
       await ev(() => { thaw(); play('17-2'); place(137, 6); sim(0.3); freeze(); });
       await shot('24-17-2-ice-cave-shelf.png');
       await ev(() => { thaw(); toArea('cave', 10, 11); sim(0.3); freeze(); });
@@ -333,7 +333,9 @@ async function session(viewport, fn) {
       // THROW makes Brady look back; walking right he then faces left; the plank ahead appears only then
       let r = await ev(() => { thaw(); play('17-6'); place(13, 14); sim(0.3); const pl = ents('IsShyPlat').find(e => Math.floor(e.x / 32) === 15); sim(0.2, { right: true }); const before = { facing: P().facing, there: !pl.dead }; sim(0.05, { action: true, actionPressed: true }); sim(0.3, { right: true }); return { before, after: { facing: P().facing, look: !!P().isLookBack, there: !pl.dead } }; });
       check('17-6: THROW looks back: walking right Brady faces left, and the folk plank ahead appears', r.before.facing === 1 && !r.before.there && r.after.facing === -1 && r.after.look && r.after.there, r);
-      await ev(() => { thaw(); play('17-6'); place(14, 14); sim(0.05, { action: true, actionPressed: true }); sim(0.2, { right: true }); freeze(); });
+      r = await ev(() => { thaw(); play('17-6'); place(20, 14); sim(0.3); const f = []; sim(0.3, { left: true }); f.push(P().facing); sim(0.05, { action: true, actionPressed: true }); sim(0.3, { left: true }); f.push(P().facing); sim(0.3, { right: true }); f.push(P().facing); sim(0.05, { action: true, actionPressed: true }); sim(0.3, { left: true }); f.push(P().facing); return { f }; });
+      check('17-6: only THROW turns his head: walking or braking either way never does', r.f.join(',') === '1,-1,-1,1', r);
+      await ev(() => { thaw(); play('17-6'); place(14, 14); sim(0.3); sim(0.05, { action: true, actionPressed: true }); sim(0.3, { right: true }); freeze(); });
       await shot('61-17-6-looking-back.png');
       // the gate: blocks Brady while he looks at it; he backs through it while looking away
       r = await ev(() => { thaw(); play('17-6'); place(29, 14); sim(0.2); sim(1.0, { right: true }); const blocked = tx() < 32; sim(0.05, { action: true, actionPressed: true }); sim(1.0, { right: true }); return { blocked, through: tx() > 32 }; });
@@ -342,8 +344,8 @@ async function session(viewport, fn) {
       await shot('62-17-6-folk-gate.png');
       // real inputs: the teaching dip, the test over the pits, the twist (both kinds), the last stretch
       for (const [a, b, label] of [[13, 28, 'the teaching dip'], [35, 54, 'the first pits, walking backwards'], [57, 78, 'the second pits'], [86, 106, 'the twist: eye planks and folk planks in turn'], [107, 151, 'the last stretch, gates and both kinds']]) {
-        r = await ev(([a, b]) => { let res; for (let t = 0; t < 3; t++) { thaw(); play('17-6'); place(a, 14); sim(0.3 + t * 0.7); const ok = shyHop(b, 14); res = { ok, x: tx(), alive: alive(), tries: t + 1 }; if (ok && res.alive) break; } return res; }, [a, b]);
-        check('17-6: real inputs: ' + label, r.ok && r.alive, r);
+        r = await ev(([a, b]) => { const runs = []; for (let t = 0; t < 3; t++) { thaw(); play('17-6'); place(a, 14); sim(0.3 + t * 0.7); const ok = shyHop(b, 14); runs.push(ok && alive() ? 'ok' : 'fell@' + tx()); } return { runs, ok: runs.every(x => x === 'ok'), alive: true }; }, [a, b]);
+        check('17-6: real inputs (three runs, each first try): ' + label, r.ok, r);
       }
       await ev(() => { thaw(); play('17-6'); place(95, 11); sim(0.05, { action: true, actionPressed: true }); sim(0.3); freeze(); });
       await shot('63-17-6-twist.png');
@@ -355,7 +357,7 @@ async function session(viewport, fn) {
   // portrait
   await session({ width: 390, height: 844 }, async (page, shot, run) => {
     await run('p-aurora', async () => { await page.evaluate(() => { fresh(); play('17-1'); place(48, 11); sim(0.05); freeze(); }); await shot('90-portrait-17-1.png'); });
-    await run('p-lair', async () => { await page.evaluate(() => { thaw(); play('17-5'); toArea('cave'); const b = S().entities.find(e => e.boss); const p = P(); p.x = b.arenaX0 + 3 * 32; p.y = b.floorY - p.h - 2; sim(3); freeze(); }); await shot('91-portrait-17-5-troll.png'); });
+    await run('p-lair', async () => { await page.evaluate(() => { thaw(); play('17-5'); toArea('cave'); const b = S().entities.find(e => e.boss); const p = P(); p.x = b.arenaX0 + 10 * 32; p.y = b.floorY - p.h - 2; sim(2.8); b.x = p.cx + 3.5 * 32; sim(0.4); freeze(); }); const inView = await page.evaluate(() => { const g = S(), b = S().entities.find(e => e.boss), G = window.BRADY.Game; return b.x + b.w > g.camX && b.x < g.camX + G.viewW; }); check('17-5 portrait: the troll is in view', inView); await shot('91-portrait-17-5-troll.png'); });
     await run('p-map', async () => { await page.evaluate(() => { thaw(); const d = window.BRADY.Save.data; ['17-1', '17-2', '17-3', '17-4', '17-5', '17-6'].forEach(id => d.unlocked[id] = true); window.BRADY.goToMap('world', 17, '17-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }); await shot('92-portrait-iceland-map.png'); });
   });
   console.log(failures ? `${failures} ICELAND CHECK(S) FAILED` : 'ALL ICELAND CHECKS PASSED');
