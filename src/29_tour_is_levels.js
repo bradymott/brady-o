@@ -140,7 +140,7 @@ const lagoon = (() => {
   // checkpoint 2, before the last stretch
   G.put(149, 13, 'c'); G.put(151, 9, '?'); G.put(147, 13, 'A');
   // the last stretch: drifting bergs with seals, a floe, terns and a puffin; P3 (risky) low over the water
-  G.put(155, 14, 'e'); G.put(161, 14, 'w'); G.put(168, 13, 'Y'); G.put(175, 14, 'u'); G.put(169, 10, 'R'); G.put(162, 8, 't'); G.put(182, 7, 'p');
+  G.put(155, 14, 'e'); G.put(161, 14, 'E'); G.put(167, 13, 'Y'); G.put(175, 14, 'u'); G.put(169, 10, 'R'); G.put(162, 8, 't'); G.put(182, 7, 'p');
   G.coins(156, 163, 11);
   G.put(192, 13, 'j'); G.put(198, 13, 'G'); G.put(203, 13, 'x');
   return G.rows();
@@ -151,7 +151,7 @@ const LAG = {
   K: ['spawn', 'sign', { text: 'A SEAL IS HEAVY: THE BERG LEANS HIS WAY. STAND ON THE OTHER SIDE TO BALANCE IT' }],
   a: ['piece', 'berg', { w: 5 }], n: ['piece', 'berg', { w: 5, seal: 1 }], e: ['piece', 'berg', { w: 4 }], E: ['piece', 'berg', { w: 4, seal: -1 }],
   d: ['piece', 'berg', { w: 4, ax: 4, speed: 0.7 }], u: ['piece', 'berg', { w: 3, seal: 1 }], w: ['piece', 'berg', { w: 3, seal: -1, ax: 2, speed: 0.6 }], A: ['anchor', 'caveBack'],
-  Y: ['piece', 'plank', { ax: 2, w: 3, speed: 0.8, skin: 'isFloe' }], Z: ['piece', 'plank', { ax: 0, ay: -3, w: 2, speed: 0.9, skin: 'isFloe' }],
+  Y: ['piece', 'plank', { ax: 1, w: 4, speed: 0.5, skin: 'isFloe' }], Z: ['piece', 'plank', { ax: 0, ay: -3, w: 2, speed: 0.9, skin: 'isFloe' }],
   f: ['enemy', 'isFox'], m: ['enemy', 'isRam'], p: ['enemy', 'isPuffin'], t: ['enemy', 'isTern']
 };
 stamps.isLagoon = { floor: 14, rows: lagoon, legend: LAG, items: ['power', 'power', 'star'], gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'cave@in', look: 'isTube' }] };
@@ -379,7 +379,7 @@ const folk = (() => {
 })();
 const FOLK = {
   i: ['decor', 'isElfDoor'], j: ['decor', 'isHut'], A: ['anchor', 'houseBack'], E: ['piece', 'shyEye', {}],
-  k: ['spawn', 'sign', { text: 'THE HIDDEN FOLK\'S PLANKS ARE ONLY THERE WHEN NOBODY LOOKS. TAP THROW TO LOOK BACK, THEN WALK BACKWARDS ONTO THEM' }],
+  k: ['spawn', 'sign', { text: 'THE HIDDEN FOLK\'S PLANKS ARE ONLY THERE WHEN NOBODY LOOKS. TAP THROW TO LOOK BACK (TAP AGAIN TO LOOK AHEAD), THEN WALK BACKWARDS ONTO THEM' }],
   K: ['spawn', 'sign', { text: 'THEIR LITTLE GATES ARE THE OTHER WAY ROUND: THEY STOP YOU ONLY WHILE YOU LOOK AT THEM. BACK THROUGH!' }],
   n: ['piece', 'shy', { w: 3 }], N: ['piece', 'shy', { w: 2 }], e: ['piece', 'shy', { w: 3, bold: true }], w: ['piece', 'shyWall', { h: 3 }],
   f: ['enemy', 'isFox'], p: ['enemy', 'isPuffin'], t: ['enemy', 'isTern']
@@ -434,7 +434,7 @@ if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.is = {
     ['sprite', 'isHorseMap', 600, 660, 14], ['sprite', 'isPuffinMap', 1560, 330, 20], ['sprite', 'isTrollMap', 1400, 400, 20], ['sprite', 'isPipesMap', 1060, 300, 20]
   ],
   flora: ['rock'], density: 0.4,
-  live: [['walk', 'goose', [[480, 640], [620, 680]], 9]]
+  live: [['walk', 'isPuffin', [[480, 640], [620, 680]], 9], ['walk', 'isPuffin', [[1440, 300], [1520, 360]], 7]]
 };
 Object.assign(TourLandscape.ARCH_LABEL, { aurora: 'AURORA', berg: 'BERGS', quake: 'QUAKE', basalt: 'PIPES', shy: 'SHY' });
 })();

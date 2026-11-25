@@ -377,29 +377,30 @@ class IsShyEye extends Ent {
     if (!p) return;
     g.isShyOn = true;
     if (Input.actionPressed && p.state === 'play' && !p.dead) {
-      Input.actionPressed = false; p.isLookBack = !p.isLookBack; if (p.isLookBack) p.isShyFace = -p.facing; else p.facing = -(p.isShyFace || -1);
+      Input.actionPressed = false; p.isLookBack = !p.isLookBack; p.facing = p.isLookBack ? -1 : 1;
       TourKit.sfx('glance', 'select', { vol: 0.35, pitch: p.isLookBack ? 1.4 : 1.1 });
       g.parts.text(p.cx, p.y - 16, p.isLookBack ? 'LOOKING BACK' : 'LOOKING AHEAD', '#ffe28a');
     }
   }
   touchPlayer() {}
+  // the gaze marker, always over his head here: an eye with an arrow the way he looks (gold while he looks back)
   draw(ctx) {
-    const g = this.g, p = g.player; if (!p || !p.isLookBack) return;
-    // a little eye over his head looking the other way
-    const x = p.cx, y = p.y - 26 + Math.sin(this.t * 4) * 2;
-    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x, y, 8, 5, 0, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + p.facing * 3, y, 2.4, 0, TAU); ctx.fill();
+    const g = this.g, p = g.player; if (!p || p.dead) return;
+    const back = !!p.isLookBack, d = back ? -1 : 1, x = p.cx, y = p.y - 24 + Math.sin(this.t * 4) * 1.5;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+    ctx.fillStyle = back ? 'rgba(255,216,74,0.95)' : 'rgba(255,255,255,0.85)'; rr(ctx, x - 15, y - 8, 30, 16, 8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x - 3 * d, y, 6, 4.5, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x - 3 * d + 2.5 * d, y, 2.2, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x + 6 * d, y - 4); ctx.lineTo(x + 12 * d, y); ctx.lineTo(x + 6 * d, y + 4); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
 }
-// Brady walks either way while he looks back over his shoulder (in an area with the eye): his gaze stays put
+// in the hidden folk's country only THROW turns Brady's head: he looks ahead (right) or back (left), never by accident
 {
   const up0 = Player.prototype.update;
   Player.prototype.update = function (dt, inp) {
-    const g = this.g, shy = g && g.isShyOn && this.isLookBack;
     const r = up0.call(this, dt, inp);
-    // looking back, his gaze stays fixed the way he turned it, whichever way he walks
-    if (shy && this.state === 'play' && !this.dead) this.facing = this.isShyFace || -1;
+    if (this.g && this.g.isShyOn && this.state === 'play' && !this.dead) this.facing = this.isLookBack ? -1 : 1;
     return r;
   };
 }

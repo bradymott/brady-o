@@ -378,9 +378,9 @@ const themes = {
   }),
   is_cave: Object.assign({}, volcano, {
     name: 'The Troll\'s Cave', music: 'tour_is', particles: 'dust', rays: null,
-    sky: ['#14121e', '#1e1a2a', '#2a2436'], horizonGlow: '#8a7aa8', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'isCrater', color: '#1e1a26', base: 410, f: 0.1 }], ground: fieldGround, semi: basaltSemi, hard: hexHard,
-    fog: '#3a3448', darkness: 0.3, decor: ['isRock']
+    sky: ['#2a2840', '#4a3e5e', '#8a6a88'], horizonGlow: '#ffb8a0', celestial: { type: 'none' }, stars: 0,
+    layers: [{ kind: 'isCrater', color: '#3a3446', base: 410, f: 0.1 }], ground: fieldGround, semi: basaltSemi, hard: hexHard,
+    fog: '#6a5a78', darkness: 0.08, decor: ['isRock']
   }),
   is_folk: Object.assign({}, field, {
     name: 'The Hidden Folk', music: 'tour_is_folk', particles: 'fireflies', rays: '#fff0d8',
@@ -600,6 +600,8 @@ if (typeof TourOWPaint !== 'undefined') Object.assign(TourOWPaint.art, {
   isTrollMap(c, r) { decor.isTrollStone(c, 0, 0, 0); },
   isPipesMap(c, r) { for (let k = -2; k <= 2; k++) { const h = r * (1.2 - Math.abs(k) * 0.25); c.fillStyle = '#3a3a44'; c.fillRect(k * r * 0.32 - r * 0.15, -h, r * 0.3, h); c.strokeRect(k * r * 0.32 - r * 0.15, -h, r * 0.3, h); } }
 });
+// the map's little walking animal: a puffin (TourOWScenes.critter knows no puffin, so it is added here)
+if (typeof TourOWScenes !== 'undefined') { const cr0 = TourOWScenes.critter; TourOWScenes.critter = function (c, kind, x, y, S, f) { if (kind !== 'isPuffin') return cr0.call(this, c, kind, x, y, S, f); c.save(); c.translate(x, y); c.scale(f || 1, 1); this.shadow(c, 0, 0, 6); IsArt.puffin(c, 0.5, Math.sin(Date.now() / 300) * 0.3, false); c.restore(); }; }
 if (typeof TourLandscape !== 'undefined') TourLandscape.looks.is = ['#1a3a5a', '#2a6a9a', '#3a4a3a', MOSS, MOSS_HI, '#e8502a', 'volcano'];
 
 /* ---------------- music: a slow shimmering waltz under the aurora, a bright reel on the lagoon, a stomping riff in
