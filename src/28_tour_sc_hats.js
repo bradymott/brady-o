@@ -216,7 +216,7 @@ TourHats.NOT = new Set([].concat(
   'eyeTray eyeBag eyeBinDrop eyeLurch eyeSlider eyeExhaust eyeSlideTell'.split(' '),
   // Italy (14): meatballs, moka pots, tomatoes, sour notes (food and objects), the tenor's graters, ramps, crates, oil,
   // dough, ovens, the tilt clock, sliders, racks, barrels, bells' songs, the blackbird diva (in her tiara), cups, washing lines
-  'itMeatball itMoka itTomato itNote itGrater itRamp itCrates itOil itDough itOven itTilt itSlider itRack itBarrel itDiva itSong itCup itLine'.split(' '),
+  'itMeatball itMoka itTomato itNote itGrater itRamp itCrates itOil itDough itOven itTilt itSlider itRack itBarrel itDiva itSong itCup itLine itFacade'.split(' '),
   // Festival Fields: wheelie bins, balloon dogs (balloons), beds
   'festBin festBalloon festBed'.split(' '),
   // France: bread, pastries, pans, keychains, accordions, macarons, chandeliers, lamp posts, mirrors, ovens, decoys, parcels, hatches, the dovecote
