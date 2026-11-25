@@ -13,7 +13,7 @@
    ============================================================ */
 
 // temporary playtest mode, set to false to restore story locks (Brady, Nov 2026)
-const BURNS_TEST_OPEN = true;
+const BURNS_TEST_OPEN = false;
 
 const BurnsTestJump = {
   on() { return !!BURNS_TEST_OPEN; },
