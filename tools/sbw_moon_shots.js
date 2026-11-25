@@ -510,7 +510,7 @@ LEVELS.bot = async (page) => {
 };
 
 // ---------------- the land's map, the route-map pin, the boss stage ----------------
-const openMoon = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR; for (const w of B.WORLD_ORDER) { const C = T.Tour.byWorld[w]; if (!C || C.id === 'moon') continue; for (const id of T.Tour.levelIds(C)) B.Save.data.done[id] = true; } for (const id of ['18-1', '18-2', '18-3', '18-4', '18-5', '18-6']) B.Save.data.unlocked[id] = true; B.Save.data.done['18-1'] = true; B.Save.data.done['18-2'] = true; const Tp = T.TourProgress; try { Tp.exit('18-1', 'main'); Tp.exit('18-1', 'secret'); Tp.exit('18-2', 'main'); } catch (e) {} })()`;
+const openMoon = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR; B.Save.data.seenEncoreIntro = true;   /* (the Encore intro panels, 29_tour_zz_encore.js, would open first) */  for (const w of B.WORLD_ORDER) { const C = T.Tour.byWorld[w]; if (!C || C.id === 'moon') continue; for (const id of T.Tour.levelIds(C)) B.Save.data.done[id] = true; } for (const id of ['18-1', '18-2', '18-3', '18-4', '18-5', '18-6']) B.Save.data.unlocked[id] = true; B.Save.data.done['18-1'] = true; B.Save.data.done['18-2'] = true; const Tp = T.TourProgress; try { Tp.exit('18-1', 'main'); Tp.exit('18-1', 'secret'); Tp.exit('18-2', 'main'); } catch (e) {} })()`;
 LEVELS.map = async (page, shot, run) => {
   await run('map', async () => {
     const r = await page.evaluate(o => { eval(o); window.BRADY.goToMap('world', 1, '18-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc }; }, openMoon);
