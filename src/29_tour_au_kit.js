@@ -409,9 +409,10 @@ const platforms = {
   auUte(ctx, e, t) {
     const x = e.x, y = e.y, w = e.w;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = '#2a6a9a'; ctx.fillRect(x + 4, y + 20, w + 36, 52); ctx.strokeRect(x + 4, y + 20, w + 36, 52);
     ctx.fillStyle = '#3a8ac8'; ctx.fillRect(x, y, w, 20); ctx.strokeRect(x, y, w, 20);
     ctx.fillStyle = '#5aaae8'; ctx.fillRect(x + 2, y + 2, w - 4, 4);
-    ctx.fillStyle = '#3a8ac8'; ctx.beginPath(); ctx.moveTo(x + w, y + 20); ctx.lineTo(x + w, y - 26); ctx.lineTo(x + w + 26, y - 26); ctx.lineTo(x + w + 40, y); ctx.lineTo(x + w + 46, y + 20); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3a8ac8'; ctx.beginPath(); ctx.moveTo(x + w, y + 60); ctx.lineTo(x + w, y - 26); ctx.lineTo(x + w + 26, y - 26); ctx.lineTo(x + w + 40, y); ctx.lineTo(x + w + 46, y + 60); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#bfe4ff'; ctx.beginPath(); ctx.moveTo(x + w + 6, y - 20); ctx.lineTo(x + w + 24, y - 20); ctx.lineTo(x + w + 34, y - 2); ctx.lineTo(x + w + 6, y - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
     // a dog in the back, ears flapping (it loves this)
     const ear = Math.sin(t * 20) * 3;
@@ -419,7 +420,7 @@ const platforms = {
     ctx.beginPath(); ctx.moveTo(x + w - 22, y - 13); ctx.lineTo(x + w - 34, y - 16 + ear); ctx.lineTo(x + w - 24, y - 8); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#e85a8a'; ctx.beginPath(); ctx.ellipse(x + w - 10, y - 4, 3, 4, 0.3, 0, TAU); ctx.fill();
     ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + w - 14, y - 10, 1.4, 0, TAU); ctx.fill();
-    for (const wx of [x + 16, x + w + 26]) { ctx.fillStyle = '#1e1e22'; ctx.beginPath(); ctx.arc(wx, y + 26, 11, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#c8ccd4'; ctx.beginPath(); ctx.arc(wx, y + 26, 4, 0, TAU); ctx.fill(); }
+    for (const wx of [x + 18, x + w + 24]) { ctx.fillStyle = '#1e1e22'; ctx.beginPath(); ctx.arc(wx, y + 80, 14, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#c8ccd4'; ctx.beginPath(); ctx.arc(wx, y + 80, 5, 0, TAU); ctx.fill(); }
     ctx.restore();
   },
   // a drifting log on the dark creek: only shows in a ping's light (and faintly in Brady's own glow)
@@ -522,7 +523,7 @@ class AuFruitStall extends Ent {
       const k = this.rooC >= 0 ? AuRoo.charge(this.rooC) : (this.rooSquash > 0 ? this.rooSquash * 2 : 0), air = !this.onGround, s = this.small ? 1 : 1.3;
       const fx = this.cx - this.facing * 3, fy = this.y + this.h;
       if (!(this.invuln > 0 && Math.floor(this.invuln * 16) % 2 === 0)) Ink.around(ctx, fx - 70, fy - 110, 140, 116, c => AuArt.roo(c, fx, fy, this.facing, k, air, t, false, s), { pad: 0, width: 1.0 });
-      const lift = Math.round((this.small ? 14 : 20) + k * 8);
+      const lift = Math.round((this.small ? 20 : 27) + k * 8);
       this.y -= lift; dr0.call(this, ctx, t); this.y += lift;
       if (!(this.invuln > 0 && Math.floor(this.invuln * 16) % 2 === 0)) AuArt.roo(ctx, fx, fy, this.facing, k, air, t, true, s);
       // the wind-up ring over his head
@@ -770,6 +771,20 @@ P('arena_gum', (st, o) => {
   B.spawn('auShadow', x0 + 2, GY - 1, {});
   B.decorAt('auGum', x0 + 1, GY, 1); B.decorAt('auGum', x0 + w - 2, GY, 2);
   B.decorAt('auGumLeaves', x0 + Math.floor(w / 2), GY, 3);
+});
+
+/* a sheep peering through the slats of its van (the sheep van's tell, and its insides) */
+Object.assign(Decor, {
+  auSheep(ctx, x, y, t) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.8;
+    ctx.fillStyle = '#8a5a3a'; ctx.fillRect(x - 20, y - 44, 40, 44); ctx.strokeRect(x - 20, y - 44, 40, 44);
+    ctx.fillStyle = '#f4f0e6'; for (const [dx, dy] of [[-8, -30], [0, -34], [8, -30], [-4, -24], [6, -22]]) { ctx.beginPath(); ctx.arc(x + dx, y + dy, 8, 0, TAU); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = '#2a2a2e'; ctx.beginPath(); ctx.ellipse(x + 2, y - 24, 6, 8, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y - 26, 1.6, 0, TAU); ctx.arc(x + 5, y - 26, 1.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#6a4a2a'; for (let k = 0; k < 4; k++) ctx.fillRect(x - 20, y - 40 + k * 11, 40, 3);
+    if (Math.sin(t * 1.3 + x) > 0.6) { ctx.fillStyle = '#ffffff'; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.fillText('BAA?', x, y - 52); }
+    ctx.restore();
+  }
 });
 
 /* ================= registration ================= */

@@ -116,12 +116,78 @@ const L1 = { n: 1, name: 'Pouch Express', arch: 'pouch', theme: 'au_outback',
     { id: 'burrow', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auBurrow' }
   ] };
 
+
+/* ---------------- 16-2 Road Train ----------------
+   The convoy runs right to left under us: the decks are still, the road and everything beside it race past (the
+   AuRoad controller). Rows: decks of flatbeds on row 10, box vans' roofs on row 7, tankers on row 8, the road on row
+   15 (a fall is a life). A steady headwind blows Brady back down the trailers; gusts double it (dust streaks first).
+   LOW BRIDGES sweep the two marked stretches of flatbeds (a warning sign and a dashed line first): be small or crouch.
+   The two widest gaps are crossed on an overtaking ute. Teach (short gaps, the first bridge over flat decks), test
+   (box vans and tankers, cockatoos, the first ute), twist (bridges, a ute and magpies together in the last third). */
+const convoyRows = (() => {
+  const m = mk(248, 16);
+  const trailer = (x0, w, top) => { m.fill(x0, top, x0 + w - 1, top, '#'); m.fill(x0, top + 1, x0 + w - 1, 12, 'H'); m.put(x0 + 1, 13, 'w'); if (w > 10) m.put(x0 + w - 5, 13, 'w'); };
+  trailer(0, 30, 10); m.put(3, 9, '@').put(6, 9, 'k').put(1, 9, 'Z').put(9, 6, 'p'); m.fill(14, 8, 15, 9, 'B'); m.coins(18, 26, 7);
+  trailer(33, 20, 10); m.put(48, 9, 'a'); m.coins(36, 44, 8);
+  trailer(57, 14, 7); m.put(63, 4, '*'); m.fill(55, 9, 56, 9, '.');
+  trailer(75, 16, 10); m.put(80, 6, 'p'); m.put(86, 9, 'c'); m.fill(76, 8, 77, 9, 'B');
+  m.put(91, 12, 'u'); m.put(96, 9, 'R'); m.put(97, 4, 'm');
+  trailer(102, 16, 10); m.fill(110, 8, 111, 9, 'B'); m.coins(104, 108, 7); m.put(108, 4, 'm');
+  trailer(122, 18, 10); m.fill(126, 8, 127, 9, 'B'); m.put(132, 9, 'D'); m.put(131, 9, 'q'); m.put(135, 9, 'x'); m.coins(124, 130, 6);
+  trailer(144, 17, 7); m.put(150, 6, 'a'); m.put(158, 6, 'c');
+  trailer(165, 26, 10); m.fill(172, 8, 173, 9, 'B'); m.coins(176, 186, 8);
+  m.put(191, 12, 'u'); m.put(196, 5, 'm'); m.coins(193, 199, 10);
+  trailer(202, 13, 10);
+  trailer(219, 16, 8); m.put(231, 7, 'G'); m.put(240, 14, 'f'); m.coins(221, 227, 6);
+  return m.rows();
+})();
+const CONVOY = {
+  k: ['spawn', 'sign', { text: 'ROAD TRAIN! HOLD RIGHT INTO THE HEADWIND. LOW BRIDGE? GET DOWN: HOLD DOWN (OR BE SMALL). THE UTES OVERTAKE: RIDE THEIR TRAYS OVER THE WIDE GAPS' }],
+  Z: ['piece', 'convoy', { road: 15, wind: 1.8, bridges: [[33, 53], [165, 215]], bridgeY: 8.875, every: 5 }],
+  p: ['piece', 'box', { item: 'power' }], w: ['piece', 'wheels', { n: 2 }], u: ['piece', 'ute', { ax: 6, w: 4, speed: 1.5 }],
+  a: ['enemy', 'auCocky'], m: ['enemy', 'auMagpie'], q: ['decor', 'auSheep'], f: ['decor', 'auCab'], x: ['anchor', 'vanBack']
+};
+stamps.auConvoy = { floor: 10, rows: convoyRows, legend: CONVOY, gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'van@in', look: 'tourDoorHidden' }] };
+// inside the sheep van: a woolly crowd, P2 on the top rail, a hidden water bottle
+stamps.auSheepVan = {
+  floor: 13,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#....*.......................#',
+    '#..------....................#',
+    '#..............o.o.o.........#',
+    '#..........h.................#',
+    '#.......------...............#',
+    '#............................#',
+    '#............................#',
+    '#..............------........#',
+    '#.......q.......q......q.....#',
+    '#............................#',
+    '#.@...D......................#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'convoy@vanBack', look: 'tourDoorHidden' }],
+  legend: { q: ['decor', 'auSheep'] }
+};
+const L2 = { n: 2, name: 'Road Train', arch: 'convoy', theme: 'au_highway',
+  gimmick: 'Hop down a road train at speed: a headwind in your face, low bridges sweeping the decks, utes overtaking beside the widest gaps',
+  hint: 'Keep pushing RIGHT or the wind blows you off the back. When the LOW BRIDGE sign flashes, get low on a flat deck',
+  postcard: 'A road train! Fifty wheels and not one of them stops for lunch. ♥ C',
+  enemies: [['auCocky', 2], ['auMagpie', 2]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '16-3' } },
+  areas: [
+    { id: 'convoy', gen: 'room', theme: 'au_highway', stamp: 'auConvoy', camera: 'free', au: { convoy: true } },
+    { id: 'van', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auSheepVan' }
+  ] };
+
 /* ---------------- placeholders (replaced level by level) ---------------- */
 const simpleRoom = (id, extra) => ({ floor: 12, rows: ['############################'].concat(Array.from({ length: 11 }, (_, k) => '#' + (k === 10 ? '.@...........' + (extra || '.') + '..........G.' : '.'.repeat(26)) + '#')).concat(['############################', '############################']) });
 stamps.auTmp = simpleRoom('tmp');
 const tmp = (n, name, arch, theme, extra) => ({ n, name, arch, theme, gimmick: name, hint: name, postcard: name, enemies: [['auYabby', 1]], mapCell: [n % 3, Math.floor(n / 3)], mapFrom: n - 2,
   areas: [{ id: 'a', gen: 'room', stamp: 'auTmp' }], ...(extra || {}) });
-const L2 = tmp(2, 'Road Train', 'convoy', 'au_highway');
 const L3 = tmp(3, 'Platypus Creek', 'sonar', 'au_creek');
 const L4 = tmp(4, 'The Canopy', 'web', 'au_canopy');
 const L5 = { n: 5, name: 'The Drop Bear', mapLabel: 'Drop Bear', arch: 'lair', theme: 'au_night', boss: 'au_dropbear',
@@ -137,7 +203,7 @@ const L5 = { n: 5, name: 'The Drop Bear', mapLabel: 'Drop Bear', arch: 'lair', t
     { id: 'arena', gen: 'arena', role: 'arena', layout: 'gum', arenaW: 26, H: 18, roof: false }
   ] };
 const L6 = Object.assign(tmp(6, 'The Big Things', 'giant', 'au_big'), { secret: true, mapCell: [2, 2], mapFrom: 0, exits: { main: { to: 'node:16-2' } } });
-for (const L of [L2, L3, L4]) L.exits = { main: { to: '16-' + (L.n + 1) } };
+for (const L of [L3, L4]) L.exits = { main: { to: '16-' + (L.n + 1) } };
 
 Tour.amend('au', { stamps, map: { fort: 'arena', start: [0, 0] }, levels: [L1, L2, L3, L4, L5, L6] });
 })();
