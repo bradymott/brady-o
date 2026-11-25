@@ -422,5 +422,32 @@ const L6 = { n: 6, name: 'The Big Things', arch: 'giant', secret: true, theme: '
 
 // the one bounce the checker can't work out for itself: off a tumbling mango at the plinth's foot, onto its top
 { const ed = TourBuild.generateV2; TourBuild.generateV2 = function (Cc, spec, w, i, a) { const L = ed.apply(this, arguments); if (Cc && Cc.id === 'au' && i === 6 && L.areas[0]) { const A = L.areas[0], an = A.anchors && A.anchors.plinthFoot; if (an) (A.edges || (A.edges = [])).push({ from: [Math.floor(an.x / TS), Math.floor(an.y / TS) - 1], to: [45, 9] }); } return L; }; }
+/* ---------------- the land's map: the red centre to the coast ----------------
+   West to east along the trail: the airstrip, the red dunes and the kangaroos (16-1), the highway (16-2), up a dirt
+   track to the lay-by of the Big Things (16-6, secret), the creek and its billabong (16-3), the gum forest (16-4),
+   the big gum tree (16-5), and the harbour on the east coast (the port). No great red rock: low ranges only. */
+if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.au = {
+  labels: { '16-1': 'Pouch Express', '16-2': 'Road Train', '16-3': 'Platypus Creek', '16-4': 'The Canopy', '16-5': 'Drop Bear', '16-6': 'Big Things' },
+  w: 1700, h: 900,
+  pal: { land: '#d8844a', light: '#eaa86a', path: '#f8e4b8', beach: '#f6e2a8' },
+  sea: 'reef', beachW: 40, trail: 'sand', tufts: 'sand',
+  land: [[[70, 470], [150, 300], [330, 210], [560, 150], [760, 110], [900, 60], [1000, 150], [1120, 120], [1260, 200], [1420, 240], [1560, 330], [1630, 470], [1600, 640], [1500, 760], [1330, 830], [1150, 800], [980, 840], [800, 760], [620, 730], [430, 790], [250, 760], [120, 660]]],
+  nodes: { start: [190, 600], '16-1': [360, 520], '16-6': [560, 280], '16-2': [640, 470], '16-3': [930, 600], '16-4': [1180, 420], '16-5': [1390, 560], port: [1540, 420] },
+  paths: { 'start>16-1': [[270, 580]], '16-1>16-2': [[500, 500]], '16-1>16-6': [[420, 380]], '16-6>16-2': [[620, 370]], '16-2>16-3': [[780, 560]], '16-3>16-4': [[1060, 520]], '16-4>16-5': [[1300, 470]], '16-5>port': [[1480, 500]] },
+  feat: [
+    ['patch', '#c8703a', [[300, 420], [480, 380], [560, 460], [460, 560], [320, 560]]],
+    ['river', [[880, 100], [900, 260], [950, 420], [920, 560], [960, 700], [1000, 840]], 14],
+    ['lake', [[960, 640], [1010, 625], [1030, 660], [985, 680], [955, 665]]],
+    ['patch', '#7aa060', [[1080, 300], [1280, 280], [1350, 420], [1300, 620], [1120, 600], [1060, 460]]],
+    ['trees', ['round', 'round', 'bush'], 1200, 450, 150, 22],
+    ['range', 'mtn', [[700, 230, 26], [760, 250, 22], [820, 220, 24], [300, 300, 22], [380, 280, 18]], {}],
+    ['sprite', 'termite', 420, 600, 16], ['sprite', 'termite', 470, 610, 12], ['sprite', 'termite', 300, 470, 14], ['sprite', 'termite', 700, 640, 14],
+    ['sprite', 'rock', 1620, 600, 12, { sea: true }]
+  ],
+  flora: ['bush', 'round', 'rock'], density: 26,
+  scenes: { '16-1': 'herd', '16-2': 'dustdunes', '16-3': 'wetland', '16-4': 'canopy', '16-5': ['grove', { trees: ['round', 'round', 'round'], ground: '#5a7a4a' }], '16-6': 'market' },
+  live: [['walk', 'goose', [[330, 600], [420, 640], [500, 600]], 8], ['circle', 1180, 360, 70, 1.0], ['fish', 990, 650, '#5a8ac8']]
+};
+
 Tour.amend('au', { stamps, map: { fort: 'arena', start: [0, 0] }, levels: [L1, L2, L3, L4, L5, L6] });
 })();
