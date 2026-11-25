@@ -274,7 +274,8 @@ const BOSS_SAFE = {
   fest_limiter: ['exit'],                                      // 29_tour_fest.js: blowing its own fuse
   lost_hydra: ['exit'],                                        // 29_tour_lost.js: folding itself up, all paired
   // Australia (16): the Drop Bear is up in the crown, out of reach, while he lurks and takes aim (29_tour_au_kit.js touch())
-  au_dropbear: ['lurk', 'aim']
+  au_dropbear: ['lurk', 'aim'],
+  ke_kiboko: ['swim', 'dive', 'rise']                          // 29_tour_ke_boss.js: under the water (only her eyes show)
 };
 const ENEMY_SAFE_TOKENS = ['wait', 'sleep', 'under', 'hide', 'stunned', 'stun', 'friendly', 'friendT', 'harmless', 'perch', 'disguise', 'fade', 'gone', 'dead', 'snatch', 'flee', 'grab'];
 const ENEMY_SAFE_TYPES = {
