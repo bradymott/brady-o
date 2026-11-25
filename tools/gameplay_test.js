@@ -313,7 +313,9 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
   // level totals come from the game data: 68 main levels (5 per country, 4 in each secret land) plus however many
   // secret levels the countries have so far
   const order = await page.evaluate(() => { const Ws = T.Tour.worldList(), C = w => T.Tour.byWorld[w]; return { route: T.Tour.mainCountries().map(C => C.id).join(','), secret: Ws.filter(w => C(w).secret && !C(w).bonus).join(','), levels: T.Tour.allLevelIds().length, listed: Ws.reduce((n, w) => n + C(w).levels.length, 0), main: Ws.filter(w => !C(w).bonus).reduce((n, w) => n + C(w).mainCount, 0), mainOk: Ws.filter(w => !C(w).bonus).every(w => C(w).mainCount === (C(w).secret ? 4 : 5)) }; });
-  check(`the map route runs Mexico to Nepal with both secret lands, 68 main levels (${order.levels} in all)`, order.route === 'mx,ec,br,mz,ma,es,fr,nl,id,vn,jp,np' && order.secret === '13,22' && order.main === 68 && order.mainOk && order.levels === order.listed, order);
+  // (the Encore Tour's lands, ENCORE_TOUR.md, follow Nepal in route order with five main levels each as they are built)
+  const encoreIds = order.route.split(',').slice(12), encoreOk = encoreIds.every(id => ['it', 'ke', 'au', 'is', 'moon'].includes(id));
+  check(`the map route runs Mexico to Nepal (then the Encore Tour built so far) with both secret lands, ${68 + 5 * encoreIds.length} main levels (${order.levels} in all)`, order.route.split(',').slice(0, 12).join(',') === 'mx,ec,br,mz,ma,es,fr,nl,id,vn,jp,np' && encoreOk && order.secret === '13,22' && order.main === 68 + 5 * encoreIds.length && order.mainOk && order.levels === order.listed, order);
   // the secret lands: hidden on the map until found; Antarctica behind a cracked wall in 8-4, World 22 behind door 22 in 5-2 (22 postcards)
   const secrets = await page.evaluate(() => {
     const B = window.BRADY, d = B.Save.data, TP = T.TourProgress, M = T.TourMapScene;
@@ -368,7 +370,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     d.tour = { at: null, seen: {}, freed: {}, lands: {} }; d.done = {}; d.unlocked = {}; d.gold = {};
     return out;
   });
-  check('the route flows country to country: each boss opens the port, Brady walks there and boards for the next land', route.every(r => !/STUCK/.test(r)) && route[route.length - 1] === 'np>end', route);
+  check('the route flows country to country: each boss opens the port, Brady walks there and boards for the next land', route.every(r => !/STUCK/.test(r)) && /^[a-z]+>end$/.test(route[route.length - 1]), route);
   const fly = await page.evaluate(() => {
     const B = window.BRADY, d = B.Save.data; for (let i = 1; i <= 5; i++) d.done['1-' + i] = true; T.TourProgress.complete('1-5', false);
     const M = new T.TourMapScene({ from: '1-5' }); B.Game.setScene(M); M.card = null;
