@@ -1068,7 +1068,7 @@ class KeEagle extends Ent {
       this.y = lerp(this.y0, this.gy - this.h - 4, k * k); this.x = this.gx - this.w / 2;
       if (k >= 1) { this.state = 'up'; this.st = 0; g.burst(this.gx, this.gy, 10, '#e8c890', 'dust'); g.shake(3); }
     } else if (this.state === 'up') {
-      this.mode = 'stoop'; this.y -= 16 * TS * dt; this.x += 8 * TS * dt;
+      this.mode = 'gone'; this.y -= 16 * TS * dt; this.x += 8 * TS * dt;
       if (this.st > 1.2) this.remove = true;
     }
   }

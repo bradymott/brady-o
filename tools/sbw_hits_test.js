@@ -272,7 +272,8 @@ const BOSS_SAFE = {
   vn_phin: ['scald', 'wobble', 'stunned', 'empty'],           // 29_tour_vn.js
   nl_cheese: ['buried'], np_baron: ['finale'], np_tinyak: ['rattle'], aq_walrus: ['exit'], aq_plough: ['melt'], w22_other: ['crack', 'frozen'],
   fest_limiter: ['exit'],                                      // 29_tour_fest.js: blowing its own fuse
-  lost_hydra: ['exit']                                         // 29_tour_lost.js: folding itself up, all paired
+  lost_hydra: ['exit'],                                        // 29_tour_lost.js: folding itself up, all paired
+  ke_kiboko: ['swim', 'dive', 'rise']                          // 29_tour_ke_boss.js: under the water (only her eyes show)
 };
 const ENEMY_SAFE_TOKENS = ['wait', 'sleep', 'under', 'hide', 'stunned', 'stun', 'friendly', 'friendT', 'harmless', 'perch', 'disguise', 'fade', 'gone', 'dead', 'snatch', 'flee', 'grab'];
 const ENEMY_SAFE_TYPES = {
