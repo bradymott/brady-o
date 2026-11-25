@@ -196,7 +196,9 @@ async function session(viewport, fn) {
       go(target, o) {
         o = Object.assign({ tol: 0 }, o || {});
         for (let tries = 0; tries < 3; tries++) {
-          const pl = AP.plan(target, o);
+          let pl = AP.plan(target, o);
+          // no plan from exactly here: step to the middle of this tile, or a tile either side, and look again
+          if (!pl) { const f = tileOf(); for (const dx of [0, -1, 1, -2, 2]) { if (P().flipped) break; AP.exec({ walkTo: (f[0] + dx) * 32 + 16, dir: 0 }, 3); if (tileOf()[1] !== f[1]) break; pl = AP.plan(target, o); if (pl) break; } }
           if (!pl) return { ok: false, why: 'no plan', from: tileOf(), target };
           const r = AP.exec(pl.prog, o.maxT);
           if (r.dead) return { ok: false, why: 'died', r, prog: pl.prog, target };
@@ -457,12 +459,29 @@ LEVELS.dbg = async (page, shot, run) => {
   });
   console.log(JSON.stringify(r));
 };
+// ---------------- the land's map, the route-map pin, the boss stage ----------------
+const openMoon = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR; for (const w of B.WORLD_ORDER) { const C = T.Tour.byWorld[w]; if (!C || C.id === 'moon') continue; for (const id of T.Tour.levelIds(C)) B.Save.data.done[id] = true; } for (const id of ['18-1', '18-2', '18-3', '18-4', '18-5', '18-6']) B.Save.data.unlocked[id] = true; B.Save.data.done['18-1'] = true; B.Save.data.done['18-2'] = true; const Tp = T.TourProgress; try { Tp.exit('18-1', 'main'); Tp.exit('18-1', 'secret'); Tp.exit('18-2', 'main'); } catch (e) {} })()`;
+LEVELS.map = async (page, shot, run) => {
+  await run('map', async () => {
+    const r = await page.evaluate(o => { eval(o); window.BRADY.goToMap('world', 1, '18-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc }; }, openMoon);
+    check('the Moon has its own walkable map', r.cc === 'moon', r);
+    await page.evaluate(() => freeze()); await shot('70-moon-overworld-map.png');
+    const r2 = await page.evaluate(() => { thaw(); const s = S(); if (s.openRoute) s.openRoute({ dest: 'moon' }); for (let k = 0; k < 40 && (s.rRevealQ == null || s.rReveal || (s.rRevealQ && s.rRevealQ.length)); k++) sim(0.25); s.dest = 'moon'; sim(0.8); return { mode: s.mode }; });
+    await page.evaluate(() => freeze()); await shot('71-route-map-moon-pin.png');
+    check('the route map opens on the Moon\'s pin', !!r2.mode, r2);
+    await page.evaluate(() => { thaw(); play('18-5'); toArea('stage', 6, 15); sim(3); freeze(); }); await shot('50-18-5-stage.png');
+    await page.evaluate(() => { thaw(); play('18-5'); place(30, 15); sim(0.4); freeze(); }); await shot('51-18-5-wings.png');
+  });
+};
+
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
     for (const k in LEVELS) await LEVELS[k](page, shot, run, pano);
   });
   await session({ width: 390, height: 844 }, async (page, shot, run) => {
     await run('p-hop', async () => { await page.evaluate(() => { fresh(); play('18-1'); place(60, 20); sim(0.4); freeze(); }); await shot('90-portrait-18-1.png'); });
+    await run('p-boss', async () => { await page.evaluate(() => { thaw(); play('18-5'); toArea('stage', 6, 15); sim(3); freeze(); }); await shot('91-portrait-18-5-stage.png'); });
+    await run('p-map', async () => { await page.evaluate(o => { thaw(); eval(o); window.BRADY.goToMap('world', 1, '18-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }, openMoon); await shot('92-portrait-moon-map.png'); });
   });
   console.log(failures ? `${failures} MOON CHECK(S) FAILED` : 'ALL MOON CHECKS PASSED');
   process.exit(failures ? 1 : 0);
