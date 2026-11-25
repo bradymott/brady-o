@@ -222,7 +222,7 @@ const buggyRows = (() => {
   put(Gr, 142, 19, 'D'); put(Gr, 145, 19, 'a'); put(Gr, 139, 19, 'p'); put(Gr, 148, 19, 'c');
   fillG(Gr, 152, 19, 156, 19, '#'); fillG(Gr, 154, 18, 156, 18, '#'); fillG(Gr, 156, 17, 156, 17, '#'); fillG(Gr, 166, 17, 166, 19, 'B');
   // the crater whose steady geyser flings the buggy up onto the mesa
-  pit(Gr, 172, 180); put(Gr, 173, 24, '1'); ground(Gr, 181, 199, 16); put(Gr, 190, 15, 'e'); put(Gr, 194, 12, 'o.o.o');
+  pit(Gr, 172, 180); put(Gr, 173, 24, '1'); ground(Gr, 181, 199, 16); put(Gr, 197, 15, 'e'); put(Gr, 192, 12, 'o.o.o');
   put(Gr, 204, 19, 'c'); put(Gr, 208, 16, '?');
   // ③ all of it
   pit(Gr, 214, 220); put(Gr, 223, 19, 'z'); put(Gr, 228, 19, 'e');
