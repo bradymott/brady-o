@@ -121,5 +121,83 @@ const L1 = { n: 1, name: 'One Small Hop', mapLabel: 'One Small Hop', arch: 'lowg
     { id: 'green', gen: 'room', role: 'secret', theme: 'moon_shadow', stamp: 'moonGreen', gravity: G0, moon: { lowg: true } }
   ] };
 
-Tour.amend('moon', { stamps, levels: [L1] });
+/* ---------------- 18-2 Spacewalk ---------------- */
+// no ground: hull plates, airlocks and drifting junk around Piwi's orbiting venue. ① the teach over a safety net:
+// a push across, a puff up; ② the first void with an air valve half way, junk drifting through, a climb of plates
+// under antenna spikes, the locker-room airlock high up; ③ the twist: the venue's air vents blow you about, spikes
+// under every plate, a stagehand on the long gantry, then the long void with a chain of valves past junk (P3) to
+// the far airlock
+const plate = (Gr, x0, x1, y, ch) => fillG(Gr, x0, y, x1, y + 1, ch || '#');
+const walkRows = (() => {
+  const W = 224, H = 30, Gr = grid(W, H, '.');
+  // ① the teach, over a safety net
+  plate(Gr, 0, 9, 22); fillG(Gr, 0, 24, 9, 29, '#'); put(Gr, 3, 21, '@'); put(Gr, 7, 21, 'n'); put(Gr, 5, 18, '?');
+  plate(Gr, 10, 44, 27, '-'); put(Gr, 12, 26, 'r');
+  plate(Gr, 16, 21, 22); put(Gr, 17, 19, 'o.o.o');
+  plate(Gr, 29, 35, 16); put(Gr, 27, 21, 'N'); put(Gr, 30, 13, 'o.o.o');
+  plate(Gr, 40, 46, 20); put(Gr, 43, 19, 'e');
+  // ② the first void: a valve half way, junk drifting up and down through it
+  put(Gr, 58, 17, 'V'); put(Gr, 57, 12, '*'); put(Gr, 64, 10, 'j');
+  plate(Gr, 72, 84, 19); put(Gr, 74, 18, 'c'); put(Gr, 80, 15, '?'); put(Gr, 82, 18, 'u');
+  // the climb of plates under antenna spikes
+  plate(Gr, 90, 94, 15); plate(Gr, 99, 103, 10); fillG(Gr, 99, 12, 103, 12, 'v'); plate(Gr, 108, 112, 5); fillG(Gr, 108, 7, 112, 7, 'v');
+  put(Gr, 96, 8, 'M');
+  // the locker-room airlock on its own little plate up top (a light blinks on it)
+  plate(Gr, 115, 121, 3); put(Gr, 118, 2, 'A'); put(Gr, 120, 2, 'a');
+  plate(Gr, 120, 131, 15); fillG(Gr, 120, 17, 131, 17, 'v'); put(Gr, 124, 14, 'c'); put(Gr, 128, 11, 'o.o');
+  // ③ the twist: an air vent blows up out of the void beside the plates; spikes under the plates
+  put(Gr, 136, 28, '1'); plate(Gr, 141, 146, 8); fillG(Gr, 141, 10, 146, 10, 'v'); put(Gr, 142, 7, 'o.o.o');
+  plate(Gr, 150, 166, 13); fillG(Gr, 150, 15, 166, 15, 'v'); put(Gr, 158, 12, 'u'); put(Gr, 155, 9, '?');
+  // the long void with a chain of valves past junk (P3 by the second valve)
+  put(Gr, 172, 12, 'V'); put(Gr, 177, 5, 'k'); put(Gr, 181, 10, 'V'); put(Gr, 190, 11, 'V'); put(Gr, 198, 12, 'V'); put(Gr, 186, 7, 'R'); put(Gr, 184, 18, 'K'); put(Gr, 197, 9, 'M');
+  fillG(Gr, 0, 0, 223, 0, 'H');
+  plate(Gr, 203, 223, 16); fillG(Gr, 203, 18, 223, 29, '#'); put(Gr, 205, 15, 'c'); put(Gr, 214, 15, 'G'); fillG(Gr, 223, 0, 223, 15, '#');
+  return rowsOf(Gr);
+})();
+const WALK = {
+  n: ['spawn', 'sign', { text: 'SPACEWALK! JUMP PUSHES OFF A PLATE. PRESS JUMP AGAIN IN MID-AIR FOR A PUFF OF AIR (TWO IN THE TANK)' }],
+  N: ['spawn', 'sign', { text: 'YOU KEEP DRIFTING THE WAY YOU PUSHED. LAND ON A PLATE (OR FLY THROUGH A VALVE) TO REFILL' }],
+  r: ['decor', 'moonGolf'], e: ['enemy', 'moonBunny'], u: ['enemy', 'moonHand'], M: ['enemy', 'moonMoth'],
+  V: ['piece', 'moon.valve', {}],
+  j: ['piece', 'moon.junk', { ay: 9, speed: 0.7, kind: 0 }], k: ['piece', 'moon.junk', { ay: 10, speed: 0.55, kind: 1 }], K: ['piece', 'moon.junk', { ax: 9, speed: 0.6, kind: 2, phase: 1 }],
+  '1': ['piece', 'moon.geyser', { steady: true, top: 6, w: 2, force: 70, vmax: 6 }],
+  A: ['spawn', 'portal', { kind: 'door', look: 'moonAirlock', targetRef: 'locker@in' }]
+};
+stamps.moonWalk = { floor: 22, rows: walkRows, legend: WALK, gold: { '*': 'must', R: 'risky' }, items: ['power', 'power', 'power'] };
+// the venue's locker room: Piwi's stagehands keep their spare keys here (and a 1UP, and P2)
+stamps.moonLocker = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#.........*..................#',
+    '#.......-----......o.o.o.....#',
+    '#..................-----.....#',
+    '#..h.........................#',
+    '#.......................-----#',
+    '#...-----....................#',
+    '#............................#',
+    '#..........-----.............#',
+    '#............................#',
+    '#.@...D......l.....l....l....#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'walk@lockerBack', look: 'moonAirlock' }],
+  legend: { l: ['decor', 'moonLamp'] }
+};
+WALK.a = ['anchor', 'lockerBack'];
+const L2 = { n: 2, name: 'Spacewalk', mapLabel: 'Spacewalk', arch: 'drift', theme: 'moon_orbit',
+  gimmick: 'Outside Piwi\'s orbiting venue with no ground at all: push off the hull plates and steer with puffs from your air canister. You keep your momentum; the tank holds two puffs',
+  hint: 'Jump to push off, jump again in mid-air to puff. Plan your puffs: land on a plate or fly through a valve to refill. The blinking airlock up top is not locked...',
+  postcard: 'Brady! I watched you spacewalk from the venue window. You looked like a very determined balloon. ♥ C',
+  enemies: [['moonMoth', 2], ['moonHand', 2], ['moonBunny', 1]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '18-3' } },
+  areas: [
+    { id: 'walk', gen: 'room', theme: 'moon_orbit', stamp: 'moonWalk', gravity: 0.2, moon: { drift: { tank: 2 } }, camera: 'free', bottomKill: true },
+    { id: 'locker', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonLocker', gravity: G0, moon: { lowg: true } }
+  ] };
+
+Tour.amend('moon', { stamps, levels: [L1, L2] });
 })();

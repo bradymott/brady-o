@@ -63,6 +63,7 @@ async function session(viewport, fn) {
       input(prog, t, b) {
         const d = prog.dir, inp = { left: false, right: false, up: false, down: false, jump: false, jumpPressed: false, action: false, actionPressed: false };
         let dir = d;
+        if (prog.driftPlan) { const q = window.BRADY_MOON.driftInput(prog.driftPlan, prog.dir, t); for (const h of AP.hooks) h(prog, t, b, q); return q; }
         if (prog.walkTo != null) { const dx = prog.walkTo - (b.x + b.w / 2); dir = Math.abs(dx) > 6 ? Math.sign(dx) : 0; inp.left = dir < 0; inp.right = dir > 0; for (const h of AP.hooks) h(prog, t, b, inp); return inp; }
         if (prog.drop) { inp.down = t < 0.05; inp.jumpPressed = t < 1 / 120; dir = t < 0.25 ? 0 : d; }
         else if (prog.noJump) { dir = prog.air === 'late' && t > (prog.lateAt0 || 0) && t < prog.lateAt ? 0 : d; if (prog.air === 'rev' && t > prog.revAt) dir = -d; if (prog.air === 'stopgo') dir = t < prog.a || t > prog.b ? d : 0; }
@@ -84,6 +85,8 @@ async function session(viewport, fn) {
       progs(target, from) {
         const out = [], dirs = target[0] > from[0] ? [1, -1, 0] : target[0] < from[0] ? [-1, 1, 0] : [0, 1, -1];
         if (target[1] === from[1] && !target[2]) out.push({ walkTo: target[0] * 32 + 16, dir: 0 });
+        const Ar = S().area;
+        if (Ar.moon && Ar.moon.drift) { for (const dir of dirs) for (const plan of window.BRADY_MOON.DRIFT_PLANS) out.push({ driftPlan: plan, dir }); return out; }
         for (const dir of dirs) {
           out.push({ dir, noJump: true, air: 'dir' });
           for (const lateAt of [0.5, 1.0, 1.6, 2.4]) out.push({ dir, noJump: true, air: 'late', lateAt0: 0.25, lateAt });
@@ -113,6 +116,11 @@ async function session(viewport, fn) {
         return out;
       },
       extra: [],
+      // drifting junk is where it will be by then (its path is a clock): a plan that meets it is no plan
+      bad(b, A, t) {
+        for (const e of S().entities) if (e.constructor.name === 'MoonJunk') { const k = (Math.sin((e.t + t) * e.sp + e.ph) + 1) / 2, x = e.x0 + e.ax * k, y = e.y0 + e.ay * k; if (b.x < x + 26 + 4 && b.x + b.w > x - 4 && b.y < y + 26 + 4 && b.y + b.h > y - 4) return true; }
+        return false;
+      },
       body(p) {
         const b = {}; for (const k of ['x', 'y', 'w', 'h', 'vx', 'vy', 'onGround', 'coyote', 'jumpBuf', 'jumping', 'runT', 'airMax', 'facing', 'groundTile', 'groundTx', 'groundTy', 'dropT', 'flipped', 'liftPin', 'liftStill', 'liftPx', 'liftOff', 'moon']) b[k] = p[k] && typeof p[k] === 'object' ? JSON.parse(JSON.stringify(p[k])) : p[k];
         b.crouch = false; b.inWater = false; b.stroke = 0; b.ride = null; b.sim = true; return b;
@@ -130,13 +138,23 @@ async function session(viewport, fn) {
           if (AP.after) AP.after(b, inp, A, dt);
           t += dt;
           if (b.y > A.H * 32 + 20 || window.BRADY_MOON.lavaContact(b, A) || window.BRADY_MOON.spikeContact(b, A)) return null;
-          if (AP.bad && AP.bad(b, A)) return null;
+          if (AP.bad && AP.bad(b, A, t)) return null;
           if (!b.onGround) air = true;
           if (prog.walkTo != null) { if (b.onGround && !air && Math.abs(b.x + b.w / 2 - prog.walkTo) <= 8 && Math.abs(b.vx) < 4) return { tx: Math.floor((b.x + b.w / 2) / 32), ty: b.groundTy, t, flipped: !!b.flipped }; continue; }
           if (b.onGround && (air || (prog.noJump && prog.air !== 'stopgo') || prog.stand) && landT == null && t > 0.05) landT = t;
+          if (prog.driftPlan && !air && t > 0.6) return null;
           if (landT != null && Math.abs(b.vx) < 4 && b.onGround) return { tx: Math.floor((b.x + b.w / 2) / 32), ty: b.groundTy, t, flipped: !!b.flipped };
         }
         return null;
+      },
+      // is tile x on the same stretch of floor as the target (walkable between them)?
+      samePlate(x, target, tol) {
+        if (Math.abs(x - target[0]) <= (tol != null ? tol : 1)) return true;
+        if (target[2]) return false;
+        const A = S().area, Tt = window.BRADY.T, SOL = window.BRADY.SOLID, y = target[1];
+        const st = xx => { const t2 = A.tiles[y * A.W + xx]; return (SOL[t2] || t2 === Tt.SEMI) && !SOL[A.tiles[(y - 1) * A.W + xx]] && !SOL[A.tiles[(y - 2) * A.W + xx]]; };
+        const d = Math.sign(target[0] - x); for (let xx = x; xx !== target[0]; xx += d) if (!st(xx)) return false;
+        return st(target[0]);
       },
       plan(target, o) {
         o = o || {};
@@ -147,7 +165,7 @@ async function session(viewport, fn) {
           const r = AP.trial(prog, o.maxT);
           if (!r) continue;
           const okY = r.ty === target[1] && (!!target[2] === r.flipped);
-          if (!okY || Math.abs(r.tx - target[0]) > (o.tol != null ? o.tol : 1)) continue;
+          if (!okY || !AP.samePlate(r.tx, target, o.tol)) continue;
           const score = r.t + Math.abs(r.tx - target[0]) * 0.3;
           if (!best || score < best.score) best = { prog, score, r };
         }
@@ -176,7 +194,7 @@ async function session(viewport, fn) {
       },
       // hop to a standing tile [x, row(, flipped)]: plan, play, re-plan if he ended up elsewhere
       go(target, o) {
-        o = o || {};
+        o = Object.assign({ tol: 0 }, o || {});
         for (let tries = 0; tries < 3; tries++) {
           const pl = AP.plan(target, o);
           if (!pl) return { ok: false, why: 'no plan', from: tileOf(), target };
@@ -185,6 +203,7 @@ async function session(viewport, fn) {
           if (r.exit) return { ok: true, r, exit: r.exit };
           if (o.area && r.area !== o.area) return { ok: false, why: 'area', r };
           if (r.ty === target[1] && Math.abs(r.tx - target[0]) <= (o.tol != null ? o.tol : 1)) return { ok: true, r, prog: pl.prog };
+          if (r.ty === target[1] && AP.samePlate(r.tx, target)) { AP.exec({ walkTo: target[0] * 32 + 16, dir: 0 }, 4); const t2 = tileOf(); if (Math.abs(t2[0] - target[0]) <= (o.tol || 0)) return { ok: true, r, prog: pl.prog }; }
         }
         return { ok: false, why: 'off target', at: tileOf(), target };
       },
@@ -293,6 +312,56 @@ LEVELS.hop = async (page, shot, run, pano) => {
   });
 };
 
+// ---------------- 18-2 Spacewalk ----------------
+LEVELS.walk = async (page, shot, run, pano) => {
+  await run('walk', async () => {
+    await page.evaluate(() => { fresh(); play('18-2'); place(4, 21); sim(0.4); freeze(); });
+    await shot('20-18-2-start.png');
+    // a push off and a puff: the puff lifts him and spends one of three
+    const r = await page.evaluate(() => {
+      thaw(); place(4, 21); sim(0.3); const p = P();
+      sim(1 / 120, { jump: true, jumpPressed: true }); sim(0.5); const vy0 = p.vy, t0 = p.moon.tank;
+      sim(1 / 120, { jump: true, jumpPressed: true }); const vy1 = p.vy, t1 = p.moon.tank;
+      sim(1 / 120, { jump: true, jumpPressed: true }); sim(1 / 120, { jump: true, jumpPressed: true }); sim(1 / 120, { jump: true, jumpPressed: true }); const t3 = p.moon.tank;
+      const vx0 = p.vx; sim(0.5); const drift = Math.abs(p.vx - vx0);
+      return { vy0: Math.round(vy0 / 32), vy1: Math.round(vy1 / 32), t0, t1, t3, drift: +(drift / 32).toFixed(2) };
+    });
+    check('18-2: a mid-air jump is a puff (up, one air used); the tank runs dry at two; momentum is kept', r.vy1 < -5 && r.t0 === 2 && r.t1 === 1 && r.t3 === 0 && r.drift < 0.2, r);
+    await page.evaluate(() => { play('18-2'); place(3, 21); sim(0.2); });
+    const legA = await page.evaluate(() => AP.route([[18, 22], [21, 22], [32, 16], [30, 16], [43, 20]], { maxT: 7 }));
+    check('18-2: played: pushing off across the first gap, a puff up to the high plate', legA.ok, legA);
+    await page.evaluate(() => { sim(0.1); freeze(); }); await shot('21-18-2-plates.png'); await page.evaluate(() => thaw());
+    const legB = await page.evaluate(() => AP.route([[42, 20], [76, 19]], { maxT: 7 }));
+    check('18-2: played: across the first void (puffs, the valve on the way)', legB.ok, legB);
+    const legC = await page.evaluate(() => AP.route([[84, 19], [92, 15], [94, 15], [101, 10], [103, 10], [110, 5], [108, 5], [124, 15], [129, 15], [143, 8], [146, 8], [150, 13], [158, 13], [166, 13]], { maxT: 7 }));
+    check('18-2: played: the climb under the antenna spikes, the air vent, the gantry', legC.ok, legC);
+    await page.evaluate(() => { sim(0.1); freeze(); }); await shot('22-18-2-gantry.png'); await page.evaluate(() => thaw());
+    const legD = await page.evaluate(() => { const r = AP.route([[208, 16]], { maxT: 7 }); if (!r.ok) return r; const r2 = AP.route([[214, 16]]); sim(1.5, { right: true }); return { ok: r2.ok, state: S().state }; });
+    check('18-2: played: the long void with the valve chain to the far airlock and the gate', legD.ok && legD.state !== 'play', legD);
+    // mid-flight with the gauge and the tether
+    await page.evaluate(() => { play('18-2'); place(165, 12); sim(0.2); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); sim(0.7, { right: true }); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); sim(0.3, { right: true }); freeze(); });
+    await shot('23-18-2-mid-flight.png');
+    const sec = await page.evaluate(() => { thaw(); play('18-2'); place(110, 4); sim(0.3); const r = AP.route([[112, 5], [116, 3]], { maxT: 7 }); if (!r.ok) return r; AP.go([118, 3], { tol: 0 }); if (!r.ok) return r; for (let k = 0; k < 20 && S().area.aid !== 'locker'; k++) sim(0.1, { up: true, upPressed: true }); sim(1); return { ok: true, area: S().area.aid }; });
+    check('18-2: played: up to the blinking airlock: the locker room', sec.ok && sec.area === 'locker', sec);
+    await page.evaluate(() => { place(10, 11); sim(0.3); freeze(); }); await shot('24-18-2-locker.png');
+    await page.evaluate(() => { thaw(); play('18-2'); }); await pano('pano-18-2-walk.png');
+  });
+};
+
+LEVELS.dbg = async (page, shot, run) => {
+  if (!want.includes('dbg')) return;
+  const r = await page.evaluate(() => {
+    play('18-2'); place(143, 7); sim(0.3);
+    const pl = AP.plan([150, 13], { maxT: 7 }); if (!pl) return 'noplan';
+    const g = S(), I = window.BRADY.Input, prog = pl.prog, log = []; let t = 0; prog._jt = null;
+    const b = AP.body(P()), A = g.area, tl = [];
+    for (let k = 0; k < 300; k++) { const inp = AP.input(prog, t, b); window.BRADY_MOON.phys(b, inp, A, 1 / 120, null, {}); if (k % 20 === 0) tl.push([Math.round(b.x), Math.round(b.y), b.moon && b.moon.tank]); t += 1 / 120; }
+    t = 0; prog._jt = null;
+    for (let k = 0; k < 300; k++) { const p = P(); const inp = AP.input(prog, t, p); for (const key of ['left', 'right', 'jump', 'jumpPressed', 'down']) I[key] = !!inp[key]; g.update(1 / 120); I.jumpPressed = false; if (k % 20 === 0) log.push([Math.round(p.x), Math.round(p.y), p.moon && p.moon.tank, inp.jumpPressed]); t += 1 / 120; }
+    return { prog: JSON.stringify(prog.driftPlan || prog), tl, log };
+  });
+  console.log(JSON.stringify(r));
+};
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
     for (const k in LEVELS) await LEVELS[k](page, shot, run, pano);
