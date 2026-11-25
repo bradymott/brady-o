@@ -23,6 +23,12 @@ const TOUR_ROUTE = [
   { id: 'vn', world: 10, name: 'Vietnam', lon: 105.8, lat: 18.0 },
   { id: 'jp', world: 11, name: 'Japan', lon: 138.6, lat: 36.0 },
   { id: 'np', world: 12, name: 'Nepal', sub: 'the Himalayas', lon: 85.3, lat: 27.7, finale: true },
+  // the Encore Tour (worlds 14-18): the second leg, open once Nepal's Grand Finale is won. d0: the land's difficulty
+  { id: 'it', world: 14, name: 'Italy', lon: 12.5, lat: 41.9, encore: true, d0: 0.88 },
+  { id: 'ke', world: 15, name: 'Kenya', lon: 37.9, lat: -1.3, encore: true, d0: 0.9 },
+  { id: 'au', world: 16, name: 'Australia', lon: 134, lat: -25, encore: true, d0: 0.92 },
+  { id: 'is', world: 17, name: 'Iceland', lon: -19, lat: 64.9, encore: true, d0: 0.94, label: 'up' },
+  { id: 'moon', world: 18, name: 'The Moon', sub: 'the last tour date', lon: 150, lat: 62, encore: true, d0: 0.95, pin: 'moon' },
   { id: 'aq', world: 13, name: 'Antarctica', lon: -62, lat: -70, secret: true },
   { id: 'w22', world: 22, name: 'World 22', lon: -128, lat: -24, secret: true }
 ];
@@ -188,7 +194,7 @@ const Tour = {
     const mains = this.mainCountries();
     // the tour ends at Nepal; until Nepal is built, the last built country's castle stands in
     const last = mains[mains.length - 1];
-    return C === last && +id.split('-')[1] === C.mainCount && C.id === 'np';
+    return (C === last || !!last.encore) && +id.split('-')[1] === C.mainCount && C.id === 'np';   // the Encore Tour comes after the finale
   },
   // the next main country on the route that has been built
   nextCountry(C) {
