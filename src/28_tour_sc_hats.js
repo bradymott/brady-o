@@ -233,6 +233,9 @@ TourHats.NOT = new Set([].concat(
   'jpOnigiri jpTamago jpTako jpWasabi jpCapsule jpLuckyCat jpUmbrella jpUmbrellaFly jpTop jpChochin jpPole jpShoot jpLowBar jpTunnel jpPlateLoop jpChopsticks jpSteam jpPitcher jpTarget jpShutter jpClaw jpNightingale jpRevolve jpPond jpStone jpBeltPlates jpBeltSwitcher jpNeonClock jpNeonSign jpPetalDraft jpValleyWind'.split(' '),
   // Lost & Found: suitcases, flaps, belts, brollies, scanners, socks
   'lostCase lostFlap lostBelt lostBrolly lostScanner lostSock'.split(' '),
+  // The Moon (world 18): wind-up stagehands (tin robots), golf balls, geysers, golf rain, air valves, junk, magnet
+  // panels, star pads and bridges, the prop crescent
+  'moonHand moonGolf moonGeyser moonGolfRain moonValve moonJunk moonMagPanel moonStarPad moonStarBridge moonCrescent'.split(' '),
   // Morocco: tagines, teapots, oranges, storms, pots, mirages, gales, lanterns, slabs, lines, portcullises, hooks, chains, grilles, winds
   'maTagine maTeapot maOrange maStorm maPot maMirage maGale maKickPot maShopLantern maMirageSlab maPhaseLine maPortcullis maLidHook maChain maRoofGrille maDownWind'.split(' '),
   // Mexico: peppers, elotes, popcorn, the piñata burro, lava blobs, salsa, melon carts, swingers, cannons, rails, sunbeams, bubbles, the Casa's gates
@@ -303,7 +306,9 @@ Object.assign(TourHats.HEADS, {
   isFox: [0.55, 0.55, -1.0, 0], isPuffin: [0.15, 0.15, -1.6, 0], isRam: [0.5, 0.5, -1.0, 0], isTern: [0.3, 0.3, -0.6, 0],
   lostCrab: [0.12, 0.12, -1.45, 0], lostMoth: [0.1, 0.11, -1.55, 0], lostBeagle: [0.4, 0.4, -1.12, 0],
   // Italy (14): the city pigeon, the alley cat
-  itPigeon: [0.39, 0.4, -1.5, 0], itCat: [0.53, 0.53, -1.25, 0]
+  itPigeon: [0.39, 0.4, -1.5, 0], itCat: [0.53, 0.53, -1.25, 0],
+  // The Moon (world 18): the moon bunny, the dust mite, the luna moth
+  moonBunny: [0.3, 0.3, -1.3, 0], moonMite: [0.2, 0.2, -1.05, 0], moonMoth: [0.02, 0.02, -0.95, 0]
 
 });
 

@@ -28,7 +28,7 @@ const TOUR_ROUTE = [
   { id: 'ke', world: 15, name: 'Kenya', lon: 37.9, lat: -1.3, encore: true, d0: 0.9 },
   { id: 'au', world: 16, name: 'Australia', lon: 134, lat: -25, encore: true, d0: 0.92 },
   { id: 'is', world: 17, name: 'Iceland', lon: -19, lat: 64.9, encore: true, d0: 0.94, label: 'up' },
-  { id: 'moon', world: 18, name: 'The Moon', sub: 'the last tour date', lon: 150, lat: 62, encore: true, d0: 0.95, pin: 'moon' },
+  { id: 'moon', world: 18, name: 'The Moon', sub: 'the last tour date', lon: 163, lat: 48, encore: true, d0: 0.95, pin: 'moon' },
   { id: 'aq', world: 13, name: 'Antarctica', lon: -62, lat: -70, secret: true },
   { id: 'w22', world: 22, name: 'World 22', lon: -128, lat: -24, secret: true }
 ];
