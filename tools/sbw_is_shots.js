@@ -49,7 +49,7 @@ async function session(viewport, fn) {
     window.ents = name => S().entities.filter(e => e.constructor.name === name || e.type === name);
     window.alive = () => { const p = P(); return !p.dead && p.state !== 'dying'; };
     // is there nothing to stand on just ahead of Brady's feet (tiles or a live platform)? (a simple player's eye)
-    window.edgeAhead = (p, d) => { const g = S(), x = p.cx + (d || 1) * 22, fy = p.y + p.h + 4, t = g.area.tiles[Math.floor(fy / 32) * g.area.W + Math.floor(x / 32)]; if ([1, 2, 3, 4, 5, 7, 11, 12, 13, 16, 17, 19, 21, 22].includes(t)) return false; return !g.platforms.some(e => !e.dead && x > e.x && x < e.x + e.w && Math.abs(e.y - fy) < 24); };
+    window.edgeAhead = (p, d) => { const g = S(), x = p.cx + (d || 1) * 22, fy = p.y + p.h + 4, t = g.area.tiles[Math.floor(fy / 32) * g.area.W + Math.floor(x / 32)]; if ([1, 2, 3, 4, 5, 7, 11, 12, 13, 16, 17, 19, 21, 22].includes(t)) return false; return !g.platforms.some(e => !e.dead && x > e.x && x < e.x + e.w && e.y - fy < 24 && e.y - fy > -96); };
     // (in these runs enemies can't hurt Brady (invuln) but pits, lava and crushers still kill him: die() ignores it)
     // a player's run: hold right, jump (and hold it) at every edge; stops at tile column x on the ground
     window.gapAhead = p => { let n = 0; for (let d = 1; d < 12; d++) { const q = { cx: p.cx + d * 32 - 22, y: p.y, h: p.h }; if (!edgeAhead(q)) return n; n++; } return n; };
@@ -58,7 +58,7 @@ async function session(viewport, fn) {
     // a careful player's run: walk, and at each edge jump at the middle of the next thing to stand on, steering in the air
     window.hop = (x, sec) => { let target = null, j0 = -1e9; return runTo(x, sec || 10, (p, k, I) => {
       if (p.onGround) { target = null; I.right = p.vx < 6.4 * 32; I.left = false; if (edgeAhead(p)) { const L = landingAhead(p); if (L) { target = Math.min(L[0] + 40, (L[0] + L[1]) / 2); j0 = k; return true; } } return false; }
-      if (target != null) { I.right = p.cx < target - 6; I.left = p.cx > target + 10; }
+      if (target != null) { const dx = target - p.cx, tLand = Math.max(0.05, (p.vy > 0 ? 0.25 : 0.5)), want = dx / tLand; I.right = p.vx < want - 40; I.left = p.vx > want + 40; }
       return p.vy < 0 && k - j0 < 0.32 * 120; }); };
     window.waitFor = (cond, sec) => { for (let k = 0; k < (sec || 8) * 50; k++) { if (cond()) return true; sim(0.02); if (!alive()) return false; } return cond(); };
     // walk (real inputs) toward tile column x (stops on reaching it; jumps if asked)
@@ -252,6 +252,42 @@ async function session(viewport, fn) {
       await ev(() => { thaw(); toArea('tube', 12, 11); sim(0.3); freeze(); });
       await shot('35-17-3-lava-tube.png');
       await pano('17-3', null, '36-17-3-panorama.png');
+    });
+    // ---------------- 17-4 The Organ Pipes ----------------
+    await run('basalt', async () => {
+      await ev(() => { thaw(); play('17-4'); place(8, 11); sim(0.4); freeze(); });
+      await shot('40-17-4-start.png');
+      const pipeAt = 'window.pipeAt = x => ents(\'IsPipe\').find(e => Math.floor(e.x / 32) === x);';
+      await ev(new Function(pipeAt));
+      // a pipe sinks under Brady and rises again when he steps off; its sides are solid
+      let r = await ev(() => { thaw(); play('17-4'); const pp = pipeAt(14); place(14, 11); sim(1.5); const sunk = Math.round((pp.y - pp.rest) / 32 * 10) / 10; place(11, 11); sim(2.5); const back = Math.round((pp.y - pp.rest) / 32 * 10) / 10; return { sunk, back }; });
+      check('17-4: a column sinks under Brady and rises when he steps off', r.sunk >= 1 && r.back === 0, r);
+      r = await ev(() => { thaw(); play('17-4'); const pp = pipeAt(18); place(16, 14); sim(1.0, { right: true }); return { x: Math.round(P().x + P().w), wall: Math.round(pp.x) }; });
+      check('17-4: a column\'s side is solid (walking into it stops Brady)', r.x <= r.wall + 1, r);
+      await ev(() => { thaw(); play('17-4'); place(14, 11); sim(1.2); freeze(); });
+      await shot('41-17-4-pipe-sinks.png');
+      r = await ev(() => { thaw(); play('17-4'); place(42, 11); let died = false; for (let k = 0; k < 120; k++) { sim(0.05); if (!alive()) { died = true; break; } } return { died }; });
+      check('17-4: standing still on a lake column takes Brady under (the lava)', r.died, r);
+      r = await ev(() => { thaw(); play('17-4'); const pp = pipeAt(27); place(28, 11); sim(2.2); return { up: Math.round((pp.rest - pp.y) / 32 * 10) / 10 }; });
+      check('17-4: a blue lift column rises under Brady', r.up >= 3.5, r);
+      // real inputs: the lake, then the fast pipes, then the last stretch (a careful player's run: hop at each edge)
+      r = await ev(() => { thaw(); play('17-4'); place(34, 11); sim(0.2); const ok = hop(65, 12); return { ok, x: tx(), alive: alive() }; });
+      check('17-4: real inputs: across the lava lake on sinking pipes', r.ok && r.alive, r);
+      r = await ev(() => { thaw(); play('17-4'); place(86, 11); sim(0.05); place(84, 11); sim(0.2); return 0; });
+      r = await ev(() => { thaw(); play('17-4'); place(119, 11); sim(0.2); const ok = hop(151, 12); return { ok, x: tx(), alive: alive() }; });
+      check('17-4: real inputs: the twist: fast pipes and lifts', r.ok && r.alive, r);
+      r = await ev(() => { thaw(); play('17-4'); place(156, 11); sim(0.2); const ok = hop(185, 12); return { ok, x: tx(), alive: alive() }; });
+      check('17-4: real inputs: the last stretch of the fastest pipes', r.ok && r.alive, r);
+      // the lift up to the steaming crack, and in
+      r = await ev(() => { thaw(); play('17-4'); const pp = pipeAt(79); place(79, 11); waitFor(() => pp.rest - pp.y > 4.8 * 32, 4); sim(0.05, { right: true, jump: true, jumpPressed: true }); sim(0.5, { right: true, jump: true }); sim(0.4, { right: true }); const top = ty(); place(85, 4); sim(0.4); sim(0.4, { up: true, upPressed: true }); sim(1.5); return { top, area: S().area.aid }; });
+      check('17-4: real inputs: ride the lift and jump to the crater shelf; the crack leads to the vent', r.top === 4 && r.area === 'vent', r);
+      await ev(() => { sim(0.3); place(12, 11); sim(0.3); freeze(); });
+      await shot('42-17-4-vent.png');
+      await ev(() => { thaw(); play('17-4'); place(46, 11); sim(0.6); freeze(); });
+      await shot('43-17-4-lava-lake.png');
+      await ev(() => { thaw(); play('17-4'); place(130, 11); sim(0.4); freeze(); });
+      await shot('44-17-4-twist.png');
+      await pano('17-4', null, '45-17-4-panorama.png');
     });
   });
   // portrait

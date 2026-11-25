@@ -498,7 +498,7 @@ const pieces = {
   pipe(st, o) {
     const B = st.B, y = st.gy - 1, w = o.w || 2;
     B.spawn('isPipe', st.x, y, Object.assign({}, o, { w }));
-    for (let k = 0; k < w; k++) { B.ghosts.push([st.x + k, y]); if (o.kind === 'lift') B.ghosts.push([st.x + k, y - (o.lo || 3)]); }
+    for (let k = 0; k < w; k++) { B.ghosts.push([st.x + k, y]); if (o.kind === 'lift') { const up = y - (o.lo || 3); B.ghosts.push([st.x + k, up]); B.edge([st.x + k, y - 1], [st.x + k, up - 1]); } }
     return st.x;
   },
   ember(st, o) { st.B.spawn('isEmber', st.x, st.gy - 1, o); return st.x; },

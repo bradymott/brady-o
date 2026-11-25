@@ -241,11 +241,78 @@ const L3 = { n: 3, name: 'The Rift', mapLabel: 'The Rift', arch: 'quake', theme:
     { id: 'rift', gen: 'room', theme: 'is_rift', stamp: 'isRift', bottomKill: true },
     { id: 'tube', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isLavaTube' }
   ] };
+/* ---------------- 17-4 The Organ Pipes ----------------
+   Inside the volcano: a lava lake on rows 15-17 (L), scoria ledges on row 12, and the organ pipes: hexagonal basalt
+   columns whose tops rest on row 12 (p, P, q, Q) and sink under Brady like organ keys, each at its own speed and on its
+   own note, rising again when he steps off; the slow ones stop short of the lava, the others go under. Lift columns
+   (u, U) rise under him instead. Lava blobs (e) bubble, then leap over the gaps. Teach over a scoria floor (a fall is a
+   walk back), test over the lake, twist with fast pipes and lifts between leaping lava. */
+const pipes = (() => {
+  const G = mk(196, 18);
+  const ledge = (x0, x1, top) => G.fill(x0, top == null ? 12 : top, x1, 17, '#');
+  G.fill(0, 15, 195, 17, 'L');
+  ledge(0, 12); G.fill(13, 15, 30, 17, '#'); ledge(31, 36); ledge(64, 72); ledge(112, 120); ledge(150, 158); ledge(184, 195);
+  G.put(2, 11, '@'); G.put(6, 11, 'k'); G.put(9, 8, '?'); G.put(4, 11, 'x');
+  // teach: three slow pipes over the scoria floor, then a lift to a coin shelf
+  G.put(14, 12, 'p'); G.put(18, 12, 'p'); G.put(22, 12, 'q'); G.put(26, 9, 'K'); G.coins(14, 24, 9);
+  G.put(27, 12, 'u'); G.fill(26, 7, 30, 7, '-'); G.put(28, 5, '*');
+  // test 1: the lake: pipes that go under, a blob between
+  G.put(38, 12, 'q'); G.put(42, 12, 'P'); G.put(41, 14, 'e'); G.put(46, 12, 'q'); G.put(50, 12, 'P'); G.put(49, 14, 'e'); G.put(54, 12, 'q'); G.put(58, 12, 'p'); G.put(61, 14, 'e');
+  G.coins(39, 59, 9);
+  G.put(66, 8, '?'); G.put(70, 11, 'c'); G.put(68, 11, 'm');
+  // test 2: a lift between two leaps up to a high ledge (the vent: the secret), then down over fast pipes
+  G.put(74, 12, 'z'); G.put(77, 14, 'e'); G.put(79, 12, 'U'); G.fill(81, 5, 87, 7, '#'); G.put(85, 4, 'D'); G.put(83, 4, 'V');
+  G.put(83, 12, 'z'); G.put(87, 12, 'P'); G.put(86, 14, 'e'); G.put(91, 12, 'z'); G.put(95, 12, 'z'); G.put(94, 14, 'e'); G.put(99, 12, 'P'); G.put(103, 12, 'z'); G.put(107, 12, 'P'); G.put(106, 14, 'e');
+  G.coins(88, 108, 9);
+  G.put(114, 11, 'm'); G.put(117, 11, 'c'); G.put(119, 8, '?'); G.put(116, 11, 'A');
+  // the twist: fast pipes, lifts and leaping lava in one breath; P3 (risky) low over the lake
+  G.put(122, 12, 'z'); G.put(125, 14, 'e'); G.put(126, 12, 'U'); G.put(130, 12, 'z'); G.put(134, 12, 'z'); G.put(133, 14, 'e'); G.put(138, 12, 'U'); G.put(142, 12, 'z'); G.put(141, 14, 'e'); G.put(146, 12, 'P');
+  G.put(136, 11, 'R'); G.coins(123, 147, 9);
+  // checkpoint 2 before the last stretch
+  G.put(153, 11, 'c'); G.put(156, 11, 'x');
+  // the last stretch: the fastest pipes, the blobs on a quicker beat
+  G.put(160, 12, 'z'); G.put(163, 14, 'f'); G.put(164, 12, 'z'); G.put(168, 12, 'U'); G.put(167, 14, 'f'); G.put(172, 12, 'z'); G.put(176, 12, 'z'); G.put(175, 14, 'f'); G.put(180, 12, 'P'); G.put(179, 14, 'f');
+  G.coins(161, 181, 9);
+  G.put(188, 11, 'G'); G.put(193, 11, 'x');
+  return G.rows();
+})();
+const PIPEL = {
+  x: ['decor', 'isRock'], V: ['decor', 'isVentDecor'], A: ['anchor', 'ventBack'],
+  k: ['spawn', 'sign', { text: 'THE ORGAN PIPES! BASALT COLUMNS SINK UNDER YOUR WEIGHT, EACH AT ITS OWN SPEED. KEEP HOPPING BEFORE YOURS GOES UNDER' }],
+  K: ['spawn', 'sign', { text: 'A BLUE COLUMN WITH AN ARROW RISES WHEN YOU STAND ON IT' }],
+  p: ['piece', 'pipe', { w: 2, lo: 2, speed: 0.9, rise: 2 }],
+  q: ['piece', 'pipe', { w: 2, lo: 4, speed: 1.3, rise: 2.4 }],
+  P: ['piece', 'pipe', { w: 2, lo: 4, speed: 1.0, rise: 2.2 }],
+  z: ['piece', 'pipe', { w: 2, lo: 4, speed: 2.0, rise: 3 }],
+  u: ['piece', 'pipe', { w: 2, lo: 4, kind: 'lift', speed: 2.2, rise: 2.2 }],
+  U: ['piece', 'pipe', { w: 2, lo: 5, kind: 'lift', speed: 2.6, rise: 2.4 }],
+  e: ['piece', 'ember', { jump: 14, every: 2.4 }], f: ['piece', 'ember', { jump: 14, every: 1.7 }],
+  m: ['enemy', 'isRam']
+};
+stamps.isPipes = { floor: 12, rows: pipes, legend: PIPEL, items: ['power', 'power', 'power', 'power'], gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'vent@in', look: 'isTube' }] };
+// the vent behind the steaming crack: a warm chamber of hot pots, a hidden 1UP, P2, the way back down
+stamps.isVent = (() => {
+  const G = mk(30, 14);
+  G.fill(0, 0, 29, 1, '#').fill(0, 12, 29, 13, '#').fill(0, 0, 0, 11, '#').fill(29, 0, 29, 11, '#');
+  G.put(2, 11, '@'); G.put(4, 11, 'D'); G.fill(8, 8, 12, 8, '-'); G.fill(15, 6, 19, 6, '-'); G.fill(21, 4, 25, 4, '-'); G.put(23, 2, '*'); G.coins(9, 11, 7); G.coins(16, 18, 5); G.put(14, 3, 'h');
+  G.put(10, 11, 'V'); G.put(18, 11, 'V'); G.put(25, 11, 'V');
+  return { floor: 12, rows: G.rows(), gold: { '*': 'hidden' }, hidden: ['oneup'], doors: [{ to: 'crater@ventBack', look: 'isTube' }], legend: { V: ['decor', 'isHotPot'] } };
+})();
+const L4 = { n: 4, name: 'The Organ Pipes', mapLabel: 'Organ Pipes', arch: 'basalt', theme: 'is_volcano',
+  gimmick: 'Inside the volcano, over a lava lake: hexagonal basalt columns sink under your weight like organ keys, each at its own speed. Lift columns rise. Lava leaps',
+  hint: 'Never stand still on a column: hop on before it goes under. Blue columns lift you. A crack steams high on the crater wall...',
+  postcard: 'Every column plays a different note. I played a song! It was mostly the same note. ♥ C',
+  enemies: [['isRam', 2]],
+  mapCell: [2, 2], mapFrom: 2,
+  areas: [
+    { id: 'crater', gen: 'room', theme: 'is_volcano', stamp: 'isPipes', bottomKill: true },
+    { id: 'vent', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isVent' }
+  ] };
 /* ---------------- placeholders for the levels still to come (replaced below as each is built) ---------------- */
 const stub = (n, name, arch, theme, extra) => Object.assign({ n, name, arch, theme, gimmick: name, hint: name, postcard: name + ' ♥ C', enemies: [['isFox', 1]],
   mapCell: [n % 3, 1], mapFrom: n - 2, areas: [{ id: 'a', gen: 'room', theme, stamp: 'isStub' }] }, extra || {});
 stamps.isStub = (() => { const G = mk(29, 12); G.fill(0, 0, 28, 0, '#').fill(0, 10, 28, 11, '#').fill(0, 0, 0, 9, '#').fill(28, 0, 28, 9, '#'); G.put(2, 9, '@..?..*....?..o.o..R...P..G'); return { floor: 10, rows: G.rows(), items: ['power', 'power'], gold: { '*': 'must', R: 'risky', P: 'high' } }; })();
-const levels = [L1, L2, L3, stub(4, 'The Organ Pipes', 'basalt', 'is_volcano'),
+const levels = [L1, L2, L3, L4,
   stub(5, 'The Night Troll', 'lair', 'is_dawn'), stub(6, 'The Hidden Folk', 'shy', 'is_folk', { secret: true, mapFrom: 0, exits: { main: { to: 'node:17-2' } } })];
 
 Tour.amend('is', { stamps, levels });
