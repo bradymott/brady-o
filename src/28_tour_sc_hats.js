@@ -214,6 +214,9 @@ TourHats.NOT = new Set([].concat(
   'esTomato esOrange esHorchata esPetardo esOlive esTruck esCrackers esTomatoProp esCrate esRocket esWindmill esWindBoard esCorkPlug esSailBrake'.split(' '),
   // The Red-Eye: meal trays, carry-ons, bin drops, the lurching clock, sliders, exhaust, tells
   'eyeTray eyeBag eyeBinDrop eyeLurch eyeSlider eyeExhaust eyeSlideTell'.split(' '),
+  // Italy (14): meatballs, moka pots, tomatoes, sour notes (food and objects), the tenor's graters, ramps, crates, oil,
+  // dough, ovens, the tilt clock, sliders, racks, barrels, bells' songs, the blackbird diva (in her tiara), cups, washing lines
+  'itMeatball itMoka itTomato itNote itGrater itRamp itCrates itOil itDough itOven itTilt itSlider itRack itBarrel itDiva itSong itCup itLine'.split(' '),
   // Festival Fields: wheelie bins, balloon dogs (balloons), beds
   'festBin festBalloon festBed'.split(' '),
   // France: bread, pastries, pans, keychains, accordions, macarons, chandeliers, lamp posts, mirrors, ovens, decoys, parcels, hatches, the dovecote
@@ -282,7 +285,9 @@ Object.assign(TourHats.HEADS, {
   w22Moth: [0.25, 0.25, -0.85, 0],
   eyeGoose: [0.41, 0.42, -1.84, 0], eyeGoon: [0.37, 0.39, -1.1, 0],
   festDuck: [0.43, 0.44, -1.6, 0],
-  lostCrab: [0.12, 0.12, -1.45, 0], lostMoth: [0.1, 0.11, -1.55, 0], lostBeagle: [0.4, 0.4, -1.12, 0]
+  lostCrab: [0.12, 0.12, -1.45, 0], lostMoth: [0.1, 0.11, -1.55, 0], lostBeagle: [0.4, 0.4, -1.12, 0],
+  // Italy (14): the city pigeon, the alley cat
+  itPigeon: [0.39, 0.4, -1.5, 0], itCat: [0.53, 0.53, -1.25, 0]
 
 });
 
