@@ -209,6 +209,7 @@ const themes = {
     fog: '#ffc890', decor: ['keGrass', 'keReeds', 'keGrass']
   }),
   ke_stage: savanna({
+    semi: { style: 'lily', c1: '#6aa83a', c2: '#3a6a24', paint(ctx, part, x0, x1) { ctx.fillStyle = '#3a6a24'; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, 6, (x1 - x0) / 2 + 1, 6, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#7ab83a'; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, 4, (x1 - x0) / 2, 5, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke(); ctx.strokeStyle = '#4a7a2a'; ctx.beginPath(); ctx.moveTo((x0 + x1) / 2, 4); ctx.lineTo(x1 - 3, 2); ctx.stroke(); if (part === 'R' || part === 'S') { ctx.fillStyle = '#ffb8d8'; ctx.beginPath(); ctx.arc(x1 - 8, 2, 3, 0, TAU); ctx.fill(); ctx.stroke(); } } },
     name: 'Big Kiboko\'s Pool', music: 'tour_ke_boss', particles: 'none', rays: '#ffd8a0',
     sky: sky.dusk, horizonGlow: '#ffb070', celestial: sun(0.82, 0.3, 40), stars: 0,
     layers: [{ kind: 'keMountain', color: '#6a6aa8', base: 236, h: 160, f: 0.02 }, { kind: 'keFarPlain', color: '#b8784a', base: 246, f: 0.07 }],
@@ -348,6 +349,13 @@ decor.keMoundCrack = function (ctx, x, y, t) {
       if (near) { ctx.fillStyle = '#2a1408'; ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x - 7, y - 30); ctx.lineTo(x - 1, y - 48); ctx.lineTo(x + 6, y - 30); ctx.lineTo(x + 5, y); ctx.closePath(); ctx.fill(); }
       else { ctx.beginPath(); ctx.moveTo(x - 1, y - 2); ctx.lineTo(x - 5, y - 22); ctx.lineTo(x + 2, y - 36); ctx.lineTo(x - 3, y - 50); ctx.stroke(); }
       const ph = (t * 0.7) % 1; if (ph < 0.5) { ctx.fillStyle = `rgba(240,210,170,${0.7 * (1 - ph * 2)})`; ctx.beginPath(); ctx.arc(x + 6 + ph * 22, y - 40 - ph * 12, 4 + ph * 8, 0, TAU); ctx.fill(); }
+      ctx.restore(); return;
+    }
+    if (look === 'keReedCurtain') {
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; const sw = near ? 7 : Math.sin(t * 2) * 2;
+      ctx.fillStyle = '#7a5a2a'; ctx.fillRect(x - 30, y - 78, 60, 6); ctx.strokeRect(x - 30, y - 78, 60, 6);
+      for (const s of [-1, 1]) { ctx.fillStyle = '#9aaa4a'; ctx.beginPath(); ctx.moveTo(x + s * 28, y - 72); ctx.lineTo(x + s * 3, y - 72); ctx.quadraticCurveTo(x + s * (6 + sw), y - 36, x + s * (8 + sw), y); ctx.lineTo(x + s * 28, y); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#6a7a2a'; for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(x + s * (3 + k * 6), y - 70); ctx.lineTo(x + s * (6 + k * 6 + sw * 0.5), y - 2); ctx.stroke(); } ctx.strokeStyle = INK; }
+      ctx.fillStyle = '#ff9ac8'; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.fillText('TONIGHT!', x, y - 84);
       ctx.restore(); return;
     }
     return dr0.call(this, ctx, x, y, look, t, near);
@@ -1285,6 +1293,23 @@ const pieces = {
   cloud(st, o) { st.B.spawn('keCloud', st.x + (o.dx || 0), st.gy, { w: o.w || 6, ax: o.ax || 14, speed: o.speed || 0.06, sky: o.sky || 3, phase: o.phase || 0 }); return st.x; },
   elephant(st, o) { st.B.spawn('keElephant', st.x + (o.dx || 0), st.gy, { ax: o.ax || 30, speed: o.speed || 2.6 }); return st.x; },
   puddle(st, o) { const x = st.x, w = o.w || 3; st.floor(x, x + w + 1); st.B.spawn('kePuddle', x + 1, st.gy, { w }); return x + w + 2; },
+
+  /* ---- 15-5 the lead-in: hippos' backs across the waterhole's channel ---- */
+  hippos(st, o) {
+    const B = st.B, w = o.w || 14, x = st.x; st.floor(x, x + 1);
+    const a = x + 2, b = a + w - 1; st.pit(a, b); B.spawn('keRiver', a, st.gy, { w });
+    const n = o.n || 1, span = Math.floor(w / n);
+    for (let k = 0; k < n; k++) {
+      const hx = a + k * span, ax = Math.max(2, span - 4);
+      B.spawn('mplat', hx + 1, st.gy - 1, { pw: 3, ax: ax * TS, ay: 0, speed: o.speed || 1.2, skin: 'keHippoBack', phase: k * 1.7 });
+      for (let q = 0; q <= ax + 2; q++) B.ghosts.push([hx + 1 + q, st.gy]);
+    }
+    if (o.crocs) B.spawn('keCroc', a + Math.floor(w / 2), st.gy, { span: 2 });
+    if (o.gold) st.gold(a + Math.floor(w / 2), st.gy - (o.goldDy || 5), o.gold);
+    else st.coins(a + 2, b - 2, st.gy - 3);
+    st.floor(b + 1, b + 3);
+    return b + 4;
+  },
 
   /* ---- 15-6 the warren ---- */
   sentry(st, o) { const x = st.x; st.floor(x, x + 3); st.decor('keBurrowMound', x + 1, st.gy, 0); st.B.spawn('keSentry', x + 1, st.gy - 1, { surf: st.gy }); return x + 4; }

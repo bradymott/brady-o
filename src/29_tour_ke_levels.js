@@ -293,7 +293,57 @@ const L4 = { n: 4, name: 'High Noon', mapLabel: 'High Noon', arch: 'shade', them
     { id: 'cool', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keSpring' }
   ] };
 
-Tour.amend('ke', { stamps, levels: [L1, L2, L3, L4] });
+/* ---------------- 15-5 Big Kiboko (the boss) ---------------- */
+// the evening walk down to the waterhole: hippos' backs across the channels, a croc, then the reed curtain
+stamps.keHollow = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#............................#',
+    '#...............o.o.o........#',
+    '#..............-------.......#',
+    '#............................#',
+    '#.........-----..............#',
+    '#............................#',
+    '#....-----............h......#',
+    '#............................#',
+    '#............................#',
+    '#.@...D......t..........t....#',
+    '##############################',
+    '##############################'],
+  hidden: ['oneup'],
+  doors: [{ to: 'shore@hollowBack', look: 'keMoundDoor' }],
+  legend: { t: ['decor', 'kePebbles'] }
+};
+const L5 = { n: 5, name: 'Big Kiboko', mapLabel: 'Waterhole', arch: 'lair', theme: 'ke_hole', boss: 'ke_kiboko',
+  gimmick: 'The act nobody cancelled: Big Kiboko, the hippo who does water ballet, in the waterhole at sunset',
+  hint: 'When she leaps out of the pool, her shadow shows where she lands. After the landing she takes a bow: stomp her head!',
+  postcard: 'The snow cap is back on the mountain! Big Kiboko signed my programme. With her foot. It\'s very big. ♥ C',
+  enemies: [['keWarthog', 1], ['keVulture', 1]],
+  mapCell: [1, 2], mapFrom: 3,
+  exits: { main: { to: 'country:next' } },
+  areas: [
+    { id: 'shore', gen: 'strip', W: 110, H: 18, GY: 14,
+      script: [
+        ['box', { item: 'power' }],
+        ['tip', { text: 'THE WATERHOLE AT SUNSET. BIG KIBOKO\'S SHOW IS ON TONIGHT. THE HIPPOS WILL LET YOU CROSS ON THEIR BACKS' }],
+        ['plain', { n: 6 }],
+        ['hippos', { w: 12, n: 1, gold: 'must', goldDy: 4 }],
+        ['enemies', { kind: 'keWarthog', n: 1, len: 10 }],
+        ['hippos', { w: 18, n: 2, crocs: true }],
+        ['box', { item: 'power' }],
+        ['moundDoor', { to: 'hollow@in', back: 'hollowBack' }],
+        ['acacia', { h: 4, w: 6, gold: 'high' }],
+        ['hippos', { w: 14, n: 1, gold: 'risky', goldDy: 6 }],
+        ['plain', { n: 4 }],
+        ['door', { to: 'arena@in', perch: 0, look: 'keReedCurtain' }]
+      ] },
+    { id: 'hollow', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keHollow' },
+    { id: 'arena', gen: 'arena', role: 'arena', layout: 'pool', arenaW: 32, H: 18, roof: false, theme: 'ke_stage' }
+  ] };
+
+Tour.amend('ke', { stamps, levels: [L1, L2, L3, L4, L5] });
 
 /* ---------------- the land's map: the savannah under a big sky ---------------- */
 // the route: the airstrip by the great mountain, down the migration river, through the acacia grove (a meerkat
