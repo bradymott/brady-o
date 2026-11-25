@@ -599,7 +599,13 @@ class KeGap extends Ent {
 class KeShaft extends Ent {
   constructor(g, s) { super(g, s, (s.w || 4) * TS, (s.h || 5) * TS); this.x = s.x - TS / 2; this.y = s.y + TS - this.h; this.friendly = true; this.back = true; }
   update(dt) { this.t += dt; }
-  draw(ctx) { ctx.save(); ctx.fillStyle = '#4a1e0e'; ctx.fillRect(this.x, this.y, this.w, this.h); ctx.restore(); }
+  draw(ctx) {
+    const x = this.x, y = this.y;
+    ctx.save(); ctx.fillStyle = '#4a1e0e'; ctx.fillRect(x, y, 2 * TS, 6 * TS); ctx.fillRect(x + 2 * TS, y + TS, 2 * TS, 5 * TS);
+    // the root ledges (the one-way tiles under the hole and beside it), drawn again over the dark
+    for (const [lx, ly] of [[0, 3], [2, 5]]) { ctx.save(); ctx.translate(x + lx * TS, y + ly * TS); rootSemi.paint(ctx, 'S', 2, 2 * TS - 2); ctx.restore(); }
+    ctx.restore();
+  }
 }
 
 /* ---------------- the crocodiles (15-1's rivers) ---------------- */
