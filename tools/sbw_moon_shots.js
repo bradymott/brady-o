@@ -433,7 +433,7 @@ LEVELS.walk = async (page, shot, run, pano) => {
     const legC = await page.evaluate(() => AP.route([[84, 19], [92, 15], [94, 15], [101, 10], [103, 10], [110, 5], [108, 5], [124, 15], [129, 15], [143, 8], [146, 8], [150, 13], [158, 13], [166, 13]], { maxT: 7 }));
     check('18-2: played: the climb under the antenna spikes, the air vent, the gantry', legC.ok, legC);
     await page.evaluate(() => { sim(0.1); freeze(); }); await shot('22-18-2-gantry.png'); await page.evaluate(() => thaw());
-    const legD = await page.evaluate(() => { const r = AP.route([[208, 16]], { maxT: 7 }); if (!r.ok) return r; const r2 = AP.route([[214, 16]]); sim(1.5, { right: true }); return { ok: r2.ok, state: S().state }; });
+    const legD = await page.evaluate(() => { let r; for (let a = 0; a < 3; a++) { if (a) { play('18-2'); place(166, 12); sim(0.4); } r = AP.route([[208, 16]], { maxT: 7 }); if (r.ok) break; } if (!r.ok) return r; const r2 = AP.route([[214, 16]]); sim(1.5, { right: true }); return { ok: r2.ok, state: S().state }; });   // (the junk drifts on a clock: a try that meets it is tried again from the gantry, as a player would)
     check('18-2: played: the long void with the valve chain to the far airlock and the gate', legD.ok && legD.state !== 'play', legD);
     // mid-flight with the gauge and the tether
     await page.evaluate(() => { play('18-2'); place(165, 12); sim(0.2); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); sim(0.7, { right: true }); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); sim(0.3, { right: true }); freeze(); });
