@@ -158,6 +158,63 @@ async function session(browser, viewport, fn) {
       await page.evaluate(() => { thaw(); toArea('plain'); });
       await pano('19-15-1-panorama.jpg');
     });
+    /* ---------- 15-2 Giraffe Grove ---------- */
+    await run('necks', async () => {
+      await page.evaluate(() => { fresh(); play('15-2'); place(14, 13); sim(0.3); freeze(); });
+      await shot('20-15-2-start.png');
+      // without the leaves a giraffe ignores him: standing on its head and holding UP does nothing
+      const r0 = await page.evaluate(() => {
+        thaw(); const g = S(), p = P(); const gi = ents('KeGiraffe').sort((a, b) => a.x - b.x)[0];
+        place(Math.floor(gi.x / 32) - 2, 13); sim(0.2); sim(0.2, { right: true, jump: true, jumpPressed: true }); until(() => p.ride === gi, 1, { right: true }); const y0 = gi.y; sim(1.0, { up: true });
+        return { rode: p.ride === gi, moved: Math.round(y0 - gi.y), leaf: !!g.keLeaf };
+      });
+      check('15-2: without the leaves a giraffe ignores Brady (its head stays put)', !r0.leaf && Math.abs(r0.moved) < 2, r0);
+      // take the leaves from the sapling: walk into it
+      const r1 = await page.evaluate(() => {
+        const g = S(), p = P(); const b = ents('KeLeafBush').sort((a, b) => a.x - b.x)[0];
+        place(Math.floor(b.x / 32) - 3, 13); const got = until(() => !!g.keLeaf, 3, { right: true });
+        return { got };
+      });
+      check('15-2: walking through an acacia sapling takes a bunch of leaves', r1.got, r1);
+      // the lift: hop on the head, hold UP: the head rises to the cliff top; walk off onto the cliff
+      const r2 = await page.evaluate(() => {
+        const g = S(), p = P(); const gi = ents('KeGiraffe').sort((a, b) => a.x - b.x)[0];
+        const cliffX = Math.floor(gi.x / 32) + 4;
+        place(Math.floor(gi.x / 32) - 2, 13);
+        until(() => gi.pos < 4, 4);   // it bends down to him
+        sim(0.1); sim(0.25, { right: true, jump: true, jumpPressed: true });
+        const rode = until(() => p.ride === gi, 1.2, { right: true });
+        if (!rode) return { rode };
+        const y0 = p.y; const up = until(() => gi.pos >= gi.len - 1, 6, { up: true });
+        const rise = Math.round((y0 - p.y) / 32 * 10) / 10;
+        until(() => p.x > (cliffX + 2) * 32 && p.onGround && p.ride !== gi, 2.5, { right: true });
+        return { rode, up, rise, onCliff: p.onGround && p.ride !== gi && (p.y + p.h) / 32 < 9, row: (p.y + p.h) / 32, alive: alive() };
+      });
+      check('15-2: holding UP on the giraffe\'s head lifts Brady up the cliff (6 rows), and he walks off on top', r2.rode && r2.up && r2.rise >= 5.5 && r2.onCliff && r2.alive, r2);
+      // mid-lift shot
+      await page.evaluate(() => { const p = P(), gi = ents('KeGiraffe').sort((a, b) => a.x - b.x)[0]; place(Math.floor(gi.x / 32) - 2, 13); until(() => gi.pos < 4, 4); sim(0.1); sim(0.25, { right: true, jump: true, jumpPressed: true }); until(() => p.ride === gi, 1.2, { right: true }); sim(0.9, { up: true }); freeze(); });
+      await shot('21-15-2-giraffe-lift.png');
+      // the bridge: the head goes out across the gap and down to the far side
+      const r3 = await page.evaluate(() => {
+        thaw(); const g = S(), p = P(); const L = ents('KeGiraffe').sort((a, b) => a.x - b.x); const gi = L[2];
+        const a = gi.path[0], b = gi.path[gi.path.length - 1];
+        place(Math.floor(a[0] / 32) - 3, 13); sim(0.2);
+        until(() => gi.pos < 4, 4);
+        sim(0.1); sim(0.25, { right: true, jump: true, jumpPressed: true });
+        const rode = until(() => p.ride === gi, 1.2, { right: true });
+        if (!rode) return { rode };
+        const crossed = until(() => gi.pos >= gi.len - 1, 8, { up: true });
+        sim(0.6, { right: true });
+        return { rode, crossed, farSide: p.cx > b[0] - 16 && p.onGround && alive(), x: Math.round(p.cx / 32), bx: Math.round(b[0] / 32) };
+      });
+      check('15-2: a giraffe\'s neck is a bridge: hold UP and it carries Brady over the gap to the far side', r3.rode && r3.crossed && r3.farSide, r3);
+      await page.evaluate(() => { const p = P(), gi = ents('KeGiraffe').sort((a, b) => a.x - b.x)[2], a = gi.path[0]; place(Math.floor(a[0] / 32) - 3, 13); until(() => gi.pos < 4, 9); sim(0.1); sim(0.25, { right: true, jump: true, jumpPressed: true }); until(() => p.ride === gi, 1.2, { right: true }); until(() => gi.pos > gi.len * 0.5, 4, { up: true }); freeze(); });
+      await shot('22-15-2-giraffe-bridge.png');
+      await page.evaluate(() => { thaw(); toArea('manor'); place(8, 11); sim(0.4); freeze(); });
+      await shot('23-15-2-meerkat-burrow.png');
+      await page.evaluate(() => { thaw(); toArea('grove'); });
+      await pano('29-15-2-panorama.jpg');
+    });
   });
   await session(browser, { width: 390, height: 844 }, async (page, shot, run) => {
     await run('p-herd', async () => { await page.evaluate(() => { fresh(); play('15-1'); place(40, 13); sim(1.5); freeze(); }); await shot('50-portrait-15-1.png'); });

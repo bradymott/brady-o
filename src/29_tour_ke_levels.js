@@ -87,7 +87,72 @@ const L1 = { n: 1, name: 'The Great Migration', mapLabel: 'Migration', arch: 'st
     { id: 'den', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keDen' }
   ] };
 
-Tour.amend('ke', { stamps, levels: [L1] });
+/* ---------------- 15-2 Giraffe Grove ---------------- */
+// the meerkats' burrow under the kopje ledge: the way to Meerkat Manor (the hidden exit), a hidden postcard
+stamps.keManorDoor = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#.....*......................#',
+    '#....----....................#',
+    '#............o.o.o...........#',
+    '#..........-------...........#',
+    '#.h..........................#',
+    '#.................-----......#',
+    '#............................#',
+    '#.......k..............-----.#',
+    '#............................#',
+    '#.@...D...t.......t.......g..#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'grove@manorBack', look: 'keBurrow' }],
+  legend: { t: ['decor', 'kePebbles'], k: ['decor', 'keRoots'] }
+};
+const L2 = { n: 2, name: 'Giraffe Grove', mapLabel: 'Giraffes', arch: 'necks', theme: 'ke_grove',
+  gimmick: 'Giraffes follow a bunch of acacia leaves: ride a giraffe\'s head and hold UP or DOWN to steer it, up the cliffs and out across the gaps',
+  hint: 'Take the leaves from a sapling. On a giraffe\'s head, hold UP to go up and across, DOWN to come back',
+  postcard: 'The giraffes here eat out of your hand, Brady. And off your hat. And your hair. ♥ C',
+  enemies: [['keBeetle', 1], ['keWarthog', 1], ['keWeaver', 2], ['keVulture', 1]],
+  mapCell: [1, 0], mapFrom: 0,
+  exits: { main: { to: '15-3' }, secret: { to: '15-6', hint: 'Meerkats chatter from a burrow on a high rock that only a giraffe can reach...' } },
+  areas: [
+    { id: 'grove', gen: 'strip', W: 230, H: 18, GY: 14,
+      script: [
+        ['box', { item: 'power' }],
+        ['tip', { text: 'GIRAFFE GROVE! TAKE SOME ACACIA LEAVES. ON A GIRAFFE\'S HEAD, HOLD UP AND IT STRETCHES FOR THEM' }],
+        ['leaves', {}],
+        ['plain', { n: 4 }],
+        // ① a living lift up the cliff
+        ['giraffe', { n: 9, at: 3, path: [[3, 0], [3, -6]], rise: 6, gold: [3, -9, 'must'] }],
+        ['plain', { n: 5 }],
+        ['enemies', { kind: 'keBeetle', n: 1, len: 8 }],
+        // the high kopje: a second giraffe reaches it; the meerkats' burrow (the hidden exit) is up there
+        ['giraffe', { n: 7, at: 2, path: [[3, 0], [3, -4]] }],
+        ['ledge', { h: 5, w: 6, n: 8, burrow: { to: 'manor@in', back: 'manorBack' } }],
+        ['plain', { n: 4 }],
+        ['step', { h: -6 }],
+        'cp',
+        ['leaves', {}],
+        // ② living bridges over the gaps; weaver birds drop twigs on the rider
+        ['giraffe', { n: 20, at: 2, pit: [5, 15], path: [[2, 0], [4, -4], [13, -4], [15, 0]], fly: 'keWeaver', flyDx: 8, flyDy: 9, coins: [[5, 11, -7]] }],
+        ['enemies', { kind: 'keWarthog', n: 1, len: 12 }],
+        ['box', { item: 'power' }],
+        ['giraffe', { n: 22, at: 2, pit: [5, 18], path: [[2, 0], [2, -5], [9, -7], [18, -3], [18, 0]], fly: 'keWeaver', flyDx: 12, flyDy: 10, gold: [9, -10, 'risky'] }],
+        'cp',
+        ['leaves', {}],
+        // ③ the hand-over: one giraffe's reach ends over the gap; the next one bends its head to meet it
+        ['giraffe', { n: 12, at: 2, pit: [5, 11], path: [[2, 0], [2, -4], [10, -4]], fly: 'keVulture', flyDx: 9, flyDy: 9 }],
+        ['giraffe', { n: 14, at: 7, pit: [0, 4], path: [[-4, -4], [2, -6], [6, 0]] }],
+        ['plain', { n: 4 }],
+        ['enemies', { kind: 'keWarthog', n: 1, len: 10 }],
+        ['end', { exit: 'main' }]
+      ] },
+    { id: 'manor', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keManorDoor' }
+  ] };
+
+Tour.amend('ke', { stamps, levels: [L1, L2] });
 
 /* ---------------- the land's map: the savannah under a big sky ---------------- */
 // the route: the airstrip by the great mountain, down the migration river, through the acacia grove (a meerkat

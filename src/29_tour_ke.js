@@ -566,6 +566,21 @@ class KeThicket extends Ent {
   }
 }
 
+/* a gully: a pit drawn as a deep red ravine (so an open gap never reads as more plain) */
+class KeGap extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 4) * TS, TS); this.x = s.x - TS / 2; this.y = s.y - TS; this.friendly = true; this.back = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x = this.x, y = this.y, w = this.w, H = this.g.area.H * TS;
+    ctx.save();
+    const gr = ctx.createLinearGradient(0, y, 0, y + 5 * TS); gr.addColorStop(0, '#7a2e16'); gr.addColorStop(1, '#2a0e06');
+    ctx.fillStyle = gr; ctx.fillRect(x, y + 6, w, H - y);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x, y + 6, 8, H - y); ctx.fillRect(x + w - 8, y + 6, 8, H - y);
+    ctx.strokeStyle = '#5a1e0a'; ctx.lineWidth = 2; for (let k = 0; k < 4; k++) { const yy = y + 30 + k * 34; ctx.beginPath(); ctx.moveTo(x + 4, yy); ctx.lineTo(x + 16, yy + 8); ctx.moveTo(x + w - 4, yy + 14); ctx.lineTo(x + w - 18, yy + 20); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+
 /* ---------------- the crocodiles (15-1's rivers) ---------------- */
 /* KeRiver draws a river over a pit (muddy brown water, ripples), so the pit reads as a river; a fall in is the end of a
    life (the crocs). KeCroc lurks in it: only its eyes show, drifting; when Brady (on a gnu or on the bank) comes
@@ -1145,7 +1160,7 @@ const pieces = {
   // a gorge the herd jumps: a pit w wide (no water) with a leap arc over it
   gorge(st, o) {
     const B = st.B, w = o.w || 9, x = st.x;
-    st.floor(x, x + 5); const a = x + 6, b = a + w - 1; st.pit(a, b); st.floor(b + 1, b + 8);
+    st.floor(x, x + 5); const a = x + 6, b = a + w - 1; st.pit(a, b); B.spawn('keGap', a, st.gy, { w }); st.floor(b + 1, b + 8);
     const base = st.gy * TS - GNU.H, peak = base - (o.h || 3) * TS, L0 = a - 3, R1 = b + 4, prof = [];
     for (let c = L0; c <= R1; c++) { const k = (c - L0 + 0.5) / (R1 - L0 + 1); prof.push(base + (peak - base) * Math.sin(k * Math.PI)); }
     herdOf(B).leaps.push([L0, R1, 0, prof]);
@@ -1187,6 +1202,7 @@ const pieces = {
      to raise the far ground } — returns past the giraffe + o.after */
   giraffe(st, o) {
     const B = st.B, x = st.x, n = o.n || 8; st.floor(x, x + n - 1);
+    if (o.pit) { st.pit(x + o.pit[0], x + o.pit[1]); B.spawn('keGap', x + o.pit[0], st.gy, { w: o.pit[1] - o.pit[0] + 1 }); }
     const gx = x + (o.at || 3);
     const path = o.path;
     B.spawn('keGiraffe', gx, st.gy - 1, { path, dir: o.dir || 1, k0: o.k0 || 0 });
@@ -1196,6 +1212,23 @@ const pieces = {
       const L = Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]), n2 = Math.max(1, Math.ceil(L / (TS / 2)));
       for (let k = 0; k <= n2; k++) { const px = P[i - 1][0] + (P[i][0] - P[i - 1][0]) * k / n2, py = P[i - 1][1] + (P[i][1] - P[i - 1][1]) * k / n2; const r = Math.round((py - TS + 2) / TS); for (const ox of [-1, 0, 1]) B.ghosts.push([Math.floor(px / TS) + ox, r]); }
     }
+    if (o.fly) B.spawn(o.fly, gx + (o.flyDx || 6), st.gy - (o.flyDy || 9), { range: 2 });
+    if (o.gold) st.gold(gx + o.gold[0], st.gy + o.gold[1], o.gold[2]);
+    if (o.coins) for (const [a2, b2, y2] of o.coins) st.coins(gx + a2, gx + b2, st.gy + y2);
+    // the ground after the giraffe rises by o.rise rows (a cliff only the giraffe reaches) or drops by o.drop
+    if (o.rise) st.gy -= o.rise;
+    if (o.drop) st.gy += o.drop;
+    return x + n;
+  },
+
+  // a kopje ledge floating h rows up over the plain (a giraffe or the herd reaches it): { h, w, at (dx), burrow: {to, back} }
+  ledge(st, o) {
+    const B = st.B, x = st.x, n = o.n || (o.at || 0) + (o.w || 6) + 1; st.floor(x, x + n - 1);
+    const lx = x + (o.at || 0), w = o.w || 6, y = st.gy - (o.h || 5);
+    B.fill(lx, y, lx + w - 1, y + 1, T.HARD);
+    if (o.burrow) { B.spawn('portal', lx + Math.floor(w / 2), y - 1, { kind: 'door', look: 'keBurrow', targetRef: o.burrow.to }); if (o.burrow.back) B.anchor(o.burrow.back, lx + 1, y - 1); B.decorAt('keArrowRock', lx + w - 1, y, 0); }
+    if (o.gold) st.gold(lx + Math.floor(w / 2), y - 3, o.gold);
+    if (o.coins !== false && !o.burrow) st.coins(lx + 1, lx + w - 2, y - 2);
     return x + n;
   },
 
@@ -1323,7 +1356,7 @@ const emblem = (ctx, x, y, r, t) => {
   ctx.restore();
 };
 
-const entities = { keThicket: KeThicket, keHerd: KeHerd, keGnu: KeGnu, keRiver: KeRiver, keCroc: KeCroc, keGiraffe: KeGiraffe, keLeafBush: KeLeafBush, keFlamingo: KeFlamingo, keLake: KeLake, keSun: KeSun, keCloud: KeCloud, keElephant: KeElephant, kePuddle: KePuddle, keSentry: KeSentry, keEagle: KeEagle };
+const entities = { keGap: KeGap, keThicket: KeThicket, keHerd: KeHerd, keGnu: KeGnu, keRiver: KeRiver, keCroc: KeCroc, keGiraffe: KeGiraffe, keLeafBush: KeLeafBush, keFlamingo: KeFlamingo, keLake: KeLake, keSun: KeSun, keCloud: KeCloud, keElephant: KeElephant, kePuddle: KePuddle, keSentry: KeSentry, keEagle: KeEagle };
 
 Tour.country({
   id: 'ke', colors: COL, tagline: 'The savannah: wildebeest, giraffes, flamingos and one very theatrical hippo',
