@@ -59,11 +59,14 @@ async function session(viewport, fn) {
       const B = window.BRADY, g = S(), G = B.Game, A = g.area, VW = G.viewW, VH = G.viewH, W = A.W * 32, H = A.H * 32, k = 0.4;
       const c = document.createElement('canvas'); c.width = Math.ceil(W * k); c.height = Math.ceil(H * k); const x = c.getContext('2d');
       const p = g.player, px = p.x, py = p.y; p.invuln = 0;
+      // no HUD, toasts or touch controls in the panorama
+      const keep = { hud: g.drawHUD, toast: g.drawToast, tut: g.drawTutorial, ctl: B.Input.drawControls }; g.drawHUD = g.drawToast = g.drawTutorial = () => {}; B.Input.drawControls = () => {};
       for (let cy = 0; cy < H; cy += VH) for (let cx = 0; cx < W; cx += VW) {
-        g.camX = Math.min(cx, Math.max(0, W - VW)); g.camY = Math.min(cy, Math.max(0, H - VH)); p.x = g.camX + VW / 2; p.y = g.camY + VH / 2;
+        g.camX = Math.min(cx, Math.max(0, W - VW)); g.camY = Math.min(cy, Math.max(0, H - VH)); p.x = -9999; p.y = -9999;
         G.ctx.setTransform(1, 0, 0, 1, 0, 0); G.ctx.fillStyle = '#07040e'; G.ctx.fillRect(0, 0, G.canvas.width, G.canvas.height); g.draw(G.ctx);
         x.drawImage(G.canvas, G.gameRect.x * G.dpr, G.gameRect.y * G.dpr, VW * G.S, VH * G.S, g.camX * k, g.camY * k, VW * k, VH * k);
       }
+      g.drawHUD = keep.hud; g.drawToast = keep.toast; g.drawTutorial = keep.tut; B.Input.drawControls = keep.ctl;
       p.x = px; p.y = py; p.invuln = 999;
       return c.toDataURL('image/jpeg', 0.8);
     });
@@ -87,11 +90,12 @@ async function session(viewport, fn) {
       check('14-1: DOWN brakes to a stop, RIGHT speeds up', r.braked < 10 && r.fast > 7.5, r);
       // the first crates: no boost bumps, a boost smashes them
       r = await ev(() => {
-        const g = S(), c = ents('ItCrates')[0], p = P(); const tx = Math.floor(c.x / 32);
-        place(tx - 6, Math.floor(c.y / 32) + c.h / 32 - 1); sim(1.6); const stopped = !c.remove && p.x + p.w <= c.x + 2;
-        place(tx - 6, Math.floor(c.y / 32) + c.h / 32 - 1); sim(0.05, { action: true, actionPressed: true }); sim(1.0);
-        return { stopped, smashed: !!c.remove, past: p.x > c.x + c.w };
+        const c = ents('ItCrates')[0], p = P(); const tx = Math.floor(c.x / 32); window.__crate = c;
+        place(tx - 6, Math.floor(c.y / 32) + c.h / 32 - 1); sim(1.6); window.__stopped = !c.remove && p.x + p.w <= c.x + 2;
+        place(tx - 6, Math.floor(c.y / 32) + c.h / 32 - 1); sim(0.05, { action: true, actionPressed: true }); sim(0.12); return {};
       });
+      await shot('02a-14-1-boost.png');
+      r = await ev(() => { const c = window.__crate, p = P(); sim(0.9); return { stopped: window.__stopped, smashed: !!c.remove, past: p.x > c.x + c.w }; });
       check('14-1: market crates stop a plain scooter; a BOOST smashes through', r.stopped && r.smashed && r.past, r);
       await ev(() => { const p = P(); sim(0.3); });
       await shot('02-14-1-crates-smashed.png');
@@ -293,7 +297,7 @@ async function session(viewport, fn) {
   await session({ width: 390, height: 844 }, async (page, shot, run) => {
     const ev = (f, a) => page.evaluate(f, a);
     await run('p-scoot', async () => { await ev(() => { fresh(); play('14-1'); sim(1.0); }); await shot('70-portrait-14-1.png'); });
-    await run('p-boss', async () => { await ev(() => { play('14-5'); toArea('palco'); place(12, 13); sim(2.4); }); await shot('71-portrait-14-5-tenor.png'); });
+    await run('p-boss', async () => { await ev(() => { play('14-5'); toArea('palco'); place(12, 13); sim(2.4); const b = S().entities.find(e => e.boss); if (b) { b.x = P().x + 110; b.dir = -1; b.go('sing'); sim(1.0); } }); await shot('71-portrait-14-5-tenor.png'); });
     await run('p-map', async () => { await ev(() => { for (const id of ['14-1', '14-2', '14-3']) window.BRADY.Save.data.unlocked[id] = true; window.BRADY.goToMap('world', 1, '14-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } }); await shot('72-portrait-italy-map.png'); });
   });
   console.log(failures ? `${failures} ITALY CHECK(S) FAILED` : 'ALL ITALY CHECKS PASSED');

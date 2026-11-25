@@ -53,7 +53,12 @@ const tenorBrain = {
   guardText: 'TOO SAUCY!',
   wake(b) { b.phase = 1; b.dir = -1; K.say(b.g, b, 'AT LAST, AN AUDIENCE!', '#ffffff'); },
   hit(b, kind) {
-    if (kind === 'stomp' || kind === 'spin') { if (b.vuln) { b.damage(1, { text: 'SPLAT!', col: '#ffb0a0' }); return true; } return 'bounce'; }
+    if (kind === 'stomp' || kind === 'spin') {
+      if (b.vuln) { b.damage(1, { text: 'SPLAT!', col: '#ffb0a0' }); return true; }
+      // the bounce word at most once every 1.1 s (repeated bounces never stack it into a pile)
+      const now = b.t; this.guardText = now - (b.saucyT == null ? -9 : b.saucyT) > 1.1 ? (b.saucyT = now, 'TOO SAUCY!') : ' ';
+      return 'bounce';
+    }
     if (kind === 'star' && b.vuln) { b.damage(1); return true; }
     return undefined;
   },

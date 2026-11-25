@@ -143,7 +143,7 @@ const DOUGH = { full: 1.15, tear: 2.7, regrow: 2.4, sag: 12 };
     }
     if (!this.itScoot || this.dead || this.state === 'portal' || this.state === 'dying') return pd0.call(this, ctx, t);
     const a = this.anim, st = a.state;
-    if (this.onGround && (st === 'run' || st === 'skid' || st === 'airguitar' || st === 'phone')) a.state = 'idle';
+    if (st !== 'throw' && st !== 'die') a.state = 'idle';   // he stands on the deck in every pose: the usual Brady, just riding
     const lean = this.onGround ? clamp(-this.vx / TS * 0.008, -0.1, 0.1) * this.facing * -1 : (this.vy < 0 ? -0.18 : 0.1);
     const fl = this.invuln > 0 && Math.floor(this.invuln * 16) % 2 === 0;
     if (!fl) Ink.around(ctx, this.cx - 34, this.y + this.h - 48, 68, 52, c => ItArt.scooter(c, this.cx, this.y + this.h + 1, this.facing, '#e8424a', lean, this.itBoostT > 0, t), { pad: 3, width: 1.0, color: INK });
@@ -285,8 +285,17 @@ class ItDough extends Ent {
     ctx.fillStyle = 'rgba(200,170,120,0.6)'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(x + w * (0.25 + k * 0.25), this.hy + 8 + Math.sin((0.25 + k * 0.25) * Math.PI) * sag, 2.2, 0, TAU); ctx.fill(); }
     if (thin > 0) { ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 1.4; for (let k = 0; k < 3; k++) { const cx = x + w * (0.35 + k * 0.15); ctx.beginPath(); ctx.moveTo(cx, y + 2 + sag); ctx.lineTo(cx + 3, y + 8 + sag); ctx.stroke(); } }
     this.hooks(ctx);
-    // the fling gauge: a little arc of flour that fills while Brady stands
-    if (this.charge > 0.02) { ctx.strokeStyle = this.charge >= 1 ? '#ffd24a' : '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.cx, y + sag + 30, 9, -Math.PI / 2, -Math.PI / 2 + this.charge * TAU); ctx.stroke(); if (this.charge >= 1) { ctx.fillStyle = '#ffd24a'; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.fillText('MAX!', this.cx, y + sag + 52); } }
+    // the fling gauge: a bold ring over Brady's head that fills while he stands (gold and MAX! when full; red when
+    // the dough is about to tear)
+    const p = this.g.player;
+    if (this.charge > 0.02 && p && p.ride === this) {
+      const gx = p.cx, gy = p.y - 36, full = this.charge >= 1, ripe = this.stand > DOUGH.tear - 0.8;
+      ctx.fillStyle = 'rgba(26,20,38,0.78)'; ctx.beginPath(); ctx.arc(gx, gy, 15, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(gx, gy, 10, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = ripe ? '#ff5a4a' : full ? '#ffd24a' : '#f8f0dc'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(gx, gy, 10, -Math.PI / 2, -Math.PI / 2 + this.charge * TAU); ctx.stroke();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(gx, gy, 15, 0, TAU); ctx.stroke();
+      if (full) { ctx.fillStyle = ripe ? '#ff5a4a' : '#ffd24a'; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.fillText(ripe ? 'RIP!' : 'MAX!', gx, gy - 22); }
+    }
     ctx.restore();
   }
   hooks(ctx) { ctx.fillStyle = '#9aa0ac'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; for (const hx of [this.x, this.x + this.w]) { ctx.beginPath(); ctx.arc(hx, this.hy + 2, 5, 0, TAU); ctx.fill(); ctx.stroke(); } }
@@ -316,9 +325,10 @@ class ItOven extends Ent {
   draw(ctx) {
     const x = this.x, y = this.y, w = this.w, h = this.h, d = this.dirx, ph = this.phaseOf(), t = this.t;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
-    ctx.fillStyle = '#a84a32'; ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + 16); ctx.quadraticCurveTo(x + w / 2, y - 10, x + w, y + 16); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#c85a3a'; for (let k = 0; k < 4; k++) ctx.fillRect(x + 6 + k * 13, y + 20 + (k % 2) * 8, 10, 5);
-    ctx.fillStyle = '#7a2a1a'; ctx.fillRect(x + w / 2 - 6, y - 8, 12, 12); ctx.strokeRect(x + w / 2 - 6, y - 8, 12, 12);
+    ctx.fillStyle = '#2a8a7a'; ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + 16); ctx.quadraticCurveTo(x + w / 2, y - 10, x + w, y + 16); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#4ab8a4'; for (let k = 0; k < 4; k++) ctx.fillRect(x + 6 + k * 13, y + 20 + (k % 2) * 8, 10, 5);
+    ctx.fillStyle = '#d8a83a'; ctx.fillRect(x + 1, y + h - 8, w - 2, 4);
+    ctx.fillStyle = '#c8ccd4'; ctx.fillRect(x + w / 2 - 6, y - 8, 12, 12); ctx.strokeRect(x + w / 2 - 6, y - 8, 12, 12);
     // the mouth (on the side it travels toward)
     const mx = d < 0 ? x + 4 : x + w - 22;
     const glow = ph === 'glow' ? 0.5 + 0.5 * Math.sin(t * 30) : ph === 'fire' ? 1 : 0.15;
@@ -511,7 +521,7 @@ class ItDiva extends Ent {
     ctx.fillStyle = '#2a2236'; ctx.beginPath(); ctx.moveTo(-8, -50); ctx.quadraticCurveTo(-28, ph.singing ? -76 : -50, -30, ph.singing ? -66 : -40); ctx.quadraticCurveTo(-18, -44, -6, -40); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
     // out of breath: a gasp bubble
-    if (ph.tell) { ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = INK; ctx.lineWidth = 1.4; rr(ctx, x - 22, y - 104, 44, 18, 8); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#c8283a'; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.fillText('...HH', x, y - 92); ctx.restore(); }
+    if (ph.tell) { const bx = x + d * 46; ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; rr(ctx, bx - 26, y - 84, 52, 22, 9); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(bx - d * 18, y - 64); ctx.lineTo(bx - d * 30, y - 58); ctx.lineTo(bx - d * 10, y - 63); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#c8283a'; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.fillText('...HH!', bx, y - 69); ctx.restore(); }
   }
 }
 // an updraft column of song: golden notes rising; it fades and flickers in the diva's last breath; gone while she rests
@@ -616,6 +626,7 @@ const P = {
     const wx = rx + 4, roof = st.gy - up;
     // the house: stone walls down to the street, its flat roof terrace on top
     B.fill(wx, roof + 1, wx + (o.roofN || 14), st.H - 1, T.HARD);
+    B.spawn('itFacade', wx, roof, { w: (o.roofN || 14) + 1, h: st.H - roof - 1, seed: wx });
     for (let xx = wx; xx <= wx + (o.roofN || 14); xx++) B.set(xx, roof, T.SEMI);
     B.edge([rx, st.gy - 1], [wx + (o.land || 4), roof]);
     if (o.sign) st.sign(x + 1, o.sign);
@@ -628,7 +639,7 @@ const P = {
   roofs(st, o) {
     const B = st.B; let x = st.x;
     for (let k = 0; k < (o.gaps || []).length; k++) {
-      const n = 4 + (k % 2) * 2; st.floor(x, x + n - 1); for (let xx = x; xx < x + n; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI);
+      const n = 4 + (k % 2) * 2; st.floor(x, x + n - 1); for (let xx = x; xx < x + n; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI); B.spawn('itFacade', x, st.gy, { w: n, h: st.H - st.gy - 1, seed: x });
       if (o.chimney === k) { B.fill(x + 1, st.gy - 2, x + 1, st.gy - 1, T.HARD); st.decor('itChimney', x + 1, st.gy - 2); }
       x += n;
       const w = o.gaps[k]; st.pit(x, x + w - 1); st.B.fill(x, st.H - 2, x + w - 1, st.H - 1, T.LAVA);
@@ -636,20 +647,20 @@ const P = {
       if (o.gold && o.gold[0] === k) st.gold(x + Math.floor(w / 2), st.gy - (o.gold[2] || 6), o.gold[1]);
       x += w;
     }
-    st.floor(x, x + 5); for (let xx = x; xx < x + 6; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI);
+    st.floor(x, x + 5); for (let xx = x; xx < x + 6; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI); B.spawn('itFacade', x, st.gy, { w: 6, h: st.H - st.gy - 1, seed: x });
     if (o.cat) st.enemy('itCat', x + 3, st.gy);
     if (o.pigeon) st.enemy('itPigeon', x - 3, st.gy);
     return x + 6;
   },
   // a washing line strung across a wide alley between two roofs: a bouncy line (hold JUMP to fly) : { n, gold }
   washing(st, o) {
-    const B = st.B, x = st.x, n = o.n || 9; st.floor(x, x + 3); for (let xx = x; xx < x + 4; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI);
+    const B = st.B, x = st.x, n = o.n || 9; st.floor(x, x + 3); for (let xx = x; xx < x + 4; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI); B.spawn('itFacade', x, st.gy, { w: 4, h: st.H - st.gy - 1, seed: x });
     const lx = x + 4; st.pit(lx, lx + n - 1); B.fill(lx, st.H - 2, lx + n - 1, st.H - 1, T.LAVA);
     for (let xx = lx + 1; xx < lx + n - 1; xx++) { B.set(xx, st.gy + 1, T.SEMI); B.setSurf(xx, st.gy + 1, SURF.BOUNCE); }
     B.spawn('itLine', lx + 1, st.gy + 1, { n: n - 2 });
     if (o.gold) st.gold(lx + Math.floor(n / 2), st.gy - 7, o.gold);
     st.coins(lx + 2, lx + n - 3, st.gy - 5);
-    const ex = lx + n; st.floor(ex, ex + 3); for (let xx = ex; xx < ex + 4; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI);
+    const ex = lx + n; st.floor(ex, ex + 3); for (let xx = ex; xx < ex + 4; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI); B.spawn('itFacade', ex, st.gy, { w: 4, h: st.H - st.gy - 1, seed: ex });
     return ex + 4;
   },
   // back down to the street: a drop off the end of the roofs: { down }
@@ -910,7 +921,40 @@ TOUR_SKINS.itVelvet = (ctx, e, t) => {
   }
   ctx.restore(); return true;
 };
-Object.assign(ENTITY_TYPES, { itRamp: ItRamp, itCrates: ItCrates, itOil: ItOil, itDough: ItDough, itOven: ItOven, itTilt: ItTilt, itSlider: ItSlider, itRack: ItRack, itBarrel: ItBarrel, itDiva: ItDiva, itSong: ItSong, itCup: ItCup, itLine: ItLine });
+// a house front over the plaster wall tiles of a building in 14-1 (drawn after the tiles): plaster patches, rows of
+// windows with green shutters and geraniums, a door at street level now and then. Its top stays a row under the roof
+// line, which is the walkable edge (the terracotta tiles).
+class ItFacade extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 4) * TS, (s.h || 6) * TS); this.x = s.x - TS / 2; this.y = s.y; this.back = true; this.seed = s.seed || Math.floor(s.x / TS); this.col = ['#e0a860', '#e89a7a', '#f2dcb0', '#e8c070', '#d8a0a0'][this.seed % 5]; }
+  touchPlayer() {}
+  draw(ctx) {
+    const x = this.x, y = this.y, w = this.w, h = this.h, R = mulberry32(this.seed * 977 + 3);
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.fillStyle = this.col; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(x + R() * w, y + R() * h, 18 + R() * 20, 10 + R() * 8, 0, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(120,70,30,0.14)'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(x + R() * w, y + R() * h, 10 + R() * 16, 6 + R() * 6, 0, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(80,40,20,0.35)'; ctx.fillRect(x, y, w, 5);   // the shadow under the roof's eaves
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+    const cols = Math.max(1, Math.floor((w - 16) / 52)), x0 = x + (w - cols * 52) / 2 + 13;
+    for (let r = 0; y + 22 + r * 62 + 36 < y + h - 4; r++) for (let c = 0; c < cols; c++) {
+      const wx = x0 + c * 52, wy = y + 22 + r * 62;
+      const street = y + 22 + (r + 1) * 62 + 36 >= y + h - 4;
+      if (street && (c + this.seed) % 3 === 0) {   // a door at street level
+        ctx.fillStyle = '#6a3a1e'; rr(ctx, wx - 2, y + h - 56, 30, 56, 12); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(wx + 21, y + h - 26, 2, 0, TAU); ctx.fill(); continue;
+      }
+      ctx.fillStyle = '#3a2a24'; ctx.fillRect(wx, wy, 26, 34); ctx.strokeRect(wx, wy, 26, 34);
+      const open = R() < 0.45;
+      ctx.fillStyle = '#3a8a5a';
+      if (open) { ctx.fillRect(wx - 9, wy, 9, 34); ctx.strokeRect(wx - 9, wy, 9, 34); ctx.fillRect(wx + 26, wy, 9, 34); ctx.strokeRect(wx + 26, wy, 9, 34); }
+      else { ctx.fillRect(wx, wy, 13, 34); ctx.fillRect(wx + 13, wy, 13, 34); ctx.strokeRect(wx, wy, 26, 34); ctx.fillStyle = '#2a6a44'; for (let q = 0; q < 7; q++) ctx.fillRect(wx + 2, wy + 3 + q * 4.5, 22, 1.5); ctx.fillRect(wx + 12.5, wy, 1.5, 34); }
+      ctx.fillStyle = 'rgba(80,40,20,0.5)'; ctx.fillRect(wx - 3, wy + 34, 32, 3);
+      if (R() < 0.4) { ctx.fillStyle = '#c8603a'; ctx.fillRect(wx + 1, wy + 30, 24, 6); ctx.fillStyle = '#e8424a'; for (let q = 0; q < 4; q++) { ctx.beginPath(); ctx.arc(wx + 4 + q * 6, wy + 28, 2.8, 0, TAU); ctx.fill(); } }
+    }
+    ctx.restore();
+  }
+}
+Object.assign(ENTITY_TYPES, { itFacade: ItFacade, itRamp: ItRamp, itCrates: ItCrates, itOil: ItOil, itDough: ItDough, itOven: ItOven, itTilt: ItTilt, itSlider: ItSlider, itRack: ItRack, itBarrel: ItBarrel, itDiva: ItDiva, itSong: ItSong, itCup: ItCup, itLine: ItLine });
 Tour.itMech = { SCOOT, ESP, DOUGH, TILT, ARIA, tiltSide };
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.itMech = Tour.itMech; } } catch (e) { /* not in a browser */ }
 })();
