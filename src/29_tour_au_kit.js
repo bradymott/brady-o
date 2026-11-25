@@ -491,10 +491,14 @@ class AuFruit extends Ent {
     if (this.hitWall || this.life <= 0 || this.y > this.g.area.H * TS + 40) { this.remove = true; this.g.burst(this.cx, this.cy, 12, ['#ffb03a', '#ff5a3a', '#ffd84a'][this.kind % 3], 'confetti'); }
   }
   hit(kind, src) { if (kind === 'stomp' || kind === 'spin') { this.g.parts.text(this.cx, this.y - 6, 'BOING!', '#ffffff'); Sound.play('spring', { vol: 0.5 }); return 'bounce'; } return false; }
-  touchPlayer(p) {
-    if (p.vy > 0 && p.prevBottom <= this.y + 12) { p.vy = -PHYS.bounceHi * 0.95; p.jumping = true; p.y = this.y - p.h - 1; this.g.parts.text(this.cx, this.y - 6, 'BOING!', '#ffffff'); Sound.play('spring', { vol: 0.5, pitch: 1.2 }); return; }
-    p.hurt(this);
+  // landing on top is a trampoline (hold JUMP for the huge one); any other touch hurts
+  get customCollide() { return true; }
+  collidePlayer(p) {
+    if (!overlap(p, this) || this.remove) return null;
+    if (p.vy > 0 && p.prevBottom <= this.y + 16) { p.vy = -(p.inp && p.inp.jump ? PHYS.bounceHi * 0.95 : PHYS.bounceLo * 1.2); p.jumping = !!(p.inp && p.inp.jump); p.y = this.y - p.h - 1; this.g.parts.text(this.cx, this.y - 6, 'BOING!', '#ffffff'); Sound.play('spring', { vol: 0.5, pitch: 1.2 }); return null; }
+    return 'body';
   }
+  touchPlayer(p) { p.hurt(this); }
   draw(ctx) {
     const r = 22, cx = this.cx, cy = this.y + r, cols = [['#ffb03a', '#ffd86a'], ['#e8423a', '#ff8a7a'], ['#ffe04a', '#fff09a']], c = cols[this.kind % 3];
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(this.rot); ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
@@ -816,6 +820,34 @@ Object.assign(Decor, {
     ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y - 26, 1.6, 0, TAU); ctx.arc(x + 5, y - 26, 1.6, 0, TAU); ctx.fill();
     ctx.fillStyle = '#6a4a2a'; for (let k = 0; k < 4; k++) ctx.fillRect(x - 20, y - 40 + k * 11, 40, 3);
     if (Math.sin(t * 1.3 + x) > 0.6) { ctx.fillStyle = '#ffffff'; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.fillText('BAA?', x, y - 52); }
+    ctx.restore();
+  }
+});
+
+/* the big things themselves (16-6's scenery): huge, bright, fibreglass, cheerful */
+Object.assign(Decor, {
+  auGiantBoot(ctx, x, y, t) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 3;
+    ctx.fillStyle = '#7a4a2a'; ctx.beginPath(); ctx.moveTo(x - 80, y); ctx.lineTo(x - 80, y - 260); ctx.lineTo(x + 10, y - 260); ctx.lineTo(x + 10, y - 90); ctx.quadraticCurveTo(x + 150, y - 90, x + 160, y - 30); ctx.lineTo(x + 160, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#5a3418'; ctx.fillRect(x - 84, y - 20, 248, 20); ctx.strokeRect(x - 84, y - 20, 248, 20);
+    ctx.fillStyle = '#e8d8b8'; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(x - 10, y - 240 + k * 26, 5, 0, TAU); ctx.fill(); ctx.stroke(); }
+    ctx.strokeStyle = '#e8d8b8'; ctx.lineWidth = 3; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.moveTo(x - 10, y - 240 + k * 26); ctx.lineTo(x - 50, y - 228 + k * 26); ctx.stroke(); }
+    ctx.restore();
+  },
+  auGiantPineapple(ctx, x, y, t) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 3;
+    ctx.fillStyle = '#4aa83a'; for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(x - 10, y - 220); ctx.quadraticCurveTo(x + k * 22, y - 300, x + k * 30, y - 330 + Math.abs(k) * 20); ctx.quadraticCurveTo(x + k * 14, y - 270, x + 10, y - 220); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = '#ffc83a'; ctx.beginPath(); ctx.ellipse(x, y - 115, 90, 120, 0, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(x, y - 115, 90, 120, 0, 0, TAU); ctx.clip(); ctx.strokeStyle = '#c8901a'; ctx.lineWidth = 3;
+    for (let k = -8; k <= 8; k++) { ctx.beginPath(); ctx.moveTo(x - 100 + k * 26, y - 240); ctx.lineTo(x + 100 + k * 26, y + 10); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + 100 + k * 26, y - 240); ctx.lineTo(x - 100 + k * 26, y + 10); ctx.stroke(); }
+    ctx.restore();
+    ctx.restore();
+  },
+  auGiantBanana(ctx, x, y, t) {
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 3;
+    ctx.fillStyle = '#ffe04a'; ctx.beginPath(); ctx.moveTo(x - 120, y - 40); ctx.quadraticCurveTo(x, y - 10, x + 120, y - 200); ctx.quadraticCurveTo(x + 40, y - 70, x - 110, y - 80); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x + 112, y - 214, 14, 22); ctx.strokeRect(x + 112, y - 214, 14, 22);
+    ctx.fillStyle = '#8a8a90'; ctx.fillRect(x - 6, y - 40, 12, 40); ctx.strokeRect(x - 6, y - 40, 12, 40);
     ctx.restore();
   }
 });

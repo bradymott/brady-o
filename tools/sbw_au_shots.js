@@ -229,8 +229,57 @@ async function session(viewport, fn) {
       await page.evaluate(() => { thaw(); play('16-4'); P().invuln = 999; place(4, 15); sim(0.2); });
       await pano('49-16-4-panorama.png');
     });
+
+    // 16-5: the walk in under the gums, the arena (the fight itself is in boss_test au)
+    await run('lair', async () => {
+      await page.evaluate(() => { thaw(); play('16-5'); P().invuln = 999; place(20, 13); sim(0.4); freeze(); });
+      await shot('50-16-5-gum-forest.png');
+      await page.evaluate(() => { thaw(); play('16-5'); P().invuln = 999; place(4, 13); sim(0.2); });
+      await pano('59-16-5-panorama.png');
+    });
+    // 16-6 The Big Things: ride a giant orange; bounce off a tumbling mango onto the tall plinth
+    await run('giant', async () => {
+      await page.evaluate(() => { thaw(); play('16-6'); P().invuln = 999; place(12, 13); sim(0.4); freeze(); });
+      await shot('60-16-6-start.png');
+      let r = await page.evaluate(() => {
+        thaw(); const g = S(), p = P(); place(19, 13); sim(0.2);
+        const o = g.entities.filter(e => e.skin === 'auOrange').sort((a, b) => a.hx - b.hx)[0];
+        for (let k = 0; k < 1500 && !(o.x - o.hx < 6 && o.dx >= 0 && k > 5); k++) sim(1 / 120);
+        for (let k = 0; k < 200 && p.cx < 20.6 * 32; k++) sim(1 / 120, { right: true });
+        sim(0.02, { jump: true, jumpPressed: true, right: true }); sim(0.15, { jump: true, right: true }); for (let k = 0; k < 120 && !p.onGround; k++) sim(1 / 120, { right: true });
+        const on = p.ride === o, dbg = [Math.round(p.cx / 32 * 10) / 10, Math.round(o.x / 32 * 10) / 10, p.onGround];
+        for (let k = 0; k < 1500 && !(o.x - o.hx > o.ax - 6); k++) sim(1 / 120, p.cx < o.x + o.w - 44 ? { right: true } : null);
+        sim(0.02, { jump: true, jumpPressed: true, right: true }); sim(0.3, { jump: true, right: true }); sim(0.8, { right: true });
+        return Object.assign({ on, dbg }, tile());
+      });
+      check('16-6: a giant orange rolls Brady across the gap', r.on && !r.dead && r.tx >= 32, r);
+      // the plinth: wait at its foot for a mango to tumble off the top, jump on it: BOING, up onto the plinth
+      r = await page.evaluate(() => {
+        const g = S(), p = P(); place(38, 13); sim(0.2); let bounced = false; const px = p.x;
+        for (let k = 0; k < 1500; k++) {
+          const f = g.entities.find(e => e.constructor.name === 'AuFruit' && !e.remove && e.onGround && e.cx > p.cx && e.cx - p.cx < 3.2 * 32 && e.cx < 42.5 * 32);
+          if (f) { sim(0.02, { jump: true, jumpPressed: true }); sim(0.25, { jump: true }); for (let q = 0; q < 360; q++) { sim(1 / 120, { jump: true, right: bounced }); if (p.vy < -20 * 32) bounced = true; if (p.onGround && q > 5) break; } break; }
+          sim(1 / 120); p.x = px;
+        }
+        return Object.assign({ bounced }, tile());
+      });
+      check('16-6: BOING off a tumbling mango, up onto the tall plinth', r.bounced && r.ty === 9 && r.tx >= 43, r);
+      await page.evaluate(() => { place(46, 8); sim(1.2); freeze(); }); await shot('61-16-6-plinth-and-stall.png');
+      await page.evaluate(() => { thaw(); place(102, 13); sim(0.8); freeze(); }); await shot('62-16-6-twist.png');
+      await page.evaluate(() => { thaw(); toArea('pine', 10, 11); sim(0.3); freeze(); }); await shot('63-16-6-inside-the-pineapple.png');
+      await page.evaluate(() => { thaw(); play('16-6'); P().invuln = 999; place(4, 13); sim(0.2); });
+      await pano('69-16-6-panorama.png');
+    });
+    // the land's walkable map
+    await run('owmap', async () => {
+      const r = await page.evaluate(() => { thaw(); fresh(); const d = window.BRADY.Save.data; for (const id of ['16-1', '16-2', '16-3', '16-4', '16-5', '16-6']) d.unlocked[id] = true; window.BRADY.goToMap('world', 1, '16-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { mode: s.mode, cc: s.ow && s.ow.cc }; });
+      check('Australia has its own walkable map', r.cc === 'au', r);
+      await page.evaluate(() => freeze()); await shot('80-australia-map.png');
+    });
   });
   await session({ width: 390, height: 844 }, async (page, shot, run) => {
+    await run('p-boss', async () => { await page.evaluate(() => { thaw(); const g = play('16-5'); const k = g.level.areas.findIndex(a => a.role === 'arena'); const an = g.level.areas[k].anchors.in; g.loadArea(k, an.x, an.y); P().invuln = 999; P().x += 200; sim(3); freeze(); }); await shot('91-portrait-16-5-boss.png'); });
+    await run('p-map', async () => { await page.evaluate(() => { thaw(); window.BRADY.goToMap('world', 1, '16-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }); await shot('92-portrait-australia-map.png'); });
     await run('p-pouch', async () => { await page.evaluate(() => { fresh(); play('16-1'); place(60, 14); sim(0.3); sim(0.02, { jump: true, jumpPressed: true }); sim(0.6, { jump: true, right: true }); freeze(); }); await shot('90-portrait-16-1.png'); });
   });
   console.log(failures ? `${failures} AUSTRALIA CHECK(S) FAILED` : 'ALL AUSTRALIA CHECKS PASSED');

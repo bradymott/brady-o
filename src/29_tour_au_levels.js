@@ -325,11 +325,6 @@ const L4 = { n: 4, name: 'The Canopy', arch: 'web', theme: 'au_canopy',
     { id: 'hollow', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auHollow' }
   ] };
 
-/* ---------------- placeholders (replaced level by level) ---------------- */
-const simpleRoom = (id, extra) => ({ floor: 12, rows: ['############################'].concat(Array.from({ length: 11 }, (_, k) => '#' + (k === 10 ? '.@...........' + (extra || '.') + '..........G.' : '.'.repeat(26)) + '#')).concat(['############################', '############################']) });
-stamps.auTmp = simpleRoom('tmp');
-const tmp = (n, name, arch, theme, extra) => ({ n, name, arch, theme, gimmick: name, hint: name, postcard: name, enemies: [['auYabby', 1]], mapCell: [n % 3, Math.floor(n / 3)], mapFrom: n - 2,
-  areas: [{ id: 'a', gen: 'room', stamp: 'auTmp' }], ...(extra || {}) });
 /* ---------------- 16-5 The Drop Bear: the walk in under the gums, then his tree ----------------
    A short night walk through the gum forest: two power-ups, a kookaburra, a hollow trunk with a crack in it (a fake
    wall) hiding P2, then the clearing under the big gum. */
@@ -347,6 +342,7 @@ const gumsRows = (() => {
 })();
 stamps.auGums = { floor: 14, rows: gumsRows, gold: { '*': 'must', V: 'hidden', U: 'high' }, doors: [{ to: 'arena@in', look: 'tourDoor' }],
   legend: { k: ['spawn', 'sign', { text: 'DROP BEARS AREN\'T REAL. ...ARE THEY? KEEP AN EYE ON THE GROUND UNDER THE TREES' }], p: ['piece', 'box', { item: 'power' }], u: ['decor', 'auGum'], e: ['enemy', 'auKooka'], n: ['decor', 'auGumLeaves'] } };
+
 const L5 = { n: 5, name: 'The Drop Bear', mapLabel: 'Drop Bear', arch: 'lair', theme: 'au_night', boss: 'au_dropbear',
   gimmick: 'A gum tree at night. The drop bear is real, and he drops. Watch for the shadow',
   hint: 'When his shadow stops and darkens, MOVE. If he misses, he lands winded: stomp him!',
@@ -358,7 +354,73 @@ const L5 = { n: 5, name: 'The Drop Bear', mapLabel: 'Drop Bear', arch: 'lair', t
     { id: 'gums', gen: 'room', theme: 'au_night', stamp: 'auGums', camera: 'free' },
     { id: 'arena', gen: 'arena', role: 'arena', layout: 'gum', arenaW: 26, H: 18, roof: false }
   ] };
-const L6 = Object.assign(tmp(6, 'The Big Things', 'giant', 'au_big'), { secret: true, mapCell: [2, 2], mapFrom: 0, exits: { main: { to: 'node:16-2' } } });
 
+/* ---------------- 16-6 The Big Things (secret, from 16-1's cliff shelf) ----------------
+   A roadside lay-by of fibreglass giants: Brady is tiny among them. Giant oranges roll back and forth across the
+   gaps (ride on top); fruit stalls roll giant mangoes down at Brady (jump them, or land on one: BOING, a huge bounce).
+   The first plinth is too tall to jump: wait under it for a mango to come tumbling off the top and bounce off it (the
+   checker is told about that one bounce with an edge; tools/sbw_au_shots.js plays it). Inside the giant pineapple:
+   P2 and a water bottle. */
+const bigRows = (() => {
+  const m = mk(184, 18), GY = 14;
+  m.fill(0, GY, 183, 17, '#');
+  const gap = (x0, x1) => m.fill(x0, GY, x1, 17, '.');
+  m.put(2, 13, '@').put(5, 13, 'k').put(9, 10, 'p').put(15, 13, 'f');
+  gap(22, 31); m.put(22, 14, 'o'.replace('o', 'O')); m.put(26, 8, 'R'); m.coins(23, 30, 11);
+  // the tall plinth (6 high) and the stall on top of it rolling mangoes off its left edge
+  m.fill(43, 9, 60, 13, 'H'); m.put(56, 8, 'Z'); m.put(48, 6, '*'); m.put(39, 13, 'E'); m.put(36, 13, 'n');
+  m.fill(61, 11, 64, 13, 'H');
+  m.put(70, 13, 'c'); m.put(74, 13, 'P'); m.put(80, 10, 'p');
+  // the giant pineapple (the secret room's door), the giant banana
+  m.put(88, 13, 'D'); m.put(88, 13, 'D'); m.put(86, 13, 'q'); m.put(91, 13, 'x'); m.put(100, 13, 'j');
+  // twist: two rolling oranges over long gaps while mangoes roll at the landings
+  gap(106, 116); m.put(106, 14, 'O'); m.put(112, 6, 'm');
+  m.put(126, 13, 'K'); m.put(120, 13, 'c');
+  gap(132, 143); m.put(132, 14, 'O'); m.coins(133, 142, 10);
+  m.put(160, 13, 'K'); m.put(150, 13, 'w'); m.put(172, 13, 'G');
+  return m.rows();
+})();
+const BIG = {
+  k: ['spawn', 'sign', { text: 'THE BIG THINGS! EVERYTHING HERE IS GIANT, AND EVERYTHING ROLLS. RIDE THE ORANGES. LAND ON A ROLLING MANGO: BOING!' }],
+  p: ['piece', 'box', { item: 'power' }], O: ['piece', 'orange', { ax: 6, w: 3, speed: 1.4 }],
+  Z: ['piece', 'stall', { every: 3.4, dir: -1, speed: 4 }], K: ['piece', 'stall', { every: 3.0, dir: -1, speed: 5, delay: 0.8 }],
+  f: ['decor', 'auGiantPrawn'], P: ['decor', 'auGiantBoot'], q: ['decor', 'auGiantPineapple'], j: ['decor', 'auGiantBanana'], w: ['decor', 'auGiantBoot'],
+  E: ['anchor', 'plinthFoot'], n: ['decor', 'auGum'], m: ['enemy', 'auMagpie'], x: ['anchor', 'pineBack']
+};
+stamps.auBig = { floor: 14, rows: bigRows, legend: BIG, gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'pine@in', look: 'tourDoorHidden' }] };
+stamps.auPineapple = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#....*.......................#',
+    '#..------....................#',
+    '#..............o.o.o.........#',
+    '#..........h.................#',
+    '#.......------...............#',
+    '#............................#',
+    '#............................#',
+    '#..............------........#',
+    '#............................#',
+    '#.@...D......................#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'layby@pineBack', look: 'tourDoorHidden' }]
+};
+const L6 = { n: 6, name: 'The Big Things', arch: 'giant', secret: true, theme: 'au_big',
+  gimmick: 'The roadside giants: a giant prawn, a giant boot, a giant pineapple. Brady is tiny, and everything rolls: ride the giant oranges, bounce off the tumbling mangoes',
+  hint: 'Too tall to climb? Wait for a mango to come tumbling and land on it: BOING!',
+  postcard: 'THE BIG THINGS! A giant prawn, a giant boot and a giant pineapple. I bought a normal-sized postcard. ♥ C',
+  enemies: [['auMagpie', 1]],
+  mapCell: [2, 2], mapFrom: 0,
+  exits: { main: { to: 'node:16-2' } },
+  areas: [
+    { id: 'layby', gen: 'room', theme: 'au_big', stamp: 'auBig', camera: 'free' },
+    { id: 'pine', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auPineapple' }
+  ] };
+
+// the one bounce the checker can't work out for itself: off a tumbling mango at the plinth's foot, onto its top
+{ const ed = TourBuild.generateV2; TourBuild.generateV2 = function (Cc, spec, w, i, a) { const L = ed.apply(this, arguments); if (Cc && Cc.id === 'au' && i === 6 && L.areas[0]) { const A = L.areas[0], an = A.anchors && A.anchors.plinthFoot; if (an) (A.edges || (A.edges = [])).push({ from: [Math.floor(an.x / TS), Math.floor(an.y / TS) - 1], to: [45, 9] }); } return L; }; }
 Tour.amend('au', { stamps, map: { fort: 'arena', start: [0, 0] }, levels: [L1, L2, L3, L4, L5, L6] });
 })();
