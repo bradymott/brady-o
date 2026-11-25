@@ -377,7 +377,7 @@ class IsShyEye extends Ent {
     if (!p) return;
     g.isShyOn = true;
     if (Input.actionPressed && p.state === 'play' && !p.dead) {
-      Input.actionPressed = false; p.isLookBack = !p.isLookBack; if (p.isLookBack) p.isShyFace = -p.facing;
+      Input.actionPressed = false; p.isLookBack = !p.isLookBack; if (p.isLookBack) p.isShyFace = -p.facing; else p.facing = -(p.isShyFace || -1);
       TourKit.sfx('glance', 'select', { vol: 0.35, pitch: p.isLookBack ? 1.4 : 1.1 });
       g.parts.text(p.cx, p.y - 16, p.isLookBack ? 'LOOKING BACK' : 'LOOKING AHEAD', '#ffe28a');
     }

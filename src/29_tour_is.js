@@ -349,7 +349,7 @@ const themes = {
   is_aurora: Object.assign({}, field, {
     name: 'Northern Lights', music: 'tour_is', particles: 'snow', rays: null, aurora: true,
     sky: ['#060a22', '#0e1a40', '#1a2e5a'], horizonGlow: '#3affb0', celestial: { type: 'moon', x: 0.82, y: 0.16, r: 16, color: '#f4f0e0', glow: '#c8e8ff' }, stars: 1,
-    layers: [{ kind: 'isPeaks', color: '#1a2238', snow: '#7a90b8', base: 330, h: 130, f: 0.05 }, { kind: 'isField', color: '#2e5a40', base: 400, f: 0.16, huts: true, horses: true }],
+    layers: [{ kind: 'isPeaks', color: '#1a2238', snow: '#7a90b8', base: 330, h: 130, f: 0.05 }, { kind: 'isField', color: '#2e5a40', base: 350, f: 0.16, huts: true, horses: true }],
     fog: '#1a3a5a', darkness: 0.2, decor: ['isRock', 'isCairn', 'isHut']
   }),
   is_lagoon: Object.assign({}, lagoon, {

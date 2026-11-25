@@ -66,7 +66,7 @@ async function session(viewport, fn) {
     window.plateAt = (x, y) => ents('IsPlate').find(e => e.A[0] === x && e.A[1] === y);
     // the hidden folk: walk right, and before each jump look the way the next plank wants (away from a painted plank,
     // at a white eye plank), tapping THROW to switch; steer to the plank's middle in the air
-    window.shyHop = (x, sec) => { let target = null, j0 = -1e9, want = null; return runTo(x, sec || 12, (p, k, I) => {
+    window.shyHop = (x, sec) => { let target = null, j0 = -1e9, want = null, tBold = false; return runTo(x, sec || 12, (p, k, I) => {
       const look = !!p.isLookBack;
       if (want != null && look !== want && k % 6 === 0) { I.actionPressed = true; }
       if (p.onGround) {
@@ -74,11 +74,12 @@ async function session(viewport, fn) {
         const next = ents('IsShyPlat').filter(e => e.x + e.w > p.cx + 30 && p.ride !== e).sort((a, b) => a.x - b.x)[0];
         const gate = ents('IsShyWall').find(e => e.x > p.cx && e.x - p.cx < 3 * 32);
         if (gate) want = true; else if (next && next.x - p.cx < 4 * 32) want = !next.bold; else if (!edgeAhead(p)) want = want;
-        if (edgeAhead(p) && look === want) { const t = next && next.x - p.cx < 7 * 32 ? next : null; const L = t ? [t.x, t.x + t.w] : landingAhead(p); if (L) { target = (L[0] + L[1]) / 2; j0 = k; return true; } }
+        if (edgeAhead(p) && look === want) { const t = next && next.x - p.cx < 7 * 32 ? next : null; const L = t ? [t.x, t.x + t.w] : landingAhead(p); if (L) { target = (L[0] + L[1]) / 2; tBold = !!(t && t.bold); j0 = k; return true; } }
         if (edgeAhead(p) && look !== want) { I.right = false; I.left = p.vx > 20; }
         return false;
       }
-      if (target != null) { const dx = target - p.cx, tLand = p.vy > 0 ? 0.25 : 0.5, v = dx / tLand; I.right = p.vx < v - 40; I.left = p.vx > v + 40; }
+      // (looking ahead at an eye plank, he never presses back: that would turn his head away from it)
+      if (target != null) { const dx = target - p.cx, tLand = p.vy > 0 ? 0.25 : 0.5, v = dx / tLand; I.right = p.vx < v - 40; I.left = !(tBold && !look) && p.vx > v + 40; }
       return p.vy < 0 && k - j0 < 0.32 * 120; }); };
     window.tx = () => Math.floor(P().cx / 32); window.ty = () => Math.floor((P().y + P().h - 1) / 32);
     // hold right until Brady stands at tile column x (or dies); the jump button pressed when j(p) says so
@@ -305,6 +306,26 @@ async function session(viewport, fn) {
       await shot('44-17-4-twist.png');
       await pano('17-4', null, '45-17-4-panorama.png');
     });
+    // ---------------- 17-5 The Night Troll: the shore, the hut, the cave (the fight itself: boss_test is) ----------------
+    await run('lair', async () => {
+      await ev(() => { thaw(); play('17-5'); place(8, 12); sim(0.4); freeze(); });
+      await shot('50-17-5-shore.png');
+      let r = await ev(() => { thaw(); play('17-5'); place(16, 12); sim(0.3); const ok = hop(36, 8); return { ok, alive: alive(), x: tx() }; });
+      check('17-5: real inputs: the shore\'s blinking ribbons to the cave', r.ok && r.alive, r);
+      await ev(() => { thaw(); toArea('hut', 10, 11); sim(0.3); freeze(); });
+      await shot('51-17-5-turf-hut.png');
+      r = await ev(() => { thaw(); play('17-5'); toArea('cave'); sim(0.2); const b = S().entities.find(e => e.boss); const p = P(); p.x = b.arenaX0 + 3 * 32; p.y = b.floorY - p.h - 2; sim(2.8); const sh = S().entities.filter(e => e.constructor.name === 'IsSunShield'); return { boss: b.state, shields: sh.length }; });
+      check('17-5: the cave mouth: the troll wakes, two sun shields stand ready', r.boss === 'fight' && r.shields === 2, r);
+      await ev(() => { sim(0.5); freeze(); });
+      await shot('52-17-5-troll-cave.png');
+      await pano('17-5', null, '53-17-5-panorama.png');
+    });
+    // ---------------- the land's map ----------------
+    await run('owmap', async () => {
+      const r = await ev(() => { thaw(); const d = window.BRADY.Save.data; ['17-1', '17-2', '17-3', '17-4', '17-5', '17-6'].forEach(id => d.unlocked[id] = true); window.BRADY.goToMap('world', 17, '17-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } const s = S(); return { cc: s.ow && s.ow.cc }; });
+      check('Iceland has its own walkable map', r.cc === 'is', r);
+      await ev(() => freeze()); await shot('70-iceland-map.png');
+    });
     // ---------------- 17-6 The Hidden Folk ----------------
     await run('shy', async () => {
       await ev(() => { thaw(); play('17-6'); place(8, 14); sim(0.4); freeze(); });
@@ -334,6 +355,8 @@ async function session(viewport, fn) {
   // portrait
   await session({ width: 390, height: 844 }, async (page, shot, run) => {
     await run('p-aurora', async () => { await page.evaluate(() => { fresh(); play('17-1'); place(48, 11); sim(0.05); freeze(); }); await shot('90-portrait-17-1.png'); });
+    await run('p-lair', async () => { await page.evaluate(() => { thaw(); play('17-5'); toArea('cave'); const b = S().entities.find(e => e.boss); const p = P(); p.x = b.arenaX0 + 3 * 32; p.y = b.floorY - p.h - 2; sim(3); freeze(); }); await shot('91-portrait-17-5-troll.png'); });
+    await run('p-map', async () => { await page.evaluate(() => { thaw(); const d = window.BRADY.Save.data; ['17-1', '17-2', '17-3', '17-4', '17-5', '17-6'].forEach(id => d.unlocked[id] = true); window.BRADY.goToMap('world', 17, '17-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }); await shot('92-portrait-iceland-map.png'); });
   });
   console.log(failures ? `${failures} ICELAND CHECK(S) FAILED` : 'ALL ICELAND CHECKS PASSED');
   process.exit(failures ? 1 : 0);
