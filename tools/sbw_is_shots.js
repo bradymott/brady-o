@@ -207,8 +207,8 @@ async function session(viewport, fn) {
       // real inputs: the open lagoon, berg to berg to the sand (a player's run: jump at each edge)
       r = await ev(() => { thaw(); play('17-2'); place(44, 13); sim(0.3); const ok = hop(71, 10); return { ok, x: tx(), alive: alive() }; });
       check('17-2: real inputs: across the open lagoon on three bergs', r.ok && r.alive, r);
-      r = await ev(() => { thaw(); play('17-2'); place(98, 13); sim(0.3); const ok = hop(125, 12); return { ok, x: tx(), alive: alive() }; });
-      check('17-2: real inputs: the twist: small seal bergs and a drifting floe', r.ok && r.alive, r);
+      r = await ev(() => { const runs = []; for (let a = 0; a < 3; a++) { thaw(); play('17-2'); place(98, 13); sim(0.3 + a * 0.9); const ok = hop(125, 12); runs.push(ok && alive() ? 'ok' : 'fell@' + tx()); } return { runs, ok: runs.every(x => x === 'ok') }; });
+      check('17-2: real inputs: the twist: small seal bergs and a floe (three runs from different moments, each first try)', r.ok, r);
       await ev(() => { thaw(); play('17-2'); place(110, 13); sim(0.4); freeze(); });
       await shot('23-17-2-twist.png');
       r = await ev(() => { const runs = []; for (let a = 0; a < 3; a++) { thaw(); play('17-2'); place(150, 13); sim(0.3 + a * 0.9); const ok = hop(182, 14); runs.push(ok && alive() ? 'ok' : 'fell@' + tx()); } return { runs, ok: runs.every(x => x === 'ok'), alive: true }; });

@@ -133,14 +133,14 @@ const lagoon = (() => {
   // checkpoint 1
   G.put(97, 13, 'c'); G.put(100, 13, 'x');
   // the twist: small bergs, seals on alternate ends, a drifting floe between them, puffins
-  G.put(103, 14, 'u'); G.put(109, 14, 'w'); G.put(113, 13, 'Y'); G.put(120, 14, 'u'); G.put(112, 8, 'p'); G.put(122, 7, 'p'); G.coins(104, 122, 11);
+  G.put(103, 14, 'u'); G.put(108, 14, 'E'); G.put(114, 14, 'Y'); G.put(120, 14, 'u'); G.put(112, 8, 'p'); G.put(122, 7, 'p'); G.coins(104, 122, 11);
   G.put(126, 13, 'm');
   // the glacier wall over the next stretch: its ice cave (the secret) up on a shelf, reached off a high floe
   G.put(131, 14, 'e'); G.put(137, 14, 'E'); G.fill(136, 7, 141, 7, '-'); G.put(139, 6, 'D'); G.put(137, 6, 'i'); G.put(134, 11, 'Z');
   // checkpoint 2, before the last stretch
   G.put(149, 13, 'c'); G.put(151, 9, '?'); G.put(147, 13, 'A');
   // the last stretch: drifting bergs with seals, a floe, terns and a puffin; P3 (risky) low over the water
-  G.put(155, 14, 'e'); G.put(161, 14, 'E'); G.put(167, 13, 'Y'); G.put(175, 14, 'u'); G.put(169, 10, 'R'); G.put(162, 8, 't'); G.put(182, 7, 'p');
+  G.put(155, 14, 'e'); G.put(161, 14, 'E'); G.put(167, 14, 'Y'); G.put(173, 14, 'n'); G.put(169, 10, 'R'); G.put(162, 8, 't'); G.put(182, 7, 'p');
   G.coins(156, 163, 11);
   G.put(192, 13, 'j'); G.put(198, 13, 'G'); G.put(203, 13, 'x');
   return G.rows();
