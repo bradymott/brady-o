@@ -17,7 +17,7 @@ const fresh = () => { Save.data = Save.defaults(); Save.data.v = 3; TourProgress
 
 section('spec', () => {
   // the tour's 14 lands (bonus lands, opened by Brady Buttons, come on top: src/29_tour_fest*.js ...)
-  const tourWs = Tour.worldList().filter(w => !Tour.byWorld[w].bonus);
+  const tourWs = Tour.worldList().filter(w => !Tour.byWorld[w].bonus && !Tour.byWorld[w].encore);   // (the Encore Tour's lands, 14-18, come on top too)
   const mains = tourWs.reduce((n, w) => n + Tour.byWorld[w].mainCount, 0), listed = Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].levels.length, 0);
   check(`68 main levels in 14 countries (${Tour.allLevelIds().length} with the secret and bonus levels)`, mains === 68 && Tour.allLevelIds().length === listed && tourWs.length === 14, { mains, listed });
   check('every country knows its main-level count (5, or 4 for the secret lands; a bonus land up to 4)', Tour.worldList().every(w => { const C = Tour.byWorld[w]; return C.bonus ? C.mainCount >= 1 && C.mainCount <= 4 : C.mainCount === (C.secret ? 4 : 5); }), Tour.worldList().map(w => Tour.byWorld[w].id + Tour.byWorld[w].mainCount));
