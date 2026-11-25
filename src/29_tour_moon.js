@@ -57,12 +57,19 @@ const dustBrick = {
 };
 const dustHard = {
   c1: '#5a5468', c2: '#3a3448',
+  // basalt with strata bands and crater pocks (the overhangs and arches are big slabs of it): the pattern runs on
+  // across the tile edges so a wall reads as layered rock, not a grid
   paint(ctx) {
     ctx.fillStyle = BASALT; ctx.fillRect(0, 0, TS, TS);
-    ctx.fillStyle = '#5c5870'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(TS, 0); ctx.lineTo(TS - 6, 10); ctx.lineTo(4, 12); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#34304a'; ctx.fillRect(0, TS - 5, TS, 5);
-    ctx.fillStyle = '#6a6680'; ctx.fillRect(6, 16, 3, 3); ctx.fillRect(20, 22, 2, 2);
-    ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5);
+    ctx.fillStyle = '#56526a'; ctx.fillRect(0, 3, TS, 7);
+    ctx.fillStyle = '#3c3850'; ctx.fillRect(0, 14, TS, 3);
+    ctx.fillStyle = '#625e78'; ctx.fillRect(0, 20, TS, 6);
+    ctx.fillStyle = '#34304a'; ctx.fillRect(0, 26, TS, 1.5); ctx.fillRect(0, 10, TS, 1.5);
+    // a crater pock: dark bowl, lit rim
+    ctx.fillStyle = '#2c2840'; ctx.beginPath(); ctx.ellipse(22, 17, 5, 3.5, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#8a86a0'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(22, 17, 5, 3.5, 0, 0.2, Math.PI - 0.2); ctx.stroke();
+    ctx.fillStyle = '#2c2840'; ctx.beginPath(); ctx.arc(7, 24, 2.2, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#7a7690'; ctx.fillRect(4, 6, 3, 1.5); ctx.fillRect(14, 22, 4, 1.5);
   }
 };
 // the orbiting venue and the moon base: hull plates with rivets and hazard stripes, steel grating, road cases
@@ -114,14 +121,17 @@ const hullHard = {
 const glassGround = {
   style: 'glass', cap: '#b8c8ff', capHi: '#ffffff', dirt: '#2a2a6a', dirt2: '#1a1a4a', rock: '#14143a',
   paint(ctx, rng) {
-    ctx.fillStyle = '#22225a'; ctx.fillRect(0, 0, TS, TS);
-    ctx.fillStyle = '#2c2c6c'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(TS * 0.6, 0); ctx.lineTo(0, TS * 0.6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#34347e'; ctx.fillRect(0, 0, TS, TS);
+    ctx.fillStyle = '#40408e'; ctx.fillRect(0, 0, 2, TS);
+    ctx.fillStyle = '#3c3c88'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(TS * 0.6, 0); ctx.lineTo(0, TS * 0.6); ctx.closePath(); ctx.fill();
     if (rng() < 0.5) { ctx.fillStyle = '#c8d4ff'; ctx.fillRect(4 + rng() * 22, 6 + rng() * 20, 1.5, 1.5); }
   },
   paintCap(ctx, x0, x1) {
-    ctx.fillStyle = '#4a4aa0'; ctx.fillRect(x0, 0, x1 - x0, 9);
-    ctx.fillStyle = '#b8c8ff'; ctx.fillRect(x0, 0, x1 - x0, 5);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(x0, 0, x1 - x0, 1.5);
+    // a bright starlit top over a hard ink line: the walkable edge reads at a glance against the night sky
+    ctx.fillStyle = '#6a6ad0'; ctx.fillRect(x0, 0, x1 - x0, 11);
+    ctx.fillStyle = '#d8e2ff'; ctx.fillRect(x0, 0, x1 - x0, 7);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x0, 0, x1 - x0, 3);
+    ctx.fillStyle = INK; ctx.fillRect(x0, 11, x1 - x0, 2);
     ctx.fillStyle = '#ffe8a0'; for (let x = x0 + 9; x < x1; x += 24) { ctx.beginPath(); ctx.arc(x, 6.5, 1.4, 0, TAU); ctx.fill(); }
   }
 };

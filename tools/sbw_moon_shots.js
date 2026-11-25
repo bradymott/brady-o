@@ -445,20 +445,6 @@ LEVELS.walk = async (page, shot, run, pano) => {
   });
 };
 
-LEVELS.dbg = async (page, shot, run) => {
-  if (!want.includes('dbg')) return;
-  const r = await page.evaluate(() => {
-    play('18-2'); place(143, 7); sim(0.3);
-    const pl = AP.plan([150, 13], { maxT: 7 }); if (!pl) return 'noplan';
-    const g = S(), I = window.BRADY.Input, prog = pl.prog, log = []; let t = 0; prog._jt = null;
-    const b = AP.body(P()), A = g.area, tl = [];
-    for (let k = 0; k < 300; k++) { const inp = AP.input(prog, t, b); window.BRADY_MOON.phys(b, inp, A, 1 / 120, null, {}); if (k % 20 === 0) tl.push([Math.round(b.x), Math.round(b.y), b.moon && b.moon.tank]); t += 1 / 120; }
-    t = 0; prog._jt = null;
-    for (let k = 0; k < 300; k++) { const p = P(); const inp = AP.input(prog, t, p); for (const key of ['left', 'right', 'jump', 'jumpPressed', 'down']) I[key] = !!inp[key]; g.update(1 / 120); I.jumpPressed = false; if (k % 20 === 0) log.push([Math.round(p.x), Math.round(p.y), p.moon && p.moon.tank, inp.jumpPressed]); t += 1 / 120; }
-    return { prog: JSON.stringify(prog.driftPlan || prog), tl, log };
-  });
-  console.log(JSON.stringify(r));
-};
 // ---------------- the land's map, the route-map pin, the boss stage ----------------
 const openMoon = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR; for (const w of B.WORLD_ORDER) { const C = T.Tour.byWorld[w]; if (!C || C.id === 'moon') continue; for (const id of T.Tour.levelIds(C)) B.Save.data.done[id] = true; } for (const id of ['18-1', '18-2', '18-3', '18-4', '18-5', '18-6']) B.Save.data.unlocked[id] = true; B.Save.data.done['18-1'] = true; B.Save.data.done['18-2'] = true; const Tp = T.TourProgress; try { Tp.exit('18-1', 'main'); Tp.exit('18-1', 'secret'); Tp.exit('18-2', 'main'); } catch (e) {} })()`;
 LEVELS.map = async (page, shot, run) => {

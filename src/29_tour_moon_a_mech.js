@@ -291,8 +291,12 @@ TourHooks.on('afterEntities', (play, ctx) => {
   const m = p.moon || {}, max = Object.assign({}, DRIFT, A.moon.drift).tank;
   if (p.onGround) m.anchor = [p.cx, p.y + p.h];
   if (m.anchor && !p.onGround) { ctx.save(); ctx.strokeStyle = 'rgba(255,216,74,0.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(m.anchor[0], m.anchor[1]); ctx.quadraticCurveTo((m.anchor[0] + p.cx) / 2, Math.max(m.anchor[1], p.cy) + 40, p.cx - p.facing * 6, p.cy); ctx.stroke(); ctx.restore(); }
-  ctx.save(); const x = p.cx, y = p.y - 16;
-  for (let k = 0; k < max; k++) { const full = k < (m.tank == null ? max : m.tank); ctx.fillStyle = full ? '#7affd8' : 'rgba(255,255,255,0.18)'; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x + (k - (max - 1) / 2) * 11, y, 4, 0, TAU); ctx.fill(); ctx.stroke(); }
+  // the air gauge over his head: a dark pill with one big canister light per puff (readable at arm's length)
+  ctx.save(); const x = p.cx, y = p.y - 26, n = m.tank == null ? max : m.tank, pw = max * 22 + 30;
+  ctx.fillStyle = 'rgba(10,8,24,0.82)'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; rr(ctx, x - pw / 2, y - 12, pw, 24, 12); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = n ? '#7affd8' : '#ff7a7a'; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('AIR', x - pw / 2 + 16, y + 1);
+  for (let k = 0; k < max; k++) { const full = k < n, cx = x - pw / 2 + 36 + k * 22; ctx.fillStyle = full ? '#7affd8' : '#3a3a4a'; ctx.strokeStyle = full ? '#ffffff' : '#6a6a7a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, y, 7.5, 0, TAU); ctx.fill(); ctx.stroke(); if (full) { ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(cx - 2.5, y - 2.5, 2.2, 0, TAU); ctx.fill(); } }
+  if (m.refill > 0) { ctx.strokeStyle = `rgba(122,255,216,${m.refill * 2})`; ctx.lineWidth = 3; rr(ctx, x - pw / 2 - 4, y - 16, pw + 8, 32, 15); ctx.stroke(); }
   if (m.puffT > 0) { ctx.fillStyle = `rgba(230,240,255,${m.puffT * 2.5})`; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(p.cx - p.facing * (8 + k * 5), p.y + p.h - 6 + k * 4, 5 + k * 2, 0, TAU); ctx.fill(); } }
   ctx.restore();
 });
@@ -411,6 +415,20 @@ TourHooks.on('afterEntities', (play, ctx) => {
   const A = play.area, p = play.player; if (!A || !A.moon || !A.moon.rover || !p || p.dead) return;
   Buggy.draw(ctx, p, play.t);
 });
+// Brady sits in the buggy: the game's own seated (ride) pose, small or big, lifted so his hips are in the tub and his
+// face and shades show over its rim; the tub (drawn after him) covers his legs
+{
+  const ua0 = Player.prototype.updateAnim;
+  Player.prototype.updateAnim = function (dt, inp) { const r = ua0.call(this, dt, inp); const A = this.g && this.g.area; if (A && A.moon && A.moon.rover && !this.dead && this.state === 'play') this.anim.state = 'ride'; return r; };
+  const dr0 = Player.prototype.draw;
+  Player.prototype.draw = function (ctx, t) {
+    const A = this.g && this.g.area;
+    if (!(A && A.moon && A.moon.rover) || this.dead || this.mounted) return dr0.call(this, ctx, t);
+    const m = this.moon || {}, lift = this.small ? 20 : 14, ang = (m.ang || 0) * (this.facing || 1);
+    ctx.save(); ctx.translate(this.cx, this.y + this.h - 10); ctx.rotate(ang); ctx.translate(-this.cx, -(this.y + this.h - 10));
+    this.y -= lift; try { return dr0.call(this, ctx, t); } finally { this.y += lift; ctx.restore(); }
+  };
+}
 Tour.moonKit.ROVER = ROVER;
 
 /* ---------------- 18-4 MAG: the magnet boots ----------------

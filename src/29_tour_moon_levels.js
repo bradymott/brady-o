@@ -32,8 +32,8 @@ const hopRows = (() => {
   ground(Gr, 13, 13, 20); ground(Gr, 14, 16, 23); ground(Gr, 17, 17, 20); put(Gr, 13, 15, 'o.o.o');
   ground(Gr, 18, 23, 21); put(Gr, 20, 20, 'p');
   ground(Gr, 24, 27, 16); put(Gr, 24, 14, 'o.o.');
-  ground(Gr, 28, 50, 21); put(Gr, 29, 20, 'N');
-  fillG(Gr, 30, 4, 46, 14, '#'); fillG(Gr, 31, 15, 45, 15, 'v'); put(Gr, 38, 20, 'B'); put(Gr, 33, 18, 'o.o'); put(Gr, 41, 18, 'o.o');
+  ground(Gr, 28, 50, 21); put(Gr, 29, 20, 'N'); put(Gr, 48, 20, 'c');
+  fillG(Gr, 30, 4, 46, 14, 'H'); fillG(Gr, 31, 15, 45, 15, 'v'); put(Gr, 38, 20, 'B'); put(Gr, 33, 18, 'o.o'); put(Gr, 41, 18, 'o.o');
   // ② the crater field
   put(Gr, 53, 20, 'e');
   ground(Gr, 51, 55, 21); ground(Gr, 56, 60, 24); put(Gr, 57, 23, '1'); put(Gr, 55, 20, 'J');
@@ -53,17 +53,17 @@ const hopRows = (() => {
   ground(Gr, 147, 153, 12); put(Gr, 149, 11, 'r');
   ground(Gr, 154, 163, 21); put(Gr, 157, 20, 'c'); put(Gr, 160, 20, 'p');
   // ③ the twist: spike overhangs over craters
-  fillG(Gr, 161, 2, 181, 13, '#'); fillG(Gr, 162, 14, 180, 14, 'v');
-  pit(Gr, 164, 169); fillG(Gr, 161, 2, 181, 13, '#'); fillG(Gr, 162, 14, 180, 14, 'v');
+  fillG(Gr, 161, 2, 181, 13, 'H'); fillG(Gr, 162, 14, 180, 14, 'v');
+  pit(Gr, 164, 169); fillG(Gr, 161, 2, 181, 13, 'H'); fillG(Gr, 162, 14, 180, 14, 'v');
   ground(Gr, 170, 174, 21); put(Gr, 172, 20, 'e');
-  pit(Gr, 175, 179); fillG(Gr, 175, 2, 179, 13, '#'); fillG(Gr, 175, 14, 179, 14, 'v');
-  ground(Gr, 180, 190, 21); put(Gr, 184, 20, 'z'); put(Gr, 188, 20, 'Z'); put(Gr, 186, 16, '?');
+  pit(Gr, 175, 179); fillG(Gr, 175, 2, 179, 13, 'H'); fillG(Gr, 175, 14, 179, 14, 'v');
+  ground(Gr, 180, 190, 21); put(Gr, 181, 20, 'c'); put(Gr, 184, 20, 'z'); put(Gr, 188, 20, 'Z'); put(Gr, 186, 16, '?');
   // ... then all of it: a geyser under spikes up to a cliff, a long jump past a moth over the last crater (P3)
-  pit(Gr, 191, 199); put(Gr, 194, 24, '5'); fillG(Gr, 192, 3, 197, 4, '#'); fillG(Gr, 192, 5, 197, 5, 'v');
+  pit(Gr, 191, 199); put(Gr, 194, 24, '5'); fillG(Gr, 192, 3, 197, 4, 'H'); fillG(Gr, 192, 5, 197, 5, 'v');
   ground(Gr, 200, 204, 12); put(Gr, 202, 11, 'u');
   pit(Gr, 205, 212); put(Gr, 208, 12, 'R'); put(Gr, 207, 9, 'M');
   ground(Gr, 213, 217, 16); put(Gr, 215, 15, 'e');
-  ground(Gr, 218, 224, 14); put(Gr, 221, 13, 'O'); put(Gr, 219, 13, 'z');
+  ground(Gr, 218, 224, 14); put(Gr, 221, 13, 'O'); put(Gr, 219, 13, 'z'); put(Gr, 223, 13, 'c');
   // the narrow chasm with a faint dust vent: it blows all the way up to the star gate on its star rock
   pit(Gr, 225, 227); put(Gr, 225, 24, '4');
   fillG(Gr, 229, 7, 234, 8, '#'); put(Gr, 231, 6, 'g'); put(Gr, 229, 5, 'o.o.o.o');
@@ -147,7 +147,7 @@ const walkRows = (() => {
   plate(Gr, 120, 131, 15); fillG(Gr, 120, 17, 131, 17, 'v'); put(Gr, 124, 14, 'c'); put(Gr, 128, 11, 'o.o');
   // ③ the twist: an air vent blows up out of the void beside the plates; spikes under the plates
   put(Gr, 136, 28, '1'); plate(Gr, 141, 146, 8); fillG(Gr, 141, 10, 146, 10, 'v'); put(Gr, 142, 7, 'o.o.o');
-  plate(Gr, 150, 166, 13); fillG(Gr, 150, 15, 166, 15, 'v'); put(Gr, 158, 12, 'u'); put(Gr, 155, 9, '?');
+  plate(Gr, 150, 166, 13); fillG(Gr, 150, 15, 166, 15, 'v'); put(Gr, 158, 12, 'u'); put(Gr, 152, 12, 'c'); put(Gr, 155, 9, '?');
   // the long void with a chain of valves past junk (P3 by the second valve)
   put(Gr, 172, 12, 'V'); put(Gr, 177, 5, 'k'); put(Gr, 181, 10, 'V'); put(Gr, 190, 11, 'V'); put(Gr, 198, 12, 'V'); put(Gr, 186, 7, 'R'); put(Gr, 184, 18, 'K'); put(Gr, 197, 9, 'M');
   fillG(Gr, 0, 0, 223, 0, 'H');
@@ -212,23 +212,23 @@ const buggyRows = (() => {
   pit(Gr, 31, 34); ground(Gr, 31, 34, 23); put(Gr, 31, 17, 'o.o.');
   put(Gr, 40, 19, 'B'); put(Gr, 44, 19, 'B'); fillG(Gr, 50, 18, 50, 19, 'B'); put(Gr, 47, 19, 'N');
   pit(Gr, 56, 61); put(Gr, 57, 15, 'o.o.o');
-  put(Gr, 66, 19, 'e'); put(Gr, 74, 19, 'z'); put(Gr, 78, 19, 'l');
+  put(Gr, 64, 19, 'c'); put(Gr, 66, 19, 'e'); put(Gr, 74, 19, 'z'); put(Gr, 78, 19, 'l');
   pit(Gr, 86, 96); put(Gr, 91, 13, '*'); put(Gr, 87, 15, 'o.o.o.o.o');
   put(Gr, 99, 19, 'c'); put(Gr, 104, 16, '?'); put(Gr, 108, 19, 'm');
   // the spike overhang with craters under it
-  fillG(Gr, 112, 4, 134, 13, '#'); fillG(Gr, 112, 14, 134, 14, 'v'); put(Gr, 111, 19, 'J');
-  pit(Gr, 117, 120); fillG(Gr, 117, 4, 120, 13, '#'); fillG(Gr, 117, 14, 120, 14, 'v');
-  pit(Gr, 126, 129); fillG(Gr, 126, 4, 129, 13, '#'); fillG(Gr, 126, 14, 129, 14, 'v'); put(Gr, 127, 17, 'R');
+  fillG(Gr, 112, 4, 134, 13, 'H'); fillG(Gr, 112, 14, 134, 14, 'v'); put(Gr, 111, 19, 'J');
+  pit(Gr, 117, 120); fillG(Gr, 117, 4, 120, 13, 'H'); fillG(Gr, 117, 14, 120, 14, 'v');
+  pit(Gr, 126, 129); fillG(Gr, 126, 4, 129, 13, 'H'); fillG(Gr, 126, 14, 129, 14, 'v'); put(Gr, 127, 17, 'R');
   // the rover depot's garage door (a blinking light), ridges
-  put(Gr, 142, 19, 'D'); put(Gr, 145, 19, 'a'); put(Gr, 139, 19, 'p');
+  put(Gr, 142, 19, 'D'); put(Gr, 145, 19, 'a'); put(Gr, 139, 19, 'p'); put(Gr, 148, 19, 'c');
   fillG(Gr, 152, 19, 156, 19, '#'); fillG(Gr, 154, 18, 156, 18, '#'); fillG(Gr, 156, 17, 156, 17, '#'); put(Gr, 160, 19, 'u'); fillG(Gr, 166, 17, 166, 19, 'B');
   // the crater whose steady geyser flings the buggy up onto the mesa
   pit(Gr, 172, 180); put(Gr, 173, 24, '1'); ground(Gr, 181, 199, 16); put(Gr, 190, 15, 'e'); put(Gr, 194, 12, 'o.o.o');
   put(Gr, 204, 19, 'c'); put(Gr, 208, 16, '?');
   // ③ all of it
   pit(Gr, 214, 220); put(Gr, 223, 19, 'z'); put(Gr, 228, 19, 'e');
-  put(Gr, 233, 19, 'B'); pit(Gr, 237, 241); put(Gr, 237, 24, '2'); fillG(Gr, 242, 15, 244, 19, '#');
-  fillG(Gr, 248, 4, 268, 13, '#'); fillG(Gr, 248, 14, 268, 14, 'v'); pit(Gr, 252, 255); fillG(Gr, 252, 4, 255, 13, '#'); fillG(Gr, 252, 14, 255, 14, 'v'); put(Gr, 259, 19, 'Z'); pit(Gr, 262, 265); fillG(Gr, 262, 4, 265, 13, '#'); fillG(Gr, 262, 14, 265, 14, 'v');
+  put(Gr, 233, 19, 'B'); pit(Gr, 237, 241); put(Gr, 237, 24, '2'); fillG(Gr, 242, 15, 244, 19, '#'); put(Gr, 246, 19, 'c');
+  fillG(Gr, 248, 4, 268, 13, 'H'); fillG(Gr, 248, 14, 268, 14, 'v'); pit(Gr, 252, 255); fillG(Gr, 252, 4, 255, 13, 'H'); fillG(Gr, 252, 14, 255, 14, 'v'); put(Gr, 259, 19, 'Z'); pit(Gr, 262, 265); fillG(Gr, 262, 4, 265, 13, 'H'); fillG(Gr, 262, 14, 265, 14, 'v');
   put(Gr, 271, 19, 'm'); pit(Gr, 275, 284); put(Gr, 280, 13, 'o.o.o');
   put(Gr, 292, 19, 'G'); put(Gr, 296, 19, 'p'); fillG(Gr, W - 1, 0, W - 1, 19, '#');
   return rowsOf(Gr);
@@ -302,7 +302,7 @@ const baseRows = (() => {
   // ③ the air vent up to a ledge under the metal; spikes on the ceiling elsewhere
   fillG(Gr, 138, 20, 145, 23, '.'); put(Gr, 139, 23, '6'); fillG(Gr, 136, 3, 145, 3, 'v'); fillG(Gr, 146, 10, 151, 10, '-'); put(Gr, 146, 19, '7');
   fillG(Gr, 152, 20, 162, 20, '^'); put(Gr, 150, 6, 'o.o.o.o.o.o');
-  put(Gr, 166, 19, 'u'); put(Gr, 172, 19, 'A'); put(Gr, 168, 16, '?');
+  put(Gr, 164, 19, 'u'); put(Gr, 172, 19, 'A'); put(Gr, 168, 16, '?'); put(Gr, 169, 19, 'c');
   fillG(Gr, W - 1, 0, W - 1, 19, 'H');
   return rowsOf(Gr);
 })();
@@ -344,9 +344,9 @@ stamps.moonStore = {
 const yardRows = (() => {
   const W = 96, H = 26, Gr = grid(W, H, '.');
   fillG(Gr, 0, 0, W - 1, 0, 'H');
-  plate(Gr, 0, 8, 18); fillG(Gr, 0, 20, 8, 25, '#'); put(Gr, 2, 17, '@'); put(Gr, 6, 17, 'n');
+  plate(Gr, 0, 8, 18); fillG(Gr, 0, 20, 8, 25, '#'); put(Gr, 2, 17, '@'); put(Gr, 6, 17, 'n'); put(Gr, 4, 17, 'c');
   put(Gr, 16, 14, 'j'); plate(Gr, 22, 26, 13); put(Gr, 34, 9, 'V'); put(Gr, 40, 12, 'k');
-  plate(Gr, 47, 51, 16); fillG(Gr, 47, 18, 51, 18, 'v'); put(Gr, 58, 11, 'V'); put(Gr, 64, 6, 'K'); put(Gr, 70, 13, 'M');
+  plate(Gr, 47, 51, 16); fillG(Gr, 47, 18, 51, 18, 'v'); put(Gr, 49, 15, 'c'); put(Gr, 58, 11, 'V'); put(Gr, 64, 6, 'K'); put(Gr, 70, 13, 'M');
   plate(Gr, 78, 95, 15); fillG(Gr, 78, 17, 95, 25, '#'); put(Gr, 82, 14, 'c'); put(Gr, 90, 14, 'G'); fillG(Gr, W - 1, 0, W - 1, 14, '#');
   return rowsOf(Gr);
 })();
@@ -429,7 +429,7 @@ const starRows = (() => {
   ground(Gr, 0, 20, 19); put(Gr, 2, 18, '@'); put(Gr, 4, 18, 'n'); put(Gr, 7, 15, '?');
   put(Gr, 13, 18, 'a'); put(Gr, 9, 18, '1'); put(Gr, 18, 18, 'd');
   put(Gr, 21, 18, 'A'); put(Gr, 30, 15, '*'); put(Gr, 24, 16, 'o.o.o.o.o.o.o');
-  ground(Gr, 40, 44, 19); put(Gr, 42, 18, 'f'); put(Gr, 40, 18, 'N');
+  ground(Gr, 40, 44, 19); put(Gr, 42, 18, 'f'); put(Gr, 40, 18, 'N'); put(Gr, 44, 18, 'c');
   fillG(Gr, 47, 15, 50, 16, '#'); put(Gr, 48, 14, 'i');
   fillG(Gr, 53, 11, 56, 12, '#'); put(Gr, 54, 10, 'e'); put(Gr, 55, 7, 'R');
   fillG(Gr, 60, 15, 63, 16, '#'); put(Gr, 61, 14, 'j');
