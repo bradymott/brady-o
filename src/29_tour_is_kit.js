@@ -150,9 +150,9 @@ class IsBerg extends Ent {
       // the torque: Brady's weight about the middle, the seal's at its end
       let tq = this.seal * 0.55;
       if (on) tq += (p.cx - (this.x + this.w / 2)) / (this.w / 2) * 1.05;
-      const target = clamp(tq, -1, 1) * BERG.max * 1.08;
+      const target = clamp(tq * 1.2, -1, 1) * BERG.max;
       this.th = approach(this.th, clamp(target, -BERG.max, BERG.max), BERG.rate * dt);
-      const full = Math.abs(this.th) >= BERG.max - 0.005;
+      const full = Math.abs(this.th) >= BERG.max * 0.9;
       this.maxT = full ? this.maxT + dt : Math.max(0, this.maxT - dt * 2);
       if (full && this.maxT > 0 && this.maxT - dt <= 0) { TourKit.sfx('creak', 'crumble', { vol: 0.5, pitch: 0.6 }); g.parts.text(this.x + this.w / 2, this.top - 30, 'CREAK!', '#c8f0ff'); }
       // on a tilt, Brady slides downhill

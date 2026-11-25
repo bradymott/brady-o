@@ -48,6 +48,11 @@ async function session(viewport, fn) {
     window.thaw = () => { const g = S(); if (g._upd) { g.update = g._upd; g._upd = null; } if (g.player) g.player.invuln = 999; };
     window.ents = name => S().entities.filter(e => e.constructor.name === name || e.type === name);
     window.alive = () => { const g = S(), p = P(); return !p.dead && p.state === 'play' && g.state === 'play'; };
+    // is there nothing to stand on just ahead of Brady's feet (tiles or a live platform)? (a simple player's eye)
+    window.edgeAhead = (p, d) => { const g = S(), x = p.cx + (d || 1) * 22, fy = p.y + p.h + 4, t = g.area.tiles[Math.floor(fy / 32) * g.area.W + Math.floor(x / 32)]; if ([1, 2, 3, 4, 5, 7, 11, 12, 13, 16, 17, 19, 21, 22].includes(t)) return false; return !g.platforms.some(e => !e.dead && x > e.x && x < e.x + e.w && Math.abs(e.y - fy) < 24); };
+    // a player's run: hold right, jump (and hold it) at every edge; stops at tile column x on the ground
+    window.gapAhead = p => { let n = 0; for (let d = 1; d < 12; d++) { const q = { cx: p.cx + d * 32 - 22, y: p.y, h: p.h }; if (!edgeAhead(q)) return n; n++; } return n; };
+    window.hop = (x, sec) => { let j0 = -1e9, hold = 0.14; return runTo(x, sec || 10, (p, k) => { if (p.onGround && edgeAhead(p)) { j0 = k; const gp = gapAhead(p); hold = gp >= 4 ? 0.32 : gp >= 3 ? 0.2 : 0.12; return true; } return !p.onGround && p.vy < 0 && k - j0 < hold * 120; }); };
     window.tx = () => Math.floor(P().cx / 32); window.ty = () => Math.floor((P().y + P().h - 1) / 32);
     // hold right until Brady stands at tile column x (or dies); the jump button pressed when j(p) says so
     window.runTo = (x, sec, j) => { let r = false; sim(sec || 6, { right: true }, (k, I) => { const p = P(); if (!alive()) return false; if (p.cx >= x * 32 && p.onGround) { r = true; return false; } const want = j ? j(p, k) : false; I.jump = !!want; if (want === 'tap') I.jumpPressed = true; else I.jumpPressed = !!want && !I._held; I._held = !!want; }); return r; };
@@ -82,6 +87,7 @@ async function session(viewport, fn) {
 (async () => {
   await session({ width: 844, height: 390 }, async (page, shot, run, pano) => {
     const ev = (f, a) => page.evaluate(f, a);
+    if (process.env.IS_DBG) { console.log(JSON.stringify(await ev(new Function(process.env.IS_DBG)))); return; }
     // ---------------- 17-1 Northern Lights ----------------
     await run('aurora', async () => {
       await ev(() => { fresh(); play('17-1'); place(6, 14); sim(0.4); freeze(); });
@@ -154,6 +160,36 @@ async function session(viewport, fn) {
       await ev(() => { thaw(); play('17-1'); place(192, 14); sim(0.3); freeze(); });
       await shot('17-17-1-gate.png');
       await pano('17-1', null, '18-17-1-panorama.png');
+    });
+    // ---------------- 17-2 The Glacier Lagoon ----------------
+    await run('berg', async () => {
+      await ev(() => { thaw(); play('17-2'); place(8, 13); sim(0.4); freeze(); });
+      await shot('20-17-2-start.png');
+      const bergAt = x => ents('IsBerg').find(e => Math.floor(e.hx / 32) === x);
+      // standing in the middle of a plain berg: it stays level; at its edge it tilts, creaks and rolls over
+      let r = await ev(() => { thaw(); play('17-2'); const b = ents('IsBerg').find(e => Math.floor(e.hx / 32) === 16); place(18, 13); sim(3); const mid = { th: +b.th.toFixed(2), st: b.state }; place(20, 13); let maxTh = 0, rolled = false; for (let k = 0; k < 60; k++) { sim(0.05, { right: P().cx < b.x + b.w - 8 }); maxTh = Math.max(maxTh, b.th); if (b.state === 'roll') { rolled = true; break; } } return { mid, maxTh: +maxTh.toFixed(2), rolled, off: P().y > 14 * 32 || !alive() }; });
+      check('17-2: a berg stays level with Brady in the middle; at its edge it tips and he rolls over or slides off', Math.abs(r.mid.th) < 0.05 && r.mid.st === 'float' && r.maxTh > 0.3 && (r.rolled || r.off), r);
+      await ev(() => { thaw(); play('17-2'); const b = ents('IsBerg').find(e => Math.floor(e.hx / 32) === 16); place(20, 13); for (let k = 0; k < 80 && b.maxT < 0.5; k++) sim(0.05, { right: P().cx < b.x + b.w - 8 }); freeze(); });
+      await shot('21-17-2-berg-creaks.png');
+      // a seal is a counterweight: stand opposite it and the berg holds; stand on its side and it rolls
+      r = await ev(() => { thaw(); play('17-2'); const b = ents('IsBerg').find(e => Math.floor(e.hx / 32) === 32); place(33, 13); sim(4); const opp = b.state; place(35, 13); let rolled = false; for (let k = 0; k < 100; k++) { sim(0.05); if (b.state === 'roll') { rolled = true; break; } } return { opp, rolled }; });
+      check('17-2: a seal berg holds with Brady opposite the seal and rolls with him on the seal\'s side', r.opp === 'float' && r.rolled, r);
+      await ev(() => { thaw(); play('17-2'); place(33, 13); sim(1.2); freeze(); });
+      await shot('22-17-2-seal-counterweight.png');
+      // real inputs: the open lagoon, berg to berg to the sand (a player's run: jump at each edge)
+      r = await ev(() => { thaw(); play('17-2'); place(44, 13); sim(0.3); const ok = hop(71, 10); return { ok, x: tx(), alive: alive() }; });
+      check('17-2: real inputs: across the open lagoon on three bergs', r.ok && r.alive, r);
+      r = await ev(() => { thaw(); play('17-2'); place(98, 13); sim(0.3); const ok = hop(125, 12); return { ok, x: tx(), alive: alive() }; });
+      check('17-2: real inputs: the twist: small seal bergs and a drifting floe', r.ok && r.alive, r);
+      await ev(() => { thaw(); play('17-2'); place(110, 13); sim(0.4); freeze(); });
+      await shot('23-17-2-twist.png');
+      r = await ev(() => { thaw(); play('17-2'); place(150, 13); sim(0.3); const ok = hop(188, 14); return { ok, x: tx(), alive: alive() }; });
+      check('17-2: real inputs: the last stretch of drifting bergs', r.ok && r.alive, r);
+      await ev(() => { thaw(); play('17-2'); place(137, 6); sim(0.3); freeze(); });
+      await shot('24-17-2-ice-cave-shelf.png');
+      await ev(() => { thaw(); toArea('cave', 10, 11); sim(0.3); freeze(); });
+      await shot('25-17-2-ice-cave.png');
+      await pano('17-2', null, '26-17-2-panorama.png');
     });
   });
   // portrait
