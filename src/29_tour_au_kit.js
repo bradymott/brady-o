@@ -699,9 +699,9 @@ const bearBrain = {
       if (b.y + b.h >= b.floorY) {
         b.y = b.floorY - b.h; b.vy = 0; g.shake(9); Sound.play('stomp', { pitch: 0.5 }); g.burst(b.cx, b.floorY, 16, '#c8a070', 'dust');
         b.drops++;
-        if (ph >= 3 && b.drops % 2 === 1) { b.go('hop'); }
-        else if (ph >= 2) { b.go('bounce'); b.bn = 0; }
-        else b.go('winded');
+        if (ph >= 3 && !b.second) { b.second = true; b.go('hop'); }
+        else if (ph >= 2) { b.second = false; b.go('bounce'); b.bn = 0; }
+        else { b.go('winded'); b.vuln = true; }
       }
     } else if (b.act === 'hop') {
       // phase 3: straight back up for the second drop
@@ -713,7 +713,7 @@ const bearBrain = {
       if (b.first) { b.face(); b.vy = -12 * TS; b.vx = b.dir * 5 * TS; b.bn = (b.bn || 0); K.say(g, b, 'BOING! BOING!', '#ffffff'); }
       b.vy += PHYS.gDown * 0.7 * dt; b.y += b.vy * dt; b.x += b.vx * dt;
       if (b.x <= b.arenaX0 || b.x + b.w >= b.arenaX1) b.vx = -b.vx;
-      if (b.y + b.h >= b.floorY && b.vy > 0) { b.y = b.floorY - b.h; b.bn++; g.shake(4); if (b.bn >= 2) b.go('winded'); else { b.face(); b.vy = -12 * TS; b.vx = b.dir * 5 * TS; } }
+      if (b.y + b.h >= b.floorY && b.vy > 0) { b.y = b.floorY - b.h; b.bn++; g.shake(4); if (b.bn >= 2) { b.go('winded'); b.vuln = true; } else { b.face(); b.vy = -12 * TS; b.vx = b.dir * 5 * TS; } }
     } else if (b.act === 'winded') {
       b.pose = 'winded'; b.vuln = true; b.vx = 0;
       if (b.first) K.say(g, b, pick(['OOF... WINDED...', 'THE GROUND MOVED!', 'WHO PUT THAT THERE?']), '#ffe28a');

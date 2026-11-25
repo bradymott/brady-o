@@ -330,6 +330,23 @@ const simpleRoom = (id, extra) => ({ floor: 12, rows: ['########################
 stamps.auTmp = simpleRoom('tmp');
 const tmp = (n, name, arch, theme, extra) => ({ n, name, arch, theme, gimmick: name, hint: name, postcard: name, enemies: [['auYabby', 1]], mapCell: [n % 3, Math.floor(n / 3)], mapFrom: n - 2,
   areas: [{ id: 'a', gen: 'room', stamp: 'auTmp' }], ...(extra || {}) });
+/* ---------------- 16-5 The Drop Bear: the walk in under the gums, then his tree ----------------
+   A short night walk through the gum forest: two power-ups, a kookaburra, a hollow trunk with a crack in it (a fake
+   wall) hiding P2, then the clearing under the big gum. */
+const gumsRows = (() => {
+  const m = mk(72, 18);
+  m.fill(0, 14, 71, 17, '#'); m.fill(0, 0, 0, 13, 'H');
+  m.put(2, 13, '@').put(5, 13, 'k').put(8, 10, 'p').put(12, 13, 'u');
+  m.fill(15, 11, 19, 11, '-'); m.fill(20, 8, 24, 8, '-'); m.put(22, 6, '*'); m.coins(16, 18, 9);
+  m.put(27, 4, 'e'); m.put(30, 13, 'u');
+  m.fill(38, 4, 43, 13, 'H'); m.fill(38, 11, 43, 13, 'F'); m.fill(39, 11, 42, 12, '.'); m.fill(38, 11, 38, 13, 'F'); m.fill(43, 11, 43, 13, 'F'); m.put(41, 12, '*'.replace('*', 'V'));
+  m.fill(35, 9, 37, 9, '-'); m.put(44, 13, 'n');
+  m.put(50, 10, 'p'); m.fill(53, 10, 57, 10, '-'); m.put(55, 6, 'U'); m.put(58, 13, 'u');
+  m.put(66, 13, 'D');
+  return m.rows();
+})();
+stamps.auGums = { floor: 14, rows: gumsRows, gold: { '*': 'must', V: 'hidden', U: 'high' }, doors: [{ to: 'arena@in', look: 'tourDoor' }],
+  legend: { k: ['spawn', 'sign', { text: 'DROP BEARS AREN\'T REAL. ...ARE THEY? KEEP AN EYE ON THE GROUND UNDER THE TREES' }], p: ['piece', 'box', { item: 'power' }], u: ['decor', 'auGum'], e: ['enemy', 'auKooka'], n: ['decor', 'auGumLeaves'] } };
 const L5 = { n: 5, name: 'The Drop Bear', mapLabel: 'Drop Bear', arch: 'lair', theme: 'au_night', boss: 'au_dropbear',
   gimmick: 'A gum tree at night. The drop bear is real, and he drops. Watch for the shadow',
   hint: 'When his shadow stops and darkens, MOVE. If he misses, he lands winded: stomp him!',
@@ -338,8 +355,7 @@ const L5 = { n: 5, name: 'The Drop Bear', mapLabel: 'Drop Bear', arch: 'lair', t
   mapCell: [1, 2], mapFrom: 3,
   exits: { main: { to: 'country:next' } },
   areas: [
-    { id: 'gums', gen: 'strip', W: 70, H: 18, theme: 'au_night',
-      script: [['itemBlock', { item: 'power' }], ['flat', { n: 6 }], ['postcard', { kind: 'must', dy: -5 }], ['stairs', { n: 3 }], ['flat', { n: 4 }], ['itemBlock', { item: 'power' }], ['postcard', { kind: 'high', dy: -7, dx: -2 }], ['flat', { n: 4 }], ['postcard', { kind: 'risky', dy: -4 }], ['door', { to: 'arena@in', perch: 0 }]] },
+    { id: 'gums', gen: 'room', theme: 'au_night', stamp: 'auGums', camera: 'free' },
     { id: 'arena', gen: 'arena', role: 'arena', layout: 'gum', arenaW: 26, H: 18, roof: false }
   ] };
 const L6 = Object.assign(tmp(6, 'The Big Things', 'giant', 'au_big'), { secret: true, mapCell: [2, 2], mapFrom: 0, exits: { main: { to: 'node:16-2' } } });
