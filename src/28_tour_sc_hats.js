@@ -219,7 +219,7 @@ TourHats.NOT = new Set([].concat(
   // Kenya (15): scenery and moving parts (gullies, thickets, the herd's spawner, rivers, lakes, the sun, clouds, puddles,
   // the leaf sapling), and the big animals that are platforms or scenery-sized (wildebeest, giraffes, flamingos, the
   // elephant, the river croc that is only eyes or a lunging jaw, the eagle that is mostly a shadow)
-  'keGap keThicket keHerd keRiver keLake keSun keCloud kePuddle keLeafBush keGnu keGiraffe keFlamingo keElephant keCroc keEagle'.split(' '),
+  'keShaft keGap keThicket keHerd keRiver keLake keSun keCloud kePuddle keLeafBush keGnu keGiraffe keFlamingo keElephant keCroc keEagle'.split(' '),
   // France: bread, pastries, pans, keychains, accordions, macarons, chandeliers, lamp posts, mirrors, ovens, decoys, parcels, hatches, the dovecote
   'frBaguette frCroissant frPoele frKeychain frAccordion frMacaron frChandelier frLampPost frMirror frOven frDecoy frParcel frHatch frDovecote'.split(' '),
   // Indonesia: the rafflesia (a flower), the scarecrow, satay, the cask, the surf rack, floats, kites, the sunrise, bombs, hot rocks, plankton, glow, trees, gongs, groves, durians, winds, steam, vents

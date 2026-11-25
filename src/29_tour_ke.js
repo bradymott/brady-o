@@ -595,6 +595,13 @@ class KeGap extends Ent {
   }
 }
 
+/* the warren's shafts: dark earth behind the root ledges (the engine darkens only empty tunnel cells) */
+class KeShaft extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 4) * TS, (s.h || 5) * TS); this.x = s.x - TS / 2; this.y = s.y + TS - this.h; this.friendly = true; this.back = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) { ctx.save(); ctx.fillStyle = '#4a1e0e'; ctx.fillRect(this.x, this.y, this.w, this.h); ctx.restore(); }
+}
+
 /* ---------------- the crocodiles (15-1's rivers) ---------------- */
 /* KeRiver draws a river over a pit (muddy brown water, ripples), so the pit reads as a river; a fall in is the end of a
    life (the crocs). KeCroc lurks in it: only its eyes show, drifting; when Brady (on a gnu or on the bank) comes
@@ -1333,6 +1340,7 @@ const pieces = {
       B.set(c, gy + 3, T.SEMI); B.set(c + 1, gy + 3, T.SEMI);
       B.set(c + 2, gy + 5, T.SEMI); B.set(c + 3, gy + 5, T.SEMI);
       B.decorAt('keBurrowMound', c + 0.5, gy, 0);
+      B.spawn('keShaft', c, gy + 5, { w: 4, h: 6 });
     }
     for (const [dx, w] of o.rocks || []) B.fill(x + dx, t0, x + dx + w - 1, t1, T.HARD);
     for (const [dx, w, h] of o.thorns || []) { B.fill(x + dx, gy - h, x + dx + w - 1, gy - 1, T.HARD); B.spawn('keThicket', x + dx, gy - 1, { w, h }); }
@@ -1419,7 +1427,7 @@ const emblem = (ctx, x, y, r, t) => {
   ctx.restore();
 };
 
-const entities = { keGap: KeGap, keThicket: KeThicket, keHerd: KeHerd, keGnu: KeGnu, keRiver: KeRiver, keCroc: KeCroc, keGiraffe: KeGiraffe, keLeafBush: KeLeafBush, keFlamingo: KeFlamingo, keLake: KeLake, keSun: KeSun, keCloud: KeCloud, keElephant: KeElephant, kePuddle: KePuddle, keSentry: KeSentry, keEagle: KeEagle };
+const entities = { keShaft: KeShaft, keGap: KeGap, keThicket: KeThicket, keHerd: KeHerd, keGnu: KeGnu, keRiver: KeRiver, keCroc: KeCroc, keGiraffe: KeGiraffe, keLeafBush: KeLeafBush, keFlamingo: KeFlamingo, keLake: KeLake, keSun: KeSun, keCloud: KeCloud, keElephant: KeElephant, kePuddle: KePuddle, keSentry: KeSentry, keEagle: KeEagle };
 
 Tour.country({
   id: 'ke', colors: COL, tagline: 'The savannah: wildebeest, giraffes, flamingos and one very theatrical hippo',
