@@ -411,5 +411,30 @@ const levels = [L1, L2, L3, L4,
   L5, L6];
 
 Tour.amend('is', { stamps, levels });
+/* ---------------- the land's map: the island of fire and ice ----------------
+   Iceland's own shape (the west fjords' claw at the top left), the night field in the west, the glacier lagoon under
+   the ice cap in the south east, the rift running through the middle, the volcano in the north, the troll's cave on
+   the north-east fjord where the port is; the hidden folk's stop (17-6) hides by a rock near 17-1. */
+if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.is = {
+  labels: { '17-1': 'Northern Lights', '17-2': 'Glacier Lagoon', '17-3': 'The Rift', '17-4': 'Organ Pipes', '17-5': 'Troll\'s Cave', '17-6': 'Hidden Folk' },
+  w: 1700, h: 900,
+  pal: { sea: '#2a5a7a', deep: '#123048', land: '#4a7a4a', light: '#7ab05a', path: '#f2e8c8', beach: '#2a2a32', cliff: '#3a3a44' },
+  trail: 'stones',
+  land: [[[90, 300], [150, 160], [260, 110], [330, 190], [300, 260], [380, 250], [430, 160], [560, 140], [700, 190], [860, 130], [1040, 150], [1180, 110], [1330, 170], [1470, 150], [1600, 260], [1620, 420], [1560, 560], [1600, 650], [1480, 760], [1300, 800], [1080, 840], [860, 830], [640, 780], [460, 720], [300, 640], [200, 560], [120, 480], [170, 400]]],
+  nodes: { start: [230, 520], '17-1': [420, 430], '17-6': [330, 300], '17-2': [1000, 720], '17-3': [760, 520], '17-4': [960, 300], '17-5': [1330, 330], port: [1490, 230] },
+  paths: { 'start>17-1': [[320, 480]], '17-1>17-6': [[380, 360]], '17-6>17-2': [[520, 330], [700, 400], [860, 640]], '17-1>17-2': [[560, 560], [800, 700]], '17-2>17-3': [[880, 620]], '17-3>17-4': [[860, 400]], '17-4>17-5': [[1140, 290]], '17-5>port': [[1420, 280]] },
+  feat: [
+    ['patch', '#eef6fa', [[1080, 420], [1240, 400], [1380, 470], [1360, 600], [1180, 640], [1060, 560]]],
+    ['patch', '#2a2a32', [[860, 780], [1100, 800], [1300, 760], [1080, 840], [860, 830]]],
+    ['range', 'mtn', [[1500, 480, 44], [1450, 620, 38], [560, 230, 40], [680, 260, 34], [250, 220, 32]], { snow: true }],
+    ['volcano', 960, 230, 54, { lava: true }],
+    ['river', [[700, 180], [740, 320], [760, 520], [720, 700], [700, 790]], 10],
+    ['sprite', 'isGlacierMap', 1210, 520, 40], ['sprite', 'isBergMap', 1060, 790, 14], ['sprite', 'isBergMap', 1120, 780, 10],
+    ['sprite', 'isGeyserMap', 640, 470, 16], ['sprite', 'isHutMap', 300, 560, 18], ['sprite', 'isHutMap', 520, 610, 16],
+    ['sprite', 'isHorseMap', 600, 660, 14], ['sprite', 'isPuffinMap', 1560, 330, 20], ['sprite', 'isTrollMap', 1400, 400, 20], ['sprite', 'isPipesMap', 1060, 300, 20]
+  ],
+  flora: ['rock'], density: 0.4,
+  live: [['walk', 'goose', [[480, 640], [620, 680]], 9]]
+};
 Object.assign(TourLandscape.ARCH_LABEL, { aurora: 'AURORA', berg: 'BERGS', quake: 'QUAKE', basalt: 'PIPES', shy: 'SHY' });
 })();
