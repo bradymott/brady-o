@@ -915,7 +915,7 @@ class KeSun extends Ent {
   }
   draw(ctx) {
     const g = this.g, h = g.keHeat || 0, port = Game.cssH > Game.cssW;
-    const W = 150, x = g.camX + Game.viewW / 2 - W / 2, y = g.camY + (port ? 104 : 14);
+    const W = 150, x = g.camX + Game.viewW / 2 - W / 2, y = g.camY + (port ? 150 : 44);
     const hot = h > 0.7, fl = hot && Math.sin(g.t * 16) > 0;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
     ctx.fillStyle = 'rgba(28,20,38,0.7)'; rr(ctx, x - 26, y - 4, W + 40, 22, 10); ctx.fill(); ctx.stroke();
@@ -936,7 +936,7 @@ class KeSun extends Ent {
 }
 // a cloud drifting slowly over the plain, its shadow sliding along the ground below it
 class KeCloud extends Ent {
-  constructor(g, s) { super(g, s, (s.w || 6) * TS, 2 * TS); this.hx = s.x - this.w / 2; this.x = this.hx; this.y = (s.sky || 3) * TS; this.ax = (s.ax || 10) * TS; this.speed = s.speed || 0.12; this.gy = s.y - TS; this.friendly = true; this.back = true; this.ph = s.phase || 0; }
+  constructor(g, s) { super(g, s, (s.w || 6) * TS, 2 * TS); this.hx = s.x - this.w / 2; this.x = this.hx; this.y = s.y - TS - (5 + (s.sky || 3)) * TS; this.ax = (s.ax || 10) * TS; this.speed = s.speed || 0.12; this.gy = s.y - TS; this.friendly = true; this.back = true; this.ph = s.phase || 0; }
   update(dt) { this.t += dt; this.x = this.hx + (0.5 - 0.5 * Math.cos(this.t * this.speed * TAU + this.ph)) * this.ax; }
   shadeOf() { return [this.x + 6, this.x + this.w - 6, this.y]; }
   draw(ctx) {
@@ -1268,11 +1268,13 @@ const pieces = {
   },
 
   /* ---- 15-4 noon ---- */
+  // a gully in the plain: a pit drawn as a red ravine: { n }
+  gully(st, o) { const x = st.x, n = o.n || 3; st.floor(x, x + 1); st.pit(x + 2, x + n + 1); st.B.spawn('keGap', x + 2, st.gy, { w: n }); if (o.coins !== false) st.arc(x + 1, x + n + 2, st.gy - 2, 2); st.floor(x + n + 2, x + n + 4); return x + n + 5; },
   sun(st, o) { st.B.spawn('keSun', st.x, st.gy - 1, {}); return st.x; },
   // an open sunny stretch: n columns of flat plain, decor
   open(st, o) { const x = st.x, n = o.n || 12; st.floor(x, x + n - 1); st.dress(x, x + n - 1, 0.1); if (o.coins !== false) st.coins(x + 2, x + n - 3, st.gy - 2); return x + n; },
   // a shade tree: an acacia whose crown is high enough to walk under (shade) and to stand on (sun)
-  shadeTree(st, o) { return pieces.acacia(st, Object.assign({ h: 5, w: o.w || 6 }, o)); },
+  shadeTree(st, o) { return pieces.acacia(st, Object.assign({ h: 4, w: o.w || 6 }, o)); },
   // a rock overhang (kopje) to shelter under: { w, h }
   overhang(st, o) {
     const B = st.B, x = st.x, w = o.w || 6, h = o.h || 3; st.floor(x, x + w + 1);

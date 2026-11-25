@@ -212,7 +212,88 @@ const L3 = { n: 3, name: 'Flamingo Lake', mapLabel: 'Flamingos', arch: 'flock', 
     { id: 'nests', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keNests' }
   ] };
 
-Tour.amend('ke', { stamps, levels: [L1, L2, L3] });
+/* ---------------- 15-4 High Noon ---------------- */
+// a cool hollow under a kopje with a spring in it (a hidden postcard, a hidden 1UP); no sun down here
+stamps.keSpring = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#..*.........................#',
+    '#.----.......................#',
+    '#.......-----................#',
+    '#............................#',
+    '#.............-----..........#',
+    '#..................h.........#',
+    '#....................-----...#',
+    '#............................#',
+    '#............................#',
+    '#.@...D......WWWWWW..........#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'plain@springBack', look: 'keMoundDoor' }]
+};
+const L4 = { n: 4, name: 'High Noon', mapLabel: 'High Noon', arch: 'shade', theme: 'ke_noon',
+  gimmick: 'The sun is the hazard: a heat gauge fills out in the open and empties in the shade. Hop from acacia to rock, drift with the clouds\' shadows, walk in the elephant\'s shade',
+  hint: 'Watch the gauge at the top. Shade is under trees and rocks, under a cloud, beside the elephant. Her trunk shower cools you right down',
+  postcard: 'It is SO hot, Brady. The elephant let me stand in her shadow. She is very polite. ♥ C',
+  enemies: [['keBeetle', 2], ['keWarthog', 2], ['keVulture', 1]],
+  mapCell: [2, 1], mapFrom: 2,
+  exits: { main: { to: '15-5' } },
+  areas: [
+    { id: 'plain', gen: 'strip', W: 260, H: 18, GY: 14,
+      script: [
+        ['sun', {}],
+        ['box', { item: 'power' }],
+        ['tip', { text: 'HIGH NOON! THE GAUGE UP TOP FILLS IN THE SUN AND EMPTIES IN THE SHADE. A FULL GAUGE AND YOU WILT' }],
+        // ① tree to tree, rock to puddle
+        ['shadeTree', { w: 6 }],
+        ['open', { n: 14 }],
+        ['shadeTree', { w: 6, gold: 'must' }],
+        ['open', { n: 18 }],
+        ['overhang', { w: 6, h: 3 }],
+        ['enemies', { kind: 'keBeetle', n: 1, len: 10 }],
+        ['puddle', { w: 3 }],
+        'cp',
+        // ② a long open stretch: two clouds drift over it, their shadows sliding along the ground
+        ['shadeTree', { w: 5 }],
+        ['cloud', { dx: 4, w: 7, ax: 34, speed: 0.045, sky: 3 }],
+        ['cloud', { dx: 22, w: 6, ax: 24, speed: 0.06, sky: 2, phase: 2.4 }],
+        ['open', { n: 22 }],
+        ['enemies', { kind: 'keWarthog', n: 1, len: 12 }],
+        ['open', { n: 12 }],
+        ['moundDoor', { to: 'cool@in', back: 'springBack' }],
+        ['box', { item: 'power' }],
+        'cp',
+        // ③ the elephant: sixty tiles of open plain; walk in her shade and keep up
+        ['shadeTree', { w: 6 }],
+        ['elephant', { dx: 2, ax: 56, speed: 2.4 }],
+        ['open', { n: 20 }],
+        ['enemies', { kind: 'keBeetle', n: 1, len: 10 }],
+        ['open', { n: 14 }],
+        ['enemies', { kind: 'keWarthog', n: 1, len: 12 }],
+        ['puddle', { w: 3 }],
+        'cp',
+        // ④ gullies in the sun, a cloud over them, the elephant once more to the finish
+        ['shadeTree', { w: 5 }],
+        ['cloud', { dx: 2, w: 7, ax: 26, speed: 0.05, sky: 3 }],
+        ['gully', { n: 3 }],
+        ['open', { n: 6 }],
+        ['gully', { n: 4 }],
+        ['postcard', { kind: 'risky', dx: -3, dy: -6 }],
+        ['open', { n: 6 }],
+        ['gully', { n: 3 }],
+        ['overhang', { w: 5, h: 3 }],
+        ['elephant', { dx: 2, ax: 30, speed: 2.8 }],
+        ['open', { n: 24 }],
+        ['enemies', { kind: 'keVulture', n: 1, len: 8 }],
+        ['end', { exit: 'main' }]
+      ] },
+    { id: 'cool', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keSpring' }
+  ] };
+
+Tour.amend('ke', { stamps, levels: [L1, L2, L3, L4] });
 
 /* ---------------- the land's map: the savannah under a big sky ---------------- */
 // the route: the airstrip by the great mountain, down the migration river, through the acacia grove (a meerkat

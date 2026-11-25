@@ -287,6 +287,60 @@ async function session(browser, viewport, fn) {
       await page.evaluate(() => { thaw(); toArea('lake'); });
       await pano('39-15-3-panorama.jpg');
     });
+    /* ---------- 15-4 High Noon ---------- */
+    await run('shade', async () => {
+      await page.evaluate(() => { fresh(); play('15-4'); place(14, 13); sim(0.3); freeze(); });
+      await shot('40-15-4-start.png');
+      // the gauge: it fills standing in the sun, empties under an acacia
+      const r = await page.evaluate(() => {
+        thaw(); const g = S(), p = P(); const A = g.area;
+        // an open column with nothing overhead, and the first acacia's crown
+        let tree = 0; for (let x = 12; x < A.W && !tree; x++) if (A.tiles[10 * A.W + x] === window.BRADY.T.SEMI) tree = x;
+        place(tree + 12, 13); g.keHeat = 0; sim(1.7); const sun = g.keHeat;
+        place(tree + 2, 13); sim(1.2); const shade = g.keHeat;
+        return { sun: Math.round(sun * 100) / 100, shade: Math.round(shade * 100) / 100 };
+      });
+      check('15-4: the heat gauge fills in the open sun and empties in an acacia\'s shade', r.sun > 0.4 && r.shade < r.sun - 0.3, r);
+      await page.evaluate(() => { const g = S(); g.keHeat = 0.82; place(60, 13); sim(0.1); freeze(); });
+      await shot('41-15-4-heat-gauge-hot.png');
+      // the elephant's stretch: running it flat out in the sun wilts him; walking in her shade gets him across
+      const r2 = await page.evaluate(() => {
+        thaw(); const g = S(), p = P();
+        const el = ents('KeElephant').sort((a, b) => a.x - b.x)[0], pud = ents('KePuddle').find(q => q.x > el.ax + 40 * 32);
+        const start = Math.floor(el.ax / 32) - 2;
+        // flat out, no shade (the elephant parked at the far end)
+        p.setPower && p.setPower(1, true); p.invuln = 0;
+        for (const e of g.entities) if (e.enemy) e.remove = true;   // (this check is about the heat: the critters on this stretch are left out)
+        el.x = el.bx + 20 * 32; el.wait = 99; place(start, 13); g.keHeat = 0;
+        let hurt = false; const pw = p.power;
+        until(() => { if (p.power < pw || p.invuln > 0.2) hurt = true; return p.x > pud.x || !alive(); }, 12, { right: true });
+        // with the elephant: wait for her at the start, then keep in her shadow
+        play('15-4'); const g2 = S(), p2 = P(); p2.setPower && p2.setPower(1, true); p2.invuln = 0;
+        const el2 = ents('KeElephant').sort((a, b) => a.x - b.x)[0], pud2 = ents('KePuddle').find(q => q.x > el2.ax + 40 * 32);
+        for (const e of g2.entities) if (e.enemy) e.remove = true;
+        el2.x = el2.ax - el2.w / 2; el2.dir = 1; el2.wait = 0; place(start, 13); g2.keHeat = 0;
+        let hurt2 = false, maxHeat = 0; const pw2 = p2.power;
+        for (let k = 0; k < 120 * 40; k++) {
+          const sh = el2.shadeOf(), mid = (sh[0] + sh[1]) / 2, turning = el2.dir < 0 || el2.wait > 0;
+          // keep under her; once she turns back at the end of her walk, run for the puddle
+          const goRun = el2.cx > el2.bx - 2 * 32 || turning;
+          const inp = goRun ? { right: true } : { right: p2.cx < mid - 8, left: p2.cx > mid + 24 };
+          sim(1 / 120, inp); maxHeat = Math.max(maxHeat, g2.keHeat);
+          if (p2.power < pw2 || (p2.invuln > 0.2)) hurt2 = true;
+          if (p2.x > pud2.x || !alive()) break;
+        }
+        return { flatOutWilts: hurt, withElephant: !hurt2 && p2.x > pud2.x && alive(), maxHeat: Math.round(maxHeat * 100) / 100 };
+      });
+      check('15-4: running the open plain in the sun wilts Brady; walking in the elephant\'s shadow gets him across unhurt', r2.flatOutWilts && r2.withElephant, r2);
+      await page.evaluate(() => { play('15-4'); const p = P(), el = ents('KeElephant').sort((a, b) => a.x - b.x)[0]; el.x = el.ax + 10 * 32; el.dir = 1; place(Math.floor(el.cx / 32), 13); sim(0.3); freeze(); });
+      await shot('42-15-4-elephant-shade.png');
+      await page.evaluate(() => { thaw(); const c = ents('KeCloud').sort((a, b) => a.x - b.x)[0]; place(Math.floor((c.x + c.w / 2) / 32), 13); sim(0.2); freeze(); });
+      await shot('43-15-4-cloud-shadow.png');
+      await page.evaluate(() => { thaw(); toArea('cool'); place(8, 11); sim(0.4); freeze(); });
+      await shot('44-15-4-cool-spring.png');
+      await page.evaluate(() => { thaw(); toArea('plain'); });
+      await pano('49-15-4-panorama.jpg');
+    });
   });
   await session(browser, { width: 390, height: 844 }, async (page, shot, run) => {
     await run('p-herd', async () => { await page.evaluate(() => { fresh(); play('15-1'); place(40, 13); sim(1.5); freeze(); }); await shot('50-portrait-15-1.png'); });
