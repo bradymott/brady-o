@@ -113,7 +113,7 @@ Object.assign(Tour.pieces, {
   // on, off, phase, force, faint }
   'moon.geyser'(st, o) {
     const B = st.B, w = o.w || 2, x = st.x, bot = st.gy - 1, top = o.top != null ? o.top : bot - (o.up || 10), gid = 'g' + (++geyserN);
-    const z = B.zone(x, top, w, bot - top + 1, 0, -(o.force || 95) * TS, (o.vmax || 7.6) * TS, 'updraft', { pull: 3, moonGeyser: gid });
+    const z = B.zone(x, top, w, bot - top + 1, 0, -(o.force || 95) * TS, (o.vmax || 7.6) * TS, 'updraft', { pull: o.pull != null ? o.pull : 3, moonGeyser: gid });
     if (!o.steady) z.pulse = true;
     B.spawn('moonGeyser', x, bot, { w, h: bot - top + 1, steady: !!o.steady, on: o.on, off: o.off, phase: o.phase || 0, gid, faint: !!o.faint });
     return st.x;
@@ -306,6 +306,114 @@ Object.assign(Tour.pieces, {
   'moon.junk'(st, o) { st.B.spawn('moonJunk', st.x, st.gy - 1, { ax: o.ax || 0, ay: o.ay || 0, speed: o.speed || 0.6, kind: o.kind || 0, phase: o.phase || 0 }); return st.x; }
 });
 Tour.moonKit.DRIFT = DRIFT; Tour.moonKit.DRIFT_PLANS = DRIFT_PLANS; Tour.moonKit.driftInput = driftInput;
+
+/* ---------------- 18-3 ROVER: the moon buggy ----------------
+   Brady drives a springy six-wheeled buggy. On the ground the stick is the THROTTLE (towards the way you face) and the
+   BRAKE (the other way, then reverse); the buggy keeps rolling when you let go. Jump is the buggy's hop (hold it for
+   a higher one). In the air the stick does NOT steer: it LEANS the buggy (nose up, nose down). Land flat (NICE),
+   or the buggy bumps and loses most of its speed; land on its nose or its back (CRASH) and Brady takes a hit.
+   The wheels climb a one-tile rock by themselves. The level checker runs this same function (its tries hold the
+   stick all flight, which only leans: the path is the same however the player leans). */
+const ROVER = { accel: 20 * TS, brake: 46 * TS, roll: 2.6 * TS, top: 11 * TS, rev: 4.5 * TS, hop: 13.5 * TS, cut: 5.5 * TS, lean: 3.4, sag: 0.55, nice: 0.35, crash: 1.05 };
+function roverPhysics(p, inp, A, dt, platforms) {
+  const R = ROVER, ev = { jump: false, bonks: null, landed: false, swim: false };
+  const m = p.moon || (p.moon = {}); if (m.ang == null) m.ang = 0;
+  const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0), gm = A.gravity || 1;
+  p.inWater = false; p.flipped = false;
+  if (m.stun > 0) m.stun -= dt;
+  const ctl = m.stun > 0 ? 0 : dir;
+  if (p.onGround) {
+    m.ang = approach(m.ang, 0, dt * 8);
+    if (ctl) {
+      if (p.vx && sign(p.vx) !== ctl) p.vx = approach(p.vx, 0, R.brake * dt);
+      else p.vx = approach(p.vx, ctl * R.top, R.accel * dt);
+      p.facing = ctl;
+    } else p.vx = approach(p.vx, 0, R.roll * dt);
+    if (inp.jumpPressed && !(m.stun > 0)) { p.vy = -R.hop; p.onGround = false; p.jumping = true; ev.jump = true; }
+  } else {
+    // the stick leans the buggy; left alone, its nose sags slowly the way it is going
+    if (ctl) m.ang += ctl * R.lean * dt * (p.facing || 1);
+    else m.ang += R.sag * dt * (p.vx >= 0 ? 1 : -1) * (p.facing || 1) * 0.5;
+    m.ang = clamp(m.ang, -2.6, 2.6);
+  }
+  if (p.jumping && !inp.jump && p.vy < -R.cut) p.vy = -R.cut;
+  const g = (p.vy < 0 && inp.jump && p.jumping) ? PHYS.gUp : PHYS.gDown;
+  p.vy = Math.min(p.vy + g * gm * dt, PHYS.maxFall);
+  const zf = zoneForce(A, p);
+  if (zf && zf.fy) { p.vy += zf.fy * dt; if (zf.vmax && p.vy < -zf.vmax) p.vy = -zf.vmax; if (zf.fy < 0) p.jumping = false; }
+  if (p.vy >= 0) p.jumping = false;
+  const wasGround = p.onGround, vx0 = p.vx, x0 = p.x, y0 = p.y;
+  moveBody(p, A, dt, { semis: true, hidden: true, corner: true, platforms, extraDx: zf && zf.fx ? zf.fx * dt : 0 });
+  // the springy wheels climb a one-tile rock by themselves
+  if (p.hitWall && wasGround && vx0) {
+    const d = sign(vx0), fx = Math.floor((d > 0 ? p.x + p.w + 1 : p.x - 1) / TS), fy = Math.floor((p.y + p.h - 1) / TS);
+    const free = y => !SOLID[tileAt(A, fx, y)] && !SOLID[tileAt(A, Math.floor((p.x + 1) / TS), y)] && !SOLID[tileAt(A, Math.floor((p.x + p.w - 1) / TS), y)];
+    if (SOLID[tileAt(A, fx, fy)] && free(fy - 1) && free(fy - 2) && (p.h < 40 || free(fy - 3))) { p.y -= TS; p.x = x0 + vx0 * dt; p.vx = vx0 * 0.85; p.onGround = true; m.bump = 0.25; }
+    else p.vx = 0;
+  } else if (p.hitWall) p.vx = 0;
+  ev.bonks = p.bonks;
+  if (p.bonks) p.vy = Math.max(p.vy, 0);
+  ev.landed = p.onGround && !wasGround;
+  if (ev.landed) {
+    const a = Math.abs(m.ang);
+    if (a < R.nice) { m.say = a < 0.15 ? 'PERFECT!' : 'NICE!'; if (a < 0.15) p.vx *= 1.05; }
+    else if (a < R.crash) { m.say = 'BUMP!'; p.vx *= 0.4; m.stun = 0.25; }
+    else { m.say = 'CRASH!'; p.vx = 0; m.stun = 0.6; m.crash = true; }
+    m.ang = 0; m.bump = 0.3;
+  }
+  if (m.bump > 0) m.bump -= dt;
+  return ev;
+}
+{
+  const ppf = playerPhysicsFlip;
+  playerPhysicsFlip = function (p, inp, area, dt, platforms, opts) {
+    if (area && area.moon && area.moon.rover) return roverPhysics(p, inp, area, dt, platforms);
+    return ppf(p, inp, area, dt, platforms, opts);
+  };
+  // the game: a crash costs a hit; the landing words; the engine hum
+  const up0 = Player.prototype.update;
+  Player.prototype.update = function (dt) {
+    const r = up0.apply(this, arguments), m = this.moon, A = this.g && this.g.area;
+    if (m && A && A.moon && A.moon.rover) {
+      if (m.say) { if (this.g.onScreen(this)) this.g.parts.text(this.cx, this.y - 20, m.say, m.say === 'CRASH!' ? '#ff6a6a' : m.say === 'BUMP!' ? '#ffd84a' : '#7affd8'); if (m.say === 'CRASH!' || m.say === 'BUMP!') { this.g.shake(m.say === 'CRASH!' ? 6 : 2); this.g.burst(this.cx, this.y + this.h, 8, '#e8e2f2', 'dust'); } m.say = null; }
+      if (m.crash) { m.crash = false; this.hurt({ x: this.x, y: this.y + this.h, w: this.w, h: 1, cx: this.cx, cy: this.cy }); }
+    } else if (m) { m.ang = 0; m.stun = 0; }
+    return r;
+  };
+}
+// the buggy itself, drawn over Brady's legs: a six-wheeled tub with a dish antenna, a P on the side, the springs
+// squashing on landings; leaning with m.ang
+const Buggy = {
+  draw(ctx, p, t) {
+    const m = p.moon || {}, f = p.facing || 1, x = p.cx, y = p.y + p.h, ang = (m.ang || 0) * f, sq = m.bump > 0 ? Math.sin(m.bump / 0.3 * Math.PI) * 4 : 0;
+    const roll = (p.x / 9) % TAU;
+    ctx.save(); ctx.translate(x, y - 10); ctx.rotate(ang); ctx.scale(f, 1);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    // wheels on their springs
+    for (const wx of [-24, 0, 24]) {
+      const wy = (p.onGround ? 0 : 4) + (wx === 0 ? 1 : 0);
+      ctx.strokeStyle = '#8a92a6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(wx, -10 + sq); for (let k = 1; k <= 4; k++) ctx.lineTo(wx + (k % 2 ? 3 : -3), -10 + sq + k * (wy + 10 - sq) / 4); ctx.stroke();
+      ctx.strokeStyle = INK; ctx.fillStyle = '#2a2a34'; ctx.beginPath(); ctx.arc(wx, wy, 8, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#c8ccd4'; ctx.beginPath(); ctx.arc(wx, wy, 3.5, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#c8ccd4'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(wx + Math.cos(roll) * 6, wy + Math.sin(roll) * 6); ctx.lineTo(wx - Math.cos(roll) * 6, wy - Math.sin(roll) * 6); ctx.stroke();
+    }
+    ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    // the tub
+    ctx.fillStyle = '#e8ecf4'; ctx.beginPath(); ctx.moveTo(-34, -12 + sq); ctx.lineTo(30, -12 + sq); ctx.lineTo(36, -24 + sq); ctx.lineTo(10, -26 + sq); ctx.lineTo(4, -34 + sq); ctx.lineTo(-30, -34 + sq); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffd84a'; ctx.fillRect(-32, -20 + sq, 60, 5); ctx.strokeRect(-32, -20 + sq, 60, 5);
+    ctx.fillStyle = Tour.moonKit.PIWI; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('P', -18, -27 + sq);
+    // the headlight and the dish antenna on its stalk
+    ctx.fillStyle = '#fff4c8'; ctx.beginPath(); ctx.arc(33, -18 + sq, 3.5, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = INK; ctx.beginPath(); ctx.moveTo(-28, -34 + sq); ctx.lineTo(-30, -50 + sq); ctx.stroke();
+    ctx.fillStyle = '#c8ccd4'; ctx.beginPath(); ctx.ellipse(-30, -52 + sq, 7, 3, -0.4 + Math.sin(t * 2) * 0.3, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+};
+TourHooks.on('afterEntities', (play, ctx) => {
+  const A = play.area, p = play.player; if (!A || !A.moon || !A.moon.rover || !p || p.dead) return;
+  Buggy.draw(ctx, p, play.t);
+});
+Tour.moonKit.ROVER = ROVER;
 
 Object.assign(TourLandscape.ARCH_LABEL, { lowg: 'LOW-G', drift: 'SPACEWALK', rover: 'BUGGY', mag: 'MAG BOOTS', stars: 'STARS' });
 Tour.moonKit.MOON_G = MOON_G;

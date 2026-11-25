@@ -64,7 +64,7 @@ async function session(viewport, fn) {
         const d = prog.dir, inp = { left: false, right: false, up: false, down: false, jump: false, jumpPressed: false, action: false, actionPressed: false };
         let dir = d;
         if (prog.driftPlan) { const q = window.BRADY_MOON.driftInput(prog.driftPlan, prog.dir, t); for (const h of AP.hooks) h(prog, t, b, q); return q; }
-        if (prog.walkTo != null) { const dx = prog.walkTo - (b.x + b.w / 2); dir = Math.abs(dx) > 6 ? Math.sign(dx) : 0; inp.left = dir < 0; inp.right = dir > 0; for (const h of AP.hooks) h(prog, t, b, inp); return inp; }
+        if (prog.walkTo != null) { const dx = prog.walkTo - (b.x + b.w / 2), stop = Math.sqrt(2 * 40 * 32 * Math.abs(dx)) * 0.8; dir = Math.abs(dx) <= 6 ? (Math.abs(b.vx) > 40 ? -Math.sign(b.vx) : 0) : (b.vx * dx > 0 && Math.abs(b.vx) > stop ? -Math.sign(dx) : Math.sign(dx)); inp.left = dir < 0; inp.right = dir > 0; for (const h of AP.hooks) h(prog, t, b, inp); return inp; }
         if (prog.drop) { inp.down = t < 0.05; inp.jumpPressed = t < 1 / 120; dir = t < 0.25 ? 0 : d; }
         else if (prog.noJump) { dir = prog.air === 'late' && t > (prog.lateAt0 || 0) && t < prog.lateAt ? 0 : d; if (prog.air === 'rev' && t > prog.revAt) dir = -d; if (prog.air === 'stopgo') dir = t < prog.a || t > prog.b ? d : 0; }
         else if (prog.jumpAtX != null && prog._jt == null && d * (b.x + b.w / 2 - prog.jumpAtX) < 0 && t < 3) dir = d;
@@ -131,7 +131,7 @@ async function session(viewport, fn) {
         let t = 0, air = false, landT = null; prog._jt = null; prog._s = {};
         while (t < (maxT || 6)) {
           const inp = AP.input(prog, t, b);
-          if (landT != null) { inp.left = inp.right = false; inp.jump = inp.jumpPressed = false; inp.down = false; }
+          if (landT != null) { inp.left = inp.right = false; inp.jump = inp.jumpPressed = false; inp.down = false; if (A.moon && A.moon.rover && Math.abs(b.vx) > 40) inp[b.vx > 0 ? 'left' : 'right'] = true; }
           // the player's own drop-through (11_player.js): down + jump on a one-way floor
           if (inp.down && inp.jumpPressed && b.onGround && b.groundTile === window.BRADY.T.SEMI) { b.dropT = 0.22; b.y += 2; b.onGround = false; inp.jumpPressed = false; }
           window.BRADY_MOON.phys(b, inp, A, dt, null, {});
@@ -178,7 +178,7 @@ async function session(viewport, fn) {
         while (t < (maxT || 6)) {
           const p = P(); if (!p || p.dead || g.state !== 'play') break;
           const inp = AP.input(prog, t, p);
-          if (landed) { inp.left = inp.right = inp.jump = inp.jumpPressed = inp.down = false; }
+          if (landed) { inp.left = inp.right = inp.jump = inp.jumpPressed = inp.down = false; if (g.area.moon && g.area.moon.rover && Math.abs(p.vx) > 40) inp[p.vx > 0 ? 'left' : 'right'] = true; }
           for (const k of keys) I[k] = !!inp[k];
           if (inp.down) I.downPressed = t < dt;
           g.update(dt);
@@ -309,6 +309,47 @@ LEVELS.hop = async (page, shot, run, pano) => {
     await page.evaluate(() => { sim(1); place(10, 11); sim(0.3); freeze(); }); await shot('18-18-1-practice-green.png');
     await page.evaluate(() => { thaw(); play('18-1'); }); await pano('pano-18-1-surface.png');
     await page.evaluate(() => toArea('green')); await pano('pano-18-1-green.png');
+  });
+};
+
+// ---------------- 18-3 Moon Buggy ----------------
+// (the autopilot levels the buggy in the air: in a rover area the stick only leans it, so the path is the same)
+const roverHook = `AP.hooks.push((prog, t, b, inp) => { const A = S().area; if (!(A.moon && A.moon.rover) || b.onGround || !b.moon) return; const a = (b.moon.ang || 0) * (b.facing || 1); inp.left = inp.right = false; if (Math.abs(a) > 0.08) { if (a * (b.facing || 1) > 0) inp[b.facing > 0 ? 'left' : 'right'] = true; else inp[b.facing > 0 ? 'right' : 'left'] = true; } });`;
+LEVELS.buggy = async (page, shot, run, pano) => {
+  await run('buggy', async () => {
+    await page.evaluate(roverHook);
+    await page.evaluate(() => { fresh(); play('18-3'); place(4, 19); sim(0.4); freeze(); });
+    await shot('30-18-3-start.png');
+    // throttle and momentum: full speed in a second or two; let go and it keeps rolling
+    const r = await page.evaluate(() => { thaw(); place(63, 19); sim(0.2); const p = P(); sim(1.4, { right: true }); const v1 = p.vx / 32; sim(0.5); const v2 = p.vx / 32; sim(0.4, { left: true }); const v3 = p.vx / 32; return { top: +v1.toFixed(1), rolling: +v2.toFixed(1), braked: +v3.toFixed(1) }; });
+    check('18-3: the throttle takes the buggy past 10 tiles/s, it keeps rolling when let go, the brake stops it', r.top > 10 && r.rolling > 8 && r.braked < 2, r);
+    // the wheels climb a one-tile rock by themselves
+    const r2 = await page.evaluate(() => { play('18-3'); place(37, 19); sim(0.2); const p = P(); sim(1.2, { right: true }); return { x: Math.floor(p.cx / 32), row: p.groundTy }; });
+    check('18-3: the springy wheels climb a one-tile rock without a hop', r2.x > 41, r2);
+    // lean: a jump with the nose held down lands crooked (CRASH, a hit); levelled, it lands NICE and keeps its speed
+    const r3 = await page.evaluate(() => {
+      play('18-3'); place(131, 19); sim(0.4); const p = P(); p.invuln = 0; const pw = p.power; let said = [];
+      const tx = S().parts.text; S().parts.text = function (x, y, txt) { said.push(txt); return tx.apply(this, arguments); };
+      sim(0.6, { right: true }); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); const angs = []; for (let k = 0; k < 12; k++) { sim(0.1, { right: true, jump: true }); angs.push([+(p.moon.ang || 0).toFixed(2), p.onGround]); } sim(0.6);
+      const crash = said.includes('CRASH!'), hurt = p.power !== pw || p.invuln > 0; p.invuln = 999; S().parts.text = tx; return { crash, hurt, said, angs };
+    });
+    check('18-3: holding the stick all flight tips the buggy onto its nose: CRASH, and it costs a hit', r3.crash && r3.hurt, r3);
+    await page.evaluate(() => { play('18-3'); place(3, 19); sim(0.2); });
+    const legA = await page.evaluate(() => AP.route([[28, 20], [37, 20], [42, 20], [47, 20], [54, 20], [65, 20], [72, 20], [99, 20]], { maxT: 7 }));
+    check('18-3: played: the trench, the rocks, the boulder, the first crater, the long crater at speed', legA.ok, legA);
+    await page.evaluate(() => { freeze(); }); await shot('31-18-3-after-long-crater.png'); await page.evaluate(() => thaw());
+    const legB = await page.evaluate(() => AP.route([[110, 20], [122, 20], [131, 20], [150, 20], [158, 20], [190, 16]], { maxT: 7 }));
+    check('18-3: played: short hops at speed under the spike overhang, the ridges, the geyser flings the buggy onto the mesa', legB.ok, legB);
+    await page.evaluate(() => { freeze(); }); await shot('32-18-3-mesa.png'); await page.evaluate(() => thaw());
+    const legC = await page.evaluate(() => { const r = AP.route([[205, 20], [222, 20], [229, 20], [246, 20], [258, 20], [270, 20], [288, 20]], { maxT: 7 }); if (!r.ok) return r; sim(2, { right: true }); return { ok: true, state: S().state }; });
+    check('18-3: played: the last third (craters, golf balls, the geyser over the wall, the overhang, the last crater) to the gate', legC.ok && legC.state !== 'play', legC);
+    // a mid-air shot
+    await page.evaluate(() => { play('18-3'); place(76, 19); sim(0.2); sim(1.0, { right: true }); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); sim(0.45, { jump: true }); freeze(); });
+    await shot('33-18-3-airborne.png');
+    const sec = await page.evaluate(() => { thaw(); play('18-3'); place(136, 19); sim(0.2); AP.go([142, 20]); for (let k = 0; k < 20 && S().area.aid !== 'depot'; k++) sim(0.1, { up: true, upPressed: true }); sim(1); return { area: S().area.aid }; });
+    check('18-3: the blinking garage door leads to the rover depot', sec.area === 'depot', sec);
+    await page.evaluate(() => { place(10, 11); sim(0.3); freeze(); }); await shot('34-18-3-depot.png');
+    await page.evaluate(() => { thaw(); play('18-3'); }); await pano('pano-18-3-buggy.png');
   });
 };
 

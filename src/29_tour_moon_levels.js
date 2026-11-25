@@ -199,5 +199,83 @@ const L2 = { n: 2, name: 'Spacewalk', mapLabel: 'Spacewalk', arch: 'drift', them
     { id: 'locker', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonLocker', gravity: G0, moon: { lowg: true } }
   ] };
 
-Tour.amend('moon', { stamps, levels: [L1, L2] });
+/* ---------------- 18-3 Moon Buggy ---------------- */
+// the floor is row 20. ① the teach: a hop over a trench (not deadly), rocks the wheels climb, a boulder to hop, the
+// first crater, golf balls; ② the long crater at full speed (P1 in the arc), the spike overhang with craters under it
+// (short hops at speed), the rover depot's garage door, ridges, the crater whose geyser flings the buggy up the
+// mesa; ③ everything at once: craters with golf balls on the landings, a geyser hop over a wall, spike overhangs,
+// bunnies on the track, the last long crater (P3 over it) and the finish line
+const buggyRows = (() => {
+  const W = 300, H = 26, Gr = grid(W, H, '.');
+  ground(Gr, 0, W - 1, 20);
+  put(Gr, 3, 19, '@'); put(Gr, 8, 19, 'n'); put(Gr, 12, 16, '?'); put(Gr, 18, 19, 'p');
+  pit(Gr, 31, 34); ground(Gr, 31, 34, 23); put(Gr, 31, 17, 'o.o.');
+  put(Gr, 40, 19, 'B'); put(Gr, 44, 19, 'B'); fillG(Gr, 50, 18, 50, 19, 'B'); put(Gr, 47, 19, 'N');
+  pit(Gr, 56, 61); put(Gr, 57, 15, 'o.o.o');
+  put(Gr, 66, 19, 'e'); put(Gr, 74, 19, 'z'); put(Gr, 78, 19, 'l');
+  pit(Gr, 86, 96); put(Gr, 91, 13, '*'); put(Gr, 87, 15, 'o.o.o.o.o');
+  put(Gr, 99, 19, 'c'); put(Gr, 104, 16, '?'); put(Gr, 108, 19, 'm');
+  // the spike overhang with craters under it
+  fillG(Gr, 112, 4, 134, 13, '#'); fillG(Gr, 112, 14, 134, 14, 'v'); put(Gr, 111, 19, 'J');
+  pit(Gr, 117, 120); fillG(Gr, 117, 4, 120, 13, '#'); fillG(Gr, 117, 14, 120, 14, 'v');
+  pit(Gr, 126, 129); fillG(Gr, 126, 4, 129, 13, '#'); fillG(Gr, 126, 14, 129, 14, 'v'); put(Gr, 127, 17, 'R');
+  // the rover depot's garage door (a blinking light), ridges
+  put(Gr, 142, 19, 'D'); put(Gr, 145, 19, 'a'); put(Gr, 139, 19, 'p');
+  fillG(Gr, 152, 19, 156, 19, '#'); fillG(Gr, 154, 18, 156, 18, '#'); fillG(Gr, 156, 17, 156, 17, '#'); put(Gr, 160, 19, 'u'); fillG(Gr, 166, 17, 166, 19, 'B');
+  // the crater whose steady geyser flings the buggy up onto the mesa
+  pit(Gr, 172, 180); put(Gr, 173, 24, '1'); ground(Gr, 181, 199, 16); put(Gr, 190, 15, 'e'); put(Gr, 194, 12, 'o.o.o');
+  put(Gr, 204, 19, 'c'); put(Gr, 208, 16, '?');
+  // ③ all of it
+  pit(Gr, 214, 220); put(Gr, 223, 19, 'z'); put(Gr, 228, 19, 'e');
+  put(Gr, 233, 19, 'B'); pit(Gr, 237, 241); put(Gr, 237, 24, '2'); fillG(Gr, 242, 15, 244, 19, '#');
+  fillG(Gr, 248, 4, 268, 13, '#'); fillG(Gr, 248, 14, 268, 14, 'v'); pit(Gr, 252, 255); fillG(Gr, 252, 4, 255, 13, '#'); fillG(Gr, 252, 14, 255, 14, 'v'); put(Gr, 259, 19, 'Z'); pit(Gr, 262, 265); fillG(Gr, 262, 4, 265, 13, '#'); fillG(Gr, 262, 14, 265, 14, 'v');
+  put(Gr, 271, 19, 'm'); pit(Gr, 275, 284); put(Gr, 280, 13, 'o.o.o');
+  put(Gr, 292, 19, 'G'); put(Gr, 296, 19, 'p'); fillG(Gr, W - 1, 0, W - 1, 19, '#');
+  return rowsOf(Gr);
+})();
+const BUGGY = {
+  n: ['spawn', 'sign', { text: 'MOON BUGGY! HOLD FORWARD TO DRIVE, BACK TO BRAKE. JUMP HOPS. IN THE AIR THE STICK TILTS THE BUGGY: LAND IT FLAT!' }],
+  N: ['spawn', 'sign', { text: 'THE WHEELS CLIMB SMALL ROCKS. HOP THE BIG ONES' }],
+  J: ['spawn', 'sign', { text: 'SPIKES OVERHEAD: SHORT HOPS (TAP JUMP) AT FULL SPEED' }],
+  p: ['decor', 'moonPoster'], l: ['decor', 'moonGolf'], e: ['enemy', 'moonBunny'], m: ['enemy', 'moonMite'], u: ['enemy', 'moonHand'],
+  z: ['piece', 'moon.golfRain', { period: 2.8 }], Z: ['piece', 'moon.golfRain', { period: 2.8, phase: 1.4 }],
+  '1': ['piece', 'moon.geyser', { steady: true, top: 6, w: 4, pull: 0, vmax: 13, force: 150 }], '2': ['piece', 'moon.geyser', { steady: true, top: 7, w: 3, pull: 0, vmax: 13, force: 150 }],
+  a: ['anchor', 'depotBack']
+};
+stamps.moonBuggy = { floor: 20, rows: buggyRows, legend: BUGGY, gold: { '*': 'must', R: 'risky' }, items: ['power', 'power', 'power'], doors: [{ to: 'depot@in', look: 'moonHatch' }] };
+// the rover depot: spare wheels, a buggy up on blocks, P2 on the tyre stack, a hidden 1UP
+stamps.moonDepot = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#.....................*......#',
+    '#....................---.....#',
+    '#.......o.o.o................#',
+    '#......-------.....------....#',
+    '#..h.........................#',
+    '#.......................---..#',
+    '#...----.....................#',
+    '#..........-----.............#',
+    '#............................#',
+    '#.@...D.....l....j......l....#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'buggy@depotBack', look: 'moonHatch' }],
+  legend: { l: ['decor', 'moonLamp'], j: ['decor', 'moonPoster'] }
+};
+const L3 = { n: 3, name: 'Moon Buggy', mapLabel: 'Moon Buggy', arch: 'rover', theme: 'moon_rover',
+  gimmick: 'Drive a springy six-wheeled buggy over craters and ridges: throttle, brake, hop, and lean in the air to land flat',
+  hint: 'Keep your speed up for the long craters. In the air, tilt the buggy level before it lands: a crooked landing kills your speed, a nose-dive costs a hit. A garage door blinks by the ridges...',
+  postcard: 'Brady! The buggy has SIX wheels and a little dish on top. I said you could drive. I meant slowly. ♥ C',
+  enemies: [['moonBunny', 3], ['moonMite', 2], ['moonHand', 1]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '18-4' } },
+  areas: [
+    { id: 'buggy', gen: 'room', theme: 'moon_rover', stamp: 'moonBuggy', gravity: G0, moon: { rover: true }, camera: 'free', bottomKill: true },
+    { id: 'depot', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonDepot', gravity: G0, moon: { lowg: true } }
+  ] };
+
+Tour.amend('moon', { stamps, levels: [L1, L2, L3] });
 })();
