@@ -275,6 +275,8 @@ const decor = {
   },
   // roots hanging from the warren's roof (y is the floor: they hang from 5 rows up)
   keRoots(ctx, x, y, t) { ctx.save(); ctx.strokeStyle = '#c8905a'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(x - 8 + k * 8, y - 128); ctx.quadraticCurveTo(x - 4 + k * 8 + Math.sin(t + k) * 2, y - 110, x - 6 + k * 8, y - 96 + k * 6); ctx.stroke(); } ctx.restore(); },
+  // a flamingo's mud nest: a little cone with an egg on top
+  keMudNest(ctx, x, y) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#8a5a3a'; ctx.beginPath(); ctx.moveTo(x - 16, y); ctx.lineTo(x - 9, y - 16); ctx.lineTo(x + 9, y - 16); ctx.lineTo(x + 16, y); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff8ec'; ctx.beginPath(); ctx.ellipse(x, y - 20, 6, 5, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); },
   kePebbles(ctx, x, y) { ctx.save(); ctx.fillStyle = '#c8a888'; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; for (const [ox, r] of [[-8, 3], [0, 4], [7, 2.5]]) { ctx.beginPath(); ctx.ellipse(x + ox, y - r, r * 1.3, r, 0, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.restore(); },
   // a big flat-topped acacia growing out of the ground: the trunk and branches up to its crown (the crown itself is
   // the one-way tiles laid by the piece: { w } in the decor's seed is the crown's row count above the ground)
@@ -771,7 +773,7 @@ TourHooks.on('afterEntities', (play, ctx) => {
    drawn over the pits: deep, caustic soda water: a fall is the end of a life. */
 class KeFlamingo extends Ent {
   constructor(g, s) {
-    super(g, s, 1.6 * TS, 14); this.isPlatform = true; this.home = [s.x - this.w / 2, s.y - 4 * TS]; this.alt = s.alt ? [s.x - this.w / 2 + s.alt * TS, s.y - 4 * TS] : null;
+    super(g, s, 1.6 * TS, 14); this.isPlatform = true; this.home = [s.x - this.w / 2, s.y - 3 * TS]; this.alt = s.alt ? [s.x - this.w / 2 + s.alt * TS, s.y - 3 * TS] : null;
     this.x = this.home[0]; this.y = this.home[1]; this.spot = this.home; this.state = 'stand'; this.st = 0; this.dx = this.dy = 0; this.chain = !!s.chain; this.dir = s.dir || (Math.random() < 0.5 ? -1 : 1); this.fx = 0; this.fy = 0; this.wl = s.y - TS + 10;
     this.calm = s.calm || 0.75;
   }
@@ -835,8 +837,9 @@ class KeLake extends Ent {
   draw(ctx) {
     const x = this.x, w = this.w, y = this.wl, t = this.t, H = this.g.area.H * TS;
     ctx.save();
-    ctx.fillStyle = '#e88aa0'; ctx.fillRect(x - 2, y, w + 4, H - y);
-    ctx.fillStyle = '#c86a8a'; ctx.fillRect(x - 2, y + 34, w + 4, H - y);
+    ctx.fillStyle = '#d0587e'; ctx.fillRect(x - 2, y, w + 4, H - y);
+    ctx.fillStyle = '#a03a62'; ctx.fillRect(x - 2, y + 30, w + 4, H - y);
+    ctx.fillStyle = '#7a2448'; ctx.fillRect(x - 2, y + 70, w + 4, H - y);
     ctx.fillStyle = 'rgba(255,255,255,0.6)'; for (let k = 0; k < w / 28; k++) { const rx = x + ((k * 53 + t * 18) % w); ctx.fillRect(rx, y + 8 + (k % 4) * 6, 18, 1.6); }
     ctx.fillStyle = 'rgba(255,255,255,0.85)'; for (let k = 0; k < w / 40; k++) { const rx = x + ((k * 71) % w); ctx.beginPath(); ctx.ellipse(rx, y + 2, 9, 2, 0, 0, TAU); ctx.fill(); }
     ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); for (let xx = x; xx <= x + w; xx += 8) ctx.lineTo(xx, y + Math.sin(xx * 0.06 + t * 2) * 1.4); ctx.stroke();
@@ -1240,12 +1243,13 @@ const pieces = {
     B.spawn('keLake', a, st.gy, { w });
     for (const [dx, po] of o.posts || []) {
       B.spawn('keFlamingo', a + dx, st.gy, Object.assign({}, po || {}));
-      const r = st.gy - 3; for (const ox of [-1, 0]) B.ghosts.push([a + dx + ox, r]);
+      const r = st.gy - 2; for (const ox of [-1, 0]) B.ghosts.push([a + dx + ox, r]);
       if (po && po.alt) for (const ox of [-1, 0]) B.ghosts.push([a + dx + po.alt + ox, r]);
     }
     if (o.coins) st.coins(a + 1, b - 1, st.gy - 6);
     if (o.gold) st.gold(a + o.gold[0], st.gy - o.gold[1], o.gold[2]);
     if (o.island) for (const [dx, wd] of o.island) st.floor(a + dx, a + dx + wd - 1);
+    if (o.fly) B.spawn(o.fly, a + Math.floor(w / 2), st.gy - (o.flyDy || 8), { range: 3 });
     st.floor(b + 1, b + 3);
     return b + 4;
   },

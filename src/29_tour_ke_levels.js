@@ -152,7 +152,67 @@ const L2 = { n: 2, name: 'Giraffe Grove', mapLabel: 'Giraffes', arch: 'necks', t
     { id: 'manor', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keManorDoor' }
   ] };
 
-Tour.amend('ke', { stamps, levels: [L1, L2] });
+/* ---------------- 15-3 Flamingo Lake ---------------- */
+// a hollow under the shore where the flamingos keep their mud nests (a hidden postcard, a hidden 1UP)
+stamps.keNests = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#...................*........#',
+    '#.................-----......#',
+    '#............................#',
+    '#..........-----.............#',
+    '#.h..........................#',
+    '#....-----...................#',
+    '#............................#',
+    '#.........-----..............#',
+    '#............................#',
+    '#.@...D.....n......n.....n...#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'lake@nestsBack', look: 'keMoundDoor' }],
+  legend: { n: ['decor', 'keMudNest'] }
+};
+const L3 = { n: 3, name: 'Flamingo Lake', mapLabel: 'Flamingos', arch: 'flock', theme: 'ke_lake',
+  gimmick: 'The flamingos standing in the soda lake are the stepping stones, but each one panics a moment after you land and flies off. Skeins of flamingos ferry you over the wide water',
+  hint: 'Land and hop on at once: a flamingo squawks, then flies. Some land back on another spot. Startle one and its neighbours go too!',
+  postcard: 'The lake is PINK, Brady. The flamingos are pink. I am wearing pink. Nobody can find me. ♥ C',
+  enemies: [['keBeetle', 1], ['keVulture', 2], ['keWeaver', 1]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: '15-4' } },
+  areas: [
+    { id: 'lake', gen: 'strip', W: 240, H: 18, GY: 14,
+      script: [
+        ['box', { item: 'power' }],
+        ['tip', { text: 'FLAMINGO LAKE! THE FLAMINGOS ARE STEPPING STONES, BUT THEY PANIC A MOMENT AFTER YOU LAND: KEEP HOPPING. THE SODA LAKE IS DEEP' }],
+        ['plain', { n: 4 }],
+        // ① two calm flamingos, then a skein that ferries you
+        ['lake', { w: 12, posts: [[3], [8]], gold: [8, 7, 'must'] }],
+        ['plain', { n: 4 }],
+        ['flock', { w: 16, ax: 10, speed: 1.3, y: 2 }],
+        ['enemies', { kind: 'keBeetle', n: 1, len: 8 }],
+        'cp',
+        // ② a longer crossing; one flamingo hops between two spots; a fish-eagle overhead
+        ['lake', { w: 22, posts: [[3], [8, { alt: 2 }], [14], [19]], fly: 'keVulture' }],
+        ['moundDoor', { to: 'nests@in', back: 'nestsBack' }],
+        ['flock', { w: 20, ax: 14, ay: -3, speed: 1.2, y: 2, gold: 'high' }],
+        ['box', { item: 'power' }],
+        'cp',
+        // ③ the panic chain: startle the first and the whole line takes off behind you
+        ['lake', { w: 26, posts: [[3, { chain: true }], [7, { chain: true }], [11, { chain: true }], [15, { chain: true }], [19, { chain: true }], [23]], gold: [13, 7, 'risky'], fly: 'keVulture' }],
+        ['plain', { n: 4 }],
+        ['enemies', { kind: 'keWeaver', n: 1, len: 8 }],
+        // the nervous ones (half a second) and a skein to finish
+        ['lake', { w: 18, posts: [[3, { calm: 0.5 }], [9, { alt: -2, calm: 0.5 }], [14, { calm: 0.5 }]] }],
+        ['flock', { w: 18, ax: 12, ay: -2, speed: 1.5, y: 2 }],
+        ['end', { exit: 'main' }]
+      ] },
+    { id: 'nests', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keNests' }
+  ] };
+
+Tour.amend('ke', { stamps, levels: [L1, L2, L3] });
 
 /* ---------------- the land's map: the savannah under a big sky ---------------- */
 // the route: the airstrip by the great mountain, down the migration river, through the acacia grove (a meerkat

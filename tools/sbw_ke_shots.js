@@ -56,6 +56,17 @@ async function session(browser, viewport, fn) {
       }
       return false;
     };
+    // a player's jump onto a target platform: jump, steer in the air toward its middle, land; true if he stands on it
+    window.hopTo = (tgt, hold) => {
+      const p = P(); let k = 0;
+      sim(1 / 120, { jump: true, jumpPressed: true, right: tgt.cx > p.cx, left: tgt.cx < p.cx });
+      for (k = 0; k < 240; k++) {
+        const dx = tgt.cx - p.cx, inp = { jump: k < (hold || 50), right: dx > 6, left: dx < -6 };
+        sim(1 / 120, inp);
+        if (p.onGround || !alive()) break;
+      }
+      return p.onGround && p.ride === tgt;
+    };
     window.freeze = () => { const g = S(); g._upd = g.update; g.update = function () {}; };
     window.thaw = () => { const g = S(); if (g._upd) { g.update = g._upd; g._upd = null; } };
     window.alive = () => { const p = P(); return !!p && !p.dead && p.state === 'play'; };
@@ -214,6 +225,67 @@ async function session(browser, viewport, fn) {
       await shot('23-15-2-meerkat-burrow.png');
       await page.evaluate(() => { thaw(); toArea('grove'); });
       await pano('29-15-2-panorama.jpg');
+    });
+    /* ---------- 15-3 Flamingo Lake ---------- */
+    await run('flock', async () => {
+      await page.evaluate(() => { fresh(); play('15-3'); place(30, 13); sim(0.3); freeze(); });
+      await shot('30-15-3-start.png');
+      // hop the first lake: bank, flamingo, flamingo, bank; each one panics and flies off after he lands
+      const r = await page.evaluate(() => {
+        thaw(); const g = S(), p = P(); const lk = ents('KeLake').sort((a, b) => a.x - b.x)[0];
+        const F = ents('KeFlamingo').filter(f => f.cx > lk.x && f.cx < lk.x + lk.w).sort((a, b) => a.x - b.x);
+        place(Math.floor(lk.x / 32) - 1, 13); sim(0.3);
+        const on1 = hopTo(F[0], 50); const left1 = until(() => F[0].state === 'alarm', 0.3);
+        sim(0.08); const on2 = hopTo(F[1], 50);
+        sim(0.08); const end = { x: lk.x + lk.w + 48 }; Object.defineProperty(end, 'cx', { get() { return this.x; } });
+        hopTo(end, 50);
+        const across = p.x > lk.x + lk.w && alive() && p.onGround;
+        // standing still on one: it squawks, then flies off; he drops into the lake
+        return { on1, left1, on2, across };
+      });
+      check('15-3: hopping flamingo to flamingo crosses the lake (each one panics as he lands)', r.on1 && r.left1 && r.on2 && r.across, r);
+      const r2 = await page.evaluate(() => {
+        const g = S(), p = P(); p.invuln = 0; const lk = ents('KeLake').sort((a, b) => a.x - b.x)[0];
+        const F = ents('KeFlamingo').filter(f => f.cx > lk.x && f.cx < lk.x + lk.w).sort((a, b) => a.x - b.x);
+        until(() => F[0].state === 'stand', 6); place(Math.floor(lk.x / 32) - 1, 13); sim(0.3);
+        const on = hopTo(F[0], 50); const t0 = g.t;
+        const flew = until(() => F[0].state === 'fly', 2); const tell = g.t - t0;
+        const fell = until(() => !alive() || p.y > 15 * 32, 2);
+        return { on, flew, tell: Math.round(tell * 100) / 100, fell };
+      });
+      check('15-3: a flamingo squawks and wobbles (the tell) for 0.75 s, then flies off: standing still drops Brady in the lake', r2.on && r2.flew && r2.tell >= 0.5 && r2.fell, r2);
+      await page.evaluate(() => { play('15-3'); const p = P(), lk = ents('KeLake').sort((a, b) => a.x - b.x)[0]; const F = ents('KeFlamingo').filter(f => f.cx > lk.x && f.cx < lk.x + lk.w).sort((a, b) => a.x - b.x); place(Math.floor(lk.x / 32) - 1, 13); sim(0.3); p.invuln = 99; hopTo(F[0], 50); sim(0.3); p.invuln = 0; freeze(); });
+      await shot('31-15-3-flamingo-panic.png');
+      // the skein: hop on, it ferries him across
+      const r3 = await page.evaluate(() => {
+        thaw(); const g = S(), p = P(); p.invuln = 0;
+        const sk = S().entities.filter(e => e.skin === 'keFlock').sort((a, b) => a.x - b.x)[0];
+        const lk = ents('KeLake').filter(l => l.x <= sk.hx && l.x + l.w >= sk.hx).sort((a, b) => a.x - b.x)[0];
+        place(Math.floor(lk.x / 32) - 1, 13); sim(0.2);
+        until(() => sk.x < lk.x + 40 && sk.dx <= 0.05, 12);
+        const on = hopTo(sk, 50);
+        const far = until(() => sk.x >= sk.hx + sk.ax - 6 || !alive(), 12);
+        const end = { cx: lk.x + lk.w + 56 }; hopTo(end, 50);
+        return { on, far, across: p.x > lk.x + lk.w && alive() && p.onGround };
+      });
+      check('15-3: a skein of flamingos ferries Brady across the wide water', r3.on && r3.across, r3);
+      await page.evaluate(() => { const p = P(), sk = S().entities.filter(e => e.skin === 'keFlock').sort((a, b) => a.x - b.x)[0]; const lk = ents('KeLake').filter(l => l.x <= sk.hx && l.x + l.w >= sk.hx)[0]; place(Math.floor(lk.x / 32) - 1, 13); until(() => sk.x < lk.x + 40 && sk.dx <= 0.05, 12); hopTo(sk, 50); sim(1.2); freeze(); });
+      await shot('32-15-3-skein.png');
+      // the panic chain: startle the first of the line and the next ones go one after another
+      const r4 = await page.evaluate(() => {
+        thaw(); const g = S(), p = P(); p.invuln = 99;
+        const F = ents('KeFlamingo').filter(f => f.chain).sort((a, b) => a.x - b.x);
+        const lk = ents('KeLake').find(l => l.x <= F[0].cx && l.x + l.w >= F[0].cx);
+        place(Math.floor(lk.x / 32) - 1, 13); sim(0.2); hopTo(F[0], 50);
+        sim(1.3); const flying = F.filter(f => f.state === 'fly').length, alarmed = F.filter(f => f.state === 'alarm').length;
+        freeze(); return { n: F.length, flying, alarmed };
+      });
+      check('15-3: the panic chain: startling the first flamingo sets off its neighbours', r4.flying >= 1 && r4.flying + r4.alarmed >= 2, r4);
+      await shot('33-15-3-panic-chain.png');
+      await page.evaluate(() => { thaw(); toArea('nests'); place(8, 11); sim(0.4); freeze(); });
+      await shot('34-15-3-nests.png');
+      await page.evaluate(() => { thaw(); toArea('lake'); });
+      await pano('39-15-3-panorama.jpg');
     });
   });
   await session(browser, { width: 390, height: 844 }, async (page, shot, run) => {
