@@ -198,7 +198,7 @@ async function session(viewport, fn) {
         for (let tries = 0; tries < 3; tries++) {
           let pl = AP.plan(target, o);
           // no plan from exactly here: step to the middle of this tile, or a tile either side, and look again
-          if (!pl) { const f = tileOf(); for (const dx of [0, -1, 1, -2, 2]) { if (P().flipped) break; AP.exec({ walkTo: (f[0] + dx) * 32 + 16, dir: 0 }, 3); if (tileOf()[1] !== f[1]) break; pl = AP.plan(target, o); if (pl) break; } }
+          if (!pl) { const f = tileOf(), back = -(Math.sign(target[0] - f[0]) || 1); for (const dx of [0, -1, 1, -2, 2, 3 * back, 5 * back, 7 * back]) { if (P().flipped) break; if (dx && !AP.samePlate(f[0] + dx, [f[0], f[1]])) continue; AP.exec({ walkTo: (f[0] + dx) * 32 + 16, dir: 0 }, 3); if (tileOf()[1] !== f[1]) break; pl = AP.plan(target, o); if (pl) break; } }
           if (!pl) return { ok: false, why: 'no plan', from: tileOf(), target };
           const r = AP.exec(pl.prog, o.maxT);
           if (r.dead) return { ok: false, why: 'died', r, prog: pl.prog, target };
@@ -433,7 +433,7 @@ LEVELS.walk = async (page, shot, run, pano) => {
     const legC = await page.evaluate(() => AP.route([[84, 19], [92, 15], [94, 15], [101, 10], [103, 10], [110, 5], [108, 5], [124, 15], [129, 15], [143, 8], [146, 8], [150, 13], [158, 13], [166, 13]], { maxT: 7 }));
     check('18-2: played: the climb under the antenna spikes, the air vent, the gantry', legC.ok, legC);
     await page.evaluate(() => { sim(0.1); freeze(); }); await shot('22-18-2-gantry.png'); await page.evaluate(() => thaw());
-    const legD = await page.evaluate(() => { const r = AP.route([[208, 16]], { maxT: 7 }); if (!r.ok) return r; const r2 = AP.route([[214, 16]]); sim(1.5, { right: true }); return { ok: r2.ok, state: S().state }; });
+    const legD = await page.evaluate(() => { let r; for (let a = 0; a < 3; a++) { if (a) { play('18-2'); place(166, 12); sim(0.4); } r = AP.route([[208, 16]], { maxT: 7 }); if (r.ok) break; } if (!r.ok) return r; const r2 = AP.route([[214, 16]]); sim(1.5, { right: true }); return { ok: r2.ok, state: S().state }; });   // (the junk drifts on a clock: a try that meets it is tried again from the gantry, as a player would)
     check('18-2: played: the long void with the valve chain to the far airlock and the gate', legD.ok && legD.state !== 'play', legD);
     // mid-flight with the gauge and the tether
     await page.evaluate(() => { play('18-2'); place(165, 12); sim(0.2); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); sim(0.7, { right: true }); sim(1 / 120, { right: true, jump: true, jumpPressed: true }); sim(0.3, { right: true }); freeze(); });
@@ -445,20 +445,70 @@ LEVELS.walk = async (page, shot, run, pano) => {
   });
 };
 
-LEVELS.dbg = async (page, shot, run) => {
-  if (!want.includes('dbg')) return;
-  const r = await page.evaluate(() => {
-    play('18-2'); place(143, 7); sim(0.3);
-    const pl = AP.plan([150, 13], { maxT: 7 }); if (!pl) return 'noplan';
-    const g = S(), I = window.BRADY.Input, prog = pl.prog, log = []; let t = 0; prog._jt = null;
-    const b = AP.body(P()), A = g.area, tl = [];
-    for (let k = 0; k < 300; k++) { const inp = AP.input(prog, t, b); window.BRADY_MOON.phys(b, inp, A, 1 / 120, null, {}); if (k % 20 === 0) tl.push([Math.round(b.x), Math.round(b.y), b.moon && b.moon.tank]); t += 1 / 120; }
-    t = 0; prog._jt = null;
-    for (let k = 0; k < 300; k++) { const p = P(); const inp = AP.input(prog, t, p); for (const key of ['left', 'right', 'jump', 'jumpPressed', 'down']) I[key] = !!inp[key]; g.update(1 / 120); I.jumpPressed = false; if (k % 20 === 0) log.push([Math.round(p.x), Math.round(p.y), p.moon && p.moon.tank, inp.jumpPressed]); t += 1 / 120; }
-    return { prog: JSON.stringify(prog.driftPlan || prog), tl, log };
-  });
-  console.log(JSON.stringify(r));
+// ---------------- the full runs: each level start to finish, enemies on, no invulnerability ----------------
+// (only on request: node tools/sbw_moon_shots.js <dir> bot). Each route is a list of standing tiles (and button
+// steps); {r: [x, row]} marks a checkpoint's restart spot. On a death the bot waits for the respawn, goes back to the
+// last restart spot at or behind it and carries on. Deaths are counted with where they happened.
+const BOT = {
+  '18-1': [{ r: [3, 21] }, [11, 21], [19, 21], [25, 16], [29, 21], [36, 21], [41, 21], { r: [48, 21] }, [50, 21], [55, 21], [62, 8], [63, 21], [72, 19], { r: [85, 21] }, [100, 21], [108, 21], [115, 21], [122, 16], [130, 21], [136, 21], [131, 21], [149, 12], { r: [157, 21] }, [161, 21], [172, 21], { r: [181, 21] }, [184, 21], [202, 12], [214, 16], [219, 14], { r: [223, 14] }, [230, 21], [243, 21]],
+  '18-2': [{ r: [3, 22] }, [18, 22], [21, 22], [32, 16], [30, 16], [43, 20], [42, 20], { r: [74, 19] }, [84, 19], [92, 15], [94, 15], [101, 10], [103, 10], [110, 5], [108, 5], { r: [124, 15] }, [129, 15], [143, 8], [146, 8], { r: [152, 13] }, [158, 13], [166, 13], { r: [205, 16] }, [214, 16]],
+  '18-3': [{ r: [3, 20] }, [28, 20], [37, 20], [42, 20], [47, 20], [54, 20], { r: [64, 20] }, [72, 20], { r: [99, 20] }, [110, 20], [122, 20], [131, 20], { r: [148, 20] }, [150, 20], [158, 20], [190, 16], { r: [204, 20] }, [205, 20], [222, 20], [229, 20], [235, 20], { r: [246, 20] }, [246, 20], [258, 20], [270, 20], [292, 20]],
+  '18-4': [{ r: [3, 20] }, [16, 20], 'B1', [22, 2, 1], 'B0', [27, 20], 'B1', [42, 2, 1], 'B0', [53, 20], 'B1', [72, 2, 1], [75, 20], 'B0', { r: [82, 20] }, [85, 20], [97, 20], 'B1', [104, 2, 1], 'B0', [109, 11], 'B1', [112, 2, 1], [124, 2, 1], 'B0', [124, 9], [128, 20], { r: [132, 20] }, [134, 20], [148, 10], [166, 20], { r: [169, 20] }, [172, 20], 'DOOR',
+           { r: [4, 18] }, [3, 18], [24, 13], [26, 13], { r: [49, 16] }, [51, 16], [82, 15], [90, 15]],
+  '18-6': [{ r: [2, 19] }, [13, 19], [9, 19], [18, 19], [30, 19], [42, 19], { r: [44, 19] }, [54, 11], [42, 19], [54, 11], [61, 15], [54, 11], [48, 15], [66, 19], [80, 19], { r: [95, 19] }, [93, 19], [101, 15], [107, 11], [101, 7], [108, 3], [118, 3], { r: [135, 7] }, [126, 7], [136, 7], [141, 12], [147, 16], [153, 10], [159, 14], [165, 11], [176, 11], [190, 11]]
 };
+LEVELS.bot = async (page) => {
+  if (!want.includes('bot')) return;
+  for (const id of Object.keys(BOT)) {
+    for (const foes of [false, true]) {
+    await page.evaluate(src => { window.__roverSrc = src; }, roverHook);
+    const r = await page.evaluate(([id, list, foes]) => {
+      fresh(); const g0 = play(id); for (let k = 0; k < 600 && S().state !== 'play'; k++) sim(1 / 60); P().invuln = 0; window.BRADY.Save.data.lives = 9;
+      const calm = () => { if (!foes) for (const e of S().entities) if (e.enemy && !e.boss && !(e.constructor.name === 'MoonJunk')) e.remove = true; };
+      // what got him: the last thing that hurt him, a fall, spikes
+      const cause = () => { const p = P(), A = S().area; if (!p) return '?'; if (p.y > A.H * 32 - 40) return 'fell'; const near = S().entities.filter(e => (e.enemy || e.constructor.name === 'TourShot') && !e.remove && Math.abs(e.cx - p.cx) < 60 && Math.abs(e.cy - p.cy) < 80).map(e => e.constructor.name === 'cls' ? (e.s && e.s.type) : e.constructor.name); return near.length ? near.join('+') : 'spikes/other'; };
+      calm();
+      if (!window.__roverHook) { window.__roverHook = true; eval(window.__roverSrc); }
+      const deaths = [], t0 = Date.now(); let i = 0, guard = 0, stuck = {}, area0 = S().area.aid;
+      const boots = () => { sim(1 / 120, { action: true, actionPressed: true }); sim(1.6); };
+      const respawn = () => { for (let k = 0; k < 900 && !(S().state === 'play' && P() && !P().dead && S().player.state === 'play'); k++) sim(1 / 60); window.BRADY.Save.data.lives = 9; sim(0.6); P().invuln = Math.min(P().invuln || 0, 2); };
+      while (i < list.length && guard++ < 400 && Date.now() - t0 < 900000) {
+        const e = list[i];
+        if (e && e.r) { i++; continue; }
+        if (e === 'B1' || e === 'B0') { if (window.BRADY_MOON.kit.magBoots(S()) !== (e === 'B1')) boots(); i++; continue; }
+        // a critter on the floor just ahead: hop onto it first (a stomp), the way a player clears the way
+        if (foes && !P().flipped) {
+          const p = P(), A = S().area, row = p.groundTy, ahead = Math.sign(e[0] - tileOf()[0]) || 1;
+          const foe = S().entities.find(q => q.enemy && !q.dead && !q.remove && q.behavior && !(q.cfg && q.cfg.spiky) && Math.abs(Math.floor((q.y + q.h + 1) / 32) - row) <= 0 && (q.cx - p.cx) * ahead > 0 && Math.abs(q.cx - p.cx) < 7 * 32);
+          if (foe) { const r0 = AP.go([Math.floor(foe.cx / 32), row], { tol: 1, maxT: 4 }); if (P() && !P().dead && S().state === 'play') { sim(0.2); continue; } }
+        }
+        if (e === 'DOOR') { for (let k = 0; k < 20 && S().area.aid === area0; k++) sim(0.1, { up: true, upPressed: true }); sim(1); i++; continue; }
+        calm(); const res = AP.go(e, { tol: e[2] ? 1 : 0, maxT: 7 });
+        if (res.ok && res.exit) return { id, done: true, exit: res.exit, idx: i, of: list.length, deaths, sec: Math.round((Date.now() - t0) / 1000) };
+        if (res.ok) { i++; continue; }
+        const died = res.why === 'died' || (P() && P().dead) || S().state !== 'play';
+        if (!died) {
+          // no plan from here (pushed off course by a critter): wait a moment and try again, then give up
+          stuck[i] = (stuck[i] || 0) + 1; if (stuck[i] > 3) return { id, done: false, deaths, stuckAt: e, from: tileOf(), boots: window.BRADY_MOON.kit.magBoots(S()), small: P().small, why: res.why }; sim(0.5); continue;
+        }
+        deaths.push({ at: tileOf(), to: e, why: cause() });
+        if (deaths.length > 12) return { id, done: false, deaths, gaveUp: true };
+        respawn();
+        const here = tileOf(), aid = S().area.aid;
+        // back to the last restart spot at or behind where he respawned (in this area)
+        let k = -1, inArea = aid === area0 ? 0 : list.indexOf('DOOR') + 1;
+        for (let q = inArea; q < list.length && list[q] !== 'DOOR'; q++) if (list[q] && list[q].r && list[q].r[0] <= here[0] + 2) k = q;
+        i = k >= 0 ? k + 1 : inArea;
+        if (aid !== area0) area0 = aid === area0 ? area0 : area0;
+      }
+      sim(2, { right: true });
+      return { id, done: S().state !== 'play', state: S().state, deaths, sec: Math.round((Date.now() - t0) / 1000), at: i };
+    }, [id, BOT[id], foes]);
+    console.log('BOT ' + (foes ? 'enemies on  ' : 'enemies off ') + JSON.stringify(r));
+    }
+  }
+};
+
 // ---------------- the land's map, the route-map pin, the boss stage ----------------
 const openMoon = `(() => { fresh(); const B = window.BRADY, T = window.BRADY_TOUR; for (const w of B.WORLD_ORDER) { const C = T.Tour.byWorld[w]; if (!C || C.id === 'moon') continue; for (const id of T.Tour.levelIds(C)) B.Save.data.done[id] = true; } for (const id of ['18-1', '18-2', '18-3', '18-4', '18-5', '18-6']) B.Save.data.unlocked[id] = true; B.Save.data.done['18-1'] = true; B.Save.data.done['18-2'] = true; const Tp = T.TourProgress; try { Tp.exit('18-1', 'main'); Tp.exit('18-1', 'secret'); Tp.exit('18-2', 'main'); } catch (e) {} })()`;
 LEVELS.map = async (page, shot, run) => {
