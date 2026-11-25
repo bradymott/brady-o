@@ -216,6 +216,9 @@ TourHats.NOT = new Set([].concat(
   'eyeTray eyeBag eyeBinDrop eyeLurch eyeSlider eyeExhaust eyeSlideTell'.split(' '),
   // Australia (16): the ping, webs, the road and its wheels, giant fruit and its stall, the bear's shadow, the creek mud
   'auPing auWeb auRoad auWheels auFruit auFruitStall auShadow auMud'.split(' '),
+  // Italy (14): meatballs, moka pots, tomatoes, sour notes (food and objects), the tenor's graters, ramps, crates, oil,
+  // dough, ovens, the tilt clock, sliders, racks, barrels, bells' songs, the blackbird diva (in her tiara), cups, washing lines
+  'itMeatball itMoka itTomato itNote itGrater itRamp itCrates itOil itDough itOven itTilt itSlider itRack itBarrel itDiva itSong itCup itLine'.split(' '),
   // Festival Fields: wheelie bins, balloon dogs (balloons), beds
   'festBin festBalloon festBed'.split(' '),
   // Kenya (15): scenery and moving parts (gullies, thickets, the herd's spawner, rivers, lakes, the sun, clouds, puddles,
@@ -298,7 +301,9 @@ Object.assign(TourHats.HEADS, {
   keBeetle: [-0.05, -0.05, -0.8, 0], keWarthog: [0.38, 0.38, -0.95, 0], keVulture: [0.47, 0.47, -0.9, 0], keWeaver: [0.27, 0.27, -0.75, 0], keSentry: [0.1, 0.1, -1.15, 0],
   // Iceland (17)
   isFox: [0.55, 0.55, -1.0, 0], isPuffin: [0.15, 0.15, -1.6, 0], isRam: [0.5, 0.5, -1.0, 0], isTern: [0.3, 0.3, -0.6, 0],
-  lostCrab: [0.12, 0.12, -1.45, 0], lostMoth: [0.1, 0.11, -1.55, 0], lostBeagle: [0.4, 0.4, -1.12, 0]
+  lostCrab: [0.12, 0.12, -1.45, 0], lostMoth: [0.1, 0.11, -1.55, 0], lostBeagle: [0.4, 0.4, -1.12, 0],
+  // Italy (14): the city pigeon, the alley cat
+  itPigeon: [0.39, 0.4, -1.5, 0], itCat: [0.53, 0.53, -1.25, 0]
 
 });
 
