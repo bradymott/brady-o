@@ -81,8 +81,8 @@ const AUR = {
   u: ['piece', 'ribbon', { len: 6, mode: 'pulse', hold: 2.2, dark: 2.0, amp: 4, hue: 2, phase: 0.5 }],
   z: ['piece', 'plank', { ax: 6, w: 3, speed: 1.6 }],
   '1': ['piece', 'ribbon', { len: 12, mode: 'sweep', hold: 1.2, dark: 1.4, speed: 5.0, amp: 10, phase: 0 }],
-  '2': ['piece', 'ribbon', { len: 12, mode: 'sweep', hold: 1.2, dark: 1.4, speed: 5.0, amp: 10, hue: 1, phase: -2.2 }],
-  '3': ['piece', 'ribbon', { len: 11, mode: 'sweep', hold: 1.2, dark: 1.4, speed: 5.0, amp: 10, hue: 2, phase: -4.4 }],
+  '2': ['piece', 'ribbon', { len: 12, mode: 'sweep', hold: 1.2, dark: 1.4, speed: 5.0, amp: 10, hue: 1, phase: -1.2 }],
+  '3': ['piece', 'ribbon', { len: 12, mode: 'sweep', hold: 1.2, dark: 1.4, speed: 5.0, amp: 10, hue: 2, phase: -2.4 }],
   f: ['enemy', 'isFox'], m: ['enemy', 'isRam'], p: ['enemy', 'isPuffin'], t: ['enemy', 'isTern'], w: ['enemy', 'isPuffin']
 };
 stamps.isAurora = { floor: 15, rows: aurora, legend: AUR, items: ['power', 'power'], gold: { '*': 'must', P: 'risky' }, doors: [{ to: 'huldu@in', look: 'isFolkDoor' }] };

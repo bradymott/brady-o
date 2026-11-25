@@ -228,14 +228,22 @@ const painters = {
   // dark mountains with snowy shoulders and long gullies (the far range)
   isPeaks(ctx, L, rng, H) {
     const b = L.base, col = L.color, snow = L.snow || '#dfe8f0';
-    const pts = []; for (let x = 0; x <= BG_W; x += 64) pts.push([x, b - 60 - rng() * (L.h || 140)]);
-    pts[pts.length - 1][1] = pts[0][1];
-    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, H); for (const [x, y] of pts) ctx.lineTo(x, y); ctx.lineTo(BG_W, H); ctx.closePath(); ctx.fill();
-    // snow on the tops: a band under each crest
-    ctx.save(); ctx.beginPath(); ctx.moveTo(0, H); for (const [x, y] of pts) ctx.lineTo(x, y); ctx.lineTo(BG_W, H); ctx.closePath(); ctx.clip();
-    ctx.fillStyle = snow; ctx.beginPath(); ctx.moveTo(0, pts[0][1]); for (const [x, y] of pts) ctx.lineTo(x, y); for (let k = pts.length - 1; k >= 0; k--) ctx.lineTo(pts[k][0], pts[k][1] + 26 + (k % 3) * 10); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = shade(col, -0.25); ctx.lineWidth = 3; for (const [x, y] of pts) { ctx.beginPath(); ctx.moveTo(x, y + 20); ctx.lineTo(x + 10 - rng() * 20, b); ctx.stroke(); }
-    ctx.restore();
+    ctx.fillStyle = col; ctx.fillRect(0, b, BG_W, H - b);
+    for (let x = 0; x < BG_W; x += 90 + rng() * 80) {
+      const h = 50 + rng() * (L.h || 140), w = h * (1.1 + rng() * 0.5), sk = (rng() - 0.5) * w * 0.3;
+      wrapDraw(x - w, w * 2, X => {
+        const px = X + w + sk, py = b - h;
+        ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(X, b + 2); ctx.quadraticCurveTo(px - w * 0.45, py + h * 0.35, px - 6, py + 3); ctx.quadraticCurveTo(px, py - 3, px + 6, py + 3); ctx.quadraticCurveTo(px + w * 0.45, py + h * 0.4, X + w * 2, b + 2); ctx.closePath(); ctx.fill();
+        // the snow cap: only the top third, with a ragged lower edge
+        const ch = h * 0.34;
+        ctx.save(); ctx.clip();
+        ctx.fillStyle = snow; ctx.beginPath(); ctx.moveTo(px - w, py + ch);
+        for (let k = 0; k <= 6; k++) ctx.lineTo(px - w * 0.5 + k * w / 6, py + ch + (k % 2 ? -ch * 0.35 : 0));
+        ctx.lineTo(px + w, py + ch); ctx.lineTo(px + w, py - 20); ctx.lineTo(px - w, py - 20); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = shade(col, -0.18); ctx.beginPath(); ctx.moveTo(px + 2, py + 2); ctx.quadraticCurveTo(px + w * 0.45, py + h * 0.4, X + w * 2, b + 2); ctx.lineTo(px + w * 0.25, b + 2); ctx.closePath(); ctx.fill();
+        ctx.restore();
+      });
+    }
   },
   // a lava field: rolling mossy humps, black rock showing through, steam from cracks, turf huts and horses far off
   isField(ctx, L, rng, H) {
@@ -341,49 +349,49 @@ const themes = {
   is_aurora: Object.assign({}, field, {
     name: 'Northern Lights', music: 'tour_is', particles: 'snow', rays: null, aurora: true,
     sky: ['#060a22', '#0e1a40', '#1a2e5a'], horizonGlow: '#3affb0', celestial: { type: 'moon', x: 0.82, y: 0.16, r: 16, color: '#f4f0e0', glow: '#c8e8ff' }, stars: 1,
-    layers: [{ kind: 'isPeaks', color: '#1a2238', snow: '#8aa0c0', base: 360, h: 150, f: 0.05 }, { kind: 'isField', color: '#1e3a2e', base: 470, f: 0.16, huts: true, horses: true }],
+    layers: [{ kind: 'isPeaks', color: '#1a2238', snow: '#7a90b8', base: 330, h: 130, f: 0.05 }, { kind: 'isField', color: '#2e5a40', base: 400, f: 0.16, huts: true, horses: true }],
     fog: '#1a3a5a', darkness: 0.2, decor: ['isRock', 'isCairn', 'isHut']
   }),
   is_lagoon: Object.assign({}, lagoon, {
     name: 'The Glacier Lagoon', music: 'tour_is_lagoon', particles: 'none', rays: '#fff4e8',
     sky: ['#7ab0e0', '#c8e0f0', '#ffe8e0'], horizonGlow: '#ffffff', celestial: { type: 'sun', x: 0.16, y: 0.3, r: 26, color: '#fff4d8', glow: '#ffe8c8' }, stars: 0,
-    layers: [{ kind: 'isPeaks', color: '#4a5a6e', snow: '#f4f8fc', base: 330, h: 110, f: 0.04 }, { kind: 'isGlacier', color: '#f4fbff', base: 420, f: 0.1 }, { kind: 'isLagoonFar', color: '#2a6a9a', base: 440, f: 0.2 }],
+    layers: [{ kind: 'isPeaks', color: '#4a5a6e', snow: '#f4f8fc', base: 330, h: 110, f: 0.04 }, { kind: 'isGlacier', color: '#f4fbff', base: 380, f: 0.1 }, { kind: 'isLagoonFar', color: '#2a6a9a', base: 395, f: 0.2 }],
     fog: '#d8ecf8', decor: ['isRock']
   }),
   is_rift: Object.assign({}, field, {
     name: 'The Rift', music: 'tour_is_rift', particles: 'dust', rays: null,
     sky: ['#7a8a98', '#a8b4bc', '#d0d8d8'], horizonGlow: '#e8f0f0', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'isPeaks', color: '#5a6672', snow: '#e8eef2', base: 330, h: 90, f: 0.04 }, { kind: 'isSteamCols', base: 420, f: 0.08 }, { kind: 'isRiftWalls', color: '#4a5448', base: 470, f: 0.18 }],
+    layers: [{ kind: 'isPeaks', color: '#5a6672', snow: '#e8eef2', base: 330, h: 90, f: 0.04 }, { kind: 'isSteamCols', base: 380, f: 0.08 }, { kind: 'isRiftWalls', color: '#4a5448', base: 410, f: 0.18 }],
     fog: '#c8d4d8', decor: ['isRock', 'isCairn']
   }),
   is_volcano: Object.assign({}, volcano, {
     name: 'The Organ Pipes', music: 'tour_is_pipes', particles: 'embers', rays: null,
     sky: ['#1a0a0e', '#2a1012', '#4a1a14'], horizonGlow: '#ff6a1a', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'isCrater', color: '#2a1a1e', base: 470, f: 0.14 }],
+    layers: [{ kind: 'isCrater', color: '#2a1a1e', base: 410, f: 0.14 }],
     fog: '#ff6a2a', darkness: 0.18, decor: ['isRock']
   }),
   is_dawn: Object.assign({}, field, {
     name: 'Before Dawn', music: 'tour_is', particles: 'none', rays: null,
     sky: ['#1a1e4a', '#5a4a7a', '#ffb0a0'], horizonGlow: '#ffc8a8', celestial: { type: 'none' }, stars: 0.4,
-    layers: [{ kind: 'isPeaks', color: '#2a2a48', snow: '#b8b0d0', base: 360, h: 100, f: 0.04 }, { kind: 'isFjord', color: '#1e1e34', base: 450, f: 0.14 }],
+    layers: [{ kind: 'isPeaks', color: '#2a2a48', snow: '#b8b0d0', base: 360, h: 100, f: 0.04 }, { kind: 'isFjord', color: '#1e1e34', base: 400, f: 0.14 }],
     fog: '#a888b8', darkness: 0.1, decor: ['isRock', 'isTrollStone']
   }),
   is_cave: Object.assign({}, volcano, {
     name: 'The Troll\'s Cave', music: 'tour_is', particles: 'dust', rays: null,
     sky: ['#14121e', '#1e1a2a', '#2a2436'], horizonGlow: '#8a7aa8', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'isCrater', color: '#1e1a26', base: 470, f: 0.1 }], ground: fieldGround, semi: basaltSemi, hard: hexHard,
+    layers: [{ kind: 'isCrater', color: '#1e1a26', base: 410, f: 0.1 }], ground: fieldGround, semi: basaltSemi, hard: hexHard,
     fog: '#3a3448', darkness: 0.3, decor: ['isRock']
   }),
   is_folk: Object.assign({}, field, {
     name: 'The Hidden Folk', music: 'tour_is_folk', particles: 'fireflies', rays: '#fff0d8',
     sky: ['#e8a8c0', '#f8d0c0', '#fff0d0'], horizonGlow: '#fff4e0', celestial: { type: 'sun', x: 0.86, y: 0.42, r: 22, color: '#fff2c8', glow: '#ffd8a8' }, stars: 0,
-    layers: [{ kind: 'isPeaks', color: '#8a7a9a', snow: '#fff4f0', base: 350, h: 90, f: 0.04 }, { kind: 'isFolkRocks', color: '#5a5a66', moss: '#7ab04a', base: 460, f: 0.16 }],
+    layers: [{ kind: 'isPeaks', color: '#8a7a9a', snow: '#fff4f0', base: 350, h: 90, f: 0.04 }, { kind: 'isFolkRocks', color: '#5a5a66', moss: '#7ab04a', base: 410, f: 0.16 }],
     fog: '#f8d8d0', decor: ['isRock', 'isElfDoor']
   }),
   is_tube: Object.assign({}, volcano, {
     name: 'A Lava Tube', music: 'tour_is', particles: 'none', rays: null, ground: fieldGround, semi: basaltSemi, hard: hexHard,
     sky: ['#120e14', '#1a141c', '#241c26'], horizonGlow: '#ff8a4a', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'isCrater', color: '#1a1418', base: 470, f: 0.1 }],
+    layers: [{ kind: 'isCrater', color: '#1a1418', base: 410, f: 0.1 }],
     fog: '#4a2a2a', darkness: 0.25, decor: ['isRock']
   })
 };
