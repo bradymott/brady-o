@@ -53,7 +53,7 @@ const L1 = { n: 1, name: 'The Great Migration', mapLabel: 'Migration', arch: 'st
         ['tip', { text: 'THE GREAT MIGRATION! HOP ON A WILDEBEEST AS IT RUNS PAST: THE HERD SWIMS RIVERS AND LEAPS THORNS YOU CAN\'T' }],
         ['plain', { n: 6 }],
         // ① teach: an empty river, then a thicket: just ride
-        ['herdOn', { n: 10, every: 1.1 }],
+        ['herdOn', { n: 10, every: 0.85 }],
         ['river', { w: 11 }],
         ['plain', { n: 4 }],
         ['thicket', { h: 6, w: 2 }],
@@ -62,7 +62,7 @@ const L1 = { n: 1, name: 'The Great Migration', mapLabel: 'Migration', arch: 'st
         ['postcard', { kind: 'must', dx: -6, dy: -4 }],
         'cp',
         // ② test: crocs in the rivers, a vulture over the water, a thicket between two rivers
-        ['herdOn', { n: 8, every: 1.15 }],
+        ['herdOn', { n: 8, every: 1.0 }],
         ['river', { w: 13, crocs: 1, gold: 'risky', goldDy: 5 }],
         ['plain', { n: 3 }],
         ['thicket', { h: 7, w: 3 }],
@@ -74,7 +74,7 @@ const L1 = { n: 1, name: 'The Great Migration', mapLabel: 'Migration', arch: 'st
         ['box', { item: 'power' }],
         'cp',
         // ③ twist: the gorge leap straight into the long river, a thicket on the far bank, one more river
-        ['herdOn', { n: 8, every: 1.0 }],
+        ['herdOn', { n: 8, every: 0.95 }],
         ['gorge', { w: 10, h: 3 }],
         ['river', { w: 20, crocs: 3, fly: 'keVulture' }],
         'cp',
