@@ -233,7 +233,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
 
   // 6. A postcard and the goal
   const card2 = await page.evaluate(() => { start('1-1'); const g = S(), p = P(); const gold = g.entities.find(e => e.constructor.name === 'Gold'); p.x = gold.cx - p.w / 2; p.y = gold.y; p.vy = 0; sim(0.2); return { got: (window.BRADY.Save.data.gold['1-1'] || []).filter(Boolean).length }; });
-  check('collecting a postcard from Chinka counts', card2.got >= 1, card2);
+  check('collecting a postcard from Princess Papaya counts', card2.got >= 1, card2);
   const clear = await page.evaluate(() => {
     start('1-1'); clearEnemies(); const g = S(), p = P(); const gate = g.entities.find(e => e.constructor.name === 'Gate' && !e.secret);
     p.x = gate.cx - 80; p.y = gate.y + gate.h - p.h - 4; p.vy = 0; sim(0.8, { right: true }); const st1 = g.state; sim(8); const st2 = g.state;

@@ -468,7 +468,7 @@ class MapScene {
     const cg = countGold(w);
     let done = 0; for (let i = 1; i <= Wd.plan.length; i++) if (Save.data.done[levelId(w, i)]) done++;
     ctx.font = `12px ${FONT_UI}`; ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.fillText(`${done}/${Wd.plan.length} cleared   ·   ${cg.have}/${cg.total} photos of Chinka`, W / 2, Math.max(82, insets.t + 76));
+    ctx.fillText(`${done}/${Wd.plan.length} cleared   ·   ${cg.have}/${cg.total} photos of Princess Papaya`, W / 2, Math.max(82, insets.t + 76));
     // path
     const pts = this.nodes();
     ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 4; ctx.setLineDash([2, 10]); ctx.lineCap = 'round';
@@ -660,17 +660,17 @@ class CreditsScene {
     const tag = burns ? 'ONE WEEK IN BLACK ROCK CITY' : 'A TRIP AROUND THE WORLD';
     const nWorlds = (typeof BURNS_WORLD_ORDER !== 'undefined') ? BURNS_WORLD_ORDER.length : 17;
     this.lines = [
-      [head, 'h'], [tag, 'k'], ['', ''], ['Chinka is safe. The Man burned. Nobody hydrated enough.', 's'], ['', ''],
-      ['STARRING', 'k'], ['Brady  ·  long hair, man bun, zero chill', 'v'], ['Chinka  ·  the actual hero, honestly', 'v'], ['Slothy  ·  very fast, for a sloth', 'v'], ['Toadie & the Toad Crew  ·  hydration consultants', 'v'], ['', ''],
-      ['AND INTRODUCING', 'k'], ['The Man  ·  forty feet of wood with a crush on Chinka', 'v'], ['', ''],
+      [head, 'h'], [tag, 'k'], ['', ''], ['Princess Papaya is safe. The Man burned. Nobody hydrated enough.', 's'], ['', ''],
+      ['STARRING', 'k'], ['Brady  ·  long hair, man bun, zero chill', 'v'], ['Princess Papaya  ·  the actual hero, honestly', 'v'], ['Slothy  ·  very fast, for a sloth', 'v'], ['Toadie & the Toad Crew  ·  hydration consultants', 'v'], ['', ''],
+      ['AND INTRODUCING', 'k'], ['The Man  ·  forty feet of wood with a crush on Princess Papaya', 'v'], ['', ''],
       ['BURNERS WHO GOT IN THE WAY', 'k'], ['Hippies who want to talk about your aura', 'v'], ['Tech bros on electric unicycles', 'v'], ['Orgy dome creepers in fur coats', 'v'], ['Sparkle ponies who forgot water', 'v'], ['Fake spiritual pagan witches', 'v'], ['DPW. Obviously DPW.', 'v'], ['', ''],
       [burns ? 'BOSSES' : 'CAMP BOSSES', 'k'], ...bosses.map(n => [n, 'v']), ['', ''],
       ...(burns ? [
-        ['YOUR STATS', 'k'], [`Burn Tokens: ${nk(B.tokens)}`, 'v'], [`Photos of Chinka: ${nk(B.photos)}`, 'v'], [`Worlds cleared: ${nk(B.worldDone)} / ${nWorlds}`, 'v'], ['', ''],
+        ['YOUR STATS', 'k'], [`Burn Tokens: ${nk(B.tokens)}`, 'v'], [`Photos of Princess Papaya: ${nk(B.photos)}`, 'v'], [`Worlds cleared: ${nk(B.worldDone)} / ${nWorlds}`, 'v'], ['', ''],
         ['Six-day drivers, stressed camp leads and greeters', 's'], ['Influencers, sparkle ponies and crusty old burners', 's'], ['It was better last year. It always is.', 's'], ['', '']
       ] : [
-        ['YOUR STATS', 'k'], [`Photos of Chinka: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Man got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
-        [g.have >= g.total ? 'Every photo of Chinka. She framed them all.' : 'Some photos of Chinka are still out on the playa...', 's'],
+        ['YOUR STATS', 'k'], [`Photos of Princess Papaya: ${g.have} / ${g.total}`, 'v'], [`Levels cleared: ${sp.done} / ${sp.total}`, 'v'], [`Score: ${Save.data.score}`, 'v'], [`Times the Man got you: ${Save.data.deaths || 0}`, 'v'], ['', ''],
+        [g.have >= g.total ? 'Every photo of Princess Papaya. She framed them all.' : 'Some photos of Princess Papaya are still out on the playa...', 's'],
         [WORLDS[50] && worldUnlocked(50) ? 'You found World 22.' : 'Legend speaks of a World 22.', 's'], ['', '']
       ]),
 

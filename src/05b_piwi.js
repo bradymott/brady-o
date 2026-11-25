@@ -1,7 +1,7 @@
 /* ============================================================
    Piwi Squirmin': the villain of Super Brady-O World (Nov 2026).
    A wooden ventriloquist dummy with nobody working him: a prim,
-   giggly show-off who has decided Chinka-O is the leading lady of
+   giggly show-off who has decided Princess Papaya is the leading lady of
    his world-tour variety show. Story and character sheet:
    docs/design/STORY_PIWI.md.
    Our own design: a big lacquered head with a hinged jaw (two jaw

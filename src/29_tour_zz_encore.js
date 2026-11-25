@@ -2,7 +2,7 @@
    World tour: the Encore Tour's story (docs/design/ENCORE_TOUR.md §1).
    Worlds 14 to 18 follow Nepal's Grand Finale. Loads after every land.
    - The opening: once Nepal's boss has fallen, the next visit to the
-     map plays four panels (Chinka-O turns the tour poster over).
+     map plays four panels (Princess Papaya turns the tour poster over).
    - The acts: each Encore boss wakes under the banner
      "THE ACT NOBODY CANCELLED", and Pupo has a line when it falls.
    - The ending: four panels the first time the Moon's boss is beaten.
@@ -63,11 +63,11 @@ function moonStage(ctx, W, H, t) {
 function EncoreIntroPanels() {
   const C = TourCast;
   return [
-    { text: 'Home at last? Not quite. Chinka-O turned Piwi\'s tour poster over. On the back, in very small print: "PLUS FIVE MORE DATES."',
+    { text: 'Home at last? Not quite. Princess Papaya turned Piwi\'s tour poster over. On the back, in very small print: "PLUS FIVE MORE DATES."',
       scene(ctx, W, H, t, pt) { const { gy, s } = storyStage(ctx, W, H, t, 'tour_himalaya'); C.pupo(ctx, W * 0.16, gy, s * 0.8, t, 'idle', 1); C.brady(ctx, W * 0.34, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.72, gy, s, t, 'idle', -1); poster(ctx, W * 0.54, gy - 60 * s, s * 0.5, pt > 1.1, t); } },
     { text: 'The posters are up. The acts are booked, and paid in advance. The scenery was shrunk and posted ahead weeks ago. Nobody cancelled the second half of the tour.',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'tour_dusk'); for (let i = 0; i < 5; i++) poster(ctx, W * (0.14 + i * 0.18), gy - (62 + (i % 2) * 22) * s, s * 0.36, i % 2 === 1, t + i); C.pupo(ctx, W * 0.5, gy, s * 0.8, t, 'sad', 1); } },
-    { text: 'Chinka-O: "Then we cancel it ourselves. I\'ll go ahead and talk to the venues. You two put the landmarks back." Pupo: "...more... trip."',
+    { text: 'Princess Papaya: "Then we cancel it ourselves. I\'ll go ahead and talk to the venues. You two put the landmarks back." Pupo: "...more... trip."',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'tour_title'); C.pupo(ctx, W * 0.2, gy, s * 0.8, t, 'happy', 1); C.brady(ctx, W * 0.4, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.62, gy, s, t, 'wave', -1); } },
     { text: 'THE ENCORE TOUR. Italy. Kenya. Australia. Iceland. And the last date on the poster... no, that can\'t be right. The MOON? Fly on from Nepal\'s port.',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'tour_title'); C.pupo(ctx, W * 0.34, gy, s * 0.9, t, 'ride', 1, true); poster(ctx, W * 0.68, gy - 62 * s, s * 0.55, true, t); } }
@@ -78,7 +78,7 @@ function EncoreEndPanels() {
   return [
     { text: 'The headliner takes her bow. The very last show of Piwi Squirmin\'s World Tour is cancelled, and the crater pops back into the Moon with a soft, dusty FWOOMP.',
       scene(ctx, W, H, t) { const { gy, s } = moonStage(ctx, W, H, t); C.brady(ctx, W * 0.4, gy, s, t, 'idle', 1); C.pupo(ctx, W * 0.2, gy, s * 0.8, t, 'happy', 1); } },
-    { text: 'Chinka-O: "Every tour date, and every landmark back where it belongs." Brady-O: "And you did a pirouette on the Moon." Chinka-O: "Somebody had to."',
+    { text: 'Princess Papaya: "Every tour date, and every landmark back where it belongs." Brady-O: "And you did a pirouette on the Moon." Princess Papaya: "Somebody had to."',
       scene(ctx, W, H, t) { const { gy, s } = moonStage(ctx, W, H, t); C.brady(ctx, W * 0.32, gy, s, t, 'idle', 1); C.chinka(ctx, W * 0.56, gy - Math.abs(Math.sin(t * 1.2)) * 26 * s, s, t, 'pirouette', -1); } },
     { text: 'Pupo looks down at the Earth for a very long time. "...home... is the round one." Then, very slowly, he pokes the Moon. "...no pupo. ...just holes."',
       scene(ctx, W, H, t) { const { gy, s } = moonStage(ctx, W, H, t); C.pupo(ctx, W * 0.5, gy, s, t, 'poke', 1); } },

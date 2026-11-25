@@ -72,7 +72,7 @@ Plus two secret lands: e.g. Antarctica, and the hidden **World 22**, a nod to th
 - Show the Eiffel Tower in daylight or with generic lights, not its signature night light show.
 - Stylize modern architecture.
 
-**Story:** to be finalized by the 2D lead. A fun villain who steals or shrinks the world's landmarks works well, with Chinka travelling with Brady or sending postcard clues. The final showdown is in Nepal.
+**Story:** to be finalized by the 2D lead. A fun villain who steals or shrinks the world's landmarks works well, with Princess Papaya travelling with Brady or sending postcard clues. The final showdown is in Nepal.
 
 ### Power-ups (the owner's design)
 **Core set, found in every country.** These rework the existing items in `src/11_player.js`. Each power is one small cartoon pickup: touching it gives the power.
@@ -115,7 +115,7 @@ Plus two secret lands: e.g. Antarctica, and the hidden **World 22**, a nod to th
   - a temple/pyramid sound car
   - more like these
 - **Every car is our own design and our own name.** No replicas of real art cars, their artwork, names or logos.
-- **Drivers:** the action-figure cast (`docs/design/CAST_ACTION_FIGURES.md`), plus Brady, Chinka and the Man.
+- **Drivers:** the action-figure cast (`docs/design/CAST_ACTION_FIGURES.md`), plus Brady, Princess Papaya and the Man.
 - **Weapons:** every car has its OWN signature weapon that reloads every 5–10 seconds (deploy it when ready), on top of pickups: "kart racing plus way more attacking".
 - **Not only tracks:** also open arenas, such as a dirt-bike course, a skate park and an open-playa battle area, with racing and objectives.
 

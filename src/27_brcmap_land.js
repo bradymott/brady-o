@@ -961,7 +961,7 @@ function owLive47(ctx, L, t, z, inV, G) {
   }
 }
 
-/* ---------- the Man on his saucer, with Chinka on top (drawn above the dust) ---------- */
+/* ---------- the Man on his saucer, with Princess Papaya on top (drawn above the dust) ---------- */
 const OW_MAN_SCALE = 0.86;
 function owManSprite(k) {                 // the static figure and saucer, rendered for one zoom level
   const key = 'man|' + k.toFixed(3);
@@ -1027,7 +1027,7 @@ function owDrawMan(ctx, t, k, ox, oy, veil) {
   ctx.fillStyle = '#fff6c8'; ctx.beginPath(); ctx.moveTo(0, -166); ctx.lineTo(9, -152); ctx.lineTo(0, -140); ctx.lineTo(-9, -152); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.moveTo(0, -166); ctx.lineTo(9, -152); ctx.lineTo(0, -152); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = 'rgba(120,70,20,0.9)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, -166); ctx.lineTo(9, -152); ctx.lineTo(0, -140); ctx.lineTo(-9, -152); ctx.closePath(); ctx.stroke();
-  // Chinka, a tiny figure waving from the top of the saucer
+  // Princess Papaya, a tiny figure waving from the top of the saucer
   const cx = 24, cy = -26, wave = Math.sin(t * 6) * 0.5;
   ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + 0.2 * Math.sin(t * 3); ctx.drawImage(brcmGlow('#ff9ad8', 1), cx - 12, cy - 22, 24, 24); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.strokeStyle = '#3a2430'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';

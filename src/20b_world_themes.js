@@ -485,7 +485,7 @@ Object.assign(BGPaint, {
     ctx.beginPath(); ctx.ellipse(cx, deck, 200 * s, 26 * s, 0, 0, TAU); ctx.stroke();
     for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; ctx.fillStyle = rgba(i % 2 ? L.neon : '#ff4fd8', 0.95); ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 200 * s, deck + Math.sin(a) * 26 * s, 2.2, 0, TAU); ctx.fill(); }
     drawManFigure(ctx, cx, deck - 46 * s, 1.15 * s, shade(L.color, 0.2), L.neon);
-    // a little cage up top where Chinka waits
+    // a little cage up top where Princess Papaya waits
     ctx.strokeStyle = 'rgba(255,220,150,0.8)'; ctx.lineWidth = 1.2;
     ctx.strokeRect(cx - 8 * s, deck - 46 * s - 160 * s, 16 * s, 20 * s);
   },

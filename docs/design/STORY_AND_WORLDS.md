@@ -5,13 +5,13 @@ The user's story, expanded into worlds. Missions and names are suggestions: impr
 **Originality:** everything is our own design. Real camps and art cars are referenced by name only where noted, rendered as our own original designs and never as replicas. No characters, levels or music copied from any other game.
 
 **Story so far (World 1):**
-- The Man (the giant wooden effigy) fell in love with Chinka and stole her.
+- The Man (the giant wooden effigy) fell in love with Princess Papaya and stole her.
 - Brady had no ticket. He found one, beat the greeters and the Man at the gate, and got in.
-- The Man fled with Chinka.
+- The Man fled with Princess Papaya.
 
 **Every world:**
 - 5–7 Burn Tokens.
-- 3 hidden Photos of Chinka.
+- 3 hidden Photos of Princess Papaya.
 - Glow sticks.
 - Ground-score baggies.
 - Friendly gifting NPCs.
@@ -21,7 +21,7 @@ The user's story, expanded into worlds. Missions and names are suggestions: impr
 
 ## World 2: FINDING CAMP (the city at night)
 **Setting:** Black Rock City at night. Clock streets (2:00–10:00) and lettered streets (Esplanade, A, B, C…), a dense grid of camps, domes, shade structures, RVs, LED-wrapped bikes, burn barrels, fire art, art cars rolling down the streets.
-**Goal:** Brady has to find his own camp. All he has is a crumpled note with the address, e.g. "7:30 & E". When he arrives, the Man is waiting there holding Chinka.
+**Goal:** Brady has to find his own camp. All he has is a crumpled note with the address, e.g. "7:30 & E". When he arrives, the Man is waiting there holding Princess Papaya.
 
 **NPCs and enemies:**
 - Fire spinners: poi and staff circles as moving hazards.
@@ -39,7 +39,7 @@ The user's story, expanded into worlds. Missions and names are suggestions: impr
 - Flame Alley: a timed run through an alley of fire cannons.
 - Bike Light Roundup: collect 8 lost LED bike lights between bike swarms.
 - Find your camp from street-sign clues.
-- **Boss:** the Man at camp. Stronger than World 1, with fire and swipe attacks. He escapes again with Chinka.
+- **Boss:** the Man at camp. Stronger than World 1, with fire and swipe attacks. He escapes again with Princess Papaya.
 
 **Set piece:** an art car parade crossing the street you have to get past.
 
@@ -73,7 +73,7 @@ Keep it comedic and tasteful. No nudity, no explicit content; innuendo and silli
 - A district of domes and lounges around a big pink dome with a neon sign.
 - Velvet ropes, chill lounges, a cuddle puddle in fog and red light.
 
-**Goal:** meet an informant who knows where the Man is keeping Chinka. Avoid the creepy dudes: guys in fur coats and nothing much else, "free hugs" signs, "hey, wanna come to a cuddle puddle?".
+**Goal:** meet an informant who knows where the Man is keeping Princess Papaya. Avoid the creepy dudes: guys in fur coats and nothing much else, "free hugs" signs, "hey, wanna come to a cuddle puddle?".
 
 **Mechanics:**
 - Stealth: creeps have vision cones. If one spots you, he follows and blathers at you, draining hydration.
@@ -156,7 +156,7 @@ Keep it comedic and tasteful. No nudity, no explicit content; innuendo and silli
 
 ## World 9: DEEP PLAYA SHOWDOWN (night, dust storm)
 **Setting:** a night dust storm on the open playa. Lamp posts, the trash fence at the edge, sculptures looming out of the dust. The Temple glows far away. It's a quiet, sacred space: no fighting at or in the Temple; Brady may pass by it respectfully.
-**Goal:** the Man appears again with Chinka and drags her toward his pavilion. Fight him in the storm. He escapes to his pavilion for the finale.
+**Goal:** the Man appears again with Princess Papaya and drags her toward his pavilion. Fight him in the storm. He escapes to his pavilion for the finale.
 
 **Mission ideas:**
 - Follow the lamp line in a whiteout.
@@ -178,7 +178,7 @@ Keep it comedic and tasteful. No nudity, no explicit content; innuendo and silli
   - Fireworks from his arms.
   - Very hard but fair; Brady wins because he's amazing.
 
-**Ending:** the Man is defeated, Chinka is rescued, and the Man BURNS. Fireworks, crowd cheers, Brady and Chinka watch together. Then the ending and credits.
+**Ending:** the Man is defeated, Princess Papaya is rescued, and the Man BURNS. Fireworks, crowd cheers, Brady and Princess Papaya watch together. Then the ending and credits.
 
 ---
 
@@ -195,7 +195,7 @@ Keep it comedic and tasteful. No nudity, no explicit content; innuendo and silli
 ---
 # STORY UPDATE (latest; supersedes earlier notes where they conflict)
 ## The arc: clueless first-timer to full-on burner in one week
-Brady-O has never been to Burning Man. He arrives clueless, with no camp, and over one week becomes a full-on burner. He "wins Burning Man" by defeating the Man and finding Chinka.
+Brady-O has never been to Burning Man. He arrives clueless, with no camp, and over one week becomes a full-on burner. He "wins Burning Man" by defeating the Man and finding Princess Papaya.
 
 **Day labels:** show the day on world intro cards.
 
@@ -223,7 +223,7 @@ Brady-O has never been to Burning Man. He arrives clueless, with no camp, and ov
 | 15 | Exodus | Monday |
 
 ### W1, The Line (engine author's world)
-Brady and Chinka rode in on an RV belonging to the RED LIGHT DISTRICT camp: a burlesque/cabaret camp of glamorous blonde performers in pink bikinis, feather boas and red lingerie-style corsets. They're friendly, funny and protective of Brady. Keep it PG-13: glam, not explicit.
+Brady and Princess Papaya rode in on an RV belonging to the RED LIGHT DISTRICT camp: a burlesque/cabaret camp of glamorous blonde performers in pink bikinis, feather boas and red lingerie-style corsets. They're friendly, funny and protective of Brady. Keep it PG-13: glam, not explicit.
 
 ### W2, No Camp (worlds 2–4 agent; replaces "Finding Camp")
 1. **The stash.** Brady is a first-timer with no camp. He stashes his gear in the Red Light District RV; the crew babysits his stuff ("Honey, you have NO camp?").

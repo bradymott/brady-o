@@ -283,7 +283,7 @@ class Play {
     arr[idx] = true; Save.data.gold[this.id] = arr; Save.save();
     Sound.play('chinka');
     this.burst(x, y, 30, '#ff9ad8', 'firework');
-    this.parts.text(x, y - 20, this.level.tour ? 'POSTCARD FROM CHINKA!' : 'PHOTO OF CHINKA!', '#ff9ad8');
+    this.parts.text(x, y - 20, this.level.tour ? 'POSTCARD FROM PRINCESS PAPAYA!' : 'PHOTO OF PRINCESS PAPAYA!', '#ff9ad8');
     this.addScore(5000);
     this.happyT = 1.5;
   }
@@ -779,7 +779,7 @@ class Play {
     const W = Game.cssW, H = Play.uiH();
     const bw = Math.min(170, W * 0.36), bh = 48, y = H * 0.5 + 90;
     const finale = this.level.tour ? Tour.isFinale(this.id) : !!FINALE_LEVELS[this.id];
-    if (finale) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: this.level.tour ? 'HOME TOGETHER ♥' : 'FIND CHINKA ♥', primary: true, fn: () => this.goNext(null) });
+    if (finale) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: this.level.tour ? 'HOME TOGETHER ♥' : 'FIND PRINCESS PAPAYA ♥', primary: true, fn: () => this.goNext(null) });
     else if (next) btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: 'NEXT ▶', primary: true, fn: () => this.goNext(next) });
     else btns.push({ x: W / 2 + 8, y, w: bw, h: bh, label: 'MAP ▶', primary: true, fn: () => this.goNext(null) });
     btns.push({ x: W / 2 - 8 - bw, y, w: bw, h: bh, label: 'PLAY AGAIN', fn: () => { Sound.play('select'); Game.setScene(new Play(this.level, {})); } });
@@ -1369,7 +1369,7 @@ class Play {
     ctx.fillStyle = g;
     // secrets: an exit kind's title (a warp's own title) or a resultsTitle hook (TourHooks.titleFor)
     const hookTitle = typeof TourHooks !== 'undefined' ? TourHooks.titleFor(this) : null;
-    ctx.fillText(hookTitle || (this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'CHINKA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'YOU DID IT!'), W / 2, H / 2 - 100);
+    ctx.fillText(hookTitle || (this.secretClear ? 'SECRET EXIT!' : FINALE_LEVELS[this.id] ? 'PRINCESS PAPAYA IS FREE!' : this.level.kind === 'castle' ? 'CASTLE CLEARED!' : this.level.kind === 'fort' ? 'FORT CLEARED!' : this.level.kind === 'haunt' ? 'ESCAPED!' : this.level.kind === 'gift' ? 'GIFTED!' : 'YOU DID IT!'), W / 2, H / 2 - 100);
     ctx.font = `14px ${FONT_UI}`; ctx.fillStyle = '#ffffff';
     ctx.fillText(this.level.name + ' cleared', W / 2, H / 2 - 66);
     ctx.font = `13px ${FONT_DISPLAY}`;

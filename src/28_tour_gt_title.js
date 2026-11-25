@@ -2,7 +2,7 @@
    Super Brady-O World: the title show and the home-screen icon.
    Brady jogs around a little toon globe while landmarks from every
    land pop up over its rim, the plane loops the sky, Piwi's
-   Showtrunk drifts past with Chinka-O in its cage, postcards flutter.
+   Showtrunk drifts past with Princess Papaya in its cage, postcards flutter.
    The logo is lettered in canvas (inked letters, a highlight band,
    a chunky extrusion, a spinning globe for the O) and drops in with
    a bounce. Tap: Brady hops into his plane and it takes off into
@@ -83,7 +83,7 @@ const SBWT = {
       x.fillStyle = '#ffd23a'; x.beginPath(); x.arc(47, -12, 2.6, 0, TAU); x.fill(); x.stroke();
     }, { width: 1.4 });
   },
-  // Piwi's Showtrunk (05d_showtrunk.js) with Chinka-O in its show cage: painted once, so its rotors freeze mid-spin
+  // Piwi's Showtrunk (05d_showtrunk.js) with Princess Papaya in its show cage: painted once, so its rotors freeze mid-spin
   blimp(k) {
     return this.inked(190, 240, 95, 128, k, x => Showtrunk.draw(x, { x: 0, y: 0, scale: 1, t: 0.3, piwi: 'gloat', chinka: true }), { width: 1.5 });
   },
@@ -500,7 +500,7 @@ class SBWTitleScene {
     else {
       // the credits from the title: no spoilers, and watching them doesn't count as beating the game
       const was = !!Save.data.beatGame, c = new CreditsScene('world');
-      if (!was) { Save.data.beatGame = false; Save.save(); c.lines = c.lines.filter(l => !/Chinka-O is home|Piwi is pocket-sized/.test(l[0])); }
+      if (!was) { Save.data.beatGame = false; Save.save(); c.lines = c.lines.filter(l => !/Princess Papaya is home|Piwi is pocket-sized/.test(l[0])); }
       Game.setScene(c);
     }
   }
@@ -598,7 +598,7 @@ class SBWTitleScene {
       const x = ((c.x - t * c.sp * (calm ? 0.3 : 1)) % span + span) % span - 130;
       SBWT.blit(ctx, s, x, c.y, c.sc);
     }
-    // Piwi's Showtrunk drifting by with Chinka-O in the cage
+    // Piwi's Showtrunk drifting by with Princess Papaya in the cage
     {
       const b = this.blimp, span = W + 400, x = ((b.x + t * (calm ? 4 : 11)) % span + span) % span - 200;
       SBWT.blit(ctx, this.blimpS, x, b.y + Math.sin(t * 1.3) * 5, 1, Math.sin(t * 0.9) * 0.03);

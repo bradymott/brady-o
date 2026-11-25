@@ -49,7 +49,7 @@ Last full suite (18 Nov, `sbw/integration-5`, soak with `--jobs 1`): everything 
   - **Not built (ENCORE_TOUR.md section 5 item 7):** Souvenir Stands, Wormholes, Pupo levels, typed secret rooms for the five lands. Difficulty was tuned by scripts, never by hand on a phone: expect to adjust after Brady plays (candidates: 15-1 boarding, 16-1 mound tops, 16-3 two-tile stones, 17-6, 18-2).
 
 ## Brady's decisions (settled; use the names exactly)
-- Villain **Piwi Squirmin'** (original ventriloquist dummy) has taken **Chinka-O** (ballerina, pink tutu, Latina/Ecuadorian, black hair; drawn warmly). **Pupo** the sloth is Brady-O's steed: round, in Brady's art style, never spiky; nothing grabs automatically; Down+Jump to hop off (no button).
+- Villain **Piwi Squirmin'** (original ventriloquist dummy) has taken **Princess Papaya** (ballerina, pink tutu, Latina/Ecuadorian, black hair; drawn warmly). **Pupo** the sloth is Brady-O's steed: round, in Brady's art style, never spiky; nothing grabs automatically; Down+Jump to hop off (no button).
 - **Wormholes**, **Brady Buttons**, three bonus lands. Every secret room different. Powers carry between levels. One power lost per hit, then shrink, then a life. Trips wavy and trippy but readable and smooth. More maze levels; the more creative the better. Save wipes are fine.
 
 ## What to do next

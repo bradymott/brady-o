@@ -53,7 +53,7 @@ const check = (name, ok, info) => { console.log((ok ? 'PASS ' : 'FAIL ') + name 
     const card = !!m.card; m.card = null; const at0 = m.ow.walker.at; settle();
     return { mode: m.mode, sel: m.sel, card, at0, at: m.ow.walker.at };
   });
-  check('a new game opens the walkable overworld of Mexico with Chinka\'s postcard; Brady walks from the airstrip to 1-1', r1.mode === 'land' && r1.sel === 'mx' && r1.card && r1.at0 === 'start' && r1.at === '1-1', r1);
+  check('a new game opens the walkable overworld of Mexico with Princess Papaya\'s postcard; Brady walks from the airstrip to 1-1', r1.mode === 'land' && r1.sel === 'mx' && r1.card && r1.at0 === 'start' && r1.at === '1-1', r1);
   if (shots) await page.screenshot({ path: path.join(shots, 'ow-01-start.png') });
 
   // 2. Walking only along open trails: 1-2 is behind Piwi's roadblock

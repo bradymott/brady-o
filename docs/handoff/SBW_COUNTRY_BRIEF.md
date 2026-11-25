@@ -19,7 +19,7 @@ You rewrite every level of the countries you are assigned, in the new level form
 ## Rules
 - **Original content only.** Nothing may look or work like a Nintendo item, block, pipe, enemy or level. No question blocks, no shrinking, no cape or suit flight, no global timed switch.
 - **Respect:** humour from food, animals, objects and folklore. Never caricature people. Temples, shrines, monasteries, minarets, churches and similar sites are distant plain background only; never stage platforming or fights in them. No Christ the Redeemer. The iron tower in France is daylight or an unlit silhouette.
-- **The player is the code-drawn Brady.** Chinka and anything depicting Brady stay code-drawn.
+- **The player is the code-drawn Brady.** Princess Papaya and anything depicting Brady stay code-drawn.
 - World 6 is "Spain" and world 7 is "France", the whole countries.
 - Level ids stay `<world>-<i>`. Boss ids stay `x-5`, `13-4`, `22-4`. The secret lands still open from 8-4 (Antarctica) and 5-2 (World 22, behind the 22-postcard door).
 

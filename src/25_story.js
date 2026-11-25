@@ -1,24 +1,24 @@
 /* ============================================================
    Story: intro panels, camp-boss messages from the little toads,
-   and the ending where Brady finds Chinka as the Man burns.
+   and the ending where Brady finds Princess Papaya as the Man burns.
    ============================================================ */
 const STORY_BEATS = {
-  '41-1': 'A little toad hops onto your boot: "Psst. The Man went that way, with Chinka on his shoulder. Toads hear everything on Gate Road."',
-  '41-6': '"The Head Greeter lets you through at last. Chinka? The Man carried her into the city. Follow the smell of bad coffee."',
+  '41-1': 'A little toad hops onto your boot: "Psst. The Man went that way, with Princess Papaya on his shoulder. Toads hear everything on Gate Road."',
+  '41-6': '"The Head Greeter lets you through at last. Princess Papaya? The Man carried her into the city. Follow the smell of bad coffee."',
   '41-7': '"Kandi bracelets! One extra hit at the start of every level. Gifting is the whole point, man."',
-  '42-4': '"The Head Camp Lead dropped her clipboard. It says: CHINKA, SEEN AT THE BIG TOP, 2 AM."',
-  '42-6': '"Barista Bot sputters: Chinka ordered an oat-milk latte for the Man. She\'s stalling him! The Esplanade, now!"',
+  '42-4': '"The Head Camp Lead dropped her clipboard. It says: PRINCESS PAPAYA, SEEN AT THE BIG TOP, 2 AM."',
+  '42-6': '"Barista Bot sputters: Princess Papaya ordered an oat-milk latte for the Man. She\'s stalling him! The Esplanade, now!"',
   '43-6': '"DJ Wub-Lord drops the beat, and a clue: the Man stomped off toward Theme Camp Row."',
   '43-7': '"A lamplighter\'s lantern! Dark levels and dust storms are easier to see through now."',
-  '44-6': '"Grand Witch Moonbeam read your aura: deeply annoyed. She saw Chinka out past the hot springs."',
-  '45-6': '"The Geyser Guardian burbles happily. The Man waded into the deep playa, still carrying Chinka."',
+  '44-6': '"Grand Witch Moonbeam read your aura: deeply annoyed. She saw Princess Papaya out past the hot springs."',
+  '45-6': '"The Geyser Guardian burbles happily. The Man waded into the deep playa, still carrying Princess Papaya."',
   '45-7': '"Bike Repair Camp tuned you up. Brady runs faster now. You\'re welcome."',
   '46-6': '"Dust Devil Diablo spins out. Through the settling dust: the Man\'s pavilion, glowing on the horizon."',
   '46-7': '"Hydration Station topped you up: you start every level big now. Drink water. Seriously."',
   '47-3': '"Forklift Frank waves you on. He\'ll pretend he never saw you."',
   '47-6': '"Foreman Rusty radios it in: \'Brady is coming for the Man.\' Somewhere, the whole city cheers."',
-  '48-4': '"The Glitter Queen lost her shine. The pavilion is right there, and Chinka is waving from the top!"',
-  '48-5': '"The Man burns. Chinka is free. Little toad wipes away a little tear."',
+  '48-4': '"The Glitter Queen lost her shine. The pavilion is right there, and Princess Papaya is waving from the top!"',
+  '48-5': '"The Man burns. Princess Papaya is free. Little toad wipes away a little tear."',
   '49-5': '"Bouncer Brutus steps aside. You\'re on the list now. Forever. And someone left a page lying around..."',
   '50-4': '"The Archivist closes the book. Some stories are worth telling twice. Thanks for finding World 22."'
 };
@@ -96,13 +96,13 @@ function worldIntroPanels() {
   const chinka = (ctx, x, y, s, t, pose, facing) => drawChinka(ctx, { x, y, scale: s, t, pose, facing: facing || -1 });
   const hearts = (ctx, x, y, s, t) => { for (let i = 0; i < 4; i++) { const k = (t * 0.6 + i / 4) % 1; ctx.fillStyle = `rgba(255,90,160,${1 - k})`; ctx.font = `${12 + i * 3}px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.fillText('\u2665', x + Math.sin(t * 2 + i) * 14 * s, y - k * 60 * s); } };
   return [
-    { text: 'Burn week. Brady and Chinka rolled down Gate Road at sunset: goggles on, playlist ready, a sloth asleep in the back.',
+    { text: 'Burn week. Brady and Princess Papaya rolled down Gate Road at sunset: goggles on, playlist ready, a sloth asleep in the back.',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'gate'); brady(ctx, W * 0.38, gy, s, t, 'idle', 1); chinka(ctx, W * 0.5, gy, s, t, 'wave', -1); } },
-    { text: 'That night the Man looked down from his pavilion: forty feet of wood, a glowing diamond head... and he fell head over lattice for Chinka.',
+    { text: 'That night the Man looked down from his pavilion: forty feet of wood, a glowing diamond head... and he fell head over lattice for Princess Papaya.',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'manbase'); ManArt.figure(ctx, W * 0.66, gy, s * 1.6, t, { lit: true }); hearts(ctx, W * 0.66, gy - 150 * s, s, t); chinka(ctx, W * 0.3, gy, s, t, 'wave', 1); } },
     { text: 'He scooped her up and carried her to the top of his pavilion. "MINE," he boomed. Nobody had ever heard the Man talk before.',
       scene(ctx, W, H, t, pt) { const { gy, s } = storyStage(ctx, W, H, t, 'manbase'); const k = Math.min(1, pt * 0.5); ManArt.figure(ctx, W * (0.6 + k * 0.1), gy, s * 1.6, t, { lit: true, cage: true, arms: true, angry: true }); brady(ctx, W * 0.24, gy, s, t, 'run', 1); if (pt < 0.4) { ctx.fillStyle = `rgba(255,255,255,${0.6 * (1 - pt / 0.4)})`; ctx.fillRect(0, 0, W, H); } } },
-    { text: 'Brady woke Slothy from his hammock. Across the whole playa, land by land, all the way to the Man: hold on, Chinka. We\'re coming.',
+    { text: 'Brady woke Slothy from his hammock. Across the whole playa, land by land, all the way to the Man: hold on, Princess Papaya. We\'re coming.',
       scene(ctx, W, H, t) { const { gy, s } = storyStage(ctx, W, H, t, 'deepplaya'); ctx.save(); ctx.translate(W * 0.45, gy); ctx.scale(s, s); drawSlothy(ctx, { x: 0, y: 0, facing: 1, t, pose: 'walk' }); drawBrady(ctx, { x: -4, y: -24, facing: 1, small: false, power: 0, anim: { state: 'ride', t, phase: 0 }, hair: null, look: Save.data.look, time: t }); ctx.restore(); } }
   ];
 }
@@ -111,10 +111,10 @@ class EndingScene {
   constructor(set) {
     this.set = set; this.t = 0; this.stage = 0; Input.setMode('ui'); Sound.music('ending'); Sound.play('reunion');
     this.lines = [
-      "The Man's diamond head flickers. He sets Chinka down very, very gently.",
-      'Chinka: "You came all this way for me?"  Brady: "Through Gate Road traffic. Twice."',
+      "The Man's diamond head flickers. He sets Princess Papaya down very, very gently.",
+      'Princess Papaya: "You came all this way for me?"  Brady: "Through Gate Road traffic. Twice."',
       "Saturday night. The Man burns, and for once he doesn't seem to mind.",
-      'Brady and Chinka watch the fire together. Slothy naps. Best. Burn. Ever.'
+      'Brady and Princess Papaya watch the fire together. Slothy naps. Best. Burn. Ever.'
     ];
     this.parts = new Particles();
     Save.data.beatGame = true; Save.save();

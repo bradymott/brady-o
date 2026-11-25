@@ -64,7 +64,7 @@ The live game is unaffected by the unfinished work: https://bradymott.github.io/
   - `docs/handoff/WIP_C2.md` — Battle Royale rules, Bass Valentine's arena "The Sound Camp", the Man boss (`src/43_cart_i_royale*.js`)
   - `docs/handoff/WIP_C3.md` — the 12 drivers and their specials, Bass Valentine's career track "Love Parade", and the level recipe `docs/ART_CART_LEVEL_RECIPE.md` (`src/43_cart_j_*.js`)
 - **Rename to Super Art Kart and the new icon** are done in the same branch (not live). Icon generator: `tools/cart_icon.js` (`node tools/cart_icon.js <dir>/icons/kart A`). Chosen design A (heart racer); copies and the three candidates are in `~/Desktop/super-art-kart-icons/`. Brady has not picked a different one.
-- Driver list (Brady's final word): Brady, Chinka, Sparkle Pony, DPW Punk, Death Guild, Crusty Old Burner, Overzealous Ranger, Annoying DJ, Darkwad, Bad Idea Guy, **Messiah Complex**, **Party Boy**. (I assumed Party Boy replaces Partied Too Hard and Messiah Complex replaces Undercover Cop; Brady has not confirmed which driver Party Boy replaces.)
+- Driver list (Brady's final word): Brady, Princess Papaya, Sparkle Pony, DPW Punk, Death Guild, Crusty Old Burner, Overzealous Ranger, Annoying DJ, Darkwad, Bad Idea Guy, **Messiah Complex**, **Party Boy**. (I assumed Party Boy replaces Partied Too Hard and Messiah Complex replaces Undercover Cop; Brady has not confirmed which driver Party Boy replaces.)
 
 ### First things to do
 1. `cd /Users/bradymott/brady-o-artcart && git status && git log --oneline -5`. Merge `origin/main` into the branch.
@@ -94,7 +94,7 @@ New test files from the career agents are named in their WIP files (`tools/cart_
 - Engine files `src/40_*`, `41_*`, `42_*` belong to the Burning Man agent: never edit; requests go in `docs/handoff/REQUESTS.md` (nine are open there).
 - Blender 5.2.3 crashes in background mode; use the Blender MCP in the open window, one self-contained call from a wiped scene, and check each exported glb has its rig bones and no `.001` names.
 - iPhone budget: every view ≤ 420k triangles, ≤ 120 draw calls, no per-frame allocations.
-- Original content only; no brands; PG-13. Brady and Chinka are real people (the owner and his wife): warm treatment, Brady in all black, Chinka ivory and gold. Messiah Complex: the joke is his self-importance, no religious symbols or scripture.
+- Original content only; no brands; PG-13. Brady and Princess Papaya are real people (the owner and his wife): warm treatment, Brady in all black, Princess Papaya ivory and gold. Messiah Complex: the joke is his self-importance, no religious symbols or scripture.
 - "Super Art Kart" resembles a famous kart game's title pattern: fine for the personal site, flag before any commercial release.
 - When Brady says he can't see a change on his phone, suspect the offline cache first and test the update path; don't just tell him to reopen.
 

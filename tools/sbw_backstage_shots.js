@@ -92,7 +92,7 @@ async function session(viewport, fn) {
     await run('map', async () => {
       // the map after the Wormhole: Mexico, the trip across the globe, Ecuador with Brady popping out at 2-7
       await page.evaluate(() => { thaw(); window.BRADY.goToMap('world', 1, '1-4'); });
-      // (Chinka's first postcard from a land is put away as a player would)
+      // (Princess Papaya's first postcard from a land is put away as a player would)
       await page.evaluate(() => { for (let k = 0; k < 60 && !(S().mode === 'route' && S().rReveal); k++) { if (S().card) S().card = null; sim(0.25); } sim(1.0); });
       await shot('12-map-wormhole-trip.png');
       await page.evaluate(() => { for (let k = 0; k < 60 && !(S().mode === 'land' && S().ow && S().ow.cc === 'ec'); k++) sim(0.25); S().card = null; sim(0.5); });

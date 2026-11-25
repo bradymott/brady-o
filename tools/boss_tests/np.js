@@ -69,7 +69,7 @@ module.exports = async ({ page, check, shot }) => {
   r = await ev(() => { const b = boss(); sim(0.1); return { act: b.act, hp: b.hp }; });
   check('np: the killing blow starts the finale gag', r.act === 'finale', r);
   r = await ev(() => { sim(3.2); const roof = S().entities.find(e => e.npRoof), c = S().entities.find(e => e.npChinka); return { freed: roof.n, chinka: c && c.state }; });
-  check('np: every landmark is restored and Chinka arrives', r.freed === 12 && (r.chinka === 'run' || r.chinka === 'hug'), r);
+  check('np: every landmark is restored and Princess Papaya arrives', r.freed === 12 && (r.chinka === 'run' || r.chinka === 'hug'), r);
   await snap('np_finale.png');
   r = await ev(() => { const b = boss(); const doorX = b.doorX; sim(5); const g = S(); const T = window.BRADY.T || { EMPTY: 0 }; let open = true; for (let y = 3; y < g.area.H - 4; y++) if (g.area.tiles[y * g.area.W + doorX] !== 0) open = false; return { gone: !boss(), open, lock: !!g.bossLock }; });
   check('np: Piwi falls and the summit door opens', r.gone && r.open && !r.lock, r);

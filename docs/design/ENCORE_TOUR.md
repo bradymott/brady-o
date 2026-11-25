@@ -9,10 +9,10 @@ Five new main lands follow Nepal on the tour route. Each has **six levels**: fou
 ## 1. Story: nobody cancelled the second half of the tour
 
 - Nepal's Grand Finale (12-5) is still the ending. Nothing about lands 1 to 13, World 22 or the three bonus lands changes.
-- After the finale, Chinka-O turns Piwi's tour poster over. On the back: **five more tour dates.** The posters are up, the acts are booked and paid in advance, and the scenery was shrunk and posted ahead weeks ago.
-- So the trip goes on. Brady-O and Pupo cancel each show and put each landmark back; Chinka-O goes ahead to talk to the venues and leaves her postcards (the collectible, unchanged) with tips.
+- After the finale, Princess Papaya turns Piwi's tour poster over. On the back: **five more tour dates.** The posters are up, the acts are booked and paid in advance, and the scenery was shrunk and posted ahead weeks ago.
+- So the trip goes on. Brady-O and Pupo cancel each show and put each landmark back; Princess Papaya goes ahead to talk to the venues and leaves her postcards (the collectible, unchanged) with tips.
 - Each land's boss is **the act nobody cancelled**. It has been waiting on stage for weeks and it is in a mood.
-- Piwi is not in these lands (he is pocket-sized in his jar, or running his puppet theatre, depending on how far Brady has played). His bookings, his "P" posters and his wind-up stagehands may appear. Chinka-O is free; she is never captured again.
+- Piwi is not in these lands (he is pocket-sized in his jar, or running his puppet theatre, depending on how far Brady has played). His bookings, his "P" posters and his wind-up stagehands may appear. Princess Papaya is free; she is never captured again.
 - The last date is **The Moon**: "LIVE ON THE MOON. No atmosphere. Great acoustics."
 - Tone and rules are those of `docs/design/STORY_PIWI.md`: PG, silly, warm. Humour from food, animals, objects and folklore; never from people.
 
@@ -124,7 +124,7 @@ Built like the three bonus lands, which are the working examples of a self-conta
 
 ## 6. Rules that always hold
 - Original content only. Nothing resembling Nintendo or any other game, even renamed. No brand names.
-- The player is the code-drawn Brady: black tee and trousers, man bun, dark square shades, no stubble, blackwork sleeves. Chinka-O: ballerina in a pink tutu, drawn warmly. Pupo: round, never spiky.
+- The player is the code-drawn Brady: black tee and trousers, man bun, dark square shades, no stubble, blackwork sleeves. Princess Papaya: ballerina in a pink tutu, drawn warmly. Pupo: round, never spiky.
 - Never caricature people; crowds and passengers are animals or objects. Sacred buildings only as plain distant silhouettes. No national or religious headwear. PG-13.
 - Every secret has a visible tell and a way back out; no secret may need a power the level does not hand out.
 - Never edit `src/40` to `src/43` or `src/28_tour_b_build.js`. Other shared files: tiny additive edits only. New behaviour is added by wrapping from the land's own files.

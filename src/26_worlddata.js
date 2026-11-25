@@ -2,7 +2,7 @@
    SUPER BRADY-O WORLD — the 2D overworld campaign.
    10 lands (ids 41-50), 60 levels, a walkable overworld map.
 
-   Story: the Man (the giant wooden effigy) fell in love with Chinka and
+   Story: the Man (the giant wooden effigy) fell in love with Princess Papaya and
    carried her to the top of his pavilion. Brady crosses the playa land
    by land to bring her home.
 
@@ -23,7 +23,7 @@ const WORLD_LANDS = [
   { id: 45, name: 'Hot Springs', tag: 'Off the playa: steam and mud', color: '#5ac8e8', mood: 'day' },
   { id: 46, name: 'Deep Playa', tag: 'Sculptures, dust and wanderers', color: '#c89ae8', mood: 'night' },
   { id: 47, name: 'Hell Station', tag: 'DPW turf: fuel, rebar, forklifts', color: '#ff7a3a', mood: 'dusk' },
-  { id: 48, name: 'The Man Base', tag: 'Where the Man keeps Chinka', color: '#ffd84a', mood: 'night' },
+  { id: 48, name: 'The Man Base', tag: 'Where the Man keeps Princess Papaya', color: '#ffd84a', mood: 'night' },
   { id: 49, name: 'Sunrise Set', tag: 'Secret: dance till dawn', color: '#ffb0a0', mood: 'dawn', secret: true },
   { id: 50, name: 'World 22', tag: 'Secret: the last page', color: '#9affd8', mood: 'void', secret: true }
 ];
