@@ -132,11 +132,11 @@ const AuRoo = {
 
 /* ================= SONAR: the platypus ping ================= */
 class AuPing extends Ent {
-  constructor(g, s) { super(g, s, 4, 4); this.ox = s.x; this.oy = s.y; this.age = 0; this.R = s.R || 330; this.back = true; this.light = { x: this.ox, y: this.oy, r: 1, col: '#9affe8', a: 0.75 }; }
+  constructor(g, s) { super(g, s, 4, 4); this.always = true; this.ox = s.x; this.oy = s.y; this.age = 0; this.R = s.R || 330; this.back = true; this.light = { x: this.ox, y: this.oy, r: 1, col: '#9affe8', a: 0.55 }; }
   get k() { const a = this.age; return a < 0.5 ? a / 0.5 : a < 2.4 ? 1 : Math.max(0, 1 - (a - 2.4) / 0.6); }
   update(dt) {
-    this.age += dt; this.x = this.g.camX; this.y = this.g.camY;
-    const k = this.k; this.light.r = this.R * (this.age < 0.5 ? k : 1) * (this.age > 2.4 ? 0.6 + 0.4 * k : 1); this.light.a = 0.75 * (this.age > 2.4 ? k : 1);
+    this.age += dt; const A = this.g.area; this.x = 0; this.y = 0; this.w = A.W * TS; this.h = A.H * TS;
+    const k = this.k; this.light.r = this.R * (this.age < 0.5 ? k : 1) * (this.age > 2.4 ? 0.6 + 0.4 * k : 1); this.light.a = 0.55 * (this.age > 2.4 ? k : 1);
     if (this.age > 3) this.remove = true;
   }
   touchPlayer() {}
@@ -154,7 +154,7 @@ const AuSonar = {
   // how lit a point is by the pings alive now (0..1): the drifting rafts and the snag tells use it
   litAt(g, x, y) {
     let k = 0;
-    for (const e of g.entities) if (e instanceof AuPing && !e.remove) { const d = Math.hypot(e.ox - x, e.oy - y); k = Math.max(k, clamp((e.light.r * 0.95 - d) / 60, 0, 1) * Math.min(1, e.light.a / 0.5)); }
+    for (const e of g.entities) if (e instanceof AuPing && !e.remove) { const d = Math.hypot(e.ox - x, e.oy - y); k = Math.max(k, clamp((e.light.r * 0.95 - d) / 60, 0, 1) * Math.min(1, e.light.a / 0.4)); }
     return k;
   },
   ping(p) {
@@ -317,7 +317,9 @@ class AuRoad extends Ent {
   zone() { const Z = this.g.area.zones; return Z && Z.find(z => z.kind === 'auWind'); }
   update(dt) {
     this.t += dt; const g = this.g, p = g.player;
-    this.x = g.camX - 10; this.y = Math.min(this.roadY - 40, g.camY + Game.viewH - 10); this.w = Game.viewW + 20; this.h = 60;
+    // off the back of a trailer onto the bitumen: the convoy is gone (a life)
+    if (p && !p.dead && p.state === 'play' && p.y + p.h > this.roadY + 12) { g.parts.text(p.cx, this.roadY - 30, 'LEFT BEHIND!', '#ffffff'); p.die('pit'); }
+    this.x = 0; this.y = 0; this.w = g.area.W * TS; this.h = g.area.H * TS;   // (the whole area: always in the active window)
     // gusts: 1 s of streaks, then 1.4 s of double wind
     const z = this.zone();
     this.gustT -= dt;
@@ -359,7 +361,7 @@ class AuRoad extends Ent {
   drawOver(ctx) {
     const g = this.g;
     if (this.warn > 0) {
-      const x = g.camX + Game.viewW - 70, y = g.camY + (Game.cssH > Game.cssW ? 130 : 46), on = Math.sin(this.t * 16) > -0.2;
+      const x = g.camX + Game.viewW - 70, y = g.camY + (Game.cssH > Game.cssW ? 170 : 120), on = Math.sin(this.t * 16) > -0.2;
       ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
       ctx.fillStyle = on ? '#ffd23a' : '#c8a020'; ctx.beginPath(); ctx.moveTo(x, y - 30); ctx.lineTo(x + 30, y); ctx.lineTo(x, y + 30); ctx.lineTo(x - 30, y); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = INK; ctx.font = TourBackstage.F7; ctx.textAlign = 'center'; ctx.fillText('LOW', x, y - 4); ctx.fillText('BRIDGE', x, y + 6);
@@ -403,16 +405,46 @@ class AuWheels extends Ent {
   }
 }
 
+/* the creek's deep mud (16-3): a dark, slow surface across every open column from row y down; sinking into it is a
+   life. (Drawn by an entity, not as liquid tiles, so it stays dark: lava-type tiles glow.) */
+class AuMud extends Ent {
+  constructor(g, s) {
+    super(g, s, 4, 4); this.back = true; this.my = s.my;
+    const A = g.area; this.spans = []; let x0 = -1;
+    for (let x = 0; x <= A.W; x++) { const open = x < A.W && !SOLID[tileAt(A, x, this.my)] && !SOLID[tileAt(A, x, A.H - 1)]; if (open && x0 < 0) x0 = x; if (!open && x0 >= 0) { this.spans.push([x0, x - 1]); x0 = -1; } }
+  }
+  update(dt) {
+    this.t += dt; const A = this.g.area, p = this.g.player; this.x = 0; this.y = 0; this.w = A.W * TS; this.h = A.H * TS;
+    if (p && !p.dead && p.state === 'play' && p.y + p.h > this.my * TS + 18) { this.g.parts.text(p.cx, this.my * TS - 20, 'SPLOOSH!', '#c8d8a8'); this.g.burst(p.cx, this.my * TS, 10, '#5a5a32', 'dust'); p.die('pit'); }
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const g = this.g, y = this.my * TS, t = this.t, bot = g.area.H * TS + 60;
+    ctx.save();
+    for (const [a, b] of this.spans) {
+      const x0 = a * TS, x1 = (b + 1) * TS; if (x1 < g.camX - 40 || x0 > g.camX + Game.viewW + 40) continue;
+      ctx.fillStyle = '#2a2818'; ctx.fillRect(x0, y + 6, x1 - x0, bot - y);
+      ctx.fillStyle = '#5a5430'; ctx.beginPath(); ctx.moveTo(x0, bot); ctx.lineTo(x0, y + 6);
+      for (let x = x0; x <= x1; x += 8) ctx.lineTo(x, y + 4 + Math.sin(t * 1.4 + x * 0.05) * 2);
+      ctx.lineTo(x1, bot); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(220,230,160,0.8)'; ctx.lineWidth = 2; ctx.beginPath();
+      for (let x = x0; x <= x1; x += 8) { const yy = y + 4 + Math.sin(t * 1.4 + x * 0.05) * 2; x === x0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy); } ctx.stroke();
+      ctx.fillStyle = 'rgba(140,150,90,0.5)'; for (let k = 0; k < (b - a + 1) / 3; k++) { const ph = (t * 0.4 + k * 0.37) % 1, bx = x0 + ((k * 53) % Math.max(8, x1 - x0)); ctx.beginPath(); ctx.arc(bx, y + 8 - ph * 4, 2.5 * (1 - ph) + 0.5, 0, TAU); ctx.fill(); }
+    }
+    ctx.restore();
+  }
+}
+
 /* ================= platforms: skins for moving platforms ================= */
 const platforms = {
   // an overtaking ute: a flat tray (the platform), the cab in front, wheels down to the road
   auUte(ctx, e, t) {
     const x = e.x, y = e.y, w = e.w;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
-    ctx.fillStyle = '#2a6a9a'; ctx.fillRect(x + 4, y + 20, w + 36, 52); ctx.strokeRect(x + 4, y + 20, w + 36, 52);
+    ctx.fillStyle = '#2a6a9a'; ctx.fillRect(x + 4, y + 20, w + 36, 22); ctx.strokeRect(x + 4, y + 20, w + 36, 22);
     ctx.fillStyle = '#3a8ac8'; ctx.fillRect(x, y, w, 20); ctx.strokeRect(x, y, w, 20);
     ctx.fillStyle = '#5aaae8'; ctx.fillRect(x + 2, y + 2, w - 4, 4);
-    ctx.fillStyle = '#3a8ac8'; ctx.beginPath(); ctx.moveTo(x + w, y + 60); ctx.lineTo(x + w, y - 26); ctx.lineTo(x + w + 26, y - 26); ctx.lineTo(x + w + 40, y); ctx.lineTo(x + w + 46, y + 60); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3a8ac8'; ctx.beginPath(); ctx.moveTo(x + w, y + 40); ctx.lineTo(x + w, y - 26); ctx.lineTo(x + w + 26, y - 26); ctx.lineTo(x + w + 40, y); ctx.lineTo(x + w + 46, y + 40); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#bfe4ff'; ctx.beginPath(); ctx.moveTo(x + w + 6, y - 20); ctx.lineTo(x + w + 24, y - 20); ctx.lineTo(x + w + 34, y - 2); ctx.lineTo(x + w + 6, y - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
     // a dog in the back, ears flapping (it loves this)
     const ear = Math.sin(t * 20) * 3;
@@ -420,7 +452,7 @@ const platforms = {
     ctx.beginPath(); ctx.moveTo(x + w - 22, y - 13); ctx.lineTo(x + w - 34, y - 16 + ear); ctx.lineTo(x + w - 24, y - 8); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#e85a8a'; ctx.beginPath(); ctx.ellipse(x + w - 10, y - 4, 3, 4, 0.3, 0, TAU); ctx.fill();
     ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + w - 14, y - 10, 1.4, 0, TAU); ctx.fill();
-    for (const wx of [x + 18, x + w + 24]) { ctx.fillStyle = '#1e1e22'; ctx.beginPath(); ctx.arc(wx, y + 80, 14, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#c8ccd4'; ctx.beginPath(); ctx.arc(wx, y + 80, 5, 0, TAU); ctx.fill(); }
+    for (const wx of [x + 18, x + w + 24]) { ctx.fillStyle = '#1e1e22'; ctx.beginPath(); ctx.arc(wx, y + 50, 14, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#c8ccd4'; ctx.beginPath(); ctx.arc(wx, y + 50, 5, 0, TAU); ctx.fill(); }
     ctx.restore();
   },
   // a drifting log on the dark creek: only shows in a ping's light (and faintly in Brady's own glow)
@@ -595,6 +627,7 @@ P('convoy', (st, o) => {
   B.spawn('auRoad', st.x, st.gy - 1, { road: o.road, wind: o.wind || 1.8, bridges: o.bridges || [], bridgeY: o.bridgeY, every: o.every || 5.5, speed: o.speed || 22 });
   return st.x;
 });
+P('mud', (st, o) => { st.B.spawn('auMud', st.x, st.gy - 1, { my: o.y }); return st.x; });
 P('wheels', (st, o) => { st.B.spawn('auWheels', st.x, st.gy - 1, { n: o.n || 3 }); return st.x; });
 P('stall', (st, o) => { st.B.spawn('auFruitStall', st.x + 1, st.gy - 1, { every: o.every, dir: o.dir || -1, speed: o.speed, delay: o.delay }); return st.x; });
 
@@ -731,8 +764,8 @@ const K = TourKit;
 // his shadow and the gumnut shadows are drawn on the floor under everything (afterEntities draws over the actors,
 // so the shadow is an entity in the back layer instead): AuShadow follows the bear
 class AuShadow extends Ent {
-  constructor(g, s) { super(g, s, 4, 4); this.back = true; this.always = true; }
-  update(dt) { this.t += dt; const b = this.g.entities.find(e => e.boss && e.style === 'au_dropbear' && !e.remove); this.b = b; if (b) { this.x = b.x - 20; this.y = b.floorY - 10; this.w = b.w + 40; this.h = 20; } }
+  constructor(g, s) { super(g, s, 4, 4); this.back = true; }
+  update(dt) { this.t += dt; const A = this.g.area; this.x = 0; this.y = 0; this.w = A.W * TS; this.h = A.H * TS; this.b = this.g.entities.find(e => e.boss && e.style === 'au_dropbear' && !e.remove); }
   touchPlayer() {}
   draw(ctx) {
     const b = this.b; if (!b || b.state === 'dying' || b.state === 'sleep') return;
@@ -788,7 +821,7 @@ Object.assign(Decor, {
 });
 
 /* ================= registration ================= */
-Object.assign(ENTITY_TYPES, { auPing: AuPing, auWeb: AuWebEnt, auHuntsman: AuHuntsman, auRoad: AuRoad, auWheels: AuWheels, auFruit: AuFruit, auFruitStall: AuFruitStall, auShadow: AuShadow });
+Object.assign(ENTITY_TYPES, { auPing: AuPing, auWeb: AuWebEnt, auHuntsman: AuHuntsman, auRoad: AuRoad, auWheels: AuWheels, auFruit: AuFruit, auFruitStall: AuFruitStall, auShadow: AuShadow, auMud: AuMud });
 Object.assign(TourLandscape.ARCH_LABEL, { pouch: 'POUCH', convoy: 'CONVOY', sonar: 'SONAR', web: 'WEB', giant: 'GIANT' });
 Tour.auKit.AuRoo = AuRoo; Tour.auKit.AuSonar = AuSonar; Tour.auKit.AuWeb = AuWeb; Tour.auKit.bearBrain = bearBrain; Tour.auKit.BEAR = BEAR;
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.auKit = Tour.auKit; } } catch (e) { /* not in a browser */ }

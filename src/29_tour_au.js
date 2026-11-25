@@ -233,7 +233,7 @@ const plinth = {
 const SET = (ground, semi, brick, hard, pillar, accent, liquid, bloom) => ({ ground, semi, brick, hard, pillar, accent, tint: {}, bloom: bloom || 0.12, liquid: liquid || null });
 const outback = SET(earth, ledge, mound, sandstone, { c1: '#e0a060', c2: '#a8602a', cap: '#c8b84a', style: 'column' }, COL.a);
 const road = SET(deck, tarp, hay, chassis, { c1: '#9aa0a8', c2: '#5a6068', cap: '#ffd84a', style: 'column' }, COL.c);
-const creek = SET(bank, logSemi, stone, snagHard, { c1: '#6a5440', c2: '#3a2a1e', cap: '#5a8a5a', style: 'column' }, '#7affd8', 'mud', 0.2);
+const creek = SET(bank, logSemi, snagHard, stone, { c1: '#6a5440', c2: '#3a2a1e', cap: '#5a8a5a', style: 'column' }, '#7affd8', 'mud', 0.2);
 const canopy = SET(limb, twig, hollow, trunk, { c1: '#e0d8c8', c2: '#a89a88', cap: GUM, style: 'column' }, '#ffd84a');
 const big = SET(pave, rail, crate, plinth, { c1: '#f2ece0', c2: '#b8ae9a', cap: '#e8423a', style: 'column' }, COL.a);
 if (typeof LIQUIDS !== 'undefined' && !LIQUIDS.mud) LIQUIDS.mud = ['#3a3a22', '#7a8a4a', '#5a5a32'];
@@ -374,19 +374,19 @@ const themes = {
   }),
   au_creek: Object.assign({}, creek, {
     name: 'Platypus Creek', music: 'tour_au_night', particles: 'none', rays: null,
-    sky: ['#0a0c24', '#1a1a3a', '#3a2a4a'], horizonGlow: '#8a5a8a', celestial: { type: 'moon', x: 0.7, y: 0.14, r: 18, color: '#f8f0d8', glow: '#a8a8d8' }, stars: 70,
+    sky: ['#0a0c24', '#1a1a3a', '#3a2a4a'], horizonGlow: '#8a5a8a', celestial: { type: 'moon', x: 0.7, y: 0.14, r: 18, color: '#f8f0d8', glow: '#a8a8d8' }, stars: 0.35,
     layers: [{ kind: 'auCreekFar', color: '#141a2a', water: '#10182a', base: 330, f: 0.08 }, { kind: 'auReeds', color: '#0e1418', base: 430, f: 0.3 }],
     fog: '#3a4a6a', darkness: 0.8, decor: ['auReed', 'auReed']
   }),
   au_canopy: Object.assign({}, canopy, {
     name: 'The Canopy', music: 'tour_au_night', particles: 'none', rays: null,
-    sky: ['#1a2a4a', '#3a5a7a', '#8aa8a8'], horizonGlow: '#c8d8a8', celestial: { type: 'moon', x: 0.2, y: 0.18, r: 22, color: '#fff8e0', glow: '#d8e8c8' }, stars: 30,
+    sky: ['#1a2a4a', '#3a5a7a', '#8aa8a8'], horizonGlow: '#c8d8a8', celestial: { type: 'moon', x: 0.2, y: 0.18, r: 22, color: '#fff8e0', glow: '#d8e8c8' }, stars: 0.2,
     layers: [{ kind: 'auTrunks', color: '#4a5a6a', f: 0.08 }, { kind: 'auLeaves', color: '#3a5a4a', base: 260, f: 0.18 }, { kind: 'auTrunks', color: '#6a7a7a', f: 0.32 }],
     fog: '#a8c8b8', darkness: 0.25, decor: ['auGumLeaves']
   }),
   au_night: Object.assign({}, canopy, {
     name: 'A Gum Tree at Night', music: 'tour_au_night', particles: 'none', rays: null,
-    sky: ['#06081a', '#141a34', '#2a2440'], horizonGlow: '#5a5a8a', celestial: { type: 'moon', x: 0.5, y: 0.12, r: 26, color: '#fffbe8', glow: '#c8c8f0' }, stars: 90,
+    sky: ['#06081a', '#141a34', '#2a2440'], horizonGlow: '#5a5a8a', celestial: { type: 'moon', x: 0.5, y: 0.12, r: 26, color: '#fffbe8', glow: '#c8c8f0' }, stars: 0.6,
     layers: [{ kind: 'auTrunks', color: '#1e2436', f: 0.08 }, { kind: 'auLeaves', color: '#1a2a2a', base: 220, f: 0.2 }],
     fog: '#3a3a6a', darkness: 0.3, decor: ['auGumLeaves']
   }),

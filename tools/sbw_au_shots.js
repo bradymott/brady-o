@@ -128,6 +128,75 @@ async function session(viewport, fn) {
       await page.evaluate(() => { thaw(); play('16-1'); P().invuln = 999; place(4, 14); sim(0.2); });
       await pano('19-16-1-panorama.png');
     });
+
+    // 16-2 Road Train: the headwind, a low bridge, the ute over the widest gap
+    await run('convoy', async () => {
+      await page.evaluate(() => { thaw(); play('16-2'); P().invuln = 999; place(5, 9); sim(0.4); freeze(); });
+      await shot('20-16-2-start.png');
+      let r = await page.evaluate(() => { thaw(); const p = P(); place(20, 9); sim(0.3); const x0 = p.cx; sim(1.0); const still = (p.cx - x0) / 32; const x1 = p.cx; sim(1.0, { right: true }); return { still: Math.round(still * 10) / 10, pushing: Math.round((p.cx - x1) / 32 * 10) / 10 }; });
+      check('16-2: the headwind blows Brady back down the trailer; pushing right still gets him on', r.still < -0.8 && r.pushing > 2, r);
+      // a low bridge: the warning, then it sweeps the deck; standing big it hits, crouched it passes over
+      const bridge = async down => page.evaluate(d => { const g = S(), p = P(); p.invuln = 0; if (p.power === 0) p.setPower(1, true); place(44, 9); sim(0.2); const road = g.entities.find(e => e.constructor.name === 'AuRoad'); road.bridge = null; road.warn = 0; road.clock = 0.01; road.gust = 0; road.gustT = 99; const pw = p.power; let warned = false; for (let k = 0; k < 400 && !(road.bridge && road.bridge.x + road.bridge.w < p.x - 10); k++) { sim(1 / 120, d ? { down: true } : null); if (road.warn > 0) warned = true; p.x = 44 * 32; } const res = { warned, hit: p.power < pw || p.invuln > 0.5, power: p.power }; p.invuln = 999; return res; }, down);
+      r = await bridge(false);
+      check('16-2: a LOW BRIDGE warns first, then knocks a standing big Brady', r.warned && r.hit, r);
+      r = await bridge(true);
+      check('16-2: crouched on the deck, the bridge passes over', r.warned && !r.hit, r);
+      await page.evaluate(() => { const g = S(), p = P(); place(44, 9); const road = g.entities.find(e => e.constructor.name === 'AuRoad'); road.bridge = null; road.clock = 0.01; sim(0.5); freeze(); });
+      await shot('21-16-2-low-bridge-warning.png');
+      await page.evaluate(() => { thaw(); const g = S(); const road = g.entities.find(e => e.constructor.name === 'AuRoad'); for (let k = 0; k < 300 && !(road.bridge && road.bridge.x < g.camX + 500); k++) sim(1 / 120, { down: true }); freeze(); });
+      await shot('22-16-2-low-bridge.png');
+      // the ute: wait for it at the edge of the deck, hop down onto its tray, ride, hop up onto the next flatbed
+      r = await page.evaluate(() => {
+        thaw(); const g = S(), p = P(); place(84, 9); sim(0.3);
+        const ute = g.entities.find(e => e.skin === 'auUte' && Math.abs(e.hx / 32 - 91) < 2);
+        const hold = p.x; for (let k = 0; k < 1200 && !(ute.x - ute.hx < 8 && ute.dx < 0.01 && ute.dx > -1); k++) { sim(1 / 120); p.x = hold; }
+        for (let k = 0; k < 300 && p.cx < 89.7 * 32; k++) sim(1 / 120, { right: true });
+        sim(0.02, { jump: true, jumpPressed: true, right: true }); sim(0.15, { jump: true, right: true }); for (let k = 0; k < 120 && !p.onGround; k++) sim(1 / 120, { right: true });
+        const onUte = p.ride === ute;
+        for (let k = 0; k < 1200 && !(ute.x - ute.hx > ute.ax - 8); k++) { sim(1 / 120, p.cx < ute.x + ute.w - 30 ? { right: true } : null); }
+        sim(0.02, { jump: true, jumpPressed: true, right: true }); sim(0.3, { jump: true, right: true }); sim(1.0, { right: true });
+        return Object.assign({ onUte }, tile());
+      });
+      check('16-2: the overtaking ute carries Brady over the widest gap', r.onUte && !r.dead && r.tx >= 102, r);
+      await page.evaluate(() => { const g = S(); place(90, 9); const ute = g.entities.find(e => e.skin === 'auUte'); const p = P(); p.x = ute.cx - p.w / 2; p.y = ute.y - p.h; sim(0.6); freeze(); });
+      await shot('23-16-2-ute.png');
+      await page.evaluate(() => { thaw(); place(176, 9); sim(0.5); freeze(); });
+      await shot('24-16-2-twist.png');
+      await page.evaluate(() => { thaw(); toArea('van', 8, 12); sim(0.3); freeze(); });
+      await shot('25-16-2-sheep-van.png');
+      await page.evaluate(() => { thaw(); play('16-2'); P().invuln = 999; place(4, 9); sim(0.2); });
+      await pano('29-16-2-panorama.png');
+    });
+
+    // 16-3 Platypus Creek: dark until the ping
+    await run('sonar', async () => {
+      await page.evaluate(() => { thaw(); play('16-3'); P().invuln = 999; place(24, 11); sim(0.4); freeze(); });
+      await shot('30-16-3-dark-before-ping.png');
+      let r = await page.evaluate(() => { thaw(); const K = window.BRADY_TOUR.auKit.AuSonar, g = S(); const before = K.litAt(g, 28.5 * 32, 12.5 * 32); sim(0.05, { action: true, actionPressed: true }); sim(0.6); const after = K.litAt(g, 28.5 * 32, 12.5 * 32); return { before: Math.round(before * 100) / 100, after: Math.round(after * 100) / 100, pings: g.auPings || 0, power: P().power }; });
+      check('16-3: ACTION sends a ping that lights the hidden stones (dark before)', r.before < 0.05 && r.after > 0.6 && r.pings === 1, r);
+      await page.evaluate(() => freeze()); await shot('31-16-3-ping.png');
+      // play the first stones: ping, then jump stone to stone
+      r = await page.evaluate(() => {
+        thaw(); const p = P(), out = []; place(24, 11); sim(0.3);
+        const jump = (hold, t) => { sim(0.02, { jump: true, jumpPressed: true, right: true }); sim(hold, { jump: true, right: true }); for (let k = 0; k < 200 && !p.onGround; k++) sim(1 / 120, { right: true }); sim(0.15, { left: true }); out.push(tile()); };
+        place(21, 11); sim(0.2); sim(0.05, { action: true, actionPressed: true }); sim(0.3);
+        for (let k = 0; k < 200 && p.cx < 24.6 * 32; k++) sim(1 / 120, { right: true });
+        jump(0.2); jump(0.3);
+        return out;
+      });
+      check('16-3: lit by the ping, the stepping stones carry Brady over the mud', r[0].tx >= 28 && r[0].tx <= 30 && r[0].ty === 12 && r[1].tx >= 32 && r[1].ty <= 12 && !r[1].dead, r);
+      r = await page.evaluate(() => { thaw(); place(60, 8); sim(0.2); sim(0.05, { action: true, actionPressed: true }); sim(0.5); const A = S().area; const snag = A.tiles[11 * A.W + 69] === window.BRADY_TOUR.T || true; freeze(); return { hide: A.hide[11 * A.W + 69] }; });
+      check('16-3: the snags are light-only too', r.hide === 3, r);
+      await shot('32-16-3-snag-and-safe-stone.png');
+      await page.evaluate(() => { thaw(); place(162, 10); sim(1.0); sim(0.05, { action: true, actionPressed: true }); sim(0.7); freeze(); });
+      r = await page.evaluate(() => { const K = window.BRADY_TOUR.auKit.AuSonar, g = S(); const raft = g.entities.filter(e => e.skin === 'auRaft').sort((a, b) => Math.abs(a.cx - P().cx) - Math.abs(b.cx - P().cx))[0]; return { lit: raft ? Math.round(K.litAt(g, raft.cx, raft.y) * 100) / 100 : -1, raft: raft && Math.round(raft.cx / 32), p: Math.round(P().cx / 32), pings: g.entities.filter(e => e.constructor.name === 'AuPing').map(e => [Math.round(e.ox / 32), Math.round(e.light.r)]) }; });
+      check('16-3: the drifting logs show in the ping', r.lit > 0.5, r);
+      await shot('33-16-3-drifting-logs.png');
+      await page.evaluate(() => { thaw(); toArea('cave', 10, 11); sim(0.3); freeze(); });
+      await shot('34-16-3-glow-worm-cave.png');
+      await page.evaluate(() => { thaw(); play('16-3'); P().invuln = 999; place(4, 11); sim(0.2); });
+      await pano('39-16-3-panorama.png');
+    });
   });
   await session({ width: 390, height: 844 }, async (page, shot, run) => {
     await run('p-pouch', async () => { await page.evaluate(() => { fresh(); play('16-1'); place(60, 14); sim(0.3); sim(0.02, { jump: true, jumpPressed: true }); sim(0.6, { jump: true, right: true }); freeze(); }); await shot('90-portrait-16-1.png'); });
