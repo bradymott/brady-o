@@ -308,12 +308,49 @@ const L4 = { n: 4, name: 'The Organ Pipes', mapLabel: 'Organ Pipes', arch: 'basa
     { id: 'crater', gen: 'room', theme: 'is_volcano', stamp: 'isPipes', bottomKill: true },
     { id: 'vent', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isVent' }
   ] };
+/* ---------------- 17-5 The Night Troll ----------------
+   The shore below the troll's cave, the last of the night: the aurora fading, sea stacks in the fjord (trolls the sun
+   caught long ago), a ram and a fox, two power-ups on the way (rule 6), a turf hut with its door ajar; then the cave
+   mouth (the arena, 29_tour_is_boss.js). */
+const shore = (() => {
+  const G = mk(78, 16);
+  G.fill(0, 13, 77, 15, '#'); G.fill(18, 13, 21, 15, '.'); G.fill(38, 13, 41, 15, '.');
+  G.put(2, 12, '@'); G.put(5, 12, 'k'); G.put(8, 9, '?'); G.put(12, 12, 'j'); G.put(13, 12, 'D');
+  G.put(18, 10, 'a'); G.coins(18, 21, 8); G.put(26, 12, 'm'); G.put(30, 7, '*'); G.fill(28, 9, 32, 9, '-');
+  G.put(38, 10, 'd'); G.put(40, 6, 'R'); G.put(46, 12, 'f'); G.put(50, 9, '?'); G.put(55, 12, 't');
+  G.put(60, 12, 'P'); G.put(66, 12, 'x'); G.put(72, 12, 'E'); G.put(14, 12, 'A');
+  return G.rows();
+})();
+stamps.isShore = { floor: 13, rows: shore, items: ['power', 'power'], gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'hut@in', look: 'isHutDoor' }],
+  legend: { j: ['decor', 'isHut'], x: ['decor', 'isRock'], t: ['decor', 'isTrollStone'], P: ['decor', 'isPoster'], A: ['anchor', 'hutBack'],
+    k: ['spawn', 'sign', { text: 'THE NIGHT TROLL HAS WAITED WEEKS FOR HIS ENCORE. TROLLS TURN TO STONE IN SUNLIGHT... AND DAWN IS COMING' }],
+    a: ['piece', 'ribbon', { len: 4, mode: 'pulse', hold: 2.4, dark: 1.2, amp: 3 }], d: ['piece', 'ribbon', { len: 4, mode: 'pulse', hold: 2.4, dark: 1.2, amp: 3, hue: 2, phase: 1.2 }],
+    m: ['enemy', 'isRam'], f: ['enemy', 'isFox'], E: ['spawn', 'portal', { kind: 'door', look: 'isTube', targetRef: 'cave@in' }] } };
+// inside the turf hut: a warm little room, a hidden 1UP up in the rafters, P2
+stamps.isTrollHut = (() => {
+  const G = mk(28, 14);
+  G.fill(0, 0, 27, 1, 'B').fill(0, 12, 27, 13, '#').fill(0, 0, 0, 11, 'B').fill(27, 0, 27, 11, 'B');
+  G.put(2, 11, '@'); G.put(4, 11, 'D'); G.fill(8, 8, 12, 8, '-'); G.fill(15, 6, 19, 6, '-'); G.put(17, 4, '*'); G.put(10, 4, 'h'); G.coins(9, 11, 7); G.put(22, 11, 'V');
+  return { floor: 12, rows: G.rows(), gold: { '*': 'hidden' }, hidden: ['oneup'], doors: [{ to: 'shore@hutBack', look: 'isHutDoor' }], legend: { V: ['decor', 'isHotPot'] } };
+})();
+const L5 = { n: 5, name: 'The Night Troll', mapLabel: 'Troll\'s Cave', arch: 'lair', theme: 'is_dawn', boss: 'is_troll',
+  gimmick: 'The act nobody cancelled: a troll who must finish before sunrise. Bounce the dawn off the old shields onto him',
+  hint: 'Step on a shield\'s stone: it throws sunlight onto a spot on the floor. Lure the troll onto the spot, then stomp his stony head',
+  postcard: 'The geyser is uncorked! Whoosh. The troll is a very handsome rock now. He seems happy with the view. ♥ C',
+  enemies: [['isRam', 1], ['isFox', 1]],
+  mapCell: [1, 2], mapFrom: 3,
+  exits: { main: { to: 'country:next' } },
+  areas: [
+    { id: 'shore', gen: 'room', theme: 'is_dawn', stamp: 'isShore', bottomKill: true },
+    { id: 'hut', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isTrollHut' },
+    { id: 'cave', gen: 'arena', role: 'arena', layout: 'cave', arenaW: 28, H: 18, theme: 'is_cave' }
+  ] };
 /* ---------------- placeholders for the levels still to come (replaced below as each is built) ---------------- */
 const stub = (n, name, arch, theme, extra) => Object.assign({ n, name, arch, theme, gimmick: name, hint: name, postcard: name + ' ♥ C', enemies: [['isFox', 1]],
   mapCell: [n % 3, 1], mapFrom: n - 2, areas: [{ id: 'a', gen: 'room', theme, stamp: 'isStub' }] }, extra || {});
 stamps.isStub = (() => { const G = mk(29, 12); G.fill(0, 0, 28, 0, '#').fill(0, 10, 28, 11, '#').fill(0, 0, 0, 9, '#').fill(28, 0, 28, 9, '#'); G.put(2, 9, '@..?..*....?..o.o..R...P..G'); return { floor: 10, rows: G.rows(), items: ['power', 'power'], gold: { '*': 'must', R: 'risky', P: 'high' } }; })();
 const levels = [L1, L2, L3, L4,
-  stub(5, 'The Night Troll', 'lair', 'is_dawn'), stub(6, 'The Hidden Folk', 'shy', 'is_folk', { secret: true, mapFrom: 0, exits: { main: { to: 'node:17-2' } } })];
+  L5, stub(6, 'The Hidden Folk', 'shy', 'is_folk', { secret: true, mapFrom: 0, exits: { main: { to: 'node:17-2' } } })];
 
 Tour.amend('is', { stamps, levels });
 Object.assign(TourLandscape.ARCH_LABEL, { aurora: 'AURORA', berg: 'BERGS', quake: 'QUAKE', basalt: 'PIPES', shy: 'SHY' });
