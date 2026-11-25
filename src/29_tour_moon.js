@@ -299,13 +299,13 @@ const painters = {
 const SPACE_SKY = ['#04040e', '#0a0a24', '#16163a'];
 const themes = {
   moon_surface: Object.assign({}, regolith, {
-    name: 'One Small Hop', music: 'tour_moon', particles: 'motes', rays: null,
+    name: 'One Small Hop', music: 'tour_moon', particles: 'none', rays: null,
     sky: SPACE_SKY, horizonGlow: '#6a6aa8', celestial: { type: 'none' }, stars: 1.2,
     layers: [{ kind: 'moonEarth', x: 760, y: 92, r: 36, base: 200, f: 0.02 }, { kind: 'moonFarRims', color: '#6e6a8a', base: 340, f: 0.08 }, { kind: 'moonNearRim', color: '#4e4a64', base: 410, f: 0.22 }],
     fog: '#2a2a5a', decor: ['moonRock', 'moonGolf', 'moonRock']
   }),
   moon_shadow: Object.assign({}, regolith, {
-    name: 'Crater Shadow', music: 'tour_moon', particles: 'motes', rays: null,
+    name: 'Crater Shadow', music: 'tour_moon', particles: 'none', rays: null,
     sky: ['#06060e', '#0e0e22', '#1c1a34'], horizonGlow: '#4a4a7a', celestial: { type: 'none' }, stars: 0.8,
     layers: [{ kind: 'moonFarRims', color: '#3a3652', base: 330, f: 0.08 }, { kind: 'moonNearRim', color: '#2a2640', base: 400, f: 0.2, posters: false }],
     fog: '#1a1a3a', darkness: 0.2, decor: ['moonRock']
@@ -317,7 +317,7 @@ const themes = {
     fog: '#1a2050', decor: []
   }),
   moon_rover: Object.assign({}, regolith, {
-    name: 'Moon Buggy', music: 'tour_moon_buggy', particles: 'motes', rays: '#fff0d0',
+    name: 'Moon Buggy', music: 'tour_moon_buggy', particles: 'none', rays: '#fff0d0',
     sky: ['#06061a', '#1a1a44', '#4a3a6a'], horizonGlow: '#ffb27a', celestial: { type: 'sun', x: 0.86, y: 0.2, r: 22, color: '#fff8e8', glow: '#ffd8a0' }, stars: 0.7,
     layers: [{ kind: 'moonEarth', x: 300, y: 70, r: 26, base: 200, f: 0.02 }, { kind: 'moonFarRims', color: '#8a7a96', base: 330, f: 0.07 }, { kind: 'moonNearRim', color: '#5e5270', base: 400, f: 0.2 }],
     fog: '#5a4a7a', decor: ['moonRock', 'moonGolf']
@@ -329,7 +329,7 @@ const themes = {
     fog: '#6a7a9a', darkness: 0.1, decor: ['moonLamp']
   }),
   moon_stage: Object.assign({}, regolith, {
-    name: 'The Lunar Stage', music: 'tour_moon_boss', particles: 'motes', rays: null, spotlights: true,
+    name: 'The Lunar Stage', music: 'tour_moon_boss', particles: 'none', rays: null, spotlights: true,
     sky: SPACE_SKY, horizonGlow: '#ff8ac8', celestial: { type: 'none' }, stars: 1.0,
     layers: [{ kind: 'moonEarth', x: 820, y: 70, r: 30, base: 200, f: 0.02 }, { kind: 'moonAmphi', color: '#5a5672', base: 400, f: 0.12 }],
     fog: '#3a2a5a', decor: ['moonRock']

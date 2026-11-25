@@ -66,7 +66,7 @@ const hopRows = (() => {
   ground(Gr, 218, 224, 14); put(Gr, 221, 13, 'O'); put(Gr, 219, 13, 'z');
   // the narrow chasm with a faint dust vent: it blows all the way up to the star gate on its star rock
   pit(Gr, 225, 227); put(Gr, 225, 24, '4');
-  fillG(Gr, 229, 4, 234, 5, '#'); put(Gr, 231, 3, 'g'); put(Gr, 229, 2, 'o.o.o.o');
+  fillG(Gr, 229, 7, 234, 8, '#'); put(Gr, 231, 6, 'g'); put(Gr, 229, 5, 'o.o.o.o');
   ground(Gr, 228, 251, 21); put(Gr, 233, 20, 'p'); put(Gr, 236, 20, 'm'); put(Gr, 243, 20, 'G'); put(Gr, 248, 20, 'p');
   fillG(Gr, 251, 0, 251, 25, '#');
   return rowsOf(Gr);
@@ -80,7 +80,7 @@ const HOP = {
   '1': ['piece', 'moon.geyser', { steady: true, top: 5 }],
   '2': ['piece', 'moon.geyser', { steady: true, top: 9 }],
   '3': ['piece', 'moon.geyser', { top: 6, on: 2.2, off: 2.6 }],
-  '4': ['piece', 'moon.geyser', { steady: true, top: 0, faint: true, w: 3 }],
+  '4': ['piece', 'moon.geyser', { steady: true, top: 3, faint: true, w: 3 }],
   '5': ['piece', 'moon.geyser', { steady: true, top: 8 }],
   z: ['piece', 'moon.golfRain', { period: 3.0 }], Z: ['piece', 'moon.golfRain', { period: 3.0, phase: 1.5 }],
   X: ['piece', 'secretDoor', { to: 'green@in', look: 'fake', back: 'greenBack' }]

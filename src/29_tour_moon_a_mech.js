@@ -124,4 +124,6 @@ Object.assign(Tour.pieces, {
 
 Object.assign(TourLandscape.ARCH_LABEL, { lowg: 'LOW-G', drift: 'SPACEWALK', rover: 'BUGGY', mag: 'MAG BOOTS', stars: 'STARS' });
 Tour.moonKit.MOON_G = MOON_G;
+// for the shots tool's autopilot: the game's own physics, run on a copy of Brady's body
+try { if (typeof window !== 'undefined') window.BRADY_MOON = { phys: (b, inp, A, dt, pl, o) => playerPhysicsFlip(b, inp, A, dt, pl, o), spikeContact: (b, A) => spikeContact(b, A), lavaContact: (b, A) => lavaContact(b, A), moveBody: (b, A, dt, o) => moveBody(b, A, dt, o), kit: Tour.moonKit }; } catch (e) { /* not in a browser */ }
 })();
