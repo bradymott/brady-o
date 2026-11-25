@@ -277,5 +277,96 @@ const L3 = { n: 3, name: 'Moon Buggy', mapLabel: 'Moon Buggy', arch: 'rover', th
     { id: 'depot', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonDepot', gravity: G0, moon: { lowg: true } }
   ] };
 
-Tour.amend('moon', { stamps, levels: [L1, L2, L3] });
+/* ---------------- 18-4 The Moon Base ---------------- */
+// inside: the ceiling is rows 0-2, the floor row 20. ① the boots taught over a safe floor, then over a spike floor;
+// ② a deadly pit crossed on the ceiling (P3 over it), ceiling spikes where the metal stops, two metal spans with a
+// gap: drop to the ledge between and go back up; the storeroom ledge you only reach from the ceiling; ③ an air
+// vent up to a ledge under the metal, more spikes, then out through the airlock into the YARD: a spacewalk in low
+// orbit past junk and golf balls to the stage door (all of the land at once)
+const baseRows = (() => {
+  const W = 184, H = 24, Gr = grid(W, H, '.');
+  fillG(Gr, 0, 0, W - 1, 2, 'H'); ground(Gr, 0, W - 1, 20);
+  put(Gr, 3, 19, '@'); put(Gr, 7, 19, 'n'); put(Gr, 10, 16, '?');
+  put(Gr, 14, 19, '1'); put(Gr, 15, 4, 'o.o.o.o'); put(Gr, 23, 5, '*');
+  put(Gr, 26, 19, '2'); fillG(Gr, 30, 20, 40, 20, '^'); put(Gr, 27, 4, 'o.o.o.o.o.o.o.o');
+  put(Gr, 46, 19, 'N');
+  // ② the deadly pit under a metal span
+  put(Gr, 53, 19, '3'); fillG(Gr, 55, 20, 72, 23, '.'); put(Gr, 63, 7, 'R'); put(Gr, 77, 19, 'u');
+  fillG(Gr, 75, 3, 80, 3, 'v');
+  put(Gr, 82, 19, 'c'); put(Gr, 90, 16, '?'); put(Gr, 94, 19, 'e');
+  // two metal spans with a gap: drop to the ledge between, boots on again from it
+  fillG(Gr, 101, 20, 120, 23, '.'); put(Gr, 99, 19, '4'); fillG(Gr, 104, 11, 111, 11, '#'); put(Gr, 111, 19, '5'); fillG(Gr, 107, 3, 110, 3, 'v'); put(Gr, 108, 10, 'k');
+  // the storeroom ledge, only reachable from the ceiling (its hatch light blinks)
+  fillG(Gr, 122, 9, 126, 9, '#'); put(Gr, 124, 8, 'D'); put(Gr, 126, 8, 'a');
+  put(Gr, 128, 12, 'M'); put(Gr, 132, 19, 'c');
+  // ③ the air vent up to a ledge under the metal; spikes on the ceiling elsewhere
+  fillG(Gr, 138, 20, 145, 23, '.'); put(Gr, 139, 23, '6'); fillG(Gr, 136, 3, 145, 3, 'v'); fillG(Gr, 146, 10, 151, 10, '-'); put(Gr, 146, 19, '7');
+  fillG(Gr, 152, 20, 162, 20, '^'); put(Gr, 150, 6, 'o.o.o.o.o.o');
+  put(Gr, 166, 19, 'u'); put(Gr, 172, 19, 'A'); put(Gr, 168, 16, '?');
+  fillG(Gr, W - 1, 0, W - 1, 19, 'H');
+  return rowsOf(Gr);
+})();
+const BASE = {
+  n: ['spawn', 'sign', { text: 'MAGNET BOOTS! PRESS ACTION TO SWITCH THEM ON: UNDER THE BLUE PANELS YOU FALL UP AND WALK THE CEILING' }],
+  N: ['spawn', 'sign', { text: 'SWITCH THE BOOTS OFF TO DROP. YOU CAN SWITCH IN MID-AIR TOO' }],
+  e: ['enemy', 'moonBunny'], u: ['enemy', 'moonHand'], M: ['enemy', 'moonMoth'], k: ['decor', 'moonLamp'],
+  '1': ['piece', 'moon.metal', { w: 10, ceil: 2, bot: 19 }], '2': ['piece', 'moon.metal', { w: 18, ceil: 2, bot: 19 }],
+  '3': ['piece', 'moon.metal', { w: 21, ceil: 2, bot: 19 }], '4': ['piece', 'moon.metal', { w: 8, ceil: 2, bot: 19 }],
+  '5': ['piece', 'moon.metal', { w: 16, ceil: 2, bot: 19 }],
+  '6': ['piece', 'moon.geyser', { steady: true, top: 4, w: 2 }], '7': ['piece', 'moon.metal', { w: 6, ceil: 2, bot: 9 }],
+  a: ['anchor', 'storeBack'],
+  A: ['spawn', 'portal', { kind: 'door', look: 'moonAirlock', targetRef: 'yard@in' }]
+};
+stamps.moonBase = { floor: 20, rows: baseRows, legend: BASE, gold: { '*': 'must', R: 'risky' }, items: ['power', 'power', 'power'], doors: [{ to: 'store@in', look: 'moonHatch' }] };
+// the storeroom over the corridor: Piwi's spare posters, P2, a hidden 1UP
+stamps.moonStore = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#........*...................#',
+    '#......-----......o.o.o......#',
+    '#.................-----......#',
+    '#..h.........................#',
+    '#.....................-----..#',
+    '#...-----....................#',
+    '#............................#',
+    '#..........-----.............#',
+    '#............................#',
+    '#.@...D.....j....j......l....#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'base@storeBack', look: 'moonHatch' }],
+  legend: { l: ['decor', 'moonLamp'], j: ['decor', 'moonPoster'] }
+};
+// the yard outside the base: a short spacewalk in low orbit over the stage crater, junk and golf balls adrift
+const yardRows = (() => {
+  const W = 96, H = 26, Gr = grid(W, H, '.');
+  fillG(Gr, 0, 0, W - 1, 0, 'H');
+  plate(Gr, 0, 8, 18); fillG(Gr, 0, 20, 8, 25, '#'); put(Gr, 2, 17, '@'); put(Gr, 6, 17, 'n');
+  put(Gr, 16, 14, 'j'); plate(Gr, 22, 26, 13); put(Gr, 34, 9, 'V'); put(Gr, 40, 12, 'k');
+  plate(Gr, 47, 51, 16); fillG(Gr, 47, 18, 51, 18, 'v'); put(Gr, 58, 11, 'V'); put(Gr, 64, 6, 'K'); put(Gr, 70, 13, 'M');
+  plate(Gr, 78, 95, 15); fillG(Gr, 78, 17, 95, 25, '#'); put(Gr, 82, 14, 'c'); put(Gr, 90, 14, 'G'); fillG(Gr, W - 1, 0, W - 1, 14, '#');
+  return rowsOf(Gr);
+})();
+stamps.moonYard = { floor: 18, rows: yardRows, legend: {
+  n: ['spawn', 'sign', { text: 'THE YARD! NO GRAVITY OUT HERE: PUSH OFF AND PUFF TO THE STAGE DOOR' }],
+  V: ['piece', 'moon.valve', {}], M: ['enemy', 'moonMoth'],
+  j: ['piece', 'moon.junk', { ay: 8, speed: 0.7, kind: 2 }], k: ['piece', 'moon.junk', { ay: 9, speed: 0.6, kind: 0, phase: 2 }], K: ['piece', 'moon.junk', { ax: 8, speed: 0.6, kind: 1 }]
+} };
+const L4 = { n: 4, name: 'The Moon Base', mapLabel: 'The Moon Base', arch: 'mag', theme: 'moon_base',
+  gimmick: 'Magnet boots: under the blue metal panels Brady falls up and walks the ceiling. Switch them on and off with the action button; off the metal he floats in the low gravity. Then out into the yard',
+  hint: 'Action switches the boots. Walk the ceiling over the spikes and pits, switch off to drop onto ledges. A hatch blinks on a ledge only the ceiling reaches...',
+  postcard: 'Brady! You walked on the CEILING. The stagehands have fishbowls on their heads. One waved at me. I think. ♥ C',
+  enemies: [['moonHand', 2], ['moonMoth', 2], ['moonBunny', 1]],
+  mapCell: [2, 1], mapFrom: 2,
+  exits: { main: { to: '18-5' } },
+  areas: [
+    { id: 'base', gen: 'room', theme: 'moon_base', stamp: 'moonBase', gravity: G0, moon: { mag: true } },
+    { id: 'store', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonStore', gravity: G0, moon: { lowg: true } },
+    { id: 'yard', gen: 'room', theme: 'moon_orbit', stamp: 'moonYard', gravity: 0.2, moon: { drift: { tank: 2 } }, camera: 'free', bottomKill: true }
+  ] };
+
+Tour.amend('moon', { stamps, levels: [L1, L2, L3, L4] });
 })();

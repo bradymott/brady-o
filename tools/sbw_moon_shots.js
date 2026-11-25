@@ -84,7 +84,7 @@ async function session(viewport, fn) {
       },
       progs(target, from) {
         const out = [], dirs = target[0] > from[0] ? [1, -1, 0] : target[0] < from[0] ? [-1, 1, 0] : [0, 1, -1];
-        if (target[1] === from[1] && !target[2]) out.push({ walkTo: target[0] * 32 + 16, dir: 0 });
+        if (target[1] === from[1]) out.push({ walkTo: target[0] * 32 + 16, dir: 0 });
         const Ar = S().area;
         if (Ar.moon && Ar.moon.drift) { for (const dir of dirs) for (const plan of window.BRADY_MOON.DRIFT_PLANS) out.push({ driftPlan: plan, dir }); return out; }
         for (const dir of dirs) {
@@ -350,6 +350,35 @@ LEVELS.buggy = async (page, shot, run, pano) => {
     check('18-3: the blinking garage door leads to the rover depot', sec.area === 'depot', sec);
     await page.evaluate(() => { place(10, 11); sim(0.3); freeze(); }); await shot('34-18-3-depot.png');
     await page.evaluate(() => { thaw(); play('18-3'); }); await pano('pano-18-3-buggy.png');
+  });
+};
+
+// ---------------- 18-4 The Moon Base ----------------
+LEVELS.base = async (page, shot, run, pano) => {
+  await run('base', async () => {
+    await page.evaluate(() => { AP.boots = () => { sim(1 / 120, { action: true, actionPressed: true }); sim(1.6); return window.BRADY_MOON.kit.magBoots(S()); }; });
+    await page.evaluate(() => { fresh(); play('18-4'); place(4, 19); sim(0.4); freeze(); });
+    await shot('40-18-4-start.png');
+    // the boots: on under the metal, Brady falls up and stands on the ceiling; off, he drops
+    const r = await page.evaluate(() => { thaw(); place(17, 19); sim(0.3); const on = AP.boots(), p = P(); const up = { flipped: !!p.flipped, row: p.groundTy, onG: p.onGround }; const off = AP.boots(); return { on, up, off, back: { flipped: !!p.flipped, row: p.groundTy } }; });
+    check('18-4: the action button switches the boots: under the panels Brady falls up onto the ceiling, and off again he drops', r.on && r.up.flipped && r.up.row === 2 && !r.off && !r.back.flipped && r.back.row === 20, r);
+    await page.evaluate(() => { place(17, 19); sim(0.2); AP.boots(); sim(0.3); freeze(); }); await shot('41-18-4-on-the-ceiling.png');
+    await page.evaluate(() => { thaw(); play('18-4'); place(3, 19); sim(0.2); });
+    const legA = await page.evaluate(() => AP.route([[16, 20], () => AP.boots(), [22, 2, 1], () => AP.boots(), [27, 20], () => AP.boots(), [42, 2, 1], () => AP.boots(), [53, 20], () => AP.boots(), [72, 2, 1], [75, 20], () => AP.boots()], { tol: 1 }));
+    check('18-4: played: the boots up to P1 on the ceiling, over the spike floor, across the deadly pit on the ceiling', legA.ok, legA);
+    const legB = await page.evaluate(() => AP.route([[85, 20], [97, 20], () => AP.boots(), [104, 2, 1], () => AP.boots(), [109, 11], () => AP.boots(), [112, 2, 1], [124, 2, 1], () => AP.boots(), [124, 9]], { tol: 1 }));
+    check('18-4: played: two metal spans with a gap (drop to the ledge between, back up), down onto the storeroom ledge', legB.ok, legB);
+    await page.evaluate(() => { freeze(); }); await shot('42-18-4-storeroom-ledge.png'); await page.evaluate(() => thaw());
+    const st = await page.evaluate(() => { AP.go([124, 9]); for (let k = 0; k < 20 && S().area.aid !== 'store'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.5); const a = S().area.aid; if (a === 'store') { sim(0.2); P(); } return { area: a }; });
+    check('18-4: the blinking hatch on the ledge leads into the storeroom', st.area === 'store', st);
+    await page.evaluate(() => { place(10, 11); sim(0.3); freeze(); }); await shot('43-18-4-storeroom.png');
+    const legC = await page.evaluate(() => { thaw(); play('18-4'); place(126, 19); sim(0.3); return AP.route([[134, 20], [148, 10], [166, 20], [172, 20]], { tol: 0, maxT: 7 }); });
+    check('18-4: played: the air vent up to the ledge, the leap over the spike floor to the airlock', legC.ok, legC);
+    const yd = await page.evaluate(() => { for (let k = 0; k < 20 && S().area.aid !== 'yard'; k++) sim(0.1, { up: true, upPressed: true }); sim(1); if (S().area.aid !== 'yard') return { area: S().area.aid }; const r = AP.route([[3, 18], [24, 13], [26, 13], [49, 16], [51, 16], [82, 15], [89, 15]], { maxT: 7 }); if (!r.ok) return r; sim(1.5, { right: true }); return { ok: true, state: S().state }; });
+    check('18-4: played: through the airlock into the yard, a spacewalk past the junk to the stage door (the gate)', yd.ok && yd.state !== 'play', yd);
+    await page.evaluate(() => { play('18-4'); toArea('yard', 4, 17); sim(0.3); freeze(); }); await shot('44-18-4-yard.png');
+    await page.evaluate(() => { thaw(); play('18-4'); }); await pano('pano-18-4-base.png');
+    await page.evaluate(() => toArea('yard')); await pano('pano-18-4-yard.png');
   });
 };
 

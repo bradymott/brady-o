@@ -415,6 +415,74 @@ TourHooks.on('afterEntities', (play, ctx) => {
 });
 Tour.moonKit.ROVER = ROVER;
 
+/* ---------------- 18-4 MAG: the magnet boots ----------------
+   The base's blue metal panels: with the boots ON (the action button switches them, anywhere, any time) Brady falls
+   UP to the panels over his head and walks the ceiling (the engine's flip band, tied to toggle group 0); switch them
+   OFF and he drops back down in the low gravity. The checker's search may switch the boots at any standing spot
+   (an automatic toggle group); the player can do that and more (in mid-air too). */
+const MAG_G = 0;
+function magBoots(play) { return !!(play.area && play.area.toggleState && play.area.toggleState[MAG_G]); }
+{
+  const up0 = Player.prototype.update;
+  Player.prototype.update = function (dt, inp) {
+    const g = this.g, A = g && g.area;
+    if (A && A.moon && A.moon.mag && inp && inp.actionPressed && this.state === 'play' && !this.dead) {
+      g.flipToggle(MAG_G, true);
+      const on = magBoots(g);
+      TourKit.sfx('mag', 'select', { vol: 0.5, pitch: on ? 1.6 : 0.8 });
+      g.parts.text(this.cx, this.y - 14, on ? 'BOOTS ON' : 'BOOTS OFF', on ? '#7ad8ff' : '#c8c2d4');
+      if (!this.magTold) { this.magTold = true; }
+      inp = Object.assign({}, inp, { actionPressed: false, action: false });
+    }
+    return up0.call(this, dt, inp);
+  };
+  if (typeof TourPicker !== 'undefined') {
+    const vis0 = TourPicker.visible;
+    TourPicker.visible = function (play) { if (play && play.area && play.area.moon && play.area.moon.mag) return false; return vis0.call(this, play); };
+  }
+}
+// a span of blue metal panels on the ceiling: drawn under the ceiling tiles, with field lines down into the band
+// while the boots are on
+class MoonMagPanel extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 4) * TS, (s.h || 10) * TS); this.x = s.x - TS / 2; this.y = s.top * TS; this.ceil = s.ceil; this.floor = !!s.floor; this.back = true; }
+  update(dt) { this.t += dt; }
+  touchPlayer() {}
+  draw(ctx) {
+    const on = magBoots(this.g), x = this.x, w = this.w, t = this.t, cy = this.ceil * TS;
+    ctx.save();
+    // the panels: blue steel with bolts and a magnet stripe, hung under the ceiling row
+    ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = on ? '#4a9aff' : '#3a6ac8'; ctx.fillRect(x, cy - 8, w, 8); ctx.strokeRect(x, cy - 8, w, 8);
+    ctx.fillStyle = '#e8424a'; for (let k = x + 6; k < x + w - 6; k += 32) ctx.fillRect(k, cy - 6, 10, 4);
+    ctx.fillStyle = '#c8d8ff'; for (let k = x + 20; k < x + w - 4; k += 32) { ctx.beginPath(); ctx.arc(k, cy - 4, 1.6, 0, TAU); ctx.fill(); }
+    // the field: faint arcs down into the band (bright and moving with the boots on)
+    const a = on ? 0.35 : 0.1;
+    ctx.strokeStyle = `rgba(120,200,255,${a})`; ctx.lineWidth = 1.5;
+    for (let k = 0; k < 3; k++) { const ph = on ? (t * 0.8 + k / 3) % 1 : k / 3, yy = cy + ph * this.h; ctx.beginPath(); ctx.moveTo(x + 4, yy); ctx.quadraticCurveTo(x + w / 2, yy + 10, x + w - 4, yy); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+ENTITY_TYPES.moonMagPanel = MoonMagPanel;
+TourHats.NOT && TourHats.NOT.add('moonMagPanel');
+// Brady's boots glow blue while they are on
+TourHooks.on('afterEntities', (play, ctx) => {
+  const A = play.area, p = play.player; if (!A || !A.moon || !A.moon.mag || !p || p.dead) return;
+  const on = magBoots(play), y = p.flipped ? p.y : p.y + p.h;
+  ctx.save(); ctx.fillStyle = on ? '#4ab8ff' : '#5a6276'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+  for (const dx of [-6, 6]) { ctx.beginPath(); ctx.ellipse(p.cx + dx, y + (p.flipped ? 2 : -2), 6, 3.5, 0, 0, TAU); ctx.fill(); ctx.stroke(); }
+  if (on) { ctx.fillStyle = 'rgba(80,180,255,0.3)'; ctx.beginPath(); ctx.ellipse(p.cx, y, 18, 7, 0, 0, TAU); ctx.fill(); }
+  ctx.restore();
+});
+Tour.pieces['moon.metal'] = function (st, o) {
+  // metal panels under the ceiling row `ceil` from the letter, w wide; the band reaches down to row `bot`
+  const B = st.B, x = st.x, w = o.w || 6, ceil = o.ceil, bot = o.bot;
+  if (!B.toggles[MAG_G]) B.toggle(MAG_G, [], [], { kind: 'boots', auto: true });
+  B.zone(x, ceil + 1, w, bot - ceil, 0, 0, 0, 'flip', { g: MAG_G });
+  B.spawn('moonMagPanel', x, bot, { w, top: ceil + 1, ceil: ceil + 1, h: bot - ceil });
+  return st.x;
+};
+Tour.moonKit.magBoots = magBoots;
+
 Object.assign(TourLandscape.ARCH_LABEL, { lowg: 'LOW-G', drift: 'SPACEWALK', rover: 'BUGGY', mag: 'MAG BOOTS', stars: 'STARS' });
 Tour.moonKit.MOON_G = MOON_G;
 // for the shots tool's autopilot: the game's own physics, run on a copy of Brady's body
