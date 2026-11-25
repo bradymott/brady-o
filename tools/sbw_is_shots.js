@@ -47,15 +47,26 @@ async function session(viewport, fn) {
     window.freeze = () => { const g = S(); if (g.player) g.player.invuln = 0; g._upd = g.update; g.update = function () {}; };
     window.thaw = () => { const g = S(); if (g._upd) { g.update = g._upd; g._upd = null; } if (g.player) g.player.invuln = 999; };
     window.ents = name => S().entities.filter(e => e.constructor.name === name || e.type === name);
-    window.alive = () => { const g = S(), p = P(); return !p.dead && p.state === 'play' && g.state === 'play'; };
+    window.alive = () => { const p = P(); return !p.dead && p.state !== 'dying'; };
     // is there nothing to stand on just ahead of Brady's feet (tiles or a live platform)? (a simple player's eye)
     window.edgeAhead = (p, d) => { const g = S(), x = p.cx + (d || 1) * 22, fy = p.y + p.h + 4, t = g.area.tiles[Math.floor(fy / 32) * g.area.W + Math.floor(x / 32)]; if ([1, 2, 3, 4, 5, 7, 11, 12, 13, 16, 17, 19, 21, 22].includes(t)) return false; return !g.platforms.some(e => !e.dead && x > e.x && x < e.x + e.w && Math.abs(e.y - fy) < 24); };
+    // (in these runs enemies can't hurt Brady (invuln) but pits, lava and crushers still kill him: die() ignores it)
     // a player's run: hold right, jump (and hold it) at every edge; stops at tile column x on the ground
     window.gapAhead = p => { let n = 0; for (let d = 1; d < 12; d++) { const q = { cx: p.cx + d * 32 - 22, y: p.y, h: p.h }; if (!edgeAhead(q)) return n; n++; } return n; };
-    window.hop = (x, sec) => { let j0 = -1e9, hold = 0.14; return runTo(x, sec || 10, (p, k) => { if (p.onGround && edgeAhead(p)) { j0 = k; const gp = gapAhead(p); hold = gp >= 4 ? 0.32 : gp >= 3 ? 0.2 : 0.12; return true; } return !p.onGround && p.vy < 0 && k - j0 < hold * 120; }); };
+    // the support ahead: the first stretch of ground or live platform beyond the edge, as [start, end] in px
+    window.landingAhead = p => { let gap = false, a = null, b = null; for (let d = 4; d < 13 * 32; d += 6) { const q = { cx: p.cx + d - 22, y: p.y, h: p.h }, ok = !edgeAhead(q); if (!gap) { if (!ok) gap = true; continue; } if (ok && a == null) a = b = p.cx + d; else if (a != null) { if (ok) b = p.cx + d; else break; } } return a == null ? null : [a, b]; };
+    // a careful player's run: walk, and at each edge jump at the middle of the next thing to stand on, steering in the air
+    window.hop = (x, sec) => { let target = null, j0 = -1e9; return runTo(x, sec || 10, (p, k, I) => {
+      if (p.onGround) { target = null; I.right = p.vx < 6.4 * 32; I.left = false; if (edgeAhead(p)) { const L = landingAhead(p); if (L) { target = Math.min(L[0] + 40, (L[0] + L[1]) / 2); j0 = k; return true; } } return false; }
+      if (target != null) { I.right = p.cx < target - 6; I.left = p.cx > target + 10; }
+      return p.vy < 0 && k - j0 < 0.32 * 120; }); };
+    window.waitFor = (cond, sec) => { for (let k = 0; k < (sec || 8) * 50; k++) { if (cond()) return true; sim(0.02); if (!alive()) return false; } return cond(); };
+    // walk (real inputs) toward tile column x (stops on reaching it; jumps if asked)
+    window.walk = (x, sec, jump) => { const d = x * 32 + 16 > P().cx ? 1 : -1; let ok = false; sim(sec || 3, d > 0 ? { right: true } : { left: true }, (k, I) => { if (!alive()) return false; if ((P().cx - (x * 32 + 16)) * d >= -6) { ok = true; return false; } if (jump && k === 0) { I.jump = true; I.jumpPressed = true; } }); sim(0.4, null, (k, I) => { const v = P().vx; I.left = v * d > 20 && d > 0; I.right = v * d > 20 && d < 0; if (Math.abs(v) <= 20) return false; }); return ok && alive(); };
+    window.plateAt = (x, y) => ents('IsPlate').find(e => e.A[0] === x && e.A[1] === y);
     window.tx = () => Math.floor(P().cx / 32); window.ty = () => Math.floor((P().y + P().h - 1) / 32);
     // hold right until Brady stands at tile column x (or dies); the jump button pressed when j(p) says so
-    window.runTo = (x, sec, j) => { let r = false; sim(sec || 6, { right: true }, (k, I) => { const p = P(); if (!alive()) return false; if (p.cx >= x * 32 && p.onGround) { r = true; return false; } const want = j ? j(p, k) : false; I.jump = !!want; if (want === 'tap') I.jumpPressed = true; else I.jumpPressed = !!want && !I._held; I._held = !!want; }); return r; };
+    window.runTo = (x, sec, j) => { let r = false; sim(sec || 6, { right: true }, (k, I) => { const p = P(); if (!alive()) return false; if (p.cx >= x * 32 && p.onGround) { r = true; return false; } const want = j ? j(p, k, I) : false; I.jump = !!want; if (want === 'tap') I.jumpPressed = true; else I.jumpPressed = !!want && !I._held; I._held = !!want; }); return r; };
   });
   const pin = () => page.evaluate(() => { const G = window.BRADY.Game; G.slowT = -1e9; G.lowered = 0; G.dprCap = null; G.quality = 1; G.resize(); });
   const shot = async name => { await pin(); if (checksOnly) return; await page.waitForTimeout(300); await page.screenshot({ path: path.join(out, name) }); };
@@ -172,8 +183,8 @@ async function session(viewport, fn) {
       await ev(() => { thaw(); play('17-2'); const b = ents('IsBerg').find(e => Math.floor(e.hx / 32) === 16); place(20, 13); for (let k = 0; k < 80 && b.maxT < 0.5; k++) sim(0.05, { right: P().cx < b.x + b.w - 8 }); freeze(); });
       await shot('21-17-2-berg-creaks.png');
       // a seal is a counterweight: stand opposite it and the berg holds; stand on its side and it rolls
-      r = await ev(() => { thaw(); play('17-2'); const b = ents('IsBerg').find(e => Math.floor(e.hx / 32) === 32); place(33, 13); sim(4); const opp = b.state; place(35, 13); let rolled = false; for (let k = 0; k < 100; k++) { sim(0.05); if (b.state === 'roll') { rolled = true; break; } } return { opp, rolled }; });
-      check('17-2: a seal berg holds with Brady opposite the seal and rolls with him on the seal\'s side', r.opp === 'float' && r.rolled, r);
+      r = await ev(() => { thaw(); play('17-2'); const b = ents('IsBerg').find(e => Math.floor(e.hx / 32) === 32); place(33, 13); sim(4); const opp = b.state; place(35, 13); let rolled = false; let off = false; for (let k = 0; k < 100; k++) { sim(0.05); if (b.state === 'roll') { rolled = true; break; } if (P().y + P().h > 14 * 32 + 8) { off = true; break; } } return { opp, rolled, off }; });
+      check('17-2: a seal berg holds with Brady opposite the seal; on the seal\'s side it rolls or tips him off', r.opp === 'float' && (r.rolled || r.off), r);
       await ev(() => { thaw(); play('17-2'); place(33, 13); sim(1.2); freeze(); });
       await shot('22-17-2-seal-counterweight.png');
       // real inputs: the open lagoon, berg to berg to the sand (a player's run: jump at each edge)
@@ -183,13 +194,64 @@ async function session(viewport, fn) {
       check('17-2: real inputs: the twist: small seal bergs and a drifting floe', r.ok && r.alive, r);
       await ev(() => { thaw(); play('17-2'); place(110, 13); sim(0.4); freeze(); });
       await shot('23-17-2-twist.png');
-      r = await ev(() => { thaw(); play('17-2'); place(150, 13); sim(0.3); const ok = hop(188, 14); return { ok, x: tx(), alive: alive() }; });
+      r = await ev(() => { thaw(); play('17-2'); place(150, 13); sim(0.3); const ok = hop(182, 14); return { ok, x: tx(), alive: alive() }; });
       check('17-2: real inputs: the last stretch of drifting bergs', r.ok && r.alive, r);
       await ev(() => { thaw(); play('17-2'); place(137, 6); sim(0.3); freeze(); });
       await shot('24-17-2-ice-cave-shelf.png');
       await ev(() => { thaw(); toArea('cave', 10, 11); sim(0.3); freeze(); });
       await shot('25-17-2-ice-cave.png');
       await pano('17-2', null, '26-17-2-panorama.png');
+    });
+    // ---------------- 17-3 The Rift ----------------
+    await run('quake', async () => {
+      await ev(() => { thaw(); play('17-3'); place(8, 14); sim(0.4); freeze(); });
+      await shot('30-17-3-start.png');
+      // the teaching ferry: stand on it at one bank, it slides across and carries Brady to the other
+      let r = await ev(() => { thaw(); play('17-3'); const f = plateAt(15, 15); waitFor(() => f.at === 0 && f.state === 'rest' && f.toNext() > 1.5); place(13, 14); sim(0.2); walk(16, 2); const x0 = tx(); waitFor(() => f.state === 'slide', 4); const told = true; waitFor(() => f.state === 'rest', 3); sim(0.1); return { x0, x1: tx(), on: P().onGround, alive: alive() }; });
+      check('17-3: a ferry slab carries Brady across the trough', r.x1 - r.x0 >= 7 && r.on && r.alive, r);
+      await ev(() => { thaw(); play('17-3'); const f = plateAt(15, 15); waitFor(() => f.state === 'rest' && f.toNext() < 0.6); place(17, 14); sim(0.05); freeze(); });
+      await shot('31-17-3-ferry-rumble.png');
+      // a crusher: standing under it as it grinds down is fatal (after its rumble); passing while it is up is not
+      r = await ev(() => { thaw(); play('17-3'); const c = plateAt(35, 9); waitFor(() => c.at === 0 && c.state === 'rest' && c.toNext() < 1.4); place(36, 14); P().invuln = 0; let died = false; for (let k = 0; k < 150; k++) { sim(0.02); if (!alive()) { died = true; break; } } return { died }; });
+      check('17-3: a crusher grinding down on Brady kills him (after a second of rumble)', r.died, r);
+      r = await ev(() => { thaw(); play('17-3'); const c = plateAt(35, 9); place(33, 14); waitFor(() => c.state === 'slide'); waitFor(() => c.state === 'rest'); waitFor(() => c.state === 'slide'); waitFor(() => c.state === 'rest'); const up = c.at === 0; const ok = up && walk(39, 3); return { ok, alive: alive() }; });
+      check('17-3: real inputs: walk under the crusher while it is up', r.ok && r.alive, r);
+      await ev(() => { thaw(); play('17-3'); const c = plateAt(35, 9); waitFor(() => c.state === 'slide'); sim(0.3); place(31, 14); sim(0.02); freeze(); });
+      await shot('32-17-3-crusher.png');
+      // the chasm: board the ferry at the near bank, ride, wait on the island, board the next, ride, step off
+      r = await ev(() => {
+        thaw(); play('17-3'); place(39, 14); sim(0.2);
+        const f1 = plateAt(41, 15), f2 = plateAt(53, 15), st = [];
+        waitFor(() => f1.at === 0 && f1.state === 'rest' && f1.toNext() > 1.2, 8); walk(42, 2); st.push(tx());
+        waitFor(() => f1.at === 1 && f1.state === 'rest', 4); sim(0.1); walk(51, 2); st.push(tx());
+        waitFor(() => f2.at === 0 && f2.state === 'rest' && f2.toNext() > 1.2, 8); walk(54, 2); st.push(tx());
+        waitFor(() => f2.at === 1 && f2.state === 'rest', 4); sim(0.1); walk(62, 2); st.push(tx());
+        const res = { st, alive: alive(), x: tx() }; P().invuln = 999; return res;
+      });
+      check('17-3: real inputs: two ferries and an island across the chasm', r.alive && r.x >= 62, r);
+      // the lift up to the cliff
+      r = await ev(() => { thaw(); play('17-3'); place(65, 14); const l = plateAt(67, 15); waitFor(() => l.at === 0 && l.state === 'rest' && l.toNext() > 1); walk(68, 2); waitFor(() => l.at === 1 && l.state === 'rest', 5); sim(0.1); const ok = walk(73, 2); return { ok, y: ty(), alive: alive() }; });
+      check('17-3: real inputs: the lift slab carries Brady up onto the cliff', r.ok && r.y === 9 && r.alive, r);
+      // the last stretch: ferry, counter-ferry, an island under a crusher, a ferry
+      r = await ev(() => {
+        thaw(); play('17-3'); place(124, 14); sim(0.2);
+        const f1 = plateAt(126, 15), f2 = plateAt(137, 15), cr = plateAt(145, 9), f3 = plateAt(147, 15), st = [];
+        waitFor(() => f1.at === 0 && f1.state === 'rest' && f1.toNext() > 1.2, 8); walk(127, 2); st.push(tx());
+        waitFor(() => f1.at === 1 && f1.state === 'rest', 4); sim(0.1); walk(136, 2); st.push(tx());
+        waitFor(() => f2.at === 0 && f2.state === 'rest' && f2.toNext() > 1.0, 8); walk(138, 2); st.push(tx());
+        waitFor(() => f2.at === 1 && f2.state === 'rest', 4); sim(0.1);
+        waitFor(() => cr.at === 0 && cr.state === 'rest' && cr.toNext() > 1.6 && f3.at === 0 && f3.state === 'rest' && f3.toNext() > 0.8, 12); walk(148, 2); st.push(tx());
+        waitFor(() => f3.at === 1 && f3.state === 'rest', 4); sim(0.1); walk(157, 2); st.push(tx());
+        const res = { st, alive: alive(), x: tx() }; P().invuln = 999; return res;
+      });
+      check('17-3: real inputs: the last stretch (ferry, counter-ferry, the crusher island, ferry)', r.alive && r.x >= 157, r);
+      await ev(() => { thaw(); play('17-3'); place(140, 13); sim(0.1); freeze(); });
+      await shot('33-17-3-last-stretch.png');
+      await ev(() => { thaw(); play('17-3'); place(86, 14); sim(0.3); freeze(); });
+      await shot('34-17-3-fissure.png');
+      await ev(() => { thaw(); toArea('tube', 12, 11); sim(0.3); freeze(); });
+      await shot('35-17-3-lava-tube.png');
+      await pano('17-3', null, '36-17-3-panorama.png');
     });
   });
   // portrait

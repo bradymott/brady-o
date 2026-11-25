@@ -117,7 +117,7 @@ const lagoon = (() => {
   const G = mk(206, 18);
   const sand = (x0, x1) => G.fill(x0, 14, x1, 17, '#');
   G.fill(0, 15, 205, 17, 'L');
-  sand(0, 12); sand(25, 28); sand(41, 46); sand(70, 74); sand(94, 101); sand(124, 128); sand(146, 153); sand(186, 205);
+  sand(0, 12); sand(25, 28); sand(41, 46); sand(70, 74); sand(94, 101); sand(124, 128); sand(146, 153); sand(180, 205);
   // the two teaching pools: shallow water over sand (a fall is a swim and a climb back out)
   G.fill(13, 15, 24, 15, 'W').fill(13, 16, 24, 17, '#'); G.fill(29, 15, 40, 15, 'W').fill(29, 16, 40, 17, '#');
   G.put(2, 13, '@'); G.put(6, 13, 'k'); G.put(9, 9, '?'); G.put(4, 13, 'x');
@@ -133,14 +133,14 @@ const lagoon = (() => {
   // checkpoint 1
   G.put(97, 13, 'c'); G.put(100, 13, 'x');
   // the twist: small bergs, seals on alternate ends, a drifting floe between them, puffins
-  G.put(103, 14, 'u'); G.put(109, 14, 'w'); G.put(114, 13, 'z'); G.put(120, 14, 'u'); G.put(112, 8, 'p'); G.put(122, 7, 'p'); G.coins(104, 122, 11);
+  G.put(103, 14, 'u'); G.put(109, 14, 'w'); G.put(113, 13, 'Y'); G.put(120, 14, 'u'); G.put(112, 8, 'p'); G.put(122, 7, 'p'); G.coins(104, 122, 11);
   G.put(126, 13, 'm');
   // the glacier wall over the next stretch: its ice cave (the secret) up on a shelf, reached off a high floe
   G.put(131, 14, 'e'); G.put(137, 14, 'E'); G.fill(136, 7, 141, 7, '-'); G.put(139, 6, 'D'); G.put(137, 6, 'i'); G.put(134, 11, 'Z');
   // checkpoint 2, before the last stretch
   G.put(149, 13, 'c'); G.put(151, 9, '?'); G.put(147, 13, 'A');
   // the last stretch: drifting bergs with seals, a floe, terns and a puffin; P3 (risky) low over the water
-  G.put(155, 14, 'd'); G.put(165, 14, 'w'); G.put(171, 13, 'z'); G.put(178, 14, 'u'); G.put(168, 12, 'R'); G.put(162, 8, 't'); G.put(182, 7, 'p');
+  G.put(155, 14, 'e'); G.put(161, 14, 'w'); G.put(168, 13, 'Y'); G.put(175, 14, 'u'); G.put(169, 10, 'R'); G.put(162, 8, 't'); G.put(182, 7, 'p');
   G.coins(156, 163, 11);
   G.put(192, 13, 'j'); G.put(198, 13, 'G'); G.put(203, 13, 'x');
   return G.rows();
@@ -151,7 +151,7 @@ const LAG = {
   K: ['spawn', 'sign', { text: 'A SEAL IS HEAVY: THE BERG LEANS HIS WAY. STAND ON THE OTHER SIDE TO BALANCE IT' }],
   a: ['piece', 'berg', { w: 5 }], n: ['piece', 'berg', { w: 5, seal: 1 }], e: ['piece', 'berg', { w: 4 }], E: ['piece', 'berg', { w: 4, seal: -1 }],
   d: ['piece', 'berg', { w: 4, ax: 4, speed: 0.7 }], u: ['piece', 'berg', { w: 3, seal: 1 }], w: ['piece', 'berg', { w: 3, seal: -1, ax: 2, speed: 0.6 }], A: ['anchor', 'caveBack'],
-  z: ['piece', 'plank', { ax: 3, w: 2, speed: 1.2, skin: 'isFloe' }], Z: ['piece', 'plank', { ax: 0, ay: -3, w: 2, speed: 0.9, skin: 'isFloe' }],
+  Y: ['piece', 'plank', { ax: 2, w: 3, speed: 0.8, skin: 'isFloe' }], Z: ['piece', 'plank', { ax: 0, ay: -3, w: 2, speed: 0.9, skin: 'isFloe' }],
   f: ['enemy', 'isFox'], m: ['enemy', 'isRam'], p: ['enemy', 'isPuffin'], t: ['enemy', 'isTern']
 };
 stamps.isLagoon = { floor: 14, rows: lagoon, legend: LAG, items: ['power', 'power', 'star'], gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'cave@in', look: 'isTube' }] };
@@ -172,11 +172,80 @@ const L2 = { n: 2, name: 'The Glacier Lagoon', mapLabel: 'Glacier Lagoon', arch:
     { id: 'lagoon', gen: 'room', theme: 'is_lagoon', stamp: 'isLagoon', bottomKill: true },
     { id: 'cave', gen: 'room', role: 'secret', theme: 'is_lagoon', stamp: 'isIceCave' }
   ] };
+/* ---------------- 17-3 The Rift ----------------
+   The crack between two plates of the earth: the land comes apart and grinds together on a slow clock. Slabs of
+   mossy ground slide across the chasms (ferries: board one at one bank, ride it to the other), slabs of rock grind
+   down from the overhangs (crushers: pass under while they are up), and a slab lifts to the cliff. Every move is
+   told a second ahead: the ground rumbles, dust trickles, the seam glows and a '!' blinks. Groups: 0 the ferries
+   (5 s), 1 the crushers (6 s), 2 the lift (4 s), 3 the counter-ferry of the last stretch (5 s, half a beat
+   later). Teach over a shallow trough, test over the chasm, twist by combining them; a steaming fissure under the
+   cliff hides a lava tube. */
+const rift = (() => {
+  const G = mk(176, 18);
+  const ground = (x0, x1, top) => G.fill(x0, top == null ? 15 : top, x1, 17, '#');
+  ground(0, 14); ground(27, 40); ground(50, 52); ground(61, 66); ground(70, 84, 10); ground(85, 88); ground(98, 100); ground(109, 125); ground(135, 136); ground(145, 146); ground(155, 175);
+  G.fill(15, 17, 26, 17, '#'); G.fill(67, 16, 69, 17, '#');
+  // overhangs over the crushers (rock from the top down to row 8)
+  G.fill(33, 0, 39, 8, '#'); G.fill(96, 0, 102, 8, '#'); G.fill(144, 0, 147, 8, '#');
+  G.put(2, 14, '@'); G.put(6, 14, 'k'); G.put(9, 10, '?'); G.put(4, 14, 'x'); G.put(12, 14, 'V');
+  // teach 1: a ferry over a shallow trough
+  G.put(15, 15, 'a'); G.coins(16, 25, 12);
+  // teach 2: a crusher grinding down from the overhang over the flat
+  G.put(29, 14, 'K'); G.put(35, 9, 'u'); G.put(45, 10, '*');
+  // test: two ferries across the chasm with an island between, a puffin over it
+  G.put(41, 15, 'r'); G.put(53, 15, 'd'); G.put(51, 8, 'p'); G.coins(42, 48, 12); G.coins(54, 59, 12);
+  G.put(64, 10, '?'); G.put(63, 14, 'm');
+  // the lift up to the cliff top, checkpoint 1 on the cliff
+  G.put(67, 15, 'e'); G.put(74, 9, 'c'); G.put(80, 9, 'q'); G.put(78, 9, 'f');
+  // the steaming fissure under the cliff edge (the lava tube: the secret)
+  G.put(86, 14, 'D'); G.put(87, 14, 'V'); G.put(88, 14, 'A');
+  // the twist: ferry, an island under a crusher, ferry
+  G.put(89, 15, 'r'); G.put(98, 9, 'u'); G.put(101, 15, 'd'); G.put(94, 7, 't'); G.coins(90, 96, 12);
+  G.put(113, 14, 'x'); G.put(116, 14, 'm');
+  // checkpoint 2, before the last stretch
+  G.put(120, 14, 'c'); G.put(123, 10, '?');
+  // the last stretch: ferry, the counter-ferry, an island under a crusher, a ferry; P3 (risky) over the chasm
+  G.put(126, 15, 'r'); G.put(137, 15, 'w'); G.put(145, 9, 'n'); G.put(147, 15, 'd'); G.put(141, 9, 'R'); G.put(132, 7, 'p'); G.put(151, 7, 't');
+  G.put(160, 14, 'q'); G.put(166, 14, 'G'); G.put(171, 14, 'x');
+  return G.rows();
+})();
+const RIFTL = {
+  x: ['decor', 'isRock'], q: ['decor', 'isCairn'], V: ['decor', 'isVentDecor'], A: ['anchor', 'tubeBack'],
+  k: ['spawn', 'sign', { text: 'THE RIFT! THE GROUND HERE SLIDES APART AND BACK. WHEN IT RUMBLES AND THE SEAM GLOWS, A SLAB IS ABOUT TO MOVE. RIDE IT ACROSS' }],
+  K: ['spawn', 'sign', { text: 'ROCK GRINDS DOWN FROM ABOVE! PASS UNDER WHILE IT IS UP, AND NEVER WHEN IT RUMBLES' }],
+  a: ['piece', 'plate', { w: 4, dx: 8, g: 0, period: 5 }],
+  u: ['piece', 'plate', { w: 3, h: 3, dy: 3, g: 1, period: 6, tile: 'HARD', ride: false }],
+  n: ['piece', 'plate', { w: 2, h: 3, dy: 3, g: 1, period: 6, tile: 'HARD', ride: false }],
+  r: ['piece', 'plate', { w: 3, dx: 6, g: 0, period: 5 }],
+  d: ['piece', 'plate', { w: 3, dx: 5, g: 0, period: 5 }],
+  e: ['piece', 'plate', { w: 3, dy: -5, g: 2, period: 4 }],
+  w: ['piece', 'plate', { w: 3, dx: 5, g: 3, period: 5, phase: 2.5 }],
+  f: ['enemy', 'isFox'], m: ['enemy', 'isRam'], p: ['enemy', 'isPuffin'], t: ['enemy', 'isTern']
+};
+stamps.isRift = { floor: 15, rows: rift, legend: RIFTL, items: ['power', 'power', 'power'], gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'tube@in', look: 'isTube' }] };
+// the lava tube under the cliff: a warm glowing tunnel, a hidden 1UP, P2, the way back out
+stamps.isLavaTube = (() => {
+  const G = mk(32, 14);
+  G.fill(0, 0, 31, 1, '#').fill(0, 12, 31, 13, '#').fill(0, 0, 0, 11, '#').fill(31, 0, 31, 11, '#');
+  G.put(2, 11, '@'); G.put(4, 11, 'D'); G.fill(9, 9, 13, 9, '-'); G.fill(16, 7, 19, 7, '-'); G.fill(22, 5, 26, 5, '-'); G.put(24, 3, '*'); G.coins(10, 12, 8); G.coins(23, 25, 4); G.put(17, 3, 'h');
+  G.put(14, 11, 'V'); G.put(28, 11, 'V');
+  return { floor: 12, rows: G.rows(), gold: { '*': 'hidden' }, hidden: ['oneup'], doors: [{ to: 'rift@tubeBack', look: 'isTube' }], legend: { V: ['decor', 'isHotPot'] } };
+})();
+const L3 = { n: 3, name: 'The Rift', mapLabel: 'The Rift', arch: 'quake', theme: 'is_rift',
+  gimmick: 'The land splits along the rift: slabs slide across the chasms and grind down from the overhangs on a slow rhythm. Ride them, time them',
+  hint: 'Listen for the rumble: a glowing seam means a slab is about to move. Board a slab while it rests at your bank. Steam hisses from a crack under the cliff...',
+  postcard: 'I stood with one foot in America and one in Europe. Then the ground moved and I had to pick one. ♥ C',
+  enemies: [['isRam', 2], ['isPuffin', 2], ['isTern', 2], ['isFox', 1]],
+  mapCell: [2, 1], mapFrom: 1,
+  areas: [
+    { id: 'rift', gen: 'room', theme: 'is_rift', stamp: 'isRift', bottomKill: true },
+    { id: 'tube', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isLavaTube' }
+  ] };
 /* ---------------- placeholders for the levels still to come (replaced below as each is built) ---------------- */
 const stub = (n, name, arch, theme, extra) => Object.assign({ n, name, arch, theme, gimmick: name, hint: name, postcard: name + ' ♥ C', enemies: [['isFox', 1]],
   mapCell: [n % 3, 1], mapFrom: n - 2, areas: [{ id: 'a', gen: 'room', theme, stamp: 'isStub' }] }, extra || {});
 stamps.isStub = (() => { const G = mk(29, 12); G.fill(0, 0, 28, 0, '#').fill(0, 10, 28, 11, '#').fill(0, 0, 0, 9, '#').fill(28, 0, 28, 9, '#'); G.put(2, 9, '@..?..*....?..o.o..R...P..G'); return { floor: 10, rows: G.rows(), items: ['power', 'power'], gold: { '*': 'must', R: 'risky', P: 'high' } }; })();
-const levels = [L1, L2, stub(3, 'The Rift', 'quake', 'is_rift'), stub(4, 'The Organ Pipes', 'basalt', 'is_volcano'),
+const levels = [L1, L2, L3, stub(4, 'The Organ Pipes', 'basalt', 'is_volcano'),
   stub(5, 'The Night Troll', 'lair', 'is_dawn'), stub(6, 'The Hidden Folk', 'shy', 'is_folk', { secret: true, mapFrom: 0, exits: { main: { to: 'node:17-2' } } })];
 
 Tour.amend('is', { stamps, levels });

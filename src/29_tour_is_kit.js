@@ -22,6 +22,9 @@ const C = Tour.countries.is;
 if (!C) return;
 const KIT = Tour.isKit, IsArt = KIT.IsArt, INK = KIT.INK;
 const riding = (p, e) => p && !p.dead && p.ride === e && p.onGround;
+// the engine keeps p.ride while Brady stays on the ground, even after he walked off onto tiles: a platform that
+// later moves (or comes back to life) would drag him along. Each of ours lets go of a stale rider first.
+const unride = e => { const p = e.g.player; if (p && p.ride === e && (e.dead || p.x + p.w <= e.x + 1 || p.x >= e.x + e.w - 1 || Math.abs(p.y + p.h - e.y) > 6)) p.ride = null; };
 
 /* ======================= 17-1: the aurora ribbons ======================= */
 const AURORA = { relight: 16, tell: 0.7 };
@@ -64,7 +67,7 @@ class IsRibbon extends Ent {
     if (lit && !this.wasLit && this.g.onScreen && this.g.onScreen(this, 80)) TourKit.sfx('chime', 'select', { vol: 0.25, pitch: 1.6 + this.hue * 0.2 });
     this.dead = !lit; this.wasLit = lit;
   }
-  update(dt) { this.t += dt; this.calc(); }
+  update(dt) { unride(this); this.t += dt; this.calc(); }
   touchPlayer() {}
   draw(ctx) {
     const g = this.g, S = this.S || this.span(g.t + this.ph), L = this.len, t = g.t;
@@ -140,7 +143,7 @@ class IsBerg extends Ent {
   }
   surfY(x) { return this.top + this.bob + Math.tan(this.th) * (x - (this.x + this.w / 2)); }
   update(dt) {
-    this.t += dt; const g = this.g, p = g.player;
+    unride(this); this.t += dt; const g = this.g, p = g.player;
     const ox = this.x, oy = this.y;
     // the current drifts it along (a slow there-and-back)
     if (this.ax) { const k = 0.5 - 0.5 * Math.cos((this.t * this.sp * TS / Math.abs(this.ax)) * Math.PI + this.ph); this.x = this.hx + this.ax * k; }
@@ -230,7 +233,7 @@ class IsPlate extends Ent {
   rectPx(r) { return { x: r[0] * TS, y: r[1] * TS, w: (r[2] - r[0] + 1) * TS, h: (r[3] - r[1] + 1) * TS }; }
   place() { const a = this.rectPx(this.A), b = this.rectPx(this.B), k = this.k; const nx = lerp(a.x, b.x, k), ny = lerp(a.y, b.y, k); this.dx = nx - this.x; this.dy = ny - this.y; this.x = nx; this.y = ny; this.w = a.w; this.h = a.h; }
   update(dt) {
-    this.t += dt; const g = this.g, p = g.player;
+    unride(this); this.t += dt; const g = this.g, p = g.player;
     const want = this.atB() ? 1 : 0;
     this.tellOn = this.state === 'rest' && this.toNext() < RIFT.tell;
     if (this.tellOn && !this.rumbled && g.onScreen(this, 200)) { this.rumbled = true; TourKit.sfx('rumble', 'crumble', { vol: 0.45, pitch: 0.5 }); }
@@ -266,7 +269,8 @@ class IsPlate extends Ent {
     // while resting the tiles draw the slab; this draws its moving body, the glowing seam and the rumble tell
     if (this.state === 'slide') {
       ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.fillStyle = '#34323c'; ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h);
-      ctx.fillStyle = KIT.MOSS; ctx.fillRect(x, y, w, 8); ctx.fillStyle = KIT.MOSS_HI; ctx.fillRect(x, y, w, 3);
+      if (this.tile === T.HARD) { for (let k = 0; k < w / TS; k++) { ctx.fillStyle = '#44444f'; ctx.fillRect(x + k * TS + 3, y, 10, h); ctx.fillRect(x + k * TS + 18, y, 10, h); } ctx.fillStyle = '#5a5a68'; for (let k = 0; k < w / TS; k++) ctx.fillRect(x + k * TS + 2, y + h - 6, TS - 4, 4); }
+      else { ctx.fillStyle = KIT.MOSS; ctx.fillRect(x, y, w, 8); ctx.fillStyle = KIT.MOSS_HI; ctx.fillRect(x, y, w, 3); }
       ctx.fillStyle = '#24222a'; for (let k = 1; k < w / TS; k++) ctx.fillRect(x + k * TS - 1, y + 10, 2, h - 12);
     }
     if (this.tellOn || this.state === 'slide') {
@@ -293,7 +297,7 @@ class IsPipe extends Ent {
     this.pressed = false; this.glow = 0;
   }
   update(dt) {
-    this.t += dt; const p = this.g.player, on = riding(p, this), oy = this.y;
+    unride(this); this.t += dt; const p = this.g.player, on = riding(p, this), oy = this.y;
     if (on && !this.pressed) { this.glow = 1; Sound.play('select', { vol: 0.35, pitch: Math.pow(2, NOTES[this.note % NOTES.length] / 12) * 0.5 }); }
     this.pressed = on;
     const lo = this.kind === 'lift' ? this.rest - this.travel : this.rest + this.travel;
@@ -408,7 +412,7 @@ class IsShyPlat extends Ent {
     this.k = 0; this.col = ['#d83a2a', '#3a7ad8', '#2a8a4a', '#f2c84a'][Math.floor(s.x / TS) % 4];
   }
   update(dt) {
-    this.t += dt; const p = this.g.player;
+    unride(this); this.t += dt; const p = this.g.player;
     const on = riding(p, this) || lookingAway(p, this.cx);
     this.dead = !on; this.k = approach(this.k, on ? 1 : 0, dt * 8);
   }
@@ -486,6 +490,8 @@ const pieces = {
     const G = B.toggles && B.toggles[g];
     if (G) { G.A.push(A); G.B.push(Bt); } else B.toggle(g, [A], [Bt], { kind: 'rift', auto: true });
     B.spawn('isPlate', x, y, { g, A: A.slice(0, 4), B: Bt.slice(0, 4), tile, period: o.period || 5, phase: o.phase || 0 });
+    // the checker rides it: one-way edges from each cell on top at one spot to the same cell at the other
+    if (o.ride !== false) for (let k = 0; k < w; k++) { B.edge([x + k, y - 1], [x + k + (o.dx || 0), y - 1 + (o.dy || 0)]); B.edge([x + k + (o.dx || 0), y - 1 + (o.dy || 0)], [x + k, y - 1]); }
     return st.x;
   },
   // an organ-pipe column whose rest top is the letter's row: { w, lo, speed, rise, kind: 'sink' | 'lift', note }
