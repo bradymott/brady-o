@@ -53,22 +53,23 @@ const crateBrick = {
     ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5);
   }
 };
+// house walls: warm ochre plaster with a few stone quoins showing through (no tile grid: a wall reads as one wall)
 const travertine = {
-  c1: '#efe2c4', c2: '#c8b48a',
-  paint(ctx) {
-    ctx.fillStyle = '#e8d8b4'; ctx.fillRect(0, 0, TS, TS);
-    ctx.fillStyle = '#d4c098'; ctx.fillRect(0, TS - 4, TS, 4); ctx.fillRect(TS - 3, 0, 3, TS);
-    ctx.fillStyle = 'rgba(160,130,90,0.4)'; for (let k = 0; k < 4; k++) ctx.fillRect(4 + k * 7, 6 + (k % 2) * 12, 5, 1.4);
-    ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5);
+  c1: '#e8b870', c2: '#c8904a',
+  paint(ctx, rng) {
+    ctx.fillStyle = '#e0a860'; ctx.fillRect(0, 0, TS, TS);
+    ctx.fillStyle = 'rgba(255,240,200,0.18)'; ctx.fillRect(0, 0, TS, 2);
+    ctx.fillStyle = 'rgba(150,90,40,0.22)'; if (rng && rng() < 0.35) { ctx.beginPath(); ctx.ellipse(6 + rng() * 20, 6 + rng() * 20, 4, 2.5, 0, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(120,70,30,0.18)'; ctx.fillRect(0, TS - 1, TS, 1);
   }
 };
 // the pizzeria: terracotta floor tiles under a wooden counter top; shelves; flour sacks; firebrick
 const kitchenGround = {
-  style: 'counter', cap: '#c89058', capHi: '#e8b478', dirt: '#e8dcc8', dirt2: '#c84a3a', rock: '#d0c4b0',
+  style: 'counter', cap: '#c89058', capHi: '#e8b478', dirt: '#a0563a', dirt2: '#8a4a2e', rock: '#8a4a2e',
   paint(ctx, rng) {
-    ctx.fillStyle = '#f2ece0'; ctx.fillRect(0, 0, TS, TS);
-    ctx.fillStyle = '#d8cfc0'; ctx.fillRect(0, TS / 2 - 1, TS, 2); ctx.fillRect(TS / 2 - 1, 0, 2, TS);
-    ctx.fillStyle = '#3a8a5a'; ctx.fillRect(0, 0, TS, 3); ctx.fillStyle = '#e8424a'; ctx.fillRect(0, TS - 3, TS, 3);
+    ctx.fillStyle = '#8a4a2e'; ctx.fillRect(0, 0, TS, TS);
+    ctx.fillStyle = '#b0603a'; ctx.fillRect(1, 1, TS / 2 - 2, TS / 2 - 2); ctx.fillRect(TS / 2 + 1, TS / 2 + 1, TS / 2 - 2, TS / 2 - 2);
+    ctx.fillStyle = '#a0563a'; ctx.fillRect(TS / 2 + 1, 1, TS / 2 - 2, TS / 2 - 2); ctx.fillRect(1, TS / 2 + 1, TS / 2 - 2, TS / 2 - 2);
   },
   paintCap(ctx, x0, x1) {
     ctx.fillStyle = '#7a4a24'; ctx.fillRect(x0, 0, x1 - x0, 11);
@@ -107,17 +108,17 @@ const fireBrick = {
 };
 // the stair tower: pale stone floors, wooden scaffold planks, barrels, marble blocks
 const towerGround = {
-  style: 'stone', cap: '#f2ecdc', capHi: '#ffffff', dirt: '#c8bca4', dirt2: '#a89c84', rock: '#b8ac94',
+  style: 'stone', cap: '#a8743a', capHi: '#c8945a', dirt: '#7a6450', dirt2: '#5a4838', rock: '#6a5644',
   paint(ctx, rng) {
-    ctx.fillStyle = '#cfc3a9'; ctx.fillRect(0, 0, TS, TS);
-    ctx.fillStyle = '#bcb096'; ctx.fillRect(0, TS / 2, TS, 2); ctx.fillRect((rng() < 0.5 ? 8 : 20), 0, 2, TS / 2); ctx.fillRect((rng() < 0.5 ? 4 : 24), TS / 2, 2, TS / 2);
+    ctx.fillStyle = '#7a6450'; ctx.fillRect(0, 0, TS, TS);
+    ctx.fillStyle = '#5e4c3c'; ctx.fillRect(0, TS / 2, TS, 2); ctx.fillRect((rng() < 0.5 ? 8 : 20), 0, 2, TS / 2); ctx.fillRect((rng() < 0.5 ? 4 : 24), TS / 2, 2, TS / 2);
     ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(2, 2, 10, 2);
   },
   paintCap(ctx, x0, x1) {
-    ctx.fillStyle = '#9a8e76'; ctx.fillRect(x0, 0, x1 - x0, 10);
-    ctx.fillStyle = '#f2ecdc'; ctx.fillRect(x0, 0, x1 - x0, 7);
-    ctx.fillStyle = '#c8bca4'; for (let x = x0 + 30; x < x1; x += 32) ctx.fillRect(x, 0, 2, 7);
-    ctx.fillStyle = 'rgba(140,130,110,0.5)'; for (let x = x0 + 7; x < x1; x += 13) ctx.fillRect(x, 3, 5, 1);
+    ctx.fillStyle = '#4a3020'; ctx.fillRect(x0, 0, x1 - x0, 10);
+    ctx.fillStyle = '#a8743a'; ctx.fillRect(x0, 0, x1 - x0, 7);
+    ctx.fillStyle = '#d0a060'; ctx.fillRect(x0, 0, x1 - x0, 2);
+    ctx.fillStyle = '#6a4424'; for (let x = x0 + 22; x < x1; x += 24) ctx.fillRect(x, 0, 2, 7);
   }
 };
 const plankSemi = {
@@ -340,8 +341,14 @@ const painters = {
     ctx.strokeStyle = shade(L.color, -0.08); ctx.lineWidth = 1;
     for (let y = 0; y < H; y += 16) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(BG_W, y); ctx.stroke(); }
     for (let y = 0; y < H; y += 16) for (let x = (y / 16) % 2 ? 0 : 16; x < BG_W; x += 32) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 16); ctx.stroke(); }
+    // the great wood-fired oven, glowing, once a backdrop width
+    { const cx = 760; ctx.fillStyle = '#a8583a'; ctx.beginPath(); ctx.moveTo(cx - 130, b - 96); ctx.quadraticCurveTo(cx - 130, b - 250, cx, b - 260); ctx.quadraticCurveTo(cx + 130, b - 250, cx + 130, b - 96); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#7a3a24'; ctx.fillRect(cx - 18, b - 330, 36, 80);
+      const og = ctx.createRadialGradient(cx, b - 130, 5, cx, b - 130, 70); og.addColorStop(0, '#fff0a0'); og.addColorStop(0.5, '#ff9a2a'); og.addColorStop(1, '#8a2a14');
+      ctx.fillStyle = og; ctx.beginPath(); ctx.moveTo(cx - 46, b - 96); ctx.lineTo(cx - 46, b - 140); ctx.arc(cx, b - 140, 46, Math.PI, 0); ctx.lineTo(cx + 46, b - 96); ctx.fill(); }
     ctx.fillStyle = '#3a8a5a'; ctx.fillRect(0, b - 96, BG_W, 6); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, b - 90, BG_W, 6); ctx.fillStyle = '#e8424a'; ctx.fillRect(0, b - 84, BG_W, 6);
     for (let x = 30; x < BG_W; x += 200) {
+      if (x > 560 && x < 900) continue;
       // a shelf of jars: tomatoes, olives, peppers, pasta
       ctx.fillStyle = shade('#c89058', -0.1); ctx.fillRect(x, b - 200, 120, 6);
       for (let k = 0; k < 6; k++) { ctx.fillStyle = ['#e8424a', '#5a7a2a', '#ff8a2a', '#f2d890', '#e8424a', '#7a3a6a'][k]; rr(ctx, x + 4 + k * 19, b - 226, 15, 26, 4); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(x + 7 + k * 19, b - 222, 3, 16); ctx.fillStyle = '#c8ccd4'; ctx.fillRect(x + 5 + k * 19, b - 230, 13, 4); }
@@ -412,7 +419,7 @@ const painters = {
           ctx.fillStyle = '#ffd24a'; ctx.fillRect(ax - 5, ay - 15, 4, 3); ctx.fillRect(ax + 1, ay - 15, 4, 3);
         }
       }
-      ctx.fillStyle = '#d8a83a'; ctx.fillRect(0, y, BG_W, 7); ctx.fillStyle = '#fff2a8'; ctx.fillRect(0, y, BG_W, 2);
+      ctx.fillStyle = shade(L.color, -0.35); ctx.fillRect(0, y, BG_W, 7); ctx.fillStyle = shade(L.color, -0.1); ctx.fillRect(0, y, BG_W, 2);
       ctx.fillStyle = shade(L.color, 0.1); for (let x = 0; x < BG_W; x += 16) { ctx.beginPath(); ctx.arc(x + 8, y + 12, 5, 0, Math.PI); ctx.fill(); }
     }
   },
@@ -422,7 +429,7 @@ const painters = {
       wrapDraw(x, 110, X => {
         ctx.fillStyle = L.color; ctx.beginPath(); ctx.moveTo(X, 0); ctx.lineTo(X + 100, 0); ctx.quadraticCurveTo(X + 60, H * 0.4, X + 80, H * 0.62); ctx.quadraticCurveTo(X + 40, H * 0.7, X, H * 0.64); ctx.closePath(); ctx.fill();
         ctx.strokeStyle = shade(L.color, -0.25); ctx.lineWidth = 3; for (let k = 1; k < 5; k++) { ctx.beginPath(); ctx.moveTo(X + k * 20, 0); ctx.quadraticCurveTo(X + k * 14, H * 0.35, X + k * 16, H * 0.62); ctx.stroke(); }
-        ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(X + 78, H * 0.62, 7, 0, TAU); ctx.fill(); ctx.fillRect(X + 74, H * 0.62, 8, 22);
+        ctx.fillStyle = shade(L.color, -0.3); ctx.beginPath(); ctx.arc(X + 78, H * 0.62, 7, 0, TAU); ctx.fill(); ctx.fillRect(X + 74, H * 0.62, 8, 22);
       });
       ctx.fillStyle = 'rgba(255,240,190,0.07)'; ctx.beginPath(); ctx.moveTo(x + 200, 0); ctx.lineTo(x + 150, H); ctx.lineTo(x + 260, H); ctx.lineTo(x + 214, 0); ctx.fill();
     }
@@ -502,8 +509,8 @@ const themes = {
   }),
   it_pizzeria: Object.assign({}, kitchen, {
     name: 'The Pizzeria', music: 'tour_it_pizza', particles: 'motes', rays: null,
-    sky: ['#f6f0e4', '#f2e8d4', '#e8d8bc'], horizonGlow: '#ffb06a', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'itOvenGlow', color: '#a8583a', base: 330, f: 0.06 }, { kind: 'itKitchenWall', color: '#f4f0e8', base: 420, f: 0.18 }],
+    sky: ['#d8c4a4', '#e8d8bc', '#ece2d0'], horizonGlow: '#ffb06a', celestial: { type: 'none' }, stars: 0,
+    layers: [{ kind: 'itKitchenWall', color: '#ece2d0', base: 400, f: 0.14 }],
     fog: '#f2dcc0', decor: ['itFlourSack', 'itBasilPot', 'itPizzaBoxes', 'itTomatoCans']
   }),
   it_cantina: Object.assign({}, cellar, {
@@ -515,18 +522,18 @@ const themes = {
   it_torre: Object.assign({}, tower, {
     name: 'The Leaning Tower', music: 'tour_it_tower', particles: 'motes', rays: '#fff6d8',
     sky: ['#e8e0cc', '#e2d8c0', '#d8ccb0'], horizonGlow: '#fff2c8', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'itTowerWall', color: '#ddd2b8', base: 400, f: 0.1 }, { kind: 'itTowerBeams', color: '#8a6a44', base: 420, f: 0.26 }],
+    layers: [{ kind: 'itTowerWall', color: '#e6dcc6', base: 400, f: 0.1 }, { kind: 'itTowerBeams', color: '#8a6a44', base: 420, f: 0.26 }],
     fog: '#efe6d2', decor: ['itBarrel', 'itCrateStack', 'itBellRope']
   }),
   it_opera: Object.assign({}, opera, {
     name: 'Night at the Opera', music: 'tour_it_opera', particles: 'motes', rays: null,
     sky: ['#2a0a14', '#3a121c', '#4a1a22'], horizonGlow: '#ffd24a', celestial: { type: 'none' }, stars: 0,
-    layers: [{ kind: 'itOperaBoxes', color: '#8a2030', base: 470, f: 0.1 }, { kind: 'itOperaDrapes', color: '#a81828', base: 420, f: 0.28 }],
+    layers: [{ kind: 'itOperaBoxes', color: '#6a1a26', base: 470, f: 0.1 }, { kind: 'itOperaDrapes', color: '#5a1018', base: 420, f: 0.28 }],
     fog: '#5a1a22', darkness: 0.18, decor: ['itMusicStand', 'itRoses', 'itFootlight']
   }),
   it_stage: Object.assign({}, opera, {
     name: 'The Grand Stage', music: 'tour_it_boss', particles: 'confetti', rays: null,
-    sky: ['#1a0a14', '#2a121c', '#3a1a22'], horizonGlow: '#ffd24a', celestial: { type: 'none' }, stars: 0,
+    sky: ['#4a1a3a', '#6a2a4a', '#8a3a4a'], horizonGlow: '#ffd24a', celestial: { type: 'none' }, stars: 0,
     layers: [{ kind: 'itStageFlat', color: '#7a1420', base: 400, f: 0.08 }, { kind: 'itStageWings', color: '#a81828', base: 420, f: 0.22 }],
     fog: '#5a1a22', decor: ['itFootlight', 'itRoses']
   }),
@@ -901,8 +908,6 @@ TourOWScenes.groundPaint.it = function (c, ow) {
   // vineyard and field stripes on the hills of the boot
   c.strokeStyle = 'rgba(120,150,70,0.35)'; c.lineWidth = 2;
   for (let k = 0; k < 16; k++) { const x = 340 + R() * 700, y = 170 + R() * 420; c.beginPath(); c.moveTo(x, y); c.lineTo(x + 40, y + 12); c.stroke(); c.beginPath(); c.moveTo(x, y + 6); c.lineTo(x + 40, y + 18); c.stroke(); }
-  // a ring of terracotta roofs around the piazza
-  for (let k = 0; k < 10; k++) { const a = k / 10 * TAU, x = 340 + Math.cos(a) * 46, y = 236 + Math.sin(a) * 26; c.fillStyle = k % 2 ? '#d8693a' : '#e8b04a'; c.fillRect(x - 7, y - 6, 14, 10); c.strokeStyle = ink; c.lineWidth = 1.2; c.strokeRect(x - 7, y - 6, 14, 10); }
 };
 TourLandscape.looks.it = ['#4aa8e8', '#8ad0f8', '#a8c87a', '#e8b04a', '#d8693a', '#ffd24a', 'tower'];
 

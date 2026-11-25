@@ -88,7 +88,7 @@ const tenorBrain = {
       }
       if (b.at > TEN.breathe + n * 0.55 + 0.5) b.go('walk');
     } else if (b.act === 'roll') {
-      if (b.first) { b.face(); b.stage = 0; K.say(g, b, 'HUP!', '#ffe28a'); K.sfx('hup', 'jump', { vol: 0.5, pitch: 0.5 }); b.rolls = b.rolls || 0; }
+      if (b.first) { b.face(); b.stage = 0; K.say(g, b, 'HUP!', '#ffe28a'); K.sfx('hup', 'jump', { vol: 0.5, pitch: 0.5 }); b.encore = ph >= 3; }
       if (b.stage === 0) {
         // the tell: rocking back and spinning on the spot
         b.pose = 'tuck'; b.vx = 0;
@@ -98,9 +98,8 @@ const tenorBrain = {
         b.vx = b.dir * (ph >= 3 ? TEN.rollV3 : TEN.rollV) * TS;
         if ((b.dir < 0 && b.x <= b.arenaX0 + 2) || (b.dir > 0 && b.x >= b.arenaX1 - b.w - 2) || b.hitWall) {
           g.shake(8); Sound.play('stomp', { pitch: 0.5 }); g.burst(b.dir < 0 ? b.x : b.x + b.w, b.cy, 14, '#d82a1a', 'confetti');
-          b.rolls++;
           // phase 3: he bounces off and rolls back once before he gets dizzy
-          if (ph >= 3 && b.rolls % 2 === 1) { b.dir = -b.dir; b.stage = 0; b.at = TEN.roll * 0.4; K.say(g, b, 'ENCORE!', '#ffe28a'); }
+          if (b.encore) { b.encore = false; b.dir = -b.dir; b.stage = 0; b.at = TEN.roll * 0.4; b.st = 0; K.say(g, b, 'ENCORE!', '#ffe28a'); }
           else b.go('dazed');
         }
         if (b.st > 6) b.go('walk');

@@ -614,7 +614,7 @@ const P = {
     const wx = rx + 4, roof = st.gy - up;
     // the house: stone walls down to the street, its flat roof terrace on top
     B.fill(wx, roof + 1, wx + (o.roofN || 14), st.H - 1, T.HARD);
-    for (let xx = wx; xx <= wx + (o.roofN || 14); xx++) B.set(xx, roof, T.GROUND);
+    for (let xx = wx; xx <= wx + (o.roofN || 14); xx++) B.set(xx, roof, T.SEMI);
     B.edge([rx, st.gy - 1], [wx + (o.land || 4), roof]);
     if (o.sign) st.sign(x + 1, o.sign);
     st.coins(rx + 1, wx + 2, roof - 3);
@@ -626,7 +626,7 @@ const P = {
   roofs(st, o) {
     const B = st.B; let x = st.x;
     for (let k = 0; k < (o.gaps || []).length; k++) {
-      const n = 4 + (k % 2) * 2; st.floor(x, x + n - 1); for (let xx = x; xx < x + n; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.GROUND);
+      const n = 4 + (k % 2) * 2; st.floor(x, x + n - 1); for (let xx = x; xx < x + n; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI);
       if (o.chimney === k) { B.fill(x + 1, st.gy - 2, x + 1, st.gy - 1, T.HARD); st.decor('itChimney', x + 1, st.gy - 2); }
       x += n;
       const w = o.gaps[k]; st.pit(x, x + w - 1); st.B.fill(x, st.H - 2, x + w - 1, st.H - 1, T.LAVA);
@@ -634,20 +634,20 @@ const P = {
       if (o.gold && o.gold[0] === k) st.gold(x + Math.floor(w / 2), st.gy - (o.gold[2] || 6), o.gold[1]);
       x += w;
     }
-    st.floor(x, x + 5); for (let xx = x; xx < x + 6; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.GROUND);
+    st.floor(x, x + 5); for (let xx = x; xx < x + 6; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI);
     if (o.cat) st.enemy('itCat', x + 3, st.gy);
     if (o.pigeon) st.enemy('itPigeon', x - 3, st.gy);
     return x + 6;
   },
   // a washing line strung across a wide alley between two roofs: a bouncy line (hold JUMP to fly) : { n, gold }
   washing(st, o) {
-    const B = st.B, x = st.x, n = o.n || 9; st.floor(x, x + 3); for (let xx = x; xx < x + 4; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.GROUND);
+    const B = st.B, x = st.x, n = o.n || 9; st.floor(x, x + 3); for (let xx = x; xx < x + 4; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI);
     const lx = x + 4; st.pit(lx, lx + n - 1); B.fill(lx, st.H - 2, lx + n - 1, st.H - 1, T.LAVA);
     for (let xx = lx + 1; xx < lx + n - 1; xx++) { B.set(xx, st.gy + 1, T.SEMI); B.setSurf(xx, st.gy + 1, SURF.BOUNCE); }
     B.spawn('itLine', lx + 1, st.gy + 1, { n: n - 2 });
     if (o.gold) st.gold(lx + Math.floor(n / 2), st.gy - 7, o.gold);
     st.coins(lx + 2, lx + n - 3, st.gy - 5);
-    const ex = lx + n; st.floor(ex, ex + 3); for (let xx = ex; xx < ex + 4; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.GROUND);
+    const ex = lx + n; st.floor(ex, ex + 3); for (let xx = ex; xx < ex + 4; xx++) B.fill(xx, st.gy, xx, st.H - 1, T.HARD), B.set(xx, st.gy, T.SEMI);
     return ex + 4;
   },
   // back down to the street: a drop off the end of the roofs: { down }
