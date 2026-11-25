@@ -412,7 +412,11 @@ async function session(browser, viewport, fn) {
   });
   await session(browser, { width: 390, height: 844 }, async (page, shot, run) => {
     await run('p-herd', async () => { await page.evaluate(() => { fresh(); play('15-1'); place(40, 13); sim(1.5); freeze(); }); await shot('50-portrait-15-1.png'); });
-    await run('p-lair', async () => { await page.evaluate(() => { thaw(); fresh(); play('15-5'); const g = S(), k = areaOf(g, 'arena'), A = g.level.areas[k], an = A.anchors.in; g.loadArea(k, an.x, an.y); P().invuln = 99; sim(0.2); P().x += 5 * 32; sim(3); const b = g.entities.find(e => e.boss); b.go('jete'); sim(1.4); P().invuln = 0; freeze(); }); await shot('57-portrait-15-5-arena.png'); });
+    await run('p-lair', async () => { await page.evaluate(() => { thaw(); fresh(); play('15-5'); const g = S(), k = areaOf(g, 'arena'), A = g.level.areas[k], an = A.anchors.in; g.loadArea(k, an.x, an.y); P().invuln = 99; sim(0.2); P().x += 5 * 32; sim(3); const b = g.entities.find(e => e.boss); b.go('jete'); sim(1.4); P().invuln = 0; freeze(); }); await shot('57-portrait-15-5-arena.png');
+      // off the screen while she swims: an arrow at the view's edge says where she is
+      const r = await page.evaluate(() => { thaw(); const g = S(), p = P(), b = g.entities.find(e => e.boss); p.invuln = 99; p.x = b.arenaX0 + 2 * 32; p.y = b.floorY - p.h; b.x = b.pool.x1 - b.w - 8; b.go('swim'); sim(0.6); p.x = b.arenaX0 + 2 * 32; sim(0.05); const off = b.x > g.camX + window.BRADY.Game.viewW || b.x + b.w < g.camX; p.invuln = 0; freeze(); return { off }; });
+      check('15-5 (portrait): with Big Kiboko off the screen, the edge arrow shows where she swims', r.off, r);
+      await shot('58-portrait-15-5-offscreen-arrow.png'); });
     await run('p-map', async () => { await page.evaluate(() => { thaw(); fresh(); const B = window.BRADY, T = window.BRADY_TOUR; B.Save.data.unlocked['15-1'] = true; T.TourProgress.data().lands.ke = true; B.goToMap('world', 1, '15-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } freeze(); }); await shot('71-portrait-kenya-map.png'); });
   });
   await browser.close();

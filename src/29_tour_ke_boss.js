@@ -23,7 +23,8 @@ const drop = (ctx, s) => { ctx.save(); ctx.fillStyle = '#8ad8ff'; ctx.strokeStyl
 const wave = (ctx, s) => { ctx.save(); ctx.fillStyle = '#8ad8ff'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; const x = s.x, y = s.y + s.h, w = s.w, h = s.h; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + w * 0.2, y - h, x + w * 0.5, y - h * 0.9); ctx.quadraticCurveTo(x + w * 0.85, y - h * 0.6, x + w, y); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x + w * 0.45, y - h * 0.75, 3, 0, TAU); ctx.fill(); ctx.restore(); };
 const brain = {
   phases: [3, 1],
-  guardText: 'MIND THE TUTU!',
+  // the bounce word, at most once a second (a few bounces in a row used to stack it up)
+  get guardText() { const b = this._b; if (!b || !b.g) return 'MIND THE TUTU!'; if (b.g.t - (b.guardShownT || -9) < 1.1) return ' '; b.guardShownT = b.g.t; return 'MIND THE TUTU!'; },
   wake(b) {
     b.phase = 1; b.tall = true;
     const P = b.g.area.kePool || [b.arenaX0 + 9 * TS, b.arenaX1 - 9 * TS];
@@ -32,6 +33,7 @@ const brain = {
     b.g.bannerText = 'BIG KIBOKO\'S WATER BALLET'; b.g.bannerT = 2.2;
   },
   hit(b, kind) {
+    this._b = b;
     if (kind === 'stomp' || kind === 'spin') {
       if (b.vuln) { b.damage(1, { text: 'BRAVO!', col: '#ffd84a' }); return true; }
       if (b.act === 'swim' || b.act === 'dive' || b.act === 'rise') return false;
@@ -183,6 +185,20 @@ const brain = {
     ctx.restore();
   }
 };
+// off the edge of the view (a narrow portrait screen): an arrow at the view's edge, level with the water, with her ears
+// on it, so Brady always knows where she is; it pulses and shows a note while she rises
+TourHooks.on('afterEntities', (play, ctx) => {
+  const b = play.boss; if (!b || b.style !== 'ke_kiboko' || b.remove || b.state !== 'fight') return;
+  const vx0 = play.camX, vx1 = play.camX + Game.viewW;
+  if (b.x + b.w > vx0 + 8 && b.x < vx1 - 8) return;
+  const left = b.cx < vx0, x = left ? vx0 + 22 : vx1 - 22, wl = b.pool ? b.pool.wl : b.floorY;
+  const y = clamp(Math.min(wl - 26, b.y + b.h / 2), play.camY + 60, play.camY + Game.viewH - 40), rise = b.act === 'rise' || b.act === 'jete', k = rise ? 1 + 0.25 * Math.sin(play.t * 20) : 1;
+  ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.fillStyle = rise ? '#ffd84a' : 'rgba(255,255,255,0.9)'; ctx.beginPath(); const d = left ? -1 : 1; ctx.moveTo(d * 18, 0); ctx.lineTo(d * 4, -12); ctx.lineTo(d * 4, 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#9a8ab0'; ctx.beginPath(); ctx.ellipse(-d * 6, 2, 11, 7, 0, Math.PI, 0); ctx.fill(); ctx.stroke(); for (const ox of [-8, 2]) { ctx.beginPath(); ctx.ellipse(-d * 6 + ox, -6, 3, 4, 0, 0, TAU); ctx.fill(); ctx.stroke(); }
+  if (rise) { ctx.fillStyle = '#ffd0e8'; ctx.font = TourBackstage.F9; ctx.textAlign = 'center'; ctx.fillText('♪', -d * 6, -16); }
+  ctx.restore();
+});
 // her landing spot: a shadow that grows as she comes down (drawn under her, over the sand)
 TourHooks.on('afterEntities', (play, ctx) => {
   const b = play.boss; if (!b || b.style !== 'ke_kiboko' || b.remove || b.shadowX == null || b.act !== 'jete') return;

@@ -484,7 +484,7 @@ const enemies = {
    plain, swimming low through the rivers (only their backs and horns show), and LEAPING over the thorn thickets that
    are too tall to jump. The validator walks the same path as one-way ghosts. The path never drops faster than one row
    per column, so a rider stays on his gnu all the way down. */
-const GNU = { W: 64, H: 30, SPEED: 7.2 };
+const GNU = { W: 80, H: 30, SPEED: 7.2, SNAP: 22 };
 class KeGnu extends Ent {
   constructor(g, s) {
     super(g, s, GNU.W, 14); this.herd = s.herd; this.isPlatform = true; this.x = s.x; this.speed = s.speed || GNU.SPEED;
@@ -495,6 +495,16 @@ class KeGnu extends Ent {
     const nx = this.x + this.speed * TS * dt, ny = H.backAt(nx + this.w / 2);
     this.dx = nx - this.x; this.dy = ny - this.y; this.x = nx; this.y = ny;
     this.leg += dt * this.speed * 2.2;
+    // forgiving boarding (a thumb on a phone): Brady dropping onto a back within a few pixels of it, or just past its
+    // ends, is snapped onto it; and a back that runs out from under him keeps him for a moment (coyote: the next gnu
+    // behind usually arrives inside that time)
+    const p = this.g.player;
+    if (p && !p.dead && p.state === 'play' && !p.onGround && p.vy >= 0 && !p.inWater) {
+      const feet = p.y + p.h, S = GNU.SNAP;
+      if (feet >= this.y - 14 && feet <= this.y + 12 && p.x + p.w > this.x - S && p.x < this.x + this.w + S) {
+        p.x = clamp(p.x, this.x - p.w + 8, this.x + this.w - 8); p.y = this.y - p.h + 1; p.vy = Math.max(p.vy, TS);
+      }
+    }
     this.air = H.modeAt(this.cx) === 'leap'; this.swim = H.modeAt(this.cx) === 'swim';
     if (this.swim && Math.random() < 0.25) this.g.burst(this.x + 4, this.y + 12, 1, '#ffffff', 'bubble');
     if (!this.swim && !this.air && Math.random() < 0.15) this.g.burst(this.x + 6, this.y + GNU.H, 1, '#e8c890', 'dust');
@@ -551,7 +561,7 @@ class KeHerd extends Ent {
     if (vx1 < this.x0 * TS - 2 * TS || vx0 > this.x1 * TS) return;
     this.cool -= dt;
     if (this.cool <= 0) {
-      this.cool = this.every * (0.75 + Math.random() * 0.5);
+      this.cool = this.every * (0.85 + Math.random() * 0.3);
       const sx = Math.max(this.x0 * TS, vx0 - GNU.W - TS);
       if (sx < this.x1 * TS - 3 * TS) { const e = new KeGnu(g, { x: sx, y: 0, herd: this, speed: GNU.SPEED * (0.95 + Math.random() * 0.1) }); g.spawn(e); }
     }
@@ -1444,6 +1454,17 @@ Tour.country({
   star: { name: 'GOLDEN ACACIA', draw(ctx, x, y, t) { ctx.save(); ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(x, y - 3, 9, 3.5, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillRect(x - 1, y - 1, 2, 8); ctx.restore(); } },
   levels: []
 });
+// the land's map: the flamingo lake (the stop 15-3's lake, east of the grove) is pink, with a flamingo haze on it
+if (typeof TourOWPaint !== 'undefined' && TourOWPaint.lake) {
+  const l0 = TourOWPaint.lake;
+  TourOWPaint.lake = function (c, ow, pts) {
+    const cx = pts.reduce((s2, q) => s2 + q[0], 0) / pts.length, cy = pts.reduce((s2, q) => s2 + q[1], 0) / pts.length;
+    if (!(ow && ow.G && ow.G.cc === 'ke' && cx > 800)) return l0.call(this, c, ow, pts);
+    const ow2 = Object.create(ow); ow2.look = Object.assign({}, ow.look, { sea: '#ec86a8', deep: '#b84a78', beach: '#f6efe4' });
+    l0.call(this, c, ow2, pts);
+    const R = mulberry32(1503); c.save(); c.fillStyle = '#ff6a9a'; for (let k = 0; k < 40; k++) { const a = R() * TAU, r = R(); const x = cx + Math.cos(a) * r * 70, y = cy + Math.sin(a) * r * 34; c.fillRect(x, y, 2.4, 2.4); } c.restore();
+  };
+}
 Object.assign(TourLandscape.ARCH_LABEL, { stampede: 'HERD', necks: 'NECKS', flock: 'FLOCK', shade: 'SHADE', burrow: 'BURROW' });
 TourLandscape.looks.ke = ['#f2dcae', '#4a9ad0', '#9a8ab8', '#d8a850', '#ecd08a', '#fff0c8', 'peaks'];
 Tour.keKit = { GNU, GIR, HEAT, KeHerd, KeGnu, KeCroc, KeGiraffe, KeFlamingo, KeSun, KeElephant, KeCloud, KeSentry, KeEagle, INK, COL, CLAY, RED, GOLD };
