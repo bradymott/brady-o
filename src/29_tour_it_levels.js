@@ -216,8 +216,8 @@ const operaRows = (() => {
   fillG(G, 0, 22, W - 1, H - 1, '#');                // the stalls (floor)
   fillG(G, 0, 1, 0, 21, '#'); fillG(G, W - 1, 1, W - 1, 21, '#');
   // ① the first diva on her box; her column over the stalls lifts Brady to the first balcony
-  put(G, 2, 21, '@.j'); put(G, 7, 18, '?');
-  fillG(G, 4, 9, 9, 9, '#'); put(G, 5, 8, 'O'); put(G, 7, 8, 'd');
+  put(G, 2, 21, '@.j'); put(G, 9, 18, '?');
+  fillG(G, 2, 16, 7, 16, '#'); put(G, 3, 15, 'O'); put(G, 5, 15, 'd');
   put(G, 12, 21, 'X');
   fillG(G, 15, 12, 24, 12, '-'); put(G, 18, 11, '*'); put(G, 20, 11, 'o.o'); put(G, 23, 11, 'Y');
   put(G, 30, 19, 'n'); put(G, 27, 13, 'o.o.o');
@@ -298,7 +298,7 @@ const L5 = { n: 5, name: 'Il Polpettone', mapLabel: 'Grand Stage', arch: 'lair',
         ['postcard', { kind: 'must', dy: -5 }],
         ['stairs', { n: 3 }],
         ['cobbles', { n: 6, enemies: ['itNote'] }],
-        ['secretDoor', { to: 'camerino@in', look: 'curtain', back: 'camerinoBack' }],
+        ['secretDoor', { to: 'camerino@in', look: 'curtain', skin: 'itVelvet', back: 'camerinoBack' }],
         ['itemBlock', { item: 'power' }],
         ['postcard', { kind: 'high', dy: -7, dx: -2 }],
         ['cobbles', { n: 6, enemies: ['itMeatball'] }],

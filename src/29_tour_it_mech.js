@@ -560,6 +560,8 @@ class ItCup extends Ent {
   draw(ctx) {
     const x = this.cx, y = this.y + this.h;
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    // a full cup glows gold and a little arrow bobs over it: it is the power, not a prop
+    if (this.full) { const gl = ctx.createRadialGradient(x, y - 18, 2, x, y - 18, 30); gl.addColorStop(0, 'rgba(255,220,120,0.55)'); gl.addColorStop(1, 'rgba(255,220,120,0)'); ctx.fillStyle = gl; ctx.fillRect(x - 30, y - 48, 60, 50); ctx.fillStyle = '#ffd24a'; const by = y - 58 + Math.sin(this.t * 5) * 3; ctx.beginPath(); ctx.moveTo(x - 6, by); ctx.lineTo(x + 6, by); ctx.lineTo(x, by + 8); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     ctx.fillStyle = '#ece6d6'; ctx.fillRect(x - 16, y - 8, 32, 8); ctx.strokeRect(x - 16, y - 8, 32, 8);
     ItArt.cup(ctx, x, y - 9, 1.1, this.full);
     if (this.full) { ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2; for (let k = 0; k < 2; k++) { const ph = (this.t * 0.8 + k * 0.5) % 1; ctx.globalAlpha = 1 - ph; ctx.beginPath(); ctx.moveTo(x - 3 + k * 6, y - 26 - ph * 16); ctx.quadraticCurveTo(x + 3 + k * 6, y - 32 - ph * 16, x - 1 + k * 6, y - 38 - ph * 16); ctx.stroke(); } ctx.globalAlpha = 1; }
@@ -874,7 +876,7 @@ Object.assign(P, {
   // an updraft column of song for a diva: { g, who, w, h (rows above the letter's row) }
   song(st, o) {
     const B = st.B, w = o.w || 3, h = o.h || 10, g = o.g || 0, who = o.who || 0, x = st.x, bot = st.gy - 1, top = bot - h + 1;
-    const z = B.zone(x, top, w, h, 0, -150 * TS, 7.4 * TS, 'updraft', { pull: 3 }); z.g = g; z.gOn = who === 0; z.itAria = g; z.itWho = who;
+    const z = B.zone(x, top, w, h, 0, -150 * TS, 7.4 * TS, 'updraft', { pull: 8 }); z.g = g; z.gOn = who === 0; z.itAria = g; z.itWho = who;
     if (!B.toggles[g]) B.toggle(g, [], [], { kind: 'aria', auto: true });
     B.spawn('itSong', x, bot, { w, h, g, who });
     return st.x;
@@ -886,13 +888,28 @@ Object.assign(P, {
 P.hideDoor = (st, o) => {
   const B = st.B, x = st.x, y = st.gy - 1, look = o.look || 'fake';
   if (look === 'fake') { B.fill(x, y - (o.h || 3) + 1, x, y, T.FAKE); B.spawn('tourDraft', x, y, { look }); }
-  else B.spawn('tourCurtain', x, y, { look, skin: o.skin || look, h: o.h || 3 });
+  else B.spawn('tourCurtain', x, y, { look, skin: o.skin || 'itVelvet', h: o.h || 3 });
   B.spawn('portal', x, y, { kind: 'door', look: 'tourDoorHidden', targetRef: o.to || null, secretDoor: true });
   if (o.back) B.anchor(o.back, x + (o.backDx || 2), y);
   return st.x;
 };
 for (const k of ['tilt', 'slide', 'rack', 'bell', 'song', 'diva', 'hideDoor']) Tour.pieces['it.' + k] = P[k];
 
+// the velvet curtain over a secret door (the royal box, the tenor's dressing room): red drapes with gold tassels;
+// they sway, and part a little when Brady is close (the tell is the draught: the hem flutters)
+TOUR_SKINS.itVelvet = (ctx, e, t) => {
+  const x = e.x, y = e.y, w = e.w, h = e.h, p = e.g && e.g.player, near = p && Math.abs(p.cx - e.cx) < 2 * TS ? 1 : 0, part = (e.part || 0) * 10 + near * 6;
+  ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.fillStyle = '#b8861a'; ctx.fillRect(x - 4, y - 6, w + 8, 7); ctx.strokeRect(x - 4, y - 6, w + 8, 7);
+  for (const s of [0, 1]) {
+    const x0 = s ? x + w : x, xm = x + w / 2 + (s ? part : -part), fl = Math.sin(t * 3 + s) * 3;
+    ctx.fillStyle = '#a8182a'; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(xm, y); ctx.quadraticCurveTo(xm + (s ? 4 : -4), y + h * 0.5, xm + fl, y + h); ctx.lineTo(x0, y + h); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#6a0a14'; ctx.lineWidth = 2; for (let k = 1; k < 3; k++) { const fx = lerp(x0, xm, k / 3); ctx.beginPath(); ctx.moveTo(fx, y + 2); ctx.lineTo(fx + fl * 0.5, y + h - 2); ctx.stroke(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(lerp(x0, xm, 0.5), y + h * 0.45, 4, 0, TAU); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore(); return true;
+};
 Object.assign(ENTITY_TYPES, { itRamp: ItRamp, itCrates: ItCrates, itOil: ItOil, itDough: ItDough, itOven: ItOven, itTilt: ItTilt, itSlider: ItSlider, itRack: ItRack, itBarrel: ItBarrel, itDiva: ItDiva, itSong: ItSong, itCup: ItCup, itLine: ItLine });
 Tour.itMech = { SCOOT, ESP, DOUGH, TILT, ARIA, tiltSide };
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.itMech = Tour.itMech; } } catch (e) { /* not in a browser */ }

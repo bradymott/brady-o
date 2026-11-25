@@ -51,7 +51,7 @@ async function session(viewport, fn) {
     window.ents = name => S().entities.filter(e => e.constructor.name === name && !e.remove);
   });
   const pin = () => page.evaluate(() => { const G = window.BRADY.Game; G.slowT = -1e9; G.lowered = 0; G.dprCap = null; G.quality = 1; G.resize(); });
-  const shot = async name => { await pin(); if (checksOnly) return; await page.evaluate(() => { const p = window.BRADY.Game.scene && window.BRADY.Game.scene.player; if (p) p.invuln = 0; }); await page.waitForTimeout(250); await page.screenshot({ path: path.join(out, name) }); };
+  const shot = async name => { await pin(); if (checksOnly) return; await page.evaluate(() => { const p = window.BRADY.Game.scene && window.BRADY.Game.scene.player; if (p) p.invuln = 0; }); await page.waitForTimeout(250); await page.screenshot({ path: path.join(out, name) }); await page.evaluate(() => { const p = window.BRADY.Game.scene && window.BRADY.Game.scene.player; if (p) p.invuln = 999; }); };
   // a panorama of the current area: the canvas drawn tile-window by tile-window into one picture (scaled to 0.4)
   const pano = async name => {
     if (checksOnly) return;
@@ -138,6 +138,7 @@ async function session(viewport, fn) {
       // too long: it tears
       r = await ev(() => { const d = ents('ItDough')[0], p = P(); place(Math.floor(d.x / 32) + 1, Math.floor(d.y / 32) - 1); sim(3.2); return { torn: d.state === 'torn', fell: !p.onGround || p.y > d.hy }; });
       check('14-2: stand too long and the dough tears', r.torn, r);
+      await ev(() => { play('14-2'); });
       // every fling the checker was told about: charge, jump, steer to the landing
       r = await ev(() => {
         const g = S(), A = g.area, res = [], seen = {};
@@ -211,7 +212,7 @@ async function session(viewport, fn) {
         until(8, () => ({}), () => d.phase().singing && d.phase().k < 0.3);
         // walk into the column, then hold JUMP and ride it up; at the top, steer right onto the balcony
         place(9, 21); until(1, () => ({ right: true }), () => p.cx > 12.6 * 32);
-        const ok = until(3.5, k => ({ jump: true, jumpPressed: k === 0 }), () => feetRow() <= 11);
+        const ok = until(3.5, k => ({ jump: true, jumpPressed: k === 0, left: p.cx > 13.8 * 32, right: p.cx < 13.2 * 32 }), () => feetRow() <= 11);
         until(1.5, () => ({ right: true }), () => p.onGround);
         return { rose: ok, row: feetRow(), x: Math.floor(p.cx / 32) };
       });
@@ -292,7 +293,7 @@ async function session(viewport, fn) {
   await session({ width: 390, height: 844 }, async (page, shot, run) => {
     const ev = (f, a) => page.evaluate(f, a);
     await run('p-scoot', async () => { await ev(() => { fresh(); play('14-1'); sim(1.0); }); await shot('70-portrait-14-1.png'); });
-    await run('p-boss', async () => { await ev(() => { play('14-5'); toArea('palco'); place(6, 13); sim(3.0); }); await shot('71-portrait-14-5-tenor.png'); });
+    await run('p-boss', async () => { await ev(() => { play('14-5'); toArea('palco'); place(12, 13); sim(2.4); }); await shot('71-portrait-14-5-tenor.png'); });
     await run('p-map', async () => { await ev(() => { for (const id of ['14-1', '14-2', '14-3']) window.BRADY.Save.data.unlocked[id] = true; window.BRADY.goToMap('world', 1, '14-1'); for (let k = 0; k < 40; k++) { if (S().card) S().card = null; sim(0.25); } }); await shot('72-portrait-italy-map.png'); });
   });
   console.log(failures ? `${failures} ITALY CHECK(S) FAILED` : 'ALL ITALY CHECKS PASSED');
