@@ -35,7 +35,6 @@ const hopRows = (() => {
   ground(Gr, 28, 50, 21); put(Gr, 29, 20, 'N'); put(Gr, 48, 20, 'c');
   fillG(Gr, 30, 4, 46, 14, 'H'); fillG(Gr, 31, 15, 45, 15, 'v'); put(Gr, 38, 20, 'B'); put(Gr, 33, 18, 'o.o'); put(Gr, 41, 18, 'o.o');
   // ② the crater field
-  put(Gr, 53, 20, 'e');
   ground(Gr, 51, 55, 21); ground(Gr, 56, 60, 24); put(Gr, 57, 23, '1'); put(Gr, 55, 20, 'J');
   fillG(Gr, 60, 8, 64, 8, '-'); put(Gr, 60, 7, 'o.o.o'); put(Gr, 62, 5, '*');
   ground(Gr, 61, 64, 21);
@@ -60,7 +59,7 @@ const hopRows = (() => {
   ground(Gr, 180, 190, 21); put(Gr, 181, 20, 'c'); put(Gr, 184, 20, 'z'); put(Gr, 188, 20, 'Z'); put(Gr, 186, 16, '?');
   // ... then all of it: a geyser under spikes up to a cliff, a long jump past a moth over the last crater (P3)
   pit(Gr, 191, 199); put(Gr, 194, 24, '5'); fillG(Gr, 192, 3, 197, 4, 'H'); fillG(Gr, 192, 5, 197, 5, 'v');
-  ground(Gr, 200, 204, 12); put(Gr, 202, 11, 'u');
+  ground(Gr, 200, 204, 12);
   pit(Gr, 205, 212); put(Gr, 208, 12, 'R'); put(Gr, 207, 9, 'M');
   ground(Gr, 213, 217, 16); put(Gr, 215, 15, 'e');
   ground(Gr, 218, 224, 14); put(Gr, 221, 13, 'O'); put(Gr, 219, 13, 'z'); put(Gr, 223, 13, 'c');
@@ -113,7 +112,7 @@ const L1 = { n: 1, name: 'One Small Hop', mapLabel: 'One Small Hop', arch: 'lowg
   gimmick: 'Low gravity: huge floaty jumps and long hang time. Dust geysers blow you sky-high, spikes overhead punish a full jump, golf balls fall out of the black sky',
   hint: 'Tap jump for a short hop under spikes; hold it for a huge one. Ride the dust geysers up and steer off at the top. The telescope on the last rim is pointing at something...',
   postcard: 'Brady! I jumped and came down about a week later. The dust gets EVERYWHERE. Someone left golf balls all over the place. ♥ C',
-  enemies: [['moonBunny', 3], ['moonMite', 2], ['moonHand', 2], ['moonMoth', 2]],
+  enemies: [['moonBunny', 3], ['moonMite', 2], ['moonHand', 1], ['moonMoth', 2]],
   mapCell: [0, 0], mapFrom: -1,
   exits: { main: { to: '18-2' }, secret: { to: '18-6', hint: 'A telescope on the last rim points up at a patch of sky. Something twinkles up there...' } },
   areas: [
@@ -147,7 +146,7 @@ const walkRows = (() => {
   plate(Gr, 120, 131, 15); fillG(Gr, 120, 17, 131, 17, 'v'); put(Gr, 124, 14, 'c'); put(Gr, 128, 11, 'o.o');
   // ③ the twist: an air vent blows up out of the void beside the plates; spikes under the plates
   put(Gr, 136, 28, '1'); plate(Gr, 141, 146, 8); fillG(Gr, 141, 10, 146, 10, 'v'); put(Gr, 142, 7, 'o.o.o');
-  plate(Gr, 150, 166, 13); fillG(Gr, 150, 15, 166, 15, 'v'); put(Gr, 158, 12, 'u'); put(Gr, 152, 12, 'c'); put(Gr, 155, 9, '?');
+  plate(Gr, 150, 166, 13); fillG(Gr, 150, 15, 166, 15, 'v'); put(Gr, 152, 12, 'c'); put(Gr, 155, 9, '?');
   // the long void with a chain of valves past junk (P3 by the second valve)
   put(Gr, 172, 12, 'V'); put(Gr, 177, 5, 'k'); put(Gr, 181, 10, 'V'); put(Gr, 190, 11, 'V'); put(Gr, 198, 12, 'V'); put(Gr, 186, 7, 'R'); put(Gr, 184, 18, 'K'); put(Gr, 197, 9, 'M');
   fillG(Gr, 0, 0, 223, 0, 'H');
@@ -221,7 +220,7 @@ const buggyRows = (() => {
   pit(Gr, 126, 129); fillG(Gr, 126, 4, 129, 13, 'H'); fillG(Gr, 126, 14, 129, 14, 'v'); put(Gr, 127, 17, 'R');
   // the rover depot's garage door (a blinking light), ridges
   put(Gr, 142, 19, 'D'); put(Gr, 145, 19, 'a'); put(Gr, 139, 19, 'p'); put(Gr, 148, 19, 'c');
-  fillG(Gr, 152, 19, 156, 19, '#'); fillG(Gr, 154, 18, 156, 18, '#'); fillG(Gr, 156, 17, 156, 17, '#'); put(Gr, 160, 19, 'u'); fillG(Gr, 166, 17, 166, 19, 'B');
+  fillG(Gr, 152, 19, 156, 19, '#'); fillG(Gr, 154, 18, 156, 18, '#'); fillG(Gr, 156, 17, 156, 17, '#'); fillG(Gr, 166, 17, 166, 19, 'B');
   // the crater whose steady geyser flings the buggy up onto the mesa
   pit(Gr, 172, 180); put(Gr, 173, 24, '1'); ground(Gr, 181, 199, 16); put(Gr, 190, 15, 'e'); put(Gr, 194, 12, 'o.o.o');
   put(Gr, 204, 19, 'c'); put(Gr, 208, 16, '?');
@@ -269,7 +268,7 @@ const L3 = { n: 3, name: 'Moon Buggy', mapLabel: 'Moon Buggy', arch: 'rover', th
   gimmick: 'Drive a springy six-wheeled buggy over craters and ridges: throttle, brake, hop, and lean in the air to land flat',
   hint: 'Keep your speed up for the long craters. In the air, tilt the buggy level before it lands: a crooked landing kills your speed, a nose-dive costs a hit. A garage door blinks by the ridges...',
   postcard: 'Brady! The buggy has SIX wheels and a little dish on top. I said you could drive. I meant slowly. ♥ C',
-  enemies: [['moonBunny', 3], ['moonMite', 2], ['moonHand', 1]],
+  enemies: [['moonBunny', 3], ['moonMite', 2]],
   mapCell: [2, 0], mapFrom: 1,
   exits: { main: { to: '18-4' } },
   areas: [
@@ -433,7 +432,7 @@ const starRows = (() => {
   fillG(Gr, 47, 15, 50, 16, '#'); put(Gr, 48, 14, 'i');
   fillG(Gr, 53, 11, 56, 12, '#'); put(Gr, 54, 10, 'e'); put(Gr, 55, 7, 'R');
   fillG(Gr, 60, 15, 63, 16, '#'); put(Gr, 61, 14, 'j');
-  ground(Gr, 66, 70, 19); put(Gr, 57, 8, 'M');
+  ground(Gr, 66, 70, 19); put(Gr, 64, 9, 'M');
   put(Gr, 71, 18, '3');
   ground(Gr, 93, 98, 19); put(Gr, 95, 18, 'c'); put(Gr, 97, 15, '?');
   fillG(Gr, 100, 15, 103, 16, '#'); put(Gr, 101, 14, 'l'); fillG(Gr, 106, 11, 109, 12, '#'); put(Gr, 107, 10, 'm');
