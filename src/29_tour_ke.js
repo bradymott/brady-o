@@ -1431,7 +1431,7 @@ Tour.country({
   levels: []
 });
 Object.assign(TourLandscape.ARCH_LABEL, { stampede: 'HERD', necks: 'NECKS', flock: 'FLOCK', shade: 'SHADE', burrow: 'BURROW' });
-TourLandscape.looks.ke = ['#3a7ad8', '#e8b84a', '#b8502a', '#fff0c8', '#ffffff', '#ffd23a', 'tower'];
+TourLandscape.looks.ke = ['#f2dcae', '#4a9ad0', '#9a8ab8', '#d8a850', '#ecd08a', '#fff0c8', 'peaks'];
 Tour.keKit = { GNU, GIR, HEAT, KeHerd, KeGnu, KeCroc, KeGiraffe, KeFlamingo, KeSun, KeElephant, KeCloud, KeSentry, KeEagle, INK, COL, CLAY, RED, GOLD };
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.keKit = Tour.keKit; } } catch (e) { /* not in a browser */ }
 })();
