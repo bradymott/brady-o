@@ -214,6 +214,8 @@ TourHats.NOT = new Set([].concat(
   'esTomato esOrange esHorchata esPetardo esOlive esTruck esCrackers esTomatoProp esCrate esRocket esWindmill esWindBoard esCorkPlug esSailBrake'.split(' '),
   // The Red-Eye: meal trays, carry-ons, bin drops, the lurching clock, sliders, exhaust, tells
   'eyeTray eyeBag eyeBinDrop eyeLurch eyeSlider eyeExhaust eyeSlideTell'.split(' '),
+  // Australia (16): the ping, webs, the road and its wheels, giant fruit and its stall, the bear's shadow, the creek mud
+  'auPing auWeb auRoad auWheels auFruit auFruitStall auShadow auMud'.split(' '),
   // Festival Fields: wheelie bins, balloon dogs (balloons), beds
   'festBin festBalloon festBed'.split(' '),
   // France: bread, pastries, pans, keychains, accordions, macarons, chandeliers, lamp posts, mirrors, ovens, decoys, parcels, hatches, the dovecote
@@ -282,7 +284,10 @@ Object.assign(TourHats.HEADS, {
   w22Moth: [0.25, 0.25, -0.85, 0],
   eyeGoose: [0.41, 0.42, -1.84, 0], eyeGoon: [0.37, 0.39, -1.1, 0],
   festDuck: [0.43, 0.44, -1.6, 0],
-  lostCrab: [0.12, 0.12, -1.45, 0], lostMoth: [0.1, 0.11, -1.55, 0], lostBeagle: [0.4, 0.4, -1.12, 0]
+  lostCrab: [0.12, 0.12, -1.45, 0], lostMoth: [0.1, 0.11, -1.55, 0], lostBeagle: [0.4, 0.4, -1.12, 0],
+  // Australia (16)
+  auEmu: [0.4, 0.42, -1.45, 0], auMagpie: [0.37, 0.39, -1.1, 0], auKooka: [0.33, 0.35, -1.15, 0], auYabby: [0.3, 0.3, -1.2, 0],
+  auCocky: [0.18, 0.2, -1.35, 0], auWombat: [0.55, 0.55, -1.3, 0], auHuntsman: [0.22, 0.22, -1.14, 0]
 
 });
 
