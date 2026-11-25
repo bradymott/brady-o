@@ -105,7 +105,6 @@ class MoonGolfRain extends Ent {
 }
 // a sign card on a little crate (the land's tips, in Piwi's stage crew's voice)
 Object.assign(ENTITY_TYPES, { moonGeyser: MoonGeyser, moonGolfRain: MoonGolfRain });
-TourHats.NOT && ['moonGeyser', 'moonGolfRain'].forEach(k => TourHats.NOT.add(k));
 
 let geyserN = 0;
 Object.assign(Tour.pieces, {
@@ -298,7 +297,6 @@ TourHooks.on('afterEntities', (play, ctx) => {
   ctx.restore();
 });
 Object.assign(ENTITY_TYPES, { moonValve: MoonValve, moonJunk: MoonJunk });
-TourHats.NOT && ['moonValve', 'moonJunk'].forEach(k => TourHats.NOT.add(k));
 Object.assign(Tour.pieces, {
   // a floating air valve at the letter (its zone refills the tank)
   'moon.valve'(st, o) { st.B.zone(st.x - 1, st.gy - 3, 3, 3, 0, 0, 0, 'moonValve'); st.B.spawn('moonValve', st.x, st.gy - 2, {}); return st.x; },
@@ -463,7 +461,6 @@ class MoonMagPanel extends Ent {
   }
 }
 ENTITY_TYPES.moonMagPanel = MoonMagPanel;
-TourHats.NOT && TourHats.NOT.add('moonMagPanel');
 // Brady's boots glow blue while they are on
 TourHooks.on('afterEntities', (play, ctx) => {
   const A = play.area, p = play.player; if (!A || !A.moon || !A.moon.mag || !p || p.dead) return;
@@ -482,6 +479,83 @@ Tour.pieces['moon.metal'] = function (st, o) {
   return st.x;
 };
 Tour.moonKit.magBoots = magBoots;
+
+/* ---------------- 18-6 STARS: connect the stars ----------------
+   Star pads lie on the ground in little constellations. Step on them in order (each shows its number; the next
+   one pulses, a dotted line shows the shape): each lit star draws a line of light from the one before. A wrong
+   star puts the constellation out. The last star finishes it: the constellation becomes a BRIDGE OF LIGHT (toggle
+   group c: its B tiles appear). The checker flips the group at the last star (a switch there); every
+   constellation's stars are laid out on ground reachable from each other before its bridge, so that order exists. */
+class MoonStarPad extends Ent {
+  constructor(g, s) { super(g, s, TS, TS); this.x = s.x - TS / 2; this.y = s.y - TS; this.c = s.c || 0; this.n = s.n || 0; this.of = s.of || 1; this.back = true; this.t = 0; }
+  st() { const A = this.g.area; A.moonStars = A.moonStars || {}; return A.moonStars[this.c] || (A.moonStars[this.c] = { next: 0, done: false, lit: [] }); }
+  update(dt) {
+    this.t += dt; const p = this.g.player, S = this.st();
+    if (!p || p.dead || S.done || !p.onGround) { this.on = false; return; }
+    const here = p.groundTy === Math.floor(this.y / TS) + 1 && Math.abs(p.cx - this.cx) < TS * 0.7;
+    if (here && !this.on) {
+      if (S.lit.indexOf(this.n) >= 0) { /* already lit */ }
+      else if (this.n === S.next) {
+        S.lit.push(this.n); S.next++; TourKit.sfx('chime', 'pick', { vol: 0.5, pitch: 1 + this.n * 0.12 }); this.g.burst(this.cx, this.y + 10, 10, '#ffe8a0', 'spark');
+        if (S.next >= this.of) { S.done = true; this.g.flipToggle(this.c, true); this.g.parts.text(this.cx, this.y - 30, 'A BRIDGE OF STARS!', '#ffe8a0'); TourKit.sfx('bridge', 'checkpoint', { vol: 0.6 }); this.g.shake(2); }
+      } else if (S.lit.length) { S.lit.length = 0; S.next = 0; TourKit.sfx('fizz', 'bump', { vol: 0.5, pitch: 0.6 }); this.g.parts.text(this.cx, this.y - 20, 'WRONG STAR! START AGAIN', '#ff9a9a'); }
+    }
+    this.on = here;
+  }
+  touchPlayer() {}
+  draw(ctx) {
+    const S = this.st(), lit = S.done || S.lit.indexOf(this.n) >= 0, next = !S.done && S.next === this.n, x = this.cx, y = this.y + TS - 10, t = this.t;
+    ctx.save();
+    // the dotted line to the next star (the shape), or the line of light once both are lit
+    const nx = this.g.entities.find(e => e instanceof MoonStarPad && e.c === this.c && e.n === this.n + 1);
+    if (nx) {
+      const both = S.done || (lit && S.lit.indexOf(nx.n) >= 0);
+      ctx.strokeStyle = both ? 'rgba(255,240,180,0.95)' : 'rgba(200,210,255,0.35)'; ctx.lineWidth = both ? 3 : 1.5; if (!both) ctx.setLineDash([3, 6]);
+      ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(nx.cx, nx.y + TS - 18); ctx.stroke(); ctx.setLineDash([]);
+    }
+    const r = 11 + (next ? Math.sin(t * 6) * 2.5 : 0);
+    if (lit || next) { const g2 = ctx.createRadialGradient(x, y - 8, 2, x, y - 8, 30); g2.addColorStop(0, lit ? 'rgba(255,240,170,0.6)' : 'rgba(180,200,255,0.4)'); g2.addColorStop(1, 'rgba(255,240,170,0)'); ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(x, y - 8, 30, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = lit ? '#ffe8a0' : '#6a6aa8'; ctx.strokeStyle = INK; ctx.lineWidth = 1.8;
+    ctx.beginPath(); TourKit.star(ctx, x, y - 8, r, r * 0.45, 5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = lit ? '#5a3a10' : '#ffffff'; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(this.n + 1), x, y - 7);
+    ctx.restore();
+  }
+}
+// the bridge of starlight: drawn over its tiles once its constellation is finished (the tiles are one-way floors)
+class MoonStarBridge extends Ent {
+  constructor(g, s) { super(g, s, TS, TS); this.c = s.c || 0; this.r = s.r; this.x = s.r[0] * TS; this.y = s.r[1] * TS; this.w = (s.r[2] - s.r[0] + 1) * TS; this.h = (s.r[3] - s.r[1] + 1) * TS; this.back = true; this.k = 0; }
+  update(dt) { this.t += dt; this.k = approach(this.k, this.g.toggleBit(this.c) ? 1 : 0, dt * 2); }
+  touchPlayer() {}
+  draw(ctx) {
+    const k = this.k, x = this.x, y = this.y, w = this.w;
+    ctx.save();
+    if (k < 0.01) { ctx.strokeStyle = 'rgba(200,210,255,0.22)'; ctx.setLineDash([2, 8]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y + 4); ctx.lineTo(x + w, y + 4); ctx.stroke(); ctx.restore(); return; }
+    const ww = w * k;
+    ctx.fillStyle = 'rgba(255,240,170,0.25)'; ctx.fillRect(x, y - 6, ww, 18);
+    ctx.fillStyle = '#ffe8a0'; ctx.fillRect(x, y, ww, 6); ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y, ww, 2);
+    ctx.fillStyle = '#fff8d8'; for (let q = x + 8; q < x + ww; q += 24) { ctx.beginPath(); TourKit.star(ctx, q + Math.sin(this.t * 3 + q) * 2, y + 3, 4, 1.8, 4); ctx.fill(); }
+    ctx.restore();
+  }
+}
+Object.assign(ENTITY_TYPES, { moonStarPad: MoonStarPad, moonStarBridge: MoonStarBridge });
+Object.assign(Tour.pieces, {
+  // a star pad at the letter (it lies on the tile under it): { c, n, of }; the last one is the checker's switch
+  'moon.star'(st, o) {
+    const B = st.B, x = st.x, y = st.gy - 1;
+    B.spawn('moonStarPad', x, y, { c: o.c || 0, n: o.n || 0, of: o.of || 1 });
+    if (!B.toggles[o.c || 0]) B.toggle(o.c || 0, [], [], { kind: 'stars' });
+    if ((o.n || 0) === (o.of || 1) - 1) B.switchAt(o.c || 0, x, y);
+    return st.x;
+  },
+  // the bridge of constellation c: a row of one-way starlight from the letter, w long (dy: rows below the letter)
+  'moon.bridge'(st, o) {
+    const B = st.B, x = st.x, y = st.gy - 1 + (o.dy || 0), r = [x, y, x + (o.w || 6) - 1, y, T.SEMI];
+    B.toggle(o.c || 0, [], [r], { kind: 'stars' });
+    for (let q = r[0]; q <= r[2]; q++) B.set(q, y, T.EMPTY);
+    B.spawn('moonStarBridge', x, y, { c: o.c || 0, r: r.slice(0, 4) });
+    return st.x;
+  }
+});
 
 Object.assign(TourLandscape.ARCH_LABEL, { lowg: 'LOW-G', drift: 'SPACEWALK', rover: 'BUGGY', mag: 'MAG BOOTS', stars: 'STARS' });
 Tour.moonKit.MOON_G = MOON_G;

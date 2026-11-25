@@ -382,6 +382,31 @@ LEVELS.base = async (page, shot, run, pano) => {
   });
 };
 
+// ---------------- 18-6 Connect the Stars ----------------
+LEVELS.stars = async (page, shot, run, pano) => {
+  await run('stars', async () => {
+    await page.evaluate(() => { fresh(); play('18-6'); place(3, 18); sim(0.4); freeze(); });
+    await shot('60-18-6-start.png');
+    // a wrong star puts the constellation out
+    const r = await page.evaluate(() => { thaw(); const A = () => S().area.moonStars[0]; AP.go([13, 19]); const one = A().lit.length; AP.go([18, 19]); const after = A().lit.length; return { one, after, bridge: !!S().toggleBit(0) }; });
+    check('18-6: the first star lights; a wrong one puts the constellation out (no bridge)', r.one === 1 && r.after === 0 && !r.bridge, r);
+    const r2 = await page.evaluate(() => { const ok = AP.route([[13, 19], [9, 19], [18, 19]]); return { ok: ok.ok, bridge: !!S().toggleBit(0), tile: S().area.tiles[19 * S().area.W + 30] }; });
+    check('18-6: played: stars 1, 2, 3 in order: the constellation becomes a bridge of light over the pit', r2.ok && r2.bridge, r2);
+    await page.evaluate(() => { sim(0.6); freeze(); }); await shot('61-18-6-first-bridge.png'); await page.evaluate(() => thaw());
+    const legB = await page.evaluate(() => { const r = AP.route([[30, 19], [42, 19], [54, 11], [42, 19], [54, 11], [61, 15], [54, 11], [48, 15]], { maxT: 7 }); return Object.assign(r, { bridge: !!S().toggleBit(1) }); });
+    check('18-6: played: the second constellation over the gap (in order, skipping round the wrong star), its bridge', legB.ok && legB.bridge, legB);
+    const legC = await page.evaluate(() => { const r = AP.route([[66, 19], [80, 19], [93, 19], [101, 15], [107, 11], [101, 7], [108, 3]], { maxT: 7 }); return Object.assign(r, { bridge: !!S().toggleBit(2) }); });
+    check('18-6: played: the third constellation up the ledges, a bridge high over the void', legC.ok && legC.bridge, legC);
+    await page.evaluate(() => { sim(0.6); freeze(); }); await shot('62-18-6-high-bridge.png'); await page.evaluate(() => thaw());
+    const legD = await page.evaluate(() => { const r = AP.route([[118, 3], [126, 7], [136, 7], [141, 12], [147, 16], [153, 10], [159, 14], [165, 11]], { maxT: 7 }); if (!r.ok) return r; const b = !!S().toggleBit(3); const r2 = AP.route([[176, 11], [189, 11]]); sim(1.5, { right: true }); return { ok: r2.ok, bridge: b, state: S().state }; });
+    check('18-6: played: the last constellation on floating rocks, its bridge to the gate', legD.ok && legD.bridge && legD.state !== 'play', legD);
+    const sec = await page.evaluate(() => { play('18-6'); place(126, 6); sim(0.2); AP.go([131, 7]); for (let k = 0; k < 20 && S().area.aid !== 'scope'; k++) sim(0.1, { up: true, upPressed: true }); sim(0.8); return { area: S().area.aid }; });
+    check('18-6: the loose panel on the plateau leads to the observatory', sec.area === 'scope', sec);
+    await page.evaluate(() => { place(10, 11); sim(0.3); freeze(); }); await shot('63-18-6-observatory.png');
+    await page.evaluate(() => { thaw(); play('18-6'); }); await pano('pano-18-6-sky.png');
+  });
+};
+
 // ---------------- 18-2 Spacewalk ----------------
 LEVELS.walk = async (page, shot, run, pano) => {
   await run('walk', async () => {

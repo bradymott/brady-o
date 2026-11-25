@@ -19,7 +19,9 @@ section('spec', () => {
   // the tour's 14 lands (bonus lands, opened by Brady Buttons, come on top: src/29_tour_fest*.js ...)
   const tourWs = Tour.worldList().filter(w => !Tour.byWorld[w].bonus);
   const mains = tourWs.reduce((n, w) => n + Tour.byWorld[w].mainCount, 0), listed = Tour.worldList().reduce((n, w) => n + Tour.byWorld[w].levels.length, 0);
-  check(`68 main levels in 14 countries (${Tour.allLevelIds().length} with the secret and bonus levels)`, mains === 68 && Tour.allLevelIds().length === listed && tourWs.length === 14, { mains, listed });
+  // (the Encore Tour's lands, worlds 14-18, come on top: 5 main levels each, as each land's branch lands)
+  const enc = tourWs.filter(w => Tour.byWorld[w].encore), encMains = enc.reduce((n, w) => n + Tour.byWorld[w].mainCount, 0);
+  check(`68 main levels in 14 countries, plus the Encore Tour's (${Tour.allLevelIds().length} with the secret and bonus levels)`, mains - encMains === 68 && Tour.allLevelIds().length === listed && tourWs.length - enc.length === 14 && enc.every(w => Tour.byWorld[w].mainCount === 5), { mains, listed, encore: enc });
   check('every country knows its main-level count (5, or 4 for the secret lands; a bonus land up to 4)', Tour.worldList().every(w => { const C = Tour.byWorld[w]; return C.bonus ? C.mainCount >= 1 && C.mainCount <= 4 : C.mainCount === (C.secret ? 4 : 5); }), Tour.worldList().map(w => Tour.byWorld[w].id + Tour.byWorld[w].mainCount));
   const L84 = Tour.specOf('8-4');
   check('a legacy secret: {to} becomes exits.secret = land:aq', L84.exits.secret && L84.exits.secret.to === 'land:aq' && L84.secret === false, L84.exits);

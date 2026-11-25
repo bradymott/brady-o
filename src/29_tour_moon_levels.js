@@ -419,5 +419,98 @@ const L5 = { n: 5, name: 'The Lunar Stage', mapLabel: 'The Lunar Stage', arch: '
     { id: 'stage', gen: 'arena', role: 'arena', layout: 'stage', arenaW: 30, H: 20, roof: false, theme: 'moon_stage', gravity: G0, moon: { lowg: true } }
   ] };
 
-Tour.amend('moon', { stamps, levels: [L1, L2, L3, L4, L5] });
+/* ---------------- 18-6 Connect the Stars (secret) ---------------- */
+// the star gate from 18-1 opens onto a field of stars over the moon. The floor is row 19. ① three stars on flat
+// ground, a bridge over a pit too wide to jump; ② four stars on floating rocks over a deadly gap; ③ four stars up a
+// stack of ledges, a bridge high over the void to the plateau (the observatory behind its loose panel); ④ five stars
+// on floating rocks past moths and golf balls, the last bridge to the gate
+const starRows = (() => {
+  const W = 204, H = 24, Gr = grid(W, H, '.');
+  ground(Gr, 0, 20, 19); put(Gr, 2, 18, '@'); put(Gr, 4, 18, 'n'); put(Gr, 7, 15, '?');
+  put(Gr, 13, 18, 'a'); put(Gr, 9, 18, '1'); put(Gr, 18, 18, 'd');
+  put(Gr, 21, 18, 'A'); put(Gr, 30, 15, '*'); put(Gr, 24, 16, 'o.o.o.o.o.o.o');
+  ground(Gr, 40, 44, 19); put(Gr, 42, 18, 'f'); put(Gr, 40, 18, 'N');
+  fillG(Gr, 47, 15, 50, 16, '#'); put(Gr, 48, 14, 'i');
+  fillG(Gr, 53, 11, 56, 12, '#'); put(Gr, 54, 10, 'e'); put(Gr, 55, 7, 'R');
+  fillG(Gr, 60, 15, 63, 16, '#'); put(Gr, 61, 14, 'j');
+  ground(Gr, 66, 70, 19); put(Gr, 57, 8, 'M');
+  put(Gr, 71, 18, '3');
+  ground(Gr, 93, 98, 19); put(Gr, 95, 18, 'c'); put(Gr, 97, 15, '?');
+  fillG(Gr, 100, 15, 103, 16, '#'); put(Gr, 101, 14, 'l'); fillG(Gr, 106, 11, 109, 12, '#'); put(Gr, 107, 10, 'm');
+  fillG(Gr, 100, 7, 103, 8, '#'); put(Gr, 101, 6, 'p'); fillG(Gr, 106, 3, 109, 4, '#'); put(Gr, 108, 2, 'q');
+  put(Gr, 110, 2, '4'); ground(Gr, 125, 136, 7); put(Gr, 127, 6, 'X'); put(Gr, 135, 6, 'c');
+  // ④ the last constellation on floating rocks
+  fillG(Gr, 140, 12, 142, 13, '#'); put(Gr, 141, 11, 'r'); fillG(Gr, 146, 16, 148, 17, '#'); put(Gr, 147, 15, '2'); put(Gr, 147, 9, 'M');
+  fillG(Gr, 152, 10, 154, 11, '#'); put(Gr, 153, 9, 't'); fillG(Gr, 158, 14, 160, 15, '#'); put(Gr, 159, 13, 'u');
+  fillG(Gr, 164, 11, 166, 12, '#'); put(Gr, 165, 10, 'w'); put(Gr, 153, 6, 'z');
+  put(Gr, 167, 10, 'E'); ground(Gr, 186, W - 1, 11); put(Gr, 190, 10, 'G'); put(Gr, 196, 10, 'Y'); fillG(Gr, W - 1, 0, W - 1, 10, '#');
+  return rowsOf(Gr);
+})();
+const STAR = (c, n, of) => ['piece', 'moon.star', { c, n, of }];
+stamps.moonStars = { floor: 19, rows: starRows, gold: { '*': 'must', R: 'risky' }, items: ['power', 'star'], legend: {
+  n: ['spawn', 'sign', { text: 'CONNECT THE STARS! STEP ON THEM IN ORDER, 1, 2, 3... A FINISHED CONSTELLATION BECOMES A BRIDGE' }],
+  N: ['spawn', 'sign', { text: 'A WRONG STAR PUTS THEM ALL OUT. FOLLOW THE DOTTED LINE' }],
+  a: STAR(0, 0, 3), '1': STAR(0, 1, 3), d: STAR(0, 2, 3),
+  i: STAR(1, 3, 4), e: STAR(1, 0, 4), j: STAR(1, 2, 4), f: STAR(1, 1, 4),
+  l: STAR(2, 0, 4), m: STAR(2, 1, 4), p: STAR(2, 2, 4), q: STAR(2, 3, 4),
+  r: STAR(3, 0, 5), '2': STAR(3, 1, 5), t: STAR(3, 2, 5), u: STAR(3, 3, 5), w: STAR(3, 4, 5),
+  A: ['piece', 'moon.bridge', { c: 0, w: 19, dy: 1 }], '3': ['piece', 'moon.bridge', { c: 1, w: 22, dy: 1 }],
+  '4': ['piece', 'moon.bridge', { c: 2, w: 15, dy: 1 }], E: ['piece', 'moon.bridge', { c: 3, w: 19, dy: 1 }],
+  M: ['enemy', 'moonMoth'], Y: ['decor', 'moonPoster'], z: ['piece', 'moon.golfRain', { period: 3.2 }],
+  X: ['piece', 'secretDoor', { to: 'scope@in', look: 'fake', back: 'scopeBack' }]
+} };
+// the observatory: a big telescope pointed at the Earth, P2, a hidden 1UP
+stamps.moonScope = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#...................*........#',
+    '#..................-----.....#',
+    '#.......o.o.o................#',
+    '#..h...-------...............#',
+    '#............................#',
+    '#...-----.............-----..#',
+    '#............................#',
+    '#..........-----.............#',
+    '#............................#',
+    '#.@...D......k...........k...#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'], doors: [{ to: 'sky@scopeBack', look: 'moonHatch' }],
+  legend: { k: ['decor', 'moonScope'] }
+};
+const L6 = { n: 6, name: 'Connect the Stars', mapLabel: 'Connect the Stars', arch: 'stars', secret: true, theme: 'moon_stars',
+  gimmick: 'Through the star gate: step on the stars in the right order to draw each constellation, and every finished constellation becomes a bridge of light',
+  hint: 'Follow the numbers and the dotted line. A wrong star puts the whole constellation out. A loose panel on the high plateau hides an observatory',
+  postcard: 'Brady, you drew a COW in the stars. Or a teapot. Pupo says it is him. ♥ C',
+  enemies: [['moonMoth', 3]],
+  mapCell: [0, 1], mapFrom: 0,
+  exits: { main: { to: 'node:18-4' } },
+  areas: [
+    { id: 'sky', gen: 'room', theme: 'moon_stars', stamp: 'moonStars', gravity: G0, moon: { lowg: true }, camera: 'free', bottomKill: true },
+    { id: 'scope', gen: 'room', role: 'secret', theme: 'moon_base', stamp: 'moonScope', gravity: G0, moon: { lowg: true } }
+  ] };
+
+Tour.amend('moon', { stamps, levels: [L1, L2, L3, L4, L5, L6] });
+/* ---------------- the land's map: the near side of the moon ---------------- */
+// the landing pad at the left; the hop across the crater plain, the spacewalk up by the venue's tether, the buggy
+// ruts, the base's dome, the stage in the big crater at the right (the port: back to Earth); the star gate's trail
+// from the first rim to the field of stars, and on to the base
+if (typeof TOUR_OW_MAPS !== 'undefined') TOUR_OW_MAPS.moon = {
+  labels: { '18-1': 'One Small Hop', '18-2': 'Spacewalk', '18-3': 'Moon Buggy', '18-4': 'The Moon Base', '18-5': 'The Lunar Stage', '18-6': 'Connect the Stars' },
+  w: 1520, h: 760,
+  pal: { sea: '#06061a', deep: '#020210', land: '#c8c2d4', light: '#e8e4f0', path: '#ffe8a0', beach: '#d8d2e2', cliff: '#6a6480', roof: '#ff4f8a', wall: '#ffffff' },
+  sea: 'stars', coast: 'moonRim', tufts: 'none', trail: 'sparkle', bridge: 'steps', meadow: false, woods: false, foam: false, birds: false,
+  land: [[[150, 380], [210, 220], [380, 140], [620, 120], [860, 150], [1080, 120], [1300, 180], [1400, 320], [1380, 520], [1260, 650], [1000, 690], [720, 660], [460, 680], [250, 600]]],
+  nodes: { start: [250, 450], '18-1': [420, 330, 'n'], '18-2': [700, 220, 'n'], '18-3': [1000, 260, 'n'], '18-4': [1160, 420, 'e'], '18-5': [960, 560, 's'], '18-6': [560, 520, 's'], port: [1240, 600] },
+  paths: { 'start>18-1': [[320, 400]], '18-1>18-2': [[560, 250]], '18-2>18-3': [[850, 200]], '18-3>18-4': [[1100, 330]], '18-4>18-5': [[1080, 520]], '18-5>port': [[1120, 600]], '18-1>18-6': [[480, 440]], '18-6>18-4': [[800, 500], [1040, 440]] },
+  feat: [
+    ['sprite', 'moonPad', 240, 470, 30], ['sprite', 'moonDome', 1200, 400, 34], ['sprite', 'moonStage', 960, 600, 30],
+    ['sprite', 'moonRuts', 900, 300, 40], ['sprite', 'moonRuts', 1060, 320, 30], ['sprite', 'moonCrater', 620, 600, 26]
+  ],
+  flora: ['rock'], density: 0,
+  live: [['blink', 1200, 372, '#ff5a5a'], ['blink', 700, 170, '#7affd8'], ['circle', 760, 110, 50, 0.6]]
+};
+
 })();

@@ -202,6 +202,5 @@ class MoonCrescent extends Ent {
   }
 }
 ENTITY_TYPES.moonCrescent = MoonCrescent;
-TourHats.NOT && TourHats.NOT.add('moonCrescent');
 Tour.moonKit.MOO = MOO; Tour.moonKit.mooBrain = brain;
 })();
