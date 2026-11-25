@@ -237,6 +237,8 @@ TourHats.NOT = new Set([].concat(
   // Vietnam: flying conical hats, the coffee phin, tin scooters, bao, rolls, gỏi, beans, hooks, phở, boats, rafts, signals, ice, roasters, kettles, pedals, lanterns, puppets, goods, gates, rain clouds, the cave's bat swarm
   'vnNon vnPhinDrip vnScooter vnBao vnRoll vnGoi vnBean vnHook vnPho vnBoat vnRaft vnTrainSignal vnIce vnRoaster vnKettle vnPedal vnArenaLantern vnPuppet vnGoods vnTradeGate vnRainCloud vnCaveBats'.split(' '),
   // World 22: alarm clocks, envelopes, hourglasses, echoes, loops, mirrors, panes, strikes, pendulums, copies, slabs, lakes, doors, keys, ink, falling time; 22-6's pages and stamps
+  // Iceland (17): aurora ribbons, icebergs, rift slabs, organ pipes, lava blobs, the hidden folk's planks / gates / eye, the sun shields
+  'isRibbon isBerg isPlate isPipe isEmber isShyEye isShyPlat isShyWall isSunShield'.split(' '),
   'w22Alarm w22Envelope w22Hourglass w22Echo w22Loop w22Mirror w22Pane w22Strike w22Pendulum w22Copy w22Slab w22Lake w22ReflectDoor w22Key w22Ink w22TimeFall w22NumDoorE rbPage rbStamp rbTornPage'.split(' ')
 ));
 
@@ -282,6 +284,8 @@ Object.assign(TourHats.HEADS, {
   w22Moth: [0.25, 0.25, -0.85, 0],
   eyeGoose: [0.41, 0.42, -1.84, 0], eyeGoon: [0.37, 0.39, -1.1, 0],
   festDuck: [0.43, 0.44, -1.6, 0],
+  // Iceland (17)
+  isFox: [0.55, 0.55, -1.0, 0], isPuffin: [0.15, 0.15, -1.6, 0], isRam: [0.5, 0.5, -1.0, 0], isTern: [0.3, 0.3, -0.6, 0],
   lostCrab: [0.12, 0.12, -1.45, 0], lostMoth: [0.1, 0.11, -1.55, 0], lostBeagle: [0.4, 0.4, -1.12, 0]
 
 });

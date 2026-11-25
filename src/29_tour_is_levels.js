@@ -345,12 +345,70 @@ const L5 = { n: 5, name: 'The Night Troll', mapLabel: 'Troll\'s Cave', arch: 'la
     { id: 'hut', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isTrollHut' },
     { id: 'cave', gen: 'arena', role: 'arena', layout: 'cave', arenaW: 28, H: 18, theme: 'is_cave' }
   ] };
+/* ---------------- 17-6 The Hidden Folk (secret) ----------------
+   Behind the painted door on the ridge (17-1): the hidden folk's own country under the midnight sun. Their painted
+   planks (s) are only there while nobody looks at them: tap THROW to look back over your shoulder, then walk
+   backwards onto them. Their little gates (w) are the other way round: there while Brady looks at them, so he backs
+   through. The twist: white planks with a painted eye (e) are there only while he DOES look at them: switch your gaze
+   in mid-air. Teach over a shallow dip, test over the pits, twist with both kinds in a row. */
+const folk = (() => {
+  const G = mk(176, 18);
+  const ground = (x0, x1, top) => G.fill(x0, top == null ? 15 : top, x1, 17, '#');
+  ground(0, 14); ground(27, 36); ground(53, 58); ground(77, 86); ground(105, 110); ground(124, 132); ground(150, 175);
+  G.fill(15, 17, 26, 17, '#');
+  G.put(1, 14, 'E'); G.put(3, 14, '@'); G.put(6, 14, 'k'); G.put(10, 10, '?'); G.put(12, 14, 'i');
+  // teach 1: planks over a shallow dip
+  G.put(15, 15, 'n'); G.put(19, 15, 'n'); G.put(23, 15, 'n'); G.coins(16, 25, 11);
+  // teach 2: a folk gate across the path, then the dip's far side
+  G.put(28, 14, 'K'); G.put(32, 14, 'w'); G.put(35, 10, '*');
+  // test: planks over the pit, a gap between each (jump backwards), a fox on the island
+  G.put(37, 15, 'n'); G.put(42, 14, 'n'); G.put(47, 13, 'n'); G.put(50, 14, 'n'); G.put(56, 14, 'f'); G.coins(38, 51, 9);
+  G.put(59, 15, 'N'); G.put(63, 14, 'n'); G.put(68, 13, 'N'); G.put(72, 14, 'n'); G.put(66, 7, 'p');
+  G.put(79, 14, 'c'); G.put(82, 10, '?'); G.put(84, 14, 'w');
+  // the folk's house in a boulder (the secret room), its door beside a gate
+  G.put(85, 14, 'D'); G.put(86, 14, 'A');
+  // the twist: eye planks (look AT them) and folk planks (look AWAY) in turn, a tern
+  G.put(87, 15, 'e'); G.put(91, 14, 'n'); G.put(95, 13, 'e'); G.put(99, 14, 'n'); G.put(103, 15, 'e'); G.put(96, 7, 't'); G.coins(88, 104, 10);
+  // checkpoint 2, a gate, then the last stretch: longer, a gate on an island, P3 (risky) high over the pit
+  G.put(106, 14, 'c'); G.put(109, 14, 'w');
+  G.put(111, 15, 'n'); G.put(115, 14, 'e'); G.put(119, 13, 'n'); G.put(122, 14, 'e'); G.put(118, 7, 'R');
+  G.put(126, 14, 'w'); G.put(130, 14, 'f');
+  G.put(133, 15, 'e'); G.put(137, 14, 'n'); G.put(141, 13, 'e'); G.put(145, 14, 'N'); G.put(140, 6, 'p'); G.coins(134, 147, 9);
+  G.put(155, 14, 'i'); G.put(162, 14, 'G'); G.put(168, 14, 'j');
+  return G.rows();
+})();
+const FOLK = {
+  i: ['decor', 'isElfDoor'], j: ['decor', 'isHut'], A: ['anchor', 'houseBack'], E: ['piece', 'shyEye', {}],
+  k: ['spawn', 'sign', { text: 'THE HIDDEN FOLK\'S PLANKS ARE ONLY THERE WHEN NOBODY LOOKS. TAP THROW TO LOOK BACK, THEN WALK BACKWARDS ONTO THEM' }],
+  K: ['spawn', 'sign', { text: 'THEIR LITTLE GATES ARE THE OTHER WAY ROUND: THEY STOP YOU ONLY WHILE YOU LOOK AT THEM. BACK THROUGH!' }],
+  n: ['piece', 'shy', { w: 3 }], N: ['piece', 'shy', { w: 2 }], e: ['piece', 'shy', { w: 3, bold: true }], w: ['piece', 'shyWall', { h: 3 }],
+  f: ['enemy', 'isFox'], p: ['enemy', 'isPuffin'], t: ['enemy', 'isTern']
+};
+stamps.isFolk = { floor: 15, rows: folk, legend: FOLK, items: ['power', 'power'], gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'house@in', look: 'isFolkDoor' }] };
+// inside the boulder: the folk's parlour (nobody home: a kettle still steaming), P2, a hidden 1UP, the way out
+stamps.isFolkHouse = (() => {
+  const G = mk(28, 14);
+  G.fill(0, 0, 27, 1, 'B').fill(0, 12, 27, 13, '#').fill(0, 0, 0, 11, 'B').fill(27, 0, 27, 11, 'B');
+  G.put(2, 11, '@'); G.put(4, 11, 'D'); G.fill(8, 8, 12, 8, '-'); G.fill(15, 6, 19, 6, '-'); G.put(17, 4, '*'); G.put(10, 4, 'h'); G.coins(9, 11, 7); G.put(22, 11, 'V'); G.put(14, 11, 'i');
+  return { floor: 12, rows: G.rows(), gold: { '*': 'hidden' }, hidden: ['oneup'], doors: [{ to: 'folk@houseBack', look: 'isFolkDoor' }], legend: { V: ['decor', 'isHotPot'], i: ['decor', 'isElfDoor'] } };
+})();
+const L6 = { n: 6, name: 'The Hidden Folk', mapLabel: 'Hidden Folk', arch: 'shy', secret: true, theme: 'is_folk',
+  gimmick: 'The hidden folk\'s country: their planks exist only while you look away from them, their gates only while you look at them. Walk backwards',
+  hint: 'Tap THROW to look back over your shoulder: then the painted planks ahead of you appear. White planks with an eye want to be looked at',
+  postcard: 'I did not see any hidden folk. That is how you know they were there. ♥ C',
+  enemies: [['isFox', 2], ['isPuffin', 2], ['isTern', 1]],
+  mapCell: [0, 2], mapFrom: 0,
+  exits: { main: { to: 'node:17-2' } },
+  areas: [
+    { id: 'folk', gen: 'room', theme: 'is_folk', stamp: 'isFolk', bottomKill: true },
+    { id: 'house', gen: 'room', role: 'secret', theme: 'is_tube', stamp: 'isFolkHouse' }
+  ] };
 /* ---------------- placeholders for the levels still to come (replaced below as each is built) ---------------- */
 const stub = (n, name, arch, theme, extra) => Object.assign({ n, name, arch, theme, gimmick: name, hint: name, postcard: name + ' ♥ C', enemies: [['isFox', 1]],
   mapCell: [n % 3, 1], mapFrom: n - 2, areas: [{ id: 'a', gen: 'room', theme, stamp: 'isStub' }] }, extra || {});
 stamps.isStub = (() => { const G = mk(29, 12); G.fill(0, 0, 28, 0, '#').fill(0, 10, 28, 11, '#').fill(0, 0, 0, 9, '#').fill(28, 0, 28, 9, '#'); G.put(2, 9, '@..?..*....?..o.o..R...P..G'); return { floor: 10, rows: G.rows(), items: ['power', 'power'], gold: { '*': 'must', R: 'risky', P: 'high' } }; })();
 const levels = [L1, L2, L3, L4,
-  L5, stub(6, 'The Hidden Folk', 'shy', 'is_folk', { secret: true, mapFrom: 0, exits: { main: { to: 'node:17-2' } } })];
+  L5, L6];
 
 Tour.amend('is', { stamps, levels });
 Object.assign(TourLandscape.ARCH_LABEL, { aurora: 'AURORA', berg: 'BERGS', quake: 'QUAKE', basalt: 'PIPES', shy: 'SHY' });

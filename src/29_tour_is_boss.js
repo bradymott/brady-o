@@ -200,6 +200,6 @@ Tour.pieces['is.arena_cave'] = (st, o) => {
   B.decorAt('isTrollStone', x0 + 2, GY, 1);
   B.decorAt('isRock', x0 + Math.floor(w / 2) + 3, GY, 2);
 };
-Object.assign(ENTITY_TYPES, { isSunShield: IsSunShield, isStalactite: IsStalactite });
+Object.assign(ENTITY_TYPES, { isSunShield: IsSunShield });   // (stalactites are made by the troll only)
 Object.assign(Tour.isKit, { TROLL, trollBrain, IsSunShield });
 })();

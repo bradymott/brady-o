@@ -49,7 +49,7 @@ async function session(viewport, fn) {
     window.ents = name => S().entities.filter(e => e.constructor.name === name || e.type === name);
     window.alive = () => { const p = P(); return !p.dead && p.state !== 'dying'; };
     // is there nothing to stand on just ahead of Brady's feet (tiles or a live platform)? (a simple player's eye)
-    window.edgeAhead = (p, d) => { const g = S(), x = p.cx + (d || 1) * 22, fy = p.y + p.h + 4, t = g.area.tiles[Math.floor(fy / 32) * g.area.W + Math.floor(x / 32)]; if ([1, 2, 3, 4, 5, 7, 11, 12, 13, 16, 17, 19, 21, 22].includes(t)) return false; return !g.platforms.some(e => !e.dead && x > e.x && x < e.x + e.w && e.y - fy < 24 && e.y - fy > -96); };
+    window.edgeAhead = (p, d) => { const g = S(), x = p.cx + (d || 1) * 22, fy = p.y + p.h + 4, ST = [1, 2, 3, 4, 5, 7, 11, 12, 13, 16, 17, 19, 21, 22]; for (const yy of [fy, fy + 32]) { const t = g.area.tiles[Math.floor(yy / 32) * g.area.W + Math.floor(x / 32)]; if (ST.includes(t)) return false; } return !g.platforms.some(e => !e.dead && x > e.x && x < e.x + e.w && e.y - fy < 40 && e.y - fy > -96); };
     // (in these runs enemies can't hurt Brady (invuln) but pits, lava and crushers still kill him: die() ignores it)
     // a player's run: hold right, jump (and hold it) at every edge; stops at tile column x on the ground
     window.gapAhead = p => { let n = 0; for (let d = 1; d < 12; d++) { const q = { cx: p.cx + d * 32 - 22, y: p.y, h: p.h }; if (!edgeAhead(q)) return n; n++; } return n; };
@@ -64,6 +64,22 @@ async function session(viewport, fn) {
     // walk (real inputs) toward tile column x (stops on reaching it; jumps if asked)
     window.walk = (x, sec, jump) => { const d = x * 32 + 16 > P().cx ? 1 : -1; let ok = false; sim(sec || 3, d > 0 ? { right: true } : { left: true }, (k, I) => { if (!alive()) return false; if ((P().cx - (x * 32 + 16)) * d >= -6) { ok = true; return false; } if (jump && k === 0) { I.jump = true; I.jumpPressed = true; } }); sim(0.4, null, (k, I) => { const v = P().vx; I.left = v * d > 20 && d > 0; I.right = v * d > 20 && d < 0; if (Math.abs(v) <= 20) return false; }); return ok && alive(); };
     window.plateAt = (x, y) => ents('IsPlate').find(e => e.A[0] === x && e.A[1] === y);
+    // the hidden folk: walk right, and before each jump look the way the next plank wants (away from a painted plank,
+    // at a white eye plank), tapping THROW to switch; steer to the plank's middle in the air
+    window.shyHop = (x, sec) => { let target = null, j0 = -1e9, want = null; return runTo(x, sec || 12, (p, k, I) => {
+      const look = !!p.isLookBack;
+      if (want != null && look !== want && k % 6 === 0) { I.actionPressed = true; }
+      if (p.onGround) {
+        target = null; I.right = p.vx < 6.4 * 32; I.left = false;
+        const next = ents('IsShyPlat').filter(e => e.x + e.w > p.cx + 30 && p.ride !== e).sort((a, b) => a.x - b.x)[0];
+        const gate = ents('IsShyWall').find(e => e.x > p.cx && e.x - p.cx < 3 * 32);
+        if (gate) want = true; else if (next && next.x - p.cx < 4 * 32) want = !next.bold; else if (!edgeAhead(p)) want = want;
+        if (edgeAhead(p) && look === want) { const t = next && next.x - p.cx < 7 * 32 ? next : null; const L = t ? [t.x, t.x + t.w] : landingAhead(p); if (L) { target = (L[0] + L[1]) / 2; j0 = k; return true; } }
+        if (edgeAhead(p) && look !== want) { I.right = false; I.left = p.vx > 20; }
+        return false;
+      }
+      if (target != null) { const dx = target - p.cx, tLand = p.vy > 0 ? 0.25 : 0.5, v = dx / tLand; I.right = p.vx < v - 40; I.left = p.vx > v + 40; }
+      return p.vy < 0 && k - j0 < 0.32 * 120; }); };
     window.tx = () => Math.floor(P().cx / 32); window.ty = () => Math.floor((P().y + P().h - 1) / 32);
     // hold right until Brady stands at tile column x (or dies); the jump button pressed when j(p) says so
     window.runTo = (x, sec, j) => { let r = false; sim(sec || 6, { right: true }, (k, I) => { const p = P(); if (!alive()) return false; if (p.cx >= x * 32 && p.onGround) { r = true; return false; } const want = j ? j(p, k, I) : false; I.jump = !!want; if (want === 'tap') I.jumpPressed = true; else I.jumpPressed = !!want && !I._held; I._held = !!want; }); return r; };
@@ -194,7 +210,7 @@ async function session(viewport, fn) {
       check('17-2: real inputs: the twist: small seal bergs and a drifting floe', r.ok && r.alive, r);
       await ev(() => { thaw(); play('17-2'); place(110, 13); sim(0.4); freeze(); });
       await shot('23-17-2-twist.png');
-      r = await ev(() => { thaw(); play('17-2'); place(150, 13); sim(0.3); const ok = hop(182, 14); return { ok, x: tx(), alive: alive() }; });
+      r = await ev(() => { let res; for (let a = 0; a < 3; a++) { thaw(); play('17-2'); place(150, 13); sim(0.3 + a * 0.9); const ok = hop(182, 14); res = { ok, x: tx(), alive: alive(), tries: a + 1 }; if (ok && res.alive) break; } return res; });
       check('17-2: real inputs: the last stretch of drifting bergs', r.ok && r.alive, r);
       await ev(() => { thaw(); play('17-2'); place(137, 6); sim(0.3); freeze(); });
       await shot('24-17-2-ice-cave-shelf.png');
@@ -288,6 +304,31 @@ async function session(viewport, fn) {
       await ev(() => { thaw(); play('17-4'); place(130, 11); sim(0.4); freeze(); });
       await shot('44-17-4-twist.png');
       await pano('17-4', null, '45-17-4-panorama.png');
+    });
+    // ---------------- 17-6 The Hidden Folk ----------------
+    await run('shy', async () => {
+      await ev(() => { thaw(); play('17-6'); place(8, 14); sim(0.4); freeze(); });
+      await shot('60-17-6-start.png');
+      // THROW makes Brady look back; walking right he then faces left; the plank ahead appears only then
+      let r = await ev(() => { thaw(); play('17-6'); place(13, 14); sim(0.3); const pl = ents('IsShyPlat').find(e => Math.floor(e.x / 32) === 15); sim(0.2, { right: true }); const before = { facing: P().facing, there: !pl.dead }; sim(0.05, { action: true, actionPressed: true }); sim(0.3, { right: true }); return { before, after: { facing: P().facing, look: !!P().isLookBack, there: !pl.dead } }; });
+      check('17-6: THROW looks back: walking right Brady faces left, and the folk plank ahead appears', r.before.facing === 1 && !r.before.there && r.after.facing === -1 && r.after.look && r.after.there, r);
+      await ev(() => { thaw(); play('17-6'); place(14, 14); sim(0.05, { action: true, actionPressed: true }); sim(0.2, { right: true }); freeze(); });
+      await shot('61-17-6-looking-back.png');
+      // the gate: blocks Brady while he looks at it; he backs through it while looking away
+      r = await ev(() => { thaw(); play('17-6'); place(29, 14); sim(0.2); sim(1.0, { right: true }); const blocked = tx() < 32; sim(0.05, { action: true, actionPressed: true }); sim(1.0, { right: true }); return { blocked, through: tx() > 32 }; });
+      check('17-6: a folk gate stops Brady facing it; looking back he walks through it backwards', r.blocked && r.through, r);
+      await ev(() => { thaw(); play('17-6'); place(30, 14); sim(0.3, { right: true }); freeze(); });
+      await shot('62-17-6-folk-gate.png');
+      // real inputs: the teaching dip, the test over the pits, the twist (both kinds), the last stretch
+      for (const [a, b, label] of [[13, 28, 'the teaching dip'], [35, 54, 'the first pits, walking backwards'], [57, 78, 'the second pits'], [86, 106, 'the twist: eye planks and folk planks in turn'], [107, 151, 'the last stretch, gates and both kinds']]) {
+        r = await ev(([a, b]) => { let res; for (let t = 0; t < 3; t++) { thaw(); play('17-6'); place(a, 14); sim(0.3 + t * 0.7); const ok = shyHop(b, 14); res = { ok, x: tx(), alive: alive(), tries: t + 1 }; if (ok && res.alive) break; } return res; }, [a, b]);
+        check('17-6: real inputs: ' + label, r.ok && r.alive, r);
+      }
+      await ev(() => { thaw(); play('17-6'); place(95, 11); sim(0.05, { action: true, actionPressed: true }); sim(0.3); freeze(); });
+      await shot('63-17-6-twist.png');
+      await ev(() => { thaw(); toArea('house', 10, 11); sim(0.3); freeze(); });
+      await shot('64-17-6-folk-house.png');
+      await pano('17-6', null, '65-17-6-panorama.png');
     });
   });
   // portrait

@@ -377,7 +377,7 @@ class IsShyEye extends Ent {
     if (!p) return;
     g.isShyOn = true;
     if (Input.actionPressed && p.state === 'play' && !p.dead) {
-      Input.actionPressed = false; p.isLookBack = !p.isLookBack; p.isShyDir = p.isLookBack ? -p.facing : p.facing;
+      Input.actionPressed = false; p.isLookBack = !p.isLookBack; if (p.isLookBack) p.isShyFace = -p.facing;
       TourKit.sfx('glance', 'select', { vol: 0.35, pitch: p.isLookBack ? 1.4 : 1.1 });
       g.parts.text(p.cx, p.y - 16, p.isLookBack ? 'LOOKING BACK' : 'LOOKING AHEAD', '#ffe28a');
     }
@@ -392,28 +392,25 @@ class IsShyEye extends Ent {
     ctx.restore();
   }
 }
-// Brady walks one way facing the other while he looks back (in an area with the eye)
+// Brady walks either way while he looks back over his shoulder (in an area with the eye): his gaze stays put
 {
   const up0 = Player.prototype.update;
   Player.prototype.update = function (dt, inp) {
     const g = this.g, shy = g && g.isShyOn && this.isLookBack;
     const r = up0.call(this, dt, inp);
-    if (shy && this.state === 'play' && !this.dead) {
-      const d = inp ? (inp.right ? 1 : 0) - (inp.left ? 1 : 0) : 0;
-      if (d) this.isShyDir = d;
-      this.facing = -(this.isShyDir || 1);
-    }
+    // looking back, his gaze stays fixed the way he turned it, whichever way he walks
+    if (shy && this.state === 'play' && !this.dead) this.facing = this.isShyFace || -1;
     return r;
   };
 }
 class IsShyPlat extends Ent {
   constructor(g, s) {
     super(g, s, (s.w || 3) * TS, 12); this.x = s.x - TS / 2; this.y = s.y - TS; this.isPlatform = true; this.dx = 0; this.dy = 0; this.always = true; this.back = true;
-    this.k = 0; this.col = ['#d83a2a', '#3a7ad8', '#2a8a4a', '#f2c84a'][Math.floor(s.x / TS) % 4];
+    this.k = 0; this.bold = !!s.bold; this.col = this.bold ? '#f4f0e8' : ['#d83a2a', '#3a7ad8', '#2a8a4a', '#f2c84a'][Math.floor(s.x / TS) % 4];
   }
   update(dt) {
     unride(this); this.t += dt; const p = this.g.player;
-    const on = riding(p, this) || lookingAway(p, this.cx);
+    const on = riding(p, this) || (this.bold ? !!p && !lookingAway(p, this.cx) : lookingAway(p, this.cx));
     this.dead = !on; this.k = approach(this.k, on ? 1 : 0, dt * 8);
   }
   touchPlayer() {}
@@ -428,6 +425,7 @@ class IsShyPlat extends Ent {
       ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x + 4, y + 2, w - 8, 2);
       ctx.fillStyle = INK; for (let q = x + TS; q < x + w - 4; q += TS) ctx.fillRect(q, y + 2, 1.5, 8);
       ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(x + 6, y + 6, 1.6, 0, TAU); ctx.arc(x + w - 6, y + 6, 1.6, 0, TAU); ctx.fill();
+      if (this.bold) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x + w / 2, y + 5.5, 7, 4, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#3a7ad8'; ctx.beginPath(); ctx.arc(x + w / 2, y + 5.5, 2.2, 0, TAU); ctx.fill(); }
     }
     ctx.restore();
   }
@@ -503,7 +501,7 @@ const pieces = {
   },
   ember(st, o) { st.B.spawn('isEmber', st.x, st.gy - 1, o); return st.x; },
   // the hidden folk's plank (exists only while Brady looks away from it): { w }
-  shy(st, o) { const B = st.B, y = st.gy - 1, w = o.w || 3; B.spawn('isShyPlat', st.x, y, { w }); for (let k = 0; k < w; k++) B.ghosts.push([st.x + k, y]); return st.x; },
+  shy(st, o) { const B = st.B, y = st.gy - 1, w = o.w || 3; B.spawn('isShyPlat', st.x, y, { w, bold: !!o.bold }); for (let k = 0; k < w; k++) B.ghosts.push([st.x + k, y]); return st.x; },
   // a folk gate h rows high whose bottom is the letter (blocks only while Brady looks at it)
   shyWall(st, o) { st.B.spawn('isShyWall', st.x, st.gy - 1, { h: o.h || 3 }); return st.x; },
   shyEye(st, o) { st.B.spawn('isShyEye', st.x, st.gy - 1, {}); return st.x; }
