@@ -206,7 +206,7 @@ Tour.pieces['ke.arena_pool'] = (st, o) => {
 // the pool's span reaches the built area (the boss reads area.kePool)
 {
   const b0 = AreaBuilder.prototype.build;
-  AreaBuilder.prototype.build = function (props) { const A = b0.call(this, props); if (this.kePool) A.kePool = this.kePool; return A; };
+  AreaBuilder.prototype.build = function (props) { const A = b0.call(this, props); if (this.kePool) A.kePool = this.kePool; if (this.keWarren != null) { A.dig = true; A.surface = this.keWarren - 1; A.tunnelCol = '#4a1e0e'; } return A; };
 }
 Tour.keKit.KIB = KIB; Tour.keKit.kibBrain = brain;
 })();

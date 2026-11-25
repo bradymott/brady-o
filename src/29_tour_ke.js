@@ -80,6 +80,7 @@ const kopjeHard = {
     ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0.75, 0.75, TS - 1.5, TS - 1.5);
   }
 };
+const rootSemi = { style: 'root', c1: '#c8905a', c2: '#7a4a24', paint(ctx, part, x0, x1) { ctx.fillStyle = '#7a4a24'; rr(ctx, x0, 2, x1 - x0, 9, 4); ctx.fill(); ctx.fillStyle = '#c8905a'; rr(ctx, x0, 0, x1 - x0, 6, 3); ctx.fill(); ctx.strokeStyle = '#5a3418'; ctx.lineWidth = 1.4; for (let x = x0 + 4; x < x1; x += 9) { ctx.beginPath(); ctx.moveTo(x, 10); ctx.quadraticCurveTo(x + 2, 14, x - 1, 17); ctx.stroke(); } ctx.fillStyle = INK; ctx.fillRect(x0, 10, x1 - x0, 1.4); } };
 const savanna = (o) => Object.assign({
   ground: groundOf(GOLD, '#ffe08a', RED, RED2, '#f0c860'), semi: acaciaSemi('#7a9a3a', '#4a6a24'), brick: clayBrick, hard: kopjeHard,
   pillar: { c1: '#c8784a', c2: '#8a4422', cap: GOLD, style: 'column' }, accent: COL.a, tint: {}, bloom: 0.12, liquid: null
@@ -216,6 +217,7 @@ const themes = {
     fog: '#ffc890', decor: ['keReeds']
   }),
   ke_warren: savanna({
+    semi: rootSemi,
     name: 'Meerkat Manor', music: 'tour_ke_burrow', particles: 'dust', rays: '#fff0c0',
     ground: groundOf('#e0b050', '#ffe08a', '#b0482a', '#7a2a14', '#f0c860'),
     sky: sky.big, horizonGlow: '#ffe8b0', celestial: sun(0.3, 0.14, 30), stars: 0, cloudsDyn: true,
@@ -223,7 +225,7 @@ const themes = {
     fog: '#ffe2b0', decor: ['keGrass', 'keGrass', 'keSkullRock']
   }),
   ke_den: savanna({
-    semi: { style: 'root', c1: '#c8905a', c2: '#7a4a24', paint(ctx, part, x0, x1) { ctx.fillStyle = '#7a4a24'; rr(ctx, x0, 2, x1 - x0, 9, 4); ctx.fill(); ctx.fillStyle = '#c8905a'; rr(ctx, x0, 0, x1 - x0, 6, 3); ctx.fill(); ctx.strokeStyle = '#5a3418'; ctx.lineWidth = 1.4; for (let x = x0 + 4; x < x1; x += 9) { ctx.beginPath(); ctx.moveTo(x, 10); ctx.quadraticCurveTo(x + 2, 14, x - 1, 17); ctx.stroke(); } ctx.fillStyle = INK; ctx.fillRect(x0, 10, x1 - x0, 1.4); } },
+    semi: rootSemi,
     name: 'The Warren', music: 'tour_ke_burrow', particles: 'dust', rays: null,
     ground: groundOf('#8a3a1e', '#a84a28', '#7a2e16', '#5a1e0c', '#a85030'),
     sky: ['#3a1a10', '#5a2a18', '#6a3420'], horizonGlow: '#a85030', celestial: { type: 'none' }, stars: 0,
@@ -278,6 +280,8 @@ const decor = {
   keRoots(ctx, x, y, t) { ctx.save(); ctx.strokeStyle = '#c8905a'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(x - 8 + k * 8, y - 128); ctx.quadraticCurveTo(x - 4 + k * 8 + Math.sin(t + k) * 2, y - 110, x - 6 + k * 8, y - 96 + k * 6); ctx.stroke(); } ctx.restore(); },
   // a flamingo's mud nest: a little cone with an egg on top
   keMudNest(ctx, x, y) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = '#8a5a3a'; ctx.beginPath(); ctx.moveTo(x - 16, y); ctx.lineTo(x - 9, y - 16); ctx.lineTo(x + 9, y - 16); ctx.lineTo(x + 16, y); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff8ec'; ctx.beginPath(); ctx.ellipse(x, y - 20, 6, 5, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); },
+  // a heap of sleeping meerkat pups
+  kePups(ctx, x, y, t) { ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; for (const [ox, oy] of [[-12, 0], [0, -2], [12, 0], [-6, -10], [6, -10]]) { ctx.fillStyle = '#c8a070'; ctx.beginPath(); ctx.ellipse(x + ox, y - 6 + oy, 8, 6, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#3a2a1a'; ctx.beginPath(); ctx.ellipse(x + ox + 3, y - 7 + oy, 2, 1.2, 0, 0, TAU); ctx.fill(); } ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = TourBackstage.F8; ctx.textAlign = 'center'; const ph = (t * 0.4) % 1; ctx.globalAlpha = 1 - ph; ctx.fillText('z', x + 14, y - 22 - ph * 16); ctx.restore(); },
   kePebbles(ctx, x, y) { ctx.save(); ctx.fillStyle = '#c8a888'; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; for (const [ox, r] of [[-8, 3], [0, 4], [7, 2.5]]) { ctx.beginPath(); ctx.ellipse(x + ox, y - r, r * 1.3, r, 0, 0, TAU); ctx.fill(); ctx.stroke(); } ctx.restore(); },
   // a big flat-topped acacia growing out of the ground: the trunk and branches up to its crown (the crown itself is
   // the one-way tiles laid by the piece: { w } in the decor's seed is the crown's row count above the ground)
@@ -1312,6 +1316,34 @@ const pieces = {
   },
 
   /* ---- 15-6 the warren ---- */
+  /* the warren: n columns of plain over a tunnel. The crust is 3 rows; the tunnel 4 rows tall under it.
+     { n, mouths: [dx] (a burrow mouth: a hole in the crust, a root ledge just under it and another to the side: drop
+       in and step off; climb out the same way),
+       rocks: [[dx, w]] (rock plugs that close the tunnel), thorns: [[dx, w, h]] (thickets that close the surface),
+       enemies: [[kind, dx]] (in the tunnel), sentries: [dx], gold: [[dx, 'top' | 'tunnel', kind]], coins: true } */
+  warren(st, o) {
+    const B = st.B, x = st.x, n = o.n || 20, gy = st.gy, t0 = gy + 4, t1 = gy + 7;
+    st.floor(x, x + n - 1);
+    B.keWarren = gy;
+    for (let c = x; c < x + n; c++) for (let y = t0; y <= t1; y++) B.set(c, y, T.EMPTY);
+    for (const dx of o.mouths || []) {
+      const c = x + dx;
+      for (let cc = c; cc <= c + 3; cc++) for (let y = gy + 1; y < t0; y++) B.set(cc, y, T.EMPTY);
+      B.set(c, gy, T.EMPTY); B.set(c + 1, gy, T.EMPTY);
+      B.set(c, gy + 3, T.SEMI); B.set(c + 1, gy + 3, T.SEMI);
+      B.set(c + 2, gy + 5, T.SEMI); B.set(c + 3, gy + 5, T.SEMI);
+      B.decorAt('keBurrowMound', c + 0.5, gy, 0);
+    }
+    for (const [dx, w] of o.rocks || []) B.fill(x + dx, t0, x + dx + w - 1, t1, T.HARD);
+    for (const [dx, w, h] of o.thorns || []) { B.fill(x + dx, gy - h, x + dx + w - 1, gy - 1, T.HARD); B.spawn('keThicket', x + dx, gy - 1, { w, h }); }
+    for (const [kind, dx] of o.enemies || []) st.enemy(kind, x + dx, t1 + 1);
+    for (const dx of o.sentries || []) { B.decorAt('keBurrowMound', x + dx, gy, 0); B.spawn('keSentry', x + dx, gy - 1, { surf: gy }); }
+    for (const [dx, where, kind] of o.gold || []) st.gold(x + dx, where === 'tunnel' ? t1 - 1 : gy - 4, kind);
+    if (o.coins !== false) { st.coins(x + 2, x + n - 3, t1 - 1); }
+    if (o.box) st.block(x + o.box[0], o.box[1] === 'tunnel' ? t0 : gy - 4, o.box[2] || 'power');
+    st.dress(x, x + n - 1, 0.08);
+    return x + n;
+  },
   sentry(st, o) { const x = st.x; st.floor(x, x + 3); st.decor('keBurrowMound', x + 1, st.gy, 0); st.B.spawn('keSentry', x + 1, st.gy - 1, { surf: st.gy }); return x + 4; }
 };
 

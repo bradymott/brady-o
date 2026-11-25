@@ -76,13 +76,13 @@ async function session(browser, viewport, fn) {
   const pin = () => page.evaluate(() => { const G = window.BRADY.Game; G.slowT = -1e9; G.lowered = 0; G.dprCap = null; G.quality = 1; G.resize(); });
   const shot = async name => { await pin(); if (checksOnly) return; await page.waitForTimeout(250); await page.screenshot({ path: path.join(out, name) }); };
   // a panorama of the current area: views stepped across it, stitched side by side in the page
-  const pano = async (name, rows) => {
+  const pano = async (name, camY) => {
     if (checksOnly) return;
     await pin();
     const info = await page.evaluate(() => { const g = S(); freeze(); return { W: g.area.W * 32, vw: window.BRADY.Game.viewW, cssW: window.BRADY.Game.cssW }; });
     const bufs = [];
     for (let x = 0; x < info.W; x += info.vw) {
-      await page.evaluate(x => { thaw(); const g = S(); viewAt(x, Math.max(0, g.area.H * 32 - window.BRADY.Game.viewH)); const p = P(); if (p) { p.x = -9999; } freeze(); }, x);
+      await page.evaluate(([x, camY]) => { thaw(); const g = S(); viewAt(x, camY != null ? camY : Math.max(0, g.area.H * 32 - window.BRADY.Game.viewH)); const p = P(); if (p) { p.x = -9999; } freeze(); }, [x, camY]);
       await page.waitForTimeout(120);
       bufs.push((await page.screenshot({ type: 'jpeg', quality: 80 })).toString('base64'));
     }
@@ -340,6 +340,58 @@ async function session(browser, viewport, fn) {
       await shot('44-15-4-cool-spring.png');
       await page.evaluate(() => { thaw(); toArea('plain'); });
       await pano('49-15-4-panorama.jpg');
+    });
+    /* ---------- 15-6 Meerkat Manor ---------- */
+    await run('burrow', async () => {
+      await page.evaluate(() => { fresh(); play('15-6'); place(14, 7); sim(0.3); freeze(); });
+      await shot('60-15-6-start.png');
+      // a sentry sees Brady up top: it whistles, a shadow marks his spot, then the eagle stoops through it
+      const r = await page.evaluate(() => {
+        thaw(); const g = S(), p = P(); p.invuln = 0; p.setPower(1, true);
+        const se = ents('KeSentry').sort((a, b) => a.x - b.x)[0];
+        place(Math.floor(se.cx / 32) - 5, 7); sim(0.05);
+        const whistled = until(() => ents('KeEagle').length > 0, 2); const e = ents('KeEagle')[0]; const t0 = g.t;
+        const stoop = until(() => e.state === 'stoop', 2); const tell = g.t - t0;
+        let hurt = false; for (let k = 0; k < 90; k++) { sim(1 / 120); if (p.invuln > 0.3) hurt = true; }
+        return { whistled, stoop, tell: Math.round(tell * 100) / 100, hurtStandingStill: hurt };
+      });
+      check('15-6: a sentry whistles at Brady above ground; the eagle\'s shadow is a tell of a second, then it stoops on the spot', r.whistled && r.stoop && r.tell >= 0.5 && r.hurtStandingStill, r);
+      const r2 = await page.evaluate(() => {
+        const g = S(), p = P(); p.invuln = 0;
+        for (const e of ents('KeEagle')) e.remove = true; sim(3.5);
+        const se = ents('KeSentry').sort((a, b) => a.x - b.x)[0];
+        place(Math.floor(se.cx / 32) - 5, 7); sim(0.05);
+        until(() => ents('KeEagle').length > 0, 2); const e = ents('KeEagle')[0];
+        sim(0.55);   // the shadow locks; step out of it
+        let hurt = false; for (let k = 0; k < 150; k++) { sim(1 / 120, { left: true }); if (p.invuln > 0.3) hurt = true; }
+        return { hurt, eagle: !!e };
+      });
+      check('15-6: stepping out of the shadow once it locks dodges the eagle', r2.eagle && !r2.hurt, r2);
+      await page.evaluate(() => { const g = S(), p = P(); for (const e of ents('KeEagle')) e.remove = true; sim(3.4); const se = ents('KeSentry').sort((a, b) => a.x - b.x)[0]; place(Math.floor(se.cx / 32) - 4, 7); p.invuln = 99; until(() => ents('KeEagle').length > 0, 2); sim(0.9); p.invuln = 0; freeze(); });
+      await shot('61-15-6-eagle-shadow.png');
+      // down a burrow: walk into the hole, step off the root ledge into the tunnel; underground the sentries can't see him
+      const r3 = await page.evaluate(() => {
+        thaw(); const g = S(), p = P(); p.invuln = 99; for (const e of ents('KeEagle')) e.remove = true;
+        const A = g.area, T = window.BRADY.T; let hx = 0; for (let x = 12; x < A.W && !hx; x++) if (A.tiles[8 * A.W + x] === T.EMPTY && A.tiles[9 * A.W + x] === T.EMPTY) hx = x;
+        place(hx - 3, 7); sim(0.1);
+        const down = until(() => (p.y + p.h) / 32 > 15.5 && p.onGround, 3, { right: true });
+        // underground, walk under the sentry: no whistle
+        let eagles = 0; for (let k = 0; k < 120; k++) { sim(1 / 120, { right: true }); eagles = Math.max(eagles, ents('KeEagle').length); }
+        // climb out of the next mouth: ledge beside it, the ledge under the hole, up through the hole
+        let hx2 = 0; for (let x = Math.floor(p.cx / 32); x < A.W && !hx2; x++) if (A.tiles[8 * A.W + x] === T.EMPTY && A.tiles[9 * A.W + x] === T.EMPTY) hx2 = x;
+        place(hx2 + 2, 15); sim(0.2);
+        const s1 = hopTo({ cx: (hx2 + 3) * 32 }, 50), y1 = (p.y + p.h) / 32;
+        const s2 = hopTo({ cx: (hx2 + 1) * 32 }, 50), y2 = (p.y + p.h) / 32;
+        const s3 = hopTo({ cx: (hx2 - 1.5) * 32 }, 50);
+        return { hx, down, eagles, y1, y2, out: (p.y + p.h) / 32 <= 8.05 && alive() };
+      });
+      check('15-6: Brady drops down a burrow into the tunnel; underground no sentry sees him; he climbs out at the next mouth', r3.down && r3.eagles === 0 && r3.out, r3);
+      await page.evaluate(() => { const g = S(), A = g.area, T = window.BRADY.T; let hx = 0; for (let x = 12; x < A.W && !hx; x++) if (A.tiles[8 * A.W + x] === T.EMPTY && A.tiles[9 * A.W + x] === T.EMPTY) hx = x; place(hx + 6, 15); sim(0.3); freeze(); });
+      await shot('62-15-6-tunnel.png');
+      await page.evaluate(() => { thaw(); toArea('nursery'); place(8, 11); sim(0.4); freeze(); });
+      await shot('63-15-6-nursery.png');
+      await page.evaluate(() => { thaw(); toArea('manor'); });
+      await pano('69-15-6-panorama.jpg', 4 * 32);
     });
   });
   await session(browser, { width: 390, height: 844 }, async (page, shot, run) => {

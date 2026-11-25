@@ -343,7 +343,60 @@ const L5 = { n: 5, name: 'Big Kiboko', mapLabel: 'Waterhole', arch: 'lair', them
     { id: 'arena', gen: 'arena', role: 'arena', layout: 'pool', arenaW: 32, H: 18, roof: false, theme: 'ke_stage' }
   ] };
 
-Tour.amend('ke', { stamps, levels: [L1, L2, L3, L4, L5] });
+/* ---------------- 15-6 Meerkat Manor (secret) ---------------- */
+// the nursery chamber: meerkat pups asleep in a heap (decor), a hidden postcard, a hidden 1UP
+stamps.keNursery = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#........................*...#',
+    '#......................----..#',
+    '#............................#',
+    '#.................-----......#',
+    '#..h.........................#',
+    '#..........-----.............#',
+    '#............................#',
+    '#....-----...................#',
+    '#............................#',
+    '#.@...D.......p.......p......#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'manor@nurseryBack', look: 'keBurrow' }],
+  legend: { p: ['decor', 'kePups'] }
+};
+const L6 = { n: 6, name: 'Meerkat Manor', mapLabel: 'Meerkats', arch: 'burrow', secret: true, theme: 'ke_warren',
+  gimmick: 'A meerkat warren: sentries whistle when they see you above ground and an eagle stoops on the spot. Drop down the burrows and run the tunnels; climb out where rocks block the way',
+  hint: 'When a sentry whistles, a shadow marks the spot: get out of it, or get underground. Drop down a burrow and climb the root ledges back out',
+  postcard: 'The meerkats took turns standing guard over me. I have never felt so safe. Or so watched. ♥ C',
+  enemies: [['keBeetle', 2], ['keWarthog', 2]],
+  mapCell: [2, 0], mapFrom: 1,
+  exits: { main: { to: 'node:15-3' } },
+  areas: [
+    { id: 'manor', gen: 'strip', W: 230, H: 20, GY: 8,
+      script: [
+        ['box', { item: 'power' }],
+        ['tip', { text: 'MEERKAT MANOR! SENTRIES WHISTLE WHEN THEY SEE YOU UP TOP, AND THE EAGLE COMES. DROP DOWN A BURROW AND RUN THE TUNNELS' }],
+        ['plain', { n: 4 }],
+        // ① one sentry; a burrow to duck into, a way out again
+        ['warren', { n: 26, mouths: [4, 18], sentries: [12], gold: [[11, 'tunnel', 'must']], enemies: [['keBeetle', 10]] }],
+        ['plain', { n: 3 }],
+        // ② thorns close the top: go under; a rock plug closes the tunnel: come up between the sentries
+        ['warren', { n: 34, mouths: [2, 14, 27], thorns: [[8, 2, 6]], rocks: [[20, 2]], sentries: [17, 24], enemies: [['keWarthog', 6]], box: [21, 'top', 'power'] }],
+        'cp',
+        ['burrowDoor', { to: 'nursery@in', back: 'nurseryBack', sign: true }],
+        // ③ the long run: thorns and rocks alternate; three sentries watch the gaps
+        ['warren', { n: 48, mouths: [2, 12, 24, 36], thorns: [[7, 2, 6], [30, 2, 7]], rocks: [[17, 2], [41, 2]], sentries: [14, 22, 40], enemies: [['keBeetle', 8], ['keWarthog', 28]], gold: [[20, 'top', 'risky']] }],
+        'cp',
+        ['warren', { n: 30, mouths: [2, 16], thorns: [[9, 3, 6]], rocks: [[22, 2]], sentries: [20, 26], enemies: [['keWarthog', 12]] }],
+        ['plain', { n: 4 }],
+        ['end', { exit: 'main' }]
+      ] },
+    { id: 'nursery', gen: 'room', role: 'secret', theme: 'ke_den', stamp: 'keNursery' }
+  ] };
+
+Tour.amend('ke', { stamps, levels: [L1, L2, L3, L4, L5, L6] });
 
 /* ---------------- the land's map: the savannah under a big sky ---------------- */
 // the route: the airstrip by the great mountain, down the migration river, through the acacia grove (a meerkat
