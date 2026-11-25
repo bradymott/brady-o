@@ -589,7 +589,7 @@ P('web', (st, o) => {
   for (let k = 0; k < w; k++) { B.set(x0 + k, y, T.SEMI); B.setSurf(x0 + k, y, SURF.BOUNCE); B.setHide(x0 + k, y, 1); }
   B.spawn('auWeb', x0, y - 1, { id, x0, x1: x0 + w - 1, ty: y });
   (B.auWebs || (B.auWebs = [])).push({ id, x0, x1: x0 + w - 1, y });
-  if (o.spider) { const sx = o.spider === 'left' ? x0 : x0 + w - 1; B.spawn('auHuntsman', sx, y - 1, { web: id, ty: y, dir: o.spider === 'left' ? 1 : -1, reach: o.reach || 1 }); }
+  for (const side of o.spider === 'both' ? ['left', 'right'] : o.spider ? [o.spider] : []) { const sx = side === 'left' ? x0 : x0 + w - 1; B.spawn('auHuntsman', sx, y - 1, { web: id, ty: y, dir: side === 'left' ? 1 : -1, reach: o.reach || 1 }); }
   return st.x;
 });
 // a web ladder: one-way strands every 2 rows, h rows up from the letter's row, w wide (quiet: no spider listens)

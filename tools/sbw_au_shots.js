@@ -197,6 +197,38 @@ async function session(viewport, fn) {
       await page.evaluate(() => { thaw(); play('16-3'); P().invuln = 999; place(4, 11); sim(0.2); });
       await pano('39-16-3-panorama.png');
     });
+
+    // 16-4 The Canopy: webs, tremors, the huntsman
+    await run('web', async () => {
+      await page.evaluate(() => { thaw(); play('16-4'); P().invuln = 999; place(14, 15); sim(0.4); freeze(); });
+      await shot('40-16-4-start.png');
+      // the web is a trampoline: just landing is a little hop, holding jump a big one
+      let r = await page.evaluate(() => { thaw(); const p = P(); const drop = j => { place(20, 12); p.vy = 2 * 32; let minVy = 0; for (let k = 0; k < 90; k++) { sim(1 / 120, j ? { jump: true } : null); minVy = Math.min(minVy, p.vy); } return Math.round(minVy / 32); }; return { soft: drop(false), held: drop(true) }; });
+      check('16-4: a web is a trampoline (hold JUMP to go high)', r.soft < -8 && r.held < -20, r);
+      const spider = async (x, webX, opts) => page.evaluate(([x, webX, o]) => {
+        const g = S(), p = P(); place(x, 9); p.y = 9 * 32; p.vy = 4 * 32; sim(0.02);
+        const sp = g.entities.find(e => e.constructor.name === 'AuHuntsman' && Math.abs(e.homeX / 32 - webX) < 2);
+        sp.state = 'wait'; sp.x = sp.homeX;
+        for (let k = 0; k < 160; k++) { sim(1 / 120, o.down ? { down: true } : null); if (o.down && p.onGround) break; }
+        const res = { state: sp.state, ground: p.onGround, d: Math.round(Math.abs(sp.cx - p.cx) / 32) };
+        if (o.down) sim(0.6, { down: true });
+        res.after = sp.state; return res;
+      }, [x, webX, opts || {}]);
+      r = await spider(51, 60);
+      check('16-4: a bounce far from a heavy sleeper lets him sleep', r.state === 'wait' && r.after === 'wait', r);
+      r = await spider(80, 84);
+      check('16-4: a bounce near the huntsman: he notices and comes over', r.state === 'notice' || r.state === 'hunt', r);
+      await page.evaluate(() => { sim(0.9); freeze(); }); await shot('41-16-4-huntsman-comes.png');
+      r = await page.evaluate(() => { thaw(); const g = S(), p = P(), sp = g.entities.find(e => e.constructor.name === 'AuHuntsman' && Math.abs(e.homeX / 32 - 84) < 2); sp.hear(sp.cx - 3 * 32, 1); sim(0.9); p.x = sp.cx - p.w / 2; p.y = sp.y - p.h - 30; p.vy = 6 * 32; p.prevBottom = p.y + p.h; let st = sp.state, mv = 0; for (let k = 0; k < 30 && st !== 'home'; k++) { sim(1 / 120); st = sp.state; mv = Math.min(mv, p.vy); } return { state: st, vy: Math.round(mv / 32) }; });
+      check('16-4: a stomp on the hunting huntsman sends him home', r.state === 'home', r);
+      r = await spider(80, 84, { down: true });
+      check('16-4: holding DOWN as you land clings quietly: no bounce, he sleeps on', r.ground && r.after === 'wait', r);
+      await page.evaluate(() => freeze()); await shot('42-16-4-cling.png');
+      await page.evaluate(() => { thaw(); place(119, 8); sim(0.3); freeze(); }); await shot('43-16-4-twist-two-huntsmen.png');
+      await page.evaluate(() => { thaw(); toArea('hollow', 10, 11); sim(0.3); freeze(); }); await shot('44-16-4-tree-hollow.png');
+      await page.evaluate(() => { thaw(); play('16-4'); P().invuln = 999; place(4, 15); sim(0.2); });
+      await pano('49-16-4-panorama.png');
+    });
   });
   await session({ width: 390, height: 844 }, async (page, shot, run) => {
     await run('p-pouch', async () => { await page.evaluate(() => { fresh(); play('16-1'); place(60, 14); sim(0.3); sim(0.02, { jump: true, jumpPressed: true }); sim(0.6, { jump: true, right: true }); freeze(); }); await shot('90-portrait-16-1.png'); });

@@ -251,12 +251,85 @@ const L3 = { n: 3, name: 'Platypus Creek', arch: 'sonar', theme: 'au_creek',
     { id: 'cave', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auGlowCave' }
   ] };
 
+
+/* ---------------- 16-4 The Canopy ----------------
+   High in the gums at twilight; the forest floor is far below (a fall is a life). Limbs (ground) are joined by giant
+   webs, which are trampolines (a little hop if you just land, a huge one if you hold JUMP), and by web ladders. Every
+   bounce sends a tremor along the strand: it runs about 12 tiles (15 for a big bounce, 3 if you hold DOWN as you land
+   and cling). A tremor that reaches a huntsman brings him scuttling over to see who it was; bump into him and it
+   hurts, bounce on his back and he goes home in a huff. Teach (a web with nobody on it, a ladder, then a web whose
+   huntsman is a heavy sleeper), test (webs where he will come: bounce high and away, or cling), twist (one long web
+   with a huntsman at each end while kookaburras dive). */
+const canopyRows = (() => {
+  const m = mk(200, 22);
+  const limb = (x0, x1, y) => m.fill(x0, y, x1, y + 1, '#');
+  m.fill(0, 0, 1, 21, 'H');
+  limb(2, 16, 16); m.put(3, 15, '@').put(6, 15, 'k').put(10, 12, 'p').put(13, 15, 'l');
+  m.put(17, 16, 'A'); m.coins(18, 23, 9);
+  limb(25, 34, 16); m.put(28, 15, 'l');
+  m.put(35, 16, 'u'); limb(37, 48, 8); m.put(44, 4, 'p'); m.coins(39, 43, 5);
+  m.put(49, 10, 'a'); m.put(55, 3, '*');
+  limb(61, 70, 8); m.put(66, 7, 'c');
+  m.put(71, 13, 'd'); m.coins(74, 82, 7);
+  limb(87, 95, 6); m.put(91, 5, 'D'); m.put(92, 3, 'q'); m.put(94, 5, 'x');
+  m.put(96, 11, 'E'); m.put(102, 4, 'e'); m.put(104, 3, 'R');
+  limb(110, 118, 9); m.put(116, 8, 'c'); m.put(113, 8, 'l');
+  m.put(120, 12, 'f'); m.put(124, 5, 'e'); m.put(131, 5, 'e'); m.coins(122, 132, 8);
+  limb(136, 150, 9); m.put(147, 8, 'l');
+  m.put(151, 13, 'J'); m.put(158, 6, 'e');
+  m.put(163, 13, 'K'); limb(165, 199, 5); m.put(180, 4, 'G'); m.put(170, 4, 'l');
+  return m.rows();
+})();
+const CANOPY = {
+  k: ['spawn', 'sign', { text: 'THE CANOPY. WEBS ARE TRAMPOLINES: HOLD JUMP TO GO HIGH. EVERY BOUNCE SHAKES THE WEB, AND THE HUNTSMAN COMES TO SEE WHO IT IS! HOLD DOWN AS YOU LAND TO CLING QUIETLY' }],
+  p: ['piece', 'box', { item: 'power' }], l: ['decor', 'auGumLeaves'], q: ['decor', 'auGlow'], x: ['anchor', 'hollowBack'], e: ['enemy', 'auKooka'],
+  A: ['piece', 'web', { w: 8 }], u: ['piece', 'webLadder', { w: 2, h: 8 }],
+  a: ['piece', 'web', { w: 12, spider: 'right', reach: 0.55 }],
+  d: ['piece', 'web', { w: 15, spider: 'right', reach: 0.85 }],
+  E: ['piece', 'web', { w: 14, spider: 'left', reach: 1 }],
+  f: ['piece', 'web', { w: 14, spider: 'both', reach: 1 }], J: ['piece', 'web', { w: 12, spider: 'right', reach: 1 }],
+  K: ['piece', 'webLadder', { w: 2, h: 8 }]
+};
+stamps.auCanopy = { floor: 16, rows: canopyRows, legend: CANOPY, gold: { '*': 'must', R: 'risky' }, doors: [{ to: 'hollow@in', look: 'tourDoorHidden' }] };
+// the tree hollow: a possum's flat (the possum is out), P2 on the top shelf, a hidden water bottle
+stamps.auHollow = {
+  floor: 12,
+  rows: [
+    '##############################',
+    '#............................#',
+    '#...................*........#',
+    '#.................-----......#',
+    '#..o.o.o.....................#',
+    '#.-------.........h..........#',
+    '#............................#',
+    '#..........------............#',
+    '#............................#',
+    '#....................------..#',
+    '#............................#',
+    '#.@...D.....q.........q......#',
+    '##############################',
+    '##############################'],
+  gold: { '*': 'hidden' }, hidden: ['oneup'],
+  doors: [{ to: 'canopy@hollowBack', look: 'tourDoorHidden' }],
+  legend: { q: ['decor', 'auLantern'] }
+};
+const L4 = { n: 4, name: 'The Canopy', arch: 'web', theme: 'au_canopy',
+  gimmick: 'Giant webs strung through the gums are trampolines and ladders, but every bounce sends a tremor down the strand, and a tremor that reaches the huntsman brings him over',
+  hint: 'Hold JUMP on a web to bounce high. Bounce far from the huntsman, or hold DOWN as you land to cling quietly. If he comes, bounce on his back!',
+  postcard: 'A huntsman spider the size of a dinner plate! He waved. With all eight. ♥ C',
+  enemies: [['auKooka', 3]],
+  mapCell: [2, 1], mapFrom: 2,
+  exits: { main: { to: '16-5' } },
+  areas: [
+    { id: 'canopy', gen: 'room', theme: 'au_canopy', stamp: 'auCanopy', camera: 'free', au: { web: true } },
+    { id: 'hollow', gen: 'room', role: 'secret', theme: 'au_burrow', stamp: 'auHollow' }
+  ] };
+
 /* ---------------- placeholders (replaced level by level) ---------------- */
 const simpleRoom = (id, extra) => ({ floor: 12, rows: ['############################'].concat(Array.from({ length: 11 }, (_, k) => '#' + (k === 10 ? '.@...........' + (extra || '.') + '..........G.' : '.'.repeat(26)) + '#')).concat(['############################', '############################']) });
 stamps.auTmp = simpleRoom('tmp');
 const tmp = (n, name, arch, theme, extra) => ({ n, name, arch, theme, gimmick: name, hint: name, postcard: name, enemies: [['auYabby', 1]], mapCell: [n % 3, Math.floor(n / 3)], mapFrom: n - 2,
   areas: [{ id: 'a', gen: 'room', stamp: 'auTmp' }], ...(extra || {}) });
-const L4 = tmp(4, 'The Canopy', 'web', 'au_canopy');
 const L5 = { n: 5, name: 'The Drop Bear', mapLabel: 'Drop Bear', arch: 'lair', theme: 'au_night', boss: 'au_dropbear',
   gimmick: 'A gum tree at night. The drop bear is real, and he drops. Watch for the shadow',
   hint: 'When his shadow stops and darkens, MOVE. If he misses, he lands winded: stomp him!',
@@ -270,7 +343,6 @@ const L5 = { n: 5, name: 'The Drop Bear', mapLabel: 'Drop Bear', arch: 'lair', t
     { id: 'arena', gen: 'arena', role: 'arena', layout: 'gum', arenaW: 26, H: 18, roof: false }
   ] };
 const L6 = Object.assign(tmp(6, 'The Big Things', 'giant', 'au_big'), { secret: true, mapCell: [2, 2], mapFrom: 0, exits: { main: { to: 'node:16-2' } } });
-for (const L of [L4]) L.exits = { main: { to: '16-' + (L.n + 1) } };
 
 Tour.amend('au', { stamps, map: { fort: 'arena', start: [0, 0] }, levels: [L1, L2, L3, L4, L5, L6] });
 })();
