@@ -1321,6 +1321,7 @@ const levels = [
         ['caimans', { n: 3 }],
         'cp',
         ['napBox', {}],   // the backup Nap Box at the caiman checkpoint (the near side of the Sloth Bridge)
+        ['itemBlock', { item: 'star', y: 4 }],   // a star for the leapers and the sloth grove (Brady: stars where they make things easier)
         ['leapers', { span: 9 }],
         ['slothGrove', { n: 3 }],
         ['step', { h: -2 }],

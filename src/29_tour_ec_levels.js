@@ -959,6 +959,7 @@ const L6 = { n: 6, name: 'Galápagos Snorkel', arch: 'dive', secret: true, theme
         ['postcard', { kind: 'risky', dx: -5, dy: -9 }],
         ['sunkenBottle', { n: 1 }],
         'cp',
+        ['itemBlock', { item: 'star', y: 4 }],   // a star in the open for the second half (Brady: the grotto's star could not leave the grotto)
         'puffers', 'surge',
         ['penguins', { w: 10, dir: -1 }],
         'arches',

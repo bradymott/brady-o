@@ -1195,7 +1195,8 @@ class Play {
     // picks
     pill(left + 82, hy, 78, 28);
     ctx.save(); ctx.translate(left + 98, hy + 14); ctx.scale(0.8, 0.8); Sprites.pick(ctx, 0, 0, 0.45, 1); ctx.restore();   // a still coin, face-on (frame 4 of the 10 fps spin clips is the widest)
-    ctx.fillStyle = '#ffd84a'; ctx.fillText('×' + String(this.picks).padStart(2, '0'), left + 112, hy + 15);
+    ctx.fillStyle = '#ffd84a'; if (this.picks >= 1000) ctx.font = `${this.picks >= 10000 ? 10 : 12}px ${FONT_DISPLAY}`;   // the running total (29_tour_zz_carry.js) fits the pill
+    ctx.fillText('×' + String(this.picks).padStart(2, '0'), left + 112, hy + 15); ctx.font = `14px ${FONT_DISPLAY}`;
     // gold records
     const gx = left + 168;
     pill(gx, hy, 76, 28);

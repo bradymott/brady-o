@@ -886,6 +886,7 @@ const levels = [
           'plankton',
           'morays',
           'cp',
+          ['niche', { item: 'star' }],   // a star for the moray shafts and the anglers (Brady: stars where they make things easier)
           // ③ the manta run through moray shafts as the light fades
           ['manta', { w: 18, gold: 'risky' }],
           'morays',
