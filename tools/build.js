@@ -27,7 +27,7 @@ const isKart = f => /^3[01]_kart/.test(f) || /^43_cart_/.test(f);
 const APPS = {
   burningman: {
     dir: 'burning-man', name: 'Brady Goes to Burning Man', short: 'Burning Man',
-    desc: 'A 3D open-world adventure: Brady goes to Burning Man for the first time, becomes a burner, and rescues Chinka from the Man.',
+    desc: 'A 3D open-world adventure: Brady goes to Burning Man for the first time, becomes a burner, and rescues Princess Papaya from the Man.',
     color: '#0d0716', saveKey: 'bgtbm-save-v1',
     // home-screen icons kept in the repo (tools/make_burns_icon.js), so the site no longer depends on gh-pages copies
     iconDir: path.join(root, 'assets', 'icons', 'burning-man'),
@@ -55,7 +55,7 @@ const APPS = {
   }
 };
 // 2D-game modules the other apps still use (UI kit, title scene, portraits…). Trim as the apps separate.
-// the Burning Man app is engine-only (the Chinka photo is rendered from the 3D model now), plus Super Art Kart's car
+// the Burning Man app is engine-only (the Princess Papaya photo is rendered from the 3D model now), plus Super Art Kart's car
 // rig, part animations and glb loader (read only, owned by the Art Kart agent) for the city's art cars
 const BURNS_DEPS = ['43_cart_a_data.js', '43_cart_b_models.js', '43_cart_bb_glb.js'];
 const KART_DEPS = [];   // Art Cart is engine-only now (the shared boot code guards its 2D references)
