@@ -618,6 +618,47 @@ class KeShaft extends Ent {
   }
 }
 
+/* the land's one secret tell: a little puff of dust (or, over the cool gully, mist) drifting up now and then where
+   a hidden way is. Never anywhere else. */
+class KePuff extends Ent {
+  constructor(g, s) { super(g, s, TS, TS); this.friendly = true; this.back = true; this.mist = !!s.mist; this.low = !!s.low; this.ph = Math.random() * 3; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x = this.cx, y = this.low ? this.y + this.h + TS * 0.5 : this.y + this.h - 6;
+    ctx.save();
+    for (let k = 0; k < 3; k++) {
+      const ph = ((this.t + this.ph) * 0.45 + k / 3) % 1; if (ph > 0.75) continue;
+      const a = (1 - ph / 0.75) * (this.mist ? 0.55 : 0.6);
+      ctx.fillStyle = this.mist ? `rgba(230,248,255,${a})` : `rgba(236,200,150,${a})`;
+      ctx.beginPath(); ctx.arc(x + Math.sin(ph * 6 + k) * 6, y - ph * (this.mist ? 70 : 34), 3 + ph * 9, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+// the canopy run's leafy crowns, drawn under their one-way tiles: a thick band of acacia leaves with branches
+class KeCanopy extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 10) * TS, TS); this.x = s.x - TS / 2; this.y = s.y; this.friendly = true; this.back = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x = this.x, y = this.y - TS, w = this.w;
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.fillStyle = '#4a6a24'; for (let k = 0; k < w / 40; k++) { const cx = x + 20 + k * 40; ctx.beginPath(); ctx.ellipse(cx, y + 20, 30, 12, 0, 0, Math.PI); ctx.fill(); }
+    ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 4; for (let k = 0; k < w / 120; k++) { const bx = x + 50 + k * 120; ctx.beginPath(); ctx.moveTo(bx, y + 28); ctx.lineTo(bx + 18, y + 80); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+// a reed-fringed ledge up out of sight over the lake
+class KeReedLedge extends Ent {
+  constructor(g, s) { super(g, s, (s.w || 4) * TS, TS); this.x = s.x - TS / 2; this.y = s.y; this.friendly = true; this.back = true; }
+  update(dt) { this.t += dt; }
+  draw(ctx) {
+    const x = this.x, y = this.y - TS, w = this.w;
+    ctx.save(); ctx.lineCap = 'round';
+    for (let q = 4; q < w; q += 7) { const h = 18 + (q * 7) % 14; ctx.strokeStyle = INK; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(x + q, y + 4); ctx.lineTo(x + q + Math.sin(this.t + q) * 2, y + 4 - h); ctx.stroke(); ctx.strokeStyle = '#8aaa4a'; ctx.lineWidth = 2; ctx.stroke(); }
+    ctx.restore();
+  }
+}
+
 /* ---------------- the crocodiles (15-1's rivers) ---------------- */
 /* KeRiver draws a river over a pit (muddy brown water, ripples), so the pit reads as a river; a fall in is the end of a
    life (the crocs). KeCroc lurks in it: only its eyes show, drifting; when Brady (on a gnu or on the bank) comes
@@ -1155,6 +1196,7 @@ const pieces = {
     // the validator's view: the backs as one-way ghosts along the way
     for (let i = 0; i < prof.length; i++) { const r = Math.round(prof[i] / TS); B.ghosts.push([x0 + i, r]); if (modes[i] === 'leap') B.ghosts.push([x0 + i, r + 1]); }
     B.spawn('keHerd', x0, st.gy - 1, { x0, x1, prof, modes, every: H.on.every });
+    if (B.keLate) { for (const [lx, ly, lt] of B.keLate) B.set(lx, ly, lt); B.keLate = null; }
     H.zones.push([x0, x1]); H.on = null; H.leaps.length = 0; H.swims.length = 0;
     st.dress(st.x, x1 - 1, 0.15);
     return x1;
@@ -1192,7 +1234,20 @@ const pieces = {
     }
     herdOf(B).leaps.push([L0, b + down, 0, prof]);
     if (o.gold) st.gold(a + Math.floor(w / 2), top - 4, o.gold);
-    else st.coins(a - 1, b + 1, top - 3);
+    else if (!o.canopy) st.coins(a - 1, b + 1, top - 3);
+    // a run up in the acacia crowns ABOVE the level, only reached from a wildebeest's back at the top of its leap:
+    // { canopy: { len, to, gap: [dx, w] } } — the tell: a little trail of coins going UP off the leap's peak
+    if (o.canopy) {
+      const C = o.canopy, cy = top - 4, c0 = a - 1, c1 = b + (C.len || 26);
+      // (laid when the herd zone closes: the pieces after this one clear their columns)
+      const late = B.keLate || (B.keLate = []);
+      for (let q = c0; q <= c1; q++) if (!(C.gaps || []).some(([gx, gw]) => q >= c0 + gx && q < c0 + gx + gw)) late.push([q, cy, T.SEMI]);
+      for (let q = c0 + 4; q <= c1 - 6; q++) late.push([q, cy - 2, T.PICK]);
+      B.spawn('keCanopy', c0, cy, { w: c1 - c0 + 1 });
+      B.picksRow(a, b, top - 3);
+      if (C.fly) B.spawn(C.fly, c0 + Math.floor((c1 - c0) / 2), cy - 2, { range: 3 });
+      B.spawn('portal', c1 - 1, cy - 1, { kind: 'door', look: 'keNestHole', targetRef: C.to, walkIn: true });
+    }
     return x + w + 14;
   },
   // a gorge the herd jumps: a pit w wide (no water) with a leap arc over it
@@ -1252,6 +1307,16 @@ const pieces = {
     }
     if (o.fly) B.spawn(o.fly, gx + (o.flyDx || 6), st.gy - (o.flyDy || 9), { range: 2 });
     if (o.gold) st.gold(gx + o.gold[0], st.gy + o.gold[1], o.gold[2]);
+    // a ledge up out of sight that only the head reaches at the very top of its path: { dx, w, row (rows above the
+    // ground the ledge stands on), burrow: { to, back }, trail: [[dx, dy], ...] coins leading up past the obvious stop }
+    if (o.secret) {
+      const L = o.secret, lx = gx + L.dx, ly = st.gy - L.row;
+      B.fill(lx, ly, lx + L.w - 1, ly + 1, T.HARD);
+      B.spawn('portal', lx + 1, ly - 1, { kind: 'door', look: 'keBurrow', targetRef: L.burrow.to });
+      if (L.burrow.back) B.anchor(L.burrow.back, lx + L.w - 2, ly - 1);
+      B.spawn('kePuff', lx + 1, ly - 1, {});
+      for (const [tx, ty] of L.trail || []) B.set(gx + tx, st.gy + ty, T.PICK);
+    }
     if (o.coins) for (const [a2, b2, y2] of o.coins) st.coins(gx + a2, gx + b2, st.gy + y2);
     // the ground after the giraffe rises by o.rise rows (a cliff only the giraffe reaches) or drops by o.drop
     if (o.rise) st.gy -= o.rise;
@@ -1296,15 +1361,32 @@ const pieces = {
     B.spawn('mplat', a + 1, y0 - 1, { pw: 4, ax: ax * TS, ay: ay * TS, speed: o.speed || 1.6, skin: 'keFlock', phase: o.phase || 0 });
     const n = Math.max(Math.abs(ax), Math.abs(ay));
     for (let q = 0; q <= n; q++) { const gx = a + 1 + Math.round(ax * q / (n || 1)), gy = y0 + Math.round(ay * q / (n || 1)); for (let k = 0; k < 4; k++) B.ghosts.push([gx + k, gy]); }
-    if (o.coins !== false) st.coins(a + 3, b - 3, y0 - 3 + Math.min(0, ay));
+    if (o.coins !== false && !o.secret) st.coins(a + 3, b - 3, y0 - 3 + Math.min(0, ay));
     if (o.gold) st.gold(a + Math.floor(w / 2), y0 + Math.min(0, ay) - 4, o.gold);
+    // the skein's route tops out under a ledge up out of sight: hop off at the top; a reed screen on the ledge is the
+    // way in (walk into it). { secret: { to, ledge: [dx, w], up } } — the tell: a coin trail up from the skein's top
+    if (o.secret) {
+      const L = o.secret, ex = a + 1 + ax, ey = y0 + ay, lx = a + L.ledge[0], ly = ey - (L.up || 3);
+      for (let q = 0; q < L.ledge[1]; q++) B.set(lx + q, ly, T.SEMI);
+      B.spawn('keReedLedge', lx, ly, { w: L.ledge[1] });
+      for (let q = 1; q <= 2; q++) B.set(ex + 1, ey - q, T.PICK);
+      B.spawn('portal', lx + L.ledge[1] - 1, ly - 1, { kind: 'door', look: 'keReedGap', targetRef: L.to, walkIn: true });
+      B.spawn('kePuff', lx + L.ledge[1] - 1, ly - 1, {});
+    }
     st.floor(b + 1, b + 3);
     return b + 4;
   },
 
   /* ---- 15-4 noon ---- */
   // a gully in the plain: a pit drawn as a red ravine: { n }
-  gully(st, o) { const x = st.x, n = o.n || 3; st.floor(x, x + 1); st.pit(x + 2, x + n + 1); st.B.spawn('keGap', x + 2, st.gy, { w: n }); if (o.coins !== false) st.arc(x + 1, x + n + 2, st.gy - 2, 2); st.floor(x + n + 2, x + n + 4); return x + n + 5; },
+  gully(st, o) {
+    const x = st.x, n = o.n || 3; st.floor(x, x + 1); st.pit(x + 2, x + n + 1);
+    // the one gully that is not a drop to doom: a cool draught of mist puffs up out of it (the tell); falling in
+    // drops Brady through the bottom into a hidden room: { seam: 'area@anchor' }
+    if (o.seam) { TourSeams.add(st.B, { side: 'bottom', a: x + 2, b: x + n + 1, to: o.seam, tell: true }); st.B.spawn('keGap', x + 2, st.gy, { w: n, cool: true }); st.B.spawn('kePuff', x + 2 + Math.floor(n / 2), st.gy, { mist: true, low: true, tell: true }); }
+    else st.B.spawn('keGap', x + 2, st.gy, { w: n });
+    if (o.coins !== false) st.arc(x + 1, x + n + 2, st.gy - 2, 2); st.floor(x + n + 2, x + n + 4); return x + n + 5;
+  },
   sun(st, o) { st.B.spawn('keSun', st.x, st.gy - 1, {}); return st.x; },
   // an open sunny stretch: n columns of flat plain, decor
   open(st, o) { const x = st.x, n = o.n || 12; st.floor(x, x + n - 1); st.dress(x, x + n - 1, 0.1); if (o.coins !== false) st.coins(x + 2, x + n - 3, st.gy - 2); return x + n; },
@@ -1359,6 +1441,8 @@ const pieces = {
       B.spawn('keShaft', c, gy + 5, { w: 4, h: 6 });
     }
     for (const [dx, w] of o.rocks || []) B.fill(x + dx, t0, x + dx + w - 1, t1, T.HARD);
+    // a root-tangled plug that is really a side burrow: walk into its face from the tunnel (a puff of dust tells)
+    if (o.walkIn) { const [dx, to] = o.walkIn; B.spawn('portal', x + dx - 1, t1, { kind: 'door', look: 'keRootWall', targetRef: to, walkIn: true }); B.spawn('kePuff', x + dx - 1, t1, {}); }
     for (const [dx, w, h] of o.thorns || []) { B.fill(x + dx, gy - h, x + dx + w - 1, gy - 1, T.HARD); B.spawn('keThicket', x + dx, gy - 1, { w, h }); }
     for (const [kind, dx] of o.enemies || []) st.enemy(kind, x + dx, t1 + 1);
     for (const dx of o.sentries || []) { B.decorAt('keBurrowMound', x + dx, gy, 0); B.spawn('keSentry', x + dx, gy - 1, { surf: gy }); }
@@ -1443,7 +1527,7 @@ const emblem = (ctx, x, y, r, t) => {
   ctx.restore();
 };
 
-const entities = { keShaft: KeShaft, keGap: KeGap, keThicket: KeThicket, keHerd: KeHerd, keGnu: KeGnu, keRiver: KeRiver, keCroc: KeCroc, keGiraffe: KeGiraffe, keLeafBush: KeLeafBush, keFlamingo: KeFlamingo, keLake: KeLake, keSun: KeSun, keCloud: KeCloud, keElephant: KeElephant, kePuddle: KePuddle, keSentry: KeSentry, keEagle: KeEagle };
+const entities = { kePuff: KePuff, keCanopy: KeCanopy, keReedLedge: KeReedLedge, keShaft: KeShaft, keGap: KeGap, keThicket: KeThicket, keHerd: KeHerd, keGnu: KeGnu, keRiver: KeRiver, keCroc: KeCroc, keGiraffe: KeGiraffe, keLeafBush: KeLeafBush, keFlamingo: KeFlamingo, keLake: KeLake, keSun: KeSun, keCloud: KeCloud, keElephant: KeElephant, kePuddle: KePuddle, keSentry: KeSentry, keEagle: KeEagle };
 
 Tour.country({
   id: 'ke', colors: COL, tagline: 'The savannah: wildebeest, giraffes, flamingos and one very theatrical hippo',
@@ -1467,6 +1551,6 @@ if (typeof TourOWPaint !== 'undefined' && TourOWPaint.lake) {
 }
 Object.assign(TourLandscape.ARCH_LABEL, { stampede: 'HERD', necks: 'NECKS', flock: 'FLOCK', shade: 'SHADE', burrow: 'BURROW' });
 TourLandscape.looks.ke = ['#f2dcae', '#4a9ad0', '#9a8ab8', '#d8a850', '#ecd08a', '#fff0c8', 'peaks'];
-Tour.keKit = { GNU, GIR, HEAT, KeHerd, KeGnu, KeCroc, KeGiraffe, KeFlamingo, KeSun, KeElephant, KeCloud, KeSentry, KeEagle, INK, COL, CLAY, RED, GOLD };
+Tour.keKit = { groundOf, acaciaSemi, rootSemi, clayBrick, kopjeHard, thornHard, savanna, GNU, GIR, HEAT, KeHerd, KeGnu, KeCroc, KeGiraffe, KeFlamingo, KeSun, KeElephant, KeCloud, KeSentry, KeEagle, INK, COL, CLAY, RED, GOLD };
 try { if (typeof window !== 'undefined') { window.BRADY_TOUR = window.BRADY_TOUR || {}; window.BRADY_TOUR.keKit = Tour.keKit; } } catch (e) { /* not in a browser */ }
 })();
